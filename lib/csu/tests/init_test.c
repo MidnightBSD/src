@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #ifndef DSO_LIB
 #include <atf-c.h>
 #endif

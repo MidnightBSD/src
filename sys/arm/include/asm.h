@@ -34,7 +34,6 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)asm.h	5.5 (Berkeley) 5/7/91
- *
  */
 
 #ifndef _MACHINE_ASM_H_
@@ -167,7 +166,6 @@
 #else
 #define __FBSDID(s)     /* nothing */
 #endif
-
 
 #define	WEAK_ALIAS(alias,sym)						\
 	.weak alias;							\

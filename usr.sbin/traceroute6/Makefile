@@ -12,9 +12,12 @@
 # LIMITATION, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
 # A PARTICULAR PURPOSE.
 
+.include <src.opts.mk>
+
 TRACEROUTE_DISTDIR?= ${SRCTOP}/contrib/traceroute
 .PATH: ${TRACEROUTE_DISTDIR}
 
+PACKAGE=	runtime
 PROG=	traceroute6
 MAN=	traceroute6.8
 SRCS=	as.c traceroute6.c
@@ -24,7 +27,13 @@ BINMODE= 4555
 CFLAGS+= -DIPSEC -DHAVE_POLL
 CFLAGS+= -I${.CURDIR} -I${TRACEROUTE_DISTDIR} -I.
 
-LIBADD=	ipsec
+.if ${MK_CASPER} != "no"
+LIBADD+=	casper
+LIBADD+=	cap_dns
+CFLAGS+=	-DWITH_CASPER
+.endif
+
+LIBADD+=	ipsec
 
 .include <bsd.prog.mk>
 

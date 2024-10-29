@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/file.h>
 #include <sys/stat.h>
 

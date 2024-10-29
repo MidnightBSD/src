@@ -21,7 +21,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _CLOUDABI32_UTIL_H_
@@ -41,8 +40,8 @@ extern Elf32_Brandinfo cloudabi32_brand;
 #define	TO_PTR(x)	((void *)(uintptr_t)(x))
 
 /* Stack initialization during process execution. */
-register_t *cloudabi32_copyout_strings(struct image_params *);
-int	cloudabi32_fixup(register_t **, struct image_params *);
+int	cloudabi32_copyout_strings(struct image_params *, uintptr_t *);
+int	cloudabi32_fixup(uintptr_t *, struct image_params *);
 
 int	cloudabi32_thread_setregs(struct thread *,
     const cloudabi32_threadattr_t *, uint32_t);

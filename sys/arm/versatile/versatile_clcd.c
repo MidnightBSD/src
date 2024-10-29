@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012-2017 Oleksandr Tymoshenko <gonzo@freebsd.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -261,7 +260,7 @@ versatile_clcdc_attach(device_t dev)
 	sc->mode = CLCD_MODE_RGB565;
 	versatile_scm_reg_write_4(SCM_CLCD, reg);
  	dma_size = sc->width*sc->height*2;
- 
+
  	/*
 	 * Power on LCD
 	 */
@@ -537,7 +536,6 @@ clcdr_draw_cursor(scr_stat* scp, int off, int blink, int on, int flip)
 	/* our cursor consists of simply inverting the char under it */
 	for (i = 0; i < adp->va_info.vi_cheight; i++) {
 		for (j = 0; j < adp->va_info.vi_cwidth; j++) {
-
 			addr[2*j] ^= 0xff;
 			addr[2*j + 1] ^= 0xff;
 		}

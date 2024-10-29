@@ -29,8 +29,6 @@
  */
 
 #include <machine/asm.h>
-
-
 ENTRY(strncmp)
 /* if (len == 0) return 0 */
 	cmp	r2, #0

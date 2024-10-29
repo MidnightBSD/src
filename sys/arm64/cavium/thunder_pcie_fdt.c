@@ -28,7 +28,6 @@
 #include "opt_platform.h"
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
@@ -88,7 +87,6 @@ DRIVER_MODULE(thunder_pcib, simplebus, thunder_pcie_fdt_driver,
     thunder_pcie_fdt_devclass, 0, 0);
 DRIVER_MODULE(thunder_pcib, ofwbus, thunder_pcie_fdt_driver,
     thunder_pcie_fdt_devclass, 0, 0);
-
 
 static int
 thunder_pcie_fdt_probe(device_t dev)

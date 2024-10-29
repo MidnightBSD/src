@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2018 Rubicon Communications, LLC (Netgate)
  *
@@ -23,11 +23,9 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -128,7 +126,6 @@ struct mv_cp110_clock_softc {
 	struct syscon		*syscon;
 	struct mtx		mtx;
 };
-
 
 static struct ofw_compat_data compat_data[] = {
 	{"marvell,cp110-clock", 1},

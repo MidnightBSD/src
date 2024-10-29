@@ -2,7 +2,7 @@
  * Data structures and definitions for dealing with the 
  * Common Access Method Transport (xpt) layer.
  *
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1997 Justin T. Gibbs.
  * All rights reserved.
@@ -27,7 +27,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _CAM_CAM_XPT_H
@@ -37,7 +36,6 @@
 #include <sys/cdefs.h>
 #include <cam/cam_ccb.h>
 #endif
-
 
 /* Forward Declarations */
 union ccb;
@@ -85,8 +83,8 @@ void			xpt_setup_ccb_flags(struct ccb_hdr *ccb_h,
 void			xpt_setup_ccb(struct ccb_hdr *ccb_h,
 				      struct cam_path *path,
 				      u_int32_t priority);
-void			xpt_merge_ccb(union ccb *master_ccb,
-				      union ccb *slave_ccb);
+void			xpt_merge_ccb(union ccb *dst_ccb,
+				      union ccb *src_ccb);
 cam_status		xpt_create_path(struct cam_path **new_path_ptr,
 					struct cam_periph *perph,
 					path_id_t path_id,

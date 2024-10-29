@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2015 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Semihalf under
  * the sponsorship of the FreeBSD Foundation.
@@ -25,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _GIC_V3_VAR_H_
@@ -67,6 +65,11 @@ struct gic_v3_softc {
 	/* Re-Distributors */
 	struct gic_redists	gic_redists;
 
+	/* Message Based Interrupts */
+	u_int			gic_mbi_start;
+	u_int			gic_mbi_end;
+	struct mtx		gic_mbi_mtx;
+
 	uint32_t		gic_pidr2;
 	u_int			gic_bus;
 
@@ -81,7 +84,6 @@ struct gic_v3_softc {
 	struct gic_v3_irqsrc	*gic_irqs;
 };
 
-
 struct gic_v3_devinfo {
 	int gic_domain;
 	int msi_xref;
@@ -93,12 +95,13 @@ MALLOC_DECLARE(M_GIC_V3);
 
 /* ivars */
 #define	GICV3_IVAR_NIRQS	1000
-#define	GICV3_IVAR_REDIST_VADDR	1001
+/* 1001 was GICV3_IVAR_REDIST_VADDR */
 #define	GICV3_IVAR_REDIST	1002
+#define	GICV3_IVAR_SUPPORT_LPIS	1003
 
 __BUS_ACCESSOR(gicv3, nirqs, GICV3, NIRQS, u_int);
-__BUS_ACCESSOR(gicv3, redist_vaddr, GICV3, REDIST_VADDR, void *);
 __BUS_ACCESSOR(gicv3, redist, GICV3, REDIST, void *);
+__BUS_ACCESSOR(gicv3, support_lpis, GICV3, SUPPORT_LPIS, bool);
 
 /* Device methods */
 int gic_v3_attach(device_t dev);
@@ -130,8 +133,8 @@ void gic_r_write_8(device_t, bus_size_t, uint64_t var);
 	u_int cpu = PCPU_GET(cpuid);		\
 						\
 	bus_read_##len(				\
-	    &sc->gic_redists.pcpu[cpu]->res,	\
-	    reg);				\
+	    &(sc)->gic_redists.pcpu[cpu]->res,	\
+	    (reg));				\
 })
 
 #define	gic_r_write(sc, len, reg, val)		\
@@ -139,8 +142,8 @@ void gic_r_write_8(device_t, bus_size_t, uint64_t var);
 	u_int cpu = PCPU_GET(cpuid);		\
 						\
 	bus_write_##len(			\
-	    &sc->gic_redists.pcpu[cpu]->res,	\
-	    reg, val);				\
+	    &(sc)->gic_redists.pcpu[cpu]->res,	\
+	    (reg), (val));			\
 })
 
 #endif /* _GIC_V3_VAR_H_ */

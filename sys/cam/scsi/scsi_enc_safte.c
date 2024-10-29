@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000 Matthew Jacob
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 
 #include <sys/conf.h>
@@ -1023,13 +1022,6 @@ safte_init_enc(enc_softc_t *enc)
 }
 
 static int
-safte_get_enc_status(enc_softc_t *enc, int slpflg)
-{
-
-	return (0);
-}
-
-static int
 safte_set_enc_status(enc_softc_t *enc, uint8_t encstat, int slpflag)
 {
 	struct scfg *cfg;
@@ -1042,7 +1034,7 @@ safte_set_enc_status(enc_softc_t *enc, uint8_t encstat, int slpflag)
 	req.elm_idx = SES_SETSTATUS_ENC_IDX;
 	req.elm_stat[0] = encstat & 0xf;
 	req.result = 0;
-	
+
 	TAILQ_INSERT_TAIL(&cfg->requests, &req, links);
 	enc_update_request(enc, SAFTE_PROCESS_CONTROL_REQS);
 	cam_periph_sleep(enc->periph, &req, PUSER, "encstat", 0);
@@ -1100,7 +1092,6 @@ static struct enc_vec safte_enc_vec =
 	.softc_invalidate	= safte_softc_invalidate,
 	.softc_cleanup	= safte_softc_cleanup,
 	.init_enc	= safte_init_enc,
-	.get_enc_status	= safte_get_enc_status,
 	.set_enc_status	= safte_set_enc_status,
 	.get_elm_status	= safte_get_elm_status,
 	.set_elm_status	= safte_set_elm_status,
@@ -1128,4 +1119,3 @@ safte_softc_init(enc_softc_t *enc)
 	TAILQ_INIT(&cfg->requests);
 	return (0);
 }
-

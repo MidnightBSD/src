@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2003 Jake Burkholder.
  * All rights reserved.
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -68,7 +67,6 @@ sc_get_softc(int unit, int flags)
 	sc = &sc_softcs[unit];
 	sc->unit = unit;
 	if ((sc->flags & SC_INIT_DONE) == 0) {
-		sc->keyboard = -1;
 		sc->adapter = -1;
 		sc->cursor_char = SC_CURSOR_CHAR;
 		sc->mouse_char = SC_MOUSE_CHAR;

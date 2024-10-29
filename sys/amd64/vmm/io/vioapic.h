@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013 Tycho Nightingale <tycho.nightingale@pluribusnetworks.com>
  * Copyright (c) 2013 Neel Natu <neel@freebsd.org>
@@ -25,7 +25,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _VIOAPIC_H_
@@ -34,6 +33,9 @@
 #define	VIOAPIC_BASE	0xFEC00000
 #define	VIOAPIC_SIZE	4096
 
+#ifdef _KERNEL
+struct vm_snapshot_meta;
+
 struct vioapic *vioapic_init(struct vm *vm);
 void	vioapic_cleanup(struct vioapic *vioapic);
 
@@ -41,11 +43,18 @@ int	vioapic_assert_irq(struct vm *vm, int irq);
 int	vioapic_deassert_irq(struct vm *vm, int irq);
 int	vioapic_pulse_irq(struct vm *vm, int irq);
 
-int	vioapic_mmio_write(void *vm, int vcpuid, uint64_t gpa,
+int	vioapic_mmio_write(struct vcpu *vcpu, uint64_t gpa,
 	    uint64_t wval, int size, void *arg);
-int	vioapic_mmio_read(void *vm, int vcpuid, uint64_t gpa,
+int	vioapic_mmio_read(struct vcpu *vcpu, uint64_t gpa,
 	    uint64_t *rval, int size, void *arg);
 
 int	vioapic_pincount(struct vm *vm);
-void	vioapic_process_eoi(struct vm *vm, int vcpuid, int vector);
+void	vioapic_process_eoi(struct vm *vm, int vector);
+#ifdef BHYVE_SNAPSHOT
+int	vioapic_snapshot(struct vioapic *vioapic,
+			 struct vm_snapshot_meta *meta);
 #endif
+
+#endif /* _KERNEL */
+
+#endif /* _VIOAPIC_H_ */

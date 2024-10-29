@@ -1,4 +1,5 @@
-# $FreeBSD$
+
+PACKAGE=	kerberos
 
 PROG=	verify_krb5_conf
 MAN=	verify_krb5_conf.8

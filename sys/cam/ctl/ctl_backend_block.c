@@ -1,10 +1,10 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2003 Silicon Graphics International Corp.
  * Copyright (c) 2009-2011 Spectra Logic Corporation
- * Copyright (c) 2012 The FreeBSD Foundation
- * Copyright (c) 2014-2015 Alexander Motin <mav@FreeBSD.org>
+ * Copyright (c) 2012,2021 The FreeBSD Foundation
+ * Copyright (c) 2014-2021 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
  *
  * Portions of this software were developed by Edward Tomasz Napierala
@@ -43,7 +43,6 @@
  * Author: Ken Merry <ken@FreeBSD.org>
  */
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -96,14 +95,15 @@
 #include <cam/ctl/ctl_error.h>
 
 /*
- * The idea here is that we'll allocate enough S/G space to hold a 1MB
- * I/O.  If we get an I/O larger than that, we'll split it.
+ * The idea here is to allocate enough S/G space to handle at least 1MB I/Os.
+ * On systems with small maxphys it can be 8 128KB segments.  On large systems
+ * it can be up to 8 1MB segments.  I/Os larger than that we'll split.
  */
-#define	CTLBLK_HALF_IO_SIZE	(512 * 1024)
-#define	CTLBLK_MAX_IO_SIZE	(CTLBLK_HALF_IO_SIZE * 2)
-#define	CTLBLK_MAX_SEG		MIN(CTLBLK_HALF_IO_SIZE, MAXPHYS)
-#define	CTLBLK_HALF_SEGS	MAX(CTLBLK_HALF_IO_SIZE / CTLBLK_MAX_SEG, 1)
-#define	CTLBLK_MAX_SEGS		(CTLBLK_HALF_SEGS * 2)
+#define	CTLBLK_MAX_SEGS		8
+#define	CTLBLK_HALF_SEGS	(CTLBLK_MAX_SEGS / 2)
+#define	CTLBLK_MIN_SEG		(128 * 1024)
+#define	CTLBLK_MAX_SEG		MIN(1024 * 1024, MAX(CTLBLK_MIN_SEG, maxphys))
+#define	CTLBLK_MAX_IO_SIZE	(CTLBLK_MAX_SEG * CTLBLK_MAX_SEGS)
 
 #ifdef CTLBLK_DEBUG
 #define DPRINTF(fmt, args...) \
@@ -188,10 +188,8 @@ struct ctl_be_block_softc {
 	int				 num_luns;
 	SLIST_HEAD(, ctl_be_block_lun)	 lun_list;
 	uma_zone_t			 beio_zone;
-	uma_zone_t			 buf_zone;
-#if (CTLBLK_MAX_SEG > 131072)
-	uma_zone_t			 buf128_zone;
-#endif
+	uma_zone_t			 bufmin_zone;
+	uma_zone_t			 bufmax_zone;
 };
 
 static struct ctl_be_block_softc backend_block_softc;
@@ -203,6 +201,7 @@ struct ctl_be_block_io {
 	union ctl_io			*io;
 	struct ctl_sg_entry		sg_segs[CTLBLK_MAX_SEGS];
 	struct iovec			xiovecs[CTLBLK_MAX_SEGS];
+	int				refcnt;
 	int				bio_cmd;
 	int				two_sglists;
 	int				num_segs;
@@ -225,7 +224,7 @@ struct ctl_be_block_io {
 extern struct ctl_softc *control_softc;
 
 static int cbb_num_threads = 32;
-SYSCTL_NODE(_kern_cam_ctl, OID_AUTO, block, CTLFLAG_RD, 0,
+SYSCTL_NODE(_kern_cam_ctl, OID_AUTO, block, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
 	    "CAM Target Layer Block Backend");
 SYSCTL_INT(_kern_cam_ctl_block, OID_AUTO, num_threads, CTLFLAG_RWTUN,
            &cbb_num_threads, 0, "Number of threads per backing file");
@@ -304,12 +303,13 @@ ctl_alloc_seg(struct ctl_be_block_softc *softc, struct ctl_sg_entry *sg,
     size_t len)
 {
 
-#if (CTLBLK_MAX_SEG > 131072)
-	if (len <= 131072)
-		sg->addr = uma_zalloc(softc->buf128_zone, M_WAITOK);
-	else
-#endif
-		sg->addr = uma_zalloc(softc->buf_zone, M_WAITOK);
+	if (len <= CTLBLK_MIN_SEG) {
+		sg->addr = uma_zalloc(softc->bufmin_zone, M_WAITOK);
+	} else {
+		KASSERT(len <= CTLBLK_MAX_SEG,
+		    ("Too large alloc %zu > %lu", len, CTLBLK_MAX_SEG));
+		sg->addr = uma_zalloc(softc->bufmax_zone, M_WAITOK);
+	}
 	sg->len = len;
 }
 
@@ -317,12 +317,13 @@ static void
 ctl_free_seg(struct ctl_be_block_softc *softc, struct ctl_sg_entry *sg)
 {
 
-#if (CTLBLK_MAX_SEG > 131072)
-	if (sg->len <= 131072)
-		uma_zfree(softc->buf128_zone, sg->addr);
-	else
-#endif
-		uma_zfree(softc->buf_zone, sg->addr);
+	if (sg->len <= CTLBLK_MIN_SEG) {
+		uma_zfree(softc->bufmin_zone, sg->addr);
+	} else {
+		KASSERT(sg->len <= CTLBLK_MAX_SEG,
+		    ("Too large free %zu > %lu", sg->len, CTLBLK_MAX_SEG));
+		uma_zfree(softc->bufmax_zone, sg->addr);
+	}
 }
 
 static struct ctl_be_block_io *
@@ -332,11 +333,12 @@ ctl_alloc_beio(struct ctl_be_block_softc *softc)
 
 	beio = uma_zalloc(softc->beio_zone, M_WAITOK | M_ZERO);
 	beio->softc = softc;
+	beio->refcnt = 1;
 	return (beio);
 }
 
 static void
-ctl_free_beio(struct ctl_be_block_io *beio)
+ctl_real_free_beio(struct ctl_be_block_io *beio)
 {
 	struct ctl_be_block_softc *softc = beio->softc;
 	int i;
@@ -352,6 +354,22 @@ ctl_free_beio(struct ctl_be_block_io *beio)
 	}
 
 	uma_zfree(softc->beio_zone, beio);
+}
+
+static void
+ctl_refcnt_beio(void *arg, int diff)
+{
+	struct ctl_be_block_io *beio = arg;
+
+	if (atomic_fetchadd_int(&beio->refcnt, diff) + diff == 0)
+		ctl_real_free_beio(beio);
+}
+
+static void
+ctl_free_beio(struct ctl_be_block_io *beio)
+{
+
+	ctl_refcnt_beio(beio, -1);
 }
 
 static void
@@ -469,13 +487,12 @@ ctl_be_block_move_done(union ctl_io *io, bool samethr)
 static void
 ctl_be_block_biodone(struct bio *bio)
 {
-	struct ctl_be_block_io *beio;
-	struct ctl_be_block_lun *be_lun;
+	struct ctl_be_block_io *beio = bio->bio_caller1;
+	struct ctl_be_block_lun *be_lun = beio->lun;
+	struct ctl_be_lun *cbe_lun = &be_lun->cbe_lun;
 	union ctl_io *io;
 	int error;
 
-	beio = bio->bio_caller1;
-	be_lun = beio->lun;
 	io = beio->io;
 
 	DPRINTF("entered\n");
@@ -555,7 +572,8 @@ ctl_be_block_biodone(struct bio *bio)
 		if ((ARGS(io)->flags & CTL_LLF_READ) &&
 		    beio->beio_cont == NULL) {
 			ctl_set_success(&io->scsiio);
-			ctl_serseq_done(io);
+			if (cbe_lun->serseq >= CTL_LUN_SERSEQ_SOFT)
+				ctl_serseq_done(io);
 		}
 		ctl_datamove(io);
 	}
@@ -567,26 +585,20 @@ ctl_be_block_flush_file(struct ctl_be_block_lun *be_lun,
 {
 	union ctl_io *io = beio->io;
 	struct mount *mountpoint;
-	int error, lock_flags;
+	int error;
 
 	DPRINTF("entered\n");
 
 	binuptime(&beio->ds_t0);
-	mtx_lock(&be_lun->io_lock);
 	devstat_start_transaction(beio->lun->disk_stats, &beio->ds_t0);
-	mtx_unlock(&be_lun->io_lock);
 
 	(void) vn_start_write(be_lun->vn, &mountpoint, V_WAIT);
 
-	if (MNT_SHARED_WRITES(mountpoint) ||
-	    ((mountpoint == NULL) && MNT_SHARED_WRITES(be_lun->vn->v_mount)))
-		lock_flags = LK_SHARED;
-	else
-		lock_flags = LK_EXCLUSIVE;
-	vn_lock(be_lun->vn, lock_flags | LK_RETRY);
+	vn_lock(be_lun->vn, vn_lktype_write(mountpoint, be_lun->vn) |
+	    LK_RETRY);
 	error = VOP_FSYNC(be_lun->vn, beio->io_arg ? MNT_NOWAIT : MNT_WAIT,
 	    curthread);
-	VOP_UNLOCK(be_lun->vn, 0);
+	VOP_UNLOCK(be_lun->vn);
 
 	vn_finished_write(mountpoint);
 
@@ -617,6 +629,7 @@ static void
 ctl_be_block_dispatch_file(struct ctl_be_block_lun *be_lun,
 			   struct ctl_be_block_io *beio)
 {
+	struct ctl_be_lun *cbe_lun = &be_lun->cbe_lun;
 	struct ctl_be_block_filedata *file_data;
 	union ctl_io *io;
 	struct uio xuio;
@@ -655,13 +668,14 @@ ctl_be_block_dispatch_file(struct ctl_be_block_lun *be_lun,
 	}
 
 	binuptime(&beio->ds_t0);
-	mtx_lock(&be_lun->io_lock);
 	devstat_start_transaction(beio->lun->disk_stats, &beio->ds_t0);
-	mtx_unlock(&be_lun->io_lock);
 
 	if (beio->bio_cmd == BIO_READ) {
 		vn_lock(be_lun->vn, LK_SHARED | LK_RETRY);
 
+		if (beio->beio_cont == NULL &&
+		    cbe_lun->serseq == CTL_LUN_SERSEQ_SOFT)
+			ctl_serseq_done(io);
 		/*
 		 * UFS pays attention to IO_DIRECT for reads.  If the
 		 * DIRECTIO option is configured into the kernel, it calls
@@ -681,7 +695,7 @@ ctl_be_block_dispatch_file(struct ctl_be_block_lun *be_lun,
 		 */
 		error = VOP_READ(be_lun->vn, &xuio, flags, file_data->cred);
 
-		VOP_UNLOCK(be_lun->vn, 0);
+		VOP_UNLOCK(be_lun->vn);
 		SDT_PROBE0(cbb, , read, file_done);
 		if (error == 0 && xuio.uio_resid > 0) {
 			/*
@@ -701,16 +715,10 @@ ctl_be_block_dispatch_file(struct ctl_be_block_lun *be_lun,
 		}
 	} else {
 		struct mount *mountpoint;
-		int lock_flags;
 
 		(void)vn_start_write(be_lun->vn, &mountpoint, V_WAIT);
-
-		if (MNT_SHARED_WRITES(mountpoint) || ((mountpoint == NULL)
-		  && MNT_SHARED_WRITES(be_lun->vn->v_mount)))
-			lock_flags = LK_SHARED;
-		else
-			lock_flags = LK_EXCLUSIVE;
-		vn_lock(be_lun->vn, lock_flags | LK_RETRY);
+		vn_lock(be_lun->vn, vn_lktype_write(mountpoint,
+		    be_lun->vn) | LK_RETRY);
 
 		/*
 		 * UFS pays attention to IO_DIRECT for writes.  The write
@@ -728,7 +736,7 @@ ctl_be_block_dispatch_file(struct ctl_be_block_lun *be_lun,
 		 * cache before returning.
 		 */
 		error = VOP_WRITE(be_lun->vn, &xuio, flags, file_data->cred);
-		VOP_UNLOCK(be_lun->vn, 0);
+		VOP_UNLOCK(be_lun->vn);
 
 		vn_finished_write(mountpoint);
 		SDT_PROBE0(cbb, , write, file_done);
@@ -769,7 +777,8 @@ ctl_be_block_dispatch_file(struct ctl_be_block_lun *be_lun,
 		if ((ARGS(io)->flags & CTL_LLF_READ) &&
 		    beio->beio_cont == NULL) {
 			ctl_set_success(&io->scsiio);
-			ctl_serseq_done(io);
+			if (cbe_lun->serseq > CTL_LUN_SERSEQ_SOFT)
+				ctl_serseq_done(io);
 		}
 		ctl_datamove(io);
 	}
@@ -803,7 +812,7 @@ ctl_be_block_gls_file(struct ctl_be_block_lun *be_lun,
 			off = be_lun->size_bytes;
 		}
 	}
-	VOP_UNLOCK(be_lun->vn, 0);
+	VOP_UNLOCK(be_lun->vn);
 
 	data = (struct scsi_get_lba_status_data *)io->scsiio.kern_data_ptr;
 	scsi_u64to8b(lbalen->lba, data->descr[0].addr);
@@ -832,13 +841,13 @@ ctl_be_block_getattr_file(struct ctl_be_block_lun *be_lun, const char *attrname)
 			val = vattr.va_bytes / be_lun->cbe_lun.blocksize;
 	}
 	if (strcmp(attrname, "blocksavail") == 0 &&
-	    (be_lun->vn->v_iflag & VI_DOOMED) == 0) {
+	    !VN_IS_DOOMED(be_lun->vn)) {
 		error = VFS_STATFS(be_lun->vn->v_mount, &statfs);
 		if (error == 0)
 			val = statfs.f_bavail * statfs.f_bsize /
 			    be_lun->cbe_lun.blocksize;
 	}
-	VOP_UNLOCK(be_lun->vn, 0);
+	VOP_UNLOCK(be_lun->vn);
 	return (val);
 }
 
@@ -846,6 +855,7 @@ static void
 ctl_be_block_dispatch_zvol(struct ctl_be_block_lun *be_lun,
 			   struct ctl_be_block_io *beio)
 {
+	struct ctl_be_lun *cbe_lun = &be_lun->cbe_lun;
 	union ctl_io *io;
 	struct cdevsw *csw;
 	struct cdev *dev;
@@ -883,15 +893,16 @@ ctl_be_block_dispatch_zvol(struct ctl_be_block_lun *be_lun,
 	}
 
 	binuptime(&beio->ds_t0);
-	mtx_lock(&be_lun->io_lock);
 	devstat_start_transaction(beio->lun->disk_stats, &beio->ds_t0);
-	mtx_unlock(&be_lun->io_lock);
 
 	csw = devvn_refthread(be_lun->vn, &dev, &ref);
 	if (csw) {
-		if (beio->bio_cmd == BIO_READ)
+		if (beio->bio_cmd == BIO_READ) {
+			if (beio->beio_cont == NULL &&
+			    cbe_lun->serseq == CTL_LUN_SERSEQ_SOFT)
+				ctl_serseq_done(io);
 			error = csw->d_read(dev, &xuio, flags);
-		else
+		} else
 			error = csw->d_write(dev, &xuio, flags);
 		dev_relthread(dev, ref);
 	} else
@@ -937,7 +948,8 @@ ctl_be_block_dispatch_zvol(struct ctl_be_block_lun *be_lun,
 		if ((ARGS(io)->flags & CTL_LLF_READ) &&
 		    beio->beio_cont == NULL) {
 			ctl_set_success(&io->scsiio);
-			ctl_serseq_done(io);
+			if (cbe_lun->serseq > CTL_LUN_SERSEQ_SOFT)
+				ctl_serseq_done(io);
 		}
 		ctl_datamove(io);
 	}
@@ -1020,9 +1032,7 @@ ctl_be_block_flush_dev(struct ctl_be_block_lun *be_lun,
 	beio->send_complete = 1;
 
 	binuptime(&beio->ds_t0);
-	mtx_lock(&be_lun->io_lock);
 	devstat_start_transaction(be_lun->disk_stats, &beio->ds_t0);
-	mtx_unlock(&be_lun->io_lock);
 
 	csw = devvn_refthread(be_lun->vn, &dev, &ref);
 	if (csw) {
@@ -1093,9 +1103,7 @@ ctl_be_block_unmap_dev(struct ctl_be_block_lun *be_lun,
 	DPRINTF("entered\n");
 
 	binuptime(&beio->ds_t0);
-	mtx_lock(&be_lun->io_lock);
 	devstat_start_transaction(be_lun->disk_stats, &beio->ds_t0);
-	mtx_unlock(&be_lun->io_lock);
 
 	if (beio->io_offset == -1) {
 		beio->io_len = 0;
@@ -1135,10 +1143,10 @@ ctl_be_block_dispatch_dev(struct ctl_be_block_lun *be_lun,
 	 */
 	if (csw) {
 		max_iosize = dev->si_iosize_max;
-		if (max_iosize < PAGE_SIZE)
+		if (max_iosize <= 0)
 			max_iosize = DFLTPHYS;
 	} else
-		max_iosize = DFLTPHYS;
+		max_iosize = maxphys;
 
 	cur_offset = beio->io_offset;
 	for (i = 0; i < beio->num_segs; i++) {
@@ -1171,11 +1179,9 @@ ctl_be_block_dispatch_dev(struct ctl_be_block_lun *be_lun,
 			beio->num_bios_sent++;
 		}
 	}
-	binuptime(&beio->ds_t0);
-	mtx_lock(&be_lun->io_lock);
-	devstat_start_transaction(be_lun->disk_stats, &beio->ds_t0);
 	beio->send_complete = 1;
-	mtx_unlock(&be_lun->io_lock);
+	binuptime(&beio->ds_t0);
+	devstat_start_transaction(be_lun->disk_stats, &beio->ds_t0);
 
 	/*
 	 * Fire off all allocated requests!
@@ -1309,7 +1315,6 @@ ctl_be_block_cw_dispatch_ws(struct ctl_be_block_lun *be_lun,
 		pbo = 0;
 	len_left = (uint64_t)lbalen->len * cbe_lun->blocksize;
 	for (i = 0, lba = 0; i < CTLBLK_MAX_SEGS && len_left > 0; i++) {
-
 		/*
 		 * Setup the S/G entry for this chunk.
 		 */
@@ -1577,11 +1582,10 @@ ctl_be_block_dispatch(struct ctl_be_block_lun *be_lun,
 	DPRINTF("%s at LBA %jx len %u @%ju\n",
 	       (beio->bio_cmd == BIO_READ) ? "READ" : "WRITE",
 	       (uintmax_t)lbalen->lba, lbalen->len, bptrlen->len);
+	lbas = CTLBLK_MAX_IO_SIZE;
 	if (lbalen->flags & CTL_LLF_COMPARE) {
 		beio->two_sglists = 1;
-		lbas = CTLBLK_HALF_IO_SIZE;
-	} else {
-		lbas = CTLBLK_MAX_IO_SIZE;
+		lbas /= 2;
 	}
 	lbas = MIN(lbalen->len - bptrlen->len, lbas / cbe_lun->blocksize);
 	beio->io_offset = (lbalen->lba + bptrlen->len) * cbe_lun->blocksize;
@@ -1596,7 +1600,7 @@ ctl_be_block_dispatch(struct ctl_be_block_lun *be_lun,
 		 * Setup the S/G entry for this chunk.
 		 */
 		ctl_alloc_seg(softc, &beio->sg_segs[i],
-		    min(CTLBLK_MAX_SEG, len_left));
+		    MIN(CTLBLK_MAX_SEG, len_left));
 
 		DPRINTF("segment %d addr %p len %zd\n", i,
 			beio->sg_segs[i].addr, beio->sg_segs[i].len);
@@ -1621,6 +1625,8 @@ ctl_be_block_dispatch(struct ctl_be_block_lun *be_lun,
 		io->scsiio.kern_data_ptr = (uint8_t *)beio->sg_segs;
 	io->scsiio.kern_data_len = beio->io_len;
 	io->scsiio.kern_sg_entries = beio->num_segs;
+	io->scsiio.kern_data_ref = ctl_refcnt_beio;
+	io->scsiio.kern_data_arg = beio;
 	io->io_hdr.flags |= CTL_FLAG_ALLOCATED;
 
 	/*
@@ -2162,7 +2168,7 @@ again:
 	be_lun->vn = nd.ni_vp;
 
 	/* We only support disks and files. */
-	if (vn_isdisk(be_lun->vn, &error)) {
+	if (vn_isdisk_error(be_lun->vn, &error)) {
 		error = ctl_be_block_open_dev(be_lun, req);
 	} else if (be_lun->vn->v_type == VREG) {
 		error = ctl_be_block_open_file(be_lun, req);
@@ -2171,18 +2177,20 @@ again:
 		snprintf(req->error_str, sizeof(req->error_str),
 			 "%s is not a disk or plain file", be_lun->dev_path);
 	}
-	VOP_UNLOCK(be_lun->vn, 0);
+	VOP_UNLOCK(be_lun->vn);
 
 	if (error != 0)
 		ctl_be_block_close(be_lun);
 	cbe_lun->serseq = CTL_LUN_SERSEQ_OFF;
 	if (be_lun->dispatch != ctl_be_block_dispatch_dev)
-		cbe_lun->serseq = CTL_LUN_SERSEQ_READ;
+		cbe_lun->serseq = CTL_LUN_SERSEQ_SOFT;
 	value = dnvlist_get_string(cbe_lun->options, "serseq", NULL);
 	if (value != NULL && strcmp(value, "on") == 0)
 		cbe_lun->serseq = CTL_LUN_SERSEQ_ON;
 	else if (value != NULL && strcmp(value, "read") == 0)
 		cbe_lun->serseq = CTL_LUN_SERSEQ_READ;
+	else if (value != NULL && strcmp(value, "soft") == 0)
+		cbe_lun->serseq = CTL_LUN_SERSEQ_SOFT;
 	else if (value != NULL && strcmp(value, "off") == 0)
 		cbe_lun->serseq = CTL_LUN_SERSEQ_OFF;
 	return (0);
@@ -2525,12 +2533,12 @@ ctl_be_block_modify(struct ctl_be_block_softc *softc, struct ctl_lun_req *req)
 	    control_softc->ha_mode == CTL_HA_MODE_SER_ONLY) {
 		if (be_lun->vn == NULL)
 			error = ctl_be_block_open(be_lun, req);
-		else if (vn_isdisk(be_lun->vn, &error))
+		else if (vn_isdisk_error(be_lun->vn, &error))
 			error = ctl_be_block_open_dev(be_lun, req);
 		else if (be_lun->vn->v_type == VREG) {
 			vn_lock(be_lun->vn, LK_SHARED | LK_RETRY);
 			error = ctl_be_block_open_file(be_lun, req);
-			VOP_UNLOCK(be_lun->vn, 0);
+			VOP_UNLOCK(be_lun->vn);
 		} else
 			error = EINVAL;
 		if ((cbe_lun->flags & CTL_LUN_FLAG_NO_MEDIA) &&
@@ -2755,16 +2763,14 @@ ctl_be_block_init(void)
 	mtx_init(&softc->lock, "ctlblock", NULL, MTX_DEF);
 	softc->beio_zone = uma_zcreate("beio", sizeof(struct ctl_be_block_io),
 	    NULL, NULL, NULL, NULL, UMA_ALIGN_PTR, 0);
-	softc->buf_zone = uma_zcreate("ctlblock", CTLBLK_MAX_SEG,
+	softc->bufmin_zone = uma_zcreate("ctlblockmin", CTLBLK_MIN_SEG,
 	    NULL, NULL, NULL, NULL, /*align*/ 0, /*flags*/0);
-#if (CTLBLK_MAX_SEG > 131072)
-	softc->buf128_zone = uma_zcreate("ctlblock128", 131072,
-	    NULL, NULL, NULL, NULL, /*align*/ 0, /*flags*/0);
-#endif
+	if (CTLBLK_MIN_SEG < CTLBLK_MAX_SEG)
+		softc->bufmax_zone = uma_zcreate("ctlblockmax", CTLBLK_MAX_SEG,
+		    NULL, NULL, NULL, NULL, /*align*/ 0, /*flags*/0);
 	SLIST_INIT(&softc->lun_list);
 	return (0);
 }
-
 
 static int
 ctl_be_block_shutdown(void)
@@ -2786,10 +2792,9 @@ ctl_be_block_shutdown(void)
 		mtx_lock(&softc->lock);
 	}
 	mtx_unlock(&softc->lock);
-	uma_zdestroy(softc->buf_zone);
-#if (CTLBLK_MAX_SEG > 131072)
-	uma_zdestroy(softc->buf128_zone);
-#endif
+	uma_zdestroy(softc->bufmin_zone);
+	if (CTLBLK_MIN_SEG < CTLBLK_MAX_SEG)
+		uma_zdestroy(softc->bufmax_zone);
 	uma_zdestroy(softc->beio_zone);
 	mtx_destroy(&softc->lock);
 	sx_destroy(&softc->modify_lock);

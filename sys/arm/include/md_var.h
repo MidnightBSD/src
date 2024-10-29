@@ -37,8 +37,6 @@
 extern long Maxmem;
 extern char sigcode[];
 extern int szsigcode;
-extern uint32_t *vm_page_dump;
-extern int vm_page_dump_size;
 extern u_long elf_hwcap;
 extern u_long elf_hwcap2;
 extern vm_paddr_t arm_physmem_kernaddr;
@@ -55,25 +53,16 @@ extern int _min_bzero_size;
 
 enum cpu_class {
 	CPU_CLASS_NONE,
-	CPU_CLASS_ARM9TDMI,
-	CPU_CLASS_ARM9ES,
-	CPU_CLASS_ARM9EJS,
-	CPU_CLASS_ARM10E,
-	CPU_CLASS_ARM10EJ,
 	CPU_CLASS_CORTEXA,
 	CPU_CLASS_KRAIT,
-	CPU_CLASS_XSCALE,
 	CPU_CLASS_ARM11J,
 	CPU_CLASS_MARVELL
 };
 extern enum cpu_class cpu_class;
 
 struct dumperinfo;
-extern int busdma_swi_pending;
-void busdma_swi(void);
-void dump_add_page(vm_paddr_t);
-void dump_drop_page(vm_paddr_t);
-int minidumpsys(struct dumperinfo *);
+struct minidumpstate;
+int cpu_minidumpsys(struct dumperinfo *, const struct minidumpstate *);
 
 extern uint32_t initial_fpscr;
 

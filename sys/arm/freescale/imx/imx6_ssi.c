@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -277,7 +276,6 @@ static kobj_method_t ssimixer_methods[] = {
 	KOBJMETHOD_END
 };
 MIXER_DECLARE(ssimixer);
-
 
 /*
  * Channel interface.

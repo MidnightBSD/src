@@ -22,7 +22,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _VATPIC_H_
@@ -35,14 +34,16 @@
 #define	IO_ELCR1	0x4d0
 #define	IO_ELCR2	0x4d1
 
+struct vm_snapshot_meta;
+
 struct vatpic *vatpic_init(struct vm *vm);
 void vatpic_cleanup(struct vatpic *vatpic);
 
-int vatpic_master_handler(struct vm *vm, int vcpuid, bool in, int port,
-    int bytes, uint32_t *eax);
-int vatpic_slave_handler(struct vm *vm, int vcpuid, bool in, int port,
-    int bytes, uint32_t *eax);
-int vatpic_elc_handler(struct vm *vm, int vcpuid, bool in, int port, int bytes,
+int vatpic_master_handler(struct vm *vm, bool in, int port, int bytes,
+    uint32_t *eax);
+int vatpic_slave_handler(struct vm *vm, bool in, int port, int bytes,
+    uint32_t *eax);
+int vatpic_elc_handler(struct vm *vm, bool in, int port, int bytes,
     uint32_t *eax);
 
 int vatpic_assert_irq(struct vm *vm, int irq);
@@ -52,5 +53,9 @@ int vatpic_set_irq_trigger(struct vm *vm, int irq, enum vm_intr_trigger trigger)
 
 void vatpic_pending_intr(struct vm *vm, int *vecptr);
 void vatpic_intr_accepted(struct vm *vm, int vector);
+
+#ifdef BHYVE_SNAPSHOT
+int vatpic_snapshot(struct vatpic *vatpic, struct vm_snapshot_meta *meta);
+#endif
 
 #endif	/* _VATPIC_H_ */

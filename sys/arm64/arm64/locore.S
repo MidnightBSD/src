@@ -22,7 +22,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include "assym.inc"
@@ -33,17 +32,13 @@
 #include <machine/hypervisor.h>
 #include <machine/param.h>
 #include <machine/pte.h>
+#include <machine/vm.h>
 #include <machine/vmparam.h>
 
 #define	VIRT_BITS	48
-#define	DMAP_TABLES	((DMAP_MAX_ADDRESS - DMAP_MIN_ADDRESS) >> L0_SHIFT)
 
 	.globl	kernbase
 	.set	kernbase, KERNBASE
-
-#define	DEVICE_MEM	0
-#define	NORMAL_UNCACHED	1
-#define	NORMAL_MEM	2
 
 /*
  * We assume:
@@ -53,24 +48,9 @@
  *  We are loaded at a 2MiB aligned address
  */
 
-	.text
-	.globl _start
-_start:
-	/* Drop to EL1 */
-	bl	drop_to_el1
-
-	/*
-	 * Disable the MMU. We may have entered the kernel with it on and
-	 * will need to update the tables later. If this has been set up
-	 * with anything other than a VA == PA map then this will fail,
-	 * but in this case the code to find where we are running from
-	 * would have also failed.
-	 */
-	dsb	sy
-	mrs	x2, sctlr_el1
-	bic	x2, x2, SCTLR_M
-	msr	sctlr_el1, x2
-	isb
+ENTRY(_start)
+	/* Enter the kernel exception level */
+	bl	enter_kernel_el
 
 	/* Set the context id */
 	msr	contextidr_el1, xzr
@@ -97,13 +77,20 @@ _start:
 	/* Enable the mmu */
 	bl	start_mmu
 
+	/* Load the new ttbr0 pagetable */
+	adrp	x27, pagetable_l0_ttbr0
+	add	x27, x27, :lo12:pagetable_l0_ttbr0
+
 	/* Jump to the virtual address space */
 	ldr	x15, .Lvirtdone
 	br	x15
 
 virtdone:
+	BTI_J
+
 	/* Set up the stack */
-	adr	x25, initstack_end
+	adrp	x25, initstack_end
+	add	x25, x25, :lo12:initstack_end
 	mov	sp, x25
 	sub	sp, sp, #PCB_SIZE
 
@@ -115,6 +102,13 @@ virtdone:
 	cmp	x15, x14
 	b.lo	1b
 
+#if defined(PERTHREAD_SSP)
+	/* Set sp_el0 to the boot canary for early per-thread SSP to work */
+	adrp	x15, boot_canary
+	add	x15, x15, :lo12:boot_canary
+	msr	sp_el0, x15
+#endif
+
 	/* Backup the module pointer */
 	mov	x1, x0
 
@@ -122,23 +116,28 @@ virtdone:
 	sub	x26, x26, x29
 	sub	x24, x24, x29
 
-	sub	sp, sp, #(64 * 4)
+	sub	sp, sp, #BOOTPARAMS_SIZE
 	mov	x0, sp
 
-	/* Degate the delda so it is VA -> PA */
+	/* Negate the delta so it is VA -> PA */
 	neg	x29, x29
 
-	str	x1,  [x0]	/* modulep */
-	str	x26, [x0, 8]	/* kern_l1pt */
-	str	x29, [x0, 16]	/* kern_delta */
-	adr	x25, initstack
-	str	x25, [x0, 24]	/* kern_stack */
-	str	x24, [x0, 32]	/* kern_l0pt */
+	str	x1,  [x0, #BP_MODULEP]
+	str	x26, [x0, #BP_KERN_L1PT]
+	str	x29, [x0, #BP_KERN_DELTA]
+	adrp	x25, initstack
+	add	x25, x25, :lo12:initstack
+	str	x25, [x0, #BP_KERN_STACK]
+	str	x24, [x0, #BP_KERN_L0PT]
+	str	x27, [x0, #BP_KERN_TTBR0]
+	str	x23, [x0, #BP_BOOT_EL]
 
 	/* trace back starts here */
 	mov	fp, #0
 	/* Branch to C code */
 	bl	initarm
+	/* We are done with the boot params */
+	add	sp, sp, #BOOTPARAMS_SIZE
 	bl	mi_startup
 
 	/* We should not get here */
@@ -150,7 +149,8 @@ virtdone:
 .Lbss:
 	.quad	__bss_start
 .Lend:
-	.quad	_end
+	.quad	__bss_end
+END(_start)
 
 #ifdef SMP
 /*
@@ -161,31 +161,56 @@ virtdone:
  */
 ENTRY(mpentry)
 	/* Disable interrupts */
-	msr	daifset, #2
+	msr	daifset, #DAIF_INTR
 
-	/* Drop to EL1 */
-	bl	drop_to_el1
+	/* Enter the kernel exception level */
+	bl	enter_kernel_el
 
 	/* Set the context id */
 	msr	contextidr_el1, xzr
 
 	/* Load the kernel page table */
-	adr	x24, pagetable_l0_ttbr1
+	adrp	x24, pagetable_l0_ttbr1
+	add	x24, x24, :lo12:pagetable_l0_ttbr1
 	/* Load the identity page table */
-	adr	x27, pagetable_l0_ttbr0
+	adrp	x27, pagetable_l0_ttbr0_bootstrap
+	add	x27, x27, :lo12:pagetable_l0_ttbr0_bootstrap
 
 	/* Enable the mmu */
 	bl	start_mmu
+
+	/* Load the new ttbr0 pagetable */
+	adrp	x27, pagetable_l0_ttbr0
+	add	x27, x27, :lo12:pagetable_l0_ttbr0
 
 	/* Jump to the virtual address space */
 	ldr	x15, =mp_virtdone
 	br	x15
 
 mp_virtdone:
+	BTI_J
+
 	/* Start using the AP boot stack */
-	ldr	x4, =bootstack
-	ldr	x4, [x4]
+	adrp	x4, bootstack
+	ldr	x4, [x4, :lo12:bootstack]
 	mov	sp, x4
+
+#if defined(PERTHREAD_SSP)
+	/* Set sp_el0 to the boot canary for early per-thread SSP to work */
+	adrp	x15, boot_canary
+	add	x15, x15, :lo12:boot_canary
+	msr	sp_el0, x15
+#endif
+
+	/* Load the kernel ttbr0 pagetable */
+	msr	ttbr0_el1, x27
+	isb
+
+	/* Invalidate the TLB */
+	tlbi	vmalle1
+	dsb	sy
+	isb
+
 	b	init_secondary
 END(mpentry)
 #endif
@@ -194,20 +219,38 @@ END(mpentry)
  * If we are started in EL2, configure the required hypervisor
  * registers and drop to EL1.
  */
-drop_to_el1:
-	mrs	x1, CurrentEL
-	lsr	x1, x1, #2
-	cmp	x1, #0x2
+LENTRY(enter_kernel_el)
+#define	INIT_SCTLR_EL1	(SCTLR_LSMAOE | SCTLR_nTLSMD | SCTLR_EIS | \
+    SCTLR_TSCXT | SCTLR_EOS)
+	mrs	x23, CurrentEL
+	lsr	x23, x23, #2
+	cmp	x23, #0x2
 	b.eq	1f
-	ret
-1:
-	/*
-	 * Disable the MMU. If the HCR_EL2.E2H field is set we will clear it
-	 * which may break address translation.
+
+	ldr	x2, =INIT_SCTLR_EL1
+	msr	sctlr_el1, x2
+	/* SCTLR_EOS is set so eret is a context synchronizing event so we
+	 * need an isb here to ensure it's observed by later instructions,
+	 * but don't need it in the eret below.
 	 */
+	isb
+
+	/* Ensure SPSR_EL1 and pstate are in sync. The only wat to set the
+	 * latter is to set the former and return from an exception with eret.
+	 */
+	mov	x2, #(PSR_DAIF | PSR_M_EL1h)
+	msr	spsr_el1, x2
+	msr	elr_el1, lr
+	eret
+
+1:
 	dsb	sy
-	mrs	x2, sctlr_el2
-	bic	x2, x2, SCTLR_M
+	/*
+	 * Set just the reserved bits in sctlr_el2. This will disable the
+	 * MMU which may have broken the kernel if we enter the kernel in
+	 * EL2, e.g. when using VHE.
+	 */
+	ldr	x2, =(SCTLR_EL2_RES1 | SCTLR_EL2_EIS | SCTLR_EL2_EOS)
 	msr	sctlr_el2, x2
 	isb
 
@@ -223,8 +266,8 @@ drop_to_el1:
 	mrs	x2, mpidr_el1
 	msr	vmpidr_el2, x2
 
-	/* Set the bits that need to be 1 in sctlr_el1 */
-	ldr	x2, .Lsctlr_res1
+	/* Set the initial sctlr_el1 */
+	ldr	x2, =INIT_SCTLR_EL1
 	msr	sctlr_el1, x2
 
 	/* Don't trap to EL2 for exceptions */
@@ -235,16 +278,22 @@ drop_to_el1:
 	msr	hstr_el2, xzr
 
 	/* Enable access to the physical timers at EL1 */
-	mrs	x2, cnthctl_el2
-	orr	x2, x2, #(CNTHCTL_EL1PCTEN | CNTHCTL_EL1PCEN)
+	tst	x4, #HCR_E2H
+	ldr	x3, =(CNTHCTL_EL1PCTEN | CNTHCTL_EL1PCEN)
+	ldr	x5, =(CNTHCTL_E2H_EL1PCTEN | CNTHCTL_E2H_EL1PTEN)
+	csel	x2, x3, x5, eq
 	msr	cnthctl_el2, x2
 
 	/* Set the counter offset to a known value */
 	msr	cntvoff_el2, xzr
 
 	/* Hypervisor trap functions */
-	adr	x2, hyp_vectors
+	adrp	x2, hyp_stub_vectors
+	add	x2, x2, :lo12:hyp_stub_vectors
 	msr	vbar_el2, x2
+
+	/* Zero vttbr_el2 so a hypervisor can tell the host and guest apart */
+	msr	vttbr_el2, xzr
 
 	mov	x2, #(PSR_F | PSR_I | PSR_A | PSR_D | PSR_M_EL1h)
 	msr	spsr_el2, x2
@@ -253,9 +302,8 @@ drop_to_el1:
 	mrs	x2, id_aa64pfr0_el1
 	/* Extract GIC bits from the register */
 	ubfx	x2, x2, #ID_AA64PFR0_GIC_SHIFT, #ID_AA64PFR0_GIC_BITS
-	/* GIC[3:0] == 0001 - GIC CPU interface via special regs. supported */
-	cmp	x2, #(ID_AA64PFR0_GIC_CPUIF_EN >> ID_AA64PFR0_GIC_SHIFT)
-	b.ne	2f
+	/* GIC[3:0] != 0000 - GIC CPU interface via special regs. supported */
+	cbz	x2, 2f
 
 	mrs	x2, icc_sre_el2
 	orr	x2, x2, #ICC_SRE_EL2_EN	/* Enable access from insecure EL1 */
@@ -268,45 +316,18 @@ drop_to_el1:
 	isb
 
 	eret
-
-	.align 3
-.Lsctlr_res1:
-	.quad SCTLR_RES1
-
-#define	VECT_EMPTY	\
-	.align 7;	\
-	1:	b	1b
-
-	.align 11
-hyp_vectors:
-	VECT_EMPTY	/* Synchronous EL2t */
-	VECT_EMPTY	/* IRQ EL2t */
-	VECT_EMPTY	/* FIQ EL2t */
-	VECT_EMPTY	/* Error EL2t */
-
-	VECT_EMPTY	/* Synchronous EL2h */
-	VECT_EMPTY	/* IRQ EL2h */
-	VECT_EMPTY	/* FIQ EL2h */
-	VECT_EMPTY	/* Error EL2h */
-
-	VECT_EMPTY	/* Synchronous 64-bit EL1 */
-	VECT_EMPTY	/* IRQ 64-bit EL1 */
-	VECT_EMPTY	/* FIQ 64-bit EL1 */
-	VECT_EMPTY	/* Error 64-bit EL1 */
-
-	VECT_EMPTY	/* Synchronous 32-bit EL1 */
-	VECT_EMPTY	/* IRQ 32-bit EL1 */
-	VECT_EMPTY	/* FIQ 32-bit EL1 */
-	VECT_EMPTY	/* Error 32-bit EL1 */
+#undef INIT_SCTLR_EL1
+LEND(enter_kernel_el)
 
 /*
  * Get the delta between the physical address we were loaded to and the
  * virtual address we expect to run from. This is used when building the
  * initial page table.
  */
-get_virt_delta:
+LENTRY(get_virt_delta)
 	/* Load the physical address of virt_map */
-	adr	x29, virt_map
+	adrp	x29, virt_map
+	add	x29, x29, :lo12:virt_map
 	/* Load the virtual address of virt_map stored in virt_map */
 	ldr	x28, [x29]
 	/* Find PA - VA as PA' = VA' - VA + PA = VA' + (PA - VA) = VA' + x29 */
@@ -319,6 +340,7 @@ get_virt_delta:
 	.align 3
 virt_map:
 	.quad	virt_map
+LEND(get_virt_delta)
 
 /*
  * This builds the page tables containing the identity map, and the kernel
@@ -337,16 +359,17 @@ virt_map:
  *    - The Kernel L0 table             (TTBR1)
  *    - The identity (PA = VA) L1 table
  *    - The identity (PA = VA) L0 table (TTBR0)
- *    - The DMAP L1 tables
  */
-create_pagetables:
+LENTRY(create_pagetables)
 	/* Save the Link register */
 	mov	x5, x30
 
 	/* Clean the page table */
-	adr	x6, pagetable
+	adrp	x6, pagetable
+	add	x6, x6, :lo12:pagetable
 	mov	x26, x6
-	adr	x27, pagetable_end
+	adrp	x27, pagetable_end
+	add	x27, x27, :lo12:pagetable_end
 1:
 	stp	xzr, xzr, [x6], #16
 	stp	xzr, xzr, [x6], #16
@@ -361,17 +384,57 @@ create_pagetables:
 
 	/* Find the size of the kernel */
 	mov	x6, #(KERNBASE)
+
+#if defined(LINUX_BOOT_ABI)
+	/* X19 is used as 'map FDT data' flag */
+	mov	x19, xzr
+
+	/* No modules or FDT pointer ? */
+	cbz	x0, booti_no_fdt
+
+	/*
+	 * Test if x0 points to modules descriptor(virtual address) or
+	 * to FDT (physical address)
+	 */
+	cmp	x0, x6		/* x6 is #(KERNBASE) */
+	b.lo	booti_fdt
+#endif
+
+	/* Booted with modules pointer */
 	/* Find modulep - begin */
 	sub	x8, x0, x6
 	/* Add two 2MiB pages for the module data and round up */
 	ldr	x7, =(3 * L2_SIZE - 1)
 	add	x8, x8, x7
+	b	common
+
+#if defined(LINUX_BOOT_ABI)
+booti_fdt:
+	/* Booted by U-Boot booti with FDT data */
+	/* Set 'map FDT data' flag */
+	mov	x19, #1
+
+booti_no_fdt:
+	/* Booted by U-Boot booti without FTD data */
+	/* Find the end - begin */
+	ldr     x7, .Lend
+	sub     x8, x7, x6
+
+	/*
+	 * Add one 2MiB page for copy of FDT data (maximum FDT size),
+	 * one for metadata and round up
+	 */
+	ldr	x7, =(3 * L2_SIZE - 1)
+	add	x8, x8, x7
+#endif
+
+common:
 	/* Get the number of l2 pages to allocate, rounded down */
 	lsr	x10, x8, #(L2_SHIFT)
 
 	/* Create the kernel space L2 table */
 	mov	x6, x26
-	mov	x7, #NORMAL_MEM
+	mov	x7, #VM_MEMATTR_WRITE_BACK
 	mov	x8, #(KERNBASE & L2_BLOCK_MASK)
 	mov	x9, x28
 	bl	build_l2_block_pagetable
@@ -393,30 +456,39 @@ create_pagetables:
 	mov	x10, #1
 	bl	link_l0_pagetable
 
-	/* Link the DMAP tables */
-	ldr	x8, =DMAP_MIN_ADDRESS
-	adr	x9, pagetable_dmap;
-	mov	x10, #DMAP_TABLES
-	bl	link_l0_pagetable
-
 	/*
-	 * Build the TTBR0 maps.
+	 * Build the TTBR0 maps.  As TTBR0 maps, they must specify ATTR_S1_nG.
+	 * They are only needed early on, so the VA = PA map is uncached.
 	 */
 	add	x27, x24, #PAGE_SIZE
 
 	mov	x6, x27		/* The initial page table */
 #if defined(SOCDEV_PA) && defined(SOCDEV_VA)
 	/* Create a table for the UART */
-	mov	x7, #DEVICE_MEM
+	mov	x7, #(ATTR_S1_nG | ATTR_S1_IDX(VM_MEMATTR_DEVICE))
 	mov	x8, #(SOCDEV_VA)	/* VA start */
 	mov	x9, #(SOCDEV_PA)	/* PA start */
 	mov	x10, #1
 	bl	build_l1_block_pagetable
 #endif
 
+#if defined(LINUX_BOOT_ABI)
+	/* Map FDT data ? */
+	cbz	x19, 1f
+
+	/* Create the identity mapping for FDT data (2 MiB max) */
+	mov	x7, #(ATTR_S1_nG | ATTR_S1_IDX(VM_MEMATTR_WRITE_BACK))
+	mov	x9, x0
+	mov	x8, x0		/* VA start (== PA start) */
+	mov	x10, #1
+	bl	build_l1_block_pagetable
+
+1:
+#endif
+
 	/* Create the VA = PA map */
-	mov	x7, #NORMAL_UNCACHED /* Uncached as it's only needed early on */
-	mov	x9, x27
+	mov	x7, #(ATTR_S1_nG | ATTR_S1_IDX(VM_MEMATTR_WRITE_BACK))
+	mov	x9, x28
 	mov	x8, x9		/* VA start (== PA start) */
 	mov	x10, #1
 	bl	build_l1_block_pagetable
@@ -433,6 +505,7 @@ create_pagetables:
 	/* Restore the Link register */
 	mov	x30, x5
 	ret
+LEND(create_pagetables)
 
 /*
  * Builds an L0 -> L1 table descriptor
@@ -446,7 +519,7 @@ create_pagetables:
  *  x10 = Entry count
  *  x11, x12 and x13 are trashed
  */
-link_l0_pagetable:
+LENTRY(link_l0_pagetable)
 	/*
 	 * Link an L0 -> L1 table entry.
 	 */
@@ -456,6 +529,7 @@ link_l0_pagetable:
 
 	/* Build the L0 block entry */
 	mov	x12, #L0_TABLE
+	orr	x12, x12, #(TATTR_UXN_TABLE | TATTR_AP_TABLE_NO_EL0)
 
 	/* Only use the output address bits */
 	lsr	x9, x9, #PAGE_SHIFT
@@ -470,6 +544,7 @@ link_l0_pagetable:
 	cbnz	x10, 1b
 
 	ret
+LEND(link_l0_pagetable)
 
 /*
  * Builds an L1 -> L2 table descriptor
@@ -482,7 +557,7 @@ link_l0_pagetable:
  *  x9  = L2 PA (trashed)
  *  x11, x12 and x13 are trashed
  */
-link_l1_pagetable:
+LENTRY(link_l1_pagetable)
 	/*
 	 * Link an L1 -> L2 table entry.
 	 */
@@ -501,17 +576,18 @@ link_l1_pagetable:
 	str	x13, [x6, x11, lsl #3]
 
 	ret
+LEND(link_l1_pagetable)
 
 /*
  * Builds count 1 GiB page table entry
  *  x6  = L1 table
- *  x7  = Type (0 = Device, 1 = Normal)
+ *  x7  = Variable lower block attributes
  *  x8  = VA start
  *  x9  = PA start (trashed)
  *  x10 = Entry count
  *  x11, x12 and x13 are trashed
  */
-build_l1_block_pagetable:
+LENTRY(build_l1_block_pagetable)
 	/*
 	 * Build the L1 table entry.
 	 */
@@ -520,12 +596,8 @@ build_l1_block_pagetable:
 	and	x11, x11, #Ln_ADDR_MASK
 
 	/* Build the L1 block entry */
-	lsl	x12, x7, #2
-	orr	x12, x12, #L1_BLOCK
-	orr	x12, x12, #(ATTR_AF)
-#ifdef SMP
-	orr	x12, x12, ATTR_SH(ATTR_SH_IS)
-#endif
+	orr	x12, x7, #L1_BLOCK
+	orr	x12, x12, #(ATTR_DEFAULT)
 
 	/* Only use the output address bits */
 	lsr	x9, x9, #L1_SHIFT
@@ -542,6 +614,7 @@ build_l1_block_pagetable:
 	cbnz	x10, 1b
 
 	ret
+LEND(build_l1_block_pagetable)
 
 /*
  * Builds count 2 MiB page table entry
@@ -552,7 +625,7 @@ build_l1_block_pagetable:
  *  x10 = Entry count
  *  x11, x12 and x13 are trashed
  */
-build_l2_block_pagetable:
+LENTRY(build_l2_block_pagetable)
 	/*
 	 * Build the L2 table entry.
 	 */
@@ -563,10 +636,8 @@ build_l2_block_pagetable:
 	/* Build the L2 block entry */
 	lsl	x12, x7, #2
 	orr	x12, x12, #L2_BLOCK
-	orr	x12, x12, #(ATTR_AF)
-#ifdef SMP
-	orr	x12, x12, ATTR_SH(ATTR_SH_IS)
-#endif
+	orr	x12, x12, #(ATTR_DEFAULT)
+	orr	x12, x12, #(ATTR_S1_UXN)
 
 	/* Only use the output address bits */
 	lsr	x9, x9, #L2_SHIFT
@@ -583,8 +654,9 @@ build_l2_block_pagetable:
 	cbnz	x10, 1b
 
 	ret
+LEND(build_l2_block_pagetable)
 
-start_mmu:
+LENTRY(start_mmu)
 	dsb	sy
 
 	/* Load the exception vectors */
@@ -601,19 +673,52 @@ start_mmu:
 
 	/* Invalidate the TLB */
 	tlbi	vmalle1is
+	dsb	ish
+	isb
 
 	ldr	x2, mair
 	msr	mair_el1, x2
 
 	/*
-	 * Setup TCR according to PARange bits from ID_AA64MMFR0_EL1.
+	 * Setup TCR according to the PARange and ASIDBits fields
+	 * from ID_AA64MMFR0_EL1 and the HAFDBS field from the
+	 * ID_AA64MMFR1_EL1.  More precisely, set TCR_EL1.AS
+	 * to 1 only if the ASIDBits field equals 0b0010.
 	 */
 	ldr	x2, tcr
 	mrs	x3, id_aa64mmfr0_el1
-	bfi	x2, x3, #32, #3
+
+	/* Copy the bottom 3 bits from id_aa64mmfr0_el1 into TCR.IPS */
+	bfi	x2, x3, #(TCR_IPS_SHIFT), #(TCR_IPS_WIDTH)
+	and	x3, x3, #(ID_AA64MMFR0_ASIDBits_MASK)
+
+	/* Check if the HW supports 16 bit ASIDS */
+	cmp	x3, #(ID_AA64MMFR0_ASIDBits_16)
+	/* If so x3 == 1, else x3 == 0 */
+	cset	x3, eq
+	/* Set TCR.AS with x3 */
+	bfi	x2, x3, #(TCR_ASID_SHIFT), #(TCR_ASID_WIDTH)
+
+	/*
+	 * Check if the HW supports access flag and dirty state updates,
+	 * and set TCR_EL1.HA and TCR_EL1.HD accordingly.
+	 */
+	mrs	x3, id_aa64mmfr1_el1
+	and	x3, x3, #(ID_AA64MMFR1_HAFDBS_MASK)
+	cmp	x3, #1
+	b.ne	1f
+	orr 	x2, x2, #(TCR_HA)
+	b	2f
+1:
+	cmp	x3, #2
+	b.ne	2f
+	orr 	x2, x2, #(TCR_HA | TCR_HD)
+2:
 	msr	tcr_el1, x2
 
-	/* Setup SCTLR */
+	/*
+	 * Setup SCTLR.
+	 */
 	ldr	x2, sctlr_set
 	ldr	x3, sctlr_clear
 	mrs	x1, sctlr_el1
@@ -626,85 +731,80 @@ start_mmu:
 
 	.align 3
 mair:
-	.quad	MAIR_ATTR(MAIR_DEVICE_nGnRnE, 0) |	\
-		MAIR_ATTR(MAIR_NORMAL_NC, 1) |		\
-		MAIR_ATTR(MAIR_NORMAL_WB, 2) |		\
-		MAIR_ATTR(MAIR_NORMAL_WT, 3)
+	.quad	MAIR_ATTR(MAIR_DEVICE_nGnRnE, VM_MEMATTR_DEVICE_nGnRnE) | \
+		MAIR_ATTR(MAIR_NORMAL_NC, VM_MEMATTR_UNCACHEABLE)   |	\
+		MAIR_ATTR(MAIR_NORMAL_WB, VM_MEMATTR_WRITE_BACK)    |	\
+		MAIR_ATTR(MAIR_NORMAL_WT, VM_MEMATTR_WRITE_THROUGH) |	\
+		MAIR_ATTR(MAIR_DEVICE_nGnRE, VM_MEMATTR_DEVICE_nGnRE)
 tcr:
-	.quad (TCR_TxSZ(64 - VIRT_BITS) | TCR_ASID_16 | TCR_TG1_4K | \
+	.quad (TCR_TxSZ(64 - VIRT_BITS) | TCR_TG1_4K | TCR_TG0_4K | \
 	    TCR_CACHE_ATTRS | TCR_SMP_ATTRS)
 sctlr_set:
 	/* Bits to set */
 	.quad (SCTLR_LSMAOE | SCTLR_nTLSMD | SCTLR_UCI | SCTLR_SPAN | \
 	    SCTLR_nTWE | SCTLR_nTWI | SCTLR_UCT | SCTLR_DZE | \
 	    SCTLR_I | SCTLR_SED | SCTLR_SA0 | SCTLR_SA | SCTLR_C | \
-	    SCTLR_M | SCTLR_CP15BEN)
+	    SCTLR_M | SCTLR_CP15BEN | SCTLR_BT1 | SCTLR_BT0)
 sctlr_clear:
 	/* Bits to clear */
-	.quad (SCTLR_EE | SCTLR_EOE | SCTLR_IESB | SCTLR_WXN | SCTLR_UMA | \
+	.quad (SCTLR_EE | SCTLR_E0E | SCTLR_IESB | SCTLR_WXN | SCTLR_UMA | \
 	    SCTLR_ITD | SCTLR_A)
+LEND(start_mmu)
 
-	.globl abort
-abort:
+ENTRY(abort)
 	b abort
+END(abort)
 
-	//.section .init_pagetable
-	.align 12 /* 4KiB aligned */
+.bss
+	.align	PAGE_SHIFT
+initstack:
+	.space	(PAGE_SIZE * KSTACK_PAGES)
+initstack_end:
+
+	.section .init_pagetable, "aw", %nobits
+	.align PAGE_SHIFT
 	/*
-	 * 3 initial tables (in the following order):
+	 * 6 initial tables (in the following order):
 	 *           L2 for kernel (High addresses)
 	 *           L1 for kernel
-	 *           L1 for user   (Low addresses)
+	 *           L0 for kernel
+	 *           L1 bootstrap for user   (Low addresses)
+	 *           L0 bootstrap for user
+	 *           L0 for user
 	 */
+	.globl pagetable_l0_ttbr1
 pagetable:
 	.space	PAGE_SIZE
 pagetable_l1_ttbr1:
 	.space	PAGE_SIZE
 pagetable_l0_ttbr1:
 	.space	PAGE_SIZE
-pagetable_l1_ttbr0:
+pagetable_l1_ttbr0_bootstrap:
+	.space	PAGE_SIZE
+pagetable_l0_ttbr0_bootstrap:
 	.space	PAGE_SIZE
 pagetable_l0_ttbr0:
 	.space	PAGE_SIZE
-
-	.globl pagetable_dmap
-pagetable_dmap:
-	.space	PAGE_SIZE * DMAP_TABLES
 pagetable_end:
 
 el2_pagetable:
 	.space	PAGE_SIZE
 
-	.globl init_pt_va
-init_pt_va:
-	.quad pagetable		/* XXX: Keep page tables VA */
-
-	.align	4
-initstack:
-	.space	(PAGE_SIZE * KSTACK_PAGES)
-initstack_end:
-
-
-ENTRY(sigcode)
-	mov	x0, sp
-	add	x0, x0, #SF_UC
-
-1:
-	mov	x8, #SYS_sigreturn
-	svc	0
-
-	/* sigreturn failed, exit */
-	mov	x8, #SYS_exit
-	svc	0
-
-	b	1b
-END(sigcode)
-	/* This may be copied to the stack, keep it 16-byte aligned */
+.text
+EENTRY(aarch32_sigcode)
+	.word 0xe1a0000d	// mov r0, sp
+	.word 0xe2800040	// add r0, r0, #SIGF_UC
+	.word 0xe59f700c	// ldr r7, [pc, #12]
+	.word 0xef000000	// swi #0
+	.word 0xe59f7008	// ldr r7, [pc, #8]
+	.word 0xef000000	// swi #0
+	.word 0xeafffffa	// b . - 16
+EEND(aarch32_sigcode)
+	.word SYS_sigreturn
+	.word SYS_exit
 	.align	3
-esigcode:
-
+aarch32_esigcode:
 	.data
-	.align	3
-	.global	szsigcode
-szsigcode:
-	.quad	esigcode - sigcode
+	.global sz_aarch32_sigcode
+sz_aarch32_sigcode:
+	.quad aarch32_esigcode - aarch32_sigcode

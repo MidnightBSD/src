@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/conf.h>
@@ -60,7 +59,6 @@ static device_method_t nb_service_methods[] = {
 	DEVMETHOD(device_probe,		nb_service_probe),
 	DEVMETHOD(device_attach,	nb_service_attach),
 	DEVMETHOD(device_detach,	nb_service_detach),
-
 	{ 0, 0 }
 };
 

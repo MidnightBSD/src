@@ -18,7 +18,6 @@
  *
  * CDDL HEADER END
  *
- *
  */
 
 /* ARGSUSED */

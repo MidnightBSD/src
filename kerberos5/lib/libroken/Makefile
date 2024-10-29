@@ -1,4 +1,5 @@
-# $FreeBSD$
+
+PACKAGE=	kerberos-lib
 
 LIB=	roken
 LIBADD=	crypt

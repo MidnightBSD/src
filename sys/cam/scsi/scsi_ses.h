@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: (BSD-2-Clause-FreeBSD OR GPL-2.0)
+ * SPDX-License-Identifier: (BSD-2-Clause OR GPL-2.0)
  *
  * Copyright (c) 2000 by Matthew Jacob
  * All rights reserved.
@@ -153,7 +153,6 @@ ses_cfg_page_get_num_subenc(struct ses_cfg_page *page)
 {
 	return (page->hdr.page_specific_flags + 1);
 }
-
 
 /*================ SCSI SES Control Diagnostic Page Structures ==============*/
 struct ses_ctrl_common {
@@ -2058,6 +2057,50 @@ union ses_status_element {
 	uint8_t				    bytes[4];
 };
 
+/*
+ * Convert element status into control as much as possible.
+ * Some bits have different meaning in status and control,
+ * while others have the same and should be preserved.
+ */
+static inline void
+ses_status_to_ctrl(uint8_t type, uint8_t *bytes)
+{
+	/* Updated to SES4r5. */
+	static const uint8_t mask[][4] = {
+	    { 0x60, 0x00, 0x00, 0x00 },	/* UNSPECIFIED */
+	    { 0x60, 0x00, 0x4e, 0x3c },	/* DEVICE */
+	    { 0x60, 0xc0, 0x00, 0x60 },	/* POWER */
+	    { 0x60, 0xc0, 0x00, 0x60 },	/* COOLING/FAN */
+	    { 0x60, 0xc0, 0x00, 0x80 },	/* THERM */
+	    { 0x60, 0xc0, 0x00, 0x01 },	/* DOORLOCK */
+	    { 0x60, 0xc0, 0x00, 0x5f },	/* ALARM */
+	    { 0x60, 0xf0, 0x01, 0x00 },	/* ESSC */
+	    { 0x60, 0xc0, 0x00, 0x00 },	/* SCC */
+	    { 0x60, 0xc0, 0x00, 0x00 },	/* NVRAM */
+	    { 0x60, 0x00, 0x00, 0x00 },	/* INV_OP_REASON */
+	    { 0x60, 0x00, 0x00, 0xe0 },	/* UPS */
+	    { 0x60, 0xc0, 0xff, 0xff },	/* DISPLAY */
+	    { 0x60, 0xc0, 0x00, 0x00 },	/* KEYPAD */
+	    { 0x60, 0x80, 0x00, 0xff },	/* ENCLOSURE */
+	    { 0x60, 0xc0, 0x00, 0x10 },	/* SCSIXVR */
+	    { 0x60, 0x80, 0xff, 0xff },	/* LANGUAGE */
+	    { 0x60, 0xc0, 0x00, 0x01 },	/* COMPORT */
+	    { 0x60, 0xc0, 0x00, 0x00 },	/* VOM */
+	    { 0x60, 0xc0, 0x00, 0x00 },	/* AMMETER */
+	    { 0x60, 0xc0, 0x00, 0x01 },	/* SCSI_TGT */
+	    { 0x60, 0xc0, 0x00, 0x01 },	/* SCSI_INI*/
+	    { 0x60, 0xc0, 0x00, 0x00 },	/* SUBENC */
+	    { 0x60, 0xff, 0x4e, 0x3c },	/* ARRAY_DEV */
+	    { 0x60, 0xc0, 0x00, 0x00 },	/* SAS_EXP */
+	    { 0x60, 0x80, 0x00, 0x40 },	/* SAS_CONN */
+	};
+
+	if (type >= sizeof(mask) / sizeof(mask[0]))
+		type = 0;
+	for (int i = 0; i < 4; i++)
+		bytes[i] &= mask[type][i];
+}
+
 /*===================== SCSI SES Status Diagnostic Page =====================*/
 struct ses_status_page {
 	struct ses_page_hdr  hdr;
@@ -2153,8 +2196,6 @@ struct ses_status_page_hdr {
 #define	SES_SET_STATUS_MASK		0xf
 /* Element Descriptor Diagnostic Page: unused */
 /* Additional Element Status Diagnostic Page: unused */
-
-
 
 /* Summary SES Status Defines, Common Status Codes */
 #define	SES_OBJSTAT_UNSUPPORTED		0

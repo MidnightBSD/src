@@ -22,12 +22,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/sys/cddl/compat/opensolaris/kern/opensolaris.c 222670 2011-06-04 07:02:06Z avg $
- *
  */
 
 #include <sys/cdefs.h>
-#include <sys/types.h>
+#include <sys/param.h>
 #include <sys/conf.h>
 #include <sys/cpuvar.h>
 #include <sys/errno.h>
@@ -36,6 +34,8 @@
 #include <sys/misc.h>
 #include <sys/module.h>
 #include <sys/mutex.h>
+
+extern struct opensolaris_utsname utsname;
 
 cpu_core_t	cpu_core[MAXCPU];
 kmutex_t	cpu_lock;
@@ -82,7 +82,6 @@ opensolaris_modevent(module_t mod __unused, int type, void *data __unused)
 
 	switch (type) {
 	case MOD_LOAD:
-		utsname.nodename = prison0.pr_hostname;
 		break;
 
 	case MOD_UNLOAD:

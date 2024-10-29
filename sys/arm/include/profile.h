@@ -44,7 +44,6 @@
  */
 #define	FUNCTION_ALIGNMENT	16
 
-
 #define	_MCOUNT_DECL void mcount
 
 typedef u_long	fptrdiff_t;
@@ -106,19 +105,12 @@ void user(void);
 	    ((pc >= (uintfptr_t)bintr) ? (uintfptr_t)bintr :	\
 		(uintfptr_t)btrap) : ~0U)
 
-
 #ifdef _KERNEL
 
 #define	MCOUNT_DECL(s)	register_t s;
 
 #include <machine/asm.h>
 #include <machine/cpufunc.h>
-/*
- * splhigh() and splx() are heavyweight, and call mcount().  Therefore
- * we disabled interrupts (IRQ, but not FIQ) directly on the CPU.
- *
- * We're lucky that the CPSR and 's' both happen to be 'int's.
- */
 #define	MCOUNT_ENTER(s)	{s = intr_disable(); }	/* kill IRQ */
 #define	MCOUNT_EXIT(s)	{intr_restore(s); }	/* restore old value */
 

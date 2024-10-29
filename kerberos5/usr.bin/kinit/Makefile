@@ -1,4 +1,5 @@
-# $FreeBSD$
+
+PACKAGE=	kerberos
 
 PROG=	kinit
 CFLAGS+=-I${KRB5DIR}/lib/roken

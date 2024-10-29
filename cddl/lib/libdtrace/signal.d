@@ -21,7 +21,6 @@
  *
  * Portions Copyright 2008 John Birrell jb@freebsd.org
  * Portions Copyright 2018 Devin Teske dteske@freebsd.org
- *
  */
 
 inline int SIGHUP = 1;

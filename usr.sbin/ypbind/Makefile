@@ -1,5 +1,6 @@
 #	from: @(#)Makefile	5.8 (Berkeley) 7/28/90
 
+PACKAGE=	yp
 PROG=	ypbind
 MAN=	ypbind.8
 SRCS=	ypbind.c yp_ping.c

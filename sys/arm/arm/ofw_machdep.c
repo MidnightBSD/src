@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
 
@@ -71,4 +70,3 @@ OF_decode_addr(phandle_t dev, int regno, bus_space_tag_t *tag,
 
 	return (bus_space_map(*tag, addr, size, flags, handle));
 }
-

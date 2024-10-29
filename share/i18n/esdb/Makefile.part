@@ -1,7 +1,4 @@
-# $FreeBSD$
 # $NetBSD: Makefile.part,v 1.6 2008/10/25 22:35:36 apb Exp $
-
-MKESDB?= ${.OBJDIR:H:H:H:H}/usr.bin/mkesdb_static/mkesdb_static
 
 PARTFILE?= ${.CURDIR}/${CODE}.part
 ALIASFILE?= ${.CURDIR}/${CODE}.alias

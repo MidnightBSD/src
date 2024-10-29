@@ -4,7 +4,7 @@
 # For more information on this file, please read the config(5) manual page,
 # and/or the handbook section on Kernel Configuration Files:
 #
-#    https://www.FreeBSD.org/doc/en_US.ISO8859-1/books/handbook/kernelconfig-config.html
+#    https://docs.freebsd.org/en/books/handbook/kernelconfig/#kernelconfig-config
 #
 # The handbook is also available locally in /usr/share/doc/handbook
 # if you've installed the doc distribution, otherwise always see the
@@ -49,6 +49,14 @@ options 	ROOTDEVNAME=\"ufs:ada0s2a\"
 #options 	NO_SYSCTL_DESCR
 #options 	RWLOCK_NOINLINE
 
+# pseudo devices
+device		clk
+device		phy
+device		hwreset
+device		nvmem
+device		regulator
+device		syscon
+
 # The `bpf' device enables the Berkeley Packet Filter.
 # Be aware of the administrative consequences of enabling this!
 # Note that 'bpf' is required for DHCP.
@@ -56,7 +64,6 @@ device		bpf			# Berkeley packet filter
 
 # Pseudo devices.
 device		loop			# Network loopback
-device		random			# Entropy device
 device		ether			# Ethernet support
 #device		vlan			# 802.1Q VLAN support
 #device		tuntap			# Packet tunnel.
@@ -115,6 +122,9 @@ device		wlan_wep		# 802.11 WEP support
 device		wlan_ccmp		# 802.11 CCMP support
 device		wlan_tkip		# 802.11 TKIP support
 device		wlan_amrr		# AMRR transmit rate control algorithm
+
+# HID support
+device		hid			# Generic HID support
 
 # Flattened Device Tree
 options 	FDT			# Configure using FDT/DTB data

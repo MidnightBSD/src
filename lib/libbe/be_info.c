@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2017 Kyle J. Kneitinger <kyle@kneit.in>
  * Copyright (c) 2018 Kyle Evans <kevans@FreeBSD.org>
@@ -27,8 +27,8 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/zfs_context.h>
+#include <libzfsbootenv.h>
 
 #include "be.h"
 #include "be_impl.h"
@@ -107,6 +107,7 @@ be_get_bootenv_props(libbe_handle_t *lbh, nvlist_t *dsnvl)
 	data.lbh = lbh;
 	data.list = dsnvl;
 	data.single_object = false;
+	data.bootonce = NULL;
 	return (be_proplist_update(&data));
 }
 
@@ -120,6 +121,7 @@ be_get_dataset_props(libbe_handle_t *lbh, const char *name, nvlist_t *props)
 	data.lbh = lbh;
 	data.list = props;
 	data.single_object = true;
+	data.bootonce = NULL;
 	if ((snap_hdl = zfs_open(lbh->lzh, name,
 	    ZFS_TYPE_FILESYSTEM | ZFS_TYPE_SNAPSHOT)) == NULL)
 		return (BE_ERR_ZFSOPEN);
@@ -139,6 +141,7 @@ be_get_dataset_snapshots(libbe_handle_t *lbh, const char *name, nvlist_t *props)
 	data.lbh = lbh;
 	data.list = props;
 	data.single_object = false;
+	data.bootonce = NULL;
 	if ((ds_hdl = zfs_open(lbh->lzh, name,
 	    ZFS_TYPE_FILESYSTEM)) == NULL)
 		return (BE_ERR_ZFSOPEN);
@@ -177,6 +180,10 @@ prop_list_builder_cb(zfs_handle_t *zfs_hdl, void *data_p)
 
 	dataset = zfs_get_name(zfs_hdl);
 	nvlist_add_string(props, "dataset", dataset);
+
+	if (data->bootonce != NULL &&
+	    strcmp(dataset, data->bootonce) == 0)
+		nvlist_add_boolean_value(props, "bootonce", true);
 
 	name = strrchr(dataset, '/') + 1;
 	nvlist_add_string(props, "name", name);
@@ -244,6 +251,9 @@ be_proplist_update(prop_data_t *data)
 	if ((root_hdl = zfs_open(data->lbh->lzh, data->lbh->root,
 	    ZFS_TYPE_FILESYSTEM)) == NULL)
 		return (BE_ERR_ZFSOPEN);
+
+	(void) lzbe_get_boot_device(zpool_get_name(data->lbh->active_phandle),
+	    &data->bootonce);
 
 	/* XXX TODO: some error checking here */
 	zfs_iter_filesystems(root_hdl, prop_list_builder_cb, data);

@@ -5,7 +5,7 @@
 # For more information on this file, please read the config(5) manual page,
 # and/or the handbook section on Kernel Configuration Files:
 #
-#    https://www.FreeBSD.org/doc/en_US.ISO8859-1/books/handbook/kernelconfig-config.html
+#    https://docs.freebsd.org/en/books/handbook/kernelconfig/#kernelconfig-config
 #
 # The handbook is also available locally in /usr/share/doc/handbook
 # if you've installed the doc distribution, otherwise always see the
@@ -41,21 +41,34 @@ options 	ROOTDEVNAME=\"ufs:mmcsd0s2a\"
 # Interrupt controller
 device		gic
 
+# pseudo devices
+device		clk
+device		phy
+device		hwreset
+device		nvmem
+device		regulator
+device		syscon
+
 # Cache controller
 device		pl310			# PL310 L2 cache controller
 # ARM MPCore timer
 device		mpcore_timer
 
 device		loop
-device		random
 device		ether
-device		cgem			# Zynq-7000 gig ethernet device
+device		cgem			# Cadence GEM Gigabit Ethernet device
 device		mii
 device		e1000phy
 device		rgephy			# Zybo uses Realtek RTL8211E
 device		pty
 device		uart
 device		gpio
+
+device		spibus
+device		spigen
+device		mx25l
+device		zy7_qspi		# Xilinx Zynq QSPI controller
+device		zy7_spi			# Xilinx Zynq SPI controller
 
 device		md
 device		mmc			# mmc/sd bus

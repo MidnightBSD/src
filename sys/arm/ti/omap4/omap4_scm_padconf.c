@@ -29,7 +29,6 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -44,7 +43,6 @@
 
 #include <arm/ti/ti_pinmux.h>
 #include <arm/ti/omap4/omap4_scm_padconf.h>
-
 
 /*
  *	This file defines the pin mux configuration for the OMAP4xxx series of

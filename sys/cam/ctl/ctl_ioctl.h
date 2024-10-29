@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2003 Silicon Graphics International Corp.
  * Copyright (c) 2011 Spectra Logic Corporation
@@ -669,9 +669,12 @@ struct ctl_iscsi_terminate_params {
 struct ctl_iscsi_limits_params {
 	/* passed to kernel */
 	char			offload[CTL_ISCSI_OFFLOAD_LEN];
+	int			socket;
 
 	/* passed to userland */
-	size_t			spare;
+#ifdef __LP64__
+	int			spare;
+#endif
 	int			max_recv_data_segment_length;
 	int			max_send_data_segment_length;
 	int			max_burst_length;

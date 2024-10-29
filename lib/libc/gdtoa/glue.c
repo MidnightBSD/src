@@ -1,7 +1,6 @@
 /*
  * Machine-independent glue to integrate David Gay's gdtoa
  * package into libc.
- *
  */
 
 #include <pthread.h>

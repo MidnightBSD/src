@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * XHCI driver for Tegra SoCs.
  */
@@ -33,15 +32,17 @@
 #include "opt_platform.h"
 
 #include <sys/param.h>
-#include <sys/systm.h>
-#include <sys/kernel.h>
-#include <sys/malloc.h>
-#include <sys/module.h>
 #include <sys/bus.h>
 #include <sys/clock.h>
 #include <sys/condvar.h>
 #include <sys/firmware.h>
+#include <sys/kernel.h>
+#include <sys/lock.h>
+#include <sys/malloc.h>
+#include <sys/module.h>
+#include <sys/mutex.h>
 #include <sys/rman.h>
+#include <sys/systm.h>
 
 #include <vm/vm.h>
 #include <vm/vm_extern.h>
@@ -50,7 +51,6 @@
 
 #include <machine/bus.h>
 #include <machine/resource.h>
-
 
 #include <dev/extres/clk/clk.h>
 #include <dev/extres/hwreset/hwreset.h>
@@ -208,7 +208,6 @@
 #define	MBOX_CMD_ACK				(0x80 + 0)
 #define	MBOX_CMD_NAK				(0x80 + 1)
 
-
 #define	IPFS_WR4(_sc, _r, _v)	bus_write_4((_sc)->mem_res_ipfs, (_r), (_v))
 #define	IPFS_RD4(_sc, _r)	bus_read_4((_sc)->mem_res_ipfs, (_r))
 #define	FPCI_WR4(_sc, _r, _v)	bus_write_4((_sc)->mem_res_fpci, (_r), (_v))
@@ -264,15 +263,11 @@ struct tegra_xusb_fw_hdr {
 	uint8_t		padding[137]; /* Pad to 256 bytes */
 };
 
-/* Compatible devices. */
-static struct ofw_compat_data compat_data[] = {
-	{"nvidia,tegra124-xusb",	1},
-	{NULL,		 		0}
-};
-
+struct xhci_soc;
 struct tegra_xhci_softc {
 	struct xhci_softc 	xhci_softc;
 	device_t		dev;
+	struct xhci_soc		*soc;
 	struct mtx		mtx;
 	struct resource		*mem_res_fpci;
 	struct resource		*mem_res_ipfs;
@@ -287,25 +282,85 @@ struct tegra_xhci_softc {
 	clk_t			clk_xusb_fs_src;
 	hwreset_t		hwreset_xusb_host;
 	hwreset_t		hwreset_xusb_ss;
-	regulator_t		supply_avddio_pex;
-	regulator_t		supply_dvddio_pex;
-	regulator_t		supply_avdd_usb;
-	regulator_t		supply_avdd_pll_utmip;
-	regulator_t		supply_avdd_pll_erefe;
-	regulator_t		supply_avdd_usb_ss_pll;
-	regulator_t		supply_hvdd_usb_ss;
-	regulator_t		supply_hvdd_usb_ss_pll_e;
-	phy_t 			phy_usb2_0;
-	phy_t 			phy_usb2_1;
-	phy_t 			phy_usb2_2;
-	phy_t 			phy_usb3_0;
+	regulator_t		regulators[16];		/* Safe maximum */
+	phy_t 			phys[8];		/* Safe maximum */
 
 	struct intr_config_hook	irq_hook;
 	bool			xhci_inited;
-	char			*fw_name;
 	vm_offset_t		fw_vaddr;
 	vm_size_t		fw_size;
 };
+
+struct xhci_soc {
+	char		*fw_name;
+	char 		**regulator_names;
+	char 		**phy_names;
+};
+
+/* Tegra 124 config */
+static char *tegra124_reg_names[] = {
+	"avddio-pex-supply",
+	"dvddio-pex-supply",
+	"avdd-usb-supply",
+	"avdd-pll-utmip-supply",
+	"avdd-pll-erefe-supply",
+	"avdd-usb-ss-pll-supply",
+	"hvdd-usb-ss-supply",
+	"hvdd-usb-ss-pll-e-supply",
+	NULL
+};
+
+static char *tegra124_phy_names[] = {
+	"usb2-0",
+	"usb2-1",
+	"usb2-2",
+	"usb3-0",
+	NULL
+};
+
+static struct xhci_soc tegra124_soc =
+{
+	.fw_name = "tegra124_xusb_fw",
+	.regulator_names = tegra124_reg_names,
+	.phy_names = tegra124_phy_names,
+};
+
+/* Tegra 210 config */
+static char *tegra210_reg_names[] = {
+	"dvddio-pex-supply",
+	"hvddio-pex-supply",
+	"avdd-usb-supply",
+	"avdd-pll-utmip-supply",
+	"avdd-pll-uerefe-supply",
+	"dvdd-usb-ss-pll-supply",
+	"hvdd-usb-ss-pll-e-supply",
+	NULL
+};
+
+static char *tegra210_phy_names[] = {
+	"usb2-0",
+	"usb2-1",
+	"usb2-2",
+	"usb2-3",
+	"usb3-0",
+	"usb3-1",
+	NULL
+};
+
+static struct xhci_soc tegra210_soc =
+{
+	.fw_name = "tegra210_xusb_fw",
+	.regulator_names = tegra210_reg_names,
+	.phy_names = tegra210_phy_names,
+};
+
+/* Compatible devices. */
+static struct ofw_compat_data compat_data[] = {
+	{"nvidia,tegra124-xusb", (uintptr_t)&tegra124_soc},
+	{"nvidia,tegra210-xusb", (uintptr_t)&tegra210_soc},
+	{NULL,		 	 0}
+};
+
 
 static uint32_t
 CSB_RD4(struct tegra_xhci_softc *sc, uint32_t addr)
@@ -326,63 +381,23 @@ CSB_WR4(struct tegra_xhci_softc *sc, uint32_t addr, uint32_t val)
 static int
 get_fdt_resources(struct tegra_xhci_softc *sc, phandle_t node)
 {
-	int rv;
+	int i, rv;
 
-	rv = regulator_get_by_ofw_property(sc->dev, 0, "avddio-pex-supply",
-	    &sc->supply_avddio_pex);
-	if (rv != 0) {
-		device_printf(sc->dev,
-		    "Cannot get 'avddio-pex' regulator\n");
-		return (ENXIO);
-	}
-	rv = regulator_get_by_ofw_property(sc->dev, 0, "dvddio-pex-supply",
-	    &sc->supply_dvddio_pex);
-	if (rv != 0) {
-		device_printf(sc->dev,
-		    "Cannot get 'dvddio-pex' regulator\n");
-		return (ENXIO);
-	}
-	rv = regulator_get_by_ofw_property(sc->dev, 0, "avdd-usb-supply",
-	    &sc->supply_avdd_usb);
-	if (rv != 0) {
-		device_printf(sc->dev,
-		    "Cannot get 'avdd-usb' regulator\n");
-		return (ENXIO);
-	}
-	rv = regulator_get_by_ofw_property(sc->dev, 0, "avdd-pll-utmip-supply",
-	    &sc->supply_avdd_pll_utmip);
-	if (rv != 0) {
-		device_printf(sc->dev,
-		    "Cannot get 'avdd-pll-utmip' regulator\n");
-		return (ENXIO);
-	}
-	rv = regulator_get_by_ofw_property(sc->dev, 0, "avdd-pll-erefe-supply",
-	    &sc->supply_avdd_pll_erefe);
-	if (rv != 0) {
-		device_printf(sc->dev,
-		    "Cannot get 'avdd-pll-erefe' regulator\n");
-		return (ENXIO);
-	}
-	rv = regulator_get_by_ofw_property(sc->dev, 0, "avdd-usb-ss-pll-supply",
-	    &sc->supply_avdd_usb_ss_pll);
-	if (rv != 0) {
-		device_printf(sc->dev,
-		    "Cannot get 'avdd-usb-ss-pll' regulator\n");
-		return (ENXIO);
-	}
-	rv = regulator_get_by_ofw_property(sc->dev, 0, "hvdd-usb-ss-supply",
-	    &sc->supply_hvdd_usb_ss);
-	if (rv != 0) {
-		device_printf(sc->dev,
-		    "Cannot get 'hvdd-usb-ss' regulator\n");
-		return (ENXIO);
-	}
-	rv = regulator_get_by_ofw_property(sc->dev, 0,
-	    "hvdd-usb-ss-pll-e-supply", &sc->supply_hvdd_usb_ss_pll_e);
-	if (rv != 0) {
-		device_printf(sc->dev,
-		    "Cannot get 'hvdd-usb-ss-pll-e' regulator\n");
-		return (ENXIO);
+	/* Regulators. */
+	for (i = 0; sc->soc->regulator_names[i] != NULL; i++) {
+		if (i >= nitems(sc->regulators)) {
+			device_printf(sc->dev,
+			    "Too many regulators present in DT.\n");
+			return (EOVERFLOW);
+		}
+		rv = regulator_get_by_ofw_property(sc->dev, 0,
+		    sc->soc->regulator_names[i], sc->regulators + i);
+		if (rv != 0) {
+			device_printf(sc->dev,
+			    "Cannot get '%s' regulator\n",
+			    sc->soc->regulator_names[i]);
+			return (ENXIO);
+		}
 	}
 
 	rv = hwreset_get_by_ofw_name(sc->dev, 0, "xusb_host",
@@ -398,25 +413,20 @@ get_fdt_resources(struct tegra_xhci_softc *sc, phandle_t node)
 		return (ENXIO);
 	}
 
-	rv = phy_get_by_ofw_name(sc->dev, 0, "usb2-0", &sc->phy_usb2_0);
-	if (rv != 0) {
-		device_printf(sc->dev, "Cannot get 'usb2-0' phy\n");
-		return (ENXIO);
-	}
-	rv = phy_get_by_ofw_name(sc->dev, 0, "usb2-1", &sc->phy_usb2_1);
-	if (rv != 0) {
-		device_printf(sc->dev, "Cannot get 'usb2-1' phy\n");
-		return (ENXIO);
-	}
-	rv = phy_get_by_ofw_name(sc->dev, 0, "usb2-2", &sc->phy_usb2_2);
-	if (rv != 0) {
-		device_printf(sc->dev, "Cannot get 'usb2-2' phy\n");
-		return (ENXIO);
-	}
-	rv = phy_get_by_ofw_name(sc->dev, 0, "usb3-0", &sc->phy_usb3_0);
-	if (rv != 0) {
-		device_printf(sc->dev, "Cannot get 'usb3-0' phy\n");
-		return (ENXIO);
+	/* Phys. */
+	for (i = 0; sc->soc->phy_names[i] != NULL; i++) {
+		if (i >= nitems(sc->phys)) {
+			device_printf(sc->dev,
+			    "Too many phys present in DT.\n");
+			return (EOVERFLOW);
+		}
+		rv = phy_get_by_ofw_name(sc->dev, 0, sc->soc->phy_names[i],
+		    sc->phys + i);
+		if (rv != 0 && rv != ENOENT) {
+			device_printf(sc->dev, "Cannot get '%s' phy.\n",
+			    sc->soc->phy_names[i]);
+			return (ENXIO);
+		}
 	}
 
 	rv = clk_get_by_ofw_name(sc->dev, 0, "xusb_host",
@@ -449,8 +459,8 @@ get_fdt_resources(struct tegra_xhci_softc *sc, phandle_t node)
 		device_printf(sc->dev, "Cannot get 'xusb_fs_src' clock\n");
 		return (ENXIO);
 	}
-	rv = clk_get_by_ofw_index_prop(sc->dev, 0, "freebsd,clock-xusb-gate", 0,
-	    &sc->clk_xusb_gate);
+	/* Clock xusb_gate is missing in mainstream DT */
+	rv = clk_get_by_name(sc->dev, "xusb_gate", &sc->clk_xusb_gate);
 	if (rv != 0) {
 		device_printf(sc->dev, "Cannot get 'xusb_gate' clock\n");
 		return (ENXIO);
@@ -461,7 +471,7 @@ get_fdt_resources(struct tegra_xhci_softc *sc, phandle_t node)
 static int
 enable_fdt_resources(struct tegra_xhci_softc *sc)
 {
-	int rv;
+	int i, rv;
 
 	rv = hwreset_assert(sc->hwreset_xusb_host);
 	if (rv != 0) {
@@ -474,53 +484,17 @@ enable_fdt_resources(struct tegra_xhci_softc *sc)
 		return (rv);
 	}
 
-	rv = regulator_enable(sc->supply_avddio_pex);
-	if (rv != 0) {
-		device_printf(sc->dev,
-		    "Cannot enable 'avddio_pex' regulator\n");
-		return (rv);
-	}
-	rv = regulator_enable(sc->supply_dvddio_pex);
-	if (rv != 0) {
-		device_printf(sc->dev,
-		    "Cannot enable 'dvddio_pex' regulator\n");
-		return (rv);
-	}
-	rv = regulator_enable(sc->supply_avdd_usb);
-	if (rv != 0) {
-		device_printf(sc->dev,
-		    "Cannot enable 'avdd_usb' regulator\n");
-		return (rv);
-	}
-	rv = regulator_enable(sc->supply_avdd_pll_utmip);
-	if (rv != 0) {
-		device_printf(sc->dev,
-		    "Cannot enable 'avdd_pll_utmip-5v' regulator\n");
-		return (rv);
-	}
-	rv = regulator_enable(sc->supply_avdd_pll_erefe);
-	if (rv != 0) {
-		device_printf(sc->dev,
-		    "Cannot enable 'avdd_pll_erefe' regulator\n");
-		return (rv);
-	}
-	rv = regulator_enable(sc->supply_avdd_usb_ss_pll);
-	if (rv != 0) {
-		device_printf(sc->dev,
-		    "Cannot enable 'avdd_usb_ss_pll' regulator\n");
-		return (rv);
-	}
-	rv = regulator_enable(sc->supply_hvdd_usb_ss);
-	if (rv != 0) {
-		device_printf(sc->dev,
-		    "Cannot enable 'hvdd_usb_ss' regulator\n");
-		return (rv);
-	}
-	rv = regulator_enable(sc->supply_hvdd_usb_ss_pll_e);
-	if (rv != 0) {
-		device_printf(sc->dev,
-		    "Cannot enable 'hvdd_usb_ss_pll_e' regulator\n");
-		return (rv);
+	/* Regulators. */
+	for (i = 0; i < nitems(sc->regulators); i++) {
+		if (sc->regulators[i] == NULL)
+			continue;
+		rv = regulator_enable(sc->regulators[i]);
+		if (rv != 0) {
+			device_printf(sc->dev,
+			    "Cannot enable '%s' regulator\n",
+			    sc->soc->regulator_names[i]);
+			return (rv);
+		}
 	}
 
 	/* Power off XUSB host and XUSB SS domains. */
@@ -582,25 +556,16 @@ enable_fdt_resources(struct tegra_xhci_softc *sc)
 		return (rv);
 	}
 
-	rv = phy_enable(sc->phy_usb2_0);
-	if (rv != 0) {
-		device_printf(sc->dev, "Cannot enable USB2_0 phy\n");
-		return (rv);
-	}
-	rv = phy_enable(sc->phy_usb2_1);
-	if (rv != 0) {
-		device_printf(sc->dev, "Cannot enable USB2_1 phy\n");
-		return (rv);
-	}
-	rv = phy_enable(sc->phy_usb2_2);
-	if (rv != 0) {
-		device_printf(sc->dev, "Cannot enable USB2_2 phy\n");
-		return (rv);
-	}
-	rv = phy_enable(sc->phy_usb3_0);
-	if (rv != 0) {
-		device_printf(sc->dev, "Cannot enable USB3_0 phy\n");
-		return (rv);
+	/* Phys. */
+	for (i = 0; i < nitems(sc->phys); i++) {
+		if (sc->phys[i] == NULL)
+			continue;
+		rv = phy_enable(sc->phys[i]);
+		if (rv != 0) {
+			device_printf(sc->dev, "Cannot enable '%s' phy\n",
+			    sc->soc->phy_names[i]);
+			return (rv);
+		}
 	}
 
 	return (0);
@@ -710,7 +675,6 @@ process_msg(struct tegra_xhci_softc *sc, uint32_t req_cmd, uint32_t req_data,
 		*resp_cmd = MBOX_CMD_ACK;
 		break;
 
-
 	case MBOX_CMD_START_HSIC_IDLE:
 	case MBOX_CMD_STOP_HSIC_IDLE:
 		/* Not implemented yet. */
@@ -797,7 +761,7 @@ load_fw(struct tegra_xhci_softc *sc)
 		return (0);
 	}
 
-	fw = firmware_get(sc->fw_name);
+	fw = firmware_get(sc->soc->fw_name);
 	if (fw == NULL) {
 		device_printf(sc->dev, "Cannot read xusb firmware\n");
 		return (ENOENT);
@@ -905,7 +869,6 @@ init_hw(struct tegra_xhci_softc *sc)
 	IPFS_WR4(sc, XUSB_HOST_CONFIGURATION, reg);
 	IPFS_RD4(sc, XUSB_HOST_CONFIGURATION);
 
-
 	/* Program bar for XHCI base address */
 	reg = FPCI_RD4(sc, T_XUSB_CFG_4);
 	reg &= ~CFG_4_BASE_ADDRESS(~0);
@@ -998,7 +961,8 @@ tegra_xhci_attach(device_t dev)
 
 	sc = device_get_softc(dev);
 	sc->dev = dev;
-	sc->fw_name = "tegra124_xusb_fw";
+	sc->soc = (struct xhci_soc *)ofw_bus_search_compatible(dev,
+	    compat_data)->ocd_data;
 	node = ofw_bus_get_node(dev);
 	xsc = &sc->xhci_softc;
 	LOCK_INIT(sc);

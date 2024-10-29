@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2014 Tycho Nightingale <tycho.nightingale@pluribusnetworks.com>
  * All rights reserved.
@@ -27,6 +27,7 @@
  */
 
 #include <sys/cdefs.h>
+#include "opt_bhyve_snapshot.h"
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -41,6 +42,7 @@
 #include <dev/ic/i8259.h>
 
 #include <machine/vmm.h>
+#include <machine/vmm_snapshot.h>
 
 #include "vmm_ktr.h"
 #include "vmm_lapic.h"
@@ -258,7 +260,7 @@ vatpic_notify_intr(struct vatpic *vatpic)
 		 * interrupt.
 		 */
 		atpic->intr_raised = true;
-		lapic_set_local_intr(vatpic->vm, -1, APIC_LVT_LINT0);
+		lapic_set_local_intr(vatpic->vm, NULL, APIC_LVT_LINT0);
 		vioapic_pulse_irq(vatpic->vm, 0);
 	} else {
 		VATPIC_CTR3(vatpic, "atpic master no eligible interrupts "
@@ -708,7 +710,7 @@ vatpic_write(struct vatpic *vatpic, struct atpic *atpic, bool in, int port,
 }
 
 int
-vatpic_master_handler(struct vm *vm, int vcpuid, bool in, int port, int bytes,
+vatpic_master_handler(struct vm *vm, bool in, int port, int bytes,
     uint32_t *eax)
 {
 	struct vatpic *vatpic;
@@ -719,16 +721,16 @@ vatpic_master_handler(struct vm *vm, int vcpuid, bool in, int port, int bytes,
 
 	if (bytes != 1)
 		return (-1);
- 
+
 	if (in) {
 		return (vatpic_read(vatpic, atpic, in, port, bytes, eax));
 	}
- 
+
 	return (vatpic_write(vatpic, atpic, in, port, bytes, eax));
 }
 
 int
-vatpic_slave_handler(struct vm *vm, int vcpuid, bool in, int port, int bytes,
+vatpic_slave_handler(struct vm *vm, bool in, int port, int bytes,
     uint32_t *eax)
 {
 	struct vatpic *vatpic;
@@ -748,7 +750,7 @@ vatpic_slave_handler(struct vm *vm, int vcpuid, bool in, int port, int bytes,
 }
 
 int
-vatpic_elc_handler(struct vm *vm, int vcpuid, bool in, int port, int bytes,
+vatpic_elc_handler(struct vm *vm, bool in, int port, int bytes,
     uint32_t *eax)
 {
 	struct vatpic *vatpic;
@@ -805,5 +807,45 @@ vatpic_init(struct vm *vm)
 void
 vatpic_cleanup(struct vatpic *vatpic)
 {
+	mtx_destroy(&vatpic->mtx);
 	free(vatpic, M_VATPIC);
 }
+
+#ifdef BHYVE_SNAPSHOT
+int
+vatpic_snapshot(struct vatpic *vatpic, struct vm_snapshot_meta *meta)
+{
+	int ret;
+	int i;
+	struct atpic *atpic;
+
+	for (i = 0; i < nitems(vatpic->atpic); i++) {
+		atpic = &vatpic->atpic[i];
+
+		SNAPSHOT_VAR_OR_LEAVE(atpic->ready, meta, ret, done);
+		SNAPSHOT_VAR_OR_LEAVE(atpic->icw_num, meta, ret, done);
+		SNAPSHOT_VAR_OR_LEAVE(atpic->rd_cmd_reg, meta, ret, done);
+
+		SNAPSHOT_VAR_OR_LEAVE(atpic->aeoi, meta, ret, done);
+		SNAPSHOT_VAR_OR_LEAVE(atpic->poll, meta, ret, done);
+		SNAPSHOT_VAR_OR_LEAVE(atpic->rotate, meta, ret, done);
+		SNAPSHOT_VAR_OR_LEAVE(atpic->sfn, meta, ret, done);
+		SNAPSHOT_VAR_OR_LEAVE(atpic->irq_base, meta, ret, done);
+		SNAPSHOT_VAR_OR_LEAVE(atpic->request, meta, ret, done);
+		SNAPSHOT_VAR_OR_LEAVE(atpic->service, meta, ret, done);
+		SNAPSHOT_VAR_OR_LEAVE(atpic->mask, meta, ret, done);
+		SNAPSHOT_VAR_OR_LEAVE(atpic->smm, meta, ret, done);
+
+		SNAPSHOT_BUF_OR_LEAVE(atpic->acnt, sizeof(atpic->acnt),
+				      meta, ret, done);
+		SNAPSHOT_VAR_OR_LEAVE(atpic->lowprio, meta, ret, done);
+		SNAPSHOT_VAR_OR_LEAVE(atpic->intr_raised, meta, ret, done);
+	}
+
+	SNAPSHOT_BUF_OR_LEAVE(vatpic->elc, sizeof(vatpic->elc),
+			      meta, ret, done);
+
+done:
+	return (ret);
+}
+#endif

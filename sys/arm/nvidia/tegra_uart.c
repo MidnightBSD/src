@@ -25,8 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
-
 /*
  * UART driver for Tegra SoCs.
  */
@@ -138,6 +136,7 @@ static kobj_method_t tegra_methods[] = {
 	KOBJMETHOD(uart_receive,	ns8250_bus_receive),
 	KOBJMETHOD(uart_setsig,		ns8250_bus_setsig),
 	KOBJMETHOD(uart_transmit,	ns8250_bus_transmit),
+	KOBJMETHOD(uart_txbusy,		ns8250_bus_txbusy),
 	KOBJMETHOD(uart_grab,		tegra_uart_grab),
 	KOBJMETHOD(uart_ungrab,		tegra_uart_ungrab),
 	KOBJMETHOD_END
@@ -155,7 +154,8 @@ static struct uart_class tegra_uart_class = {
 /* Compatible devices. */
 static struct ofw_compat_data compat_data[] = {
 	{"nvidia,tegra124-uart", (uintptr_t)&tegra_uart_class},
-	{NULL,			(uintptr_t)NULL},
+	{"nvidia,tegra210-uart", (uintptr_t)&tegra_uart_class},
+	{NULL,			 (uintptr_t)NULL},
 };
 
 UART_FDT_CLASS(compat_data);
@@ -190,7 +190,6 @@ tegra_uart_probe(device_t dev)
 	if (cd->ocd_data == 0)
 		return (ENXIO);
 	sc->ns8250_base.base.sc_class = (struct uart_class *)cd->ocd_data;
-
 	rv = hwreset_get_by_ofw_name(dev, 0, "serial", &sc->reset);
 	if (rv != 0) {
 		device_printf(dev, "Cannot get 'serial' reset\n");
@@ -201,7 +200,6 @@ tegra_uart_probe(device_t dev)
 		device_printf(dev, "Cannot unreset 'serial' reset\n");
 		return (ENXIO);
 	}
-
 	node = ofw_bus_get_node(dev);
 	shift = uart_fdt_get_shift1(node);
 	rv = clk_get_by_ofw_index(dev, 0, 0, &sc->clk);
@@ -240,7 +238,7 @@ static device_method_t tegra_uart_bus_methods[] = {
 	DEVMETHOD(device_probe,		tegra_uart_probe),
 	DEVMETHOD(device_attach,	uart_bus_attach),
 	DEVMETHOD(device_detach,	tegra_uart_detach),
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t tegra_uart_driver = {

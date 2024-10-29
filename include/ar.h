@@ -37,7 +37,6 @@
  * SUCH DAMAGE.
  *
  *	@(#)ar.h	8.2 (Berkeley) 1/21/94
- *
  */
 
 #ifndef _AR_H_

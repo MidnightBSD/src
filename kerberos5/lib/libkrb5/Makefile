@@ -1,4 +1,5 @@
-# $FreeBSD$
+
+PACKAGE=	kerberos-lib
 
 LIB=	krb5
 LDFLAGS=	-Wl,--no-undefined

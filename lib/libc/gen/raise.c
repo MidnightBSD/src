@@ -31,7 +31,6 @@
 
 #include <sys/cdefs.h>
 __SCCSID("@(#)raise.c	8.1 (Berkeley) 6/4/93");
-
 #include <signal.h>
 #include <unistd.h>
 

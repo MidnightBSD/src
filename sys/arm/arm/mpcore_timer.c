@@ -45,7 +45,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -250,9 +249,6 @@ arm_tmr_intr(void *arg)
 		sc->et.et_event_cb(&sc->et, sc->et.et_arg);
 	return (FILTER_HANDLED);
 }
-
-
-
 
 /**
  *	arm_tmr_probe - timer probe routine

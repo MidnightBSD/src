@@ -1,11 +1,11 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2003 David Schultz <das@FreeBSD.ORG>
  * All rights reserved.
  *
  * Copyright (c) 2011 The FreeBSD Foundation
- * All rights reserved.
+ *
  * Portions of this software were developed by David Chisnall
  * under sponsorship from the FreeBSD Foundation.
  *
@@ -34,11 +34,10 @@
 /*
  * Machine-dependent glue to integrate David Gay's gdtoa
  * package into libc for architectures where a long double
- * uses quad precision, such as sparc64.
+ * uses quad precision, such as aarch64 or riscv.
  */
 
 #include <sys/cdefs.h>
-
 #include <float.h>
 
 #include "gdtoaimp.h"

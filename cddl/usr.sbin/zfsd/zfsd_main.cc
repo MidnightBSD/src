@@ -55,8 +55,6 @@
 
 #include "vdev_iterator.h"
 #include "zfsd.h"
-
-
 /*=============================== Program Main ===============================*/
 static void
 usage()

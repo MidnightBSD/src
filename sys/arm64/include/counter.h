@@ -22,7 +22,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _MACHINE_COUNTER_H_
@@ -31,7 +30,7 @@
 #include <sys/pcpu.h>
 #include <machine/atomic.h>
 
-#define	EARLY_COUNTER	&__pcpu[0].pc_early_dummy_counter
+#define	EARLY_COUNTER	&pcpu0.pc_early_dummy_counter
 
 #define	counter_enter()	do {} while (0)
 #define	counter_exit()	do {} while (0)

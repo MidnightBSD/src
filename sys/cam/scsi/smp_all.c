@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010 Spectra Logic Corporation
  * All rights reserved.
@@ -37,7 +37,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/types.h>
 #ifdef _KERNEL
@@ -617,4 +616,3 @@ smp_phy_control(struct ccb_smpio *smpio, uint32_t retries,
 	request->config_bits0 = slumber_partial;
 	request->pp_timeout_value = pp_timeout_value;
 }
-

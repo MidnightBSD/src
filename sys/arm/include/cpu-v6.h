@@ -23,7 +23,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 #ifndef MACHINE_CPU_V6_H
 #define MACHINE_CPU_V6_H
@@ -37,10 +36,6 @@
 #include <machine/cpufunc.h>
 #include <machine/cpuinfo.h>
 #include <machine/sysreg.h>
-
-#if __ARM_ARCH < 6
-#error Only include this file for ARMv6
-#endif
 
 /*
  * Some kernel modules (dtrace all for example) are compiled

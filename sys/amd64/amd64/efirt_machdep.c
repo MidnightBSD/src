@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/efi.h>
 #include <sys/kernel.h>
@@ -46,11 +45,8 @@
 #include <sys/systm.h>
 #include <sys/vmmeter.h>
 #include <isa/rtc.h>
-#include <machine/fpu.h>
 #include <machine/efi.h>
-#include <machine/metadata.h>
 #include <machine/md_var.h>
-#include <machine/smp.h>
 #include <machine/vmparam.h>
 #include <vm/vm.h>
 #include <vm/pmap.h>
@@ -60,9 +56,10 @@
 #include <vm/vm_page.h>
 #include <vm/vm_pager.h>
 
+static pml5_entry_t *efi_pml5;
 static pml4_entry_t *efi_pml4;
 static vm_object_t obj_1t1_pt;
-static vm_page_t efi_pml4_page;
+static vm_page_t efi_pmltop_page;
 static vm_pindex_t efi_1t1_idx;
 
 void
@@ -73,7 +70,7 @@ efi_destroy_1t1_map(void)
 	if (obj_1t1_pt != NULL) {
 		VM_OBJECT_RLOCK(obj_1t1_pt);
 		TAILQ_FOREACH(m, &obj_1t1_pt->memq, listq)
-			m->wire_count = 0;
+			m->ref_count = VPRC_OBJREF;
 		vm_wire_sub(obj_1t1_pt->resident_page_count);
 		VM_OBJECT_RUNLOCK(obj_1t1_pt);
 		vm_object_deallocate(obj_1t1_pt);
@@ -81,7 +78,8 @@ efi_destroy_1t1_map(void)
 
 	obj_1t1_pt = NULL;
 	efi_pml4 = NULL;
-	efi_pml4_page = NULL;
+	efi_pml5 = NULL;
+	efi_pmltop_page = NULL;
 }
 
 /*
@@ -108,22 +106,38 @@ efi_1t1_page(void)
 static pt_entry_t *
 efi_1t1_pte(vm_offset_t va)
 {
+	pml5_entry_t *pml5e;
 	pml4_entry_t *pml4e;
 	pdp_entry_t *pdpe;
 	pd_entry_t *pde;
 	pt_entry_t *pte;
 	vm_page_t m;
-	vm_pindex_t pml4_idx, pdp_idx, pd_idx;
+	vm_pindex_t pml5_idx, pml4_idx, pdp_idx, pd_idx;
 	vm_paddr_t mphys;
 
 	pml4_idx = pmap_pml4e_index(va);
-	pml4e = &efi_pml4[pml4_idx];
+	if (la57) {
+		pml5_idx = pmap_pml5e_index(va);
+		pml5e = &efi_pml5[pml5_idx];
+		if (*pml5e == 0) {
+			m = efi_1t1_page();
+			mphys = VM_PAGE_TO_PHYS(m);
+			*pml5e = mphys | X86_PG_RW | X86_PG_V;
+		} else {
+			mphys = *pml5e & PG_FRAME;
+		}
+		pml4e = (pml4_entry_t *)PHYS_TO_DMAP(mphys);
+		pml4e = &pml4e[pml4_idx];
+	} else {
+		pml4e = &efi_pml4[pml4_idx];
+	}
+
 	if (*pml4e == 0) {
 		m = efi_1t1_page();
 		mphys =  VM_PAGE_TO_PHYS(m);
 		*pml4e = mphys | X86_PG_RW | X86_PG_V;
 	} else {
-		mphys = *pml4e & ~PAGE_MASK;
+		mphys = *pml4e & PG_FRAME;
 	}
 
 	pdpe = (pdp_entry_t *)PHYS_TO_DMAP(mphys);
@@ -134,7 +148,7 @@ efi_1t1_pte(vm_offset_t va)
 		mphys =  VM_PAGE_TO_PHYS(m);
 		*pdpe = mphys | X86_PG_RW | X86_PG_V;
 	} else {
-		mphys = *pdpe & ~PAGE_MASK;
+		mphys = *pdpe & PG_FRAME;
 	}
 
 	pde = (pd_entry_t *)PHYS_TO_DMAP(mphys);
@@ -145,7 +159,7 @@ efi_1t1_pte(vm_offset_t va)
 		mphys = VM_PAGE_TO_PHYS(m);
 		*pde = mphys | X86_PG_RW | X86_PG_V;
 	} else {
-		mphys = *pde & ~PAGE_MASK;
+		mphys = *pde & PG_FRAME;
 	}
 
 	pte = (pt_entry_t *)PHYS_TO_DMAP(mphys);
@@ -160,6 +174,8 @@ efi_create_1t1_map(struct efi_md *map, int ndesc, int descsz)
 {
 	struct efi_md *p;
 	pt_entry_t *pte;
+	void *pml;
+	vm_page_t m;
 	vm_offset_t va;
 	uint64_t idx;
 	int bits, i, mode;
@@ -169,10 +185,16 @@ efi_create_1t1_map(struct efi_md *map, int ndesc, int descsz)
 	    VM_PROT_ALL, 0, NULL);
 	efi_1t1_idx = 0;
 	VM_OBJECT_WLOCK(obj_1t1_pt);
-	efi_pml4_page = efi_1t1_page();
+	efi_pmltop_page = efi_1t1_page();
 	VM_OBJECT_WUNLOCK(obj_1t1_pt);
-	efi_pml4 = (pml4_entry_t *)PHYS_TO_DMAP(VM_PAGE_TO_PHYS(efi_pml4_page));
-	pmap_pinit_pml4(efi_pml4_page);
+	pml = (void *)PHYS_TO_DMAP(VM_PAGE_TO_PHYS(efi_pmltop_page));
+	if (la57) {
+		efi_pml5 = pml;
+		pmap_pinit_pml5(efi_pmltop_page);
+	} else {
+		efi_pml4 = pml;
+		pmap_pinit_pml4(efi_pmltop_page);
+	}
 
 	for (i = 0, p = map; i < ndesc; i++, p = efi_next_descriptor(p,
 	    descsz)) {
@@ -221,6 +243,14 @@ efi_create_1t1_map(struct efi_md *map, int ndesc, int descsz)
 		    va += PAGE_SIZE) {
 			pte = efi_1t1_pte(va);
 			pte_store(pte, va | bits);
+
+			m = PHYS_TO_VM_PAGE(va);
+			if (m != NULL && VM_PAGE_TO_PHYS(m) == 0) {
+				vm_page_init_page(m, va, -1);
+				m->order = VM_NFREEORDER + 1; /* invalid */
+				m->pool = VM_NFREEPOOL + 1; /* invalid */
+				pmap_page_set_memattr_noflush(m, mode);
+			}
 		}
 		VM_OBJECT_WUNLOCK(obj_1t1_pt);
 	}
@@ -246,11 +276,6 @@ fail:
  * mapping.  As result, we must provide 1:1 mapping anyway, so no
  * reason to bother with the virtual map, and no need to add a
  * complexity into loader.
- *
- * The fpu_kern_enter() call allows firmware to use FPU, as mandated
- * by the specification.  In particular, CR0.TS bit is cleared.  Also
- * it enters critical section, giving us neccessary protection against
- * context switch.
  *
  * There is no need to disable interrupts around the change of %cr3,
  * the kernel mappings are correct, while we only grabbed the
@@ -278,7 +303,7 @@ efi_arch_enter(void)
 	if (pmap_pcid_enabled && !invpcid_works)
 		PCPU_SET(curpmap, NULL);
 
-	load_cr3(VM_PAGE_TO_PHYS(efi_pml4_page) | (pmap_pcid_enabled ?
+	load_cr3(VM_PAGE_TO_PHYS(efi_pmltop_page) | (pmap_pcid_enabled ?
 	    curpmap->pm_pcids[PCPU_GET(cpuid)].pm_pcid : 0));
 	/*
 	 * If PCID is enabled, the clear CR3_PCID_SAVE bit in the loaded %cr3
@@ -324,5 +349,7 @@ efi_time_sysctl_handler(SYSCTL_HANDLER_ARGS)
 	return (error);
 }
 
-SYSCTL_PROC(_debug, OID_AUTO, efi_time, CTLTYPE_INT | CTLFLAG_RW, NULL, 0,
-    efi_time_sysctl_handler, "I", "");
+SYSCTL_PROC(_debug, OID_AUTO, efi_time,
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE, NULL, 0,
+    efi_time_sysctl_handler, "I",
+    "");

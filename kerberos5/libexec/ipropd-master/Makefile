@@ -1,4 +1,5 @@
-# $FreeBSD$
+
+PACKAGE=	kerberos
 
 PROG=	ipropd-master
 MAN=	iprop.8

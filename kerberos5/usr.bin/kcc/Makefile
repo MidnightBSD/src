@@ -1,4 +1,5 @@
-# $FreeBSD$
+
+PACKAGE=	kerberos
 
 PROG=	kcc
 MAN=	klist.1 kswitch.1

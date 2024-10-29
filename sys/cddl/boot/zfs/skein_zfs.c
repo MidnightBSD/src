@@ -17,8 +17,6 @@
  * information: Portions Copyright [yyyy] [name of copyright owner]
  *
  * CDDL HEADER END
- *
- * $FreeBSD: stable/11/sys/cddl/boot/zfs/skein_zfs.c 328866 2018-02-05 04:00:59Z kevans $
  */
 /*
  * Copyright 2013 Saso Kiselkov.  All rights reserved.

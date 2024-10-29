@@ -21,7 +21,6 @@
  * Portions Copyright 2006-2008 John Birrell jb@freebsd.org
  * Portions Copyright 2013 Justin Hibbits jhibbits@freebsd.org
  *
- *
  */
 
 /*
@@ -45,9 +44,7 @@
 #define FBT_BR_MASK		0x03fffffc
 #define FBT_IS_JUMP(instr)	((instr & ~FBT_BR_MASK) == FBT_BRANCH)
 
-#define	FBT_ENTRY	"entry"
-#define	FBT_RETURN	"return"
-#define	FBT_AFRAMES	7
+#define	FBT_AFRAMES	5
 
 int
 fbt_invop(uintptr_t addr, struct trapframe *frame, uintptr_t rval)
@@ -115,6 +112,7 @@ fbt_provide_module_function(linker_file_t lf, int symindx,
 	uint32_t *instr, *limit;
 
 #ifdef __powerpc64__
+#if !defined(_CALL_ELF) || _CALL_ELF == 1
 	/*
 	 * PowerPC64 uses '.' prefixes on symbol names, ignore it, but only
 	 * allow symbols with the '.' prefix, so that we don't get the function
@@ -124,6 +122,7 @@ fbt_provide_module_function(linker_file_t lf, int symindx,
 		name++;
 	else
 		return (0);
+#endif
 #endif
 
 	if (fbt_excluded(name))
@@ -220,7 +219,7 @@ again:
 	if (*instr == FBT_BCTR)
 		fbt->fbtp_rval = DTRACE_INVOP_BCTR;
 	else if (*instr == FBT_BLR)
-		fbt->fbtp_rval = DTRACE_INVOP_RET;
+		fbt->fbtp_rval = DTRACE_INVOP_BLR;
 	else
 		fbt->fbtp_rval = DTRACE_INVOP_JUMP;
 

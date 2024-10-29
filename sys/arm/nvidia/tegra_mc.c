@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Memory controller driver for Tegra SoCs.
  */
@@ -109,6 +108,7 @@
 
 static struct ofw_compat_data compat_data[] = {
 	{"nvidia,tegra124-mc",	1},
+	{"nvidia,tegra210-mc",	1},
 	{NULL,			0}
 };
 
@@ -131,7 +131,7 @@ static char *smmu_err_tbl[16] = {
 	"Security carveout",	/*  4 */
 	"reserved",		/*  5 */
 	"Invalid SMMU page",	/*  6 */
-	"reserved",	/*  7 */
+	"reserved",		/*  7 */
 };
 
 static void
@@ -172,8 +172,8 @@ tegra_mc_intr(void *arg)
 		err = RD4(sc, MC_ERR_STATUS);
 		addr = RD4(sc, MC_ERR_STATUS);
 		addr |= (uint64_t)(MC_ERR_ADR_HI(err)) << 32;
-		printf(" at 0x%012llX [%s %s %s]  - %s error.\n",
-		    addr,
+		printf(" at 0x%012jX [%s %s %s]  - %s error.\n",
+		    (uintmax_t)addr,
 		    stat & MC_ERR_SWAP ? "Swap, " : "",
 		    stat & MC_ERR_SECURITY ? "Sec, " : "",
 		    stat & MC_ERR_RW ? "Write" : "Read",
@@ -298,7 +298,6 @@ static device_method_t tegra_mc_methods[] = {
 	DEVMETHOD(device_probe,		tegra_mc_probe),
 	DEVMETHOD(device_attach,	tegra_mc_attach),
 	DEVMETHOD(device_detach,	tegra_mc_detach),
-
 
 	DEVMETHOD_END
 };

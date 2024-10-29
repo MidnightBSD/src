@@ -1,6 +1,5 @@
 /*
  * Structures and definitions for SCSI commands to the SG passthrough device.
- *
  */
 
 #ifndef _SCSI_SG_H

@@ -36,6 +36,7 @@
  * Implementation of the ZfsdException class.
  */
 #include <sys/cdefs.h>
+#include <sys/byteorder.h>
 #include <sys/fs/zfs.h>
 
 #include <syslog.h>
@@ -51,7 +52,6 @@
 
 #include "vdev.h"
 #include "zfsd_exception.h"
-
 /*============================ Namespace Control =============================*/
 using std::endl;
 using std::string;

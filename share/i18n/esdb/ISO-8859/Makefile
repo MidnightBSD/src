@@ -1,4 +1,3 @@
-# $FreeBSD: stable/11/share/i18n/esdb/ISO-8859/Makefile 219019 2011-02-25 00:04:39Z gabor $
 # $NetBSD: Makefile.inc,v 1.4 2008/10/25 22:27:36 apb Exp $
 
 CODE=	ISO-8859

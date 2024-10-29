@@ -35,7 +35,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/efi.h>
 #include <sys/kernel.h>
@@ -47,10 +46,7 @@
 #include <sys/systm.h>
 #include <sys/vmmeter.h>
 
-#include <machine/metadata.h>
-#include <machine/pcb.h>
 #include <machine/pte.h>
-#include <machine/vfp.h>
 #include <machine/vmparam.h>
 
 #include <vm/vm.h>
@@ -61,9 +57,9 @@
 #include <vm/vm_pager.h>
 
 static vm_object_t obj_1t1_pt;
-static vm_page_t efi_l0_page;
-static pd_entry_t *efi_l0;
 static vm_pindex_t efi_1t1_idx;
+static pd_entry_t *efi_l0;
+static uint64_t efi_ttbr0;
 
 void
 efi_destroy_1t1_map(void)
@@ -73,15 +69,16 @@ efi_destroy_1t1_map(void)
 	if (obj_1t1_pt != NULL) {
 		VM_OBJECT_RLOCK(obj_1t1_pt);
 		TAILQ_FOREACH(m, &obj_1t1_pt->memq, listq)
-			m->wire_count = 0;
+			m->ref_count = VPRC_OBJREF;
 		vm_wire_sub(obj_1t1_pt->resident_page_count);
 		VM_OBJECT_RUNLOCK(obj_1t1_pt);
 		vm_object_deallocate(obj_1t1_pt);
 	}
 
 	obj_1t1_pt = NULL;
+	efi_1t1_idx = 0;
 	efi_l0 = NULL;
-	efi_l0_page = NULL;
+	efi_ttbr0 = 0;
 }
 
 static vm_page_t
@@ -148,10 +145,17 @@ efi_1t1_l3(vm_offset_t va)
 vm_offset_t
 efi_phys_to_kva(vm_paddr_t paddr)
 {
+	vm_offset_t vaddr;
 
-	if (!PHYS_IN_DMAP(paddr))
-		return (0);
-	return (PHYS_TO_DMAP(paddr));
+	if (PHYS_IN_DMAP(paddr)) {
+		vaddr = PHYS_TO_DMAP(paddr);
+		if (pmap_klookup(vaddr, NULL))
+			return (vaddr);
+	}
+
+	/* TODO: Map memory not in the DMAP */
+
+	return (0);
 }
 
 /*
@@ -163,6 +167,7 @@ efi_create_1t1_map(struct efi_md *map, int ndesc, int descsz)
 	struct efi_md *p;
 	pt_entry_t *l3, l3_attr;
 	vm_offset_t va;
+	vm_page_t efi_l0_page;
 	uint64_t idx;
 	int i, mode;
 
@@ -171,11 +176,11 @@ efi_create_1t1_map(struct efi_md *map, int ndesc, int descsz)
 	    L0_ENTRIES * Ln_ENTRIES * Ln_ENTRIES * Ln_ENTRIES,
 	    VM_PROT_ALL, 0, NULL);
 	VM_OBJECT_WLOCK(obj_1t1_pt);
-	efi_1t1_idx = 0;
 	efi_l0_page = efi_1t1_page();
 	VM_OBJECT_WUNLOCK(obj_1t1_pt);
 	efi_l0 = (pd_entry_t *)PHYS_TO_DMAP(VM_PAGE_TO_PHYS(efi_l0_page));
-	bzero(efi_l0, L0_ENTRIES * sizeof(*efi_l0));
+	efi_ttbr0 = ASID_TO_OPERAND(ASID_RESERVED_FOR_EFI) |
+	    VM_PAGE_TO_PHYS(efi_l0_page);
 
 	for (i = 0, p = map; i < ndesc; i++, p = efi_next_descriptor(p,
 	    descsz)) {
@@ -210,16 +215,19 @@ efi_create_1t1_map(struct efi_md *map, int ndesc, int descsz)
 		else
 			mode = VM_MEMATTR_DEVICE;
 
-		printf("MAP %lx mode %x pages %lu\n", p->md_phys, mode, p->md_pages);
+		if (bootverbose) {
+			printf("MAP %lx mode %x pages %lu\n",
+			    p->md_phys, mode, p->md_pages);
+		}
 
-		l3_attr = ATTR_DEFAULT | ATTR_IDX(mode) | ATTR_AP(ATTR_AP_RW) |
-		    L3_PAGE;
+		l3_attr = ATTR_DEFAULT | ATTR_S1_IDX(mode) |
+		    ATTR_S1_AP(ATTR_S1_AP_RW) | ATTR_S1_nG | L3_PAGE;
 		if (mode == VM_MEMATTR_DEVICE || p->md_attr & EFI_MD_ATTR_XP)
-			l3_attr |= ATTR_UXN | ATTR_PXN;
+			l3_attr |= ATTR_S1_XN;
 
 		VM_OBJECT_WLOCK(obj_1t1_pt);
-		for (va = p->md_phys, idx = 0; idx < p->md_pages; idx++,
-		    va += PAGE_SIZE) {
+		for (va = p->md_phys, idx = 0; idx < p->md_pages;
+		    idx += (PAGE_SIZE / EFI_PAGE_SIZE), va += PAGE_SIZE) {
 			l3 = efi_1t1_l3(va);
 			*l3 = va | l3_attr;
 		}
@@ -236,14 +244,16 @@ int
 efi_arch_enter(void)
 {
 
-	__asm __volatile(
-	    "msr ttbr0_el1, %0	\n"
-	    "isb		\n"
-	    "dsb  ishst		\n"
-	    "tlbi vmalle1is	\n"
-	    "dsb  ish		\n"
-	    "isb		\n"
-	     : : "r"(VM_PAGE_TO_PHYS(efi_l0_page)));
+	CRITICAL_ASSERT(curthread);
+
+	/*
+	 * Temporarily switch to EFI's page table.  However, we leave curpmap
+	 * unchanged in order to prevent its ASID from being reclaimed before
+	 * we switch back to its page table in efi_arch_leave().
+	 */
+	set_ttbr0(efi_ttbr0);
+	if (PCPU_GET(bcast_tlbi_workaround) != 0)
+		invalidate_local_icache();
 
 	return (0);
 }
@@ -251,27 +261,20 @@ efi_arch_enter(void)
 void
 efi_arch_leave(void)
 {
-	struct thread *td;
 
 	/*
 	 * Restore the pcpu pointer. Some UEFI implementations trash it and
 	 * we don't store it before calling into them. To fix this we need
 	 * to restore it after returning to the kernel context. As reading
-	 * curthread will access x18 we need to restore it before loading
-	 * the thread pointer.
+	 * curpmap will access x18 we need to restore it before loading
+	 * the pmap pointer.
 	 */
 	__asm __volatile(
 	    "mrs x18, tpidr_el1	\n"
 	);
-	td = curthread;
-	__asm __volatile(
-	    "msr ttbr0_el1, %0	\n"
-	    "isb		\n"
-	    "dsb  ishst		\n"
-	    "tlbi vmalle1is	\n"
-	    "dsb  ish		\n"
-	    "isb		\n"
-	     : : "r"(td->td_proc->p_md.md_l0addr));
+	set_ttbr0(pmap_to_ttbr0(PCPU_GET(curpmap)));
+	if (PCPU_GET(bcast_tlbi_workaround) != 0)
+		invalidate_local_icache();
 }
 
 int

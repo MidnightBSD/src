@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2018 Emmanuel Vadot <manu@FreeBSD.org>
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,11 +26,13 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
+#include <sys/clock.h>
+#include <sys/eventhandler.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
+#include <sys/reboot.h>
 #include <sys/mutex.h>
 #include <sys/rman.h>
 #include <machine/bus.h>
@@ -46,6 +47,7 @@
 
 #include <arm64/rockchip/rk805reg.h>
 
+#include "clock_if.h"
 #include "regdev_if.h"
 
 MALLOC_DEFINE(M_RK805_REG, "RK805 regulator", "RK805 power regulator");
@@ -356,10 +358,10 @@ rk805_read(device_t dev, uint8_t reg, uint8_t *data, uint8_t size)
 }
 
 static int
-rk805_write(device_t dev, uint8_t reg, uint8_t data)
+rk805_write(device_t dev, uint8_t reg, uint8_t *data, uint8_t size)
 {
 
-	return (iicdev_writeto(dev, reg, &data, 1, IIC_INTRWAIT));
+	return (iicdev_writeto(dev, reg, data, size, IIC_INTRWAIT));
 }
 
 static int
@@ -415,7 +417,7 @@ rk805_regnode_enable(struct regnode *regnode, bool enable, int *udelay)
 		val |= sc->def->enable_mask;
 	else
 		val &= ~sc->def->enable_mask;
-	rk805_write(sc->base_dev, sc->def->enable_reg, val);
+	rk805_write(sc->base_dev, sc->def->enable_reg, &val, 1);
 
 	*udelay = 0;
 
@@ -491,7 +493,7 @@ rk805_regnode_set_voltage(struct regnode *regnode, int min_uvolt,
 	if (rk805_regnode_voltage_to_reg(sc, min_uvolt, max_uvolt, &val) != 0)
 		return (ERANGE);
 
-	rk805_write(sc->base_dev, sc->def->voltage_reg, val);
+	rk805_write(sc->base_dev, sc->def->voltage_reg, &val, 1);
 
 	rk805_read(sc->base_dev, sc->def->voltage_reg, &val, 1);
 
@@ -624,7 +626,138 @@ rk805_start(void *pdev)
 		device_printf(dev, "Chip Version: %x\n", data[1] & 0xf);
 	}
 
+	/* Register this as a 1Hz clock */
+	clock_register(dev, 1000000);
+
 	config_intrhook_disestablish(&sc->intr_hook);
+}
+
+static int
+rk805_gettime(device_t dev, struct timespec *ts)
+{
+	struct bcd_clocktime bct;
+	uint8_t data[7];
+	uint8_t ctrl;
+	int error;
+
+	/* Latch the RTC value into the shadow registers and set 24hr mode */
+	error = rk805_read(dev, RK805_RTC_CTRL, &ctrl, 1);
+	if (error != 0)
+		return (error);
+
+	ctrl |= RK805_RTC_READSEL;
+	ctrl &= ~(RK805_RTC_AMPM_MODE | RK805_RTC_GET_TIME);
+	error = rk805_write(dev, RK805_RTC_CTRL, &ctrl, 1);
+	if (error != 0)
+		return (error);
+	ctrl |= RK805_RTC_GET_TIME;
+	error = rk805_write(dev, RK805_RTC_CTRL, &ctrl, 1);
+	if (error != 0)
+		return (error);
+	ctrl &= ~RK805_RTC_GET_TIME;
+	error = rk805_write(dev, RK805_RTC_CTRL, &ctrl, 1);
+	if (error != 0)
+		return (error);
+
+	/* This works as long as RK805_RTC_SECS = 0 */
+	error = rk805_read(dev, RK805_RTC_SECS, data, 7);
+	if (error != 0)
+		return (error);
+
+	/*
+	 * If the reported year is earlier than 2019, assume the clock is unset.
+	 * This is both later than the reset value for the RK805 and RK808 as
+	 * well as being prior to the current time.
+	 */
+	if (data[RK805_RTC_YEARS] < 0x19)
+		return (EINVAL);
+
+	memset(&bct, 0, sizeof(bct));
+	bct.year = data[RK805_RTC_YEARS];
+	bct.mon = data[RK805_RTC_MONTHS] & RK805_RTC_MONTHS_MASK;
+	bct.day = data[RK805_RTC_DAYS] & RK805_RTC_DAYS_MASK;
+	bct.hour = data[RK805_RTC_HOURS] & RK805_RTC_HOURS_MASK;
+	bct.min = data[RK805_RTC_MINUTES] & RK805_RTC_MINUTES_MASK;
+	bct.sec = data[RK805_RTC_SECS] & RK805_RTC_SECS_MASK;
+	bct.dow = data[RK805_RTC_WEEKS] & RK805_RTC_WEEKS_MASK;
+	/* The day of week is reported as 1-7 with 1 = Monday */
+	if (bct.dow == 7)
+		bct.dow = 0;
+	bct.ispm = 0;
+
+	if (bootverbose)
+		device_printf(dev, "Read RTC: %02x-%02x-%02x %02x:%02x:%02x\n",
+		    bct.year, bct.mon, bct.day, bct.hour, bct.min, bct.sec);
+
+	return (clock_bcd_to_ts(&bct, ts, false));
+}
+
+static int
+rk805_settime(device_t dev, struct timespec *ts)
+{
+	struct bcd_clocktime bct;
+	uint8_t data[7];
+	int error;
+	uint8_t ctrl;
+
+	clock_ts_to_bcd(ts, &bct, false);
+
+	/* This works as long as RK805_RTC_SECS = 0 */
+	data[RK805_RTC_YEARS] = bct.year;
+	data[RK805_RTC_MONTHS] = bct.mon;
+	data[RK805_RTC_DAYS] = bct.day;
+	data[RK805_RTC_HOURS] = bct.hour;
+	data[RK805_RTC_MINUTES] = bct.min;
+	data[RK805_RTC_SECS] = bct.sec;
+	data[RK805_RTC_WEEKS] = bct.dow;
+	/* The day of week is reported as 1-7 with 1 = Monday */
+	if (data[RK805_RTC_WEEKS] == 0)
+		data[RK805_RTC_WEEKS] = 7;
+
+	error = rk805_read(dev, RK805_RTC_CTRL, &ctrl, 1);
+	if (error != 0)
+		return (error);
+
+	ctrl |= RK805_RTC_CTRL_STOP;
+	ctrl &= ~RK805_RTC_AMPM_MODE;
+	error = rk805_write(dev, RK805_RTC_CTRL, &ctrl, 1);
+	if (error != 0)
+		return (error);
+
+	error = rk805_write(dev, RK805_RTC_SECS, data, 7);
+	ctrl &= ~RK805_RTC_CTRL_STOP;
+	rk805_write(dev, RK805_RTC_CTRL, &ctrl, 1);
+
+	if (bootverbose)
+		device_printf(dev,
+		    "Set RTC at %04x-%02x-%02x %02x:%02x:%02x[.%09ld]\n",
+		    bct.year, bct.mon, bct.day, bct.hour, bct.min, bct.sec,
+		    bct.nsec);
+
+	return (error);
+}
+
+static void
+rk805_poweroff(void *arg, int howto)
+{
+	device_t dev = arg;
+	int error;
+	uint8_t val;
+
+	if ((howto & RB_POWEROFF) == 0)
+		return;
+
+	device_printf(dev, "Powering off...\n");
+	error = rk805_read(dev, RK805_DEV_CTRL, &val, 1);
+	if (error == 0) {
+		val |= RK805_DEV_CTRL_OFF;
+		error = rk805_write(dev, RK805_DEV_CTRL, &val, 1);
+
+		/* Wait a bit for the command to take effect. */
+		if (error == 0)
+			DELAY(100);
+	}
+	device_printf(dev, "Power off failed\n");
 }
 
 static int
@@ -687,6 +820,17 @@ rk805_attach(device_t dev)
 		}
 	}
 
+	if (OF_hasprop(ofw_bus_get_node(dev),
+	    "rockchip,system-power-controller")) {
+		/*
+		 * The priority is chosen to override PSCI and EFI shutdown
+		 * methods as those two just hang without powering off on Rock64
+		 * at least.
+		 */
+		EVENTHANDLER_REGISTER(shutdown_final, rk805_poweroff, dev,
+		    SHUTDOWN_PRI_LAST - 2);
+	}
+
 	return (0);
 }
 
@@ -724,6 +868,11 @@ static device_method_t rk805_methods[] = {
 
 	/* regdev interface */
 	DEVMETHOD(regdev_map,		rk805_map),
+
+	/* Clock interface */
+	DEVMETHOD(clock_gettime,	rk805_gettime),
+	DEVMETHOD(clock_settime,	rk805_settime),
+
 	DEVMETHOD_END
 };
 

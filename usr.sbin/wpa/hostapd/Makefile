@@ -7,6 +7,7 @@
 .PATH.c:${HOSTAPD_DISTDIR} \
 	${WPA_DISTDIR}/src/drivers
 
+PACKAGE=	hostapd
 PROG=	hostapd
 SRCS=	config_file.c \
 	ctrl_iface.c \
@@ -32,7 +33,8 @@ CFLAGS+= -DCONFIG_IPV6
 LIBADD+=	pcap util \
 		wpadrivers wpaap wpal2_packet wpaeap_server \
 		wpaeapol_auth wpaeap_common \
-		wparadius wpatls wpawps wpacommon wpacrypto wpautils
+		wparadius wpatls wpawps wpacommon wpacrypto wpautils \
+		wpapasn
 
 # User customizations for wpa_supplicant/hostapd build environment
 CFLAGS+=${HOSTAPD_CFLAGS}

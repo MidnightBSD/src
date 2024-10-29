@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2006 Benno Rice.
  * Copyright (C) 2008 MARVELL INTERNATIONAL LTD.
@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -58,7 +57,6 @@
 #include <arm/mv/mvreg.h>
 
 #include "gpio_if.h"
-
 
 #define GPIO_MAX_INTR_COUNT	8
 #define GPIO_PINS_PER_REG	32
@@ -527,7 +525,6 @@ mv_gpio_exec_intr_handlers(device_t dev, uint32_t status, int high)
 static void
 mv_gpio_intr_handler(device_t dev, int pin)
 {
-#ifdef INTRNG
 	struct intr_irqsrc isrc;
 	struct mv_gpio_softc *sc;
 	sc = (struct mv_gpio_softc *)device_get_softc(dev);
@@ -544,7 +541,6 @@ mv_gpio_intr_handler(device_t dev, int pin)
 		return;
 
 	intr_isrc_dispatch(&isrc, NULL);
-#endif
 }
 
 int

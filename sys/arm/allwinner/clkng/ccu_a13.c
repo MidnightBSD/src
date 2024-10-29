@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2017,2018 Emmanuel Vadot <manu@freebsd.org>
  *
@@ -23,11 +23,9 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -495,7 +493,6 @@ static struct aw_clk_nm_def ir_clk = {
 /* Missing LCD CH1 clock */
 /* Missing CSI clock */
 /* Missing VE clock */
-
 
 /* Clocks list */
 static struct aw_ccung_clk a13_ccu_clks[] = {

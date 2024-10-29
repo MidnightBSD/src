@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2003, 2008 Silicon Graphics International Corp.
  * Copyright (c) 2012 The FreeBSD Foundation
@@ -43,7 +43,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -385,6 +384,7 @@ ctl_backend_ramdisk_cmp(union ctl_io *io)
 		if (res < cbe_lun->blocksize)
 			break;
 	}
+	free(io->scsiio.kern_data_ptr, M_RAMDISK);
 	if (lbas > 0) {
 		off += io->scsiio.kern_rel_offset - io->scsiio.kern_data_len;
 		scsi_u64to8b(off, info);
@@ -506,7 +506,8 @@ nospc:
 	if ((ARGS(io)->flags & CTL_LLF_READ) &&
 	    ARGS(io)->len <= PRIV(io)->len) {
 		ctl_set_success(&io->scsiio);
-		ctl_serseq_done(io);
+		if (cbe_lun->serseq >= CTL_LUN_SERSEQ_SOFT)
+			ctl_serseq_done(io);
 	}
 	ctl_datamove(io);
 }
@@ -1035,6 +1036,8 @@ ctl_backend_ramdisk_create(struct ctl_be_ramdisk_softc *softc,
 		cbe_lun->serseq = CTL_LUN_SERSEQ_ON;
 	else if (value != NULL && strcmp(value, "read") == 0)
 		cbe_lun->serseq = CTL_LUN_SERSEQ_READ;
+	else if (value != NULL && strcmp(value, "soft") == 0)
+		cbe_lun->serseq = CTL_LUN_SERSEQ_SOFT;
 	else if (value != NULL && strcmp(value, "off") == 0)
 		cbe_lun->serseq = CTL_LUN_SERSEQ_OFF;
 

@@ -1,7 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
- * Copyright (c) 2004-2010 Pawel Jakub Dawidek <pjd@FreeBSD.org>
+ * Copyright (c) 2004-2019 Pawel Jakub Dawidek <pawel@dawidek.net>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/mman.h>
 #include <sys/sysctl.h>
@@ -90,13 +89,13 @@ static int eli_backup_create(struct gctl_req *req, const char *prov,
 /*
  * Available commands:
  *
- * init [-bdgPTv] [-a aalgo] [-B backupfile] [-e ealgo] [-i iterations] [-l keylen] [-J newpassfile] [-K newkeyfile] [-s sectorsize] [-V version] prov ...
+ * init [-bdgPRTv] [-a aalgo] [-B backupfile] [-e ealgo] [-i iterations] [-l keylen] [-J newpassfile] [-K newkeyfile] [-s sectorsize] [-V version] prov ...
  * label - alias for 'init'
  * attach [-Cdprv] [-n keyno] [-j passfile] [-k keyfile] prov ...
  * detach [-fl] prov ...
  * stop - alias for 'detach'
- * onetime [-d] [-a aalgo] [-e ealgo] [-l keylen] prov
- * configure [-bBgGtT] prov ...
+ * onetime [-dRT] [-a aalgo] [-e ealgo] [-l keylen] prov
+ * configure [-bBgGrRtT] prov ...
  * setkey [-pPv] [-n keyno] [-j passfile] [-J newpassfile] [-k keyfile] [-K newkeyfile] prov
  * delkey [-afv] [-n keyno] prov
  * suspend [-v] -a | prov ...
@@ -123,12 +122,13 @@ struct g_command class_commands[] = {
 		{ 'K', "newkeyfile", G_VAL_OPTIONAL, G_TYPE_STRING | G_TYPE_MULTI },
 		{ 'l', "keylen", "0", G_TYPE_NUMBER },
 		{ 'P', "nonewpassphrase", NULL, G_TYPE_BOOL },
+		{ 'R', "noautoresize", NULL, G_TYPE_BOOL },
 		{ 's', "sectorsize", "0", G_TYPE_NUMBER },
 		{ 'T', "notrim", NULL, G_TYPE_BOOL },
 		{ 'V', "mdversion", "-1", G_TYPE_NUMBER },
 		G_OPT_SENTINEL
 	    },
-	    "[-bdgPTv] [-a aalgo] [-B backupfile] [-e ealgo] [-i iterations] [-l keylen] [-J newpassfile] [-K newkeyfile] [-s sectorsize] [-V version] prov ..."
+	    "[-bdgPRTv] [-a aalgo] [-B backupfile] [-e ealgo] [-i iterations] [-l keylen] [-J newpassfile] [-K newkeyfile] [-s sectorsize] [-V version] prov ..."
 	},
 	{ "label", G_FLAG_VERBOSE, eli_main,
 	    {
@@ -143,7 +143,9 @@ struct g_command class_commands[] = {
 		{ 'K', "newkeyfile", G_VAL_OPTIONAL, G_TYPE_STRING | G_TYPE_MULTI },
 		{ 'l', "keylen", "0", G_TYPE_NUMBER },
 		{ 'P', "nonewpassphrase", NULL, G_TYPE_BOOL },
+		{ 'R', "noautoresize", NULL, G_TYPE_BOOL },
 		{ 's', "sectorsize", "0", G_TYPE_NUMBER },
+		{ 'T', "notrim", NULL, G_TYPE_BOOL },
 		{ 'V', "mdversion", "-1", G_TYPE_NUMBER },
 		G_OPT_SENTINEL
 	    },
@@ -184,11 +186,12 @@ struct g_command class_commands[] = {
 		{ 'd', "detach", NULL, G_TYPE_BOOL },
 		{ 'e', "ealgo", GELI_ENC_ALGO, G_TYPE_STRING },
 		{ 'l', "keylen", "0", G_TYPE_NUMBER },
+		{ 'R', "noautoresize", NULL, G_TYPE_BOOL },
 		{ 's', "sectorsize", "0", G_TYPE_NUMBER },
 		{ 'T', "notrim", NULL, G_TYPE_BOOL },
 		G_OPT_SENTINEL
 	    },
-	    "[-dT] [-a aalgo] [-e ealgo] [-l keylen] [-s sectorsize] prov"
+	    "[-dRT] [-a aalgo] [-e ealgo] [-l keylen] [-s sectorsize] prov"
 	},
 	{ "configure", G_FLAG_VERBOSE, eli_main,
 	    {
@@ -198,11 +201,13 @@ struct g_command class_commands[] = {
 		{ 'D', "nodisplaypass", NULL, G_TYPE_BOOL },
 		{ 'g', "geliboot", NULL, G_TYPE_BOOL },
 		{ 'G', "nogeliboot", NULL, G_TYPE_BOOL },
+		{ 'r', "autoresize", NULL, G_TYPE_BOOL },
+		{ 'R', "noautoresize", NULL, G_TYPE_BOOL },
 		{ 't', "trim", NULL, G_TYPE_BOOL },
 		{ 'T', "notrim", NULL, G_TYPE_BOOL },
 		G_OPT_SENTINEL
 	    },
-	    "[-bBdDgGtT] prov ..."
+	    "[-bBdDgGrRtT] prov ..."
 	},
 	{ "setkey", G_FLAG_VERBOSE, eli_main,
 	    {
@@ -751,7 +756,7 @@ eli_init(struct gctl_req *req)
 		eli_version = val;
 	}
 	md.md_version = eli_version;
-	md.md_flags = 0;
+	md.md_flags = G_ELI_FLAG_AUTORESIZE;
 	if (gctl_get_int(req, "boot"))
 		md.md_flags |= G_ELI_FLAG_BOOT;
 	if (gctl_get_int(req, "geliboot"))
@@ -760,6 +765,8 @@ eli_init(struct gctl_req *req)
 		md.md_flags |= G_ELI_FLAG_GELIDISPLAYPASS;
 	if (gctl_get_int(req, "notrim"))
 		md.md_flags |= G_ELI_FLAG_NODELETE;
+	if (gctl_get_int(req, "noautoresize"))
+		md.md_flags &= ~G_ELI_FLAG_AUTORESIZE;
 	md.md_ealgo = CRYPTO_ALGORITHM_MIN - 1;
 	str = gctl_get_ascii(req, "aalgo");
 	if (*str != '\0') {
@@ -820,22 +827,6 @@ eli_init(struct gctl_req *req)
 			    G_ELI_VERSION_05);
 			return;
 		}
-	}
-	if (md.md_flags & G_ELI_FLAG_AUTH) {
-		switch (md.md_aalgo) {
-		case CRYPTO_MD5_HMAC:
-			gctl_error(req,
-			    "The %s authentication algorithm is deprecated.",
-			    g_eli_algo2str(md.md_aalgo));
-			return;
-		}
-	}
-	switch (md.md_ealgo) {
-	case CRYPTO_3DES_CBC:
-	case CRYPTO_BLF_CBC:
-		gctl_error(req, "The %s encryption algorithm is deprecated.",
-		    g_eli_algo2str(md.md_ealgo));
-		return;
 	}
 	val = gctl_get_intmax(req, "keylen");
 	md.md_keylen = val;
@@ -1145,7 +1136,7 @@ out:
 
 static void
 eli_configure_detached(struct gctl_req *req, const char *prov, int boot,
-    int geliboot, int displaypass, int trim)
+    int geliboot, int displaypass, int trim, int autoresize)
 {
 	struct g_eli_metadata md;
 	bool changed = 0;
@@ -1210,6 +1201,20 @@ eli_configure_detached(struct gctl_req *req, const char *prov, int boot,
 		changed = 1;
 	}
 
+	if (autoresize == 1 && (md.md_flags & G_ELI_FLAG_AUTORESIZE)) {
+		if (verbose)
+			printf("AUTORESIZE flag already configured for %s.\n", prov);
+	} else if (autoresize == 0 && !(md.md_flags & G_ELI_FLAG_AUTORESIZE)) {
+		if (verbose)
+			printf("AUTORESIZE flag not configured for %s.\n", prov);
+	} else if (autoresize >= 0) {
+		if (autoresize)
+			md.md_flags |= G_ELI_FLAG_AUTORESIZE;
+		else
+			md.md_flags &= ~G_ELI_FLAG_AUTORESIZE;
+		changed = 1;
+	}
+
 	if (changed)
 		eli_metadata_store(req, prov, &md);
 	explicit_bzero(&md, sizeof(md));
@@ -1220,8 +1225,8 @@ eli_configure(struct gctl_req *req)
 {
 	const char *prov;
 	bool boot, noboot, geliboot, nogeliboot, displaypass, nodisplaypass;
-	bool trim, notrim;
-	int doboot, dogeliboot, dodisplaypass, dotrim;
+	bool autoresize, noautoresize, trim, notrim;
+	int doboot, dogeliboot, dodisplaypass, dotrim, doautoresize;
 	int i, nargs;
 
 	nargs = gctl_get_int(req, "nargs");
@@ -1238,6 +1243,8 @@ eli_configure(struct gctl_req *req)
 	nodisplaypass = gctl_get_int(req, "nodisplaypass");
 	trim = gctl_get_int(req, "trim");
 	notrim = gctl_get_int(req, "notrim");
+	autoresize = gctl_get_int(req, "autoresize");
+	noautoresize = gctl_get_int(req, "noautoresize");
 
 	doboot = -1;
 	if (boot && noboot) {
@@ -1279,8 +1286,18 @@ eli_configure(struct gctl_req *req)
 	else if (notrim)
 		dotrim = 0;
 
+	doautoresize = -1;
+	if (autoresize && noautoresize) {
+		gctl_error(req, "Options -r and -R are mutually exclusive.");
+		return;
+	}
+	if (autoresize)
+		doautoresize = 1;
+	else if (noautoresize)
+		doautoresize = 0;
+
 	if (doboot == -1 && dogeliboot == -1 && dodisplaypass == -1 &&
-	    dotrim == -1) {
+	    dotrim == -1 && doautoresize == -1) {
 		gctl_error(req, "No option given.");
 		return;
 	}
@@ -1292,7 +1309,7 @@ eli_configure(struct gctl_req *req)
 		prov = gctl_get_ascii(req, "arg%d", i);
 		if (!eli_is_attached(prov)) {
 			eli_configure_detached(req, prov, doboot, dogeliboot,
-			    dodisplaypass, dotrim);
+			    dodisplaypass, dotrim, doautoresize);
 		}
 	}
 }
@@ -1404,6 +1421,12 @@ eli_setkey_detached(struct gctl_req *req, const char *prov,
 	bcopy(mkey, mkeydst, sizeof(mkey));
 	explicit_bzero(mkey, sizeof(mkey));
 
+	/*
+	 * The previous eli_genkey() set cached_passphrase, we do not want to
+	 * use that for the new passphrase so always prompt for it
+	 */
+	explicit_bzero(cached_passphrase, sizeof(cached_passphrase));
+
 	/* Generate key for Master Key encryption. */
 	if (eli_genkey_single(req, md, key, true) == NULL) {
 		explicit_bzero(key, sizeof(key));
@@ -1450,7 +1473,7 @@ eli_setkey(struct gctl_req *req)
 
 	if (req->error == NULL || req->error[0] == '\0') {
 		printf("Note, that the master key encrypted with old keys "
-		    "and/or passphrase may still exists in a metadata backup "
+		    "and/or passphrase may still exist in a metadata backup "
 		    "file.\n");
 	}
 }

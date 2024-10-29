@@ -35,7 +35,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Echo command.
  */

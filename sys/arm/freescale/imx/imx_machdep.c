@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013 Ian Lepore <ian@freebsd.org>
  * All rights reserved.
@@ -29,7 +29,6 @@
 #include "opt_platform.h"
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/reboot.h>
@@ -46,7 +45,8 @@
 #include <arm/freescale/imx/imx_machdep.h>
 #include <arm/freescale/imx/imx_wdogreg.h>
 
-SYSCTL_NODE(_hw, OID_AUTO, imx, CTLFLAG_RW, NULL, "i.MX container");
+SYSCTL_NODE(_hw, OID_AUTO, imx, CTLFLAG_RW | CTLFLAG_MPSAFE, NULL,
+    "i.MX container");
 
 static int last_reset_status;
 SYSCTL_UINT(_hw_imx, OID_AUTO, last_reset_status, CTLFLAG_RD, 
@@ -128,4 +128,3 @@ imx_wdog_init_last_reset(vm_offset_t wdsr_phys)
 		sysctl___hw_imx_last_reset_reason.oid_arg1 = "PowerOnReset";
 	}
 }
-

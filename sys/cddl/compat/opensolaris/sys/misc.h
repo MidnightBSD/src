@@ -22,7 +22,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _OPENSOLARIS_SYS_MISC_H_
@@ -54,7 +53,6 @@ struct opensolaris_utsname {
 };
 
 extern char hw_serial[11];
-extern struct opensolaris_utsname utsname;
 #endif
 
 #endif	/* _OPENSOLARIS_SYS_MISC_H_ */

@@ -42,7 +42,6 @@
 #include "opt_platform.h"
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -117,8 +116,6 @@ bcm2836_devmap_init(platform_t plat)
 	return (0);
 }
 #endif
-
-
 
 static void
 bcm2835_cpu_reset(platform_t plat)

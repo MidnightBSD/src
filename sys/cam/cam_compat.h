@@ -1,7 +1,7 @@
 /*-
  * CAM ioctl compatibility shims
  *
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013 Scott Long
  * All rights reserved.
@@ -26,7 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _CAM_CAM_COMPAT_H
@@ -38,7 +37,6 @@
 int cam_compat_ioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag,
     struct thread *td, int(*cbfnp)(struct cdev *, u_long, caddr_t, int,
     struct thread *));
-
 
 /* Version 0x16 compatibility */
 #define CAM_VERSION_0x16	0x16
@@ -71,7 +69,7 @@ struct ccb_hdr_0x17 {
 	ccb_ppriv_area	periph_priv;
 	ccb_spriv_area	sim_priv;
 	u_int32_t	timeout;	/* Hard timeout value in seconds */
-	struct callout_handle timeout_ch;
+	struct callout	*timeout_ch;
 };
 
 struct ccb_pathinq_0x17 {
@@ -219,6 +217,13 @@ struct dev_match_result_0x18 {
 
 #define	CAMIOCOMMAND_0x18	_IOC(IOC_INOUT, CAM_VERSION_0x18, 2, CAM_0X18_LEN)
 #define CAMGETPASSTHRU_0x18	_IOC(IOC_INOUT, CAM_VERSION_0x18, 3, CAM_0X18_LEN)
+
+/* Version 0x19 compatibility */
+#define CAM_VERSION_0x19	0x19
+#define CAMIOCOMMAND_0x19	_IOWR(CAM_VERSION_0x19, 2, union ccb)
+#define CAMGETPASSTHRU_0x19	_IOWR(CAM_VERSION_0x19, 3, union ccb)
+#define CAMIOQUEUE_0x19		_IO(CAM_VERSION_0x19, 4)
+#define CAMIOGET_0x19		_IO(CAM_VERSION_0x19, 5)
 
 #endif
 #endif

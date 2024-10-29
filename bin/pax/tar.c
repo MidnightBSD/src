@@ -39,7 +39,6 @@ static char sccsid[] = "@(#)tar.c	8.2 (Berkeley) 4/18/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/stat.h>
@@ -56,9 +55,7 @@ static char sccsid[] = "@(#)tar.c	8.2 (Berkeley) 4/18/94";
 static u_long tar_chksm(char *, int);
 static char *name_split(char *, int);
 static int ul_oct(u_long, char *, int, int);
-#ifndef NET2_STAT
 static int uqd_oct(u_quad_t, char *, int, int);
-#endif
 
 /*
  * Routines common to all versions of tar
@@ -189,7 +186,6 @@ ul_oct(u_long val, char *str, int len, int term)
 	return(0);
 }
 
-#ifndef NET2_STAT
 /*
  * uqd_oct()
  *	convert an u_quad_t to an octal string. one of many oddball field
@@ -243,7 +239,6 @@ uqd_oct(u_quad_t val, char *str, int len, int term)
 		return(-1);
 	return(0);
 }
-#endif
 
 /*
  * tar_chksm()
@@ -378,9 +373,9 @@ tar_rd(ARCHD *arcn, char *buf)
 	 */
 	if (tar_id(buf, BLKMULT) < 0)
 		return(-1);
+	memset(arcn, 0, sizeof *arcn);
 	arcn->org_name = arcn->name;
 	arcn->sb.st_nlink = 1;
-	arcn->pat = NULL;
 
 	/*
 	 * copy out the name and values in the stat buffer
@@ -398,13 +393,8 @@ tar_rd(ARCHD *arcn, char *buf)
 	    0xfff);
 	arcn->sb.st_uid = (uid_t)asc_ul(hd->uid, sizeof(hd->uid), OCT);
 	arcn->sb.st_gid = (gid_t)asc_ul(hd->gid, sizeof(hd->gid), OCT);
-#ifdef NET2_STAT
-	arcn->sb.st_size = (off_t)asc_ul(hd->size, sizeof(hd->size), OCT);
-	arcn->sb.st_mtime = (time_t)asc_ul(hd->mtime, sizeof(hd->mtime), OCT);
-#else
 	arcn->sb.st_size = (off_t)asc_uqd(hd->size, sizeof(hd->size), OCT);
 	arcn->sb.st_mtime = (time_t)asc_uqd(hd->mtime, sizeof(hd->mtime), OCT);
-#endif
 	arcn->sb.st_ctime = arcn->sb.st_atime = arcn->sb.st_mtime;
 
 	/*
@@ -412,8 +402,6 @@ tar_rd(ARCHD *arcn, char *buf)
 	 * to encode this as a directory
 	 */
 	pt = &(arcn->name[arcn->nlen - 1]);
-	arcn->pad = 0;
-	arcn->skip = 0;
 	switch(hd->linkflag) {
 	case SYMTYPE:
 		/*
@@ -450,8 +438,6 @@ tar_rd(ARCHD *arcn, char *buf)
 		arcn->type = PAX_DIR;
 		arcn->sb.st_mode |= S_IFDIR;
 		arcn->sb.st_nlink = 2;
-		arcn->ln_name[0] = '\0';
-		arcn->ln_nlen = 0;
 		break;
 	case AREGTYPE:
 	case REGTYPE:
@@ -459,8 +445,6 @@ tar_rd(ARCHD *arcn, char *buf)
 		/*
 		 * If we have a trailing / this is a directory and NOT a file.
 		 */
-		arcn->ln_name[0] = '\0';
-		arcn->ln_nlen = 0;
 		if (*pt == '/') {
 			/*
 			 * it is a directory, set the mode for -v printing
@@ -561,12 +545,12 @@ tar_wr(ARCHD *arcn)
 	}
 
 	/*
-	 * copy the data out of the ARCHD into the tar header based on the type
-	 * of the file. Remember many tar readers want the unused fields to be
-	 * padded with zero. We set the linkflag field (type), the linkname
-	 * (or zero if not used),the size, and set the padding (if any) to be
-	 * added after the file data (0 for all other types, as they only have
-	 * a header)
+	 * Copy the data out of the ARCHD into the tar header based on the type
+	 * of the file. Remember, many tar readers want all fields to be
+	 * padded with zero so we zero the header first.  We then set the
+	 * linkflag field (type), the linkname, the size, and set the padding
+	 * (if any) to be added after the file data (0 for all other types,
+	 * as they only have a header).
 	 */
 	hd = &hdblk;
 	l_strncpy(hd->name, arcn->name, sizeof(hd->name) - 1);
@@ -608,13 +592,8 @@ tar_wr(ARCHD *arcn)
 		 */
 		hd->linkflag = AREGTYPE;
 		memset(hd->linkname, 0, sizeof(hd->linkname));
-#		ifdef NET2_STAT
-		if (ul_oct((u_long)arcn->sb.st_size, hd->size,
-		    sizeof(hd->size), 1)) {
-#		else
 		if (uqd_oct((u_quad_t)arcn->sb.st_size, hd->size,
 		    sizeof(hd->size), 1)) {
-#		endif
 			paxwarn(1,"File is too large for tar %s", arcn->org_name);
 			return(1);
 		}
@@ -742,10 +721,9 @@ ustar_rd(ARCHD *arcn, char *buf)
 	 */
 	if (ustar_id(buf, BLKMULT) < 0)
 		return(-1);
+	memset(arcn, 0, sizeof *arcn);
 	arcn->org_name = arcn->name;
 	arcn->sb.st_nlink = 1;
-	arcn->pat = NULL;
-	arcn->nlen = 0;
 	hd = (HD_USTAR *)buf;
 
 	/*
@@ -775,13 +753,8 @@ ustar_rd(ARCHD *arcn, char *buf)
 	 */
 	arcn->sb.st_mode = (mode_t)(asc_ul(hd->mode, sizeof(hd->mode), OCT) &
 	    0xfff);
-#ifdef NET2_STAT
-	arcn->sb.st_size = (off_t)asc_ul(hd->size, sizeof(hd->size), OCT);
-	arcn->sb.st_mtime = (time_t)asc_ul(hd->mtime, sizeof(hd->mtime), OCT);
-#else
 	arcn->sb.st_size = (off_t)asc_uqd(hd->size, sizeof(hd->size), OCT);
 	arcn->sb.st_mtime = (time_t)asc_uqd(hd->mtime, sizeof(hd->mtime), OCT);
-#endif
 	arcn->sb.st_ctime = arcn->sb.st_atime = arcn->sb.st_mtime;
 
 	/*
@@ -796,15 +769,6 @@ ustar_rd(ARCHD *arcn, char *buf)
 	hd->uname[sizeof(hd->uname) - 1] = '\0';
 	if (uid_name(hd->uname, &(arcn->sb.st_uid)) < 0)
 		arcn->sb.st_uid = (uid_t)asc_ul(hd->uid, sizeof(hd->uid), OCT);
-
-	/*
-	 * set the defaults, these may be changed depending on the file type
-	 */
-	arcn->ln_name[0] = '\0';
-	arcn->ln_nlen = 0;
-	arcn->pad = 0;
-	arcn->skip = 0;
-	arcn->sb.st_rdev = (dev_t)0;
 
 	/*
 	 * set the mode and PAX type according to the typeflag in the header
@@ -1010,13 +974,8 @@ ustar_wr(ARCHD *arcn)
 		memset(hd->devmajor, 0, sizeof(hd->devmajor));
 		memset(hd->devminor, 0, sizeof(hd->devminor));
 		arcn->pad = TAR_PAD(arcn->sb.st_size);
-#		ifdef NET2_STAT
-		if (ul_oct((u_long)arcn->sb.st_size, hd->size,
-		    sizeof(hd->size), 3)) {
-#		else
 		if (uqd_oct((u_quad_t)arcn->sb.st_size, hd->size,
 		    sizeof(hd->size), 3)) {
-#		endif
 			paxwarn(1,"File is too long for ustar %s",arcn->org_name);
 			return(1);
 		}

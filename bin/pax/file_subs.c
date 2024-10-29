@@ -39,7 +39,6 @@ static char sccsid[] = "@(#)file_subs.c	8.1 (Berkeley) 5/31/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/stat.h>
@@ -622,7 +621,7 @@ chk_path( char *name, uid_t st_uid, gid_t st_gid)
  *	non-zero we force these times to be set even if the user did not
  *	request access and/or modification time preservation (this is also
  *	used by -t to reset access times).
- *	When ign is zero, only those times the user has asked for are set, the
+ *	When frc is zero, only those times the user has asked for are set, the
  *	other ones are left alone. We do not assume the un-documented feature
  *	of many lutimes() implementations that consider a 0 time value as a do
  *	not set request.

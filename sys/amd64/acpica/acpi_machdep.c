@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2001 Mitsuru IWASAKI
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
@@ -261,7 +260,7 @@ nexus_acpi_probe(device_t dev)
 	error = acpi_identify();
 	if (error)
 		return (error);
-
+	device_quiet(dev);
 	return (BUS_PROBE_DEFAULT);
 }
 
@@ -281,7 +280,6 @@ static device_method_t nexus_acpi_methods[] = {
 	/* Device interface */
 	DEVMETHOD(device_probe,		nexus_acpi_probe),
 	DEVMETHOD(device_attach,	nexus_acpi_attach),
-
 	{ 0, 0 }
 };
 

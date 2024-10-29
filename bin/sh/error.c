@@ -36,7 +36,6 @@ static char sccsid[] = "@(#)error.c	8.2 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-
 /*
  * Errors and exceptions.
  */
@@ -66,7 +65,7 @@ volatile sig_atomic_t suppressint;
 volatile sig_atomic_t intpending;
 
 
-static void exverror(int, const char *, va_list) __printf0like(2, 0) __dead2;
+static void verrorwithstatus(int, const char *, va_list) __printf0like(2, 0) __dead2;
 
 /*
  * Called to raise an exception.  Since C doesn't include exceptions, we
@@ -153,7 +152,7 @@ warning(const char *msg, ...)
  * formatting.  It then raises the error exception.
  */
 static void
-exverror(int cond, const char *msg, va_list ap)
+verrorwithstatus(int status, const char *msg, va_list ap)
 {
 	/*
 	 * An interrupt trumps an error.  Certain places catch error
@@ -167,14 +166,17 @@ exverror(int cond, const char *msg, va_list ap)
 
 #ifdef DEBUG
 	if (msg)
-		TRACE(("exverror(%d, \"%s\") pid=%d\n", cond, msg, getpid()));
+		TRACE(("verrorwithstatus(%d, \"%s\") pid=%d\n",
+		    status, msg, getpid()));
 	else
-		TRACE(("exverror(%d, NULL) pid=%d\n", cond, getpid()));
+		TRACE(("verrorwithstatus(%d, NULL) pid=%d\n",
+		    status, getpid()));
 #endif
 	if (msg)
 		vwarning(msg, ap);
 	flushall();
-	exraise(cond);
+	exitstatus = status;
+	exraise(EXERROR);
 }
 
 
@@ -183,16 +185,16 @@ error(const char *msg, ...)
 {
 	va_list ap;
 	va_start(ap, msg);
-	exverror(EXERROR, msg, ap);
+	verrorwithstatus(2, msg, ap);
 	va_end(ap);
 }
 
 
 void
-exerror(int cond, const char *msg, ...)
+errorwithstatus(int status, const char *msg, ...)
 {
 	va_list ap;
 	va_start(ap, msg);
-	exverror(cond, msg, ap);
+	verrorwithstatus(status, msg, ap);
 	va_end(ap);
 }

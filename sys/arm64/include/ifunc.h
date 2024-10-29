@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2015-2018 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Konstantin Belousov <kib@FreeBSD.org>
  * under sponsorship from the FreeBSD Foundation.
@@ -25,23 +24,22 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef __ARM64_IFUNC_H
 #define	__ARM64_IFUNC_H
 
-#define	DEFINE_IFUNC(qual, ret_type, name, args, resolver_qual)		\
-    resolver_qual ret_type (*name##_resolver(void))args __used;		\
+#define	DEFINE_IFUNC(qual, ret_type, name, args)			\
+    static ret_type (*name##_resolver(void))args __used;		\
     qual ret_type name args __attribute__((ifunc(#name "_resolver")));	\
-    resolver_qual ret_type (*name##_resolver(void))args
+    static ret_type (*name##_resolver(void))args
 
-#define	DEFINE_UIFUNC(qual, ret_type, name, args, resolver_qual)	\
-    resolver_qual ret_type (*name##_resolver(uint64_t, uint64_t,	\
+#define	DEFINE_UIFUNC(qual, ret_type, name, args)			\
+    static ret_type (*name##_resolver(uint64_t, uint64_t,		\
 	uint64_t, uint64_t, uint64_t, uint64_t, uint64_t,		\
 	uint64_t))args __used;						\
     qual ret_type name args __attribute__((ifunc(#name "_resolver")));	\
-    resolver_qual ret_type (*name##_resolver(uint64_t _arg1 __unused,	\
+    static ret_type (*name##_resolver(uint64_t _arg1 __unused,		\
 	uint64_t _arg2 __unused, uint64_t _arg3 __unused,		\
 	uint64_t _arg4 __unused, uint64_t _arg5 __unused,		\
 	uint64_t _arg6 __unused, uint64_t _arg7 __unused,		\

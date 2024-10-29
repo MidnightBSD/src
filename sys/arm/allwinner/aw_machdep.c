@@ -34,7 +34,6 @@
 #include "opt_platform.h"
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -289,8 +288,6 @@ static platform_method_t h3_methods[] = {
 };
 FDT_PLATFORM_DEF(h3, "h3", 0, "allwinner,sun8i-h3", 200);
 #endif
-
-
 
 u_int
 allwinner_soc_type(void)

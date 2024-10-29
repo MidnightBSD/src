@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/conf.h>
@@ -68,7 +67,6 @@ static device_method_t pmsu_methods[] = {
 	DEVMETHOD(device_probe,		pmsu_probe),
 	DEVMETHOD(device_attach,	pmsu_attach),
 	DEVMETHOD(device_detach,	pmsu_detach),
-
 	{ 0, 0 }
 };
 

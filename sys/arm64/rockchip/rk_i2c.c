@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2018 Emmanuel Vadot <manu@FreeBSD.org>
  *
@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/kernel.h>
@@ -44,7 +43,6 @@
 #include <dev/extres/clk/clk.h>
 
 #include "iicbus_if.h"
-
 
 #define	RK_I2C_CON			0x00
 #define	 RK_I2C_CON_EN			(1 << 0)

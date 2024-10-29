@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -189,7 +188,6 @@ am335x_ecap_detach(device_t dev)
 	PWM_UNLOCK(sc);
 
 	PWM_LOCK_DESTROY(sc);
-
 
 	return (0);
 }

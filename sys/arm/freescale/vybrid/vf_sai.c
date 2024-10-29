@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2014 Ruslan Bukin <br@bsdpad.com>
  * All rights reserved.
@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -668,7 +667,6 @@ setup_sai(struct sc_info *sc)
 	reg |= (1 << 10); /* FEIE */
 	WRITE4(sc, I2S_TCSR, reg);
 }
-
 
 static void
 sai_dmamap_cb(void *arg, bus_dma_segment_t *segs, int nseg, int err)

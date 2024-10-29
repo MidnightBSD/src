@@ -25,8 +25,6 @@
 .\" This document is derived in part from the enet man page (enet.4)
 .\" distributed with 4.3BSD Unix.
 .\"
-.\" $FreeBSD$
-.\"
 .Dd March 6, 2022
 .Dt NETMAP 4
 .Os
@@ -40,7 +38,7 @@
 is a framework for extremely fast and efficient packet I/O
 for userspace and kernel clients, and for Virtual Machines.
 It runs on
-.Fx
+.Fx ,
 Linux and some versions of Windows, and supports a variety of
 .Nm netmap ports ,
 including
@@ -828,7 +826,7 @@ On
 .Xr cxgbe 4 ,
 .Xr em 4 ,
 .Xr iflib 4
-(providing igb, em and lem),
+.Pq providing Xr igb 4 and Xr em 4 ,
 .Xr ixgbe 4 ,
 .Xr ixl 4 ,
 .Xr re 4 ,
@@ -1003,7 +1001,7 @@ interfaces, as in
 or even connect the NIC to the host stack using netmap
 .Dl bridge -i netmap:ix0
 .Ss USING THE NATIVE API
-The following code implements a traffic generator
+The following code implements a traffic generator:
 .Pp
 .Bd -literal -compact
 #include <net/netmap_user.h>
@@ -1038,7 +1036,8 @@ void sender(void)
 }
 .Ed
 .Ss HELPER FUNCTIONS
-A simple receiver can be implemented using the helper functions
+A simple receiver can be implemented using the helper functions:
+.Pp
 .Bd -literal -compact
 #define NETMAP_WITH_LIBS
 #include <net/netmap_user.h>
@@ -1067,6 +1066,7 @@ it is possible to do packet forwarding between ports
 swapping buffers.
 The buffer from the transmit ring is used
 to replenish the receive ring:
+.Pp
 .Bd -literal -compact
     uint32_t tmp;
     struct netmap_slot *src, *dst;

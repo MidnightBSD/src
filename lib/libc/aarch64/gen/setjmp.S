@@ -1,7 +1,6 @@
 /*-
  * Copyright (c) 2014 Andrew Turner
  * Copyright (c) 2014 The FreeBSD Foundation
- * All rights reserved.
  *
  * Portions of this software were developed by Andrew Turner
  * under sponsorship from the FreeBSD Foundation
@@ -30,7 +29,6 @@
  */
 
 #include <machine/asm.h>
-
 #include <machine/setjmp.h>
 
 ENTRY(setjmp)
@@ -113,7 +111,8 @@ ENTRY(longjmp)
 	ldp	d14, d15, [x0]
 
 	/* Load the return value */
-	mov	x0, x1
+	cmp	x1, #0
+	csinc	x0, x1, xzr, ne
 	ret
 
 botch:

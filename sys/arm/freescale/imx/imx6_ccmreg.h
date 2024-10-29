@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013 Ian Lepore <ian@freebsd.org>
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef	IMX6_CCMREG_H
@@ -153,7 +152,7 @@
 
 #define	CCM_ANALOG_PLL_VIDEO_NUM		0x000040b0
 #define	CCM_ANALOG_PLL_VIDEO_DENOM		0x000040c0
-	
+
 #define	CCM_ANALOG_PLL_ENET			0x000040e0
 #define	  CCM_ANALOG_PLL_ENET_LOCK		  (1u << 31)
 #define	  CCM_ANALOG_PLL_ENET_ENABLE_100M	  (1u << 20)  /* SATA */

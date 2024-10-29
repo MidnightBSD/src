@@ -1,4 +1,5 @@
-# $FreeBSD$
+
+PACKAGE=	kerberos
 
 PROG=	kstash
 MAN=	kstash.8

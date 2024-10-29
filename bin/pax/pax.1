@@ -32,7 +32,7 @@
 .\"
 .\"	@(#)pax.1	8.4 (Berkeley) 4/18/94
 .\"
-.Dd March 17, 2015
+.Dd October 19, 2022
 .Dt PAX 1
 .Os
 .Sh NAME
@@ -792,6 +792,16 @@ limits can be separated by
 .Li x
 to indicate a product.
 .Pp
+Note that the specified size is for the uncompressed pax image itself.
+If the
+.Fl z
+option is also used, the resulting file may contain fewer
+.Ar bytes ,
+according to the compressibility of the archive contents.
+See
+.Xr zip 1
+if compressed volumes of predictable size are required.
+.Pp
 .Em Warning :
 Only use this option when writing an archive to a device which supports
 an end of file read condition based on last (or largest) write offset
@@ -803,7 +813,7 @@ This option is the same as the
 option, except that the file inode change time is checked instead of the
 file modification time.
 The file inode change time can be used to select files whose inode information
-(e.g.\& uid, gid, etc.) is newer than a copy of the file in the destination
+(e.g., uid, gid, etc.) is newer than a copy of the file in the destination
 .Ar directory .
 .It Fl E Ar limit
 Limit the number of consecutive read faults while trying to read a flawed
@@ -902,7 +912,7 @@ the file was last written).
 The
 .Ar c
 specifies the comparison of inode change time (the time when the file
-inode was last changed; e.g.\& a change of owner, group, mode, etc).
+inode was last changed; e.g., a change of owner, group, mode, etc).
 When
 .Ar c
 and
@@ -922,28 +932,31 @@ changed during a specified time range will be archived).
 A time range is made up of six different fields and each field must contain two
 digits.
 The format is:
-.Dl [yy[mm[dd[hh]]]]mm[.ss]
+.Pp
+.Dl [[[[[cc]yy]mm]dd]HH]MM[.SS]
+.Pp
 Where
-.Cm yy
+.Ar cc
+is the first two digits of the year (the century),
+.Ar yy
 is the last two digits of the year,
 the first
-.Cm mm
+.Ar mm
 is the month (from 01 to 12),
-.Cm dd
+.Ar dd
 is the day of the month (from 01 to 31),
-.Cm hh
+.Ar HH
 is the hour of the day (from 00 to 23),
-the second
-.Cm mm
+.Ar MM
 is the minute (from 00 to 59),
 and
-.Cm ss
+.Ar SS
 is the seconds (from 00 to 59).
 The minute field
-.Cm mm
+.Ar MM
 is required, while the other fields are optional and must be added in the
 following order:
-.Dl Cm hh , dd , mm , yy .
+.Ar HH , dd , mm , yy , cc .
 The
 .Cm ss
 field may be added independently of the other fields.

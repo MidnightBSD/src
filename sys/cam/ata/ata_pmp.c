@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 
 #ifdef _KERNEL
@@ -138,8 +137,8 @@ static int pmp_retry_count = PMP_DEFAULT_RETRY;
 static int pmp_default_timeout = PMP_DEFAULT_TIMEOUT;
 static int pmp_hide_special = PMP_DEFAULT_HIDE_SPECIAL;
 
-static SYSCTL_NODE(_kern_cam, OID_AUTO, pmp, CTLFLAG_RD, 0,
-            "CAM Direct Access Disk driver");
+static SYSCTL_NODE(_kern_cam, OID_AUTO, pmp, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
+    "CAM Direct Access Disk driver");
 SYSCTL_INT(_kern_cam_pmp, OID_AUTO, retry_count, CTLFLAG_RWTUN,
            &pmp_retry_count, 0, "Normal I/O retry count");
 SYSCTL_INT(_kern_cam_pmp, OID_AUTO, default_timeout, CTLFLAG_RWTUN,
@@ -273,7 +272,7 @@ pmpasync(void *callback_arg, u_int32_t code,
 	{
 		struct ccb_getdev *cgd;
 		cam_status status;
- 
+
 		cgd = (struct ccb_getdev *)arg;
 		if (cgd == NULL)
 			break;
@@ -353,7 +352,7 @@ pmpsysctlinit(void *context, int pending)
 	softc->flags |= PMP_FLAG_SCTX_INIT;
 	softc->sysctl_tree = SYSCTL_ADD_NODE_WITH_LABEL(&softc->sysctl_ctx,
 		SYSCTL_STATIC_CHILDREN(_kern_cam_pmp), OID_AUTO, tmpstr2,
-		CTLFLAG_RD, 0, tmpstr, "device_index");
+		CTLFLAG_RD | CTLFLAG_MPSAFE, 0, tmpstr, "device_index");
 	if (softc->sysctl_tree == NULL) {
 		printf("pmpsysctlinit: unable to allocate sysctl tree\n");
 		cam_periph_release(periph);

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012 Damjan Marion <dmarion@Freebsd.org>
  * Copyright (c) 2016 Rubicon Communications, LLC (Netgate)
@@ -47,7 +47,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_cpsw.h"
 
 #include <sys/param.h>
@@ -73,7 +72,8 @@
 #include <net/if_media.h>
 #include <net/if_types.h>
 
-#include <arm/ti/ti_scm.h>
+#include <dev/extres/syscon/syscon.h>
+#include "syscon_if.h"
 #include <arm/ti/am335x/am335x_scm.h>
 
 #include <dev/mii/mii.h>
@@ -83,7 +83,7 @@
 #include <dev/ofw/ofw_bus_subr.h>
 
 #include <dev/fdt/fdt_common.h>
- 
+
 #ifdef CPSW_ETHERSWITCH
 #include <dev/etherswitch/etherswitch.h>
 #include "etherswitch_if.h"
@@ -1003,6 +1003,8 @@ cpswp_attach(device_t dev)
 	struct cpswp_softc *sc;
 	uint32_t reg;
 	uint8_t mac_addr[ETHER_ADDR_LEN];
+	phandle_t opp_table;
+	struct syscon *syscon;
 
 	sc = device_get_softc(dev);
 	sc->dev = dev;
@@ -1027,11 +1029,6 @@ cpswp_attach(device_t dev)
 
 	/* Allocate network interface */
 	ifp = sc->ifp = if_alloc(IFT_ETHER);
-	if (ifp == NULL) {
-		cpswp_detach(dev);
-		return (ENXIO);
-	}
-
 	if_initname(ifp, device_get_name(sc->dev), sc->unit);
 	ifp->if_softc = sc;
 	ifp->if_flags = IFF_SIMPLEX | IFF_MULTICAST | IFF_BROADCAST;
@@ -1046,15 +1043,34 @@ cpswp_attach(device_t dev)
 	IFQ_SET_MAXLEN(&ifp->if_snd, ifp->if_snd.ifq_drv_maxlen);
 	IFQ_SET_READY(&ifp->if_snd);
 
+	/* FIXME: For now; Go and kidnap syscon from opp-table */
+	/* ti,cpsw actually have an optional syscon reference but only for am33xx?? */
+	opp_table = OF_finddevice("/opp-table");
+	if (opp_table == -1) {
+		device_printf(dev, "Cant find /opp-table\n");
+		cpswp_detach(dev);
+		return (ENXIO);
+	}
+	if (!OF_hasprop(opp_table, "syscon")) {
+		device_printf(dev, "/opp-table doesnt have required syscon property\n");
+		cpswp_detach(dev);
+		return (ENXIO);
+	}
+	if (syscon_get_by_ofw_property(dev, opp_table, "syscon", &syscon) != 0) {
+		device_printf(dev, "Failed to get syscon\n");
+		cpswp_detach(dev);
+		return (ENXIO);
+	}
+
 	/* Get high part of MAC address from control module (mac_id[0|1]_hi) */
-	ti_scm_reg_read_4(SCM_MAC_ID0_HI + sc->unit * 8, &reg);
+	reg = SYSCON_READ_4(syscon, SCM_MAC_ID0_HI + sc->unit * 8);
 	mac_addr[0] = reg & 0xFF;
 	mac_addr[1] = (reg >>  8) & 0xFF;
 	mac_addr[2] = (reg >> 16) & 0xFF;
 	mac_addr[3] = (reg >> 24) & 0xFF;
 
 	/* Get low part of MAC address from control module (mac_id[0|1]_lo) */
-	ti_scm_reg_read_4(SCM_MAC_ID0_LO + sc->unit * 8, &reg);
+	reg = SYSCON_READ_4(syscon, SCM_MAC_ID0_LO + sc->unit * 8);
 	mac_addr[4] = reg & 0xFF;
 	mac_addr[5] = (reg >>  8) & 0xFF;
 
@@ -2424,12 +2440,27 @@ cpsw_ale_dump_table(struct cpsw_softc *sc) {
 	printf("\n");
 }
 
+static u_int
+cpswp_set_maddr(void *arg, struct sockaddr_dl *sdl, u_int cnt)
+{
+	struct cpswp_softc *sc = arg;
+	uint32_t portmask;
+
+	if (sc->swsc->dualemac)
+		portmask = 1 << (sc->unit + 1) | 1 << 0;
+	else
+		portmask = 7;
+
+	cpsw_ale_mc_entry_set(sc->swsc, portmask, sc->vlan, LLADDR(sdl));
+
+	return (1);
+}
+
 static int
 cpswp_ale_update_addresses(struct cpswp_softc *sc, int purge)
 {
 	uint8_t *mac;
 	uint32_t ale_entry[3], ale_type, portmask;
-	struct ifmultiaddr *ifma;
 
 	if (sc->swsc->dualemac) {
 		ale_type = ALE_TYPE_VLAN_ADDR << 28 | sc->vlan << 16;
@@ -2444,7 +2475,6 @@ cpswp_ale_update_addresses(struct cpswp_softc *sc, int purge)
 	 * For simplicity, keep this entry at table index 0 for port 1 and
 	 * at index 2 for port 2 in the ALE.
 	 */
-        if_addr_rlock(sc->ifp);
 	mac = LLADDR((struct sockaddr_dl *)sc->ifp->if_addr->ifa_addr);
 	ale_entry[0] = mac[2] << 24 | mac[3] << 16 | mac[4] << 8 | mac[5];
 	ale_entry[1] = ale_type | mac[0] << 8 | mac[1]; /* addr entry + mac */
@@ -2456,7 +2486,6 @@ cpswp_ale_update_addresses(struct cpswp_softc *sc, int purge)
 	    mac[3] << 24 | mac[2] << 16 | mac[1] << 8 | mac[0]);
 	cpsw_write_4(sc->swsc, CPSW_PORT_P_SA_LO(sc->unit + 1),
 	    mac[5] << 8 | mac[4]);
-        if_addr_runlock(sc->ifp);
 
 	/* Keep the broadcast address at table entry 1 (or 3). */
 	ale_entry[0] = 0xffffffff; /* Lower 32 bits of MAC */
@@ -2471,14 +2500,7 @@ cpswp_ale_update_addresses(struct cpswp_softc *sc, int purge)
 		cpsw_ale_remove_all_mc_entries(sc->swsc);
 
         /* Set other multicast addrs desired. */
-        if_maddr_rlock(sc->ifp);
-        CK_STAILQ_FOREACH(ifma, &sc->ifp->if_multiaddrs, ifma_link) {
-                if (ifma->ifma_addr->sa_family != AF_LINK)
-                        continue;
-		cpsw_ale_mc_entry_set(sc->swsc, portmask, sc->vlan,
-		    LLADDR((struct sockaddr_dl *)ifma->ifma_addr));
-        }
-        if_maddr_runlock(sc->ifp);
+	if_foreach_llmaddr(sc->ifp, cpswp_set_maddr, sc);
 
 	return (0);
 }
@@ -2718,15 +2740,17 @@ cpsw_add_sysctls(struct cpsw_softc *sc)
 	    CTLFLAG_RW, &sc->debug, 0, "Enable switch debug messages");
 
 	SYSCTL_ADD_PROC(ctx, parent, OID_AUTO, "attachedSecs",
-	    CTLTYPE_UINT | CTLFLAG_RD, sc, 0, cpsw_stat_attached, "IU",
+	    CTLTYPE_UINT | CTLFLAG_RD | CTLFLAG_NEEDGIANT,
+	    sc, 0, cpsw_stat_attached, "IU",
 	    "Time since driver attach");
 
 	SYSCTL_ADD_PROC(ctx, parent, OID_AUTO, "intr_coalesce_us",
-	    CTLTYPE_UINT | CTLFLAG_RW, sc, 0, cpsw_intr_coalesce, "IU",
+	    CTLTYPE_UINT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
+	    sc, 0, cpsw_intr_coalesce, "IU",
 	    "minimum time between interrupts");
 
 	node = SYSCTL_ADD_NODE(ctx, parent, OID_AUTO, "ports",
-	    CTLFLAG_RD, NULL, "CPSW Ports Statistics");
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "CPSW Ports Statistics");
 	ports_parent = SYSCTL_CHILDREN(node);
 	for (i = 0; i < CPSW_PORTS; i++) {
 		if (!sc->dualemac && i != sc->active_slave)
@@ -2734,38 +2758,39 @@ cpsw_add_sysctls(struct cpsw_softc *sc)
 		port[0] = '0' + i;
 		port[1] = '\0';
 		node = SYSCTL_ADD_NODE(ctx, ports_parent, OID_AUTO,
-		    port, CTLFLAG_RD, NULL, "CPSW Port Statistics");
+		    port, CTLFLAG_RD | CTLFLAG_MPSAFE, NULL,
+		    "CPSW Port Statistics");
 		port_parent = SYSCTL_CHILDREN(node);
 		SYSCTL_ADD_PROC(ctx, port_parent, OID_AUTO, "uptime",
-		    CTLTYPE_UINT | CTLFLAG_RD, sc, i,
+		    CTLTYPE_UINT | CTLFLAG_RD | CTLFLAG_NEEDGIANT, sc, i,
 		    cpsw_stat_uptime, "IU", "Seconds since driver init");
 	}
 
 	stats_node = SYSCTL_ADD_NODE(ctx, parent, OID_AUTO, "stats",
-				     CTLFLAG_RD, NULL, "CPSW Statistics");
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "CPSW Statistics");
 	stats_parent = SYSCTL_CHILDREN(stats_node);
 	for (i = 0; i < CPSW_SYSCTL_COUNT; ++i) {
 		SYSCTL_ADD_PROC(ctx, stats_parent, i,
 				cpsw_stat_sysctls[i].oid,
-				CTLTYPE_U64 | CTLFLAG_RD, sc, 0,
-				cpsw_stats_sysctl, "IU",
+				CTLTYPE_U64 | CTLFLAG_RD | CTLFLAG_NEEDGIANT,
+				sc, 0, cpsw_stats_sysctl, "IU",
 				cpsw_stat_sysctls[i].oid);
 	}
 
 	queue_node = SYSCTL_ADD_NODE(ctx, parent, OID_AUTO, "queue",
-	    CTLFLAG_RD, NULL, "CPSW Queue Statistics");
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "CPSW Queue Statistics");
 	queue_parent = SYSCTL_CHILDREN(queue_node);
 
 	node = SYSCTL_ADD_NODE(ctx, queue_parent, OID_AUTO, "tx",
-	    CTLFLAG_RD, NULL, "TX Queue Statistics");
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "TX Queue Statistics");
 	cpsw_add_queue_sysctls(ctx, node, &sc->tx);
 
 	node = SYSCTL_ADD_NODE(ctx, queue_parent, OID_AUTO, "rx",
-	    CTLFLAG_RD, NULL, "RX Queue Statistics");
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "RX Queue Statistics");
 	cpsw_add_queue_sysctls(ctx, node, &sc->rx);
 
 	node = SYSCTL_ADD_NODE(ctx, parent, OID_AUTO, "watchdog",
-	    CTLFLAG_RD, NULL, "Watchdog Statistics");
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "Watchdog Statistics");
 	cpsw_add_watchdog_sysctls(ctx, node, sc);
 }
 

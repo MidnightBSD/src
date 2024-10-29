@@ -19,4 +19,3 @@
 #define SWI_IMBrange	0xf00001
 
 #endif /* !_MACHINE_SWI_H_ */
-

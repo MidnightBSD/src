@@ -38,7 +38,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -248,7 +247,6 @@ mv_pcib_ctrl_alloc_resource(device_t bus, device_t child, int type, int *rid,
 	int i;
 
 	if (RMAN_IS_DEFAULT_RANGE(start, end)) {
-
 		if ((di = device_get_ivars(child)) == NULL)
 			return (NULL);
 		if (type != SYS_RES_MEMORY)

@@ -1,6 +1,5 @@
 #!/bin/sh
 
-
 usage()
 {
     cat >&2 <<__EOF__

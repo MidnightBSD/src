@@ -18,7 +18,6 @@
  *
  * CDDL HEADER END
  *
- *
  */
 
 /* Report registered DTrace providers. */
@@ -72,12 +71,15 @@ sysctl_dtrace_providers(SYSCTL_HANDLER_ARGS)
 	return (error);
 }
 
-SYSCTL_NODE(_debug, OID_AUTO, dtrace, CTLFLAG_RD, 0, "DTrace debug parameters");
+SYSCTL_NODE(_debug, OID_AUTO, dtrace, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
+    "DTrace debug parameters");
 
-SYSCTL_PROC(_debug_dtrace, OID_AUTO, providers, CTLTYPE_STRING | CTLFLAG_RD,
-    0, 0, sysctl_dtrace_providers, "A", "available DTrace providers");
+SYSCTL_PROC(_debug_dtrace, OID_AUTO, providers,
+    CTLTYPE_STRING | CTLFLAG_MPSAFE | CTLFLAG_RD, 0, 0, sysctl_dtrace_providers,
+    "A", "available DTrace providers");
 
-SYSCTL_NODE(_kern, OID_AUTO, dtrace, CTLFLAG_RD, 0, "DTrace parameters");
+SYSCTL_NODE(_kern, OID_AUTO, dtrace, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
+    "DTrace parameters");
 
 SYSCTL_INT(_kern_dtrace, OID_AUTO, err_verbose, CTLFLAG_RW,
     &dtrace_err_verbose, 0,
@@ -91,6 +93,10 @@ SYSCTL_QUAD(_kern_dtrace, OID_AUTO, dof_maxsize, CTLFLAG_RW,
 
 SYSCTL_QUAD(_kern_dtrace, OID_AUTO, helper_actions_max, CTLFLAG_RW,
     &dtrace_helper_actions_max, 0, "maximum number of allowed helper actions");
+
+SYSCTL_INT(_kern_dtrace, OID_AUTO, bufsize_max, CTLFLAG_RWTUN,
+    &dtrace_bufsize_max_frac, 0,
+    "maximum fraction (1/n-th) of physical memory for principal buffers");
 
 SYSCTL_INT(_security_bsd, OID_AUTO, allow_destructive_dtrace, CTLFLAG_RDTUN,
     &dtrace_allow_destructive, 1, "Allow destructive mode DTrace scripts");

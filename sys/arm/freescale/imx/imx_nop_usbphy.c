@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013 Ian Lepore <ian@freebsd.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * USBPHY "no-op" driver for Freescale family of SoCs.  This driver is used on
  * SoCs which have usbphy hardware whose clocks need to be enabled, but no other
@@ -119,4 +118,3 @@ static driver_t usbphy_driver = {
 static devclass_t usbphy_devclass;
 
 DRIVER_MODULE(usbphy, simplebus, usbphy_driver, usbphy_devclass, 0, 0);
-

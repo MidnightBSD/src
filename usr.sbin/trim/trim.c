@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2019 Eugene Grosbein <eugen@FreeBSD.org>.
  * Contains code written by Alan Somers <asomers@FreeBSD.org>.
@@ -45,7 +45,6 @@
 #include <unistd.h>
 
 #include <sys/cdefs.h>
-
 static bool	candelete(int fd);
 static off_t	getsize(const char *path);
 static int	opendev(const char *path, int flags);
@@ -219,7 +218,7 @@ trim(const char *path, off_t offset, off_t length, bool dryrun, bool verbose)
 		return (0);
 	}
 
-	fd = opendev(path, O_WRONLY | O_DIRECT);
+	fd = opendev(path, O_RDWR | O_DIRECT);
 	arg[0] = offset;
 	arg[1] = length;
 

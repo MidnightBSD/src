@@ -36,7 +36,6 @@ static char sccsid[] = "@(#)mail.c	8.2 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-
 /*
  * Routines to check for mail.  (Perhaps make part of main.c?)
  */

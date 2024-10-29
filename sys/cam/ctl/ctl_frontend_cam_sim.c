@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009 Silicon Graphics International Corp.
  * All rights reserved.
@@ -39,7 +39,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -87,8 +86,7 @@ struct cfcs_softc {
  * handle physical addresses yet.  That would require mapping things in
  * order to do the copy.
  */
-#define	CFCS_BAD_CCB_FLAGS (CAM_DATA_ISPHYS | CAM_MSG_BUF_PHYS |	\
-	CAM_SNS_BUF_PHYS | CAM_CDB_PHYS | CAM_SENSE_PTR |		\
+#define	CFCS_BAD_CCB_FLAGS (CAM_DATA_ISPHYS | CAM_CDB_PHYS | CAM_SENSE_PTR |		\
 	CAM_SENSE_PHYS)
 
 static int cfcs_init(void);
@@ -108,8 +106,8 @@ struct cfcs_softc cfcs_softc;
  */
 static int cfcs_max_sense = sizeof(struct scsi_sense_data);
 
-SYSCTL_NODE(_kern_cam, OID_AUTO, ctl2cam, CTLFLAG_RD, 0,
-	    "CAM Target Layer SIM frontend");
+SYSCTL_NODE(_kern_cam, OID_AUTO, ctl2cam, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
+    "CAM Target Layer SIM frontend");
 SYSCTL_INT(_kern_cam_ctl2cam, OID_AUTO, max_sense, CTLFLAG_RW,
            &cfcs_max_sense, 0, "Maximum sense data size");
 
@@ -761,8 +759,8 @@ cfcs_action(struct cam_sim *sim, union ccb *ccb)
 		cpi->hpath_id = 0;
 		cpi->initiator_id = 1;
 
-		strlcpy(cpi->sim_vid, "MidnightBSD", SIM_IDLEN);
-		strlcpy(cpi->hba_vid, "MidnightBSD", HBA_IDLEN);
+		strlcpy(cpi->sim_vid, "FreeBSD", SIM_IDLEN);
+		strlcpy(cpi->hba_vid, "FreeBSD", HBA_IDLEN);
 		strlcpy(cpi->dev_name, cam_sim_name(sim), DEV_IDLEN);
 		cpi->unit_number = 0;
 		cpi->bus_id = 0;

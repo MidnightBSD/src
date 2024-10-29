@@ -1,4 +1,5 @@
-# $FreeBSD$
+
+PACKAGE=	kerberos
 
 PROG=	ksu
 .if defined(ENABLE_SUID_K5SU)

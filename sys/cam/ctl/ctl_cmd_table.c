@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2003, 2004, 2005, 2009 Silicon Graphics International Corp.
  * Copyright (c) 2014-2015 Alexander Motin <mav@FreeBSD.org>
@@ -736,7 +736,6 @@ const struct ctl_cmd_entry ctl_cmd_table_9b[32] =
 
 /* 1d-1f */
 };
-
 
 /* 9E SERVICE ACTION IN(16) */
 const struct ctl_cmd_entry ctl_cmd_table_9e[32] =

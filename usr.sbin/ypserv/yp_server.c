@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "yp.h"
 #include "yp_extern.h"
 #include <dirent.h>

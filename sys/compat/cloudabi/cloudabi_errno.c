@@ -24,7 +24,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 
 #include <contrib/cloudabi/cloudabi_types_common.h>

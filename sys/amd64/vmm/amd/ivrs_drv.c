@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2016, Anish Gupta (anish@freebsd.org)
  * Copyright (c) 2021 The FreeBSD Foundation
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_acpi.h"
 #include <sys/param.h>
 #include <sys/bus.h>
@@ -107,7 +106,6 @@ ivrs_hdr_iterate_tbl(ivhd_iter_t iter, void *arg)
 
 		default:
 			printf("AMD-Vi:Not IVHD/IVMD type(%d)", ivrs_hdr->Type);
-
 		}
 
 		ivrs_hdr = (ACPI_IVRS_HEADER *)((uint8_t *)ivrs_hdr +
@@ -450,7 +448,7 @@ ivhd_probe(device_t dev)
 	case IVRS_TYPE_HARDWARE_EFR:
 		device_set_desc(dev, "AMD-Vi/IOMMU ivhd with EFR");
 		break;
-	
+
 	case IVRS_TYPE_HARDWARE_MIXED:
 		device_set_desc(dev, "AMD-Vi/IOMMU ivhd in mixed format");
 		break;
@@ -614,7 +612,7 @@ ivhd_print_cap(struct amdvi_softc *softc, ACPI_IVRS_HARDWARE1 * ivhd)
 	int max_ptp_level;
 
 	dev = softc->dev;
-	
+
 	ivhd_print_flag(dev, softc->ivhd_type, softc->ivhd_flag);
 	ivhd_print_feature(dev, softc->ivhd_type, softc->ivhd_feature);
 	ivhd_print_ext_feature(dev, softc->ext_feature);
@@ -651,7 +649,8 @@ ivhd_attach(device_t dev)
 	softc->dev = dev;
 	ivhd = ivhd_hdrs[unit];
 	KASSERT(ivhd, ("ivhd is NULL"));
-	softc->pci_dev = pci_find_bsf(PCI_RID2BUS(ivhd->Header.DeviceId),
+	softc->pci_dev = pci_find_dbsf(ivhd->PciSegmentGroup,
+	    PCI_RID2BUS(ivhd->Header.DeviceId),
 	    PCI_RID2SLOT(ivhd->Header.DeviceId),
 	    PCI_RID2FUNC(ivhd->Header.DeviceId));
 

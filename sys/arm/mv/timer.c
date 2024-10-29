@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2006 Benno Rice.
  * Copyright (C) 2007-2008 MARVELL INTERNATIONAL LTD.
@@ -31,10 +31,10 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
+#include <sys/eventhandler.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
 #include <sys/malloc.h>
@@ -285,7 +285,6 @@ mv_hardclock(void *arg)
 static device_method_t mv_timer_methods[] = {
 	DEVMETHOD(device_probe, mv_timer_probe),
 	DEVMETHOD(device_attach, mv_timer_attach),
-
 	{ 0, 0 }
 };
 

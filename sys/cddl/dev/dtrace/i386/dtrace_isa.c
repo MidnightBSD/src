@@ -18,7 +18,6 @@
  * information: Portions Copyright [yyyy] [name of copyright owner]
  *
  * CDDL HEADER END
- *
  */
 /*
  * Copyright 2005 Sun Microsystems, Inc.  All rights reserved.
@@ -72,7 +71,8 @@ dtrace_getpcstack(pc_t *pcstack, int pcstack_limit, int aframes,
 
 	frame = (struct i386_frame *)ebp;
 	while (depth < pcstack_limit) {
-		if (!INKERNEL(frame))
+		if (!kstack_contains(curthread, (vm_offset_t)frame,
+		    sizeof(*frame)))
 			break;
 
 		callpc = frame->f_retaddr;
@@ -90,9 +90,7 @@ dtrace_getpcstack(pc_t *pcstack, int pcstack_limit, int aframes,
 			pcstack[depth++] = callpc;
 		}
 
-		if (frame->f_frame <= frame ||
-		    (vm_offset_t)frame->f_frame >= curthread->td_kstack +
-		    curthread->td_kstack_pages * PAGE_SIZE)
+		if (frame->f_frame <= frame)
 			break;
 		frame = frame->f_frame;
 	}
@@ -483,14 +481,11 @@ dtrace_getstackdepth(int aframes)
 	frame = (struct i386_frame *)ebp;
 	depth++;
 	for(;;) {
-		if (!INKERNEL((long) frame))
-			break;
-		if (!INKERNEL((long) frame->f_frame))
+		if (!kstack_contains(curthread, (vm_offset_t)frame,
+		    sizeof(*frame)))
 			break;
 		depth++;
-		if (frame->f_frame <= frame ||
-		    (vm_offset_t)frame->f_frame >= curthread->td_kstack +
-		    curthread->td_kstack_pages * PAGE_SIZE)
+		if (frame->f_frame <= frame)
 			break;
 		frame = frame->f_frame;
 	}

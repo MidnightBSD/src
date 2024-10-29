@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013 Ian Lepore <ian@freebsd.org>
  * Copyright (c) 2014 Steven Lawrance <stl@koffein.net>
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Analog PLL and power regulator driver for Freescale i.MX6 family of SoCs.
  * Also, temperature montoring and cpu frequency control.  It was Freescale who
@@ -399,11 +398,13 @@ cpufreq_initialize(struct imx6_anatop_softc *sc)
 	    "CPU frequency");
 
 	SYSCTL_ADD_PROC(NULL, SYSCTL_STATIC_CHILDREN(_hw_imx), 
-	    OID_AUTO, "cpu_minmhz", CTLTYPE_INT | CTLFLAG_RWTUN | CTLFLAG_NOFETCH,
+	    OID_AUTO, "cpu_minmhz",
+	    CTLTYPE_INT | CTLFLAG_RWTUN | CTLFLAG_NOFETCH | CTLFLAG_NEEDGIANT,
 	    sc, 0, cpufreq_sysctl_minmhz, "IU", "Minimum CPU frequency");
 
 	SYSCTL_ADD_PROC(NULL, SYSCTL_STATIC_CHILDREN(_hw_imx),
-	    OID_AUTO, "cpu_maxmhz", CTLTYPE_INT | CTLFLAG_RWTUN | CTLFLAG_NOFETCH,
+	    OID_AUTO, "cpu_maxmhz",
+	    CTLTYPE_INT | CTLFLAG_RWTUN | CTLFLAG_NOFETCH | CTLFLAG_NEEDGIANT,
 	    sc, 0, cpufreq_sysctl_maxmhz, "IU", "Maximum CPU frequency");
 
 	SYSCTL_ADD_INT(NULL, SYSCTL_STATIC_CHILDREN(_hw_imx),
@@ -626,10 +627,12 @@ initialize_tempmon(struct imx6_anatop_softc *sc)
 	    0, tempmon_throttle_check, sc, 0);
 
 	SYSCTL_ADD_PROC(NULL, SYSCTL_STATIC_CHILDREN(_hw_imx), 
-	    OID_AUTO, "temperature", CTLTYPE_INT | CTLFLAG_RD, sc, 0,
+	    OID_AUTO, "temperature",
+	    CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_NEEDGIANT, sc, 0,
 	    temp_sysctl_handler, "IK", "Current die temperature");
 	SYSCTL_ADD_PROC(NULL, SYSCTL_STATIC_CHILDREN(_hw_imx), 
-	    OID_AUTO, "throttle_temperature", CTLTYPE_INT | CTLFLAG_RW, sc,
+	    OID_AUTO, "throttle_temperature",
+	    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT, sc,
 	    0, temp_throttle_sysctl_handler, "IK", 
 	    "Throttle CPU when exceeding this temperature");
 }
@@ -811,4 +814,3 @@ EARLY_DRIVER_MODULE(imx6_anatop, simplebus, imx6_anatop_driver,
     imx6_anatop_devclass, 0, 0, BUS_PASS_BUS + BUS_PASS_ORDER_MIDDLE);
 EARLY_DRIVER_MODULE(imx6_anatop, ofwbus, imx6_anatop_driver,
     imx6_anatop_devclass, 0, 0, BUS_PASS_BUS + BUS_PASS_ORDER_MIDDLE);
-

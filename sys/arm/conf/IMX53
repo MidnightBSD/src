@@ -4,7 +4,7 @@
 # For more information on this file, please read the config(5) manual page,
 # and/or the handbook section on Kernel Configuration Files:
 #
-#    https://www.FreeBSD.org/doc/en_US.ISO8859-1/books/handbook/kernelconfig-config.html
+#    https://docs.freebsd.org/en/books/handbook/kernelconfig/#kernelconfig-config
 #
 # The handbook is also available locally in /usr/share/doc/handbook
 # if you've installed the doc distribution, otherwise always see the
@@ -41,9 +41,16 @@ options 	INCLUDE_CONFIG_FILE	# Include this file in kernel
 # Note that 'bpf' is required for DHCP.
 device		bpf			# Berkeley packet filter
 
+# pseudo devices
+device		clk
+device		phy
+device		hwreset
+device		nvmem
+device		regulator
+device		syscon
+
 # Pseudo devices.
 device		loop			# Network loopback
-device		random			# Entropy device
 device		ether			# Ethernet support
 #device		vlan			# 802.1Q VLAN support
 #device		tuntap			# Packet tunnel.
@@ -112,6 +119,9 @@ device		wlan_amrr		# AMRR transmit rate control algorithm
 #device  	sdhci			# SD controller
 #device  	mmc			# SD/MMC protocol
 #device  	mmcsd			# SDCard disk device
+
+# HID support
+device		hid			# Generic HID support
 
 
 # Flattened Device Tree

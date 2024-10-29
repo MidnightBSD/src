@@ -35,7 +35,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -139,7 +138,6 @@ fpga_wait_dclk_pulses(struct fpgamgr_a10_softc *sc, int npulses)
 
 	return (0);
 }
-
 
 static int
 fpga_open(struct cdev *dev, int flags __unused,

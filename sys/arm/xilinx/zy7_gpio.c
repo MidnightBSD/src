@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013 Thomas Skibo
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -45,7 +44,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/conf.h>
@@ -95,7 +93,6 @@ struct zy7_gpio_softc {
 
 #define WR4(sc, off, val)	bus_write_4((sc)->mem_res, (off), (val))
 #define RD4(sc, off)		bus_read_4((sc)->mem_res, (off))
-
 
 /* Xilinx Zynq-7000 GPIO register definitions:
  */

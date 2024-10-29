@@ -33,7 +33,6 @@
  */
 
 #include <machine/asm.h>
-
 	.section .init,"ax",@progbits
 	ld	ra, 0(sp)
 	addi	sp, sp, 16

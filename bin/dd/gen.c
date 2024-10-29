@@ -1,6 +1,5 @@
 /*-
  * This program is in the public domain
- *
  */
 
 #include <stdio.h>

@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2016 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Andrew Turner under
  * the sponsorship of the FreeBSD Foundation.
@@ -30,7 +29,6 @@
 #include "opt_acpi.h"
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -57,6 +55,7 @@ static device_identify_t gic_v3_acpi_identify;
 static device_probe_t gic_v3_acpi_probe;
 static device_attach_t gic_v3_acpi_attach;
 static bus_alloc_resource_t gic_v3_acpi_bus_alloc_res;
+static bus_get_resource_list_t gic_v3_acpi_get_resource_list;
 
 static void gic_v3_acpi_bus_attach(device_t);
 
@@ -69,6 +68,7 @@ static device_method_t gic_v3_acpi_methods[] = {
 	/* Bus interface */
 	DEVMETHOD(bus_alloc_resource,		gic_v3_acpi_bus_alloc_res),
 	DEVMETHOD(bus_activate_resource,	bus_generic_activate_resource),
+	DEVMETHOD(bus_get_resource_list,	gic_v3_acpi_get_resource_list),
 
 	/* End */
 	DEVMETHOD_END
@@ -82,12 +82,12 @@ static devclass_t gic_v3_acpi_devclass;
 EARLY_DRIVER_MODULE(gic_v3, acpi, gic_v3_acpi_driver, gic_v3_acpi_devclass,
     0, 0, BUS_PASS_INTERRUPT + BUS_PASS_ORDER_MIDDLE);
 
-
 struct madt_table_data {
 	device_t parent;
 	device_t dev;
 	ACPI_MADT_GENERIC_DISTRIBUTOR *dist;
 	int count;
+	bool rdist_use_gicc;
 };
 
 static void
@@ -120,12 +120,16 @@ static void
 rdist_map(ACPI_SUBTABLE_HEADER *entry, void *arg)
 {
 	ACPI_MADT_GENERIC_REDISTRIBUTOR *redist;
+	ACPI_MADT_GENERIC_INTERRUPT *intr;
 	struct madt_table_data *madt_data;
+	rman_res_t count;
 
 	madt_data = (struct madt_table_data *)arg;
 
 	switch(entry->Type) {
 	case ACPI_MADT_TYPE_GENERIC_REDISTRIBUTOR:
+		if (madt_data->rdist_use_gicc)
+			break;
 		redist = (ACPI_MADT_GENERIC_REDISTRIBUTOR *)entry;
 
 		madt_data->count++;
@@ -133,6 +137,23 @@ rdist_map(ACPI_SUBTABLE_HEADER *entry, void *arg)
 		    SYS_RES_MEMORY, madt_data->count, redist->BaseAddress,
 		    redist->Length);
 		break;
+
+	case ACPI_MADT_TYPE_GENERIC_INTERRUPT:
+		if (!madt_data->rdist_use_gicc)
+			break;
+
+		intr = (ACPI_MADT_GENERIC_INTERRUPT *)entry;
+
+		madt_data->count++;
+		/*
+		 * Map the two 64k redistributor frames.
+		 */
+		count = GICR_RD_BASE_SIZE + GICR_SGI_BASE_SIZE;
+		if (madt_data->dist->Version == ACPI_MADT_GIC_VERSION_V4)
+			count += GICR_VLPI_BASE_SIZE + GICR_RESERVED_SIZE;
+		BUS_SET_RESOURCE(madt_data->parent, madt_data->dev,
+		    SYS_RES_MEMORY, madt_data->count, intr->GicrBaseAddress,
+		    count);
 
 	default:
 		break;
@@ -168,9 +189,15 @@ gic_v3_acpi_identify(driver_t *driver, device_t parent)
 		    "No gic interrupt or distributor table\n");
 		goto out;
 	}
-	/* This is for the wrong GIC version */
-	if (madt_data.dist->Version != ACPI_MADT_GIC_VERSION_V3)
+
+	/* Check the GIC version is supported by thiss driver */
+	switch(madt_data.dist->Version) {
+	case ACPI_MADT_GIC_VERSION_V3:
+	case ACPI_MADT_GIC_VERSION_V4:
+		break;
+	default:
 		goto out;
+	}
 
 	dev = BUS_ADD_CHILD(parent, BUS_PASS_INTERRUPT + BUS_PASS_ORDER_MIDDLE,
 	    "gic", -1);
@@ -181,11 +208,21 @@ gic_v3_acpi_identify(driver_t *driver, device_t parent)
 
 	/* Add the MADT data */
 	BUS_SET_RESOURCE(parent, dev, SYS_RES_MEMORY, 0,
-	    madt_data.dist->BaseAddress, 128 * 1024);
+	    madt_data.dist->BaseAddress, GICD_SIZE);
 
 	madt_data.dev = dev;
+	madt_data.rdist_use_gicc = false;
 	acpi_walk_subtables(madt + 1, (char *)madt + madt->Header.Length,
 	    rdist_map, &madt_data);
+	if (madt_data.count == 0) {
+		/*
+		 * No redistributors found, fall back to use the GICR
+		 * address from the GICC sub-table.
+		 */
+		madt_data.rdist_use_gicc = true;
+		acpi_walk_subtables(madt + 1, (char *)madt + madt->Header.Length,
+		    rdist_map, &madt_data);
+	}
 
 	acpi_set_private(dev, (void *)(uintptr_t)madt_data.dist->Version);
 
@@ -199,6 +236,7 @@ gic_v3_acpi_probe(device_t dev)
 
 	switch((uintptr_t)acpi_get_private(dev)) {
 	case ACPI_MADT_GIC_VERSION_V3:
+	case ACPI_MADT_GIC_VERSION_V4:
 		break;
 	default:
 		return (ENXIO);
@@ -214,6 +252,15 @@ madt_count_redistrib(ACPI_SUBTABLE_HEADER *entry, void *arg)
 	struct gic_v3_softc *sc = arg;
 
 	if (entry->Type == ACPI_MADT_TYPE_GENERIC_REDISTRIBUTOR)
+		sc->gic_redists.nregions++;
+}
+
+static void
+madt_count_gicc_redistrib(ACPI_SUBTABLE_HEADER *entry, void *arg)
+{
+	struct gic_v3_softc *sc = arg;
+
+	if (entry->Type == ACPI_MADT_TYPE_GENERIC_INTERRUPT)
 		sc->gic_redists.nregions++;
 }
 
@@ -238,6 +285,12 @@ gic_v3_acpi_count_regions(device_t dev)
 
 	acpi_walk_subtables(madt + 1, (char *)madt + madt->Header.Length,
 	    madt_count_redistrib, sc);
+	/* Fall back to use the distributor GICR base address */
+	if (sc->gic_redists.nregions == 0) {
+		acpi_walk_subtables(madt + 1,
+		    (char *)madt + madt->Header.Length,
+		    madt_count_gicc_redistrib, sc);
+	}
 	acpi_unmap_table(madt);
 
 	return (sc->gic_redists.nregions > 0 ? 0 : ENXIO);
@@ -255,7 +308,7 @@ gic_v3_acpi_attach(device_t dev)
 
 	err = gic_v3_acpi_count_regions(dev);
 	if (err != 0)
-		goto error;
+		goto count_error;
 
 	err = gic_v3_attach(dev);
 	if (err != 0)
@@ -287,12 +340,13 @@ gic_v3_acpi_attach(device_t dev)
 	return (0);
 
 error:
+	/* Failure so free resources */
+	gic_v3_detach(dev);
+count_error:
 	if (bootverbose) {
 		device_printf(dev,
 		    "Failed to attach. Error %d\n", err);
 	}
-	/* Failure so free resources */
-	gic_v3_detach(dev);
 
 	return (err);
 }
@@ -363,19 +417,20 @@ static struct resource *
 gic_v3_acpi_bus_alloc_res(device_t bus, device_t child, int type, int *rid,
     rman_res_t start, rman_res_t end, rman_res_t count, u_int flags)
 {
-	struct gic_v3_acpi_devinfo *di;
 	struct resource_list_entry *rle;
+	struct resource_list *rl;
 
 	/* We only allocate memory */
 	if (type != SYS_RES_MEMORY)
 		return (NULL);
 
 	if (RMAN_IS_DEFAULT_RANGE(start, end)) {
-		if ((di = device_get_ivars(child)) == NULL)
+		rl = BUS_GET_RESOURCE_LIST(bus, child);
+		if (rl == NULL)
 			return (NULL);
 
 		/* Find defaults for this rid */
-		rle = resource_list_find(&di->di_rl, type, *rid);
+		rle = resource_list_find(rl, type, *rid);
 		if (rle == NULL)
 			return (NULL);
 
@@ -386,4 +441,15 @@ gic_v3_acpi_bus_alloc_res(device_t bus, device_t child, int type, int *rid,
 
 	return (bus_generic_alloc_resource(bus, child, type, rid, start, end,
 	    count, flags));
+}
+
+static struct resource_list *
+gic_v3_acpi_get_resource_list(device_t bus, device_t child)
+{
+	struct gic_v3_acpi_devinfo *di;
+
+	di = device_get_ivars(child);
+	KASSERT(di != NULL, ("%s: No devinfo", __func__));
+
+	return (&di->di_rl);
 }

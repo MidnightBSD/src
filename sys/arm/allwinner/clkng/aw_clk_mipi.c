@@ -21,11 +21,9 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -81,9 +79,6 @@ struct aw_clk_mipi_sc {
 static int
 aw_clk_mipi_init(struct clknode *clk, device_t dev)
 {
-	struct aw_clk_mipi_sc *sc;
-
-	sc = clknode_get_softc(clk);
 
 	clknode_init_parent_idx(clk, 0);
 	return (0);

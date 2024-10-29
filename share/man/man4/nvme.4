@@ -31,8 +31,6 @@
 .\"
 .\" Author: Jim Harris <jimharris@FreeBSD.org>
 .\"
-.\" $FreeBSD$
-.\"
 .Dd June 6, 2020
 .Dt NVME 4
 .Os
@@ -154,7 +152,30 @@ To select the
 driver, set the following tunable value in
 .Xr loader.conf 5 :
 .Bd -literal -offset indent
+hw.nvme.use_nvd=0
+.Ed
+.Pp
+This value may also be set in the kernel config file with
+.Bd -literal -offset indent
+.Cd options NVME_USE_NVD=0
+.Ed
+.Pp
+When there is an error,
+.Nm
+prints only the most relevant information about the command by default.
+To enable dumping of all information about the command, set the following tunable
+value in
+.Xr loader.conf 5 :
+.Bd -literal -offset indent
 hw.nvme.verbose_cmd_dump=1
+.Ed
+.Pp
+Prior versions of the driver reset the card twice on boot.
+This proved to be unnecessary and inefficient, so the driver now resets drive
+controller only once.
+The old behavior may be restored in the kernel config file with
+.Bd -literal -offset indent
+.Cd options NVME_2X_RESET
 .Ed
 .Pp
 .Sh SYSCTL VARIABLES

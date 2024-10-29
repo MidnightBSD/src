@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2018 Emmanuel Vadot <manu@freebsd.org>
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,7 +23,6 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef __RK_CRU_H__
@@ -170,7 +168,7 @@
 }
 
 /* Complex clock without divider (multiplexer only). */
-#define MUX(_id, _name, _pn, _f,  _mo, _ms, _mw)			\
+#define MUXRAW(_id, _name, _pn, _f,  _mo, _ms, _mw)			\
 {									\
 	.type = RK_CLK_MUX,						\
 	.clk.mux = &(struct rk_clk_mux_def) {				\
@@ -179,10 +177,30 @@
 		.clkdef.parent_names = _pn,				\
 		.clkdef.parent_cnt = nitems(_pn),			\
 		.clkdef.flags = CLK_NODE_STATIC_STRINGS,		\
-		.offset = CRU_CLKSEL_CON(_mo),				\
+		.offset = _mo,						\
 		.shift = _ms,						\
 		.width = _mw,						\
-		.mux_flags = _f, 			\
+		.mux_flags = _f,					\
+	},								\
+}
+
+#define MUX(_id, _name, _pn, _f,  _mo, _ms, _mw)			\
+	MUXRAW(_id, _name, _pn, _f, CRU_CLKSEL_CON(_mo), _ms, _mw)
+
+/* Complex clock without divider (multiplexer only in GRF). */
+#define MUXGRF(_id, _name, _pn, _f,  _mo, _ms, _mw)			\
+{									\
+	.type = RK_CLK_MUX,						\
+	.clk.mux = &(struct rk_clk_mux_def) {				\
+		.clkdef.id = _id,					\
+		.clkdef.name = _name,					\
+		.clkdef.parent_names = _pn,				\
+		.clkdef.parent_cnt = nitems(_pn),			\
+		.clkdef.flags = CLK_NODE_STATIC_STRINGS,		\
+		.offset = _mo,						\
+		.shift = _ms,						\
+		.width = _mw,						\
+		.mux_flags = RK_CLK_MUX_GRF | _f,			\
 	},								\
 }
 
@@ -205,6 +223,7 @@ struct rk_cru_gate {
 
 enum rk_clk_type {
 	RK_CLK_UNDEFINED = 0,
+	RK3066_CLK_PLL,
 	RK3328_CLK_PLL,
 	RK3399_CLK_PLL,
 	RK_CLK_COMPOSITE,

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012 Damjan Marion <dmarion@Freebsd.org>
  * All rights reserved.
@@ -28,9 +28,7 @@
  * SUCH DAMAGE.
  */
 
-
 #include <sys/cdefs.h>
-
 #include "opt_platform.h"
 
 #include <sys/param.h>
@@ -438,7 +436,6 @@ static device_method_t bcm_intc_methods[] = {
 	DEVMETHOD(pic_post_filter,	bcm_intc_post_filter),
 	DEVMETHOD(pic_post_ithread,	bcm_intc_post_ithread),
 	DEVMETHOD(pic_pre_ithread,	bcm_intc_pre_ithread),
-
 	{ 0, 0 }
 };
 

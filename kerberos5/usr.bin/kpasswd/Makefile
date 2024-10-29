@@ -1,4 +1,5 @@
-# $FreeBSD$
+
+PACKAGE=	kerberos
 
 PROG=	kpasswd
 CFLAGS+=-I${KRB5DIR}/lib/roken

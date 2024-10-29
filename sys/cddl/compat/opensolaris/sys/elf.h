@@ -18,7 +18,6 @@
  *
  * CDDL HEADER END
  *
- *
  * ELF compatibility definitions for OpenSolaris source.
  *
  */

@@ -20,7 +20,6 @@
  *
  * Portions Copyright 2006-2008 John Birrell jb@freebsd.org
  *
- *
  */
 
 /*
@@ -43,6 +42,7 @@
 #include <sys/systm.h>
 
 #include <sys/conf.h>
+#include <sys/endian.h>
 #include <sys/eventhandler.h>
 #include <sys/kernel.h>
 #include <sys/limits.h>

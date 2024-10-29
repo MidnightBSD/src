@@ -29,10 +29,10 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
+#include <sys/eventhandler.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
 #include <sys/malloc.h>
@@ -129,7 +129,6 @@ static void mv_watchdog_event(void *, unsigned int, int *);
 static device_method_t mv_wdt_methods[] = {
 	DEVMETHOD(device_probe, mv_wdt_probe),
 	DEVMETHOD(device_attach, mv_wdt_attach),
-
 	{ 0, 0 }
 };
 

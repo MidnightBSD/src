@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/conf.h>
@@ -38,7 +37,7 @@
 
 #include <machine/bus.h>
 
-#include <arm/ti/ti_prcm.h>
+#include <arm/ti/ti_sysc.h>
 #include <arm/ti/usb/omap_usb.h>
 
 /*
@@ -211,7 +210,7 @@ omap_tll_init(struct omap_tll_softc *sc)
 	int ret = 0;
 
 	/* Enable the USB TLL */
-	ti_prcm_clk_enable(USBTLL_CLK);
+	ti_sysc_clock_enable(device_get_parent(sc->sc_dev));
 
 	/* Perform TLL soft reset, and wait until reset is complete */
 	omap_tll_write_4(sc, OMAP_USBTLL_SYSCONFIG, TLL_SYSCONFIG_SOFTRESET);
@@ -222,7 +221,6 @@ omap_tll_init(struct omap_tll_softc *sc)
 	/* Wait for TLL reset to complete */
 	while ((omap_tll_read_4(sc, OMAP_USBTLL_SYSSTATUS) &
 	        TLL_SYSSTATUS_RESETDONE) == 0x00) {
-
 		/* Sleep for a tick */
 		pause("USBRESET", 1);
 
@@ -247,7 +245,7 @@ omap_tll_init(struct omap_tll_softc *sc)
 
 err_sys_status:
 	/* Disable the TLL clocks */
-	ti_prcm_clk_disable(USBTLL_CLK);
+	ti_sysc_clock_disable(device_get_parent(sc->sc_dev));
 
 	return(ret);
 }
@@ -272,7 +270,7 @@ omap_tll_disable(struct omap_tll_softc *sc)
 	}
 
 	/* Disable functional and interface clocks for the TLL and HOST modules */
-	ti_prcm_clk_disable(USBTLL_CLK);
+	ti_sysc_clock_disable(device_get_parent(sc->sc_dev));
 }
 
 static int
@@ -347,7 +345,6 @@ static device_method_t omap_tll_methods[] = {
 	DEVMETHOD(device_suspend, bus_generic_suspend),
 	DEVMETHOD(device_resume, bus_generic_resume),
 	DEVMETHOD(device_shutdown, bus_generic_shutdown),
-
 	{0, 0}
 };
 

@@ -20,7 +20,6 @@
  *
  * Portions Copyright 2006-2008 John Birrell jb@freebsd.org
  *
- *
  */
 
 #include <sys/cdefs.h>
@@ -113,7 +112,7 @@ static void
 dtmalloc_type_cb(struct malloc_type *mtp, void *arg __unused)
 {
 	char name[DTRACE_FUNCNAMELEN];
-	struct malloc_type_internal *mtip = mtp->ks_handle;
+	struct malloc_type_internal *mtip = &mtp->ks_mti;
 	int i;
 
 	/*

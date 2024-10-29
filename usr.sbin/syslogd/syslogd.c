@@ -29,7 +29,7 @@
  * SUCH DAMAGE.
  */
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2018 Prodrive Technologies, https://prodrive-technologies.com/
  * Author: Ed Schouten <ed@FreeBSD.org>
@@ -69,7 +69,6 @@ static char sccsid[] = "@(#)syslogd.c	8.3 (Berkeley) 4/4/94";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-
 /*
  *  syslogd -- log system messages
  *
@@ -96,8 +95,7 @@ static char sccsid[] = "@(#)syslogd.c	8.3 (Berkeley) 4/4/94";
  * Priority comparison code by Harlan Stenn.
  */
 
-/* Maximum number of characters in time of last occurrence */
-#define	MAXLINE		2048		/* maximum line length */
+#define	MAXLINE		8192		/* maximum line length */
 #define	MAXSVLINE	MAXLINE		/* maximum saved line length */
 #define	DEFUPRI		(LOG_USER|LOG_NOTICE)
 #define	DEFSPRI		(LOG_KERN|LOG_CRIT)
@@ -136,6 +134,7 @@ static char sccsid[] = "@(#)syslogd.c	8.3 (Berkeley) 4/4/94";
 #include <paths.h>
 #include <signal.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -187,7 +186,10 @@ struct peer {
 static STAILQ_HEAD(, peer) pqueue = STAILQ_HEAD_INITIALIZER(pqueue);
 
 struct socklist {
-	struct sockaddr_storage	sl_ss;
+	struct addrinfo		sl_ai;
+#define	sl_sa		sl_ai.ai_addr
+#define	sl_salen	sl_ai.ai_addrlen
+#define	sl_family	sl_ai.ai_family
 	int			sl_socket;
 	struct peer		*sl_peer;
 	int			(*sl_recv)(struct socklist *);
@@ -202,6 +204,7 @@ static STAILQ_HEAD(, socklist) shead = STAILQ_HEAD_INITIALIZER(shead);
 #define	IGN_CONS	0x001	/* don't print on console */
 #define	SYNC_FILE	0x002	/* do fsync on file after printing */
 #define	MARK		0x008	/* this message is a mark */
+#define	ISKERNEL	0x010	/* kernel generated message */
 
 /* Timestamps of log entries. */
 struct logtime {
@@ -377,6 +380,7 @@ static int	MarkInterval = 20 * 60;	/* interval between marks in seconds */
 static int	MarkSeq;	/* mark sequence number */
 static int	NoBind;		/* don't bind() as suggested by RFC 3164 */
 static int	SecureMode;	/* when true, receive only unix domain socks */
+static int	MaxForwardLen = 1024;	/* max length of forwared message */
 #ifdef INET6
 static int	family = PF_UNSPEC; /* protocol family (IPv4, IPv6 or both) */
 #else
@@ -388,7 +392,7 @@ static int	use_bootfile;	/* log entire bootfile for every kern msg */
 static int	no_compress;	/* don't compress messages (1=pipes, 2=all) */
 static int	logflags = O_WRONLY|O_APPEND; /* flags used to open log files */
 
-static char	bootfile[MAXLINE+1]; /* booted kernel file */
+static char	bootfile[MAXPATHLEN]; /* booted kernel file */
 
 static int	RemoteAddDate;	/* Always set the date on remote messages */
 static int	RemoteHostname;	/* Log remote hostname from the message */
@@ -409,7 +413,7 @@ struct iovlist;
 static int	allowaddr(char *);
 static int	addfile(struct filed *);
 static int	addpeer(struct peer *);
-static int	addsock(struct sockaddr *, socklen_t, struct socklist *);
+static int	addsock(struct addrinfo *, struct socklist *);
 static struct filed *cfline(const char *, const char *, const char *,
     const char *);
 static const char *cvthname(struct sockaddr *);
@@ -463,9 +467,9 @@ close_filed(struct filed *f)
 
 	switch (f->f_type) {
 	case F_FORW:
-		if (f->f_un.f_forw.f_addr) {
-			freeaddrinfo(f->f_un.f_forw.f_addr);
-			f->f_un.f_forw.f_addr = NULL;
+		if (f->fu_forw_addr != NULL) {
+			freeaddrinfo(f->fu_forw_addr);
+			f->fu_forw_addr = NULL;
 		}
 		/* FALLTHROUGH */
 
@@ -511,16 +515,23 @@ addpeer(struct peer *pe0)
 }
 
 static int
-addsock(struct sockaddr *sa, socklen_t sa_len, struct socklist *sl0)
+addsock(struct addrinfo *ai, struct socklist *sl0)
 {
 	struct socklist *sl;
 
-	sl = calloc(1, sizeof(*sl));
+	/* Copy *ai->ai_addr to the tail of struct socklist if any. */
+	sl = calloc(1, sizeof(*sl) + ((ai != NULL) ? ai->ai_addrlen : 0));
 	if (sl == NULL)
 		err(1, "malloc failed");
 	*sl = *sl0;
-	if (sa != NULL && sa_len > 0)
-		memcpy(&sl->sl_ss, sa, sa_len);
+	if (ai != NULL) {
+		memcpy(&sl->sl_ai, ai, sizeof(*ai));
+		if (ai->ai_addrlen > 0) {
+			memcpy((sl + 1), ai->ai_addr, ai->ai_addrlen);
+			sl->sl_sa = (struct sockaddr *)(sl + 1);
+		} else
+			sl->sl_sa = NULL;
+	}
 	STAILQ_INSERT_TAIL(&shead, sl, next);
 
 	return (0);
@@ -540,7 +551,7 @@ main(int argc, char *argv[])
 	if (madvise(NULL, 0, MADV_PROTECT) != 0)
 		dprintf("madvise() failed: %s\n", strerror(errno));
 
-	while ((ch = getopt(argc, argv, "468Aa:b:cCdf:FHkl:m:nNoO:p:P:sS:Tuv"))
+	while ((ch = getopt(argc, argv, "468Aa:b:cCdf:FHkl:M:m:nNoO:p:P:sS:Tuv"))
 	    != -1)
 		switch (ch) {
 #ifdef INET
@@ -653,12 +664,19 @@ main(int argc, char *argv[])
 			});
 			break;
 		   }
+		case 'M':		/* max length of forwarded message */
+			MaxForwardLen = atoi(optarg);
+			if (MaxForwardLen < 480)
+				errx(1, "minimum length limit of forwarded "
+				        "messages is 480 bytes");
+			break;
 		case 'm':		/* mark interval */
 			MarkInterval = atoi(optarg) * 60;
 			break;
 		case 'N':
 			NoBind = 1;
-			SecureMode = 1;
+			if (!SecureMode)
+				SecureMode = 1;
 			break;
 		case 'n':
 			resolve = 0;
@@ -697,12 +715,15 @@ main(int argc, char *argv[])
 	if ((argc -= optind) != 0)
 		usage();
 
+	if (RFC3164OutputFormat && MaxForwardLen > 1024)
+		errx(1, "RFC 3164 messages may not exceed 1024 bytes");
+
 	/* Pipe to catch a signal during select(). */
 	s = pipe2(sigpipe, O_CLOEXEC);
 	if (s < 0) {
 		err(1, "cannot open a pipe for signals");
 	} else {
-		addsock(NULL, 0, &(struct socklist){
+		addsock(NULL, &(struct socklist){
 		    .sl_socket = sigpipe[0],
 		    .sl_recv = socklist_recv_signal
 		});
@@ -713,7 +734,7 @@ main(int argc, char *argv[])
 	if (s < 0) {
 		dprintf("can't open %s (%d)\n", _PATH_KLOG, errno);
 	} else {
-		addsock(NULL, 0, &(struct socklist){
+		addsock(NULL, &(struct socklist){
 			.sl_socket = s,
 			.sl_recv = socklist_recv_file,
 		});
@@ -885,7 +906,7 @@ socklist_recv_sock(struct socklist *sl)
 	}
 	/* Received valid data. */
 	line[len] = '\0';
-	if (sl->sl_ss.ss_family == AF_LOCAL)
+	if (sl->sl_sa != NULL && sl->sl_family == AF_LOCAL)
 		hname = LocalHostName;
 	else {
 		hname = cvthname(sa);
@@ -935,9 +956,9 @@ usage(void)
 	fprintf(stderr,
 		"usage: syslogd [-468ACcdFHknosTuv] [-a allowed_peer]\n"
 		"               [-b bind_address] [-f config_file]\n"
-		"               [-l [mode:]path] [-m mark_interval]\n"
-		"               [-O format] [-P pid_file] [-p log_socket]\n"
-		"               [-S logpriv_socket]\n");
+		"               [-l [mode:]path] [-M fwd_length]\n"
+		"               [-m mark_interval] [-O format] [-P pid_file]\n"
+		"               [-p log_socket] [-S logpriv_socket]\n");
 	exit(1);
 }
 
@@ -1140,19 +1161,19 @@ parsemsg_rfc5424(const char *from, int pri, char *msg)
 }
 
 /*
- * Trims the application name ("TAG" in RFC 3164 terminology) and
- * process ID from a message if present.
+ * Returns the length of the application name ("TAG" in RFC 3164
+ * terminology) and process ID from a message if present.
  */
 static void
-parsemsg_rfc3164_app_name_procid(char **msg, const char **app_name,
-    const char **procid) {
-	char *m, *app_name_begin, *procid_begin;
+parsemsg_rfc3164_get_app_name_procid(const char *msg, size_t *app_name_length_p,
+    ptrdiff_t *procid_begin_offset_p, size_t *procid_length_p)
+{
+	const char *m, *procid_begin;
 	size_t app_name_length, procid_length;
 
-	m = *msg;
+	m = msg;
 
 	/* Application name. */
-	app_name_begin = m;
 	app_name_length = strspn(m,
 	    "abcdefghijklmnopqrstuvwxyz"
 	    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -1180,12 +1201,52 @@ parsemsg_rfc3164_app_name_procid(char **msg, const char **app_name,
 	if (m[0] != ':' || m[1] != ' ')
 		goto bad;
 
+	*app_name_length_p = app_name_length;
+	if (procid_begin_offset_p != NULL)
+		*procid_begin_offset_p =
+		    procid_begin == NULL ? 0 : procid_begin - msg;
+	if (procid_length_p != NULL)
+		*procid_length_p = procid_length;
+	return;
+bad:
+	*app_name_length_p = 0;
+	if (procid_begin_offset_p != NULL)
+		*procid_begin_offset_p = 0;
+	if (procid_length_p != NULL)
+		*procid_length_p = 0;
+}
+
+/*
+ * Trims the application name ("TAG" in RFC 3164 terminology) and
+ * process ID from a message if present.
+ */
+static void
+parsemsg_rfc3164_app_name_procid(char **msg, const char **app_name,
+    const char **procid)
+{
+	char *m, *app_name_begin, *procid_begin;
+	size_t app_name_length, procid_length;
+	ptrdiff_t procid_begin_offset;
+
+	m = *msg;
+	app_name_begin = m;
+
+	parsemsg_rfc3164_get_app_name_procid(app_name_begin, &app_name_length,
+	    &procid_begin_offset, &procid_length);
+	if (app_name_length == 0)
+		goto bad;
+	procid_begin = procid_begin_offset == 0 ? NULL :
+	    app_name_begin + procid_begin_offset;
+
 	/* Split strings from input. */
 	app_name_begin[app_name_length] = '\0';
-	if (procid_begin != 0)
+	m += app_name_length + 1;
+	if (procid_begin != NULL) {
 		procid_begin[procid_length] = '\0';
+		m += procid_length + 2;
+	}
 
-	*msg = m + 2;
+	*msg = m + 1;
 	*app_name = app_name_begin;
 	*procid = procid_begin;
 	return;
@@ -1383,7 +1444,7 @@ printsys(char *msg)
 	long n;
 	int flags, isprintf, pri;
 
-	flags = SYNC_FILE;	/* fsync after write */
+	flags = ISKERNEL | SYNC_FILE;	/* fsync after write */
 	p = msg;
 	pri = DEFSPRI;
 	isprintf = 1;
@@ -1533,7 +1594,7 @@ logmsg(int pri, const struct logtime *timestamp, const char *hostname,
 	struct filed *f;
 	size_t savedlen;
 	int fac, prilev;
-	char saved[MAXSVLINE];
+	char saved[MAXSVLINE], kernel_app_name[100];
 
 	dprintf("logmsg: pri %o, flags %x, from %s, msg %s\n",
 	    pri, flags, hostname, msg);
@@ -1557,6 +1618,23 @@ logmsg(int pri, const struct logtime *timestamp, const char *hostname,
 		return;
 
 	prilev = LOG_PRI(pri);
+
+	/*
+	 * Lookup kernel app name from log prefix if present.
+	 * This is only used for local program specification matching.
+	 */
+	if (flags & ISKERNEL) {
+		size_t kernel_app_name_length;
+
+		parsemsg_rfc3164_get_app_name_procid(msg,
+		    &kernel_app_name_length, NULL, NULL);
+		if (kernel_app_name_length != 0) {
+			strlcpy(kernel_app_name, msg,
+			    MIN(sizeof(kernel_app_name),
+			    kernel_app_name_length + 1));
+		} else
+			kernel_app_name[0] = '\0';
+	}
 
 	/* log the message to the particular outputs */
 	if (!Initialized) {
@@ -1604,7 +1682,10 @@ logmsg(int pri, const struct logtime *timestamp, const char *hostname,
 			continue;
 
 		/* skip messages with the incorrect program name */
-		if (skip_message(app_name == NULL ? "" : app_name,
+		if (flags & ISKERNEL && kernel_app_name[0] != '\0') {
+			if (skip_message(kernel_app_name, f->f_program, 1))
+				continue;
+		} else if (skip_message(app_name == NULL ? "" : app_name,
 		    f->f_program, 1))
 			continue;
 
@@ -1760,26 +1841,28 @@ fprintlog_write(struct filed *f, struct iovlist *il, int flags)
 
 	switch (f->f_type) {
 	case F_FORW:
-		/* Truncate messages to RFC 5426 recommended size. */
 		dprintf(" %s", f->fu_forw_hname);
-		switch (f->fu_forw_addr->ai_addr->sa_family) {
+		switch (f->fu_forw_addr->ai_family) {
 #ifdef INET
 		case AF_INET:
 			dprintf(":%d\n",
 			    ntohs(satosin(f->fu_forw_addr->ai_addr)->sin_port));
-			iovlist_truncate(il, 480);
 			break;
 #endif
 #ifdef INET6
 		case AF_INET6:
 			dprintf(":%d\n",
 			    ntohs(satosin6(f->fu_forw_addr->ai_addr)->sin6_port));
-			iovlist_truncate(il, 1180);
 			break;
 #endif
 		default:
 			dprintf("\n");
 		}
+
+#if defined(INET) || defined(INET6)
+		/* Truncate messages to maximum forward length. */
+		iovlist_truncate(il, MaxForwardLen);
+#endif
 
 		lsent = 0;
 		for (r = f->fu_forw_addr; r; r = r->ai_next) {
@@ -1789,9 +1872,11 @@ fprintlog_write(struct filed *f, struct iovlist *il, int flags)
 			msghdr.msg_iov = il->iov;
 			msghdr.msg_iovlen = il->iovcnt;
 			STAILQ_FOREACH(sl, &shead, next) {
-				if (sl->sl_ss.ss_family == AF_LOCAL ||
-				    sl->sl_ss.ss_family == AF_UNSPEC ||
-				    sl->sl_socket < 0)
+				if (sl->sl_socket < 0)
+					continue;
+				if (sl->sl_sa == NULL ||
+				    sl->sl_family == AF_UNSPEC ||
+				    sl->sl_family == AF_LOCAL)
 					continue;
 				lsent = sendmsg(sl->sl_socket, &msghdr, 0);
 				if (lsent == (ssize_t)il->totalsize)
@@ -2284,7 +2369,7 @@ die(int signo)
 		logerror(buf);
 	}
 	STAILQ_FOREACH(sl, &shead, next) {
-		if (sl->sl_ss.ss_family == AF_LOCAL)
+		if (sl->sl_sa != NULL && sl->sl_family == AF_LOCAL)
 			unlink(sl->sl_peer->pe_name);
 	}
 	pidfile_remove(pfh);
@@ -2471,7 +2556,7 @@ init(int signo)
 	char *p;
 	char oldLocalHostName[MAXHOSTNAMELEN];
 	char hostMsg[2*MAXHOSTNAMELEN+40];
-	char bootfileMsg[LINE_MAX];
+	char bootfileMsg[MAXLINE + 1];
 
 	dprintf("init\n");
 	WantInitialize = 0;
@@ -2598,7 +2683,7 @@ init(int signo)
 				break;
 
 			case F_FORW:
-				switch (f->fu_forw_addr->ai_addr->sa_family) {
+				switch (f->fu_forw_addr->ai_family) {
 #ifdef INET
 				case AF_INET:
 					port = ntohs(satosin(f->fu_forw_addr->ai_addr)->sin_port);
@@ -2679,7 +2764,7 @@ prop_filter_compile(struct prop_filter *pfilter, char *filter)
 	/*
 	 * Here's some filter examples mentioned in syslog.conf(5)
 	 * 'msg, contains, ".*Deny.*"'
-	 * 'processname, regex, "^bird6?$"'
+	 * 'programname, regex, "^bird6?$"'
 	 * 'hostname, icase_ereregex, "^server-(dcA|podB)-rack1[0-9]{2}\\..*"'
 	 */
 
@@ -2818,7 +2903,7 @@ cfline(const char *line, const char *prog, const char *host,
 	int error, i, pri, syncfile;
 	const char *p, *q;
 	char *bp, *pfilter_dup;
-	char buf[MAXLINE], ebuf[100];
+	char buf[LINE_MAX], ebuf[100];
 
 	dprintf("cfline(\"%s\", f, \"%s\", \"%s\", \"%s\")\n", line, prog,
 	    host, pfilter);
@@ -3740,6 +3825,14 @@ socksetup(struct peer *pe)
 	if (pe->pe_serv == NULL)
 		pe->pe_serv = "syslog";
 	error = getaddrinfo(pe->pe_name, pe->pe_serv, &hints, &res0);
+	if (error == EAI_NONAME && pe->pe_name == NULL && SecureMode > 1) {
+		/*
+		 * If we're in secure mode, we won't open inet sockets anyway.
+		 * This failure can arise legitimately when running in a jail
+		 * without networking.
+		 */
+		return (0);
+	}
 	if (error) {
 		char *msgbuf;
 
@@ -3848,8 +3941,7 @@ socksetup(struct peer *pe)
 #endif
 			dprintf("listening on socket\n");
 		dprintf("sending on socket\n");
-		addsock(res->ai_addr, res->ai_addrlen,
-		    &(struct socklist){
+		addsock(res, &(struct socklist){
 			.sl_socket = s,
 			.sl_peer = pe,
 			.sl_recv = sl_recv

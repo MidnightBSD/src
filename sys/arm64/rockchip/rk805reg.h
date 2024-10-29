@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2018 Emmanuel Vadot <manu@FreeBSD.org>
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,12 +23,35 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
-
 
 #ifndef _RK805REG_H_
 #define	 _RK805REG_H_
+
+/*
+ * The RTC registers are the same in both RK805 and RK808.
+ * Note that the code assumes that RK805_RTC_SECS is 0
+ */
+#define	RK805_RTC_SECS		0x00
+#define	RK805_RTC_SECS_MASK	0x7f
+#define	RK805_RTC_MINUTES	0x01
+#define	RK805_RTC_MINUTES_MASK	0x7f
+#define	RK805_RTC_HOURS		0x02
+#define	RK805_RTC_HOURS_MASK	0x3f
+#define	RK805_RTC_HOURS_PM	0x80
+#define	RK805_RTC_DAYS		0x03
+#define	RK805_RTC_DAYS_MASK	0x3f
+#define	RK805_RTC_MONTHS	0x04
+#define	RK805_RTC_MONTHS_MASK	0x1f
+#define	RK805_RTC_YEARS		0x05
+#define	RK805_RTC_WEEKS		0x06 /* day of week */
+#define	RK805_RTC_WEEKS_MASK	0x07
+
+#define	RK805_RTC_CTRL		0x10
+#define	 RK805_RTC_CTRL_STOP	(1 << 0)
+#define	 RK805_RTC_AMPM_MODE	(1 << 3)
+#define	 RK805_RTC_GET_TIME	(1 << 6)
+#define	 RK805_RTC_READSEL	(1 << 7)
 
 #define	RK805_CHIP_NAME		0x17
 #define	RK805_CHIP_VER		0x18
@@ -68,6 +90,10 @@
 #define	RK808_LDO7_SLEEP_VSEL	0x48
 #define	RK808_LDO8_ON_VSEL	0x49
 #define	RK808_LDO8_SLEEP_VSEL	0x4A
+
+#define	RK805_DEV_CTRL		0x4B
+#define	 RK805_DEV_CTRL_OFF	(1 << 0)
+#define	 RK805_DEV_CTRL_SLP	(1 << 1)
 
 enum rk805_regulator {
 	RK805_DCDC1 = 0,

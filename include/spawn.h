@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008 Ed Schouten <ed@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _SPAWN_H_
@@ -60,6 +59,7 @@ typedef struct __posix_spawn_file_actions	*posix_spawn_file_actions_t;
 #define POSIX_SPAWN_SETSCHEDULER	0x08
 #define POSIX_SPAWN_SETSIGDEF		0x10
 #define POSIX_SPAWN_SETSIGMASK		0x20
+#define	POSIX_SPAWN_DISABLE_ASLR_NP	0x40
 
 __BEGIN_DECLS
 /*
@@ -85,6 +85,15 @@ int posix_spawn_file_actions_addopen(posix_spawn_file_actions_t * __restrict,
     int, const char * __restrict, int, mode_t);
 int posix_spawn_file_actions_adddup2(posix_spawn_file_actions_t *, int, int);
 int posix_spawn_file_actions_addclose(posix_spawn_file_actions_t *, int);
+
+#if __BSD_VISIBLE
+int posix_spawn_file_actions_addchdir_np(posix_spawn_file_actions_t *
+    __restrict, const char * __restrict);
+int posix_spawn_file_actions_addfchdir_np(posix_spawn_file_actions_t *,
+    int);
+int posix_spawn_file_actions_addclosefrom_np(posix_spawn_file_actions_t *,
+    int);
+#endif
 
 /*
  * Spawn attributes

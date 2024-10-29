@@ -3,7 +3,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <math.h>
 
 /* bytes for +Infinity on aarch64 */

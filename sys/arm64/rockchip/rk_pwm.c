@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2018 Emmanuel Vadot <manu@FreeBSD.org>
  * Copyright (c) 2019 Brandon Bergren <git@bdragon.rtk0.net>
@@ -24,11 +24,9 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -97,6 +95,7 @@
 #define	NS_PER_SEC	1000000000
 
 static struct ofw_compat_data compat_data[] = {
+	{ "rockchip,rk3288-pwm",		1 },
 	{ "rockchip,rk3399-pwm",		1 },
 	{ NULL,					0 }
 };

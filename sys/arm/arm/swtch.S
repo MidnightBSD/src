@@ -84,8 +84,6 @@
 #include <machine/asmacros.h>
 #include <machine/armreg.h>
 #include <machine/vfp.h>
-
-
 #ifdef VFP
 	.fpu vfp	/* allow VFP instructions */
 #endif

@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * SoC misc configuration and indentification driver.
  */
@@ -57,12 +56,12 @@
 #define	PMC_STRAPPING_OPT_A_RAM_CODE_MASK_SHORT	\
 	(0x3 << PMC_STRAPPING_OPT_A_RAM_CODE_SHIFT)
 
-
 #define	ABP_RD4(_sc, _r)	bus_read_4((_sc)->abp_misc_res, (_r))
 #define	STR_RD4(_sc, _r)	bus_read_4((_sc)->strap_opt_res, (_r))
 
 static struct ofw_compat_data compat_data[] = {
 	{"nvidia,tegra124-apbmisc",	1},
+	{"nvidia,tegra210-apbmisc",	1},
 	{NULL,				0}
 };
 

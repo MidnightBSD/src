@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000 Matthew Jacob
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 
 #include <sys/conf.h>
@@ -77,8 +76,8 @@ static  periph_dtor_t   enc_dtor;
 static void enc_async(void *, uint32_t, struct cam_path *, void *);
 static enctyp enc_type(struct ccb_getdev *);
 
-SYSCTL_NODE(_kern_cam, OID_AUTO, enc, CTLFLAG_RD, 0,
-            "CAM Enclosure Services driver");
+SYSCTL_NODE(_kern_cam, OID_AUTO, enc, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
+    "CAM Enclosure Services driver");
 
 #if defined(DEBUG) || defined(ENC_DEBUG)
 int enc_verbose = 1;
@@ -204,7 +203,7 @@ enc_dtor(struct cam_periph *periph)
 	if (enc->enc_vec.softc_cleanup != NULL)
 		enc->enc_vec.softc_cleanup(enc);
 
-	root_mount_rel(&enc->enc_rootmount);
+	cam_periph_release_boot(periph);
 
 	ENC_FREE(enc);
 }
@@ -344,11 +343,6 @@ enc_close(struct cdev *dev, int flag, int fmt, struct thread *td)
 int
 enc_error(union ccb *ccb, uint32_t cflags, uint32_t sflags)
 {
-	struct enc_softc *softc;
-	struct cam_periph *periph;
-
-	periph = xpt_path_periph(ccb->ccb_h.path);
-	softc = (struct enc_softc *)periph->softc;
 
 	return (cam_periph_error(ccb, cflags, sflags));
 }
@@ -358,12 +352,6 @@ enc_ioctl(struct cdev *dev, u_long cmd, caddr_t arg_addr, int flag,
 	 struct thread *td)
 {
 	struct cam_periph *periph;
-	encioc_enc_status_t tmp;
-	encioc_string_t sstr;
-	encioc_elm_status_t elms;
-	encioc_elm_desc_t elmd;
-	encioc_elm_devnames_t elmdn;
-	encioc_element_t *uelm;
 	enc_softc_t *enc;
 	enc_cache_t *cache;
 	void *addr;
@@ -428,7 +416,7 @@ enc_ioctl(struct cdev *dev, u_long cmd, caddr_t arg_addr, int flag,
 			return (EBADF);
 		}
 	}
- 
+
 	/*
 	 * XXX The values read here are only valid for the current
 	 *     configuration generation.  We need these ioctls
@@ -440,7 +428,9 @@ enc_ioctl(struct cdev *dev, u_long cmd, caddr_t arg_addr, int flag,
 		error = copyout(&cache->nelms, addr, sizeof (cache->nelms));
 		break;
 		
-	case ENCIOC_GETELMMAP:
+	case ENCIOC_GETELMMAP: {
+		encioc_element_t *uelm;
+
 		for (uelm = addr, i = 0; i != cache->nelms; i++) {
 			encioc_element_t kelm;
 			kelm.elm_idx = i;
@@ -451,21 +441,15 @@ enc_ioctl(struct cdev *dev, u_long cmd, caddr_t arg_addr, int flag,
 				break;
 		}
 		break;
-
-	case ENCIOC_GETENCSTAT:
-		cam_periph_lock(periph);
-		error = enc->enc_vec.get_enc_status(enc, 1);
-		if (error) {
-			cam_periph_unlock(periph);
-			break;
-		}
-		tmp = cache->enc_status;
-		cam_periph_unlock(periph);
-		error = copyout(&tmp, addr, sizeof(tmp));
-		cache->enc_status = tmp;
+	}
+	case ENCIOC_GETENCSTAT: {
+		error = copyout(&cache->enc_status, addr,
+				sizeof(cache->enc_status));
 		break;
+	}
+	case ENCIOC_SETENCSTAT: {
+		encioc_enc_status_t tmp;
 
-	case ENCIOC_SETENCSTAT:
 		error = copyin(addr, &tmp, sizeof(tmp));
 		if (error)
 			break;
@@ -473,11 +457,13 @@ enc_ioctl(struct cdev *dev, u_long cmd, caddr_t arg_addr, int flag,
 		error = enc->enc_vec.set_enc_status(enc, tmp, 1);
 		cam_periph_unlock(periph);
 		break;
-
+	}
 	case ENCIOC_GETSTRING:
 	case ENCIOC_SETSTRING:
 	case ENCIOC_GETENCNAME:
-	case ENCIOC_GETENCID:
+	case ENCIOC_GETENCID: {
+		encioc_string_t sstr;
+
 		if (enc->enc_vec.handle_string == NULL) {
 			error = EINVAL;
 			break;
@@ -488,9 +474,15 @@ enc_ioctl(struct cdev *dev, u_long cmd, caddr_t arg_addr, int flag,
 		cam_periph_lock(periph);
 		error = enc->enc_vec.handle_string(enc, &sstr, cmd);
 		cam_periph_unlock(periph);
+		if (error == 0 || error == ENOMEM)
+			(void)copyout(&sstr.bufsiz,
+			    &((encioc_string_t *)addr)->bufsiz,
+			    sizeof(sstr.bufsiz));
 		break;
+	}
+	case ENCIOC_GETELMSTAT: {
+		encioc_elm_status_t elms;
 
-	case ENCIOC_GETELMSTAT:
 		error = copyin(addr, &elms, sizeof(elms));
 		if (error)
 			break;
@@ -505,8 +497,10 @@ enc_ioctl(struct cdev *dev, u_long cmd, caddr_t arg_addr, int flag,
 			break;
 		error = copyout(&elms, addr, sizeof(elms));
 		break;
+	}
+	case ENCIOC_GETELMDESC: {
+		encioc_elm_desc_t elmd;
 
-	case ENCIOC_GETELMDESC:
 		error = copyin(addr, &elmd, sizeof(elmd));
 		if (error)
 			break;
@@ -522,8 +516,10 @@ enc_ioctl(struct cdev *dev, u_long cmd, caddr_t arg_addr, int flag,
 			elmd.elm_desc_len = 0;
 		error = copyout(&elmd, addr, sizeof(elmd));
 		break;
+	}
+	case ENCIOC_GETELMDEVNAMES: {
+		encioc_elm_devnames_t elmdn;
 
-	case ENCIOC_GETELMDEVNAMES:
 		if (enc->enc_vec.get_elm_devnames == NULL) {
 			error = EINVAL;
 			break;
@@ -542,8 +538,10 @@ enc_ioctl(struct cdev *dev, u_long cmd, caddr_t arg_addr, int flag,
 			break;
 		error = copyout(&elmdn, addr, sizeof(elmdn));
 		break;
+	}
+	case ENCIOC_SETELMSTAT: {
+		encioc_elm_status_t elms;
 
-	case ENCIOC_SETELMSTAT:
 		error = copyin(addr, &elms, sizeof(elms));
 		if (error)
 			break;
@@ -557,7 +555,7 @@ enc_ioctl(struct cdev *dev, u_long cmd, caddr_t arg_addr, int flag,
 		cam_periph_unlock(periph);
 
 		break;
-
+	}
 	case ENCIOC_INIT:
 
 		cam_periph_lock(periph);
@@ -760,7 +758,7 @@ enc_fsm_step(enc_softc_t *enc)
 	struct enc_fsm_state *cur_state;
 	int		      error;
 	uint32_t	      xfer_len;
-	
+
 	ENC_DLOG(enc, "%s enter %p\n", __func__, enc);
 
 	enc->current_action   = ffs(enc->pending_actions) - 1;
@@ -831,7 +829,6 @@ enc_daemon(void *arg)
 	cam_periph_lock(enc->periph);
 	while ((enc->enc_flags & ENC_FLAG_SHUTDOWN) == 0) {
 		if (enc->pending_actions == 0) {
-
 			/*
 			 * Reset callout and msleep, or
 			 * issue timed task completion
@@ -843,10 +840,10 @@ enc_daemon(void *arg)
 			 * We've been through our state machine at least
 			 * once.  Allow the transition to userland.
 			 */
-			root_mount_rel(&enc->enc_rootmount);
+			cam_periph_release_boot(enc->periph);
 
-			callout_reset(&enc->status_updater, 60*hz,
-				      enc_status_updater, enc);
+			callout_reset_sbt(&enc->status_updater, 60 * SBT_1S, 0,
+			    enc_status_updater, enc, C_PREL(1));
 
 			cam_periph_sleep(enc->periph, enc->enc_daemon,
 					 PUSER, "idle", 0);
@@ -938,9 +935,8 @@ enc_ctor(struct cam_periph *periph, void *arg)
 	 * through our state machine so that physical path data is
 	 * present.
 	 */
-	if (enc->enc_vec.poll_status != NULL) {
-		root_mount_hold_token(periph->periph_name, &enc->enc_rootmount);
-	}
+	if (enc->enc_vec.poll_status != NULL)
+		cam_periph_hold_boot(periph);
 
 	/*
 	 * The softc field is set only once the enc is fully initialized
@@ -1029,4 +1025,3 @@ out:
 		enc_dtor(periph);
 	return (status);
 }
-

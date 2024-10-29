@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2014 Juergen Weiss <weiss@uni-mainz.de>
  * Copyright (c) 2014 Ian Lepore <ian@freebsd.org>
@@ -151,7 +151,6 @@ imx6_mp_start_ap(platform_t plat)
 
 		val |= ((1 << (SRC_CONTROL_C1ENA_SHIFT - 1 + i )) |
 		    ( 1 << (SRC_CONTROL_C1RST_SHIFT - 1 + i)));
-
 	}
 	bus_space_write_4(fdtbus_bs_tag, src, SRC_CONTROL_REG, val);
 

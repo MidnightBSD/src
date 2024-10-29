@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Dispatch platform calls to the appropriate platform implementation
  * through a previously registered kernel object.

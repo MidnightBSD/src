@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2003-2009 Silicon Graphics International Corp.
  * Copyright (c) 2012 The FreeBSD Foundation
@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -74,7 +73,7 @@ struct ctl_fe_ioctl_params {
 
 struct cfi_port {
 	TAILQ_ENTRY(cfi_port)	link;
-	uint32_t		cur_tag_num;
+	u_int			cur_tag_num;
 	struct cdev *		dev;
 	struct ctl_port		port;
 };
@@ -83,9 +82,7 @@ struct cfi_softc {
 	TAILQ_HEAD(, cfi_port)	ports;
 };
 
-
 static struct cfi_softc cfi_softc;
-
 
 static int cfi_init(void);
 static int cfi_shutdown(void);
@@ -182,7 +179,7 @@ cfi_ioctl_port_create(struct ctl_req *req)
 	val = dnvlist_get_string(req->args_nvl, "pp", NULL);
 	if (val != NULL)
 		pp = strtol(val, NULL, 10);
-	
+
 	val = dnvlist_get_string(req->args_nvl, "vp", NULL);
 	if (val != NULL)
 		vp = strtol(val, NULL, 10);
@@ -271,7 +268,7 @@ cfi_ioctl_port_remove(struct ctl_req *req)
 	if (port_id == -1) {
 		req->status = CTL_LUN_ERROR;
 		snprintf(req->error_str, sizeof(req->error_str),
-		    "port_id not provided");
+		    "Missing required argument: port_id");
 		return;
 	}
 
@@ -635,7 +632,7 @@ ctl_ioctl_io(struct cdev *dev, u_long cmd, caddr_t addr, int flag,
 	io->io_hdr.flags |= CTL_FLAG_USER_REQ;
 	if ((io->io_hdr.io_type == CTL_IO_SCSI) &&
 	    (io->scsiio.tag_type != CTL_TAG_UNTAGGED))
-		io->scsiio.tag_num = cfi->cur_tag_num++;
+		io->scsiio.tag_num = atomic_fetchadd_int(&cfi->cur_tag_num, 1);
 
 	retval = cfi_submit_wait(io);
 	if (retval == 0)

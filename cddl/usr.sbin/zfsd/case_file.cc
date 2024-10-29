@@ -39,11 +39,13 @@
  * accumulate in order to mark a device as degraded.
  */
 #include <sys/cdefs.h>
+#include <sys/byteorder.h>
 #include <sys/time.h>
 
 #include <sys/fs/zfs.h>
 
 #include <dirent.h>
+#include <fcntl.h>
 #include <iomanip>
 #include <fstream>
 #include <functional>
@@ -71,10 +73,7 @@
 #include "zfsd.h"
 #include "zfsd_exception.h"
 #include "zpool_list.h"
-
-
 /*============================ Namespace Control =============================*/
-using std::auto_ptr;
 using std::hex;
 using std::ifstream;
 using std::stringstream;
@@ -238,8 +237,6 @@ CaseFile::ReEvaluate(const string &devPath, const string &physPath, Vdev *vdev)
 {
 	ZpoolList zpl(ZpoolList::ZpoolByGUID, &m_poolGUID);
 	zpool_handle_t *pool(zpl.empty() ? NULL : zpl.front());
-	zpool_boot_label_t boot_type;
-	uint64_t boot_size;
 
 	if (pool == NULL || !RefreshVdevState()) {
 		/*
@@ -340,13 +337,7 @@ CaseFile::ReEvaluate(const string &devPath, const string &physPath, Vdev *vdev)
 	}
 
 	/* Write a label on the newly inserted disk. */
-	if (zpool_is_bootable(pool))
-		boot_type = ZPOOL_COPY_BOOT_LABEL;
-	else
-		boot_type = ZPOOL_NO_BOOT_LABEL;
-	boot_size = zpool_get_prop_int(pool, ZPOOL_PROP_BOOTSIZE, NULL);
-	if (zpool_label_disk(g_zfsHandle, pool, devPath.c_str(),
-	    boot_type, boot_size, NULL) != 0) {
+	if (zpool_label_disk(g_zfsHandle, pool, devPath.c_str()) != 0) {
 		syslog(LOG_ERR,
 		       "Replace vdev(%s/%s) by physical path (label): %s: %s\n",
 		       zpool_get_name(pool), VdevGUIDString().c_str(),
@@ -366,7 +357,7 @@ CaseFile::ReEvaluate(const ZfsEvent &event)
 {
 	bool consumed(false);
 
-	if (event.Value("type") == "misc.fs.zfs.vdev_remove") {
+	if (event.Value("type") == "sysevent.fs.zfs.vdev_remove") {
 		/*
 		 * The Vdev we represent has been removed from the
 		 * configuration.  This case is no longer of value.
@@ -374,12 +365,12 @@ CaseFile::ReEvaluate(const ZfsEvent &event)
 		Close();
 
 		return (/*consumed*/true);
-	} else if (event.Value("type") == "misc.fs.zfs.pool_destroy") {
+	} else if (event.Value("type") == "sysevent.fs.zfs.pool_destroy") {
 		/* This Pool has been destroyed.  Discard the case */
 		Close();
 
 		return (/*consumed*/true);
-	} else if (event.Value("type") == "misc.fs.zfs.config_sync") {
+	} else if (event.Value("type") == "sysevent.fs.zfs.config_sync") {
 		RefreshVdevState();
 		if (VdevState() < VDEV_STATE_HEALTHY)
 			consumed = ActivateSpare();
@@ -451,7 +442,8 @@ CaseFile::ReEvaluate(const ZfsEvent &event)
 		consumed = true;
 	}
 	else if (event.Value("class") == "ereport.fs.zfs.io" ||
-	         event.Value("class") == "ereport.fs.zfs.checksum") {
+	         event.Value("class") == "ereport.fs.zfs.checksum" ||
+		 event.Value("class") == "ereport.fs.zfs.delay") {
 
 		m_tentativeEvents.push_front(event.DeepCopy());
 		RegisterCallout(event);
@@ -1125,7 +1117,7 @@ CaseFile::Replace(const char* vdev_type, const char* path, bool isspare) {
 	nvlist_free(newvd);
 
 	retval = (zpool_vdev_attach(zhp, oldstr.c_str(), path, nvroot,
-	    /*replace*/B_TRUE) == 0);
+       /*replace*/B_TRUE, /*rebuild*/ B_FALSE) == 0);
 	if (retval)
 		syslog(LOG_INFO, "Replacing vdev(%s/%s) with %s\n",
 		    poolname, oldstr.c_str(), path);
@@ -1152,6 +1144,13 @@ IsIOEvent(const Event* const event)
 	return ("ereport.fs.zfs.io" == event->Value("type"));
 }
 
+/* Does the argument event refer to an IO delay? */
+static bool
+IsDelayEvent(const Event* const event)
+{
+	return ("ereport.fs.zfs.delay" == event->Value("type"));
+}
+
 bool
 CaseFile::ShouldDegrade() const
 {
@@ -1162,8 +1161,14 @@ CaseFile::ShouldDegrade() const
 bool
 CaseFile::ShouldFault() const
 {
-	return (std::count_if(m_events.begin(), m_events.end(),
-			      IsIOEvent) > ZFS_DEGRADE_IO_COUNT);
+	bool should_fault_for_io, should_fault_for_delay;
+
+	should_fault_for_io = std::count_if(m_events.begin(), m_events.end(),
+			      IsIOEvent) > ZFS_DEGRADE_IO_COUNT;
+	should_fault_for_delay = std::count_if(m_events.begin(), m_events.end(),
+			      IsDelayEvent) > ZFS_FAULT_DELAY_COUNT;
+
+	return (should_fault_for_io || should_fault_for_delay);
 }
 
 nvlist_t *

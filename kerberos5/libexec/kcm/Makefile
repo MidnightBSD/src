@@ -1,4 +1,5 @@
-# $FreeBSD$
+
+PACKAGE=	kerberos
 
 PROG=	kcm
 MAN=	kcm.8
@@ -19,6 +20,8 @@ SRCS=	acl.c \
 
 CFLAGS+=-I${KRB5DIR}/lib/krb5 -I${KRB5DIR}/lib/asn1 -I${KRB5DIR}/lib/roken \
 	-I${KRB5DIR}/kcm -I${KRB5DIR}/lib/ipc ${LDAPCFLAGS}
+# Avoid errors for using deprecated krb5_* APIs
+CFLAGS+="-DKRB5_DEPRECATED_FUNCTION(X)="
 LIBADD=	krb5 roken heimntlm heimipcs crypto
 DPADD=	${LDAPDPADD}
 LDADD=	${LIBVERS} ${LDAPLDADD}

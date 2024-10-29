@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -48,7 +47,7 @@
 
 #include <arm/nvidia/tegra_efuse.h>
 
-#include <gnu/dts/include/dt-bindings/pinctrl/pinctrl-tegra-xusb.h>
+#include <dt-bindings/pinctrl/pinctrl-tegra-xusb.h>
 
 #include "phydev_if.h"
 
@@ -59,7 +58,6 @@
 #define	  FUSE_XUSB_CALIB_HS_SQUELCH_LEVEL(x)		(((x) >> 11) & 0x03);
 #define	  FUSE_XUSB_CALIB_HS_TERM_RANGE_ADJ(x)		(((x) >>  7) & 0x0F);
 #define	  FUSE_XUSB_CALIB_HS_CURR_LEVEL_0(x)		(((x) >>  0) & 0x3F);
-
 
 /* Registers. */
 #define	XUSB_PADCTL_USB2_PAD_MUX		0x004
@@ -103,7 +101,6 @@
 #define	 IOPHY_USB3_PAD_CTL2_RX_WANDER(x)		(((x) & 0x000F) <<  4)
 #define	 IOPHY_USB3_PAD_CTL2_RX_TERM_CNTL(x)		(((x) & 0x0003) <<  2)
 #define	 IOPHY_USB3_PAD_CTL2_TX_TERM_CNTL(x)		(((x) & 0x0003) <<  0)
-
 
 #define	XUSB_PADCTL_IOPHY_USB3_PAD_CTL4(x)	(0x068 + (x) * 4)
 
@@ -150,7 +147,6 @@
 #define	 USB3_PAD_MUX_PCIE_IDDQ_DISABLE(x) 		(1 << (1 + (x)))
 #define	 USB3_PAD_MUX_SATA_IDDQ_DISABLE 		(1 << 6)
 
-
 #define	XUSB_PADCTL_IOPHY_PLL_S0_CTL1		0x138
 #define	 IOPHY_PLL_S0_CTL1_PLL1_LOCKDET			(1 << 27)
 #define	 IOPHY_PLL_S0_CTL1_PLL1_MODE			(1 << 24)
@@ -172,10 +168,8 @@
 #define	XUSB_PADCTL_IOPHY_MISC_PAD_S0_CTL5	0x158
 #define	XUSB_PADCTL_IOPHY_MISC_PAD_S0_CTL6	0x15C
 
-
 #define	WR4(_sc, _r, _v)	bus_write_4((_sc)->mem_res, (_r), (_v))
 #define	RD4(_sc, _r)		bus_read_4((_sc)->mem_res, (_r))
-
 
 struct padctl_softc {
 	device_t	dev;
@@ -642,7 +636,6 @@ usb2_powerdown(struct padctl_softc *sc, struct padctl_lane *lane)
 	}
 	return (0);
 }
-
 
 static int
 phy_powerup(struct padctl_softc *sc)

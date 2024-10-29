@@ -33,7 +33,6 @@ static char sccsid[] = "@(#)print.c	8.6 (Berkeley) 4/16/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 
 #include <stddef.h>
@@ -128,6 +127,7 @@ print(struct termios *tp, struct winsize *wp, int ldisc, enum FMT fmt)
 	put("-inpck", INPCK, 0);
 	put("-ignpar", IGNPAR, 0);
 	put("-parmrk", PARMRK, 0);
+	put("-iutf8", IUTF8, 1);
 
 	/* output flags */
 	tmp = tp->c_oflag;
@@ -183,6 +183,12 @@ print(struct termios *tp, struct winsize *wp, int ldisc, enum FMT fmt)
 	put("-dsrflow", CDSR_OFLOW, 0);
 	put("-dtrflow", CDTR_IFLOW, 0);
 	put("-mdmbuf", MDMBUF, 0);	/* XXX mdmbuf ==  dtrflow */
+	if (on(CNO_RTSDTR))
+		bput("-rtsdtr");
+	else {
+		if (fmt >= BSD)
+			bput("rtsdtr");
+	}
 
 	/* special control characters */
 	cc = tp->c_cc;

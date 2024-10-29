@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -37,7 +36,7 @@
 
 #include <dev/extres/clk/clk.h>
 
-#include <gnu/dts/include/dt-bindings/clock/tegra124-car.h>
+#include <dt-bindings/clock/tegra124-car.h>
 #include "tegra124_car.h"
 
 /* #define TEGRA_PLL_DEBUG */
@@ -381,6 +380,7 @@ static struct clk_pll_def pll_clks[] = {
 
 static int tegra124_pll_init(struct clknode *clk, device_t dev);
 static int tegra124_pll_set_gate(struct clknode *clk, bool enable);
+static int tegra124_pll_get_gate(struct clknode *clk, bool *enabled);
 static int tegra124_pll_recalc(struct clknode *clk, uint64_t *freq);
 static int tegra124_pll_set_freq(struct clknode *clknode, uint64_t fin,
     uint64_t *fout, int flags, int *stop);
@@ -402,6 +402,7 @@ static clknode_method_t tegra124_pll_methods[] = {
 	/* Device interface */
 	CLKNODEMETHOD(clknode_init,		tegra124_pll_init),
 	CLKNODEMETHOD(clknode_set_gate,		tegra124_pll_set_gate),
+	CLKNODEMETHOD(clknode_get_gate,		tegra124_pll_get_gate),
 	CLKNODEMETHOD(clknode_recalc_freq,	tegra124_pll_recalc),
 	CLKNODEMETHOD(clknode_set_freq,		tegra124_pll_set_freq),
 	CLKNODEMETHOD_END
@@ -413,7 +414,6 @@ static int
 pll_enable(struct pll_sc *sc)
 {
 	uint32_t reg;
-
 
 	RD4(sc, sc->base_reg, &reg);
 	if (sc->type != PLL_E)
@@ -566,7 +566,6 @@ plle_enable(struct pll_sc *sc)
 
 	mnp_bits = &sc->mnp_bits;
 
-
 	/* Disable lock override. */
 	RD4(sc, sc->base_reg, &reg);
 	reg &= ~PLLE_BASE_LOCK_OVERRIDE;
@@ -646,7 +645,6 @@ plle_enable(struct pll_sc *sc)
 	reg |= XUSBIO_PLL_CFG0_SEQ_ENABLE;
 	WR4(sc, XUSBIO_PLL_CFG0, reg);
 
-
 	/* Enable HW control and unreset SATA PLL. */
 	RD4(sc, SATA_PLL_CFG0, &reg);
 	reg &= ~SATA_PLL_CFG0_PADPLL_RESET_SWCTL;
@@ -688,6 +686,19 @@ tegra124_pll_set_gate(struct clknode *clknode, bool enable)
 	else
 		rv = pll_enable(sc);
 	return (rv);
+}
+
+static int
+tegra124_pll_get_gate(struct clknode *clknode, bool *enabled)
+{
+	uint32_t reg;
+	struct pll_sc *sc;
+
+	sc = clknode_get_softc(clknode);
+	RD4(sc, sc->base_reg, &reg);
+	*enabled = reg & PLL_BASE_ENABLE ? true: false;
+	WR4(sc, sc->base_reg, reg);
+	return (0);
 }
 
 static int
@@ -985,7 +996,6 @@ tegra124_pll_set_freq(struct clknode *clknode, uint64_t fin, uint64_t *fout,
 
 	return (rv);
 }
-
 
 static int
 tegra124_pll_init(struct clknode *clk, device_t dev)

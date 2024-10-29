@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2014 The FreeBSD Foundation.
- * All rights reserved.
  *
  * Portions of this software were developed by Konstantin Belousov
  * under sponsorship from the FreeBSD Foundation.
@@ -31,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <pthread.h>
 #include "libc_private.h"
 

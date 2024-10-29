@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012 Damjan Marion <dmarion@Freebsd.org>
  * All rights reserved.
@@ -112,7 +112,7 @@ am335x_pmic_intr(void *arg)
 	if (int_reg.aci) {
 		snprintf(notify_buf, sizeof(notify_buf), "notify=0x%02x",
 		    status_reg.acpwr);
-		devctl_notify_f("ACPI", "ACAD", "power", notify_buf, M_NOWAIT);
+		devctl_notify("ACPI", "ACAD", "power", notify_buf);
 	}
 }
 

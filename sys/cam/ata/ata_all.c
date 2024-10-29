@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 
 #ifdef _KERNEL
@@ -929,7 +928,6 @@ ata_string2mode(char *str)
 	return (-1);
 }
 
-
 u_int
 ata_mode2speed(int mode)
 {
@@ -1004,7 +1002,7 @@ ata_identify_match(caddr_t identbuffer, caddr_t table_entry)
 {
 	struct scsi_inquiry_pattern *entry;
 	struct ata_params *ident;
- 
+
 	entry = (struct scsi_inquiry_pattern *)table_entry;
 	ident = (struct ata_params *)identbuffer;
 
@@ -1022,7 +1020,7 @@ ata_static_identify_match(caddr_t identbuffer, caddr_t table_entry)
 {
 	struct scsi_static_inquiry_pattern *entry;
 	struct ata_params *ident;
- 
+
 	entry = (struct scsi_static_inquiry_pattern *)table_entry;
 	ident = (struct ata_params *)identbuffer;
 
@@ -1116,7 +1114,6 @@ semb_write_buffer(struct ccb_ataio *ataio,
 	ata_28bit_cmd(ataio, ATA_SEP_ATTN,
 	    length > 0 ? data_ptr[0] : 0, 0x80, length / 4);
 }
-
 
 void
 ata_zac_mgmt_out(struct ccb_ataio *ataio, uint32_t retries, 

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright 2019 Michal Meloun <mmel@FreeBSD.org>
  *
@@ -23,7 +23,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _RK_CLK_FRACT_H_
@@ -34,8 +33,12 @@
 struct rk_clk_fract_def {
 	struct clknode_init_def clkdef;
 	uint32_t		offset;
+	uint32_t		gate_offset;
+	uint32_t		gate_shift;
 	uint32_t		flags;
 };
+
+#define	RK_CLK_FRACT_HAVE_GATE	0x0001
 
 int rk_clk_fract_register(struct clkdom *clkdom,
     struct rk_clk_fract_def *clkdef);

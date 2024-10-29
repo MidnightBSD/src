@@ -1,4 +1,5 @@
-# $FreeBSD$
+
+PACKAGE=	kerberos-lib
 
 LIB=	gssapi_krb5
 LDFLAGS= -Wl,-Bsymbolic -Wl,--no-undefined

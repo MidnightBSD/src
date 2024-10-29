@@ -36,7 +36,6 @@
  */
 
 #include <machine/asm.h>
-
 .syntax	unified
 
 /* LINTSTUB: Func: void *memcpy(void *dst, const void *src, size_t len) */

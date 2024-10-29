@@ -29,8 +29,6 @@
  */
 
 #include <machine/asm.h>
-
-
 ENTRY(strcmp)
 1:
 	ldrb	r2, [r0], #1

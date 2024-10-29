@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011, 2012 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by David Chisnall under sponsorship from
  * the FreeBSD Foundation.
@@ -27,7 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _XLOCALE_LOCALE_H
@@ -42,6 +40,7 @@
 #define LC_MESSAGES_MASK (1<<5)
 #define LC_ALL_MASK      (LC_COLLATE_MASK | LC_CTYPE_MASK | LC_MESSAGES_MASK | \
 			  LC_MONETARY_MASK | LC_NUMERIC_MASK | LC_TIME_MASK)
+#define LC_VERSION_MASK  (1<<6)
 #define LC_GLOBAL_LOCALE ((locale_t)-1)
 
 #ifndef _LOCALE_T_DEFINED

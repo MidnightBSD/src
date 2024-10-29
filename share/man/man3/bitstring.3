@@ -56,9 +56,8 @@
 .\" POSSIBILITY OF SUCH DAMAGES.
 .\"
 .\"     @(#)bitstring.3	8.1 (Berkeley) 7/19/93
-.\" $FreeBSD$
 .\"
-.Dd Nov 18, 2019
+.Dd November 21, 2023
 .Dt BITSTRING 3
 .Os
 .Sh NAME
@@ -68,14 +67,17 @@
 .Nm bit_decl ,
 .Nm bit_ffc ,
 .Nm bit_ffs ,
+.Nm bit_ff_at ,
 .Nm bit_ffc_at ,
 .Nm bit_ffs_at ,
 .Nm bit_ffc_area ,
 .Nm bit_ffs_area ,
+.Nm bit_ff_area_at ,
 .Nm bit_ffc_area_at ,
 .Nm bit_ffs_area_at ,
 .Nm bit_nclear ,
 .Nm bit_nset ,
+.Nm bit_ntest ,
 .Nm bit_set ,
 .Nm bit_test ,
 .Nm bitstr_size
@@ -83,39 +85,49 @@
 .Sh SYNOPSIS
 .In bitstring.h
 .Ft bitstr_t *
-.Fn bit_alloc "int nbits"
+.Fn bit_alloc "size_t nbits"
 .Ft void
-.Fn bit_decl "bitstr_t *name" "int nbits"
+.Fn bit_decl "bitstr_t *name" "size_t nbits"
 .Ft void
-.Fn bit_clear "bitstr_t *name" "int bit"
+.Fn bit_clear "bitstr_t *name" "size_t bit"
 .Ft void
-.Fn bit_count "bitstr_t *name" "int count" "int nbits" "int *value"
+.Fn bit_count "bitstr_t *name" "size_t count" "size_t nbits" "ssize_t *value"
 .Ft void
-.Fn bit_ffc "bitstr_t *name" "int nbits" "int *value"
+.Fn bit_ffc "bitstr_t *name" "size_t nbits" "ssize_t *value"
 .Ft void
-.Fn bit_ffs "bitstr_t *name" "int nbits" "int *value"
+.Fn bit_ffs "bitstr_t *name" "size_t nbits" "ssize_t *value"
 .Ft void
-.Fn bit_ffc_at "bitstr_t *name" "int start" "int nbits" "int *value"
+.Fn bit_ffc_at "bitstr_t *name" "size_t start" "size_t nbits" "ssize_t *value"
 .Ft void
-.Fn bit_ffs_at "bitstr_t *name" "int start" "int nbits" "int *value"
+.Fn bit_ffs_at "bitstr_t *name" "size_t start" "size_t nbits" "ssize_t *value"
 .Ft void
-.Fn bit_ffc_area "bitstr_t *name" "int nbits" "int size" "int *value"
+.Fn bit_ff_at "bitstr_t *name" "size_t start" "size_t nbits" "int match" "ssize_t *value"
 .Ft void
-.Fn bit_ffs_area "bitstr_t *name" "int nbits" "int size" "int *value"
+.Fn bit_ffc_area "bitstr_t *name" "size_t nbits" "size_t size" "ssize_t *value"
 .Ft void
-.Fn bit_ffc_area_at "bitstr_t *name" "int start" "int nbits" "int size" "int *value"
+.Fn bit_ffs_area "bitstr_t *name" "size_t nbits" "size_t size" "ssize_t *value"
 .Ft void
-.Fn bit_ffs_area_at "bitstr_t *name" "int start" "int nbits" "int size" "int *value"
+.Fn bit_ffc_area_at "bitstr_t *name" "size_t start" "size_t nbits" "size_t size" "ssize_t *value"
 .Ft void
-.Fn bit_nclear "bitstr_t *name" "int start" "int stop"
+.Fn bit_ffs_area_at "bitstr_t *name" "size_t start" "size_t nbits" "size_t size" "ssize_t *value"
 .Ft void
-.Fn bit_nset "bitstr_t *name" "int start" "int stop"
+.Fn bit_ff_area_at "bitstr_t *name" "size_t start" "size_t nbits" "size_t size" "int match" "ssize_t *value"
+.Fn bit_foreach "bitstr_t *name" "size_t nbits" "size_t var"
+.Fn bit_foreach_at "bitstr_t *name" "size_t start" "size_t nbits" "size_t var"
+.Fn bit_foreach_unset "bitstr_t *name" "size_t nbits" "size_t var"
+.Fn bit_foreach_unset_at "bitstr_t *name" "size_t start" "size_t nbits" "size_t var"
 .Ft void
-.Fn bit_set "bitstr_t *name" "int bit"
+.Fn bit_nclear "bitstr_t *name" "size_t start" "size_t stop"
+.Ft void
+.Fn bit_nset "bitstr_t *name" "size_t start" "size_t stop"
 .Ft int
-.Fn bitstr_size "int nbits"
+.Fn bit_ntest "bitstr_t *name" "size_t start" "size_t stop" "int match"
+.Ft void
+.Fn bit_set "bitstr_t *name" "size_t bit"
 .Ft int
-.Fn bit_test "bitstr_t *name" "int bit"
+.Fn bitstr_size "size_t nbits"
+.Ft int
+.Fn bit_test "bitstr_t *name" "size_t bit"
 .Sh DESCRIPTION
 These macros operate on strings of bits.
 .Pp
@@ -182,6 +194,18 @@ of bit string
 .Fa name
 is set, and zero otherwise.
 .Pp
+The
+.Fn bit_ntest
+function
+evaluates to non-zero if the zero-based numbered bits from
+.Fa start
+through
+.Fa stop
+in the bit string
+.Ar name
+all have the value
+.Ar match .
+.Pp
 The function
 .Fn bit_ffc
 stores in the location referenced by
@@ -237,6 +261,25 @@ at or after the zero-based bit index
 If no bits are set after
 .Fa start ,
 the location referenced by
+.Fa value
+is set to \-1.
+.Pp
+The
+.Fn bit_ff_at
+function
+stores in the location referenced by
+.Fa value
+the zero-based number of the first bit in the array of
+.Fa nbits
+bits referenced by
+.Fa name ,
+at or after the zero-based bit index
+.Fa start
+that has value
+.Fa match .
+If no bits after
+.Fa start
+match that value, the location referenced by
 .Fa value
 is set to \-1.
 .Pp
@@ -317,6 +360,29 @@ the location referenced by
 is set to \-1.
 .Pp
 The
+.Fn bit_ff_area_at
+function stores in the location referenced by
+.Fa value
+the zero-based number of the first bit beginning a sequence of bits of
+at least
+.Fa size
+bits in the array of
+.Fa nbits
+bits referenced by
+.Fa name ,
+at or after the zero-based bit index
+.Fa start 
+in which all bits have the value
+.Fa match .
+If no sequence of contiguous such bits of the specified
+.Fa size
+can be found at or after
+.Fa start ,
+the location referenced by
+.Fa value
+is set to \-1.
+.Pp
+The
 .Fn bit_count
 function stores in the location referenced by
 .Fa value
@@ -326,6 +392,46 @@ bits referenced by
 .Fa name ,
 at or after the zero-based bit index
 .Fa start .
+.Pp
+The macro
+.Fn bit_foreach
+traverses all set bits in the array of
+.Fa nbits
+referenced by
+.Fa name
+in the forward direction, assigning each location in turn to
+.Fa var .
+.Pp
+The macro
+.Fn bit_foreach_at
+traverses all set bits in the array of
+.Fa nbits
+referenced by
+.Fa name
+in the forward direction at or after the zero-based bit index
+.Fa start ,
+assigning each location in turn to
+.Fa var .
+.Pp
+The macro
+.Fn bit_foreach_unset
+traverses all unset bits in the array of
+.Fa nbits
+referenced by
+.Fa name
+in the forward direction, assigning each location in turn to
+.Fa var .
+.Pp
+The macro
+.Fn bit_foreach_unset_at
+traverses all unset bits in the array of
+.Fa nbits
+referenced by
+.Fa name
+in the forward direction at or after the zero-based bit index
+.Fa start ,
+assigning each location in turn to
+.Fa var .
 .Pp
 The arguments in bit string macros are evaluated only once and may safely
 have side effects.

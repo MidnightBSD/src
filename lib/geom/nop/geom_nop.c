@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004-2006 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <stdio.h>
 #include <stdint.h>
 #include <libgeom.h>
@@ -42,29 +41,41 @@ uint32_t version = G_NOP_VERSION;
 struct g_command class_commands[] = {
 	{ "create", G_FLAG_VERBOSE | G_FLAG_LOADKLD, NULL,
 	    {
+		{ 'c', "count_until_fail", "-1", G_TYPE_NUMBER },
+		{ 'd', "delaymsec", "-1", G_TYPE_NUMBER },
 		{ 'e', "error", "-1", G_TYPE_NUMBER },
 		{ 'o', "offset", "0", G_TYPE_NUMBER },
 		{ 'p', "stripesize", "0", G_TYPE_NUMBER },
 		{ 'P', "stripeoffset", "0", G_TYPE_NUMBER },
+		{ 'q', "rdelayprob", "-1", G_TYPE_NUMBER },
 		{ 'r', "rfailprob", "-1", G_TYPE_NUMBER },
 		{ 's', "size", "0", G_TYPE_NUMBER },
 		{ 'S', "secsize", "0", G_TYPE_NUMBER },
 		{ 'w', "wfailprob", "-1", G_TYPE_NUMBER },
+		{ 'x', "wdelayprob", "-1", G_TYPE_NUMBER },
 		{ 'z', "physpath", G_NOP_PHYSPATH_PASSTHROUGH, G_TYPE_STRING },
+		{ 'Z', "gnopname", G_VAL_OPTIONAL, G_TYPE_STRING },
 		G_OPT_SENTINEL
 	    },
-	    "[-v] [-e error] [-o offset] [-p stripesize] [-P stripeoffset] "
-	    "[-r rfailprob] [-s size] [-S secsize] [-w wfailprob] "
-	    "[-z physpath] dev ..."
+	    "[-v] [-c count_until_fail] [-d delaymsec] [-e error] [-o offset] "
+	    "[-p stripesize] [-P stripeoffset] [-q rdelayprob] [-r rfailprob] "
+	    "[-s size]  [-S secsize] [-w wfailprob] [-x wdelayprob] "
+	    "[-z physpath] [-Z gnopname] dev ..."
 	},
 	{ "configure", G_FLAG_VERBOSE, NULL,
 	    {
+		{ 'c', "count_until_fail", "-1", G_TYPE_NUMBER },
+		{ 'd', "delaymsec", "-1", G_TYPE_NUMBER },
 		{ 'e', "error", "-1", G_TYPE_NUMBER },
+		{ 'q', "rdelayprob", "-1", G_TYPE_NUMBER },
 		{ 'r', "rfailprob", "-1", G_TYPE_NUMBER },
 		{ 'w', "wfailprob", "-1", G_TYPE_NUMBER },
+		{ 'x', "wdelayprob", "-1", G_TYPE_NUMBER },
 		G_OPT_SENTINEL
 	    },
-	    "[-v] [-e error] [-r rfailprob] [-w wfailprob] prov ..."
+	    "[-v] [-c count_until_fail] [-d delaymsec] [-e error] "
+	    "[-q rdelayprob] [-r rfailprob] [-w wfailprob] [-x wdelayprob] "
+	    "prov ..."
 	},
 	{ "destroy", G_FLAG_VERBOSE, NULL,
 	    {

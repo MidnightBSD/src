@@ -35,7 +35,6 @@ static const char copyright[] =
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-
 /*
  * CREDITS
  *
@@ -45,10 +44,6 @@ static const char copyright[] =
  *
  *	The buffering algorithm is attributed to Rodney Ruddock of
  *	the University of Guelph, Guelph, Ontario.
- *
- *	The cbc.c encryption code is adapted from
- *	the bdes program by Matt Bishop of Dartmouth College,
- *	Hanover, NH.
  *
  */
 
@@ -80,7 +75,6 @@ int ibufsz;			/* ed command-line buffer size */
 char *ibufp;			/* pointer to ed command-line buffer */
 
 /* global flags */
-int des = 0;			/* if set, use crypt(3) for i/o */
 static int garrulous = 0;	/* if set, print all error messages */
 int isbinary;			/* if set, buffer contains ASCII NULs */
 int isglobal;			/* if set, doing a global command */
@@ -120,11 +114,7 @@ top:
 			scripted = 1;
 			break;
 		case 'x':				/* use crypt */
-#ifdef DES
-			des = get_keyword();
-#else
 			fprintf(stderr, "crypt unavailable\n?\n");
-#endif
 			break;
 
 		default:
@@ -820,13 +810,8 @@ exec_command(void)
 			return ERR;
 		}
 		GET_COMMAND_SUFFIX();
-#ifdef DES
-		des = get_keyword();
-		break;
-#else
 		errmsg = "crypt unavailable";
 		return ERR;
-#endif
 	case 'z':
 #ifdef BACKWARDS
 		if (check_addr_range(first_addr = 1, current_addr + 1) < 0)

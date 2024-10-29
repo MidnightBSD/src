@@ -1,6 +1,5 @@
-# $FreeBSD$
 
-PACKAGE=examples
+PACKAGE=ipf
 FILES=	README
 
 # dist sample files

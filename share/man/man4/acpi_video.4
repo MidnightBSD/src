@@ -23,8 +23,6 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man4/acpi_video.4 267938 2014-06-26 21:46:14Z bapt $
-.\"
 .Dd November 8, 2004
 .Dt ACPI_VIDEO 4
 .Os
@@ -63,6 +61,15 @@ Preset brightness level to be used in economy mode.
 Defaults for these variables can be set in
 .Xr sysctl.conf 5 ,
 which is parsed at boot-time.
+.Sh COMPATIBILITY
+In order for
+.Nm
+to attach correctly,
+.Nm
+should be loaded after any of the DRM kernel modules.
+This can be achieved by setting the correct order in
+.Xr rc.conf 5
+using the kld_list directive.
 .Sh SEE ALSO
 .Xr acpi 4 ,
 .Xr loader.conf 5 ,

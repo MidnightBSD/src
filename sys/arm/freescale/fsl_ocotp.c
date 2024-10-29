@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2014 Steven Lawrance <stl@koffein.net>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Access to the Freescale i.MX6 On-Chip One-Time-Programmable Memory
  */
@@ -203,4 +202,3 @@ static devclass_t ocotp_devclass;
 
 EARLY_DRIVER_MODULE(ocotp, simplebus, ocotp_driver, ocotp_devclass, 0, 0,
     BUS_PASS_CPU + BUS_PASS_ORDER_FIRST);
-

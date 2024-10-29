@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2018-2019, Rubicon Communications, LLC (Netgate)
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -74,7 +73,6 @@ struct a37x0_gpio_softc {
 #define	A37X0_GPIO_INPUT(_p)		(0x10 + ((_p) / 32) * 4)
 #define	A37X0_GPIO_OUTPUT(_p)		(0x18 + ((_p) / 32) * 4)
 #define	A37X0_GPIO_SEL			0x30
-
 
 static struct ofw_compat_data compat_data[] = {
 	{ "marvell,armada3710-nb-pinctrl",	A37X0_NB_GPIO },

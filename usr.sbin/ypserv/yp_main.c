@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * ypserv startup function.
  * We need out own main() since we have to do some additional work

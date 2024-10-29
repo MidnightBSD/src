@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -283,11 +282,10 @@ am335x_ehrpwm_cfg_period(struct am335x_ehrpwm_softc *sc, u_int period)
 	 */
 	if (sc->sc_clkfreq != pwmclk || sc->sc_clktick != pwmtick ||
 	    sc->sc_period != tbprd * pwmtick) {
-
 		sc->sc_clkfreq = pwmclk;
 		sc->sc_clktick = pwmtick;
 		sc->sc_period  = tbprd * pwmtick;
-	
+
 		PWM_LOCK_ASSERT(sc);
 		regval = EPWM_READ2(sc, EPWM_TBCTL);
 		regval &= ~(TBCTL_CLKDIV_MASK | TBCTL_HSPCLKDIV_MASK);
@@ -588,23 +586,23 @@ am335x_ehrpwm_attach(device_t dev)
 	tree = device_get_sysctl_tree(sc->sc_dev);
 
 	sc->sc_clkdiv_oid = SYSCTL_ADD_PROC(ctx, SYSCTL_CHILDREN(tree), OID_AUTO,
-	    "clkdiv", CTLTYPE_INT | CTLFLAG_RW, sc, 0,
+	    "clkdiv", CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT, sc, 0,
 	    am335x_ehrpwm_sysctl_clkdiv, "I", "PWM clock prescaler");
 
 	sc->sc_freq_oid = SYSCTL_ADD_PROC(ctx, SYSCTL_CHILDREN(tree), OID_AUTO,
-	    "freq", CTLTYPE_INT | CTLFLAG_RW, sc, 0,
+	    "freq", CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT, sc, 0,
 	    am335x_ehrpwm_sysctl_freq, "I", "PWM frequency");
 
 	sc->sc_period_oid = SYSCTL_ADD_PROC(ctx, SYSCTL_CHILDREN(tree), OID_AUTO,
-	    "period", CTLTYPE_INT | CTLFLAG_RW, sc, 0,
+	    "period", CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT, sc, 0,
 	    am335x_ehrpwm_sysctl_period, "I", "PWM period");
 
 	sc->sc_chanA_oid = SYSCTL_ADD_PROC(ctx, SYSCTL_CHILDREN(tree), OID_AUTO,
-	    "dutyA", CTLTYPE_INT | CTLFLAG_RW, sc, 0,
+	    "dutyA", CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT, sc, 0,
 	    am335x_ehrpwm_sysctl_duty, "I", "Channel A duty cycles");
 
 	sc->sc_chanB_oid = SYSCTL_ADD_PROC(ctx, SYSCTL_CHILDREN(tree), OID_AUTO,
-	    "dutyB", CTLTYPE_INT | CTLFLAG_RW, sc, 0,
+	    "dutyB", CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT, sc, 0,
 	    am335x_ehrpwm_sysctl_duty, "I", "Channel B duty cycles");
 
 	/* CONFIGURE EPWM1 */

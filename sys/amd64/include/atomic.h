@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1998 Doug Rabson
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 #ifndef _MACHINE_ATOMIC_H_
 #define	_MACHINE_ATOMIC_H_
@@ -56,6 +55,20 @@
 #define	wmb()	__asm __volatile("sfence;" : : : "memory")
 #define	rmb()	__asm __volatile("lfence;" : : : "memory")
 
+#ifdef _KERNEL
+/*
+ * OFFSETOF_MONITORBUF == __pcpu_offset(pc_monitorbuf).
+ *
+ * The open-coded number is used instead of the symbolic expression to
+ * avoid a dependency on sys/pcpu.h in machine/atomic.h consumers.
+ * An assertion in amd64/vm_machdep.c ensures that the value is correct.
+ */
+#define	OFFSETOF_MONITORBUF	0x100
+#endif
+
+#if defined(SAN_NEEDS_INTERCEPTORS) && !defined(SAN_RUNTIME)
+#include <sys/atomic_san.h>
+#else
 #include <sys/atomic_common.h>
 
 /*
@@ -87,14 +100,6 @@
  * atomic_readandclear_long(P)	(return (*(u_long *)(P)); *(u_long *)(P) = 0;)
  */
 
-/*
- * The above functions are expanded inline in the statically-linked
- * kernel.  Lock prefixes are generated if an SMP kernel is being
- * built.
- *
- * Kernel modules call real functions which are built into the kernel.
- * This allows kernel modules to be portable between UP and SMP systems.
- */
 #if !defined(__GNUCLIKE_ASM)
 #define	ATOMIC_ASM(NAME, TYPE, OP, CONS, V)			\
 void atomic_##NAME##_##TYPE(volatile u_##TYPE *p, u_##TYPE v);	\
@@ -125,19 +130,13 @@ u_##TYPE	atomic_load_acq_##TYPE(volatile u_##TYPE *p)
 #define	ATOMIC_STORE(TYPE)					\
 void		atomic_store_rel_##TYPE(volatile u_##TYPE *p, u_##TYPE v)
 
-#else /* !KLD_MODULE && __GNUCLIKE_ASM */
+#else /* !__GNUCLIKE_ASM */
 
 /*
- * For userland, always use lock prefixes so that the binaries will run
- * on both SMP and !SMP systems.
- */
-#if defined(SMP) || !defined(_KERNEL) || defined(KLD_MODULE)
-#define	MPLOCKED	"lock ; "
-#else
-#define	MPLOCKED
-#endif
-
-/*
+ * Always use lock prefixes.  The result is slighly less optimal for
+ * UP systems, but it matters less now, and sometimes UP is emulated
+ * over SMP.
+ *
  * The assembly is volatilized to avoid code chunk removal by the compiler.
  * GCC aggressively reorders operations and memory clobbering is necessary
  * in order to avoid that for memory barriers.
@@ -146,7 +145,7 @@ void		atomic_store_rel_##TYPE(volatile u_##TYPE *p, u_##TYPE v)
 static __inline void					\
 atomic_##NAME##_##TYPE(volatile u_##TYPE *p, u_##TYPE v)\
 {							\
-	__asm __volatile(MPLOCKED OP			\
+	__asm __volatile("lock; " OP			\
 	: "+m" (*p)					\
 	: CONS (V)					\
 	: "cc");					\
@@ -155,7 +154,7 @@ atomic_##NAME##_##TYPE(volatile u_##TYPE *p, u_##TYPE v)\
 static __inline void					\
 atomic_##NAME##_barr_##TYPE(volatile u_##TYPE *p, u_##TYPE v)\
 {							\
-	__asm __volatile(MPLOCKED OP			\
+	__asm __volatile("lock; " OP			\
 	: "+m" (*p)					\
 	: CONS (V)					\
 	: "memory", "cc");				\
@@ -184,11 +183,9 @@ atomic_cmpset_##TYPE(volatile u_##TYPE *dst, u_##TYPE expect, u_##TYPE src) \
 	u_char res;					\
 							\
 	__asm __volatile(				\
-	"	" MPLOCKED "		"		\
-	"	cmpxchg %3,%1 ;	"			\
-	"	sete	%0 ;		"		\
+	" lock; cmpxchg %3,%1 ;	"			\
 	"# atomic_cmpset_" #TYPE "	"		\
-	: "=q" (res),			/* 0 */		\
+	: "=@cce" (res),		/* 0 */		\
 	  "+m" (*dst),			/* 1 */		\
 	  "+a" (expect)			/* 2 */		\
 	: "r" (src)			/* 3 */		\
@@ -202,11 +199,9 @@ atomic_fcmpset_##TYPE(volatile u_##TYPE *dst, u_##TYPE *expect, u_##TYPE src) \
 	u_char res;					\
 							\
 	__asm __volatile(				\
-	"	" MPLOCKED "		"		\
-	"	cmpxchg %3,%1 ;		"		\
-	"	sete	%0 ;		"		\
+	" lock; cmpxchg %3,%1 ;		"		\
 	"# atomic_fcmpset_" #TYPE "	"		\
-	: "=q" (res),			/* 0 */		\
+	: "=@cce" (res),		/* 0 */		\
 	  "+m" (*dst),			/* 1 */		\
 	  "+a" (*expect)		/* 2 */		\
 	: "r" (src)			/* 3 */		\
@@ -228,8 +223,7 @@ atomic_fetchadd_int(volatile u_int *p, u_int v)
 {
 
 	__asm __volatile(
-	"	" MPLOCKED "		"
-	"	xaddl	%0,%1 ;		"
+	" lock; xaddl	%0,%1 ;		"
 	"# atomic_fetchadd_int"
 	: "+r" (v),			/* 0 */
 	  "+m" (*p)			/* 1 */
@@ -246,8 +240,7 @@ atomic_fetchadd_long(volatile u_long *p, u_long v)
 {
 
 	__asm __volatile(
-	"	" MPLOCKED "		"
-	"	xaddq	%0,%1 ;		"
+	" lock;	xaddq	%0,%1 ;		"
 	"# atomic_fetchadd_long"
 	: "+r" (v),			/* 0 */
 	  "+m" (*p)			/* 1 */
@@ -261,11 +254,9 @@ atomic_testandset_int(volatile u_int *p, u_int v)
 	u_char res;
 
 	__asm __volatile(
-	"	" MPLOCKED "		"
-	"	btsl	%2,%1 ;		"
-	"	setc	%0 ;		"
+	" lock;	btsl	%2,%1 ;		"
 	"# atomic_testandset_int"
-	: "=q" (res),			/* 0 */
+	: "=@ccc" (res),		/* 0 */
 	  "+m" (*p)			/* 1 */
 	: "Ir" (v & 0x1f)		/* 2 */
 	: "cc");
@@ -278,11 +269,9 @@ atomic_testandset_long(volatile u_long *p, u_int v)
 	u_char res;
 
 	__asm __volatile(
-	"	" MPLOCKED "		"
-	"	btsq	%2,%1 ;		"
-	"	setc	%0 ;		"
+	" lock;	btsq	%2,%1 ;		"
 	"# atomic_testandset_long"
-	: "=q" (res),			/* 0 */
+	: "=@ccc" (res),		/* 0 */
 	  "+m" (*p)			/* 1 */
 	: "Jr" ((u_long)(v & 0x3f))	/* 2 */
 	: "cc");
@@ -295,11 +284,9 @@ atomic_testandclear_int(volatile u_int *p, u_int v)
 	u_char res;
 
 	__asm __volatile(
-	"	" MPLOCKED "		"
-	"	btrl	%2,%1 ;		"
-	"	setc	%0 ;		"
+	" lock;	btrl	%2,%1 ;		"
 	"# atomic_testandclear_int"
-	: "=q" (res),			/* 0 */
+	: "=@ccc" (res),		/* 0 */
 	  "+m" (*p)			/* 1 */
 	: "Ir" (v & 0x1f)		/* 2 */
 	: "cc");
@@ -312,11 +299,9 @@ atomic_testandclear_long(volatile u_long *p, u_int v)
 	u_char res;
 
 	__asm __volatile(
-	"	" MPLOCKED "		"
-	"	btrq	%2,%1 ;		"
-	"	setc	%0 ;		"
+	" lock;	btrq	%2,%1 ;		"
 	"# atomic_testandclear_long"
-	: "=q" (res),			/* 0 */
+	: "=@ccc" (res),		/* 0 */
 	  "+m" (*p)			/* 1 */
 	: "Jr" ((u_long)(v & 0x3f))	/* 2 */
 	: "cc");
@@ -335,48 +320,18 @@ atomic_testandclear_long(volatile u_long *p, u_int v)
  * special address for "mem".  In the kernel, we use a private per-cpu
  * cache line.  In user space, we use a word in the stack's red zone
  * (-8(%rsp)).
- *
- * For UP kernels, however, the memory of the single processor is
- * always consistent, so we only need to stop the compiler from
- * reordering accesses in a way that violates the semantics of acquire
- * and release.
  */
 
-#if defined(_KERNEL)
-
-/*
- * OFFSETOF_MONITORBUF == __pcpu_offset(pc_monitorbuf).
- *
- * The open-coded number is used instead of the symbolic expression to
- * avoid a dependency on sys/pcpu.h in machine/atomic.h consumers.
- * An assertion in amd64/vm_machdep.c ensures that the value is correct.
- */
-#define	OFFSETOF_MONITORBUF	0x100
-
-#if defined(SMP) || defined(KLD_MODULE)
 static __inline void
 __storeload_barrier(void)
 {
-
+#if defined(_KERNEL)
 	__asm __volatile("lock; addl $0,%%gs:%0"
 	    : "+m" (*(u_int *)OFFSETOF_MONITORBUF) : : "memory", "cc");
-}
-#else /* _KERNEL && UP */
-static __inline void
-__storeload_barrier(void)
-{
-
-	__compiler_membar();
-}
-#endif /* SMP */
 #else /* !_KERNEL */
-static __inline void
-__storeload_barrier(void)
-{
-
 	__asm __volatile("lock; addl $0,-8(%%rsp)" : : : "memory", "cc");
-}
 #endif /* _KERNEL*/
+}
 
 #define	ATOMIC_LOAD(TYPE)					\
 static __inline u_##TYPE					\
@@ -428,7 +383,7 @@ atomic_thread_fence_seq_cst(void)
 	__storeload_barrier();
 }
 
-#endif /* KLD_MODULE || !__GNUCLIKE_ASM */
+#endif /* !__GNUCLIKE_ASM */
 
 ATOMIC_ASM(set,	     char,  "orb %b1,%0",  "iq",  v);
 ATOMIC_ASM(clear,    char,  "andb %b1,%0", "iq", ~v);
@@ -553,6 +508,7 @@ u_long	atomic_swap_long(volatile u_long *p, u_long v);
 
 #define	atomic_readandclear_int(p)	atomic_swap_int(p, 0)
 #define	atomic_readandclear_long(p)	atomic_swap_long(p, 0)
+#define	atomic_testandset_acq_long	atomic_testandset_long
 
 /* Operations on 8-bit bytes. */
 #define	atomic_set_8		atomic_set_char
@@ -677,5 +633,7 @@ u_long	atomic_swap_long(volatile u_long *p, u_long v);
 #define	atomic_readandclear_ptr	atomic_readandclear_long
 
 #endif /* !WANT_FUNCTIONS */
+
+#endif /* !SAN_NEEDS_INTERCEPTORS || SAN_RUNTIME */
 
 #endif /* !_MACHINE_ATOMIC_H_ */

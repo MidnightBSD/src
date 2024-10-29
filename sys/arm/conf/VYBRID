@@ -4,7 +4,7 @@
 # For more information on this file, please read the config(5) manual page,
 # and/or the handbook section on Kernel Configuration Files:
 #
-#    https://www.FreeBSD.org/doc/en_US.ISO8859-1/books/handbook/kernelconfig-config.html
+#    https://docs.freebsd.org/en/books/handbook/kernelconfig/#kernelconfig-config
 #
 # The handbook is also available locally in /usr/share/doc/handbook
 # if you've installed the doc distribution, otherwise always see the
@@ -23,7 +23,6 @@ include 	"../freescale/vybrid/std.vybrid"
 
 options 	SCHED_4BSD		# 4BSD scheduler
 options 	PLATFORM		# Platform based SoC
-#options 	NANDFS			# NAND Filesystem
 #options 	SMP			# Enable multiple cores
 
 # NFS root from boopt/dhcp
@@ -34,7 +33,6 @@ options 	PLATFORM		# Platform based SoC
 #options 	BOOTP_WIRED_TO=ffec0
 
 #options 	ROOTDEVNAME=\"nfs:10.5.0.1:/tftpboot/cosmic\"
-#options 	ROOTDEVNAME=\"nandfs:/dev/gnand0s.root\"
 options 	ROOTDEVNAME=\"ufs:/dev/da0\"
 
 options 	MUTEX_NOINLINE
@@ -44,6 +42,14 @@ options 	NO_SWAPPING
 
 # Interrupt controller
 device		gic
+
+# pseudo devices
+device		clk
+device		phy
+device		hwreset
+device		nvmem
+device		regulator
+device		syscon
 
 # ARM MPCore timer
 device		mpcore_timer
@@ -56,7 +62,6 @@ device		sdhci			# generic sdhci
 # Pseudo devices
 
 device		loop
-device		random
 device		pty
 device		md
 device		gpio
@@ -77,8 +82,6 @@ device		pass
 #device		ata
 #device		atadisk
 #device		mvs
-
-device		nand
 
 # Serial ports
 device		uart
@@ -106,6 +109,9 @@ device		vf_spi
 device		vt
 device		kbdmux
 device		ukbd
+
+# HID support
+device		hid			# Generic HID support
 
 # Flattened Device Tree
 options 	FDT			# Configure using FDT/DTB data

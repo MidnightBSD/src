@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013 Ganbold Tsagaankhuu <ganbold@freebsd.org>
  * All rights reserved.
@@ -24,11 +24,9 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -65,7 +63,6 @@ static struct a10_sramc_softc *a10_sramc_sc;
     bus_space_read_4((sc)->bst, (sc)->bsh, (reg))
 #define	sramc_write_4(sc, reg, val)	\
     bus_space_write_4((sc)->bst, (sc)->bsh, (reg), (val))
-
 
 static int
 a10_sramc_probe(device_t dev)

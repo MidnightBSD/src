@@ -1,7 +1,6 @@
 /*-
  * Copyright (c) 2018 Emmanuel Vadot <manu@freebsd.org>
  * Copyright (c) 2016 Jared McNeill <jmcneill@invisible.ca>
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,7 +22,6 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -31,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/eventhandler.h>
@@ -757,11 +754,9 @@ axp8xx_write(device_t dev, uint8_t reg, uint8_t val)
 static int
 axp8xx_regnode_init(struct regnode *regnode)
 {
-	struct axp8xx_reg_sc *sc;
 	struct regnode_std_param *param;
 	int rv, udelay;
 
-	sc = regnode_get_softc(regnode);
 	param = regnode_get_stdparam(regnode);
 	if (param->min_uvolt == 0)
 		return (0);
@@ -850,6 +845,22 @@ axp8xx_regnode_voltage_to_reg(struct axp8xx_reg_sc *sc, int min_uvolt,
 }
 
 static int
+axp8xx_regnode_status(struct regnode *regnode, int *status)
+{
+	struct axp8xx_reg_sc *sc;
+	uint8_t val;
+
+	sc = regnode_get_softc(regnode);
+
+	*status = 0;
+	axp8xx_read(sc->base_dev, sc->def->enable_reg, &val, 1);
+	if (val & sc->def->enable_mask)
+		*status = REGULATOR_STATUS_ENABLED;
+
+	return (0);
+}
+
+static int
 axp8xx_regnode_set_voltage(struct regnode *regnode, int min_uvolt,
     int max_uvolt, int *udelay)
 {
@@ -898,6 +909,7 @@ static regnode_method_t axp8xx_regnode_methods[] = {
 	/* Regulator interface */
 	REGNODEMETHOD(regnode_init,		axp8xx_regnode_init),
 	REGNODEMETHOD(regnode_enable,		axp8xx_regnode_enable),
+	REGNODEMETHOD(regnode_status,		axp8xx_regnode_status),
 	REGNODEMETHOD(regnode_set_voltage,	axp8xx_regnode_set_voltage),
 	REGNODEMETHOD(regnode_get_voltage,	axp8xx_regnode_get_voltage),
 	REGNODEMETHOD(regnode_check_voltage,	regnode_method_check_voltage),
@@ -1117,9 +1129,9 @@ axp8xx_intr(void *arg)
 		if (bootverbose)
 			device_printf(dev, "AXP_IRQSTAT4 val: %x\n", val);
 		if (val & AXP_IRQSTAT4_BATLVL_LO0)
-			devctl_notify("PMU", "Battery", "shutdown threshold", NULL);
+			devctl_notify("PMU", "Battery", "shutdown-threshold", NULL);
 		if (val & AXP_IRQSTAT4_BATLVL_LO1)
-			devctl_notify("PMU", "Battery", "warning threshold", NULL);
+			devctl_notify("PMU", "Battery", "warning-threshold", NULL);
 		/* Acknowledge */
 		axp8xx_write(dev, AXP_IRQSTAT4, val);
 	}
@@ -1315,7 +1327,6 @@ axp8xx_gpio_pin_set(device_t dev, uint32_t pin, unsigned int val)
 
 	return (error);
 }
-
 
 static int
 axp8xx_gpio_pin_toggle(device_t dev, uint32_t pin)
@@ -1537,7 +1548,7 @@ axp8xx_attach(device_t dev)
 		SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
 		    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
 		    OID_AUTO, sc->sensors[i].name,
-		    CTLTYPE_INT | CTLFLAG_RD,
+		    CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_NEEDGIANT,
 		    dev, sc->sensors[i].id, axp8xx_sysctl,
 		    sc->sensors[i].format,
 		    sc->sensors[i].desc);
@@ -1545,7 +1556,7 @@ axp8xx_attach(device_t dev)
 	SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
 	    OID_AUTO, "batchargecurrentstep",
-	    CTLTYPE_INT | CTLFLAG_RW,
+	    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
 	    dev, 0, axp8xx_sysctl_chargecurrent,
 	    "I", "Battery Charging Current Step, "
 	    "0: 200mA, 1: 400mA, 2: 600mA, 3: 800mA, "

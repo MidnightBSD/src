@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010 Ed Schouten <ed@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "namespace.h"
 #include <sys/endian.h>
 #include <sys/param.h>
@@ -127,11 +126,7 @@ utx_to_futx(const struct utmpx *ut, struct futx *fu)
 struct utmpx *
 futx_to_utx(const struct futx *fu)
 {
-#ifdef __NO_TLS
-	static struct utmpx *ut;
-#else
 	static _Thread_local struct utmpx *ut;
-#endif
 
 	if (ut == NULL) {
 		ut = calloc(1, sizeof *ut);

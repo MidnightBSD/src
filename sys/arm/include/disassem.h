@@ -36,7 +36,6 @@
  * SUCH DAMAGE.
  *
  * Define the interface structure required by the disassembler.
- *
  */
 
 #ifndef _MACHINE_DISASSEM_H_

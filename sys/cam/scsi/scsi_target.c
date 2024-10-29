@@ -1,7 +1,7 @@
 /*-
  * Generic SCSI Target Kernel Mode Driver
  *
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2002 Nate Lawson.
  * Copyright (c) 1998, 1999, 2001, 2002 Justin T. Gibbs.
@@ -30,8 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -53,7 +51,6 @@
 #include <cam/cam_xpt_periph.h>
 #include <cam/cam_sim.h>
 #include <cam/scsi/scsi_targetio.h>
-
 
 /* Transaction information attached to each CCB sent by the user */
 struct targ_cmd_descr {
@@ -116,7 +113,6 @@ static struct filterops targread_filtops = {
 
 static struct cdevsw targ_cdevsw = {
 	.d_version =	D_VERSION,
-	.d_flags =	D_NEEDGIANT,
 	.d_open =	targopen,
 	.d_read =	targread,
 	.d_write =	targwrite,
@@ -405,8 +401,8 @@ targenable(struct targ_softc *softc, struct cam_path *path, int grp6_len,
 	}
 	if (cpi.maxio == 0)
 		softc->maxio = DFLTPHYS;	/* traditional default */
-	else if (cpi.maxio > MAXPHYS)
-		softc->maxio = MAXPHYS;		/* for safety */
+	else if (cpi.maxio > maxphys)
+		softc->maxio = maxphys;		/* for safety */
 	else
 		softc->maxio = cpi.maxio;	/* real value */
 
@@ -598,7 +594,7 @@ targwrite(struct cdev *dev, struct uio *uio, int ioflag)
 		}
 		write_len += sizeof(user_ccb);
 	}
-	
+
 	/*
 	 * If we've successfully taken in some amount of
 	 * data, return success for that data first.  If
@@ -730,7 +726,6 @@ targsendccb(struct targ_softc *softc, union ccb *ccb,
 
 	if ((ccb_h->func_code == XPT_CONT_TARGET_IO) ||
 	    (ccb_h->func_code == XPT_DEV_MATCH)) {
-
 		error = cam_periph_mapmem(ccb, mapinfo, softc->maxio);
 
 		/*

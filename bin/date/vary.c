@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <err.h>
 #include <time.h>
 #include <string.h>

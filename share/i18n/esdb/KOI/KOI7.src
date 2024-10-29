@@ -1,4 +1,3 @@
-# $FreeBSD: stable/11/share/i18n/esdb/KOI/KOI7.src 219019 2011-02-25 00:04:39Z gabor $ 
 # $NetBSD: KOI7.src,v 1.1 2006/04/08 14:15:48 tnozaki Exp $
 
 NAME		"KOI7"

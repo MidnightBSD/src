@@ -36,7 +36,6 @@ static char sccsid[] = "@(#)exec.c	8.4 (Berkeley) 6/8/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -91,7 +90,6 @@ struct tblentry {
 
 static struct tblentry *cmdtable[CMDTABLESIZE];
 static int cmdtable_cd = 0;	/* cmdtable contains cd-dependent entries */
-int exerrno = 0;			/* Last exec error */
 
 
 static void tryexec(char *, char **, char **);
@@ -134,13 +132,10 @@ shellexec(char **argv, char **envp, const char *path, int idx)
 	}
 
 	/* Map to POSIX errors */
-	if (e == ENOENT || e == ENOTDIR) {
-		exerrno = 127;
-		exerror(EXEXEC, "%s: not found", argv[0]);
-	} else {
-		exerrno = 126;
-		exerror(EXEXEC, "%s: %s", argv[0], strerror(e));
-	}
+	if (e == ENOENT || e == ENOTDIR)
+		errorwithstatus(127, "%s: not found", argv[0]);
+	else
+		errorwithstatus(126, "%s: %s", argv[0], strerror(e));
 }
 
 
@@ -682,6 +677,21 @@ isfunc(const char *name)
 }
 
 
+static void
+print_absolute_path(const char *name)
+{
+	const char *pwd;
+
+	if (*name != '/' && (pwd = lookupvar("PWD")) != NULL && *pwd != '\0') {
+		out1str(pwd);
+		if (strcmp(pwd, "/") != 0)
+			outcslow('/', out1);
+	}
+	out1str(name);
+	outcslow('\n', out1);
+}
+
+
 /*
  * Shared code for the following builtin commands:
  *    type, command -v, command -V
@@ -748,20 +758,16 @@ typecmd_impl(int argc, char **argv, int cmd, const char *path)
 					name = padvance(&path2, &opt2, argv[i]);
 					stunalloc(name);
 				} while (--j >= 0);
-				if (cmd == TYPECMD_SMALLV)
-					out1fmt("%s\n", name);
-				else
-					out1fmt("%s is%s %s\n", argv[i],
+				if (cmd != TYPECMD_SMALLV)
+					out1fmt("%s is%s ", argv[i],
 					    (cmdp && cmd == TYPECMD_TYPE) ?
-						" a tracked alias for" : "",
-					    name);
+						" a tracked alias for" : "");
+				print_absolute_path(name);
 			} else {
 				if (eaccess(argv[i], X_OK) == 0) {
-					if (cmd == TYPECMD_SMALLV)
-						out1fmt("%s\n", argv[i]);
-					else
-						out1fmt("%s is %s\n", argv[i],
-						    argv[i]);
+					if (cmd != TYPECMD_SMALLV)
+						out1fmt("%s is ", argv[i]);
+					print_absolute_path(argv[i]);
 				} else {
 					if (cmd != TYPECMD_SMALLV)
 						outfmt(out2, "%s: %s\n",

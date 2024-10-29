@@ -26,7 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _MACHINE_KDB_H_
@@ -38,6 +37,8 @@
 
 void kdb_cpu_clear_singlestep(void);
 void kdb_cpu_set_singlestep(void);
+int kdb_cpu_set_watchpoint(vm_offset_t addr, size_t size, int access);
+int kdb_cpu_clr_watchpoint(vm_offset_t addr, size_t size);
 
 static __inline void
 kdb_cpu_sync_icache(unsigned char *addr, size_t size)

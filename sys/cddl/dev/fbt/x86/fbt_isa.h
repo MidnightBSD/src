@@ -18,7 +18,6 @@
  *
  * CDDL HEADER END
  *
- *
  */
 
 #ifndef _FBT_ISA_H_

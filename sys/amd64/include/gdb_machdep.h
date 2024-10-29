@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004 Marcel Moolenaar
  * All rights reserved.
@@ -24,13 +24,12 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef _MACHINE_GDB_MACHDEP_H_
 #define	_MACHINE_GDB_MACHDEP_H_
 
-#define	GDB_BUFSZ	(GDB_NREGS * 16)
+#define	GDB_BUFSZ	4096
 #define	GDB_NREGS	56
 #define	GDB_REG_RAX	0
 #define	GDB_REG_RBX	1
@@ -71,5 +70,6 @@ void *gdb_cpu_getreg(int, size_t *);
 void gdb_cpu_setreg(int, void *);
 int gdb_cpu_signal(int, int);
 void gdb_end_write(void *);
+void gdb_cpu_stop_reason(int, int);
 
 #endif /* !_MACHINE_GDB_MACHDEP_H_ */

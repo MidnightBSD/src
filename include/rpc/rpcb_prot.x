@@ -1,5 +1,4 @@
 %/*-
-% *
 % * Copyright (c) 2009, Sun Microsystems, Inc.
 % * All rights reserved.
 % *

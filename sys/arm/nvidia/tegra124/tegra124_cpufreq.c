@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -137,7 +136,6 @@ static struct speedo_entry tegra124_speedo_pllx_tbl[] =
 	{2499000000ULL,	1400000, 0, 0},
 };
 
-
 static struct cpu_volt_def tegra124_cpu_volt_pllx_def =
 {
 	.min_uvolt = 1000000,		/* XXX 0.9 V doesn't work on all boards */
@@ -239,7 +237,6 @@ freq_to_voltage(struct tegra124_cpufreq_softc *sc, uint64_t freq)
 	if (ent == NULL)
 		ent = &sc->cpu_def->speedo_tbl[sc->cpu_def->speedo_nitems - 1];
 	scale = sc->cpu_def->speedo_scale;
-
 
 	/* uV = (c2 * speedo / scale + c1) * speedo / scale + c0) */
 	uv = DIV_ROUND_CLOSEST(ent->c2 * sc->speedo_value, scale);
@@ -411,7 +408,6 @@ tegra124_cpufreq_get(device_t dev, struct cf_setting *cf)
 	return (0);
 }
 
-
 static int
 tegra124_cpufreq_type(device_t dev, int *type)
 {
@@ -517,7 +513,6 @@ tegra124_cpufreq_attach(device_t dev)
 		sc->cpu_def = &tegra124_cpu_volt_pllx_def;
 	else
 		sc->cpu_def = &tegra124_cpu_volt_dpll_def;
-
 
 	rv = get_fdt_resources(sc, sc->node);
 	if (rv !=  0) {

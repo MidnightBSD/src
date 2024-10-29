@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Scan the directory dirname calling select to make a list of selected
  * directory entries then sort using qsort and compare routine dcomp.

@@ -33,7 +33,6 @@
 static char sccsid[] = "@(#)mcount.c	8.1 (Berkeley) 6/4/93";
 #endif
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/gmon.h>
 #ifdef _KERNEL
@@ -278,8 +277,7 @@ MCOUNT
 
 #ifdef GUPROF
 void
-mexitcount(selfpc)
-	uintfptr_t selfpc;
+mexitcount(uintfptr_t selfpc)
 {
 	struct gmonparam *p;
 	uintfptr_t selfpcdiff;

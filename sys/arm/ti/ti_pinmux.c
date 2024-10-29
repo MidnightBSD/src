@@ -34,7 +34,6 @@
  * Exposes pinmux module to pinctrl-compatible interface
  */
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -79,7 +78,6 @@ static struct ti_pinmux_softc *ti_pinmux_sc;
 #define	ti_pinmux_write_4(sc, reg, val)		\
     bus_space_write_4((sc)->sc_bst, (sc)->sc_bsh, (reg), (val))
 
-
 /**
  *	ti_padconf_devmap - Array of pins, should be defined one per SoC
  *
@@ -88,7 +86,6 @@ static struct ti_pinmux_softc *ti_pinmux_sc;
  *	corresponds to an individual pin.
  */
 static const struct ti_pinmux_device *ti_pinmux_dev;
-
 
 /**
  *	ti_pinmux_padconf_from_name - searches the list of pads and returns entry
@@ -399,7 +396,6 @@ ti_pinmux_probe(device_t dev)
 		return (ENXIO);
 	}
 
-
 	device_set_desc(dev, "TI Pinmux Module");
 	return (BUS_PROBE_DEFAULT);
 }
@@ -458,3 +454,5 @@ static driver_t ti_pinmux_driver = {
 static devclass_t ti_pinmux_devclass;
 
 DRIVER_MODULE(ti_pinmux, simplebus, ti_pinmux_driver, ti_pinmux_devclass, 0, 0);
+MODULE_VERSION(ti_pinmux, 1);
+MODULE_DEPEND(ti_pinmux, ti_scm, 1, 1, 1);

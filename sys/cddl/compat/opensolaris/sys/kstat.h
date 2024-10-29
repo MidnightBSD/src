@@ -22,7 +22,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _OPENSOLARIS_SYS_KSTAT_H_
@@ -67,24 +66,13 @@ typedef struct kstat_named {
 #define	KSTAT_DATA_UINT32	2
 #define	KSTAT_DATA_INT64	3
 #define	KSTAT_DATA_UINT64	4
-#define	KSTAT_DATA_STRING	7
 	uchar_t	data_type;
 #define	KSTAT_DESCLEN		128
 	char	desc[KSTAT_DESCLEN];
 	union {
 		uint64_t	ui64;
-                struct {
-                        union {
-                                char *ptr;      /* NULL-term string */
-                                char __pad[8];  /* 64-bit padding */
-                        } addr;
-                        uint32_t len;           /* # bytes for strlen + '\0' */
-                } string;
 	} value;
 } kstat_named_t;
-
-#define KSTAT_NAMED_STR_PTR(knptr) ((knptr)->value.string.addr.ptr)
-#define KSTAT_NAMED_STR_BUFLEN(knptr) ((knptr)->value.string.len)
 
 kstat_t *kstat_create(char *module, int instance, char *name, char *cls,
     uchar_t type, ulong_t ndata, uchar_t flags);

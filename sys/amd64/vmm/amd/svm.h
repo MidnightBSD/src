@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013 Anish Gupta (akgupt3@gmail.com)
  * All rights reserved.
@@ -24,13 +24,14 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef _SVM_H_
 #define _SVM_H_
 
 struct pcpu;
+struct svm_softc;
+struct svm_vcpu;
 
 /*
  * Guest register state that is saved outside the VMCB.
@@ -65,5 +66,8 @@ struct svm_regctx {
 };
 
 void svm_launch(uint64_t pa, struct svm_regctx *gctx, struct pcpu *pcpu);
+#ifdef BHYVE_SNAPSHOT
+void svm_set_tsc_offset(struct svm_vcpu *vcpu, uint64_t offset);
+#endif
 
 #endif /* _SVM_H_ */

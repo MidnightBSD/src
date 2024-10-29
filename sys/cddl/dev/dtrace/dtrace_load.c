@@ -18,7 +18,6 @@
  *
  * CDDL HEADER END
  *
- *
  */
 
 #ifndef EARLY_AP_STARTUP

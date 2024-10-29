@@ -23,14 +23,12 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
-.\"
 .Dd June 24, 2020
 .Dt ACPI_IBM 4
 .Os
 .Sh NAME
 .Nm acpi_ibm
-.Nd "ACPI extras driver for IBM laptops"
+.Nd "ThinkPad ACPI extras driver"
 .Sh SYNOPSIS
 To compile this driver into the kernel,
 place the following line in your
@@ -48,7 +46,7 @@ acpi_ibm_load="YES"
 .Sh DESCRIPTION
 The
 .Nm
-driver provides support for hotkeys and other components of IBM laptops.
+driver provides support for hotkeys and other components of ThinkPad laptops.
 The main purpose of this driver is to provide an interface,
 accessible via
 .Xr sysctl 8
@@ -273,6 +271,9 @@ Current brightness level of the display.
 Speaker volume.
 .It Va dev.acpi_ibm.0.mute
 Indicates, whether the speakers are muted or not.
+.It Va dev.acpi_ibm.0.mic_mute
+Indicates, whether the microphone led (present on some model) is on or not.
+Note that this does not mean that the microphone input is muted.
 .It Va dev.acpi_ibm.0.thinklight
 Indicates, whether the ThinkLight keyboard light is activated or not.
 .It Va dev.acpi_ibm.0.bluetooth
@@ -444,6 +445,17 @@ case ${NOTIFY} in
                         MESSAGE="volume unmuted"
                 fi
                 ;;
+	0x1b)
+		LEVEL=`sysctl -n dev.acpi_ibm.0.mic_led`
+		if [ $LEVEL -eq 0 ]; then
+			sysctl dev.acpi_ibm.0.mic_led=1
+			mixer rec 0
+		fi
+		if [ $LEVEL -eq 1 ]; then
+			sysctl dev.acpi_ibm.0.mic_led=0
+			mixer rec 30
+		fi
+		;;
         *)
                 ;;
 esac

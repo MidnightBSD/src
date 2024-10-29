@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright 2016 Michal Meloun <mmel@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 #ifndef _RK_CLK_MUX_H_
 #define _RK_CLK_MUX_H_
@@ -40,6 +39,8 @@ struct rk_clk_mux_def {
 };
 
 #define	RK_CLK_MUX_MASK		0xFFFF0000
+#define	RK_CLK_MUX_REPARENT	(1 << 0)
+#define	RK_CLK_MUX_GRF		(1 << 1)
 
 int rk_clk_mux_register(struct clkdom *clkdom, struct rk_clk_mux_def *clkdef);
 

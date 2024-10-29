@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004 Marcel Moolenaar
  * All rights reserved.
@@ -24,7 +24,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef _MACHINE_KDB_H_
@@ -37,21 +36,11 @@
 
 #define	KDB_STOPPEDPCB(pc)	&stoppcbs[pc->pc_cpuid]
 
-#if __ARM_ARCH >= 6
 extern void kdb_cpu_clear_singlestep(void);
 extern void kdb_cpu_set_singlestep(void);
 boolean_t kdb_cpu_pc_is_singlestep(db_addr_t);
-#else
-static __inline void
-kdb_cpu_clear_singlestep(void)
-{
-}
-
-static __inline void
-kdb_cpu_set_singlestep(void)
-{
-}
-#endif
+int kdb_cpu_set_watchpoint(vm_offset_t addr, size_t size, int access);
+int kdb_cpu_clr_watchpoint(vm_offset_t addr, size_t size);
 
 static __inline void
 kdb_cpu_sync_icache(unsigned char *addr, size_t size)

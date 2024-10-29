@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/capsicum.h>
@@ -62,7 +61,8 @@ sgx_linux_ioctl(struct thread *td, struct linux_ioctl_args *args)
 	int error;
 	int len;
 
-	error = fget(td, args->fd, cap_rights_init(&rights, CAP_IOCTL), &fp);
+	error = fget(td, args->fd, cap_rights_init_one(&rights, CAP_IOCTL),
+	    &fp);
 	if (error != 0)
 		return (error);
 

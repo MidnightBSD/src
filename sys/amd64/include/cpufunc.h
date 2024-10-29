@@ -28,7 +28,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -64,41 +63,13 @@ breakpoint(void)
 	__asm __volatile("int $3");
 }
 
-static __inline __pure2 u_int
-bsfl(u_int mask)
-{
-	u_int	result;
+#define	bsfl(mask)	__builtin_ctz(mask)
 
-	__asm __volatile("bsfl %1,%0" : "=r" (result) : "rm" (mask));
-	return (result);
-}
+#define	bsfq(mask)	__builtin_ctzl(mask)
 
-static __inline __pure2 u_long
-bsfq(u_long mask)
-{
-	u_long	result;
+#define	bsrl(mask)	(__builtin_clz(mask) ^ 0x1f)
 
-	__asm __volatile("bsfq %1,%0" : "=r" (result) : "rm" (mask));
-	return (result);
-}
-
-static __inline __pure2 u_int
-bsrl(u_int mask)
-{
-	u_int	result;
-
-	__asm __volatile("bsrl %1,%0" : "=r" (result) : "rm" (mask));
-	return (result);
-}
-
-static __inline __pure2 u_long
-bsrq(u_long mask)
-{
-	u_long	result;
-
-	__asm __volatile("bsrq %1,%0" : "=r" (result) : "rm" (mask));
-	return (result);
-}
+#define	bsrq(mask)	(__builtin_clzl(mask) ^ 0x3f)
 
 static __inline void
 clflush(u_long addr)
@@ -159,24 +130,13 @@ enable_intr(void)
 #ifdef _KERNEL
 
 #define	HAVE_INLINE_FFS
-#define        ffs(x)  __builtin_ffs(x)
+#define	ffs(x)		__builtin_ffs(x)
 
 #define	HAVE_INLINE_FFSL
-
-static __inline __pure2 int
-ffsl(long mask)
-{
-
-	return (__builtin_ffsl(mask));
-}
+#define	ffsl(x)		__builtin_ffsl(x)
 
 #define	HAVE_INLINE_FFSLL
-
-static __inline __pure2 int
-ffsll(long long mask)
-{
-	return (ffsl((long)mask));
-}
+#define	ffsll(x)	__builtin_ffsll(x)
 
 #define	HAVE_INLINE_FLS
 
@@ -231,7 +191,7 @@ inl(u_int port)
 static __inline void
 insb(u_int port, void *addr, size_t count)
 {
-	__asm __volatile("cld; rep; insb"
+	__asm __volatile("rep; insb"
 			 : "+D" (addr), "+c" (count)
 			 : "d" (port)
 			 : "memory");
@@ -240,7 +200,7 @@ insb(u_int port, void *addr, size_t count)
 static __inline void
 insw(u_int port, void *addr, size_t count)
 {
-	__asm __volatile("cld; rep; insw"
+	__asm __volatile("rep; insw"
 			 : "+D" (addr), "+c" (count)
 			 : "d" (port)
 			 : "memory");
@@ -249,7 +209,7 @@ insw(u_int port, void *addr, size_t count)
 static __inline void
 insl(u_int port, void *addr, size_t count)
 {
-	__asm __volatile("cld; rep; insl"
+	__asm __volatile("rep; insl"
 			 : "+D" (addr), "+c" (count)
 			 : "d" (port)
 			 : "memory");
@@ -285,7 +245,7 @@ outl(u_int port, u_int data)
 static __inline void
 outsb(u_int port, const void *addr, size_t count)
 {
-	__asm __volatile("cld; rep; outsb"
+	__asm __volatile("rep; outsb"
 			 : "+S" (addr), "+c" (count)
 			 : "d" (port));
 }
@@ -293,7 +253,7 @@ outsb(u_int port, const void *addr, size_t count)
 static __inline void
 outsw(u_int port, const void *addr, size_t count)
 {
-	__asm __volatile("cld; rep; outsw"
+	__asm __volatile("rep; outsw"
 			 : "+S" (addr), "+c" (count)
 			 : "d" (port));
 }
@@ -301,7 +261,7 @@ outsw(u_int port, const void *addr, size_t count)
 static __inline void
 outsl(u_int port, const void *addr, size_t count)
 {
-	__asm __volatile("cld; rep; outsl"
+	__asm __volatile("rep; outsl"
 			 : "+S" (addr), "+c" (count)
 			 : "d" (port));
 }

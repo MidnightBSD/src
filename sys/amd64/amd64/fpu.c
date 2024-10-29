@@ -33,10 +33,10 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
+#include <sys/domainset.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
@@ -77,7 +77,7 @@
 #define	fxrstor(addr)		__asm __volatile("fxrstor %0" : : "m" (*(addr)))
 #define	fxsave(addr)		__asm __volatile("fxsave %0" : "=m" (*(addr)))
 #define	ldmxcsr(csr)		__asm __volatile("ldmxcsr %0" : : "m" (csr))
-#define	stmxcsr(addr)		__asm __volatile("stmxcsr %0" : : "m" (*(addr)))
+#define	stmxcsr(addr)		__asm __volatile("stmxcsr %0" : "=m" (*(addr)))
 
 static __inline void
 xrstor32(char *addr, uint64_t mask)
@@ -189,17 +189,12 @@ static	void	fpu_clean_state(void);
 SYSCTL_INT(_hw, HW_FLOATINGPT, floatingpoint, CTLFLAG_RD,
     SYSCTL_NULL_INT_PTR, 1, "Floating point instructions executed in hardware");
 
-int lazy_fpu_switch = 0;
-SYSCTL_INT(_hw, OID_AUTO, lazy_fpu_switch, CTLFLAG_RD,
-    &lazy_fpu_switch, 0,
-    "Lazily load FPU context after context switch");
-
 int use_xsave;			/* non-static for cpu_switch.S */
 uint64_t xsave_mask;		/* the same */
 static	uma_zone_t fpu_save_area_zone;
 static	struct savefpu *fpu_initialstate;
 
-struct xsave_area_elm_descr {
+static struct xsave_area_elm_descr {
 	u_int	offset;
 	u_int	size;
 } *xsave_area_desc;
@@ -263,25 +258,14 @@ fpurestore_fxrstor(void *addr)
 	fxrstor((char *)addr);
 }
 
-static void
-init_xsave(void)
+DEFINE_IFUNC(, void, fpusave, (void *))
 {
+	u_int cp[4];
 
-	if (use_xsave)
-		return;
-	if ((cpu_feature2 & CPUID2_XSAVE) == 0)
-		return;
-	use_xsave = 1;
-	TUNABLE_INT_FETCH("hw.use_xsave", &use_xsave);
-}
-
-DEFINE_IFUNC(, void, fpusave, (void *), static)
-{
-
-	init_xsave();
 	if (!use_xsave)
 		return (fpusave_fxsave);
-	if ((cpu_stdext_feature & CPUID_EXTSTATE_XSAVEOPT) != 0) {
+	cpuid_count(0xd, 0x1, cp);
+	if ((cp[0] & CPUID_EXTSTATE_XSAVEOPT) != 0) {
 		return ((cpu_stdext_feature & CPUID_STDEXT_NFPUSG) != 0 ?
 		    fpusave_xsaveopt64 : fpusave_xsaveopt3264);
 	}
@@ -289,10 +273,8 @@ DEFINE_IFUNC(, void, fpusave, (void *), static)
 	    fpusave_xsave64 : fpusave_xsave3264);
 }
 
-DEFINE_IFUNC(, void, fpurestore, (void *), static)
+DEFINE_IFUNC(, void, fpurestore, (void *))
 {
-
-	init_xsave();
 	if (!use_xsave)
 		return (fpurestore_fxrstor);
 	return ((cpu_stdext_feature & CPUID_STDEXT_NFPUSG) != 0 ?
@@ -397,6 +379,7 @@ void
 fpuinit(void)
 {
 	register_t saveintr;
+	uint64_t cr4;
 	u_int mxcsr;
 	u_short control;
 
@@ -404,7 +387,22 @@ fpuinit(void)
 		fpuinit_bsp1();
 
 	if (use_xsave) {
-		load_cr4(rcr4() | CR4_XSAVE);
+		cr4 = rcr4();
+
+		/*
+		 * Revert enablement of PKRU if user disabled its
+		 * saving on context switches by clearing the bit in
+		 * the xsave mask.  Also redundantly clear the bit in
+		 * cpu_stdext_feature2 to prevent pmap from ever
+		 * trying to set the page table bits.
+		 */
+		if ((cpu_stdext_feature2 & CPUID_STDEXT2_PKU) != 0 &&
+		    (xsave_mask & XFEATURE_ENABLED_PKRU) == 0) {
+			cr4 &= ~CR4_PKE;
+			cpu_stdext_feature2 &= ~CPUID_STDEXT2_PKU;
+		}
+
+		load_cr4(cr4 | CR4_XSAVE);
 		load_xcr(XCR0, xsave_mask);
 	}
 
@@ -440,8 +438,19 @@ fpuinitstate(void *arg __unused)
 	register_t saveintr;
 	int cp[4], i, max_ext_n;
 
-	fpu_initialstate = malloc(cpu_max_ext_state_size, M_DEVBUF,
-	    M_WAITOK | M_ZERO);
+	/* Do potentially blocking operations before disabling interrupts. */
+	fpu_save_area_zone = uma_zcreate("FPU_save_area",
+	    cpu_max_ext_state_size, NULL, NULL, NULL, NULL,
+	    XSAVE_AREA_ALIGN - 1, 0);
+	fpu_initialstate = uma_zalloc(fpu_save_area_zone, M_WAITOK | M_ZERO);
+	if (use_xsave) {
+		max_ext_n = flsl(xsave_mask);
+		xsave_area_desc = malloc(max_ext_n * sizeof(struct
+		    xsave_area_elm_descr), M_DEVBUF, M_WAITOK | M_ZERO);
+	}
+
+	cpu_thread_alloc(&thread0);
+
 	saveintr = intr_disable();
 	stop_emulating();
 
@@ -472,9 +481,6 @@ fpuinitstate(void *arg __unused)
 		    offsetof(struct xstate_hdr, xstate_bv));
 		*xstate_bv = XFEATURE_ENABLED_X87 | XFEATURE_ENABLED_SSE;
 
-		max_ext_n = flsl(xsave_mask);
-		xsave_area_desc = malloc(max_ext_n * sizeof(struct
-		    xsave_area_elm_descr), M_DEVBUF, M_WAITOK | M_ZERO);
 		/* x87 state */
 		xsave_area_desc[0].offset = 0;
 		xsave_area_desc[0].size = 160;
@@ -489,15 +495,11 @@ fpuinitstate(void *arg __unused)
 		}
 	}
 
-	fpu_save_area_zone = uma_zcreate("FPU_save_area",
-	    cpu_max_ext_state_size, NULL, NULL, NULL, NULL,
-	    XSAVE_AREA_ALIGN - 1, 0);
-
 	start_emulating();
 	intr_restore(saveintr);
 }
 /* EFIRT needs this to be initialized before we can enter our EFI environment */
-SYSINIT(fpuinitstate, SI_SUB_DRIVERS, SI_ORDER_FIRST, fpuinitstate, NULL);
+SYSINIT(fpuinitstate, SI_SUB_CPU, SI_ORDER_ANY, fpuinitstate, NULL);
 
 /*
  * Free coprocessor (if we have it).
@@ -873,7 +875,10 @@ fpugetregs(struct thread *td)
 	struct pcb *pcb;
 	uint64_t *xstate_bv, bit;
 	char *sa;
+	struct savefpu *s;
+	uint32_t mxcsr, mxcsr_mask;
 	int max_ext_n, i, owned;
+	bool do_mxcsr;
 
 	pcb = td->td_pcb;
 	critical_enter();
@@ -904,10 +909,28 @@ fpugetregs(struct thread *td)
 			bit = 1ULL << i;
 			if ((xsave_mask & bit) == 0 || (*xstate_bv & bit) != 0)
 				continue;
+			do_mxcsr = false;
+			if (i == 0 && (*xstate_bv & (XFEATURE_ENABLED_SSE |
+			    XFEATURE_ENABLED_AVX)) != 0) {
+				/*
+				 * x87 area was not saved by XSAVEOPT,
+				 * but one of XMM or AVX was.  Then we need
+				 * to preserve MXCSR from being overwritten
+				 * with the default value.
+				 */
+				s = (struct savefpu *)sa;
+				mxcsr = s->sv_env.en_mxcsr;
+				mxcsr_mask = s->sv_env.en_mxcsr_mask;
+				do_mxcsr = true;
+			}
 			bcopy((char *)fpu_initialstate +
 			    xsave_area_desc[i].offset,
 			    sa + xsave_area_desc[i].offset,
 			    xsave_area_desc[i].size);
+			if (do_mxcsr) {
+				s->sv_env.en_mxcsr = mxcsr;
+				s->sv_env.en_mxcsr_mask = mxcsr_mask;
+			}
 			*xstate_bv |= bit;
 		}
 	}
@@ -1072,7 +1095,6 @@ static device_method_t fpupnp_methods[] = {
 	DEVMETHOD(device_shutdown,	bus_generic_shutdown),
 	DEVMETHOD(device_suspend,	bus_generic_suspend),
 	DEVMETHOD(device_resume,	bus_generic_resume),
-	
 	{ 0, 0 }
 };
 
@@ -1101,17 +1123,31 @@ struct fpu_kern_ctx {
 	char hwstate1[];
 };
 
+static inline size_t __pure2
+fpu_kern_alloc_sz(u_int max_est)
+{
+	return (sizeof(struct fpu_kern_ctx) + XSAVE_AREA_ALIGN + max_est);
+}
+
+static inline int __pure2
+fpu_kern_malloc_flags(u_int fpflags)
+{
+	return (((fpflags & FPU_KERN_NOWAIT) ? M_NOWAIT : M_WAITOK) | M_ZERO);
+}
+
+struct fpu_kern_ctx *
+fpu_kern_alloc_ctx_domain(int domain, u_int flags)
+{
+	return (malloc_domainset(fpu_kern_alloc_sz(cpu_max_ext_state_size),
+	    M_FPUKERN_CTX, DOMAINSET_PREF(domain),
+	    fpu_kern_malloc_flags(flags)));
+}
+
 struct fpu_kern_ctx *
 fpu_kern_alloc_ctx(u_int flags)
 {
-	struct fpu_kern_ctx *res;
-	size_t sz;
-
-	sz = sizeof(struct fpu_kern_ctx) + XSAVE_AREA_ALIGN +
-	    cpu_max_ext_state_size;
-	res = malloc(sz, M_FPUKERN_CTX, ((flags & FPU_KERN_NOWAIT) ?
-	    M_NOWAIT : M_WAITOK) | M_ZERO);
-	return (res);
+	return (malloc(fpu_kern_alloc_sz(cpu_max_ext_state_size),
+	    M_FPUKERN_CTX, fpu_kern_malloc_flags(flags)));
 }
 
 void
@@ -1264,7 +1300,7 @@ struct savefpu *
 fpu_save_area_alloc(void)
 {
 
-	return (uma_zalloc(fpu_save_area_zone, 0));
+	return (uma_zalloc(fpu_save_area_zone, M_WAITOK));
 }
 
 void

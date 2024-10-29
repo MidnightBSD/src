@@ -38,7 +38,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * 386 Trap and System call handling
  */
@@ -51,7 +50,6 @@
 #include <sys/bus.h>
 #include <sys/systm.h>
 #include <sys/proc.h>
-#include <sys/pioctl.h>
 #include <sys/kernel.h>
 #include <sys/ktr.h>
 #include <sys/lock.h>
@@ -90,6 +88,12 @@
 #include <machine/md_var.h>
 #include <machine/pcb.h>
 #include <machine/cpufunc.h>
+
+#include "vdso_ia32_offsets.h"
+
+extern const char _binary_elf_vdso32_so_1_start[];
+extern const char _binary_elf_vdso32_so_1_end[];
+extern char _binary_elf_vdso32_so_1_size;
 
 #define	IDTVEC(name)	__CONCAT(X,name)
 
@@ -176,21 +180,18 @@ ia32_fetch_syscall_args(struct thread *td)
 		sa->code = tmp;
 		params += sizeof(quad_t);
 	}
- 	if (p->p_sysent->sv_mask)
- 		sa->code &= p->p_sysent->sv_mask;
  	if (sa->code >= p->p_sysent->sv_size)
- 		sa->callp = &p->p_sysent->sv_table[0];
+		sa->callp = &nosys_sysent;
   	else
  		sa->callp = &p->p_sysent->sv_table[sa->code];
-	sa->narg = sa->callp->sy_narg;
 
-	if (params != NULL && sa->narg != 0)
+	if (params != NULL && sa->callp->sy_narg != 0)
 		error = copyin(params, (caddr_t)args,
-		    (u_int)(sa->narg * sizeof(int)));
+		    (u_int)(sa->callp->sy_narg * sizeof(int)));
 	else
 		error = 0;
 
-	for (i = 0; i < sa->narg; i++)
+	for (i = 0; i < sa->callp->sy_narg; i++)
 		sa->args[i] = args[i];
 
 	if (error == 0) {
@@ -263,7 +264,9 @@ setup_lcall_gate(void)
 	bzero(&uap, sizeof(uap));
 	uap.start = 0;
 	uap.num = 1;
-	lcall_addr = curproc->p_sysent->sv_psstrings - sz_lcall_tramp;
+	lcall_addr = PROC_PS_STRINGS(curproc) -
+	    (_binary_elf_vdso32_so_1_end - _binary_elf_vdso32_so_1_start) +
+	    VDSO_LCALL_TRAMP_OFFSET;
 	bzero(&desc, sizeof(desc));
 	desc.sd_type = SDT_MEMERA;
 	desc.sd_dpl = SEL_UPL;

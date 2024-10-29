@@ -4,7 +4,6 @@
 # This file contains machine dependent kernel configuration notes.  For
 # machine independent notes, look in /sys/conf/NOTES.
 #
-
 #
 
 #
@@ -121,8 +120,8 @@ device		nvram		# Access to rtc cmos via /dev/nvram
 # MISCELLANEOUS DEVICES AND OPTIONS
 
 device		speaker		#Play IBM BASIC-style noises out your speaker
-hint.speaker.0.at="isa"
-hint.speaker.0.port="0x61"
+envvar		hint.speaker.0.at="isa"
+envvar		hint.speaker.0.port="0x61"
 
 
 #####################################################################
@@ -195,8 +194,8 @@ options 	X86BIOS
 
 # PS/2 mouse
 device		psm
-hint.psm.0.at="atkbdc"
-hint.psm.0.irq="12"
+envvar		hint.psm.0.at="atkbdc"
+envvar		hint.psm.0.irq="12"
 
 # Options for psm:
 options 	PSM_HOOKRESUME		#hook the system resume event, useful
@@ -205,13 +204,13 @@ options 	PSM_RESETAFTERSUSPEND	#reset the device at the resume event
 
 # The keyboard controller; it controls the keyboard and the PS/2 mouse.
 device		atkbdc
-hint.atkbdc.0.at="isa"
-hint.atkbdc.0.port="0x060"
+envvar		hint.atkbdc.0.at="isa"
+envvar		hint.atkbdc.0.port="0x060"
 
 # The AT keyboard
 device		atkbd
-hint.atkbd.0.at="atkbdc"
-hint.atkbd.0.irq="1"
+envvar		hint.atkbd.0.at="atkbdc"
+envvar		hint.atkbd.0.irq="1"
 
 # Options for atkbd:
 options 	ATKBD_DFLT_KEYMAP	# specify the built-in keymap
@@ -226,7 +225,7 @@ makeoptions	ATKBD_DFLT_KEYMAP=fr.dvorak
 
 # Video card driver for VGA adapters.
 device		vga
-hint.vga.0.at="isa"
+envvar		hint.vga.0.at="isa"
 
 # Options for vga:
 # Try the following option if the mouse pointer is not drawn correctly
@@ -251,6 +250,7 @@ options 	VGA_DEBUG
 # vt(4) drivers.
 device		vt_vga		# VGA
 device		vt_efifb	# EFI framebuffer
+device		vt_vbefb	# VBE framebuffer
 
 # Linear framebuffer driver for S3 VESA 1.2 cards. Works on top of VESA.
 device		s3pci
@@ -260,11 +260,8 @@ device		s3pci
 # linked to /dev/3dfx and /dev/voodoo.  Note that this is not the same as
 # the tdfx DRI module from XFree86 and is completely unrelated.
 #
-# To enable Linuxulator support, one must also include COMPAT_LINUX in the
-# config as well.  The other option is to load both as modules.
 
 device		tdfx			# Enable 3Dfx Voodoo support
-#XXX#device 	tdfx_linux		# Enable Linuxulator support
 
 #
 # ACPI support using the Intel ACPI Component Architecture reference
@@ -629,7 +626,13 @@ options 	NKPT=31
 # EFI Runtime Services support
 options 	EFIRT
 
-
+#
+# HID-over-I2C support
+#
+device		iichid		# HID-over-I2C support
+options 	IICHID_DEBUG	# Enable HID-over-I2C debug messages
+options 	IICHID_SAMPLING	# Workaround missing GPIO INTR support
+
 #####################################################################
 # ABI Emulation
 
@@ -638,12 +641,6 @@ options 	EFIRT
 
 # Enable 32-bit runtime support for FreeBSD/i386 binaries.
 options 	COMPAT_FREEBSD32
-
-# Enable iBCS2 runtime support for SCO and ISC binaries
-#XXX#options 	IBCS2
-
-# Emulate spx device for client side of SVR3 local X interface
-#XXX#options 	SPX_HACK
 
 # Enable (32-bit) a.out binary support
 options 	COMPAT_AOUT
@@ -654,19 +651,11 @@ options 	COMPAT_CLOUDABI32
 # Enable 64-bit runtime support for CloudABI binaries.
 options 	COMPAT_CLOUDABI64
 
-# Enable Linux ABI emulation
-#XXX#options 	COMPAT_LINUX
+#####################################################################
+# ZFS support
 
-# Enable 32-bit Linux ABI emulation (requires COMPAT_FREEBSD32).
-options 	COMPAT_LINUX32
-
-# Enable the linux-like proc filesystem support (requires COMPAT_LINUX32
-# and PSEUDOFS)
-options 	LINPROCFS
-
-#Enable the linux-like sys filesystem support (requires COMPAT_LINUX32
-# and PSEUDOFS)
-options 	LINSYSFS
+# NB: This depends on crypto, cryptodev and ZSTDIO
+options		ZFS
 
 #####################################################################
 # VM OPTIONS
@@ -703,3 +692,9 @@ options 	VM_KMEM_SIZE_SCALE
 # Enable NDIS binary driver support
 options 	NDISAPI
 device		ndis
+
+
+# GCOV (code coverage) support
+
+options		LINDEBUGFS
+options		GCOV

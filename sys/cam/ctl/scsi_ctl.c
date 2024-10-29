@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008, 2009 Silicon Graphics International Corp.
  * Copyright (c) 2014-2015 Alexander Motin <mav@FreeBSD.org>
@@ -39,7 +39,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/queue.h>
 #include <sys/systm.h>
@@ -382,7 +381,6 @@ ctlfeasync(void *callback_arg, uint32_t code, struct cam_path *path, void *arg)
 		break;
 	}
 	case AC_PATH_DEREGISTERED: {
-
 		if (softc != NULL) {
 			/*
 			 * XXX KDM are we certain at this point that there
@@ -462,7 +460,7 @@ ctlferegister(struct cam_periph *periph, void *arg)
 
 	softc = (struct ctlfe_lun_softc *)arg;
 	bus_softc = softc->parent_softc;
-	
+
 	STAILQ_INIT(&softc->work_queue);
 	LIST_INIT(&softc->atio_list);
 	LIST_INIT(&softc->inot_list);
@@ -1115,7 +1113,6 @@ ctlfedone(struct cam_periph *periph, union ccb *done_ccb)
 
 	switch (done_ccb->ccb_h.func_code) {
 	case XPT_ACCEPT_TARGET_IO: {
-
 		LIST_REMOVE(&done_ccb->ccb_h, periph_links.le);
 		atio = &done_ccb->atio;
 		status = atio->ccb_h.status & CAM_STATUS_MASK;

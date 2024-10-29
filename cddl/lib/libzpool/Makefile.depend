@@ -2,6 +2,7 @@
 
 DIRDEPS = \
 	cddl/lib/libavl \
+	cddl/lib/libicp \
 	cddl/lib/libnvpair \
 	cddl/lib/libumem \
 	gnu/lib/csu \

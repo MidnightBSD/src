@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012 Oleksandr Tymoshenko <gonzo@freebsd.org>
  * Copyright (c) 2012, 2013 The FreeBSD Foundation
@@ -31,7 +31,6 @@
  *
  */
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bio.h>
@@ -153,7 +152,6 @@ static uint32_t colors_24[16] = {
 	0xFF00FF,/* Light Magenta */
 	0xFFFF00,/* Yellow 	*/
 	0xFFFFFF,/* White 	*/
-
 
 };
 
@@ -421,7 +419,6 @@ static device_method_t ipu3_fb_methods[] = {
 	/* Device interface */
 	DEVMETHOD(device_probe,		ipu3_fb_probe),
 	DEVMETHOD(device_attach,	ipu3_fb_attach),
-
 	{ 0, 0 }
 };
 
@@ -743,8 +740,6 @@ ipu3fb_ioctl(video_adapter_t *adp, u_long cmd, caddr_t data)
 			fb->fb_cmsize = 1 << sc->depth;
 		fb->fb_size = sc->fb_size;
 		break;
-	case FBIOSCURSOR:
-		return (ENODEV);
 	default:
 		return (fb_commonioctl(adp, cmd, data));
 	}

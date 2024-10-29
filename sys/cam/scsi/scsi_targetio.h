@@ -1,7 +1,7 @@
 /*-
  * Ioctl definitions for the SCSI Target Driver
  *
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2002 Nate Lawson.
  * Copyright (c) 1998 Justin T. Gibbs.
@@ -27,7 +27,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _CAM_SCSI_SCSI_TARGETIO_H_

@@ -30,7 +30,5 @@
  */
 
 #include <machine/asm.h>
-
-
 #define _BZERO
 #include "memset.S"

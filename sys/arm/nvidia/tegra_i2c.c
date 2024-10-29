@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * I2C driver for Tegra SoCs.
  */
@@ -204,6 +203,7 @@
 
 static struct ofw_compat_data compat_data[] = {
 	{"nvidia,tegra124-i2c",	1},
+	{"nvidia,tegra210-i2c",	1},
 	{NULL,			0}
 };
 enum tegra_i2c_xfer_type {
@@ -483,7 +483,6 @@ tegra_i2c_start_msg(struct tegra_i2c_softc *sc, struct iic_msg *msg,
 	   (1 << PACKET_HEADER0_PACKET_ID_SHIFT);
 	WR4(sc, I2C_TX_PACKET_FIFO, tmp);
 
-
 	/* Packet size. */
 	WR4(sc, I2C_TX_PACKET_FIFO, msg->len - 1);
 
@@ -678,7 +677,6 @@ tegra_i2c_attach(device_t dev)
 	    sizeof(sc->bus_freq));
 	if (rv != sizeof(sc->bus_freq)) {
 		sc->bus_freq = 100000;
-		goto fail;
 	}
 
 	/* Request maximum frequency for I2C block 136MHz (408MHz / 3). */

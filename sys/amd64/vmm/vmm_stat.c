@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
@@ -24,11 +24,9 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/systm.h>
@@ -80,27 +78,37 @@ vmm_stat_register(void *arg)
 }
 
 int
-vmm_stat_copy(struct vm *vm, int vcpu, int *num_stats, uint64_t *buf)
+vmm_stat_copy(struct vcpu *vcpu, int index, int count, int *num_stats,
+    uint64_t *buf)
 {
 	struct vmm_stat_type *vst;
 	uint64_t *stats;
-	int i;
+	int i, tocopy;
 
-	if (vcpu < 0 || vcpu >= vm_get_maxcpus(vm))
+	if (index < 0 || count < 0)
 		return (EINVAL);
+
+	if (index > vst_num_elems)
+		return (ENOENT);
+
+	if (index == vst_num_elems) {
+		*num_stats = 0;
+		return (0);
+	}
+
+	tocopy = min(vst_num_elems - index, count);
 
 	/* Let stats functions update their counters */
 	for (i = 0; i < vst_num_types; i++) {
 		vst = vsttab[i];
 		if (vst->func != NULL)
-			(*vst->func)(vm, vcpu, vst);
+			(*vst->func)(vcpu, vst);
 	}
 
 	/* Copy over the stats */
-	stats = vcpu_stats(vm, vcpu);
-	for (i = 0; i < vst_num_elems; i++)
-		buf[i] = stats[i];
-	*num_stats = vst_num_elems;
+	stats = vcpu_stats(vcpu);
+	memcpy(buf, stats + index, tocopy * sizeof(stats[0]));
+	*num_stats = tocopy;
 	return (0);
 }
 

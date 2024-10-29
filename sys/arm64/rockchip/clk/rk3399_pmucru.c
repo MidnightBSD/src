@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2018 Emmanuel Vadot <manu@freebsd.org>
  * Copyright (c) 2018 Greg V <greg@unrelenting.technology>
@@ -24,11 +24,9 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -726,7 +724,6 @@ static struct rk_clk_composite_def pclk_pmu_src = {
 	.div_shift = 0,
 	.div_width = 5,
 };
-
 
 #define	SCLK_I2C0_PMU	9
 #define	SCLK_I2C4_PMU	10

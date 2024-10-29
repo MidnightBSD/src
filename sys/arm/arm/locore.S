@@ -22,7 +22,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -33,8 +32,4 @@
 
 #include <machine/acle-compat.h>
 
-#if __ARM_ARCH >= 6
 #include "locore-v6.S"
-#else
-#include "locore-v4.S"
-#endif

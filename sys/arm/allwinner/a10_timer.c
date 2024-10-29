@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -118,8 +117,10 @@ static uint64_t timer_read_counter64(struct a10_timer_softc *sc);
 static void a10_timer_eventtimer_setup(struct a10_timer_softc *sc);
 #endif
 
+#if defined(__aarch64__)
 static void a23_timer_timecounter_setup(struct a10_timer_softc *sc);
 static u_int a23_timer_get_timecount(struct timecounter *tc);
+#endif
 
 static int a10_timer_irq(void *);
 static int a10_timer_probe(device_t);
@@ -137,6 +138,7 @@ static struct timecounter a10_timer_timecounter = {
 	.tc_quality        = 1000,
 };
 
+#if defined(__aarch64__)
 static struct timecounter a23_timer_timecounter = {
 	.tc_name           = "a10_timer timer0",
 	.tc_get_timecount  = a23_timer_get_timecount,
@@ -145,6 +147,7 @@ static struct timecounter a23_timer_timecounter = {
 	/* We want it to be selected over the arm generic timecounter */
 	.tc_quality        = 2000,
 };
+#endif
 
 #define	A10_TIMER_MEMRES		0
 #define	A10_TIMER_IRQRES		1
@@ -157,19 +160,18 @@ static struct resource_spec a10_timer_spec[] = {
 
 static struct ofw_compat_data compat_data[] = {
 	{"allwinner,sun4i-a10-timer", A10_TIMER},
+#if defined(__aarch64__)
 	{"allwinner,sun8i-a23-timer", A23_TIMER},
+#endif
 	{NULL, 0},
 };
 
 static int
 a10_timer_probe(device_t dev)
 {
-	struct a10_timer_softc *sc;
 #if defined(__arm__)
 	u_int soc_family;
 #endif
-
-	sc = device_get_softc(dev);
 
 	if (ofw_bus_search_compatible(dev, compat_data)->ocd_data == 0)
 		return (ENXIO);
@@ -373,6 +375,7 @@ a10_timer_timer_stop(struct eventtimer *et)
  * Timecounter functions for A23 and above
  */
 
+#if defined(__aarch64__)
 static void
 a23_timer_timecounter_setup(struct a10_timer_softc *sc)
 {
@@ -414,6 +417,7 @@ a23_timer_get_timecount(struct timecounter *tc)
 	/* Counter count backwards */
 	return (~0u - val);
 }
+#endif
 
 /*
  * Timecounter functions for A10 and A13, using the 64 bits counter

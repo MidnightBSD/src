@@ -26,31 +26,15 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _MACHINE__UNDEFINED_H_
 #define	_MACHINE__UNDEFINED_H_
 
+#ifdef _KERNEL
+
 typedef int (*undef_handler_t)(vm_offset_t, uint32_t, struct trapframe *,
     uint32_t);
-
-#define	MRS_MASK			0xfff00000
-#define	MRS_VALUE			0xd5300000
-#define	MRS_SPECIAL(insn)		((insn) & 0x000fffe0)
-#define	MRS_REGISTER(insn)		((insn) & 0x0000001f)
-#define	 MRS_Op0_SHIFT			19
-#define	 MRS_Op0_MASK			0x00080000
-#define	 MRS_Op1_SHIFT			16
-#define	 MRS_Op1_MASK			0x00070000
-#define	 MRS_CRn_SHIFT			12
-#define	 MRS_CRn_MASK			0x0000f000
-#define	 MRS_CRm_SHIFT			8
-#define	 MRS_CRm_MASK			0x00000f00
-#define	 MRS_Op2_SHIFT			5
-#define	 MRS_Op2_MASK			0x000000e0
-#define	 MRS_Rt_SHIFT			0
-#define	 MRS_Rt_MASK			0x0000001f
 
 static inline int
 mrs_Op0(uint32_t insn)
@@ -76,5 +60,7 @@ void undef_init(void);
 void *install_undef_handler(bool, undef_handler_t);
 void remove_undef_handler(void *);
 int undef_insn(u_int, struct trapframe *);
+
+#endif /* _KERNEL */
 
 #endif

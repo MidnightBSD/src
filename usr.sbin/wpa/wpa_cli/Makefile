@@ -7,6 +7,7 @@
 
 .PATH.c:${WPA_SUPPLICANT_DISTDIR}
 
+PACKAGE=	wpa
 PROG=	wpa_cli
 SRCS=	wpa_cli.c
 

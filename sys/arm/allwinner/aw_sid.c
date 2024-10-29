@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2016 Jared McNeill <jmcneill@invisible.ca>
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -22,7 +21,6 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -30,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/endian.h>
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -277,7 +274,7 @@ aw_sid_attach(device_t dev)
 		SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
 		    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
 		    OID_AUTO, sc->sid_conf->efuses[i].name,
-		    CTLTYPE_STRING | CTLFLAG_RD,
+		    CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_NEEDGIANT,
 		    dev, sc->sid_conf->efuses[i].id, aw_sid_sysctl,
 		    "A", sc->sid_conf->efuses[i].desc);
 	}
@@ -363,15 +360,12 @@ aw_sid_read(device_t dev, uint32_t offset, uint32_t size, uint8_t *buffer)
 static int
 aw_sid_sysctl(SYSCTL_HANDLER_ARGS)
 {
-	struct aw_sid_softc *sc;
 	device_t dev = arg1;
 	enum aw_sid_fuse_id fuse = arg2;
 	uint8_t data[32];
 	char out[128];
 	uint32_t size;
 	int ret, i;
-
-	sc = device_get_softc(dev);
 
 	/* Get the size of the efuse data */
 	size = 0;

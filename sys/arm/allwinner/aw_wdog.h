@@ -23,7 +23,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *
  */
 #ifndef __AW_WDOG_H__
 #define	__AW_WDOG_H__
@@ -31,4 +30,3 @@
 void aw_wdog_watchdog_reset(void);
 
 #endif /*__AW_WDOG_H__*/
-

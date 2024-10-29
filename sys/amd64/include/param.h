@@ -40,7 +40,6 @@
  *	@(#)param.h	8.1 (Berkeley) 6/10/93
  */
 
-
 #ifndef _AMD64_INCLUDE_PARAM_H_
 #define	_AMD64_INCLUDE_PARAM_H_
 
@@ -49,7 +48,6 @@
 /*
  * Machine dependent constants for AMD64.
  */
-
 
 #define __HAVE_ACPI
 #define __PCI_REROUTE_INTERRUPT
@@ -64,7 +62,7 @@
 #define	MACHINE_ARCH32	"i386"
 #endif
 
-#if defined(SMP) || defined(KLD_MODULE)
+#ifdef SMP
 #ifndef MAXCPU
 #define MAXCPU		256
 #endif
@@ -117,6 +115,12 @@
 #define	PML4SHIFT	39		/* LOG2(NBPML4) */
 #define	NBPML4		(1UL<<PML4SHIFT)/* bytes/page map lev4 table */
 #define	PML4MASK	(NBPML4-1)
+/* Size of the level 5 page-map level-5 table units */
+#define	NPML5EPG	(PAGE_SIZE/(sizeof (pml5_entry_t)))
+#define	NPML5EPGSHIFT	9		/* LOG2(NPML5EPG) */
+#define	PML5SHIFT	48		/* LOG2(NBPML5) */
+#define	NBPML5		(1UL<<PML5SHIFT)/* bytes/page map lev5 table */
+#define	PML5MASK	(NBPML5-1)
 
 #define	MAXPAGESIZES	3	/* maximum number of supported page sizes */
 
@@ -129,7 +133,11 @@
 #define	IOPERM_BITMAP_SIZE	(IOPAGES * PAGE_SIZE + 1)
 
 #ifndef	KSTACK_PAGES
+#ifdef KASAN
+#define	KSTACK_PAGES	6
+#else
 #define	KSTACK_PAGES	4	/* pages of kstack (with pcb) */
+#endif
 #endif
 #define	KSTACK_GUARD_PAGES 1	/* pages of kstack guard; 0 disables */
 

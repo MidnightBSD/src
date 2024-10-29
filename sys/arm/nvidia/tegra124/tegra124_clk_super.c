@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -37,9 +36,8 @@
 
 #include <dev/extres/clk/clk.h>
 
-#include <gnu/dts/include/dt-bindings/clock/tegra124-car.h>
+#include <dt-bindings/clock/tegra124-car.h>
 #include "tegra124_car.h"
-
 
 /* Flags */
 #define	SMF_HAVE_DIVIDER_2	1

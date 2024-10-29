@@ -34,7 +34,6 @@
 #include <sys/param.h>
 #include <sys/systm.h>
 
-
 #include <sys/proc.h>
 #include <sys/kdb.h>
 #include <sys/stack.h>
@@ -101,7 +100,6 @@ db_stack_trace_cmd(struct unwind_state *state)
 					i = 0;
 				} else
 					sep = " ";
-
 			}
 		}
 		db_printf("\n");
@@ -133,20 +131,6 @@ db_md_list_watchpoints(void)
 {
 
 	dbg_show_watchpoint();
-}
-
-int
-db_md_clr_watchpoint(db_expr_t addr, db_expr_t size)
-{
-
-	return (dbg_remove_watchpoint(addr, size));
-}
-
-int
-db_md_set_watchpoint(db_expr_t addr, db_expr_t size)
-{
-
-	return (dbg_setup_watchpoint(addr, size, HW_WATCHPOINT_RW));
 }
 
 int

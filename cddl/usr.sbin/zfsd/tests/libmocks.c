@@ -28,7 +28,6 @@
  * POSSIBILITY OF SUCH DAMAGES.
  *
  * Authors: Alan Somers     (Spectra Logic Corporation)
- *
  */
 
 #include <stdio.h>

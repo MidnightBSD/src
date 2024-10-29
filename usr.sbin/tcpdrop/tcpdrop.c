@@ -18,7 +18,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -53,7 +52,7 @@ static char *findport(const char *);
 static struct xinpgen *getxpcblist(const char *);
 static void sockinfo(const struct sockaddr *, struct host_service *);
 static bool tcpdrop(const struct sockaddr *, const struct sockaddr *);
-static bool tcpdropall(const char *, int);
+static bool tcpdropall(const char *, const char *, int);
 static bool tcpdropbyname(const char *, const char *, const char *,
     const char *);
 static bool tcpdropconn(const struct in_conninfo *);
@@ -66,29 +65,35 @@ int
 main(int argc, char *argv[])
 {
 	char stack[TCP_FUNCTION_NAME_LEN_MAX];
+	char ca_name[TCP_CA_NAME_MAX];
 	char *lport, *fport;
-	bool dropall, dropallstack;
+	bool dropall, dropspecific;
 	int ch, state;
 
 	dropall = false;
-	dropallstack = false;
+	dropspecific = false;
+	ca_name[0] = '\0';
 	stack[0] = '\0';
 	state = -1;
 
-	while ((ch = getopt(argc, argv, "alS:s:")) != -1) {
+	while ((ch = getopt(argc, argv, "aC:lS:s:")) != -1) {
 		switch (ch) {
 		case 'a':
 			dropall = true;
+			break;
+		case 'C':
+			dropspecific = true;
+			strlcpy(ca_name, optarg, sizeof(ca_name));
 			break;
 		case 'l':
 			tcpdrop_list_commands = true;
 			break;
 		case 'S':
-			dropallstack = true;
+			dropspecific = true;
 			strlcpy(stack, optarg, sizeof(stack));
 			break;
 		case 's':
-			dropallstack = true;
+			dropspecific = true;
 			for (state = 0; state < TCP_NSTATES; state++) {
 				if (strcmp(tcpstates[state], optarg) == 0)
 					break;
@@ -105,12 +110,12 @@ main(int argc, char *argv[])
 	    state == TCPS_CLOSED ||
 	    state == TCPS_LISTEN)
 		usage();
-	if (dropall && dropallstack)
+	if (dropall && dropspecific)
 		usage();
-	if (dropall || dropallstack) {
+	if (dropall || dropspecific) {
 		if (argc != 0)
 			usage();
-		if (!tcpdropall(stack, state))
+		if (!tcpdropall(ca_name, stack, state))
 			exit(1);
 		exit(0);
 	}
@@ -222,7 +227,7 @@ tcpdrop(const struct sockaddr *lsa, const struct sockaddr *fsa)
 }
 
 static bool
-tcpdropall(const char *stack, int state)
+tcpdropall(const char *ca_name, const char *stack, int state)
 {
 	struct xinpgen *head, *xinp;
 	struct xtcpcb *xtp;
@@ -246,7 +251,7 @@ tcpdropall(const char *stack, int state)
 		 * Check protocol, support just v4 or v6, etc.
 		 */
 
-		/* Ignore PCBs which were freed during copyout.  */
+		/* Ignore PCBs which were freed during copyout. */
 		if (xip->inp_gencnt > head->xig_gen)
 			continue;
 
@@ -256,6 +261,14 @@ tcpdropall(const char *stack, int state)
 
 		/* If requested, skip sockets not having the requested state. */
 		if ((state != -1) && (xtp->t_state != state))
+			continue;
+
+		/*
+		 * If requested, skip sockets not having the requested
+		 * congestion control algorithm.
+		 */
+		if (ca_name[0] != '\0' &&
+		    strncmp(xtp->xt_cc, ca_name, TCP_CA_NAME_MAX))
 			continue;
 
 		/* If requested, skip sockets not having the requested stack. */
@@ -277,10 +290,11 @@ tcpdropbyname(const char *lhost, const char *lport, const char *fhost,
 {
 	static const struct addrinfo hints = {
 		/*
-		 * Look for streams in all domains.
+		 * Look for TCP streams in all domains.
 		 */
 		.ai_family = AF_UNSPEC,
 		.ai_socktype = SOCK_STREAM,
+		.ai_protocol = IPPROTO_TCP,
 	};
 	struct addrinfo *ail, *local, *aif, *foreign;
 	int error;
@@ -378,8 +392,8 @@ usage(void)
 "       tcpdrop local-address:local-port foreign-address:foreign-port\n"
 "       tcpdrop local-address.local-port foreign-address.foreign-port\n"
 "       tcpdrop [-l] -a\n"
-"       tcpdrop [-l] -S stack\n"
-"       tcpdrop [-l] -s state\n"
-"       tcpdrop [-l] -S stack -s state\n");
+"       tcpdrop [-l] -C cc-algo [-S stack] [-s state]\n"
+"       tcpdrop [-l] [-C cc-algo] -S stack [-s state]\n"
+"       tcpdrop [-l] [-C cc-algo] [-S stack] -s state\n");
 	exit(1);
 }

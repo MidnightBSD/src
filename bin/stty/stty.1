@@ -31,7 +31,7 @@
 .\"
 .\"     @(#)stty.1	8.4 (Berkeley) 4/18/94
 .\"
-.Dd March 2, 2018
+.Dd September 27, 2022
 .Dt STTY 1
 .Os
 .Sh NAME
@@ -144,6 +144,8 @@ Assume a line without (with) modem
 control.
 .It Cm crtscts Pq Fl crtscts
 Enable (disable) RTS/CTS flow control.
+.It Cm rtsdtr Pq Fl -rtsdtr
+Enable (disable) asserting RTS/DTR on open.
 .El
 .Ss Input Modes:
 This corresponds to the c_iflag in the termios structure.
@@ -222,6 +224,9 @@ if
 .Cm imaxbel
 is unset and the input queue is full, the next input character causes
 the entire input and output queues to be discarded.
+.It Cm iutf8 Pq Fl iutf8
+Assume that input characters are UTF-8 encoded. Setting this flag
+causes backspace to properly delete multibyte characters in canonical mode.
 .El
 .Ss Output Modes:
 This corresponds to the c_oflag of the termios structure.
@@ -458,6 +463,13 @@ The status line consists of the
 system load average, the current command name, its process ID, the
 event the process is waiting on (or the status of the process), the user
 and system times, percent cpu, and current memory usage.
+.Pp
+If the
+.Xr sysctl 8
+variable
+.Va kern.tty_info_kstacks
+is set to a non-zero value, the status message also includes the kernel program
+stack of the foreground thread.
 .It Cm columns Ar number
 The terminal size is recorded as having
 .Ar number
@@ -584,6 +596,32 @@ Same as the control character
 Same as the control character
 .Cm reprint .
 .El
+.Sh INTERACTION WITH JOB CONTROL
+Modifications to the terminal settings are treated by job control
+(see
+.Xr termios 4 )
+same as writes.
+When the
+.Nm
+utility is executing in a background process group,
+such attempts result in the kernel sending the
+.Dv SIGTTOU
+signal and stopping the process until its group is returned
+to foreground.
+The non-blocking open of the terminal device with the
+.Fl f
+option to
+.Nm
+does not affect the behavior.
+If it is desirable to modify the settings from the background,
+.Xr sh 1
+users might utilize the following idiom:
+.Bd -literal
+(trap '' TTOU; stty -f /dev/tty sane)
+.Ed
+.Pp
+Note that changing terminal settings for a running foreground
+job that is not prepared for it might cause inconsistencies.
 .Sh EXIT STATUS
 .Ex -std
 .Sh SEE ALSO

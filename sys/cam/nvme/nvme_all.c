@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2015 Netflix, Inc.
  *
@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 
 #ifdef _KERNEL
@@ -83,7 +82,6 @@ nvme_identify_match(caddr_t identbuffer, caddr_t table_entry)
 {
 	return 0;
 }
-
 
 void
 nvme_print_ident(const struct nvme_controller_data *cdata,

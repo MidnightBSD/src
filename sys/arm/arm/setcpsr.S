@@ -49,7 +49,6 @@
  */
 
 #include <machine/asm.h>
-
 /* Sets and clears bits in the CPSR register
  *
  *  r0 - bic mask

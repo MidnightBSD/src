@@ -22,7 +22,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef	_MACHINE_ELF_H_
@@ -63,40 +62,13 @@ typedef struct {	/* Auxiliary vector entry on initial stack */
 
 __ElfType(Auxinfo);
 
+#ifdef _MACHINE_ELF_WANT_32BIT
+#define	ELF_ARCH	EM_ARM
+#else
 #define	ELF_ARCH	EM_AARCH64
+#endif
 
 #define	ELF_MACHINE_OK(x) ((x) == (ELF_ARCH))
-
-/* Values for a_type. */
-#define	AT_NULL		0	/* Terminates the vector. */
-#define	AT_IGNORE	1	/* Ignored entry. */
-#define	AT_EXECFD	2	/* File descriptor of program to load. */
-#define	AT_PHDR		3	/* Program header of program already loaded. */
-#define	AT_PHENT	4	/* Size of each program header entry. */
-#define	AT_PHNUM	5	/* Number of program header entries. */
-#define	AT_PAGESZ	6	/* Page size in bytes. */
-#define	AT_BASE		7	/* Interpreter's base address. */
-#define	AT_FLAGS	8	/* Flags (unused). */
-#define	AT_ENTRY	9	/* Where interpreter should transfer control. */
-#define	AT_NOTELF	10	/* Program is not ELF ?? */
-#define	AT_UID		11	/* Real uid. */
-#define	AT_EUID		12	/* Effective uid. */
-#define	AT_GID		13	/* Real gid. */
-#define	AT_EGID		14	/* Effective gid. */
-#define	AT_EXECPATH	15	/* Path to the executable. */
-#define	AT_CANARY	16	/* Canary for SSP */
-#define	AT_CANARYLEN	17	/* Length of the canary. */
-#define	AT_OSRELDATE	18	/* OSRELDATE. */
-#define	AT_NCPUS	19	/* Number of CPUs. */
-#define	AT_PAGESIZES	20	/* Pagesizes. */
-#define	AT_PAGESIZESLEN	21	/* Number of pagesizes. */
-#define	AT_TIMEKEEP	22	/* Pointer to timehands. */
-#define	AT_STACKPROT	23	/* Initial stack protection. */
-#define	AT_EHDRFLAGS	24	/* e_flags field from elf hdr */
-#define	AT_HWCAP	25	/* CPU feature flags. */
-#define	AT_HWCAP2	26	/* CPU feature flags 2. */
-
-#define	AT_COUNT	27	/* Count of defined aux entry types. */
 
 /* Define "machine" characteristics */
 #if __ELF_WORD_SIZE == 64
@@ -111,7 +83,11 @@ __ElfType(Auxinfo);
 #define	ELF_TARG_VER	1
 #endif
 
+#if __ELF_WORD_SIZE == 32
+#define	ET_DYN_LOAD_ADDR 0x01001000
+#else
 #define	ET_DYN_LOAD_ADDR 0x100000
+#endif
 
 /* HWCAP */
 #define	HWCAP_FP		0x00000001
@@ -153,23 +129,79 @@ __ElfType(Auxinfo);
 #define	HWCAP_PACG		0x80000000
 
 /* HWCAP2 */
-#define	HWCAP2_DCPODP		0x00000001
-#define	HWCAP2_SVE2		0x00000002
-#define	HWCAP2_SVEAES		0x00000004
-#define	HWCAP2_SVEPMULL		0x00000008
-#define	HWCAP2_SVEBITPERM	0x00000010
-#define	HWCAP2_SVESHA3		0x00000020
-#define	HWCAP2_SVESM4		0x00000040
-#define	HWCAP2_FLAGM2		0x00000080
-#define	HWCAP2_FRINT		0x00000100
-#define	HWCAP2_SVEI8MM		0x00000200
-#define	HWCAP2_SVEF32MM		0x00000400
-#define	HWCAP2_SVEF64MM		0x00000800
-#define	HWCAP2_SVEBF16		0x00001000
-#define	HWCAP2_I8MM		0x00002000
-#define	HWCAP2_BF16		0x00004000
-#define	HWCAP2_DGH		0x00008000
-#define	HWCAP2_RNG		0x00010000
-#define	HWCAP2_BTI		0x00020000
+#define	HWCAP2_DCPODP		0x0000000000000001ul
+#define	HWCAP2_SVE2		0x0000000000000002ul
+#define	HWCAP2_SVEAES		0x0000000000000004ul
+#define	HWCAP2_SVEPMULL		0x0000000000000008ul
+#define	HWCAP2_SVEBITPERM	0x0000000000000010ul
+#define	HWCAP2_SVESHA3		0x0000000000000020ul
+#define	HWCAP2_SVESM4		0x0000000000000040ul
+#define	HWCAP2_FLAGM2		0x0000000000000080ul
+#define	HWCAP2_FRINT		0x0000000000000100ul
+#define	HWCAP2_SVEI8MM		0x0000000000000200ul
+#define	HWCAP2_SVEF32MM		0x0000000000000400ul
+#define	HWCAP2_SVEF64MM		0x0000000000000800ul
+#define	HWCAP2_SVEBF16		0x0000000000001000ul
+#define	HWCAP2_I8MM		0x0000000000002000ul
+#define	HWCAP2_BF16		0x0000000000004000ul
+#define	HWCAP2_DGH		0x0000000000008000ul
+#define	HWCAP2_RNG		0x0000000000010000ul
+#define	HWCAP2_BTI		0x0000000000020000ul
+#define	HWCAP2_MTE		0x0000000000040000ul
+#define	HWCAP2_ECV		0x0000000000080000ul
+#define	HWCAP2_AFP		0x0000000000100000ul
+#define	HWCAP2_RPRES		0x0000000000200000ul
+#define	HWCAP2_MTE3		0x0000000000400000ul
+#define	HWCAP2_SME		0x0000000000800000ul
+#define	HWCAP2_SME_I16I64	0x0000000001000000ul
+#define	HWCAP2_SME_F64F64	0x0000000002000000ul
+#define	HWCAP2_SME_I8I32	0x0000000004000000ul
+#define	HWCAP2_SME_F16F32	0x0000000008000000ul
+#define	HWCAP2_SME_B16F32	0x0000000010000000ul
+#define	HWCAP2_SME_F32F32	0x0000000020000000ul
+#define	HWCAP2_SME_FA64		0x0000000040000000ul
+#define	HWCAP2_WFXT		0x0000000080000000ul
+#define	HWCAP2_EBF16		0x0000000100000000ul
+#define	HWCAP2_SVE_EBF16	0x0000000200000000ul
+#define	HWCAP2_CSSC		0x0000000400000000ul
+#define	HWCAP2_RPRFM		0x0000000800000000ul
+#define	HWCAP2_SVE2P1		0x0000001000000000ul
+#define	HWCAP2_SME2		0x0000002000000000ul
+#define	HWCAP2_SME2P1		0x0000004000000000ul
+#define	HWCAP2_SME_I16I32	0x0000008000000000ul
+#define	HWCAP2_SME_BI32I32	0x0000010000000000ul
+#define	HWCAP2_SME_B16B16	0x0000020000000000ul
+#define	HWCAP2_SME_F16F16	0x0000040000000000ul
+#define	HWCAP2_MOPS		0x0000080000000000ul
+#define	HWCAP2_HBC		0x0000100000000000ul
+
+#ifdef COMPAT_FREEBSD32
+/* ARM HWCAP */
+#define	HWCAP32_HALF		0x00000002	/* Always set.               */
+#define	HWCAP32_THUMB		0x00000004	/* Always set.               */
+#define	HWCAP32_FAST_MULT	0x00000010	/* Always set.               */
+#define	HWCAP32_VFP		0x00000040
+#define	HWCAP32_EDSP		0x00000080	/* Always set.               */
+#define	HWCAP32_NEON		0x00001000
+#define	HWCAP32_VFPv3		0x00002000
+#define	HWCAP32_TLS		0x00008000	/* Always set.               */
+#define	HWCAP32_VFPv4		0x00010000
+#define	HWCAP32_IDIVA		0x00020000	/* Always set.               */
+#define	HWCAP32_IDIVT		0x00040000	/* Always set.               */
+#define	HWCAP32_VFPD32		0x00080000	/* Always set.               */
+#define	HWCAP32_LPAE		0x00100000	/* Always set.               */
+
+#define HWCAP32_DEFAULT \
+   (HWCAP32_HALF | HWCAP32_THUMB | HWCAP32_FAST_MULT | HWCAP32_EDSP |\
+    HWCAP32_TLS | HWCAP32_IDIVA | HWCAP32_IDIVT | HWCAP32_VFPD32 |   \
+    HWCAP32_LPAE)
+
+/* ARM HWCAP2 */
+#define	HWCAP32_2_AES		0x00000001
+#define	HWCAP32_2_PMULL		0x00000002
+#define	HWCAP32_2_SHA1		0x00000004
+#define	HWCAP32_2_SHA2		0x00000008
+#define	HWCAP32_2_CRC32		0x00000010
+#endif
 
 #endif /* !_MACHINE_ELF_H_ */

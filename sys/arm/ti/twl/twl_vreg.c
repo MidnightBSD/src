@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011
  *	Ben Gray <ben.r.gray@gmail.com>.
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Texas Instruments TWL4030/TWL5030/TWL60x0/TPS659x0 Power Management.
  *
@@ -74,7 +73,6 @@
 #include "twl_vreg.h"
 
 static int twl_vreg_debug = 1;
-
 
 /*
  * Power Groups bits for the 4030 and 6030 devices
@@ -231,7 +229,6 @@ struct twl_vreg_softc {
 	LIST_HEAD(twl_regulator_list, twl_regulator_entry) sc_vreg_list;
 };
 
-
 #define TWL_VREG_XLOCK(_sc)			sx_xlock(&(_sc)->sc_sx)
 #define	TWL_VREG_XUNLOCK(_sc)		sx_xunlock(&(_sc)->sc_sx)
 #define TWL_VREG_SLOCK(_sc)			sx_slock(&(_sc)->sc_sx)
@@ -247,9 +244,6 @@ struct twl_vreg_softc {
 			pause("twl_vreg_ex", (hz / 100));    \
 	} while(0)
 #define TWL_VREG_LOCK_DOWNGRADE(_sc)	sx_downgrade(&(_sc)->sc_sx);
-
-
-
 
 /**
  *	twl_vreg_read_1 - read single register from the TWL device
@@ -311,7 +305,6 @@ twl_vreg_millivolt_to_vsel(struct twl_vreg_softc *sc,
 	closest_idx = 0;
 	smallest_delta = 0x7fffffff;
 	for (i = 0; i < regulator->num_supp_voltages; i++) {
-
 		/* Ignore undefined values */
 		if (regulator->supp_voltages[i] == UNDF)
 			continue;
@@ -356,7 +349,7 @@ twl_vreg_is_regulator_enabled(struct twl_vreg_softc *sc,
 	uint8_t grp;
 	uint8_t state;
 	int xlocked;
-	
+
 	if (enabled == NULL)
 		return (EINVAL);
 
@@ -368,7 +361,6 @@ twl_vreg_is_regulator_enabled(struct twl_vreg_softc *sc,
 
 	/* The status reading is different for the different devices */
 	if (twl_is_4030(sc->sc_pdev)) {
-
 		err = twl_vreg_read_1(sc, regulator, TWL_VREG_GRP, &state);
 		if (err)
 			goto done;
@@ -376,7 +368,6 @@ twl_vreg_is_regulator_enabled(struct twl_vreg_softc *sc,
 		*enabled = (state & TWL4030_P1_GRP);
 
 	} else if (twl_is_6030(sc->sc_pdev) || twl_is_6025(sc->sc_pdev)) {
-
 		/* Check the regulator is in the application group */
 		if (twl_is_6030(sc->sc_pdev)) {
 			err = twl_vreg_read_1(sc, regulator, TWL_VREG_GRP, &grp);
@@ -437,7 +428,6 @@ twl_vreg_disable_regulator(struct twl_vreg_softc *sc,
 		TWL_VREG_LOCK_UPGRADE(sc);
 
 	if (twl_is_4030(sc->sc_pdev)) {
-
 		/* Read the regulator CFG_GRP register */
 		err = twl_vreg_read_1(sc, regulator, TWL_VREG_GRP, &grp);
 		if (err)
@@ -450,7 +440,6 @@ twl_vreg_disable_regulator(struct twl_vreg_softc *sc,
 		err = twl_vreg_write_1(sc, regulator, TWL_VREG_GRP, grp);
 
 	} else if (twl_is_6030(sc->sc_pdev) || twl_is_6025(sc->sc_pdev)) {
-
 		/* On TWL6030 we need to make sure we disable power for all groups */
 		if (twl_is_6030(sc->sc_pdev))
 			grp = TWL6030_P1_GRP | TWL6030_P2_GRP | TWL6030_P3_GRP;
@@ -464,7 +453,7 @@ twl_vreg_disable_regulator(struct twl_vreg_softc *sc,
 done:
 	if (!xlocked)
 		TWL_VREG_LOCK_DOWNGRADE(sc);
-	
+
 	return (err);
 }
 
@@ -499,7 +488,6 @@ twl_vreg_enable_regulator(struct twl_vreg_softc *sc,
 	if (!xlocked)
 		TWL_VREG_LOCK_UPGRADE(sc);
 
-
 	err = twl_vreg_read_1(sc, regulator, TWL_VREG_GRP, &grp);
 	if (err)
 		goto done;
@@ -508,7 +496,6 @@ twl_vreg_enable_regulator(struct twl_vreg_softc *sc,
 	 * and is in the "on" state.
 	 */
 	if (twl_is_4030(sc->sc_pdev)) {
-
 		/* On the TWL4030 we just need to ensure the regulator is in the right
 		 * power domain, don't need to turn on explicitly like TWL6030.
 		 */
@@ -516,7 +503,6 @@ twl_vreg_enable_regulator(struct twl_vreg_softc *sc,
 		err = twl_vreg_write_1(sc, regulator, TWL_VREG_GRP, grp);
 
 	} else if (twl_is_6030(sc->sc_pdev) || twl_is_6025(sc->sc_pdev)) {
-
 		if (twl_is_6030(sc->sc_pdev) && !(grp & TWL6030_P1_GRP)) {
 			grp |= TWL6030_P1_GRP;
 			err = twl_vreg_write_1(sc, regulator, TWL_VREG_GRP, grp);
@@ -531,7 +517,7 @@ twl_vreg_enable_regulator(struct twl_vreg_softc *sc,
 done:
 	if (!xlocked)
 		TWL_VREG_LOCK_DOWNGRADE(sc);
-	
+
 	return (err);
 }
 
@@ -580,12 +566,10 @@ twl_vreg_write_regulator_voltage(struct twl_vreg_softc *sc,
 	if (err)
 		return (err);
 
-	
 	/* Need to upgrade because writing the voltage and enabling should be atomic */
 	xlocked = sx_xlocked(&sc->sc_sx);
 	if (!xlocked)
 		TWL_VREG_LOCK_UPGRADE(sc);
-
 
 	/* Set voltage and enable (atomically) */
 	err = twl_vreg_write_1(sc, regulator, TWL_VREG_VSEL, (vsel & 0x1f));
@@ -625,16 +609,15 @@ twl_vreg_read_regulator_voltage(struct twl_vreg_softc *sc,
 	int en = 0;
 	int xlocked;
 	uint8_t vsel;
-	
+
 	TWL_VREG_ASSERT_LOCKED(sc);
-	
+
 	/* Need to upgrade the lock because checking enabled state and voltage
 	 * should be atomic.
 	 */
 	xlocked = sx_xlocked(&sc->sc_sx);
 	if (!xlocked)
 		TWL_VREG_LOCK_UPGRADE(sc);
-
 
 	/* Check if the regulator is currently enabled */
 	err = twl_vreg_is_regulator_enabled(sc, regulator, &en);
@@ -644,7 +627,6 @@ twl_vreg_read_regulator_voltage(struct twl_vreg_softc *sc,
 	*millivolts = 0;	
 	if (!en)
 		goto done;
-
 
 	/* Not all voltages are adjustable */
 	if (regulator->supp_voltages == NULL || !regulator->num_supp_voltages) {
@@ -668,7 +650,7 @@ twl_vreg_read_regulator_voltage(struct twl_vreg_softc *sc,
 done:
 	if (!xlocked)
 		TWL_VREG_LOCK_DOWNGRADE(sc);
-	
+
 	if ((twl_vreg_debug > 1) && !err)
 		device_printf(sc->sc_dev, "%s : reading voltage is %dmV (vsel: 0x%x)\n",
 		    regulator->name, *millivolts, vsel);
@@ -832,7 +814,6 @@ twl_vreg_add_regulator(struct twl_vreg_softc *sc, const char *name,
 	if (new == NULL)
 		return (NULL);
 
-
 	strncpy(new->name, name, TWL_VREG_MAX_NAMELEN);
 	new->name[TWL_VREG_MAX_NAMELEN - 1] = '\0';
 
@@ -844,10 +825,9 @@ twl_vreg_add_regulator(struct twl_vreg_softc *sc, const char *name,
 	new->supp_voltages = voltages;
 	new->num_supp_voltages = num_voltages;
 
-
 	/* Add a sysctl entry for the voltage */
 	new->oid = SYSCTL_ADD_PROC(ctx, SYSCTL_CHILDREN(tree), OID_AUTO, name,
-	    CTLTYPE_INT | CTLFLAG_RD, sc, 0,
+	    CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_NEEDGIANT, sc, 0,
 	    twl_vreg_sysctl_voltage, "I", "voltage regulator");
 
 	/* Finally add the regulator to list of supported regulators */
@@ -884,11 +864,9 @@ twl_vreg_add_regulators(struct twl_vreg_softc *sc,
 	char *name, *voltage;
 	int len = 0, prop_len;
 
-
 	/* Add the regulators from the list */
 	walker = &regulators[0];
 	while (walker->name != NULL) {
-
 		/* Add the regulator to the list */
 		entry = twl_vreg_add_regulator(sc, walker->name, walker->subdev,
 		    walker->regbase, walker->fixedvoltage,
@@ -899,11 +877,9 @@ twl_vreg_add_regulators(struct twl_vreg_softc *sc,
 		walker++;
 	}
 
-
 	/* Check if the FDT is telling us to set any voltages */
 	child = ofw_bus_get_node(sc->sc_pdev);
 	if (child) {
-
 		prop_len = OF_getprop(child, "voltage-regulators", rnames, sizeof(rnames));
 		while (len < prop_len) {
 			name = rnames + len;
@@ -926,8 +902,7 @@ twl_vreg_add_regulators(struct twl_vreg_softc *sc,
 			}
 		}
 	}
-	
-	
+
 	if (twl_vreg_debug) {
 		LIST_FOREACH(entry, &sc->sc_vreg_list, entries) {
 			err = twl_vreg_read_regulator_voltage(sc, entry, &millivolts);

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2007 Scott Long
  * All rights reserved.
@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -58,8 +57,6 @@
 #include <cam/scsi/scsi_all.h>
 #include <cam/scsi/scsi_message.h>
 #include <cam/scsi/scsi_sg.h>
-
-#include <compat/linux/linux_ioctl.h>
 
 typedef enum {
 	SG_FLAG_LOCKED		= 0x01,
@@ -141,7 +138,7 @@ PERIPHDRIVER_DECLARE(sg, sgdriver);
 
 static struct cdevsw sg_cdevsw = {
 	.d_version =	D_VERSION,
-	.d_flags =	D_NEEDGIANT | D_TRACKCLOSE,
+	.d_flags =	D_TRACKCLOSE,
 	.d_open =	sgopen,
 	.d_close =	sgclose,
 	.d_ioctl =	sgioctl,
@@ -209,7 +206,6 @@ sgdevgonecb(void *arg)
 	 */
 	mtx_unlock(mtx);
 }
-
 
 static void
 sgoninvalidate(struct cam_periph *periph)
@@ -327,8 +323,8 @@ sgregister(struct cam_periph *periph, void *arg)
 
 	if (cpi.maxio == 0)
 		softc->maxio = DFLTPHYS;	/* traditional default */
-	else if (cpi.maxio > MAXPHYS)
-		softc->maxio = MAXPHYS;		/* for safety */
+	else if (cpi.maxio > maxphys)
+		softc->maxio = maxphys;		/* for safety */
 	else
 		softc->maxio = cpi.maxio;	/* real value */
 
@@ -1014,4 +1010,3 @@ scsi_group_len(u_char cmd)
 	group = (cmd >> 5) & 0x7;
 	return (len[group]);
 }
-

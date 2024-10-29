@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Implementation of Utility functions for all SCSI device types.
  *
@@ -32,8 +32,6 @@
  */
 
 #include <sys/param.h>
-
-
 #include <sys/types.h>
 #ifdef _KERNEL
 #include <sys/systm.h>
@@ -135,7 +133,6 @@ ctl_scsi_sense_sbuf(struct ctl_scsiio *ctsio,
 	ctl_scsi_path_string((union ctl_io *)ctsio, path_str, sizeof(path_str));
 
 	if (flags & SSS_FLAG_PRINT_COMMAND) {
-
 		sbuf_cat(sb, path_str);
 
 		ctl_scsi_command_string(ctsio, inq_data, sb);
@@ -203,4 +200,3 @@ ctl_scsi_sense_print(struct ctl_scsiio *ctsio,
 }
 
 #endif /* _KERNEL */
-

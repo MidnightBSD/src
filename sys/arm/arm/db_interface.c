@@ -64,7 +64,6 @@
 #include <ddb/db_variables.h>
 #include <ddb/db_sym.h>
 
-
 static int nil = 0;
 
 int db_access_und_sp (struct db_variable *, db_expr_t *, int);
@@ -153,10 +152,9 @@ void
 db_show_mdpcpu(struct pcpu *pc)
 {
 
-#if __ARM_ARCH >= 6
 	db_printf("curpmap      = %p\n", pc->pc_curpmap);
-#endif
 }
+
 int
 db_validate_address(vm_offset_t addr)
 {
@@ -174,7 +172,7 @@ db_validate_address(vm_offset_t addr)
 	else
 		pmap = p->p_vmspace->vm_map.pmap;
 
-	return (pmap_extract(pmap, addr) == FALSE);
+	return (pmap_extract(pmap, addr) == 0);
 }
 
 /*
@@ -251,7 +249,6 @@ db_write_bytes(vm_offset_t addr, size_t size, char *data)
 	tlb_flush_all();
 	return (0);
 }
-
 
 static u_int
 db_fetch_reg(int reg)

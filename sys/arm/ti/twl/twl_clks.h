@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012
  *	Ben Gray <bgray@freebsd.org>.
@@ -25,15 +25,12 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 #ifndef _TWL_CLKS_H_
 #define _TWL_CLKS_H_
 
-
 int twl_clks_enable(device_t dev, const char *name);
 int twl_clks_disable(device_t dev, const char *name);
 int twl_clks_is_enabled(device_t dev, const char *name, int *enabled);
-
 
 #endif /* _TWL_CLKS_H_ */

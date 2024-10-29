@@ -1,7 +1,7 @@
 /*-
  * Implementation of Utility functions for all SCSI device types.
  *
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1997, 1998, 1999 Justin T. Gibbs.
  * Copyright (c) 1997, 1998, 2003 Kenneth D. Merry.
@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/stdint.h>
@@ -694,7 +693,7 @@ scsi_op_desc(u_int16_t opcode, struct scsi_inquiry_data *inq_data)
 				return(table[j][i].desc);
 		}
 	}
-	
+
 	/*
 	 * If we can't find a match for the command in the table, we just
 	 * assume it's a vendor specifc command.
@@ -712,7 +711,6 @@ scsi_op_desc(u_int16_t opcode, struct scsi_inquiry_data *inq_data)
 }
 
 #endif
-
 
 #if !defined(SCSI_NO_SENSE_STRINGS)
 #define SST(asc, ascq, action, desc) \
@@ -1195,6 +1193,9 @@ static struct asc_table_entry asc_table[] = {
 	/* D              */
 	{ SST(0x04, 0x24, SS_FATAL | EBUSY,
 	    "Depopulation in progress") },
+	/* D              */
+	{ SST(0x04, 0x25, SS_FATAL | EBUSY,
+	    "Depopulation restoration in progress") },
 	/* DTL WROMAEBKVF */
 	{ SST(0x05, 0x00, SS_RDEF,
 	    "Logical unit does not respond to selection") },
@@ -2076,6 +2077,12 @@ static struct asc_table_entry asc_table[] = {
 	/* D         B    */
 	{ SST(0x31, 0x03, SS_FATAL | EIO,
 	    "SANITIZE command failed") },
+	/* D              */
+	{ SST(0x31, 0x04, SS_FATAL | EIO,
+	    "Depopulation failed") },
+	/* D              */
+	{ SST(0x31, 0x05, SS_FATAL | EIO,
+	    "Depopulation restoration failed") },
 	/* D   W O   BK   */
 	{ SST(0x32, 0x00, SS_RDEF,
 	    "No defect spare location available") },
@@ -3233,7 +3240,6 @@ ascentrycomp(const void *key, const void *member)
 	table_entry = (const struct asc_table_entry *)member;
 
 	if (asc >= table_entry->asc) {
-
 		if (asc > table_entry->asc)
 			return (1);
 
@@ -4361,7 +4367,6 @@ scsi_command_sbuf(struct sbuf *sb, uint8_t *cdb, int cdb_len,
 	sbuf_printf(sb, "Command Specific Info: %#jx", csi);
 }
 
-
 void
 scsi_progress_sbuf(struct sbuf *sb, uint16_t progress)
 {
@@ -4970,7 +4975,6 @@ scsi_sense_only_sbuf(struct scsi_sense_data *sense, u_int sense_len,
 		scsi_desc_iterate(desc_sense, sense_len, scsi_print_desc_func,
 				  &print_info);
 		break;
-
 	}
 	case -1:
 		/*
@@ -5071,7 +5075,6 @@ scsi_sense_sbuf(struct cam_device *device, struct ccb_scsiio *csio,
 	sense = NULL;
 
 	if (flags & SSS_FLAG_PRINT_COMMAND) {
-
 		sbuf_cat(sb, path_str);
 
 #ifdef _KERNEL
@@ -5126,8 +5129,6 @@ scsi_sense_sbuf(struct cam_device *device, struct ccb_scsiio *csio,
 #endif /* _KERNEL/!_KERNEL */
 	return(0);
 }
-
-
 
 #ifdef _KERNEL
 char *
@@ -5538,7 +5539,6 @@ scsi_calc_syncsrate(u_int period_factor)
 	num_syncrates = nitems(scsi_syncrates);
 	/* See if the period is in the "exception" table */
 	for (i = 0; i < num_syncrates; i++) {
-
 		if (period_factor == scsi_syncrates[i].period_factor) {
 			/* Period in kHz */
 			return (100000000 / scsi_syncrates[i].period);
@@ -5570,7 +5570,6 @@ scsi_calc_syncparam(u_int period)
 	num_syncrates = nitems(scsi_syncrates);
 	/* See if the period is in the "exception" table */
 	for (i = 0; i < num_syncrates; i++) {
-
 		if (period <= scsi_syncrates[i].period) {
 			/* Period in 100ths of ns */
 			return (scsi_syncrates[i].period_factor);
@@ -5721,7 +5720,6 @@ scsi_get_devid_desc(struct scsi_vpd_id_descriptor *desc, uint32_t len,
 	    desc->identifier + desc->length <= desc_buf_end;
 	    desc = (struct scsi_vpd_id_descriptor *)(desc->identifier
 						    + desc->length)) {
-
 		if (ck_fn == NULL || ck_fn((uint8_t *)desc) != 0)
 			return (desc);
 	}
@@ -7120,7 +7118,7 @@ scsi_attrib_vendser_sbuf(struct sbuf *sb, struct scsi_mam_attribute_header *hdr,
 	case SCSI_ATTR_OUTPUT_NONASCII_ESC:
 	default:
 		strvis_flags = CAM_STRVIS_FLAG_NONASCII_ESC;
-		break;;
+		break;
 	}
 	cam_strvis_sbuf(sb, vendser->vendor, sizeof(vendser->vendor),
 	    strvis_flags);
@@ -7901,7 +7899,6 @@ scsi_read_capacity_16(struct ccb_scsiio *csio, uint32_t retries,
 {
 	struct scsi_read_capacity_16 *scsi_cmd;
 
-	
 	cam_fill_csio(csio,
 		      retries,
 		      cbfcnp,
@@ -8497,7 +8494,6 @@ scsi_ata_pass(struct ccb_scsiio *csio, uint32_t retries,
 		protocol |= AP_EXTEND;
 	}
 
-
 	if ((cmd_size > sizeof(csio->cdb_io.cdb_bytes))
 	 && ((cdb_storage == NULL)
 	  || (cdb_storage_len < cmd_size))) {
@@ -8875,7 +8871,7 @@ scsi_read_attribute(struct ccb_scsiio *csio, u_int32_t retries,
 	scsi_ulto4b(length, scsi_cmd->length);
 	if (cache != 0)
 		scsi_cmd->cache |= SRA_CACHE;
-	
+
 	cam_fill_csio(csio,
 		      retries,
 		      cbfcnp,
@@ -9084,7 +9080,7 @@ scsi_inquiry_match(caddr_t inqbuffer, caddr_t table_entry)
 {
 	struct scsi_inquiry_pattern *entry;
 	struct scsi_inquiry_data *inq;
- 
+
 	entry = (struct scsi_inquiry_pattern *)table_entry;
 	inq = (struct scsi_inquiry_data *)inqbuffer;
 
@@ -9111,7 +9107,7 @@ scsi_static_inquiry_match(caddr_t inqbuffer, caddr_t table_entry)
 {
 	struct scsi_static_inquiry_pattern *entry;
 	struct scsi_inquiry_data *inq;
- 
+
 	entry = (struct scsi_static_inquiry_pattern *)table_entry;
 	inq = (struct scsi_inquiry_data *)inqbuffer;
 
@@ -9174,7 +9170,6 @@ scsi_devid_match(uint8_t *lhs, size_t lhs_len, uint8_t *rhs, size_t rhs_len)
 		rhs_id = (struct scsi_vpd_id_descriptor *)rhs;
 		while (rhs_id <= rhs_last
 		    && (rhs_id->identifier + rhs_id->length) <= rhs_end) {
-
 			if ((rhs_id->id_type &
 			     (SVPD_ID_ASSOC_MASK | SVPD_ID_TYPE_MASK)) ==
 			    (lhs_id->id_type &
@@ -9243,7 +9238,7 @@ sysctl_scsi_delay(SYSCTL_HANDLER_ARGS)
 	return (set_scsi_delay(delay));
 }
 SYSCTL_PROC(_kern_cam, OID_AUTO, scsi_delay,
-    CTLTYPE_INT | CTLFLAG_RWTUN | CTLFLAG_NOFETCH,
+    CTLTYPE_INT | CTLFLAG_RWTUN | CTLFLAG_NOFETCH | CTLFLAG_MPSAFE,
     0, 0, sysctl_scsi_delay, "I",
     "Delay to allow devices to settle after a SCSI bus reset (ms)");
 

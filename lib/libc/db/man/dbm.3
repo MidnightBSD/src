@@ -13,9 +13,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/lib/libc/db/man/dbm.3 301066 2016-05-31 18:32:57Z ed $
-.\"
-.Dd May 30, 2016
+.Dd April 2, 2022
 .Dt DBM 3
 .Os
 .Sh NAME
@@ -224,3 +222,14 @@ These functions (except
 .Fn dbm_dirfno )
 are included in the
 .St -susv2 .
+.Sh HISTORY
+The functions
+.Fn dbminit ,
+.Fn fetch ,
+.Fn store ,
+.Fn delete ,
+.Fn firstkey ,
+and
+.Fn nextkey
+first appeared in
+.At v7 .

@@ -1,4 +1,3 @@
-# $MidnightBSD$
 
 FILES=	mech qop
 NO_OBJ=

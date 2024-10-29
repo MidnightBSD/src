@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <err.h>
 #include <errno.h>
 #include <stdio.h>
@@ -1019,9 +1018,7 @@ main(int argc, char **argv)
 		    "If it is set to local time,\n"
 		    "or you don't know, please choose NO here!");
 		dlg_save_vars(&save_vars);
-#if !defined(__sparc64__)
 		dialog_vars.defaultno = TRUE;
-#endif
 		yesno = dialog_yesno(title, prompt, 7, 73);
 		dlg_restore_vars(&save_vars);
 		if (!yesno) {

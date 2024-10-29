@@ -22,7 +22,6 @@
  * Portions Copyright 2013 Justin Hibbits jhibbits@freebsd.org
  * Portions Copyright 2013 Howard Su howardsu@freebsd.org
  * Portions Copyright 2016-2018 Ruslan Bukin <br@bsdpad.com>
- *
  */
 
 /*
@@ -42,8 +41,7 @@
 
 #define	FBT_C_PATCHVAL		MATCH_C_EBREAK
 #define	FBT_PATCHVAL		MATCH_EBREAK
-#define	FBT_ENTRY		"entry"
-#define	FBT_RETURN		"return"
+#define	FBT_AFRAMES		5
 
 int
 fbt_invop(uintptr_t addr, struct trapframe *frame, uintptr_t rval)
@@ -56,11 +54,16 @@ fbt_invop(uintptr_t addr, struct trapframe *frame, uintptr_t rval)
 
 	for (; fbt != NULL; fbt = fbt->fbtp_hashnext) {
 		if ((uintptr_t)fbt->fbtp_patchpoint == addr) {
-			cpu->cpu_dtrace_caller = addr;
+			cpu->cpu_dtrace_caller = frame->tf_ra - INSN_SIZE;
 
-			dtrace_probe(fbt->fbtp_id, frame->tf_a[0],
-			    frame->tf_a[1], frame->tf_a[2],
-			    frame->tf_a[3], frame->tf_a[4]);
+			if (fbt->fbtp_roffset == 0) {
+				dtrace_probe(fbt->fbtp_id, frame->tf_a[0],
+				    frame->tf_a[1], frame->tf_a[2],
+				    frame->tf_a[3], frame->tf_a[4]);
+			} else {
+				dtrace_probe(fbt->fbtp_id, fbt->fbtp_roffset,
+				    frame->tf_a[0], frame->tf_a[1], 0, 0);
+			}
 
 			cpu->cpu_dtrace_caller = 0;
 			return (fbt->fbtp_savedval);
@@ -150,6 +153,19 @@ fbt_provide_module_function(linker_file_t lf, int symindx,
 	if (fbt_excluded(name))
 		return (0);
 
+	/*
+	 * Some assembly-language exception handlers are not suitable for
+	 * instrumentation.
+	 */
+	if (strcmp(name, "cpu_exception_handler") == 0)
+		return (0);
+	if (strcmp(name, "cpu_exception_handler_user") == 0)
+		return (0);
+	if (strcmp(name, "cpu_exception_handler_supervisor") == 0)
+		return (0);
+	if (strcmp(name, "do_trap_supervisor") == 0)
+		return (0);
+
 	instr = (uint32_t *)(symval->value);
 	limit = (uint32_t *)(symval->value + symval->size);
 
@@ -177,7 +193,7 @@ fbt_provide_module_function(linker_file_t lf, int symindx,
 	fbt = malloc(sizeof (fbt_probe_t), M_FBT, M_WAITOK | M_ZERO);
 	fbt->fbtp_name = name;
 	fbt->fbtp_id = dtrace_probe_create(fbt_id, modname,
-	    name, FBT_ENTRY, 3, fbt);
+	    name, FBT_ENTRY, FBT_AFRAMES, fbt);
 	fbt->fbtp_patchpoint = instr;
 	fbt->fbtp_ctl = lf;
 	fbt->fbtp_loadcnt = lf->loadcnt;
@@ -220,7 +236,7 @@ again:
 	fbt->fbtp_name = name;
 	if (retfbt == NULL) {
 		fbt->fbtp_id = dtrace_probe_create(fbt_id, modname,
-		    name, FBT_RETURN, 3, fbt);
+		    name, FBT_RETURN, FBT_AFRAMES, fbt);
 	} else {
 		retfbt->fbtp_probenext = fbt;
 		fbt->fbtp_id = retfbt->fbtp_id;
@@ -232,6 +248,7 @@ again:
 	fbt->fbtp_loadcnt = lf->loadcnt;
 	fbt->fbtp_symindx = symindx;
 	fbt->fbtp_rval = rval;
+	fbt->fbtp_roffset = (uintptr_t)instr - (uintptr_t)symval->value;
 	fbt->fbtp_savedval = *instr;
 	fbt->fbtp_patchval = patchval;
 	fbt->fbtp_hashnext = fbt_probetab[FBT_ADDR2NDX(instr)];

@@ -31,7 +31,6 @@
 
 #include <sys/cdefs.h>
 __SCCSID("@(#)devname.c	8.2 (Berkeley) 4/29/95");
-
 #include <sys/param.h>
 #include <sys/sysctl.h>
 
@@ -47,7 +46,7 @@ devname_r(dev_t dev, mode_t type, char *buf, int len)
 	int i;
 	size_t j;
 
-	if (dev == NODEV || !(S_ISCHR(type) || S_ISBLK(dev))) {
+	if (dev == NODEV || !(S_ISCHR(type) || S_ISBLK(type))) {
 		strlcpy(buf, "#NODEV", len);
 		return (buf);
 	}

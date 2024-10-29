@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013 Ganbold Tsagaankhuu <ganbold@freebsd.org>
  * All rights reserved.
@@ -24,13 +24,11 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /* A10/A20 EMAC driver */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -216,12 +214,22 @@ emac_get_hwaddr(struct emac_softc *sc, uint8_t *hwaddr)
 		printf("MAC address: %s\n", ether_sprintf(hwaddr));
 }
 
+static u_int
+emac_hash_maddr(void *arg, struct sockaddr_dl *sdl, u_int cnt)
+{
+	uint32_t h, *hashes = arg;
+
+	h = ether_crc32_be(LLADDR(sdl), ETHER_ADDR_LEN) >> 26;
+	hashes[h >> 5] |= 1 << (h & 0x1f);
+
+	return (1);
+}
+
 static void
 emac_set_rx_mode(struct emac_softc *sc)
 {
 	struct ifnet *ifp;
-	struct ifmultiaddr *ifma;
-	uint32_t h, hashes[2];
+	uint32_t hashes[2];
 	uint32_t rcr = 0;
 
 	EMAC_ASSERT_LOCKED(sc);
@@ -239,17 +247,8 @@ emac_set_rx_mode(struct emac_softc *sc)
 	if (ifp->if_flags & IFF_ALLMULTI) {
 		hashes[0] = 0xffffffff;
 		hashes[1] = 0xffffffff;
-	} else {
-		if_maddr_rlock(ifp);
-		CK_STAILQ_FOREACH(ifma, &sc->emac_ifp->if_multiaddrs, ifma_link) {
-			if (ifma->ifma_addr->sa_family != AF_LINK)
-				continue;
-			h = ether_crc32_be(LLADDR((struct sockaddr_dl *)
-			    ifma->ifma_addr), ETHER_ADDR_LEN) >> 26;
-			hashes[h >> 5] |= 1 << (h & 0x1f);
-		}
-		if_maddr_runlock(ifp);
-	}
+	} else
+		if_foreach_llmaddr(ifp, emac_hash_maddr, hashes);
 	rcr |= EMAC_RX_MCO;
 	rcr |= EMAC_RX_MHF;
 	EMAC_WRITE_REG(sc, EMAC_RX_HASH0, hashes[0]);
@@ -464,7 +463,7 @@ emac_watchdog(struct emac_softc *sc)
 			    "(missed link)\n");
 	} else
 		if_printf(sc->emac_ifp, "watchdog timeout -- resetting\n");
-	
+
 	if_inc_counter(ifp, IFCOUNTER_OERRORS, 1);
 	ifp->if_drv_flags &= ~IFF_DRV_RUNNING;
 	emac_init_locked(sc);
@@ -598,7 +597,6 @@ emac_init_locked(struct emac_softc *sc)
 
 	callout_reset(&sc->emac_tick_ch, hz, emac_tick, sc);
 }
-
 
 static void
 emac_start(struct ifnet *ifp)
@@ -920,7 +918,8 @@ emac_attach(device_t dev)
 	/* Create device sysctl node. */
 	SYSCTL_ADD_PROC(device_get_sysctl_ctx(dev),
 	    SYSCTL_CHILDREN(device_get_sysctl_tree(dev)),
-	    OID_AUTO, "process_limit", CTLTYPE_INT | CTLFLAG_RW,
+	    OID_AUTO, "process_limit",
+	    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
 	    &sc->emac_rx_process_limit, 0, sysctl_hw_emac_proc_limit, "I",
 	    "max number of Rx events to process");
 
@@ -943,11 +942,6 @@ emac_attach(device_t dev)
 	emac_reset(sc);
 
 	ifp = sc->emac_ifp = if_alloc(IFT_ETHER);
-	if (ifp == NULL) {
-		device_printf(dev, "unable to allocate ifp\n");
-		error = ENOSPC;
-		goto fail;
-	}
 	ifp->if_softc = sc;
 
 	/* Setup MII */

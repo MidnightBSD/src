@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000, 2002 Kenneth D. Merry
  * All rights reserved.
@@ -885,4 +885,3 @@ void scsi_read_toc(struct ccb_scsiio *csio, uint32_t retries,
 __END_DECLS
 
 #endif /*_SCSI_SCSI_CD_H*/
-

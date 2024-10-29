@@ -2,7 +2,6 @@
 #
 
 options 	HZ=1000
-options 	ARM_L2_PIPT		# Only L2 PIPT is supported
 options 	INTRNG			# All arm systems use INTRNG these days
 options 	PREEMPTION		# Enable kernel thread preemption
 options 	VIMAGE			# Subsystem virtualization, e.g. VNET
@@ -10,8 +9,9 @@ options 	INET			# InterNETworking
 options 	INET6			# IPv6 communications protocols
 options 	TCP_HHOOK		# hhook(9) framework for TCP
 device		crypto			# core crypto support
-options 	IPSEC			# IP (v4/v6) security
-options 	SCTP			# Stream Control Transmission Protocol
+options 	IPSEC_SUPPORT		# Allow kldload of ipsec and tcpmd5
+options		NETLINK			# netlink(4) support
+options 	SCTP_SUPPORT		# Allow kldload of SCTP
 options 	FFS			# Berkeley Fast Filesystem
 options 	SOFTUPDATES		# Enable FFS soft updates support
 options 	UFS_ACL			# Support for access control lists
@@ -49,6 +49,7 @@ options 	MAC			# Support for Mandatory Access Control (MAC)
 
 options 	COMPAT_FREEBSD10	# Compatible with FreeBSD10
 options 	COMPAT_FREEBSD11	# Compatible with FreeBSD11
+options 	COMPAT_FREEBSD12	# Compatible with FreeBSD12
 
 # DTrace support
 options 	KDTRACE_HOOKS		# Kernel DTrace hooks
@@ -70,4 +71,9 @@ options 	KDB_TRACE		# Print a stack trace for a panic.
 #options 	KTR_VERBOSE=0
 #options 	USB_REQ_DEBUG
 #options 	USB_VERBOSE
-#options 	VERBOSE_SYSINIT		# Enable verbose sysinit messages
+
+# Enable support for the kernel PLL to use an external PPS signal,
+# under supervision of [x]ntpd(8)
+# More info in ntpd documentation: http://www.eecis.udel.edu/~ntp
+
+options 	PPS_SYNC

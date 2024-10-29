@@ -19,7 +19,6 @@
  *
  * CDDL HEADER END
  *
- *
  */
 /*
  * Copyright 2005 Sun Microsystems, Inc.  All rights reserved.
@@ -32,16 +31,17 @@
 
 #include <sys/param.h>
 #include <sys/systm.h>
-#include <sys/types.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
-#include <sys/kmem.h>
+#include <sys/proc.h>
 #include <sys/smp.h>
 #include <sys/dtrace_impl.h>
 #include <sys/dtrace_bsd.h>
+#include <cddl/dev/dtrace/dtrace_cddl.h>
 #include <machine/clock.h>
 #include <machine/cpufunc.h>
 #include <machine/frame.h>
+#include <machine/md_var.h>
 #include <machine/psl.h>
 #include <machine/trap.h>
 #include <vm/pmap.h>
@@ -49,7 +49,7 @@
 extern void dtrace_getnanotime(struct timespec *tsp);
 extern int (*dtrace_invop_jump_addr)(struct trapframe *);
 
-int	dtrace_invop(uintptr_t, struct trapframe *, uintptr_t);
+int	dtrace_invop(uintptr_t, struct trapframe *, void **);
 int	dtrace_invop_start(struct trapframe *frame);
 void	dtrace_invop_init(void);
 void	dtrace_invop_uninit(void);
@@ -62,16 +62,22 @@ typedef struct dtrace_invop_hdlr {
 dtrace_invop_hdlr_t *dtrace_invop_hdlr;
 
 int
-dtrace_invop(uintptr_t addr, struct trapframe *frame, uintptr_t eax)
+dtrace_invop(uintptr_t addr, struct trapframe *frame, void **scratch)
 {
+	struct thread *td;
 	dtrace_invop_hdlr_t *hdlr;
 	int rval;
 
-	for (hdlr = dtrace_invop_hdlr; hdlr != NULL; hdlr = hdlr->dtih_next)
-		if ((rval = hdlr->dtih_func(addr, frame, eax)) != 0)
-			return (rval);
-
-	return (0);
+	td = curthread;
+	td->t_dtrace_trapframe = frame;
+	rval = 0;
+	for (hdlr = dtrace_invop_hdlr; hdlr != NULL; hdlr = hdlr->dtih_next) {
+		rval = hdlr->dtih_func(addr, frame, (uintptr_t)scratch);
+		if (rval != 0)
+			break;
+	}
+	td->t_dtrace_trapframe = NULL;
+	return (rval);
 }
 
 void
@@ -130,7 +136,7 @@ dtrace_invop_uninit(void)
 void
 dtrace_toxic_ranges(void (*func)(uintptr_t base, uintptr_t limit))
 {
-	(*func)(0, (uintptr_t) addr_PTmap);
+	(*func)(0, la57 ? (uintptr_t)addr_P5Tmap : (uintptr_t)addr_P4Tmap);
 }
 
 void
@@ -441,7 +447,7 @@ dtrace_trap(struct trapframe *frame, u_int type)
 			 * Offset the instruction pointer to the instruction
 			 * following the one causing the fault.
 			 */
-			frame->tf_rip += dtrace_instr_size((u_char *) frame->tf_rip);
+			frame->tf_rip += dtrace_instr_size((uint8_t *) frame->tf_rip);
 			return (1);
 		/* Page fault. */
 		case T_PAGEFLT:
@@ -453,7 +459,7 @@ dtrace_trap(struct trapframe *frame, u_int type)
 			 * Offset the instruction pointer to the instruction
 			 * following the one causing the fault.
 			 */
-			frame->tf_rip += dtrace_instr_size((u_char *) frame->tf_rip);
+			frame->tf_rip += dtrace_instr_size((uint8_t *) frame->tf_rip);
 			return (1);
 		default:
 			/* Handle all other traps in the usual way. */

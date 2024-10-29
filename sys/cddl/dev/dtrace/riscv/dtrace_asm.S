@@ -20,7 +20,6 @@
  * CDDL HEADER END
  *
  * Portions Copyright 2016 Ruslan Bukin <br@bsdpad.com>
- *
  */
 /*
  * Copyright 2004 Sun Microsystems, Inc.  All rights reserved.
@@ -73,7 +72,9 @@ uint8_t
 dtrace_fuword8_nocheck(void *addr)
 */
 ENTRY(dtrace_fuword8_nocheck)
+	ENTER_USER_ACCESS(t0)
 	lb	a0, 0(a0)
+	EXIT_USER_ACCESS(t0)
 	RET
 END(dtrace_fuword8_nocheck)
 
@@ -82,7 +83,9 @@ uint16_t
 dtrace_fuword16_nocheck(void *addr)
 */
 ENTRY(dtrace_fuword16_nocheck)
+	ENTER_USER_ACCESS(t0)
 	lh	a0, 0(a0)
+	EXIT_USER_ACCESS(t0)
 	RET
 END(dtrace_fuword16_nocheck)
 
@@ -91,7 +94,9 @@ uint32_t
 dtrace_fuword32_nocheck(void *addr)
 */
 ENTRY(dtrace_fuword32_nocheck)
+	ENTER_USER_ACCESS(t0)
 	lw	a0, 0(a0)
+	EXIT_USER_ACCESS(t0)
 	RET
 END(dtrace_fuword32_nocheck)
 
@@ -100,7 +105,9 @@ uint64_t
 dtrace_fuword64_nocheck(void *addr)
 */
 ENTRY(dtrace_fuword64_nocheck)
+	ENTER_USER_ACCESS(t0)
 	ld	a0, 0(a0)
+	EXIT_USER_ACCESS(t0)
 	RET
 END(dtrace_fuword64_nocheck)
 
@@ -110,6 +117,7 @@ dtrace_copy(uintptr_t uaddr, uintptr_t kaddr, size_t size)
 */
 ENTRY(dtrace_copy)
 	beqz	a2, 2f		/* If len == 0 then skip loop */
+	ENTER_USER_ACCESS(t0)
 1:
 	lb	a4, 0(a0)	/* Load from uaddr */
 	addi	a0, a0, 1
@@ -117,6 +125,7 @@ ENTRY(dtrace_copy)
 	addi	a1, a1, 1
 	addi	a2, a2, -1	/* len-- */
 	bnez	a2, 1b
+	EXIT_USER_ACCESS(t0)
 2:
 	RET
 END(dtrace_copy)
@@ -128,7 +137,9 @@ dtrace_copystr(uintptr_t uaddr, uintptr_t kaddr, size_t size,
 XXX: Check for flags?
 */
 ENTRY(dtrace_copystr)
-	beqz	a2, 2f		/* If len == 0 then skip loop */
+	beqz	a2, 3f		/* If len == 0 then skip loop */
+	ENTER_USER_ACCESS(t0)
+1:
 	lb	a4, 0(a0)	/* Load from uaddr */
 	addi	a0, a0, 1
 	sb	a4, 0(a1)	/* Store in kaddr */
@@ -137,6 +148,8 @@ ENTRY(dtrace_copystr)
 	addi	a2, a2, -1	/* len-- */
 	bnez	a2, 1b
 2:
+	EXIT_USER_ACCESS(t0)
+3:
 	RET
 END(dtrace_copystr)
 

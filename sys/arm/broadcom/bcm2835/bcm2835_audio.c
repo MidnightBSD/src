@@ -38,6 +38,7 @@
 
 #include "vc_vchi_audioserv_defs.h"
 
+SND_DECLARE_FILE("");
 
 /* Audio destination */
 #define	DEST_AUTO		0
@@ -206,6 +207,8 @@ bcm2835_audio_callback(void *param, const VCHI_CALLBACK_REASON_T reason, void *m
 
 	status = vchi_msg_dequeue(sc->vchi_handle,
 	    &m, sizeof m, &msg_len, VCHI_FLAGS_NONE);
+	if (status != 0)
+		return;
 	if (m.type == VC_AUDIO_MSG_TYPE_RESULT) {
 		if (m.u.result.success) {
 			device_printf(sc->dev,
@@ -411,7 +414,7 @@ bcm2835_audio_update_params(struct bcm2835_audio_info *sc, uint32_t fmt, uint32_
 static bool
 bcm2835_audio_buffer_should_sleep(struct bcm2835_audio_chinfo *ch)
 {
-	
+
 	if (ch->playback_state != PLAYBACK_PLAYING)
 		return (true);
 
@@ -809,7 +812,7 @@ vchi_audio_sysctl_init(struct bcm2835_audio_info *sc)
 	tree_node = device_get_sysctl_tree(sc->dev);
 	tree = SYSCTL_CHILDREN(tree_node);
 	SYSCTL_ADD_PROC(ctx, tree, OID_AUTO, "dest",
-	    CTLFLAG_RW | CTLTYPE_UINT, sc, sizeof(*sc),
+	    CTLFLAG_RW | CTLTYPE_UINT | CTLFLAG_NEEDGIANT, sc, sizeof(*sc),
 	    sysctl_bcm2835_audio_dest, "IU", "audio destination, "
 	    "0 - auto, 1 - headphones, 2 - HDMI");
 	SYSCTL_ADD_UQUAD(ctx, tree, OID_AUTO, "callbacks",
@@ -952,7 +955,6 @@ static device_method_t bcm2835_audio_methods[] = {
 	DEVMETHOD(device_probe,		bcm2835_audio_probe),
 	DEVMETHOD(device_attach,	bcm2835_audio_attach),
 	DEVMETHOD(device_detach,	bcm2835_audio_detach),
-
 	{ 0, 0 }
 };
 

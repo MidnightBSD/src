@@ -28,7 +28,6 @@
 #include "opt_platform.h"
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/syslog.h>
@@ -48,7 +47,6 @@
 #include <machine/cpu.h>
 #include <machine/smp.h>
 
-#ifdef INTRNG
 #include "pic_if.h"
 
 #ifdef SMP
@@ -64,7 +62,6 @@ struct intr_ipi {
 };
 
 static struct intr_ipi ipi_sources[INTR_IPI_COUNT];
-#endif
 #endif
 
 /*
@@ -130,7 +127,6 @@ arm_irq_memory_barrier(uintptr_t irq)
 	cpu_l2cache_drain_writebuf();
 }
 
-#ifdef INTRNG
 #ifdef SMP
 static inline struct intr_ipi *
 intr_ipi_lookup(u_int ipi)
@@ -225,7 +221,7 @@ intr_pic_ipi_setup(u_int ipi, const char *name, intr_ipi_handler_t *hand,
 
 	isrc->isrc_handlers++;
 	intr_ipi_setup(ipi, name, hand, arg, pic_ipi_send, isrc);
+	PIC_ENABLE_INTR(intr_irq_root_dev, isrc);
 	return (0);
 }
-#endif
 #endif

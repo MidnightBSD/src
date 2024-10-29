@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999 Luoqi Chen <luoqi@freebsd.org>
  * All rights reserved.
@@ -36,13 +36,10 @@
 #include <sys/_lock.h>
 #include <sys/_mutex.h>
 
-#define	ALT_STACK_SIZE	128
-
 struct vmspace;
 
 #endif	/* _KERNEL */
 
-#if __ARM_ARCH >= 6
 /* Branch predictor hardening method */
 #define PCPU_BP_HARDEN_KIND_NONE		0
 #define PCPU_BP_HARDEN_KIND_BPIALL		1
@@ -67,10 +64,6 @@ struct vmspace;
 	uint64_t pc_clock;						\
 	uint32_t pc_mpidr;						\
 	char __pad[135]
-#else
-#define PCPU_MD_FIELDS							\
-	char __pad[93]
-#endif
 
 #ifdef _KERNEL
 
@@ -82,7 +75,6 @@ struct pcpu;
 
 extern struct pcpu *pcpup;
 
-#if __ARM_ARCH >= 6
 #define CPU_MASK (0xf)
 
 #ifndef SMP
@@ -111,7 +103,6 @@ set_curthread(struct thread *td)
 	__asm __volatile("mcr p15, 0, %0, c13, c0, 4" : : "r" (td));
 }
 
-
 static inline void *
 get_tls(void)
 {
@@ -139,15 +130,14 @@ set_tls(void *tls)
 
 #define curthread get_curthread()
 
-#else
-#define get_pcpu()	pcpup
-#endif
 
 #define	PCPU_GET(member)	(get_pcpu()->pc_ ## member)
 #define	PCPU_ADD(member, value)	(get_pcpu()->pc_ ## member += (value))
 #define	PCPU_INC(member)	PCPU_ADD(member, 1)
 #define	PCPU_PTR(member)	(&get_pcpu()->pc_ ## member)
 #define	PCPU_SET(member,value)	(get_pcpu()->pc_ ## member = (value))
+
+#define	PCPU_GET_MPIDR(pc)	((pc)->pc_mpidr)
 
 void pcpu0_init(void);
 #endif	/* _KERNEL */

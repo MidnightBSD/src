@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2015 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Semihalf under
  * the sponsorship of the FreeBSD Foundation.
@@ -30,7 +29,6 @@
 /* Common PCIe functions for Cavium Thunder SOC */
 
 #include <sys/cdefs.h>
-
 #include "opt_platform.h"
 
 #include <sys/param.h>
@@ -184,7 +182,6 @@ thunder_pcie_alloc_resource(device_t dev, device_t child, int type, int *rid,
 	 */
 	if (((type == SYS_RES_IOPORT) || (type == SYS_RES_MEMORY)) &&
 	    RMAN_IS_DEFAULT_RANGE(start, end)) {
-
 		/* Read BAR manually to get resource address and size */
 		pci_read_bar(child, *rid, &map, &testval, NULL);
 

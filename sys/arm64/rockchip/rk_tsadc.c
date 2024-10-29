@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2019 Michal Meloun <mmel@FreeBSD.org>
  *
@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Thermometer and thermal zones driver for RockChip SoCs.
  * Calibration data are taken from Linux, because this part of SoC
@@ -126,7 +125,7 @@ struct tsadc_softc {
 
 	clk_t			tsadc_clk;
 	clk_t			apb_pclk_clk;
-	hwreset_t		hwreset;
+	hwreset_array_t		hwreset;
 	struct syscon		*grf;
 
 	struct tsadc_conf	*conf;
@@ -386,7 +385,6 @@ tsadc_raw_to_temp(struct tsadc_softc *sc, uint32_t raw)
 		}
 	}
 
-
 	/*
 	* Translated value is between i and i - 1 table entries.
 	* Do linear interpolation for it.
@@ -555,7 +553,7 @@ tsadc_init_sysctl(struct tsadc_softc *sc)
 	/* create node for hw.temp */
 	oid = SYSCTL_ADD_NODE(&tsadc_sysctl_ctx,
 	    SYSCTL_STATIC_CHILDREN(_hw), OID_AUTO, "temperature",
-	    CTLFLAG_RD, NULL, "");
+	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "");
 	if (oid == NULL)
 		return (ENXIO);
 
@@ -563,7 +561,7 @@ tsadc_init_sysctl(struct tsadc_softc *sc)
 	for (i = sc->conf->ntsensors  - 1; i >= 0; i--) {
 		tmp = SYSCTL_ADD_PROC(&tsadc_sysctl_ctx,
 		    SYSCTL_CHILDREN(oid), OID_AUTO, sc->conf->tsensors[i].name,
-		    CTLTYPE_INT | CTLFLAG_RD, sc, i,
+		    CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_NEEDGIANT, sc, i,
 		    tsadc_sysctl_temperature, "IK", "SoC Temperature");
 		if (tmp == NULL)
 			return (ENXIO);
@@ -646,9 +644,9 @@ tsadc_attach(device_t dev)
 	}
 
 	/* FDT resources */
-	rv = hwreset_get_by_ofw_name(dev, 0, "tsadc-apb", &sc->hwreset);
+	rv = hwreset_array_get_ofw(dev, 0, &sc->hwreset);
 	if (rv != 0) {
-		device_printf(dev, "Cannot get 'tsadc-apb' reset\n");
+		device_printf(dev, "Cannot get resets\n");
 		goto fail;
 	}
 	rv = clk_get_by_ofw_name(dev, 0, "tsadc", &sc->tsadc_clk);
@@ -685,14 +683,15 @@ tsadc_attach(device_t dev)
 		sc->shutdown_pol = sc->conf->shutdown_pol;
 
 	/* Wakeup controller */
-	rv = hwreset_assert(sc->hwreset);
+	rv = hwreset_array_assert(sc->hwreset);
 	if (rv != 0) {
 		device_printf(dev, "Cannot assert reset\n");
 		goto fail;
 	}
 
 	/* Set the assigned clocks parent and freq */
-	if (clk_set_assigned(sc->dev, node) != 0) {
+	rv = clk_set_assigned(sc->dev, node);
+	if (rv != 0 && rv != ENOENT) {
 		device_printf(dev, "clk_set_assigned failed\n");
 		goto fail;
 	}
@@ -707,7 +706,7 @@ tsadc_attach(device_t dev)
 		device_printf(dev, "Cannot enable 'apb_pclk' clock: %d\n", rv);
 		goto fail;
 	}
-	rv = hwreset_deassert(sc->hwreset);
+	rv = hwreset_array_deassert(sc->hwreset);
 	if (rv != 0) {
 		device_printf(dev, "Cannot deassert reset\n");
 		goto fail;
@@ -741,7 +740,7 @@ fail:
 	if (sc->apb_pclk_clk != NULL)
 		clk_release(sc->apb_pclk_clk);
 	if (sc->hwreset != NULL)
-		hwreset_release(sc->hwreset);
+		hwreset_array_release(sc->hwreset);
 	if (sc->irq_res != NULL)
 		bus_release_resource(dev, SYS_RES_IRQ, 0, sc->irq_res);
 	if (sc->mem_res != NULL)
@@ -764,7 +763,7 @@ tsadc_detach(device_t dev)
 	if (sc->apb_pclk_clk != NULL)
 		clk_release(sc->apb_pclk_clk);
 	if (sc->hwreset != NULL)
-		hwreset_release(sc->hwreset);
+		hwreset_array_release(sc->hwreset);
 	if (sc->irq_res != NULL)
 		bus_release_resource(dev, SYS_RES_IRQ, 0, sc->irq_res);
 	if (sc->mem_res != NULL)

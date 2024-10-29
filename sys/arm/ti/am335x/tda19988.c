@@ -33,6 +33,7 @@
 #include <sys/kernel.h>
 #include <sys/module.h>
 #include <sys/clock.h>
+#include <sys/eventhandler.h>
 #include <sys/time.h>
 #include <sys/bus.h>
 #include <sys/resource.h>
@@ -649,7 +650,7 @@ tda19988_start(struct tda19988_softc *sc)
 	uint16_t version;
 
 	dev = sc->sc_dev;
-	
+
 	tda19988_cec_write(sc, TDA_CEC_ENAMODS, ENAMODS_RXSENS | ENAMODS_HDMI);
 	DELAY(1000);
 	tda19988_cec_read(sc, 0xfe, &data);

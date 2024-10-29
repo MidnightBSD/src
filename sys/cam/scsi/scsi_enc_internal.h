@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000 Matthew Jacob
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -87,13 +86,13 @@ typedef int (enc_softc_init_t)(enc_softc_t *);
 typedef void (enc_softc_invalidate_t)(enc_softc_t *);
 typedef void (enc_softc_cleanup_t)(enc_softc_t *);
 typedef int (enc_init_enc_t)(enc_softc_t *); 
-typedef int (enc_get_enc_status_t)(enc_softc_t *, int);
 typedef int (enc_set_enc_status_t)(enc_softc_t *, encioc_enc_status_t, int);
 typedef int (enc_get_elm_status_t)(enc_softc_t *, encioc_elm_status_t *, int);
 typedef int (enc_set_elm_status_t)(enc_softc_t *, encioc_elm_status_t *, int);
 typedef int (enc_get_elm_desc_t)(enc_softc_t *, encioc_elm_desc_t *); 
 typedef int (enc_get_elm_devnames_t)(enc_softc_t *, encioc_elm_devnames_t *); 
-typedef int (enc_handle_string_t)(enc_softc_t *, encioc_string_t *, int);
+typedef int (enc_handle_string_t)(enc_softc_t *, encioc_string_t *,
+				  unsigned long);
 typedef void (enc_device_found_t)(enc_softc_t *);
 typedef void (enc_poll_status_t)(enc_softc_t *);
 
@@ -101,7 +100,6 @@ struct enc_vec {
 	enc_softc_invalidate_t	*softc_invalidate;
 	enc_softc_cleanup_t	*softc_cleanup;
 	enc_init_enc_t		*init_enc;
-	enc_get_enc_status_t	*get_enc_status;
 	enc_set_enc_status_t	*set_enc_status;
 	enc_get_elm_status_t	*get_elm_status;
 	enc_set_elm_status_t	*set_elm_status;
@@ -161,8 +159,6 @@ struct enc_softc {
 	struct proc		*enc_daemon;
 
 	struct enc_fsm_state 	*enc_fsm_states;
-
-	struct root_hold_token	 enc_rootmount;
 
 #define 	ENC_ANNOUNCE_SZ		400
 	char			announce_buf[ENC_ANNOUNCE_SZ];

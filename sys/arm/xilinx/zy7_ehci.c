@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012-2013 Thomas Skibo
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -35,9 +34,7 @@
  * controller and register definitions are in appendix B.34.
  */
 
-
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -69,7 +66,6 @@
 #include <dev/usb/usb_bus.h>
 #include <dev/usb/controller/ehci.h>
 #include <dev/usb/controller/ehcireg.h>
-
 
 /* Register definitions. */
 #define ZY7_USB_ID				0x0000
@@ -178,7 +174,6 @@ zy7_phy_config(device_t dev, bus_space_tag_t io_tag, bus_space_handle_t bsh)
 	}
 
 	if (OF_getprop(node, "phy_vbus_ext", buf, sizeof(buf)) >= 0) {
-
 		/* Tell PHY that VBUS is supplied externally. */
 		bus_space_write_4(io_tag, bsh, ZY7_USB_ULPI_VIEWPORT,
 				  ZY7_USB_ULPI_VIEWPORT_RUN |
@@ -222,7 +217,7 @@ zy7_ehci_attach(device_t dev)
 	ehci_softc_t *sc = device_get_softc(dev);
 	bus_space_handle_t bsh;
 	int err, rid;
-	
+
 	/* initialize some bus fields */
 	sc->sc_bus.parent = dev;
 	sc->sc_bus.devices = sc->sc_devices;
@@ -324,7 +319,7 @@ zy7_ehci_detach(device_t dev)
 
 	/* during module unload there are lots of children leftover */
 	device_delete_children(dev);
-	
+
 	if ((sc->sc_flags & EHCI_SCFLG_DONEINIT) != 0) {
 		ehci_detach(sc);
 		sc->sc_flags &= ~EHCI_SCFLG_DONEINIT;

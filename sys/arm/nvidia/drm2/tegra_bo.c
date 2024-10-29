@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -63,12 +62,11 @@ tegra_bo_destruct(struct tegra_bo *bo)
 	VM_OBJECT_WLOCK(bo->cdev_pager);
 	for (i = 0; i < bo->npages; i++) {
 		m = bo->m[i];
+		vm_page_busy_acquire(m, 0);
 		cdev_pager_free_page(bo->cdev_pager, m);
-		vm_page_lock(m);
 		m->flags &= ~PG_FICTITIOUS;
 		vm_page_unwire_noq(m);
 		vm_page_free(m);
-		vm_page_unlock(m);
 	}
 	VM_OBJECT_WUNLOCK(bo->cdev_pager);
 
@@ -97,21 +95,19 @@ tegra_bo_alloc_contig(size_t npages, u_long alignment, vm_memattr_t memattr,
     vm_page_t **ret_page)
 {
 	vm_page_t m;
-	int pflags, tries, i;
+	int tries, i;
 	vm_paddr_t low, high, boundary;
 
 	low = 0;
 	high = -1UL;
 	boundary = 0;
-	pflags = VM_ALLOC_NORMAL  | VM_ALLOC_NOOBJ | VM_ALLOC_NOBUSY |
-	    VM_ALLOC_WIRED | VM_ALLOC_ZERO;
 	tries = 0;
 retry:
-	m = vm_page_alloc_contig(NULL, 0, pflags, npages, low, high, alignment,
-	    boundary, memattr);
+	m = vm_page_alloc_noobj_contig(VM_ALLOC_WIRED | VM_ALLOC_ZERO, npages,
+	    low, high, alignment, boundary, memattr);
 	if (m == NULL) {
 		if (tries < 3) {
-			if (!vm_page_reclaim_contig(pflags, npages, low, high,
+			if (!vm_page_reclaim_contig(0, npages, low, high,
 			    alignment, boundary))
 				vm_wait(NULL);
 			tries++;
@@ -121,8 +117,6 @@ retry:
 	}
 
 	for (i = 0; i < npages; i++, m++) {
-		if ((m->flags & PG_ZERO) == 0)
-			pmap_zero_page(m);
 		m->valid = VM_PAGE_BITS_ALL;
 		(*ret_page)[i] = m;
 	}
@@ -231,8 +225,6 @@ tegra_bo_create(struct drm_device *drm, size_t size, struct tegra_bo **res_bo)
 	*res_bo = bo;
 	return (0);
 }
-
-
 
 static int
 tegra_bo_create_with_handle(struct drm_file *file, struct drm_device *drm,

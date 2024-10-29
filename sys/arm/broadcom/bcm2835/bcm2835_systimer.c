@@ -1,5 +1,5 @@
 /*
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012 Oleksandr Tymoshenko <gonzo@freebsd.org>
  * Copyright (c) 2012 Damjan Marion <dmarion@freebsd.org>
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -137,7 +136,6 @@ bcm_systimer_start(struct eventtimer *et, sbintime_t first, sbintime_t period)
 	register_t s;
 
 	if (first != 0) {
-
 		count = ((uint32_t)et->et_frequency * first) >> 32;
 
 		s = intr_disable();

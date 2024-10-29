@@ -24,7 +24,6 @@
  */
 
 #include <machine/asm.h>
-
 	.section .init,"ax",@progbits
 	ld %r1,0(%r1)
 	ld 0,16(%r1)

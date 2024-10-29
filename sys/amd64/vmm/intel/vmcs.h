@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
@@ -24,13 +24,15 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _VMCS_H_
 #define	_VMCS_H_
 
 #ifdef _KERNEL
+
+struct vm_snapshot_meta;
+
 struct vmcs {
 	uint32_t	identifier;
 	uint32_t	abort_code;
@@ -54,6 +56,16 @@ int	vmcs_getdesc(struct vmcs *vmcs, int running, int ident,
 		     struct seg_desc *desc);
 int	vmcs_setdesc(struct vmcs *vmcs, int running, int ident,
 		     struct seg_desc *desc);
+#ifdef BHYVE_SNAPSHOT
+int	vmcs_getany(struct vmcs *vmcs, int running, int ident, uint64_t *val);
+int	vmcs_setany(struct vmcs *vmcs, int running, int ident, uint64_t val);
+int	vmcs_snapshot_reg(struct vmcs *vmcs, int running, int ident,
+			  struct vm_snapshot_meta *meta);
+int	vmcs_snapshot_desc(struct vmcs *vmcs, int running, int seg,
+			   struct vm_snapshot_meta *meta);
+int	vmcs_snapshot_any(struct vmcs *vmcs, int running, int ident,
+			  struct vm_snapshot_meta *meta);
+#endif
 
 /*
  * Avoid header pollution caused by inline use of 'vtophys()' in vmx_cpufunc.h
@@ -62,7 +74,7 @@ int	vmcs_setdesc(struct vmcs *vmcs, int running, int ident,
 static __inline uint64_t
 vmcs_read(uint32_t encoding)
 {
-	int error;
+	int error __diagused;
 	uint64_t val;
 
 	error = vmread(encoding, &val);
@@ -73,7 +85,7 @@ vmcs_read(uint32_t encoding)
 static __inline void
 vmcs_write(uint32_t encoding, uint64_t val)
 {
-	int error;
+	int error __diagused;
 
 	error = vmwrite(encoding, val);
 	KASSERT(error == 0, ("vmcs_write(%u) error %d", encoding, error));

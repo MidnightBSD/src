@@ -22,7 +22,6 @@
  * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef _MACHINE_PMC_MDEP_H_
@@ -37,6 +36,11 @@
 #include <dev/hwpmc/hwpmc_arm64.h>
 
 union pmc_md_op_pmcallocate {
+	struct {
+		uint32_t	pm_md_config;
+		uint32_t	pm_md_flags;
+#define	PM_MD_RAW_EVENT		0x1
+	};
 	uint64_t		__pad[4];
 };
 
@@ -49,12 +53,11 @@ union pmc_md_pmc {
 	struct pmc_md_arm64_pmc		pm_arm64;
 };
 
-#define	PMC_IN_KERNEL_STACK(S,START,END)		\
-	((S) >= (START) && (S) < (END))
+#define	PMC_IN_KERNEL_STACK(va)	kstack_contains(curthread, (va), sizeof(va))
 #define	PMC_IN_KERNEL(va)	INKERNEL((va))
-#define	PMC_IN_USERSPACE(va) ((va) <= VM_MAXUSER_ADDRESS)
-#define	PMC_TRAPFRAME_TO_PC(TF)		((TF)->tf_lr)
-#define	PMC_TRAPFRAME_TO_FP(TF)		((TF)->tf_x[29])
+#define	PMC_IN_USERSPACE(va)	((va) <= VM_MAXUSER_ADDRESS)
+#define	PMC_TRAPFRAME_TO_PC(TF)	((TF)->tf_elr)
+#define	PMC_TRAPFRAME_TO_FP(TF)	((TF)->tf_x[29])
 
 /*
  * Prototypes

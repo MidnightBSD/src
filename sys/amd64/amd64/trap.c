@@ -40,7 +40,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * AMD64 Trap and System call handling
  */
@@ -51,13 +50,12 @@
 #include "opt_hwpmc_hooks.h"
 #include "opt_isa.h"
 #include "opt_kdb.h"
-#include "opt_stack.h"
 
 #include <sys/param.h>
+#include <sys/asan.h>
 #include <sys/bus.h>
 #include <sys/systm.h>
 #include <sys/proc.h>
-#include <sys/pioctl.h>
 #include <sys/ptrace.h>
 #include <sys/kdb.h>
 #include <sys/kernel.h>
@@ -174,6 +172,39 @@ SYSCTL_INT(_machdep, OID_AUTO, nmi_flush_l1d_sw, CTLFLAG_RWTUN,
     "Flush L1 Data Cache on NMI exit, software bhyve L1TF mitigation assist");
 
 /*
+ * Table of handlers for various segment load faults.
+ */
+static const struct {
+	uintptr_t	faddr;
+	uintptr_t	fhandler;
+} sfhandlers[] = {
+	{
+		.faddr = (uintptr_t)ld_ds,
+		.fhandler = (uintptr_t)ds_load_fault,
+	},
+	{
+		.faddr = (uintptr_t)ld_es,
+		.fhandler = (uintptr_t)es_load_fault,
+	},
+	{
+		.faddr = (uintptr_t)ld_fs,
+		.fhandler = (uintptr_t)fs_load_fault,
+	},
+	{
+		.faddr = (uintptr_t)ld_gs,
+		.fhandler = (uintptr_t)gs_load_fault,
+	},
+	{
+		.faddr = (uintptr_t)ld_gsbase,
+		.fhandler = (uintptr_t)gsbase_load_fault
+	},
+	{
+		.faddr = (uintptr_t)ld_fsbase,
+		.fhandler = (uintptr_t)fsbase_load_fault,
+	},
+};
+
+/*
  * Exception, fault, and trap interface to the FreeBSD kernel.
  * This common code is called from assembly language IDT gate entry
  * routines that prepare a suitable stack frame, and restore this
@@ -187,12 +218,15 @@ trap(struct trapframe *frame)
 	struct thread *td;
 	struct proc *p;
 	register_t addr, dr6;
+	size_t i;
 	int pf, signo, ucode;
 	u_int type;
 
 	td = curthread;
 	p = td->td_proc;
 	dr6 = 0;
+
+	kasan_mark(frame, sizeof(*frame), sizeof(*frame), 0);
 
 	VM_CNT_INC(v_trap);
 	type = frame->tf_trapno;
@@ -227,11 +261,6 @@ trap(struct trapframe *frame)
 		    (*pmc_intr)(frame) != 0)
 			return;
 #endif
-
-#ifdef STACK
-		if (stack_nmi_handler(frame) != 0)
-			return;
-#endif
 	}
 
 	if ((frame->tf_rflags & PSL_I) == 0) {
@@ -242,25 +271,33 @@ trap(struct trapframe *frame)
 		 * interrupts disabled until they are accidentally
 		 * enabled later.
 		 */
-		if (TRAPF_USERMODE(frame))
+		if (TRAPF_USERMODE(frame)) {
 			uprintf(
-			    "pid %ld (%s): trap %d with interrupts disabled\n",
-			    (long)curproc->p_pid, curthread->td_name, type);
-		else if (type != T_NMI && type != T_BPTFLT &&
-		    type != T_TRCTRAP) {
-			/*
-			 * XXX not quite right, since this may be for a
-			 * multiple fault in user mode.
-			 */
-			printf("kernel trap %d with interrupts disabled\n",
-			    type);
+			    "pid %ld (%s): trap %d (%s) "
+			    "with interrupts disabled\n",
+			    (long)curproc->p_pid, curthread->td_name, type,
+			    trap_msg[type]);
+		} else {
+			switch (type) {
+			case T_NMI:
+			case T_BPTFLT:
+			case T_TRCTRAP:
+			case T_PROTFLT:
+			case T_SEGNPFLT:
+			case T_STKFLT:
+				break;
+			default:
+				printf(
+				    "kernel trap %d with interrupts disabled\n",
+				    type);
 
-			/*
-			 * We shouldn't enable interrupts while holding a
-			 * spin lock.
-			 */
-			if (td->td_md.md_spinlock_count == 0)
-				enable_intr();
+				/*
+				 * We shouldn't enable interrupts while holding a
+				 * spin lock.
+				 */
+				if (td->td_md.md_spinlock_count == 0)
+					enable_intr();
+			}
 		}
 	}
 
@@ -451,6 +488,8 @@ trap(struct trapframe *frame)
 			 * the hardware trap frame.
 			 */
 			if (frame->tf_rip == (long)doreti_iret) {
+				KASSERT((read_rflags() & PSL_I) == 0,
+				    ("interrupts enabled"));
 				frame->tf_rip = (long)doreti_iret_fault;
 				if ((PCPU_GET(curpmap)->pm_ucr3 !=
 				    PMAP_NO_CR3) &&
@@ -461,30 +500,16 @@ trap(struct trapframe *frame)
 				}
 				return;
 			}
-			if (frame->tf_rip == (long)ld_ds) {
-				frame->tf_rip = (long)ds_load_fault;
-				return;
+
+			for (i = 0; i < nitems(sfhandlers); i++) {
+				if (frame->tf_rip == sfhandlers[i].faddr) {
+					KASSERT((read_rflags() & PSL_I) == 0,
+					    ("interrupts enabled"));
+					frame->tf_rip = sfhandlers[i].fhandler;
+					return;
+				}
 			}
-			if (frame->tf_rip == (long)ld_es) {
-				frame->tf_rip = (long)es_load_fault;
-				return;
-			}
-			if (frame->tf_rip == (long)ld_fs) {
-				frame->tf_rip = (long)fs_load_fault;
-				return;
-			}
-			if (frame->tf_rip == (long)ld_gs) {
-				frame->tf_rip = (long)gs_load_fault;
-				return;
-			}
-			if (frame->tf_rip == (long)ld_gsbase) {
-				frame->tf_rip = (long)gsbase_load_fault;
-				return;
-			}
-			if (frame->tf_rip == (long)ld_fsbase) {
-				frame->tf_rip = (long)fsbase_load_fault;
-				return;
-			}
+
 			if (curpcb->pcb_onfault != NULL) {
 				frame->tf_rip = (long)curpcb->pcb_onfault;
 				return;
@@ -593,21 +618,17 @@ trap(struct trapframe *frame)
 		return;
 	}
 
-	/* Translate fault for emulators (e.g. Linux) */
-	if (*p->p_sysent->sv_transtrap != NULL)
-		signo = (*p->p_sysent->sv_transtrap)(signo, type);
-
 	ksiginfo_init_trap(&ksi);
 	ksi.ksi_signo = signo;
 	ksi.ksi_code = ucode;
 	ksi.ksi_trapno = type;
 	ksi.ksi_addr = (void *)addr;
 	if (uprintf_signal) {
-		uprintf("pid %d comm %s: signal %d err %lx code %d type %d "
-		    "addr 0x%lx rsp 0x%lx rip 0x%lx "
+		uprintf("pid %d comm %s: signal %d err %#lx code %d type %d "
+		    "addr %#lx rsp %#lx rip %#lx rax %#lx "
 		    "<%02x %02x %02x %02x %02x %02x %02x %02x>\n",
 		    p->p_pid, p->p_comm, signo, frame->tf_err, ucode, type,
-		    addr, frame->tf_rsp, frame->tf_rip,
+		    addr, frame->tf_rsp, frame->tf_rip, frame->tf_rax,
 		    fubyte((void *)(frame->tf_rip + 0)),
 		    fubyte((void *)(frame->tf_rip + 1)),
 		    fubyte((void *)(frame->tf_rip + 2)),
@@ -849,21 +870,20 @@ after_vmfault:
 }
 
 static void
-trap_fatal(frame, eva)
-	struct trapframe *frame;
-	vm_offset_t eva;
+trap_fatal(struct trapframe *frame, vm_offset_t eva)
 {
 	int code, ss;
 	u_int type;
 	struct soft_segment_descriptor softseg;
+	struct user_segment_descriptor *gdt;
 #ifdef KDB
 	bool handled;
 #endif
 
 	code = frame->tf_err;
 	type = frame->tf_trapno;
-	sdtossd(&gdt[NGDT * PCPU_GET(cpuid) + IDXSEL(frame->tf_cs & 0xffff)],
-	    &softseg);
+	gdt = *PCPU_PTR(gdt);
+	sdtossd(&gdt[IDXSEL(frame->tf_cs & 0xffff)], &softseg);
 
 	printf("\n\nFatal trap %d: %s while in %s mode\n", type,
 	    type < nitems(trap_msg) ? trap_msg[type] : UNKNOWN,
@@ -932,7 +952,7 @@ trap_user_dtrace(struct trapframe *frame, int (**hookp)(struct trapframe *))
 {
 	int (*hook)(struct trapframe *);
 
-	hook = (int (*)(struct trapframe *))atomic_load_ptr(hookp);
+	hook = atomic_load_ptr(hookp);
 	enable_intr();
 	if (hook != NULL)
 		return ((hook)(frame) == 0);
@@ -993,30 +1013,26 @@ cpu_fetch_syscall_args_fallback(struct thread *td, struct syscall_args *sa)
 	reg = 0;
 	regcnt = NARGREGS;
 
-	sa->code = frame->tf_rax;
-
 	if (sa->code == SYS_syscall || sa->code == SYS___syscall) {
 		sa->code = frame->tf_rdi;
 		reg++;
 		regcnt--;
 	}
- 	if (p->p_sysent->sv_mask)
- 		sa->code &= p->p_sysent->sv_mask;
 
- 	if (sa->code >= p->p_sysent->sv_size)
- 		sa->callp = &p->p_sysent->sv_table[0];
-  	else
- 		sa->callp = &p->p_sysent->sv_table[sa->code];
+	if (sa->code >= p->p_sysent->sv_size)
+		sa->callp = &nosys_sysent;
+	else
+		sa->callp = &p->p_sysent->sv_table[sa->code];
 
-	sa->narg = sa->callp->sy_narg;
-	KASSERT(sa->narg <= nitems(sa->args), ("Too many syscall arguments!"));
+	KASSERT(sa->callp->sy_narg <= nitems(sa->args),
+	    ("Too many syscall arguments!"));
 	argp = &frame->tf_rdi;
 	argp += reg;
 	memcpy(sa->args, argp, sizeof(sa->args[0]) * NARGREGS);
-	if (sa->narg > regcnt) {
+	if (sa->callp->sy_narg > regcnt) {
 		params = (caddr_t)frame->tf_rsp + sizeof(register_t);
 		error = copyin(params, &sa->args[regcnt],
-	    	    (sa->narg - regcnt) * sizeof(sa->args[0]));
+		    (sa->callp->sy_narg - regcnt) * sizeof(sa->args[0]));
 		if (__predict_false(error != 0))
 			return (error);
 	}
@@ -1046,13 +1062,10 @@ cpu_fetch_syscall_args(struct thread *td)
 		return (cpu_fetch_syscall_args_fallback(td, sa));
 
 	sa->callp = &p->p_sysent->sv_table[sa->code];
-	sa->narg = sa->callp->sy_narg;
-	KASSERT(sa->narg <= nitems(sa->args), ("Too many syscall arguments!"));
+	KASSERT(sa->callp->sy_narg <= nitems(sa->args),
+	    ("Too many syscall arguments!"));
 
-	if (p->p_sysent->sv_mask)
-		sa->code &= p->p_sysent->sv_mask;
-
-	if (__predict_false(sa->narg > NARGREGS))
+	if (__predict_false(sa->callp->sy_narg > NARGREGS))
 		return (cpu_fetch_syscall_args_fallback(td, sa));
 
 	memcpy(sa->args, &frame->tf_rdi, sizeof(sa->args[0]) * NARGREGS);
@@ -1075,25 +1088,32 @@ flush_l1d_hw(void)
 	wrmsr(MSR_IA32_FLUSH_CMD, IA32_FLUSH_CMD_L1D);
 }
 
-static void __inline
-amd64_syscall_ret_flush_l1d_inline(int error)
+static void __noinline
+amd64_syscall_ret_flush_l1d_check(int error)
 {
 	void (*p)(void);
 
-	if (error != 0 && error != EEXIST && error != EAGAIN &&
-	    error != EXDEV && error != ENOENT && error != ENOTCONN &&
-	    error != EINPROGRESS) {
-		p = syscall_ret_l1d_flush;
+	if (error != EEXIST && error != EAGAIN && error != EXDEV &&
+	    error != ENOENT && error != ENOTCONN && error != EINPROGRESS) {
+		p = atomic_load_ptr(&syscall_ret_l1d_flush);
 		if (p != NULL)
 			p();
 	}
+}
+
+static void __inline
+amd64_syscall_ret_flush_l1d_check_inline(int error)
+{
+
+	if (__predict_false(error != 0))
+		amd64_syscall_ret_flush_l1d_check(error);
 }
 
 void
 amd64_syscall_ret_flush_l1d(int error)
 {
 
-	amd64_syscall_ret_flush_l1d_inline(error);
+	amd64_syscall_ret_flush_l1d_check_inline(error);
 }
 
 void
@@ -1140,8 +1160,7 @@ SYSCTL_PROC(_machdep, OID_AUTO, syscall_ret_flush_l1d, CTLTYPE_INT |
     CTLFLAG_RWTUN | CTLFLAG_NOFETCH | CTLFLAG_MPSAFE, NULL, 0,
     machdep_syscall_ret_flush_l1d, "I",
     "Flush L1D on syscall return with error (0 - off, 1 - on, "
-    "2 - use hw only, 3 - use sw only");
-
+    "2 - use hw only, 3 - use sw only)");
 
 /*
  * System call handler for native binaries.  The trap frame is already
@@ -1194,8 +1213,9 @@ amd64_syscall(struct thread *td, int traced)
 	 * not be safe.  Instead, use the full return path which
 	 * catches the problem safely.
 	 */
-	if (__predict_false(td->td_frame->tf_rip >= VM_MAXUSER_ADDRESS))
+	if (__predict_false(td->td_frame->tf_rip >= (la57 ?
+	    VM_MAXUSER_ADDRESS_LA57 : VM_MAXUSER_ADDRESS_LA48)))
 		set_pcb_flags(td->td_pcb, PCB_FULL_IRET);
 
-	amd64_syscall_ret_flush_l1d_inline(td->td_errno);
+	amd64_syscall_ret_flush_l1d_check_inline(td->td_errno);
 }

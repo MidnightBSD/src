@@ -1,3 +1,6 @@
+#
+#
+
 PACKAGE=	lib${LIB}
 OPENBSMDIR=		${SRCTOP}/contrib/openbsm
 _LIBBSMDIR=		${OPENBSMDIR}/libbsm

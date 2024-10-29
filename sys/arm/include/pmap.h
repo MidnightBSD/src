@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2016 Svatopluk Kraus
  * Copyright (c) 2016 Michal Meloun
@@ -25,23 +25,15 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _MACHINE_PMAP_H_
 #define _MACHINE_PMAP_H_
 
-#if __ARM_ARCH >= 6
 #include <machine/pmap-v6.h>
-#else
-#include <machine/pmap-v4.h>
-#endif
 
 #ifdef _KERNEL
 #include <sys/systm.h>
-
-extern vm_paddr_t dump_avail[];
-extern vm_paddr_t phys_avail[];
 
 extern char *_tmppt;	/* poor name! */
 
@@ -49,8 +41,9 @@ extern vm_offset_t virtual_avail;
 extern vm_offset_t virtual_end;
 
 void *pmap_kenter_temporary(vm_paddr_t, int);
-#define	pmap_page_is_write_mapped(m)	(((m)->aflags & PGA_WRITEABLE) != 0)
+#define	pmap_page_is_write_mapped(m)	(((m)->a.flags & PGA_WRITEABLE) != 0)
 void pmap_page_set_memattr(vm_page_t, vm_memattr_t);
+#define	pmap_map_delete(pmap, sva, eva)	pmap_remove(pmap, sva, eva)
 
 void *pmap_mapdev(vm_paddr_t, vm_size_t);
 void pmap_unmapdev(vm_offset_t, vm_size_t);
@@ -76,6 +69,10 @@ pmap_vmspace_copy(pmap_t dst_pmap __unused, pmap_t src_pmap __unused)
 
 	return (0);
 }
+
+#define	PMAP_ENTER_QUICK_LOCKED	0x10000000
+
+#define	pmap_vm_page_alloc_check(m)
 
 #endif	/* _KERNEL */
 #endif	/* !_MACHINE_PMAP_H_ */

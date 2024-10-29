@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright 2019 Michal Meloun <mmel@FreeBSD.org>
  *
@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -48,28 +47,33 @@
 #define	DEVICE_UNLOCK(_clk)						\
 	CLKDEV_DEVICE_UNLOCK(clknode_get_device(_clk))
 
+#define	RK_CLK_FRACT_MASK_SHIFT	16
+
 static int rk_clk_fract_init(struct clknode *clk, device_t dev);
 static int rk_clk_fract_recalc(struct clknode *clk, uint64_t *req);
 static int rk_clk_fract_set_freq(struct clknode *clknode, uint64_t fin,
     uint64_t *fout, int flag, int *stop);
+static int rk_clk_fract_set_gate(struct clknode *clk, bool enable);
 
 struct rk_clk_fract_sc {
 	uint32_t	flags;
 	uint32_t	offset;
 	uint32_t	numerator;
 	uint32_t	denominator;
+	uint32_t	gate_offset;
+	uint32_t	gate_shift;
 };
 
 static clknode_method_t rk_clk_fract_methods[] = {
 	/* Device interface */
 	CLKNODEMETHOD(clknode_init,		rk_clk_fract_init),
+	CLKNODEMETHOD(clknode_set_gate,		rk_clk_fract_set_gate),
 	CLKNODEMETHOD(clknode_recalc_freq,	rk_clk_fract_recalc),
 	CLKNODEMETHOD(clknode_set_freq,		rk_clk_fract_set_freq),
 	CLKNODEMETHOD_END
 };
 DEFINE_CLASS_1(rk_clk_fract, rk_clk_fract_class, rk_clk_fract_methods,
    sizeof(struct rk_clk_fract_sc), clknode_class);
-
 
 /*
  * Compute best rational approximation of input fraction
@@ -147,6 +151,30 @@ rk_clk_fract_init(struct clknode *clk, device_t dev)
 	clknode_init_parent_idx(clk, 0);
 
 	return(0);
+}
+
+static int
+rk_clk_fract_set_gate(struct clknode *clk, bool enable)
+{
+	struct rk_clk_fract_sc *sc;
+	uint32_t val = 0;
+
+	sc = clknode_get_softc(clk);
+
+	if ((sc->flags & RK_CLK_FRACT_HAVE_GATE) == 0)
+		return (0);
+
+	RD4(clk, sc->gate_offset, &val);
+
+	val = 0;
+	if (!enable)
+		val |= 1 << sc->gate_shift;
+	val |= (1 << sc->gate_shift) << RK_CLK_FRACT_MASK_SHIFT;
+	DEVICE_LOCK(clk);
+	WR4(clk, sc->gate_offset, val);
+	DEVICE_UNLOCK(clk);
+
+	return (0);
 }
 
 static int
@@ -240,6 +268,8 @@ rk_clk_fract_register(struct clkdom *clkdom, struct rk_clk_fract_def *clkdef)
 	sc = clknode_get_softc(clk);
 	sc->flags = clkdef->flags;
 	sc->offset = clkdef->offset;
+	sc->gate_offset = clkdef->gate_offset;
+	sc->gate_shift = clkdef->gate_shift;
 
 	clknode_register(clkdom, clk);
 	return (0);

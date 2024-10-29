@@ -1,4 +1,3 @@
-# $FreeBSD: stable/11/share/i18n/esdb/Makefile 296281 2016-03-01 22:25:49Z bdrewery $
 # $NetBSD: Makefile,v 1.14 2007/04/01 18:52:30 tnozaki Exp $
 
 FILESDIR= ${ESDBDIR}

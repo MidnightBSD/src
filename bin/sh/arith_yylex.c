@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <ctype.h>
 #include <errno.h>
 #include <inttypes.h>

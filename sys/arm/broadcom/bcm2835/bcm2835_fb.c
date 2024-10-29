@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012 Oleksandr Tymoshenko <gonzo@freebsd.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  *
  */
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -190,7 +189,6 @@ static device_method_t bcm_fb_methods[] = {
 	/* Device interface */
 	DEVMETHOD(device_probe,		bcm_fb_probe),
 	DEVMETHOD(device_attach,	bcm_fb_attach),
-
 	{ 0, 0 }
 };
 

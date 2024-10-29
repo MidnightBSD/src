@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2012, 2013 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Oleksandr Rybalko under sponsorship
  * from the FreeBSD Foundation.
@@ -30,7 +29,6 @@
 /* Simple UART console driver for Freescale i.MX515 */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -135,7 +133,6 @@ uart_cnungrab(struct consdev *cp)
 {
 
 }
-
 
 static void
 uart_cnprobe(struct consdev *cp)

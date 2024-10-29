@@ -18,7 +18,6 @@
  * information: Portions Copyright [yyyy] [name of copyright owner]
  *
  * CDDL HEADER END
- *
  */
 /*
  * Copyright 2004 Sun Microsystems, Inc.  All rights reserved.

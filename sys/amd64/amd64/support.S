@@ -31,7 +31,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include "opt_ddb.h"
@@ -79,30 +78,6 @@ ENTRY(pagecopy)
 	POP_FRAME_POINTER
 	ret
 END(pagecopy)
-
-/* Address: %rdi */
-ENTRY(sse2_pagezero)
-	PUSH_FRAME_POINTER
-	movq	$-PAGE_SIZE,%rdx
-	subq	%rdx,%rdi
-	xorl	%eax,%eax
-	jmp	1f
-	/*
-	 * The loop takes 29 bytes.  Ensure that it doesn't cross a 32-byte
-	 * cache line.
-	 */
-	.p2align 5,0x90
-1:
-	movnti	%rax,(%rdi,%rdx)
-	movnti	%rax,8(%rdi,%rdx)
-	movnti	%rax,16(%rdi,%rdx)
-	movnti	%rax,24(%rdi,%rdx)
-	addq	$32,%rdx
-	jne	1b
-	sfence
-	POP_FRAME_POINTER
-	ret
-END(sse2_pagezero)
 
 /*
  * memcmp(b1, b2, len)
@@ -712,6 +687,72 @@ ENTRY(fillw)
 	ret
 END(fillw)
 
+/*
+ * strlen(string)
+ *	  %rdi
+ *
+ * Uses the ((x - 0x01....01) & ~x & 0x80....80) trick.
+ *
+ * 0x01....01 is replaced with 0x0 - 0x01....01 so that it can be added
+ * with leaq.
+ *
+ * For a description see either:
+ * - "Hacker's Delight" by Henry S. Warren, Jr.
+ * - "Optimizing subroutines in assembly language: An optimization guide for x86 platforms"
+ *   by Agner Fog
+ *
+ * The latter contains a 32-bit variant of the same algorithm coded in assembly for i386.
+ */
+ENTRY(strlen)
+	PUSH_FRAME_POINTER
+	movabsq	$0xfefefefefefefeff,%r8
+	movabsq	$0x8080808080808080,%r9
+
+	movq	%rdi,%r10
+	movq	%rdi,%rcx
+	testb	$7,%dil
+	jz	2f
+
+	/*
+	 * Handle misaligned reads: align to 8 and fill
+	 * the spurious bytes.
+	 */
+	andq	$~7,%rdi
+	movq	(%rdi),%r11
+	shlq	$3,%rcx
+	movq	$-1,%rdx
+	shlq	%cl,%rdx
+	notq	%rdx
+	orq	%rdx,%r11
+
+	leaq	(%r11,%r8),%rcx
+	notq	%r11
+	andq	%r11,%rcx
+	andq	%r9,%rcx
+	jnz	3f
+
+	/*
+	 * Main loop.
+	 */
+	ALIGN_TEXT
+1:
+	leaq	8(%rdi),%rdi
+2:
+	movq	(%rdi),%r11
+	leaq	(%r11,%r8),%rcx
+	notq	%r11
+	andq	%r11,%rcx
+	andq	%r9,%rcx
+	jz	1b
+3:
+	bsfq	%rcx,%rcx
+	shrq	$3,%rcx
+	leaq	(%rcx,%rdi),%rax
+	subq	%r10,%rax
+	POP_FRAME_POINTER
+	ret
+END(strlen)
+
 /*****************************************************************************/
 /* copyout and fubyte family                                                 */
 /*****************************************************************************/
@@ -879,7 +920,8 @@ copy_fault:
 
 /*
  * casueword32.  Compare and set user integer.  Returns -1 on fault,
- *        0 if access was successful.  Old value is written to *oldp.
+ *        0 if access was successful, and 1 when comparison failed.
+ *        Old value is written to *oldp.
  *        dst = %rdi, old = %esi, oldp = %rdx, new = %ecx
  */
 ENTRY(casueword32_nosmap)
@@ -958,7 +1000,8 @@ END(casueword32_smap)
 
 /*
  * casueword.  Compare and set user long.  Returns -1 on fault,
- *        0 if access was successful.  Old value is written to *oldp.
+ *        0 if access was successful, and 1 when comparison failed.
+ *        Old value is written to *oldp.
  *        dst = %rdi, old = %rsi, oldp = %rdx, new = %rcx
  */
 ENTRY(casueword_nosmap)
@@ -1423,43 +1466,6 @@ copyinstr_toolong:
 	jmp	cpystrflt_x
 
 /*
- * copystr(from, to, maxlen, int *lencopied)
- *         %rdi, %rsi, %rdx, %rcx
- */
-ENTRY(copystr)
-	PUSH_FRAME_POINTER
-	movq	%rdx,%r8			/* %r8 = maxlen */
-
-	incq    %rdx
-1:
-	decq	%rdx
-	jz	4f
-	movb	(%rdi),%al
-	movb	%al,(%rsi)
-	incq	%rsi
-	incq	%rdi
-	testb	%al,%al
-	jnz	1b
-
-	/* Success -- 0 byte reached */
-	decq	%rdx
-	xorl	%eax,%eax
-2:
-	testq	%rcx,%rcx
-	jz      3f
-	/* set *lencopied and return %rax */
-	subq	%rdx,%r8
-	movq	%r8,(%rcx)
-3:
-	POP_FRAME_POINTER
-	ret
-4:
-	/* rdx is zero -- return ENAMETOOLONG */
-	movl    $ENAMETOOLONG,%eax
-	jmp	2b
-END(copystr)
-
-/*
  * Handling of special amd64 registers and descriptor tables etc
  */
 /* void lgdt(struct region_descriptor *rdp); */
@@ -1527,6 +1533,7 @@ ENTRY(rdmsr_safe)
 /* int rdmsr_safe(u_int msr, uint64_t *data) */
 	PUSH_FRAME_POINTER
 	movq	PCPU(CURPCB),%r8
+	movq	PCB_ONFAULT(%r8),%r9
 	movq	$msr_onfault,PCB_ONFAULT(%r8)
 	movl	%edi,%ecx
 	rdmsr			/* Read MSR pointed by %ecx. Returns
@@ -1535,8 +1542,8 @@ ENTRY(rdmsr_safe)
 	movl	%eax,%eax	/* zero-extend %eax -> %rax */
 	orq	%rdx,%rax
 	movq	%rax,(%rsi)
-	xorq	%rax,%rax
-	movq	%rax,PCB_ONFAULT(%r8)
+	movq	%r9,PCB_ONFAULT(%r8)
+	xorl	%eax,%eax
 	POP_FRAME_POINTER
 	ret
 
@@ -1548,6 +1555,7 @@ ENTRY(wrmsr_safe)
 /* int wrmsr_safe(u_int msr, uint64_t data) */
 	PUSH_FRAME_POINTER
 	movq	PCPU(CURPCB),%r8
+	movq	PCB_ONFAULT(%r8),%r9
 	movq	$msr_onfault,PCB_ONFAULT(%r8)
 	movl	%edi,%ecx
 	movl	%esi,%eax
@@ -1555,8 +1563,8 @@ ENTRY(wrmsr_safe)
 	movl	%esi,%edx
 	wrmsr			/* Write MSR pointed by %ecx. Accepts
 				   hi byte in edx, lo in %eax. */
-	xorq	%rax,%rax
-	movq	%rax,PCB_ONFAULT(%r8)
+	movq	%r9,PCB_ONFAULT(%r8)
+	xorl	%eax,%eax
 	POP_FRAME_POINTER
 	ret
 
@@ -1565,7 +1573,7 @@ ENTRY(wrmsr_safe)
  */
 	ALIGN_TEXT
 msr_onfault:
-	movq	$0,PCB_ONFAULT(%r8)
+	movq	%r9,PCB_ONFAULT(%r8)
 	movl	$EFAULT,%eax
 	POP_FRAME_POINTER
 	ret
@@ -1694,7 +1702,8 @@ END(handle_ibrs_exit_rs)
  *
  * N.B. The function does not follow ABI calling conventions, it corrupts %rbx.
  * The vmm.ko caller expects that only %rax, %rdx, %rbx, %rcx, %r9, and %rflags
- * registers are clobbered.  The NMI handler caller only needs %r13 preserved.
+ * registers are clobbered.  The NMI handler caller only needs %r13 and %r15
+ * preserved.
  */
 ENTRY(flush_l1d_sw)
 #define	L1D_FLUSH_SIZE	(64 * 1024)
@@ -1963,3 +1972,24 @@ ENTRY(mds_handler_silvermont)
 	popq	%rax
 	retq
 END(mds_handler_silvermont)
+
+/*
+ * Do the same as Linux and execute IRET explicitly, despite IPI
+ * return does it as well.
+ */
+ENTRY(cpu_sync_core)
+/*
+ * Can utilize SERIALIZE when instruction is moved from
+ * 'future extensions' to SDM.
+ */
+	movq	(%rsp), %rdx
+	movl	%ss, %eax
+	pushq	%rax
+	pushq	%rsp
+	addq	$16, (%rsp)
+	pushfq
+	movl	%cs, %eax
+	pushq	%rax
+	pushq	%rdx
+	iretq
+END(cpu_sync_core)

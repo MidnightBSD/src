@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2014 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Edward Tomasz Napierala under sponsorship
  * from the FreeBSD Foundation.
@@ -36,7 +35,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <assert.h>
 #include <err.h>
 #include <errno.h>
@@ -54,6 +52,8 @@
 #define _CTASSERT(x, y)		__CTASSERT(x, y)
 #define __CTASSERT(x, y)	typedef char __assert_ ## y [(x) ? 1 : -1]
 #endif
+
+#define PE_ALIGMENT_SIZE	8
 
 struct mz_header {
 	uint8_t			mz_signature[2];
@@ -242,7 +242,8 @@ parse_section_table(struct executable *x, off_t off, int number_of_sections)
 	x->x_nsections = number_of_sections;
 
 	for (i = 0; i < number_of_sections; i++) {
-		if (psh->psh_pointer_to_raw_data < x->x_headers_len)
+		if (psh->psh_size_of_raw_data > 0 &&
+		    psh->psh_pointer_to_raw_data < x->x_headers_len)
 			errx(1, "section points inside the headers");
 
 		range_check(x, psh->psh_pointer_to_raw_data,
@@ -497,19 +498,17 @@ parse(struct executable *x)
 }
 
 static off_t
-append(struct executable *x, void *ptr, size_t len)
+append(struct executable *x, void *ptr, size_t len, size_t aligment)
 {
 	off_t off;
 
-	/*
-	 * XXX: Alignment.
-	 */
 	off = x->x_len;
-	x->x_buf = realloc(x->x_buf, x->x_len + len);
+	x->x_buf = realloc(x->x_buf, x->x_len + len + aligment);
 	if (x->x_buf == NULL)
 		err(1, "realloc");
 	memcpy(x->x_buf + x->x_len, ptr, len);
-	x->x_len += len;
+	memset(x->x_buf + x->x_len + len, 0, aligment);
+	x->x_len += len + aligment;
 
 	return (off);
 }
@@ -521,12 +520,18 @@ update(struct executable *x)
 	struct pe_certificate *pc;
 	struct pe_directory_entry pde;
 	size_t pc_len;
+	size_t pc_aligment;
 	off_t pc_off;
 
 	pc_len = sizeof(*pc) + x->x_signature_len;
 	pc = calloc(1, pc_len);
 	if (pc == NULL)
 		err(1, "calloc");
+
+	if (pc_len % PE_ALIGMENT_SIZE > 0)
+		pc_aligment = PE_ALIGMENT_SIZE - (pc_len % PE_ALIGMENT_SIZE);
+	else
+		pc_aligment = 0;
 
 #if 0
 	/*
@@ -544,7 +549,7 @@ update(struct executable *x)
 	pc->pc_type = PE_CERTIFICATE_TYPE;
 	memcpy(&pc->pc_signature, x->x_signature, x->x_signature_len);
 
-	pc_off = append(x, pc, pc_len);
+	pc_off = append(x, pc, pc_len, pc_aligment);
 #if 0
 	printf("added signature chunk at offset %zd, len %zd\n",
 	    pc_off, pc_len);
@@ -553,7 +558,7 @@ update(struct executable *x)
 	free(pc);
 
 	pde.pde_rva = pc_off;
-	pde.pde_size = pc_len;
+	pde.pde_size = pc_len + pc_aligment;
 	memcpy(x->x_buf + x->x_certificate_entry_off, &pde, sizeof(pde));
 
 	checksum = compute_checksum(x);

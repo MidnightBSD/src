@@ -44,7 +44,6 @@ static char sccsid[] = "@(#)main.c	8.6 (Berkeley) 5/28/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-
 #include <stdio.h>
 #include <signal.h>
 #include <sys/stat.h>
@@ -74,6 +73,9 @@ static char sccsid[] = "@(#)main.c	8.6 (Berkeley) 5/28/95";
 #include "cd.h"
 #include "redir.h"
 #include "builtins.h"
+#ifndef NO_HISTORY
+#include "myhistedit.h"
+#endif
 
 int rootpid;
 int rootshell;
@@ -104,19 +106,6 @@ main(int argc, char *argv[])
 	initcharset();
 	state = 0;
 	if (setjmp(main_handler.loc)) {
-		switch (exception) {
-		case EXEXEC:
-			exitstatus = exerrno;
-			break;
-
-		case EXERROR:
-			exitstatus = 2;
-			break;
-
-		default:
-			break;
-		}
-
 		if (state == 0 || iflag == 0 || ! rootshell ||
 		    exception == EXEXIT)
 			exitshell(exitstatus);
@@ -146,6 +135,7 @@ main(int argc, char *argv[])
 	setstackmark(&smark);
 	setstackmark(&smark2);
 	procargs(argc, argv);
+	trap_init();
 	pwd_init(iflag);
 	INTON;
 	if (iflag)
@@ -168,6 +158,10 @@ state2:
 			read_profile(shinit);
 		}
 	}
+#ifndef NO_HISTORY
+	if (iflag)
+		histload();
+#endif
 state3:
 	state = 4;
 	popstackmark(&smark2);

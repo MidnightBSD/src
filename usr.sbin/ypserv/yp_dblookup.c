@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <db.h>
 #include <errno.h>
 #include <fcntl.h>

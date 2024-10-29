@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
@@ -24,11 +24,9 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/systm.h>
@@ -115,7 +113,7 @@ struct domain {
 
 static SLIST_HEAD(, domain) domhead;
 
-#define	DRHD_MAX_UNITS	8
+#define	DRHD_MAX_UNITS	16
 static ACPI_DMAR_HARDWARE_UNIT	*drhds[DRHD_MAX_UNITS];
 static int			drhd_num;
 static struct vtdmap		*vtdmaps[DRHD_MAX_UNITS];
@@ -169,7 +167,7 @@ domain_id(void)
 		if (dom == NULL)
 			break;		/* found it */
 	}
-	
+
 	if (id >= max_domains)
 		panic("domain ids exhausted");
 
@@ -272,7 +270,7 @@ vtd_iotlb_global_invalidate(struct vtdmap *vtdmap)
 
 	offset = VTD_ECAP_IRO(vtdmap->ext_cap) * 16;
 	iotlb_reg = (volatile uint64_t *)((caddr_t)vtdmap + offset + 8);
-	
+
 	*iotlb_reg =  VTD_IIR_IVT | VTD_IIR_IIRG_GLOBAL |
 		      VTD_IIR_DRAIN_READS | VTD_IIR_DRAIN_WRITES;
 
@@ -751,7 +749,7 @@ static void
 vtd_destroy_domain(void *arg)
 {
 	struct domain *dom;
-	
+
 	dom = arg;
 
 	SLIST_REMOVE(&domhead, dom, domain, next);
@@ -759,16 +757,16 @@ vtd_destroy_domain(void *arg)
 	free(dom, M_VTD);
 }
 
-struct iommu_ops iommu_ops_intel = {
-	vtd_init,
-	vtd_cleanup,
-	vtd_enable,
-	vtd_disable,
-	vtd_create_domain,
-	vtd_destroy_domain,
-	vtd_create_mapping,
-	vtd_remove_mapping,
-	vtd_add_device,
-	vtd_remove_device,
-	vtd_invalidate_tlb,
+const struct iommu_ops iommu_ops_intel = {
+	.init = vtd_init,
+	.cleanup = vtd_cleanup,
+	.enable = vtd_enable,
+	.disable = vtd_disable,
+	.create_domain = vtd_create_domain,
+	.destroy_domain = vtd_destroy_domain,
+	.create_mapping = vtd_create_mapping,
+	.remove_mapping = vtd_remove_mapping,
+	.add_device = vtd_add_device,
+	.remove_device = vtd_remove_device,
+	.invalidate_tlb = vtd_invalidate_tlb,
 };

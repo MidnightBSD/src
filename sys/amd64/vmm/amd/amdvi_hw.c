@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2016, Anish Gupta (anish@freebsd.org)
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -58,7 +57,8 @@
 #include "amdvi_priv.h"
 
 SYSCTL_DECL(_hw_vmm);
-SYSCTL_NODE(_hw_vmm, OID_AUTO, amdvi, CTLFLAG_RW, NULL, NULL);
+SYSCTL_NODE(_hw_vmm, OID_AUTO, amdvi, CTLFLAG_RW | CTLFLAG_MPSAFE, NULL,
+    NULL);
 
 #define MOD_INC(a, s, m) (((a) + (s)) % ((m) * (s)))
 #define MOD_DEC(a, s, m) (((a) - (s)) % ((m) * (s)))
@@ -125,7 +125,7 @@ static inline uint32_t
 amdvi_pci_read(struct amdvi_softc *softc, int off)
 {
 
-	return (pci_cfgregread(PCI_RID2BUS(softc->pci_rid),
+	return (pci_cfgregread(softc->pci_seg, PCI_RID2BUS(softc->pci_rid),
 	    PCI_RID2SLOT(softc->pci_rid), PCI_RID2FUNC(softc->pci_rid),
 	    off, 4));
 }
@@ -355,7 +355,6 @@ amdvi_cmd_inv_iommu_pages(struct amdvi_softc *softc, uint16_t domain_id,
 	cmd = amdvi_get_cmd_tail(softc);
 	KASSERT(cmd != NULL, ("Cmd is NULL"));
 
-
 	cmd->opcode = AMDVI_INVD_PAGE_OPCODE;
 	cmd->word1 = domain_id;
 	/*
@@ -422,7 +421,7 @@ amdvi_cmd_inv_intr_map(struct amdvi_softc *softc,
 static void
 amdvi_inv_domain(struct amdvi_softc *softc, uint16_t domain_id)
 {
-	struct amdvi_cmd *cmd;
+	struct amdvi_cmd *cmd __diagused;
 
 	cmd = amdvi_get_cmd_tail(softc);
 	KASSERT(cmd != NULL, ("Cmd is NULL"));
@@ -443,13 +442,14 @@ amdvi_inv_domain(struct amdvi_softc *softc, uint16_t domain_id)
 static	bool
 amdvi_cmp_wait(struct amdvi_softc *softc)
 {
-	struct amdvi_ctrl *ctrl;
+#ifdef AMDVI_DEBUG_CMD
+	struct amdvi_ctrl *ctrl = softc->ctrl;
+#endif
 	const uint64_t VERIFY = 0xA5A5;
 	volatile uint64_t *read;
 	int i;
 	bool status;
 
-	ctrl = softc->ctrl;
 	read = &softc->cmp_data;
 	*read = 0;
 	amdvi_cmd_cmp(softc, VERIFY);
@@ -727,7 +727,6 @@ amdvi_print_pci_cap(device_t dev)
 	struct amdvi_softc *softc;
 	uint32_t off, cap;
 
-
 	softc = device_get_softc(dev);
 	off = softc->cap_off;
 
@@ -800,7 +799,6 @@ amdvi_alloc_intr_resources(struct amdvi_softc *softc)
 		    device_get_nameunit(mmio_dev));
 	return (err);
 }
-
 
 static void
 amdvi_print_dev_cap(struct amdvi_softc *softc)
@@ -876,16 +874,16 @@ amdvi_add_sysctl(struct amdvi_softc *softc)
 	SYSCTL_ADD_U16(ctx, child, OID_AUTO, "pci_rid", CTLFLAG_RD,
 	    &softc->pci_rid, 0, "IOMMU RID");
 	SYSCTL_ADD_PROC(ctx, child, OID_AUTO, "command_head",
-	    CTLTYPE_UINT | CTLFLAG_RD, softc, 0,
+	    CTLTYPE_UINT | CTLFLAG_RD | CTLFLAG_MPSAFE, softc, 0,
 	    amdvi_handle_sysctl, "IU", "Command head");
 	SYSCTL_ADD_PROC(ctx, child, OID_AUTO, "command_tail",
-	    CTLTYPE_UINT | CTLFLAG_RD, softc, 1,
+	    CTLTYPE_UINT | CTLFLAG_RD | CTLFLAG_MPSAFE, softc, 1,
 	    amdvi_handle_sysctl, "IU", "Command tail");
 	SYSCTL_ADD_PROC(ctx, child, OID_AUTO, "event_head",
-	    CTLTYPE_UINT | CTLFLAG_RD, softc, 2,
+	    CTLTYPE_UINT | CTLFLAG_RD | CTLFLAG_MPSAFE, softc, 2,
 	    amdvi_handle_sysctl, "IU", "Command head");
 	SYSCTL_ADD_PROC(ctx, child, OID_AUTO, "event_tail",
-	    CTLTYPE_UINT | CTLFLAG_RD, softc, 3,
+	    CTLTYPE_UINT | CTLFLAG_RD | CTLFLAG_MPSAFE, softc, 3,
 	    amdvi_handle_sysctl, "IU", "Command tail");
 }
 
@@ -1049,7 +1047,6 @@ amdvi_free_ptp(uint64_t *ptp, int level)
 
 		amdvi_free_ptp((uint64_t *)PHYS_TO_DMAP(ptp[i]
 		    & AMDVI_PT_MASK), level - 1);
-
 	}
 
 	free(ptp, M_AMDVI);
@@ -1183,7 +1180,7 @@ amdvi_create_mapping(void *arg, vm_paddr_t gpa, vm_paddr_t hpa,
 }
 
 static uint64_t
-amdvi_destroy_mapping(void *arg, vm_paddr_t gpa, uint64_t len)
+amdvi_remove_mapping(void *arg, vm_paddr_t gpa, uint64_t len)
 {
 	struct amdvi_domain *domain;
 
@@ -1362,7 +1359,7 @@ amdvi_disable(void)
 }
 
 static void
-amdvi_inv_tlb(void *arg)
+amdvi_invalidate_tlb(void *arg)
 {
 	struct amdvi_domain *domain;
 
@@ -1371,16 +1368,16 @@ amdvi_inv_tlb(void *arg)
 	amdvi_do_inv_domain(domain->id, false);
 }
 
-struct iommu_ops iommu_ops_amd = {
-	amdvi_init,
-	amdvi_cleanup,
-	amdvi_enable,
-	amdvi_disable,
-	amdvi_create_domain,
-	amdvi_destroy_domain,
-	amdvi_create_mapping,
-	amdvi_destroy_mapping,
-	amdvi_add_device,
-	amdvi_remove_device,
-	amdvi_inv_tlb
+const struct iommu_ops iommu_ops_amd = {
+	.init = amdvi_init,
+	.cleanup = amdvi_cleanup,
+	.enable = amdvi_enable,
+	.disable = amdvi_disable,
+	.create_domain = amdvi_create_domain,
+	.destroy_domain = amdvi_destroy_domain,
+	.create_mapping = amdvi_create_mapping,
+	.remove_mapping = amdvi_remove_mapping,
+	.add_device = amdvi_add_device,
+	.remove_device = amdvi_remove_device,
+	.invalidate_tlb = amdvi_invalidate_tlb
 };

@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -189,13 +188,16 @@ rstmgr_add_sysctl(struct rstmgr_softc *sc)
 	children = SYSCTL_CHILDREN(device_get_sysctl_tree(sc->dev));
 
 	SYSCTL_ADD_PROC(ctx, children, OID_AUTO, "fpga2hps",
-	    CTLTYPE_UINT | CTLFLAG_RW, sc, RSTMGR_SYSCTL_FPGA2HPS,
+	    CTLTYPE_UINT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
+	    sc, RSTMGR_SYSCTL_FPGA2HPS,
 	    rstmgr_sysctl, "I", "Enable fpga2hps bridge");
 	SYSCTL_ADD_PROC(ctx, children, OID_AUTO, "lwhps2fpga",
-	    CTLTYPE_UINT | CTLFLAG_RW, sc, RSTMGR_SYSCTL_LWHPS2FPGA,
+	    CTLTYPE_UINT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
+	    sc, RSTMGR_SYSCTL_LWHPS2FPGA,
 	    rstmgr_sysctl, "I", "Enable lwhps2fpga bridge");
 	SYSCTL_ADD_PROC(ctx, children, OID_AUTO, "hps2fpga",
-	    CTLTYPE_UINT | CTLFLAG_RW, sc, RSTMGR_SYSCTL_HPS2FPGA,
+	    CTLTYPE_UINT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
+	    sc, RSTMGR_SYSCTL_HPS2FPGA,
 	    rstmgr_sysctl, "I", "Enable hps2fpga bridge");
 
 	return (0);

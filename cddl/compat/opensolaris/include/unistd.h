@@ -23,8 +23,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $FreeBSD: stable/11/cddl/compat/opensolaris/include/unistd.h 177698 2008-03-28 22:16:18Z jb $
- *
  */
 
 #ifndef _COMPAT_OPENSOLARIS_UNISTD_H_

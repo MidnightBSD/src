@@ -47,11 +47,6 @@ struct mdthread {
 	int md_ptrace_addr;
 	int md_ptrace_instr_alt;
 	int md_ptrace_addr_alt;
-#if __ARM_ARCH < 6
-	register_t md_tp;
-	void *md_ras_start;
-	void *md_ras_end;
-#endif
 };
 
 struct mdproc {
@@ -73,8 +68,6 @@ struct syscall_args {
 	u_int code;
 	struct sysent *callp;
 	register_t args[MAXARGS];
-	int narg;
-	u_int nap;
 } __aligned(8);
 
 #ifdef _KERNEL

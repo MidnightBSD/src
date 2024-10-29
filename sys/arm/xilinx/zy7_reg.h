@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012-2013 Thomas Skibo
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -54,7 +53,6 @@
 
 #define ZYNQ7_UART1_HWBASE	(ZYNQ7_PSIO_HWBASE+0x1000)
 #define ZYNQ7_UART1_SIZE	0x1000
-
 
 /* SMC Memories not mapped for now. */
 #define ZYNQ7_SMC_HWBASE	0xE1000000

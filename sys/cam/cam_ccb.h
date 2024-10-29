@@ -1,7 +1,7 @@
 /*-
  * Data structures and definitions for CAM Control Blocks (CCBs).
  *
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1997, 1998 Justin T. Gibbs.
  * All rights reserved.
@@ -26,7 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _CAM_CAM_CCB_H
@@ -60,8 +59,8 @@
 /* CAM CCB flags */
 typedef enum {
 	CAM_CDB_POINTER		= 0x00000001,/* The CDB field is a pointer    */
-	CAM_QUEUE_ENABLE	= 0x00000002,/* SIM queue actions are enabled */
-	CAM_CDB_LINKED		= 0x00000004,/* CCB contains a linked CDB     */
+	CAM_unused1		= 0x00000002,
+	CAM_unused2		= 0x00000004,
 	CAM_NEGOTIATE		= 0x00000008,/*
 					      * Perform transport negotiation
 					      * with this command.
@@ -79,8 +78,8 @@ typedef enum {
 	CAM_DATA_SG_PADDR	= 0x00040010,/* Data type (011:sglist phys)   */
 	CAM_DATA_BIO		= 0x00200000,/* Data type (100:bio)           */
 	CAM_DATA_MASK		= 0x00240010,/* Data type mask                */
-	CAM_SOFT_RST_OP		= 0x00000100,/* Use Soft reset alternative    */
-	CAM_ENG_SYNC		= 0x00000200,/* Flush resid bytes on complete */
+	CAM_unused3		= 0x00000100,
+	CAM_unused4		= 0x00000200,
 	CAM_DEV_QFRZDIS		= 0x00000400,/* Disable DEV Q freezing	      */
 	CAM_DEV_QFREEZE		= 0x00000800,/* Freeze DEV Q on execution     */
 	CAM_HIGH_POWER		= 0x00001000,/* Command takes a lot of power  */
@@ -89,24 +88,24 @@ typedef enum {
 	CAM_TAG_ACTION_VALID	= 0x00008000,/* Use the tag action in this ccb*/
 	CAM_PASS_ERR_RECOVER	= 0x00010000,/* Pass driver does err. recovery*/
 	CAM_DIS_DISCONNECT	= 0x00020000,/* Disable disconnect	      */
-	CAM_MSG_BUF_PHYS	= 0x00080000,/* Message buffer ptr is physical*/
-	CAM_SNS_BUF_PHYS	= 0x00100000,/* Autosense data ptr is physical*/
+	CAM_unused5		= 0x00080000,
+	CAM_unused6		= 0x00100000,
 	CAM_CDB_PHYS		= 0x00400000,/* CDB poiner is physical	      */
-	CAM_ENG_SGLIST		= 0x00800000,/* SG list is for the HBA engine */
+	CAM_unused7		= 0x00800000,
 
 /* Phase cognizant mode flags */
-	CAM_DIS_AUTOSRP		= 0x01000000,/* Disable autosave/restore ptrs */
-	CAM_DIS_AUTODISC	= 0x02000000,/* Disable auto disconnect	      */
-	CAM_TGT_CCB_AVAIL	= 0x04000000,/* Target CCB available	      */
-	CAM_TGT_PHASE_MODE	= 0x08000000,/* The SIM runs in phase mode    */
-	CAM_MSGB_VALID		= 0x10000000,/* Message buffer valid	      */
-	CAM_STATUS_VALID	= 0x20000000,/* Status buffer valid	      */
-	CAM_DATAB_VALID		= 0x40000000,/* Data buffer valid	      */
+	CAM_unused8		= 0x01000000,
+	CAM_unused9		= 0x02000000,
+	CAM_unused10		= 0x04000000,
+	CAM_unused11		= 0x08000000,
+	CAM_unused12		= 0x10000000,
+	CAM_unused13		= 0x20000000,
+	CAM_unused14		= 0x40000000,
 
 /* Host target Mode flags */
 	CAM_SEND_SENSE		= 0x08000000,/* Send sense data with status   */
-	CAM_TERM_IO		= 0x10000000,/* Terminate I/O Message sup.    */
-	CAM_DISCONNECT		= 0x20000000,/* Disconnects are mandatory     */
+	CAM_unused15		= 0x10000000,
+	CAM_unused16		= 0x20000000,
 	CAM_SEND_STATUS		= 0x40000000,/* Send status after data phase  */
 
 	CAM_UNLOCKED		= 0x80000000 /* Call callback without lock.   */
@@ -245,6 +244,9 @@ typedef enum {
 				/* Acknowledgement of event */
 	XPT_REPROBE_LUN		= 0x38 | XPT_FC_QUEUED | XPT_FC_USER_CCB,
 				/* Query device capacity and notify GEOM */
+
+	XPT_MMC_SET_TRAN_SETTINGS = 0x40 | XPT_FC_DEV_QUEUED,
+	XPT_MMC_GET_TRAN_SETTINGS = 0x41 | XPT_FC_DEV_QUEUED,
 
 /* Vendor Unique codes: 0x80->0x8F */
 	XPT_VUNIQUE		= 0x80
@@ -406,13 +408,12 @@ struct ccb_getdevlist {
 };
 
 typedef enum {
-	PERIPH_MATCH_NONE	= 0x000,
+	PERIPH_MATCH_ANY	= 0x000,
 	PERIPH_MATCH_PATH	= 0x001,
 	PERIPH_MATCH_TARGET	= 0x002,
 	PERIPH_MATCH_LUN	= 0x004,
 	PERIPH_MATCH_NAME	= 0x008,
 	PERIPH_MATCH_UNIT	= 0x010,
-	PERIPH_MATCH_ANY	= 0x01f
 } periph_pattern_flags;
 
 struct periph_match_pattern {
@@ -425,13 +426,12 @@ struct periph_match_pattern {
 };
 
 typedef enum {
-	DEV_MATCH_NONE		= 0x000,
+	DEV_MATCH_ANY		= 0x000,
 	DEV_MATCH_PATH		= 0x001,
 	DEV_MATCH_TARGET	= 0x002,
 	DEV_MATCH_LUN		= 0x004,
 	DEV_MATCH_INQUIRY	= 0x008,
 	DEV_MATCH_DEVID		= 0x010,
-	DEV_MATCH_ANY		= 0x00f
 } dev_pattern_flags;
 
 struct device_id_match_pattern {
@@ -451,12 +451,11 @@ struct device_match_pattern {
 };
 
 typedef enum {
-	BUS_MATCH_NONE		= 0x000,
+	BUS_MATCH_ANY		= 0x000,
 	BUS_MATCH_PATH		= 0x001,
 	BUS_MATCH_NAME		= 0x002,
 	BUS_MATCH_UNIT		= 0x004,
 	BUS_MATCH_BUS_ID	= 0x008,
-	BUS_MATCH_ANY		= 0x00f
 } bus_pattern_flags;
 
 struct bus_match_pattern {
@@ -578,7 +577,7 @@ struct ccb_dev_match {
 /*
  * Definitions for the path inquiry CCB fields.
  */
-#define CAM_VERSION	0x19	/* Hex value for current version */
+#define CAM_VERSION	0x1a	/* Hex value for current version */
 
 typedef enum {
 	PI_MDP_ABLE	= 0x80,	/* Supports MDP message */
@@ -1037,7 +1036,6 @@ struct ccb_trans_settings_nvme
 	uint8_t		speed;		/* PCIe generation for each lane */
 	uint8_t		max_lanes;	/* Number of PCIe lanes */
 	uint8_t		max_speed;	/* PCIe generation for each lane */
-
 };
 
 #include <cam/mmc/mmc_bus.h>
@@ -1050,15 +1048,43 @@ struct ccb_trans_settings_mmc {
 #define MMC_PM		(1 << 5)
 #define MMC_BT		(1 << 6)
 #define MMC_BM		(1 << 7)
+#define MMC_VCCQ        (1 << 8)
 	uint32_t ios_valid;
 /* The folowing is used only for GET_TRAN_SETTINGS */
 	uint32_t	host_ocr;
 	int host_f_min;
 	int host_f_max;
-#define MMC_CAP_4_BIT_DATA	(1 << 0) /* Can do 4-bit data transfers */
-#define MMC_CAP_8_BIT_DATA	(1 << 1) /* Can do 8-bit data transfers */
-#define MMC_CAP_HSPEED		(1 << 2) /* Can do High Speed transfers */
+/* Copied from sys/dev/mmc/bridge.h */
+#define	MMC_CAP_4_BIT_DATA	(1 <<  0) /* Can do 4-bit data transfers */
+#define	MMC_CAP_8_BIT_DATA	(1 <<  1) /* Can do 8-bit data transfers */
+#define	MMC_CAP_HSPEED		(1 <<  2) /* Can do High Speed transfers */
+#define	MMC_CAP_BOOT_NOACC	(1 <<  4) /* Cannot access boot partitions */
+#define	MMC_CAP_WAIT_WHILE_BUSY	(1 <<  5) /* Host waits for busy responses */
+#define	MMC_CAP_UHS_SDR12	(1 <<  6) /* Can do UHS SDR12 */
+#define	MMC_CAP_UHS_SDR25	(1 <<  7) /* Can do UHS SDR25 */
+#define	MMC_CAP_UHS_SDR50	(1 <<  8) /* Can do UHS SDR50 */
+#define	MMC_CAP_UHS_SDR104	(1 <<  9) /* Can do UHS SDR104 */
+#define	MMC_CAP_UHS_DDR50	(1 << 10) /* Can do UHS DDR50 */
+#define	MMC_CAP_MMC_DDR52_120	(1 << 11) /* Can do eMMC DDR52 at 1.2 V */
+#define	MMC_CAP_MMC_DDR52_180	(1 << 12) /* Can do eMMC DDR52 at 1.8 V */
+#define	MMC_CAP_MMC_DDR52	(MMC_CAP_MMC_DDR52_120 | MMC_CAP_MMC_DDR52_180)
+#define	MMC_CAP_MMC_HS200_120	(1 << 13) /* Can do eMMC HS200 at 1.2 V */
+#define	MMC_CAP_MMC_HS200_180	(1 << 14) /* Can do eMMC HS200 at 1.8 V */
+#define	MMC_CAP_MMC_HS200	(MMC_CAP_MMC_HS200_120| MMC_CAP_MMC_HS200_180)
+#define	MMC_CAP_MMC_HS400_120	(1 << 15) /* Can do eMMC HS400 at 1.2 V */
+#define	MMC_CAP_MMC_HS400_180	(1 << 16) /* Can do eMMC HS400 at 1.8 V */
+#define	MMC_CAP_MMC_HS400	(MMC_CAP_MMC_HS400_120 | MMC_CAP_MMC_HS400_180)
+#define	MMC_CAP_MMC_HSX00_120	(MMC_CAP_MMC_HS200_120 | MMC_CAP_MMC_HS400_120)
+#define	MMC_CAP_MMC_ENH_STROBE	(1 << 17) /* Can do eMMC Enhanced Strobe */
+#define	MMC_CAP_SIGNALING_120	(1 << 18) /* Can do signaling at 1.2 V */
+#define	MMC_CAP_SIGNALING_180	(1 << 19) /* Can do signaling at 1.8 V */
+#define	MMC_CAP_SIGNALING_330	(1 << 20) /* Can do signaling at 3.3 V */
+#define	MMC_CAP_DRIVER_TYPE_A	(1 << 21) /* Can do Driver Type A */
+#define	MMC_CAP_DRIVER_TYPE_C	(1 << 22) /* Can do Driver Type C */
+#define	MMC_CAP_DRIVER_TYPE_D	(1 << 23) /* Can do Driver Type D */
+
 	uint32_t host_caps;
+	uint32_t host_max_data;
 };
 
 /* Get/Set transfer rate/width/disconnection/tag queueing settings */
@@ -1087,7 +1113,6 @@ struct ccb_trans_settings {
 	} xport_specific;
 };
 
-
 /*
  * Calculate the geometry parameters for a device
  * give the block size and volume size in blocks.
@@ -1107,7 +1132,6 @@ struct ccb_calc_geometry {
 
 #define	KNOB_VALID_ADDRESS	0x1
 #define	KNOB_VALID_ROLE		0x2
-
 
 #define	KNOB_ROLE_NONE		0x0
 #define	KNOB_ROLE_INITIATOR	0x1

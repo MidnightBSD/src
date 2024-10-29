@@ -6,19 +6,15 @@ SUBDIR= \
 	ctfdump \
 	ctfmerge \
 	${_zinject} \
-	${_zlook} \
-	${_zstreamdump} \
+	${_zstream} \
 	${_ztest}
 
 SUBDIR.${MK_TESTS}+= tests
 
 .if ${MK_ZFS} != "no"
 _zinject= zinject
-#_zlook= zlook
-.if ${MK_LIBTHR} != "no"
 _ztest=	ztest
-_zstreamdump = zstreamdump
-.endif
+_zstream = zstream
 .endif
 
 SUBDIR_PARALLEL=

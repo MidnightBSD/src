@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012
  *	Ben Gray <bgray@freebsd.org>.
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Texas Instruments TWL4030/TWL5030/TWL60x0/TPS659x0 Power Management.
  *
@@ -72,9 +71,7 @@
 #include "twl.h"
 #include "twl_clks.h"
 
-
 static int twl_clks_debug = 1;
-
 
 /*
  * Power Groups bits for the 4030 and 6030 devices
@@ -92,8 +89,6 @@ static int twl_clks_debug = 1;
  */
 #define TWL_CLKS_GRP		0x00	/* Regulator GRP register */
 #define TWL_CLKS_STATE		0x02	/* TWL6030 only */
-
-
 
 /**
  *  Support voltage regulators for the different IC's
@@ -153,9 +148,6 @@ struct twl_clks_softc {
 	} while(0)
 #define TWL_CLKS_LOCK_DOWNGRADE(_sc)	sx_downgrade(&(_sc)->sc_sx);
 
-
-
-
 /**
  *	twl_clks_read_1 - read single register from the TWL device
  *	twl_clks_write_1 - writes a single register in the TWL device
@@ -180,7 +172,6 @@ twl_clks_write_1(struct twl_clks_softc *sc, struct twl_clk_entry *clk,
 {
 	return (twl_write(sc->sc_pdev, clk->sub_dev, clk->reg_off + off, &val, 1));
 }
-
 
 /**
  *	twl_clks_is_enabled - determines if a clock is enabled
@@ -217,15 +208,12 @@ twl_clks_is_enabled(device_t dev, const char *name, int *enabled)
 		return (EINVAL);
 	}
 
-
 	if (twl_is_4030(sc->sc_pdev)) {
-
 		err = twl_clks_read_1(sc, clk, TWL_CLKS_GRP, &grp);
 		if (!err)
 			*enabled = (grp & TWL4030_P1_GRP);
 
 	} else if (twl_is_6030(sc->sc_pdev) || twl_is_6025(sc->sc_pdev)) {
-
 		TWL_CLKS_LOCK_UPGRADE(sc);
 
 		/* Check the clock is in the application group */
@@ -259,7 +247,6 @@ done:
 	return (err);
 }
 
-
 /**
  *	twl_clks_set_state - enables/disables a clock output
  *	@sc: device context
@@ -292,7 +279,6 @@ twl_clks_set_state(struct twl_clks_softc *sc, struct twl_clk_entry *clk,
 		goto done;
 
 	if (twl_is_4030(sc->sc_pdev)) {
-
 		/* On the TWL4030 we just need to ensure the clock is in the right
 		 * power domain, don't need to turn on explicitly like TWL6030.
 		 */
@@ -304,7 +290,6 @@ twl_clks_set_state(struct twl_clks_softc *sc, struct twl_clk_entry *clk,
 		err = twl_clks_write_1(sc, clk, TWL_CLKS_GRP, grp);
 
 	} else if (twl_is_6030(sc->sc_pdev) || twl_is_6025(sc->sc_pdev)) {
-
 		/* Make sure the clock belongs to at least the APP power group */
 		if (twl_is_6030(sc->sc_pdev) && !(grp & TWL6030_P1_GRP)) {
 			grp |= TWL6030_P1_GRP;
@@ -341,7 +326,6 @@ done:
 	return (err);
 }
 
-
 /**
  *	twl_clks_disable - disables a clock output
  *	@dev: TWL clk device
@@ -368,7 +352,7 @@ twl_clks_disable(device_t dev, const char *name)
 			break;
 		}
 	}
-	
+
 	TWL_CLKS_SUNLOCK(sc);
 	return (err);
 }
@@ -399,7 +383,7 @@ twl_clks_enable(device_t dev, const char *name)
 			break;
 		}
 	}
-	
+
 	TWL_CLKS_SUNLOCK(sc);
 	return (err);
 }
@@ -425,7 +409,7 @@ twl_clks_sysctl_clock(SYSCTL_HANDLER_ARGS)
 
 	if ((err = twl_clks_is_enabled(sc->sc_dev, oidp->oid_name, &enabled)) != 0)
 		return err;
-	
+
 	return sysctl_handle_int(oidp, &enabled, 0, req);
 }
 
@@ -459,18 +443,15 @@ twl_clks_add_clock(struct twl_clks_softc *sc, const char *name,
 	if (new == NULL)
 		return (NULL);
 
-
 	strncpy(new->name, name, TWL_CLKS_MAX_NAMELEN);
 	new->name[TWL_CLKS_MAX_NAMELEN - 1] = '\0';
 
 	new->sub_dev = nsub;
 	new->reg_off = regbase;
 
-
-
 	/* Add a sysctl entry for the clock */
 	new->oid = SYSCTL_ADD_PROC(ctx, SYSCTL_CHILDREN(tree), OID_AUTO, name,
-	    CTLTYPE_INT | CTLFLAG_RD, sc, 0,
+	    CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_NEEDGIANT, sc, 0,
 	    twl_clks_sysctl_clock, "I", "external clock");
 
 	/* Finally add the regulator to list of supported regulators */
@@ -508,13 +489,11 @@ twl_clks_add_clocks(struct twl_clks_softc *sc, const struct twl_clock *clks)
 	int len = 0, prop_len;
 	int enable;
 
-
 	TWL_CLKS_XLOCK(sc);
 
 	/* Add the regulators from the list */
 	walker = &clks[0];
 	while (walker->name != NULL) {
-
 		/* Add the regulator to the list */
 		entry = twl_clks_add_clock(sc, walker->name, walker->subdev,
 		    walker->regbase);
@@ -527,7 +506,6 @@ twl_clks_add_clocks(struct twl_clks_softc *sc, const struct twl_clock *clks)
 	/* Check for any FDT settings that need to be applied */
 	child = ofw_bus_get_node(sc->sc_pdev);
 	if (child) {
-
 		prop_len = OF_getprop(child, "external-clocks", rnames, sizeof(rnames));
 		while (len < prop_len) {
 			name = rnames + len;
@@ -550,10 +528,9 @@ twl_clks_add_clocks(struct twl_clks_softc *sc, const struct twl_clock *clks)
 			}
 		}
 	}
-	
+
 	TWL_CLKS_XUNLOCK(sc);
 
-	
 	if (twl_clks_debug) {
 		LIST_FOREACH(entry, &sc->sc_clks_list, link) {
 			err = twl_clks_is_enabled(sc->sc_dev, entry->name, &enable);
@@ -618,7 +595,6 @@ twl_clks_attach(device_t dev)
 	TWL_CLKS_LOCK_INIT(sc);
 
 	LIST_INIT(&sc->sc_clks_list);
-
 
 	sc->sc_init_hook.ich_func = twl_clks_init;
 	sc->sc_init_hook.ich_arg = dev;

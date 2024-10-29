@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2014 Andrew Turner
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +25,6 @@
  */
 
 #include <machine/asm.h>
-
 ENTRY(cerror)
 	.hidden	cerror
 	sub	sp, sp, #16

@@ -1,6 +1,6 @@
 /*	$NetBSD: imx51_ccm.c,v 1.1 2012/04/17 09:33:31 bsh Exp $	*/
 /*-
- * SPDX-License-Identifier: BSD-2-Clause AND BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010, 2011, 2012  Genetec Corporation.  All rights reserved.
  * Written by Hashimoto Kenichi for Genetec Corporation.
@@ -61,7 +61,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -247,7 +246,6 @@ imxccm_attach(device_t dev)
 	    imx51_get_clock(IMX51CLK_AHB_CLK_ROOT),
 	    imx51_get_clock(IMX51CLK_IPG_CLK_ROOT),
 	    imx51_get_clock(IMX51CLK_PERCLK_ROOT));
-
 
 	return (0);
 
@@ -436,7 +434,6 @@ imx51_get_clock(enum imx51_clock clk)
 		return 0;
 	}
 }
-
 
 static uint64_t
 imx51_get_pll_freq(u_int pll_no)
@@ -660,4 +657,3 @@ imx_ccm_ahb_hz(void)
 
 	return (imx51_get_clock(IMX51CLK_AHB_CLK_ROOT));
 }
-

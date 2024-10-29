@@ -18,7 +18,6 @@
  * information: Portions Copyright [yyyy] [name of copyright owner]
  *
  * CDDL HEADER END
- *
  */
 /*
  * Copyright 2005 Sun Microsystems, Inc.  All rights reserved.
@@ -34,7 +33,6 @@
 
 #include <machine/frame.h>
 #include <machine/md_var.h>
-#include <machine/reg.h>
 
 #include <vm/vm.h>
 #include <vm/vm_param.h>
@@ -50,12 +48,6 @@
 
 #include "regset.h"
 
-/*
- * Wee need some reasonable default to prevent backtrace code
- * from wandering too far
- */
-#define	MAX_FUNCTION_SIZE 0x10000
-#define	MAX_PROLOGUE_SIZE 0x100
 #define	MAX_USTACK_DEPTH  2048
 
 uint8_t dtrace_fuword8_nocheck(void *);
@@ -69,7 +61,7 @@ dtrace_getpcstack(pc_t *pcstack, int pcstack_limit, int aframes,
 {
 	struct unwind_state state;
 	int scp_offset;
-	register_t sp, fp;
+	register_t sp;
 	int depth;
 
 	depth = 0;
@@ -82,20 +74,15 @@ dtrace_getpcstack(pc_t *pcstack, int pcstack_limit, int aframes,
 
 	__asm __volatile("mov %0, sp" : "=&r" (sp));
 
-	state.fp = (uint64_t)__builtin_frame_address(0);
+	state.fp = (uintptr_t)__builtin_frame_address(0);
 	state.sp = sp;
-	state.pc = (uint64_t)dtrace_getpcstack;
+	state.pc = (uintptr_t)dtrace_getpcstack;
 
 	while (depth < pcstack_limit) {
-		if (!INKERNEL(state.pc) || !INKERNEL(state.fp))
+		if (!unwind_frame(curthread, &state))
 			break;
-
-		fp = state.fp;
-		state.sp = fp + 0x10;
-		/* FP to previous frame (X29) */
-		state.fp = *(register_t *)(fp);
-		/* LR (X30) */
-		state.pc = *(register_t *)(fp + 8) - 4;
+		if (!INKERNEL(state.pc))
+			break;
 
 		/*
 		 * NB: Unlike some other architectures, we don't need to
@@ -148,7 +135,7 @@ dtrace_getustack_common(uint64_t *pcstack, int pcstack_limit, uintptr_t pc,
 			break;
 
 		pc = dtrace_fuword64((void *)(fp +
-		    offsetof(struct arm64_frame, f_retaddr)));
+		    offsetof(struct unwind_state, pc)));
 		fp = dtrace_fuword64((void *)fp);
 
 		if (fp == oldfp) {
@@ -273,19 +260,19 @@ dtrace_getstackdepth(int aframes)
 	int scp_offset;
 	register_t sp;
 	int depth;
-	int done;
+	bool done;
 
 	depth = 1;
-	done = 0;
+	done = false;
 
 	__asm __volatile("mov %0, sp" : "=&r" (sp));
 
-	state.fp = (uint64_t)__builtin_frame_address(0);
+	state.fp = (uintptr_t)__builtin_frame_address(0);
 	state.sp = sp;
-	state.pc = (uint64_t)dtrace_getstackdepth;
+	state.pc = (uintptr_t)dtrace_getstackdepth;
 
 	do {
-		done = unwind_frame(&state);
+		done = !unwind_frame(curthread, &state);
 		if (!INKERNEL(state.pc) || !INKERNEL(state.fp))
 			break;
 		depth++;

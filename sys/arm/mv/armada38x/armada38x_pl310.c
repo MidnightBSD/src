@@ -24,7 +24,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * The machine-dependent part of the arm/pl310 driver for Armada 38x SoCs.
  */

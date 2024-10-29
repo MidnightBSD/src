@@ -20,7 +20,6 @@
  *
  * Portions Copyright 2006-2008 John Birrell jb@freebsd.org
  *
- *
  */
 
 /*
@@ -56,23 +55,22 @@
 #define	FBT_PATCHVAL		0xf0
 #endif
 
-#define	FBT_ENTRY	"entry"
-#define	FBT_RETURN	"return"
-
 int
-fbt_invop(uintptr_t addr, struct trapframe *frame, uintptr_t rval)
+fbt_invop(uintptr_t addr, struct trapframe *frame, uintptr_t scratch __unused)
 {
 	solaris_cpu_t *cpu;
 	uintptr_t *stack;
-	uintptr_t arg0, arg1, arg2, arg3, arg4;
+	uintptr_t arg0, arg1, arg2, arg3, arg4, rval;
 	fbt_probe_t *fbt;
 	int8_t fbtrval;
 
 #ifdef __amd64__
 	stack = (uintptr_t *)frame->tf_rsp;
+	rval = frame->tf_rax;
 #else
 	/* Skip hardware-saved registers. */
 	stack = (uintptr_t *)frame->tf_isp + 3;
+	rval = frame->tf_eax;
 #endif
 
 	cpu = &solaris_cpu[curcpu];

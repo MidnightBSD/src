@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright 1996-1998 John D. Polstra.
  * All rights reserved.
@@ -26,13 +26,13 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/systm.h>
 #include <sys/exec.h>
 #include <sys/imgact.h>
 #include <sys/linker.h>
+#include <sys/reg.h>
 #include <sys/sysent.h>
 #include <sys/imgact_elf.h>
 #include <sys/proc.h>
@@ -55,7 +55,8 @@
 #include "opt_global.h"         /* for OPT_KDTRACE_HOOKS */
 #include "opt_stack.h"          /* for OPT_STACK */
 
-static boolean_t elf32_arm_abi_supported(struct image_params *);
+static boolean_t elf32_arm_abi_supported(struct image_params *, int32_t *,
+    uint32_t *);
 
 u_long elf_hwcap;
 u_long elf_hwcap2;
@@ -63,32 +64,31 @@ u_long elf_hwcap2;
 struct sysentvec elf32_freebsd_sysvec = {
 	.sv_size	= SYS_MAXSYSCALL,
 	.sv_table	= sysent,
-	.sv_mask	= 0,
-	.sv_errsize	= 0,
-	.sv_errtbl	= NULL,
-	.sv_transtrap	= NULL,
 	.sv_fixup	= __elfN(freebsd_fixup),
 	.sv_sendsig	= sendsig,
 	.sv_sigcode	= sigcode,
 	.sv_szsigcode	= &szsigcode,
 	.sv_name	= "FreeBSD ELF32",
 	.sv_coredump	= __elfN(coredump),
+	.sv_elf_core_osabi = ELFOSABI_FREEBSD,
+	.sv_elf_core_abi_vendor = FREEBSD_ABI_VENDOR,
+	.sv_elf_core_prepare_notes = __elfN(prepare_notes),
 	.sv_imgact_try	= NULL,
 	.sv_minsigstksz	= MINSIGSTKSZ,
 	.sv_minuser	= VM_MIN_ADDRESS,
 	.sv_maxuser	= VM_MAXUSER_ADDRESS,
 	.sv_usrstack	= USRSTACK,
 	.sv_psstrings	= PS_STRINGS,
+	.sv_psstringssz	= sizeof(struct ps_strings),
 	.sv_stackprot	= VM_PROT_ALL,
+	.sv_copyout_auxargs = __elfN(freebsd_copyout_auxargs),
 	.sv_copyout_strings = exec_copyout_strings,
 	.sv_setregs	= exec_setregs,
 	.sv_fixlimit	= NULL,
 	.sv_maxssiz	= NULL,
 	.sv_flags	=
-#if __ARM_ARCH >= 6
-			  SV_ASLR | SV_SHP | SV_TIMEKEEP |
-#endif
-			  SV_ABI_FREEBSD | SV_ILP32 | SV_ASLR,
+			  SV_ASLR | SV_SHP | SV_TIMEKEEP | SV_RNG_SEED_VER |
+			  SV_ABI_FREEBSD | SV_ILP32 | SV_SIGSYS,
 	.sv_set_syscall_retval = cpu_set_syscall_retval,
 	.sv_fetch_syscall_args = cpu_fetch_syscall_args,
 	.sv_syscallnames = syscallnames,
@@ -99,6 +99,10 @@ struct sysentvec elf32_freebsd_sysvec = {
 	.sv_trap	= NULL,
 	.sv_hwcap	= &elf_hwcap,
 	.sv_hwcap2	= &elf_hwcap2,
+	.sv_onexec_old	= exec_onexec_old,
+	.sv_onexit	= exit_onexit,
+	.sv_regset_begin = SET_BEGIN(__elfN(regset)),
+	.sv_regset_end  = SET_LIMIT(__elfN(regset)),
 };
 INIT_SYSENTVEC(elf32_sysvec, &elf32_freebsd_sysvec);
 
@@ -120,7 +124,8 @@ SYSINIT(elf32, SI_SUB_EXEC, SI_ORDER_FIRST,
 	&freebsd_brand_info);
 
 static boolean_t
-elf32_arm_abi_supported(struct image_params *imgp)
+elf32_arm_abi_supported(struct image_params *imgp, int32_t *osrel __unused,
+    uint32_t *fctl0 __unused)
 {
 	const Elf_Ehdr *hdr = (const Elf_Ehdr *)imgp->image_header;
 
@@ -137,19 +142,9 @@ elf32_arm_abi_supported(struct image_params *imgp)
 }
 
 void
-elf32_dump_thread(struct thread *td, void *dst, size_t *off)
+elf32_dump_thread(struct thread *td __unused, void *dst __unused,
+    size_t *off __unused)
 {
-#ifdef VFP
-	mcontext_vfp_t vfp;
-
-	if (dst != NULL) {
-		get_vfpcontext(td, &vfp);
-		*off = elf32_populate_note(NT_ARM_VFP, &vfp, dst, sizeof(vfp),
-		    NULL);
-	} else
-		*off = elf32_populate_note(NT_ARM_VFP, NULL, NULL, sizeof(vfp),
-		    NULL);
-#endif
 }
 
 bool
@@ -186,7 +181,6 @@ store_ptr(Elf_Addr *where, Elf_Addr val)
 		memcpy(where, &val, sizeof(val));
 }
 #undef RELOC_ALIGNED_P
-
 
 /* Process one elf relocation with addend. */
 static int
@@ -230,14 +224,13 @@ elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
 	}
 
 	switch (rtype) {
-
 		case R_ARM_NONE:	/* none */
 			break;
 
 		case R_ARM_ABS32:
 			error = lookup(lf, symidx, 1, &addr);
 			if (error != 0)
-				return -1;
+				return (-1);
 			store_ptr(where, addr + load_ptr(where));
 			break;
 
@@ -246,8 +239,9 @@ elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
 			 * There shouldn't be copy relocations in kernel
 			 * objects.
 			 */
-			printf("kldload: unexpected R_COPY relocation\n");
-			return -1;
+			printf("kldload: unexpected R_COPY relocation, "
+			    "symbol index %d\n", symidx);
+			return (-1);
 			break;
 
 		case R_ARM_JUMP_SLOT:
@@ -261,9 +255,9 @@ elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
 			break;
 
 		default:
-			printf("kldload: unexpected relocation type %d\n",
-			       rtype);
-			return -1;
+			printf("kldload: unexpected relocation type %d, "
+			    "symbol index %d\n", rtype, symidx);
+			return (-1);
 	}
 	return(0);
 }
@@ -305,14 +299,8 @@ elf_cpu_load_file(linker_file_t lf)
 	 */
 	if (lf->id == 1)
 		return (0);
-#if __ARM_ARCH >= 6
 	dcache_wb_pou((vm_offset_t)lf->address, (vm_size_t)lf->size);
 	icache_inv_all();
-#else
-	cpu_dcache_wb_range((vm_offset_t)lf->address, (vm_size_t)lf->size);
-	cpu_l2cache_wb_range((vm_offset_t)lf->address, (vm_size_t)lf->size);
-	cpu_icache_sync_range((vm_offset_t)lf->address, (vm_size_t)lf->size);
-#endif
 
 #if defined(DDB) || defined(KDTRACE_HOOKS) || defined(STACK)
 	/*
@@ -321,6 +309,13 @@ elf_cpu_load_file(linker_file_t lf)
 	 */
 	unwind_module_loaded(lf);
 #endif
+
+	return (0);
+}
+
+int
+elf_cpu_parse_dynamic(caddr_t loadbase __unused, Elf_Dyn *dynamic __unused)
+{
 
 	return (0);
 }

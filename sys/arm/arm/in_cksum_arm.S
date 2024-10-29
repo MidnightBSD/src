@@ -44,7 +44,6 @@
 
 #include <machine/asm.h>
 #include "assym.inc"
-
 	.syntax	unified
 /*
  * int in_cksum(struct mbuf *m, int len)
@@ -115,9 +114,7 @@ END(do_cksum)
  */
 /* LINTSTUB: Ignore */
 ASENTRY_NP(L_cksumdata)
-#ifdef _ARM_ARCH_5E
 	pld	[r0]			/* Pre-fetch the start of the buffer */
-#endif
 	mov	r2, #0
 
 	/* We first have to word-align the buffer.  */
@@ -132,24 +129,17 @@ ASENTRY_NP(L_cksumdata)
 	movlt	r5, #0x00
 	ldrbgt	r6, [r0], #0x01		/* Fetch 3rd byte */
 	movle	r6, #0x00
+
 	/* Combine the three bytes depending on endianness and alignment */
-#ifdef __ARMEB__
-	orreq	r2, r5, r4, lsl #8
-	orreq	r2, r2, r6, lsl #24
-	orrne	r2, r4, r5, lsl #8
-	orrne	r2, r2, r6, lsl #16
-#else
 	orreq	r2, r4, r5, lsl #8
 	orreq	r2, r2, r6, lsl #16
 	orrne	r2, r5, r4, lsl #8
 	orrne	r2, r2, r6, lsl #24
-#endif
 	subs	r1, r1, r7		/* Update length */
-	RETeq			/* All done? */
+	RETeq				/* All done? */
 
 	/* Buffer is now word aligned */
 .Lcksumdata_wordaligned:
-#ifdef _ARM_ARCH_5E
 	cmp	r1, #0x04		/* Less than 4 bytes left? */
 	blt	.Lcksumdata_endgame	/* Yup */
 
@@ -204,43 +194,10 @@ ASENTRY_NP(L_cksumdata)
 	adcs	r2, r2, r7
 	adc	r2, r2, #0x00
 
-#else	/* !_ARM_ARCH_5E */
-
-	subs	r1, r1, #0x40
-	blt	.Lcksumdata_bigloop_end
-
-.Lcksumdata_bigloop:
-	ldmia	r0!, {r3, r4, r5, r6}
-	adds	r2, r2, r3
-	adcs	r2, r2, r4
-	adcs	r2, r2, r5
-	ldmia	r0!, {r3, r4, r5, r7}
-	adcs	r2, r2, r6
-	adcs	r2, r2, r3
-	adcs	r2, r2, r4
-	adcs	r2, r2, r5
-	ldmia	r0!, {r3, r4, r5, r6}
-	adcs	r2, r2, r7
-	adcs	r2, r2, r3
-	adcs	r2, r2, r4
-	adcs	r2, r2, r5
-	ldmia	r0!, {r3, r4, r5, r7}
-	adcs	r2, r2, r6
-	adcs	r2, r2, r3
-	adcs	r2, r2, r4
-	adcs	r2, r2, r5
-	adcs	r2, r2, r7
-	adc	r2, r2, #0x00
-	subs	r1, r1, #0x40
-	bge	.Lcksumdata_bigloop
-.Lcksumdata_bigloop_end:
-#endif
-
 	adds	r1, r1, #0x40
 	RETeq
 	cmp	r1, #0x20
 
-#ifdef _ARM_ARCH_5E
 	ldrdge	r4, [r0], #0x08		/* Avoid stalling pld and result */
 	blt	.Lcksumdata_less_than_32
 	pld	[r0, #0x18]
@@ -255,19 +212,6 @@ ASENTRY_NP(L_cksumdata)
 	adcs	r2, r2, r5
 	adcs	r2, r2, r6		/* XXX: Unavoidable result stall */
 	adcs	r2, r2, r7
-#else
-	blt	.Lcksumdata_less_than_32
-	ldmia	r0!, {r3, r4, r5, r6}
-	adds	r2, r2, r3
-	adcs	r2, r2, r4
-	adcs	r2, r2, r5
-	ldmia	r0!, {r3, r4, r5, r7}
-	adcs	r2, r2, r6
-	adcs	r2, r2, r3
-	adcs	r2, r2, r4
-	adcs	r2, r2, r5
-	adcs	r2, r2, r7
-#endif
 	adc	r2, r2, #0x00
 	subs	r1, r1, #0x20
 	RETeq
@@ -325,17 +269,10 @@ ASENTRY_NP(L_cksumdata)
 	movle	r5, #0x00
 	/* Combine the three bytes depending on endianness and alignment */
 	tst	r0, #0x01
-#ifdef __ARMEB__
-	orreq	r3, r4, r3, lsl #8
-	orreq	r3, r3, r5, lsl #24
-	orrne	r3, r3, r4, lsl #8
-	orrne	r3, r3, r5, lsl #16
-#else
 	orreq	r3, r3, r4, lsl #8
 	orreq	r3, r3, r5, lsl #16
 	orrne	r3, r4, r3, lsl #8
 	orrne	r3, r3, r5, lsl #24
-#endif
 	adds	r2, r2, r3
 	adc	r2, r2, #0x00
 	RET

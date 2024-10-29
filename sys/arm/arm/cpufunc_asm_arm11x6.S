@@ -60,7 +60,6 @@
 
 
 #include <machine/asm.h>
-
 	.cpu arm1176jz-s
 
 /*

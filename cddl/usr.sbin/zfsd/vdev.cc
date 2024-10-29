@@ -28,7 +28,6 @@
  * POSSIBILITY OF SUCH DAMAGES.
  *
  * Authors: Justin T. Gibbs     (Spectra Logic Corporation)
- *
  */
 
 /**
@@ -38,6 +37,7 @@
  */
 #include <syslog.h>
 #include <sys/cdefs.h>
+#include <sys/byteorder.h>
 #include <sys/fs/zfs.h>
 
 #include <libzfs.h>
@@ -63,7 +63,6 @@
 #include "zfsd.h"
 #include "zfsd_exception.h"
 #include "zpool_list.h"
-
 /*============================ Namespace Control =============================*/
 using std::string;
 using std::stringstream;

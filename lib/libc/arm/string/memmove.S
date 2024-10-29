@@ -30,7 +30,6 @@
  */
 
 #include <machine/asm.h>
-
 .syntax	unified
 
 #ifndef _BCOPY

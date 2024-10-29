@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/lock.h>
@@ -91,10 +90,8 @@
 #define	A8K_RTC_READ_OUTPUT_DELAY_MASK		0x000000FFFF
 #define	A8K_RTC_READ_OUTPUT_DELAY_VAL		0x3F
 
-
 #define	RTC_RES		0
 #define	RTC_SOC_RES	1
-
 
 static struct resource_spec res_spec[] = {
 	{ SYS_RES_MEMORY,	0,	RF_ACTIVE },
@@ -209,9 +206,7 @@ static int
 mv_rtc_attach(device_t dev)
 {
 	struct mv_rtc_softc *sc;
-	int unit, ret;
-
-	unit = device_get_unit(dev);
+	int ret;
 
 	sc = device_get_softc(dev);
 	sc->dev = dev;

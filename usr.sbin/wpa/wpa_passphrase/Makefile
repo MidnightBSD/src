@@ -5,6 +5,7 @@
 
 .PATH.c:${WPA_SUPPLICANT_DISTDIR}
 
+PACKAGE=	wpa
 PROG=	wpa_passphrase
 SRCS=	wpa_passphrase.c
 

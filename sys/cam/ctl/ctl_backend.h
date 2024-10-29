@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2003 Silicon Graphics International Corp.
  * Copyright (c) 2014-2017 Alexander Motin <mav@FreeBSD.org>
@@ -46,6 +46,7 @@
 
 typedef enum {
 	CTL_LUN_SERSEQ_OFF,
+	CTL_LUN_SERSEQ_SOFT,
 	CTL_LUN_SERSEQ_READ,
 	CTL_LUN_SERSEQ_ON
 } ctl_lun_serseq;
@@ -77,7 +78,6 @@ typedef enum {
 	DECLARE_MODULE(name, name ## _mod, SI_SUB_CONFIGURE, SI_ORDER_FOURTH); \
 	MODULE_DEPEND(name, ctl, 1, 1, 1); \
 	MODULE_DEPEND(name, cam, 1, 1, 1)
-
 
 struct ctl_be_lun;
 typedef void (*be_callback_t)(struct ctl_be_lun *be_lun);

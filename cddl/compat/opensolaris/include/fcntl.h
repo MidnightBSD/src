@@ -23,7 +23,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *
  */
 
 #ifndef _COMPAT_OPENSOLARIS_FCNTL_H_
@@ -31,7 +30,9 @@
 
 #include_next <fcntl.h>
 
+#ifndef open64
 #define open64(...)	open(__VA_ARGS__)
+#endif
 #define openat64(...)	openat(__VA_ARGS__)
 
 #endif

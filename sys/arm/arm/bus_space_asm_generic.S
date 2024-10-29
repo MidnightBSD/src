@@ -36,7 +36,6 @@
  */
 
 #include <machine/asm.h>
-
 /*
  * Generic bus_space functions.
  */

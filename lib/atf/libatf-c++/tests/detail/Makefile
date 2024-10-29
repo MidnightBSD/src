@@ -1,4 +1,3 @@
-# $FreeBSD: stable/11/lib/atf/libatf-c++/tests/detail/Makefile 299094 2016-05-04 23:20:53Z ngie $
 
 .include <bsd.init.mk>
 

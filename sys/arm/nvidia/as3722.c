@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * AS3722 PMIC driver
  */
@@ -50,7 +49,7 @@
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>
 
-#include <gnu/dts/include/dt-bindings/mfd/as3722.h>
+#include <dt-bindings/mfd/as3722.h>
 
 #include "clock_if.h"
 #include "regdev_if.h"

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013 Ganbold Tsagaankhuu <ganbold@freebsd.org>
  * Copyright (c) 2012 Oleksandr Tymoshenko <gonzo@freebsd.org>
@@ -29,7 +29,6 @@
  *
  */
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -61,10 +60,7 @@
 #include "opt_soc.h"
 #endif
 
-#ifdef INTRNG
 #include "pic_if.h"
-#endif
-
 #include "gpio_if.h"
 
 #define	AW_GPIO_DEFAULT_CAPS	(GPIO_PIN_INPUT | GPIO_PIN_OUTPUT |	\
@@ -256,7 +252,6 @@ struct clk_list {
 	clk_t			clk;
 };
 
-#ifdef INTRNG
 struct gpio_irqsrc {
 	struct intr_irqsrc	isrc;
 	u_int			irq;
@@ -268,7 +263,6 @@ struct gpio_irqsrc {
 	uint32_t		oldfunc;
 	bool			enabled;
 };
-#endif
 
 #define	AW_GPIO_MEMRES		0
 #define	AW_GPIO_IRQRES		1
@@ -285,10 +279,8 @@ struct aw_gpio_softc {
 	struct aw_gpio_conf	*conf;
 	TAILQ_HEAD(, clk_list)		clk_list;
 
-#ifdef INTRNG
 	struct gpio_irqsrc 	*gpio_pic_irqsrc;
 	int			nirqs;
-#endif
 };
 
 static struct resource_spec aw_gpio_res_spec[] = {
@@ -662,17 +654,29 @@ aw_gpio_pin_get_locked(struct aw_gpio_softc *sc,uint32_t pin,
     unsigned int *val)
 {
 	uint32_t bank, reg_data;
+	int32_t func;
+	int err;
 
 	AW_GPIO_LOCK_ASSERT(sc);
 
 	if (pin > sc->conf->padconf->npins)
 		return (EINVAL);
 
+	func = aw_gpio_get_function(sc, pin);
+	if (func == sc->conf->padconf->pins[pin].eint_func) {	/* "pl_eintX */
+		err = aw_gpio_set_function(sc, pin, AW_GPIO_INPUT);
+		if (err != 0)
+			return (err);
+	}
+
 	bank = sc->conf->padconf->pins[pin].port;
 	pin = sc->conf->padconf->pins[pin].pin;
 
 	reg_data = AW_GPIO_READ(sc, AW_GPIO_GP_DAT(bank));
 	*val = (reg_data & (1 << pin)) ? 1 : 0;
+
+	if (func == sc->conf->padconf->pins[pin].eint_func)
+		(void)aw_gpio_set_function(sc, pin, func);
 
 	return (0);
 }
@@ -826,14 +830,13 @@ aw_gpio_pin_config_32(device_t dev, uint32_t first_pin, uint32_t num_pins,
     uint32_t *pin_flags)
 {
 	struct aw_gpio_softc *sc;
-	uint32_t bank, pin;
+	uint32_t pin;
 	int err;
 
 	sc = device_get_softc(dev);
 	if (first_pin > sc->conf->padconf->npins)
 		return (EINVAL);
 
-	bank = sc->conf->padconf->pins[first_pin].port;
 	if (sc->conf->padconf->pins[first_pin].pin != 0)
 		return (EINVAL);
 
@@ -1070,10 +1073,8 @@ aw_gpio_attach(device_t dev)
 		goto fail;
 	}
 
-#ifdef INTRNG
 	aw_gpio_register_isrcs(sc);
 	intr_pic_register(dev, OF_xref_from_node(ofw_bus_get_node(dev)));
-#endif
 
 	sc->sc_busdev = gpiobus_attach_bus(dev);
 	if (sc->sc_busdev == NULL)
@@ -1317,20 +1318,21 @@ aw_gpio_pic_setup_intr(device_t dev, struct intr_irqsrc *isrc,
     struct resource *res, struct intr_map_data *data)
 {
 	struct aw_gpio_softc *sc;
-	struct gpio_irqsrc *gi;
 	uint32_t irqcfg;
 	uint32_t pinidx, reg;
 	u_int irq, mode;
 	int err;
 
 	sc = device_get_softc(dev);
-	gi = (struct gpio_irqsrc *)isrc;
 
+	err = 0;
 	switch (data->type) {
 	case INTR_MAP_DATA_GPIO:
 		err = aw_gpio_pic_map_gpio(sc,
 		    (struct intr_map_data_gpio *)data,
 		  &irq, &mode);
+		if (err != 0)
+			return (err);
 		break;
 	default:
 		return (ENOTSUP);
@@ -1450,7 +1452,6 @@ static device_method_t aw_gpio_methods[] = {
 	DEVMETHOD(device_attach,	aw_gpio_attach),
 	DEVMETHOD(device_detach,	aw_gpio_detach),
 
-#ifdef INTRNG
 	/* Interrupt controller interface */
 	DEVMETHOD(pic_disable_intr,	aw_gpio_pic_disable_intr),
 	DEVMETHOD(pic_enable_intr,	aw_gpio_pic_enable_intr),
@@ -1460,7 +1461,6 @@ static device_method_t aw_gpio_methods[] = {
 	DEVMETHOD(pic_post_filter,	aw_gpio_pic_post_filter),
 	DEVMETHOD(pic_post_ithread,	aw_gpio_pic_post_ithread),
 	DEVMETHOD(pic_pre_ithread,	aw_gpio_pic_pre_ithread),
-#endif
 
 	/* GPIO protocol */
 	DEVMETHOD(gpio_get_bus,		aw_gpio_get_bus),

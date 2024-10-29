@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2014 Ian Lepore <ian@freebsd.org>
  * Copyright (c) 2012 Mark Tinguely
@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #ifdef VFP
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -99,12 +98,11 @@ set_coprocessorACR(u_int val)
 	isb();
 }
 
-
 	/* called for each cpu */
 void
 vfp_init(void)
 {
-	u_int fpsid, fpexc, tmp;
+	u_int fpsid, tmp;
 	u_int coproc, vfp_arch;
 
 	coproc = get_coprocessorACR();
@@ -112,7 +110,6 @@ vfp_init(void)
 	set_coprocessorACR(coproc);
 
 	fpsid = fmrx(fpsid);		/* read the vfp system id */
-	fpexc = fmrx(fpexc);		/* read the vfp exception reg */
 
 	if (!(fpsid & VFPSID_HARDSOFT_IMP)) {
 		vfp_exists = 1;
@@ -168,7 +165,6 @@ vfp_init(void)
 }
 
 SYSINIT(vfp, SI_SUB_CPU, SI_ORDER_ANY, vfp_init, NULL);
-
 
 /* start VFP unit, restore the vfp registers from the PCB  and retry
  * the instruction
@@ -323,4 +319,3 @@ vfp_discard(struct thread *td)
 }
 
 #endif
-

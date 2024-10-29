@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
@@ -24,11 +24,9 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -110,7 +108,8 @@ struct pptdev {
 };
 
 SYSCTL_DECL(_hw_vmm);
-SYSCTL_NODE(_hw_vmm, OID_AUTO, ppt, CTLFLAG_RW, 0, "bhyve passthru devices");
+SYSCTL_NODE(_hw_vmm, OID_AUTO, ppt, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "bhyve passthru devices");
 
 static int num_pptdevs;
 SYSCTL_INT(_hw_vmm_ppt, OID_AUTO, devices, CTLFLAG_RD, &num_pptdevs, 0,
@@ -221,7 +220,7 @@ ppt_find(struct vm *vm, int bus, int slot, int func, struct pptdev **pptp)
 }
 
 static void
-ppt_unmap_mmio(struct vm *vm, struct pptdev *ppt)
+ppt_unmap_all_mmio(struct vm *vm, struct pptdev *ppt)
 {
 	int i;
 	struct pptseg *seg;
@@ -409,7 +408,7 @@ ppt_unassign_device(struct vm *vm, int bus, int slot, int func)
 	pci_save_state(ppt->dev);
 	ppt_pci_reset(ppt->dev);
 	pci_restore_state(ppt->dev);
-	ppt_unmap_mmio(vm, ppt);
+	ppt_unmap_all_mmio(vm, ppt);
 	ppt_teardown_msi(ppt);
 	ppt_teardown_msix(ppt);
 	iommu_remove_device(vm_iommu_domain(vm), pci_get_rid(ppt->dev));
@@ -487,12 +486,38 @@ ppt_map_mmio(struct vm *vm, int bus, int slot, int func,
 	return (ENOSPC);
 }
 
+int
+ppt_unmap_mmio(struct vm *vm, int bus, int slot, int func,
+	       vm_paddr_t gpa, size_t len)
+{
+	int i, error;
+	struct pptseg *seg;
+	struct pptdev *ppt;
+
+	error = ppt_find(vm, bus, slot, func, &ppt);
+	if (error)
+		return (error);
+
+	for (i = 0; i < MAX_MMIOSEGS; i++) {
+		seg = &ppt->mmio[i];
+		if (seg->gpa == gpa && seg->len == len) {
+			error = vm_unmap_mmio(vm, seg->gpa, seg->len);
+			if (error == 0) {
+				seg->gpa = 0;
+				seg->len = 0;
+			}
+			return (error);
+		}
+	}
+	return (ENOENT);
+}
+
 static int
 pptintr(void *arg)
 {
 	struct pptdev *ppt;
 	struct pptintr_arg *pptarg;
-	
+
 	pptarg = arg;
 	ppt = pptarg->pptdev;
 
@@ -516,7 +541,7 @@ pptintr(void *arg)
 }
 
 int
-ppt_setup_msi(struct vm *vm, int vcpu, int bus, int slot, int func,
+ppt_setup_msi(struct vm *vm, int bus, int slot, int func,
 	      uint64_t addr, uint64_t msg, int numvec)
 {
 	int i, rid, flags;
@@ -572,7 +597,7 @@ ppt_setup_msi(struct vm *vm, int vcpu, int bus, int slot, int func,
 			/* success */
 		}
 	}
-	
+
 	ppt->msi.startrid = startrid;
 
 	/*
@@ -599,7 +624,7 @@ ppt_setup_msi(struct vm *vm, int vcpu, int bus, int slot, int func,
 		if (error != 0)
 			break;
 	}
-	
+
 	if (i < numvec) {
 		ppt_teardown_msi(ppt);
 		return (ENXIO);
@@ -609,7 +634,7 @@ ppt_setup_msi(struct vm *vm, int vcpu, int bus, int slot, int func,
 }
 
 int
-ppt_setup_msix(struct vm *vm, int vcpu, int bus, int slot, int func,
+ppt_setup_msix(struct vm *vm, int bus, int slot, int func,
 	       int idx, uint64_t addr, uint64_t msg, uint32_t vector_control)
 {
 	struct pptdev *ppt;
@@ -694,17 +719,17 @@ ppt_setup_msix(struct vm *vm, int vcpu, int bus, int slot, int func,
 							    &rid, RF_ACTIVE);
 		if (ppt->msix.res[idx] == NULL)
 			return (ENXIO);
-	
+
 		ppt->msix.arg[idx].pptdev = ppt;
 		ppt->msix.arg[idx].addr = addr;
 		ppt->msix.arg[idx].msg_data = msg;
-	
+
 		/* Setup the MSI-X interrupt */
 		error = bus_setup_intr(ppt->dev, ppt->msix.res[idx],
 				       INTR_TYPE_NET | INTR_MPSAFE,
 				       pptintr, NULL, &ppt->msix.arg[idx],
 				       &ppt->msix.cookie[idx]);
-	
+
 		if (error != 0) {
 			bus_release_resource(ppt->dev, SYS_RES_IRQ, rid, ppt->msix.res[idx]);
 			ppt->msix.cookie[idx] = NULL;

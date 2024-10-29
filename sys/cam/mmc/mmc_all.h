@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2014-2016 Ilya Bakulin.  All rights reserved.
  *
@@ -49,7 +49,6 @@
  * herein shall be construed as an obligation by the SD Group, the SD-3C LLC
  * or the SD Card Association to disclose or distribute any technical
  * information, know-how or other confidential information to any third party.
- *
  */
 
 /*
@@ -63,9 +62,14 @@
 #ifndef CAM_MMC_ALL_H
 #define CAM_MMC_ALL_H
 
+#include <cam/cam_sim.h>
 #include <cam/mmc/mmc.h>
 #include <dev/mmc/mmcreg.h>
 
-void	mmc_print_ident(struct mmc_params *ident_data);
+struct ccb_pathinq;
+struct cam_sim;
+void	mmc_path_inq(struct ccb_pathinq *cpi, const char *hba,
+    const struct cam_sim *sim, size_t maxio);
+void    mmccam_start_discovery(struct cam_sim *sim);
 
 #endif

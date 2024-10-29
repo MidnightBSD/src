@@ -22,7 +22,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef	_MACHINE_PCB_H_
@@ -30,6 +29,7 @@
 
 #ifndef LOCORE
 
+#include <machine/debug_monitor.h>
 #include <machine/vfp.h>
 
 struct trapframe;
@@ -65,6 +65,8 @@ struct pcb {
 	 * Place last to simplify the asm to access the rest if the struct.
 	 */
 	struct vfpstate	pcb_fpustate;
+
+	struct debug_monitor_state pcb_dbg_regs;
 };
 
 #ifdef _KERNEL

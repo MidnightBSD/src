@@ -31,18 +31,15 @@
 #include "opt_ddb.h"
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/proc.h>
+#include <sys/reg.h>
 #include <sys/systm.h>
 
 #include <machine/cpu.h>
-#include <machine/reg.h>
 
 #ifdef DDB
 #include <ddb/ddb.h>
-
-#if __ARM_ARCH >= 6
 
 DB_SHOW_COMMAND(cp15, db_show_cp15)
 {
@@ -89,7 +86,6 @@ DB_SHOW_COMMAND(vtop, db_show_vtop)
 	} else
 		db_printf("show vtop <virt_addr>\n");
 }
-#endif /* __ARM_ARCH >= 6 */
 #endif /* DDB */
 
 int

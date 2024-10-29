@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2007 Konstantin Belousov
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include "linux_assym.h"		/* system definitions */
@@ -38,7 +37,7 @@ futex_fault:
 	je	1f
 	clac
 1:	movq	$0,PCB_ONFAULT(%r8)
-	movl	$-EFAULT,%eax
+	movl	$EFAULT,%eax
 	ret
 
 ENTRY(futex_xchgl_nosmap)

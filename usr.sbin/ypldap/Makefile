@@ -1,5 +1,6 @@
 # $OpenBSD: Makefile,v 1.8 2015/09/09 15:33:18 deraadt Exp $
 
+PACKAGE=	yp
 PROG=		ypldap
 SRCS=		parse.y ypldap.c log.c	\
 		ldapclient.c entries.c yp.c \
@@ -8,7 +9,7 @@ SRCS=		parse.y ypldap.c log.c	\
 
 MAN=		ypldap.8 ypldap.conf.5
 
-LIBADD=		openbsd event util rpcsvc
+LIBADD=		openbsd event1 util rpcsvc
 
 CFLAGS+=-I${.CURDIR}
 CFLAGS+=-I${SRCTOP}/contrib/pf/libevent

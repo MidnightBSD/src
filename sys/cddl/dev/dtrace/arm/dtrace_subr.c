@@ -19,24 +19,22 @@
  *
  * CDDL HEADER END
  *
- *
  */
 /*
  * Copyright 2005 Sun Microsystems, Inc.  All rights reserved.
  * Use is subject to license terms.
  */
 
-#include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
-#include <sys/types.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
 #include <sys/kmem.h>
+#include <sys/proc.h>
 #include <sys/smp.h>
 #include <sys/dtrace_impl.h>
 #include <sys/dtrace_bsd.h>
+#include <cddl/dev/dtrace/dtrace_cddl.h>
 #include <machine/armreg.h>
 #include <machine/clock.h>
 #include <machine/frame.h>
@@ -52,6 +50,7 @@
 extern dtrace_id_t	dtrace_probeid_error;
 extern int (*dtrace_invop_jump_addr)(struct trapframe *);
 extern void dtrace_getnanotime(struct timespec *tsp);
+extern void dtrace_getnanouptime(struct timespec *tsp);
 
 int dtrace_invop(uintptr_t, struct trapframe *, uintptr_t);
 void dtrace_invop_init(void);
@@ -67,14 +66,18 @@ dtrace_invop_hdlr_t *dtrace_invop_hdlr;
 int
 dtrace_invop(uintptr_t addr, struct trapframe *frame, uintptr_t eax)
 {
+	struct thread *td;
 	dtrace_invop_hdlr_t *hdlr;
 	int rval;
 
+	rval = 0;
+	td = curthread;
+	td->t_dtrace_trapframe = frame;
 	for (hdlr = dtrace_invop_hdlr; hdlr != NULL; hdlr = hdlr->dtih_next)
 		if ((rval = hdlr->dtih_func(addr, frame, eax)) != 0)
-			return (rval);
-
-	return (0);
+			break;
+	td->t_dtrace_trapframe = NULL;
+	return (rval);
 }
 
 
@@ -172,7 +175,7 @@ dtrace_gethrtime(void)
 {
 	struct	timespec curtime;
 
-	nanouptime(&curtime);
+	dtrace_getnanouptime(&curtime);
 
 	return (curtime.tv_sec * 1000000000UL + curtime.tv_nsec);
 

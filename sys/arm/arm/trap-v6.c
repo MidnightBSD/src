@@ -30,7 +30,6 @@
 #include "opt_ktrace.h"
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/systm.h>
@@ -68,10 +67,6 @@
 #endif
 
 extern char cachebailout[];
-
-#ifdef DEBUG
-int last_fault_code;	/* For the benefit of pmap_fault_fixup() */
-#endif
 
 struct ksig {
 	int sig;
@@ -117,7 +112,7 @@ struct abort {
  *    for cache operations working on virtual addresses. For now, we will
  *    consider this abort as fatal. In fact, no cache maintenance on
  *    not mapped virtual addresses should be called. As cache maintenance
- *    operation (except DMB, DSB, and Flush Prefetch Buffer) are priviledged,
+ *    operation (except DMB, DSB, and Flush Prefetch Buffer) are privileged,
  *    the abort is fatal for user mode as well for now. (This is good place to
  *    note that cache maintenance on virtual address fill TLB.)
  * Acces Bit (L1 & L2):
@@ -168,7 +163,8 @@ static const struct abort aborts[] = {
 };
 
 static __inline void
-call_trapsignal(struct thread *td, int sig, int code, vm_offset_t addr)
+call_trapsignal(struct thread *td, int sig, int code, vm_offset_t addr,
+    int trapno)
 {
 	ksiginfo_t ksi;
 
@@ -184,6 +180,7 @@ call_trapsignal(struct thread *td, int sig, int code, vm_offset_t addr)
 	ksi.ksi_signo = sig;
 	ksi.ksi_code = code;
 	ksi.ksi_addr = (void *)addr;
+	ksi.ksi_trapno = trapno;
 	trapsignal(td, &ksi);
 }
 
@@ -251,7 +248,7 @@ abort_debug(struct trapframe *tf, u_int fsr, u_int prefetch, bool usermode,
 		struct thread *td;
 
 		td = curthread;
-		call_trapsignal(td, SIGTRAP, TRAP_BRKPT, far);
+		call_trapsignal(td, SIGTRAP, TRAP_BRKPT, far, FAULT_DEBUG);
 		userret(td, tf);
 	} else {
 #ifdef KDB
@@ -492,10 +489,6 @@ abort_handler(struct trapframe *tf, int prefetch)
 	if (prefetch)
 		ftype |= VM_PROT_EXECUTE;
 
-#ifdef DEBUG
-	last_fault_code = fsr;
-#endif
-
 #ifdef INVARIANTS
 	onfault = pcb->pcb_onfault;
 	pcb->pcb_onfault = NULL;
@@ -528,7 +521,7 @@ nogo:
 	ksig.addr = far;
 
 do_trapsignal:
-	call_trapsignal(td, ksig.sig, ksig.code, ksig.addr);
+	call_trapsignal(td, ksig.sig, ksig.code, ksig.addr, idx);
 out:
 	if (usermode)
 		userret(td, tf);
@@ -559,6 +552,9 @@ abort_fatal(struct trapframe *tf, u_int idx, u_int fsr, u_int far,
 	bool usermode;
 	const char *mode;
 	const char *rw_mode;
+#ifdef KDB
+	bool handled;
+#endif
 
 	usermode = TRAPF_USERMODE(tf);
 #ifdef KDTRACE_HOOKS
@@ -606,8 +602,10 @@ abort_fatal(struct trapframe *tf, u_int idx, u_int fsr, u_int far,
 #ifdef KDB
 	if (debugger_on_trap) {
 		kdb_why = KDB_WHY_TRAP;
-		kdb_trap(fsr, 0, tf);
+		handled = kdb_trap(fsr, 0, tf);
 		kdb_why = KDB_WHY_UNSET;
+		if (handled)
+			return (0);
 	}
 #endif
 	panic("Fatal abort");
@@ -654,7 +652,7 @@ abort_align(struct trapframe *tf, u_int idx, u_int fsr, u_int far,
  * According to manual, FAULT_ICACHE is translation fault during cache
  * maintenance operation. In fact, no cache maintenance operation on
  * not mapped virtual addresses should be called. As cache maintenance
- * operation (except DMB, DSB, and Flush Prefetch Buffer) are priviledged,
+ * operation (except DMB, DSB, and Flush Prefetch Buffer) are privileged,
  * the abort is concider as fatal for now. However, all the matter with
  * cache maintenance operation on virtual addresses could be really complex
  * and fuzzy in SMP case, so maybe in future standard fault mechanism

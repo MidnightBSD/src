@@ -247,6 +247,7 @@ static char sccsid[] = "@(#)traceroute.c	8.1 (Berkeley) 6/6/93";
  */
 
 #include <sys/param.h>
+#include <sys/capsicum.h>
 #include <sys/time.h>
 #include <sys/socket.h>
 #include <sys/uio.h>
@@ -257,6 +258,10 @@ static char sccsid[] = "@(#)traceroute.c	8.1 (Berkeley) 6/6/93";
 #include <netinet/in.h>
 
 #include <arpa/inet.h>
+
+#include <libcasper.h>
+#include <casper/cap_dns.h>
+#include <capsicum_helpers.h>
 
 #include <netdb.h>
 #include <stdio.h>
@@ -287,11 +292,6 @@ static char sccsid[] = "@(#)traceroute.c	8.1 (Berkeley) 6/6/93";
 
 #define	MAXPACKET	65535	/* max ip packet size */
 
-#ifndef HAVE_GETIPNODEBYNAME
-#define getipnodebyname(x, y, z, u)	gethostbyname2((x), (y))
-#define freehostent(x)
-#endif
-
 static u_char	packet[512];		/* last inbound (icmp) packet */
 static char 	*outpacket;		/* last output packet */
 
@@ -302,6 +302,7 @@ int	setpolicy(int so, char *policy);
 #endif
 void	send_probe(int, u_long);
 void	*get_uphdr(struct ip6_hdr *, u_char *);
+void	capdns_open(void);
 int	get_hoplim(struct msghdr *);
 double	deltaT(struct timeval *, struct timeval *);
 const char *pr_type(int);
@@ -310,6 +311,8 @@ void	print(struct msghdr *, int);
 const char *inetname(struct sockaddr *);
 u_int32_t sctp_crc32c(void *, u_int32_t);
 u_int16_t in_cksum(u_int16_t *addr, int);
+u_int16_t udp_cksum(struct sockaddr_in6 *, struct sockaddr_in6 *,
+    void *, u_int32_t);
 u_int16_t tcp_chksum(struct sockaddr_in6 *, struct sockaddr_in6 *,
     void *, u_int32_t);
 void	usage(void);
@@ -332,6 +335,8 @@ static struct cmsghdr *cmsg;
 
 static char *source = NULL;
 static char *hostname;
+
+static cap_channel_t *capdns;
 
 static u_long nprobes = 3;
 static u_long first_hop = 1;
@@ -367,6 +372,9 @@ main(int argc, char *argv[])
 	char ipsec_inpolicy[] = "in bypass";
 	char ipsec_outpolicy[] = "out bypass";
 #endif
+	cap_rights_t rights;
+
+	capdns_open();
 
 	/*
 	 * Receive ICMP
@@ -428,6 +436,7 @@ main(int argc, char *argv[])
 			}
 			break;
 		case 'g':
+			/* XXX use after capability mode is entered */
 			hp = getipnodebyname(optarg, AF_INET6, 0, &h_errno);
 			if (hp == NULL) {
 				fprintf(stderr,
@@ -567,17 +576,10 @@ main(int argc, char *argv[])
 	 */
 	switch (useproto) {
 	case IPPROTO_ICMPV6:
-		sndsock = rcvsock;
-		break;
-	case IPPROTO_UDP:
-		if ((sndsock = socket(AF_INET6, SOCK_DGRAM, 0)) < 0) {
-			perror("socket(SOCK_DGRAM)");
-			exit(5);
-		}
-		break;
 	case IPPROTO_NONE:
 	case IPPROTO_SCTP:
 	case IPPROTO_TCP:
+	case IPPROTO_UDP:
 		if ((sndsock = socket(AF_INET6, SOCK_RAW, useproto)) < 0) {
 			perror("socket(SOCK_RAW)");
 			exit(5);
@@ -623,7 +625,9 @@ main(int argc, char *argv[])
 	hints.ai_socktype = SOCK_RAW;
 	hints.ai_protocol = IPPROTO_ICMPV6;
 	hints.ai_flags = AI_CANONNAME;
-	error = getaddrinfo(*argv, NULL, &hints, &res);
+
+	error = cap_getaddrinfo(capdns, *argv, NULL, &hints, &res);
+
 	if (error) {
 		fprintf(stderr,
 		    "traceroute6: %s\n", gai_strerror(error));
@@ -641,7 +645,7 @@ main(int argc, char *argv[])
 		exit(1);
 	}
 	if (res->ai_next) {
-		if (getnameinfo(res->ai_addr, res->ai_addrlen, hbuf,
+		if (cap_getnameinfo(capdns, res->ai_addr, res->ai_addrlen, hbuf,
 		    sizeof(hbuf), NULL, 0, NI_NUMERICHOST) != 0)
 			strlcpy(hbuf, "?", sizeof(hbuf));
 		fprintf(stderr, "traceroute6: Warning: %s has multiple "
@@ -688,8 +692,6 @@ main(int argc, char *argv[])
 		    minlen, MAXPACKET);
 		exit(1);
 	}
-	if (useproto == IPPROTO_UDP)
-		datalen -= sizeof(struct udphdr);
 	if ((useproto == IPPROTO_SCTP) && (datalen & 3)) {
 		fprintf(stderr, 
 		    "traceroute6: packet size must be a multiple of 4.\n");
@@ -820,7 +822,7 @@ main(int argc, char *argv[])
 		hints.ai_family = AF_INET6;
 		hints.ai_socktype = SOCK_DGRAM;	/*dummy*/
 		hints.ai_flags = AI_NUMERICHOST;
-		error = getaddrinfo(source, "0", &hints, &res);
+		error = cap_getaddrinfo(capdns, source, "0", &hints, &res);
 		if (error) {
 			printf("traceroute6: %s: %s\n", source,
 			    gai_strerror(error));
@@ -856,7 +858,7 @@ main(int argc, char *argv[])
 			perror("getsockname");
 			exit(1);
 		}
-		if (getnameinfo((struct sockaddr *)&Src, Src.sin6_len,
+		if (cap_getnameinfo(capdns, (struct sockaddr *)&Src, Src.sin6_len,
 		    src0, sizeof(src0), NULL, 0, NI_NUMERICHOST)) {
 			fprintf(stderr, "getnameinfo failed for source\n");
 			exit(1);
@@ -896,7 +898,7 @@ main(int argc, char *argv[])
 	/*
 	 * Message to users
 	 */
-	if (getnameinfo((struct sockaddr *)&Dst, Dst.sin6_len, hbuf,
+	if (cap_getnameinfo(capdns, (struct sockaddr *)&Dst, Dst.sin6_len, hbuf,
 	    sizeof(hbuf), NULL, 0, NI_NUMERICHOST))
 		strlcpy(hbuf, "(invalid)", sizeof(hbuf));
 	fprintf(stderr, "traceroute6");
@@ -910,6 +912,35 @@ main(int argc, char *argv[])
 
 	if (first_hop > 1)
 		printf("Skipping %lu intermediate hops\n", first_hop - 1);
+
+	if (connect(sndsock, (struct sockaddr *)&Dst,
+	    sizeof(Dst)) != 0) {
+		fprintf(stderr, "connect: %s\n", strerror(errno));
+		exit(1);
+	}
+
+	/*
+	 * Here we enter capability mode. Further down access to global
+	 * namespaces (e.g filesystem) is restricted (see capsicum(4)).
+	 * We must connect(2) our socket before this point.
+	 */
+	if (caph_enter_casper() < 0) {
+		fprintf(stderr, "caph_enter_casper: %s\n", strerror(errno));
+		exit(1);
+	}
+
+	cap_rights_init(&rights, CAP_SEND, CAP_SETSOCKOPT);
+	if (caph_rights_limit(sndsock, &rights) < 0) {
+		fprintf(stderr, "caph_rights_limit sndsock: %s\n",
+		    strerror(errno));
+		exit(1);
+	}
+	cap_rights_init(&rights, CAP_RECV, CAP_EVENT);
+	if (caph_rights_limit(rcvsock, &rights) < 0) {
+		fprintf(stderr, "caph_rights_limit rcvsock: %s\n",
+		    strerror(errno));
+		exit(1);
+	}
 
 	/*
 	 * Main loop
@@ -1006,7 +1037,8 @@ wait_for_reply(int sock, struct msghdr *mhdr)
 	pfd[0].events = POLLIN;
 	pfd[0].revents = 0;
 
-	if (poll(pfd, 1, waittime * 1000) > 0)
+	if (poll(pfd, 1, waittime * 1000) > 0 &&
+	    pfd[0].revents & POLLIN)
 		cc = recvmsg(rcvsock, mhdr, 0);
 
 	return (cc);
@@ -1055,6 +1087,7 @@ send_probe(int seq, u_long hops)
 {
 	struct icmp6_hdr *icp;
 	struct sctphdr *sctp;
+	struct udphdr *outudp;
 	struct sctp_chunkhdr *chk;
 	struct sctp_init_chunk *init;
 	struct sctp_paramhdr *param;
@@ -1080,6 +1113,12 @@ send_probe(int seq, u_long hops)
 		icp->icmp6_seq = htons(seq);
 		break;
 	case IPPROTO_UDP:
+		outudp = (struct udphdr *) outpacket;
+		outudp->uh_sport = htons(ident);
+		outudp->uh_dport = htons(port+seq);
+		outudp->uh_ulen = htons(datalen);
+		outudp->uh_sum = 0;
+		outudp->uh_sum = udp_cksum(&Src, &Dst, outpacket, datalen);
 		break;
 	case IPPROTO_NONE:
 		/* No space for anything. No harm as seq/tv32 are decorative. */
@@ -1166,12 +1205,11 @@ send_probe(int seq, u_long hops)
 		fprintf(stderr, "Unknown probe protocol %d.\n", useproto);
 		exit(1);
 	}
-
-	i = sendto(sndsock, (char *)outpacket, datalen, 0,
-	    (struct sockaddr *)&Dst, Dst.sin6_len);
+	
+	i = send(sndsock, (char *)outpacket, datalen, 0);
 	if (i < 0 || (u_long)i != datalen)  {
 		if (i < 0)
-			perror("sendto");
+			perror("send");
 		printf("traceroute6: wrote %s %lu chars, ret=%d\n",
 		    hostname, datalen, i);
 		(void) fflush(stdout);
@@ -1283,7 +1321,7 @@ packet_ok(struct msghdr *mhdr, int cc, int seq, u_char *type, u_char *code)
 	hlen = sizeof(struct ip6_hdr);
 	if (cc < hlen + sizeof(struct icmp6_hdr)) {
 		if (verbose) {
-			if (getnameinfo((struct sockaddr *)from, from->sin6_len,
+			if (cap_getnameinfo(capdns, (struct sockaddr *)from, from->sin6_len,
 			    hbuf, sizeof(hbuf), NULL, 0, NI_NUMERICHOST) != 0)
 				strlcpy(hbuf, "invalid", sizeof(hbuf));
 			printf("packet too short (%d bytes) from %s\n", cc,
@@ -1296,7 +1334,7 @@ packet_ok(struct msghdr *mhdr, int cc, int seq, u_char *type, u_char *code)
 #else
 	if (cc < (int)sizeof(struct icmp6_hdr)) {
 		if (verbose) {
-			if (getnameinfo((struct sockaddr *)from, from->sin6_len,
+			if (cap_getnameinfo(capdns, (struct sockaddr *)from, from->sin6_len,
 			    hbuf, sizeof(hbuf), NULL, 0, NI_NUMERICHOST) != 0)
 				strlcpy(hbuf, "invalid", sizeof(hbuf));
 			printf("data too short (%d bytes) from %s\n", cc, hbuf);
@@ -1362,7 +1400,7 @@ packet_ok(struct msghdr *mhdr, int cc, int seq, u_char *type, u_char *code)
 			break;
 		case IPPROTO_UDP:
 			udp = (struct udphdr *)up;
-			if (udp->uh_sport == htons(srcport) &&
+			if (udp->uh_sport == htons(ident) &&
 			    udp->uh_dport == htons(port + seq))
 				return (1);
 			break;
@@ -1418,7 +1456,7 @@ packet_ok(struct msghdr *mhdr, int cc, int seq, u_char *type, u_char *code)
 		u_int8_t *p;
 		int i;
 
-		if (getnameinfo((struct sockaddr *)from, from->sin6_len,
+		if (cap_getnameinfo(capdns, (struct sockaddr *)from, from->sin6_len,
 		    sbuf, sizeof(sbuf), NULL, 0, NI_NUMERICHOST) != 0)
 			strlcpy(sbuf, "invalid", sizeof(sbuf));
 		printf("\n%d bytes from %s to %s", cc, sbuf,
@@ -1492,12 +1530,35 @@ get_uphdr(struct ip6_hdr *ip6, u_char *lim)
 }
 
 void
+capdns_open(void)
+{
+#ifdef	WITH_CASPER
+	const char *types[] = { "NAME", "ADDR" };
+	int families[1];
+	cap_channel_t *casper;
+
+	casper = cap_init();
+	if (casper == NULL)
+		errx(1, "unable to create casper process");
+	capdns = cap_service_open(casper, "system.dns");
+	if (capdns == NULL)
+		errx(1, "unable to open system.dns service");
+	if (cap_dns_type_limit(capdns, types, nitems(types)) < 0)
+		errx(1, "unable to limit access to system.dns service");
+	families[0] = AF_INET6;
+	if (cap_dns_family_limit(capdns, families, nitems(families)) < 0)
+		errx(1, "unable to limit access to system.dns service");
+	cap_close(casper);
+#endif	/* WITH_CASPER */
+}
+
+void
 print(struct msghdr *mhdr, int cc)
 {
 	struct sockaddr_in6 *from = (struct sockaddr_in6 *)mhdr->msg_name;
 	char hbuf[NI_MAXHOST];
 
-	if (getnameinfo((struct sockaddr *)from, from->sin6_len,
+	if (cap_getnameinfo(capdns, (struct sockaddr *)from, from->sin6_len,
 	    hbuf, sizeof(hbuf), NULL, 0, NI_NUMERICHOST) != 0)
 		strlcpy(hbuf, "invalid", sizeof(hbuf));
 	if (as_path)
@@ -1544,7 +1605,7 @@ inetname(struct sockaddr *sa)
 	}
 	cp = NULL;
 	if (!nflag) {
-		if (getnameinfo(sa, sa->sa_len, line, sizeof(line), NULL, 0,
+		if (cap_getnameinfo(capdns, sa, sa->sa_len, line, sizeof(line), NULL, 0,
 		    NI_NAMEREQD) == 0) {
 			if ((cp = strchr(line, '.')) &&
 			    !strcmp(cp + 1, domain))
@@ -1555,7 +1616,7 @@ inetname(struct sockaddr *sa)
 	if (cp)
 		return cp;
 
-	if (getnameinfo(sa, sa->sa_len, line, sizeof(line), NULL, 0,
+	if (cap_getnameinfo(capdns, sa, sa->sa_len, line, sizeof(line), NULL, 0,
 	    NI_NUMERICHOST) != 0)
 		strlcpy(line, "invalid", sizeof(line));
 	return line;
@@ -1683,6 +1744,33 @@ in_cksum(u_int16_t *addr, int len)
 	sum += (sum >> 16);			/* add carry */
 	answer = ~sum;				/* truncate to 16 bits */
 	return (answer);
+}
+
+u_int16_t
+udp_cksum(struct sockaddr_in6 *src, struct sockaddr_in6 *dst,
+    void *payload, u_int32_t len)
+{
+	struct {
+		struct in6_addr src;
+		struct in6_addr dst;
+		u_int32_t len;
+		u_int8_t zero[3];
+		u_int8_t next;
+	} pseudo_hdr;
+	u_int16_t sum[2];
+
+	pseudo_hdr.src = src->sin6_addr;
+	pseudo_hdr.dst = dst->sin6_addr;
+	pseudo_hdr.len = htonl(len);
+	pseudo_hdr.zero[0] = 0;
+	pseudo_hdr.zero[1] = 0;
+	pseudo_hdr.zero[2] = 0;
+	pseudo_hdr.next = IPPROTO_UDP;
+
+	sum[1] = in_cksum((u_int16_t *)&pseudo_hdr, sizeof(pseudo_hdr));
+	sum[0] = in_cksum(payload, len);
+
+	return (~in_cksum(sum, sizeof(sum)));
 }
 
 u_int16_t

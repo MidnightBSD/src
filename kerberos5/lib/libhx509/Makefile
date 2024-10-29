@@ -1,4 +1,5 @@
-# $FreeBSD$
+
+PACKAGE=	kerberos-lib
 
 LIB=	hx509
 LDFLAGS=	-Wl,--no-undefined

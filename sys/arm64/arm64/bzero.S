@@ -27,8 +27,6 @@
  */
 
 #include <machine/asm.h>
-
-
 #include "assym.inc"
 
 	/*

@@ -38,4 +38,6 @@ void trargs(char **);
 void trputc(int);
 void trputs(const char *);
 void opentrace(void);
+
+extern int debug;
 #endif

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
@@ -24,11 +24,9 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/pcpu.h>
 #include <sys/systm.h>
@@ -48,7 +46,8 @@
 #include "x86.h"
 
 SYSCTL_DECL(_hw_vmm);
-static SYSCTL_NODE(_hw_vmm, OID_AUTO, topology, CTLFLAG_RD, 0, NULL);
+static SYSCTL_NODE(_hw_vmm, OID_AUTO, topology, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
+    NULL);
 
 #define	CPUID_VM_HIGH		0x40000000
 
@@ -84,34 +83,41 @@ log2(u_int x)
 }
 
 int
-x86_emulate_cpuid(struct vm *vm, int vcpu_id,
-		  uint32_t *eax, uint32_t *ebx, uint32_t *ecx, uint32_t *edx)
+x86_emulate_cpuid(struct vcpu *vcpu, uint64_t *rax, uint64_t *rbx,
+    uint64_t *rcx, uint64_t *rdx)
 {
+	struct vm *vm = vcpu_vm(vcpu);
+	int vcpu_id = vcpu_vcpuid(vcpu);
 	const struct xsave_limits *limits;
 	uint64_t cr4;
 	int error, enable_invpcid, enable_rdpid, enable_rdtscp, level,
 	    width, x2apic_id;
-	unsigned int func, regs[4], logical_cpus;
+	unsigned int func, regs[4], logical_cpus, param;
 	enum x2apic_state x2apic_state;
 	uint16_t cores, maxcpus, sockets, threads;
 
-	VCPU_CTR2(vm, vcpu_id, "cpuid %#x,%#x", *eax, *ecx);
+	/*
+	 * The function of CPUID is controlled through the provided value of
+	 * %eax (and secondarily %ecx, for certain leaf data).
+	 */
+	func = (uint32_t)*rax;
+	param = (uint32_t)*rcx;
+
+	VCPU_CTR2(vm, vcpu_id, "cpuid %#x,%#x", func, param);
 
 	/*
 	 * Requests for invalid CPUID levels should map to the highest
 	 * available level instead.
 	 */
-	if (cpu_exthigh != 0 && *eax >= 0x80000000) {
-		if (*eax > cpu_exthigh)
-			*eax = cpu_exthigh;
-	} else if (*eax >= 0x40000000) {
-		if (*eax > CPUID_VM_HIGH)
-			*eax = CPUID_VM_HIGH;
-	} else if (*eax > cpu_high) {
-		*eax = cpu_high;
+	if (cpu_exthigh != 0 && func >= 0x80000000) {
+		if (func > cpu_exthigh)
+			func = cpu_exthigh;
+	} else if (func >= 0x40000000) {
+		if (func > CPUID_VM_HIGH)
+			func = CPUID_VM_HIGH;
+	} else if (func > cpu_high) {
+		func = cpu_high;
 	}
-
-	func = *eax;
 
 	/*
 	 * In general the approach used for CPU topology is to
@@ -130,10 +136,10 @@ x86_emulate_cpuid(struct vm *vm, int vcpu_id,
 		case CPUID_8000_0003:
 		case CPUID_8000_0004:
 		case CPUID_8000_0006:
-			cpuid_count(*eax, *ecx, regs);
+			cpuid_count(func, param, regs);
 			break;
 		case CPUID_8000_0008:
-			cpuid_count(*eax, *ecx, regs);
+			cpuid_count(func, param, regs);
 			if (vmm_is_svm()) {
 				/*
 				 * As on Intel (0000_0007:0, EDX), mask out
@@ -164,7 +170,7 @@ x86_emulate_cpuid(struct vm *vm, int vcpu_id,
 			break;
 
 		case CPUID_8000_0001:
-			cpuid_count(*eax, *ecx, regs);
+			cpuid_count(func, param, regs);
 
 			/*
 			 * Hide SVM from guest.
@@ -194,7 +200,7 @@ x86_emulate_cpuid(struct vm *vm, int vcpu_id,
 			regs[2] &= ~AMDID2_MWAITX;
 
 			/* Advertise RDTSCP if it is enabled. */
-			error = vm_get_capability(vm, vcpu_id,
+			error = vm_get_capability(vcpu,
 			    VM_CAP_RDTSCP, &enable_rdtscp);
 			if (error == 0 && enable_rdtscp)
 				regs[3] |= AMDID_RDTSCP;
@@ -245,7 +251,7 @@ x86_emulate_cpuid(struct vm *vm, int vcpu_id,
 			 */
 			vm_get_topology(vm, &sockets, &cores, &threads,
 			    &maxcpus);
-			switch (*ecx) {
+			switch (param) {
 			case 0:
 				logical_cpus = threads;
 				level = 1;
@@ -301,7 +307,7 @@ x86_emulate_cpuid(struct vm *vm, int vcpu_id,
 		case CPUID_0000_0001:
 			do_cpuid(1, regs);
 
-			error = vm_get_x2apic_state(vm, vcpu_id, &x2apic_state);
+			error = vm_get_x2apic_state(vcpu, &x2apic_state);
 			if (error) {
 				panic("x86_emulate_cpuid: error %d "
 				      "fetching x2apic state", error);
@@ -341,7 +347,7 @@ x86_emulate_cpuid(struct vm *vm, int vcpu_id,
 			 */
 			regs[2] &= ~CPUID2_OSXSAVE;
 			if (regs[2] & CPUID2_XSAVE) {
-				error = vm_get_register(vm, vcpu_id,
+				error = vm_get_register(vcpu,
 				    VM_REG_GUEST_CR4, &cr4);
 				if (error)
 					panic("x86_emulate_cpuid: error %d "
@@ -393,7 +399,7 @@ x86_emulate_cpuid(struct vm *vm, int vcpu_id,
 			break;
 
 		case CPUID_0000_0004:
-			cpuid_count(*eax, *ecx, regs);
+			cpuid_count(func, param, regs);
 
 			if (regs[0] || regs[1] || regs[2] || regs[3]) {
 				vm_get_topology(vm, &sockets, &cores, &threads,
@@ -422,8 +428,8 @@ x86_emulate_cpuid(struct vm *vm, int vcpu_id,
 			regs[3] = 0;
 
 			/* leaf 0 */
-			if (*ecx == 0) {
-				cpuid_count(*eax, *ecx, regs);
+			if (param == 0) {
+				cpuid_count(func, param, regs);
 
 				/* Only leaf 0 is supported */
 				regs[0] = 0;
@@ -431,26 +437,32 @@ x86_emulate_cpuid(struct vm *vm, int vcpu_id,
 				/*
 				 * Expose known-safe features.
 				 */
-				regs[1] &= (CPUID_STDEXT_FSGSBASE |
+				regs[1] &= CPUID_STDEXT_FSGSBASE |
 				    CPUID_STDEXT_BMI1 | CPUID_STDEXT_HLE |
-				    CPUID_STDEXT_AVX2 | CPUID_STDEXT_BMI2 |
+				    CPUID_STDEXT_AVX2 | CPUID_STDEXT_SMEP |
+				    CPUID_STDEXT_BMI2 |
 				    CPUID_STDEXT_ERMS | CPUID_STDEXT_RTM |
 				    CPUID_STDEXT_AVX512F |
+				    CPUID_STDEXT_AVX512DQ |
 				    CPUID_STDEXT_RDSEED |
+				    CPUID_STDEXT_SMAP |
 				    CPUID_STDEXT_AVX512PF |
 				    CPUID_STDEXT_AVX512ER |
-				    CPUID_STDEXT_AVX512CD | CPUID_STDEXT_SHA);
-				regs[2] = 0;
+				    CPUID_STDEXT_AVX512CD | CPUID_STDEXT_SHA |
+				    CPUID_STDEXT_AVX512BW |
+				    CPUID_STDEXT_AVX512VL;
+				regs[2] &= CPUID_STDEXT2_VAES |
+				    CPUID_STDEXT2_VPCLMULQDQ;
 				regs[3] &= CPUID_STDEXT3_MD_CLEAR;
 
 				/* Advertise RDPID if it is enabled. */
-				error = vm_get_capability(vm, vcpu_id,
-				    VM_CAP_RDPID, &enable_rdpid);
+				error = vm_get_capability(vcpu, VM_CAP_RDPID,
+				    &enable_rdpid);
 				if (error == 0 && enable_rdpid)
 					regs[2] |= CPUID_STDEXT2_RDPID;
 
 				/* Advertise INVPCID if it is enabled. */
-				error = vm_get_capability(vm, vcpu_id,
+				error = vm_get_capability(vcpu,
 				    VM_CAP_ENABLE_INVPCID, &enable_invpcid);
 				if (error == 0 && enable_invpcid)
 					regs[1] |= CPUID_STDEXT_INVPCID;
@@ -482,21 +494,21 @@ x86_emulate_cpuid(struct vm *vm, int vcpu_id,
 			if (vmm_is_intel()) {
 				vm_get_topology(vm, &sockets, &cores, &threads,
 				    &maxcpus);
-				if (*ecx == 0) {
+				if (param == 0) {
 					logical_cpus = threads;
 					width = log2(logical_cpus);
 					level = CPUID_TYPE_SMT;
 					x2apic_id = vcpu_id;
 				}
 
-				if (*ecx == 1) {
+				if (param == 1) {
 					logical_cpus = threads * cores;
 					width = log2(logical_cpus);
 					level = CPUID_TYPE_CORE;
 					x2apic_id = vcpu_id;
 				}
 
-				if (!cpuid_leaf_b || *ecx >= 2) {
+				if (!cpuid_leaf_b || param >= 2) {
 					width = 0;
 					logical_cpus = 0;
 					level = 0;
@@ -505,7 +517,7 @@ x86_emulate_cpuid(struct vm *vm, int vcpu_id,
 
 				regs[0] = width & 0x1f;
 				regs[1] = logical_cpus & 0xffff;
-				regs[2] = (level << 8) | (*ecx & 0xff);
+				regs[2] = (level << 8) | (param & 0xff);
 				regs[3] = x2apic_id;
 			} else {
 				regs[0] = 0;
@@ -525,8 +537,8 @@ x86_emulate_cpuid(struct vm *vm, int vcpu_id,
 				break;
 			}
 
-			cpuid_count(*eax, *ecx, regs);
-			switch (*ecx) {
+			cpuid_count(func, param, regs);
+			switch (param) {
 			case 0:
 				/*
 				 * Only permit the guest to use bits
@@ -556,7 +568,7 @@ x86_emulate_cpuid(struct vm *vm, int vcpu_id,
 				 * pass through as-is, otherwise return
 				 * all zeroes.
 				 */
-				if (!(limits->xcr0_allowed & (1ul << *ecx))) {
+				if (!(limits->xcr0_allowed & (1ul << param))) {
 					regs[0] = 0;
 					regs[1] = 0;
 					regs[2] = 0;
@@ -611,20 +623,23 @@ default_leaf:
 			 * how many unhandled leaf values have been seen.
 			 */
 			atomic_add_long(&bhyve_xcpuids, 1);
-			cpuid_count(*eax, *ecx, regs);
+			cpuid_count(func, param, regs);
 			break;
 	}
 
-	*eax = regs[0];
-	*ebx = regs[1];
-	*ecx = regs[2];
-	*edx = regs[3];
+	/*
+	 * CPUID clears the upper 32-bits of the long-mode registers.
+	 */
+	*rax = regs[0];
+	*rbx = regs[1];
+	*rcx = regs[2];
+	*rdx = regs[3];
 
 	return (1);
 }
 
 bool
-vm_cpuid_capability(struct vm *vm, int vcpuid, enum vm_cpuid_capability cap)
+vm_cpuid_capability(struct vcpu *vcpu, enum vm_cpuid_capability cap)
 {
 	bool rv;
 
@@ -652,4 +667,86 @@ vm_cpuid_capability(struct vm *vm, int vcpuid, enum vm_cpuid_capability cap)
 		panic("%s: unknown vm_cpu_capability %d", __func__, cap);
 	}
 	return (rv);
+}
+
+int
+vm_rdmtrr(struct vm_mtrr *mtrr, u_int num, uint64_t *val)
+{
+	switch (num) {
+	case MSR_MTRRcap:
+		*val = MTRR_CAP_WC | MTRR_CAP_FIXED | VMM_MTRR_VAR_MAX;
+		break;
+	case MSR_MTRRdefType:
+		*val = mtrr->def_type;
+		break;
+	case MSR_MTRR4kBase ... MSR_MTRR4kBase + 7:
+		*val = mtrr->fixed4k[num - MSR_MTRR4kBase];
+		break;
+	case MSR_MTRR16kBase ... MSR_MTRR16kBase + 1:
+		*val = mtrr->fixed16k[num - MSR_MTRR16kBase];
+		break;
+	case MSR_MTRR64kBase:
+		*val = mtrr->fixed64k;
+		break;
+	case MSR_MTRRVarBase ... MSR_MTRRVarBase + (VMM_MTRR_VAR_MAX * 2) - 1: {
+		u_int offset = num - MSR_MTRRVarBase;
+		if (offset % 2 == 0) {
+			*val = mtrr->var[offset / 2].base;
+		} else {
+			*val = mtrr->var[offset / 2].mask;
+		}
+		break;
+	}
+	default:
+		return (-1);
+	}
+
+	return (0);
+}
+
+int
+vm_wrmtrr(struct vm_mtrr *mtrr, u_int num, uint64_t val)
+{
+	switch (num) {
+	case MSR_MTRRcap:
+		/* MTRRCAP is read only */
+		return (-1);
+	case MSR_MTRRdefType:
+		if (val & ~VMM_MTRR_DEF_MASK) {
+			/* generate #GP on writes to reserved fields */
+			return (-1);
+		}
+		mtrr->def_type = val;
+		break;
+	case MSR_MTRR4kBase ... MSR_MTRR4kBase + 7:
+		mtrr->fixed4k[num - MSR_MTRR4kBase] = val;
+		break;
+	case MSR_MTRR16kBase ... MSR_MTRR16kBase + 1:
+		mtrr->fixed16k[num - MSR_MTRR16kBase] = val;
+		break;
+	case MSR_MTRR64kBase:
+		mtrr->fixed64k = val;
+		break;
+	case MSR_MTRRVarBase ... MSR_MTRRVarBase + (VMM_MTRR_VAR_MAX * 2) - 1: {
+		u_int offset = num - MSR_MTRRVarBase;
+		if (offset % 2 == 0) {
+			if (val & ~VMM_MTRR_PHYSBASE_MASK) {
+				/* generate #GP on writes to reserved fields */
+				return (-1);
+			}
+			mtrr->var[offset / 2].base = val;
+		} else {
+			if (val & ~VMM_MTRR_PHYSMASK_MASK) {
+				/* generate #GP on writes to reserved fields */
+				return (-1);
+			}
+			mtrr->var[offset / 2].mask = val;
+		}
+		break;
+	}
+	default:
+		return (-1);
+	}
+
+	return (0);
 }

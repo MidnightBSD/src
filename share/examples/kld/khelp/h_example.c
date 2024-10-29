@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010-2011 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed at the Centre for Advanced Internet
  * Architectures, Swinburne University of Technology, Melbourne, Australia by
@@ -38,8 +37,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/share/examples/kld/khelp/h_example.c 218545 2011-02-11 07:26:17Z lstewart $");
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/hhook.h>

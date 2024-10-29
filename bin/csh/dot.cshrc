@@ -1,3 +1,4 @@
+#
 # .cshrc - csh resource script, read at beginning of execution by each shell
 #
 # see also csh(1), environ(7).

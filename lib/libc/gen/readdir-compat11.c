@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "namespace.h"
 #include <sys/param.h>
 #define	_WANT_FREEBSD11_DIRENT

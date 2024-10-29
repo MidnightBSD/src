@@ -42,7 +42,6 @@
  * Eventually this will become a set of defines.
  *
  * Created      : 21/07/95
- *
  */
 
 #ifndef _MACHINE_PSL_H_

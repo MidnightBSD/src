@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013 Rui Paulo <rpaulo@FreeBSD.org>
  * Copyright (c) 2017 Manuel Stuehn
@@ -27,7 +27,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-
 #include <sys/poll.h>
 #include <sys/time.h>
 #include <sys/uio.h>
@@ -37,8 +36,10 @@
 #include <sys/bus.h>
 #include <sys/conf.h>
 #include <sys/kernel.h>
+#include <sys/lock.h>
 #include <sys/module.h>
 #include <sys/malloc.h>
+#include <sys/mutex.h>
 #include <sys/rman.h>
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -54,8 +55,11 @@
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>
 
-#include <arm/ti/ti_prcm.h>
+#include <dev/extres/clk/clk.h>
+
+#include <arm/ti/ti_sysc.h>
 #include <arm/ti/ti_pruss.h>
+#include <arm/ti/ti_prm.h>
 
 #ifdef DEBUG
 #define	DPRINTF(fmt, ...)	do {	\
@@ -158,7 +162,8 @@ static driver_t ti_pruss_driver = {
 static devclass_t ti_pruss_devclass;
 
 DRIVER_MODULE(ti_pruss, simplebus, ti_pruss_driver, ti_pruss_devclass, 0, 0);
-MODULE_DEPEND(ti_pruss, ti_prcm, 1, 1, 1);
+MODULE_DEPEND(ti_pruss, ti_sysc, 1, 1, 1);
+MODULE_DEPEND(ti_pruss, ti_prm, 1, 1, 1);
 
 static struct resource_spec ti_pruss_irq_spec[] = {
 	{ SYS_RES_IRQ,	    0,  RF_ACTIVE },
@@ -181,9 +186,6 @@ ti_pruss_irq_open(struct cdev *dev, int oflags, int devtype, struct thread *td)
 	sc = dev->si_drv1;
 
 	irqs = malloc(sizeof(struct ctl), M_DEVBUF, M_WAITOK);
-	if (!irqs)
-	    return (ENOMEM);
-
 	irqs->cnt = sc->tstamps.ctl.cnt;
 	irqs->idx = sc->tstamps.ctl.idx;
 
@@ -512,14 +514,89 @@ static int
 ti_pruss_attach(device_t dev)
 {
 	struct ti_pruss_softc *sc;
-	int rid, i;
+	int rid, i, err, ncells;
+	uint32_t reg;
+	phandle_t node;
+	clk_t l3_gclk, pruss_ocp_gclk;
+	phandle_t ti_prm_ref, *cells;
+        device_t ti_prm_dev;
 
-	if (ti_prcm_clk_enable(PRUSS_CLK) != 0) {
-		device_printf(dev, "could not enable PRUSS clock\n");
+	rid = 0;
+	sc = device_get_softc(dev);
+	node = ofw_bus_get_node(device_get_parent(dev));
+	if (node <= 0) {
+		device_printf(dev, "Cant get ofw node\n");
 		return (ENXIO);
 	}
-	sc = device_get_softc(dev);
-	rid = 0;
+
+	/*
+	 * Follow activate pattern from sys/arm/ti/am335x/am335x_prcm.c
+	 * by Damjan Marion
+	 */
+
+	/* Set MODULEMODE to ENABLE(2) */
+	/* Wait for MODULEMODE to become ENABLE(2) */
+	if (ti_sysc_clock_enable(device_get_parent(dev)) != 0) {
+		device_printf(dev, "Could not enable PRUSS clock\n");
+		return (ENXIO);
+	}
+
+	/* Set CLKTRCTRL to SW_WKUP(2) */
+	/* Wait for the 200 MHz OCP clock to become active */
+	/* Wait for the 200 MHz IEP clock to become active */
+	/* Wait for the 192 MHz UART clock to become active */
+	/*
+	 * At the moment there is no reference to CM_PER_PRU_ICSS_CLKSTCTRL@140
+	 * in the devicetree. The register reset state are SW_WKUP(2) as default
+	 * so at the moment ignore setting this register.
+	 */
+
+	/* Select L3F as OCP clock */
+	/* Get the clock and set the parent */
+	err = clk_get_by_name(dev, "l3_gclk", &l3_gclk);
+	if (err) {
+		device_printf(dev, "Cant get l3_gclk err %d\n", err);
+		return (ENXIO);
+	}
+
+	err = clk_get_by_name(dev, "pruss_ocp_gclk@530", &pruss_ocp_gclk);
+	if (err) {
+		device_printf(dev, "Cant get pruss_ocp_gclk@530 err %d\n", err);
+		return (ENXIO);
+	}
+
+	err = clk_set_parent_by_clk(pruss_ocp_gclk, l3_gclk);
+	if (err) {
+		device_printf(dev,
+		    "Cant set pruss_ocp_gclk parent to l3_gclk err %d\n", err);
+		return (ENXIO);
+	}
+
+	/* Clear the RESET bit */
+	/* Find the ti_prm */
+	/* #reset-cells should not been used in this way but... */
+	err = ofw_bus_parse_xref_list_alloc(node, "resets", "#reset-cells", 0,
+	    &ti_prm_ref, &ncells, &cells);
+	OF_prop_free(cells);
+	if (err) {
+		device_printf(dev,
+		    "Cant fetch \"resets\" reference %x\n", err);
+		return (ENXIO);
+	}
+
+	ti_prm_dev = OF_device_from_xref(ti_prm_ref);
+	if (ti_prm_dev == NULL) {
+		device_printf(dev, "Cant get device from \"resets\"\n");
+		return (ENXIO);
+	}
+
+	err = ti_prm_reset(ti_prm_dev);
+	if (err) {
+		device_printf(dev, "ti_prm_reset failed %d\n", err);
+		return (ENXIO);
+	}
+	/* End of clock activation */
+
 	mtx_init(&sc->sc_mtx, "TI PRUSS", NULL, MTX_DEF);
 	sc->sc_mem_res = bus_alloc_resource_any(dev, SYS_RES_MEMORY, &rid,
 	    RF_ACTIVE);
@@ -539,10 +616,11 @@ ti_pruss_attach(device_t dev)
 
 	sc->sc_glob_irqen = false;
 	struct sysctl_oid *irq_root = SYSCTL_ADD_NODE(clist, SYSCTL_CHILDREN(poid),
-	    OID_AUTO, "irq", CTLFLAG_RD, 0,
+	    OID_AUTO, "irq", CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
 	    "PRUSS Host Interrupts");
 	SYSCTL_ADD_PROC(clist, SYSCTL_CHILDREN(poid), OID_AUTO,
-	    "global_interrupt_enable", CTLFLAG_RW | CTLTYPE_U8,
+	    "global_interrupt_enable",
+	    CTLFLAG_RW | CTLTYPE_U8 | CTLFLAG_NEEDGIANT,
 	    sc, 0, ti_pruss_global_interrupt_enable,
 	    "CU", "Global interrupt enable");
 
@@ -561,16 +639,19 @@ ti_pruss_attach(device_t dev)
 		snprintf(name, sizeof(name), "%d", i);
 
 		struct sysctl_oid *irq_nodes = SYSCTL_ADD_NODE(clist, SYSCTL_CHILDREN(irq_root),
-		    OID_AUTO, name, CTLFLAG_RD, 0,
+		    OID_AUTO, name, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
 		    "PRUSS Interrupts");
 		SYSCTL_ADD_PROC(clist, SYSCTL_CHILDREN(irq_nodes), OID_AUTO,
-		    "channel", CTLFLAG_RW | CTLTYPE_STRING, sc, i, ti_pruss_channel_map,
+		    "channel", CTLFLAG_RW | CTLTYPE_STRING | CTLFLAG_NEEDGIANT,
+		    sc, i, ti_pruss_channel_map,
 		    "A", "Channel attached to this irq");
 		SYSCTL_ADD_PROC(clist, SYSCTL_CHILDREN(irq_nodes), OID_AUTO,
-		    "event", CTLFLAG_RW | CTLTYPE_STRING, sc, i, ti_pruss_event_map,
+		    "event", CTLFLAG_RW | CTLTYPE_STRING | CTLFLAG_NEEDGIANT,
+		    sc, i, ti_pruss_event_map,
 		    "A", "Event attached to this irq");
 		SYSCTL_ADD_PROC(clist, SYSCTL_CHILDREN(irq_nodes), OID_AUTO,
-		    "enable", CTLFLAG_RW | CTLTYPE_U8, sc, i, ti_pruss_interrupt_enable,
+		    "enable", CTLFLAG_RW | CTLTYPE_U8 | CTLFLAG_NEEDGIANT,
+		    sc, i, ti_pruss_interrupt_enable,
 		    "CU", "Enable/Disable interrupt");
 
 		sc->sc_irq_devs[i].event = -1;
@@ -594,6 +675,9 @@ ti_pruss_attach(device_t dev)
 			knlist_init_mtx(&sc->sc_irq_devs[i].sc_selinfo.si_note, &sc->sc_irq_devs[i].sc_mtx);
 		}
 	}
+
+	reg = ti_pruss_reg_read(sc,
+	    ti_sysc_get_sysc_address_offset_host(device_get_parent(dev)));
 
 	if (ti_pruss_reg_read(sc, PRUSS_AM33XX_INTC) == PRUSS_AM33XX_REV)
 		device_printf(dev, "AM33xx PRU-ICSS\n");

@@ -24,7 +24,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/lock.h>
@@ -59,9 +58,10 @@ cloudabi_vdso_init(struct sysentvec *sv, char *begin, char *end)
 	addr = kva_alloc(PAGE_SIZE);
 	for (i = 0; i < pages; ++i) {
 		VM_OBJECT_WLOCK(obj);
-		m = vm_page_grab(obj, i, VM_ALLOC_NOBUSY | VM_ALLOC_ZERO);
-		m->valid = VM_PAGE_BITS_ALL;
+		m = vm_page_grab(obj, i, VM_ALLOC_ZERO);
 		VM_OBJECT_WUNLOCK(obj);
+		vm_page_valid(m);
+		vm_page_xunbusy(m);
 
 		pmap_qenter(addr, &m, 1);
 		memcpy((void *)addr, begin + i * PAGE_SIZE,

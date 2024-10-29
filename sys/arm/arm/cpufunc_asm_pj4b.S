@@ -30,7 +30,6 @@
  */
 
 #include <machine/asm.h>
-
 #include <machine/param.h>
 
 .Lpj4b_sf_ctrl_reg:

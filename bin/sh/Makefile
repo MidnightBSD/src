@@ -2,9 +2,13 @@
 
 .include <src.opts.mk>
 
-CONFS=	dot.profile profile
-CONFSDIR_dot.profile=	/root
-CONFSNAME_dot.profile=	.profile
+CONFGROUPS=	ETC ROOT
+ETC=	profile
+ROOT=	dot.shrc dot.profile
+ROOTDIR=	/root
+ROOTDIR_MODE=	0750
+ROOTNAME_dot.shrc=	.shrc
+ROOTNAME_dot.profile=	.profile
 PACKAGE=runtime
 PROG=	sh
 INSTALLFLAGS= -S
@@ -26,8 +30,6 @@ LIBADD=	edit
 CFLAGS+=-DSHELL -I. -I${.CURDIR}
 # for debug:
 # DEBUG_FLAGS+= -g -DDEBUG=2 -fno-inline
-WARNS?=	2
-WFORMAT=0
 
 .PATH:	${.CURDIR}/bltin \
 	${.CURDIR:H}/kill \
@@ -44,6 +46,7 @@ builtins.h: .NOMETA
 builtins.c builtins.h: mkbuiltins builtins.def
 	sh ${.CURDIR}/mkbuiltins ${.CURDIR}
 
+DEPENDOBJS+= mknodes mksyntax
 mknodes mksyntax: ${BUILD_TOOLS_META}
 
 .ORDER: nodes.c nodes.h
@@ -65,6 +68,7 @@ SUBDIR.${MK_TESTS}+= tests
 beforeinstallconfig:
 	rm -f ${DESTDIR}/.profile
 
+LINKMODE=${CONFMODE}
 afterinstallconfig:
 	${INSTALL_LINK} ${TAG_ARGS} ${DESTDIR}/root/.profile ${DESTDIR}/.profile
 

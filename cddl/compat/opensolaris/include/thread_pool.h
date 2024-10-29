@@ -25,7 +25,6 @@
  */
 
 /*
- * $FreeBSD: stable/11/cddl/compat/opensolaris/include/thread_pool.h 265689 2014-05-08 16:59:36Z mav $
  */
 
 #ifndef	_THREAD_POOL_H_

@@ -58,7 +58,6 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD: stable/11/share/examples/kld/cdev/README 66549 2000-10-02 14:14:07Z sobomax $
 #
 
 1.0	Overview

@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * RTC driver for Tegra SoCs.
  */
@@ -141,7 +140,6 @@ tegra_rtc_gettime(device_t dev, struct timespec *ts)
 	return (0);
 }
 
-
 static int
 tegra_rtc_settime(device_t dev, struct timespec *ts)
 {
@@ -158,7 +156,6 @@ tegra_rtc_settime(device_t dev, struct timespec *ts)
 
 	return (0);
 }
-
 
 static void
 tegra_rtc_intr(void *arg)

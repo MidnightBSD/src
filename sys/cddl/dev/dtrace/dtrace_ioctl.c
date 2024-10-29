@@ -18,7 +18,6 @@
  *
  * CDDL HEADER END
  *
- *
  */
 
 static int dtrace_verbose_ioctl;

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2017 Poul-Henning Kamp <phk@FreeBSD.org>
  * All rights reserved.
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -363,7 +362,8 @@ bcm_pwm_sysctl_init(struct bcm_pwm_softc *sc)
 	if (bootverbose) {
 #define RR(x,y)							\
 	SYSCTL_ADD_PROC(ctx, tree, OID_AUTO, y,			\
-	    CTLFLAG_RW | CTLTYPE_UINT, sc, 0x##x,		\
+	    CTLFLAG_RW | CTLTYPE_UINT | CTLFLAG_NEEDGIANT,	\
+	    sc, 0x##x,						\
 	    bcm_pwm_reg_proc, "IU", "Register 0x" #x " " y);
 
 		RR(24, "DAT2")
@@ -378,31 +378,31 @@ bcm_pwm_sysctl_init(struct bcm_pwm_softc *sc)
 	}
 
 	SYSCTL_ADD_PROC(ctx, tree, OID_AUTO, "pwm_freq",
-	    CTLFLAG_RD | CTLTYPE_UINT, sc, 0,
+	    CTLFLAG_RD | CTLTYPE_UINT | CTLFLAG_NEEDGIANT, sc, 0,
 	    bcm_pwm_pwm_freq_proc, "IU", "PWM frequency ch 1 (Hz)");
 	SYSCTL_ADD_PROC(ctx, tree, OID_AUTO, "period",
-	    CTLFLAG_RW | CTLTYPE_UINT, sc, 0,
+	    CTLFLAG_RW | CTLTYPE_UINT | CTLFLAG_NEEDGIANT, sc, 0,
 	    bcm_pwm_period_proc, "IU", "PWM period ch 1 (#clocks)");
 	SYSCTL_ADD_PROC(ctx, tree, OID_AUTO, "ratio",
-	    CTLFLAG_RW | CTLTYPE_UINT, sc, 0,
+	    CTLFLAG_RW | CTLTYPE_UINT | CTLFLAG_NEEDGIANT, sc, 0,
 	    bcm_pwm_ratio_proc, "IU", "PWM ratio ch 1 (0...period)");
 	SYSCTL_ADD_PROC(ctx, tree, OID_AUTO, "freq",
-	    CTLFLAG_RW | CTLTYPE_UINT, sc, 0,
+	    CTLFLAG_RW | CTLTYPE_UINT | CTLFLAG_NEEDGIANT, sc, 0,
 	    bcm_pwm_freq_proc, "IU", "PWM clock (Hz)");
 	SYSCTL_ADD_PROC(ctx, tree, OID_AUTO, "mode",
-	    CTLFLAG_RW | CTLTYPE_UINT, sc, 0,
+	    CTLFLAG_RW | CTLTYPE_UINT | CTLFLAG_NEEDGIANT, sc, 0,
 	    bcm_pwm_mode_proc, "IU", "PWM mode ch 1 (0=off, 1=pwm, 2=dither)");
 	SYSCTL_ADD_PROC(ctx, tree, OID_AUTO, "pwm_freq2",
-	    CTLFLAG_RD | CTLTYPE_UINT, sc, 0,
+	    CTLFLAG_RD | CTLTYPE_UINT | CTLFLAG_NEEDGIANT, sc, 0,
 	    bcm_pwm_pwm_freq2_proc, "IU", "PWM frequency ch 2 (Hz)");
 	SYSCTL_ADD_PROC(ctx, tree, OID_AUTO, "period2",
-	    CTLFLAG_RW | CTLTYPE_UINT, sc, 0,
+	    CTLFLAG_RW | CTLTYPE_UINT | CTLFLAG_NEEDGIANT, sc, 0,
 	    bcm_pwm_period2_proc, "IU", "PWM period ch 2 (#clocks)");
 	SYSCTL_ADD_PROC(ctx, tree, OID_AUTO, "ratio2",
-	    CTLFLAG_RW | CTLTYPE_UINT, sc, 0,
+	    CTLFLAG_RW | CTLTYPE_UINT | CTLFLAG_NEEDGIANT, sc, 0,
 	    bcm_pwm_ratio2_proc, "IU", "PWM ratio ch 2 (0...period)");
 	SYSCTL_ADD_PROC(ctx, tree, OID_AUTO, "mode2",
-	    CTLFLAG_RW | CTLTYPE_UINT, sc, 0,
+	    CTLFLAG_RW | CTLTYPE_UINT | CTLFLAG_NEEDGIANT, sc, 0,
 	    bcm_pwm_mode2_proc, "IU", "PWM mode ch 2 (0=off, 1=pwm, 2=dither)");
 }
 
@@ -487,7 +487,6 @@ bcm_pwm_get_node(device_t bus, device_t dev)
 
 	return (ofw_bus_get_node(bus));
 }
-
 
 static device_method_t bcm_pwm_methods[] = {
 	/* Device interface */

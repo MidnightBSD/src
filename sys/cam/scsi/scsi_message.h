@@ -1,6 +1,5 @@
 /*-
  * This file is in the public domain.
- * $FreeBSD: stable/11/sys/cam/scsi/scsi_message.h 289843 2015-10-23 18:34:18Z mav $
  */
 
 /* Messages (1 byte) */		     /* I/T (M)andatory or (O)ptional */
@@ -73,4 +72,3 @@
 #define	MSG_QUERY_TASK		0x100
 #define	MSG_QUERY_TASK_SET	0x101
 #define	MSG_QUERY_ASYNC_EVENT	0x102
-

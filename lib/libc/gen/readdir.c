@@ -31,7 +31,6 @@
 
 #include <sys/cdefs.h>
 __SCCSID("@(#)readdir.c	8.3 (Berkeley) 9/29/94");
-
 #include "namespace.h"
 #include <sys/param.h>
 #include <dirent.h>

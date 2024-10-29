@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -176,7 +175,6 @@ static const struct tmds_config tegra124_tmds_config[] =
 	},
 };
 
-
 struct hdmi_softc {
 	device_t		dev;
 	struct resource		*mem_res;
@@ -292,7 +290,6 @@ hdmi_setup_clock(struct tegra_drm_encoder *output, clk_t clk, uint64_t pclk)
 	if (rv != 0) {
 		device_printf(output->dev, "Cannot set parent clock\n");
 		return (rv);
-
 	}
 	rv = clk_set_freq(clk, freq, 0);
 	if (rv != 0) {
@@ -340,7 +337,7 @@ static void
 avi_setup_infoframe(struct hdmi_softc *sc, struct drm_display_mode *mode)
 {
 	struct hdmi_avi_infoframe frame;
-	uint8_t buf[17], *hdr, *pb;;
+	uint8_t buf[17], *hdr, *pb;
 	ssize_t rv;
 
 	rv = drm_hdmi_avi_infoframe_from_display_mode(&frame, mode);
@@ -376,7 +373,6 @@ audio_setup_infoframe(struct hdmi_softc *sc)
 	struct hdmi_audio_infoframe frame;
 	uint8_t buf[14], *hdr, *pb;
 	ssize_t rv;
-
 
 	rv = hdmi_audio_infoframe_init(&frame);
 	frame.channels = sc->audio_chans;
@@ -495,7 +491,6 @@ get_hda_cts_n(uint32_t audio_freq_hz, uint32_t pixclk_freq_hz,
 		better_n = abs(n - ideal_n) < abs((int)(*best_n) - ideal_n);
 		if (TO_FFP(aval) == aval_f &&
 		    (err_f < min_err_f || (err_f == min_err_f && better_n))) {
-
 			min_err_f = err_f;
 			*best_n = (uint32_t)n;
 			*best_cts = (uint32_t)cts;
@@ -912,7 +907,6 @@ hdmi_connector_mode_valid(struct drm_connector *connector,
 	return (MODE_OK);
 }
 
-
 static const struct drm_connector_helper_funcs hdmi_connector_helper_funcs = {
 	.get_modes = tegra_drm_connector_get_modes,
 	.mode_valid = hdmi_connector_mode_valid,
@@ -1107,7 +1101,6 @@ static int
 enable_fdt_resources(struct hdmi_softc *sc)
 {
 	int rv;
-
 
 	rv = clk_set_parent_by_clk(sc->clk_hdmi, sc->clk_parent);
 	if (rv != 0) {

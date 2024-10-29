@@ -25,7 +25,6 @@
  */
 
 #include <machine/asm.h>
-
 .syntax	unified
 
 ENTRY(strlen)

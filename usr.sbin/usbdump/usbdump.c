@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010 Weongyo Jeong <weongyo@freebsd.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
- *
  */
 
 #include <sys/param.h>
@@ -107,14 +106,14 @@ struct header_32 {
 	uint8_t align;
 } __packed;
 
-static int doexit = 0;
-static int pkt_captured = 0;
-static int verbose = 0;
+static int doexit;
+static int pkt_captured;
+static int verbose;
 static int uf_minor;
-static const char *i_arg = "usbus0";
-static const char *r_arg = NULL;
-static const char *w_arg = NULL;
-static const char *b_arg = NULL;
+static char *i_arg;
+static char *r_arg;
+static char *w_arg;
+static char *b_arg;
 static struct usbcap uc;
 static const char *errstr_table[USB_ERR_MAX] = {
 	[USB_ERR_NORMAL_COMPLETION]	= "0",
@@ -778,7 +777,10 @@ usage(void)
 
 #define FMT "    %-14s %s\n"
 	fprintf(stderr, "usage: usbdump [options]\n");
-	fprintf(stderr, FMT, "-i <usbusX>", "Listen on USB bus interface");
+	fprintf(stderr, FMT, "-d [ugen]B", "Listen on bus, B");
+	fprintf(stderr, FMT, "-d [ugen]B.D", "Listen on bus, B and device, D");
+	fprintf(stderr, FMT, "-d [ugen]B.D.E", "Listen on bus, B, device, D, and endpoint E");
+	fprintf(stderr, FMT, "-i <usbusX>", "Listen on this bus interface");
 	fprintf(stderr, FMT, "-f <unit[.endpoint]>", "Specify a device and endpoint filter");
 	fprintf(stderr, FMT, "-r <file>", "Read the raw packets from file");
 	fprintf(stderr, FMT, "-s <snaplen>", "Snapshot bytes from each packet");
@@ -827,9 +829,41 @@ main(int argc, char *argv[])
 	const char *optstring;
 	char *pp;
 
-	optstring = "b:hi:r:s:vw:f:";
+	optstring = "b:d:hi:r:s:vw:f:";
 	while ((o = getopt(argc, argv, optstring)) != -1) {
 		switch (o) {
+		case 'd':
+			pp = optarg;
+			if (pp[0] == 'u' && pp[1] == 'g' && pp[2] == 'e' && pp[3] == 'n')
+				pp += 4;
+			ifindex = strtol(pp, &pp, 10);
+			/* Must be same bus when using -d option. */
+			if (i_arg != NULL) {
+				if (atoi(i_arg + 5) != ifindex)
+					usage();
+			} else {
+				asprintf(&i_arg, "usbus%d", ifindex);
+			}
+			/* Parse unit and endpoint, if any. */
+			if (pp != NULL) {
+				if (*pp == '.') {
+					filt_unit = strtol(pp + 1, &pp, 10);
+					filt_ep = -1;
+					if (pp != NULL) {
+						if (*pp == '.') {
+							filt_ep = strtol(pp + 1, &pp, 10);
+							if (pp != NULL && *pp != 0)
+								usage();
+						} else if (*pp != 0) {
+							usage();
+						}
+					}
+					add_filter(filt_unit, filt_ep);
+				} else if (*pp != 0) {
+					usage();
+				}
+			}
+			break;
 		case 'i':
 			i_arg = optarg;
 			break;
@@ -877,6 +911,9 @@ main(int argc, char *argv[])
 			/* NOTREACHED */
 		}
 	}
+
+	if (i_arg == NULL)
+		i_arg = "usbus0";
 
 	if (b_arg != NULL) {
 		p->bfd = open(b_arg, O_CREAT | O_TRUNC |

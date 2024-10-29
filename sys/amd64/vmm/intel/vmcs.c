@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
@@ -24,13 +24,12 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
+#include "opt_bhyve_snapshot.h"
 #include "opt_ddb.h"
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/sysctl.h>
 #include <sys/systm.h>
@@ -41,6 +40,7 @@
 
 #include <machine/segments.h>
 #include <machine/vmm.h>
+#include <machine/vmm_snapshot.h>
 #include "vmm_host.h"
 #include "vmx_cpufunc.h"
 #include "vmcs.h"
@@ -368,7 +368,7 @@ vmcs_init(struct vmcs *vmcs)
 	cr0 = vmm_get_host_cr0();
 	if ((error = vmwrite(VMCS_HOST_CR0, cr0)) != 0)
 		goto done;
-	
+
 	cr4 = vmm_get_host_cr4() | CR4_VMXE;
 	if ((error = vmwrite(VMCS_HOST_CR4, cr4)) != 0)
 		goto done;
@@ -427,6 +427,128 @@ done:
 	VMCLEAR(vmcs);
 	return (error);
 }
+
+#ifdef BHYVE_SNAPSHOT
+int
+vmcs_getany(struct vmcs *vmcs, int running, int ident, uint64_t *val)
+{
+	int error;
+
+	if (!running)
+		VMPTRLD(vmcs);
+
+	error = vmread(ident, val);
+
+	if (!running)
+		VMCLEAR(vmcs);
+
+	return (error);
+}
+
+int
+vmcs_setany(struct vmcs *vmcs, int running, int ident, uint64_t val)
+{
+	int error;
+
+	if (!running)
+		VMPTRLD(vmcs);
+
+	error = vmwrite(ident, val);
+
+	if (!running)
+		VMCLEAR(vmcs);
+
+	return (error);
+}
+
+int
+vmcs_snapshot_reg(struct vmcs *vmcs, int running, int ident,
+		  struct vm_snapshot_meta *meta)
+{
+	int ret;
+	uint64_t val;
+
+	if (meta->op == VM_SNAPSHOT_SAVE) {
+		ret = vmcs_getreg(vmcs, running, ident, &val);
+		if (ret != 0)
+			goto done;
+
+		SNAPSHOT_VAR_OR_LEAVE(val, meta, ret, done);
+	} else if (meta->op == VM_SNAPSHOT_RESTORE) {
+		SNAPSHOT_VAR_OR_LEAVE(val, meta, ret, done);
+
+		ret = vmcs_setreg(vmcs, running, ident, val);
+		if (ret != 0)
+			goto done;
+	} else {
+		ret = EINVAL;
+		goto done;
+	}
+
+done:
+	return (ret);
+}
+
+int
+vmcs_snapshot_desc(struct vmcs *vmcs, int running, int seg,
+		   struct vm_snapshot_meta *meta)
+{
+	int ret;
+	struct seg_desc desc;
+
+	if (meta->op == VM_SNAPSHOT_SAVE) {
+		ret = vmcs_getdesc(vmcs, running, seg, &desc);
+		if (ret != 0)
+			goto done;
+
+		SNAPSHOT_VAR_OR_LEAVE(desc.base, meta, ret, done);
+		SNAPSHOT_VAR_OR_LEAVE(desc.limit, meta, ret, done);
+		SNAPSHOT_VAR_OR_LEAVE(desc.access, meta, ret, done);
+	} else if (meta->op == VM_SNAPSHOT_RESTORE) {
+		SNAPSHOT_VAR_OR_LEAVE(desc.base, meta, ret, done);
+		SNAPSHOT_VAR_OR_LEAVE(desc.limit, meta, ret, done);
+		SNAPSHOT_VAR_OR_LEAVE(desc.access, meta, ret, done);
+
+		ret = vmcs_setdesc(vmcs, running, seg, &desc);
+		if (ret != 0)
+			goto done;
+	} else {
+		ret = EINVAL;
+		goto done;
+	}
+
+done:
+	return (ret);
+}
+
+int
+vmcs_snapshot_any(struct vmcs *vmcs, int running, int ident,
+		  struct vm_snapshot_meta *meta)
+{
+	int ret;
+	uint64_t val;
+
+	if (meta->op == VM_SNAPSHOT_SAVE) {
+		ret = vmcs_getany(vmcs, running, ident, &val);
+		if (ret != 0)
+			goto done;
+
+		SNAPSHOT_VAR_OR_LEAVE(val, meta, ret, done);
+	} else if (meta->op == VM_SNAPSHOT_RESTORE) {
+		SNAPSHOT_VAR_OR_LEAVE(val, meta, ret, done);
+
+		ret = vmcs_setany(vmcs, running, ident, val);
+		if (ret != 0)
+			goto done;
+	} else {
+		ret = EINVAL;
+		goto done;
+	}
+
+done:
+	return (ret);
+}
+#endif
 
 #ifdef DDB
 extern int vmxon_enabled[];

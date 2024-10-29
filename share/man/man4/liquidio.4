@@ -28,7 +28,6 @@
 .\"  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 .\"  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 .\"  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-.\" $FreeBSD$
 .\"
 .Dd August 17, 2017
 .Dt LIQUIDIO 4
@@ -77,7 +76,7 @@ LiquidIO II CN2350 210SV/225SV
 .It
 LiquidIO II CN2360 210SV/225SV
 .El
-.Sh LOADER TUBABLES
+.Sh LOADER TUNABLES
 Tunables can be set at the
 .Xr loader 8
 prompt before booting the kernel or stored in
@@ -110,6 +109,7 @@ To enable/disable driver RSS support
 .It Va hw.lio.hwlro
 .Pp
 To enable/disable hardware LRO
+.El
 .Sh SUPPORT
 For general information and support,
 go to the Cavium support website at:

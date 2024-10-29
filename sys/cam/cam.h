@@ -1,7 +1,7 @@
 /*-
  * Data structures and definitions for the CAM system.
  *
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1997 Justin T. Gibbs.
  * All rights reserved.
@@ -26,7 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _CAM_CAM_H
@@ -277,7 +276,6 @@ typedef enum {
 	/* SCSI Bus Busy */
 	CAM_SCSI_BUSY		= 0x3f,
 
-
 	/*
 	 * Flags
 	 */
@@ -303,7 +301,7 @@ typedef enum {
 	/*
 	 * Target Specific Adjunct Status
 	 */
-	
+
 	/* sent sense with status */
 	CAM_SENT_SENSE		= 0x40000000
 } cam_status;
@@ -404,11 +402,9 @@ void	cam_error_print(struct cam_device *device, union ccb *ccb,
 __END_DECLS
 
 #ifdef _KERNEL
-static __inline void cam_init_pinfo(cam_pinfo *pinfo);
-
 static __inline void cam_init_pinfo(cam_pinfo *pinfo)
 {
-	pinfo->priority = CAM_PRIORITY_NONE;	
+	pinfo->priority = CAM_PRIORITY_NONE;
 	pinfo->index = CAM_UNQUEUED_INDEX;
 }
 #endif

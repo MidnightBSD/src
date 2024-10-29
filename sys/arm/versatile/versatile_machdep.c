@@ -39,7 +39,6 @@
 #include "opt_platform.h"
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -70,7 +69,6 @@ static struct devmap_entry fdt_devmap[FDT_DEVMAP_MAX] = {
 	{ 0, 0, 0, },
 	{ 0, 0, 0, }
 };
-
 
 /*
  * Construct devmap table with DT-derived config data.

@@ -12,7 +12,7 @@ options 	SOC_MV_ARMADA38X
 
 makeoptions 	MODULES_EXTRA="dtb/mv"
 
-options 	MD_ROOT
+#options 	MD_ROOT
 #makeoptions 	MFS_IMAGE=/path/to/miniroot
 #options 	ROOTDEVNAME=\"ufs:md0\"
 options 	ROOTDEVNAME=\"/dev/da0s1a\"
@@ -22,8 +22,15 @@ options 	SMP
 
 options		VM_KMEM_SIZE_MAX=0x9CCD000
 
+# pseudo devices
+device		clk
+device		phy
+device		hwreset
+device		nvmem
+device		regulator
+device		syscon
+
 # Pseudo devices
-device		random
 device		pty
 device		loop
 device		md
@@ -37,7 +44,6 @@ device		ether
 device		vlan
 device		mii
 device		bpf
-device		re
 device		mdio
 device		etherswitch
 device		e6000sw
@@ -73,6 +79,11 @@ device		ahci
 device		iic
 device		iicbus
 device		twsi
+
+# SPI
+device		spibus
+device		spigen
+device		mv_spi
 
 # Wireless NIC cards
 device		wlan		# 802.11 support

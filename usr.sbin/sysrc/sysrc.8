@@ -22,7 +22,6 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\"
 .Dd April 3, 2022
 .Dt SYSRC 8
 .Os
@@ -143,7 +142,7 @@ Disable verbose and hide certain errors.
 When combined with
 .Sq Fl L
 and one or more
-.Li Ar name
+.Ar name
 arguments, provide only exit status and no output.
 .It Fl R Ar dir
 Operate within the root directory
@@ -215,7 +214,8 @@ The list of system configuration files is configured in the file
 within the variable
 .Ql rc_conf_files ,
 which by-default contains a space-separated list of pathnames.
-On all FreeBSD
+On all
+.Fx
 systems, this defaults to the value "/etc/rc.conf /etc/rc.conf.local".
 Each
 pathname is sourced in-order upon startup.
@@ -275,7 +275,7 @@ it is added
 For convenience, if the first character is alpha-numeric
 .Pq letters A-Z, a-z, or numbers 0-9 ,
 dot
-.Pq Li . ,
+.Pq Li \&. ,
 or slash
 .Pq Li / ,
 .Nm
@@ -333,7 +333,7 @@ it is removed
 For convenience, if the first character is alpha-numeric
 .Pq letters A-Z, a-z, or numbers 0-9 ,
 dot
-.Pq Li . ,
+.Pq Li \&. ,
 or slash
 .Pq Li / ,
 .Nm
@@ -466,11 +466,11 @@ cloned_interfaces+"alternate"
 .Dl returns "alternate" if $cloned_interfaces is set .
 .Sh SEE ALSO
 .Xr rc.conf 5 ,
-.Xr rc.subr 8 ,
 .Xr jail 8 ,
 .Xr jexec 8 ,
 .Xr jls 8 ,
 .Xr rc 8 ,
+.Xr rc.subr 8 ,
 .Xr sysctl 8
 .Sh HISTORY
 A

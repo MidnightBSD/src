@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012 Damjan Marion <dmarion@Freebsd.org>
  * All rights reserved.
@@ -28,9 +28,7 @@
  * SUCH DAMAGE.
  */
 
-
 #include <sys/cdefs.h>
-
 #include "opt_platform.h"
 
 #include <sys/param.h>
@@ -293,7 +291,6 @@ static device_method_t ti_aintc_methods[] = {
 	DEVMETHOD(pic_post_filter,	ti_aintc_post_filter),
 	DEVMETHOD(pic_post_ithread,	ti_aintc_post_ithread),
 	DEVMETHOD(pic_pre_ithread,	ti_aintc_pre_ithread),
-
 	{ 0, 0 }
 };
 

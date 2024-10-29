@@ -43,7 +43,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -135,9 +134,7 @@ cpu_fork(struct thread *td1, struct proc *p2, struct thread *td2, int flags)
 	pcb2->pcb_regs.sf_r5 = (register_t)td2;
 	pcb2->pcb_regs.sf_lr = (register_t)fork_trampoline;
 	pcb2->pcb_regs.sf_sp = STACKALIGN(td2->td_frame);
-#if __ARM_ARCH >= 6
 	pcb2->pcb_regs.sf_tpidrurw = (register_t)get_tls();
-#endif
 
 	pcb2->pcb_vfpcpu = -1;
 	pcb2->pcb_vfpstate.fpscr = initial_fpscr;
@@ -147,13 +144,9 @@ cpu_fork(struct thread *td1, struct proc *p2, struct thread *td2, int flags)
 	tf->tf_r0 = 0;
 	tf->tf_r1 = 0;
 
-
 	/* Setup to release spin count in fork_exit(). */
 	td2->td_md.md_spinlock_count = 1;
 	td2->td_md.md_saved_cspr = PSR_SVC32_MODE;
-#if __ARM_ARCH < 6
-	td2->td_md.md_tp = *(register_t *)ARM_TP_ADDRESS;
-#endif
 }
 
 void
@@ -170,40 +163,12 @@ void
 cpu_set_syscall_retval(struct thread *td, int error)
 {
 	struct trapframe *frame;
-	int fixup;
-#ifdef __ARMEB__
-	u_int call;
-#endif
 
 	frame = td->td_frame;
-	fixup = 0;
-
-#ifdef __ARMEB__
-	/*
-	 * __syscall returns an off_t while most other syscalls return an
-	 * int. As an off_t is 64-bits and an int is 32-bits we need to
-	 * place the returned data into r1. As the lseek and freebsd6_lseek
-	 * syscalls also return an off_t they do not need this fixup.
-	 */
-	call = frame->tf_r7;
-	if (call == SYS___syscall) {
-		register_t *ap = &frame->tf_r0;
-		register_t code = ap[_QUAD_LOWWORD];
-		if (td->td_proc->p_sysent->sv_mask)
-			code &= td->td_proc->p_sysent->sv_mask;
-		fixup = (code != SYS_lseek);
-	}
-#endif
-
 	switch (error) {
 	case 0:
-		if (fixup) {
-			frame->tf_r0 = 0;
-			frame->tf_r1 = td->td_retval[0];
-		} else {
-			frame->tf_r0 = td->td_retval[0];
-			frame->tf_r1 = td->td_retval[1];
-		}
+		frame->tf_r0 = td->td_retval[0];
+		frame->tf_r1 = td->td_retval[1];
 		frame->tf_spsr &= ~PSR_C;   /* carry bit */
 		break;
 	case ERESTART:
@@ -221,7 +186,7 @@ cpu_set_syscall_retval(struct thread *td, int error)
 		/* nothing to do */
 		break;
 	default:
-		frame->tf_r0 = SV_ABI_ERRNO(td->td_proc, error);
+		frame->tf_r0 = error;
 		frame->tf_spsr |= PSR_C;    /* carry bit */
 		break;
 	}
@@ -258,7 +223,7 @@ cpu_copy_thread(struct thread *td, struct thread *td0)
  * Set that machine state for performing an upcall that starts
  * the entry function with the given argument.
  */
-void
+int
 cpu_set_upcall(struct thread *td, void (*entry)(void *), void *arg,
 	stack_t *stack)
 {
@@ -268,24 +233,16 @@ cpu_set_upcall(struct thread *td, void (*entry)(void *), void *arg,
 	tf->tf_pc = (int)entry;
 	tf->tf_r0 = (int)arg;
 	tf->tf_spsr = PSR_USR32_MODE;
+	return (0);
 }
 
 int
 cpu_set_user_tls(struct thread *td, void *tls_base)
 {
 
-#if __ARM_ARCH >= 6
 	td->td_pcb->pcb_regs.sf_tpidrurw = (register_t)tls_base;
 	if (td == curthread)
 		set_tls(tls_base);
-#else
-	td->td_md.md_tp = (register_t)tls_base;
-	if (td == curthread) {
-		critical_enter();
-		*(register_t *)ARM_TP_ADDRESS = (register_t)tls_base;
-		critical_exit();
-	}
-#endif
 	return (0);
 }
 
@@ -330,17 +287,6 @@ cpu_fork_kthread_handler(struct thread *td, void (*func)(void *), void *arg)
 	td->td_pcb->pcb_regs.sf_r5 = (register_t)arg;	/* first arg */
 }
 
-/*
- * Software interrupt handler for queued VM system processing.
- */
-void
-swi_vm(void *dummy)
-{
-
-	if (busdma_swi_pending)
-		busdma_swi();
-}
-
 void
 cpu_exit(struct thread *td)
 {
@@ -359,4 +305,9 @@ cpu_procctl(struct thread *td __unused, int idtype __unused, id_t id __unused,
 {
 
 	return (EINVAL);
+}
+
+void
+cpu_sync_core(void)
+{
 }

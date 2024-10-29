@@ -29,9 +29,7 @@
 .\"
 .\" * Other names and brands may be claimed as the property of others.
 .\"
-.\" $FreeBSD$
-.\"
-.Dd October 19, 2020
+.Dd September 12, 2022
 .Dt CXGBE 4
 .Os
 .Sh NAME
@@ -263,7 +261,7 @@ The default is 1.
 Number of padding bytes inserted before the beginning of an Ethernet
 frame in the receive buffer.
 The default value is 0.
-A value of of 2 would ensure that the Ethernet payload (usually the IP header)
+A value of 2 would ensure that the Ethernet payload (usually the IP header)
 is at a 4 byte aligned address.
 0-7 are all valid values.
 .It Va hw.cxgbe.fl_pad
@@ -277,6 +275,7 @@ Controls the hardware response to congestion.
 0 instructs the hardware to backpressure its pipeline on congestion.
 This usually results in the port emitting PAUSE frames.
 1 instructs the hardware to drop frames destined for congested queues.
+2 instructs the hardware to both backpressure the pipeline and drop frames.
 .It Va hw.cxgbe.pause_settings
 PAUSE frame settings.
 Bit 0 is rx_pause, bit 1 is tx_pause, bit 2 is pause_autoneg.
@@ -300,8 +299,10 @@ Bit 0 enables RS FEC, bit 1 enables BASE-R FEC (aka Firecode FEC), bit
 transceiver/cable that is plugged in.
 These bits can be set together in any combination.
 This tunable establishes the default FEC settings for all ports.
-Settings can be displayed and controlled on a per-port basis via the
-dev.<port>.X.fec sysctl.
+Settings can be controlled on a per-port basis via the
+dev.<port>.X.requested_fec sysctl.
+The FEC in use on the link is available in dev.<port>.X.link_fec when
+the link is up.
 .It Va hw.cxgbe.autoneg
 Link autonegotiation settings.
 This tunable establishes the default autonegotiation settings for all ports.

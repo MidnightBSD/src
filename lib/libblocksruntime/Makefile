@@ -1,4 +1,3 @@
-# $FreeBSD: stable/11/lib/libblocksruntime/Makefile 313538 2017-02-10 07:32:40Z ngie $
 
 PACKAGE=lib${LIB:tl}
 LIB=	BlocksRuntime

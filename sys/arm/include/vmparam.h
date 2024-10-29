@@ -29,7 +29,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef	_MACHINE_VMPARAM_H_
@@ -52,10 +51,10 @@
 #define	MAXDSIZ		(512UL*1024*1024)	/* max data size */
 #endif
 #ifndef	DFLSSIZ
-#define	DFLSSIZ		(2UL*1024*1024)		/* initial stack size limit */
+#define	DFLSSIZ		(4UL*1024*1024)		/* initial stack size limit */
 #endif
 #ifndef	MAXSSIZ
-#define	MAXSSIZ		(8UL*1024*1024)		/* max stack size */
+#define	MAXSSIZ		(64UL*1024*1024)	/* max stack size */
 #endif
 #ifndef	SGROWSIZ
 #define	SGROWSIZ	(128UL*1024)		/* amount to grow stack */
@@ -191,5 +190,15 @@ extern vm_offset_t vm_max_kernel_address;
 #define	DMAP_TO_PHYS(x)	({ panic("No direct map exists"); 0; })
 
 #define	DEVMAP_MAX_VADDR	ARM_VECTORS_HIGH
+
+/*
+ * No non-transparent large page support in the pmap.
+ */
+#define	PMAP_HAS_LARGEPAGES	0
+
+/*
+ * Need a page dump array for minidump.
+ */
+#define MINIDUMP_PAGE_TRACKING	1
 
 #endif	/* _MACHINE_VMPARAM_H_ */

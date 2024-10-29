@@ -2,7 +2,7 @@
  * Structure and function declarations for the
  * SCSI Sequential Access Peripheral driver for CAM.
  *
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999, 2000 Matthew Jacob
  * Copyright (c) 2013, 2014, 2015 Spectra Logic Corporation
@@ -28,7 +28,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef	_SCSI_SCSI_SA_H
@@ -999,7 +998,7 @@ void	scsi_load_unload(struct ccb_scsiio *csio, u_int32_t retries,
 			 u_int8_t tag_action, int immediate,   int eot,
 			 int reten, int load, u_int8_t sense_len,
 			 u_int32_t timeout);
-	
+
 void	scsi_write_filemarks(struct ccb_scsiio *csio, u_int32_t retries,
 			     void (*cbfcnp)(struct cam_periph *, union ccb *),
 			     u_int8_t tag_action, int immediate, int setmark,

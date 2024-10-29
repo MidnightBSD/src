@@ -78,15 +78,6 @@ static struct {
 	struct video_info	video_mode_info;
 } cur_info;
 
-struct vt4font_header {
-	uint8_t		magic[8];
-	uint8_t		width;
-	uint8_t		height;
-	uint16_t	pad;
-	uint32_t	glyph_count;
-	uint32_t	map_count[4];
-} __packed;
-
 static int	hex = 0;
 static int	vesa_cols;
 static int	vesa_rows;
@@ -166,9 +157,8 @@ revert(void)
 		else
 			ioctl(0, _IO('S', cur_info.video_mode_number), NULL);
 		if (cur_info.video_mode_info.vi_flags & V_INFO_GRAPHICS) {
-			size[0] = cur_info.video_mode_info.vi_width / 8;
-			size[1] = cur_info.video_mode_info.vi_height /
-			    cur_info.console_info.font_size;
+			size[0] = cur_info.console_info.mv_csz;
+			size[1] = cur_info.console_info.mv_rsz;
 			size[2] = cur_info.console_info.font_size;
 			ioctl(0, KDRASTER, size);
 		}
@@ -199,11 +189,11 @@ usage(void)
 "                  [foreground [background]] [show]");
 	else
 		fprintf(stderr, "%s\n%s\n%s\n%s\n%s\n%s\n",
-"usage: vidcontrol [-CdHLPpx] [-b color] [-c appearance] [-f [size] file]",
-"                  [-g geometry] [-h size] [-i active | adapter | mode]",
-"                  [-l screen_map] [-M char] [-m on | off]",
-"                  [-r foreground background] [-S on | off] [-s number]",
-"                  [-T xterm | cons25] [-t N | off] [mode]",
+"usage: vidcontrol [-CdHLPpx] [-b color] [-c appearance] [-E emulator]",
+"                  [-f [[size] file]] [-g geometry] [-h size]",
+"                  [-i active | adapter | mode] [-l screen_map] [-M char]",
+"                  [-m on | off] [-r foreground background] [-S on | off]",
+"                  [-s number] [-T xterm | cons25] [-t N | off] [mode]",
 "                  [foreground [background]] [show]");
 	exit(1);
 }
@@ -400,9 +390,9 @@ load_vt4mappingtable(unsigned int nmappings, FILE *f)
 	}
 
 	for (i = 0; i < nmappings; i++) {
-		t[i].src = be32toh(t[i].src);
-		t[i].dst = be16toh(t[i].dst);
-		t[i].len = be16toh(t[i].len);
+		t[i].vfm_src = be32toh(t[i].vfm_src);
+		t[i].vfm_dst = be16toh(t[i].vfm_dst);
+		t[i].vfm_len = be16toh(t[i].vfm_len);
 	}
 
 	return (t);
@@ -424,7 +414,7 @@ load_default_vt4font(void)
 static void
 load_vt4font(FILE *f)
 {
-	struct vt4font_header fh;
+	struct font_header fh;
 	static vfnt_t vfnt;
 	size_t glyphsize;
 	unsigned int i;
@@ -434,16 +424,16 @@ load_vt4font(FILE *f)
 		return;
 	}
 
-	if (memcmp(fh.magic, "VFNT0002", 8) != 0) {
+	if (memcmp(fh.fh_magic, "VFNT0002", 8) != 0) {
 		warnx("bad magic in font file\n");
 		return;
 	}
 
 	for (i = 0; i < VFNT_MAPS; i++)
-		vfnt.map_count[i] = be32toh(fh.map_count[i]);
-	vfnt.glyph_count = be32toh(fh.glyph_count);
-	vfnt.width = fh.width;
-	vfnt.height = fh.height;
+		vfnt.map_count[i] = be32toh(fh.fh_map_count[i]);
+	vfnt.glyph_count = be32toh(fh.fh_glyph_count);
+	vfnt.width = fh.fh_width;
+	vfnt.height = fh.fh_height;
 
 	glyphsize = howmany(vfnt.width, 8) * vfnt.height * vfnt.glyph_count;
 	if ((vfnt.glyphs = malloc(glyphsize)) == NULL) {
@@ -1379,6 +1369,45 @@ clear_history(void)
 	}
 }
 
+static int
+get_terminal_emulator(int i, struct term_info *tip)
+{
+	tip->ti_index = i;
+	if (ioctl(0, CONS_GETTERM, tip) == 0)
+		return (1);
+	strlcpy((char *)tip->ti_name, "unknown", sizeof(tip->ti_name));
+	strlcpy((char *)tip->ti_desc, "unknown", sizeof(tip->ti_desc));
+	return (0);
+}
+
+static void
+get_terminal_emulators(void)
+{
+	struct term_info ti;
+	int i;
+
+	for (i = 0; i < 10; i++) {
+		if (get_terminal_emulator(i, &ti) == 0)
+			break;
+		printf("%d: %s (%s)%s\n", i, ti.ti_name, ti.ti_desc,
+		    i == 0 ? " (active)" : "");
+	}
+}
+
+static void
+set_terminal_emulator(const char *name)
+{
+	struct term_info old_ti, ti;
+
+	get_terminal_emulator(0, &old_ti);
+	strlcpy((char *)ti.ti_name, name, sizeof(ti.ti_name));
+	if (ioctl(0, CONS_SETTERM, &ti) != 0)
+		warn("SETTERM '%s'", name);
+	get_terminal_emulator(0, &ti);
+	printf("%s (%s) -> %s (%s)\n", old_ti.ti_name, old_ti.ti_desc,
+	    ti.ti_name, ti.ti_desc);
+}
+
 static void
 set_terminal_mode(char *arg)
 {
@@ -1407,7 +1436,7 @@ main(int argc, char **argv)
 	if (vt4_mode)
 		opts = "b:Cc:fg:h:i:M:m:r:S:s:T:t:x";
 	else
-		opts = "b:Cc:dfg:h:Hi:l:LM:m:pPr:S:s:T:t:x";
+		opts = "b:Cc:deE:fg:h:Hi:l:LM:m:pPr:S:s:T:t:x";
 
 	while ((opt = getopt(argc, argv, opts)) != -1)
 		switch(opt) {
@@ -1424,6 +1453,16 @@ main(int argc, char **argv)
 			if (vt4_mode)
 				break;
 			print_scrnmap();
+			break;
+		case 'E':
+			if (vt4_mode)
+				break;
+			set_terminal_emulator(optarg);
+			break;
+		case 'e':
+			if (vt4_mode)
+				break;
+			get_terminal_emulators();
 			break;
 		case 'f':
 			optarg = nextarg(argc, argv, &optind, 'f', 0);

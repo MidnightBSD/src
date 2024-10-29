@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2018 Rubicon Communications, LLC (Netgate)
  *
@@ -23,11 +23,9 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -310,7 +308,6 @@ mv_thermal_attach(device_t dev)
 
 	mtx_init(&sc->mtx, device_get_nameunit(dev), NULL, MTX_DEF);
 
-
 	if (SYSCON_GET_HANDLE(sc->dev, &sc->syscon) != 0 ||
 	    sc->syscon == NULL) {
 		device_printf(dev, "cannot get syscon for device\n");
@@ -331,7 +328,7 @@ mv_thermal_attach(device_t dev)
 	oid = SYSCTL_CHILDREN(device_get_sysctl_tree(dev));
 	/* There is always at least one sensor */
 	SYSCTL_ADD_PROC(ctx, oid, OID_AUTO, "internal",
-	    CTLTYPE_INT | CTLFLAG_RD,
+	    CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_NEEDGIANT,
 	    dev, 0, mv_thermal_sysctl,
 	    "IK",
 	    "Internal Temperature");
@@ -340,7 +337,7 @@ mv_thermal_attach(device_t dev)
 		snprintf(name, sizeof(name), "cpu%d", i);
 		snprintf(desc, sizeof(desc), "CPU%d Temperature", i);
 		SYSCTL_ADD_PROC(ctx, oid, OID_AUTO, name,
-		    CTLTYPE_INT | CTLFLAG_RD,
+		    CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_NEEDGIANT,
 		    dev, i + 1, mv_thermal_sysctl,
 		    "IK",
 		    desc);

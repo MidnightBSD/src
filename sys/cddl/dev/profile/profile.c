@@ -101,14 +101,6 @@
 #else
 #ifdef __i386
 #define	PROF_ARTIFICIAL_FRAMES	6
-#else
-#ifdef __sparc
-#ifdef DEBUG
-#define	PROF_ARTIFICIAL_FRAMES	4
-#else
-#define	PROF_ARTIFICIAL_FRAMES	3
-#endif
-#endif
 #endif
 #endif
 
@@ -123,7 +115,7 @@
 /*
  * This value is bogus just to make module compilable on powerpc
  */
-#define	PROF_ARTIFICIAL_FRAMES	3
+#define	PROF_ARTIFICIAL_FRAMES	8
 #endif
 
 struct profile_probe_percpu;
@@ -138,13 +130,11 @@ struct profile_probe_percpu;
 #endif
 
 #ifdef __aarch64__
-/* TODO: verify */
-#define	PROF_ARTIFICIAL_FRAMES	10
+#define	PROF_ARTIFICIAL_FRAMES	12
 #endif
 
 #ifdef __riscv
-/* TODO: verify */
-#define	PROF_ARTIFICIAL_FRAMES	10
+#define	PROF_ARTIFICIAL_FRAMES	12
 #endif
 
 typedef struct profile_probe {
@@ -238,7 +228,8 @@ static hrtime_t			profile_interval_min = NANOSEC / 5000;	/* 5000 hz */
 static int			profile_aframes = PROF_ARTIFICIAL_FRAMES;
 
 SYSCTL_DECL(_kern_dtrace);
-SYSCTL_NODE(_kern_dtrace, OID_AUTO, profile, CTLFLAG_RD, 0, "DTrace profile parameters");
+SYSCTL_NODE(_kern_dtrace, OID_AUTO, profile, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
+    "DTrace profile parameters");
 SYSCTL_INT(_kern_dtrace_profile, OID_AUTO, aframes, CTLFLAG_RW, &profile_aframes,
     0, "Skipped frames for profile provider");
 

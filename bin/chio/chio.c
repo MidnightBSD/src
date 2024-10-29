@@ -43,7 +43,6 @@ static const char copyright[] =
 #endif
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/chio.h> 
 #include <err.h>

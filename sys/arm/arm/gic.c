@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_acpi.h"
 #include "opt_platform.h"
 
@@ -97,7 +96,6 @@
 #define	GIC_SUPPORT_SECEXT(_sc)	\
     ((_sc->typer & GICD_TYPER_SECURITYEXT) == GICD_TYPER_SECURITYEXT)
 
-
 #ifndef	GIC_DEFAULT_ICFGR_INIT
 #define	GIC_DEFAULT_ICFGR_INIT	0x00000000
 #endif
@@ -131,7 +129,6 @@ static struct resource_spec arm_gic_spec[] = {
 	{ SYS_RES_IRQ,	  0, RF_ACTIVE | RF_OPTIONAL }, /* Parent interrupt */
 	{ -1, 0 }
 };
-
 
 #if defined(__arm__) && defined(INVARIANTS)
 static int gic_debug_spurious = 1;
@@ -280,7 +277,7 @@ arm_gic_reserve_msi_range(device_t dev, u_int start, u_int count)
 
 	sc = device_get_softc(dev);
 
-	KASSERT((start + count) < sc->nirqs,
+	KASSERT((start + count) <= sc->nirqs,
 	    ("%s: Trying to allocate too many MSI IRQs: %d + %d > %d", __func__,
 	    start, count, sc->nirqs));
 	for (i = 0; i < count; i++) {
@@ -1136,7 +1133,6 @@ arm_gicv2m_alloc_msi(device_t dev, device_t child, int count, int maxcount,
 	for (i = 0; i < count; i++) {
 		/* Mark the interrupt as used */
 		psc->gic_irqs[irq + i].gi_flags |= GI_FLAG_MSI_USED;
-
 	}
 	mtx_unlock(&sc->sc_mutex);
 

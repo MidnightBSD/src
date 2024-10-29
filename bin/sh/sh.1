@@ -31,7 +31,7 @@
 .\"
 .\"	from: @(#)sh.1	8.6 (Berkeley) 5/4/95
 .\"
-.Dd July 6, 2020
+.Dd May 10, 2021
 .Dt SH 1
 .Os
 .Sh NAME
@@ -1350,6 +1350,15 @@ If not set, the default editor is
 The default editor used with the
 .Ic fc
 built-in.
+.It Va HISTFILE
+File used for persistent history storage.
+If unset
+.Pa ~/.sh_history
+will be used.
+If set but empty or
+.Va HISTSIZE
+is set to 0
+the shell will not load and save the history.
 .It Va HISTSIZE
 The number of previous commands that are accessible.
 .It Va HOME
@@ -2501,8 +2510,8 @@ lines, suitable for re-input to the shell.
 See the
 .Sx Functions
 subsection.
-.It Ic set Oo Fl /+abCEefIimnpTuVvx Oc Oo Fl /+o Ar longname Oc Oo
-.Fl c Ar string Oc Op Fl - Ar arg ...
+.It Ic set Oo Fl /+abCEefIimnpTuVvx Oc Oo Fl /+o Ar longname
+.Oc Op Fl - Ar arg ...
 The
 .Ic set
 command performs three different functions:
@@ -2835,7 +2844,11 @@ Shell database.
 Privileged shell profile.
 .El
 .Sh EXIT STATUS
-Errors that are detected by the shell, such as a syntax error, will
+If the
+.Ar script
+cannot be found, the exit status will be 127;
+if it cannot be opened for another reason, the exit status will be 126.
+Other errors that are detected by the shell, such as a syntax error, will
 cause the shell to exit with a non-zero exit status.
 If the shell is not an interactive shell, the execution of the shell
 file will be aborted.

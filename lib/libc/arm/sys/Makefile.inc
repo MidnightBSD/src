@@ -1,5 +1,6 @@
 
-SRCS+=	__vdso_gettc.c
+SRCS+=	__vdso_gettc.c \
+	sched_getcpu_gen.c
 
 MDASM= Ovfork.S cerror.S syscall.S
 

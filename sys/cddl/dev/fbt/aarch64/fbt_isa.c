@@ -22,7 +22,6 @@
  * Portions Copyright 2013 Justin Hibbits jhibbits@freebsd.org
  * Portions Copyright 2013 Howard Su howardsu@freebsd.org
  * Portions Copyright 2015 Ruslan Bukin <br@bsdpad.com>
- *
  */
 
 /*
@@ -41,8 +40,7 @@
 #define	AARCH64_BRK_IMM16_SHIFT	5
 #define	AARCH64_BRK_IMM16_VAL	(0x40d << AARCH64_BRK_IMM16_SHIFT)
 #define	FBT_PATCHVAL		(AARCH64_BRK | AARCH64_BRK_IMM16_VAL)
-#define	FBT_ENTRY	"entry"
-#define	FBT_RETURN	"return"
+#define	FBT_AFRAMES	4
 
 int
 fbt_invop(uintptr_t addr, struct trapframe *frame, uintptr_t rval)
@@ -54,16 +52,21 @@ fbt_invop(uintptr_t addr, struct trapframe *frame, uintptr_t rval)
 	fbt = fbt_probetab[FBT_ADDR2NDX(addr)];
 
 	for (; fbt != NULL; fbt = fbt->fbtp_hashnext) {
-		if ((uintptr_t)fbt->fbtp_patchpoint == addr) {
-			cpu->cpu_dtrace_caller = addr;
+		if ((uintptr_t)fbt->fbtp_patchpoint != addr)
+			continue;
 
+		cpu->cpu_dtrace_caller = addr;
+
+		if (fbt->fbtp_roffset == 0) {
 			dtrace_probe(fbt->fbtp_id, frame->tf_x[0],
 			    frame->tf_x[1], frame->tf_x[2],
 			    frame->tf_x[3], frame->tf_x[4]);
-
-			cpu->cpu_dtrace_caller = 0;
-			return (fbt->fbtp_savedval);
+		} else {
+			dtrace_probe(fbt->fbtp_id, fbt->fbtp_roffset, rval,
+			    0, 0, 0);
 		}
+		cpu->cpu_dtrace_caller = 0;
+		return (fbt->fbtp_savedval);
 	}
 
 	return (0);
@@ -72,8 +75,12 @@ fbt_invop(uintptr_t addr, struct trapframe *frame, uintptr_t rval)
 void
 fbt_patch_tracepoint(fbt_probe_t *fbt, fbt_patchval_t val)
 {
+	vm_offset_t addr;
 
-	*fbt->fbtp_patchpoint = val;
+	if (!arm64_get_writable_addr((vm_offset_t)fbt->fbtp_patchpoint, &addr))
+		panic("%s: Unable to write new instruction", __func__);
+
+	*(fbt_patchval_t *)addr = val;
 	cpu_icache_sync_range((vm_offset_t)fbt->fbtp_patchpoint, 4);
 }
 
@@ -86,6 +93,7 @@ fbt_provide_module_function(linker_file_t lf, int symindx,
 	uint32_t *instr, *limit;
 	const char *name;
 	char *modname;
+	bool found;
 	int offs;
 
 	modname = opaque;
@@ -95,28 +103,81 @@ fbt_provide_module_function(linker_file_t lf, int symindx,
 	if (fbt_excluded(name))
 		return (0);
 
+	/*
+	 * Instrumenting certain exception handling functions can lead to FBT
+	 * recursion, so exclude from instrumentation.
+	 */
+	 if (strcmp(name, "handle_el1h_sync") == 0 ||
+	    strcmp(name, "do_el1h_sync") == 0)
+		return (1);
+
 	instr = (uint32_t *)(symval->value);
 	limit = (uint32_t *)(symval->value + symval->size);
 
+	/*
+	 * Ignore any bti instruction at the start of the function
+	 * we need to keep it there for any indirect branches calling
+	 * the function on Armv8.5+
+	 */
+	if ((*instr & BTI_MASK) == BTI_INSTR)
+		instr++;
+
 	/* Look for stp (pre-indexed) operation */
-	for (; instr < limit; instr++) {
-		if ((*instr & LDP_STP_MASK) == STP_64)
-			break;
+	found = false;
+	/*
+	 * If the first instruction is a nop it's a specially marked
+	 * asm function. We only support a nop first as it's not a normal
+	 * part of the function prologue.
+	 */
+	if (*instr == NOP_INSTR)
+		found = true;
+	if (!found) {
+		for (; instr < limit; instr++) {
+			/*
+			 * Some functions start with
+			 * "stp xt1, xt2, [xn, <const>]!"
+			 */
+			if ((*instr & LDP_STP_MASK) == STP_64) {
+				/*
+				 * Assume any other store of this type means we
+				 * are past the function prolog.
+				 */
+				if (((*instr >> ADDR_SHIFT) & ADDR_MASK) == 31)
+					found = true;
+				break;
+			}
+
+			/*
+			 * Some functions start with a "sub sp, sp, <const>"
+			 * Sometimes the compiler will have a sub instruction
+			 * that is not of the above type so don't stop if we
+			 * see one.
+			 */
+			if ((*instr & SUB_MASK) == SUB_INSTR &&
+			    ((*instr >> SUB_RD_SHIFT) & SUB_R_MASK) == 31 &&
+			    ((*instr >> SUB_RN_SHIFT) & SUB_R_MASK) == 31) {
+				found = true;
+				break;
+			}
+		}
 	}
 
-	if (instr >= limit)
+	if (!found)
 		return (0);
 
 	fbt = malloc(sizeof (fbt_probe_t), M_FBT, M_WAITOK | M_ZERO);
 	fbt->fbtp_name = name;
 	fbt->fbtp_id = dtrace_probe_create(fbt_id, modname,
-	    name, FBT_ENTRY, 3, fbt);
+	    name, FBT_ENTRY, FBT_AFRAMES, fbt);
 	fbt->fbtp_patchpoint = instr;
 	fbt->fbtp_ctl = lf;
 	fbt->fbtp_loadcnt = lf->loadcnt;
 	fbt->fbtp_savedval = *instr;
 	fbt->fbtp_patchval = FBT_PATCHVAL;
-	fbt->fbtp_rval = DTRACE_INVOP_PUSHM;
+	if ((*instr & SUB_MASK) == SUB_INSTR)
+		fbt->fbtp_rval = DTRACE_INVOP_SUB;
+	else
+		fbt->fbtp_rval = DTRACE_INVOP_STP;
 	fbt->fbtp_symindx = symindx;
 
 	fbt->fbtp_hashnext = fbt_probetab[FBT_ADDR2NDX(instr)];
@@ -149,7 +210,7 @@ again:
 	fbt->fbtp_name = name;
 	if (retfbt == NULL) {
 		fbt->fbtp_id = dtrace_probe_create(fbt_id, modname,
-		    name, FBT_RETURN, 3, fbt);
+		    name, FBT_RETURN, FBT_AFRAMES, fbt);
 	} else {
 		retfbt->fbtp_probenext = fbt;
 		fbt->fbtp_id = retfbt->fbtp_id;
@@ -164,6 +225,7 @@ again:
 		fbt->fbtp_rval = DTRACE_INVOP_B;
 	else
 		fbt->fbtp_rval = DTRACE_INVOP_RET;
+	fbt->fbtp_roffset = (uintptr_t)instr - (uintptr_t)symval->value;
 	fbt->fbtp_savedval = *instr;
 	fbt->fbtp_patchval = FBT_PATCHVAL;
 	fbt->fbtp_hashnext = fbt_probetab[FBT_ADDR2NDX(instr)];

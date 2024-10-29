@@ -22,7 +22,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "namespace.h"
 #include <ctype.h>
 #include <errno.h>

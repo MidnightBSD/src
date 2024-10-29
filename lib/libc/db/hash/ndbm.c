@@ -36,7 +36,6 @@
 static char sccsid[] = "@(#)ndbm.c	8.4 (Berkeley) 7/21/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-
 /*
  * This package provides a dbm compatible interface to the new hashing
  * package described in db(3).

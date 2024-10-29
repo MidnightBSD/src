@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2003-2009 Silicon Graphics International Corp.
  * Copyright (c) 2012 The FreeBSD Foundation
@@ -45,7 +45,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/ctype.h>
@@ -405,7 +404,8 @@ const static struct scsi_cddvd_capabilities_page cddvd_page_changeable = {
 	/*num_speed_descr*/0,
 };
 
-SYSCTL_NODE(_kern_cam, OID_AUTO, ctl, CTLFLAG_RD, 0, "CAM Target Layer");
+SYSCTL_NODE(_kern_cam, OID_AUTO, ctl, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
+    "CAM Target Layer");
 static int worker_threads = -1;
 SYSCTL_INT(_kern_cam_ctl, OID_AUTO, worker_threads, CTLFLAG_RDTUN,
     &worker_threads, 1, "Number of worker threads");
@@ -581,7 +581,6 @@ static struct cdevsw ctl_cdevsw = {
 	.d_ioctl =	ctl_ioctl,
 	.d_name =	"ctl",
 };
-
 
 MALLOC_DEFINE(M_CTL, "ctlmem", "Memory used for CTL");
 
@@ -1101,7 +1100,14 @@ static void
 ctl_isc_ua(struct ctl_softc *softc, union ctl_ha_msg *msg, int len)
 {
 	struct ctl_lun *lun;
-	uint32_t iid = ctl_get_initindex(&msg->hdr.nexus);
+	uint32_t iid;
+
+	if (len < sizeof(msg->ua)) {
+		printf("%s: Received truncated message %d < %zu\n",
+		    __func__, len, sizeof(msg->ua));
+		ctl_ha_msg_abort(CTL_HA_CHAN_CTL);
+		return;
+	}
 
 	mtx_lock(&softc->ctl_lock);
 	if (msg->hdr.nexus.targ_mapped_lun >= ctl_max_luns ||
@@ -1113,6 +1119,7 @@ ctl_isc_ua(struct ctl_softc *softc, union ctl_ha_msg *msg, int len)
 	mtx_unlock(&softc->ctl_lock);
 	if (msg->ua.ua_type == CTL_UA_THIN_PROV_THRES && msg->ua.ua_set)
 		memcpy(lun->ua_tpt_info, msg->ua.ua_info, 8);
+	iid = ctl_get_initindex(&msg->hdr.nexus);
 	if (msg->ua.ua_all) {
 		if (msg->ua.ua_set)
 			ctl_est_ua_all(lun, iid, msg->ua.ua_type);
@@ -1135,6 +1142,20 @@ ctl_isc_lun_sync(struct ctl_softc *softc, union ctl_ha_msg *msg, int len)
 	int i, k;
 	ctl_lun_flags oflags;
 	uint32_t targ_lun;
+
+	if (len < offsetof(struct ctl_ha_msg_lun, data[0])) {
+		printf("%s: Received truncated message %d < %zu\n",
+		    __func__, len, offsetof(struct ctl_ha_msg_lun, data[0]));
+		ctl_ha_msg_abort(CTL_HA_CHAN_CTL);
+		return;
+	}
+	i = msg->lun.lun_devid_len + msg->lun.pr_key_count * sizeof(pr_key);
+	if (len < offsetof(struct ctl_ha_msg_lun, data[i])) {
+		printf("%s: Received truncated message data %d < %zu\n",
+		    __func__, len, offsetof(struct ctl_ha_msg_lun, data[i]));
+		ctl_ha_msg_abort(CTL_HA_CHAN_CTL);
+		return;
+	}
 
 	targ_lun = msg->hdr.nexus.targ_mapped_lun;
 	mtx_lock(&softc->ctl_lock);
@@ -1205,6 +1226,22 @@ ctl_isc_port_sync(struct ctl_softc *softc, union ctl_ha_msg *msg, int len)
 	struct ctl_port *port;
 	struct ctl_lun *lun;
 	int i, new;
+
+	if (len < offsetof(struct ctl_ha_msg_port, data[0])) {
+		printf("%s: Received truncated message %d < %zu\n",
+		    __func__, len, offsetof(struct ctl_ha_msg_port, data[0]));
+		ctl_ha_msg_abort(CTL_HA_CHAN_CTL);
+		return;
+	}
+	i = msg->port.name_len + msg->port.lun_map_len +
+	    msg->port.port_devid_len + msg->port.target_devid_len +
+	    msg->port.init_devid_len;
+	if (len < offsetof(struct ctl_ha_msg_port, data[i])) {
+		printf("%s: Received truncated message data %d < %zu\n",
+		    __func__, len, offsetof(struct ctl_ha_msg_port, data[i]));
+		ctl_ha_msg_abort(CTL_HA_CHAN_CTL);
+		return;
+	}
 
 	port = softc->ctl_ports[msg->hdr.nexus.targ_port];
 	if (port == NULL) {
@@ -1317,7 +1354,21 @@ static void
 ctl_isc_iid_sync(struct ctl_softc *softc, union ctl_ha_msg *msg, int len)
 {
 	struct ctl_port *port;
-	int iid;
+	int i, iid;
+
+	if (len < offsetof(struct ctl_ha_msg_iid, data[0])) {
+		printf("%s: Received truncated message %d < %zu\n",
+		    __func__, len, offsetof(struct ctl_ha_msg_iid, data[0]));
+		ctl_ha_msg_abort(CTL_HA_CHAN_CTL);
+		return;
+	}
+	i = msg->iid.name_len;
+	if (len < offsetof(struct ctl_ha_msg_iid, data[i])) {
+		printf("%s: Received truncated message data %d < %zu\n",
+		    __func__, len, offsetof(struct ctl_ha_msg_iid, data[i]));
+		ctl_ha_msg_abort(CTL_HA_CHAN_CTL);
+		return;
+	}
 
 	port = softc->ctl_ports[msg->hdr.nexus.targ_port];
 	if (port == NULL) {
@@ -1342,6 +1393,13 @@ ctl_isc_iid_sync(struct ctl_softc *softc, union ctl_ha_msg *msg, int len)
 static void
 ctl_isc_login(struct ctl_softc *softc, union ctl_ha_msg *msg, int len)
 {
+
+	if (len < sizeof(msg->login)) {
+		printf("%s: Received truncated message %d < %zu\n",
+		    __func__, len, sizeof(msg->login));
+		ctl_ha_msg_abort(CTL_HA_CHAN_CTL);
+		return;
+	}
 
 	if (msg->login.version != CTL_HA_VERSION) {
 		printf("CTL HA peers have different versions %d != %d\n",
@@ -1376,6 +1434,20 @@ ctl_isc_mode_sync(struct ctl_softc *softc, union ctl_ha_msg *msg, int len)
 	u_int i;
 	uint32_t initidx, targ_lun;
 
+	if (len < offsetof(struct ctl_ha_msg_mode, data[0])) {
+		printf("%s: Received truncated message %d < %zu\n",
+		    __func__, len, offsetof(struct ctl_ha_msg_mode, data[0]));
+		ctl_ha_msg_abort(CTL_HA_CHAN_CTL);
+		return;
+	}
+	i = msg->mode.page_len;
+	if (len < offsetof(struct ctl_ha_msg_mode, data[i])) {
+		printf("%s: Received truncated message data %d < %zu\n",
+		    __func__, len, offsetof(struct ctl_ha_msg_mode, data[i]));
+		ctl_ha_msg_abort(CTL_HA_CHAN_CTL);
+		return;
+	}
+
 	targ_lun = msg->hdr.nexus.targ_mapped_lun;
 	mtx_lock(&softc->ctl_lock);
 	if (targ_lun >= ctl_max_luns ||
@@ -1400,7 +1472,7 @@ ctl_isc_mode_sync(struct ctl_softc *softc, union ctl_ha_msg *msg, int len)
 		return;
 	}
 	memcpy(lun->mode_pages.index[i].page_data, msg->mode.data,
-	    lun->mode_pages.index[i].page_len);
+	    min(lun->mode_pages.index[i].page_len, msg->mode.page_len));
 	initidx = ctl_get_initindex(&msg->hdr.nexus);
 	if (initidx != -1)
 		ctl_est_ua_all(lun, initidx, CTL_UA_MODE_CHANGE);
@@ -1437,7 +1509,8 @@ ctl_isc_event_handler(ctl_ha_channel channel, ctl_ha_event event, int param)
 			return;
 		}
 
-		CTL_DEBUG_PRINT(("CTL: msg_type %d\n", msg->hdr.msg_type));
+		CTL_DEBUG_PRINT(("CTL: msg_type %d len %d\n",
+		    msg->hdr.msg_type, param));
 		switch (msg->hdr.msg_type) {
 		case CTL_MSG_SERIALIZE:
 			io = ctl_alloc_io(softc->othersc_pool);
@@ -1879,7 +1952,7 @@ ctl_init(void)
 	sysctl_ctx_init(&softc->sysctl_ctx);
 	softc->sysctl_tree = SYSCTL_ADD_NODE(&softc->sysctl_ctx,
 		SYSCTL_STATIC_CHILDREN(_kern_cam), OID_AUTO, "ctl",
-		CTLFLAG_RD, 0, "CAM Target Layer");
+		CTLFLAG_RD | CTLFLAG_MPSAFE, 0, "CAM Target Layer");
 
 	if (softc->sysctl_tree == NULL) {
 		printf("%s: unable to allocate sysctl tree\n", __func__);
@@ -1916,7 +1989,6 @@ ctl_init(void)
 	  ((ctl_max_ports + 31) / 32), M_DEVBUF, M_WAITOK | M_ZERO);
 	softc->ctl_ports = malloc(sizeof(struct ctl_port *) * ctl_max_ports,
 	     M_DEVBUF, M_WAITOK | M_ZERO);
-
 
 	/*
 	 * In Copan's HA scheme, the "master" and "slave" roles are
@@ -1979,7 +2051,8 @@ ctl_init(void)
 	}
 
 	SYSCTL_ADD_PROC(&softc->sysctl_ctx,SYSCTL_CHILDREN(softc->sysctl_tree),
-	    OID_AUTO, "ha_role", CTLTYPE_INT | CTLFLAG_RWTUN,
+	    OID_AUTO, "ha_role",
+	    CTLTYPE_INT | CTLFLAG_RWTUN | CTLFLAG_MPSAFE,
 	    softc, 0, ctl_ha_role_sysctl, "I", "HA role for this head");
 
 	if (softc->is_single == 0) {
@@ -2476,7 +2549,6 @@ ctl_sbuf_printf_esc(struct sbuf *sb, char *str, int size)
 
 		if (retval != 0)
 			break;
-
 	}
 
 	return (retval);
@@ -2638,12 +2710,6 @@ ctl_ioctl(struct cdev *dev, u_long cmd, caddr_t addr, int flag,
 		}
 
 		entries = malloc(ooa_hdr->alloc_len, M_CTL, M_WAITOK | M_ZERO);
-		if (entries == NULL) {
-			printf("%s: could not allocate %d bytes for OOA "
-			       "dump\n", __func__, ooa_hdr->alloc_len);
-			retval = ENOMEM;
-			break;
-		}
 
 		mtx_lock(&softc->ctl_lock);
 		if ((ooa_hdr->flags & CTL_OOA_FLAG_ALL_LUNS) == 0 &&
@@ -4003,7 +4069,6 @@ ctl_expand_number(const char *buf, uint64_t *num)
 	return (0);
 }
 
-
 /*
  * This routine could be used in the future to load default and/or saved
  * mode page parameters for a particuar lun.
@@ -4020,7 +4085,6 @@ ctl_init_page_index(struct ctl_lun *lun)
 	       sizeof(page_index_template));
 
 	for (i = 0; i < CTL_NUM_MODE_PAGES; i++) {
-
 		page_index = &lun->mode_pages.index[i];
 		if (lun->be_lun->lun_type == T_DIRECT &&
 		    (page_index->page_flags & CTL_PAGE_FLAG_DIRECT) == 0)
@@ -4433,7 +4497,6 @@ ctl_init_log_page_index(struct ctl_lun *lun)
 
 	prev = -1;
 	for (i = 0, j = 0, k = 0; i < CTL_NUM_LOG_PAGES; i++) {
-
 		page_index = &lun->log_pages.index[i];
 		if (lun->be_lun->lun_type == T_DIRECT &&
 		    (page_index->page_flags & CTL_PAGE_FLAG_DIRECT) == 0)
@@ -5285,7 +5348,6 @@ ctl_start_stop(struct ctl_scsiio *ctsio)
 			residx = ctl_get_initindex(&ctsio->io_hdr.nexus);
 			if (ctl_get_prkey(lun, residx) == 0 ||
 			    (lun->pr_res_idx != residx && lun->pr_res_type < 4)) {
-
 				ctl_set_reservation_conflict(ctsio);
 				ctl_done((union ctl_io *)ctsio);
 				return (CTL_RETVAL_COMPLETE);
@@ -5565,7 +5627,7 @@ ctl_read_buffer(struct ctl_scsiio *ctsio)
 	} else {
 		if (lun->write_buffer == NULL) {
 			lun->write_buffer = malloc(CTL_WRITE_BUFFER_SIZE,
-			    M_CTL, M_WAITOK);
+			    M_CTL, M_WAITOK | M_ZERO);
 		}
 		ctsio->kern_data_ptr = lun->write_buffer + buffer_offset;
 	}
@@ -5604,21 +5666,24 @@ ctl_write_buffer(struct ctl_scsiio *ctsio)
 		return (CTL_RETVAL_COMPLETE);
 	}
 
+	if (lun->write_buffer == NULL) {
+		lun->write_buffer = malloc(CTL_WRITE_BUFFER_SIZE,
+			    M_CTL, M_WAITOK | M_ZERO);
+	}
+
 	/*
-	 * If we've got a kernel request that hasn't been malloced yet,
-	 * malloc it and tell the caller the data buffer is here.
+	 * If this kernel request hasn't started yet, initialize the data
+	 * buffer to the correct region of the LUN's write buffer.  Note that
+	 * this doesn't set CTL_FLAG_ALLOCATED since this points into a
+	 * persistent buffer belonging to the LUN rather than a buffer
+	 * dedicated to this request.
 	 */
-	if ((ctsio->io_hdr.flags & CTL_FLAG_ALLOCATED) == 0) {
-		if (lun->write_buffer == NULL) {
-			lun->write_buffer = malloc(CTL_WRITE_BUFFER_SIZE,
-			    M_CTL, M_WAITOK);
-		}
+	if (ctsio->kern_data_ptr == NULL) {
 		ctsio->kern_data_ptr = lun->write_buffer + buffer_offset;
 		ctsio->kern_data_len = len;
 		ctsio->kern_total_len = len;
 		ctsio->kern_rel_offset = 0;
 		ctsio->kern_sg_entries = 0;
-		ctsio->io_hdr.flags |= CTL_FLAG_ALLOCATED;
 		ctsio->be_move_done = ctl_config_move_done;
 		ctl_datamove((union ctl_io *)ctsio);
 
@@ -5923,7 +5988,8 @@ ctl_ie_timer(void *arg)
 		t = scsi_4btoul(lun->MODE_IE.interval_timer);
 		if (t == 0 || t == UINT32_MAX)
 			t = 3000;  /* 5 min */
-		callout_schedule(&lun->ie_callout, t * hz / 10);
+		callout_schedule_sbt(&lun->ie_callout, SBT_1S / 10 * t,
+		    SBT_1S / 10, 0);
 	}
 }
 
@@ -5955,8 +6021,8 @@ ctl_ie_page_handler(struct ctl_scsiio *ctsio,
 			t = scsi_4btoul(pg->interval_timer);
 			if (t == 0 || t == UINT32_MAX)
 				t = 3000;  /* 5 min */
-			callout_reset(&lun->ie_callout, t * hz / 10,
-			    ctl_ie_timer, lun);
+			callout_reset_sbt(&lun->ie_callout, SBT_1S / 10 * t,
+			    SBT_1S / 10, ctl_ie_timer, lun, 0);
 		}
 	} else {
 		lun->ie_asc = 0;
@@ -6002,7 +6068,6 @@ do_next_page:
 		ctl_done((union ctl_io *)ctsio);
 		return (CTL_RETVAL_COMPLETE);
 	} else if (*len_left < sizeof(struct scsi_mode_page_header)) {
-
 		free(ctsio->kern_data_ptr, M_CTL);
 		ctl_set_param_len_error(ctsio);
 		ctl_done((union ctl_io *)ctsio);
@@ -6010,13 +6075,11 @@ do_next_page:
 
 	} else if ((page_header->page_code & SMPH_SPF)
 		&& (*len_left < sizeof(struct scsi_mode_page_header_sp))) {
-
 		free(ctsio->kern_data_ptr, M_CTL);
 		ctl_set_param_len_error(ctsio);
 		ctl_done((union ctl_io *)ctsio);
 		return (CTL_RETVAL_COMPLETE);
 	}
-
 
 	/*
 	 * XXX KDM should we do something with the block descriptor?
@@ -7444,20 +7507,19 @@ ctl_report_supported_opcodes(struct ctl_scsiio *ctsio)
 	case RSO_OPTIONS_OC_SA:
 		if ((ctl_cmd_table[opcode].flags & CTL_CMD_FLAG_SA5) == 0 ||
 		    service_action >= 32) {
-			ctl_set_invalid_field(/*ctsio*/ ctsio,
-					      /*sks_valid*/ 1,
-					      /*command*/ 1,
-					      /*field*/ 2,
-					      /*bit_valid*/ 1,
-					      /*bit*/ 2);
-			ctl_done((union ctl_io *)ctsio);
-			return (CTL_RETVAL_COMPLETE);
+			goto invalid;
 		}
-		/* FALLTHROUGH */
+		total_len = sizeof(struct scsi_report_supported_opcodes_one) + 32;
+		break;
 	case RSO_OPTIONS_OC_ASA:
+		if ((ctl_cmd_table[opcode].flags & CTL_CMD_FLAG_SA5) != 0 &&
+		    service_action >= 32) {
+			goto invalid;
+		}
 		total_len = sizeof(struct scsi_report_supported_opcodes_one) + 32;
 		break;
 	default:
+invalid:
 		ctl_set_invalid_field(/*ctsio*/ ctsio,
 				      /*sks_valid*/ 1,
 				      /*command*/ 1,
@@ -8197,7 +8259,6 @@ ctl_pro_preempt_other(struct ctl_lun *lun, union ctl_ha_msg *msg)
 
 }
 
-
 int
 ctl_persistent_reserve_out(struct ctl_scsiio *ctsio)
 {
@@ -8251,6 +8312,18 @@ ctl_persistent_reserve_out(struct ctl_scsiio *ctsio)
 	}
 
 	param_len = scsi_4btoul(cdb->length);
+
+	/* validate the parameter length */
+	if (param_len != 24) {
+		ctl_set_invalid_field(ctsio,
+				/*sks_valid*/ 1,
+				/*command*/ 1,
+				/*field*/ 5,
+				/*bit_valid*/ 1,
+				/*bit*/ 0);
+		ctl_done((union ctl_io *)ctsio);
+		return (CTL_RETVAL_COMPLETE);
+	}
 
 	if ((ctsio->io_hdr.flags & CTL_FLAG_ALLOCATED) == 0) {
 		ctsio->kern_data_ptr = malloc(param_len, M_CTL, M_WAITOK);
@@ -8316,7 +8389,6 @@ ctl_persistent_reserve_out(struct ctl_scsiio *ctsio)
 	switch (cdb->action & SPRO_ACTION_MASK) {
 	case SPRO_REGISTER:
 	case SPRO_REG_IGNO: {
-
 		/*
 		 * We don't support any of these options, as we report in
 		 * the read capabilities request (see
@@ -8403,7 +8475,6 @@ ctl_persistent_reserve_out(struct ctl_scsiio *ctsio)
 			ctl_ha_msg_send(CTL_HA_CHAN_CTL, &persis_io,
 			    sizeof(persis_io.pr), M_WAITOK);
 		} else /* sa_res_key != 0 */ {
-
 			/*
 			 * If we aren't registered currently then increment
 			 * the key count and set the registered flag.
@@ -9276,14 +9347,8 @@ ctl_request_sense(struct ctl_scsiio *ctsio)
 	sense_ptr = (struct scsi_sense_data *)ctsio->kern_data_ptr;
 	ctsio->kern_sg_entries = 0;
 	ctsio->kern_rel_offset = 0;
-
-	/*
-	 * struct scsi_sense_data, which is currently set to 256 bytes, is
-	 * larger than the largest allowed value for the length field in the
-	 * REQUEST SENSE CDB, which is 252 bytes as of SPC-4.
-	 */
-	ctsio->kern_data_len = cdb->length;
-	ctsio->kern_total_len = cdb->length;
+	ctsio->kern_data_len = ctsio->kern_total_len =
+	    MIN(cdb->length, sizeof(*sense_ptr));
 
 	/*
 	 * If we don't have a LUN, we don't have any pending sense.
@@ -9502,7 +9567,6 @@ ctl_inquiry_evpd_serial(struct ctl_scsiio *ctsio, int alloc_len)
 	ctl_datamove((union ctl_io *)ctsio);
 	return (CTL_RETVAL_COMPLETE);
 }
-
 
 /*
  * SCSI VPD page 0x86, the Extended INQUIRY Data page.
@@ -11571,7 +11635,6 @@ ctl_scsiio_precheck(struct ctl_scsiio *ctsio)
 		}
 	}
 
-
 	if (ctl_scsiio_lun_check(lun, entry, ctsio) != 0) {
 		mtx_unlock(&lun->lun_lock);
 		ctl_done((union ctl_io *)ctsio);
@@ -12305,7 +12368,6 @@ ctl_handle_isc(union ctl_io *io)
 
 }
 
-
 /*
  * Returns the match type in the case of a match, or CTL_LUN_PAT_NONE if
  * there is no match.
@@ -12514,7 +12576,6 @@ ctl_datamove(union ctl_io *io)
 		lun = CTL_LUN(io);
 		if ((lun != NULL)
 		 && (lun->delay_info.datamove_delay > 0)) {
-
 			callout_init(&io->io_hdr.delay_callout, /*mpsafe*/ 1);
 			io->io_hdr.flags |= CTL_FLAG_DELAY_DONE;
 			callout_reset(&io->io_hdr.delay_callout,
@@ -12781,7 +12842,6 @@ ctl_datamove_remote_xfer(union ctl_io *io, unsigned command,
 
 	if ((io->io_hdr.status & CTL_STATUS_MASK) != CTL_STATUS_NONE &&
 	    (io->io_hdr.status & CTL_STATUS_MASK) != CTL_SUCCESS) {
-
 		if (rq != NULL)
 			ctl_dt_req_free(rq);
 
@@ -13303,10 +13363,7 @@ ctl_done_timer_wakeup(void *arg)
 void
 ctl_serseq_done(union ctl_io *io)
 {
-	struct ctl_lun *lun = CTL_LUN(io);;
-
-	if (lun->be_lun->serseq == CTL_LUN_SERSEQ_OFF)
-		return;
+	struct ctl_lun *lun = CTL_LUN(io);
 
 	/* This is racy, but should not be a problem. */
 	if (!TAILQ_EMPTY(&io->io_hdr.blocked_queue)) {
@@ -13362,7 +13419,6 @@ ctl_done(union ctl_io *io)
 
 		if ((lun != NULL)
 		 && (lun->delay_info.done_delay > 0)) {
-
 			callout_init(&io->io_hdr.delay_callout, /*mpsafe*/ 1);
 			io->io_hdr.flags |= CTL_FLAG_DELAY_DONE;
 			callout_reset(&io->io_hdr.delay_callout,

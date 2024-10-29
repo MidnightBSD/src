@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Semihalf under sponsorship from
  * the FreeBSD Foundation.
@@ -27,23 +26,12 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _MACHINE_FDT_H_
 #define _MACHINE_FDT_H_
 
 #include <machine/bus.h>
-
-#ifndef INTRNG
-
-/* Max interrupt number */
-#define FDT_INTR_MAX	NIRQ
-
-/* Map phandle/intpin pair to global IRQ number */
-#define	FDT_MAP_IRQ(node, pin)	(pin)
-
-#endif
 
 /*
  * Bus space tag. XXX endianess info needs to be derived from the blob.

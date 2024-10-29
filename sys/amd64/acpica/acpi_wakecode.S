@@ -25,7 +25,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <machine/asmacros.h>
@@ -147,10 +146,18 @@ wakeup_32:
 	mov	$bootdata32 - bootgdt, %eax
 	mov	%ax, %ds
 
-	/* Turn on the PAE bit for when paging is enabled */
+	/*
+	 * Turn on the PAE bit and optionally the LA57 bit for when paging
+	 * is later enabled.
+	 */
 	mov	%cr4, %eax
 	orl	$CR4_PAE, %eax
-	mov	%eax, %cr4
+	leal	wakeup_pagetables - wakeup_start(%ebx), %ecx
+	movl	(%ecx), %ecx
+	testl	$0x1, %ecx
+	je	1f
+	orl	$CR4_LA57, %eax
+1:	mov	%eax, %cr4
 
 	/*
 	 * Enable EFER.LME so that we get long mode when all the prereqs are
@@ -173,6 +180,7 @@ wakeup_32:
 	 */
 	leal	wakeup_pagetables - wakeup_start(%ebx), %eax
 	movl	(%eax), %eax
+	andl	$~0x1, %eax
 	mov	%eax, %cr3
 
 	/*

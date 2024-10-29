@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * error logging/reporting facilities
  * stolen from /usr/libexec/mail.local via ypserv

@@ -50,13 +50,13 @@
 #include <machine/cpu.h>
 #include <machine/md_var.h>
 
-char machine[] = "arm";
+const char machine[] = "arm";
 
-SYSCTL_STRING(_hw, HW_MACHINE, machine, CTLFLAG_RD,
-	machine, 0, "Machine class");
+SYSCTL_CONST_STRING(_hw, HW_MACHINE, machine, CTLFLAG_RD | CTLFLAG_CAPRD,
+    machine, "Machine class");
 
 static char cpu_model[64];
-SYSCTL_STRING(_hw, HW_MODEL, model, CTLFLAG_RD,
+SYSCTL_STRING(_hw, HW_MODEL, model, CTLFLAG_RD | CTLFLAG_CAPRD,
     cpu_model, sizeof(cpu_model), "Machine model");
 
 static char hw_buf[81];
@@ -105,7 +105,6 @@ static struct {
 	{CPU_IMPLEMENTER_QCOM, CPU_ARCH_KRAIT_300, "Qualcomm", "Krait 300",
 	    CPU_CLASS_KRAIT},
 };
-
 
 static void
 print_v5_cache(void)
@@ -166,7 +165,6 @@ print_v5_cache(void)
 		    (CPU_CT_xSIZE_ASSOC(dsize) - 1);
 		}
 	pdcache_size = multiplier << (CPU_CT_xSIZE_SIZE(dsize) + 8);
-
 
 	/* Print cache info. */
 	if (picache_line_size == 0 && pdcache_line_size == 0)
@@ -271,7 +269,6 @@ add_cap(char *cap)
 		hw_buf_idx += sprintf(hw_buf + hw_buf_idx, ", ");
 	hw_buf_newline = false;
 
-
 	hw_buf_idx += sprintf(hw_buf + hw_buf_idx, "%s", cap);
 }
 
@@ -297,7 +294,6 @@ identify_arm_cpu(void)
 			printf("CPU: %s\n", cpu_model);
 			break;
 		}
-
 	}
 	if (i >= nitems(cpu_names))
 		printf("unknown CPU (ID = 0x%x)\n", cpuinfo.midr);

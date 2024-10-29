@@ -38,7 +38,6 @@ static char sccsid[] = "@(#)var.c	8.3 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-
 #include <unistd.h>
 #include <stdlib.h>
 #include <paths.h>
@@ -557,13 +556,13 @@ environment(void)
 	nenv = 0;
 	for (vpp = vartab ; vpp < vartab + VTABSIZE ; vpp++) {
 		for (vp = *vpp ; vp ; vp = vp->next)
-			if (vp->flags & VEXPORT)
+			if ((vp->flags & (VEXPORT|VUNSET)) == VEXPORT)
 				nenv++;
 	}
 	ep = env = stalloc((nenv + 1) * sizeof *env);
 	for (vpp = vartab ; vpp < vartab + VTABSIZE ; vpp++) {
 		for (vp = *vpp ; vp ; vp = vp->next)
-			if (vp->flags & VEXPORT)
+			if ((vp->flags & (VEXPORT|VUNSET)) == VEXPORT)
 				*ep++ = vp->text;
 	}
 	*ep = NULL;

@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2018 Emmanuel Vadot <manu@freebsd.org>
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,7 +23,6 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -32,13 +30,14 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
 #include <sys/rman.h>
 #include <sys/kernel.h>
+#include <sys/lock.h>
 #include <sys/module.h>
+#include <sys/mutex.h>
 #include <machine/bus.h>
 
 #include <dev/fdt/simplebus.h>
@@ -229,6 +228,10 @@ rk_cru_attach(device_t dev)
 	for (i = 0; i < sc->nclks; i++) {
 		switch (sc->clks[i].type) {
 		case RK_CLK_UNDEFINED:
+			break;
+		case RK3066_CLK_PLL:
+			rk3066_clk_pll_register(sc->clkdom,
+			    sc->clks[i].clk.pll);
 			break;
 		case RK3328_CLK_PLL:
 			rk3328_clk_pll_register(sc->clkdom,

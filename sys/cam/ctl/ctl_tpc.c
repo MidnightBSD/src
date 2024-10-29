@@ -1,7 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
- * Copyright (c) 2014 Alexander Motin <mav@FreeBSD.org>
+ * Copyright (c) 2014-2021 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -66,8 +65,8 @@
 #define	TPC_MAX_LIST	8192
 #define	TPC_MAX_INLINE	0
 #define	TPC_MAX_LISTS	255
-#define	TPC_MAX_IO_SIZE	(1024 * 1024)
-#define	TPC_MAX_IOCHUNK_SIZE	(TPC_MAX_IO_SIZE * 16)
+#define	TPC_MAX_IO_SIZE	(8 * MIN(1024 * 1024, MAX(128 * 1024, maxphys)))
+#define	TPC_MAX_IOCHUNK_SIZE	(TPC_MAX_IO_SIZE * 4)
 #define	TPC_MIN_TOKEN_TIMEOUT	1
 #define	TPC_DFL_TOKEN_TIMEOUT	60
 #define	TPC_MAX_TOKEN_TIMEOUT	600
@@ -186,7 +185,7 @@ tpc_timeout(void *arg)
 		free(token, M_CTL);
 	}
 	mtx_unlock(&softc->tpc_lock);
-	callout_schedule(&softc->tpc_timeout, hz);
+	callout_schedule_sbt(&softc->tpc_timeout, SBT_1S, SBT_1S, 0);
 }
 
 void
@@ -196,7 +195,8 @@ ctl_tpc_init(struct ctl_softc *softc)
 	mtx_init(&softc->tpc_lock, "CTL TPC mutex", NULL, MTX_DEF);
 	TAILQ_INIT(&softc->tpc_tokens);
 	callout_init_mtx(&softc->tpc_timeout, &softc->ctl_lock, 0);
-	callout_reset(&softc->tpc_timeout, hz, tpc_timeout, softc);
+	callout_reset_sbt(&softc->tpc_timeout, SBT_1S, SBT_1S,
+	    tpc_timeout, softc, 0);
 }
 
 void
@@ -2471,4 +2471,3 @@ ctl_report_all_rod_tokens(struct ctl_scsiio *ctsio)
 	ctl_datamove((union ctl_io *)ctsio);
 	return (retval);
 }
-

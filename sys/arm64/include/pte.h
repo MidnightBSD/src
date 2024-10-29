@@ -26,7 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _MACHINE_PTE_H_
@@ -37,36 +36,67 @@ typedef	uint64_t	pd_entry_t;		/* page directory entry */
 typedef	uint64_t	pt_entry_t;		/* page table entry */
 #endif
 
+/* Table attributes */
+#define	TATTR_MASK		UINT64_C(0xfff8000000000000)
+#define	TATTR_AP_TABLE_MASK	(3UL << 61)
+#define	TATTR_AP_TABLE_RO	(2UL << 61)
+#define	TATTR_AP_TABLE_NO_EL0	(1UL << 61)
+#define	TATTR_UXN_TABLE		(1UL << 60)
+#define	TATTR_PXN_TABLE		(1UL << 59)
+/* Bits 58:51 are ignored */
+
 /* Block and Page attributes */
-#define	ATTR_MASK_H	UINT64_C(0xfffc000000000000)
-#define	ATTR_MASK_L	UINT64_C(0x0000000000000fff)
-#define	ATTR_MASK	(ATTR_MASK_H | ATTR_MASK_L)
+#define	ATTR_MASK_H		UINT64_C(0xfffc000000000000)
+#define	ATTR_MASK_L		UINT64_C(0x0000000000000fff)
+#define	ATTR_MASK		(ATTR_MASK_H | ATTR_MASK_L)
 /* Bits 58:55 are reserved for software */
-#define	ATTR_SW_UNUSED2	(1UL << 58)
-#define	ATTR_SW_UNUSED1	(1UL << 57)
-#define	ATTR_SW_MANAGED	(1UL << 56)
-#define	ATTR_SW_WIRED	(1UL << 55)
-#define	ATTR_UXN	(1UL << 54)
-#define	ATTR_PXN	(1UL << 53)
-#define	ATTR_XN		(ATTR_PXN | ATTR_UXN)
-#define	ATTR_CONTIGUOUS	(1UL << 52)
-#define	ATTR_DBM	(1UL << 51)
-#define	ATTR_nG		(1 << 11)
-#define	ATTR_AF		(1 << 10)
-#define	ATTR_SH(x)	((x) << 8)
-#define	 ATTR_SH_MASK	ATTR_SH(3)
-#define	 ATTR_SH_NS	0		/* Non-shareable */
-#define	 ATTR_SH_OS	2		/* Outer-shareable */
-#define	 ATTR_SH_IS	3		/* Inner-shareable */
-#define	ATTR_AP_RW_BIT	(1 << 7)
-#define	ATTR_AP(x)	((x) << 6)
-#define	 ATTR_AP_MASK	ATTR_AP(3)
-#define	 ATTR_AP_RW	(0 << 1)
-#define	 ATTR_AP_RO	(1 << 1)
-#define	 ATTR_AP_USER	(1 << 0)
-#define	ATTR_NS		(1 << 5)
-#define	ATTR_IDX(x)	((x) << 2)
-#define	ATTR_IDX_MASK	(7 << 2)
+#define	ATTR_SW_UNUSED1		(1UL << 58)
+#define	ATTR_SW_NO_PROMOTE	(1UL << 57)
+#define	ATTR_SW_MANAGED		(1UL << 56)
+#define	ATTR_SW_WIRED		(1UL << 55)
+
+#define	ATTR_S1_UXN		(1UL << 54)
+#define	ATTR_S1_PXN		(1UL << 53)
+#define	ATTR_S1_XN		(ATTR_S1_PXN | ATTR_S1_UXN)
+
+#define	ATTR_S2_XN(x)		((x) << 53)
+#define	 ATTR_S2_XN_MASK	ATTR_S2_XN(3UL)
+#define	 ATTR_S2_XN_NONE	0UL	/* Allow execution at EL0 & EL1 */
+#define	 ATTR_S2_XN_EL1		1UL	/* Allow execution at EL0 */
+#define	 ATTR_S2_XN_ALL		2UL	/* No execution */
+#define	 ATTR_S2_XN_EL0		3UL	/* Allow execution at EL1 */
+
+#define	ATTR_CONTIGUOUS		(1UL << 52)
+#define	ATTR_DBM		(1UL << 51)
+#define	ATTR_S1_nG		(1 << 11)
+#define	ATTR_AF			(1 << 10)
+#define	ATTR_SH(x)		((x) << 8)
+#define	 ATTR_SH_MASK		ATTR_SH(3)
+#define	 ATTR_SH_NS		0		/* Non-shareable */
+#define	 ATTR_SH_OS		2		/* Outer-shareable */
+#define	 ATTR_SH_IS		3		/* Inner-shareable */
+
+#define	ATTR_S1_AP_RW_BIT	(1 << 7)
+#define	ATTR_S1_AP(x)		((x) << 6)
+#define	 ATTR_S1_AP_MASK	ATTR_S1_AP(3)
+#define	 ATTR_S1_AP_RW		(0 << 1)
+#define	 ATTR_S1_AP_RO		(1 << 1)
+#define	 ATTR_S1_AP_USER	(1 << 0)
+#define	ATTR_S1_NS		(1 << 5)
+#define	ATTR_S1_IDX(x)		((x) << 2)
+#define	ATTR_S1_IDX_MASK	(7 << 2)
+
+#define	ATTR_S2_S2AP(x)		((x) << 6)
+#define	 ATTR_S2_S2AP_MASK	3
+#define	 ATTR_S2_S2AP_READ	1
+#define	 ATTR_S2_S2AP_WRITE	2
+
+#define	ATTR_S2_MEMATTR(x)		((x) << 2)
+#define	 ATTR_S2_MEMATTR_MASK		ATTR_S2_MEMATTR(0xf)
+#define	 ATTR_S2_MEMATTR_DEVICE_nGnRnE	0x0
+#define	 ATTR_S2_MEMATTR_NC		0xf
+#define	 ATTR_S2_MEMATTR_WT		0xa
+#define	 ATTR_S2_MEMATTR_WB		0xf
 
 #define	ATTR_DEFAULT	(ATTR_AF | ATTR_SH(ATTR_SH_IS))
 
@@ -102,19 +132,22 @@ typedef	uint64_t	pt_entry_t;		/* page table entry */
 #define	L2_BLOCK	L1_BLOCK
 #define	L2_TABLE	L1_TABLE
 
-#define	L2_BLOCK_MASK	UINT64_C(0xffffffe00000)
+#define	L2_BLOCK_MASK	UINT64_C(0xffffffffffe00000)
 
 /* Level 3 table, 4KiB per entry */
 #define	L3_SHIFT	12
 #define	L3_SIZE 	(1 << L3_SHIFT)
 #define	L3_OFFSET 	(L3_SIZE - 1)
-#define	L3_SHIFT	12
 #define	L3_INVAL	0x0
 	/* 0x1 is reserved */
 	/* 0x2 also marks an invalid address */
 #define	L3_PAGE		0x3
 
-#define	PMAP_MAPDEV_EARLY_SIZE	(L2_SIZE * 8)
+/*
+ * A substantial portion of this is to make sure that we can cope with 4K
+ * framebuffers in early boot, assuming a common 4K resolution @ 32-bit depth.
+ */
+#define	PMAP_MAPDEV_EARLY_SIZE	(L2_SIZE * 20)
 
 #define	L0_ENTRIES_SHIFT 9
 #define	L0_ENTRIES	(1 << L0_ENTRIES_SHIFT)

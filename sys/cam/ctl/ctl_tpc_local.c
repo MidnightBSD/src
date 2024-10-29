@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2014 Alexander Motin <mav@FreeBSD.org>
  * Copyright (c) 2004, 2005 Silicon Graphics International Corp.
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -69,7 +68,6 @@ static int tpcl_init(void);
 static int tpcl_shutdown(void);
 static void tpcl_datamove(union ctl_io *io);
 static void tpcl_done(union ctl_io *io);
-
 
 static struct ctl_frontend tpcl_frontend =
 {

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2018 Rubicon Communications, LLC (Netgate)
  *
@@ -23,11 +23,9 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -164,9 +162,6 @@ mv_ap806_gicp_convert_map_data(struct mv_ap806_gicp_softc *sc,
 
 	return ((struct intr_map_data *)sc->parent_map_data);
 }
-
-
-
 
 static int
 mv_ap806_gicp_activate_intr(device_t dev, struct intr_irqsrc *isrc,

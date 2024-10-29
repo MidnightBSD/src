@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012 Oleksandr Tymoshenko <gonzo@freebsd.org>
  * All rights reserved.
@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -76,7 +75,7 @@
  */
 #define	KMI_CTX_LOCK_ASSERT()			 	\
 	do {						\
-		if (!kdb_active && panicstr == NULL)	\
+		if (!kdb_active && !KERNEL_PANICKED())	\
 			mtx_assert(&Giant, MA_OWNED);	\
 	} while (0)
 #else

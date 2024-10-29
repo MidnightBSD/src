@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2015 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Semihalf under
  * the sponsorship of the FreeBSD Foundation.
@@ -30,7 +29,6 @@
 /* PCIe external MAC root complex driver (PEM) for Cavium Thunder SOC */
 
 #include <sys/cdefs.h>
-
 #include "opt_platform.h"
 
 #include <sys/param.h>
@@ -647,7 +645,6 @@ thunder_pem_alloc_resource(device_t dev, device_t child, int type, int *rid,
 		    end, count, flags));
 	}
 
-
 	if (!RMAN_IS_DEFAULT_RANGE(start, end)) {
 		/*
 		 * We might get PHYS addresses here inherited from EFI.
@@ -657,7 +654,6 @@ thunder_pem_alloc_resource(device_t dev, device_t child, int type, int *rid,
 			start = range_addr_phys_to_pci(sc->ranges, start);
 			end = start + count - 1;
 		}
-
 	}
 
 	if (bootverbose) {

@@ -49,7 +49,6 @@
  */
 
 #include <machine/asm.h>
-
 #include <machine/armreg.h>
 
 /* To set the stack pointer for a particular mode we must switch

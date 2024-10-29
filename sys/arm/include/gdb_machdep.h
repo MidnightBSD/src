@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2006 Olivier Houchard
  * All rights reserved.
@@ -24,7 +24,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef _MACHINE_GDB_MACHDEP_H_
@@ -61,6 +60,12 @@ gdb_begin_write(void)
 
 static __inline void
 gdb_end_write(void *arg __unused)
+{
+
+}
+
+static __inline void
+gdb_cpu_stop_reason(int type __unused, int code __unused)
 {
 
 }

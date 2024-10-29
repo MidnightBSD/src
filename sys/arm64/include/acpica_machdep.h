@@ -22,7 +22,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /******************************************************************************
@@ -34,7 +33,6 @@
 
 #ifndef __ACPICA_MACHDEP_H__
 #define	__ACPICA_MACHDEP_H__
-
 
 #ifdef _KERNEL
 

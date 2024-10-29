@@ -36,10 +36,11 @@
 struct mdthread {
 	int	md_spinlock_count;	/* (k) */
 	register_t md_saved_daif;	/* (k) */
+	uintptr_t md_canary;
 };
 
 struct mdproc {
-	vm_offset_t	md_l0addr;
+	long	md_dummy;
 };
 
 #define	KINFO_PROC_SIZE	1088
@@ -50,7 +51,6 @@ struct syscall_args {
 	u_int code;
 	struct sysent *callp;
 	register_t args[MAXARGS];
-	int narg;
 };
 
 #ifdef _KERNEL

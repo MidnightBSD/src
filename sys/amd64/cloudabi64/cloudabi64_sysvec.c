@@ -24,7 +24,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/imgact.h>
 #include <sys/kernel.h>
@@ -35,6 +34,7 @@
 #include <vm/pmap.h>
 
 #include <machine/frame.h>
+#include <machine/md_var.h>
 #include <machine/pcb.h>
 #include <machine/vmparam.h>
 
@@ -47,7 +47,7 @@ extern const char *cloudabi64_syscallnames[];
 extern struct sysent cloudabi64_sysent[];
 
 static int
-cloudabi64_fixup_tcb(register_t **stack_base, struct image_params *imgp)
+cloudabi64_fixup_tcb(uintptr_t *stack_base, struct image_params *imgp)
 {
 	int error;
 	register_t tcbptr;
@@ -56,19 +56,20 @@ cloudabi64_fixup_tcb(register_t **stack_base, struct image_params *imgp)
 	error = cloudabi64_fixup(stack_base, imgp);
 	if (error != 0)
 		return (error);
-	
+
 	/*
 	 * On x86-64, the TCB is referred to by %fs:0. Take some space
 	 * from the top of the stack to store a single element array,
 	 * containing a pointer to the TCB. %fs base will point to this.
 	 */
 	tcbptr = (register_t)*stack_base;
-	return (copyout(&tcbptr, --*stack_base, sizeof(tcbptr)));
+	*stack_base -= sizeof(tcbptr);
+	return (copyout(&tcbptr, (void *)*stack_base, sizeof(tcbptr)));
 }
 
 static void
 cloudabi64_proc_setregs(struct thread *td, struct image_params *imgp,
-    unsigned long stack)
+    uintptr_t stack)
 {
 	struct trapframe *regs;
 
@@ -99,7 +100,6 @@ cloudabi64_fetch_syscall_args(struct thread *td)
 	if (sa->code >= CLOUDABI64_SYS_MAXSYSCALL)
 		return (ENOSYS);
 	sa->callp = &cloudabi64_sysent[sa->code];
-	sa->narg = sa->callp->sy_narg;
 
 	/* Fetch system call arguments. */
 	sa->args[0] = frame->tf_rdi;
@@ -196,6 +196,9 @@ static struct sysentvec cloudabi64_elf_sysvec = {
 	.sv_fixup		= cloudabi64_fixup_tcb,
 	.sv_name		= "CloudABI ELF64",
 	.sv_coredump		= elf64_coredump,
+	.sv_elf_core_osabi	= ELFOSABI_FREEBSD,
+	.sv_elf_core_abi_vendor	= FREEBSD_ABI_VENDOR,
+	.sv_elf_core_prepare_notes = elf64_prepare_notes,
 	.sv_minuser		= VM_MIN_ADDRESS,
 	/* Keep top page reserved to work around AMD Ryzen stability issues. */
 	.sv_maxuser		= VM_MAXUSER_ADDRESS - PAGE_SIZE,
@@ -207,6 +210,7 @@ static struct sysentvec cloudabi64_elf_sysvec = {
 	.sv_fetch_syscall_args	= cloudabi64_fetch_syscall_args,
 	.sv_syscallnames	= cloudabi64_syscallnames,
 	.sv_schedtail		= cloudabi64_schedtail,
+	.sv_set_fork_retval	= x86_set_fork_retval,
 };
 
 INIT_SYSENTVEC(elf_sysvec, &cloudabi64_elf_sysvec);

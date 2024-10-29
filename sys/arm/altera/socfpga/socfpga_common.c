@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -41,4 +40,3 @@
 #include <machine/fdt.h>
 
 #include <arm/altera/socfpga/socfpga_rstmgr.h>
-

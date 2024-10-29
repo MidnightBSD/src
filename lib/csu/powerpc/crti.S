@@ -24,7 +24,6 @@
  */
 
 #include <machine/asm.h>
-
 	.section .init,"ax",@progbits
 	.align	2
 	.globl	_init

@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "ed.h"
 
 /* read_file: read a named file/pipe into the buffer; return line count */
@@ -75,8 +74,6 @@ read_stream(FILE *fp, long n)
 	int len;
 
 	isbinary = newline_added = 0;
-	if (des)
-		init_des_cipher();
 	for (current_addr = n; (len = get_stream_line(fp)) > 0; size += len) {
 		SPL1();
 		if (put_sbuf_line(sbuf) == NULL) {
@@ -105,8 +102,6 @@ read_stream(FILE *fp, long n)
 		newline_added = 1;
 	newline_added = appended ? newline_added : o_newline_added;
 	isbinary = isbinary | o_isbinary;
-	if (des)
-		size += 8 - size % 8;			/* adjust DES size */
 	return size;
 }
 
@@ -118,8 +113,8 @@ get_stream_line(FILE *fp)
 	int c;
 	int i = 0;
 
-	while (((c = des ? get_des_char(fp) : getc(fp)) != EOF || (!feof(fp) &&
-	    !ferror(fp))) && c != '\n') {
+	while (((c = getc(fp)) != EOF || (!feof(fp) && !ferror(fp))) &&
+	    c != '\n') {
 		REALLOC(sbuf, sbufsz, i + 1, ERR);
 		if (!(sbuf[i++] = c))
 			isbinary = 1;
@@ -179,8 +174,6 @@ write_stream(FILE *fp, long n, long m)
 	char *s;
 	int len;
 
-	if (des)
-		init_des_cipher();
 	for (; n && n <= m; n++, lp = lp->q_forw) {
 		if ((s = get_sbuf_line(lp)) == NULL)
 			return ERR;
@@ -191,10 +184,6 @@ write_stream(FILE *fp, long n, long m)
 			return ERR;
 		size += len;
 	}
-	if (des) {
-		flush_des_file(fp);			/* flush buffer */
-		size += 8 - size % 8;			/* adjust DES size */
-	}
 	return size;
 }
 
@@ -204,7 +193,7 @@ int
 put_stream_line(FILE *fp, const char *s, int len)
 {
 	while (len--)
-		if ((des ? put_des_char(*s++, fp) : fputc(*s++, fp)) < 0) {
+		if (fputc(*s++, fp) < 0) {
 			fprintf(stderr, "%s\n", strerror(errno));
 			errmsg = "cannot write file";
 			return ERR;

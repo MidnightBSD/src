@@ -33,7 +33,6 @@ static char sccsid[] = "@(#)modes.c	8.3 (Berkeley) 4/2/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <string.h>
 #include "stty.h"
@@ -89,6 +88,8 @@ static const struct modes cmodes[] = {
 	{ "-rtsflow",	0, CRTS_IFLOW },
 	{ "mdmbuf",	MDMBUF, 0 },
 	{ "-mdmbuf",	0, MDMBUF },
+	{ "rtsdtr",	0, CNO_RTSDTR },
+	{ "-rtsdtr",	CNO_RTSDTR, 0 },
 	{ NULL,		0, 0 },
 };
 
@@ -125,6 +126,8 @@ static const struct modes imodes[] = {
 	{ "-decctlq",	IXANY, 0 },
 	{ "imaxbel",	IMAXBEL, 0 },
 	{ "-imaxbel",	0, IMAXBEL },
+	{ "iutf8",	IUTF8, 0 },
+	{ "-iutf8",	0, IUTF8 },
 	{ NULL,		0, 0 },
 };
 

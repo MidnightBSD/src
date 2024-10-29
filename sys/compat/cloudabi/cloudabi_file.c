@@ -24,7 +24,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/capsicum.h>
 #include <sys/dirent.h>
@@ -184,7 +183,7 @@ cloudabi_sys_file_link(struct thread *td,
 
 	error = kern_linkat(td, uap->fd1.fd, uap->fd2, path1, path2,
 	    UIO_SYSSPACE, (uap->fd1.flags & CLOUDABI_LOOKUP_SYMLINK_FOLLOW) ?
-	    FOLLOW : NOFOLLOW);
+	    AT_SYMLINK_FOLLOW : 0);
 	cloudabi_freestr(path1);
 	cloudabi_freestr(path2);
 	return (error);
@@ -213,7 +212,7 @@ cloudabi_sys_file_open(struct thread *td,
 	    fds.fs_rights_base | fds.fs_rights_inheriting, &rights);
 	if (error != 0)
 		return (error);
-	cap_rights_set(&rights, CAP_LOOKUP);
+	cap_rights_set_one(&rights, CAP_LOOKUP);
 
 	/* Convert rights to corresponding access mode. */
 	read = (fds.fs_rights_base & (CLOUDABI_RIGHT_FD_READ |
@@ -226,7 +225,7 @@ cloudabi_sys_file_open(struct thread *td,
 	/* Convert open flags. */
 	if ((uap->oflags & CLOUDABI_O_CREAT) != 0) {
 		fflags |= O_CREAT;
-		cap_rights_set(&rights, CAP_CREATE);
+		cap_rights_set_one(&rights, CAP_CREATE);
 	}
 	if ((uap->oflags & CLOUDABI_O_DIRECTORY) != 0)
 		fflags |= O_DIRECTORY;
@@ -234,7 +233,7 @@ cloudabi_sys_file_open(struct thread *td,
 		fflags |= O_EXCL;
 	if ((uap->oflags & CLOUDABI_O_TRUNC) != 0) {
 		fflags |= O_TRUNC;
-		cap_rights_set(&rights, CAP_FTRUNCATE);
+		cap_rights_set_one(&rights, CAP_FTRUNCATE);
 	}
 	if ((fds.fs_flags & CLOUDABI_FDFLAG_APPEND) != 0)
 		fflags |= O_APPEND;
@@ -243,12 +242,12 @@ cloudabi_sys_file_open(struct thread *td,
 	if ((fds.fs_flags & (CLOUDABI_FDFLAG_SYNC | CLOUDABI_FDFLAG_DSYNC |
 	    CLOUDABI_FDFLAG_RSYNC)) != 0) {
 		fflags |= O_SYNC;
-		cap_rights_set(&rights, CAP_FSYNC);
+		cap_rights_set_one(&rights, CAP_FSYNC);
 	}
 	if ((uap->dirfd.flags & CLOUDABI_LOOKUP_SYMLINK_FOLLOW) == 0)
 		fflags |= O_NOFOLLOW;
 	if (write && (fflags & (O_APPEND | O_TRUNC)) == 0)
-		cap_rights_set(&rights, CAP_SEEK);
+		cap_rights_set_one(&rights, CAP_SEEK);
 
 	/* Allocate new file descriptor. */
 	error = falloc_noinstall(td, &fp);
@@ -264,7 +263,7 @@ cloudabi_sys_file_open(struct thread *td,
 	}
 	NDINIT_ATRIGHTS(&nd, LOOKUP, FOLLOW, UIO_SYSSPACE, path, uap->dirfd.fd,
 	    &rights, td);
-	error = vn_open(&nd, &fflags, 0777 & ~td->td_proc->p_fd->fd_cmask, fp);
+	error = vn_open(&nd, &fflags, 0777 & ~td->td_proc->p_pd->pd_cmask, fp);
 	cloudabi_freestr(path);
 	if (error != 0) {
 		/* Custom operations provided. */
@@ -286,11 +285,12 @@ cloudabi_sys_file_open(struct thread *td,
 
 	/* Install vnode operations if no custom operations are provided. */
 	if (fp->f_ops == &badfileops) {
-		fp->f_seqcount = 1;
+		fp->f_seqcount[UIO_READ] = 1;
+		fp->f_seqcount[UIO_WRITE] = 1;
 		finit(fp, (fflags & FMASK) | (fp->f_flag & FHASLOCK),
 		    DTYPE_VNODE, vp, &vnops);
 	}
-	VOP_UNLOCK(vp, 0);
+	VOP_UNLOCK(vp);
 
 	/* Truncate file. */
 	if (fflags & O_TRUNC) {
@@ -433,14 +433,14 @@ cloudabi_sys_file_readdir(struct thread *td,
 		/* Validate file type. */
 		vn_lock(vp, LK_SHARED | LK_RETRY);
 		if (vp->v_type != VDIR) {
-			VOP_UNLOCK(vp, 0);
+			VOP_UNLOCK(vp);
 			error = ENOTDIR;
 			goto done;
 		}
 #ifdef MAC
 		error = mac_vnode_check_readdir(td->td_ucred, vp);
 		if (error != 0) {
-			VOP_UNLOCK(vp, 0);
+			VOP_UNLOCK(vp);
 			goto done;
 		}
 #endif /* MAC */
@@ -450,7 +450,7 @@ cloudabi_sys_file_readdir(struct thread *td,
 		ncookies = 0;
 		error = VOP_READDIR(vp, &readuio, fp->f_cred, &eof,
 		    &ncookies, &cookies);
-		VOP_UNLOCK(vp, 0);
+		VOP_UNLOCK(vp);
 		if (error != 0)
 			goto done;
 
@@ -657,7 +657,7 @@ cloudabi_sys_file_stat_get(struct thread *td,
 
 	error = kern_statat(td,
 	    (uap->fd.flags & CLOUDABI_LOOKUP_SYMLINK_FOLLOW) != 0 ? 0 :
-	    AT_SYMLINK_NOFOLLOW, uap->fd.fd, path, UIO_SYSSPACE, &sb, NULL);
+	    AT_SYMLINK_NOFOLLOW, uap->fd.fd, path, UIO_SYSSPACE, &sb);
 	cloudabi_freestr(path);
 	if (error != 0)
 		return (error);
@@ -751,9 +751,11 @@ cloudabi_sys_file_unlink(struct thread *td,
 		return (error);
 
 	if (uap->flags & CLOUDABI_UNLINK_REMOVEDIR)
-		error = kern_rmdirat(td, uap->fd, path, UIO_SYSSPACE, 0);
+		error = kern_frmdirat(td, uap->fd, path, FD_NONE,
+		    UIO_SYSSPACE, 0);
 	else
-		error = kern_unlinkat(td, uap->fd, path, UIO_SYSSPACE, 0, 0);
+		error = kern_funlinkat(td, uap->fd, path, FD_NONE,
+		    UIO_SYSSPACE, 0, 0);
 	cloudabi_freestr(path);
 	return (error);
 }

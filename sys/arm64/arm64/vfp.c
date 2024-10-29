@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2015-2016 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Andrew Turner under
  * sponsorship from the FreeBSD Foundation.
@@ -28,16 +27,17 @@
  */
 
 #include <sys/cdefs.h>
-
 #ifdef VFP
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/limits.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
 #include <sys/pcpu.h>
 #include <sys/proc.h>
 
 #include <machine/armreg.h>
+#include <machine/md_var.h>
 #include <machine/pcb.h>
 #include <machine/vfp.h>
 
@@ -100,11 +100,12 @@ vfp_discard(struct thread *td)
 static void
 vfp_store(struct vfpstate *state)
 {
-	__int128_t *vfp_state;
+	__uint128_t *vfp_state;
 	uint64_t fpcr, fpsr;
 
 	vfp_state = state->vfp_regs;
 	__asm __volatile(
+	    ".arch_extension fp\n"
 	    "mrs	%0, fpcr		\n"
 	    "mrs	%1, fpsr		\n"
 	    "stp	q0,  q1,  [%2, #16 *  0]\n"
@@ -123,6 +124,7 @@ vfp_store(struct vfpstate *state)
 	    "stp	q26, q27, [%2, #16 * 26]\n"
 	    "stp	q28, q29, [%2, #16 * 28]\n"
 	    "stp	q30, q31, [%2, #16 * 30]\n"
+	    ".arch_extension nofp\n"
 	    : "=&r"(fpcr), "=&r"(fpsr) : "r"(vfp_state));
 
 	state->vfp_fpcr = fpcr;
@@ -132,7 +134,7 @@ vfp_store(struct vfpstate *state)
 static void
 vfp_restore(struct vfpstate *state)
 {
-	__int128_t *vfp_state;
+	__uint128_t *vfp_state;
 	uint64_t fpcr, fpsr;
 
 	vfp_state = state->vfp_regs;
@@ -140,6 +142,7 @@ vfp_restore(struct vfpstate *state)
 	fpsr = state->vfp_fpsr;
 
 	__asm __volatile(
+	    ".arch_extension fp\n"
 	    "ldp	q0,  q1,  [%2, #16 *  0]\n"
 	    "ldp	q2,  q3,  [%2, #16 *  2]\n"
 	    "ldp	q4,  q5,  [%2, #16 *  4]\n"
@@ -158,6 +161,7 @@ vfp_restore(struct vfpstate *state)
 	    "ldp	q30, q31, [%2, #16 * 30]\n"
 	    "msr	fpcr, %0		\n"
 	    "msr	fpsr, %1		\n"
+	    ".arch_extension nofp\n"
 	    : : "r"(fpcr), "r"(fpsr), "r"(vfp_state));
 }
 
@@ -197,6 +201,52 @@ vfp_save_state(struct thread *td, struct pcb *pcb)
 	critical_exit();
 }
 
+/*
+ * Update the VFP state for a forked process or new thread. The PCB will
+ * have been copied from the old thread.
+ */
+void
+vfp_new_thread(struct thread *newtd, struct thread *oldtd, bool fork)
+{
+	struct pcb *newpcb;
+
+	newpcb = newtd->td_pcb;
+
+	/* Kernel threads start with clean VFP */
+	if ((oldtd->td_pflags & TDP_KTHREAD) != 0) {
+		newpcb->pcb_fpflags &=
+		    ~(PCB_FP_STARTED | PCB_FP_KERN | PCB_FP_NOSAVE);
+	} else {
+		MPASS((newpcb->pcb_fpflags & (PCB_FP_KERN|PCB_FP_NOSAVE)) == 0);
+		if (!fork) {
+			newpcb->pcb_fpflags &= ~PCB_FP_STARTED;
+		}
+	}
+
+	newpcb->pcb_fpusaved = &newpcb->pcb_fpustate;
+	newpcb->pcb_vfpcpu = UINT_MAX;
+}
+
+/*
+ * Reset the FP state to avoid leaking state from the parent process across
+ * execve() (and to ensure that we get a consistent floating point environment
+ * in every new process).
+ */
+void
+vfp_reset_state(struct thread *td, struct pcb *pcb)
+{
+	critical_enter();
+	bzero(&pcb->pcb_fpustate.vfp_regs, sizeof(pcb->pcb_fpustate.vfp_regs));
+	KASSERT(pcb->pcb_fpusaved == &pcb->pcb_fpustate,
+	    ("pcb_fpusaved should point to pcb_fpustate."));
+	pcb->pcb_fpustate.vfp_fpcr = initial_fpcr;
+	pcb->pcb_fpustate.vfp_fpsr = 0;
+	pcb->pcb_vfpcpu = UINT_MAX;
+	pcb->pcb_fpflags = 0;
+	vfp_discard(td);
+	critical_exit();
+}
+
 void
 vfp_restore_state(void)
 {
@@ -217,7 +267,6 @@ vfp_restore_state(void)
 	 * cpu we need to restore the old state.
 	 */
 	if (PCPU_GET(fpcurthread) != curthread || cpu != curpcb->pcb_vfpcpu) {
-
 		vfp_restore(curthread->td_pcb->pcb_fpusaved);
 		PCPU_SET(fpcurthread, curthread);
 		curpcb->pcb_vfpcpu = cpu;
@@ -238,6 +287,9 @@ vfp_init(void)
 
 	/* Disable to be enabled when it's used */
 	vfp_disable();
+
+	if (PCPU_GET(cpuid) == 0)
+		thread0.td_pcb->pcb_fpusaved->vfp_fpcr = initial_fpcr;
 }
 
 SYSINIT(vfp, SI_SUB_CPU, SI_ORDER_ANY, vfp_init, NULL);
@@ -353,7 +405,7 @@ fpu_kern_leave(struct thread *td, struct fpu_kern_ctx *ctx)
 }
 
 int
-fpu_kern_thread(u_int flags)
+fpu_kern_thread(u_int flags __unused)
 {
 	struct pcb *pcb = curthread->td_pcb;
 
@@ -368,7 +420,7 @@ fpu_kern_thread(u_int flags)
 }
 
 int
-is_fpu_kern_thread(u_int flags)
+is_fpu_kern_thread(u_int flags __unused)
 {
 	struct pcb *curpcb;
 

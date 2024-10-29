@@ -30,12 +30,17 @@
  */
 
 #include <machine/asm.h>
-
 #include <machine/setjmp.h>
 #include <machine/param.h>
 #include <machine/vmparam.h>
 
 #include "assym.inc"
+
+.macro check_user_access user_arg, limit, bad_addr_func
+	ldr	x7, =(\limit)
+	cmp	x\user_arg, x7
+	b.cs	\bad_addr_func
+.endm
 
 /*
  * One of the fu* or su* functions failed, return -1.
@@ -49,60 +54,98 @@ fsu_fault_nopcb:
 END(fsu_fault)
 
 /*
- * int casueword32(volatile uint32_t *, uint32_t, uint32_t *, uint32_t)
+ * int casueword32_llsc(volatile uint32_t *, uint32_t, uint32_t *, uint32_t)
  */
-ENTRY(casueword32)
-	ldr	x4, =(VM_MAXUSER_ADDRESS-3)
-	cmp	x0, x4
-	b.cs	fsu_fault_nopcb
+ENTRY(casueword32_llsc)
+	check_user_access 0, (VM_MAXUSER_ADDRESS-3), fsu_fault_nopcb
 	adr	x6, fsu_fault		/* Load the fault handler */
 	mov	w5, #1
 	SET_FAULT_HANDLER(x6, x4)	/* And set it */
 	ENTER_USER_ACCESS(w6, x4)
-1:	ldxr	w4, [x0]		/* Load-exclusive the data */
+	ldxr	w4, [x0]		/* Load-exclusive the data */
 	cmp	w4, w1			/* Compare */
-	b.ne	2f			/* Not equal, exit */
+	b.ne	1f			/* Not equal, exit */
 	stxr	w5, w3, [x0]		/* Store the new data */
-2:	EXIT_USER_ACCESS(w6)
+1:	EXIT_USER_ACCESS(w6)
 	SET_FAULT_HANDLER(xzr, x6)	/* Reset the fault handler */
 	str	w4, [x2]		/* Store the read data */
 	mov	w0, w5			/* Result same as store status */
 	ret				/* Return */
-END(casueword32)
+END(casueword32_llsc)
 
 /*
- * int casueword(volatile u_long *, u_long, u_long *, u_long)
+ * int casueword32_lse(volatile uint32_t *, uint32_t, uint32_t *, uint32_t)
  */
-ENTRY(casueword)
-	ldr	x4, =(VM_MAXUSER_ADDRESS-7)
-	cmp	x0, x4
-	b.cs	fsu_fault_nopcb
+ENTRY(casueword32_lse)
+	check_user_access 0, (VM_MAXUSER_ADDRESS-3), fsu_fault_nopcb
+	adr	x6, fsu_fault		/* Load the fault handler */
+	SET_FAULT_HANDLER(x6, x4)	/* And set it */
+	ENTER_USER_ACCESS(w6, x4)
+	mov	w7, w1			/* Back up the compare value */
+	.arch_extension lse
+	cas	w1, w3, [x0]		/* Compare and Swap */
+	.arch_extension nolse
+	cmp	w1, w7			/* Check if successful */
+	cset	w0, ne			/* Return 0 on success, 1 on failure */
+	EXIT_USER_ACCESS(w6)
+	SET_FAULT_HANDLER(xzr, x6)	/* Reset the fault handler */
+	str	w1, [x2]		/* Store the read data */
+	ret				/* Return */
+END(casueword32_lse)
+
+/*
+ * int casueword_llsc(volatile u_long *, u_long, u_long *, u_long)
+ */
+ENTRY(casueword_llsc)
+	check_user_access 0, (VM_MAXUSER_ADDRESS-7), fsu_fault_nopcb
 	adr	x6, fsu_fault		/* Load the fault handler */
 	mov	w5, #1
 	SET_FAULT_HANDLER(x6, x4)	/* And set it */
 	ENTER_USER_ACCESS(w6, x4)
-1:	ldxr	x4, [x0]		/* Load-exclusive the data */
+	ldxr	x4, [x0]		/* Load-exclusive the data */
 	cmp	x4, x1			/* Compare */
-	b.ne	2f			/* Not equal, exit */
+	b.ne	1f			/* Not equal, exit */
 	stxr	w5, x3, [x0]		/* Store the new data */
-2:	EXIT_USER_ACCESS(w6)
+1:	EXIT_USER_ACCESS(w6)
 	SET_FAULT_HANDLER(xzr, x6)	/* Reset the fault handler */
 	str	x4, [x2]		/* Store the read data */
 	mov	w0, w5			/* Result same as store status */
 	ret				/* Return */
-END(casueword)
+END(casueword_llsc)
+
+/*
+ * int casueword_lse(volatile u_long *, u_long, u_long *, u_long)
+ */
+ENTRY(casueword_lse)
+	check_user_access 0, (VM_MAXUSER_ADDRESS-3), fsu_fault_nopcb
+	adr	x6, fsu_fault		/* Load the fault handler */
+	SET_FAULT_HANDLER(x6, x4)	/* And set it */
+	ENTER_USER_ACCESS(w6, x4)
+	mov	x7, x1			/* Back up the compare value */
+	.arch_extension lse
+	cas	x1, x3, [x0]		/* Compare and Swap */
+	.arch_extension nolse
+	cmp	x1, x7			/* Check if successful */
+	cset	w0, ne			/* Return 0 on success, 1 on failure */
+	EXIT_USER_ACCESS(w6)
+	SET_FAULT_HANDLER(xzr, x6)	/* Reset the fault handler */
+	str	x1, [x2]		/* Store the read data */
+	ret				/* Return */
+END(casueword_lse)
+
+.macro fsudata insn, ret_reg, user_arg
+	adr	x7, fsu_fault		/* Load the fault handler */
+	SET_FAULT_HANDLER(x7, x6)	/* And set it */
+	\insn	\ret_reg, [x\user_arg]	/* Try accessing the data */
+	SET_FAULT_HANDLER(xzr, x6)	/* Reset the fault handler */
+.endm
 
 /*
  * int fubyte(volatile const void *)
  */
 ENTRY(fubyte)
-	ldr	x1, =VM_MAXUSER_ADDRESS
-	cmp	x0, x1
-	b.cs	fsu_fault_nopcb
-	adr	x6, fsu_fault		/* Load the fault handler */
-	SET_FAULT_HANDLER(x6, x1)	/* And set it */
-	ldtrb	w0, [x0]		/* Try loading the data */
-	SET_FAULT_HANDLER(xzr, x1)	/* Reset the fault handler */
+	check_user_access 0, (VM_MAXUSER_ADDRESS), fsu_fault_nopcb
+	fsudata	ldtrb, w0, 0
 	ret				/* Return */
 END(fubyte)
 
@@ -110,13 +153,8 @@ END(fubyte)
  * int fuword(volatile const void *)
  */
 ENTRY(fuword16)
-	ldr	x1, =(VM_MAXUSER_ADDRESS-1)
-	cmp	x0, x1
-	b.cs	fsu_fault_nopcb
-	adr	x6, fsu_fault		/* Load the fault handler */
-	SET_FAULT_HANDLER(x6, x1)	/* And set it */
-	ldtrh	w0, [x0]		/* Try loading the data */
-	SET_FAULT_HANDLER(xzr, x1)	/* Reset the fault handler */
+	check_user_access 0, (VM_MAXUSER_ADDRESS-1), fsu_fault_nopcb
+	fsudata	ldtrh, w0, 0
 	ret				/* Return */
 END(fuword16)
 
@@ -124,13 +162,8 @@ END(fuword16)
  * int32_t fueword32(volatile const void *, int32_t *)
  */
 ENTRY(fueword32)
-	ldr	x2, =(VM_MAXUSER_ADDRESS-3)
-	cmp	x0, x2
-	b.cs	fsu_fault_nopcb
-	adr	x6, fsu_fault		/* Load the fault handler */
-	SET_FAULT_HANDLER(x6, x2)	/* And set it */
-	ldtr	w0, [x0]		/* Try loading the data */
-	SET_FAULT_HANDLER(xzr, x2)	/* Reset the fault handler */
+	check_user_access 0, (VM_MAXUSER_ADDRESS-3), fsu_fault_nopcb
+	fsudata	ldtr, w0, 0
 	str	w0, [x1]		/* Save the data in kernel space */
 	mov	w0, #0			/* Success */
 	ret				/* Return */
@@ -140,32 +173,22 @@ END(fueword32)
  * long fueword(volatile const void *, int64_t *)
  * int64_t fueword64(volatile const void *, int64_t *)
  */
-ENTRY(fueword)
 EENTRY(fueword64)
-	ldr	x2, =(VM_MAXUSER_ADDRESS-7)
-	cmp	x0, x2
-	b.cs	fsu_fault_nopcb
-	adr	x6, fsu_fault		/* Load the fault handler */
-	SET_FAULT_HANDLER(x6, x2)	/* And set it */
-	ldtr	x0, [x0]		/* Try loading the data */
-	SET_FAULT_HANDLER(xzr, x2)	/* Reset the fault handler */
+ENTRY(fueword)
+	check_user_access 0, (VM_MAXUSER_ADDRESS-7), fsu_fault_nopcb
+	fsudata	ldtr, x0, 0
 	str	x0, [x1]		/* Save the data in kernel space */
 	mov	x0, #0			/* Success */
 	ret				/* Return */
-EEND(fueword64)
 END(fueword)
+EEND(fueword64)
 
 /*
  * int subyte(volatile void *, int)
  */
 ENTRY(subyte)
-	ldr	x2, =VM_MAXUSER_ADDRESS
-	cmp	x0, x2
-	b.cs	fsu_fault_nopcb
-	adr	x6, fsu_fault		/* Load the fault handler */
-	SET_FAULT_HANDLER(x6, x2)	/* And set it */
-	sttrb	w1, [x0]		/* Try storing the data */
-	SET_FAULT_HANDLER(xzr, x2)	/* Reset the fault handler */
+	check_user_access 0, (VM_MAXUSER_ADDRESS), fsu_fault_nopcb
+	fsudata	sttrb, w1, 0
 	mov	x0, #0			/* Success */
 	ret				/* Return */
 END(subyte)
@@ -174,13 +197,8 @@ END(subyte)
  * int suword16(volatile void *, int)
  */
 ENTRY(suword16)
-	ldr	x2, =(VM_MAXUSER_ADDRESS-1)
-	cmp	x0, x2
-	b.cs	fsu_fault_nopcb
-	adr	x6, fsu_fault		/* Load the fault handler */
-	SET_FAULT_HANDLER(x6, x2)	/* And set it */
-	sttrh	w1, [x0]		/* Try storing the data */
-	SET_FAULT_HANDLER(xzr, x2)	/* Reset the fault handler */
+	check_user_access 0, (VM_MAXUSER_ADDRESS-1), fsu_fault_nopcb
+	fsudata	sttrh, w1, 0
 	mov	x0, #0			/* Success */
 	ret				/* Return */
 END(suword16)
@@ -189,13 +207,8 @@ END(suword16)
  * int suword32(volatile void *, int)
  */
 ENTRY(suword32)
-	ldr	x2, =(VM_MAXUSER_ADDRESS-3)
-	cmp	x0, x2
-	b.cs	fsu_fault_nopcb
-	adr	x6, fsu_fault		/* Load the fault handler */
-	SET_FAULT_HANDLER(x6, x2)	/* And set it */
-	sttr	w1, [x0]		/* Try storing the data */
-	SET_FAULT_HANDLER(xzr, x2)	/* Reset the fault handler */
+	check_user_access 0, (VM_MAXUSER_ADDRESS-3), fsu_fault_nopcb
+	fsudata	sttr, w1, 0
 	mov	x0, #0			/* Success */
 	ret				/* Return */
 END(suword32)
@@ -203,19 +216,14 @@ END(suword32)
 /*
  * int suword(volatile void *, long)
  */
-ENTRY(suword)
 EENTRY(suword64)
-	ldr	x2, =(VM_MAXUSER_ADDRESS-7)
-	cmp	x0, x2
-	b.cs	fsu_fault_nopcb
-	adr	x6, fsu_fault		/* Load the fault handler */
-	SET_FAULT_HANDLER(x6, x2)	/* And set it */
-	sttr	x1, [x0]		/* Try storing the data */
-	SET_FAULT_HANDLER(xzr, x2)	/* Reset the fault handler */
+ENTRY(suword)
+	check_user_access 0, (VM_MAXUSER_ADDRESS-7), fsu_fault_nopcb
+	fsudata	sttr, x1, 0
 	mov	x0, #0			/* Success */
 	ret				/* Return */
-EEND(suword64)
 END(suword)
+EEND(suword64)
 
 ENTRY(setjmp)
 	/* Store the stack pointer */
@@ -276,8 +284,8 @@ END(pagezero_simple)
 ENTRY(pagezero_cache)
 	add	x1, x0, #PAGE_SIZE
 
-	ldr	x2, =dczva_line_size
-	ldr	x2, [x2]
+	adrp	x2, dczva_line_size
+	ldr	x2, [x2, :lo12:dczva_line_size]
 
 1:
 	dc	zva, x0

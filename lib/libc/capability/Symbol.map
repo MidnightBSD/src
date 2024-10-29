@@ -1,5 +1,4 @@
 /*
- * $FreeBSD: stable/11/lib/libc/capability/Symbol.map 255219 2013-09-05 00:09:56Z pjd $
  */
 
 FBSD_1.3 {

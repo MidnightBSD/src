@@ -44,6 +44,6 @@ INTERNAL_CUSTOM_INCS+=	gtest/internal/custom/gtest.h
 
 SRCS+=		gtest-all.cc
 
-LIBADD+=	pthread
+LIBADD+=	pthread regex
 
 .include <bsd.lib.mk>

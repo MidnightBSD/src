@@ -1,6 +1,5 @@
 /*
  * MD header for contrib/gdtoa
- *
  */
 
 /*

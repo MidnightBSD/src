@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Nvidia Integrated PCI/PCI-Express controller driver.
  */
@@ -69,7 +68,6 @@
 #include "msi_if.h"
 #include "pcib_if.h"
 #include "pic_if.h"
-
 
 #define	AFI_AXI_BAR0_SZ				0x000
 #define	AFI_AXI_BAR1_SZ				0x004
@@ -121,7 +119,6 @@
 #define	 AFI_INTR_CODE_INT_CODE_CLKCLAMP_SENSE		12
 #define	 AFI_INTR_CODE_INT_CODE_RDY4PD_SENSE		13
 #define	 AFI_INTR_CODE_INT_CODE_P2P_ERROR		14
-
 
 #define	AFI_INTR_SIGNATURE			0x0bc
 #define	AFI_UPPER_FPCI_ADDRESS			0x0c0
@@ -180,27 +177,35 @@
 
 #define	AFI_PEXBIAS_CTRL			0x168
 
-/* FPCI Address space */
-#define	FPCI_MAP_IO			0xfdfc000000ULL
-#define	FPCI_MAP_TYPE0_CONFIG		0xfdfc000000ULL
-#define	FPCI_MAP_TYPE1_CONFIG		0xfdff000000ULL
-#define	FPCI_MAP_EXT_TYPE0_CONFIG	0xfe00000000ULL
-#define	FPCI_MAP_EXT_TYPE1_CONFIG	0xfe10000000ULL
-
 /* Configuration space */
-#define	RP_VEND_XP	0x00000F00
-#define	 RP_VEND_XP_DL_UP	(1 << 30)
+#define	RP_VEND_XP				0x0F00
+#define	 RP_VEND_XP_DL_UP				(1 << 30)
 
-#define	RP_PRIV_MISC	0x00000FE0
-#define	 RP_PRIV_MISC_PRSNT_MAP_EP_PRSNT (0xE << 0)
-#define	 RP_PRIV_MISC_PRSNT_MAP_EP_ABSNT (0xF << 0)
+#define RP_VEND_CTL2				0x0fa8
+#define  RP_VEND_CTL2_PCA_ENABLE			(1 << 7)
 
-#define	RP_LINK_CONTROL_STATUS			0x00000090
-#define	 RP_LINK_CONTROL_STATUS_DL_LINK_ACTIVE	0x20000000
-#define	 RP_LINK_CONTROL_STATUS_LINKSTAT_MASK	0x3fff0000
+#define	RP_PRIV_MISC				0x0FE0
+#define	 RP_PRIV_MISC_PRSNT_MAP_EP_PRSNT 		(0xE << 0)
+#define	 RP_PRIV_MISC_PRSNT_MAP_EP_ABSNT 		(0xF << 0)
+
+#define	RP_LINK_CONTROL_STATUS			0x0090
+#define	 RP_LINK_CONTROL_STATUS_DL_LINK_ACTIVE		0x20000000
+#define	 RP_LINK_CONTROL_STATUS_LINKSTAT_MASK		0x3fff0000
+
+/* PADS space */
+#define PADS_REFCLK_CFG0			0x000c8
+#define PADS_REFCLK_CFG1			0x000cc
+
 
 /* Wait 50 ms (per port) for link. */
 #define	TEGRA_PCIE_LINKUP_TIMEOUT	50000
+
+/* FPCI Address space */
+#define	FPCI_MAP_IO			0xFDFC000000ULL
+#define	FPCI_MAP_TYPE0_CONFIG		0xFDFC000000ULL
+#define	FPCI_MAP_TYPE1_CONFIG		0xFDFF000000ULL
+#define	FPCI_MAP_EXT_TYPE0_CONFIG	0xFE00000000ULL
+#define	FPCI_MAP_EXT_TYPE1_CONFIG	0xFE10000000ULL
 
 #define TEGRA_PCIB_MSI_ENABLE
 
@@ -225,7 +230,7 @@
 #define	PCI_CFG_FUN(fun)	(((fun) & 0x07) << 8)
 #define	PCI_CFG_BASE_REG(reg)	((reg)  & 0xff)
 
-#define	PADS_WR4(_sc, _r, _v)	bus_write_4((_sc)-pads_mem_res, (_r), (_v))
+#define	PADS_WR4(_sc, _r, _v)	bus_write_4((_sc)->pads_mem_res, (_r), (_v))
 #define	PADS_RD4(_sc, _r)	bus_read_4((_sc)->pads_mem_res, (_r))
 #define	AFI_WR4(_sc, _r, _v)	bus_write_4((_sc)->afi_mem_res, (_r), (_v))
 #define	AFI_RD4(_sc, _r)	bus_read_4((_sc)->afi_mem_res, (_r))
@@ -247,10 +252,57 @@ static struct {
     {AFI_MSI_AXI_BAR_ST, AFI_MSI_FPCI_BAR_ST, AFI_MSI_BAR_SZ},	/* MSI 9 */
 };
 
+
+struct pcie_soc {
+	char 		**regulator_names;
+	bool		cml_clk;
+	bool		pca_enable;
+	uint32_t	pads_refclk_cfg0;
+	uint32_t	pads_refclk_cfg1;
+};
+
+/* Tegra 124 config. */
+static char *tegra124_reg_names[] = {
+	"avddio-pex-supply",
+	"dvddio-pex-supply",
+	"avdd-pex-pll-supply",
+	"hvdd-pex-supply",
+	"hvdd-pex-pll-e-supply",
+	"vddio-pex-ctl-supply",
+	"avdd-pll-erefe-supply",
+	NULL
+};
+
+static struct pcie_soc tegra124_soc = {
+	.regulator_names = tegra124_reg_names,
+	.cml_clk = true,
+	.pca_enable = false,
+	.pads_refclk_cfg0 = 0x44ac44ac,
+};
+
+/* Tegra 210 config. */
+static char *tegra210_reg_names[] = {
+	"avdd-pll-uerefe-supply",
+	"hvddio-pex-supply",
+	"dvddio-pex-supply",
+	"dvdd-pex-pll-supply",
+	"hvdd-pex-pll-e-supply",
+	"vddio-pex-ctl-supply",
+	NULL
+};
+
+static struct pcie_soc tegra210_soc = {
+	.regulator_names = tegra210_reg_names,
+	.cml_clk =  true,
+	.pca_enable = true,
+	.pads_refclk_cfg0 = 0x90b890b8,
+};
+
 /* Compatible devices. */
 static struct ofw_compat_data compat_data[] = {
-	{"nvidia,tegra124-pcie",	1},
-	{NULL,		 		0},
+	{"nvidia,tegra124-pcie", (uintptr_t)&tegra124_soc},
+	{"nvidia,tegra210-pcie", (uintptr_t)&tegra210_soc},
+	{NULL,		 	 0},
 };
 
 #define	TEGRA_FLAG_MSI_USED	0x0001
@@ -278,6 +330,7 @@ struct tegra_pcib_port {
 struct tegra_pcib_softc {
 	struct ofw_pci_softc	ofw_pci;
 	device_t		dev;
+	struct pcie_soc		*soc;
 	struct mtx		mtx;
 	struct resource		*pads_mem_res;
 	struct resource		*afi_mem_res;
@@ -298,13 +351,7 @@ struct tegra_pcib_softc {
 	hwreset_t		hwreset_pex;
 	hwreset_t		hwreset_afi;
 	hwreset_t		hwreset_pcie_x;
-	regulator_t		supply_avddio_pex;
-	regulator_t		supply_dvddio_pex;
-	regulator_t		supply_avdd_pex_pll;
-	regulator_t		supply_hvdd_pex;
-	regulator_t		supply_hvdd_pex_pll_e;
-	regulator_t		supply_vddio_pex_ctl;
-	regulator_t		supply_avdd_pll_erefe;
+	regulator_t		regulators[16]; /* Safe maximum */
 
 	vm_offset_t		msi_page;	/* VA of MSI page */
 	bus_addr_t		cfg_base_addr;	/* base address of config */
@@ -619,7 +666,6 @@ tegra_pcib_msi_detach(struct tegra_pcib_softc *sc)
 	return (EBUSY);
 }
 
-
 static void
 tegra_pcib_msi_disable_intr(device_t dev, struct intr_irqsrc *isrc)
 {
@@ -692,7 +738,6 @@ tegra_pcib_msi_teardown_intr(device_t dev, struct intr_irqsrc *isrc,
 	return (0);
 }
 
-
 static int
 tegra_pcib_msi_alloc_msi(device_t dev, device_t child, int count, int maxcount,
     device_t *pic, struct intr_irqsrc **srcs)
@@ -739,7 +784,6 @@ tegra_pcib_msi_alloc_msi(device_t dev, device_t child, int count, int maxcount,
 	for (i = 0; i < count; i++) {
 		/* Mark the interrupt as used */
 		sc->isrcs[irq + i].flags |= TEGRA_FLAG_MSI_USED;
-
 	}
 	mtx_unlock(&sc->mtx);
 
@@ -805,7 +849,7 @@ tegra_pcib_pex_ctrl(struct tegra_pcib_softc *sc, int port)
 static int
 tegra_pcib_enable_fdt_resources(struct tegra_pcib_softc *sc)
 {
-	int rv;
+	int i, rv;
 
 	rv = hwreset_assert(sc->hwreset_pcie_x);
 	if (rv != 0) {
@@ -825,48 +869,17 @@ tegra_pcib_enable_fdt_resources(struct tegra_pcib_softc *sc)
 
 	tegra_powergate_power_off(TEGRA_POWERGATE_PCX);
 
-	/* Power supplies. */
-	rv = regulator_enable(sc->supply_avddio_pex);
-	if (rv != 0) {
-		device_printf(sc->dev,
-		    "Cannot enable 'avddio_pex' regulator\n");
-		return (rv);
-	}
-	rv = regulator_enable(sc->supply_dvddio_pex);
-	if (rv != 0) {
-		device_printf(sc->dev,
-		    "Cannot enable 'dvddio_pex' regulator\n");
-		return (rv);
-	}
-	rv = regulator_enable(sc->supply_avdd_pex_pll);
-	if (rv != 0) {
-		device_printf(sc->dev,
-		    "Cannot enable 'avdd-pex-pll' regulator\n");
-		return (rv);
-	}
-	rv = regulator_enable(sc->supply_hvdd_pex);
-	if (rv != 0) {
-		device_printf(sc->dev,
-		    "Cannot enable 'hvdd-pex-supply' regulator\n");
-		return (rv);
-	}
-	rv = regulator_enable(sc->supply_hvdd_pex_pll_e);
-	if (rv != 0) {
-		device_printf(sc->dev,
-		    "Cannot enable 'hvdd-pex-pll-e-supply' regulator\n");
-		return (rv);
-	}
-	rv = regulator_enable(sc->supply_vddio_pex_ctl);
-	if (rv != 0) {
-		device_printf(sc->dev,
-		    "Cannot enable 'vddio-pex-ctl' regulator\n");
-		return (rv);
-	}
-	rv = regulator_enable(sc->supply_avdd_pll_erefe);
-	if (rv != 0) {
-		device_printf(sc->dev,
-		    "Cannot enable 'avdd-pll-erefe-supply' regulator\n");
-		return (rv);
+	/* Regulators. */
+	for (i = 0; i < nitems(sc->regulators); i++) {
+		if (sc->regulators[i] == NULL)
+			continue;
+		rv = regulator_enable(sc->regulators[i]);
+		if (rv != 0) {
+			device_printf(sc->dev,
+			    "Cannot enable '%s' regulator\n",
+			    sc->soc->regulator_names[i]);
+			return (rv);
+		}
 	}
 
 	rv = tegra_powergate_sequence_power_up(TEGRA_POWERGATE_PCX,
@@ -887,16 +900,19 @@ tegra_pcib_enable_fdt_resources(struct tegra_pcib_softc *sc)
 		device_printf(sc->dev, "Cannot enable 'afi' clock\n");
 		return (rv);
 	}
-	rv = clk_enable(sc->clk_cml);
-	if (rv != 0) {
-		device_printf(sc->dev, "Cannot enable 'cml' clock\n");
-		return (rv);
+	if (sc->soc->cml_clk) {
+		rv = clk_enable(sc->clk_cml);
+		if (rv != 0) {
+			device_printf(sc->dev, "Cannot enable 'cml' clock\n");
+			return (rv);
+		}
 	}
 	rv = clk_enable(sc->clk_pll_e);
 	if (rv != 0) {
 		device_printf(sc->dev, "Cannot enable 'pll_e' clock\n");
 		return (rv);
 	}
+
 	return (0);
 }
 
@@ -974,63 +990,28 @@ fail:
 	return (NULL);
 }
 
-
 static int
 tegra_pcib_parse_fdt_resources(struct tegra_pcib_softc *sc, phandle_t node)
 {
 	phandle_t child;
 	struct tegra_pcib_port *port;
-	int rv;
+	int i, rv;
 
-	/* Power supplies. */
-	rv = regulator_get_by_ofw_property(sc->dev, 0, "avddio-pex-supply",
-	    &sc->supply_avddio_pex);
-	if (rv != 0) {
-		device_printf(sc->dev,
-		    "Cannot get 'avddio-pex' regulator\n");
-		return (ENXIO);
-	}
-	rv = regulator_get_by_ofw_property(sc->dev, 0, "dvddio-pex-supply",
-	     &sc->supply_dvddio_pex);
-	if (rv != 0) {
-		device_printf(sc->dev,
-		    "Cannot get 'dvddio-pex' regulator\n");
-		return (ENXIO);
-	}
-	rv = regulator_get_by_ofw_property(sc->dev, 0, "avdd-pex-pll-supply",
-	     &sc->supply_avdd_pex_pll);
-	if (rv != 0) {
-		device_printf(sc->dev,
-		    "Cannot get 'avdd-pex-pll' regulator\n");
-		return (ENXIO);
-	}
-	rv = regulator_get_by_ofw_property(sc->dev, 0, "hvdd-pex-supply",
-	     &sc->supply_hvdd_pex);
-	if (rv != 0) {
-		device_printf(sc->dev,
-		    "Cannot get 'hvdd-pex' regulator\n");
-		return (ENXIO);
-	}
-	rv = regulator_get_by_ofw_property(sc->dev, 0, "hvdd-pex-pll-e-supply",
-	     &sc->supply_hvdd_pex_pll_e);
-	if (rv != 0) {
-		device_printf(sc->dev,
-		    "Cannot get 'hvdd-pex-pll-e' regulator\n");
-		return (ENXIO);
-	}
-	rv = regulator_get_by_ofw_property(sc->dev, 0, "vddio-pex-ctl-supply",
-	    &sc->supply_vddio_pex_ctl);
-	if (rv != 0) {
-		device_printf(sc->dev,
-		    "Cannot get 'vddio-pex-ctl' regulator\n");
-		return (ENXIO);
-	}
-	rv = regulator_get_by_ofw_property(sc->dev, 0, "avdd-pll-erefe-supply",
-	     &sc->supply_avdd_pll_erefe);
-	if (rv != 0) {
-		device_printf(sc->dev,
-		    "Cannot get 'avdd-pll-erefe' regulator\n");
-		return (ENXIO);
+	/* Regulators. */
+	for (i = 0; sc->soc->regulator_names[i] != NULL; i++) {
+		if (i >= nitems(sc->regulators)) {
+			device_printf(sc->dev,
+			    "Too many regulators present in DT.\n");
+			return (EOVERFLOW);
+		}
+		rv = regulator_get_by_ofw_property(sc->dev, 0,
+		    sc->soc->regulator_names[i], sc->regulators + i);
+		if (rv != 0) {
+			device_printf(sc->dev,
+			    "Cannot get '%s' regulator\n",
+			    sc->soc->regulator_names[i]);
+			return (ENXIO);
+		}
 	}
 
 	/* Resets. */
@@ -1066,10 +1047,12 @@ tegra_pcib_parse_fdt_resources(struct tegra_pcib_softc *sc, phandle_t node)
 		device_printf(sc->dev, "Cannot get 'pll_e' clock\n");
 		return (ENXIO);
 	}
-	rv = clk_get_by_ofw_name(sc->dev, 0, "cml", &sc->clk_cml);
-	if (rv != 0) {
-		device_printf(sc->dev, "Cannot get 'cml' clock\n");
-		return (ENXIO);
+	if (sc->soc->cml_clk) {
+		rv = clk_get_by_ofw_name(sc->dev, 0, "cml", &sc->clk_cml);
+		if (rv != 0) {
+			device_printf(sc->dev, "Cannot get 'cml' clock\n");
+			return (ENXIO);
+		}
 	}
 
 	/* Ports */
@@ -1142,7 +1125,6 @@ tegra_pcib_wait_for_link(struct tegra_pcib_softc *sc,
 	uint32_t reg;
 	int i;
 
-
 	/* Setup link detection. */
 	reg = tegra_pcib_read_config(sc->dev, 0, port->port_idx, 0,
 	    RP_PRIV_MISC, 4);
@@ -1157,7 +1139,6 @@ tegra_pcib_wait_for_link(struct tegra_pcib_softc *sc,
 		if (reg & RP_VEND_XP_DL_UP)
 				break;
 		DELAY(1);
-
 	}
 	if (i <= 0)
 		return (ETIMEDOUT);
@@ -1203,6 +1184,14 @@ tegra_pcib_port_enable(struct tegra_pcib_softc *sc, int port_num)
 	reg |= AFI_PEX_CTRL_RST_L;
 	AFI_WR4(sc, port->afi_pex_ctrl, reg);
 
+	if (sc->soc->pca_enable) {
+		reg = tegra_pcib_read_config(sc->dev, 0, port->port_idx, 0,
+		    RP_VEND_CTL2, 4);
+		reg |= RP_VEND_CTL2_PCA_ENABLE;
+		tegra_pcib_write_config(sc->dev, 0, port->port_idx, 0,
+		    RP_VEND_CTL2, reg, 4);
+	}
+
 	rv = tegra_pcib_wait_for_link(sc, port);
 	if (bootverbose)
 		device_printf(sc->dev, " port %d (%d lane%s): Link is %s\n",
@@ -1210,7 +1199,6 @@ tegra_pcib_port_enable(struct tegra_pcib_softc *sc, int port_num)
 			 port->num_lanes > 1 ? "s": "",
 			 rv == 0 ? "up": "down");
 }
-
 
 static void
 tegra_pcib_port_disable(struct tegra_pcib_softc *sc, uint32_t port_num)
@@ -1267,6 +1255,7 @@ tegra_pcib_enable(struct tegra_pcib_softc *sc)
 		device_printf(sc->dev, "Cannot enable FDT resources\n");
 		return (rv);
 	}
+
 	/* Enable PLLE control. */
 	reg = AFI_RD4(sc, AFI_PLLE_CONTROL);
 	reg &= ~AFI_PLLE_CONTROL_BYPASS_PADS2PLLE_CONTROL;
@@ -1318,6 +1307,10 @@ tegra_pcib_enable(struct tegra_pcib_softc *sc)
 		}
 	}
 
+	/* Configure PCIe reference clock */
+	PADS_WR4(sc, PADS_REFCLK_CFG0, sc->soc->pads_refclk_cfg0);
+	if (sc->num_ports > 2)
+		PADS_WR4(sc, PADS_REFCLK_CFG1, sc->soc->pads_refclk_cfg1);
 
 	rv = hwreset_deassert(sc->hwreset_pcie_x);
 	if (rv != 0) {
@@ -1458,6 +1451,8 @@ tegra_pcib_attach(device_t dev)
 	mtx_init(&sc->mtx, "msi_mtx", NULL, MTX_DEF);
 
 	node = ofw_bus_get_node(dev);
+	sc->soc = (struct pcie_soc *)ofw_bus_search_compatible(dev,
+	    compat_data)->ocd_data;
 
 	rv = tegra_pcib_parse_fdt_resources(sc, node);
 	if (rv != 0) {
@@ -1498,7 +1493,6 @@ tegra_pcib_attach(device_t dev)
 		goto out;
 	}
 	sc->cfg_base_addr = rman_get_start(sc->cfg_mem_res);
-
 
 	/* Map RP slots */
 	for (i = 0; i < TEGRA_PCIB_MAX_PORTS; i++) {
@@ -1581,7 +1575,6 @@ out:
 
 	return (rv);
 }
-
 
 static device_method_t tegra_pcib_methods[] = {
 	/* Device interface */

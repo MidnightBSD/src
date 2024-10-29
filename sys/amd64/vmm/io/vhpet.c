@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013 Tycho Nightingale <tycho.nightingale@pluribusnetworks.com>
  * Copyright (c) 2013 Neel Natu <neel@freebsd.org>
@@ -25,10 +25,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/cdefs.h>
+#include "opt_bhyve_snapshot.h"
 
 #include <sys/param.h>
 #include <sys/lock.h>
@@ -41,6 +41,7 @@
 
 #include <machine/vmm.h>
 #include <machine/vmm_dev.h>
+#include <machine/vmm_snapshot.h>
 
 #include "vmm_lapic.h"
 #include "vatpic.h"
@@ -467,7 +468,7 @@ vhpet_timer_update_config(struct vhpet *vhpet, int n, uint64_t data,
 }
 
 int
-vhpet_mmio_write(void *vm, int vcpuid, uint64_t gpa, uint64_t val, int size,
+vhpet_mmio_write(struct vcpu *vcpu, uint64_t gpa, uint64_t val, int size,
     void *arg)
 {
 	struct vhpet *vhpet;
@@ -476,7 +477,7 @@ vhpet_mmio_write(void *vm, int vcpuid, uint64_t gpa, uint64_t val, int size,
 	sbintime_t now, *nowptr;
 	int i, offset;
 
-	vhpet = vm_hpet(vm);
+	vhpet = vm_hpet(vcpu_vm(vcpu));
 	offset = gpa - VHPET_BASE;
 
 	VHPET_LOCK(vhpet);
@@ -617,14 +618,14 @@ done:
 }
 
 int
-vhpet_mmio_read(void *vm, int vcpuid, uint64_t gpa, uint64_t *rval, int size,
+vhpet_mmio_read(struct vcpu *vcpu, uint64_t gpa, uint64_t *rval, int size,
     void *arg)
 {
 	int i, offset;
 	struct vhpet *vhpet;
 	uint64_t data;
 
-	vhpet = vm_hpet(vm);
+	vhpet = vm_hpet(vcpu_vm(vcpu));
 	offset = gpa - VHPET_BASE;
 
 	VHPET_LOCK(vhpet);
@@ -749,6 +750,7 @@ vhpet_cleanup(struct vhpet *vhpet)
 	for (i = 0; i < VHPET_NUM_TIMERS; i++)
 		callout_drain(&vhpet->timer[i].callout);
 
+	mtx_destroy(&vhpet->mtx);
 	free(vhpet, M_VHPET);
 }
 
@@ -759,3 +761,49 @@ vhpet_getcap(struct vm_hpet_cap *cap)
 	cap->capabilities = vhpet_capabilities();
 	return (0);
 }
+
+#ifdef BHYVE_SNAPSHOT
+int
+vhpet_snapshot(struct vhpet *vhpet, struct vm_snapshot_meta *meta)
+{
+	int i, ret;
+	uint32_t countbase;
+
+	SNAPSHOT_VAR_OR_LEAVE(vhpet->freq_sbt, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(vhpet->config, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(vhpet->isr, meta, ret, done);
+
+	/* at restore time the countbase should have the value it had when the
+	 * snapshot was created; since the value is not directly kept in
+	 * vhpet->countbase, but rather computed relative to the current system
+	 * uptime using countbase_sbt, save the value retured by vhpet_counter
+	 */
+	if (meta->op == VM_SNAPSHOT_SAVE)
+		countbase = vhpet_counter(vhpet, NULL);
+	SNAPSHOT_VAR_OR_LEAVE(countbase, meta, ret, done);
+	if (meta->op == VM_SNAPSHOT_RESTORE)
+		vhpet->countbase = countbase;
+
+	for (i = 0; i < nitems(vhpet->timer); i++) {
+		SNAPSHOT_VAR_OR_LEAVE(vhpet->timer[i].cap_config,
+				      meta, ret, done);
+		SNAPSHOT_VAR_OR_LEAVE(vhpet->timer[i].msireg, meta, ret, done);
+		SNAPSHOT_VAR_OR_LEAVE(vhpet->timer[i].compval, meta, ret, done);
+		SNAPSHOT_VAR_OR_LEAVE(vhpet->timer[i].comprate, meta, ret, done);
+		SNAPSHOT_VAR_OR_LEAVE(vhpet->timer[i].callout_sbt,
+				      meta, ret, done);
+	}
+
+done:
+	return (ret);
+}
+
+int
+vhpet_restore_time(struct vhpet *vhpet)
+{
+	if (vhpet_counter_enabled(vhpet))
+		vhpet_start_counting(vhpet);
+
+	return (0);
+}
+#endif

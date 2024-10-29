@@ -12,7 +12,7 @@
 #define _ENDIAN_H_
 
 /*
- * BSD's sys/_endian.h is very close to the interface provided on Linux by
+ * FreeBSD's sys/_endian.h is very close to the interface provided on Linux by
  * glibc's endian.h.
  */
 #include <sys/_endian.h>
@@ -28,16 +28,16 @@
 #define __PDP_ENDIAN		_PDP_ENDIAN
 
 /*
- * BSD's sys/endian.h and machine/endian.h doesn't define a separate
+ * FreeBSD's sys/endian.h and machine/endian.h doesn't define a separate
  * byte order for floats. Use the host non-float byte order.
  */
 #define __FLOAT_WORD_ORDER	_BYTE_ORDER
 
 /*
  * We don't define BIG_ENDI, LITTLE_ENDI, HIGH_HALF and LOW_HALF macros that
- * glibc's endian.h defines since those appear to be internal to internal to
- * glibc. We also don't try to emulate the various helper macros that glibc
- * uses to limit namespace visibility.
+ * glibc's endian.h defines since those appear to be internal to glibc.
+ * We also don't try to emulate the various helper macros that glibc uses to
+ * limit namespace visibility.
  */
 
 #endif /* _ENDIAN_H_ */

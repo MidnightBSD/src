@@ -35,7 +35,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_hwpmc_hooks.h"
 #include "opt_kstack_pages.h"
 
@@ -98,11 +97,10 @@ ASSYM(TDP_KTHREAD, TDP_KTHREAD);
 ASSYM(PAGE_SIZE, PAGE_SIZE);
 ASSYM(NPTEPG, NPTEPG);
 ASSYM(NPDEPG, NPDEPG);
-ASSYM(addr_PTmap, addr_PTmap);
-ASSYM(addr_PDmap, addr_PDmap);
-ASSYM(addr_PDPmap, addr_PDPmap);
-ASSYM(addr_PML4map, addr_PML4map);
-ASSYM(addr_PML4pml4e, addr_PML4pml4e);
+ASSYM(addr_P4Tmap, addr_P4Tmap);
+ASSYM(addr_P4Dmap, addr_P4Dmap);
+ASSYM(addr_P5Tmap, addr_P5Tmap);
+ASSYM(addr_P5Dmap, addr_P5Dmap);
 ASSYM(PDESIZE, sizeof(pd_entry_t));
 ASSYM(PTESIZE, sizeof(pt_entry_t));
 ASSYM(PAGE_SHIFT, PAGE_SHIFT);
@@ -115,6 +113,7 @@ ASSYM(val_KPML4I, KPML4I);
 ASSYM(val_PML4PML4I, PML4PML4I);
 ASSYM(VM_MAXUSER_ADDRESS, VM_MAXUSER_ADDRESS);
 ASSYM(KERNBASE, KERNBASE);
+ASSYM(KERNLOAD, KERNLOAD);
 ASSYM(DMAP_MIN_ADDRESS, DMAP_MIN_ADDRESS);
 ASSYM(DMAP_MAX_ADDRESS, DMAP_MAX_ADDRESS);
 
@@ -204,6 +203,33 @@ ASSYM(PTI_SIZE, sizeof(struct pti_frame));
 ASSYM(SIGF_HANDLER, offsetof(struct sigframe, sf_ahu.sf_handler));
 ASSYM(SIGF_UC, offsetof(struct sigframe, sf_uc));
 ASSYM(UC_EFLAGS, offsetof(ucontext_t, uc_mcontext.mc_rflags));
+ASSYM(UC_RDI, offsetof(ucontext_t, uc_mcontext.mc_rdi));
+ASSYM(UC_RSI, offsetof(ucontext_t, uc_mcontext.mc_rsi));
+ASSYM(UC_RDX, offsetof(ucontext_t, uc_mcontext.mc_rdx));
+ASSYM(UC_RCX, offsetof(ucontext_t, uc_mcontext.mc_rcx));
+ASSYM(UC_R8, offsetof(ucontext_t, uc_mcontext.mc_r8));
+ASSYM(UC_R9, offsetof(ucontext_t, uc_mcontext.mc_r9));
+ASSYM(UC_RAX, offsetof(ucontext_t, uc_mcontext.mc_rax));
+ASSYM(UC_RBX, offsetof(ucontext_t, uc_mcontext.mc_rbx));
+ASSYM(UC_RBP, offsetof(ucontext_t, uc_mcontext.mc_rbp));
+ASSYM(UC_R10, offsetof(ucontext_t, uc_mcontext.mc_r10));
+ASSYM(UC_R11, offsetof(ucontext_t, uc_mcontext.mc_r11));
+ASSYM(UC_R12, offsetof(ucontext_t, uc_mcontext.mc_r12));
+ASSYM(UC_R13, offsetof(ucontext_t, uc_mcontext.mc_r13));
+ASSYM(UC_R14, offsetof(ucontext_t, uc_mcontext.mc_r14));
+ASSYM(UC_R15, offsetof(ucontext_t, uc_mcontext.mc_r15));
+ASSYM(UC_FS, offsetof(ucontext_t, uc_mcontext.mc_fs));
+ASSYM(UC_GS, offsetof(ucontext_t, uc_mcontext.mc_gs));
+ASSYM(UC_ES, offsetof(ucontext_t, uc_mcontext.mc_es));
+ASSYM(UC_DS, offsetof(ucontext_t, uc_mcontext.mc_ds));
+ASSYM(UC_RIP, offsetof(ucontext_t, uc_mcontext.mc_rip));
+ASSYM(UC_CS, offsetof(ucontext_t, uc_mcontext.mc_cs));
+ASSYM(UC_RFLAGS, offsetof(ucontext_t, uc_mcontext.mc_rflags));
+ASSYM(UC_RSP, offsetof(ucontext_t, uc_mcontext.mc_rsp));
+ASSYM(UC_SS, offsetof(ucontext_t, uc_mcontext.mc_ss));
+ASSYM(UC_FSBASE, offsetof(ucontext_t, uc_mcontext.mc_fsbase));
+ASSYM(UC_GSBASE, offsetof(ucontext_t, uc_mcontext.mc_gsbase));
+
 ASSYM(ENOENT, ENOENT);
 ASSYM(EFAULT, EFAULT);
 ASSYM(ENAMETOOLONG, ENAMETOOLONG);
@@ -224,11 +250,11 @@ ASSYM(PC_RSP0, offsetof(struct pcpu, pc_rsp0));
 ASSYM(PC_FS32P, offsetof(struct pcpu, pc_fs32p));
 ASSYM(PC_GS32P, offsetof(struct pcpu, pc_gs32p));
 ASSYM(PC_LDT, offsetof(struct pcpu, pc_ldt));
-ASSYM(PC_COMMONTSSP, offsetof(struct pcpu, pc_commontssp));
+ASSYM(PC_COMMONTSS, offsetof(struct pcpu, pc_common_tss));
 ASSYM(PC_TSS, offsetof(struct pcpu, pc_tss));
-ASSYM(PC_PM_SAVE_CNT, offsetof(struct pcpu, pc_pm_save_cnt));
 ASSYM(PC_KCR3, offsetof(struct pcpu, pc_kcr3));
 ASSYM(PC_UCR3, offsetof(struct pcpu, pc_ucr3));
+ASSYM(PC_UCR3_LOAD_MASK, offsetof(struct pcpu, pc_ucr3_load_mask));
 ASSYM(PC_SAVED_UCR3, offsetof(struct pcpu, pc_saved_ucr3));
 ASSYM(PC_PTI_STACK, offsetof(struct pcpu, pc_pti_stack));
 ASSYM(PC_PTI_STACK_SZ, PC_PTI_STACK_SZ);
@@ -237,7 +263,7 @@ ASSYM(PC_IBPB_SET, offsetof(struct pcpu, pc_ibpb_set));
 ASSYM(PC_MDS_TMP, offsetof(struct pcpu, pc_mds_tmp));
 ASSYM(PC_MDS_BUF, offsetof(struct pcpu, pc_mds_buf));
 ASSYM(PC_MDS_BUF64, offsetof(struct pcpu, pc_mds_buf64));
- 
+
 ASSYM(LA_EOI, LAPIC_EOI * LAPIC_MEM_MUL);
 ASSYM(LA_ISR, LAPIC_ISR0 * LAPIC_MEM_MUL);
 

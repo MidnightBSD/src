@@ -1,5 +1,4 @@
 /*
- * $FreeBSD: stable/11/lib/libc/compat-43/Symbol.map 277032 2015-01-11 22:16:31Z kib $
  */
 
 FBSD_1.0 {

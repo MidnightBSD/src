@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 .include <src.opts.mk>
 
@@ -9,8 +8,7 @@ KRB5DIR=	${SRCTOP}/crypto/heimdal
 CFLAGS+=	-DHAVE_CONFIG_H -I${.CURDIR:H:H}/include
 
 WARNS?=		1
-CWARNFLAGS.clang+=	-Wno-error=absolute-value
-CWARNFLAGS+=	-Wno-error=deprecated-declarations
+CWARNFLAGS.clang+=	-Wno-absolute-value
 
 .if ${MK_OPENLDAP} != "no" && !defined(COMPAT_32BIT)
 OPENLDAPBASE?=	/usr/local

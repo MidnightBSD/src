@@ -26,7 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _MACHINE_FRAME_H_
@@ -49,13 +48,8 @@ struct trapframe {
 	uint64_t tf_x[30];
 };
 
-struct arm64_frame {
-	struct arm64_frame	*f_frame;
-	u_long			f_retaddr;
-};
-
 /*
- * Signal frame, pushedonto the user stack
+ * Signal frame, pushed onto the user stack.
  */
 struct sigframe {
 	siginfo_t       sf_si;          /* actual saved siginfo */
@@ -63,11 +57,19 @@ struct sigframe {
 };
 
 /*
- * There is no fixed frame layout, other than to be 16-byte aligned
+ * There is no fixed frame layout, other than to be 16-byte aligned.
  */
 struct frame {
 	int dummy;
 };
+
+#ifdef COMPAT_FREEBSD32
+struct sigframe32 {
+	struct siginfo32		sf_si;
+	ucontext32_t			sf_uc;
+	mcontext32_vfp_t		sf_vfp;
+};
+#endif /* COMPAT_FREEBSD32 */
 
 #endif /* !LOCORE */
 

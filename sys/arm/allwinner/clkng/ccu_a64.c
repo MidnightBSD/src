@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2017,2018 Emmanuel Vadot <manu@freebsd.org>
  *
@@ -23,11 +23,9 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -47,8 +45,8 @@
 
 #include <arm/allwinner/clkng/aw_ccung.h>
 
-#include <gnu/dts/include/dt-bindings/clock/sun50i-a64-ccu.h>
-#include <gnu/dts/include/dt-bindings/reset/sun50i-a64-ccu.h>
+#include <dt-bindings/clock/sun50i-a64-ccu.h>
+#include <dt-bindings/reset/sun50i-a64-ccu.h>
 
 /* Non-exported clocks */
 
@@ -787,6 +785,8 @@ static struct aw_clk_init a64_init_clks[] = {
 	{"ahb1", "pll_periph0", 0, false},
 	{"ahb2", "pll_periph0", 0, false},
 	{"dram", "pll_ddr0", 0, false},
+	{"pll_de", NULL, 432000000, true},
+	{"de", "pll_de", 0, true},
 };
 
 static int

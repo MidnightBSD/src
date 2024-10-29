@@ -43,9 +43,7 @@
  * Undefined instruction types, symbols and prototypes
  *
  * Created      : 08/02/95
- *
  */
-
 
 #ifndef _MACHINE_UNDEFINED_H_
 #define _MACHINE_UNDEFINED_H_

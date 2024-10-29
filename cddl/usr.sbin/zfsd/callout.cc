@@ -28,7 +28,6 @@
  * POSSIBILITY OF SUCH DAMAGES.
  *
  * Authors: Justin T. Gibbs     (Spectra Logic Corporation)
- *
  */
 
 /**
@@ -38,6 +37,7 @@
  *        timer services built on top of the POSIX interval timer.
  */
 
+#include <sys/byteorder.h>
 #include <sys/time.h>
 
 #include <signal.h>

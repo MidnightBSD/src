@@ -23,9 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man4/acpi.4 282678 2015-05-09 12:28:48Z kib $
-.\"
-.Dd May 9, 2015
+.Dd July 15, 2024
 .Dt ACPI 4
 .Os
 .Sh NAME
@@ -86,7 +84,7 @@ should be set to
 .Li acpi
 if it is listed in
 .Va machdep.idle_available .
-.It Va hw.acpi.cpu.cx_supported
+.It Va dev.cpu.N.cx_supported
 List of supported CPU idle states and their transition latency
 in microseconds.
 Each state has a type (e.g.,
@@ -126,14 +124,17 @@ with legacy rebooting support.
 .It Va hw.acpi.lid_switch_state
 Suspend state
 .Pq Li S1 Ns \[en] Ns Li S5
-to enter when the lid switch (i.e., a notebook screen) is closed.
-Default is
+to enter when the lid switch (i.e., a notebook screen) is closed, or
 .Dq Li NONE
-(do nothing).
+.Pq do nothing .
+Default is
+.Dq Li NONE .
 .It Va hw.acpi.power_button_state
 Suspend state
 .Pq Li S1 Ns \[en] Ns Li S5
-to enter when the power button is pressed.
+to enter when the power button is pressed, or
+.Dq Li NONE
+.Pq do nothing .
 Default is
 .Li S5
 (power-off nicely).
@@ -207,11 +208,6 @@ entry for access after boot.
 Enables loading of a custom ACPI DSDT.
 .It Va acpi_dsdt_name
 Name of the DSDT table to load, if loading is enabled.
-.It Va debug.acpi.cpu_unordered
-Do not use the MADT to match ACPI Processor objects to CPUs.
-This is needed on a few systems with a buggy BIOS that does not use
-consistent processor IDs.
-Default is 0 (disabled).
 .It Va debug.acpi.disabled
 Selectively disables portions of ACPI for debugging purposes.
 .It Va debug.acpi.interpreter_slack
@@ -260,6 +256,12 @@ is a valid list of two interfaces
 .Qq Li FreeBSD
 and
 .Qq Li Linux .
+.It Va hw.acpi.hw.acpi.override_isa_irq_polarity (x86)
+Forces active-lo polarity for edge-triggered ISA interrupts.
+Some older systems incorrectly specify active-lo polarity for ISA
+interrupts and this override fixes those systems.
+This override is enabled by default on systems with Intel CPUs,
+but can be enabled or disabled by setting the tunable explicitly.
 .It Va hw.acpi.reset_video
 Enables calling the VESA reset BIOS vector on the resume path.
 This can fix some graphics cards that have problems such as LCD white-out

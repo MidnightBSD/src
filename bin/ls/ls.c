@@ -44,12 +44,12 @@ static char sccsid[] = "@(#)ls.c	8.5 (Berkeley) 4/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <sys/mac.h>
 
+#include <ctype.h>
 #include <dirent.h>
 #include <err.h>
 #include <errno.h>
@@ -87,12 +87,12 @@ static char sccsid[] = "@(#)ls.c	8.5 (Berkeley) 4/2/94";
  */
 #define MAKENINES(n)							\
 	do {								\
-		intmax_t i;						\
+		intmax_t __i;						\
 									\
 		/* Use a loop as all values of n are small. */		\
-		for (i = 1; n > 0; i *= 10)				\
+		for (__i = 1; n > 0; __i *= 10)				\
 			n--;						\
-		n = i - 1;						\
+		n = __i - 1;						\
 	} while(0)
 
 static void	 display(const FTSENT *, FTSENT *, int);
@@ -103,9 +103,7 @@ static void	 traverse(int, char **, int);
 
 static const struct option long_opts[] =
 {
-#ifdef COLORLS
         {"color",       optional_argument,      NULL, COLOR_OPT},
-#endif
         {NULL,          no_argument,            NULL, 0}
 };
 
@@ -136,6 +134,7 @@ static int f_numericonly;	/* don't convert uid/gid to name */
        int f_octal_escape;	/* like f_octal but use C escapes if possible */
 static int f_recursive;		/* ls subdirectories also */
 static int f_reversesort;	/* reverse whatever sort is used */
+static int f_verssort;		/* sort names using strverscmp(3) rather than strcoll(3) */
        int f_samesort;		/* sort time and name in same direction */
        int f_sectime;		/* print full time information */
 static int f_singlecol;		/* use single column output */
@@ -159,6 +158,7 @@ char *ansi_fgcol;		/* ANSI sequence to set foreground colour */
 char *ansi_coloff;		/* ANSI sequence to reset colours */
 char *attrs_off;		/* ANSI sequence to turn off attributes */
 char *enter_bold;		/* ANSI sequence to set color to bold mode */
+char *enter_underline;		/* ANSI sequence to enter underline mode */
 #endif
 
 static int rval;
@@ -274,7 +274,7 @@ main(int argc, char *argv[])
 		colorflag = COLORFLAG_AUTO;
 #endif
 	while ((ch = getopt_long(argc, argv,
-	    "+1ABCD:FGHILPRSTUWXZabcdfghiklmnopqrstuwxy,", long_opts,
+	    "+1ABCD:FGHILPRSTUWXZabcdfghiklmnopqrstuvwxy,", long_opts,
 	    NULL)) != -1) {
 		switch (ch) {
 		/*
@@ -438,6 +438,9 @@ main(int argc, char *argv[])
 		case 's':
 			f_size = 1;
 			break;
+		case 'v':
+			f_verssort = 1;
+			break;
 		case 'w':
 			f_nonprint = 0;
 			f_octal = 0;
@@ -446,8 +449,8 @@ main(int argc, char *argv[])
 		case 'y':
 			f_samesort = 1;
 			break;
-#ifdef COLORLS
 		case COLOR_OPT:
+#ifdef COLORLS
 			if (optarg == NULL || do_color_always(optarg))
 				colorflag = COLORFLAG_ALWAYS;
 			else if (do_color_auto(optarg))
@@ -458,6 +461,8 @@ main(int argc, char *argv[])
 				errx(2, "unsupported --color value '%s' (must be always, auto, or never)",
 				    optarg);
 			break;
+#else
+			warnx("color support not compiled in");
 #endif
 		default:
 		case '?':
@@ -483,6 +488,7 @@ main(int argc, char *argv[])
 			ansi_bgcol = tgetstr("AB", &bp);
 			attrs_off = tgetstr("me", &bp);
 			enter_bold = tgetstr("md", &bp);
+			enter_underline = tgetstr("us", &bp);
 
 			/* To switch colours off use 'op' if
 			 * available, otherwise use 'oc', or
@@ -501,8 +507,6 @@ main(int argc, char *argv[])
 			f_color = 1;
 			explicitansi = true;
 		}
-#else
-		warnx("color support not compiled in");
 #endif /*COLORLS*/
 	}
 
@@ -564,10 +568,12 @@ main(int argc, char *argv[])
 	}
 	/* Select a sort function. */
 	if (f_reversesort) {
-		if (!f_timesort && !f_sizesort)
-			sortfcn = revnamecmp;
-		else if (f_sizesort)
+		if (f_sizesort)
 			sortfcn = revsizecmp;
+		else if (f_verssort)
+			sortfcn = revverscmp;
+		else if (!f_timesort)
+			sortfcn = revnamecmp;
 		else if (f_accesstime)
 			sortfcn = revacccmp;
 		else if (f_birthtime)
@@ -577,10 +583,12 @@ main(int argc, char *argv[])
 		else		/* Use modification time. */
 			sortfcn = revmodcmp;
 	} else {
-		if (!f_timesort && !f_sizesort)
-			sortfcn = namecmp;
-		else if (f_sizesort)
+		if (f_sizesort)
 			sortfcn = sizecmp;
+		else if (f_verssort)
+			sortfcn = verscmp;
+		else if (!f_timesort)
+			sortfcn = namecmp;
 		else if (f_accesstime)
 			sortfcn = acccmp;
 		else if (f_birthtime)
@@ -644,7 +652,7 @@ traverse(int argc, char *argv[], int options)
 	ch_options = !f_recursive && !f_label &&
 	    options & FTS_NOSTAT ? FTS_NAMEONLY : 0;
 
-	while ((p = fts_read(ftsp)) != NULL)
+	while (errno = 0, (p = fts_read(ftsp)) != NULL)
 		switch (p->fts_info) {
 		case FTS_DC:
 			warnx("%s: directory causes a cycle", p->fts_name);
@@ -714,88 +722,58 @@ display(const FTSENT *p, FTSENT *list, int options)
 	char *flags, *labelstr = NULL;
 	char ngroup[STRBUF_SIZEOF(uid_t) + 1];
 	char nuser[STRBUF_SIZEOF(gid_t) + 1];
+	u_long width[9];
+	int i;
 
 	needstats = f_inode || f_longform || f_size;
 	flen = 0;
 	btotal = 0;
-	initmax = getenv("LS_COLWIDTHS");
-	/* Fields match -lios order.  New ones should be added at the end. */
-	maxlabelstr = maxblock = maxlen = maxnlink = 0;
-	maxuser = maxgroup = maxflags = maxsize = 0;
-	maxinode = 0;
-	if (initmax != NULL && *initmax != '\0') {
-		char *initmax2, *jinitmax;
-		int ninitmax;
 
-		/* Fill-in "::" as "0:0:0" for the sake of scanf. */
-		jinitmax = malloc(strlen(initmax) * 2 + 2);
-		if (jinitmax == NULL)
-			err(1, "malloc");
-		initmax2 = jinitmax;
-		if (*initmax == ':')
-			strcpy(initmax2, "0:"), initmax2 += 2;
-		else
-			*initmax2++ = *initmax, *initmax2 = '\0';
-		for (initmax++; *initmax != '\0'; initmax++) {
-			if (initmax[-1] == ':' && initmax[0] == ':') {
-				*initmax2++ = '0';
-				*initmax2++ = initmax[0];
-				initmax2[1] = '\0';
+#define LS_COLWIDTHS_FIELDS	9
+	initmax = getenv("LS_COLWIDTHS");
+
+	for (i = 0 ; i < LS_COLWIDTHS_FIELDS; i++)
+		width[i] = 0;
+
+	if (initmax != NULL) {
+		char *endp;
+
+		for (i = 0; i < LS_COLWIDTHS_FIELDS && *initmax != '\0'; i++) {
+			if (*initmax == ':') {
+				width[i] = 0;
 			} else {
-				*initmax2++ = initmax[0];
-				initmax2[1] = '\0';
+				width[i] = strtoul(initmax, &endp, 10);
+				initmax = endp;
+				while (isspace(*initmax))
+					initmax++;
+				if (*initmax != ':')
+					break;
+				initmax++;
 			}
 		}
-		if (initmax2[-1] == ':')
-			strcpy(initmax2, "0");
-
-		ninitmax = sscanf(jinitmax,
-		    " %ju : %ld : %lu : %u : %u : %i : %jd : %lu : %lu ",
-		    &maxinode, &maxblock, &maxnlink, &maxuser,
-		    &maxgroup, &maxflags, &maxsize, &maxlen, &maxlabelstr);
-		f_notabs = 1;
-		switch (ninitmax) {
-		case 0:
-			maxinode = 0;
-			/* FALLTHROUGH */
-		case 1:
-			maxblock = 0;
-			/* FALLTHROUGH */
-		case 2:
-			maxnlink = 0;
-			/* FALLTHROUGH */
-		case 3:
-			maxuser = 0;
-			/* FALLTHROUGH */
-		case 4:
-			maxgroup = 0;
-			/* FALLTHROUGH */
-		case 5:
-			maxflags = 0;
-			/* FALLTHROUGH */
-		case 6:
-			maxsize = 0;
-			/* FALLTHROUGH */
-		case 7:
-			maxlen = 0;
-			/* FALLTHROUGH */
-		case 8:
-			maxlabelstr = 0;
-			/* FALLTHROUGH */
+		if (i < LS_COLWIDTHS_FIELDS)
 #ifdef COLORLS
 			if (!f_color)
 #endif
 				f_notabs = 0;
-			/* FALLTHROUGH */
-		default:
-			break;
-		}
-		MAKENINES(maxinode);
-		MAKENINES(maxblock);
-		MAKENINES(maxnlink);
-		MAKENINES(maxsize);
-		free(jinitmax);
 	}
+
+	/* Fields match -lios order.  New ones should be added at the end. */
+	maxinode = width[0];
+	maxblock = width[1];
+	maxnlink = width[2];
+	maxuser = width[3];
+	maxgroup = width[4];
+	maxflags = width[5];
+	maxsize = width[6];
+	maxlen = width[7];
+	maxlabelstr = width[8];
+
+	MAKENINES(maxinode);
+	MAKENINES(maxblock);
+	MAKENINES(maxnlink);
+	MAKENINES(maxsize);
+
 	d.s_size = 0;
 	sizelen = 0;
 	flags = NULL;
@@ -854,7 +832,21 @@ display(const FTSENT *p, FTSENT *list, int options)
 					group = ngroup;
 				} else {
 					user = user_from_uid(sp->st_uid, 0);
+					/*
+					 * user_from_uid(..., 0) only returns
+					 * NULL in OOM conditions.  We could
+					 * format the uid here, but (1) in
+					 * general ls(1) exits on OOM, and (2)
+					 * there is another allocation/exit
+					 * path directly below, which will
+					 * likely exit anyway.
+					 */
+					if (user == NULL)
+						err(1, "user_from_uid");
 					group = group_from_gid(sp->st_gid, 0);
+					/* Ditto. */
+					if (group == NULL)
+						err(1, "group_from_gid");
 				}
 				if ((ulen = strlen(user)) > maxuser)
 					maxuser = ulen;
@@ -976,7 +968,8 @@ label_out:
 	d.maxlen = maxlen;
 	if (needstats) {
 		d.btotal = btotal;
-		d.s_block = snprintf(NULL, 0, "%lu", howmany(maxblock, blocksize));
+		d.s_block = snprintf(NULL, 0, f_thousands ? "%'ld" : "%ld",
+		    howmany(maxblock, blocksize));
 		d.s_flags = maxflags;
 		d.s_label = maxlabelstr;
 		d.s_group = maxgroup;

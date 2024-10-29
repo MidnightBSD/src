@@ -1,4 +1,3 @@
-# $FreeBSD: stable/11/lib/libc/capability/Makefile.inc 313240 2017-02-04 17:17:38Z ngie $
 
 # capability sources
 .PATH: ${SRCTOP}/sys/kern ${LIBC_SRCTOP}/capability

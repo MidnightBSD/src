@@ -1,6 +1,6 @@
 
+PACKAGE=	runtime
 CONFS=	regdomain.xml
-PACKAGE=lib${LIB}
 LIB=	80211
 SHLIBDIR?= /lib
 SHLIB_MAJOR= 1

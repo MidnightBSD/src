@@ -26,7 +26,6 @@
  */
 
 #include <machine/asm.h>
-
 #include <sys/param.h>
 #include <machine/asmacros.h>
 

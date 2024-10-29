@@ -22,7 +22,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 #ifndef _TEGRA_DRM_H_
 #define _TEGRA_DRM_H_
@@ -113,7 +112,6 @@ int tegra_drm_fb_create(struct drm_device *drm, struct drm_file *file,
     struct drm_mode_fb_cmd2 *cmd, struct drm_framebuffer **fb_res);
 int tegra_drm_fb_init(struct drm_device *drm);
 void tegra_drm_fb_destroy(struct drm_device *drm);
-
 
 /* tegra_bo.c */
 struct tegra_bo;

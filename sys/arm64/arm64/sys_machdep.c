@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2015 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Andrew Turner under
  * sponsorship from the FreeBSD Foundation.
@@ -29,13 +28,11 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/sysproto.h>
 
 #include <machine/sysarch.h>
-
 
 int
 sysarch(struct thread *td, struct sysarch_args *uap)
@@ -43,4 +40,3 @@ sysarch(struct thread *td, struct sysarch_args *uap)
 
 	return (ENOTSUP);
 }
-

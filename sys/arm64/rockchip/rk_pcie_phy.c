@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2019 Michal Meloun <mmel@FreeBSD.org>
  *
@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -72,14 +71,12 @@
 #define	PHY_CFG_SCC_LOCK	0x12
 #define	 CLK_SCC_100M_GATE		(1 << 2)
 
-
 #define	 STATUS1_PLL_LOCKED		(1 << 9)
 
 static struct ofw_compat_data compat_data[] = {
 	{"rockchip,rk3399-pcie-phy",	1},
 	{NULL,				0}
 };
-
 
 struct rk_pcie_phy_softc {
 	device_t		dev;
@@ -98,13 +95,11 @@ struct rk_pcie_phy_softc {
 #define	PHY_ASSERT_LOCKED(_sc)	mtx_assert(&(_sc)->mtx, MA_OWNED);
 #define	PHY_ASSERT_UNLOCKED(_sc) mtx_assert(&(_sc)->mtx, MA_NOTOWNED);
 
-
 #define	RD4(sc, reg)		SYSCON_READ_4((sc)->syscon, (reg))
 #define	WR4(sc, reg, mask, val)						\
     SYSCON_WRITE_4((sc)->syscon, (reg), ((mask) << GRF_HIWORD_SHIFT) | (val))
 
 #define	MAX_LANE	4
-
 
 static void
 cfg_write(struct rk_pcie_phy_softc *sc, uint32_t reg, uint32_t data)
@@ -254,9 +249,7 @@ rk_pcie_phy_enable(struct phynode *phynode, bool enable)
 	return (rv);
 }
 
-
 /* Phy class and methods. */
-static int rk_pcie_phy_enable(struct phynode *phynode, bool enable);
 static phynode_method_t rk_pcie_phy_phynode_methods[] = {
 	PHYNODEMETHOD(phynode_enable,		 rk_pcie_phy_enable),
 

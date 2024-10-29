@@ -21,11 +21,9 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -173,7 +171,9 @@ aw_clk_m_set_freq(struct clknode *clk, uint64_t fparent, uint64_t *fout,
 
 	best = cur = 0;
 
-	if ((sc->flags & AW_CLK_SET_PARENT) != 0) {
+	best = aw_clk_m_find_best(sc, fparent, fout,
+	    &best_m);
+	if ((best != *fout) && ((sc->flags & AW_CLK_SET_PARENT) != 0)) {
 		p_clk = clknode_get_parent(clk);
 		if (p_clk == NULL) {
 			printf("%s: Cannot get parent for clock %s\n",
@@ -183,9 +183,6 @@ aw_clk_m_set_freq(struct clknode *clk, uint64_t fparent, uint64_t *fout,
 		}
 		clknode_set_freq(p_clk, *fout, CLK_SET_ROUND_MULTIPLE, 0);
 		clknode_get_freq(p_clk, &fparent);
-		best = aw_clk_m_find_best(sc, fparent, fout,
-		    &best_m);
-	} else {
 		best = aw_clk_m_find_best(sc, fparent, fout,
 		    &best_m);
 	}

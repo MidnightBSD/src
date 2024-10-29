@@ -17,7 +17,6 @@
  * information: Portions Copyright [yyyy] [name of copyright owner]
  *
  * CDDL HEADER END
- *
  */
 /*
  * Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
@@ -243,7 +242,7 @@ translator tcpsinfo_t < struct tcpcb *p > {
 	tcps_cwnd_ssthresh =	p == NULL ? -1 : p->snd_ssthresh;
 	tcps_srecover =		p == NULL ? -1 : p->snd_recover;
 	tcps_sack_fack =	p == NULL ? 0  : p->snd_fack;
-	tcps_sack_snxt =	p == NULL ? 0  : p->sack_newdata;
+	tcps_sack_snxt =	p == NULL ? 0  : p->snd_recover;
 	tcps_rto =		p == NULL ? -1 : (p->t_rxtcur * 1000) / `hz;
 	tcps_mss =		p == NULL ? -1 : p->t_maxseg;
 	tcps_retransmit =	p == NULL ? -1 : p->t_rxtshift > 0 ? 1 : 0;
@@ -264,7 +263,7 @@ translator tcpinfo_t < struct tcphdr *p > {
 	tcp_dport =	p == NULL ? 0  : ntohs(p->th_dport);
 	tcp_seq =	p == NULL ? -1 : ntohl(p->th_seq);
 	tcp_ack =	p == NULL ? -1 : ntohl(p->th_ack);
-	tcp_offset =	p == NULL ? -1 : (p->th_off >> 2);
+	tcp_offset =	p == NULL ? -1 : (p->th_off << 2);
 	tcp_flags =	p == NULL ? 0  : p->th_flags;
 	tcp_window =	p == NULL ? 0  : ntohs(p->th_win);
 	tcp_checksum =	p == NULL ? 0  : ntohs(p->th_sum);
@@ -283,7 +282,7 @@ translator tcpinfoh_t < struct tcphdr *p > {
 	tcp_dport =	p == NULL ? 0  : ntohs(p->th_dport);
 	tcp_seq =	p == NULL ? -1 : p->th_seq;
 	tcp_ack =	p == NULL ? -1 : p->th_ack;
-	tcp_offset =	p == NULL ? -1 : (p->th_off >> 2);
+	tcp_offset =	p == NULL ? -1 : (p->th_off << 2);
 	tcp_flags =	p == NULL ? 0  : p->th_flags;
 	tcp_window =	p == NULL ? 0  : p->th_win;
 	tcp_checksum =	p == NULL ? 0  : ntohs(p->th_sum);

@@ -38,7 +38,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -89,7 +88,6 @@ generic_bs_alloc(bus_space_tag_t t, bus_addr_t rstart, bus_addr_t rend, bus_size
 
 	panic("generic_bs_alloc(): not implemented");
 }
-
 
 void
 generic_bs_unmap(bus_space_tag_t t, bus_space_handle_t h, bus_size_t size)

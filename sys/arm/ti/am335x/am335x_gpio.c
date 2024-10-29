@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -154,3 +153,4 @@ DEFINE_CLASS_1(gpio, am335x_gpio_driver, am335x_gpio_methods,
     sizeof(struct ti_gpio_softc), ti_gpio_driver);
 DRIVER_MODULE(am335x_gpio, simplebus, am335x_gpio_driver, am335x_gpio_devclass,
     0, 0);
+MODULE_DEPEND(am335x_gpio, ti_sysc, 1, 1, 1);

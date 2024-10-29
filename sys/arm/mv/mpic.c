@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2006 Benno Rice.
  * Copyright (C) 2007-2011 MARVELL INTERNATIONAL LTD.
@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_platform.h"
 
 #include <sys/param.h>
@@ -61,9 +60,7 @@
 #include <dev/ofw/ofw_bus_subr.h>
 #include <dev/fdt/fdt_common.h>
 
-#ifdef INTRNG
 #include "pic_if.h"
-#endif
 
 #ifdef DEBUG
 #define debugf(fmt, args...) do { printf("%s(): ", __func__);	\

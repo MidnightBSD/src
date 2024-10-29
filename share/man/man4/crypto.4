@@ -1,12 +1,15 @@
 .\"	$NetBSD: crypto.4,v 1.24 2014/01/27 21:23:59 pgoyette Exp $
 .\"
 .\" Copyright (c) 2008 The NetBSD Foundation, Inc.
-.\" Copyright (c) 2014 The FreeBSD Foundation
+.\" Copyright (c) 2014-2021 The FreeBSD Foundation
 .\" All rights reserved.
 .\"
 .\" Portions of this documentation were written by John-Mark Gurney
 .\" under sponsorship of the FreeBSD Foundation and
 .\" Rubicon Communications, LLC (Netgate).
+.\"
+.\" Portions of this documentation were written by Ararat River
+.\" Consulting, LLC under sponsorship of the FreeBSD Foundation.
 .\"
 .\" This code is derived from software contributed to The NetBSD Foundation
 .\" by Coyote Point Systems, Inc.
@@ -58,9 +61,7 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 .\" THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
-.\"
-.Dd October 19, 2020
+.Dd October 6, 2021
 .Dt CRYPTO 4
 .Os
 .Sh NAME
@@ -122,19 +123,11 @@ Open the
 .Pa /dev/crypto
 device.
 .It
-Create a new cryptography file descriptor via
-.Dv CRIOGET
-to use for all subsequent
-.Xr ioctl 2
-commands.
-.It
-Close the
-.Pa /dev/crypto
-device.
-.It
 If any symmetric-keyed cryptographic or digest operations will be performed,
 create a session with
-.Dv CIOCGSESSION .
+.Dv CIOCGSESSION
+or
+.Dv CIOCGSESSION2 .
 Most applications will require at least one symmetric session.
 Since cipher and MAC keys are tied to sessions, many
 applications will require more.
@@ -152,8 +145,9 @@ or
 Optionally destroy a session with
 .Dv CIOCFSESSION .
 .It
-Close the cryptography file descriptor with
-.Xr close 2 .
+Close the
+.Pa /dev/crypto
+device.
 This will automatically close any remaining sessions associated with the
 file desriptor.
 .El
@@ -161,7 +155,7 @@ file desriptor.
 The symmetric-key operation mode provides a context-based API
 to traditional symmetric-key encryption (or privacy) algorithms,
 or to keyed and unkeyed one-way hash (HMAC and MAC) algorithms.
-The symmetric-key mode also permits fused operation,
+The symmetric-key mode also permits encrypt-then-authenticate fused operation,
 where the hardware performs both a privacy algorithm and an integrity-check
 algorithm in a single pass over the data: either a fused
 encrypt/HMAC-generate operation, or a fused HMAC-verify/decrypt operation.
@@ -177,11 +171,6 @@ and
 .Ss IOCTL Request Descriptions
 .\"
 .Bl -tag -width CIOCGSESSION
-.\"
-.It Dv CRIOGET Fa int *fd
-Clone the fd argument to
-.Xr ioctl 2 ,
-yielding a new file descriptor for the creation of sessions.
 .\"
 .It Dv CIOCFINDDEV Fa struct crypt_find_op *fop
 .Bd -literal
@@ -209,15 +198,15 @@ is returned.
 .It Dv CIOCGSESSION Fa struct session_op *sessp
 .Bd -literal
 struct session_op {
-    u_int32_t cipher;	/* e.g. CRYPTO_DES_CBC */
-    u_int32_t mac;	/* e.g. CRYPTO_MD5_HMAC */
+    uint32_t cipher;	/* e.g. CRYPTO_AES_CBC */
+    uint32_t mac;	/* e.g. CRYPTO_SHA2_256_HMAC */
 
-    u_int32_t keylen;	/* cipher key */
+    uint32_t keylen;	/* cipher key */
     const void *key;
     int mackeylen;	/* mac key */
     const void *mackey;
 
-    u_int32_t ses;	/* returns: ses # */
+    uint32_t ses;	/* returns: ses # */
 };
 
 .Ed
@@ -267,37 +256,51 @@ stand-alone non-fused operation.
 .It Dv CIOCGSESSION2 Fa struct session2_op *sessp
 .Bd -literal
 struct session2_op {
-    u_int32_t cipher;	/* e.g. CRYPTO_DES_CBC */
-    u_int32_t mac;	/* e.g. CRYPTO_MD5_HMAC */
+    uint32_t cipher;	/* e.g. CRYPTO_AES_CBC */
+    uint32_t mac;	/* e.g. CRYPTO_SHA2_256_HMAC */
 
-    u_int32_t keylen;	/* cipher key */
+    uint32_t keylen;	/* cipher key */
     const void *key;
     int mackeylen;	/* mac key */
     const void *mackey;
 
-    u_int32_t ses;	/* returns: ses # */
+    uint32_t ses;	/* returns: ses # */
     int	crid;		/* driver id + flags (rw) */
-    int	pad[4];		/* for future expansion */
+    int ivlen;		/* length of nonce/IV */
+    int maclen;		/* length of MAC/tag */
+    int	pad[2];		/* for future expansion */
 };
 
 .Ed
-This request is similar to CIOGSESSION except that
+This request is similar to CIOGSESSION but adds additional fields.
+.Pp
 .Fa sessp-\*[Gt]crid
 requests either a specific crypto device or a class of devices (software vs
 hardware).
+.Pp
+.Fa sessp-\*[Gt]ivlen
+specifies the length of the IV or nonce supplied with each request.
+If this field is set to zero, the default IV or nonce length is used.
+.Pp
+.Fa sessp-\*[Gt]maclen
+specifies the length of the MAC or authentication tag supplied or computed by
+each request.
+If this field is set to zero, the full MAC is used.
+.Pp
 The
 .Fa sessp-\*[Gt]pad
 field must be initialized to zero.
 .It Dv CIOCCRYPT Fa struct crypt_op *cr_op
 .Bd -literal
 struct crypt_op {
-    u_int32_t ses;
-    u_int16_t op;	/* e.g. COP_ENCRYPT */
-    u_int16_t flags;
+    uint32_t ses;
+    uint16_t op;	/* e.g. COP_ENCRYPT */
+    uint16_t flags;
     u_int len;
-    caddr_t src, dst;
-    caddr_t mac;		/* must be large enough for result */
-    caddr_t iv;
+    const void *src;
+    void *dst;
+    void *mac;		/* must be large enough for result */
+    const void *iv;
 };
 
 .Ed
@@ -319,29 +322,28 @@ supplies the length of the input buffer; the fields
 .Fa cr_op-\*[Gt]iv
 supply the addresses of the input buffer, output buffer,
 one-way hash, and initialization vector, respectively.
-If a session is using both a privacy algorithm and a hash algorithm,
-the request will generate a hash of the input buffer before
-generating the output buffer by default.
-If the
-.Dv COP_F_CIPHER_FIRST
-flag is included in the
-.Fa cr_op-\*[Gt]flags
-field,
-then the request will generate a hash of the output buffer after
-executing the privacy algorithm.
+.Pp
+If a session is using either fused encrypt-then-authenticate or
+an AEAD algorithm,
+decryption operations require the associated hash as an input.
+If the hash is incorrect, the
+operation will fail with
+.Dv EBADMSG
+and the output buffer will remain unchanged.
 .It Dv CIOCCRYPTAEAD Fa struct crypt_aead *cr_aead
 .Bd -literal
 struct crypt_aead {
-    u_int32_t ses;
-    u_int16_t op;	/* e.g. COP_ENCRYPT */
-    u_int16_t flags;
+    uint32_t ses;
+    uint16_t op;	/* e.g. COP_ENCRYPT */
+    uint16_t flags;
     u_int len;
     u_int aadlen;
     u_int ivlen;
-    caddr_t src, dst;
-    caddr_t aad;
-    caddr_t tag;		/* must be large enough for result */
-    caddr_t iv;
+    const void *src;
+    void *dst;
+    const void *aad;	/* additional authenticated data */
+    void *tag;		/* must fit for chosen TAG length */
+    const void *iv;
 };
 
 .Ed
@@ -431,7 +433,6 @@ The semantics of these arguments are currently undocumented.
 .Xr ipsec 4 ,
 .Xr padlock 4 ,
 .Xr safe 4 ,
-.Xr ubsec 4 ,
 .Xr crypto 7 ,
 .Xr geli 8 ,
 .Xr crypto 9
@@ -459,11 +460,3 @@ session: if you request a
 algorithm, you must supply a suitably-sized buffer.
 .Pp
 The scheme for passing arguments for asymmetric requests is baroque.
-.Pp
-.Dv CRIOGET
-should not exist.
-It should be possible to use the
-.Dv CIOC Ns \&*
-commands directly on a
-.Pa /dev/crypto
-file descriptor.

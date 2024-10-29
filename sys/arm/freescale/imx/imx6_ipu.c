@@ -25,12 +25,12 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
 #include <sys/clock.h>
+#include <sys/eventhandler.h>
 #include <sys/time.h>
 #include <sys/bus.h>
 #include <sys/lock.h>

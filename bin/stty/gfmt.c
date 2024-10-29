@@ -33,11 +33,11 @@ static char sccsid[] = "@(#)gfmt.c	8.6 (Berkeley) 4/2/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 
 #include <err.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "stty.h"
@@ -84,7 +84,7 @@ gread(struct termios *tp, char *s)
 		if (!(ep = strchr(p, '=')))
 			gerr(p);
 		*ep++ = '\0';
-		(void)sscanf(ep, "%lx", (u_long *)&tmp);
+		tmp = strtoul(ep, NULL, 0x10);
 
 #define	CHK(s)	(*p == s[0] && !strcmp(p, s))
 		if (CHK("cflag")) {
@@ -96,7 +96,7 @@ gread(struct termios *tp, char *s)
 			continue;
 		}
 		if (CHK("ispeed")) {
-			(void)sscanf(ep, "%ld", &tmp);
+			tmp = strtoul(ep, NULL, 10);
 			tp->c_ispeed = tmp;
 			continue;
 		}
@@ -109,14 +109,14 @@ gread(struct termios *tp, char *s)
 			continue;
 		}
 		if (CHK("ospeed")) {
-			(void)sscanf(ep, "%ld", &tmp);
+			tmp = strtoul(ep, NULL, 10);
 			tp->c_ospeed = tmp;
 			continue;
 		}
 		for (cp = cchars1; cp->name != NULL; ++cp)
 			if (CHK(cp->name)) {
 				if (cp->sub == VMIN || cp->sub == VTIME)
-					(void)sscanf(ep, "%ld", &tmp);
+					tmp = strtoul(ep, NULL, 10);
 				tp->c_cc[cp->sub] = tmp;
 				break;
 			}

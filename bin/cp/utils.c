@@ -35,14 +35,9 @@ static char sccsid[] = "@(#)utils.c	8.3 (Berkeley) 4/1/94";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-
-#include <sys/types.h>
-#include <sys/acl.h>
 #include <sys/param.h>
+#include <sys/acl.h>
 #include <sys/stat.h>
-#ifdef VM_AND_BUFFER_CACHE_SYNCHRONIZED
-#include <sys/mman.h>
-#endif
 
 #include <err.h>
 #include <errno.h>
@@ -73,29 +68,71 @@ static char sccsid[] = "@(#)utils.c	8.3 (Berkeley) 4/1/94";
  */
 #define BUFSIZE_SMALL (MAXPHYS)
 
-int
-copy_file(const FTSENT *entp, int dne)
+/*
+ * Prompt used in -i case.
+ */
+#define YESNO "(y/n [n]) "
+
+static ssize_t
+copy_fallback(int from_fd, int to_fd)
 {
 	static char *buf = NULL;
 	static size_t bufsize;
-	struct stat *fs;
-	ssize_t wcount;
-	size_t wresid;
-	off_t wtotal;
-	int ch, checkch, from_fd, rcount, rval, to_fd;
+	ssize_t rcount, wresid, wcount = 0;
 	char *bufp;
-#ifdef VM_AND_BUFFER_CACHE_SYNCHRONIZED
-	char *p;
-#endif
 
-	from_fd = to_fd = -1;
-	if (!lflag && !sflag &&
-	    (from_fd = open(entp->fts_path, O_RDONLY, 0)) == -1) {
-		warn("%s", entp->fts_path);
-		return (1);
+	if (buf == NULL) {
+		if (sysconf(_SC_PHYS_PAGES) > PHYSPAGES_THRESHOLD)
+			bufsize = MIN(BUFSIZE_MAX, MAXPHYS * 8);
+		else
+			bufsize = BUFSIZE_SMALL;
+		buf = malloc(bufsize);
+		if (buf == NULL)
+			err(1, "Not enough memory");
 	}
+	rcount = read(from_fd, buf, bufsize);
+	if (rcount <= 0)
+		return (rcount);
+	for (bufp = buf, wresid = rcount; ; bufp += wcount, wresid -= wcount) {
+		wcount = write(to_fd, bufp, wresid);
+		if (wcount <= 0)
+			break;
+		if (wcount >= (ssize_t)wresid)
+			break;
+	}
+	return (wcount < 0 ? wcount : rcount);
+}
+
+int
+copy_file(const FTSENT *entp, int dne)
+{
+	struct stat sb, *fs;
+	ssize_t wcount;
+	off_t wtotal;
+	int ch, checkch, from_fd, rval, to_fd;
+	int use_copy_file_range = 1;
 
 	fs = entp->fts_statp;
+	from_fd = to_fd = -1;
+	if (!lflag && !sflag) {
+		if ((from_fd = open(entp->fts_path, O_RDONLY, 0)) < 0 ||
+		    fstat(from_fd, &sb) != 0) {
+			warn("%s", entp->fts_path);
+			return (1);
+		}
+		/*
+		 * Check that the file hasn't been replaced with one of a
+		 * different type.  This can happen if we've been asked to
+		 * copy something which is actively being modified and
+		 * lost the race, or if we've been asked to copy something
+		 * like /proc/X/fd/Y which stat(2) reports as S_IFREG but
+		 * is actually something else once you open it.
+		 */
+		if ((sb.st_mode & S_IFMT) != (fs->st_mode & S_IFMT)) {
+			warnx("%s: File changed", entp->fts_path);
+			return (1);
+		}
+	}
 
 	/*
 	 * If the file exists and we're interactive, verify with the user.
@@ -106,7 +143,6 @@ copy_file(const FTSENT *entp, int dne)
 	 * modified by the umask.)
 	 */
 	if (!dne) {
-#define YESNO "(y/n [n]) "
 		if (nflag) {
 			if (vflag)
 				printf("%s not overwritten\n", to.p_path);
@@ -126,129 +162,69 @@ copy_file(const FTSENT *entp, int dne)
 		}
 
 		if (fflag) {
-			/*
-			 * Remove existing destination file name create a new
-			 * file.
-			 */
+			/* remove existing destination file */
 			(void)unlink(to.p_path);
-			if (!lflag && !sflag) {
-				to_fd = open(to.p_path,
-				    O_WRONLY | O_TRUNC | O_CREAT,
-				    fs->st_mode & ~(S_ISUID | S_ISGID));
-			}
-		} else if (!lflag && !sflag) {
-			/* Overwrite existing destination file name. */
-			to_fd = open(to.p_path, O_WRONLY | O_TRUNC, 0);
+			dne = 1;
 		}
-	} else if (!lflag && !sflag) {
+	}
+
+	rval = 0;
+
+	if (lflag) {
+		if (link(entp->fts_path, to.p_path) != 0) {
+			warn("%s", to.p_path);
+			rval = 1;
+		}
+		goto done;
+	}
+
+	if (sflag) {
+		if (symlink(entp->fts_path, to.p_path) != 0) {
+			warn("%s", to.p_path);
+			rval = 1;
+		}
+		goto done;
+	}
+
+	if (!dne) {
+		/* overwrite existing destination file */
+		to_fd = open(to.p_path, O_WRONLY | O_TRUNC, 0);
+	} else {
+		/* create new destination file */
 		to_fd = open(to.p_path, O_WRONLY | O_TRUNC | O_CREAT,
 		    fs->st_mode & ~(S_ISUID | S_ISGID));
 	}
-
-	if (!lflag && !sflag && to_fd == -1) {
+	if (to_fd == -1) {
 		warn("%s", to.p_path);
 		rval = 1;
 		goto done;
 	}
 
-	rval = 0;
-
-	if (!lflag && !sflag) {
-		/*
-		 * Mmap and write if less than 8M (the limit is so we don't
-		 * totally trash memory on big files.  This is really a minor
-		 * hack, but it wins some CPU back.
-		 * Some filesystems, such as smbnetfs, don't support mmap,
-		 * so this is a best-effort attempt.
-		 */
-#ifdef VM_AND_BUFFER_CACHE_SYNCHRONIZED
-		if (S_ISREG(fs->st_mode) && fs->st_size > 0 &&
-		    fs->st_size <= 8 * 1024 * 1024 &&
-		    (p = mmap(NULL, (size_t)fs->st_size, PROT_READ,
-		    MAP_SHARED, from_fd, (off_t)0)) != MAP_FAILED) {
-			wtotal = 0;
-			for (bufp = p, wresid = fs->st_size; ;
-			    bufp += wcount, wresid -= (size_t)wcount) {
-				wcount = write(to_fd, bufp, wresid);
-				if (wcount <= 0)
-					break;
-				wtotal += wcount;
-				if (info) {
-					info = 0;
-					(void)fprintf(stderr,
-					    "%s -> %s %3d%%\n",
-					    entp->fts_path, to.p_path,
-					    cp_pct(wtotal, fs->st_size));
-				}
-				if (wcount >= (ssize_t)wresid)
-					break;
-			}
-			if (wcount != (ssize_t)wresid) {
-				warn("%s", to.p_path);
-				rval = 1;
-			}
-			/* Some systems don't unmap on close(2). */
-			if (munmap(p, fs->st_size) < 0) {
-				warn("%s", entp->fts_path);
-				rval = 1;
-			}
-		} else
-#endif
-		{
-			if (buf == NULL) {
-				/*
-				 * Note that buf and bufsize are static. If
-				 * malloc() fails, it will fail at the start
-				 * and not copy only some files. 
-				 */ 
-				if (sysconf(_SC_PHYS_PAGES) > 
-				    PHYSPAGES_THRESHOLD)
-					bufsize = MIN(BUFSIZE_MAX, MAXPHYS * 8);
-				else
-					bufsize = BUFSIZE_SMALL;
-				buf = malloc(bufsize);
-				if (buf == NULL)
-					err(1, "Not enough memory");
-			}
-			wtotal = 0;
-			while ((rcount = read(from_fd, buf, bufsize)) > 0) {
-				for (bufp = buf, wresid = rcount; ;
-				    bufp += wcount, wresid -= wcount) {
-					wcount = write(to_fd, bufp, wresid);
-					if (wcount <= 0)
-						break;
-					wtotal += wcount;
-					if (info) {
-						info = 0;
-						(void)fprintf(stderr,
-						    "%s -> %s %3d%%\n",
-						    entp->fts_path, to.p_path,
-						    cp_pct(wtotal, fs->st_size));
-					}
-					if (wcount >= (ssize_t)wresid)
-						break;
-				}
-				if (wcount != (ssize_t)wresid) {
-					warn("%s", to.p_path);
-					rval = 1;
-					break;
-				}
-			}
-			if (rcount < 0) {
-				warn("%s", entp->fts_path);
-				rval = 1;
+	wtotal = 0;
+	do {
+		if (use_copy_file_range) {
+			wcount = copy_file_range(from_fd, NULL,
+			    to_fd, NULL, SSIZE_MAX, 0);
+			if (wcount < 0 && errno == EINVAL) {
+				/* probably a non-seekable descriptor */
+				use_copy_file_range = 0;
 			}
 		}
-	} else if (lflag) {
-		if (link(entp->fts_path, to.p_path)) {
-			warn("%s", to.p_path);
-			rval = 1;
+		if (!use_copy_file_range) {
+			wcount = copy_fallback(from_fd, to_fd);
 		}
-	} else if (sflag) {
-		if (symlink(entp->fts_path, to.p_path)) {
-			warn("%s", to.p_path);
-			rval = 1;
+		wtotal += wcount;
+		if (info) {
+			info = 0;
+			(void)fprintf(stderr,
+			    "%s -> %s %3d%%\n",
+			    entp->fts_path, to.p_path,
+			    cp_pct(wtotal, fs->st_size));
 		}
+	} while (wcount > 0);
+	if (wcount < 0) {
+		warn("%s", entp->fts_path);
+		rval = 1;
 	}
 
 	/*
@@ -257,16 +233,13 @@ copy_file(const FTSENT *entp, int dne)
 	 * or its contents might be irreplaceable.  It would only be safe
 	 * to remove it if we created it and its length is 0.
 	 */
-
-	if (!lflag && !sflag) {
-		if (pflag && setfile(fs, to_fd))
-			rval = 1;
-		if (pflag && preserve_fd_acls(from_fd, to_fd) != 0)
-			rval = 1;
-		if (close(to_fd)) {
-			warn("%s", to.p_path);
-			rval = 1;
-		}
+	if (pflag && setfile(fs, to_fd))
+		rval = 1;
+	if (pflag && preserve_fd_acls(from_fd, to_fd) != 0)
+		rval = 1;
+	if (close(to_fd)) {
+		warn("%s", to.p_path);
+		rval = 1;
 	}
 
 done:
@@ -278,7 +251,7 @@ done:
 int
 copy_link(const FTSENT *p, int exists)
 {
-	int len;
+	ssize_t len;
 	char llink[PATH_MAX];
 
 	if (exists && nflag) {
@@ -395,13 +368,22 @@ setfile(struct stat *fs, int fd)
 			rval = 1;
 		}
 
-	if (!gotstat || fs->st_flags != ts.st_flags)
+	if (!Nflag && (!gotstat || fs->st_flags != ts.st_flags))
 		if (fdval ?
 		    fchflags(fd, fs->st_flags) :
 		    (islink ? lchflags(to.p_path, fs->st_flags) :
 		    chflags(to.p_path, fs->st_flags))) {
-			warn("chflags: %s", to.p_path);
-			rval = 1;
+			/*
+			 * NFS doesn't support chflags; ignore errors unless
+			 * there's reason to believe we're losing bits.  (Note,
+			 * this still won't be right if the server supports
+			 * flags and we were trying to *remove* flags on a file
+			 * that we copied, i.e., that we didn't create.)
+			 */
+			if (errno != EOPNOTSUPP || fs->st_flags != 0) {
+				warn("chflags: %s", to.p_path);
+				rval = 1;
+			}
 		}
 
 	return (rval);

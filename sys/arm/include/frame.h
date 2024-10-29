@@ -44,7 +44,6 @@
  *
  * Created      : 30/09/94
  *
- *
  */
 
 #ifndef _MACHINE_FRAME_H_
@@ -54,7 +53,6 @@
 
 #include <sys/signal.h>
 #include <sys/ucontext.h>
-
 
 /*
  * Trap frame.  Pushed onto the kernel stack on a trap (synchronous exception).
@@ -98,7 +96,6 @@ struct sigframe {
 	mcontext_vfp_t	sf_vfp;         /* actual saved VFP context */
 };
 
-
 /*
  * Switch frame.
  *
@@ -119,12 +116,9 @@ struct switchframe
         register_t sf_sp;
         register_t sf_lr;
         register_t sf_pc;
-#if __ARM_ARCH >= 6
         register_t sf_tpidrurw;
         register_t sf_spare0;
-#endif
 };
-
 
 /*
  * Stack frame. Used during stack traces (db_trace.c)

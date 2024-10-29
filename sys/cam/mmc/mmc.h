@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2014-2016 Ilya Bakulin.  All rights reserved.
  *
@@ -52,7 +52,6 @@
  *
  * Inspired coded in sys/dev/mmc. Thanks to Warner Losh <imp@FreeBSD.org>,
  * Bernd Walter <tisco@FreeBSD.org>, and other authors.
- *
  */
 
 #ifndef CAM_MMC_H

@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "ed.h"
 
 const char *errmsg = "";

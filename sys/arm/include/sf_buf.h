@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2003 Alan L. Cox <alc@cs.rice.edu>
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _MACHINE_SF_BUF_H_
@@ -34,22 +33,14 @@ static inline void
 sf_buf_map(struct sf_buf *sf, int flags)
 {
 
-#if __ARM_ARCH >= 6
 	pmap_qenter(sf->kva, &(sf->m), 1);
-#else
-	pmap_kenter(sf->kva, VM_PAGE_TO_PHYS(sf->m));
-#endif
 }
 
 static inline int
 sf_buf_unmap(struct sf_buf *sf)
 {
 
-#if __ARM_ARCH >= 6
 	pmap_qremove(sf->kva, 1);
-#else
-	pmap_kremove(sf->kva);
-#endif
 	return (1);
 }
 #endif /* !_MACHINE_SF_BUF_H_ */

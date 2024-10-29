@@ -39,7 +39,6 @@ static char sccsid[] = "@(#)cpio.c	8.1 (Berkeley) 5/31/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/stat.h>
@@ -148,7 +147,7 @@ com_rd(ARCHD *arcn)
 }
 
 /*
- * cpio_end_wr()
+ * cpio_endwr()
  *	write the special file with the name trailer in the proper format
  * Return:
  *	result of the write of the trailer from the cpio specific write func
@@ -215,13 +214,8 @@ rd_ln_nm(ARCHD *arcn)
 	 */
 	if ((arcn->sb.st_size == 0) ||
 	    ((size_t)arcn->sb.st_size >= sizeof(arcn->ln_name))) {
-#		ifdef NET2_STAT
-		paxwarn(1, "Cpio link name length is invalid: %lu",
-		    arcn->sb.st_size);
-#		else
 		paxwarn(1, "Cpio link name length is invalid: %ju",
 		    (uintmax_t)arcn->sb.st_size);
-#		endif
 		return(-1);
 	}
 
@@ -286,13 +280,13 @@ cpio_rd(ARCHD *arcn, char *buf)
 	 */
 	if (cpio_id(buf, sizeof(HD_CPIO)) < 0)
 		return(-1);
+	memset(arcn, 0, sizeof *arcn);
 	hd = (HD_CPIO *)buf;
 
 	/*
 	 * byte oriented cpio (posix) does not have padding! extract the octal
 	 * ascii fields from the header
 	 */
-	arcn->pad = 0L;
 	arcn->sb.st_dev = (dev_t)asc_ul(hd->c_dev, sizeof(hd->c_dev), OCT);
 	arcn->sb.st_ino = (ino_t)asc_ul(hd->c_ino, sizeof(hd->c_ino), OCT);
 	arcn->sb.st_mode = (mode_t)asc_ul(hd->c_mode, sizeof(hd->c_mode), OCT);
@@ -301,21 +295,11 @@ cpio_rd(ARCHD *arcn, char *buf)
 	arcn->sb.st_nlink = (nlink_t)asc_ul(hd->c_nlink, sizeof(hd->c_nlink),
 	    OCT);
 	arcn->sb.st_rdev = (dev_t)asc_ul(hd->c_rdev, sizeof(hd->c_rdev), OCT);
-#ifdef NET2_STAT
-	arcn->sb.st_mtime = (time_t)asc_ul(hd->c_mtime, sizeof(hd->c_mtime),
-	    OCT);
-#else
 	arcn->sb.st_mtime = (time_t)asc_uqd(hd->c_mtime, sizeof(hd->c_mtime),
 	    OCT);
-#endif
 	arcn->sb.st_ctime = arcn->sb.st_atime = arcn->sb.st_mtime;
-#ifdef NET2_STAT
-	arcn->sb.st_size = (off_t)asc_ul(hd->c_filesize,sizeof(hd->c_filesize),
-	    OCT);
-#else
 	arcn->sb.st_size = (off_t)asc_uqd(hd->c_filesize,sizeof(hd->c_filesize),
 	    OCT);
-#endif
 
 	/*
 	 * check name size and if valid, read in the name of this entry (name
@@ -331,8 +315,6 @@ cpio_rd(ARCHD *arcn, char *buf)
 		/*
 	 	 * no link name to read for this file
 	 	 */
-		arcn->ln_nlen = 0;
-		arcn->ln_name[0] = '\0';
 		return(com_rd(arcn));
 	}
 
@@ -410,13 +392,8 @@ cpio_wr(ARCHD *arcn)
 		/*
 		 * set data size for file data
 		 */
-#		ifdef NET2_STAT
-		if (ul_asc((u_long)arcn->sb.st_size, hd->c_filesize,
-		    sizeof(hd->c_filesize), OCT)) {
-#		else
 		if (uqd_asc((u_quad_t)arcn->sb.st_size, hd->c_filesize,
 		    sizeof(hd->c_filesize), OCT)) {
-#		endif
 			paxwarn(1,"File is too large for cpio format %s",
 			    arcn->org_name);
 			return(1);
@@ -582,8 +559,8 @@ vcpio_rd(ARCHD *arcn, char *buf)
 			return(-1);
 	}
 
+	memset(arcn, 0, sizeof *arcn);
 	hd = (HD_VCPIO *)buf;
-	arcn->pad = 0L;
 
 	/*
 	 * extract the hex ascii fields from the header
@@ -592,19 +569,10 @@ vcpio_rd(ARCHD *arcn, char *buf)
 	arcn->sb.st_mode = (mode_t)asc_ul(hd->c_mode, sizeof(hd->c_mode), HEX);
 	arcn->sb.st_uid = (uid_t)asc_ul(hd->c_uid, sizeof(hd->c_uid), HEX);
 	arcn->sb.st_gid = (gid_t)asc_ul(hd->c_gid, sizeof(hd->c_gid), HEX);
-#ifdef NET2_STAT
-	arcn->sb.st_mtime = (time_t)asc_ul(hd->c_mtime,sizeof(hd->c_mtime),HEX);
-#else
 	arcn->sb.st_mtime = (time_t)asc_uqd(hd->c_mtime,sizeof(hd->c_mtime),HEX);
-#endif
 	arcn->sb.st_ctime = arcn->sb.st_atime = arcn->sb.st_mtime;
-#ifdef NET2_STAT
-	arcn->sb.st_size = (off_t)asc_ul(hd->c_filesize,
-	    sizeof(hd->c_filesize), HEX);
-#else
 	arcn->sb.st_size = (off_t)asc_uqd(hd->c_filesize,
 	    sizeof(hd->c_filesize), HEX);
-#endif
 	arcn->sb.st_nlink = (nlink_t)asc_ul(hd->c_nlink, sizeof(hd->c_nlink),
 	    HEX);
 	devmajor = (dev_t)asc_ul(hd->c_maj, sizeof(hd->c_maj), HEX);
@@ -639,8 +607,6 @@ vcpio_rd(ARCHD *arcn, char *buf)
 		/*
 		 * we have a valid header (not a link)
 		 */
-		arcn->ln_nlen = 0;
-		arcn->ln_name[0] = '\0';
 		arcn->pad = VCPIO_PAD(arcn->sb.st_size);
 		return(com_rd(arcn));
 	}
@@ -739,13 +705,8 @@ vcpio_wr(ARCHD *arcn)
 		 * much to pad.
 		 */
 		arcn->pad = VCPIO_PAD(arcn->sb.st_size);
-#		ifdef NET2_STAT
-		if (ul_asc((u_long)arcn->sb.st_size, hd->c_filesize,
-		    sizeof(hd->c_filesize), HEX)) {
-#		else
 		if (uqd_asc((u_quad_t)arcn->sb.st_size, hd->c_filesize,
 		    sizeof(hd->c_filesize), HEX)) {
-#		endif
 			paxwarn(1,"File is too large for sv4cpio format %s",
 			    arcn->org_name);
 			return(1);
@@ -892,7 +853,7 @@ bcpio_rd(ARCHD *arcn, char *buf)
 	if (bcpio_id(buf, sizeof(HD_BCPIO)) < 0)
 		return(-1);
 
-	arcn->pad = 0L;
+	memset(arcn, 0, sizeof *arcn);
 	hd = (HD_BCPIO *)buf;
 	if (swp_head) {
 		/*
@@ -954,8 +915,6 @@ bcpio_rd(ARCHD *arcn, char *buf)
 		/*
 		 * we have a valid header (not a link)
 		 */
-		arcn->ln_nlen = 0;
-		arcn->ln_name[0] = '\0';
 		arcn->pad = BCPIO_PAD(arcn->sb.st_size);
 		return(com_rd(arcn));
 	}

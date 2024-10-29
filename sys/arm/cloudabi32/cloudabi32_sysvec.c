@@ -24,7 +24,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/imgact.h>
 #include <sys/kernel.h>
@@ -48,7 +47,7 @@ extern struct sysent cloudabi32_sysent[];
 
 static void
 cloudabi32_proc_setregs(struct thread *td, struct image_params *imgp,
-    unsigned long stack)
+    uintptr_t stack)
 {
 	struct trapframe *regs;
 
@@ -80,16 +79,15 @@ cloudabi32_fetch_syscall_args(struct thread *td)
 	if (sa->code >= CLOUDABI32_SYS_MAXSYSCALL)
 		return (ENOSYS);
 	sa->callp = &cloudabi32_sysent[sa->code];
-	sa->narg = sa->callp->sy_narg;
 
 	/* Fetch system call arguments from registers and the stack. */
 	sa->args[0] = frame->tf_r0;
 	sa->args[1] = frame->tf_r1;
 	sa->args[2] = frame->tf_r2;
 	sa->args[3] = frame->tf_r3;
-	if (sa->narg > 4) {
+	if (sa->callp->sy_narg > 4) {
 		error = copyin((void *)td->td_frame->tf_usr_sp, &sa->args[4],
-		    (sa->narg - 4) * sizeof(register_t));
+		    (sa->callp->sy_narg - 4) * sizeof(register_t));
 		if (error != 0)
 			return (error);
 	}
@@ -173,6 +171,9 @@ static struct sysentvec cloudabi32_elf_sysvec = {
 	.sv_fixup		= cloudabi32_fixup,
 	.sv_name		= "CloudABI ELF32",
 	.sv_coredump		= elf32_coredump,
+	.sv_elf_core_osabi	= ELFOSABI_FREEBSD,
+	.sv_elf_core_abi_vendor	= FREEBSD_ABI_VENDOR,
+	.sv_elf_core_prepare_notes = elf32_prepare_notes,
 	.sv_minuser		= VM_MIN_ADDRESS,
 	.sv_maxuser		= VM_MAXUSER_ADDRESS,
 	.sv_stackprot		= VM_PROT_READ | VM_PROT_WRITE,

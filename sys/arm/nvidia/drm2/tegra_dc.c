@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -67,7 +66,6 @@
 #define	ASSERT_LOCKED(_sc)	mtx_assert(&_sc->mtx, MA_OWNED)
 #define	ASSERT_UNLOCKED(_sc)	mtx_assert(&_sc->mtx, MA_NOTOWNED)
 
-
 #define	SYNCPT_VBLANK0 26
 #define	SYNCPT_VBLANK1 27
 
@@ -84,7 +82,6 @@ static uint32_t dc_plane_formats[] = {
 	DRM_FORMAT_YUV420,
 	DRM_FORMAT_YUV422,
 };
-
 
 /* Complete description of one window (plane) */
 struct dc_window {
@@ -136,7 +133,6 @@ struct dc_softc {
 	struct drm_pending_vblank_event *event;
 	struct drm_gem_object 	*cursor_gem;
 };
-
 
 static struct ofw_compat_data compat_data[] = {
 	{"nvidia,tegra124-dc",	1},
@@ -383,7 +379,7 @@ dc_setup_window(struct dc_softc *sc, unsigned int index, struct dc_window *win)
 		v_size = win->src_w;
 	}
 
-	h_offset = win->src_x * bpp;;
+	h_offset = win->src_x * bpp;
 	v_offset = win->src_y;
 	if (win->flip_x) {
 		h_offset += win->src_w * bpp - 1;
@@ -654,7 +650,6 @@ dc_crtc_mode_set(struct drm_crtc *drm_crtc, struct drm_display_mode *mode,
 	sc = device_get_softc(crtc->dev);
 	fb = container_of(drm_crtc->fb, struct tegra_fb, drm_fb);
 
-
 	h_ref_to_sync = 1;
 	v_ref_to_sync = 1;
 	/* Setup timing */
@@ -734,7 +729,6 @@ dc_crtc_mode_set_base(struct drm_crtc *drm_crtc, int x, int y,
 	WR4(sc, DC_CMD_STATE_CONTROL, GENERAL_ACT_REQ | WIN_A_ACT_REQ);
 	return (rv);
 }
-
 
 static void
 dc_crtc_prepare(struct drm_crtc *drm_crtc)
@@ -913,7 +907,6 @@ dc_finish_page_flip(struct dc_softc *sc)
 
 	mtx_unlock(&drm->event_lock);
 }
-
 
 void
 tegra_dc_cancel_page_flip(struct drm_crtc *drm_crtc, struct drm_file *file)

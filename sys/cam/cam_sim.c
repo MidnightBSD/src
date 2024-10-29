@@ -1,7 +1,7 @@
 /*-
  * Common functions for SCSI Interface Modules (SIMs).
  *
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1997 Justin T. Gibbs.
  * All rights reserved.
@@ -29,13 +29,13 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
+#include <sys/bus.h>
 
 #include <cam/cam.h>
 #include <cam/cam_ccb.h>
@@ -70,9 +70,7 @@ cam_sim_alloc(sim_action_func sim_action, sim_poll_func sim_poll,
 {
 	struct cam_sim *sim;
 
-	sim = (struct cam_sim *)malloc(sizeof(struct cam_sim),
-	    M_CAMSIM, M_ZERO | M_NOWAIT);
-
+	sim = malloc(sizeof(struct cam_sim), M_CAMSIM, M_ZERO | M_NOWAIT);
 	if (sim == NULL)
 		return (NULL);
 
@@ -81,6 +79,7 @@ cam_sim_alloc(sim_action_func sim_action, sim_poll_func sim_poll,
 	sim->sim_name = sim_name;
 	sim->softc = softc;
 	sim->path_id = CAM_PATH_ANY;
+	sim->sim_dev = NULL;	/* set only by cam_sim_alloc_dev */
 	sim->unit_number = unit;
 	sim->bus_id = 0;	/* set in xpt_bus_register */
 	sim->max_tagged_dev_openings = max_tagged_dev_transactions;
@@ -89,13 +88,26 @@ cam_sim_alloc(sim_action_func sim_action, sim_poll_func sim_poll,
 	sim->refcount = 1;
 	sim->devq = queue;
 	sim->mtx = mtx;
-	if (mtx == &Giant) {
-		sim->flags |= 0;
-		callout_init(&sim->callout, 0);
-	} else {
-		sim->flags |= CAM_SIM_MPSAFE;
-		callout_init(&sim->callout, 1);
-	}
+	callout_init(&sim->callout, 1);
+	return (sim);
+}
+
+struct cam_sim *
+cam_sim_alloc_dev(sim_action_func sim_action, sim_poll_func sim_poll,
+	      const char *sim_name, void *softc, device_t dev,
+	      struct mtx *mtx, int max_dev_transactions,
+	      int max_tagged_dev_transactions, struct cam_devq *queue)
+{
+	struct cam_sim *sim;
+
+	KASSERT(dev != NULL, ("%s: dev is null for sim_name %s softc %p\n",
+	    __func__, sim_name, softc));
+
+	sim = cam_sim_alloc(sim_action, sim_poll, sim_name, softc,
+	    device_get_unit(dev), mtx, max_dev_transactions,
+	    max_tagged_dev_transactions, queue);
+	if (sim != NULL)
+		sim->sim_dev = dev;
 	return (sim);
 }
 
@@ -112,6 +124,7 @@ cam_sim_free(struct cam_sim *sim, int free_devq)
 		mtx = sim->mtx;
 		mtx_assert(mtx, MA_OWNED);
 	}
+	KASSERT(sim->refcount >= 1, ("sim->refcount >= 1"));
 	sim->refcount--;
 	if (sim->refcount > 0) {
 		error = msleep(sim, mtx, PRIBIO, "simfree", 0);

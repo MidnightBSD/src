@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/conf.h>
@@ -123,7 +122,6 @@ omap4_wugen_pre_ithread(device_t dev, struct intr_irqsrc *isrc)
 
 	PIC_PRE_ITHREAD(sc->sc_parent, isrc);
 }
-
 
 static void
 omap4_wugen_post_ithread(device_t dev, struct intr_irqsrc *isrc)

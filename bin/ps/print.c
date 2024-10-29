@@ -36,7 +36,6 @@ static char sccsid[] = "@(#)print.c	8.6 (Berkeley) 4/16/94";
 #endif
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/time.h>
 #include <sys/resource.h>
@@ -88,11 +87,11 @@ printheader(void)
 		v = vent->var;
 		if (v->flag & LJUST) {
 			if (STAILQ_NEXT(vent, next_ve) == NULL)	/* last one */
-				xo_emit("{T:/%s}", vent->header);
+				xo_emit("{T:/%hs}", vent->header);
 			else
-				xo_emit("{T:/%-*s}", v->width, vent->header);
+				xo_emit("{T:/%-*hs}", v->width, vent->header);
 		} else
-			xo_emit("{T:/%*s}", v->width, vent->header);
+			xo_emit("{T:/%*hs}", v->width, vent->header);
 		if (STAILQ_NEXT(vent, next_ve) != NULL)
 			xo_emit("{P: }");
 	}
@@ -310,7 +309,7 @@ upr(KINFO *k, VARENT *ve __unused)
 #undef scalepri
 
 char *
-uname(KINFO *k, VARENT *ve __unused)
+username(KINFO *k, VARENT *ve __unused)
 {
 
 	return (strdup(user_from_uid(k->ki_p->ki_uid, 0)));

@@ -42,10 +42,12 @@
  */
 
 #include <sys/cdefs.h>
+#include <sys/byteorder.h>
 #include <sys/param.h>
 #include <sys/fs/zfs.h>
 
 #include <err.h>
+#include <fcntl.h>
 #include <libgeom.h>
 #include <libutil.h>
 #include <poll.h>
@@ -72,8 +74,6 @@
 #include "zfsd.h"
 #include "zfsd_exception.h"
 #include "zpool_list.h"
-
-
 /*================================== Macros ==================================*/
 #define NUM_ELEMENTS(x) (sizeof(x) / sizeof(*x))
 
@@ -245,7 +245,7 @@ ZfsDaemon::BuildCaseFiles()
 
 		
 		snprintf(evString, 160, "!system=ZFS subsystem=ZFS "
-		    "type=misc.fs.zfs.config_sync sub_type=synthesized "
+		    "type=sysevent.fs.zfs.config_sync sub_type=synthesized "
 		    "pool_name=%s pool_guid=%" PRIu64 "\n", poolname, poolGUID);
 		event = Event::CreateEvent(GetFactory(), string(evString));
 		if (event != NULL) {

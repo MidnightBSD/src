@@ -46,21 +46,13 @@ static char sccsid[] = "@(#)df.c	8.9 (Berkeley) 5/8/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/stat.h>
 #include <sys/mount.h>
 #include <sys/sysctl.h>
-#ifdef MOUNT_CHAR_DEVS
-#include <ufs/ufs/ufsmount.h>
-#endif
-#include <err.h>
 #include <getopt.h>
 #include <libutil.h>
 #include <locale.h>
-#ifdef MOUNT_CHAR_DEVS
-#include <mntopts.h>
-#endif
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -106,9 +98,6 @@ imax(int a, int b)
 
 static int	  aflag = 0, cflag, hflag, iflag, kflag, lflag = 0, nflag, Tflag;
 static int	  thousands;
-#ifdef MOUNT_CHAR_DEVS
-static struct	ufs_args mdev;
-#endif
 static int	  skipvfs_l, skipvfs_t;
 static const char **vfslist_l, **vfslist_t;
 
@@ -125,22 +114,10 @@ main(int argc, char *argv[])
 	struct statfs statfsbuf, totalbuf;
 	struct maxwidths maxwidths;
 	struct statfs *mntbuf;
-#ifdef MOUNT_CHAR_DEVS
-	struct iovec *iov = NULL;
-#endif
-	const char *fstype;
-#ifdef MOUNT_CHAR_DEVS
-	char *mntpath;
-	char errmsg[255] = {0};
-#endif
 	char *mntpt;
 	int i, mntsize;
 	int ch, rv;
-#ifdef MOUNT_CHAR_DEVS
-	int iovlen = 0;
-#endif
 
-	fstype = "ufs";
 	(void)setlocale(LC_ALL, "");
 	memset(&maxwidths, 0, sizeof(maxwidths));
 	memset(&totalbuf, 0, sizeof(totalbuf));
@@ -209,7 +186,6 @@ main(int argc, char *argv[])
 		case 't':
 			if (vfslist_t != NULL)
 				xo_errx(1, "only one -t option may be specified");
-			fstype = optarg;
 			vfslist_t = makevfslist(optarg, &skipvfs_t);
 			break;
 		case 'T':
@@ -225,7 +201,7 @@ main(int argc, char *argv[])
 	argc -= optind;
 	argv += optind;
 
-	rv = 0;
+	rv = EXIT_SUCCESS;
 	if (!*argv) {
 		/* everything (modulo -t) */
 		mntsize = getmntinfo(&mntbuf, MNT_NOWAIT);
@@ -247,70 +223,19 @@ main(int argc, char *argv[])
 		if (stat(*argv, &stbuf) < 0) {
 			if ((mntpt = getmntpt(*argv)) == NULL) {
 				xo_warn("%s", *argv);
-				rv = 1;
+				rv = EXIT_FAILURE;
 				continue;
 			}
 		} else if (S_ISCHR(stbuf.st_mode)) {
-			if ((mntpt = getmntpt(*argv)) == NULL) {
-#ifdef MOUNT_CHAR_DEVS
-				xo_warnx(
-				    "df on unmounted devices is deprecated");
-				mdev.fspec = *argv;
-				mntpath = strdup("/tmp/df.XXXXXX");
-				if (mntpath == NULL) {
-					xo_warn("strdup failed");
-					rv = 1;
-					continue;
-				}
-				mntpt = mkdtemp(mntpath);
-				if (mntpt == NULL) {
-					xo_warn("mkdtemp(\"%s\") failed", mntpath);
-					rv = 1;
-					free(mntpath);
-					continue;
-				}
-				if (iov != NULL)
-					free_iovec(&iov, &iovlen);
-				build_iovec_argf(&iov, &iovlen, "fstype", "%s",
-				    fstype);
-				build_iovec_argf(&iov, &iovlen, "fspath", "%s",
-				    mntpath);
-				build_iovec_argf(&iov, &iovlen, "from", "%s",
-				    *argv);
-				build_iovec(&iov, &iovlen, "errmsg", errmsg,
-				    sizeof(errmsg));
-				if (nmount(iov, iovlen,
-				    MNT_RDONLY|MNT_NOEXEC) < 0) {
-					if (errmsg[0])
-						xo_warn("%s: %s", *argv,
-						    errmsg);
-					else
-						xo_warn("%s", *argv);
-					rv = 1;
-					(void)rmdir(mntpt);
-					free(mntpath);
-					continue;
-				} else if (statfs(mntpt, &statfsbuf) == 0) {
-					statfsbuf.f_mntonname[0] = '\0';
-					prtstat(&statfsbuf, &maxwidths);
-					if (cflag)
-						addstat(&totalbuf, &statfsbuf);
-				} else {
-					xo_warn("%s", *argv);
-					rv = 1;
-				}
-				(void)unmount(mntpt, 0);
-				(void)rmdir(mntpt);
-				free(mntpath);
-				continue;
-#else
+			mntpt = getmntpt(*argv);
+			if (mntpt == NULL) {
 				xo_warnx("%s: not mounted", *argv);
-				rv = 1;
+				rv = EXIT_FAILURE;
 				continue;
-#endif
 			}
-		} else
+		} else {
 			mntpt = *argv;
+		}
 
 		/*
 		 * Statfs does not take a `wait' flag, so we cannot
@@ -318,7 +243,7 @@ main(int argc, char *argv[])
 		 */
 		if (statfs(mntpt, &statfsbuf) < 0) {
 			xo_warn("%s", mntpt);
-			rv = 1;
+			rv = EXIT_FAILURE;
 			continue;
 		}
 
@@ -329,7 +254,7 @@ main(int argc, char *argv[])
 		 * we've been given (-l, -t, etc.).
 		 */
 		if (checkvfsselected(statfsbuf.f_fstypename) != 0) {
-			rv = 1;
+			rv = EXIT_FAILURE;
 			continue;
 		}
 
@@ -358,7 +283,8 @@ main(int argc, char *argv[])
 		prtstat(&totalbuf, &maxwidths);
 
 	xo_close_container("storage-system-information");
-	xo_finish();
+	if (xo_finish() < 0)
+		rv = EXIT_FAILURE;
 	exit(rv);
 }
 
@@ -394,7 +320,7 @@ makevfslist(char *fslist, int *skip)
 		if (*nextcp == ',')
 			i++;
 	if ((av = malloc((size_t)(i + 2) * sizeof(char *))) == NULL) {
-		warnx("malloc failed");
+		xo_warnx("malloc failed");
 		return (NULL);
 	}
 	nextcp = fslist;
@@ -633,9 +559,12 @@ prtstat(struct statfs *sfsp, struct maxwidths *mwp)
 			xo_emit(format, mwp->iused, (intmax_t)used,
 			    mwp->ifree, (intmax_t)sfsp->f_ffree);
 		}
-		xo_emit(" {:inodes-used-percent/%4.0f}{U:%%} ",
-			inodes == 0 ? 100.0 :
-			(double)used / (double)inodes * 100.0);
+		if (inodes == 0)
+			xo_emit(" {:inodes-used-percent/    -}{U:} ");
+		else {
+			xo_emit(" {:inodes-used-percent/%4.0f}{U:%%} ",
+				(double)used / (double)inodes * 100.0);
+		}
 	} else
 		xo_emit("  ");
 	if (strncmp(sfsp->f_mntfromname, "total", MNAMELEN) != 0)

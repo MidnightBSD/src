@@ -39,7 +39,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Memory special file
  */
@@ -61,11 +60,14 @@
 #include <sys/uio.h>
 
 #include <vm/vm.h>
+#include <vm/vm_param.h>
+#include <vm/vm_page.h>
+#include <vm/vm_phys.h>
+#include <vm/vm_dumpset.h>
 #include <vm/pmap.h>
 #include <vm/vm_extern.h>
 
 #include <machine/memdev.h>
-#include <machine/vmparam.h>
 
 /*
  * Used in /dev/mem drivers and elsewhere
@@ -114,9 +116,7 @@ memrw(struct cdev *dev, struct uio *uio, int flags)
 				return (EINVAL);
 			sx_xlock(&tmppt_lock);
 			pmap_kenter((vm_offset_t)_tmppt, v);
-#if __ARM_ARCH >= 6
 			pmap_tlb_flush(kernel_pmap, (vm_offset_t)_tmppt);
-#endif
 			o = (int)uio->uio_offset & PAGE_MASK;
 			c = (u_int)(PAGE_SIZE - ((int)iov->iov_base & PAGE_MASK));
 			c = min(c, (u_int)(PAGE_SIZE - o));

@@ -31,7 +31,6 @@
  */
 
 #include <machine/asm.h>
-
 #include <machine/sysreg.h>
 
 	.cpu cortex-a8
