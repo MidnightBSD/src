@@ -34,7 +34,6 @@
  */
 
 #include <machine/asm.h>
-
 ENTRY(copysign)
 	movl	16(%esp),%edx
 	andl	$0x80000000,%edx

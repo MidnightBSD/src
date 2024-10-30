@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 .include <src.opts.mk>
 
@@ -25,6 +24,8 @@ S.${MK_FORTH}+=		forth
 S.${MK_LOADER_LUA}+=	liblua
 S.${MK_LOADER_LUA}+=	lua
 S.yes+=			defaults
+S.yes+=			fonts
+S.yes+=			images
 S.yes+=			man
 
 .if ${MK_FORTH} != "no"
@@ -37,6 +38,9 @@ INTERP_DEPENDS+=	lua
 .include <bsd.arch.inc.mk>
 
 S.${MK_EFI}+=		efi
+.if ${MK_FDT} != "no"
+S.${MK_LOADER_KBOOT}+=	kboot
+.endif
 S.${MK_LOADER_UBOOT}+=	uboot
 
 .if defined(LIB32LIST)
@@ -75,10 +79,22 @@ SUBDIR_DEPEND_forth+=	ficl
 SUBDIR_DEPEND_lua+=	liblua
 
 SUBDIR_DEPEND_efi+=	${INTERP_DEPENDS}
+SUBDIR_DEPEND_kboot+=	${INTERP_DEPENDS}
 .if ${MK_FDT} != "no"
 SUBDIR_DEPEND_efi+=	fdt
+SUBDIR_DEPEND_kboot+=	fdt
+.endif
+
+SUBDIR_DEPEND_uboot+=	${INTERP_DEPENDS}
+.if ${MK_FDT} != "no"
+SUBDIR_DEPEND_uboot+=	fdt
 .endif
 
 SUBDIR_PARALLEL=	yes
 
 .include <bsd.subdir.mk>
+
+# Simplified way to build-test the most important build combinations for the
+# loader.
+universe:
+	sh ${SRCTOP}/tools/boot/universe.sh

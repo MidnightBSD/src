@@ -25,7 +25,6 @@
  */
 
 #include <machine/asm.h>
-
 ENTRY(scalbn)
 	movsd	%xmm0,-8(%rsp)
 	movl	%edi,-12(%rsp)

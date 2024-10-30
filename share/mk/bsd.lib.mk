@@ -1,8 +1,9 @@
 #	from: @(#)bsd.lib.mk	5.26 (Berkeley) 5/2/91
-# $FreeBSD$
 #
 
 .include <bsd.init.mk>
+.include <bsd.compiler.mk>
+.include <bsd.linker.mk>
 
 .if defined(LIB_CXX) || defined(SHLIB_CXX)
 _LD=	${CXX}
@@ -45,7 +46,9 @@ CFLAGS+=	${CRUNCH_CFLAGS}
 
 .if ${MK_ASSERT_DEBUG} == "no"
 CFLAGS+= -DNDEBUG
-NO_WERROR=
+# XXX: shouldn't we ensure that !asserts marks potentially unused variables as
+# __unused instead of disabling -Werror globally?
+MK_WERROR=	no
 .endif
 
 .if defined(DEBUG_FLAGS)
@@ -64,7 +67,7 @@ TAGS+=	lib32
 
 .if defined(NO_ROOT)
 .if !defined(TAGS) || ! ${TAGS:Mpackage=*}
-TAGS+=		package=${PACKAGE:Uruntime}
+TAGS+=		package=${PACKAGE:Uutilities}
 .endif
 TAG_ARGS=	-T ${TAGS:[*]:S/ /,/g}
 .endif
@@ -73,10 +76,42 @@ TAG_ARGS=	-T ${TAGS:[*]:S/ /,/g}
 .if ${MK_BIND_NOW} != "no"
 LDFLAGS+= -Wl,-znow
 .endif
+.if ${LINKER_TYPE} != "mac"
+.if ${MK_RELRO} == "no"
+LDFLAGS+= -Wl,-znorelro
+.else
+LDFLAGS+= -Wl,-zrelro
+.endif
+.endif
 .if ${MK_RETPOLINE} != "no"
+.if ${COMPILER_FEATURES:Mretpoline} && ${LINKER_FEATURES:Mretpoline}
 CFLAGS+= -mretpoline
 CXXFLAGS+= -mretpoline
 LDFLAGS+= -Wl,-zretpolineplt
+.else
+.warning Retpoline requested but not supported by compiler or linker
+.endif
+.endif
+
+# Initialize stack variables on function entry
+.if ${MK_INIT_ALL_ZERO} == "yes"
+.if ${COMPILER_FEATURES:Minit-all}
+CFLAGS+= -ftrivial-auto-var-init=zero
+CXXFLAGS+= -ftrivial-auto-var-init=zero
+.if ${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} < 160000
+CFLAGS+= -enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang
+CXXFLAGS+= -enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang
+.endif
+.else
+.warning InitAll (zeros) requested but not supported by compiler
+.endif
+.elif ${MK_INIT_ALL_PATTERN} == "yes"
+.if ${COMPILER_FEATURES:Minit-all}
+CFLAGS+= -ftrivial-auto-var-init=pattern
+CXXFLAGS+= -ftrivial-auto-var-init=pattern
+.else
+.warning InitAll (pattern) requested but not supported by compiler
+.endif
 .endif
 
 .if ${MK_DEBUG_FILES} != "no" && empty(DEBUG_FLAGS:M-g) && \
@@ -84,6 +119,12 @@ LDFLAGS+= -Wl,-zretpolineplt
 CFLAGS+= ${DEBUG_FILES_CFLAGS}
 CXXFLAGS+= ${DEBUG_FILES_CFLAGS}
 CTFFLAGS+= -g
+.endif
+
+# clang currently defaults to dynamic TLS for mips64 object files without -fPIC
+.if ${MACHINE_ARCH:Mmips64*} && ${COMPILER_TYPE} == "clang"
+STATIC_CFLAGS+= -ftls-model=initial-exec
+STATIC_CXXFLAGS+= -ftls-model=initial-exec
 .endif
 
 .if ${MACHINE_CPUARCH} == "riscv" && ${LINKER_FEATURES:Mriscv-relaxations} == ""
@@ -99,13 +140,8 @@ CFLAGS += -mno-relax
 .SUFFIXES: .out .o .bc .ll .po .pico .nossppico .pieo .S .asm .s .c .cc .cpp .cxx .C .f .y .l .ln
 
 .if !defined(PICFLAG)
-.if ${MACHINE_CPUARCH} == "sparc64"
-PICFLAG=-fPIC
-PIEFLAG=-fPIE
-.else
 PICFLAG=-fpic
 PIEFLAG=-fpie
-.endif
 .endif
 
 PO_FLAG=-pg
@@ -220,7 +256,7 @@ SHLIB_NAME_FULL=${SHLIB_NAME}
 
 # Allow libraries to specify their own version map or have it
 # automatically generated (see bsd.symver.mk above).
-.if ${MK_SYMVER} == "yes" && !empty(VERSION_MAP)
+.if !empty(VERSION_MAP)
 ${SHLIB_NAME_FULL}:	${VERSION_MAP}
 LDFLAGS+=	-Wl,--version-script=${VERSION_MAP}
 
@@ -245,9 +281,7 @@ _LIBS=		lib${LIB_PRIVATE}${LIB}.a
 lib${LIB_PRIVATE}${LIB}.a: ${OBJS} ${STATICOBJS}
 	@${ECHO} building static ${LIB} library
 	@rm -f ${.TARGET}
-	${AR} ${ARFLAGS} ${.TARGET} `NM='${NM}' NMFLAGS='${NMFLAGS}' \
-	    ${LORDER} ${OBJS} ${STATICOBJS} | ${TSORT} ${TSORTFLAGS}` ${ARADD}
-	${RANLIB} ${RANLIBFLAGS} ${.TARGET}
+	${AR} ${ARFLAGS} ${.TARGET} ${OBJS} ${STATICOBJS} ${ARADD}
 .endif
 
 .if !defined(INTERNALLIB)
@@ -261,9 +295,7 @@ CLEANFILES+=	${POBJS}
 lib${LIB_PRIVATE}${LIB}_p.a: ${POBJS}
 	@${ECHO} building profiled ${LIB} library
 	@rm -f ${.TARGET}
-	${AR} ${ARFLAGS} ${.TARGET} `NM='${NM}' NMFLAGS='${NMFLAGS}' \
-	    ${LORDER} ${POBJS} | ${TSORT} ${TSORTFLAGS}` ${ARADD}
-	${RANLIB} ${RANLIBFLAGS} ${.TARGET}
+	${AR} ${ARFLAGS} ${.TARGET} ${POBJS} ${ARADD}
 .endif
 
 .if defined(LLVM_LINK)
@@ -287,8 +319,7 @@ CLEANFILES+=	${SOBJS}
 _LIBS+=		${SHLIB_NAME}
 
 SOLINKOPTS+=	-shared -Wl,-x
-.if (defined(LD_FATAL_WARNINGS) && ${LD_FATAL_WARNINGS} == "no") || \
-    (!defined(LD_FATAL_WARNINGS) && ${MACHINE_ARCH} == "arm")
+.if defined(LD_FATAL_WARNINGS) && ${LD_FATAL_WARNINGS} == "no"
 SOLINKOPTS+=	-Wl,--no-fatal-warnings
 .else
 SOLINKOPTS+=	-Wl,--fatal-warnings
@@ -317,12 +348,11 @@ ${SHLIB_NAME_FULL}: ${SOBJS}
 	@${ECHO} building shared library ${SHLIB_NAME}
 	@rm -f ${SHLIB_NAME} ${SHLIB_LINK}
 .if defined(SHLIB_LINK) && !commands(${SHLIB_LINK:R}.ld) && ${MK_DEBUG_FILES} == "no"
-	@${INSTALL_LIBSYMLINK} ${TAG_ARGS:D${TAG_ARGS},development} ${SHLIB_NAME} ${SHLIB_LINK}
+	# Note: This uses ln instead of ${INSTALL_LIBSYMLINK} since we are in OBJDIR
+	@${LN:Uln} -fs ${SHLIB_NAME} ${SHLIB_LINK}
 .endif
 	${_LD:N${CCACHE_BIN}} ${LDFLAGS} ${SSP_CFLAGS} ${SOLINKOPTS} \
-	    -o ${.TARGET} -Wl,-soname,${SONAME} \
-	    `NM='${NM}' NMFLAGS='${NMFLAGS}' ${LORDER} ${SOBJS} | \
-	    ${TSORT} ${TSORTFLAGS}` ${LDADD}
+	    -o ${.TARGET} -Wl,-soname,${SONAME} ${SOBJS} ${LDADD}
 .if ${MK_CTF} != "no"
 	${CTFMERGE} ${CTFFLAGS} -o ${.TARGET} ${SOBJS}
 .endif
@@ -333,7 +363,8 @@ ${SHLIB_NAME}: ${SHLIB_NAME_FULL} ${SHLIB_NAME}.debug
 	${OBJCOPY} --strip-debug --add-gnu-debuglink=${SHLIB_NAME}.debug \
 	    ${SHLIB_NAME_FULL} ${.TARGET}
 .if defined(SHLIB_LINK) && !commands(${SHLIB_LINK:R}.ld)
-	@${INSTALL_LIBSYMLINK} ${TAG_ARGS:D${TAG_ARGS},development} ${SHLIB_NAME} ${SHLIB_LINK}
+	# Note: This uses ln instead of ${INSTALL_LIBSYMLINK} since we are in OBJDIR
+	@${LN:Uln} -fs ${SHLIB_NAME} ${SHLIB_LINK}
 .endif
 
 ${SHLIB_NAME}.debug: ${SHLIB_NAME_FULL}
@@ -348,7 +379,6 @@ lib${LIB_PRIVATE}${LIB}_pic.a: ${SOBJS}
 	@${ECHO} building special pic ${LIB} library
 	@rm -f ${.TARGET}
 	${AR} ${ARFLAGS} ${.TARGET} ${SOBJS} ${ARADD}
-	${RANLIB} ${RANLIBFLAGS} ${.TARGET}
 .endif
 
 .if defined(BUILD_NOSSP_PIC_ARCHIVE) && defined(LIB) && !empty(LIB)
@@ -361,7 +391,6 @@ lib${LIB_PRIVATE}${LIB}_nossp_pic.a: ${NOSSPSOBJS}
 	@${ECHO} building special nossp pic ${LIB} library
 	@rm -f ${.TARGET}
 	${AR} ${ARFLAGS} ${.TARGET} ${NOSSPSOBJS} ${ARADD}
-	${RANLIB} ${RANLIBFLAGS} ${.TARGET}
 .endif
 
 .endif # !defined(INTERNALLIB)
@@ -377,7 +406,6 @@ lib${LIB_PRIVATE}${LIB}_pie.a: ${PIEOBJS}
 	@${ECHO} building pie ${LIB} library
 	@rm -f ${.TARGET}
 	${AR} ${ARFLAGS} ${.TARGET} ${PIEOBJS} ${ARADD}
-	${RANLIB} ${RANLIBFLAGS} ${.TARGET}
 .endif
 
 .if defined(_SKIP_BUILD)
@@ -411,7 +439,17 @@ SHLINSTALLFLAGS+= -fschg
 # Install libraries with -S to avoid risk of modifying in-use libraries when
 # installing to a running system.  It is safe to avoid this for NO_ROOT builds
 # that are only creating an image.
-.if !defined(NO_SAFE_LIBINSTALL) && !defined(NO_ROOT)
+#
+# XXX: Since Makefile.inc1 ends up building lib/libc both as part of
+# _startup_libs and as part of _generic_libs it ends up getting installed a
+# second time during the parallel build, and although the .WAIT in lib/Makefile
+# stops that mattering for lib, other directories like secure/lib are built in
+# parallel at the top level and are unaffected by that, so can sometimes race
+# with the libc.so.7 reinstall and see a missing or corrupt file. Ideally the
+# build system would be fixed to not build/install libc to WORLDTMP the second
+# time round, but for now using -S ensures the install is atomic and thus we
+# never see a broken intermediate state, so use it even for NO_ROOT builds.
+.if !defined(NO_SAFE_LIBINSTALL) #&& !defined(NO_ROOT)
 SHLINSTALLFLAGS+= -S
 SHLINSTALLSYMLINKFLAGS+= -S
 .endif
@@ -426,15 +464,27 @@ _SHLINSTALLSYMLINKFLAGS:= ${SHLINSTALLSYMLINKFLAGS}
 _SHLINSTALLFLAGS:=	${_SHLINSTALLFLAGS${ie}}
 .endfor
 
+.if defined(PCFILES)
+.for pcfile in ${PCFILES}
+installpcfiles: installpcfiles-${pcfile}
+
+installpcfiles-${pcfile}: ${pcfile}
+	${INSTALL} ${TAG_ARGS:D${TAG_ARGS},dev} -o ${LIBOWN} -g ${LIBGRP} -m ${LIBMODE} \
+	    ${_INSTALLFLAGS} \
+	    ${.ALLSRC} ${DESTDIR}${LIBDATADIR}/pkgconfig
+.endfor
+.endif
+installpcfiles: .PHONY
+
 .if !defined(INTERNALLIB)
-realinstall: _libinstall
+realinstall: _libinstall installpcfiles
 .ORDER: beforeinstall _libinstall
 _libinstall:
 .if defined(LIB) && !empty(LIB) && ${MK_INSTALLLIB} != "no"
-	${INSTALL} ${TAG_ARGS:D${TAG_ARGS},development} -C -o ${LIBOWN} -g ${LIBGRP} -m ${LIBMODE} \
+	${INSTALL} ${TAG_ARGS:D${TAG_ARGS},dev} -C -o ${LIBOWN} -g ${LIBGRP} -m ${LIBMODE} \
 	    ${_INSTALLFLAGS} lib${LIB_PRIVATE}${LIB}.a ${DESTDIR}${_LIBDIR}/
 .if ${MK_PROFILE} != "no"
-	${INSTALL} ${TAG_ARGS:D${TAG_ARGS},profile} -C -o ${LIBOWN} -g ${LIBGRP} -m ${LIBMODE} \
+	${INSTALL} ${TAG_ARGS:D${TAG_ARGS},dev} -C -o ${LIBOWN} -g ${LIBGRP} -m ${LIBMODE} \
 	    ${_INSTALLFLAGS} lib${LIB_PRIVATE}${LIB}_p.a ${DESTDIR}${_LIBDIR}/
 .endif
 .endif
@@ -444,25 +494,25 @@ _libinstall:
 	    ${SHLIB_NAME} ${DESTDIR}${_SHLIBDIR}/
 .if ${MK_DEBUG_FILES} != "no"
 .if defined(DEBUGMKDIR)
-	${INSTALL} ${TAG_ARGS:D${TAG_ARGS},debug} -d ${DESTDIR}${DEBUGFILEDIR}/
+	${INSTALL} ${TAG_ARGS:D${TAG_ARGS},dbg} -d ${DESTDIR}${DEBUGFILEDIR}/
 .endif
-	${INSTALL} ${TAG_ARGS:D${TAG_ARGS},debug} -o ${LIBOWN} -g ${LIBGRP} -m ${DEBUGMODE} \
+	${INSTALL} ${TAG_ARGS:D${TAG_ARGS},dbg} -o ${LIBOWN} -g ${LIBGRP} -m ${DEBUGMODE} \
 	    ${_INSTALLFLAGS} \
 	    ${SHLIB_NAME}.debug ${DESTDIR}${DEBUGFILEDIR}/
 .endif
 .if defined(SHLIB_LINK)
 .if commands(${SHLIB_LINK:R}.ld)
-	${INSTALL} ${TAG_ARGS:D${TAG_ARGS},development} -S -C -o ${LIBOWN} -g ${LIBGRP} -m ${LIBMODE} \
+	${INSTALL} ${TAG_ARGS:D${TAG_ARGS},dev} -S -C -o ${LIBOWN} -g ${LIBGRP} -m ${LIBMODE} \
 	    ${_INSTALLFLAGS} ${SHLIB_LINK:R}.ld \
 	    ${DESTDIR}${_LIBDIR}/${SHLIB_LINK}
 .for _SHLIB_LINK_LINK in ${SHLIB_LDSCRIPT_LINKS}
-	${INSTALL_LIBSYMLINK} ${_SHLINSTALLSYMLINKFLAGS} ${SHLIB_LINK} \
+	${INSTALL_LIBSYMLINK} ${_SHLINSTALLSYMLINKFLAGS} ${TAG_ARGS} ${SHLIB_LINK} \
 	    ${DESTDIR}${_LIBDIR}/${_SHLIB_LINK_LINK}
 .endfor
 .else
 .if ${_SHLIBDIR} == ${_LIBDIR}
 .if ${SHLIB_LINK:Mlib*}
-	${INSTALL_RSYMLINK} ${_SHLINSTALLSYMLINKFLAGS} ${TAG_ARGS:D${TAG_ARGS},development} \
+	${INSTALL_RSYMLINK} ${_SHLINSTALLSYMLINKFLAGS} ${TAG_ARGS:D${TAG_ARGS},dev} \
 	    ${SHLIB_NAME} ${DESTDIR}${_LIBDIR}/${SHLIB_LINK}
 .else
 	${INSTALL_RSYMLINK} ${_SHLINSTALLSYMLINKFLAGS} ${TAG_ARGS} ${DESTDIR}${_SHLIBDIR}/${SHLIB_NAME} \
@@ -470,7 +520,7 @@ _libinstall:
 .endif
 .else
 .if ${SHLIB_LINK:Mlib*}
-	${INSTALL_RSYMLINK} ${_SHLINSTALLSYMLINKFLAGS} ${TAG_ARGS:D${TAG_ARGS},development} \
+	${INSTALL_RSYMLINK} ${_SHLINSTALLSYMLINKFLAGS} ${TAG_ARGS:D${TAG_ARGS},dev} \
 	    ${DESTDIR}${_SHLIBDIR}/${SHLIB_NAME} ${DESTDIR}${_LIBDIR}/${SHLIB_LINK}
 .else
 	${INSTALL_RSYMLINK} ${_SHLINSTALLSYMLINKFLAGS} ${TAG_ARGS} \
@@ -485,7 +535,7 @@ _libinstall:
 .endif # SHLIB_LINK
 .endif # SHIB_NAME
 .if defined(INSTALL_PIC_ARCHIVE) && defined(LIB) && !empty(LIB) && ${MK_TOOLCHAIN} != "no"
-	${INSTALL} ${TAG_ARGS:D${TAG_ARGS},development} -o ${LIBOWN} -g ${LIBGRP} -m ${LIBMODE} \
+	${INSTALL} ${TAG_ARGS:D${TAG_ARGS},dev} -o ${LIBOWN} -g ${LIBGRP} -m ${LIBMODE} \
 	    ${_INSTALLFLAGS} lib${LIB}_pic.a ${DESTDIR}${_LIBDIR}/
 .endif
 .endif # !defined(INTERNALLIB)
@@ -494,7 +544,10 @@ _libinstall:
 .include <bsd.nls.mk>
 .include <bsd.confs.mk>
 .include <bsd.files.mk>
+#No need to install header for INTERNALLIB
+.if !defined(INTERNALLIB)
 .include <bsd.incs.mk>
+.endif
 .endif
 
 LINKOWN?=	${LIBOWN}

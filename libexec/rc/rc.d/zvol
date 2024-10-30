@@ -1,8 +1,9 @@
 #!/bin/sh
+#
+#
 
 # PROVIDE: zvol
-# REQUIRE: hostid
-# BEFORE: dumpon
+# REQUIRE: zpool
 # KEYWORD: nojail
 
 . /etc/rc.subr

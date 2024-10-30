@@ -24,7 +24,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Map system call codes to names for the supported ABIs on each
  * platform.  Rather than regnerating system call name tables locally

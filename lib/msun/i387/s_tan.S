@@ -34,7 +34,6 @@
  */
 
 #include <machine/asm.h>
-
 ENTRY(tan)
 	fldl	4(%esp)
 	fptan

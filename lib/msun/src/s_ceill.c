@@ -12,7 +12,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * ceill(x)
  * Return x rounded toward -inf to integral value

@@ -1,4 +1,3 @@
-# $FreeBSD$
 #
 # Directory permissions management.
 
@@ -21,7 +20,7 @@ ${dir}_FLAG=	-f ${${dir}_FLAGS}
 
 .      if defined(NO_ROOT)
 .        if !defined(${dir}TAGS) || ! ${${dir}TAGS:Mpackage=*}
-${dir}TAGS+=		package=${${dir}PACKAGE:Uruntime}
+${dir}TAGS+=		package=${${dir}PACKAGE:Uutilities}
 .        endif
 ${dir}TAG_ARGS=	-T ${${dir}TAGS:[*]:S/ /,/g}
 .      endif

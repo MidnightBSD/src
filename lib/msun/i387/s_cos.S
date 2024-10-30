@@ -34,7 +34,6 @@
  */
 
 #include <machine/asm.h>
-
 ENTRY(cos)
 	fldl	4(%esp)
 	fcos

@@ -24,6 +24,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
+#
 
 # PROVIDE: hostid
 # REQUIRE: sysctl
@@ -48,9 +49,9 @@ hostid_set()
 
 	# Set both kern.hostuuid and kern.hostid.
 	#
-	check_startmsgs && echo "Setting hostuuid: ${uuid}."
+	startmsg "Setting hostuuid: ${uuid}."
 	${SYSCTL} kern.hostuuid="${uuid}" >/dev/null
-	check_startmsgs && echo "Setting hostid: ${id}."
+	startmsg "Setting hostid: ${id}."
 	${SYSCTL} kern.hostid=${id} >/dev/null
 }
 
@@ -115,7 +116,7 @@ hostid_generate()
 		warn "hostid: unable to figure out a UUID from DMI data, generating a new one"
 		sleep 2
 		# If not found, fall back to software-generated UUID.
-		uuid=`uuidgen`
+		uuid=`uuidgen ${hostid_uuidgen_flags}`
 	fi
 	hostid_set $uuid
 }
@@ -136,7 +137,7 @@ hostid_start()
 	if [ -r ${hostid_file} ]; then
 		read saved_hostid < ${hostid_file}
 		if valid_hostid ${saved_hostid}; then
-			hostid_set `cat ${hostid_file}`
+			hostid_set ${saved_hostid}
 			exit 0
 		fi
 	fi

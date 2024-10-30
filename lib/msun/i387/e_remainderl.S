@@ -34,8 +34,6 @@
  */
 
 #include <machine/asm.h>
-
-
 ENTRY(remainderl)
 	fldt	16(%esp)
 	fldt	4(%esp)
@@ -45,5 +43,6 @@ ENTRY(remainderl)
 	jp	1b
 	fstp	%st(1)
 	ret
+END(remainderl)
 
 	.section .note.GNU-stack,"",%progbits

@@ -12,7 +12,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /* cosh(x)
  * Method : 
  * mathematically cosh(x) if defined to be (exp(x)+exp(-x))/2

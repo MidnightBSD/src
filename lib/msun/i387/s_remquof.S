@@ -29,7 +29,6 @@
  */
 
 #include <machine/asm.h>
-	
 ENTRY(remquof)
 	flds	8(%esp)
 	flds	4(%esp)

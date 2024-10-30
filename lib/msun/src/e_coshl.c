@@ -12,7 +12,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * See e_cosh.c for complete comments.
  *

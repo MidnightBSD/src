@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 # early setup only see also src.sys.mk
 
@@ -22,6 +21,11 @@ RELDIR:= ${.CURDIR:S,${SRCTOP}/,,}
 RELTOP?= 	${RELDIR:C,[^/]+,..,g}
 RELOBJTOP?=	${RELTOP}
 RELSRCTOP?=	${RELTOP}
+
+.if !defined(OS_REVISION)
+OS_REVISION!=eval `sh ${SRCTOP}/sys/conf/newvers.sh -V REVISION` && echo $$REVISION || echo
+.export OS_REVISION
+.endif
 
 # site customizations that do not depend on anything!
 
@@ -61,8 +65,9 @@ MAKEOBJDIRPREFIX:=	${_saveMAKEOBJDIRPREFIX}
 .include <bsd.mkopt.mk>
 
 # Top-level installs should not use meta mode as it may prevent installing
-# based on cookies.
-.if make(*install*) && ${.MAKE.LEVEL} == 0
+# based on cookies. It's fine with filemon though.
+.if !empty(META_MODE:Mnofilemon) && \
+  make(*install*) && ${.MAKE.LEVEL} == 0
 META_MODE=	normal
 MK_META_MODE=	no
 .export MK_META_MODE

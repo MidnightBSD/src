@@ -34,11 +34,11 @@
  */
 
 #include <machine/asm.h>
-
 ENTRY(logbl)
 	fldt	4(%esp)
 	fxtract
 	fstp	%st
 	ret
+END(logbl)
 
 	.section .note.GNU-stack,"",%progbits

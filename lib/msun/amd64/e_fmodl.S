@@ -34,7 +34,6 @@
  */
 
 #include <machine/asm.h>
-
 ENTRY(fmodl)
 	fldt	24(%rsp)
 	fldt	8(%rsp)

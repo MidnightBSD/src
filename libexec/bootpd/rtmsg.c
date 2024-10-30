@@ -40,7 +40,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 /*
  * Verify that we are at least 4.4 BSD

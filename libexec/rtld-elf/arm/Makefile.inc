@@ -1,1 +1,2 @@
-CFLAGS.clang+=	-mfpu=none
+
+CFLAGS+=	-mfpu=none

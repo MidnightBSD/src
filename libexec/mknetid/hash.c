@@ -38,11 +38,6 @@
 #include <sys/types.h>
 #include "hash.h"
 
-#ifndef lint
-static const char rcsid[] =
-  "$FreeBSD: stable/11/libexec/mknetid/hash.c 331722 2018-03-29 02:50:57Z eadler $";
-#endif /* not lint */
-
 /*
  * This hash function is stolen directly from the
  * Berkeley DB package. It already exists inside libc, but

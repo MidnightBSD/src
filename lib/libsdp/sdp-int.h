@@ -1,7 +1,7 @@
 /*-
  * sdp-int.h
  *
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2001-2003 Maksim Yevmenkin <m_evmenkin@yahoo.com>
  * All rights reserved.
@@ -28,7 +28,6 @@
  * SUCH DAMAGE.
  *
  * $Id: sdp-int.h,v 1.1 2003/09/01 23:01:07 max Exp $
- * $FreeBSD: stable/11/lib/libsdp/sdp-int.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifndef _SDP_INT_H_

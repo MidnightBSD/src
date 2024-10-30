@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 .if !target(__<bsd.init.mk>__)
 .error bsd.incs.mk cannot be included directly.
@@ -7,13 +6,6 @@
 .if ${MK_INCLUDES} != "no"
 
 INCSGROUPS?=	INCS
-
-.if defined(NO_ROOT)
-.if !defined(TAGS) || ! ${TAGS:Mpackage=*}
-TAGS+=		package=${PACKAGE:Uruntime}
-.endif
-TAG_ARGS=	-T ${TAGS:[*]:S/ /,/g}
-.endif
 
 .if !target(buildincludes)
 .for group in ${INCSGROUPS}
@@ -36,6 +28,17 @@ ${group}DIR?=	${INCLUDEDIR}${PRIVATELIB:D/private/${LIB}}
 STAGE_SETS+=	${group:C,[/*],_,g}
 STAGE_DIR.${group:C,[/*],_,g}= ${STAGE_OBJTOP}${${group}DIR}
 STAGE_SYMLINKS_DIR.${group:C,[/*],_,g}= ${STAGE_OBJTOP}
+
+.if defined(NO_ROOT)
+.if !defined(${group}TAGS) || ! ${${group}TAGS:Mpackage=*}
+.if defined(${group}PACKAGE)
+${group}TAGS+=		package=${${group}PACKAGE:Uutilities},dev
+.else
+${group}TAGS+=		package=${PACKAGE:Uutilities},dev
+.endif
+.endif
+${group}TAG_ARGS=	-T ${${group}TAGS:[*]:S/ /,/g}
+.endif
 
 _${group}INCS=
 .for header in ${${group}}
@@ -60,14 +63,14 @@ stage_includes: stage_as.${header:T}
 
 installincludes: _${group}INS_${header:T}
 _${group}INS_${header:T}: ${header}
-	${INSTALL} -C -o ${${group}OWN_${.ALLSRC:T}} \
+	${INSTALL} ${TAG_ARGS:D${TAG_ARGS},dev} -C -o ${${group}OWN_${.ALLSRC:T}} \
 	    -g ${${group}GRP_${.ALLSRC:T}} -m ${${group}MODE_${.ALLSRC:T}} \
 	    ${.ALLSRC} \
 	    ${DESTDIR}${${group}DIR_${.ALLSRC:T}}/${${group}NAME_${.ALLSRC:T}}
 .else
 _${group}INCS+= ${header}
 .endif
-.endfor
+.endfor # header in ${${group}}
 .if !empty(_${group}INCS)
 stage_files.${group}: ${_${group}INCS}
 stage_includes: stage_files.${group}
@@ -75,21 +78,21 @@ stage_includes: stage_files.${group}
 installincludes: _${group}INS
 _${group}INS: ${_${group}INCS}
 .if defined(${group}NAME)
-	${INSTALL} ${TAG_ARGS:D${TAG_ARGS},development} -C -o ${${group}OWN} -g ${${group}GRP} -m ${${group}MODE} \
+	${INSTALL} ${${group}TAG_ARGS} -C -o ${${group}OWN} -g ${${group}GRP} -m ${${group}MODE} \
 	    ${.ALLSRC} ${DESTDIR}${${group}DIR}/${${group}NAME}
 .else
-	${INSTALL} ${TAG_ARGS:D${TAG_ARGS},development} -C -o ${${group}OWN} -g ${${group}GRP} -m ${${group}MODE} \
+	${INSTALL} ${${group}TAG_ARGS} -C -o ${${group}OWN} -g ${${group}GRP} -m ${${group}MODE} \
 	    ${.ALLSRC} ${DESTDIR}${${group}DIR}/
 .endif
-.endif
+.endif # !empty(_${group}INCS)
 
 .endif # defined(${group}) && !empty(${group})
-.endfor
+.endfor # group in ${INCSGROUPS}
 
 .if defined(INCSLINKS) && !empty(INCSLINKS)
 installincludes:
 .for s t in ${INCSLINKS}
-	${INSTALL_SYMLINK} ${TAG_ARGS:D${TAG_ARGS},development} ${s} ${DESTDIR}${t}
+	${INSTALL_SYMLINK} ${TAG_ARGS:D${TAG_ARGS},dev} ${s} ${DESTDIR}${t}
 .endfor
 .endif
 .endif # !target(installincludes)

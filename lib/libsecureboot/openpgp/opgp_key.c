@@ -24,7 +24,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "../libsecureboot-priv.h"
 
 #include "decode.h"

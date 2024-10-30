@@ -139,11 +139,12 @@ get_fibmod()
 
 static_inet()
 {
-	local _action _if _skip _fibmod
+	local _action _if _skip _fibmod _fibs
 	_action=$1
 	_if=$2
 
 	_fibmod=`get_fibmod`
+	_fibs=$((`${SYSCTL_N} net.fibs` - 1))
 
 	# Provide loopback route in all routing tables.  This has to come
 	# first so that any following routes can be added.
@@ -159,6 +160,22 @@ static_inet()
 		route__default="default ${defaultrouter}"
 		;;
 	esac
+
+	# Add default routes for fibs
+	if [ ${_fibs} -gt 0 ]; then
+		for _fibnum in `jot ${_fibs}` ; do
+			eval _fib_gw=\${defaultrouter_fib${_fibnum}}
+			case ${_fib_gw} in
+			[Nn][Oo] | '')
+				;;
+			*)
+				static_routes="${static_routes} _default_fib${_fibnum}"
+				eval route__default_fib${_fibnum}="'default ${_fib_gw} -fib ${_fibnum}'"
+				;;
+			esac
+		done
+	fi
+
 
 	# Install configured routes.
 	if [ -n "${static_routes}" ]; then
@@ -184,11 +201,12 @@ static_inet()
 
 static_inet6()
 {
-	local _action _if _skip fibmod allfibs
+	local _action _if _skip fibmod _fibs
 	_action=$1
 	_if=$2
 
 	fibmod=`get_fibmod`
+	_fibs=$((`${SYSCTL_N} net.fibs` - 1))
 
 	# Add pre-defined static routes first.
 	ipv6_static_routes="_v4mapped _v4compat ${ipv6_static_routes}"
@@ -219,6 +237,22 @@ static_inet6()
 		ipv6_route__default="default ${ipv6_defaultrouter}"
 		;;
 	esac
+
+	# Add default routes for fibs
+	if [ ${_fibs} -gt 0 ]; then
+		for _fibnum in `jot ${_fibs}` ; do
+			eval _fib_gw=\${ipv6_defaultrouter_fib${_fibnum}}
+			case ${_fib_gw} in
+			[Nn][Oo] | '')
+				;;
+			*)
+				ipv6_static_routes="${ipv6_static_routes} _default_fib${_fibnum}"
+				eval ipv6_route__default_fib${_fibnum}="'default ${_fib_gw} -fib ${_fibnum}'"
+				;;
+			esac
+		done
+	fi
+
 
 	# Install configured routes.
 	if [ -n "${ipv6_static_routes}" ]; then
@@ -291,8 +325,29 @@ ropts_init()
 	fi
 }
 
+_check_dynamicrouting()
+{
+	local skip file name rcvar
+
+	# copied from /etc/rc
+	skip="-s nostart"
+	if [ `/sbin/sysctl -n security.jail.jailed` -eq 1 ]; then
+		skip="$skip -s nojail"
+	fi
+	[ -n "$local_startup" ] && find_local_scripts_new
+	
+	for file in $( rcorder ${skip} /etc/rc.d/* ${local_rc} 2>/dev/null |
+		       xargs grep -lE '^# PROVIDE:.*\<dynamicrouting\>' ); do
+		(set -- enabled; . $file) && return 0;
+	done
+
+	return 1
+}
+
 options_inet()
 {
+	local _icmp_drop_redirect
+
 	_ropts_initdone=
 	if checkyesno icmp_bmcastecho; then
 		ropts_init inet
@@ -302,7 +357,17 @@ options_inet()
 		${SYSCTL} net.inet.icmp.bmcastecho=0 > /dev/null
 	fi
 
-	if checkyesno icmp_drop_redirect; then
+	_icmp_drop_redirect="${icmp_drop_redirect}"
+	case "${_icmp_drop_redirect}" in
+	[Aa][Uu][Tt][Oo] | "")
+		if _check_dynamicrouting; then
+			_icmp_drop_redirect="yes"
+		else
+			_icmp_drop_redirect="no"
+		fi
+		;;
+	esac
+	if checkyesno _icmp_drop_redirect; then
 		ropts_init inet
 		echo -n ' ignore ICMP redirect=YES'
 		${SYSCTL} net.inet.icmp.drop_redirect=1 > /dev/null

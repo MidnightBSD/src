@@ -34,7 +34,6 @@
  */
 
 #include <machine/asm.h>
-
 ENTRY(scalbn)
 	fildl	12(%esp)
 	fldl	4(%esp)

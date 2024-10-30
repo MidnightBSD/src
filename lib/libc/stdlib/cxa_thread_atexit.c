@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2017 The FreeBSD Foundation
- * All rights reserved.
  *
  * Portions of this software were developed by Konstantin Belousov
  * under sponsorship from the FreeBSD Foundation.
@@ -28,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "libc_private.h"
 
 int

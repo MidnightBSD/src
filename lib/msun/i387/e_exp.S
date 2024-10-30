@@ -34,7 +34,6 @@
  */
 
 #include <machine/asm.h>
-
 /* e^x = 2^(x * log2(e)) */
 ENTRY(exp)
 	/*

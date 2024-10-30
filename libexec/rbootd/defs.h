@@ -40,7 +40,6 @@
  *
  * From: Utah Hdr: defs.h 3.1 92/07/06
  * Author: Jeff Forys, University of Utah CSS
- *
  */
 
 #include "rmp.h"

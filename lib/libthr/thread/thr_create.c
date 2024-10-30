@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2003 Daniel M. Eischen <deischen@gdeb.com>
  * Copyright (c) 2005, David Xu <davidxu@freebsd.org>
@@ -26,8 +26,6 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
-#include <sys/cdefs.h>
 
 #include "namespace.h"
 #include <sys/types.h>
@@ -72,8 +70,7 @@ _pthread_create(pthread_t * __restrict thread,
 	 */
 	if (_thr_isthreaded() == 0) {
 		_malloc_first_thread();
-		if (_thr_setthreaded(1))
-			return (EAGAIN);
+		_thr_setthreaded(1);
 	}
 
 	curthread = _get_curthread();
@@ -257,6 +254,7 @@ thread_start(struct pthread *curthread)
 
 	if (curthread->attr.suspend == THR_CREATE_SUSPENDED)
 		set = curthread->sigmask;
+	_thr_signal_block_setup(curthread);
 
 	/*
 	 * This is used as a serialization point to allow parent

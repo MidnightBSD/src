@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2003 David Xu <davidxu@freebsd.org>
  * Copyright (c) 2016 The FreeBSD Foundation
@@ -30,8 +30,6 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 #include "namespace.h"
 #include <errno.h>
 #include <stdlib.h>
@@ -40,7 +38,7 @@
 
 #include "thr_private.h"
 
-_Static_assert(sizeof(struct pthread_spinlock) <= PAGE_SIZE,
+_Static_assert(sizeof(struct pthread_spinlock) <= THR_PAGE_SIZE_MIN,
     "pthread_spinlock is too large for off-page");
 
 #define SPIN_COUNT 100000
@@ -59,7 +57,8 @@ _pthread_spin_init(pthread_spinlock_t *lock, int pshared)
 	if (lock == NULL)
 		return (EINVAL);
 	if (pshared == PTHREAD_PROCESS_PRIVATE) {
-		lck = malloc(sizeof(struct pthread_spinlock));
+		lck = aligned_alloc(CACHE_LINE_SIZE,
+		    roundup(sizeof(struct pthread_spinlock), CACHE_LINE_SIZE));
 		if (lck == NULL)
 			return (ENOMEM);
 		*lock = lck;

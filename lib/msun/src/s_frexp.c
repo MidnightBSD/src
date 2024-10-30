@@ -11,7 +11,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * for non-zero x
  *	x = frexp(arg,&exp);

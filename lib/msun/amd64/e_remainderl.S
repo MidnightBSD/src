@@ -34,8 +34,6 @@
  */
 
 #include <machine/asm.h>
-
-
 ENTRY(remainderl)
 	fldt	24(%rsp)
 	fldt	8(%rsp)
@@ -45,5 +43,6 @@ ENTRY(remainderl)
 	jne	1b
 	fstp	%st(1)
 	ret
+END(remainderl)
 
 	.section .note.GNU-stack,"",%progbits

@@ -29,7 +29,6 @@
  */
 
 #include <machine/asm.h>
-	
 ENTRY(remquof)
 	movss	%xmm0,-4(%rsp)
 	movss	%xmm1,-8(%rsp)

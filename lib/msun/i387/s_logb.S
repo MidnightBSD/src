@@ -34,7 +34,6 @@
  */
 
 #include <machine/asm.h>
-
 ENTRY(logb)
 	fldl	4(%esp)
 	fxtract

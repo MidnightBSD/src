@@ -46,8 +46,6 @@
 #if 0
 static const char sccsid[] = "@(#)parseconf.c	8.1 (Berkeley) 6/4/93";
 #endif
-static const char rcsid[] =
-  "$FreeBSD: stable/11/libexec/rbootd/parseconf.c 331722 2018-03-29 02:50:57Z eadler $";
 #endif /* not lint */
 
 #include <sys/param.h>

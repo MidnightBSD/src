@@ -1,4 +1,3 @@
-# $FreeBSD$
 #
 # The include file <bsd.own.mk> set common variables for owner,
 # group, mode, and directories. Defaults are in brackets.
@@ -54,6 +53,15 @@
 # KMODGRP	Kernel and KLD group. [${BINGRP}]
 #
 # KMODMODE	KLD mode. [${BINMODE}]
+#
+#
+# EFIDIR	Base path for the UEFI ESP [/boot/efi]
+#
+# EFIOWN	EFIDIR owner. [root]
+#
+# EFIGRP	EFIDIR group. [wheel]
+#
+# EFIMODE	EFIDIR mode. [555]
 #
 #
 # SHAREDIR	Base path for architecture-independent ascii
@@ -163,12 +171,16 @@ NOBINMODE?=	444
 KMODDIR?=	/boot/modules
 KMODOWN?=	${BINOWN}
 KMODGRP?=	${BINGRP}
-KMODMODE?=	${BINMODE}
+KMODMODE?=	${NOBINMODE}
 DTBDIR?=	/boot/dtb
 DTBODIR?=	/boot/dtb/overlays
 DTBOWN?=	root
 DTBGRP?=	wheel
 DTBMODE?=	444
+EFIDIR?=	/boot/efi
+EFIOWN?=	root
+EFIGRP?=	wheel
+EFIMODE?=	555
 
 # Use make.conf / environment LIBDIR as default if set...
 .if !empty(_PREMK_LIBDIR)

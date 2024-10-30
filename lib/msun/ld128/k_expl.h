@@ -1,7 +1,7 @@
 /* from: FreeBSD: head/lib/msun/ld128/s_expl.c 251345 2013-06-03 20:09:22Z kargl */
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009-2013 Steven G. Kargl
  * All rights reserved.
@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * ld128 version of k_expl.h.  See ../ld80/s_expl.c for most comments.
  *
@@ -264,7 +263,8 @@ __k_expl(long double x, long double *hip, long double *lop, int *kp)
 /*
  * XXX: the rest of the functions are identical for ld80 and ld128.
  * However, we should use scalbnl() for ld128, since long double
- * multiplication is very slow on the only supported ld128 arch (sparc64).
+ * multiplication was very slow on sparc64 and no new evaluation has
+ * been made for aarch64 and/or riscv.
  */
 
 static inline void
@@ -298,7 +298,7 @@ hexpl(long double x)
 static inline long double complex
 __ldexp_cexpl(long double complex z, int expt)
 {
-	long double exp_x, hi, lo;
+	long double c, exp_x, hi, lo, s;
 	long double x, y, scale1, scale2;
 	int half_expt, k;
 
@@ -306,16 +306,17 @@ __ldexp_cexpl(long double complex z, int expt)
 	y = cimagl(z);
 	__k_expl(x, &hi, &lo, &k);
 
-	exp_x = (lo + hi) * 0x1p16382;
+	exp_x = (lo + hi) * 0x1p16382L;
 	expt += k - 16382;
 
 	scale1 = 1;
 	half_expt = expt / 2;
 	SET_LDBL_EXPSIGN(scale1, BIAS + half_expt);
 	scale2 = 1;
-	SET_LDBL_EXPSIGN(scale1, BIAS + expt - half_expt);
+	SET_LDBL_EXPSIGN(scale2, BIAS + expt - half_expt);
 
-	return (CMPLXL(cos(y) * exp_x * scale1 * scale2,
-	    sinl(y) * exp_x * scale1 * scale2));
+	sincosl(y, &s, &c);
+	return (CMPLXL(c * exp_x * scale1 * scale2,
+	    s * exp_x * scale1 * scale2));
 }
 #endif /* _COMPLEX_H */

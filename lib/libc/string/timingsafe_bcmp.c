@@ -16,7 +16,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <string.h>
 
 int __timingsafe_bcmp(const void *, const void *, size_t);

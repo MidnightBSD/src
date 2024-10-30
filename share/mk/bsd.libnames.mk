@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 # The include file <bsd.libnames.mk> define library names.
 # Other include files (e.g. bsd.prog.mk, bsd.lib.mk) include this
@@ -8,7 +7,7 @@
 .error bsd.libnames.mk cannot be included directly.
 .endif
 
-LIBDESTDIR=	${SYSROOT:U${DESTDIR}}
+LIBDESTDIR?=	${SYSROOT:U${DESTDIR}}
 
 .sinclude <src.libnames.mk>
 
@@ -17,6 +16,7 @@ LIBDESTDIR=	${SYSROOT:U${DESTDIR}}
 LIBCRT0?=	${LIBDESTDIR}${LIBDIR_BASE}/crt0.o
 
 LIB80211?=	${LIBDESTDIR}${LIBDIR_BASE}/lib80211.a
+LIB9P?=		${LIBDESTDIR}${LIBDIR_BASE}/lib9p.a
 LIBALIAS?=	${LIBDESTDIR}${LIBDIR_BASE}/libalias.a
 LIBARCHIVE?=	${LIBDESTDIR}${LIBDIR_BASE}/libarchive.a
 LIBASN1?=	${LIBDESTDIR}${LIBDIR_BASE}/libasn1.a
@@ -26,7 +26,7 @@ LIBAVL?=	${LIBDESTDIR}${LIBDIR_BASE}/libavl.a
 LIBBE?=		${LIBDESTDIR}${LIBDIR_BASE}/libbe.a
 LIBBEGEMOT?=	${LIBDESTDIR}${LIBDIR_BASE}/libbegemot.a
 LIBBLACKLIST?=	${LIBDESTDIR}${LIBDIR_BASE}/libblacklist.a
-LIBBLOCKSRUNTIME?=	${LIBDESTDIR}${LIBDIR_BASE}/libBlocksRuntime.a
+LIBBLOCKSRUNTIME?= ${LIBDESTDIR}${LIBDIR_BASE}/libBlocksRuntime.a
 LIBBLUETOOTH?=	${LIBDESTDIR}${LIBDIR_BASE}/libbluetooth.a
 LIBBSDXML?=	${LIBDESTDIR}${LIBDIR_BASE}/libbsdxml.a
 LIBBSM?=	${LIBDESTDIR}${LIBDIR_BASE}/libbsm.a
@@ -83,9 +83,11 @@ LIBIBMAD?=	${LIBDESTDIR}${LIBDIR_BASE}/libibmad.a
 LIBIBNETDISC?=	${LIBDESTDIR}${LIBDIR_BASE}/libibnetdisc.a
 LIBIBUMAD?=	${LIBDESTDIR}${LIBDIR_BASE}/libibumad.a
 LIBIBVERBS?=	${LIBDESTDIR}${LIBDIR_BASE}/libibverbs.a
-LIBIFCONFIG?=	${LIBDESTDIR}${LIBDIR_BASE}/libifconfig.a
+LIBICP?=	${LIBDESTDIR}${LIBDIR_BASE}/libicp.a
 LIBIPSEC?=	${LIBDESTDIR}${LIBDIR_BASE}/libipsec.a
 LIBIPT?=	${LIBDESTDIR}${LIBDIR_BASE}/libipt.a
+LIBIRDMA?=	${LIBDESTDIR}${LIBDIR_BASE}/libirdma.a
+LIBISCSIUTIL?=	${LIBDESTDIR}${LIBDIR_BASE}/libiscsiutil.a
 LIBJAIL?=	${LIBDESTDIR}${LIBDIR_BASE}/libjail.a
 LIBKADM5CLNT?=	${LIBDESTDIR}${LIBDIR_BASE}/libkadm5clnt.a
 LIBKADM5SRV?=	${LIBDESTDIR}${LIBDIR_BASE}/libkadm5srv.a
@@ -146,9 +148,10 @@ LIBRTLD_DB?=	${LIBDESTDIR}${LIBDIR_BASE}/librtld_db.a
 LIBSBUF?=	${LIBDESTDIR}${LIBDIR_BASE}/libsbuf.a
 LIBSDP?=	${LIBDESTDIR}${LIBDIR_BASE}/libsdp.a
 LIBSMB?=	${LIBDESTDIR}${LIBDIR_BASE}/libsmb.a
+LIBSPL?=	${LIBDESTDIR}${LIBDIR_BASE}/libspl.a
 LIBSSL?=	${LIBDESTDIR}${LIBDIR_BASE}/libssl.a
 LIBSSP_NONSHARED?=	${LIBDESTDIR}${LIBDIR_BASE}/libssp_nonshared.a
-LIBSTDCPLUSPLUS?= ${LIBDESTDIR}${LIBDIR_BASE}/libstdc++.a
+LIBSTATS?=	${LIBDESTDIR}${LIBDIR_BASE}/libstats.a
 LIBSTDTHREADS?=	${LIBDESTDIR}${LIBDIR_BASE}/libstdthreads.a
 LIBSYSDECODE?=	${LIBDESTDIR}${LIBDIR_BASE}/libsysdecode.a
 LIBTACPLUS?=	${LIBDESTDIR}${LIBDIR_BASE}/libtacplus.a
@@ -156,6 +159,7 @@ LIBTERMCAP?=	${LIBDESTDIR}${LIBDIR_BASE}/libtermcap.a
 LIBTERMCAPW?=	${LIBDESTDIR}${LIBDIR_BASE}/libtermcapw.a
 LIBTERMLIB?=	"don't use LIBTERMLIB, use LIBTERMCAP"
 LIBTINFO?=	"don't use LIBTINFO, use LIBNCURSES"
+LIBTPOOL?=	${LIBDESTDIR}${LIBDIR_BASE}/libtpool.a
 LIBUFS?=	${LIBDESTDIR}${LIBDIR_BASE}/libufs.a
 LIBUGIDFW?=	${LIBDESTDIR}${LIBDIR_BASE}/libugidfw.a
 LIBULOG?=	${LIBDESTDIR}${LIBDIR_BASE}/libulog.a
@@ -175,7 +179,9 @@ LIBYPCLNT?=	${LIBDESTDIR}${LIBDIR_BASE}/libypclnt.a
 LIBZ?=		${LIBDESTDIR}${LIBDIR_BASE}/libz.a
 LIBZFS?=	${LIBDESTDIR}${LIBDIR_BASE}/libzfs.a
 LIBZFS_CORE?=	${LIBDESTDIR}${LIBDIR_BASE}/libzfs_core.a
+LIBZFSBOOTENV?=	${LIBDESTDIR}${LIBDIR_BASE}/libzfsbootenv.a
 LIBZPOOL?=	${LIBDESTDIR}${LIBDIR_BASE}/libzpool.a
+LIBZUTIL?=	${LIBDESTDIR}${LIBDIR_BASE}/libzutil.a
 
 # enforce the 2 -lpthread and -lc to always be the last in that exact order
 .if defined(LDADD)

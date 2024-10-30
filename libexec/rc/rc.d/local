@@ -10,16 +10,16 @@
 . /etc/rc.subr
 
 name="local"
-desc="Run /etc/rc.local and /etc/shutdown.local"
+desc="Run /etc/rc.local and /etc/rc.shutdown.local"
 start_cmd="local_start"
 stop_cmd="local_stop"
 
 local_start()
 {
 	if [ -f /etc/rc.local ]; then
-		echo -n 'Starting local daemons:'
+		startmsg -n 'Starting local daemons:'
 		. /etc/rc.local
-		echo '.'
+		startmsg '.'
 	fi
 }
 

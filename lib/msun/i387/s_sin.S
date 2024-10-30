@@ -34,7 +34,6 @@
  */
 
 #include <machine/asm.h>
-
 ENTRY(sin)
 	fldl	4(%esp)
 	fsin

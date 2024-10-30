@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <err.h>
 #include <pwd.h>
 #include <signal.h>

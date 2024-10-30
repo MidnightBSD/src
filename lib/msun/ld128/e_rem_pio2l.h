@@ -14,7 +14,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /* ld128 version of __ieee754_rem_pio2l(x,y)
  * 
  * return the remainder of x rem pi/2 in y[0]+y[1] 

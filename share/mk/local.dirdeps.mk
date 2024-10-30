@@ -1,4 +1,3 @@
-# $FreeBSD$
 .if !target(_DIRDEP_USE)
 # we are the 1st makefile
 
@@ -38,7 +37,6 @@ DIRDEPS_FILTER.host = \
 	Nlib/csu* \
 	Nlib/libc \
 	Nlib/[mn]* \
-	Ngnu/lib/csu* \
 	Ngnu/lib/lib[a-r]* \
 	Nsecure/lib* \
 	Nusr.bin/xinstall* \
@@ -92,13 +90,9 @@ DIRDEPS += \
 # Add both gcc_s and gcc_eh as dependencies as the decision to build
 # -static or not is not known here.
 .if ${DEP_RELDIR:M*libgcc*} == "" && ${DIRDEPS:U:Mlib/libc} != ""
-.if ${MK_LLVM_LIBUNWIND} == "yes"
 DIRDEPS+= \
 	lib/libgcc_eh \
 	lib/libgcc_s
-.else
-DIRDEPS+= gnu/lib/libgcc
-.endif
 .endif
 
 # Bootstrap support.  Give hints to DIRDEPS if there is no Makefile.depend*
@@ -173,8 +167,6 @@ DIRDEPS+= ${C_DIRDEPS}
 DIRDEPS+= ${C_DIRDEPS}
 .if ${MK_CLANG} == "yes"
 DIRDEPS+= lib/libc++ lib/libcxxrt
-.else
-DIRDEPS+= gnu/lib/libstdc++ gnu/lib/libsupc++
 .endif
 # XXX: Clang and GCC always adds -lm currently, even when not needed.
 DIRDEPS+= lib/msun
@@ -186,8 +178,6 @@ DIRDEPS+=	usr.bin/yacc.host
 .endif
 _DPADD= ${DPADD} ${_PROGS_DPADD}
 .if !empty(_DPADD)
-# Taken from meta.autodep.mk (where it only does something with
-# BUILD_AT_LEVEL0, which we don't use).
 # This only works for DPADD with full OBJ/SRC paths, which is mostly just
 # _INTERNALLIBS.
 _DP_DIRDEPS= \
@@ -219,11 +209,6 @@ DIRDEPS+= ${_lib${_lib}reldir}
 .if ${DEP_RELDIR} != "targets/pseudo/stage"
 DIRDEPS += targets/pseudo/stage
 .endif
-.endif
-
-# this one is too pervasive
-.if ${MK_BSD_CRTBEGIN} == "no" && ${DEP_RELDIR:N.:Ngnu/lib/csu:Ninclude*:Ntargets/*} != ""
-DIRDEPS+= gnu/lib/csu
 .endif
 
 DEP_MACHINE_ARCH = ${MACHINE_ARCH.${DEP_MACHINE}}

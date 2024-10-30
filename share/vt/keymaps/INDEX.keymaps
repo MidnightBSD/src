@@ -1,4 +1,3 @@
-# $FreeBSD$
 #
 # database for kbdmap(8)
 #
@@ -101,6 +100,7 @@ centraleuropean.qwerty.kbd:de:Zentral Europäisch (QWERTY)
 centraleuropean.qwerty.kbd:fr:Centre européen (QWERTY)
 centraleuropean.qwerty.kbd:es:Centroeuropeo (QWERTY)
 
+colemak-dh.acc.kbd:en:Colemak Mod-DH ergonomic alternative
 colemak.acc.kbd:en:Colemak ergonomic alternative
 colemak.acc.kbd:da:Colemak ergonomisk alternativ
 

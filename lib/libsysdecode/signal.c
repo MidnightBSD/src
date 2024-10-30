@@ -24,7 +24,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <signal.h>
 #include <stdbool.h>

@@ -1,5 +1,6 @@
 #!/bin/sh
 #
+#
 
 # PROVIDE: os-release
 # REQUIRE: mountcritremote FILESYSTEMS
@@ -11,6 +12,7 @@
 : ${osrelease_perms:=444}
 name="osrelease"
 desc="Update ${osrelease_file}"
+rcvar="osrelease_enable"
 start_cmd="osrelease_start"
 stop_cmd=":"
 
@@ -35,7 +37,7 @@ osrelease_start()
 __EOF__
 	install -C -o root -g wheel -m ${osrelease_perms} "$t" "${osrelease_file}"
 	rm -f "$t"
-	check_startmsgs && echo 'done.'
+	startmsg 'done.'
 }
 
 load_rc_config $name

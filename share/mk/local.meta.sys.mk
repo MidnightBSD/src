@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 # local configuration specific to meta mode
 # XXX some of this should be in meta.sys.mk
@@ -17,7 +16,7 @@ MK_INSTALL_AS_USER= yes
 TARGET_ARCHES_arm?=     arm armv6 armv7
 TARGET_ARCHES_arm64?=   aarch64
 TARGET_ARCHES_mips?=    mipsel mips mips64el mips64 mipsn32 mipsn32el
-TARGET_ARCHES_powerpc?= powerpc powerpc64 powerpcspe
+TARGET_ARCHES_powerpc?= powerpc powerpc64 powerpc64le powerpcspe
 TARGET_ARCHES_riscv?=   riscv64 riscv64sf
 
 # some corner cases
@@ -25,7 +24,7 @@ BOOT_MACHINE_DIR.amd64 = boot/i386
 MACHINE_ARCH.host = ${_HOST_ARCH}
 
 # the list of machines we support
-ALL_MACHINE_LIST?= amd64 arm arm64 i386 mips powerpc riscv sparc64
+ALL_MACHINE_LIST?= amd64 arm arm64 i386 mips powerpc riscv
 .for m in ${ALL_MACHINE_LIST:O:u}
 MACHINE_ARCH_LIST.$m?= ${TARGET_ARCHES_${m}:U$m}
 MACHINE_ARCH.$m?= ${MACHINE_ARCH_LIST.$m:[1]}
@@ -99,13 +98,10 @@ OBJTOP := ${HOST_OBJTOP}
 .if ${.MAKE.LEVEL} == 0 || empty(PYTHON)
 PYTHON ?= /usr/local/bin/python
 .export PYTHON
-# this works best if share/mk is ready for it.
-BUILD_AT_LEVEL0= no
 # _SKIP_BUILD is not 100% as it requires wrapping all 'all:' targets to avoid
 # building in MAKELEVEL0.  Just prohibit 'all' entirely in this case to avoid
 # problems.
-.if ${MK_DIRDEPS_BUILD} == "yes" && \
-    ${.MAKE.LEVEL} == 0 && ${BUILD_AT_LEVEL0:Uyes:tl} == "no"
+.if ${MK_DIRDEPS_BUILD} == "yes" && ${.MAKE.LEVEL} == 0
 .MAIN: dirdeps
 .if make(all)
 .error DIRDEPS_BUILD: Please run '${MAKE}' instead of '${MAKE} all'.
@@ -176,6 +172,10 @@ LDFLAGS_LAST+= -L${STAGE_LIBDIR}
 
 .if ${.MAKE.LEVEL} > 0 && ${MACHINE} == "host" && ${.MAKE.DEPENDFILE:E} != "host"
 # we can use this but should not update it.
+UPDATE_DEPENDFILE= NO
+.endif
+# Don't require filemon for makeman.
+.if make(showconfig)
 UPDATE_DEPENDFILE= NO
 .endif
 

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999, 2000 John D. Polstra.
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef RTLD_MACHDEP_H
@@ -32,8 +31,11 @@
 
 #include <sys/types.h>
 #include <machine/atomic.h>
+#include <machine/tls.h>
 
 struct Struct_Obj_Entry;
+
+#define	MD_OBJ_ENTRY
 
 /* Return the address of the .dynamic section in the dynamic linker. */
 Elf_Dyn *rtld_dynamic_addr(void);
@@ -75,5 +77,4 @@ void *__tls_get_addr(tls_index *ti) __exported;
 size_t calculate_first_tls_offset(size_t size, size_t align, size_t offset);
 size_t calculate_tls_offset(size_t prev_offset, size_t prev_size, size_t size,
     size_t align, size_t offset);
-size_t calculate_tls_end(size_t off, size_t size);
 #endif

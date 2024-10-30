@@ -25,12 +25,12 @@
  */
 
 #include <machine/asm.h>
-	
 ENTRY(lrintl)
 	fldt	8(%rsp)
 	subq	$8,%rsp
 	fistpll	(%rsp)
 	popq	%rax
 	ret
+END(lrintl)
 
 	.section .note.GNU-stack,"",%progbits

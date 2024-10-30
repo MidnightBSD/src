@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 .if !target(__<bsd.init.mk>__)
 .error bsd.files.mk cannot be included directly.
@@ -38,9 +37,13 @@ ${group}MODE?=	${SHAREMODE}
 ${group}DIR?=	BINDIR
 STAGE_SETS+=	${group:C,[/*],_,g}
 
+.if ${group} == "FILES"
+FILESPACKAGE=	${PACKAGE:Uutilities}
+.endif
+
 .if defined(NO_ROOT)
 .if !defined(${group}TAGS) || ! ${${group}TAGS:Mpackage=*}
-${group}TAGS+=		package=${${group}PACKAGE:Uruntime}
+${group}TAGS+=		package=${${group}PACKAGE:Uutilities}
 .endif
 ${group}TAG_ARGS=	-T ${${group}TAGS:[*]:S/ /,/g}
 .endif
@@ -49,10 +52,12 @@ ${group}TAG_ARGS=	-T ${${group}TAGS:[*]:S/ /,/g}
 .if ${${group}DIR:S/^\///} == ${${group}DIR}
 # ${group}DIR specifies a variable that specifies a path
 DIRS+=	${${group}DIR}
+${group}DIRTAGS=	${group}TAGS
 _${group}DIR=	${${group}DIR}
 .else
 # ${group}DIR specifies a path
 DIRS+=	${group}DIR
+${group}DIRTAGS=	${${group}TAGS}
 _${group}DIR=	${group}DIR
 .endif
 
@@ -108,12 +113,11 @@ STAGE_AS_SETS+=	${${_${group}DIR_${file}}:C,[/*],_,g}
 STAGE_DIR.${${_${group}DIR_${file}}:C,[/*],_,g}= ${STAGE_OBJTOP}${${_${group}DIR_${file}}}
 stage_as.${${_${group}DIR_${file}}:C,[/*],_,g}: ${file}
 
-installfiles-${group}: _${group}INS1_${file}
-_${group}INS1_${file}: installdirs-${_${group}DIR_${file}} _${group}INS_${file}
-_${group}INS_${file}: ${file}
+installfiles-${group}: _${group}INS_${file}
+_${group}INS_${file}: ${file} installdirs-${_${group}DIR_${file}}
 	${INSTALL} ${${group}TAG_ARGS} -o ${${group}OWN_${file}} \
 	    -g ${${group}GRP_${file}} -m ${${group}MODE_${file}} \
-	    ${.ALLSRC} ${${group}PREFIX_${file}}/${${group}NAME_${file}}
+	    ${.ALLSRC:Ninstalldirs-*} ${${group}PREFIX_${file}}/${${group}NAME_${file}}
 .endfor # file in ${${group}}
 
 .endif # defined(${group}) && !empty(${group})

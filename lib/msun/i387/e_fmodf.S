@@ -4,7 +4,6 @@
  */
 
 #include <machine/asm.h>
-
 ENTRY(fmodf)
 	flds	8(%esp)
 	flds	4(%esp)

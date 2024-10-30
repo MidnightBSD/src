@@ -1,6 +1,5 @@
 /*
  * trygetif.c - test program for getif.c
- *
  */
 
 #include <sys/types.h>

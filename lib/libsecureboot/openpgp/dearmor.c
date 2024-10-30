@@ -24,7 +24,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #define NEED_BRSSL_H
 #include <libsecureboot.h>
 #include <brssl.h>

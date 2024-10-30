@@ -34,7 +34,6 @@
  */
 
 #include <machine/asm.h>
-
 ENTRY(fmodl)
 	fldt	16(%esp)
 	fldt	4(%esp)

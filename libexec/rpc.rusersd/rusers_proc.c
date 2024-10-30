@@ -29,11 +29,6 @@
  * SUCH DAMAGE.
  */
 
-#ifndef lint
-static const char rcsid[] =
-  "$FreeBSD: stable/11/libexec/rpc.rusersd/rusers_proc.c 331722 2018-03-29 02:50:57Z eadler $";
-#endif /* not lint */
-
 #ifdef DEBUG
 #include <errno.h>
 #endif

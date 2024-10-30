@@ -63,8 +63,6 @@ __DEFAULT_YES_OPTIONS = \
     AUTHPF \
     AUTOFS \
     BHYVE \
-    BINUTILS \
-    BINUTILS_BOOTSTRAP \
     BLACKLIST \
     BLUETOOTH \
     BOOT \
@@ -80,17 +78,20 @@ __DEFAULT_YES_OPTIONS = \
     CASPER \
     CCD \
     CDDL \
+    CLANG \
+    CLANG_BOOTSTRAP \
+    CLANG_IS_CC \
+    CLEAN \
     CPP \
     CROSS_COMPILER \
     CRYPT \
-    CTM \
     CUSE \
     CXX \
+    CXGBETOOL \
     DIALOG \
     DICT \
     DMAGENT \
     DYNAMICROOT \
-    ED_CRYPTO \
     EE \
     EFI \
     ELFTOOLCHAIN_BOOTSTRAP \

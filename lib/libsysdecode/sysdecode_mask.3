@@ -22,8 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\"
-.Dd January 16, 2018
+.Dd March 3, 2022
 .Dt sysdecode_mask 3
 .Os
 .Sh NAME
@@ -31,6 +30,7 @@
 .Nm sysdecode_accessmode ,
 .Nm sysdecode_atflags ,
 .Nm sysdecode_capfcntlrights ,
+.Nm sysdecode_close_range_flags ,
 .Nm sysdecode_fcntl_fileflags ,
 .Nm sysdecode_fileflags ,
 .Nm sysdecode_filemode ,
@@ -62,9 +62,6 @@
 .Sh LIBRARY
 .Lb libsysdecode
 .Sh SYNOPSIS
-.In sys/types.h
-.In stdbool.h
-.In stdio.h
 .In sysdecode.h
 .Ft bool
 .Fn sysdecode_access_mode "FILE *fp" "int mode" "int *rem"
@@ -72,6 +69,8 @@
 .Fn sysdecode_atflags "FILE *fp" "int flags" "int *rem"
 .Ft bool
 .Fn sysdecode_cap_fcntlrights "FILE *fp" "uint32_t rights" "uint32_t *rem"
+.Ft bool
+.Fn sysdecode_close_range_flags "FILE *fp" "int flags" "int *rem"
 .Ft bool
 .Fn sysdecode_fcntl_fileflags "FILE *fp" "int flags" "int *rem"
 .Ft bool
@@ -193,17 +192,17 @@ and
 .Xr fcntl 2
 commands.
 .It Fn sysdecode_sctp_nxt_flags
-The 
+The
 .Fa nxt_flags
 member of a
 .Vt struct sctp_nxtinfo .
 .It Fn sysdecode_sctp_rcv_flags
-The 
+The
 .Fa rcv_flags
 member of a
 .Vt struct sctp_rcvinfo .
 .It Fn sysdecode_sctp_snd_flags
-The 
+The
 .Fa snd_flags
 member of a
 .Vt struct sctp_sndinfo .

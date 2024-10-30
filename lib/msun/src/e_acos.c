@@ -12,7 +12,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /* acos(x)
  * Method :                  
  *	acos(x)  = pi/2 - asin(x)

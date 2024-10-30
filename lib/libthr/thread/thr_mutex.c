@@ -38,8 +38,6 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 #include "namespace.h"
 #include <stdlib.h>
 #include <errno.h>
@@ -52,7 +50,7 @@
 
 #include "thr_private.h"
 
-_Static_assert(sizeof(struct pthread_mutex) <= PAGE_SIZE,
+_Static_assert(sizeof(struct pthread_mutex) <= THR_PAGE_SIZE_MIN,
     "pthread_mutex is too large for off-page");
 
 /*
@@ -119,7 +117,7 @@ __weak_reference(_pthread_mutex_getyieldloops_np, pthread_mutex_getyieldloops_np
 __weak_reference(_pthread_mutex_isowned_np, pthread_mutex_isowned_np);
 
 static void
-mutex_init_link(struct pthread_mutex *m)
+mutex_init_link(struct pthread_mutex *m __unused)
 {
 
 #if defined(_PTHREADS_INVARIANTS)
@@ -290,8 +288,8 @@ mutex_init(pthread_mutex_t *mutex,
 		if (error != 0)
 			return (error);
 	}
-	if ((pmutex = (pthread_mutex_t)
-		calloc_cb(1, sizeof(struct pthread_mutex))) == NULL)
+	if ((pmutex = (pthread_mutex_t)calloc_cb(1,
+	    sizeof(struct pthread_mutex))) == NULL)
 		return (ENOMEM);
 	mutex_init_body(pmutex, attr);
 	*mutex = pmutex;
@@ -595,7 +593,7 @@ check_and_init_mutex(pthread_mutex_t *mutex, struct pthread_mutex **m)
 
 	*m = *mutex;
 	ret = 0;
-	if (*m == THR_PSHARED_PTR) {
+	if (__predict_false(*m == THR_PSHARED_PTR)) {
 		*m = __thr_pshared_offpage(mutex, 0);
 		if (*m == NULL)
 			ret = EINVAL;
@@ -713,7 +711,7 @@ done:
 	return (ret);
 }
 
-static inline int
+static __always_inline int
 mutex_lock_common(struct pthread_mutex *m, const struct timespec *abstime,
     bool cvattach, bool rb_onlist)
 {
@@ -727,7 +725,7 @@ mutex_lock_common(struct pthread_mutex *m, const struct timespec *abstime,
 	if (!rb_onlist)
 		robust = _mutex_enter_robust(curthread, m);
 	ret = _thr_umutex_trylock2(&m->m_lock, TID(curthread));
-	if (ret == 0 || ret == EOWNERDEAD) {
+	if (__predict_true(ret == 0) || ret == EOWNERDEAD) {
 		enqueue_mutex(curthread, m, ret);
 		if (ret == EOWNERDEAD)
 			m->m_lock.m_flags |= UMUTEX_NONCONSISTENT;
@@ -950,7 +948,7 @@ mutex_self_lock(struct pthread_mutex *m, const struct timespec *abstime)
 	return (ret);
 }
 
-static int
+static __always_inline int
 mutex_unlock_common(struct pthread_mutex *m, bool cv, int *mtx_defer)
 {
 	struct pthread *curthread;

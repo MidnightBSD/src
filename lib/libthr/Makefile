@@ -1,8 +1,3 @@
-#
-# All library objects contain FreeBSD revision strings by default; they may be
-# excluded as a space-saving measure.  To produce a library that does
-# not contain these strings, add -DSTRIP_FBSDID (see <sys/cdefs.h>) to CFLAGS
-# below.
 
 PACKAGE=	clibs
 SHLIBDIR?= /lib
@@ -18,19 +13,18 @@ CFLAGS+=-DPTHREAD_KERNEL
 CFLAGS+=-I${SRCTOP}/lib/libc/include
 CFLAGS+=-I${SRCTOP}/lib/libc/${MACHINE_CPUARCH}
 CFLAGS+=-I${.CURDIR}/thread
-CFLAGS+=-I${SRCTOP}/include
 CFLAGS+=-I${.CURDIR}/arch/${MACHINE_CPUARCH}/include
 CFLAGS+=-I${.CURDIR}/sys
 CFLAGS+=-I${SRCTOP}/libexec/rtld-elf
 CFLAGS+=-I${SRCTOP}/libexec/rtld-elf/${MACHINE_CPUARCH}
 CFLAGS+=-I${SRCTOP}/lib/libthread_db
-CFLAGS+=-Winline
 
 CFLAGS.thr_stack.c+=	-Wno-cast-align
 CFLAGS.rtld_malloc.c+=	-Wno-cast-align
-.include <bsd.compiler.mk>
-.if !(${COMPILER_TYPE} == "gcc" && ${COMPILER_VERSION} < 40300)
 CFLAGS.thr_symbols.c+=	-Wno-missing-variable-declarations
+
+.if ${MACHINE_CPUARCH} == "arm"
+NO_THREAD_UNWIND_STACK= yes
 .endif
 
 .ifndef NO_THREAD_UNWIND_STACK
@@ -45,8 +39,10 @@ SYMBOL_MAPS=${.CURDIR}/pthread.map
 
 MAN=	libthr.3
 
+.if ${MK_PTHREADS_ASSERTIONS} != "no"
 # enable extra internal consistency checks
 CFLAGS+=-D_PTHREADS_INVARIANTS
+.endif
 
 PRECIOUSLIB=
 

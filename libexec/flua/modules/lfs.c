@@ -50,7 +50,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #ifndef _STANDALONE
 #include <sys/stat.h>
 #include <dirent.h>

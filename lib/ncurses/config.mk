@@ -1,3 +1,4 @@
+
 # This Makefile is shared by libncurses, libform, libmenu, libpanel.
 
 NCURSES_DIR=	${SRCTOP}/contrib/ncurses

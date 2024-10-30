@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2005 David Xu <davidxu@freebsd.org>
  * Copyright (c) 2015 The FreeBSD Foundation
@@ -30,8 +30,6 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 #include "namespace.h"
 #include <stdlib.h>
 #include <errno.h>
@@ -42,7 +40,7 @@
 
 #include "thr_private.h"
 
-_Static_assert(sizeof(struct pthread_cond) <= PAGE_SIZE,
+_Static_assert(sizeof(struct pthread_cond) <= THR_PAGE_SIZE_MIN,
     "pthread_cond too large");
 
 /*

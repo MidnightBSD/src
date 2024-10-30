@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2010 The FreeBSD Foundation 
- * All rights reserved. 
  * 
  * This software was developed by Rui Paulo under sponsorship from the
  * FreeBSD Foundation. 
@@ -25,8 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY 
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
  * SUCH DAMAGE. 
- *
- * $FreeBSD: stable/11/lib/libthr/plockstat.d 268297 2014-07-05 19:49:31Z rpaulo $
  */
 
 provider plockstat {

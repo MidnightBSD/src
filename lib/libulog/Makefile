@@ -1,6 +1,4 @@
-# $FreeBSD: stable/11/lib/libulog/Makefile 313538 2017-02-10 07:32:40Z ngie $
 
-PACKAGE=lib${LIB}
 SHLIBDIR?=/lib
 
 .include <src.opts.mk>

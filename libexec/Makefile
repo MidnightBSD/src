@@ -1,5 +1,4 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
-# $FreeBSD: stable/11/libexec/Makefile 355345 2019-12-03 18:25:16Z kevans $
 
 .include <src.opts.mk>
 
@@ -92,6 +91,7 @@ _tftp-proxy=	tftp-proxy
 
 .if !defined(NO_PIC) && !defined(NO_RTLD)
 _rtld-elf=	rtld-elf
+SUBDIR.${MK_LIB32}+=	rtld-elf32
 .endif
 
 .if ${MK_RBOOTD} != "no"

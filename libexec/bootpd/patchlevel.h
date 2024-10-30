@@ -1,6 +1,5 @@
 /* 
  * patchlevel.h 
- *
  */
 
 #define VERSION 	"2.4"

@@ -11,7 +11,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /* asinh(x)
  * Method :
  *	Based on

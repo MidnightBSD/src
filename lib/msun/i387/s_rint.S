@@ -34,7 +34,6 @@
  */
 
 #include <machine/asm.h>
-
 ENTRY(rint)
 	fldl	4(%esp)
 	frndint

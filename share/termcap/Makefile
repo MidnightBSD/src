@@ -1,5 +1,4 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/8/93
-# $FreeBSD$
 
 # reorder gives an editor command for most common terminals
 # (in reverse order from n'th to 1'st most commonly used)
@@ -7,16 +6,20 @@
 #
 MAN=	termcap.5
 
+PACKAGE=	runtime
 FILES=		termcap termcap.db
 FILESDIR=	${BINDIR}/misc
 CLEANFILES+=	termcap.db
+CONFS=		termcap.small
 
 .include <bsd.endian.mk>
+.include <src.tools.mk>
 
 termcap.db: termcap
-	cap_mkdb ${CAP_MKDB_ENDIAN} -f ${.TARGET:R} ${.ALLSRC}
+	${CAP_MKDB_CMD} ${CAP_MKDB_ENDIAN} -f ${.TARGET:R} ${.ALLSRC}
 
 etc-termcap:
-	${INSTALL_SYMLINK} ${BINDIR}/misc/termcap ${DESTDIR}/etc/termcap
+	${INSTALL_SYMLINK} -T "package=runtime" \
+	    ${BINDIR}/misc/termcap ${DESTDIR}/etc/termcap
 
 .include <bsd.prog.mk>

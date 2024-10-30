@@ -36,12 +36,11 @@
 static char sccsid[] = "@(#)memset.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 
 #include <limits.h>
 
-#define	wsize	sizeof(u_int)
+#define	wsize	sizeof(u_long)
 #define	wmask	(wsize - 1)
 
 #ifdef BZERO
@@ -66,7 +65,7 @@ memset(void *dst0, int c0, size_t length)
 {
 	size_t t;
 #ifndef BZERO
-	u_int c;
+	u_long c;
 #endif
 	u_char *dst;
 
@@ -83,6 +82,9 @@ memset(void *dst0, int c0, size_t length)
 	 *
 	 * but we use a minimum of 3 here since the overhead of the code
 	 * to do word writes is substantial.
+	 *
+	 * TODO: This threshold might not be sensible for 64-bit u_long.
+	 * We should benchmark and revisit this decision.
 	 */
 	if (length < 3 * wsize) {
 		while (length != 0) {
@@ -94,12 +96,12 @@ memset(void *dst0, int c0, size_t length)
 
 #ifndef BZERO
 	if ((c = (u_char)c0) != 0) {	/* Fill the word. */
-		c = (c << 8) | c;	/* u_int is 16 bits. */
-#if UINT_MAX > 0xffff
-		c = (c << 16) | c;	/* u_int is 32 bits. */
+		c = (c << 8) | c;	/* u_long is 16 bits. */
+#if ULONG_MAX > 0xffff
+		c = (c << 16) | c;	/* u_long is 32 bits. */
 #endif
-#if UINT_MAX > 0xffffffff
-		c = (c << 32) | c;	/* u_int is 64 bits. */
+#if ULONG_MAX > 0xffffffff
+		c = (c << 32) | c;	/* u_long is 64 bits. */
 #endif
 	}
 #endif
@@ -115,7 +117,7 @@ memset(void *dst0, int c0, size_t length)
 	/* Fill words.  Length was >= 2*words so we know t >= 1 here. */
 	t = length / wsize;
 	do {
-		*(u_int *)dst = WIDEVAL;
+		*(u_long *)(void *)dst = WIDEVAL;
 		dst += wsize;
 	} while (--t != 0);
 

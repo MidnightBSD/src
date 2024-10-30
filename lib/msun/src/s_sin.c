@@ -11,7 +11,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /* sin(x)
  * Return sine function of x.
  *

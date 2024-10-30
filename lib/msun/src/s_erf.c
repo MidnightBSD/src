@@ -11,7 +11,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /* double erf(double x)
  * double erfc(double x)
  *			     x

@@ -1,4 +1,3 @@
-# $FreeBSD$
 #
 # Option file for src builds.
 #
@@ -62,18 +61,21 @@ __DEFAULT_YES_OPTIONS = \
     NLS \
     OPENSSH \
     PROFILE \
+    RELRO \
     SSP \
-    SYMVER \
     TESTS \
     TOOLCHAIN \
-    WARNS
+    WARNS \
+    WERROR
 
 __DEFAULT_NO_OPTIONS = \
     BIND_NOW \
     CCACHE_BUILD \
     CTF \
+    INIT_ALL_PATTERN \
+    INIT_ALL_ZERO \
     INSTALL_AS_USER \
-    PIE \
+    MANSPLITPKG \
     RETPOLINE \
     STALE_STAGED
 
@@ -83,8 +85,27 @@ __DEFAULT_DEPENDENT_OPTIONS = \
     STAGING_PROG/STAGING \
     STALE_STAGED/STAGING \
 
+#
+# Default to disabling PIE on 32-bit architectures. The small address space
+# means that ASLR is of limited effectiveness, and it may cause issues with
+# some memory-hungry workloads.
+#
+.if ${MACHINE_ARCH} == "armv6" || ${MACHINE_ARCH} == "armv7" \
+    || ${MACHINE_ARCH} == "i386" || ${MACHINE_ARCH} == "mips" \
+    || ${MACHINE_ARCH} == "mipsel" || ${MACHINE_ARCH} == "mipselhf" \
+    || ${MACHINE_ARCH} == "mipshf" || ${MACHINE_ARCH} == "mipsn32" \
+    || ${MACHINE_ARCH} == "mipsn32el" || ${MACHINE_ARCH} == "powerpc" \
+    || ${MACHINE_ARCH} == "powerpcspe"
+__DEFAULT_NO_OPTIONS+= PIE
+.else
+__DEFAULT_YES_OPTIONS+=PIE
+.endif
 
 .include <bsd.mkopt.mk>
+
+.if ${MK_INIT_ALL_PATTERN} == "yes" && ${MK_INIT_ALL_ZERO} == "yes"
+.warning WITH_INIT_ALL_PATTERN and WITH_INIT_ALL_ZERO are mutually exclusive.
+.endif
 
 #
 # Supported NO_* options (if defined, MK_* will be forced to "no",
@@ -98,9 +119,10 @@ __DEFAULT_DEPENDENT_OPTIONS = \
     INSTALLLIB \
     MAN \
     PROFILE \
-    WARNS
+    WARNS \
+    WERROR
 .if defined(NO_${var})
-.warning "NO_${var} is defined, but deprecated. Please use MK_${var}=no instead."
+.error "NO_${var} is defined, but deprecated. Please use MK_${var}=no instead."
 MK_${var}:=no
 .endif
 .endfor

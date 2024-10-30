@@ -1,5 +1,4 @@
 #	from: @(#)sys.mk	8.2 (Berkeley) 3/21/94
-# $FreeBSD$
 
 unix		?=	We run MidnightBSD, not UNIX.
 .MidnightBSD	?=	true
@@ -13,7 +12,7 @@ unix		?=	We run MidnightBSD, not UNIX.
 # and/or endian.  This is called MACHINE_CPU in NetBSD, but that's used
 # for something different in MidnightBSD.
 #
-__TO_CPUARCH=C/mips(n32|64)?(el)?(hf)?/mips/:C/arm(v[67])?(eb)?/arm/:C/powerpc(64|spe)/powerpc/:C/riscv64(sf)?/riscv/
+__TO_CPUARCH=C/mips(n32|64)?(el)?(hf)?/mips/:C/arm(v[67])?(eb)?/arm/:C/powerpc(64|64le|spe)/powerpc/:C/riscv64(sf)?/riscv/
 MACHINE_CPUARCH=${MACHINE_ARCH:${__TO_CPUARCH}}
 .endif
 
@@ -150,7 +149,7 @@ AR		?=	ar
 .if defined(%POSIX)
 ARFLAGS		?=	-rv
 .else
-ARFLAGS		?=	-crD
+ARFLAGS		?=	-crsD
 .endif
 RANLIB		?=	ranlib
 .if !defined(%POSIX)
@@ -166,11 +165,7 @@ CC		?=	c89
 CFLAGS		?=	-O
 .else
 CC		?=	cc
-.if ${MACHINE_CPUARCH} == "arm" || ${MACHINE_CPUARCH} == "mips"
-CFLAGS		?=	-O -pipe
-.else
 CFLAGS		?=	-O2 -pipe
-.endif
 .if defined(NO_STRICT_ALIASING)
 CFLAGS		+=	-fno-strict-aliasing
 .endif
@@ -214,6 +209,8 @@ ECHODIR		?=	true
 .endif
 .endif
 
+ELFCTL		?=	elfctl
+
 .if ${.MAKEFLAGS:M-N}
 # bmake -N is supposed to skip executing anything but it does not skip
 # exeucting '+' commands.  The '+' feature is used where .MAKE
@@ -234,7 +231,7 @@ FFLAGS		?=	-O
 .endif
 EFLAGS		?=
 
-INSTALL		?=	install
+INSTALL		?=	${INSTALL_CMD:Uinstall}
 
 LEX		?=	lex
 LFLAGS		?=
@@ -244,7 +241,7 @@ LFLAGS		?=
 # compiler driver flags (e.g. -mabi=*) that conflict with flags to LD.
 LD		?=	ld
 LDFLAGS		?=
-_LDFLAGS	=	${LDFLAGS:S/-Wl,//g:N-mabi=*:N-fuse-ld=*}
+_LDFLAGS	=	${LDFLAGS:S/-Wl,//g:N-mabi=*:N-fuse-ld=*:N--ld-path=*}
 
 MAKE		?=	make
 
@@ -275,6 +272,7 @@ SHELL		?=	sh
 
 .if !defined(%POSIX)
 SIZE		?=	size
+STRIPBIN	?=	strip
 .endif
 
 YACC		?=	yacc

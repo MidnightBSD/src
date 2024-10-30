@@ -13,7 +13,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * See s_tanh.c for complete comments.
  *

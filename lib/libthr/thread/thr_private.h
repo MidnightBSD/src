@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2005 Daniel M. Eischen <deischen@freebsd.org>
  * Copyright (c) 2005 David Xu <davidxu@freebsd.org>
@@ -27,7 +27,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef _THR_PRIVATE_H
@@ -38,7 +37,6 @@
  */
 #include <sys/types.h>
 #include <sys/time.h>
-#include <sys/cdefs.h>
 #include <sys/queue.h>
 #include <sys/param.h>
 #include <sys/cpuset.h>
@@ -262,7 +260,6 @@ struct pthread_atfork {
 };
 
 struct pthread_attr {
-#define pthread_attr_start_copy	sched_policy
 	int	sched_policy;
 	int	sched_inherit;
 	int	prio;
@@ -272,7 +269,6 @@ struct pthread_attr {
 	void	*stackaddr_attr;
 	size_t	stacksize_attr;
 	size_t	guardsize_attr;
-#define pthread_attr_end_copy	cpuset
 	cpuset_t	*cpuset;
 	size_t	cpusetsize;
 };
@@ -394,6 +390,9 @@ struct pthread {
 
 	/* Signal blocked counter. */
 	int			sigblock;
+
+	/* Fast sigblock var. */
+	uint32_t		fsigblock;
 
 	/* Queue entry for list of all threads. */
 	TAILQ_ENTRY(pthread)	tle;	/* link for all threads in process */
@@ -573,6 +572,10 @@ struct pthread {
 
 	/* pthread_set/get_name_np */
 	char			*name;
+
+	/* rtld thread-local dlerror message and seen control */
+	char			dlerror_msg[512];
+	int			dlerror_seen;
 };
 
 #define THR_SHOULD_GC(thrd) 						\
@@ -771,11 +774,13 @@ extern int		_suspend_all_waiters __hidden;
 extern int		_suspend_all_cycle __hidden;
 extern struct pthread	*_single_thread __hidden;
 
+extern bool		_thr_after_fork __hidden;
+
 /*
  * Function prototype definitions.
  */
 __BEGIN_DECLS
-int	_thr_setthreaded(int) __hidden;
+void	_thr_setthreaded(int) __hidden;
 int	_mutex_cv_lock(struct pthread_mutex *, int, bool) __hidden;
 int	_mutex_cv_unlock(struct pthread_mutex *, int *, int *) __hidden;
 int     _mutex_cv_attach(struct pthread_mutex *, int) __hidden;
@@ -812,6 +817,8 @@ void	_thr_cancel_leave(struct pthread *, int) __hidden;
 void	_thr_testcancel(struct pthread *) __hidden;
 void	_thr_signal_block(struct pthread *) __hidden;
 void	_thr_signal_unblock(struct pthread *) __hidden;
+void	_thr_signal_block_check_fast(void) __hidden;
+void	_thr_signal_block_setup(struct pthread *) __hidden;
 void	_thr_signal_init(int) __hidden;
 void	_thr_signal_deinit(void) __hidden;
 int	_thr_send_sig(struct pthread *, int sig) __hidden;
@@ -864,10 +871,6 @@ int     __sys_openat(int, const char *, int, ...);
 
 /* #include <signal.h> */
 #ifdef _SIGNAL_H_
-int	__sys_kill(pid_t, int);
-int     __sys_sigaltstack(const struct sigaltstack *, struct sigaltstack *);
-int     __sys_sigpending(sigset_t *);
-int     __sys_sigreturn(const ucontext_t *);
 #ifndef _LIBC_PRIVATE_H_
 int     __sys_sigaction(int, const struct sigaction *, struct sigaction *);
 int     __sys_sigprocmask(int, const sigset_t *, sigset_t *);
@@ -898,8 +901,6 @@ int	__sys_swapcontext(ucontext_t *oucp, const ucontext_t *ucp);
 
 /* #include <unistd.h> */
 #ifdef  _UNISTD_H_
-void	__sys_exit(int);
-pid_t	__sys_getpid(void);
 #ifndef _LIBC_PRIVATE_H_
 int     __sys_close(int);
 int	__sys_fork(void);
@@ -1069,6 +1070,7 @@ int _thr_cond_wait(pthread_cond_t *, pthread_mutex_t *);
 int _thr_detach(pthread_t);
 int _thr_equal(pthread_t, pthread_t);
 void _Tthr_exit(void *);
+int _thr_getname_np(pthread_t, char *, size_t);
 int _thr_key_create(pthread_key_t *, void (*)(void *));
 int _thr_key_delete(pthread_key_t);
 int _thr_setspecific(pthread_key_t, const void *);
@@ -1098,6 +1100,9 @@ int _thr_mutex_destroy(pthread_mutex_t *);
 int _thr_mutex_unlock(pthread_mutex_t *);
 int __Tthr_mutex_lock(pthread_mutex_t *);
 int __Tthr_mutex_trylock(pthread_mutex_t *);
+bool __thr_get_main_stack_base(char **base);
+bool __thr_get_main_stack_lim(size_t *lim);
+void _thr_resolve_machdep(void);
 
 __END_DECLS
 __NULLABILITY_PRAGMA_POP

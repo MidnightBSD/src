@@ -12,7 +12,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * truncl(x)
  * Return x rounded toward 0 to integral value

@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 .if ${MK_DIRDEPS_BUILD} == "yes" || ${MK_META_MODE} == "yes"
 
@@ -32,6 +31,11 @@ MAKE_PRINT_VAR_ON_ERROR+= \
 	SRCTOP \
 	OBJTOP \
 	${MAKE_PRINT_VAR_ON_ERROR_XTRAS}
+
+# Meta mode may rebuild targets that then fail. The next build won't detect
+# the meta mode change. Not all targets have a 'rm ${.TARGET}' in them
+# so force it.
+.DELETE_ON_ERROR:
 
 .if ${.MAKE.LEVEL} > 0
 MAKE_PRINT_VAR_ON_ERROR += .MAKE.MAKEFILES .PATH

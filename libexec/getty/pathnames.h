@@ -29,7 +29,6 @@
  * SUCH DAMAGE.
  *
  *	from: @(#)pathnames.h	8.1 (Berkeley) 6/4/93
- * $FreeBSD: stable/11/libexec/getty/pathnames.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <paths.h>

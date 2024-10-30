@@ -25,6 +25,7 @@
 # SUCH DAMAGE.
 #
 #	From: @(#)netstart	5.9 (Berkeley) 3/30/91
+#
 
 # This file is NOT called by any of the other scripts - it has been
 # obsoleted by /etc/rc.d/* and is provided here only for user

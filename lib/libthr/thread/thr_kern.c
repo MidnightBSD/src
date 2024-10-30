@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2005 David Xu <davidxu@freebsd.org>
  * Copyright (C) 2003 Daniel M. Eischen <deischen@freebsd.org>
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <sys/signalvar.h>
 #include <sys/rtprio.h>
@@ -52,14 +51,10 @@ static struct wake_addr default_wake_addr;
  * This is called when the first thread (other than the initial
  * thread) is created.
  */
-int
+void
 _thr_setthreaded(int threaded)
 {
-	if (((threaded == 0) ^ (__isthreaded == 0)) == 0)
-		return (0);
-
 	__isthreaded = threaded;
-	return (0);
 }
 
 void
@@ -161,7 +156,7 @@ _thr_alloc_wake_addr(void)
 		unsigned i;
 		unsigned pagesize = getpagesize();
 		struct wake_addr *pp = (struct wake_addr *)
-			mmap(NULL, getpagesize(), PROT_READ|PROT_WRITE,
+			mmap(NULL, pagesize, PROT_READ|PROT_WRITE,
 			MAP_ANON|MAP_PRIVATE, -1, 0);
 		for (i = 1; i < pagesize/sizeof(struct wake_addr); ++i)
 			pp[i].link = &pp[i+1];

@@ -25,12 +25,12 @@
  */
 
 #include <machine/asm.h>
-	
 ENTRY(lrintl)
 	fldt	4(%esp)
 	subl	$4,%esp
 	fistpl	(%esp)
 	popl	%eax
 	ret
+END(lrintl)
 
 	.section .note.GNU-stack,"",%progbits

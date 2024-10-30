@@ -23,7 +23,6 @@
  *
  * This file was copied from tcpdump-2.1.1 and modified.
  * There is an e-mail list for tcpdump: <tcpdump@ee.lbl.gov>
- *
  */
 
 #include <stdio.h>

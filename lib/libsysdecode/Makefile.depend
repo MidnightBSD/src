@@ -47,6 +47,7 @@ DIRDEPS = \
 	lib/libcapsicum \
 	lib/libcasper/libcasper \
 	lib/libcasper/services/cap_dns \
+	lib/libcasper/services/cap_fileargs \
 	lib/libcasper/services/cap_grp \
 	lib/libcasper/services/cap_pwd \
 	lib/libcasper/services/cap_sysctl \
@@ -61,7 +62,7 @@ DIRDEPS = \
 	lib/libdpv \
 	lib/libdwarf \
 	lib/libedit \
-	lib/libedit/edit/readline \
+	lib/libedit/readline \
 	lib/libefivar \
 	lib/libelf \
 	lib/libelftc \
@@ -98,6 +99,7 @@ DIRDEPS = \
 	lib/libsecureboot \
 	lib/libsqlite3 \
 	lib/libssp \
+	lib/libstand \
 	lib/libstdthreads \
 	lib/libtacplus \
 	lib/libthread_db \

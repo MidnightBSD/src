@@ -36,15 +36,23 @@
 static char sccsid[] = "@(#)strncpy.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-
 #include <string.h>
 
 /*
  * Copy src to dst, truncating or null-padding to always copy n bytes.
  * Return dst.
  */
+#ifdef WEAK_STRNCPY
+__weak_reference(__strncpy, strncpy);
+#endif
+
 char *
-strncpy(char * __restrict dst, const char * __restrict src, size_t n)
+#ifdef WEAK_STRNCPY
+__strncpy
+#else
+strncpy
+#endif
+(char * __restrict dst, const char * __restrict src, size_t n)
 {
 	if (n != 0) {
 		char *d = dst;

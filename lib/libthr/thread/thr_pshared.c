@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <sys/queue.h>
@@ -49,11 +48,16 @@ static struct pshared_hash_head pshared_hash[HASH_SIZE];
 #define	PSHARED_KEY_HASH(key)	(((unsigned long)(key) >> 8) % HASH_SIZE)
 /* XXXKIB: lock could be split to per-hash chain, if appears contested */
 static struct urwlock pshared_lock = DEFAULT_URWLOCK;
+static int page_size;
 
 void
 __thr_pshared_init(void)
 {
 	int i;
+
+	page_size = getpagesize();
+	THR_ASSERT(page_size >= THR_PAGE_SIZE_MIN,
+	    "THR_PAGE_SIZE_MIN is too large");
 
 	_thr_urwlock_init(&pshared_lock);
 	for (i = 0; i < HASH_SIZE; i++)
@@ -111,7 +115,7 @@ pshared_gc(struct pthread *curthread)
 			if (error == 0)
 				continue;
 			LIST_REMOVE(h, link);
-			munmap(h->val, PAGE_SIZE);
+			munmap(h->val, page_size);
 			free(h);
 		}
 	}
@@ -163,7 +167,7 @@ pshared_insert(void *key, void **val)
 		 */
 		if (h->key == key) {
 			if (h->val != *val) {
-				munmap(*val, PAGE_SIZE);
+				munmap(*val, page_size);
 				*val = h->val;
 			}
 			return (1);
@@ -203,7 +207,7 @@ pshared_clean(void *key, void *val)
 {
 
 	if (val != NULL)
-		munmap(val, PAGE_SIZE);
+		munmap(val, page_size);
 	_umtx_op(NULL, UMTX_OP_SHM, UMTX_SHM_DESTROY, key, NULL);
 }
 
@@ -240,7 +244,7 @@ __thr_pshared_offpage(void *key, int doalloc)
 	    UMTX_SHM_LOOKUP, key, NULL);
 	if (fd == -1)
 		return (NULL);
-	res = mmap(NULL, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+	res = mmap(NULL, page_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 	close(fd);
 	if (res == MAP_FAILED)
 		return (NULL);

@@ -26,7 +26,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 /*
@@ -36,46 +35,23 @@
 #define	_PTHREAD_MD_H_
 
 #include <sys/types.h>
-#include <machine/sysarch.h>
-#include <stddef.h>
+#include <machine/tls.h>
 
 #define	CPU_SPINWAIT
-#define	DTV_OFFSET		offsetof(struct tcb, tcb_dtv)
 
-/*
- * Variant I tcb. The structure layout is fixed, don't blindly
- * change it.
- */
-struct tcb {
-	void			*tcb_dtv;
-	struct pthread		*tcb_thread;
-};
-
-/* Called from the thread to set its private data. */
-static __inline void
-_tcb_set(struct tcb *tcb)
-{
-
-	__asm __volatile("msr	tpidr_el0, %x0" :: "r" (tcb));
-}
-
-/*
- * Get the current tcb.
- */
-static __inline struct tcb *
-_tcb_get(void)
-{
-	struct tcb *tcb;
-
-	__asm __volatile("mrs	%x0, tpidr_el0" : "=r" (tcb));
-	return (tcb);
-}
+/* For use in _Static_assert to check structs will fit in a page */
+#define	THR_PAGE_SIZE_MIN	PAGE_SIZE_4K
 
 static __inline struct pthread *
 _get_curthread(void)
 {
 
 	return (_tcb_get()->tcb_thread);
+}
+
+static __inline void
+_thr_resolve_machdep(void)
+{
 }
 
 #endif /* _PTHREAD_MD_H_ */

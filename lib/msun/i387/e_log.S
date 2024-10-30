@@ -34,7 +34,6 @@
  */
 
 #include <machine/asm.h>
-
 ENTRY(log)
 	fldln2
 	fldl	4(%esp)

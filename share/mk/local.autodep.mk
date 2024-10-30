@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 .if ${.MAKE.DEPENDFILE:M*.${MACHINE}} == ""
 # by default only MACHINE0 does updates
@@ -7,6 +6,10 @@ UPDATE_DEPENDFILE_MACHINE?= ${MACHINE0:U${MACHINE}}
 UPDATE_DEPENDFILE= no
 .endif
 .endif
+
+NOSSPPICO?= .nossppico
+PIEO?= .pieo
+OBJ_EXTENSIONS+= ${NOSSPPICO} ${PIEO}
 
 CFLAGS+= ${CFLAGS_LAST}
 CXXFLAGS+= ${CXXFLAGS_LAST}

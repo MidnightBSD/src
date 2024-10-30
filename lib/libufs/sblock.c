@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2002 Juli Mallett.  All rights reserved.
  *
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/mount.h>
 #include <sys/disklabel.h>
@@ -53,7 +52,7 @@ sbread(struct uufsd *disk)
 
 	ERROR(disk, NULL);
 
-	if ((errno = sbget(disk->d_fd, &fs, -1)) != 0) {
+	if ((errno = sbget(disk->d_fd, &fs, STDSB)) != 0) {
 		switch (errno) {
 		case EIO:
 			ERROR(disk, "non-existent or truncated superblock");
@@ -87,7 +86,7 @@ sbread(struct uufsd *disk)
 		disk->d_ufs = 2;
 	disk->d_bsize = fs->fs_fsize / fsbtodb(fs, 1);
 	disk->d_sblock = fs->fs_sblockloc / disk->d_bsize;
-	disk->d_sbcsum = fs->fs_csp;
+	disk->d_si = fs->fs_si;
 	return (0);
 }
 
@@ -185,7 +184,7 @@ sbput(int devfd, struct fs *fs, int numaltwrite)
 		     use_pwrite)) != 0) {
 			fs->fs_sblockactualloc = savedactualloc;
 			fs->fs_csp = savedcsp;
-			return (-1);
+			return (error);
 		}
 	}
 	fs->fs_sblockactualloc = savedactualloc;

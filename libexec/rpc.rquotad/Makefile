@@ -1,4 +1,5 @@
-# $FreeBSD: stable/11/libexec/rpc.rquotad/Makefile 275077 2014-11-25 21:18:18Z bapt $
+
+PACKAGE=	nfs
 
 PROG =	rpc.rquotad
 SRCS =	rquotad.c

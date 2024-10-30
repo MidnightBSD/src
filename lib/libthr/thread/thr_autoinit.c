@@ -33,9 +33,6 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libthr/thread/thr_autoinit.c 331722 2018-03-29 02:50:57Z eadler $");
-
 #include <pthread.h>
 
 #include "thr_private.h"

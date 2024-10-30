@@ -13,9 +13,6 @@
  * ====================================================
  */
 
-#ifndef lint
-#endif
-
 #include "math.h"
 #include "math_private.h"
 

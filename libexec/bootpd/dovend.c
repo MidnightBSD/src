@@ -1,6 +1,5 @@
 /*
  * dovend.c : Inserts all but the first few vendor options.
- *
  */
 
 #include <sys/types.h>

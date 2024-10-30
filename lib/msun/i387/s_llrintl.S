@@ -25,7 +25,6 @@
  */
 
 #include <machine/asm.h>
-	
 ENTRY(llrintl)
 	fldt	4(%esp)
 	subl	$8,%esp
@@ -33,5 +32,6 @@ ENTRY(llrintl)
 	popl	%eax
 	popl	%edx
 	ret
+END(llrintl)
 
 	.section .note.GNU-stack,"",%progbits

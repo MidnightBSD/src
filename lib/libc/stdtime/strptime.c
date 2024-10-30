@@ -1,12 +1,12 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2014 Gary Mills
  * Copyright 2011, Nexenta Systems, Inc.  All rights reserved.
  * Copyright (c) 1994 Powerdog Industries.  All rights reserved.
  *
  * Copyright (c) 2011 The FreeBSD Foundation
- * All rights reserved.
+ *
  * Portions of this software were developed by David Chisnall
  * under sponsorship from the FreeBSD Foundation.
  *
@@ -45,7 +45,6 @@ static char copyright[] __unused =
 static char sccsid[] __unused = "@(#)strptime.c	0.1 (Powerdog) 94/03/27";
 #endif /* !defined NOID */
 #endif /* not lint */
-
 #include "namespace.h"
 #include <time.h>
 #include <ctype.h>
@@ -53,6 +52,7 @@ static char sccsid[] __unused = "@(#)strptime.c	0.1 (Powerdog) 94/03/27";
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+#include "private.h"
 #include "un-namespace.h"
 #include "libc_private.h"
 #include "timelocal.h"
@@ -271,17 +271,24 @@ label:
 		case 'k':
 		case 'l':
 			/*
-			 * Of these, %l is the only specifier explicitly
-			 * documented as not being zero-padded.  However,
-			 * there is no harm in allowing zero-padding.
+			 * %k and %l specifiers are documented as being
+			 * blank-padded.  However, there is no harm in
+			 * allowing zero-padding.
 			 *
-			 * XXX The %l specifier may gobble one too many
+			 * XXX %k and %l specifiers may gobble one too many
 			 * digits if used incorrectly.
 			 */
+
+			len = 2;
+			if ((c == 'k' || c == 'l') &&
+			    isblank_l((unsigned char)*buf, locale)) {
+				buf++;
+				len = 1;
+			}
+
 			if (!isdigit_l((unsigned char)*buf, locale))
 				return (NULL);
 
-			len = 2;
 			for (i = 0; len && *buf != 0 &&
 			     isdigit_l((unsigned char)*buf, locale); buf++) {
 				i *= 10;

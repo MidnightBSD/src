@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009-2013 Steven G. Kargl
  * All rights reserved.
@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * ld128 version of s_expl.c.  See ../ld80/s_expl.c for most comments.
  */
@@ -64,8 +63,6 @@ expl(long double x)
 	int k;
 	uint16_t hx, ix;
 
-	DOPRINT_START(&x);
-
 	/* Filter out exceptional cases. */
 	u.e = x;
 	hx = u.xbits.expsign;
@@ -73,15 +70,15 @@ expl(long double x)
 	if (ix >= BIAS + 13) {		/* |x| >= 8192 or x is NaN */
 		if (ix == BIAS + LDBL_MAX_EXP) {
 			if (hx & 0x8000)  /* x is -Inf or -NaN */
-				RETURNP(-1 / x);
-			RETURNP(x + x);	/* x is +Inf or +NaN */
+				RETURNF(-1 / x);
+			RETURNF(x + x);	/* x is +Inf or +NaN */
 		}
 		if (x > o_threshold)
-			RETURNP(huge * huge);
+			RETURNF(huge * huge);
 		if (x < u_threshold)
-			RETURNP(tiny * tiny);
+			RETURNF(tiny * tiny);
 	} else if (ix < BIAS - 114) {	/* |x| < 0x1p-114 */
-		RETURN2P(1, x);		/* 1 with inexact iff x != 0 */
+		RETURNF(1 + x);		/* 1 with inexact iff x != 0 */
 	}
 
 	ENTERI();
@@ -91,7 +88,10 @@ expl(long double x)
 	t = SUM2P(hi, lo);
 
 	/* Scale by 2**k. */
-	/* XXX sparc64 multiplication is so slow that scalbnl() is faster. */
+	/*
+	 * XXX sparc64 multiplication was so slow that scalbnl() is faster,
+	 * but performance on aarch64 and riscv hasn't yet been quantified.
+	 */
 	if (k >= LDBL_MIN_EXP) {
 		if (k == LDBL_MAX_EXP)
 			RETURNI(t * 2 * 0x1p16383L);
@@ -206,8 +206,6 @@ expm1l(long double x)
 	int k, n, n2;
 	uint16_t hx, ix;
 
-	DOPRINT_START(&x);
-
 	/* Filter out exceptional cases. */
 	u.e = x;
 	hx = u.xbits.expsign;
@@ -215,11 +213,11 @@ expm1l(long double x)
 	if (ix >= BIAS + 7) {		/* |x| >= 128 or x is NaN */
 		if (ix == BIAS + LDBL_MAX_EXP) {
 			if (hx & 0x8000)  /* x is -Inf or -NaN */
-				RETURNP(-1 / x - 1);
-			RETURNP(x + x);	/* x is +Inf or +NaN */
+				RETURNF(-1 / x - 1);
+			RETURNF(x + x);	/* x is +Inf or +NaN */
 		}
 		if (x > o_threshold)
-			RETURNP(huge * huge);
+			RETURNF(huge * huge);
 		/*
 		 * expm1l() never underflows, but it must avoid
 		 * unrepresentable large negative exponents.  We used a
@@ -228,7 +226,7 @@ expm1l(long double x)
 		 * in the same way as large ones here.
 		 */
 		if (hx & 0x8000)	/* x <= -128 */
-			RETURN2P(tiny, -1);	/* good for x < -114ln2 - eps */
+			RETURNF(tiny - 1);	/* good for x < -114ln2 - eps */
 	}
 
 	ENTERI();
@@ -240,7 +238,7 @@ expm1l(long double x)
 		if (x < T3) {
 			if (ix < BIAS - 113) {	/* |x| < 0x1p-113 */
 				/* x (rounded) with inexact if x != 0: */
-				RETURNPI(x == 0 ? x :
+				RETURNI(x == 0 ? x :
 				    (0x1p200 * x + fabsl(x)) * 0x1p-200);
 			}
 			q = x * x2 * C3 + x2 * x2 * (C4 + x * (C5 + x * (C6 +
@@ -261,9 +259,9 @@ expm1l(long double x)
 		hx2_hi = x_hi * x_hi / 2;
 		hx2_lo = x_lo * (x + x_hi) / 2;
 		if (ix >= BIAS - 7)
-			RETURN2PI(hx2_hi + x_hi, hx2_lo + x_lo + q);
+			RETURNI((hx2_hi + x_hi) + (hx2_lo + x_lo + q));
 		else
-			RETURN2PI(x, hx2_lo + q + hx2_hi);
+			RETURNI(x + (hx2_lo + q + hx2_hi));
 	}
 
 	/* Reduce x to (k*ln2 + endpoint[n2] + r1 + r2). */

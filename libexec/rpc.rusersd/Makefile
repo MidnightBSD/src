@@ -1,4 +1,3 @@
-# $FreeBSD: stable/11/libexec/rpc.rusersd/Makefile 275077 2014-11-25 21:18:18Z bapt $
 
 PROG =	rpc.rusersd
 SRCS =	rusersd.c rusers_proc.c extern.h

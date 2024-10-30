@@ -5,8 +5,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/libexec/rpc.rquotad/rquotad.c 339008 2018-09-29 00:44:23Z sef $");
-
 #include <sys/param.h>
 #include <sys/mount.h>
 #include <sys/file.h>

@@ -4,7 +4,6 @@
  */
 
 #include <machine/asm.h>
-
 ENTRY(fmodf)
 	movss	%xmm0,-4(%rsp)
 	movss	%xmm1,-8(%rsp)

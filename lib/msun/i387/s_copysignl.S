@@ -4,7 +4,6 @@
  */
 
 #include <machine/asm.h>
-
 ENTRY(copysignl)
 	movl	24(%esp),%edx
 	andl	$0x8000,%edx

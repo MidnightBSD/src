@@ -34,7 +34,6 @@
  */
 
 #include <machine/asm.h>
-
 ENTRY(fmod)
 	movsd	%xmm0,-8(%rsp)
 	movsd	%xmm1,-16(%rsp)

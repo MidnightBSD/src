@@ -33,7 +33,6 @@
 static char sccsid[] = "@(#)getprotoname.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-
 #include <errno.h>
 #include <netdb.h>
 #include <nsswitch.h>

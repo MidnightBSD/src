@@ -10,7 +10,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /* pow(x,y) return x**y
  *
  *		      n
@@ -132,7 +131,7 @@ pow(double x, double y)
 		k = (iy>>20)-0x3ff;	   /* exponent */
 		if(k>20) {
 		    j = ly>>(52-k);
-		    if((j<<(52-k))==ly) yisint = 2-(j&1);
+		    if(((u_int32_t)j<<(52-k))==ly) yisint = 2-(j&1);
 		} else if(ly==0) {
 		    j = iy>>(20-k);
 		    if((j<<(20-k))==iy) yisint = 2-(j&1);

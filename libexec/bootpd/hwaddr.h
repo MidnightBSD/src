@@ -1,6 +1,5 @@
 /* 
  * hwaddr.h
- *
  */
 
 #ifndef	HWADDR_H

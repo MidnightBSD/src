@@ -1,6 +1,5 @@
 /*
  * trylook.c - test program for lookup.c
- *
  */
 
 #include <sys/types.h>

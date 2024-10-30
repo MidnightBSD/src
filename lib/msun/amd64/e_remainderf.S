@@ -6,7 +6,6 @@
 #include <machine/asm.h>
 
 RCSID("from: $NetBSD: e_remainderf.S,v 1.2 1995/05/08 23:49:47 jtc Exp $")
-
 ENTRY(remainderf)
 	movss	%xmm0,-4(%rsp)
 	movss	%xmm1,-8(%rsp)
@@ -20,5 +19,6 @@ ENTRY(remainderf)
 	movss	-4(%rsp),%xmm0
 	fstp	%st
 	ret
+END(remainderf)
 
 	.section .note.GNU-stack,"",%progbits

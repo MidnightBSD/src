@@ -24,6 +24,6 @@
 # SUCH DAMAGE.
 #
 
-SUBDIR=	atf-check atf-sh tests
+SUBDIR=	atf-check atf-pytest-wrapper atf-sh tests
 
 .include <bsd.subdir.mk>

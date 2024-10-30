@@ -1,5 +1,4 @@
 #!/bin/sh
-
 #
 # PROVIDE: netwait
 # REQUIRE: devd ipfw pf routing

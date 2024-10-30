@@ -22,8 +22,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: stable/11/lib/libthr/arch/i386/i386/_umtx_op_err.S 217107 2011-01-07 16:09:33Z kib $
  */
 
 #include <machine/asm.h>
@@ -31,7 +29,10 @@
 
 #define SYSCALL_ERR(x)		 			\
 			ENTRY(__CONCAT(x, _err));	\
-			mov __CONCAT($SYS_,x),%eax; int $0x80; ret
+			mov __CONCAT($SYS_,x),%eax;	\
+			int $0x80;			\
+			ret;				\
+			END(__CONCAT(x, _err))
 
 SYSCALL_ERR(_umtx_op)
 

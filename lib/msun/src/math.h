@@ -33,11 +33,11 @@ extern const union __nan_un {
 	float		__uf;
 } __nan;
 
-#if __GNUC_PREREQ__(3, 3) || (defined(__INTEL_COMPILER) && __INTEL_COMPILER >= 800)
+#if __GNUC_PREREQ__(3, 3)
 #define	__MATH_BUILTIN_CONSTANTS
 #endif
 
-#if __GNUC_PREREQ__(3, 0) && !defined(__INTEL_COMPILER)
+#if __GNUC_PREREQ__(3, 0)
 #define	__MATH_BUILTIN_RELOPS
 #endif
 
@@ -498,6 +498,15 @@ long double	lgammal_r(long double, int *);
 void		sincos(double, double *, double *);
 void		sincosf(float, float *, float *);
 void		sincosl(long double, long double *, long double *);
+double		cospi(double);
+float		cospif(float);
+long double 	cospil(long double);
+double		sinpi(double);
+float		sinpif(float);
+long double 	sinpil(long double);
+double		tanpi(double);
+float		tanpif(float);
+long double	tanpil(long double);
 #endif
 
 __END_DECLS

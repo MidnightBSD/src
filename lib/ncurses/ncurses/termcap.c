@@ -59,7 +59,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #if 0
 #ifndef lint
 static const char sccsid[] = "@(#)termcap.c	8.1 (Berkeley) 6/4/93";

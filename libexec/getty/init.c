@@ -51,7 +51,7 @@ static char nullstr[] = "";
 static char loginprg[] = _PATH_LOGIN;
 static char datefmt[] = "%+";
 
-#define M(a) (&omode.c_cc[a])
+#define M(a) (char *)(&omode.c_cc[a])
 
 struct	gettystrs gettystrs[] = {
 	{ "nx", NULL, NULL },		/* next table */
@@ -121,7 +121,7 @@ struct	gettynums gettynums[] = {
 	{ "dc", 0, 0, 0 },		/* debug chat script value */
 	{ NULL, 0, 0, 0 }
 };
-  
+
 
 struct	gettyflags gettyflags[] = {
 	{ "ht",	0, 0, 0, 0 },		/* has tabs */

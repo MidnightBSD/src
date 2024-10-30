@@ -1,9 +1,10 @@
 #!/bin/sh
 #
+#
 
 # PROVIDE: mountd
-# REQUIRE: NETWORKING rpcbind quota
-# KEYWORD: nojail shutdown
+# REQUIRE: NETWORKING rpcbind quota mountlate
+# KEYWORD: nojailvnet shutdown
 
 . /etc/rc.subr
 

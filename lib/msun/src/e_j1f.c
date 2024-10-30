@@ -14,7 +14,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * See e_j1.c for complete comments.
  */

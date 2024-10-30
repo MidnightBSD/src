@@ -25,7 +25,6 @@
  */
 
 #include <machine/asm.h>
-	
 ENTRY(sqrtf)
 	sqrtss	%xmm0, %xmm0
 	ret

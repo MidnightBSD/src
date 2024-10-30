@@ -1,5 +1,4 @@
 #include <sys/cdefs.h>
-
 #define type		double
 #define	roundit		round
 #define dtype		long long

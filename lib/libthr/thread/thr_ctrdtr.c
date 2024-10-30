@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <rtld_tls.h>
 
@@ -41,7 +40,7 @@ _tcb_ctor(struct pthread *thread, int initial)
 	if (initial)
 		tcb = _tcb_get();
 	else
-		tcb = _rtld_allocate_tls(NULL, sizeof(struct tcb), 16);
+		tcb = _rtld_allocate_tls(NULL, TLS_TCB_SIZE, TLS_TCB_ALIGN);
 	if (tcb)
 		tcb->tcb_thread = thread;
 	return (tcb);
@@ -51,5 +50,5 @@ void
 _tcb_dtor(struct tcb *tcb)
 {
 
-	_rtld_free_tls(tcb, sizeof(struct tcb), 16);
+	_rtld_free_tls(tcb, TLS_TCB_SIZE, TLS_TCB_ALIGN);
 }

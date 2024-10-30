@@ -1,4 +1,3 @@
-# $MidnightBSD: src/share/skel/dot.login,v 1.4 2011/11/23 12:48:52 laffer1 Exp $
 #
 # .login - csh login script, read by login shell, after `.cshrc' at login.
 #

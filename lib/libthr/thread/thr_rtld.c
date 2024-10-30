@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2006, David Xu <davidxu@freebsd.org>
  * All rights reserved.
@@ -26,12 +26,9 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
  /*
   * A lockless rwlock for rtld.
   */
-#include <sys/cdefs.h>
 #include <sys/mman.h>
 #include <sys/syscall.h>
 #include <link.h>
@@ -157,6 +154,17 @@ _thr_rtld_lock_release(void *lock)
 	l = (struct rtld_lock *)lock;
 	
 	state = l->lock.rw_state;
+	if (__predict_false(_thr_after_fork)) {
+		/*
+		 * After fork, only this thread is running, there is no
+		 * waiters.  Keeping waiters recorded in rwlock breaks
+		 * wake logic.
+		 */
+		atomic_clear_int(&l->lock.rw_state,
+		    URWLOCK_WRITE_WAITERS | URWLOCK_READ_WAITERS);
+		l->lock.rw_blocked_readers = 0;
+		l->lock.rw_blocked_writers = 0;
+	}
 	if (_thr_rwlock_unlock(&l->lock) == 0) {
 		if ((state & URWLOCK_WRITE_OWNER) == 0)
 			curthread->rdlock_count--;
@@ -179,6 +187,31 @@ static int
 _thr_rtld_clr_flag(int mask __unused)
 {
 	return (0);
+}
+
+/*
+ * ABI bug workaround: This symbol must be present for rtld to accept
+ * RTLI_VERSION from RtldLockInfo
+ */
+extern char _pli_rtli_version;
+char _pli_rtli_version;
+
+static char *
+_thr_dlerror_loc(void)
+{
+	struct pthread *curthread;
+
+	curthread = _get_curthread();
+	return (curthread->dlerror_msg);
+}
+
+static int *
+_thr_dlerror_seen(void)
+{
+	struct pthread *curthread;
+
+	curthread = _get_curthread();
+	return (&curthread->dlerror_seen);
 }
 
 void
@@ -204,6 +237,7 @@ _thr_rtld_init(void)
 	mprotect(NULL, 0, 0);
 	_rtld_get_stack_prot();
 
+	li.rtli_version = RTLI_VERSION;
 	li.lock_create  = _thr_rtld_lock_create;
 	li.lock_destroy = _thr_rtld_lock_destroy;
 	li.rlock_acquire = _thr_rtld_rlock_acquire;
@@ -212,6 +246,9 @@ _thr_rtld_init(void)
 	li.thread_set_flag = _thr_rtld_set_flag;
 	li.thread_clr_flag = _thr_rtld_clr_flag;
 	li.at_fork = NULL;
+	li.dlerror_loc = _thr_dlerror_loc;
+	li.dlerror_loc_sz = sizeof(curthread->dlerror_msg);
+	li.dlerror_seen = _thr_dlerror_seen;
 
 	/*
 	 * Preresolve the symbols needed for the fork interposer.  We
@@ -235,6 +272,11 @@ _thr_rtld_init(void)
 	_thr_signal_block(curthread);
 	_rtld_thread_init(&li);
 	_thr_signal_unblock(curthread);
+	_thr_signal_block_check_fast();
+	_thr_signal_block_setup(curthread);
+
+	/* resolve machine depended functions, if any */
+	_thr_resolve_machdep();
 
 	uc_len = __getcontextx_size();
 	uc = alloca(uc_len);

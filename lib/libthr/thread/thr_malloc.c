@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2019 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Konstantin Belousov <kib@FreeBSD.org>
  * under sponsorship from the FreeBSD Foundation.
@@ -30,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <rtld_malloc.h>
@@ -50,8 +48,7 @@ __thr_malloc_init(void)
 		return;
 	npagesizes = getpagesizes(pagesizes_d, nitems(pagesizes_d));
 	if (npagesizes == -1) {
-		npagesizes = 1;
-		pagesizes_d[0] = PAGE_SIZE;
+		PANIC("Unable to read page sizes");
 	}
 	pagesizes = pagesizes_d;
 	_thr_umutex_init(&thr_malloc_umtx);

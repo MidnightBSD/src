@@ -4,7 +4,6 @@
  */
 
 #include <machine/asm.h>
-
 /* RCSID("$NetBSD: s_floorf.S,v 1.3 1995/05/09 00:04:32 jtc Exp $") */
 
 ENTRY(floorf)
@@ -17,7 +16,7 @@ ENTRY(floorf)
 	orw	$0x0400,%dx		/* round towards -oo */
 	andw	$0xf7ff,%dx
 	movw	%dx,-8(%ebp)
-	fldcw	-8(%ebp)		/* load modfied control word */
+	fldcw	-8(%ebp)		/* load modified control word */
 
 	flds	8(%ebp);		/* round */
 	frndint

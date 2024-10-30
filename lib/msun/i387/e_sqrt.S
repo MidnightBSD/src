@@ -34,7 +34,6 @@
  */
 
 #include <machine/asm.h>
-
 ENTRY(sqrt)
 	fldl	4(%esp)
 	fsqrt

@@ -4,7 +4,6 @@
  */
 
 #include <machine/asm.h>
-
 /* RCSID("$NetBSD: e_remainderf.S,v 1.2 1995/05/08 23:49:47 jtc Exp $") */
 
 ENTRY(remainderf)

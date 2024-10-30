@@ -1,10 +1,13 @@
 
 .include <src.opts.mk>
 
-PACKAGE=lib${LIB}
 LIB=	sysdecode
 
-SRCS=	errno.c flags.c ioctl.c signal.c syscallnames.c utrace.c
+SRCS=	errno.c flags.c ioctl.c signal.c syscallnames.c utrace.c support.c
+.if ${MACHINE_CPUARCH} == "aarch64" || ${MACHINE_CPUARCH} == "amd64" || \
+	${MACHINE_CPUARCH} == "i386"
+SRCS+= linux.c
+.endif
 INCS=	sysdecode.h
 
 CFLAGS+= -I${.OBJDIR}
@@ -106,7 +109,7 @@ MLINKS+=sysdecode_mask.3 sysdecode_accessmode.3 \
 	sysdecode_mask.3 sysdecode_wait4_options.3 \
 	sysdecode_mask.3 sysdecode_wait6_options.3
 
-CLEANFILES= ioctl.c ioctl.c.tmp tables.h
+CLEANFILES= ioctl.c ioctl.c.tmp tables.h tables_linux.h
 
 .if defined(COMPAT_32BIT)
 CPP+=	-m32
@@ -119,18 +122,13 @@ CFLAGS+=-DPF
 # Workaround duplicate declarations in <netinet/ip_compat.h>
 CFLAGS.gcc.ioctl.c+= -Wno-redundant-decls
 
-# Ignore deprecation warning in <sys/pioctl.h>
-CFLAGS.clang.ioctl.c+= -Wno-\#warnings
-.if ${COMPILER_TYPE} == "gcc" && ${COMPILER_VERSION} >= 40700
-CFLAGS.gcc.ioctl.c+= -Wno-cpp
-.endif
-
-CFLAGS.clang+=	${CFLAGS.clang.${.IMPSRC}}
 CFLAGS.gcc+=	${CFLAGS.gcc.${.IMPSRC}}
 
-DEPENDOBJS+=	tables.h
+DEPENDOBJS+=	tables.h tables_linux.h
 tables.h: mktables
 	sh ${.CURDIR}/mktables ${SYSROOT:U${DESTDIR}}${INCLUDEDIR} ${.TARGET}
+tables_linux.h: mklinuxtables
+	sh ${.CURDIR}/mklinuxtables ${SRCTOP}/sys ${.TARGET}
 
 # mkioctls runs find(1) for headers so needs to rebuild every time.  This used
 # to be a hack only done in buildworld.
@@ -146,6 +144,9 @@ ioctl.c: ioctl.c.tmp
 		mv -f ${.TARGET}.tmp ${.TARGET}; \
 	fi
 
-beforedepend: ioctl.c tables.h
+beforedepend: ioctl.c tables.h tables_linux.h
+
+HAS_TESTS=
+SUBDIR.${MK_TESTS}+= tests
 
 .include <bsd.lib.mk>

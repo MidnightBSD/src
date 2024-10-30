@@ -13,7 +13,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * See s_asinh.c for complete comments.
  *

@@ -5,8 +5,7 @@
 .\"
 .\" This file is in the public domain.
 .\"
-.\"
-.Dd January 19, 2018
+.Dd September 2, 2020
 .Dt LIBUFS 3
 .Os
 .Sh NAME
@@ -52,6 +51,7 @@ field of
 .Vt "struct uufsd"
 to a string describing the error.
 .Sh SEE ALSO
+.Xr berase 3 ,
 .Xr bread 3 ,
 .Xr bwrite 3 ,
 .Xr cgget 3 ,
@@ -60,6 +60,10 @@ to a string describing the error.
 .Xr cgread1 3 ,
 .Xr cgwrite 3 ,
 .Xr cgwrite1 3 ,
+.Xr getinode 3 ,
+.Xr putinode 3 ,
+.Xr sbget 3 ,
+.Xr sbput 3 ,
 .Xr sbread 3 ,
 .Xr sbwrite 3 ,
 .Xr ufs_disk_close 3 ,
@@ -74,6 +78,7 @@ library first appeared in
 .Fx 5.0 .
 .Sh AUTHORS
 .An Juli Mallett Aq Mt jmallett@FreeBSD.org
+.An Marshall Kirk McKusick Aq Mt mckusick@FreeBSD.org
 .Pp
 .An -nosplit
 Additional design, feedback, and ideas were provided by

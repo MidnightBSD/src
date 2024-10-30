@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 .if !target(__<bsd.init.mk>__)
 .  error bsd.conf.mk cannot be included directly.
@@ -40,14 +39,13 @@ ${group}GRP?=	${SHAREGRP}
 ${group}MODE?=	${CONFMODE}
 ${group}DIR?=	${CONFDIR}
 STAGE_SETS+=	${group:C,[/*],_,g}
-STAGE_DIR.${group:C,[/*],_,g}= ${STAGE_OBJTOP}${${group}DIR}
 
 .      if defined(NO_ROOT)
 .        if !defined(${group}TAGS) || ! ${${group}TAGS:Mpackage=*}
-.          if defined(${${group}PACKAGE})
-${group}TAGS+=		package=${${group}PACKAGE:Uruntime}
+.          if defined(${group}PACKAGE)
+${group}TAGS+=		package=${${group}PACKAGE:Uutilities}
 .          else
-${group}TAGS+=		package=${PACKAGE:Uruntime}
+${group}TAGS+=		package=${PACKAGE:Uutilities}
 .          endif
 .        endif
 ${group}TAGS+=		config
@@ -65,6 +63,7 @@ DIRS+=	${group}DIR
 _${group}DIR=	${group}DIR
 .      endif
 
+STAGE_DIR.${group:C,[/*],_,g}= ${STAGE_OBJTOP}${${_${group}DIR}}
 
 .      for cnf in ${${group}}
 ${group}OWN_${cnf}?=	${${group}OWN}
@@ -119,7 +118,7 @@ INSTALL_COPY=  -C
 STAGE_AS_SETS+= ${cnf:T}
 STAGE_AS_${cnf:T}= ${${group}NAME_${cnf:T}}
 # XXX {group}OWN,GRP,MODE
-STAGE_DIR.${cnf:T}= ${STAGE_OBJTOP}${${group}DIR_${cnf:T}}
+STAGE_DIR.${cnf:T}= ${STAGE_OBJTOP}${${_${group}DIR_${cnf}}}
 stage_as.${cnf:T}: ${cnf}
 
 realinstallconfig: installdirs-${_${group}DIR_${cnf}} _${group}INS_${cnf:T}

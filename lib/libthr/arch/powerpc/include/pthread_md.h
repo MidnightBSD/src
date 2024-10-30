@@ -25,7 +25,6 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -34,52 +33,13 @@
 #ifndef _PTHREAD_MD_H_
 #define	_PTHREAD_MD_H_
 
-#include <stddef.h>
 #include <sys/types.h>
+#include <machine/tls.h>
 
 #define	CPU_SPINWAIT
 
-#define	DTV_OFFSET		offsetof(struct tcb, tcb_dtv)
-#ifdef __powerpc64__
-#define	TP_OFFSET		0x7010
-#else
-#define	TP_OFFSET		0x7008
-#endif
-
-/*
- * Variant I tcb. The structure layout is fixed, don't blindly
- * change it.
- * %r2 (32-bit) or %r13 (64-bit) points to end of the structure.
- */
-struct tcb {
-	void			*tcb_dtv;
-	struct pthread		*tcb_thread;
-};
-
-static __inline void
-_tcb_set(struct tcb *tcb)
-{
-#ifdef __powerpc64__
-	__asm __volatile("mr 13,%0" ::
-	    "r"((uint8_t *)tcb + TP_OFFSET));
-#else
-	__asm __volatile("mr 2,%0" ::
-	    "r"((uint8_t *)tcb + TP_OFFSET));
-#endif
-}
-
-static __inline struct tcb *
-_tcb_get(void)
-{
-	register uint8_t *_tp;
-#ifdef __powerpc64__
-	__asm __volatile("mr %0,13" : "=r"(_tp));
-#else
-	__asm __volatile("mr %0,2" : "=r"(_tp));
-#endif
-
-	return ((struct tcb *)(_tp - TP_OFFSET));
-}
+/* For use in _Static_assert to check structs will fit in a page */
+#define	THR_PAGE_SIZE_MIN	PAGE_SIZE
 
 static __inline struct pthread *
 _get_curthread(void)
@@ -87,6 +47,13 @@ _get_curthread(void)
 	if (_thr_initial)
 		return (_tcb_get()->tcb_thread);
 	return (NULL);
+}
+
+#define	HAS__UMTX_OP_ERR	1
+
+static __inline void
+_thr_resolve_machdep(void)
+{
 }
 
 #endif /* _PTHREAD_MD_H_ */

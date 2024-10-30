@@ -1,7 +1,6 @@
 /*
  * hwaddr.c - routines that deal with hardware addresses.
  * (i.e. Ethernet)
- *
  */
 
 #include <sys/types.h>

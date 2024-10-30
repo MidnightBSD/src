@@ -15,7 +15,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <float.h>
 #ifdef __i386__
 #include <ieeefp.h>

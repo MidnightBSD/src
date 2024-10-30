@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 .if !target(__<bsd.symver.mk>__)
 __<bsd.symver.mk>__:
@@ -7,7 +6,7 @@ __<bsd.symver.mk>__:
 
 # Generate the version map given the version definitions
 # and symbol maps.
-.if ${MK_SYMVER} == "yes" && !empty(VERSION_DEF) && !empty(SYMBOL_MAPS)
+.if !empty(VERSION_DEF) && !empty(SYMBOL_MAPS)
 # Find the awk script that generates the version map.
 VERSION_GEN?=	version_gen.awk
 VERSION_MAP?=	Version.map
@@ -41,7 +40,7 @@ _vgen=  ${path}/${VERSION_GEN}
 # Run the symbol maps through the C preprocessor before passing
 # them to the symbol version generator.
 ${VERSION_MAP}: ${VERSION_DEF} ${_vgen} ${SYMBOL_MAPS}
-	cat ${SYMBOL_MAPS} | ${CPP} - - \
+	cat ${SYMBOL_MAPS} | ${CPP} ${CFLAGS} - - \
 	    | awk -v vfile=${VERSION_DEF} -f ${_vgen} > ${.TARGET}
 .endif	# !empty(VERSION_DEF) && !empty(SYMBOL_MAPS)
 .endif  # !target(__<bsd.symver.mk>__)

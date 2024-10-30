@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2016 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Kurt Lidl under sponsorship from the
  * FreeBSD Foundation.
@@ -26,7 +25,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE. */
 
-/* $FreeBSD: stable/11/libexec/ftpd/blacklist.c 318240 2017-05-12 15:03:09Z lidl $ */
 
 #include <ctype.h>
 #include <stdarg.h>

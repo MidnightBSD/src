@@ -1,6 +1,5 @@
 /*
  * trygetea.c - test program for getether.c
- *
  */
 
 #include <sys/types.h>

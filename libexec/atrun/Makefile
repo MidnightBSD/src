@@ -1,4 +1,3 @@
-# $FreeBSD: stable/11/libexec/atrun/Makefile 321269 2017-07-20 00:58:19Z ngie $
 
 PACKAGE=at
 MAINSRC=${SRCTOP}/usr.bin/at

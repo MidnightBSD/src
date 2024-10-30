@@ -8,8 +8,6 @@
  * You may copy, modify and distribute this software (icmp.c) freely.
  *
  * Ari Suutari <suutari@iki.fi>
- *
- * $FreeBSD: stable/11/sbin/natd/icmp.c 131567 2004-07-04 12:53:54Z phk $
  */
 
 #include <stdlib.h>
@@ -30,7 +28,6 @@
 #include <netinet/in_systm.h>
 #include <netinet/ip.h>
 #include <netinet/ip_icmp.h>
-#include <machine/in_cksum.h>
 
 #include <alias.h>
 

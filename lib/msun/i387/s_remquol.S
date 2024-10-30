@@ -29,7 +29,6 @@
  */
 
 #include <machine/asm.h>
-	
 ENTRY(remquol)
 	fldt	16(%esp)
 	fldt	4(%esp)
@@ -60,5 +59,6 @@ ENTRY(remquol)
 	movl	28(%esp),%ecx
 	movl	%eax,(%ecx)
 	ret
+END(remquol)
 
 	.section .note.GNU-stack,"",%progbits

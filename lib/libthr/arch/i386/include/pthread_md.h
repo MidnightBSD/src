@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2002 Daniel Eischen <deischen@freebsd.org>.
  * Copyright (c) 2005 David Xu <davidxu@freebsd.org>.
@@ -25,8 +25,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: stable/11/lib/libthr/arch/i386/include/pthread_md.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 /*
@@ -37,68 +35,28 @@
 
 #include <stddef.h>
 #include <sys/types.h>
-#include <machine/sysarch.h>
+#include <machine/tls.h>
 
 #define	CPU_SPINWAIT		__asm __volatile("pause")
 
-#define	DTV_OFFSET		offsetof(struct tcb, tcb_dtv)
+/* For use in _Static_assert to check structs will fit in a page */
+#define	THR_PAGE_SIZE_MIN	PAGE_SIZE
 
-/*
- * Variant II tcb, first two members are required by rtld,
- * %gs points to the structure.
- */
-struct tcb {
-	struct tcb		*tcb_self;	/* required by rtld */
-	void			*tcb_dtv;	/* required by rtld */
-	struct pthread		*tcb_thread;
-};
-
-/*
- * Evaluates to the byte offset of the per-tcb variable name.
- */
-#define	__tcb_offset(name)	__offsetof(struct tcb, name)
-
-/*
- * Evaluates to the type of the per-tcb variable name.
- */
-#define	__tcb_type(name)	__typeof(((struct tcb *)0)->name)
-
-/*
- * Evaluates to the value of the per-tcb variable name.
- */
-#define	TCB_GET32(name) ({					\
-	__tcb_type(name) __result;				\
-								\
-	u_int __i;						\
-	__asm __volatile("movl %%gs:%1, %0"			\
-	    : "=r" (__i)					\
-	    : "m" (*(volatile u_int *)(__tcb_offset(name))));	\
-	__result = (__tcb_type(name))__i;			\
-								\
-	__result;						\
-})
-
-/* Called from the thread to set its private data. */
-static __inline void
-_tcb_set(struct tcb *tcb)
-{
- 	i386_set_gsbase(tcb);
-}
-
-/* Get the current kcb. */
-static __inline struct tcb *
-_tcb_get(void)
-{
-	return (TCB_GET32(tcb_self));
-}
-
-/* Get the current thread. */
 static __inline struct pthread *
 _get_curthread(void)
 {
-	return (TCB_GET32(tcb_thread));
+	struct pthread *thr;
+
+	__asm __volatile("movl %%gs:%1, %0" : "=r" (thr)
+	    : "m" (*(volatile u_int *)offsetof(struct tcb, tcb_thread)));
+	return (thr);
 }
 
 #define HAS__UMTX_OP_ERR	1
+
+static __inline void
+_thr_resolve_machdep(void)
+{
+}
 
 #endif

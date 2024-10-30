@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2007-2013 Bruce D. Evans
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /**
  * Implementation of the natural logarithm of x for 128-bit format.
  *
@@ -534,16 +533,17 @@ logl(long double x)
 	 * efficiency than is gained.
 	 */
 	/*
-	 * Use double precision operations wherever possible, since long
-	 * double operations are emulated and are very slow on the only
-	 * known machines that support ld128 (sparc64).  Also, don't try
-	 * to improve parallelism by increasing the number of operations,
-	 * since any parallelism on such machines is needed for the
-	 * emulation.  Horner's method is good for this, and is also good
-	 * for accuracy.  Horner's method doesn't handle the `lo' term
-	 * well, either for efficiency or accuracy.  However, for accuracy
-	 * we evaluate d * d * P2 separately to take advantage of
-	 * by P2 being exact, and this gives a good place to sum the 'lo'
+	 * Use double precision operations wherever possible, since
+	 * long double operations are emulated and were very slow on
+	 * the old sparc64 and unknown on the newer aarch64 and riscv
+	 * machines.  Also, don't try to improve parallelism by
+	 * increasing the number of operations, since any parallelism
+	 * on such machines is needed for the emulation.  Horner's
+	 * method is good for this, and is also good for accuracy.
+	 * Horner's method doesn't handle the `lo' term well, either
+	 * for efficiency or accuracy.  However, for accuracy we
+	 * evaluate d * d * P2 separately to take advantage of by P2
+	 * being exact, and this gives a good place to sum the 'lo'
 	 * term too.
 	 */
 	dd = (double)d;
@@ -571,24 +571,23 @@ log1pl(long double x)
 	int i, k;
 	int16_t ax, hx;
 
-	DOPRINT_START(&x);
 	EXTRACT_LDBL128_WORDS(hx, lx, llx, x);
 	if (hx < 0x3fff) {		/* x < 1, or x neg NaN */
 		ax = hx & 0x7fff;
 		if (ax >= 0x3fff) {	/* x <= -1, or x neg NaN */
 			if (ax == 0x3fff && (lx | llx) == 0)
-				RETURNP(-1 / zero);	/* log1p(-1) = -Inf */
+				RETURNF(-1 / zero);	/* log1p(-1) = -Inf */
 			/* log1p(x < 1, or x NaN) = qNaN: */
-			RETURNP((x - x) / (x - x));
+			RETURNF((x - x) / (x - x));
 		}
 		if (ax <= 0x3f8d) {	/* |x| < 2**-113 */
 			if ((int)x == 0)
-				RETURNP(x);	/* x with inexact if x != 0 */
+				RETURNF(x);	/* x with inexact if x != 0 */
 		}
 		f_hi = 1;
 		f_lo = x;
 	} else if (hx >= 0x7fff) {	/* x +Inf or non-neg NaN */
-		RETURNP(x + x);		/* log1p(Inf or NaN) = Inf or qNaN */
+		RETURNF(x + x);		/* log1p(Inf or NaN) = Inf or qNaN */
 	} else if (hx < 0x40e1) {	/* 1 <= x < 2**226 */
 		f_hi = x;
 		f_lo = 1;
@@ -667,7 +666,7 @@ log1pl(long double x)
 #endif
 
 	_3sumF(val_hi, val_lo, F_hi(i) + dk * ln2_hi);
-	RETURN2PI(val_hi, val_lo);
+	RETURNI(val_hi + val_lo);
 }
 
 #ifdef STRUCT_RETURN
@@ -678,7 +677,6 @@ logl(long double x)
 	struct ld r;
 
 	ENTERI();
-	DOPRINT_START(&x);
 	k_logl(x, &r);
 	RETURNSPI(&r);
 }
@@ -695,44 +693,40 @@ invln10_hi =  4.3429448176175356e-1,		/*  0x1bcb7b15000000.0p-54 */
 invln2_hi =  1.4426950402557850e0;		/*  0x17154765000000.0p-52 */
 static const long double
 invln10_lo =  1.41498268538580090791605082294397000e-10L,	/*  0x137287195355baaafad33dc323ee3.0p-145L */
-invln2_lo =  6.33178418956604368501892137426645911e-10L;	/*  0x15c17f0bbbe87fed0691d3e88eb57.0p-143L */
+invln2_lo =  6.33178418956604368501892137426645911e-10L,	/*  0x15c17f0bbbe87fed0691d3e88eb57.0p-143L */
+invln10_lo_plus_hi = invln10_lo + invln10_hi,
+invln2_lo_plus_hi = invln2_lo + invln2_hi;
 
 long double
 log10l(long double x)
 {
 	struct ld r;
-	long double lo;
-	float hi;
+	long double hi, lo;
 
 	ENTERI();
-	DOPRINT_START(&x);
 	k_logl(x, &r);
 	if (!r.lo_set)
-		RETURNPI(r.hi);
+		RETURNI(r.hi);
 	_2sumF(r.hi, r.lo);
-	hi = r.hi;
+	hi = (float)r.hi;
 	lo = r.lo + (r.hi - hi);
-	RETURN2PI(invln10_hi * hi,
-	    (invln10_lo + invln10_hi) * lo + invln10_lo * hi);
+	RETURNI(invln10_hi * hi + (invln10_lo_plus_hi * lo + invln10_lo * hi));
 }
 
 long double
 log2l(long double x)
 {
 	struct ld r;
-	long double lo;
-	float hi;
+	long double hi, lo;
 
 	ENTERI();
-	DOPRINT_START(&x);
 	k_logl(x, &r);
 	if (!r.lo_set)
-		RETURNPI(r.hi);
+		RETURNI(r.hi);
 	_2sumF(r.hi, r.lo);
-	hi = r.hi;
+	hi = (float)r.hi;
 	lo = r.lo + (r.hi - hi);
-	RETURN2PI(invln2_hi * hi,
-	    (invln2_lo + invln2_hi) * lo + invln2_lo * hi);
+	RETURNI(invln2_hi * hi + (invln2_lo_plus_hi * lo + invln2_lo * hi));
 }
 
 #endif /* STRUCT_RETURN */

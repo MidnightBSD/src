@@ -11,7 +11,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * fabs(x) returns the absolute value of x.
  */

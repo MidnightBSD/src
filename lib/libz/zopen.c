@@ -3,7 +3,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <stdio.h>
 #include <zlib.h>
 

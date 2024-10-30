@@ -1,6 +1,5 @@
 /*
  * lookup.c - Lookup IP address, HW address, netmask
- *
  */
 
 #include <sys/types.h>

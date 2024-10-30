@@ -25,7 +25,6 @@
  */
 
 #include <machine/asm.h>
-	
 ENTRY(llrint)
 	fldl	4(%esp)
 	subl	$8,%esp

@@ -1,3 +1,4 @@
+#
 # Early setup of MAKEOBJDIR
 #
 # Default format is: /usr/obj/usr/src/[${TARGET}.${TARGET_ARCH}/]bin/sh

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2007 David Schultz
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/endian.h>
@@ -65,14 +64,15 @@ _scan_nan(uint32_t *words, int num_words, const char *s)
 		;
 
 	/* Scan backwards, filling in the bits in words[] as we go. */
-#if _BYTE_ORDER == _LITTLE_ENDIAN
 	for (bitpos = 0; bitpos < 32 * num_words; bitpos += 4) {
-#else
-	for (bitpos = 32 * num_words - 4; bitpos >= 0; bitpos -= 4) {
-#endif
 		if (--si < 0)
 			break;
+#if _BYTE_ORDER == _LITTLE_ENDIAN
 		words[bitpos / 32] |= digittoint(s[si]) << (bitpos % 32);
+#else
+		words[num_words - 1 - bitpos / 32] |=
+		    digittoint(s[si]) << (bitpos % 32);
+#endif
 	}
 }
 

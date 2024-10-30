@@ -12,7 +12,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /* 
  * fmod(x,y)
  * Return x mod y in exact arithmetic

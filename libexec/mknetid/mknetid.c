@@ -55,11 +55,6 @@
 
 #include "hash.h"
 
-#ifndef lint
-static const char rcsid[] =
-  "$FreeBSD: stable/11/libexec/mknetid/mknetid.c 331722 2018-03-29 02:50:57Z eadler $";
-#endif /* not lint */
-
 #define LINSIZ 1024
 #define OPSYS "unix"
 

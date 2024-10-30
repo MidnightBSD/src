@@ -22,15 +22,16 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: stable/11/lib/libthr/arch/amd64/amd64/_umtx_op_err.S 217107 2011-01-07 16:09:33Z kib $
  */
 
 #include <sys/syscall.h>
 #include <machine/asm.h>
 
-#define	RSYSCALL_ERR(x)	ENTRY(__CONCAT(x, _err));		\
-			mov __CONCAT($SYS_,x),%rax; KERNCALL; ret; 
+#define	RSYSCALL_ERR(x)	ENTRY(__CONCAT(x, _err)); \
+			mov __CONCAT($SYS_,x),%rax; \
+			KERNCALL; \
+			ret; \
+			END(__CONCAT(x, _err));
 
 #define KERNCALL	movq %rcx, %r10; syscall
 

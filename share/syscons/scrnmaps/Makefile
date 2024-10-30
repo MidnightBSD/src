@@ -1,4 +1,5 @@
-# $FreeBSD$
+
+PACKAGE=	syscons-data
 
 SCRMAPS = armscii8-2haik8.scm \
 	  iso-8859-1_to_cp437.scm iso-8859-4_for_vga9.scm \
@@ -12,6 +13,7 @@ CLEANFILES+= ${SCRMAPS_MK} ${SCRMAPS}
 FILES=	${SCRMAPS}
 FILESDIR= ${SHAREDIR}/syscons/scrnmaps
 
+DEPENDOBJS+= ${SCRMAPS_MK}
 build-tools: ${SCRMAPS_MK}
 
 ${SCRMAPS}: ${.TARGET:R}.mk

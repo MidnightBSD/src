@@ -2,7 +2,6 @@
  * tzone.c - get the timezone
  *
  * This is shared by bootpd and bootpef
- *
  */
 
 #ifdef	SVR4

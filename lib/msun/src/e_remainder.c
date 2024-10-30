@@ -12,7 +12,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /* remainder(x,p)
  * Return :                  
  * 	returns  x REM p  =  x - [x/p]*p as if in infinite 

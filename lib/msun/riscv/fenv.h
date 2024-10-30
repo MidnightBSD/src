@@ -31,7 +31,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef	_FENV_H_
@@ -185,7 +184,7 @@ fegetenv(fenv_t *__envp)
 }
 
 __fenv_static inline int
-feholdexcept(fenv_t *__envp)
+feholdexcept(fenv_t *__envp __unused)
 {
 
 	/* No exception traps. */
@@ -217,24 +216,13 @@ feupdateenv(const fenv_t *__envp)
 
 #if __BSD_VISIBLE
 
-/* We currently provide no external definitions of the functions below. */
-
 #ifdef __riscv_float_abi_soft
 int feenableexcept(int __mask);
 int fedisableexcept(int __mask);
 int fegetexcept(void);
 #else
-static inline int
-feenableexcept(int __mask)
-{
-
-	/* No exception traps. */
-
-	return (-1);
-}
-
-static inline int
-fedisableexcept(int __mask)
+__fenv_static inline int
+feenableexcept(int __mask __unused)
 {
 
 	/* No exception traps. */
@@ -242,6 +230,16 @@ fedisableexcept(int __mask)
 	return (0);
 }
 
+__fenv_static inline int
+fedisableexcept(int __mask __unused)
+{
+
+	/* No exception traps. */
+
+	return (0);
+}
+
+/* We currently provide no external definition of fegetexcept(). */
 static inline int
 fegetexcept(void)
 {

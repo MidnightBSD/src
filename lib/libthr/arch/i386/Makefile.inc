@@ -1,4 +1,3 @@
-# $FreeBSD: stable/11/lib/libthr/arch/i386/Makefile.inc 286317 2015-08-05 12:53:55Z vangyzen $
 
 SRCS+=	_umtx_op_err.S
 

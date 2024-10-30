@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2014 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Andrew Turner under
  * sponsorship from the FreeBSD Foundation.
@@ -28,7 +27,6 @@
  */
 
 #include <machine/asm.h>
-
 ENTRY(.rtld_start)
 	mov	x19, x0		/* Put ps_strings in a callee-saved register */
 	mov	x20, sp		/* And the stack pointer */
@@ -54,7 +52,6 @@ END(.rtld_start)
  * x17 = &_rtld_bind_start
  */
 ENTRY(_rtld_bind_start)
-	.cfi_startproc
 	mov	x17, sp
 
 	/* Save frame pointer and SP */
@@ -113,7 +110,6 @@ ENTRY(_rtld_bind_start)
 
 	/* Call into the correct function */
 	br	x16
-	.cfi_endproc
 END(_rtld_bind_start)
 
 /*
@@ -127,10 +123,8 @@ END(_rtld_bind_start)
  * Resolver function for TLS symbols resolved at load time
  */
 ENTRY(_rtld_tlsdesc_static)
-	.cfi_startproc
 	ldr	x0, [x0, #8]
 	ret
-	.cfi_endproc
 END(_rtld_tlsdesc_static)
 
 /*
@@ -139,7 +133,6 @@ END(_rtld_tlsdesc_static)
  * Resolver function for weak and undefined TLS symbols
  */
 ENTRY(_rtld_tlsdesc_undef)
-	.cfi_startproc
 	str	x1, [sp, #-16]!
 	.cfi_adjust_cfa_offset	16
 
@@ -149,7 +142,6 @@ ENTRY(_rtld_tlsdesc_undef)
 
 	ldr	x1, [sp], #16
 	.cfi_adjust_cfa_offset 	-16
-	.cfi_endproc
 	ret
 END(_rtld_tlsdesc_undef)
 
@@ -159,8 +151,6 @@ END(_rtld_tlsdesc_undef)
  * Resolver function for TLS symbols from dlopen()
  */
 ENTRY(_rtld_tlsdesc_dynamic)
-	.cfi_startproc
-
 	/* Save registers used in fast path */
 	stp	x1,  x2, [sp, #(-2 * 16)]!
 	stp	x3,  x4, [sp, #(1 * 16)]
@@ -256,6 +246,5 @@ ENTRY(_rtld_tlsdesc_dynamic)
 	ldp	 x3,  x4, [sp, #16]
 	ldp	 x1,  x2, [sp], #(2 * 16)
 	.cfi_adjust_cfa_offset	-2 * 16
-	.cfi_endproc
 	ret
 END(_rtld_tlsdesc_dynamic)

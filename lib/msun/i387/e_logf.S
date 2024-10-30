@@ -4,7 +4,6 @@
  */
 
 #include <machine/asm.h>
-
 /* RCSID("$NetBSD: e_logf.S,v 1.2 1996/07/06 00:15:45 jtc Exp $") */
 
 ENTRY(logf)
@@ -12,5 +11,6 @@ ENTRY(logf)
 	flds	4(%esp)
 	fyl2x
 	ret
+END(logf)
 
 	.section .note.GNU-stack,"",%progbits
