@@ -25,7 +25,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.Dd July 11, 2023
+.Dd November 25, 2020
 .Dt GETLOCALBASE 3
 .Os
 .Sh NAME
@@ -51,10 +51,10 @@ If that does not exist then the
 .Va user.localbase
 sysctl is checked.
 If that also does not exist then the value of the
-.Dv LOCALBASE_PATH
+.Dv _PATH_LOCALBASE
 compile-time variable is used.
-If that is undefined then the system default,
-.Pa _PATH_LOCALBASE
+If that is undefined then the default of
+.Pa /usr/local
 is used.
 .Pp
 The contents of the string returned by the

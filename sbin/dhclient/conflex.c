@@ -43,7 +43,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <ctype.h>
 
 #include "dhcpd.h"

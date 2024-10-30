@@ -44,7 +44,6 @@ static char sccsid[] = "@(#)mount_nfs.c	8.11 (Berkeley) 5/4/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/linker.h>
 #include <sys/module.h>
@@ -60,15 +59,19 @@ static char sccsid[] = "@(#)mount_nfs.c	8.11 (Berkeley) 5/4/95";
 #include <rpcsvc/nfs_prot.h>
 #include <rpcsvc/mount.h>
 
-#include <nfsclient/nfs.h>
+#include <fs/nfs/nfsproto.h>
+#include <fs/nfs/nfsv4_errstr.h>
 
 #include <arpa/inet.h>
+#include <net/route.h>
+#include <net/if.h>
 
 #include <ctype.h>
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <netdb.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -135,7 +138,7 @@ enum tryret {
 
 static int	sec_name_to_num(const char *sec);
 static const char	*sec_num_to_name(int num);
-static int	getnfsargs(char *, struct iovec **iov, int *iovlen);
+static int	getnfsargs(char **, char **, struct iovec **iov, int *iovlen);
 /* void	set_rpc_maxgrouplist(int); */
 static struct netconfig *getnetconf_cached(const char *netid);
 static const char	*netidbytype(int af, int sotype);
@@ -152,11 +155,13 @@ main(int argc, char *argv[])
 	int c;
 	struct iovec *iov;
 	int num, iovlen;
-	char *mntname, *p, *spec, *tmp;
+	char *host, *mntname, *p, *spec, *tmp;
 	char mntpath[MAXPATHLEN], errmsg[255];
 	char hostname[MAXHOSTNAMELEN + 1], gssn[MAXHOSTNAMELEN + 50];
-	const char *gssname;
+	const char *gssname, *nmount_errstr;
+	bool softintr;
 
+	softintr = false;
 	iov = NULL;
 	iovlen = 0;
 	memset(errmsg, 0, sizeof(errmsg));
@@ -206,6 +211,7 @@ main(int argc, char *argv[])
 		case 'i':
 			printf("-i deprecated, use -o intr\n");
 			build_iovec(&iov, &iovlen, "intr", NULL, 0);
+			softintr = true;
 			break;
 		case 'L':
 			printf("-L deprecated, use -o nolockd\n");
@@ -362,6 +368,10 @@ main(int argc, char *argv[])
 						    "value -- %s", val);
 					}
 					pass_flag_to_nmount=0;
+				} else if (strcmp(opt, "soft") == 0) {
+					softintr = true;
+				} else if (strcmp(opt, "intr") == 0) {
+					softintr = true;
 				}
 				if (pass_flag_to_nmount) {
 					build_iovec(&iov, &iovlen, opt,
@@ -391,6 +401,7 @@ main(int argc, char *argv[])
 		case 's':
 			printf("-s deprecated, use -o soft\n");
 			build_iovec(&iov, &iovlen, "soft", NULL, 0);
+			softintr = true;
 			break;
 		case 'T':
 			nfsproto = IPPROTO_TCP;
@@ -429,6 +440,11 @@ main(int argc, char *argv[])
 		/* NOTREACHED */
 	}
 
+	/* Warn that NFSv4 mounts only work correctly as hard mounts. */
+	if (mountmode == V4 && softintr)
+		warnx("Warning, options soft and/or intr cannot be safely used"
+		    " for NFSv4. See the BUGS section of mount_nfs(8)");
+
 	spec = *argv++;
 	mntname = *argv;
 
@@ -457,7 +473,7 @@ main(int argc, char *argv[])
 		    __DECONST(void *, gssname), strlen(gssname) + 1);
 	}
 
-	if (!getnfsargs(spec, &iov, &iovlen))
+	if (!getnfsargs(&spec, &host, &iov, &iovlen))
 		exit(1);
 
 	/* resolve the mountpoint with realpath(3) */
@@ -468,9 +484,17 @@ main(int argc, char *argv[])
 	build_iovec(&iov, &iovlen, "fspath", mntpath, (size_t)-1);
 	build_iovec(&iov, &iovlen, "errmsg", errmsg, sizeof(errmsg));
 
-	if (nmount(iov, iovlen, 0))
-		err(1, "nmount: %s%s%s", mntpath, errmsg[0] ? ", " : "",
-		    errmsg);
+	if (nmount(iov, iovlen, 0)) {
+		nmount_errstr = nfsv4_geterrstr(errno);
+		if (mountmode == V4 && nmount_errstr != NULL)
+			errx(1, "nmount: %s, %s", mntpath, nmount_errstr);
+		else
+			err(1, "nmount: %s%s%s", mntpath, errmsg[0] ? ", " : "",
+			    errmsg);
+	} else if (mountmode != V4 && !add_mtab(host, spec)) {
+		/* Add mounted file system to PATH_MOUNTTAB */
+		warnx("can't update %s for %s:%s", PATH_MOUNTTAB, host, spec);
+	}
 
 	exit(0);
 }
@@ -505,16 +529,70 @@ sec_num_to_name(int flavor)
 	return (NULL);
 }
 
+/*
+ * Wait for RTM_IFINFO message with interface that is IFF_UP and with
+ * link on, or until timeout expires.  Returns seconds left.
+ */
+static time_t
+rtm_ifinfo_sleep(time_t sec)
+{
+	char buf[2048] __aligned(__alignof(struct if_msghdr));
+	fd_set rfds;
+	struct timeval tv, start;
+	ssize_t nread;
+	int n, s;
+
+	s = socket(PF_ROUTE, SOCK_RAW, 0);
+	if (s < 0)
+		err(EX_OSERR, "socket");
+	(void)gettimeofday(&start, NULL);
+
+	for (tv.tv_sec = sec, tv.tv_usec = 0;
+	    tv.tv_sec > 0;
+	    (void)gettimeofday(&tv, NULL),
+	    tv.tv_sec = sec - (tv.tv_sec - start.tv_sec)) {
+		FD_ZERO(&rfds);
+		FD_SET(s, &rfds);
+		n = select(s + 1, &rfds, NULL, NULL, &tv);
+		if (n == 0)
+			continue;
+		if (n == -1) {
+			if (errno == EINTR)
+				continue;
+			else
+				err(EX_SOFTWARE, "select");
+		}
+		nread = read(s, buf, 2048);
+		if (nread < 0)
+			err(EX_OSERR, "read");
+		if ((size_t)nread >= sizeof(struct if_msghdr)) {
+			struct if_msghdr *ifm;
+
+			ifm = (struct if_msghdr *)buf;
+			if (ifm->ifm_version == RTM_VERSION &&
+			    ifm->ifm_type == RTM_IFINFO &&
+			    (ifm->ifm_flags & IFF_UP) &&
+			    ifm->ifm_data.ifi_link_state != LINK_STATE_DOWN)
+				break;
+		}
+	}
+
+	close(s);
+
+	return (tv.tv_sec);
+}
+
 static int
-getnfsargs(char *spec, struct iovec **iov, int *iovlen)
+getnfsargs(char **specp, char **hostpp, struct iovec **iov, int *iovlen)
 {
 	struct addrinfo hints, *ai_nfs, *ai;
 	enum tryret ret;
 	int ecode, speclen, remoteerr, offset, have_bracket = 0;
-	char *hostp, *delimp, *errstr;
+	char *hostp, *delimp, *errstr, *spec;
 	size_t len;
 	static char nam[MNAMELEN + 1], pname[MAXHOSTNAMELEN + 5];
 
+	spec = *specp;
 	if (*spec == '[' && (delimp = strchr(spec + 1, ']')) != NULL &&
 	    *(delimp + 1) == ':') {
 		hostp = spec + 1;
@@ -646,14 +724,19 @@ getnfsargs(char *spec, struct iovec **iov, int *iovlen)
 			if (daemon(0, 0) != 0)
 				err(1, "daemon");
 		}
-		sleep(60);
+		/*
+		 * If rtm_ifinfo_sleep() returns non-zero, don't count
+		 * that as a retry attempt.
+		 */
+		if (rtm_ifinfo_sleep(60) && retrycnt != 0)
+			retrycnt++;
 	}
 	freeaddrinfo(ai_nfs);
 
 	build_iovec(iov, iovlen, "hostname", nam, (size_t)-1);
-	/* Add mounted file system to PATH_MOUNTTAB */
-	if (mountmode != V4 && !add_mtab(hostp, spec))
-		warnx("can't update %s for %s:%s", PATH_MOUNTTAB, hostp, spec);
+
+	*specp = spec;
+	*hostpp = hostp;
 	return (1);
 }
 

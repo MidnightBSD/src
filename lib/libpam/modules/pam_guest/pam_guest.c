@@ -35,7 +35,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <string.h>
 
 #define PAM_SM_AUTH

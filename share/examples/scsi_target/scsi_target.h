@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * SCSI Target Emulator
  *
@@ -26,8 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD$
  */
 
 #ifndef _SCSI_TARGET_H
@@ -117,7 +115,11 @@ extern void		free_ccb(union ccb *ccb);
 static __inline u_int	min(u_int a, u_int b) { return (a < b ? a : b); }
 
 /* Global Data */
-extern int notaio;
+extern int	notaio;
+extern int	debug;
+extern off_t	volume_size;
+extern u_int	sector_size;
+extern size_t	buf_size;
 
 /*
  * Compat Defines

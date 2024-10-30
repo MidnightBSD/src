@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Rui Paulo under sponsorship from the
  * FreeBSD Foundation.
@@ -30,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #define	_WANT_MIPS_REGNUM
 #include <sys/ptrace.h>
@@ -138,7 +136,7 @@ proc_regset(struct proc_handle *phdl, proc_reg_t reg, unsigned long regvalue)
 #elif defined(__i386__)
 		regs.r_esp = regvalue;
 #elif defined(__mips__)
-		regs.r_regs[PC] = regvalue;
+		regs.r_regs[SP] = regvalue;
 #elif defined(__powerpc__)
 		regs.fixreg[1] = regvalue;
 #elif defined(__riscv)

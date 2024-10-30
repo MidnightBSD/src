@@ -43,7 +43,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "dhcpd.h"
 #include "dhctoken.h"
 
@@ -198,7 +197,6 @@ void
 parse_client_statement(FILE *cfile, struct interface_info *ip,
     struct client_config *config)
 {
-	int		 token;
 	char		*val;
 	struct option	*option;
 	time_t		 tmp;
@@ -289,15 +287,11 @@ parse_client_statement(FILE *cfile, struct interface_info *ip,
 		parse_reject_statement(cfile, config);
 		return;
 	default:
-		parse_warn("expecting a statement.");
-		skip_to_semi(cfile);
 		break;
 	}
-	token = next_token(&val, cfile);
-	if (token != SEMI) {
-		parse_warn("semicolon expected.");
-		skip_to_semi(cfile);
-	}
+
+	parse_warn("expecting a statement.");
+	skip_to_semi(cfile);
 }
 
 unsigned
@@ -636,7 +630,7 @@ parse_client_lease_declaration(FILE *cfile, struct client_lease *lease,
 		if (token != STRING) {
 			parse_warn("expecting interface name (in quotes).");
 			skip_to_semi(cfile);
-			break;
+			return;
 		}
 		ip = interface_or_dummy(val);
 		*ipp = ip;
@@ -673,7 +667,7 @@ parse_client_lease_declaration(FILE *cfile, struct client_lease *lease,
 	default:
 		parse_warn("expecting lease declaration.");
 		skip_to_semi(cfile);
-		break;
+		return;
 	}
 	token = next_token(&val, cfile);
 	if (token != SEMI) {

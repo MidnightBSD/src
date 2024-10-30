@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009 Stanislav Sedov <stas@FreeBSD.org>
  * Copyright (c) 2017 Dell EMC
@@ -25,7 +25,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _LIBPROCSTAT_H_
@@ -63,7 +62,7 @@
 #define	PS_FST_TYPE_PIPE	4
 #define	PS_FST_TYPE_PTS		5
 #define	PS_FST_TYPE_KQUEUE	6
-#define	PS_FST_TYPE_CRYPTO	7
+/* was PS_FST_TYPE_CRYPTO	7 */
 #define	PS_FST_TYPE_MQUEUE	8
 #define	PS_FST_TYPE_SHM		9
 #define	PS_FST_TYPE_SEM		10
@@ -71,6 +70,7 @@
 #define	PS_FST_TYPE_NONE	12
 #define	PS_FST_TYPE_PROCDESC	13
 #define	PS_FST_TYPE_DEV		14
+#define	PS_FST_TYPE_EVENTFD	15
 
 /*
  * Special descriptor numbers.
@@ -101,6 +101,11 @@
 #define	PS_FST_FFLAG_DIRECT	0x1000
 #define	PS_FST_FFLAG_EXEC	0x2000
 #define	PS_FST_FFLAG_HASLOCK	0x4000
+
+#if !defined(__ILP32__) && !defined(__riscv)
+/* Target architecture supports 32-bit compat */
+#define	PS_ARCH_HAS_FREEBSD32	1
+#endif
 
 struct kinfo_kstack;
 struct kinfo_proc;
@@ -167,8 +172,33 @@ struct sockstat {
 
 STAILQ_HEAD(filestat_list, filestat);
 
+struct advlock {
+	int		rw;			/* PS_ADVLOCK_RO/RW */
+	int		type;			/* PS_ADVLOCK_TYPE_ */
+	int		pid;
+	int		sysid;
+	uint64_t	file_fsid;
+	uint64_t	file_rdev;
+	uint64_t	file_fileid;
+	off_t		start;
+	off_t		len;			/* len == 0 till the EOF */
+	const char	*path;
+	STAILQ_ENTRY(advlock)	next;
+};
+
+#define	PS_ADVLOCK_RO		0x01
+#define	PS_ADVLOCK_RW		0x02
+
+#define	PS_ADVLOCK_TYPE_FLOCK	0x01
+#define	PS_ADVLOCK_TYPE_PID	0x02
+#define	PS_ADVLOCK_TYPE_REMOTE	0x03
+
+STAILQ_HEAD(advlock_list, advlock);
+
 __BEGIN_DECLS
 void	procstat_close(struct procstat *procstat);
+void	procstat_freeadvlock(struct procstat *procstat,
+    struct advlock_list *advlocks);
 void	procstat_freeargv(struct procstat *procstat);
 #ifndef ZFS
 void	procstat_freeauxv(struct procstat *procstat, Elf_Auxinfo *auxv);
@@ -184,6 +214,7 @@ void	procstat_freeptlwpinfo(struct procstat *procstat,
     struct ptrace_lwpinfo *pl);
 void	procstat_freevmmap(struct procstat *procstat,
     struct kinfo_vmentry *vmmap);
+struct advlock_list	*procstat_getadvlock(struct procstat *procstat);
 struct filestat_list	*procstat_getfiles(struct procstat *procstat,
     struct kinfo_proc *kp, int mmapped);
 struct kinfo_proc	*procstat_getprocs(struct procstat *procstat,

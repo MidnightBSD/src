@@ -1,4 +1,3 @@
-/* $FreeBSD: stable/11/lib/libusb/libusb10_hotplug.c 357438 2020-02-03 11:05:14Z hselasky $ */
 /*-
  * Copyright (c) 2016-2019 Hans Petter Selasky. All rights reserved.
  *

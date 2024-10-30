@@ -33,9 +33,6 @@
 static const char copyright[] =
 "@(#) Copyright (c) 1983, 1993\n\
 	The Regents of the University of California.  All rights reserved.\n";
-#endif /* not lint */
-
-#ifndef lint
 #if 0
 static char sccsid[] = "@(#)ifconfig.c	8.2 (Berkeley) 2/16/94";
 #endif
@@ -43,6 +40,9 @@ static char sccsid[] = "@(#)ifconfig.c	8.2 (Berkeley) 2/16/94";
 
 #include <sys/param.h>
 #include <sys/ioctl.h>
+#ifdef JAIL
+#include <sys/jail.h>
+#endif
 #include <sys/module.h>
 #include <sys/linker.h>
 #include <sys/queue.h>
@@ -76,7 +76,11 @@ static char sccsid[] = "@(#)ifconfig.c	8.2 (Berkeley) 2/16/94";
 #include <string.h>
 #include <unistd.h>
 
+#include <libifconfig.h>
+
 #include "ifconfig.h"
+
+ifconfig_handle_t *lifh;
 
 /*
  * Since "struct ifreq" is composed of various union members, callers
@@ -113,7 +117,7 @@ static	void status(const struct afswtch *afp, const struct sockaddr_dl *sdl,
 static	void tunnel_status(int s);
 static _Noreturn void usage(void);
 
-static int getifflags(const char *ifname, int us);
+static int getifflags(const char *ifname, int us, bool err_ok);
 
 static struct afswtch *af_getbyname(const char *name);
 static struct afswtch *af_getbyfamily(int af);
@@ -186,12 +190,12 @@ usage(void)
 	}
 
 	fprintf(stderr,
-	"usage: ifconfig [-f type:format] %sinterface address_family\n"
+	"usage: ifconfig [-j jail] [-f type:format] %sinterface address_family\n"
 	"                [address [dest_address]] [parameters]\n"
-	"       ifconfig interface create\n"
-	"       ifconfig -a %s[-d] [-m] [-u] [-v] [address_family]\n"
-	"       ifconfig -l [-d] [-u] [address_family]\n"
-	"       ifconfig %s[-d] [-m] [-u] [-v]\n",
+	"       ifconfig [-j jail] interface create\n"
+	"       ifconfig [-j jail] -a %s[-d] [-m] [-u] [-v] [address_family]\n"
+	"       ifconfig [-j jail] -l [-d] [-u] [address_family]\n"
+	"       ifconfig [-j jail] %s[-d] [-m] [-u] [-v]\n",
 		options, options, options);
 	exit(1);
 }
@@ -204,12 +208,10 @@ ioctl_ifcreate(int s, struct ifreq *ifr)
 		case EEXIST:
 			errx(1, "interface %s already exists", ifr->ifr_name);
 		default:
-			err(1, "SIOCIFCREATE2");
+			err(1, "SIOCIFCREATE2 (%s)", ifr->ifr_name);
 		}
 	}
 }
-
-#define ORDERS_SIZE(x) sizeof(x) / sizeof(x[0])
 
 static int
 calcorders(struct ifaddrs *ifa, struct ifa_queue *q)
@@ -240,7 +242,7 @@ calcorders(struct ifaddrs *ifa, struct ifa_queue *q)
 		if (ifa->ifa_addr) {
 			af = ifa->ifa_addr->sa_family;
 
-			if (af < ORDERS_SIZE(cur->af_orders) &&
+			if (af < nitems(cur->af_orders) &&
 			    cur->af_orders[af] == 0)
 				cur->af_orders[af] = ++ord;
 		}
@@ -291,8 +293,7 @@ cmpifaddrs(struct ifaddrs *a, struct ifaddrs *b, struct ifa_queue *q)
 		af1 = a->ifa_addr->sa_family;
 		af2 = b->ifa_addr->sa_family;
 
-		if (af1 < ORDERS_SIZE(e1->af_orders) &&
-		    af2 < ORDERS_SIZE(e1->af_orders))
+		if (af1 < nitems(e1->af_orders) && af2 < nitems(e1->af_orders))
 			return (e1->af_orders[af1] - e1->af_orders[af2]);
 	}
 
@@ -302,14 +303,10 @@ cmpifaddrs(struct ifaddrs *a, struct ifaddrs *b, struct ifa_queue *q)
 static void freeformat(void)
 {
 
-	if (f_inet != NULL)
-		free(f_inet);
-	if (f_inet6 != NULL)
-		free(f_inet6);
-	if (f_ether != NULL)
-		free(f_ether);
-	if (f_addr != NULL)
-		free(f_addr);
+	free(f_inet);
+	free(f_inet6);
+	free(f_ether);
+	free(f_addr);
 }
 
 static void setformat(char *input)
@@ -319,9 +316,18 @@ static void setformat(char *input)
 	formatstr = strdup(input);
 	while ((category = strsep(&formatstr, ",")) != NULL) {
 		modifier = strchr(category, ':');
-		if (modifier == NULL || modifier[1] == '\0') {
-			warnx("Skipping invalid format specification: %s\n",
-			    category);
+		if (modifier == NULL) {
+			if (strcmp(category, "default") == 0) {
+				freeformat();
+			} else if (strcmp(category, "cidr") == 0) {
+				free(f_inet);
+				f_inet = strdup(category);
+				free(f_inet6);
+				f_inet6 = strdup(category);
+			} else {
+				warnx("Skipping invalid format: %s\n",
+				    category);
+			}
 			continue;
 		}
 
@@ -329,19 +335,22 @@ static void setformat(char *input)
 		modifier[0] = '\0';
 		modifier++;
 
-		if (strcmp(category, "addr") == 0)
+		if (strcmp(category, "addr") == 0) {
+			free(f_addr);
 			f_addr = strdup(modifier);
-		else if (strcmp(category, "ether") == 0)
+		} else if (strcmp(category, "ether") == 0) {
+			free(f_ether);
 			f_ether = strdup(modifier);
-		else if (strcmp(category, "inet") == 0)
+		} else if (strcmp(category, "inet") == 0) {
+			free(f_inet);
 			f_inet = strdup(modifier);
-		else if (strcmp(category, "inet6") == 0)
+		} else if (strcmp(category, "inet6") == 0) {
+			free(f_inet6);
 			f_inet6 = strdup(modifier);
+		}
 	}
 	free(formatstr);
 }
-
-#undef ORDERS_SIZE
 
 static struct ifaddrs *
 sortifaddrs(struct ifaddrs *list,
@@ -414,16 +423,25 @@ main(int argc, char *argv[])
 	struct ifreq paifr;
 	const struct sockaddr_dl *sdl;
 	char options[1024], *cp, *envformat, *namecp = NULL;
+#ifdef JAIL
+	char *jail_name = NULL;
+#endif
 	struct ifa_queue q = TAILQ_HEAD_INITIALIZER(q);
 	struct ifa_order_elt *cur, *tmp;
 	const char *ifname, *matchgroup, *nogroup;
 	struct option *p;
 	size_t iflen;
 	int flags;
+#ifdef JAIL
+        int jid;
+#endif
 
 	all = downonly = uponly = namesonly = noload = verbose = 0;
-	f_inet = f_inet6 = f_ether = f_addr = NULL;
 	matchgroup = nogroup = NULL;
+
+	lifh = ifconfig_open();
+	if (lifh == NULL)
+		err(EXIT_FAILURE, "ifconfig_open");
 
 	envformat = getenv("IFCONFIG_FORMAT");
 	if (envformat != NULL)
@@ -436,7 +454,7 @@ main(int argc, char *argv[])
 	atexit(printifnamemaybe);
 
 	/* Parse leading line options */
-	strlcpy(options, "G:adf:klmnuv", sizeof(options));
+	strlcpy(options, "G:adf:j:klmnuv", sizeof(options));
 	for (p = opts; p != NULL; p = p->next)
 		strlcat(options, p->opt, sizeof(options));
 	while ((c = getopt(argc, argv, options)) != -1) {
@@ -456,6 +474,15 @@ main(int argc, char *argv[])
 			if (optarg == NULL || all == 0)
 				usage();
 			nogroup = optarg;
+			break;
+		case 'j':
+#ifdef JAIL
+			if (optarg == NULL)
+				usage();
+			jail_name = optarg;
+#else
+			Perror("not built with jail support");
+#endif
 			break;
 		case 'k':
 			printkeys++;
@@ -508,6 +535,16 @@ main(int argc, char *argv[])
 	/* no arguments is equivalent to '-a' */
 	if (!namesonly && argc < 1)
 		all = 1;
+
+#ifdef JAIL
+	if (jail_name) {
+		jid = jail_getid(jail_name);
+		if (jid == -1)
+			Perror("jail not found");
+		if (jail_attach(jid) != 0)
+			Perror("cannot attach to jail");
+	}
+#endif
 
 	/* -a and -l allow an address family arg to limit the output */
 	if (all || namesonly) {
@@ -601,7 +638,7 @@ main(int argc, char *argv[])
 		if (iflen >= sizeof(name)) {
 			warnx("%s: interface name too long, skipping", ifname);
 		} else {
-			flags = getifflags(name, -1);
+			flags = getifflags(name, -1, false);
 			if (!(((flags & IFF_CANTCONFIG) != 0) ||
 				(downonly && (flags & IFF_UP) != 0) ||
 				(uponly && (flags & IFF_UP) == 0)))
@@ -697,6 +734,7 @@ main(int argc, char *argv[])
 
 done:
 	freeformat();
+	ifconfig_close(lifh);
 	exit(exit_code);
 }
 
@@ -997,7 +1035,7 @@ top:
 	 * Do any post argument processing required by the address family.
 	 */
 	if (afp->af_postproc != NULL)
-		afp->af_postproc(s, afp);
+		afp->af_postproc(s, afp, newaddr, getifflags(name, s, true));
 	/*
 	 * Do deferred callbacks registered while processing
 	 * command-line arguments.
@@ -1176,7 +1214,7 @@ setifdstaddr(const char *addr, int param __unused, int s,
 }
 
 static int
-getifflags(const char *ifname, int us)
+getifflags(const char *ifname, int us, bool err_ok)
 {
 	struct ifreq my_ifr;
 	int s;
@@ -1189,8 +1227,10 @@ getifflags(const char *ifname, int us)
 	} else
 		s = us;
  	if (ioctl(s, SIOCGIFFLAGS, (caddr_t)&my_ifr) < 0) {
- 		Perror("ioctl (SIOCGIFFLAGS)");
- 		exit(1);
+		if (!err_ok) {
+			Perror("ioctl (SIOCGIFFLAGS)");
+			exit(1);
+		}
  	}
 	if (us < 0)
 		close(s);
@@ -1208,7 +1248,7 @@ setifflags(const char *vname, int value, int s, const struct afswtch *afp)
 	struct ifreq		my_ifr;
 	int flags;
 
-	flags = getifflags(name, s);
+	flags = getifflags(name, s, false);
 	if (value < 0) {
 		value = -value;
 		flags &= ~value;
@@ -1238,6 +1278,9 @@ setifcap(const char *vname, int value, int s, const struct afswtch *afp)
 	} else
 		flags |= value;
 	flags &= ifr.ifr_reqcap;
+	/* Check for no change in capabilities. */
+	if (ifr.ifr_curcap == flags)
+		return;
 	ifr.ifr_reqcap = flags;
 	if (ioctl(s, SIOCSIFCAP, (caddr_t)&ifr) < 0)
 		Perror(vname);
@@ -1355,8 +1398,8 @@ unsetifdescr(const char *val, int value, int s, const struct afswtch *afp)
 "\020\1RXCSUM\2TXCSUM\3NETCONS\4VLAN_MTU\5VLAN_HWTAGGING\6JUMBO_MTU\7POLLING" \
 "\10VLAN_HWCSUM\11TSO4\12TSO6\13LRO\14WOL_UCAST\15WOL_MCAST\16WOL_MAGIC" \
 "\17TOE4\20TOE6\21VLAN_HWFILTER\23VLAN_HWTSO\24LINKSTATE\25NETMAP" \
-"\26RXCSUM_IPV6\27TXCSUM_IPV6\31TXRTLMT\32HWRXTSTMP" \
-"\36VXLAN_HWCSUM\37VXLAN_HWTSO"
+"\26RXCSUM_IPV6\27TXCSUM_IPV6\31TXRTLMT\32HWRXTSTMP\33NOMAP\34TXTLS4\35TXTLS6" \
+"\36VXLAN_HWCSUM\37VXLAN_HWTSO\40TXTLS_RTLMT"
 
 /*
  * Print the status of the interface.  If an address family was
@@ -1512,7 +1555,7 @@ printb(const char *s, unsigned v, const char *bits)
 		bits++;
 		putchar('<');
 		while ((i = *bits++) != '\0') {
-			if (v & (1 << (i-1))) {
+			if (v & (1u << (i-1))) {
 				if (any)
 					putchar(',');
 				any = 1;
@@ -1558,11 +1601,13 @@ ifmaybeload(const char *name)
 
 	/* trim the interface number off the end */
 	strlcpy(ifname, name, sizeof(ifname));
-	for (dp = ifname; *dp != 0; dp++)
-		if (isdigit(*dp)) {
-			*dp = 0;
+	dp = ifname + strlen(ifname) - 1;
+	for (; dp > ifname; dp--) {
+		if (isdigit(*dp))
+			*dp = '\0';
+		else
 			break;
-		}
+	}
 
 	/* Either derive it from the map or guess otherwise */
 	*ifkind = '\0';
@@ -1656,6 +1701,8 @@ static struct cmd basic_cmds[] = {
 	DEF_CMD("-link2",	-IFF_LINK2,	setifflags),
 	DEF_CMD("monitor",	IFF_MONITOR,	setifflags),
 	DEF_CMD("-monitor",	-IFF_MONITOR,	setifflags),
+	DEF_CMD("mextpg",	IFCAP_MEXTPG,	setifcap),
+	DEF_CMD("-mextpg",	-IFCAP_MEXTPG,	setifcap),
 	DEF_CMD("staticarp",	IFF_STATICARP,	setifflags),
 	DEF_CMD("-staticarp",	-IFF_STATICARP,	setifflags),
 	DEF_CMD("rxcsum6",	IFCAP_RXCSUM_IPV6,	setifcap),
@@ -1682,6 +1729,8 @@ static struct cmd basic_cmds[] = {
 	DEF_CMD("-toe",		-IFCAP_TOE,	setifcap),
 	DEF_CMD("lro",		IFCAP_LRO,	setifcap),
 	DEF_CMD("-lro",		-IFCAP_LRO,	setifcap),
+	DEF_CMD("txtls",	IFCAP_TXTLS,	setifcap),
+	DEF_CMD("-txtls",	-IFCAP_TXTLS,	setifcap),
 	DEF_CMD("wol",		IFCAP_WOL,	setifcap),
 	DEF_CMD("-wol",		-IFCAP_WOL,	setifcap),
 	DEF_CMD("wol_ucast",	IFCAP_WOL_UCAST,	setifcap),
@@ -1692,6 +1741,8 @@ static struct cmd basic_cmds[] = {
 	DEF_CMD("-wol_magic",	-IFCAP_WOL_MAGIC,	setifcap),
 	DEF_CMD("txrtlmt",	IFCAP_TXRTLMT,	setifcap),
 	DEF_CMD("-txrtlmt",	-IFCAP_TXRTLMT,	setifcap),
+	DEF_CMD("txtlsrtlmt",	IFCAP_TXTLS_RTLMT,	setifcap),
+	DEF_CMD("-txtlsrtlmt",	-IFCAP_TXTLS_RTLMT,	setifcap),
 	DEF_CMD("hwrxtstmp",	IFCAP_HWRXTSTMP,	setifcap),
 	DEF_CMD("-hwrxtstmp",	-IFCAP_HWRXTSTMP,	setifcap),
 	DEF_CMD("normal",	-IFF_LINK0,	setifflags),

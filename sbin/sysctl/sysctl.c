@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/time.h>
 #include <sys/resource.h>
@@ -70,7 +69,7 @@ static int	oidfmt(int *, int, char *, u_int *);
 static int	parsefile(const char *);
 static int	parse(const char *, int);
 static int	show_var(int *, int, bool);
-static int	sysctl_all(int *oid, int len);
+static int	sysctl_all(int *, int);
 static int	name2oid(const char *, int *);
 
 static int	strIKtoi(const char *, char **, const char *);
@@ -711,6 +710,29 @@ S_input_id(size_t l2, void *p)
 	return (0);
 }
 
+static int
+S_pagesizes(size_t l2, void *p)
+{
+	char buf[256];
+	u_long *ps;
+	size_t l;
+	int i;
+
+	l = snprintf(buf, sizeof(buf), "{ ");
+	ps = p;
+	for (i = 0; i * sizeof(*ps) < l2 && ps[i] != 0 && l < sizeof(buf);
+	    i++) {
+		l += snprintf(&buf[l], sizeof(buf) - l,
+		    "%s%lu", i == 0 ? "" : ", ", ps[i]);
+	}
+	if (l < sizeof(buf))
+		(void)snprintf(&buf[l], sizeof(buf) - l, " }");
+
+	printf("%s", buf);
+
+	return (0);
+}
+
 #ifdef __amd64__
 static int
 S_efi_map(size_t l2, void *p)
@@ -1006,7 +1028,8 @@ show_var(int *oid, int nlen, bool honor_skip)
 	}
 
 	/* keep track of encountered skip nodes, ignoring descendants */
-	if (skip_len == 0 && (kind & CTLFLAG_SKIP) != 0) {
+	if ((skip_len == 0 || skip_len >= nlen * (int)sizeof(int)) &&
+	    (kind & CTLFLAG_SKIP) != 0) {
 		/* Save this oid so we can skip descendants. */
 		skip_len = nlen * sizeof(int);
 		memcpy(skip_oid, oid, skip_len);
@@ -1033,6 +1056,8 @@ show_var(int *oid, int nlen, bool honor_skip)
 			func = S_vmtotal;
 		else if (strcmp(fmt, "S,input_id") == 0)
 			func = S_input_id;
+		else if (strcmp(fmt, "S,pagesizes") == 0)
+			func = S_pagesizes;
 #ifdef __amd64__
 		else if (strcmp(fmt, "S,efi_map_header") == 0)
 			func = S_efi_map;
@@ -1201,7 +1226,6 @@ sysctl_all(int *oid, int len)
 	int name1[22], name2[22];
 	int i, j;
 	size_t l1, l2;
-	bool honor_skip = false;
 
 	name1[0] = CTL_SYSCTL;
 	name1[1] = (oid != NULL || Nflag || dflag || tflag) ?
@@ -1232,12 +1256,11 @@ sysctl_all(int *oid, int len)
 		if (memcmp(name2, oid, len * sizeof(int)) != 0)
 			return (0);
 
-		i = show_var(name2, l2, honor_skip);
+		i = show_var(name2, l2, true);
 		if (!i && !bflag)
 			putchar('\n');
 
 		memcpy(name1 + 2, name2, l2 * sizeof(int));
 		l1 = 2 + l2;
-		honor_skip = true;
 	}
 }

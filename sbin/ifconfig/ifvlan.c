@@ -4,7 +4,7 @@
  * Copyright (c) 1999 Bill Paul <wpaul@ctr.columbia.edu>
  * Copyright (c) 2012 ADARA Networks, Inc.
  * All rights reserved.
-  *
+ *
  * Portions of this software were developed by Robert N. M. Watson under
  * contract to ADARA Networks, Inc.
  *
@@ -61,8 +61,13 @@
 
 #define	NOTAG	((u_short) -1)
 
+static const char proto_8021Q[]  = "802.1q";
+static const char proto_8021ad[] = "802.1ad";
+static const char proto_qinq[] = "qinq";
+
 static 	struct vlanreq params = {
 	.vlr_tag	= NOTAG,
+	.vlr_proto	= ETHERTYPE_VLAN,
 };
 
 static int
@@ -82,6 +87,17 @@ vlan_status(int s)
 	if (getvlan(s, &ifr, &vreq) == -1)
 		return;
 	printf("\tvlan: %d", vreq.vlr_tag);
+	printf(" vlanproto: ");
+	switch (vreq.vlr_proto) {
+		case ETHERTYPE_VLAN:
+			printf(proto_8021Q);
+			break;
+		case ETHERTYPE_QINQ:
+			printf(proto_8021ad);
+			break;
+		default:
+			printf("0x%04x", vreq.vlr_proto);
+	}
 	if (ioctl(s, SIOCGVLANPCP, (caddr_t)&ifr) != -1)
 		printf(" vlanpcp: %u", ifr.ifr_vlan_pcp);
 	printf(" parent interface: %s", vreq.vlr_parent[0] == '\0' ?
@@ -89,9 +105,58 @@ vlan_status(int s)
 	printf("\n");
 }
 
+static int
+vlan_match_ethervid(const char *name)
+{
+	return (strchr(name, '.') != NULL);
+}
+
+static void
+vlan_parse_ethervid(const char *name)
+{
+	char ifname[IFNAMSIZ];
+	char *cp;
+	unsigned int vid;
+
+	strlcpy(ifname, name, IFNAMSIZ);
+	if ((cp = strrchr(ifname, '.')) == NULL)
+		return;
+	/*
+	 * Derive params from interface name: "parent.vid".
+	 */
+	*cp++ = '\0';
+	if ((*cp < '1') || (*cp > '9'))
+		errx(1, "invalid vlan tag");
+
+	vid = *cp++ - '0';
+	while ((*cp >= '0') && (*cp <= '9')) {
+		vid = (vid * 10) + (*cp++ - '0');
+		if (vid >= 0xFFF)
+			errx(1, "invalid vlan tag");
+	}
+	if (*cp != '\0')
+		errx(1, "invalid vlan tag");
+
+	/*
+	 * allow "devX.Y vlandev devX vlan Y" syntax
+	 */
+	if (params.vlr_tag == NOTAG || params.vlr_tag == vid)
+		params.vlr_tag = vid;
+	else
+		errx(1, "ambiguous vlan specification");
+
+	/* Restrict overriding interface name */
+	if (params.vlr_parent[0] == '\0' || !strcmp(params.vlr_parent, ifname))
+		strlcpy(params.vlr_parent, ifname, IFNAMSIZ);
+	else
+		errx(1, "ambiguous vlan specification");
+}
+
 static void
 vlan_create(int s, struct ifreq *ifr)
 {
+	vlan_parse_ethervid(ifr->ifr_name);
+
 	if (params.vlr_tag != NOTAG || params.vlr_parent[0] != '\0') {
 		/*
 		 * One or both parameters were specified, make sure both.
@@ -153,6 +218,24 @@ DECL_CMD_FUNC(setvlandev, val, d)
 }
 
 static
+DECL_CMD_FUNC(setvlanproto, val, d)
+{
+	struct vlanreq vreq;
+
+	if (strncasecmp(proto_8021Q, val,
+	    strlen(proto_8021Q)) == 0) {
+		params.vlr_proto = ETHERTYPE_VLAN;
+	} else if ((strncasecmp(proto_8021ad, val, strlen(proto_8021ad)) == 0)
+	    || (strncasecmp(proto_qinq, val, strlen(proto_qinq)) == 0)) {
+		params.vlr_proto = ETHERTYPE_QINQ;
+	} else
+		errx(1, "invalid value for vlanproto");
+
+	if (getvlan(s, &ifr, &vreq) != -1)
+		vlan_set(s, &ifr);
+}
+
+static
 DECL_CMD_FUNC(setvlanpcp, val, d)
 {
 	u_long ul;
@@ -189,10 +272,12 @@ DECL_CMD_FUNC(unsetvlandev, val, d)
 static struct cmd vlan_cmds[] = {
 	DEF_CLONE_CMD_ARG("vlan",			setvlantag),
 	DEF_CLONE_CMD_ARG("vlandev",			setvlandev),
+	DEF_CLONE_CMD_ARG("vlanproto",			setvlanproto),
 	DEF_CMD_ARG("vlanpcp",				setvlanpcp),
 	/* NB: non-clone cmds */
 	DEF_CMD_ARG("vlan",				setvlantag),
 	DEF_CMD_ARG("vlandev",				setvlandev),
+	DEF_CMD_ARG("vlanproto",			setvlanproto),
 	/* XXX For compatibility.  Should become DEF_CMD() some day. */
 	DEF_CMD_OPTARG("-vlandev",			unsetvlandev),
 	DEF_CMD("vlanmtu",	IFCAP_VLAN_MTU,		setifcap),
@@ -221,5 +306,6 @@ vlan_ctor(void)
 		cmd_register(&vlan_cmds[i]);
 	af_register(&af_vlan);
 	callback_register(vlan_cb, NULL);
-	clone_setdefcallback("vlan", vlan_create);
+	clone_setdefcallback_prefix("vlan", vlan_create);
+	clone_setdefcallback_filter(vlan_match_ethervid, vlan_create);
 }

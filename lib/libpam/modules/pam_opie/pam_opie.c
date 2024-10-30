@@ -38,7 +38,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <opie.h>
 #include <pwd.h>

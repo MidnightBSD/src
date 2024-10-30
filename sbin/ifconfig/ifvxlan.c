@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
@@ -640,5 +639,5 @@ vxlan_ctor(void)
 		cmd_register(&vxlan_cmds[i]);
 	af_register(&af_vxlan);
 	callback_register(vxlan_cb, NULL);
-	clone_setdefcallback("vxlan", vxlan_create);
+	clone_setdefcallback_prefix("vxlan", vxlan_create);
 }

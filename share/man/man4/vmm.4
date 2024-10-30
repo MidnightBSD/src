@@ -22,16 +22,13 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man4/vmm.4 327974 2018-01-14 20:23:44Z eadler $
-.\"
-.Dd December 19, 2013
+.Dd March 6, 2024
 .Dt VMM 4
 .Os
 .Sh NAME
 .Nm vmm.ko
 .Nd "bhyve virtual machine monitor"
 .Sh SYNOPSIS
-.Pp
 To load the driver as a module at boot, add this line to
 .Xr loader.conf 5 :
 .Bd -literal -offset indent
@@ -47,7 +44,7 @@ kldload vmm
 .Nm
 provides the kernel portion of the
 .Xr bhyve 4
-hypervisor. 
+hypervisor.
 .Pp
 An Intel CPU with VT-x/EPT or AMD CPU with SVM support is required.
 .Pp
@@ -73,6 +70,19 @@ See the
 .Sx EXAMPLES
 section below for sample usage.
 .Pp
+Note that
+.Nm vmm
+must be given first the right of refusal to all
+.Xr pci 4
+devices it may need to claim.
+As a result, the
+.Nm vmm
+kernel module almost certainly needs to be loaded from
+.Xr loader.conf 5
+rather than by adding it to
+.Va kld_list in
+.Xr rc.conf 5 .
+.Pp
 A large number of PCI device entries may require a string longer than the
 128-character limit of
 .Xr loader.conf 5
@@ -82,6 +92,16 @@ The
 and
 .Va pptdevs3
 variables can be used for additional entries.
+.Sh LOADER TUNABLES
+Tunables can be set at the
+.Xr loader 8
+prompt before booting the kernel or stored in
+.Xr loader.conf 5 .
+.Bl -tag -width indent
+.It Va hw.vmm.maxcpu
+Maximum number of virtual CPUs.
+The default is the number of physical CPUs in the system.
+.El
 .Sh EXAMPLES
 Reserve three PCI devices for use by the hypervisor: bus 10 slot 0 function 0,
 bus 6 slot 5 function 0, and bus 6 slot 5 function 1.

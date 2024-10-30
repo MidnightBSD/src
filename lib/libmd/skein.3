@@ -23,8 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\"
-.Dd May 28, 2016
+.Dd May 21, 2019
 .Dt SKEIN 3
 .Os
 .Sh NAME
@@ -132,8 +131,7 @@ is a wrapper for
 .Fn SKEIN256_Final
 which converts the return value to a 33-character
 (including the terminating '\e0')
-.Tn ASCII
-string which represents the 256 bits in hexadecimal.
+ASCII string which represents the 256 bits in hexadecimal.
 .Pp
 .Fn SKEIN256_File
 calculates the digest of a file, and uses
@@ -187,6 +185,26 @@ functions are similar to the
 .Li SKEIN256_
 functions except they produce a 512-bit, 65 character,
 or 1024-bit, 129 character, output.
+.Sh ERRORS
+The
+.Fn SKEIN256_End
+function called with a null buf argument may fail and return NULL if:
+.Bl -tag -width Er
+.It Bq Er ENOMEM
+Insufficient storage space is available.
+.El
+.Pp
+The
+.Fn SKEIN256_File
+and
+.Fn SKEIN256_FileChunk
+may return NULL when underlying
+.Xr open 2 ,
+.Xr fstat 2 ,
+.Xr lseek 2 ,
+or
+.Xr SKEIN256_End 2
+fail.
 .Sh SEE ALSO
 .Xr md4 3 ,
 .Xr md5 3 ,
@@ -199,15 +217,15 @@ These functions appeared in
 .Fx 11.0 .
 .Sh AUTHORS
 .An -nosplit
-The core hash routines were imported from version 1.3 of the optimized 
+The core hash routines were imported from version 1.3 of the optimized
 Skein reference implementation written by
 .An Doug Whiting
 as submitted to the NSA SHA-3 contest.
 The algorithms were developed by
-.An Niels Ferguson , 
+.An Niels Ferguson ,
 .An Stefan Lucks ,
-.An Bruce Schneier , 
-.An Doug Whiting , 
+.An Bruce Schneier ,
+.An Doug Whiting ,
 .An Mihir Bellare ,
 .An Tadayoshi Kohno ,
 .An Jon Callas,

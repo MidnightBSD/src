@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2020 Yandex LLC
  * Copyright (c) 2020 Andrey V. Elsukov <ae@FreeBSD.org>
@@ -24,8 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD$
  */
 
 #pragma D depends_on provider ipfw
@@ -68,17 +66,29 @@ inline string ipfw_retcodes[int ret] =
 
 /* ip_fw_args flags */
 #pragma D binding "1.0" IPFW_ARGS_ETHER
-inline int IPFW_ARGS_ETHER =	0x0001; /* valid ethernet header */
+inline int IPFW_ARGS_ETHER =	0x00010000; /* valid ethernet header */
 #pragma D binding "1.0" IPFW_ARGS_NH4
-inline int IPFW_ARGS_NH4 =	0x0002; /* IPv4 next hop in hopstore */
+inline int IPFW_ARGS_NH4 =	0x00020000; /* IPv4 next hop in hopstore */
 #pragma D binding "1.0" IPFW_ARGS_NH6
-inline int IPFW_ARGS_NH6 =	0x0004; /* IPv6 next hop in hopstore */
+inline int IPFW_ARGS_NH6 =	0x00040000; /* IPv6 next hop in hopstore */
 #pragma D binding "1.0" IPFW_ARGS_NH4PTR
-inline int IPFW_ARGS_NH4PTR =	0x0008; /* IPv4 next hop in next_hop */
+inline int IPFW_ARGS_NH4PTR =	0x00080000; /* IPv4 next hop in next_hop */
 #pragma D binding "1.0" IPFW_ARGS_NH6PTR
-inline int IPFW_ARGS_NH6PTR =	0x0010; /* IPv6 next hop in next_hop6 */
+inline int IPFW_ARGS_NH6PTR =	0x00100000; /* IPv6 next hop in next_hop6 */
 #pragma D binding "1.0" IPFW_ARGS_REF
-inline int IPFW_ARGS_REF =	0x0020; /* valid ipfw_rule_ref	*/
+inline int IPFW_ARGS_REF =	0x00200000; /* valid ipfw_rule_ref	*/
+#pragma D binding "1.0" IPFW_ARGS_IN
+inline int IPFW_ARGS_IN =	0x00400000; /* called on input */
+#pragma D binding "1.0" IPFW_ARGS_OUT	
+inline int IPFW_ARGS_OUT =	0x00800000; /* called on output */
+#pragma D binding "1.0" IPFW_ARGS_IP4
+inline int IPFW_ARGS_IP4 =	0x01000000; /* belongs to v4 ISR */
+#pragma D binding "1.0" IPFW_ARGS_IP6
+inline int IPFW_ARGS_IP6 =	0x02000000; /* belongs to v6 ISR */
+#pragma D binding "1.0" IPFW_ARGS_DROP
+inline int IPFW_ARGS_DROP =	0x04000000; /* drop it (dummynet) */
+#pragma D binding "1.0" IPFW_ARGS_LENMASK
+inline int IPFW_ARGS_LENMASK =	0x0000ffff; /* length of data in *mem */
 
 /* ipfw_rule_ref.info */
 #pragma D binding "1.0" IPFW_INFO_MASK
@@ -135,13 +145,17 @@ typedef struct ipfw_match_info {
 #pragma D binding "1.0" translator
 translator ipfw_match_info_t < struct ip_fw_args *p > {
 	flags =		p->flags;
-	m =		p->m;
-	mem =		NULL;
+	m =		(p->flags & IPFW_ARGS_LENMASK) ? NULL : p->m;
+	mem =		(p->flags & IPFW_ARGS_LENMASK) ? p->mem : NULL;
 	inp =		p->inp;
-	ifp =		p->oif;
+	ifp =		p->ifp;
 	/* Initialize IP pointer corresponding to addr_type */
-	ipp =		(p->m != NULL) ? (struct ip *)p->m->m_data : NULL;
-	ip6p =		(p->m != NULL) ? (struct ip6_hdr *)p->m->m_data : NULL;
+	ipp =		(p->flags & IPFW_ARGS_IP4) ?
+	    (p->flags & IPFW_ARGS_LENMASK) ? (struct ip *)p->mem :
+	    (p->m != NULL) ? (struct ip *)p->m->m_data : NULL : NULL;
+	ip6p =		(p->flags & IPFW_ARGS_IP6) ?
+	    (p->flags & IPFW_ARGS_LENMASK) ? (struct ip6_hdr *)p->mem :
+	    (p->m != NULL) ? (struct ip6_hdr *)p->m->m_data : NULL : NULL;
 
 	/* fill f_id fields */
 	addr_type =	p->f_id.addr_type;

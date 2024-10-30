@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2017 Kyle J. Kneitinger <kyle@kneit.in>
  *
@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/mount.h>
 #include <errno.h>
@@ -66,24 +65,25 @@ usage(bool explicit)
 
 	fp =  explicit ? stdout : stderr;
 	fprintf(fp, "%s",
-	    "Usage:\tbectl {-h | -? | subcommand [args...]}\n"
+	    "Usage:\tbectl {-h | subcommand [args...]}\n"
 #if SOON
-	    "\tbectl add (path)*\n"
+	    "\tbectl [-r beroot] add (path)*\n"
 #endif
-	    "\tbectl activate [-t] beName\n"
-	    "\tbectl check\n"
-	    "\tbectl create [-r] [-e {nonActiveBe | beName@snapshot}] beName\n"
-	    "\tbectl create [-r] beName@snapshot\n"
-	    "\tbectl destroy [-F] {beName | beName@snapshot}\n"
-	    "\tbectl export sourceBe\n"
-	    "\tbectl import targetBe\n"
-	    "\tbectl jail [-bU] [{-o key=value | -u key}]... beName\n"
+	    "\tbectl [-r beroot] activate [-t] beName\n"
+	    "\tbectl [-r beroot] activate [-T]\n"
+	    "\tbectl [-r beroot] check\n"
+	    "\tbectl [-r beroot] create [-r] [-e {nonActiveBe | beName@snapshot}] beName\n"
+	    "\tbectl [-r beroot] create [-r] beName@snapshot\n"
+	    "\tbectl [-r beroot] destroy [-Fo] {beName | beName@snapshot}\n"
+	    "\tbectl [-r beroot] export sourceBe\n"
+	    "\tbectl [-r beroot] import targetBe\n"
+	    "\tbectl [-r beroot] jail [-bU] [{-o key=value | -u key}]... beName\n"
 	    "\t      [utility [argument ...]]\n"
-	    "\tbectl list [-aDHs] [{-c property | -C property}]\n"
-	    "\tbectl mount beName [mountpoint]\n"
-	    "\tbectl rename origBeName newBeName\n"
-	    "\tbectl {ujail | unjail} {jailID | jailName | beName}\n"
-	    "\tbectl {umount | unmount} [-f] beName\n");
+	    "\tbectl [-r beroot] list [-aDHs] [{-c property | -C property}]\n"
+	    "\tbectl [-r beroot] mount beName [mountpoint]\n"
+	    "\tbectl [-r beroot] rename origBeName newBeName\n"
+	    "\tbectl [-r beroot] {ujail | unjail} {jailID | jailName | beName}\n"
+	    "\tbectl [-r beroot] {umount | unmount} [-f] beName\n");
 
 	return (explicit ? 0 : EX_USAGE);
 }
@@ -115,7 +115,9 @@ static struct command_map_entry command_map[] =
 	{ "mount",    bectl_cmd_mount,   false   },
 	{ "rename",   bectl_cmd_rename,  false   },
 	{ "unjail",   bectl_cmd_unjail,  false   },
+	{ "ujail",    bectl_cmd_unjail,  false   },
 	{ "unmount",  bectl_cmd_unmount, false   },
+	{ "umount",   bectl_cmd_unmount, false   },
 	{ "check",    bectl_cmd_check,   true    },
 };
 
@@ -136,13 +138,21 @@ static int
 bectl_cmd_activate(int argc, char *argv[])
 {
 	int err, opt;
-	bool temp;
+	bool temp, reset;
 
 	temp = false;
-	while ((opt = getopt(argc, argv, "t")) != -1) {
+	reset = false;
+	while ((opt = getopt(argc, argv, "tT")) != -1) {
 		switch (opt) {
 		case 't':
+			if (reset)
+				return (usage(false));
 			temp = true;
+			break;
+		case 'T':
+			if (temp)
+				return (usage(false));
+			reset = true;
 			break;
 		default:
 			fprintf(stderr, "bectl activate: unknown option '-%c'\n",
@@ -154,11 +164,18 @@ bectl_cmd_activate(int argc, char *argv[])
 	argc -= optind;
 	argv += optind;
 
-	if (argc != 1) {
+	if (argc != 1 && (!reset || argc != 0)) {
 		fprintf(stderr, "bectl activate: wrong number of arguments\n");
 		return (usage(false));
 	}
 
+	if (reset) {
+		if ((err = be_deactivate(be, NULL, reset)) == 0)
+			printf("Temporary activation removed\n");
+		else
+			printf("Failed to remove temporary activation\n");
+		return (err);
+	}
 
 	/* activate logic goes here */
 	if ((err = be_activate(be, argv[0], temp)) != 0)
@@ -530,44 +547,42 @@ main(int argc, char *argv[])
 {
 	struct command_map_entry *cmd;
 	const char *command;
-	char *root;
-	int rc;
+	char *root = NULL;
+	int opt, rc;
 
-	cmd = NULL;
-	root = NULL;
-	if (argc < 2)
-		return (usage(false));
-
-	if (strcmp(argv[1], "-r") == 0) {
-		if (argc < 4)
-			return (usage(false));
-		root = strdup(argv[2]);
-		command = argv[3];
-		argc -= 3;
-		argv += 3;
-	} else {
-		command = argv[1];
-		argc -= 1;
-		argv += 1;
+	while ((opt = getopt(argc, argv, "hr:")) != -1) {
+		switch (opt) {
+		case 'h':
+			exit(usage(true));
+		case 'r':
+			root = strdup(optarg);
+			break;
+		default:
+			exit(usage(false));
+		}
 	}
 
-	/* Handle command aliases */
-	if (strcmp(command, "umount") == 0)
-		command = "unmount";
+	argc -= optind;
+	argv += optind;
 
-	if (strcmp(command, "ujail") == 0)
-		command = "unjail";
+	if (argc == 0)
+		exit(usage(false));
 
-	if ((strcmp(command, "-?") == 0) || (strcmp(command, "-h") == 0))
-		return (usage(true));
+	command = *argv;
+	optreset = 1;
+	optind = 1;
 
 	if ((cmd = get_cmd_info(command)) == NULL) {
 		fprintf(stderr, "Unknown command: %s\n", command);
 		return (usage(false));
 	}
 
-	if ((be = libbe_init(root)) == NULL)
+	if ((be = libbe_init(root)) == NULL) {
+		if (!cmd->silent)
+			fprintf(stderr, "libbe_init(\"%s\") failed.\n",
+			    root != NULL ? root : "");
 		return (-1);
+	}
 
 	libbe_print_on_error(be, !cmd->silent);
 

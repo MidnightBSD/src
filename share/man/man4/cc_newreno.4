@@ -28,9 +28,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
-.\"
-.Dd August 6, 2019
+.Dd May 13, 2021
 .Dt CC_NEWRENO 4
 .Os
 .Sh NAME
@@ -47,13 +45,13 @@ The
 module supports a number of socket options under TCP_CCALGOOPT (refer to
 .Xr tcp 4
 and
-.Xr moc_cc 9 for details)
+.Xr mod_cc 9 for details)
 which can
 be set with
 .Xr setsockopt 2
 and tested with
 .Xr getsockopt 2 .
-The 
+The
 .Nm
 socket options use this structure defined in
 <sys/netinet/cc/cc_newreno.h>:
@@ -75,6 +73,7 @@ the congestion window in response to an ECN congestion signal when
 .Va net.inet.tcp.cc.abe=1
 per: cwnd = (cwnd * CC_NEWRENO_BETA_ECN) / 100.
 Default is 80.
+.El
 .Sh MIB Variables
 The algorithm exposes these variables in the
 .Va net.inet.tcp.cc.newreno
@@ -93,9 +92,12 @@ the congestion window in response to an ECN congestion signal when
 .Va net.inet.tcp.cc.abe=1
 per: cwnd = (cwnd * beta_ecn) / 100.
 Default is 80.
+.El
 .Sh SEE ALSO
+.Xr cc_cdg 4 ,
 .Xr cc_chd 4 ,
 .Xr cc_cubic 4 ,
+.Xr cc_dctcp 4 ,
 .Xr cc_hd 4 ,
 .Xr cc_htcp 4 ,
 .Xr cc_vegas 4 ,

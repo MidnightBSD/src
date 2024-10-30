@@ -44,7 +44,6 @@ static char sccsid[] = "@(#)quotacheck.c	8.3 (Berkeley) 1/29/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-
 /*
  * Fix up / report on disk quotas & usage
  */
@@ -320,7 +319,7 @@ chkquota(char *specname, struct quotafile *qfu, struct quotafile *qfg)
 		}
 	}
 	sync();
-	if ((ret = sbget(fi, &fs, -1)) != 0) {
+	if ((ret = sbget(fi, &fs, STDSB)) != 0) {
 		switch (ret) {
 		case ENOENT:
 			warn("Cannot find file system superblock");

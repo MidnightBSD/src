@@ -26,7 +26,6 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)tests.ms	6.2 (Berkeley) 4/16/91
-.\" $FreeBSD: stable/11/share/doc/papers/diskperf/tests.ms 263142 2014-03-14 03:07:51Z eadler $
 .\"
 .ds RH Tests
 .NH

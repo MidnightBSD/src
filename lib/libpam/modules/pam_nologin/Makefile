@@ -23,6 +23,8 @@
 # SUCH DAMAGE.
 #
 
+PACKAGE=	runtime
+
 LIB=	pam_nologin
 SRCS=	pam_nologin.c
 MAN=	pam_nologin.8

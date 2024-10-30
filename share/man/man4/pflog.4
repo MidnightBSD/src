@@ -23,8 +23,6 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
-.\"
 .Dd October 29, 2021
 .Dt PFLOG 4
 .Os
@@ -47,13 +45,18 @@ on the
 interface, or stored to disk using
 .Xr pflogd 8 .
 .Pp
-The pflog0 interface is created automatically at boot if both
+The pflog0 interface is created when the
+.Nm
+module is loaded;
+further instances can be created using
+.Xr ifconfig 8 .
+The
+.Nm
+module is loaded automatically if both
 .Xr pf 4
 and
 .Xr pflogd 8
-are enabled;
-further instances can be created using
-.Xr ifconfig 8 .
+are enabled.
 .Pp
 Each packet retrieved on this interface has a header associated
 with it of length
@@ -88,6 +91,8 @@ Create a
 interface
 and monitor all packets logged on it:
 .Bd -literal -offset indent
+# ifconfig pflog create
+pflog1
 # ifconfig pflog1 up
 # tcpdump -n -e -ttt -i pflog1
 .Ed
@@ -104,5 +109,7 @@ The
 .Nm
 device first appeared in
 .Ox 3.0 .
-.\" .Sh BUGS
-.\" Anything here?
+.Sh BUGS
+FreeBSD does not set a process id in the
+.Fa pid
+field in pfloghdr.

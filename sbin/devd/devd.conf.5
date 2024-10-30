@@ -1,6 +1,5 @@
 .\"
-.\" Copyright (c) 2002 M. Warner Losh
-.\" All rights reserved.
+.\" Copyright (c) 2002 M. Warner Losh <imp@FreeBSD.org>
 .\"
 .\" Redistribution and use in source and binary forms, with or without
 .\" modification, are permitted provided that the following conditions
@@ -21,7 +20,6 @@
 .\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
-.\"
 .\"
 .\" The section on comments was taken from named.conf.5, which has the
 .\" following copyright:
@@ -399,24 +397,6 @@ String containing the temperature of the core that has become too hot.
 .Pp
 .Bl -column "System" "Subsystem" "1234567" -compact
 .Sy "System" Ta Sy "Subsystem" Ta Sy "Type" Ta Sy "Description"
-.It Li IFNET
-.It Li IFNET Ta Ar inet Ta Ta
-The
-.Dq subsystem
-is the actual name of the network interface on which the event
-took place.
-.It Li IFNET Ta Ar inet Ta Li LINK_UP Ta
-Carrier status changed to UP.
-.It Li IFNET Ta Ar inet Ta Li LINK_DOWN Ta
-Carrier status changed to DOWN.
-.It Li IFNET Ta Ar inet Ta Li ATTACH Ta
-The network interface is attached to the system.
-.It Li IFNET Ta Ar inet Ta Li DETACH Ta
-The network interface is detached from the system.
-.El
-.Pp
-.Bl -column "System" "Subsystem" "1234567" -compact
-.Sy "System" Ta Sy "Subsystem" Ta Sy "Type" Ta Sy "Description"
 .It Li DEVFS
 .It Li DEVFS Ta Li CDEV Ta Li CREATE Ta
 The
@@ -432,7 +412,7 @@ node is destroyed.
 .Sy "System" Ta Sy "Subsystem" Ta Sy "Type" Ta Sy "Description"
 .It Li ETHERNET Ta Ar inet Ta IFATTACH Ta
 Notification when the default VNET instance of the
-.Ar inet
+.Em inet
 interface is attached.
 .El
 .Pp
@@ -450,11 +430,11 @@ only includes disk-like devices.
 .It Li GEOM Ta Li DEV Ta Li CREATE Ta
 A
 .Xr geom 4
-device node is created.
+provider is created.
 .It Li GEOM Ta Li DEV Ta Li DESTROY Ta
 A
 .Xr geom 4
-device node is destroyed.
+provider is destroyed.
 .It Li GEOM Ta Li DEV Ta Li GEOM::physpath Ta
 The physical path of a device has changed.
 .It Li GEOM Ta Li DEV Ta Li GEOM::rotation_rate Ta
@@ -469,12 +449,29 @@ provider size has changed.
 .Pp
 .Bl -column "System" "Subsystem" "1234567" -compact
 .Sy "System" Ta Sy "Subsystem" Ta Sy "Type" Ta Sy "Description"
+.It Li IFNET
+.It Li IFNET Ta Em inet Ta Ta
+The
+.Dq subsystem
+is the actual name of the network interface on which the event
+took place.
+.It Li IFNET Ta Em inet Ta Li LINK_UP Ta
+Carrier status changed to UP.
+.It Li IFNET Ta Em inet Ta Li LINK_DOWN Ta
+Carrier status changed to DOWN.
+.It Li IFNET Ta Em inet Ta Li ATTACH Ta
+The network interface is attached to the system.
+.It Li IFNET Ta Em inet Ta Li DETACH Ta
+The network interface is detached from the system.
+.El
+.Pp
+.Bl -column "System" "Subsystem" "1234567" -compact
+.Sy "System" Ta Sy "Subsystem" Ta Sy "Type" Ta Sy "Description"
 .It Li kern Ta Li power Ta Li resume Ta
 Notification that the system has woken from the suspended state.
 Note: this notification is deprecated and will be removed in
 .Fx 14.0 .
 .El
-.Pp
 .Pp
 .Bl -column "System" "Subsystem" "1234567" -compact
 .Sy "System" Ta Sy "Subsystem" Ta Sy "Type" Ta Sy "Description"
@@ -581,6 +578,40 @@ USB interface is attached to a device.
 USB interface is detached from a device.
 .El
 .Pp
+.Bl -column "System" "Subsystem" "1234567" -compact
+.Sy "System" Ta Sy "Subsystem" Ta Sy "Type" Ta Sy "Description"
+.It Li VFS Ta Ta Ta
+Events from the vfs system.
+.It Li VFS Ta Li FS Ta Ta
+Events that change what is mounted to the system.
+.It Li VFS Ta Li FS Ta Li MOUNT Ta
+Notification of a filesystem is mounted for the first time.
+.It Li VFS Ta Li FS Ta Li REMOUNT Ta
+Notification of a filesystem is remounted (whether or not the options actually change).
+.It Li VFS Ta Li FS Ta Li UNMOUNT Ta
+Notification of a filesystem being unmounted.
+.El
+.Pp
+.Bl -column "System" "Subsystem" "1234567" -compact
+.Sy "System" Ta Sy "Subsystem" Ta Sy "Type" Ta Sy "Description"
+.It Li VT Ta BELL Ta RING Ta
+Notification that the console bell has rung.
+See
+.Xr vt 4
+for details.
+.El
+.Pp
+.Bl -column "System" "Subsystem" "1234567" -compact
+.Sy "System" Ta Sy "Subsystem" Ta Sy "Type" Ta Sy "Description"
+.It Li ZFS Ta ZFS Ta Ta
+Events about the ZFS subsystem.
+See
+.Xr zfsd 8
+and
+.Pa /etc/devd/zfs.conf
+for details.
+.El
+.Pp
 .\"
 .\" End of tables
 .\"
@@ -636,6 +667,59 @@ For example:
 // is a new comment, even though it is logically
 // part of the previous comment.
 .Ed
+.Ss Notes on Variable Expansion
+To prevent issues with special shell characters, the following happens for each
+variable
+.Ic $foo .
+.Bl -enum
+.It
+The characters
+.Dq $'
+are inserted.
+.It
+The string
+.Dq $foo
+is removed.
+.It
+The value of the
+.Ic foo
+variable is inserted into the buffer with all single quote characters
+prefixed by a backslash.
+.El
+.Pp
+See
+.Xr sh 1
+for what this construct means.
+It is safe in all context, except one: inside single quotes.
+If foo=meta and bar=var, then a rule like the following:
+.Bd -literal -offset indent -compact
+action "echo '$foo $bar'";
+.Ed
+will be presented to the shell via
+.Xr system 3
+as
+.Bd -literal -offset indent -compact
+echo '$'meta' $'var''
+.Ed
+which produces the following output:
+.Bd -literal -offset indent -compact
+$meta $var
+.Ed
+as its output.
+This is an unanticipated result.
+A future version of this software will change this behavior.
+Users are discouraged from using single quotes inside
+.Ic action
+value without due care.
+.Pp
+The above should be written as
+.Bd -literal -offset indent -compact
+action "echo $foo' '$bar"
+.Ed
+to produce a single argument to echo.
+Given the above expansion, juxtaposing bare variables with
+single quote expressions will produce the right output,
+regardless of the value of the variable.
 .Sh FILES
 .Bl -tag -width ".Pa /etc/devd.conf" -compact
 .It Pa /etc/devd.conf

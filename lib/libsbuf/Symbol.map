@@ -1,5 +1,4 @@
 /*
- * $FreeBSD: stable/11/lib/libsbuf/Symbol.map 321107 2017-07-18 06:45:13Z ngie $
  */
 
 FBSD_1.2 {
@@ -39,3 +38,7 @@ FBSD_1.5 {
 	sbuf_putbuf;
 };
 
+/* Added in FreeBSD 13.x */
+FBSD_1.6 {
+	sbuf_printf_drain;
+};

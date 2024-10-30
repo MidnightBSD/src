@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2005 Robert N. M. Watson
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _MEMSTAT_INTERNAL_H_
@@ -68,6 +67,7 @@ struct memory_type {
 	uint64_t	 mt_free;	/* Number of cached free items. */
 	uint64_t	 mt_failures;	/* Number of allocation failures. */
 	uint64_t	 mt_sleeps;	/* Number of allocation sleeps. */
+	uint64_t	 mt_xdomain;	/* Number of cross domain sleeps. */
 
 	/*
 	 * Caller-owned memory.

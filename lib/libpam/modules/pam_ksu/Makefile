@@ -23,6 +23,8 @@
 # SUCH DAMAGE.
 #
 
+PACKAGE=	kerberos
+
 LIB=	pam_ksu
 SRCS=	pam_ksu.c
 MAN=	pam_ksu.8

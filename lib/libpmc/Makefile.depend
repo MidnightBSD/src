@@ -9,6 +9,7 @@ DIRDEPS = \
 	lib/libcompiler_rt \
 	lib/libelf \
 	lib/libpmc/pmu-events.host \
+	lib/msun \
 
 
 .include <dirdeps.mk>

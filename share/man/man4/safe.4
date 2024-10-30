@@ -22,10 +22,8 @@
 .\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
-.\"
-.\" $FreeBSD: stable/11/share/man/man4/safe.4 157362 2006-04-01 10:56:36Z brueffer $
 .\"/
-.Dd April 1, 2006
+.Dd July 29, 2020
 .Dt SAFE 4
 .Os
 .Sh NAME
@@ -60,7 +58,7 @@ driver supports cards containing SafeNet crypto accelerator chips.
 .Pp
 The
 .Nm
-driver registers itself to accelerate DES, Triple-DES, AES, MD5-HMAC,
+driver registers itself to accelerate AES,
 SHA1-HMAC, and NULL operations for
 .Xr ipsec 4
 and
@@ -124,6 +122,7 @@ A faster version of the 1141.
 .Xr intro 4 ,
 .Xr ipsec 4 ,
 .Xr random 4 ,
+.Xr crypto 7 ,
 .Xr crypto 9
 .Sh BUGS
 Public key support is not implemented.

@@ -1,6 +1,5 @@
 .\"
-.\" Copyright (c) 2002 M. Warner Losh
-.\" All rights reserved.
+.\" Copyright (c) 2002 M. Warner Losh <imp@FreeBSD.org>
 .\"
 .\" Redistribution and use in source and binary forms, with or without
 .\" modification, are permitted provided that the following conditions
@@ -22,14 +21,16 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man4/devctl.4 301589 2016-06-08 08:50:35Z trasz $
-.\"
-.Dd March 26, 2014
+.Dd September 21, 2020
 .Dt DEVCTL 4
 .Os
 .Sh NAME
 .Nm devctl
 .Nd "device event reporting and device control interface"
+.Sh SYNOPSIS
+The
+.Nm
+driver is automatically included in the kernel.
 .Sh DESCRIPTION
 The
 .Nm
@@ -125,5 +126,17 @@ driver.
 The attach message driver has already claimed this device.
 One cannot use the detach messages to flush data to the device.
 The device is already gone.
+.Pp
+All values passed back are of the form
+.Sq key=value
+or
+.Sq key="value" .
+When the latter, the string
+.Dq value
+must have any internal backslashes doubled.
+It must also have any internal double quote characters
+.Sq "
+preceded by a backslash.
+All other characters should be passed through.
 .Sh SEE ALSO
 .Xr devd 8

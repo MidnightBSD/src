@@ -1,4 +1,5 @@
-# $FreeBSD: stable/11/sbin/newfs_msdos/Makefile 298107 2016-04-16 07:45:30Z gjb $
+
+.include <src.opts.mk>
 
 PACKAGE=runtime
 PROG=	newfs_msdos
@@ -9,5 +10,9 @@ SRCS=	newfs_msdos.c mkfs_msdos.c
 .if ${MACHINE_CPUARCH} == "arm"
 WARNS?= 3
 .endif
+CSTD=	c11
+
+HAS_TESTS=
+SUBDIR.${MK_TESTS}+= tests
 
 .include <bsd.prog.mk>

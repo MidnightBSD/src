@@ -1,4 +1,3 @@
-/*	$FreeBSD: stable/11/sbin/newfs_msdos/mkfs_msdos.h 336329 2018-07-16 04:06:34Z delphij $	*/
 /*	$NetBSD: mkfs_msdos.h,v 1.3 2015/10/16 17:38:17 christos Exp $	*/
 
 /*-

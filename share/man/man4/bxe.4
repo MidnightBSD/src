@@ -22,8 +22,6 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 .\" THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man4/bxe.4 267938 2014-06-26 21:46:14Z bapt $
-.\"
 .Dd April 29, 2012
 .Dt BXE 4
 .Os
@@ -164,7 +162,7 @@ Enable/Disable 4-tuple RSS for UDP: 0=DISABLED, 1=ENABLED
 .Pp
 Special care must be taken when modifying the number of queues and receive
 buffers.
-FreeBSD imposes a limit on the maximum number of
+.Fx imposes a limit on the maximum number of
 .Xr mbuf 9
 allocations.
 If buffer allocations fail, the interface initialization will fail

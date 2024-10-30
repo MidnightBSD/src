@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011-2012 Stefan Bethke.
  * All rights reserved.
@@ -24,11 +24,9 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/cdefs.h>
-
 #include <ctype.h>
 #include <err.h>
 #include <errno.h>
@@ -213,6 +211,8 @@ set_port_flag(struct cfg *cfg, int argc, char *argv[])
 			f = ETHERSWITCH_PORT_ADDTAG;
 		else if (strcasecmp(flag, "firstlock") == 0)
 			f = ETHERSWITCH_PORT_FIRSTLOCK;
+		else if (strcasecmp(flag, "droptagged") == 0)
+			f = ETHERSWITCH_PORT_DROPTAGGED;
 		else if (strcasecmp(flag, "dropuntagged") == 0)
 			f = ETHERSWITCH_PORT_DROPUNTAGGED;
 		else if (strcasecmp(flag, "doubletag") == 0)
@@ -869,6 +869,8 @@ static struct cmds cmds[] = {
 	{ MODE_PORT, "-doubletag", 0, set_port_flag },
 	{ MODE_PORT, "firstlock", 0, set_port_flag },
 	{ MODE_PORT, "-firstlock", 0, set_port_flag },
+	{ MODE_PORT, "droptagged", 0, set_port_flag },
+	{ MODE_PORT, "-droptagged", 0, set_port_flag },
 	{ MODE_PORT, "dropuntagged", 0, set_port_flag },
 	{ MODE_PORT, "-dropuntagged", 0, set_port_flag },
 	{ MODE_CONFIG, "vlan_mode", 1, set_vlan_mode },

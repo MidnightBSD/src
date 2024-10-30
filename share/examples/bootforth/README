@@ -31,5 +31,3 @@ configuration to distinguish one from the other.
 
 Daniel C. Sobral
 <dcs@freebsd.org>
-
-$FreeBSD: stable/11/share/examples/bootforth/README 329145 2018-02-12 01:08:44Z kevans $

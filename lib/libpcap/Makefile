@@ -4,7 +4,6 @@ SHLIBDIR?= /lib
 
 .include <src.opts.mk>
 
-PACKAGE=lib${LIB}
 LIB=	pcap
 
 SRCS=	bpf_dump.c \

@@ -24,7 +24,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/sbuf.h>
 #include <errno.h>
@@ -62,6 +61,9 @@ ATF_TC_BODY(sbuf_clear_test, tc)
 	 */
 	child_proc = atf_utils_fork();
 	if (child_proc == 0) {
+		ATF_REQUIRE_EQ_MSG(0, sbuf_finish(sb), "sbuf_finish failed: %s",
+		    strerror(errno));
+
 		sbuf_putbuf(sb);
 		exit(0);
 	}
@@ -99,6 +101,34 @@ ATF_TC_BODY(sbuf_done_and_sbuf_finish_test, tc)
 	sbuf_delete(sb);
 }
 
+static int
+drain_ret0(void *arg, const char *data, int len)
+{
+
+	(void)arg;
+	(void)data;
+	(void)len;
+
+	return (0);
+}
+
+ATF_TC_WITHOUT_HEAD(sbuf_drain_ret0_test);
+ATF_TC_BODY(sbuf_drain_ret0_test, tc)
+{
+	struct sbuf *sb;
+
+	sb = sbuf_new_auto();
+
+	sbuf_set_drain(sb, drain_ret0, NULL);
+
+	sbuf_cat(sb, test_string);
+
+	ATF_CHECK_EQ_MSG(-1, sbuf_finish(sb),
+	    "required to return error when drain func returns 0");
+	ATF_CHECK_EQ_MSG(EDEADLK, errno,
+	    "errno required to be EDEADLK when drain func returns 0");
+}
+
 ATF_TC_WITHOUT_HEAD(sbuf_len_test);
 ATF_TC_BODY(sbuf_len_test, tc)
 {
@@ -128,6 +158,34 @@ ATF_TC_BODY(sbuf_len_test, tc)
 	    strerror(errno));
 
 	sbuf_delete(sb);
+}
+
+ATF_TC_WITHOUT_HEAD(sbuf_new_fixedlen);
+ATF_TC_BODY(sbuf_new_fixedlen, tc)
+{
+	char buf[strlen(test_string) + 1];
+	struct sbuf sb;
+	pid_t child_proc;
+
+	sbuf_new(&sb, buf, sizeof(buf), SBUF_FIXEDLEN);
+
+	sbuf_cat(&sb, test_string);
+
+	child_proc = atf_utils_fork();
+	if (child_proc == 0) {
+		ATF_REQUIRE_EQ_MSG(0, sbuf_finish(&sb), "sbuf_finish failed: %s",
+		    strerror(errno));
+
+		sbuf_putbuf(&sb);
+		exit(0);
+	}
+	atf_utils_wait(child_proc, 0, test_string, "");
+
+	sbuf_putc(&sb, ' ');
+
+	ATF_CHECK_EQ_MSG(-1, sbuf_finish(&sb), "failed to return error on overflow");
+
+	sbuf_delete(&sb);
 }
 
 ATF_TC_WITHOUT_HEAD(sbuf_setpos_test);
@@ -189,7 +247,9 @@ ATF_TP_ADD_TCS(tp)
 
 	ATF_TP_ADD_TC(tp, sbuf_clear_test);
 	ATF_TP_ADD_TC(tp, sbuf_done_and_sbuf_finish_test);
+	ATF_TP_ADD_TC(tp, sbuf_drain_ret0_test);
 	ATF_TP_ADD_TC(tp, sbuf_len_test);
+	ATF_TP_ADD_TC(tp, sbuf_new_fixedlen);
 #if 0
 	/* TODO */
 #ifdef	HAVE_SBUF_CLEAR_FLAGS

@@ -35,8 +35,8 @@
 #include <libutil.h>
 #include <unistd.h>
 
-#ifndef LOCALBASE_PATH
-#define LOCALBASE_PATH _PATH_LOCALBASE
+#ifndef _PATH_LOCALBASE
+#define _PATH_LOCALBASE "/usr/local"
 #endif
 
 #ifndef LOCALBASE_CTL_LEN
@@ -49,7 +49,7 @@
 const char *
 getlocalbase(void)
 {
-#if LOCALBASE_CTL_LEN > 0
+#if LOCALBASE_CTL_LEN > 0 
 	int localbase_oid[2] = {CTL_USER, USER_LOCALBASE};
 	static char localpath[LOCALBASE_CTL_LEN];
 	size_t localpathlen = LOCALBASE_CTL_LEN;
@@ -71,17 +71,17 @@ getlocalbase(void)
 #if LOCALBASE_CTL_LEN > 0
 	if (sysctl(localbase_oid, 2, localpath, &localpathlen, NULL, 0) != 0) {
 		if (errno != ENOMEM)
-			localbase = LOCALBASE_PATH;
+			localbase = _PATH_LOCALBASE;
 		else
 			localbase = ILLEGAL_PREFIX;
 	} else {
 		if (localpath[0] != '\0')
 			localbase = localpath;
 		else
-			localbase = LOCALBASE_PATH;
+			localbase = _PATH_LOCALBASE;
 	}
 #else
-	localbase = LOCALBASE_PATH;
+	localbase = _PATH_LOCALBASE;
 #endif
 
 	return (localbase);

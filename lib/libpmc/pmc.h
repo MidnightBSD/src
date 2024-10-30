@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2003,2004 Joseph Koshy
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _PMC_H_
@@ -121,7 +120,6 @@ uint64_t pmc_pmu_sample_rate_get(const char *);
 int pmc_pmu_pmcallocate(const char *, struct pmc_op_pmcallocate *);
 const char *pmc_pmu_event_get_by_idx(const char *, int idx);
 int pmc_pmu_idx_get_by_event(const char*, const char *);
-int pmc_pmu_stat_mode(const char ***);
 __END_DECLS
 
 #endif

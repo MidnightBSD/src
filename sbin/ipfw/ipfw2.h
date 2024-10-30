@@ -16,7 +16,6 @@
  * This software is provided ``AS IS'' without any warranties of any kind.
  *
  * NEW command line interface for IP firewall facility
- *
  */
 
 enum cmdline_prog {
@@ -176,6 +175,8 @@ enum tokens {
 	TOK_SRCIP,
 	TOK_DSTPORT,
 	TOK_SRCPORT,
+	TOK_DSTMAC,
+	TOK_SRCMAC,
 	TOK_ALL,
 	TOK_MASK,
 	TOK_FLOW_MASK,

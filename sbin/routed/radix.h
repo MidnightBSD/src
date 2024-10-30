@@ -29,7 +29,6 @@
  * SUCH DAMAGE.
  *
  *	@(#)radix.h	8.2 (Berkeley) 10/31/94
- *
  */
 
 #ifndef __RADIX_H_

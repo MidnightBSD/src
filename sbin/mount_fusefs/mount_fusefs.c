@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2005 Jean-Sebastien Pedron
  * Copyright (c) 2005 Csaba Henk 
@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/mount.h>
 #include <sys/uio.h>
@@ -76,6 +75,8 @@ static struct mntopt mopts[] = {
 	{ "max_read=",           0, ALTF_MAXREAD, 1 },
 	#define ALTF_SUBTYPE 0x40
 	{ "subtype=",            0, ALTF_SUBTYPE, 1 },
+	#define ALTF_FSNAME 0x80
+	{ "fsname=",             0, ALTF_FSNAME, 1 },
 	/*
 	 * MOPT_AUTOMOUNTED, included by MOPT_STDOPTS, does not fit into
 	 * the 'flags' argument to nmount(2).  We have to abuse altflags
@@ -86,7 +87,6 @@ static struct mntopt mopts[] = {
 	#define ALTF_INTR 0x200
 	{ "intr",		0, ALTF_INTR, 1 },
 	/* Linux specific options, we silently ignore them */
-	{ "fsname=",             0, 0x00, 1 },
 	{ "fd=",                 0, 0x00, 1 },
 	{ "rootmode=",           0, 0x00, 1 },
 	{ "user_id=",            0, 0x00, 1 },
@@ -109,6 +109,7 @@ struct mntval {
 static struct mntval mvals[] = {
 	{ ALTF_MAXREAD, NULL, 0 },
 	{ ALTF_SUBTYPE, NULL, 0 },
+	{ ALTF_FSNAME, NULL, 0 },
 	{ 0, NULL, 0 }
 };
 
@@ -473,8 +474,8 @@ helpmsg(void)
 	        /* "    -o nonempty            allow mounts over non-empty file/dir\n" */
 	        "    -o default_permissions enable permission checking by kernel\n"
 		"    -o intr                interruptible mount\n"
-		/*
 	        "    -o fsname=NAME         set filesystem name\n"
+		/*
 	        "    -o large_read          issue large read requests (2.4 only)\n"
 		 */
 	        "    -o subtype=NAME        set filesystem type\n"

@@ -3,6 +3,8 @@
 
 PACKAGE=	tests
 
+WARNS?=		1
+
 LIBXOSRC=	${SRCTOP}/contrib/libxo
 
 # Override the default suffix transformation rules for .c/.o -> .out
@@ -239,7 +241,7 @@ PROGS+= test_09
 PROGS+= test_10
 PROGS+= test_11
 
-CFLAGS+=	-I${LIBXOSRC}/libxo -I${.CURDIR:H}
+CFLAGS+=	-I${LIBXOSRC}/libxo -I${.CURDIR:H}/libxo
 
 LIBADD=		xo util
 

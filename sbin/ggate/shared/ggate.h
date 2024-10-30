@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _GGATE_H_
@@ -46,8 +45,8 @@
 #define	GGATE_FLAG_RDONLY	0x0001
 #define	GGATE_FLAG_WRONLY	0x0002
 /*
- * If GGATE_FLAG_SEND not GGATE_FLAG_RECV flag is set, this is initial
- * connection.
+ * If neither the GGATE_FLAG_SEND nor the GGATE_FLAG_RECV flag is
+ * set - this is initial connection.
  * If GGATE_FLAG_SEND flag is set - this is socket to send data.
  * If GGATE_FLAG_RECV flag is set - this is socket to receive data.
  */
@@ -56,6 +55,7 @@
 
 #define	GGATE_CMD_READ		0
 #define	GGATE_CMD_WRITE		1
+#define	GGATE_CMD_FLUSH		3
 
 extern int g_gate_devfd;
 extern int g_gate_verbose;

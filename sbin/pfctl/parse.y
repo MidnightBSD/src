@@ -30,7 +30,6 @@
  */
 %{
 #include <sys/cdefs.h>
-
 #define PFIOC_USE_LATEST
 
 #include <sys/types.h>
@@ -819,8 +818,16 @@ numberstring	: NUMBER				{
 		;
 
 varset		: STRING '=' varstring	{
+			char *s = $1;
 			if (pf->opts & PF_OPT_VERBOSE)
 				printf("%s = \"%s\"\n", $1, $3);
+			while (*s++) {
+				if (isspace((unsigned char)*s)) {
+					yyerror("macro name cannot contain "
+					   "whitespace");
+					YYERROR;
+				}
+			}
 			if (symset($1, $3, 0) == -1)
 				err(1, "cannot store variable %s", $1);
 			free($1);
@@ -4237,6 +4244,10 @@ natrule		: nataction interface af proto fromto tag tagged rtable
 				remove_invalid_hosts(&$9->host, &r.af);
 				if (invalid_redirect($9->host, r.af))
 					YYERROR;
+				if ($9->host->addr.type == PF_ADDR_DYNIFTL) {
+					if (($9->host = gen_dynnode($9->host, r.af)) == NULL)
+						err(1, "calloc");
+				}
 				if (check_netmask($9->host, r.af))
 					YYERROR;
 
@@ -4453,6 +4464,10 @@ binatrule	: no BINAT natpasslog interface af proto FROM ipspec toipspec tag
 					yyerror("binat ip versions must match");
 					YYERROR;
 				}
+				if ($8->addr.type == PF_ADDR_DYNIFTL) {
+					if (($8 = gen_dynnode($8, binat.af)) == NULL)
+						err(1, "calloc");
+				}
 				if (check_netmask($8, binat.af))
 					YYERROR;
 				memcpy(&binat.src.addr, &$8->addr,
@@ -4467,6 +4482,10 @@ binatrule	: no BINAT natpasslog interface af proto FROM ipspec toipspec tag
 				if ($9->af != binat.af && $9->af) {
 					yyerror("binat ip versions must match");
 					YYERROR;
+				}
+				if ($9->addr.type == PF_ADDR_DYNIFTL) {
+					if (($9 = gen_dynnode($9, binat.af)) == NULL)
+						err(1, "calloc");
 				}
 				if (check_netmask($9, binat.af))
 					YYERROR;
@@ -4496,6 +4515,10 @@ binatrule	: no BINAT natpasslog interface af proto FROM ipspec toipspec tag
 					yyerror("binat rule must redirect to "
 					    "a single address");
 					YYERROR;
+				}
+				if ($13->host->addr.type == PF_ADDR_DYNIFTL) {
+					if (($13->host = gen_dynnode($13->host, binat.af)) == NULL)
+						err(1, "calloc");
 				}
 				if (check_netmask($13->host, binat.af))
 					YYERROR;
@@ -4788,8 +4811,9 @@ filter_consistent(struct pfctl_rule *r, int anchor_call)
 	int	problems = 0;
 
 	if (r->proto != IPPROTO_TCP && r->proto != IPPROTO_UDP &&
+	    r->proto != IPPROTO_SCTP &&
 	    (r->src.port_op || r->dst.port_op)) {
-		yyerror("port only applies to tcp/udp");
+		yyerror("port only applies to tcp/udp/sctp");
 		problems++;
 	}
 	if (r->proto != IPPROTO_ICMP && r->proto != IPPROTO_ICMPV6 &&
@@ -4856,17 +4880,18 @@ rdr_consistent(struct pfctl_rule *r)
 {
 	int			 problems = 0;
 
-	if (r->proto != IPPROTO_TCP && r->proto != IPPROTO_UDP) {
+	if (r->proto != IPPROTO_TCP && r->proto != IPPROTO_UDP &&
+	    r->proto != IPPROTO_SCTP) {
 		if (r->src.port_op) {
-			yyerror("src port only applies to tcp/udp");
+			yyerror("src port only applies to tcp/udp/sctp");
 			problems++;
 		}
 		if (r->dst.port_op) {
-			yyerror("dst port only applies to tcp/udp");
+			yyerror("dst port only applies to tcp/udp/sctp");
 			problems++;
 		}
 		if (r->rpool.proxy_port[0]) {
-			yyerror("rpool port only applies to tcp/udp");
+			yyerror("rpool port only applies to tcp/udp/sctp");
 			problems++;
 		}
 	}
@@ -5403,7 +5428,7 @@ expand_rule(struct pfctl_rule *r,
 	char			 tagname[PF_TAG_NAME_SIZE];
 	char			 match_tagname[PF_TAG_NAME_SIZE];
 	struct pf_pooladdr	*pa;
-	struct node_host	*h;
+	struct node_host	*h, *osrch, *odsth;
 	u_int8_t		 flags, flagset, keep_state;
 
 	memcpy(label, r->label, sizeof(r->label));
@@ -5463,6 +5488,18 @@ expand_rule(struct pfctl_rule *r,
 		if (strlcpy(r->match_tagname, match_tagname,
 		    sizeof(r->match_tagname)) >= sizeof(r->match_tagname))
 			errx(1, "expand_rule: strlcpy");
+
+		osrch = odsth = NULL;
+		if (src_host->addr.type == PF_ADDR_DYNIFTL) {
+			osrch = src_host;
+			if ((src_host = gen_dynnode(src_host, r->af)) == NULL)
+				err(1, "expand_rule: calloc");
+		}
+		if (dst_host->addr.type == PF_ADDR_DYNIFTL) {
+			odsth = dst_host;
+			if ((dst_host = gen_dynnode(dst_host, r->af)) == NULL)
+				err(1, "expand_rule: calloc");
+		}
 
 		error += check_netmask(src_host, r->af);
 		error += check_netmask(dst_host, r->af);
@@ -5540,6 +5577,15 @@ expand_rule(struct pfctl_rule *r,
 			r->nr = pf->astack[pf->asd]->match++;
 			pfctl_append_rule(pf, r, anchor_call);
 			added++;
+		}
+
+		if (osrch && src_host->addr.type == PF_ADDR_DYNIFTL) {
+			free(src_host);
+			src_host = osrch;
+		}
+		if (odsth && dst_host->addr.type == PF_ADDR_DYNIFTL) {
+			free(dst_host);
+			dst_host = odsth;
 		}
 
 	))))))))));
@@ -6341,6 +6387,8 @@ getservice(char *n)
 		s = getservbyname(n, "tcp");
 		if (s == NULL)
 			s = getservbyname(n, "udp");
+		if (s == NULL)
+			s = getservbyname(n, "sctp");
 		if (s == NULL) {
 			yyerror("unknown port %s", n);
 			return (-1);

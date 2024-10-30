@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000-2004 Poul-Henning Kamp <phk@FreeBSD.org>
  * Copyright (c) 2012 The FreeBSD Foundation
@@ -28,7 +28,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/param.h>
@@ -87,7 +86,8 @@ usage(void)
 "       mdconfig -l [-v] [-n] [-f file] [-u unit]\n"
 "       mdconfig file\n");
 	fprintf(stderr, "\t\ttype = {malloc, vnode, swap}\n");
-	fprintf(stderr, "\t\toption = {cluster, compress, reserve}\n");
+	fprintf(stderr, "\t\toption = {cache, cluster, compress, force,\n");
+	fprintf(stderr, "\t\t          readonly, reserve, ro, verify}\n");
 	fprintf(stderr, "\t\tsize = %%d (512 byte blocks), %%db (B),\n");
 	fprintf(stderr, "\t\t       %%dk (kB), %%dm (MB), %%dg (GB), \n");
 	fprintf(stderr, "\t\t       %%dt (TB), or %%dp (PB)\n");
@@ -176,6 +176,10 @@ main(int argc, char **argv)
 				mdio.md_options |= MD_ASYNC;
 			else if (!strcmp(optarg, "noasync"))
 				mdio.md_options &= ~MD_ASYNC;
+			else if (!strcmp(optarg, "cache"))
+				mdio.md_options |= MD_CACHE;
+			else if (!strcmp(optarg, "nocache"))
+				mdio.md_options &= ~MD_CACHE;
 			else if (!strcmp(optarg, "cluster"))
 				mdio.md_options |= MD_CLUSTER;
 			else if (!strcmp(optarg, "nocluster"))
@@ -191,6 +195,10 @@ main(int argc, char **argv)
 			else if (!strcmp(optarg, "readonly"))
 				mdio.md_options |= MD_READONLY;
 			else if (!strcmp(optarg, "noreadonly"))
+				mdio.md_options &= ~MD_READONLY;
+			else if (!strcmp(optarg, "ro"))
+				mdio.md_options |= MD_READONLY;
+			else if (!strcmp(optarg, "noro"))
 				mdio.md_options &= ~MD_READONLY;
 			else if (!strcmp(optarg, "reserve"))
 				mdio.md_options |= MD_RESERVE;

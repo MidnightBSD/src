@@ -36,7 +36,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/elf.h>
 #include <sys/time.h>
@@ -69,6 +68,7 @@
 #include <sys/ptrace.h>
 #define	_KERNEL
 #include <sys/mount.h>
+#include <sys/filedesc.h>
 #include <sys/pipe.h>
 #include <ufs/ufs/quota.h>
 #include <ufs/ufs/inode.h>
@@ -350,7 +350,7 @@ struct filestat_list *
 procstat_getfiles(struct procstat *procstat, struct kinfo_proc *kp, int mmapped)
 {
 
-	switch(procstat->type) {
+	switch (procstat->type) {
 	case PROCSTAT_KVM:
 		return (procstat_getfiles_kvm(procstat, kp, mmapped));
 	case PROCSTAT_SYSCTL:
@@ -444,37 +444,65 @@ getctty(kvm_t *kd, struct kinfo_proc *kp)
 	return (sess.s_ttyvp);
 }
 
+static int
+procstat_vm_map_reader(void *token, vm_map_entry_t addr, vm_map_entry_t dest)
+{
+	kvm_t *kd;
+
+	kd = (kvm_t *)token;
+	return (kvm_read_all(kd, (unsigned long)addr, dest, sizeof(*dest)));
+}
+
 static struct filestat_list *
 procstat_getfiles_kvm(struct procstat *procstat, struct kinfo_proc *kp, int mmapped)
 {
 	struct file file;
 	struct filedesc filed;
+	struct pwddesc pathsd;
+	struct fdescenttbl *fdt;
+	struct pwd pwd;
+	unsigned long pwd_addr;
 	struct vm_map_entry vmentry;
 	struct vm_object object;
 	struct vmspace vmspace;
 	vm_map_entry_t entryp;
-	vm_map_t map;
 	vm_object_t objp;
 	struct vnode *vp;
-	struct filedescent *ofiles;
 	struct filestat *entry;
 	struct filestat_list *head;
 	kvm_t *kd;
 	void *data;
-	int i, fflags;
+	int fflags;
+	unsigned int i;
 	int prot, type;
+	size_t fdt_size;
 	unsigned int nfiles;
+	bool haspwd;
 
 	assert(procstat);
 	kd = procstat->kd;
 	if (kd == NULL)
 		return (NULL);
-	if (kp->ki_fd == NULL)
+	if (kp->ki_fd == NULL || kp->ki_pd == NULL)
 		return (NULL);
 	if (!kvm_read_all(kd, (unsigned long)kp->ki_fd, &filed,
 	    sizeof(filed))) {
 		warnx("can't read filedesc at %p", (void *)kp->ki_fd);
 		return (NULL);
+	}
+	if (!kvm_read_all(kd, (unsigned long)kp->ki_pd, &pathsd,
+	    sizeof(pathsd))) {
+		warnx("can't read pwddesc at %p", (void *)kp->ki_pd);
+		return (NULL);
+	}
+	haspwd = false;
+	pwd_addr = (unsigned long)(PWDDESC_KVM_LOAD_PWD(&pathsd));
+	if (pwd_addr != 0) {
+		if (!kvm_read_all(kd, pwd_addr, &pwd, sizeof(pwd))) {
+			warnx("can't read fd_pwd at %p", (void *)pwd_addr);
+			return (NULL);
+		}
+		haspwd = true;
 	}
 
 	/*
@@ -486,25 +514,27 @@ procstat_getfiles_kvm(struct procstat *procstat, struct kinfo_proc *kp, int mmap
 	STAILQ_INIT(head);
 
 	/* root directory vnode, if one. */
-	if (filed.fd_rdir) {
-		entry = filestat_new_entry(filed.fd_rdir, PS_FST_TYPE_VNODE, -1,
-		    PS_FST_FFLAG_READ, PS_FST_UFLAG_RDIR, 0, 0, NULL, NULL);
-		if (entry != NULL)
-			STAILQ_INSERT_TAIL(head, entry, next);
-	}
-	/* current working directory vnode. */
-	if (filed.fd_cdir) {
-		entry = filestat_new_entry(filed.fd_cdir, PS_FST_TYPE_VNODE, -1,
-		    PS_FST_FFLAG_READ, PS_FST_UFLAG_CDIR, 0, 0, NULL, NULL);
-		if (entry != NULL)
-			STAILQ_INSERT_TAIL(head, entry, next);
-	}
-	/* jail root, if any. */
-	if (filed.fd_jdir) {
-		entry = filestat_new_entry(filed.fd_jdir, PS_FST_TYPE_VNODE, -1,
-		    PS_FST_FFLAG_READ, PS_FST_UFLAG_JAIL, 0, 0, NULL, NULL);
-		if (entry != NULL)
-			STAILQ_INSERT_TAIL(head, entry, next);
+	if (haspwd) {
+		if (pwd.pwd_rdir) {
+			entry = filestat_new_entry(pwd.pwd_rdir, PS_FST_TYPE_VNODE, -1,
+			    PS_FST_FFLAG_READ, PS_FST_UFLAG_RDIR, 0, 0, NULL, NULL);
+			if (entry != NULL)
+				STAILQ_INSERT_TAIL(head, entry, next);
+		}
+		/* current working directory vnode. */
+		if (pwd.pwd_cdir) {
+			entry = filestat_new_entry(pwd.pwd_cdir, PS_FST_TYPE_VNODE, -1,
+			    PS_FST_FFLAG_READ, PS_FST_UFLAG_CDIR, 0, 0, NULL, NULL);
+			if (entry != NULL)
+				STAILQ_INSERT_TAIL(head, entry, next);
+		}
+		/* jail root, if any. */
+		if (pwd.pwd_jdir) {
+			entry = filestat_new_entry(pwd.pwd_jdir, PS_FST_TYPE_VNODE, -1,
+			    PS_FST_FFLAG_READ, PS_FST_UFLAG_JAIL, 0, 0, NULL, NULL);
+			if (entry != NULL)
+				STAILQ_INSERT_TAIL(head, entry, next);
+		}
 	}
 	/* ktrace vnode, if one */
 	if (kp->ki_tracep) {
@@ -530,26 +560,31 @@ procstat_getfiles_kvm(struct procstat *procstat, struct kinfo_proc *kp, int mmap
 			STAILQ_INSERT_TAIL(head, entry, next);
 	}
 
-	nfiles = filed.fd_lastfile + 1;
-	ofiles = malloc(nfiles * sizeof(struct filedescent));
-	if (ofiles == NULL) {
-		warn("malloc(%zu)", nfiles * sizeof(struct filedescent));
+	if (!kvm_read_all(kd, (unsigned long)filed.fd_files, &nfiles,
+	    sizeof(nfiles))) {
+		warnx("can't read fd_files at %p", (void *)filed.fd_files);
+		return (NULL);
+	}
+
+	fdt_size = sizeof(*fdt) + nfiles * sizeof(struct filedescent);
+	fdt = malloc(fdt_size);
+	if (fdt == NULL) {
+		warn("malloc(%zu)", fdt_size);
 		goto do_mmapped;
 	}
-	if (!kvm_read_all(kd, (unsigned long)filed.fd_ofiles, ofiles,
-	    nfiles * sizeof(struct filedescent))) {
-		warnx("cannot read file structures at %p",
-		    (void *)filed.fd_ofiles);
-		free(ofiles);
+	if (!kvm_read_all(kd, (unsigned long)filed.fd_files, fdt, fdt_size)) {
+		warnx("cannot read file structures at %p", (void *)filed.fd_files);
+		free(fdt);
 		goto do_mmapped;
 	}
-	for (i = 0; i <= filed.fd_lastfile; i++) {
-		if (ofiles[i].fde_file == NULL)
+	for (i = 0; i < nfiles; i++) {
+		if (fdt->fdt_ofiles[i].fde_file == NULL) {
 			continue;
-		if (!kvm_read_all(kd, (unsigned long)ofiles[i].fde_file, &file,
+		}
+		if (!kvm_read_all(kd, (unsigned long)fdt->fdt_ofiles[i].fde_file, &file,
 		    sizeof(struct file))) {
 			warnx("can't read file %d at %p", i,
-			    (void *)ofiles[i].fde_file);
+			    (void *)fdt->fdt_ofiles[i].fde_file);
 			continue;
 		}
 		switch (file.f_type) {
@@ -591,6 +626,10 @@ procstat_getfiles_kvm(struct procstat *procstat, struct kinfo_proc *kp, int mmap
 			type = PS_FST_TYPE_DEV;
 			data = file.f_data;
 			break;
+		case DTYPE_EVENTFD:
+			type = PS_FST_TYPE_EVENTFD;
+			data = file.f_data;
+			break;
 		default:
 			continue;
 		}
@@ -600,7 +639,7 @@ procstat_getfiles_kvm(struct procstat *procstat, struct kinfo_proc *kp, int mmap
 		if (entry != NULL)
 			STAILQ_INSERT_TAIL(head, entry, next);
 	}
-	free(ofiles);
+	free(fdt);
 
 do_mmapped:
 
@@ -614,17 +653,11 @@ do_mmapped:
 			    (void *)kp->ki_vmspace);
 			goto exit;
 		}
-		map = &vmspace.vm_map;
 
-		for (entryp = map->header.next;
-		    entryp != &kp->ki_vmspace->vm_map.header;
-		    entryp = vmentry.next) {
-			if (!kvm_read_all(kd, (unsigned long)entryp, &vmentry,
-			    sizeof(vmentry))) {
-				warnx("can't read vm_map_entry at %p",
-				    (void *)entryp);
-				continue;
-			}
+		vmentry = vmspace.vm_map.header;
+		for (entryp = vm_map_entry_read_succ(kd, &vmentry, procstat_vm_map_reader);
+		    entryp != NULL && entryp != &kp->ki_vmspace->vm_map.header;
+		     entryp = vm_map_entry_read_succ(kd, &vmentry, procstat_vm_map_reader)) {
 			if (vmentry.eflags & MAP_ENTRY_IS_SUB_MAP)
 				continue;
 			if ((objp = vmentry.object.vm_object) == NULL)
@@ -659,6 +692,8 @@ do_mmapped:
 			if (entry != NULL)
 				STAILQ_INSERT_TAIL(head, entry, next);
 		}
+		if (entryp == NULL)
+			warnx("can't read vm_map_entry");
 	}
 exit:
 	return (head);
@@ -675,7 +710,6 @@ kinfo_type2fst(int kftype)
 		int	fst_type;
 	} kftypes2fst[] = {
 		{ KF_TYPE_PROCDESC, PS_FST_TYPE_PROCDESC },
-		{ KF_TYPE_CRYPTO, PS_FST_TYPE_CRYPTO },
 		{ KF_TYPE_DEV, PS_FST_TYPE_DEV },
 		{ KF_TYPE_FIFO, PS_FST_TYPE_FIFO },
 		{ KF_TYPE_KQUEUE, PS_FST_TYPE_KQUEUE },
@@ -687,6 +721,7 @@ kinfo_type2fst(int kftype)
 		{ KF_TYPE_SHM, PS_FST_TYPE_SHM },
 		{ KF_TYPE_SOCKET, PS_FST_TYPE_SOCKET },
 		{ KF_TYPE_VNODE, PS_FST_TYPE_VNODE },
+		{ KF_TYPE_EVENTFD, PS_FST_TYPE_EVENTFD },
 		{ KF_TYPE_UNKNOWN, PS_FST_TYPE_UNKNOWN }
 	};
 #define NKFTYPES	(sizeof(kftypes2fst) / sizeof(*kftypes2fst))
@@ -1271,10 +1306,10 @@ procstat_get_vnode_info_kvm(kvm_t *kd, struct filestat *fst,
 	vn->vn_type = vntype2psfsttype(vnode.v_type);
 	if (vnode.v_type == VNON || vnode.v_type == VBAD)
 		return (0);
-	error = kvm_read_all(kd, (unsigned long)vnode.v_tag, tagstr,
-	    sizeof(tagstr));
+	error = kvm_read_all(kd, (unsigned long)vnode.v_lock.lock_object.lo_name,
+	    tagstr, sizeof(tagstr));
 	if (error == 0) {
-		warnx("can't read v_tag at %p", (void *)vp);
+		warnx("can't read lo_name at %p", (void *)vp);
 		goto fail;
 	}
 	tagstr[sizeof(tagstr) - 1] = '\0';
@@ -1495,7 +1530,7 @@ procstat_get_socket_info_kvm(kvm_t *kd, struct filestat *fst,
 	/*
 	 * Protocol specific data.
 	 */
-	switch(dom.dom_family) {
+	switch (dom.dom_family) {
 	case AF_INET:
 	case AF_INET6:
 		if (proto.pr_protocol == IPPROTO_TCP) {
@@ -1568,7 +1603,7 @@ procstat_get_socket_info_sysctl(struct filestat *fst, struct sockstat *sock,
 	/*
 	 * Protocol specific data.
 	 */
-	switch(sock->dom_family) {
+	switch (sock->dom_family) {
 	case AF_INET:
 	case AF_INET6:
 		if (sock->proto == IPPROTO_TCP) {
@@ -1929,7 +1964,7 @@ procstat_getvmmap(struct procstat *procstat, struct kinfo_proc *kp,
     unsigned int *cntp)
 {
 
-	switch(procstat->type) {
+	switch (procstat->type) {
 	case PROCSTAT_KVM:
 		warnx("kvm method is not supported");
 		return (NULL);
@@ -2034,7 +2069,7 @@ gid_t *
 procstat_getgroups(struct procstat *procstat, struct kinfo_proc *kp,
     unsigned int *cntp)
 {
-	switch(procstat->type) {
+	switch (procstat->type) {
 	case PROCSTAT_KVM:
 		return (procstat_getgroups_kvm(procstat->kd, kp, cntp));
 	case PROCSTAT_SYSCTL:
@@ -2057,18 +2092,18 @@ procstat_freegroups(struct procstat *procstat __unused, gid_t *groups)
 static int
 procstat_getumask_kvm(kvm_t *kd, struct kinfo_proc *kp, unsigned short *maskp)
 {
-	struct filedesc fd;
+	struct pwddesc pd;
 
 	assert(kd != NULL);
 	assert(kp != NULL);
-	if (kp->ki_fd == NULL)
+	if (kp->ki_pd == NULL)
 		return (-1);
-	if (!kvm_read_all(kd, (unsigned long)kp->ki_fd, &fd, sizeof(fd))) {
-		warnx("can't read filedesc at %p for pid %d", kp->ki_fd,
+	if (!kvm_read_all(kd, (unsigned long)kp->ki_pd, &pd, sizeof(pd))) {
+		warnx("can't read pwddesc at %p for pid %d", kp->ki_pd,
 		    kp->ki_pid);
 		return (-1);
 	}
-	*maskp = fd.fd_cmask;
+	*maskp = pd.pd_cmask;
 	return (0);
 }
 
@@ -2112,7 +2147,7 @@ int
 procstat_getumask(struct procstat *procstat, struct kinfo_proc *kp,
     unsigned short *maskp)
 {
-	switch(procstat->type) {
+	switch (procstat->type) {
 	case PROCSTAT_KVM:
 		return (procstat_getumask_kvm(procstat->kd, kp, maskp));
 	case PROCSTAT_SYSCTL:
@@ -2202,7 +2237,7 @@ int
 procstat_getrlimit(struct procstat *procstat, struct kinfo_proc *kp, int which,
     struct rlimit* rlimit)
 {
-	switch(procstat->type) {
+	switch (procstat->type) {
 	case PROCSTAT_KVM:
 		return (procstat_getrlimit_kvm(procstat->kd, kp, which,
 		    rlimit));
@@ -2261,7 +2296,7 @@ int
 procstat_getpathname(struct procstat *procstat, struct kinfo_proc *kp,
     char *pathname, size_t maxlen)
 {
-	switch(procstat->type) {
+	switch (procstat->type) {
 	case PROCSTAT_KVM:
 		/* XXX: Return empty string. */
 		if (maxlen > 0)
@@ -2334,7 +2369,7 @@ procstat_getosrel_core(struct procstat_core *core, int *osrelp)
 int
 procstat_getosrel(struct procstat *procstat, struct kinfo_proc *kp, int *osrelp)
 {
-	switch(procstat->type) {
+	switch (procstat->type) {
 	case PROCSTAT_KVM:
 		return (procstat_getosrel_kvm(procstat->kd, kp, osrelp));
 	case PROCSTAT_SYSCTL:
@@ -2349,10 +2384,10 @@ procstat_getosrel(struct procstat *procstat, struct kinfo_proc *kp, int *osrelp)
 
 #define PROC_AUXV_MAX	256
 
-#if __ELF_WORD_SIZE == 64
+#ifdef PS_ARCH_HAS_FREEBSD32
 static const char *elf32_sv_names[] = {
 	"Linux ELF32",
-	"MidnightBSD ELF32",
+	"FreeBSD ELF32",
 };
 
 static int
@@ -2360,7 +2395,7 @@ is_elf32_sysctl(pid_t pid)
 {
 	int error, name[4];
 	size_t len, i;
-	static char sv_name[256];
+	char sv_name[32];
 
 	name[0] = CTL_KERN;
 	name[1] = KERN_PROC;
@@ -2382,7 +2417,6 @@ procstat_getauxv32_sysctl(pid_t pid, unsigned int *cntp)
 {
 	Elf_Auxinfo *auxv;
 	Elf32_Auxinfo *auxv32;
-	void *ptr;
 	size_t len;
 	unsigned int i, count;
 	int name[4];
@@ -2403,8 +2437,8 @@ procstat_getauxv32_sysctl(pid_t pid, unsigned int *cntp)
 			warn("sysctl: kern.proc.auxv: %d: %d", pid, errno);
 		goto out;
 	}
-	count = len / sizeof(Elf_Auxinfo);
-	auxv = malloc(count  * sizeof(Elf_Auxinfo));
+	count = len / sizeof(Elf32_Auxinfo);
+	auxv = malloc(count * sizeof(Elf_Auxinfo));
 	if (auxv == NULL) {
 		warn("malloc(%zu)", count * sizeof(Elf_Auxinfo));
 		goto out;
@@ -2416,15 +2450,24 @@ procstat_getauxv32_sysctl(pid_t pid, unsigned int *cntp)
 		 * necessarily true.
 		 */
 		auxv[i].a_type = auxv32[i].a_type;
-		ptr = &auxv32[i].a_un;
-		auxv[i].a_un.a_val = *((uint32_t *)ptr);
+		/*
+		 * Don't sign extend values.  Existing entries are positive
+		 * integers or pointers.  Under freebsd32, programs typically
+		 * have a full [0, 2^32) address space (perhaps minus the last
+		 * page) and treating this as a signed integer would be
+		 * confusing since these are not kernel pointers.
+		 *
+		 * XXX: A more complete translation would be ABI and
+		 * type-aware.
+		 */
+		auxv[i].a_un.a_val = (uint32_t)auxv32[i].a_un.a_val;
 	}
 	*cntp = count;
 out:
 	free(auxv32);
 	return (auxv);
 }
-#endif /* __ELF_WORD_SIZE == 64 */
+#endif /* PS_ARCH_HAS_FREEBSD32 */
 
 static Elf_Auxinfo *
 procstat_getauxv_sysctl(pid_t pid, unsigned int *cntp)
@@ -2433,7 +2476,7 @@ procstat_getauxv_sysctl(pid_t pid, unsigned int *cntp)
 	int name[4];
 	size_t len;
 
-#if __ELF_WORD_SIZE == 64
+#ifdef PS_ARCH_HAS_FREEBSD32
 	if (is_elf32_sysctl(pid))
 		return (procstat_getauxv32_sysctl(pid, cntp));
 #endif
@@ -2474,7 +2517,7 @@ Elf_Auxinfo *
 procstat_getauxv(struct procstat *procstat, struct kinfo_proc *kp,
     unsigned int *cntp)
 {
-	switch(procstat->type) {
+	switch (procstat->type) {
 	case PROCSTAT_KVM:
 		warnx("kvm method is not supported");
 		return (NULL);
@@ -2573,7 +2616,8 @@ procstat_getkstack_sysctl(pid_t pid, int *cntp)
 		warn("malloc(%zu)", len);
 		return (NULL);
 	}
-	if (sysctl(name, nitems(name), kkstp, &len, NULL, 0) == -1) {
+	if (sysctl(name, nitems(name), kkstp, &len, NULL, 0) == -1 &&
+	    errno != ENOMEM) {
 		warn("sysctl: kern.proc.pid: %d", pid);
 		free(kkstp);
 		return (NULL);
@@ -2587,7 +2631,7 @@ struct kinfo_kstack *
 procstat_getkstack(struct procstat *procstat, struct kinfo_proc *kp,
     unsigned int *cntp)
 {
-	switch(procstat->type) {
+	switch (procstat->type) {
 	case PROCSTAT_KVM:
 		warnx("kvm method is not supported");
 		return (NULL);
@@ -2609,3 +2653,138 @@ procstat_freekstack(struct procstat *procstat __unused,
 
 	free(kkstp);
 }
+
+static struct advlock_list *
+procstat_getadvlock_sysctl(struct procstat *procstat __unused)
+{
+	struct advlock_list *res;
+	struct advlock *a;
+	void *buf;
+	char *c;
+	struct kinfo_lockf *kl;
+	size_t buf_len;
+	int error;
+	static const int kl_name[] = { CTL_KERN, KERN_LOCKF };
+
+	res = malloc(sizeof(*res));
+	if (res == NULL)
+		return (NULL);
+	STAILQ_INIT(res);
+	buf = NULL;
+
+	buf_len = 0;
+	error = sysctl(kl_name, nitems(kl_name), NULL, &buf_len, NULL, 0);
+	if (error != 0) {
+		warn("sysctl KERN_LOCKF size");
+		goto fail;
+	}
+	buf_len *= 2;
+	buf = malloc(buf_len);
+	if (buf == NULL) {
+		warn("malloc");
+		goto fail;
+	}
+	error = sysctl(kl_name, nitems(kl_name), buf, &buf_len, NULL, 0);
+	if (error != 0) {
+		warn("sysctl KERN_LOCKF data");
+		goto fail;
+	}
+
+	for (c = buf; (char *)c < (char *)buf + buf_len;
+	    c += kl->kl_structsize) {
+		kl = (struct kinfo_lockf *)(void *)c;
+		if (sizeof(*kl) < (size_t)kl->kl_structsize) {
+			warn("ABI broken");
+			goto fail;
+		}
+		a = malloc(sizeof(*a));
+		if (a == NULL) {
+			warn("malloc advlock");
+			goto fail;
+		}
+		switch (kl->kl_rw) {
+		case KLOCKF_RW_READ:
+			a->rw = PS_ADVLOCK_RO;
+			break;
+		case KLOCKF_RW_WRITE:
+			a->rw = PS_ADVLOCK_RW;
+			break;
+		default:
+			warn("ABI broken");
+			free(a);
+			goto fail;
+		}
+		switch (kl->kl_type) {
+		case KLOCKF_TYPE_FLOCK:
+			a->type = PS_ADVLOCK_TYPE_FLOCK;
+			break;
+		case KLOCKF_TYPE_PID:
+			a->type = PS_ADVLOCK_TYPE_PID;
+			break;
+		case KLOCKF_TYPE_REMOTE:
+			a->type = PS_ADVLOCK_TYPE_REMOTE;
+			break;
+		default:
+			warn("ABI broken");
+			free(a);
+			goto fail;
+		}
+		a->pid = kl->kl_pid;
+		a->sysid = kl->kl_sysid;
+		a->file_fsid = kl->kl_file_fsid;
+		a->file_rdev = kl->kl_file_rdev;
+		a->file_fileid = kl->kl_file_fileid;
+		a->start = kl->kl_start;
+		a->len = kl->kl_len;
+		if (kl->kl_path[0] != '\0') {
+			a->path = strdup(kl->kl_path);
+			if (a->path == NULL) {
+				warn("malloc");
+				free(a);
+				goto fail;
+			}
+		} else
+			a->path = NULL;
+		STAILQ_INSERT_TAIL(res, a, next);
+	}
+
+	free(buf);
+	return (res);
+
+fail:
+	free(buf);
+	procstat_freeadvlock(procstat, res);
+	return (NULL);
+}
+
+struct advlock_list *
+procstat_getadvlock(struct procstat *procstat)
+{
+	switch (procstat->type) {
+	case PROCSTAT_KVM:
+		warnx("kvm method is not supported");
+		return (NULL);
+	case PROCSTAT_SYSCTL:
+		return (procstat_getadvlock_sysctl(procstat));
+	case PROCSTAT_CORE:
+		warnx("core method is not supported");
+		return (NULL);
+	default:
+		warnx("unknown access method: %d", procstat->type);
+		return (NULL);
+	}
+}
+
+void
+procstat_freeadvlock(struct procstat *procstat __unused,
+    struct advlock_list *lst)
+{
+	struct advlock *a, *a1;
+
+	STAILQ_FOREACH_SAFE(a, lst, next, a1) {
+		free(__DECONST(char *, a->path));
+		free(a);
+	}
+	free(lst);
+}
+

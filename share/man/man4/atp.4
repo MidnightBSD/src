@@ -25,8 +25,6 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man4/atp.4 301589 2016-06-08 08:50:35Z trasz $
-.\"
 .Dd February 24, 2014
 .Dt ATP 4
 .Os
@@ -38,6 +36,7 @@ To compile this driver into the kernel, place the following lines into
 your kernel configuration file:
 .Bd -ragged -offset indent
 .Cd "device atp"
+.Cd "device hid"
 .Cd "device usb"
 .Ed
 .Pp

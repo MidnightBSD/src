@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Rui Paulo under sponsorship from the
  * FreeBSD Foundation.
@@ -30,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/sysctl.h>
 #include <sys/user.h>
@@ -164,6 +162,7 @@ rd_loadobj_iter(rd_agent_t *rdap, rl_iter_f *cb, void *clnt_data)
 	rd_loadobj_t rdl;
 	rd_err_e ret;
 	uintptr_t base;
+	uint32_t offset;
 	int cnt, i;
 
 	DPRINTF("%s\n", __func__);
@@ -189,11 +188,12 @@ rd_loadobj_iter(rd_agent_t *rdap, rl_iter_f *cb, void *clnt_data)
 			if (kve->kve_vn_fileid != fileid) {
 				base = kve->kve_start;
 				fileid = kve->kve_vn_fileid;
-				path = kve->kve_path;
 			}
+			path = kve->kve_path;
+			offset = kve->kve_start - base;
 		} else {
-			base = 0;
 			path = NULL;
+			offset = 0;
 		}
 		memset(&rdl, 0, sizeof(rdl));
 		/*
@@ -201,7 +201,7 @@ rd_loadobj_iter(rd_agent_t *rdap, rl_iter_f *cb, void *clnt_data)
 		 */
 		rdl.rdl_saddr = kve->kve_start;
 		rdl.rdl_eaddr = kve->kve_end;
-		rdl.rdl_offset = kve->kve_start - base;
+		rdl.rdl_offset = offset;
 		if (kve->kve_protection & KVME_PROT_READ)
 			rdl.rdl_prot |= RD_RDL_R;
 		if (kve->kve_protection & KVME_PROT_WRITE)

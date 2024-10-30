@@ -1,7 +1,7 @@
 /*	$NetBSD: usbvar.h,v 1.2 1999/05/11 21:15:46 augustss Exp $	*/
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999 Lennart Augustsson <augustss@netbsd.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *
  */
 
 #ifndef _USBVAR_H_
@@ -44,12 +43,6 @@ struct report_desc {
 int	hid_set_immed_compat7(int fd, int enable);
 int	hid_get_report_id_compat7(int fd);
 report_desc_t	hid_get_report_desc_compat7(int fd);
-#endif
-
-#ifdef COMPAT_32BIT
-#define	hid_pass_ptr(ptr)	((uint64_t)(uintptr_t)(ptr))
-#else
-#define	hid_pass_ptr(ptr)	(ptr)
 #endif
 
 #endif		/* _USBVAR_H_ */

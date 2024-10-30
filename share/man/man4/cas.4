@@ -23,9 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man4/cas.4 267938 2014-06-26 21:46:14Z bapt $
-.\"
-.Dd March 24, 2012
+.Dd April 18, 2023
 .Dt CAS 4
 .Os
 .Sh NAME
@@ -50,8 +48,7 @@ if_cas_load="YES"
 The
 .Nm
 driver provides support for the Sun Cassini/Cassini+ and National
-Semiconductor DP83065 Saturn Gigabit Ethernet controllers found
-on-board in Sun UltraSPARC machines and as add-on cards.
+Semiconductor DP83065 Saturn Gigabit Ethernet controllers.
 .Pp
 All controllers supported by the
 .Nm
@@ -105,35 +102,11 @@ Sun Quad GigaSwift Ethernet UTP (QGE)
 Sun Quad GigaSwift Ethernet PCI-X (QGE-X)
 (part no.\& 501-6738)
 .El
-.Sh NOTES
-On sparc64 the
-.Nm
-driver respects the
-.Va local-mac-address?
-system configuration variable which can be set in the Open Firmware boot
-monitor using the
-.Ic setenv
-command or by
-.Xr eeprom 8 .
-If set to
-.Dq Li false
-(the default), the
-.Nm
-driver will use the system's default MAC address for all of its devices.
-If set to
-.Dq Li true ,
-the unique MAC address of each interface is used if present rather than
-the system's default MAC address.
-.Pp
-Supported interfaces having their own MAC address include on-board
-versions on boards equipped with more than one Ethernet interface and
-all add-on cards.
 .Sh SEE ALSO
 .Xr altq 4 ,
 .Xr miibus 4 ,
 .Xr netintro 4 ,
 .Xr vlan 4 ,
-.Xr eeprom 8 ,
 .Xr ifconfig 8
 .Sh HISTORY
 The

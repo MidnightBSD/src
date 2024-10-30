@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2001 Dima Dorfman.
  * All rights reserved.
@@ -72,7 +72,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <ctype.h>
 #include <err.h>
 #include <errno.h>

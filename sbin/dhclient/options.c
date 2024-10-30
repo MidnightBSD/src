@@ -43,7 +43,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <ctype.h>
 
 #define DHCP_OPTION_DATA

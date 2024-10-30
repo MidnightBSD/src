@@ -25,12 +25,12 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <sys/cpuset.h>
 #include <sys/param.h>
 #include <sys/endian.h>
 #include <sys/pmc.h>
+#include <sys/sysctl.h>
 #include <sys/imgact_aout.h>
 #include <sys/imgact_elf.h>
 
@@ -116,13 +116,23 @@ pmcstat_image_add_symbols(struct pmcstat_image *image, Elf *e,
 		if ((fnname = elf_strptr(e, sh->sh_link, sym.st_name))
 		    == NULL)
 			continue;
-#ifdef __arm__
-		/* Remove spurious ARM function name. */
+
+#if defined(__aarch64__) || defined(__arm__)
+		/* Ignore ARM mapping symbols. */
 		if (fnname[0] == '$' &&
 		    (fnname[1] == 'a' || fnname[1] == 't' ||
-		    fnname[1] == 'd') &&
-		    fnname[2] == '\0')
+		    fnname[1] == 'd' || fnname[1] == 'x'))
 			continue;
+
+		/*
+		 * Clear LSB from starting addresses for functions
+		 * which execute in Thumb mode.  We should perhaps
+		 * only do this for functions in a $t mapping symbol
+		 * range, but parsing mapping symbols would be a lot
+		 * of work and function addresses shouldn't have the
+		 * LSB set otherwise.
+		 */
+		sym.st_value &= ~1;
 #endif
 
 		symptr->ps_name  = pmcstat_string_intern(fnname);
@@ -175,12 +185,36 @@ pmcstat_image_link(struct pmcstat_process *pp, struct pmcstat_image *image,
 {
 	struct pmcstat_pcmap *pcm, *pcmnew;
 	uintfptr_t offset;
+#ifdef __powerpc__
+	unsigned long kernbase;
+	size_t kernbase_len;
+#endif
 
 	assert(image->pi_type != PMCSTAT_IMAGE_UNKNOWN &&
 	    image->pi_type != PMCSTAT_IMAGE_INDETERMINABLE);
 
 	if ((pcmnew = malloc(sizeof(*pcmnew))) == NULL)
 		err(EX_OSERR, "ERROR: Cannot create a map entry");
+
+	/*
+	 * PowerPC kernel is of DYN type and it has a base address
+	 * where it is initially loaded, before being relocated.
+	 * As the address in 'start' is where the kernel was relocated to,
+	 * but the symbols always use the original base address, we need to
+	 * subtract it to get the correct offset.
+	 */
+#ifdef __powerpc__
+	if (pp->pp_pid == -1) {
+		kernbase = 0;
+		kernbase_len = sizeof(kernbase);
+		if (sysctlbyname("kern.base_address", &kernbase, &kernbase_len,
+		    NULL, 0) == -1)
+			warnx(
+			    "WARNING: Could not retrieve kernel base address");
+		else
+			start -= kernbase;
+	}
+#endif
 
 	/*
 	 * Adjust the map entry to only cover the text portion
@@ -277,6 +311,7 @@ pmcstat_image_get_elf_params(struct pmcstat_image *image,
 	GElf_Shdr sh;
 	enum pmcstat_image_type image_type;
 	char buffer[PATH_MAX];
+	char buffer_modules[PATH_MAX];
 
 	assert(image->pi_type == PMCSTAT_IMAGE_UNKNOWN);
 
@@ -291,23 +326,32 @@ pmcstat_image_get_elf_params(struct pmcstat_image *image,
 	assert(path != NULL);
 
 	/*
-	 * Look for kernel modules under FSROOT/KERNELPATH/NAME,
-	 * and user mode executable objects under FSROOT/PATHNAME.
+	 * Look for kernel modules under FSROOT/KERNELPATH/NAME and
+	 * FSROOT/boot/modules/NAME, and user mode executable objects
+	 * under FSROOT/PATHNAME.
 	 */
-	if (image->pi_iskernelmodule)
+	if (image->pi_iskernelmodule) {
 		(void) snprintf(buffer, sizeof(buffer), "%s%s/%s",
 		    args->pa_fsroot, args->pa_kernel, path);
-	else
+		(void) snprintf(buffer_modules, sizeof(buffer_modules),
+		    "%s/boot/modules/%s", args->pa_fsroot, path);
+	} else {
 		(void) snprintf(buffer, sizeof(buffer), "%s%s",
 		    args->pa_fsroot, path);
+	}
 
 	e = NULL;
-	if ((fd = open(buffer, O_RDONLY, 0)) < 0) {
+	fd = open(buffer, O_RDONLY, 0);
+	if (fd < 0 && !image->pi_iskernelmodule) {
 		warnx("WARNING: Cannot open \"%s\".",
 		    buffer);
 		goto done;
 	}
-
+	if (fd < 0 && (fd = open(buffer_modules, O_RDONLY, 0)) < 0) {
+		warnx("WARNING: Cannot open \"%s\" or \"%s\".",
+		    buffer, buffer_modules);
+		goto done;
+	}
 	if (elf_version(EV_CURRENT) == EV_NONE) {
 		warnx("WARNING: failed to init elf\n");
 		goto done;

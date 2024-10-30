@@ -1,9 +1,10 @@
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
 
-PACKAGE=lib${LIB}
 SHLIBDIR?= /lib
 
 .include <src.opts.mk>
+
+PACKAGE=	runtime
 
 .PATH: ${SRCTOP}/lib/libc/gen # for pw_scan.c
 

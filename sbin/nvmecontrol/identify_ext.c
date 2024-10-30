@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2012-2013 Intel Corporation
  * All rights reserved.
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 
 #include <ctype.h>
@@ -106,7 +105,7 @@ nvme_print_controller(struct nvme_controller_data *cdata)
 	printf("Firmware Version:            %s\n", str);
 	printf("Recommended Arb Burst:       %d\n", cdata->rab);
 	printf("IEEE OUI Identifier:         %02x %02x %02x\n",
-		cdata->ieee[0], cdata->ieee[1], cdata->ieee[2]);
+		cdata->ieee[2], cdata->ieee[1], cdata->ieee[0]);
 	printf("Multi-Path I/O Capabilities: %s%s%s%s%s\n",
 	    (cdata->mic == 0) ? "Not Supported" : "",
 	    ((cdata->mic >> NVME_CTRLR_DATA_MIC_ANAR_SHIFT) &
@@ -171,16 +170,8 @@ nvme_print_controller(struct nvme_controller_data *cdata)
 	}
 	printf("Abort Command Limit:         %d\n", cdata->acl+1);
 	printf("Async Event Request Limit:   %d\n", cdata->aerl+1);
-	printf("Number of Firmware Slots:    ");
-	if (fw != 0)
-		printf("%d\n", fw_num_slots);
-	else
-		printf("N/A\n");
-	printf("Firmware Slot 1 Read-Only:   ");
-	if (fw != 0)
-		printf("%s\n", fw_slot1_ro ? "Yes" : "No");
-	else
-		printf("N/A\n");
+	printf("Number of Firmware Slots:    %d\n", fw_num_slots);
+	printf("Firmware Slot 1 Read-Only:   %s\n", fw_slot1_ro ? "Yes" : "No");
 	printf("Per-Namespace SMART Log:     %s\n",
 		ns_smart ? "Yes" : "No");
 	printf("Error Log Page Entries:      %d\n", cdata->elpe+1);

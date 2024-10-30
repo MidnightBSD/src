@@ -41,7 +41,6 @@ static char sccsid[] = "From: @(#)swapon.c	8.1 (Berkeley) 6/5/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/capsicum.h>
 #include <sys/disk.h>
@@ -76,6 +75,7 @@ static char sccsid[] = "From: @(#)swapon.c	8.1 (Berkeley) 6/5/93";
 #ifdef HAVE_CRYPTO
 #include <openssl/err.h>
 #include <openssl/pem.h>
+#include <openssl/rand.h>
 #include <openssl/rsa.h>
 #endif
 
@@ -85,8 +85,8 @@ static void _Noreturn
 usage(void)
 {
 	fprintf(stderr,
-    "usage: dumpon [-v] [-k <pubkey>] [-Zz] <device>\n"
-    "       dumpon [-v] [-k <pubkey>] [-Zz]\n"
+    "usage: dumpon [-i index] [-r] [-v] [-k <pubkey>] [-Zz] <device>\n"
+    "       dumpon [-i index] [-r] [-v] [-k <pubkey>] [-Zz]\n"
     "              [-g <gateway>] -s <server> -c <client> <iface>\n"
     "       dumpon [-v] off\n"
     "       dumpon [-v] -l\n");
@@ -184,6 +184,25 @@ find_gateway(const char *ifname)
 }
 
 static void
+check_link_status(const char *ifname)
+{
+	struct ifaddrs *ifap, *ifa;
+
+	if (getifaddrs(&ifap) != 0)
+		err(EX_OSERR, "getifaddrs");
+
+	for (ifa = ifap; ifa != NULL; ifa = ifa->ifa_next) {
+		if (strcmp(ifname, ifa->ifa_name) != 0)
+			continue;
+		if ((ifa->ifa_flags & IFF_UP) == 0) {
+			warnx("warning: %s's link is down", ifname);
+		}
+		break;
+	}
+	freeifaddrs(ifap);
+}
+
+static void
 check_size(int fd, const char *fn)
 {
 	int name[] = { CTL_HW, HW_PHYSMEM };
@@ -202,11 +221,8 @@ check_size(int fd, const char *fn)
 		err(EX_OSERR, "can't get memory size");
 	if (ioctl(fd, DIOCGMEDIASIZE, &mediasize) != 0)
 		err(EX_OSERR, "%s: can't get size", fn);
-	if ((uintmax_t)mediasize < (uintmax_t)physmem) {
-		if (verbose)
-			printf("%s is smaller than physical memory\n", fn);
-		exit(EX_IOERR);
-	}
+	if ((uintmax_t)mediasize < (uintmax_t)physmem)
+		errx(EX_IOERR, "%s is smaller than physical memory", fn);
 }
 
 #ifdef HAVE_CRYPTO
@@ -226,6 +242,18 @@ genkey(const char *pubkeyfile, struct diocskerneldump_arg *kdap)
 	if (fp == NULL)
 		err(1, "Unable to open %s", pubkeyfile);
 
+	/*
+	 * Obsolescent OpenSSL only knows about /dev/random, and needs to
+	 * pre-seed before entering cap mode.  For whatever reason,
+	 * RSA_pub_encrypt uses the internal PRNG.
+	 */
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+	{
+		unsigned char c[1];
+		RAND_bytes(c, 1);
+	}
+#endif
+
 	if (caph_enter() < 0)
 		err(1, "Unable to enter capability mode");
 
@@ -241,6 +269,30 @@ genkey(const char *pubkeyfile, struct diocskerneldump_arg *kdap)
 	if (pubkey == NULL)
 		errx(1, "Unable to read data from %s.", pubkeyfile);
 
+	/*
+	 * RSA keys under ~1024 bits are trivially factorable (2018).  OpenSSL
+	 * provides an API for RSA keys to estimate the symmetric-cipher
+	 * "equivalent" bits of security (defined in NIST SP800-57), which as
+	 * of this writing equates a 2048-bit RSA key to 112 symmetric cipher
+	 * bits.
+	 *
+	 * Use this API as a seatbelt to avoid suggesting to users that their
+	 * privacy is protected by encryption when the key size is insufficient
+	 * to prevent compromise via factoring.
+	 *
+	 * Future work: Sanity check for weak 'e', and sanity check for absence
+	 * of 'd' (i.e., the supplied key is a public key rather than a full
+	 * keypair).
+	 */
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+	if (RSA_security_bits(pubkey) < 112)
+#else
+	if (RSA_size(pubkey) * 8 < 2048)
+#endif
+		errx(1, "Small RSA keys (you provided: %db) can be "
+		    "factored cheaply.  Please generate a larger key.",
+		    RSA_size(pubkey) * 8);
+
 	kdap->kda_encryptedkeysize = RSA_size(pubkey);
 	if (kdap->kda_encryptedkeysize > KERNELDUMP_ENCKEY_MAX_SIZE) {
 		errx(1, "Public key has to be at most %db long.",
@@ -251,12 +303,22 @@ genkey(const char *pubkeyfile, struct diocskerneldump_arg *kdap)
 	if (kdap->kda_encryptedkey == NULL)
 		err(1, "Unable to allocate encrypted key");
 
-	kdap->kda_encryption = KERNELDUMP_ENC_AES_256_CBC;
+	/*
+	 * If no cipher was specified, choose a reasonable default.
+	 */
+	if (kdap->kda_encryption == KERNELDUMP_ENC_NONE)
+		kdap->kda_encryption = KERNELDUMP_ENC_CHACHA20;
+	else if (kdap->kda_encryption == KERNELDUMP_ENC_AES_256_CBC &&
+	    kdap->kda_compression != KERNELDUMP_COMP_NONE)
+		errx(EX_USAGE, "Unpadded AES256-CBC mode cannot be used "
+		    "with compression.");
+
 	arc4random_buf(kdap->kda_key, sizeof(kdap->kda_key));
 	if (RSA_public_encrypt(sizeof(kdap->kda_key), kdap->kda_key,
 	    kdap->kda_encryptedkey, pubkey,
-	    RSA_PKCS1_PADDING) != (int)kdap->kda_encryptedkeysize) {
-		errx(1, "Unable to encrypt the one-time key.");
+	    RSA_PKCS1_OAEP_PADDING) != (int)kdap->kda_encryptedkeysize) {
+		errx(1, "Unable to encrypt the one-time key: %s",
+		    ERR_error_string(ERR_get_error(), NULL));
 	}
 	RSA_free(pubkey);
 }
@@ -265,8 +327,10 @@ genkey(const char *pubkeyfile, struct diocskerneldump_arg *kdap)
 static void
 listdumpdev(void)
 {
+	static char ip[200];
+
 	char dumpdev[PATH_MAX];
-	struct netdump_conf ndconf;
+	struct diocskerneldump_arg ndconf;
 	size_t len;
 	const char *sysctlname = "kern.shutdown.dumpdevname";
 	int fd;
@@ -283,9 +347,17 @@ listdumpdev(void)
 	if (strlen(dumpdev) == 0)
 		(void)strlcpy(dumpdev, _PATH_DEVNULL, sizeof(dumpdev));
 
-	if (verbose)
-		printf("kernel dumps on ");
-	printf("%s\n", dumpdev);
+	if (verbose) {
+		char *ctx, *dd;
+		unsigned idx;
+
+		printf("kernel dumps on priority: device\n");
+		idx = 0;
+		ctx = dumpdev;
+		while ((dd = strsep(&ctx, ",")) != NULL)
+			printf("%u: %s\n", idx++, dd);
+	} else
+		printf("%s\n", dumpdev);
 
 	/* If netdump is enabled, print the configuration parameters. */
 	if (verbose) {
@@ -295,16 +367,22 @@ listdumpdev(void)
 				err(EX_OSERR, "opening %s", _PATH_NETDUMP);
 			return;
 		}
-		if (ioctl(fd, NETDUMPGCONF, &ndconf) != 0) {
+		if (ioctl(fd, DIOCGKERNELDUMP, &ndconf) != 0) {
 			if (errno != ENXIO)
-				err(EX_OSERR, "ioctl(NETDUMPGCONF)");
+				err(EX_OSERR, "ioctl(DIOCGKERNELDUMP)");
 			(void)close(fd);
 			return;
 		}
 
-		printf("server address: %s\n", inet_ntoa(ndconf.ndc_server));
-		printf("client address: %s\n", inet_ntoa(ndconf.ndc_client));
-		printf("gateway address: %s\n", inet_ntoa(ndconf.ndc_gateway));
+		printf("server address: %s\n",
+		    inet_ntop(ndconf.kda_af, &ndconf.kda_server, ip,
+			sizeof(ip)));
+		printf("client address: %s\n",
+		    inet_ntop(ndconf.kda_af, &ndconf.kda_client, ip,
+			sizeof(ip)));
+		printf("gateway address: %s\n",
+		    inet_ntop(ndconf.kda_af, &ndconf.kda_gateway, ip,
+			sizeof(ip)));
 		(void)close(fd);
 	}
 }
@@ -334,31 +412,60 @@ int
 main(int argc, char *argv[])
 {
 	char dumpdev[PATH_MAX];
-	struct diocskerneldump_arg _kda, *kdap;
-	struct netdump_conf ndconf;
+	struct diocskerneldump_arg ndconf, *kdap;
 	struct addrinfo hints, *res;
 	const char *dev, *pubkeyfile, *server, *client, *gateway;
-	int ch, error, fd;
-	bool enable, gzip, list, netdump, zstd;
+	int ch, error, fd, cipher;
+	bool gzip, list, netdump, zstd, insert, rflag;
+	uint8_t ins_idx;
 
-	gzip = list = netdump = zstd = false;
+	gzip = list = netdump = zstd = insert = rflag = false;
 	kdap = NULL;
 	pubkeyfile = NULL;
 	server = client = gateway = NULL;
+	ins_idx = KDA_APPEND;
+	cipher = KERNELDUMP_ENC_NONE;
 
-	while ((ch = getopt(argc, argv, "c:g:k:ls:vZz")) != -1)
+	while ((ch = getopt(argc, argv, "C:c:g:i:k:lrs:vZz")) != -1)
 		switch ((char)ch) {
+		case 'C':
+			if (strcasecmp(optarg, "chacha") == 0 ||
+			    strcasecmp(optarg, "chacha20") == 0)
+				cipher = KERNELDUMP_ENC_CHACHA20;
+			else if (strcasecmp(optarg, "aes-cbc") == 0 ||
+			    strcasecmp(optarg, "aes256-cbc") == 0)
+				cipher = KERNELDUMP_ENC_AES_256_CBC;
+			else
+				errx(EX_USAGE, "Unrecognized cipher algorithm "
+				    "'%s'", optarg);
+			break;
 		case 'c':
 			client = optarg;
 			break;
 		case 'g':
 			gateway = optarg;
 			break;
+		case 'i':
+			{
+			int i;
+
+			i = atoi(optarg);
+			if (i < 0 || i >= KDA_APPEND - 1)
+				errx(EX_USAGE,
+				    "-i index must be between zero and %d.",
+				    (int)KDA_APPEND - 2);
+			insert = true;
+			ins_idx = i;
+			}
+			break;
 		case 'k':
 			pubkeyfile = optarg;
 			break;
 		case 'l':
 			list = true;
+			break;
+		case 'r':
+			rflag = true;
 			break;
 		case 's':
 			server = optarg;
@@ -379,6 +486,9 @@ main(int argc, char *argv[])
 	if (gzip && zstd)
 		errx(EX_USAGE, "The -z and -Z options are mutually exclusive.");
 
+	if (insert && rflag)
+		errx(EX_USAGE, "The -i and -r options are mutually exclusive.");
+
 	argc -= optind;
 	argv += optind;
 
@@ -390,38 +500,43 @@ main(int argc, char *argv[])
 	if (argc != 1)
 		usage();
 
-#ifndef HAVE_CRYPTO
+#ifdef HAVE_CRYPTO
+	if (cipher != KERNELDUMP_ENC_NONE && pubkeyfile == NULL) {
+		errx(EX_USAGE, "-C option requires a public key file.");
+	} else if (pubkeyfile != NULL) {
+		ERR_load_crypto_strings();
+	}
+#else
 	if (pubkeyfile != NULL)
 		errx(EX_UNAVAILABLE,"Unable to use the public key."
 				    " Recompile dumpon with OpenSSL support.");
 #endif
 
 	if (server != NULL && client != NULL) {
-		enable = true;
 		dev = _PATH_NETDUMP;
 		netdump = true;
-		kdap = &ndconf.ndc_kda;
 	} else if (server == NULL && client == NULL && argc > 0) {
-		enable = strcmp(argv[0], "off") != 0;
-		dev = enable ? argv[0] : _PATH_DEVNULL;
+		if (strcmp(argv[0], "off") == 0) {
+			rflag = true;
+			dev = _PATH_DEVNULL;
+		} else
+			dev = argv[0];
 		netdump = false;
-		kdap = &_kda;
 	} else
 		usage();
 
 	fd = opendumpdev(dev, dumpdev);
-	if (!netdump && !gzip)
+	if (!netdump && !gzip && !zstd && !rflag)
 		check_size(fd, dumpdev);
 
+	kdap = &ndconf;
 	bzero(kdap, sizeof(*kdap));
-	kdap->kda_enable = 0;
-	if (ioctl(fd, DIOCSKERNELDUMP, kdap) != 0)
-		err(EX_OSERR, "ioctl(DIOCSKERNELDUMP)");
-	if (!enable)
-		exit(EX_OK);
 
-	explicit_bzero(kdap, sizeof(*kdap));
-	kdap->kda_enable = 1;
+	if (rflag)
+		kdap->kda_index = KDA_REMOVE;
+	else
+		kdap->kda_index = ins_idx;
+
 	kdap->kda_compression = KERNELDUMP_COMP_NONE;
 	if (zstd)
 		kdap->kda_compression = KERNELDUMP_COMP_ZSTD;
@@ -442,12 +557,12 @@ main(int argc, char *argv[])
 		    ((struct sockaddr_in *)(void *)res->ai_addr)->sin_addr);
 		freeaddrinfo(res);
 
-		if (strlcpy(ndconf.ndc_iface, argv[0],
-		    sizeof(ndconf.ndc_iface)) >= sizeof(ndconf.ndc_iface))
+		if (strlcpy(ndconf.kda_iface, argv[0],
+		    sizeof(ndconf.kda_iface)) >= sizeof(ndconf.kda_iface))
 			errx(EX_USAGE, "invalid interface name '%s'", argv[0]);
-		if (inet_aton(server, &ndconf.ndc_server) == 0)
+		if (inet_aton(server, &ndconf.kda_server.in4) == 0)
 			errx(EX_USAGE, "invalid server address '%s'", server);
-		if (inet_aton(client, &ndconf.ndc_client) == 0)
+		if (inet_aton(client, &ndconf.kda_client.in4) == 0)
 			errx(EX_USAGE, "invalid client address '%s'", client);
 
 		if (gateway == NULL) {
@@ -460,39 +575,52 @@ main(int argc, char *argv[])
 				gateway = server;
 			}
 		}
-		if (inet_aton(gateway, &ndconf.ndc_gateway) == 0)
+		if (inet_aton(gateway, &ndconf.kda_gateway.in4) == 0)
 			errx(EX_USAGE, "invalid gateway address '%s'", gateway);
+		ndconf.kda_af = AF_INET;
+	}
 
 #ifdef HAVE_CRYPTO
-		if (pubkeyfile != NULL)
-			genkey(pubkeyfile, kdap);
-#endif
-		error = ioctl(fd, NETDUMPSCONF, &ndconf);
-		if (error != 0)
-			error = errno;
-		explicit_bzero(kdap->kda_encryptedkey,
-		    kdap->kda_encryptedkeysize);
-		free(kdap->kda_encryptedkey);
-		explicit_bzero(kdap, sizeof(*kdap));
-		if (error != 0)
-			errc(EX_OSERR, error, "ioctl(NETDUMPSCONF)");
-	} else {
-#ifdef HAVE_CRYPTO
-		if (pubkeyfile != NULL)
-			genkey(pubkeyfile, kdap);
-#endif
-		error = ioctl(fd, DIOCSKERNELDUMP, kdap);
-		if (error != 0)
-			error = errno;
-		explicit_bzero(kdap->kda_encryptedkey,
-		    kdap->kda_encryptedkeysize);
-		free(kdap->kda_encryptedkey);
-		explicit_bzero(kdap, sizeof(*kdap));
-		if (error != 0)
-			errc(EX_OSERR, error, "ioctl(DIOCSKERNELDUMP)");
+	if (pubkeyfile != NULL) {
+		kdap->kda_encryption = cipher;
+		genkey(pubkeyfile, kdap);
 	}
+#endif
+	error = ioctl(fd, DIOCSKERNELDUMP, kdap);
+	if (error != 0)
+		error = errno;
+	if (error == EINVAL && (gzip || zstd)) {
+		/* Retry without compression in case kernel lacks support. */
+		kdap->kda_compression = KERNELDUMP_COMP_NONE;
+		error = ioctl(fd, DIOCSKERNELDUMP, kdap);
+		if (error == 0)
+			warnx("Compression disabled; kernel may lack gzip or zstd support.");
+		else
+			error = errno;
+	}
+	/* Emit a warning if the user configured a downed interface. */
+	if (error == 0 && netdump)
+		check_link_status(kdap->kda_iface);
+	explicit_bzero(kdap->kda_encryptedkey, kdap->kda_encryptedkeysize);
+	free(kdap->kda_encryptedkey);
+	explicit_bzero(kdap, sizeof(*kdap));
+	if (error != 0) {
+		if (netdump) {
+			/*
+			 * Be slightly less user-hostile for some common
+			 * errors, especially as users don't have any great
+			 * discoverability into which NICs support netdump.
+			 */
+			if (error == ENODEV)
+				errx(EX_OSERR, "Unable to configure netdump "
+				    "because the interface driver does not yet "
+				    "support netdump.");
+		}
+		errc(EX_OSERR, error, "ioctl(DIOCSKERNELDUMP)");
+	}
+
 	if (verbose)
-		printf("kernel dumps on %s\n", dumpdev);
+		listdumpdev();
 
 	exit(EX_OK);
 }

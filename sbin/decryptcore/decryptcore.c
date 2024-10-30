@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <sys/capsicum.h>
 #include <sys/endian.h>
@@ -118,7 +117,8 @@ static bool
 decrypt(int ofd, const char *privkeyfile, const char *keyfile,
     const char *input)
 {
-	uint8_t buf[KERNELDUMP_BUFFER_SIZE], key[KERNELDUMP_KEY_MAX_SIZE];
+	uint8_t buf[KERNELDUMP_BUFFER_SIZE], key[KERNELDUMP_KEY_MAX_SIZE],
+	    chachaiv[4 * 4];
 	EVP_CIPHER_CTX *ctx;
 	const EVP_CIPHER *cipher;
 	FILE *fp;
@@ -168,6 +168,20 @@ decrypt(int ofd, const char *privkeyfile, const char *keyfile,
 		goto failed;
 	}
 
+	/*
+	 * Obsolescent OpenSSL only knows about /dev/random, and needs to
+	 * pre-seed before entering cap mode.  For whatever reason,
+	 * RSA_pub_encrypt uses the internal PRNG.
+	 */
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+	{
+		unsigned char c[1];
+		RAND_bytes(c, 1);
+	}
+#endif
+	ERR_load_crypto_strings();
+
+	caph_cache_catpages();
 	if (caph_enter() < 0) {
 		pjdlog_errno(LOG_ERR, "Unable to enter capability mode");
 		goto failed;
@@ -206,12 +220,19 @@ decrypt(int ofd, const char *privkeyfile, const char *keyfile,
 	case KERNELDUMP_ENC_AES_256_CBC:
 		cipher = EVP_aes_256_cbc();
 		break;
+	case KERNELDUMP_ENC_CHACHA20:
+		cipher = EVP_chacha20();
+		break;
 	default:
 		pjdlog_error("Invalid encryption algorithm.");
 		goto failed;
 	}
 
 	if (RSA_private_decrypt(kdk->kdk_encryptedkeysize,
+	    kdk->kdk_encryptedkey, key, privkey,
+	    RSA_PKCS1_OAEP_PADDING) != sizeof(key) &&
+	    /* Fallback to deprecated, formerly-used PKCS 1.5 padding. */
+	    RSA_private_decrypt(kdk->kdk_encryptedkeysize,
 	    kdk->kdk_encryptedkey, key, privkey,
 	    RSA_PKCS1_PADDING) != sizeof(key)) {
 		pjdlog_error("Unable to decrypt key: %s",
@@ -221,7 +242,23 @@ decrypt(int ofd, const char *privkeyfile, const char *keyfile,
 	RSA_free(privkey);
 	privkey = NULL;
 
-	EVP_DecryptInit_ex(ctx, cipher, NULL, key, kdk->kdk_iv);
+	if (kdk->kdk_encryption == KERNELDUMP_ENC_CHACHA20) {
+		/*
+		 * OpenSSL treats the IV as 4 little-endian 32 bit integers.
+		 *
+		 * The first two represent a 64-bit counter, where the low half
+		 * is the first 32-bit word.
+		 *
+		 * Start at counter block zero...
+		 */
+		memset(chachaiv, 0, 4 * 2);
+		/*
+		 * And use the IV specified by the dump.
+		 */
+		memcpy(&chachaiv[4 * 2], kdk->kdk_iv, 4 * 2);
+		EVP_DecryptInit_ex(ctx, cipher, NULL, key, chachaiv);
+	} else
+		EVP_DecryptInit_ex(ctx, cipher, NULL, key, kdk->kdk_iv);
 	EVP_CIPHER_CTX_set_padding(ctx, 0);
 
 	explicit_bzero(key, sizeof(key));

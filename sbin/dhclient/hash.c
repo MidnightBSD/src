@@ -43,7 +43,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "dhcpd.h"
 
 static int do_hash(const unsigned char *, int, int);

@@ -27,7 +27,7 @@
 .\"
 .\"	@(#)mount_nfs.8	8.3 (Berkeley) 3/29/95
 .\"
-.Dd September 5, 2022
+.Dd June 14, 2023
 .Dt MOUNT_NFS 8
 .Os
 .Sh NAME
@@ -58,9 +58,11 @@ on to the file system tree at the point
 .Ar node .
 This command is normally executed by
 .Xr mount 8 .
-It implements the mount protocol as described in RFC 1094, Appendix A and
-.%T "NFS: Network File System Version 3 Protocol Specification" ,
-Appendix I.
+For NFSv2 and NFSv3,
+it implements the mount protocol as described in RFC 1094, Appendix A and
+RFC 1813, Appendix I.
+For NFSv4, it uses the NFSv4 protocol as described in RFC 7530, RFC 5661 and
+RFC 7862.
 .Pp
 By default,
 .Nm
@@ -163,7 +165,7 @@ It allows the mount to be performed by
 and avoids problems with
 cached credentials for the system operations expiring.
 The
-.Dq "service-prinicpal-name"
+.Dq "service-principal-name"
 should be specified without instance or domain and is typically
 .Dq "host" ,
 .Dq "nfs"
@@ -209,6 +211,28 @@ If this is set to 0 it disables positive name caching for the mount point.
 Override the default of NFS_DEFAULT_NEGNAMETIMEO for the timeout (in seconds)
 for negative name cache entries.
 If this is set to 0 it disables negative name caching for the mount point.
+.It Cm nconnect Ns = Ns Aq Ar value
+Specify the number of TCP connections (1-16) to be used
+for an NFS Version 4, minor version 1 or 2 mount.
+Multiple TCP connections can provide more client to server network
+bandwidth for certain network configurations such as:
+.Bd -literal
+- Multiple network interfaces that are aggregated together.
+- A fast network interface that uses multiple queues.
+.Ed
+.sp
+The first TCP connection will be used for all RPCs that consist
+entirely of small RPC messages.
+The RPCs that can have large RPC messages (Read/Readdir/Write) are
+distributed over the additional TCP connections in a round robin
+fashion.
+This option will result in more IP port#s being used.
+This option requires the
+.Cm nfsv4
+option.
+Note that for NFS servers such as AmazonEFS, where each new TCP
+connection can connect to a different cluster that maintains lock
+state separately, this option cannot be used.
 .It Cm nfsv2
 Use the NFS Version 2 protocol (the default is to try version 3 first
 then version 2).
@@ -219,25 +243,31 @@ Use the NFS Version 3 protocol.
 Use the NFS Version 4 protocol.
 This option will force the mount to use
 TCP transport.
+By default, the highest minor version of NFS Version 4 that is
+supported by the NFS Version 4 server will be used.
+See the
+.Cm minorversion
+option.
 Make sure that all your NFS Version 4 clients have unique
 values in
 .Pa /etc/hostid .
 .It Cm minorversion Ns = Ns Aq Ar value
-Override the default of 0 for the minor version of the NFS Version 4 protocol.
-The only minor version currently supported is 1.
+Use the specified minor version for a NFS Version 4 mount,
+overriding the default.
+The minor versions supported are 0, 1, and 2.
 This option is only meaningful when used with the
 .Cm nfsv4
 option.
 .It Cm oneopenown
-Make a minor version 1 of the NFS Version 4 protocol mount use a single OpenOwner
-for all Opens.
+Make a minor version 1 or 2 of the NFS Version 4 protocol mount use a single
+OpenOwner for all Opens.
 This may be useful for a server with a very low limit on OpenOwners, such as
 AmazonEFS.
 It may be required when an accumulation of NFS version 4 Opens occurs,
 as indicated by the
 .Dq Opens
 count displayed by
-.Xr nfsstat 8
+.Xr nfsstat 1
 with the
 .Fl c
 and
@@ -247,21 +277,16 @@ A common case for an accumulation of Opens is a shared library within
 the NFS mount that is used by several
 processes, where at least one of these processes is always running.
 This option cannot be used for an NFS Version 4, minor version 0 mount.
-As such, this option requires the
-.Cm minorversion
-option be specified with a value of 1 for AmazonEFS.
 It may not work correctly when Delegations are being issued by a server,
 but note that the AmazonEFS server does not issued delegations at this time.
 This option is only meaningful when used with the
 .Cm nfsv4
-and
-.Cm minorversion
-options.
+option.
 .It Cm pnfs
-Enable support for parallel NFS (pNFS) for minor version 1 of the
+Enable support for parallel NFS (pNFS) for minor version 1 or 2 of the
 NFS Version 4 protocol.
 This option is only meaningful when used with the
-.Cm minorversion
+.Cm nfsv4
 option.
 .It Cm noac
 Disable attribute caching.
@@ -418,6 +443,21 @@ A soft mount, which implies that file system calls will fail
 after
 .Ar retrycnt
 round trip timeout intervals.
+.It Cm syskrb5
+This option specifies that a KerberosV NFSv4 minor version 1 or 2 mount
+uses AUTH_SYS for system operations.
+Using this option avoids the need for a KerberosV mount to have a
+host-based principal entry in the default keytab file
+(no
+.Cm gssname
+option) or a requirement for the user doing the mount to have a
+valid KerberosV ticket granting ticket (TGT) when the mount is done.
+This option is intended to be used with the
+.Cm sec Ns = Ns krb5
+and
+.Cm tls
+options and can only be used for
+NFSv4 mounts with minor version 1 or 2.
 .It Cm tcp
 Use TCP transport.
 This is the default option, as it provides for increased reliability on both
@@ -441,6 +481,42 @@ interval.)
 .It Cm timeo Ns = Ns Aq Ar value
 Alias for
 .Cm timeout .
+.It Cm tls
+This option specifies that the connection to the server must use TLS
+per RFC 9289.
+TLS is only supported for TCP connections and the
+.Xr rpc.tlsclntd 8
+daemon must be running for an NFS over TCP connection to use TLS.
+.It Cm tlscertname Ns = Ns Aq Ar name
+This option specifies the name of an alternate certificate to be
+presented to the NFS server during TLS handshake.
+The default certificate file names are
+.Dq cert.pem
+and
+.Dq certkey.pem .
+When this option is specified,
+.Ar name
+replaces
+.Dq cert
+in the above file names.
+For example, if the value of
+.Ar name
+is specified as
+.Dq other
+the certificate file names to be used will be
+.Dq other.pem
+and
+.Dq otherkey.pem .
+These files are stored in
+.Pa /etc/rpc.tlsclntd
+by default.
+This option is only meaningful when used with the
+.Cm tls
+option and the
+.Xr rpc.tlsclntd 8
+is running with the
+.Fl m
+command line flag set.
 .It Cm udp
 Use UDP transport.
 .It Cm vers Ns = Ns Aq Ar vers_number
@@ -587,14 +663,17 @@ Same as
 .Fl o Cm nfsv4
 .El
 .Sh SEE ALSO
+.Xr nfsstat 1 ,
 .Xr nmount 2 ,
 .Xr unmount 2 ,
+.Xr lagg 4 ,
 .Xr nfsv4 4 ,
 .Xr fstab 5 ,
 .Xr gssd 8 ,
 .Xr mount 8 ,
 .Xr nfsd 8 ,
 .Xr nfsiod 8 ,
+.Xr rpc.tlsclntd 8 ,
 .Xr showmount 8
 .Sh HISTORY
 A version of the
@@ -608,10 +687,18 @@ enforced by the server, the options
 and
 .Cm soft
 cannot be safely used.
-For NFSv4 minor version 1 mounts, these options may
-also result
-in hung mount points, due to corruption of session slots.
-For NFSv4 mounts,
+For NFSv4 minor version 1 or 2 mounts, the ordering is done
+via session slots and the NFSv4 client now handles broken session slots
+fairly well.
+As such, if the
+.Cm nolockd
+option is used along with
+.Cm intr
+and/or
+.Cm soft ,
+an NFSv4 minor version 1 or 2 mount
+should work fairly well, although still not completely correctly.
+For NFSv4 minor version 0 mounts,
 .Cm hard
 mounts without the
 .Cm intr

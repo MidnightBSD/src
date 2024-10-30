@@ -22,8 +22,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 .\" OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\"
-.Dd July 4, 2018
+.Dd July 8, 2022
 .Dt VERIEXEC 8
 .Os
 .Sh NAME
@@ -33,6 +32,7 @@
 .Nm
 .Op Fl v
 .Op Fl C Ar directory
+.Op Fl S
 .Pa manifest
 .Nm
 .Fl z Ar state
@@ -52,6 +52,11 @@ The first form is for loading a
 first verifies a digital signature of the
 .Ar manifest
 and if successful, parses it and feeds its content to kernel.
+The
+.Fl S
+flag indicates that certificate validity should be checked.
+Without this, a valid signature with an expired certificate
+will still be accepted.
 .Pp
 The second form with
 .Fl z
@@ -100,6 +105,20 @@ unless verified.
 .It Ar locked
 prevent loading of any more manifests.
 .El
+.Pp
+When setting or querying the state, it is sufficient to provide
+a unique prefix of the desired state.
+So
+.Fl i
+.Ar a
+or
+.Fl z
+.Ar e
+are sufficient, but
+.Fl i
+.Ar loc
+is the minimum required to avoid confusion with
+.Ar loaded .
 .Sh MANIFESTS
 The manifest contains a mapping of relative pathnames to fingerprints
 with optional flags.

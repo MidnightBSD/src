@@ -29,7 +29,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef _PFCTL_PARSER_H_
@@ -183,7 +182,7 @@ struct node_queue_opt {
 };
 
 #define QPRI_BITSET_SIZE	256
-BITSET_DEFINE(qpri_bitset, QPRI_BITSET_SIZE);
+__BITSET_DEFINE(qpri_bitset, QPRI_BITSET_SIZE);
 LIST_HEAD(gen_sc, segment);
 
 struct pfctl_altq {
@@ -341,6 +340,7 @@ extern const struct pf_timeout pf_timeouts[];
 void			 set_ipmask(struct node_host *, u_int8_t);
 int			 check_netmask(struct node_host *, sa_family_t);
 int			 unmask(struct pf_addr *, sa_family_t);
+struct node_host	*gen_dynnode(struct node_host *, sa_family_t);
 void			 ifa_load(void);
 int			 get_query_socket(void);
 struct node_host	*ifa_exists(char *);

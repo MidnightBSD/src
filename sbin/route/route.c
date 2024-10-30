@@ -42,11 +42,13 @@ static char sccsid[] = "@(#)route.c	8.6 (Berkeley) 4/28/95";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/file.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
+#ifdef JAIL
+#include <sys/jail.h>
+#endif
 #include <sys/sysctl.h>
 #include <sys/types.h>
 #include <sys/queue.h>
@@ -62,6 +64,9 @@ static char sccsid[] = "@(#)route.c	8.6 (Berkeley) 4/28/95";
 #include <ctype.h>
 #include <err.h>
 #include <errno.h>
+#ifdef JAIL
+#include <jail.h>
+#endif
 #include <paths.h>
 #include <signal.h>
 #include <stdbool.h>
@@ -89,6 +94,9 @@ static struct keytab {
 	{0, 0}
 };
 
+#ifdef JAIL
+char * jail_name;
+#endif
 static struct sockaddr_storage so[RTAX_MAX];
 static int	pid, rtm_addrs;
 static int	s;
@@ -100,8 +108,8 @@ static u_long  rtm_inits;
 static uid_t	uid;
 static int	defaultfib;
 static int	numfibs;
-static char	domain[MAXHOSTNAMELEN + 1];
-static bool	domain_initialized;
+static char	domain_storage[MAXHOSTNAMELEN + 1];
+static const char	*domain;
 static int	rtm_seq;
 static char	rt_line[NI_MAXHOST];
 static char	net_line[MAXHOSTNAMELEN + 1];
@@ -116,11 +124,10 @@ static TAILQ_HEAD(fibl_head_t, fibl) fibl_head;
 static void	printb(int, const char *);
 static void	flushroutes(int argc, char *argv[]);
 static int	flushroutes_fib(int);
-static int	getaddr(int, char *, struct hostent **, int);
+static int	getaddr(int, char *, int);
 static int	keyword(const char *);
 #ifdef INET
-static void	inet_makenetandmask(u_long, struct sockaddr_in *,
-		    struct sockaddr_in *, u_long);
+static void	inet_makemask(struct sockaddr_in *, u_long);
 #endif
 #ifdef INET6
 static int	inet6_makenetandmask(struct sockaddr_in6 *, const char *);
@@ -161,7 +168,7 @@ usage(const char *cp)
 {
 	if (cp != NULL)
 		warnx("bad keyword: %s", cp);
-	errx(EX_USAGE, "usage: route [-46dnqtv] command [[modifiers] args]");
+	errx(EX_USAGE, "usage: route [-j jail] [-46dnqtv] command [[modifiers] args]");
 	/* NOTREACHED */
 }
 
@@ -169,12 +176,15 @@ int
 main(int argc, char **argv)
 {
 	int ch;
+#ifdef JAIL
+	int jid;
+#endif
 	size_t len;
 
 	if (argc < 2)
 		usage(NULL);
 
-	while ((ch = getopt(argc, argv, "46nqdtv")) != -1)
+	while ((ch = getopt(argc, argv, "46nqdtvj:")) != -1)
 		switch(ch) {
 		case '4':
 #ifdef INET
@@ -207,6 +217,15 @@ main(int argc, char **argv)
 		case 'd':
 			debugonly = 1;
 			break;
+		case 'j':
+#ifdef JAIL
+			if (optarg == NULL)
+				usage(NULL);
+			jail_name = optarg;
+#else
+			errx(1, "Jail support is not compiled in");
+#endif
+			break;
 		case '?':
 		default:
 			usage(NULL);
@@ -216,6 +235,17 @@ main(int argc, char **argv)
 
 	pid = getpid();
 	uid = geteuid();
+
+#ifdef JAIL
+	if (jail_name != NULL) {
+		jid = jail_getid(jail_name);
+		if (jid == -1)
+			errx(1, "Jail not found");
+		if (jail_attach(jid) != 0)
+			errx(1, "Cannot attach to jail");
+	}
+#endif
+
 	if (tflag)
 		s = open(_PATH_DEVNULL, O_WRONLY, 0);
 	else
@@ -533,14 +563,16 @@ routename(struct sockaddr *sa)
 	const char *cp;
 	int n;
 
-	if (!domain_initialized) {
-		domain_initialized = true;
-		if (gethostname(domain, MAXHOSTNAMELEN) == 0 &&
-		    (cp = strchr(domain, '.'))) {
-			domain[MAXHOSTNAMELEN] = '\0';
-			(void)strcpy(domain, cp + 1);
-		} else
-			domain[0] = '\0';
+	if (domain == NULL) {
+		if (gethostname(domain_storage,
+		    sizeof(domain_storage) - 1) == 0 &&
+		    (cp = strchr(domain_storage, '.')) != NULL) {
+			domain_storage[sizeof(domain_storage) - 1] = '\0';
+			domain = cp + 1;
+		} else {
+			domain_storage[0] = '\0';
+			domain = domain_storage;
+		}
 	}
 
 	/* If the address is zero-filled, use "default". */
@@ -790,7 +822,6 @@ static void
 newroute(int argc, char **argv)
 {
 	struct sigaction sa;
-	struct hostent *hp;
 	struct fibl *fl;
 	char *cmd;
 	const char *dest, *gateway, *errmsg;
@@ -802,7 +833,6 @@ newroute(int argc, char **argv)
 	gateway = NULL;
 	flags = RTF_STATIC;
 	nrflags = 0;
-	hp = NULL;
 	TAILQ_INIT(&fibl_head);
 
 	sigemptyset(&sa.sa_mask);
@@ -893,35 +923,35 @@ newroute(int argc, char **argv)
 			case K_IFA:
 				if (!--argc)
 					usage(NULL);
-				getaddr(RTAX_IFA, *++argv, 0, nrflags);
+				getaddr(RTAX_IFA, *++argv, nrflags);
 				break;
 			case K_IFP:
 				if (!--argc)
 					usage(NULL);
-				getaddr(RTAX_IFP, *++argv, 0, nrflags);
+				getaddr(RTAX_IFP, *++argv, nrflags);
 				break;
 			case K_GENMASK:
 				if (!--argc)
 					usage(NULL);
-				getaddr(RTAX_GENMASK, *++argv, 0, nrflags);
+				getaddr(RTAX_GENMASK, *++argv, nrflags);
 				break;
 			case K_GATEWAY:
 				if (!--argc)
 					usage(NULL);
-				getaddr(RTAX_GATEWAY, *++argv, 0, nrflags);
+				getaddr(RTAX_GATEWAY, *++argv, nrflags);
 				gateway = *argv;
 				break;
 			case K_DST:
 				if (!--argc)
 					usage(NULL);
-				if (getaddr(RTAX_DST, *++argv, &hp, nrflags))
+				if (getaddr(RTAX_DST, *++argv, nrflags))
 					nrflags |= F_ISHOST;
 				dest = *argv;
 				break;
 			case K_NETMASK:
 				if (!--argc)
 					usage(NULL);
-				getaddr(RTAX_NETMASK, *++argv, 0, nrflags);
+				getaddr(RTAX_NETMASK, *++argv, nrflags);
 				/* FALLTHROUGH */
 			case K_NET:
 				nrflags |= F_FORCENET;
@@ -956,13 +986,13 @@ newroute(int argc, char **argv)
 		} else {
 			if ((rtm_addrs & RTA_DST) == 0) {
 				dest = *argv;
-				if (getaddr(RTAX_DST, *argv, &hp, nrflags))
+				if (getaddr(RTAX_DST, *argv, nrflags))
 					nrflags |= F_ISHOST;
 			} else if ((rtm_addrs & RTA_GATEWAY) == 0) {
 				gateway = *argv;
-				getaddr(RTAX_GATEWAY, *argv, &hp, nrflags);
+				getaddr(RTAX_GATEWAY, *argv, nrflags);
 			} else {
-				getaddr(RTAX_NETMASK, *argv, 0, nrflags);
+				getaddr(RTAX_NETMASK, *argv, nrflags);
 				nrflags |= F_FORCENET;
 			}
 		}
@@ -1112,40 +1142,15 @@ newroute_fib(int fib, char *cmd, int flags)
 
 #ifdef INET
 static void
-inet_makenetandmask(u_long net, struct sockaddr_in *sin,
-    struct sockaddr_in *sin_mask, u_long bits)
+inet_makemask(struct sockaddr_in *sin_mask, u_long bits)
 {
 	u_long mask = 0;
 
 	rtm_addrs |= RTA_NETMASK;
 
-	/*
-	 * MSB of net should be meaningful. 0/0 is exception.
-	 */
-	if (net > 0)
-		while ((net & 0xff000000) == 0)
-			net <<= 8;
-
-	/*
-	 * If no /xx was specified we must calculate the
-	 * CIDR address.
-	 */
-	if ((bits == 0) && (net != 0)) {
-		u_long i, j;
-
-		for(i = 0, j = 0xff; i < 4; i++)  {
-			if (net & j) {
-				break;
-			}
-			j <<= 8;
-		}
-		/* i holds the first non zero bit */
-		bits = 32 - (i*8);
-	}
 	if (bits != 0)
 		mask = 0xffffffff << (32 - bits);
 
-	sin->sin_addr.s_addr = htonl(net);
 	sin_mask->sin_addr.s_addr = htonl(mask);
 	sin_mask->sin_len = sizeof(struct sockaddr_in);
 	sin_mask->sin_family = AF_INET;
@@ -1179,14 +1184,12 @@ inet6_makenetandmask(struct sockaddr_in6 *sin6, const char *plen)
  * returning 1 if a host address, 0 if a network address.
  */
 static int
-getaddr(int idx, char *str, struct hostent **hpp, int nrflags)
+getaddr(int idx, char *str, int nrflags)
 {
 	struct sockaddr *sa;
 #if defined(INET)
 	struct sockaddr_in *sin;
 	struct hostent *hp;
-	struct netent *np;
-	u_long val;
 	char *q;
 #elif defined(INET6)
 	char *q;
@@ -1206,9 +1209,6 @@ getaddr(int idx, char *str, struct hostent **hpp, int nrflags)
 		aflen = sizeof(struct sockaddr_dl);
 #endif
 	}
-#ifndef INET
-	hpp = NULL;
-#endif
 	rtm_addrs |= (1 << idx);
 	sa = (struct sockaddr *)&so[idx];
 	sa->sa_family = af;
@@ -1260,7 +1260,7 @@ getaddr(int idx, char *str, struct hostent **hpp, int nrflags)
 		switch (idx) {
 		case RTAX_DST:
 			nrflags |= F_FORCENET;
-			getaddr(RTAX_NETMASK, str, 0, nrflags);
+			getaddr(RTAX_NETMASK, str, nrflags);
 			break;
 		}
 		return (0);
@@ -1307,43 +1307,43 @@ getaddr(int idx, char *str, struct hostent **hpp, int nrflags)
 
 #ifdef INET
 	sin = (struct sockaddr_in *)(void *)sa;
-	if (hpp == NULL)
-		hpp = &hp;
-	*hpp = NULL;
 
 	q = strchr(str,'/');
 	if (q != NULL && idx == RTAX_DST) {
+		/* A.B.C.D/NUM */
+		struct sockaddr_in *mask;
+		uint32_t mask_bits;
+
 		*q = '\0';
-		if ((val = inet_network(str)) != INADDR_NONE) {
-			inet_makenetandmask(val, sin,
-			    (struct sockaddr_in *)&so[RTAX_NETMASK],
-			    strtoul(q+1, 0, 0));
-			return (0);
-		}
-		*q = '/';
-	}
-	if ((idx != RTAX_DST || (nrflags & F_FORCENET) == 0) &&
-	    inet_aton(str, &sin->sin_addr)) {
-		val = sin->sin_addr.s_addr;
-		if (idx != RTAX_DST || nrflags & F_FORCEHOST ||
-		    inet_lnaof(sin->sin_addr) != INADDR_ANY)
-			return (1);
-		else {
-			val = ntohl(val);
-			goto netdone;
-		}
-	}
-	if (idx == RTAX_DST && (nrflags & F_FORCEHOST) == 0 &&
-	    ((val = inet_network(str)) != INADDR_NONE ||
-	    ((np = getnetbyname(str)) != NULL && (val = np->n_net) != 0))) {
-netdone:
-		inet_makenetandmask(val, sin,
-		    (struct sockaddr_in *)&so[RTAX_NETMASK], 0);
+		if (inet_aton(str, &sin->sin_addr) == 0)
+			errx(EX_NOHOST, "bad address: %s", str);
+
+		int masklen = strtol(q + 1, NULL, 10);
+		if (masklen < 0 || masklen > 32)
+			errx(EX_NOHOST, "bad mask length: %s", q + 1);
+
+		inet_makemask((struct sockaddr_in *)&so[RTAX_NETMASK],masklen);
+
+		/*
+		 * Check for bogus destination such as "10/8"; heuristic is
+		 * that there are bits set in the host part, and no dot
+		 * is present.
+		 */
+		mask = ((struct sockaddr_in *) &so[RTAX_NETMASK]);
+		mask_bits = ntohl(mask->sin_addr.s_addr);
+		if ((ntohl(sin->sin_addr.s_addr) & ~mask_bits) != 0 &&
+		    strchr(str, '.') == NULL)
+			errx(EX_NOHOST,
+			    "malformed address, bits set after mask;"
+			    " %s means %s",
+			    str, inet_ntoa(sin->sin_addr));
 		return (0);
 	}
+	if (inet_aton(str, &sin->sin_addr) != 0)
+		return (1);
+
 	hp = gethostbyname(str);
 	if (hp != NULL) {
-		*hpp = hp;
 		sin->sin_family = hp->h_addrtype;
 		memmove((char *)&sin->sin_addr, hp->h_addr,
 		    MIN((size_t)hp->h_length, sizeof(sin->sin_addr)));

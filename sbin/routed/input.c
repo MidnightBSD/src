@@ -27,19 +27,9 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include "defs.h"
-
-#ifdef __NetBSD__
-__RCSID("$NetBSD$");
-#elif defined(__FreeBSD__)
-#else
-__RCSID("$Revision: 2.26 $");
-#ident "$Revision: 2.26 $"
-#endif
-
 static void input(struct sockaddr_in *, struct interface *, struct interface *,
 		  struct rip *, int);
 static void input_route(naddr, naddr, struct rt_spare *, struct netinfo *);

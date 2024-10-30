@@ -53,7 +53,6 @@ All rights reserved.\n";
 #endif /* not lint */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
@@ -117,7 +116,6 @@ static void	updjcg(int, time_t, int, int, unsigned int);
 static void	updcsloc(time_t, int, int, unsigned int);
 static void	frag_adjust(ufs2_daddr_t, int);
 static void	updclst(int);
-static void	mount_reload(const struct statfs *stfs);
 static void	cgckhash(struct cg *);
 
 /*
@@ -149,7 +147,7 @@ growfs(int fsi, int fso, unsigned int Nflag)
 	 */
 	fscs = (struct csum *)calloc((size_t)1, (size_t)sblock.fs_cssize);
 	if (fscs == NULL)
-		errx(1, "calloc failed");
+		errx(3, "calloc failed");
 	memcpy(fscs, osblock.fs_csp, osblock.fs_cssize);
 	free(osblock.fs_csp);
 	osblock.fs_csp = NULL;
@@ -261,7 +259,7 @@ growfs(int fsi, int fso, unsigned int Nflag)
 	 * and all the alternates back to disk.
 	 */
 	if (!Nflag && sbput(fso, &sblock, sblock.fs_ncg) != 0)
-		errc(2, EIO, "could not write updated superblock");
+		errc(3, EIO, "could not write updated superblock");
 	DBG_PRINT0("fscs written\n");
 
 #ifdef FS_DEBUG
@@ -300,16 +298,21 @@ initcg(int cylno, time_t modtime, int fso, unsigned int Nflag)
 {
 	DBG_FUNC("initcg")
 	static caddr_t iobuf;
+	static long iobufsize;
 	long blkno, start;
 	ino_t ino;
 	ufs2_daddr_t i, cbase, dmax;
 	struct ufs1_dinode *dp1;
+	struct ufs2_dinode *dp2;
 	struct csum *cs;
 	uint j, d, dupper, dlower;
 
-	if (iobuf == NULL && (iobuf = malloc(sblock.fs_bsize * 3)) == NULL)
-		errx(37, "panic: cannot allocate I/O buffer");
-
+	if (iobuf == NULL) {
+		iobufsize = 2 * sblock.fs_bsize;
+		if ((iobuf = malloc(iobufsize)) == NULL)
+			errx(37, "panic: cannot allocate I/O buffer");
+		memset(iobuf, '\0', iobufsize);
+	}
 	/*
 	 * Determine block bounds for cylinder group.
 	 * Allow space for super block summary information in first
@@ -333,7 +336,7 @@ initcg(int cylno, time_t modtime, int fso, unsigned int Nflag)
 	acg.cg_ndblk = dmax - cbase;
 	if (sblock.fs_contigsumsize > 0)
 		acg.cg_nclusterblks = acg.cg_ndblk / sblock.fs_frag;
-	start = &acg.cg_space[0] - (u_char *)(&acg.cg_firstfield);
+	start = sizeof(acg);
 	if (sblock.fs_magic == FS_UFS2_MAGIC) {
 		acg.cg_iusedoff = start;
 	} else {
@@ -374,12 +377,29 @@ initcg(int cylno, time_t modtime, int fso, unsigned int Nflag)
 			acg.cg_cs.cs_nifree--;
 		}
 	/*
+	 * Initialize the initial inode blocks.
+	 */
+	dp1 = (struct ufs1_dinode *)(void *)iobuf;
+	dp2 = (struct ufs2_dinode *)(void *)iobuf;
+	for (i = 0; i < acg.cg_initediblk; i++) {
+		if (sblock.fs_magic == FS_UFS1_MAGIC) {
+			dp1->di_gen = arc4random();
+			dp1++;
+		} else {
+			dp2->di_gen = arc4random();
+			dp2++;
+		}
+	}
+	wtfs(fsbtodb(&sblock, cgimin(&sblock, cylno)), iobufsize, iobuf,
+	    fso, Nflag);
+	/*
 	 * For the old file system, we have to initialize all the inodes.
 	 */
-	if (sblock.fs_magic == FS_UFS1_MAGIC) {
-		bzero(iobuf, sblock.fs_bsize);
-		for (i = 0; i < sblock.fs_ipg / INOPF(&sblock);
-		    i += sblock.fs_frag) {
+	if (sblock.fs_magic == FS_UFS1_MAGIC &&
+	    sblock.fs_ipg > 2 * INOPB(&sblock)) {
+		for (i = 2 * sblock.fs_frag;
+		     i < sblock.fs_ipg / INOPF(&sblock);
+		     i += sblock.fs_frag) {
 			dp1 = (struct ufs1_dinode *)(void *)iobuf;
 			for (j = 0; j < INOPB(&sblock); j++) {
 				dp1->di_gen = arc4random();
@@ -404,6 +424,7 @@ initcg(int cylno, time_t modtime, int fso, unsigned int Nflag)
 		sblock.fs_dsize += dlower;
 	}
 	sblock.fs_dsize += acg.cg_ndblk - dupper;
+	sblock.fs_old_dsize = sblock.fs_dsize;
 	if ((i = dupper % sblock.fs_frag)) {
 		acg.cg_frsum[sblock.fs_frag - i]++;
 		for (d = dupper + sblock.fs_frag - i; dupper < d; dupper++) {
@@ -462,12 +483,8 @@ initcg(int cylno, time_t modtime, int fso, unsigned int Nflag)
 	*cs = acg.cg_cs;
 
 	cgckhash(&acg);
-	memcpy(iobuf, &acg, sblock.fs_cgsize);
-	memset(iobuf + sblock.fs_cgsize, '\0',
-	    sblock.fs_bsize * 3 - sblock.fs_cgsize);
-
-	wtfs(fsbtodb(&sblock, cgtod(&sblock, cylno)),
-	    sblock.fs_bsize * 3, iobuf, fso, Nflag);
+	wtfs(fsbtodb(&sblock, cgtod(&sblock, cylno)), sblock.fs_cgsize, &acg,
+	    fso, Nflag);
 	DBG_DUMP_CG(&sblock, "new cg", &acg);
 
 	DBG_LEAVE;
@@ -541,7 +558,7 @@ static void
 updjcg(int cylno, time_t modtime, int fsi, int fso, unsigned int Nflag)
 {
 	DBG_FUNC("updjcg")
-	ufs2_daddr_t cbase, dmax, dupper;
+	ufs2_daddr_t cbase, dmax;
 	struct csum *cs;
 	int i, k;
 	int j = 0;
@@ -588,9 +605,6 @@ updjcg(int cylno, time_t modtime, int fsi, int fso, unsigned int Nflag)
 	dmax = cbase + sblock.fs_fpg;
 	if (dmax > sblock.fs_size)
 		dmax = sblock.fs_size;
-	dupper = cgdmin(&sblock, cylno) - cbase;
-	if (cylno == 0) /* XXX fscs may be relocated */
-		dupper += howmany(sblock.fs_cssize, sblock.fs_fsize);
 
 	/*
 	 * Set pointer to the cylinder summary for our cylinder group.
@@ -620,6 +634,7 @@ updjcg(int cylno, time_t modtime, int fsi, int fso, unsigned int Nflag)
 	DBG_PRINT0("\n");
 	acg.cg_ndblk = dmax - cbase;
 	sblock.fs_dsize += acg.cg_ndblk - aocg.cg_ndblk;
+	sblock.fs_old_dsize = sblock.fs_dsize;
 	if (sblock.fs_contigsumsize > 0)
 		acg.cg_nclusterblks = acg.cg_ndblk / sblock.fs_frag;
 
@@ -797,6 +812,10 @@ updcsloc(time_t modtime, int fsi, int fso, unsigned int Nflag)
 		DBG_LEAVE;
 		return;
 	}
+	/* Adjust fs_dsize by added summary blocks */
+	sblock.fs_dsize -= howmany(sblock.fs_cssize, sblock.fs_fsize) -
+	    howmany(osblock.fs_cssize, osblock.fs_fsize);
+	sblock.fs_old_dsize = sblock.fs_dsize;
 	ocscg = dtog(&osblock, osblock.fs_csaddr);
 	cs = fscs + ocscg;
 
@@ -1241,76 +1260,11 @@ is_dev(const char *name)
 	return (1);
 }
 
-/*
- * Return mountpoint on which the device is currently mounted.
- */ 
-static const struct statfs *
-dev_to_statfs(const char *dev)
-{
-	struct stat devstat, mntdevstat;
-	struct statfs *mntbuf, *statfsp;
-	char device[MAXPATHLEN];
-	char *mntdevname;
-	int i, mntsize;
-
-	/*
-	 * First check the mounted filesystems.
-	 */
-	if (stat(dev, &devstat) != 0)
-		return (NULL);
-	if (!S_ISCHR(devstat.st_mode) && !S_ISBLK(devstat.st_mode))
-		return (NULL);
-
-	mntsize = getmntinfo(&mntbuf, MNT_NOWAIT);
-	for (i = 0; i < mntsize; i++) {
-		statfsp = &mntbuf[i];
-		mntdevname = statfsp->f_mntfromname;
-		if (*mntdevname != '/') {
-			strcpy(device, _PATH_DEV);
-			strcat(device, mntdevname);
-			mntdevname = device;
-		}
-		if (stat(mntdevname, &mntdevstat) == 0 &&
-		    mntdevstat.st_rdev == devstat.st_rdev)
-			return (statfsp);
-	}
-
-	return (NULL);
-}
-
 static const char *
-mountpoint_to_dev(const char *mountpoint)
-{
-	struct statfs *mntbuf, *statfsp;
-	struct fstab *fs;
-	int i, mntsize;
-
-	/*
-	 * First check the mounted filesystems.
-	 */
-	mntsize = getmntinfo(&mntbuf, MNT_NOWAIT);
-	for (i = 0; i < mntsize; i++) {
-		statfsp = &mntbuf[i];
-
-		if (strcmp(statfsp->f_mntonname, mountpoint) == 0)
-			return (statfsp->f_mntfromname);
-	}
-
-	/*
-	 * Check the fstab.
-	 */
-	fs = getfsfile(mountpoint);
-	if (fs != NULL)
-		return (fs->fs_spec);
-
-	return (NULL);
-}
-
-static const char *
-getdev(const char *name)
+getdev(const char *name, struct statfs *statfsp)
 {
 	static char device[MAXPATHLEN];
-	const char *cp, *dev;
+	const char *cp;
 
 	if (is_dev(name))
 		return (name);
@@ -1322,9 +1276,8 @@ getdev(const char *name)
 			return (device);
 	}
 
-	dev = mountpoint_to_dev(name);
-	if (dev != NULL && is_dev(dev))
-		return (dev);
+	if (statfsp != NULL)
+		return (statfsp->f_mntfromname);
 
 	return (NULL);
 }
@@ -1356,7 +1309,7 @@ main(int argc, char **argv)
 	DBG_FUNC("main")
 	struct fs *fs;
 	const char *device;
-	const struct statfs *statfsp;
+	struct statfs *statfsp;
 	uint64_t size = 0;
 	off_t mediasize;
 	int error, j, fsi, fso, ch, ret, Nflag = 0, yflag = 0;
@@ -1386,7 +1339,7 @@ main(int argc, char **argv)
 				size <<= 30;
 				size <<= 10;
 			} else
-				errx(1, "unknown suffix on -s argument");
+				errx(2, "unknown suffix on -s argument");
 			break;
 		case 'v': /* for compatibility to newfs */
 			break;
@@ -1408,44 +1361,43 @@ main(int argc, char **argv)
 	/*
 	 * Now try to guess the device name.
 	 */
-	device = getdev(*argv);
+	statfsp = getmntpoint(*argv);
+	device = getdev(*argv, statfsp);
 	if (device == NULL)
-		errx(1, "cannot find special device for %s", *argv);
-
-	statfsp = dev_to_statfs(device);
+		errx(2, "cannot find special device for %s", *argv);
 
 	fsi = open(device, O_RDONLY);
 	if (fsi < 0)
-		err(1, "%s", device);
+		err(3, "%s", device);
 
 	/*
 	 * Try to guess the slice size if not specified.
 	 */
 	if (ioctl(fsi, DIOCGMEDIASIZE, &mediasize) == -1)
-		err(1,"DIOCGMEDIASIZE");
+		err(3,"DIOCGMEDIASIZE");
 
 	/*
 	 * Check if that partition is suitable for growing a file system.
 	 */
 	if (mediasize < 1)
-		errx(1, "partition is unavailable");
+		errx(2, "partition is unavailable");
 
 	/*
 	 * Read the current superblock, and take a backup.
 	 */
-	if ((ret = sbget(fsi, &fs, -1)) != 0) {
+	if ((ret = sbget(fsi, &fs, STDSB)) != 0) {
 		switch (ret) {
 		case ENOENT:
-			errx(1, "superblock not recognized");
+			errx(2, "superblock not recognized");
 		default:
-			errc(1, ret, "unable to read superblock");
+			errc(3, ret, "unable to read superblock");
 		}
 	}
 	/*
 	 * Check for filesystem that was unclean at mount time.
 	 */
 	if ((fs->fs_flags & (FS_UNCLEAN | FS_NEEDSFSCK)) != 0)
-		errx(1, "%s is not clean - run fsck.\n", *argv);
+		errx(2, "%s is not clean - run fsck.\n", *argv);
 	memcpy(&osblock, fs, fs->fs_sbsize);
 	free(fs);
 	memcpy((void *)&fsun1, (void *)&fsun2, osblock.fs_sbsize);
@@ -1466,7 +1418,7 @@ main(int argc, char **argv)
 			    mediasize,
 			    "B", HN_AUTOSCALE, HN_B | HN_NOSPACE | HN_DECIMAL);
 
-			errx(1, "requested size %s is larger "
+			errx(2, "requested size %s is larger "
 			    "than the available %s", oldsizebuf, newsizebuf);
 		}
 	}
@@ -1487,18 +1439,19 @@ main(int argc, char **argv)
 		if (size == (uint64_t)(osblock.fs_size * osblock.fs_fsize))
 			errx(0, "requested size %s is equal to the current "
 			    "filesystem size %s", newsizebuf, oldsizebuf);
-		errx(1, "requested size %s is smaller than the current "
+		errx(2, "requested size %s is smaller than the current "
 		   "filesystem size %s", newsizebuf, oldsizebuf);
 	}
 
-	sblock.fs_size = dbtofsb(&osblock, size / DEV_BSIZE);
+	sblock.fs_old_size = sblock.fs_size =
+	    dbtofsb(&osblock, size / DEV_BSIZE);
 	sblock.fs_providersize = dbtofsb(&osblock, mediasize / DEV_BSIZE);
 
 	/*
 	 * Are we really growing?
 	 */
 	if (osblock.fs_size >= sblock.fs_size) {
-		errx(1, "we are not growing (%jd->%jd)",
+		errx(3, "we are not growing (%jd->%jd)",
 		    (intmax_t)osblock.fs_size, (intmax_t)sblock.fs_size);
 	}
 
@@ -1508,7 +1461,7 @@ main(int argc, char **argv)
 	if (yflag == 0) {
 		for (j = 0; j < FSMAXSNAP; j++) {
 			if (sblock.fs_snapinum[j]) {
-				errx(1, "active snapshot found in file system; "
+				errx(2, "active snapshot found in file system; "
 				    "please remove all snapshots before "
 				    "using growfs");
 			}
@@ -1553,14 +1506,14 @@ main(int argc, char **argv)
 		if (statfsp != NULL && (statfsp->f_flags & MNT_RDONLY) == 0) {
 			fso = open(_PATH_UFSSUSPEND, O_RDWR);
 			if (fso == -1)
-				err(1, "unable to open %s", _PATH_UFSSUSPEND);
+				err(3, "unable to open %s", _PATH_UFSSUSPEND);
 			error = ioctl(fso, UFSSUSPEND, &statfsp->f_fsid);
 			if (error != 0)
-				err(1, "UFSSUSPEND");
+				err(3, "UFSSUSPEND");
 		} else {
 			fso = open(device, O_WRONLY);
 			if (fso < 0)
-				err(1, "%s", device);
+				err(3, "%s", device);
 		}
 	}
 
@@ -1569,7 +1522,7 @@ main(int argc, char **argv)
 	 */
 	testbuf = malloc(sblock.fs_fsize);
 	if (testbuf == NULL)
-		err(1, "malloc");
+		err(3, "malloc");
 	rdfs((ufs2_daddr_t)((size - sblock.fs_fsize) / DEV_BSIZE),
 	    sblock.fs_fsize, testbuf, fsi);
 	wtfs((ufs2_daddr_t)((size - sblock.fs_fsize) / DEV_BSIZE),
@@ -1612,7 +1565,8 @@ main(int argc, char **argv)
 		sblock.fs_ncg--;
 		if (sblock.fs_magic == FS_UFS1_MAGIC)
 			sblock.fs_old_ncyl = sblock.fs_ncg * sblock.fs_old_cpg;
-		sblock.fs_size = sblock.fs_ncg * sblock.fs_fpg;
+		sblock.fs_old_size = sblock.fs_size =
+		    sblock.fs_ncg * sblock.fs_fpg;
 	}
 
 	/*
@@ -1623,7 +1577,7 @@ main(int argc, char **argv)
 	    fragroundup(&sblock, sblock.fs_ncg * sizeof(struct csum));
 
 	if (osblock.fs_size >= sblock.fs_size)
-		errx(1, "not enough new space");
+		errx(3, "not enough new space");
 
 	DBG_PRINT0("sblock calculated\n");
 
@@ -1637,13 +1591,14 @@ main(int argc, char **argv)
 		if (statfsp != NULL && (statfsp->f_flags & MNT_RDONLY) == 0) {
 			error = ioctl(fso, UFSRESUME);
 			if (error != 0)
-				err(1, "UFSRESUME");
+				err(3, "UFSRESUME");
 		}
 		error = close(fso);
 		if (error != 0)
-			err(1, "close");
-		if (statfsp != NULL && (statfsp->f_flags & MNT_RDONLY) != 0)
-			mount_reload(statfsp);
+			err(3, "close");
+		if (statfsp != NULL && (statfsp->f_flags & MNT_RDONLY) != 0 &&
+		    chkdoreload(statfsp, warn) != 0)
+			exit(9);
 	}
 
 	DBG_CLOSE;
@@ -1708,29 +1663,6 @@ updclst(int block)
 
 	DBG_LEAVE;
 	return;
-}
-
-static void
-mount_reload(const struct statfs *stfs)
-{
-	char errmsg[255];
-	struct iovec *iov;
-	int iovlen;
-
-	iov = NULL;
-	iovlen = 0;
-	*errmsg = '\0';
-	build_iovec(&iov, &iovlen, "fstype", __DECONST(char *, "ffs"), 4);
-	build_iovec(&iov, &iovlen, "fspath", __DECONST(char *, stfs->f_mntonname), (size_t)-1);
-	build_iovec(&iov, &iovlen, "errmsg", errmsg, sizeof(errmsg));
-	build_iovec(&iov, &iovlen, "update", NULL, 0);
-	build_iovec(&iov, &iovlen, "reload", NULL, 0);
-
-	if (nmount(iov, iovlen, stfs->f_flags) < 0) {
-		errmsg[sizeof(errmsg) - 1] = '\0';
-		err(9, "%s: cannot reload filesystem%s%s", stfs->f_mntonname,
-		    *errmsg != '\0' ? ": " : "", errmsg);
-	}
 }
 
 /*

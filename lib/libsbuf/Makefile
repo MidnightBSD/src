@@ -1,5 +1,6 @@
 
-PACKAGE=lib${LIB}
+PACKAGE=	runtime
+
 LIB=		sbuf
 SHLIBDIR?= 	/lib
 SRCS=		subr_prf.c subr_sbuf.c

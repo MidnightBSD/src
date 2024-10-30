@@ -41,7 +41,6 @@ static char sccsid[] = "@(#)tunefs.c	8.2 (Berkeley) 4/19/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-
 /*
  * tunefs: change layout parameters to an existing file system.
  */
@@ -88,18 +87,14 @@ main(int argc, char *argv[])
 {
 	const char *avalue, *jvalue, *Jvalue, *Lvalue, *lvalue, *Nvalue, *nvalue;
 	const char *tvalue;
-	const char *special, *on;
+	const char *special;
 	const char *name;
-	int active;
+	char *diskname;
 	int Aflag, aflag, eflag, evalue, fflag, fvalue, jflag, Jflag, kflag;
 	int kvalue, Lflag, lflag, mflag, mvalue, Nflag, nflag, oflag, ovalue;
 	int pflag, sflag, svalue, Svalue, tflag;
 	int ch, found_arg, i;
-	int iovlen = 0;
 	const char *chg[2];
-	struct statfs stfs;
-	struct iovec *iov = NULL;
-	char errmsg[255] = {0};
 
 	if (argc < 3)
 		usage();
@@ -107,7 +102,6 @@ main(int argc, char *argv[])
 	lflag = mflag = Nflag = nflag = oflag = pflag = sflag = tflag = 0;
 	avalue = jvalue = Jvalue = Lvalue = lvalue = Nvalue = nvalue = NULL;
 	evalue = fvalue = mvalue = ovalue = svalue = Svalue = 0;
-	active = 0;
 	found_arg = 0;		/* At least one arg is required. */
 	while ((ch = getopt(argc, argv, "Aa:e:f:j:J:k:L:l:m:N:n:o:ps:S:t:"))
 	    != -1)
@@ -306,7 +300,7 @@ main(int argc, char *argv[])
 	if (found_arg == 0 || argc != 1)
 		usage();
 
-	on = special = argv[0];
+	special = argv[0];
 	if (ufs_disk_fillout(&disk, special) == -1)
 		goto err;
 	/*
@@ -316,13 +310,6 @@ main(int argc, char *argv[])
 	    (sblock.fs_flags & (FS_UNCLEAN | FS_NEEDSFSCK)) != 0) &&
 	    (found_arg > 1 || !pflag))
 		errx(1, "%s is not clean - run fsck.\n", special);
-	if (disk.d_name != special) {
-		if (statfs(special, &stfs) != 0)
-			warn("Can't stat %s", special);
-		if (strcmp(special, stfs.f_mntonname) == 0)
-			active = 1;
-	}
-
 	if (pflag) {
 		printfs();
 		exit(0);
@@ -567,20 +554,9 @@ main(int argc, char *argv[])
 
 	if (sbwrite(&disk, Aflag) == -1)
 		goto err;
+	diskname = strdup(disk.d_name);
 	ufs_disk_close(&disk);
-	if (active) {
-		build_iovec_argf(&iov, &iovlen, "fstype", "ufs");
-		build_iovec_argf(&iov, &iovlen, "fspath", "%s", on);
-		build_iovec(&iov, &iovlen, "errmsg", errmsg, sizeof(errmsg));
-		if (nmount(iov, iovlen,
-		    stfs.f_flags | MNT_UPDATE | MNT_RELOAD) < 0) {
-			if (errmsg[0])
-				err(9, "%s: reload: %s", special, errmsg);
-			else
-				err(9, "%s: reload", special);
-		}
-		warnx("file system reloaded");
-	}
+	chkdoreload(getmntpoint(diskname), warnx);
 	exit(0);
 err:
 	if (disk.d_error != NULL)
@@ -687,41 +663,36 @@ dir_search(ufs2_daddr_t blk, int bytes)
 static ino_t
 journal_findfile(void)
 {
-	struct ufs1_dinode *dp1;
-	struct ufs2_dinode *dp2;
+	union dinodep dp;
 	ino_t ino;
-	int mode;
-	void *ip;
 	int i;
 
-	if (getino(&disk, &ip, UFS_ROOTINO, &mode) != 0) {
-		warn("Failed to get root inode");
+	if (getinode(&disk, &dp, UFS_ROOTINO) != 0) {
+		warn("Failed to get root inode: %s", disk.d_error);
 		return (-1);
 	}
-	dp2 = ip;
-	dp1 = ip;
 	if (sblock.fs_magic == FS_UFS1_MAGIC) {
-		if ((off_t)dp1->di_size >= lblktosize(&sblock, UFS_NDADDR)) {
+		if ((off_t)dp.dp1->di_size >= lblktosize(&sblock, UFS_NDADDR)) {
 			warnx("UFS_ROOTINO extends beyond direct blocks.");
 			return (-1);
 		}
 		for (i = 0; i < UFS_NDADDR; i++) {
-			if (dp1->di_db[i] == 0)
+			if (dp.dp1->di_db[i] == 0)
 				break;
-			if ((ino = dir_search(dp1->di_db[i],
-			    sblksize(&sblock, (off_t)dp1->di_size, i))) != 0)
+			if ((ino = dir_search(dp.dp1->di_db[i],
+			    sblksize(&sblock, (off_t)dp.dp1->di_size, i))) != 0)
 				return (ino);
 		}
 	} else {
-		if ((off_t)dp2->di_size >= lblktosize(&sblock, UFS_NDADDR)) {
+		if ((off_t)dp.dp2->di_size >= lblktosize(&sblock, UFS_NDADDR)) {
 			warnx("UFS_ROOTINO extends beyond direct blocks.");
 			return (-1);
 		}
 		for (i = 0; i < UFS_NDADDR; i++) {
-			if (dp2->di_db[i] == 0)
+			if (dp.dp2->di_db[i] == 0)
 				break;
-			if ((ino = dir_search(dp2->di_db[i],
-			    sblksize(&sblock, (off_t)dp2->di_size, i))) != 0)
+			if ((ino = dir_search(dp.dp2->di_db[i],
+			    sblksize(&sblock, (off_t)dp.dp2->di_size, i))) != 0)
 				return (ino);
 		}
 	}
@@ -803,23 +774,18 @@ dir_extend(ufs2_daddr_t blk, ufs2_daddr_t nblk, off_t size, ino_t ino)
 static int
 journal_insertfile(ino_t ino)
 {
-	struct ufs1_dinode *dp1;
-	struct ufs2_dinode *dp2;
-	void *ip;
+	union dinodep dp;
 	ufs2_daddr_t nblk;
 	ufs2_daddr_t blk;
 	ufs_lbn_t lbn;
 	int size;
-	int mode;
 	int off;
 
-	if (getino(&disk, &ip, UFS_ROOTINO, &mode) != 0) {
-		warn("Failed to get root inode");
+	if (getinode(&disk, &dp, UFS_ROOTINO) != 0) {
+		warn("Failed to get root inode: %s", disk.d_error);
 		sbdirty();
 		return (-1);
 	}
-	dp2 = ip;
-	dp1 = ip;
 	blk = 0;
 	size = 0;
 	nblk = journal_balloc();
@@ -832,15 +798,15 @@ journal_insertfile(ino_t ino)
 	 * have to free them and extend the block.
 	 */
 	if (sblock.fs_magic == FS_UFS1_MAGIC) {
-		lbn = lblkno(&sblock, dp1->di_size);
-		off = blkoff(&sblock, dp1->di_size);
-		blk = dp1->di_db[lbn];
-		size = sblksize(&sblock, (off_t)dp1->di_size, lbn);
+		lbn = lblkno(&sblock, dp.dp1->di_size);
+		off = blkoff(&sblock, dp.dp1->di_size);
+		blk = dp.dp1->di_db[lbn];
+		size = sblksize(&sblock, (off_t)dp.dp1->di_size, lbn);
 	} else {
-		lbn = lblkno(&sblock, dp2->di_size);
-		off = blkoff(&sblock, dp2->di_size);
-		blk = dp2->di_db[lbn];
-		size = sblksize(&sblock, (off_t)dp2->di_size, lbn);
+		lbn = lblkno(&sblock, dp.dp2->di_size);
+		off = blkoff(&sblock, dp.dp2->di_size);
+		blk = dp.dp2->di_db[lbn];
+		size = sblksize(&sblock, (off_t)dp.dp2->di_size, lbn);
 	}
 	if (off != 0) {
 		if (dir_extend(blk, nblk, off, ino) == -1)
@@ -851,16 +817,16 @@ journal_insertfile(ino_t ino)
 			return (-1);
 	}
 	if (sblock.fs_magic == FS_UFS1_MAGIC) {
-		dp1->di_blocks += (sblock.fs_bsize - size) / DEV_BSIZE;
-		dp1->di_db[lbn] = nblk;
-		dp1->di_size = lblktosize(&sblock, lbn+1);
+		dp.dp1->di_blocks += (sblock.fs_bsize - size) / DEV_BSIZE;
+		dp.dp1->di_db[lbn] = nblk;
+		dp.dp1->di_size = lblktosize(&sblock, lbn+1);
 	} else {
-		dp2->di_blocks += (sblock.fs_bsize - size) / DEV_BSIZE;
-		dp2->di_db[lbn] = nblk;
-		dp2->di_size = lblktosize(&sblock, lbn+1);
+		dp.dp2->di_blocks += (sblock.fs_bsize - size) / DEV_BSIZE;
+		dp.dp2->di_db[lbn] = nblk;
+		dp.dp2->di_size = lblktosize(&sblock, lbn+1);
 	}
-	if (putino(&disk) < 0) {
-		warn("Failed to write root inode");
+	if (putinode(&disk) < 0) {
+		warn("Failed to write root inode: %s", disk.d_error);
 		return (-1);
 	}
 	if (cgwrite(&disk) < 0) {
@@ -924,11 +890,8 @@ indir_fill(ufs2_daddr_t blk, int level, int *resid)
 static void
 journal_clear(void)
 {
-	struct ufs1_dinode *dp1;
-	struct ufs2_dinode *dp2;
+	union dinodep dp;
 	ino_t ino;
-	int mode;
-	void *ip;
 
 	ino = journal_findfile();
 	if (ino == (ino_t)-1 || ino == 0) {
@@ -936,18 +899,16 @@ journal_clear(void)
 		return;
 	}
 	printf("Clearing journal flags from inode %ju\n", (uintmax_t)ino);
-	if (getino(&disk, &ip, ino, &mode) != 0) {
-		warn("Failed to get journal inode");
+	if (getinode(&disk, &dp, ino) != 0) {
+		warn("Failed to get journal inode: %s", disk.d_error);
 		return;
 	}
-	dp2 = ip;
-	dp1 = ip;
 	if (sblock.fs_magic == FS_UFS1_MAGIC)
-		dp1->di_flags = 0;
+		dp.dp1->di_flags = 0;
 	else
-		dp2->di_flags = 0;
-	if (putino(&disk) < 0) {
-		warn("Failed to write journal inode");
+		dp.dp2->di_flags = 0;
+	if (putinode(&disk) < 0) {
+		warn("Failed to write journal inode: %s", disk.d_error);
 		return;
 	}
 }
@@ -955,15 +916,12 @@ journal_clear(void)
 static int
 journal_alloc(int64_t size)
 {
-	struct ufs1_dinode *dp1;
-	struct ufs2_dinode *dp2;
+	union dinodep dp;
 	ufs2_daddr_t blk;
-	void *ip;
 	struct cg *cgp;
 	int resid;
 	ino_t ino;
 	int blks;
-	int mode;
 	time_t utime;
 	int i;
 
@@ -991,7 +949,6 @@ journal_alloc(int64_t size)
 	 */
 	if (size == 0) {
 		size = (sblock.fs_size * sblock.fs_bsize) / 1024;
-		size = MIN(SUJ_MAX, size);
 		if (size / sblock.fs_fsize > sblock.fs_fpg)
 			size = sblock.fs_fpg * sblock.fs_fsize;
 		size = MAX(SUJ_MIN, size);
@@ -1015,8 +972,8 @@ journal_alloc(int64_t size)
 			break;
 		printf("Using inode %ju in cg %d for %jd byte journal\n",
 		    (uintmax_t)ino, cgp->cg_cgx, size);
-		if (getino(&disk, &ip, ino, &mode) != 0) {
-			warn("Failed to get allocated inode");
+		if (getinode(&disk, &dp, ino) != 0) {
+			warn("Failed to get allocated inode: %s", disk.d_error);
 			sbdirty();
 			goto out;
 		}
@@ -1025,39 +982,39 @@ journal_alloc(int64_t size)
 		 * blocks and size uninitialized.  This causes legacy
 		 * fsck implementations to clear the inode.
 		 */
-		dp2 = ip;
-		dp1 = ip;
 		time(&utime);
 		if (sblock.fs_magic == FS_UFS1_MAGIC) {
-			bzero(dp1, sizeof(*dp1));
-			dp1->di_size = size;
-			dp1->di_mode = IFREG | IREAD;
-			dp1->di_nlink = 1;
-			dp1->di_flags = SF_IMMUTABLE | SF_NOUNLINK | UF_NODUMP;
-			dp1->di_atime = utime;
-			dp1->di_mtime = utime;
-			dp1->di_ctime = utime;
+			bzero(dp.dp1, sizeof(*dp.dp1));
+			dp.dp1->di_size = size;
+			dp.dp1->di_mode = IFREG | IREAD;
+			dp.dp1->di_nlink = 1;
+			dp.dp1->di_flags =
+			    SF_IMMUTABLE | SF_NOUNLINK | UF_NODUMP;
+			dp.dp1->di_atime = utime;
+			dp.dp1->di_mtime = utime;
+			dp.dp1->di_ctime = utime;
 		} else {
-			bzero(dp2, sizeof(*dp2));
-			dp2->di_size = size;
-			dp2->di_mode = IFREG | IREAD;
-			dp2->di_nlink = 1;
-			dp2->di_flags = SF_IMMUTABLE | SF_NOUNLINK | UF_NODUMP;
-			dp2->di_atime = utime;
-			dp2->di_mtime = utime;
-			dp2->di_ctime = utime;
-			dp2->di_birthtime = utime;
+			bzero(dp.dp2, sizeof(*dp.dp2));
+			dp.dp2->di_size = size;
+			dp.dp2->di_mode = IFREG | IREAD;
+			dp.dp2->di_nlink = 1;
+			dp.dp2->di_flags =
+			    SF_IMMUTABLE | SF_NOUNLINK | UF_NODUMP;
+			dp.dp2->di_atime = utime;
+			dp.dp2->di_mtime = utime;
+			dp.dp2->di_ctime = utime;
+			dp.dp2->di_birthtime = utime;
 		}
 		for (i = 0; i < UFS_NDADDR && resid; i++, resid--) {
 			blk = journal_balloc();
 			if (blk <= 0)
 				goto out;
 			if (sblock.fs_magic == FS_UFS1_MAGIC) {
-				dp1->di_db[i] = blk;
-				dp1->di_blocks++;
+				dp.dp1->di_db[i] = blk;
+				dp.dp1->di_blocks++;
 			} else {
-				dp2->di_db[i] = blk;
-				dp2->di_blocks++;
+				dp.dp2->di_db[i] = blk;
+				dp.dp2->di_blocks++;
 			}
 		}
 		for (i = 0; i < UFS_NIADDR && resid; i++) {
@@ -1070,19 +1027,20 @@ journal_alloc(int64_t size)
 				goto out;
 			}
 			if (sblock.fs_magic == FS_UFS1_MAGIC) {
-				dp1->di_ib[i] = blk;
-				dp1->di_blocks += blks;
+				dp.dp1->di_ib[i] = blk;
+				dp.dp1->di_blocks += blks;
 			} else {
-				dp2->di_ib[i] = blk;
-				dp2->di_blocks += blks;
+				dp.dp2->di_ib[i] = blk;
+				dp.dp2->di_blocks += blks;
 			}
 		}
 		if (sblock.fs_magic == FS_UFS1_MAGIC)
-			dp1->di_blocks *= sblock.fs_bsize / disk.d_bsize;
+			dp.dp1->di_blocks *= sblock.fs_bsize / disk.d_bsize;
 		else
-			dp2->di_blocks *= sblock.fs_bsize / disk.d_bsize;
-		if (putino(&disk) < 0) {
-			warn("Failed to write inode");
+			dp.dp2->di_blocks *= sblock.fs_bsize / disk.d_bsize;
+		if (putinode(&disk) < 0) {
+			warn("Failed to write allocated inode: %s",
+			    disk.d_error);
 			sbdirty();
 			return (-1);
 		}

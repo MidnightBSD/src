@@ -21,8 +21,6 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
-.\"
 .Dd January 4, 2019
 .Dt SMP 4
 .Os
@@ -118,7 +116,7 @@ tasks on CPUs that are closely grouped together.
 Support for multi-processor systems is present for all Tier-1 and Tier-2
 architectures on
 .Fx .
-Currently, this includes x86, powerpc, arm, and sparc64.
+Currently, this includes x86, powerpc, mips, arm and arm64.
 Support is enabled using
 .Cd options SMP .
 It is permissible to use the SMP kernel configuration on non-SMP hardware.

@@ -23,9 +23,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
-.\"
-.Dd April 8, 2022
+.Dd April 25, 2023
 .Dt CD9660 5
 .Os
 .Sh NAME
@@ -42,6 +40,7 @@ module at boot time, place the following line in
 .Xr loader.conf 5 :
 .Bd -literal -offset indent
 cd9660_load="YES"
+.Ed
 .Sh DESCRIPTION
 The
 .Nm
@@ -68,7 +67,7 @@ volume located on
 The
 .Nm
 driver first appeared in
-.Fx 4.4 Lite
+.Bx 4.4 Lite .
 .Sh AUTHORS
 .An -nosplit
 The

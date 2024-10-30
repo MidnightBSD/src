@@ -44,7 +44,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #define _BSD_SOURCE
 
 #include <sys/time.h>

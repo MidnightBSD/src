@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009 Ulf Lilleengen
  * All rights reserved.
@@ -24,13 +24,9 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: stable/11/lib/libutil/kinfo_getproc.c 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libutil/kinfo_getproc.c 331722 2018-03-29 02:50:57Z eadler $");
-
 #include <sys/param.h>
 #include <sys/sysctl.h>
 #include <sys/user.h>
@@ -46,17 +42,15 @@ kinfo_getproc(pid_t pid)
 	int mib[4];
 	size_t len;
 
-	len = 0;
+	len = sizeof(*kipp);
+	kipp = malloc(len);
+	if (kipp == NULL)
+		return (NULL);
+
 	mib[0] = CTL_KERN;
 	mib[1] = KERN_PROC;
 	mib[2] = KERN_PROC_PID;
 	mib[3] = pid;
-	if (sysctl(mib, nitems(mib), NULL, &len, NULL, 0) < 0)
-		return (NULL);
-
-	kipp = malloc(len);
-	if (kipp == NULL)
-		return (NULL);
 
 	if (sysctl(mib, nitems(mib), kipp, &len, NULL, 0) < 0)
 		goto bad;

@@ -50,7 +50,6 @@ static char sccsid[] = "@(#)newfs.c	8.13 (Berkeley) 5/1/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-
 /*
  * newfs: friendly front end to mkfs
  */
@@ -392,6 +391,9 @@ main(int argc, char *argv[])
 		fprintf(stderr, "because minfree is less than %d%%\n", MINFREE);
 		opt = FS_OPTSPACE;
 	}
+	/* Use soft updates by default for UFS2 and above */
+	if (Oflag > 1)
+		Uflag = 1;
 	realsectorsize = sectorsize;
 	if (sectorsize != DEV_BSIZE) {		/* XXX */
 		int secperblk = sectorsize / DEV_BSIZE;

@@ -14,8 +14,6 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man4/usb_quirk.4 324769 2017-10-19 20:28:04Z wulf $
-.\"
 .Dd August 19, 2017
 .Dt USB_QUIRK 4
 .Os
@@ -78,6 +76,8 @@ does not identify properly
 mouse sends an unknown leading byte
 .It UQ_MS_REVZ
 mouse has Z-axis reversed
+.It UQ_MS_VENDOR_BTN
+mouse has buttons in vendor usage page
 .It UQ_NO_STRINGS
 string descriptors are broken
 .It UQ_POWER_CLAIM
@@ -98,6 +98,8 @@ select configuration index 4 by default
 select configuration index 0 by default
 .It UQ_ASSUME_CM_OVER_DATA
 assume cm over data feature
+.It UQ_IGNORE_CDC_CM
+ignore cm descriptor
 .It UQ_WMT_IGNORE
 device should be ignored by wmt driver
 .El

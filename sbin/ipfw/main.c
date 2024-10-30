@@ -16,7 +16,6 @@
  * This software is provided ``AS IS'' without any warranties of any kind.
  *
  * Command line interface for IP firewall facility
- *
  */
 
 #include <sys/wait.h>

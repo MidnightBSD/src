@@ -41,7 +41,6 @@ static const char sccsid[] = "@(#)dmesg.c	8.1 (Berkeley) 6/5/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <sys/msgbuf.h>
 #include <sys/sysctl.h>

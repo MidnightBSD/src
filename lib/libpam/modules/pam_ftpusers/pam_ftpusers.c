@@ -35,7 +35,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <ctype.h>
 #include <grp.h>
 #include <paths.h>

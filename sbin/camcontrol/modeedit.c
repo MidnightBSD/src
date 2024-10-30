@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000 Kelly Yancey <kbyanc@posi.net>
  * Derived from work done by Julian Elischer <julian@tfs.com,
@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/queue.h>
 #include <sys/types.h>
 #include <sys/sbuf.h>

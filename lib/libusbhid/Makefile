@@ -1,7 +1,5 @@
 #	$NetBSD: Makefile,v 1.5 1999/07/23 09:44:38 mrg Exp $
-#	$FreeBSD: stable/11/lib/libusbhid/Makefile 298107 2016-04-16 07:45:30Z gjb $
 
-PACKAGE=lib${LIB}
 LIB=	usbhid
 MAN=	usbhid.3
 
@@ -19,9 +17,5 @@ MLINKS=	usbhid.3 libusbhid.3 usbhid.3 hid_get_report_desc.3 \
 SRCS=	descr.c descr_compat.c parse.c usage.c data.c
 
 INCS=	usbhid.h
-
-.if defined(COMPAT_32BIT)
-CFLAGS+=	-DCOMPAT_32BIT
-.endif
 
 .include <bsd.lib.mk>

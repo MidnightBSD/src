@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Rui Paulo under sponsorship from the
  * FreeBSD Foundation.
@@ -30,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <sys/ptrace.h>
 #include <sys/wait.h>
@@ -111,7 +109,7 @@ proc_bkptset(struct proc_handle *phdl, uintptr_t address,
 		return (-1);
 	}
 
-	DPRINTFX("adding breakpoint at 0x%lx", address);
+	DPRINTFX("adding breakpoint at 0x%lx", (unsigned long)address);
 
 	stopped = 0;
 	if (phdl->status != PS_STOP) {
@@ -172,7 +170,7 @@ proc_bkptdel(struct proc_handle *phdl, uintptr_t address,
 		return (-1);
 	}
 
-	DPRINTFX("removing breakpoint at 0x%lx", address);
+	DPRINTFX("removing breakpoint at 0x%lx", (unsigned long)address);
 
 	stopped = 0;
 	if (phdl->status != PS_STOP) {

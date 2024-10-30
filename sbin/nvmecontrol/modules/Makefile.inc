@@ -1,5 +1,5 @@
 
-PACKAGE=runtime
+PACKAGE=nvme-tools
 NVMECONTROLDIR=	${SRCTOP}/sbin/nvmecontrol
 
 MK_INSTALLLIB=	no

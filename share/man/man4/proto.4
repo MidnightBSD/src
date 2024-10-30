@@ -23,8 +23,6 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man4/proto.4 301589 2016-06-08 08:50:35Z trasz $
-.\"
 .Dd August 7, 2015
 .Dt PROTO 4
 .Os
@@ -267,7 +265,7 @@ single contigous region of physical memory.
 In practice this also tends to give a single contigous region in bus space.
 This may change over time.
 .It PROTO_IOC_BUSDMA_MEM_FREE
-Free previously allocated memory and destroy the memory desciptor.
+Free previously allocated memory and destroy the memory descriptor.
 The
 .Nm
 driver is not in a position to track whether the memory has been mapped in

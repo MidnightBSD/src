@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-3-Clause AND BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-3-Clause AND BSD-2-Clause
  *
- * Copyright (c) 2002-2010 M. Warner Losh.
- * All rights reserved.
+ * Copyright (c) 2002-2010 M. Warner Losh <imp@FreeBSD.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -65,7 +64,6 @@
 //	  - devd.conf needs more details on the supported statements.
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/socket.h>
 #include <sys/stat.h>

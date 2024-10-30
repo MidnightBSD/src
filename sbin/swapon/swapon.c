@@ -41,7 +41,6 @@ static char sccsid[] = "@(#)swapon.c	8.1 (Berkeley) 6/5/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/disk.h>
 #include <sys/disklabel.h>
@@ -50,6 +49,7 @@ static char sccsid[] = "@(#)swapon.c	8.1 (Berkeley) 6/5/93";
 #include <sys/sysctl.h>
 #include <sys/wait.h>
 #include <vm/vm_param.h>
+#include <vm/swap_pager.h>
 
 #include <err.h>
 #include <errno.h>
@@ -77,7 +77,7 @@ static int run_cmd(int *, const char *, ...) __printflike(2, 3);
 
 static enum { SWAPON, SWAPOFF, SWAPCTL } orig_prog, which_prog = SWAPCTL;
 
-static int Eflag, qflag;
+static int Eflag, fflag, qflag;
 
 int
 main(int argc, char **argv)
@@ -100,7 +100,7 @@ main(int argc, char **argv)
 	
 	doall = 0;
 	etc_fstab = NULL;
-	while ((ch = getopt(argc, argv, "AadEghklLmqsUF:")) != -1) {
+	while ((ch = getopt(argc, argv, "AadEfghklLmqsUF:")) != -1) {
 		switch(ch) {
 		case 'A':
 			if (which_prog == SWAPCTL) {
@@ -124,6 +124,12 @@ main(int argc, char **argv)
 		case 'E':
 			if (which_prog == SWAPON)
 				Eflag = 2;
+			else
+				usage();
+			break;
+		case 'f':
+			if (which_prog == SWAPOFF)
+				fflag = 1;
 			else
 				usage();
 			break;
@@ -786,7 +792,7 @@ swap_on_off_sfile(const char *name, int doingall)
 	if (which_prog == SWAPON)
 		error = Eflag ? swapon_trim(name) : swapon(name);
 	else /* SWAPOFF */
-		error = swapoff(name);
+		error = swapoff(name, fflag ? SWAPOFF_FORCE : 0);
 
 	if (error == -1) {
 		switch (errno) {
@@ -819,7 +825,7 @@ usage(void)
 	    fprintf(stderr, "[-F fstab] -aLq | [-E] file ...\n");
 	    break;
 	case SWAPOFF:
-	    fprintf(stderr, "[-F fstab] -aLq | file ...\n");
+	    fprintf(stderr, "[-F fstab] -afLq | file ...\n");
 	    break;
 	case SWAPCTL:
 	    fprintf(stderr, "[-AghklmsU] [-a file ... | -d file ...]\n");

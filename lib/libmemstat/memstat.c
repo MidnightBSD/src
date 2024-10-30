@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2005 Robert N. M. Watson
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/param.h>
@@ -323,6 +322,13 @@ memstat_get_sleeps(const struct memory_type *mtp)
 {
 
 	return (mtp->mt_sleeps);
+}
+
+uint64_t
+memstat_get_xdomain(const struct memory_type *mtp)
+{
+
+	return (mtp->mt_xdomain);
 }
 
 void *

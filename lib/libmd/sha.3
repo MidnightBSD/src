@@ -8,7 +8,7 @@
 .\"
 .\" 	From: Id: mdX.3,v 1.14 1999/02/11 20:31:49 wollman Exp
 .\"
-.Dd July 20, 2018
+.Dd February 6, 2023
 .Dt SHA 3
 .Os
 .Sh NAME
@@ -75,16 +75,9 @@ a
 .Dq fingerprint
 of the input-data, which does not disclose the actual input.
 .Pp
-.Tn SHA
-(or
-.Tn SHA-0 )
-is the original Secure Hash Algorithm specified in
-.Tn FIPS
-160.
-It was quickly proven insecure, and has been superseded by
-.Tn SHA-1 .
-.Tn SHA-0
-is included for compatibility purposes only.
+SHA (or SHA-0) is the original Secure Hash Algorithm specified in FIPS 160.
+It was quickly proven insecure, and has been superseded by SHA-1.
+SHA-0 is included for compatibility purposes only.
 .Pp
 The
 .Fn SHA1_Init ,
@@ -108,8 +101,7 @@ is a wrapper for
 .Fn SHA1_Final
 which converts the return value to a 41-character
 (including the terminating '\e0')
-.Tn ASCII
-string which represents the 160 bits in hexadecimal.
+ASCII string which represents the 160 bits in hexadecimal.
 .Pp
 .Fn SHA1_File
 calculates the digest of a file, and uses
@@ -154,6 +146,26 @@ after use.
 If the
 .Fa buf
 argument is non-null it must point to at least 41 characters of buffer space.
+.Sh ERRORS
+The
+.Fn SHA1_End
+function called with a null buf argument may fail and return NULL if:
+.Bl -tag -width Er
+.It Bq Er ENOMEM
+Insufficient storage space is available.
+.El
+.Pp
+The
+.Fn SHA1_File
+and
+.Fn SHA1_FileChunk
+may return NULL when underlying
+.Xr open 2 ,
+.Xr fstat 2 ,
+.Xr lseek 2 ,
+or
+.Xr SHA1_End 2
+fail.
 .Sh SEE ALSO
 .Xr md4 3 ,
 .Xr md5 3 ,
@@ -167,21 +179,8 @@ These functions appeared in
 .Sh AUTHORS
 The core hash routines were implemented by Eric Young based on the
 published
-.Tn FIPS
-standards.
+FIPS standards.
 .Sh BUGS
-No method is known to exist which finds two files having the same hash value,
-nor to find a file with a specific hash value.
-There is on the other hand no guarantee that such a method does not exist.
-.Pp
-The
-.Tn IA32
-(Intel) implementation of
-.Tn SHA-1
-makes heavy use of the
-.Ql bswapl
-instruction, which is not present on the original 80386.
-Attempts to use
-.Tn SHA-1
-on those processors will cause an illegal instruction trap.
-(Arguably, the kernel should simply emulate this instruction.)
+The SHA1 algorithm has been proven to be vulnerable to practical collision
+attacks and should not be relied upon to produce unique outputs,
+.Em nor should it be used as part of a new cryptographic signature scheme.

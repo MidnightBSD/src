@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013 Hans Petter Selasky. All rights reserved.
  *
@@ -49,6 +49,7 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <setjmp.h>
+#include <signal.h>
 #include <pthread.h>
 #include <sys/queue.h>
 #include <sys/ioctl.h>

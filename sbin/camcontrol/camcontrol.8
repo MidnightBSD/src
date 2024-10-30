@@ -25,8 +25,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\"
-.Dd August 6, 2019
+.Dd December 28, 2023
 .Dt CAMCONTROL 8
 .Os
 .Sh NAME
@@ -51,6 +50,12 @@
 .Ic tur
 .Op device id
 .Op generic args
+.Nm
+.Ic sense
+.Op device id
+.Op generic args
+.Op Fl D
+.Op Fl x
 .Nm
 .Ic inquiry
 .Op device id
@@ -369,9 +374,10 @@
 .Sh DESCRIPTION
 The
 .Nm
-utility is designed to provide a way for users to access and control the
+utility allows users to access and control the
 .Fx
-CAM subsystem.
+CAM subsystem described in
+.Xr cam 4 .
 .Pp
 The
 .Nm
@@ -481,6 +487,15 @@ Send the SCSI test unit ready (0x00) command to the given device.
 The
 .Nm
 utility will report whether the device is ready or not.
+.It Ic sense
+Send a SCSI REQUEST SENSE command (0x03) to a device.
+The decoded sense (or hexdump) is printed to stdout.
+.Bl -tag -width 4n
+.It Fl D
+Request descriptor sense instead of fixed sense.
+.It Fl x
+Do a hexdump of the returned sense data.
+.El
 .It Ic inquiry
 Send a SCSI inquiry command (0x12) to a device.
 By default,
@@ -1084,18 +1099,8 @@ to print out the tagged queueing related fields of the XPT_GDEV_TYPE CCB:
 This is the amount of capacity for transactions queued to a given device.
 .It dev_active
 This is the number of transactions currently queued to a device.
-.It devq_openings
-This is the kernel queue space for transactions.
-This count usually mirrors
-dev_openings except during error recovery operations when
-the device queue is frozen (device is not allowed to receive
-commands), the number of dev_openings is reduced, or transaction
-replay is occurring.
-.It devq_queued
-This is the number of transactions waiting in the kernel queue for capacity
-on the device.
-This number is usually zero unless error recovery is in
-progress.
+.It allocated
+This is the number of CCBs allocated for the device.
 .It held
 The held count is the number of CCBs held by peripheral drivers that have
 either just been completed or are about to be released to the transport
@@ -1688,6 +1693,8 @@ Tested with Constellation ES (ST32000444SS), ES.2 (ST33000651SS) and
 ES.3 (ST1000NM0023) drives.
 .It SmrtStor
 Tested with 400GB Optimus SSDs (TXA2D20400GA6001).
+.It TOSHIBA
+Tested with 22TB MG10SFA22TE SAS drives.
 .El
 .Pp
 .Em WARNING! WARNING! WARNING!
@@ -1805,7 +1812,7 @@ One of those two options is required.
 Persistent reservations are complex, and fully explaining them is outside
 the scope of this manual.
 Please visit
-http://www.t10.org
+https://www.t10.org
 and download the latest SPC spec for a full explanation of persistent
 reservations.
 .Bl -tag -width 8n
@@ -2918,7 +2925,10 @@ that was created using this format string.
 .Xr cam_cdbparse 3 ,
 .Xr cam 4 ,
 .Xr pass 4 ,
-.Xr xpt 4
+.Xr xpt 4 ,
+.Xr diskinfo 8 ,
+.Xr trim 8 ,
+.Xr zonectl 8
 .Sh HISTORY
 The
 .Nm

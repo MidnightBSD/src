@@ -29,7 +29,6 @@
  * SUCH DAMAGE.
  *
  *	@(#)radix.c	8.4 (Berkeley) 11/2/94
- *
  */
 
 /*
@@ -37,15 +36,6 @@
  */
 
 #include "defs.h"
-
-#ifdef __NetBSD__
-__RCSID("$NetBSD$");
-#elif defined(__FreeBSD__)
-#else
-__RCSID("$Revision: 2.23 $");
-#ident "$Revision: 2.23 $"
-#endif
-
 #define log(x, msg) syslog(x, msg)
 #define panic(s) {log(LOG_ERR,s); exit(1);}
 #define min(a,b) (((a)<(b))?(a):(b))

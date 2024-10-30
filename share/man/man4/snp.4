@@ -1,7 +1,5 @@
 .\"
-.\" $FreeBSD: stable/11/share/man/man4/snp.4 286663 2015-08-12 11:56:19Z brueffer $
-.\"
-.Dd November 5, 2008
+.Dd September 24, 2022
 .Dt SNP 4
 .Os
 .Sh NAME
@@ -58,8 +56,6 @@ ioctl returns a positive value equal to the number of characters
 in a read buffer.
 Special values defined are:
 .Bl -tag -width ".Dv SNP_TTYCLOSE"
-.It Dv SNP_OFLOW
-device overflow occurred, device detached.
 .It Dv SNP_TTYCLOSE
 tty not attached.
 .It Dv SNP_DETACH
@@ -69,7 +65,6 @@ and detached.
 .El
 .Sh SEE ALSO
 .Xr pty 4 ,
-.Xr sio 4 ,
 .Xr kldload 8 ,
 .Xr watch 8
 .Sh HISTORY
@@ -90,11 +85,3 @@ Previous versions of
 .Nm
 were based on code written by
 .An Ugen J.S. Antsilevich Aq Mt ugen@NetVision.net.il .
-.Sh BUGS
-This version of
-.Nm
-does not return proper error codes when calling
-.Dv FIONREAD .
-It also does not allow
-.Dv SNPSTTY
-to detach itself from the TTY.

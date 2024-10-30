@@ -1,9 +1,9 @@
 
-PACKAGE=lib${LIB}
 SHLIBDIR?= /lib
 
 .include <src.opts.mk>
 
+PACKAGE=	runtime
 LIB=	nv
 SHLIB_MAJOR= 0
 
@@ -14,7 +14,7 @@ SRCS=	cnvlist.c
 SRCS+=	dnvlist.c
 SRCS+=	msgio.c
 SRCS+=	nvlist.c
-SRCS+=	nvpair.c
+SRCS+=	bsd_nvpair.c
 
 HAS_TESTS=
 SUBDIR.${MK_TESTS}+= tests

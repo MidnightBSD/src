@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/param.h>
@@ -603,6 +602,7 @@ sendfail(int sfd, int error, const char *fmt, ...)
 	va_list ap;
 	ssize_t data;
 
+	memset(&sinit, 0, sizeof(sinit));
 	sinit.gs_error = error;
 	g_gate_swap2n_sinit(&sinit);
 	data = g_gate_send(sfd, &sinit, sizeof(sinit), 0);
@@ -724,7 +724,6 @@ disk_thread(void *arg)
 		/*
 		 * Check the request.
 		 */
-		assert(req->r_cmd == GGATE_CMD_READ || req->r_cmd == GGATE_CMD_WRITE);
 		assert(req->r_offset + req->r_length <= (uintmax_t)conn->c_mediasize);
 		assert((req->r_offset % conn->c_sectorsize) == 0);
 		assert((req->r_length % conn->c_sectorsize) == 0);
@@ -747,6 +746,19 @@ disk_thread(void *arg)
 			/* Free data memory here - better sooner. */
 			free(req->r_data);
 			req->r_data = NULL;
+			break;
+		case GGATE_CMD_FLUSH:
+			data = fsync(fd);
+			if (data != 0)
+				req->r_error = errno;
+			break;
+		default:
+			g_gate_log(LOG_DEBUG, "Unsupported request: %i", req->r_cmd);
+			req->r_error = EOPNOTSUPP;
+			if (req->r_data != NULL) {
+				free(req->r_data);
+				req->r_data = NULL;
+			}
 			break;
 		}
 		if (data != (ssize_t)req->r_length) {

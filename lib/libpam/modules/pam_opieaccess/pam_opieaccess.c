@@ -35,7 +35,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #define _BSD_SOURCE
 
 #include <sys/types.h>

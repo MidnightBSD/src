@@ -25,7 +25,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*-
@@ -71,6 +70,7 @@
 #include <net/if_media.h>
 #include <net/route.h>
 
+#define WANT_NET80211	1
 #include <net80211/ieee80211_ioctl.h>
 #include <net80211/ieee80211_freebsd.h>
 #include <net80211/ieee80211_superg.h>
@@ -238,7 +238,7 @@ getchaninfo(int s)
 	if (get80211(s, IEEE80211_IOC_CHANINFO, chaninfo,
 	    IEEE80211_CHANINFO_SIZE(MAXCHAN)) < 0)
 		err(1, "unable to get channel information");
-	ifmr = ifmedia_getstate(s);
+	ifmr = ifmedia_getstate();
 	gethtconf(s);
 	getvhtconf(s);
 }
@@ -2781,10 +2781,18 @@ printvhtcap(const char *tag, const u_int8_t *ie, size_t ielen, int maxlen)
 {
 	printf("%s", tag);
 	if (verbose) {
-		const struct ieee80211_ie_vhtcap *vhtcap =
-		    (const struct ieee80211_ie_vhtcap *) ie;
-		uint32_t vhtcap_info = LE_READ_4(&vhtcap->vht_cap_info);
+		const struct ieee80211_vht_cap *vhtcap;
+		uint32_t vhtcap_info;
 
+		/* Check that the right size. */
+		if (ie[1] != sizeof(*vhtcap)) {
+			printf("<err: vht_cap inval. length>");
+			return;
+		}
+		/* Skip Element ID and Length. */
+		vhtcap = (const struct ieee80211_vht_cap *)(ie + 2);
+
+		vhtcap_info = LE_READ_4(&vhtcap->vht_cap_info);
 		printf("<cap 0x%08x", vhtcap_info);
 		printf(" rx_mcs_map 0x%x",
 		    LE_READ_2(&vhtcap->supp_mcs.rx_mcs_map));
@@ -2804,13 +2812,20 @@ printvhtinfo(const char *tag, const u_int8_t *ie, size_t ielen, int maxlen)
 {
 	printf("%s", tag);
 	if (verbose) {
-		const struct ieee80211_ie_vht_operation *vhtinfo =
-		    (const struct ieee80211_ie_vht_operation *) ie;
+		const struct ieee80211_vht_operation *vhtinfo;
 
-		printf("<chw %d freq1_idx %d freq2_idx %d basic_mcs_set 0x%04x>",
+		/* Check that the right size. */
+		if (ie[1] != sizeof(*vhtinfo)) {
+			printf("<err: vht_operation inval. length>");
+			return;
+		}
+		/* Skip Element ID and Length. */
+		vhtinfo = (const struct ieee80211_vht_operation *)(ie + 2);
+
+		printf("<chw %d freq0_idx %d freq1_idx %d basic_mcs_set 0x%04x>",
 		    vhtinfo->chan_width,
-		    vhtinfo->center_freq_seg1_idx,
-		    vhtinfo->center_freq_seg2_idx,
+		    vhtinfo->center_freq_seq0_idx,
+		    vhtinfo->center_freq_seq1_idx,
 		    LE_READ_2(&vhtinfo->basic_mcs_set));
 	}
 }
@@ -3716,6 +3731,17 @@ printmimo(const struct ieee80211_mimo_info *mi)
 }
 
 static void
+printbssidname(const struct ether_addr *n)
+{
+	char name[MAXHOSTNAMELEN + 1];
+
+	if (ether_ntohost(name, n) != 0)
+		return;
+
+	printf(" (%s)", name);
+}
+
+static void
 list_scan(int s)
 {
 	uint8_t buf[24*1024];
@@ -3766,6 +3792,7 @@ list_scan(int s)
 		);
 		printies(vp + sr->isr_ssid_len + sr->isr_meshid_len,
 		    sr->isr_ie_len, 24);
+		printbssidname((const struct ether_addr *)sr->isr_bssid);
 		printf("\n");
 		cp += sr->isr_len, len -= sr->isr_len;
 	} while (len >= sizeof(struct ieee80211req_scan_result));
@@ -4903,8 +4930,10 @@ ieee80211_status(int s)
 		printf(" channel UNDEF");
 
 	if (get80211(s, IEEE80211_IOC_BSSID, data, IEEE80211_ADDR_LEN) >= 0 &&
-	    (memcmp(data, zerobssid, sizeof(zerobssid)) != 0 || verbose))
+	    (memcmp(data, zerobssid, sizeof(zerobssid)) != 0 || verbose)) {
 		printf(" bssid %s", ether_ntoa((struct ether_addr *)data));
+		printbssidname((struct ether_addr *)data);
+	}
 
 	if (get80211len(s, IEEE80211_IOC_STATIONNAME, data, sizeof(data), &len) != -1) {
 		printf("\n\tstationname ");
@@ -5059,6 +5088,8 @@ ieee80211_status(int s)
 				printkey(&ik);
 			}
 		}
+		if (i > 0 && verbose)
+			LINE_BREAK();
 end:
 		;
 	}
@@ -6067,5 +6098,5 @@ ieee80211_ctor(void)
 	for (i = 0; i < nitems(ieee80211_cmds);  i++)
 		cmd_register(&ieee80211_cmds[i]);
 	af_register(&af_ieee80211);
-	clone_setdefcallback("wlan", wlan_create);
+	clone_setdefcallback_prefix("wlan", wlan_create);
 }

@@ -39,7 +39,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <stdlib.h>
 #include <rpc/rpc.h>
 #include <rpcsvc/yp_prot.h>

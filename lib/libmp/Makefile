@@ -1,7 +1,6 @@
 
 .include <src.opts.mk>
 
-PACKAGE=lib${LIB}
 LIB=		mp
 SHLIB_MAJOR=	7
 LIBADD=		crypto

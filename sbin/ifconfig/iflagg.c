@@ -23,6 +23,8 @@
 #include <err.h>
 #include <errno.h>
 
+#include <libifconfig.h>
+
 #include "ifconfig.h"
 
 static struct iflaggparam params = {
@@ -132,6 +134,8 @@ setlaggsetopt(const char *val, int d, int s, const struct afswtch *afp)
 	switch (ro.ro_opts) {
 	case LAGG_OPT_USE_FLOWID:
 	case -LAGG_OPT_USE_FLOWID:
+	case LAGG_OPT_USE_NUMA:
+	case -LAGG_OPT_USE_NUMA:
 	case LAGG_OPT_LACP_STRICT:
 	case -LAGG_OPT_LACP_STRICT:
 	case LAGG_OPT_LACP_TXTEST:
@@ -209,93 +213,80 @@ lacp_format_peer(struct lacp_opreq *req, const char *sep)
 static void
 lagg_status(int s)
 {
-	struct lagg_protos lpr[] = LAGG_PROTOS;
-	struct lagg_reqport rpbuf[LAGG_MAX_PORTS];
-	struct lagg_reqall ra;
-	struct lagg_reqopts ro;
-	struct lagg_reqflags rf;
+	struct lagg_protos protos[] = LAGG_PROTOS;
+	struct ifconfig_lagg_status *lagg;
+	struct lagg_reqall *ra;
+	struct lagg_reqflags *rf;
+	struct lagg_reqopts *ro;
+	struct lagg_reqport *ports;
 	struct lacp_opreq *lp;
-	const char *proto = "<unknown>";
-	int i;
+	const char *proto;
 
-	bzero(&ra, sizeof(ra));
-	bzero(&ro, sizeof(ro));
+	if (ifconfig_lagg_get_lagg_status(lifh, name, &lagg) == -1)
+		return;
 
-	strlcpy(ra.ra_ifname, name, sizeof(ra.ra_ifname));
-	ra.ra_size = sizeof(rpbuf);
-	ra.ra_port = rpbuf;
+	ra = lagg->ra;
+	rf = lagg->rf;
+	ro = lagg->ro;
+	ports = ra->ra_port;
 
-	strlcpy(ro.ro_ifname, name, sizeof(ro.ro_ifname));
-	ioctl(s, SIOCGLAGGOPTS, &ro);
-
-	strlcpy(rf.rf_ifname, name, sizeof(rf.rf_ifname));
-	if (ioctl(s, SIOCGLAGGFLAGS, &rf) != 0)
-		rf.rf_flags = 0;
-
-	if (ioctl(s, SIOCGLAGG, &ra) == 0) {
-		lp = (struct lacp_opreq *)&ra.ra_lacpreq;
-
-		for (i = 0; i < nitems(lpr); i++) {
-			if (ra.ra_proto == lpr[i].lpr_proto) {
-				proto = lpr[i].lpr_name;
-				break;
-			}
-		}
-
-		printf("\tlaggproto %s", proto);
-		if (rf.rf_flags & LAGG_F_HASHMASK) {
-			const char *sep = "";
-
-			printf(" lagghash ");
-			if (rf.rf_flags & LAGG_F_HASHL2) {
-				printf("%sl2", sep);
-				sep = ",";
-			}
-			if (rf.rf_flags & LAGG_F_HASHL3) {
-				printf("%sl3", sep);
-				sep = ",";
-			}
-			if (rf.rf_flags & LAGG_F_HASHL4) {
-				printf("%sl4", sep);
-				sep = ",";
-			}
-		}
-		putchar('\n');
-		if (verbose) {
-			printf("\tlagg options:\n");
-			printb("\t\tflags", ro.ro_opts, LAGG_OPT_BITS);
-			putchar('\n');
-			printf("\t\tflowid_shift: %d\n", ro.ro_flowid_shift);
-			if (ra.ra_proto == LAGG_PROTO_ROUNDROBIN)
-				printf("\t\trr_limit: %d\n", ro.ro_bkt);
-			printf("\tlagg statistics:\n");
-			printf("\t\tactive ports: %d\n", ro.ro_active);
-			printf("\t\tflapping: %u\n", ro.ro_flapping);
-			if (ra.ra_proto == LAGG_PROTO_LACP) {
-				printf("\tlag id: %s\n",
-				    lacp_format_peer(lp, "\n\t\t "));
-			}
-		}
-
-		for (i = 0; i < ra.ra_ports; i++) {
-			lp = (struct lacp_opreq *)&rpbuf[i].rp_lacpreq;
-			printf("\tlaggport: %s ", rpbuf[i].rp_portname);
-			printb("flags", rpbuf[i].rp_flags, LAGG_PORT_BITS);
-			if (verbose && ra.ra_proto == LAGG_PROTO_LACP)
-				printb(" state", lp->actor_state,
-				    LACP_STATE_BITS);
-			putchar('\n');
-			if (verbose && ra.ra_proto == LAGG_PROTO_LACP)
-				printf("\t\t%s\n",
-				    lacp_format_peer(lp, "\n\t\t "));
-		}
-
-		if (0 /* XXX */) {
-			printf("\tsupported aggregation protocols:\n");
-			for (i = 0; i < nitems(lpr); i++)
-				printf("\t\tlaggproto %s\n", lpr[i].lpr_name);
+	proto = "<unknown>";
+	for (size_t i = 0; i < nitems(protos); ++i) {
+		if (ra->ra_proto == protos[i].lpr_proto) {
+			proto = protos[i].lpr_name;
+			break;
 		}
 	}
+	printf("\tlaggproto %s", proto);
+
+	if (rf->rf_flags & LAGG_F_HASHMASK) {
+		const char *sep = "";
+
+		printf(" lagghash ");
+		if (rf->rf_flags & LAGG_F_HASHL2) {
+			printf("%sl2", sep);
+			sep = ",";
+		}
+		if (rf->rf_flags & LAGG_F_HASHL3) {
+			printf("%sl3", sep);
+			sep = ",";
+		}
+		if (rf->rf_flags & LAGG_F_HASHL4) {
+			printf("%sl4", sep);
+			sep = ",";
+		}
+	}
+	putchar('\n');
+	if (verbose) {
+		printf("\tlagg options:\n");
+		printb("\t\tflags", ro->ro_opts, LAGG_OPT_BITS);
+		putchar('\n');
+		printf("\t\tflowid_shift: %d\n", ro->ro_flowid_shift);
+		if (ra->ra_proto == LAGG_PROTO_ROUNDROBIN)
+			printf("\t\trr_limit: %d\n", ro->ro_bkt);
+		printf("\tlagg statistics:\n");
+		printf("\t\tactive ports: %d\n", ro->ro_active);
+		printf("\t\tflapping: %u\n", ro->ro_flapping);
+		if (ra->ra_proto == LAGG_PROTO_LACP) {
+			lp = &ra->ra_lacpreq;
+			printf("\tlag id: %s\n",
+			    lacp_format_peer(lp, "\n\t\t "));
+		}
+	}
+
+	for (size_t i = 0; i < ra->ra_ports; ++i) {
+		lp = &ports[i].rp_lacpreq;
+		printf("\tlaggport: %s ", ports[i].rp_portname);
+		printb("flags", ports[i].rp_flags, LAGG_PORT_BITS);
+		if (verbose && ra->ra_proto == LAGG_PROTO_LACP)
+			printb(" state", lp->actor_state, LACP_STATE_BITS);
+		putchar('\n');
+		if (verbose && ra->ra_proto == LAGG_PROTO_LACP)
+			printf("\t\t%s\n",
+			    lacp_format_peer(lp, "\n\t\t "));
+	}
+
+	ifconfig_lagg_free_lagg_status(lagg);
 }
 
 static
@@ -328,6 +319,8 @@ static struct cmd lagg_cmds[] = {
 	DEF_CMD_ARG("lagghash",		setlagghash),
 	DEF_CMD("use_flowid",	LAGG_OPT_USE_FLOWID,	setlaggsetopt),
 	DEF_CMD("-use_flowid",	-LAGG_OPT_USE_FLOWID,	setlaggsetopt),
+	DEF_CMD("use_numa",	LAGG_OPT_USE_NUMA,	setlaggsetopt),
+	DEF_CMD("-use_numa",	-LAGG_OPT_USE_NUMA,	setlaggsetopt),
 	DEF_CMD("lacp_strict",	LAGG_OPT_LACP_STRICT,	setlaggsetopt),
 	DEF_CMD("-lacp_strict",	-LAGG_OPT_LACP_STRICT,	setlaggsetopt),
 	DEF_CMD("lacp_txtest",	LAGG_OPT_LACP_TXTEST,	setlaggsetopt),
@@ -353,5 +346,5 @@ lagg_ctor(void)
 	for (i = 0; i < nitems(lagg_cmds);  i++)
 		cmd_register(&lagg_cmds[i]);
 	af_register(&af_lagg);
-	clone_setdefcallback("lagg", lagg_create);
+	clone_setdefcallback_prefix("lagg", lagg_create);
 }

@@ -23,8 +23,6 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man4/coretemp.4 267938 2014-06-26 21:46:14Z bapt $
-.\"
 .Dd August 23, 2007
 .Dt CORETEMP 4
 .Os
@@ -57,6 +55,7 @@ driver reports each core's temperature through a sysctl node in the
 corresponding CPU device's sysctl tree, named
 .Va dev.cpu.%d.temperature .
 .Sh SEE ALSO
+.Xr amdtemp 4 ,
 .Xr sysctl 8
 .Sh HISTORY
 The

@@ -1,7 +1,7 @@
 /*	$NetBSD: data.c,v 1.8 2000/04/02 11:10:53 augustss Exp $	*/
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999 Lennart Augustsson <augustss@netbsd.org>
  * All rights reserved.
@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <assert.h>
 #include <stdlib.h>
@@ -125,7 +124,7 @@ hid_get_report(int fd, enum hid_kind k, unsigned char *data, unsigned int size)
 	struct usb_gen_descriptor ugd;
 
 	memset(&ugd, 0, sizeof(ugd));
-	ugd.ugd_data = hid_pass_ptr(data);
+	ugd.ugd_data = data;
 	ugd.ugd_maxlen = size;
 	ugd.ugd_report_type = k + 1;
 	return (ioctl(fd, USB_GET_REPORT, &ugd));
@@ -137,7 +136,7 @@ hid_set_report(int fd, enum hid_kind k, unsigned char *data, unsigned int size)
 	struct usb_gen_descriptor ugd;
 
 	memset(&ugd, 0, sizeof(ugd));
-	ugd.ugd_data = hid_pass_ptr(data);
+	ugd.ugd_data = data;
 	ugd.ugd_maxlen = size;
 	ugd.ugd_report_type = k + 1;
 	return (ioctl(fd, USB_SET_REPORT, &ugd));

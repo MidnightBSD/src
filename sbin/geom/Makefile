@@ -1,8 +1,9 @@
+
 .include <src.opts.mk>
 
 .PATH: ${.CURDIR}/core ${.CURDIR}/misc
 
-PACKAGE=runtime
+PACKAGE=geom
 PROG=		geom
 SRCS=		geom.c subr.c
 MAN=		geom.8
@@ -11,7 +12,7 @@ CFLAGS+=	-DGEOM_CLASS_DIR=\"${GEOM_CLASS_DIR}\"
 
 LIBADD=		geom util
 
-.if defined(RESCUE) || defined(RELEASE_CRUNCH)
+.if defined(RESCUE)
 .PATH:	${SRCTOP}/lib/geom/part \
 	${SRCTOP}/lib/geom/label
 

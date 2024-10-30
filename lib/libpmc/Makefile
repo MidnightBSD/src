@@ -1,27 +1,24 @@
 
-WARNS=0
-
 LIB_CXX= pmc
 
 SRCS=	libpmc.c pmclog.c libpmc_pmu_util.c libpmc_json.cc
 INCS=	pmc.h pmclog.h pmcformat.h
 
-CFLAGS+= -I${.CURDIR}
-CWARNFLAGS.gcc+= -Wno-shadow -Wno-cast-align
+CFLAGS+= -I${SRCTOP}/${RELDIR:H}/libpmcstat
 
-.if ${MACHINE_ARCH} == "amd64" || ${MACHINE_ARCH} == "i386"
-
-.if ${MACHINE_ARCH} == "aarch64"
+.if ${MACHINE_CPUARCH} == "aarch64"
 EVENT_ARCH="arm64"
-.elif ${MACHINE_ARCH} == "amd64" || ${MACHINE_ARCH} == "i386"
+.elif ${MACHINE_CPUARCH} == "amd64" || ${MACHINE_CPUARCH} == "i386"
 EVENT_ARCH="x86"
-.elif ${MACHINE_ARCH} == "powerpc"
+.elif ${MACHINE_CPUARCH} == "powerpc" && ${MACHINE_ARCH:Mpowerpc64*} != ""
 EVENT_ARCH="powerpc"
+.else
+# This will generate an empty events table
+EVENT_ARCH="none"
 .endif
 
 .if ${MK_DIRDEPS_BUILD} == "yes"
 # avoid circular dependency
-CFLAGS+= -I${SRCTOP}/${RELDIR:H}/libpmcstat
 GENDIRDEPS_FILTER+= N${RELDIR:H}/libpmcstat
 JEVENTS?= ${HOST_OBJTOP}/${RELDIR}/pmu-events/jevents
 .else
@@ -34,10 +31,18 @@ SUBDIR+= pmu-events
 .endif
 .endif
 
-libpmc_events.c: ${JEVENTS}
-	${JEVENTS} ${EVENT_ARCH} ${.CURDIR}/pmu-events/arch libpmc_events.c
-SRCS+= libpmc_events.c
-.endif
+libpmc_events.c: ${JEVENTS} .META
+	${JEVENTS} ${EVENT_ARCH} ${.CURDIR}/pmu-events/arch ${.TARGET}.tmp
+	if [ ! -e ${.TARGET} ] || ! cmp -s ${.TARGET} ${.TARGET}.tmp; then \
+		mv -f ${.TARGET}.tmp ${.TARGET}; \
+	fi
+CLEANFILES+=	libpmc_events.c libpmc_events.c.tmp
+SRCS+=	libpmc_events.c
+
+WARNS?=	3
+
+CFLAGS+= -I${.CURDIR}
+CWARNFLAGS.gcc+= -Wno-shadow -Wno-cast-align
 
 # Silence warnings about usage of deprecated std::auto_ptr
 CXXWARNFLAGS+=	-Wno-deprecated-declarations
@@ -76,9 +81,6 @@ MAN+=	pmc.k7.3
 MAN+=	pmc.k8.3
 MAN+=	pmc.mips24k.3
 MAN+=	pmc.octeon.3
-MAN+=	pmc.p4.3
-MAN+=	pmc.p5.3
-MAN+=	pmc.p6.3
 MAN+=	pmc.sandybridge.3
 MAN+=	pmc.sandybridgeuc.3
 MAN+=	pmc.sandybridgexeon.3
@@ -86,7 +88,6 @@ MAN+=	pmc.tsc.3
 MAN+=	pmc.ucf.3
 MAN+=	pmc.westmere.3
 MAN+=	pmc.westmereuc.3
-MAN+=	pmc.xscale.3
 
 MLINKS+= \
 	pmc_allocate.3 pmc_release.3 \

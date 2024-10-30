@@ -1,7 +1,6 @@
 #
 #
 
-PACKAGE=lib${LIB}
 SHLIBDIR?=	/lib
 
 .include <bsd.own.mk>

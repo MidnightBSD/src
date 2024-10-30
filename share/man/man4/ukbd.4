@@ -22,8 +22,6 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
-.\"
 .Dd April 24, 2018
 .Dt UKBD 4
 .Os
@@ -36,6 +34,8 @@ place the following line in your
 kernel configuration file:
 .Bd -ragged -offset indent
 .Cd "device ukbd"
+.Cd "device hid"
+.Cd "device usb"
 .Ed
 .Pp
 Alternatively, to load the driver as a
@@ -147,6 +147,7 @@ tunables:
 Debug output level, where 0 is debugging disabled and larger values increase
 debug message verbosity.
 Default is 0.
+.El
 .Sh FILES
 .Bl -tag -width ".Pa /dev/kbd*" -compact
 .It Pa /dev/kbd*

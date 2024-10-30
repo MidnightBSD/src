@@ -17,7 +17,6 @@
  *
  * NEW command line interface for IP firewall facility
  *
- *
  * In-kernel nat support
  */
 

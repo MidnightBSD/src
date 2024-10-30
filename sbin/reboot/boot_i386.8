@@ -34,8 +34,7 @@
 .\"
 .\"     @(#)boot_i386.8	8.2 (Berkeley) 4/19/94
 .\"
-.\"
-.Dd April 30, 2019
+.Dd July 11, 2020
 .Dt BOOT 8 i386
 .Os
 .Sh NAME
@@ -60,31 +59,13 @@ That process is described
 in
 .Xr uefi 8 .
 .Pp
-By default, a three-stage bootstrap is employed, and control is
-automatically passed from the boot blocks (bootstrap stages one and
-two) to a separate third-stage bootstrap program,
+A three-stage bootstrap is employed.
+Control is passed from the boot blocks (bootstrap stages one and two) to a
+third-stage bootstrap program,
 .Xr loader 8 .
 This third stage provides more sophisticated control over the booting
 process than it is possible to achieve in the boot blocks, which are
 constrained by occupying limited fixed space on a given disk or slice.
-.Pp
-However, it is possible to dispense with the third stage altogether,
-either by specifying a kernel name in the boot block parameter
-file,
-.Pa /boot.config ,
-or, unless option
-.Fl n
-is set, by hitting a key during a brief pause (while one of the characters
-.Sy - ,
-.Sy \e ,
-.Sy \&| ,
-or
-.Sy /
-is displayed) before
-.Xr loader 8
-is invoked.
-Booting will also be attempted at stage two, if the
-third stage cannot be loaded.
 .Pp
 The remainder of this subsection deals only with the boot blocks.
 The
@@ -222,15 +203,6 @@ you can use the
 .Fl h
 option to force the kernel to use the serial port as its
 console device.
-The serial port driver
-.Xr sio 4
-(but not
-.Xr uart 4 )
-has a flag (0x20) to override this option.
-If that flag is set, the serial port will always be used as the console,
-regardless of the
-.Fl h
-option described here.
 .It Fl m
 mute the console to suppress all kernel console input and output during the
 boot.
@@ -354,14 +326,18 @@ requirement has not been adhered to.
 .Xr boot0cfg 8 ,
 .Xr btxld 8 ,
 .Xr config 8 ,
+.Xr efibootmgr 8 ,
+.Xr efivar 8 ,
 .Xr gpart 8 ,
 .Xr gptboot 8 ,
+.Xr gptzfsboot 8 ,
 .Xr halt 8 ,
 .Xr loader 8 ,
 .Xr nextboot 8 ,
 .Xr reboot 8 ,
 .Xr shutdown 8 ,
-.Xr uefi 8
+.Xr uefi 8 ,
+.Xr zfsbootcfg 8
 .Sh BUGS
 The bsdlabel format used by this version of
 .Bx

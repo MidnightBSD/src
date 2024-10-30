@@ -26,7 +26,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef _VGL_H_
@@ -48,7 +47,7 @@ typedef struct {
 } VGLBitmap;
 
 #define VGLBITMAP_INITIALIZER(t, x, y, bits)	\
-	{ (t), (x), (y), (x), (y), 0, 0, (bits) }
+	{ (t), (x), (y), (x), (y), 0, 0, (bits), -1 }
 
 /*
  * Defined Type's
@@ -99,6 +98,7 @@ typedef struct VGLObject {
 extern video_adapter_info_t	VGLAdpInfo;
 extern video_info_t		VGLModeInfo;
 extern VGLBitmap 		*VGLDisplay;
+extern VGLBitmap 		VGLVDisplay;
 extern byte 			*VGLBuf;
 
 /*
@@ -110,6 +110,7 @@ int VGLBitmapCopy(VGLBitmap *src, int srcx, int srcy, VGLBitmap *dst, int dstx, 
 VGLBitmap *VGLBitmapCreate(int type, int xsize, int ysize, byte *bits);
 void VGLBitmapDestroy(VGLBitmap *object);
 int VGLBitmapAllocateBits(VGLBitmap *object);
+void VGLBitmapCvt(VGLBitmap *src, VGLBitmap *dst);
 /* keyboard.c */
 int VGLKeyboardInit(int mode);
 void VGLKeyboardEnd(void);
@@ -122,15 +123,17 @@ int VGLSetVScreenSize(VGLBitmap *object, int VXsize, int VYsize);
 int VGLPanScreen(VGLBitmap *object, int x, int y);
 int VGLSetSegment(unsigned int offset);
 /* mouse.c */
-void VGLMousePointerShow(void);
-void VGLMousePointerHide(void);
+int __VGLMouseMode(int mode);
 void VGLMouseMode(int mode);
-void VGLMouseAction(int dummy);
 void VGLMouseSetImage(VGLBitmap *AndMask, VGLBitmap *OrMask);
 void VGLMouseSetStdImage(void);
 int VGLMouseInit(int mode);
+void VGLMouseRestore(void);
 int VGLMouseStatus(int *x, int *y, char *buttons);
-int VGLMouseFreeze(int x, int y, int width, int hight, byte color);
+void VGLMouseFreeze(void);
+int VGLMouseFreezeXY(int x, int y);
+void VGLMouseMerge(int x, int y, int width, byte *line);
+int VGLMouseOverlap(int x, int y, int width, int hight);
 void VGLMouseUnFreeze(void);
 /* simple.c */
 void VGLSetXY(VGLBitmap *object, int x, int y, u_long color);
@@ -141,6 +144,9 @@ void VGLFilledBox(VGLBitmap *object, int x1, int y1, int x2, int y2, u_long colo
 void VGLEllipse(VGLBitmap *object, int xc, int yc, int a, int b, u_long color);
 void VGLFilledEllipse(VGLBitmap *object, int xc, int yc, int a, int b, u_long color);
 void VGLClear(VGLBitmap *object, u_long color);
+u_long VGLrgb332ToNative(byte c);
+void VGLRestoreBlank(void);
+void VGLRestoreBorder(void);
 void VGLRestorePalette(void);
 void VGLSavePalette(void);
 void VGLSetPalette(byte *red, byte *green, byte *blue);
@@ -149,7 +155,7 @@ void VGLSetBorder(byte color);
 void VGLBlankDisplay(int blank);
 /* text.c */
 int VGLTextSetFontFile(char *filename);
-void VGLBitmapPutChar(VGLBitmap *Object, int x, int y, byte ch, byte fgcol, byte bgcol, int fill, int dir);
-void VGLBitmapString(VGLBitmap *Object, int x, int y, char *str, byte fgcol, byte bgcol, int fill, int dir);
+void VGLBitmapPutChar(VGLBitmap *Object, int x, int y, byte ch, u_long fgcol, u_long bgcol, int fill, int dir);
+void VGLBitmapString(VGLBitmap *Object, int x, int y, char *str, u_long fgcol, u_long bgcol, int fill, int dir);
 
 #endif /* !_VGL_H_ */

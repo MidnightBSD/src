@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  *  Copyright (c) 2004 Lukas Ertl
  *  Copyright (c) 2005 Chris Jones
@@ -30,7 +30,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/param.h>
@@ -574,13 +573,15 @@ find_name(const char *prefix, int type, int namelen)
 	char line[1024];
 
 	comment[0] = '\0';
+	buf[0] = '\0';
 
 	/* Find a name. Fetch out configuration first. */
 	req = gctl_get_handle();
 	gctl_ro_param(req, "class", -1, "VINUM");
 	gctl_ro_param(req, "verb", -1, "getconfig");
 	gctl_ro_param(req, "comment", -1, comment);
-	gctl_rw_param(req, "config", sizeof(buf), buf);
+	gctl_add_param(req, "config", sizeof(buf), buf,
+	    GCTL_PARAM_WR | GCTL_PARAM_ASCII);
 	errstr = gctl_issue(req);
 	if (errstr != NULL) {
 		warnx("can't get configuration: %s", errstr);
@@ -840,13 +841,16 @@ gvinum_list(int argc, char * const *argv)
 
 	}
 
+	config[0] = '\0';
+
 	req = gctl_get_handle();
 	gctl_ro_param(req, "class", -1, "VINUM");
 	gctl_ro_param(req, "verb", -1, "list");
 	gctl_ro_param(req, "cmd", -1, cmd);
 	gctl_ro_param(req, "argc", sizeof(int), &argc);
 	gctl_ro_param(req, "flags", sizeof(int), &flags);
-	gctl_rw_param(req, "config", sizeof(config), config);
+	gctl_add_param(req, "config", sizeof(config), config,
+	    GCTL_PARAM_WR | GCTL_PARAM_ASCII);
 	if (argc) {
 		for (i = 0; i < argc; i++) {
 			snprintf(buf, sizeof(buf), "argv%d", i);
@@ -1417,15 +1421,17 @@ printconfig(FILE *of, const char *comment)
 	const char *errstr;
 	time_t now;
 	char buf[GV_CFG_LEN + 1];
-	
+
 	uname(&uname_s);
 	time(&now);
+	buf[0] = '\0';
 
 	req = gctl_get_handle();
 	gctl_ro_param(req, "class", -1, "VINUM");
 	gctl_ro_param(req, "verb", -1, "getconfig");
 	gctl_ro_param(req, "comment", -1, comment);
-	gctl_rw_param(req, "config", sizeof(buf), buf);
+	gctl_add_param(req, "config", sizeof(buf), buf,
+	    GCTL_PARAM_WR | GCTL_PARAM_ASCII);
 	errstr = gctl_issue(req);
 	if (errstr != NULL) {
 		warnx("can't get configuration: %s", errstr);

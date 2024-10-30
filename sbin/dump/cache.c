@@ -2,7 +2,6 @@
  * CACHE.C
  *
  *	Block cache for dump
- *
  */
 
 #include <sys/param.h>

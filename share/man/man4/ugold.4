@@ -15,8 +15,6 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man4/ugold.4 284284 2015-06-11 19:06:58Z brueffer $
-.\"
 .Dd June 11, 2015
 .Dt UGOLD 4
 .Os
@@ -28,6 +26,7 @@ To compile this driver into the kernel, place the following lines into
 your kernel configuration file:
 .Bd -ragged -offset indent
 .Cd "device usb"
+.Cd "device hid"
 .Cd "device ugold"
 .Ed
 .Pp

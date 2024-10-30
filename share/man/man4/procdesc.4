@@ -27,9 +27,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
-.\"
-.Dd October 14, 2018
+.Dd May 15, 2020
 .Dt PROCDESC 4
 .Os
 .Sh NAME
@@ -40,16 +38,14 @@
 is a file-descriptor-oriented interface to process signalling and control,
 which supplements historic
 .Ux
-.Xr fork 2 ,
-.Xr kill 2 ,
+.Xr fork 2
 and
-.Xr wait4 2
+.Xr kill 2 ,
 primitives with
 new system calls such as
-.Xr pdfork 2 ,
-.Xr pdkill 2 ,
+.Xr pdfork 2
 and
-.Xr pdwait4 2 .
+.Xr pdkill 2 ,
 .Nm
 is designed for use with
 .Xr capsicum 4 ,
@@ -65,7 +61,6 @@ Given a process descriptor, it is possible to query its conventional PID using
 .Xr pdfork 2 ,
 .Xr pdgetpid 2 ,
 .Xr pdkill 2 ,
-.Xr pdwait4 2 ,
 .Xr kqueue 2 ,
 .Xr wait4 2 ,
 .Xr capsicum 4

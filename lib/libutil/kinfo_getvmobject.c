@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <sys/sysctl.h>
 #include <sys/user.h>
@@ -35,8 +34,8 @@
 
 #include "libutil.h"
 
-struct kinfo_vmobject *
-kinfo_getvmobject(int *cntp)
+static struct kinfo_vmobject *
+kinfo_getvmobject_impl(int *cntp, const char *vmobjsysctl)
 {
 	char *buf, *bp, *ep;
 	struct kinfo_vmobject *kvo, *list, *kp;
@@ -45,14 +44,14 @@ kinfo_getvmobject(int *cntp)
 
 	buf = NULL;
 	for (i = 0; i < 3; i++) {
-		if (sysctlbyname("vm.objects", NULL, &len, NULL, 0) < 0) {
+		if (sysctlbyname(vmobjsysctl, NULL, &len, NULL, 0) < 0) {
 			free(buf);
 			return (NULL);
 		}
 		buf = reallocf(buf, len);
 		if (buf == NULL)
 			return (NULL);
-		if (sysctlbyname("vm.objects", buf, &len, NULL, 0) == 0)
+		if (sysctlbyname(vmobjsysctl, buf, &len, NULL, 0) == 0)
 			goto unpack;
 		if (errno != ENOMEM) {
 			free(buf);
@@ -92,4 +91,16 @@ unpack:
 	free(buf);
 	*cntp = cnt;
 	return (list);
+}
+
+struct kinfo_vmobject *
+kinfo_getvmobject(int *cntp)
+{
+	return (kinfo_getvmobject_impl(cntp, "vm.objects"));
+}
+
+struct kinfo_vmobject *
+kinfo_getswapvmobject(int *cntp)
+{
+	return (kinfo_getvmobject_impl(cntp, "vm.swap_objects"));
 }

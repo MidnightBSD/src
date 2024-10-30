@@ -25,7 +25,6 @@
  *
  */
 #include <sys/cdefs.h>
-
 #include <mp.h>
 #include <stdio.h>
 #include <string.h>

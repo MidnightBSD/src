@@ -25,8 +25,6 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man4/ucycom.4 318493 2017-05-18 20:45:09Z trasz $
-.\"
 .Dd April 26, 2017
 .Dt UCYCOM 4
 .Os
@@ -39,6 +37,7 @@ place the following line in your
 kernel configuration file:
 .Bd -ragged -offset indent
 .Cd "device usb"
+.Cd "device hid"
 .Cd "device ucom"
 .Cd "device ucycom"
 .Ed

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008-2009 Hans Petter Selasky. All rights reserved.
  *
@@ -351,7 +351,7 @@ libusb20_tr_clear_stall_sync(struct libusb20_transfer *xfer)
 void
 libusb20_tr_set_buffer(struct libusb20_transfer *xfer, void *buffer, uint16_t frIndex)
 {
-	xfer->ppBuffer[frIndex] = libusb20_pass_ptr(buffer);
+	xfer->ppBuffer[frIndex] = buffer;
 	return;
 }
 
@@ -417,7 +417,7 @@ libusb20_tr_set_total_frames(struct libusb20_transfer *xfer, uint32_t nFrames)
 void
 libusb20_tr_setup_bulk(struct libusb20_transfer *xfer, void *pBuf, uint32_t length, uint32_t timeout)
 {
-	xfer->ppBuffer[0] = libusb20_pass_ptr(pBuf);
+	xfer->ppBuffer[0] = pBuf;
 	xfer->pLength[0] = length;
 	xfer->timeout = timeout;
 	xfer->nFrames = 1;
@@ -429,7 +429,7 @@ libusb20_tr_setup_control(struct libusb20_transfer *xfer, void *psetup, void *pB
 {
 	uint16_t len;
 
-	xfer->ppBuffer[0] = libusb20_pass_ptr(psetup);
+	xfer->ppBuffer[0] = psetup;
 	xfer->pLength[0] = 8;		/* fixed */
 	xfer->timeout = timeout;
 
@@ -437,7 +437,7 @@ libusb20_tr_setup_control(struct libusb20_transfer *xfer, void *psetup, void *pB
 
 	if (len != 0) {
 		xfer->nFrames = 2;
-		xfer->ppBuffer[1] = libusb20_pass_ptr(pBuf);
+		xfer->ppBuffer[1] = pBuf;
 		xfer->pLength[1] = len;
 	} else {
 		xfer->nFrames = 1;
@@ -448,7 +448,7 @@ libusb20_tr_setup_control(struct libusb20_transfer *xfer, void *psetup, void *pB
 void
 libusb20_tr_setup_intr(struct libusb20_transfer *xfer, void *pBuf, uint32_t length, uint32_t timeout)
 {
-	xfer->ppBuffer[0] = libusb20_pass_ptr(pBuf);
+	xfer->ppBuffer[0] = pBuf;
 	xfer->pLength[0] = length;
 	xfer->timeout = timeout;
 	xfer->nFrames = 1;
@@ -462,7 +462,7 @@ libusb20_tr_setup_isoc(struct libusb20_transfer *xfer, void *pBuf, uint32_t leng
 		/* should not happen */
 		return;
 	}
-	xfer->ppBuffer[frIndex] = libusb20_pass_ptr(pBuf);
+	xfer->ppBuffer[frIndex] = pBuf;
 	xfer->pLength[frIndex] = length;
 	return;
 }

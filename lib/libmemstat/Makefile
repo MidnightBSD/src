@@ -1,6 +1,4 @@
-# $FreeBSD: stable/11/lib/libmemstat/Makefile 298107 2016-04-16 07:45:30Z gjb $
 
-PACKAGE=lib${LIB}
 WARNS?=		3
 LIB=		memstat
 SHLIB_MAJOR=	3

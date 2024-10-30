@@ -193,7 +193,7 @@ mapfiles(ino_t maxino, long *tapesize)
 		}
 		for (i = 0; i < inosused; i++, ino++) {
 			if (ino < UFS_ROOTINO ||
-			    (dp = getinode(ino, &mode)) == NULL ||
+			    (dp = getino(ino, &mode)) == NULL ||
 			    (mode & IFMT) == 0)
 				continue;
 			if (ino >= maxino) {
@@ -275,7 +275,7 @@ mapdirs(ino_t maxino, long *tapesize)
 		nodump = !nonodump && (TSTINO(ino, usedinomap) == 0);
 		if ((isdir & 1) == 0 || (TSTINO(ino, dumpinomap) && !nodump))
 			continue;
-		dp = getinode(ino, &i);
+		dp = getino(ino, &i);
 		/*
 		 * inode buf may change in searchdir().
 		 */
@@ -419,7 +419,7 @@ searchdir(
 				continue;
 		}
 		if (nodump) {
-			ip = getinode(dp->d_ino, &mode);
+			ip = getino(dp->d_ino, &mode);
 			if (TSTINO(dp->d_ino, dumpinomap)) {
 				CLRINO(dp->d_ino, dumpinomap);
 				*tapesize -= blockest(ip);
@@ -523,12 +523,8 @@ dumpino(union dinode *dp, ino_t ino)
 			spcl.c_count = 1;
 			added = appendextdata(dp);
 			writeheader(ino);
-			if (sblock->fs_magic == FS_UFS1_MAGIC)
-				memmove(buf, (caddr_t)dp->dp1.di_db,
-				    (u_long)DIP(dp, di_size));
-			else
-				memmove(buf, (caddr_t)dp->dp2.di_db,
-				    (u_long)DIP(dp, di_size));
+			memmove(buf, DIP(dp, di_shortlink),
+			    (u_long)DIP(dp, di_size));
 			buf[DIP(dp, di_size)] = '\0';
 			writerec(buf, 0);
 			writeextdata(dp, ino, added);
@@ -873,7 +869,7 @@ writeheader(ino_t ino)
 }
 
 union dinode *
-getinode(ino_t inum, int *modep)
+getino(ino_t inum, int *modep)
 {
 	static ino_t minino, maxino;
 	static caddr_t inoblock;

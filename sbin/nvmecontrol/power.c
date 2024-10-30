@@ -24,7 +24,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/ioccom.h>
 
@@ -96,7 +95,7 @@ power_list(struct nvme_controller_data *cdata)
 	int i;
 
 	printf("\nPower States Supported: %d\n\n", cdata->npss + 1);
-	printf(" #   Max pwr  Enter Lat  Exit Lat RT RL WT WL Idle Pwr  Act Pwr Workloadd\n");
+	printf(" #   Max pwr  Enter Lat  Exit Lat RT RL WT WL Idle Pwr  Act Pwr Workload\n");
 	printf("--  --------  --------- --------- -- -- -- -- -------- -------- --\n");
 	for (i = 0; i <= cdata->npss; i++)
 		power_list_one(i, &cdata->power_state[i]);
@@ -136,7 +135,8 @@ power_show(int fd)
 	if (nvme_completion_is_error(&pt.cpl))
 		errx(EX_IOERR, "set feature power mgmt request returned error");
 
-	printf("Current Power Mode is %d\n", pt.cpl.cdw0);
+	printf("Current Power State is %d\n", pt.cpl.cdw0 & 0x1F);
+	printf("Current Workload Hint is %d\n", pt.cpl.cdw0 >> 5);
 }
 
 static void
@@ -188,7 +188,7 @@ static const struct opts power_opts[] = {
 	OPT("power", 'p', arg_uint32, opt, power,
 	    "Set the power state"),
 	OPT("workload", 'w', arg_uint32, opt, workload,
-	    "Set the workload"),
+	    "Set the workload hint"),
 	{ NULL, 0, arg_none, NULL, NULL }
 };
 #undef OPT

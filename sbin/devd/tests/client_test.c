@@ -23,7 +23,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <stdbool.h>
 #include <stdio.h>
 

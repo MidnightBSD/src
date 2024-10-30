@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2012-2013 Intel Corporation
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/ioccom.h>
 #include <sys/stat.h>
@@ -37,6 +36,7 @@
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <libutil.h>
 #include <paths.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -177,11 +177,13 @@ get_nsid(int fd, char **ctrlr_str, uint32_t *nsid)
 int
 main(int argc, char *argv[])
 {
+	static char dir[MAXPATHLEN];
 
 	cmd_init();
 
 	cmd_load_dir("/lib/nvmecontrol", NULL, NULL);
-	cmd_load_dir("/usr/local/lib/nvmecontrol", NULL, NULL);
+	snprintf(dir, MAXPATHLEN, "%s/lib/nvmecontrol", getlocalbase());
+	cmd_load_dir(dir, NULL, NULL);
 
 	cmd_dispatch(argc, argv, NULL);
 

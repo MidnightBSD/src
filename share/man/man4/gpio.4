@@ -22,8 +22,6 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man4/gpio.4 350045 2019-07-16 15:58:19Z avg $
-.\"
 .Dd June 27, 2019
 .Dt GPIO 4
 .Os
@@ -71,6 +69,13 @@ architecture include:
 .Bd -ragged -offset indent
 .Cd "device wiigpio"
 .Cd "device macgpio"
+.Ed
+.Pp
+Additional device entries for the
+.Li RISC-V
+architecture include:
+.Bd -ragged -offset indent
+.Cd "device sifive_gpio"
 .Ed
 .Sh DESCRIPTION
 The

@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/linker.h>
 #include <sys/module.h>
@@ -262,7 +261,9 @@ do_single(int argc, char **argv, int action)
 			cp += strlen(_PATH_DEV);
 		gctl_ro_param(grq, buf1, -1, cp);
 	}
-	gctl_rw_param(grq, "output", sizeof(buf1), buf1);
+	buf1[0] = '\0';
+	gctl_add_param(grq, "output", sizeof(buf1), buf1,
+	    GCTL_PARAM_WR | GCTL_PARAM_ASCII);
 	errstr = gctl_issue(grq);
 	if (errstr == NULL) {		
 		if (verbose) {
@@ -370,10 +371,12 @@ dumpout(int unit)
 	grq = gctl_get_handle();
 	ncp = 65536;
 	cp = malloc(ncp);
+	cp[0] = '\0';
 	gctl_ro_param(grq, "verb", -1, "list");
 	gctl_ro_param(grq, "class", -1, "CCD");
 	gctl_ro_param(grq, "unit", sizeof(unit), &unit);
-	gctl_rw_param(grq, "output", ncp, cp);
+	gctl_add_param(grq, "output", ncp, cp,
+	    GCTL_PARAM_WR | GCTL_PARAM_ASCII);
 	errstr = gctl_issue(grq);
 	if (errstr != NULL)
 		errx(1, "%s\nor possibly kernel and ccdconfig out of sync",

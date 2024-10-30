@@ -16,9 +16,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.\" $FreeBSD$
-.\"
-.Dd January 7, 2019
+.Dd January 2, 2019
 .Dt RTWN 4
 .Os
 .Sh NAME
@@ -150,9 +148,9 @@ prompt before booting the kernel or stored in
 .It Va dev.rtwn.%d.hwcrypto
 This tunable controls how key slots are assigned:
 .br
-0 - disable h/w crypto support. Features that require access
-to frame contents (e.g., TCP/UDP/IP Rx checksum validation)
-will not work;
+0 - disable h/w crypto support.
+Features that require access to frame contents (e.g., TCP/UDP/IP Rx
+checksum validation) will not work;
 .br
 1 - use h/w crypto support for pairwise keys only;
 .br

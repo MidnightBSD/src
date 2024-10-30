@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright 1998 Juniper Networks, Inc.
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/time.h>
@@ -78,7 +77,7 @@ static void
 clear_password(struct rad_handle *h)
 {
 	if (h->pass_len != 0) {
-		memset(h->pass, 0, h->pass_len);
+		explicit_bzero(h->pass, h->pass_len);
 		h->pass_len = 0;
 	}
 	h->pass_pos = 0;
@@ -186,8 +185,10 @@ is_valid_response(struct rad_handle *h, int srv,
 	MD5_CTX ctx;
 	unsigned char md5[MD5_DIGEST_LENGTH];
 	const struct rad_server *srvp;
-	int alen, len;
+
+	int len;
 #ifdef WITH_SSL
+	int alen;
 	HMAC_CTX *hctx;
 	u_char resp[MSGSIZE], md[EVP_MAX_MD_SIZE];
 	u_int md_len;
@@ -283,8 +284,9 @@ is_valid_request(struct rad_handle *h)
 	MD5_CTX ctx;
 	unsigned char md5[MD5_DIGEST_LENGTH];
 	const struct rad_server *srvp;
-	int alen, len;
+	int len;
 #ifdef WITH_SSL
+	int alen;
 	HMAC_CTX *hctx;
 	u_char resp[MSGSIZE], md[EVP_MAX_MD_SIZE];
 	u_int md_len;
@@ -874,8 +876,8 @@ rad_create_request(struct rad_handle *h, int code)
 	if (code == RAD_ACCESS_REQUEST) {
 		/* Create a random authenticator */
 		for (i = 0;  i < LEN_AUTH;  i += 2) {
-			long r;
-			r = random();
+			uint32_t r;
+			r = arc4random();
 			h->out[POS_AUTH+i] = (u_char)r;
 			h->out[POS_AUTH+i+1] = (u_char)(r >> 8);
 		}
@@ -1079,10 +1081,9 @@ rad_auth_open(void)
 
 	h = (struct rad_handle *)malloc(sizeof(struct rad_handle));
 	if (h != NULL) {
-		srandomdev();
 		h->fd = -1;
 		h->num_servers = 0;
-		h->ident = random();
+		h->ident = arc4random();
 		h->errmsg[0] = '\0';
 		memset(h->pass, 0, sizeof h->pass);
 		h->pass_len = 0;

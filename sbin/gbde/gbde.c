@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -30,7 +30,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  *
  * XXX: Future stuff
  *
@@ -173,18 +172,7 @@ g_read_data(struct g_consumer *cp, off_t offset, off_t length, int *error)
 static void
 random_bits(void *p, u_int len)
 {
-	static int fdr = -1;
-	int i;
-
-	if (fdr < 0) {
-		fdr = open("/dev/urandom", O_RDONLY);
-		if (fdr < 0)
-			err(1, "/dev/urandom");
-	}
-
-	i = read(fdr, p, len);
-	if (i != (int)len)
-		err(1, "read from /dev/urandom");
+	arc4random_buf(p, len);
 }
 
 /* XXX: not nice */

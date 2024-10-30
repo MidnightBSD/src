@@ -12,7 +12,6 @@
  * documentation and/or software. */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 
 #include <stdio.h>

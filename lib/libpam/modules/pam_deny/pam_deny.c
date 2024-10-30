@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <stddef.h>
 
 #define PAM_SM_AUTH

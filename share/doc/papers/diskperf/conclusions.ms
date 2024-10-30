@@ -26,7 +26,6 @@
 .\" SUCH DAMAGE.
 .\"
 .\"	@(#)conclusions.ms	6.2 (Berkeley) 4/16/91
-.\" $FreeBSD: stable/11/share/doc/papers/diskperf/conclusions.ms 263142 2014-03-14 03:07:51Z eadler $
 .\"
 .ds RH Conclusions
 .NH

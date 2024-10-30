@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 1993-1998 by Andrey A. Chernov, Moscow, Russia.
  * All rights reserved.
@@ -34,7 +34,6 @@ static const char copyright[] =
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-
 /*
  * Andrey A. Chernov   <ache@astral.msk.su>    Dec 20 1993
  *

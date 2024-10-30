@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013 EMC Corp.
  * All rights reserved.
@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/ioccom.h>
 
@@ -231,10 +230,6 @@ read_logpage(int fd, uint8_t log_page, uint32_t nsid, uint8_t lsp,
 		nvme_health_information_page_swapbytes(
 		    (struct nvme_health_information_page *)payload);
 		break;
-	case NVME_LOG_FIRMWARE_SLOT:
-		nvme_firmware_page_swapbytes(
-		    (struct nvme_firmware_page *)payload);
-		break;
 	case NVME_LOG_CHANGED_NAMESPACE:
 		nvme_ns_list_swapbytes((struct nvme_ns_list *)payload);
 		break;
@@ -425,15 +420,10 @@ print_log_firmware(const struct nvme_controller_data *cdata, void *buf, uint32_t
 		else
 			status = "Inactive";
 
-		if (fw->revision[i] == 0LLU)
+		if (fw->revision[i][0] == '\0')
 			printf("Empty\n");
 		else
-			if (isprint(*(char *)&fw->revision[i]))
-				printf("[%s] %.8s\n", status,
-				    (char *)&fw->revision[i]);
-			else
-				printf("[%s] %016jx\n", status,
-				    fw->revision[i]);
+			printf("[%s] %.8s\n", status, fw->revision[i]);
 	}
 }
 
@@ -728,7 +718,7 @@ NVME_LOGPAGE(ple,
     NVME_LOG_PREDICTABLE_LATENCY_EVENT_AGGREGATE,	NULL,	"Predictable Latency Event Aggregate",
     NULL,				DEFAULT_SIZE);
 NVME_LOGPAGE(ana,
-    NVME_LOG_ASYMMETRIC_NAMESPAVE_ACCESS,	NULL,	"Asymmetric Namespace Access",
+    NVME_LOG_ASYMMETRIC_NAMESPACE_ACCESS,	NULL,	"Asymmetric Namespace Access",
     NULL,				DEFAULT_SIZE);
 NVME_LOGPAGE(pel,
     NVME_LOG_PERSISTENT_EVENT_LOG,	NULL,	"Persistent Event Log",

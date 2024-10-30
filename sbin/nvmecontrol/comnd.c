@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2019 Netflix, Inc
  *
@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/ioccom.h>
 
@@ -286,7 +285,7 @@ bad_arg:
  * Loads all the .so's from the specified directory.
  */
 void
-cmd_load_dir(const char *dir __unused, cmd_load_cb_t cb __unused, void *argp __unused)
+cmd_load_dir(const char *dir, cmd_load_cb_t cb, void *argp)
 {
 	DIR *d;
 	struct dirent *dent;

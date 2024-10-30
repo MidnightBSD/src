@@ -24,14 +24,12 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man4/gem.4 267938 2014-06-26 21:46:14Z bapt $
-.\"
-.Dd December 25, 2009
+.Dd April 18, 2023
 .Dt GEM 4
 .Os
 .Sh NAME
 .Nm gem
-.Nd ERI/GEM/GMAC Ethernet device driver
+.Nd GEM/GMAC Ethernet device driver
 .Sh SYNOPSIS
 To compile this driver into the kernel,
 place the following lines in your
@@ -51,8 +49,7 @@ if_gem_load="YES"
 The
 .Nm
 driver provides support for the GMAC Ethernet hardware found mostly in
-the last Apple PowerBooks G3s and most G4-based Apple hardware, as
-well as Sun UltraSPARC machines.
+the last Apple PowerBooks G3s and most G4-based Apple hardware.
 .Pp
 All controllers supported by the
 .Nm
@@ -69,8 +66,6 @@ driver include:
 .It
 Apple GMAC
 .It
-Sun ERI 10/100 Mbps Ethernet
-.It
 Sun GEM Gigabit Ethernet
 .El
 .Pp
@@ -83,39 +78,12 @@ driver at this time:
 .It
 Sun Gigabit Ethernet PCI 2.0/3.0 (GBE/P)
 (part no.\& 501-4373)
-.It
-Sun Gigabit Ethernet SBus 2.0/3.0 (GBE/S)
-(part no.\& 501-4375)
 .El
-.Sh NOTES
-On sparc64 the
-.Nm
-driver respects the
-.Va local-mac-address?
-system configuration variable which can be set in the Open Firmware boot
-monitor using the
-.Ic setenv
-command or by
-.Xr eeprom 8 .
-If set to
-.Dq Li false
-(the default), the
-.Nm
-driver will use the system's default MAC address for all of its devices.
-If set to
-.Dq Li true ,
-the unique MAC address of each interface is used if present rather than
-the system's default MAC address.
-.Pp
-Supported interfaces having their own MAC address include the on-board
-Sun ERI 10/100 Mbps on boards equipped with more than one Ethernet interface
-and the Sun Gigabit Ethernet 2.0/3.0 GBE add-on cards.
 .Sh SEE ALSO
 .Xr altq 4 ,
 .Xr miibus 4 ,
 .Xr netintro 4 ,
 .Xr vlan 4 ,
-.Xr eeprom 8 ,
 .Xr ifconfig 8
 .Sh HISTORY
 The

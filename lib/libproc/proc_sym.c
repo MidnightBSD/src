@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2016-2017 Mark Johnston <markj@FreeBSD.org>
  * Copyright (c) 2010 The FreeBSD Foundation
@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #ifndef NO_CTF
 #include <sys/ctf.h>
@@ -53,7 +52,7 @@
 #endif
 #include <libutil.h>
 
-#include "crc32.h"
+#include <zlib.h>
 #include "_libproc.h"
 
 #define	PATH_DEBUG_DIR	"/usr/lib/debug"
@@ -69,17 +68,14 @@ extern char *__cxa_demangle(const char *, char *, size_t *, int *);
 static int
 crc32_file(int fd, uint32_t *crc)
 {
-	uint8_t buf[PAGE_SIZE], *p;
-	size_t n;
+	char buf[MAXPHYS];
+	ssize_t nr;
 
-	*crc = ~0;
-	while ((n = read(fd, buf, sizeof(buf))) > 0) {
-		p = &buf[0];
-		while (n-- > 0)
-			*crc = crc32_tab[(*crc ^ *p++) & 0xff] ^ (*crc >> 8);
+	*crc = crc32(0L, Z_NULL, 0);
+	while ((nr = read(fd, buf, sizeof(buf))) > 0) {
+		*crc = crc32(*crc, (char *)buf, nr);
 	}
-	*crc = ~*crc;
-	return (n);
+	return (!!nr);
 }
 
 static void
@@ -306,7 +302,7 @@ open_object(struct map_info *mapping)
 	 */
 	if (data->d_size < sizeof(crc) + 1) {
 		DPRINTFX("ERROR: debuglink section is too small (%zd bytes)",
-		    data->d_size);
+		    (ssize_t)data->d_size);
 		goto internal;
 	}
 	if (strnlen(data->d_buf, data->d_size) >= data->d_size - sizeof(crc)) {
@@ -509,7 +505,7 @@ proc_addr2sym(struct proc_handle *p, uintptr_t addr, char *name,
 	int error;
 
 	if ((mapping = _proc_addr2map(p, addr)) == NULL) {
-		DPRINTFX("ERROR: proc_addr2map failed to resolve 0x%jx", addr);
+		DPRINTFX("ERROR: proc_addr2map failed to resolve 0x%jx", (uintmax_t)addr);
 		return (-1);
 	}
 	if (open_object(mapping) != 0) {

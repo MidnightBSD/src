@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1998 John D. Polstra
  * All rights reserved.
@@ -24,19 +24,19 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef LDCONFIG_H
 #define LDCONFIG_H 1
 
 #include <sys/cdefs.h>
+#include <stdbool.h>
 
-extern int	insecure;	/* -i flag, needed here for elfhints.c */
+extern bool insecure;		/* -i flag, needed here for elfhints.c */
 
 __BEGIN_DECLS
 void	list_elf_hints(const char *);
-void	update_elf_hints(const char *, int, char **, int);
+void	update_elf_hints(const char *, int, char **, bool);
 __END_DECLS
 
 #endif

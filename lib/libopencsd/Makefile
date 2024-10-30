@@ -39,10 +39,8 @@ SRCS+=	\
 	trc_cmp_cfg_etmv4.cpp			\
 	trc_etmv4_stack_elem.cpp		\
 	trc_pkt_decode_etmv4i.cpp		\
-	trc_pkt_elem_etmv4d.cpp			\
 	trc_pkt_elem_etmv4i.cpp			\
-	trc_pkt_proc_etmv4.cpp			\
-	trc_pkt_proc_etmv4i_impl.cpp
+	trc_pkt_proc_etmv4i.cpp
 
 # PKT_PRINTERS
 SRCS+=	\
@@ -74,6 +72,7 @@ SRCS+=	\
 	ocsd_error.cpp				\
 	ocsd_error_logger.cpp			\
 	ocsd_gen_elem_list.cpp			\
+	ocsd_gen_elem_stack.cpp			\
 	ocsd_lib_dcd_register.cpp		\
 	ocsd_msg_logger.cpp			\
 	ocsd_version.cpp			\
@@ -87,6 +86,7 @@ SRCS+=	\
 # MEM_ACC
 SRCS+=	\
 	trc_mem_acc_base.cpp			\
+	trc_mem_acc_cache.cpp			\
 	trc_mem_acc_cb.cpp			\
 	trc_mem_acc_mapper.cpp			\
 	trc_mem_acc_bufptr.cpp			\
@@ -103,6 +103,7 @@ CFLAGS+=	\
 
 INCS=	\
 	ocsd_if_types.h			\
+	ocsd_if_version.h		\
 	trc_gen_elem_types.h		\
 	trc_pkt_types.h
 
@@ -123,9 +124,9 @@ ETMV4INCS=	\
 	trc_dcd_mngr_etmv4i.h		\
 	trc_etmv4_stack_elem.h		\
 	trc_pkt_decode_etmv4i.h		\
-	trc_pkt_elem_etmv4d.h		\
 	trc_pkt_elem_etmv4i.h		\
 	trc_pkt_proc_etmv4.h		\
+	trc_pkt_proc_etmv4i.h		\
 	trc_pkt_types_etmv4.h
 
 ETMV4INCSDIR=${INCLUDEDIR}/opencsd/etmv4/

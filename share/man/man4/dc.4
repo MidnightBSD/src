@@ -28,9 +28,7 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
 .\" THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/share/man/man4/dc.4 267938 2014-06-26 21:46:14Z bapt $
-.\"
-.Dd October 24, 2011
+.Dd December 26, 2020
 .Dt DC 4
 .Os
 .Sh NAME
@@ -199,9 +197,6 @@ Alfa Inc GFC2204 (ASIX AX88140A)
 Built in 10Mbps only Ethernet on Compaq Presario 7900 series
 desktops (21143, non-MII)
 .It
-Built in Sun DMFE 10/100 Mbps Ethernet on Sun Netra X1 and Sun Fire V100
-(DM9102A, MII)
-.It
 Built in Ethernet on LinkSys EtherFast 10/100 Instant GigaDrive (DM9102, MII)
 .It
 CNet Pro110B (ASIX AX88140A)
@@ -262,28 +257,6 @@ Xircom Cardbus Ethernet 10/100
 .It
 Xircom Cardbus Ethernet II 10/100
 .El
-.Sh NOTES
-On sparc64 the
-.Nm
-driver respects the
-.Va local-mac-address?
-system configuration variable for the built in Sun DMFE 10/100 Mbps Ethernet
-interfaces on Sun Netra X1 and Sun Fire V100.
-This system configuration variable can be set in the Open Firmware boot
-monitor using the
-.Ic setenv
-command or by
-.Xr eeprom 8 .
-If set to
-.Dq Li false
-(the default), the
-.Nm
-driver will use the system's default MAC address for both of the built in
-devices.
-If set to
-.Dq Li true ,
-the unique MAC address of each interface is used rather than the system's
-default MAC address.
 .Sh DIAGNOSTICS
 .Bl -diag
 .It "dc%d: couldn't map ports/memory"
@@ -348,7 +321,6 @@ the card should be configured correctly.
 .Xr ng_ether 4 ,
 .Xr polling 4 ,
 .Xr vlan 4 ,
-.Xr eeprom 8 ,
 .Xr ifconfig 8
 .Rs
 .%T ADMtek AL981, AL983 and AL985 data sheets

@@ -1,6 +1,5 @@
-# $FreeBSD: stable/11/sbin/resolvconf/Makefile 319185 2017-05-30 04:17:22Z ngie $
 
-PACKAGE=runtime
+PACKAGE=resolvconf
 DIST=		${SRCTOP}/contrib/openresolv
 .PATH:		${DIST}
 

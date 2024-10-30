@@ -1,20 +1,16 @@
 
 .include <src.opts.mk>
 
-PACKAGE=lib${LIB}
 LIB=	procstat
 
 SRCS=	cd9660.c	\
 	common_kvm.c	\
 	core.c		\
 	libprocstat.c	\
+	libprocstat_compat.c \
 	msdosfs.c	\
 	smbfs.c		\
 	udf.c
-
-.if ${MK_SYMVER} == yes
-SRCS+=	libprocstat_compat.c
-.endif
 
 VERSION_DEF=	${LIBCSRCDIR}/Versions.def
 SYMBOL_MAPS=	${.CURDIR}/Symbol.map
@@ -67,6 +63,8 @@ zfs/zfs_defs.o: .PHONY
 	@cd ${.CURDIR}/zfs && ${MAKE} zfs_defs.o
 zfs/zfs_defs.pico: .PHONY
 	@cd ${.CURDIR}/zfs && ${MAKE} zfs_defs.pico
+zfs/zfs_defs.pieo: .PHONY
+	@cd ${.CURDIR}/zfs && ${MAKE} zfs_defs.pieo
 zfs/zfs_defs.po: .PHONY
 	@cd ${.CURDIR}/zfs && ${MAKE} zfs_defs.po
 .endif

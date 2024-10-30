@@ -29,7 +29,6 @@
  * SUCH DAMAGE.
  *
  *	@(#)pathnames.h	8.1 (Berkeley) 6/5/93
- *
  */
 
 #include <paths.h>
@@ -46,8 +45,4 @@
  * Leave this undefined, and only the trace file originally specified
  * when routed was started, if any, will be appended to.
  */
-#ifndef __NetBSD__
 #define _PATH_TRACE	"/etc/routed.trace"
-#else
-#undef _PATH_TRACE
-#endif

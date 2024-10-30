@@ -17,7 +17,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #define PFIOC_USE_LATEST
 
 #include <sys/types.h>

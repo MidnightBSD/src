@@ -22,9 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
-.\"
-.Dd July 21, 2022
+.Dd May 24, 2024
 .Dt "VT" 4
 .Os
 .Sh NAME
@@ -220,6 +218,11 @@ The
 kernel uses
 .Nm
 when this value is not set.
+Note that
+.Ql sc
+is not compatible with
+.Xr UEFI 8
+boot.
 .It Va kern.vt.color. Ns Ar colornum Ns Va .rgb
 Set this value to override default palette entry for color
 .Pa colornum
@@ -309,6 +312,21 @@ console fonts
 .It Pa /usr/share/vt/keymaps/*.kbd
 keyboard layouts
 .El
+.Sh DEVCTL MESSAGES
+.Bl -column "System" "Subsystem" "1234567" -compact
+.Sy "System" Ta Sy "Subsystem" Ta Sy "Type" Ta Sy "Description"
+.It Li VT Ta BELL Ta RING Ta
+Notification that the console bell has rung.
+.El
+.Pp
+.Bl -column "Variable" "Meaning" -compact
+.Sy "Variable" Ta Sy "Meaning"
+.It Li duration_ms Ta Length of time the bell was requested to ring in milliseconds.
+.It Li enabled Ta true or false indicating whether or not the bell was administratively enabled when rung.
+.It Li hushed Ta true or false indicating whether or not the bell was quieted by the user when rung.
+.It Li hz Ta Tone that was requested in Hz.
+.El
+.Pp
 .Sh EXAMPLES
 This example changes the default color of normal text to green on a
 black background, or black on a green background when reversed.

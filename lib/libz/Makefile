@@ -1,4 +1,7 @@
-PACKAGE=lib${LIB}
+#
+#
+
+PACKAGE=	runtime
 LIB=		z
 SHLIBDIR?=	/lib
 SHLIB_MAJOR=	6

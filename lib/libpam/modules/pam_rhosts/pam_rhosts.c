@@ -37,7 +37,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <pwd.h>
 #include <stddef.h>
 #include <string.h>

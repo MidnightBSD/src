@@ -24,8 +24,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libutil/tests/trimdomain-nodomain_test.c 269904 2014-08-13 04:56:27Z ngie $");
-
 #include <sys/types.h>
 #include <sys/param.h>
 #include <errno.h>

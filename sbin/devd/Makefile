@@ -2,7 +2,7 @@
 .include <src.opts.mk>
 
 WARNS?= 3
-PACKAGE=runtime
+PACKAGE=devd
 CONFGROUPS=	CONFS DEVD
 CONFS=	devd.conf
 DEVD=	devmatch.conf
@@ -12,7 +12,10 @@ DEVD+=	asus.conf
 .endif
 
 .if ${MK_HYPERV} != "no"
-DEVD+=	hyperv.conf
+CONFGROUPS+=	HYPERV
+HYPERVDIR=${DEVDDIR}
+HYPERV+=	hyperv.conf
+HYPERVPACKAGE=	hyperv-tools
 .endif
 
 .if ${MK_USB} != "no"

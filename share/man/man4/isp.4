@@ -1,4 +1,4 @@
-.\" Copyright (c) 2009-2018 Alexander Motin <mav@FreeBSD.org>
+.\" Copyright (c) 2009-2020 Alexander Motin <mav@FreeBSD.org>
 .\" Copyright (c) 2006 Marcus Alves Grando
 .\" Copyright (c) 1998-2001 Matthew Jacob, for NASA/Ames Research Center
 .\"
@@ -24,14 +24,12 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
-.\"
-.Dd February 28, 2019
+.Dd June 24, 2024
 .Dt ISP 4
 .Os
 .Sh NAME
 .Nm isp
-.Nd Qlogic based SPI and FibreChannel SCSI Host Adapters
+.Nd Qlogic FibreChannel SCSI Host Adapters driver
 .Sh SYNOPSIS
 To compile this driver into the kernel,
 place the following lines in your
@@ -51,23 +49,16 @@ ispfw_load="YES"
 .Ed
 .Sh DESCRIPTION
 This driver provides access to
-.Tn SPI
-or
 .Tn FibreChannel
 SCSI devices.
 .Pp
-SPI supports initiator mode for Ultra SCSI and wide mode transactions for
-.Tn SCSI ,
-Ultra2 LVD (1080, 1280), and Ultra3 LVD (10160, 12160).
-.Pp
-Fibre Channel supports initiator and target modes of FCP SCSI profile,
-utilizing Class 3 and Class 2 (2200 and later) connections.
+It supports initiator and target modes of FCP SCSI profile,
+utilizing Class 3 and Class 2 connections.
 Support is available for Public and Private loops, Point-to-Point
 and Fabric connections.
 .Pp
-FC-Tape is supported on 4Gb (2400) and newer controllers.
-FC-Tape is highly recommended for connections to tape drives that support
-it.
+Supported FC-Tape functionality is highly recommended for connections
+to tape drives that support it.
 It encompasses four elements from the T-10 FCP-4 specification:
 .Bl -bullet -offset indent
 .It
@@ -89,50 +80,22 @@ FC-Tape is automatically enabled when connecting controller that supports
 it to a target that supports it.
 It may be disabled using configuration and hint options described below.
 .Sh FIRMWARE
-Firmware loading is supported if the
+Firmware loading is supported and handled by
+.Xr firmware 9 .
+The correct firmware is either loaded automatically, if available for this
+type of adapter, or by manually loading the
 .Xr ispfw 4
-module is loaded.
+module.
 It is strongly recommended that you use the firmware available from
 .Xr ispfw 4
-as it is the most likely to have been tested with this driver.
+as it is the one that most likely has been tested with this driver.
 .Sh HARDWARE
 Cards supported by the
 .Nm
 driver include:
 .Bl -tag -width xxxxxx -offset indent
-.It Qlogic 1000
-Fast Wide, Ultra Fast Wide cards, Single Ended or Differential SBus cards.
-.It Qlogic 1020
-Fast Wide and Differential Fast Wide SCSI PCI cards.
-.It Qlogic 1040
-Ultra Wide and Differential Ultra Wide SCSI PCI cards.
-Also known as the DEC KZPBA-CA (single ended) and KZPBA-CB (HVD differential).
-.It Qlogic 1080
-LVD Ultra2 Wide SCSI PCI cards.
-.It Qlogic 10160
-LVD Ultra3 Wide SCSI PCI cards.
-.It Qlogic 1240
-Dual Bus Ultra Wide and Differential Ultra Wide SCSI PCI cards.
-.It Qlogic 1280
-Dual Bus LVD Ultra2 Wide SCSI PCI cards.
-.It Qlogic 12160
-Dual Bus LVD Ultra3 Wide SCSI PCI cards.
-.It Qlogic 210X
-Copper and Optical Fibre Channel Arbitrated Loop PCI cards (single, dual).
-.It Qlogic 220X
-Copper and Optical Fibre Channel Arbitrated Loop PCI cards (single, dual, quad).
-.It Qlogic 2300
-Optical 2Gb Fibre Channel PCI cards.
-.It Qlogic 2312
-Optical 2Gb Fibre Channel PCI cards.
-.It Qlogic 234X
-Optical 2Gb Fibre Channel PCI cards (2312 chipset, single and dual attach).
-.It Qlogic 2322
-Optical 2Gb Fibre Channel PCIe cards.
-.It Qlogic 200
-Dell branded version of the QLogic 2312.
 .It Qlogic 2422
-Optical 4Gb Fibre Channel PCI cards.
+Optical 4Gb Fibre Channel PCI-X cards.
 .It Qlogic 246x (aka 2432)
 Optical 4Gb Fibre Channel PCIe cards.
 .It Qlogic 256x (aka 2532)
@@ -143,6 +106,14 @@ Optical 16Gb FC/FCoE PCIe cards.
 Optical 16Gb Fibre Channel PCIe cards.
 .It Qlogic 2740/2742/2764 (aka 2722/2714)
 Optical 32Gb Fibre Channel PCIe cards.
+.It Qlogic QLE2770/QLE2772 (aka 2812)
+Optical 32Gb Fibre Channel PCIe cards.
+.It Qlogic QLE2774 (aka 2814)
+Optical 32Gb Fibre Channel PCIe cards.
+.It Qlogic QLE2870/QLE2872 (aka 2812)
+Optical 64Gb Fibre Channel PCIe cards.
+.It Qlogic QLE2874 (aka 2814)
+Optical 64Gb Fibre Channel PCIe cards.
 .El
 .Sh CONFIGURATION OPTIONS
 Target mode support for Fibre Channel adapters may be enabled with the
@@ -168,8 +139,23 @@ Limit on number of Message Signaled Interrupts (MSI) to be used.
 .It Va hint.isp. Ns Ar N Ns Va .msix
 Limit on number of Extended Message Signaled Interrupts (MSI-X) to be used.
 .It Va hint.isp. Ns Ar N Ns Va .fwload_disable
-A hint value to disable loading of firmware
+A hint value to disable loading of firmware provided by
 .Xr ispfw 4 .
+.It Va hint.isp. Ns Ar N Ns Va .fwload_force
+A hint value to prefer firmware provided by
+.Xr ispfw 4 ,
+even if it is older than the firmware in flash on the board.
+If fwload_disable is also specified, fwload_force will be ignored.
+.Pp
+By default, with 27XX and newer controllers, the
+.Xr isp 4
+driver will use the newer
+firmware.
+For older controllers, the
+.Xr isp 4
+driver will use the firmware provided by
+.Xr ispfw 4
+if it is available, and otherwise use the firmware in flash on the board.
 .It Va hint.isp. Ns Ar N Ns Va .ignore_nvram
 A hint value to ignore board NVRAM settings for.
 Otherwise use NVRAM settings.
@@ -242,6 +228,14 @@ The default is 1 (enabled).
 This is the readonly World Wide Node Name value for this port.
 .It Va dev.isp. Ns Ar N Ns Va .wwpn
 This is the readonly World Wide Port Name value for this port.
+.It Va dev.isp. Ns Ar N Ns Va .fw_version_flash
+The readonly flash firmware version value in the active region of the
+controller.
+.It Va dev.isp. Ns Ar N Ns Va .fw_version_ispfw
+The readonly firmware version value provided by
+.Xr ispfw 4 .
+.It Va dev.isp. Ns Ar N Ns Va .fw_version_run
+The readonly firmware version value currently executed on the controller.
 .El
 .Sh SEE ALSO
 .Xr da 4 ,
@@ -260,6 +254,3 @@ Later improvement was done by
 .An Alexander Motin Aq Mt mav@FreeBSD.org .
 .Sh BUGS
 The driver currently ignores some NVRAM settings.
-.Pp
-Fabric support for 2100 cards has been so problematic, and these cards are so
-old now that it is just not worth your time to try it.
