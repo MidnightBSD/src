@@ -42,8 +42,6 @@
 
 #include <machine/asm.h>
 #include <machine/setjmp.h>
-
-
 /*
  * C library -- _setjmp, _longjmp
  *
@@ -60,7 +58,7 @@
 ENTRY(_setjmp)
 	ldr	r1, .L_setjmp_magic
 
-#if !defined(_STANDALONE) && __ARM_ARCH >= 6
+#if !defined(_STANDALONE) && __ARM_ARCH >= 6 && !defined(SOFTFLOAT_FOR_GCC)
 	add	r2, r0, #(_JB_REG_D8 * 4)
 	vstmia	r2, {d8-d15}
 	vmrs	r2, fpscr
@@ -93,7 +91,7 @@ ENTRY(_longjmp)
 	teq	ip, r2				/* magic correct? */
 	bne	botch				/*   no, botch */
 
-#if !defined(_STANDALONE) && __ARM_ARCH >= 6
+#if !defined(_STANDALONE) && __ARM_ARCH >= 6 && !defined(SOFTFLOAT_FOR_GCC)
 	add	ip, r0, #(_JB_REG_D8 * 4)
 	vldmia	ip, {d8-d15}
 	ldr	ip, [r0, #(_JB_REG_FPSCR * 4)]

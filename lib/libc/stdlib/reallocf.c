@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
- * Copyright (c) 1998, M. Warner Losh <imp@freebsd.org>
- * All rights reserved.
+ * Copyright (c) 1998 M. Warner Losh <imp@FreeBSD.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <stdlib.h>
 
 void *

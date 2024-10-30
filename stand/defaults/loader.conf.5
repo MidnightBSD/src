@@ -21,9 +21,7 @@
 .\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
-.\"
-.\" $FreeBSD$
-.Dd October 8, 2021
+.Dd January 10, 2024
 .Dt LOADER.CONF 5
 .Os
 .Sh NAME
@@ -38,7 +36,6 @@ it you can specify the kernel to be booted, parameters to be passed to
 it, and additional modules to be loaded; and generally set all variables
 described in
 .Xr loader 8 .
-.Pp
 .Sh SYNTAX
 Though
 .Nm Ns 's
@@ -235,7 +232,7 @@ special value
 which aborts the bootstrap process, use of this setting should be avoided.
 .El
 .Pp
-.Em WARNING:
+.Em WARNING :
 developers should never use these suffixes for any kernel environment
 variables (tunables) or conflicts will result.
 .Sh DEFAULT SETTINGS
@@ -281,14 +278,44 @@ selects the video console which prevents any input and hides all output
 replacing it with
 .Dq spinning
 character (useful for embedded products and such).
+.It Va screen.font
+Set font size for framebuffer mode.
+Default font size is selected based on screen resolution, to achieve
+terminal dimensions 80x24.
+.It Va screen.textmode
+Value
+.Dq 0
+will trigger BIOS loader to switch to use VESA BIOS Extension (VBE)
+frame buffer mode for console.
+The same effect can be achieved by setting
+.Va vbe_max_resolution .
+.Pp
+Value
+.Dq 1
+will force BIOS loader to use VGA text mode.
+.Pp
+If
+.Va vbe_max_resolution
+is not set, the loader will try to set screen resolution based on EDID
+information.
+If EDID is not available, the default resolution is 800x600 (if available).
+.It Va screen.height
+.It Va screen.width
+.It Va screen.depth
+.Va screen.height ,
+.Va screen.width ,
+.Va screen.depth
+are set by loader when loader is using framebuffer mode to draw the screen.
 .It Va efi_max_resolution
-Specify the maximum desired resolution for the EFI console.
+.It Va vbe_max_resolution
+Specify the maximum desired resolution for the EFI or VBE framebuffer console.
 The following values are accepted:
 .Bl -column "WidthxHeight"
 .It Sy Value Ta Sy Resolution
 .It 480p Ta 640x480
 .It 720p Ta 1280x720
 .It 1080p Ta 1920x1080
+.It 1440p Ta 2560x1440
 .It 2160p Ta 3840x2160
 .It 4k Ta 3840x2160
 .It 5k Ta 5120x2880
@@ -396,13 +423,14 @@ It is not available in the default Forth-based loader.
 .Sh FILES
 .Bl -tag -width /boot/defaults/loader.conf -compact
 .It Pa /boot/defaults/loader.conf
-default settings -- do not change this file.
+default settings \(em do not change this file.
 .It Pa /boot/loader.conf
 user defined settings.
 .It Pa /boot/loader.conf.local
 machine-specific settings for sites with a common loader.conf.
 .El
 .Sh SEE ALSO
+.Xr kenv 1 ,
 .Xr rc.conf 5 ,
 .Xr boot 8 ,
 .Xr cpucontrol 8 ,
@@ -422,7 +450,7 @@ The
 stops reading
 .Nm
 when it encounters a syntax error, so any options which are vital for
-booting a particular system (i.e.\&
+booting a particular system (i.e.,
 .Dq Va hw.ata.ata_dma Ns "=0" )
 should precede any experimental additions to
 .Nm .

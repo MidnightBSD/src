@@ -1,6 +1,5 @@
 /*-
  * Test 0083:	Check that the last instruction is BPF_RET.
- *
  */
 
 /* BPF program */

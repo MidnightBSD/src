@@ -41,6 +41,9 @@
 #
 ## User modifiable variables - set these in the environment if desired.
 # If not empty, 'mport upgrade' will be skipped.
+# Utility to manage ZFS boot environments.
+BE_UTILITY="${BE_UTILITY:-"bectl"}"
+# If not empty, 'pkg upgrade' will be skipped.
 NO_PKG_UPGRADE="${NO_PKG_UPGRADE:-""}"
 # Config updater - 'etcupdate' and 'mergemaster' are supported.  Set to an
 # empty string to skip.
@@ -52,10 +55,6 @@ MERGEMASTER_FLAGS="${MERGEMASTER_FLAGS:-"-iFU"}"
 
 
 ########################################################################
-## Constants
-ETCUPDATE_CMD="etcupdate"
-MERGEMASTER_CMD="mergemaster"
-
 ## Functions
 cleanup() {
 	[ -z "${cleanup_commands}" ] && return
@@ -90,7 +89,7 @@ cleanup_be() {
 	if [ -n "${created_be_dirs}" ]; then
 		chroot ${BE_MNTPT} /bin/rm -rf ${created_be_dirs}
 	fi
-	beadm destroy -F ${BENAME}
+	${BE_UTILITY} destroy -F ${BENAME}
 }
 
 create_be_dirs() {
@@ -116,23 +115,22 @@ create_be_dirs() {
 }
 
 update_mergemaster_pre() {
-	mergemaster -p -m ${srcdir} -D ${BE_MNTPT} -t ${BE_MM_ROOT} ${MERGEMASTER_FLAGS}
+	${MERGEMASTER_CMD} -p -m ${srcdir} -D ${BE_MNTPT} -t ${BE_MM_ROOT} ${MERGEMASTER_FLAGS}
 }
 
 update_mergemaster() {
-	chroot ${BE_MNTPT} \
-		mergemaster -m ${srcdir} -t ${BE_MM_ROOT} ${MERGEMASTER_FLAGS}
+	${MERGEMASTER_CMD} -m ${srcdir} -D ${BE_MNTPT} -t ${BE_MM_ROOT} ${MERGEMASTER_FLAGS}
 }
 
 update_etcupdate_pre() {
-	etcupdate -p -s ${srcdir} -D ${BE_MNTPT} ${ETCUPDATE_FLAGS} || return $?
-	etcupdate resolve -D ${BE_MNTPT} || return $?
+	${ETCUPDATE_CMD} -p -s ${srcdir} -D ${BE_MNTPT} ${ETCUPDATE_FLAGS} || return $?
+	${ETCUPDATE_CMD} resolve -D ${BE_MNTPT} || return $?
 }
 
 update_etcupdate() {
 	chroot ${BE_MNTPT} \
-		etcupdate -s ${srcdir} ${ETCUPDATE_FLAGS} || return $?
-	chroot ${BE_MNTPT} etcupdate resolve
+		${ETCUPDATE_CMD} -s ${srcdir} ${ETCUPDATE_FLAGS} || return $?
+	chroot ${BE_MNTPT} ${ETCUPDATE_CMD} resolve
 }
 
 
@@ -145,8 +143,8 @@ postmortem() {
 	unmount_be
 	rmdir_be
 	echo "Post-mortem cleanup complete."
-	echo "To destroy the BE (recommended), run: beadm destroy ${BENAME}"
-	echo "To instead continue with the BE, run: beadm activate ${BENAME}"
+	echo "To destroy the BE (recommended), run: ${BE_UTILITY} destroy ${BENAME}"
+	echo "To instead continue with the BE, run: ${BE_UTILITY} activate ${BENAME}"
 }
 
 if [ -n "$BEINSTALL_CMD" ]; then
@@ -154,6 +152,9 @@ if [ -n "$BEINSTALL_CMD" ]; then
 	exit $?
 fi
 
+if [ "$(basename -- "${BE_UTILITY}")" = "bectl" ]; then
+	${BE_UTILITY} check || errx "${BE_UTILITY} sanity check failed"
+fi
 
 cleanup_commands=""
 trap 'errx "Interrupt caught"' HUP INT TERM
@@ -164,6 +165,10 @@ trap 'errx "Interrupt caught"' HUP INT TERM
 srcdir=$(pwd)
 objdir=$(make -V .OBJDIR 2>/dev/null)
 [ ! -d "${objdir}" ] && errx "Must have built MidnightBSD from source tree"
+
+## Constants
+ETCUPDATE_CMD="${srcdir}/usr.sbin/etcupdate/etcupdate.sh"
+MERGEMASTER_CMD="${srcdir}/usr.sbin/mergemaster/mergemaster.sh"
 
 # May be a worktree, in which case .git is a file, not a directory.
 if [ -e .git ] ; then
@@ -196,10 +201,10 @@ BE_MNTPT=${BE_TMP}/mnt
 BE_MM_ROOT=${BE_TMP}/mergemaster # mergemaster will create
 mkdir -p ${BE_MNTPT}
 
-beadm create ${BENAME} >/dev/null || errx "Unable to create BE ${BENAME}"
+${BE_UTILITY} create ${BENAME} >/dev/null || errx "Unable to create BE ${BENAME}"
 [ -z "$NO_CLEANUP_BE" ] && cleanup_commands="cleanup_be ${cleanup_commands}"
 
-beadm mount ${BENAME} ${BE_TMP}/mnt || errx "Unable to mount BE ${BENAME}."
+${BE_UTILITY} mount ${BENAME} ${BE_TMP}/mnt || errx "Unable to mount BE ${BENAME}."
 
 echo "Mounted ${BENAME} to ${BE_MNTPT}, performing install/update ..."
 make "$@" DESTDIR=${BE_MNTPT} installkernel || errx "Installkernel failed!"
@@ -239,8 +244,8 @@ fi
 
 unmount_be || errx "Unable to unmount BE"
 rmdir_be || errx "Unable to cleanup BE"
-beadm activate ${BENAME} || errx "Unable to activate BE"
+${BE_UTILITY} activate ${BENAME} || errx "Unable to activate BE"
 echo
-beadm list
+${BE_UTILITY} list
 echo
 echo "Boot environment ${BENAME} setup complete; reboot to use it."

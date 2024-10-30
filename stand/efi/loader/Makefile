@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 LOADER_NET_SUPPORT?=	yes
 LOADER_MSDOS_SUPPORT?=	yes
@@ -22,18 +21,29 @@ SRCS=	autoload.c \
 	framebuffer.c \
 	main.c \
 	self_reloc.c \
-	vers.c
+	vers.c \
+	gfx_fb.c \
+	8x16.c
 
 CFLAGS+=	-I${.CURDIR}/../loader
 .if ${MK_LOADER_ZFS} != "no"
 CFLAGS+=	-I${ZFSSRC}
+CFLAGS+=        -I${SYSDIR}/contrib/openzfs/include
+CFLAGS+=        -I${SYSDIR}/contrib/openzfs/include/os/freebsd/zfs
 CFLAGS+=	-DEFI_ZFS_BOOT
 HAVE_ZFS=	yes
 .endif
 
-.if ${COMPILER_TYPE} == "gcc" && ${COMPILER_VERSION} > 40201
-CWARNFLAGS.self_reloc.c+=	-Wno-error=maybe-uninitialized
-.endif
+CFLAGS.bootinfo.c += -I$(SRCTOP)/sys/teken
+CFLAGS.bootinfo.c += -I${SRCTOP}/contrib/pnglite
+CFLAGS.framebuffer.c += -I$(SRCTOP)/sys/teken
+CFLAGS.framebuffer.c += -I${SRCTOP}/contrib/pnglite
+CFLAGS.main.c += -I$(SRCTOP)/sys/teken
+CFLAGS.main.c += -I${SRCTOP}/contrib/pnglite
+CFLAGS.gfx_fb.c += -I$(SRCTOP)/sys/teken
+CFLAGS.gfx_fb.c += -I${SRCTOP}/sys/cddl/contrib/opensolaris/common/lz4
+CFLAGS.gfx_fb.c += -I${SRCTOP}/contrib/pnglite
+CFLAGS.gfx_fb.c += -DHAVE_MEMCPY -I${SRCTOP}/sys/contrib/zlib
 
 # We implement a slightly non-standard %S in that it always takes a
 # CHAR16 that's common in UEFI-land instead of a wchar_t. This only
@@ -72,9 +82,15 @@ CFLAGS+= -DEFI_SECUREBOOT
 
 NEWVERSWHAT=	"EFI loader" ${MACHINE}
 VERSION_FILE=	${.CURDIR}/../loader/version
+HELP_FILENAME=	loader.help.efi
 
 # Always add MI sources
 .include	"${BOOTSRC}/loader.mk"
+
+CLEANFILES+=	8x16.c
+
+8x16.c:		${SRCTOP}/contrib/terminus/ter-u16b.bdf
+	vtfontcvt -f compressed-source -o ${.TARGET} ${.ALLSRC}
 
 FILES+=	${LOADER}.efi
 FILESMODE_${LOADER}.efi=	${BINMODE}
@@ -89,7 +105,19 @@ LDFLAGS+=	-Wl,-T${LDSCRIPT},-Bsymbolic,-znotext -pie
 LDFLAGS+=	-Wl,--no-dynamic-linker
 .endif
 
-CLEANFILES+=	loader.efi
+.include <bsd.linker.mk>
+
+.if ${LINKER_TYPE} == "lld" && \
+    (${LINKER_FREEBSD_VERSION} < 1400007 || \
+    (${LINKER_FREEBSD_VERSION} >= 1500000 && \
+    ${LINKER_FREEBSD_VERSION} < 1500001))
+# When lld is using multiple threads, which it does by default, it can
+# result in non-reproducible output with the custom linker script. Work
+# around this by disabling threading.
+LDFLAGS+=	-Wl,--threads=1
+.endif
+
+CLEANFILES+=	${LOADER}.efi
 
 ${LOADER}.efi: ${PROG}
 	if ${NM} ${.ALLSRC} | grep ' U '; then \

@@ -17,12 +17,13 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <errno.h>
 #include <libgen.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/param.h>
+
+char * __freebsd11_dirname(char *path);
 
 char *
 __freebsd11_dirname(char *path)

@@ -4,8 +4,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/common/pnp.c 332154 2018-04-06 21:37:25Z kevans $");
-
 /*
  * "Plug and Play" functionality.
  *

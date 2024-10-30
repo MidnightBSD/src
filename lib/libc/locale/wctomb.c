@@ -1,11 +1,11 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2002-2004 Tim J. Robbins.
  * All rights reserved.
  *
  * Copyright (c) 2011 The FreeBSD Foundation
- * All rights reserved.
+ *
  * Portions of this software were developed by David Chisnall
  * under sponsorship from the FreeBSD Foundation.
  *
@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <stdlib.h>
 #include <wchar.h>
 #include "mblocal.h"
@@ -46,10 +45,11 @@ wctomb_l(char *s, wchar_t wchar, locale_t locale)
 
 	if (s == NULL) {
 		/* No support for state dependent encodings. */
-		locale->wctomb = initial;
+		XLOCALE_CTYPE(locale)->wctomb = initial;
 		return (0);
 	}
-	if ((rval = XLOCALE_CTYPE(locale)->__wcrtomb(s, wchar, &locale->wctomb)) == (size_t)-1)
+	if ((rval = XLOCALE_CTYPE(locale)->__wcrtomb(s, wchar,
+	    &(XLOCALE_CTYPE(locale)->wctomb))) == (size_t)-1)
 		return (-1);
 	return ((int)rval);
 }

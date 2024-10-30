@@ -6,7 +6,6 @@ SRCS=	ncpus.c acpi.c
 SRCS+=	biosmptable.c
 .endif
 BINDIR=	/usr/local/bin
-WARNS?=	6
 
 LIBADD=	devinfo
 

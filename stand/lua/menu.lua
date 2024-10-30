@@ -1,8 +1,8 @@
 --
--- SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+-- SPDX-License-Identifier: BSD-2-Clause
 --
 -- Copyright (c) 2015 Pedro Souza <pedrosouza@freebsd.org>
--- Copyright (C) 2018 Kyle Evans <kevans@FreeBSD.org>
+-- Copyright (c) 2018 Kyle Evans <kevans@FreeBSD.org>
 -- All rights reserved.
 --
 -- Redistribution and use in source and binary forms, with or without
@@ -56,6 +56,13 @@ local function bootenvSet(env)
 	loader.setenv("vfs.root.mountfrom", env)
 	loader.setenv("currdev", env .. ":")
 	config.reload()
+	if loader.getenv("kernelname") ~= nil then
+		loader.perform("unload")
+	end
+end
+
+local function multiUserPrompt()
+	return loader.getenv("loader_menu_multi_user_prompt") or "Multi user"
 end
 
 -- Module exports
@@ -130,6 +137,9 @@ menu.boot_environments = {
 		},
 		{
 			entry_type = core.MENU_ENTRY,
+			visible = function()
+				return core.isRewinded() == false
+			end,
 			name = function()
 				return color.highlight("b") .. "ootfs: " ..
 				    core.bootenvDefault()
@@ -227,7 +237,7 @@ menu.welcome = {
 					multi_user = multi_user,
 				}
 			else
-				single_user = alts.single_user 
+				single_user = alts.single_user
 				multi_user = alts.multi_user
 			end
 			boot_entry_1, boot_entry_2 = single_user, multi_user
@@ -249,18 +259,29 @@ menu.welcome = {
 			},
 			menu_entries.kernel_options,
 			menu_entries.boot_options,
+			menu_entries.zpool_checkpoints,
 			menu_entries.boot_envs,
 			menu_entries.chainload,
+			menu_entries.vendor,
+			{
+				entry_type = core.MENU_SEPARATOR,
+			},
+			menu_entries.loader_needs_upgrade,
 		}
 	end,
 	all_entries = {
 		multi_user = {
 			entry_type = core.MENU_ENTRY,
-			name = color.highlight("B") .. "oot Multi user " ..
-			    color.highlight("[Enter]"),
+			name = function()
+				return color.highlight("B") .. "oot " ..
+				    multiUserPrompt() .. " " ..
+				    color.highlight("[Enter]")
+			end,
 			-- Not a standard menu entry function!
-			alternate_name = color.highlight("B") ..
-			    "oot Multi user",
+			alternate_name = function()
+				return color.highlight("B") .. "oot " ..
+				    multiUserPrompt()
+			end,
 			func = function()
 				core.setSingleUser(false)
 				core.boot()
@@ -343,6 +364,32 @@ menu.welcome = {
 			submenu = menu.boot_options,
 			alias = {"o", "O"},
 		},
+		zpool_checkpoints = {
+			entry_type = core.MENU_ENTRY,
+			name = function()
+				local rewind = "No"
+				if core.isRewinded() then
+					rewind = "Yes"
+				end
+				return "Rewind ZFS " .. color.highlight("C") ..
+					"heckpoint: " .. rewind
+			end,
+			func = function()
+				core.changeRewindCheckpoint()
+				if core.isRewinded() then
+					bootenvSet(
+					    core.bootenvDefaultRewinded())
+				else
+					bootenvSet(core.bootenvDefault())
+				end
+				config.setCarouselIndex("be_active", 1)
+			end,
+			visible = function()
+				return core.isZFSBoot() and
+				    core.isCheckpointed()
+			end,
+			alias = {"c", "C"},
+		},
 		boot_envs = {
 			entry_type = core.MENU_SUBMENU,
 			visible = function()
@@ -367,6 +414,21 @@ menu.welcome = {
 				return loader.getenv('chain_disk') ~= nil
 			end,
 			alias = {"l", "L"},
+		},
+		loader_needs_upgrade = {
+			entry_type = core.MENU_SEPARATOR,
+			name = function()
+				return color.highlight("Loader needs to be updated")
+			end,
+			visible = function()
+				return core.loaderTooOld()
+			end
+		},
+		vendor = {
+			entry_type = core.MENU_ENTRY,
+			visible = function()
+				return false
+			end
 		},
 	},
 }
@@ -483,7 +545,7 @@ function menu.autoboot(delay)
 			last = time
 			screen.setcursor(x, y)
 			print("Autoboot in " .. time ..
-			    " seconds. [Space] to pause")
+			    " seconds. [Space] to pause ")
 			screen.defcursor()
 		end
 		if io.ischar() then

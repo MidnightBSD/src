@@ -25,8 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
-
 /*
  * file/module function dispatcher, support, etc.
  */
@@ -38,6 +36,8 @@ __FBSDID("$FreeBSD$");
 #include <sys/module.h>
 #include <sys/queue.h>
 #include <sys/stdint.h>
+#include <sys/font.h>
+#include <gfx_fb.h>
 
 #if defined(LOADER_FDT_SUPPORT)
 #include <fdt_platform.h>
@@ -65,6 +65,7 @@ static char			*mod_searchmodule(char *name, struct mod_depend *verinfo);
 static char *			mod_searchmodule_pnpinfo(const char *bus, const char *pnpinfo);
 static void			file_insert_tail(struct preloaded_file *mp);
 static void			file_remove(struct preloaded_file *fp);
+static void			file_remove_tail(struct preloaded_file *fp);
 struct file_metadata*		metadata_next(struct file_metadata *base_mp, int type);
 static void			moduledir_readhints(struct moduledir *mdp);
 static void			moduledir_rebuild(void);
@@ -91,7 +92,6 @@ static char *kld_ext_list[] = {
     NULL
 };
 
-
 /*
  * load an object, either a disk file or code module.
  *
@@ -111,8 +111,9 @@ command_load(int argc, char *argv[])
 {
 	struct preloaded_file *fp;
 	char	*typestr;
-	char	*prefix;
-	char	*skip;
+#ifdef LOADER_VERIEXEC
+	char	*prefix, *skip;
+#endif
 	int		dflag, dofile, dokld, ch, error;
 
 	dflag = dokld = dofile = 0;
@@ -123,7 +124,10 @@ command_load(int argc, char *argv[])
 		command_errmsg = "no filename specified";
 		return (CMD_CRIT);
 	}
-	prefix = skip = NULL;
+#ifdef LOADER_VERIEXEC
+	prefix = NULL;
+	skip = NULL;
+#endif
 	while ((ch = getopt(argc, argv, "dkp:s:t:")) != -1) {
 		switch(ch) {
 		case 'd':
@@ -132,12 +136,14 @@ command_load(int argc, char *argv[])
 		case 'k':
 			dokld = 1;
 			break;
+#ifdef LOADER_VERIEXEC
 		case 'p':
 			prefix = optarg;
 			break;
 		case 's':
 			skip = optarg;
 			break;
+#endif
 		case 't':
 			typestr = optarg;
 			dofile = 1;
@@ -378,14 +384,19 @@ command_pnpmatch(int argc, char *argv[])
 			return(CMD_OK);
 		}
 	}
-	argv += (optind - 1);
-	argc -= (optind - 1);
+	argv += optind;
+	argc -= optind;
 
-	module = mod_searchmodule_pnpinfo(argv[1], argv[2]);
+	if (argc != 2) {
+		command_errmsg = "Usage: pnpmatch <busname> compat=<compatdata>";
+		return (CMD_CRIT);
+	}
+
+	module = mod_searchmodule_pnpinfo(argv[0], argv[1]);
 	if (module)
 		printf("Matched module: %s\n", module);
-	else if(argv[1])
-		printf("No module matches %s\n", argv[1]);
+	else
+		printf("No module matches %s on bus %s\n", argv[1], argv[0]);
 
 	return (CMD_OK);
 }
@@ -416,13 +427,15 @@ command_pnpload(int argc, char *argv[])
 			return(CMD_OK);
 		}
 	}
-	argv += (optind - 1);
-	argc -= (optind - 1);
+	argv += optind;
+	argc -= optind;
 
-	if (argc != 2)
+	if (argc != 2) {
+		command_errmsg = "Usage: pnpload <busname> compat=<compatdata>";
 		return (CMD_ERROR);
+	}
 
-	module = mod_searchmodule_pnpinfo(argv[1], argv[2]);
+	module = mod_searchmodule_pnpinfo(argv[0], argv[1]);
 
 	error = mod_load(module, NULL, 0, NULL);
 	if (error == EEXIST) {
@@ -436,7 +449,7 @@ command_pnpload(int argc, char *argv[])
 
 #if defined(LOADER_FDT_SUPPORT)
 static void
-pnpautoload_simplebus(void) {
+pnpautoload_fdt_bus(const char *busname) {
 	const char *pnpstring;
 	const char *compatstr;
 	char *pnpinfo = NULL;
@@ -454,7 +467,7 @@ pnpautoload_simplebus(void) {
 			pnplen += strlen(compatstr) + 1;
 			asprintf(&pnpinfo, "compat=%s", compatstr);
 
-			module = mod_searchmodule_pnpinfo("simplebus", pnpinfo);
+			module = mod_searchmodule_pnpinfo(busname, pnpinfo);
 			if (module) {
 				error = mod_loadkld(module, 0, NULL);
 				if (error)
@@ -470,12 +483,15 @@ pnpautoload_simplebus(void) {
 
 struct pnp_bus {
 	const char *name;
-	void (*load)(void);
+	void (*load)(const char *busname);
 };
 
 struct pnp_bus pnp_buses[] = {
 #if defined(LOADER_FDT_SUPPORT)
-	{"simplebus", pnpautoload_simplebus},
+	{"simplebus", pnpautoload_fdt_bus},
+	{"ofwbus", pnpautoload_fdt_bus},
+	{"iicbus", pnpautoload_fdt_bus},
+	{"spibus", pnpautoload_fdt_bus},
 #endif
 };
 
@@ -518,8 +534,8 @@ command_pnpautoload(int argc, char *argv[])
 			continue;
 		}
 		if (verbose)
-			printf("Autoloading modules for simplebus\n");
-		pnp_buses[i].load();
+			printf("Autoloading modules for %s\n", pnp_buses[i].name);
+		pnp_buses[i].load(pnp_buses[i].name);
 		match = 1;
 	}
 	if (match == 0)
@@ -539,6 +555,7 @@ file_load(char *filename, vm_offset_t dest, struct preloaded_file **result)
 	int error;
 	int i;
 
+	TSENTER2(filename);
 	if (archsw.arch_loadaddr != NULL)
 		dest = archsw.arch_loadaddr(LOAD_RAW, filename, dest);
 
@@ -565,6 +582,7 @@ file_load(char *filename, vm_offset_t dest, struct preloaded_file **result)
 			break;
 		}
 	}
+	TSEXIT();
 	return (error);
 }
 
@@ -586,7 +604,8 @@ file_load_dependencies(struct preloaded_file *base_file)
 		verinfo = (struct mod_depend*)md->md_data;
 		dmodname = (char *)(verinfo + 1);
 		if (file_findmodule(NULL, dmodname, verinfo) == NULL) {
-			printf("loading required module '%s'\n", dmodname);
+			if (module_verbose > MODULE_VERBOSE_SILENT)
+				printf("loading required module '%s'\n", dmodname);
 			error = mod_load(dmodname, verinfo, 0, NULL);
 			if (error)
 				break;
@@ -616,6 +635,92 @@ file_load_dependencies(struct preloaded_file *base_file)
 	return (error);
 }
 
+vm_offset_t
+build_font_module(vm_offset_t addr)
+{
+	vt_font_bitmap_data_t *bd;
+	struct vt_font *fd;
+	struct preloaded_file *fp;
+	size_t size;
+	uint32_t checksum;
+	int i;
+	struct font_info fi;
+	struct fontlist *fl;
+	uint64_t fontp;
+
+	if (STAILQ_EMPTY(&fonts))
+		return (addr);
+
+	/* We can't load first */
+	if ((file_findfile(NULL, NULL)) == NULL) {
+		printf("Can not load font module: %s\n",
+		    "the kernel is not loaded");
+		return (addr);
+	}
+
+	/* helper pointers */
+	bd = NULL;
+	STAILQ_FOREACH(fl, &fonts, font_next) {
+		if (gfx_state.tg_font.vf_width == fl->font_data->vfbd_width &&
+		    gfx_state.tg_font.vf_height == fl->font_data->vfbd_height) {
+			/*
+			 * Kernel does have better built in font.
+			 */
+			if (fl->font_flags == FONT_BUILTIN)
+				return (addr);
+
+			bd = fl->font_data;
+			break;
+		}
+	}
+	if (bd == NULL)
+		return (addr);
+	fd = bd->vfbd_font;
+
+	fi.fi_width = fd->vf_width;
+	checksum = fi.fi_width;
+	fi.fi_height = fd->vf_height;
+	checksum += fi.fi_height;
+	fi.fi_bitmap_size = bd->vfbd_uncompressed_size;
+	checksum += fi.fi_bitmap_size;
+
+	size = roundup2(sizeof (struct font_info), 8);
+	for (i = 0; i < VFNT_MAPS; i++) {
+		fi.fi_map_count[i] = fd->vf_map_count[i];
+		checksum += fi.fi_map_count[i];
+		size += fd->vf_map_count[i] * sizeof (struct vfnt_map);
+		size += roundup2(size, 8);
+	}
+	size += bd->vfbd_uncompressed_size;
+
+	fi.fi_checksum = -checksum;
+
+	fp = file_findfile(NULL, "elf kernel");
+	if (fp == NULL)
+		fp = file_findfile(NULL, "elf64 kernel");
+	if (fp == NULL)
+		panic("can't find kernel file");
+
+	fontp = addr;
+	addr += archsw.arch_copyin(&fi, addr, sizeof (struct font_info));
+	addr = roundup2(addr, 8);
+
+	/* Copy maps. */
+	for (i = 0; i < VFNT_MAPS; i++) {
+		if (fd->vf_map_count[i] != 0) {
+			addr += archsw.arch_copyin(fd->vf_map[i], addr,
+			    fd->vf_map_count[i] * sizeof (struct vfnt_map));
+			addr = roundup2(addr, 8);
+		}
+	}
+
+	/* Copy the bitmap. */
+	addr += archsw.arch_copyin(fd->vf_bytes, addr, fi.fi_bitmap_size);
+
+	/* Looks OK so far; populate control structure */
+	file_addmetadata(fp, MODINFOMD_FONT, sizeof(fontp), &fontp);
+	return (addr);
+}
 
 #ifdef LOADER_VERIEXEC_VECTX
 #define VECTX_HANDLE(fd) vctx
@@ -640,9 +745,11 @@ file_loadraw(const char *fname, char *type, int insert)
 	int			verror;
 #endif
 
+	TSENTER2(fname);
 	/* We can't load first */
 	if ((file_findfile(NULL, NULL)) == NULL) {
 		command_errmsg = "can't load file before kernel";
+		TSEXIT();
 		return(NULL);
 	}
 
@@ -651,6 +758,7 @@ file_loadraw(const char *fname, char *type, int insert)
 	if (name == NULL) {
 		snprintf(command_errbuf, sizeof(command_errbuf),
 		  "can't find '%s'", fname);
+		TSEXIT();
 		return(NULL);
 	}
 
@@ -658,6 +766,7 @@ file_loadraw(const char *fname, char *type, int insert)
 		snprintf(command_errbuf, sizeof(command_errbuf),
 		  "can't open '%s': %s", name, strerror(errno));
 		free(name);
+		TSEXIT();
 		return(NULL);
 	}
 
@@ -669,6 +778,7 @@ file_loadraw(const char *fname, char *type, int insert)
 		free(name);
 		free(vctx);
 		close(fd);
+		TSEXIT();
 		return(NULL);
 	}
 #else
@@ -678,6 +788,7 @@ file_loadraw(const char *fname, char *type, int insert)
 		    name, ve_error_get());
 		free(name);
 		close(fd);
+		TSEXIT();
 		return(NULL);
 	}
 #endif
@@ -686,7 +797,8 @@ file_loadraw(const char *fname, char *type, int insert)
 	if (archsw.arch_loadaddr != NULL)
 		loadaddr = archsw.arch_loadaddr(LOAD_RAW, name, loadaddr);
 
-	printf("%s ", name);
+	if (module_verbose > MODULE_VERBOSE_SILENT)
+		printf("%s ", name);
 
 	laddr = loadaddr;
 	for (;;) {
@@ -702,18 +814,21 @@ file_loadraw(const char *fname, char *type, int insert)
 #ifdef LOADER_VERIEXEC_VECTX
 			free(vctx);
 #endif
+			TSEXIT();
 			return(NULL);
 		}
 		laddr += got;
 	}
 
-	printf("size=%#jx\n", (uintmax_t)(laddr - loadaddr));
+	if (module_verbose > MODULE_VERBOSE_SILENT)
+		printf("size=%#jx\n", (uintmax_t)(laddr - loadaddr));
 #ifdef LOADER_VERIEXEC_VECTX
 	verror = vectx_close(vctx, VE_MUST, __func__);
 	if (verror) {
 		free(name);
 		close(fd);
 		free(vctx);
+		TSEXIT();
 		return(NULL);
 	}
 #endif
@@ -725,6 +840,7 @@ file_loadraw(const char *fname, char *type, int insert)
 		    "no memory to load %s", name);
 		free(name);
 		close(fd);
+		TSEXIT();
 		return (NULL);
 	}
 	fp->f_name = name;
@@ -740,6 +856,7 @@ file_loadraw(const char *fname, char *type, int insert)
 		    "no memory to load %s", name);
 		free(name);
 		close(fd);
+		TSEXIT();
 		return (NULL);
 	}
 	/* recognise space consumption */
@@ -749,6 +866,7 @@ file_loadraw(const char *fname, char *type, int insert)
 	if (insert != 0)
 		file_insert_tail(fp);
 	close(fd);
+	TSEXIT();
 	return(fp);
 }
 
@@ -764,8 +882,10 @@ mod_load(char *modname, struct mod_depend *verinfo, int argc, char *argv[])
 	int				err;
 	char			*filename;
 
+	TSENTER2(modname);
 	if (file_havepath(modname)) {
 		printf("Warning: mod_load() called instead of mod_loadkld() for module '%s'\n", modname);
+		TSEXIT();
 		return (mod_loadkld(modname, argc, argv));
 	}
 	/* see if module is already loaded */
@@ -777,6 +897,7 @@ mod_load(char *modname, struct mod_depend *verinfo, int argc, char *argv[])
 #endif
 		snprintf(command_errbuf, sizeof(command_errbuf),
 		  "warning: module '%s' already loaded", mp->m_name);
+		TSEXIT();
 		return (0);
 	}
 	/* locate file with the module on the search path */
@@ -784,10 +905,12 @@ mod_load(char *modname, struct mod_depend *verinfo, int argc, char *argv[])
 	if (filename == NULL) {
 		snprintf(command_errbuf, sizeof(command_errbuf),
 		  "can't find '%s'", modname);
+		TSEXIT();
 		return (ENOENT);
 	}
 	err = mod_loadkld(filename, argc, argv);
 	free(filename);
+	TSEXIT();
 	return (err);
 }
 
@@ -803,6 +926,7 @@ mod_loadkld(const char *kldname, int argc, char *argv[])
 	char			*filename;
 	vm_offset_t		loadaddr_saved;
 
+	TSENTER2(kldname);
 	/*
 	 * Get fully qualified KLD name
 	 */
@@ -810,6 +934,7 @@ mod_loadkld(const char *kldname, int argc, char *argv[])
 	if (filename == NULL) {
 		snprintf(command_errbuf, sizeof(command_errbuf),
 		  "can't find '%s'", kldname);
+		TSEXIT();
 		return (ENOENT);
 	}
 	/*
@@ -820,6 +945,7 @@ mod_loadkld(const char *kldname, int argc, char *argv[])
 		snprintf(command_errbuf, sizeof(command_errbuf),
 		  "warning: KLD '%s' already loaded", filename);
 		free(filename);
+		TSEXIT();
 		return (0);
 	}
 
@@ -833,7 +959,7 @@ mod_loadkld(const char *kldname, int argc, char *argv[])
 		file_insert_tail(fp);	/* Add to the list of loaded files */
 		if (file_load_dependencies(fp) != 0) {
 			err = ENOENT;
-			file_remove(fp);
+			file_remove_tail(fp);
 			loadaddr = loadaddr_saved;
 			fp = NULL;
 			break;
@@ -846,6 +972,7 @@ mod_loadkld(const char *kldname, int argc, char *argv[])
 	if (err)
 		file_discard(fp);
 	free(filename);
+	TSEXIT();
 	return (err);
 }
 
@@ -951,6 +1078,57 @@ file_removemetadata(struct preloaded_file *fp)
 		free(md);
 	}
 	fp->f_metadata = NULL;
+}
+
+/*
+ * Add a buffer to the list of preloaded "files".
+ */
+int
+file_addbuf(const char *name, const char *type, size_t len, void *buf)
+{
+	struct preloaded_file	*fp;
+	vm_offset_t dest;
+
+	/* We can't load first */
+	if ((file_findfile(NULL, NULL)) == NULL) {
+		command_errmsg = "can't load file before kernel";
+		return (-1);
+	}
+
+	/* Figure out where to load the data. */
+	dest = loadaddr;
+	if (archsw.arch_loadaddr != NULL)
+		dest = archsw.arch_loadaddr(LOAD_RAW, (void *)name, dest);
+
+	/* Create & populate control structure */
+	fp = file_alloc();
+	if (fp == NULL) {
+		snprintf(command_errbuf, sizeof (command_errbuf),
+		    "no memory to load %s", name);
+		return (-1);
+	}
+	fp->f_name = strdup(name);
+	fp->f_type = strdup(type);
+	fp->f_args = NULL;
+	fp->f_metadata = NULL;
+	fp->f_loader = -1;
+	fp->f_addr = dest;
+	fp->f_size = len;
+	if ((fp->f_name == NULL) || (fp->f_type == NULL)) {
+		snprintf(command_errbuf, sizeof (command_errbuf),
+		    "no memory to load %s", name);
+		free(fp->f_name);
+		free(fp->f_type);
+		return (-1);
+	}
+
+	/* Copy the data in. */
+	archsw.arch_copyin(buf, fp->f_addr, len);
+	loadaddr = fp->f_addr + len;
+
+	/* Add to the list of loaded files */
+	file_insert_tail(fp);
+	return(0);
 }
 
 struct file_metadata *
@@ -1542,23 +1720,43 @@ file_insert_tail(struct preloaded_file *fp)
  * Remove module from the chain
  */
 static void
-file_remove(struct preloaded_file *fp)
+file_remove_impl(struct preloaded_file *fp, bool keep_tail)
 {
-	struct preloaded_file   *cm;
+	struct preloaded_file   *cm, *next;
 
 	if (preloaded_files == NULL)
 		return;
 
+	if (keep_tail)
+		next = fp->f_next;
+	else
+		next = NULL;
+
 	if (preloaded_files == fp) {
-		preloaded_files = fp->f_next;
+		preloaded_files = next;
 		return;
         }
+
         for (cm = preloaded_files; cm->f_next != NULL; cm = cm->f_next) {
 		if (cm->f_next == fp) {
-			cm->f_next = fp->f_next;
+			cm->f_next = next;
 			return;
 		}
 	}
+}
+
+static void
+file_remove(struct preloaded_file *fp)
+{
+
+	file_remove_impl(fp, true);
+}
+
+static void
+file_remove_tail(struct preloaded_file *fp)
+{
+
+	file_remove_impl(fp, false);
 }
 
 static char *

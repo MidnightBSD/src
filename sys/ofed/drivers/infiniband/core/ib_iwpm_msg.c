@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "iwpm_util.h"
 
 static int iwpm_user_pid = IWPM_PID_UNDEFINED;

@@ -1,7 +1,5 @@
-/* $MidnightBSD$ */
-/* $FreeBSD: stable/10/tools/tools/usbtest/usb_control_ep_test.c 254241 2013-08-12 09:15:33Z hselasky $ */
 /*-
- * Copyright (c) 2007-2010 Hans Petter Selasky. All rights reserved.
+ * Copyright (c) 2007-2022 Hans Petter Selasky
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -76,7 +74,7 @@ emissing:
 }
 
 void
-usb_control_ep_error_test(uint16_t vid, uint16_t pid)
+usb_control_ep_error_test(struct uaddr uaddr)
 {
 	struct LIBUSB20_CONTROL_SETUP_DECODED req;
 	struct libusb20_device *pdev;
@@ -87,7 +85,7 @@ usb_control_ep_error_test(uint16_t vid, uint16_t pid)
 	int dev;
 	int cfg;
 
-	pdev = find_usb_device(vid, pid);
+	pdev = find_usb_device(uaddr);
 	if (pdev == NULL) {
 		printf("USB device not found\n");
 		return;
@@ -162,7 +160,7 @@ usb_control_ep_error_test(uint16_t vid, uint16_t pid)
 }
 
 void
-usb_get_string_desc_test(uint16_t vid, uint16_t pid)
+usb_get_string_desc_test(struct uaddr uaddr)
 {
 	struct libusb20_device *pdev;
 	uint32_t x;
@@ -171,7 +169,7 @@ usb_get_string_desc_test(uint16_t vid, uint16_t pid)
 	uint8_t *buf;
 	int error;
 
-	pdev = find_usb_device(vid, pid);
+	pdev = find_usb_device(uaddr);
 	if (pdev == NULL) {
 		printf("USB device not found\n");
 		return;
@@ -191,7 +189,7 @@ usb_get_string_desc_test(uint16_t vid, uint16_t pid)
 	valid = 0;
 
 	printf("Starting string descriptor test for "
-	    "VID=0x%04x PID=0x%04x\n", vid, pid);
+	    "VID=0x%04x PID=0x%04x\n", uaddr.vid, uaddr.pid);
 
 	for (x = 0; x != 256; x++) {
 
@@ -237,7 +235,7 @@ usb_get_string_desc_test(uint16_t vid, uint16_t pid)
 }
 
 void
-usb_port_reset_test(uint16_t vid, uint16_t pid, uint32_t duration)
+usb_port_reset_test(struct uaddr uaddr, uint32_t duration)
 {
 	struct timeval sub_tv;
 	struct timeval ref_tv;
@@ -253,7 +251,7 @@ usb_port_reset_test(uint16_t vid, uint16_t pid, uint32_t duration)
 
 	/* sysctl() - no set config */
 
-	pdev = find_usb_device(vid, pid);
+	pdev = find_usb_device(uaddr);
 	if (pdev == NULL) {
 		printf("USB device not found\n");
 		return;
@@ -307,7 +305,7 @@ usb_port_reset_test(uint16_t vid, uint16_t pid, uint32_t duration)
 }
 
 void
-usb_set_config_test(uint16_t vid, uint16_t pid, uint32_t duration)
+usb_set_config_test(struct uaddr uaddr, uint32_t duration)
 {
 	struct libusb20_device *pdev;
 	struct LIBUSB20_DEVICE_DESC_DECODED *ddesc;
@@ -316,7 +314,7 @@ usb_set_config_test(uint16_t vid, uint16_t pid, uint32_t duration)
 	int failed;
 	int exp;
 
-	pdev = find_usb_device(vid, pid);
+	pdev = find_usb_device(uaddr);
 	if (pdev == NULL) {
 		printf("USB device not found\n");
 		return;
@@ -330,7 +328,7 @@ usb_set_config_test(uint16_t vid, uint16_t pid, uint32_t duration)
 	failed = 0;
 
 	printf("Starting set config test for "
-	    "VID=0x%04x PID=0x%04x\n", vid, pid);
+	    "VID=0x%04x PID=0x%04x\n", uaddr.vid, uaddr.pid);
 
 	for (x = 255; x > -1; x--) {
 
@@ -366,11 +364,11 @@ usb_set_config_test(uint16_t vid, uint16_t pid, uint32_t duration)
 }
 
 void
-usb_get_descriptor_test(uint16_t vid, uint16_t pid, uint32_t duration)
+usb_get_descriptor_test(struct uaddr uaddr, uint32_t duration)
 {
 	struct libusb20_device *pdev;
 
-	pdev = find_usb_device(vid, pid);
+	pdev = find_usb_device(uaddr);
 	if (pdev == NULL) {
 		printf("USB device not found\n");
 		return;
@@ -379,7 +377,7 @@ usb_get_descriptor_test(uint16_t vid, uint16_t pid, uint32_t duration)
 }
 
 void
-usb_suspend_resume_test(uint16_t vid, uint16_t pid, uint32_t duration)
+usb_suspend_resume_test(struct uaddr uaddr, uint32_t duration)
 {
 	struct timeval sub_tv;
 	struct timeval ref_tv;
@@ -404,7 +402,7 @@ usb_suspend_resume_test(uint16_t vid, uint16_t pid, uint32_t duration)
 		printf("WARNING: Could not set power "
 		    "timeout to 1 (error=%d) \n", errno);
 	}
-	pdev = find_usb_device(vid, pid);
+	pdev = find_usb_device(uaddr);
 	if (pdev == NULL) {
 		printf("USB device not found\n");
 		return;
@@ -418,7 +416,7 @@ usb_suspend_resume_test(uint16_t vid, uint16_t pid, uint32_t duration)
 	power_old = libusb20_dev_get_power_mode(pdev);
 
 	printf("Starting suspend and resume "
-	    "test for VID=0x%04x PID=0x%04x\n", vid, pid);
+	    "test for VID=0x%04x PID=0x%04x\n", uaddr.vid, uaddr.pid);
 
 	iter = 0;
 	errcnt = 0;
@@ -469,7 +467,7 @@ usb_suspend_resume_test(uint16_t vid, uint16_t pid, uint32_t duration)
 }
 
 void
-usb_set_and_clear_stall_test(uint16_t vid, uint16_t pid)
+usb_set_and_clear_stall_test(struct uaddr uaddr)
 {
 	struct libusb20_device *pdev;
 	struct libusb20_transfer *pxfer;
@@ -479,7 +477,7 @@ usb_set_and_clear_stall_test(uint16_t vid, uint16_t pid)
 	int errcnt;
 	int ep;
 
-	pdev = find_usb_device(vid, pid);
+	pdev = find_usb_device(uaddr);
 	if (pdev == NULL) {
 		printf("USB device not found\n");
 		return;
@@ -491,7 +489,7 @@ usb_set_and_clear_stall_test(uint16_t vid, uint16_t pid)
 		return;
 	}
 	printf("Starting set and clear stall test "
-	    "for VID=0x%04x PID=0x%04x\n", vid, pid);
+	    "for VID=0x%04x PID=0x%04x\n", uaddr.vid, uaddr.pid);
 
 	iter = 0;
 	errcnt = 0;
@@ -605,7 +603,7 @@ usb_set_and_clear_stall_test(uint16_t vid, uint16_t pid)
 }
 
 void
-usb_set_alt_interface_test(uint16_t vid, uint16_t pid)
+usb_set_alt_interface_test(struct uaddr uaddr)
 {
 	struct libusb20_device *pdev;
 	struct libusb20_config *config;
@@ -616,13 +614,13 @@ usb_set_alt_interface_test(uint16_t vid, uint16_t pid)
 	int n;
 	int m;
 
-	pdev = find_usb_device(vid, pid);
+	pdev = find_usb_device(uaddr);
 	if (pdev == NULL) {
 		printf("USB device not found\n");
 		return;
 	}
 	printf("Starting set alternate setting test "
-	    "for VID=0x%04x PID=0x%04x\n", vid, pid);
+	    "for VID=0x%04x PID=0x%04x\n", uaddr.vid, uaddr.pid);
 
 	config = libusb20_dev_alloc_config(pdev,
 	    libusb20_dev_get_config_index(pdev));

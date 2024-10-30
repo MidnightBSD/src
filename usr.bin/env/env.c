@@ -42,7 +42,6 @@ static char sccsid[] = "@(#)env.c	8.3 (Berkeley) 4/2/94";
 #endif
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 
 #include <err.h>
@@ -143,16 +142,23 @@ main(int argc, char **argv)
 		login_class = strchr(login_name, '/');
 		if (login_class)
 			*login_class++ = '\0';
-		pw = getpwnam(login_name);
-		if (pw == NULL) {
-			char *endp = NULL;
-			errno = 0;
-			uid = strtoul(login_name, &endp, 10);
-			if (errno == 0 && *endp == '\0')
-				pw = getpwuid(uid);
+		if (*login_name != '\0' && strcmp(login_name, "-") != 0) {
+			pw = getpwnam(login_name);
+			if (pw == NULL) {
+				char *endp = NULL;
+				errno = 0;
+				uid = strtoul(login_name, &endp, 10);
+				if (errno == 0 && *endp == '\0')
+					pw = getpwuid(uid);
+			}
+			if (pw == NULL)
+				errx(EXIT_FAILURE, "no such user: %s", login_name);
 		}
-		if (pw == NULL)
-			errx(EXIT_FAILURE, "no such user: %s", login_name);
+		/*
+		 * Note that it is safe for pw to be null here; the libutil
+		 * code handles that, bypassing substitution of $ and using
+		 * the class "default" if no class name is given either.
+		 */
 		if (login_class != NULL) {
 			lc = login_getclass(login_class);
 			if (lc == NULL)
@@ -209,6 +215,8 @@ main(int argc, char **argv)
 	}
 	for (ep = environ; *ep; ep++)
 		(void)printf("%s%c", *ep, term);
+	if (fflush(stdout) != 0)
+		err(1, "stdout");
 	exit(0);
 }
 

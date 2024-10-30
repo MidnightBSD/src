@@ -24,7 +24,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #define	_SEARCH_PRIVATE
 #include <search.h>
 #include <stdlib.h>

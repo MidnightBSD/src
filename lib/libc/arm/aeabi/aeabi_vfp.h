@@ -23,7 +23,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *
  */
 
 #ifndef AEABI_VFP_H
@@ -66,7 +65,7 @@
  * C Helper macros
  */
 
-#if __ARM_ARCH >= 6
+#if __ARM_ARCH >= 6 && !defined(SOFTFLOAT_FOR_GCC)
 /*
  * Generate a function that will either call into the VFP implementation,
  * or the soft float version for a given __aeabi_* helper. The function

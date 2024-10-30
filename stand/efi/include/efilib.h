@@ -23,8 +23,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD$
  */
 
 #ifndef _LOADER_EFILIB_H
@@ -69,13 +67,22 @@ pdinfo_t *efiblk_get_pdinfo(struct devdesc *dev);
 pdinfo_t *efiblk_get_pdinfo_by_handle(EFI_HANDLE h);
 pdinfo_t *efiblk_get_pdinfo_by_device_path(EFI_DEVICE_PATH *path);
 
+/* libefi.c */
 void *efi_get_table(EFI_GUID *tbl);
 EFI_STATUS OpenProtocolByHandle(EFI_HANDLE, EFI_GUID *, void **);
 
-int efi_getdev(void **vdev, const char *devspec, const char **path);
-char *efi_fmtdev(void *vdev);
-int efi_setcurrdev(struct env_var *ev, int flags, const void *value);
+static inline EFI_STATUS
+efi_exit_boot_services(UINTN key)
+{
+	EFI_STATUS status;
 
+	status = BS->ExitBootServices(IH, key);
+	if (!EFI_ERROR(status))
+		boot_services_active = false;
+	return (status);
+}
+
+int efi_getdev(void **vdev, const char *devspec, const char **path);
 
 int efi_register_handles(struct devsw *, EFI_HANDLE *, EFI_HANDLE *, int);
 EFI_HANDLE efi_find_handle(struct devsw *, int);
@@ -96,10 +103,10 @@ void efi_free_devpath_name(CHAR16 *);
 bool efi_devpath_same_disk(EFI_DEVICE_PATH *, EFI_DEVICE_PATH *);
 EFI_DEVICE_PATH *efi_devpath_to_media_path(EFI_DEVICE_PATH *);
 UINTN efi_devpath_length(EFI_DEVICE_PATH *);
-EFI_HANDLE efi_devpath_to_handle(EFI_DEVICE_PATH *path, EFI_HANDLE *handles, unsigned nhandles);
 EFI_DEVICE_PATH *efi_name_to_devpath(const char *path);
 EFI_DEVICE_PATH *efi_name_to_devpath16(CHAR16 *path);
 void efi_devpath_free(EFI_DEVICE_PATH *dp);
+EFI_HANDLE efi_devpath_to_handle(EFI_DEVICE_PATH *path, EFI_HANDLE *handles, unsigned nhandles);
 
 int efi_status_to_errno(EFI_STATUS);
 EFI_STATUS errno_to_efi_status(int errno);
@@ -107,6 +114,7 @@ EFI_STATUS errno_to_efi_status(int errno);
 void efi_time_init(void);
 void efi_time_fini(void);
 
+int parse_uefi_con_out(void);
 EFI_STATUS efi_main(EFI_HANDLE Ximage, EFI_SYSTEM_TABLE* Xsystab);
 
 EFI_STATUS main(int argc, CHAR16 *argv[]);

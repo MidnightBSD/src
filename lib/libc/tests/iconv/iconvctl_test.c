@@ -24,7 +24,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <iconv.h>
 
 #include <atf-c.h>

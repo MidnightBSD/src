@@ -25,7 +25,6 @@
 static const char rcsid[] = "$Id: ev_timers.c,v 1.6 2005/04/27 04:56:36 sra Exp $";
 #endif
 #include <sys/cdefs.h>
-
 /* Import. */
 
 #include "port_before.h"

@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <x86/mptable.h>
 

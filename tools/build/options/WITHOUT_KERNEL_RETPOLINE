@@ -1,2 +1,2 @@
-Set to disable the "retpoline" mitigation for CVE-2017-5715 in the kernel
+Disable the "retpoline" mitigation for CVE-2017-5715 in the kernel
 build.

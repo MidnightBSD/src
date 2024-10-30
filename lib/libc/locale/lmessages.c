@@ -1,11 +1,11 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2001 Alexey Zelkin <phantom@FreeBSD.org>
  * All rights reserved.
  *
  * Copyright (c) 2011 The FreeBSD Foundation
- * All rights reserved.
+ *
  * Portions of this software were developed by David Chisnall
  * under sponsorship from the FreeBSD Foundation.
  *
@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <stddef.h>
 
 #include "ldpart.h"
@@ -59,7 +58,8 @@ static const struct lc_messages_T _C_messages_locale = {
 	"no"		/* nostr */
 };
 
-static void destruct_messages(void *v)
+static void
+destruct_messages(void *v)
 {
 	struct xlocale_messages *l = v;
 	if (l->buffer)
@@ -68,7 +68,8 @@ static void destruct_messages(void *v)
 }
 
 static int
-messages_load_locale(struct xlocale_messages *loc, int *using_locale, const char *name)
+messages_load_locale(struct xlocale_messages *loc, int *using_locale,
+    const char *name)
 {
 	int ret;
 	struct lc_messages_T *l = &loc->locale;
@@ -85,35 +86,41 @@ messages_load_locale(struct xlocale_messages *loc, int *using_locale, const char
 	}
 	return (ret);
 }
+
 int
 __messages_load_locale(const char *name)
 {
-	return messages_load_locale(&__xlocale_global_messages,
-			&__xlocale_global_locale.using_messages_locale, name);
+	return (messages_load_locale(&__xlocale_global_messages,
+	    &__xlocale_global_locale.using_messages_locale, name));
 }
+
 void *
 __messages_load(const char *name, locale_t l)
 {
-	struct xlocale_messages *new = calloc(sizeof(struct xlocale_messages), 1);
+	struct xlocale_messages *new = calloc(sizeof(struct xlocale_messages),
+	    1);
+	if (new == NULL)
+		return (NULL);
 	new->header.header.destructor = destruct_messages;
-	if (messages_load_locale(new, &l->using_messages_locale, name) == _LDP_ERROR) {
+	if (messages_load_locale(new, &l->using_messages_locale, name) ==
+	    _LDP_ERROR) {
 		xlocale_release(new);
-		return NULL;
+		return (NULL);
 	}
-	return new;
+	return (new);
 }
 
 struct lc_messages_T *
 __get_current_messages_locale(locale_t loc)
 {
-	return (loc->using_messages_locale
-		? &((struct xlocale_messages *)loc->components[XLC_MESSAGES])->locale
-		: (struct lc_messages_T *)&_C_messages_locale);
+	return (loc->using_messages_locale ? &((struct xlocale_messages *)
+	    loc->components[XLC_MESSAGES])->locale :
+	    (struct lc_messages_T *)&_C_messages_locale);
 }
 
 #ifdef LOCALE_DEBUG
 void
-msgdebug() {
+msgdebug(void) {
 printf(	"yesexpr = %s\n"
 	"noexpr = %s\n"
 	"yesstr = %s\n"

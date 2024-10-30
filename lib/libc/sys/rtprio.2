@@ -51,8 +51,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\"
-.Dd December 27, 2011
+.Dd December 8, 2021
 .Dt RTPRIO 2
 .Os
 .Sh NAME
@@ -134,7 +133,10 @@ field ranges between 0 and
 .Pq usually 31 .
 0 is the highest possible priority.
 .Pp
-Realtime and idle priority is inherited through fork() and exec().
+Realtime and idle priority is inherited through
+.Fn fork
+and
+.Fn exec .
 .Pp
 A realtime thread can only be preempted by a thread of equal or
 higher priority, or by an interrupt; idle priority threads will run only
@@ -163,15 +165,19 @@ The specified
 .Fa prio
 was out of range.
 .It Bq Er EPERM
-The calling thread is not allowed to set the realtime priority.
+The calling thread is not allowed to set the priority.
 Only
-root is allowed to change the realtime priority of any thread, and non-root
-may only change the idle priority of threads the user owns,
-when the
+root is allowed to change the realtime or idle priority of any thread.
+Exceptional privileges can be granted through the
+.Xr mac_priority 4
+policy and the realtime and idletime user groups.
+The
 .Xr sysctl 8
 variable
 .Va security.bsd.unprivileged_idprio
-is set to non-zero.
+is deprecated.
+If set to non-zero, it lets any user change the idle priority of threads
+they own.
 .It Bq Er ESRCH
 The specified process or thread was not found or visible.
 .El
@@ -181,6 +187,7 @@ The specified process or thread was not found or visible.
 .Xr rtprio 1 ,
 .Xr setpriority 2 ,
 .Xr nice 3 ,
+.Xr mac_priority 4 ,
 .Xr renice 8 ,
 .Xr p_cansee 9
 .Sh AUTHORS

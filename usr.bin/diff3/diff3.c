@@ -70,7 +70,6 @@ static char sccsid[] = "@(#)diff3.c	8.1 (Berkeley) 6/6/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-
 #include <sys/capsicum.h>
 #include <sys/procdesc.h>
 #include <sys/types.h>
@@ -83,6 +82,8 @@ static char sccsid[] = "@(#)diff3.c	8.1 (Berkeley) 6/6/93";
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <limits.h>
+#include <inttypes.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -123,7 +124,7 @@ static int cline[3];		/* # of the last-read line in each file (0-2) */
  */
 static int last[4];
 static int Aflag, eflag, iflag, mflag, Tflag;
-static int oflag;		/* indicates whether to mark overlaps (-E or -X)*/
+static int oflag;		/* indicates whether to mark overlaps (-E or -X) */
 static int strip_cr;
 static char *f1mark, *f2mark, *f3mark;
 
@@ -131,7 +132,6 @@ static bool duplicate(struct range *, struct range *);
 static int edit(struct diff *, bool, int);
 static char *getchange(FILE *);
 static char *get_line(FILE *, size_t *);
-static int number(char **);
 static int readin(int fd, struct diff **);
 static int skip(int, int, const char *);
 static void change(int, struct range *, bool);
@@ -168,9 +168,9 @@ static struct option longopts[] = {
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: diff3 [-3aAeEimTxX] [-L lable1] [-L label2] "
-	    "[ -L label3] file1 file2 file3\n");
-	exit (2);
+	fprintf(stderr, "usage: diff3 [-3aAeEimTxX] [-L label1] [-L label2] "
+	    "[-L label3] file1 file2 file3\n");
+	exit(2);
 }
 
 static int
@@ -184,19 +184,19 @@ readin(int fd, struct diff **dd)
 	f = fdopen(fd, "r");
 	if (f == NULL)
 		err(2, "fdopen");
-	for (i=0; (p = getchange(f)); i++) {
+	for (i = 0; (p = getchange(f)); i++) {
 		if (i >= szchanges - 1)
 			increase();
-		a = b = number(&p);
+		a = b = (int)strtoimax(p, &p, 10);
 		if (*p == ',') {
 			p++;
-			b = number(&p);
+			b = (int)strtoimax(p, &p, 10);
 		}
 		kind = *p++;
-		c = d = number(&p);
-		if (*p==',') {
+		c = d = (int)strtoimax(p, &p, 10);
+		if (*p == ',') {
 			p++;
-			d = number(&p);
+			d = (int)strtoimax(p, &p, 10);
 		}
 		if (kind == 'a')
 			a++;
@@ -210,8 +210,8 @@ readin(int fd, struct diff **dd)
 		(*dd)[i].new.to = d;
 	}
 	if (i) {
-		(*dd)[i].old.from = (*dd)[i-1].old.to;
-		(*dd)[i].new.from = (*dd)[i-1].new.to;
+		(*dd)[i].old.from = (*dd)[i - 1].old.to;
+		(*dd)[i].new.from = (*dd)[i - 1].new.to;
 	}
 	fclose(f);
 	return (i);
@@ -220,9 +220,9 @@ readin(int fd, struct diff **dd)
 static int
 diffexec(const char *diffprog, char **diffargv, int fd[])
 {
-	int pid, pd;
+	int pd;
 
-	switch (pid = pdfork(&pd, PD_CLOEXEC)) {
+	switch (pdfork(&pd, PD_CLOEXEC)) {
 	case 0:
 		close(fd[0]);
 		if (dup2(fd[1], STDOUT_FILENO) == -1)
@@ -237,17 +237,6 @@ diffexec(const char *diffprog, char **diffargv, int fd[])
 	}
 	close(fd[1]);
 	return (pd);
-}
-
-static int
-number(char **lc)
-{
-	int nn;
-
-	nn = 0;
-	while (isdigit((unsigned char)(**lc)))
-		nn = nn*10 + *(*lc)++ - '0';
-	return (nn);
 }
 
 static char *
@@ -266,28 +255,22 @@ getchange(FILE *b)
 static char *
 get_line(FILE *b, size_t *n)
 {
-	char *cp;
-	size_t len;
-	static char *buf;
-	static size_t bufsize;
+	ssize_t len;
+	static char *buf = NULL;
+	static size_t bufsize = 0;
 
-	if ((cp = fgetln(b, &len)) == NULL)
+	if ((len = getline(&buf, &bufsize, b)) < 0)
 		return (NULL);
 
-	if (cp[len - 1] != '\n')
-		len++;
-	if (len + 1 > bufsize) {
-		do {
-			bufsize += 1024;
-		} while (len + 1 > bufsize);
-		if ((buf = realloc(buf, bufsize)) == NULL)
-			err(EXIT_FAILURE, NULL);
+	if (strip_cr && len >= 2 && strcmp("\r\n", &(buf[len - 2])) == 0) {
+		buf[len - 2] = '\n';
+		buf[len - 1] = '\0';
+		len--;
 	}
-	memcpy(buf, cp, len - 1);
-	buf[len - 1] = '\n';
-	buf[len] = '\0';
+
 	if (n != NULL)
 		*n = len;
+
 	return (buf);
 }
 
@@ -417,7 +400,7 @@ prange(struct range *rold)
 		printf("%da\n", rold->from - 1);
 	else {
 		printf("%d", rold->from);
-		if (rold->to > rold->from+1)
+		if (rold->to > rold->from + 1)
 			printf(",%d", rold->to - 1);
 		printf("c\n");
 	}
@@ -454,7 +437,7 @@ skip(int i, int from, const char *pr)
 		if ((line = get_line(fp[i], &j)) == NULL)
 			errx(EXIT_FAILURE, "logic error");
 		if (pr != NULL)
-			printf("%s%s", Tflag == 1? "\t" : pr, line);
+			printf("%s%s", Tflag == 1 ? "\t" : pr, line);
 		cline[i]++;
 	}
 	return ((int) n);
@@ -476,11 +459,13 @@ duplicate(struct range *r1, struct range *r2)
 	skip(0, r1->from, NULL);
 	skip(1, r2->from, NULL);
 	nchar = 0;
-	for (nline=0; nline < r1->to - r1->from; nline++) {
+	for (nline = 0; nline < r1->to - r1->from; nline++) {
 		do {
 			c = getc(fp[0]);
 			d = getc(fp[1]);
-			if (c == -1 || d== -1)
+			if (c == -1 && d == -1)
+				break;
+			if (c == -1 || d == -1)
 				errx(EXIT_FAILURE, "logic error");
 			nchar++;
 			if (c != d) {
@@ -501,6 +486,7 @@ repos(int nchar)
 	for (i = 0; i < 2; i++)
 		(void)fseek(fp[i], (long)-nchar, SEEK_CUR);
 }
+
 /*
  * collect an editing script for later regurgitation
  */
@@ -533,7 +519,7 @@ edscript(int n)
 		if (!oflag || !overlap[n]) {
 			prange(&de[n].old);
 		} else {
-			printf("%da\n", de[n].old.to -1);
+			printf("%da\n", de[n].old.to - 1);
 			if (Aflag) {
 				printf("%s\n", f2mark);
 				fseek(fp[1], de[n].old.from, SEEK_SET);
@@ -548,11 +534,19 @@ edscript(int n)
 			printf("=======\n");
 		}
 		fseek(fp[2], (long)de[n].new.from, SEEK_SET);
-		for (k = de[n].new.to - de[n].new.from; k > 0; k-= j) {
+		for (k = de[n].new.to - de[n].new.from; k > 0; k -= j) {
+			size_t r;
+
 			j = k > BUFSIZ ? BUFSIZ : k;
-			if (fread(block, 1, j, fp[2]) != j)
+			r = fread(block, 1, j, fp[2]);
+			if (r == 0) {
+				if (feof(fp[2]))
+					break;
 				errx(2, "logic error");
-			fwrite(block, 1, j, stdout);
+			}
+			if (r != j)
+				j = r;
+			(void)fwrite(block, 1, j, stdout);
 		}
 		if (!oflag || !overlap[n])
 			printf(".\n");
@@ -578,22 +572,22 @@ increase(void)
 	newsz = szchanges == 0 ? 64 : 2 * szchanges;
 	incr = newsz - szchanges;
 
-	p = realloc(d13, newsz * sizeof(struct diff));
+	p = reallocarray(d13, newsz, sizeof(struct diff));
 	if (p == NULL)
 		err(1, NULL);
 	memset(p + szchanges, 0, incr * sizeof(struct diff));
 	d13 = p;
-	p = realloc(d23, newsz * sizeof(struct diff));
+	p = reallocarray(d23, newsz, sizeof(struct diff));
 	if (p == NULL)
 		err(1, NULL);
 	memset(p + szchanges, 0, incr * sizeof(struct diff));
 	d23 = p;
-	p = realloc(de, newsz * sizeof(struct diff));
+	p = reallocarray(de, newsz, sizeof(struct diff));
 	if (p == NULL)
 		err(1, NULL);
 	memset(p + szchanges, 0, incr * sizeof(struct diff));
 	de = p;
-	q = realloc(overlap, newsz * sizeof(char));
+	q = reallocarray(overlap, newsz, sizeof(char));
 	if (q == NULL)
 		err(1, NULL);
 	memset(q + szchanges, 0, incr * sizeof(char));
@@ -609,7 +603,7 @@ main(int argc, char **argv)
 	char *labels[] = { NULL, NULL, NULL };
 	const char *diffprog = DIFF_PATH;
 	char *file1, *file2, *file3;
-	char *diffargv[6];
+	char *diffargv[7];
 	int diffargc = 0;
 	int fd13[2], fd23[2];
 	int pd13, pd23;
@@ -667,6 +661,7 @@ main(int argc, char **argv)
 			break;
 		case STRIPCR_OPT:
 			strip_cr = 1;
+			diffargv[diffargc++] = __DECONST(char *, "--strip-trailing-cr");
 			break;
 		}
 	}
@@ -771,7 +766,7 @@ main(int argc, char **argv)
 		for (i = 0; i < nke; i++) {
 			status = e[i].data;
 			if (WIFEXITED(status) && WEXITSTATUS(status) >= 2)
-				errx(2, "diff exited abormally");
+				errx(2, "diff exited abnormally");
 			else if (WIFSIGNALED(status))
 				errx(2, "diff killed by signal %d",
 				    WTERMSIG(status));

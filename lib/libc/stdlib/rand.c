@@ -35,17 +35,64 @@
 static char sccsid[] = "@(#)rand.c	8.1 (Berkeley) 6/14/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-
 #include "namespace.h"
 #include <sys/param.h>
 #include <sys/sysctl.h>
+#include <assert.h>
+#include <pthread.h>
+#include <stdbool.h>
 #include <stdlib.h>
+#include <syslog.h>
 #include "un-namespace.h"
 
-#ifdef TEST
-#include <stdio.h>
-#endif /* TEST */
+#include "libc_private.h"
+#include "random.h"
 
+/*
+ * Implement rand(3), the standard C PRNG API, using the non-standard but
+ * higher quality random(3) implementation and the same size 128-byte state
+ * LFSR as the random(3) default.
+ *
+ * It turns out there are portable applications that want a PRNG but are too
+ * lazy to use better-but-nonstandard interfaces like random(3), when
+ * available, and too lazy to import higher-quality and faster PRNGs into their
+ * codebase (such as any of SFC, JSF, 128-bit LCGs, PCG, or Splitmix64).
+ *
+ * Since we're stuck with rand(3) due to the C standard, we can at least have
+ * it produce a relatively good PRNG sequence using our existing random(3)
+ * LFSR.  The random(3) design is not particularly fast nor compact, but it has
+ * the advantage of being the one already in the tree.
+ */
+static struct __random_state *rand3_state;
+static pthread_once_t rand3_state_once = PTHREAD_ONCE_INIT;
+
+static void
+initialize_rand3(void)
+{
+	int error;
+
+	rand3_state = allocatestate(TYPE_3);
+	error = initstate_r(rand3_state, 1, rand3_state->rst_randtbl, BREAK_3);
+	assert(error == 0);
+}
+
+int
+rand(void)
+{
+	_once(&rand3_state_once, initialize_rand3);
+	return ((int)random_r(rand3_state));
+}
+
+void
+srand(unsigned seed)
+{
+	_once(&rand3_state_once, initialize_rand3);
+	srandom_r(rand3_state, seed);
+}
+
+/*
+ * FreeBSD 12 and prior compatibility implementation of rand(3).
+ */
 static int
 do_rand(unsigned long *ctx)
 {
@@ -72,7 +119,9 @@ do_rand(unsigned long *ctx)
 	return (x);
 }
 
-
+/*
+ * Can't fix this garbage; too little state.
+ */
 int
 rand_r(unsigned *ctx)
 {
@@ -85,68 +134,33 @@ rand_r(unsigned *ctx)
 	return (r);
 }
 
-
 static u_long next = 1;
 
+int __rand_fbsd12(void);
 int
-rand(void)
+__rand_fbsd12(void)
 {
 	return (do_rand(&next));
 }
+__sym_compat(rand, __rand_fbsd12, FBSD_1.0);
 
+void __srand_fbsd12(unsigned seed);
 void
-srand(unsigned seed)
+__srand_fbsd12(unsigned seed)
 {
 	next = seed;
 }
+__sym_compat(srand, __srand_fbsd12, FBSD_1.0);
 
-
-/*
- * sranddev:
- *
- * Many programs choose the seed value in a totally predictable manner.
- * This often causes problems.  We seed the generator using pseudo-random
- * data from the kernel.
- */
+void __sranddev_fbsd12(void);
 void
-sranddev(void)
+__sranddev_fbsd12(void)
 {
-	int mib[2];
-	size_t len;
+	static bool warned = false;
 
-	len = sizeof(next);
-
-	mib[0] = CTL_KERN;
-	mib[1] = KERN_ARND;
-	sysctl(mib, 2, (void *)&next, &len, NULL, 0);
+	if (!warned) {
+		syslog(LOG_DEBUG, "Deprecated function sranddev() called");
+		warned = true;
+	}
 }
-
-
-#ifdef TEST
-
-main()
-{
-    int i;
-    unsigned myseed;
-
-    printf("seeding rand with 0x19610910: \n");
-    srand(0x19610910);
-
-    printf("generating three pseudo-random numbers:\n");
-    for (i = 0; i < 3; i++)
-    {
-	printf("next random number = %d\n", rand());
-    }
-
-    printf("generating the same sequence with rand_r:\n");
-    myseed = 0x19610910;
-    for (i = 0; i < 3; i++)
-    {
-	printf("next random number = %d\n", rand_r(&myseed));
-    }
-
-    return 0;
-}
-
-#endif /* TEST */
-
+__sym_compat(sranddev, __sranddev_fbsd12, FBSD_1.0);

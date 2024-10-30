@@ -29,7 +29,6 @@
  */
 
 #include <machine/asm.h>
-
 ENTRY(ldiv)
         movl    4(%esp),%eax
         movl    8(%esp),%ecx

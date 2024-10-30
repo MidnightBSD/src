@@ -1,4 +1,4 @@
-Set to strip debug info into a separate file for each executable binary
+Strip debug info into a separate file for each executable binary
 and shared library.
 The debug files will be placed in a subdirectory of
 .Pa /usr/lib/debug

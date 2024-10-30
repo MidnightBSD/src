@@ -1,6 +1,5 @@
 /*-
  * Test 0090:	Divide by 0 (BPF_ALU+BPF_DIV+BPF_K)
- *
  */
 
 /* BPF program */

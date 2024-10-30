@@ -31,7 +31,6 @@
 
 #include <sys/cdefs.h>
 __SCCSID("@(#)exec.c	8.1 (Berkeley) 6/4/93");
-
 #include "namespace.h"
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -45,8 +44,6 @@ __SCCSID("@(#)exec.c	8.1 (Berkeley) 6/4/93");
 #include <stdarg.h>
 #include "un-namespace.h"
 #include "libc_private.h"
-
-extern char **environ;
 
 static const char execvPe_err_preamble[] = "execvP: ";
 static const char execvPe_err_trailer[] = ": path too long\n";

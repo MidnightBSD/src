@@ -28,13 +28,15 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <stand.h>
 
 #include <sys/disk.h>
 #include <sys/param.h>
 #include <sys/reboot.h>
 #include <sys/boot.h>
+#ifdef EFI_ZFS_BOOT
+#include <sys/zfs_bootenv.h>
+#endif
 #include <paths.h>
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
@@ -48,6 +50,7 @@
 #include <efi.h>
 #include <efilib.h>
 #include <efichar.h>
+#include <efirng.h>
 
 #include <uuid.h>
 
@@ -55,6 +58,7 @@
 #include <smbios.h>
 
 #include "efizfs.h"
+#include "framebuffer.h"
 
 #include "loader_efi.h"
 
@@ -180,28 +184,11 @@ out:
 }
 
 static void
-set_currdev(const char *devname)
-{
-
-	/*
-	 * Don't execute hooks here; we may need to try setting these more than
-	 * once here if we're probing for the ZFS pool we're supposed to boot.
-	 * The currdev hook is intended to just validate user input anyways,
-	 * while the loaddev hook makes it immutable once we've determined what
-	 * the proper currdev is.
-	 */
-	env_setenv("currdev", EV_VOLATILE | EV_NOHOOK, devname, efi_setcurrdev,
-	    env_nounset);
-	env_setenv("loaddev", EV_VOLATILE | EV_NOHOOK, devname, env_noset,
-	    env_nounset);
-}
-
-static void
 set_currdev_devdesc(struct devdesc *currdev)
 {
 	const char *devname;
 
-	devname = efi_fmtdev(currdev);
+	devname = devformat(currdev);
 	printf("Setting currdev to %s\n", devname);
 	set_currdev(devname);
 }
@@ -264,28 +251,31 @@ probe_zfs_currdev(uint64_t guid)
 	char *devname;
 	struct zfs_devdesc currdev;
 	char *buf = NULL;
-	bool rv;
+	bool bootable;
 
 	currdev.dd.d_dev = &zfs_dev;
 	currdev.dd.d_unit = 0;
 	currdev.pool_guid = guid;
 	currdev.root_guid = 0;
 	set_currdev_devdesc((struct devdesc *)&currdev);
-	devname = efi_fmtdev(&currdev);
-	init_zfs_bootenv(devname);
+	devname = devformat(&currdev.dd);
+	init_zfs_boot_options(devname);
 
-	rv = sanity_check_currdev();
-	if (rv) {
+	bootable = sanity_check_currdev();
+	if (bootable) {
 		buf = malloc(VDEV_PAD_SIZE);
 		if (buf != NULL) {
-			if (zfs_nextboot(&currdev, buf, VDEV_PAD_SIZE) == 0) {
-				printf("zfs nextboot: %s\n", buf);
+			if (zfs_get_bootonce(&currdev, OS_BOOTONCE, buf,
+			    VDEV_PAD_SIZE) == 0) {
+				printf("zfs bootonce: %s\n", buf);
 				set_currdev(buf);
+				setenv("zfs-bootonce", buf, 1);
 			}
 			free(buf);
+			(void) zfs_attach_nvstore(&currdev);
 		}
 	}
-	return (rv);
+	return (bootable);
 }
 #endif
 
@@ -696,8 +686,7 @@ interactive_interrupt(const char *msg)
 static int
 parse_args(int argc, CHAR16 *argv[])
 {
-	int i, j, howto;
-	bool vargood;
+	int i, howto;
 	char var[128];
 
 	/*
@@ -714,7 +703,7 @@ parse_args(int argc, CHAR16 *argv[])
 	 * method is flawed for non-ASCII characters).
 	 */
 	howto = 0;
-	for (i = 1; i < argc; i++) {
+	for (i = 0; i < argc; i++) {
 		cpy16to8(argv[i], var, sizeof(var));
 		howto |= boot_parse_arg(var);
 	}
@@ -735,9 +724,12 @@ setenv_int(const char *key, int val)
  * Parse ConOut (the list of consoles active) and see if we can find a
  * serial port and/or a video port. It would be nice to also walk the
  * ACPI name space to map the UID for the serial port to a port. The
- * latter is especially hard.
+ * latter is especially hard. Also check for ConIn as well. This will
+ * be enough to determine if we have serial, and if we don't, we default
+ * to video. If there's a dual-console situation with ConIn, this will
+ * currently fail.
  */
-static int
+int
 parse_uefi_con_out(void)
 {
 	int how, rv;
@@ -752,9 +744,25 @@ parse_uefi_con_out(void)
 	how = 0;
 	sz = sizeof(buf);
 	rv = efi_global_getenv("ConOut", buf, &sz);
+	if (rv != EFI_SUCCESS)
+		rv = efi_global_getenv("ConOutDev", buf, &sz);
+	if (rv != EFI_SUCCESS)
+		rv = efi_global_getenv("ConIn", buf, &sz);
 	if (rv != EFI_SUCCESS) {
-		/* If we don't have any ConOut default to serial */
-		how = RB_SERIAL;
+		/*
+		 * If we don't have any ConOut default to both. If we have GOP
+		 * make video primary, otherwise just make serial primary. In
+		 * either case, try to use both the 'efi' console which will use
+		 * the GOP, if present and serial. If there's an EFI BIOS that
+		 * omits this, but has a serial port redirect, we'll
+		 * unavioidably get doubled characters (but we'll be right in
+		 * all the other more common cases).
+		 */
+		if (efi_has_gop())
+			how = RB_MULTIPLE;
+		else
+			how = RB_MULTIPLE | RB_SERIAL;
+		setenv("console", "efi,comconsole", 1);
 		goto out;
 	}
 	ep = buf + sz;
@@ -766,7 +774,8 @@ parse_uefi_con_out(void)
 		}
 		pci_pending = false;
 		if (DevicePathType(node) == ACPI_DEVICE_PATH &&
-		    DevicePathSubType(node) == ACPI_DP) {
+		    (DevicePathSubType(node) == ACPI_DP ||
+		    DevicePathSubType(node) == ACPI_EXTENDED_DP)) {
 			/* Check for Serial node */
 			acpi = (void *)node;
 			if (EISA_ID_TO_NUM(acpi->HID) == 0x501) {
@@ -775,7 +784,7 @@ parse_uefi_con_out(void)
 			}
 		} else if (DevicePathType(node) == MESSAGING_DEVICE_PATH &&
 		    DevicePathSubType(node) == MSG_UART_DP) {
-
+			com_seen = ++seen;
 			uart = (void *)node;
 			setenv_int("efi_com_speed", uart->BaudRate);
 		} else if (DevicePathType(node) == ACPI_DEVICE_PATH &&
@@ -939,7 +948,18 @@ main(int argc, CHAR16 *argv[])
 	 * changes to take effect, regardless of where they come from.
 	 */
 	setenv("console", "efi", 1);
+	uhowto = parse_uefi_con_out();
+#if defined(__riscv)
+	/*
+	 * This workaround likely is papering over a real issue
+	 */
+	if ((uhowto & RB_SERIAL) != 0)
+		setenv("console", "comconsole", 1);
+#endif
 	cons_probe();
+
+	/* Set up currdev variable to have hooks in place. */
+	env_setenv("currdev", EV_VOLATILE, "", gen_setcurrdev, env_nounset);
 
 	/* Init the time source */
 	efi_time_init();
@@ -959,9 +979,7 @@ main(int argc, CHAR16 *argv[])
 		    "failures\n", i);
 	}
 
-	for (i = 0; devsw[i] != NULL; i++)
-		if (devsw[i]->dv_init != NULL)
-			(devsw[i]->dv_init)();
+	devinit();
 
 	/*
 	 * Detect console settings two different ways: one via the command
@@ -972,7 +990,6 @@ main(int argc, CHAR16 *argv[])
 	if (!has_kbd && (howto & RB_PROBE))
 		howto |= RB_SERIAL | RB_MULTIPLE;
 	howto &= ~RB_PROBE;
-	uhowto = parse_uefi_con_out();
 
 	/*
 	 * Read additional environment variables from the boot device's
@@ -1069,7 +1086,8 @@ main(int argc, CHAR16 *argv[])
 		efi_free_devpath_name(text);
 	}
 
-	rv = OpenProtocolByHandle(boot_img->DeviceHandle, &devid, (void **)&imgpath);
+	rv = OpenProtocolByHandle(boot_img->DeviceHandle, &devid,
+	    (void **)&imgpath);
 	if (rv == EFI_SUCCESS) {
 		text = efi_devpath_name(imgpath);
 		if (text != NULL) {
@@ -1166,6 +1184,7 @@ main(int argc, CHAR16 *argv[])
 		    !interactive_interrupt("Failed to find bootable partition"))
 			return (EFI_NOT_FOUND);
 
+	autoload_font(false);	/* Set up the font list for console. */
 	efi_init_environment();
 
 #if !defined(__arm__)
@@ -1186,6 +1205,47 @@ main(int argc, CHAR16 *argv[])
 	interact();			/* doesn't return */
 
 	return (EFI_SUCCESS);		/* keep compiler happy */
+}
+
+COMMAND_SET(efi_seed_entropy, "efi-seed-entropy", "try to get entropy from the EFI RNG", command_seed_entropy);
+
+static int
+command_seed_entropy(int argc, char *argv[])
+{
+	EFI_STATUS status;
+	EFI_RNG_PROTOCOL *rng;
+	unsigned int size = 2048;
+	void *buf;
+
+	if (argc > 1) {
+		size = strtol(argv[1], NULL, 0);
+	}
+
+	status = BS->LocateProtocol(&rng_guid, NULL, (VOID **)&rng);
+	if (status != EFI_SUCCESS) {
+		command_errmsg = "RNG protocol not found";
+		return (CMD_ERROR);
+	}
+
+	if ((buf = malloc(size)) == NULL) {
+		command_errmsg = "out of memory";
+		return (CMD_ERROR);
+	}
+
+	status = rng->GetRNG(rng, NULL, size, (UINT8 *)buf);
+	if (status != EFI_SUCCESS) {
+		free(buf);
+		command_errmsg = "GetRNG failed";
+		return (CMD_ERROR);
+	}
+
+	if (file_addbuf("efi_rng_seed", "boot_entropy_platform", size, buf) != 0) {
+		free(buf);
+		return (CMD_ERROR);
+	}
+
+	free(buf);
+	return (CMD_OK);
 }
 
 COMMAND_SET(poweroff, "poweroff", "power off the system", command_poweroff);
@@ -1220,15 +1280,6 @@ command_reboot(int argc, char *argv[])
 
 	/* NOTREACHED */
 	return (CMD_ERROR);
-}
-
-COMMAND_SET(quit, "quit", "exit the loader", command_quit);
-
-static int
-command_quit(int argc, char *argv[])
-{
-	exit(0);
-	return (CMD_OK);
 }
 
 COMMAND_SET(memmap, "memmap", "print memory map", command_memmap);
@@ -1344,10 +1395,8 @@ command_mode(int argc, char *argv[])
 	unsigned int mode;
 	int i;
 	char *cp;
-	char rowenv[8];
 	EFI_STATUS status;
 	SIMPLE_TEXT_OUTPUT_INTERFACE *conout;
-	extern void HO(void);
 
 	conout = ST->ConOut;
 
@@ -1367,9 +1416,7 @@ command_mode(int argc, char *argv[])
 			printf("couldn't set mode %d\n", mode);
 			return (CMD_ERROR);
 		}
-		sprintf(rowenv, "%u", (unsigned)rows);
-		setenv("LINES", rowenv, 1);
-		HO();		/* set cursor */
+		(void) cons_update_mode(true);
 		return (CMD_OK);
 	}
 
@@ -1389,6 +1436,30 @@ command_mode(int argc, char *argv[])
 }
 
 COMMAND_SET(lsefi, "lsefi", "list EFI handles", command_lsefi);
+
+static void
+lsefi_print_handle_info(EFI_HANDLE handle)
+{
+	EFI_DEVICE_PATH *devpath;
+	EFI_DEVICE_PATH *imagepath;
+	CHAR16 *dp_name;
+
+	imagepath = efi_lookup_image_devpath(handle);
+	if (imagepath != NULL) {
+		dp_name = efi_devpath_name(imagepath);
+		printf("Handle for image %S", dp_name);
+		efi_free_devpath_name(dp_name);
+		return;
+	}
+	devpath = efi_lookup_devpath(handle);
+	if (devpath != NULL) {
+		dp_name = efi_devpath_name(devpath);
+		printf("Handle for device %S", dp_name);
+		efi_free_devpath_name(dp_name);
+		return;
+	}
+	printf("Handle %p", handle);
+}
 
 static int
 command_lsefi(int argc __unused, char *argv[] __unused)
@@ -1425,7 +1496,7 @@ command_lsefi(int argc __unused, char *argv[] __unused)
 		EFI_GUID **protocols = NULL;
 
 		handle = buffer[i];
-		printf("Handle %p", handle);
+		lsefi_print_handle_info(handle);
 		if (pager_output("\n"))
 			break;
 		/* device path */

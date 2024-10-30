@@ -1,5 +1,3 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/tools/tools/drm/radeon/mkregtable/Makefile 276486 2014-12-31 23:25:37Z ngie $
 
 all: regtables
 

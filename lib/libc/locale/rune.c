@@ -38,7 +38,6 @@
 static char sccsid[] = "@(#)rune.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-
 #include "namespace.h"
 #include <arpa/inet.h>
 #include <errno.h>
@@ -73,7 +72,7 @@ _Read_RuneMagi(const char *fname)
 	int runetype_ext_len = 0;
 	int fd;
 
-	if ((fd = _open(fname, O_RDONLY)) < 0) {
+	if ((fd = _open(fname, O_RDONLY | O_CLOEXEC)) < 0) {
 		errno = EINVAL;
 		return (NULL);
 	}

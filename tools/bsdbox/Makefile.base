@@ -13,12 +13,13 @@ CRUNCH_ALIAS_tset=	reset
 
 CRUNCH_PROGS_usr.bin+=	vmstat
 #CRUNCH_PROGS_user.bin+=	systat
-CRUNCH_LIBS+=		-ldevstat -lncursesw -lncurses -lmemstat -lkvm -lelf
+CRUNCH_LIBS+=		-ldevstat -lncursesw -lmemstat -lkvm -lelf
 
 # CRUNCH_PROGS_usr.bin+=	tar
 CRUNCH_PROGS_usr.bin+=	cpio
 # XXX SSL ?
 CRUNCH_LIBS+=		-larchive -lbz2 -lz -llzma -lbsdxml -lssl -lcrypto
+CRUNCH_LIBS+=		-lprivatezstd -lthr
 
 # Clear requires tput, and it's a shell script so it won't be crunched
 CRUNCH_PROGS_usr.bin+=	tput

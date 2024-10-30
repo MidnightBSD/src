@@ -1,6 +1,5 @@
 /*-
  * Test 0001:	Catch illegal instruction.
- *
  */
 
 /* BPF program */

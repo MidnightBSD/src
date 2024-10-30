@@ -25,7 +25,6 @@
  * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGES.
- *
  */
 
 /*
@@ -83,7 +82,6 @@ static struct wds *wds;
 static	const char *script = NULL;
 static	char **ifnets;
 static	int nifnets = 0;
-static	int verbose = 0;
 static	int discover_on_join = 0;
 
 static	void scanforvaps(int s);
@@ -374,6 +372,8 @@ static void
 handle_rtmsg(struct rt_msghdr *rtm, ssize_t msglen)
 {
 	struct if_announcemsghdr *ifan;
+
+	(void) msglen; /* UNUSED */
 
 	if (rtm->rtm_version != RTM_VERSION) {
 		syslog(LOG_ERR, "routing message version %d not understood",

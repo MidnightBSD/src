@@ -12,7 +12,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "rand48.h"
 
 double

@@ -32,8 +32,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD$
  */
 
 #ifndef __SYS_LIBNETBOOT_IODESC_H
@@ -47,6 +45,8 @@ struct iodesc {
 	u_long	xid;			/* transaction identification */
 	u_char	myea[6];		/* my ethernet address */
 	struct netif *io_netif;
+	int io_id;			/* descriptor id */
+	TAILQ_ENTRY(iodesc) io_link;	/* next entry in list */
 };
 
 #endif /* __SYS_LIBNETBOOT_IODESC_H */

@@ -35,8 +35,8 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "ipoib.h"
+#include <sys/eventhandler.h>
 
 #include <linux/module.h>
 
@@ -48,6 +48,7 @@
 
 #include <net/infiniband.h>
 
+#include <rdma/ib_addr.h>
 #include <rdma/ib_cache.h>
 
 MODULE_AUTHOR("Roland Dreier");
@@ -86,7 +87,7 @@ struct ib_sa_client ipoib_sa_client;
 
 static void ipoib_add_one(struct ib_device *device);
 static void ipoib_remove_one(struct ib_device *device, void *client_data);
-static struct net_device *ipoib_get_net_dev_by_params(
+static struct ifnet *ipoib_get_net_dev_by_params(
 		struct ib_device *dev, u8 port, u16 pkey,
 		const union ib_gid *gid, const struct sockaddr *addr,
 		void *client_data);
@@ -275,7 +276,13 @@ ipoib_ioctl(struct ifnet *ifp, u_long command, caddr_t data)
 	int error = 0;
 
 	/* check if detaching */
-	if (priv == NULL || priv->gone != 0)
+	if (priv == NULL)
+		return (ENXIO);
+	/* wait for device to become ready, if any */
+	while (priv->gone == 2)
+		pause("W", 1);
+	/* check for device gone */
+	if (priv->gone != 0)
 		return (ENXIO);
 
 	switch (command) {
@@ -506,6 +513,7 @@ path_rec_completion(int status, struct ib_sa_path_rec *pathrec, void *path_ptr)
 	struct ifnet *dev = priv->dev;
 	struct ipoib_ah *ah = NULL;
 	struct ipoib_ah *old_ah = NULL;
+	struct epoch_tracker et;
 	struct ifqueue mbqueue;
 	struct mbuf *mb;
 	unsigned long flags;
@@ -560,6 +568,7 @@ path_rec_completion(int status, struct ib_sa_path_rec *pathrec, void *path_ptr)
 	if (old_ah)
 		ipoib_put_ah(old_ah);
 
+	NET_EPOCH_ENTER(et);
 	for (;;) {
 		_IF_DEQUEUE(&mbqueue, mb);
 		if (mb == NULL)
@@ -569,6 +578,7 @@ path_rec_completion(int status, struct ib_sa_path_rec *pathrec, void *path_ptr)
 			ipoib_warn(priv, "dev_queue_xmit failed "
 				   "to requeue packet\n");
 	}
+	NET_EPOCH_EXIT(et);
 }
 
 static struct ipoib_path *
@@ -816,7 +826,7 @@ out:
 }
 
 static void
-ipoib_detach(struct ipoib_dev_priv *priv)
+ipoib_ifdetach(struct ipoib_dev_priv *priv)
 {
 	struct ifnet *dev;
 
@@ -824,6 +834,16 @@ ipoib_detach(struct ipoib_dev_priv *priv)
 	if (!test_bit(IPOIB_FLAG_SUBINTERFACE, &priv->flags)) {
 		priv->gone = 1;
 		infiniband_ifdetach(dev);
+	}
+}
+
+static void
+ipoib_detach(struct ipoib_dev_priv *priv)
+{
+	struct ifnet *dev;
+
+	dev = priv->dev;
+	if (!test_bit(IPOIB_FLAG_SUBINTERFACE, &priv->flags)) {
 		if_free(dev);
 		free_unr(ipoib_unrhdr, priv->unit);
 	} else
@@ -839,6 +859,7 @@ ipoib_dev_cleanup(struct ipoib_dev_priv *priv)
 
 	/* Delete any child interfaces first */
 	list_for_each_entry_safe(cpriv, tcpriv, &priv->child_intfs, list) {
+		ipoib_ifdetach(cpriv);
 		ipoib_dev_cleanup(cpriv);
 		ipoib_detach(cpriv);
 	}
@@ -879,18 +900,15 @@ ipoib_priv_alloc(void)
 }
 
 struct ipoib_dev_priv *
-ipoib_intf_alloc(const char *name)
+ipoib_intf_alloc(const char *name, struct ib_device *hca)
 {
 	struct ipoib_dev_priv *priv;
 	struct ifnet *dev;
 
 	priv = ipoib_priv_alloc();
 	dev = priv->dev = if_alloc(IFT_INFINIBAND);
-	if (!dev) {
-		free(priv, M_TEMP);
-		return NULL;
-	}
 	dev->if_softc = priv;
+	priv->gone = 2; /* initializing */
 	priv->unit = alloc_unr(ipoib_unrhdr);
 	if (priv->unit == -1) {
 		if_free(dev);
@@ -899,8 +917,10 @@ ipoib_intf_alloc(const char *name)
 	}
 	if_initname(dev, name, priv->unit);
 	dev->if_flags = IFF_BROADCAST | IFF_MULTICAST;
+	if (hca->attrs.device_cap_flags & IB_DEVICE_KNOWSEPOCH)
+		dev->if_flags |= IFF_KNOWSEPOCH;
 
-	infiniband_ifattach(dev, NULL, priv->broadcastaddr);
+	infiniband_ifattach(priv->dev, NULL, priv->broadcastaddr);
 
 	dev->if_init = ipoib_init;
 	dev->if_ioctl = ipoib_ioctl;
@@ -909,7 +929,7 @@ ipoib_intf_alloc(const char *name)
 	dev->if_snd.ifq_maxlen = ipoib_sendq_size * 2;
 
 	priv->dev = dev;
-	if_link_state_change(dev, LINK_STATE_DOWN);
+	if_link_state_change(priv->dev, LINK_STATE_DOWN);
 
 	return dev->if_softc;
 }
@@ -953,7 +973,7 @@ ipoib_add_port(const char *format, struct ib_device *hca, u8 port)
 	struct ib_port_attr attr;
 	int result = -ENOMEM;
 
-	priv = ipoib_intf_alloc(format);
+	priv = ipoib_intf_alloc(format, hca);
 	if (!priv)
 		goto alloc_mem_failed;
 
@@ -994,7 +1014,7 @@ ipoib_add_port(const char *format, struct ib_device *hca, u8 port)
 		       hca->name, port, result);
 		goto device_init_failed;
 	}
-	memcpy(IF_LLADDR(priv->dev) + 4, priv->local_gid.raw, sizeof (union ib_gid));
+	memcpy(IF_LLADDR(priv->dev) + 4, priv->local_gid.raw, sizeof(union ib_gid));
 
 	result = ipoib_dev_init(priv, hca, port);
 	if (result < 0) {
@@ -1016,12 +1036,15 @@ ipoib_add_port(const char *format, struct ib_device *hca, u8 port)
 	}
 	if_printf(priv->dev, "Attached to %s port %d\n", hca->name, port);
 
+	priv->gone = 0;	/* ready */
+
 	return priv->dev;
 
 event_failed:
 	ipoib_dev_cleanup(priv);
 
 device_init_failed:
+	ipoib_ifdetach(priv);
 	ipoib_detach(priv);
 
 alloc_mem_failed:
@@ -1082,11 +1105,10 @@ ipoib_remove_one(struct ib_device *device, void *client_data)
 		if (rdma_port_get_link_layer(device, priv->port) != IB_LINK_LAYER_INFINIBAND)
 			continue;
 
+		ipoib_ifdetach(priv);
 		ipoib_stop(priv);
 
 		ib_unregister_event_handler(&priv->event_handler);
-
-		/* dev_change_flags(priv->dev, priv->dev->flags & ~IFF_UP); */
 
 		flush_workqueue(ipoib_workqueue);
 
@@ -1098,12 +1120,13 @@ ipoib_remove_one(struct ib_device *device, void *client_data)
 }
 
 static int
-ipoib_match_dev_addr(const struct sockaddr *addr, struct net_device *dev)
+ipoib_match_dev_addr(const struct sockaddr *addr, struct ifnet *dev)
 {
+	struct epoch_tracker et;
 	struct ifaddr *ifa;
 	int retval = 0;
 
-	IF_ADDR_RLOCK(dev);
+	NET_EPOCH_ENTER(et);
 	CK_STAILQ_FOREACH(ifa, &dev->if_addrhead, ifa_link) {
 		if (ifa->ifa_addr == NULL ||
 		    ifa->ifa_addr->sa_family != addr->sa_family ||
@@ -1115,7 +1138,7 @@ ipoib_match_dev_addr(const struct sockaddr *addr, struct net_device *dev)
 			break;
 		}
 	}
-	IF_ADDR_RUNLOCK(dev);
+	NET_EPOCH_EXIT(et);
 
 	return (retval);
 }
@@ -1131,7 +1154,7 @@ ipoib_match_dev_addr(const struct sockaddr *addr, struct net_device *dev)
 static int
 ipoib_match_gid_pkey_addr(struct ipoib_dev_priv *priv,
     const union ib_gid *gid, u16 pkey_index, const struct sockaddr *addr,
-    struct net_device **found_net_dev)
+    struct ifnet **found_net_dev)
 {
 	struct ipoib_dev_priv *child_priv;
 	int matches = 0;
@@ -1140,7 +1163,7 @@ ipoib_match_gid_pkey_addr(struct ipoib_dev_priv *priv,
 	    (!gid || !memcmp(gid, &priv->local_gid, sizeof(*gid)))) {
 		if (addr == NULL || ipoib_match_dev_addr(addr, priv->dev) != 0) {
 			if (*found_net_dev == NULL) {
-				struct net_device *net_dev;
+				struct ifnet *net_dev;
 
 				if (priv->parent != NULL)
 					net_dev = priv->parent;
@@ -1175,7 +1198,7 @@ ipoib_match_gid_pkey_addr(struct ipoib_dev_priv *priv,
 static int
 __ipoib_get_net_dev_by_params(struct list_head *dev_list, u8 port,
     u16 pkey_index, const union ib_gid *gid,
-    const struct sockaddr *addr, struct net_device **net_dev)
+    const struct sockaddr *addr, struct ifnet **net_dev)
 {
 	struct ipoib_dev_priv *priv;
 	int matches = 0;
@@ -1196,11 +1219,11 @@ __ipoib_get_net_dev_by_params(struct list_head *dev_list, u8 port,
 	return matches;
 }
 
-static struct net_device *
+static struct ifnet *
 ipoib_get_net_dev_by_params(struct ib_device *dev, u8 port, u16 pkey,
     const union ib_gid *gid, const struct sockaddr *addr, void *client_data)
 {
-	struct net_device *net_dev;
+	struct ifnet *net_dev;
 	struct list_head *dev_list = client_data;
 	u16 pkey_index;
 	int matches;
@@ -1250,13 +1273,16 @@ ipoib_config_vlan(void *arg, struct ifnet *ifp, u_int16_t vtag)
 {
 	struct ipoib_dev_priv *parent;
 	struct ipoib_dev_priv *priv;
+	struct epoch_tracker et;
 	struct ifnet *dev;
 	uint16_t pkey;
 	int error;
 
 	if (ifp->if_type != IFT_INFINIBAND)
 		return;
+	NET_EPOCH_ENTER(et);
 	dev = VLAN_DEVAT(ifp, vtag);
+	NET_EPOCH_EXIT(et);
 	if (dev == NULL)
 		return;
 	priv = NULL;
@@ -1318,13 +1344,16 @@ ipoib_unconfig_vlan(void *arg, struct ifnet *ifp, u_int16_t vtag)
 {
 	struct ipoib_dev_priv *parent;
 	struct ipoib_dev_priv *priv;
+	struct epoch_tracker et;
 	struct ifnet *dev;
 	uint16_t pkey;
 
 	if (ifp->if_type != IFT_INFINIBAND)
 		return;
 
+	NET_EPOCH_ENTER(et);
 	dev = VLAN_DEVAT(ifp, vtag);
+	NET_EPOCH_EXIT(et);
 	if (dev)
 		VLAN_SETCOOKIE(dev, NULL);
 	pkey = vtag | 0x8000;

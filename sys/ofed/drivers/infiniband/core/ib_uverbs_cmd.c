@@ -36,7 +36,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #define	LINUXKPI_PARAM_PREFIX ibcore_
 
 #include <linux/file.h>
@@ -364,6 +363,7 @@ ssize_t ib_uverbs_get_context(struct ib_uverbs_file *file,
 	ucontext->tgid = get_pid(task_pid_group_leader(current));
 	rcu_read_unlock();
 	ucontext->closing = 0;
+	ucontext->cleanup_retryable = false;
 
 #ifdef CONFIG_INFINIBAND_ON_DEMAND_PAGING
 	ucontext->umem_tree = RB_ROOT;
@@ -2531,7 +2531,8 @@ ssize_t ib_uverbs_post_send(struct ib_uverbs_file *file,
 	struct ib_uverbs_post_send      cmd;
 	struct ib_uverbs_post_send_resp resp;
 	struct ib_uverbs_send_wr       *user_wr;
-	struct ib_send_wr              *wr = NULL, *last, *next, *bad_wr;
+	struct ib_send_wr              *wr = NULL, *last, *next;
+	const struct ib_send_wr        *bad_wr;
 	struct ib_qp                   *qp;
 	int                             i, sg_ind;
 	int				is_ud;
@@ -2803,7 +2804,8 @@ ssize_t ib_uverbs_post_recv(struct ib_uverbs_file *file,
 {
 	struct ib_uverbs_post_recv      cmd;
 	struct ib_uverbs_post_recv_resp resp;
-	struct ib_recv_wr              *wr, *next, *bad_wr;
+	struct ib_recv_wr              *wr, *next;
+	const struct ib_recv_wr        *bad_wr;
 	struct ib_qp                   *qp;
 	ssize_t                         ret = -EINVAL;
 
@@ -2853,7 +2855,8 @@ ssize_t ib_uverbs_post_srq_recv(struct ib_uverbs_file *file,
 {
 	struct ib_uverbs_post_srq_recv      cmd;
 	struct ib_uverbs_post_srq_recv_resp resp;
-	struct ib_recv_wr                  *wr, *next, *bad_wr;
+	struct ib_recv_wr                  *wr, *next;
+	const struct ib_recv_wr		   *bad_wr;
 	struct ib_srq                      *srq;
 	ssize_t                             ret = -EINVAL;
 

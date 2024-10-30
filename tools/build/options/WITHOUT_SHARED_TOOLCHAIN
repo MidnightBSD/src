@@ -1,4 +1,4 @@
-Set to build the toolchain binaries as statically linked executables.
+Build the toolchain binaries as statically linked executables.
 The set includes
 .Xr cc 1 ,
 .Xr make 1

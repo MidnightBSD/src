@@ -27,8 +27,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\"
-.Dd June 13, 2020
+.Dd October 26, 2023
 .Dt PROCCTL 2
 .Os
 .Sh NAME
@@ -71,6 +70,14 @@ Control processes belonging to the process group with the ID
 The control request to perform is specified by the
 .Fa cmd
 argument.
+.Pp
+All status changing requests
+.Dv *_CTL
+require the caller to have the right to debug the target.
+All status query requests
+.DV *_STATUS
+require the caller to have the right to observe the target.
+.Pp
 The following commands are supported:
 .Bl -tag -width PROC_TRAPCAP_STATUS
 .It Dv PROC_ASLR_CTL
@@ -78,8 +85,8 @@ Controls the Address Space Layout Randomization (ASLR) in the program
 images created
 by
 .Xr execve 2
-in the specified process or its descendants that did not changed
-the control nor modified it by other means.
+in the specified process or its descendants that do not either change
+the control or modify it by other means.
 The
 .Fa data
 parameter must point to the integer variable holding one of the following
@@ -95,7 +102,7 @@ Same notes as for
 .Dv PROC_ASLR_FORCE_ENABLE
 apply.
 .It Dv PROC_ASLR_NOFORCE
-Use system-wide configured policy for ASLR.
+Use the system-wide configured policy for ASLR.
 .El
 .It Dv PROC_ASLR_STATUS
 Returns the current status of ASLR enablement for the target process.
@@ -112,6 +119,47 @@ following values is written:
 If the currently executed image in the process itself has ASLR enabled,
 the
 .Dv PROC_ASLR_ACTIVE
+flag is or-ed with the value listed above.
+.It Dv PROC_PROTMAX_CTL
+Controls implicit application of PROT_MAX protection equal to the
+.Fa prot
+argument of the
+.Xr mmap 2
+syscall, in the target process.
+The
+.Fa data
+parameter must point to the integer variable holding one of the following
+values:
+.Bl -tag -width PROC_PROTMAX_FORCE_DISABLE
+.It Dv PROC_PROTMAX_FORCE_ENABLE
+Enables implicit PROT_MAX application,
+even if it is disabled system-wide by the sysctl
+.Va vm.imply_prot_max .
+The image flag might still prevent the enablement.
+.It Dv PROC_PROTMAX_FORCE_DISABLE
+Request that implicit application of PROT_MAX be disabled.
+Same notes as for
+.Dv PROC_PROTMAX_FORCE_ENABLE
+apply.
+.It Dv PROC_PROTMAX_NOFORCE
+Use the system-wide configured policy for PROT_MAX.
+.El
+.It Dv PROC_PROTMAX_STATUS
+Returns the current status of implicit PROT_MAX enablement for the
+target process.
+The
+.Fa data
+parameter must point to the integer variable, where one of the
+following values is written:
+.Bl -tag -width PROC_PROTMAX_FORCE_DISABLE
+.It Dv PROC_PROTMAX_FORCE_ENABLE
+.It Dv PROC_PROTMAX_FORCE_DISABLE
+.It Dv PROC_PROTMAX_NOFORCE
+.El
+.Pp
+If the currently executed image in the process itself has implicit PROT_MAX
+application enabled, the
+.Dv PROC_PROTMAX_ACTIVE
 flag is or-ed with the value listed above.
 .It Dv PROC_SPROTECT
 Set process protection state.
@@ -252,7 +300,7 @@ of the process.
 The
 .Fa pi_flags
 field returns the following flags, further describing the descendant:
-.Bl -tag -width REAPER_PIDINFO_REAPER
+.Bl -tag -width REAPER_PIDINFO_EXITING
 .It Dv REAPER_PIDINFO_VALID
 Set to indicate that the
 .Vt procctl_reaper_pidinfo
@@ -270,6 +318,12 @@ field identifies the direct child of the reaper.
 .It Dv REAPER_PIDINFO_REAPER
 The reported process is itself a reaper.
 The descendants of the subordinate reaper are not reported.
+.It Dv REAPER_PIDINFO_ZOMBIE
+The reported process is in the zombie state, ready to be reaped.
+.It Dv REAPER_PIDINFO_STOPPED
+The reported process is stopped by a SIGSTOP/SIGTSTP signal.
+.It Dv REAPER_PIDINFO_EXITING
+The reported process is in the process of exiting (but not yet a zombie).
 .El
 .It Dv PROC_REAP_KILL
 Request to deliver a signal to some subset of the descendants of the reaper.
@@ -443,7 +497,7 @@ and
 must be the either caller's pid or zero, with no difference in effect.
 The value is cleared for child processes
 and when executing set-user-ID or set-group-ID binaries.
-.Fa arg
+.Fa data
 must point to a value of type
 .Vt int
 indicating the signal
@@ -458,7 +512,7 @@ must be
 and
 .Fa id
 must be the either caller's pid or zero, with no difference in effect.
-.Fa arg
+.Fa data
 must point to a memory location that can hold a value of type
 .Vt int .
 If signal delivery has not been requested, it will contain zero
@@ -524,6 +578,87 @@ Stack gaps are enabled in the process after
 Stack gaps are disabled in the process after
 .Xr execve 2 .
 .El
+.It Dv PROC_NO_NEW_PRIVS_CTL
+Allows one to ignore the SUID and SGID bits on the program
+images activated by
+.Xr execve 2
+in the specified process and its future descendants.
+The
+.Fa data
+parameter must point to the integer variable holding the following
+value:
+.Bl -tag -width PROC_NO_NEW_PRIVS_ENABLE
+.It Dv PROC_NO_NEW_PRIVS_ENABLE
+Request SUID and SGID bits to be ignored.
+.El
+.Pp
+It is not possible to disable it once it has been enabled.
+.It Dv PROC_NO_NEW_PRIVS_STATUS
+Returns the current status of SUID/SGID enablement for the target process.
+The
+.Fa data
+parameter must point to the integer variable, where one of the
+following values is written:
+.Bl -tag -width PROC_NO_NEW_PRIVS_DISABLE
+.It Dv PROC_NO_NEW_PRIVS_ENABLE
+.It Dv PROC_NO_NEW_PRIVS_DISABLE
+.El
+.It Dv PROC_WXMAP_CTL
+Controls the 'write exclusive against execution' permissions for the
+mappings in the process address space.
+It overrides the global settings established by the
+.Dv kern.elf{32/64}.allow_wx
+sysctl,
+and the corresponding bit in the ELF control note, see
+.Xr elfctl 1 .
+.Pp
+The
+.Fa data
+parameter must point to the integer variable holding one of the
+following values:
+.Bl -tag -width PROC_WX_MAPPINGS_DISALLOW_EXEC
+.It Dv PROC_WX_MAPPINGS_PERMIT
+Enable creation of mappings that have both write and execute
+protection attributes, in the specified process' address space.
+.It Dv PROC_WX_MAPPINGS_DISALLOW_EXEC
+In the new address space created by
+.Xr execve 2 ,
+disallow creation of mappings that have both write and execute
+permissions.
+.El
+.Pp
+Once creation of writeable and executable mappings is allowed,
+it is impossible (and pointless) to disallow it.
+The only way to ensure the absence of such mappings after they
+were enabled in a given process, is to set the
+.Dv PROC_WX_MAPPINGS_DISALLOW_EXEC
+flag and
+.Xr execve 2
+an image.
+.It Dv PROC_WXMAP_STATUS
+Returns the current status of the 'write exclusive against execution'
+enforcement for the specified process.
+The
+.Dv data
+parameter must point to the integer variable, where one of the
+following values is written:
+.Bl -tag -width PROC_WX_MAPPINGS_DISALLOW_EXEC
+.It Dv PROC_WX_MAPPINGS_PERMIT
+Creation of simultaneously writable and executable mapping is permitted,
+otherwise the process cannot create such mappings.
+.It Dv PROC_WX_MAPPINGS_DISALLOW_EXEC
+After
+.Xr execve 2 ,
+the new address space should disallow creation of simultaneously
+writable and executable mappings.
+.El
+.Pp
+Additionally, if the address space of the process disallows
+creation of simultaneously writable and executable mappings and
+it is guaranteed that no such mapping was created since address space
+creation, the
+.Dv PROC_WXORX_ENFORCE
+flag is set in the returned value.
 .El
 .Sh x86 MACHINE-SPECIFIC REQUESTS
 .Bl -tag -width PROC_KPTI_STATUS
@@ -556,7 +691,8 @@ privilege might use this option.
 .El
 .It Dv PROC_KPTI_STATUS
 Returns the current KPTI status for the specified process.
-.Fa data must point to the integer variable, which returns the
+.Fa data
+must point to the integer variable, which returns the
 following statuses:
 .Bl -tag -width PROC_KPTI_CTL_DISABLE_ON_EXEC
 .It Dv PROC_KPTI_CTL_ENABLE_ON_EXEC
@@ -572,6 +708,12 @@ feature, as it is bypassable both by the kernel and privileged processes,
 and via other system mechanisms.
 As such, it should not be utilized to reliably protect cryptographic
 keying material or other confidential data.
+.Pp
+Note that processes can trivially bypass the 'no simultaneously
+writable and executable mappings' policy by first marking some mapping
+as writeable and write code to it, then removing write and adding
+execute permission.
+This may be legitimately required by some programs, such as JIT compilers.
 .Sh RETURN VALUES
 If an error occurs, a value of -1 is returned and
 .Va errno
@@ -584,7 +726,7 @@ will fail if:
 .Bl -tag -width Er
 .It Bq Er EFAULT
 The
-.Fa arg
+.Fa data
 parameter points outside the process's allocated address space.
 .It Bq Er EINVAL
 The
@@ -604,7 +746,7 @@ and
 .Fa id .
 .It Bq Er EINVAL
 An invalid operation or flag was passed in
-.Fa arg
+.Fa data
 for a
 .Dv PROC_SPROTECT
 command.
@@ -673,9 +815,13 @@ or invalid signal number.
 .El
 .Sh SEE ALSO
 .Xr dtrace 1 ,
+.Xr proccontrol 1 ,
+.Xr protect 1 ,
 .Xr cap_enter 2 ,
 .Xr kill 2 ,
 .Xr ktrace 2 ,
+.Xr mmap 2 ,
+.Xr mprotect 2 ,
 .Xr ptrace 2 ,
 .Xr wait 2 ,
 .Xr capsicum 4 ,

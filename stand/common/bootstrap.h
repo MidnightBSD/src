@@ -22,16 +22,16 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD$
  */
 
 #ifndef _BOOTSTRAP_H_
 #define	_BOOTSTRAP_H_
 
+#include <stand.h>
 #include <sys/types.h>
 #include <sys/queue.h>
 #include <sys/linker_set.h>
+#include <stdbool.h>
 
 #include "readin.h"
 
@@ -50,6 +50,7 @@ extern char	command_errbuf[COMMAND_ERRBUFSZ];
 void	interact(void);
 void	interp_emit_prompt(void);
 int	interp_builtin_cmd(int argc, char *argv[]);
+bool	interp_has_builtin_cmd(const char *cmd);
 
 /* Called by interp.c for interp_*.c embedded interpreters */
 int	interp_include(const char *);	/* Execute commands from filename */
@@ -68,7 +69,6 @@ int	getrootmount(char *rootdev);
 
 /* misc.c */
 char	*unargv(int argc, char *argv[]);
-void	hexdump(caddr_t region, size_t len);
 size_t	strlenout(vm_offset_t str);
 char	*strdupout(vm_offset_t str);
 void	kern_bzero(vm_offset_t dest, size_t len);
@@ -120,6 +120,16 @@ struct console
 };
 extern struct console *consoles[];
 void cons_probe(void);
+bool		cons_update_mode(bool);
+void		autoload_font(bool);
+
+extern int module_verbose;
+enum {
+	MODULE_VERBOSE_SILENT,		/* say nothing */
+	MODULE_VERBOSE_SIZE,		/* print name and size */
+	MODULE_VERBOSE_TWIDDLE,		/* show progress */
+	MODULE_VERBOSE_FULL,		/* all we have */
+};
 
 /*
  * Plug-and-play enumerator/configurator interface.
@@ -170,6 +180,7 @@ extern int isapnp_readport;
  * Version information
  */
 extern char bootprog_info[];
+extern unsigned bootprog_rev;
 
 /*
  * Interpreter information
@@ -189,6 +200,7 @@ struct file_metadata
 {
 	size_t		md_size;
 	uint16_t	md_type;
+	vm_offset_t	md_addr;	/* Valid after copied to kernel space */
 	struct file_metadata *md_next;
 	char		md_data[1];	/* data are immediately appended */
 };
@@ -226,6 +238,12 @@ struct preloaded_file
 	size_t f_size;		/* file size */
 	struct kernel_module	*f_modules;	/* list of modules if any */
 	struct preloaded_file	*f_next;	/* next file */
+#ifdef __amd64__
+	bool			f_kernphys_relocatable;
+#endif
+#if defined(__i386__)
+	bool			f_tg_kernel_support;
+#endif
 };
 
 struct file_format
@@ -258,6 +276,11 @@ void file_addmetadata(struct preloaded_file *, int, size_t, void *);
 int file_addmodule(struct preloaded_file *, char *, int,
     struct kernel_module **);
 void file_removemetadata(struct preloaded_file *fp);
+int file_addbuf(const char *name, const char *type, size_t len, void *buf);
+int tslog_init(void);
+int tslog_publish(void);
+
+vm_offset_t build_font_module(vm_offset_t);
 
 /* MI module loaders */
 #ifdef __elfN
@@ -357,7 +380,10 @@ extern struct arch_switch archsw;
 /* This must be provided by the MD code, but should it be in the archsw? */
 void	delay(int delay);
 
-void	dev_cleanup(void);
+/* common code to set currdev variable. */
+int gen_setcurrdev(struct env_var *ev, int flags, const void *value);
+int mount_currdev(struct env_var *, int, const void *);
+void set_currdev(const char *devname);
 
 #ifndef CTASSERT
 #define	CTASSERT(x)	_Static_assert(x, "compile-time assertion failed")

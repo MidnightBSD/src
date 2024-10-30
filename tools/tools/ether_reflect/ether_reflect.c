@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <unistd.h>
 #include <stdlib.h>
 #include <strings.h>

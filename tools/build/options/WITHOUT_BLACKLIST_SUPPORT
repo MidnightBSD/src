@@ -1,4 +1,4 @@
-Set to build some programs without
+Build some programs without
 .Xr libblacklist 3
 support, like
 .Xr fingerd 8 ,

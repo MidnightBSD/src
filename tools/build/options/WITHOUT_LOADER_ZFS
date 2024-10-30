@@ -1,1 +1,1 @@
-Set to not build ZFS file system boot loader support.
+Do not build ZFS file system boot loader support.

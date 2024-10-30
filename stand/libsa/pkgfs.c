@@ -25,8 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
-
 #include "stand.h"
 
 #include <sys/stat.h>
@@ -49,18 +47,18 @@ static int   pkg_readdir(struct open_file *, struct dirent *);
 static off_t pkg_atol(const char *, unsigned);
 
 struct fs_ops pkgfs_fsops = {
-	"pkg",
-	pkg_open, 
-	pkg_close, 
-	pkg_read,
-	null_write,
-	pkg_seek,
-	pkg_stat,
-	pkg_readdir
+	.fs_name = "pkg",
+	.fo_open = pkg_open,
+	.fo_close = pkg_close,
+	.fo_read = pkg_read,
+	.fo_write = null_write,
+	.fo_seek = pkg_seek,
+	.fo_stat = pkg_stat,
+	.fo_readdir = pkg_readdir,
 };
 
 #define PKG_BUFSIZE	512
-#define	PKG_MAXCACHESZ	(16384 * 3)
+#define	PKG_MAXCACHESZ	(512 * 1024)
 
 #define	PKG_FILEEXT	".tgz"
 

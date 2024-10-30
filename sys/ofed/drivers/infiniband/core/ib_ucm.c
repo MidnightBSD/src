@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <linux/completion.h>
 #include <linux/fs.h>
 #include <linux/module.h>

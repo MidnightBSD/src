@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2016 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Konstantin Belousov under sponsorship
  * from the FreeBSD Foundation.
@@ -25,8 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: stable/11/stand/efi/loader/arch/amd64/exc.S 306738 2016-10-05 22:04:22Z kib $
  */
 
 	.macro	EH	N, err=1

@@ -25,8 +25,6 @@
  */
 
  #include <machine/asm.h>
-
-
 	.globl  CNAME(_ctx_done)
 	.globl  CNAME(abort)
 
@@ -34,12 +32,19 @@
 	mtlr	%r14
 	blrl			/* branch to start function */
 	mr	%r3,%r15	/* pass pointer to ucontext as argument */
-	bl	PIC_PLT(CNAME(_ctx_done)) /* branch to ctxt completion func */
+	bl	CNAME(_ctx_done) /* branch to ctxt completion func */
+
 	/*
 	 * we should never return from the
 	 * above branch.
 	 */
+	/* Don't bother saving off %r30, we're already in a bad state. */
+	bcl	20,31,1f
+1:	mflr	%r30
+	mr	%r3,%r30		# save for _DYNAMIC
+	addis	%r30,%r30,_GLOBAL_OFFSET_TABLE_-1b@ha
+	addi	%r30,%r30,_GLOBAL_OFFSET_TABLE_-1b@l
 	bl	PIC_PLT(CNAME(abort))	/* abort */
- END(_cts_start)
+ END(_ctx_start)
 
 	.section .note.GNU-stack,"",%progbits

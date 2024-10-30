@@ -32,7 +32,6 @@
 static char sccsid[] = "@(#)realpath.c	8.1 (Berkeley) 2/16/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-
 #include "namespace.h"
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -41,14 +40,19 @@ static char sccsid[] = "@(#)realpath.c	8.1 (Berkeley) 2/16/94";
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include "un-namespace.h"
+#include "libc_private.h"
+
+extern int __realpathat(int fd, const char *path, char *buf, size_t size,
+    int flags);
 
 /*
  * Find the real name of path, by removing all ".", ".." and symlink
  * components.  Returns (resolved) on success, or (NULL) on failure,
  * in which case the path which caused trouble is left in (resolved).
  */
-static char *
+static char * __noinline
 realpath1(const char *path, char *resolved)
 {
 	struct stat sb;
@@ -90,7 +94,7 @@ realpath1(const char *path, char *resolved)
 		 */
 		p = strchr(left, '/');
 
-		next_token_len = p != NULL ? p - left : left_len;
+		next_token_len = p != NULL ? (size_t)(p - left) : left_len;
 		memcpy(next_token, left, next_token_len);
 		next_token[next_token_len] = '\0';
 
@@ -145,7 +149,7 @@ realpath1(const char *path, char *resolved)
 				return (NULL);
 			}
 			slen = readlink(resolved, symlink, sizeof(symlink));
-			if (slen <= 0 || slen >= sizeof(symlink)) {
+			if (slen <= 0 || slen >= (ssize_t)sizeof(symlink)) {
 				if (slen < 0)
 					; /* keep errno from readlink(2) call */
 				else if (slen == 0)
@@ -172,7 +176,7 @@ realpath1(const char *path, char *resolved)
 			 */
 			if (p != NULL) {
 				if (symlink[slen - 1] != '/') {
-					if (slen + 1 >= sizeof(symlink)) {
+					if (slen + 1 >= (ssize_t)sizeof(symlink)) {
 						errno = ENAMETOOLONG;
 						return (NULL);
 					}
@@ -221,6 +225,10 @@ realpath(const char * __restrict path, char * __restrict resolved)
 		m = resolved = malloc(PATH_MAX);
 		if (resolved == NULL)
 			return (NULL);
+	}
+	if (__getosreldate() >= 1300080) {
+		if (__realpathat(AT_FDCWD, path, resolved, PATH_MAX, 0) == 0)
+			return (resolved);
 	}
 	res = realpath1(path, resolved);
 	if (res == NULL)

@@ -1,10 +1,13 @@
-# $FreeBSD$
 
 .include <bsd.init.mk>
 
-MAN+=	loader.8
-.if ${MK_EFI} != "no"
-MAN+=	loader.efi.8
-.endif
+M.${MK_EFI}+=		boot1.efi.8
+M.yes+=			loader.8
+M.${MK_EFI}+=		loader.efi.8
+M.${MK_FORTH}+=		loader_4th.8
+M.${MK_LOADER_LUA}+=	loader_lua.8
+M.yes+=			loader_simp.8
+
+MAN=${M.yes}
 
 .include <bsd.prog.mk>

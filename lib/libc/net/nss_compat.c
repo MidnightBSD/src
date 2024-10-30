@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2003 Networks Associates Technology, Inc.
  * All rights reserved.
@@ -34,7 +34,6 @@
  * Compatibility shims for the GNU C Library-style nsswitch interface.
  */
 #include <sys/cdefs.h>
-
 #include "namespace.h"
 #include <sys/param.h>
 #include <errno.h>

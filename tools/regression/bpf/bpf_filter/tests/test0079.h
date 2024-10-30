@@ -1,6 +1,5 @@
 /*-
  * Test 0079:	An empty filter program.
- *
  */
 
 /* BPF program */

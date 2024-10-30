@@ -34,8 +34,6 @@
 
 
 #include <sys/cdefs.h>
-
-
 const char value1[] = "Large ------------------ value";
 const char value2[] = "Small -- value";
 char nameValuePair[] = "less=more";

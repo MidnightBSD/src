@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2018 Christian Kramer
  * Copyright (c) 2020 Ian Lepore <ian@FreeBSD.org>
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  *
  * make LDFLAGS+=-lgpio gpioevents
  */
@@ -457,7 +456,7 @@ run_sigio(bool loop, int handle, const char *file)
 	do {
 		if (sigio == 1) {
 			sigio = 0;
-			printf("%s: recieved SIGIO on %s\n", getprogname(),
+			printf("%s: received SIGIO on %s\n", getprogname(),
 			    file);
 			run_read(false, handle, file, 0);
 		}

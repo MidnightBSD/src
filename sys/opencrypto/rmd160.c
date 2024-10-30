@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/endian.h>
@@ -105,9 +104,9 @@ RMD160Init(RMD160_CTX *ctx)
 }
 
 void
-RMD160Update(RMD160_CTX *ctx, const u_char *input, u_int32_t len)
+RMD160Update(RMD160_CTX *ctx, const u_char *input, uint32_t len)
 {
-	u_int32_t have, off, need;
+	uint32_t have, off, need;
 
 	have = (ctx->count/8) % 64;
 	need = 64 - have;
@@ -136,7 +135,7 @@ RMD160Final(u_char digest[20], RMD160_CTX *ctx)
 {
 	int i;
 	u_char size[8];
-	u_int32_t padlen;
+	uint32_t padlen;
 
 	PUT_64BIT_LE(size, ctx->count);
 
@@ -158,9 +157,9 @@ RMD160Final(u_char digest[20], RMD160_CTX *ctx)
 }
 
 void
-RMD160Transform(u_int32_t state[5], const u_char block[64])
+RMD160Transform(uint32_t state[5], const u_char block[64])
 {
-	u_int32_t a, b, c, d, e, aa, bb, cc, dd, ee, t, x[16];
+	uint32_t a, b, c, d, e, aa, bb, cc, dd, ee, t, x[16];
 
 #if BYTE_ORDER == LITTLE_ENDIAN
 	memcpy(x, block, 64);
@@ -168,7 +167,7 @@ RMD160Transform(u_int32_t state[5], const u_char block[64])
 	int i;
 
 	for (i = 0; i < 16; i++)
-		x[i] = bswap32(*(const u_int32_t*)(block+i*4));
+		x[i] = bswap32(*(const uint32_t*)(block+i*4));
 #endif
 
 	a = state[0];

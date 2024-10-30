@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "namespace.h"
 #include <err.h>
 #include <sys/types.h>

@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 .include <bsd.init.mk>
 
@@ -31,15 +30,11 @@ CFLAGS+=-fomit-frame-pointer \
 	-I${LDRSRC} \
 	-Wall -Waggregate-return -Wbad-function-cast -Wno-cast-align \
 	-Wmissing-declarations -Wmissing-prototypes -Wnested-externs \
-	-Wpointer-arith -Wshadow -Wstrict-prototypes -Wwrite-strings \
-	-Winline
+	-Wpointer-arith -Wshadow -Wstrict-prototypes -Wwrite-strings
 
 CFLAGS.gcc+=	-Os \
 		-fno-asynchronous-unwind-tables \
 		--param max-inline-insns-single=100
-.if ${COMPILER_TYPE} == "gcc" && ${COMPILER_VERSION} <= 40201
-CFLAGS.gcc+=   -mno-align-long-strings
-.endif
 
 CFLAGS.clang+=	-Oz ${CLANG_OPT_SMALL}
 

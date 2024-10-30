@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013 Ed Schouten <ed@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/queue.h>
 
 #include <assert.h>
@@ -38,7 +37,7 @@
 #include "../iconv/citrus_hash.h"
 #include "../iconv/citrus_module.h"
 #include "../iconv/citrus_iconv.h"
-#include "xlocale_private.h"
+#include "mblocal.h"
 
 typedef struct {
 	bool			initialized;
@@ -64,7 +63,7 @@ cXXrtomb_l(char * __restrict s, charXX_t c, mbstate_t * __restrict ps,
 
 	FIX_LOCALE(locale);
 	if (ps == NULL)
-		ps = &locale->cXXrtomb;
+		ps = &(XLOCALE_CTYPE(locale)->cXXrtomb);
 	cs = (_ConversionState *)ps;
 	handle = &cs->iconv;
 

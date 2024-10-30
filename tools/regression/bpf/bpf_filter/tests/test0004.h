@@ -1,6 +1,5 @@
 /*-
  * Test 0004:	BPF_LD+BPF_W+BPF_ABS
- *
  */
 
 /* BPF program */

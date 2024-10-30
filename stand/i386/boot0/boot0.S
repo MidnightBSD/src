@@ -13,8 +13,6 @@
  * implied warranties, including, without limitation, the implied
  * warranties of merchantability and fitness for a particular
  * purpose.
- *
- * $FreeBSD: stable/11/stand/i386/boot0/boot0.S 283006 2015-05-16 10:31:15Z thomas $
  */
 
 /* build options: */

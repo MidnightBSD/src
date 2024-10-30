@@ -1,11 +1,11 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2002-2004 Tim J. Robbins.
  * All rights reserved.
  *
  * Copyright (c) 2011 The FreeBSD Foundation
- * All rights reserved.
+ *
  * Portions of this software were developed by David Chisnall
  * under sponsorship from the FreeBSD Foundation.
  *
@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <errno.h>
 #include <stdlib.h>
 #include <wchar.h>
@@ -47,10 +46,11 @@ mbtowc_l(wchar_t * __restrict pwc, const char * __restrict s, size_t n, locale_t
 
 	if (s == NULL) {
 		/* No support for state dependent encodings. */
-		locale->mbtowc = initial;
+		XLOCALE_CTYPE(locale)->mbtowc = initial;
 		return (0);
 	}
-	rval = XLOCALE_CTYPE(locale)->__mbrtowc(pwc, s, n, &locale->mbtowc);
+	rval = XLOCALE_CTYPE(locale)->__mbrtowc(pwc, s, n,
+	    &(XLOCALE_CTYPE(locale)->mbtowc));
 	switch (rval) {
 	case (size_t)-2:
 		errno = EILSEQ;

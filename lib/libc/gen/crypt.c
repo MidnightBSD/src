@@ -34,7 +34,6 @@
 
 #include <sys/cdefs.h>
 __SCCSID("@(#)crypt.c	5.11 (Berkeley) 6/25/91");
-
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -45,6 +44,11 @@ __SCCSID("@(#)crypt.c	5.11 (Berkeley) 6/25/91");
  * since this is non-exportable, this is just a dummy.  if you want real
  * encryption, make sure you've got libcrypt.a around.
  */
+
+int __freebsd11_des_setkey(const char *key);
+int __freebsd11_des_cipher(const char *in, char *out, long salt, int num_iter);
+int __freebsd11_setkey(const char *key);
+int __freebsd11_encrypt(char *block, int flag);
 
 /* ARGSUSED */
 int

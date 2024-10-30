@@ -1,4 +1,3 @@
-/* $FreeBSD: stable/11/stand/efi/loader/arch/amd64/ldscript.amd64 329011 2018-02-08 02:50:47Z kevans $ */
 OUTPUT_FORMAT("elf64-x86-64-freebsd", "elf64-x86-64-freebsd", "elf64-x86-64-freebsd")
 OUTPUT_ARCH(i386:x86-64)
 ENTRY(_start)

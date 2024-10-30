@@ -27,7 +27,7 @@
 .\"
 .\"	@(#)sysctl.3	8.4 (Berkeley) 5/9/95
 .\"
-.Dd March 22, 2019
+.Dd October 30, 2020
 .Dt SYSCTL 3
 .Os
 .Sh NAME
@@ -562,6 +562,7 @@ The fifth, sixth, and seventh level names are as follows:
 .It Dv NET_RT_IFLIST Ta 0 or if_index Ta None
 .It Dv NET_RT_IFMALIST Ta 0 or if_index Ta None
 .It Dv NET_RT_IFLISTL Ta 0 or if_index Ta None
+.It Dv NET_RT_NHOPS Ta None Ta fib number
 .El
 .Pp
 The
@@ -582,6 +583,9 @@ uses 'l' versions of the message header structures:
 .Va struct if_msghdrl
 and
 .Va struct ifa_msghdrl .
+.Pp
+.Dv NET_RT_NHOPS
+returns all nexthops for specified address family in given fib.
 .It Li PF_INET
 Get or set various global information about the IPv4
 (Internet Protocol version 4).
@@ -649,6 +653,7 @@ privilege may change the value.
 .It Dv USER_CS_PATH Ta string Ta no
 .It Dv USER_EXPR_NEST_MAX Ta integer Ta no
 .It Dv USER_LINE_MAX Ta integer Ta no
+.It Dv USER_LOCALBASE Ta string Ta no
 .It Dv USER_POSIX2_CHAR_TERM Ta integer Ta no
 .It Dv USER_POSIX2_C_BIND Ta integer Ta no
 .It Dv USER_POSIX2_C_DEV Ta integer Ta no
@@ -694,6 +699,9 @@ utility.
 .It Li USER_LINE_MAX
 The maximum length in bytes of a text-processing utility's input
 line.
+.It Li USER_LOCALBASE
+Return the value of localbase that has been compiled into system utilities
+that need to have access to resources provided by a port or package.
 .It Li USER_POSIX2_CHAR_TERM
 Return 1 if the system supports at least one terminal type capable of
 all operations described in

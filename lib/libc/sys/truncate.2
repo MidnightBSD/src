@@ -161,6 +161,9 @@ system calls appeared in
 These calls should be generalized to allow ranges
 of bytes in a file to be discarded.
 .Pp
-Use of
+Historically, the use of
 .Fn truncate
-to extend a file is not portable.
+or
+.Fn ftruncate
+to extend a file was not portable, but this behavior became required in
+.St -p1003.1-2008 .

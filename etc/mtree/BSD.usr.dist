@@ -59,11 +59,11 @@
                     freebsd
                     ..
                 ..
+                share
+                ..
             ..
         ..
         compat
-            aout
-            ..
         ..
         dtrace
         ..
@@ -161,6 +161,8 @@
         ..
         sm.bin
         ..
+        zfs
+        ..
     ..
     local
     ..
@@ -169,7 +171,11 @@
     sbin
     ..
     share
-        atf
+        atf             tags=package=tests
+        ..
+        bhyve
+            kbdlayout
+            ..
         ..
         bsdconfig
             media
@@ -222,7 +228,9 @@
         doc
             IPv6
             ..
-            atf
+            atf             tags=package=tests
+            ..
+            kyua             tags=package=tests
             ..
             legal
             ..
@@ -1096,6 +1104,8 @@
             ..
             man3
             ..
+            man3lua
+            ..
             man4
                 aarch64
                 ..
@@ -1104,6 +1114,8 @@
                 arm
                 ..
                 i386
+                ..
+                powerpc
                 ..
             ..
             man5
@@ -1116,6 +1128,8 @@
                 amd64
                 ..
                 i386
+                ..
+                powerpc
                 ..
             ..
             man9
@@ -1505,6 +1519,10 @@
             fonts
             ..
             keymaps
+            ..
+        ..
+        zfs
+            compatibility.d
             ..
         ..
         zoneinfo

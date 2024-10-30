@@ -1,1 +1,1 @@
-Set to build the Clang C/C++ compiler during the bootstrap phase of the build.
+Build the Clang C/C++ compiler during the bootstrap phase of the build.

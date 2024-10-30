@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <err.h>

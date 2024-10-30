@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -411,7 +410,7 @@ again:
 		mb_put_mem(mbp, (caddr_t)unipp, uniplen, MB_MSYSTEM);
 		smb_put_dstring(mbp, vcp, up, SMB_CS_NONE);		/* AccountName */
 		smb_put_dstring(mbp, vcp, vcp->vc_domain, SMB_CS_NONE);	/* PrimaryDomain */
-		smb_put_dstring(mbp, vcp, "MidnightBSD", SMB_CS_NONE);	/* Client's OS */
+		smb_put_dstring(mbp, vcp, "FreeBSD", SMB_CS_NONE);	/* Client's OS */
 		smb_put_dstring(mbp, vcp, "NETSMB", SMB_CS_NONE);		/* Client name */
 	}
 	smb_rq_bend(rqp);
@@ -601,7 +600,6 @@ int
 smb_smb_treedisconnect(struct smb_share *ssp, struct smb_cred *scred)
 {
 	struct smb_rq *rqp;
-	struct mbchain *mbp;
 	int error;
 
 	if (ssp->ss_tid == SMB_TID_UNKNOWN)
@@ -609,7 +607,6 @@ smb_smb_treedisconnect(struct smb_share *ssp, struct smb_cred *scred)
 	error = smb_rq_alloc(SSTOCP(ssp), SMB_COM_TREE_DISCONNECT, scred, &rqp);
 	if (error)
 		return error;
-	mbp = &rqp->sr_rq;
 	smb_rq_wstart(rqp);
 	smb_rq_wend(rqp);
 	smb_rq_bstart(rqp);
@@ -851,7 +848,7 @@ smb_smb_write(struct smb_share *ssp, u_int16_t fid, int *len, int *rresid,
 
 	if (*len && SSTOVC(ssp)->vc_sopt.sv_caps & SMB_CAP_LARGE_WRITEX)
 		return (smb_smb_writex(ssp, fid, len, rresid, uio, scred));
- 
+
 	blksz = SSTOVC(ssp)->vc_txmax - SMB_HDRLEN - 16;
 	if (blksz > 0xffff)
 		blksz = 0xffff;

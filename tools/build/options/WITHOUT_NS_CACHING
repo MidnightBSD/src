@@ -1,4 +1,4 @@
-Set to disable name caching in the
+Disable name caching in the
 .Pa nsswitch
 subsystem.
 The generic caching daemon,

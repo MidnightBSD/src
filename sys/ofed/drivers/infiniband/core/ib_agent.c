@@ -38,7 +38,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <linux/slab.h>
 #include <linux/string.h>
 

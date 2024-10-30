@@ -25,7 +25,6 @@
  */
 
 #include <machine/asm.h>
-
 /*
  * With thanks to John Dyson for the original version of this.
  */

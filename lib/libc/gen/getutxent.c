@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010 Ed Schouten <ed@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "namespace.h"
 #include <sys/endian.h>
 #include <sys/param.h>
@@ -39,13 +38,8 @@
 #include "utxdb.h"
 #include "un-namespace.h"
 
-#ifdef __NO_TLS
-static FILE *uf = NULL;
-static int udb;
-#else
 static _Thread_local FILE *uf = NULL;
 static _Thread_local int udb;
-#endif
 
 int
 setutxdb(int db, const char *file)

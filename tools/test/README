@@ -1,4 +1,3 @@
-$FreeBSD: stable/11/tools/test/README 290112 2015-10-28 15:00:21Z vangyzen $
 
 This directory is for standalone test programs.  For the BSD
 Test Suite, which uses Kyua, please see /usr/src/tests/

@@ -14,7 +14,6 @@
  */
 
 /*
- * $FreeBSD: stable/11/stand/i386/btx/lib/btxv86.h 332154 2018-04-06 21:37:25Z kevans $
  */
 
 #ifndef _BTXV86_H_

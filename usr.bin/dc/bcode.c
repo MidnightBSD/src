@@ -17,7 +17,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <err.h>
 #include <limits.h>
 #include <openssl/ssl.h>

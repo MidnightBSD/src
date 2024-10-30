@@ -37,7 +37,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_pf.h"
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -223,6 +222,23 @@ pf_get_sport(sa_family_t af, u_int8_t proto, struct pf_krule *r,
 	if (pf_map_addr(af, r, saddr, naddr, &init_addr, sn))
 		return (1);
 
+	if (proto == IPPROTO_ICMP) {
+		if (*nport == htons(ICMP_ECHO)) {
+			low = 1;
+			high = 65535;
+		} else
+			return (0);	/* Don't try to modify non-echo ICMP */
+	}
+#ifdef INET6
+	if (proto == IPPROTO_ICMPV6) {
+		if (*nport == htons(ICMP6_ECHO_REQUEST)) {
+			low = 1;
+			high = 65535;
+		} else
+			return (0);	/* Don't try to modify non-echo ICMP */
+	}
+#endif /* INET6 */
+
 	bzero(&key, sizeof(key));
 	key.af = af;
 	key.proto = proto;
@@ -236,7 +252,15 @@ pf_get_sport(sa_family_t af, u_int8_t proto, struct pf_krule *r,
 		 * port search; start random, step;
 		 * similar 2 portloop in in_pcbbind
 		 */
-		if (!(proto == IPPROTO_TCP || proto == IPPROTO_UDP ||
+		if (proto == IPPROTO_SCTP) {
+			key.port[1] = sport;
+			if (!pf_find_state_all_exists(&key, PF_IN)) {
+				*nport = sport;
+				return (0);
+			} else {
+				return (1); /* Fail mapping. */
+			}
+		} else if (!(proto == IPPROTO_TCP || proto == IPPROTO_UDP ||
 		    proto == IPPROTO_ICMP) || (low == 0 && high == 0)) {
 			/*
 			 * XXX bug: icmp states don't use the id on both sides.
@@ -285,6 +309,10 @@ pf_get_sport(sa_family_t af, u_int8_t proto, struct pf_krule *r,
 		switch (r->rpool.opts & PF_POOL_TYPEMASK) {
 		case PF_POOL_RANDOM:
 		case PF_POOL_ROUNDROBIN:
+			/*
+			 * pick a different source address since we're out
+			 * of free port choices for the current one.
+			 */
 			if (pf_map_addr(af, r, saddr, naddr, &init_addr, sn))
 				return (1);
 			break;
@@ -578,7 +606,7 @@ pf_get_translation(struct pf_pdesc *pd, struct mbuf *m, int off, int direction,
 		return (NULL);
 	}
 
-	*skp = pf_state_key_setup(pd, saddr, daddr, sport, dport);
+	*skp = pf_state_key_setup(pd, m, off, saddr, daddr, sport, dport);
 	if (*skp == NULL)
 		return (NULL);
 	*nkp = pf_state_key_clone(*skp);
@@ -595,7 +623,7 @@ pf_get_translation(struct pf_pdesc *pd, struct mbuf *m, int off, int direction,
 	switch (r->action) {
 	case PF_NAT:
 		if (pd->proto == IPPROTO_ICMP) {
-			low  = 1;
+			low = 1;
 			high = 65535;
 		} else {
 			low  = r->rpool.proxy_port[0];
@@ -692,6 +720,10 @@ pf_get_translation(struct pf_pdesc *pd, struct mbuf *m, int off, int direction,
 		if ((r->rpool.opts & PF_POOL_TYPEMASK) == PF_POOL_BITMASK)
 			PF_POOLMASK(naddr, naddr, &r->rpool.cur->addr.v.a.mask,
 			    daddr, pd->af);
+
+		/* Do not change SCTP ports. */
+		if (pd->proto == IPPROTO_SCTP)
+			break;
 
 		if (r->rpool.proxy_port[1]) {
 			uint32_t	tmp_nport;

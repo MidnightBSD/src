@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013 Ed Schouten <ed@FreeBSD.org>
  * All rights reserved.
@@ -27,11 +27,10 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <errno.h>
 #include <uchar.h>
 #include <wchar.h>
-#include "xlocale_private.h"
+#include "mblocal.h"
 
 size_t
 c32rtomb_l(char * __restrict s, char32_t c32, mbstate_t * __restrict ps,
@@ -46,7 +45,7 @@ c32rtomb_l(char * __restrict s, char32_t c32, mbstate_t * __restrict ps,
 
 	FIX_LOCALE(locale);
 	if (ps == NULL)
-		ps = &locale->c32rtomb;
+		ps = &(XLOCALE_CTYPE(locale)->c32rtomb);
 
 	/* Assume wchar_t uses UTF-32. */
 	return (wcrtomb_l(s, c32, ps, locale));

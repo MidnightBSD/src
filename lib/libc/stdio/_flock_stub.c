@@ -37,7 +37,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "namespace.h"
 #include <stdio.h>
 #include <stdlib.h>

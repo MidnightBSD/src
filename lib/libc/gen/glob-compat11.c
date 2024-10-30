@@ -39,7 +39,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #define	_WANT_FREEBSD11_STAT
 #include <sys/stat.h>

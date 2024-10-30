@@ -36,7 +36,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/socket.h>
 
 #include <err.h>

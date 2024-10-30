@@ -103,7 +103,7 @@ sdp_post_recv(struct sdp_sock *ssk)
 	struct ib_recv_wr rx_wr = { NULL };
 	struct ib_sge ibsge[SDP_MAX_RECV_SGES];
 	struct ib_sge *sge = ibsge;
-	struct ib_recv_wr *bad_wr;
+	const struct ib_recv_wr *bad_wr;
 	struct mbuf *mb, *m;
 	struct sdp_bsdh *h;
 	int id = ring_head(ssk->rx_ring);
@@ -481,8 +481,9 @@ sdp_process_rx_wc(struct sdp_sock *ssk, struct ib_wc *wc)
 	if (unlikely(wc->status)) {
 		if (ssk->qp_active && sk) {
 			sdp_dbg(sk, "Recv completion with error. "
-					"Status %d, vendor: %d\n",
-				wc->status, wc->vendor_err);
+			    "Status %s (%d), vendor: %d\n",
+			    ib_wc_status_msg(wc->status), wc->status,
+			    wc->vendor_err);
 			sdp_abort(sk);
 			ssk->qp_active = 0;
 		}

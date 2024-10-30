@@ -26,7 +26,6 @@
  */
 
 #include <machine/asm.h>
-
 ENTRY(div)
         movl    4(%esp),%eax
         movl    8(%esp),%ecx

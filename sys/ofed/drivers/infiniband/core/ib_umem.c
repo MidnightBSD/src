@@ -35,7 +35,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #define	LINUXKPI_PARAM_PREFIX ibcore_
 
 #include <linux/mm.h>

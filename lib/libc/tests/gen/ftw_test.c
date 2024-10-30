@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/wait.h>
 #include <err.h>
 #include <errno.h>

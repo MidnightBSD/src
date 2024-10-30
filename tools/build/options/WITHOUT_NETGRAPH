@@ -1,2 +1,2 @@
-Set to not build applications to support
+Do not build applications to support
 .Xr netgraph 4 .

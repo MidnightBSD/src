@@ -6,7 +6,6 @@
  */
 
 #include <machine/asm.h>
-
 ENTRY(div)
 	movl	%edi,%eax
 	cltd

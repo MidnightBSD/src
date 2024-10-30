@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 by Panasas, Inc.
  * All rights reserved.
@@ -24,7 +23,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: stable/10/tools/tools/vhba/mptest/vhba_mptest.c 211183 2010-08-11 17:25:14Z mjacob $ */
 /*
  * "Faulty" Multipath Device. Creates to devices to be set up as multipath,
  * makes one or both of them non existent (or re existent) on demand.

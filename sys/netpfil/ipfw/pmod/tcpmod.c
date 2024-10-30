@@ -29,7 +29,6 @@
 #include "opt_inet6.h"
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/errno.h>
@@ -242,4 +241,3 @@ tcpmod_uninit(struct ip_fw_chain *ch, int last)
 	ipfw_del_eaction(ch, V_tcpmod_setmss_eid);
 	V_tcpmod_setmss_eid = 0;
 }
-

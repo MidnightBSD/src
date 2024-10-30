@@ -1,1 +1,1 @@
-Set to not build kernel modules that include sourceless microcode.
+Do not build kernel modules that include sourceless microcode.

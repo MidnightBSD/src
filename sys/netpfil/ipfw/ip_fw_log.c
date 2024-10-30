@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2002-2009 Luigi Rizzo, Universita` di Pisa
  *
@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Logging support for ipfw
  */
@@ -98,30 +97,32 @@
  */
 void
 ipfw_log(struct ip_fw_chain *chain, struct ip_fw *f, u_int hlen,
-    struct ip_fw_args *args, struct mbuf *m, struct ifnet *oif,
-    u_short offset, uint32_t tablearg, struct ip *ip)
+    struct ip_fw_args *args, u_short offset, uint32_t tablearg, struct ip *ip)
 {
 	char *action;
 	int limit_reached = 0;
 	char action2[92], proto[128], fragment[32];
 
 	if (V_fw_verbose == 0) {
-		if (args->flags & IPFW_ARGS_ETHER) /* layer2, use orig hdr */
-			ipfw_bpf_mtap2(args->eh, ETHER_HDR_LEN, m);
+		if (args->flags & IPFW_ARGS_LENMASK)
+			ipfw_bpf_tap(args->mem, IPFW_ARGS_LENGTH(args->flags));
+		else if (args->flags & IPFW_ARGS_ETHER)
+			/* layer2, use orig hdr */
+			ipfw_bpf_mtap(args->m);
 		else {
 			/* Add fake header. Later we will store
 			 * more info in the header.
 			 */
 			if (ip->ip_v == 4)
 				ipfw_bpf_mtap2("DDDDDDSSSSSS\x08\x00",
-				    ETHER_HDR_LEN, m);
+				    ETHER_HDR_LEN, args->m);
 			else if (ip->ip_v == 6)
 				ipfw_bpf_mtap2("DDDDDDSSSSSS\x86\xdd",
-				    ETHER_HDR_LEN, m);
+				    ETHER_HDR_LEN, args->m);
 			else
 				/* Obviously bogus EtherType. */
 				ipfw_bpf_mtap2("DDDDDDSSSSSS\xff\xff",
-				    ETHER_HDR_LEN, m);
+				    ETHER_HDR_LEN, args->m);
 		}
 		return;
 	}
@@ -153,8 +154,7 @@ ipfw_log(struct ip_fw_chain *chain, struct ip_fw *f, u_int hlen,
 				altq->qid);
 			cmd += F_LEN(cmd);
 		}
-		if (cmd->opcode == O_PROB || cmd->opcode == O_TAG ||
-		    cmd->opcode == O_SETDSCP)
+		if (cmd->opcode == O_PROB || cmd->opcode == O_TAG)
 			cmd += F_LEN(cmd);
 
 		action = action2;
@@ -198,6 +198,10 @@ ipfw_log(struct ip_fw_chain *chain, struct ip_fw *f, u_int hlen,
 		case O_TEE:
 			snprintf(SNPARGS(action2, 0), "Tee %d",
 				TARG(cmd->arg1, divert));
+			break;
+		case O_SETDSCP:
+			snprintf(SNPARGS(action2, 0), "SetDscp %d",
+				TARG(cmd->arg1, dscp) & 0x3F);
 			break;
 		case O_SETFIB:
 			snprintf(SNPARGS(action2, 0), "SetFib %d",
@@ -403,20 +407,15 @@ ipfw_log(struct ip_fw_chain *chain, struct ip_fw *f, u_int hlen,
 				    (ipoff & IP_MF) ? "+" : "");
 		}
 	}
-#ifdef __MidnightBSD__
-	if (oif || m->m_pkthdr.rcvif)
-		log(LOG_SECURITY | LOG_INFO,
-		    "ipfw: %d %s %s %s via %s%s\n",
-		    f ? f->rulenum : -1,
-		    action, proto, oif ? "out" : "in",
-		    oif ? oif->if_xname : m->m_pkthdr.rcvif->if_xname,
-		    fragment);
-	else
+#ifdef __FreeBSD__
+	log(LOG_SECURITY | LOG_INFO, "ipfw: %d %s %s %s via %s%s\n",
+	    f ? f->rulenum : -1, action, proto,
+	    args->flags & IPFW_ARGS_OUT ? "out" : "in", args->ifp->if_xname,
+	    fragment);
+#else
+	log(LOG_SECURITY | LOG_INFO, "ipfw: %d %s %s [no if info]%s\n",
+	    f ? f->rulenum : -1, action, proto, fragment);
 #endif
-		log(LOG_SECURITY | LOG_INFO,
-		    "ipfw: %d %s %s [no if info]%s\n",
-		    f ? f->rulenum : -1,
-		    action, proto, fragment);
 	if (limit_reached)
 		log(LOG_SECURITY | LOG_NOTICE,
 		    "ipfw: limit %d reached on entry %d\n",

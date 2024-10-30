@@ -1,4 +1,3 @@
-# $FreeBSD: stable/11/stand/fdt/Makefile 332131 2018-04-06 19:01:08Z kevans $
 
 .include <bsd.init.mk>
 
@@ -16,5 +15,7 @@ SRCS+=		fdt_loader_cmd.c
 CFLAGS+=	-I${SYSDIR}/contrib/libfdt/ -I${LDRSRC}
 
 CFLAGS+=	-Wformat -Wall
+
+.include "${BOOTSRC}/veriexec.mk"
 
 .include <bsd.lib.mk>

@@ -25,7 +25,6 @@
  */
 
 #include <machine/asm.h>
-
 ENTRY(__eabi)
 	blr
 END(__eabi)

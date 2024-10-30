@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2013 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Benno Rice under sponsorship from
  * the FreeBSD Foundation.
@@ -24,8 +23,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD$
  */
 
 #ifndef	_LOADER_EFI_COPY_H_
@@ -33,6 +30,18 @@
 
 #include <stand.h>
 #include <readin.h>
+#include <efi.h>
+
+#ifdef __amd64__
+enum {
+	COPY_STAGING_ENABLE,
+	COPY_STAGING_DISABLE,
+	COPY_STAGING_AUTO,
+};
+extern int copy_staging;
+#endif
+
+extern EFI_LOADED_IMAGE *boot_img;
 
 int	efi_autoload(void);
 
@@ -44,6 +53,6 @@ ssize_t	efi_readin(readin_handle_t fd, vm_offset_t dest, const size_t len);
 void * efi_translate(vm_offset_t ptr);
 
 void	efi_copy_finish(void);
-void	efi_copy_get_locations(uint64_t *dst, uint64_t *src, uint64_t *src_end);
+void	efi_copy_finish_nop(void);
 
 #endif	/* _LOADER_EFI_COPY_H_ */

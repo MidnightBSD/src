@@ -36,7 +36,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #define pr_fmt(fmt) "user_mad: " fmt
 
 #include <linux/module.h>

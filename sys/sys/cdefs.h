@@ -513,8 +513,8 @@
 #endif
 
 /* Compiler-dependent macros that rely on FreeBSD-specific extensions. */
-#if ((defined(__MidnightBSD_cc_version) && __MidnightBSD_cc_version >= 300001) || (defined(__FreeBSD_cc_version) && __FreeBSD_cc_version >= 300001)) && \
-    defined(__GNUC__) && !defined(__INTEL_COMPILER)
+#if defined(__FreeBSD_cc_version) && __FreeBSD_cc_version >= 300001 && \
+    defined(__GNUC__)
 #define	__printf0like(fmtarg, firstvararg) \
 	    __attribute__((__format__ (__printf0__, fmtarg, firstvararg)))
 #else

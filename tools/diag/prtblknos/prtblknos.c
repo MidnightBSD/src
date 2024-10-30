@@ -22,7 +22,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/param.h>
@@ -30,32 +29,35 @@
 
 #include <err.h>
 #include <stdio.h>
+#include <string.h>
 #include <libufs.h>
 
+#ifdef PRTBLKNOS
 union dinode {
 	struct ufs1_dinode dp1;
 	struct ufs2_dinode dp2;
 };
+extern struct uufsd disk;
+#else /* used by fsdb */
+#include <fsck.h>
+static struct bufarea *bp;
+#endif
 
-void prtblknos(struct uufsd *disk, union dinode *dp);
+void prtblknos(struct fs *fs, union dinode *dp);
 
 static const char *distance(struct fs *, ufs2_daddr_t, ufs2_daddr_t);
 static void  printblk(struct fs *, ufs_lbn_t, ufs2_daddr_t, int, ufs_lbn_t);
-static void  indirprt(struct uufsd *, int, ufs_lbn_t, ufs_lbn_t, ufs2_daddr_t,
+static void  indirprt(struct fs *, int, ufs_lbn_t, ufs_lbn_t, ufs2_daddr_t,
 		ufs_lbn_t);
 
 void
-prtblknos(disk, dp)
-	struct uufsd *disk;
-	union dinode *dp;
+prtblknos(struct fs *fs, union dinode *dp)
 {
 	int i, mode, frags;
 	ufs_lbn_t lbn, lastlbn, len, blksperindir;
 	ufs2_daddr_t blkno;
-	struct fs *fs;
 	off_t size;
 
-	fs = (struct fs *)&disk->d_sb;
 	if (fs->fs_magic == FS_UFS1_MAGIC) {
 		size = dp->dp1.di_size;
 		mode = dp->dp1.di_mode;
@@ -93,8 +95,8 @@ prtblknos(disk, dp)
 		if (size < fs->fs_maxsymlinklen) {
 			printf("symbolic link referencing %s\n",
 			    (fs->fs_magic == FS_UFS1_MAGIC) ?
-			    (char *)dp->dp1.di_db :
-			    (char *)dp->dp2.di_db);
+			    dp->dp1.di_shortlink :
+			    dp->dp2.di_shortlink);
 			return;
 		}
 		printf("symbolic link\n");
@@ -137,7 +139,7 @@ prtblknos(disk, dp)
 			blkno = dp->dp1.di_ib[i];
 		else
 			blkno = dp->dp2.di_ib[i];
-		indirprt(disk, i, blksperindir, lbn, blkno, lastlbn);
+		indirprt(fs, i, blksperindir, lbn, blkno, lastlbn);
 		blksperindir *= NINDIR(fs);
 		lbn += blksperindir;
 		len -= blksperindir;
@@ -148,19 +150,12 @@ prtblknos(disk, dp)
 }
 
 static void
-indirprt(disk, level, blksperindir, lbn, blkno, lastlbn)
-	struct uufsd *disk;
-	int level;
-	ufs_lbn_t blksperindir;
-	ufs_lbn_t lbn;
-	ufs2_daddr_t blkno;
-	ufs_lbn_t lastlbn;
+indirprt(struct fs *fs, int level, ufs_lbn_t blksperindir, ufs_lbn_t lbn,
+	ufs2_daddr_t blkno, ufs_lbn_t lastlbn)
 {
 	char indir[MAXBSIZE];
-	struct fs *fs;
 	ufs_lbn_t i, last;
 
-	fs = (struct fs *)&disk->d_sb;
 	if (blkno == 0) {
 		printblk(fs, lbn, blkno,
 		    blksperindir * NINDIR(fs) * fs->fs_frag, lastlbn);
@@ -168,7 +163,14 @@ indirprt(disk, level, blksperindir, lbn, blkno, lastlbn)
 	}
 	printblk(fs, lbn, blkno, fs->fs_frag, -level);
 	/* read in the indirect block. */
-	if (bread(disk, fsbtodb(fs, blkno), indir, fs->fs_bsize) == -1) {
+#ifdef PRTBLKNOS
+	if (bread(&disk, fsbtodb(fs, blkno), indir, fs->fs_bsize) == -1) {
+#else /* used by fsdb */
+	bp = getdatablk(blkno, fs->fs_bsize, BT_LEVEL1 + level);
+	if (bp->b_errs == 0) {
+		memcpy(indir, bp->b_un.b_buf, fs->fs_bsize);
+	} else {
+#endif
 		warn("Read of indirect block %jd failed", (intmax_t)blkno);
 		/* List the unreadable part as a hole */
 		printblk(fs, lbn, 0,
@@ -192,16 +194,13 @@ indirprt(disk, level, blksperindir, lbn, blkno, lastlbn)
 			blkno = ((ufs1_daddr_t *)indir)[i];
 		else
 			blkno = ((ufs2_daddr_t *)indir)[i];
-		indirprt(disk, level - 1, blksperindir / NINDIR(fs),
+		indirprt(fs, level - 1, blksperindir / NINDIR(fs),
 		    lbn + blksperindir * i, blkno, lastlbn);
 	}
 }
 
 static const char *
-distance(fs, lastblk, firstblk)
-	struct fs *fs;
-	ufs2_daddr_t lastblk;
-	ufs2_daddr_t firstblk;
+distance(struct fs *fs, ufs2_daddr_t lastblk, ufs2_daddr_t firstblk)
 {
 	ufs2_daddr_t delta;
 	int firstcg, lastcg;
@@ -226,12 +225,8 @@ distance(fs, lastblk, firstblk)
 static const char *indirname[UFS_NIADDR] = { "First", "Second", "Third" };
 
 static void
-printblk(fs, lbn, blkno, numfrags, lastlbn)
-	struct fs *fs;
-	ufs_lbn_t lbn;
-	ufs2_daddr_t blkno;
-	int numfrags;
-	ufs_lbn_t lastlbn;
+printblk(struct fs *fs, ufs_lbn_t lbn, ufs2_daddr_t blkno, int numfrags,
+	ufs_lbn_t lastlbn)
 {
 	static int seq;
 	static ufs2_daddr_t totfrags, lastindirblk, lastblk, firstblk;

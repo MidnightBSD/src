@@ -31,7 +31,6 @@
 
 #include <sys/cdefs.h>
 __SCCSID("@(#)telldir.c	8.1 (Berkeley) 6/4/93");
-
 #include "namespace.h"
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -62,8 +61,8 @@ telldir(DIR *dirp)
 	 * 2) Otherwise, see if it's already been recorded in the linked list
 	 * 3) Otherwise, malloc a new one
 	 */
-	if (dirp->dd_seek < (1ul << DD_SEEK_BITS) &&
-	    dirp->dd_loc < (1ul << DD_LOC_BITS)) {
+	if (dirp->dd_seek < (off_t)(1l << DD_SEEK_BITS) &&
+	    dirp->dd_loc < (1l << DD_LOC_BITS)) {
 		ddloc.s.is_packed = 1;
 		ddloc.s.loc = dirp->dd_loc;
 		ddloc.s.seek = dirp->dd_seek;

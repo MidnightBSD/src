@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Codel/FQ_Codel and PIE/FQ-PIE Code:
  * Copyright (C) 2016 Centre for Advanced Internet Architectures,
@@ -35,7 +35,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Configuration and internal object management for dummynet.
  */
@@ -59,7 +58,6 @@
 #include <sys/time.h>
 #include <sys/taskqueue.h>
 #include <net/if.h>	/* IFNAMSIZ, struct ifaddr, ifq head, lock.h mutex.h */
-#include <net/if_var.h>
 #include <netinet/in.h>
 #include <netinet/ip_var.h>	/* ip_output(), IP_FORWARDING */
 #include <netinet/ip_fw.h>
@@ -127,7 +125,7 @@ find_aqm_type(int type, char *name)
 {
 	struct dn_aqm *d;
 
-	MPASS(in_epoch(net_epoch_preempt));
+	NET_EPOCH_ASSERT();
 
 	CK_LIST_FOREACH(d, &aqmlist, next) {
 		if (d->type == type || (name && !strcasecmp(d->name, name)))
@@ -143,7 +141,7 @@ find_sched_type(int type, char *name)
 {
 	struct dn_alg *d;
 
-	MPASS(in_epoch(net_epoch_preempt));
+	NET_EPOCH_ASSERT();
 
 	CK_LIST_FOREACH(d, &schedlist, next) {
 		if (d->type == type || (name && !strcasecmp(d->name, name)))
@@ -1348,7 +1346,7 @@ get_aqm_parms(struct sockopt *sopt)
 	struct dn_fsk *fs;
 	size_t sopt_valsize;
 	int l, err = 0;
-	
+
 	sopt_valsize = sopt->sopt_valsize;
 	l = sizeof(*ep);
 	if (sopt->sopt_valsize < l) {
@@ -1403,7 +1401,7 @@ get_sched_parms(struct sockopt *sopt)
 	struct dn_schk *schk;
 	size_t sopt_valsize;
 	int l, err = 0;
-	
+
 	sopt_valsize = sopt->sopt_valsize;
 	l = sizeof(*ep);
 	if (sopt->sopt_valsize < l) {
@@ -1457,7 +1455,7 @@ config_aqm(struct dn_fsk *fs, struct  dn_extra_parms *ep, int busy)
 {
 	int err = 0;
 
-	MPASS(in_epoch(net_epoch_preempt));
+	NET_EPOCH_ASSERT();
 
 	do {
 		/* no configurations */
@@ -1722,14 +1720,14 @@ config_sched(struct dn_sch *_nsch, struct dn_id *arg)
 	int i;
 	struct dn_link p;	/* copy of oldlink */
 	struct dn_profile *pf = NULL;	/* copy of old link profile */
-	/* Used to preserv mask parameter */
+	/* Used to preserve mask parameter */
 	struct ipfw_flow_id new_mask;
 	int new_buckets = 0;
 	int new_flags = 0;
 	int pipe_cmd;
 	int err = ENOMEM;
 
-	MPASS(in_epoch(net_epoch_preempt));
+	NET_EPOCH_ASSERT();
 
 	a.sch = _nsch;
 	if (a.sch->oid.len != sizeof(*a.sch)) {
@@ -2501,7 +2499,7 @@ ip_dn_ctl(struct sockopt *sopt)
 			return (error);
 	}
 
-	NET_EPOCH_ENTER_ET(et);
+	NET_EPOCH_ENTER(et);
 
 	switch (sopt->sopt_name) {
 	default :
@@ -2540,11 +2538,10 @@ ip_dn_ctl(struct sockopt *sopt)
 
 	free(p, M_TEMP);
 
-	NET_EPOCH_EXIT_ET(et);
+	NET_EPOCH_EXIT(et);
 
 	return error ;
 }
-
 
 static void
 ip_dn_vnet_init(void)
@@ -2791,7 +2788,6 @@ load_dn_aqm(struct dn_aqm *d)
 	return aqm ? 1 : 0;
 }
 
-
 /* Callback to clean up AQM status for queues connected to a flowset
  * and then deconfigure the flowset.
  * This function is called before an AQM module is unloaded
@@ -2855,4 +2851,3 @@ dn_aqm_modevent(module_t mod, int cmd, void *arg)
 #endif
 
 /* end of file */
-

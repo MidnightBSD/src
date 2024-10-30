@@ -25,7 +25,6 @@
 #
 # Merges MidnightBSD's several CD installation medias to the single DVD disk.
 #
-# $MidnightBSD$
 
 ## Helper functions
 usage () {

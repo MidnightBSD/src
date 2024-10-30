@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2003 Networks Associates Technology, Inc.
  * All rights reserved.
@@ -33,7 +33,6 @@
  *
  */
 #include <sys/cdefs.h>
-
 #include "namespace.h"
 #include <sys/param.h>
 #ifdef YP
@@ -256,11 +255,11 @@ static int
 pwd_marshal_func(char *buffer, size_t *buffer_size, void *retval, va_list ap,
     void *cache_mdata)
 {
-	char *name;
-	uid_t uid;
+	char *name __unused;
+	uid_t uid __unused;
 	struct passwd *pwd;
-	char *orig_buf;
-	size_t orig_buf_size;
+	char *orig_buf __unused;
+	size_t orig_buf_size __unused;
 
 	struct passwd new_pwd;
 	size_t desired_size, size;
@@ -360,8 +359,8 @@ static int
 pwd_unmarshal_func(char *buffer, size_t buffer_size, void *retval, va_list ap,
     void *cache_mdata)
 {
-	char *name;
-	uid_t uid;
+	char *name __unused;
+	uid_t uid __unused;
 	struct passwd *pwd;
 	char *orig_buf;
 	size_t orig_buf_size;
@@ -1107,7 +1106,7 @@ dns_passwd(void *retval, void *mdata, va_list ap)
 	hes = NULL;
 	name = NULL;
 	uid = (uid_t)-1;
-	how = (enum nss_lookup_type)mdata;
+	how = (enum nss_lookup_type)(uintptr_t)mdata;
 	switch (how) {
 	case nss_lt_name:
 		name = va_arg(ap, const char *);

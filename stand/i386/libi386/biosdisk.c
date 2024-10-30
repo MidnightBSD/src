@@ -26,8 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
-
 /*
  * BIOS disk device handling.
  *
@@ -165,7 +163,7 @@ struct devsw biosfd = {
 	.dv_close = bd_close,
 	.dv_ioctl = bd_ioctl,
 	.dv_print = fd_print,
-	.dv_cleanup = NULL
+	.dv_cleanup = nullsys,
 };
 
 struct devsw bioscd = {
@@ -177,7 +175,7 @@ struct devsw bioscd = {
 	.dv_close = bd_close,
 	.dv_ioctl = bd_ioctl,
 	.dv_print = cd_print,
-	.dv_cleanup = NULL
+	.dv_cleanup = nullsys,
 };
 
 struct devsw bioshd = {
@@ -189,7 +187,9 @@ struct devsw bioshd = {
 	.dv_close = bd_close,
 	.dv_ioctl = bd_ioctl,
 	.dv_print = bd_print,
-	.dv_cleanup = NULL
+	.dv_cleanup = nullsys,
+	.dv_fmtdev = disk_fmtdev,
+	.dv_parsedev = disk_parsedev,
 };
 
 static bdinfo_list_t *
@@ -339,6 +339,8 @@ bd_init(void)
 	int base, unit;
 	bdinfo_t *bd;
 
+	TSENTER();
+
 	base = 0x80;
 	for (unit = 0; unit < *(unsigned char *)PTOV(BIOS_NUMDRIVES); unit++) {
 		/*
@@ -358,6 +360,7 @@ bd_init(void)
 		STAILQ_INSERT_TAIL(&hdinfo, bd, bd_link);
 	}
 	bcache_add_dev(unit);
+	TSEXIT();
 	return (0);
 }
 
@@ -840,6 +843,8 @@ bd_open(struct open_file *f, ...)
 	va_list ap;
 	int rc;
 
+	TSENTER();
+
 	va_start(ap, f);
 	dev = va_arg(ap, struct disk_devdesc *);
 	va_end(ap);
@@ -873,6 +878,7 @@ bd_open(struct open_file *f, ...)
 			}
 		}
 	}
+	TSEXIT();
 	return (rc);
 }
 
@@ -1136,6 +1142,8 @@ bd_edd_io(bdinfo_t *bd, daddr_t dblk, int blks, caddr_t dest,
 {
 	static struct edd_packet packet;
 
+	TSENTER();
+
 	packet.len = sizeof(struct edd_packet);
 	packet.count = blks;
 	packet.off = VTOPOFF(dest);
@@ -1153,6 +1161,8 @@ bd_edd_io(bdinfo_t *bd, daddr_t dblk, int blks, caddr_t dest,
 	v86int();
 	if (V86_CY(v86.efl))
 		return (v86.eax >> 8);
+
+	TSEXIT();
 	return (0);
 }
 
@@ -1161,6 +1171,8 @@ bd_chs_io(bdinfo_t *bd, daddr_t dblk, int blks, caddr_t dest,
     int dowrite)
 {
 	uint32_t x, bpc, cyl, hd, sec;
+
+	TSENTER();
 
 	bpc = bd->bd_sec * bd->bd_hds;	/* blocks per cylinder */
 	x = dblk;
@@ -1190,6 +1202,7 @@ bd_chs_io(bdinfo_t *bd, daddr_t dblk, int blks, caddr_t dest,
 	v86int();
 	if (V86_CY(v86.efl))
 		return (v86.eax >> 8);
+	TSEXIT();
 	return (0);
 }
 
@@ -1206,6 +1219,8 @@ bd_io(struct disk_devdesc *dev, bdinfo_t *bd, daddr_t dblk, int blks,
     caddr_t dest, int dowrite)
 {
 	int result, retry;
+
+	TSENTER();
 
 	/* Just in case some idiot actually tries to read/write -1 blocks... */
 	if (blks < 0)
@@ -1265,36 +1280,9 @@ bd_io(struct disk_devdesc *dev, bdinfo_t *bd, daddr_t dblk, int blks,
 		}
 	}
 
+	TSEXIT();
+
 	return (result);
-}
-
-/*
- * Return the BIOS geometry of a given "fixed drive" in a format
- * suitable for the legacy bootinfo structure.  Since the kernel is
- * expecting raw int 0x13/0x8 values for N_BIOS_GEOM drives, we
- * prefer to get the information directly, rather than rely on being
- * able to put it together from information already maintained for
- * different purposes and for a probably different number of drives.
- *
- * For valid drives, the geometry is expected in the format (31..0)
- * "000000cc cccccccc hhhhhhhh 00ssssss"; and invalid drives are
- * indicated by returning the geometry of a "1.2M" PC-format floppy
- * disk.  And, incidentally, what is returned is not the geometry as
- * such but the highest valid cylinder, head, and sector numbers.
- */
-uint32_t
-bd_getbigeom(int bunit)
-{
-
-	v86.ctl = V86_FLAGS;
-	v86.addr = DISK_BIOS;
-	v86.eax = CMD_READ_PARAM;
-	v86.edx = 0x80 + bunit;
-	v86int();
-	if (V86_CY(v86.efl))
-		return (0x4f010f);
-	return (((v86.ecx & 0xc0) << 18) | ((v86.ecx & 0xff00) << 8) |
-	    (v86.edx & 0xff00) | (v86.ecx & 0x3f));
 }
 
 /*

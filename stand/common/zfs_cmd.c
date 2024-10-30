@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2018 M. Warner Losh <imp@freebd.org>
+ * Copyright (c) 2018 M. Warner Losh <imp@FreeBSD.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,8 +24,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
-
 /*
  * MD bootstrap main() and assorted miscellaneous
  * commands.

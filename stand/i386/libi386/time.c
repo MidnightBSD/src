@@ -25,8 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/i386/libi386/time.c 329099 2018-02-10 04:37:44Z kevans $");
-
 #include <stand.h>
 #include <btxv86.h>
 #include "bootstrap.h"
@@ -38,7 +36,7 @@ static int	bios_seconds(void);
 /*
  * Return the BIOS time-of-day value.
  *
- * XXX uses undocumented BCD support from libstand.
+ * XXX uses undocumented BCD support from libsa.
  */
 static int
 bios_seconds(void)

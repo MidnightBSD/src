@@ -32,7 +32,6 @@
  * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
- *
  */
 
 #ifndef IB_SA_H
@@ -42,6 +41,7 @@
 #include <linux/compiler.h>
 #include <linux/netdevice.h>
 
+#include <rdma/ib_addr_freebsd.h>
 #include <rdma/ib_verbs.h>
 #include <rdma/ib_mad.h>
 
@@ -179,7 +179,7 @@ struct ib_sa_path_rec {
 	enum ib_gid_type gid_type;
 };
 
-static inline struct net_device *ib_get_ndev_from_path(struct ib_sa_path_rec *rec)
+static inline struct ifnet *ib_get_ndev_from_path(struct ib_sa_path_rec *rec)
 {
 #ifdef VIMAGE
 	if (rec->net == NULL)
@@ -423,7 +423,7 @@ int ib_sa_get_mcmember_rec(struct ib_device *device, u8 port_num,
  */
 int ib_init_ah_from_mcmember(struct ib_device *device, u8 port_num,
 			     struct ib_sa_mcmember_rec *rec,
-			     struct net_device *ndev,
+			     struct ifnet *ndev,
 			     enum ib_gid_type gid_type,
 			     struct ib_ah_attr *ah_attr);
 

@@ -1,2 +1,2 @@
-Set to not build NLS catalog support for
+Do not build NLS catalog support for
 .Xr csh 1 .

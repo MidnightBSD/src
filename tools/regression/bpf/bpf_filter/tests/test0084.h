@@ -1,6 +1,5 @@
 /*-
  * Test 0084:	Check very long BPF program.
- *
  */
 
 /* BPF program */

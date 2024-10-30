@@ -1,2 +1,2 @@
-Set to build the base system with the retpoline speculative execution
+Build the base system with the retpoline speculative execution
 vulnerability mitigation for CVE-2017-5715.

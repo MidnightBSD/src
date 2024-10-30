@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright 2010 Nexenta Systems, Inc.  All rights reserved.
  * Copyright (c) 1995 Alex Tatmanjants <alex@elvisti.kiev.ua>
@@ -7,7 +7,7 @@
  *			All rights reserved.
  *
  * Copyright (c) 2011 The FreeBSD Foundation
- * All rights reserved.
+ *
  * Portions of this software were developed by David Chisnall
  * under sponsorship from the FreeBSD Foundation.
  *
@@ -31,7 +31,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _COLLATE_H_
@@ -52,7 +51,9 @@
 #endif
 
 #define	COLLATE_STR_LEN		24		/* should be 64-bit multiple */
-#define	COLLATE_VERSION		"BSD 1.0\n"
+
+#define	COLLATE_FMT_VERSION_LEN	12
+#define	COLLATE_FMT_VERSION	"BSD 1.0\n"
 
 #define	COLLATE_MAX_PRIORITY	(0x7fffffff)	/* max signed value */
 #define	COLLATE_SUBST_PRIORITY	(0x40000000)	/* bit indicates subst table */
@@ -68,7 +69,8 @@
 /*
  * The collate file format is as follows:
  *
- * char		version[COLLATE_STR_LEN];	// must be COLLATE_VERSION
+ * char	fmt_version[COLLATE_FMT_VERSION_LEN];	// must be COLLATE_FMT_VERSION
+ * char	def_version[XLOCALE_DEF_VERSION_LEN];	// NUL-terminated, may be empty
  * collate_info_t	info;			// see below, includes padding
  * collate_char_pri_t	char_data[256];		// 8 bit char values
  * collate_subst_t	subst[*];		// 0 or more substitutions

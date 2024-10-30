@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2015-2019 Yandex LLC
  * Copyright (c) 2015-2019 Andrey V. Elsukov <ae@FreeBSD.org>
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -71,7 +70,8 @@ sysctl_direct_output(SYSCTL_HANDLER_ARGS)
 	return (0);
 }
 SYSCTL_PROC(_net_inet_ip_fw, OID_AUTO, nat64_direct_output,
-    CTLFLAG_VNET | CTLTYPE_U32 | CTLFLAG_RW, 0, 0, sysctl_direct_output, "IU",
+    CTLFLAG_VNET | CTLTYPE_U32 | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
+    0, 0, sysctl_direct_output, "IU",
     "Use if_output directly instead of deffered netisr-based processing");
 
 static int

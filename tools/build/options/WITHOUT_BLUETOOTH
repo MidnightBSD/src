@@ -1,1 +1,1 @@
-Set to not build Bluetooth related kernel modules, programs and libraries.
+Do not build Bluetooth related kernel modules, programs and libraries.

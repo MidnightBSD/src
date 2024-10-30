@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008 Edward Tomasz Napierała <trasz@FreeBSD.org>
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/acl.h>
 
 int __oldacl_get_perm_np(acl_permset_t, oldacl_perm_t);

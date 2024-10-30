@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <rdma/ib_marshall.h>
 
 void ib_copy_ah_attr_to_user(struct ib_uverbs_ah_attr *dst,

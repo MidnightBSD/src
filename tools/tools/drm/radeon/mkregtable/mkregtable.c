@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /* utility to create the register check tables
  * this includes inlined list.h safe for userspace.
  *
@@ -11,8 +10,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/tools/tools/drm/radeon/mkregtable/mkregtable.c 254885 2013-08-25 19:37:15Z dumbbell $");
-
 #include <sys/types.h>
 #include <stdlib.h>
 #include <string.h>
@@ -596,11 +593,6 @@ static void table_print(struct table *t)
 
 	nlloop = (t->nentry + 3) / 4;
 	c = t->nentry;
-	printf(
-	    "#include <sys/cdefs.h>\n"
-	    "__FBSDID(\"$" "FreeBSD" "$\");\n"
-	    "\n"
-	    );
 	printf("static const unsigned %s_reg_safe_bm[%d] = {\n", t->gpu_prefix,
 	       t->nentry);
 	for (i = 0, id = 0; i < nlloop; i++) {

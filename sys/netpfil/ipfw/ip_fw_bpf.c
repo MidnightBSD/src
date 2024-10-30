@@ -25,13 +25,11 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/mbuf.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
-#include <sys/rmlock.h>
 #include <sys/socket.h>
 #include <net/ethernet.h>
 #include <net/if.h>
@@ -55,15 +53,6 @@ VNET_DEFINE_STATIC(struct if_clone *, ipfwlog_cloner);
 #define	V_ipfwlog_cloner	VNET(ipfwlog_cloner)
 #define	V_log_if		VNET(log_if)
 #define	V_pflog_if		VNET(pflog_if)
-
-static struct rmlock log_if_lock;
-#define	LOGIF_LOCK_INIT(x)	rm_init(&log_if_lock, "ipfw log_if lock")
-#define	LOGIF_LOCK_DESTROY(x)	rm_destroy(&log_if_lock)
-#define	LOGIF_RLOCK_TRACKER	struct rm_priotracker _log_tracker
-#define	LOGIF_RLOCK(x)		rm_rlock(&log_if_lock, &_log_tracker)
-#define	LOGIF_RUNLOCK(x)	rm_runlock(&log_if_lock, &_log_tracker)
-#define	LOGIF_WLOCK(x)		rm_wlock(&log_if_lock)
-#define	LOGIF_WUNLOCK(x)	rm_wunlock(&log_if_lock)
 
 static const char ipfwname[] = "ipfw";
 static const char ipfwlogname[] = "ipfwlog";
@@ -89,13 +78,12 @@ static void
 ipfw_clone_destroy(struct ifnet *ifp)
 {
 
-	LOGIF_WLOCK();
 	if (ifp->if_hdrlen == ETHER_HDR_LEN)
 		V_log_if = NULL;
 	else
 		V_pflog_if = NULL;
-	LOGIF_WUNLOCK();
 
+	NET_EPOCH_WAIT();
 	bpfdetach(ifp);
 	if_detach(ifp);
 	if_free(ifp);
@@ -107,8 +95,6 @@ ipfw_clone_create(struct if_clone *ifc, int unit, caddr_t params)
 	struct ifnet *ifp;
 
 	ifp = if_alloc(IFT_PFLOG);
-	if (ifp == NULL)
-		return (ENOSPC);
 	if_initname(ifp, ipfwname, unit);
 	ifp->if_flags = IFF_UP | IFF_SIMPLEX | IFF_MULTICAST;
 	ifp->if_mtu = 65536;
@@ -117,16 +103,13 @@ ipfw_clone_create(struct if_clone *ifc, int unit, caddr_t params)
 	ifp->if_hdrlen = ETHER_HDR_LEN;
 	if_attach(ifp);
 	bpfattach(ifp, DLT_EN10MB, ETHER_HDR_LEN);
-	LOGIF_WLOCK();
 	if (V_log_if != NULL) {
-		LOGIF_WUNLOCK();
 		bpfdetach(ifp);
 		if_detach(ifp);
 		if_free(ifp);
 		return (EEXIST);
 	}
 	V_log_if = ifp;
-	LOGIF_WUNLOCK();
 	return (0);
 }
 
@@ -136,8 +119,6 @@ ipfwlog_clone_create(struct if_clone *ifc, int unit, caddr_t params)
 	struct ifnet *ifp;
 
 	ifp = if_alloc(IFT_PFLOG);
-	if (ifp == NULL)
-		return (ENOSPC);
 	if_initname(ifp, ipfwlogname, unit);
 	ifp->if_flags = IFF_UP | IFF_SIMPLEX | IFF_MULTICAST;
 	ifp->if_mtu = 65536;
@@ -146,50 +127,66 @@ ipfwlog_clone_create(struct if_clone *ifc, int unit, caddr_t params)
 	ifp->if_hdrlen = PFLOG_HDRLEN;
 	if_attach(ifp);
 	bpfattach(ifp, DLT_PFLOG, PFLOG_HDRLEN);
-	LOGIF_WLOCK();
 	if (V_pflog_if != NULL) {
-		LOGIF_WUNLOCK();
 		bpfdetach(ifp);
 		if_detach(ifp);
 		if_free(ifp);
 		return (EEXIST);
 	}
 	V_pflog_if = ifp;
-	LOGIF_WUNLOCK();
 	return (0);
+}
+
+void
+ipfw_bpf_tap(u_char *pkt, u_int pktlen)
+{
+	struct ifnet *ifp = V_log_if;
+
+	NET_EPOCH_ASSERT();
+	if (ifp != NULL)
+		BPF_TAP(ifp, pkt, pktlen);
+}
+
+void
+ipfw_bpf_mtap(struct mbuf *m)
+{
+	struct ifnet *ifp = V_log_if;
+
+	NET_EPOCH_ASSERT();
+	if (ifp != NULL)
+		BPF_MTAP(ifp, m);
 }
 
 void
 ipfw_bpf_mtap2(void *data, u_int dlen, struct mbuf *m)
 {
-	LOGIF_RLOCK_TRACKER;
+	struct ifnet *logif;
 
-	LOGIF_RLOCK();
-	if (dlen == ETHER_HDR_LEN) {
-		if (V_log_if == NULL) {
-			LOGIF_RUNLOCK();
-			return;
-		}
-		BPF_MTAP2(V_log_if, data, dlen, m);
-	} else if (dlen == PFLOG_HDRLEN) {
-		if (V_pflog_if == NULL) {
-			LOGIF_RUNLOCK();
-			return;
-		}
-		BPF_MTAP2(V_pflog_if, data, dlen, m);
+	NET_EPOCH_ASSERT();
+	switch (dlen) {
+	case (ETHER_HDR_LEN):
+		logif = V_log_if;
+		break;
+	case (PFLOG_HDRLEN):
+		logif = V_pflog_if;
+		break;
+	default:
+#ifdef INVARIANTS
+		panic("%s: unsupported len %d", __func__, dlen);
+#endif
+		logif = NULL;
 	}
-	LOGIF_RUNLOCK();
+
+	if (logif != NULL)
+		BPF_MTAP2(logif, data, dlen, m);
 }
 
 void
-ipfw_bpf_init(int first)
+ipfw_bpf_init(int first __unused)
 {
 
-	if (first) {
-		LOGIF_LOCK_INIT();
-		V_log_if = NULL;
-		V_pflog_if = NULL;
-	}
+	V_log_if = NULL;
+	V_pflog_if = NULL;
 	V_ipfw_cloner = if_clone_simple(ipfwname, ipfw_clone_create,
 	    ipfw_clone_destroy, 0);
 	V_ipfwlog_cloner = if_clone_simple(ipfwlogname, ipfwlog_clone_create,
@@ -197,12 +194,9 @@ ipfw_bpf_init(int first)
 }
 
 void
-ipfw_bpf_uninit(int last)
+ipfw_bpf_uninit(int last __unused)
 {
 
 	if_clone_detach(V_ipfw_cloner);
 	if_clone_detach(V_ipfwlog_cloner);
-	if (last)
-		LOGIF_LOCK_DESTROY();
 }
-

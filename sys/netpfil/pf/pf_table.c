@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2002 Cedric Berger
  * All rights reserved.
@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_inet.h"
 #include "opt_inet6.h"
 
@@ -209,6 +208,7 @@ pfr_initialize(void)
 	V_pfr_kentry_z = uma_zcreate("pf table entries",
 	    sizeof(struct pfr_kentry), NULL, NULL, NULL, NULL, UMA_ALIGN_PTR,
 	    0);
+	uma_zone_set_max(V_pfr_kentry_z, PFR_KENTRY_HIWAT);
 	V_pf_limits[PF_LIMIT_TABLE_ENTRIES].zone = V_pfr_kentry_z;
 	V_pf_limits[PF_LIMIT_TABLE_ENTRIES].limit = PFR_KENTRY_HIWAT;
 }
@@ -753,7 +753,6 @@ pfr_mark_addrs(struct pfr_ktable *kt)
 	if (kt->pfrkt_ip6->rnh_walktree(&kt->pfrkt_ip6->rh, pfr_walktree, &w))
 		printf("pfr_mark_addrs: IPv6 walktree failed.\n");
 }
-
 
 static struct pfr_kentry *
 pfr_lookup_addr(struct pfr_ktable *kt, struct pfr_addr *ad, int exact)

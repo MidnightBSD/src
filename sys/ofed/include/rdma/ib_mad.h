@@ -34,7 +34,6 @@
  * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
- *
  */
 
 #if !defined(IB_MAD_H)
@@ -43,7 +42,7 @@
 #include <linux/list.h>
 
 #include <rdma/ib_verbs.h>
-#include <rdma/ib_user_mad.h>
+#include <uapi/rdma/ib_user_mad.h>
 
 /* Management base versions */
 #define IB_MGMT_BASE_VERSION			1

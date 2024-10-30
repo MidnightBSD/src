@@ -32,8 +32,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD$
  */
 
 #ifndef _STAND_NET_H
@@ -96,8 +94,6 @@ extern	n_long netmask;
 extern	u_int intf_mtu;
 
 extern	int debug;			/* defined in the machdep sources */
-
-extern struct iodesc sockets[SOPEN_MAX];
 
 /* ARP/RevARP functions: */
 u_char	*arpwhohas(struct iodesc *, struct in_addr);

@@ -1,2 +1,2 @@
-Set to avoid building the ARCMigrate, Rewriter and StaticAnalyzer components of
+Avoid building the ARCMigrate, Rewriter and StaticAnalyzer components of
 the Clang C/C++ compiler.

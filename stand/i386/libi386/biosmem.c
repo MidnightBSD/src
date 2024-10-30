@@ -25,8 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/i386/libi386/biosmem.c 346482 2019-04-21 04:26:02Z kevans $");
-
 /*
  * Obtain memory configuration information from the BIOS
  */

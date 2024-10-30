@@ -24,7 +24,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * IEEE 802.11 PHY-related support.
  */

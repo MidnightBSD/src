@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/signal.h>
 #include <sys/ucontext.h>
@@ -42,6 +41,7 @@ __sym_compat(swapcontext, __impl_swapcontext, FBSD_1.0);
 __weak_reference(swapcontext, __impl_swapcontext);
 __sym_default(swapcontext, swapcontext, FBSD_1.2);
 
+#pragma weak swapcontext
 int
 swapcontext(ucontext_t *oucp, const ucontext_t *ucp)
 {

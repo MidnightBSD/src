@@ -108,7 +108,7 @@ const char *
 _citrus_bcs_skip_ws_len(const char * __restrict p, size_t * __restrict len)
 {
 
-	while (*p && *len > 0 && _bcs_isspace(*p)) {
+	while (*len > 0 && *p && _bcs_isspace(*p)) {
 		p++;
 		(*len)--;
 	}
@@ -123,7 +123,7 @@ const char *
 _citrus_bcs_skip_nonws_len(const char * __restrict p, size_t * __restrict len)
 {
 
-	while (*p && *len > 0 && !_bcs_isspace(*p)) {
+	while (*len > 0 && *p && !_bcs_isspace(*p)) {
 		p++;
 		(*len)--;
 	}

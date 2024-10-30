@@ -23,6 +23,17 @@
 # SUCH DAMAGE.
 #
 
+require_sparse_file_support()
+{
+	if ! getconf MIN_HOLE_SIZE "$(pwd)"; then
+		echo "getconf MIN_HOLE_SIZE $(pwd) failed; sparse files " \
+		    "probably not supported by file system"
+		mount
+		atf_skip "Test's work directory does not support sparse files;" \
+		    "try with a different TMPDIR?"
+	fi
+}
+
 atf_test_case A_flag
 A_flag_head()
 {
@@ -30,6 +41,7 @@ A_flag_head()
 }
 A_flag_body()
 {
+	require_sparse_file_support
 	# XXX: compressed volumes?
 	atf_check truncate -s 10g sparse.file
 	atf_check -o inline:'1\tsparse.file\n' du -g sparse.file
@@ -45,7 +57,7 @@ H_flag_body()
 {
 	local paths1='testdir/A/B testdir/A testdir/C testdir'
 	local paths2='testdir/C/B testdir/C'
-	local lineprefix="^[0-9]+$(printf "\t")"
+	local lineprefix=$'^[0-9]+\t'
 	local sep="\$\n${lineprefix}"
 
 	atf_check mkdir testdir
@@ -102,6 +114,7 @@ g_flag_head()
 }
 g_flag_body()
 {
+	require_sparse_file_support
 	atf_check truncate -s 1k A
 	atf_check truncate -s 1m B
 	atf_check truncate -s 1g C
@@ -116,6 +129,7 @@ h_flag_head()
 }
 h_flag_body()
 {
+	require_sparse_file_support
 	atf_check truncate -s 1k A
 	atf_check truncate -s 1m B
 	atf_check truncate -s 1g C

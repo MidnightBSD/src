@@ -21,7 +21,6 @@
 static const char rcsid[] = "$Id: ns_ttl.c,v 1.4 2005/07/28 06:51:49 marka Exp $";
 #endif
 #include <sys/cdefs.h>
-
 /* Import. */
 
 #include "port_before.h"

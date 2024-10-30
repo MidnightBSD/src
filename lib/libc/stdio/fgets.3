@@ -31,12 +31,11 @@
 .\"
 .\"     @(#)fgets.3	8.1 (Berkeley) 6/4/93
 .\"
-.Dd April 3, 2018
+.Dd April 2, 2022
 .Dt FGETS 3
 .Os
 .Sh NAME
 .Nm fgets ,
-.Nm gets ,
 .Nm gets_s
 .Nd get a line from a stream
 .Sh LIBRARY
@@ -47,8 +46,6 @@
 .Fn fgets "char * restrict str" "int size" "FILE * restrict stream"
 .Ft char *
 .Fn gets_s "char *str" "rsize_t size"
-.Ft char *
-.Fn gets "char *str"
 .Sh DESCRIPTION
 The
 .Fn fgets
@@ -80,23 +77,12 @@ except that the newline character (if any) is not stored in the string.
 The
 .Fn gets
 function
-is equivalent to
-.Fn fgets
-with an infinite
-.Fa size
-and a
-.Fa stream
-of
-.Dv stdin ,
-except that the newline character (if any) is not stored in the string.
-It is the caller's responsibility to ensure that the input line,
-if any, is sufficiently short to fit in the string.
+was unsafe and is no longer available.
 .Sh RETURN VALUES
 Upon successful completion,
-.Fn fgets ,
-.Fn gets_s ,
+.Fn fgets
 and
-.Fn gets
+.Fn gets_s
 return
 a pointer to the string.
 If end-of-file occurs before any characters are read,
@@ -108,10 +94,9 @@ they return
 .Dv NULL
 and the buffer contents are indeterminate.
 The
-.Fn fgets ,
-.Fn gets_s ,
+.Fn fgets
 and
-.Fn gets
+.Fn gets_s
 functions
 do not distinguish between end-of-file and error, and callers must use
 .Xr feof 3
@@ -138,8 +123,6 @@ or
 .Xr malloc 3 .
 .Pp
 The function
-.Fn gets
-and
 .Fn gets_s
 may also fail and set
 .Va errno
@@ -152,11 +135,9 @@ for any of the errors specified for the routine
 .Xr fgetws 3 ,
 .Xr getline 3
 .Sh STANDARDS
-The functions
+The
 .Fn fgets
-and
-.Fn gets
-conform to
+function conforms to
 .St -isoC-99 .
 .Fn gets_s
 conforms to
@@ -165,16 +146,10 @@ K.3.7.4.1.
 .Fn gets
 has been removed from
 .St -isoC-2011 .
-.Sh SECURITY CONSIDERATIONS
-The
-.Fn gets
-function cannot be used securely.
-Because of its lack of bounds checking,
-and the inability for the calling program
-to reliably determine the length of the next incoming line,
-the use of this function enables malicious users
-to arbitrarily change a running program's functionality through
-a buffer overflow attack.
-It is strongly suggested that the
+.Sh HISTORY
+The functions
 .Fn fgets
-function be used in all cases.
+and
+.Fn gets
+first appeared in
+.At v7 .

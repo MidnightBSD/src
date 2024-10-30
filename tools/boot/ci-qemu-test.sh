@@ -1,11 +1,12 @@
 #!/bin/sh
 
-# Install loader, kernel, and enough of userland to boot in QEMU and echo
-# "Hello world." from init, as a very quick smoke test for CI.  Uses QEMU's
-# virtual FAT filesystem to avoid the need to create a disk image.  While
-# designed for CI automated testing, this script can also be run by hand as
-# a quick smoke-test.  The rootgen.sh and related scripts generate much more
-# extensive tests for many combinations of boot env (ufs, zfs, geli, etc).
+# Install pkgbase packages for loader, kernel, and enough of userland to boot
+# in QEMU and echo "Hello world." from init, as a very quick smoke test for CI.
+# Uses QEMU's virtual FAT filesystem to avoid the need to create a disk image.
+# While designed for CI automated testing, this script can also be run by hand
+# as a quick smoke-test as long as pkgbase packages have been built.  The
+# rootgen.sh and related scripts generate much more extensive tests for many
+# combinations of boot env (ufs, zfs, geli, etc).
 #
 
 set -e
@@ -19,44 +20,34 @@ die()
 tempdir_cleanup()
 {
 	trap - EXIT SIGINT SIGHUP SIGTERM SIGQUIT
-	rm -rf ${ROOTDIR}
+	rm -rf ${WORKDIR}
 }
 
 tempdir_setup()
 {
 	# Create minimal directory structure and populate it.
-	# Caller must cd ${SRCTOP} before calling this function.
 
 	for dir in dev bin efi/boot etc lib libexec sbin usr/lib usr/libexec; do
 		mkdir -p ${ROOTDIR}/${dir}
 	done
 
 	# Install kernel, loader and minimal userland.
-
-	make -DNO_ROOT DESTDIR=${ROOTDIR} \
-	    MODULES_OVERRIDE= \
-	    WITHOUT_DEBUG_FILES=yes \
-	    WITHOUT_KERNEL_SYMBOLS=yes \
-	    installkernel
-	for dir in stand \
-	    lib/libc lib/libedit lib/ncurses \
-	    libexec/rtld-elf \
-	    bin/sh sbin/init sbin/shutdown sbin/sysctl; do
-		make -DNO_ROOT DESTDIR=${ROOTDIR} INSTALL="install -U" \
-		    WITHOUT_DEBUG_FILES= \
-		    WITHOUT_MAN= \
-		    WITHOUT_PROFILE= \
-		    WITHOUT_TESTS= \
-		    WITHOUT_TOOLCHAIN= \
-		    -C ${dir} install
-	done
+	cat<<EOF >${ROOTDIR}/pkg.conf
+REPOS_DIR=[]
+repositories={local {url = file://$(dirname $OBJTOP)/repo/\${ABI}/latest}}
+EOF
+	ASSUME_ALWAYS_YES=true INSTALL_AS_USER=true pkg \
+	    -o ABI_FILE=$OBJTOP/bin/sh/sh \
+	    -C ${ROOTDIR}/pkg.conf -r ${ROOTDIR} install \
+	    FreeBSD-kernel-generic FreeBSD-bootloader \
+	    FreeBSD-clibs FreeBSD-runtime
 
 	# Put loader in standard EFI location.
-	mv ${ROOTDIR}/boot/loader.efi ${ROOTDIR}/efi/boot/BOOTx64.EFI
+	mv ${ROOTDIR}/boot/loader.efi ${ROOTDIR}/efi/boot/$EFIBOOT
 
 	# Configuration files.
 	cat > ${ROOTDIR}/boot/loader.conf <<EOF
-vfs.root.mountfrom="msdosfs:/dev/ada0s1"
+vfs.root.mountfrom="msdosfs:/dev/$ROOTDEV"
 autoboot_delay=-1
 boot_verbose=YES
 EOF
@@ -80,28 +71,58 @@ EOF
 if [ -z "${SRCTOP}" ]; then
 	die "Cannot locate top of source tree"
 fi
-
-# Locate the uefi firmware file used by qemu.
-: ${OVMF:=/usr/local/share/uefi-edk2-qemu/QEMU_UEFI_CODE-x86_64.fd}
-if [ ! -r "${OVMF}" ]; then
-	echo "NOTE: UEFI firmware available in the uefi-edk2-qemu-x86_64 package" >&2
-	die "Cannot read UEFI firmware file ${OVMF}"
+: ${OBJTOP:=$(make -V OBJTOP)}
+if [ -z "${OBJTOP}" ]; then
+	die "Cannot locate top of object tree"
 fi
 
+: ${TARGET:=$(uname -m)}
+case $TARGET in
+amd64)
+	# Locate the uefi firmware file used by qemu.
+	: ${OVMF:=/usr/local/share/qemu/edk2-x86_64-code.fd}
+	if [ ! -r "${OVMF}" ]; then
+		die "Cannot read UEFI firmware file ${OVMF}"
+	fi
+	QEMU="qemu-system-x86_64 -drive if=pflash,format=raw,readonly=on,file=${OVMF}"
+	EFIBOOT=BOOTx64.EFI
+	ROOTDEV=ada0s1
+	;;
+arm64)
+	QEMU="qemu-system-aarch64 -cpu cortex-a57 -M virt -bios edk2-aarch64-code.fd"
+	EFIBOOT=BOOTAA64.EFI
+	ROOTDEV=vtbd0s1
+	;;
+*)
+	die "Unknown TARGET:TARGET_ARCH $TARGET:$TARGET_ARCH"
+esac
+
 # Create a temp dir to hold the boot image.
-ROOTDIR=$(mktemp -d -t ci-qemu-test-fat-root)
+WORKDIR=$(mktemp -d -t ci-qemu-test-fat-root)
+ROOTDIR=${WORKDIR}/stage-root
 trap tempdir_cleanup EXIT SIGINT SIGHUP SIGTERM SIGQUIT
 
 # Populate the boot image in a temp dir.
 ( cd ${SRCTOP} && tempdir_setup )
 
+# Using QEMU's virtual FAT support is much faster than creating a disk image,
+# but only supports about 500MB.  Fall back to creating a disk image if the
+# staged root is too large.
+hda="fat:${ROOTDIR}"
+rootsize=$(du -skA ${ROOTDIR} | sed 's/[[:space:]].*$//')
+if [ $rootsize -gt 512000 ]; then
+	echo "Root size ${rootsize}K too large for QEMU virtual FAT" >&2
+	makefs -t msdos -s 1g $WORKDIR/image.fat $ROOTDIR
+	mkimg -s mbr -p efi:=$WORKDIR/image.fat -o $WORKDIR/image.mbr
+	hda="$WORKDIR/image.mbr"
+fi
+
 # And, boot in QEMU.
 : ${BOOTLOG:=${TMPDIR:-/tmp}/ci-qemu-test-boot.log}
 timeout 300 \
-    qemu-system-x86_64 -m 256M -nodefaults \
-   	-drive if=pflash,format=raw,readonly,file=${OVMF} \
+    $QEMU -m 256M -nodefaults \
         -serial stdio -vga none -nographic -monitor none \
-        -snapshot -hda fat:${ROOTDIR} 2>&1 | tee ${BOOTLOG}
+        -snapshot -hda $hda 2>&1 | tee ${BOOTLOG}
 
 # Check whether we succesfully booted...
 if grep -q 'Hello world.' ${BOOTLOG}; then

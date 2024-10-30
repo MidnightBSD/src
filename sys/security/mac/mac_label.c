@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_mac.h"
 
 #include <sys/param.h>
@@ -91,7 +90,6 @@ mac_destroy_label(struct label *label)
 	label->l_flags &= ~MAC_FLAG_INITIALIZED;
 #endif
 }
-
 
 static int
 mac_labelzone_ctor(void *mem, int size, void *arg, int flags)

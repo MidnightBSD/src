@@ -1,11 +1,15 @@
 #
+#
 # The user-driven targets are:
 #
 # universe            - *Really* build *everything* (buildworld and
-#                       all kernels on all architectures).  Define the
-#                       MAKE_JUST_KERNELS variable to only build kernels.
+#                       all kernels on all architectures).  Define
+#                       MAKE_JUST_KERNELS or WITHOUT_WORLDS to only build kernels,
+#                       MAKE_JUST_WORLDS or WITHOUT_KERNELS to only build userland.
 # tinderbox           - Same as universe, but presents a list of failed build
 #                       targets and exits with an error if there were any.
+# worlds	      - Same as universe, except just makes the worlds.
+# kernels	      - Same as universe, except just makes the kernels.
 # buildworld          - Rebuild *everything*, including glue to help do
 #                       upgrades.
 # installworld        - Install everything built by "buildworld".
@@ -19,7 +23,6 @@
 # kernel-toolchain    - Builds the subset of world necessary to build a kernel
 # kernel-toolchains   - Build kernel-toolchain for all universe targets.
 # doxygen             - Build API documentation of the kernel, needs doxygen.
-# update              - Convenient way to update your source tree(s).
 # checkworld          - Run test suite on installed world.
 # check-old           - List obsolete directories/files/libraries.
 # check-old-dirs      - List obsolete directories.
@@ -29,6 +32,9 @@
 # delete-old-dirs     - Delete obsolete directories.
 # delete-old-files    - Delete obsolete files.
 # delete-old-libs     - Delete obsolete libraries.
+# list-old-dirs       - Raw list of possibly obsolete directories.
+# list-old-files      - Raw list of possibly obsolete files.
+# list-old-libs       - Raw list of possibly obsolete libraries.
 # targets             - Print a list of supported TARGET/TARGET_ARCH pairs
 #                       for world and kernel targets.
 # toolchains          - Build a toolchain for all world and kernel targets.
@@ -56,9 +62,10 @@
 # Most of the user-driven targets (as listed above) are implemented in
 # Makefile.inc1.  The exceptions are universe, tinderbox and targets.
 #
-# If you want to build your system from source be sure that /usr/obj has
-# at least 6GB of diskspace available.  A complete 'universe' build requires
-# about 100GB of space.
+# If you want to build your system from source, be sure that /usr/obj has
+# at least 6 GB of disk space available.  A complete 'universe' build of
+# r340283 (2018-11) required 167 GB of space.  ZFS lz4 compression
+# achieved a 2.18x ratio, reducing actual space to 81 GB.
 #
 # For individuals wanting to build from the sources currently on their
 # system, the simple instructions are:
@@ -78,7 +85,7 @@
 #  5.  `reboot'        (in single user mode: boot -s from the loader prompt).
 #  6.  `mergemaster -p'
 #  7.  `make installworld'
-#  8.  `mergemaster'		(you may wish to use -i, along with -U or -F).
+#  8.  `mergemaster'            (you may wish to use -i, along with -U or -F).
 #  9.  `make delete-old'
 # 10.  `reboot'
 # 11.  `make delete-old-libs' (in case no 3rd party program uses them anymore)
@@ -100,6 +107,14 @@
 # For more information, see the build(7) manual page.
 #
 
+.if defined(UNIVERSE_TARGET) || defined(MAKE_JUST_WORLDS) || defined(WITHOUT_KERNELS)
+__DO_KERNELS=no
+.endif
+.if defined(MAKE_JUST_KERNELS) || defined(WITHOUT_WORLDS)
+__DO_WORLDS=no
+.endif
+__DO_WORLDS?=yes
+__DO_KERNELS?=yes
 # This is included so CC is set to ccache for -V, and COMPILER_TYPE/VERSION
 # can be cached for sub-makes.
 .if ${MAKE_VERSION} >= 20140620 && defined(.PARSEDIR)

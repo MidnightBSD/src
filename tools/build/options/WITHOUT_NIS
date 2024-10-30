@@ -1,4 +1,4 @@
-Set to not build
+Do not build
 .Xr NIS 8
 support and related programs.
 If set, you might need to adopt your

@@ -25,8 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
-
 #include "stand.h"
 
 #include <sys/stat.h>
@@ -52,14 +50,14 @@ static off_t	zf_seek(struct open_file *f, off_t offset, int where);
 static int	zf_stat(struct open_file *f, struct stat *sb);
 
 struct fs_ops gzipfs_fsops = {
-    "zip",
-    zf_open, 
-    zf_close, 
-    zf_read,
-    null_write,
-    zf_seek,
-    zf_stat,
-    null_readdir
+	.fs_name = "zip",
+	.fo_open = zf_open,
+	.fo_close = zf_close,
+	.fo_read = zf_read,
+	.fo_write = null_write,
+	.fo_seek = zf_seek,
+	.fo_stat = zf_stat,
+	.fo_readdir = null_readdir,
 };
 
 static int

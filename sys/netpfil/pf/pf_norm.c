@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_inet.h"
 #include "opt_inet6.h"
 #include "opt_pf.h"
@@ -54,6 +53,8 @@
 #include <netinet/tcp.h>
 #include <netinet/tcp_fsm.h>
 #include <netinet/tcp_seq.h>
+#include <netinet/sctp_constants.h>
+#include <netinet/sctp_header.h>
 
 #ifdef INET6
 #include <netinet/ip6.h>
@@ -105,11 +106,11 @@ struct pf_fragment_tag {
 	uint32_t	ft_id;		/* fragment id */
 };
 
-static struct mtx pf_frag_mtx;
-MTX_SYSINIT(pf_frag_mtx, &pf_frag_mtx, "pf fragments", MTX_DEF);
-#define PF_FRAG_LOCK()		mtx_lock(&pf_frag_mtx)
-#define PF_FRAG_UNLOCK()	mtx_unlock(&pf_frag_mtx)
-#define PF_FRAG_ASSERT()	mtx_assert(&pf_frag_mtx, MA_OWNED)
+VNET_DEFINE_STATIC(struct mtx, pf_frag_mtx);
+#define V_pf_frag_mtx		VNET(pf_frag_mtx)
+#define PF_FRAG_LOCK()		mtx_lock(&V_pf_frag_mtx)
+#define PF_FRAG_UNLOCK()	mtx_unlock(&V_pf_frag_mtx)
+#define PF_FRAG_ASSERT()	mtx_assert(&V_pf_frag_mtx, MA_OWNED)
 
 VNET_DEFINE(uma_zone_t, pf_state_scrub_z);	/* XXX: shared with pfsync */
 
@@ -191,6 +192,8 @@ pf_normalize_init(void)
 	    sizeof(struct pf_state_scrub),  NULL, NULL, NULL, NULL,
 	    UMA_ALIGN_PTR, 0);
 
+	mtx_init(&V_pf_frag_mtx, "pf fragments", NULL, MTX_DEF);
+
 	V_pf_limits[PF_LIMIT_FRAGS].zone = V_pf_frent_z;
 	V_pf_limits[PF_LIMIT_FRAGS].limit = PFFRAG_FRENT_HIWAT;
 	uma_zone_set_max(V_pf_frent_z, PFFRAG_FRENT_HIWAT);
@@ -206,6 +209,8 @@ pf_normalize_cleanup(void)
 	uma_zdestroy(V_pf_state_scrub_z);
 	uma_zdestroy(V_pf_frent_z);
 	uma_zdestroy(V_pf_frag_z);
+
+	mtx_destroy(&V_pf_frag_mtx);
 }
 
 static int
@@ -997,7 +1002,7 @@ pf_refragment6(struct ifnet *ifp, struct mbuf **m0, struct m_tag *mtag)
 		DPFPRINTF(("refragment error %d\n", error));
 		action = PF_DROP;
 	}
-	for (t = m; m; m = t) {
+	for (; m; m = t) {
 		t = m->m_nextpkt;
 		m->m_nextpkt = NULL;
 		m->m_flags |= M_SKIP_FIREWALL;
@@ -1165,9 +1170,8 @@ pf_normalize_ip6(struct mbuf **m0, int dir, struct pfi_kkif *kif,
 	int			 off;
 	struct ip6_ext		 ext;
 	struct ip6_opt		 opt;
-	struct ip6_opt_jumbo	 jumbo;
 	struct ip6_frag		 frag;
-	u_int32_t		 jumbolen = 0, plen;
+	u_int32_t		 plen;
 	int			 optend;
 	int			 ooff;
 	u_int8_t		 proto;
@@ -1214,6 +1218,11 @@ pf_normalize_ip6(struct mbuf **m0, int dir, struct pfi_kkif *kif,
 
 again:
 	h = mtod(m, struct ip6_hdr *);
+	plen = ntohs(h->ip6_plen);
+	/* jumbo payload option not supported */
+	if (plen == 0)
+		goto drop;
+
 	extoff = 0;
 	off = sizeof(struct ip6_hdr);
 	proto = h->ip6_nxt;
@@ -1257,26 +1266,8 @@ again:
 					goto shortpkt;
 				if (ooff + sizeof(opt) + opt.ip6o_len > optend)
 					goto drop;
-				switch (opt.ip6o_type) {
-				case IP6OPT_JUMBO:
-					if (h->ip6_plen != 0)
-						goto drop;
-					if (!pf_pull_hdr(m, ooff, &jumbo,
-					    sizeof(jumbo), NULL, NULL,
-					    AF_INET6))
-						goto shortpkt;
-					memcpy(&jumbolen, jumbo.ip6oj_jumbo_len,
-					    sizeof(jumbolen));
-					jumbolen = ntohl(jumbolen);
-					if (jumbolen <= IPV6_MAXPACKET)
-						goto drop;
-					if (sizeof(struct ip6_hdr) + jumbolen !=
-					    m->m_pkthdr.len)
-						goto drop;
-					break;
-				default:
-					break;
-				}
+				if (opt.ip6o_type == IP6OPT_JUMBO)
+					goto drop;
 				ooff += sizeof(opt) + opt.ip6o_len;
 			} while (ooff < optend);
 
@@ -1289,13 +1280,6 @@ again:
 		}
 	} while (!terminal);
 
-	/* jumbo payload option must be present, or plen > 0 */
-	if (ntohs(h->ip6_plen) == 0)
-		plen = jumbolen;
-	else
-		plen = ntohs(h->ip6_plen);
-	if (plen == 0)
-		goto drop;
 	if (sizeof(struct ip6_hdr) + plen > m->m_pkthdr.len)
 		goto shortpkt;
 
@@ -1306,10 +1290,6 @@ again:
  fragment:
 	if (pd->flags & PFDESC_IP_REAS)
 		return (PF_DROP);
-	/* Jumbo payload packets cannot be fragmented. */
-	plen = ntohs(h->ip6_plen);
-	if (plen == 0 || jumbolen)
-		goto drop;
 	if (sizeof(struct ip6_hdr) + plen > m->m_pkthdr.len)
 		goto shortpkt;
 
@@ -1497,14 +1477,12 @@ pf_normalize_tcp_init(struct mbuf *m, int off, struct pf_pdesc *pd,
 #endif /* INET6 */
 	}
 
-
 	/*
 	 * All normalizations below are only begun if we see the start of
 	 * the connections.  They must all set an enabled bit in pfss_flags
 	 */
 	if ((th->th_flags & TH_SYN) == 0)
 		return (0);
-
 
 	if (th->th_off > (sizeof(struct tcphdr) >> 2) && src->scrub &&
 	    pf_pull_hdr(m, off, hdr, th->th_off << 2, NULL, NULL, pd->af)) {
@@ -1551,12 +1529,32 @@ pf_normalize_tcp_init(struct mbuf *m, int off, struct pf_pdesc *pd,
 void
 pf_normalize_tcp_cleanup(struct pf_kstate *state)
 {
+	/* XXX Note: this also cleans up SCTP. */
 	if (state->src.scrub)
 		uma_zfree(V_pf_state_scrub_z, state->src.scrub);
 	if (state->dst.scrub)
 		uma_zfree(V_pf_state_scrub_z, state->dst.scrub);
 
 	/* Someday... flush the TCP segment reassembly descriptors. */
+}
+
+int
+pf_normalize_sctp_init(struct mbuf *m, int off, struct pf_pdesc *pd,
+	    struct pf_state_peer *src, struct pf_state_peer *dst)
+{
+	src->scrub = uma_zalloc(V_pf_state_scrub_z, M_ZERO | M_NOWAIT);
+	if (src->scrub == NULL)
+		return (1);
+
+	dst->scrub = uma_zalloc(V_pf_state_scrub_z, M_ZERO | M_NOWAIT);
+	if (dst->scrub == NULL) {
+		uma_zfree(V_pf_state_scrub_z, src);
+		return (1);
+	}
+
+	dst->scrub->pfss_v_tag = pd->sctp_initiate_tag;
+
+	return (0);
 }
 
 int
@@ -1689,7 +1687,6 @@ pf_normalize_tcp_stateful(struct mbuf *m, int off, struct pf_pdesc *pd,
 		}
 	}
 
-
 	/*
 	 * Must invalidate PAWS checks on connections idle for too long.
 	 * The fastest allowed timestamp clock is 1ms.  That turns out to
@@ -1789,7 +1786,6 @@ pf_normalize_tcp_stateful(struct mbuf *m, int off, struct pf_pdesc *pd,
 		 */
 		struct timeval delta_ts;
 		int ts_fudge;
-
 
 		/*
 		 * PFTM_TS_DIFF is how many seconds of leeway to allow
@@ -1897,7 +1893,6 @@ pf_normalize_tcp_stateful(struct mbuf *m, int off, struct pf_pdesc *pd,
 		}
 	}
 
-
 	/*
 	 * We will note if a host sends his data packets with or without
 	 * timestamps.  And require all data packets to contain a timestamp
@@ -1924,7 +1919,6 @@ pf_normalize_tcp_stateful(struct mbuf *m, int off, struct pf_pdesc *pd,
 			}
 		}
 	}
-
 
 	/*
 	 * Update PAWS values
@@ -2012,6 +2006,212 @@ pf_normalize_tcpopt(struct pf_krule *r, struct mbuf *m, struct tcphdr *th,
 		m_copyback(m, off + sizeof(*th), thoff - sizeof(*th), opts);
 
 	return (rewrite);
+}
+
+static int
+pf_scan_sctp(struct mbuf *m, int ipoff, int off, struct pf_pdesc *pd,
+    struct pfi_kkif *kif)
+{
+	struct sctp_chunkhdr ch = { };
+	int chunk_off = sizeof(struct sctphdr);
+	int chunk_start;
+	int ret;
+
+	while (off + chunk_off < pd->tot_len) {
+		if (!pf_pull_hdr(m, off + chunk_off, &ch, sizeof(ch), NULL,
+		    NULL, pd->af))
+			return (PF_DROP);
+
+		/* Length includes the header, this must be at least 4. */
+		if (ntohs(ch.chunk_length) < 4)
+			return (PF_DROP);
+
+		chunk_start = chunk_off;
+		chunk_off += roundup(ntohs(ch.chunk_length), 4);
+
+		switch (ch.chunk_type) {
+		case SCTP_INITIATION:
+		case SCTP_INITIATION_ACK: {
+			struct sctp_init_chunk init;
+
+			if (!pf_pull_hdr(m, off + chunk_start, &init,
+			    sizeof(init), NULL, NULL, pd->af))
+				return (PF_DROP);
+
+			/*
+			 * RFC 9620, Section 3.3.2, "The Initiate Tag is allowed to have
+			 * any value except 0."
+			 */
+			if (init.init.initiate_tag == 0)
+				return (PF_DROP);
+			if (init.init.num_inbound_streams == 0)
+				return (PF_DROP);
+			if (init.init.num_outbound_streams == 0)
+				return (PF_DROP);
+			if (ntohl(init.init.a_rwnd) < SCTP_MIN_RWND)
+				return (PF_DROP);
+
+			/*
+			 * RFC 9260, Section 3.1, INIT chunks MUST have zero
+			 * verification tag.
+			 */
+			if (ch.chunk_type == SCTP_INITIATION &&
+			    pd->hdr.sctp.v_tag != 0)
+				return (PF_DROP);
+
+			pd->sctp_initiate_tag = init.init.initiate_tag;
+
+			if (ch.chunk_type == SCTP_INITIATION)
+				pd->sctp_flags |= PFDESC_SCTP_INIT;
+			else
+				pd->sctp_flags |= PFDESC_SCTP_INIT_ACK;
+
+			ret = pf_multihome_scan_init(m, off + chunk_start,
+			    ntohs(init.ch.chunk_length), pd, kif);
+			if (ret != PF_PASS)
+				return (ret);
+
+			break;
+		}
+		case SCTP_ABORT_ASSOCIATION:
+			pd->sctp_flags |= PFDESC_SCTP_ABORT;
+			break;
+		case SCTP_SHUTDOWN:
+		case SCTP_SHUTDOWN_ACK:
+			pd->sctp_flags |= PFDESC_SCTP_SHUTDOWN;
+			break;
+		case SCTP_SHUTDOWN_COMPLETE:
+			pd->sctp_flags |= PFDESC_SCTP_SHUTDOWN_COMPLETE;
+			break;
+		case SCTP_COOKIE_ECHO:
+			pd->sctp_flags |= PFDESC_SCTP_COOKIE;
+			break;
+		case SCTP_COOKIE_ACK:
+			pd->sctp_flags |= PFDESC_SCTP_COOKIE_ACK;
+			break;
+		case SCTP_DATA:
+			pd->sctp_flags |= PFDESC_SCTP_DATA;
+			break;
+		case SCTP_HEARTBEAT_REQUEST:
+			pd->sctp_flags |= PFDESC_SCTP_HEARTBEAT;
+			break;
+		case SCTP_HEARTBEAT_ACK:
+			pd->sctp_flags |= PFDESC_SCTP_HEARTBEAT_ACK;
+			break;
+		case SCTP_ASCONF:
+			pd->sctp_flags |= PFDESC_SCTP_ASCONF;
+
+			ret = pf_multihome_scan_asconf(m, off + chunk_start,
+			    ntohs(ch.chunk_length), pd, kif);
+			if (ret != PF_PASS)
+				return (ret);
+			break;
+		default:
+			pd->sctp_flags |= PFDESC_SCTP_OTHER;
+			break;
+		}
+	}
+
+	/* Validate chunk lengths vs. packet length. */
+	if (off + chunk_off != pd->tot_len)
+		return (PF_DROP);
+
+	/*
+	 * INIT, INIT_ACK or SHUTDOWN_COMPLETE chunks must always be the only
+	 * one in a packet.
+	 */
+	if ((pd->sctp_flags & PFDESC_SCTP_INIT) &&
+	    (pd->sctp_flags & ~PFDESC_SCTP_INIT))
+		return (PF_DROP);
+	if ((pd->sctp_flags & PFDESC_SCTP_INIT_ACK) &&
+	    (pd->sctp_flags & ~PFDESC_SCTP_INIT_ACK))
+		return (PF_DROP);
+	if ((pd->sctp_flags & PFDESC_SCTP_SHUTDOWN_COMPLETE) &&
+	    (pd->sctp_flags & ~PFDESC_SCTP_SHUTDOWN_COMPLETE))
+		return (PF_DROP);
+
+	return (PF_PASS);
+}
+
+int
+pf_normalize_sctp(int dir, struct pfi_kkif *kif, struct mbuf *m, int ipoff,
+    int off, void *h, struct pf_pdesc *pd)
+{
+	struct pf_krule	*r, *rm = NULL;
+	struct sctphdr	*sh = &pd->hdr.sctp;
+	u_short		 reason;
+	sa_family_t	 af = pd->af;
+	int		 srs;
+
+	PF_RULES_RASSERT();
+
+	/* Unconditionally scan the SCTP packet, because we need to look for
+	 * things like shutdown and asconf chunks. */
+	if (pf_scan_sctp(m, ipoff, off, pd, kif) != PF_PASS)
+		goto sctp_drop;
+
+	r = TAILQ_FIRST(pf_main_ruleset.rules[PF_RULESET_SCRUB].active.ptr);
+	/* Check if there any scrub rules. Lack of scrub rules means enforced
+	 * packet normalization operation just like in OpenBSD. */
+	srs = (r != NULL);
+	while (r != NULL) {
+		pf_counter_u64_add(&r->evaluations, 1);
+		if (pfi_kkif_match(r->kif, kif) == r->ifnot)
+			r = r->skip[PF_SKIP_IFP].ptr;
+		else if (r->direction && r->direction != dir)
+			r = r->skip[PF_SKIP_DIR].ptr;
+		else if (r->af && r->af != af)
+			r = r->skip[PF_SKIP_AF].ptr;
+		else if (r->proto && r->proto != pd->proto)
+			r = r->skip[PF_SKIP_PROTO].ptr;
+		else if (PF_MISMATCHAW(&r->src.addr, pd->src, af,
+		    r->src.neg, kif, M_GETFIB(m)))
+			r = r->skip[PF_SKIP_SRC_ADDR].ptr;
+		else if (r->src.port_op && !pf_match_port(r->src.port_op,
+			    r->src.port[0], r->src.port[1], sh->src_port))
+			r = r->skip[PF_SKIP_SRC_PORT].ptr;
+		else if (PF_MISMATCHAW(&r->dst.addr, pd->dst, af,
+		    r->dst.neg, NULL, M_GETFIB(m)))
+			r = r->skip[PF_SKIP_DST_ADDR].ptr;
+		else if (r->dst.port_op && !pf_match_port(r->dst.port_op,
+			    r->dst.port[0], r->dst.port[1], sh->dest_port))
+			r = r->skip[PF_SKIP_DST_PORT].ptr;
+		else {
+			rm = r;
+			break;
+		}
+	}
+
+	if (srs) {
+		/* With scrub rules present SCTP normalization happens only
+		 * if one of rules has matched and it's not a "no scrub" rule */
+		if (rm == NULL || rm->action == PF_NOSCRUB)
+			return (PF_PASS);
+
+		pf_counter_u64_critical_enter();
+		pf_counter_u64_add_protected(&r->packets[dir == PF_OUT], 1);
+		pf_counter_u64_add_protected(&r->bytes[dir == PF_OUT], pd->tot_len);
+		pf_counter_u64_critical_exit();
+	}
+
+	/* Verify we're a multiple of 4 bytes long */
+	if ((pd->tot_len - off - sizeof(struct sctphdr)) % 4)
+		goto sctp_drop;
+
+	/* INIT chunk needs to be the only chunk */
+	if (pd->sctp_flags & PFDESC_SCTP_INIT)
+		if (pd->sctp_flags & ~PFDESC_SCTP_INIT)
+			goto sctp_drop;
+
+	return (PF_PASS);
+
+sctp_drop:
+	REASON_SET(&reason, PFRES_NORM);
+	if (rm != NULL && r->log)
+		PFLOG_PACKET(kif, m, AF_INET, pd->dir, reason, r, NULL, NULL, pd,
+		    1);
+
+	return (PF_DROP);
 }
 
 #ifdef INET

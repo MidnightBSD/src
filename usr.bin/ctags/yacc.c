@@ -36,7 +36,6 @@ static char sccsid[] = "@(#)yacc.c	8.3 (Berkeley) 4/2/94";
 #endif
 
 #include <sys/cdefs.h>
-
 #include <ctype.h>
 #include <limits.h>
 #include <stdio.h>

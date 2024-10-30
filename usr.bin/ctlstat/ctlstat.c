@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004, 2008, 2009 Silicon Graphics International Corp.
  * Copyright (c) 2017 Alexander Motin <mav@FreeBSD.org>
@@ -39,20 +39,24 @@
  */
 
 #include <sys/cdefs.h>
-
-#include <sys/ioctl.h>
-#include <sys/types.h>
 #include <sys/param.h>
-#include <sys/time.h>
-#include <sys/sysctl.h>
-#include <sys/resource.h>
-#include <sys/queue.h>
 #include <sys/callout.h>
+#include <sys/ioctl.h>
+#include <sys/queue.h>
+#include <sys/resource.h>
+#include <sys/sbuf.h>
+#include <sys/socket.h>
+#include <sys/sysctl.h>
+#include <sys/time.h>
+#include <assert.h>
+#include <bsdxml.h>
+#include <malloc_np.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <inttypes.h>
 #include <getopt.h>
 #include <string.h>
 #include <errno.h>
@@ -75,8 +79,8 @@
 
 static int ctl_stat_bits;
 
-static const char *ctlstat_opts = "Cc:Ddhjl:n:p:tw:";
-static const char *ctlstat_usage = "Usage:  ctlstat [-CDdjht] [-l lunnum]"
+static const char *ctlstat_opts = "Cc:DPdhjl:n:p:tw:";
+static const char *ctlstat_usage = "Usage:  ctlstat [-CDPdjht] [-l lunnum]"
 				   "[-c count] [-n numdevs] [-w wait]\n";
 
 struct ctl_cpu_stats {
@@ -91,6 +95,7 @@ typedef enum {
 	CTLSTAT_MODE_STANDARD,
 	CTLSTAT_MODE_DUMP,
 	CTLSTAT_MODE_JSON,
+	CTLSTAT_MODE_PROMETHEUS,
 } ctlstat_mode_types;
 
 #define	CTLSTAT_FLAG_CPU		(1 << 0)
@@ -128,13 +133,24 @@ struct ctlstat_context {
 	int header_interval;
 };
 
+struct cctl_portlist_data {
+	int level;
+	struct sbuf *cur_sb[32];
+	int id;
+	int lun;
+	int ntargets;
+	char *target;
+	char **targets;
+};
+
 #ifndef min
 #define	min(x,y)	(((x) < (y)) ? (x) : (y))
 #endif
 
 static void usage(int error);
 static int getstats(int fd, int *alloc_items, int *num_items,
-    struct ctl_io_stats **xstats, struct timespec *cur_time, int *time_valid);
+    struct ctl_io_stats **xstats, struct timespec *cur_time, int *time_valid,
+    bool ports);
 static int getcpu(struct ctl_cpu_stats *cpu_stats);
 static void compute_stats(struct ctl_io_stats *cur_stats,
 			  struct ctl_io_stats *prev_stats,
@@ -153,7 +169,7 @@ usage(int error)
 
 static int
 getstats(int fd, int *alloc_items, int *num_items, struct ctl_io_stats **stats,
-	 struct timespec *cur_time, int *flags)
+	 struct timespec *cur_time, int *flags, bool ports)
 {
 	struct ctl_get_io_stats get_stats;
 	int more_space_count = 0;
@@ -169,8 +185,8 @@ retry:
 	memset(*stats, 0, get_stats.alloc_len);
 	get_stats.stats = *stats;
 
-	if (ioctl(fd, (*flags & CTLSTAT_FLAG_PORTS) ? CTL_GET_PORT_STATS :
-	    CTL_GET_LUN_STATS, &get_stats) == -1)
+	if (ioctl(fd, ports ? CTL_GET_PORT_STATS : CTL_GET_LUN_STATS,
+	    &get_stats) == -1)
 		err(1, "CTL_GET_*_STATS ioctl returned error");
 
 	switch (get_stats.status) {
@@ -380,6 +396,224 @@ ctlstat_json(struct ctlstat_context *ctx) {
 	printf("]}");
 }
 
+#define CTLSTAT_PROMETHEUS_LOOP(field, collector) \
+	for (i = n = 0; i < ctx->cur_items; i++) { \
+		if (F_MASK(ctx) && bit_test(ctx->item_mask, \
+		    (int)stats[i].item) == 0) \
+			continue; \
+		for (iotype = 0; iotype < CTL_STATS_NUM_TYPES; iotype++) { \
+			int idx = stats[i].item; \
+			/* \
+			 * Note that Prometheus considers a label value of "" \
+			 * to be the same as no label at all \
+			 */ \
+			const char *target = ""; \
+			if (strcmp(collector, "port") == 0 && \
+				targdata.targets[idx] != NULL) \
+			{ \
+				target = targdata.targets[idx]; \
+			} \
+			printf("iscsi_%s_" #field "{" \
+			    "%s=\"%u\",target=\"%s\",type=\"%s\"} %" PRIu64 \
+			    "\n", \
+			    collector, collector, \
+			    idx, target, iotypes[iotype], \
+			    stats[i].field[iotype]); \
+		} \
+	} \
+
+#define CTLSTAT_PROMETHEUS_TIMELOOP(field, collector) \
+	for (i = n = 0; i < ctx->cur_items; i++) { \
+		if (F_MASK(ctx) && bit_test(ctx->item_mask, \
+		    (int)stats[i].item) == 0) \
+			continue; \
+		for (iotype = 0; iotype < CTL_STATS_NUM_TYPES; iotype++) { \
+			uint64_t us; \
+			struct timespec ts; \
+			int idx = stats[i].item; \
+			/* \
+			 * Note that Prometheus considers a label value of "" \
+			 * to be the same as no label at all \
+			 */ \
+			const char *target = ""; \
+			if (strcmp(collector, "port") == 0 && \
+				targdata.targets[idx] != NULL) \
+			{ \
+				target = targdata.targets[idx]; \
+			} \
+			bintime2timespec(&stats[i].field[iotype], &ts); \
+			us = ts.tv_sec * 1000000 + ts.tv_nsec / 1000; \
+			printf("iscsi_%s_" #field "{" \
+			    "%s=\"%u\",target=\"%s\",type=\"%s\"} %" PRIu64 \
+			    "\n", \
+			    collector, collector, \
+			    idx, target, iotypes[iotype], us); \
+		} \
+	} \
+
+static void
+cctl_start_pelement(void *user_data, const char *name, const char **attr)
+{
+	struct cctl_portlist_data* targdata = user_data;
+
+	targdata->level++;
+	if ((u_int)targdata->level >= (sizeof(targdata->cur_sb) /
+	    sizeof(targdata->cur_sb[0])))
+		errx(1, "%s: too many nesting levels, %zd max", __func__,
+		     sizeof(targdata->cur_sb) / sizeof(targdata->cur_sb[0]));
+
+	targdata->cur_sb[targdata->level] = sbuf_new_auto();
+	if (targdata->cur_sb[targdata->level] == NULL)
+		err(1, "%s: Unable to allocate sbuf", __func__);
+
+	if (strcmp(name, "targ_port") == 0) {
+		int i = 0;
+
+		targdata->lun = -1;
+		targdata->id = -1;
+		free(targdata->target);
+		targdata->target = NULL;
+		while (attr[i]) {
+			if (strcmp(attr[i], "id") == 0) {
+				/*
+				 * Well-formed XML always pairs keys with
+				 * values in attr
+				 */
+				assert(attr[i + 1]);
+				targdata->id = atoi(attr[i + 1]);
+			}
+			i += 2;
+		}
+
+	}
+}
+
+static void
+cctl_char_phandler(void *user_data, const XML_Char *str, int len)
+{
+	struct cctl_portlist_data *targdata = user_data;
+
+	sbuf_bcat(targdata->cur_sb[targdata->level], str, len);
+}
+
+static void
+cctl_end_pelement(void *user_data, const char *name)
+{
+	struct cctl_portlist_data* targdata = user_data;
+	char *str;
+
+	if (targdata->cur_sb[targdata->level] == NULL)
+		errx(1, "%s: no valid sbuf at level %d (name %s)", __func__,
+		     targdata->level, name);
+
+	if (sbuf_finish(targdata->cur_sb[targdata->level]) != 0)
+		err(1, "%s: sbuf_finish", __func__);
+	str = strdup(sbuf_data(targdata->cur_sb[targdata->level]));
+	if (str == NULL)
+		err(1, "%s can't allocate %zd bytes for string", __func__,
+		    sbuf_len(targdata->cur_sb[targdata->level]));
+
+	sbuf_delete(targdata->cur_sb[targdata->level]);
+	targdata->cur_sb[targdata->level] = NULL;
+	targdata->level--;
+
+	if (strcmp(name, "target") == 0) {
+		free(targdata->target);
+		targdata->target = str;
+	} else if (strcmp(name, "targ_port") == 0) {
+		if (targdata->id >= 0 && targdata->target != NULL) {
+			if (targdata->id >= targdata->ntargets) {
+				/*
+				 * This can happen for example if there are
+				 * targets with no LUNs.
+				 */
+				targdata->ntargets = MAX(targdata->ntargets * 2,
+					targdata->id + 1);
+				size_t newsize = targdata->ntargets *
+					sizeof(char*);
+				targdata->targets = rallocx(targdata->targets,
+					newsize, MALLOCX_ZERO);
+			}
+			free(targdata->targets[targdata->id]);
+			targdata->targets[targdata->id] = targdata->target;
+			targdata->target = NULL;
+		}
+		free(str);
+	} else {
+		free(str);
+	}
+}
+
+static void
+ctlstat_prometheus(int fd, struct ctlstat_context *ctx, bool ports) {
+	struct ctl_io_stats *stats = ctx->cur_stats;
+	struct ctl_lun_list list;
+	struct cctl_portlist_data targdata;
+	XML_Parser parser;
+	char *port_str = NULL;
+	int iotype, i, n, retval;
+	int port_len = 4096;
+	const char *collector;
+
+	bzero(&targdata, sizeof(targdata));
+	targdata.ntargets = ctx->cur_items;
+	targdata.targets = calloc(targdata.ntargets, sizeof(char*));
+retry:
+	port_str = (char *)realloc(port_str, port_len);
+	bzero(&list, sizeof(list));
+	list.alloc_len = port_len;
+	list.status = CTL_LUN_LIST_NONE;
+	list.lun_xml = port_str;
+	if (ioctl(fd, CTL_PORT_LIST, &list) == -1)
+		err(1, "%s: error issuing CTL_PORT_LIST ioctl", __func__);
+	if (list.status == CTL_LUN_LIST_ERROR) {
+		warnx("%s: error returned from CTL_PORT_LIST ioctl:\n%s",
+		      __func__, list.error_str);
+	} else if (list.status == CTL_LUN_LIST_NEED_MORE_SPACE) {
+		port_len <<= 1;
+		goto retry;
+	}
+
+	parser = XML_ParserCreate(NULL);
+	if (parser == NULL)
+		err(1, "%s: Unable to create XML parser", __func__);
+	XML_SetUserData(parser, &targdata);
+	XML_SetElementHandler(parser, cctl_start_pelement, cctl_end_pelement);
+	XML_SetCharacterDataHandler(parser, cctl_char_phandler);
+
+	retval = XML_Parse(parser, port_str, strlen(port_str), 1);
+	if (retval != 1) {
+		errx(1, "%s: Unable to parse XML: Error %d", __func__,
+		    XML_GetErrorCode(parser));
+	}
+	XML_ParserFree(parser);
+
+	collector = ports ? "port" : "lun";
+
+	printf("# HELP iscsi_%s_bytes Number of bytes\n"
+	       "# TYPE iscsi_%s_bytes counter\n", collector, collector);
+	CTLSTAT_PROMETHEUS_LOOP(bytes, collector);
+	printf("# HELP iscsi_%s_dmas Number of DMA\n"
+	       "# TYPE iscsi_%s_dmas counter\n", collector, collector);
+	CTLSTAT_PROMETHEUS_LOOP(dmas, collector);
+	printf("# HELP iscsi_%s_operations Number of operations\n"
+	       "# TYPE iscsi_%s_operations counter\n", collector, collector);
+	CTLSTAT_PROMETHEUS_LOOP(operations, collector);
+	printf("# HELP iscsi_%s_time Cumulative operation time in us\n"
+	       "# TYPE iscsi_%s_time counter\n", collector, collector);
+	CTLSTAT_PROMETHEUS_TIMELOOP(time, collector);
+	printf("# HELP iscsi_%s_dma_time Cumulative DMA time in us\n"
+	       "# TYPE iscsi_%s_dma_time counter\n", collector, collector);
+	CTLSTAT_PROMETHEUS_TIMELOOP(dma_time, collector);
+
+	for (i = 0; i < targdata.ntargets; i++)
+		free(targdata.targets[i]);
+	free(targdata.target);
+	free(targdata.targets);
+
+	fflush(stdout);
+}
+
 static void
 ctlstat_standard(struct ctlstat_context *ctx) {
 	long double etime;
@@ -570,6 +804,45 @@ ctlstat_standard(struct ctlstat_context *ctx) {
 	}
 }
 
+static void
+get_and_print_stats(int fd, struct ctlstat_context *ctx, bool ports)
+{
+	struct ctl_io_stats *tmp_stats;
+	int c;
+
+	tmp_stats = ctx->prev_stats;
+	ctx->prev_stats = ctx->cur_stats;
+	ctx->cur_stats = tmp_stats;
+	c = ctx->prev_alloc;
+	ctx->prev_alloc = ctx->cur_alloc;
+	ctx->cur_alloc = c;
+	c = ctx->prev_items;
+	ctx->prev_items = ctx->cur_items;
+	ctx->cur_items = c;
+	ctx->prev_time = ctx->cur_time;
+	ctx->prev_cpu = ctx->cur_cpu;
+	if (getstats(fd, &ctx->cur_alloc, &ctx->cur_items,
+	    &ctx->cur_stats, &ctx->cur_time, &ctx->flags, ports) != 0)
+		errx(1, "error returned from getstats()");
+
+	switch(ctx->mode) {
+	case CTLSTAT_MODE_STANDARD:
+		ctlstat_standard(ctx);
+		break;
+	case CTLSTAT_MODE_DUMP:
+		ctlstat_dump(ctx);
+		break;
+	case CTLSTAT_MODE_JSON:
+		ctlstat_json(ctx);
+		break;
+	case CTLSTAT_MODE_PROMETHEUS:
+		ctlstat_prometheus(fd, ctx, ports);
+		break;
+	default:
+		break;
+	}
+}
+
 int
 main(int argc, char **argv)
 {
@@ -578,7 +851,6 @@ main(int argc, char **argv)
 	int fd, retval;
 	size_t size;
 	struct ctlstat_context ctx;
-	struct ctl_io_stats *tmp_stats;
 
 	/* default values */
 	retval = 0;
@@ -658,6 +930,9 @@ main(int argc, char **argv)
 			ctx.flags |= CTLSTAT_FLAG_PORTS;
 			break;
 		}
+		case 'P':
+			ctx.mode = CTLSTAT_MODE_PROMETHEUS;
+			break;
 		case 't':
 			ctx.flags |= CTLSTAT_FLAG_TOTALS;
 			break;
@@ -675,6 +950,18 @@ main(int argc, char **argv)
 	if (F_LUNS(&ctx) && F_PORTS(&ctx))
 		errx(1, "Options -p and -l are exclusive.");
 
+	if (ctx.mode == CTLSTAT_MODE_PROMETHEUS) {
+		if ((count != -1) ||
+			(waittime != 1) ||
+			(F_PORTS(&ctx)) ||
+			/* NB: -P could be compatible with -t in the future */
+			(ctx.flags & CTLSTAT_FLAG_TOTALS))
+		{
+			errx(1, "Option -P is exclusive with -p, -c, -w, and -t");
+		}
+		count = 1;
+	}
+
 	if (!F_LUNS(&ctx) && !F_PORTS(&ctx)) {
 		if (F_TOTALS(&ctx))
 			ctx.flags |= CTLSTAT_FLAG_PORTS;
@@ -685,34 +972,27 @@ main(int argc, char **argv)
 	if ((fd = open(CTL_DEFAULT_DEV, O_RDWR)) == -1)
 		err(1, "cannot open %s", CTL_DEFAULT_DEV);
 
-	for (;count != 0;) {
-		tmp_stats = ctx.prev_stats;
-		ctx.prev_stats = ctx.cur_stats;
-		ctx.cur_stats = tmp_stats;
-		c = ctx.prev_alloc;
-		ctx.prev_alloc = ctx.cur_alloc;
-		ctx.cur_alloc = c;
-		c = ctx.prev_items;
-		ctx.prev_items = ctx.cur_items;
-		ctx.cur_items = c;
-		ctx.prev_time = ctx.cur_time;
-		ctx.prev_cpu = ctx.cur_cpu;
-		if (getstats(fd, &ctx.cur_alloc, &ctx.cur_items,
-		    &ctx.cur_stats, &ctx.cur_time, &ctx.flags) != 0)
-			errx(1, "error returned from getstats()");
+	if (ctx.mode == CTLSTAT_MODE_PROMETHEUS) {
+		/*
+		 * NB: Some clients will print a warning if we don't set
+		 * Content-Length, but they still work.  And the data still
+		 * gets into Prometheus.
+		 */
+		printf("HTTP/1.1 200 OK\r\n"
+		       "Connection: close\r\n"
+		       "Content-Type: text/plain; version=0.0.4\r\n"
+		       "\r\n");
+	}
 
-		switch(ctx.mode) {
-		case CTLSTAT_MODE_STANDARD:
-			ctlstat_standard(&ctx);
-			break;
-		case CTLSTAT_MODE_DUMP:
-			ctlstat_dump(&ctx);
-			break;
-		case CTLSTAT_MODE_JSON:
-			ctlstat_json(&ctx);
-			break;
-		default:
-			break;
+	for (;count != 0;) {
+		bool ports;
+
+		if (ctx.mode == CTLSTAT_MODE_PROMETHEUS) {
+			get_and_print_stats(fd, &ctx, false);
+			get_and_print_stats(fd, &ctx, true);
+		} else {
+			ports = ctx.flags & CTLSTAT_FLAG_PORTS;
+			get_and_print_stats(fd, &ctx, ports);
 		}
 
 		fprintf(stdout, "\n");

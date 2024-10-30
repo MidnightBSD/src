@@ -179,6 +179,14 @@ typedef struct __rpc_svcxprt {
 	int		xp_upcallset;	/* socket upcall is set up */
 	uint32_t	xp_snd_cnt;	/* # of bytes to send to socket */
 	uint32_t	xp_snt_cnt;	/* # of bytes sent to socket */
+	bool_t		xp_dontrcv;	/* Do not receive on the socket */
+	uint32_t	xp_tls;		/* RPC-over-TLS on socket */
+	uint64_t	xp_sslsec;	/* Userland SSL * */
+	uint64_t	xp_sslusec;
+	uint64_t	xp_sslrefno;
+	int		xp_ngrps;	/* Cred. from TLS cert. */
+	uid_t		xp_uid;
+	gid_t		*xp_gidp;
 #else
 	int		xp_fd;
 	u_short		xp_port;	 /* associated port number */
@@ -203,7 +211,7 @@ typedef struct __rpc_svcxprt {
  * Interface to server-side authentication flavors.
  */
 typedef struct __rpc_svcauth {
-	struct svc_auth_ops {
+	const struct svc_auth_ops {
 #ifdef _KERNEL
 		int   (*svc_ah_wrap)(struct __rpc_svcauth *,  struct mbuf **);
 		int   (*svc_ah_unwrap)(struct __rpc_svcauth *, struct mbuf **);

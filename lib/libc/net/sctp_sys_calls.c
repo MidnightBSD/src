@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -390,23 +389,27 @@ sctp_getpaddrs(int sd, sctp_assoc_t id, struct sockaddr **raddrs)
 {
 	struct sctp_getaddresses *addrs;
 	struct sockaddr *sa;
-	sctp_assoc_t asoc;
 	caddr_t lim;
 	socklen_t opt_len;
+	uint32_t size_of_addresses;
 	int cnt;
 
 	if (raddrs == NULL) {
 		errno = EFAULT;
 		return (-1);
 	}
-	asoc = id;
-	opt_len = (socklen_t)sizeof(sctp_assoc_t);
+	/* When calling getsockopt(), the value contains the assoc_id. */
+	size_of_addresses = (uint32_t)id;
+	opt_len = (socklen_t)sizeof(uint32_t);
 	if (getsockopt(sd, IPPROTO_SCTP, SCTP_GET_REMOTE_ADDR_SIZE,
-	    &asoc, &opt_len) != 0) {
-		return (-1);
+	    &size_of_addresses, &opt_len) != 0) {
+		if (errno == ENOENT) {
+			return (0);
+		} else {
+			return (-1);
+		}
 	}
-	/* size required is returned in 'asoc' */
-	opt_len = (socklen_t)((size_t)asoc + sizeof(struct sctp_getaddresses));
+	opt_len = (socklen_t)((size_t)size_of_addresses + sizeof(struct sctp_getaddresses));
 	addrs = calloc(1, (size_t)opt_len);
 	if (addrs == NULL) {
 		errno = ENOMEM;
@@ -445,10 +448,10 @@ int
 sctp_getladdrs(int sd, sctp_assoc_t id, struct sockaddr **raddrs)
 {
 	struct sctp_getaddresses *addrs;
-	caddr_t lim;
 	struct sockaddr *sa;
-	size_t size_of_addresses;
+	caddr_t lim;
 	socklen_t opt_len;
+	uint32_t size_of_addresses;
 	int cnt;
 
 	if (raddrs == NULL) {
@@ -456,17 +459,12 @@ sctp_getladdrs(int sd, sctp_assoc_t id, struct sockaddr **raddrs)
 		return (-1);
 	}
 	size_of_addresses = 0;
-	opt_len = (socklen_t)sizeof(int);
+	opt_len = (socklen_t)sizeof(uint32_t);
 	if (getsockopt(sd, IPPROTO_SCTP, SCTP_GET_LOCAL_ADDR_SIZE,
 	    &size_of_addresses, &opt_len) != 0) {
-		errno = ENOMEM;
 		return (-1);
 	}
-	if (size_of_addresses == 0) {
-		errno = ENOTCONN;
-		return (-1);
-	}
-	opt_len = (socklen_t)(size_of_addresses + sizeof(struct sctp_getaddresses));
+	opt_len = (socklen_t)((size_t)size_of_addresses + sizeof(struct sctp_getaddresses));
 	addrs = calloc(1, (size_t)opt_len);
 	if (addrs == NULL) {
 		errno = ENOMEM;
@@ -477,8 +475,11 @@ sctp_getladdrs(int sd, sctp_assoc_t id, struct sockaddr **raddrs)
 	if (getsockopt(sd, IPPROTO_SCTP, SCTP_GET_LOCAL_ADDRESSES, addrs,
 	    &opt_len) != 0) {
 		free(addrs);
-		errno = ENOMEM;
 		return (-1);
+	}
+	if (size_of_addresses == 0) {
+		free(addrs);
+		return (0);
 	}
 	*raddrs = &addrs->addr[0].sa;
 	cnt = 0;

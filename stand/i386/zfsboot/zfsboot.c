@@ -14,8 +14,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
-
 #include <stand.h>
 
 #include <sys/param.h>
@@ -26,6 +24,9 @@ __FBSDID("$FreeBSD$");
 #endif
 #include <sys/reboot.h>
 #include <sys/queue.h>
+#ifdef LOADER_ZFS_SUPPORT
+#include <sys/zfs_bootenv.h>
+#endif
 
 #include <machine/bootinfo.h>
 #include <machine/elf.h>
@@ -165,7 +166,7 @@ main(void)
 {
 	unsigned i;
 	int auto_boot, fd, nextboot = 0;
-	struct disk_devdesc devdesc;
+	struct disk_devdesc *devdesc;
 
 	bios_getmem();
 
@@ -204,32 +205,46 @@ main(void)
 	snprintf(boot_devname, sizeof (boot_devname), "disk%d:",
 	    bd_bios2unit(bootinfo.bi_bios_dev));
 
-	for (i = 0; devsw[i] != NULL; i++)
-		if (devsw[i]->dv_init != NULL)
-			(devsw[i]->dv_init)();
+	/* Set up currdev variable to have hooks in place. */
+	env_setenv("currdev", EV_VOLATILE, "", gen_setcurrdev,
+	    env_nounset);
 
-	disk_parsedev(&devdesc, boot_devname + 4, NULL);
+	devinit();
 
-	bootdev = MAKEBOOTDEV(dev_maj[DEVT_DISK], devdesc.d_slice + 1,
-	    devdesc.dd.d_unit,
-	    devdesc.d_partition >= 0 ? devdesc.d_partition : 0xff);
+	/* XXX assumes this will be a disk, but it looks likely give above */
+	disk_parsedev((struct devdesc **)&devdesc, boot_devname, NULL);
+
+	bootdev = MAKEBOOTDEV(dev_maj[DEVT_DISK], devdesc->d_slice + 1,
+	    devdesc->dd.d_unit,
+	    devdesc->d_partition >= 0 ? devdesc->d_partition : 0xff);
+	free(devdesc);
 
 	/*
-	 * zfs_fmtdev() can be called only after dv_init
+	 * devformat() can be called only after dv_init
 	 */
 	if (bdev != NULL && bdev->dd.d_dev->dv_type == DEVT_ZFS) {
 		/* set up proper device name string for ZFS */
-		strncpy(boot_devname, zfs_fmtdev(bdev), sizeof (boot_devname));
-		if (zfs_nextboot(bdev, cmd, sizeof(cmd)) == 0) {
+		strncpy(boot_devname, devformat(&bdev->dd), sizeof (boot_devname));
+		if (zfs_get_bootonce(bdev, OS_BOOTONCE, cmd,
+		    sizeof(cmd)) == 0) {
+			nvlist_t *benv;
+
 			nextboot = 1;
 			memcpy(cmddup, cmd, sizeof(cmd));
 			if (parse_cmd()) {
 				if (!OPT_CHECK(RBX_QUIET))
-					printf("failed to parse pad2 area\n");
+					printf("failed to parse bootonce "
+					    "command\n");
 				exit(0);
 			}
 			if (!OPT_CHECK(RBX_QUIET))
-				printf("zfs nextboot: %s\n", cmddup);
+				printf("zfs bootonce: %s\n", cmddup);
+
+			if (zfs_get_bootenv(bdev, &benv) == 0) {
+				nvlist_add_string(benv, OS_BOOTONCE_USED,
+				    cmddup);
+				zfs_set_bootenv(bdev, benv);
+			}
 			/* Do not process this command twice */
 			*cmd = 0;
 		}
@@ -239,7 +254,7 @@ main(void)
 	free(bdev);
 	i386_getdev((void **)&bdev, boot_devname, NULL);
 
-	env_setenv("currdev", EV_VOLATILE, boot_devname, i386_setcurrdev,
+	env_setenv("currdev", EV_VOLATILE, boot_devname, gen_setcurrdev,
 	    env_nounset);
 
 	/* Process configuration file */
@@ -450,8 +465,8 @@ load(void)
 
 	if (bdev->dd.d_dev->dv_type == DEVT_ZFS) {
 		zfsargs.size = sizeof(zfsargs);
-		zfsargs.pool = bdev->d_kind.zfs.pool_guid;
-		zfsargs.root = bdev->d_kind.zfs.root_guid;
+		zfsargs.pool = bdev->zfs.pool_guid;
+		zfsargs.root = bdev->zfs.root_guid;
 #ifdef LOADER_GELI_SUPPORT
 		export_geli_boot_data(&zfsargs.gelidata);
 #endif
@@ -464,8 +479,8 @@ load(void)
 		__exec((caddr_t)addr, RB_BOOTINFO | (opts & RBX_MASK),
 		    bootdev,
 		    KARGS_FLAGS_ZFS | KARGS_FLAGS_EXTARG,
-		    (uint32_t)bdev->d_kind.zfs.pool_guid,
-		    (uint32_t)(bdev->d_kind.zfs.pool_guid >> 32),
+		    (uint32_t)bdev->zfs.pool_guid,
+		    (uint32_t)(bdev->zfs.pool_guid >> 32),
 		    VTOP(&bootinfo),
 		    zfsargs);
 	} else {
@@ -511,13 +526,12 @@ mount_root(char *arg)
 	free(bdev);
 	bdev = ddesc;
 	if (bdev->dd.d_dev->dv_type == DEVT_DISK) {
-		if (bdev->d_kind.biosdisk.partition == -1)
+		if (bdev->disk.d_partition == -1)
 			part = 0xff;
 		else
-			part = bdev->d_kind.biosdisk.partition;
+			part = bdev->disk.d_partition;
 		bootdev = MAKEBOOTDEV(dev_maj[bdev->dd.d_dev->dv_type],
-		    bdev->d_kind.biosdisk.slice + 1,
-		    bdev->dd.d_unit, part);
+		    bdev->disk.d_slice + 1, bdev->dd.d_unit, part);
 		bootinfo.bi_bios_dev = bd_unit2bios(bdev);
 	}
 	strncpy(boot_devname, root, sizeof (boot_devname));
@@ -690,15 +704,15 @@ i386_zfs_probe(void)
 		    dev.dd.d_unit);
 		/* If this is not boot disk, use generic probe. */
 		if (dev.dd.d_unit != boot_unit)
-			zfs_probe_dev(devname, NULL);
+			zfs_probe_dev(devname, NULL, true);
 		else
-			zfs_probe_dev(devname, &pool_guid);
+			zfs_probe_dev(devname, &pool_guid, true);
 
 		if (pool_guid != 0 && bdev == NULL) {
 			bdev = malloc(sizeof (struct i386_devdesc));
 			bzero(bdev, sizeof (struct i386_devdesc));
-			bdev->dd.d_dev = &zfs_dev;
-			bdev->d_kind.zfs.pool_guid = pool_guid;
+			bdev->zfs.dd.d_dev = &zfs_dev;
+			bdev->zfs.pool_guid = pool_guid;
 		}
 	}
 }

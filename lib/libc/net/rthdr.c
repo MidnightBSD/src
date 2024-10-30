@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/socket.h>
 
@@ -281,7 +280,7 @@ inet6_rth_space(int type, int segments)
 			return (((segments * 2) + 1) << 3);
 		/* FALLTHROUGH */
 	default:
-		return (0);	/* type not suppported */
+		return (0);	/* type not supported */
 	}
 }
 

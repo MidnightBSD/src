@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 #ifndef _NETSMB_DEV_H_
 #define _NETSMB_DEV_H_
@@ -193,7 +192,6 @@ int  smb_usr_t2request(struct smb_share *ssp, struct smbioc_t2rq *data,
 	struct smb_cred *scred);
 int  smb_dev2share(int fd, int mode, struct smb_cred *scred,
 	struct smb_share **sspp, struct smb_dev **ssdp);
-
 
 #endif /* _KERNEL */
 

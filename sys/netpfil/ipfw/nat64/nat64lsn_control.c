@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2015-2019 Yandex LLC
  * Copyright (c) 2015 Alexander V. Chernikov <melifaro@FreeBSD.org>
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/counter.h>
@@ -46,7 +45,6 @@
 #include <sys/sockopt.h>
 
 #include <net/if.h>
-#include <net/pfil.h>
 
 #include <netinet/in.h>
 #include <netinet/ip.h>
@@ -941,4 +939,3 @@ nat64lsn_uninit(struct ip_fw_chain *ch, int last)
 	if (last != 0)
 		nat64lsn_uninit_internal();
 }
-

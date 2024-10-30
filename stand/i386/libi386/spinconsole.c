@@ -36,8 +36,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/i386/libi386/spinconsole.c 329114 2018-02-11 02:27:50Z kevans $");
-
 #include <stand.h>
 #include <bootstrap.h>
 

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2019 The FreeBSD Foundation.
  *
@@ -48,8 +48,6 @@
 #include <unistd.h>
 
 #include "_elftc.h"
-
-
 static bool convert_to_feature_val(const char *, uint32_t *);
 static bool edit_file_features(Elf *, int, int, char *, bool);
 static bool get_file_features(Elf *, int, int, uint32_t *, uint64_t *, bool);
@@ -69,11 +67,7 @@ static struct ControlFeatures featurelist[] = {
 	    "Disable implicit PROT_MAX" },
 	{ "nostackgap",	NT_FREEBSD_FCTL_STKGAP_DISABLE, "Disable stack gap" },
 	{ "wxneeded",	NT_FREEBSD_FCTL_WXNEEDED, "Requires W+X mappings" },
-#ifdef NT_FREEBSD_FCTL_LA48
 	{ "la48",	NT_FREEBSD_FCTL_LA48, "amd64: Limit user VA to 48bit" },
-#endif
-	{ "noaslrstkgap", NT_FREEBSD_FCTL_ASG_DISABLE,
-	    "Disable ASLR stack gap" },
 };
 
 static struct option long_opts[] = {
@@ -85,7 +79,7 @@ static struct option long_opts[] = {
 #define	HOST_ENDIAN	ELFDATA2LSB
 #define	SWAP_ENDIAN	ELFDATA2MSB
 #else
-#define	HOST_ENDIAN 	ELFDATA2MSB
+#define	HOST_ENDIAN	ELFDATA2MSB
 #define	SWAP_ENDIAN	ELFDATA2LSB
 #endif
 
@@ -409,7 +403,7 @@ get_file_features(Elf *elf, int phcount, int fd, uint32_t *features,
 
 			/*
 			 * XXX: Name and descriptor are 4 byte aligned, however,
-			 * 	the size given doesn't include the padding.
+			 * the size given doesn't include the padding.
 			 */
 			namesz = roundup2(note.n_namesz, 4);
 			name = malloc(namesz);
@@ -448,7 +442,7 @@ get_file_features(Elf *elf, int phcount, int fd, uint32_t *features,
 
 			/*
 			 * XXX: For now we look at only 4 bytes of the
-			 * 	descriptor. This should respect descsz.
+			 * descriptor. This should respect descsz.
 			 */
 			if (note.n_descsz > sizeof(uint32_t))
 				warnx("Feature note is bigger than expected");

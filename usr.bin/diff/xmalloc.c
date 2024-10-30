@@ -14,7 +14,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <err.h>
 #include <stdarg.h>
 #include <stdint.h>

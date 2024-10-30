@@ -25,9 +25,8 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/userboot/userboot/userboot_cons.c 265165 2014-05-01 00:12:24Z grehan $");
-
 #include <stand.h>
+#include <sys/font.h>
 #include "bootstrap.h"
 #include "libuserboot.h"
 

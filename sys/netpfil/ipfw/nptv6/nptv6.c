@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/counter.h>
@@ -533,6 +532,7 @@ static void
 nptv6_find_prefix(struct ip_fw_chain *ch, struct nptv6_cfg *cfg,
     struct ifnet *ifp)
 {
+	struct epoch_tracker et;
 	struct ifaddr *ifa;
 	struct in6_ifaddr *ia;
 
@@ -544,7 +544,7 @@ nptv6_find_prefix(struct ip_fw_chain *ch, struct nptv6_cfg *cfg,
 		if (ifp == NULL)
 			return;
 	}
-	if_addr_rlock(ifp);
+	NET_EPOCH_ENTER(et);
 	CK_STAILQ_FOREACH(ifa, &ifp->if_addrhead, ifa_link) {
 		if (ifa->ifa_addr->sa_family != AF_INET6)
 			continue;
@@ -557,7 +557,7 @@ nptv6_find_prefix(struct ip_fw_chain *ch, struct nptv6_cfg *cfg,
 		nptv6_set_external(cfg, &ia->ia_addr.sin6_addr);
 		break;
 	}
-	if_addr_runlock(ifp);
+	NET_EPOCH_EXIT(et);
 	if_rele(ifp);
 }
 
@@ -1037,4 +1037,3 @@ nptv6_uninit(struct ip_fw_chain *ch, int last)
 	V_nptv6_eid = 0;
 	IPFW_UH_WUNLOCK(ch);
 }
-

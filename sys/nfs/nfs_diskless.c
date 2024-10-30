@@ -35,7 +35,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_bootp.h"
 
 #include <sys/param.h>
@@ -252,7 +251,7 @@ match_done:
 	if (is_nfsv3 != 0) {
 		strlcpy(nd3->myif.ifra_name, ifp->if_xname,
 		    sizeof(nd3->myif.ifra_name));
-	
+
 		/* set up gateway */
 		inaddr_to_sockaddr("boot.netif.gateway", &nd3->mygateway);
 
@@ -286,12 +285,12 @@ match_done:
 			nfs_parse_options(cp, &nd3->root_args);
 			freeenv(cp);
 		}
-	
+
 		nfs_diskless_valid = 3;
 	} else {
 		strlcpy(nd->myif.ifra_name, ifp->if_xname,
 		    sizeof(nd->myif.ifra_name));
-	
+
 		/* set up gateway */
 		inaddr_to_sockaddr("boot.netif.gateway", &nd->mygateway);
 
@@ -318,7 +317,7 @@ match_done:
 		}
 		if ((cp = kern_getenv("boot.nfsroot.options")) != NULL) {
 			struct nfs_args args;
-	
+
 			/*
 			 * XXX yech, convert between old and current
 			 * arg format
@@ -334,7 +333,7 @@ match_done:
 			nd->root_args.wsize = args.wsize;
 			freeenv(cp);
 		}
-	
+
 		nfs_diskless_valid = 1;
 	}
 }
@@ -435,4 +434,3 @@ nfs_rootconf(void)
 
 SYSINIT(cpu_rootconf, SI_SUB_ROOT_CONF, SI_ORDER_FIRST, nfs_rootconf, NULL);
 #endif
-

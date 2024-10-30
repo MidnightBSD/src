@@ -39,8 +39,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/efi/libefi/time.c 329114 2018-02-11 02:27:50Z kevans $");
-
 #include <efi.h>
 #include <efilib.h>
 

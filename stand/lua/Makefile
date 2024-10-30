@@ -1,4 +1,3 @@
-# $FreeBSD: stable/11/stand/lua/Makefile 355345 2019-12-03 18:25:16Z kevans $
 
 .include <bsd.init.mk>
 

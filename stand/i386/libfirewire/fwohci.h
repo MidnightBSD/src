@@ -30,7 +30,6 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  * 
- * $FreeBSD: stable/11/stand/i386/libfirewire/fwohci.h 332156 2018-04-06 21:50:09Z kevans $
  *
  */
 

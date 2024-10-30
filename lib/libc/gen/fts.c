@@ -33,7 +33,6 @@
 
 #include <sys/cdefs.h>
 __SCCSID("@(#)fts.c	8.6 (Berkeley) 8/14/94");
-
 #include "namespace.h"
 #include <sys/param.h>
 #include <sys/mount.h>
@@ -603,6 +602,19 @@ fts_set_clientptr(FTS *sp, void *clientptr)
 	sp->fts_clientptr = clientptr;
 }
 
+static struct dirent *
+fts_safe_readdir(DIR *dirp, int *readdir_errno)
+{
+	struct dirent *ret;
+
+	errno = 0;
+	if (!dirp)
+		return (NULL);
+	ret = readdir(dirp);
+	*readdir_errno = errno;
+	return (ret);
+}
+
 /*
  * This is the tricky part -- do not casually change *anything* in here.  The
  * idea is to build the linked list of entries that are used by fts_children
@@ -626,7 +638,8 @@ fts_build(FTS *sp, int type)
 	DIR *dirp;
 	void *oldaddr;
 	char *cp;
-	int cderrno, descend, oflag, saved_errno, nostat, doadjust;
+	int cderrno, descend, oflag, saved_errno, nostat, doadjust,
+	    readdir_errno;
 	long level;
 	long nlinks;	/* has to be signed because -1 is a magic value */
 	size_t dnamlen, len, maxlen, nitems;
@@ -640,9 +653,9 @@ fts_build(FTS *sp, int type)
 	 */
 #ifdef FTS_WHITEOUT
 	if (ISSET(FTS_WHITEOUT))
-		oflag = DTF_NODUP | DTF_REWIND;
+		oflag = DTF_NODUP;
 	else
-		oflag = DTF_HIDEW | DTF_NODUP | DTF_REWIND;
+		oflag = DTF_HIDEW | DTF_NODUP;
 #else
 #define __opendir2(path, flag) opendir(path)
 #endif
@@ -732,7 +745,9 @@ fts_build(FTS *sp, int type)
 
 	/* Read the directory, attaching each entry to the `link' pointer. */
 	doadjust = 0;
-	for (head = tail = NULL, nitems = 0; dirp && (dp = readdir(dirp));) {
+	readdir_errno = 0;
+	for (head = tail = NULL, nitems = 0;
+	    (dp = fts_safe_readdir(dirp, &readdir_errno));) {
 		dnamlen = dp->d_namlen;
 		if (!ISSET(FTS_SEEDOT) && ISDOT(dp->d_name))
 			continue;
@@ -818,6 +833,16 @@ mem1:				saved_errno = errno;
 		}
 		++nitems;
 	}
+
+	if (readdir_errno) {
+		cur->fts_errno = readdir_errno;
+		/*
+		 * If we've not read any items yet, treat
+		 * the error as if we can't access the dir.
+		 */
+		cur->fts_info = nitems ? FTS_ERR : FTS_DNR;
+	}
+
 	if (dirp)
 		(void)closedir(dirp);
 
@@ -854,7 +879,8 @@ mem1:				saved_errno = errno;
 
 	/* If didn't find anything, return NULL. */
 	if (!nitems) {
-		if (type == BREAD)
+		if (type == BREAD &&
+		    cur->fts_info != FTS_DNR && cur->fts_info != FTS_ERR)
 			cur->fts_info = FTS_DP;
 		return (NULL);
 	}

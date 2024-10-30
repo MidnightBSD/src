@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <limits.h>
 #include <locale.h>
 #include <stdio.h>

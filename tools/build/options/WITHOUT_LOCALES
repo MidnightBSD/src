@@ -1,2 +1,2 @@
-Set to not build localization files; see
+Do not build localization files; see
 .Xr locale 1 .

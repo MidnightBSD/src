@@ -36,10 +36,10 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/condvar.h>
 #include <sys/conf.h>
+#include <sys/eventhandler.h>
 #include <sys/file.h>
 #include <sys/filedesc.h>
 #include <sys/fcntl.h>
@@ -88,7 +88,7 @@ MALLOC_DEFINE(M_AUDITPATH, "audit_path", "Audit path storage");
 MALLOC_DEFINE(M_AUDITTEXT, "audit_text", "Audit text storage");
 MALLOC_DEFINE(M_AUDITGIDSET, "audit_gidset", "Audit GID set storage");
 
-static SYSCTL_NODE(_security, OID_AUTO, audit, CTLFLAG_RW, 0,
+static SYSCTL_NODE(_security, OID_AUTO, audit, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
     "TrustedBSD audit controls");
 
 /*
@@ -102,7 +102,7 @@ int			audit_trail_suspended;
 #ifdef KDTRACE_HOOKS
 u_int			audit_dtrace_enabled;
 #endif
-int __read_frequently	audit_syscalls_enabled;
+bool __read_frequently	audit_syscalls_enabled;
 
 /*
  * Flags controlling behavior in low storage situations.  Should we panic if
@@ -215,13 +215,13 @@ audit_syscalls_enabled_update(void)
 	mtx_lock(&audit_mtx);
 #ifdef KDTRACE_HOOKS
 	if (audit_dtrace_enabled)
-		audit_syscalls_enabled = 1;
+		audit_syscalls_enabled = true;
 	else {
 #endif
 		if (audit_trail_enabled && !audit_trail_suspended)
-			audit_syscalls_enabled = 1;
+			audit_syscalls_enabled = true;
 		else
-			audit_syscalls_enabled = 0;
+			audit_syscalls_enabled = false;
 #ifdef KDTRACE_HOOKS
 	}
 #endif
@@ -335,7 +335,7 @@ audit_init(void)
 
 	audit_trail_enabled = 0;
 	audit_trail_suspended = 0;
-	audit_syscalls_enabled = 0;
+	audit_syscalls_enabled = false;
 	audit_panic_on_write_fail = 0;
 	audit_fail_stop = 0;
 	audit_in_failure = 0;

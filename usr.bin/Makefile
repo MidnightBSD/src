@@ -2,20 +2,16 @@
 
 .include <src.opts.mk>
 
-# XXX MISSING:		deroff diction graph learn plot
-#			spline struct xsend
-# XXX Use GNU versions: diff ld
-# Moved to secure: bdes
-#
-
-SUBDIR+=alias \
+SUBDIR=	alias \
 	apply \
 	asa \
 	asmgraph \
 	awk \
+	backlight \
 	banner \
 	basename \
 	batt \
+	beep \
 	brandelf \
 	bsdcat \
 	bsdiff \
@@ -29,7 +25,6 @@ SUBDIR+=alias \
 	cksum \
 	cmp \
 	col \
-	colldef \
 	colrm \
 	column \
 	comm \
@@ -44,7 +39,6 @@ SUBDIR+=alias \
 	dns-sd \
 	doas \
 	du \
-	elf2aout \
 	elfctl \
 	elfdump \
 	enigma \
@@ -80,7 +74,6 @@ SUBDIR+=alias \
 	ktrace \
 	ktrdump \
 	lam \
-	lastcomm \
 	ldd \
 	leave \
 	less \
@@ -96,7 +89,6 @@ SUBDIR+=alias \
 	logins \
 	logname \
 	look \
-	lorder \
 	lsvfs \
 	lzmainfo \
 	m4 \
@@ -110,7 +102,6 @@ SUBDIR+=alias \
 	mkdep \
 	mkfifo \
 	mkimg \
-	mklocale \
 	mktemp \
 	mkuzip \
 	msearch \
@@ -174,7 +165,6 @@ SUBDIR+=alias \
 	tcopy \
 	tee \
 	time \
-	timeout \
 	tip \
 	top \
 	touch \
@@ -198,6 +188,7 @@ SUBDIR+=alias \
 	w \
 	wall \
 	wc \
+	wg \
 	what \
 	whereis \
 	which \
@@ -213,6 +204,7 @@ SUBDIR+=alias \
 
 # NB: keep these sorted by MK_* knobs
 
+SUBDIR.${MK_ACCT}+=	lastcomm
 SUBDIR.${MK_AT}+=	at
 SUBDIR.${MK_ATM}+=	atm
 SUBDIR.${MK_BLUETOOTH}+=	bluetooth
@@ -236,11 +228,7 @@ SUBDIR.${MK_GAMES}+=	number
 SUBDIR.${MK_GAMES}+=	pom
 SUBDIR.${MK_GAMES}+=	primes
 SUBDIR.${MK_GAMES}+=	random
-.if ${MK_GPL_DTC} != "yes"
-.if ${COMPILER_FEATURES:Mc++11}
-SUBDIR+=	dtc
-.endif
-.endif
+SUBDIR.${MK_CXX}+=	dtc
 .if ${MK_GH_BC} == "yes"
 SUBDIR+=		gh-bc
 .else
@@ -257,6 +245,7 @@ SUBDIR.${MK_KDUMP}+=	truss
 SUBDIR.${MK_KERBEROS_SUPPORT}+=	compile_et
 SUBDIR.${MK_LDNS_UTILS}+=	drill
 SUBDIR.${MK_LDNS_UTILS}+=	host
+SUBDIR.${MK_LIB32}+=	ldd32
 SUBDIR.${MK_LOCATE}+=	locate
 # XXX msgs?
 SUBDIR.${MK_MAIL}+=	biff
@@ -270,14 +259,13 @@ SUBDIR.${MK_NIS}+=	ypcat
 SUBDIR.${MK_NIS}+=	ypmatch
 SUBDIR.${MK_NIS}+=	ypwhich
 SUBDIR.${MK_OPENSSH}+=	ssh-copy-id
-SUBDIR.${MK_OPENSSL}+=	bc
 SUBDIR.${MK_OPENSSL}+=	chkey
-SUBDIR.${MK_OPENSSL}+=	dc
 SUBDIR.${MK_OPENSSL}+=	newkey
 SUBDIR.${MK_QUOTAS}+=	quota
 SUBDIR.${MK_SENDMAIL}+=	vacation
 SUBDIR.${MK_TALK}+=	talk
 SUBDIR.${MK_TELNET}+=	telnet
+SUBDIR.${MK_TESTS_SUPPORT}.${MK_CXX}+=	kyua
 SUBDIR.${MK_TESTS}+=	tests
 SUBDIR.${MK_TEXTPROC}+=	ul
 SUBDIR.${MK_TFTP}+=	tftp
@@ -297,13 +285,10 @@ SUBDIR.${MK_TOOLCHAIN}+=	ctags
 SUBDIR.${MK_TOOLCHAIN}+=	cxxfilt
 .endif
 SUBDIR.${MK_TOOLCHAIN}+=	file2c
-# ARM64TODO gprof does not build
-# RISCVTODO gprof does not build
-.if ${MACHINE_ARCH} != "aarch64" && ${MACHINE_CPUARCH} != "riscv"
 SUBDIR.${MK_TOOLCHAIN}+=	gprof
-.endif
 SUBDIR.${MK_TOOLCHAIN}+=	indent
 SUBDIR.${MK_TOOLCHAIN}+=	lex
+SUBDIR.${MK_TOOLCHAIN}+=	lorder
 SUBDIR.${MK_TOOLCHAIN}+=	mkstr
 SUBDIR.${MK_TOOLCHAIN}+=	rpcgen
 SUBDIR.${MK_TOOLCHAIN}+=	unifdef
@@ -319,12 +304,6 @@ SUBDIR.${MK_UTMPX}+=	users
 .endif
 SUBDIR.${MK_UTMPX}+=	who
 SUBDIR.${MK_OFED}+=	ofed
-
-# These are normally only handled for build-tools.
-.if make(clean*)
-SUBDIR+=	mkcsmapper_static
-SUBDIR+=	mkesdb_static
-.endif
 
 .include <bsd.arch.inc.mk>
 

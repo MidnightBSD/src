@@ -27,7 +27,7 @@
 .\"
 .\"	@(#)mprotect.2	8.1 (Berkeley) 6/9/93
 .\"
-.Dd August 3, 2016
+.Dd February 26, 2020
 .Dt MPROTECT 2
 .Os
 .Sh NAME
@@ -64,6 +64,22 @@ The pages can be written.
 .It Dv PROT_EXEC
 The pages can be executed.
 .El
+.Pp
+In addition to these protection flags,
+.Fx
+provides the ability to set the maximum protection of a region
+(which prevents
+.Nm
+from upgrading the permissions).
+This is accomplished by
+.Em or Ns 'ing
+one or more
+.Dv PROT_
+values wrapped in the
+.Dv PROT_MAX()
+macro into the
+.Fa prot
+argument.
 .Sh RETURN VALUES
 .Rv -std mprotect
 .Sh ERRORS
@@ -83,6 +99,15 @@ The virtual address range specified by the
 and
 .Fa len
 arguments is not valid.
+.It Bq Er EINVAL
+The
+.Fa prot
+argument contains unhandled bits.
+.It Bq Er ENOTSUP
+The
+.Fa prot
+argument contains permissions which are not a subset of the specified
+maximum permissions.
 .El
 .Sh SEE ALSO
 .Xr madvise 2 ,
@@ -92,5 +117,12 @@ arguments is not valid.
 .Sh HISTORY
 The
 .Fn mprotect
-system call first appeared in
+system call was first documented in
+.Bx 4.2
+and first appeared in
 .Bx 4.4 .
+.Pp
+The
+.Dv PROT_MAX
+functionality was introduced in
+.Fx 13 .

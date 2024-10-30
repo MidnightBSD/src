@@ -10,6 +10,8 @@ LIBADD+=ufs
 
 WARNS?=	3
 
+CFLAGS+=-DPRTBLKNOS
+
 test:	${PROG}
 	./${PROG} > a
 

@@ -1,6 +1,6 @@
 
 #-
-# Copyright (c) 2015 M. Warner Losh.
+# Copyright (c) 2015 M. Warner Losh <imp@FreeBSD.org>
 # Copyright (c) 2010-2011 iXsystems, Inc.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -133,23 +133,14 @@ LOCAL_XTOOL_DIRS=usr.bin/mkimg
 WITHOUT_ACPI=true
 WITHOUT_ATM=true
 WITHOUT_AUDIT=true
-WITHOUT_BIND_DNSSEC=true
-WITHOUT_BIND_ETC=true
-WITHOUT_BIND_LIBS_LWRES=true
 WITHOUT_BLUETOOTH=true
 WITHOUT_CALENDAR=true
-WITHOUT_CVS=true
 WITHOUT_DICT=true
 WITHOUT_EXAMPLES=true
-WITHOUT_FORTRAN=true
 WITHOUT_GAMES=true
-WITHOUT_GCOV=true
-WITHOUT_GPIB=true
 WITHOUT_HTML=true
-WITHOUT_I4B=true
 WITHOUT_IPFILTER=true
-WITHOUT_IPX=true
-WITHOUT_LIBKSE=true
+WITHOUT_LLVM_COV=true
 WITHOUT_LOCALES=true
 WITHOUT_LPR=true
 WITHOUT_MAN=true
@@ -157,7 +148,6 @@ WITHOUT_NETCAT=true
 WITHOUT_NIS=true
 WITHOUT_NLS=true
 WITHOUT_NS_CACHING=true
-WITHOUT_OBJC=true
 WITHOUT_PROFILE=true
 WITHOUT_SENDMAIL=true
 WITHOUT_SHAREDOCS=true
@@ -177,13 +167,9 @@ NO_INSTALL_MANPAGES=t
 # WITHOUT_INSTALLLIB=true		libgcc.a
 #
 # from the build
-# WITHOUT_INFO=true			makeinfo
-# WITHOUT_RCS=true
 PKG_ONLY_MAKE_CONF="
 WITHOUT_TOOLCHAIN=true
 WITHOUT_INSTALLLIB=true
-WITHOUT_INFO=true
-WITHOUT_RCS=true
 "
 
 NANO_PACKAGE_ONLY=1
@@ -300,7 +286,7 @@ create_diskimage_mbr ( ) (
 		# s1 is boot, s2 is cfg, s3 is /, not sure how to make that
 		# boot (marked as active) with mkimg yet
 		mkimg -a 2 ${fmtarg} ${bootmbr} -s mbr \
-			-p efi:=${NANO_WORLDDIR}/boot/boot1.efifat \
+			-p efi:=${NANO_WORLDDIR}/boot/efiboot.img \
 			-p ${s2}:=${NANO_LOG}/_.s2 \
 			-p ${s3}:=${NANO_LOG}/_.s3 \
 			-o ${out}
@@ -309,7 +295,7 @@ create_diskimage_mbr ( ) (
 		# p1 is boot for uefi, p2 is boot for gpt, p3 is cfg, p4 is /
 		# and p5 is alt-root (after resize)
 		mkimg -a 2 ${fmtarg} ${bootmbr} -s gpt \
-			-p efi:=${NANO_WORLDDIR}/boot/boot1.efifat \
+			-p efi:=${NANO_WORLDDIR}/boot/efiboot.img \
 			-p freebsd-boot:=${NANO_WORLDDIR}/boot/gptboot \
 			-p ${p3}:=${NANO_LOG}/_.p3 \
 			-p ${p4}:=${NANO_LOG}/_.p4 \
@@ -565,10 +551,6 @@ std_powerpc64 ( ) {
 	NANO_ENDIAN=big
 }
 
-std_sparc64 ( ) {
-	NANO_ENDIAN=big
-}
-
 #
 # QEMU settings for the standard environments
 #
@@ -670,4 +652,4 @@ create_diskimage ( ) (
 # Set the path to the same path we use for buldworld to use latest mkimg
 NANO_TARGET=$(cd ${NANO_SRC}; ${NANO_MAKE} TARGET_ARCH=${NANO_ARCH} -V _TARGET)
 NANO_TMPPATH=$(cd ${NANO_SRC}; ${NANO_MAKE} MK_AUTO_OBJ=no TARGET=${NANO_TARGET} TARGET_ARCH=${NANO_ARCH} -f Makefile.inc1 buildenv -V TMPPATH)
-export PATH="${NANO_TMPPATH}"
+export PATH="${NANO_TMPPATH}:${PATH}"

@@ -29,8 +29,6 @@
 
 
 #include <sys/cdefs.h>
-
-
 extern char **environ;
 const char *envName = "FOOBAR";
 const char *envValSmall = "Hi";

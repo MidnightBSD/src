@@ -33,7 +33,6 @@
 //
 
 #include <sys/cdefs.h>
-
 // C++ STL and other related includes
 #include <iostream>
 #include <string>

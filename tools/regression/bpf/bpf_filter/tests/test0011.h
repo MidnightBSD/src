@@ -1,6 +1,5 @@
 /*-
  * Test 0011:	BPF_LD+BPF_B+BPF_IND
- *
  */
 
 /* BPF program */

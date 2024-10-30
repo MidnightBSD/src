@@ -22,8 +22,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD$
  */
 #include <stddef.h>
 #include <stdarg.h>
@@ -124,7 +122,7 @@ probe(dev_info_t *dev)
 	}
 	memcpy(tdev, dev, sizeof(*dev));
 
-	if (vdev_probe(vdev_read, tdev, &spa) != 0) {
+	if (vdev_probe(vdev_read, NULL, tdev, &spa) != 0) {
 		free(tdev);
 		return (EFI_UNSUPPORTED);
 	}
@@ -160,7 +158,7 @@ load(const char *filepath, dev_info_t *devinfo, void **bufp, size_t *bufsize)
 		return (EFI_NOT_FOUND);
 	}
 
-	if ((err = zfs_mount(spa, 0, &zmount)) != 0) {
+	if ((err = zfs_mount_impl(spa, 0, &zmount)) != 0) {
 		DPRINTF("Failed to mount pool '%s' (%d)\n", spa->spa_name, err);
 		return (EFI_NOT_FOUND);
 	}

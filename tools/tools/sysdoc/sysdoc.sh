@@ -1,7 +1,6 @@
 #!/bin/sh
 #
-# $FreeBSD: stable/10/tools/tools/sysdoc/sysdoc.sh 307403 2016-10-16 22:02:50Z sevan $
-# $MidnightBSD$
+#
 #################################################################
 # Missing Features:
 # It would be nice to have OIDs separated into composite groups

@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <fnmatch.h>
 
 struct testcase {

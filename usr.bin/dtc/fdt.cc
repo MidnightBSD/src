@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013 David Chisnall
  * All rights reserved.
@@ -28,7 +28,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #define __STDC_LIMIT_MACROS 1
@@ -37,6 +36,7 @@
 #include "dtb.hh"
 
 #include <algorithm>
+#include <limits>
 #include <sstream>
 
 #include <ctype.h>

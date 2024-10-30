@@ -34,7 +34,6 @@
 static char sccsid[] = "@(#)getnetpath.c	1.11 91/12/19 SMI";
 #endif
 #include <sys/cdefs.h>
-
 /*
  * Copyright (c) 1989 by Sun Microsystems, Inc.
  */

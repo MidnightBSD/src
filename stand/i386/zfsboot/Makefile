@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 .include <bsd.init.mk>
 
@@ -31,7 +30,9 @@ CFLAGS+=-DBOOTPROG=\"zfsboot\" \
 	-I${ZFSSRC} \
 	-I${SYSDIR}/crypto/skein \
 	-I${SYSDIR}/cddl/boot/zfs \
-	-I${SYSDIR}/cddl/contrib/opensolaris/uts/common \
+	-I${SYSDIR}/contrib/openzfs/include \
+	-I${SYSDIR}/contrib/openzfs/include/os/freebsd/spl \
+	-I${SYSDIR}/contrib/openzfs/include/os/freebsd/zfs \
 	-I${SYSDIR}/cddl/contrib/opensolaris/common/lz4 \
 	-I${BOOTSRC}/i386/boot2 \
 	-Wall -Waggregate-return -Wbad-function-cast -Wno-cast-align \
@@ -57,7 +58,7 @@ zfsboot1: zfsldr.out
 zfsldr.out: zfsldr.o
 	${LD} ${LD_FLAGS} -e start --defsym ORG=${ORG1} -T ${LDSCRIPT} -o ${.TARGET} zfsldr.o
 
-OBJS=	zfsboot.o sio.o cons.o bcache.o devopen.o disk.o part.o zfs_cmd.o
+OBJS=	zfsboot.o sio.o cons.o bcache.o devopen.o disk.o part.o zfs_cmd.o misc.o
 CLEANFILES+=	zfsboot2 zfsboot.ld zfsboot.ldr zfsboot.bin zfsboot.out \
 		${OBJS}
 
@@ -79,7 +80,7 @@ zfsboot.ld: zfsboot.ldr zfsboot.bin ${BTXKERN}
 	    -o ${.TARGET} -P 1 zfsboot.bin
 
 zfsboot.ldr:
-	cp /dev/null ${.TARGET}
+	:> ${.TARGET}
 
 zfsboot.bin: zfsboot.out
 	${OBJCOPY} -S -O binary zfsboot.out ${.TARGET}

@@ -22,8 +22,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD$
  */
 
 /*
@@ -97,11 +95,6 @@ struct disk_devdesc {
 	uint64_t	d_offset;
 };
 
-enum disk_ioctl {
-	IOCTL_GET_BLOCKS,
-	IOCTL_GET_BLOCK_SIZE
-};
-
 /*
  * Parse disk metadata and initialise dev->d_offset.
  */
@@ -116,7 +109,8 @@ extern int ptblread(void *, void *, size_t, uint64_t);
  * Print information about slices on a disk.
  */
 extern int disk_print(struct disk_devdesc *, char *, int);
-extern char* disk_fmtdev(struct disk_devdesc *);
-extern int disk_parsedev(struct disk_devdesc *, const char *, const char **);
+extern int disk_parsedev(struct devdesc **, const char *, const char **);
+
+char *disk_fmtdev(struct devdesc *vdev);
 
 #endif	/* _DISK_H */

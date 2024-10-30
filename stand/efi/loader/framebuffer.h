@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2013 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Benno Rice under sponsorship from
  * the FreeBSD Foundation.
@@ -24,13 +23,15 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD$
  */
+
+#include <teken.h>
+#include <gfx_fb.h>
 
 #ifndef	_EFIFB_H_
 #define	_EFIFB_H_
 
-int	efi_find_framebuffer(struct efi_fb *efifb);
+bool	efi_has_gop(void);
+int	efi_find_framebuffer(teken_gfx_t *gfx_state);
 
 #endif /* _EFIFB_H_ */

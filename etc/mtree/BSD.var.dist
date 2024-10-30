@@ -1,6 +1,8 @@
+#
 # Please see the file src/etc/mtree/README before making changes to this file.
+#
 
-/set type=dir uname=root gname=wheel mode=0755
+/set type=dir uname=root gname=wheel mode=0755 tags=package=runtime
 .
     account             mode=0750
     ..
@@ -59,7 +61,7 @@
         ..
         portsnap
         ..
-        zfsd
+        zfsd tags=package=zfs
             cases
             ..
         ..
@@ -79,17 +81,19 @@
     preserve
     ..
     run
-        dhclient
+        bhyve tags=package=bhyve
         ..
-        ppp             gname=network mode=0770
+        dhclient tags=package=dhclient
         ..
-        wpa_supplicant
+        ppp             gname=network mode=0770 tags=package=ppp
+        ..
+        wpa_supplicant tags=package=wpa
         ..
     ..
     rwho            gname=daemon mode=0775
     ..
     spool
-        dma             uname=root gname=mail mode=0770
+        dma             uname=root gname=mail mode=0770 tags=package=dma
         ..
         lock            uname=uucp gname=dialer mode=0775
         ..

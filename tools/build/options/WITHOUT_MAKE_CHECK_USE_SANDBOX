@@ -1,4 +1,4 @@
-Set to not execute
+Do not execute
 .Dq Li "make check"
 in limited sandbox mode.
 This option should be paired with

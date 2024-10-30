@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2015-2019 Yandex LLC
  * Copyright (c) 2015 Alexander V. Chernikov <melifaro@FreeBSD.org>
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/counter.h>
@@ -71,10 +70,10 @@
 
 MALLOC_DEFINE(M_NAT64LSN, "NAT64LSN", "NAT64LSN");
 
-#define	NAT64LSN_EPOCH_ENTER(et)  NET_EPOCH_ENTER_ET(et)
-#define	NAT64LSN_EPOCH_EXIT(et)   NET_EPOCH_EXIT_ET(et)
-#define	NAT64LSN_EPOCH_ASSERT()   MPASS(in_epoch(net_epoch_preempt))
-#define	NAT64LSN_EPOCH_CALL(c, f) epoch_call(net_epoch_preempt, (c), (f))
+#define	NAT64LSN_EPOCH_ENTER(et)  NET_EPOCH_ENTER(et)
+#define	NAT64LSN_EPOCH_EXIT(et)   NET_EPOCH_EXIT(et)
+#define	NAT64LSN_EPOCH_ASSERT()   NET_EPOCH_ASSERT()
+#define	NAT64LSN_EPOCH_CALL(c, f) NET_EPOCH_CALL((f), (c))
 
 static uma_zone_t nat64lsn_host_zone;
 static uma_zone_t nat64lsn_pgchunk_zone;
@@ -256,7 +255,6 @@ freemask_ffsll(uint32_t *freemask)
     (out) = ck_pr_load_32(FREEMASK_CHUNK((pg), (n))) | \
 	((uint64_t)ck_pr_load_32(FREEMASK_CHUNK((pg), (n)) + 1) << 32)
 #endif /* !__LP64__ */
-
 
 #define	NAT64LSN_TRY_PGCNT	32
 static struct nat64lsn_pg*
@@ -1572,7 +1570,6 @@ int
 ipfw_nat64lsn(struct ip_fw_chain *ch, struct ip_fw_args *args,
     ipfw_insn *cmd, int *done)
 {
-	struct epoch_tracker et;
 	struct nat64lsn_cfg *cfg;
 	ipfw_insn *icmd;
 	int ret;
@@ -1589,7 +1586,6 @@ ipfw_nat64lsn(struct ip_fw_chain *ch, struct ip_fw_args *args,
 
 	*done = 1;	/* terminate the search */
 
-	NAT64LSN_EPOCH_ENTER(et);
 	switch (args->f_id.addr_type) {
 	case 4:
 		ret = nat64lsn_translate4(cfg, &args->f_id, &args->m);
@@ -1609,7 +1605,6 @@ ipfw_nat64lsn(struct ip_fw_chain *ch, struct ip_fw_args *args,
 	default:
 		ret = cfg->nomatch_verdict;
 	}
-	NAT64LSN_EPOCH_EXIT(et);
 
 	if (ret != IP_FW_PASS && args->m != NULL) {
 		m_freem(args->m);
@@ -1811,4 +1806,3 @@ nat64lsn_destroy_instance(struct nat64lsn_cfg *cfg)
 	free(cfg->aliases, M_NAT64LSN);
 	free(cfg, M_NAT64LSN);
 }
-

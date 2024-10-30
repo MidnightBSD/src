@@ -47,5 +47,7 @@ return {
 		},
 		requires_color = true,
 		shift = {x = 2, y = 4},
+		image = "/boot/images/freebsd-logo-rev.png",
+		image_rl = 15
 	}
 }

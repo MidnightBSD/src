@@ -59,6 +59,7 @@ DIRDEPS = \
 	lib/libdevinfo \
 	lib/libdevstat \
 	lib/libdispatch \
+	lib/libdl \
 	lib/libdwarf \
 	lib/libedit/edit/readline \
 	lib/libelf \

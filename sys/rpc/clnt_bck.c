@@ -34,7 +34,6 @@ static char *sccsid = "@(#)clnt_tcp.c	2.2 88/08/01 4.0 RPCSRC";
 static char sccsid3[] = "@(#)clnt_vc.c 1.19 89/03/16 Copyr 1988 Sun Micro";
 #endif
 #include <sys/cdefs.h>
- 
 /*
  * clnt_tcp.c, Implements a TCP/IP based, client side RPC.
  *
@@ -60,8 +59,11 @@ static char sccsid3[] = "@(#)clnt_vc.c 1.19 89/03/16 Copyr 1988 Sun Micro";
  * connection provided by the client to the server.
  */
 
+#include "opt_kern_tls.h"
+
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/ktls.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
@@ -83,6 +85,7 @@ static char sccsid3[] = "@(#)clnt_vc.c 1.19 89/03/16 Copyr 1988 Sun Micro";
 #include <rpc/rpc.h>
 #include <rpc/rpc_com.h>
 #include <rpc/krpc.h>
+#include <rpc/rpcsec_tls.h>
 
 struct cmessage {
         struct cmsghdr cmsg;
@@ -96,7 +99,7 @@ static bool_t clnt_bck_control(CLIENT *, u_int, void *);
 static void clnt_bck_close(CLIENT *);
 static void clnt_bck_destroy(CLIENT *);
 
-static struct clnt_ops clnt_bck_ops = {
+static const struct clnt_ops clnt_bck_ops = {
 	.cl_abort =	clnt_bck_abort,
 	.cl_geterr =	clnt_bck_geterr,
 	.cl_freeres =	clnt_bck_freeres,
@@ -202,7 +205,10 @@ clnt_bck_call(
 	uint32_t xid;
 	struct mbuf *mreq = NULL, *results;
 	struct ct_request *cr;
-	int error;
+	int error, maxextsiz;
+#ifdef KERN_TLS
+	u_int maxlen;
+#endif
 
 	cr = malloc(sizeof(struct ct_request), M_RPC, M_WAITOK);
 
@@ -295,6 +301,19 @@ call_again:
 	TAILQ_INSERT_TAIL(&ct->ct_pending, cr, cr_link);
 	mtx_unlock(&ct->ct_lock);
 
+	/* For RPC-over-TLS, copy mrep to a chain of ext_pgs. */
+	if ((xprt->xp_tls & RPCTLS_FLAGS_HANDSHAKE) != 0) {
+		/*
+		 * Copy the mbuf chain to a chain of
+		 * ext_pgs mbuf(s) as required by KERN_TLS.
+		 */
+		maxextsiz = TLS_MAX_MSG_SIZE_V10_2;
+#ifdef KERN_TLS
+		if (rpctls_getinfo(&maxlen, false, false))
+			maxextsiz = min(maxextsiz, maxlen);
+#endif
+		mreq = _rpc_copym_into_ext_pgs(mreq, maxextsiz);
+	}
 	/*
 	 * sosend consumes mreq.
 	 */

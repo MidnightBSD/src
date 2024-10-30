@@ -1,11 +1,11 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2002-2004 Tim J. Robbins.
  * All rights reserved.
  *
  * Copyright (c) 2011 The FreeBSD Foundation
- * All rights reserved.
+ *
  * Portions of this software were developed by David Chisnall
  * under sponsorship from the FreeBSD Foundation.
  *
@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
@@ -45,7 +44,7 @@ wcsrtombs_l(char * __restrict dst, const wchar_t ** __restrict src, size_t len,
 {
 	FIX_LOCALE(locale);
 	if (ps == NULL)
-		ps = &locale->wcsrtombs;
+		ps = &(XLOCALE_CTYPE(locale)->wcsrtombs);
 	return (XLOCALE_CTYPE(locale)->__wcsnrtombs(dst, src, SIZE_T_MAX, len, ps));
 }
 

@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2010 by Panasas, Inc.
  * All rights reserved.
@@ -24,7 +23,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-/* $FreeBSD: stable/10/tools/tools/vhba/vhba.h 253750 2013-07-28 18:44:17Z avg $ */
 /*
  * Virtual HBA defines
  */

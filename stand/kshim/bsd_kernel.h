@@ -1,4 +1,3 @@
-/* $FreeBSD$ */
 /*-
  * Copyright (c) 2011 Hans Petter Selasky. All rights reserved.
  *
@@ -27,14 +26,18 @@
 #ifndef _BSD_KERNEL_H_
 #define	_BSD_KERNEL_H_
 
-#define	_KERNEL
+#if !defined(_STANDALONE)
+#error "_STANDALONE is not defined!"
+#endif
+
 #undef __FreeBSD_version
-#define	__FreeBSD_version 1100000
+#define	__FreeBSD_version 1300000
 
 #include <sys/cdefs.h>
 #include <sys/queue.h>
 #include <sys/errno.h>
 
+#define	offsetof(type, field) __builtin_offsetof(type, field)
 #define	howmany(x, y)	(((x)+((y)-1))/(y))
 #define	nitems(x)	(sizeof((x)) / sizeof((x)[0]))
 #define	isalpha(x) (((x) >= 'a' && (x) <= 'z') || ((x) >= 'A' && (x) <= 'Z'))
@@ -74,6 +77,7 @@ struct sysctl_req {
 #define	EVENTHANDLER_DECLARE(...)
 #define	EVENTHANDLER_INVOKE(...)
 #define	KASSERT(...)
+#define	CTASSERT(x) _Static_assert(x, "compile-time assertion failed")
 #define	SCHEDULER_STOPPED(x) (0)
 #define	PI_SWI(...) (0)
 #define	UNIQ_NAME(x) x
@@ -116,6 +120,8 @@ SYSINIT_ENTRY(uniq##_entry, "sysuninit", (subs),	\
 #define	hz 1000
 #undef PAGE_SIZE
 #define	PAGE_SIZE 4096
+#undef PAGE_SHIFT
+#define	PAGE_SHIFT 12
 #undef MIN
 #define	MIN(a,b) (((a) < (b)) ? (a) : (b))
 #undef MAX
@@ -224,10 +230,23 @@ typedef uint16_t mode_t;
 typedef uint8_t *caddr_t;
 #define	_UINTPTR_T_DECLARED
 typedef unsigned long uintptr_t;
+#define	_UINTMAX_T_DECLARED
+typedef unsigned long uintmax_t;
+typedef unsigned long vm_paddr_t;
 
 #define	_SIZE_T_DECLARED
 typedef unsigned long size_t;
-typedef unsigned long u_long;
+#define	_SSIZE_T_DECLARED
+typedef signed long ssize_t;
+#define	_OFF_T_DECLARED
+typedef unsigned long off_t;
+
+typedef int64_t sbintime_t;
+
+typedef unsigned char   u_char;
+typedef unsigned short  u_short;
+typedef unsigned int    u_int;
+typedef unsigned long   u_long;
 #endif
 
 typedef unsigned long bus_addr_t;
@@ -346,6 +365,7 @@ struct devclass;
 struct device;
 struct module;
 struct module_data;
+struct sbuf;
 
 typedef struct driver driver_t;
 typedef struct devclass *devclass_t;
@@ -367,6 +387,12 @@ typedef int gpio_pin_setflags_t (device_t dev, uint32_t, uint32_t);
 
 typedef int bus_child_location_str_t (device_t parent, device_t child, char *buf, size_t buflen);
 typedef int bus_child_pnpinfo_str_t (device_t parent, device_t child, char *buf, size_t buflen);
+typedef int bus_child_location_t (device_t parent, device_t child, struct sbuf *);
+typedef int bus_child_pnpinfo_t (device_t parent, device_t child, struct sbuf *);
+typedef int bus_get_device_path_t (device_t bus, device_t child, const char *locator, struct sbuf *sb);
+
+#define	bus_generic_get_device_path(...) EOPNOTSUPP
+
 typedef void bus_driver_added_t (device_t dev, driver_t *driver);
 
 struct device_method {
@@ -452,7 +478,10 @@ int	devclass_get_maxunit(devclass_t dc);
 device_t devclass_get_device(devclass_t dc, int unit);
 devclass_t devclass_find(const char *classname);
 
+#define	BUS_LOCATOR_UEFI "UEFI"
 #define	bus_get_dma_tag(...) (NULL)
+#define	bus_topo_lock(...) mtx_lock(&Giant)
+#define	bus_topo_unlock(...) mtx_unlock(&Giant)
 int	bus_generic_detach(device_t dev);
 int	bus_generic_resume(device_t dev);
 int	bus_generic_shutdown(device_t dev);
@@ -493,9 +522,11 @@ void	module_register(void *);
 
 void   *memset(void *, int, size_t len);
 void   *memcpy(void *, const void *, size_t len);
+int	memcmp(const void *, const void *, size_t len);
 int	printf(const char *,...) __printflike(1, 2);
 int	snprintf(char *restrict str, size_t size, const char *restrict format,...) __printflike(3, 4);
 size_t	strlen(const char *s);
+int	strcmp(const char *, const char *);
 
 /* MALLOC API */
 
@@ -655,6 +686,11 @@ extern int delay(unsigned int);
 #define	BUS_DMA_BUS3		0x40
 #define	BUS_DMA_BUS4		0x80
 
+#define	BUS_DMASYNC_PREREAD	0x01
+#define	BUS_DMASYNC_POSTREAD	0x02
+#define	BUS_DMASYNC_PREWRITE	0x04
+#define	BUS_DMASYNC_POSTWRITE	0x08
+
 typedef void bus_dmamap_callback_t(void *, bus_dma_segment_t *, int, int);
 
 int
@@ -665,9 +701,17 @@ bus_dma_tag_create(bus_dma_tag_t parent, bus_size_t alignment,
 		   bus_size_t maxsegsz, int flags, bus_dma_lock_t *lockfunc,
 		   void *lockfuncarg, bus_dma_tag_t *dmat);
 
-int bus_dmamem_alloc(bus_dma_tag_t dmat, void** vaddr, int flags,
-    bus_dmamap_t *mapp);
-void bus_dmamem_free(bus_dma_tag_t dmat, void *vaddr, bus_dmamap_t map);
-int bus_dma_tag_destroy(bus_dma_tag_t dmat);
+int bus_dmamem_alloc(bus_dma_tag_t, void** vaddr, int flags, bus_dmamap_t *);
+void bus_dmamem_free(bus_dma_tag_t, void *vaddr, bus_dmamap_t);
+int bus_dma_tag_destroy(bus_dma_tag_t);
+
+int bus_dmamap_load(bus_dma_tag_t, bus_dmamap_t, void *buf,
+    bus_size_t buflen, bus_dmamap_callback_t *,
+    void *callback_arg, int flags);
+void bus_dmamap_unload(bus_dma_tag_t, bus_dmamap_t);
+void bus_dmamap_sync(bus_dma_tag_t dmat, bus_dmamap_t map, int flags);
+
+/* SBUF */
+#define	sbuf_printf(...) do { } while (0)
 
 #endif					/* _BSD_KERNEL_H_ */

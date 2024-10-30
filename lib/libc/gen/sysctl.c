@@ -31,7 +31,6 @@
 
 #include <sys/cdefs.h>
 __SCCSID("@(#)sysctl.c	8.2 (Berkeley) 1/4/94");
-
 #include <sys/param.h>
 #include <sys/sysctl.h>
 
@@ -45,6 +44,25 @@ __SCCSID("@(#)sysctl.c	8.2 (Berkeley) 1/4/94");
 extern int __sysctl(const int *name, u_int namelen, void *oldp,
     size_t *oldlenp, const void *newp, size_t newlen);
 
+static int
+set_user_str(void *dstp, size_t *dstlenp, const char *src, size_t len,
+    size_t maxlen)
+{
+	int retval;
+
+	retval = 0;
+	if (dstp != NULL) {
+		if (len > maxlen) {
+			len = maxlen;
+			errno = ENOMEM;
+			retval = -1;
+		}
+		memcpy(dstp, src, len);
+	}
+	*dstlenp = len;
+	return (retval);
+}
+
 int
 sysctl(const int *name, u_int namelen, void *oldp, size_t *oldlenp,
     const void *newp, size_t newlen)
@@ -52,43 +70,46 @@ sysctl(const int *name, u_int namelen, void *oldp, size_t *oldlenp,
 	int retval;
 	size_t orig_oldlen;
 
-	orig_oldlen = oldlenp ? *oldlenp : 0;
+	orig_oldlen = oldlenp != NULL ? *oldlenp : 0;
 	retval = __sysctl(name, namelen, oldp, oldlenp, newp, newlen);
 	/*
-	 * All valid names under CTL_USER have a dummy entry in the sysctl
-	 * tree (to support name lookups and enumerations) with an
-	 * empty/zero value, and the true value is supplied by this routine.
-	 * For all such names, __sysctl() is used solely to validate the
-	 * name.
+	 * Valid names under CTL_USER except USER_LOCALBASE have a dummy entry
+	 * in the sysctl tree (to support name lookups and enumerations) with
+	 * an empty/zero value, and the true value is supplied by this routine.
+	 * For all such names, __sysctl() is used solely to validate the name.
 	 *
-	 * Return here unless there was a successful lookup for a CTL_USER
-	 * name.
+	 * Return here unless there was a successful lookup for a CTL_USER name.
 	 */
-	if (retval || name[0] != CTL_USER)
+	if (retval != 0 || name[0] != CTL_USER)
 		return (retval);
 
-	if (newp != NULL) {
-		errno = EPERM;
-		return (-1);
-	}
 	if (namelen != 2) {
 		errno = EINVAL;
 		return (-1);
 	}
 
+	/* Variables under CLT_USER that may be overridden by kernel values */
 	switch (name[1]) {
-	case USER_CS_PATH:
-		if (oldp && orig_oldlen < sizeof(_PATH_STDPATH)) {
-			errno = ENOMEM;
-			return -1;
-		}
-		*oldlenp = sizeof(_PATH_STDPATH);
-		if (oldp != NULL)
-			memmove(oldp, _PATH_STDPATH, sizeof(_PATH_STDPATH));
-		return (0);
+	case USER_LOCALBASE:
+		if (oldlenp == NULL || *oldlenp > sizeof(""))
+			return (0);
+		return (set_user_str(oldp, oldlenp, _PATH_LOCALBASE,
+			sizeof(_PATH_LOCALBASE), orig_oldlen));
 	}
 
-	if (oldp && *oldlenp < sizeof(int)) {
+	/* Variables under CLT_USER whose values are immutably defined below */
+	if (newp != NULL) {
+		errno = EPERM;
+		return (-1);
+	}
+
+	switch (name[1]) {
+	case USER_CS_PATH:
+		return (set_user_str(oldp, oldlenp, _PATH_STDPATH,
+		    sizeof(_PATH_STDPATH), orig_oldlen));
+	}
+
+	if (oldp != NULL && *oldlenp < sizeof(int)) {
 		errno = ENOMEM;
 		return (-1);
 	}

@@ -32,7 +32,6 @@
 static char sccsid[] = "@(#)netnamer.c 1.13 91/03/11 Copyr 1986 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-
 /*
  * netname utility routines convert from unix names to network names and
  * vice-versa This module is operating system dependent! What we define here
@@ -63,7 +62,7 @@ static char    *NETID = "netid.byname";
 static char    *NETIDFILE = "/etc/netid";
 
 static int getnetid( char *, char * );
-static int _getgroups( char *, gid_t * );
+static int _getgroups( char *, gid_t [NGRPS] );
 
 /*
  * Convert network-name into unix credential

@@ -11,8 +11,6 @@
  * implied warranties, including, without limitation, the implied
  * warranties of merchantability and fitness for a particular
  * purpose.
- *
- * $FreeBSD: stable/11/stand/i386/zfsboot/zfsldr.S 329192 2018-02-13 04:28:13Z kevans $
  */
 
 /* Memory Locations */

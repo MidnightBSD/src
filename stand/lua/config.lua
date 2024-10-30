@@ -1,8 +1,8 @@
 --
--- SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+-- SPDX-License-Identifier: BSD-2-Clause
 --
 -- Copyright (c) 2015 Pedro Souza <pedrosouza@freebsd.org>
--- Copyright (C) 2018 Kyle Evans <kevans@FreeBSD.org>
+-- Copyright (c) 2018 Kyle Evans <kevans@FreeBSD.org>
 -- All rights reserved.
 --
 -- Redistribution and use in source and binary forms, with or without
@@ -25,8 +25,6 @@
 -- LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
 -- OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 -- SUCH DAMAGE.
---
--- $FreeBSD$
 --
 
 local hook = require("hook")
@@ -62,7 +60,10 @@ local MSG_FAILSYN_EOLESC = "Stray escape at end of line"
 local MSG_FAILSYN_EOLVAR = "Unescaped $ at end of line"
 local MSG_FAILSYN_BADVAR = "Malformed variable expression at position '%d'"
 
-local MODULEEXPR = '([-%w_]+)'
+-- MODULEEXPR should more or less allow the exact same set of characters as the
+-- env_var entries in the pattern table.  This is perhaps a good target for a
+-- little refactoring.
+local MODULEEXPR = '([%w%d-_.]+)'
 local QVALEXPR = '"(.*)"'
 local QVALREPL = QVALEXPR:gsub('%%', '%%%%')
 local WORDEXPR = "([-%w%d][-%w%d_.]*)"
@@ -436,7 +437,14 @@ end
 
 local function checkNextboot()
 	local nextboot_file = loader.getenv("nextboot_conf")
+	local nextboot_enable = loader.getenv("nextboot_enable")
+
 	if nextboot_file == nil then
+		return
+	end
+
+	-- is nextboot_enable set in nvstore?
+	if nextboot_enable == "NO" then
 		return
 	end
 
@@ -445,7 +453,8 @@ local function checkNextboot()
 		return
 	end
 
-	if text:match("^nextboot_enable=\"NO\"") ~= nil then
+	if nextboot_enable == nil and
+	    text:match("^nextboot_enable=\"NO\"") ~= nil then
 		-- We're done; nextboot is not enabled
 		return
 	end
@@ -468,6 +477,7 @@ local function checkNextboot()
 		io.write(nfile, "nextboot_enable=\"NO\" ")
 		io.close(nfile)
 	end
+	loader.setenv("nextboot_enable", "NO")
 end
 
 -- Module exports

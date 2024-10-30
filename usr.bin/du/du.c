@@ -44,7 +44,6 @@ static const char sccsid[] = "@(#)du.c	8.5 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/queue.h>
 #include <sys/stat.h>
@@ -267,7 +266,7 @@ main(int argc, char *argv[])
 	if ((fts = fts_open(argv, ftsoptions, NULL)) == NULL)
 		err(1, "fts_open");
 
-	while ((p = fts_read(fts)) != NULL) {
+	while (errno = 0, (p = fts_read(fts)) != NULL) {
 		switch (p->fts_info) {
 		case FTS_D:			/* Ignore. */
 			if (ignorep(p))

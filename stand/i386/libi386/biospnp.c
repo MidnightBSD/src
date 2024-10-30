@@ -25,8 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/i386/libi386/biospnp.c 332154 2018-04-06 21:37:25Z kevans $");
-
 /*
  * PnP BIOS enumerator.
  */

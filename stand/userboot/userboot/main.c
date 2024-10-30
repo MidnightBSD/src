@@ -26,8 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
-
 #include <stand.h>
 #include <string.h>
 #include <setjmp.h>
@@ -38,6 +36,7 @@ __FBSDID("$FreeBSD$");
 #include "libuserboot.h"
 
 #if defined(USERBOOT_ZFS_SUPPORT)
+#include <sys/zfs_bootenv.h>
 #include "libzfs.h"
 
 static void userboot_zfs_probe(void);
@@ -170,6 +169,9 @@ loader_main(struct loader_callbacks *cb, void *arg, int version, int ndisks)
 	 */
 	cons_probe();
 
+	/* Set up currdev variable to have hooks in place. */
+	env_setenv("currdev", EV_VOLATILE, "", gen_setcurrdev, env_nounset);
+
 	printf("\n%s", bootprog_info);
 #if 0
 	printf("Memory: %ld k\n", memsize() / 1024);
@@ -201,13 +203,7 @@ loader_main(struct loader_callbacks *cb, void *arg, int version, int ndisks)
 	 * Initialise the block cache. Set the upper limit.
 	 */
 	bcache_init(32768, 512);
-	/*
-	 * March through the device switch probing for things.
-	 */
-	for (i = 0; devsw[i] != NULL; i++)
-		if (devsw[i]->dv_init != NULL)
-			(devsw[i]->dv_init)();
-
+	devinit();
 	extract_currdev();
 
 	/*
@@ -237,6 +233,7 @@ extract_currdev(void)
 	struct devdesc *dd;
 #if defined(USERBOOT_ZFS_SUPPORT)
 	struct zfs_devdesc zdev;
+	char *buf = NULL;
 
 	if (userboot_zfs_found) {
 	
@@ -244,7 +241,7 @@ extract_currdev(void)
 		bzero(&zdev, sizeof(zdev));
 		zdev.dd.d_dev = &zfs_dev;
 		
-		init_zfs_bootenv(zfs_fmtdev(&zdev));
+		init_zfs_boot_options(devformat(&zdev.dd));
 		dd = &zdev.dd;
 	} else
 #endif
@@ -269,10 +266,23 @@ extract_currdev(void)
 		dd = &dev.dd;
 	}
 
-	env_setenv("currdev", EV_VOLATILE, userboot_fmtdev(dd),
-	    userboot_setcurrdev, env_nounset);
-	env_setenv("loaddev", EV_VOLATILE, userboot_fmtdev(dd),
-	    env_noset, env_nounset);
+	set_currdev(devformat(dd));
+
+#if defined(USERBOOT_ZFS_SUPPORT)
+	if (userboot_zfs_found) {
+		buf = malloc(VDEV_PAD_SIZE);
+		if (buf != NULL) {
+			if (zfs_get_bootonce(&zdev, OS_BOOTONCE, buf,
+			    VDEV_PAD_SIZE) == 0) {
+				printf("zfs bootonce: %s\n", buf);
+				set_currdev(buf);
+				setenv("zfs-bootonce", buf, 1);
+			}
+			free(buf);
+			(void) zfs_attach_nvstore(&zdev);
+		}
+	}
+#endif
 }
 
 #if defined(USERBOOT_ZFS_SUPPORT)
@@ -290,7 +300,7 @@ userboot_zfs_probe(void)
 	for (unit = 0; unit < userboot_disk_maxunit; unit++) {
 		sprintf(devname, "disk%d:", unit);
 		pool_guid = 0;
-		zfs_probe_dev(devname, &pool_guid);
+		zfs_probe_dev(devname, &pool_guid, true);
 		if (pool_guid != 0)
 			userboot_zfs_found = 1;
 	}

@@ -1,5 +1,4 @@
 #include <sys/cdefs.h>
-
 #include "namespace.h"
 #include <stdlib.h>
 #include "un-namespace.h"

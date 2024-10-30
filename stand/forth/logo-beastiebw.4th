@@ -23,7 +23,6 @@
 \ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 \ SUCH DAMAGE.
 \ 
-\ $FreeBSD: stable/11/stand/forth/logo-beastiebw.4th 280975 2015-04-02 01:48:12Z dteske $
 
 46 logoX ! 4 logoY ! \ Initialize logo placement defaults
 

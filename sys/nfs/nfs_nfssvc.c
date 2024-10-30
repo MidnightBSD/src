@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_nfs.h"
 
 #include <sys/param.h>
@@ -84,7 +83,7 @@ sys_nfssvc(struct thread *td, struct nfssvc_args *uap)
 	AUDIT_ARG_CMD(uap->flag);
 
 	/* Allow anyone to get the stats. */
-	if ((uap->flag & ~NFSSVC_GETSTATS) != 0) {
+	if ((uap->flag & ~(NFSSVC_GETSTATS | NFSSVC_NEWSTRUCT)) != 0) {
 		error = priv_check(td, PRIV_NFS_DAEMON);
 		if (error != 0)
 			return (error);
@@ -150,4 +149,3 @@ DECLARE_MODULE(nfssvc, nfssvc_mod, SI_SUB_VFS, SI_ORDER_ANY);
 
 /* So that loader and kldload(2) can find us, wherever we are.. */
 MODULE_VERSION(nfssvc, 1);
-

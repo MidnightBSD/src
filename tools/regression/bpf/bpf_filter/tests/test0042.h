@@ -1,6 +1,5 @@
 /*-
  * Test 0042:	Check boundary conditions (BPF_LD+BPF_W+BPF_ABS)
- *
  */
 
 /* BPF program */

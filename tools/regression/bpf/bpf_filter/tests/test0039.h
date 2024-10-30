@@ -1,6 +1,5 @@
 /*-
  * Test 0039:	BPF_ALU+BPF_RSH+BPF_K
- *
  */
 
 /* BPF program */

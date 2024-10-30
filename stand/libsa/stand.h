@@ -22,8 +22,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD$
  * From	$NetBSD: stand.h,v 1.22 1997/06/26 19:17:40 drochner Exp $	
  */
 
@@ -61,10 +59,12 @@
 #ifndef	STAND_H
 #define	STAND_H
 
-#include <sys/types.h>
 #include <sys/cdefs.h>
+
+#include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/dirent.h>
+#include <sys/queue.h>
 
 /* this header intentionally exports NULL from <string.h> */
 #include <string.h>
@@ -89,6 +89,8 @@
 /* Partial signal emulation for sig_atomic_t */
 #include <machine/signal.h>
 
+__BEGIN_DECLS
+
 struct open_file;
 
 /*
@@ -110,16 +112,18 @@ struct fs_ops {
     off_t	(*fo_seek)(struct open_file *f, off_t offset, int where);
     int		(*fo_stat)(struct open_file *f, struct stat *sb);
     int		(*fo_readdir)(struct open_file *f, struct dirent *d);
+    int		(*fo_preload)(struct open_file *f);
+    int		(*fo_mount)(const char *, const char *, void **);
+    int		(*fo_unmount)(const char *, void *);
 };
 
 /*
- * libstand-supplied filesystems
+ * libsa-supplied filesystems
  */
 extern struct fs_ops ufs_fsops;
 extern struct fs_ops tftp_fsops;
 extern struct fs_ops nfs_fsops;
 extern struct fs_ops cd9660_fsops;
-extern struct fs_ops nandfs_fsops;
 extern struct fs_ops gzipfs_fsops;
 extern struct fs_ops bzipfs_fsops;
 extern struct fs_ops dosfs_fsops;
@@ -136,9 +140,12 @@ extern struct fs_ops efihttp_fsops;
 /* 
  * Device switch
  */
+#define DEV_NAMLEN	8		/* Length of name of device class */
+#define DEV_DEVLEN	128		/* Length of longest device instance name */
+struct devdesc;
 struct devsw {
-    const char	dv_name[8];
-    int		dv_type;		/* opaque type constant, arch-dependant */
+    const char	dv_name[DEV_NAMLEN];
+    int		dv_type;		/* opaque type constant */
 #define DEVT_NONE	0
 #define DEVT_DISK	1
 #define DEVT_NET	2
@@ -153,25 +160,38 @@ struct devsw {
     int		(*dv_ioctl)(struct open_file *f, u_long cmd, void *data);
     int		(*dv_print)(int verbose);	/* print device information */
     void	(*dv_cleanup)(void);
+    char *	(*dv_fmtdev)(struct devdesc *);
+    int		(*dv_parsedev)(struct devdesc **, const char *, const char **);
+    bool	(*dv_match)(struct devsw *, const char *);
 };
 
 /*
- * libstand-supplied device switch
+ * libsa-supplied device switch
  */
 extern struct devsw netdev;
 
 extern int errno;
 
 /*
- * Generic device specifier; architecture-dependent
- * versions may be larger, but should be allowed to
- * overlap.
+ * Generic device specifier; architecture-dependent versions may be larger, but
+ * should be allowed to overlap. The larger device specifiers store more data
+ * than can fit in the generic one that's gleaned after parsing the device
+ * string, or used in some cases to indicate wildcards that match a variety of
+ * situations based on what's on the drive itself rather than what the progammer
+ * might know in advance. Information about open files is stored in d_opendata,
+ * though what's passed into the open routine may differ from what's present
+ * after the open on some configurations.
  */
 struct devdesc {
     struct devsw	*d_dev;
     int			d_unit;
     void		*d_opendata;
 };
+
+char *devformat(struct devdesc *d);
+int devparse(struct devdesc **, const char *, const char **);
+int devinit(void);
+void	dev_cleanup(void);
 
 struct open_file {
     int			f_flags;	/* see F_* below */
@@ -183,11 +203,14 @@ struct open_file {
     char		*f_rabuf;	/* readahead buffer pointer */
     size_t		f_ralen;	/* valid data in readahead buffer */
     off_t		f_raoffset;	/* consumer offset in readahead buffer */
+    int			f_id;		/* file number */
+    TAILQ_ENTRY(open_file) f_link;	/* next entry */
 #define SOPEN_RASIZE	512
 };
 
-#define	SOPEN_MAX	64
-extern struct open_file files[];
+typedef TAILQ_HEAD(file_list, open_file) file_list_t;
+extern file_list_t files;
+extern struct open_file *fd2open_file(int);
 
 /* f_flags values */
 #define	F_READ		0x0001	/* file opened for reading */
@@ -280,6 +303,8 @@ extern void	ngets(char *, int);
 #define gets(x)	ngets((x), 0)
 extern int	fgetstr(char *buf, int size, int fd);
 
+extern int	mount(const char *dev, const char *path, int flags, void *data);
+extern int	unmount(const char *dev, int flags);
 extern int	open(const char *, int);
 #define	O_RDONLY	0x0
 #define O_WRONLY	0x1
@@ -292,7 +317,9 @@ extern int	close(int);
 extern void	closeall(void);
 extern ssize_t	read(int, void *, size_t);
 extern ssize_t	write(int, const void *, size_t);
+extern int	ioctl(int, u_long, void *);
 extern struct	dirent *readdirfd(int);
+extern void	preload(int);
 
 extern void	srandom(unsigned int);
 extern long	random(void);
@@ -470,5 +497,64 @@ extern void *reallocf(void *, size_t);
  * va <-> pa routines. MD code must supply.
  */
 caddr_t ptov(uintptr_t);
+
+/* features.c */
+typedef void (feature_iter_fn)(void *, const char *, const char *, bool);
+
+extern void feature_enable(uint32_t);
+extern bool feature_name_is_enabled(const char *);
+extern void feature_iter(feature_iter_fn *, void *);
+
+/*
+ * Note that these should also be added to the mapping table in features.c,
+ * which the interpreter may query to provide details from.  The name with
+ * FEATURE_ removed is assumed to be the name we'll provide in the loader
+ * features table, just to simplify reasoning about these.
+ */
+#define	FEATURE_EARLY_ACPI	0x0001
+
+/* hexdump.c */
+void	hexdump(caddr_t region, size_t len);
+
+/* nvstore.c */
+typedef int (nvstore_getter_cb_t)(void *, const char *, void **);
+typedef int (nvstore_setter_cb_t)(void *, int, const char *,
+    const void *, size_t);
+typedef int (nvstore_setter_str_cb_t)(void *, const char *, const char *,
+    const char *);
+typedef int (nvstore_unset_cb_t)(void *, const char *);
+typedef int (nvstore_print_cb_t)(void *, void *);
+typedef int (nvstore_iterate_cb_t)(void *, int (*)(void *, void *));
+
+typedef struct nvs_callbacks {
+	nvstore_getter_cb_t	*nvs_getter;
+	nvstore_setter_cb_t	*nvs_setter;
+	nvstore_setter_str_cb_t *nvs_setter_str;
+	nvstore_unset_cb_t	*nvs_unset;
+	nvstore_print_cb_t	*nvs_print;
+	nvstore_iterate_cb_t	*nvs_iterate;
+} nvs_callbacks_t;
+
+int nvstore_init(const char *, nvs_callbacks_t *, void *);
+int nvstore_fini(const char *);
+void *nvstore_get_store(const char *);
+int nvstore_print(void *);
+int nvstore_get_var(void *, const char *, void **);
+int nvstore_set_var(void *, int, const char *, void *, size_t);
+int nvstore_set_var_from_string(void *, const char *, const char *,
+    const char *);
+int nvstore_unset_var(void *, const char *);
+
+/* tslog.c */
+#define TSRAW(a, b, c) tslog(a, b, c)
+#define TSENTER() TSRAW("ENTER", __func__, NULL)
+#define TSENTER2(x) TSRAW("ENTER", __func__, x)
+#define TSEXIT() TSRAW("EXIT", __func__, NULL)
+#define TSLINE() TSRAW("EVENT", __FILE__, __XSTRING(__LINE__))
+void tslog(const char *, const char *, const char *);
+void tslog_setbuf(void * buf, size_t len);
+void tslog_getbuf(void ** buf, size_t * len);
+
+__END_DECLS
 
 #endif	/* STAND_H */

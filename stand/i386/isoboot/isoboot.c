@@ -14,8 +14,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/i386/isoboot/isoboot.c 337816 2018-08-14 19:44:36Z kevans $");
-
 #include <sys/param.h>
 #include <sys/gpt.h>
 #include <sys/dirent.h>

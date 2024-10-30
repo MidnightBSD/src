@@ -28,7 +28,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *
  * Private definitions for libc, libc_r and libpthread.
  *
  */
@@ -37,6 +36,14 @@
 #define _LIBC_PRIVATE_H_
 #include <sys/_types.h>
 #include <sys/_pthreadtypes.h>
+
+extern char **environ;
+
+/*
+ * The kernel doesn't expose PID_MAX to the user space. Save it here
+ * to allow to run a newer world on a pre-1400079 kernel.
+ */
+#define	_PID_MAX	99999
 
 /*
  * This global flag is non-zero when a process has created one
@@ -177,6 +184,7 @@ typedef enum {
 	PJT_MUTEXATTR_SETROBUST,
 	PJT_GETTHREADID_NP,
 	PJT_ATTR_GET_NP,
+	PJT_GETNAME_NP,
 	PJT_MAX
 } pjt_index_t;
 
@@ -248,6 +256,12 @@ enum {
 int _yp_check(char **);
 #endif
 
+void __libc_start1(int, char *[], char *[],
+    void (*)(void), int (*)(int, char *[], char *[])) __dead2;
+void __libc_start1_gcrt(int, char *[], char *[],
+    void (*)(void), int (*)(int, char *[], char *[]),
+    int *, int *) __dead2;
+
 /*
  * Initialise TLS for static programs
  */
@@ -260,8 +274,9 @@ void _init_tls(void);
 int _once(pthread_once_t *, void (*)(void));
 
 /*
- * Set the TLS thread pointer
+ * Get/set the TLS thread pointer
  */
+void *_get_tp(void);
 void _set_tp(void *tp);
 
 /*
@@ -332,6 +347,7 @@ int		__sys_clock_gettime(__clockid_t, struct timespec *ts);
 int		__sys_clock_nanosleep(__clockid_t, int,
 		    const struct timespec *, struct timespec *);
 int		__sys_close(int);
+int		__sys_close_range(unsigned, unsigned, int);
 int		__sys_connect(int, const struct sockaddr *, __socklen_t);
 int		__sys_fcntl(int, int, ...);
 int		__sys_fdatasync(int);
@@ -368,6 +384,7 @@ __ssize_t	__sys_recv(int, void *, __size_t, int);
 __ssize_t	__sys_recvfrom(int, void *, __size_t, int, struct sockaddr *,
 		    __socklen_t *);
 __ssize_t	__sys_recvmsg(int, struct msghdr *, int);
+int		__sys_sched_getcpu(void);
 int		__sys_select(int, struct fd_set *, struct fd_set *,
 		    struct fd_set *, struct timeval *);
 __ssize_t	__sys_sendmsg(int, const struct msghdr *, int);
@@ -382,6 +399,7 @@ int		__sys_sigtimedwait(const __sigset_t *, struct __siginfo *,
 		    const struct timespec *);
 int		__sys_sigwait(const __sigset_t *, int *);
 int		__sys_sigwaitinfo(const __sigset_t *, struct __siginfo *);
+int		__sys___specialfd(int, const void *, __size_t);
 int		__sys_statfs(const char *, struct statfs *);
 int		__sys_swapcontext(struct __ucontext *,
 		    const struct __ucontext *);
@@ -393,6 +411,7 @@ __pid_t		__sys_wait6(enum idtype, __id_t, int *, int,
 		    struct __wrusage *, struct __siginfo *);
 __ssize_t	__sys_write(int, const void *, __size_t);
 __ssize_t	__sys_writev(int, const struct iovec *, int);
+int		__sys_shm_open2(const char *, int, __mode_t, int, const char *);
 
 int		__libc_sigaction(int, const struct sigaction *,
 		    struct sigaction *) __hidden;
@@ -433,6 +452,8 @@ void __throw_constraint_handler_s(const char * restrict msg, int error);
 struct __nl_cat_d;
 struct _xlocale;
 struct __nl_cat_d *__catopen_l(const char *name, int type,
+	    struct _xlocale *locale);
+int __strerror_rl(int errnum, char *strerrbuf, __size_t buflen,
 	    struct _xlocale *locale);
 
 #endif /* _LIBC_PRIVATE_H_ */

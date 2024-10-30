@@ -1,6 +1,5 @@
 /*
  * MD header for contrib/gdtoa
- *
  */
 
 /*
@@ -10,6 +9,14 @@
  * architecture.  See contrib/gdtoa/gdtoaimp.h for details.
  */
 
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#define IEEE_8087
+#define Arith_Kind_ASL 1
+#else
 #define IEEE_MC68k
 #define Arith_Kind_ASL 2
+#endif
+#define Long int
+#define Intcast (int)(long)
 #define Double_Align
+#define X64_bit_pointers

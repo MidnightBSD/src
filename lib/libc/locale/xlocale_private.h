@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by David Chisnall under sponsorship from
  * the FreeBSD Foundation.
@@ -27,7 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _XLOCALE_PRIVATE__H_
@@ -90,6 +88,9 @@ struct xlocale_refcounted {
 	/** Function used to destroy this component, if one is required*/
 	void(*destructor)(void*);
 };
+
+#define XLOCALE_DEF_VERSION_LEN 12
+
 /**
  * Header for a locale component.  All locale components must begin with this
  * header.
@@ -98,6 +99,8 @@ struct xlocale_component {
 	struct xlocale_refcounted header;
 	/** Name of the locale used for this component. */
 	char locale[ENCODING_LEN+1];
+	/** Version of the definition for this component. */
+	char version[XLOCALE_DEF_VERSION_LEN];
 };
 
 /**
@@ -127,34 +130,6 @@ struct _xlocale {
 	int using_messages_locale;
 	/** The structure to be returned from localeconv_l() for this locale. */
 	struct lconv lconv;
-	/** Persistent state used by mblen() calls. */
-	__mbstate_t mblen;
-	/** Persistent state used by mbrlen() calls. */
-	__mbstate_t mbrlen;
-	/** Persistent state used by mbrtoc16() calls. */
-	__mbstate_t mbrtoc16;
-	/** Persistent state used by mbrtoc32() calls. */
-	__mbstate_t mbrtoc32;
-	/** Persistent state used by mbrtowc() calls. */
-	__mbstate_t mbrtowc;
-	/** Persistent state used by mbsnrtowcs() calls. */
-	__mbstate_t mbsnrtowcs;
-	/** Persistent state used by mbsrtowcs() calls. */
-	__mbstate_t mbsrtowcs;
-	/** Persistent state used by mbtowc() calls. */
-	__mbstate_t mbtowc;
-	/** Persistent state used by c16rtomb() calls. */
-	__mbstate_t c16rtomb;
-	/** Persistent state used by c32rtomb() calls. */
-	__mbstate_t c32rtomb;
-	/** Persistent state used by wcrtomb() calls. */
-	__mbstate_t wcrtomb;
-	/** Persistent state used by wcsnrtombs() calls. */
-	__mbstate_t wcsnrtombs;
-	/** Persistent state used by wcsrtombs() calls. */
-	__mbstate_t wcsrtombs;
-	/** Persistent state used by wctomb() calls. */
-	__mbstate_t wctomb;
 	/** Buffer used by nl_langinfo_l() */
 	char *csym;
 };
@@ -207,7 +182,7 @@ void __set_thread_rune_locale(locale_t loc);
  * locale has ever been set, then we always use the global locale.
  */
 extern int __has_thread_locale;
-#ifndef __NO_TLS
+
 /**
  * The per-thread locale.  Avoids the need to use pthread lookup functions when
  * getting the per-thread locale.
@@ -228,9 +203,6 @@ static inline locale_t __get_locale(void)
 	}
 	return (__thread_locale ? __thread_locale : &__xlocale_global_locale);
 }
-#else
-locale_t __get_locale(void);
-#endif
 
 /**
  * Two magic values are allowed for locale_t objects.  NULL and -1.  This

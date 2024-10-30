@@ -1,1 +1,2 @@
-Set to build additional clang and llvm tools, such as bugpoint.
+Build additional clang and llvm tools, such as bugpoint and
+clang-format.

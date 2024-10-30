@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <err.h>
 #include <getopt.h>
 #include <libgen.h>
@@ -267,7 +266,7 @@ main(int argc, char **argv)
 		} else {
 			iso = fopen(argv[i], "r");
 			if (iso == NULL)
-				err(1, "could not open %s", argv[1]);
+				err(1, "could not open %s", argv[i]);
 		}
 		dump_eltorito(iso, argv[i], outfile, outputter);
 	}

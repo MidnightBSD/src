@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1998 John D. Polstra
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #if !defined(IN_LIBDL) || defined(PIC)
 
 /*
@@ -39,13 +38,15 @@
 #include <dlfcn.h>
 #include <link.h>
 #include <stddef.h>
+#include <string.h>
 #include "namespace.h"
 #include <pthread.h>
 #include "un-namespace.h"
+#include "rtld.h"
 #include "libc_private.h"
 #include "reentrant.h"
 
-static char sorry[] = "Service unavailable";
+static const char sorry[] = "Service unavailable";
 
 void _rtld_thread_init(void *);
 void _rtld_atfork_pre(int *);
@@ -90,7 +91,7 @@ char *
 dlerror(void)
 {
 
-	return (sorry);
+	return (__DECONST(char *, sorry));
 }
 
 #pragma weak dllockinit
@@ -166,7 +167,9 @@ _rtld_thread_init(void *li __unused)
 #ifndef IN_LIBDL
 static pthread_once_t dl_phdr_info_once = PTHREAD_ONCE_INIT;
 static struct dl_phdr_info phdr_info;
+#ifndef PIC
 static mutex_t dl_phdr_info_lock = MUTEX_INITIALIZER;
+#endif
 
 static void
 dl_init_phdr_info(void)
@@ -194,8 +197,6 @@ dl_init_phdr_info(void)
 	for (i = 0; i < phdr_info.dlpi_phnum; i++) {
 		if (phdr_info.dlpi_phdr[i].p_type == PT_TLS) {
 			phdr_info.dlpi_tls_modid = 1;
-			phdr_info.dlpi_tls_data =
-			    (void*)phdr_info.dlpi_phdr[i].p_vaddr;
 		}
 	}
 	phdr_info.dlpi_adds = 1;
@@ -207,19 +208,30 @@ int
 dl_iterate_phdr(int (*callback)(struct dl_phdr_info *, size_t, void *) __unused,
     void *data __unused)
 {
-#ifndef IN_LIBDL
+#if defined IN_LIBDL
+	return (0);
+#elif defined PIC
+	int (*r)(int (*)(struct dl_phdr_info *, size_t, void *), void *);
+
+	r = dlsym(RTLD_DEFAULT, "dl_iterate_phdr");
+	if (r == NULL)
+		return (0);
+	return (r(callback, data));
+#else
+	tls_index ti;
 	int ret;
 
 	__init_elf_aux_vector();
 	if (__elf_aux_vector == NULL)
 		return (1);
 	_once(&dl_phdr_info_once, dl_init_phdr_info);
+	ti.ti_module = 1;
+	ti.ti_offset = 0;
 	mutex_lock(&dl_phdr_info_lock);
+	phdr_info.dlpi_tls_data = __tls_get_addr(&ti);
 	ret = callback(&phdr_info, sizeof(phdr_info), data);
 	mutex_unlock(&dl_phdr_info_lock);
 	return (ret);
-#else
-	return (0);
 #endif
 }
 
@@ -244,13 +256,48 @@ _rtld_atfork_post(int *locks __unused)
 {
 }
 
+#ifndef IN_LIBDL
+struct _rtld_addr_phdr_cb_data {
+	const void *addr;
+	struct dl_phdr_info *dli;
+};
+
+static int
+_rtld_addr_phdr_cb(struct dl_phdr_info *dli, size_t sz, void *arg)
+{
+	struct _rtld_addr_phdr_cb_data *rd;
+	const Elf_Phdr *ph;
+	unsigned i;
+
+	rd = arg;
+	for (i = 0; i < dli->dlpi_phnum; i++) {
+		ph = &dli->dlpi_phdr[i];
+		if (ph->p_type == PT_LOAD &&
+		    dli->dlpi_addr + ph->p_vaddr <= (uintptr_t)rd->addr &&
+		    (uintptr_t)rd->addr < dli->dlpi_addr + ph->p_vaddr +
+		    ph->p_memsz) {
+			memcpy(rd->dli, dli, sz);
+			return (1);
+		}
+	}
+	return (0);
+}
+#endif
+
 #pragma weak _rtld_addr_phdr
 int
 _rtld_addr_phdr(const void *addr __unused,
     struct dl_phdr_info *phdr_info_a __unused)
 {
+#ifndef IN_LIBDL
+	struct _rtld_addr_phdr_cb_data rd;
 
+	rd.addr = addr;
+	rd.dli = phdr_info_a;
+	return (dl_iterate_phdr(_rtld_addr_phdr_cb, &rd));
+#else
 	return (0);
+#endif
 }
 
 #pragma weak _rtld_get_stack_prot

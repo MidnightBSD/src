@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2020 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Konstantin Belousov
  * under sponsorship from the FreeBSD Foundation.
@@ -28,12 +27,18 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <stdlib.h>
 
 void *
 memalign(size_t align, size_t size)
 {
-	return (aligned_alloc(align, roundup(size, align)));
+	/*
+	 * glibc allows align == 0, but that is not valid for roundup.
+	 * Just pass through to malloc in that case.
+	 */
+	if (align != 0)
+		return (aligned_alloc(align, roundup(size, align)));
+	else
+		return (malloc(size));
 }

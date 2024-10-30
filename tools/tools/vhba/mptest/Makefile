@@ -1,5 +1,3 @@
-# $MidnightBSD$
-# $FreeBSD: stable/10/tools/tools/vhba/mptest/Makefile 211088 2010-08-09 00:36:22Z mjacob $
 #
 # Copyright (c) 2010 by Panasas Inc
 # All rights reserved.

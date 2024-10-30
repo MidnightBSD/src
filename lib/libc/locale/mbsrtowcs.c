@@ -1,11 +1,11 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2002-2004 Tim J. Robbins.
  * All rights reserved.
  *
  * Copyright (c) 2011 The FreeBSD Foundation
- * All rights reserved.
+ *
  * Portions of this software were developed by David Chisnall
  * under sponsorship from the FreeBSD Foundation.
  *
@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <errno.h>
 #include <limits.h>
 #include <stdlib.h>
@@ -45,7 +44,7 @@ mbsrtowcs_l(wchar_t * __restrict dst, const char ** __restrict src, size_t len,
 {
 	FIX_LOCALE(locale);
 	if (ps == NULL)
-		ps = &locale->mbsrtowcs;
+		ps = &(XLOCALE_CTYPE(locale)->mbsrtowcs);
 	return (XLOCALE_CTYPE(locale)->__mbsnrtowcs(dst, src, SIZE_T_MAX, len, ps));
 }
 size_t

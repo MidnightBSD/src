@@ -1,6 +1,5 @@
 /*-
  * Test 0060:	Check boundary conditions (BPF_LD+BPF_H+BPF_IND)
- *
  */
 
 /* BPF program */

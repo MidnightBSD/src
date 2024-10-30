@@ -1,4 +1,4 @@
-Set to not build and install
+Do not build and install
 .Pa /bin/csh
 (which is
 .Xr tcsh 1 ) .

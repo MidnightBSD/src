@@ -1,6 +1,5 @@
 /*-
  * Test 0087:	BPF_ALU+BPF_MOD+BPF_K
- *
  */
 
 /* BPF program */

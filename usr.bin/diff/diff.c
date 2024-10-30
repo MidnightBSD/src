@@ -21,7 +21,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/stat.h>
 
 #include <ctype.h>
@@ -510,6 +509,8 @@ print_status(int val, char *path1, char *path2, const char *entry)
 		printf("File %s%s is not a regular file or directory and was skipped\n",
 		    path2, entry);
 		break;
+	case D_ERROR:
+		break;
 	}
 }
 
@@ -531,7 +532,7 @@ usage(void)
 	    "       diff [-aBbdilNPprsTtw] [-c | -e | -f | -n | -q | -u] [--ignore-case]\n"
 	    "            [--no-ignore-case] [--normal] [--tabsize] [-I pattern] [-L label]\n"
 	    "            [-S name] [-X file] [-x pattern] dir1 dir2\n"
-	    "       diff [-aBbditwW] [--expand-tabs] [--ignore-all-blanks]\n"
+	    "       diff [-aBbditwW] [--expand-tabs] [--ignore-all-space]\n"
             "            [--ignore-blank-lines] [--ignore-case] [--minimal]\n"
             "            [--no-ignore-file-name-case] [--strip-trailing-cr]\n"
             "            [--suppress-common-lines] [--tabsize] [--text] [--width]\n"

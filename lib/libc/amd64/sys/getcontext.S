@@ -25,7 +25,6 @@
  */
 
 #include <machine/asm.h>
-
 #include <SYS.h>
 
 /*

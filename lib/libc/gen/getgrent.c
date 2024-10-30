@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2003 Networks Associates Technology, Inc.
  * All rights reserved.
@@ -33,7 +33,6 @@
  *
  */
 #include <sys/cdefs.h>
-
 #include "namespace.h"
 #include <sys/param.h>
 #ifdef YP
@@ -209,12 +208,11 @@ static int
 grp_marshal_func(char *buffer, size_t *buffer_size, void *retval, va_list ap,
     void *cache_mdata)
 {
-	char *name;
-	gid_t gid;
+	char *name __unused;
+	gid_t gid __unused;
 	struct group *grp;
-	char *orig_buf;
-	size_t orig_buf_size;
-
+	char *orig_buf __unused;
+	size_t orig_buf_size __unused;
 	struct group new_grp;
 	size_t desired_size, size, mem_size;
 	char *p, **mem;
@@ -304,8 +302,8 @@ static int
 grp_unmarshal_func(char *buffer, size_t buffer_size, void *retval, va_list ap,
     void *cache_mdata)
 {
-	char *name;
-	gid_t gid;
+	char *name __unused;
+	gid_t gid __unused;
 	struct group *grp;
 	char *orig_buf;
 	size_t orig_buf_size;
@@ -970,7 +968,7 @@ dns_group(void *retval, void *mdata, va_list ap)
 	hes = NULL;
 	name = NULL;
 	gid = (gid_t)-1;
-	how = (enum nss_lookup_type)mdata;
+	how = (enum nss_lookup_type)(uintptr_t)mdata;
 	switch (how) {
 	case nss_lt_name:
 		name = va_arg(ap, const char *);

@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <errno.h>
 #include <pwd.h>
 #include <stdio.h>

@@ -39,7 +39,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <rdma/ib_smi.h>
 #include "smi.h"
 #include "opa_smi.h"

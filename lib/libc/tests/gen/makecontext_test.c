@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2018 John H. Baldwin <jhb@FreeBSD.org>
  *
@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <atf-c.h>
 #include <ucontext.h>
 

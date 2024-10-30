@@ -2,7 +2,6 @@
 MDSRCS+= \
 	bcopy.S \
 	bzero.S \
-	ffs.S \
 	memcmp.S \
 	memcpy.S \
 	memmove.S \

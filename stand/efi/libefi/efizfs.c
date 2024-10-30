@@ -26,8 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
-
 #include <sys/param.h>
 #include <stand.h>
 
@@ -115,7 +113,7 @@ efi_zfs_probe(void)
 			snprintf(devname, sizeof(devname), "%s%dp%d:",
 			    efipart_hddev.dv_name, hd->pd_unit, pd->pd_unit);
 			guid = 0;
-			if (zfs_probe_dev(devname, &guid) == 0) {
+			if (zfs_probe_dev(devname, &guid, false) == 0) {
 				insert_zfs(pd->pd_handle, guid);
 				if (pd->pd_handle == boot_img->DeviceHandle)
 					pool_guid = guid;

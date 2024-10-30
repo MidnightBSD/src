@@ -1,5 +1,10 @@
 /*-
- * Copyright (c) 2013 Konstantin Belousov <kib@FreeBSD.org>
+ * SPDX-License-Identifier: BSD-2-Clause
+ *
+ * Copyright (c) 2020 Brandon Bergren <bdragon@FreeBSD.org>
+ *
+ * This software was developed by Konstantin Belousov
+ * under sponsorship from the FreeBSD Foundation.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,17 +29,30 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/lib/libc/powerpc/sys/__vdso_gettc.c 246117 2013-01-30 12:48:16Z kib $");
-
 #include <sys/types.h>
+#include <sys/elf.h>
 #include <sys/time.h>
 #include <sys/vdso.h>
+
+#include <machine/cpufunc.h>
+#include <machine/spr.h>
+
 #include <errno.h>
 
+#include "libc_private.h"
+
 #pragma weak __vdso_gettc
-u_int
-__vdso_gettc(const struct vdso_timehands *th)
+int
+__vdso_gettc(const struct vdso_timehands *th, u_int *tc)
 {
+
+	if (__predict_false(th->th_algo != VDSO_TH_ALGO_PPC_TB))
+	    return (ENOSYS);
+	/*
+	 * While the timebase is a 64 bit quantity, we are only interested
+	 * in the lower 32 bits of it.
+	 */
+	*tc = mfspr(TBR_TBL);
 
 	return (0);
 }
@@ -44,5 +62,5 @@ int
 __vdso_gettimekeep(struct vdso_timekeep **tk)
 {
 
-	return (ENOSYS);
+	return (_elf_aux_info(AT_TIMEKEEP, tk, sizeof(*tk)));
 }

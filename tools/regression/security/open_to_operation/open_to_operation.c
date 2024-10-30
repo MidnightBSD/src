@@ -90,8 +90,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/tools/regression/security/open_to_operation/open_to_operation.c 290251 2015-11-02 00:42:31Z ngie $");
-
 #include <sys/param.h>
 #include <sys/mman.h>
 #include <sys/mount.h>

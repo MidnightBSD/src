@@ -239,9 +239,13 @@ array was negative.
 .It Bq Er EINVAL
 The sum of the
 .Fa iov_len
-values in the
-.Fa iov
-array overflowed a 32-bit integer.
+values is greater than
+.Dv SSIZE_MAX
+(or greater than
+.Dv INT_MAX ,
+if the sysctl
+.Va debug.iosize_max_clamp
+is non-zero).
 .It Bq Er ENOBUFS
 The mbuf pool has been completely exhausted when writing to a socket.
 .El

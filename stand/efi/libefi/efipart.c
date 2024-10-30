@@ -25,8 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/efi/libefi/efipart.c 344406 2019-02-21 02:37:01Z kevans $");
-
 #include <sys/disk.h>
 #include <sys/param.h>
 #include <sys/time.h>
@@ -78,7 +76,7 @@ struct devsw efipart_fddev = {
 	.dv_close = efipart_close,
 	.dv_ioctl = efipart_ioctl,
 	.dv_print = efipart_printfd,
-	.dv_cleanup = NULL
+	.dv_cleanup = nullsys,
 };
 
 struct devsw efipart_cddev = {
@@ -90,7 +88,7 @@ struct devsw efipart_cddev = {
 	.dv_close = efipart_close,
 	.dv_ioctl = efipart_ioctl,
 	.dv_print = efipart_printcd,
-	.dv_cleanup = NULL
+	.dv_cleanup = nullsys,
 };
 
 struct devsw efipart_hddev = {
@@ -102,7 +100,9 @@ struct devsw efipart_hddev = {
 	.dv_close = efipart_close,
 	.dv_ioctl = efipart_ioctl,
 	.dv_print = efipart_printhd,
-	.dv_cleanup = NULL
+	.dv_cleanup = nullsys,
+	.dv_fmtdev = disk_fmtdev,
+	.dv_parsedev = disk_parsedev,
 };
 
 static pdinfo_list_t fdinfo = STAILQ_HEAD_INITIALIZER(fdinfo);
@@ -1008,6 +1008,8 @@ efipart_readwrite(EFI_BLOCK_IO *blkio, int rw, daddr_t blk, daddr_t nblks,
 {
 	EFI_STATUS status;
 
+	TSENTER();
+
 	if (blkio == NULL)
 		return (ENXIO);
 	if (blk < 0 || blk > blkio->Media->LastBlock)
@@ -1034,6 +1036,7 @@ efipart_readwrite(EFI_BLOCK_IO *blkio, int rw, daddr_t blk, daddr_t nblks,
 		printf("%s: rw=%d, blk=%ju size=%ju status=%lu\n", __func__, rw,
 		    blk, nblks, EFI_ERROR_CODE(status));
 	}
+	TSEXIT();
 	return (efi_status_to_errno(status));
 }
 

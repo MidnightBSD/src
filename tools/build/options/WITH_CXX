@@ -1,3 +1,1 @@
-Set to build
-.Xr c++ 1
-and related libraries.
+Build C++ headers and runtime libraries.

@@ -25,8 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
-
 /*
  * Loading modules, booting the system
  */
@@ -112,6 +110,9 @@ command_boot(int argc, char *argv[])
 	pass_manifest_export_envs();
 #endif
 #endif
+
+	/* Pass the tslog buffer to the kernel as a preloaded module. */
+	tslog_publish();
 
 	/* Call the exec handler from the loader matching the kernel */
 	file_formats[fp->f_loader]->l_exec(fp);

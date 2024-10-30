@@ -3,7 +3,6 @@
 
 PROG=	so_setfib
 MAN=
-WARNS?=	6
 
 .if ${MK_INET} != "no"
 CFLAGS+=	-DINET

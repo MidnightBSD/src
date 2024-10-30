@@ -73,7 +73,8 @@ ENTRY(__sys_##name);						\
 	addi	%r1,%r1,48;					\
 	ld	%r0,16(%r1);					\
 	mtlr	%r0;						\
-	blr;
+	blr;							\
+END(__sys_##name)
 
 #define	RSYSCALL(name)						\
 	.text;							\
@@ -92,4 +93,5 @@ ENTRY(__sys_##name);						\
 	addi	%r1,%r1,48;					\
 	ld	%r0,16(%r1);					\
 	mtlr	%r0;						\
-	blr;
+	blr;							\
+END(__sys_##name)

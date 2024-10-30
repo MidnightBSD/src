@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #-
-# Copyright (c) 2003 Dag-Erling Coïdan Smørgrav
+# Copyright (c) 2003 Dag-Erling CoÃ¯dan SmÃ¸rgrav
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,7 +26,6 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 # THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-# $FreeBSD: src/tools/tools/hcomp/hcomp.pl,v 1.1 2003/08/04 13:10:01 des Exp $
 #
 
 use strict;

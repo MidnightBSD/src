@@ -1,5 +1,5 @@
 --
--- SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+-- SPDX-License-Identifier: BSD-2-Clause
 --
 -- Copyright (c) 2015 Pedro Souza <pedrosouza@freebsd.org>
 -- Copyright (c) 2018 Kyle Evans <kevans@FreeBSD.org>
@@ -26,8 +26,6 @@
 -- OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 -- SUCH DAMAGE.
 --
--- $FreeBSD$
---
 
 local config = require("config")
 local hook = require("hook")
@@ -37,6 +35,8 @@ local core = {}
 local default_safe_mode = false
 local default_single_user = false
 local default_verbose = false
+
+local bootenv_list = "bootenvs"
 
 local function composeLoaderCmd(cmd_name, argstr)
 	if argstr ~= nil then
@@ -204,17 +204,18 @@ function core.kernelList()
 		return core.cached_kernels
 	end
 
-	local k = loader.getenv("kernel")
+	local default_kernel = loader.getenv("kernel")
 	local v = loader.getenv("kernels")
 	local autodetect = loader.getenv("kernels_autodetect") or ""
 
 	local kernels = {}
 	local unique = {}
 	local i = 0
-	if k ~= nil then
+
+	if default_kernel then
 		i = i + 1
-		kernels[i] = k
-		unique[k] = true
+		kernels[i] = default_kernel
+		unique[default_kernel] = true
 	end
 
 	if v ~= nil then
@@ -227,6 +228,13 @@ function core.kernelList()
 		end
 	end
 
+	-- Do not attempt to autodetect if underlying filesystem
+	-- do not support directory listing (e.g. tftp, http)
+	if not lfs.attributes("/boot", "mode") then
+		autodetect = "no"
+		loader.setenv("kernels_autodetect", "NO")
+	end
+
 	-- Base whether we autodetect kernels or not on a loader.conf(5)
 	-- setting, kernels_autodetect. If it's set to 'yes', we'll add
 	-- any kernels we detect based on the criteria described.
@@ -234,6 +242,8 @@ function core.kernelList()
 		core.cached_kernels = kernels
 		return core.cached_kernels
 	end
+
+	local present = {}
 
 	-- Automatically detect other bootable kernel directories using a
 	-- heuristic.  Any directory in /boot that contains an ordinary file
@@ -263,8 +273,25 @@ function core.kernelList()
 			unique[file] = true
 		end
 
+		present[file] = true
+
 		::continue::
 	end
+
+	-- If we found more than one kernel, prune the "kernel" specified kernel
+	-- off of the list if it wasn't found during traversal.  If we didn't
+	-- actually find any kernels, we just assume that they know what they're
+	-- doing and leave it alone.
+	if default_kernel and not present[default_kernel] and #kernels > 1 then
+		for i = 1, #kernels do
+			if i == #kernels then
+				kernels[i] = nil
+			else
+				kernels[i] = kernels[i + 1]
+			end
+		end
+	end
+
 	core.cached_kernels = kernels
 	return core.cached_kernels
 end
@@ -274,7 +301,7 @@ function core.bootenvDefault()
 end
 
 function core.bootenvList()
-	local bootenv_count = tonumber(loader.getenv("bootenvs_count"))
+	local bootenv_count = tonumber(loader.getenv(bootenv_list .. "_count"))
 	local bootenvs = {}
 	local curenv
 	local envcount = 0
@@ -285,7 +312,12 @@ function core.bootenvList()
 	end
 
 	-- Currently selected bootenv is always first/default
-	curenv = core.bootenvDefault()
+	-- On the rewinded list the bootenv may not exists
+	if core.isRewinded() then
+		curenv = core.bootenvDefaultRewinded()
+	else
+		curenv = core.bootenvDefault()
+	end
 	if curenv ~= nil then
 		envcount = envcount + 1
 		bootenvs[envcount] = curenv
@@ -293,7 +325,7 @@ function core.bootenvList()
 	end
 
 	for curenv_idx = 0, bootenv_count - 1 do
-		curenv = loader.getenv("bootenvs[" .. curenv_idx .. "]")
+		curenv = loader.getenv(bootenv_list .. "[" .. curenv_idx .. "]")
 		if curenv ~= nil and unique[curenv] == nil then
 			envcount = envcount + 1
 			bootenvs[envcount] = curenv
@@ -301,6 +333,48 @@ function core.bootenvList()
 		end
 	end
 	return bootenvs
+end
+
+function core.isCheckpointed()
+	return loader.getenv("zpool_checkpoint") ~= nil
+end
+
+function core.bootenvDefaultRewinded()
+	local defname =  "zfs:!" .. string.sub(core.bootenvDefault(), 5)
+	local bootenv_count = tonumber("bootenvs_check_count")
+
+	if bootenv_count == nil or bootenv_count <= 0 then
+		return defname
+	end
+
+	for curenv_idx = 0, bootenv_count - 1 do
+		local curenv = loader.getenv("bootenvs_check[" .. curenv_idx .. "]")
+		if curenv == defname then
+			return defname
+		end
+	end
+
+	return loader.getenv("bootenvs_check[0]")
+end
+
+function core.isRewinded()
+	return bootenv_list == "bootenvs_check"
+end
+
+function core.changeRewindCheckpoint()
+	if core.isRewinded() then
+		bootenv_list = "bootenvs"
+	else
+		bootenv_list = "bootenvs_check"
+	end
+end
+
+function core.loadEntropy()
+	if core.isUEFIBoot() then
+		if (loader.getenv("entropy_efi_seed") or "no"):lower() == "yes" then
+			loader.perform("efi-seed-entropy")
+		end
+	end
 end
 
 function core.setDefaults()
@@ -315,6 +389,7 @@ function core.autoboot(argstr)
 	if loader.getenv("kernelname") == nil then
 		config.loadelf()
 	end
+	core.loadEntropy()
 	loader.perform(composeLoaderCmd("autoboot", argstr))
 end
 
@@ -323,7 +398,17 @@ function core.boot(argstr)
 	if loader.getenv("kernelname") == nil then
 		config.loadelf()
 	end
+	core.loadEntropy()
 	loader.perform(composeLoaderCmd("boot", argstr))
+end
+
+function core.hasFeature(name)
+	if not loader.has_feature then
+		-- Loader too old, no feature support
+		return nil, "No feature support in loaded loader"
+	end
+
+	return loader.has_feature(name)
 end
 
 function core.isSingleUserBoot()
@@ -342,6 +427,19 @@ function core.isZFSBoot()
 
 	if c ~= nil then
 		return c:match("^zfs:") ~= nil
+	end
+	return false
+end
+
+function core.isFramebufferConsole()
+	local c = loader.getenv("console")
+	if c ~= nil then
+		if c:find("efi") == nil and c:find("vidconsole") == nil then
+			return false
+		end
+		if loader.getenv("screen.depth") ~= nil then
+			return true
+		end
 	end
 	return false
 end
@@ -449,6 +547,27 @@ function core.nextConsoleChoice()
 			loader.setenv("boot_serial", "YES")
 		end
 	end
+end
+
+-- Sanity check the boot loader revision
+-- Loaders with version 3.0 have everything that we need without backwards
+-- compatible hacks. Warn users that still have old versions to upgrade so
+-- that we can remove the backwards compatible hacks in the future since
+-- they have been there a long time.
+local loader_major = 3
+
+function core.loaderTooOld()
+	return loader.version == nil or loader.version < loader_major * 1000
+end
+
+if core.loaderTooOld() then
+	print("**********************************************************************")
+	print("**********************************************************************")
+	print("*****                                                            *****")
+	print("*****           BOOT LOADER IS TOO OLD. PLEASE UPGRADE.          *****")
+	print("*****                                                            *****")
+	print("**********************************************************************")
+	print("**********************************************************************")
 end
 
 recordDefaults()

@@ -1,4 +1,6 @@
+#
 # Please see the file src/etc/mtree/README before making changes to this file.
+#
 
 /set type=dir uname=root gname=wheel mode=0755
 .
@@ -15,6 +17,8 @@
             rockchip              tags=package=runtime
             ..
         ..
+        efi
+        ..
         firmware
         ..
         loader.conf.d             tags=package=bootloader
@@ -24,6 +28,8 @@
         kernel
         ..
         modules
+        ..
+        uboot
         ..
         zfs
         ..

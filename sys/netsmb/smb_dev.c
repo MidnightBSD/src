@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/capsicum.h>
@@ -67,7 +66,6 @@ MODULE_VERSION(netsmb, NSMB_VERSION);
 
 static int smb_version = NSMB_VERSION;
 struct sx smb_lock;
-
 
 SYSCTL_DECL(_net_smb);
 SYSCTL_INT(_net_smb, OID_AUTO, version, CTLFLAG_RD, &smb_version, 0, "");
@@ -171,7 +169,6 @@ sdp_trydestroy(struct smb_dev *sdp)
 	return;
 }
 
-
 static int
 nsmb_dev_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thread *td)
 {
@@ -237,7 +234,7 @@ nsmb_dev_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thre
 	    case SMBIOC_SETFLAGS: {
 		struct smbioc_flags *fl = (struct smbioc_flags*)data;
 		int on;
-	
+
 		if (fl->ioc_level == SMBL_VC) {
 			if (fl->ioc_mask & SMBV_PERMANENT) {
 				on = fl->ioc_flags & SMBV_PERMANENT;
@@ -308,7 +305,7 @@ nsmb_dev_ioctl(struct cdev *dev, u_long cmd, caddr_t data, int flag, struct thre
 		struct smbioc_rw *rwrq = (struct smbioc_rw*)data;
 		struct uio auio;
 		struct iovec iov;
-	
+
 		if ((ssp = sdp->sd_share) == NULL) {
 			error = ENOTCONN;
 			goto out;
@@ -411,4 +408,3 @@ smb_dev2share(int fd, int mode, struct smb_cred *scred,
 	SMB_UNLOCK();
 	return error;
 }
-

@@ -32,7 +32,6 @@
  * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
- *
  */
 
 #ifndef _IB_CACHE_H
@@ -75,7 +74,7 @@ int ib_get_cached_gid(struct ib_device    *device,
 int ib_find_cached_gid(struct ib_device *device,
 		       const union ib_gid *gid,
 		       enum ib_gid_type gid_type,
-		       struct net_device *ndev,
+		       struct ifnet *ndev,
 		       u8               *port_num,
 		       u16              *index);
 
@@ -98,7 +97,7 @@ int ib_find_cached_gid_by_port(struct ib_device *device,
 			       const union ib_gid *gid,
 			       enum ib_gid_type gid_type,
 			       u8               port_num,
-			       struct net_device *ndev,
+			       struct ifnet *ndev,
 			       u16              *index);
 
 int ib_find_gid_by_filter(struct ib_device *device,

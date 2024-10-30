@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 .PATH: ${LDRSRC} ${BOOTSRC}/libsa
 
@@ -6,7 +5,14 @@ CFLAGS+=-I${LDRSRC}
 
 SRCS+=	boot.c commands.c console.c devopen.c interp.c 
 SRCS+=	interp_backslash.c interp_parse.c ls.c misc.c 
-SRCS+=	module.c
+SRCS+=	modinfo.c
+SRCS+=	module.c nvstore.c pnglite.c tslog.c
+
+CFLAGS.module.c += -I$(SRCTOP)/sys/teken -I${SRCTOP}/contrib/pnglite
+
+.PATH: ${SRCTOP}/contrib/pnglite
+CFLAGS.pnglite.c+= -I${SRCTOP}/contrib/pnglite
+CFLAGS.pnglite.c+= -DHAVE_MEMCPY -I${SRCTOP}/sys/contrib/zlib
 
 .if ${MACHINE} == "i386" || ${MACHINE_CPUARCH} == "amd64"
 SRCS+=	load_elf32.c load_elf32_obj.c reloc_elf32.c
@@ -24,6 +30,9 @@ SRCS+= load_elf64.c reloc_elf64.c
 SRCS+=	metadata.c
 .elif ${MACHINE} == "mips"
 SRCS+=	load_elf32.c reloc_elf32.c
+SRCS+=	metadata.c
+.elif ${MACHINE_CPUARCH} == "riscv"
+SRCS+=	load_elf64.c reloc_elf64.c
 SRCS+=	metadata.c
 .endif
 
@@ -72,16 +81,7 @@ SRCS+=	interp_simple.c
 .error Unknown interpreter ${LOADER_INTERP}
 .endif
 
-.if ${MK_LOADER_VERIEXEC} != "no"
-CFLAGS+= -DLOADER_VERIEXEC -I${SRCTOP}/lib/libsecureboot/h
-.if ${MK_LOADER_VERIEXEC_VECTX} != "no"
-CFLAGS+= -DLOADER_VERIEXEC_VECTX
-.endif
-.endif
-
-.if ${MK_LOADER_VERIEXEC_PASS_MANIFEST} != "no"
-CFLAGS+= -DLOADER_VERIEXEC_PASS_MANIFEST -I${SRCTOP}/lib/libsecureboot/h
-.endif
+.include "${BOOTSRC}/veriexec.mk"
 
 .if defined(BOOT_PROMPT_123)
 CFLAGS+=	-DBOOT_PROMPT_123
@@ -100,9 +100,6 @@ CFLAGS+=	-DLOADER_EXT2FS_SUPPORT
 .endif
 .if ${LOADER_MSDOS_SUPPORT:Uno} == "yes"
 CFLAGS+=	-DLOADER_MSDOS_SUPPORT
-.endif
-.if ${LOADER_NANDFS_SUPPORT:U${MK_NAND}} == "yes"
-CFLAGS+=	-DLOADER_NANDFS_SUPPORT
 .endif
 .if ${LOADER_UFS_SUPPORT:Uyes} == "yes"
 CFLAGS+=	-DLOADER_UFS_SUPPORT
@@ -166,12 +163,21 @@ vers.c: ${LDRSRC}/newvers.sh ${VERSION_FILE}
 	sh ${LDRSRC}/newvers.sh ${REPRO_FLAG} ${VERSION_FILE} \
 	    ${NEWVERSWHAT}
 
-.if !empty(HELP_FILES)
+.if ${MK_LOADER_VERBOSE} != "no"
+CFLAGS+=	-DELF_VERBOSE
+.endif
+
+# Each loader variant defines their own help filename. Optional or
+# build-specific commands are included by augmenting HELP_FILES.
+.if !defined(HELP_FILENAME)
+.error Define HELP_FILENAME before including loader.mk
+.endif
+
 HELP_FILES+=	${LDRSRC}/help.common
 
-CLEANFILES+=	loader.help
-FILES+=		loader.help
+CFLAGS+=	-DHELP_FILENAME=\"${HELP_FILENAME}\"
+CLEANFILES+=	${HELP_FILENAME}
+FILES+=		${HELP_FILENAME}
 
-loader.help: ${HELP_FILES}
+${HELP_FILENAME}: ${HELP_FILES}
 	cat ${HELP_FILES} | awk -f ${LDRSRC}/merge_help.awk > ${.TARGET}
-.endif

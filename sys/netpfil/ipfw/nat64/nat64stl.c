@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2015-2019 Yandex LLC
  * Copyright (c) 2015-2019 Andrey V. Elsukov <ae@FreeBSD.org>
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/counter.h>
@@ -262,5 +261,3 @@ ipfw_nat64stl(struct ip_fw_chain *chain, struct ip_fw_args *args,
 	args->m = NULL;
 	return (IP_FW_NAT64);
 }
-
-

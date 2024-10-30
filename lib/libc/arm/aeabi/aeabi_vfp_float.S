@@ -26,7 +26,6 @@
  */
 
 #include <machine/asm.h>
-
 #include "aeabi_vfp.h"
 
 .fpu	vfp

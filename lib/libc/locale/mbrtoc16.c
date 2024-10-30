@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013 Ed Schouten <ed@FreeBSD.org>
  * All rights reserved.
@@ -27,9 +27,8 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <uchar.h>
-#include "xlocale_private.h"
+#include "mblocal.h"
 
 typedef struct {
 	char16_t	trail_surrogate;
@@ -46,7 +45,7 @@ mbrtoc16_l(char16_t * __restrict pc16, const char * __restrict s, size_t n,
 
 	FIX_LOCALE(locale);
 	if (ps == NULL)
-		ps = &locale->mbrtoc16;
+		ps = &(XLOCALE_CTYPE(locale)->mbrtoc16);
 	cs = (_Char16State *)ps;
 
 	/*

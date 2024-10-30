@@ -36,12 +36,10 @@
 static char sccsid[] = "@(#)ldiv.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-
 #include <stdlib.h>		/* ldiv_t */
 
 ldiv_t
-ldiv(num, denom)
-	long num, denom;
+ldiv(long num, long denom)
 {
 	ldiv_t r;
 

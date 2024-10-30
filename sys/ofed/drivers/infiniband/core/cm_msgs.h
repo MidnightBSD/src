@@ -32,7 +32,6 @@
  * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS THE
  * SOFTWARE.
- *
  */
 
 #if !defined(CM_MSGS_H)
@@ -47,13 +46,6 @@
  */
 
 #define IB_CM_CLASS_VERSION	2 /* IB specification 1.2 */
-
-enum cm_msg_sequence {
-	CM_MSG_SEQUENCE_REQ,
-	CM_MSG_SEQUENCE_LAP,
-	CM_MSG_SEQUENCE_DREQ,
-	CM_MSG_SEQUENCE_SIDR
-};
 
 struct cm_req_msg {
 	struct ib_mad_hdr hdr;

@@ -1,4 +1,3 @@
-# $FreeBSD: stable/11/stand/libsa32/Makefile 329140 2018-02-11 20:58:00Z kevans $
 
 DO32=1
 

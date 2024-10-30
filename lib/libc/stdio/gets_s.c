@@ -35,7 +35,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "namespace.h"
 #include <errno.h>
 #include <unistd.h>

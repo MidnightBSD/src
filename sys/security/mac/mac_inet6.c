@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_mac.h"
 
 #include <sys/param.h>

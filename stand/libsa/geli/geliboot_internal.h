@@ -23,8 +23,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD$
  */
 
 #ifndef _GELIBOOT_INTERNAL_H_
@@ -39,8 +37,6 @@
 
 #include <geom/eli/g_eli.h>
 #include <geom/eli/pkcs5v2.h>
-
-#include <bootstrap.h>
 
 /* Pull in the md5, sha256, and sha512 implementations */
 #include <sys/md5.h>

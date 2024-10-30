@@ -1,6 +1,5 @@
 /*-
  * Test 0015:	BPF_JMP+BPF_JA
- *
  */
 
 /* BPF program */

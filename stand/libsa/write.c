@@ -61,18 +61,17 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
-
 #include <sys/param.h>
 #include "stand.h"
 
 ssize_t
 write(int fd, const void *dest, size_t bcount)
 {
-	struct open_file *f = &files[fd];
+	struct open_file *f;
 	size_t resid;
 
-	if ((unsigned)fd >= SOPEN_MAX || !(f->f_flags & F_WRITE)) {
+	f = fd2open_file(fd);
+	if (f == NULL || !(f->f_flags & F_WRITE)) {
 		errno = EBADF;
 		return (-1);
 	}

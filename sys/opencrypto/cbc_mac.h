@@ -27,7 +27,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *
  */
 
 #ifndef _CBC_CCM_H
@@ -45,22 +44,20 @@
  * the encryption one is similar.
  */
 struct aes_cbc_mac_ctx {
-	uint64_t	authDataLength, authDataCount;
-	uint64_t	cryptDataLength, cryptDataCount;
-	int		blockIndex;
 	uint8_t		staging_block[CCM_CBC_BLOCK_LEN];
 	uint8_t		block[CCM_CBC_BLOCK_LEN];
-	const uint8_t	*nonce;
+	int		blockIndex;
 	int		nonceLength;	/* This one is in bytes, not bits! */
+	const uint8_t	*nonce;
 	/* AES state data */
 	int		rounds;
 	uint32_t	keysched[4*(RIJNDAEL_MAXNR+1)];
 };
 
-void AES_CBC_MAC_Init(struct aes_cbc_mac_ctx *);
-void AES_CBC_MAC_Setkey(struct aes_cbc_mac_ctx *, const uint8_t *, uint16_t);
-void AES_CBC_MAC_Reinit(struct aes_cbc_mac_ctx *, const uint8_t *, uint16_t);
-int AES_CBC_MAC_Update(struct aes_cbc_mac_ctx *, const uint8_t *, uint16_t);
-void AES_CBC_MAC_Final(uint8_t *, struct aes_cbc_mac_ctx *);
+void AES_CBC_MAC_Init(void *);
+void AES_CBC_MAC_Setkey(void *, const uint8_t *, u_int);
+void AES_CBC_MAC_Reinit(void *, const uint8_t *, u_int);
+int AES_CBC_MAC_Update(void *, const void *, u_int);
+void AES_CBC_MAC_Final(uint8_t *, void *);
 
 #endif /* _CBC_CCM_H */

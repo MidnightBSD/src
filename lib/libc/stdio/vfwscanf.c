@@ -8,7 +8,7 @@
  * Chris Torek.
  *
  * Copyright (c) 2011 The FreeBSD Foundation
- * All rights reserved.
+ *
  * Portions of this software were developed by David Chisnall
  * under sponsorship from the FreeBSD Foundation.
  *
@@ -43,7 +43,6 @@ static char sccsid[] = "@(#)vfscanf.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #endif
 #include <sys/cdefs.h>
-
 #include "namespace.h"
 #include <ctype.h>
 #include <inttypes.h>
@@ -267,7 +266,6 @@ convert_string(FILE *fp, char * mbp, int width, locale_t locale)
 static __inline int
 convert_wstring(FILE *fp, wchar_t *wcp, int width, locale_t locale)
 {
-	wchar_t *wcp0;
 	wint_t wi;
 	int nread;
 
@@ -279,7 +277,6 @@ convert_wstring(FILE *fp, wchar_t *wcp, int width, locale_t locale)
 		if (wi != WEOF)
 			__ungetwc(wi, fp, locale);
 	} else {
-		wcp0 = wcp;
 		while ((wi = __fgetwc(fp, locale)) != WEOF &&
 		    width-- != 0 && !iswspace(wi)) {
 			*wcp++ = (wchar_t)wi;

@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 # Common flags to build FICL related files
 
@@ -15,8 +14,6 @@ CFLAGS+=	-fPIC
 .endif
 
 CFLAGS+=	-I${FICLSRC} -I${FICLSRC}/${FICL_CPUARCH} -I${LDRSRC}
-CFLAGS+=	-DBF_DICTSIZE=15000
+CFLAGS+=	-DBF_DICTSIZE=30000
 
-.if ${MK_LOADER_VERIEXEC} != "no"
-CFLAGS+= -DLOADER_VERIEXEC -I${SRCTOP}/lib/libsecureboot/h
-.endif
+.include	"${BOOTSRC}/veriexec.mk"

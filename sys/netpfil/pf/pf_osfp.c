@@ -19,7 +19,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_inet6.h"
 
 #include <sys/param.h>
@@ -134,7 +133,6 @@ pf_osfp_fingerprint_hdr(const struct ip *ip, const struct ip6_hdr *ip6, const st
 		return (NULL);
 	fp.fp_wsize = ntohs(tcp->th_win);
 
-
 	cnt = (tcp->th_off << 2) - sizeof(*tcp);
 	optp = (const u_int8_t *)((const char *)tcp + sizeof(*tcp));
 	for (; cnt > 0; cnt -= optlen, optp += optlen) {
@@ -180,7 +178,6 @@ pf_osfp_fingerprint_hdr(const struct ip *ip, const struct ip6_hdr *ip6, const st
 					memcpy(&ts, &optp[2], sizeof(ts));
 					if (ts == 0)
 						fp.fp_flags |= PF_OSFP_TS0;
-
 				}
 				fp.fp_tcpopts = (fp.fp_tcpopts <<
 				    PF_OSFP_TCPOPT_BITS) | PF_OSFP_TCPOPT_TS;
@@ -257,7 +254,6 @@ pf_osfp_flush(void)
 		free(fp, M_PFOSFP);
 	}
 }
-
 
 /* Add a fingerprint */
 int
@@ -347,7 +343,6 @@ pf_osfp_add(struct pf_osfp_ioctl *fpioc)
 #endif /* PFDEBUG */
 	return (0);
 }
-
 
 /* Find a fingerprint in the list */
 static struct pf_os_fingerprint *
@@ -470,7 +465,6 @@ pf_osfp_get(struct pf_osfp_ioctl *fpioc)
 	int num = fpioc->fp_getnum;
 	int i = 0;
 
-
 	memset(fpioc, 0, sizeof(*fpioc));
 	SLIST_FOREACH(fp, &V_pf_osfp_list, fp_next) {
 		SLIST_FOREACH(entry, &fp->fp_oses, fp_entry) {
@@ -491,7 +485,6 @@ pf_osfp_get(struct pf_osfp_ioctl *fpioc)
 
 	return (EBUSY);
 }
-
 
 #ifdef PFDEBUG
 /* Validate that each signature is reachable */

@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 .include <bsd.init.mk>
 
@@ -32,7 +31,9 @@ CFLAGS+=-DBOOTPROG=\"gptzfsboot\" \
 	-I${ZFSSRC} \
 	-I${SYSDIR}/crypto/skein \
 	-I${SYSDIR}/cddl/boot/zfs \
-	-I${SYSDIR}/cddl/contrib/opensolaris/uts/common \
+	-I${SYSDIR}/contrib/openzfs/include \
+	-I${SYSDIR}/contrib/openzfs/include/os/freebsd/spl \
+	-I${SYSDIR}/contrib/openzfs/include/os/freebsd/zfs \
 	-I${SYSDIR}/cddl/contrib/opensolaris/common/lz4 \
 	-I${BOOTSRC}/i386/btx/lib \
 	-I${BOOTSRC}/i386/boot2 \
@@ -64,7 +65,7 @@ gptldr.bin: gptldr.out
 gptldr.out: gptldr.o
 	${LD} ${LD_FLAGS} -e start --defsym ORG=${ORG1} -T ${LDSCRIPT} -o ${.TARGET} gptldr.o
 
-OBJS=	zfsboot.o sio.o cons.o bcache.o devopen.o disk.o part.o zfs_cmd.o
+OBJS=	zfsboot.o sio.o cons.o bcache.o devopen.o disk.o part.o zfs_cmd.o misc.o
 CLEANFILES+=	gptzfsboot.bin gptzfsboot.out ${OBJS} ${OPENCRYPTO_XTS}
 
 # i386 standalone support library

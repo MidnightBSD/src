@@ -1,5 +1,3 @@
-# $MidnightBSD$
-# $FreeBSD: src/tools/kerneldoc/Makefile,v 1.2 2006/07/08 12:31:33 netchild Exp $
 
 .PATH:	${.CURDIR}/../kern
 

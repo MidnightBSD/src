@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <linux/module.h>
 #include <linux/err.h>
 #include <linux/slab.h>

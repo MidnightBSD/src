@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2017-2018 Yandex LLC
  * Copyright (c) 2017-2018 Andrey V. Elsukov <ae@FreeBSD.org>
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_inet.h"
 #include "opt_inet6.h"
 #include "opt_ipfw.h"
@@ -52,7 +51,6 @@
 #include <net/ethernet.h>
 #include <net/if.h>
 #include <net/if_var.h>
-#include <net/pfil.h>
 #include <net/vnet.h>
 
 #include <netinet/in.h>
@@ -453,14 +451,17 @@ SYSCTL_U32(_net_inet_ip_fw, OID_AUTO, curr_max_length,
     CTLFLAG_VNET | CTLFLAG_RD, &VNET_NAME(curr_max_length), 0,
     "Current maximum length of states chains in hash buckets.");
 SYSCTL_PROC(_net_inet_ip_fw, OID_AUTO, dyn_buckets,
-    CTLFLAG_VNET | CTLTYPE_U32 | CTLFLAG_RW, 0, 0, sysctl_dyn_buckets,
-    "IU", "Max number of buckets for dynamic states hash table.");
+    CTLFLAG_VNET | CTLTYPE_U32 | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
+    0, 0, sysctl_dyn_buckets, "IU",
+    "Max number of buckets for dynamic states hash table.");
 SYSCTL_PROC(_net_inet_ip_fw, OID_AUTO, dyn_max,
-    CTLFLAG_VNET | CTLTYPE_U32 | CTLFLAG_RW, 0, 0, sysctl_dyn_max,
-    "IU", "Max number of dynamic states.");
+    CTLFLAG_VNET | CTLTYPE_U32 | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
+    0, 0, sysctl_dyn_max, "IU",
+    "Max number of dynamic states.");
 SYSCTL_PROC(_net_inet_ip_fw, OID_AUTO, dyn_parent_max,
-    CTLFLAG_VNET | CTLTYPE_U32 | CTLFLAG_RW, 0, 0, sysctl_dyn_parent_max,
-    "IU", "Max number of parent dynamic states.");
+    CTLFLAG_VNET | CTLTYPE_U32 | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
+    0, 0, sysctl_dyn_parent_max, "IU",
+    "Max number of parent dynamic states.");
 SYSCTL_U32(_net_inet_ip_fw, OID_AUTO, dyn_ack_lifetime,
     CTLFLAG_VNET | CTLFLAG_RW, &VNET_NAME(dyn_ack_lifetime), 0,
     "Lifetime of dynamic states for TCP ACK.");
@@ -485,7 +486,6 @@ SYSCTL_U32(_net_inet_ip_fw, OID_AUTO, dyn_keepalive,
 SYSCTL_U32(_net_inet_ip_fw, OID_AUTO, dyn_keep_states,
     CTLFLAG_VNET | CTLFLAG_RW, &VNET_NAME(dyn_keep_states), 0,
     "Do not flush dynamic states on rule deletion");
-
 
 #ifdef IPFIREWALL_DYNDEBUG
 #define	DYN_DEBUG(fmt, ...)	do {			\
@@ -1162,7 +1162,6 @@ dyn_lookup_ipv4_parent_locked(const struct ipfw_flow_id *pkt,
 	return (s);
 }
 
-
 #ifdef INET6
 static uint32_t
 dyn_getscopeid(const struct ip_fw_args *args)
@@ -1173,12 +1172,9 @@ dyn_getscopeid(const struct ip_fw_args *args)
 	 * determine the scope zone id to resolve address scope ambiguity.
 	 */
 	if (IN6_IS_ADDR_LINKLOCAL(&args->f_id.src_ip6) ||
-	    IN6_IS_ADDR_LINKLOCAL(&args->f_id.dst_ip6)) {
-		MPASS(args->oif != NULL ||
-		    args->m->m_pkthdr.rcvif != NULL);
-		return (in6_getscopezone(args->oif != NULL ? args->oif:
-		    args->m->m_pkthdr.rcvif, IPV6_ADDR_SCOPE_LINKLOCAL));
-	}
+	    IN6_IS_ADDR_LINKLOCAL(&args->f_id.dst_ip6))
+		return (in6_getscopezone(args->ifp, IPV6_ADDR_SCOPE_LINKLOCAL));
+
 	return (0);
 }
 
@@ -2460,7 +2456,7 @@ dyn_send_keepalive_ipv4(struct ip_fw_chain *chain)
 		CK_SLIST_FOREACH(s, &V_dyn_ipv4[bucket], entry) {
 			/*
 			 * Only established TCP connections that will
-			 * become expired withing dyn_keepalive_interval.
+			 * become expired within dyn_keepalive_interval.
 			 */
 			if (s->proto != IPPROTO_TCP ||
 			    (s->data->state & BOTH_SYN) != BOTH_SYN ||
@@ -2567,7 +2563,7 @@ dyn_send_keepalive_ipv6(struct ip_fw_chain *chain)
 		CK_SLIST_FOREACH(s, &V_dyn_ipv6[bucket], entry) {
 			/*
 			 * Only established TCP connections that will
-			 * become expired withing dyn_keepalive_interval.
+			 * become expired within dyn_keepalive_interval.
 			 */
 			if (s->proto != IPPROTO_TCP ||
 			    (s->data->state & BOTH_SYN) != BOTH_SYN ||
@@ -2755,6 +2751,7 @@ bad:
 static void
 dyn_tick(void *vnetx)
 {
+	struct epoch_tracker et;
 	uint32_t buckets;
 
 	CURVNET_SET((struct vnet *)vnetx);
@@ -2777,10 +2774,12 @@ dyn_tick(void *vnetx)
 	if (V_dyn_keepalive != 0 &&
 	    V_dyn_keepalive_last + V_dyn_keepalive_period <= time_uptime) {
 		V_dyn_keepalive_last = time_uptime;
+		NET_EPOCH_ENTER(et);
 		dyn_send_keepalive_ipv4(&V_layer3_chain);
 #ifdef INET6
 		dyn_send_keepalive_ipv6(&V_layer3_chain);
 #endif
+		NET_EPOCH_EXIT(et);
 	}
 	/*
 	 * Check if we need to resize the hash:
@@ -3298,5 +3297,3 @@ ipfw_dyn_uninit(int pass)
 	if (IS_DEFAULT_VNET(curvnet))
 		free(dyn_hp_cache, M_IPFW);
 }
-
-

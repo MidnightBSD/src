@@ -31,11 +31,8 @@
 
 #include <sys/cdefs.h>
 __SCCSID("@(#)opendir.c	8.8 (Berkeley) 5/1/95");
-
 #include "namespace.h"
 #include <sys/param.h>
-#include <sys/mount.h>
-#include <sys/stat.h>
 
 #include <dirent.h>
 #include <errno.h>
@@ -98,8 +95,8 @@ static int
 opendir_compar(const void *p1, const void *p2)
 {
 
-	return (strcmp((*(const struct dirent **)p1)->d_name,
-	    (*(const struct dirent **)p2)->d_name));
+	return (strcmp((*(const struct dirent * const *)p1)->d_name,
+	    (*(const struct dirent * const *)p2)->d_name));
 }
 
 /*
@@ -272,6 +269,21 @@ _filldir(DIR *dirp, bool use_current_pos)
 	return (true);
 }
 
+static bool
+is_unionstack(int fd)
+{
+	int unionstack;
+
+	unionstack = _fcntl(fd, F_ISUNIONSTACK, 0);
+	if (unionstack != -1)
+		return (unionstack);
+
+	/*
+	 * Should not happen unless running on a kernel without the op,
+	 * but no use rendering the system useless in such a case.
+	 */
+	return (0);
+}
 
 /*
  * Common routine for opendir(3), __opendir2(3) and fdopendir(3).
@@ -282,7 +294,7 @@ __opendir_common(int fd, int flags, bool use_current_pos)
 	DIR *dirp;
 	int incr;
 	int saved_errno;
-	int unionstack;
+	bool unionstack;
 
 	if ((dirp = malloc(sizeof(DIR) + sizeof(struct _telldir))) == NULL)
 		return (NULL);
@@ -309,15 +321,9 @@ __opendir_common(int fd, int flags, bool use_current_pos)
 	/*
 	 * Determine whether this directory is the top of a union stack.
 	 */
+	unionstack = false;
 	if (flags & DTF_NODUP) {
-		struct statfs sfb;
-
-		if (_fstatfs(fd, &sfb) < 0)
-			goto fail;
-		unionstack = !strcmp(sfb.f_fstypename, "unionfs")
-		    || (sfb.f_flags & MNT_UNION);
-	} else {
-		unionstack = 0;
+		unionstack = is_unionstack(fd);
 	}
 
 	if (unionstack) {

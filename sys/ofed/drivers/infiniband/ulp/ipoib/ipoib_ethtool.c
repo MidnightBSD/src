@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <linux/kernel.h>
 #include <linux/netdevice.h>
 

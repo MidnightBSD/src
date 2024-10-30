@@ -25,8 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
-
 #include <sys/param.h>
 #include <sys/exec.h>
 #include <sys/linker.h>
@@ -43,7 +41,8 @@ __FBSDID("$FreeBSD$");
 #include "../btx/lib/btxv86.h"
 
 extern void __exec(caddr_t addr, ...);
-extern int bi_load(char *args, vm_offset_t *modulep, vm_offset_t *kernendp);
+extern int bi_load(char *args, vm_offset_t *modulep, vm_offset_t *kernendp,
+    bool exit_bs);
 
 static int	elf32_exec(struct preloaded_file *amp);
 static int	elf32_obj_exec(struct preloaded_file *amp);
@@ -80,7 +79,7 @@ elf32_exec(struct preloaded_file *fp)
 
     printf("Start @ 0x%x ...\n", entry);
 
-    err = bi_load(fp->f_args, &modulep, &kernend);
+    err = bi_load(fp->f_args, &modulep, &kernend, true);
     if (err != 0) {
 	efi_time_init();
 	return(err);

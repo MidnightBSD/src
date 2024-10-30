@@ -5,7 +5,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/mman.h>
 #include <errno.h>
 

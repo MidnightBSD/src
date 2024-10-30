@@ -6,7 +6,7 @@ PROG=	athratestats
 
 SRCS=	main.c opt_ah.h ah_osdep.h
 
-LIBADD+=	ncurses
+LIBADD+=	ncursesw
 
 CLEANFILES+=	opt_ah.h ah_osdep.h
 
@@ -18,7 +18,6 @@ CFLAGS+=-DATH_SUPPORT_TDMA
 opt_ah.h:
 	echo "#define AH_DEBUG 1" > opt_ah.h
 	echo "#define AH_DEBUG_COUNTRY 1" >> opt_ah.h
-	echo "#define AH_SUPPORT_AR5416 1" >> opt_ah.h
 
 ah_osdep.h:
 	echo 'typedef void *HAL_SOFTC;' >ah_osdep.h

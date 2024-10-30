@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <assert.h>

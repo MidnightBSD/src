@@ -25,8 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
-
 /*
  * Userboot disk image handling.
  */
@@ -63,15 +61,17 @@ static int	userdisk_ioctl(struct open_file *f, u_long cmd, void *data);
 static int	userdisk_print(int verbose);
 
 struct devsw userboot_disk = {
-	"disk",
-	DEVT_DISK,
-	userdisk_init,
-	userdisk_strategy,
-	userdisk_open,
-	userdisk_close,
-	userdisk_ioctl,
-	userdisk_print,
-	userdisk_cleanup
+	.dv_name = "disk",
+	.dv_type = DEVT_DISK,
+	.dv_init = userdisk_init,
+	.dv_strategy = userdisk_strategy,
+	.dv_open = userdisk_open,
+	.dv_close = userdisk_close,
+	.dv_ioctl = userdisk_ioctl,
+	.dv_print = userdisk_print,
+	.dv_cleanup = userdisk_cleanup,
+	.dv_fmtdev = disk_fmtdev,
+	.dv_parsedev = disk_parsedev,
 };
 
 /*
@@ -211,15 +211,21 @@ userdisk_realstrategy(void *devdata, int rw, daddr_t dblk, size_t size,
 	size_t		resid;
 	int		rc;
 
-	rw &= F_MASK;
-	if (rw == F_WRITE)
-		return (EROFS);
-	if (rw != F_READ)
-		return (EINVAL);
 	if (rsize)
 		*rsize = 0;
 	off = dblk * ud_info[dev->dd.d_unit].sectorsize;
-	rc = CALLBACK(diskread, dev->dd.d_unit, off, buf, size, &resid);
+	switch (rw & F_MASK) {
+	case F_READ:
+		rc = CALLBACK(diskread, dev->dd.d_unit, off, buf, size, &resid);
+		break;
+	case F_WRITE:
+		rc = CALLBACK(diskwrite, dev->dd.d_unit, off, buf, size,
+		    &resid);
+		break;
+	default:
+		rc = EINVAL;
+		break;
+	}
 	if (rc)
 		return (rc);
 	if (rsize)

@@ -25,8 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
-
 /*-
  * Copyright (c) 1993
  *	The Regents of the University of California.  All rights reserved.
@@ -108,14 +106,14 @@ static int dtmap[] = { DT_UNKNOWN, DT_REG, DT_DIR, DT_CHR,
 			DT_UNKNOWN : dtmap[x]
 
 struct fs_ops ext2fs_fsops = {
-	"ext2fs",
-	ext2fs_open,
-	ext2fs_close,
-	ext2fs_read,
-	null_write,
-	ext2fs_seek,
-	ext2fs_stat,
-	ext2fs_readdir
+	.fs_name = "ext2fs",
+	.fo_open = ext2fs_open,
+	.fo_close = ext2fs_close,
+	.fo_read = ext2fs_read,
+	.fo_write = null_write,
+	.fo_seek = ext2fs_seek,
+	.fo_stat = ext2fs_stat,
+	.fo_readdir = ext2fs_readdir,
 };
 
 #define	EXT2_SBSIZE	1024

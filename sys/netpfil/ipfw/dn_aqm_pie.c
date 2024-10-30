@@ -1,6 +1,5 @@
 /*
  * PIE - Proportional Integral controller Enhanced AQM algorithm.
- *
  * 
  * Copyright (C) 2016 Centre for Advanced Internet Architectures,
  *  Swinburne University of Technology, Melbourne, Australia.
@@ -120,7 +119,7 @@ pie_sysctl_target_tupdate_maxb_handler(SYSCTL_HANDLER_ARGS)
 		value = pie_sysctl.tupdate;
 	else
 		value = pie_sysctl.max_burst;
-	
+
 	value = value / AQM_TIME_1US;
 	error = sysctl_handle_long(oidp, &value, 0, req);
 	if (error != 0 || req->newptr == NULL)
@@ -128,7 +127,7 @@ pie_sysctl_target_tupdate_maxb_handler(SYSCTL_HANDLER_ARGS)
 	if (value < 1 || value > 10 * AQM_TIME_1S)
 		return (EINVAL);
 	value = value * AQM_TIME_1US;
-	
+
 	if (!strcmp(oidp->oid_name,"target"))
 		pie_sysctl.qdelay_ref  = value;
 	else if (!strcmp(oidp->oid_name,"tupdate"))
@@ -161,38 +160,38 @@ SYSBEGIN(f4)
 SYSCTL_DECL(_net_inet);
 SYSCTL_DECL(_net_inet_ip);
 SYSCTL_DECL(_net_inet_ip_dummynet);
-static SYSCTL_NODE(_net_inet_ip_dummynet, OID_AUTO, 
-	pie, CTLFLAG_RW, 0, "PIE");
+static SYSCTL_NODE(_net_inet_ip_dummynet, OID_AUTO, pie,
+    CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "PIE");
 
 #ifdef SYSCTL_NODE
 SYSCTL_PROC(_net_inet_ip_dummynet_pie, OID_AUTO, target,
-	CTLTYPE_LONG | CTLFLAG_RW, NULL, 0, 
-	pie_sysctl_target_tupdate_maxb_handler, "L",
-	"queue target in microsecond");
+    CTLTYPE_LONG | CTLFLAG_RW | CTLFLAG_NEEDGIANT, NULL, 0,
+    pie_sysctl_target_tupdate_maxb_handler, "L",
+    "queue target in microsecond");
 SYSCTL_PROC(_net_inet_ip_dummynet_pie, OID_AUTO, tupdate,
-	CTLTYPE_LONG | CTLFLAG_RW, NULL, 0,
-	pie_sysctl_target_tupdate_maxb_handler, "L",
-	"the frequency of drop probability calculation in microsecond");
+    CTLTYPE_LONG | CTLFLAG_RW | CTLFLAG_NEEDGIANT, NULL, 0,
+    pie_sysctl_target_tupdate_maxb_handler, "L",
+    "the frequency of drop probability calculation in microsecond");
 SYSCTL_PROC(_net_inet_ip_dummynet_pie, OID_AUTO, max_burst,
-	CTLTYPE_LONG | CTLFLAG_RW, NULL, 0,
-	pie_sysctl_target_tupdate_maxb_handler, "L",
-	"Burst allowance interval in microsecond");
+    CTLTYPE_LONG | CTLFLAG_RW | CTLFLAG_NEEDGIANT, NULL, 0,
+    pie_sysctl_target_tupdate_maxb_handler, "L",
+    "Burst allowance interval in microsecond");
 
 SYSCTL_PROC(_net_inet_ip_dummynet_pie, OID_AUTO, max_ecnth,
-	CTLTYPE_LONG | CTLFLAG_RW, NULL, 0,
-	pie_sysctl_max_ecnth_handler, "L",
-	"ECN safeguard threshold scaled by 1000");
+    CTLTYPE_LONG | CTLFLAG_RW | CTLFLAG_NEEDGIANT, NULL, 0,
+    pie_sysctl_max_ecnth_handler, "L",
+    "ECN safeguard threshold scaled by 1000");
 
 SYSCTL_PROC(_net_inet_ip_dummynet_pie, OID_AUTO, alpha,
-	CTLTYPE_LONG | CTLFLAG_RW, NULL, 0,
-	pie_sysctl_alpha_beta_handler, "L",
-	"PIE alpha scaled by 1000");
+    CTLTYPE_LONG | CTLFLAG_RW | CTLFLAG_NEEDGIANT, NULL, 0,
+    pie_sysctl_alpha_beta_handler, "L",
+    "PIE alpha scaled by 1000");
 SYSCTL_PROC(_net_inet_ip_dummynet_pie, OID_AUTO, beta,
-	CTLTYPE_LONG | CTLFLAG_RW, NULL, 0,
-	pie_sysctl_alpha_beta_handler, "L",
-	"beta scaled by 1000");
+    CTLTYPE_LONG | CTLFLAG_RW | CTLFLAG_NEEDGIANT, NULL, 0,
+    pie_sysctl_alpha_beta_handler, "L",
+    "beta scaled by 1000");
 #endif
-
 
 /*
  * Callout function for drop probability calculation 
@@ -297,7 +296,7 @@ calculate_drop_prob(void *x)
 	}
 
 	pst->drop_prob = prob;
-	
+
 	/* store current queue delay value in old queue delay*/
 	pst->qdelay_old = pst->current_qdelay;
 
@@ -527,7 +526,6 @@ aqm_pie_enqueue(struct dn_queue *q, struct mbuf* m)
 	if ((pst->sflags & PIE_ACTIVE) && pst->drop_prob == 0 &&
 		pst->current_qdelay < (pprms->qdelay_ref >> 1) &&
 		pst->qdelay_old < (pprms->qdelay_ref >> 1)) {
-
 			pst->burst_allowance = pprms->max_burst;
 			if ((pprms->flags & PIE_ON_OFF_MODE_ENABLED) && qlen<=0)
 				deactivate_pie(pst);
@@ -574,9 +572,9 @@ aqm_pie_init(struct dn_queue *q)
 	struct pie_status *pst;
 	struct dn_aqm_pie_parms *pprms;
 	int err = 0;
-	
+
 	pprms = q->fs->aqmcfg;
-	
+
 	do { /* exit with break when error occurs*/
 		if (!pprms){
 			DX(2, "AQM_PIE is not configured");
@@ -613,7 +611,7 @@ aqm_pie_init(struct dn_queue *q)
 		//DX(2, "aqm_PIE_init");
 
 	} while(0);
-	
+
 	return err;
 }
 
@@ -696,7 +694,7 @@ aqm_pie_config(struct dn_fsk* fs, struct dn_extra_parms *ep, int len)
 		free(fs->aqmcfg, M_DUMMYNET);
 		fs->aqmcfg = NULL;
 	}
-	
+
 	fs->aqmcfg = malloc(sizeof(struct dn_aqm_pie_parms),
 			 M_DUMMYNET, M_NOWAIT | M_ZERO);
 	if (fs->aqmcfg== NULL) {
@@ -711,7 +709,7 @@ aqm_pie_config(struct dn_fsk* fs, struct dn_extra_parms *ep, int len)
 
 	/* configure PIE parameters */
 	pcfg = fs->aqmcfg;
-	
+
 	if (ep->par[0] < 0)
 		pcfg->qdelay_ref = pie_sysctl.qdelay_ref * AQM_TIME_1US;
 	else

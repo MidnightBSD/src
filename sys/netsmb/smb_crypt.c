@@ -36,7 +36,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/malloc.h>
 #include <sys/kernel.h>
@@ -66,7 +65,6 @@
 
 static u_char N8[] = {0x4b, 0x47, 0x53, 0x21, 0x40, 0x23, 0x24, 0x25};
 
-
 static void
 smb_E(const u_char *key, u_char *data, u_char *dest)
 {
@@ -82,11 +80,10 @@ smb_E(const u_char *key, u_char *data, u_char *dest)
 	kk[6] = key[5] << 2 | (key[6] >> 6 & 0xfe);
 	kk[7] = key[6] << 1;
 	ksp = malloc(sizeof(des_key_schedule), M_SMBTEMP, M_WAITOK);
-	des_set_key((des_cblock *)kk, *ksp);
-	des_ecb_encrypt((des_cblock *)data, (des_cblock *)dest, *ksp, 1);
+	des_set_key(kk, *ksp);
+	des_ecb_encrypt(data, dest, *ksp, 1);
 	free(ksp, M_SMBTEMP);
 }
-
 
 int
 smb_encrypt(const u_char *apwd, u_char *C8, u_char *RN)

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 #ifndef _NETSMB_SMB_RQ_H_
 #define	_NETSMB_SMB_RQ_H_
@@ -54,7 +53,6 @@
 #define SMBRQ_SLOCK(rqp)	smb_sl_lock(&(rqp)->sr_slock)
 #define SMBRQ_SUNLOCK(rqp)	smb_sl_unlock(&(rqp)->sr_slock)
 #define SMBRQ_SLOCKPTR(rqp)	(&(rqp)->sr_slock)
-
 
 enum smbrq_state {
 	SMBRQ_NOTSENT,		/* rq have data to send */

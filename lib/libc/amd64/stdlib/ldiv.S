@@ -6,7 +6,6 @@
  */
 
 #include <machine/asm.h>
-
 ENTRY(ldiv)
 	movq	%rdi,%rax
 	cqto

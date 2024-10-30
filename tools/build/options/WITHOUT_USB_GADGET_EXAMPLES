@@ -1,1 +1,1 @@
-Set to not build USB gadget kernel modules.
+Do not build USB gadget kernel modules.

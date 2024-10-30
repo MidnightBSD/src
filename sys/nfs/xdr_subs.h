@@ -34,7 +34,6 @@
  *	@(#)xdr_subs.h	8.3 (Berkeley) 3/30/95
  */
 
-
 #ifndef _NFS_XDR_SUBS_H_
 #define _NFS_XDR_SUBS_H_
 

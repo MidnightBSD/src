@@ -1,2 +1,2 @@
-Set to avoid building or installing standalone debug files for each
+Avoid building or installing standalone debug files for each
 executable binary and shared library.

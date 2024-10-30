@@ -1,11 +1,11 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2002-2004 Tim J. Robbins.
  * All rights reserved.
  *
  * Copyright (c) 2011 The FreeBSD Foundation
- * All rights reserved.
+ *
  * Portions of this software were developed by David Chisnall
  * under sponsorship from the FreeBSD Foundation.
  *
@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <wchar.h>
 #include "mblocal.h"
 
@@ -42,7 +41,7 @@ mbrtowc_l(wchar_t * __restrict pwc, const char * __restrict s,
 {
 	FIX_LOCALE(locale);
 	if (ps == NULL)
-		ps = &locale->mbrtowc;
+		ps = &(XLOCALE_CTYPE(locale)->mbrtowc);
 	return (XLOCALE_CTYPE(locale)->__mbrtowc(pwc, s, n, ps));
 }
 

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright 2014 Garrett D'Amore <garrett@damore.org>
  * Copyright 2010 Nexenta Systems, Inc.  All rights reserved.
@@ -8,7 +8,7 @@
  *			All rights reserved.
  *
  * Copyright (c) 2011 The FreeBSD Foundation
- * All rights reserved.
+ *
  * Portions of this software were developed by David Chisnall
  * under sponsorship from the FreeBSD Foundation.
  *
@@ -37,7 +37,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "namespace.h"
 
 #include <sys/types.h>
@@ -67,6 +66,14 @@ struct xlocale_collate __xlocale_C_collate = {
 	{{0}, "C"}, 1, 0, 0, 0
 };
 
+struct xlocale_collate __xlocale_POSIX_collate = {
+	{{0}, "POSIX"}, 1, 0, 0, 0
+};
+
+struct xlocale_collate __xlocale_CUTF8_collate = {
+	{{0}, "C.UTF-8"}, 1, 0, 0, 0
+};
+
 static int
 __collate_load_tables_l(const char *encoding, struct xlocale_collate *table);
 
@@ -83,19 +90,28 @@ destruct_collate(void *t)
 void *
 __collate_load(const char *encoding, __unused locale_t unused)
 {
-	if (strcmp(encoding, "C") == 0 || strcmp(encoding, "POSIX") == 0 ||
-	    strncmp(encoding, "C.", 2) == 0) {
-		return &__xlocale_C_collate;
-	}
-	struct xlocale_collate *table = calloc(sizeof(struct xlocale_collate), 1);
+	if (strcmp(encoding, "C") == 0)
+		return (&__xlocale_C_collate);
+	else if (strcmp(encoding, "POSIX") == 0)
+		return (&__xlocale_POSIX_collate);
+	else if (strcmp(encoding, "C.UTF-8") == 0)
+		return (&__xlocale_CUTF8_collate);
+
+	struct xlocale_collate *table = calloc(sizeof(struct xlocale_collate),
+	    1);
+	if (table == NULL)
+		return (NULL);
 	table->header.header.destructor = destruct_collate;
-	// FIXME: Make sure that _LDP_CACHE is never returned.  We should be doing
-	// the caching outside of this section
+
+	/*
+	 * FIXME: Make sure that _LDP_CACHE is never returned.  We
+	 * should be doing the caching outside of this section.
+	 */
 	if (__collate_load_tables_l(encoding, table) != _LDP_LOADED) {
 		xlocale_release(table);
-		return NULL;
+		return (NULL);
 	}
-	return table;
+	return (table);
 }
 
 /**
@@ -130,7 +146,7 @@ __collate_load_tables_l(const char *encoding, struct xlocale_collate *table)
 	if (asprintf(&buf, "%s/%s/LC_COLLATE", _PathLocale, encoding) == -1)
 		return (_LDP_ERROR);
 
-	if ((fd = _open(buf, O_RDONLY)) < 0) {
+	if ((fd = _open(buf, O_RDONLY | O_CLOEXEC)) < 0) {
 		free(buf);
 		return (_LDP_ERROR);
 	}
@@ -139,7 +155,9 @@ __collate_load_tables_l(const char *encoding, struct xlocale_collate *table)
 		(void) _close(fd);
 		return (_LDP_ERROR);
 	}
-	if (sbuf.st_size < (COLLATE_STR_LEN + sizeof (info))) {
+	if (sbuf.st_size < (COLLATE_FMT_VERSION_LEN +
+			    XLOCALE_DEF_VERSION_LEN +
+			    sizeof (*info))) {
 		(void) _close(fd);
 		errno = EINVAL;
 		return (_LDP_ERROR);
@@ -150,12 +168,14 @@ __collate_load_tables_l(const char *encoding, struct xlocale_collate *table)
 		return (_LDP_ERROR);
 	}
 
-	if (strncmp(TMP, COLLATE_VERSION, COLLATE_STR_LEN) != 0) {
+	if (strncmp(TMP, COLLATE_FMT_VERSION, COLLATE_FMT_VERSION_LEN) != 0) {
 		(void) munmap(map, sbuf.st_size);
 		errno = EINVAL;
 		return (_LDP_ERROR);
 	}
-	TMP += COLLATE_STR_LEN;
+	TMP += COLLATE_FMT_VERSION_LEN;
+	strlcat(table->header.version, TMP, sizeof (table->header.version));
+	TMP += XLOCALE_DEF_VERSION_LEN;
 
 	info = (void *)TMP;
 	TMP += sizeof (*info);

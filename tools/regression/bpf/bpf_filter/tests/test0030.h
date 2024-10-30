@@ -1,6 +1,5 @@
 /*-
  * Test 0030:	BPF_ALU+BPF_LSH+BPF_X
- *
  */
 
 /* BPF program */

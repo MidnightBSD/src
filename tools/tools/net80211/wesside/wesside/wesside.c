@@ -4,7 +4,6 @@
  *
  * XXX GENERAL: I DON'T CHECK FOR PACKET LENGTHS AND STUFF LIKE THAT and buffer
  * overflows.  this whole thing is experimental n e way.
- *
  */
 
 #include <sys/types.h>
@@ -31,6 +30,7 @@
 #include <netinet/ip.h>
 #include <netinet/udp.h>
 #include <arpa/inet.h>
+#include <paths.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -153,7 +153,7 @@ unsigned int min_prga =  128;
  * XXX builtin pathnames
  */
 #define CRACK_LOCAL_CMD "../aircrack/aircrack"
-#define CRACK_INSTALL_CMD "/usr/local/bin/aircrack"
+#define CRACK_INSTALL_CMD _PATH_LOCALBASE "/bin/aircrack"
 
 #define INCR 10000
 int thresh_incr = INCR;

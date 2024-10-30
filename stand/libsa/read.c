@@ -61,18 +61,18 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
-
 #include <sys/param.h>
 #include "stand.h"
 
 ssize_t
 read(int fd, void *dest, size_t bcount)
 {
-	struct open_file *f = &files[fd];
+	struct open_file *f;
 	size_t resid;
 
-	if ((unsigned)fd >= SOPEN_MAX || !(f->f_flags & F_READ)) {
+	TSENTER();
+	f = fd2open_file(fd);
+	if (f == NULL || !(f->f_flags & F_READ)) {
 		errno = EBADF;
 		return (-1);
 	}
@@ -83,6 +83,7 @@ read(int fd, void *dest, size_t bcount)
 		if (errno)
 			return (-1);
 		f->f_offset += resid;
+		TSEXIT();
 		return (resid);
 	}
 
@@ -102,8 +103,10 @@ read(int fd, void *dest, size_t bcount)
 			f->f_raoffset += ccount;
 			f->f_ralen -= ccount;
 			resid -= ccount;
-			if (resid == 0)
+			if (resid == 0) {
+				TSEXIT();
 				return (bcount);
+			}
 			dest = (char *)dest + ccount;
 		}
 
@@ -116,6 +119,7 @@ read(int fd, void *dest, size_t bcount)
 			errno = (f->f_ops->fo_read)(f, dest, resid, &cresid);
 			if (errno != 0)
 				return (-1);
+			TSEXIT();
 			return (bcount - cresid);
 		}
 
@@ -127,7 +131,9 @@ read(int fd, void *dest, size_t bcount)
 		f->f_raoffset = 0;
 		f->f_ralen = SOPEN_RASIZE - cresid;
 		/* no more data, return what we had */
-		if (f->f_ralen == 0)
+		if (f->f_ralen == 0) {
+			TSEXIT();
 			return (bcount - resid);
+		}
 	}
 }

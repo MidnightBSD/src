@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2003 Peter Wemm
  * Copyright (c) 2017, 2018 The FreeBSD Foundation
@@ -31,10 +31,8 @@
  */
 
 #include <sys/cdefs.h>
-
-#define	IN_RTLD	1
+#define _WANT_P_OSREL
 #include <sys/param.h>
-#undef IN_RTLD
 #include <machine/cpufunc.h>
 #include <machine/specialreg.h>
 #include <machine/sysarch.h>
@@ -56,7 +54,7 @@ amd64_get_gsbase_syscall(void **addr)
 	return (sysarch(AMD64_GET_GSBASE, addr));
 }
 
-DEFINE_UIFUNC(, int, amd64_get_gsbase, (void **), static)
+DEFINE_UIFUNC(, int, amd64_get_gsbase, (void **))
 {
 
 	if (__getosreldate() >= P_OSREL_WRFSBASE &&

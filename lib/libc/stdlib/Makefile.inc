@@ -1,5 +1,4 @@
 #	from @(#)Makefile.inc	8.3 (Berkeley) 2/4/95
-# $FreeBSD: stable/10/lib/libc/stdlib/Makefile.inc 312590 2017-01-21 12:30:07Z kib $
 
 # machine-independent stdlib sources
 .PATH: ${LIBC_SRCTOP}/${LIBC_ARCH}/stdlib ${LIBC_SRCTOP}/stdlib
@@ -11,8 +10,8 @@ MISRCS+=C99_Exit.c a64l.c abort.c abs.c atexit.c atof.c atoi.c atol.c atoll.c \
 	getsubopt.c hcreate.c hcreate_r.c hdestroy_r.c heapsort.c heapsort_b.c \
 	hsearch_r.c imaxabs.c imaxdiv.c \
 	insque.c l64a.c labs.c ldiv.c llabs.c lldiv.c lsearch.c \
-	merge.c mergesort_b.c ptsname.c qsort.c qsort_r.c quick_exit.c \
-	radixsort.c rand.c \
+	merge.c mergesort_b.c ptsname.c qsort.c qsort_r.c qsort_s.c \
+	quick_exit.c radixsort.c rand.c \
 	random.c reallocarray.c reallocf.c realpath.c remque.c \
 	set_constraint_handler_s.c strfmon.c strtoimax.c \
 	strtol.c strtold.c strtoll.c strtoq.c strtoul.c strtonum.c strtoull.c \
@@ -45,15 +44,15 @@ MLINKS+=a64l.3 l64a.3 a64l.3 l64a_r.3
 MLINKS+=atol.3 atoll.3
 MLINKS+=exit.3 _Exit.3
 MLINKS+=getenv.3 putenv.3 getenv.3 setenv.3 getenv.3 unsetenv.3
-MLINKS+=getenv.3 clearenv.3
 MLINKS+=getopt_long.3 getopt_long_only.3
 MLINKS+=hcreate.3 hdestroy.3 hcreate.3 hsearch.3
 MLINKS+=hcreate.3 hcreate_r.3 hcreate.3 hdestroy_r.3 hcreate.3 hsearch_r.3
 MLINKS+=insque.3 remque.3
 MLINKS+=lsearch.3 lfind.3
 MLINKS+=ptsname.3 grantpt.3 ptsname.3 ptsname_r.3 ptsname.3 unlockpt.3
-MLINKS+=qsort.3 heapsort.3 qsort.3 mergesort.3 qsort.3 qsort_r.3
-MLINKS+=rand.3 rand_r.3 rand.3 srand.3 rand.3 sranddev.3
+MLINKS+=qsort.3 heapsort.3 qsort.3 mergesort.3 qsort.3 qsort_r.3 \
+	qsort.3 qsort_s.3
+MLINKS+=rand.3 rand_r.3 rand.3 srand.3
 MLINKS+=random.3 initstate.3 random.3 setstate.3 random.3 srandom.3 \
 	random.3 srandomdev.3
 MLINKS+=radixsort.3 sradixsort.3

@@ -25,7 +25,6 @@
  */
 
 #include <machine/asm.h>
-
 /*
  * double fabs(double)
  */

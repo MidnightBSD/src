@@ -22,8 +22,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD$
  */
 
 /*
@@ -130,6 +128,12 @@ struct loader_callbacks {
          */
 	int		(*diskread)(void *arg, int unit, uint64_t offset,
             void *dst, size_t size, size_t *resid_return);
+
+        /*
+         * Write to a disk image at the given offset
+         */
+	int		(*diskwrite)(void *arg, int unit, uint64_t offset,
+            void *src, size_t size, size_t *resid_return);
 
 	/*
 	 * Guest virtual machine i/o

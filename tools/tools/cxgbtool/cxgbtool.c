@@ -33,7 +33,6 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ***************************************************************************/
 #include <sys/cdefs.h>
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>

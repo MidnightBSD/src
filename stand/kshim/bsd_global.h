@@ -1,4 +1,3 @@
-/* $FreeBSD: stable/11/stand/kshim/bsd_global.h 294546 2016-01-22 06:05:31Z wma $ */
 /*-
  * Copyright (c) 2013 Hans Petter Selasky. All rights reserved.
  *

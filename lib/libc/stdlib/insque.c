@@ -7,7 +7,6 @@
  * unchanged, you can do what ever you want with this file. 
  */
 #include <sys/cdefs.h>
-
 #define	_SEARCH_PRIVATE
 #include <search.h>
 #ifdef DEBUG

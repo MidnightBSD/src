@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000-2001 Boris Popov
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/condvar.h>
 #include <sys/kernel.h>
@@ -599,7 +598,6 @@ abort:
 	return error;
 }
 
-
 static int
 smb_nbst_recv(struct smb_vc *vcp, struct mbuf **mpp, struct thread *td)
 {
@@ -681,7 +679,6 @@ smb_nbst_fatal(struct smb_vc *vcp, int error)
 	return 0;
 }
 
-
 struct smb_tran_desc smb_tran_nbtcp_desc = {
 	SMBT_NBTCP,
 	smb_nbst_create, smb_nbst_done,
@@ -691,4 +688,3 @@ struct smb_tran_desc smb_tran_nbtcp_desc = {
 	smb_nbst_getparam, smb_nbst_setparam,
 	smb_nbst_fatal
 };
-

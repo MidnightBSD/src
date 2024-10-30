@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <linux/errno.h>
 #include <linux/spinlock.h>
 #include <linux/slab.h>

@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <linux/errno.h>
 #include <linux/string.h>
 #include <linux/if_ether.h>

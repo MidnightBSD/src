@@ -23,13 +23,9 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: stable/11/tools/regression/security/cap_test/cap_test.c 224989 2011-08-18 23:15:04Z jonathan $
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/tools/regression/security/cap_test/cap_test.c 224989 2011-08-18 23:15:04Z jonathan $");
-
 #include <sys/wait.h>
 
 #include <err.h>

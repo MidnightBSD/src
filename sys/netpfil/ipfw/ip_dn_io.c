@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010 Luigi Rizzo, Riccardo Panicucci, Universita` di Pisa
  * All rights reserved
@@ -30,7 +30,6 @@
  * Dummynet portions related to packet handling.
  */
 #include <sys/cdefs.h>
-
 #include "opt_inet6.h"
 
 #include <sys/param.h>
@@ -49,7 +48,7 @@
 #include <sys/sysctl.h>
 
 #include <net/if.h>	/* IFNAMSIZ, struct ifaddr, ifq head, lock.h mutex.h */
-#include <net/if_var.h>
+#include <net/if_var.h>	/* NET_EPOCH_... */
 #include <net/netisr.h>
 #include <net/vnet.h>
 
@@ -141,9 +140,12 @@ SYSBEGIN(f4)
 SYSCTL_DECL(_net_inet);
 SYSCTL_DECL(_net_inet_ip);
 #ifdef NEW_AQM
-SYSCTL_NODE(_net_inet_ip, OID_AUTO, dummynet, CTLFLAG_RW, 0, "Dummynet");
+SYSCTL_NODE(_net_inet_ip, OID_AUTO, dummynet, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "Dummynet");
 #else
-static SYSCTL_NODE(_net_inet_ip, OID_AUTO, dummynet, CTLFLAG_RW, 0, "Dummynet");
+static SYSCTL_NODE(_net_inet_ip, OID_AUTO, dummynet,
+    CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "Dummynet");
 #endif
 
 /* wrapper to pass V_dn_cfg fields to SYSCTL_* */
@@ -151,18 +153,19 @@ static SYSCTL_NODE(_net_inet_ip, OID_AUTO, dummynet, CTLFLAG_RW, 0, "Dummynet");
 
 /* parameters */
 
-
 SYSCTL_PROC(_net_inet_ip_dummynet, OID_AUTO, hash_size,
-    CTLTYPE_INT | CTLFLAG_RW, 0, 0, sysctl_hash_size,
-    "I", "Default hash table size");
-
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
+    0, 0, sysctl_hash_size, "I",
+    "Default hash table size");
 
 SYSCTL_PROC(_net_inet_ip_dummynet, OID_AUTO, pipe_slot_limit,
-    CTLTYPE_LONG | CTLFLAG_RW, 0, 1, sysctl_limits,
-    "L", "Upper limit in slots for pipe queue.");
+    CTLTYPE_LONG | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
+    0, 1, sysctl_limits, "L",
+    "Upper limit in slots for pipe queue.");
 SYSCTL_PROC(_net_inet_ip_dummynet, OID_AUTO, pipe_byte_limit,
-    CTLTYPE_LONG | CTLFLAG_RW, 0, 0, sysctl_limits,
-    "L", "Upper limit in bytes for pipe queue.");
+    CTLTYPE_LONG | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
+    0, 0, sysctl_limits, "L",
+    "Upper limit in bytes for pipe queue.");
 SYSCTL_INT(_net_inet_ip_dummynet, OID_AUTO, io_fast,
     CTLFLAG_RW | CTLFLAG_VNET, DC(io_fast), 0, "Enable fast dummynet io.");
 SYSCTL_INT(_net_inet_ip_dummynet, OID_AUTO, debug,
@@ -650,7 +653,7 @@ dummynet_task(void *context, int pending)
 
 	VNET_ITERATOR_DECL(vnet_iter);
 	VNET_LIST_RLOCK();
-	NET_EPOCH_ENTER_ET(et);
+	NET_EPOCH_ENTER(et);
 
 	VNET_FOREACH(vnet_iter) {
 		memset(&q, 0, sizeof(struct mq));
@@ -720,7 +723,7 @@ dummynet_task(void *context, int pending)
 
 		CURVNET_RESTORE();
 	}
-	NET_EPOCH_EXIT_ET(et);
+	NET_EPOCH_EXIT(et);
 	VNET_LIST_RUNLOCK();
 
 	/* Schedule our next run. */
@@ -735,6 +738,8 @@ static void
 dummynet_send(struct mbuf *m)
 {
 	struct mbuf *n;
+
+	NET_EPOCH_ASSERT();
 
 	for (; m != NULL; m = n) {
 		struct ifnet *ifp = NULL;	/* gcc 3.4.6 complains */
@@ -836,35 +841,39 @@ tag_mbuf(struct mbuf *m, int dir, struct ip_fw_args *fwa)
 	dt->rule = fwa->rule;
 	dt->rule.info &= IPFW_ONEPASS;	/* only keep this info */
 	dt->dn_dir = dir;
-	dt->ifp = fwa->oif;
+	dt->ifp = fwa->flags & IPFW_ARGS_OUT ? fwa->ifp : NULL;
 	/* dt->output tame is updated as we move through */
 	dt->output_time = V_dn_cfg.curr_time;
 	dt->iphdr_off = (dir & PROTO_LAYER2) ? ETHER_HDR_LEN : 0;
 	return 0;
 }
 
-
 /*
  * dummynet hook for packets.
  * We use the argument to locate the flowset fs and the sched_set sch
  * associated to it. The we apply flow_mask and sched_mask to
  * determine the queue and scheduler instances.
- *
- * dir		where shall we send the packet after dummynet.
- * *m0		the mbuf with the packet
- * ifp		the 'ifp' parameter from the caller.
- *		NULL in ip_input, destination interface in ip_output,
  */
 int
-dummynet_io(struct mbuf **m0, int dir, struct ip_fw_args *fwa)
+dummynet_io(struct mbuf **m0, struct ip_fw_args *fwa)
 {
 	struct mbuf *m = *m0;
 	struct dn_fsk *fs = NULL;
 	struct dn_sch_inst *si;
 	struct dn_queue *q = NULL;	/* default */
+	int fs_id, dir;
 
-	int fs_id = (fwa->rule.info & IPFW_INFO_MASK) +
+	fs_id = (fwa->rule.info & IPFW_INFO_MASK) +
 		((fwa->rule.info & IPFW_IS_PIPE) ? 2*DN_MAX_ID : 0);
+	/* XXXGL: convert args to dir */
+	if (fwa->flags & IPFW_ARGS_IN)
+		dir = DIR_IN;
+	else
+		dir = DIR_OUT;
+	if (fwa->flags & IPFW_ARGS_ETHER)
+		dir |= PROTO_LAYER2;
+	else if (fwa->flags & IPFW_ARGS_IP6)
+		dir |= PROTO_IPV6;
 	DN_BH_WLOCK();
 	V_dn_cfg.io_pkt++;
 	/* we could actually tag outside the lock, but who cares... */

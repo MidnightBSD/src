@@ -26,7 +26,6 @@
  */
 
 #include <machine/asm.h>
-
 #include <machine/sysarch.h>
 
 ENTRY(__aeabi_read_tp)

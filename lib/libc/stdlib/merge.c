@@ -36,7 +36,6 @@
 static char sccsid[] = "@(#)merge.c	8.2 (Berkeley) 2/14/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-
 /*
  * Hybrid exponential search/linear search merge sort with hybrid
  * natural/pairwise first pass.  Requires about .3% more comparisons
@@ -51,7 +50,7 @@ static char sccsid[] = "@(#)merge.c	8.2 (Berkeley) 2/14/94";
  * (The default is pairwise merging.)
  */
 
-#include <sys/types.h>
+#include <sys/param.h>
 
 #include <errno.h>
 #include <stdlib.h>
@@ -96,9 +95,7 @@ static void insertionsort(u_char *, size_t, size_t, cmp_t);
  * boundaries.
  */
 /* Assumption: PSIZE is a power of 2. */
-#define EVAL(p) (u_char **)						\
-	((u_char *)0 +							\
-	    (((u_char *)p + PSIZE - 1 - (u_char *) 0) & ~(PSIZE - 1)))
+#define EVAL(p) (u_char **)roundup2((uintptr_t)p, PSIZE)
 
 #ifdef I_AM_MERGESORT_B
 int mergesort_b(void *, size_t, size_t, cmp_t);

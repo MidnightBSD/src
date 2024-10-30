@@ -36,7 +36,6 @@
 static char sccsid[] = "@(#)fgetln.c	8.2 (Berkeley) 1/2/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-
 #include "namespace.h"
 #include <errno.h>
 #include <limits.h>
@@ -49,19 +48,12 @@ static char sccsid[] = "@(#)fgetln.c	8.2 (Berkeley) 1/2/94";
 
 /*
  * Expand the line buffer.  Return -1 on error.
-#ifdef notdef
- * The `new size' does not account for a terminating '\0',
- * so we add 1 here.
-#endif
  */
 int
 __slbexpand(FILE *fp, size_t newsize)
 {
 	void *p;
 
-#ifdef notdef
-	++newsize;
-#endif
 	if (fp->_lb._size >= newsize)
 		return (0);
 	if (newsize > INT_MAX) {
@@ -159,9 +151,6 @@ fgetln(FILE *fp, size_t *lenp)
 		break;
 	}
 	*lenp = len;
-#ifdef notdef
-	fp->_lb._base[len] = '\0';
-#endif
 	ret = (char *)fp->_lb._base;
 end:
 	FUNLOCKFILE_CANCELSAFE();

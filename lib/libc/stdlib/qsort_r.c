@@ -1,7 +1,6 @@
 /*
  * This file is in the public domain.  Originally written by Garrett
  * A. Wollman.
- *
  */
 #include "block_abi.h"
 #define I_AM_QSORT_R

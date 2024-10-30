@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2018 Conrad Meyer <cem@FreeBSD.org>
  * All rights reserved.
@@ -27,14 +27,15 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/random.h>
 #include <sys/sysctl.h>
 
 #include <errno.h>
+#include <signal.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include "libc_private.h"
 
@@ -42,6 +43,12 @@
 #define GETRANDOM_FIRST 1200061
 
 extern int __sysctl(int *, u_int, void *, size_t *, void *, size_t);
+
+static inline void
+_getentropy_fail(void)
+{
+	raise(SIGKILL);
+}
 
 static size_t
 arnd_sysctl(u_char *buf, size_t size)
@@ -86,14 +93,14 @@ getentropy_fallback(void *buf, size_t buflen)
 		if (errno == EFAULT)
 			return (-1);
 		/*
-		 * This cannot happen.  _arc4_sysctl() spins until the random
+		 * This cannot happen.  arnd_sysctl() spins until the random
 		 * device is seeded and then repeatedly reads until the full
 		 * request is satisfied.  The only way for this to return a zero
 		 * byte or short read is if sysctl(2) on the kern.arandom MIB
-		 * fails.  In this case, exceping the user-provided-a-bogus-
+		 * fails.  In this case, excepting the user-provided-a-bogus-
 		 * buffer EFAULT, give up (like for arc4random(3)'s arc4_stir).
 		 */
-		abort();
+		_getentropy_fail();
 	}
 	return (0);
 }
@@ -128,8 +135,10 @@ getentropy(void *buf, size_t buflen)
 					continue;
 				case EINTR:
 					continue;
-				default:
+				case EFAULT:
 					return (-1);
+				default:
+					_getentropy_fail();
 				}
 			}
 		} else {
@@ -138,7 +147,7 @@ getentropy(void *buf, size_t buflen)
 
 		/* This cannot happen. */
 		if (rd == 0)
-			abort();
+			_getentropy_fail();
 
 		buf = (char *)buf + rd;
 		buflen -= rd;

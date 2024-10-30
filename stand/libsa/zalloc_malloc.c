@@ -28,8 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
-
 /*
  * MALLOC.C - malloc equivalent, runs on top of zalloc and uses sbrk
  */
@@ -51,6 +49,10 @@ void mallocstats(void);
 #endif
 
 static void *Malloc_align(size_t, size_t);
+
+#ifndef MIN
+# define MIN(a,b) ((a) <= (b)) ? (a) : (b)
+#endif
 
 void *
 Malloc(size_t bytes, const char *file __unused, int line __unused)
@@ -119,9 +121,14 @@ Free(void *ptr, const char *file, int line)
 			    ptr, file, line);
 			return;
 		}
-		if (res->ga_Magic != GAMAGIC)
+		if (res->ga_Magic != GAMAGIC) {
+			size_t dump_bytes;
+
+			dump_bytes = MIN((ptr - MallocPool.mp_Base), 512);
+			hexdump(ptr - dump_bytes, dump_bytes);
 			panic("free: guard1 fail @ %p from %s:%d",
 			    ptr, file, line);
+		}
 		res->ga_Magic = GAFREE;
 #endif
 #ifdef USEENDGUARD

@@ -27,8 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
-
 #include <stand.h>
 #include <sys/param.h>
 #include <sys/linker.h>
@@ -44,58 +42,10 @@ __FBSDID("$FreeBSD$");
 #include <machine/metadata.h>
 
 #include "bootstrap.h"
+#include "modinfo.h"
 
 #ifdef LOADER_GELI_SUPPORT
 #include "geliboot.h"
-#endif
-
-#if defined(__sparc64__)
-#include <openfirm.h>
-
-extern struct tlb_entry *dtlb_store;
-extern struct tlb_entry *itlb_store;
-
-extern int dtlb_slot;
-extern int itlb_slot;
-
-static int
-md_bootserial(void)
-{
-    char        buf[64];
-    ihandle_t        inst;
-    phandle_t        input;
-    phandle_t        node;
-    phandle_t        output;
-
-    if ((node = OF_finddevice("/options")) == -1)
-        return(-1);
-    if (OF_getprop(node, "input-device", buf, sizeof(buf)) == -1)
-        return(-1);
-    input = OF_finddevice(buf);
-    if (OF_getprop(node, "output-device", buf, sizeof(buf)) == -1)
-        return(-1);
-    output = OF_finddevice(buf);
-    if (input == -1 || output == -1 ||
-        OF_getproplen(input, "keyboard") >= 0) {
-        if ((node = OF_finddevice("/chosen")) == -1)
-            return(-1);
-        if (OF_getprop(node, "stdin", &inst, sizeof(inst)) == -1)
-            return(-1);
-        if ((input = OF_instance_to_package(inst)) == -1)
-            return(-1);
-        if (OF_getprop(node, "stdout", &inst, sizeof(inst)) == -1)
-            return(-1);
-        if ((output = OF_instance_to_package(inst)) == -1)
-            return(-1);
-    }
-    if (input != output)
-        return(-1);
-    if (OF_getprop(input, "device_type", buf, sizeof(buf)) == -1)
-        return(-1);
-    if (strcmp(buf, "serial") != 0)
-        return(-1);
-    return(0);
-}
 #endif
 
 static int
@@ -106,146 +56,11 @@ md_getboothowto(char *kargs)
     /* Parse kargs */
     howto = boot_parse_cmdline(kargs);
     howto |= boot_env_to_howto();
-#if defined(__sparc64__)
-    if (md_bootserial() != -1)
-	howto |= RB_SERIAL;
-#else
     if (!strcmp(getenv("console"), "comconsole"))
 	howto |= RB_SERIAL;
     if (!strcmp(getenv("console"), "nullconsole"))
 	howto |= RB_MUTE;
-#endif
     return(howto);
-}
-
-/*
- * Copy the environment into the load area starting at (addr).
- * Each variable is formatted as <name>=<value>, with a single nul
- * separating each variable, and a double nul terminating the environment.
- */
-static vm_offset_t
-md_copyenv(vm_offset_t addr)
-{
-    struct env_var	*ep;
-
-    /* traverse the environment */
-    for (ep = environ; ep != NULL; ep = ep->ev_next) {
-	archsw.arch_copyin(ep->ev_name, addr, strlen(ep->ev_name));
-	addr += strlen(ep->ev_name);
-	archsw.arch_copyin("=", addr, 1);
-	addr++;
-	if (ep->ev_value != NULL) {
-	    archsw.arch_copyin(ep->ev_value, addr, strlen(ep->ev_value));
-	    addr += strlen(ep->ev_value);
-	}
-	archsw.arch_copyin("", addr, 1);
-	addr++;
-    }
-    archsw.arch_copyin("", addr, 1);
-    addr++;
-    return(addr);
-}
-
-/*
- * Copy module-related data into the load area, where it can be
- * used as a directory for loaded modules.
- *
- * Module data is presented in a self-describing format.  Each datum
- * is preceded by a 32-bit identifier and a 32-bit size field.
- *
- * Currently, the following data are saved:
- *
- * MOD_NAME	(variable)		module name (string)
- * MOD_TYPE	(variable)		module type (string)
- * MOD_ARGS	(variable)		module parameters (string)
- * MOD_ADDR	sizeof(vm_offset_t)	module load address
- * MOD_SIZE	sizeof(size_t)		module size
- * MOD_METADATA	(variable)		type-specific metadata
- */
-
-static int align;
-
-#define COPY32(v, a, c) {			\
-    uint32_t	x = (v);			\
-    if (c)					\
-        archsw.arch_copyin(&x, a, sizeof(x));	\
-    a += sizeof(x);				\
-}
-
-#define MOD_STR(t, a, s, c) {			\
-    COPY32(t, a, c);				\
-    COPY32(strlen(s) + 1, a, c)			\
-    if (c)					\
-        archsw.arch_copyin(s, a, strlen(s) + 1);\
-    a += roundup(strlen(s) + 1, align);		\
-}
-
-#define MOD_NAME(a, s, c)	MOD_STR(MODINFO_NAME, a, s, c)
-#define MOD_TYPE(a, s, c)	MOD_STR(MODINFO_TYPE, a, s, c)
-#define MOD_ARGS(a, s, c)	MOD_STR(MODINFO_ARGS, a, s, c)
-
-#define MOD_VAR(t, a, s, c) {			\
-    COPY32(t, a, c);				\
-    COPY32(sizeof(s), a, c);			\
-    if (c)					\
-        archsw.arch_copyin(&s, a, sizeof(s));	\
-    a += roundup(sizeof(s), align);		\
-}
-
-#define MOD_ADDR(a, s, c)	MOD_VAR(MODINFO_ADDR, a, s, c)
-#define MOD_SIZE(a, s, c)	MOD_VAR(MODINFO_SIZE, a, s, c)
-
-#define MOD_METADATA(a, mm, c) {		\
-    COPY32(MODINFO_METADATA | mm->md_type, a, c);\
-    COPY32(mm->md_size, a, c);			\
-    if (c)					\
-        archsw.arch_copyin(mm->md_data, a, mm->md_size);\
-    a += roundup(mm->md_size, align);		\
-}
-
-#define MOD_END(a, c) {				\
-    COPY32(MODINFO_END, a, c);			\
-    COPY32(0, a, c);				\
-}
-
-static vm_offset_t
-md_copymodules(vm_offset_t addr, int kern64)
-{
-    struct preloaded_file	*fp;
-    struct file_metadata	*md;
-    uint64_t			scratch64;
-    uint32_t			scratch32;
-    int				c;
-
-    c = addr != 0;
-    /* start with the first module on the list, should be the kernel */
-    for (fp = file_findfile(NULL, NULL); fp != NULL; fp = fp->f_next) {
-
-	MOD_NAME(addr, fp->f_name, c);	/* this field must come first */
-	MOD_TYPE(addr, fp->f_type, c);
-	if (fp->f_args)
-	    MOD_ARGS(addr, fp->f_args, c);
-	if (kern64) {
-		scratch64 = fp->f_addr;
-		MOD_ADDR(addr, scratch64, c);
-		scratch64 = fp->f_size;
-		MOD_SIZE(addr, scratch64, c);
-	} else {
-		scratch32 = fp->f_addr;
-#ifdef __arm__
-		scratch32 -= __elfN(relocation_offset);
-#endif
-		MOD_ADDR(addr, scratch32, c);
-		MOD_SIZE(addr, fp->f_size, c);
-	}
-	for (md = fp->f_metadata; md != NULL; md = md->md_next) {
-	    if (!(md->md_type & MODINFOMD_NOCOPY)) {
-		MOD_METADATA(addr, md, c);
-	    }
-	}
-    }
-    MOD_END(addr, c);
-    return(addr);
 }
 
 /*
@@ -289,7 +104,6 @@ md_load_dual(char *args, vm_offset_t *modulep, vm_offset_t *dtb, int kern64)
     };
 #endif
 
-    align = kern64 ? 8 : 4;
     howto = md_getboothowto(args);
 
     /*
@@ -362,16 +176,6 @@ md_load_dual(char *args, vm_offset_t *modulep, vm_offset_t *dtb, int kern64)
 #ifdef LOADER_GELI_SUPPORT
     geli_export_key_metadata(kfp);
 #endif
-#if defined(__sparc64__)
-    file_addmetadata(kfp, MODINFOMD_DTLB_SLOTS,
-	sizeof dtlb_slot, &dtlb_slot);
-    file_addmetadata(kfp, MODINFOMD_ITLB_SLOTS,
-	sizeof itlb_slot, &itlb_slot);
-    file_addmetadata(kfp, MODINFOMD_DTLB,
-	dtlb_slot * sizeof(*dtlb_store), dtlb_store);
-    file_addmetadata(kfp, MODINFOMD_ITLB,
-	itlb_slot * sizeof(*itlb_store), itlb_store);
-#endif
 
     *modulep = addr;
     size = md_copymodules(0, kern64);
@@ -411,15 +215,13 @@ md_load_dual(char *args, vm_offset_t *modulep, vm_offset_t *dtb, int kern64)
     return(0);
 }
 
-#if !defined(__sparc64__)
 int
 md_load(char *args, vm_offset_t *modulep, vm_offset_t *dtb)
 {
     return (md_load_dual(args, modulep, dtb, 0));
 }
-#endif
 
-#if defined(__mips__) || defined(__powerpc__) || defined(__sparc64__)
+#if defined(__mips__) || defined(__powerpc__)
 int
 md_load64(char *args, vm_offset_t *modulep, vm_offset_t *dtb)
 {

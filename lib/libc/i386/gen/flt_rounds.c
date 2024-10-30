@@ -4,7 +4,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <float.h>
 
 static const int map[] = {

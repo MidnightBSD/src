@@ -36,7 +36,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/filedesc.h>
 #include <sys/capsicum.h>
@@ -535,7 +534,7 @@ audit_arg_auditinfo_addr(struct auditinfo_addr *au_info)
 }
 
 void
-audit_arg_text(char *text)
+audit_arg_text(const char *text)
 {
 	struct kaudit_record *ar;
 
@@ -689,7 +688,7 @@ audit_arg_file(struct proc *p, struct file *fp)
 		vp = fp->f_vnode;
 		vn_lock(vp, LK_SHARED | LK_RETRY);
 		audit_arg_vnode1(vp);
-		VOP_UNLOCK(vp, 0);
+		VOP_UNLOCK(vp);
 		break;
 
 	case DTYPE_SOCKET:
@@ -766,6 +765,44 @@ audit_arg_upath2(struct thread *td, int dirfd, char *upath)
 	ARG_SET_VALID(ar, ARG_UPATH2);
 }
 
+static void
+audit_arg_upath_vp(struct thread *td, struct vnode *rdir, struct vnode *cdir,
+    char *upath, char **pathp)
+{
+
+	if (*pathp == NULL)
+		*pathp = malloc(MAXPATHLEN, M_AUDITPATH, M_WAITOK);
+	audit_canon_path_vp(td, rdir, cdir, upath, *pathp);
+}
+
+void
+audit_arg_upath1_vp(struct thread *td, struct vnode *rdir, struct vnode *cdir,
+    char *upath)
+{
+	struct kaudit_record *ar;
+
+	ar = currecord();
+	if (ar == NULL)
+		return;
+
+	audit_arg_upath_vp(td, rdir, cdir, upath, &ar->k_ar.ar_arg_upath1);
+	ARG_SET_VALID(ar, ARG_UPATH1);
+}
+
+void
+audit_arg_upath2_vp(struct thread *td, struct vnode *rdir, struct vnode *cdir,
+    char *upath)
+{
+	struct kaudit_record *ar;
+
+	ar = currecord();
+	if (ar == NULL)
+		return;
+
+	audit_arg_upath_vp(td, rdir, cdir, upath, &ar->k_ar.ar_arg_upath2);
+	ARG_SET_VALID(ar, ARG_UPATH2);
+}
+
 /*
  * Variants on path auditing that do not canonicalise the path passed in;
  * these are for use with filesystem-like subsystems that employ string names,
@@ -815,7 +852,7 @@ audit_arg_upath2_canon(char *upath)
  * It is assumed that the caller will hold any vnode locks necessary to
  * perform a VOP_GETATTR() on the passed vnode.
  *
- * XXX: The attr code is very similar to vfs_vnops.c:vn_stat(), but always
+ * XXX: The attr code is very similar to vfs_default.c:vop_stdstat(), but always
  * provides access to the generation number as we need that to construct the
  * BSM file ID.
  *
@@ -834,6 +871,7 @@ audit_arg_vnode(struct vnode *vp, struct vnode_au_info *vnp)
 
 	ASSERT_VOP_LOCKED(vp, "audit_arg_vnode");
 
+	VATTR_NULL(&vattr);
 	error = VOP_GETATTR(vp, &vattr, curthread->td_ucred);
 	if (error) {
 		/* XXX: How to handle this case? */
@@ -956,12 +994,10 @@ audit_arg_fcntl_rights(uint32_t fcntlrights)
  * call itself.
  */
 void
-audit_sysclose(struct thread *td, int fd)
+audit_sysclose(struct thread *td, int fd, struct file *fp)
 {
-	cap_rights_t rights;
 	struct kaudit_record *ar;
 	struct vnode *vp;
-	struct file *fp;
 
 	KASSERT(td != NULL, ("audit_sysclose: td == NULL"));
 
@@ -971,12 +1007,10 @@ audit_sysclose(struct thread *td, int fd)
 
 	audit_arg_fd(fd);
 
-	if (getvnode(td, fd, cap_rights_init(&rights), &fp) != 0)
-		return;
-
 	vp = fp->f_vnode;
+	if (vp == NULL)
+		return;
 	vn_lock(vp, LK_SHARED | LK_RETRY);
 	audit_arg_vnode1(vp);
-	VOP_UNLOCK(vp, 0);
-	fdrop(fp, td);
+	VOP_UNLOCK(vp);
 }

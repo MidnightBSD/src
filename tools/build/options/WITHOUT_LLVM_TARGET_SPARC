@@ -1,4 +1,4 @@
-Set to not build LLVM target support for SPARC.
+Do not build LLVM target support for SPARC.
 The
 .Va LLVM_TARGET_ALL
 option should be used rather than this in most cases.

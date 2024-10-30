@@ -1,6 +1,5 @@
 /*
  * Copyright (c) 2014 The FreeBSD Foundation.
- * All rights reserved.
  *
  * Portions of this software were developed by Konstantin Belousov
  * under sponsorship from the FreeBSD Foundation.
@@ -31,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <ucontext.h>
 #include "libc_private.h"
@@ -41,6 +39,7 @@ __sym_compat(setcontext, __impl_setcontext, FBSD_1.0);
 __weak_reference(setcontext, __impl_setcontext);
 __sym_default(setcontext, setcontext, FBSD_1.2);
 
+#pragma weak setcontext
 int
 setcontext(const ucontext_t *uc)
 {

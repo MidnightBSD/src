@@ -24,7 +24,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2001-2002 Chris D. Faulhaber
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include "namespace.h"
 #include <sys/acl.h>
@@ -75,7 +74,6 @@ _entry_matches(const acl_entry_t a, const acl_entry_t b)
 int
 acl_delete_entry(acl_t acl, acl_entry_t entry_d)
 {
-	struct acl *acl_int;
 	struct acl_entry entry_int;
 	int i, j, found = 0;
 
@@ -83,8 +81,6 @@ acl_delete_entry(acl_t acl, acl_entry_t entry_d)
 		errno = EINVAL;
 		return (-1);
 	}
-
-	acl_int = &acl->ats_acl;
 
 	if (_entry_brand(entry_d) != _acl_brand(acl)) {
 		errno = EINVAL;

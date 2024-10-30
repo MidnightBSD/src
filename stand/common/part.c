@@ -25,8 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/common/part.c 346483 2019-04-21 04:35:49Z kevans $");
-
 #include <stand.h>
 #include <sys/param.h>
 #include <sys/diskmbr.h>
@@ -35,7 +33,6 @@ __FBSDID("$FreeBSD: stable/11/stand/common/part.c 346483 2019-04-21 04:35:49Z ke
 #include <sys/gpt.h>
 #include <sys/stddef.h>
 #include <sys/queue.h>
-#include <sys/vtoc.h>
 
 #include <fs/cd9660/iso.h>
 
@@ -71,7 +68,6 @@ struct pentry {
 		uint8_t bsd;
 		uint8_t	mbr;
 		uuid_t	gpt;
-		uint16_t vtoc8;
 	} type;
 	STAILQ_ENTRY(pentry)	entry;
 };
@@ -686,16 +682,6 @@ ptable_open(void *dev, uint64_t sectors, uint16_t sectorsize,
 	} else if (table->type == PTABLE_ISO9660)
 		goto out;
 
-#ifdef LOADER_VTOC8_SUPPORT
-	if (be16dec(buf + offsetof(struct vtoc8, magic)) == VTOC_MAGIC) {
-		if (ptable_vtoc8read(table, dev, dread) == NULL) {
-			/* Read error. */
-			table = NULL;
-			goto out;
-		} else if (table->type == PTABLE_VTOC8)
-			goto out;
-	}
-#endif
 	/* Check the BSD label. */
 	if (ptable_bsdread(table, dev, dread) == NULL) { /* Read error. */
 		table = NULL;
@@ -935,12 +921,6 @@ ptable_iterate(const struct ptable *table, void *arg, ptable_iterate_t *iter)
 #ifdef LOADER_GPT_SUPPORT
 		if (table->type == PTABLE_GPT)
 			sprintf(name, "p%d", entry->part.index);
-		else
-#endif
-#ifdef LOADER_VTOC8_SUPPORT
-		if (table->type == PTABLE_VTOC8)
-			sprintf(name, "%c", (uint8_t) 'a' +
-			    entry->part.index);
 		else
 #endif
 		if (table->type == PTABLE_BSD)

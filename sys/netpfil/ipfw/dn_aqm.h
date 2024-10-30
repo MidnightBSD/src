@@ -29,7 +29,6 @@
 
 /*
  * API for writing an Active Queue Management algorithm for Dummynet
- *
  */
 
 #ifndef _IP_DN_AQM_H
@@ -62,7 +61,7 @@ typedef int32_t aqm_stime_t;
 #define DN_AQM_NAME_MAX 50
 	char			name[DN_AQM_NAME_MAX];	/* name of AQM algorithm */
 	uint32_t	type;	/* AQM type number */
-	
+
 	/* Methods implemented by AQM algorithm:
 	 * 
 	 * enqueue	enqueue packet 'm' on queue 'q'.
@@ -97,7 +96,7 @@ typedef int32_t aqm_stime_t;
 	 * the AQM configurations using 'par' array.
 	 * 
 	 */
-	
+
 	int (*enqueue)(struct dn_queue *, struct mbuf *);
 	struct mbuf * (*dequeue)(struct dn_queue *);
 	int (*config)(struct dn_fsk *, struct dn_extra_parms *ep, int);
@@ -123,7 +122,7 @@ update_stats(struct dn_queue *q, int len, int drop)
 	int inc = 0;
 	struct dn_flow *sni;
 	struct dn_flow *qni;
-	
+
 	sni = &q->_si->ni;
 	qni = &q->ni;
 
@@ -147,7 +146,6 @@ update_stats(struct dn_queue *q, int len, int drop)
 	}
 	/* tot_pkts  is updated in dn_enqueue function */
 }
-
 
 /* kernel module related function */
 int

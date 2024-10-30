@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "ipoib.h"
 
 int ipoib_mcast_attach(struct ipoib_dev_priv *priv, u16 mlid, union ib_gid *mgid, int set_qkey)
@@ -253,11 +252,9 @@ void ipoib_transport_dev_cleanup(struct ipoib_dev_priv *priv)
 		clear_bit(IPOIB_PKEY_ASSIGNED, &priv->flags);
 	}
 
-	if (ib_destroy_cq(priv->send_cq))
-		ipoib_warn(priv, "ib_cq_destroy (send) failed\n");
+	ib_destroy_cq(priv->send_cq);
 
-	if (ib_destroy_cq(priv->recv_cq))
-		ipoib_warn(priv, "ib_cq_destroy (recv) failed\n");
+	ib_destroy_cq(priv->recv_cq);
 
 	ipoib_cm_dev_cleanup(priv);
 

@@ -1,4 +1,4 @@
-Set to not enable
+Do not enable
 .Fl fformat-extensions
 when compiling the kernel.
 Also disables all format checking.

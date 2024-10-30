@@ -1,6 +1,5 @@
 /*-
  * Test 0082:	Check conditional jump ranges.
- *
  */
 
 /* BPF program */

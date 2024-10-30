@@ -1,5 +1,5 @@
 --
--- SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+-- SPDX-License-Identifier: BSD-2-Clause
 --
 -- Copyright (c) 2015 Pedro Souza <pedrosouza@freebsd.org>
 -- All rights reserved.
@@ -24,8 +24,6 @@
 -- LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
 -- OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 -- SUCH DAMAGE.
---
--- $FreeBSD$
 --
 
 local core = require("core")
@@ -56,7 +54,7 @@ function color.isEnabled()
 	if c ~= nil then
 		return c:lower() ~= "no" and c ~= "0"
 	end
-	return not core.isSerialBoot()
+	return true
 end
 
 function color.escapefg(color_value)

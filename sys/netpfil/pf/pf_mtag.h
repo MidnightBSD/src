@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2001 Daniel Hartmeier
  * All rights reserved.
@@ -41,6 +41,7 @@
 #define	PF_PACKET_LOOPED		0x08
 #define	PF_FASTFWD_OURS_PRESENT		0x10
 #define	PF_REASSEMBLED			0x20
+#define	PF_DUPLICATED			0x40
 #define	PF_TAG_SYNCOOKIE_RECREATED	0x80
 
 struct pf_mtag {

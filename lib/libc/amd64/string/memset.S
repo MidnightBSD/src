@@ -24,10 +24,14 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <machine/asm.h>
+/*
+ * Note: this routine was written with kernel use in mind (read: no simd),
+ * it is only present in userspace as a temporary measure until something
+ * better gets imported.
+ */
 
 #define ALIGN_TEXT      .p2align 4,0x90 /* 16-byte alignment, nop filled */
 

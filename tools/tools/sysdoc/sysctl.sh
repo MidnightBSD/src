@@ -1,6 +1,5 @@
 #!/bin/sh
 #
-# $FreeBSD: src/tools/tools/sysdoc/sysctl.sh,v 1.1 2005/03/01 05:48:37 trhodes Exp $
 #
 # For each sysctl, repeat:
 #	if it has a short description

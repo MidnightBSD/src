@@ -38,7 +38,6 @@
 static char sccsid[] = "@(#)clnt_dg.c 1.19 89/03/16 Copyr 1988 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-
 /*
  * Implements a connectionless client side RPC.
  */
@@ -83,7 +82,7 @@ static void clnt_dg_close(CLIENT *);
 static void clnt_dg_destroy(CLIENT *);
 static int clnt_dg_soupcall(struct socket *so, void *arg, int waitflag);
 
-static struct clnt_ops clnt_dg_ops = {
+static const struct clnt_ops clnt_dg_ops = {
 	.cl_call =	clnt_dg_call,
 	.cl_abort =	clnt_dg_abort,
 	.cl_geterr =	clnt_dg_geterr,

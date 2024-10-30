@@ -37,7 +37,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_mac.h"
 #include "opt_posix.h"
 

@@ -22,12 +22,15 @@
  * PURPOSE.
  *
  * Copyright (c) 2001 Theo de Raadt
- * Copyright (c) 2014 The FreeBSD Foundation
+ * Copyright (c) 2014-2021 The FreeBSD Foundation
  * All rights reserved.
  *
  * Portions of this software were developed by John-Mark Gurney
  * under sponsorship of the FreeBSD Foundation and
  * Rubicon Communications, LLC (Netgate).
+ *
+ * Portions of this software were developed by Ararat River
+ * Consulting, LLC under sponsorship of the FreeBSD Foundation.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -70,32 +73,28 @@
 
 /* Some initial values */
 #define CRYPTO_DRIVERS_INITIAL	4
-#define CRYPTO_SW_SESSIONS	32
 
 /* Hash values */
 #define	NULL_HASH_LEN		16
-#define	MD5_HASH_LEN		16
 #define	SHA1_HASH_LEN		20
 #define	RIPEMD160_HASH_LEN	20
 #define	SHA2_224_HASH_LEN	28
 #define	SHA2_256_HASH_LEN	32
 #define	SHA2_384_HASH_LEN	48
 #define	SHA2_512_HASH_LEN	64
-#define	MD5_KPDK_HASH_LEN	16
-#define	SHA1_KPDK_HASH_LEN	20
 #define	AES_GMAC_HASH_LEN	16
 #define	POLY1305_HASH_LEN	16
 #define	AES_CBC_MAC_HASH_LEN	16
 /* Maximum hash algorithm result length */
 #define	HASH_MAX_LEN		SHA2_512_HASH_LEN /* Keep this updated */
 
-#define	MD5_BLOCK_LEN		64
 #define	SHA1_BLOCK_LEN		64
 #define	RIPEMD160_BLOCK_LEN	64
 #define	SHA2_224_BLOCK_LEN	64
 #define	SHA2_256_BLOCK_LEN	64
 #define	SHA2_384_BLOCK_LEN	128
 #define	SHA2_512_BLOCK_LEN	128
+#define	POLY1305_BLOCK_LEN	16
 
 /* HMAC values */
 #define	NULL_HMAC_BLOCK_LEN		64
@@ -115,50 +114,33 @@
 
 /* Encryption algorithm block sizes */
 #define	NULL_BLOCK_LEN		4	/* IPsec to maintain alignment */
-#define	DES_BLOCK_LEN		8
-#define	DES3_BLOCK_LEN		8
-#define	BLOWFISH_BLOCK_LEN	8
-#define	SKIPJACK_BLOCK_LEN	8
-#define	CAST128_BLOCK_LEN	8
 #define	RIJNDAEL128_BLOCK_LEN	16
 #define	AES_BLOCK_LEN		16
 #define	AES_ICM_BLOCK_LEN	1
-#define	ARC4_BLOCK_LEN		1
 #define	CAMELLIA_BLOCK_LEN	16
 #define	CHACHA20_NATIVE_BLOCK_LEN	64
 #define	EALG_MAX_BLOCK_LEN	CHACHA20_NATIVE_BLOCK_LEN /* Keep this updated */
 
 /* IV Lengths */
 
-#define	ARC4_IV_LEN		1
 #define	AES_GCM_IV_LEN		12
 #define	AES_CCM_IV_LEN		12
 #define	AES_XTS_IV_LEN		8
 #define	AES_XTS_ALPHA		0x87	/* GF(2^128) generator polynomial */
+#define	CHACHA20_POLY1305_IV_LEN	12
 
 /* Min and Max Encryption Key Sizes */
 #define	NULL_MIN_KEY		0
 #define	NULL_MAX_KEY		256 /* 2048 bits, max key */
-#define	DES_MIN_KEY		8
-#define	DES_MAX_KEY		DES_MIN_KEY
-#define	TRIPLE_DES_MIN_KEY	24
-#define	TRIPLE_DES_MAX_KEY	TRIPLE_DES_MIN_KEY
-#define	BLOWFISH_MIN_KEY	5
-#define	BLOWFISH_MAX_KEY	56 /* 448 bits, max key */
-#define	CAST_MIN_KEY		5
-#define	CAST_MAX_KEY		16
-#define	SKIPJACK_MIN_KEY	10
-#define	SKIPJACK_MAX_KEY	SKIPJACK_MIN_KEY
 #define	RIJNDAEL_MIN_KEY	16
 #define	RIJNDAEL_MAX_KEY	32
 #define	AES_MIN_KEY		RIJNDAEL_MIN_KEY
 #define	AES_MAX_KEY		RIJNDAEL_MAX_KEY
 #define	AES_XTS_MIN_KEY		(2 * AES_MIN_KEY)
 #define	AES_XTS_MAX_KEY		(2 * AES_MAX_KEY)
-#define	ARC4_MIN_KEY		1
-#define	ARC4_MAX_KEY		32
 #define	CAMELLIA_MIN_KEY	16
 #define	CAMELLIA_MAX_KEY	32
+#define	CHACHA20_POLY1305_KEY	32
 
 /* Maximum hash algorithm result length */
 #define	AALG_MAX_RESULT_LEN	64 /* Keep this updated */
@@ -188,11 +170,13 @@
 #define	CRYPTO_CAMELLIA_CBC	21
 #define	CRYPTO_AES_XTS		22
 #define	CRYPTO_AES_ICM		23 /* commonly known as CTR mode */
-#define	CRYPTO_AES_NIST_GMAC	24 /* cipher side */
+#define	CRYPTO_AES_NIST_GMAC	24 /* GMAC only */
 #define	CRYPTO_AES_NIST_GCM_16	25 /* 16 byte ICV */
+#ifdef _KERNEL
 #define	CRYPTO_AES_128_NIST_GMAC 26 /* auth side */
 #define	CRYPTO_AES_192_NIST_GMAC 27 /* auth side */
 #define	CRYPTO_AES_256_NIST_GMAC 28 /* auth side */
+#endif
 #define	CRYPTO_BLAKE2B		29 /* Blake2b hash */
 #define	CRYPTO_BLAKE2S		30 /* Blake2s hash */
 #define	CRYPTO_CHACHA20		31 /* Chacha20 stream cipher */
@@ -205,7 +189,8 @@
 #define	CRYPTO_POLY1305		38
 #define	CRYPTO_AES_CCM_CBC_MAC	39	/* auth side */
 #define	CRYPTO_AES_CCM_16	40	/* cipher side */
-#define	CRYPTO_ALGORITHM_MAX	40	/* Keep updated - see below */
+#define	CRYPTO_CHACHA20_POLY1305 41	/* combined AEAD cipher per RFC 8439 */
+#define	CRYPTO_ALGORITHM_MAX	41	/* Keep updated - see below */
 
 #define	CRYPTO_ALGO_VALID(x)	((x) >= CRYPTO_ALGORITHM_MIN && \
 				 (x) <= CRYPTO_ALGORITHM_MAX)
@@ -226,17 +211,26 @@
 #define CRYPTO_FLAG_HARDWARE	0x01000000	/* hardware accelerated */
 #define CRYPTO_FLAG_SOFTWARE	0x02000000	/* software implementation */
 
+/* Does the kernel support vmpage buffers on this platform? */
+#ifdef __powerpc__
+#define CRYPTO_MAY_HAVE_VMPAGE	1
+#else
+#define CRYPTO_MAY_HAVE_VMPAGE	( PMAP_HAS_DMAP )
+#endif
+/* Does the currently running system support vmpage buffers on this platform? */
+#define CRYPTO_HAS_VMPAGE	( PMAP_HAS_DMAP )
+
 /* NB: deprecated */
 struct session_op {
-	u_int32_t	cipher;		/* ie. CRYPTO_DES_CBC */
-	u_int32_t	mac;		/* ie. CRYPTO_MD5_HMAC */
+	uint32_t	cipher;		/* ie. CRYPTO_AES_CBC */
+	uint32_t	mac;		/* ie. CRYPTO_SHA2_256_HMAC */
 
-	u_int32_t	keylen;		/* cipher key */
-	c_caddr_t	key;
+	uint32_t	keylen;		/* cipher key */
+	const void	*key;
 	int		mackeylen;	/* mac key */
-	c_caddr_t	mackey;
+	const void	*mackey;
 
-  	u_int32_t	ses;		/* returns: session # */ 
+  	uint32_t	ses;		/* returns: session # */ 
 };
 
 /*
@@ -245,47 +239,49 @@ struct session_op {
  * "cryptop" (no underscore).
  */
 struct session2_op {
-	u_int32_t	cipher;		/* ie. CRYPTO_DES_CBC */
-	u_int32_t	mac;		/* ie. CRYPTO_MD5_HMAC */
+	uint32_t	cipher;		/* ie. CRYPTO_AES_CBC */
+	uint32_t	mac;		/* ie. CRYPTO_SHA2_256_HMAC */
 
-	u_int32_t	keylen;		/* cipher key */
-	c_caddr_t	key;
+	uint32_t	keylen;		/* cipher key */
+	const void	*key;
 	int		mackeylen;	/* mac key */
-	c_caddr_t	mackey;
+	const void	*mackey;
 
-  	u_int32_t	ses;		/* returns: session # */ 
+  	uint32_t	ses;		/* returns: session # */ 
 	int		crid;		/* driver id + flags (rw) */
-	int		pad[4];		/* for future expansion */
+	int		ivlen;		/* length of nonce/IV */
+	int		maclen;		/* length of MAC/tag */
+	int		pad[2];		/* for future expansion */
 };
 
 struct crypt_op {
-	u_int32_t	ses;
-	u_int16_t	op;		/* i.e. COP_ENCRYPT */
+	uint32_t	ses;
+	uint16_t	op;		/* i.e. COP_ENCRYPT */
 #define COP_ENCRYPT	1
 #define COP_DECRYPT	2
-	u_int16_t	flags;
+	uint16_t	flags;
 #define	COP_F_CIPHER_FIRST	0x0001	/* Cipher before MAC. */
 #define	COP_F_BATCH		0x0008	/* Batch op if possible */
 	u_int		len;
-	c_caddr_t	src;		/* become iov[] inside kernel */
-	caddr_t		dst;
-	caddr_t		mac;		/* must be big enough for chosen MAC */
-	c_caddr_t	iv;
+	const void	*src;		/* become iov[] inside kernel */
+	void		*dst;
+	void		*mac;		/* must be big enough for chosen MAC */
+	const void	*iv;
 };
 
 /* op and flags the same as crypt_op */
 struct crypt_aead {
-	u_int32_t	ses;
-	u_int16_t	op;		/* i.e. COP_ENCRYPT */
-	u_int16_t	flags;
+	uint32_t	ses;
+	uint16_t	op;		/* i.e. COP_ENCRYPT */
+	uint16_t	flags;
 	u_int		len;
 	u_int		aadlen;
 	u_int		ivlen;
-	c_caddr_t	src;		/* become iov[] inside kernel */
-	caddr_t		dst;
-	c_caddr_t	aad;		/* additional authenticated data */
-	caddr_t		tag;		/* must fit for chosen TAG length */
-	c_caddr_t	iv;
+	const void	*src;		/* become iov[] inside kernel */
+	void		*dst;
+	const void	*aad;		/* additional authenticated data */
+	void		*tag;		/* must fit for chosen TAG length */
+	const void	*iv;
 };
 
 /*
@@ -300,7 +296,7 @@ struct crypt_find_op {
 
 /* bignum parameter, in packed bytes, ... */
 struct crparam {
-	caddr_t		crp_p;
+	void		*crp_p;
 	u_int		crp_nbits;
 };
 
@@ -328,20 +324,11 @@ struct crypt_kop {
 #define CRF_DSA_VERIFY		(1 << CRK_DSA_VERIFY)
 #define CRF_DH_COMPUTE_KEY	(1 << CRK_DH_COMPUTE_KEY)
 
-/*
- * done against open of /dev/crypto, to get a cloned descriptor.
- * Please use F_SETFD against the cloned descriptor.
- */
-#define	CRIOGET		_IOWR('c', 100, u_int32_t)
-#define	CRIOASYMFEAT	CIOCASYMFEAT
-#define	CRIOFINDDEV	CIOCFINDDEV
-
-/* the following are done against the cloned descriptor */
 #define	CIOCGSESSION	_IOWR('c', 101, struct session_op)
-#define	CIOCFSESSION	_IOW('c', 102, u_int32_t)
+#define	CIOCFSESSION	_IOW('c', 102, uint32_t)
 #define CIOCCRYPT	_IOWR('c', 103, struct crypt_op)
 #define CIOCKEY		_IOWR('c', 104, struct crypt_kop)
-#define CIOCASYMFEAT	_IOR('c', 105, u_int32_t)
+#define CIOCASYMFEAT	_IOR('c', 105, uint32_t)
 #define	CIOCGSESSION2	_IOWR('c', 106, struct session2_op)
 #define	CIOCKEY2	_IOWR('c', 107, struct crypt_kop)
 #define	CIOCFINDDEV	_IOWR('c', 108, struct crypt_find_op)
@@ -360,6 +347,13 @@ struct cryptostats {
 
 #ifdef _KERNEL
 
+/*
+ * Return values for cryptodev_probesession methods.
+ */
+#define	CRYPTODEV_PROBE_HARDWARE	(-100)
+#define	CRYPTODEV_PROBE_ACCEL_SOFTWARE	(-200)
+#define	CRYPTODEV_PROBE_SOFTWARE	(-500)
+
 #if 0
 #define CRYPTDEB(s, ...) do {						\
 	printf("%s:%d: " s "\n", __FILE__, __LINE__, ## __VA_ARGS__);	\
@@ -368,40 +362,85 @@ struct cryptostats {
 #define CRYPTDEB(...)	do { } while (0)
 #endif
 
-/* Standard initialization structure beginning */
-struct cryptoini {
-	int		cri_alg;	/* Algorithm to use */
-	int		cri_klen;	/* Key length, in bits */
-	int		cri_mlen;	/* Number of bytes we want from the
-					   entire hash. 0 means all. */
-	caddr_t		cri_key;	/* key to use */
-	u_int8_t	cri_iv[EALG_MAX_BLOCK_LEN];	/* IV to use */
-	struct cryptoini *cri_next;
+struct crypto_session_params {
+	int		csp_mode;	/* Type of operations to perform. */
+
+#define	CSP_MODE_NONE		0
+#define	CSP_MODE_COMPRESS	1	/* Compression/decompression. */
+#define	CSP_MODE_CIPHER		2	/* Encrypt/decrypt. */
+#define	CSP_MODE_DIGEST		3	/* Compute/verify digest. */
+#define	CSP_MODE_AEAD		4	/* Combined auth/encryption. */
+#define	CSP_MODE_ETA		5	/* IPsec style encrypt-then-auth */
+
+	int		csp_flags;
+
+#define	CSP_F_SEPARATE_OUTPUT	0x0001	/* Requests can use separate output */
+#define	CSP_F_SEPARATE_AAD	0x0002	/* Requests can use separate AAD */
+#define CSP_F_ESN		0x0004  /* Requests can use seperate ESN field */ 
+
+	int		csp_ivlen;	/* IV length in bytes. */
+
+	int		csp_cipher_alg;
+	int		csp_cipher_klen; /* Key length in bytes. */
+	const void	*csp_cipher_key;
+
+	int		csp_auth_alg;
+	int		csp_auth_klen;	/* Key length in bytes. */
+	const void	*csp_auth_key;
+	int		csp_auth_mlen;	/* Number of digest bytes to use.
+					   0 means all. */
 };
 
-/* Describe boundaries of a single crypto operation */
-struct cryptodesc {
-	int		crd_skip;	/* How many bytes to ignore from start */
-	int		crd_len;	/* How many bytes to process */
-	int		crd_inject;	/* Where to inject results, if applicable */
-	int		crd_flags;
+enum crypto_buffer_type {
+	CRYPTO_BUF_NONE = 0,
+	CRYPTO_BUF_CONTIG,
+	CRYPTO_BUF_UIO,
+	CRYPTO_BUF_MBUF,
+	CRYPTO_BUF_VMPAGE,
+	CRYPTO_BUF_SINGLE_MBUF,
+	CRYPTO_BUF_LAST = CRYPTO_BUF_SINGLE_MBUF
+};
 
-#define	CRD_F_ENCRYPT		0x01	/* Set when doing encryption */
-#define	CRD_F_IV_PRESENT	0x02	/* When encrypting, IV is already in
-					   place, so don't copy. */
-#define	CRD_F_IV_EXPLICIT	0x04	/* IV explicitly provided */
-#define	CRD_F_DSA_SHA_NEEDED	0x08	/* Compute SHA-1 of buffer for DSA */
-#define	CRD_F_COMP		0x0f    /* Set when doing compression */
-#define	CRD_F_KEY_EXPLICIT	0x10	/* Key explicitly provided */
+/*
+ * Description of a data buffer for a request.  Requests can either
+ * have a single buffer that is modified in place or separate input
+ * and output buffers.
+ */
+struct crypto_buffer {
+	union {
+		struct {
+			char	*cb_buf;
+			int	cb_buf_len;
+		};
+		struct mbuf *cb_mbuf;
+		struct {
+			vm_page_t *cb_vm_page;
+			int cb_vm_page_len;
+			int cb_vm_page_offset;
+		};
+		struct uio *cb_uio;
+	};
+	enum crypto_buffer_type cb_type;
+};
 
-	struct cryptoini	CRD_INI; /* Initialization/context data */
-#define	crd_esn		CRD_INI.cri_esn
-#define	crd_iv		CRD_INI.cri_iv
-#define	crd_key		CRD_INI.cri_key
-#define	crd_alg		CRD_INI.cri_alg
-#define	crd_klen	CRD_INI.cri_klen
-
-	struct cryptodesc *crd_next;
+/*
+ * A cursor is used to iterate through a crypto request data buffer.
+ */
+struct crypto_buffer_cursor {
+	union {
+		char *cc_buf;
+		struct mbuf *cc_mbuf;
+		struct iovec *cc_iov;
+		vm_page_t *cc_vmpage;
+	};
+	/* Optional bytes of valid data remaining */
+	int cc_buf_len;
+	/* 
+	 * Optional offset within the current buffer segment where
+	 * valid data begins
+	 */
+	size_t cc_offset;
+	enum crypto_buffer_type cc_type;
 };
 
 /* Structure describing complete operation */
@@ -411,7 +450,6 @@ struct cryptop {
 	struct task	crp_task;
 
 	crypto_session_t crp_session;	/* Session */
-	int		crp_ilen;	/* Input data total length */
 	int		crp_olen;	/* Result total length */
 
 	int		crp_etype;	/*
@@ -424,10 +462,9 @@ struct cryptop {
 					 * should always check and use the new
 					 * value on future requests.
 					 */
+#define	crp_startcopy	crp_flags
 	int		crp_flags;
 
-#define	CRYPTO_F_IMBUF		0x0001	/* Input/output are mbuf chains */
-#define	CRYPTO_F_IOV		0x0002	/* Input/output are uio */
 #define	CRYPTO_F_BATCH		0x0008	/* Batch op if possible */
 #define	CRYPTO_F_CBIMM		0x0010	/* Do callback immediately */
 #define	CRYPTO_F_DONE		0x0020	/* Operation completed */
@@ -440,14 +477,35 @@ struct cryptop {
 					 * order there are submitted. Applied only
 					 * if CRYPTO_F_ASYNC flags is set
 					 */
+#define	CRYPTO_F_IV_SEPARATE	0x0200	/* Use crp_iv[] as IV. */
 
-	union {
-		caddr_t		crp_buf;	/* Data to be processed */
-		struct mbuf	*crp_mbuf;
-		struct uio	*crp_uio;
-	};
-	void *		crp_opaque;	/* Opaque pointer, passed along */
-	struct cryptodesc *crp_desc;	/* Linked list of processing descriptors */
+	int		crp_op;
+
+	struct crypto_buffer crp_buf;
+	struct crypto_buffer crp_obuf;
+
+	void		*crp_aad;	/* AAD buffer. */
+	int		crp_aad_start;	/* Location of AAD. */
+	int		crp_aad_length;	/* 0 => no AAD. */
+	uint8_t		crp_esn[4];	/* high-order ESN */
+
+	int		crp_iv_start;	/* Location of IV.  IV length is from
+					 * the session.
+					 */
+	int		crp_payload_start; /* Location of ciphertext. */
+	int		crp_payload_output_start;
+	int		crp_payload_length;
+	int		crp_digest_start; /* Location of MAC/tag.  Length is
+					   * from the session.
+					   */
+
+	uint8_t		crp_iv[EALG_MAX_BLOCK_LEN]; /* IV if IV_SEPARATE. */
+
+	const void	*crp_cipher_key; /* New cipher key if non-NULL. */
+	const void	*crp_auth_key;	/* New auth key if non-NULL. */
+#define	crp_endcopy	crp_opaque
+
+	void		*crp_opaque;	/* Opaque pointer, passed along */
 
 	int (*crp_callback)(struct cryptop *); /* Callback function */
 
@@ -459,19 +517,124 @@ struct cryptop {
 					 */
 };
 
-#define	CRYPTOP_ASYNC(crp) \
+static __inline void
+_crypto_use_buf(struct crypto_buffer *cb, void *buf, int len)
+{
+	cb->cb_buf = buf;
+	cb->cb_buf_len = len;
+	cb->cb_type = CRYPTO_BUF_CONTIG;
+}
+
+static __inline void
+_crypto_use_mbuf(struct crypto_buffer *cb, struct mbuf *m)
+{
+	cb->cb_mbuf = m;
+	cb->cb_type = CRYPTO_BUF_MBUF;
+}
+
+static __inline void
+_crypto_use_single_mbuf(struct crypto_buffer *cb, struct mbuf *m)
+{
+	cb->cb_mbuf = m;
+	cb->cb_type = CRYPTO_BUF_SINGLE_MBUF;
+}
+
+static __inline void
+_crypto_use_vmpage(struct crypto_buffer *cb, vm_page_t *pages, int len,
+    int offset)
+{
+	cb->cb_vm_page = pages;
+	cb->cb_vm_page_len = len;
+	cb->cb_vm_page_offset = offset;
+	cb->cb_type = CRYPTO_BUF_VMPAGE;
+}
+
+static __inline void
+_crypto_use_uio(struct crypto_buffer *cb, struct uio *uio)
+{
+	cb->cb_uio = uio;
+	cb->cb_type = CRYPTO_BUF_UIO;
+}
+
+static __inline void
+crypto_use_buf(struct cryptop *crp, void *buf, int len)
+{
+	_crypto_use_buf(&crp->crp_buf, buf, len);
+}
+
+static __inline void
+crypto_use_mbuf(struct cryptop *crp, struct mbuf *m)
+{
+	_crypto_use_mbuf(&crp->crp_buf, m);
+}
+
+static __inline void
+crypto_use_single_mbuf(struct cryptop *crp, struct mbuf *m)
+{
+	_crypto_use_single_mbuf(&crp->crp_buf, m);
+}
+
+static __inline void
+crypto_use_vmpage(struct cryptop *crp, vm_page_t *pages, int len, int offset)
+{
+	_crypto_use_vmpage(&crp->crp_buf, pages, len, offset);
+}
+
+static __inline void
+crypto_use_uio(struct cryptop *crp, struct uio *uio)
+{
+	_crypto_use_uio(&crp->crp_buf, uio);
+}
+
+static __inline void
+crypto_use_output_buf(struct cryptop *crp, void *buf, int len)
+{
+	_crypto_use_buf(&crp->crp_obuf, buf, len);
+}
+
+static __inline void
+crypto_use_output_mbuf(struct cryptop *crp, struct mbuf *m)
+{
+	_crypto_use_mbuf(&crp->crp_obuf, m);
+}
+
+static __inline void
+crypto_use_output_single_mbuf(struct cryptop *crp, struct mbuf *m)
+{
+	_crypto_use_single_mbuf(&crp->crp_obuf, m);
+}
+
+static __inline void
+crypto_use_output_vmpage(struct cryptop *crp, vm_page_t *pages, int len,
+    int offset)
+{
+	_crypto_use_vmpage(&crp->crp_obuf, pages, len, offset);
+}
+
+static __inline void
+crypto_use_output_uio(struct cryptop *crp, struct uio *uio)
+{
+	_crypto_use_uio(&crp->crp_obuf, uio);
+}
+
+#define	CRYPTOP_ASYNC(crp)			\
 	(((crp)->crp_flags & CRYPTO_F_ASYNC) && \
 	crypto_ses2caps((crp)->crp_session) & CRYPTOCAP_F_SYNC)
 #define	CRYPTOP_ASYNC_KEEPORDER(crp) \
 	(CRYPTOP_ASYNC(crp) && \
 	(crp)->crp_flags & CRYPTO_F_ASYNC_KEEPORDER)
+#define	CRYPTO_HAS_OUTPUT_BUFFER(crp)					\
+	((crp)->crp_obuf.cb_type != CRYPTO_BUF_NONE)
 
-#define	CRYPTO_BUF_CONTIG	0x0
-#define	CRYPTO_BUF_IOV		0x1
-#define	CRYPTO_BUF_MBUF		0x2
-
-#define	CRYPTO_OP_DECRYPT	0x0
-#define	CRYPTO_OP_ENCRYPT	0x1
+/* Flags in crp_op. */
+#define	CRYPTO_OP_DECRYPT		0x0
+#define	CRYPTO_OP_ENCRYPT		0x1
+#define	CRYPTO_OP_IS_ENCRYPT(op)	((op) & CRYPTO_OP_ENCRYPT)
+#define	CRYPTO_OP_COMPUTE_DIGEST	0x0
+#define	CRYPTO_OP_VERIFY_DIGEST		0x2
+#define	CRYPTO_OP_DECOMPRESS		CRYPTO_OP_DECRYPT
+#define	CRYPTO_OP_COMPRESS		CRYPTO_OP_ENCRYPT
+#define	CRYPTO_OP_IS_COMPRESS(op)	((op) & CRYPTO_OP_COMPRESS)
 
 /*
  * Hints passed to process methods.
@@ -486,47 +649,58 @@ struct cryptkop {
 	u_short		krp_iparams;	/* # of input parameters */
 	u_short		krp_oparams;	/* # of output parameters */
 	u_int		krp_crid;	/* desired device, etc. */
-	u_int32_t	krp_hid;
+	uint32_t	krp_hid;	/* device used */
 	struct crparam	krp_param[CRK_MAXPARAM];	/* kvm */
-	int		(*krp_callback)(struct cryptkop *);
+	void		(*krp_callback)(struct cryptkop *);
+	struct cryptocap *krp_cap;
 };
 
 uint32_t crypto_ses2hid(crypto_session_t crypto_session);
 uint32_t crypto_ses2caps(crypto_session_t crypto_session);
-void *crypto_get_driver_session(crypto_session_t crypto_session);
+void	*crypto_get_driver_session(crypto_session_t crypto_session);
+const struct crypto_session_params *crypto_get_params(
+    crypto_session_t crypto_session);
+struct auth_hash *crypto_auth_hash(const struct crypto_session_params *csp);
+struct enc_xform *crypto_cipher(const struct crypto_session_params *csp);
 
 MALLOC_DECLARE(M_CRYPTO_DATA);
 
-extern	int crypto_newsession(crypto_session_t *cses, struct cryptoini *cri, int hard);
-extern	void crypto_freesession(crypto_session_t cses);
+int	crypto_newsession(crypto_session_t *cses,
+    const struct crypto_session_params *params, int crid);
+void	crypto_freesession(crypto_session_t cses);
 #define	CRYPTOCAP_F_HARDWARE	CRYPTO_FLAG_HARDWARE
 #define	CRYPTOCAP_F_SOFTWARE	CRYPTO_FLAG_SOFTWARE
 #define	CRYPTOCAP_F_SYNC	0x04000000	/* operates synchronously */
-extern	int32_t crypto_get_driverid(device_t dev, size_t session_size,
-    int flags);
-extern	int crypto_find_driver(const char *);
-extern	device_t crypto_find_device_byhid(int hid);
-extern	int crypto_getcaps(int hid);
-extern	int crypto_register(u_int32_t driverid, int alg, u_int16_t maxoplen,
-	    u_int32_t flags);
-extern	int crypto_kregister(u_int32_t, int, u_int32_t);
-extern	int crypto_unregister(u_int32_t driverid, int alg);
-extern	int crypto_unregister_all(u_int32_t driverid);
-extern	int crypto_dispatch(struct cryptop *crp);
-extern	int crypto_kdispatch(struct cryptkop *);
+#define	CRYPTOCAP_F_ACCEL_SOFTWARE 0x08000000
+int32_t	crypto_get_driverid(device_t dev, size_t session_size, int flags);
+int	crypto_find_driver(const char *);
+device_t crypto_find_device_byhid(int hid);
+int	crypto_getcaps(int hid);
+int	crypto_kregister(uint32_t, int, uint32_t);
+int	crypto_unregister_all(uint32_t driverid);
+int	crypto_dispatch(struct cryptop *crp);
+int	crypto_kdispatch(struct cryptkop *);
 #define	CRYPTO_SYMQ	0x1
 #define	CRYPTO_ASYMQ	0x2
-extern	int crypto_unblock(u_int32_t, int);
-extern	void crypto_done(struct cryptop *crp);
-extern	void crypto_kdone(struct cryptkop *);
-extern	int crypto_getfeat(int *);
+int	crypto_unblock(uint32_t, int);
+void	crypto_done(struct cryptop *crp);
+void	crypto_kdone(struct cryptkop *);
+int	crypto_getfeat(int *);
 
-extern	void crypto_freereq(struct cryptop *crp);
-extern	struct cryptop *crypto_getreq(int num);
+struct cryptop *crypto_clonereq(struct cryptop *crp, crypto_session_t cses,
+    int how);
+void	crypto_destroyreq(struct cryptop *crp);
+void	crypto_initreq(struct cryptop *crp, crypto_session_t cses);
+void	crypto_freereq(struct cryptop *crp);
+struct cryptop *crypto_getreq(crypto_session_t cses, int how);
 
 extern	int crypto_usercrypto;		/* userland may do crypto requests */
 extern	int crypto_userasymcrypto;	/* userland may do asym crypto reqs */
 extern	int crypto_devallowsoft;	/* only use hardware crypto */
+
+#ifdef SYSCTL_DECL
+SYSCTL_DECL(_kern_crypto);
+#endif
 
 /* Helper routines for drivers to initialize auth contexts for HMAC. */
 struct auth_hash;
@@ -539,29 +713,84 @@ void	hmac_init_opad(const struct auth_hash *axf, const char *key, int klen,
 /*
  * Crypto-related utility routines used mainly by drivers.
  *
- * XXX these don't really belong here; but for now they're
- *     kept apart from the rest of the system.
+ * Similar to m_copyback/data, *_copyback copy data from the 'src'
+ * buffer into the crypto request's data buffer while *_copydata copy
+ * data from the crypto request's data buffer into the the 'dst'
+ * buffer.
  */
-struct uio;
-extern	void cuio_copydata(struct uio* uio, int off, int len, caddr_t cp);
-extern	void cuio_copyback(struct uio* uio, int off, int len, c_caddr_t cp);
-extern	int cuio_getptr(struct uio *uio, int loc, int *off);
-extern	int cuio_apply(struct uio *uio, int off, int len,
-	    int (*f)(void *, void *, u_int), void *arg);
+void	crypto_copyback(struct cryptop *crp, int off, int size,
+	    const void *src);
+void	crypto_copydata(struct cryptop *crp, int off, int size, void *dst);
+int	crypto_apply(struct cryptop *crp, int off, int len,
+	    int (*f)(void *, const void *, u_int), void *arg);
+void	*crypto_contiguous_subsegment(struct cryptop *crp, size_t skip,
+	    size_t len);
 
-struct mbuf;
-struct iovec;
-extern	int crypto_mbuftoiov(struct mbuf *mbuf, struct iovec **iovptr,
-	    int *cnt, int *allocated);
+int	crypto_apply_buf(struct crypto_buffer *cb, int off, int len,
+	    int (*f)(void *, const void *, u_int), void *arg);
+void	*crypto_buffer_contiguous_subsegment(struct crypto_buffer *cb,
+	    size_t skip, size_t len);
+size_t	crypto_buffer_len(struct crypto_buffer *cb);
+void	crypto_cursor_init(struct crypto_buffer_cursor *cc,
+	    const struct crypto_buffer *cb);
+void	crypto_cursor_advance(struct crypto_buffer_cursor *cc, size_t amount);
+void	*crypto_cursor_segment(struct crypto_buffer_cursor *cc, size_t *len);
+void	*crypto_cursor_segbase(struct crypto_buffer_cursor *cc);
+size_t	crypto_cursor_seglen(struct crypto_buffer_cursor *cc);
+void	crypto_cursor_copyback(struct crypto_buffer_cursor *cc, int size,
+	    const void *vsrc);
+void	crypto_cursor_copydata(struct crypto_buffer_cursor *cc, int size,
+	    void *vdst);
+void	crypto_cursor_copydata_noadv(struct crypto_buffer_cursor *cc, int size,
+	    void *vdst);
 
-extern	void crypto_copyback(int flags, caddr_t buf, int off, int size,
-	    c_caddr_t in);
-extern	void crypto_copydata(int flags, caddr_t buf, int off, int size,
-	    caddr_t out);
-extern	int crypto_apply(int flags, caddr_t buf, int off, int len,
-	    int (*f)(void *, void *, u_int), void *arg);
+static __inline void
+crypto_cursor_copy(const struct crypto_buffer_cursor *fromc,
+    struct crypto_buffer_cursor *toc)
+{
+	memcpy(toc, fromc, sizeof(*toc));
+}
 
-extern void *crypto_contiguous_subsegment(int, void *, size_t, size_t);
+static __inline void
+crypto_read_iv(struct cryptop *crp, void *iv)
+{
+	const struct crypto_session_params *csp;
+
+	csp = crypto_get_params(crp->crp_session);
+	if (crp->crp_flags & CRYPTO_F_IV_SEPARATE)
+		memcpy(iv, crp->crp_iv, csp->csp_ivlen);
+	else
+		crypto_copydata(crp, crp->crp_iv_start, csp->csp_ivlen, iv);
+}
+
+static __inline size_t
+ccm_max_payload_length(const struct crypto_session_params *csp)
+{
+	/* RFC 3160 */
+	const u_int L = 15 - csp->csp_ivlen;
+
+	switch (L) {
+	case 2:
+		return (0xffff);
+	case 3:
+		return (0xffffff);
+#ifdef __LP64__
+	case 4:
+		return (0xffffffff);
+	case 5:
+		return (0xffffffffff);
+	case 6:
+		return (0xffffffffffff);
+	case 7:
+		return (0xffffffffffffff);
+	default:
+		return (0xffffffffffffffff);
+#else
+	default:
+		return (0xffffffff);
+#endif
+	}
+}
 
 #endif /* _KERNEL */
 #endif /* _CRYPTO_CRYPTO_H_ */

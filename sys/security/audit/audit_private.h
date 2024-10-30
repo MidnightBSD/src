@@ -33,7 +33,6 @@
  * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 /*
@@ -471,6 +470,8 @@ au_event_t	 audit_semsys_to_event(int which);
 au_event_t	 audit_shmsys_to_event(int which);
 void		 audit_canon_path(struct thread *td, int dirfd, char *path,
 		    char *cpath);
+void		 audit_canon_path_vp(struct thread *td, struct vnode *rdir,
+		    struct vnode *cdir, char *path, char *cpath);
 au_event_t	 auditon_command_event(int cmd);
 
 /*

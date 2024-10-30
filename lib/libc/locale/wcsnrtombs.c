@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright 2013 Garrett D'Amore <garrett@damore.org>
  * Copyright 2010 Nexenta Systems, Inc.  All rights reserved.
@@ -7,7 +7,7 @@
  * All rights reserved.
  *
  * Copyright (c) 2011 The FreeBSD Foundation
- * All rights reserved.
+ *
  * Portions of this software were developed by David Chisnall
  * under sponsorship from the FreeBSD Foundation.
  *
@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
@@ -47,7 +46,7 @@ wcsnrtombs_l(char * __restrict dst, const wchar_t ** __restrict src, size_t nwc,
 {
 	FIX_LOCALE(locale);
 	if (ps == NULL)
-		ps = &locale->wcsnrtombs;
+		ps = &(XLOCALE_CTYPE(locale)->wcsnrtombs);
 	return (XLOCALE_CTYPE(locale)->__wcsnrtombs(dst, src, nwc, len, ps));
 }
 size_t

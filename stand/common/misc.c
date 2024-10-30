@@ -25,8 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
-
 #include <string.h>
 #include <stand.h>
 #include <bootstrap.h>
@@ -170,52 +168,56 @@ alloc_pread(readin_handle_t fd, off_t off, size_t len)
 }
 
 /*
- * Display a region in traditional hexdump format.
+ * mount new rootfs and unmount old, set "currdev" environment variable.
  */
-void
-hexdump(caddr_t region, size_t len)
+int mount_currdev(struct env_var *ev, int flags, const void *value)
 {
-    caddr_t	line;
-    int		x, c;
-    char	lbuf[80];
-#define emit(fmt, args...)	{sprintf(lbuf, fmt , ## args); pager_output(lbuf);}
+	int rv;
 
-    pager_open();
-    for (line = region; line < (region + len); line += 16) {
-	emit("%08lx  ", (long) line);
-	
-	for (x = 0; x < 16; x++) {
-	    if ((line + x) < (region + len)) {
-		emit("%02x ", *(uint8_t *)(line + x));
-	    } else {
-		emit("-- ");
-	    }
-	    if (x == 7)
-		emit(" ");
+	/* mount new rootfs */
+	rv = mount(value, "/", 0, NULL);
+	if (rv == 0) {
+		/*
+		 * Note we unmount any previously mounted fs only after
+		 * successfully mounting the new because we do not want to
+		 * end up with unmounted rootfs.
+		 */
+		if (ev->ev_value != NULL)
+			unmount(ev->ev_value, 0);
+		env_setenv(ev->ev_name, flags | EV_NOHOOK, value, NULL, NULL);
 	}
-	emit(" |");
-	for (x = 0; x < 16; x++) {
-	    if ((line + x) < (region + len)) {
-		c = *(uint8_t *)(line + x);
-		if ((c < ' ') || (c > '~'))	/* !isprint(c) */
-		    c = '.';
-		emit("%c", c);
-	    } else {
-		emit(" ");
-	    }
-	}
-	emit("|\n");
-    }
-    pager_close();
+	return (rv);
 }
 
-void
-dev_cleanup(void)
+/*
+ * Set currdev to suit the value being supplied in (value)
+ */
+int
+gen_setcurrdev(struct env_var *ev, int flags, const void *value)
 {
-    int		i;
+	struct devdesc *ncurr;
+	int rv;
 
-    /* Call cleanup routines */
-    for (i = 0; devsw[i] != NULL; ++i)
-	if (devsw[i]->dv_cleanup != NULL)
-	    (devsw[i]->dv_cleanup)();
+	if ((rv = devparse(&ncurr, value, NULL)) != 0)
+		return (rv);
+	free(ncurr);
+
+	return (mount_currdev(ev, flags, value));
+}
+
+/*
+ * Wrapper to set currdev and loaddev at the same time.
+ */
+void
+set_currdev(const char *devname)
+{
+
+	env_setenv("currdev", EV_VOLATILE, devname, gen_setcurrdev,
+	    env_nounset);
+	/*
+	 * Don't execute hook here; the loaddev hook makes it immutable
+	 * once we've determined what the proper currdev is.
+	 */
+	env_setenv("loaddev", EV_VOLATILE | EV_NOHOOK, devname, env_noset,
+	    env_nounset);
 }

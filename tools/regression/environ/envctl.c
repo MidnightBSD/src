@@ -33,8 +33,6 @@
 
 
 #include <sys/cdefs.h>
-
-
 extern char **environ;
 
 

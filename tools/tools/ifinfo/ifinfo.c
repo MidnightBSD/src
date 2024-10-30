@@ -12,7 +12,7 @@
  * no representations about the suitability of this software for any
  * purpose.  It is provided "as is" without express or implied
  * warranty.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY M.I.T. ``AS IS''.  M.I.T. DISCLAIMS
  * ALL EXPRESS OR IMPLIED WARRANTIES WITH REGARD TO THIS SOFTWARE,
  * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
@@ -25,7 +25,6 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 #include <sys/types.h>
 #include <sys/socket.h>		/* for PF_LINK */
@@ -48,7 +47,6 @@
 
 static void printit(const struct ifmibdata *, const char *);
 static const char *iftype(int);
-static const char *ifphys(int, int);
 static int isit(int, char **, const char *);
 static printfcn findlink(int);
 
@@ -82,7 +80,7 @@ main(int argc, char **argv)
 			usage(argv[0]);
 		}
 	}
-	
+
 	retval = 1;
 
 	name[0] = CTL_NET;
@@ -131,15 +129,15 @@ main(int argc, char **argv)
 		if (dolink && (pf = findlink(ifmd.ifmd_data.ifi_type))) {
 			name[5] = IFDATA_LINKSPECIFIC;
 			if (sysctl(name, 6, 0, &linkmiblen, 0, 0) < 0)
-				err(EX_OSERR, 
+				err(EX_OSERR,
 				    "sysctl(net.link.ifdata.%d.linkspec) size",
 				    i);
 			linkmib = malloc(linkmiblen);
 			if (!linkmib)
-				err(EX_OSERR, "malloc(%lu)", 
+				err(EX_OSERR, "malloc(%lu)",
 				    (u_long)linkmiblen);
 			if (sysctl(name, 6, linkmib, &linkmiblen, 0, 0) < 0)
-				err(EX_OSERR, 
+				err(EX_OSERR,
 				    "sysctl(net.link.ifdata.%d.linkspec)",
 				    i);
 			pf(linkmib, linkmiblen);
@@ -164,15 +162,13 @@ printit(const struct ifmibdata *ifmd, const char *dname)
 	printf("\tsend queue max length: %d\n", ifmd->ifmd_snd_maxlen);
 	printf("\tsend queue drops: %d\n", ifmd->ifmd_snd_drops);
 	printf("\ttype: %s\n", iftype(ifmd->ifmd_data.ifi_type));
-	printf("\tphysical: %s\n", ifphys(ifmd->ifmd_data.ifi_type,
-					  ifmd->ifmd_data.ifi_physical));
 	printf("\taddress length: %d\n", ifmd->ifmd_data.ifi_addrlen);
 	printf("\theader length: %d\n", ifmd->ifmd_data.ifi_hdrlen);
 	printf("\tlink state: %u\n", ifmd->ifmd_data.ifi_link_state);
 	printf("\tvhid: %u\n", ifmd->ifmd_data.ifi_vhid);
 	printf("\tdatalen: %u\n", ifmd->ifmd_data.ifi_datalen);
-	printf("\tmtu: %lu\n", ifmd->ifmd_data.ifi_mtu);
-	printf("\tmetric: %lu\n", ifmd->ifmd_data.ifi_metric);
+	printf("\tmtu: %u\n", ifmd->ifmd_data.ifi_mtu);
+	printf("\tmetric: %u\n", ifmd->ifmd_data.ifi_metric);
 	printf("\tline rate: %lu bit/s\n", ifmd->ifmd_data.ifi_baudrate);
 	printf("\tpackets received: %lu\n", ifmd->ifmd_data.ifi_ipackets);
 	printf("\tinput errors: %lu\n", ifmd->ifmd_data.ifi_ierrors);
@@ -184,7 +180,7 @@ printit(const struct ifmibdata *ifmd, const char *dname)
 	printf("\tmulticasts received: %lu\n", ifmd->ifmd_data.ifi_imcasts);
 	printf("\tmulticasts transmitted: %lu\n", ifmd->ifmd_data.ifi_omcasts);
 	printf("\tinput queue drops: %lu\n", ifmd->ifmd_data.ifi_iqdrops);
-	printf("\tpackets for unknown protocol: %lu\n", 
+	printf("\tpackets for unknown protocol: %lu\n",
 	       ifmd->ifmd_data.ifi_noproto);
 	printf("\tHW offload capabilities: 0x%lx\n",
 	    ifmd->ifmd_data.ifi_hwassist);
@@ -192,7 +188,7 @@ printit(const struct ifmibdata *ifmd, const char *dname)
 	    ifmd->ifmd_data.ifi_epoch);
 #ifdef notdef
 	printf("\treceive timing: %lu usec\n", ifmd->ifmd_data.ifi_recvtiming);
-	printf("\ttransmit timing: %lu usec\n", 
+	printf("\ttransmit timing: %lu usec\n",
 	       ifmd->ifmd_data.ifi_xmittiming);
 #endif
 }
@@ -257,7 +253,7 @@ static const char *const if_types[] = {
 	"IPv6-to-IPv4 TCP relay capturing interface",
 	"6to4 tunnel interface"
 };
-#define	NIFTYPES ((sizeof if_types)/(sizeof if_types[0]))
+#define	NIFTYPES (int)((sizeof if_types)/(sizeof if_types[0]))
 
 static const char *
 iftype(int type)
@@ -270,15 +266,6 @@ iftype(int type)
 	}
 
 	return if_types[type];
-}
-
-static const char *
-ifphys(int type, int phys)
-{
-	static char buf[256];
-
-	sprintf(buf, "unknown physical %d", phys);
-	return buf;
 }
 
 static int

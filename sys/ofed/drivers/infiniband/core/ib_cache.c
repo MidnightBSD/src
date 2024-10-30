@@ -36,7 +36,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <linux/module.h>
 #include <linux/errno.h>
 #include <linux/slab.h>
@@ -44,6 +43,7 @@
 #include <linux/netdevice.h>
 #include <linux/in6.h>
 
+#include <rdma/ib_addr.h>
 #include <rdma/ib_cache.h>
 
 #include "core_priv.h"
@@ -181,7 +181,7 @@ static int write_gid(struct ib_device *ib_dev, u8 port,
 	__releases(&table->rwlock) __acquires(&table->rwlock)
 {
 	int ret = 0;
-	struct net_device *old_net_dev;
+	struct ifnet *old_net_dev;
 	enum ib_gid_type old_gid_type;
 
 	/* in rdma_cap_roce_gid_table, this funciton should be protected by a
@@ -309,7 +309,7 @@ static int find_gid(struct ib_gid_table *table, const union ib_gid *gid,
 	return found;
 }
 
-static void addrconf_ifid_eui48(u8 *eui, struct net_device *dev)
+static void addrconf_ifid_eui48(u8 *eui, struct ifnet *dev)
 {
 	if (dev->if_addrlen != ETH_ALEN)
 		return;
@@ -323,7 +323,7 @@ static void addrconf_ifid_eui48(u8 *eui, struct net_device *dev)
 	eui[0] ^= 2;
 }
 
-static void make_default_gid(struct  net_device *dev, union ib_gid *gid)
+static void make_default_gid(struct ifnet *dev, union ib_gid *gid)
 {
 	gid->global.subnet_prefix = cpu_to_be64(0xfe80000000000000LL);
 	addrconf_ifid_eui48(&gid->raw[8], dev);
@@ -398,7 +398,7 @@ out_unlock:
 }
 
 int ib_cache_gid_del_all_netdev_gids(struct ib_device *ib_dev, u8 port,
-				     struct net_device *ndev)
+				     struct ifnet *ndev)
 {
 	struct ib_gid_table **ports_table = ib_dev->cache.gid_cache;
 	struct ib_gid_table *table;
@@ -465,7 +465,7 @@ static int _ib_cache_gid_table_find(struct ib_device *ib_dev,
 	struct ib_gid_table *table;
 	u8 p;
 	int local_index;
-	unsigned long flags;
+	unsigned long flags __writeonly;
 
 	for (p = 0; p < ib_dev->phys_port_cnt; p++) {
 		table = ports_table[p];
@@ -488,7 +488,7 @@ static int _ib_cache_gid_table_find(struct ib_device *ib_dev,
 static int ib_cache_gid_find(struct ib_device *ib_dev,
 			     const union ib_gid *gid,
 			     enum ib_gid_type gid_type,
-			     struct net_device *ndev, u8 *port,
+			     struct ifnet *ndev, u8 *port,
 			     u16 *index)
 {
 	unsigned long mask = GID_ATTR_FIND_MASK_GID |
@@ -505,7 +505,7 @@ static int ib_cache_gid_find(struct ib_device *ib_dev,
 int ib_find_cached_gid_by_port(struct ib_device *ib_dev,
 			       const union ib_gid *gid,
 			       enum ib_gid_type gid_type,
-			       u8 port, struct net_device *ndev,
+			       u8 port, struct ifnet *ndev,
 			       u16 *index)
 {
 	int local_index;
@@ -514,10 +514,9 @@ int ib_find_cached_gid_by_port(struct ib_device *ib_dev,
 	unsigned long mask = GID_ATTR_FIND_MASK_GID |
 			     GID_ATTR_FIND_MASK_GID_TYPE;
 	struct ib_gid_attr val = {.ndev = ndev, .gid_type = gid_type};
-	unsigned long flags;
+	unsigned long flags __writeonly;
 
-	if (port < rdma_start_port(ib_dev) ||
-	    port > rdma_end_port(ib_dev))
+	if (!rdma_is_port_valid(ib_dev, port))
 		return -ENOENT;
 
 	table = ports_table[port - rdma_start_port(ib_dev)];
@@ -571,15 +570,16 @@ static int ib_cache_gid_find_by_filter(struct ib_device *ib_dev,
 	struct ib_gid_table **ports_table = ib_dev->cache.gid_cache;
 	struct ib_gid_table *table;
 	unsigned int i;
-	unsigned long flags;
+	unsigned long flags __writeonly;
 	bool found = false;
 
 	if (!ports_table)
 		return -EOPNOTSUPP;
 
-	if (port < rdma_start_port(ib_dev) ||
-	    port > rdma_end_port(ib_dev) ||
-	    !rdma_protocol_roce(ib_dev, port))
+	if (!rdma_is_port_valid(ib_dev, port))
+		return -EINVAL;
+
+	if (!rdma_protocol_roce(ib_dev, port))
 		return -EPROTONOSUPPORT;
 
 	table = ports_table[port - rdma_start_port(ib_dev)];
@@ -670,7 +670,7 @@ static void cleanup_gid_table_port(struct ib_device *ib_dev, u8 port,
 }
 
 void ib_cache_gid_set_default_gid(struct ib_device *ib_dev, u8 port,
-				  struct net_device *ndev,
+				  struct ifnet *ndev,
 				  unsigned long gid_type_mask,
 				  enum ib_cache_gid_default_mode mode)
 {
@@ -879,11 +879,11 @@ int ib_get_cached_gid(struct ib_device *device,
 		      struct ib_gid_attr *gid_attr)
 {
 	int res;
-	unsigned long flags;
+	unsigned long flags __writeonly;
 	struct ib_gid_table **ports_table = device->cache.gid_cache;
 	struct ib_gid_table *table = ports_table[port_num - rdma_start_port(device)];
 
-	if (port_num < rdma_start_port(device) || port_num > rdma_end_port(device))
+	if (!rdma_is_port_valid(device, port_num))
 		return -EINVAL;
 
 	read_lock_irqsave(&table->rwlock, flags);
@@ -897,7 +897,7 @@ EXPORT_SYMBOL(ib_get_cached_gid);
 int ib_find_cached_gid(struct ib_device *device,
 		       const union ib_gid *gid,
 		       enum ib_gid_type gid_type,
-		       struct net_device *ndev,
+		       struct ifnet *ndev,
 		       u8               *port_num,
 		       u16              *index)
 {
@@ -929,10 +929,10 @@ int ib_get_cached_pkey(struct ib_device *device,
 		       u16              *pkey)
 {
 	struct ib_pkey_cache *cache;
-	unsigned long flags;
+	unsigned long flags __writeonly;
 	int ret = 0;
 
-	if (port_num < rdma_start_port(device) || port_num > rdma_end_port(device))
+	if (!rdma_is_port_valid(device, port_num))
 		return -EINVAL;
 
 	read_lock_irqsave(&device->cache.lock, flags);
@@ -956,12 +956,12 @@ int ib_find_cached_pkey(struct ib_device *device,
 			u16              *index)
 {
 	struct ib_pkey_cache *cache;
-	unsigned long flags;
+	unsigned long flags __writeonly;
 	int i;
 	int ret = -ENOENT;
 	int partial_ix = -1;
 
-	if (port_num < rdma_start_port(device) || port_num > rdma_end_port(device))
+	if (!rdma_is_port_valid(device, port_num))
 		return -EINVAL;
 
 	read_lock_irqsave(&device->cache.lock, flags);
@@ -997,11 +997,11 @@ int ib_find_exact_cached_pkey(struct ib_device *device,
 			      u16              *index)
 {
 	struct ib_pkey_cache *cache;
-	unsigned long flags;
+	unsigned long flags __writeonly;
 	int i;
 	int ret = -ENOENT;
 
-	if (port_num < rdma_start_port(device) || port_num > rdma_end_port(device))
+	if (!rdma_is_port_valid(device, port_num))
 		return -EINVAL;
 
 	read_lock_irqsave(&device->cache.lock, flags);
@@ -1027,10 +1027,10 @@ int ib_get_cached_lmc(struct ib_device *device,
 		      u8                port_num,
 		      u8                *lmc)
 {
-	unsigned long flags;
+	unsigned long flags __writeonly;
 	int ret = 0;
 
-	if (port_num < rdma_start_port(device) || port_num > rdma_end_port(device))
+	if (!rdma_is_port_valid(device, port_num))
 		return -EINVAL;
 
 	read_lock_irqsave(&device->cache.lock, flags);
@@ -1057,7 +1057,7 @@ static void ib_cache_update(struct ib_device *device,
 	bool			   use_roce_gid_table =
 					rdma_cap_roce_gid_table(device, port);
 
-	if (port < rdma_start_port(device) || port > rdma_end_port(device))
+	if (!rdma_is_port_valid(device, port))
 		return;
 
 	table = ports_table[port - rdma_start_port(device)];

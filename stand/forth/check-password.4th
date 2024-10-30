@@ -22,7 +22,6 @@
 \ OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 \ SUCH DAMAGE.
 \ 
-\ $FreeBSD: stable/11/stand/forth/check-password.4th 339697 2018-10-24 23:17:17Z dteske $
 
 marker task-check-password.4th
 

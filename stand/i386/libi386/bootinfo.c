@@ -25,16 +25,35 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/stand/i386/libi386/bootinfo.c 344378 2019-02-20 19:19:24Z kevans $");
-
 #include <stand.h>
 #include <sys/param.h>
 #include <sys/reboot.h>
 #include <sys/boot.h>
 #include <sys/linker.h>
+#include <gfx_fb.h>
 #include "bootstrap.h"
 #include "libi386.h"
+#include "vbe.h"
 #include "btxv86.h"
+
+void
+bi_load_vbe_data(struct preloaded_file *kfp)
+{
+	if (!kfp->f_tg_kernel_support) {
+		/*
+		 * Loaded kernel does not have vt/vbe backend,
+		 * switch console to text mode.
+		 */
+		if (vbe_available())
+			bios_set_text_mode(VGA_TEXT_MODE);
+		return;
+	}
+
+	if (vbe_available()) {
+		file_addmetadata(kfp, MODINFOMD_VBE_FB,
+		    sizeof(gfx_state.tg_fb), &gfx_state.tg_fb);
+	}
+}
 
 int
 bi_getboothowto(char *kargs)
@@ -81,32 +100,4 @@ bi_setboothowto(int howto)
 {
 
     boot_howto_to_env(howto);
-}
-
-/*
- * Copy the environment into the load area starting at (addr).
- * Each variable is formatted as <name>=<value>, with a single nul
- * separating each variable, and a double nul terminating the environment.
- */
-vm_offset_t
-bi_copyenv(vm_offset_t addr)
-{
-    struct env_var	*ep;
-    
-    /* traverse the environment */
-    for (ep = environ; ep != NULL; ep = ep->ev_next) {
-	i386_copyin(ep->ev_name, addr, strlen(ep->ev_name));
-	addr += strlen(ep->ev_name);
-	i386_copyin("=", addr, 1);
-	addr++;
-	if (ep->ev_value != NULL) {
-	    i386_copyin(ep->ev_value, addr, strlen(ep->ev_value));
-	    addr += strlen(ep->ev_value);
-	}
-	i386_copyin("", addr, 1);
-	addr++;
-    }
-    i386_copyin("", addr, 1);
-    addr++;
-    return(addr);
 }

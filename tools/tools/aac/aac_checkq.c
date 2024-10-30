@@ -1,4 +1,3 @@
-/* $MidnightBSD$ */
 /*-
  * Copyright (c) 2004 Scott Long
  *
@@ -25,8 +24,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/10/tools/tools/aac/aac_checkq.c 219522 2011-03-11 18:51:42Z brucec $");
-
 #include <sys/types.h>
 #include <sys/fcntl.h>
 #include <sys/ioctl.h>

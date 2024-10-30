@@ -1,4 +1,4 @@
-Set to build some programs without Kerberos support, like
+Build some programs without Kerberos support, like
 .Xr ssh 1 ,
 .Xr telnet 1 ,
 .Xr sshd 8 ,

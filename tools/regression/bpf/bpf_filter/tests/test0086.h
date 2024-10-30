@@ -1,6 +1,5 @@
 /*-
  * Test 0086:	BPF_ALU+BPF_XOR+BPF_X
- *
  */
 
 /* BPF program */

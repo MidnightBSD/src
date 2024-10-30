@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 .if !defined(__BOOT_DEFS_MK__)
 __BOOT_DEFS_MK__=${MFILE}
@@ -25,7 +24,14 @@ INTERNALLIB=
 # enough to make that hassle worth chasing.
 _CPUCFLAGS=
 
+.if ${LDFLAGS:M-nostdlib}
+# Sanitizers won't work unless we link against libc (e.g. in userboot/test).
+MK_ASAN:=	no
+MK_UBSAN:=	no
+.endif
+
 .include <src.opts.mk>
+.include <bsd.linker.mk>
 
 WARNS?=		1
 
@@ -43,6 +49,9 @@ SASRC=		${BOOTSRC}/libsa
 SYSDIR=		${SRCTOP}/sys
 UBOOTSRC=	${BOOTSRC}/uboot
 ZFSSRC=		${SASRC}/zfs
+OZFS=		${SRCTOP}/sys/contrib/openzfs
+ZFSOSSRC=	${OZFS}/module/os/freebsd/
+ZFSOSINC=	${OZFS}/include/os/freebsd
 LIBCSRC=	${SRCTOP}/lib/libc
 
 BOOTOBJ=	${OBJTOP}/stand
@@ -110,10 +119,12 @@ CFLAGS+= -DLOADER_DISK_SUPPORT
 
 # Machine specific flags for all builds here
 
-# All PowerPC builds are 32 bit. We have no 64-bit loaders on powerpc
-# or powerpc64.
+# Ensure PowerPC64 and PowerPC64LE boot loaders are compiled as 32 bit.
+# PowerPC64LE boot loaders are 32-bit little-endian.
 .if ${MACHINE_ARCH} == "powerpc64"
-CFLAGS+=	-m32 -mcpu=powerpc
+CFLAGS+=	-m32 -mcpu=powerpc -mbig-endian
+.elif ${MACHINE_ARCH} == "powerpc64le"
+CFLAGS+=	-m32 -mcpu=powerpc -mlittle-endian
 .endif
 
 # For amd64, there's a bit of mixed bag. Some of the tree (i386, lib*32) is
@@ -127,13 +138,14 @@ AFLAGS+=	--32
 .endif
 
 # Add in the no float / no SIMD stuff and announce we're freestanding
-# aarch64 and riscv don't have -msoft-float, but all others do. riscv
-# currently has no /boot/loader, but may soon.
+# aarch64 and riscv don't have -msoft-float, but all others do.
 CFLAGS+=	-ffreestanding ${CFLAGS_NO_SIMD}
 .if ${MACHINE_CPUARCH} == "aarch64"
 CFLAGS+=	-mgeneral-regs-only -ffixed-x18 -fPIC
 .elif ${MACHINE_CPUARCH} == "riscv"
-CFLAGS+=	-march=rv64imac -mabi=lp64
+CFLAGS+=	-march=rv64imac -mabi=lp64 -fPIC
+CFLAGS.clang+=	-mcmodel=medium
+CFLAGS.gcc+=	-mcmodel=medany
 .else
 CFLAGS+=	-msoft-float
 .endif
@@ -155,13 +167,15 @@ CFLAGS+=	-fPIC -mno-red-zone
 # Do not generate movt/movw, because the relocation fixup for them does not
 # translate to the -Bsymbolic -pie format required by self_reloc() in loader(8).
 # Also, the fpu is not available in a standalone environment.
-.if ${COMPILER_VERSION} < 30800
-CFLAGS.clang+=	-mllvm -arm-use-movt=0
-.else
 CFLAGS.clang+=	-mno-movt
-.endif
 CFLAGS.clang+=  -mfpu=none
 CFLAGS+=	-fPIC
+.endif
+
+# Some RISC-V linkers have support for relaxations, while some (lld) do not
+# yet. If this is the case we inhibit the compiler from emitting relaxations.
+.if ${LINKER_FEATURES:Mriscv-relaxations} == ""
+CFLAGS+=	-mno-relax
 .endif
 
 # The boot loader build uses dd status=none, where possible, for reproducible
@@ -173,12 +187,6 @@ DD=dd ${DD_NOSTATUS}
 
 .if ${MACHINE_CPUARCH} == "mips"
 CFLAGS+=	-G0 -fno-pic -mno-abicalls
-.endif
-
-.if ${MK_LOADER_FORCE_LE} != "no"
-.if ${MACHINE_ARCH} == "powerpc64"
-CFLAGS+=	-mlittle-endian
-.endif
 .endif
 
 #
@@ -197,6 +205,13 @@ LOADER_INTERP?=${LOADER_DEFAULT_INTERP}
 CFLAGS+=-I.
 
 all: ${PROG}
+
+CLEANFILES+= teken_state.h
+teken.c: teken_state.h
+
+teken_state.h: ${SYSDIR}/teken/sequences
+	awk -f ${SYSDIR}/teken/gensequences \
+		${SYSDIR}/teken/sequences > teken_state.h
 
 .if !defined(NO_OBJ)
 _ILINKS=include/machine

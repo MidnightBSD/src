@@ -27,7 +27,6 @@ extern int debug;
 #define DX(lev, fmt, args...) do {              \
         if (debug > lev) D(fmt, ## args); } while (0)
 
-
 #ifndef offsetof
 #define offsetof(t,m) (int)(intptr_t)((&((t *)0L)->m))
 #endif
@@ -161,7 +160,7 @@ typedef struct _md_t moduledata_t;
 #include <ip_dn_private.h>
 #include <dn_sched.h>
 
-#ifndef __MidnightBSD__
+#ifndef __FreeBSD__
 int fls(int);
 #endif
 

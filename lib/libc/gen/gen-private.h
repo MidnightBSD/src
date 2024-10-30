@@ -27,7 +27,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _GEN_PRIVATE_H_
@@ -50,7 +49,11 @@ struct _dirdesc {
 	int	dd_len;		/* size of data buffer */
 	off_t	dd_seek;	/* magic cookie returned by getdirentries */
 	int	dd_flags;	/* flags for readdir */
+#ifndef IN_RTLD
 	struct pthread_mutex	*dd_lock;	/* lock */
+#else
+	struct _donotuse	*dd_lock; /* unused in rtld, keep same layout */
+#endif
 	struct _telldir *dd_td;	/* telldir position recording */
 	void	*dd_compat_de;	/* compat dirent */
 };

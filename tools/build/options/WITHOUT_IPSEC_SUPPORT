@@ -1,4 +1,4 @@
-Set to not build the kernel with
+Do not build the kernel with
 .Xr ipsec 4
 support.
 This option is needed for

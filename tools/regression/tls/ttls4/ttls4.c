@@ -3,7 +3,6 @@
  * is clean.
  *
  * David Xu <davidxu@freebsd.org>
- *
  */
 
 #include <stdio.h>

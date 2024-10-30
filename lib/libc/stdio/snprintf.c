@@ -5,7 +5,7 @@
  *	The Regents of the University of California.  All rights reserved.
  *
  * Copyright (c) 2011 The FreeBSD Foundation
- * All rights reserved.
+ *
  * Portions of this software were developed by David Chisnall
  * under sponsorship from the FreeBSD Foundation.
  *
@@ -41,7 +41,6 @@
 static char sccsid[] = "@(#)snprintf.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-
 #include <errno.h>
 #include <limits.h>
 #include <stdio.h>
@@ -53,10 +52,11 @@ static char sccsid[] = "@(#)snprintf.c	8.1 (Berkeley) 6/4/93";
 int
 snprintf(char * __restrict str, size_t n, char const * __restrict fmt, ...)
 {
-	size_t on;
-	int ret;
-	va_list ap;
 	FILE f = FAKE_FILE;
+	va_list ap;
+	size_t on;
+	int serrno = errno;
+	int ret;
 
 	on = n;
 	if (n != 0)
@@ -70,7 +70,7 @@ snprintf(char * __restrict str, size_t n, char const * __restrict fmt, ...)
 	f._flags = __SWR | __SSTR;
 	f._bf._base = f._p = (unsigned char *)str;
 	f._bf._size = f._w = n;
-	ret = __vfprintf(&f, __get_locale(), fmt, ap);
+	ret = __vfprintf(&f, __get_locale(), serrno, fmt, ap);
 	if (on > 0)
 		*f._p = '\0';
 	va_end(ap);
@@ -80,10 +80,11 @@ int
 snprintf_l(char * __restrict str, size_t n, locale_t locale,
 		char const * __restrict fmt, ...)
 {
-	size_t on;
-	int ret;
-	va_list ap;
 	FILE f = FAKE_FILE;
+	va_list ap;
+	size_t on;
+	int serrno = errno;
+	int ret;
 	FIX_LOCALE(locale);
 
 	on = n;
@@ -98,7 +99,7 @@ snprintf_l(char * __restrict str, size_t n, locale_t locale,
 	f._flags = __SWR | __SSTR;
 	f._bf._base = f._p = (unsigned char *)str;
 	f._bf._size = f._w = n;
-	ret = __vfprintf(&f, locale, fmt, ap);
+	ret = __vfprintf(&f, locale, serrno, fmt, ap);
 	if (on > 0)
 		*f._p = '\0';
 	va_end(ap);

@@ -33,7 +33,6 @@
  */
 
 #include <machine/asm.h>
-
 #include <machine/setjmp.h>
 
 /*

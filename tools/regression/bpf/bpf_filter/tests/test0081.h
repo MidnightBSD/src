@@ -1,6 +1,5 @@
 /*-
  * Test 0081:	Check unconditional jump range.
- *
  */
 
 /* BPF program */

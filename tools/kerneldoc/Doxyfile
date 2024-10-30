@@ -1,6 +1,4 @@
 # Doxyfile 1.3.6
-# $FreeBSD: src/tools/kerneldoc/Doxyfile,v 1.2 2006/07/08 12:31:33 netchild Exp $
-# $MidnightBSD$
 
 #---------------------------------------------------------------------------
 # Project related configuration options

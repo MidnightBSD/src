@@ -1,6 +1,5 @@
 /*-
  * Test 0002:	BPF_RET+BPF_K
- *
  */
 
 /* BPF program */

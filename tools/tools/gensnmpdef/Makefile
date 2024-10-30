@@ -1,3 +1,5 @@
+#
+# NB: Install ports/net-mgmt/libsmi
 
 .PATH:	${SRCTOP}/contrib/bsnmp/gensnmpdef
 
@@ -17,7 +19,5 @@ CFLAGS+=	-I${LOCALBASE}/include
 LDFLAGS+=	-L${LOCALBASE}/lib
 
 LDADD+=	-lsmi
-
-WARNS?=	6
 
 .include <bsd.prog.mk>

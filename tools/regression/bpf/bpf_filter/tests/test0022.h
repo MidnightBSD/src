@@ -1,6 +1,5 @@
 /*-
  * Test 0022:	BPF_JMP+BPF_JEQ+BPF_X
- *
  */
 
 /* BPF program */

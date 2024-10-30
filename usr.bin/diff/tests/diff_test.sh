@@ -8,12 +8,17 @@ atf_test_case group_format
 atf_test_case side_by_side
 atf_test_case brief_format
 atf_test_case b230049
+atf_test_case stripcr_o
 atf_test_case b252515
+atf_test_case b278988
 atf_test_case Bflag
 atf_test_case Nflag
 atf_test_case tabsize
 atf_test_case conflicting_format
 atf_test_case label
+atf_test_case report_identical
+atf_test_case non_regular_file
+atf_test_case binary
 
 simple_body()
 {
@@ -65,12 +70,28 @@ b230049_body()
 		    b230049_a.in b230049_b.in
 }
 
+stripcr_o_body()
+{
+	printf 'a\nX\nc\n' > stripcr_o_X.in
+	printf 'a\r\nY\r\nc\r\n' > stripcr_o_Y.in
+	atf_check -o "file:$(atf_get_srcdir)/strip_o.out" -s eq:1 \
+		diff -L1 -L2 -u --strip-trailing-cr stripcr_o_X.in stripcr_o_Y.in
+}
+
 b252515_body()
 {
 	printf 'a b\n' > b252515_a.in
 	printf 'a  b\n' > b252515_b.in
 	atf_check -o empty -s eq:0 \
 		diff -qw b252515_a.in b252515_b.in
+}
+
+b278988_body()
+{
+	printf 'a\nb\nn' > b278988.a.in
+	printf 'a\n\nb\nn' > b278988.b.in
+	atf_check -o empty -s eq:0 \
+		diff -Bw b278988.a.in b278988.b.in
 }
 
 header_body()
@@ -225,6 +246,44 @@ label_body()
 		-s exit:1 diff --label hello --label world `which diff` `which ls`
 }
 
+report_identical_head()
+{
+	atf_set "require.user" unprivileged
+}
+report_identical_body()
+{
+	printf "\tA\n" > A
+	printf "\tB\n" > B
+	chmod -r B
+	atf_check -s exit:2 -e inline:"diff: B: Permission denied\n" \
+		-o empty diff -s A B
+}
+
+non_regular_file_body()
+{
+	printf "\tA\n" > A
+	mkfifo B
+	printf "\tA\n" > B &
+
+	atf_check diff A B
+	printf "\tB\n" > B &
+	atf_check -s exit:1 \
+		-o inline:"--- A\n+++ B\n@@ -1 +1 @@\n-\tA\n+\tB\n" \
+		diff --label A --label B -u A B
+}
+
+binary_body()
+{
+	# the NUL byte has to be after at least BUFSIZ bytes to trick asciifile()
+	yes 012345678901234567890123456789012345678901234567890 | head -n 174 > A
+	cp A B
+	printf '\n\0\n' >> A
+	printf '\nx\n' >> B
+
+	atf_check -o inline:"Binary files A and B differ\n" -s exit:1 diff A B
+	atf_check -o inline:"176c\nx\n.\n" -s exit:1 diff -ae A B
+}
+
 atf_init_test_cases()
 {
 	atf_add_test_case simple
@@ -236,10 +295,15 @@ atf_init_test_cases()
 	atf_add_test_case side_by_side
 	atf_add_test_case brief_format
 	atf_add_test_case b230049
+	atf_add_test_case stripcr_o
 	atf_add_test_case b252515
+	atf_add_test_case b278988
 	atf_add_test_case Bflag
 	atf_add_test_case Nflag
 	atf_add_test_case tabsize
 	atf_add_test_case conflicting_format
 	atf_add_test_case label
+	atf_add_test_case report_identical
+	atf_add_test_case non_regular_file
+	atf_add_test_case binary
 }

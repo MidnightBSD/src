@@ -1,5 +1,4 @@
 #include <sys/cdefs.h>
-
 #include <opencrypto/cbc_mac.h>
 #include <opencrypto/xform_auth.h>
 
@@ -11,14 +10,11 @@ struct auth_hash auth_hash_ccm_cbc_mac_128 = {
 	.hashsize = AES_CBC_MAC_HASH_LEN,
 	.ctxsize = sizeof(struct aes_cbc_mac_ctx),
 	.blocksize = CCM_CBC_BLOCK_LEN,
-	.Init = (void (*)(void *)) AES_CBC_MAC_Init,
-	.Setkey =
-	    (void (*)(void *, const u_int8_t *, u_int16_t))AES_CBC_MAC_Setkey,
-	.Reinit =
-	    (void (*)(void *, const u_int8_t *, u_int16_t)) AES_CBC_MAC_Reinit,
-	.Update =
-	    (int  (*)(void *, const u_int8_t *, u_int16_t)) AES_CBC_MAC_Update,
-	.Final = (void (*)(u_int8_t *, void *)) AES_CBC_MAC_Final,
+	.Init = AES_CBC_MAC_Init,
+	.Setkey = AES_CBC_MAC_Setkey,
+	.Reinit = AES_CBC_MAC_Reinit,
+	.Update = AES_CBC_MAC_Update,
+	.Final = AES_CBC_MAC_Final,
 };
 struct auth_hash auth_hash_ccm_cbc_mac_192 = {
 	.type = CRYPTO_AES_CCM_CBC_MAC,
@@ -27,14 +23,11 @@ struct auth_hash auth_hash_ccm_cbc_mac_192 = {
 	.hashsize = AES_CBC_MAC_HASH_LEN,
 	.ctxsize = sizeof(struct aes_cbc_mac_ctx),
 	.blocksize = CCM_CBC_BLOCK_LEN,
-	.Init = (void (*)(void *)) AES_CBC_MAC_Init,
-	.Setkey =
-	    (void (*)(void *, const u_int8_t *, u_int16_t)) AES_CBC_MAC_Setkey,
-	.Reinit =
-	    (void (*)(void *, const u_int8_t *, u_int16_t)) AES_CBC_MAC_Reinit,
-	.Update =
-	    (int  (*)(void *, const u_int8_t *, u_int16_t)) AES_CBC_MAC_Update,
-	.Final = (void (*)(u_int8_t *, void *)) AES_CBC_MAC_Final,
+	.Init = AES_CBC_MAC_Init,
+	.Setkey = AES_CBC_MAC_Setkey,
+	.Reinit = AES_CBC_MAC_Reinit,
+	.Update = AES_CBC_MAC_Update,
+	.Final = AES_CBC_MAC_Final,
 };
 struct auth_hash auth_hash_ccm_cbc_mac_256 = {
 	.type = CRYPTO_AES_CCM_CBC_MAC,
@@ -43,12 +36,9 @@ struct auth_hash auth_hash_ccm_cbc_mac_256 = {
 	.hashsize = AES_CBC_MAC_HASH_LEN,
 	.ctxsize = sizeof(struct aes_cbc_mac_ctx),
 	.blocksize = CCM_CBC_BLOCK_LEN,
-	.Init = (void (*)(void *)) AES_CBC_MAC_Init,
-	.Setkey =
-	    (void (*)(void *, const u_int8_t *, u_int16_t)) AES_CBC_MAC_Setkey,
-	.Reinit =
-	    (void (*)(void *, const u_int8_t *, u_int16_t)) AES_CBC_MAC_Reinit,
-	.Update =
-	    (int  (*)(void *, const u_int8_t *, u_int16_t)) AES_CBC_MAC_Update,
-	.Final = (void (*)(u_int8_t *, void *)) AES_CBC_MAC_Final,
+	.Init = AES_CBC_MAC_Init,
+	.Setkey = AES_CBC_MAC_Setkey,
+	.Reinit = AES_CBC_MAC_Reinit,
+	.Update = AES_CBC_MAC_Update,
+	.Final = AES_CBC_MAC_Final,
 };

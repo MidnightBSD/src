@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2014 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Semihalf under
  * the sponsorship of the FreeBSD Foundation.
@@ -24,8 +23,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD$
  */
 
 #ifndef _CACHE_H_
@@ -33,6 +30,6 @@
 
 /* cache.c */
 void cpu_flush_dcache(const void *, size_t);
-void cpu_inval_icache(const void *, size_t);
+void cpu_inval_icache(void);
 
 #endif /* _CACHE_H_ */

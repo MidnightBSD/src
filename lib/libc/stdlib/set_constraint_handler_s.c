@@ -24,7 +24,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "namespace.h"
 #include <sys/types.h>
 #include <machine/atomic.h>

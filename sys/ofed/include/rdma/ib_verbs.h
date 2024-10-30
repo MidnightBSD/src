@@ -36,7 +36,6 @@
  * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
- *
  */
 
 #if !defined(IB_VERBS_H)
@@ -66,6 +65,7 @@
 
 struct ifla_vf_info;
 struct ifla_vf_stats;
+struct ib_uverbs_file;
 
 extern struct workqueue_struct *ib_wq;
 extern struct workqueue_struct *ib_comp_wq;
@@ -91,7 +91,7 @@ enum ib_gid_type {
 #define ROCE_V2_UDP_DPORT      4791
 struct ib_gid_attr {
 	enum ib_gid_type	gid_type;
-	struct net_device	*ndev;
+	struct ifnet	*ndev;
 };
 
 enum rdma_node_type {
@@ -213,6 +213,7 @@ enum ib_device_cap_flags {
 	IB_DEVICE_MEM_WINDOW_TYPE_2A		= (1 << 23),
 	IB_DEVICE_MEM_WINDOW_TYPE_2B		= (1 << 24),
 	IB_DEVICE_RC_IP_CSUM			= (1 << 25),
+	/* Deprecated. Please use IB_RAW_PACKET_CAP_IP_CSUM. */
 	IB_DEVICE_RAW_IP_CSUM			= (1 << 26),
 	/*
 	 * Devices should set IB_DEVICE_CROSS_CHANNEL if they
@@ -226,7 +227,9 @@ enum ib_device_cap_flags {
 	IB_DEVICE_ON_DEMAND_PAGING		= (1ULL << 31),
 	IB_DEVICE_SG_GAPS_REG			= (1ULL << 32),
 	IB_DEVICE_VIRTUAL_FUNCTION		= (1ULL << 33),
+	/* Deprecated. Please use IB_RAW_PACKET_CAP_SCATTER_FCS. */
 	IB_DEVICE_RAW_SCATTER_FCS		= (1ULL << 34),
+	IB_DEVICE_KNOWSEPOCH			= (1ULL << 35),
 };
 
 enum ib_signature_prot_cap {
@@ -395,6 +398,16 @@ enum ib_port_cap_flags {
 	IB_PORT_IP_BASED_GIDS			= 1 << 26,
 };
 
+enum ib_port_phys_state {
+	IB_PORT_PHYS_STATE_SLEEP = 1,
+	IB_PORT_PHYS_STATE_POLLING = 2,
+	IB_PORT_PHYS_STATE_DISABLED = 3,
+	IB_PORT_PHYS_STATE_PORT_CONFIGURATION_TRAINING = 4,
+	IB_PORT_PHYS_STATE_LINK_UP = 5,
+	IB_PORT_PHYS_STATE_LINK_ERROR_RECOVERY = 6,
+	IB_PORT_PHYS_STATE_PHY_TEST = 7,
+};
+
 enum ib_port_width {
 	IB_WIDTH_1X	= 1,
 	IB_WIDTH_2X	= 16,
@@ -422,11 +435,15 @@ enum ib_port_speed {
 	IB_SPEED_FDR10	= 8,
 	IB_SPEED_FDR	= 16,
 	IB_SPEED_EDR	= 32,
-	IB_SPEED_HDR	= 64
+	IB_SPEED_HDR	= 64,
+	IB_SPEED_NDR	= 128
 };
 
 /**
  * struct rdma_hw_stats
+ * @lock - Mutex to protect parallel write access to lifespan and values
+ *    of counters, which are 64bits and not guaranteeed to be written
+ *    atomicaly on 32bits systems.
  * @timestamp - Used by the core code to track when the last update was
  * @lifespan - Used by the core code to determine how old the counters
  *   should be before being updated again.  Stored in jiffies, defaults
@@ -442,6 +459,7 @@ enum ib_port_speed {
  *   filled in by the drivers get_stats routine
  */
 struct rdma_hw_stats {
+	struct mutex	lock; /* Protect lifespan and values[] */
 	unsigned long	timestamp;
 	unsigned long	lifespan;
 	const char * const *names;
@@ -1117,6 +1135,7 @@ enum ib_qp_attr_mask {
 	IB_QP_RESERVED2			= (1<<22),
 	IB_QP_RESERVED3			= (1<<23),
 	IB_QP_RESERVED4			= (1<<24),
+	IB_QP_RATE_LIMIT		= (1<<25),
 };
 
 enum ib_qp_state {
@@ -1167,6 +1186,7 @@ struct ib_qp_attr {
 	u8			rnr_retry;
 	u8			alt_port_num;
 	u8			alt_timeout;
+	u32			rate_limit;
 };
 
 enum ib_wr_opcode {
@@ -1245,7 +1265,7 @@ struct ib_rdma_wr {
 	u32			rkey;
 };
 
-static inline struct ib_rdma_wr *rdma_wr(struct ib_send_wr *wr)
+static inline const struct ib_rdma_wr *rdma_wr(const struct ib_send_wr *wr)
 {
 	return container_of(wr, struct ib_rdma_wr, wr);
 }
@@ -1260,7 +1280,7 @@ struct ib_atomic_wr {
 	u32			rkey;
 };
 
-static inline struct ib_atomic_wr *atomic_wr(struct ib_send_wr *wr)
+static inline const struct ib_atomic_wr *atomic_wr(const struct ib_send_wr *wr)
 {
 	return container_of(wr, struct ib_atomic_wr, wr);
 }
@@ -1277,7 +1297,7 @@ struct ib_ud_wr {
 	u8			port_num;   /* valid for DR SMPs on switch only */
 };
 
-static inline struct ib_ud_wr *ud_wr(struct ib_send_wr *wr)
+static inline const struct ib_ud_wr *ud_wr(const struct ib_send_wr *wr)
 {
 	return container_of(wr, struct ib_ud_wr, wr);
 }
@@ -1289,7 +1309,7 @@ struct ib_reg_wr {
 	int			access;
 };
 
-static inline struct ib_reg_wr *reg_wr(struct ib_send_wr *wr)
+static inline const struct ib_reg_wr *reg_wr(const struct ib_send_wr *wr)
 {
 	return container_of(wr, struct ib_reg_wr, wr);
 }
@@ -1302,7 +1322,7 @@ struct ib_sig_handover_wr {
 	struct ib_sge	       *prot;
 };
 
-static inline struct ib_sig_handover_wr *sig_handover_wr(struct ib_send_wr *wr)
+static inline const struct ib_sig_handover_wr *sig_handover_wr(const struct ib_send_wr *wr)
 {
 	return container_of(wr, struct ib_sig_handover_wr, wr);
 }
@@ -1346,6 +1366,20 @@ struct ib_fmr_attr {
 
 struct ib_umem;
 
+enum rdma_remove_reason {
+	/*
+	 * Userspace requested uobject deletion or initial try
+	 * to remove uobject via cleanup. Call could fail
+	 */
+	RDMA_REMOVE_DESTROY,
+	/* Context deletion. This call should delete the actual object itself */
+	RDMA_REMOVE_CLOSE,
+	/* Driver is being hot-unplugged. This call should delete the actual object itself */
+	RDMA_REMOVE_DRIVER_REMOVE,
+	/* uobj is being cleaned-up before being committed */
+	RDMA_REMOVE_ABORT,
+};
+
 struct ib_ucontext {
 	struct ib_device       *device;
 	struct list_head	pd_list;
@@ -1360,6 +1394,8 @@ struct ib_ucontext {
 	struct list_head	wq_list;
 	struct list_head	rwq_ind_tbl_list;
 	int			closing;
+
+	bool cleanup_retryable;
 
 	pid_t			tgid;
 #ifdef CONFIG_INFINIBAND_ON_DEMAND_PAGING
@@ -1465,6 +1501,18 @@ struct ib_srq {
 			u32		srq_num;
 		} xrc;
 	} ext;
+};
+
+enum ib_raw_packet_caps {
+	/* Strip cvlan from incoming packet and report it in the matching work
+	 * completion is supported.
+	 */
+	IB_RAW_PACKET_CAP_CVLAN_STRIPPING       = (1 << 0),
+	/* Scatter FCS field of an incoming packet to host memory is supported.
+	*/
+	IB_RAW_PACKET_CAP_SCATTER_FCS           = (1 << 1),
+	/* Checksum offloads are supported (for both send and receive). */
+	IB_RAW_PACKET_CAP_IP_CSUM               = (1 << 2),
 };
 
 enum ib_wq_type {
@@ -1891,7 +1939,7 @@ struct ib_device {
 	 * that this function returns NULL before the net device reaches
 	 * NETDEV_UNREGISTER_FINAL state.
 	 */
-	struct net_device	  *(*get_netdev)(struct ib_device *device,
+	struct ifnet		  *(*get_netdev)(struct ib_device *device,
 						 u8 port_num);
 	int		           (*query_gid)(struct ib_device *device,
 						u8 port_num, int index,
@@ -1961,8 +2009,8 @@ struct ib_device {
 						struct ib_srq_attr *srq_attr);
 	int                        (*destroy_srq)(struct ib_srq *srq);
 	int                        (*post_srq_recv)(struct ib_srq *srq,
-						    struct ib_recv_wr *recv_wr,
-						    struct ib_recv_wr **bad_recv_wr);
+						    const struct ib_recv_wr *recv_wr,
+						    const struct ib_recv_wr **bad_recv_wr);
 	struct ib_qp *             (*create_qp)(struct ib_pd *pd,
 						struct ib_qp_init_attr *qp_init_attr,
 						struct ib_udata *udata);
@@ -1976,11 +2024,11 @@ struct ib_device {
 					       struct ib_qp_init_attr *qp_init_attr);
 	int                        (*destroy_qp)(struct ib_qp *qp);
 	int                        (*post_send)(struct ib_qp *qp,
-						struct ib_send_wr *send_wr,
-						struct ib_send_wr **bad_send_wr);
+						const struct ib_send_wr *send_wr,
+						const struct ib_send_wr **bad_send_wr);
 	int                        (*post_recv)(struct ib_qp *qp,
-						struct ib_recv_wr *recv_wr,
-						struct ib_recv_wr **bad_recv_wr);
+						const struct ib_recv_wr *recv_wr,
+						const struct ib_recv_wr **bad_recv_wr);
 	struct ib_cq *             (*create_cq)(struct ib_device *device,
 						const struct ib_cq_init_attr *attr,
 						struct ib_ucontext *context,
@@ -2138,7 +2186,7 @@ struct ib_client {
 	 *
 	 * The caller is responsible for calling dev_put on the returned
 	 * netdev. */
-	struct net_device *(*get_net_dev_by_params)(
+	struct ifnet *(*get_net_dev_by_params)(
 			struct ib_device *dev,
 			u8 port,
 			u16 pkey,
@@ -2196,6 +2244,46 @@ static inline bool ib_is_udata_cleared(struct ib_udata *udata,
 }
 
 /**
+ * ib_is_destroy_retryable - Check whether the uobject destruction
+ * is retryable.
+ * @ret: The initial destruction return code
+ * @why: remove reason
+ * @uobj: The uobject that is destroyed
+ *
+ * This function is a helper function that IB layer and low-level drivers
+ * can use to consider whether the destruction of the given uobject is
+ * retry-able.
+ * It checks the original return code, if it wasn't success the destruction
+ * is retryable according to the ucontext state (i.e. cleanup_retryable) and
+ * the remove reason. (i.e. why).
+ * Must be called with the object locked for destroy.
+ */
+static inline bool ib_is_destroy_retryable(int ret, enum rdma_remove_reason why,
+					   struct ib_uobject *uobj)
+{
+	return ret && (why == RDMA_REMOVE_DESTROY ||
+		       uobj->context->cleanup_retryable);
+}
+
+/**
+ * ib_destroy_usecnt - Called during destruction to check the usecnt
+ * @usecnt: The usecnt atomic
+ * @why: remove reason
+ * @uobj: The uobject that is destroyed
+ *
+ * Non-zero usecnts will block destruction unless destruction was triggered by
+ * a ucontext cleanup.
+ */
+static inline int ib_destroy_usecnt(atomic_t *usecnt,
+				    enum rdma_remove_reason why,
+				    struct ib_uobject *uobj)
+{
+	if (atomic_read(usecnt) && ib_is_destroy_retryable(-EBUSY, why, uobj))
+		return -EBUSY;
+	return 0;
+}
+
+/**
  * ib_modify_qp_is_ok - Check that the supplied attribute mask
  * contains all required attributes and no attributes not allowed for
  * the given QP state transition.
@@ -2203,7 +2291,6 @@ static inline bool ib_is_udata_cleared(struct ib_udata *udata,
  * @next_state: Next QP state
  * @type: QP type
  * @mask: Mask of supplied QP attributes
- * @ll : link layer of port
  *
  * This function is a helper function that a low-level driver's
  * modify_qp method can use to validate the consumer's input.  It
@@ -2211,9 +2298,8 @@ static inline bool ib_is_udata_cleared(struct ib_udata *udata,
  * transition from cur_state to next_state is allowed by the IB spec,
  * and that the attribute mask supplied is allowed for the transition.
  */
-int ib_modify_qp_is_ok(enum ib_qp_state cur_state, enum ib_qp_state next_state,
-		       enum ib_qp_type type, enum ib_qp_attr_mask mask,
-		       enum rdma_link_layer ll);
+bool ib_modify_qp_is_ok(enum ib_qp_state cur_state, enum ib_qp_state next_state,
+			enum ib_qp_type type, enum ib_qp_attr_mask mask);
 
 int ib_register_event_handler  (struct ib_event_handler *event_handler);
 int ib_unregister_event_handler(struct ib_event_handler *event_handler);
@@ -2563,7 +2649,7 @@ int ib_modify_port(struct ib_device *device,
 		   struct ib_port_modify *port_modify);
 
 int ib_find_gid(struct ib_device *device, union ib_gid *gid,
-		enum ib_gid_type gid_type, struct net_device *ndev,
+		enum ib_gid_type gid_type, struct ifnet *ndev,
 		u8 *port_num, u16 *index);
 
 int ib_find_pkey(struct ib_device *device,
@@ -2707,8 +2793,8 @@ int ib_destroy_srq(struct ib_srq *srq);
  *   the work request that failed to be posted on the QP.
  */
 static inline int ib_post_srq_recv(struct ib_srq *srq,
-				   struct ib_recv_wr *recv_wr,
-				   struct ib_recv_wr **bad_recv_wr)
+				   const struct ib_recv_wr *recv_wr,
+				   const struct ib_recv_wr **bad_recv_wr)
 {
 	return srq->device->post_srq_recv(srq, recv_wr, bad_recv_wr);
 }
@@ -2792,8 +2878,8 @@ int ib_close_qp(struct ib_qp *qp);
  * earlier work requests in the list.
  */
 static inline int ib_post_send(struct ib_qp *qp,
-			       struct ib_send_wr *send_wr,
-			       struct ib_send_wr **bad_send_wr)
+			       const struct ib_send_wr *send_wr,
+			       const struct ib_send_wr **bad_send_wr)
 {
 	return qp->device->post_send(qp, send_wr, bad_send_wr);
 }
@@ -2807,8 +2893,8 @@ static inline int ib_post_send(struct ib_qp *qp,
  *   the work request that failed to be posted on the QP.
  */
 static inline int ib_post_recv(struct ib_qp *qp,
-			       struct ib_recv_wr *recv_wr,
-			       struct ib_recv_wr **bad_recv_wr)
+			       const struct ib_recv_wr *recv_wr,
+			       const struct ib_recv_wr **bad_recv_wr)
 {
 	return qp->device->post_recv(qp, recv_wr, bad_recv_wr);
 }
@@ -3340,7 +3426,7 @@ static inline int ib_check_mr_access(int flags)
 int ib_check_mr_status(struct ib_mr *mr, u32 check_mask,
 		       struct ib_mr_status *mr_status);
 
-struct net_device *ib_get_net_dev_by_params(struct ib_device *dev, u8 port,
+struct ifnet *ib_get_net_dev_by_params(struct ib_device *dev, u8 port,
 					    u16 pkey, const union ib_gid *gid,
 					    const struct sockaddr *addr);
 struct ib_wq *ib_create_wq(struct ib_pd *pd,
@@ -3374,6 +3460,8 @@ int ib_sg_to_pages(struct ib_mr *mr, struct scatterlist *sgl, int sg_nents,
 void ib_drain_rq(struct ib_qp *qp);
 void ib_drain_sq(struct ib_qp *qp);
 void ib_drain_qp(struct ib_qp *qp);
+
+struct ib_ucontext *ib_uverbs_get_ucontext_file(struct ib_uverbs_file *ufile);
 
 int ib_resolve_eth_dmac(struct ib_device *device,
 			struct ib_ah_attr *ah_attr);

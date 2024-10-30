@@ -34,7 +34,6 @@
 
 #include <sys/cdefs.h>
 __SCCSID("@(#)popen.c	8.3 (Berkeley) 5/3/95");
-
 #include "namespace.h"
 #include <sys/param.h>
 #include <sys/queue.h>
@@ -51,8 +50,6 @@ __SCCSID("@(#)popen.c	8.3 (Berkeley) 5/3/95");
 #include <pthread.h>
 #include "un-namespace.h"
 #include "libc_private.h"
-
-extern char **environ;
 
 struct pid {
 	SLIST_ENTRY(pid) next;
@@ -180,7 +177,7 @@ popen(const char *command, const char *type)
 	 * the list which will cause an explicit close.
 	 */
 	if (!cloexec)
-		(void)_fcntl(*type == 'r' ? pdes[0] : pdes[1], F_SETFD, 0);
+		(void)_fcntl(fileno(iop), F_SETFD, 0);
 
 	return (iop);
 }

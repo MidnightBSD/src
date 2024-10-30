@@ -1,5 +1,5 @@
 --
--- SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+-- SPDX-License-Identifier: BSD-2-Clause
 --
 -- Copyright (c) 2018 Kyle Evans <kevans@FreeBSD.org>
 --
@@ -23,8 +23,6 @@
 -- LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
 -- OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 -- SUCH DAMAGE.
---
--- $FreeBSD$
 --
 
 local config = require("config")
@@ -150,7 +148,7 @@ cli['read-conf'] = function(...)
 	config.readConf(assert(core.popFrontTable(argv)))
 end
 
-cli['reload-conf'] = function(...)
+cli['reload-conf'] = function()
 	config.reload()
 end
 

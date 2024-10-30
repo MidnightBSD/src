@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2015-2019 Yandex LLC
  * Copyright (c) 2015-2019 Andrey V. Elsukov <ae@FreeBSD.org>
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_ipstealth.h"
 
 #include <sys/param.h>
@@ -49,9 +48,11 @@
 #include <net/pfil.h>
 #include <net/netisr.h>
 #include <net/route.h>
+#include <net/route/nhop.h>
 
 #include <netinet/in.h>
 #include <netinet/in_fib.h>
+#include <netinet/in_var.h>
 #include <netinet/ip.h>
 #include <netinet/ip_var.h>
 #include <netinet/ip_fw.h>
@@ -72,15 +73,14 @@
 #include "ip_fw_nat64.h"
 #include "nat64_translate.h"
 
-
 typedef int (*nat64_output_t)(struct ifnet *, struct mbuf *,
     struct sockaddr *, struct nat64_counters *, void *);
 typedef int (*nat64_output_one_t)(struct mbuf *, struct nat64_counters *,
     void *);
 
-static int nat64_find_route4(struct nhop4_basic *, struct sockaddr_in *,
+static struct nhop_object *nat64_find_route4(struct sockaddr_in *,
     struct mbuf *);
-static int nat64_find_route6(struct nhop6_basic *, struct sockaddr_in6 *,
+static struct nhop_object *nat64_find_route6(struct sockaddr_in6 *,
     struct mbuf *);
 static int nat64_output_one(struct mbuf *, struct nat64_counters *, void *);
 static int nat64_output(struct ifnet *, struct mbuf *, struct sockaddr *,
@@ -171,8 +171,8 @@ static int
 nat64_direct_output_one(struct mbuf *m, struct nat64_counters *stats,
     void *logdata)
 {
-	struct nhop6_basic nh6;
-	struct nhop4_basic nh4;
+	struct nhop_object *nh4 = NULL;
+	struct nhop_object *nh6 = NULL;
 	struct sockaddr_in6 dst6;
 	struct sockaddr_in dst4;
 	struct sockaddr *dst;
@@ -182,25 +182,28 @@ nat64_direct_output_one(struct mbuf *m, struct nat64_counters *stats,
 	int error;
 
 	ip4 = mtod(m, struct ip *);
+	error = 0;
 	switch (ip4->ip_v) {
 	case IPVERSION:
 		dst4.sin_addr = ip4->ip_dst;
-		error = nat64_find_route4(&nh4, &dst4, m);
-		if (error != 0)
+		nh4 = nat64_find_route4(&dst4, m);
+		if (nh4 == NULL) {
 			NAT64STAT_INC(stats, noroute4);
-		else {
-			ifp = nh4.nh_ifp;
+			error = EHOSTUNREACH;
+		} else {
+			ifp = nh4->nh_ifp;
 			dst = (struct sockaddr *)&dst4;
 		}
 		break;
 	case (IPV6_VERSION >> 4):
 		ip6 = mtod(m, struct ip6_hdr *);
 		dst6.sin6_addr = ip6->ip6_dst;
-		error = nat64_find_route6(&nh6, &dst6, m);
-		if (error != 0)
+		nh6 = nat64_find_route6(&dst6, m);
+		if (nh6 == NULL) {
 			NAT64STAT_INC(stats, noroute6);
-		else {
-			ifp = nh6.nh_ifp;
+			error = EHOSTUNREACH;
+		} else {
+			ifp = nh6->nh_ifp;
 			dst = (struct sockaddr *)&dst6;
 		}
 		break;
@@ -613,31 +616,26 @@ fail:
 	return (ENOMEM);
 }
 
-static NAT64NOINLINE int
-nat64_find_route6(struct nhop6_basic *pnh, struct sockaddr_in6 *dst,
-    struct mbuf *m)
+static struct nhop_object *
+nat64_find_route6(struct sockaddr_in6 *dst, struct mbuf *m)
 {
+	struct nhop_object *nh;
 
-	if (fib6_lookup_nh_basic(M_GETFIB(m), &dst->sin6_addr, 0, 0, 0,
-	    pnh) != 0)
-		return (EHOSTUNREACH);
-	if (pnh->nh_flags & (NHF_BLACKHOLE | NHF_REJECT))
-		return (EHOSTUNREACH);
-	/*
-	 * XXX: we need to use destination address with embedded scope
-	 * zone id, because LLTABLE uses such form of addresses for lookup.
-	 */
+	NET_EPOCH_ASSERT();
+	nh = fib6_lookup(M_GETFIB(m), &dst->sin6_addr, 0, NHR_NONE, 0);
+	if (nh == NULL)
+		return (NULL);
+	if (nh->nh_flags & (NHF_BLACKHOLE | NHF_REJECT))
+		return (NULL);
+
 	dst->sin6_family = AF_INET6;
 	dst->sin6_len = sizeof(*dst);
-	dst->sin6_addr = pnh->nh_addr;
-	if (IN6_IS_SCOPE_LINKLOCAL(&dst->sin6_addr))
-		dst->sin6_addr.s6_addr16[1] =
-		    htons(pnh->nh_ifp->if_index & 0xffff);
+	if (nh->nh_flags & NHF_GATEWAY)
+		dst->sin6_addr = nh->gw6_sa.sin6_addr;
 	dst->sin6_port = 0;
 	dst->sin6_scope_id = 0;
 	dst->sin6_flowinfo = 0;
-
-	return (0);
+	return (nh);
 }
 
 #define	NAT64_ICMP6_PLEN	64
@@ -717,7 +715,7 @@ nat64_icmp6_reflect(struct mbuf *m, uint8_t type, uint8_t code, uint32_t mtu,
 	/*
 	 * Move pkthdr from original mbuf. We should have initialized some
 	 * fields, because we can reinject this mbuf to netisr and it will
-	 * go trough input path (it requires at least rcvif should be set).
+	 * go through input path (it requires at least rcvif should be set).
 	 * Also do M_ALIGN() to reduce chances of need to allocate new mbuf
 	 * in the chain, when we will do M_PREPEND() or make some type of
 	 * tunneling.
@@ -765,21 +763,24 @@ freeit:
 	m_freem(m);
 }
 
-static NAT64NOINLINE int
-nat64_find_route4(struct nhop4_basic *pnh, struct sockaddr_in *dst,
-    struct mbuf *m)
+static struct nhop_object *
+nat64_find_route4(struct sockaddr_in *dst, struct mbuf *m)
 {
+	struct nhop_object *nh;
 
-	if (fib4_lookup_nh_basic(M_GETFIB(m), dst->sin_addr, 0, 0, pnh) != 0)
-		return (EHOSTUNREACH);
-	if (pnh->nh_flags & (NHF_BLACKHOLE | NHF_BROADCAST | NHF_REJECT))
-		return (EHOSTUNREACH);
+	NET_EPOCH_ASSERT();
+	nh = fib4_lookup(M_GETFIB(m), dst->sin_addr, 0, NHR_NONE, 0);
+	if (nh == NULL)
+		return (NULL);
+	if (nh->nh_flags & (NHF_BLACKHOLE | NHF_BROADCAST | NHF_REJECT))
+		return (NULL);
 
 	dst->sin_family = AF_INET;
 	dst->sin_len = sizeof(*dst);
-	dst->sin_addr = pnh->nh_addr;
+	if (nh->nh_flags & NHF_GATEWAY)
+		dst->sin_addr = nh->gw4_sa.sin_addr;
 	dst->sin_port = 0;
-	return (0);
+	return (nh);
 }
 
 #define	NAT64_ICMP_PLEN	64
@@ -1222,7 +1223,7 @@ nat64_do_handle_ip4(struct mbuf *m, struct in6_addr *saddr,
     struct in6_addr *daddr, uint16_t lport, struct nat64_config *cfg,
     void *logdata)
 {
-	struct nhop6_basic nh;
+	struct nhop_object *nh;
 	struct ip6_hdr ip6;
 	struct sockaddr_in6 dst;
 	struct ip *ip;
@@ -1265,16 +1266,17 @@ nat64_do_handle_ip4(struct mbuf *m, struct in6_addr *saddr,
 	}
 
 	dst.sin6_addr = ip6.ip6_dst;
-	if (nat64_find_route6(&nh, &dst, m) != 0) {
+	nh = nat64_find_route6(&dst, m);
+	if (nh == NULL) {
 		NAT64STAT_INC(&cfg->stats, noroute6);
 		nat64_icmp_reflect(m, ICMP_UNREACH, ICMP_UNREACH_HOST, 0,
 		    &cfg->stats, logdata);
 		return (NAT64RETURN);
 	}
-	if (nh.nh_mtu < plen + sizeof(ip6) &&
+	if (nh->nh_mtu < plen + sizeof(ip6) &&
 	    (ip->ip_off & htons(IP_DF)) != 0) {
 		nat64_icmp_reflect(m, ICMP_UNREACH, ICMP_UNREACH_NEEDFRAG,
-		    FRAGSZ(nh.nh_mtu) + sizeof(struct ip), &cfg->stats, logdata);
+		    FRAGSZ(nh->nh_mtu) + sizeof(struct ip), &cfg->stats, logdata);
 		return (NAT64RETURN);
 	}
 
@@ -1319,9 +1321,9 @@ nat64_do_handle_ip4(struct mbuf *m, struct in6_addr *saddr,
 
 	m_adj(m, hlen);
 	mbufq_init(&mq, 255);
-	nat64_fragment6(&cfg->stats, &ip6, &mq, m, nh.nh_mtu, ip_id, ip_off);
+	nat64_fragment6(&cfg->stats, &ip6, &mq, m, nh->nh_mtu, ip_id, ip_off);
 	while ((m = mbufq_dequeue(&mq)) != NULL) {
-		if (V_nat64out->output(nh.nh_ifp, m, (struct sockaddr *)&dst,
+		if (V_nat64out->output(nh->nh_ifp, m, (struct sockaddr *)&dst,
 		    &cfg->stats, logdata) != 0)
 			break;
 		NAT64STAT_INC(&cfg->stats, opcnt46);
@@ -1556,7 +1558,7 @@ nat64_do_handle_ip6(struct mbuf *m, uint32_t aaddr, uint16_t aport,
     struct nat64_config *cfg, void *logdata)
 {
 	struct ip ip;
-	struct nhop4_basic nh;
+	struct nhop_object *nh;
 	struct sockaddr_in dst;
 	struct ip6_frag *frag;
 	struct ip6_hdr *ip6;
@@ -1649,14 +1651,15 @@ nat64_do_handle_ip6(struct mbuf *m, uint32_t aaddr, uint16_t aport,
 			    cfg, logdata));
 	}
 	dst.sin_addr.s_addr = ip.ip_dst.s_addr;
-	if (nat64_find_route4(&nh, &dst, m) != 0) {
+	nh = nat64_find_route4(&dst, m);
+	if (nh == NULL) {
 		NAT64STAT_INC(&cfg->stats, noroute4);
 		nat64_icmp6_reflect(m, ICMP6_DST_UNREACH,
 		    ICMP6_DST_UNREACH_NOROUTE, 0, &cfg->stats, logdata);
 		return (NAT64RETURN);
 	}
-	if (nh.nh_mtu < plen + sizeof(ip)) {
-		nat64_icmp6_reflect(m, ICMP6_PACKET_TOO_BIG, 0, nh.nh_mtu,
+	if (nh->nh_mtu < plen + sizeof(ip)) {
+		nat64_icmp6_reflect(m, ICMP6_PACKET_TOO_BIG, 0, nh->nh_mtu,
 		    &cfg->stats, logdata);
 		return (NAT64RETURN);
 	}
@@ -1710,9 +1713,8 @@ nat64_do_handle_ip6(struct mbuf *m, uint32_t aaddr, uint16_t aport,
 
 	m_adj(m, hlen - sizeof(ip));
 	bcopy(&ip, mtod(m, void *), sizeof(ip));
-	if (V_nat64out->output(nh.nh_ifp, m, (struct sockaddr *)&dst,
+	if (V_nat64out->output(nh->nh_ifp, m, (struct sockaddr *)&dst,
 	    &cfg->stats, logdata) == 0)
 		NAT64STAT_INC(&cfg->stats, opcnt64);
 	return (NAT64RETURN);
 }
-

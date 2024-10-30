@@ -38,7 +38,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_mac.h"
 
 #include <sys/param.h>
@@ -162,7 +161,7 @@ MAC_CHECK_PROBE_DEFINE2(pipe_check_poll, "struct ucred *",
     "struct pipepair *");
 
 int
-mac_pipe_check_poll(struct ucred *cred, struct pipepair *pp)
+mac_pipe_check_poll_impl(struct ucred *cred, struct pipepair *pp)
 {
 	int error;
 

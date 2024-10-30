@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <fenv.h>
 #include <float.h>
 #include <math.h>

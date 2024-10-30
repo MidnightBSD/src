@@ -57,14 +57,8 @@ device		sc
 
 device		agp		# support several AGP chipsets
 
-# Power management support (see NOTES for more options)
-#device		apm
-# Add suspend/resume support for the i8254.
-device		pmtimer
-
 # Pseudo devices.
 device		loop		# Network loopback
-device		random		# Entropy device
 device		ether		# Ethernet support
 device		pty		# Pseudo-ttys (telnet etc)
 device		md		# Memory "disks"

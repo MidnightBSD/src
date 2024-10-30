@@ -23,7 +23,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef	_IP_FW_PMOD_H_
@@ -32,4 +31,3 @@
 int tcpmod_init(struct ip_fw_chain *ch, int first);
 void tcpmod_uninit(struct ip_fw_chain *ch, int last);
 #endif /* _IP_FW_PMOD_H_ */
-

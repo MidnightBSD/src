@@ -8,7 +8,7 @@
  * Guido van Rossum.
  *
  * Copyright (c) 2011 The FreeBSD Foundation
- * All rights reserved.
+ *
  * Portions of this software were developed by David Chisnall
  * under sponsorship from the FreeBSD Foundation.
  *
@@ -39,7 +39,6 @@
 
 #include <sys/cdefs.h>
 __SCCSID("@(#)fnmatch.c	8.2 (Berkeley) 4/16/94");
-
 /*
  * Function fnmatch() as specified in POSIX 1003.2-1992, section B.6.
  * Compares a filename or pathname to a pattern.

@@ -32,12 +32,11 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
-
 /*
  * Simple TFTP implementation for libsa.
  * Assumes:
- *  - socket descriptor (int) at open_file->f_devdata
+ *  - socket descriptor (int) at dev->d_opendata, dev stored at
+ *	open_file->f_devdata
  *  - server host IP in global rootip
  * Restrictions:
  *  - read only
@@ -71,6 +70,7 @@ static int tftp_read(struct open_file *, void *, size_t, size_t *);
 static off_t tftp_seek(struct open_file *, off_t, int);
 static int tftp_set_blksize(struct tftp_handle *, const char *);
 static int tftp_stat(struct open_file *, struct stat *);
+static int tftp_preload(struct open_file *);
 
 struct fs_ops tftp_fsops = {
 	.fs_name = "tftp",
@@ -80,6 +80,7 @@ struct fs_ops tftp_fsops = {
 	.fo_write = null_write,
 	.fo_seek = tftp_seek,
 	.fo_stat = tftp_stat,
+	.fo_preload = tftp_preload,
 	.fo_readdir = null_readdir
 };
 
@@ -112,6 +113,8 @@ struct tftp_handle {
 	unsigned long	tftp_tsize;
 	void		*pkt;
 	struct tftphdr	*tftp_hdr;
+	char		*tftp_cache;
+	bool		lastacksent;
 };
 
 struct tftprecv_extra {
@@ -121,7 +124,7 @@ struct tftprecv_extra {
 
 #define	TFTP_MAX_ERRCODE EOPTNEG
 static const int tftperrors[TFTP_MAX_ERRCODE + 1] = {
-	0,			/* ??? */
+	0,			/* NAK */
 	ENOENT,
 	EPERM,
 	ENOSPC,
@@ -187,6 +190,7 @@ recvtftp(struct iodesc *d, void **pkt, void **payload, time_t tleft,
 	struct tftphdr *t;
 	void *ptr = NULL;
 	ssize_t len;
+	int tftp_error;
 
 	errno = 0;
 	extra = recv_extra;
@@ -233,16 +237,20 @@ recvtftp(struct iodesc *d, void **pkt, void **payload, time_t tleft,
 		return (got);
 	}
 	case ERROR:
-		if ((unsigned)ntohs(t->th_code) > TFTP_MAX_ERRCODE) {
-			printf("illegal tftp error %d\n", ntohs(t->th_code));
+		tftp_error = ntohs(t->th_code);
+		if ((unsigned)tftp_error > TFTP_MAX_ERRCODE) {
+			printf("illegal tftp error %d\n", tftp_error);
 			errno = EIO;
 		} else {
 #ifdef TFTP_DEBUG
-			printf("tftp-error %d\n", ntohs(t->th_code));
+			printf("tftp-error %d\n", tftp_error);
 #endif
-			errno = tftperrors[ntohs(t->th_code)];
+			errno = tftperrors[tftp_error];
 		}
 		free(ptr);
+		/* If we got a NAK return 0, it's usually a directory */
+		if (tftp_error == 0)
+			return (0);
 		return (-1);
 	case OACK: {
 		struct udphdr *uh;
@@ -371,6 +379,7 @@ tftp_makereq(struct tftp_handle *h)
 			if (res < h->tftp_blksize) {
 				h->islastblock = 1;	/* very short file */
 				tftp_sendack(h, h->currblock);
+				h->lastacksent = true;
 			}
 			return (0);
 		}
@@ -432,6 +441,7 @@ tftp_getnextblock(struct tftp_handle *h)
 static int
 tftp_open(const char *path, struct open_file *f)
 {
+	struct devdesc *dev;
 	struct tftp_handle *tftpfile;
 	struct iodesc	*io;
 	int		res;
@@ -452,7 +462,8 @@ tftp_open(const char *path, struct open_file *f)
 		return (ENOMEM);
 
 	tftpfile->tftp_blksize = TFTP_REQUESTED_BLKSIZE;
-	tftpfile->iodesc = io = socktodesc(*(int *)(f->f_devdata));
+	dev = f->f_devdata;
+	tftpfile->iodesc = io = socktodesc(*(int *)(dev->d_opendata));
 	if (io == NULL) {
 		free(tftpfile);
 		return (EINVAL);
@@ -507,6 +518,16 @@ tftp_read(struct open_file *f, void *addr, size_t size,
 	if (tftpfile->tftp_tsize > 0 &&
 	    tftpfile->off + size > tftpfile->tftp_tsize) {
 		size = tftpfile->tftp_tsize - tftpfile->off;
+	}
+
+	if (tftpfile->tftp_cache != NULL) {
+		bcopy(tftpfile->tftp_cache + tftpfile->off,
+		    addr, size);
+
+		addr = (char *)addr + size;
+		tftpfile->off += size;
+		res -= size;
+		goto out;
 	}
 
 	while (size > 0) {
@@ -574,6 +595,7 @@ tftp_read(struct open_file *f, void *addr, size_t size,
 
 	}
 
+out:
 	if (resid != NULL)
 		*resid = res;
 	return (rc);
@@ -585,11 +607,13 @@ tftp_close(struct open_file *f)
 	struct tftp_handle *tftpfile;
 	tftpfile = f->f_fsdata;
 
-	/* let it time out ... */
+	if (tftpfile->lastacksent == false)
+		tftp_senderr(tftpfile, 0, "No error: file closed");
 
 	if (tftpfile) {
 		free(tftpfile->path);
 		free(tftpfile->pkt);
+		free(tftpfile->tftp_cache);
 		free(tftpfile);
 	}
 	is_open = 0;
@@ -628,6 +652,59 @@ tftp_seek(struct open_file *f, off_t offset, int where)
 		return (-1);
 	}
 	return (tftpfile->off);
+}
+
+static int
+tftp_preload(struct open_file *f)
+{
+	struct tftp_handle *tftpfile;
+	char *cache;
+	int rc;
+#ifdef TFTP_DEBUG
+	time_t start, end;
+#endif
+
+	tftpfile = f->f_fsdata;
+	cache = malloc(sizeof(char) * tftpfile->tftp_tsize);
+	if (cache == NULL) {
+		printf("Couldn't allocate %ju bytes for preload caching"
+		    ", disabling caching\n",
+		    (uintmax_t)sizeof(char) * tftpfile->tftp_tsize);
+		return (-1);
+	}
+
+#ifdef TFTP_DEBUG
+	start = getsecs();
+	printf("Preloading %s ", tftpfile->path);
+#endif
+	if (tftpfile->currblock == 1)
+		bcopy(tftpfile->tftp_hdr->th_data,
+		    cache,
+		    tftpfile->validsize);
+	else
+		tftpfile->currblock = 0;
+
+	while (tftpfile->islastblock == 0) {
+		twiddle(32);
+		rc = tftp_getnextblock(tftpfile);
+		if (rc) {
+			free(cache);
+			printf("Got TFTP error %d, disabling caching\n", rc);
+			return (rc);
+		}
+		bcopy(tftpfile->tftp_hdr->th_data,
+		    cache + (tftpfile->tftp_blksize * (tftpfile->currblock - 1)),
+		    tftpfile->validsize);
+	}
+#ifdef TFTP_DEBUG
+	end = getsecs();
+	printf("\nPreloaded %s (%ju bytes) during %jd seconds\n",
+	    tftpfile->path, (intmax_t)tftpfile->tftp_tsize,
+	    (intmax_t)end - start);
+#endif
+
+	tftpfile->tftp_cache = cache;
+	return (0);
 }
 
 static int
