@@ -23,6 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <machine/asm.h>
 	.section .init,"ax",@progbits
 	.align	4
 	.globl	_init
@@ -38,4 +39,3 @@ _fini:
 	subq	$8,%rsp
 
 	.section .note.GNU-stack,"",%progbits
-

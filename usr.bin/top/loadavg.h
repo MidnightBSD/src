@@ -10,7 +10,6 @@
  *
  *	loaddouble(la) - convert load_avg to double.
  *	intload(i)     - convert integer to load_avg.
- *
  */
 
 #ifndef LOADAVG_H

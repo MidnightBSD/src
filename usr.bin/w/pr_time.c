@@ -29,8 +29,6 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 
 #ifndef lint
 static const char sccsid[] = "@(#)pr_time.c	8.2 (Berkeley) 4/4/94";
@@ -89,7 +87,7 @@ pr_attime(time_t *started, time_t *now)
 	if (len == width)
 		xo_emit("{:login-time/%-7.7ls/%ls}", buf);
 	else if (width < 7)
-	        xo_emit("{:login-time/%ls}%.*s", buf, 7 - width, "      ");
+		xo_emit("{:login-time/%ls}%.*s", buf, 7 - width, "      ");
 	else {
 		xo_emit("{:login-time/%ls}", buf);
 		offset = width - 7;

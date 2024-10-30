@@ -32,8 +32,6 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 #include <netinet/sctp_os.h>
 #include <sys/proc.h>
 #include <netinet/sctp_var.h>
@@ -66,7 +64,6 @@ sctp_add_chk_to_control(struct sctp_queued_to_read *control,
     struct sctp_tcb *stcb,
     struct sctp_association *asoc,
     struct sctp_tmit_chunk *chk, int hold_rlock);
-
 
 void
 sctp_set_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
@@ -127,8 +124,6 @@ sctp_calc_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 	}
 	return (calc);
 }
-
-
 
 /*
  * Build out our readq entry based on the incoming packet.
@@ -283,7 +278,6 @@ sctp_build_ctl_nchunk(struct sctp_inpcb *inp, struct sctp_sndrcvinfo *sinfo)
 	}
 	return (ret);
 }
-
 
 static void
 sctp_mark_non_revokable(struct sctp_association *asoc, uint32_t tsn)
@@ -447,7 +441,7 @@ sctp_abort_in_reasm(struct sctp_tcb *stcb,
 	chk->data = NULL;
 	sctp_free_a_chunk(stcb, chk, SCTP_SO_NOT_LOCKED);
 	stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA + SCTP_LOC_1;
-	sctp_abort_an_association(stcb->sctp_ep, stcb, oper, SCTP_SO_NOT_LOCKED);
+	sctp_abort_an_association(stcb->sctp_ep, stcb, oper, false, SCTP_SO_NOT_LOCKED);
 	*abort_flag = 1;
 }
 
@@ -500,7 +494,7 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb,
 	 * ssn 2 with TSN 1? If the peer is doing some sort of funky TSN/SSN
 	 * assignment this could happen... and I don't see how this would be
 	 * a violation. So for now I am undecided an will leave the sort by
-	 * SSN alone. Maybe a hybred approach is the answer
+	 * SSN alone. Maybe a hybrid approach is the answer
 	 *
 	 */
 	struct sctp_queued_to_read *at;
@@ -536,10 +530,9 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb,
 		}
 		op_err = sctp_generate_cause(SCTP_CAUSE_PROTOCOL_VIOLATION, msg);
 		stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA + SCTP_LOC_2;
-		sctp_abort_an_association(stcb->sctp_ep, stcb, op_err, SCTP_SO_NOT_LOCKED);
+		sctp_abort_an_association(stcb->sctp_ep, stcb, op_err, false, SCTP_SO_NOT_LOCKED);
 		*abort_flag = 1;
 		return;
-
 	}
 	queue_needed = 1;
 	asoc->size_on_all_streams += control->length;
@@ -627,12 +620,11 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb,
 			sctp_clean_up_control(stcb, control);
 			op_err = sctp_generate_cause(SCTP_CAUSE_PROTOCOL_VIOLATION, msg);
 			stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA + SCTP_LOC_3;
-			sctp_abort_an_association(stcb->sctp_ep, stcb, op_err, SCTP_SO_NOT_LOCKED);
+			sctp_abort_an_association(stcb->sctp_ep, stcb, op_err, false, SCTP_SO_NOT_LOCKED);
 			*abort_flag = 1;
 		}
 	}
 }
-
 
 static void
 sctp_setup_tail_pointer(struct sctp_queued_to_read *control)
@@ -754,21 +746,6 @@ sctp_build_readq_entry_from_ctl(struct sctp_queued_to_read *nc, struct sctp_queu
 	nc->do_not_ref_stcb = control->do_not_ref_stcb;
 }
 
-static void
-sctp_reset_a_control(struct sctp_queued_to_read *control,
-    struct sctp_inpcb *inp, uint32_t tsn)
-{
-	control->fsn_included = tsn;
-	if (control->on_read_q) {
-		/*
-		 * We have to purge it from there, hopefully this will work
-		 * :-)
-		 */
-		TAILQ_REMOVE(&inp->read_queue, control, next);
-		control->on_read_q = 0;
-	}
-}
-
 static int
 sctp_handle_old_unordered_data(struct sctp_tcb *stcb,
     struct sctp_association *asoc,
@@ -808,7 +785,7 @@ restart:
 			}
 			memset(nc, 0, sizeof(struct sctp_queued_to_read));
 			TAILQ_REMOVE(&control->reasm, chk, sctp_next);
-			sctp_add_chk_to_control(control, strm, stcb, asoc, chk, SCTP_READ_LOCK_NOT_HELD);
+			sctp_add_chk_to_control(control, strm, stcb, asoc, chk, inp_read_lock_held);
 			fsn++;
 			cnt_added++;
 			chk = NULL;
@@ -967,10 +944,11 @@ sctp_inject_old_unordered_data(struct sctp_tcb *stcb,
 				 * (since the equals part is a TSN failure
 				 * it must be that).
 				 *
-				 * We are completly hosed in that case since
-				 * I have no way to recover. This really
-				 * will only happen if we can get more TSN's
-				 * higher before the pd-api-point.
+				 * We are completely hosed in that case
+				 * since I have no way to recover. This
+				 * really will only happen if we can get
+				 * more TSN's higher before the
+				 * pd-api-point.
 				 */
 				sctp_abort_in_reasm(stcb, control, chk,
 				    abort_flag,
@@ -1042,7 +1020,6 @@ place_chunk:
 			    SCTP_FROM_SCTP_INDATA + SCTP_LOC_5);
 			return;
 		}
-
 	}
 	if (inserted == 0) {
 		/* Its at the end */
@@ -1287,7 +1264,6 @@ out:
 	return (ret);
 }
 
-
 uint32_t
 sctp_add_chk_to_control(struct sctp_queued_to_read *control,
     struct sctp_stream_in *strm,
@@ -1299,14 +1275,17 @@ sctp_add_chk_to_control(struct sctp_queued_to_read *control,
 	 * control and free up the chunk resources.
 	 */
 	uint32_t added = 0;
-	int i_locked = 0;
+	bool i_locked = false;
 
-	if (control->on_read_q && (hold_rlock == 0)) {
-		/*
-		 * Its being pd-api'd so we must do some locks.
-		 */
-		SCTP_INP_READ_LOCK(stcb->sctp_ep);
-		i_locked = 1;
+	if (control->on_read_q) {
+		if (hold_rlock == 0) {
+			/* Its being pd-api'd so we must do some locks. */
+			SCTP_INP_READ_LOCK(stcb->sctp_ep);
+			i_locked = true;
+		}
+		if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_CANT_READ) {
+			goto out;
+		}
 	}
 	if (control->data == NULL) {
 		control->data = chk->data;
@@ -1355,6 +1334,7 @@ sctp_add_chk_to_control(struct sctp_queued_to_read *control,
 		control->end_added = 1;
 		control->last_frag_seen = 1;
 	}
+out:
 	if (i_locked) {
 		SCTP_INP_READ_UNLOCK(stcb->sctp_ep);
 	}
@@ -1364,7 +1344,7 @@ sctp_add_chk_to_control(struct sctp_queued_to_read *control,
 
 /*
  * Dump onto the re-assembly queue, in its proper place. After dumping on the
- * queue, see if anthing can be delivered. If so pull it off (or as much as
+ * queue, see if anything can be delivered. If so pull it off (or as much as
  * we can. If we run out of space then we must dump what we can and set the
  * appropriate flag to say we queued what we could.
  */
@@ -1752,7 +1732,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		 */
 		op_err = sctp_generate_no_user_data_cause(tsn);
 		stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA + SCTP_LOC_16;
-		sctp_abort_an_association(stcb->sctp_ep, stcb, op_err, SCTP_SO_NOT_LOCKED);
+		sctp_abort_an_association(stcb->sctp_ep, stcb, op_err, false, SCTP_SO_NOT_LOCKED);
 		*abort_flag = 1;
 		return (0);
 	}
@@ -1818,7 +1798,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		 * receiver. Send peer an ABORT!
 		 */
 		op_err = sctp_generate_cause(SCTP_CAUSE_OUT_OF_RESC, "");
-		sctp_abort_an_association(stcb->sctp_ep, stcb, op_err, SCTP_SO_NOT_LOCKED);
+		sctp_abort_an_association(stcb->sctp_ep, stcb, op_err, false, SCTP_SO_NOT_LOCKED);
 		*abort_flag = 1;
 		return (0);
 	}
@@ -1889,7 +1869,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		err_out:
 				op_err = sctp_generate_cause(SCTP_CAUSE_PROTOCOL_VIOLATION, msg);
 				stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA + SCTP_LOC_17;
-				sctp_abort_an_association(stcb->sctp_ep, stcb, op_err, SCTP_SO_NOT_LOCKED);
+				sctp_abort_an_association(stcb->sctp_ep, stcb, op_err, false, SCTP_SO_NOT_LOCKED);
 				*abort_flag = 1;
 				return (0);
 			}
@@ -1927,7 +1907,8 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				SCTP_SNPRINTF(msg, sizeof(msg), "Duplicate MID=%8.8x detected.", mid);
 				goto err_out;
 			} else {
-				if ((tsn == control->fsn_included + 1) &&
+				if ((control->first_frag_seen) &&
+				    (tsn == control->fsn_included + 1) &&
 				    (control->end_added == 0)) {
 					SCTP_SNPRINTF(msg, sizeof(msg),
 					    "Illegal message sequence, missing end for MID: %8.8x",
@@ -1948,7 +1929,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		 * When we have NO room in the rwnd we check to make sure
 		 * the reader is doing its job...
 		 */
-		if (stcb->sctp_socket->so_rcv.sb_cc) {
+		if (SCTP_SBAVAIL(&stcb->sctp_socket->so_rcv) > 0) {
 			/* some to read, wake-up */
 			sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 		}
@@ -2024,7 +2005,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		}
 		op_err = sctp_generate_cause(SCTP_CAUSE_PROTOCOL_VIOLATION, msg);
 		stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA + SCTP_LOC_18;
-		sctp_abort_an_association(stcb->sctp_ep, stcb, op_err, SCTP_SO_NOT_LOCKED);
+		sctp_abort_an_association(stcb->sctp_ep, stcb, op_err, false, SCTP_SO_NOT_LOCKED);
 		*abort_flag = 1;
 		return (0);
 	}
@@ -2223,7 +2204,6 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 
 				TAILQ_FOREACH_SAFE(lcontrol, &asoc->pending_reply_queue, next, nlcontrol) {
 					if (SCTP_TSN_GT(control->sinfo_tsn, lcontrol->sinfo_tsn)) {
-
 						continue;
 					} else {
 						/* found it */
@@ -2399,7 +2379,6 @@ static const int8_t sctp_map_lookup_tab[256] = {
 	0, 1, 0, 2, 0, 1, 0, 8
 };
 
-
 void
 sctp_slide_mapping_arrays(struct sctp_tcb *stcb)
 {
@@ -2544,7 +2523,6 @@ sctp_slide_mapping_arrays(struct sctp_tcb *stcb)
 			for (ii = 0; ii < distance; ii++) {
 				asoc->mapping_array[ii] = asoc->mapping_array[slide_from + ii];
 				asoc->nr_mapping_array[ii] = asoc->nr_mapping_array[slide_from + ii];
-
 			}
 			for (ii = distance; ii < asoc->mapping_array_size; ii++) {
 				asoc->mapping_array[ii] = 0;
@@ -2618,14 +2596,12 @@ sctp_sack_check(struct sctp_tcb *stcb, int was_a_gap)
 		    (is_a_gap) ||	/* is still a gap */
 		    (stcb->asoc.delayed_ack == 0) ||	/* Delayed sack disabled */
 		    (stcb->asoc.data_pkts_seen >= stcb->asoc.sack_freq)) {	/* hit limit of pkts */
-
 			if ((stcb->asoc.sctp_cmt_on_off > 0) &&
 			    (SCTP_BASE_SYSCTL(sctp_cmt_use_dac)) &&
 			    (stcb->asoc.send_sack == 0) &&
 			    (stcb->asoc.numduptsns == 0) &&
 			    (stcb->asoc.delayed_ack) &&
 			    (!SCTP_OS_TIMER_PENDING(&stcb->asoc.dack_timer.timer))) {
-
 				/*
 				 * CMT DAC algorithm: With CMT, delay acks
 				 * even in the face of reordering.
@@ -2748,7 +2724,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 			SCTP_SNPRINTF(msg, sizeof(msg), "%s", "DATA chunk received when I-DATA was negotiated");
 			op_err = sctp_generate_cause(SCTP_CAUSE_PROTOCOL_VIOLATION, msg);
 			stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA + SCTP_LOC_21;
-			sctp_abort_an_association(inp, stcb, op_err, SCTP_SO_NOT_LOCKED);
+			sctp_abort_an_association(inp, stcb, op_err, false, SCTP_SO_NOT_LOCKED);
 			return (2);
 		}
 		if ((asoc->idata_supported == 0) &&
@@ -2759,7 +2735,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 			SCTP_SNPRINTF(msg, sizeof(msg), "%s", "I-DATA chunk received when DATA was negotiated");
 			op_err = sctp_generate_cause(SCTP_CAUSE_PROTOCOL_VIOLATION, msg);
 			stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA + SCTP_LOC_22;
-			sctp_abort_an_association(inp, stcb, op_err, SCTP_SO_NOT_LOCKED);
+			sctp_abort_an_association(inp, stcb, op_err, false, SCTP_SO_NOT_LOCKED);
 			return (2);
 		}
 		if ((ch->chunk_type == SCTP_DATA) ||
@@ -2784,7 +2760,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 				    chk_length);
 				op_err = sctp_generate_cause(SCTP_CAUSE_PROTOCOL_VIOLATION, msg);
 				stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA + SCTP_LOC_23;
-				sctp_abort_an_association(inp, stcb, op_err, SCTP_SO_NOT_LOCKED);
+				sctp_abort_an_association(inp, stcb, op_err, false, SCTP_SO_NOT_LOCKED);
 				return (2);
 			}
 #ifdef SCTP_AUDITING_ENABLED
@@ -2853,7 +2829,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 					SCTP_SNPRINTF(msg, sizeof(msg), "DATA chunk followed by chunk of type %2.2x",
 					    ch->chunk_type);
 					op_err = sctp_generate_cause(SCTP_CAUSE_PROTOCOL_VIOLATION, msg);
-					sctp_abort_an_association(inp, stcb, op_err, SCTP_SO_NOT_LOCKED);
+					sctp_abort_an_association(inp, stcb, op_err, false, SCTP_SO_NOT_LOCKED);
 					return (2);
 				}
 			default:
@@ -2872,7 +2848,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 					SCTP_SNPRINTF(msg, sizeof(msg), "Chunk of length %u", chk_length);
 					op_err = sctp_generate_cause(SCTP_CAUSE_PROTOCOL_VIOLATION, msg);
 					stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA + SCTP_LOC_24;
-					sctp_abort_an_association(inp, stcb, op_err, SCTP_SO_NOT_LOCKED);
+					sctp_abort_an_association(inp, stcb, op_err, false, SCTP_SO_NOT_LOCKED);
 					return (2);
 				}
 				if (ch->chunk_type & 0x40) {
@@ -3111,7 +3087,6 @@ sctp_process_segment_range(struct sctp_tcb *stcb, struct sctp_tmit_chunk **p_tp1
 								tp1->do_rtt = 0;
 							}
 						}
-
 					}
 					if (tp1->sent <= SCTP_DATAGRAM_RESEND) {
 						if (SCTP_TSN_GT(tp1->rec.data.tsn,
@@ -3188,7 +3163,6 @@ sctp_process_segment_range(struct sctp_tcb *stcb, struct sctp_tmit_chunk **p_tp1
 	*p_tp1 = tp1;
 	return (wake_him);	/* Return value only used for nr-sack */
 }
-
 
 static int
 sctp_handle_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb, struct sctp_association *asoc,
@@ -3312,7 +3286,6 @@ sctp_check_for_revoked(struct sctp_tcb *stcb,
 	}
 }
 
-
 static void
 sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
     uint32_t biggest_tsn_acked, uint32_t biggest_tsn_newly_acked, uint32_t this_sack_lowest_newack, int accum_moved)
@@ -3376,7 +3349,6 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					continue;
 				}
 			}
-
 		}
 		if (SCTP_TSN_GT(tp1->rec.data.tsn, asoc->this_sack_highest_gap) &&
 		    !(accum_moved && asoc->fast_retran_loss_recovery)) {
@@ -3397,7 +3369,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		 */
 		if (tp1->whoTo && tp1->whoTo->saw_newack == 0) {
 			/*
-			 * No new acks were receieved for data sent to this
+			 * No new acks were received for data sent to this
 			 * dest. Therefore, according to the SFR algo for
 			 * CMT, no data sent to this dest can be marked for
 			 * FR using this SACK.
@@ -3408,12 +3380,12 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			    tp1->whoTo->this_sack_highest_newack) &&
 		    !(accum_moved && asoc->fast_retran_loss_recovery)) {
 			/*
-			 * CMT: New acks were receieved for data sent to
-			 * this dest. But no new acks were seen for data
-			 * sent after tp1. Therefore, according to the SFR
-			 * algo for CMT, tp1 cannot be marked for FR using
-			 * this SACK. This step covers part of the DAC algo
-			 * and the HTNA algo as well.
+			 * CMT: New acks were received for data sent to this
+			 * dest. But no new acks were seen for data sent
+			 * after tp1. Therefore, according to the SFR algo
+			 * for CMT, tp1 cannot be marked for FR using this
+			 * SACK. This step covers part of the DAC algo and
+			 * the HTNA algo as well.
 			 */
 			continue;
 		}
@@ -3488,7 +3460,6 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			    (1)
 #endif
 			    ) {
-
 				if (SCTP_TSN_GE(biggest_tsn_newly_acked,
 				    tp1->rec.data.fast_retran_tsn)) {
 					/*
@@ -3853,10 +3824,9 @@ static int
 sctp_fs_audit(struct sctp_association *asoc)
 {
 	struct sctp_tmit_chunk *chk;
-	int inflight = 0, inbetween = 0;
+	int inflight = 0, resend = 0, inbetween = 0, acked = 0, above = 0;
 	int ret;
 #ifndef INVARIANTS
-	int resend = 0, acked = 0, above = 0;
 	int entry_flight, entry_cnt;
 #endif
 
@@ -3876,29 +3846,23 @@ sctp_fs_audit(struct sctp_association *asoc)
 			    chk->snd_count);
 			inflight++;
 		} else if (chk->sent == SCTP_DATAGRAM_RESEND) {
-#ifndef INVARIANTS
 			resend++;
-#endif
 		} else if (chk->sent < SCTP_DATAGRAM_ACKED) {
 			inbetween++;
 		} else if (chk->sent > SCTP_DATAGRAM_ACKED) {
-#ifndef INVARIANTS
 			above++;
-#endif
 		} else {
-#ifndef INVARIANTS
 			acked++;
-#endif
 		}
 	}
 
 	if ((inflight > 0) || (inbetween > 0)) {
 #ifdef INVARIANTS
-		panic("Flight size-express incorrect? \n");
+		panic("Flight size-express incorrect F: %d I: %d R: %d Ab: %d ACK: %d",
+		    inflight, inbetween, resend, above, acked);
 #else
 		SCTP_PRINTF("asoc->total_flight: %d cnt: %d\n",
 		    entry_flight, entry_cnt);
-
 		SCTP_PRINTF("Flight size-express incorrect F: %d I: %d R: %d Ab: %d ACK: %d\n",
 		    inflight, inbetween, resend, above, acked);
 		ret = 1;
@@ -3906,7 +3870,6 @@ sctp_fs_audit(struct sctp_association *asoc)
 	}
 	return (ret);
 }
-
 
 static void
 sctp_window_probe_recovery(struct sctp_tcb *stcb,
@@ -4026,7 +3989,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 		    cumack, send_s);
 		op_err = sctp_generate_cause(SCTP_CAUSE_PROTOCOL_VIOLATION, msg);
 		stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA + SCTP_LOC_25;
-		sctp_abort_an_association(stcb->sctp_ep, stcb, op_err, SCTP_SO_NOT_LOCKED);
+		sctp_abort_an_association(stcb->sctp_ep, stcb, op_err, false, SCTP_SO_NOT_LOCKED);
 		return;
 	}
 	asoc->this_sack_highest_gap = cumack;
@@ -4155,7 +4118,6 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 				break;
 			}
 		}
-
 	}
 	/* sa_ignore NO_NULL_CHK */
 	if (stcb->sctp_socket) {
@@ -4180,7 +4142,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 				 * count, this is optional.
 				 */
 				net->error_count = 0;
-				if (!(net->dest_state & SCTP_ADDR_REACHABLE)) {
+				if ((net->dest_state & SCTP_ADDR_REACHABLE) == 0) {
 					/* addr came good */
 					net->dest_state |= SCTP_ADDR_REACHABLE;
 					sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_UP, stcb,
@@ -4332,7 +4294,7 @@ again:
 			/* XXX */
 			op_err = sctp_generate_cause(SCTP_CAUSE_USER_INITIATED_ABT, "");
 			stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA + SCTP_LOC_28;
-			sctp_abort_an_association(stcb->sctp_ep, stcb, op_err, SCTP_SO_NOT_LOCKED);
+			sctp_abort_an_association(stcb->sctp_ep, stcb, op_err, false, SCTP_SO_NOT_LOCKED);
 			return;
 		}
 		if ((asoc->state & SCTP_STATE_SHUTDOWN_PENDING) &&
@@ -4454,7 +4416,7 @@ sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
 	 * old sack, if so discard. 2) If there is nothing left in the send
 	 * queue (cum-ack is equal to last acked) then you have a duplicate
 	 * too, update any rwnd change and verify no timers are running.
-	 * then return. 3) Process any new consequtive data i.e. cum-ack
+	 * then return. 3) Process any new consecutive data i.e. cum-ack
 	 * moved process these first and note that it moved. 4) Process any
 	 * sack blocks. 5) Drop any acked from the queue. 6) Check for any
 	 * revoked blocks and mark. 7) Update the cwnd. 8) Nothing left,
@@ -4548,7 +4510,7 @@ hopeless_peer:
 		    cum_ack, send_s);
 		op_err = sctp_generate_cause(SCTP_CAUSE_PROTOCOL_VIOLATION, msg);
 		stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA + SCTP_LOC_29;
-		sctp_abort_an_association(stcb->sctp_ep, stcb, op_err, SCTP_SO_NOT_LOCKED);
+		sctp_abort_an_association(stcb->sctp_ep, stcb, op_err, false, SCTP_SO_NOT_LOCKED);
 		return;
 	}
 	/**********************/
@@ -4591,7 +4553,7 @@ hopeless_peer:
 	 * We init netAckSz and netAckSz2 to 0. These are used to track 2
 	 * things. The total byte count acked is tracked in netAckSz AND
 	 * netAck2 is used to track the total bytes acked that are un-
-	 * amibguious and were never retransmitted. We track these on a per
+	 * ambiguous and were never retransmitted. We track these on a per
 	 * destination address basis.
 	 */
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
@@ -4706,7 +4668,6 @@ hopeless_peer:
 					tp1->whoTo->new_pseudo_cumack = 1;
 					tp1->whoTo->find_pseudo_cumack = 1;
 					tp1->whoTo->find_rtx_pseudo_cumack = 1;
-
 					if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_SACK_LOGGING_ENABLE) {
 						sctp_log_sack(asoc->last_acked_seq,
 						    cum_ack,
@@ -4744,7 +4705,6 @@ hopeless_peer:
 	asoc->this_sack_highest_gap = last_tsn;
 
 	if ((num_seg > 0) || (num_nr_seg > 0)) {
-
 		/*
 		 * thisSackHighestGap will increase while handling NEW
 		 * segments this_sack_highest_newack will increase while
@@ -4779,7 +4739,6 @@ hopeless_peer:
 				sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
 				    stcb, net,
 				    SCTP_FROM_SCTP_INDATA + SCTP_LOC_31);
-
 		}
 	} else {
 		if (accum_moved) {
@@ -4926,7 +4885,7 @@ hopeless_peer:
 				 * count, this is optional.
 				 */
 				net->error_count = 0;
-				if (!(net->dest_state & SCTP_ADDR_REACHABLE)) {
+				if ((net->dest_state & SCTP_ADDR_REACHABLE) == 0) {
 					/* addr came good */
 					net->dest_state |= SCTP_ADDR_REACHABLE;
 					sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_UP, stcb,
@@ -5012,7 +4971,7 @@ hopeless_peer:
 			/* XXX */
 			op_err = sctp_generate_cause(SCTP_CAUSE_USER_INITIATED_ABT, "");
 			stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA + SCTP_LOC_35;
-			sctp_abort_an_association(stcb->sctp_ep, stcb, op_err, SCTP_SO_NOT_LOCKED);
+			sctp_abort_an_association(stcb->sctp_ep, stcb, op_err, false, SCTP_SO_NOT_LOCKED);
 			return;
 		}
 		if ((asoc->state & SCTP_STATE_SHUTDOWN_PENDING) &&
@@ -5155,7 +5114,6 @@ again:
 				if (!SCTP_OS_TIMER_PENDING(&net->rxt_timer.timer)) {
 					sctp_timer_start(SCTP_TIMER_TYPE_SEND,
 					    stcb->sctp_ep, stcb, net);
-
 				}
 			} else if (SCTP_OS_TIMER_PENDING(&net->rxt_timer.timer)) {
 				sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
@@ -5269,6 +5227,10 @@ sctp_kick_prsctp_reorder_queue(struct sctp_tcb *stcb,
 	uint32_t mid;
 	int need_reasm_check = 0;
 
+	KASSERT(stcb != NULL, ("stcb == NULL"));
+	SCTP_TCB_LOCK_ASSERT(stcb);
+	SCTP_INP_READ_LOCK_ASSERT(stcb->sctp_ep);
+
 	asoc = &stcb->asoc;
 	mid = strmin->last_mid_delivered;
 	/*
@@ -5306,11 +5268,9 @@ sctp_kick_prsctp_reorder_queue(struct sctp_tcb *stcb,
 				/* deliver it to at least the delivery-q */
 				if (stcb->sctp_socket) {
 					sctp_mark_non_revokable(asoc, control->sinfo_tsn);
-					sctp_add_to_readq(stcb->sctp_ep, stcb,
-					    control,
-					    &stcb->sctp_socket->so_rcv,
-					    1, SCTP_READ_LOCK_HELD,
-					    SCTP_SO_NOT_LOCKED);
+					sctp_add_to_readq(stcb->sctp_ep, stcb, control,
+					    &stcb->sctp_socket->so_rcv, 1,
+					    SCTP_READ_LOCK_HELD, SCTP_SO_NOT_LOCKED);
 				}
 			} else {
 				/* Its a fragmented message */
@@ -5380,11 +5340,9 @@ sctp_kick_prsctp_reorder_queue(struct sctp_tcb *stcb,
 				strmin->last_mid_delivered = control->mid;
 				if (stcb->sctp_socket) {
 					sctp_mark_non_revokable(asoc, control->sinfo_tsn);
-					sctp_add_to_readq(stcb->sctp_ep, stcb,
-					    control,
+					sctp_add_to_readq(stcb->sctp_ep, stcb, control,
 					    &stcb->sctp_socket->so_rcv, 1,
 					    SCTP_READ_LOCK_HELD, SCTP_SO_NOT_LOCKED);
-
 				}
 				mid = strmin->last_mid_delivered + 1;
 			} else {
@@ -5408,8 +5366,6 @@ sctp_kick_prsctp_reorder_queue(struct sctp_tcb *stcb,
 	}
 }
 
-
-
 static void
 sctp_flush_reassm_for_str_seq(struct sctp_tcb *stcb,
     struct sctp_association *asoc, struct sctp_stream_in *strm,
@@ -5425,6 +5381,11 @@ sctp_flush_reassm_for_str_seq(struct sctp_tcb *stcb,
 	 * it can be delivered... But for now we just dump everything on the
 	 * queue.
 	 */
+
+	KASSERT(stcb != NULL, ("stcb == NULL"));
+	SCTP_TCB_LOCK_ASSERT(stcb);
+	SCTP_INP_READ_LOCK_ASSERT(stcb->sctp_ep);
+
 	if (!asoc->idata_supported && !ordered &&
 	    control->first_frag_seen &&
 	    SCTP_TSN_GT(control->fsn_included, cumtsn)) {
@@ -5455,12 +5416,25 @@ sctp_flush_reassm_for_str_seq(struct sctp_tcb *stcb,
 		sctp_free_a_chunk(stcb, chk, SCTP_SO_NOT_LOCKED);
 	}
 	if (!TAILQ_EMPTY(&control->reasm)) {
-		/* This has to be old data, unordered */
+		KASSERT(!asoc->idata_supported,
+		    ("Reassembly queue not empty for I-DATA"));
+		KASSERT(!ordered,
+		    ("Reassembly queue not empty for ordered data"));
 		if (control->data) {
 			sctp_m_freem(control->data);
 			control->data = NULL;
 		}
-		sctp_reset_a_control(control, stcb->sctp_ep, cumtsn);
+		control->fsn_included = 0xffffffff;
+		control->first_frag_seen = 0;
+		control->last_frag_seen = 0;
+		if (control->on_read_q) {
+			/*
+			 * We have to purge it from there, hopefully this
+			 * will work :-)
+			 */
+			TAILQ_REMOVE(&stcb->sctp_ep->read_queue, control, next);
+			control->on_read_q = 0;
+		}
 		chk = TAILQ_FIRST(&control->reasm);
 		if (chk->rec.data.rcv_flags & SCTP_DATA_FIRST_FRAG) {
 			TAILQ_REMOVE(&control->reasm, chk, sctp_next);
@@ -5523,9 +5497,8 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 	struct sctp_association *asoc;
 	uint32_t new_cum_tsn, gap;
 	unsigned int i, fwd_sz, m_size;
-	uint32_t str_seq;
 	struct sctp_stream_in *strm;
-	struct sctp_queued_to_read *control, *ncontrol, *sv;
+	struct sctp_queued_to_read *control, *ncontrol;
 
 	asoc = &stcb->asoc;
 	if ((fwd_sz = ntohs(fwd->ch.chunk_length)) < sizeof(struct sctp_forward_tsn_chunk)) {
@@ -5564,7 +5537,7 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 			    new_cum_tsn, asoc->highest_tsn_inside_map);
 			op_err = sctp_generate_cause(SCTP_CAUSE_PROTOCOL_VIOLATION, msg);
 			stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA + SCTP_LOC_37;
-			sctp_abort_an_association(stcb->sctp_ep, stcb, op_err, SCTP_SO_NOT_LOCKED);
+			sctp_abort_an_association(stcb->sctp_ep, stcb, op_err, false, SCTP_SO_NOT_LOCKED);
 			return;
 		}
 		SCTP_STAT_INCR(sctps_fwdtsn_map_over);
@@ -5706,9 +5679,7 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 			TAILQ_FOREACH(control, &stcb->sctp_ep->read_queue, next) {
 				if ((control->sinfo_stream == sid) &&
 				    (SCTP_MID_EQ(asoc->idata_supported, control->mid, mid))) {
-					str_seq = (sid << 16) | (0x0000ffff & mid);
 					control->pdapi_aborted = 1;
-					sv = stcb->asoc.control_pdapi;
 					control->end_added = 1;
 					if (control->on_strm_q == SCTP_ON_ORDERED) {
 						TAILQ_REMOVE(&strm->inqueue, control, next_instrm);
@@ -5731,13 +5702,11 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 #endif
 					}
 					control->on_strm_q = 0;
-					stcb->asoc.control_pdapi = control;
 					sctp_ulp_notify(SCTP_NOTIFY_PARTIAL_DELVIERY_INDICATION,
 					    stcb,
 					    SCTP_PARTIAL_DELIVERY_ABORTED,
-					    (void *)&str_seq,
+					    (void *)control,
 					    SCTP_SO_NOT_LOCKED);
-					stcb->asoc.control_pdapi = sv;
 					break;
 				} else if ((control->sinfo_stream == sid) &&
 				    SCTP_MID_GT(asoc->idata_supported, control->mid, mid)) {

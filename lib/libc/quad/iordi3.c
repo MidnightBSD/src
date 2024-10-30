@@ -37,15 +37,13 @@
 static char sccsid[] = "@(#)iordi3.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-
 #include "quad.h"
 
 /*
  * Return a | b, in quad.
  */
 quad_t
-__iordi3(a, b)
-	quad_t a, b;
+__iordi3(quad_t a, quad_t b)
 {
 	union uu aa, bb;
 

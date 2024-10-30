@@ -48,10 +48,6 @@
 
 #include "g_part_if.h"
 
-#ifndef _PATH_DEV
-#define _PATH_DEV "/dev/"
-#endif
-
 static kobj_method_t g_part_null_methods[] = {
 	{ 0, 0 }
 };
@@ -78,6 +74,7 @@ struct g_part_alias_list {
 	{ "apple-raid-offline", G_PART_ALIAS_APPLE_RAID_OFFLINE },
 	{ "apple-tv-recovery", G_PART_ALIAS_APPLE_TV_RECOVERY },
 	{ "apple-ufs", G_PART_ALIAS_APPLE_UFS },
+	{ "apple-zfs", G_PART_ALIAS_APPLE_ZFS },
 	{ "bios-boot", G_PART_ALIAS_BIOS_BOOT },
 	{ "chromeos-firmware", G_PART_ALIAS_CHROMEOS_FIRMWARE },
 	{ "chromeos-kernel", G_PART_ALIAS_CHROMEOS_KERNEL },
@@ -104,6 +101,8 @@ struct g_part_alias_list {
 	{ "freebsd-ufs", G_PART_ALIAS_FREEBSD_UFS },
 	{ "freebsd-vinum", G_PART_ALIAS_FREEBSD_VINUM },
 	{ "freebsd-zfs", G_PART_ALIAS_FREEBSD_ZFS },
+	{ "hifive-fsbl", G_PART_ALIAS_HIFIVE_FSBL },
+	{ "hifive-bbl", G_PART_ALIAS_HIFIVE_BBL },
 	{ "linux-data", G_PART_ALIAS_LINUX_DATA },
 	{ "linux-lvm", G_PART_ALIAS_LINUX_LVM },
 	{ "linux-raid", G_PART_ALIAS_LINUX_RAID },
@@ -131,6 +130,14 @@ struct g_part_alias_list {
 	{ "ntfs", G_PART_ALIAS_MS_NTFS },
 	{ "openbsd-data", G_PART_ALIAS_OPENBSD_DATA },
 	{ "prep-boot", G_PART_ALIAS_PREP_BOOT },
+        { "solaris-boot", G_PART_ALIAS_SOLARIS_BOOT },
+        { "solaris-root", G_PART_ALIAS_SOLARIS_ROOT },
+        { "solaris-swap", G_PART_ALIAS_SOLARIS_SWAP },
+        { "solaris-backup", G_PART_ALIAS_SOLARIS_BACKUP },
+        { "solaris-var", G_PART_ALIAS_SOLARIS_VAR },
+        { "solaris-home", G_PART_ALIAS_SOLARIS_HOME },
+        { "solaris-altsec", G_PART_ALIAS_SOLARIS_ALTSEC },
+	{ "solaris-reserved", G_PART_ALIAS_SOLARIS_RESERVED },
 	{ "vmware-reserved", G_PART_ALIAS_VMRESERVED },
 	{ "vmware-vmfs", G_PART_ALIAS_VMFS },
 	{ "vmware-vmkdiag", G_PART_ALIAS_VMKDIAG },
@@ -138,7 +145,7 @@ struct g_part_alias_list {
 };
 
 SYSCTL_DECL(_kern_geom);
-SYSCTL_NODE(_kern_geom, OID_AUTO, part, CTLFLAG_RW, 0,
+SYSCTL_NODE(_kern_geom, OID_AUTO, part, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
     "GEOM_PART stuff");
 u_int geom_part_check_integrity = 1;
 SYSCTL_UINT(_kern_geom_part, OID_AUTO, check_integrity,
@@ -152,6 +159,10 @@ static u_int allow_nesting = 0;
 SYSCTL_UINT(_kern_geom_part, OID_AUTO, allow_nesting,
     CTLFLAG_RWTUN, &allow_nesting, 0,
     "Allow additional levels of nesting");
+char g_part_separator[MAXPATHLEN] = "";
+SYSCTL_STRING(_kern_geom_part, OID_AUTO, separator,
+    CTLFLAG_RDTUN, &g_part_separator, sizeof(g_part_separator),
+    "Partition name separator");
 
 /*
  * The GEOM partitioning class.
@@ -313,7 +324,6 @@ g_part_get_physpath_done(struct bio *bp)
 	g_std_done(bp);
 }
 
-
 #define	DPRINTF(...)	if (bootverbose) {	\
 	printf("GEOM_PART: " __VA_ARGS__);	\
 }
@@ -376,9 +386,9 @@ g_part_check_integrity(struct g_part_table *table, struct g_consumer *cp)
 				offset = e1->gpe_offset;
 			if ((offset + pp->stripeoffset) % pp->stripesize) {
 				DPRINTF("partition %d on (%s, %s) is not "
-				    "aligned on %u bytes\n", e1->gpe_index,
+				    "aligned on %ju bytes\n", e1->gpe_index,
 				    pp->name, table->gpt_scheme->name,
-				    pp->stripesize);
+				    (uintmax_t)pp->stripesize);
 				/* Don't treat this as a critical failure */
 			}
 		}
@@ -470,7 +480,6 @@ g_part_new_provider(struct g_geom *gp, struct g_part_table *table,
 {
 	struct g_consumer *cp;
 	struct g_provider *pp;
-	struct sbuf *sb;
 	struct g_geom_alias *gap;
 	off_t offset;
 
@@ -482,24 +491,16 @@ g_part_new_provider(struct g_geom *gp, struct g_part_table *table,
 		entry->gpe_offset = offset;
 
 	if (entry->gpe_pp == NULL) {
+		entry->gpe_pp = G_PART_NEW_PROVIDER(table, gp, entry, gp->name);
 		/*
-		 * Add aliases to the geom before we create the provider so that
-		 * geom_dev can taste it with all the aliases in place so all
-		 * the aliased dev_t instances get created for each partition
-		 * (eg foo5p7 gets created for bar5p7 when foo is an alias of bar).
+		 * If our parent provider had any aliases, then copy them to our
+		 * provider so when geom DEV tastes things later, they will be
+		 * there for it to create the aliases with those name used in
+		 * place of the geom's name we use to create the provider. The
+		 * kobj interface that generates names makes this awkward.
 		 */
-		LIST_FOREACH(gap, &table->gpt_gp->aliases, ga_next) {
-			sb = sbuf_new_auto();
-			G_PART_FULLNAME(table, entry, sb, gap->ga_alias);
-			sbuf_finish(sb);
-			g_geom_add_alias(gp, sbuf_data(sb));
-			sbuf_delete(sb);
-		}
-		sb = sbuf_new_auto();
-		G_PART_FULLNAME(table, entry, sb, gp->name);
-		sbuf_finish(sb);
-		entry->gpe_pp = g_new_providerf(gp, "%s", sbuf_data(sb));
-		sbuf_delete(sb);
+		LIST_FOREACH(gap, &pp->aliases, ga_next)
+			G_PART_ADD_ALIAS(table, entry->gpe_pp, entry, gap->ga_alias);
 		entry->gpe_pp->flags |= G_PF_DIRECT_SEND | G_PF_DIRECT_RECEIVE;
 		entry->gpe_pp->private = entry;		/* Close the circle. */
 	}
@@ -829,7 +830,7 @@ g_part_ctl_add(struct gctl_req *req, struct g_part_parms *gpp)
 		G_PART_FULLNAME(table, entry, sb, gp->name);
 		if (pp->stripesize > 0 && entry->gpe_pp->stripeoffset != 0)
 			sbuf_printf(sb, " added, but partition is not "
-			    "aligned on %u bytes\n", pp->stripesize);
+			    "aligned on %ju bytes\n", (uintmax_t)pp->stripesize);
 		else
 			sbuf_cat(sb, " added\n");
 		sbuf_finish(sb);
@@ -1636,6 +1637,7 @@ g_part_ctlreq(struct gctl_req *req, struct g_class *mp, const char *verb)
 		if (!strcmp(verb, "bootcode")) {
 			ctlreq = G_PART_CTL_BOOTCODE;
 			mparms |= G_PART_PARM_GEOM | G_PART_PARM_BOOTCODE;
+			oparms |= G_PART_PARM_SKIP_DSN;
 		}
 		break;
 	case 'c':
@@ -1753,6 +1755,8 @@ g_part_ctlreq(struct gctl_req *req, struct g_class *mp, const char *verb)
 				parm = G_PART_PARM_SIZE;
 			else if (!strcmp(ap->name, "start"))
 				parm = G_PART_PARM_START;
+			else if (!strcmp(ap->name, "skip_dsn"))
+				parm = G_PART_PARM_SKIP_DSN;
 			break;
 		case 't':
 			if (!strcmp(ap->name, "type"))
@@ -1812,6 +1816,10 @@ g_part_ctlreq(struct gctl_req *req, struct g_class *mp, const char *verb)
 			break;
 		case G_PART_PARM_SIZE:
 			error = g_part_parm_quad(req, ap->name, &gpp.gpp_size);
+			break;
+		case G_PART_PARM_SKIP_DSN:
+			error = g_part_parm_uint32(req, ap->name,
+			    &gpp.gpp_skip_dsn);
 			break;
 		case G_PART_PARM_START:
 			error = g_part_parm_quad(req, ap->name,
@@ -1963,7 +1971,6 @@ g_part_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 	struct g_part_entry *entry;
 	struct g_part_table *table;
 	struct root_hold_token *rht;
-	struct g_geom_alias *gap;
 	int attr, depth;
 	int error;
 
@@ -1980,8 +1987,6 @@ g_part_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 	 * to the provider.
 	 */
 	gp = g_new_geomf(mp, "%s", pp->name);
-	LIST_FOREACH(gap, &pp->geom->aliases, ga_next)
-		g_geom_add_alias(gp, gap->ga_alias);
 	cp = g_new_consumer(gp);
 	cp->flags |= G_CF_DIRECT_SEND | G_CF_DIRECT_RECEIVE;
 	error = g_attach(cp, pp);
@@ -2267,6 +2272,7 @@ g_part_start(struct bio *bp)
 		bp2->bio_offset += entry->gpe_offset;
 		g_io_request(bp2, cp);
 		return;
+	case BIO_SPEEDUP:
 	case BIO_FLUSH:
 		break;
 	case BIO_GETATTR:

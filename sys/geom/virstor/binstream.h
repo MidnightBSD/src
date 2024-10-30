@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2005 Ivan Voras <ivoras@gmail.com>
  * All rights reserved.
@@ -24,11 +24,9 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 // $Id: binstream.h,v 1.1 2006/07/05 10:47:54 ivoras Exp $
-
 
 #ifndef _BIN_STREAM_
 #define _BIN_STREAM_
@@ -42,13 +40,11 @@ typedef struct {
 	int		pos;
 }	bin_stream_t;
 
-
 /* "Open" a binary stream for reading */
 void		bs_open   (bin_stream_t * bs, void *data);
 
 /* "Reset" position in binary stream to zero */
 void		bs_reset  (bin_stream_t * bs);
-
 
 /* Write a zero-terminated string; return next position */
 unsigned	bs_write_str(bin_stream_t * bs, char *data);
@@ -67,7 +63,6 @@ unsigned	bs_write_u32(bin_stream_t * bs, uint32_t data);
 
 /* Write a 64bit uint; return next position. */
 unsigned	bs_write_u64(bin_stream_t * bs, uint64_t data);
-
 
 /*
  * Read a null-terminated string from stream into a buffer; buf_size is size

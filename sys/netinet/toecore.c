@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012 Chelsio Communications, Inc.
  * All rights reserved.
@@ -28,11 +28,11 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_inet.h"
 #include "opt_inet6.h"
 
 #include <sys/param.h>
+#include <sys/eventhandler.h>
 #include <sys/kernel.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
@@ -75,7 +75,7 @@ static eventhandler_tag lle_event_eh;
 
 static int
 toedev_connect(struct toedev *tod __unused, struct socket *so __unused,
-    struct rtentry *rt __unused, struct sockaddr *nam __unused)
+    struct nhop_object *nh __unused, struct sockaddr *nam __unused)
 {
 
 	return (ENOTSUP);
@@ -136,7 +136,7 @@ toedev_l2_update(struct toedev *tod __unused, struct ifnet *ifp __unused,
 
 static void
 toedev_route_redirect(struct toedev *tod __unused, struct ifnet *ifp __unused,
-    struct rtentry *rt0 __unused, struct rtentry *rt1 __unused)
+    struct nhop_object *nh0 __unused, struct nhop_object *nh1 __unused)
 {
 
 	return;
@@ -182,11 +182,19 @@ toedev_ctloutput(struct toedev *tod __unused, struct tcpcb *tp __unused,
 }
 
 static void
-toedev_tcp_info(struct toedev *tod __unused, struct tcpcb *tp __unused,
+toedev_tcp_info(struct toedev *tod __unused, const struct tcpcb *tp __unused,
     struct tcp_info *ti __unused)
 {
 
 	return;
+}
+
+static int
+toedev_alloc_tls_session(struct toedev *tod __unused, struct tcpcb *tp __unused,
+    struct ktls_session *tls __unused, int direction __unused)
+{
+
+	return (EINVAL);
 }
 
 /*
@@ -279,6 +287,7 @@ init_toedev(struct toedev *tod)
 	tod->tod_offload_socket = toedev_offload_socket;
 	tod->tod_ctloutput = toedev_ctloutput;
 	tod->tod_tcp_info = toedev_tcp_info;
+	tod->tod_alloc_tls_session = toedev_alloc_tls_session;
 }
 
 /*
@@ -341,7 +350,7 @@ toe_syncache_add(struct in_conninfo *inc, struct tcpopt *to, struct tcphdr *th,
 
 	INP_WLOCK_ASSERT(inp);
 
-	syncache_add(inc, to, th, inp, &lso, NULL, tod, todctx, iptos);
+	syncache_add(inc, to, th, inp, &lso, NULL, tod, todctx, iptos, htons(0));
 }
 
 int
@@ -349,9 +358,9 @@ toe_syncache_expand(struct in_conninfo *inc, struct tcpopt *to,
     struct tcphdr *th, struct socket **lsop)
 {
 
-	INP_INFO_RLOCK_ASSERT(&V_tcbinfo);
+	NET_EPOCH_ASSERT();
 
-	return (syncache_expand(inc, to, th, lsop, NULL));
+	return (syncache_expand(inc, to, th, lsop, NULL, htons(0)));
 }
 
 /*
@@ -379,8 +388,6 @@ toe_4tuple_check(struct in_conninfo *inc, struct tcphdr *th, struct ifnet *ifp)
 		INP_WLOCK_ASSERT(inp);
 
 		if ((inp->inp_flags & INP_TIMEWAIT) && th != NULL) {
-
-			INP_INFO_RLOCK_ASSERT(&V_tcbinfo); /* for twcheck */
 			if (!tcp_twcheck(inp, NULL, th, NULL, 0))
 				return (EADDRINUSE);
 		} else {
@@ -427,7 +434,6 @@ toe_lle_event(void *arg __unused, struct llentry *lle, int evt)
 	vid = 0xfff;
 	pcp = 0;
 	if (evt != LLENTRY_RESOLVED) {
-
 		/*
 		 * LLENTRY_TIMEDOUT, LLENTRY_DELETED, LLENTRY_EXPIRED all mean
 		 * this entry is going to be deleted.
@@ -435,7 +441,6 @@ toe_lle_event(void *arg __unused, struct llentry *lle, int evt)
 
 		lladdr = NULL;
 	} else {
-
 		KASSERT(lle->la_flags & LLE_VALID,
 		    ("%s: %p resolved but not valid?", __func__, lle));
 
@@ -467,7 +472,8 @@ toe_l2_resolve(struct toedev *tod, struct ifnet *ifp, struct sockaddr *sa,
 #endif
 #ifdef INET6
 	case AF_INET6:
-		rc = nd6_resolve(ifp, 0, NULL, sa, lladdr, NULL, NULL);
+		rc = nd6_resolve(ifp, LLE_SF(AF_INET6, 0), NULL, sa, lladdr,
+		    NULL, NULL);
 		break;
 #endif
 	default:
@@ -494,6 +500,7 @@ void
 toe_connect_failed(struct toedev *tod, struct inpcb *inp, int err)
 {
 
+	NET_EPOCH_ASSERT();
 	INP_WLOCK_ASSERT(inp);
 
 	if (!(inp->inp_flags & INP_DROPPED)) {
@@ -503,7 +510,6 @@ toe_connect_failed(struct toedev *tod, struct inpcb *inp, int err)
 		    ("%s: tp %p not offloaded.", __func__, tp));
 
 		if (err == EAGAIN) {
-
 			/*
 			 * Temporary failure during offload, take this PCB back.
 			 * Detach from the TOE driver and do the rest of what
@@ -517,8 +523,6 @@ toe_connect_failed(struct toedev *tod, struct inpcb *inp, int err)
 			tcp_timer_activate(tp, TT_KEEP, TP_KEEPINIT(tp));
 			(void) tp->t_fb->tfb_tcp_output(tp);
 		} else {
-
-			INP_INFO_RLOCK_ASSERT(&V_tcbinfo);
 			tp = tcp_drop(tp, err);
 			if (tp == NULL)
 				INP_WLOCK(inp);	/* re-acquire */

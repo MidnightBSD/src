@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/sysctl.h>
@@ -472,7 +471,7 @@ md_get_mem(struct mdchain *mdp, caddr_t target, int size, int type)
 	int error;
 	u_int count;
 	u_char *s;
-	
+
 	while (size > 0) {
 		if (m == NULL) {
 			MBERROR("incomplete copy\n");

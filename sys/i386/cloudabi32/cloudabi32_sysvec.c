@@ -24,7 +24,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/imgact.h>
 #include <sys/kernel.h>
@@ -35,6 +34,7 @@
 #include <vm/pmap.h>
 
 #include <machine/frame.h>
+#include <machine/md_var.h>
 #include <machine/pcb.h>
 #include <machine/vmparam.h>
 
@@ -47,7 +47,7 @@ extern const char *cloudabi32_syscallnames[];
 extern struct sysent cloudabi32_sysent[];
 
 static int
-cloudabi32_fixup_tcb(register_t **stack_base, struct image_params *imgp)
+cloudabi32_fixup_tcb(uintptr_t *stack_base, struct image_params *imgp)
 {
 	int error;
 	uint32_t args[2];
@@ -67,16 +67,16 @@ cloudabi32_fixup_tcb(register_t **stack_base, struct image_params *imgp)
 	 * refer to the auxiliary vector, which is stored right after
 	 * the TCB.
 	 */
-	args[0] = (uintptr_t)*stack_base;
-	args[1] = (uintptr_t)*stack_base +
+	args[0] = *stack_base;
+	args[1] = *stack_base +
 	    roundup(sizeof(cloudabi32_tcb_t), sizeof(register_t));
-	*stack_base -= howmany(sizeof(args), sizeof(register_t));
-	return (copyout(args, *stack_base, sizeof(args)));
+	*stack_base -= roundup(sizeof(args), sizeof(register_t));
+	return (copyout(args, (void *)*stack_base, sizeof(args)));
 }
 
 static void
 cloudabi32_proc_setregs(struct thread *td, struct image_params *imgp,
-    unsigned long stack)
+    uintptr_t stack)
 {
 
 	exec_setregs(td, imgp, stack);
@@ -98,11 +98,10 @@ cloudabi32_fetch_syscall_args(struct thread *td)
 	if (sa->code >= CLOUDABI32_SYS_MAXSYSCALL)
 		return (ENOSYS);
 	sa->callp = &cloudabi32_sysent[sa->code];
-	sa->narg = sa->callp->sy_narg;
 
 	/* Fetch system call arguments from the stack. */
 	error = copyin((void *)(frame->tf_esp + 4), sa->args,
-	    sa->narg * sizeof(sa->args[0]));
+	    sa->callp->sy_narg * sizeof(sa->args[0]));
 	if (error != 0)
 		return (error);
 
@@ -194,6 +193,7 @@ static struct sysentvec cloudabi32_elf_sysvec = {
 	.sv_fetch_syscall_args	= cloudabi32_fetch_syscall_args,
 	.sv_syscallnames	= cloudabi32_syscallnames,
 	.sv_schedtail		= cloudabi32_schedtail,
+	.sv_set_fork_retval	= x86_set_fork_retval,
 };
 
 INIT_SYSENTVEC(elf_sysvec, &cloudabi32_elf_sysvec);

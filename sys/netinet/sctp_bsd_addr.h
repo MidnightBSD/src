@@ -32,8 +32,6 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 #ifndef _NETINET_SCTP_BSD_ADDR_H_
 #define _NETINET_SCTP_BSD_ADDR_H_
 
@@ -45,7 +43,6 @@ extern struct iterator_control sctp_it_ctl;
 void sctp_wakeup_iterator(void);
 
 void sctp_startup_iterator(void);
-
 
 #ifdef INET6
 void sctp_gather_internal_ifa_flags(struct sctp_ifa *ifa);

@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bio.h>
 #include <sys/gsb_crc32.h>
@@ -686,4 +685,3 @@ g_part_bsd64_write(struct g_part_table *basetable, struct g_consumer *cp)
 	g_free(dlp);
 	return (error);
 }
-

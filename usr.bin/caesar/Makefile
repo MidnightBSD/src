@@ -1,5 +1,7 @@
 #	@(#)Makefile	8.1 (Berkeley) 5/31/93
 
+PACKAGE=	games
+
 PROG=	caesar
 LIBADD=	m
 SCRIPTS=rot13.sh

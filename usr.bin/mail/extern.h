@@ -29,7 +29,6 @@
  * SUCH DAMAGE.
  *
  *	@(#)extern.h	8.2 (Berkeley) 4/20/95 
- *
  */
 
 struct name *cat(struct name *, struct name *);
@@ -152,7 +151,7 @@ int	 isdate(char *);
 int	 isdir(char *);
 int	 isfileaddr(char *);
 int	 ishead(char *);
-int	 isign(const char *, struct ignoretab []);
+int	 isign(const char *, struct ignoretab [2]);
 int	 isprefix(const char *, const char *);
 void	 istrncpy(char *, const char *, size_t);
 const struct cmd *

@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Instruction disassembler.
  */
@@ -937,11 +936,8 @@ static db_addr_t
  * Read address at location and return updated location.
  */
 static db_addr_t
-db_read_address(loc, short_addr, regmodrm, addrp)
-	db_addr_t	loc;
-	int		short_addr;
-	int		regmodrm;
-	struct i_addr *	addrp;		/* out */
+db_read_address(db_addr_t loc, int short_addr, int regmodrm,
+    struct i_addr *addrp)
 {
 	int		mod, rm, sib, index, disp;
 
@@ -1025,10 +1021,7 @@ db_read_address(loc, short_addr, regmodrm, addrp)
 }
 
 static void
-db_print_address(seg, size, addrp)
-	const char *	seg;
-	int		size;
-	struct i_addr *	addrp;
+db_print_address(const char *seg, int size, struct i_addr *addrp)
 {
 	if (addrp->is_reg) {
 	    db_printf("%s", db_reg[size][addrp->disp]);
@@ -1058,12 +1051,8 @@ db_print_address(seg, size, addrp)
  * and return updated location.
  */
 static db_addr_t
-db_disasm_esc(loc, inst, short_addr, size, seg)
-	db_addr_t	loc;
-	int		inst;
-	int		short_addr;
-	int		size;
-	const char *	seg;
+db_disasm_esc(db_addr_t loc, int inst, int short_addr, int size,
+    const char *seg)
 {
 	int		regmodrm;
 	const struct finst *	fp;
@@ -1345,7 +1334,6 @@ db_disasm(db_addr_t loc, bool altfmt)
 		db_printf(",");
 
 	    switch (i_mode & 0xFF) {
-
 		case E:
 		    db_print_address(seg, size, &address);
 		    break;

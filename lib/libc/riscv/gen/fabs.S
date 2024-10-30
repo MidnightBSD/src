@@ -37,7 +37,6 @@
  */
 
 #include <machine/asm.h>
-
 ENTRY(fabs)
 #ifdef __riscv_float_abi_double
 	fabs.d	fa0, fa0

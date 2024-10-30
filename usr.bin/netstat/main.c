@@ -42,9 +42,11 @@ static char sccsid[] = "@(#)main.c	8.4 (Berkeley) 3/1/94";
 #endif
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/file.h>
+#ifdef JAIL
+#include <sys/jail.h>
+#endif
 #include <sys/protosw.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
@@ -59,6 +61,9 @@ static char sccsid[] = "@(#)main.c	8.4 (Berkeley) 3/1/94";
 #include <ctype.h>
 #include <err.h>
 #include <errno.h>
+#ifdef JAIL
+#include <jail.h>
+#endif
 #include <kvm.h>
 #include <limits.h>
 #include <netdb.h>
@@ -215,6 +220,8 @@ int	mflag;		/* show memory stats */
 int	noutputs = 0;	/* how much outputs before we exit */
 int	numeric_addr;	/* show addresses numerically */
 int	numeric_port;	/* show ports numerically */
+int	Oflag;		/* show nhgrp objects*/
+int	oflag;		/* show nexthop objects*/
 int	Pflag;		/* show TCP log ID */
 static int pflag;	/* show given protocol */
 static int	Qflag;		/* show netisr information */
@@ -230,6 +237,9 @@ int	interval;	/* repeat interval for i/f stats */
 
 char	*interface;	/* desired i/f for stats, or NULL for all i/fs */
 int	unit;		/* unit number for above */
+#ifdef JAIL
+char	*jail_name;	/* desired jail to operate in */
+#endif
 
 static int	af;		/* address family */
 int	live;		/* true if we are examining a live system */
@@ -242,6 +252,9 @@ main(int argc, char *argv[])
 	int fib = -1;
 	char *endptr;
 	bool first = true;
+#ifdef JAIL
+	int jid;
+#endif
 
 	af = AF_UNSPEC;
 
@@ -249,7 +262,7 @@ main(int argc, char *argv[])
 	if (argc < 0)
 		exit(EXIT_FAILURE);
 
-	while ((ch = getopt(argc, argv, "46AaBbCcdF:f:ghI:iLlM:mN:nPp:Qq:RrSTsuWw:xz"))
+	while ((ch = getopt(argc, argv, "46AaBbCcdF:f:ghI:ij:LlM:mN:nOoPp:Qq:RrSTsuWw:xz"))
 	    != -1)
 		switch(ch) {
 		case '4':
@@ -337,6 +350,15 @@ main(int argc, char *argv[])
 		case 'i':
 			iflag = 1;
 			break;
+		case 'j':
+#ifdef JAIL
+			if (optarg == NULL)
+				usage();
+			jail_name = optarg;
+#else
+			errx(1, "Jail support is not compiled in");
+#endif
+			break;
 		case 'L':
 			Lflag = 1;
 			break;
@@ -351,6 +373,12 @@ main(int argc, char *argv[])
 			break;
 		case 'n':
 			numeric_addr = numeric_port = 1;
+			break;
+		case 'o':
+			oflag = 1;
+			break;
+		case 'O':
+			Oflag = 1;
 			break;
 		case 'P':
 			Pflag = 1;
@@ -424,6 +452,16 @@ main(int argc, char *argv[])
 			if (*++argv)
 				memf = *argv;
 		}
+	}
+#endif
+
+#ifdef JAIL
+	if (jail_name != NULL) {
+		jid = jail_getid(jail_name);
+		if (jid == -1)
+			errx(1, "Jail not found");
+		if (jail_attach(jid) != 0)
+			errx(1, "Cannot attach to jail");
 	}
 #endif
 
@@ -501,6 +539,22 @@ main(int argc, char *argv[])
 		xo_finish();
 		exit(0);
 	}
+	if (oflag) {
+		xo_open_container("statistics");
+		nhops_print(fib, af);
+		xo_close_container("statistics");
+		xo_finish();
+		exit(0);
+	}
+	if (Oflag) {
+		xo_open_container("statistics");
+		nhgrp_print(fib, af);
+		xo_close_container("statistics");
+		xo_finish();
+		exit(0);
+	}
+
+
 
 	if (gflag) {
 		xo_open_container("statistics");
@@ -728,7 +782,7 @@ kset_dpcpu(u_int cpuid)
 
 	if (kvm_dpcpu_setcpu(kvmd, cpuid) < 0)
 		xo_errx(-1, "%s: kvm_dpcpu_setcpu(%u): %s", __func__,
-		    cpuid, kvm_geterr(kvmd));
+		    cpuid, kvm_geterr(kvmd)); 
 	return;
 }
 
@@ -865,24 +919,24 @@ static void
 usage(void)
 {
 	(void)xo_error("%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n",
-"usage: netstat [-46AaCcLnRSTWx] [-f protocol_family | -p protocol]\n"
+"usage: netstat [-j jail] [-46AaCcLnRSTWx] [-f protocol_family | -p protocol]\n"
 "               [-M core] [-N system]",
-"       netstat -i | -I interface [-46abdhnW] [-f address_family]\n"
+"       netstat [-j jail] -i | -I interface [-46abdhnW] [-f address_family]\n"
 "               [-M core] [-N system]",
-"       netstat -w wait [-I interface] [-46d] [-M core] [-N system]\n"
+"       netstat [-j jail] -w wait [-I interface] [-46d] [-M core] [-N system]\n"
 "               [-q howmany]",
-"       netstat -s [-46sz] [-f protocol_family | -p protocol]\n"
+"       netstat [-j jail] -s [-46sz] [-f protocol_family | -p protocol]\n"
 "               [-M core] [-N system]",
-"       netstat -i | -I interface -s [-46s]\n"
+"       netstat [-j jail] -i | -I interface -s [-46s]\n"
 "               [-f protocol_family | -p protocol] [-M core] [-N system]",
-"       netstat -m [-M core] [-N system]",
-"       netstat -B [-z] [-I interface]",
-"       netstat -r [-46AnW] [-F fibnum] [-f address_family]\n"
+"       netstat [-j jail] -m [-M core] [-N system]",
+"       netstat [-j jail] -B [-z] [-I interface]",
+"       netstat [-j jail] -r [-46AnW] [-F fibnum] [-f address_family]\n"
 "               [-M core] [-N system]",
-"       netstat -rs [-s] [-M core] [-N system]",
-"       netstat -g [-46W] [-f address_family] [-M core] [-N system]",
-"       netstat -gs [-46s] [-f address_family] [-M core] [-N system]",
-"       netstat -Q");
+"       netstat [-j jail] -rs [-s] [-M core] [-N system]",
+"       netstat [-j jail] -g [-46W] [-f address_family] [-M core] [-N system]",
+"       netstat [-j jail] -gs [-46s] [-f address_family] [-M core] [-N system]",
+"       netstat [-j jail] -Q");
 	xo_finish();
 	exit(1);
 }

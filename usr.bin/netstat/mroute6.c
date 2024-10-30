@@ -68,7 +68,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #ifdef INET6
 #include <sys/param.h>
 #include <sys/queue.h>

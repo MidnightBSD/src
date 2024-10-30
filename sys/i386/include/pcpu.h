@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) Peter Wemm
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _MACHINE_PCPU_H_
@@ -40,6 +39,13 @@
 #include <sys/_lock.h>
 #include <sys/_mutex.h>
 
+struct monitorbuf {
+	int idle_state;		/* Used by cpu_idle_mwait. */
+	int stop_state;		/* Used by cpustop_handler. */
+	char padding[128 - (2 * sizeof(int))];
+};
+_Static_assert(sizeof(struct monitorbuf) == 128, "2x cache line");
+
 /*
  * The SMP parts are setup in pmap.c and machdep.c for the BSP, and
  * pmap.c and mp_machdep.c sets up the data for the AP's to "see" when
@@ -49,7 +55,7 @@
  */
 
 #define	PCPU_MD_FIELDS							\
-	char	pc_monitorbuf[128] __aligned(128); /* cache line */	\
+	struct monitorbuf pc_monitorbuf __aligned(128);	/* cache line */\
 	struct	pcpu *pc_prvspace;	/* Self-reference */		\
 	struct	pmap *pc_curpmap;					\
 	struct	segment_descriptor pc_common_tssd;			\
@@ -83,9 +89,13 @@
 	void	*pc_mds_buf64;						\
 	uint32_t pc_pad[4];						\
 	uint8_t	pc_mds_tmp[64];						\
-	char	__pad[3522]
+	u_int	pc_ipi_bitmap;						\
+	char	__pad[3518]
 
 #ifdef _KERNEL
+
+#define MONITOR_STOPSTATE_RUNNING	0
+#define MONITOR_STOPSTATE_STOPPED	1
 
 #if defined(__GNUCLIKE_ASM) && defined(__GNUCLIKE___TYPEOF)
 

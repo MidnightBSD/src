@@ -46,7 +46,7 @@ struct udphdr {
 	u_short	uh_sum;			/* udp checksum */
 };
 
-/* 
+/*
  * User-settable options (used with setsockopt).
  */
 #define	UDP_ENCAP			1

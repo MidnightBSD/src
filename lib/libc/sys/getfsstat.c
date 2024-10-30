@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2017 M. Warner Losh <imp@FreeBSD.org>
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +24,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "namespace.h"
 #include <sys/param.h>
 #include "compat-ino64.h"

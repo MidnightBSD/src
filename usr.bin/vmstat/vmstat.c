@@ -42,7 +42,6 @@ static char sccsid[] = "@(#)vmstat.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/proc.h>
 #include <sys/uio.h>
@@ -603,18 +602,17 @@ fill_vmtotal(struct vmtotal *vmtp)
 }
 
 /* Determine how many cpu columns, and what index they are in kern.cp_times */
-static int
+static void
 getcpuinfo(u_long *maskp, int *maxidp)
 {
 	long *times;
 	u_long mask;
 	size_t size;
-	int empty, i, j, maxcpu, maxid, ncpus;
+	int empty, i, j, maxcpu, maxid;
 
 	if (kd != NULL)
 		xo_errx(1, "not implemented");
 	mask = 0;
-	ncpus = 0;
 	size = sizeof(maxcpu);
 	mysysctl("kern.smp.maxcpus", &maxcpu, &size);
 	if (size != sizeof(maxcpu))
@@ -631,23 +629,19 @@ getcpuinfo(u_long *maskp, int *maxidp)
 			if (times[i * CPUSTATES + j] != 0)
 				empty = 0;
 		}
-		if (!empty) {
+		if (!empty)
 			mask |= (1ul << i);
-			ncpus++;
-		}
 	}
 	if (maskp)
 		*maskp = mask;
 	if (maxidp)
 		*maxidp = maxid;
-	return (ncpus);
 }
 
 
 static void
-prthuman(const char *name, uint64_t val, int size)
+prthuman(const char *name, uint64_t val, int size, int flags)
 {
-	int flags;
 	char buf[10];
 	char fmt[128];
 
@@ -655,7 +649,7 @@ prthuman(const char *name, uint64_t val, int size)
 
 	if (size < 5 || size > 9)
 		xo_errx(1, "doofus");
-	flags = HN_B | HN_NOSPACE | HN_DECIMAL;
+	flags |= HN_NOSPACE | HN_DECIMAL;
 	humanize_number(buf, size, val, "", HN_AUTOSCALE, flags);
 	xo_attr("value", "%ju", (uintmax_t) val);
 	xo_emit(fmt, size, buf);
@@ -670,12 +664,11 @@ dovmstat(unsigned int interval, int reps)
 	u_long cpumask;
 	size_t size;
 	time_t uptime, halfuptime;
-	int ncpus, maxid, rate_adj, retval;
+	int maxid, rate_adj, retval;
 
 	uptime = getuptime() / 1000000000LL;
 	halfuptime = uptime / 2;
 	rate_adj = 1;
-	ncpus = 1;
 	maxid = 0;
 	cpumask = 0;
 
@@ -714,7 +707,7 @@ dovmstat(unsigned int interval, int reps)
 	}
 
 	if (Pflag) {
-		ncpus = getcpuinfo(&cpumask, &maxid);
+		getcpuinfo(&cpumask, &maxid);
 		size_cp_times = sizeof(long) * (maxid + 1) * CPUSTATES;
 		cur_cp_times = calloc(1, size_cp_times);
 		last_cp_times = calloc(1, size_cp_times);
@@ -783,20 +776,20 @@ dovmstat(unsigned int interval, int reps)
 		fill_vmmeter(&sum);
 		fill_vmtotal(&total);
 		xo_open_container("processes");
-		xo_emit("{:runnable/%1d} {:waiting/%ld} "
-		    "{:swapped-out/%ld}", total.t_rq - 1, total.t_dw +
+		xo_emit("{:runnable/%2d} {:waiting/%2ld} "
+		    "{:swapped-out/%2ld}", total.t_rq - 1, total.t_dw +
 		    total.t_pw, total.t_sw);
 		xo_close_container("processes");
 		xo_open_container("memory");
 #define vmstat_pgtok(a) ((uintmax_t)(a) * (sum.v_page_size >> 10))
-#define	rate(x)	(((x) * rate_adj + halfuptime) / uptime)	/* round */
+#define	rate(x)	(unsigned long)(((x) * rate_adj + halfuptime) / uptime)
 		if (hflag) {
-			xo_emit("");
 			prthuman("available-memory",
-			    total.t_avm * (uint64_t)sum.v_page_size, 5);
-			xo_emit(" ");
+			    total.t_avm * (uint64_t)sum.v_page_size, 5, HN_B);
 			prthuman("free-memory",
-			    total.t_free * (uint64_t)sum.v_page_size, 5);
+			    total.t_free * (uint64_t)sum.v_page_size, 5, HN_B);
+			prthuman("total-page-faults",
+			    rate(sum.v_vm_faults - osum.v_vm_faults), 5, 0);
 			xo_emit(" ");
 		} else {
 			xo_emit(" ");
@@ -806,35 +799,50 @@ dovmstat(unsigned int interval, int reps)
 			xo_emit("{:free-memory/%7ju}",
 			    vmstat_pgtok(total.t_free));
 			xo_emit(" ");
+			xo_emit("{:total-page-faults/%5lu} ",
+			    rate(sum.v_vm_faults - osum.v_vm_faults));
 		}
-		xo_emit("{:total-page-faults/%5lu} ",
-		    (unsigned long)rate(sum.v_vm_faults -
-		    osum.v_vm_faults));
 		xo_close_container("memory");
 
 		xo_open_container("paging-rates");
 		xo_emit("{:page-reactivated/%3lu} ",
-		    (unsigned long)rate(sum.v_reactivated -
-		    osum.v_reactivated));
+		    rate(sum.v_reactivated - osum.v_reactivated));
 		xo_emit("{:paged-in/%3lu} ",
-		    (unsigned long)rate(sum.v_swapin + sum.v_vnodein -
+		    rate(sum.v_swapin + sum.v_vnodein -
 		    (osum.v_swapin + osum.v_vnodein)));
-		xo_emit("{:paged-out/%3lu} ",
-		    (unsigned long)rate(sum.v_swapout + sum.v_vnodeout -
+		xo_emit("{:paged-out/%3lu}",
+		    rate(sum.v_swapout + sum.v_vnodeout -
 		    (osum.v_swapout + osum.v_vnodeout)));
-		xo_emit("{:freed/%5lu} ",
-		    (unsigned long)rate(sum.v_tfree - osum.v_tfree));
-		xo_emit("{:scanned/%4lu} ",
-		    (unsigned long)rate(sum.v_pdpages - osum.v_pdpages));
+		if (hflag) {
+			prthuman("freed",
+			    rate(sum.v_tfree - osum.v_tfree), 5, 0);
+			prthuman("scanned",
+			    rate(sum.v_pdpages - osum.v_pdpages), 5, 0);
+			xo_emit(" ");
+		} else {
+			xo_emit(" ");
+			xo_emit("{:freed/%5lu} ",
+			    rate(sum.v_tfree - osum.v_tfree));
+			xo_emit("{:scanned/%4lu} ",
+			    rate(sum.v_pdpages - osum.v_pdpages));
+		}
 		xo_close_container("paging-rates");
 
 		devstats();
 		xo_open_container("fault-rates");
-		xo_emit("{:interrupts/%4lu} {:system-calls/%5lu} "
-		    "{:context-switches/%5lu}",
-		    (unsigned long)rate(sum.v_intr - osum.v_intr),
-		    (unsigned long)rate(sum.v_syscall - osum.v_syscall),
-		    (unsigned long)rate(sum.v_swtch - osum.v_swtch));
+		xo_emit("{:interrupts/%4lu}", rate(sum.v_intr - osum.v_intr));
+		if (hflag) {
+			prthuman("system-calls",
+			    rate(sum.v_syscall - osum.v_syscall), 5, 0);
+			prthuman("context-switches",
+			    rate(sum.v_swtch - osum.v_swtch), 5, 0);
+		} else {
+			xo_emit(" ");
+			xo_emit("{:system-calls/%5lu} "
+			    "{:context-switches/%5lu}",
+			    rate(sum.v_syscall - osum.v_syscall),
+			    rate(sum.v_swtch - osum.v_swtch));
+		}
 		xo_close_container("fault-rates");
 		if (Pflag)
 			pcpustats(cpumask, maxid);
@@ -866,14 +874,14 @@ printhdr(int maxid, u_long cpumask)
 
 	num_shown = MIN(num_selected, maxshowdevs);
 	if (hflag)
-		xo_emit("{T:procs}  {T:memory}       {T:/page%*s}", 19, "");
+		xo_emit(" {T:procs}    {T:memory}    {T:/page%*s}", 19, "");
 	else
-		xo_emit("{T:procs}     {T:memory}        {T:/page%*s}", 19, "");
+		xo_emit("{T:procs}     {T:memory}       {T:/page%*s}", 19, "");
 	if (num_shown > 1)
-		xo_emit(" {T:/disks %*s}", num_shown * 4 - 7, "");
+		xo_emit("   {T:/disks %*s}  ", num_shown * 4 - 7, "");
 	else if (num_shown == 1)
 		xo_emit("   {T:disks}");
-	xo_emit("   {T:faults}      ");
+	xo_emit(" {T:faults}      ");
 	if (Pflag) {
 		for (i = 0; i <= maxid; i++) {
 			if (cpumask & (1ul << i))
@@ -881,10 +889,10 @@ printhdr(int maxid, u_long cpumask)
 		}
 		xo_emit("\n");
 	} else
-		xo_emit("   {T:cpu}\n");
+		xo_emit(" {T:cpu}\n");
 	if (hflag) {
-		xo_emit("{T:r} {T:b} {T:w}  {T:avm}   {T:fre}   {T:flt}  {T:re}"
-		    "  {T:pi}  {T:po}    {T:fr}   {T:sr} ");
+		xo_emit(" {T:r}  {T:b}  {T:w}  {T:avm}  {T:fre}  {T:flt}  {T:re}"
+		    "  {T:pi}  {T:po}   {T:fr}   {T:sr} ");
 	} else {
 		xo_emit("{T:r} {T:b} {T:w}     {T:avm}     {T:fre}  {T:flt}  "
 		    "{T:re}  {T:pi}  {T:po}    {T:fr}   {T:sr} ");
@@ -895,7 +903,7 @@ printhdr(int maxid, u_long cpumask)
 			xo_emit("{T:/%c%c%d} ", dev_select[i].device_name[0],
 			    dev_select[i].device_name[1],
 			    dev_select[i].unit_number);
-	xo_emit("  {T:in}    {T:sy}    {T:cs}");
+	xo_emit("  {T:in}   {T:sy}   {T:cs}");
 	if (Pflag) {
 		for (i = 0; i <= maxid; i++) {
 			if (cpumask & (1ul << i))
@@ -1274,29 +1282,26 @@ static void
 print_intrcnts(unsigned long *intrcnts, unsigned long *old_intrcnts,
     char *intrnames, unsigned int nintr, size_t istrnamlen, long long period_ms)
 {
-	unsigned long *intrcnt, *old_intrcnt;
-	char *intrname;
 	uint64_t inttotal, old_inttotal, total_count, total_rate;
 	unsigned long count, rate;
 	unsigned int i;
 
 	inttotal = 0;
 	old_inttotal = 0;
-	intrname = intrnames;
 	xo_open_list("interrupt");
-	for (i = 0, intrcnt=intrcnts, old_intrcnt=old_intrcnts; i < nintr; i++) {
-		if (intrname[0] != '\0' && (*intrcnt != 0 || aflag)) {
-			count = *intrcnt - *old_intrcnt;
+	for (i = 0; i < nintr; i++) {
+		if (intrnames[0] != '\0' && (*intrcnts != 0 || aflag)) {
+			count = *intrcnts - *old_intrcnts;
 			rate = ((uint64_t)count * 1000 + period_ms / 2) / period_ms;
 			xo_open_instance("interrupt");
 			xo_emit("{d:name/%-*s}{ket:name/%s} "
 			    "{:total/%20lu} {:rate/%10lu}\n",
-			    (int)istrnamlen, intrname, intrname, count, rate);
+			    (int)istrnamlen, intrnames, intrnames, count, rate);
 			xo_close_instance("interrupt");
 		}
-		intrname += strlen(intrname) + 1;
-		inttotal += *intrcnt++;
-		old_inttotal += *old_intrcnt++;
+		intrnames += strlen(intrnames) + 1;
+		inttotal += *intrcnts++;
+		old_inttotal += *old_intrcnts++;
 	}
 	total_count = inttotal - old_inttotal;
 	total_rate = (total_count * 1000 + period_ms / 2) / period_ms;
@@ -1342,7 +1347,7 @@ dointr(unsigned int interval, int reps)
 	/* Determine the length of the longest interrupt name */
 	intrname = intrnames;
 	istrnamlen = strlen("interrupt");
-	while(*intrname != '\0') {
+	while (intrname < intrnames + inamlen) {
 		clen = strlen(intrname);
 		if (clen > istrnamlen)
 			istrnamlen = clen;
@@ -1392,7 +1397,8 @@ domemstat_malloc(void)
 {
 	struct memory_type_list *mtlp;
 	struct memory_type *mtp;
-	int error, first, i;
+	size_t i, zones;
+	int error, first;
 
 	mtlp = memstat_mtl_alloc();
 	if (mtlp == NULL) {
@@ -1417,9 +1423,10 @@ domemstat_malloc(void)
 		}
 	}
 	xo_open_container("malloc-statistics");
-	xo_emit("{T:/%13s} {T:/%5s} {T:/%6s} {T:/%7s} {T:/%8s}  {T:Size(s)}\n",
-	    "Type", "InUse", "MemUse", "HighUse", "Requests");
+	xo_emit("{T:/%13s} {T:/%5s} {T:/%6s} {T:/%8s}  {T:Size(s)}\n",
+	    "Type", "InUse", "MemUse", "Requests");
 	xo_open_list("memory");
+	zones = memstat_malloc_zone_get_count();
 	for (mtp = memstat_mtl_first(mtlp); mtp != NULL;
 	    mtp = memstat_mtl_next(mtp)) {
 		if (memstat_get_numallocs(mtp) == 0 &&
@@ -1427,18 +1434,17 @@ domemstat_malloc(void)
 			continue;
 		xo_open_instance("memory");
 		xo_emit("{k:type/%13s/%s} {:in-use/%5ju} "
-		    "{:memory-use/%5ju}{U:K} {:high-use/%7s} "
-		    "{:requests/%8ju}  ",
+		    "{:memory-use/%5ju}{U:K} {:requests/%8ju}  ",
 		    memstat_get_name(mtp), (uintmax_t)memstat_get_count(mtp),
-		    ((uintmax_t)memstat_get_bytes(mtp) + 1023) / 1024, "-",
+		    ((uintmax_t)memstat_get_bytes(mtp) + 1023) / 1024,
 		    (uintmax_t)memstat_get_numallocs(mtp));
 		first = 1;
 		xo_open_list("size");
-		for (i = 0; i < 32; i++) {
-			if (memstat_get_sizemask(mtp) & (1 << i)) {
+		for (i = 0; i < zones; i++) {
+			if (memstat_malloc_zone_used(mtp, i)) {
 				if (!first)
 					xo_emit(",");
-				xo_emit("{l:size/%d}", 1 << (i + 4));
+				xo_emit("{l:size/%d}", memstat_malloc_zone_get_size(i));
 				first = 0;
 			}
 		}
@@ -1482,9 +1488,9 @@ domemstat_zone(void)
 		}
 	}
 	xo_open_container("memory-zone-statistics");
-	xo_emit("{T:/%-20s} {T:/%6s} {T:/%6s} {T:/%8s} {T:/%8s} {T:/%8s} "
-	    "{T:/%4s} {T:/%4s}\n\n", "ITEM", "SIZE",
-	    "LIMIT", "USED", "FREE", "REQ", "FAIL", "SLEEP");
+	xo_emit("{T:/%-20s} {T:/%6s} {T:/%6s} {T:/%8s} {T:/%8s} {T:/%8s} {T:/%8s} "
+	    "{T:/%4s} {T:/%4s}\n", "ITEM", "SIZE",
+	    "LIMIT", "USED", "FREE", "REQ", "FAIL", "SLEEP", "XDOMAIN");
 	xo_open_list("zone");
 	for (mtp = memstat_mtl_first(mtlp); mtp != NULL;
 	    mtp = memstat_mtl_next(mtp)) {
@@ -1494,7 +1500,7 @@ domemstat_zone(void)
 		xo_emit("{d:name/%-20s}{ke:name/%s} {:size/%6ju}, "
 		    "{:limit/%6ju},{:used/%8ju},"
 		    "{:free/%8ju},{:requests/%8ju},"
-		    "{:fail/%4ju},{:sleep/%4ju}\n", name,
+		    "{:fail/%4ju},{:sleep/%4ju},{:xdomain/%4ju}\n", name,
 		    memstat_get_name(mtp),
 		    (uintmax_t)memstat_get_size(mtp),
 		    (uintmax_t)memstat_get_countlimit(mtp),
@@ -1502,13 +1508,13 @@ domemstat_zone(void)
 		    (uintmax_t)memstat_get_free(mtp),
 		    (uintmax_t)memstat_get_numallocs(mtp),
 		    (uintmax_t)memstat_get_failures(mtp),
-		    (uintmax_t)memstat_get_sleeps(mtp));
+		    (uintmax_t)memstat_get_sleeps(mtp),
+		    (uintmax_t)memstat_get_xdomain(mtp));
 		xo_close_instance("zone");
 	}
 	memstat_mtl_free(mtlp);
 	xo_close_list("zone");
 	xo_close_container("memory-zone-statistics");
-	xo_emit("\n");
 }
 
 static void
@@ -1522,66 +1528,48 @@ display_object(struct kinfo_vmobject *kvo)
 	xo_emit("{:inactive/%5ju} ", (uintmax_t)kvo->kvo_inactive);
 	xo_emit("{:refcount/%3d} ", kvo->kvo_ref_count);
 	xo_emit("{:shadowcount/%3d} ", kvo->kvo_shadow_count);
-	switch (kvo->kvo_memattr) {
+
+#define	MEMATTR_STR(type, val)					\
+	if (kvo->kvo_memattr == (type)) {			\
+		str = (val);					\
+	} else
 #ifdef VM_MEMATTR_UNCACHEABLE
-	case VM_MEMATTR_UNCACHEABLE:
-		str = "UC";
-		break;
+	MEMATTR_STR(VM_MEMATTR_UNCACHEABLE, "UC")
 #endif
 #ifdef VM_MEMATTR_WRITE_COMBINING
-	case VM_MEMATTR_WRITE_COMBINING:
-		str = "WC";
-		break;
+	MEMATTR_STR(VM_MEMATTR_WRITE_COMBINING, "WC")
 #endif
 #ifdef VM_MEMATTR_WRITE_THROUGH
-	case VM_MEMATTR_WRITE_THROUGH:
-		str = "WT";
-		break;
+	MEMATTR_STR(VM_MEMATTR_WRITE_THROUGH, "WT")
 #endif
 #ifdef VM_MEMATTR_WRITE_PROTECTED
-	case VM_MEMATTR_WRITE_PROTECTED:
-		str = "WP";
-		break;
+	MEMATTR_STR(VM_MEMATTR_WRITE_PROTECTED, "WP")
 #endif
 #ifdef VM_MEMATTR_WRITE_BACK
-	case VM_MEMATTR_WRITE_BACK:
-		str = "WB";
-		break;
+	MEMATTR_STR(VM_MEMATTR_WRITE_BACK, "WB")
 #endif
 #ifdef VM_MEMATTR_WEAK_UNCACHEABLE
-	case VM_MEMATTR_WEAK_UNCACHEABLE:
-		str = "UC-";
-		break;
+	MEMATTR_STR(VM_MEMATTR_WEAK_UNCACHEABLE, "UC-")
 #endif
 #ifdef VM_MEMATTR_WB_WA
-	case VM_MEMATTR_WB_WA:
-		str = "WB";
-		break;
+	MEMATTR_STR(VM_MEMATTR_WB_WA, "WB")
 #endif
 #ifdef VM_MEMATTR_NOCACHE
-	case VM_MEMATTR_NOCACHE:
-		str = "NC";
-		break;
+	MEMATTR_STR(VM_MEMATTR_NOCACHE, "NC")
 #endif
 #ifdef VM_MEMATTR_DEVICE
-	case VM_MEMATTR_DEVICE:
-		str = "DEV";
-		break;
+	MEMATTR_STR(VM_MEMATTR_DEVICE, "DEV")
 #endif
 #ifdef VM_MEMATTR_CACHEABLE
-	case VM_MEMATTR_CACHEABLE:
-		str = "C";
-		break;
+	MEMATTR_STR(VM_MEMATTR_CACHEABLE, "C")
 #endif
 #ifdef VM_MEMATTR_PREFETCHABLE
-	case VM_MEMATTR_PREFETCHABLE:
-		str = "PRE";
-		break;
+	MEMATTR_STR(VM_MEMATTR_PREFETCHABLE, "PRE")
 #endif
-	default:
+	{
 		str = "??";
-		break;
 	}
+#undef MEMATTR_STR
 	xo_emit("{:attribute/%-3s} ", str);
 	switch (kvo->kvo_type) {
 	case KVME_TYPE_NONE:

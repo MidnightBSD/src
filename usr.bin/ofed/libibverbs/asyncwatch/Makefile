@@ -1,4 +1,5 @@
 
+PACKAGE=	rdma
 PROG=	ibv_asyncwatch
 MAN=	ibv_asyncwatch.1
 SRCS=	asyncwatch.c

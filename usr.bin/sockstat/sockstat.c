@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2002 Dag-Erling Coïdan Smørgrav
  * All rights reserved.
@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/file.h>
 #include <sys/socket.h>
@@ -57,6 +56,7 @@
 #include <ctype.h>
 #include <err.h>
 #include <errno.h>
+#include <inttypes.h>
 #include <jail.h>
 #include <netdb.h>
 #include <pwd.h>
@@ -75,9 +75,11 @@ static int	 opt_4;		/* Show IPv4 sockets */
 static int	 opt_6;		/* Show IPv6 sockets */
 static int	 opt_C;		/* Show congestion control */
 static int	 opt_c;		/* Show connected sockets */
+static int	 opt_i;		/* Show inp_gencnt */
 static int	 opt_j;		/* Show specified jail */
 static int	 opt_L;		/* Don't show IPv4 or IPv6 loopback sockets */
 static int	 opt_l;		/* Show listening sockets */
+static int	 opt_n;		/* Don't resolve UIDs to user names */
 static int	 opt_q;		/* Don't show header */
 static int	 opt_S;		/* Show protocol stack if applicable */
 static int	 opt_s;		/* Show protocol state if applicable */
@@ -111,6 +113,7 @@ struct addr {
 struct sock {
 	kvaddr_t socket;
 	kvaddr_t pcb;
+	uint64_t inp_gencnt;
 	int shown;
 	int vflag;
 	int family;
@@ -695,6 +698,7 @@ gather_inet(int proto)
 			err(1, "malloc()");
 		sock->socket = so->xso_so;
 		sock->proto = proto;
+		sock->inp_gencnt = xip->inp_gencnt;
 		if (xip->inp_vflag & INP_IPV4) {
 			sock->family = AF_INET;
 			sockaddr(&laddr->address, sock->family,
@@ -708,6 +712,8 @@ gather_inet(int proto)
 			sockaddr(&faddr->address, sock->family,
 			    &xip->in6p_faddr, xip->inp_fport);
 		}
+		if (proto == IPPROTO_TCP)
+			faddr->encaps_port = xtp->xt_encaps_port;
 		laddr->next = NULL;
 		faddr->next = NULL;
 		sock->laddr = laddr;
@@ -852,7 +858,7 @@ printaddr(struct sockaddr_storage *ss)
 
 	switch (ss->ss_family) {
 	case AF_INET:
-		if (inet_lnaof(sstosin(ss)->sin_addr) == INADDR_ANY)
+		if (sstosin(ss)->sin_addr.s_addr == INADDR_ANY)
 			addrstr[0] = '*';
 		port = ntohs(sstosin(ss)->sin_port);
 		break;
@@ -1083,12 +1089,24 @@ displaysock(struct sock *s, int pos)
 		default:
 			abort();
 		}
+		if (opt_i) {
+			if (s->proto == IPPROTO_TCP ||
+			    s->proto == IPPROTO_UDP) {
+				while (pos < offset)
+					pos += xprintf(" ");
+				pos += xprintf("%" PRIu64, s->inp_gencnt);
+			}
+			offset += 9;
+		}
 		if (opt_U) {
 			if (faddr != NULL &&
-			    s->proto == IPPROTO_SCTP &&
-			    s->state != SCTP_CLOSED &&
-			    s->state != SCTP_BOUND &&
-			    s->state != SCTP_LISTEN) {
+			    ((s->proto == IPPROTO_SCTP &&
+			      s->state != SCTP_CLOSED &&
+			      s->state != SCTP_BOUND &&
+			      s->state != SCTP_LISTEN) ||
+			     (s->proto == IPPROTO_TCP &&
+			      s->state != TCPS_CLOSED &&
+			      s->state != TCPS_LISTEN))) {
 				while (pos < offset)
 					pos += xprintf(" ");
 				pos += xprintf("%u",
@@ -1177,6 +1195,8 @@ display(void)
 		    "USER", "COMMAND", "PID", "FD", "PROTO",
 		    opt_w ? 45 : 21, "LOCAL ADDRESS",
 		    opt_w ? 45 : 21, "FOREIGN ADDRESS");
+		if (opt_i)
+			printf(" %-8s", "ID");
 		if (opt_U)
 			printf(" %-6s", "ENCAPS");
 		if (opt_s) {
@@ -1204,7 +1224,7 @@ display(void)
 				continue;
 			s->shown = 1;
 			pos = 0;
-			if ((pwd = getpwuid(xf->xf_uid)) == NULL)
+			if (opt_n || (pwd = getpwuid(xf->xf_uid)) == NULL)
 				pos += xprintf("%lu ", (u_long)xf->xf_uid);
 			else
 				pos += xprintf("%s ", pwd->pw_name);
@@ -1292,7 +1312,7 @@ static void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: sockstat [-46cLlSsUuvw] [-j jid] [-p ports] [-P protocols]\n");
+	    "usage: sockstat [-46CciLlnqSsUuvw] [-j jid] [-p ports] [-P protocols]\n");
 	exit(1);
 }
 
@@ -1303,7 +1323,7 @@ main(int argc, char *argv[])
 	int o, i;
 
 	opt_j = -1;
-	while ((o = getopt(argc, argv, "46Ccj:Llp:P:qSsUuvw")) != -1)
+	while ((o = getopt(argc, argv, "46Ccij:Llnp:P:qSsUuvw")) != -1)
 		switch (o) {
 		case '4':
 			opt_4 = 1;
@@ -1317,6 +1337,9 @@ main(int argc, char *argv[])
 		case 'c':
 			opt_c = 1;
 			break;
+		case 'i':
+			opt_i = 1;
+			break;
 		case 'j':
 			opt_j = jail_getid(optarg);
 			if (opt_j < 0)
@@ -1327,6 +1350,9 @@ main(int argc, char *argv[])
 			break;
 		case 'l':
 			opt_l = 1;
+			break;
+		case 'n':
+			opt_n = 1;
 			break;
 		case 'p':
 			parse_ports(optarg);
@@ -1371,7 +1397,7 @@ main(int argc, char *argv[])
 			errx(2, "%s", jail_errmsg);
 		case JAIL_SYS_NEW:
 			if (jail_attach(opt_j) < 0)
-				errx(3, "%s", jail_errmsg);
+				err(3, "jail_attach()");
 			/* Set back to -1 for normal output in vnet jail. */
 			opt_j = -1;
 			break;

@@ -27,7 +27,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _MACHINE_MD_VAR_H_
@@ -35,6 +34,7 @@
 
 #include <x86/x86_var.h>
 
+extern	u_int	cpu_fxsr;
 extern	u_int	cyrix_did;
 #if defined(I586_CPU) && !defined(NO_F00F_HACK)
 extern	int	has_f00f_bug;
@@ -46,7 +46,6 @@ extern	int	szfreebsd4_sigcode;
 extern	int	szosigcode;
 extern	int	sz_lcall_tramp;
 #endif
-extern	uint32_t *vm_page_dump;
 extern  vm_offset_t proc0kstack;
 extern	size_t setidt_disp;
 
@@ -68,6 +67,8 @@ void	doreti_popl_fs_fault(void) __asm(__STRING(doreti_popl_fs_fault));
 void	fill_based_sd(struct segment_descriptor *sdp, uint32_t base);
 void	i686_pagezero(void *addr);
 void	sse2_pagezero(void *addr);
+int	cpu_minidumpsys_nopae(struct dumperinfo *, const struct minidumpstate *);
+int	cpu_minidumpsys_pae(struct dumperinfo *, const struct minidumpstate *);
 void	init_AMD_Elan_sc520(void);
 vm_paddr_t kvtop(void *addr);
 void	panicifcpuunsupported(void);

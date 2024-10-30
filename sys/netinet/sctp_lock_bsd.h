@@ -32,8 +32,6 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 #ifndef _NETINET_SCTP_LOCK_BSD_H_
 #define _NETINET_SCTP_LOCK_BSD_H_
 
@@ -106,6 +104,17 @@
 	rw_wunlock(&SCTP_BASE_INFO(ipi_ep_mtx));			\
 } while (0)
 
+#define SCTP_INP_INFO_LOCK_ASSERT() do {				\
+	rw_assert(&SCTP_BASE_INFO(ipi_ep_mtx), RA_LOCKED);		\
+} while (0)
+
+#define SCTP_INP_INFO_RLOCK_ASSERT() do {				\
+	rw_assert(&SCTP_BASE_INFO(ipi_ep_mtx), RA_RLOCKED);		\
+} while (0)
+
+#define SCTP_INP_INFO_WLOCK_ASSERT() do {				\
+	rw_assert(&SCTP_BASE_INFO(ipi_ep_mtx), RA_WLOCKED);		\
+} while (0)
 
 #define SCTP_MCORE_QLOCK_INIT(cpstr) do {				\
 	mtx_init(&(cpstr)->que_mtx, "sctp-mcore_queue","queue_lock",	\
@@ -127,7 +136,6 @@
 	mtx_unlock(&(cpstr)->que_mtx);					\
 } while (0)
 
-
 #define SCTP_MCORE_LOCK_INIT(cpstr) do {				\
 	mtx_init(&(cpstr)->core_mtx, "sctp-cpulck","cpu_proc_lock",	\
 	         MTX_DEF | MTX_DUPOK);					\
@@ -147,7 +155,6 @@
 #define SCTP_MCORE_UNLOCK(cpstr) do {					\
 	mtx_unlock(&(cpstr)->core_mtx);					\
 } while (0)
-
 
 #define SCTP_IPI_ADDR_INIT() do {					\
 	rw_init(&SCTP_BASE_INFO(ipi_addr_mtx), "sctp-addr");		\
@@ -201,7 +208,6 @@
 	mtx_unlock(&sctp_it_ctl.ipi_iterator_wq_mtx);			\
 } while (0)
 
-
 #define SCTP_IP_PKTLOG_INIT() do {					\
 	mtx_init(&SCTP_BASE_INFO(ipi_pktlog_mtx), "sctp-pktlog",	\
 	         "packetlog", MTX_DEF);					\
@@ -219,19 +225,18 @@
 	mtx_unlock(&SCTP_BASE_INFO(ipi_pktlog_mtx));			\
 } while (0)
 
-
 /*
  * The INP locks we will use for locking an SCTP endpoint, so for example if
  * we want to change something at the endpoint level for example random_store
  * or cookie secrets we lock the INP level.
  */
 
-#define SCTP_INP_READ_INIT(_inp) do {					\
+#define SCTP_INP_READ_LOCK_INIT(_inp) do {				\
 	mtx_init(&(_inp)->inp_rdata_mtx, "sctp-read", "inpr",		\
 	         MTX_DEF | MTX_DUPOK);					\
 } while (0)
 
-#define SCTP_INP_READ_DESTROY(_inp) do {				\
+#define SCTP_INP_READ_LOCK_DESTROY(_inp) do {				\
 	mtx_destroy(&(_inp)->inp_rdata_mtx);				\
 } while (0)
 
@@ -243,6 +248,10 @@
 	mtx_unlock(&(_inp)->inp_rdata_mtx);				\
 } while (0)
 
+#define SCTP_INP_READ_LOCK_ASSERT(_inp) do {				\
+	KASSERT(mtx_owned(&(_inp)->inp_rdata_mtx),			\
+	        ("Don't own INP read queue lock"));			\
+} while (0)
 
 #define SCTP_INP_LOCK_INIT(_inp) do {					\
 	mtx_init(&(_inp)->inp_mtx, "sctp-inp", "inp",			\
@@ -330,24 +339,6 @@
 #define SCTP_ASOC_CREATE_LOCK_CONTENDED(_inp)				\
 	((_inp)->inp_create_mtx.mtx_lock & MTX_CONTESTED)
 
-
-#define SCTP_TCB_SEND_LOCK_INIT(_tcb) do {				\
-	mtx_init(&(_tcb)->tcb_send_mtx, "sctp-send-tcb", "tcbs",	\
-	         MTX_DEF | MTX_DUPOK);					\
-} while (0)
-
-#define SCTP_TCB_SEND_LOCK_DESTROY(_tcb) do {				\
-	mtx_destroy(&(_tcb)->tcb_send_mtx);				\
-} while (0)
-
-#define SCTP_TCB_SEND_LOCK(_tcb) do {					\
-	mtx_lock(&(_tcb)->tcb_send_mtx);				\
-} while (0)
-
-#define SCTP_TCB_SEND_UNLOCK(_tcb) do {					\
-	mtx_unlock(&(_tcb)->tcb_send_mtx);				\
-} while (0)
-
 /*
  * For the majority of things (once we have found the association) we will
  * lock the actual association mutex. This will protect all the assoiciation
@@ -395,7 +386,6 @@
 	        ("Don't own TCB lock"));				\
 } while (0)
 
-
 #define SCTP_ITERATOR_LOCK_INIT() do {					\
 	mtx_init(&sctp_it_ctl.it_mtx, "sctp-it", "iterator", MTX_DEF);	\
 } while (0)
@@ -414,7 +404,6 @@
 #define SCTP_ITERATOR_UNLOCK() do {					\
 	mtx_unlock(&sctp_it_ctl.it_mtx);				\
 } while (0)
-
 
 #define SCTP_WQ_ADDR_INIT() do {					\
 	mtx_init(&SCTP_BASE_INFO(wq_addr_mtx),				\

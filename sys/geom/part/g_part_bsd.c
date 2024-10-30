@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2007 Marcel Moolenaar
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bio.h>
 #include <sys/disklabel.h>
@@ -248,8 +247,7 @@ g_part_bsd_destroy(struct g_part_table *basetable, struct g_part_parms *gpp)
 	struct g_part_bsd_table *table;
 
 	table = (struct g_part_bsd_table *)basetable;
-	if (table->bbarea != NULL)
-		g_free(table->bbarea);
+	g_free(table->bbarea);
 	table->bbarea = NULL;
 
 	/* Wipe the second sector to clear the partitioning. */

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  *  Copyright (c) 2005 Chris Jones
  *  All rights reserved.
@@ -32,12 +32,12 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/libkern.h>
 #include <sys/malloc.h>
 
 #include <geom/geom.h>
+#include <geom/geom_dbg.h>
 #include <geom/vinum/geom_vinum_var.h>
 #include <geom/vinum/geom_vinum.h>
 

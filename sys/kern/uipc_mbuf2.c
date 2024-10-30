@@ -63,7 +63,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*#define PULLDOWN_DEBUG*/
 
 #include <sys/param.h>

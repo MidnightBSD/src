@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004, 2007 Lukas Ertl
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef	_GEOM_VINUM_H_
@@ -75,7 +74,6 @@ void	gv_rm_sd(struct gv_softc *sc, struct gv_sd *s);
 void	gv_rm_drive(struct gv_softc *, struct gv_drive *, int);
 void	gv_rm_plex(struct gv_softc *, struct gv_plex *);
 void	gv_rm_vol(struct gv_softc *, struct gv_volume *);
-
 
 /* geom_vinum_state.c */
 int	gv_sdstatemap(struct gv_plex *);
@@ -157,28 +155,9 @@ int	gv_sync_complete(struct gv_plex *, struct bio *);
 
 extern	u_int	g_vinum_debug;
 
-#define	G_VINUM_DEBUG(lvl, ...)	do {					\
-	if (g_vinum_debug >= (lvl)) {					\
-		printf("GEOM_VINUM");					\
-		if (g_vinum_debug > 0)					\
-			printf("[%u]", lvl);				\
-		printf(": ");						\
-		printf(__VA_ARGS__);					\
-		printf("\n");						\
-	}								\
-} while (0)
-
-#define	G_VINUM_LOGREQ(lvl, bp, ...)	do {				\
-	if (g_vinum_debug >= (lvl)) {					\
-		printf("GEOM_VINUM");					\
-		if (g_vinum_debug > 0)					\
-			printf("[%u]", lvl);				\
-		printf(": ");						\
-		printf(__VA_ARGS__);					\
-		printf(" ");						\
-		g_print_bio(bp);					\
-		printf("\n");						\
-	}								\
-} while (0)
+#define	G_VINUM_DEBUG(lvl, ...) \
+    _GEOM_DEBUG("GEOM_VINUM", g_vinum_debug, (lvl), NULL, __VA_ARGS__)
+#define	G_VINUM_LOGREQ(lvl, bp, ...) \
+    _GEOM_DEBUG("GEOM_VINUM", g_vinum_debug, (lvl), (bp), __VA_ARGS__)
 
 #endif /* !_GEOM_VINUM_H_ */

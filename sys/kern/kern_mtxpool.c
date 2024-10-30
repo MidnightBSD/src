@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2001 Matthew Dillon.  All Rights Reserved.
  *
@@ -46,7 +46,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/proc.h>
 #include <sys/kernel.h>
@@ -55,7 +54,6 @@
 #include <sys/malloc.h>
 #include <sys/mutex.h>
 #include <sys/systm.h>
-
 
 static MALLOC_DEFINE(M_MTXPOOL, "mtx_pool", "mutex pool");
 
@@ -81,7 +79,7 @@ struct mtx_pool {
 #define mtx_pool_shift	mtx_pool_header.mtxpool_shift
 #define mtx_pool_next	mtx_pool_header.mtxpool_next
 
-struct mtx_pool __read_frequently *mtxpool_sleep;
+struct mtx_pool __read_mostly *mtxpool_sleep;
 
 #if UINTPTR_MAX == UINT64_MAX	/* 64 bits */
 # define POINTER_BITS		64

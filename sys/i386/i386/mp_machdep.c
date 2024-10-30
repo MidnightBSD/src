@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1996, by Steve Passe
  * All rights reserved.
@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_acpi.h"
 #include "opt_apic.h"
 #include "opt_cpu.h"
@@ -53,6 +52,7 @@
 #ifdef GPROF 
 #include <sys/gmon.h>
 #endif
+#include <sys/kdb.h>
 #include <sys/kernel.h>
 #include <sys/ktr.h>
 #include <sys/lock.h>
@@ -145,6 +145,61 @@ static int	start_ap(int apic_id);
 
 static char *ap_copyout_buf;
 static char *ap_tramp_stack_base;
+
+unsigned int boot_address;
+
+#define MiB(v)	(v ## ULL << 20)
+
+/* Allocate memory for the AP trampoline. */
+void
+alloc_ap_trampoline(vm_paddr_t *physmap, unsigned int *physmap_idx)
+{
+	unsigned int i;
+	bool allocated;
+
+	allocated = false;
+	for (i = *physmap_idx; i <= *physmap_idx; i -= 2) {
+		/*
+		 * Find a memory region big enough and below the 1MB boundary
+		 * for the trampoline code.
+		 * NB: needs to be page aligned.
+		 */
+		if (physmap[i] >= MiB(1) ||
+		    (trunc_page(physmap[i + 1]) - round_page(physmap[i])) <
+		    round_page(bootMP_size))
+			continue;
+
+		allocated = true;
+		/*
+		 * Try to steal from the end of the region to mimic previous
+		 * behaviour, else fallback to steal from the start.
+		 */
+		if (physmap[i + 1] < MiB(1)) {
+			boot_address = trunc_page(physmap[i + 1]);
+			if ((physmap[i + 1] - boot_address) < bootMP_size)
+				boot_address -= round_page(bootMP_size);
+			physmap[i + 1] = boot_address;
+		} else {
+			boot_address = round_page(physmap[i]);
+			physmap[i] = boot_address + round_page(bootMP_size);
+		}
+		if (physmap[i] == physmap[i + 1] && *physmap_idx != 0) {
+			memmove(&physmap[i], &physmap[i + 2],
+			    sizeof(*physmap) * (*physmap_idx - i + 2));
+			*physmap_idx -= 2;
+		}
+		break;
+	}
+
+	if (!allocated) {
+		boot_address = basemem * 1024 - bootMP_size;
+		if (bootverbose)
+			printf(
+"Cannot find enough space for the boot trampoline, placing it at %#x",
+			    boot_address);
+	}
+}
+
 /*
  * Initialize the IPI handlers and start up the AP's.
  */
@@ -156,7 +211,6 @@ cpu_mp_start(void)
 	/* Initialize the logical ID to APIC ID table. */
 	for (i = 0; i < MAXCPU; i++) {
 		cpu_apic_ids[i] = -1;
-		cpu_ipi_pending[i] = 0;
 	}
 
 	/* Install an inter-CPU IPI for TLB invalidation */
@@ -288,7 +342,7 @@ init_secondary(void)
 	cr0 &= ~(CR0_CD | CR0_NW | CR0_EM);
 	load_cr0(cr0);
 	CHECK_WRITE(0x38, 5);
-	
+
 	/* signal our startup to the BSP. */
 	mp_naps++;
 	CHECK_WRITE(0x39, 6);
@@ -320,9 +374,7 @@ start_all_aps(void)
 
 	mtx_init(&ap_boot_mtx, "ap boot", NULL, MTX_SPIN);
 
-	/* Remap lowest 1MB */
-	IdlePTD[0] = IdlePTD[1];
-	load_cr3(rcr3());		/* invalidate TLB */
+	pmap_remap_lower(true);
 
 	/* install the AP 1st level boot code */
 	install_ap_tramp();
@@ -370,9 +422,7 @@ start_all_aps(void)
 		CPU_SET(cpu, &all_cpus);	/* record AP in CPU map */
 	}
 
-	/* Unmap lowest 1MB again */
-	IdlePTD[0] = 0;
-	load_cr3(rcr3());
+	pmap_remap_lower(false);
 
 	/* restore the warmstart vector */
 	*(u_int32_t *) WARMBOOT_OFF = mpbioswarmvec;
@@ -474,4 +524,220 @@ start_ap(int apic_id)
 		DELAY(1000);
 	}
 	return 0;		/* return FAILURE */
+}
+
+/*
+ * Flush the TLB on other CPU's
+ */
+
+/* Variables needed for SMP tlb shootdown. */
+vm_offset_t smp_tlb_addr1, smp_tlb_addr2;
+pmap_t smp_tlb_pmap;
+volatile uint32_t smp_tlb_generation;
+
+/*
+ * Used by pmap to request cache or TLB invalidation on local and
+ * remote processors.  Mask provides the set of remote CPUs which are
+ * to be signalled with the invalidation IPI.  Vector specifies which
+ * invalidation IPI is used.  As an optimization, the curcpu_cb
+ * callback is invoked on the calling CPU while waiting for remote
+ * CPUs to complete the operation.
+ *
+ * The callback function is called unconditionally on the caller's
+ * underlying processor, even when this processor is not set in the
+ * mask.  So, the callback function must be prepared to handle such
+ * spurious invocations.
+ */
+static void
+smp_targeted_tlb_shootdown(cpuset_t mask, u_int vector, pmap_t pmap,
+    vm_offset_t addr1, vm_offset_t addr2, smp_invl_cb_t curcpu_cb)
+{
+	cpuset_t other_cpus;
+	volatile uint32_t *p_cpudone;
+	uint32_t generation;
+	int cpu;
+
+	/*
+	 * It is not necessary to signal other CPUs while booting or
+	 * when in the debugger.
+	 */
+	if (kdb_active || KERNEL_PANICKED() || !smp_started) {
+		curcpu_cb(pmap, addr1, addr2);
+		return;
+	}
+
+	sched_pin();
+
+	/*
+	 * Check for other cpus.  Return if none.
+	 */
+	if (CPU_ISFULLSET(&mask)) {
+		if (mp_ncpus <= 1)
+			goto nospinexit;
+	} else {
+		CPU_CLR(PCPU_GET(cpuid), &mask);
+		if (CPU_EMPTY(&mask))
+			goto nospinexit;
+	}
+
+	KASSERT((read_eflags() & PSL_I) != 0,
+	    ("smp_targeted_tlb_shootdown: interrupts disabled"));
+	mtx_lock_spin(&smp_ipi_mtx);
+	smp_tlb_addr1 = addr1;
+	smp_tlb_addr2 = addr2;
+	smp_tlb_pmap = pmap;
+	generation = ++smp_tlb_generation;
+	if (CPU_ISFULLSET(&mask)) {
+		ipi_all_but_self(vector);
+		other_cpus = all_cpus;
+		CPU_CLR(PCPU_GET(cpuid), &other_cpus);
+	} else {
+		other_cpus = mask;
+		ipi_selected(mask, vector);
+	}
+	curcpu_cb(pmap, addr1, addr2);
+	CPU_FOREACH_ISSET(cpu, &other_cpus) {
+		p_cpudone = &cpuid_to_pcpu[cpu]->pc_smp_tlb_done;
+		while (*p_cpudone != generation)
+			ia32_pause();
+	}
+	mtx_unlock_spin(&smp_ipi_mtx);
+	sched_unpin();
+	return;
+
+nospinexit:
+	curcpu_cb(pmap, addr1, addr2);
+	sched_unpin();
+}
+
+void
+smp_masked_invltlb(cpuset_t mask, pmap_t pmap, smp_invl_cb_t curcpu_cb)
+{
+	smp_targeted_tlb_shootdown(mask, IPI_INVLTLB, pmap, 0, 0, curcpu_cb);
+#ifdef COUNT_XINVLTLB_HITS
+	ipi_global++;
+#endif
+}
+
+void
+smp_masked_invlpg(cpuset_t mask, vm_offset_t addr, pmap_t pmap,
+    smp_invl_cb_t curcpu_cb)
+{
+	smp_targeted_tlb_shootdown(mask, IPI_INVLPG, pmap, addr, 0, curcpu_cb);
+#ifdef COUNT_XINVLTLB_HITS
+	ipi_page++;
+#endif
+}
+
+void
+smp_masked_invlpg_range(cpuset_t mask, vm_offset_t addr1, vm_offset_t addr2,
+    pmap_t pmap, smp_invl_cb_t curcpu_cb)
+{
+	smp_targeted_tlb_shootdown(mask, IPI_INVLRNG, pmap, addr1, addr2,
+	    curcpu_cb);
+#ifdef COUNT_XINVLTLB_HITS
+	ipi_range++;
+	ipi_range_size += (addr2 - addr1) / PAGE_SIZE;
+#endif
+}
+
+void
+smp_cache_flush(smp_invl_cb_t curcpu_cb)
+{
+	smp_targeted_tlb_shootdown(all_cpus, IPI_INVLCACHE, NULL, 0, 0,
+	    curcpu_cb);
+}
+
+/*
+ * Handlers for TLB related IPIs
+ */
+void
+invltlb_handler(void)
+{
+	uint32_t generation;
+
+	trap_check_kstack();
+#ifdef COUNT_XINVLTLB_HITS
+	xhits_gbl[PCPU_GET(cpuid)]++;
+#endif /* COUNT_XINVLTLB_HITS */
+#ifdef COUNT_IPIS
+	(*ipi_invltlb_counts[PCPU_GET(cpuid)])++;
+#endif /* COUNT_IPIS */
+
+	/*
+	 * Reading the generation here allows greater parallelism
+	 * since invalidating the TLB is a serializing operation.
+	 */
+	generation = smp_tlb_generation;
+	if (smp_tlb_pmap == kernel_pmap)
+		invltlb_glob();
+	PCPU_SET(smp_tlb_done, generation);
+}
+
+void
+invlpg_handler(void)
+{
+	uint32_t generation;
+
+	trap_check_kstack();
+#ifdef COUNT_XINVLTLB_HITS
+	xhits_pg[PCPU_GET(cpuid)]++;
+#endif /* COUNT_XINVLTLB_HITS */
+#ifdef COUNT_IPIS
+	(*ipi_invlpg_counts[PCPU_GET(cpuid)])++;
+#endif /* COUNT_IPIS */
+
+	generation = smp_tlb_generation;	/* Overlap with serialization */
+	if (smp_tlb_pmap == kernel_pmap)
+		invlpg(smp_tlb_addr1);
+	PCPU_SET(smp_tlb_done, generation);
+}
+
+void
+invlrng_handler(void)
+{
+	vm_offset_t addr, addr2;
+	uint32_t generation;
+
+	trap_check_kstack();
+#ifdef COUNT_XINVLTLB_HITS
+	xhits_rng[PCPU_GET(cpuid)]++;
+#endif /* COUNT_XINVLTLB_HITS */
+#ifdef COUNT_IPIS
+	(*ipi_invlrng_counts[PCPU_GET(cpuid)])++;
+#endif /* COUNT_IPIS */
+
+	addr = smp_tlb_addr1;
+	addr2 = smp_tlb_addr2;
+	generation = smp_tlb_generation;	/* Overlap with serialization */
+	if (smp_tlb_pmap == kernel_pmap) {
+		do {
+			invlpg(addr);
+			addr += PAGE_SIZE;
+		} while (addr < addr2);
+	}
+
+	PCPU_SET(smp_tlb_done, generation);
+}
+
+void
+invlcache_handler(void)
+{
+	uint32_t generation;
+
+	trap_check_kstack();
+#ifdef COUNT_IPIS
+	(*ipi_invlcache_counts[PCPU_GET(cpuid)])++;
+#endif /* COUNT_IPIS */
+
+	/*
+	 * Reading the generation here allows greater parallelism
+	 * since wbinvd is a serializing instruction.  Without the
+	 * temporary, we'd wait for wbinvd to complete, then the read
+	 * would execute, then the dependent write, which must then
+	 * complete before return from interrupt.
+	 */
+	generation = smp_tlb_generation;
+	wbinvd();
+	PCPU_SET(smp_tlb_done, generation);
 }

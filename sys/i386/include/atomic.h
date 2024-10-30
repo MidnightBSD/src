@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1998 Doug Rabson
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 #ifndef _MACHINE_ATOMIC_H_
 #define	_MACHINE_ATOMIC_H_
@@ -95,14 +94,6 @@ __mbu(void)
  * atomic_readandclear_long(P)	(return (*(u_long *)(P)); *(u_long *)(P) = 0;)
  */
 
-/*
- * The above functions are expanded inline in the statically-linked
- * kernel.  Lock prefixes are generated if an SMP kernel is being
- * built.
- *
- * Kernel modules call real functions which are built into the kernel.
- * This allows kernel modules to be portable between UP and SMP systems.
- */
 #if !defined(__GNUCLIKE_ASM)
 #define	ATOMIC_ASM(NAME, TYPE, OP, CONS, V)			\
 void atomic_##NAME##_##TYPE(volatile u_##TYPE *p, u_##TYPE v);	\
@@ -137,19 +128,13 @@ uint64_t	atomic_fetchadd_64(volatile uint64_t *, uint64_t);
 void		atomic_add_64(volatile uint64_t *, uint64_t);
 void		atomic_subtract_64(volatile uint64_t *, uint64_t);
 
-#else /* !KLD_MODULE && __GNUCLIKE_ASM */
+#else /* !__GNUCLIKE_ASM */
 
 /*
- * For userland, always use lock prefixes so that the binaries will run
- * on both SMP and !SMP systems.
- */
-#if defined(SMP) || !defined(_KERNEL) || defined(KLD_MODULE)
-#define	MPLOCKED	"lock ; "
-#else
-#define	MPLOCKED
-#endif
-
-/*
+ * Always use lock prefixes.  The result is slightly less optimal for
+ * UP systems, but it matters less now, and sometimes UP is emulated
+ * over SMP.
+ *
  * The assembly is volatilized to avoid code chunk removal by the compiler.
  * GCC aggressively reorders operations and memory clobbering is necessary
  * in order to avoid that for memory barriers.
@@ -158,7 +143,7 @@ void		atomic_subtract_64(volatile uint64_t *, uint64_t);
 static __inline void					\
 atomic_##NAME##_##TYPE(volatile u_##TYPE *p, u_##TYPE v)\
 {							\
-	__asm __volatile(MPLOCKED OP			\
+	__asm __volatile("lock; " OP			\
 	: "+m" (*p)					\
 	: CONS (V)					\
 	: "cc");					\
@@ -167,7 +152,7 @@ atomic_##NAME##_##TYPE(volatile u_##TYPE *p, u_##TYPE v)\
 static __inline void					\
 atomic_##NAME##_barr_##TYPE(volatile u_##TYPE *p, u_##TYPE v)\
 {							\
-	__asm __volatile(MPLOCKED OP			\
+	__asm __volatile("lock; " OP			\
 	: "+m" (*p)					\
 	: CONS (V)					\
 	: "memory", "cc");				\
@@ -196,8 +181,7 @@ atomic_cmpset_##TYPE(volatile u_##TYPE *dst, u_##TYPE expect, u_##TYPE src) \
 	u_char res;					\
 							\
 	__asm __volatile(				\
-	"	" MPLOCKED "		"		\
-	"	cmpxchg	%3,%1 ;		"		\
+	"	lock; cmpxchg	%3,%1 ;	"		\
 	"	sete	%0 ;		"		\
 	"# atomic_cmpset_" #TYPE "	"		\
 	: "=q" (res),			/* 0 */		\
@@ -214,8 +198,7 @@ atomic_fcmpset_##TYPE(volatile u_##TYPE *dst, u_##TYPE *expect, u_##TYPE src) \
 	u_char res;					\
 							\
 	__asm __volatile(				\
-	"	" MPLOCKED "		"		\
-	"	cmpxchg	%3,%1 ;		"		\
+	"	lock; cmpxchg	%3,%1 ;	"		\
 	"	sete	%0 ;		"		\
 	"# atomic_fcmpset_" #TYPE "	"		\
 	: "=q" (res),			/* 0 */		\
@@ -239,8 +222,7 @@ atomic_fetchadd_int(volatile u_int *p, u_int v)
 {
 
 	__asm __volatile(
-	"	" MPLOCKED "		"
-	"	xaddl	%0,%1 ;		"
+	"	lock; xaddl	%0,%1 ;	"
 	"# atomic_fetchadd_int"
 	: "+r" (v),			/* 0 */
 	  "+m" (*p)			/* 1 */
@@ -254,8 +236,7 @@ atomic_testandset_int(volatile u_int *p, u_int v)
 	u_char res;
 
 	__asm __volatile(
-	"	" MPLOCKED "		"
-	"	btsl	%2,%1 ;		"
+	"	lock; btsl	%2,%1 ;	"
 	"	setc	%0 ;		"
 	"# atomic_testandset_int"
 	: "=q" (res),			/* 0 */
@@ -271,8 +252,7 @@ atomic_testandclear_int(volatile u_int *p, u_int v)
 	u_char res;
 
 	__asm __volatile(
-	"	" MPLOCKED "		"
-	"	btrl	%2,%1 ;		"
+	"	lock; btrl	%2,%1 ;	"
 	"	setc	%0 ;		"
 	"# atomic_testandclear_int"
 	: "=q" (res),			/* 0 */
@@ -302,11 +282,7 @@ atomic_testandclear_int(volatile u_int *p, u_int v)
  */
 
 #if defined(_KERNEL)
-#if defined(SMP) || defined(KLD_MODULE)
 #define	__storeload_barrier()	__mbk()
-#else /* _KERNEL && UP */
-#define	__storeload_barrier()	__compiler_membar()
-#endif /* SMP */
 #else /* !_KERNEL */
 #define	__storeload_barrier()	__mbu()
 #endif /* _KERNEL*/
@@ -483,8 +459,7 @@ atomic_cmpset_64_i586(volatile uint64_t *dst, uint64_t expect, uint64_t src)
 	u_char res;
 
 	__asm __volatile(
-	"	" MPLOCKED "		"
-	"	cmpxchg8b %1 ;		"
+	"	lock; cmpxchg8b %1 ;	"
 	"	sete	%0"
 	: "=q" (res),			/* 0 */
 	  "+m" (*dst),			/* 1 */
@@ -501,8 +476,7 @@ atomic_fcmpset_64_i586(volatile uint64_t *dst, uint64_t *expect, uint64_t src)
 	u_char res;
 
 	__asm __volatile(
-	"	" MPLOCKED "		"
-	"	cmpxchg8b %1 ;		"
+	"	lock; cmpxchg8b %1 ;	"
 	"	sete	%0"
 	: "=q" (res),			/* 0 */
 	  "+m" (*dst),			/* 1 */
@@ -521,8 +495,7 @@ atomic_load_acq_64_i586(volatile uint64_t *p)
 	__asm __volatile(
 	"	movl	%%ebx,%%eax ;	"
 	"	movl	%%ecx,%%edx ;	"
-	"	" MPLOCKED "		"
-	"	cmpxchg8b %1"
+	"	lock; cmpxchg8b %1"
 	: "=&A" (res),			/* 0 */
 	  "+m" (*p)			/* 1 */
 	: : "memory", "cc");
@@ -537,8 +510,7 @@ atomic_store_rel_64_i586(volatile uint64_t *p, uint64_t v)
 	"	movl	%%eax,%%ebx ;	"
 	"	movl	%%edx,%%ecx ;	"
 	"1:				"
-	"	" MPLOCKED "		"
-	"	cmpxchg8b %0 ;		"
+	"	lock; cmpxchg8b %0 ;	"
 	"	jne	1b"
 	: "+m" (*p),			/* 0 */
 	  "+A" (v)			/* 1 */
@@ -553,8 +525,7 @@ atomic_swap_64_i586(volatile uint64_t *p, uint64_t v)
 	"	movl	%%eax,%%ebx ;	"
 	"	movl	%%edx,%%ecx ;	"
 	"1:				"
-	"	" MPLOCKED "		"
-	"	cmpxchg8b %0 ;		"
+	"	lock; cmpxchg8b %0 ;	"
 	"	jne	1b"
 	: "+m" (*p),			/* 0 */
 	  "+A" (v)			/* 1 */
@@ -649,7 +620,7 @@ atomic_subtract_64(volatile uint64_t *p, uint64_t v)
 
 #endif /* _KERNEL */
 
-#endif /* KLD_MODULE || !__GNUCLIKE_ASM */
+#endif /* !__GNUCLIKE_ASM */
 
 ATOMIC_ASM(set,	     char,  "orb %b1,%0",  "iq",  v);
 ATOMIC_ASM(clear,    char,  "andb %b1,%0", "iq", ~v);
@@ -807,6 +778,7 @@ u_long	atomic_swap_long(volatile u_long *p, u_long v);
 
 #define	atomic_readandclear_int(p)	atomic_swap_int(p, 0)
 #define	atomic_readandclear_long(p)	atomic_swap_long(p, 0)
+#define	atomic_testandset_acq_long	atomic_testandset_long
 
 /* Operations on 8-bit bytes. */
 #define	atomic_set_8		atomic_set_char

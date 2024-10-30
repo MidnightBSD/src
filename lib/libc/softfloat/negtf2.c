@@ -9,7 +9,6 @@
 #include "softfloat.h"
 
 #include <sys/cdefs.h>
-
 #ifdef FLOAT128
 
 float128 __negtf2(float128);

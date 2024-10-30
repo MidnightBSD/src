@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2002 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -36,8 +36,6 @@ __RCSID("$NetBSD: stat.c,v 1.33 2011/01/15 22:54:10 njoly Exp $"
 "$OpenBSD: stat.c,v 1.14 2009/06/24 09:44:25 sobrado Exp $");
 #endif
 #endif
-
-
 #if HAVE_CONFIG_H
 #include "config.h" 
 #else  /* HAVE_CONFIG_H */
@@ -58,6 +56,7 @@ __RCSID("$NetBSD: stat.c,v 1.33 2011/01/15 22:54:10 njoly Exp $"
 #include <errno.h>
 #include <grp.h>
 #include <limits.h>
+#include <locale.h>
 #include <paths.h>
 #include <pwd.h>
 #include <stdio.h>
@@ -111,7 +110,8 @@ __RCSID("$NetBSD: stat.c,v 1.33 2011/01/15 22:54:10 njoly Exp $"
 	"Device: %Hd,%Ld   Inode: %i    Links: %l%n" \
 	"Access: %Sa%n" \
 	"Modify: %Sm%n" \
-	"Change: %Sc"
+	"Change: %Sc%n"	\
+	" Birth: %SB"
 
 #define TIME_FORMAT	"%b %e %T %Y"
 
@@ -637,14 +637,9 @@ format1(const struct stat *st,
 		small = (sizeof(st->st_dev) == 4);
 		data = (what == SHOW_st_dev) ? st->st_dev : st->st_rdev;
 #if HAVE_DEVNAME
-		sdata = (what == SHOW_st_dev) ?
-		    devname(st->st_dev, S_IFBLK) :
-		    devname(st->st_rdev, 
-		    S_ISCHR(st->st_mode) ? S_IFCHR :
-		    S_ISBLK(st->st_mode) ? S_IFBLK :
-		    0U);
-		if (sdata == NULL)
-			sdata = "???";
+		sdata = devname(what == SHOW_st_dev ? st->st_dev :
+		    st->st_rdev, S_ISCHR(st->st_mode) ? S_IFCHR :
+		    (S_ISBLK(st->st_mode) ? S_IFBLK : 0));
 #endif /* HAVE_DEVNAME */
 		if (hilo == HIGH_PIECE) {
 			data = major(data);
@@ -761,6 +756,7 @@ format1(const struct stat *st,
 			ts.tv_sec = 0;
 			tm = localtime(&ts.tv_sec);
 		}
+		(void)setlocale(LC_TIME, "");
 		(void)strftime(path, sizeof(path), timefmt, tm);
 		sdata = path;
 		formats = FMTF_DECIMAL | FMTF_OCTAL | FMTF_UNSIGNED | FMTF_HEX |

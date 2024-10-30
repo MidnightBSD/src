@@ -9,7 +9,6 @@
 #include "softfloat.h"
 
 #include <sys/cdefs.h>
-
 #ifdef FLOATX80
 
 flag __gtxf2(floatx80, floatx80);

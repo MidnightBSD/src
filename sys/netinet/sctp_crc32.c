@@ -33,13 +33,12 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_sctp.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
-#include <sys/mbuf.h>
 #include <sys/gsb_crc32.h>
+#include <sys/mbuf.h>
 
 #include <netinet/sctp.h>
 #include <netinet/sctp_crc32.h>
@@ -51,32 +50,35 @@
 static uint32_t
 sctp_finalize_crc32c(uint32_t crc32c)
 {
-	uint32_t result;
 #if BYTE_ORDER == BIG_ENDIAN
-	uint8_t byte0, byte1, byte2, byte3;
+	uint32_t byte0, byte1, byte2, byte3;
 #endif
 
-	/* Complement the result */
-	result = ~crc32c;
 #if BYTE_ORDER == BIG_ENDIAN
 	/*
-	 * For BIG-ENDIAN platforms the result is in little-endian form. So
-	 * we must swap the bytes to return the result in network byte
-	 * order.
+	 * For BIG-ENDIAN platforms, the result is in LITTLE-ENDIAN byte
+	 * order. For LITTLE-ENDIAN platforms, the result is in in
+	 * BIG-ENDIAN byte order. So for BIG-ENDIAN platforms the bytes must
+	 * be swapped to return the result always in network byte order (aka
+	 * BIG-ENDIAN).
 	 */
-	byte0 = result & 0x000000ff;
-	byte1 = (result >> 8) & 0x000000ff;
-	byte2 = (result >> 16) & 0x000000ff;
-	byte3 = (result >> 24) & 0x000000ff;
+	byte0 = crc32c & 0x000000ff;
+	byte1 = (crc32c >> 8) & 0x000000ff;
+	byte2 = (crc32c >> 16) & 0x000000ff;
+	byte3 = (crc32c >> 24) & 0x000000ff;
 	crc32c = ((byte0 << 24) | (byte1 << 16) | (byte2 << 8) | byte3);
-#else
-	/*
-	 * For LITTLE ENDIAN platforms the result is in already in network
-	 * byte order.
-	 */
-	crc32c = result;
 #endif
-	return (crc32c);
+	return (~crc32c);
+}
+
+static int
+sctp_calculate_cksum_cb(void *arg, void *data, u_int len)
+{
+	uint32_t *basep;
+
+	basep = arg;
+	*basep = calculate_crc32c(*basep, data, len);
+	return (0);
 }
 
 /*
@@ -86,32 +88,19 @@ sctp_finalize_crc32c(uint32_t crc32c)
  * it is compiled on a kernel with SCTP support.
  */
 uint32_t
-sctp_calculate_cksum(struct mbuf *m, uint32_t offset)
+sctp_calculate_cksum(struct mbuf *m, int32_t offset)
 {
-	uint32_t base = 0xffffffff;
+	uint32_t base;
+	int len;
 
-	while (offset > 0) {
-		KASSERT(m != NULL, ("sctp_calculate_cksum, offset > length of mbuf chain"));
-		if (offset < (uint32_t)m->m_len) {
-			break;
-		}
-		offset -= m->m_len;
-		m = m->m_next;
-	}
-	if (offset > 0) {
-		base = calculate_crc32c(base,
-		    (unsigned char *)(m->m_data + offset),
-		    (unsigned int)(m->m_len - offset));
-		m = m->m_next;
-	}
-	while (m != NULL) {
-		base = calculate_crc32c(base,
-		    (unsigned char *)m->m_data,
-		    (unsigned int)m->m_len);
-		m = m->m_next;
-	}
-	base = sctp_finalize_crc32c(base);
-	return (base);
+	M_ASSERTPKTHDR(m);
+	KASSERT(offset < m->m_pkthdr.len,
+	    ("%s: invalid offset %u into mbuf %p", __func__, offset, m));
+
+	base = 0xffffffff;
+	len = m->m_pkthdr.len - offset;
+	(void)m_apply(m, offset, len, sctp_calculate_cksum_cb, &base);
+	return (sctp_finalize_crc32c(base));
 }
 
 #if defined(SCTP) || defined(SCTP_SUPPORT)
@@ -132,16 +121,16 @@ sctp_delayed_cksum(struct mbuf *m, uint32_t offset)
 	SCTP_STAT_INCR(sctps_sendswcrc);
 	offset += offsetof(struct sctphdr, checksum);
 
-	if (offset + sizeof(uint32_t) > (uint32_t)(m->m_len)) {
+	if (offset + sizeof(uint32_t) > (uint32_t)(m->m_pkthdr.len)) {
 #ifdef INVARIANTS
-		panic("sctp_delayed_cksum(): m->m_len: %d, offset: %u.",
-		    m->m_len, offset);
+		panic("sctp_delayed_cksum(): m->m_pkthdr.len: %d, offset: %u.",
+		    m->m_pkthdr.len, offset);
 #else
-		SCTP_PRINTF("sctp_delayed_cksum(): m->m_len: %d, offset: %u.\n",
-		    m->m_len, offset);
+		SCTP_PRINTF("sctp_delayed_cksum(): m->m_pkthdr.len: %d, offset: %u.\n",
+		    m->m_pkthdr.len, offset);
 #endif
 		return;
 	}
-	*(uint32_t *)(m->m_data + offset) = checksum;
+	m_copyback(m, (int)offset, (int)sizeof(uint32_t), (caddr_t)&checksum);
 }
 #endif

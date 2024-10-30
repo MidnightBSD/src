@@ -79,7 +79,7 @@
 #elif defined(LARGE_LOMTU)
 #define LOMTU	131072
 #else
-#define LOMTU	32768
+#define LOMTU	16384
 #endif
 
 #define	LO_CSUM_FEATURES	(CSUM_IP | CSUM_TCP | CSUM_UDP | CSUM_SCTP)
@@ -125,9 +125,6 @@ lo_clone_create(struct if_clone *ifc, int unit, caddr_t params)
 	struct ifnet *ifp;
 
 	ifp = if_alloc(IFT_LOOP);
-	if (ifp == NULL)
-		return (ENOSPC);
-
 	if_initname(ifp, loname, unit);
 	ifp->if_mtu = LOMTU;
 	ifp->if_flags = IFF_LOOPBACK | IFF_MULTICAST;
@@ -234,7 +231,7 @@ looutput(struct ifnet *ifp, struct mbuf *m, const struct sockaddr *dst,
 	if (dst->sa_family == AF_UNSPEC || dst->sa_family == pseudo_AF_HDRCMPLT)
 		bcopy(dst->sa_data, &af, sizeof(af));
 	else
-		af = dst->sa_family;
+		af = RO_GET_FAMILY(ro, dst);
 
 #if 1	/* XXX */
 	switch (af) {
@@ -392,7 +389,6 @@ loioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 			break;
 		}
 		switch (ifr->ifr_addr.sa_family) {
-
 #ifdef INET
 		case AF_INET:
 			break;

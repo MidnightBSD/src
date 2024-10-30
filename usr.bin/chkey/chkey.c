@@ -35,7 +35,6 @@ static char sccsid[] = "@(#)chkey.c 1.7 91/03/11 Copyr 1986 Sun Micro";
 #endif
 
 #include <sys/cdefs.h>
-
 /*
  * Copyright (C) 1986, Sun Microsystems, Inc.
  */

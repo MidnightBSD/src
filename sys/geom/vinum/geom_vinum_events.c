@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  *  Copyright (c) 2007 Lukas Ertl
  *  All rights reserved.
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
@@ -37,6 +36,7 @@
 #include <sys/systm.h>
 
 #include <geom/geom.h>
+#include <geom/geom_dbg.h>
 #include <geom/vinum/geom_vinum_var.h>
 #include <geom/vinum/geom_vinum.h>
 
@@ -183,8 +183,7 @@ gv_drive_tasted(struct gv_softc *sc, struct g_provider *pp)
 	return;
 
 failed:
-	if (hdr != NULL)
-		g_free(hdr);
+	g_free(hdr);
 	g_topology_lock();
 	g_access(cp, -1, 0, 0);
 	g_detach(cp);

@@ -35,7 +35,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_inet6.h"
 
 #include <sys/param.h>
@@ -56,6 +55,7 @@
 #include <net/if_var.h>
 #include <net/if_dl.h>
 #include <net/route.h>
+#include <net/route/nhop.h>
 #include <net/vnet.h>
 
 #include <netinet/in.h>
@@ -119,8 +119,6 @@ MTX_SYSINIT(in6_multi_free_mtx, &in6_multi_free_mtx, "in6_multi_free_mtx", MTX_D
 struct sx in6_multi_sx;
 SX_SYSINIT(in6_multi_sx, &in6_multi_sx, "in6_multi_sx");
 
-
-
 static void	im6f_commit(struct in6_mfilter *);
 static int	im6f_get_source(struct in6_mfilter *imf,
 		    const struct sockaddr_in6 *psin,
@@ -142,6 +140,8 @@ static void	im6s_merge(struct ip6_msource *ims,
 		    const struct in6_msource *lims, const int rollback);
 static int	in6_getmulti(struct ifnet *, const struct in6_addr *,
 		    struct in6_multi **);
+static int	in6_joingroup_locked(struct ifnet *, const struct in6_addr *,
+		    struct in6_mfilter *, struct in6_multi **, int);
 static int	in6m_get_source(struct in6_multi *inm,
 		    const struct in6_addr *addr, const int noalloc,
 		    struct ip6_msource **pims);
@@ -166,7 +166,8 @@ static int	sysctl_ip6_mcast_filters(SYSCTL_HANDLER_ARGS);
 
 SYSCTL_DECL(_net_inet6_ip6);	/* XXX Not in any common header. */
 
-static SYSCTL_NODE(_net_inet6_ip6, OID_AUTO, mcast, CTLFLAG_RW, 0,
+static SYSCTL_NODE(_net_inet6_ip6, OID_AUTO, mcast,
+    CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
     "IPv6 multicast");
 
 static u_long in6_mcast_maxgrpsrc = IPV6_MAX_GROUP_SRC_FILTER;
@@ -370,7 +371,7 @@ in6_getmulti(struct ifnet *ifp, const struct in6_addr *group,
 	IN6_MULTI_LOCK_ASSERT();
 	IN6_MULTI_LIST_LOCK();
 	IF_ADDR_WLOCK(ifp);
-	NET_EPOCH_ENTER_ET(et);
+	NET_EPOCH_ENTER(et);
 	/*
 	 * Does ifp support IPv6 multicasts?
 	 */
@@ -378,7 +379,7 @@ in6_getmulti(struct ifnet *ifp, const struct in6_addr *group,
 		error = ENODEV;
 	else
 		inm = in6m_lookup_locked(ifp, group);
-	NET_EPOCH_EXIT_ET(et);
+	NET_EPOCH_EXIT(et);
 
 	if (error != 0)
 		goto out_locked;
@@ -548,6 +549,7 @@ in6m_release_wait(void *arg __unused)
 	taskqueue_drain_all(taskqueue_in6m_free);
 }
 #ifdef VIMAGE
+/* XXX-BZ FIXME, see D24914. */
 VNET_SYSUNINIT(in6m_release_wait, SI_SUB_PROTO_DOMAIN, SI_ORDER_FIRST, in6m_release_wait, NULL);
 #endif
 
@@ -1201,7 +1203,7 @@ in6_joingroup(struct ifnet *ifp, const struct in6_addr *mcaddr,
  * If the MLD downcall fails, the group is not joined, and an error
  * code is returned.
  */
-int
+static int
 in6_joingroup_locked(struct ifnet *ifp, const struct in6_addr *mcaddr,
     /*const*/ struct in6_mfilter *imf, struct in6_multi **pinm,
     const int delay)
@@ -1215,7 +1217,6 @@ in6_joingroup_locked(struct ifnet *ifp, const struct in6_addr *mcaddr,
 	char			 ip6tbuf[INET6_ADDRSTRLEN];
 #endif
 
-#ifdef INVARIANTS
 	/*
 	 * Sanity: Check scope zone ID was set for ifp, if and
 	 * only if group is scoped to an interface.
@@ -1227,7 +1228,6 @@ in6_joingroup_locked(struct ifnet *ifp, const struct in6_addr *mcaddr,
 		KASSERT(mcaddr->s6_addr16[1] != 0,
 		    ("%s: scope zone ID not set", __func__));
 	}
-#endif
 
 	IN6_MULTI_LOCK_ASSERT();
 	IN6_MULTI_LIST_UNLOCK_ASSERT();
@@ -1270,8 +1270,11 @@ in6_joingroup_locked(struct ifnet *ifp, const struct in6_addr *mcaddr,
 out_in6m_release:
 	SLIST_INIT(&inmh);
 	if (error) {
+		struct epoch_tracker et;
+
 		CTR2(KTR_MLD, "%s: dropping ref on %p", __func__, inm);
-		IF_ADDR_RLOCK(ifp);
+		IF_ADDR_WLOCK(ifp);
+		NET_EPOCH_ENTER(et);
 		CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
 			if (ifma->ifma_protospec == inm) {
 				ifma->ifma_protospec = NULL;
@@ -1280,7 +1283,8 @@ out_in6m_release:
 		}
 		in6m_disconnect_locked(&inmh, inm);
 		in6m_rele_locked(&inmh, inm);
-		IF_ADDR_RUNLOCK(ifp);
+		NET_EPOCH_EXIT(et);
+		IF_ADDR_WUNLOCK(ifp);
 	} else {
 		*pinm = inm;
 	}
@@ -1380,7 +1384,6 @@ in6_leavegroup_locked(struct in6_multi *inm, /*const*/ struct in6_mfilter *imf)
 	in6m_release_list_deferred(&inmh);
 	return (error);
 }
-
 
 /*
  * Block or unblock an ASM multicast source on an inpcb.
@@ -1833,7 +1836,7 @@ ip6_getmoptions(struct inpcb *inp, struct sockopt *sopt)
 static struct ifnet *
 in6p_lookup_mcast_ifp(const struct inpcb *inp, const struct sockaddr_in6 *gsin6)
 {
-	struct nhop6_basic	nh6;
+	struct nhop_object	*nh;
 	struct in6_addr		dst;
 	uint32_t		scopeid;
 	uint32_t		fibnum;
@@ -1843,10 +1846,9 @@ in6p_lookup_mcast_ifp(const struct inpcb *inp, const struct sockaddr_in6 *gsin6)
 
 	in6_splitscope(&gsin6->sin6_addr, &dst, &scopeid);
 	fibnum = inp->inp_inc.inc_fibnum;
-	if (fib6_lookup_nh_basic(fibnum, &dst, scopeid, 0, 0, &nh6) != 0)
-		return (NULL);
+	nh = fib6_lookup(fibnum, &dst, scopeid, 0, 0);
 
-	return (nh6.nh_ifp);
+	return (nh ? nh->nh_ifp : NULL);
 }
 
 /*
@@ -2512,7 +2514,7 @@ in6p_set_source_filters(struct inpcb *inp, struct sockopt *sopt)
 		int			 i;
 
 		INP_WUNLOCK(inp);
- 
+
 		CTR2(KTR_MLD, "%s: loading %lu source list entries",
 		    __func__, (unsigned long)msfr.msfr_nsrcs);
 		kss = malloc(sizeof(struct sockaddr_storage) * msfr.msfr_nsrcs,
@@ -2731,6 +2733,7 @@ sysctl_ip6_mcast_filters(SYSCTL_HANDLER_ARGS)
 {
 	struct in6_addr			 mcaddr;
 	struct in6_addr			 src;
+	struct epoch_tracker		 et;
 	struct ifnet			*ifp;
 	struct ifmultiaddr		*ifma;
 	struct in6_multi		*inm;
@@ -2767,8 +2770,10 @@ sysctl_ip6_mcast_filters(SYSCTL_HANDLER_ARGS)
 		return (EINVAL);
 	}
 
+	NET_EPOCH_ENTER(et);
 	ifp = ifnet_byindex(ifindex);
 	if (ifp == NULL) {
+		NET_EPOCH_EXIT(et);
 		CTR2(KTR_MLD, "%s: no ifp for ifindex %u",
 		    __func__, ifindex);
 		return (ENOENT);
@@ -2780,12 +2785,13 @@ sysctl_ip6_mcast_filters(SYSCTL_HANDLER_ARGS)
 
 	retval = sysctl_wire_old_buffer(req,
 	    sizeof(uint32_t) + (in6_mcast_maxgrpsrc * sizeof(struct in6_addr)));
-	if (retval)
+	if (retval) {
+		NET_EPOCH_EXIT(et);
 		return (retval);
+	}
 
 	IN6_MULTI_LOCK();
 	IN6_MULTI_LIST_LOCK();
-	IF_ADDR_RLOCK(ifp);
 	CK_STAILQ_FOREACH(ifma, &ifp->if_multiaddrs, ifma_link) {
 		inm = in6m_ifmultiaddr_get_inm(ifma);
 		if (inm == NULL)
@@ -2813,10 +2819,9 @@ sysctl_ip6_mcast_filters(SYSCTL_HANDLER_ARGS)
 				break;
 		}
 	}
-	IF_ADDR_RUNLOCK(ifp);
-
 	IN6_MULTI_LIST_UNLOCK();
 	IN6_MULTI_UNLOCK();
+	NET_EPOCH_EXIT(et);
 
 	return (retval);
 }

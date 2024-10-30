@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Ed Schouten under sponsorship from the
  * FreeBSD Foundation.
@@ -30,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/cons.h>
 #include <sys/consio.h>
@@ -123,13 +121,13 @@ static teken_funcs_t terminal_drawmethods = {
 };
 
 /* Kernel message formatting. */
-static const teken_attr_t kernel_message = {
+static teken_attr_t kernel_message = {
 	.ta_fgcolor	= TCHAR_FGCOLOR(TERMINAL_KERN_ATTR),
 	.ta_bgcolor	= TCHAR_BGCOLOR(TERMINAL_KERN_ATTR),
 	.ta_format	= TCHAR_FORMAT(TERMINAL_KERN_ATTR)
 };
 
-static const teken_attr_t default_message = {
+static teken_attr_t default_message = {
 	.ta_fgcolor	= TCHAR_FGCOLOR(TERMINAL_NORM_ATTR),
 	.ta_bgcolor	= TCHAR_BGCOLOR(TERMINAL_NORM_ATTR),
 	.ta_format	= TCHAR_FORMAT(TERMINAL_NORM_ATTR)
@@ -167,10 +165,34 @@ static const teken_attr_t default_message = {
 static void
 terminal_init(struct terminal *tm)
 {
+	int fg, bg;
 
 	if (tm->tm_flags & TF_CONS)
 		mtx_init(&tm->tm_mtx, "trmlck", NULL, MTX_SPIN);
+
 	teken_init(&tm->tm_emulator, &terminal_drawmethods, tm);
+
+	fg = bg = -1;
+	TUNABLE_INT_FETCH("teken.fg_color", &fg);
+	TUNABLE_INT_FETCH("teken.bg_color", &bg);
+
+	if (fg != -1) {
+		default_message.ta_fgcolor = fg;
+		kernel_message.ta_fgcolor = fg;
+	}
+	if (bg != -1) {
+		default_message.ta_bgcolor = bg;
+		kernel_message.ta_bgcolor = bg;
+	}
+
+	if (default_message.ta_bgcolor == TC_WHITE) {
+		default_message.ta_bgcolor |= TC_LIGHT;
+		kernel_message.ta_bgcolor |= TC_LIGHT;
+	}
+
+	if (default_message.ta_bgcolor == TC_BLACK &&
+	    default_message.ta_fgcolor < TC_NCOLORS)
+		kernel_message.ta_fgcolor |= TC_LIGHT;
 	teken_set_defattr(&tm->tm_emulator, &default_message);
 }
 
@@ -455,6 +477,16 @@ termtty_ioctl(struct tty *tp, u_long cmd, caddr_t data, struct thread *td)
 	tty_unlock(tp);
 	error = tm->tm_class->tc_ioctl(tm, cmd, data, td);
 	tty_lock(tp);
+	if ((error == 0) && (cmd == CONS_CLRHIST)) {
+		/*
+		 * Scrollback history has been successfully cleared,
+		 * so reset the cursor position to the top left of the screen.
+		 */
+		teken_pos_t p;
+		p.tp_row = 0;
+		p.tp_col = 0;
+		teken_set_cursor(&tm->tm_emulator, &p);
+	}
 	return (error);
 }
 

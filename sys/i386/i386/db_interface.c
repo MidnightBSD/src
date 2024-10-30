@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Interface to new debugger.
  */

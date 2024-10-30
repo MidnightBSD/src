@@ -15,7 +15,6 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include <sys/cdefs.h>
-
 #include <stdint.h>
 #include <stdio.h>
 #include <stddef.h>

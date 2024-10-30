@@ -38,10 +38,10 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_inet.h"
 
 #include <sys/param.h>
+#include <sys/eventhandler.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/queue.h>
@@ -61,6 +61,7 @@
 #include <net/netisr.h>
 #include <net/ethernet.h>
 #include <net/route.h>
+#include <net/route/nhop.h>
 #include <net/vnet.h>
 
 #include <netinet/in.h>
@@ -89,8 +90,12 @@ enum arp_llinfo_state {
 };
 
 SYSCTL_DECL(_net_link_ether);
-static SYSCTL_NODE(_net_link_ether, PF_INET, inet, CTLFLAG_RW, 0, "");
-static SYSCTL_NODE(_net_link_ether, PF_ARP, arp, CTLFLAG_RW, 0, "");
+static SYSCTL_NODE(_net_link_ether, PF_INET, inet,
+    CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "");
+static SYSCTL_NODE(_net_link_ether, PF_ARP, arp,
+    CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "");
 
 /* timer values */
 VNET_DEFINE_STATIC(int, arpt_keep) = (20*60);	/* once resolved, good for 20
@@ -107,7 +112,7 @@ VNET_PCPUSTAT_SYSINIT(arpstat);
 VNET_PCPUSTAT_SYSUNINIT(arpstat);
 #endif /* VIMAGE */
 
-VNET_DEFINE_STATIC(int, arp_maxhold) = 1;
+VNET_DEFINE_STATIC(int, arp_maxhold) = 16;
 
 #define	V_arpt_keep		VNET(arpt_keep)
 #define	V_arpt_down		VNET(arpt_down)
@@ -160,11 +165,17 @@ SYSCTL_PROC(_net_link_ether_inet, OID_AUTO, garp_rexmit_count,
     "Number of times to retransmit GARP packets;"
     " 0 to disable, maximum of 16");
 
+VNET_DEFINE_STATIC(int, arp_log_level) = LOG_INFO;	/* Min. log(9) level. */
+#define	V_arp_log_level		VNET(arp_log_level)
+SYSCTL_INT(_net_link_ether_arp, OID_AUTO, log_level, CTLFLAG_VNET | CTLFLAG_RW,
+	&VNET_NAME(arp_log_level), 0,
+	"Minimum log(9) level for recording rate limited arp log messages. "
+	"The higher will be log more (emerg=0, info=6 (default), debug=7).");
 #define	ARP_LOG(pri, ...)	do {					\
-	if (ppsratecheck(&arp_lastlog, &arp_curpps, arp_maxpps))	\
+	if ((pri) <= V_arp_log_level &&					\
+	    ppsratecheck(&arp_lastlog, &arp_curpps, arp_maxpps))	\
 		log((pri), "arp: " __VA_ARGS__);			\
 } while (0)
-
 
 static void	arpintr(struct mbuf *);
 static void	arptimer(void *);
@@ -194,7 +205,6 @@ arptimer(void *arg)
 {
 	struct llentry *lle = (struct llentry *)arg;
 	struct ifnet *ifp;
-	int r_skip_req;
 
 	if (lle->la_flags & LLE_STATIC) {
 		return;
@@ -202,7 +212,7 @@ arptimer(void *arg)
 	LLE_WLOCK(lle);
 	if (callout_pending(&lle->lle_timer)) {
 		/*
-		 * Here we are a bit odd here in the treatment of 
+		 * Here we are a bit odd here in the treatment of
 		 * active/pending. If the pending bit is set, it got
 		 * rescheduled before I ran. The active
 		 * bit we ignore, since if it was stopped
@@ -227,34 +237,28 @@ arptimer(void *arg)
 
 		/*
 		 * Expiration time is approaching.
-		 * Let's try to refresh entry if it is still
-		 * in use.
-		 *
-		 * Set r_skip_req to get feedback from
-		 * fast path. Change state and re-schedule
-		 * ourselves.
+		 * Request usage feedback from the datapath.
+		 * Change state and re-schedule ourselves.
 		 */
-		LLE_REQ_LOCK(lle);
-		lle->r_skip_req = 1;
-		LLE_REQ_UNLOCK(lle);
+		llentry_request_feedback(lle);
 		lle->ln_state = ARP_LLINFO_VERIFY;
 		callout_schedule(&lle->lle_timer, hz * V_arpt_rexmit);
 		LLE_WUNLOCK(lle);
 		CURVNET_RESTORE();
 		return;
 	case ARP_LLINFO_VERIFY:
-		LLE_REQ_LOCK(lle);
-		r_skip_req = lle->r_skip_req;
-		LLE_REQ_UNLOCK(lle);
-
-		if (r_skip_req == 0 && lle->la_preempt > 0) {
+		if (llentry_get_hittime(lle) > 0 && lle->la_preempt > 0) {
 			/* Entry was used, issue refresh request */
+			struct epoch_tracker et;
 			struct in_addr dst;
+
 			dst = lle->r_l3addr.addr4;
 			lle->la_preempt--;
 			callout_schedule(&lle->lle_timer, hz * V_arpt_rexmit);
 			LLE_WUNLOCK(lle);
+			NET_EPOCH_ENTER(et);
 			arprequest(ifp, NULL, &dst, NULL);
+			NET_EPOCH_EXIT(et);
 			CURVNET_RESTORE();
 			return;
 		}
@@ -333,15 +337,14 @@ arp_fillheader(struct ifnet *ifp, struct arphdr *ah, int bcast, u_char *buf,
 	return (error);
 }
 
-
 /*
  * Broadcast an ARP request. Caller specifies:
  *	- arp header source ip address
  *	- arp header target ip address
  *	- arp header source ethernet address
  */
-void
-arprequest(struct ifnet *ifp, const struct in_addr *sip,
+static int
+arprequest_internal(struct ifnet *ifp, const struct in_addr *sip,
     const struct in_addr *tip, u_char *enaddr)
 {
 	struct mbuf *m;
@@ -353,6 +356,8 @@ arprequest(struct ifnet *ifp, const struct in_addr *sip,
 	struct route ro;
 	int error;
 
+	NET_EPOCH_ASSERT();
+
 	if (sip == NULL) {
 		/*
 		 * The caller did not supply a source address, try to find
@@ -360,7 +365,6 @@ arprequest(struct ifnet *ifp, const struct in_addr *sip,
 		 */
 		struct ifaddr *ifa;
 
-		IF_ADDR_RLOCK(ifp);
 		CK_STAILQ_FOREACH(ifa, &ifp->if_addrhead, ifa_link) {
 			if (ifa->ifa_addr->sa_family != AF_INET)
 				continue;
@@ -378,17 +382,16 @@ arprequest(struct ifnet *ifp, const struct in_addr *sip,
 			    IA_MASKSIN(ifa)->sin_addr.s_addr))
 				break;  /* found it. */
 		}
-		IF_ADDR_RUNLOCK(ifp);
 		if (sip == NULL) {
 			printf("%s: cannot find matching address\n", __func__);
-			return;
+			return (EADDRNOTAVAIL);
 		}
 	}
 	if (enaddr == NULL)
 		enaddr = carpaddr ? carpaddr : (u_char *)IF_LLADDR(ifp);
 
 	if ((m = m_gethdr(M_NOWAIT, MT_DATA)) == NULL)
-		return;
+		return (ENOMEM);
 	m->m_len = sizeof(*ah) + 2 * sizeof(struct in_addr) +
 		2 * ifp->if_addrlen;
 	m->m_pkthdr.len = m->m_len;
@@ -413,9 +416,10 @@ arprequest(struct ifnet *ifp, const struct in_addr *sip,
 	linkhdrsize = sizeof(linkhdr);
 	error = arp_fillheader(ifp, ah, 1, linkhdr, &linkhdrsize);
 	if (error != 0 && error != EAFNOSUPPORT) {
+		m_freem(m);
 		ARP_LOG(LOG_ERR, "Failed to calculate ARP header on %s: %d\n",
 		    if_name(ifp), error);
-		return;
+		return (error);
 	}
 
 	ro.ro_prepend = linkhdr;
@@ -424,10 +428,23 @@ arprequest(struct ifnet *ifp, const struct in_addr *sip,
 
 	m->m_flags |= M_BCAST;
 	m_clrprotoflags(m);	/* Avoid confusing lower layers. */
-	(*ifp->if_output)(ifp, m, &sa, &ro);
+	error = (*ifp->if_output)(ifp, m, &sa, &ro);
 	ARPSTAT_INC(txrequests);
+	if (error) {
+		ARPSTAT_INC(txerrors);
+		ARP_LOG(LOG_DEBUG, "Failed to send ARP packet on %s: %d\n",
+		    if_name(ifp), error);
+	}
+	return (error);
 }
 
+void
+arprequest(struct ifnet *ifp, const struct in_addr *sip,
+    const struct in_addr *tip, u_char *enaddr)
+{
+
+	(void) arprequest_internal(ifp, sip, tip, enaddr);
+}
 
 /*
  * Resolve an IP address into an ethernet address - heavy version.
@@ -446,22 +463,19 @@ arpresolve_full(struct ifnet *ifp, int is_gw, int flags, struct mbuf *m,
 	struct llentry **plle)
 {
 	struct llentry *la = NULL, *la_tmp;
-	struct mbuf *curr = NULL;
-	struct mbuf *next = NULL;
 	int error, renew;
 	char *lladdr;
 	int ll_len;
+
+	NET_EPOCH_ASSERT();
 
 	if (pflags != NULL)
 		*pflags = 0;
 	if (plle != NULL)
 		*plle = NULL;
 
-	if ((flags & LLE_CREATE) == 0) {
-		IF_AFDATA_RLOCK(ifp);
+	if ((flags & LLE_CREATE) == 0)
 		la = lla_lookup(LLTABLE(ifp), LLE_EXCLUSIVE, dst);
-		IF_AFDATA_RUNLOCK(ifp);
-	}
 	if (la == NULL && (ifp->if_flags & (IFF_NOARP | IFF_STATICARP)) == 0) {
 		la = lltable_alloc_entry(LLTABLE(ifp), 0, dst);
 		if (la == NULL) {
@@ -504,7 +518,7 @@ arpresolve_full(struct ifnet *ifp, int is_gw, int flags, struct mbuf *m,
 		bcopy(lladdr, desten, ll_len);
 
 		/* Notify LLE code that the entry was used by datapath */
-		llentry_mark_used(la);
+		llentry_provide_feedback(la);
 		if (pflags != NULL)
 			*pflags = la->la_flags & (LLE_VALID|LLE_IFADDR);
 		if (plle) {
@@ -516,6 +530,7 @@ arpresolve_full(struct ifnet *ifp, int is_gw, int flags, struct mbuf *m,
 	}
 
 	renew = (la->la_asked == 0 || la->la_expire != time_uptime);
+
 	/*
 	 * There is an arptab entry, but no ethernet address
 	 * response yet.  Add the mbuf to the list, dropping
@@ -523,24 +538,10 @@ arpresolve_full(struct ifnet *ifp, int is_gw, int flags, struct mbuf *m,
 	 * setting.
 	 */
 	if (m != NULL) {
-		if (la->la_numheld >= V_arp_maxhold) {
-			if (la->la_hold != NULL) {
-				next = la->la_hold->m_nextpkt;
-				m_freem(la->la_hold);
-				la->la_hold = next;
-				la->la_numheld--;
-				ARPSTAT_INC(dropped);
-			}
-		}
-		if (la->la_hold != NULL) {
-			curr = la->la_hold;
-			while (curr->m_nextpkt != NULL)
-				curr = curr->m_nextpkt;
-			curr->m_nextpkt = m;
-		} else
-			la->la_hold = m;
-		la->la_numheld++;
+		size_t dropped = lltable_append_entry_queue(la, m, V_arp_maxhold);
+		ARPSTAT_ADD(dropped, dropped);
 	}
+
 	/*
 	 * Return EWOULDBLOCK if we have tried less than arp_maxtries. It
 	 * will be masked by ether_output(). Return EHOSTDOWN/EHOSTUNREACH
@@ -553,7 +554,7 @@ arpresolve_full(struct ifnet *ifp, int is_gw, int flags, struct mbuf *m,
 		error = is_gw != 0 ? EHOSTUNREACH : EHOSTDOWN;
 
 	if (renew) {
-		int canceled;
+		int canceled, e;
 
 		LLE_ADDREF(la);
 		la->la_expire = time_uptime;
@@ -563,28 +564,19 @@ arpresolve_full(struct ifnet *ifp, int is_gw, int flags, struct mbuf *m,
 			LLE_REMREF(la);
 		la->la_asked++;
 		LLE_WUNLOCK(la);
-		arprequest(ifp, NULL, &SIN(dst)->sin_addr, NULL);
+		e = arprequest_internal(ifp, NULL, &SIN(dst)->sin_addr, NULL);
+		/*
+		 * Only overwrite 'error' in case of error; in case of success
+		 * the proper return value was already set above.
+		 */
+		if (e != 0)
+			return (e);
 		return (error);
 	}
 
 	LLE_WUNLOCK(la);
 	return (error);
 }
-
-/*
- * Resolve an IP address into an ethernet address.
- */
-int
-arpresolve_addr(struct ifnet *ifp, int flags, const struct sockaddr *dst,
-    char *desten, uint32_t *pflags, struct llentry **plle)
-{
-	int error;
-
-	flags |= LLE_ADDRONLY;
-	error = arpresolve_full(ifp, 0, flags, NULL, dst, desten, pflags, plle);
-	return (error);
-}
-
 
 /*
  * Lookups link header based on an IP address.
@@ -609,6 +601,8 @@ arpresolve(struct ifnet *ifp, int is_gw, struct mbuf *m,
 {
 	struct llentry *la = NULL;
 
+	NET_EPOCH_ASSERT();
+
 	if (pflags != NULL)
 		*pflags = 0;
 	if (plle != NULL)
@@ -628,7 +622,6 @@ arpresolve(struct ifnet *ifp, int is_gw, struct mbuf *m,
 		}
 	}
 
-	IF_AFDATA_RLOCK(ifp);
 	la = lla_lookup(LLTABLE(ifp), plle ? LLE_EXCLUSIVE : LLE_UNLOCKED, dst);
 	if (la != NULL && (la->r_flags & RLLE_VALID) != 0) {
 		/* Entry found, let's copy lle info */
@@ -636,18 +629,16 @@ arpresolve(struct ifnet *ifp, int is_gw, struct mbuf *m,
 		if (pflags != NULL)
 			*pflags = LLE_VALID | (la->r_flags & RLLE_IFADDR);
 		/* Notify the LLE handling code that the entry was used. */
-		llentry_mark_used(la);
+		llentry_provide_feedback(la);
 		if (plle) {
 			LLE_ADDREF(la);
 			*plle = la;
 			LLE_WUNLOCK(la);
 		}
-		IF_AFDATA_RUNLOCK(ifp);
 		return (0);
 	}
 	if (plle && la)
 		LLE_WUNLOCK(la);
-	IF_AFDATA_RUNLOCK(ifp);
 
 	return (arpresolve_full(ifp, is_gw, la == NULL ? LLE_CREATE : 0, m, dst,
 	    desten, pflags, plle));
@@ -693,8 +684,12 @@ arpintr(struct mbuf *m)
 		hlen = ETHER_ADDR_LEN; /* RFC 826 */
 		layer = "ethernet";
 		break;
+	case ARPHRD_IEEE802:
+		hlen = ETHER_ADDR_LEN;
+		layer = "ieee802";
+		break;
 	case ARPHRD_INFINIBAND:
-		hlen = 20;	/* RFC 4391, INFINIBAND_ALEN */ 
+		hlen = 20;	/* RFC 4391, INFINIBAND_ALEN */
 		layer = "infiniband";
 		break;
 	case ARPHRD_IEEE1394:
@@ -785,13 +780,15 @@ in_arpinput(struct mbuf *m)
 	int carped;
 	struct sockaddr_in sin;
 	struct sockaddr *dst;
-	struct nhop4_basic nh4;
+	struct nhop_object *nh;
 	uint8_t linkhdr[LLE_MAX_LINKHDR];
 	struct route ro;
 	size_t linkhdrsize;
 	int lladdr_off;
 	int error;
 	char addrbuf[INET_ADDRSTRLEN];
+
+	NET_EPOCH_ASSERT();
 
 	sin.sin_len = sizeof(struct sockaddr_in);
 	sin.sin_family = AF_INET;
@@ -884,17 +881,14 @@ in_arpinput(struct mbuf *m)
 	 * No match, use the first inet address on the receive interface
 	 * as a dummy address for the rest of the function.
 	 */
-	IF_ADDR_RLOCK(ifp);
 	CK_STAILQ_FOREACH(ifa, &ifp->if_addrhead, ifa_link)
 		if (ifa->ifa_addr->sa_family == AF_INET &&
 		    (ifa->ifa_carp == NULL ||
 		    (*carp_iamatch_p)(ifa, &enaddr))) {
 			ia = ifatoia(ifa);
 			ifa_ref(ifa);
-			IF_ADDR_RUNLOCK(ifp);
 			goto match;
 		}
-	IF_ADDR_RUNLOCK(ifp);
 
 	/*
 	 * If bridging, fall back to using any inet address.
@@ -951,9 +945,7 @@ match:
 	sin.sin_family = AF_INET;
 	sin.sin_addr = isaddr;
 	dst = (struct sockaddr *)&sin;
-	IF_AFDATA_RLOCK(ifp);
 	la = lla_lookup(LLTABLE(ifp), LLE_EXCLUSIVE, dst);
-	IF_AFDATA_RUNLOCK(ifp);
 	if (la != NULL)
 		arp_check_update_lle(ah, isaddr, ifp, bridged, la);
 	else if (itaddr.s_addr == myaddr.s_addr) {
@@ -969,7 +961,6 @@ match:
 		/* Allocate new entry */
 		la = lltable_alloc_entry(LLTABLE(ifp), 0, dst);
 		if (la == NULL) {
-
 			/*
 			 * lle creation may fail if source address belongs
 			 * to non-directly connected subnet. However, we
@@ -1028,27 +1019,29 @@ reply:
 		(void)memcpy(ar_tha(ah), ar_sha(ah), ah->ar_hln);
 		(void)memcpy(ar_sha(ah), enaddr, ah->ar_hln);
 	} else {
-		struct llentry *lle = NULL;
+		/*
+		 * Destination address is not ours. Check if
+		 * proxyarp entry exists or proxyarp is turned on globally.
+		 */
+		struct llentry *lle;
 
 		sin.sin_addr = itaddr;
-		IF_AFDATA_RLOCK(ifp);
 		lle = lla_lookup(LLTABLE(ifp), 0, (struct sockaddr *)&sin);
-		IF_AFDATA_RUNLOCK(ifp);
 
 		if ((lle != NULL) && (lle->la_flags & LLE_PUB)) {
 			(void)memcpy(ar_tha(ah), ar_sha(ah), ah->ar_hln);
 			(void)memcpy(ar_sha(ah), lle->ll_addr, ah->ar_hln);
 			LLE_RUNLOCK(lle);
 		} else {
-
 			if (lle != NULL)
 				LLE_RUNLOCK(lle);
 
 			if (!V_arp_proxyall)
 				goto drop;
 
-			/* XXX MRT use table 0 for arp reply  */
-			if (fib4_lookup_nh_basic(0, itaddr, 0, 0, &nh4) != 0)
+			NET_EPOCH_ASSERT();
+			nh = fib4_lookup(ifp->if_fib, itaddr, 0, 0, 0);
+			if (nh == NULL)
 				goto drop;
 
 			/*
@@ -1056,7 +1049,7 @@ reply:
 			 * as this one came out of, or we'll get into a fight
 			 * over who claims what Ether address.
 			 */
-			if (nh4.nh_ifp == ifp)
+			if (nh->nh_ifp == ifp)
 				goto drop;
 
 			(void)memcpy(ar_tha(ah), ar_sha(ah), ah->ar_hln);
@@ -1069,10 +1062,10 @@ reply:
 			 * wrong network.
 			 */
 
-			/* XXX MRT use table 0 for arp checks */
-			if (fib4_lookup_nh_basic(0, isaddr, 0, 0, &nh4) != 0)
+			nh = fib4_lookup(ifp->if_fib, isaddr, 0, 0, 0);
+			if (nh == NULL)
 				goto drop;
-			if (nh4.nh_ifp != ifp) {
+			if (nh->nh_ifp != ifp) {
 				ARP_LOG(LOG_INFO, "proxy: ignoring request"
 				    " from %s via %s\n",
 				    inet_ntoa_r(isaddr, addrbuf),
@@ -1123,7 +1116,7 @@ reply:
 	if (error != 0 && error != EAFNOSUPPORT) {
 		ARP_LOG(LOG_ERR, "Failed to calculate ARP header on %s: %d\n",
 		    if_name(ifp), error);
-		return;
+		goto drop;
 	}
 
 	ro.ro_prepend = linkhdr;
@@ -1140,6 +1133,44 @@ drop:
 }
 #endif
 
+static struct mbuf *
+arp_grab_holdchain(struct llentry *la)
+{
+	struct mbuf *chain;
+
+	LLE_WLOCK_ASSERT(la);
+
+	chain = la->la_hold;
+	la->la_hold = NULL;
+	la->la_numheld = 0;
+
+	return (chain);
+}
+
+static void
+arp_flush_holdchain(struct ifnet *ifp, struct llentry *la, struct mbuf *chain)
+{
+	struct mbuf *m_hold, *m_hold_next;
+	struct sockaddr_in sin;
+
+	NET_EPOCH_ASSERT();
+
+	struct route ro = {
+		.ro_prepend = la->r_linkdata,
+		.ro_plen = la->r_hdrlen,
+	};
+
+	lltable_fill_sa_entry(la, (struct sockaddr *)&sin);
+
+	for (m_hold = chain; m_hold != NULL; m_hold = m_hold_next) {
+		m_hold_next = m_hold->m_nextpkt;
+		m_hold->m_nextpkt = NULL;
+		/* Avoid confusing lower layers. */
+		m_clrprotoflags(m_hold);
+		(*ifp->if_output)(ifp, m_hold, (struct sockaddr *)&sin, &ro);
+	}
+}
+
 /*
  * Checks received arp data against existing @la.
  * Updates lle state/performs notification if necessary.
@@ -1148,8 +1179,6 @@ static void
 arp_check_update_lle(struct arphdr *ah, struct in_addr isaddr, struct ifnet *ifp,
     int bridged, struct llentry *la)
 {
-	struct sockaddr sa;
-	struct mbuf *m_hold, *m_hold_next;
 	uint8_t linkhdr[LLE_MAX_LINKHDR];
 	size_t linkhdrsize;
 	int lladdr_off;
@@ -1197,19 +1226,23 @@ arp_check_update_lle(struct arphdr *ah, struct in_addr isaddr, struct ifnet *ifp
 	/* Calculate full link prepend to use in lle */
 	linkhdrsize = sizeof(linkhdr);
 	if (lltable_calc_llheader(ifp, AF_INET, ar_sha(ah), linkhdr,
-	    &linkhdrsize, &lladdr_off) != 0)
+	    &linkhdrsize, &lladdr_off) != 0) {
+		LLE_WUNLOCK(la);
 		return;
+	}
 
 	/* Check if something has changed */
 	if (memcmp(la->r_linkdata, linkhdr, linkhdrsize) != 0 ||
 	    (la->la_flags & LLE_VALID) == 0) {
 		/* Try to perform LLE update */
 		if (lltable_try_set_entry_addr(ifp, la, linkhdr, linkhdrsize,
-		    lladdr_off) == 0)
+		    lladdr_off) == 0) {
+			LLE_WUNLOCK(la);
 			return;
+		}
 
 		/* Clear fast path feedback request if set */
-		la->r_skip_req = 0;
+		llentry_mark_used(la);
 	}
 
 	arp_mark_lle_reachable(la);
@@ -1222,18 +1255,11 @@ arp_check_update_lle(struct arphdr *ah, struct in_addr isaddr, struct ifnet *ifp
 	 * output routine.
 	 */
 	if (la->la_hold != NULL) {
-		m_hold = la->la_hold;
-		la->la_hold = NULL;
-		la->la_numheld = 0;
-		lltable_fill_sa_entry(la, &sa);
+		struct mbuf *chain;
+
+		chain = arp_grab_holdchain(la);
 		LLE_WUNLOCK(la);
-		for (; m_hold != NULL; m_hold = m_hold_next) {
-			m_hold_next = m_hold->m_nextpkt;
-			m_hold->m_nextpkt = NULL;
-			/* Avoid confusing lower layers. */
-			m_clrprotoflags(m_hold);
-			(*ifp->if_output)(ifp, m_hold, &sa, NULL);
-		}
+		arp_flush_holdchain(ifp, la, chain);
 	} else
 		LLE_WUNLOCK(la);
 }
@@ -1412,6 +1438,7 @@ garp_timer_start(struct ifaddr *ifa)
 void
 arp_ifinit(struct ifnet *ifp, struct ifaddr *ifa)
 {
+	struct epoch_tracker et;
 	const struct sockaddr_in *dst_in;
 	const struct sockaddr *dst;
 
@@ -1423,7 +1450,9 @@ arp_ifinit(struct ifnet *ifp, struct ifaddr *ifa)
 
 	if (ntohl(dst_in->sin_addr.s_addr) == INADDR_ANY)
 		return;
+	NET_EPOCH_ENTER(et);
 	arp_announce_ifaddr(ifp, dst_in->sin_addr, IF_LLADDR(ifp));
+	NET_EPOCH_EXIT(et);
 	if (garp_rexmit_count > 0) {
 		garp_timer_start(ifa);
 	}

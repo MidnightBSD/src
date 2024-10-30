@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004, 2007 Lukas Ertl
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bio.h>
 #include <sys/lock.h>
@@ -35,6 +34,7 @@
 #include <sys/systm.h>
 
 #include <geom/geom.h>
+#include <geom/geom_dbg.h>
 #include <geom/vinum/geom_vinum_var.h>
 #include <geom/vinum/geom_vinum_raid5.h>
 #include <geom/vinum/geom_vinum.h>
@@ -78,7 +78,7 @@ gv_raid5_start(struct gv_plex *p, struct bio *bp, caddr_t addr, off_t boff,
 		g_free(wp);
 		return (NULL);
 	}
-	
+
 	/*
 	 * Building the sub-request failed, we probably need to clean up a lot.
 	 */

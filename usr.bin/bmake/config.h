@@ -10,6 +10,9 @@
 /* Shell spec to use by default */
 /* #undef DEFSHELL_INDEX */
 
+/* Path of default shell */
+/* #undef DEFSHELL_PATH */
+
 /* Define to 1 if you have the <ar.h> header file. */
 #define HAVE_AR_H 1
 
@@ -66,6 +69,9 @@
 /* Define to 1 if you have the <limits.h> header file. */
 #define HAVE_LIMITS_H 1
 
+/* Define to 1 if the system has the type `long long int'. */
+#define HAVE_LONG_LONG_INT 1
+
 /* Define to 1 if you have the <memory.h> header file. */
 #define HAVE_MEMORY_H 1
 
@@ -99,14 +105,35 @@
 /* Define to 1 if you have the `setpgid' function. */
 #define HAVE_SETPGID 1
 
+/* Define to 1 if you have the `setrlimit' function. */
+#define HAVE_SETRLIMIT 1
+
 /* Define to 1 if you have the `setsid' function. */
 #define HAVE_SETSID 1
 
 /* Define to 1 if you have the `sigaction' function. */
 #define HAVE_SIGACTION 1
 
+/* Define to 1 if you have the `sigaddset' function. */
+#define HAVE_SIGADDSET 1
+
+/* Define to 1 if you have the `sigpending' function. */
+#define HAVE_SIGPENDING 1
+
+/* Define to 1 if you have the `sigprocmask' function. */
+#define HAVE_SIGPROCMASK 1
+
+/* Define to 1 if you have the `sigsetmask' function. */
+#define HAVE_SIGSETMASK 1
+
+/* Define to 1 if you have the `sigsuspend' function. */
+#define HAVE_SIGSUSPEND 1
+
 /* Define to 1 if you have the `sigvec' function. */
 #define HAVE_SIGVEC 1
+
+/* Define to 1 if the system has the type `sig_atomic_t'. */
+#define HAVE_SIG_ATOMIC_T 1
 
 /* Define to 1 if you have the `snprintf' function. */
 #define HAVE_SNPRINTF 1
@@ -143,6 +170,12 @@
 
 /* Define to 1 if you have the `strtol' function. */
 #define HAVE_STRTOL 1
+
+/* Define to 1 if you have the `strtoll' function. */
+#define HAVE_STRTOLL 1
+
+/* Define to 1 if you have the `strtoul' function. */
+#define HAVE_STRTOUL 1
 
 /* Define to 1 if `st_rdev' is a member of `struct stat'. */
 #define HAVE_STRUCT_STAT_ST_RDEV 1
@@ -198,6 +231,9 @@
 /* Define to 1 if you have the `unsetenv' function. */
 #define HAVE_UNSETENV 1
 
+/* Define to 1 if the system has the type `unsigned long long int'. */
+#define HAVE_UNSIGNED_LONG_LONG_INT 1
+
 /* Define to 1 if you have the <utime.h> header file. */
 #define HAVE_UTIME_H 1
 
@@ -244,7 +280,7 @@
 #define PACKAGE_NAME "bmake"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "bmake 20200710"
+#define PACKAGE_STRING "bmake 20211020"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "bmake"
@@ -253,7 +289,7 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "20200710"
+#define PACKAGE_VERSION "20211020"
 
 /* Define as the return type of signal handlers (`int' or `void'). */
 #define RETSIGTYPE void
@@ -325,6 +361,16 @@
 /* Define to empty if `const' does not conform to ANSI C. */
 /* #undef const */
 
+/* Define to `__inline__' or `__inline' if that's what the C compiler
+   calls it, or to nothing if 'inline' is not supported under any name.  */
+#ifndef __cplusplus
+/* #undef inline */
+#endif
+
+/* Define to the type of a signed integer type of width exactly 64 bits if
+   such a type exists and the standard includes do not define it. */
+/* #undef int64_t */
+
 /* Define to `int' if <sys/types.h> does not define. */
 /* #undef mode_t */
 
@@ -333,6 +379,9 @@
 
 /* Define to `int' if <sys/types.h> does not define. */
 /* #undef pid_t */
+
+/* type that signal handlers can safely frob */
+/* #undef sig_atomic_t */
 
 /* Define to `unsigned int' if <sys/types.h> does not define. */
 /* #undef size_t */

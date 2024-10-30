@@ -41,7 +41,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_inet.h"
 #include "opt_inet6.h"
 #include "opt_ipsec.h"
@@ -96,7 +95,6 @@
 
 #include <machine/in_cksum.h>
 #include <machine/stdarg.h>
-
 
 #define	IPSEC_ISTAT(proto, name)	do {	\
 	if ((proto) == IPPROTO_ESP)		\
@@ -277,6 +275,7 @@ ipsec4_common_input_cb(struct mbuf *m, struct secasvar *sav, int skip,
     int protoff)
 {
 	IPSEC_DEBUG_DECLARE(char buf[IPSEC_ADDRSTRLEN]);
+	struct epoch_tracker et;
 	struct ipsec_ctx_data ctx;
 	struct xform_history *xh;
 	struct secasindex *saidx;
@@ -304,7 +303,7 @@ ipsec4_common_input_cb(struct mbuf *m, struct secasvar *sav, int skip,
 			    buf, sizeof(buf)), (u_long) ntohl(sav->spi)));
 			IPSEC_ISTAT(sproto, hdrops);
 			error = ENOBUFS;
-			goto bad;
+			goto bad_noepoch;
 		}
 
 		ip = mtod(m, struct ip *);
@@ -323,6 +322,11 @@ ipsec4_common_input_cb(struct mbuf *m, struct secasvar *sav, int skip,
 	if (sav->natt != NULL &&
 	    (prot == IPPROTO_UDP || prot == IPPROTO_TCP))
 		udp_ipsec_adjust_cksum(m, sav, prot, skip);
+
+	/*
+	 * Needed for ipsec_run_hooks and netisr_queue_src
+	 */
+	NET_EPOCH_ENTER(et);
 
 	IPSEC_INIT_CTX(&ctx, &m, NULL, sav, AF_INET, IPSEC_ENC_BEFORE);
 	if ((error = ipsec_run_hhooks(&ctx, HHOOK_TYPE_IPSEC_IN)) != 0)
@@ -430,9 +434,12 @@ ipsec4_common_input_cb(struct mbuf *m, struct secasvar *sav, int skip,
 			    __func__, sproto));
 		}
 	}
+	NET_EPOCH_EXIT(et);
 	key_freesav(&sav);
 	return (error);
 bad:
+	NET_EPOCH_EXIT(et);
+bad_noepoch:
 	key_freesav(&sav);
 	if (m != NULL)
 		m_freem(m);
@@ -488,6 +495,7 @@ ipsec6_common_input_cb(struct mbuf *m, struct secasvar *sav, int skip,
     int protoff)
 {
 	IPSEC_DEBUG_DECLARE(char buf[IPSEC_ADDRSTRLEN]);
+	struct epoch_tracker et;
 	struct ipsec_ctx_data ctx;
 	struct xform_history *xh;
 	struct secasindex *saidx;
@@ -508,10 +516,11 @@ ipsec6_common_input_cb(struct mbuf *m, struct secasvar *sav, int skip,
 		sproto == IPPROTO_IPCOMP,
 		("unexpected security protocol %u", sproto));
 
+	NET_EPOCH_ENTER(et);
+
 	/* Fix IPv6 header */
 	if (m->m_len < sizeof(struct ip6_hdr) &&
 	    (m = m_pullup(m, sizeof(struct ip6_hdr))) == NULL) {
-
 		DPRINTF(("%s: processing failed for SA %s/%08lx\n",
 		    __func__, ipsec_address(&sav->sah->saidx.dst, buf,
 		    sizeof(buf)), (u_long) ntohl(sav->spi)));
@@ -628,6 +637,7 @@ ipsec6_common_input_cb(struct mbuf *m, struct secasvar *sav, int skip,
 				    " dropped\n", __func__, sproto));
 			}
 		}
+		NET_EPOCH_EXIT(et);
 		key_freesav(&sav);
 		return (error);
 	}
@@ -666,9 +676,11 @@ ipsec6_common_input_cb(struct mbuf *m, struct secasvar *sav, int skip,
 		}
 		nxt = (*inet6sw[ip6_protox[nxt]].pr_input)(&m, &skip, nxt);
 	}
+	NET_EPOCH_EXIT(et);
 	key_freesav(&sav);
 	return (0);
 bad:
+	NET_EPOCH_EXIT(et);
 	key_freesav(&sav);
 	if (m)
 		m_freem(m);

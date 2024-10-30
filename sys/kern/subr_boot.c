@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1998 Michael Smith <msmith@freebsd.org>
  * All Rights Reserved.
@@ -36,7 +36,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /* Note: This is compiled in both the kernel and boot loader contexts */
 
 #include <sys/param.h>
@@ -198,13 +197,13 @@ boot_parse_cmdline_delim(char *cmdline, const char *delim)
 }
 
 /**
- * @brief Simplified interface for common 'space separated' args
+ * @brief Simplified interface for common 'space or tab separated' args
  */
 int
 boot_parse_cmdline(char *cmdline)
 {
 
-	return (boot_parse_cmdline_delim(cmdline, " \n"));
+	return (boot_parse_cmdline_delim(cmdline, " \t\n"));
 }
 
 /**

@@ -65,11 +65,11 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_inet6.h"
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/hash.h>
 #include <sys/jail.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
@@ -120,11 +120,13 @@ VNET_DEFINE_STATIC(struct callout, tcp_hc_callout);
 static struct hc_metrics *tcp_hc_lookup(struct in_conninfo *);
 static struct hc_metrics *tcp_hc_insert(struct in_conninfo *);
 static int sysctl_tcp_hc_list(SYSCTL_HANDLER_ARGS);
+static int sysctl_tcp_hc_histo(SYSCTL_HANDLER_ARGS);
 static int sysctl_tcp_hc_purgenow(SYSCTL_HANDLER_ARGS);
 static void tcp_hc_purge_internal(int);
 static void tcp_hc_purge(void *);
 
-static SYSCTL_NODE(_net_inet_tcp, OID_AUTO, hostcache, CTLFLAG_RW, 0,
+static SYSCTL_NODE(_net_inet_tcp, OID_AUTO, hostcache,
+    CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
     "TCP Host cache");
 
 VNET_DEFINE(int, tcp_use_hostcache) = 1;
@@ -162,25 +164,30 @@ SYSCTL_INT(_net_inet_tcp_hostcache, OID_AUTO, purge, CTLFLAG_VNET | CTLFLAG_RW,
     "Expire all entries on next purge run");
 
 SYSCTL_PROC(_net_inet_tcp_hostcache, OID_AUTO, list,
-    CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_SKIP, 0, 0,
-    sysctl_tcp_hc_list, "A", "List of all hostcache entries");
+    CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_SKIP | CTLFLAG_MPSAFE,
+    0, 0, sysctl_tcp_hc_list, "A",
+    "List of all hostcache entries");
+
+SYSCTL_PROC(_net_inet_tcp_hostcache, OID_AUTO, histo,
+    CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_SKIP | CTLFLAG_MPSAFE,
+    0, 0, sysctl_tcp_hc_histo, "A",
+    "Print a histogram of hostcache hashbucket utilization");
 
 SYSCTL_PROC(_net_inet_tcp_hostcache, OID_AUTO, purgenow,
-    CTLTYPE_INT | CTLFLAG_RW, NULL, 0,
-    sysctl_tcp_hc_purgenow, "I", "Immediately purge all entries");
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE,
+    NULL, 0, sysctl_tcp_hc_purgenow, "I",
+    "Immediately purge all entries");
 
 static MALLOC_DEFINE(M_HOSTCACHE, "hostcache", "TCP hostcache");
 
+/* Use jenkins_hash32(), as in other parts of the tcp stack */
 #define HOSTCACHE_HASH(ip) \
-	(((ip)->s_addr ^ ((ip)->s_addr >> 7) ^ ((ip)->s_addr >> 17)) &	\
-	  V_tcp_hostcache.hashmask)
+	(jenkins_hash32((uint32_t *)(ip), 1, V_tcp_hostcache.hashsalt) & \
+	 V_tcp_hostcache.hashmask)
 
-/* XXX: What is the recommended hash to get good entropy for IPv6 addresses? */
 #define HOSTCACHE_HASH6(ip6)				\
-	(((ip6)->s6_addr32[0] ^				\
-	  (ip6)->s6_addr32[1] ^				\
-	  (ip6)->s6_addr32[2] ^				\
-	  (ip6)->s6_addr32[3]) &			\
+	(jenkins_hash32((uint32_t *)&((ip6)->s6_addr32[0]), 4, \
+	 V_tcp_hostcache.hashsalt) & \
 	 V_tcp_hostcache.hashmask)
 
 #define THC_LOCK(lp)		mtx_lock(lp)
@@ -200,6 +207,7 @@ tcp_hc_init(void)
 	V_tcp_hostcache.bucket_limit = TCP_HOSTCACHE_BUCKETLIMIT;
 	V_tcp_hostcache.expire = TCP_HOSTCACHE_EXPIRE;
 	V_tcp_hostcache.prune = TCP_HOSTCACHE_PRUNE;
+	V_tcp_hostcache.hashsalt = arc4random();
 
 	TUNABLE_INT_FETCH("net.inet.tcp.hostcache.hashsize",
 	    &V_tcp_hostcache.hashsize);
@@ -386,6 +394,11 @@ tcp_hc_insert(struct in_conninfo *inc)
 			return NULL;
 		}
 		TAILQ_REMOVE(&hc_head->hch_bucket, hc_entry, rmx_q);
+		KASSERT(V_tcp_hostcache.hashbase[hash].hch_length > 0 &&
+			V_tcp_hostcache.hashbase[hash].hch_length <=
+			V_tcp_hostcache.bucket_limit,
+			("tcp_hostcache: bucket length range violated at %u: %u",
+			hash, V_tcp_hostcache.hashbase[hash].hch_length));
 		V_tcp_hostcache.hashbase[hash].hch_length--;
 		atomic_subtract_int(&V_tcp_hostcache.cache_count, 1);
 		TCPSTAT_INC(tcps_hc_bucketoverflow);
@@ -420,6 +433,10 @@ tcp_hc_insert(struct in_conninfo *inc)
 	 */
 	TAILQ_INSERT_HEAD(&hc_head->hch_bucket, hc_entry, rmx_q);
 	V_tcp_hostcache.hashbase[hash].hch_length++;
+	KASSERT(V_tcp_hostcache.hashbase[hash].hch_length <
+		V_tcp_hostcache.bucket_limit,
+		("tcp_hostcache: bucket length too high at %u: %u",
+		hash, V_tcp_hostcache.hashbase[hash].hch_length));
 	atomic_add_int(&V_tcp_hostcache.cache_count, 1);
 	TCPSTAT_INC(tcps_hc_added);
 
@@ -693,6 +710,48 @@ sysctl_tcp_hc_list(SYSCTL_HANDLER_ARGS)
 }
 
 /*
+ * Sysctl function: prints a histogram of the hostcache hashbucket
+ * utilization.
+ */
+static int
+sysctl_tcp_hc_histo(SYSCTL_HANDLER_ARGS)
+{
+	const int linesize = 50;
+	struct sbuf sb;
+	int i, error;
+	int *histo;
+	u_int hch_length;
+
+	if (jailed_without_vnet(curthread->td_ucred) != 0)
+		return (EPERM);
+
+	histo = (int *)malloc(sizeof(int) * (V_tcp_hostcache.bucket_limit + 1),
+			M_TEMP, M_NOWAIT|M_ZERO);
+	if (histo == NULL)
+		return(ENOMEM);
+
+	for (i = 0; i < V_tcp_hostcache.hashsize; i++) {
+		hch_length = V_tcp_hostcache.hashbase[i].hch_length;
+		KASSERT(hch_length <= V_tcp_hostcache.bucket_limit,
+			("tcp_hostcache: bucket limit exceeded at %u: %u",
+			i, hch_length));
+		histo[hch_length]++;
+	}
+
+	/* Use a buffer for 16 lines */
+	sbuf_new_for_sysctl(&sb, NULL, 16 * linesize, req);
+
+	sbuf_printf(&sb, "\nLength\tCount\n");
+	for (i = 0; i <= V_tcp_hostcache.bucket_limit; i++) {
+		sbuf_printf(&sb, "%u\t%u\n", i, histo[i]);
+	}
+	error = sbuf_finish(&sb);
+	sbuf_delete(&sb);
+	free(histo, M_TEMP);
+	return(error);
+}
+
+/*
  * Caller has to make sure the curvnet is set properly.
  */
 static void
@@ -705,6 +764,11 @@ tcp_hc_purge_internal(int all)
 		THC_LOCK(&V_tcp_hostcache.hashbase[i].hch_mtx);
 		TAILQ_FOREACH_SAFE(hc_entry,
 		    &V_tcp_hostcache.hashbase[i].hch_bucket, rmx_q, hc_next) {
+			KASSERT(V_tcp_hostcache.hashbase[i].hch_length > 0 &&
+				V_tcp_hostcache.hashbase[i].hch_length <=
+				V_tcp_hostcache.bucket_limit,
+				("tcp_hostcache: bucket length out of range at %u: %u",
+				i, V_tcp_hostcache.hashbase[i].hch_length));
 			if (all || hc_entry->rmx_expire <= 0) {
 				TAILQ_REMOVE(&V_tcp_hostcache.hashbase[i].hch_bucket,
 					      hc_entry, rmx_q);
@@ -729,6 +793,8 @@ tcp_hc_purge(void *arg)
 	int all = 0;
 
 	if (V_tcp_hostcache.purgeall) {
+		if (V_tcp_hostcache.purgeall == 2)
+			V_tcp_hostcache.hashsalt = arc4random();
 		all = 1;
 		V_tcp_hostcache.purgeall = 0;
 	}
@@ -753,6 +819,8 @@ sysctl_tcp_hc_purgenow(SYSCTL_HANDLER_ARGS)
 	if (error || !req->newptr)
 		return (error);
 
+	if (val == 2)
+		V_tcp_hostcache.hashsalt = arc4random();
 	tcp_hc_purge_internal(1);
 
 	callout_reset(&V_tcp_hc_callout, V_tcp_hostcache.prune * hz,

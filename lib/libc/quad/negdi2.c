@@ -37,15 +37,13 @@
 static char sccsid[] = "@(#)negdi2.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-
 #include "quad.h"
 
 /*
  * Return -a (or, equivalently, 0 - a), in quad.  See subdi3.c.
  */
 quad_t
-__negdi2(a)
-	quad_t a;
+__negdi2(quad_t a)
 {
 	union uu aa, res;
 

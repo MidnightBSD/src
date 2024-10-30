@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <sys/sysctl.h>
 #define	_WANT_SYSVMSG_INTERNALS

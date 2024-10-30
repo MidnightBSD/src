@@ -36,8 +36,6 @@
  */
 
 #include <sys/cdefs.h>
-
-
 /*
  * eval.c
  * Facility: m4 macro processor

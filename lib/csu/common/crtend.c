@@ -22,7 +22,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "crt.h"
 
 typedef void (*crt_func)(void);

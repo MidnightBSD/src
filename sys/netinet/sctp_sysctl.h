@@ -32,8 +32,6 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 #ifndef _NETINET_SCTP_SYSCTL_H_
 #define _NETINET_SCTP_SYSCTL_H_
 
@@ -143,7 +141,7 @@ struct sctp_sysctl {
 #define SCTPCTL_AUTOASCONF_DEFAULT	1
 
 /* autoasconf: Enable SCTP Auto-ASCONF */
-#define SCTPCTL_MULTIPLEASCONFS_DESC	"Enable SCTP Muliple-ASCONFs"
+#define SCTPCTL_MULTIPLEASCONFS_DESC	"Enable SCTP Multiple-ASCONFs"
 #define SCTPCTL_MULTIPLEASCONFS_MIN	0
 #define SCTPCTL_MULTIPLEASCONFS_MAX	1
 #define SCTPCTL_MULTIPLEASCONFS_DEFAULT	SCTP_DEFAULT_MULTIPLE_ASCONFS
@@ -213,7 +211,6 @@ struct sctp_sysctl {
 #define SCTPCTL_FRMAXBURST_MIN		0
 #define SCTPCTL_FRMAXBURST_MAX		0xFFFFFFFF
 #define SCTPCTL_FRMAXBURST_DEFAULT	SCTP_DEF_FRMAX_BURST
-
 
 /* maxchunks: Default max chunks on queue per asoc */
 #define SCTPCTL_MAXCHUNKS_DESC		"Default max chunks on queue per asoc"
@@ -553,9 +550,6 @@ struct sctp_sysctl {
 #define SCTPCTL_DEBUG_MAX	0xFFFFFFFF
 #define SCTPCTL_DEBUG_DEFAULT	0
 #endif
-
-
-
 
 #if defined(_KERNEL) || defined(__Userspace__)
 #if defined(SYSCTL_DECL)

@@ -29,8 +29,6 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 
 #ifndef lint
 static const char copyright[] =
@@ -66,7 +64,6 @@ static const char sccsid[] = "@(#)w.c	8.4 (Berkeley) 4/16/94";
 #include <arpa/nameser.h>
 
 #include <ctype.h>
-#include <err.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <kvm.h>
@@ -94,9 +91,9 @@ static struct utmpx *utmp;
 static struct winsize ws;
 static kvm_t   *kd;
 static time_t	now;		/* the current time of day */
-static int	ttywidth;	/* width of tty */
-static int	fromwidth = 0;	/* max width of "from" field */
-static int	argwidth;	/* width of arguments */
+static size_t	ttywidth;	/* width of tty */
+static size_t	fromwidth = 0;	/* max width of "from" field */
+static size_t	argwidth;	/* width of arguments */
 static int	header = 1;	/* true if -h flag: don't print heading */
 static int	nflag;		/* true if -n flag: don't convert addrs */
 static int	dflag;		/* true if -d flag: output debug info */
@@ -139,11 +136,12 @@ main(int argc, char *argv[])
 	struct kinfo_proc *dkp;
 	struct stat *stp;
 	time_t touched;
+	size_t width;
 	int ch, i, nentries, nusers, wcmd, longidle, longattime;
 	const char *memf, *nlistf, *p, *save_p;
 	char *x_suffix;
-	char buf[MAXHOSTNAMELEN], errbuf[_POSIX2_LINE_MAX];
-	char fn[MAXHOSTNAMELEN];
+	char errbuf[_POSIX2_LINE_MAX];
+	char buf[MAXHOSTNAMELEN], fn[MAXHOSTNAMELEN];
 	char *dot;
 
 	(void)setlocale(LC_ALL, "");
@@ -187,7 +185,7 @@ main(int argc, char *argv[])
 			nflag += 1;
 			break;
 		case 'f': case 'l': case 's': case 'u': case 'w':
-			warnx("[-flsuw] no longer supported");
+			xo_warnx("-%c no longer supported", ch);
 			/* FALLTHROUGH */
 		case '?':
 		default:
@@ -202,7 +200,7 @@ main(int argc, char *argv[])
 	_res.retry = 1;		/* only try once.. */
 
 	if ((kd = kvm_openfiles(nlistf, memf, NULL, O_RDONLY, errbuf)) == NULL)
-		errx(1, "%s", errbuf);
+		xo_errx(1, "%s", errbuf);
 
 	(void)time(&now);
 
@@ -237,7 +235,7 @@ main(int argc, char *argv[])
 				continue;
 		}
 		if ((ep = calloc(1, sizeof(struct entry))) == NULL)
-			errx(1, "calloc");
+			xo_errx(1, "calloc");
 		*nextp = ep;
 		nextp = &ep->next;
 		memmove(&ep->utmp, utmp, sizeof *utmp);
@@ -309,8 +307,8 @@ main(int argc, char *argv[])
 			p = buf;
 		}
 		ep->from = strdup(p);
-		if ((i = strlen(p)) > fromwidth)
-			fromwidth = i;
+		if ((width = strlen(p)) > fromwidth)
+			fromwidth = width;
 		if (save_p != p)
 			ep->save_from = strdup(save_p);
 	}
@@ -322,10 +320,9 @@ main(int argc, char *argv[])
 #define HEADER_LOGIN_IDLE	"LOGIN@  IDLE "
 #define HEADER_WHAT		"WHAT\n"
 #define WUSED  (W_DISPUSERSIZE + W_DISPLINESIZE + fromwidth + \
-		sizeof(HEADER_LOGIN_IDLE) + 3)	/* header width incl. spaces */ 
+		sizeof(HEADER_LOGIN_IDLE) + 3)	/* header width incl. spaces */
 
-
-	if ((int) sizeof(HEADER_FROM) > fromwidth)
+	if (sizeof(HEADER_FROM) > fromwidth)
 		fromwidth = sizeof(HEADER_FROM);
 	fromwidth++;
 	if (fromwidth > W_MAXHOSTSIZE)
@@ -337,13 +334,13 @@ main(int argc, char *argv[])
 		pr_header(&now, nusers);
 		if (wcmd == 0) {
 			xo_close_container("uptime-information");
-			xo_finish();
-
+			if (xo_finish() < 0)
+				xo_err(1, "stdout");
 			(void)kvm_close(kd);
 			exit(0);
 		}
 
-		xo_emit("{T:/%-*.*s} {T:/%-*.*s} {T:/%-*.*s}  {T:/%s}", 
+		xo_emit("{T:/%-*.*s} {T:/%-*.*s} {T:/%-*.*s}  {T:/%s}",
 				W_DISPUSERSIZE, W_DISPUSERSIZE, HEADER_USER,
 				W_DISPLINESIZE, W_DISPLINESIZE, HEADER_TTY,
 				fromwidth, fromwidth, HEADER_FROM,
@@ -351,7 +348,7 @@ main(int argc, char *argv[])
 	}
 
 	if ((kp = kvm_getprocs(kd, KERN_PROC_ALL, 0, &nentries)) == NULL)
-		err(1, "%s", kvm_geterr(kd));
+		xo_err(1, "%s", kvm_geterr(kd));
 	for (i = 0; i < nentries; i++, kp++) {
 		if (kp->ki_stat == SIDL || kp->ki_stat == SZOMB ||
 		    kp->ki_tdev == NODEV)
@@ -397,7 +394,7 @@ main(int argc, char *argv[])
 		ep->args = fmt_argv(kvm_getargv(kd, ep->kp, argwidth),
 		    ep->kp->ki_comm, NULL, MAXCOMLEN);
 		if (ep->args == NULL)
-			err(1, NULL);
+			xo_err(1, "fmt_argv");
 	}
 	/* sort by idle time */
 	if (sortidle && ehead != NULL) {
@@ -426,8 +423,8 @@ main(int argc, char *argv[])
 		xo_open_instance("user-entry");
 
 		if (dflag) {
-		        xo_open_container("process-table");
-		        xo_open_list("process-entry");
+			xo_open_container("process-table");
+			xo_open_list("process-entry");
 
 			for (dkp = ep->dkp; dkp != NULL; dkp = debugproc(dkp)) {
 				const char *ptr;
@@ -437,12 +434,12 @@ main(int argc, char *argv[])
 				if (ptr == NULL)
 					ptr = "-";
 				xo_open_instance("process-entry");
-				xo_emit("\t\t{:process-id/%-9d/%d} {:command/%s}\n",
-				    dkp->ki_pid, ptr);
+				xo_emit("\t\t{:process-id/%-9d/%d} "
+				    "{:command/%hs}\n", dkp->ki_pid, ptr);
 				xo_close_instance("process-entry");
 			}
-		        xo_close_list("process-entry");
-		        xo_close_container("process-table");
+			xo_close_list("process-entry");
+			xo_close_container("process-table");
 		}
 		xo_emit("{:user/%-*.*s/%@**@s} {:tty/%-*.*s/%@**@s} ",
 			W_DISPUSERSIZE, W_DISPUSERSIZE, ep->utmp.ut_user,
@@ -455,12 +452,12 @@ main(int argc, char *argv[])
 		if (ep->save_from)
 		    xo_attr("address", "%s", ep->save_from);
 		xo_emit("{:from/%-*.*s/%@**@s} ",
-		    fromwidth, fromwidth, ep->from);
+		    (int)fromwidth, (int)fromwidth, ep->from);
 		t = ep->utmp.ut_tv.tv_sec;
 		longattime = pr_attime(&t, &now);
 		longidle = pr_idle(ep->idle);
-		xo_emit("{:command/%.*s/%@*@s}\n",
-		    argwidth - longidle - longattime,
+		xo_emit("{:command/%.*hs/%@*@hs}\n",
+		    (int)argwidth - longidle - longattime,
 		    ep->args);
 
 		xo_close_instance("user-entry");
@@ -469,7 +466,8 @@ main(int argc, char *argv[])
 	xo_close_list("user-entry");
 	xo_close_container("user-table");
 	xo_close_container("uptime-information");
-	xo_finish();
+	if (xo_finish() < 0)
+		xo_err(1, "stdout");
 
 	(void)kvm_close(kd);
 	exit(0);
@@ -478,14 +476,13 @@ main(int argc, char *argv[])
 static void
 pr_header(time_t *nowp, int nusers)
 {
+	char buf[64];
+	struct sbuf upbuf;
 	double avenrun[3];
-	time_t uptime;
 	struct timespec tp;
-	int days, hrs, i, mins, secs;
-	char buf[256];
-	struct sbuf *upbuf;
+	unsigned long days, hrs, mins, secs;
+	unsigned int i;
 
-	upbuf = sbuf_new_auto();
 	/*
 	 * Print time of day.
 	 */
@@ -495,38 +492,49 @@ pr_header(time_t *nowp, int nusers)
 	/*
 	 * Print how long system has been up.
 	 */
+	(void)sbuf_new(&upbuf, buf, sizeof(buf), SBUF_FIXEDLEN);
 	if (clock_gettime(CLOCK_UPTIME, &tp) != -1) {
-		uptime = tp.tv_sec;
-		if (uptime > 60)
-			uptime += 30;
-		days = uptime / 86400;
-		uptime %= 86400;
-		hrs = uptime / 3600;
-		uptime %= 3600;
-		mins = uptime / 60;
-		secs = uptime % 60;
 		xo_emit(" up");
-		xo_emit("{e:uptime/%lu}", (unsigned long) tp.tv_sec);
-		xo_emit("{e:days/%d}{e:hours/%d}{e:minutes/%d}{e:seconds/%d}", days, hrs, mins, secs);
+		secs = tp.tv_sec;
+		xo_emit("{e:uptime/%lu}", secs);
+		mins = secs / 60;
+		secs %= 60;
+		hrs = mins / 60;
+		mins %= 60;
+		days = hrs / 24;
+		hrs %= 24;
+		xo_emit("{e:days/%ld}{e:hours/%ld}{e:minutes/%ld}{e:seconds/%ld}",
+		    days, hrs, mins, secs);
+
+		/* If we've been up longer than 60 s, round to nearest min */
+		if (tp.tv_sec > 60) {
+			secs = tp.tv_sec + 30;
+			mins = secs / 60;
+			secs = 0;
+			hrs = mins / 60;
+			mins %= 60;
+			days = hrs / 24;
+			hrs %= 24;
+		}
 
 		if (days > 0)
-			sbuf_printf(upbuf, " %d day%s,",
+			sbuf_printf(&upbuf, " %ld day%s,",
 				days, days > 1 ? "s" : "");
 		if (hrs > 0 && mins > 0)
-			sbuf_printf(upbuf, " %2d:%02d,", hrs, mins);
+			sbuf_printf(&upbuf, " %2ld:%02ld,", hrs, mins);
 		else if (hrs > 0)
-			sbuf_printf(upbuf, " %d hr%s,",
+			sbuf_printf(&upbuf, " %ld hr%s,",
 				hrs, hrs > 1 ? "s" : "");
 		else if (mins > 0)
-			sbuf_printf(upbuf, " %d min%s,",
+			sbuf_printf(&upbuf, " %ld min%s,",
 				mins, mins > 1 ? "s" : "");
-		else 
-			sbuf_printf(upbuf, " %d sec%s,",
+		else
+			sbuf_printf(&upbuf, " %ld sec%s,",
 				secs, secs > 1 ? "s" : "");
-		if (sbuf_finish(upbuf) != 0)
+		if (sbuf_finish(&upbuf) != 0)
 			xo_err(1, "Could not generate output");
-		xo_emit("{:uptime-human/%s}", sbuf_data(upbuf));
-		sbuf_delete(upbuf);
+		xo_emit("{:uptime-human/%s}", sbuf_data(&upbuf));
+		sbuf_delete(&upbuf);
 	}
 
 	/* Print number of users logged in to system */
@@ -538,13 +546,13 @@ pr_header(time_t *nowp, int nusers)
 	if (getloadavg(avenrun, nitems(avenrun)) == -1)
 		xo_emit(", no load average information available\n");
 	else {
-	        static const char *format[] = {
+		static const char *format[] = {
 		    " {:load-average-1/%.2f}",
 		    " {:load-average-5/%.2f}",
 		    " {:load-average-15/%.2f}",
 		};
 		xo_emit(", load averages:");
-		for (i = 0; i < (int)(nitems(avenrun)); i++) {
+		for (i = 0; i < nitems(avenrun); i++) {
 			if (use_comma && i > 0)
 				xo_emit(",");
 			xo_emit(format[i], avenrun[i]);
@@ -560,10 +568,9 @@ ttystat(char *line)
 	char ttybuf[MAXPATHLEN];
 
 	(void)snprintf(ttybuf, sizeof(ttybuf), "%s%s", _PATH_DEV, line);
-	if (stat(ttybuf, &sb) == 0 && S_ISCHR(sb.st_mode)) {
+	if (stat(ttybuf, &sb) == 0 && S_ISCHR(sb.st_mode))
 		return (&sb);
-	} else
-		return (NULL);
+	return (NULL);
 }
 
 static void

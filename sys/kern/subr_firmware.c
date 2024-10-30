@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2005-2008, Sam Leffler <sam@errno.com>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
@@ -237,36 +236,42 @@ firmware_unregister(const char *imagename)
 	return (err);
 }
 
+struct fw_loadimage {
+	const char	*imagename;
+	uint32_t	flags;
+};
+
 static void
-loadimage(void *arg, int npending)
+loadimage(void *arg, int npending __unused)
 {
-	char *imagename = arg;
+	struct fw_loadimage *fwli = arg;
 	struct priv_fw *fp;
 	linker_file_t result;
 	int error;
 
-	error = linker_reference_module(imagename, NULL, &result);
+	error = linker_reference_module(fwli->imagename, NULL, &result);
 	if (error != 0) {
-		printf("%s: could not load firmware image, error %d\n",
-		    imagename, error);
+		if (bootverbose || (fwli->flags & FIRMWARE_GET_NOWARN) == 0)
+			printf("%s: could not load firmware image, error %d\n",
+			    fwli->imagename, error);
 		mtx_lock(&firmware_mtx);
 		goto done;
 	}
 
 	mtx_lock(&firmware_mtx);
-	fp = lookup(imagename);
+	fp = lookup(fwli->imagename);
 	if (fp == NULL || fp->file != NULL) {
 		mtx_unlock(&firmware_mtx);
 		if (fp == NULL)
 			printf("%s: firmware image loaded, "
-			    "but did not register\n", imagename);
-		(void) linker_release_module(imagename, NULL, NULL);
+			    "but did not register\n", fwli->imagename);
+		(void) linker_release_module(fwli->imagename, NULL, NULL);
 		mtx_lock(&firmware_mtx);
 		goto done;
 	}
 	fp->file = result;	/* record the module identity */
 done:
-	wakeup_one(imagename);
+	wakeup_one(arg);
 	mtx_unlock(&firmware_mtx);
 }
 
@@ -278,7 +283,7 @@ done:
  * release this reference for the image to be eligible for removal/unload.
  */
 const struct firmware *
-firmware_get(const char *imagename)
+firmware_get_flags(const char *imagename, uint32_t flags)
 {
 	struct task fwload_task;
 	struct thread *td;
@@ -305,11 +310,15 @@ firmware_get(const char *imagename)
 	 * Also we must not hold any mtx's over this call which is problematic.
 	 */
 	if (!cold) {
-		TASK_INIT(&fwload_task, 0, loadimage, __DECONST(void *,
-		    imagename));
+		struct fw_loadimage fwli;
+
+		fwli.imagename = imagename;
+		fwli.flags = flags;
+		TASK_INIT(&fwload_task, 0, loadimage, (void *)&fwli);
 		taskqueue_enqueue(firmware_tq, &fwload_task);
-		msleep(__DECONST(void *, imagename), &firmware_mtx, 0,
-		    "fwload", 0);
+		PHOLD(curproc);
+		msleep((void *)&fwli, &firmware_mtx, 0, "fwload", 0);
+		PRELE(curproc);
 	}
 	/*
 	 * After attempting to load the module, see if the image is registered.
@@ -325,6 +334,13 @@ found:				/* common exit point on success */
 	fp->refcnt++;
 	mtx_unlock(&firmware_mtx);
 	return &fp->fw;
+}
+
+const struct firmware *
+firmware_get(const char *imagename)
+{
+
+	return (firmware_get_flags(imagename, 0));
 }
 
 /*
@@ -394,7 +410,6 @@ static void
 unloadentry(void *unused1, int unused2)
 {
 	struct priv_fw *fp;
-	int err;
 
 	mtx_lock(&firmware_mtx);
 restart:
@@ -416,7 +431,7 @@ restart:
 		 * on unload to actually free the entry.
 		 */
 		mtx_unlock(&firmware_mtx);
-		err = linker_release_module(NULL, NULL, fp->file);
+		(void)linker_release_module(NULL, NULL, fp->file);
 		mtx_lock(&firmware_mtx);
 
 		/*

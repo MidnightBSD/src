@@ -1,5 +1,4 @@
 #include <machine/asm.h>
-
 /*
  * This is cribbed from the Linux thinkpad-4.1 driver by
  * Thomas Hood.
@@ -37,3 +36,4 @@ ENTRY(smapi32)
 
 	leave
 	ret
+END(smapi32)

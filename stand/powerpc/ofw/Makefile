@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 LOADER_CD9660_SUPPORT?=	yes
 LOADER_EXT2FS_SUPPORT?=	no
@@ -18,14 +17,26 @@ INSTALLFLAGS=	-b
 
 # Architecture-specific loader code
 SRCS=		conf.c vers.c main.c elf_freebsd.c ppc64_elf_freebsd.c start.c
-SRCS+=		ucmpdi2.c
+SRCS+=		ucmpdi2.c gfx_fb_stub.c
+
+CFLAGS.gfx_fb_stub.c += -I${SRCTOP}/contrib/pnglite -I${SRCTOP}/sys/teken
 
 .include	"${BOOTSRC}/fdt.mk"
 .if ${MK_FDT} == "yes"
 SRCS+=		ofwfdt.c
 .endif
 
+.if ${MACHINE_ARCH:Mpowerpc64*} != ""
+SRCS+=		cas.c
+CFLAGS+=	-DCAS
+.endif
+
+.if ${MACHINE_ARCH} == "powerpc64le"
+SRCS+=		trampolineLE.S
+.endif
+
 HELP_FILES=	${FDTSRC}/help.fdt
+HELP_FILENAME=	loader.help.ofw
 
 # Always add MI sources
 .include	"${BOOTSRC}/loader.mk"
@@ -34,9 +45,15 @@ HELP_FILES=	${FDTSRC}/help.fdt
 
 # load address. set in linker script
 RELOC?=		0x1C00000
-CFLAGS+=	-DRELOC=${RELOC}
+CFLAGS+=	-DRELOC=${RELOC} -g
 
-LDFLAGS=	-nostdlib -static -T ${.CURDIR}/ldscript.powerpc
+LDFLAGS=	-nostdlib -static
+
+.if ${MACHINE_ARCH} == "powerpc64le"
+LDFLAGS+=	-T ${.CURDIR}/ldscript.powerpcle
+.else
+LDFLAGS+=	-T ${.CURDIR}/ldscript.powerpc
+.endif
 
 # Open Firmware standalone support library
 LIBOFW=		${BOOTOBJ}/libofw/libofw.a

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2016-2018 Netflix, Inc.
  *
@@ -27,12 +27,13 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
+#include <sys/arb.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/mutex.h>
+#include <sys/qmath.h>
 #include <sys/queue.h>
 #include <sys/refcount.h>
 #include <sys/rwlock.h>
@@ -40,6 +41,7 @@
 #include <sys/socketvar.h>
 #include <sys/sysctl.h>
 #include <sys/tree.h>
+#include <sys/stats.h> /* Must come after qmath.h and tree.h */
 #include <sys/counter.h>
 
 #include <dev/tcp_log/tcp_log_dev.h>
@@ -74,10 +76,12 @@ static u_long tcp_log_auto_ratio = 0;
 static volatile u_long tcp_log_auto_ratio_cur = 0;
 static uint32_t tcp_log_auto_mode = TCP_LOG_STATE_TAIL;
 static bool tcp_log_auto_all = false;
+static uint32_t tcp_disable_all_bb_logs = 0;
 
 RB_PROTOTYPE_STATIC(tcp_log_id_tree, tcp_log_id_bucket, tlb_rb, tcp_log_id_cmp)
 
-SYSCTL_NODE(_net_inet_tcp, OID_AUTO, bb, CTLFLAG_RW, 0, "TCP Black Box controls");
+SYSCTL_NODE(_net_inet_tcp, OID_AUTO, bb, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "TCP Black Box controls");
 
 SYSCTL_BOOL(_net_inet_tcp_bb, OID_AUTO, log_verbose, CTLFLAG_RW, &tcp_log_verbose,
     0, "Force verbose logging for TCP traces");
@@ -107,15 +111,19 @@ SYSCTL_UMA_CUR(_net_inet_tcp_bb, OID_AUTO, log_id_tcpcb_entries, CTLFLAG_RD,
 SYSCTL_U32(_net_inet_tcp_bb, OID_AUTO, log_version, CTLFLAG_RD, &tcp_log_version,
     0, "Version of log formats exported");
 
+SYSCTL_U32(_net_inet_tcp_bb, OID_AUTO, disable_all, CTLFLAG_RW,
+    &tcp_disable_all_bb_logs, 0,
+    "Disable all BB logging for all connections");
+
 SYSCTL_ULONG(_net_inet_tcp_bb, OID_AUTO, log_auto_ratio, CTLFLAG_RW,
     &tcp_log_auto_ratio, 0, "Do auto capturing for 1 out of N sessions");
 
 SYSCTL_U32(_net_inet_tcp_bb, OID_AUTO, log_auto_mode, CTLFLAG_RW,
-    &tcp_log_auto_mode, TCP_LOG_STATE_HEAD_AUTO,
-    "Logging mode for auto-selected sessions (default is TCP_LOG_STATE_HEAD_AUTO)");
+    &tcp_log_auto_mode, 0,
+    "Logging mode for auto-selected sessions (default is TCP_LOG_STATE_TAIL)");
 
 SYSCTL_BOOL(_net_inet_tcp_bb, OID_AUTO, log_auto_all, CTLFLAG_RW,
-    &tcp_log_auto_all, false,
+    &tcp_log_auto_all, 0,
     "Auto-select from all sessions (rather than just those with IDs)");
 
 #ifdef TCPLOG_DEBUG_COUNTERS
@@ -152,6 +160,17 @@ SYSCTL_COUNTER_U64(_net_inet_tcp_bb, OID_AUTO, freed, CTLFLAG_RD,
 #ifdef INVARIANTS
 #define	TCPLOG_DEBUG_RINGBUF
 #endif
+/* Number of requests to consider a PBCID "active". */
+#define	ACTIVE_REQUEST_COUNT	10
+
+/* Statistic tracking for "active" PBCIDs. */
+static counter_u64_t tcp_log_pcb_ids_cur;
+static counter_u64_t tcp_log_pcb_ids_tot;
+
+SYSCTL_COUNTER_U64(_net_inet_tcp_bb, OID_AUTO, pcb_ids_cur, CTLFLAG_RD,
+    &tcp_log_pcb_ids_cur, "Number of pcb IDs allocated in the system");
+SYSCTL_COUNTER_U64(_net_inet_tcp_bb, OID_AUTO, pcb_ids_tot, CTLFLAG_RD,
+    &tcp_log_pcb_ids_tot, "Total number of pcb IDs that have been allocated");
 
 struct tcp_log_mem
 {
@@ -236,10 +255,14 @@ struct tcp_log_id_bucket
 	 * (struct tcp_log_id_bucket *) and (char *) interchangeably.
 	 */
 	char				tlb_id[TCP_LOG_ID_LEN];
+	char				tlb_tag[TCP_LOG_TAG_LEN];
 	RB_ENTRY(tcp_log_id_bucket)	tlb_rb;
 	struct tcp_log_id_head		tlb_head;
 	struct mtx			tlb_mtx;
 	volatile u_int			tlb_refcnt;
+	volatile u_int			tlb_reqcnt;
+	uint32_t			tlb_loglimit;
+	uint8_t				tlb_logstate;
 };
 
 struct tcp_log_id_node
@@ -281,6 +304,7 @@ tcp_log_selectauto(void)
 	 * this session.
 	 */
 	if (tcp_log_auto_ratio &&
+	    (tcp_disable_all_bb_logs == 0) &&
 	    (atomic_fetchadd_long(&tcp_log_auto_ratio_cur, 1) %
 	    tcp_log_auto_ratio) == 0)
 		return (true);
@@ -333,6 +357,7 @@ tcp_log_remove_bucket(struct tcp_log_id_bucket *tlb)
 #endif
 	}
 	TCPID_BUCKET_LOCK_DESTROY(tlb);
+	counter_u64_add(tcp_log_pcb_ids_cur, (int64_t)-1);
 	uma_zfree(tcp_log_id_bucket_zone, tlb);
 }
 
@@ -474,10 +499,56 @@ tcp_log_grow_tlb(char *tlb_id, struct tcpcb *tp)
 
 	INP_WLOCK_ASSERT(tp->t_inpcb);
 
-#ifdef NETFLIX
+#ifdef STATS
 	if (V_tcp_perconn_stats_enable == 2 && tp->t_stats == NULL)
 		(void)tcp_stats_sample_rollthedice(tp, tlb_id, strlen(tlb_id));
 #endif
+}
+
+static void
+tcp_log_increment_reqcnt(struct tcp_log_id_bucket *tlb)
+{
+
+	atomic_fetchadd_int(&tlb->tlb_reqcnt, 1);
+}
+
+/*
+ * Associate the specified tag with a particular TCP log ID.
+ * Called with INPCB locked. Returns with it unlocked.
+ * Returns 0 on success or EOPNOTSUPP if the connection has no TCP log ID.
+ */
+int
+tcp_log_set_tag(struct tcpcb *tp, char *tag)
+{
+	struct tcp_log_id_bucket *tlb;
+	int tree_locked;
+
+	INP_WLOCK_ASSERT(tp->t_inpcb);
+
+	tree_locked = TREE_UNLOCKED;
+	tlb = tp->t_lib;
+	if (tlb == NULL) {
+		INP_WUNLOCK(tp->t_inpcb);
+		return (EOPNOTSUPP);
+	}
+
+	TCPID_BUCKET_REF(tlb);
+	INP_WUNLOCK(tp->t_inpcb);
+	TCPID_BUCKET_LOCK(tlb);
+	strlcpy(tlb->tlb_tag, tag, TCP_LOG_TAG_LEN);
+	if (!tcp_log_unref_bucket(tlb, &tree_locked, NULL))
+		TCPID_BUCKET_UNLOCK(tlb);
+
+	if (tree_locked == TREE_WLOCKED) {
+		TCPID_TREE_WLOCK_ASSERT();
+		TCPID_TREE_WUNLOCK();
+	} else if (tree_locked == TREE_RLOCKED) {
+		TCPID_TREE_RLOCK_ASSERT();
+		TCPID_TREE_RUNLOCK();
+	} else
+		TCPID_TREE_UNLOCK_ASSERT();
+
+	return (0);
 }
 
 /*
@@ -505,6 +576,21 @@ restart:
 	/* See if the ID is unchanged. */
 	if ((tp->t_lib != NULL && !strcmp(tp->t_lib->tlb_id, id)) ||
 	    (tp->t_lib == NULL && *id == 0)) {
+		if (tp->t_lib != NULL) {
+			tcp_log_increment_reqcnt(tp->t_lib);
+			if ((tp->t_lib->tlb_logstate) &&
+			    (tp->t_log_state_set == 0)) {
+				/* Clone in any logging */
+
+				tp->t_logstate = tp->t_lib->tlb_logstate;
+			}
+			if ((tp->t_lib->tlb_loglimit) &&
+			    (tp->t_log_state_set == 0)) {
+				/* We also have a limit set */
+
+				tp->t_loglimit = tp->t_lib->tlb_loglimit;
+			}
+		}
 		rv = 0;
 		goto done;
 	}
@@ -561,7 +647,7 @@ restart:
 			KASSERT(bucket_locked || tlb == NULL,
 			    ("%s: bucket_locked (%d) and tlb (%p) are "
 			    "inconsistent", __func__, bucket_locked, tlb));
-			
+
 			if (bucket_locked) {
 				TCPID_BUCKET_UNLOCK(tlb);
 				bucket_locked = false;
@@ -642,7 +728,7 @@ refind:
 		 * Remember that we constructed (struct tcp_log_id_node) so
 		 * we can safely cast the id to it for the purposes of finding.
 		 */
-		KASSERT(tlb == NULL, ("%s:%d tlb unexpectedly non-NULL", 
+		KASSERT(tlb == NULL, ("%s:%d tlb unexpectedly non-NULL",
 		    __func__, __LINE__));
 		tmp_tlb = RB_FIND(tcp_log_id_tree, &tcp_log_id_head,
 		    (struct tcp_log_id_bucket *) id);
@@ -674,6 +760,18 @@ refind:
 				rv = ENOBUFS;
 				goto done_noinp;
 			}
+			counter_u64_add(tcp_log_pcb_ids_cur, 1);
+			counter_u64_add(tcp_log_pcb_ids_tot, 1);
+
+			if ((tcp_log_auto_all == false) &&
+			    tcp_log_auto_mode &&
+			    tcp_log_selectauto()) {
+				/* Save off the log state */
+				tlb->tlb_logstate = tcp_log_auto_mode;
+			} else
+				tlb->tlb_logstate = TCP_LOG_STATE_OFF;
+			tlb->tlb_loglimit = 0;
+			tlb->tlb_tag[0] = '\0'; /* Default to an empty tag. */
 
 			/*
 			 * Copy the ID to the bucket.
@@ -696,6 +794,7 @@ refind:
 			 */
 			SLIST_INIT(&tlb->tlb_head);
 			refcount_init(&tlb->tlb_refcnt, 1);
+			tlb->tlb_reqcnt = 1;
 			memset(&tlb->tlb_mtx, 0, sizeof(struct mtx));
 			TCPID_BUCKET_LOCK_INIT(tlb);
 			TCPID_BUCKET_LOCK(tlb);
@@ -704,6 +803,8 @@ refind:
 #define	FREE_NEW_TLB()	do {				\
 	TCPID_BUCKET_LOCK_DESTROY(tlb);			\
 	uma_zfree(tcp_log_id_bucket_zone, tlb);		\
+	counter_u64_add(tcp_log_pcb_ids_cur, (int64_t)-1);	\
+	counter_u64_add(tcp_log_pcb_ids_tot, (int64_t)-1);	\
 	bucket_locked = false;				\
 	tlb = NULL;					\
 } while (0)
@@ -752,12 +853,16 @@ refind:
 			RECHECK_INP();
 			if (tp->t_lib != NULL) {
 				TCPID_BUCKET_UNLOCK(tlb);
+				bucket_locked = false;
 				tlb = NULL;
 				goto restart;
 			}
 
 			/* Take a reference on the bucket. */
 			TCPID_BUCKET_REF(tlb);
+
+			/* Record the request. */
+			tcp_log_increment_reqcnt(tlb);
 		}
 
 		tcp_log_grow_tlb(tlb->tlb_id, tp);
@@ -766,6 +871,16 @@ refind:
 		SLIST_INSERT_HEAD(&tlb->tlb_head, tln, tln_list);
 		tp->t_lib = tlb;
 		tp->t_lin = tln;
+		if (tp->t_lib->tlb_logstate) {
+			/* Clone in any logging */
+
+			tp->t_logstate = tp->t_lib->tlb_logstate;
+		}
+		if (tp->t_lib->tlb_loglimit) {
+			/* The loglimit too */
+
+			tp->t_loglimit = tp->t_lib->tlb_loglimit;
+		}
 		tln = NULL;
 	}
 
@@ -815,6 +930,52 @@ tcp_log_get_id(struct tcpcb *tp, char *buf)
 		*buf = '\0';
 		len = 0;
 	}
+	return (len);
+}
+
+/*
+ * Get the tag associated with the TCPCB's log ID.
+ * Called with INPCB locked. Returns with it unlocked.
+ * 'buf' must point to a buffer that is at least TCP_LOG_TAG_LEN bytes long.
+ * Returns number of bytes copied.
+ */
+size_t
+tcp_log_get_tag(struct tcpcb *tp, char *buf)
+{
+	struct tcp_log_id_bucket *tlb;
+	size_t len;
+	int tree_locked;
+
+	INP_WLOCK_ASSERT(tp->t_inpcb);
+
+	tree_locked = TREE_UNLOCKED;
+	tlb = tp->t_lib;
+
+	if (tlb != NULL) {
+		TCPID_BUCKET_REF(tlb);
+		INP_WUNLOCK(tp->t_inpcb);
+		TCPID_BUCKET_LOCK(tlb);
+		len = strlcpy(buf, tlb->tlb_tag, TCP_LOG_TAG_LEN);
+		KASSERT(len < TCP_LOG_TAG_LEN,
+		    ("%s:%d: tp->t_lib->tlb_tag too long (%zu)",
+		    __func__, __LINE__, len));
+		if (!tcp_log_unref_bucket(tlb, &tree_locked, NULL))
+			TCPID_BUCKET_UNLOCK(tlb);
+
+		if (tree_locked == TREE_WLOCKED) {
+			TCPID_TREE_WLOCK_ASSERT();
+			TCPID_TREE_WUNLOCK();
+		} else if (tree_locked == TREE_RLOCKED) {
+			TCPID_TREE_RLOCK_ASSERT();
+			TCPID_TREE_RUNLOCK();
+		} else
+			TCPID_TREE_UNLOCK_ASSERT();
+	} else {
+		INP_WUNLOCK(tp->t_inpcb);
+		*buf = '\0';
+		len = 0;
+	}
+
 	return (len);
 }
 
@@ -1001,6 +1162,8 @@ tcp_log_init(void)
 	tcp_log_que_read = counter_u64_alloc(M_WAITOK);
 	tcp_log_que_freed = counter_u64_alloc(M_WAITOK);
 #endif
+	tcp_log_pcb_ids_cur = counter_u64_alloc(M_WAITOK);
+	tcp_log_pcb_ids_tot = counter_u64_alloc(M_WAITOK);
 
 	rw_init_flags(&tcp_id_tree_lock, "TCP ID tree", RW_NEW);
 	mtx_init(&tcp_log_expireq_mtx, "TCP log expireq", NULL, MTX_DEF);
@@ -1019,12 +1182,14 @@ tcp_log_tcpcbinit(struct tcpcb *tp)
 	 * If we are doing auto-capturing, figure out whether we will capture
 	 * this session.
 	 */
-	if (tcp_log_selectauto()) {
+	tp->t_loglimit = tcp_log_session_limit;
+	if ((tcp_log_auto_all == true) &&
+	    tcp_log_auto_mode &&
+	    tcp_log_selectauto()) {
 		tp->t_logstate = tcp_log_auto_mode;
 		tp->t_flags2 |= TF2_LOG_AUTO;
 	}
 }
-
 
 /* Remove entries */
 static void
@@ -1158,6 +1323,8 @@ tcp_log_tcpcbfini(struct tcpcb *tp)
 
 	INP_WLOCK_ASSERT(tp->t_inpcb);
 
+	TCP_LOG_EVENT(tp, NULL, NULL, NULL, TCP_LOG_CONNEND, 0, 0, NULL, false);
+
 	/*
 	 * If we were gathering packets to be automatically dumped, try to do
 	 * it now. If this succeeds, the log information in the TCPCB will be
@@ -1183,7 +1350,7 @@ tcp_log_tcpcbfini(struct tcpcb *tp)
 	 * There are two ways we could keep logs: per-socket or per-ID. If
 	 * we are tracking logs with an ID, then the logs survive the
 	 * destruction of the TCPCB.
-	 * 
+	 *
 	 * If the TCPCB is associated with an ID node, move the logs from the
 	 * TCPCB to the ID node. In theory, this is safe, for reasons which I
 	 * will now explain for my own benefit when I next need to figure out
@@ -1193,7 +1360,7 @@ tcp_log_tcpcbfini(struct tcpcb *tp)
 	 * of this node (Rule C). Further, no one can remove this node from
 	 * the bucket while we hold the lock (Rule D). Basically, no one can
 	 * mess with this node. That leaves two states in which we could be:
-	 * 
+	 *
 	 * 1. Another thread is currently waiting to acquire the INP lock, with
 	 *    plans to do something with this node. When we drop the INP lock,
 	 *    they will have a chance to do that. They will recheck the
@@ -1323,6 +1490,25 @@ tcp_log_tcpcbfini(struct tcpcb *tp)
 	tp->t_logstate = TCP_LOG_STATE_OFF;
 }
 
+static void
+tcp_log_purge_tp_logbuf(struct tcpcb *tp)
+{
+	struct tcp_log_mem *log_entry;
+	struct inpcb *inp;
+
+	inp = tp->t_inpcb;
+	INP_WLOCK_ASSERT(inp);
+	if (tp->t_lognum == 0)
+		return;
+
+	while ((log_entry = STAILQ_FIRST(&tp->t_logs)) != NULL)
+		tcp_log_remove_log_head(tp, log_entry);
+	KASSERT(tp->t_lognum == 0,
+		("%s: After freeing entries, tp->t_lognum=%d (expected 0)",
+		 __func__, tp->t_lognum));
+	tp->t_logstate = TCP_LOG_STATE_OFF;
+}
+
 /*
  * This logs an event for a TCP socket. Normally, this is called via
  * TCP_LOG_EVENT or TCP_LOG_EVENT_VERBOSE. See the documentation for
@@ -1346,7 +1532,17 @@ tcp_log_event_(struct tcpcb *tp, struct tcphdr *th, struct sockbuf *rxbuf,
 		__func__, func, line));
 
 	INP_WLOCK_ASSERT(tp->t_inpcb);
-
+	if (tcp_disable_all_bb_logs) {
+		/*
+		 * The global shutdown logging
+		 * switch has been thrown. Call
+		 * the purge function that frees
+		 * purges out the logs and
+		 * turns off logging.
+		 */
+		tcp_log_purge_tp_logbuf(tp);
+		return (NULL);
+	}
 	KASSERT(tp->t_logstate == TCP_LOG_STATE_HEAD ||
 	    tp->t_logstate == TCP_LOG_STATE_TAIL ||
 	    tp->t_logstate == TCP_LOG_STATE_CONTINUAL ||
@@ -1367,7 +1563,7 @@ tcp_log_event_(struct tcpcb *tp, struct tcphdr *th, struct sockbuf *rxbuf,
 	 * here.
 	 */
 retry:
-	if (tp->t_lognum < tcp_log_session_limit) {
+	if (tp->t_lognum < tp->t_loglimit) {
 		if ((log_entry = uma_zalloc(tcp_log_zone, M_NOWAIT)) != NULL)
 			tp->t_lognum++;
 	} else
@@ -1489,13 +1685,15 @@ retry:
 	COPY_STAT(rcv_up);
 	COPY_STAT(rcv_adv);
 	COPY_STAT(rcv_nxt);
-	COPY_STAT(sack_newdata);
 	COPY_STAT(rcv_wnd);
 	COPY_STAT_T(dupacks);
 	COPY_STAT_T(segqlen);
 	COPY_STAT(snd_numholes);
 	COPY_STAT(snd_scale);
 	COPY_STAT(rcv_scale);
+	COPY_STAT_T(flags2);
+	COPY_STAT_T(fbyte_in);
+	COPY_STAT_T(fbyte_out);
 #undef COPY_STAT
 #undef COPY_STAT_T
 	log_buf->tlb_flex1 = 0;
@@ -1570,7 +1768,10 @@ tcp_log_state_change(struct tcpcb *tp, int state)
 	default:
 		return (EINVAL);
 	}
-
+	if (tcp_disable_all_bb_logs) {
+		/* We are prohibited from doing any logs */
+		tp->t_logstate = TCP_LOG_STATE_OFF;
+	}
 	tp->t_flags2 &= ~(TF2_LOG_AUTO);
 
 	return (0);
@@ -1910,7 +2111,7 @@ tcp_log_expandlogbuf(struct tcp_log_dev_queue *param)
 	sopt.sopt_val = hdr + 1;
 	sopt.sopt_valsize -= sizeof(struct tcp_log_header);
 	sopt.sopt_td = NULL;
-	
+
 	error = tcp_log_logs_to_buf(&sopt, &entry->tldl_entries,
 	    (struct tcp_log_buffer **)&end, entry->tldl_count);
 	if (error) {
@@ -1930,6 +2131,7 @@ tcp_log_expandlogbuf(struct tcp_log_dev_queue *param)
 	hdr->tlh_af = entry->tldl_af;
 	getboottime(&hdr->tlh_offset);
 	strlcpy(hdr->tlh_id, entry->tldl_id, TCP_LOG_ID_LEN);
+	strlcpy(hdr->tlh_tag, entry->tldl_tag, TCP_LOG_TAG_LEN);
 	strlcpy(hdr->tlh_reason, entry->tldl_reason, TCP_LOG_REASON_LEN);
 	return ((struct tcp_log_common_header *)hdr);
 }
@@ -2022,14 +2224,17 @@ tcp_log_dump_tp_logbuf(struct tcpcb *tp, char *reason, int how, bool force)
 	}
 
 	/* Fill in the unique parts of the queue entry. */
-	if (tp->t_lib != NULL)
+	if (tp->t_lib != NULL) {
 		strlcpy(entry->tldl_id, tp->t_lib->tlb_id, TCP_LOG_ID_LEN);
-	else
+		strlcpy(entry->tldl_tag, tp->t_lib->tlb_tag, TCP_LOG_TAG_LEN);
+	} else {
 		strlcpy(entry->tldl_id, "UNKNOWN", TCP_LOG_ID_LEN);
+		strlcpy(entry->tldl_tag, "UNKNOWN", TCP_LOG_TAG_LEN);
+	}
 	if (reason != NULL)
 		strlcpy(entry->tldl_reason, reason, TCP_LOG_REASON_LEN);
 	else
-		strlcpy(entry->tldl_reason, "UNKNOWN", TCP_LOG_ID_LEN);
+		strlcpy(entry->tldl_reason, "UNKNOWN", TCP_LOG_REASON_LEN);
 	entry->tldl_ie = inp->inp_inc.inc_ie;
 	if (inp->inp_inc.inc_flags & INC_ISIPV6)
 		entry->tldl_af = AF_INET6;
@@ -2115,10 +2320,11 @@ tcp_log_dump_node_logbuf(struct tcp_log_id_node *tln, char *reason, int how)
 
 	/* Fill in the unique parts of the queue entry. */
 	strlcpy(entry->tldl_id, tlb->tlb_id, TCP_LOG_ID_LEN);
+	strlcpy(entry->tldl_tag, tlb->tlb_tag, TCP_LOG_TAG_LEN);
 	if (reason != NULL)
 		strlcpy(entry->tldl_reason, reason, TCP_LOG_REASON_LEN);
 	else
-		strlcpy(entry->tldl_reason, "UNKNOWN", TCP_LOG_ID_LEN);
+		strlcpy(entry->tldl_reason, "UNKNOWN", TCP_LOG_REASON_LEN);
 	entry->tldl_ie = tln->tln_ie;
 	entry->tldl_entries = tln->tln_entries;
 	entry->tldl_count = tln->tln_count;
@@ -2130,7 +2336,6 @@ tcp_log_dump_node_logbuf(struct tcp_log_id_node *tln, char *reason, int how)
 
 	return (0);
 }
-
 
 /*
  * Queue the log buffers for all sessions in a bucket for transmissions via
@@ -2175,7 +2380,7 @@ tcp_log_dumpbucketlogs(struct tcp_log_id_bucket *tlb, char *reason)
 		 * If this isn't associated with a TCPCB, we can pull it off
 		 * the list now. We need to be careful that the expire timer
 		 * hasn't already taken ownership (tln_expiretime == SBT_MAX).
-		 * If so, we let the expire timer code free the data. 
+		 * If so, we let the expire timer code free the data.
 		 */
 		if (cur_tln->tln_closed) {
 no_inp:
@@ -2369,7 +2574,6 @@ done:
 }
 #undef	LOCAL_SAVE
 
-
 /*
  * Queue the log buffers for all sessions in a bucket for transmissions via
  * the log buffer facility.
@@ -2413,7 +2617,7 @@ tcp_log_dump_tp_bucket_logbufs(struct tcpcb *tp, char *reason)
 		return;
 	}
 
-	/* Turn this over to tcp_log_dumpbucketlogs() to finish the work. */ 
+	/* Turn this over to tcp_log_dumpbucketlogs() to finish the work. */
 	tcp_log_dumpbucketlogs(tlb, reason);
 }
 
@@ -2431,4 +2635,3 @@ tcp_log_flowend(struct tcpcb *tp)
 				TCP_LOG_FLOWEND, 0, 0, NULL, false);
 	}
 }
-

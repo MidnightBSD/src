@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #ifndef lint
 static const char sccsid[] = "@(#)compile.c	8.1 (Berkeley) 6/6/93";
 #endif
@@ -436,11 +435,19 @@ compile_delimited(char *p, char *d, int is_tr)
 				linenum, fname);
 	while (*p) {
 		if (*p == '[' && *p != c) {
-			if ((d = compile_ccl(&p, d)) == NULL)
-				errx(1, "%lu: %s: unbalanced brackets ([])", linenum, fname);
-			continue;
+			if (!is_tr) {
+				if ((d = compile_ccl(&p, d)) == NULL) {
+					errx(1,
+					    "%lu: %s: unbalanced brackets ([])",
+					    linenum, fname);
+				}
+				continue;
+			}
 		} else if (*p == '\\' && p[1] == '[') {
-			*d++ = *p++;
+			if (is_tr)
+				p++;
+			else
+				*d++ = *p++;
 		} else if (*p == '\\' && p[1] == c) {
 			p++;
 		} else if (*p == '\\' &&

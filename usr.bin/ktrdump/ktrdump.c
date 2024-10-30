@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2002 Jake Burkholder
  * Copyright (c) 2004 Robert Watson
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <sys/capsicum.h>
 #include <sys/ktr.h>

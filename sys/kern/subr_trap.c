@@ -44,7 +44,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_hwpmc_hooks.h"
 #include "opt_ktrace.h"
 #include "opt_sched.h"
@@ -52,13 +51,13 @@
 #include <sys/param.h>
 #include <sys/bus.h>
 #include <sys/capsicum.h>
+#include <sys/event.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
 #include <sys/pmckern.h>
 #include <sys/proc.h>
 #include <sys/ktr.h>
-#include <sys/pioctl.h>
 #include <sys/ptrace.h>
 #include <sys/racct.h>
 #include <sys/resourcevar.h>
@@ -115,39 +114,41 @@ userret(struct thread *td, struct trapframe *frame)
 	if (p->p_numthreads == 1) {
 		PROC_LOCK(p);
 		thread_lock(td);
-		if ((p->p_flag & P_PPWAIT) == 0) {
-			KASSERT(!SIGPENDING(td) || (td->td_flags &
-			    (TDF_NEEDSIGCHK | TDF_ASTPENDING)) ==
-			    (TDF_NEEDSIGCHK | TDF_ASTPENDING),
-			    ("failed to set signal flags for ast p %p "
-			    "td %p fl %x", p, td, td->td_flags));
+		if ((p->p_flag & P_PPWAIT) == 0 &&
+		    (td->td_pflags & TDP_SIGFASTBLOCK) == 0) {
+			if (SIGPENDING(td) && (td->td_flags &
+			    (TDF_NEEDSIGCHK | TDF_ASTPENDING)) !=
+			    (TDF_NEEDSIGCHK | TDF_ASTPENDING)) {
+				thread_unlock(td);
+				panic(
+	"failed to set signal flags for ast p %p td %p fl %x",
+				    p, td, td->td_flags);
+			}
 		}
 		thread_unlock(td);
 		PROC_UNLOCK(p);
 	}
 #endif
-#ifdef KTRACE
-	KTRUSERRET(td);
-#endif
-	td_softdep_cleanup(td);
-	MPASS(td->td_su == NULL);
-
-	/*
-	 * If this thread tickled GEOM, we need to wait for the giggling to
-	 * stop before we return to userland
-	 */
-	if (td->td_pflags & TDP_GEOM)
-		g_waitidle();
 
 	/*
 	 * Charge system time if profiling.
 	 */
-	if (p->p_flag & P_PROFIL)
+	if (__predict_false(p->p_flag & P_PROFIL))
 		addupc_task(td, TRAPF_PC(frame), td->td_pticks * psratio);
 
 #ifdef HWPMC_HOOKS
 	if (PMC_THREAD_HAS_SAMPLES(td))
 		PMC_CALL_HOOK(td, PMC_FN_THR_USERRET, NULL);
+#endif
+#ifdef TCPHPTS
+	/*
+	 * @gallatin is adament that this needs to go here, I
+	 * am not so sure. Running hpts is a lot like
+	 * a lro_flush() that happens while a user process
+	 * is running. But he may know best so I will go
+	 * with his view of accounting. :-)
+	 */
+	tcp_run_hpts();
 #endif
 	/*
 	 * Let the scheduler adjust our priority etc.
@@ -165,8 +166,6 @@ userret(struct thread *td, struct trapframe *frame)
 	WITNESS_WARN(WARN_PANIC, NULL, "userret: returning");
 	KASSERT(td->td_critnest == 0,
 	    ("userret: Returning in a critical section"));
-	KASSERT(td->td_epochnest == 0,
-	    ("userret: Returning in an epoch section"));
 	KASSERT(td->td_locks == 0,
 	    ("userret: Returning with %d locks held", td->td_locks));
 	KASSERT(td->td_rw_rlocks == 0,
@@ -180,16 +179,18 @@ userret(struct thread *td, struct trapframe *frame)
 	    td->td_lk_slocks));
 	KASSERT((td->td_pflags & TDP_NOFAULTING) == 0,
 	    ("userret: Returning with pagefaults disabled"));
-	KASSERT(td->td_no_sleeping == 0,
-	    ("userret: Returning with sleep disabled"));
+	if (__predict_false(!THREAD_CAN_SLEEP())) {
+#ifdef EPOCH_TRACE
+		epoch_trace_list(curthread);
+#endif
+		KASSERT(0, ("userret: Returning with sleep disabled"));
+	}
 	KASSERT(td->td_pinned == 0 || (td->td_pflags & TDP_CALLCHAIN) != 0,
-	    ("userret: Returning with with pinned thread"));
-	KASSERT(td->td_vp_reserv == 0,
-	    ("userret: Returning while holding vnode reservation"));
+	    ("userret: Returning with pinned thread"));
+	KASSERT(td->td_vp_reserved == NULL,
+	    ("userret: Returning with preallocated vnode"));
 	KASSERT((td->td_flags & (TDF_SBDRY | TDF_SEINTR | TDF_SERESTART)) == 0,
 	    ("userret: Returning with stop signals deferred"));
-	KASSERT(td->td_su == NULL,
-	    ("userret: Returning with SU cleanup request not handled"));
 	KASSERT(td->td_vslock_sz == 0,
 	    ("userret: Returning with vslock-wired space"));
 #ifdef VIMAGE
@@ -198,18 +199,6 @@ userret(struct thread *td, struct trapframe *frame)
 	    ("%s: Returning on td %p (pid %d, %s) with vnet %p set in %s",
 	    __func__, td, p->p_pid, td->td_name, curvnet,
 	    (td->td_vnet_lpush != NULL) ? td->td_vnet_lpush : "N/A"));
-#endif
-#ifdef RACCT
-	if (racct_enable && p->p_throttled != 0) {
-		PROC_LOCK(p);
-		while (p->p_throttled != 0) {
-			msleep(p->p_racct, &p->p_mtx, 0, "racct",
-			    p->p_throttled < 0 ? 0 : p->p_throttled);
-			if (p->p_throttled > 0)
-				p->p_throttled = 0;
-		}
-		PROC_UNLOCK(p);
-	}
 #endif
 }
 
@@ -223,8 +212,8 @@ ast(struct trapframe *framep)
 {
 	struct thread *td;
 	struct proc *p;
-	int flags;
-	int sig;
+	int flags, old_boundary, sig;
+	bool resched_sigs;
 
 	td = curthread;
 	p = td->td_proc;
@@ -248,7 +237,8 @@ ast(struct trapframe *framep)
 	thread_lock(td);
 	flags = td->td_flags;
 	td->td_flags &= ~(TDF_ASTPENDING | TDF_NEEDSIGCHK | TDF_NEEDSUSPCHK |
-	    TDF_NEEDRESCHED | TDF_ALRMPEND | TDF_PROFPEND | TDF_MACPEND);
+	    TDF_NEEDRESCHED | TDF_ALRMPEND | TDF_PROFPEND | TDF_MACPEND |
+	    TDF_KQTICKLED);
 	thread_unlock(td);
 	VM_CNT_INC(v_trap);
 
@@ -285,13 +275,22 @@ ast(struct trapframe *framep)
 #endif
 		thread_lock(td);
 		sched_prio(td, td->td_user_pri);
-		mi_switch(SW_INVOL | SWT_NEEDRESCHED, NULL);
-		thread_unlock(td);
+		mi_switch(SW_INVOL | SWT_NEEDRESCHED);
 #ifdef KTRACE
 		if (KTRPOINT(td, KTR_CSW))
 			ktrcsw(0, 1, __func__);
 #endif
 	}
+
+	td_softdep_cleanup(td);
+	MPASS(td->td_su == NULL);
+
+	/*
+	 * If this thread tickled GEOM, we need to wait for the giggling to
+	 * stop before we return to userland
+	 */
+	if (__predict_false(td->td_pflags & TDP_GEOM))
+		g_waitidle();
 
 #ifdef DIAGNOSTIC
 	if (p->p_numthreads == 1 && (flags & TDF_NEEDSIGCHK) == 0) {
@@ -304,12 +303,16 @@ ast(struct trapframe *framep)
 		 * the reason for looping check for AST condition.
 		 * See comment in userret() about P_PPWAIT.
 		 */
-		if ((p->p_flag & P_PPWAIT) == 0) {
-			KASSERT(!SIGPENDING(td) || (td->td_flags &
-			    (TDF_NEEDSIGCHK | TDF_ASTPENDING)) ==
-			    (TDF_NEEDSIGCHK | TDF_ASTPENDING),
-			    ("failed2 to set signal flags for ast p %p td %p "
-			    "fl %x %x", p, td, flags, td->td_flags));
+		if ((p->p_flag & P_PPWAIT) == 0 &&
+		    (td->td_pflags & TDP_SIGFASTBLOCK) == 0) {
+			if (SIGPENDING(td) && (td->td_flags &
+			    (TDF_NEEDSIGCHK | TDF_ASTPENDING)) !=
+			    (TDF_NEEDSIGCHK | TDF_ASTPENDING)) {
+				thread_unlock(td); /* fix dumps */
+				panic(
+	"failed2 to set signal flags for ast p %p td %p fl %x %x",
+				    p, td, flags, td->td_flags);
+			}
 		}
 		thread_unlock(td);
 		PROC_UNLOCK(p);
@@ -323,15 +326,36 @@ ast(struct trapframe *framep)
 	 */
 	if (flags & TDF_NEEDSIGCHK || p->p_pendingcnt > 0 ||
 	    !SIGISEMPTY(p->p_siglist)) {
+		sigfastblock_fetch(td);
 		PROC_LOCK(p);
+		old_boundary = ~TDB_BOUNDARY | (td->td_dbgflags & TDB_BOUNDARY);
+		td->td_dbgflags |= TDB_BOUNDARY;
 		mtx_lock(&p->p_sigacts->ps_mtx);
 		while ((sig = cursig(td)) != 0) {
 			KASSERT(sig >= 0, ("sig %d", sig));
 			postsig(sig);
 		}
 		mtx_unlock(&p->p_sigacts->ps_mtx);
+		td->td_dbgflags &= old_boundary;
 		PROC_UNLOCK(p);
+		resched_sigs = true;
+	} else {
+		resched_sigs = false;
 	}
+
+	if ((flags & TDF_KQTICKLED) != 0)
+		kqueue_drain_schedtask();
+
+	/*
+	 * Handle deferred update of the fast sigblock value, after
+	 * the postsig() loop was performed.
+	 */
+	sigfastblock_setpend(td, resched_sigs);
+
+#ifdef KTRACE
+	KTRUSERRET(td);
+#endif
+
 	/*
 	 * We need to check to see if we have to exit or wait due to a
 	 * single threading requirement or some other STOP condition.
@@ -346,6 +370,11 @@ ast(struct trapframe *framep)
 		td->td_pflags &= ~TDP_OLDMASK;
 		kern_sigprocmask(td, SIG_SETMASK, &td->td_oldsigmask, NULL, 0);
 	}
+
+#ifdef RACCT
+	if (__predict_false(racct_enable && p->p_throttled != 0))
+		racct_proc_throttled(p);
+#endif
 
 	userret(td, framep);
 }

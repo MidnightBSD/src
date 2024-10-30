@@ -31,7 +31,6 @@
 
 #include <sys/cdefs.h>
 __SCCSID("@(#)scandir.c	8.3 (Berkeley) 1/2/94");
-
 /*
  * Scan the directory dirname calling select to make a list of selected
  * directory entries then sort using qsort and compare routine dcomp.
@@ -41,8 +40,10 @@ __SCCSID("@(#)scandir.c	8.3 (Berkeley) 1/2/94");
 
 #include "namespace.h"
 #include <dirent.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include "un-namespace.h"
 
 #ifdef	I_AM_SCANDIR_B
@@ -63,22 +64,18 @@ typedef DECLARE_BLOCK(int, dcomp_block, const struct dirent **,
 static int scandir_thunk_cmp(void *thunk, const void *p1, const void *p2);
 #endif
 
-int
+static int
 #ifdef I_AM_SCANDIR_B
-scandir_b(const char *dirname, struct dirent ***namelist, select_block select,
+scandir_b_dirp(DIR *dirp, struct dirent ***namelist, select_block select,
     dcomp_block dcomp)
 #else
-scandir(const char *dirname, struct dirent ***namelist,
+scandir_dirp(DIR *dirp, struct dirent ***namelist,
     int (*select)(const struct dirent *), int (*dcomp)(const struct dirent **,
-	const struct dirent **))
+    const struct dirent **))
 #endif
 {
 	struct dirent *d, *p, **names = NULL;
 	size_t arraysz, numitems;
-	DIR *dirp;
-
-	if ((dirp = opendir(dirname)) == NULL)
-		return(-1);
 
 	numitems = 0;
 	arraysz = 32;	/* initial estimate of the array size */
@@ -137,7 +134,50 @@ fail:
 	return (-1);
 }
 
+int
+#ifdef I_AM_SCANDIR_B
+scandir_b(const char *dirname, struct dirent ***namelist, select_block select,
+    dcomp_block dcomp)
+#else
+scandir(const char *dirname, struct dirent ***namelist,
+    int (*select)(const struct dirent *), int (*dcomp)(const struct dirent **,
+    const struct dirent **))
+#endif
+{
+	DIR *dirp;
+
+	dirp = opendir(dirname);
+	if (dirp == NULL)
+		return (-1);
+	return (
+#ifdef I_AM_SCANDIR_B
+	    scandir_b_dirp
+#else
+	    scandir_dirp
+#endif
+	    (dirp, namelist, select, dcomp));
+}
+
 #ifndef I_AM_SCANDIR_B
+int
+scandirat(int dirfd, const char *dirname, struct dirent ***namelist,
+    int (*select)(const struct dirent *), int (*dcomp)(const struct dirent **,
+    const struct dirent **))
+{
+	DIR *dirp;
+	int fd;
+
+	fd = _openat(dirfd, dirname, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+	if (fd == -1)
+		return (-1);
+	dirp = fdopendir(fd);
+	if (dirp == NULL) {
+		_close(fd);
+		return (-1);
+	}
+	return (scandir_dirp(dirp, namelist, select, dcomp));
+}
+
 /*
  * Alphabetic order comparison routine for those who want it.
  * POSIX 2008 requires that alphasort() uses strcoll().
@@ -147,6 +187,13 @@ alphasort(const struct dirent **d1, const struct dirent **d2)
 {
 
 	return (strcoll((*d1)->d_name, (*d2)->d_name));
+}
+
+int
+versionsort(const struct dirent **d1, const struct dirent **d2)
+{
+
+	return (strverscmp((*d1)->d_name, (*d2)->d_name));
 }
 
 static int

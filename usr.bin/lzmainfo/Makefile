@@ -1,4 +1,3 @@
-# $FreeBSD: stable/11/usr.bin/lzmainfo/Makefile 319186 2017-05-30 04:27:05Z ngie $
 
 PROG=	lzmainfo
 

@@ -1,4 +1,3 @@
-# $FreeBSD: stable/11/usr.bin/atm/sscop/Makefile 314009 2017-02-21 02:24:45Z ngie $
 
 CONTRIB= ${SRCTOP}/contrib/ngatm/sscop
 

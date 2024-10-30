@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2007, 2008 Marcel Moolenaar
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bio.h>
 #include <sys/diskmbr.h>
@@ -51,7 +50,8 @@
 FEATURE(geom_part_mbr, "GEOM partitioning class for MBR support");
 
 SYSCTL_DECL(_kern_geom_part);
-static SYSCTL_NODE(_kern_geom_part, OID_AUTO, mbr, CTLFLAG_RW, 0,
+static SYSCTL_NODE(_kern_geom_part, OID_AUTO, mbr,
+    CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
     "GEOM_PART_MBR Master Boot Record");
 
 static u_int enforce_chs = 0;
@@ -273,7 +273,7 @@ g_part_mbr_bootcode(struct g_part_table *basetable, struct g_part_parms *gpp)
 	table = (struct g_part_mbr_table *)basetable;
 	dsn = *(uint32_t *)(table->mbr + DOSDSNOFF);
 	bcopy(gpp->gpp_codeptr, table->mbr, DOSPARTOFF);
-	if (dsn != 0)
+	if (dsn != 0 && !gpp->gpp_skip_dsn)
 		*(uint32_t *)(table->mbr + DOSDSNOFF) = dsn;
 	return (0);
 }

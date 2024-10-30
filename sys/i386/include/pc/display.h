@@ -1,6 +1,5 @@
 /*
  * IBM PC display definitions
- *
  */
 
 /* Color attributes for foreground text */

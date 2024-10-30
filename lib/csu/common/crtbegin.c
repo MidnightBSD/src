@@ -22,7 +22,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 
 #include "crt.h"

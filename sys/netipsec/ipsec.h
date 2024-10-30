@@ -281,8 +281,6 @@ VNET_DECLARE(int, crypto_support);
 VNET_DECLARE(int, async_crypto);
 VNET_DECLARE(int, natt_cksum_policy);
 
-extern struct timeval ipsec_warn_interval;
-
 #define	IPSECSTAT_INC(name)	\
     VNET_PCPUSTAT_ADD(struct ipsecstat, ipsec4stat, name, 1)
 #define	V_ip4_esp_trans_deflev	VNET(ip4_esp_trans_deflev)
@@ -326,7 +324,7 @@ int udp_ipsec_output(struct mbuf *, struct secasvar *);
 int udp_ipsec_input(struct mbuf *, int, int);
 int udp_ipsec_pcbctl(struct inpcb *, struct sockopt *);
 
-int ipsec_chkreplay(uint32_t, struct secasvar *);
+int ipsec_chkreplay(uint32_t, uint32_t *, struct secasvar *);
 int ipsec_updatereplay(uint32_t, struct secasvar *);
 int ipsec_updateid(struct secasvar *, crypto_session_t *, crypto_session_t *);
 int ipsec_initialized(void);

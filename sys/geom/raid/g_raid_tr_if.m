@@ -94,7 +94,6 @@ METHOD void iodone {
 METHOD int kerneldump {
 	struct g_raid_tr_object *tr;
 	void *virtual;
-	vm_offset_t physical;
 	off_t offset;
 	size_t length;
 } DEFAULT g_raid_tr_kerneldump_common;

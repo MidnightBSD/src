@@ -34,7 +34,6 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-
 /*
  * look.c
  * Facility: m4 macro processor

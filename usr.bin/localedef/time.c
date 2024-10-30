@@ -32,7 +32,6 @@
  * LC_TIME database generation routines for localedef.
  */
 #include <sys/cdefs.h>
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -105,7 +104,7 @@ add_list(const char *ptr[], char *str, int limit)
 			return;
 		}
 	}
-	fprintf(stderr,"too many list elements");
+	fprintf(stderr,"too many list elements\n");
 }
 
 void
@@ -138,7 +137,7 @@ add_time_list(wchar_t *wcs)
 		} else if (tm.pm == NULL) {
 			tm.pm = str;
 		} else {
-			fprintf(stderr,"too many list elements");
+			fprintf(stderr,"too many list elements\n");
 			free(str);
 		}
 		break;
@@ -181,11 +180,11 @@ check_time_list(void)
 	case T_ALT_DIGITS:
 		return;
 	default:
-		fprintf(stderr,"unknown list");
+		fprintf(stderr,"unknown list\n");
 		break;
 	}
 
-	fprintf(stderr,"too few items in list (%d)", last_kw);
+	fprintf(stderr,"too few items in list (%d)\n", last_kw);
 }
 
 void

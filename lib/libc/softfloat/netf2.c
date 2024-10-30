@@ -9,7 +9,6 @@
 #include "softfloat.h"
 
 #include <sys/cdefs.h>
-
 #ifdef FLOAT128
 
 flag __netf2(float128, float128);

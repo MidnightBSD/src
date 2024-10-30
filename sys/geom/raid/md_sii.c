@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011 Alexander Motin <mav@FreeBSD.org>
  * Copyright (c) 2000 - 2008 Søren Schmidt <sos@FreeBSD.org>
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bio.h>
 #include <sys/endian.h>
@@ -41,6 +40,7 @@
 #include <sys/systm.h>
 #include <sys/taskqueue.h>
 #include <geom/geom.h>
+#include <geom/geom_dbg.h>
 #include "geom/raid/g_raid.h"
 #include "g_raid_md_if.h"
 
@@ -269,7 +269,8 @@ sii_meta_read(struct g_consumer *cp)
 	uint16_t checksum, *ptr;
 
 	pp = cp->provider;
-
+	if (pp->sectorsize < sizeof(*meta))
+		return (NULL);
 	/* Read the anchor sector. */
 	buf = g_read_data(cp,
 	    pp->mediasize - pp->sectorsize, pp->sectorsize, &error);
@@ -584,7 +585,6 @@ nofit:
 	else
 		g_raid_change_disk_state(disk, G_RAID_DISK_S_FAILED);
 	TAILQ_FOREACH(sd, &disk->d_subdisks, sd_next) {
-
 		/*
 		 * Different disks may have different sizes,
 		 * in concat mode. Update from real disk size.
@@ -1130,7 +1130,6 @@ g_raid_md_ctl_sii(struct g_raid_md_object *md,
 	nargs = gctl_get_paraml(req, "nargs", sizeof(*nargs));
 	error = 0;
 	if (strcmp(verb, "label") == 0) {
-
 		if (*nargs < 4) {
 			gctl_error(req, "Invalid number of arguments.");
 			return (-1);
@@ -1323,7 +1322,6 @@ g_raid_md_ctl_sii(struct g_raid_md_object *md,
 		return (0);
 	}
 	if (strcmp(verb, "delete") == 0) {
-
 		/* Check if some volume is still open. */
 		force = gctl_get_paraml(req, "force", sizeof(*force));
 		if (force != NULL && *force == 0 &&
@@ -1353,7 +1351,7 @@ g_raid_md_ctl_sii(struct g_raid_md_object *md,
 				error = -2;
 				break;
 			}
-			if (strncmp(diskname, "/dev/", 5) == 0)
+			if (strncmp(diskname, _PATH_DEV, 5) == 0)
 				diskname += 5;
 
 			TAILQ_FOREACH(disk, &sc->sc_disks, d_next) {

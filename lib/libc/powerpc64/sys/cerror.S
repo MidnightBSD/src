@@ -26,7 +26,6 @@
 /*      $NetBSD: cerror.S,v 1.5 2000/01/27 14:58:48 kleink Exp $        */
 
 #include <machine/asm.h>
-	
 #include "SYS.h"
 
 	.globl  HIDENAME(cerror)
@@ -34,7 +33,7 @@
 
 	/*
 	 * The __error() function is thread aware. For non-threaded
-	 * programs and the initial threaded in threaded programs,
+	 * programs and the initial thread in threaded programs,
 	 * it returns a pointer to the global errno variable.
 	 */
 ENTRY_NOPROF(HIDENAME(cerror))
@@ -55,5 +54,6 @@ ENTRY_NOPROF(HIDENAME(cerror))
 	li	%r3,-1
 	li	%r4,-1
 	blr
+END(HIDENAME(cerror))
 
 	.section .note.GNU-stack,"",%progbits

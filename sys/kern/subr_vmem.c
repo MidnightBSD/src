@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c)2006,2007,2008,2009 YAMAMOTO Takashi,
  * Copyright (c) 2013 EMC Corp.
@@ -41,7 +41,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_ddb.h"
 
 #include <sys/param.h>
@@ -75,8 +74,6 @@
 #include <vm/vm_phys.h>
 #include <vm/vm_pagequeue.h>
 #include <vm/uma_int.h>
-
-int	vmem_startup_count(void);
 
 #define	VMEM_OPTORDER		5
 #define	VMEM_OPTVALUE		(1 << VMEM_OPTORDER)
@@ -202,7 +199,6 @@ static uma_zone_t vmem_zone;
 #define	VMEM_CONDVAR_WAIT(vm)		cv_wait(&vm->vm_cv, &vm->vm_lock)
 #define	VMEM_CONDVAR_BROADCAST(vm)	cv_broadcast(&vm->vm_cv)
 
-
 #define	VMEM_LOCK(vm)		mtx_lock(&vm->vm_lock)
 #define	VMEM_TRYLOCK(vm)	mtx_trylock(&vm->vm_lock)
 #define	VMEM_UNLOCK(vm)		mtx_unlock(&vm->vm_lock)
@@ -250,6 +246,18 @@ vmem_t *transient_arena = &transient_arena_storage;
 static struct vmem memguard_arena_storage;
 vmem_t *memguard_arena = &memguard_arena_storage;
 #endif
+
+static bool
+bt_isbusy(bt_t *bt)
+{
+	return (bt->bt_type == BT_TYPE_BUSY);
+}
+
+static bool
+bt_isfree(bt_t *bt)
+{
+	return (bt->bt_type == BT_TYPE_FREE);
+}
 
 /*
  * Fill the vmem's boundary tag cache.  We guarantee that boundary tag
@@ -589,8 +597,7 @@ qc_init(vmem_t *vm, vmem_size_t qcache_max)
 		qc->qc_vmem = vm;
 		qc->qc_size = size;
 		qc->qc_cache = uma_zcache_create(qc->qc_name, size,
-		    NULL, NULL, NULL, NULL, qc_import, qc_release, qc,
-		    UMA_ZONE_VM);
+		    NULL, NULL, NULL, NULL, qc_import, qc_release, qc, 0);
 		MPASS(qc->qc_cache);
 	}
 }
@@ -614,7 +621,7 @@ qc_drain(vmem_t *vm)
 
 	qcache_idx_max = vm->vm_qcache_max >> vm->vm_quantum_shift;
 	for (i = 0; i < qcache_idx_max; i++)
-		zone_drain(vm->vm_qcache[i].qc_cache);
+		uma_zone_reclaim(vm->vm_qcache[i].qc_cache, UMA_RECLAIM_DRAIN);
 }
 
 #ifndef UMA_MD_SMALL_ALLOC
@@ -687,17 +694,6 @@ vmem_bt_alloc(uma_zone_t zone, vm_size_t bytes, int domain, uint8_t *pflag,
 
 	return (NULL);
 }
-
-/*
- * How many pages do we need to startup_alloc.
- */
-int
-vmem_startup_count(void)
-{
-
-	return (howmany(BT_MAXALLOC,
-	    UMA_SLAB_SPACE / sizeof(struct vmem_btag)));
-}
 #endif
 
 void
@@ -707,10 +703,10 @@ vmem_startup(void)
 	mtx_init(&vmem_list_lock, "vmem list lock", NULL, MTX_DEF);
 	vmem_zone = uma_zcreate("vmem",
 	    sizeof(struct vmem), NULL, NULL, NULL, NULL,
-	    UMA_ALIGN_PTR, UMA_ZONE_VM);
+	    UMA_ALIGN_PTR, 0);
 	vmem_bt_zone = uma_zcreate("vmem btag",
 	    sizeof(struct vmem_btag), NULL, NULL, NULL, NULL,
-	    UMA_ALIGN_PTR, UMA_ZONE_VM | UMA_ZONE_NOFREE);
+	    UMA_ALIGN_PTR, UMA_ZONE_VM);
 #ifndef UMA_MD_SMALL_ALLOC
 	mtx_init(&vmem_bt_lock, "btag lock", NULL, MTX_DEF);
 	uma_prealloc(vmem_bt_zone, BT_MAXALLOC);
@@ -829,24 +825,48 @@ SYSINIT(vfs, SI_SUB_CONFIGURE, SI_ORDER_ANY, vmem_start_callout, NULL);
 static void
 vmem_add1(vmem_t *vm, vmem_addr_t addr, vmem_size_t size, int type)
 {
-	bt_t *btspan;
-	bt_t *btfree;
+	bt_t *btfree, *btprev, *btspan;
 
+	VMEM_ASSERT_LOCKED(vm);
 	MPASS(type == BT_TYPE_SPAN || type == BT_TYPE_SPAN_STATIC);
 	MPASS((size & vm->vm_quantum_mask) == 0);
 
-	btspan = bt_alloc(vm);
-	btspan->bt_type = type;
-	btspan->bt_start = addr;
-	btspan->bt_size = size;
-	bt_insseg_tail(vm, btspan);
+	if (vm->vm_releasefn == NULL) {
+		/*
+		 * The new segment will never be released, so see if it is
+		 * contiguous with respect to an existing segment.  In this case
+		 * a span tag is not needed, and it may be possible now or in
+		 * the future to coalesce the new segment with an existing free
+		 * segment.
+		 */
+		btprev = TAILQ_LAST(&vm->vm_seglist, vmem_seglist);
+		if ((!bt_isbusy(btprev) && !bt_isfree(btprev)) ||
+		    btprev->bt_start + btprev->bt_size != addr)
+			btprev = NULL;
+	} else {
+		btprev = NULL;
+	}
 
-	btfree = bt_alloc(vm);
-	btfree->bt_type = BT_TYPE_FREE;
-	btfree->bt_start = addr;
-	btfree->bt_size = size;
-	bt_insseg(vm, btfree, btspan);
-	bt_insfree(vm, btfree);
+	if (btprev == NULL || bt_isbusy(btprev)) {
+		if (btprev == NULL) {
+			btspan = bt_alloc(vm);
+			btspan->bt_type = type;
+			btspan->bt_start = addr;
+			btspan->bt_size = size;
+			bt_insseg_tail(vm, btspan);
+		}
+
+		btfree = bt_alloc(vm);
+		btfree->bt_type = BT_TYPE_FREE;
+		btfree->bt_start = addr;
+		btfree->bt_size = size;
+		bt_insseg_tail(vm, btfree);
+		bt_insfree(vm, btfree);
+	} else {
+		bt_remfree(vm, btprev);
+		btprev->bt_size += size;
+		bt_insfree(vm, btprev);
+	}
 
 	vm->vm_size += size;
 }
@@ -1181,6 +1201,7 @@ vmem_set_import(vmem_t *vm, vmem_import_t *importfn,
 {
 
 	VMEM_LOCK(vm);
+	KASSERT(vm->vm_size == 0, ("%s: arena is non-empty", __func__));
 	vm->vm_importfn = importfn;
 	vm->vm_releasefn = releasefn;
 	vm->vm_arg = arg;

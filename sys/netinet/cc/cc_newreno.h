@@ -22,7 +22,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _CC_NEWRENO_H
@@ -30,12 +29,17 @@
 
 #define CCALGONAME_NEWRENO "newreno"
 
+struct newreno {
+	uint32_t beta;
+	uint32_t beta_ecn;
+	uint32_t newreno_flags;
+};
+
 struct cc_newreno_opts {
-	int			name;
+	int		name;
 	uint32_t	val;
 };
 
-#define CC_NEWRENO_BETA		1
-#define CC_NEWRENO_BETA_ECN	2
-
+#define CC_NEWRENO_BETA		1	/* Beta for normal DUP-ACK/Sack recovery */
+#define CC_NEWRENO_BETA_ECN	2	/* ECN Beta for Abe */
 #endif /* _CC_NEWRENO_H */

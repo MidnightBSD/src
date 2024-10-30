@@ -32,8 +32,6 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 #ifndef _NETINET_SCTP_TIMER_H_
 #define _NETINET_SCTP_TIMER_H_
 
@@ -87,7 +85,6 @@ void
 void sctp_audit_retranmission_queue(struct sctp_association *);
 
 void sctp_iterator_timer(struct sctp_iterator *it);
-
 
 #endif
 #endif

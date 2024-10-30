@@ -25,8 +25,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\"
-.Dd September 13, 2020
+.Dd February 2, 2022
 .Dt SOCKSTAT 1
 .Os
 .Sh NAME
@@ -34,8 +33,8 @@
 .Nd list open sockets
 .Sh SYNOPSIS
 .Nm
-.Op Fl 46CcLlSsUuvw
-.Op Fl j Ar jid
+.Op Fl 46CciLlnqSsUuvw
+.Op Fl j Ar jail
 .Op Fl p Ar ports
 .Op Fl P Ar protocols
 .Sh DESCRIPTION
@@ -60,6 +59,9 @@ Display the congestion control module, if applicable.
 This is currently only implemented for TCP.
 .It Fl c
 Show connected sockets.
+.It Fl i
+Display the
+.Dv inp_gencnt .
 .It Fl j Ar jail
 Show only sockets belonging to the specified jail ID or name.
 .It Fl L
@@ -70,6 +72,8 @@ or do not contain the IPv6 loopback address
 .Li ::1 .
 .It Fl l
 Show listening sockets.
+.It Fl n
+Do not resolve numeric UIDs to user names.
 .It Fl p Ar ports
 Only show Internet sockets if the local or foreign port number
 is on the specified list.
@@ -95,7 +99,7 @@ Display the protocol state, if applicable.
 This is currently only implemented for SCTP and TCP.
 .It Fl U
 Display the remote UDP encapsulation port number, if applicable.
-This is currently only implemented for SCTP.
+This is currently only implemented for SCTP and TCP.
 .It Fl u
 Show
 .Dv AF_LOCAL
@@ -157,10 +161,14 @@ if the endpoint could not be determined.
 (Internet sockets only)
 The address the foreign end of the socket is bound to (see
 .Xr getpeername 2 ) .
+.It Li ID
+The inp_gencnt if
+.Fl i
+is specified (only for TCP or UDP).
 .It Li ENCAPS
 The remote UDP encapsulation port number if
 .Fl U
-is specified (only for SCTP).
+is specified (only for SCTP or TCP).
 .It Li PATH STATE
 The path state if
 .Fl s
@@ -183,6 +191,23 @@ If a socket is associated with more than one file descriptor,
 it is shown multiple times.
 If a socket is not associated with any file descriptor,
 the first four columns have no meaning.
+.Sh EXAMPLES
+Show information for IPv4 sockets listening on port 22 using protocol
+TCP:
+.Bd -literal -offset indent
+$ sockstat -4 -l -P tcp -p 22
+.Ed
+.Pp
+Show information for sockets using either TCP or UDP, if neither, the local nor
+the foreign addresses are in the loopback network:
+.Bd -literal -offset indent
+$ sockstat -L -P tcp,udp
+.Ed
+.Pp
+Show TCP IPv6 sockets which are listening and connected (default):
+.Bd -literal -offset indent
+$ sockstat -6 -P tcp
+.Ed
 .Sh SEE ALSO
 .Xr fstat 1 ,
 .Xr netstat 1 ,

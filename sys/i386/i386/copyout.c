@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2018 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Konstantin Belousov <kib@FreeBSD.org>
  * under sponsorship from the FreeBSD Foundation.
@@ -30,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
@@ -45,12 +43,6 @@
 #include <vm/pmap.h>
 #include <vm/vm_map.h>
 #include <vm/vm_page.h>
-
-#if defined(PAE) || defined(PAE_TABLES)
-#define	KCR3	((u_int)IdlePDPT)
-#else
-#define	KCR3	((u_int)IdlePTD)
-#endif
 
 int copyin_fast(const void *udaddr, void *kaddr, size_t len, u_int);
 static int (*copyin_fast_tramp)(const void *, void *, size_t, u_int);
@@ -102,7 +94,6 @@ cp_slow0(vm_offset_t uva, size_t len, bool write,
 {
 	struct pcpu *pc;
 	vm_page_t m[2];
-	pt_entry_t *pte;
 	vm_offset_t kaddr;
 	int error, i, plen;
 	bool sleepable;
@@ -127,12 +118,7 @@ cp_slow0(vm_offset_t uva, size_t len, bool write,
 		sx_xlock(&pc->pc_copyout_slock);
 		kaddr = pc->pc_copyout_saddr;
 	}
-	for (i = 0, pte = vtopte(kaddr); i < plen; i++, pte++) {
-		*pte = PG_V | PG_RW | PG_A | PG_M | VM_PAGE_TO_PHYS(m[i]) |
-		    pmap_cache_bits(kernel_pmap, pmap_page_get_memattr(m[i]),
-		    FALSE);
-		invlpg(kaddr + ptoa(i));
-	}
+	pmap_cp_slow0_map(kaddr, plen, m);
 	kaddr += uva - trunc_page(uva);
 	f(kaddr, arg);
 	sched_unpin();
@@ -224,7 +210,7 @@ copyin(const void *udaddr, void *kaddr, size_t len)
 	    (uintptr_t)udaddr + len > VM_MAXUSER_ADDRESS)
 		return (EFAULT);
 	if (len == 0 || (fast_copyout && len <= TRAMP_COPYOUT_SZ &&
-	    copyin_fast_tramp(udaddr, kaddr, len, KCR3) == 0))
+	    copyin_fast_tramp(udaddr, kaddr, len, pmap_get_kcr3()) == 0))
 		return (0);
 	for (plen = 0, uc = (vm_offset_t)udaddr, ca.kc = (vm_offset_t)kaddr;
 	    plen < len; uc += ca.len, ca.kc += ca.len, plen += ca.len) {
@@ -259,7 +245,7 @@ copyout(const void *kaddr, void *udaddr, size_t len)
 	    (uintptr_t)udaddr + len > VM_MAXUSER_ADDRESS)
 		return (EFAULT);
 	if (len == 0 || (fast_copyout && len <= TRAMP_COPYOUT_SZ &&
-	    copyout_fast_tramp(kaddr, udaddr, len, KCR3) == 0))
+	    copyout_fast_tramp(kaddr, udaddr, len, pmap_get_kcr3()) == 0))
 		return (0);
 	for (plen = 0, uc = (vm_offset_t)udaddr, ca.kc = (vm_offset_t)kaddr;
 	    plen < len; uc += ca.len, ca.kc += ca.len, plen += ca.len) {
@@ -295,7 +281,7 @@ fubyte(volatile const void *base)
 	    (uintptr_t)base + sizeof(uint8_t) > VM_MAXUSER_ADDRESS)
 		return (-1);
 	if (fast_copyout) {
-		res = fubyte_fast_tramp(base, KCR3);
+		res = fubyte_fast_tramp(base, pmap_get_kcr3());
 		if (res != -1)
 			return (res);
 	}
@@ -321,7 +307,7 @@ fuword16(volatile const void *base)
 	    (uintptr_t)base + sizeof(uint16_t) > VM_MAXUSER_ADDRESS)
 		return (-1);
 	if (fast_copyout) {
-		res = fuword16_fast_tramp(base, KCR3);
+		res = fuword16_fast_tramp(base, pmap_get_kcr3());
 		if (res != -1)
 			return (res);
 	}
@@ -347,7 +333,7 @@ fueword(volatile const void *base, long *val)
 	    (uintptr_t)base + sizeof(*val) > VM_MAXUSER_ADDRESS)
 		return (-1);
 	if (fast_copyout) {
-		if (fueword_fast_tramp(base, val, KCR3) == 0)
+		if (fueword_fast_tramp(base, val, pmap_get_kcr3()) == 0)
 			return (0);
 	}
 	if (cp_slow0((vm_offset_t)base, sizeof(long), false, fueword_slow0,
@@ -382,7 +368,7 @@ subyte(volatile void *base, int byte)
 	if ((uintptr_t)base + sizeof(uint8_t) < (uintptr_t)base ||
 	    (uintptr_t)base + sizeof(uint8_t) > VM_MAXUSER_ADDRESS)
 		return (-1);
-	if (fast_copyout && subyte_fast_tramp(base, byte, KCR3) == 0)
+	if (fast_copyout && subyte_fast_tramp(base, byte, pmap_get_kcr3()) == 0)
 		return (0);
 	return (cp_slow0((vm_offset_t)base, sizeof(u_char), true, subyte_slow0,
 	    &byte) != 0 ? -1 : 0);
@@ -402,7 +388,8 @@ suword16(volatile void *base, int word)
 	if ((uintptr_t)base + sizeof(uint16_t) < (uintptr_t)base ||
 	    (uintptr_t)base + sizeof(uint16_t) > VM_MAXUSER_ADDRESS)
 		return (-1);
-	if (fast_copyout && suword16_fast_tramp(base, word, KCR3) == 0)
+	if (fast_copyout && suword16_fast_tramp(base, word, pmap_get_kcr3())
+	    == 0)
 		return (0);
 	return (cp_slow0((vm_offset_t)base, sizeof(int16_t), true,
 	    suword16_slow0, &word) != 0 ? -1 : 0);
@@ -422,7 +409,7 @@ suword(volatile void *base, long word)
 	if ((uintptr_t)base + sizeof(word) < (uintptr_t)base ||
 	    (uintptr_t)base + sizeof(word) > VM_MAXUSER_ADDRESS)
 		return (-1);
-	if (fast_copyout && suword_fast_tramp(base, word, KCR3) == 0)
+	if (fast_copyout && suword_fast_tramp(base, word, pmap_get_kcr3()) == 0)
 		return (0);
 	return (cp_slow0((vm_offset_t)base, sizeof(long), true,
 	    suword_slow0, &word) != 0 ? -1 : 0);

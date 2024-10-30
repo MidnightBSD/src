@@ -27,7 +27,6 @@
  * SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-
 /*
  * functions needed to support gnu-m4 extensions, including a fake freezing
  */

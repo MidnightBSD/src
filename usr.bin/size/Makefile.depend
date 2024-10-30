@@ -5,9 +5,11 @@ DIRDEPS = \
 	include/xlocale \
 	lib/${CSU_DIR} \
 	lib/libc \
+	lib/libcapsicum \
 	lib/libcompiler_rt \
 	lib/libelf \
 	lib/libelftc \
+	lib/libnv \
 
 
 .include <dirdeps.mk>

@@ -73,7 +73,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_inet.h"
 #include "opt_inet6.h"
 #include "opt_tcpdebug.h"
@@ -127,7 +126,8 @@
 VNET_DECLARE(struct uma_zone *, sack_hole_zone);
 #define	V_sack_hole_zone		VNET(sack_hole_zone)
 
-SYSCTL_NODE(_net_inet_tcp, OID_AUTO, sack, CTLFLAG_RW, 0, "TCP SACK");
+SYSCTL_NODE(_net_inet_tcp, OID_AUTO, sack, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "TCP SACK");
 VNET_DEFINE(int, tcp_do_sack) = 1;
 #define	V_tcp_do_sack			VNET(tcp_do_sack)
 SYSCTL_INT(_net_inet_tcp_sack, OID_AUTO, enable, CTLFLAG_VNET | CTLFLAG_RW,
@@ -140,7 +140,7 @@ SYSCTL_INT(_net_inet_tcp_sack, OID_AUTO, maxholes, CTLFLAG_VNET | CTLFLAG_RW,
 
 VNET_DEFINE(int, tcp_sack_globalmaxholes) = 65536;
 SYSCTL_INT(_net_inet_tcp_sack, OID_AUTO, globalmaxholes, CTLFLAG_VNET | CTLFLAG_RW,
-    &VNET_NAME(tcp_sack_globalmaxholes), 0, 
+    &VNET_NAME(tcp_sack_globalmaxholes), 0,
     "Global maximum number of TCP SACK holes");
 
 VNET_DEFINE(int, tcp_sack_globalholes) = 0;
@@ -148,6 +148,16 @@ SYSCTL_INT(_net_inet_tcp_sack, OID_AUTO, globalholes, CTLFLAG_VNET | CTLFLAG_RD,
     &VNET_NAME(tcp_sack_globalholes), 0,
     "Global number of TCP SACK holes currently allocated");
 
+int
+tcp_dsack_block_exists(struct tcpcb *tp)
+{
+	/* Return true if a DSACK block exists */
+	if (tp->rcv_numsacks == 0)
+		return (0);
+	if (SEQ_LEQ(tp->sackblks[0].end, tp->rcv_nxt))
+		return(1);
+	return (0);
+}
 
 /*
  * This function will find overlaps with the currently stored sackblocks
@@ -237,7 +247,7 @@ tcp_update_dsack_list(struct tcpcb *tp, tcp_seq rcv_start, tcp_seq rcv_end)
 	}
 	j = 0;
 	for (i = 0; i < n; i++) {
-		/* we can end up with a stale inital entry */
+		/* we can end up with a stale initial entry */
 		if (SEQ_LT(saved_blks[i].start, saved_blks[i].end)) {
 			tp->sackblks[j++] = saved_blks[i];
 		}
@@ -396,7 +406,7 @@ tcp_clean_dsack_blocks(struct tcpcb *tp)
 	/*
 	 * Clean up any DSACK blocks that
 	 * are in our queue of sack blocks.
-	 * 
+	 *
 	 */
 	num_saved = 0;
 	for (i = 0; i < tp->rcv_numsacks; i++) {
@@ -558,6 +568,15 @@ tcp_sack_doack(struct tcpcb *tp, struct tcpopt *to, tcp_seq th_ack)
 		left_edge_delta = th_ack - tp->snd_una;
 		sack_blocks[num_sack_blks].start = tp->snd_una;
 		sack_blocks[num_sack_blks++].end = th_ack;
+		/*
+		 * Pulling snd_fack forward if we got here
+		 * due to DSACK blocks
+		 */
+		if (SEQ_LT(tp->snd_fack, th_ack)) {
+			delivered_data += th_ack - tp->snd_una;
+			tp->snd_fack = th_ack;
+			sack_changed = 1;
+		}
 	}
 	/*
 	 * Append received valid SACK blocks to sack_blocks[], but only if we
@@ -627,35 +646,52 @@ tcp_sack_doack(struct tcpcb *tp, struct tcpopt *to, tcp_seq th_ack)
 	tp->sackhint.last_sack_ack = sblkp->end;
 	if (SEQ_LT(tp->snd_fack, sblkp->start)) {
 		/*
-		 * The highest SACK block is beyond fack.  Append new SACK
-		 * hole at the tail.  If the second or later highest SACK
-		 * blocks are also beyond the current fack, they will be
-		 * inserted by way of hole splitting in the while-loop below.
+		 * The highest SACK block is beyond fack.  First,
+		 * check if there was a successful Rescue Retransmission,
+		 * and move this hole left. With normal holes, snd_fack
+		 * is always to the right of the end.
 		 */
-		temp = tcp_sackhole_insert(tp, tp->snd_fack,sblkp->start,NULL);
-		if (temp != NULL) {
+		if (((temp = TAILQ_LAST(&tp->snd_holes, sackhole_head)) != NULL) &&
+		    SEQ_LEQ(tp->snd_fack,temp->end)) {
+			temp->start = SEQ_MAX(tp->snd_fack, SEQ_MAX(tp->snd_una, th_ack));
+			temp->end = sblkp->start;
+			temp->rxmit = temp->start;
 			delivered_data += sblkp->end - sblkp->start;
 			tp->snd_fack = sblkp->end;
-			/* Go to the previous sack block. */
 			sblkp--;
 			sack_changed = 1;
 		} else {
-			/* 
-			 * We failed to add a new hole based on the current 
-			 * sack block.  Skip over all the sack blocks that 
-			 * fall completely to the right of snd_fack and
-			 * proceed to trim the scoreboard based on the
-			 * remaining sack blocks.  This also trims the
-			 * scoreboard for th_ack (which is sack_blocks[0]).
+			/*
+			 * Append a new SACK hole at the tail.  If the
+			 * second or later highest SACK blocks are also
+			 * beyond the current fack, they will be inserted
+			 * by way of hole splitting in the while-loop below.
 			 */
-			while (sblkp >= sack_blocks && 
-			       SEQ_LT(tp->snd_fack, sblkp->start))
-				sblkp--;
-			if (sblkp >= sack_blocks && 
-			    SEQ_LT(tp->snd_fack, sblkp->end)) {
-				delivered_data += sblkp->end - tp->snd_fack;
+			temp = tcp_sackhole_insert(tp, tp->snd_fack,sblkp->start,NULL);
+			if (temp != NULL) {
+				delivered_data += sblkp->end - sblkp->start;
 				tp->snd_fack = sblkp->end;
+				/* Go to the previous sack block. */
+				sblkp--;
 				sack_changed = 1;
+			} else {
+				/*
+				 * We failed to add a new hole based on the current
+				 * sack block.  Skip over all the sack blocks that
+				 * fall completely to the right of snd_fack and
+				 * proceed to trim the scoreboard based on the
+				 * remaining sack blocks.  This also trims the
+				 * scoreboard for th_ack (which is sack_blocks[0]).
+				 */
+				while (sblkp >= sack_blocks &&
+				       SEQ_LT(tp->snd_fack, sblkp->start))
+					sblkp--;
+				if (sblkp >= sack_blocks &&
+				    SEQ_LT(tp->snd_fack, sblkp->end)) {
+					delivered_data += sblkp->end - tp->snd_fack;
+					tp->snd_fack = sblkp->end;
+					sack_changed = 1;
+				}
 			}
 		}
 	} else if (SEQ_LT(tp->snd_fack, sblkp->end)) {
@@ -749,6 +785,16 @@ tcp_sack_doack(struct tcpcb *tp, struct tcpopt *to, tcp_seq th_ack)
 		else
 			sblkp--;
 	}
+	if (!(to->to_flags & TOF_SACK))
+		/*
+		 * If this ACK did not contain any
+		 * SACK blocks, any only moved the
+		 * left edge right, it is a pure
+		 * cumulative ACK. Do not count
+		 * DupAck for this. Also required
+		 * for RFC6675 rescue retransmission.
+		 */
+		sack_changed = 0;
 	tp->sackhint.delivered_data = delivered_data;
 	tp->sackhint.sacked_bytes += delivered_data - left_edge_delta;
 	KASSERT((delivered_data >= 0), ("delivered_data < 0"));
@@ -795,10 +841,46 @@ tcp_sack_partialack(struct tcpcb *tp, struct tcphdr *th)
 	if ((BYTES_THIS_ACK(tp, th) / maxseg) >= 2)
 		num_segs = 2;
 	tp->snd_cwnd = (tp->sackhint.sack_bytes_rexmit +
-	    (tp->snd_nxt - tp->sack_newdata) + num_segs * maxseg);
+	    (tp->snd_nxt - tp->snd_recover) + num_segs * maxseg);
 	if (tp->snd_cwnd > tp->snd_ssthresh)
 		tp->snd_cwnd = tp->snd_ssthresh;
 	tp->t_flags |= TF_ACKNOW;
+	/*
+	 * RFC6675 rescue retransmission
+	 * Add a hole between th_ack (snd_una is not yet set) and snd_max,
+	 * if this was a pure cumulative ACK and no data was send beyond
+	 * recovery point. Since the data in the socket has not been freed
+	 * at this point, we check if the scoreboard is empty, and the ACK
+	 * delivered some new data, indicating a full ACK. Also, if the
+	 * recovery point is still at snd_max, we are probably application
+	 * limited. However, this inference might not always be true. The
+	 * rescue retransmission may rarely be slightly premature
+	 * compared to RFC6675.
+	 * The corresponding ACK+SACK will cause any further outstanding
+	 * segments to be retransmitted. This addresses a corner case, when
+	 * the trailing packets of a window are lost and no further data
+	 * is available for sending.
+	 */
+	if ((V_tcp_do_rfc6675_pipe) &&
+	    SEQ_LT(th->th_ack, tp->snd_recover) &&
+	    (tp->snd_recover == tp->snd_max) &&
+	    TAILQ_EMPTY(&tp->snd_holes) &&
+	    (tp->sackhint.delivered_data > 0)) {
+		/*
+		 * Exclude FIN sequence space in
+		 * the hole for the rescue retransmission,
+		 * and also don't create a hole, if only
+		 * the ACK for a FIN is outstanding.
+		 */
+		tcp_seq highdata = tp->snd_max;
+		if (tp->t_flags & TF_SENTFIN)
+			highdata--;
+		if (th->th_ack != highdata) {
+			tp->snd_fack = th->th_ack;
+			(void)tcp_sackhole_insert(tp, SEQ_MAX(th->th_ack,
+			    highdata - maxseg), highdata, NULL);
+		}
+	}
 	(void) tp->t_fb->tfb_tcp_output(tp);
 }
 

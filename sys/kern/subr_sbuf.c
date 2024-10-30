@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000-2008 Poul-Henning Kamp
  * Copyright (c) 2000-2008 Dag-Erling Coïdan Smørgrav
@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 
 #ifdef _KERNEL
@@ -69,6 +68,7 @@ static MALLOC_DEFINE(M_SBUF, "sbuf", "string buffers");
 #define	SBUF_ISDYNAMIC(s)	((s)->s_flags & SBUF_DYNAMIC)
 #define	SBUF_ISDYNSTRUCT(s)	((s)->s_flags & SBUF_DYNSTRUCT)
 #define	SBUF_ISFINISHED(s)	((s)->s_flags & SBUF_FINISHED)
+#define	SBUF_ISDRAINATEOL(s)	((s)->s_flags & SBUF_DRAINATEOL)
 #define	SBUF_HASROOM(s)		((s)->s_len < (s)->s_size - 1)
 #define	SBUF_FREESPACE(s)	((s)->s_size - ((s)->s_len + 1))
 #define	SBUF_CANEXTEND(s)	((s)->s_flags & SBUF_AUTOEXTEND)
@@ -186,39 +186,6 @@ sbuf_extend(struct sbuf *s, int addlen)
 }
 
 /*
- * Initialize the internals of an sbuf.
- * If buf is non-NULL, it points to a static or already-allocated string
- * big enough to hold at least length characters.
- */
-static struct sbuf *
-sbuf_newbuf(struct sbuf *s, char *buf, int length, int flags)
-{
-
-	memset(s, 0, sizeof(*s));
-	s->s_flags = flags;
-	s->s_size = length;
-	s->s_buf = buf;
-
-	if (!SBUF_CANEXTEND(s)) {
-		KASSERT(s->s_size >= SBUF_MINSIZE,
-		    ("attempt to create an sbuf smaller than %d bytes",
-		    SBUF_MINSIZE));
-	}
-
-	if (s->s_buf != NULL)
-		return (s);
-
-	if (SBUF_CANEXTEND(s))
-		s->s_size = sbuf_extendsize(s->s_size);
-
-	s->s_buf = SBMALLOC(s->s_size, SBUF_MALLOCFLAG(s));
-	if (s->s_buf == NULL)
-		return (NULL);
-	SBUF_SETFLAG(s, SBUF_DYNAMIC);
-	return (s);
-}
-
-/*
  * Initialize an sbuf.
  * If buf is non-NULL, it points to a static or already-allocated string
  * big enough to hold at least length characters.
@@ -231,19 +198,56 @@ sbuf_new(struct sbuf *s, char *buf, int length, int flags)
 	    ("attempt to create an sbuf of negative length (%d)", length));
 	KASSERT((flags & ~SBUF_USRFLAGMSK) == 0,
 	    ("%s called with invalid flags", __func__));
+	KASSERT((flags & SBUF_AUTOEXTEND) || length >= SBUF_MINSIZE,
+	    ("sbuf buffer %d smaller than minimum %d bytes", length,
+	    SBUF_MINSIZE));
 
 	flags &= SBUF_USRFLAGMSK;
-	if (s != NULL)
-		return (sbuf_newbuf(s, buf, length, flags));
 
-	s = SBMALLOC(sizeof(*s), (flags & SBUF_NOWAIT) ? M_NOWAIT : M_WAITOK);
-	if (s == NULL)
-		return (NULL);
-	if (sbuf_newbuf(s, buf, length, flags) == NULL) {
-		SBFREE(s);
-		return (NULL);
+	/*
+	 * Allocate 'DYNSTRUCT' sbuf from the heap, if NULL 's' was provided.
+	 */
+	if (s == NULL) {
+		s = SBMALLOC(sizeof(*s),
+		    (flags & SBUF_NOWAIT) ?  M_NOWAIT : M_WAITOK);
+		if (s == NULL)
+			goto out;
+		SBUF_SETFLAG(s, SBUF_DYNSTRUCT);
+	} else {
+		/*
+		 * DYNSTRUCT SBMALLOC sbufs are allocated with M_ZERO, but
+		 * user-provided sbuf objects must be initialized.
+		 */
+		memset(s, 0, sizeof(*s));
 	}
-	SBUF_SETFLAG(s, SBUF_DYNSTRUCT);
+
+	s->s_flags |= flags;
+	s->s_size = length;
+	s->s_buf = buf;
+	/*
+	 * Never-written sbufs do not need \n termination.
+	 */
+	SBUF_SETFLAG(s, SBUF_DRAINATEOL);
+
+	/*
+	 * Allocate DYNAMIC, i.e., heap data buffer backing the sbuf, if no
+	 * buffer was provided.
+	 */
+	if (s->s_buf == NULL) {
+		if (SBUF_CANEXTEND(s))
+			s->s_size = sbuf_extendsize(s->s_size);
+		s->s_buf = SBMALLOC(s->s_size, SBUF_MALLOCFLAG(s));
+		if (s->s_buf == NULL)
+			goto out;
+		SBUF_SETFLAG(s, SBUF_DYNAMIC);
+	}
+
+out:
+	if (s != NULL && s->s_buf == NULL) {
+		if (SBUF_ISDYNSTRUCT(s))
+			SBFREE(s);
+		s = NULL;
+	}
 	return (s);
 }
 
@@ -300,7 +304,6 @@ void
 sbuf_set_flags(struct sbuf *s, int flags)
 {
 
-
 	s->s_flags |= (flags & SBUF_USRFLAGMSK);
 }
 
@@ -313,6 +316,8 @@ sbuf_clear(struct sbuf *s)
 
 	assert_sbuf_integrity(s);
 	/* don't care if it's finished or not */
+	KASSERT(s->s_drain_func == NULL,
+	    ("%s makes no sense on sbuf %p with drain", __func__, s));
 
 	SBUF_CLEARFLAG(s, SBUF_FINISHED);
 	s->s_error = 0;
@@ -408,8 +413,18 @@ sbuf_drain(struct sbuf *s)
 	 * Fast path for the expected case where all the data was
 	 * drained.
 	 */
-	if (s->s_len == 0)
+	if (s->s_len == 0) {
+		/*
+		 * When the s_buf is entirely drained, we need to remember if
+		 * the last character was a '\n' or not for
+		 * sbuf_nl_terminate().
+		 */
+		if (s->s_buf[len - 1] == '\n')
+			SBUF_SETFLAG(s, SBUF_DRAINATEOL);
+		else
+			SBUF_CLEARFLAG(s, SBUF_DRAINATEOL);
 		return (0);
+	}
 	/*
 	 * Move the remaining characters to the beginning of the
 	 * string.
@@ -738,6 +753,38 @@ sbuf_putc(struct sbuf *s, int c)
 {
 
 	sbuf_put_byte(s, c);
+	if (s->s_error != 0)
+		return (-1);
+	return (0);
+}
+
+/*
+ * Append a trailing newline to a non-empty sbuf, if one is not already
+ * present.  Handles sbufs with drain functions correctly.
+ */
+int
+sbuf_nl_terminate(struct sbuf *s)
+{
+
+	assert_sbuf_integrity(s);
+	assert_sbuf_state(s, 0);
+
+	/*
+	 * If the s_buf isn't empty, the last byte is simply s_buf[s_len - 1].
+	 *
+	 * If the s_buf is empty because a drain function drained it, we
+	 * remember if the last byte was a \n with the SBUF_DRAINATEOL flag in
+	 * sbuf_drain().
+	 *
+	 * In either case, we only append a \n if the previous character was
+	 * something else.
+	 */
+	if (s->s_len == 0) {
+		if (!SBUF_ISDRAINATEOL(s))
+			sbuf_put_byte(s, '\n');
+	} else if (s->s_buf[s->s_len - 1] != '\n')
+		sbuf_put_byte(s, '\n');
+
 	if (s->s_error != 0)
 		return (-1);
 	return (0);

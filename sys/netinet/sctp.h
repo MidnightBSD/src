@@ -32,14 +32,11 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 #ifndef _NETINET_SCTP_H_
 #define _NETINET_SCTP_H_
 
-
+#include <sys/cdefs.h>
 #include <sys/types.h>
-
 
 #define SCTP_PACKED __attribute__((packed))
 
@@ -183,7 +180,6 @@ struct sctp_paramhdr {
 #define SCTP_STREAM_RESET_INCOMING	0x00000001
 #define SCTP_STREAM_RESET_OUTGOING	0x00000002
 
-
 /* here on down are more implementation specific */
 #define SCTP_SET_DEBUG_LEVEL		0x00001005
 #define SCTP_CLR_STAT_LOG               0x00001007
@@ -193,8 +189,11 @@ struct sctp_paramhdr {
 /* JRS - Pluggable Congestion Control Socket option */
 #define SCTP_PLUGGABLE_CC               0x00001202
 /* RS - Pluggable Stream Scheduling Socket option */
-#define SCTP_PLUGGABLE_SS		0x00001203
-#define SCTP_SS_VALUE			0x00001204
+#define SCTP_STREAM_SCHEDULER		0x00001203
+#define SCTP_STREAM_SCHEDULER_VALUE	0x00001204
+/* The next two are for backwards compatibility. */
+#define SCTP_PLUGGABLE_SS		SCTP_STREAM_SCHEDULER
+#define SCTP_SS_VALUE			SCTP_STREAM_SCHEDULER_VALUE
 #define SCTP_CC_OPTION			0x00001205	/* Options for CC
 							 * modules */
 /* For I-DATA */
@@ -205,7 +204,6 @@ struct sctp_paramhdr {
 #define SCTP_GET_STAT_LOG		0x00001103
 #define SCTP_PCB_STATUS			0x00001104
 #define SCTP_GET_NONCE_VALUES           0x00001105
-
 
 /* Special hook for dynamically setting primary for all assoc's,
  * this is a write only option that requires root privilege.
@@ -311,16 +309,21 @@ struct sctp_paramhdr {
 /* Default simple round-robin */
 #define SCTP_SS_DEFAULT			0x00000000
 /* Real round-robin */
-#define SCTP_SS_ROUND_ROBIN		0x00000001
+#define SCTP_SS_RR			0x00000001
 /* Real round-robin per packet */
-#define SCTP_SS_ROUND_ROBIN_PACKET	0x00000002
+#define SCTP_SS_RR_PKT			0x00000002
 /* Priority */
-#define SCTP_SS_PRIORITY		0x00000003
+#define SCTP_SS_PRIO			0x00000003
 /* Fair Bandwidth */
-#define SCTP_SS_FAIR_BANDWITH		0x00000004
+#define SCTP_SS_FB			0x00000004
 /* First-come, first-serve */
-#define SCTP_SS_FIRST_COME		0x00000005
-
+#define SCTP_SS_FCFS			0x00000005
+/* The next five are for backwards compatibility. */
+#define SCTP_SS_ROUND_ROBIN		SCTP_SS_RR
+#define SCTP_SS_ROUND_ROBIN_PACKET	SCTP_SS_RR_PKT
+#define SCTP_SS_PRIORITY		SCTP_SS_PRIO
+#define SCTP_SS_FAIR_BANDWITH		SCTP_SS_FB
+#define SCTP_SS_FIRST_COME		SCTP_SS_FCFS
 
 /* fragment interleave constants
  * setting must be one of these or
@@ -582,7 +585,6 @@ struct sctp_error_auth_invalid_hmac {
 #define SCTP_MOBILITY_FASTHANDOFF        0x00000002
 #define SCTP_MOBILITY_PRIM_DELETED       0x00000004
 
-
 /* Smallest PMTU allowed when disabling PMTU discovery */
 #define SCTP_SMALLEST_PMTU 512
 /* Largest PMTU allowed when disabling PMTU discovery */
@@ -606,7 +608,6 @@ struct sctp_error_auth_invalid_hmac {
 #define SCTP_MAX_HB_INTERVAL 14400000	/* 4 hours in ms */
 #define SCTP_MIN_COOKIE_LIFE     1000	/* 1 second in ms */
 #define SCTP_MAX_COOKIE_LIFE  3600000	/* 1 hour in ms */
-
 
 /* Types of logging/KTR tracing  that can be enabled via the
  * sysctl net.inet.sctp.sctp_logging. You must also enable

@@ -33,10 +33,10 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_inet.h"
 #include "opt_inet6.h"
 #include "opt_ipsec.h"
+#include "opt_route.h"
 
 #include <sys/param.h>
 #include <sys/jail.h>
@@ -62,10 +62,12 @@
 #include <net/if.h>
 #include <net/if_var.h>
 #include <net/route.h>
+#include <net/route/route_ctl.h>
 #include <net/vnet.h>
 
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
+#include <netinet/in_fib.h>
 #include <netinet/in_pcb.h>
 #include <netinet/in_var.h>
 #include <netinet/if_ether.h>
@@ -99,10 +101,9 @@ VNET_DEFINE(ip_fw_chk_ptr_t, ip_fw_chk_ptr) = NULL;
 VNET_DEFINE(ip_fw_ctl_ptr_t, ip_fw_ctl_ptr) = NULL;
 
 int	(*ip_dn_ctl_ptr)(struct sockopt *);
-int	(*ip_dn_io_ptr)(struct mbuf **, int, struct ip_fw_args *);
-void	(*ip_divert_ptr)(struct mbuf *, int);
-int	(*ng_ipfw_input_p)(struct mbuf **, int,
-			struct ip_fw_args *, int);
+int	(*ip_dn_io_ptr)(struct mbuf **, struct ip_fw_args *);
+void	(*ip_divert_ptr)(struct mbuf *, bool);
+int	(*ng_ipfw_input_p)(struct mbuf **, struct ip_fw_args *, bool);
 
 #ifdef INET
 /*
@@ -160,7 +161,7 @@ rip_inshash(struct inpcb *inp)
 
 	INP_INFO_WLOCK_ASSERT(pcbinfo);
 	INP_WLOCK_ASSERT(inp);
-	
+
 	if (inp->inp_ip_p != 0 &&
 	    inp->inp_laddr.s_addr != INADDR_ANY &&
 	    inp->inp_faddr.s_addr != INADDR_ANY) {
@@ -283,8 +284,9 @@ rip_input(struct mbuf **mp, int *offp, int proto)
 	struct ip *ip = mtod(m, struct ip *);
 	struct inpcb *inp, *last;
 	struct sockaddr_in ripsrc;
-	struct epoch_tracker et;
 	int hash;
+
+	NET_EPOCH_ASSERT();
 
 	*mp = NULL;
 
@@ -298,7 +300,6 @@ rip_input(struct mbuf **mp, int *offp, int proto)
 
 	hash = INP_PCBHASH_RAW(proto, ip->ip_src.s_addr,
 	    ip->ip_dst.s_addr, V_ripcbinfo.ipi_hashmask);
-	INP_INFO_RLOCK_ET(&V_ripcbinfo, et);
 	CK_LIST_FOREACH(inp, &V_ripcbinfo.ipi_hashbase[hash], inp_hash) {
 		if (inp->inp_ip_p != proto)
 			continue;
@@ -421,7 +422,6 @@ rip_input(struct mbuf **mp, int *offp, int proto)
 	skip_2:
 		INP_RUNLOCK(inp);
 	}
-	INP_INFO_RUNLOCK_ET(&V_ripcbinfo, et);
 	if (last != NULL) {
 		if (rip_append(last, ip, m, &ripsrc) != 0)
 			IPSTAT_INC(ips_delivered);
@@ -445,6 +445,7 @@ rip_input(struct mbuf **mp, int *offp, int proto)
 int
 rip_output(struct mbuf *m, struct socket *so, ...)
 {
+	struct epoch_tracker et;
 	struct ip *ip;
 	int error;
 	struct inpcb *inp = sotoinpcb(so);
@@ -483,6 +484,17 @@ rip_output(struct mbuf *m, struct socket *so, ...)
 		ip->ip_len = htons(m->m_pkthdr.len);
 		ip->ip_src = inp->inp_laddr;
 		ip->ip_dst.s_addr = dst;
+#ifdef ROUTE_MPATH
+		if (CALC_FLOWID_OUTBOUND) {
+			uint32_t hash_type, hash_val;
+
+			hash_val = fib4_calc_software_hash(ip->ip_src,
+			    ip->ip_dst, 0, 0, ip->ip_p, &hash_type);
+			m->m_pkthdr.flowid = hash_val;
+			M_HASHTYPE_SET(m, hash_type);
+			flags |= IP_NODEFAULTFLOWID;
+		}
+#endif
 		if (jailed(inp->inp_cred)) {
 			/*
 			 * prison_local_ip4() would be good enough but would
@@ -490,8 +502,10 @@ rip_output(struct mbuf *m, struct socket *so, ...)
 			 * want to see from jails.
 			 */
 			if (ip->ip_src.s_addr == INADDR_ANY) {
-				error = in_pcbladdr(inp, &ip->ip_dst, &ip->ip_src,
-				    inp->inp_cred);
+				NET_EPOCH_ENTER(et);
+				error = in_pcbladdr(inp, &ip->ip_dst,
+				    &ip->ip_src, inp->inp_cred);
+				NET_EPOCH_EXIT(et);
 			} else {
 				error = prison_local_ip4(inp->inp_cred,
 				    &ip->ip_src);
@@ -523,7 +537,17 @@ rip_output(struct mbuf *m, struct socket *so, ...)
 				return (EINVAL);
 			ip = mtod(m, struct ip *);
 		}
+#ifdef ROUTE_MPATH
+		if (CALC_FLOWID_OUTBOUND) {
+			uint32_t hash_type, hash_val;
 
+			hash_val = fib4_calc_software_hash(ip->ip_dst,
+			    ip->ip_src, 0, 0, ip->ip_p, &hash_type);
+			m->m_pkthdr.flowid = hash_val;
+			M_HASHTYPE_SET(m, hash_type);
+			flags |= IP_NODEFAULTFLOWID;
+		}
+#endif
 		INP_RLOCK(inp);
 		/*
 		 * Don't allow both user specified and setsockopt options,
@@ -591,8 +615,10 @@ rip_output(struct mbuf *m, struct socket *so, ...)
 	mac_inpcb_create_mbuf(inp, m);
 #endif
 
+	NET_EPOCH_ENTER(et);
 	error = ip_output(m, inp->inp_options, NULL, flags,
 	    inp->inp_moptions, inp);
+	NET_EPOCH_EXIT(et);
 	INP_RUNLOCK(inp);
 	return (error);
 }
@@ -843,7 +869,8 @@ rip_ctlinput(int cmd, struct sockaddr *sa, void *vip)
 
 		err = ifa_del_loopback_route((struct ifaddr *)ia, sa);
 
-		err = rtinit(&ia->ia_ifa, RTM_ADD, flags);
+		rt_addrmsg(RTM_ADD, &ia->ia_ifa, ia->ia_ifp->if_fib);
+		err = in_handle_ifaddr_route(RTM_ADD, ia);
 		if (err == 0)
 			ia->ia_flags |= IFA_ROUTE;
 
@@ -894,7 +921,7 @@ rip_detach(struct socket *so)
 
 	inp = sotoinpcb(so);
 	KASSERT(inp != NULL, ("rip_detach: inp == NULL"));
-	KASSERT(inp->inp_faddr.s_addr == INADDR_ANY, 
+	KASSERT(inp->inp_faddr.s_addr == INADDR_ANY,
 	    ("rip_detach: not closed"));
 
 	INP_INFO_WLOCK(&V_ripcbinfo);
@@ -973,6 +1000,8 @@ rip_bind(struct socket *so, struct sockaddr *nam, struct thread *td)
 	struct inpcb *inp;
 	int error;
 
+	if (nam->sa_family != AF_INET)
+		return (EAFNOSUPPORT);
 	if (nam->sa_len != sizeof(*addr))
 		return (EINVAL);
 
@@ -1047,130 +1076,116 @@ rip_send(struct socket *so, int flags, struct mbuf *m, struct sockaddr *nam,
 {
 	struct inpcb *inp;
 	u_long dst;
+	int error;
 
 	inp = sotoinpcb(so);
 	KASSERT(inp != NULL, ("rip_send: inp == NULL"));
+
+	if (control != NULL) {
+		m_freem(control);
+		control = NULL;
+	}
 
 	/*
 	 * Note: 'dst' reads below are unlocked.
 	 */
 	if (so->so_state & SS_ISCONNECTED) {
 		if (nam) {
-			m_freem(m);
-			return (EISCONN);
+			error = EISCONN;
+			goto release;
 		}
 		dst = inp->inp_faddr.s_addr;	/* Unlocked read. */
 	} else {
-		if (nam == NULL) {
-			m_freem(m);
-			return (ENOTCONN);
-		}
+		error = 0;
+		if (nam == NULL)
+			error = ENOTCONN;
+		else if (nam->sa_family != AF_INET)
+			error = EAFNOSUPPORT;
+		else if (nam->sa_len != sizeof(struct sockaddr_in))
+			error = EINVAL;
+		if (error != 0)
+			goto release;
 		dst = ((struct sockaddr_in *)nam)->sin_addr.s_addr;
 	}
 	return (rip_output(m, so, dst));
+
+release:
+	m_freem(m);
+	return (error);
 }
 #endif /* INET */
 
 static int
 rip_pcblist(SYSCTL_HANDLER_ARGS)
 {
-	int error, i, n;
-	struct inpcb *inp, **inp_list;
-	inp_gen_t gencnt;
 	struct xinpgen xig;
 	struct epoch_tracker et;
+	struct inpcb *inp;
+	int error;
 
-	/*
-	 * The process of preparing the TCB list is too time-consuming and
-	 * resource-intensive to repeat twice on every request.
-	 */
+	if (req->newptr != 0)
+		return (EPERM);
+
 	if (req->oldptr == 0) {
+		int n;
+
 		n = V_ripcbinfo.ipi_count;
 		n += imax(n / 8, 10);
 		req->oldidx = 2 * (sizeof xig) + n * sizeof(struct xinpcb);
 		return (0);
 	}
 
-	if (req->newptr != 0)
-		return (EPERM);
-
-	/*
-	 * OK, now we're committed to doing something.
-	 */
-	INP_INFO_WLOCK(&V_ripcbinfo);
-	gencnt = V_ripcbinfo.ipi_gencnt;
-	n = V_ripcbinfo.ipi_count;
-	INP_INFO_WUNLOCK(&V_ripcbinfo);
+	if ((error = sysctl_wire_old_buffer(req, 0)) != 0)
+		return (error);
 
 	bzero(&xig, sizeof(xig));
 	xig.xig_len = sizeof xig;
-	xig.xig_count = n;
-	xig.xig_gen = gencnt;
+	xig.xig_count = V_ripcbinfo.ipi_count;
+	xig.xig_gen = V_ripcbinfo.ipi_gencnt;
 	xig.xig_sogen = so_gencnt;
 	error = SYSCTL_OUT(req, &xig, sizeof xig);
 	if (error)
 		return (error);
 
-	inp_list = malloc(n * sizeof *inp_list, M_TEMP, M_WAITOK);
-
-	INP_INFO_RLOCK_ET(&V_ripcbinfo, et);
-	for (inp = CK_LIST_FIRST(V_ripcbinfo.ipi_listhead), i = 0; inp && i < n;
-	     inp = CK_LIST_NEXT(inp, inp_list)) {
-		INP_WLOCK(inp);
-		if (inp->inp_gencnt <= gencnt &&
-		    cr_canseeinpcb(req->td->td_ucred, inp) == 0) {
-			in_pcbref(inp);
-			inp_list[i++] = inp;
-		}
-		INP_WUNLOCK(inp);
-	}
-	INP_INFO_RUNLOCK_ET(&V_ripcbinfo, et);
-	n = i;
-
-	error = 0;
-	for (i = 0; i < n; i++) {
-		inp = inp_list[i];
+	NET_EPOCH_ENTER(et);
+	for (inp = CK_LIST_FIRST(V_ripcbinfo.ipi_listhead);
+	    inp != NULL;
+	    inp = CK_LIST_NEXT(inp, inp_list)) {
 		INP_RLOCK(inp);
-		if (inp->inp_gencnt <= gencnt) {
+		if (inp->inp_gencnt <= xig.xig_gen &&
+		    cr_canseeinpcb(req->td->td_ucred, inp) == 0) {
 			struct xinpcb xi;
 
 			in_pcbtoxinpcb(inp, &xi);
 			INP_RUNLOCK(inp);
 			error = SYSCTL_OUT(req, &xi, sizeof xi);
+			if (error)
+				break;
 		} else
 			INP_RUNLOCK(inp);
 	}
-	INP_INFO_WLOCK(&V_ripcbinfo);
-	for (i = 0; i < n; i++) {
-		inp = inp_list[i];
-		INP_RLOCK(inp);
-		if (!in_pcbrele_rlocked(inp))
-			INP_RUNLOCK(inp);
-	}
-	INP_INFO_WUNLOCK(&V_ripcbinfo);
+	NET_EPOCH_EXIT(et);
 
 	if (!error) {
-		struct epoch_tracker et;
 		/*
 		 * Give the user an updated idea of our state.  If the
 		 * generation differs from what we told her before, she knows
 		 * that something happened while we were processing this
 		 * request, and it might be necessary to retry.
 		 */
-		INP_INFO_RLOCK_ET(&V_ripcbinfo, et);
 		xig.xig_gen = V_ripcbinfo.ipi_gencnt;
 		xig.xig_sogen = so_gencnt;
 		xig.xig_count = V_ripcbinfo.ipi_count;
-		INP_INFO_RUNLOCK_ET(&V_ripcbinfo, et);
 		error = SYSCTL_OUT(req, &xig, sizeof xig);
 	}
-	free(inp_list, M_TEMP);
+
 	return (error);
 }
 
 SYSCTL_PROC(_net_inet_raw, OID_AUTO/*XXX*/, pcblist,
-    CTLTYPE_OPAQUE | CTLFLAG_RD, NULL, 0,
-    rip_pcblist, "S,xinpcb", "List of active raw IP sockets");
+    CTLTYPE_OPAQUE | CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, 0,
+    rip_pcblist, "S,xinpcb",
+    "List of active raw IP sockets");
 
 #ifdef INET
 struct pr_usrreqs rip_usrreqs = {

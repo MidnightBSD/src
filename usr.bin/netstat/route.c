@@ -36,7 +36,6 @@ static char sccsid[] = "From: @(#)route.c	8.6 (Berkeley) 4/28/95";
 #endif
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/protosw.h>
 #include <sys/socket.h>
@@ -68,16 +67,13 @@ static char sccsid[] = "From: @(#)route.c	8.6 (Berkeley) 4/28/95";
 #include <err.h>
 #include <libxo/xo.h>
 #include "netstat.h"
+#include "common.h"
 #include "nl_defs.h"
 
 /*
  * Definitions for showing gateway flags.
  */
-static struct bits {
-	u_long	b_mask;
-	char	b_val;
-	const char *b_name;
-} bits[] = {
+struct bits rt_bits[] = {
 	{ RTF_UP,	'U', "up" },
 	{ RTF_GATEWAY,	'G', "gateway" },
 	{ RTF_HOST,	'H', "host" },
@@ -98,11 +94,8 @@ static struct bits {
 	{ 0 , 0, NULL }
 };
 
-struct ifmap_entry {
-	char ifname[IFNAMSIZ];
-};
 static struct ifmap_entry *ifmap;
-static int ifmap_size;
+static size_t ifmap_size;
 static struct timespec uptime;
 
 static const char *netname4(in_addr_t, in_addr_t);
@@ -111,12 +104,7 @@ static const char *netname6(struct sockaddr_in6 *, struct sockaddr_in6 *);
 #endif
 static void p_rtable_sysctl(int, int);
 static void p_rtentry_sysctl(const char *name, struct rt_msghdr *);
-static int p_sockaddr(const char *name, struct sockaddr *, struct sockaddr *,
-    int, int);
-static const char *fmt_sockaddr(struct sockaddr *sa, struct sockaddr *mask,
-    int flags);
 static void p_flags(int, const char *);
-static const char *fmt_flags(int f);
 static void domask(char *, size_t, u_long);
 
 
@@ -195,16 +183,15 @@ pr_family(int af1)
 }
 
 /* column widths; each followed by one space */
+#define WID_IF_DEFAULT		(Wflag ? IFNAMSIZ : 12)	/* width of netif column */
 #ifndef INET6
 #define	WID_DST_DEFAULT(af) 	18	/* width of destination column */
 #define	WID_GW_DEFAULT(af)	18	/* width of gateway column */
-#define	WID_IF_DEFAULT(af)	(Wflag ? 10 : 8) /* width of netif column */
 #else
 #define	WID_DST_DEFAULT(af) \
 	((af) == AF_INET6 ? (numeric_addr ? 33: 18) : 18)
 #define	WID_GW_DEFAULT(af) \
 	((af) == AF_INET6 ? (numeric_addr ? 29 : 18) : 18)
-#define	WID_IF_DEFAULT(af)	((af) == AF_INET6 ? 8 : (Wflag ? 10 : 8))
 #endif /*INET6*/
 
 static int wid_dst;
@@ -228,7 +215,7 @@ pr_rthdr(int af1 __unused)
 			wid_dst,	wid_dst,	"Destination",
 			wid_gw,		wid_gw,		"Gateway",
 			wid_flags,	wid_flags,	"Flags",
-			wid_pksent,	wid_pksent,	"Use",
+			wid_mtu,	wid_mtu,	"Nhop#",
 			wid_mtu,	wid_mtu,	"Mtu",
 			wid_if,		wid_if,		"Netif",
 			wid_expire,			"Expire");
@@ -251,46 +238,10 @@ p_rtable_sysctl(int fibnum, int af)
 	char *buf, *next, *lim;
 	struct rt_msghdr *rtm;
 	struct sockaddr *sa;
-	int fam = AF_UNSPEC, ifindex = 0, size;
+	int fam = AF_UNSPEC;
 	int need_table_close = false;
 
-	struct ifaddrs *ifap, *ifa;
-	struct sockaddr_dl *sdl;
-
-	/*
-	 * Retrieve interface list at first
-	 * since we need #ifindex -> if_xname match
-	 */
-	if (getifaddrs(&ifap) != 0)
-		err(EX_OSERR, "getifaddrs");
-
-	for (ifa = ifap; ifa; ifa = ifa->ifa_next) {
-		
-		if (ifa->ifa_addr->sa_family != AF_LINK)
-			continue;
-
-		sdl = (struct sockaddr_dl *)ifa->ifa_addr;
-		ifindex = sdl->sdl_index;
-
-		if (ifindex >= ifmap_size) {
-			size = roundup(ifindex + 1, 32) *
-			    sizeof(struct ifmap_entry);
-			if ((ifmap = realloc(ifmap, size)) == NULL)
-				errx(2, "realloc(%d) failed", size);
-			memset(&ifmap[ifmap_size], 0,
-			    size - ifmap_size *
-			    sizeof(struct ifmap_entry));
-
-			ifmap_size = roundup(ifindex + 1, 32);
-		}
-
-		if (*ifmap[ifindex].ifname != '\0')
-			continue;
-
-		strlcpy(ifmap[ifindex].ifname, ifa->ifa_name, IFNAMSIZ);
-	}
-
-	freeifaddrs(ifap);
+	ifmap = prepare_ifmap(&ifmap_size);
 
 	mib[0] = CTL_NET;
 	mib[1] = PF_ROUTE;
@@ -331,7 +282,7 @@ p_rtable_sysctl(int fibnum, int af)
 			wid_flags = 6;
 			wid_pksent = 8;
 			wid_mtu = 6;
-			wid_if = WID_IF_DEFAULT(fam);
+			wid_if = WID_IF_DEFAULT;
 			wid_expire = 6;
 			xo_open_instance("rt-family");
 			pr_family(fam);
@@ -375,8 +326,11 @@ p_rtentry_sysctl(const char *name, struct rt_msghdr *rtm)
 	snprintf(buffer, sizeof(buffer), "{[:-%d}{:flags/%%s}{]:} ",
 	    wid_flags - protrusion);
 	p_flags(rtm->rtm_flags, buffer);
+	/* Output path weight as non-visual property */
+	xo_emit("{e:weight/%u}", rtm->rtm_rmx.rmx_weight);
 	if (Wflag) {
-		xo_emit("{t:use/%*lu} ", wid_pksent, rtm->rtm_rmx.rmx_pksent);
+		/* XXX: use=0? */
+		xo_emit("{t:nhop/%*lu} ", wid_mtu, rtm->rtm_rmx.rmx_nhidx);
 
 		if (rtm->rtm_rmx.rmx_mtu != 0)
 			xo_emit("{t:mtu/%*lu} ", wid_mtu, rtm->rtm_rmx.rmx_mtu);
@@ -409,7 +363,7 @@ p_rtentry_sysctl(const char *name, struct rt_msghdr *rtm)
 	xo_close_instance(name);
 }
 
-static int
+int
 p_sockaddr(const char *name, struct sockaddr *sa, struct sockaddr *mask,
     int flags, int width)
 {
@@ -441,7 +395,7 @@ p_sockaddr(const char *name, struct sockaddr *sa, struct sockaddr *mask,
 	return (protrusion);
 }
 
-static const char *
+const char *
 fmt_sockaddr(struct sockaddr *sa, struct sockaddr *mask, int flags)
 {
 	static char buf[128];
@@ -518,30 +472,10 @@ fmt_sockaddr(struct sockaddr *sa, struct sockaddr *mask, int flags)
 static void
 p_flags(int f, const char *format)
 {
-	struct bits *p;
 
-	xo_emit(format, fmt_flags(f));
-
-	xo_open_list("flags_pretty");
-	for (p = bits; p->b_mask; p++)
-		if (p->b_mask & f)
-			xo_emit("{le:flags_pretty/%s}", p->b_name);
-	xo_close_list("flags_pretty");
+	print_flags_generic(f, rt_bits, format, "flags_pretty");
 }
 
-static const char *
-fmt_flags(int f)
-{
-	static char name[33];
-	char *flags;
-	struct bits *p = bits;
-
-	for (flags = name; p->b_mask; p++)
-		if (p->b_mask & f)
-			*flags++ = p->b_val;
-	*flags = '\0';
-	return (name);
-}
 
 char *
 routename(struct sockaddr *sa, int flags)
@@ -764,38 +698,27 @@ void
 rt_stats(void)
 {
 	struct rtstat rtstat;
-	u_long rtsaddr, rttaddr;
-	int rttrash;
+	u_long rtsaddr;
 
 	if ((rtsaddr = nl[N_RTSTAT].n_value) == 0) {
 		xo_emit("{W:rtstat: symbol not in namelist}\n");
 		return;
 	}
-	if ((rttaddr = nl[N_RTTRASH].n_value) == 0) {
-		xo_emit("{W:rttrash: symbol not in namelist}\n");
-		return;
-	}
-	kread(rtsaddr, (char *)&rtstat, sizeof (rtstat));
-	kread(rttaddr, (char *)&rttrash, sizeof (rttrash));
+	kread_counters(rtsaddr, (char *)&rtstat, sizeof (rtstat));
 	xo_emit("{T:routing}:\n");
 
 #define	p(f, m) if (rtstat.f || sflag <= 1) \
 	xo_emit(m, rtstat.f, plural(rtstat.f))
 
-	p(rts_badredirect, "\t{:bad-redirects/%hu} "
+	p(rts_badredirect, "\t{:bad-redirects/%ju} "
 	    "{N:/bad routing redirect%s}\n");
-	p(rts_dynamic, "\t{:dynamically-created/%hu} "
+	p(rts_dynamic, "\t{:dynamically-created/%ju} "
 	    "{N:/dynamically created route%s}\n");
-	p(rts_newgateway, "\t{:new-gateways/%hu} "
+	p(rts_newgateway, "\t{:new-gateways/%ju} "
 	    "{N:/new gateway%s due to redirects}\n");
-	p(rts_unreach, "\t{:unreachable-destination/%hu} "
+	p(rts_unreach, "\t{:unreachable-destination/%ju} "
 	    "{N:/destination%s found unreachable}\n");
-	p(rts_wildcard, "\t{:wildcard-uses/%hu} "
+	p(rts_wildcard, "\t{:wildcard-uses/%ju} "
 	    "{N:/use%s of a wildcard route}\n");
 #undef p
-
-	if (rttrash || sflag <= 1)
-		xo_emit("\t{:unused-but-not-freed/%u} "
-		    "{N:/route%s not in table but not freed}\n",
-		    rttrash, plural(rttrash));
 }

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef	_G_RAID_H_
@@ -60,39 +59,13 @@ extern int g_raid_read_err_thresh;
 extern u_int g_raid_start_timeout;
 extern struct g_class g_raid_class;
 
-#define	G_RAID_DEBUG(lvl, fmt, ...)	do {				\
-	if (g_raid_debug >= (lvl)) {					\
-		if (g_raid_debug > 0) {					\
-			printf("GEOM_RAID[%u]: " fmt "\n",		\
-			    lvl, ## __VA_ARGS__);			\
-		} else {						\
-			printf("GEOM_RAID: " fmt "\n",			\
-			    ## __VA_ARGS__);				\
-		}							\
-	}								\
-} while (0)
-#define	G_RAID_DEBUG1(lvl, sc, fmt, ...)	do {			\
-	if (g_raid_debug >= (lvl)) {					\
-		if (g_raid_debug > 0) {					\
-			printf("GEOM_RAID[%u]: %s: " fmt "\n",		\
-			    lvl, (sc)->sc_name, ## __VA_ARGS__);	\
-		} else {						\
-			printf("GEOM_RAID: %s: " fmt "\n",		\
-			    (sc)->sc_name, ## __VA_ARGS__);		\
-		}							\
-	}								\
-} while (0)
-#define	G_RAID_LOGREQ(lvl, bp, fmt, ...)	do {			\
-	if (g_raid_debug >= (lvl)) {					\
-		if (g_raid_debug > 0) {					\
-			printf("GEOM_RAID[%u]: " fmt " ",		\
-			    lvl, ## __VA_ARGS__);			\
-		} else							\
-			printf("GEOM_RAID: " fmt " ", ## __VA_ARGS__);	\
-		g_print_bio(bp);					\
-		printf("\n");						\
-	}								\
-} while (0)
+#define	G_RAID_DEBUG(lvl, ...) \
+    _GEOM_DEBUG("GEOM_RAID", g_raid_debug, (lvl), NULL, __VA_ARGS__)
+#define	G_RAID_DEBUG1(lvl, sc, fmt, ...)				\
+    _GEOM_DEBUG("GEOM_RAID", g_raid_debug, (lvl), NULL, "%s: " fmt,	\
+	(sc)->sc_name, ## __VA_ARGS__)
+#define	G_RAID_LOGREQ(lvl, bp, ...) \
+    _GEOM_DEBUG("GEOM_RAID", g_raid_debug, (lvl), (bp), __VA_ARGS__)
 
 /*
  * Flags we use to distinguish I/O initiated by the TR layer to maintain
@@ -154,7 +127,6 @@ struct g_raid_disk {
 	struct g_raid_softc	*d_softc;	/* Back-pointer to softc. */
 	struct g_consumer	*d_consumer;	/* GEOM disk consumer. */
 	void			*d_md_data;	/* Disk's metadata storage. */
-	struct g_kerneldump	 d_kd;		/* Kernel dumping method/args. */
 	int			 d_candelete;	/* BIO_DELETE supported. */
 	uint64_t		 d_flags;	/* Additional flags. */
 	u_int			 d_state;	/* Disk state. */
@@ -163,6 +135,7 @@ struct g_raid_disk {
 	int			 d_read_errs;	/* Count of the read errors */
 	TAILQ_HEAD(, g_raid_subdisk)	 d_subdisks; /* List of subdisks. */
 	TAILQ_ENTRY(g_raid_disk)	 d_next;	/* Next disk in the node. */
+	struct g_kerneldump	 d_kd;		/* Kernel dumping method/args. */
 };
 
 #define G_RAID_SUBDISK_S_NONE		0x00	/* Absent. */
@@ -362,7 +335,8 @@ int g_raid_md_modevent(module_t, int, void *);
     DECLARE_MODULE(g_raid_md_##name, g_raid_md_##name##_mod,	\
 	SI_SUB_DRIVERS, SI_ORDER_SECOND);			\
     MODULE_DEPEND(g_raid_md_##name, geom_raid, 0, 0, 0);	\
-    SYSCTL_NODE(_kern_geom_raid, OID_AUTO, name, CTLFLAG_RD,	\
+    SYSCTL_NODE(_kern_geom_raid, OID_AUTO, name,		\
+        CTLFLAG_RD | CTLFLAG_MPSAFE,				\
 	NULL, label " metadata module");			\
     SYSCTL_INT(_kern_geom_raid_##name, OID_AUTO, enable,	\
 	CTLFLAG_RWTUN, &g_raid_md_##name##_class.mdc_enable, 0,	\
@@ -399,7 +373,8 @@ int g_raid_tr_modevent(module_t, int, void *);
     DECLARE_MODULE(g_raid_tr_##name, g_raid_tr_##name##_mod,	\
 	SI_SUB_DRIVERS, SI_ORDER_FIRST);			\
     MODULE_DEPEND(g_raid_tr_##name, geom_raid, 0, 0, 0);	\
-    SYSCTL_NODE(_kern_geom_raid, OID_AUTO, name, CTLFLAG_RD,	\
+    SYSCTL_NODE(_kern_geom_raid, OID_AUTO, name,		\
+        CTLFLAG_RD | CTLFLAG_MPSAFE,				\
 	NULL, label " transformation module");			\
     SYSCTL_INT(_kern_geom_raid_##name, OID_AUTO, enable,	\
 	CTLFLAG_RWTUN, &g_raid_tr_##name##_class.trc_enable, 0,	\
@@ -429,8 +404,8 @@ int g_raid_destroy_disk(struct g_raid_disk *disk);
 
 void g_raid_iodone(struct bio *bp, int error);
 void g_raid_subdisk_iostart(struct g_raid_subdisk *sd, struct bio *bp);
-int g_raid_subdisk_kerneldump(struct g_raid_subdisk *sd,
-    void *virtual, vm_offset_t physical, off_t offset, size_t length);
+int g_raid_subdisk_kerneldump(struct g_raid_subdisk *sd, void *virtual,
+    off_t offset, size_t length);
 
 struct g_consumer *g_raid_open_consumer(struct g_raid_softc *sc,
     const char *name);

@@ -36,7 +36,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <errno.h>
 #include <unistd.h>

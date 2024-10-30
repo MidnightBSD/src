@@ -41,7 +41,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -50,9 +49,6 @@
 #include <sys/limits.h>
 #include <sys/sysctl.h>
 #include <sys/timetc.h>
-
-int tz_minuteswest;
-int tz_dsttime;
 
 /*
  * The adjkerntz and wall_cmos_clock sysctls are in the "machdep" sysctl
@@ -85,7 +81,6 @@ SYSCTL_INT(_machdep, OID_AUTO, wall_cmos_clock, CTLFLAG_RW,
  * (seconds since 1/1/1970) and yr/mo/day/hr/min/sec
  * Derived from NetBSD arch/hp300/hp300/clock.c
  */
-
 
 #define	FEBRUARY	2
 #define	days_in_year(y) 	(leapyear(y) ? 366 : 365)
@@ -385,5 +380,5 @@ int
 utc_offset(void)
 {
 
-	return (tz_minuteswest * 60 + (wall_cmos_clock ? adjkerntz : 0));
+	return (wall_cmos_clock ? adjkerntz : 0);
 }

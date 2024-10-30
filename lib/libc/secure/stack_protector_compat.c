@@ -4,7 +4,6 @@
  */
 
 #include <sys/cdefs.h>
-
 void __stack_chk_fail(void);
 
 #ifdef PIC

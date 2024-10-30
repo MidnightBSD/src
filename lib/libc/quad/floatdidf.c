@@ -37,15 +37,13 @@
 static char sccsid[] = "@(#)floatdidf.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-
 #include "quad.h"
 
 /*
  * Convert (signed) quad to double.
  */
 double
-__floatdidf(x)
-	quad_t x;
+__floatdidf(quad_t x)
 {
 	double d;
 	union uu u;

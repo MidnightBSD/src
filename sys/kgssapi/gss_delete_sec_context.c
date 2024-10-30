@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Authors: Doug Rabson <dfr@rabson.org>
@@ -28,8 +28,8 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
+#include <sys/jail.h>
 #include <sys/kernel.h>
 #include <sys/kobj.h>
 #include <sys/lock.h>
@@ -53,8 +53,12 @@ gss_delete_sec_context(OM_uint32 *minor_status, gss_ctx_id_t *context_handle,
 
 	*minor_status = 0;
 
-	if (!kgss_gssd_handle)
+	KGSS_CURVNET_SET_QUIET(KGSS_TD_TO_VNET(curthread));
+	if (!KGSS_VNET(kgss_gssd_handle)) {
+		KGSS_CURVNET_RESTORE();
 		return (GSS_S_FAILURE);
+	}
+	KGSS_CURVNET_RESTORE();
 
 	if (*context_handle) {
 		ctx = *context_handle;
@@ -69,7 +73,7 @@ gss_delete_sec_context(OM_uint32 *minor_status, gss_ctx_id_t *context_handle,
 			cl = kgss_gssd_client();
 			if (cl == NULL)
 				return (GSS_S_FAILURE);
-	
+
 			bzero(&res, sizeof(res));
 			stat = gssd_delete_sec_context_1(&args, &res, cl);
 			CLNT_RELEASE(cl);

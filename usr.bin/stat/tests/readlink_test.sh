@@ -24,7 +24,7 @@
 # SUCH DAMAGE.
 #
 
-atf_test_case f_flag
+atf_test_case basic
 basic_head()
 {
 	atf_set	"descr" "Verify that calling readlink without any flags " \

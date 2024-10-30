@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2006-2008 Marcel Moolenaar
  * All rights reserved.
@@ -24,7 +24,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef _GEOM_PART_H_
@@ -46,6 +45,8 @@ enum g_part_alias {
 	G_PART_ALIAS_APPLE_RAID_OFFLINE,/* An Apple RAID (offline) part entry.*/
 	G_PART_ALIAS_APPLE_TV_RECOVERY,	/* An Apple TV recovery part entry. */
 	G_PART_ALIAS_APPLE_UFS,		/* An Apple UFS partition entry. */
+	G_PART_ALIAS_APPLE_ZFS,		/* An Apple ZFS partition entry.
+					   Also used for Solaris /usr partition. */
 	G_PART_ALIAS_BIOS_BOOT,		/* A GRUB 2 boot partition entry. */
 	G_PART_ALIAS_CHROMEOS_FIRMWARE,	/* A ChromeOS firmware part. entry. */
 	G_PART_ALIAS_CHROMEOS_KERNEL,	/* A ChromeOS Kernel part. entry. */
@@ -62,7 +63,7 @@ enum g_part_alias {
 	G_PART_ALIAS_DFBSD_VINUM,	/* A DfBSD Vinum partition entry */
 	G_PART_ALIAS_EBR,		/* A EBR partition entry. */
 	G_PART_ALIAS_EFI,		/* A EFI system partition entry. */
-	G_PART_ALIAS_FREEBSD,		/* A FreeBSD labeled partition entry. */
+	G_PART_ALIAS_FREEBSD,		/* A BSD labeled partition entry. */
 	G_PART_ALIAS_FREEBSD_BOOT,	/* A FreeBSD boot partition entry. */
 	G_PART_ALIAS_FREEBSD_NANDFS,	/* A FreeBSD nandfs partition entry. */
 	G_PART_ALIAS_FREEBSD_SWAP,	/* A swap partition entry. */
@@ -70,6 +71,8 @@ enum g_part_alias {
 	G_PART_ALIAS_FREEBSD_VINUM,	/* A Vinum partition entry. */
 	G_PART_ALIAS_FREEBSD_ZFS,	/* A ZFS file system entry. */
 	G_PART_ALIAS_MBR,		/* A MBR (extended) partition entry. */
+	G_PART_ALIAS_HIFIVE_FSBL,	/* HiFive First Stage Bootloader */
+	G_PART_ALIAS_HIFIVE_BBL,	/* HiFive Second Stage Bootloader */
 	G_PART_ALIAS_LINUX_DATA,	/* A Linux data partition entry. */
 	G_PART_ALIAS_LINUX_LVM,		/* A Linux LVM partition entry. */
 	G_PART_ALIAS_LINUX_RAID,	/* A Linux RAID partition entry. */
@@ -99,6 +102,14 @@ enum g_part_alias {
 	G_PART_ALIAS_NETBSD_SWAP,	/* A NetBSD swap partition entry. */
 	G_PART_ALIAS_OPENBSD_DATA,	/* An OpenBSD data partition entry. */
 	G_PART_ALIAS_PREP_BOOT,		/* A PREP/CHRP boot partition entry. */
+	G_PART_ALIAS_SOLARIS_BOOT,	/* A Solaris boot partition entry. */
+	G_PART_ALIAS_SOLARIS_ROOT,	/* A Solaris root partition entry. */
+	G_PART_ALIAS_SOLARIS_SWAP,	/* A Solaris swap partition entry. */
+	G_PART_ALIAS_SOLARIS_BACKUP,	/* A Solaris backup partition entry. */
+	G_PART_ALIAS_SOLARIS_VAR,	/* A Solaris /var partition entry. */
+	G_PART_ALIAS_SOLARIS_HOME,	/* A Solaris /home partition entry. */
+	G_PART_ALIAS_SOLARIS_ALTSEC,	/* A Solaris alternate sector partition entry. */
+	G_PART_ALIAS_SOLARIS_RESERVED,	/* A Solaris reserved partition entry. */
 	G_PART_ALIAS_VMFS,		/* A VMware VMFS partition entry */
 	G_PART_ALIAS_VMKDIAG,		/* A VMware vmkDiagnostic partition entry */
 	G_PART_ALIAS_VMRESERVED,	/* A VMware reserved partition entry */
@@ -126,10 +137,10 @@ struct g_part_entry {
 	quad_t		gpe_start;	/* First LBA of partition. */
 	quad_t		gpe_end;	/* Last LBA of partition. */
 	int		gpe_index;
-	int		gpe_created:1;	/* Entry is newly created. */
-	int		gpe_deleted:1;	/* Entry has been deleted. */
-	int		gpe_modified:1;	/* Entry has been modified. */
-	int		gpe_internal:1;	/* Entry is not a used entry. */
+	bool		gpe_created:1;	/* Entry is newly created. */
+	bool		gpe_deleted:1;	/* Entry has been deleted. */
+	bool		gpe_modified:1;	/* Entry has been modified. */
+	bool		gpe_internal:1;	/* Entry is not a used entry. */
 };
 
 /* G_PART table (KOBJ instance). */
@@ -164,12 +175,12 @@ struct g_part_table {
 	uint32_t	gpt_heads;
 
 	int		gpt_depth;	/* Sub-partitioning level. */
-	int		gpt_isleaf:1;	/* Cannot be sub-partitioned. */
-	int		gpt_created:1;	/* Newly created. */
-	int		gpt_modified:1;	/* Table changes have been made. */
-	int		gpt_opened:1;	/* Permissions obtained. */
-	int		gpt_fixgeom:1;	/* Geometry is fixed. */
-	int		gpt_corrupt:1;	/* Table is corrupt. */
+	bool		gpt_isleaf:1;	/* Cannot be sub-partitioned. */
+	bool		gpt_created:1;	/* Newly created. */
+	bool		gpt_modified:1;	/* Table changes have been made. */
+	bool		gpt_opened:1;	/* Permissions obtained. */
+	bool		gpt_fixgeom:1;	/* Geometry is fixed. */
+	bool		gpt_corrupt:1;	/* Table is corrupt. */
 };
 
 struct g_part_entry *g_part_new_entry(struct g_part_table *, int, quad_t,
@@ -208,6 +219,7 @@ enum g_part_ctl {
 #define	G_PART_PARM_BOOTCODE	0x1000
 #define	G_PART_PARM_ATTRIB	0x2000
 #define	G_PART_PARM_FORCE	0x4000
+#define G_PART_PARM_SKIP_DSN	0x8000
 
 struct g_part_parms {
 	unsigned int	gpp_parms;
@@ -226,11 +238,14 @@ struct g_part_parms {
 	unsigned int	gpp_codesize;
 	const char	*gpp_attrib;
 	unsigned int	gpp_force;
+	unsigned int	gpp_skip_dsn;
 };
 
 void g_part_geometry_heads(off_t, u_int, off_t *, u_int *);
 
 int g_part_modevent(module_t, int, struct g_part_scheme *);
+
+extern char g_part_separator[];
 
 #define	G_PART_SCHEME_DECLARE(name)				\
     static int name##_modevent(module_t mod, int tp, void *d)	\

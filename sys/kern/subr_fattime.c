@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2006 Poul-Henning Kamp
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  *
  * Convert MS-DOS FAT format timestamps to and from unix timespecs
  *
@@ -133,7 +132,6 @@ static const struct {
 	{ SEP + 3 * YEAR + 1, ENC(3, 10) }, { OCT + 3 * YEAR + 1, ENC(3, 11) },
 	{ NOV + 3 * YEAR + 1, ENC(3, 12) }
 };
-
 
 void
 timespec2fattime(const struct timespec *tsp, int utc, uint16_t *ddp,

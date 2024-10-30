@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD AND MIT
+ * SPDX-License-Identifier: BSD-2-Clause AND MIT
  *
  * Copyright (c) 1999 Doug Rabson
  * All rights reserved.
@@ -60,7 +60,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_isa.h"
 
 #include <sys/param.h>

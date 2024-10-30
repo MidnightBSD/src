@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2005 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef	_G_SHSEC_H_
@@ -45,28 +44,10 @@
 #ifdef _KERNEL
 #define	G_SHSEC_BFLAG_FIRST	0x1
 
-#define	G_SHSEC_DEBUG(lvl, ...)	do {					\
-	if (g_shsec_debug >= (lvl)) {					\
-		printf("GEOM_SHSEC");					\
-		if (g_shsec_debug > 0)					\
-			printf("[%u]", lvl);				\
-		printf(": ");						\
-		printf(__VA_ARGS__);					\
-		printf("\n");						\
-	}								\
-} while (0)
-#define	G_SHSEC_LOGREQ(lvl, bp, ...)	do {				\
-	if (g_shsec_debug >= (lvl)) {					\
-		printf("GEOM_SHSEC");					\
-		if (g_shsec_debug > 0)					\
-			printf("[%u]", lvl);				\
-		printf(": ");						\
-		printf(__VA_ARGS__);					\
-		printf(" ");						\
-		g_print_bio(bp);					\
-		printf("\n");						\
-	}								\
-} while (0)
+#define	G_SHSEC_DEBUG(lvl, ...) \
+    _GEOM_DEBUG("GEOM_SHSEC", g_shsec_debug, (lvl), NULL, __VA_ARGS__)
+#define	G_SHSEC_LOGREQ(lvl, bp, ...) \
+    _GEOM_DEBUG("GEOM_SHSEC", g_shsec_debug, (lvl), (bp), __VA_ARGS__)
 
 struct g_shsec_softc {
 	u_int		 sc_type;	/* provider type */

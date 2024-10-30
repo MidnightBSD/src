@@ -29,8 +29,6 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 
 #ifndef lint
 static const char copyright[] =
@@ -176,10 +174,18 @@ main(int argc, char *argv[])
 				/* Create the file. */
 				fd = open(*argv,
 				    O_WRONLY | O_CREAT, DEFFILEMODE);
-				if (fd == -1 || fstat(fd, &sb) || close(fd)) {
+				if (fd == -1) {
 					rval = 1;
 					warn("%s", *argv);
 					continue;
+				}
+				if (fstat(fd, &sb) < 0) {
+					warn("%s", *argv);
+					rval = 1;
+				}
+				if (close(fd) < 0) {
+					warn("%s", *argv);
+					rval = 1;
 				}
 
 				/* If using the current time, we're done. */
@@ -237,7 +243,7 @@ stime_arg1(const char *arg, struct timespec *tvp)
 	}
 
 	yearset = 0;
-	switch(strlen(arg)) {
+	switch (strlen(arg)) {
 	case 12:			/* CCYYMMDDhhmm */
 		t->tm_year = ATOI2(arg);
 		t->tm_year *= 100;
@@ -268,15 +274,17 @@ stime_arg1(const char *arg, struct timespec *tvp)
 	}
 
 	t->tm_isdst = -1;		/* Figure out DST. */
+	t->tm_yday = -1;
 	tvp[0].tv_sec = tvp[1].tv_sec = mktime(t);
-	if (tvp[0].tv_sec == -1)
+	if (t->tm_yday == -1)
 		goto terr;
 
 	tvp[0].tv_nsec = tvp[1].tv_nsec = 0;
 	return;
 
 terr:
-	errx(1, "out of range or illegal time specification: [[CC]YY]MMDDhhmm[.SS]");
+	errx(1, "out of range or illegal time specification: "
+	    "[[CC]YY]MMDDhhmm[.SS]");
 }
 
 static void
@@ -301,10 +309,11 @@ stime_arg2(const char *arg, int year, struct timespec *tvp)
 	}
 
 	t->tm_isdst = -1;		/* Figure out DST. */
+	t->tm_yday = -1;
 	tvp[0].tv_sec = tvp[1].tv_sec = mktime(t);
-	if (tvp[0].tv_sec == -1)
-		errx(1,
-	"out of range or illegal time specification: MMDDhhmm[yy]");
+	if (t->tm_yday == -1)
+		errx(1, "out of range or illegal time specification: "
+		    "MMDDhhmm[yy]");
 
 	tvp[0].tv_nsec = tvp[1].tv_nsec = 0;
 }
@@ -344,13 +353,17 @@ stime_darg(const char *arg, struct timespec *tvp)
 	if (*p != '\0')
 		goto bad;
 
+	t.tm_yday = -1;
 	tvp[0].tv_sec = isutc ? timegm(&t) : mktime(&t);
+	if (t.tm_yday == -1)
+		goto bad;
 
 	tvp[1] = tvp[0];
 	return;
 
 bad:
-	errx(1, "out of range or illegal time specification: YYYY-MM-DDThh:mm:SS[.frac][tz]");
+	errx(1, "out of range or illegal time specification: "
+	    "YYYY-MM-DDThh:mm:SS[.frac][tz]");
 }
 
 /* Calculate a time offset in seconds, given an arg of the format [-]HHMMSS. */

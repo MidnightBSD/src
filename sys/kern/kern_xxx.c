@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/sysproto.h>
@@ -49,15 +48,8 @@
 
 #if defined(COMPAT_43)
 
-#ifndef _SYS_SYSPROTO_H_
-struct gethostname_args {
-	char	*hostname;
-	u_int	len;
-};
-#endif
-/* ARGSUSED */
 int
-ogethostname(struct thread *td, struct gethostname_args *uap)
+ogethostname(struct thread *td, struct ogethostname_args *uap)
 {
 	int name[2];
 	size_t len = uap->len;
@@ -68,15 +60,8 @@ ogethostname(struct thread *td, struct gethostname_args *uap)
 	    1, 0, 0, 0, 0));
 }
 
-#ifndef _SYS_SYSPROTO_H_
-struct sethostname_args {
-	char	*hostname;
-	u_int	len;
-};
-#endif
-/* ARGSUSED */
 int
-osethostname(struct thread *td, struct sethostname_args *uap)
+osethostname(struct thread *td, struct osethostname_args *uap)
 {
 	int name[2];
 
@@ -103,15 +88,7 @@ ogethostid(struct thread *td, struct ogethostid_args *uap)
 	return (kernel_sysctl(td, name, 2, (long *)td->td_retval, &len,
 	    NULL, 0, NULL, 0));
 }
-#endif /* COMPAT_43 */
 
-#ifdef COMPAT_43
-#ifndef _SYS_SYSPROTO_H_
-struct osethostid_args {
-	long	hostid;
-};
-#endif
-/* ARGSUSED */
 int
 osethostid(struct thread *td, struct osethostid_args *uap)
 {
@@ -186,23 +163,14 @@ static struct {
  */
 static char bsdi_strings[80];	/* It had better be less than this! */
 
-#ifndef _SYS_SYSPROTO_H_
-struct getkerninfo_args {
-	int	op;
-	char	*where;
-	size_t	*size;
-	int	arg;
-};
-#endif
 int
-ogetkerninfo(struct thread *td, struct getkerninfo_args *uap)
+ogetkerninfo(struct thread *td, struct ogetkerninfo_args *uap)
 {
 	int error, name[6];
 	size_t size;
 	u_int needed = 0;
 
 	switch (uap->op & 0xff00) {
-
 	case KINFO_RT:
 		name[0] = CTL_NET;
 		name[1] = PF_ROUTE;
@@ -357,7 +325,8 @@ freebsd4_uname(struct thread *td, struct freebsd4_uname_args *uap)
 {
 	int name[2], error;
 	size_t len;
-	char *s, *us;
+	const char *s;
+	char *us;
 
 	name[0] = CTL_KERN;
 	name[1] = KERN_OSTYPE;
@@ -366,7 +335,9 @@ freebsd4_uname(struct thread *td, struct freebsd4_uname_args *uap)
 		1, 0, 0, 0, 0);
 	if (error)
 		return (error);
-	subyte( uap->name->sysname + sizeof(uap->name->sysname) - 1, 0);
+	error = subyte(uap->name->sysname + sizeof(uap->name->sysname) - 1, 0);
+	if (error)
+		return (EFAULT);
 
 	name[1] = KERN_HOSTNAME;
 	len = sizeof uap->name->nodename;
@@ -374,7 +345,9 @@ freebsd4_uname(struct thread *td, struct freebsd4_uname_args *uap)
 		1, 0, 0, 0, 0);
 	if (error)
 		return (error);
-	subyte( uap->name->nodename + sizeof(uap->name->nodename) - 1, 0);
+	error = subyte(uap->name->nodename + sizeof(uap->name->nodename) - 1, 0);
+	if (error)
+		return (EFAULT);
 
 	name[1] = KERN_OSRELEASE;
 	len = sizeof uap->name->release;
@@ -382,7 +355,9 @@ freebsd4_uname(struct thread *td, struct freebsd4_uname_args *uap)
 		1, 0, 0, 0, 0);
 	if (error)
 		return (error);
-	subyte( uap->name->release + sizeof(uap->name->release) - 1, 0);
+	error = subyte(uap->name->release + sizeof(uap->name->release) - 1, 0);
+	if (error)
+		return (EFAULT);
 
 /*
 	name = KERN_VERSION;
@@ -400,13 +375,11 @@ freebsd4_uname(struct thread *td, struct freebsd4_uname_args *uap)
 	for(s = version; *s && *s != '#'; s++);
 
 	for(us = uap->name->version; *s && *s != ':'; s++) {
-		error = subyte( us++, *s);
-		if (error)
-			return (error);
+		if (subyte(us++, *s) != 0)
+			return (EFAULT);
 	}
-	error = subyte( us++, 0);
-	if (error)
-		return (error);
+	if (subyte(us++, 0) != 0)
+		return (EFAULT);
 
 	name[0] = CTL_HW;
 	name[1] = HW_MACHINE;
@@ -415,7 +388,9 @@ freebsd4_uname(struct thread *td, struct freebsd4_uname_args *uap)
 		1, 0, 0, 0, 0);
 	if (error)
 		return (error);
-	subyte( uap->name->machine + sizeof(uap->name->machine) - 1, 0);
+	error = subyte(uap->name->machine + sizeof(uap->name->machine) - 1, 0);
+	if (error)
+		return (EFAULT);
 	return (0);
 }
 

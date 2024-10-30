@@ -32,13 +32,14 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_capsicum.h"
 #include "opt_kstack_pages.h"
+#include "opt_ktrace.h"
 
 #include <sys/param.h>
 #include <sys/capsicum.h>
 #include <sys/systm.h>
+#include <sys/ktrace.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/mutex.h>
@@ -107,7 +108,8 @@ set_fsbase(struct thread *td, uint32_t base)
 	fill_based_sd(&sd, base);
 	critical_enter();
 	td->td_pcb->pcb_fsd = sd;
-	PCPU_GET(fsgs_gdt)[0] = sd;
+	if (td == curthread)
+		PCPU_GET(fsgs_gdt)[0] = sd;
 	critical_exit();
 }
 
@@ -119,7 +121,8 @@ set_gsbase(struct thread *td, uint32_t base)
 	fill_based_sd(&sd, base);
 	critical_enter();
 	td->td_pcb->pcb_gsd = sd;
-	PCPU_GET(fsgs_gdt)[1] = sd;
+	if (td == curthread)
+		PCPU_GET(fsgs_gdt)[1] = sd;
 	critical_exit();
 }
 
@@ -331,9 +334,7 @@ i386_extend_pcb(struct thread *td)
 }
 
 int
-i386_set_ioperm(td, uap)
-	struct thread *td;
-	struct i386_ioperm_args *uap;
+i386_set_ioperm(struct thread *td, struct i386_ioperm_args *uap)
 {
 	char *iomap;
 	u_int i;
@@ -369,9 +370,7 @@ i386_set_ioperm(td, uap)
 }
 
 int
-i386_get_ioperm(td, uap)
-	struct thread *td;
-	struct i386_ioperm_args *uap;
+i386_get_ioperm(struct thread *td, struct i386_ioperm_args *uap)
 {
 	int i, state;
 	char *iomap;
@@ -472,7 +471,7 @@ user_ldt_alloc(struct mdproc *mdp, int len)
 		    len * sizeof(union descriptor));
 	} else
 		bcopy(ldt, new_ldt->ldt_base, sizeof(union descriptor) * NLDT);
-	
+
 	return (new_ldt);
 }
 

@@ -39,7 +39,6 @@ static char sccsid[] = "@(#)generic.c 1.2 91/03/11 Copyr 1986 Sun Micro";
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/file.h>
 
 #include <rpc/rpc.h>
@@ -51,7 +50,7 @@ static char sccsid[] = "@(#)generic.c 1.2 91/03/11 Copyr 1986 Sun Micro";
 
 #include "extern.h"
 
-static void adjust(char[], char *);
+static void adjust(char[HEXKEYBYTES + 1], char *);
 static void getseed(char *, int, unsigned char *);
 
 /*

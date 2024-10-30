@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_capsicum.h"
 #include "opt_sctp.h"
 #include "opt_ktrace.h"
@@ -152,7 +151,7 @@ sys_sctp_peeloff(td, uap)
 	int error, fd;
 
 	AUDIT_ARG_FD(uap->sd);
-	error = getsock_cap(td, uap->sd, cap_rights_init(&rights, CAP_PEELOFF),
+	error = getsock_cap(td, uap->sd, cap_rights_init_one(&rights, CAP_PEELOFF),
 	    &headfp, &fflag, NULL);
 	if (error != 0)
 		goto done2;
@@ -240,14 +239,14 @@ sys_sctp_generic_sendmsg (td, uap)
 		u_sinfo = &sinfo;
 	}
 
-	cap_rights_init(&rights, CAP_SEND);
+	cap_rights_init_one(&rights, CAP_SEND);
 	if (uap->tolen != 0) {
 		error = getsockaddr(&to, uap->to, uap->tolen);
 		if (error != 0) {
 			to = NULL;
 			goto sctp_bad2;
 		}
-		cap_rights_set(&rights, CAP_CONNECT);
+		cap_rights_set_one(&rights, CAP_CONNECT);
 	}
 
 	AUDIT_ARG_FD(uap->sd);
@@ -349,14 +348,14 @@ sys_sctp_generic_sendmsg_iov(td, uap)
 			return (error);
 		u_sinfo = &sinfo;
 	}
-	cap_rights_init(&rights, CAP_SEND);
+	cap_rights_init_one(&rights, CAP_SEND);
 	if (uap->tolen != 0) {
 		error = getsockaddr(&to, uap->to, uap->tolen);
 		if (error != 0) {
 			to = NULL;
 			goto sctp_bad2;
 		}
-		cap_rights_set(&rights, CAP_CONNECT);
+		cap_rights_set_one(&rights, CAP_CONNECT);
 	}
 
 	AUDIT_ARG_FD(uap->sd);
@@ -471,7 +470,7 @@ sys_sctp_generic_recvmsg(td, uap)
 	int error, fromlen, i, msg_flags;
 
 	AUDIT_ARG_FD(uap->sd);
-	error = getsock_cap(td, uap->sd, cap_rights_init(&rights, CAP_RECV),
+	error = getsock_cap(td, uap->sd, cap_rights_init_one(&rights, CAP_RECV),
 	    &fp, NULL, NULL);
 	if (error != 0)
 		return (error);

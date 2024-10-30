@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2001 Atsushi Onoe
  * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_wlan.h"
 
 #include <sys/param.h>
@@ -36,9 +35,9 @@
 #include <sys/malloc.h>
 #include <sys/endian.h>
 #include <sys/kernel.h>
- 
+
 #include <sys/socket.h>
- 
+
 #include <net/ethernet.h>
 #include <net/if.h>
 #include <net/if_var.h>
@@ -145,7 +144,7 @@ ieee80211_input_mimo_all(struct ieee80211com *ic, struct mbuf *m)
 			 * so do a deep copy of the packet.
 			 * NB: tags are copied too.
 			 */
-			mcopy = m_dup(m, M_NOWAIT);
+			mcopy = m_dup(m, IEEE80211_M_NOWAIT);
 			if (mcopy == NULL) {
 				/* XXX stat+msg */
 				continue;
@@ -274,6 +273,7 @@ void
 ieee80211_deliver_data(struct ieee80211vap *vap,
 	struct ieee80211_node *ni, struct mbuf *m)
 {
+	struct epoch_tracker et;
 	struct ether_header *eh = mtod(m, struct ether_header *);
 	struct ifnet *ifp = vap->iv_ifp;
 
@@ -304,7 +304,9 @@ ieee80211_deliver_data(struct ieee80211vap *vap,
 		m->m_pkthdr.ether_vtag = ni->ni_vlan;
 		m->m_flags |= M_VLANTAG;
 	}
+	NET_EPOCH_ENTER(et);
 	ifp->if_input(ifp, m);
+	NET_EPOCH_EXIT(et);
 }
 
 struct mbuf *
@@ -744,7 +746,7 @@ ieee80211_parse_beacon(struct ieee80211_node *ni, struct mbuf *m,
 #ifdef IEEE80211_SUPPORT_MESH
 	if (scan->meshid != NULL) {
 		IEEE80211_VERIFY_ELEMENT(scan->meshid, IEEE80211_MESHID_LEN,
-		    scan->status |= IEEE80211_BPARSE_RATES_INVALID);
+		    scan->status |= IEEE80211_BPARSE_MESHID_INVALID);
 	}
 #endif
 	/*
@@ -770,12 +772,12 @@ ieee80211_parse_beacon(struct ieee80211_node *ni, struct mbuf *m,
 	/* Process VHT IEs */
 	if (scan->vhtcap != NULL) {
 		IEEE80211_VERIFY_LENGTH(scan->vhtcap[1],
-		    sizeof(struct ieee80211_ie_vhtcap) - 2,
+		    sizeof(struct ieee80211_vht_cap),
 		    scan->vhtcap = NULL);
 	}
 	if (scan->vhtopmode != NULL) {
 		IEEE80211_VERIFY_LENGTH(scan->vhtopmode[1],
-		    sizeof(struct ieee80211_ie_vht_operation) - 2,
+		    sizeof(struct ieee80211_vht_operation),
 		    scan->vhtopmode = NULL);
 	}
 
@@ -941,14 +943,18 @@ ieee80211_getbssid(const struct ieee80211vap *vap,
 void
 ieee80211_note(const struct ieee80211vap *vap, const char *fmt, ...)
 {
-	char buf[128];		/* XXX */
+	char buf[256];		/* XXX */
 	va_list ap;
+	int len;
 
 	va_start(ap, fmt);
-	vsnprintf(buf, sizeof(buf), fmt, ap);
+	len = vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
 
 	if_printf(vap->iv_ifp, "%s", buf);	/* NB: no \n */
+
+	if (len >= sizeof(buf))
+		printf("%s: XXX buffer too small: len = %d\n", __func__, len);
 }
 
 void
@@ -956,14 +962,18 @@ ieee80211_note_frame(const struct ieee80211vap *vap,
 	const struct ieee80211_frame *wh,
 	const char *fmt, ...)
 {
-	char buf[128];		/* XXX */
+	char buf[256];		/* XXX */
 	va_list ap;
+	int len;
 
 	va_start(ap, fmt);
-	vsnprintf(buf, sizeof(buf), fmt, ap);
+	len = vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
 	if_printf(vap->iv_ifp, "[%s] %s\n",
 		ether_sprintf(ieee80211_getbssid(vap, wh)), buf);
+
+	if (len >= sizeof(buf))
+		printf("%s: XXX buffer too small: len = %d\n", __func__, len);
 }
 
 void
@@ -971,13 +981,17 @@ ieee80211_note_mac(const struct ieee80211vap *vap,
 	const uint8_t mac[IEEE80211_ADDR_LEN],
 	const char *fmt, ...)
 {
-	char buf[128];		/* XXX */
+	char buf[256];		/* XXX */
 	va_list ap;
+	int len;
 
 	va_start(ap, fmt);
-	vsnprintf(buf, sizeof(buf), fmt, ap);
+	len = vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
 	if_printf(vap->iv_ifp, "[%s] %s\n", ether_sprintf(mac), buf);
+
+	if (len >= sizeof(buf))
+		printf("%s: XXX buffer too small: len = %d\n", __func__, len);
 }
 
 void
@@ -985,16 +999,21 @@ ieee80211_discard_frame(const struct ieee80211vap *vap,
 	const struct ieee80211_frame *wh,
 	const char *type, const char *fmt, ...)
 {
+	char buf[256];		/* XXX */
 	va_list ap;
+	int len;
 
-	if_printf(vap->iv_ifp, "[%s] discard ",
-		ether_sprintf(ieee80211_getbssid(vap, wh)));
-	printf("%s frame, ", type != NULL ? type :
-	    ieee80211_mgt_subtype_name(wh->i_fc[0]));
 	va_start(ap, fmt);
-	vprintf(fmt, ap);
+	len = vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
-	printf("\n");
+
+	if_printf(vap->iv_ifp, "[%s] discard %s frame, %s\n",
+	    ether_sprintf(ieee80211_getbssid(vap, wh)),
+	    type != NULL ? type : ieee80211_mgt_subtype_name(wh->i_fc[0]),
+	    buf);
+
+	if (len >= sizeof(buf))
+		printf("%s: XXX buffer too small: len = %d\n", __func__, len);
 }
 
 void
@@ -1002,18 +1021,20 @@ ieee80211_discard_ie(const struct ieee80211vap *vap,
 	const struct ieee80211_frame *wh,
 	const char *type, const char *fmt, ...)
 {
+	char buf[256];		/* XXX */
 	va_list ap;
+	int len;
 
-	if_printf(vap->iv_ifp, "[%s] discard ",
-		ether_sprintf(ieee80211_getbssid(vap, wh)));
-	if (type != NULL)
-		printf("%s information element, ", type);
-	else
-		printf("information element, ");
 	va_start(ap, fmt);
-	vprintf(fmt, ap);
+	len = vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
-	printf("\n");
+
+	if_printf(vap->iv_ifp, "[%s] discard%s%s information element, %s\n",
+	    ether_sprintf(ieee80211_getbssid(vap, wh)),
+	    type != NULL ? " " : "", type != NULL ? type : "", buf);
+
+	if (len >= sizeof(buf))
+		printf("%s: XXX buffer too small: len = %d\n", __func__, len);
 }
 
 void
@@ -1021,16 +1042,19 @@ ieee80211_discard_mac(const struct ieee80211vap *vap,
 	const uint8_t mac[IEEE80211_ADDR_LEN],
 	const char *type, const char *fmt, ...)
 {
+	char buf[256];		/* XXX */
 	va_list ap;
+	int len;
 
-	if_printf(vap->iv_ifp, "[%s] discard ", ether_sprintf(mac));
-	if (type != NULL)
-		printf("%s frame, ", type);
-	else
-		printf("frame, ");
 	va_start(ap, fmt);
-	vprintf(fmt, ap);
+	len = vsnprintf(buf, sizeof(buf), fmt, ap);
 	va_end(ap);
-	printf("\n");
+
+	if_printf(vap->iv_ifp, "[%s] discard%s%s frame, %s\n",
+	    ether_sprintf(mac),
+	    type != NULL ? " " : "", type != NULL ? type : "", buf);
+
+	if (len >= sizeof(buf))
+		printf("%s: XXX buffer too small: len = %d\n", __func__, len);
 }
 #endif /* IEEE80211_DEBUG */

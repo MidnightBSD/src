@@ -9,7 +9,6 @@
 #include "softfloat.h"
 
 #include <sys/cdefs.h>
-
 flag __gtsf2(float32, float32);
 
 flag

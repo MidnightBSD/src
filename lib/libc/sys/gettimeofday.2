@@ -27,7 +27,7 @@
 .\"
 .\"     @(#)gettimeofday.2	8.2 (Berkeley) 5/26/95
 .\"
-.Dd August 4, 2018
+.Dd April 28, 2024
 .Dt GETTIMEOFDAY 2
 .Os
 .Sh NAME
@@ -43,6 +43,17 @@
 .Ft int
 .Fn settimeofday "const struct timeval *tp" "const struct timezone *tzp"
 .Sh DESCRIPTION
+.Em Note :
+The
+.Nm gettimeofday
+function
+.Po but not
+.Nm settimeofday Pc
+is obsolescent.
+See the
+.Sx STANDARDS
+section for more details.
+.Pp
 The system's notion of the current Greenwich time and the current time
 zone is obtained with the
 .Fn gettimeofday
@@ -88,6 +99,11 @@ structure indicates the local time zone
 and a flag that, if nonzero, indicates that
 Daylight Saving time applies locally during
 the appropriate part of the year.
+The kernel generally does not track these values and they
+are usually returned as zero.
+Use
+.Xr localtime 3
+to find the offset for the currently active timezone.
 .Pp
 Only the super-user may set the time of day or time zone.
 If the system is running at securelevel >= 2 (see
@@ -117,8 +133,17 @@ A user other than the super-user attempted to set the time.
 .Xr clock_gettime 2 ,
 .Xr ctime 3 ,
 .Xr timeradd 3 ,
-.Xr clocks 7 ,
-.Xr timed 8
+.Xr clocks 7
+.Sh STANDARDS
+The
+.Nm gettimeofday
+function is considered obsolescent and its usage discouraged by
+.\" XXX: This should be replaced in the future when an appropriate argument to
+.\" the St macro is available: -p1003.1-2017
+.No IEEE Std 1003.1-2008, 2017 Edition (\\(LqPOSIX.1\\(Rq) .
+Applications should use the
+.Xr clock_gettime 2
+function instead.
 .Sh HISTORY
 The
 .Fn gettimeofday

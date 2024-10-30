@@ -41,14 +41,16 @@ static char sccsid[] = "@(#)kdump.c	8.1 (Berkeley) 6/6/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-
 #define _WANT_KERNEL_ERRNO
 #ifdef __LP64__
 #define	_WANT_KEVENT32
 #endif
 #define	_WANT_FREEBSD11_KEVENT
+#define	_WANT_FREEBSD_BITSET
 #include <sys/param.h>
 #include <sys/capsicum.h>
+#include <sys/_bitset.h>
+#include <sys/bitset.h>
 #include <sys/errno.h>
 #include <sys/time.h>
 #include <sys/uio.h>
@@ -86,6 +88,7 @@ static char sccsid[] = "@(#)kdump.c	8.1 (Berkeley) 6/6/93";
 #include <unistd.h>
 #include <vis.h>
 #include "ktrace.h"
+#include "kdump.h"
 
 #ifdef WITH_CASPER
 #include <libcasper.h>
@@ -118,6 +121,9 @@ void ktrfault(struct ktr_fault *);
 void ktrfaultend(struct ktr_faultend *);
 void ktrkevent(struct kevent *);
 void ktrstructarray(struct ktr_struct_array *, size_t);
+void ktrbitset(char *, struct bitset *, size_t);
+void ktrsyscall_freebsd(struct ktr_syscall *ktr, register_t **resip,
+    int *resnarg, char *resc, u_int sv_flags);
 void usage(void);
 
 #define	TIMESTAMP_NONE		0x0
@@ -125,45 +131,14 @@ void usage(void);
 #define	TIMESTAMP_ELAPSED	0x2
 #define	TIMESTAMP_RELATIVE	0x4
 
-static bool abiflag, decimal, fancy = true, resolv, suppressdata, syscallno,
-    tail, threads;
+bool decimal, fancy = true, resolv;
+static bool abiflag, suppressdata, syscallno, tail, threads;
 static int timestamp, maxdata;
 static const char *tracefile = DEF_TRACEFILE;
 static struct ktr_header ktr_header;
 
 #define TIME_FORMAT	"%b %e %T %Y"
 #define eqs(s1, s2)	(strcmp((s1), (s2)) == 0)
-
-#define	print_number64(first,i,n,c) do {				\
-	uint64_t __v;							\
-									\
-	if (quad_align && (((ptrdiff_t)((i) - (first))) & 1) == 1) {	\
-		(i)++;							\
-		(n)--;							\
-	}								\
-	if (quad_slots == 2)						\
-		__v = (uint64_t)(uint32_t)(i)[0] |			\
-		    ((uint64_t)(uint32_t)(i)[1]) << 32;			\
-	else								\
-		__v = (uint64_t)*(i);					\
-	if (decimal)							\
-		printf("%c%jd", (c), (intmax_t)__v);			\
-	else								\
-		printf("%c%#jx", (c), (uintmax_t)__v);			\
-	(i) += quad_slots;						\
-	(n) -= quad_slots;						\
-	(c) = ',';							\
-} while (0)
-
-#define print_number(i,n,c) do {					\
-	if (decimal)							\
-		printf("%c%jd", c, (intmax_t)*i);			\
-	else								\
-		printf("%c%#jx", c, (uintmax_t)(u_register_t)*i);	\
-	i++;								\
-	n--;								\
-	c = ',';							\
-} while (0)
 
 struct proc_info
 {
@@ -220,7 +195,7 @@ cappwdgrp_setup(cap_channel_t **cappwdp, cap_channel_t **capgrpp)
 }
 #endif	/* WITH_CASPER */
 
-static void
+void
 print_integer_arg(const char *(*decoder)(int), int value)
 {
 	const char *str;
@@ -237,7 +212,7 @@ print_integer_arg(const char *(*decoder)(int), int value)
 }
 
 /* Like print_integer_arg but unknown values are treated as valid. */
-static void
+void
 print_integer_arg_valid(const char *(*decoder)(int), int value)
 {
 	const char *str;
@@ -253,7 +228,7 @@ print_integer_arg_valid(const char *(*decoder)(int), int value)
 	}
 }
 
-static bool
+bool
 print_mask_arg_part(bool (*decoder)(FILE *, int, int *), int value, int *rem)
 {
 
@@ -261,7 +236,7 @@ print_mask_arg_part(bool (*decoder)(FILE *, int, int *), int value, int *rem)
 	return (decoder(stdout, value, rem));
 }
 
-static void
+void
 print_mask_arg(bool (*decoder)(FILE *, int, int *), int value)
 {
 	bool invalid;
@@ -273,7 +248,7 @@ print_mask_arg(bool (*decoder)(FILE *, int, int *), int value)
 		printf("<invalid>%u", rem);
 }
 
-static void
+void
 print_mask_arg0(bool (*decoder)(FILE *, int, int *), int value)
 {
 	bool invalid;
@@ -307,7 +282,7 @@ decode_fileflags(fflags_t value)
 		printf("<invalid>%u", rem);
 }
 
-static void
+void
 decode_filemode(int value)
 {
 	bool invalid;
@@ -324,7 +299,7 @@ decode_filemode(int value)
 		printf("<invalid>%u", rem);
 }
 
-static void
+void
 print_mask_arg32(bool (*decoder)(FILE *, uint32_t, uint32_t *), uint32_t value)
 {
 	bool invalid;
@@ -337,7 +312,7 @@ print_mask_arg32(bool (*decoder)(FILE *, uint32_t, uint32_t *), uint32_t value)
 		printf("<invalid>%u", rem);
 }
 
-static void
+void
 print_mask_argul(bool (*decoder)(FILE *, u_long, u_long *), u_long value)
 {
 	bool invalid;
@@ -798,17 +773,50 @@ void
 ktrsyscall(struct ktr_syscall *ktr, u_int sv_flags)
 {
 	int narg = ktr->ktr_narg;
+	register_t *ip;
+
+	syscallname(ktr->ktr_code, sv_flags);
+	ip = &ktr->ktr_args[0];
+	if (narg) {
+		char c = '(';
+		if (fancy) {
+			switch (sv_flags & SV_ABI_MASK) {
+			case SV_ABI_FREEBSD:
+				ktrsyscall_freebsd(ktr, &ip, &narg, &c,
+				    sv_flags);
+				break;
+#ifdef SYSDECODE_HAVE_LINUX
+			case SV_ABI_LINUX:
+#ifdef __amd64__
+				if (sv_flags & SV_ILP32)
+					ktrsyscall_linux32(ktr, &ip,
+					    &narg, &c);
+				else
+#endif
+				ktrsyscall_linux(ktr, &ip, &narg, &c);
+				break;
+#endif /* SYSDECODE_HAVE_LINUX */
+			}
+		}
+		while (narg > 0)
+			print_number(ip, narg, c);
+		putchar(')');
+	}
+	putchar('\n');
+}
+
+void
+ktrsyscall_freebsd(struct ktr_syscall *ktr, register_t **resip,
+    int *resnarg, char *resc, u_int sv_flags)
+{
+	int narg = ktr->ktr_narg;
 	register_t *ip, *first;
 	intmax_t arg;
 	int quad_align, quad_slots;
 
-	syscallname(ktr->ktr_code, sv_flags);
 	ip = first = &ktr->ktr_args[0];
-	if (narg) {
-		char c = '(';
-		if (fancy &&
-		    (sv_flags == 0 ||
-		    (sv_flags & SV_ABI_MASK) == SV_ABI_FREEBSD)) {
+	char c = *resc;
+
 			quad_align = 0;
 			if (sv_flags & SV_ILP32) {
 #ifdef __powerpc__
@@ -867,6 +875,15 @@ ktrsyscall(struct ktr_syscall *ktr, u_int sv_flags)
 				print_mask_arg(sysdecode_access_mode, *ip);
 				ip++;
 				narg--;
+				break;
+			case SYS_close_range:
+				print_number(ip, narg, c);
+				print_number(ip, narg, c);
+				putchar(',');
+				print_mask_arg0(sysdecode_close_range_flags,
+				    *ip);
+				ip += 3;
+				narg -= 3;
 				break;
 			case SYS_open:
 			case SYS_openat:
@@ -930,14 +947,14 @@ ktrsyscall(struct ktr_syscall *ktr, u_int sv_flags)
 				print_number(ip, narg, c);
 				print_number(ip, narg, c);
 				putchar(',');
-				print_mask_arg(sysdecode_mount_flags, *ip);
+				print_mask_arg0(sysdecode_mount_flags, *ip);
 				ip++;
 				narg--;
 				break;
 			case SYS_unmount:
 				print_number(ip, narg, c);
 				putchar(',');
-				print_mask_arg(sysdecode_mount_flags, *ip);
+				print_mask_arg0(sysdecode_mount_flags, *ip);
 				ip++;
 				narg--;
 				break;
@@ -1253,7 +1270,8 @@ ktrsyscall(struct ktr_syscall *ktr, u_int sv_flags)
 				ip++;
 				narg--;
 				break;
-			case SYS_shm_open:
+#ifdef SYS_freebsd12_shm_open
+			case SYS_freebsd12_shm_open:
 				if (ip[0] == (uintptr_t)SHM_ANON) {
 					printf("(SHM_ANON");
 					ip++;
@@ -1266,6 +1284,23 @@ ktrsyscall(struct ktr_syscall *ktr, u_int sv_flags)
 				decode_filemode(ip[1]);
 				ip += 2;
 				narg -= 2;
+				break;
+#endif
+			case SYS_shm_open2:
+				if (ip[0] == (uintptr_t)SHM_ANON) {
+					printf("(SHM_ANON");
+					ip++;
+				} else {
+					print_number(ip, narg, c);
+				}
+				putchar(',');
+				print_mask_arg(sysdecode_open_flags, ip[0]);
+				putchar(',');
+				decode_filemode(ip[1]);
+				putchar(',');
+				print_mask_arg(sysdecode_shmflags, ip[2]);
+				ip += 3;
+				narg -= 3;
 				break;
 			case SYS_minherit:
 				print_number(ip, narg, c);
@@ -1377,7 +1412,7 @@ ktrsyscall(struct ktr_syscall *ktr, u_int sv_flags)
 				print_number(ip, narg, c);
 				print_number(ip, narg, c);
 				putchar(',');
-				print_mask_arg(sysdecode_mount_flags, *ip);
+				print_mask_arg0(sysdecode_mount_flags, *ip);
 				ip++;
 				narg--;
 				break;
@@ -1498,6 +1533,14 @@ ktrsyscall(struct ktr_syscall *ktr, u_int sv_flags)
 				narg--;
 				c = ',';
 				break;
+			case SYS_getitimer:
+			case SYS_setitimer:
+				putchar('(');
+				print_integer_arg(sysdecode_itimer, *ip);
+				ip++;
+				narg--;
+				c = ',';
+				break;
 			}
 			switch (ktr->ktr_code) {
 			case SYS_chflagsat:
@@ -1514,13 +1557,9 @@ ktrsyscall(struct ktr_syscall *ktr, u_int sv_flags)
 				narg--;
 				break;
 			}
-		}
-		while (narg > 0) {
-			print_number(ip, narg, c);
-		}
-		putchar(')');
-	}
-	putchar('\n');
+	*resc = c;
+	*resip = ip;
+	*resnarg = narg;
 }
 
 void
@@ -1619,7 +1658,7 @@ visdump(char *dp, int datalen, int screenwidth)
 	printf("       \"");
 	col = 8;
 	for (;datalen > 0; datalen--, dp++) {
-		 vis(visbuf, *dp, VIS_CSTYLE, *(dp+1));
+		vis(visbuf, *dp, VIS_CSTYLE | VIS_NOLOCALE, *(dp+1));
 		cp = visbuf;
 		/*
 		 * Keep track of printables and
@@ -1946,6 +1985,30 @@ ktrstat(struct stat *statp)
 }
 
 void
+ktrbitset(char *name, struct bitset *set, size_t setlen)
+{
+	int i, maxi, c = 0;
+
+	if (setlen > INT32_MAX)
+		setlen = INT32_MAX;
+	maxi = setlen * CHAR_BIT;
+	printf("%s [ ", name);
+	for (i = 0; i < maxi; i++) {
+		if (!BIT_ISSET(setlen, i, set))
+			continue;
+		if (c == 0)
+			printf("%d", i);
+		else
+			printf(", %d", i);
+		c++;
+	}
+	if (c == 0)
+		printf(" empty ]\n");
+	else
+		printf(" ]\n");
+}
+
+void
 ktrstruct(char *buf, size_t buflen)
 {
 	char *name, *data;
@@ -1955,6 +2018,7 @@ ktrstruct(char *buf, size_t buflen)
 	struct itimerval it;
 	struct stat sb;
 	struct sockaddr_storage ss;
+	struct bitset *set;
 
 	for (name = buf, namelen = 0;
 	     namelen < buflen && name[namelen] != '\0';
@@ -1970,7 +2034,7 @@ ktrstruct(char *buf, size_t buflen)
 		goto invalid;
 	/* sanity check */
 	for (i = 0; i < (int)namelen; ++i)
-		if (!isalpha(name[i]))
+		if (!isalpha(name[i]) && name[i] != '_')
 			goto invalid;
 	if (strcmp(name, "caprights") == 0) {
 		if (datalen != sizeof(cap_rights_t))
@@ -1994,8 +2058,20 @@ ktrstruct(char *buf, size_t buflen)
 		if (datalen != ss.ss_len)
 			goto invalid;
 		ktrsockaddr((struct sockaddr *)&ss);
+	} else if (strcmp(name, "cpuset_t") == 0) {
+		if (datalen < 1)
+			goto invalid;
+		set = malloc(datalen);
+		if (set == NULL)
+			errx(1, "%s", strerror(ENOMEM));
+		memcpy(set, data, datalen);
+		ktrbitset(name, set, datalen);
+		free(set);
 	} else {
-		printf("unknown structure\n");
+#ifdef SYSDECODE_HAVE_LINUX
+		if (ktrstruct_linux(name, data, datalen) == false)
+#endif
+			printf("unknown structure\n");
 	}
 	return;
 invalid:
@@ -2025,7 +2101,7 @@ ktrcapfail(struct ktr_cap_fail *ktr)
 		printf("disallowed system call");
 		break;
 	case CAPFAIL_LOOKUP:
-		/* used ".." in strict-relative mode */
+		/* absolute or AT_FDCWD path, ".." path, etc. */
 		printf("restricted VFS lookup");
 		break;
 	default:

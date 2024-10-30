@@ -1,6 +1,5 @@
 /*
  * Codel - The Controlled-Delay Active Queue Management algorithm.
- *
  * 
  * Copyright (C) 2016 Centre for Advanced Internet Architectures,
  *  Swinburne University of Technology, Melbourne, Australia.
@@ -124,7 +123,6 @@ fqc_codel_dequeue(struct fq_codel_flow *q, struct fq_codel_si *si)
 		 * happen now, hence the 'while' loop.
 		 */
 		while (now >= cst->drop_next_time && cst->dropping) {
-
 			/* mark the packet */
 			if (cprms->flags & CODEL_ECN_ENABLED && ecn_mark(m)) {
 				cst->count++;
@@ -152,7 +150,6 @@ fqc_codel_dequeue(struct fq_codel_flow *q, struct fq_codel_si *si)
 	 * above 'target' for 'interval' so enter dropping state.
 	 */
 	} else if (ok_to_drop) {
-
 		/* if ECN option is disabled or the packet cannot be marked,
 		 * drop the packet and extract another.
 		 */

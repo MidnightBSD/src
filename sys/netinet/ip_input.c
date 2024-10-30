@@ -32,8 +32,8 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_bootp.h"
+#include "opt_inet.h"
 #include "opt_ipstealth.h"
 #include "opt_ipsec.h"
 #include "opt_route.h"
@@ -56,12 +56,13 @@
 #include <sys/syslog.h>
 #include <sys/sysctl.h>
 
-#include <net/pfil.h>
 #include <net/if.h>
 #include <net/if_types.h>
 #include <net/if_var.h>
 #include <net/if_dl.h>
+#include <net/pfil.h>
 #include <net/route.h>
+#include <net/route/nhop.h>
 #include <net/netisr.h>
 #include <net/rss_config.h>
 #include <net/vnet.h>
@@ -71,6 +72,7 @@
 #include <netinet/in_systm.h>
 #include <netinet/in_var.h>
 #include <netinet/ip.h>
+#include <netinet/in_fib.h>
 #include <netinet/in_pcb.h>
 #include <netinet/ip_var.h>
 #include <netinet/ip_fw.h>
@@ -136,7 +138,9 @@ SYSCTL_INT(_net_inet_ip, OID_AUTO, check_interface, CTLFLAG_VNET | CTLFLAG_RW,
     &VNET_NAME(ip_checkinterface), 0,
     "Verify packet arrives on correct interface");
 
-VNET_DEFINE(struct pfil_head, inet_pfil_hook);	/* Packet filter hooks */
+/* Packet filter hooks */
+VNET_DEFINE(pfil_head_t, inet_pfil_head);
+VNET_DEFINE(pfil_head_t, inet_local_pfil_head);
 
 static struct netisr_handler ip_nh = {
 	.nh_name = "ip",
@@ -232,7 +236,8 @@ sysctl_netinet_intr_queue_maxlen(SYSCTL_HANDLER_ARGS)
 	return (netisr_setqlimit(&ip_nh, qlimit));
 }
 SYSCTL_PROC(_net_inet_ip, IPCTL_INTRQMAXLEN, intr_queue_maxlen,
-    CTLTYPE_INT|CTLFLAG_RW, 0, 0, sysctl_netinet_intr_queue_maxlen, "I",
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE, 0, 0,
+    sysctl_netinet_intr_queue_maxlen, "I",
     "Maximum size of the IP input queue");
 
 static int
@@ -253,7 +258,8 @@ sysctl_netinet_intr_queue_drops(SYSCTL_HANDLER_ARGS)
 }
 
 SYSCTL_PROC(_net_inet_ip, IPCTL_INTRQDROPS, intr_queue_drops,
-    CTLTYPE_INT|CTLFLAG_RD, 0, 0, sysctl_netinet_intr_queue_drops, "I",
+    CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_MPSAFE,
+    0, 0, sysctl_netinet_intr_queue_drops, "I",
     "Number of packets dropped from the IP input queue");
 
 #ifdef	RSS
@@ -271,7 +277,8 @@ sysctl_netinet_intr_direct_queue_maxlen(SYSCTL_HANDLER_ARGS)
 	return (netisr_setqlimit(&ip_direct_nh, qlimit));
 }
 SYSCTL_PROC(_net_inet_ip, IPCTL_INTRDQMAXLEN, intr_direct_queue_maxlen,
-    CTLTYPE_INT|CTLFLAG_RW, 0, 0, sysctl_netinet_intr_direct_queue_maxlen,
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE,
+    0, 0, sysctl_netinet_intr_direct_queue_maxlen,
     "I", "Maximum size of the IP direct input queue");
 
 static int
@@ -292,7 +299,8 @@ sysctl_netinet_intr_direct_queue_drops(SYSCTL_HANDLER_ARGS)
 }
 
 SYSCTL_PROC(_net_inet_ip, IPCTL_INTRDQDROPS, intr_direct_queue_drops,
-    CTLTYPE_INT|CTLFLAG_RD, 0, 0, sysctl_netinet_intr_direct_queue_drops, "I",
+    CTLTYPE_INT | CTLFLAG_RD | CTLFLAG_MPSAFE, 0, 0,
+    sysctl_netinet_intr_direct_queue_drops, "I",
     "Number of packets dropped from the IP direct input queue");
 #endif	/* RSS */
 
@@ -303,6 +311,7 @@ SYSCTL_PROC(_net_inet_ip, IPCTL_INTRDQDROPS, intr_direct_queue_drops,
 void
 ip_init(void)
 {
+	struct pfil_head_args args;
 	struct protosw *pr;
 	int i;
 
@@ -313,11 +322,15 @@ ip_init(void)
 	ipreass_init();
 
 	/* Initialize packet filter hooks. */
-	V_inet_pfil_hook.ph_type = PFIL_TYPE_AF;
-	V_inet_pfil_hook.ph_af = AF_INET;
-	if ((i = pfil_head_register(&V_inet_pfil_hook)) != 0)
-		printf("%s: WARNING: unable to register pfil hook, "
-			"error %d\n", __func__, i);
+	args.pa_version = PFIL_VERSION;
+	args.pa_flags = PFIL_IN | PFIL_OUT;
+	args.pa_type = PFIL_TYPE_IP4;
+	args.pa_headname = PFIL_INET_NAME;
+	V_inet_pfil_head = pfil_head_register(&args);
+
+	args.pa_flags = PFIL_OUT;
+	args.pa_headname = PFIL_INET_LOCAL_NAME;
+	V_inet_local_pfil_head = pfil_head_register(&args);
 
 	if (hhook_head_register(HHOOK_TYPE_IPSEC_IN, AF_INET,
 	    &V_ipsec_hhh_in[HHOOK_IPSEC_INET],
@@ -371,7 +384,6 @@ ip_init(void)
 static void
 ip_destroy(void *unused __unused)
 {
-	struct ifnet *ifp;
 	int error;
 
 #ifdef	RSS
@@ -379,10 +391,7 @@ ip_destroy(void *unused __unused)
 #endif
 	netisr_unregister_vnet(&ip_nh);
 
-	if ((error = pfil_head_unregister(&V_inet_pfil_hook)) != 0)
-		printf("%s: WARNING: unable to unregister pfil hook, "
-		    "error %d\n", __func__, error);
-
+	pfil_head_unregister(V_inet_pfil_head);
 	error = hhook_head_deregister(V_ipsec_hhh_in[HHOOK_IPSEC_INET]);
 	if (error != 0) {
 		printf("%s: WARNING: unable to deregister input helper hook "
@@ -400,10 +409,7 @@ ip_destroy(void *unused __unused)
 	in_ifscrub_all();
 
 	/* Make sure the IPv4 routes are gone as well. */
-	IFNET_RLOCK();
-	CK_STAILQ_FOREACH(ifp, &V_ifnet, if_link)
-		rt_flushifroutes_af(ifp, AF_INET);
-	IFNET_RUNLOCK();
+	rib_flush_routes_family(AF_INET);
 
 	/* Destroy IP reassembly queue. */
 	ipreass_destroy();
@@ -461,6 +467,7 @@ ip_input(struct mbuf *m)
 	struct in_addr odst;			/* original dst address */
 
 	M_ASSERTPKTHDR(m);
+	NET_EPOCH_ASSERT();
 
 	if (m->m_flags & M_FASTFWD_OURS) {
 		m->m_flags &= ~M_FASTFWD_OURS;
@@ -512,6 +519,11 @@ ip_input(struct mbuf *m)
 			goto bad;
 		}
 	}
+	/* The unspecified address can appear only as a src address - RFC1122 */
+	if (__predict_false(ntohl(ip->ip_dst.s_addr) == INADDR_ANY)) {
+		IPSTAT_INC(ips_badaddr);
+		goto bad;
+	}
 
 	if (m->m_pkthdr.csum_flags & CSUM_IP_CHECKED) {
 		sum = !(m->m_pkthdr.csum_flags & CSUM_IP_VALID);
@@ -560,8 +572,9 @@ tooshort:
 
 	/*
 	 * Try to forward the packet, but if we fail continue.
-	 * ip_tryforward() does not generate redirects, so fall
-	 * through to normal processing if redirects are required.
+	 * ip_tryforward() may generate redirects these days.
+	 * XXX the logic below falling through to normal processing
+	 * if redirects are required should be revisited as well.
 	 * ip_tryforward() does inbound and outbound packet firewall
 	 * processing. If firewall has decided that destination becomes
 	 * our local address, it sets M_FASTFWD_OURS flag. In this
@@ -574,6 +587,10 @@ tooshort:
 	    IPSEC_CAPS(ipv4, m, IPSEC_CAP_OPERABLE) == 0)
 #endif
 	    ) {
+		/*
+		 * ip_dooptions() was run so we can ignore the source route (or
+		 * any IP options case) case for redirects in ip_tryforward().
+		 */
 		if ((m = ip_tryforward(m)) == NULL)
 			return;
 		if (m->m_flags & M_FASTFWD_OURS) {
@@ -601,11 +618,12 @@ tooshort:
 	 */
 
 	/* Jump over all PFIL processing if hooks are not active. */
-	if (!PFIL_HOOKED(&V_inet_pfil_hook))
+	if (!PFIL_HOOKED_IN(V_inet_pfil_head))
 		goto passin;
 
 	odst = ip->ip_dst;
-	if (pfil_run_hooks(&V_inet_pfil_hook, &m, ifp, PFIL_IN, 0, NULL) != 0)
+	if (pfil_run_hooks(V_inet_pfil_head, &m, ifp, PFIL_IN, NULL) !=
+	    PFIL_PASS)
 		return;
 	if (m == NULL)			/* consumed by filter */
 		return;
@@ -641,12 +659,12 @@ passin:
 		return;
 
         /* greedy RSVP, snatches any PATH packet of the RSVP protocol and no
-         * matter if it is destined to another node, or whether it is 
+         * matter if it is destined to another node, or whether it is
          * a multicast one, RSVP wants it! and prevents it from being forwarded
          * anywhere else. Also checks if the rsvp daemon is running before
 	 * grabbing the packet.
          */
-	if (V_rsvp_on && ip->ip_p==IPPROTO_RSVP) 
+	if (V_rsvp_on && ip->ip_p==IPPROTO_RSVP)
 		goto ours;
 
 	/*
@@ -677,7 +695,7 @@ passin:
 	 * insert a workaround. If the packet got here, we already
 	 * checked with carp_iamatch() and carp_forus().
 	 */
-	checkif = V_ip_checkinterface && (V_ipforwarding == 0) && 
+	checkif = V_ip_checkinterface && (V_ipforwarding == 0) &&
 	    ifp != NULL && ((ifp->if_flags & IFF_LOOPBACK) == 0) &&
 	    ifp->if_carp == NULL && (dchg == 0);
 
@@ -691,7 +709,7 @@ passin:
 		 * arrived via the correct interface if checking is
 		 * enabled.
 		 */
-		if (IA_SIN(ia)->sin_addr.s_addr == ip->ip_dst.s_addr && 
+		if (IA_SIN(ia)->sin_addr.s_addr == ip->ip_dst.s_addr &&
 		    (!checkif || ia->ia_ifp == ifp)) {
 			counter_u64_add(ia->ia_ifa.ifa_ipackets, 1);
 			counter_u64_add(ia->ia_ifa.ifa_ibytes,
@@ -711,7 +729,6 @@ passin:
 	 * into the stack for SIMPLEX interfaces handled by ether_output().
 	 */
 	if (ifp != NULL && ifp->if_flags & IFF_BROADCAST) {
-		IF_ADDR_RLOCK(ifp);
 		CK_STAILQ_FOREACH(ifa, &ifp->if_addrhead, ifa_link) {
 			if (ifa->ifa_addr->sa_family != AF_INET)
 				continue;
@@ -721,7 +738,6 @@ passin:
 				counter_u64_add(ia->ia_ifa.ifa_ipackets, 1);
 				counter_u64_add(ia->ia_ifa.ifa_ibytes,
 				    m->m_pkthdr.len);
-				IF_ADDR_RUNLOCK(ifp);
 				goto ours;
 			}
 #ifdef BOOTP_COMPAT
@@ -729,12 +745,10 @@ passin:
 				counter_u64_add(ia->ia_ifa.ifa_ipackets, 1);
 				counter_u64_add(ia->ia_ifa.ifa_ibytes,
 				    m->m_pkthdr.len);
-				IF_ADDR_RUNLOCK(ifp);
 				goto ours;
 			}
 #endif
 		}
-		IF_ADDR_RUNLOCK(ifp);
 		ia = NULL;
 	}
 	if (IN_MULTICAST(ntohl(ip->ip_dst.s_addr))) {
@@ -805,6 +819,20 @@ ours:
 	if (V_ipstealth && hlen > sizeof (struct ip) && ip_dooptions(m, 1))
 		return;
 #endif /* IPSTEALTH */
+
+	/*
+	 * We are going to ship the packet to the local protocol stack. Call the
+	 * filter again for this 'output' action, allowing redirect-like rules
+	 * to adjust the source address.
+	 */
+	if (PFIL_HOOKED_OUT(V_inet_local_pfil_head)) {
+		if (pfil_run_hooks(V_inet_local_pfil_head, &m, V_loif, PFIL_OUT, NULL) !=
+		    PFIL_PASS)
+			return;
+		if (m == NULL)			/* consumed by filter */
+			return;
+		ip = mtod(m, struct ip *);
+	}
 
 	/*
 	 * Attempt reassembly; if it succeeds, proceed.
@@ -959,7 +987,10 @@ ip_forward(struct mbuf *m, int srcrt)
 	struct sockaddr_in *sin;
 	struct in_addr dest;
 	struct route ro;
+	uint32_t flowid;
 	int error, type = 0, code = 0, mtu = 0;
+
+	NET_EPOCH_ASSERT();
 
 	if (m->m_flags & (M_BCAST|M_MCAST) || in_canforward(ip->ip_dst) == 0) {
 		IPSTAT_INC(ips_cantforward);
@@ -980,16 +1011,10 @@ ip_forward(struct mbuf *m, int srcrt)
 	sin->sin_family = AF_INET;
 	sin->sin_len = sizeof(*sin);
 	sin->sin_addr = ip->ip_dst;
-#ifdef RADIX_MPATH
-	rtalloc_mpath_fib(&ro,
-	    ntohl(ip->ip_src.s_addr ^ ip->ip_dst.s_addr),
-	    M_GETFIB(m));
-#else
-	in_rtalloc_ign(&ro, 0, M_GETFIB(m));
-#endif
-	NET_EPOCH_ENTER();
-	if (ro.ro_rt != NULL) {
-		ia = ifatoia(ro.ro_rt->rt_ifa);
+	flowid = m->m_pkthdr.flowid;
+	ro.ro_nh = fib4_lookup(M_GETFIB(m), ip->ip_dst, 0, NHR_REF, flowid);
+	if (ro.ro_nh != NULL) {
+		ia = ifatoia(ro.ro_nh->nh_ifa);
 	} else
 		ia = NULL;
 	/*
@@ -1032,10 +1057,11 @@ ip_forward(struct mbuf *m, int srcrt)
 	if (IPSEC_ENABLED(ipv4)) {
 		if ((error = IPSEC_FORWARD(ipv4, m)) != 0) {
 			/* mbuf consumed by IPsec */
+			RO_NHFREE(&ro);
 			m_freem(mcopy);
 			if (error != EINPROGRESS)
 				IPSTAT_INC(ips_cantforward);
-			goto out;
+			return;
 		}
 		/* No IPsec processing required */
 	}
@@ -1051,33 +1077,35 @@ ip_forward(struct mbuf *m, int srcrt)
 	dest.s_addr = 0;
 	if (!srcrt && V_ipsendredirects &&
 	    ia != NULL && ia->ia_ifp == m->m_pkthdr.rcvif) {
-		struct rtentry *rt;
+		struct nhop_object *nh;
 
-		rt = ro.ro_rt;
+		nh = ro.ro_nh;
 
-		if (rt && (rt->rt_flags & (RTF_DYNAMIC|RTF_MODIFIED)) == 0 &&
-		    satosin(rt_key(rt))->sin_addr.s_addr != 0) {
-#define	RTA(rt)	((struct in_ifaddr *)(rt->rt_ifa))
+		if (nh != NULL && ((nh->nh_flags & (NHF_REDIRECT|NHF_DEFAULT)) == 0)) {
+			struct in_ifaddr *nh_ia = (struct in_ifaddr *)(nh->nh_ifa);
 			u_long src = ntohl(ip->ip_src.s_addr);
 
-			if (RTA(rt) &&
-			    (src & RTA(rt)->ia_subnetmask) == RTA(rt)->ia_subnet) {
-				if (rt->rt_flags & RTF_GATEWAY)
-					dest.s_addr = satosin(rt->rt_gateway)->sin_addr.s_addr;
-				else
-					dest.s_addr = ip->ip_dst.s_addr;
+			if (nh_ia != NULL &&
+			    (src & nh_ia->ia_subnetmask) == nh_ia->ia_subnet) {
 				/* Router requirements says to only send host redirects */
 				type = ICMP_REDIRECT;
 				code = ICMP_REDIRECT_HOST;
+				if (nh->nh_flags & NHF_GATEWAY) {
+				    if (nh->gw_sa.sa_family == AF_INET)
+					dest.s_addr = nh->gw4_sa.sin_addr.s_addr;
+				    else /* Do not redirect in case gw is AF_INET6 */
+					type = 0;
+				} else
+					dest.s_addr = ip->ip_dst.s_addr;
 			}
 		}
 	}
 
 	error = ip_output(m, NULL, &ro, IP_FORWARDING, NULL, NULL);
 
-	if (error == EMSGSIZE && ro.ro_rt)
-		mtu = ro.ro_rt->rt_mtu;
-	RO_RTFREE(&ro);
+	if (error == EMSGSIZE && ro.ro_nh)
+		mtu = ro.ro_nh->nh_mtu;
+	RO_NHFREE(&ro);
 
 	if (error)
 		IPSTAT_INC(ips_cantforward);
@@ -1088,15 +1116,13 @@ ip_forward(struct mbuf *m, int srcrt)
 		else {
 			if (mcopy)
 				m_freem(mcopy);
-			goto out;
+			return;
 		}
 	}
 	if (mcopy == NULL)
-		goto out;
-
+		return;
 
 	switch (error) {
-
 	case 0:				/* forwarded, but need redirect */
 		/* type, code set above */
 		break;
@@ -1135,11 +1161,9 @@ ip_forward(struct mbuf *m, int srcrt)
 	case ENOBUFS:
 	case EACCES:			/* ipfw denied packet */
 		m_freem(mcopy);
-		goto out;
+		return;
 	}
 	icmp_error(mcopy, type, code, dest.s_addr, mtu);
- out:
-	NET_EPOCH_EXIT();
 }
 
 #define	CHECK_SO_CT(sp, ct) \
@@ -1175,7 +1199,7 @@ ip_savecontrol(struct inpcb *inp, struct mbuf **mp, struct ip *ip,
 	}
 	if (CHECK_SO_CT(inp->inp_socket, SO_TS_REALTIME_MICRO)) {
 		struct bintime boottimebin, bt1;
-		struct timespec ts1;;
+		struct timespec ts1;
 		struct timeval tv;
 
 		if ((m->m_flags & (M_PKTHDR | M_TSTMP)) == (M_PKTHDR |
@@ -1294,7 +1318,7 @@ ip_savecontrol(struct inpcb *inp, struct mbuf **mp, struct ip *ip,
 			}
 			bcopy(sdp, sdl2, sdp->sdl_len);
 		} else {
-makedummy:	
+makedummy:
 			sdl2->sdl_len =
 			    offsetof(struct sockaddr_dl, sdl_data[0]);
 			sdl2->sdl_family = AF_LINK;
@@ -1420,13 +1444,13 @@ rsvp_input(struct mbuf **mp, int *offp, int proto)
 	 * of the group to which the RSVP packet is addressed.  But in this
 	 * case we want to throw the packet away.
 	 */
-	
+
 	if (!V_rsvp_on) {
 		m_freem(m);
 		return (IPPROTO_DONE);
 	}
 
-	if (V_ip_rsvpd != NULL) { 
+	if (V_ip_rsvpd != NULL) {
 		*mp = m;
 		rip_input(mp, offp, proto);
 		return (IPPROTO_DONE);

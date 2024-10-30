@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #ifndef lint
 static const char copyright[] =
 "@(#) Copyright (c) 1983, 1993\n\

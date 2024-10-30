@@ -43,7 +43,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_isa.h"
 #include "opt_npx.h"
 #include "opt_reset.h"
@@ -59,7 +58,6 @@
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/mutex.h>
-#include <sys/pioctl.h>
 #include <sys/proc.h>
 #include <sys/sysent.h>
 #include <sys/sf_buf.h>
@@ -84,10 +82,6 @@
 #include <vm/vm_page.h>
 #include <vm/vm_map.h>
 #include <vm/vm_param.h>
-
-#ifndef NSFBUFS
-#define	NSFBUFS		(512 + maxusers * 16)
-#endif
 
 _Static_assert(__OFFSETOF_MONITORBUF == offsetof(struct pcpu, pc_monitorbuf),
     "__OFFSETOF_MONITORBUF does not correspond with offset of pc_monitorbuf.");
@@ -137,6 +131,74 @@ alloc_fpusave(int flags)
 	}
 	return (res);
 }
+
+/*
+ * Common code shared between cpu_fork() and cpu_copy_thread() for
+ * initializing a thread.
+ */
+static void
+copy_thread(struct thread *td1, struct thread *td2)
+{
+	struct pcb *pcb2;
+
+	pcb2 = td2->td_pcb;
+
+	/* Ensure that td1's pcb is up to date for user threads. */
+	if ((td2->td_pflags & TDP_KTHREAD) == 0) {
+		MPASS(td1 == curthread);
+		td1->td_pcb->pcb_gs = rgs();
+		critical_enter();
+		if (PCPU_GET(fpcurthread) == td1)
+			npxsave(td1->td_pcb->pcb_save);
+		critical_exit();
+	}
+
+	/* Copy td1's pcb */
+	bcopy(td1->td_pcb, pcb2, sizeof(*pcb2));
+
+	/* Properly initialize pcb_save */
+	pcb2->pcb_save = get_pcb_user_save_pcb(pcb2);
+
+	/* Kernel threads start with clean NPX and segment bases. */
+	if ((td2->td_pflags & TDP_KTHREAD) != 0) {
+		pcb2->pcb_gs = _udatasel;
+		set_fsbase(td2, 0);
+		set_gsbase(td2, 0);
+		pcb2->pcb_flags &= ~(PCB_NPXINITDONE | PCB_NPXUSERINITDONE |
+		    PCB_KERNNPX | PCB_KERNNPX_THR);
+	} else {
+		MPASS((pcb2->pcb_flags & (PCB_KERNNPX | PCB_KERNNPX_THR)) == 0);
+		bcopy(get_pcb_user_save_td(td1), get_pcb_user_save_pcb(pcb2),
+		    cpu_max_ext_state_size);
+	}
+
+	/*
+	 * Set registers for trampoline to user mode.  Leave space for the
+	 * return address on stack.  These are the kernel mode register values.
+	 */
+	pcb2->pcb_edi = 0;
+	pcb2->pcb_esi = (int)fork_return;		    /* trampoline arg */
+	pcb2->pcb_ebp = 0;
+	pcb2->pcb_esp = (int)td2->td_frame - sizeof(void *); /* trampoline arg */
+	pcb2->pcb_ebx = (int)td2;			    /* trampoline arg */
+	pcb2->pcb_eip = (int)fork_trampoline + setidt_disp;
+	/*
+	 * If we didn't copy the pcb, we'd need to do the following registers:
+	 * pcb2->pcb_cr3:	cloned above.
+	 * pcb2->pcb_dr*:	cloned above.
+	 * pcb2->pcb_savefpu:	cloned above.
+	 * pcb2->pcb_flags:	cloned above.
+	 * pcb2->pcb_onfault:	cloned above (always NULL here?).
+	 * pcb2->pcb_gs:	cloned above.
+	 * pcb2->pcb_ext:	cleared below.
+	 */
+	pcb2->pcb_ext = NULL;
+
+	/* Setup to release spin count in fork_exit(). */
+	td2->td_md.md_spinlock_count = 1;
+	td2->td_md.md_saved_flags = PSL_KERNEL | PSL_I;
+}
+
 /*
  * Finish a fork operation, with process p2 nearly set up.
  * Copy and update the pcb, set up the stack so that the child
@@ -171,25 +233,11 @@ cpu_fork(struct thread *td1, struct proc *p2, struct thread *td2, int flags)
 		return;
 	}
 
-	/* Ensure that td1's pcb is up to date. */
-	if (td1 == curthread)
-		td1->td_pcb->pcb_gs = rgs();
-	critical_enter();
-	if (PCPU_GET(fpcurthread) == td1)
-		npxsave(td1->td_pcb->pcb_save);
-	critical_exit();
-
 	/* Point the pcb to the top of the stack */
 	pcb2 = get_pcb_td(td2);
 	td2->td_pcb = pcb2;
 
-	/* Copy td1's pcb */
-	bcopy(td1->td_pcb, pcb2, sizeof(*pcb2));
-
-	/* Properly initialize pcb_save */
-	pcb2->pcb_save = get_pcb_user_save_pcb(pcb2);
-	bcopy(get_pcb_user_save_td(td1), get_pcb_user_save_pcb(pcb2),
-	    cpu_max_ext_state_size);
+	copy_thread(td1, td2);
 
 	/* Reset debug registers in the new process */
 	x86_clear_dbregs(pcb2);
@@ -199,7 +247,6 @@ cpu_fork(struct thread *td1, struct proc *p2, struct thread *td2, int flags)
 	bcopy(&p1->p_md, mdp2, sizeof(*mdp2));
 
 	/*
-	 * Create a new fresh stack for the new process.
 	 * Copy the trap frame for the return to user mode as if from a
 	 * syscall.  This copies most of the user mode register values.
 	 * The -VM86_STACK_SPACE (-16) is so we can expand the trapframe
@@ -209,49 +256,23 @@ cpu_fork(struct thread *td1, struct proc *p2, struct thread *td2, int flags)
 	    VM86_STACK_SPACE) - 1;
 	bcopy(td1->td_frame, td2->td_frame, sizeof(struct trapframe));
 
-	td2->td_frame->tf_eax = 0;		/* Child returns zero */
-	td2->td_frame->tf_eflags &= ~PSL_C;	/* success */
-	td2->td_frame->tf_edx = 1;
+	/* Set child return values. */
+	p2->p_sysent->sv_set_fork_retval(td2);
 
 	/*
-	 * If the parent process has the trap bit set (i.e. a debugger had
-	 * single stepped the process to the system call), we need to clear
-	 * the trap flag from the new frame unless the debugger had set PF_FORK
-	 * on the parent.  Otherwise, the child will receive a (likely
-	 * unexpected) SIGTRAP when it executes the first instruction after
-	 * returning  to userland.
+	 * If the parent process has the trap bit set (i.e. a debugger
+	 * had single stepped the process to the system call), we need
+	 * to clear the trap flag from the new frame.
 	 */
-	if ((p1->p_pfsflags & PF_FORK) == 0)
-		td2->td_frame->tf_eflags &= ~PSL_T;
+	td2->td_frame->tf_eflags &= ~PSL_T;
 
-	/*
-	 * Set registers for trampoline to user mode.  Leave space for the
-	 * return address on stack.  These are the kernel mode register values.
-	 */
-#if defined(PAE) || defined(PAE_TABLES)
-	pcb2->pcb_cr3 = vtophys(vmspace_pmap(p2->p_vmspace)->pm_pdpt);
-#else
-	pcb2->pcb_cr3 = vtophys(vmspace_pmap(p2->p_vmspace)->pm_pdir);
-#endif
-	pcb2->pcb_edi = 0;
-	pcb2->pcb_esi = (int)fork_return;	/* fork_trampoline argument */
-	pcb2->pcb_ebp = 0;
-	pcb2->pcb_esp = (int)td2->td_frame - sizeof(void *);
-	pcb2->pcb_ebx = (int)td2;		/* fork_trampoline argument */
-	pcb2->pcb_eip = (int)fork_trampoline + setidt_disp;
-	/*-
-	 * pcb2->pcb_dr*:	cloned above.
-	 * pcb2->pcb_savefpu:	cloned above.
-	 * pcb2->pcb_flags:	cloned above.
-	 * pcb2->pcb_onfault:	cloned above (always NULL here?).
-	 * pcb2->pcb_gs:	cloned above.
-	 * pcb2->pcb_ext:	cleared below.
-	 */
+	/* Set cr3 for the new process. */
+	pcb2->pcb_cr3 = pmap_get_cr3(vmspace_pmap(p2->p_vmspace));
 
 	/*
 	 * XXX don't copy the i/o pages.  this should probably be fixed.
 	 */
-	pcb2->pcb_ext = 0;
+	pcb2->pcb_ext = NULL;
 
 	/* Copy the LDT, if necessary. */
 	mtx_lock_spin(&dt_lock);
@@ -267,10 +288,6 @@ cpu_fork(struct thread *td1, struct proc *p2, struct thread *td2, int flags)
 	}
 	mtx_unlock_spin(&dt_lock);
 
-	/* Setup to release spin count in fork_exit(). */
-	td2->td_md.md_spinlock_count = 1;
-	td2->td_md.md_saved_flags = PSL_KERNEL | PSL_I;
-
 	/*
 	 * Now, cpu_switch() can schedule the new process.
 	 * pcb_esp is loaded pointing to the cpu_switch() stack frame
@@ -280,6 +297,16 @@ cpu_fork(struct thread *td1, struct proc *p2, struct thread *td2, int flags)
 	 * will set up a stack to call fork_return(p, frame); to complete
 	 * the return to user-mode.
 	 */
+}
+
+void
+x86_set_fork_retval(struct thread *td)
+{
+	struct trapframe * frame = td->td_frame;
+
+	frame->tf_eax = 0;		/* Child returns zero */
+	frame->tf_eflags &= ~PSL_C;	/* success */
+	frame->tf_edx = 1;		/* System V emulation */
 }
 
 /*
@@ -422,7 +449,7 @@ cpu_set_syscall_retval(struct thread *td, int error)
 		break;
 
 	default:
-		td->td_frame->tf_eax = SV_ABI_ERRNO(td->td_proc, error);
+		td->td_frame->tf_eax = error;
 		td->td_frame->tf_eflags |= PSL_C;
 		break;
 	}
@@ -438,25 +465,13 @@ cpu_set_syscall_retval(struct thread *td, int error)
 void
 cpu_copy_thread(struct thread *td, struct thread *td0)
 {
-	struct pcb *pcb2;
-
-	/* Point the pcb to the top of the stack. */
-	pcb2 = td->td_pcb;
+	copy_thread(td0, td);
 
 	/*
-	 * Copy the upcall pcb.  This loads kernel regs.
-	 * Those not loaded individually below get their default
-	 * values here.
-	 */
-	bcopy(td0->td_pcb, pcb2, sizeof(*pcb2));
-	pcb2->pcb_flags &= ~(PCB_NPXINITDONE | PCB_NPXUSERINITDONE |
-	    PCB_KERNNPX);
-	pcb2->pcb_save = get_pcb_user_save_pcb(pcb2);
-	bcopy(get_pcb_user_save_td(td0), pcb2->pcb_save,
-	    cpu_max_ext_state_size);
-
-	/*
-	 * Create a new fresh stack for the new thread.
+	 * Copy user general-purpose registers.
+	 *
+	 * Some of these registers are rewritten by cpu_set_upcall()
+	 * and linux_set_upcall().
 	 */
 	bcopy(td0->td_frame, td->td_frame, sizeof(struct trapframe));
 
@@ -467,40 +482,13 @@ cpu_copy_thread(struct thread *td, struct thread *td0)
 	 * instruction after returning to userland.
 	 */
 	td->td_frame->tf_eflags &= ~PSL_T;
-
-	/*
-	 * Set registers for trampoline to user mode.  Leave space for the
-	 * return address on stack.  These are the kernel mode register values.
-	 */
-	pcb2->pcb_edi = 0;
-	pcb2->pcb_esi = (int)fork_return;		    /* trampoline arg */
-	pcb2->pcb_ebp = 0;
-	pcb2->pcb_esp = (int)td->td_frame - sizeof(void *); /* trampoline arg */
-	pcb2->pcb_ebx = (int)td;			    /* trampoline arg */
-	pcb2->pcb_eip = (int)fork_trampoline + setidt_disp;
-	pcb2->pcb_gs = rgs();
-	/*
-	 * If we didn't copy the pcb, we'd need to do the following registers:
-	 * pcb2->pcb_cr3:	cloned above.
-	 * pcb2->pcb_dr*:	cloned above.
-	 * pcb2->pcb_savefpu:	cloned above.
-	 * pcb2->pcb_flags:	cloned above.
-	 * pcb2->pcb_onfault:	cloned above (always NULL here?).
-	 * pcb2->pcb_gs:	cloned above.
-	 * pcb2->pcb_ext:	cleared below.
-	 */
-	pcb2->pcb_ext = NULL;
-
-	/* Setup to release spin count in fork_exit(). */
-	td->td_md.md_spinlock_count = 1;
-	td->td_md.md_saved_flags = PSL_KERNEL | PSL_I;
 }
 
 /*
  * Set that machine state for performing an upcall that starts
  * the entry function with the given argument.
  */
-void
+int
 cpu_set_upcall(struct thread *td, void (*entry)(void *), void *arg,
     stack_t *stack)
 {
@@ -524,11 +512,14 @@ cpu_set_upcall(struct thread *td, void (*entry)(void *), void *arg,
 	td->td_frame->tf_eip = (int)entry;
 
 	/* Return address sentinel value to stop stack unwinding. */
-	suword((void *)td->td_frame->tf_esp, 0);
+	if (suword((void *)td->td_frame->tf_esp, 0) != 0)
+		return (EFAULT);
 
 	/* Pass the argument to the entry point. */
-	suword((void *)(td->td_frame->tf_esp + sizeof(void *)),
-	    (int)arg);
+	if (suword((void *)(td->td_frame->tf_esp + sizeof(void *)),
+	    (int)arg) != 0)
+		return (EFAULT);
+	return (0);
 }
 
 int
@@ -585,34 +576,10 @@ kvtop(void *addr)
 void
 sf_buf_map(struct sf_buf *sf, int flags)
 {
-	pt_entry_t opte, *ptep;
 
-	/*
-	 * Update the sf_buf's virtual-to-physical mapping, flushing the
-	 * virtual address from the TLB.  Since the reference count for 
-	 * the sf_buf's old mapping was zero, that mapping is not 
-	 * currently in use.  Consequently, there is no need to exchange 
-	 * the old and new PTEs atomically, even under PAE.
-	 */
-	ptep = vtopte(sf->kva);
-	opte = *ptep;
-	*ptep = VM_PAGE_TO_PHYS(sf->m) | PG_RW | PG_V |
-	    pmap_cache_bits(kernel_pmap, sf->m->md.pat_mode, 0);
-
-	/*
-	 * Avoid unnecessary TLB invalidations: If the sf_buf's old
-	 * virtual-to-physical mapping was not used, then any processor
-	 * that has invalidated the sf_buf's virtual address from its TLB
-	 * since the last used mapping need not invalidate again.
-	 */
+	pmap_sf_buf_map(sf);
 #ifdef SMP
-	if ((opte & (PG_V | PG_A)) ==  (PG_V | PG_A))
-		CPU_ZERO(&sf->cpumask);
-
 	sf_buf_shootdown(sf, flags);
-#else
-	if ((opte & (PG_V | PG_A)) ==  (PG_V | PG_A))
-		pmap_invalidate_page(kernel_pmap, sf->kva);
 #endif
 }
 
@@ -638,9 +605,9 @@ sf_buf_shootdown(struct sf_buf *sf, int flags)
 	if ((flags & SFB_CPUPRIVATE) == 0) {
 		other_cpus = all_cpus;
 		CPU_CLR(cpuid, &other_cpus);
-		CPU_NAND(&other_cpus, &sf->cpumask);
+		CPU_ANDNOT(&other_cpus, &other_cpus, &sf->cpumask);
 		if (!CPU_EMPTY(&other_cpus)) {
-			CPU_OR(&sf->cpumask, &other_cpus);
+			CPU_OR(&sf->cpumask, &sf->cpumask, &other_cpus);
 			smp_masked_invlpg(other_cpus, sf->kva, kernel_pmap,
 			    sf_buf_shootdown_curcpu_cb);
 		}
@@ -683,39 +650,4 @@ sf_buf_invalidate_cache(vm_page_t m)
 {
 
 	return (sf_buf_process_page(m, sf_buf_invalidate));
-}
-
-/*
- * Software interrupt handler for queued VM system processing.
- */   
-void  
-swi_vm(void *dummy) 
-{     
-	if (busdma_swi_pending != 0)
-		busdma_swi();
-}
-
-/*
- * Tell whether this address is in some physical memory region.
- * Currently used by the kernel coredump code in order to avoid
- * dumping the ``ISA memory hole'' which could cause indefinite hangs,
- * or other unpredictable behaviour.
- */
-
-int
-is_physical_memory(vm_paddr_t addr)
-{
-
-#ifdef DEV_ISA
-	/* The ISA ``memory hole''. */
-	if (addr >= 0xa0000 && addr < 0x100000)
-		return 0;
-#endif
-
-	/*
-	 * stuff other tests for known memory-mapped devices (PCI?)
-	 * here
-	 */
-
-	return 1;
 }

@@ -27,7 +27,7 @@
 .\"
 .\"     From: @(#)nfsstat.1	8.1 (Berkeley) 6/6/93
 .\"
-.Dd October 1, 2018
+.Dd December 28, 2023
 .Dt NFSSTAT 1
 .Os
 .Sh NAME
@@ -38,9 +38,7 @@ statistics
 .Sh SYNOPSIS
 .Nm
 .Op Fl -libxo
-.Op Fl cdEemszW
-.Op Fl M Ar core
-.Op Fl N Ar system
+.Op Fl cdEemqszW
 .Op Fl w Ar wait
 .Sh DESCRIPTION
 The
@@ -54,7 +52,7 @@ If you wish to compare RPC counts between NFSv3 and NFSv4, you must use
 statistics in the client(s).
 .Pp
 The options are as follows:
-.Bl -tag -width indent
+.Bl -tag -width "-w wait"
 .It Fl c
 Only display client side statistics.
 .It Fl d
@@ -85,25 +83,22 @@ server for NFSv4.
 .It Fl E
 Similar to
 .Fl e
-except that the statistics include NFSv4.1 and the numbers aren't clipped
-at one billion.
+except that the statistics include NFSv4.1 and NFSv4.2 and the numbers aren't
+clipped at one billion.
 Only one of
 .Fl e
 or
 .Fl E
 can be specified.
 .It Fl M
-Extract values associated with the name list from the specified core
-instead of the default
-.Pa /dev/kmem .
+Deprecated and ignored.
 .It Fl m
 Report the mount options for all NFS client mounts.
 This option overrides all others and
 .Nm
 will exit after completing the report.
 .It Fl N
-Extract the name list from the specified system instead of the default
-.Pa /boot/kernel/kernel .
+Deprecated and ignored.
 .It Fl s
 Only display server side statistics.
 .It Fl W
@@ -115,7 +110,7 @@ useful when combined with
 or
 .Fl s
 and a time delay.
-.It Fl w
+.It Fl w Ar wait
 Display a shorter summary of
 .Tn NFS
 activity for both the client and server at
@@ -124,7 +119,7 @@ second intervals.
 .It Fl z
 Reset statistics after displaying them.
 .It Fl q
-Do not print header
+Do not print headers.
 .It Fl -libxo
 Generate output via
 .Xr libxo 3
@@ -132,13 +127,6 @@ in a selection of different human and machine readable formats.
 See
 .Xr xo_parse_args 3
 for details on command line arguments.
-.El
-.Sh FILES
-.Bl -tag -width ".Pa /boot/kernel/kernel" -compact
-.It Pa /boot/kernel/kernel
-default kernel namelist
-.It Pa /dev/kmem
-default memory file
 .El
 .Sh SEE ALSO
 .Xr fstat 1 ,

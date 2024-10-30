@@ -25,7 +25,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <machine/asmacros.h>
@@ -231,47 +230,6 @@ ENTRY(memcpy)
 	popl	%edi
 	ret
 END(memcpy)
-
-/*
- * copystr(from, to, maxlen, int *lencopied) - MP SAFE
- */
-ENTRY(copystr)
-	pushl	%esi
-	pushl	%edi
-
-	movl	12(%esp),%esi			/* %esi = from */
-	movl	16(%esp),%edi			/* %edi = to */
-	movl	20(%esp),%edx			/* %edx = maxlen */
-	incl	%edx
-1:
-	decl	%edx
-	jz	4f
-	lodsb
-	stosb
-	orb	%al,%al
-	jnz	1b
-
-	/* Success -- 0 byte reached */
-	decl	%edx
-	xorl	%eax,%eax
-	jmp	6f
-4:
-	/* edx is zero -- return ENAMETOOLONG */
-	movl	$ENAMETOOLONG,%eax
-
-6:
-	/* set *lencopied and return %eax */
-	movl	20(%esp),%ecx
-	subl	%edx,%ecx
-	movl	24(%esp),%edx
-	testl	%edx,%edx
-	jz	7f
-	movl	%ecx,(%edx)
-7:
-	popl	%edi
-	popl	%esi
-	ret
-END(copystr)
 
 ENTRY(bcmp)
 	pushl	%edi
@@ -676,3 +634,11 @@ ENTRY(mds_handler_silvermont)
 	movl	%eax, %cr0
 3:	ret
 END(mds_handler_silvermont)
+
+ENTRY(cpu_sync_core)
+	popl	%eax
+	pushfl
+	pushl	%cs
+	pushl	%eax
+	iretl
+END(cpu_sync_core)

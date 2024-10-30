@@ -22,7 +22,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/queue.h>
@@ -74,7 +73,7 @@ SYSCTL_INT(_net_inet_tcp, OID_AUTO, tcp_pcap_alloc_new_mbuf,
 VNET_DEFINE(int, tcp_pcap_packets) = 0;
 #define V_tcp_pcap_packets	VNET(tcp_pcap_packets)
 SYSCTL_INT(_net_inet_tcp, OID_AUTO, tcp_pcap_packets,
-	CTLFLAG_RW, &VNET_NAME(tcp_pcap_packets), 0,
+	CTLFLAG_VNET | CTLFLAG_RW, &VNET_NAME(tcp_pcap_packets), 0,
 	"Default number of packets saved per direction per TCPCB");
 
 /* Initialize the values. */
@@ -307,7 +306,11 @@ tcp_pcap_add(struct tcphdr *th, struct mbuf *m, struct mbufq *queue)
 			 * last reference, go through the normal
 			 * free-ing process.
 			 */
-			if (mhead->m_flags & M_EXT) {
+			if (mhead->m_flags & M_EXTPG) {
+				/* Don't mess around with these. */
+				tcp_pcap_m_freem(mhead);
+				continue;
+			} else if (mhead->m_flags & M_EXT) {
 				switch (mhead->m_ext.ext_type) {
 				case EXT_SFBUF:
 					/* Don't mess around with these. */
@@ -337,8 +340,7 @@ tcp_pcap_add(struct tcphdr *th, struct mbuf *m, struct mbufq *queue)
 					tcp_pcap_alloc_reuse_ext++;
 					break;
 				}
-			}
-			else {
+			} else {
 				tcp_pcap_alloc_reuse_mbuf++;
 			}
 
@@ -364,7 +366,8 @@ tcp_pcap_add(struct tcphdr *th, struct mbuf *m, struct mbufq *queue)
 	 * In cases where that isn't possible, settle for what we can
 	 * get.
 	 */
-	if ((m->m_flags & M_EXT) && tcp_pcap_take_cluster_reference()) {
+	if ((m->m_flags & (M_EXT | M_EXTPG)) &&
+	    tcp_pcap_take_cluster_reference()) {
 		n->m_data = m->m_data;
 		n->m_len = m->m_len;
 		mb_dupcl(n, m);
@@ -382,8 +385,11 @@ tcp_pcap_add(struct tcphdr *th, struct mbuf *m, struct mbufq *queue)
 			__func__, n->m_flags));
 		n->m_data = n->m_dat + M_LEADINGSPACE_NOWRITE(m);
 		n->m_len = m->m_len;
-		bcopy(M_START(m), n->m_dat,
-			m->m_len + M_LEADINGSPACE_NOWRITE(m));
+		if (m->m_flags & M_EXTPG)
+			m_copydata(m, 0, m->m_len, n->m_data);
+		else
+			bcopy(M_START(m), n->m_dat,
+			    m->m_len + M_LEADINGSPACE_NOWRITE(m));
 	}
 	else {
 		/*

@@ -27,7 +27,7 @@
 .\"
 .\"	From: @(#)install.1	8.1 (Berkeley) 6/6/93
 .\"
-.Dd January 18, 2013
+.Dd April 16, 2024
 .Dt INSTALL 1
 .Os
 .Sh NAME
@@ -98,6 +98,12 @@ option's argument.
 .Pp
 The options are as follows:
 .Bl -tag -width indent
+.It Fl B Ar suffix
+Use
+.Ar suffix
+as the backup suffix if
+.Fl b
+is given.
 .It Fl b
 Back up any existing files before overwriting them by renaming
 them to
@@ -105,12 +111,6 @@ them to
 See
 .Fl B
 for specifying a different backup suffix.
-.It Fl B Ar suffix
-Use
-.Ar suffix
-as the backup suffix if
-.Fl b
-is given.
 .It Fl C
 Copy the file.
 If the target file already exists and the files are the same,
@@ -137,11 +137,11 @@ This option does not affect where the actual files are installed.
 .It Fl d
 Create directories.
 Missing parent directories are created as required.
-.It Fl f
+.It Fl f Ar flags
 Specify the target's file flags; see
 .Xr chflags 1
 for a list of possible flags and their meanings.
-.It Fl g
+.It Fl g Ar group
 Specify a group.
 A numeric GID is allowed.
 .It Fl h Ar hash
@@ -164,13 +164,9 @@ The RMD-160 cryptographic message digest.
 .It Sy sha1
 The SHA-1 cryptographic message digest.
 .It Sy sha256
-The 256-bits
-.Tn SHA-2
-cryptographic message digest of the file.
+The 256-bits SHA-2 cryptographic message digest of the file.
 .It Sy sha512
-The 512-bits
-.Tn SHA-2
-cryptographic message digest of the file.
+The 512-bits SHA-2 cryptographic message digest of the file.
 .El
 .It Fl l Ar linkflags
 Instead of copying the file make a link to the source.
@@ -202,13 +198,13 @@ in an
 specification line.
 The metadata includes: the file name and file type, and depending upon
 other options, the owner, group, file flags, modification time, and tags.
-.It Fl m
+.It Fl m Ar mode
 Specify an alternate mode.
 The default mode is set to rwxr-xr-x (0755).
 The specified mode may be either an octal or symbolic value; see
 .Xr chmod 1
 for a description of possible mode values.
-.It Fl N
+.It Fl N Ar dbdir
 Use the user database text file
 .Pa master.passwd
 and group database text file
@@ -220,7 +216,7 @@ rather than using the results from the system's
 and
 .Xr getgrnam 3
 (and related) library calls.
-.It Fl o
+.It Fl o Ar owner
 Specify an owner.
 A numeric UID is allowed.
 .It Fl p
@@ -231,16 +227,18 @@ Copy the file, as if the
 except if the target file does not already exist or is different,
 then preserve the access and modification times of the source file.
 .It Fl S
-Safe copy.
-Normally,
+Flush each file to disk after copying.
+This has a non-negligible impact on performance, but reduces the risk
+of being left with a partial file if the system crashes or loses power
+shortly after
 .Nm
-unlinks an existing target before installing the new file.
-With the
+runs.
+.Pp
+Historically,
 .Fl S
-flag a temporary file is used and then renamed to be
-the target.
-The reason this is safer is that if the copy or
-rename fails, the existing target is left untouched.
+also enabled the use of temporary files to ensure atomicity when
+replacing an existing target.
+Temporary files are no longer optional.
 .It Fl s
 .Nm
 exec's the command
@@ -304,20 +302,12 @@ This is mainly for use in debugging the
 .Fx
 Ports Collection.
 .Sh FILES
-.Bl -tag -width ".Pa INS@XXXX" -compact
-.It Pa INS@XXXX
-If either
-.Fl S
-option is specified, or the
-.Fl C
-or
-.Fl p
-option is used in conjunction with the
-.Fl s
-option, temporary files named
-.Pa INS@XXXX ,
+.Bl -tag -width "INS@XXXXXX" -compact
+.It Pa INS@XXXXXX
+Temporary files named
+.Pa INS@XXXXXX ,
 where
-.Pa XXXX
+.Pa XXXXXX
 is decided by
 .Xr mkstemp 3 ,
 are created in the target directory.
@@ -337,7 +327,6 @@ The default was changed to copy in
 .Xr cp 1 ,
 .Xr mv 1 ,
 .Xr strip 1 ,
-.Xr mmap 2 ,
 .Xr getgrnam 3 ,
 .Xr getpwnam 3 ,
 .Xr chown 8

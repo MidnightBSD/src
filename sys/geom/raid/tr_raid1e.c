@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bio.h>
 #include <sys/endian.h>
@@ -40,6 +39,7 @@
 #include <sys/sysctl.h>
 #include <sys/systm.h>
 #include <geom/geom.h>
+#include <geom/geom_dbg.h>
 #include "geom/raid/g_raid.h"
 #include "g_raid_tr_if.h"
 
@@ -558,7 +558,7 @@ g_raid_tr_raid1e_maybe_rebuild(struct g_raid_tr_object *tr,
 	struct g_raid_volume *vol;
 	struct g_raid_tr_raid1e_object *trs;
 	int nr;
-	
+
 	vol = tr->tro_volume;
 	trs = (struct g_raid_tr_raid1e_object *)tr;
 	if (trs->trso_stopping)
@@ -867,6 +867,7 @@ g_raid_tr_iostart_raid1e(struct g_raid_tr_object *tr, struct bio *bp)
 	case BIO_DELETE:
 		g_raid_tr_iostart_raid1e_write(tr, bp);
 		break;
+	case BIO_SPEEDUP:
 	case BIO_FLUSH:
 		g_raid_tr_flush_common(tr, bp);
 		break;
@@ -896,7 +897,6 @@ g_raid_tr_iodone_raid1e(struct g_raid_tr_object *tr,
 		if (trs->trso_type == TR_RAID1E_REBUILD) {
 			nsd = trs->trso_failed_sd;
 			if (bp->bio_cmd == BIO_READ) {
-
 				/* Immediately abort rebuild, if requested. */
 				if (trs->trso_flags & TR_RAID1E_F_ABORT) {
 					trs->trso_flags &= ~TR_RAID1E_F_DOING_SOME;
@@ -1142,8 +1142,8 @@ rebuild_round_done:
 }
 
 static int
-g_raid_tr_kerneldump_raid1e(struct g_raid_tr_object *tr,
-    void *virtual, vm_offset_t physical, off_t boffset, size_t blength)
+g_raid_tr_kerneldump_raid1e(struct g_raid_tr_object *tr, void *virtual,
+    off_t boffset, size_t blength)
 {
 	struct g_raid_volume *vol;
 	struct g_raid_subdisk *sd;
@@ -1175,8 +1175,8 @@ g_raid_tr_kerneldump_raid1e(struct g_raid_tr_object *tr,
 			default:
 				goto nextdisk;
 			}
-			error = g_raid_subdisk_kerneldump(sd,
-			    addr, 0, offset + start, length);
+			error = g_raid_subdisk_kerneldump(sd, addr,
+			    offset + start, length);
 			if (error != 0)
 				return (error);
 nextdisk:

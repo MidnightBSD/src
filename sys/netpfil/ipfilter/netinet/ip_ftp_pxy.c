@@ -6,7 +6,6 @@
  *
  * Simple FTP transparent proxy for in-kernel use.  For use with the NAT
  * code.
- *
  * Id: ip_ftp_pxy.c,v 2.88.2.19 2006/04/01 10:14:53 darrenr Exp $
  */
 
@@ -1837,7 +1836,7 @@ ipf_p_ftp_epsv(ipf_ftp_softc_t *softf, fr_info_t *fin, ip_t *ip, nat_t *nat,
 		s++;
 
 	/*
-	 * As per RFC 2428, there are no addres components in the EPSV
+	 * As per RFC 2428, there are no address components in the EPSV
 	 * response.  So we'll go straight to getting the port.
 	 */
 	while (*s && ISDIGIT(*s)) {

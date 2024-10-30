@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010, 2012 Konstantin Belousov <kib@FreeBSD.org>
  * Copyright (c) 2015 The FreeBSD Foundation
@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_vm.h"
 
 #include <sys/param.h>
@@ -40,6 +39,7 @@
 #include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/rwlock.h>
+#include <sys/stddef.h>
 #include <sys/sysent.h>
 #include <sys/sysctl.h>
 #include <sys/vdso.h>
@@ -58,6 +58,14 @@ static struct sx shared_page_alloc_sx;
 static vm_object_t shared_page_obj;
 static int shared_page_free;
 char *shared_page_mapping;
+
+#ifdef RANDOM_FENESTRASX
+static struct vdso_fxrng_generation *fxrng_shpage_mapping;
+
+static bool fxrng_enabled = true;
+SYSCTL_BOOL(_debug, OID_AUTO, fxrng_vdso_enable, CTLFLAG_RWTUN, &fxrng_enabled,
+    0, "Enable FXRNG VDSO");
+#endif
 
 void
 shared_page_write(int base, int size, const void *data)
@@ -113,9 +121,10 @@ shared_page_init(void *dummy __unused)
 	shared_page_obj = vm_pager_allocate(OBJT_PHYS, 0, PAGE_SIZE,
 	    VM_PROT_DEFAULT, 0, NULL);
 	VM_OBJECT_WLOCK(shared_page_obj);
-	m = vm_page_grab(shared_page_obj, 0, VM_ALLOC_NOBUSY | VM_ALLOC_ZERO);
-	m->valid = VM_PAGE_BITS_ALL;
+	m = vm_page_grab(shared_page_obj, 0, VM_ALLOC_ZERO);
 	VM_OBJECT_WUNLOCK(shared_page_obj);
+	vm_page_valid(m);
+	vm_page_xunbusy(m);
 	addr = kva_alloc(PAGE_SIZE);
 	pmap_qenter(addr, &m, 1);
 	shared_page_mapping = (char *)addr;
@@ -254,35 +263,147 @@ alloc_sv_tk_compat32(void)
 }
 #endif
 
+#ifdef RANDOM_FENESTRASX
+void
+fxrng_push_seed_generation(uint64_t gen)
+{
+	if (fxrng_shpage_mapping == NULL || !fxrng_enabled)
+		return;
+	KASSERT(gen < INT32_MAX,
+	    ("fxrng seed version shouldn't roll over a 32-bit counter "
+	     "for approximately 456,000 years"));
+	atomic_store_rel_32(&fxrng_shpage_mapping->fx_generation32,
+	    (uint32_t)gen);
+}
+
+static void
+alloc_sv_fxrng_generation(void)
+{
+	int base;
+
+	/*
+	 * Allocate a full cache line for the fxrng root generation (64-bit
+	 * counter, or truncated 32-bit counter on ILP32 userspace).  It is
+	 * important that the line is not shared with frequently dirtied data,
+	 * and the shared page allocator lacks a __read_mostly mechanism.
+	 * However, PAGE_SIZE is typically large relative to the amount of
+	 * stuff we've got in it so far, so maybe the possible waste isn't an
+	 * issue.
+	 */
+	base = shared_page_alloc(CACHE_LINE_SIZE, CACHE_LINE_SIZE);
+	KASSERT(base != -1, ("%s: base allocation failed", __func__));
+	fxrng_shpage_mapping = (void *)(shared_page_mapping + base);
+	*fxrng_shpage_mapping = (struct vdso_fxrng_generation) {
+		.fx_vdso_version = VDSO_FXRNG_VER_CURR,
+	};
+}
+#endif /* RANDOM_FENESTRASX */
+
 void
 exec_sysvec_init(void *param)
 {
 	struct sysentvec *sv;
+	vm_offset_t sb;
+#ifdef RANDOM_FENESTRASX
+	ptrdiff_t base;
+#endif
+	u_int flags;
+	int res;
 
-	sv = (struct sysentvec *)param;
-	if ((sv->sv_flags & SV_SHP) == 0)
+	sv = param;
+	flags = sv->sv_flags;
+	if ((flags & SV_SHP) == 0)
 		return;
+	MPASS(sv->sv_shared_page_obj == NULL);
+	MPASS(sv->sv_shared_page_base != 0);
+
 	sv->sv_shared_page_obj = shared_page_obj;
-	sv->sv_sigcode_base = sv->sv_shared_page_base +
-	    shared_page_fill(*(sv->sv_szsigcode), 16, sv->sv_sigcode);
-	if ((sv->sv_flags & SV_ABI_MASK) != SV_ABI_FREEBSD)
-		return;
-	if ((sv->sv_flags & SV_TIMEKEEP) != 0) {
+	if ((flags & SV_ABI_MASK) == SV_ABI_FREEBSD) {
+		if ((flags & SV_DSO_SIG) != 0) {
+			sb = sv->sv_shared_page_base;
+			res = shared_page_fill((uintptr_t)sv->sv_szsigcode,
+			    16, sv->sv_sigcode);
+			if (res == -1)
+				panic("copying sigtramp to shared page");
+			sb += res;
+			sv->sv_vdso_base = sb;
+			sb += sv->sv_sigcodeoff;
+			sv->sv_sigcode_base = sb;
+		} else {
+			sv->sv_sigcode_base = sv->sv_shared_page_base +
+			    shared_page_fill(*(sv->sv_szsigcode), 16,
+			    sv->sv_sigcode);
+		}
+	}
+	if ((flags & SV_TIMEKEEP) != 0) {
 #ifdef COMPAT_FREEBSD32
-		if ((sv->sv_flags & SV_ILP32) != 0) {
-			KASSERT(compat32_svtk == NULL,
-			    ("Compat32 already registered"));
-			compat32_svtk = alloc_sv_tk_compat32();
+		if ((flags & SV_ILP32) != 0) {
+			if ((flags & SV_ABI_MASK) == SV_ABI_FREEBSD) {
+				KASSERT(compat32_svtk == NULL,
+				    ("Compat32 already registered"));
+				compat32_svtk = alloc_sv_tk_compat32();
+			} else {
+				KASSERT(compat32_svtk != NULL,
+				    ("Compat32 not registered"));
+			}
 			sv->sv_timekeep_base = sv->sv_shared_page_base +
 			    compat32_svtk->sv_timekeep_off;
 		} else {
 #endif
-			KASSERT(host_svtk == NULL, ("Host already registered"));
-			host_svtk = alloc_sv_tk();
+			if ((flags & SV_ABI_MASK) == SV_ABI_FREEBSD) {
+				KASSERT(host_svtk == NULL,
+				    ("Host already registered"));
+				host_svtk = alloc_sv_tk();
+			} else {
+				KASSERT(host_svtk != NULL,
+				    ("Host not registered"));
+			}
 			sv->sv_timekeep_base = sv->sv_shared_page_base +
 			    host_svtk->sv_timekeep_off;
 #ifdef COMPAT_FREEBSD32
 		}
 #endif
+	}
+#ifdef RANDOM_FENESTRASX
+	if ((flags & (SV_ABI_MASK | SV_RNG_SEED_VER)) ==
+	    (SV_ABI_FREEBSD | SV_RNG_SEED_VER)) {
+		/*
+		 * Only allocate a single VDSO entry for multiple sysentvecs,
+		 * i.e., native and COMPAT32.
+		 */
+		if (fxrng_shpage_mapping == NULL)
+			alloc_sv_fxrng_generation();
+		base = (char *)fxrng_shpage_mapping - shared_page_mapping;
+		sv->sv_fxrng_gen_base = sv->sv_shared_page_base + base;
+	}
+#endif
+}
+
+void
+exec_sysvec_init_secondary(struct sysentvec *sv, struct sysentvec *sv2)
+{
+	MPASS((sv2->sv_flags & SV_ABI_MASK) == (sv->sv_flags & SV_ABI_MASK));
+	MPASS((sv2->sv_flags & SV_TIMEKEEP) == (sv->sv_flags & SV_TIMEKEEP));
+	MPASS((sv2->sv_flags & SV_SHP) != 0 && (sv->sv_flags & SV_SHP) != 0);
+	MPASS((sv2->sv_flags & SV_DSO_SIG) == (sv->sv_flags & SV_DSO_SIG));
+	MPASS((sv2->sv_flags & SV_RNG_SEED_VER) ==
+	    (sv->sv_flags & SV_RNG_SEED_VER));
+
+	sv2->sv_shared_page_obj = sv->sv_shared_page_obj;
+	sv2->sv_sigcode_base = sv2->sv_shared_page_base +
+	    (sv->sv_sigcode_base - sv->sv_shared_page_base);
+	if ((sv2->sv_flags & SV_DSO_SIG) != 0) {
+		sv2->sv_vdso_base = sv2->sv_shared_page_base +
+		    (sv->sv_vdso_base - sv->sv_shared_page_base);
+	}
+	if ((sv2->sv_flags & SV_ABI_MASK) != SV_ABI_FREEBSD)
+		return;
+	if ((sv2->sv_flags & SV_TIMEKEEP) != 0) {
+		sv2->sv_timekeep_base = sv2->sv_shared_page_base +
+		    (sv->sv_timekeep_base - sv->sv_shared_page_base);
+	}
+	if ((sv2->sv_flags & SV_RNG_SEED_VER) != 0) {
+		sv2->sv_fxrng_gen_base = sv2->sv_shared_page_base +
+		    (sv->sv_fxrng_gen_base - sv->sv_shared_page_base);
 	}
 }

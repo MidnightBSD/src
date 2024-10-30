@@ -33,7 +33,6 @@
  */
 
 #include <machine/asm.h>
-
 ENTRY(_ctx_start)
 	jalr	s0		/* Call func from makecontext */
 	mv	a0, s1		/* Load ucp saved in makecontext */

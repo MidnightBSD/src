@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_ntp.h"
 
 #include <sys/param.h>
@@ -72,7 +71,13 @@ typedef int64_t l_fp;
 #define L_MPY(v, a)	((v) *= (a))
 #define L_CLR(v)	((v) = 0)
 #define L_ISNEG(v)	((v) < 0)
-#define L_LINT(v, a)	((v) = (int64_t)(a) << 32)
+#define L_LINT(v, a) \
+	do { \
+		if ((a) < 0) \
+			((v) = -((int64_t)(-(a)) << 32)); \
+		else \
+			((v) = (int64_t)(a) << 32); \
+	} while (0)
 #define L_GINT(v)	((v) < 0 ? -(-(v) >> 32) : (v) >> 32)
 
 /*
@@ -308,7 +313,8 @@ ntp_sysctl(SYSCTL_HANDLER_ARGS)
 	return (sysctl_handle_opaque(oidp, &ntv, sizeof(ntv), req));
 }
 
-SYSCTL_NODE(_kern, OID_AUTO, ntp_pll, CTLFLAG_RW, 0, "");
+SYSCTL_NODE(_kern, OID_AUTO, ntp_pll, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "");
 SYSCTL_PROC(_kern_ntp_pll, OID_AUTO, gettime, CTLTYPE_OPAQUE | CTLFLAG_RD |
     CTLFLAG_MPSAFE, 0, sizeof(struct ntptimeval) , ntp_sysctl, "S,ntptimeval",
     "");
@@ -524,7 +530,6 @@ ntp_update_second(int64_t *adjustment, time_t *newsec)
 	 * is always monotonic.
 	 */
 	switch (time_state) {
-
 		/*
 		 * No warning.
 		 */
@@ -598,7 +603,7 @@ ntp_update_second(int64_t *adjustment, time_t *newsec)
 	time_adj = ftemp;
 	L_SUB(time_offset, ftemp);
 	L_ADD(time_adj, time_freq);
-	
+
 	/*
 	 * Apply any correction from adjtime(2).  If more than one second
 	 * off we slew at a rate of 5ms/s (5000 PPM) else 500us/s (500 PPM)

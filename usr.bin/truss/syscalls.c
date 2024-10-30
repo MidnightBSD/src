@@ -32,20 +32,24 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * This file has routines used to print out system calls and their
  * arguments.
  */
 
+#include <sys/aio.h>
 #include <sys/capsicum.h>
 #include <sys/types.h>
 #define	_WANT_FREEBSD11_KEVENT
 #include <sys/event.h>
 #include <sys/ioccom.h>
+#include <sys/mman.h>
 #include <sys/mount.h>
+#include <sys/poll.h>
+#include <sys/procfs.h>
 #include <sys/ptrace.h>
 #include <sys/resource.h>
+#include <sys/sched.h>
 #include <sys/socket.h>
 #define _WANT_FREEBSD11_STAT
 #include <sys/stat.h>
@@ -63,8 +67,6 @@
 #define _WANT_KERNEL_ERRNO
 #include <errno.h>
 #include <fcntl.h>
-#include <poll.h>
-#include <sched.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -82,8 +84,13 @@
 
 /*
  * This should probably be in its own file, sorted alphabetically.
+ *
+ * Note: We only scan this table on the initial syscall number to calling
+ * convention lookup, i.e. once each time a new syscall is encountered. This
+ * is unlikely to be a performance issue, but if it is we could sort this array
+ * and use a binary search instead.
  */
-static struct syscall decoded_syscalls[] = {
+static const struct syscall_decode decoded_syscalls[] = {
 	/* Native ABI */
 	{ .name = "__acl_aclcheck_fd", .ret_type = 1, .nargs = 3,
 	  .args = { { Int, 0 }, { Acltype, 1 }, { Ptr, 2 } } },
@@ -113,6 +120,9 @@ static struct syscall decoded_syscalls[] = {
 	  .args = { { Int, 0 }, { Int, 1 }, { CapRights | OUT, 2 } } },
 	{ .name = "__getcwd", .ret_type = 1, .nargs = 2,
 	  .args = { { Name | OUT, 0 }, { Int, 1 } } },
+	{ .name = "__realpathat", .ret_type = 1, .nargs = 5,
+	  .args = { { Atfd, 0 }, { Name | IN, 1 }, { Name | OUT, 2 },
+		    { Sizet, 3 }, { Int, 4} } },
 	{ .name = "_umtx_op", .ret_type = 1, .nargs = 5,
 	  .args = { { Ptr, 0 }, { Umtxop, 1 }, { LongHex, 2 }, { Ptr, 3 },
 		    { Ptr, 4 } } },
@@ -120,6 +130,24 @@ static struct syscall decoded_syscalls[] = {
 	  .args = { { Int, 0 }, { Sockaddr | OUT, 1 }, { Ptr | OUT, 2 } } },
 	{ .name = "access", .ret_type = 1, .nargs = 2,
 	  .args = { { Name | IN, 0 }, { Accessmode, 1 } } },
+	{ .name = "aio_cancel", .ret_type = 1, .nargs = 2,
+	  .args = { { Int, 0 }, { Aiocb, 1 } } },
+	{ .name = "aio_error", .ret_type = 1, .nargs = 1,
+	  .args = { { Aiocb, 0 } } },
+	{ .name = "aio_fsync", .ret_type = 1, .nargs = 2,
+	  .args = { { AiofsyncOp, 0 }, { Aiocb, 1 } } },
+	{ .name = "aio_mlock", .ret_type = 1, .nargs = 1,
+	  .args = { { Aiocb, 0 } } },
+	{ .name = "aio_read", .ret_type = 1, .nargs = 1,
+	  .args = { { Aiocb, 0 } } },
+	{ .name = "aio_return", .ret_type = 1, .nargs = 1,
+	  .args = { { Aiocb, 0 } } },
+	{ .name = "aio_suspend", .ret_type = 1, .nargs = 3,
+	  .args = { { AiocbArray, 0 }, { Int, 1 }, { Timespec, 2 } } },
+	{ .name = "aio_waitcomplete", .ret_type = 1, .nargs = 2,
+	  .args = { { AiocbPointer | OUT, 0 }, { Timespec, 1 } } },
+	{ .name = "aio_write", .ret_type = 1, .nargs = 1,
+	  .args = { { Aiocb, 0 } } },
 	{ .name = "bind", .ret_type = 1, .nargs = 3,
 	  .args = { { Int, 0 }, { Sockaddr | IN, 1 }, { Socklent, 2 } } },
 	{ .name = "bindat", .ret_type = 1, .nargs = 4,
@@ -152,6 +180,10 @@ static struct syscall decoded_syscalls[] = {
 	  .args = { { Int, 0 }, { Timespec | OUT, 1 } } },
 	{ .name = "close", .ret_type = 1, .nargs = 1,
 	  .args = { { Int, 0 } } },
+	{ .name = "closefrom", .ret_type = 1, .nargs = 1,
+	  .args = { { Int, 0 } } },
+	{ .name = "close_range", .ret_type = 1, .nargs = 3,
+	  .args = { { Int, 0 }, { Int, 1 }, { Closerangeflags, 2 } } },
 	{ .name = "compat11.fstat", .ret_type = 1, .nargs = 2,
 	  .args = { { Int, 0 }, { Stat11 | OUT, 1 } } },
 	{ .name = "compat11.fstatat", .ret_type = 1, .nargs = 4,
@@ -162,6 +194,10 @@ static struct syscall decoded_syscalls[] = {
 		    { Kevent11 | OUT, 3 }, { Int, 4 }, { Timespec, 5 } } },
 	{ .name = "compat11.lstat", .ret_type = 1, .nargs = 2,
 	  .args = { { Name | IN, 0 }, { Stat11 | OUT, 1 } } },
+	{ .name = "compat11.mknod", .ret_type = 1, .nargs = 3,
+	  .args = { { Name, 0 }, { Octal, 1 }, { Int, 2 } } },
+	{ .name = "compat11.mknodat", .ret_type = 1, .nargs = 4,
+	  .args = { { Atfd, 0 }, { Name, 1 }, { Octal, 2 }, { Int, 3 } } },
 	{ .name = "compat11.stat", .ret_type = 1, .nargs = 2,
 	  .args = { { Name | IN, 0 }, { Stat11 | OUT, 1 } } },
 	{ .name = "connect", .ret_type = 1, .nargs = 3,
@@ -259,7 +295,7 @@ static struct syscall decoded_syscalls[] = {
 	{ .name = "getfsstat", .ret_type = 1, .nargs = 3,
 	  .args = { { Ptr, 0 }, { Long, 1 }, { Getfsstatmode, 2 } } },
 	{ .name = "getitimer", .ret_type = 1, .nargs = 2,
-	  .args = { { Int, 0 }, { Itimerval | OUT, 2 } } },
+	  .args = { { Itimerwhich, 0 }, { Itimerval | OUT, 2 } } },
 	{ .name = "getpeername", .ret_type = 1, .nargs = 3,
 	  .args = { { Int, 0 }, { Sockaddr | OUT, 1 }, { Ptr | OUT, 2 } } },
 	{ .name = "getpgid", .ret_type = 1, .nargs = 1,
@@ -317,6 +353,9 @@ static struct syscall decoded_syscalls[] = {
 	{ .name = "linkat", .ret_type = 1, .nargs = 5,
 	  .args = { { Atfd, 0 }, { Name, 1 }, { Atfd, 2 }, { Name, 3 },
 		    { Atflags, 4 } } },
+	{ .name = "lio_listio", .ret_type = 1, .nargs = 4,
+	  .args = { { LioMode, 0 }, { AiocbArray, 1 }, { Int, 2 },
+		    { Sigevent, 3 } } },
 	{ .name = "listen", .ret_type = 1, .nargs = 2,
 	  .args = { { Int, 0 }, { Int, 1 } } },
  	{ .name = "lseek", .ret_type = 2, .nargs = 3,
@@ -338,9 +377,9 @@ static struct syscall decoded_syscalls[] = {
 	{ .name = "mkfifoat", .ret_type = 1, .nargs = 3,
 	  .args = { { Atfd, 0 }, { Name, 1 }, { Octal, 2 } } },
 	{ .name = "mknod", .ret_type = 1, .nargs = 3,
-	  .args = { { Name, 0 }, { Octal, 1 }, { Int, 2 } } },
+	  .args = { { Name, 0 }, { Octal, 1 }, { Quad, 2 } } },
 	{ .name = "mknodat", .ret_type = 1, .nargs = 4,
-	  .args = { { Atfd, 0 }, { Name, 1 }, { Octal, 2 }, { Int, 3 } } },
+	  .args = { { Atfd, 0 }, { Name, 1 }, { Octal, 2 }, { Quad, 3 } } },
 	{ .name = "mlock", .ret_type = 1, .nargs = 2,
 	  .args = { { Ptr, 0 }, { Sizet, 1 } } },
 	{ .name = "mlockall", .ret_type = 1, .nargs = 1,
@@ -452,6 +491,10 @@ static struct syscall decoded_syscalls[] = {
 	  .args = { { Int, 0 }, { Iovec | IN, 1 }, { Int, 2 },
 	            { Sockaddr | IN, 3 }, { Socklent, 4 },
 	            { Sctpsndrcvinfo | IN, 5 }, { Msgflags, 6 } } },
+	{ .name = "sendfile", .ret_type = 1, .nargs = 7,
+	  .args = { { Int, 0 }, { Int, 1 }, { QuadHex, 2 }, { Sizet, 3 },
+		    { Sendfilehdtr, 4 }, { QuadHex | OUT, 5 },
+		    { Sendfileflags, 6 } } },
 	{ .name = "select", .ret_type = 1, .nargs = 5,
 	  .args = { { Int, 0 }, { Fd_set, 1 }, { Fd_set, 2 }, { Fd_set, 3 },
 		    { Timeval, 4 } } },
@@ -462,7 +505,8 @@ static struct syscall decoded_syscalls[] = {
 	            { Msgflags, 3 }, { Sockaddr | IN, 4 },
 	            { Socklent | IN, 5 } } },
 	{ .name = "setitimer", .ret_type = 1, .nargs = 3,
-	  .args = { { Int, 0 }, { Itimerval, 1 }, { Itimerval | OUT, 2 } } },
+	  .args = { { Itimerwhich, 0 }, { Itimerval, 1 },
+		    { Itimerval | OUT, 2 } } },
 	{ .name = "setpriority", .ret_type = 1, .nargs = 3,
 	  .args = { { Priowhich, 0 }, { Int, 1 }, { Int, 2 } } },
 	{ .name = "setrlimit", .ret_type = 1, .nargs = 2,
@@ -471,7 +515,12 @@ static struct syscall decoded_syscalls[] = {
 	  .args = { { Int, 0 }, { Sockoptlevel, 1 }, { Sockoptname, 2 },
 		    { Ptr | IN, 3 }, { Socklent, 4 } } },
 	{ .name = "shm_open", .ret_type = 1, .nargs = 3,
-	  .args = { { Name | IN, 0 }, { Open, 1 }, { Octal, 2 } } },
+	  .args = { { ShmName | IN, 0 }, { Open, 1 }, { Octal, 2 } } },
+	{ .name = "shm_open2", .ret_type = 1, .nargs = 5,
+	  .args = { { ShmName | IN, 0 }, { Open, 1 }, { Octal, 2 },
+		    { ShmFlags, 3 }, { Name | IN, 4 } } },
+	{ .name = "shm_rename", .ret_type = 1, .nargs = 3,
+	  .args = { { Name | IN, 0 }, { Name | IN, 1 }, { Hex, 2 } } },
 	{ .name = "shm_unlink", .ret_type = 1, .nargs = 1,
 	  .args = { { Name | IN, 0 } } },
 	{ .name = "shutdown", .ret_type = 1, .nargs = 2,
@@ -558,18 +607,25 @@ static struct syscall decoded_syscalls[] = {
 	{ .name = "linux_execve", .ret_type = 1, .nargs = 3,
 	  .args = { { Name | IN, 0 }, { ExecArgs | IN, 1 },
 		    { ExecEnv | IN, 2 } } },
+	{ .name = "linux_getitimer", .ret_type = 1, .nargs = 2,
+	  .args = { { Itimerwhich, 0 }, { Itimerval | OUT, 2 } } },
 	{ .name = "linux_lseek", .ret_type = 2, .nargs = 3,
 	  .args = { { Int, 0 }, { Int, 1 }, { Whence, 2 } } },
 	{ .name = "linux_mkdir", .ret_type = 1, .nargs = 2,
 	  .args = { { Name | IN, 0 }, { Int, 1 } } },
 	{ .name = "linux_newfstat", .ret_type = 1, .nargs = 2,
 	  .args = { { Int, 0 }, { Ptr | OUT, 1 } } },
+	{ .name = "linux_newlstat", .ret_type = 1, .nargs = 2,
+	  .args = { { Name | IN, 0 }, { Ptr | OUT, 1 } } },
 	{ .name = "linux_newstat", .ret_type = 1, .nargs = 2,
 	  .args = { { Name | IN, 0 }, { Ptr | OUT, 1 } } },
 	{ .name = "linux_open", .ret_type = 1, .nargs = 3,
 	  .args = { { Name, 0 }, { Hex, 1 }, { Octal, 2 } } },
 	{ .name = "linux_readlink", .ret_type = 1, .nargs = 3,
 	  .args = { { Name, 0 }, { Name | OUT, 1 }, { Sizet, 2 } } },
+	{ .name = "linux_setitimer", .ret_type = 1, .nargs = 3,
+	  .args = { { Itimerwhich, 0 }, { Itimerval, 1 },
+		    { Itimerval | OUT, 2 } } },
 	{ .name = "linux_socketcall", .ret_type = 1, .nargs = 2,
 	  .args = { { Int, 0 }, { LinuxSockArgs, 1 } } },
 	{ .name = "linux_stat64", .ret_type = 1, .nargs = 2,
@@ -671,10 +727,8 @@ static struct syscall decoded_syscalls[] = {
 	{ .name = "cloudabi_sys_thread_exit", .ret_type = 1, .nargs = 2,
 	  .args = { { Ptr, 0 }, { CloudABIMFlags, 1 } } },
 	{ .name = "cloudabi_sys_thread_yield", .ret_type = 1, .nargs = 0 },
-
-	{ .name = 0 },
 };
-static STAILQ_HEAD(, syscall) syscalls;
+static STAILQ_HEAD(, syscall) seen_syscalls;
 
 /* Xlat idea taken from strace */
 struct xlat {
@@ -688,7 +742,7 @@ struct xlat {
 static struct xlat poll_flags[] = {
 	X(POLLSTANDARD) X(POLLIN) X(POLLPRI) X(POLLOUT) X(POLLERR)
 	X(POLLHUP) X(POLLNVAL) X(POLLRDNORM) X(POLLRDBAND)
-	X(POLLWRBAND) X(POLLINIGNEOF) XEND
+	X(POLLWRBAND) X(POLLINIGNEOF) X(POLLRDHUP) XEND
 };
 
 static struct xlat sigaction_flags[] = {
@@ -702,6 +756,21 @@ static struct xlat linux_socketcall_ops[] = {
 	X(LINUX_SOCKETPAIR) X(LINUX_SEND) X(LINUX_RECV) X(LINUX_SENDTO)
 	X(LINUX_RECVFROM) X(LINUX_SHUTDOWN) X(LINUX_SETSOCKOPT)
 	X(LINUX_GETSOCKOPT) X(LINUX_SENDMSG) X(LINUX_RECVMSG)
+	XEND
+};
+
+static struct xlat lio_modes[] = {
+	X(LIO_WAIT) X(LIO_NOWAIT)
+	XEND
+};
+
+static struct xlat lio_opcodes[] = {
+	X(LIO_WRITE) X(LIO_READ) X(LIO_READV) X(LIO_WRITEV) X(LIO_NOP)
+	XEND
+};
+
+static struct xlat aio_fsync_ops[] = {
+	X(O_SYNC)
 	XEND
 };
 
@@ -806,18 +875,17 @@ lookup(struct xlat *xlat, int val, int base)
 		if (xlat->val == val)
 			return (xlat->str);
 	switch (base) {
-		case 8:
-			sprintf(tmp, "0%o", val);
-			break;
-		case 16:
-			sprintf(tmp, "0x%x", val);
-			break;
-		case 10:
-			sprintf(tmp, "%u", val);
-			break;
-		default:
-			errx(1,"Unknown lookup base");
-			break;
+	case 8:
+		sprintf(tmp, "0%o", val);
+		break;
+	case 16:
+		sprintf(tmp, "0x%x", val);
+		break;
+	case 10:
+		sprintf(tmp, "%u", val);
+		break;
+	default:
+		errx(1, "Unknown lookup base");
 	}
 	return (tmp);
 }
@@ -910,16 +978,15 @@ print_mask_arg32(bool (*decoder)(FILE *, uint32_t, uint32_t *), FILE *fp,
 		fprintf(fp, "|0x%x", rem);
 }
 
-#ifndef __LP64__
 /*
- * Add argument padding to subsequent system calls afater a Quad
+ * Add argument padding to subsequent system calls after Quad
  * syscall arguments as needed.  This used to be done by hand in the
  * decoded_syscalls table which was ugly and error prone.  It is
- * simpler to do the fixup of offsets at initalization time than when
+ * simpler to do the fixup of offsets at initialization time than when
  * decoding arguments.
  */
 static void
-quad_fixup(struct syscall *sc)
+quad_fixup(struct syscall_decode *sc)
 {
 	int offset, prev;
 	u_int i;
@@ -955,21 +1022,6 @@ quad_fixup(struct syscall *sc)
 		}
 	}
 }
-#endif
-
-void
-init_syscalls(void)
-{
-	struct syscall *sc;
-
-	STAILQ_INIT(&syscalls);
-	for (sc = decoded_syscalls; sc->name != NULL; sc++) {
-#ifndef __LP64__
-		quad_fixup(sc);
-#endif
-		STAILQ_INSERT_HEAD(&syscalls, sc, entries);
-	}
-}
 
 static struct syscall *
 find_syscall(struct procabi *abi, u_int number)
@@ -990,6 +1042,14 @@ add_syscall(struct procabi *abi, u_int number, struct syscall *sc)
 {
 	struct extra_syscall *es;
 
+	/*
+	 * quad_fixup() is currently needed for all 32-bit ABIs.
+	 * TODO: This should probably be a function pointer inside struct
+	 *  procabi instead.
+	 */
+	if (abi->pointer_size == 4)
+		quad_fixup(&sc->decode);
+
 	if (number < nitems(abi->syscalls)) {
 		assert(abi->syscalls[number] == NULL);
 		abi->syscalls[number] = sc;
@@ -999,6 +1059,8 @@ add_syscall(struct procabi *abi, u_int number, struct syscall *sc)
 		es->number = number;
 		STAILQ_INSERT_TAIL(&abi->extra_syscalls, es, entries);
 	}
+
+	STAILQ_INSERT_HEAD(&seen_syscalls, sc, entries);
 }
 
 /*
@@ -1009,24 +1071,37 @@ struct syscall *
 get_syscall(struct threadinfo *t, u_int number, u_int nargs)
 {
 	struct syscall *sc;
+	struct procabi *procabi;
+	const char *sysdecode_name;
+	const char *lookup_name;
 	const char *name;
-	char *new_name;
 	u_int i;
 
-	sc = find_syscall(t->proc->abi, number);
+	procabi = t->proc->abi;
+	sc = find_syscall(procabi, number);
 	if (sc != NULL)
 		return (sc);
 
-	name = sysdecode_syscallname(t->proc->abi->abi, number);
-	if (name == NULL) {
-		asprintf(&new_name, "#%d", number);
-		name = new_name;
-	} else
-		new_name = NULL;
-	STAILQ_FOREACH(sc, &syscalls, entries) {
-		if (strcmp(name, sc->name) == 0) {
+	/* Memory is not explicitly deallocated, it's released on exit(). */
+	sysdecode_name = sysdecode_syscallname(procabi->abi, number);
+	if (sysdecode_name == NULL)
+		asprintf(__DECONST(char **, &name), "#%d", number);
+	else
+		name = sysdecode_name;
+
+	sc = calloc(1, sizeof(*sc));
+	sc->name = name;
+
+	/* Also decode compat syscalls arguments by stripping the prefix. */
+	lookup_name = name;
+	if (procabi->compat_prefix != NULL && strncmp(procabi->compat_prefix,
+	    name, strlen(procabi->compat_prefix)) == 0)
+		lookup_name += strlen(procabi->compat_prefix);
+
+	for (i = 0; i < nitems(decoded_syscalls); i++) {
+		if (strcmp(lookup_name, decoded_syscalls[i].name) == 0) {
+			sc->decode = decoded_syscalls[i];
 			add_syscall(t->proc->abi, number, sc);
-			free(new_name);
 			return (sc);
 		}
 	}
@@ -1036,21 +1111,15 @@ get_syscall(struct threadinfo *t, u_int number, u_int nargs)
 	fprintf(stderr, "unknown syscall %s -- setting args to %d\n", name,
 	    nargs);
 #endif
-
-	sc = calloc(1, sizeof(struct syscall));
-	sc->name = name;
-	if (new_name != NULL)
-		sc->unknown = true;
-	sc->ret_type = 1;
-	sc->nargs = nargs;
+	sc->unknown = sysdecode_name == NULL;
+	sc->decode.ret_type = 1; /* Assume 1 return value. */
+	sc->decode.nargs = nargs;
 	for (i = 0; i < nargs; i++) {
-		sc->args[i].offset = i;
+		sc->decode.args[i].offset = i;
 		/* Treat all unknown arguments as LongHex. */
-		sc->args[i].type = LongHex;
+		sc->decode.args[i].type = LongHex;
 	}
-	STAILQ_INSERT_HEAD(&syscalls, sc, entries);
 	add_syscall(t->proc->abi, number, sc);
-
 	return (sc);
 }
 
@@ -1058,12 +1127,12 @@ get_syscall(struct threadinfo *t, u_int number, u_int nargs)
  * Copy a fixed amount of bytes from the process.
  */
 static int
-get_struct(pid_t pid, void *offset, void *buf, int len)
+get_struct(pid_t pid, psaddr_t offset, void *buf, size_t len)
 {
 	struct ptrace_io_desc iorequest;
 
 	iorequest.piod_op = PIOD_READ_D;
-	iorequest.piod_offs = offset;
+	iorequest.piod_offs = (void *)(uintptr_t)offset;
 	iorequest.piod_addr = buf;
 	iorequest.piod_len = len;
 	if (ptrace(PT_IO, pid, (caddr_t)&iorequest, 0) < 0)
@@ -1079,7 +1148,7 @@ get_struct(pid_t pid, void *offset, void *buf, int len)
  * only get that much.
  */
 static char *
-get_string(pid_t pid, void *addr, int max)
+get_string(pid_t pid, psaddr_t addr, int max)
 {
 	struct ptrace_io_desc iorequest;
 	char *buf, *nbuf;
@@ -1090,7 +1159,7 @@ get_string(pid_t pid, void *addr, int max)
 		size = max + 1;
 	else {
 		/* Read up to the end of the current page. */
-		size = PAGE_SIZE - ((uintptr_t)addr % PAGE_SIZE);
+		size = PAGE_SIZE - (addr % PAGE_SIZE);
 		if (size > MAXSIZE)
 			size = MAXSIZE;
 	}
@@ -1100,7 +1169,7 @@ get_string(pid_t pid, void *addr, int max)
 		return (NULL);
 	for (;;) {
 		iorequest.piod_op = PIOD_READ_D;
-		iorequest.piod_offs = (char *)addr + offset;
+		iorequest.piod_offs = (void *)((uintptr_t)addr + offset);
 		iorequest.piod_addr = buf + offset;
 		iorequest.piod_len = size;
 		if (ptrace(PT_IO, pid, (caddr_t)&iorequest, 0) < 0) {
@@ -1190,7 +1259,15 @@ print_utrace(FILE *fp, void *utrace_addr, size_t len)
 }
 
 static void
-print_sockaddr(FILE *fp, struct trussinfo *trussinfo, void *arg, socklen_t len)
+print_pointer(FILE *fp, uintptr_t arg)
+{
+
+	fprintf(fp, "%p", (void *)arg);
+}
+
+static void
+print_sockaddr(FILE *fp, struct trussinfo *trussinfo, uintptr_t arg,
+    socklen_t len)
 {
 	char addr[64];
 	struct sockaddr_in *lsin;
@@ -1200,20 +1277,20 @@ print_sockaddr(FILE *fp, struct trussinfo *trussinfo, void *arg, socklen_t len)
 	u_char *q;
 	pid_t pid = trussinfo->curthread->proc->pid;
 
-	if (arg == NULL) {
+	if (arg == 0) {
 		fputs("NULL", fp);
 		return;
 	}
 	/* If the length is too small, just bail. */
 	if (len < sizeof(*sa)) {
-		fprintf(fp, "%p", arg);
+		print_pointer(fp, arg);
 		return;
 	}
 
 	sa = calloc(1, len);
 	if (get_struct(pid, arg, sa, len) == -1) {
 		free(sa);
-		fprintf(fp, "%p", arg);
+		print_pointer(fp, arg);
 		return;
 	}
 
@@ -1259,7 +1336,7 @@ print_sockaddr(FILE *fp, struct trussinfo *trussinfo, void *arg, socklen_t len)
 #define IOV_LIMIT 16
 
 static void
-print_iovec(FILE *fp, struct trussinfo *trussinfo, void *arg, int iovcnt)
+print_iovec(FILE *fp, struct trussinfo *trussinfo, uintptr_t arg, int iovcnt)
 {
 	struct iovec iov[IOV_LIMIT];
 	size_t max_string = trussinfo->strsize;
@@ -1270,7 +1347,7 @@ print_iovec(FILE *fp, struct trussinfo *trussinfo, void *arg, int iovcnt)
 	bool buf_truncated, iov_truncated;
 
 	if (iovcnt <= 0) {
-		fprintf(fp, "%p", arg);
+		print_pointer(fp, arg);
 		return;
 	}
 	if (iovcnt > IOV_LIMIT) {
@@ -1280,7 +1357,7 @@ print_iovec(FILE *fp, struct trussinfo *trussinfo, void *arg, int iovcnt)
 		iov_truncated = false;
 	}
 	if (get_struct(pid, arg, &iov, iovcnt * sizeof(struct iovec)) == -1) {
-		fprintf(fp, "%p", arg);
+		print_pointer(fp, arg);
 		return;
 	}
 
@@ -1294,7 +1371,7 @@ print_iovec(FILE *fp, struct trussinfo *trussinfo, void *arg, int iovcnt)
 			buf_truncated = false;
 		}
 		fprintf(fp, "%s{", (i > 0) ? "," : "");
-		if (len && get_struct(pid, iov[i].iov_base, &tmp2, len) != -1) {
+		if (len && get_struct(pid, (uintptr_t)iov[i].iov_base, &tmp2, len) != -1) {
 			tmp3 = malloc(len * 4 + 1);
 			while (len) {
 				if (strvisx(tmp3, tmp2, len,
@@ -1308,11 +1385,64 @@ print_iovec(FILE *fp, struct trussinfo *trussinfo, void *arg, int iovcnt)
 			    buf_truncated ? "..." : "");
 			free(tmp3);
 		} else {
-			fprintf(fp, "%p", iov[i].iov_base);
+			print_pointer(fp, (uintptr_t)iov[i].iov_base);
 		}
 		fprintf(fp, ",%zu}", iov[i].iov_len);
 	}
 	fprintf(fp, "%s%s", iov_truncated ? ",..." : "", "]");
+}
+
+static void
+print_sigval(FILE *fp, union sigval *sv)
+{
+	fprintf(fp, "{ %d, %p }", sv->sival_int, sv->sival_ptr);
+}
+
+static void
+print_sigevent(FILE *fp, struct sigevent *se)
+{
+	fputs("{ sigev_notify=", fp);
+	switch (se->sigev_notify) {
+	case SIGEV_NONE:
+		fputs("SIGEV_NONE", fp);
+		break;
+	case SIGEV_SIGNAL:
+		fprintf(fp, "SIGEV_SIGNAL, sigev_signo=%s, sigev_value=",
+				strsig2(se->sigev_signo));
+		print_sigval(fp, &se->sigev_value);
+		break;
+	case SIGEV_THREAD:
+		fputs("SIGEV_THREAD, sigev_value=", fp);
+		print_sigval(fp, &se->sigev_value);
+		break;
+	case SIGEV_KEVENT:
+		fprintf(fp, "SIGEV_KEVENT, sigev_notify_kqueue=%d, sigev_notify_kevent_flags=",
+				se->sigev_notify_kqueue);
+		print_mask_arg(sysdecode_kevent_flags, fp, se->sigev_notify_kevent_flags);
+		break;
+	case SIGEV_THREAD_ID:
+		fprintf(fp, "SIGEV_THREAD_ID, sigev_notify_thread_id=%d, sigev_signo=%s, sigev_value=",
+				se->sigev_notify_thread_id, strsig2(se->sigev_signo));
+		print_sigval(fp, &se->sigev_value);
+		break;
+	default:
+		fprintf(fp, "%d", se->sigev_notify);
+		break;
+	}
+	fputs(" }", fp);
+}
+
+static void
+print_aiocb(FILE *fp, struct aiocb *cb)
+{
+	fprintf(fp, "{ %d,%jd,%p,%zu,%s,",
+			cb->aio_fildes,
+			cb->aio_offset,
+			cb->aio_buf,
+			cb->aio_nbytes,
+			xlookup(lio_opcodes, cb->aio_lio_opcode));
+	print_sigevent(fp, &cb->aio_sigevent);
+	fputs(" }", fp);
 }
 
 static void
@@ -1528,8 +1658,8 @@ print_cmsgs(FILE *fp, pid_t pid, bool receive, struct msghdr *msghdr)
 		return;
 	}
 	cmsgbuf = calloc(1, len);
-	if (get_struct(pid, msghdr->msg_control, cmsgbuf, len) == -1) {
-		fprintf(fp, "%p", msghdr->msg_control);
+	if (get_struct(pid, (uintptr_t)msghdr->msg_control, cmsgbuf, len) == -1) {
+		print_pointer(fp, (uintptr_t)msghdr->msg_control);
 		free(cmsgbuf);
 		return;
 	}
@@ -1539,6 +1669,16 @@ print_cmsgs(FILE *fp, pid_t pid, bool receive, struct msghdr *msghdr)
 	for (cmsghdr = CMSG_FIRSTHDR(msghdr);
 	   cmsghdr != NULL;
 	   cmsghdr = CMSG_NXTHDR(msghdr, cmsghdr)) {
+		if (cmsghdr->cmsg_len < sizeof(*cmsghdr)) {
+			fprintf(fp, "{<invalid cmsg, len=%u>}",
+			    cmsghdr->cmsg_len);
+			if (cmsghdr->cmsg_len == 0) {
+				/* Avoid looping forever. */
+				break;
+			}
+			continue;
+		}
+
 		level = cmsghdr->cmsg_level;
 		type = cmsghdr->cmsg_type;
 		len = cmsghdr->cmsg_len;
@@ -1600,13 +1740,27 @@ print_sysctl(FILE *fp, int *oid, size_t len)
 }
 
 /*
+ * Convert a 32-bit user-space pointer to psaddr_t. Currently, this
+ * sign-extends on MIPS and zero-extends on all other architectures.
+ */
+static psaddr_t
+user_ptr32_to_psaddr(int32_t user_pointer)
+{
+#if defined(__mips__)
+	return ((psaddr_t)(intptr_t)user_pointer);
+#else
+	return ((psaddr_t)(uintptr_t)user_pointer);
+#endif
+}
+
+/*
  * Converts a syscall argument into a string.  Said string is
  * allocated via malloc(), so needs to be free()'d.  sc is
  * a pointer to the syscall description (see above); args is
  * an array of all of the system call arguments.
  */
 char *
-print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
+print_arg(struct syscall_arg *sc, unsigned long *args, register_t *retval,
     struct trussinfo *trussinfo)
 {
 	FILE *fp;
@@ -1632,11 +1786,11 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 	case PUInt: {
 		unsigned int val;
 
-		if (get_struct(pid, (void *)args[sc->offset], &val,
+		if (get_struct(pid, args[sc->offset], &val,
 		    sizeof(val)) == 0) 
 			fprintf(fp, "{ %u }", val);
 		else
-			fprintf(fp, "0x%lx", args[sc->offset]);
+			print_pointer(fp, args[sc->offset]);
 		break;
 	}
 	case LongHex:
@@ -1648,11 +1802,18 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 	case Sizet:
 		fprintf(fp, "%zu", (size_t)args[sc->offset]);
 		break;
+	case ShmName:
+		/* Handle special SHM_ANON value. */
+		if ((char *)(uintptr_t)args[sc->offset] == SHM_ANON) {
+			fprintf(fp, "SHM_ANON");
+			break;
+		}
+		/* FALLTHROUGH */
 	case Name: {
 		/* NULL-terminated string. */
 		char *tmp2;
 
-		tmp2 = get_string(pid, (void*)args[sc->offset], 0);
+		tmp2 = get_string(pid, args[sc->offset], 0);
 		fprintf(fp, "\"%s\"", tmp2);
 		free(tmp2);
 		break;
@@ -1682,7 +1843,7 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 			len = max_string;
 			truncated = 1;
 		}
-		if (len && get_struct(pid, (void*)args[sc->offset], &tmp2, len)
+		if (len && get_struct(pid, args[sc->offset], &tmp2, len)
 		    != -1) {
 			tmp3 = malloc(len * 4 + 1);
 			while (len) {
@@ -1696,21 +1857,24 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 			    "..." : "");
 			free(tmp3);
 		} else {
-			fprintf(fp, "0x%lx", args[sc->offset]);
+			print_pointer(fp, args[sc->offset]);
 		}
 		break;
 	}
 	case ExecArgs:
 	case ExecEnv:
 	case StringArray: {
-		uintptr_t addr;
+		psaddr_t addr;
 		union {
-			char *strarray[0];
+			int32_t strarray32[PAGE_SIZE / sizeof(int32_t)];
+			int64_t strarray64[PAGE_SIZE / sizeof(int64_t)];
 			char buf[PAGE_SIZE];
 		} u;
 		char *string;
 		size_t len;
 		u_int first, i;
+		size_t pointer_size =
+		    trussinfo->curthread->proc->abi->pointer_size;
 
 		/*
 		 * Only parse argv[] and environment arrays from exec calls
@@ -1720,7 +1884,7 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 		    (trussinfo->flags & EXECVEARGS) == 0) ||
 		    ((sc->type & ARG_MASK) == ExecEnv &&
 		    (trussinfo->flags & EXECVEENVS) == 0)) {
-			fprintf(fp, "0x%lx", args[sc->offset]);
+			print_pointer(fp, args[sc->offset]);
 			break;
 		}
 
@@ -1730,32 +1894,45 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 		 * a partial page.
 		 */
 		addr = args[sc->offset];
-		if (addr % sizeof(char *) != 0) {
-			fprintf(fp, "0x%lx", args[sc->offset]);
+		if (!__is_aligned(addr, pointer_size)) {
+			print_pointer(fp, args[sc->offset]);
 			break;
 		}
 
 		len = PAGE_SIZE - (addr & PAGE_MASK);
-		if (get_struct(pid, (void *)addr, u.buf, len) == -1) {
-			fprintf(fp, "0x%lx", args[sc->offset]);
+		if (get_struct(pid, addr, u.buf, len) == -1) {
+			print_pointer(fp, args[sc->offset]);
 			break;
 		}
+		assert(len > 0);
 
 		fputc('[', fp);
 		first = 1;
 		i = 0;
-		while (u.strarray[i] != NULL) {
-			string = get_string(pid, u.strarray[i], 0);
+		for (;;) {
+			psaddr_t straddr;
+			if (pointer_size == 4) {
+				straddr = user_ptr32_to_psaddr(u.strarray32[i]);
+			} else if (pointer_size == 8) {
+				straddr = (psaddr_t)u.strarray64[i];
+			} else {
+				errx(1, "Unsupported pointer size: %zu",
+				    pointer_size);
+			}
+
+			/* Stop once we read the first NULL pointer. */
+			if (straddr == 0)
+				break;
+			string = get_string(pid, straddr, 0);
 			fprintf(fp, "%s \"%s\"", first ? "" : ",", string);
 			free(string);
 			first = 0;
 
 			i++;
-			if (i == len / sizeof(char *)) {
+			if (i == len / pointer_size) {
 				addr += len;
 				len = PAGE_SIZE;
-				if (get_struct(pid, (void *)addr, u.buf, len) ==
-				    -1) {
+				if (get_struct(pid, addr, u.buf, len) == -1) {
 					fprintf(fp, ", <inval>");
 					break;
 				}
@@ -1765,51 +1942,48 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 		fputs(" ]", fp);
 		break;
 	}
-#ifdef __LP64__
-	case Quad:
-		fprintf(fp, "%ld", args[sc->offset]);
-		break;
-	case QuadHex:
-		fprintf(fp, "0x%lx", args[sc->offset]);
-		break;
-#else
 	case Quad:
 	case QuadHex: {
-		unsigned long long ll;
+		uint64_t value;
+		size_t pointer_size =
+		    trussinfo->curthread->proc->abi->pointer_size;
 
+		if (pointer_size == 4) {
 #if _BYTE_ORDER == _LITTLE_ENDIAN
-		ll = (unsigned long long)args[sc->offset + 1] << 32 |
-		    args[sc->offset];
+			value = (uint64_t)args[sc->offset + 1] << 32 |
+			    args[sc->offset];
 #else
-		ll = (unsigned long long)args[sc->offset] << 32 |
-		    args[sc->offset + 1];
+			value = (uint64_t)args[sc->offset] << 32 |
+			    args[sc->offset + 1];
 #endif
+		} else {
+			value = (uint64_t)args[sc->offset];
+		}
 		if ((sc->type & ARG_MASK) == Quad)
-			fprintf(fp, "%lld", ll);
+			fprintf(fp, "%jd", (intmax_t)value);
 		else
-			fprintf(fp, "0x%llx", ll);
+			fprintf(fp, "0x%jx", (intmax_t)value);
 		break;
 	}
-#endif
 	case PQuadHex: {
 		uint64_t val;
 
-		if (get_struct(pid, (void *)args[sc->offset], &val,
+		if (get_struct(pid, args[sc->offset], &val,
 		    sizeof(val)) == 0) 
 			fprintf(fp, "{ 0x%jx }", (uintmax_t)val);
 		else
-			fprintf(fp, "0x%lx", args[sc->offset]);
+			print_pointer(fp, args[sc->offset]);
 		break;
 	}
 	case Ptr:
-		fprintf(fp, "0x%lx", args[sc->offset]);
+		print_pointer(fp, args[sc->offset]);
 		break;
 	case Readlinkres: {
 		char *tmp2;
 
 		if (retval[0] == -1)
 			break;
-		tmp2 = get_string(pid, (void*)args[sc->offset], retval[0]);
+		tmp2 = get_string(pid, args[sc->offset], retval[0]);
 		fprintf(fp, "\"%s\"", tmp2);
 		free(tmp2);
 		break;
@@ -1834,12 +2008,11 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 	case Timespec: {
 		struct timespec ts;
 
-		if (get_struct(pid, (void *)args[sc->offset], &ts,
-		    sizeof(ts)) != -1)
+		if (get_struct(pid, args[sc->offset], &ts, sizeof(ts)) != -1)
 			fprintf(fp, "{ %jd.%09ld }", (intmax_t)ts.tv_sec,
 			    ts.tv_nsec);
 		else
-			fprintf(fp, "0x%lx", args[sc->offset]);
+			print_pointer(fp, args[sc->offset]);
 		break;
 	}
 	case Timespec2: {
@@ -1847,8 +2020,7 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 		const char *sep;
 		unsigned int i;
 
-		if (get_struct(pid, (void *)args[sc->offset], &ts, sizeof(ts))
-		    != -1) {
+		if (get_struct(pid, args[sc->offset], &ts, sizeof(ts)) != -1) {
 			fputs("{ ", fp);
 			sep = "";
 			for (i = 0; i < nitems(ts); i++) {
@@ -1870,57 +2042,54 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 			}
 			fputs(" }", fp);
 		} else
-			fprintf(fp, "0x%lx", args[sc->offset]);
+			print_pointer(fp, args[sc->offset]);
 		break;
 	}
 	case Timeval: {
 		struct timeval tv;
 
-		if (get_struct(pid, (void *)args[sc->offset], &tv, sizeof(tv))
-		    != -1)
+		if (get_struct(pid, args[sc->offset], &tv, sizeof(tv)) != -1)
 			fprintf(fp, "{ %jd.%06ld }", (intmax_t)tv.tv_sec,
 			    tv.tv_usec);
 		else
-			fprintf(fp, "0x%lx", args[sc->offset]);
+			print_pointer(fp, args[sc->offset]);
 		break;
 	}
 	case Timeval2: {
 		struct timeval tv[2];
 
-		if (get_struct(pid, (void *)args[sc->offset], &tv, sizeof(tv))
-		    != -1)
+		if (get_struct(pid, args[sc->offset], &tv, sizeof(tv)) != -1)
 			fprintf(fp, "{ %jd.%06ld, %jd.%06ld }",
 			    (intmax_t)tv[0].tv_sec, tv[0].tv_usec,
 			    (intmax_t)tv[1].tv_sec, tv[1].tv_usec);
 		else
-			fprintf(fp, "0x%lx", args[sc->offset]);
+			print_pointer(fp, args[sc->offset]);
 		break;
 	}
 	case Itimerval: {
 		struct itimerval itv;
 
-		if (get_struct(pid, (void *)args[sc->offset], &itv,
-		    sizeof(itv)) != -1)
+		if (get_struct(pid, args[sc->offset], &itv, sizeof(itv)) != -1)
 			fprintf(fp, "{ %jd.%06ld, %jd.%06ld }",
 			    (intmax_t)itv.it_interval.tv_sec,
 			    itv.it_interval.tv_usec,
 			    (intmax_t)itv.it_value.tv_sec,
 			    itv.it_value.tv_usec);
 		else
-			fprintf(fp, "0x%lx", args[sc->offset]);
+			print_pointer(fp, args[sc->offset]);
 		break;
 	}
 	case LinuxSockArgs:
 	{
 		struct linux_socketcall_args largs;
 
-		if (get_struct(pid, (void *)args[sc->offset], (void *)&largs,
+		if (get_struct(pid, args[sc->offset], (void *)&largs,
 		    sizeof(largs)) != -1)
 			fprintf(fp, "{ %s, 0x%lx }",
 			    lookup(linux_socketcall_ops, largs.what, 10),
 			    (long unsigned int)largs.args);
 		else
-			fprintf(fp, "0x%lx", args[sc->offset]);
+			print_pointer(fp, args[sc->offset]);
 		break;
 	}
 	case Pollfd: {
@@ -1937,8 +2106,7 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 		if ((pfd = malloc(bytes)) == NULL)
 			err(1, "Cannot malloc %zu bytes for pollfd array",
 			    bytes);
-		if (get_struct(pid, (void *)args[sc->offset], pfd, bytes)
-		    != -1) {
+		if (get_struct(pid, args[sc->offset], pfd, bytes) != -1) {
 			fputs("{", fp);
 			for (i = 0; i < numfds; i++) {
 				fprintf(fp, " %d/%s", pfd[i].fd,
@@ -1946,7 +2114,7 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 			}
 			fputs(" }", fp);
 		} else {
-			fprintf(fp, "0x%lx", args[sc->offset]);
+			print_pointer(fp, args[sc->offset]);
 		}
 		free(pfd);
 		break;
@@ -1965,8 +2133,7 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 		if ((fds = malloc(bytes)) == NULL)
 			err(1, "Cannot malloc %zu bytes for fd_set array",
 			    bytes);
-		if (get_struct(pid, (void *)args[sc->offset], fds, bytes)
-		    != -1) {
+		if (get_struct(pid, args[sc->offset], fds, bytes) != -1) {
 			fputs("{", fp);
 			for (i = 0; i < numfds; i++) {
 				if (FD_ISSET(i, fds))
@@ -1974,7 +2141,7 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 			}
 			fputs(" }", fp);
 		} else
-			fprintf(fp, "0x%lx", args[sc->offset]);
+			print_pointer(fp, args[sc->offset]);
 		free(fds);
 		break;
 	}
@@ -1982,14 +2149,12 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 		fputs(strsig2(args[sc->offset]), fp);
 		break;
 	case Sigset: {
-		long sig;
 		sigset_t ss;
 		int i, first;
 
-		sig = args[sc->offset];
-		if (get_struct(pid, (void *)args[sc->offset], (void *)&ss,
+		if (get_struct(pid, args[sc->offset], (void *)&ss,
 		    sizeof(ss)) == -1) {
-			fprintf(fp, "0x%lx", args[sc->offset]);
+			print_pointer(fp, args[sc->offset]);
 			break;
 		}
 		fputs("{ ", fp);
@@ -2022,6 +2187,9 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 	case Fcntl:
 		print_integer_arg(sysdecode_fcntl_cmd, fp, args[sc->offset]);
 		break;
+	case Closerangeflags:
+		print_mask_arg(sysdecode_close_range_flags, fp, args[sc->offset]);
+		break;
 	case Mprot:
 		print_mask_arg(sysdecode_mmap_prot, fp, args[sc->offset]);
 		break;
@@ -2030,6 +2198,9 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 		break;
 	case Whence:
 		print_integer_arg(sysdecode_whence, fp, args[sc->offset]);
+		break;
+	case ShmFlags:
+		print_mask_arg(sysdecode_shmflags, fp, args[sc->offset]);
 		break;
 	case Sockdomain:
 		print_integer_arg(sysdecode_socketdomain, fp, args[sc->offset]);
@@ -2067,22 +2238,21 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 		 * the next argument contains a socklen_t by value.
 		 */
 		if (sc->type & OUT) {
-			if (get_struct(pid, (void *)args[sc->offset + 1],
-			    &len, sizeof(len)) == -1) {
-				fprintf(fp, "0x%lx", args[sc->offset]);
+			if (get_struct(pid, args[sc->offset + 1], &len,
+			    sizeof(len)) == -1) {
+				print_pointer(fp, args[sc->offset]);
 				break;
 			}
 		} else
 			len = args[sc->offset + 1];
 
-		print_sockaddr(fp, trussinfo, (void *)args[sc->offset], len);
+		print_sockaddr(fp, trussinfo, args[sc->offset], len);
 		break;
 	}
 	case Sigaction: {
 		struct sigaction sa;
 
-		if (get_struct(pid, (void *)args[sc->offset], &sa, sizeof(sa))
-		    != -1) {
+		if (get_struct(pid, args[sc->offset], &sa, sizeof(sa)) != -1) {
 			fputs("{ ", fp);
 			if (sa.sa_handler == SIG_DFL)
 				fputs("SIG_DFL", fp);
@@ -2093,7 +2263,16 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 			fprintf(fp, " %s ss_t }",
 			    xlookup_bits(sigaction_flags, sa.sa_flags));
 		} else
-			fprintf(fp, "0x%lx", args[sc->offset]);
+			print_pointer(fp, args[sc->offset]);
+		break;
+	}
+	case Sigevent: {
+		struct sigevent se;
+
+		if (get_struct(pid, args[sc->offset], &se, sizeof(se)) != -1)
+			print_sigevent(fp, &se);
+		else
+			print_pointer(fp, args[sc->offset]);
 		break;
 	}
 	case Kevent: {
@@ -2122,7 +2301,7 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 				    bytes);
 		} else
 			ke = NULL;
-		if (numevents >= 0 && get_struct(pid, (void *)args[sc->offset],
+		if (numevents >= 0 && get_struct(pid, args[sc->offset],
 		    ke, bytes) != -1) {
 			fputc('{', fp);
 			for (i = 0; i < numevents; i++) {
@@ -2131,7 +2310,7 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 			}
 			fputs(" }", fp);
 		} else {
-			fprintf(fp, "0x%lx", args[sc->offset]);
+			print_pointer(fp, args[sc->offset]);
 		}
 		free(ke);
 		break;
@@ -2157,7 +2336,7 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 		} else
 			ke11 = NULL;
 		memset(&ke, 0, sizeof(ke));
-		if (numevents >= 0 && get_struct(pid, (void *)args[sc->offset],
+		if (numevents >= 0 && get_struct(pid, args[sc->offset],
 		    ke11, bytes) != -1) {
 			fputc('{', fp);
 			for (i = 0; i < numevents; i++) {
@@ -2172,7 +2351,7 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 			}
 			fputs(" }", fp);
 		} else {
-			fprintf(fp, "0x%lx", args[sc->offset]);
+			print_pointer(fp, args[sc->offset]);
 		}
 		free(ke11);
 		break;
@@ -2180,7 +2359,7 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 	case Stat: {
 		struct stat st;
 
-		if (get_struct(pid, (void *)args[sc->offset], &st, sizeof(st))
+		if (get_struct(pid, args[sc->offset], &st, sizeof(st))
 		    != -1) {
 			char mode[12];
 
@@ -2190,14 +2369,14 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 			    (uintmax_t)st.st_ino, (intmax_t)st.st_size,
 			    (long)st.st_blksize);
 		} else {
-			fprintf(fp, "0x%lx", args[sc->offset]);
+			print_pointer(fp, args[sc->offset]);
 		}
 		break;
 	}
 	case Stat11: {
 		struct freebsd11_stat st;
 
-		if (get_struct(pid, (void *)args[sc->offset], &st, sizeof(st))
+		if (get_struct(pid, args[sc->offset], &st, sizeof(st))
 		    != -1) {
 			char mode[12];
 
@@ -2207,7 +2386,7 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 			    (uintmax_t)st.st_ino, (intmax_t)st.st_size,
 			    (long)st.st_blksize);
 		} else {
-			fprintf(fp, "0x%lx", args[sc->offset]);
+			print_pointer(fp, args[sc->offset]);
 		}
 		break;
 	}
@@ -2215,7 +2394,7 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 		unsigned int i;
 		struct statfs buf;
 
-		if (get_struct(pid, (void *)args[sc->offset], &buf,
+		if (get_struct(pid, args[sc->offset], &buf,
 		    sizeof(buf)) != -1) {
 			char fsid[17];
 
@@ -2231,14 +2410,14 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 			    "fsid=%s }", buf.f_fstypename, buf.f_mntonname,
 			    buf.f_mntfromname, fsid);
 		} else
-			fprintf(fp, "0x%lx", args[sc->offset]);
+			print_pointer(fp, args[sc->offset]);
 		break;
 	}
 
 	case Rusage: {
 		struct rusage ru;
 
-		if (get_struct(pid, (void *)args[sc->offset], &ru, sizeof(ru))
+		if (get_struct(pid, args[sc->offset], &ru, sizeof(ru))
 		    != -1) {
 			fprintf(fp,
 			    "{ u=%jd.%06ld,s=%jd.%06ld,in=%ld,out=%ld }",
@@ -2246,24 +2425,24 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 			    (intmax_t)ru.ru_stime.tv_sec, ru.ru_stime.tv_usec,
 			    ru.ru_inblock, ru.ru_oublock);
 		} else
-			fprintf(fp, "0x%lx", args[sc->offset]);
+			print_pointer(fp, args[sc->offset]);
 		break;
 	}
 	case Rlimit: {
 		struct rlimit rl;
 
-		if (get_struct(pid, (void *)args[sc->offset], &rl, sizeof(rl))
+		if (get_struct(pid, args[sc->offset], &rl, sizeof(rl))
 		    != -1) {
 			fprintf(fp, "{ cur=%ju,max=%ju }",
 			    rl.rlim_cur, rl.rlim_max);
 		} else
-			fprintf(fp, "0x%lx", args[sc->offset]);
+			print_pointer(fp, args[sc->offset]);
 		break;
 	}
 	case ExitStatus: {
 		int status;
 
-		if (get_struct(pid, (void *)args[sc->offset], &status,
+		if (get_struct(pid, args[sc->offset], &status,
 		    sizeof(status)) != -1) {
 			fputs("{ ", fp);
 			if (WIFCONTINUED(status))
@@ -2280,7 +2459,7 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 				    strsig2(WTERMSIG(status)));
 			fputs(" }", fp);
 		} else
-			fprintf(fp, "0x%lx", args[sc->offset]);
+			print_pointer(fp, args[sc->offset]);
 		break;
 	}
 	case Waitoptions:
@@ -2321,7 +2500,7 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 
 		memset(name, 0, sizeof(name));
 		len = args[sc->offset + 1];
-		if (get_struct(pid, (void *)args[sc->offset], oid,
+		if (get_struct(pid, args[sc->offset], oid,
 		    len * sizeof(oid[0])) != -1) {
 		    	fprintf(fp, "\"");
 			if (oid[0] == CTL_SYSCTL) {
@@ -2340,7 +2519,7 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 				case CTL_SYSCTL_NAME2OID:
 					fprintf(fp, "name2oid %s",
 					    get_string(pid,
-					        (void *)args[sc->offset + 4],
+					        args[sc->offset + 4],
 						args[sc->offset + 5]));
 					break;
 				case CTL_SYSCTL_OIDFMT:
@@ -2389,11 +2568,11 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 
 		len = args[sc->offset + 1];
 		utrace_addr = calloc(1, len);
-		if (get_struct(pid, (void *)args[sc->offset],
+		if (get_struct(pid, args[sc->offset],
 		    (void *)utrace_addr, len) != -1)
 			print_utrace(fp, utrace_addr, len);
 		else
-			fprintf(fp, "0x%lx", args[sc->offset]);
+			print_pointer(fp, args[sc->offset]);
 		free(utrace_addr);
 		break;
 	}
@@ -2408,7 +2587,7 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 			ndescriptors = nitems(descriptors);
 			truncated = true;
 		}
-		if (get_struct(pid, (void *)args[sc->offset],
+		if (get_struct(pid, args[sc->offset],
 		    descriptors, ndescriptors * sizeof(descriptors[0])) != -1) {
 			fprintf(fp, "{");
 			for (i = 0; i < ndescriptors; i++)
@@ -2416,7 +2595,7 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 				    descriptors[i]);
 			fprintf(fp, truncated ? ", ... }" : " }");
 		} else
-			fprintf(fp, "0x%lx", args[sc->offset]);
+			print_pointer(fp, args[sc->offset]);
 		break;
 	}
 	case Pipe2:
@@ -2426,9 +2605,9 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 		uint32_t rights;
 
 		if (sc->type & OUT) {
-			if (get_struct(pid, (void *)args[sc->offset], &rights,
+			if (get_struct(pid, args[sc->offset], &rights,
 			    sizeof(rights)) == -1) {
-				fprintf(fp, "0x%lx", args[sc->offset]);
+				print_pointer(fp, args[sc->offset]);
 				break;
 			}
 		} else
@@ -2455,12 +2634,21 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 		print_integer_arg(sysdecode_getfsstat_mode, fp,
 		    args[sc->offset]);
 		break;
+	case Itimerwhich:
+		print_integer_arg(sysdecode_itimer, fp, args[sc->offset]);
+		break;
 	case Kldsymcmd:
 		print_integer_arg(sysdecode_kldsym_cmd, fp, args[sc->offset]);
 		break;
 	case Kldunloadflags:
 		print_integer_arg(sysdecode_kldunload_flags, fp,
 		    args[sc->offset]);
+		break;
+	case AiofsyncOp:
+		fputs(xlookup(aio_fsync_ops, args[sc->offset]), fp);
+		break;
+	case LioMode:
+		fputs(xlookup(lio_modes, args[sc->offset]), fp);
 		break;
 	case Madvice:
 		print_integer_arg(sysdecode_madvice, fp, args[sc->offset]);
@@ -2510,13 +2698,13 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 	case CapRights: {
 		cap_rights_t rights;
 
-		if (get_struct(pid, (void *)args[sc->offset], &rights,
+		if (get_struct(pid, args[sc->offset], &rights,
 		    sizeof(rights)) != -1) {
 			fputs("{ ", fp);
 			sysdecode_cap_rights(fp, &rights);
 			fputs(" }", fp);
 		} else
-			fprintf(fp, "0x%lx", args[sc->offset]);
+			print_pointer(fp, args[sc->offset]);
 		break;
 	}
 	case Acltype:
@@ -2546,6 +2734,24 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 		print_integer_arg(sysdecode_ptrace_request, fp,
 		    args[sc->offset]);
 		break;
+	case Sendfileflags:
+		print_mask_arg(sysdecode_sendfile_flags, fp, args[sc->offset]);
+		break;
+	case Sendfilehdtr: {
+		struct sf_hdtr hdtr;
+
+		if (get_struct(pid, args[sc->offset], &hdtr, sizeof(hdtr)) !=
+		    -1) {
+			fprintf(fp, "{");
+			print_iovec(fp, trussinfo, (uintptr_t)hdtr.headers,
+			    hdtr.hdr_cnt);
+			print_iovec(fp, trussinfo, (uintptr_t)hdtr.trailers,
+			    hdtr.trl_cnt);
+			fprintf(fp, "}");
+		} else
+			print_pointer(fp, args[sc->offset]);
+		break;
+	}
 	case Quotactlcmd:
 		if (!sysdecode_quotactl_cmd(fp, args[sc->offset]))
 			fprintf(fp, "%#x", (int)args[sc->offset]);
@@ -2564,33 +2770,30 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 	case Schedparam: {
 		struct sched_param sp;
 
-		if (get_struct(pid, (void *)args[sc->offset], &sp,
-		    sizeof(sp)) != -1)
+		if (get_struct(pid, args[sc->offset], &sp, sizeof(sp)) != -1)
 			fprintf(fp, "{ %d }", sp.sched_priority);
 		else
-			fprintf(fp, "0x%lx", args[sc->offset]);
+			print_pointer(fp, args[sc->offset]);
 		break;
 	}
 	case PSig: {
 		int sig;
 
-		if (get_struct(pid, (void *)args[sc->offset], &sig,
-		    sizeof(sig)) == 0) 
+		if (get_struct(pid, args[sc->offset], &sig, sizeof(sig)) == 0)
 			fprintf(fp, "{ %s }", strsig2(sig));
 		else
-			fprintf(fp, "0x%lx", args[sc->offset]);
+			print_pointer(fp, args[sc->offset]);
 		break;
 	}
 	case Siginfo: {
 		siginfo_t si;
 
-		if (get_struct(pid, (void *)args[sc->offset], &si,
-		    sizeof(si)) != -1) {
+		if (get_struct(pid, args[sc->offset], &si, sizeof(si)) != -1) {
 			fprintf(fp, "{ signo=%s", strsig2(si.si_signo));
 			decode_siginfo(fp, &si);
 			fprintf(fp, " }");
 		} else
-			fprintf(fp, "0x%lx", args[sc->offset]);
+			print_pointer(fp, args[sc->offset]);
 		break;
 	}
 	case Iovec:
@@ -2599,15 +2802,76 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 		 * syscall argument is the number of elements of the array.
 		 */
 
-		print_iovec(fp, trussinfo, (void *)args[sc->offset],
+		print_iovec(fp, trussinfo, args[sc->offset],
 		    (int)args[sc->offset + 1]);
 		break;
+	case Aiocb: {
+		struct aiocb cb;
+
+		if (get_struct(pid, args[sc->offset], &cb, sizeof(cb)) != -1)
+			print_aiocb(fp, &cb);
+		else
+			print_pointer(fp, args[sc->offset]);
+		break;
+	}
+	case AiocbArray: {
+		/*
+		 * Print argment as an array of pointers to struct aiocb, where
+		 * the next syscall argument is the number of elements.
+		 */
+		uintptr_t cbs[16];
+		unsigned int nent;
+		bool truncated;
+
+		nent = args[sc->offset + 1];
+		truncated = false;
+		if (nent > nitems(cbs)) {
+			nent = nitems(cbs);
+			truncated = true;
+		}
+
+		if (get_struct(pid, args[sc->offset], cbs, sizeof(uintptr_t) * nent) != -1) {
+			unsigned int i;
+			fputs("[", fp);
+			for (i = 0; i < nent; ++i) {
+				struct aiocb cb;
+				if (i > 0)
+					fputc(',', fp);
+				if (get_struct(pid, cbs[i], &cb, sizeof(cb)) != -1)
+					print_aiocb(fp, &cb);
+				else
+					print_pointer(fp, cbs[i]);
+			}
+			if (truncated)
+				fputs(",...", fp);
+			fputs("]", fp);
+		} else
+			print_pointer(fp, args[sc->offset]);
+		break;
+	}
+	case AiocbPointer: {
+		/*
+		 * aio_waitcomplete(2) assigns a pointer to a pointer to struct
+		 * aiocb, so we need to handle the extra layer of indirection.
+		 */
+		uintptr_t cbp;
+		struct aiocb cb;
+
+		if (get_struct(pid, args[sc->offset], &cbp, sizeof(cbp)) != -1) {
+			if (get_struct(pid, cbp, &cb, sizeof(cb)) != -1)
+				print_aiocb(fp, &cb);
+			else
+				print_pointer(fp, cbp);
+		} else
+			print_pointer(fp, args[sc->offset]);
+		break;
+	}
 	case Sctpsndrcvinfo: {
 		struct sctp_sndrcvinfo info;
 
-		if (get_struct(pid, (void *)args[sc->offset],
+		if (get_struct(pid, args[sc->offset],
 		    &info, sizeof(struct sctp_sndrcvinfo)) == -1) {
-			fprintf(fp, "0x%lx", args[sc->offset]);
+			print_pointer(fp, args[sc->offset]);
 			break;
 		}
 		print_sctp_sndrcvinfo(fp, sc->type & OUT, &info);
@@ -2616,15 +2880,15 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 	case Msghdr: {
 		struct msghdr msghdr;
 
-		if (get_struct(pid, (void *)args[sc->offset],
+		if (get_struct(pid, args[sc->offset],
 		    &msghdr, sizeof(struct msghdr)) == -1) {
-			fprintf(fp, "0x%lx", args[sc->offset]);
+			print_pointer(fp, args[sc->offset]);
 			break;
 		}
 		fputs("{", fp);
-		print_sockaddr(fp, trussinfo, msghdr.msg_name, msghdr.msg_namelen);
+		print_sockaddr(fp, trussinfo, (uintptr_t)msghdr.msg_name, msghdr.msg_namelen);
 		fprintf(fp, ",%d,", msghdr.msg_namelen);
-		print_iovec(fp, trussinfo, msghdr.msg_iov, msghdr.msg_iovlen);
+		print_iovec(fp, trussinfo, (uintptr_t)msghdr.msg_iov, msghdr.msg_iovlen);
 		fprintf(fp, ",%d,", msghdr.msg_iovlen);
 		print_cmsgs(fp, pid, sc->type & OUT, &msghdr);
 		fprintf(fp, ",%u,", msghdr.msg_controllen);
@@ -2644,25 +2908,25 @@ print_arg(struct syscall_args *sc, unsigned long *args, register_t *retval,
 		break;
 	case CloudABIFDStat: {
 		cloudabi_fdstat_t fds;
-		if (get_struct(pid, (void *)args[sc->offset], &fds, sizeof(fds))
+		if (get_struct(pid, args[sc->offset], &fds, sizeof(fds))
 		    != -1) {
 			fprintf(fp, "{ %s, ",
 			    xlookup(cloudabi_filetype, fds.fs_filetype));
 			fprintf(fp, "%s, ... }",
 			    xlookup_bits(cloudabi_fdflags, fds.fs_flags));
 		} else
-			fprintf(fp, "0x%lx", args[sc->offset]);
+			print_pointer(fp, args[sc->offset]);
 		break;
 	}
 	case CloudABIFileStat: {
 		cloudabi_filestat_t fsb;
-		if (get_struct(pid, (void *)args[sc->offset], &fsb, sizeof(fsb))
+		if (get_struct(pid, args[sc->offset], &fsb, sizeof(fsb))
 		    != -1)
 			fprintf(fp, "{ %s, %ju }",
 			    xlookup(cloudabi_filetype, fsb.st_filetype),
 			    (uintmax_t)fsb.st_size);
 		else
-			fprintf(fp, "0x%lx", args[sc->offset]);
+			print_pointer(fp, args[sc->offset]);
 		break;
 	}
 	case CloudABIFileType:
@@ -2786,11 +3050,9 @@ print_syscall_ret(struct trussinfo *trussinfo, int error, register_t *retval)
 		fprintf(trussinfo->outfile, " ERR#%d '%s'\n",
 		    sysdecode_freebsd_to_abi_errno(t->proc->abi->abi, error),
 		    strerror(error));
-	}
-#ifndef __LP64__
-	else if (sc->ret_type == 2) {
+	} else if (sc->decode.ret_type == 2 &&
+	    t->proc->abi->pointer_size == 4) {
 		off_t off;
-
 #if _BYTE_ORDER == _LITTLE_ENDIAN
 		off = (off_t)retval[1] << 32 | retval[0];
 #else
@@ -2798,11 +3060,10 @@ print_syscall_ret(struct trussinfo *trussinfo, int error, register_t *retval)
 #endif
 		fprintf(trussinfo->outfile, " = %jd (0x%jx)\n", (intmax_t)off,
 		    (intmax_t)off);
-	}
-#endif
-	else
+	} else {
 		fprintf(trussinfo->outfile, " = %jd (0x%jx)\n",
 		    (intmax_t)retval[0], (intmax_t)retval[0]);
+	}
 }
 
 void
@@ -2815,7 +3076,7 @@ print_summary(struct trussinfo *trussinfo)
 	fprintf(trussinfo->outfile, "%-20s%15s%8s%8s\n",
 	    "syscall", "seconds", "calls", "errors");
 	ncall = nerror = 0;
-	STAILQ_FOREACH(sc, &syscalls, entries)
+	STAILQ_FOREACH(sc, &seen_syscalls, entries) {
 		if (sc->ncalls) {
 			fprintf(trussinfo->outfile, "%-20s%5jd.%09ld%8d%8d\n",
 			    sc->name, (intmax_t)sc->time.tv_sec,
@@ -2824,6 +3085,7 @@ print_summary(struct trussinfo *trussinfo)
 			ncall += sc->ncalls;
 			nerror += sc->nerror;
 		}
+	}
 	fprintf(trussinfo->outfile, "%20s%15s%8s%8s\n",
 	    "", "-------------", "-------", "-------");
 	fprintf(trussinfo->outfile, "%-20s%5jd.%09ld%8d%8d\n",

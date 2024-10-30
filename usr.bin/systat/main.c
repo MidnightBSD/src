@@ -29,17 +29,9 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 
 #ifdef lint
 static const char sccsid[] = "@(#)main.c	8.1 (Berkeley) 6/6/93";
-#endif
-
-#ifndef lint
-static const char copyright[] =
-"@(#) Copyright (c) 1980, 1992, 1993\n\
-	The Regents of the University of California.  All rights reserved.\n";
 #endif
 
 #include <sys/param.h>
@@ -134,6 +126,21 @@ parse_cmd_args (int argc, char **argv)
 
 }
 
+static void
+resize(int signo __unused)
+{
+
+	endwin();
+	refresh();
+	clear();
+
+	CMDLINE = LINES - 1;
+	labels();
+	display();
+	status();
+}
+
+
 int
 main(int argc, char **argv)
 {
@@ -190,6 +197,7 @@ main(int argc, char **argv)
 	signal(SIGINT, die);
 	signal(SIGQUIT, die);
 	signal(SIGTERM, die);
+	signal(SIGWINCH, resize);
 
 	/*
 	 * Initialize display.  Load average appears in a one line

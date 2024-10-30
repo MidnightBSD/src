@@ -57,8 +57,6 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 
 #ifdef lint
 static const char sccsid[] = "@(#)disks.c	8.1 (Berkeley) 6/6/93";
@@ -425,12 +423,6 @@ dsshow2(int diskcol, int diskrow, int dn, int lc, struct statinfo *now, struct s
 	putlongdouble(device_busy, diskrow + 4, lc, 5, 0, 0);
 }
 
-static void
-dsshow3(int diskcol, int diskrow, int dn, int lc, struct statinfo *now, struct statinfo *then)
-{
-	dsshow2(diskcol, diskrow, dn, lc, now, then);
-}
-
 void
 dsshow(int maxdrives, int diskcol, int diskrow, struct statinfo *now, struct statinfo *then)
 {
@@ -438,5 +430,5 @@ dsshow(int maxdrives, int diskcol, int diskrow, struct statinfo *now, struct sta
 
 	for (i = 0, lc = 0; i < num_devices && lc < maxdrives; i++)
 		if (dev_select[i].selected)
-			dsshow3(diskcol, diskrow, i, ++lc, now, then);
+			dsshow2(diskcol, diskrow, i, ++lc, now, then);
 }

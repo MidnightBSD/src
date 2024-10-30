@@ -12,12 +12,12 @@
  *          Wolfram Schneider <wosch@FreeBSD.org>
  *          Thomas Moestl <tmoestl@gmx.net>
  *          Eitan Adler <eadler@FreeBSD.org>
- *
  */
 
+#include <sys/param.h>
+#include <sys/cpuset.h>
 #include <sys/errno.h>
 #include <sys/fcntl.h>
-#include <sys/param.h>
 #include <sys/priority.h>
 #include <sys/proc.h>
 #include <sys/resource.h>
@@ -203,12 +203,16 @@ static const char *ordernames[] = {
 static int maxcpu;
 static int maxid;
 static int ncpus;
-static unsigned long cpumask;
+static cpuset_t cpumask;
 static long *times;
 static long *pcpu_cp_time;
 static long *pcpu_cp_old;
 static long *pcpu_cp_diff;
 static int *pcpu_cpu_states;
+
+/* Battery units and states */
+static int battery_units;
+static int battery_life;
 
 static int compare_swap(const void *a, const void *b);
 static int compare_jid(const void *a, const void *b);
@@ -289,17 +293,27 @@ machine_init(struct statics *statics)
 	size = sizeof(carc_en);
 	if (arc_enabled &&
 	    sysctlbyname("vfs.zfs.compressed_arc_enabled", &carc_en, &size,
-	    NULL, 0) == 0 && carc_en == 1)
-		carc_enabled = 1;
+	    NULL, 0) == 0 && carc_en == 1) {
+		uint64_t uncomp_sz;
+
+		/*
+		 * Don't report compression stats if no data is in the ARC.
+		 * Otherwise, we end up printing a blank line.
+		 */
+		size = sizeof(uncomp_sz);
+		if (sysctlbyname("kstat.zfs.misc.arcstats.uncompressed_size",
+		    &uncomp_sz, &size, NULL, 0) == 0 && uncomp_sz != 0)
+			carc_enabled = 1;
+	}
 
 	kd = kvm_open(NULL, _PATH_DEVNULL, NULL, O_RDONLY, "kvm_open");
 	if (kd == NULL)
 		return (-1);
 
 	size = sizeof(nswapdev);
-	if (sysctlbyname("vm.nswapdev", &nswapdev, &size, NULL,
-		0) == 0 && nswapdev != 0)
-			has_swap = 1;
+	if (sysctlbyname("vm.nswapdev", &nswapdev, &size, NULL, 0) == 0 &&
+	    nswapdev != 0)
+		has_swap = 1;
 
 	GETSYSCTL("kern.ccpu", ccpu);
 
@@ -342,8 +356,6 @@ machine_init(struct statics *statics)
 	statics->order_names = ordernames;
 
 	/* Allocate state for per-CPU stats. */
-	cpumask = 0;
-	ncpus = 0;
 	GETSYSCTL("kern.smp.maxcpus", maxcpu);
 	times = calloc(maxcpu * CPUSTATES, sizeof(long));
 	if (times == NULL)
@@ -352,23 +364,29 @@ machine_init(struct statics *statics)
 	if (sysctlbyname("kern.cp_times", times, &size, NULL, 0) == -1)
 		err(1, "sysctlbyname kern.cp_times");
 	pcpu_cp_time = calloc(1, size);
-	maxid = (size / CPUSTATES / sizeof(long)) - 1;
+	maxid = MIN(size / CPUSTATES / sizeof(long) - 1, CPU_SETSIZE - 1);
+	CPU_ZERO(&cpumask);
 	for (i = 0; i <= maxid; i++) {
 		empty = 1;
 		for (j = 0; empty && j < CPUSTATES; j++) {
 			if (times[i * CPUSTATES + j] != 0)
 				empty = 0;
 		}
-		if (!empty) {
-			cpumask |= (1ul << i);
-			ncpus++;
-		}
+		if (!empty)
+			CPU_SET(i, &cpumask);
 	}
+	ncpus = CPU_COUNT(&cpumask);
 	assert(ncpus > 0);
 	pcpu_cp_old = calloc(ncpus * CPUSTATES, sizeof(long));
 	pcpu_cp_diff = calloc(ncpus * CPUSTATES, sizeof(long));
 	pcpu_cpu_states = calloc(ncpus * CPUSTATES, sizeof(int));
 	statics->ncpus = ncpus;
+
+	/* Allocate state of battery units reported via ACPI. */
+	battery_units = 0;
+	size = sizeof(int);
+	sysctlbyname("hw.acpi.battery.units", &battery_units, &size, NULL, 0);
+	statics->nbatteries = battery_units;
 
 	update_layout();
 
@@ -455,7 +473,7 @@ get_system_info(struct system_info *si)
 
 	/* convert cp_time counts to percentages */
 	for (i = j = 0; i <= maxid; i++) {
-		if ((cpumask & (1ul << i)) == 0)
+		if (!CPU_ISSET(i, &cpumask))
 			continue;
 		percentages(CPUSTATES, &pcpu_cpu_states[j * CPUSTATES],
 		    &pcpu_cp_time[j * CPUSTATES],
@@ -576,6 +594,12 @@ get_system_info(struct system_info *si)
 	} else {
 		si->boottime.tv_sec = -1;
 	}
+
+	battery_life = 0;
+	if (battery_units > 0) {
+		GETSYSCTL("hw.acpi.battery.life", battery_life);
+	}
+	si->battery = battery_life;
 }
 
 #define NOPROC	((void *)-1)
@@ -1033,7 +1057,7 @@ format_next_process(struct handle * xhandle, char *(*get_userid)(int), int flags
 				len = (argbuflen - (dst - argbuf) - 1) / 4;
 				strvisx(dst, src,
 				    MIN(strlen(src), len),
-				    VIS_NL | VIS_CSTYLE);
+				    VIS_NL | VIS_TAB | VIS_CSTYLE | VIS_OCTAL);
 				while (*dst != '\0')
 					dst++;
 				if ((argbuflen - (dst - argbuf) - 1) / 4 > 0)
@@ -1132,7 +1156,7 @@ format_next_process(struct handle * xhandle, char *(*get_userid)(int), int flags
 		sbuf_printf(procbuf, "%6s ", format_time(cputime));
 		sbuf_printf(procbuf, "%6.2f%% ", ps.wcpu ? 100.0 * weighted_cpu(PCTCPU(pp), pp) : 100.0 * PCTCPU(pp));
 	}
-	sbuf_printf(procbuf, "%s", printable(cmdbuf));
+	sbuf_printf(procbuf, "%s", cmdbuf);
 	free(cmdbuf);
 	return (sbuf_data(procbuf));
 }
@@ -1240,19 +1264,19 @@ compare_tid(const void *p1, const void *p2)
  *	distinct keys.  The keys (in descending order of importance) are:
  *	percent cpu, cpu ticks, state, resident set size, total virtual
  *	memory usage.  The process states are ordered as follows (from least
- *	to most important):  WAIT, zombie, sleep, stop, start, run.  The
- *	array declaration below maps a process state index into a number
- *	that reflects this ordering.
+ *	to most important):  run, zombie, idle, interrupt wait, stop, sleep.
+ *	The array declaration below maps a process state index into a
+ *	number that reflects this ordering.
  */
 
-static int sorted_state[] = {
-	0,	/* not used		*/
-	3,	/* sleep		*/
-	1,	/* ABANDONED (WAIT)	*/
-	6,	/* run			*/
-	5,	/* start		*/
-	2,	/* zombie		*/
-	4	/* stop			*/
+static const int sorted_state[] = {
+	[SIDL] =	3,	/* being created	*/
+	[SRUN] =	1,	/* running/runnable	*/
+	[SSLEEP] =	6,	/* sleeping		*/
+	[SSTOP] =	5,	/* stopped/suspended	*/
+	[SZOMB] =	2,	/* zombie		*/
+	[SWAIT] =	4,	/* intr			*/
+	[SLOCK] =	7,	/* blocked on lock	*/
 };
 
 

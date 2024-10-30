@@ -170,6 +170,7 @@ do { \
 	/* struct in_ifaddr *ia; */					\
 	/* struct rm_priotracker *t; */					\
 do {									\
+	NET_EPOCH_ASSERT();						\
 	IN_IFADDR_RLOCK((t));						\
 	for ((ia) = CK_STAILQ_FIRST(&V_in_ifaddrhead);			\
 	    (ia) != NULL && (ia)->ia_ifp != (ifp);			\
@@ -393,7 +394,21 @@ extern struct sx in_multi_sx;
 #define	IN_MULTI_UNLOCK_ASSERT() sx_assert(&in_multi_sx, SA_XUNLOCKED)
 
 void inm_disconnect(struct in_multi *inm);
-extern int ifma_restart;
+
+/*
+ * Get the in_multi pointer from a ifmultiaddr.
+ * Returns NULL if ifmultiaddr is no longer valid.
+ */
+static __inline struct in_multi *
+inm_ifmultiaddr_get_inm(struct ifmultiaddr *ifma)
+{
+
+	NET_EPOCH_ASSERT();
+
+	return ((ifma->ifma_addr->sa_family != AF_INET ||
+	    (ifma->ifma_flags & IFMA_F_ENQUEUED) == 0) ? NULL :
+	    ifma->ifma_protospec);
+}
 
 /* Acquire an in_multi record. */
 static __inline void
@@ -434,8 +449,7 @@ inm_rele_locked(struct in_multi_head *inmh, struct in_multi *inm)
 #define MCAST_NOTSMEMBER	2	/* This host excluded source */
 #define MCAST_MUTED		3	/* [deprecated] */
 
-struct	rtentry;
-struct	route;
+struct rib_head;
 struct	ip_moptions;
 
 struct in_multi *inm_lookup_locked(struct ifnet *, const struct in_addr);
@@ -460,21 +474,21 @@ int	in_leavegroup_locked(struct in_multi *,
 	    /*const*/ struct in_mfilter *);
 int	in_control(struct socket *, u_long, caddr_t, struct ifnet *,
 	    struct thread *);
-int	in_addprefix(struct in_ifaddr *, int);
+int	in_addprefix(struct in_ifaddr *);
 int	in_scrubprefix(struct in_ifaddr *, u_int);
 void	in_ifscrub_all(void);
+int	in_handle_ifaddr_route(int, struct in_ifaddr *);
 void	ip_input(struct mbuf *);
 void	ip_direct_input(struct mbuf *);
 void	in_ifadown(struct ifaddr *ifa, int);
 struct	mbuf	*ip_tryforward(struct mbuf *);
 void	*in_domifattach(struct ifnet *);
 void	in_domifdetach(struct ifnet *, void *);
+struct rib_head *in_inithead(uint32_t fibnum);
+#ifdef VIMAGE
+void	in_detachhead(struct rib_head *rh);
+#endif
 
-
-/* XXX */
-void	 in_rtalloc_ign(struct route *ro, u_long ignflags, u_int fibnum);
-void	 in_rtredirect(struct sockaddr *, struct sockaddr *,
-	    struct sockaddr *, int, struct sockaddr *, u_int);
 #endif /* _KERNEL */
 
 /* INET6 stuff */

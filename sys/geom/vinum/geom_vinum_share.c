@@ -43,7 +43,6 @@
 /* This file is shared between kernel and userland. */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #ifdef _KERNEL
 #include <sys/malloc.h>
@@ -53,6 +52,7 @@
 #define	iswhite(c) (((c) == ' ') || ((c) == '\t'))
 #else
 #include <ctype.h>
+#include <paths.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -78,9 +78,8 @@ gv_tokenize(char *cptr, char *token[], int maxtoken)
 {
 	int tokennr;	/* Index of this token. */
 	char delim;	/* Delimiter for searching for the partner. */
-	
-	for (tokennr = 0; tokennr < maxtoken;) {
 
+	for (tokennr = 0; tokennr < maxtoken;) {
 		/* Skip leading white space. */
 		while (iswhite(*cptr))
 			cptr++;
@@ -135,7 +134,6 @@ gv_tokenize(char *cptr, char *token[], int maxtoken)
 	return maxtoken;
 }
 
-
 /*
  * Take a number with an optional scale factor and convert it to a number of
  * bytes.
@@ -157,7 +155,7 @@ gv_sizespec(char *spec)
 	uint64_t size;
 	char *s;
 	int sign;
-	
+
 	size = 0;
 	sign = 1;
 	if (spec != NULL) {		/* we have a parameter */
@@ -169,7 +167,6 @@ gv_sizespec(char *spec)
 
 		/* It's numeric. */
 		if ((*s >= '0') && (*s <= '9')) {
-
 			/* It's numeric. */
 			while ((*s >= '0') && (*s <= '9'))
 				/* Convert it. */
@@ -465,7 +462,7 @@ gv_new_drive(int max, char *token[])
 			}
 			ptr = token[j];
 
-			if (strncmp(ptr, "/dev/", 5) == 0)
+			if (strncmp(ptr, _PATH_DEV, 5) == 0)
 				ptr += 5;
 			strlcpy(d->device, ptr, sizeof(d->device));
 		} else {
@@ -597,8 +594,6 @@ gv_new_plex(int max, char *token[])
 	return (p);
 }
 
-
-
 /* Get a new subdisk object. */
 struct gv_sd *
 gv_new_sd(int max, char *token[])
@@ -705,7 +700,7 @@ const char *
 gv_roughlength(off_t bytes, int lj)
 {
 	static char desc[16];
-	
+
 	/* Gigabytes. */
 	if (bytes > (off_t)MEGABYTE * 10000)
 		snprintf(desc, sizeof(desc), lj ? "%jd GB" : "%10jd GB",

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -45,7 +44,6 @@
 #include <sys/kthread.h>
 #include <geom/raid/g_raid.h>
 #include "g_raid_md_if.h"
-
 
 static struct g_raid_softc *
 g_raid_find_node(struct g_class *mp, const char *name)

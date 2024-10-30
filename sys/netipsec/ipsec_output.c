@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2002, 2003 Sam Leffler, Errno Consulting
  * Copyright (c) 2016 Andrey V. Elsukov <ae@FreeBSD.org>
@@ -25,7 +25,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -327,8 +326,9 @@ ipsec4_common_output(struct mbuf *m, struct inpcb *inp, int forwarding)
 		}
 #if defined(SCTP) || defined(SCTP_SUPPORT)
 		if (m->m_pkthdr.csum_flags & CSUM_SCTP) {
-			struct ip *ip = mtod(m, struct ip *);
+			struct ip *ip;
 
+			ip = mtod(m, struct ip *);
 			sctp_delayed_cksum(m, (uint32_t)(ip->ip_hl << 2));
 			m->m_pkthdr.csum_flags &= ~CSUM_SCTP;
 		}
@@ -618,7 +618,7 @@ ipsec6_common_output(struct mbuf *m, struct inpcb *inp, int forwarding)
 		if (m->m_pkthdr.csum_flags & CSUM_DELAY_DATA_IPV6) {
 			in6_delayed_cksum(m, m->m_pkthdr.len -
 			    sizeof(struct ip6_hdr), sizeof(struct ip6_hdr));
-		m->m_pkthdr.csum_flags &= ~CSUM_DELAY_DATA_IPV6;
+			m->m_pkthdr.csum_flags &= ~CSUM_DELAY_DATA_IPV6;
 		}
 #if defined(SCTP) || defined(SCTP_SUPPORT)
 		if (m->m_pkthdr.csum_flags & CSUM_SCTP_IPV6) {
@@ -687,6 +687,7 @@ int
 ipsec_process_done(struct mbuf *m, struct secpolicy *sp, struct secasvar *sav,
     u_int idx)
 {
+	struct epoch_tracker et;
 	struct xform_history *xh;
 	struct secasindex *saidx;
 	struct m_tag *mtag;
@@ -788,19 +789,25 @@ ipsec_process_done(struct mbuf *m, struct secpolicy *sp, struct secasvar *sav,
 	 * We're done with IPsec processing, transmit the packet using the
 	 * appropriate network protocol (IP or IPv6).
 	 */
+	NET_EPOCH_ENTER(et);
 	switch (saidx->dst.sa.sa_family) {
 #ifdef INET
 	case AF_INET:
 		key_freesav(&sav);
-		return ip_output(m, NULL, NULL, IP_RAWOUTPUT, NULL, NULL);
+		error = ip_output(m, NULL, NULL, IP_RAWOUTPUT, NULL, NULL);
+		break;
 #endif /* INET */
 #ifdef INET6
 	case AF_INET6:
 		key_freesav(&sav);
-		return ip6_output(m, NULL, NULL, 0, NULL, NULL, NULL);
+		error = ip6_output(m, NULL, NULL, 0, NULL, NULL, NULL);
+		break;
 #endif /* INET6 */
+	default:
+		panic("ipsec_process_done");
 	}
-	panic("ipsec_process_done");
+	NET_EPOCH_EXIT(et);
+	return (error);
 bad:
 	m_freem(m);
 	key_freesav(&sav);
@@ -957,4 +964,3 @@ ipsec_encap(struct mbuf **mp, struct secasindex *saidx)
 	(*mp)->m_flags &= ~(M_BCAST | M_MCAST);
 	return (0);
 }
-

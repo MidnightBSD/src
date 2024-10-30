@@ -22,17 +22,10 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef __RANDOMIZE_FD__
 #define __RANDOMIZE_FD__
-
-/*
- * The random() function is defined to return values between 0 and
- * 2^31 - 1 inclusive in random(3).
- */
-#define	RANDOM_MAX_PLUS1	0x80000000UL
 
 #define RANDOM_TYPE_UNSET 0
 #define RANDOM_TYPE_LINES 1
@@ -47,4 +40,40 @@ struct rand_node {
 
 int randomize_fd(int fd, int type, int unique, double denom);
 
+/*
+ * Generates a random number uniformly in the range [0.0, 1.0).
+ */
+static inline double
+random_unit_float(void)
+{
+	static const uint64_t denom = (1ull << 53);
+	static const uint64_t mask = denom - 1;
+
+	uint64_t rand64;
+
+	/*
+	 * arc4random_buf(...) in this use generates integer outputs in [0,
+	 * UINT64_MAX].
+	 *
+	 * The double mantissa only has 53 bits, so we uniformly mask off the
+	 * high 11 bits and then floating-point divide by 2^53 to achieve a
+	 * result in [0, 1).
+	 *
+	 * We are not allowed to emit 1.0, so denom must be one greater than
+	 * the possible range of the preceeding step.
+	 */
+	arc4random_buf(&rand64, sizeof(rand64));
+	rand64 &= mask;
+	return ((double)rand64 / denom);
+}
+
+/*
+ * Returns true with probability 1 / denom (a floating point number >= 1).
+ * Otherwise, returns false.
+ */
+static inline bool
+random_uniform_denom(double denom)
+{
+	return ((uint64_t)(denom * random_unit_float()) == 0);
+}
 #endif

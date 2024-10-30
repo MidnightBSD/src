@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2009 Gabor Kovesdan <gabor@FreeBSD.org>
  * Copyright (C) 2012 Oleg Moskalenko <mom040267@gmail.com>
@@ -28,12 +28,21 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <err.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "mem.h"
+
+void*
+sort_calloc(size_t nb, size_t size)
+{
+	void *ptr;
+
+	if ((ptr = calloc(nb, size)) == NULL)
+		err(2, NULL);
+	return (ptr);
+}
 
 /*
  * malloc() wrapper.

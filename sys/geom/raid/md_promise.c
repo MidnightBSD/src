@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011 Alexander Motin <mav@FreeBSD.org>
  * Copyright (c) 2000 - 2008 Søren Schmidt <sos@FreeBSD.org>
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bio.h>
 #include <sys/endian.h>
@@ -40,6 +39,7 @@
 #include <sys/mutex.h>
 #include <sys/systm.h>
 #include <geom/geom.h>
+#include <geom/geom_dbg.h>
 #include "geom/raid/g_raid.h"
 #include "g_raid_md_if.h"
 
@@ -186,7 +186,6 @@ static struct g_raid_md_class g_raid_md_promise_class = {
 	.mdc_enable = 1,
 	.mdc_priority = 100
 };
-
 
 static void
 g_raid_md_promise_print(struct promise_raid_conf *meta)
@@ -343,7 +342,9 @@ promise_meta_read(struct g_consumer *cp, struct promise_raid_conf **metaarr)
 	pp = cp->provider;
 	subdisks = 0;
 
-	if (pp->sectorsize * 4 > MAXPHYS) {
+	if (pp->sectorsize * 4 < sizeof(*meta))
+		return (subdisks);
+	if (pp->sectorsize * 4 > maxphys) {
 		G_RAID_DEBUG(1, "%s: Blocksize is too big.", pp->name);
 		return (subdisks);
 	}
@@ -1279,7 +1280,6 @@ g_raid_md_ctl_promise(struct g_raid_md_object *md,
 	nargs = gctl_get_paraml(req, "nargs", sizeof(*nargs));
 	error = 0;
 	if (strcmp(verb, "label") == 0) {
-
 		if (*nargs < 4) {
 			gctl_error(req, "Invalid number of arguments.");
 			return (-1);
@@ -1500,13 +1500,11 @@ g_raid_md_ctl_promise(struct g_raid_md_object *md,
 		return (0);
 	}
 	if (strcmp(verb, "add") == 0) {
-
 		gctl_error(req, "`add` command is not applicable, "
 		    "use `label` instead.");
 		return (-99);
 	}
 	if (strcmp(verb, "delete") == 0) {
-
 		nodename = gctl_get_asciiparam(req, "arg0");
 		if (nodename != NULL && strcasecmp(sc->sc_name, nodename) != 0)
 			nodename = NULL;
@@ -1607,7 +1605,7 @@ g_raid_md_ctl_promise(struct g_raid_md_object *md,
 				error = -2;
 				break;
 			}
-			if (strncmp(diskname, "/dev/", 5) == 0)
+			if (strncmp(diskname, _PATH_DEV, 5) == 0)
 				diskname += 5;
 
 			TAILQ_FOREACH(disk, &sc->sc_disks, d_next) {

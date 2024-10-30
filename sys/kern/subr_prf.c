@@ -37,7 +37,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #ifdef _KERNEL
 #include "opt_ddb.h"
 #include "opt_printf.h"
@@ -61,6 +60,8 @@
 #include <sys/syslog.h>
 #include <sys/cons.h>
 #include <sys/uio.h>
+#else /* !_KERNEL */
+#include <errno.h>
 #endif
 #include <sys/ctype.h>
 #include <sys/sbuf.h>
@@ -115,6 +116,7 @@ extern	int log_open;
 
 static void  msglogchar(int c, int pri);
 static void  msglogstr(char *str, int pri, int filter_cr);
+static void  prf_putbuf(char *bufr, int flags, int pri);
 static void  putchar(int ch, void *arg);
 static char *ksprintn(char *nbuf, uintmax_t num, int base, int *len, int upper);
 static void  snprintf_func(int ch, void *arg);
@@ -175,6 +177,14 @@ uprintf(const char *fmt, ...)
 	td = curthread;
 	if (TD_IS_IDLETHREAD(td))
 		return (0);
+
+	if (td->td_proc == initproc) {
+		/* Produce output when we fail to load /sbin/init: */
+		va_start(ap, fmt);
+		retval = vprintf(fmt, ap);
+		va_end(ap);
+		return (retval);
+	}
 
 	sx_slock(&proctree_lock);
 	p = td->td_proc;
@@ -257,27 +267,6 @@ vtprintf(struct proc *p, int pri, const char *fmt, va_list ap)
 	msgbuftrigger = 1;
 }
 
-/*
- * Ttyprintf displays a message on a tty; it should be used only by
- * the tty driver, or anything that knows the underlying tty will not
- * be revoke(2)'d away.  Other callers should use tprintf.
- */
-int
-ttyprintf(struct tty *tp, const char *fmt, ...)
-{
-	va_list ap;
-	struct putchar_arg pca;
-	int retval;
-
-	va_start(ap, fmt);
-	pca.tty = tp;
-	pca.flags = TOTTY;
-	pca.p_bufr = NULL;
-	retval = kvprintf(fmt, putchar, &pca, 10, ap);
-	va_end(ap);
-	return (retval);
-}
-
 static int
 _vprintf(int level, int flags, const char *fmt, va_list ap)
 {
@@ -306,13 +295,8 @@ _vprintf(int level, int flags, const char *fmt, va_list ap)
 
 #ifdef PRINTF_BUFR_SIZE
 	/* Write any buffered console/log output: */
-	if (*pca.p_bufr != '\0') {
-		if (pca.flags & TOLOG)
-			msglogstr(pca.p_bufr, level, /*filter_cr*/1);
-
-		if (pca.flags & TOCONS)
-			cnputs(pca.p_bufr);
-	}
+	if (*pca.p_bufr != '\0')
+		prf_putbuf(pca.p_bufr, flags, level);
 #endif
 
 	TSEXIT();
@@ -427,10 +411,26 @@ vprintf(const char *fmt, va_list ap)
 
 	retval = _vprintf(-1, TOCONS | TOLOG, fmt, ap);
 
-	if (!panicstr)
+	if (!KERNEL_PANICKED())
 		msgbuftrigger = 1;
 
 	return (retval);
+}
+
+static void
+prf_putchar(int c, int flags, int pri)
+{
+
+	if (flags & TOLOG)
+		msglogchar(c, pri);
+
+	if (flags & TOCONS) {
+		if ((!KERNEL_PANICKED()) && (constty != NULL))
+			msgbuf_addchar(&consmsgbuf, c);
+
+		if ((constty == NULL) || always_console_output)
+			cnputc(c);
+	}
 }
 
 static void
@@ -441,11 +441,11 @@ prf_putbuf(char *bufr, int flags, int pri)
 		msglogstr(bufr, pri, /*filter_cr*/1);
 
 	if (flags & TOCONS) {
-		if ((panicstr == NULL) && (constty != NULL))
+		if ((!KERNEL_PANICKED()) && (constty != NULL))
 			msgbuf_addstr(&consmsgbuf, -1,
 			    bufr, /*filter_cr*/ 0);
 
-		if ((constty == NULL) ||(always_console_output))
+		if ((constty == NULL) || always_console_output)
 			cnputs(bufr);
 	}
 }
@@ -455,12 +455,7 @@ putbuf(int c, struct putchar_arg *ap)
 {
 	/* Check if no console output buffer was provided. */
 	if (ap->p_bufr == NULL) {
-		/* Output direct to the console. */
-		if (ap->flags & TOCONS)
-			cnputc(c);
-
-		if (ap->flags & TOLOG)
-			msglogchar(c, ap->pri);
+		prf_putchar(c, ap->flags, ap->pri);
 	} else {
 		/* Buffer the character: */
 		*ap->p_next++ = c;
@@ -510,7 +505,7 @@ putchar(int c, void *arg)
 		return;
 	}
 
-	if ((flags & TOTTY) && tp != NULL && panicstr == NULL)
+	if ((flags & TOTTY) && tp != NULL && !KERNEL_PANICKED())
 		tty_putchar(tp, c);
 
 	if ((flags & (TOCONS | TOLOG)) && c != '\0')
@@ -793,20 +788,24 @@ reswitch:	switch (ch = (u_char)*fmt++) {
 				lflag = 1;
 			goto reswitch;
 		case 'n':
+			/*
+			 * We do not support %n in kernel, but consume the
+			 * argument.
+			 */
 			if (jflag)
-				*(va_arg(ap, intmax_t *)) = retval;
+				(void)va_arg(ap, intmax_t *);
 			else if (qflag)
-				*(va_arg(ap, quad_t *)) = retval;
+				(void)va_arg(ap, quad_t *);
 			else if (lflag)
-				*(va_arg(ap, long *)) = retval;
+				(void)va_arg(ap, long *);
 			else if (zflag)
-				*(va_arg(ap, size_t *)) = retval;
+				(void)va_arg(ap, size_t *);
 			else if (hflag)
-				*(va_arg(ap, short *)) = retval;
+				(void)va_arg(ap, short *);
 			else if (cflag)
-				*(va_arg(ap, char *)) = retval;
+				(void)va_arg(ap, char *);
 			else
-				*(va_arg(ap, int *)) = retval;
+				(void)va_arg(ap, int *);
 			break;
 		case 'o':
 			base = 8;
@@ -854,6 +853,7 @@ reswitch:	switch (ch = (u_char)*fmt++) {
 			goto handle_nosign;
 		case 'X':
 			upper = 1;
+			/* FALLTHROUGH */
 		case 'x':
 			base = 16;
 			goto handle_nosign;
@@ -1274,3 +1274,42 @@ sbuf_putbuf(struct sbuf *sb)
 	printf("%s", sbuf_data(sb));
 }
 #endif
+
+int
+sbuf_printf_drain(void *arg, const char *data, int len)
+{
+	size_t *retvalptr;
+	int r;
+#ifdef _KERNEL
+	char *dataptr;
+	char oldchr;
+
+	/*
+	 * This is allowed as an extra byte is always resvered for
+	 * terminating NUL byte.  Save and restore the byte because
+	 * we might be flushing a record, and there may be valid
+	 * data after the buffer.
+	 */
+	oldchr = data[len];
+	dataptr = __DECONST(char *, data);
+	dataptr[len] = '\0';
+
+	prf_putbuf(dataptr, TOLOG | TOCONS, -1);
+	r = len;
+
+	dataptr[len] = oldchr;
+
+#else /* !_KERNEL */
+
+	r = printf("%.*s", len, data);
+	if (r < 0)
+		return (-errno);
+
+#endif
+
+	retvalptr = arg;
+	if (retvalptr != NULL)
+		*retvalptr += r;
+
+	return (r);
+}

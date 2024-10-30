@@ -37,7 +37,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /* Includes */
 #ifdef _KERNEL
 #include <sys/param.h>

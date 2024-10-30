@@ -1,7 +1,6 @@
 
 /*
  * Copyright (C) 2012 by Darren Reed.
- *
  * See the IPFILTER.LICENCE file for details on licencing.
  */
 
@@ -86,24 +85,30 @@ static	int	ipfwrite(dev_t, struct uio *, int);
 
 SYSCTL_DECL(_net_inet);
 #define SYSCTL_IPF(parent, nbr, name, access, ptr, val, descr) \
-	SYSCTL_OID(parent, nbr, name, CTLTYPE_INT|CTLFLAG_VNET|access, \
-		   ptr, val, sysctl_ipf_int, "I", descr)
+    SYSCTL_OID(parent, nbr, name, \
+	CTLTYPE_INT | CTLFLAG_VNET | CTLFLAG_MPSAFE | access, \
+	ptr, val, sysctl_ipf_int, "I", descr)
 #define SYSCTL_DYN_IPF_NAT(parent, nbr, name, access,ptr, val, descr) \
-	SYSCTL_ADD_OID(&ipf_clist, SYSCTL_STATIC_CHILDREN(parent), nbr, name, \
-	CTLTYPE_INT|CTLFLAG_VNET|access, ptr, val, sysctl_ipf_int_nat, "I", descr)
+    SYSCTL_ADD_OID(&ipf_clist, SYSCTL_STATIC_CHILDREN(parent), nbr, name, \
+	CTLTYPE_INT | CTLFLAG_VNET | CTLFLAG_MPSAFE |access, \
+	ptr, val, sysctl_ipf_int_nat, "I", descr)
 #define SYSCTL_DYN_IPF_STATE(parent, nbr, name, access,ptr, val, descr) \
-	SYSCTL_ADD_OID(&ipf_clist, SYSCTL_STATIC_CHILDREN(parent), nbr, name, \
-	CTLTYPE_INT|CTLFLAG_VNET|access, ptr, val, sysctl_ipf_int_state, "I", descr)
+    SYSCTL_ADD_OID(&ipf_clist, SYSCTL_STATIC_CHILDREN(parent), nbr, name, \
+	CTLTYPE_INT | CTLFLAG_VNET | CTLFLAG_MPSAFE | access, \
+	ptr, val, sysctl_ipf_int_state, "I", descr)
 #define SYSCTL_DYN_IPF_FRAG(parent, nbr, name, access,ptr, val, descr) \
-	SYSCTL_ADD_OID(&ipf_clist, SYSCTL_STATIC_CHILDREN(parent), nbr, name, \
-	CTLTYPE_INT|CTLFLAG_VNET|access, ptr, val, sysctl_ipf_int_frag, "I", descr)
+    SYSCTL_ADD_OID(&ipf_clist, SYSCTL_STATIC_CHILDREN(parent), nbr, name, \
+	CTLTYPE_INT | CTLFLAG_VNET | CTLFLAG_MPSAFE | access, \
+	ptr, val, sysctl_ipf_int_frag, "I", descr)
 #define SYSCTL_DYN_IPF_AUTH(parent, nbr, name, access,ptr, val, descr) \
-	SYSCTL_ADD_OID(&ipf_clist, SYSCTL_STATIC_CHILDREN(parent), nbr, name, \
-	CTLTYPE_INT|CTLFLAG_VNET|access, ptr, val, sysctl_ipf_int_auth, "I", descr)
+    SYSCTL_ADD_OID(&ipf_clist, SYSCTL_STATIC_CHILDREN(parent), nbr, name, \
+	CTLTYPE_INT | CTLFLAG_VNET | CTLFLAG_MPSAFE | access, \
+	ptr, val, sysctl_ipf_int_auth, "I", descr)
 static struct sysctl_ctx_list ipf_clist;
 #define	CTLFLAG_OFF	0x00800000	/* IPFilter must be disabled */
 #define	CTLFLAG_RWO	(CTLFLAG_RW|CTLFLAG_OFF)
-SYSCTL_NODE(_net_inet, OID_AUTO, ipf, CTLFLAG_RW, 0, "IPF");
+SYSCTL_NODE(_net_inet, OID_AUTO, ipf, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "IPF");
 SYSCTL_IPF(_net_inet_ipf, OID_AUTO, fr_flags, CTLFLAG_RW, &VNET_NAME(ipfmain.ipf_flags), 0, "IPF flags");
 SYSCTL_IPF(_net_inet_ipf, OID_AUTO, ipf_pass, CTLFLAG_RW, &VNET_NAME(ipfmain.ipf_pass), 0, "default pass/block");
 SYSCTL_IPF(_net_inet_ipf, OID_AUTO, fr_active, CTLFLAG_RD, &VNET_NAME(ipfmain.ipf_active), 0, "IPF is active");
@@ -347,7 +352,7 @@ sysctl_ipf_int ( SYSCTL_HANDLER_ARGS )
 		error = SYSCTL_OUT(req, &arg2, sizeof(int));
 
 	if (error || !req->newptr)
-		return (error);
+		goto sysctl_error;
 
 	if (!arg1)
 		error = EPERM;
@@ -357,6 +362,8 @@ sysctl_ipf_int ( SYSCTL_HANDLER_ARGS )
 		else
 			error = SYSCTL_IN(req, arg1, sizeof(int));
 	}
+
+sysctl_error:
 	return (error);
 }
 
@@ -373,7 +380,7 @@ sysctl_ipf_int_nat ( SYSCTL_HANDLER_ARGS )
 	ipf_nat_softc_t *nat_softc;
 
 	nat_softc = V_ipfmain.ipf_nat_soft;
-	arg1 = (void *)((uintptr_t)nat_softc + arg2);
+	arg1 = (void *)((uintptr_t)nat_softc + (size_t)arg2);
 
 	return (sysctl_ipf_int(oidp, arg1, 0, req));
 }
@@ -387,7 +394,7 @@ sysctl_ipf_int_state ( SYSCTL_HANDLER_ARGS )
 	ipf_state_softc_t *state_softc;
 
 	state_softc = V_ipfmain.ipf_state_soft;
-	arg1 = (void *)((uintptr_t)state_softc + arg2);
+	arg1 = (void *)((uintptr_t)state_softc + (size_t)arg2);
 
 	return (sysctl_ipf_int(oidp, arg1, 0, req));
 }
@@ -401,7 +408,7 @@ sysctl_ipf_int_auth ( SYSCTL_HANDLER_ARGS )
 	ipf_auth_softc_t *auth_softc;
 
 	auth_softc = V_ipfmain.ipf_auth_soft;
-	arg1 = (void *)((uintptr_t)auth_softc + arg2);
+	arg1 = (void *)((uintptr_t)auth_softc + (size_t)arg2);
 
 	return (sysctl_ipf_int(oidp, arg1, 0, req));
 }
@@ -415,7 +422,7 @@ sysctl_ipf_int_frag ( SYSCTL_HANDLER_ARGS )
 	ipf_frag_softc_t *frag_softc;
 
 	frag_softc = V_ipfmain.ipf_frag_soft;
-	arg1 = (void *)((uintptr_t)frag_softc + arg2);
+	arg1 = (void *)((uintptr_t)frag_softc + (size_t)arg2);
 
 	return (sysctl_ipf_int(oidp, arg1, 0, req));
 }
@@ -423,7 +430,7 @@ sysctl_ipf_int_frag ( SYSCTL_HANDLER_ARGS )
 
 
 static int
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 ipfpoll(struct cdev *dev, int events, struct thread *td)
 #else
 ipfpoll(dev_t dev, int events, struct proc *td)

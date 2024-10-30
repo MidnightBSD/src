@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010 Riccardo Panicucci, Universita` di Pisa
  * All rights reserved
@@ -206,7 +206,6 @@ prio_free_queue(struct dn_queue *q)
 	return 0;
 }
 
-
 static struct dn_alg prio_desc = {
 	_SI( .type = ) DN_SCHED_PRIO,
 	_SI( .name = ) "PRIO",
@@ -234,6 +233,5 @@ static struct dn_alg prio_desc = {
 	_SI( .getconfig = )  NULL,
 #endif
 };
-
 
 DECLARE_DNSCHED_MODULE(dn_prio, &prio_desc);

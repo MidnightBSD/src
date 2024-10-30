@@ -42,7 +42,6 @@ static const char sccsid[] = "@(#)random.c	8.5 (Berkeley) 4/5/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 
 #include <err.h>
@@ -50,6 +49,8 @@ static const char sccsid[] = "@(#)random.c	8.5 (Berkeley) 4/5/94";
 #include <fcntl.h>
 #include <limits.h>
 #include <locale.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -65,11 +66,12 @@ main(int argc, char *argv[])
 {
 	double denom;
 	int ch, fd, random_exit, randomize_lines, random_type, ret,
-		selected, unique_output, unbuffer_output;
+	    unique_output, unbuffer_output;
+	bool selected;
 	char *ep;
 	const char *filename;
 
-	denom = 0;
+	denom = 0.;
 	filename = "/dev/fd/0";
 	random_type = RANDOM_TYPE_UNSET;
 	random_exit = randomize_lines = unbuffer_output = 0;
@@ -117,24 +119,22 @@ main(int argc, char *argv[])
 
 	switch (argc) {
 	case 0:
-		denom = (randomize_lines ? 1 : 2);
+		denom = (randomize_lines ? 1. : 2.);
 		break;
 	case 1:
 		errno = 0;
 		denom = strtod(*argv, &ep);
 		if (errno == ERANGE)
 			err(1, "%s", *argv);
-		if (denom <= 0 || *ep != '\0')
+		if (denom < 1. || *ep != '\0')
 			errx(1, "denominator is not valid.");
-		if (random_exit && denom > 256)
+		if (random_exit && denom > 256.)
 			errx(1, "denominator must be <= 256 for random exit.");
 		break;
 	default:
 		usage();
 		/* NOTREACHED */
 	}
-
-	srandomdev();
 
 	/*
 	 * Act as a filter, randomly choosing lines of the standard input
@@ -157,28 +157,28 @@ main(int argc, char *argv[])
 
 	/* Compute a random exit status between 0 and denom - 1. */
 	if (random_exit)
-		return (int)(denom * random() / RANDOM_MAX_PLUS1);
+		return (arc4random_uniform(denom));
 
 	/*
-	 * Select whether to print the first line.  (Prime the pump.)
-	 * We find a random number between 0 and denom - 1 and, if it's
-	 * 0 (which has a 1 / denom chance of being true), we select the
-	 * line.
+	 * Filter stdin, selecting lines with probability 1/denom, one
+	 * character at a time.
 	 */
-	selected = (int)(denom * random() / RANDOM_MAX_PLUS1) == 0;
-	while ((ch = getchar()) != EOF) {
-		if (selected)
-			(void)putchar(ch);
-		if (ch == '\n') {
-			/* End of that line.  See if we got an error. */
-			if (ferror(stdout))
-				err(2, "stdout");
-
-			/* Now see if the next line is to be printed. */
-			selected = (int)(denom * random() /
-				RANDOM_MAX_PLUS1) == 0;
+	do {
+		selected = random_uniform_denom(denom);
+		if (selected) {
+			while ((ch = getchar()) != EOF) {
+				putchar(ch);
+				if (ch == '\n')
+					break;
+			}
+		} else {
+			while ((ch = getchar()) != EOF)
+				if (ch == '\n')
+					break;
 		}
-	}
+		if (ferror(stdout))
+			err(2, "stdout");
+	} while (ch != EOF);
 	if (ferror(stdin))
 		err(2, "stdin");
 	exit (0);

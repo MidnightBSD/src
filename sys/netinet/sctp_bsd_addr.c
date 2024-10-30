@@ -32,8 +32,6 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_var.h>
 #include <netinet/sctp_pcb.h>
@@ -74,7 +72,6 @@ MALLOC_DEFINE(SCTP_M_MCORE, "sctp_mcore", "sctp mcore queue");
 /* Global NON-VNET structure that controls the iterator */
 struct iterator_control sctp_it_ctl;
 
-
 void
 sctp_wakeup_iterator(void)
 {
@@ -108,7 +105,7 @@ sctp_startup_iterator(void)
 	kproc_create(sctp_iterator_thread,
 	    (void *)NULL,
 	    &sctp_it_ctl.thread_proc,
-	    RFPROC,
+	    0,
 	    SCTP_KTHREAD_PAGES,
 	    SCTP_KTRHEAD_NAME);
 }
@@ -142,7 +139,6 @@ sctp_gather_internal_ifa_flags(struct sctp_ifa *ifa)
 	}
 }
 #endif				/* INET6 */
-
 
 static uint32_t
 sctp_is_desired_interface_type(struct ifnet *ifn)
@@ -186,9 +182,6 @@ sctp_is_desired_interface_type(struct ifnet *ifn)
 	return (result);
 }
 
-
-
-
 static void
 sctp_init_ifns_for_vrf(int vrfid)
 {
@@ -197,6 +190,7 @@ sctp_init_ifns_for_vrf(int vrfid)
 	 * make sure we lock any IFA that exists as we float through the
 	 * list of IFA's
 	 */
+	struct epoch_tracker et;
 	struct ifnet *ifn;
 	struct ifaddr *ifa;
 	struct sctp_ifa *sctp_ifa;
@@ -206,12 +200,12 @@ sctp_init_ifns_for_vrf(int vrfid)
 #endif
 
 	IFNET_RLOCK();
+	NET_EPOCH_ENTER(et);
 	CK_STAILQ_FOREACH(ifn, &MODULE_GLOBAL(ifnet), if_link) {
 		if (sctp_is_desired_interface_type(ifn) == 0) {
 			/* non desired type */
 			continue;
 		}
-		IF_ADDR_RLOCK(ifn);
 		CK_STAILQ_FOREACH(ifa, &ifn->if_addrhead, ifa_link) {
 			if (ifa->ifa_addr == NULL) {
 				continue;
@@ -227,7 +221,7 @@ sctp_init_ifns_for_vrf(int vrfid)
 #ifdef INET6
 			case AF_INET6:
 				if (IN6_IS_ADDR_UNSPECIFIED(&((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr)) {
-					/* skip unspecifed addresses */
+					/* skip unspecified addresses */
 					continue;
 				}
 				break;
@@ -264,8 +258,8 @@ sctp_init_ifns_for_vrf(int vrfid)
 				sctp_ifa->localifa_flags &= ~SCTP_ADDR_DEFER_USE;
 			}
 		}
-		IF_ADDR_RUNLOCK(ifn);
 	}
+	NET_EPOCH_EXIT(et);
 	IFNET_RUNLOCK();
 }
 
@@ -329,7 +323,7 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 	case AF_INET6:
 		ifa_flags = ((struct in6_ifaddr *)ifa)->ia6_flags;
 		if (IN6_IS_ADDR_UNSPECIFIED(&((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr)) {
-			/* skip unspecifed addresses */
+			/* skip unspecified addresses */
 			return;
 		}
 		break;
@@ -343,7 +337,6 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 		    ifa->ifa_ifp->if_index, ifa->ifa_ifp->if_type, ifa->ifa_ifp->if_xname,
 		    (void *)ifa, ifa->ifa_addr, ifa_flags, 1);
 	} else {
-
 		sctp_del_addr_from_vrf(SCTP_DEFAULT_VRFID, ifa->ifa_addr,
 		    ifa->ifa_ifp->if_index,
 		    ifa->ifa_ifp->if_xname);
@@ -386,7 +379,6 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 #endif
 	return (m);
 }
-
 
 #ifdef SCTP_PACKET_LOGGING
 void
@@ -459,7 +451,6 @@ again_locked:
 		    SCTP_BASE_VAR(packet_log_end));
 		SCTP_BASE_VAR(packet_log_end) = 0;
 		goto no_log;
-
 	}
 	lenat = (int *)&SCTP_BASE_VAR(packet_log_buffer)[thisbegin];
 	*lenat = total_len;
@@ -484,7 +475,6 @@ no_log:
 	}
 	atomic_subtract_int(&SCTP_BASE_VAR(packet_log_writers), 1);
 }
-
 
 int
 sctp_copy_out_packet_log(uint8_t *target, int length)

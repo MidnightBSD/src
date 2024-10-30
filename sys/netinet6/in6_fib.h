@@ -25,36 +25,26 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _NETINET6_IN6_FIB_H_
 #define	_NETINET6_IN6_FIB_H_
 
-/* Basic nexthop info used for uRPF/mtu checks */
-struct nhop6_basic {
-	struct ifnet	*nh_ifp;	/* Logical egress interface */
-	uint16_t	nh_mtu;		/* nexthop mtu */
-	uint16_t	nh_flags;	/* nhop flags */
-	uint8_t		spare[4];
-	struct in6_addr	nh_addr;	/* GW/DST IPv4 address */
-};
+struct rtentry;
+struct route_nhop_data;
 
-/* Does not differ from nhop6_basic */
-struct nhop6_extended {
-	struct ifnet	*nh_ifp;	/* Logical egress interface */
-	uint16_t	nh_mtu;		/* nexthop mtu */
-	uint16_t	nh_flags;	/* nhop flags */
-	uint8_t		spare[4];
-	struct in6_addr	nh_addr;	/* GW/DST IPv6 address */
-	uint64_t	spare2[2];
-};
-
-int fib6_lookup_nh_basic(uint32_t fibnum, const struct in6_addr *dst,
-    uint32_t scopeid, uint32_t flags, uint32_t flowid,struct nhop6_basic *pnh6);
-int fib6_lookup_nh_ext(uint32_t fibnum, const struct in6_addr *dst,
-    uint32_t scopeid, uint32_t flags, uint32_t flowid,
-    struct nhop6_extended *pnh6);
-void fib6_free_nh_ext(uint32_t fibnum, struct nhop6_extended *pnh6);
+struct nhop_object *fib6_lookup(uint32_t fibnum,
+    const struct in6_addr *dst6, uint32_t scopeid, uint32_t flags,
+    uint32_t flowid);
+int fib6_check_urpf(uint32_t fibnum, const struct in6_addr *dst6,
+    uint32_t scopeid, uint32_t flags, const struct ifnet *src_if);
+struct rtentry *fib6_lookup_rt(uint32_t fibnum, const struct in6_addr *dst6,
+    uint32_t scopeid, uint32_t flags, struct route_nhop_data *rnd);
+struct nhop_object *fib6_lookup_debugnet(uint32_t fibnum,
+    const struct in6_addr *dst6, uint32_t scopeid, uint32_t flags);
+struct nhop_object *fib6_radix_lookup_nh(uint32_t fibnum,
+    const struct in6_addr *dst6, uint32_t scopeid);
+uint32_t fib6_calc_software_hash(const struct in6_addr *src,
+    const struct in6_addr *dst, unsigned short src_port, unsigned short dst_port,
+    char proto, uint32_t *phashtype);
 #endif
-

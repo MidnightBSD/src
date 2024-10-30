@@ -1,6 +1,5 @@
 /*
  * PIE - Proportional Integral controller Enhanced AQM algorithm.
- *
  * 
  * Copyright (C) 2016 Centre for Advanced Internet Architectures,
  *  Swinburne University of Technology, Melbourne, Australia.
@@ -46,7 +45,6 @@
 /* for 16-bits, we have 3-bits for integer part and 13-bits for fraction */
 #define PIE_FIX_POINT_BITS 13
 #define PIE_SCALE (1L<<PIE_FIX_POINT_BITS)
-
 
 /* PIE options */
 enum {
@@ -118,7 +116,6 @@ drop_early(struct pie_status *pst, uint32_t qlen)
 		&& pst->drop_prob < PIE_MAX_PROB / 5 )
 		||  qlen <= 2 * MEAN_PKTSIZE)
 		return ENQUE;
-
 
 	if (pst->drop_prob == 0)
 		pst->accu_prob = 0;

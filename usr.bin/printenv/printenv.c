@@ -42,7 +42,6 @@ static char sccsid[] = "@(#)printenv.c	8.2 (Berkeley) 5/4/95";
 #endif
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 
 #include <capsicum_helpers.h>

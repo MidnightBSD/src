@@ -183,6 +183,7 @@ x_output()
 	local path=$1; shift
 
 	local atime_s=$(x_output_date -f '%Sa' $path)
+	local btime_s=$(x_output_date -f '%SB' $path)
 	local ctime_s=$(x_output_date -f '%Sc' $path)
 	local devid=$(stat -f '%Hd,%Ld' $path)
 	local file_type_s=$(stat -f '%HT' $path)
@@ -205,6 +206,7 @@ Device: $devid   Inode: $inode    Links: $nlink
 Access: $atime_s
 Modify: $mtime_s
 Change: $ctime_s
+ Birth: $btime_s
 EOF
 }
 

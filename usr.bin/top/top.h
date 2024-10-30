@@ -1,6 +1,5 @@
 /*-
  * Top - a top users display for Berkeley Unix
- *
  */
 
 #ifndef TOP_H

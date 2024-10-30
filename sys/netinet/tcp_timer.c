@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_inet.h"
 #include "opt_inet6.h"
 #include "opt_tcpdebug.h"
@@ -81,46 +80,62 @@
 #endif
 
 int    tcp_persmin;
-SYSCTL_PROC(_net_inet_tcp, OID_AUTO, persmin, CTLTYPE_INT|CTLFLAG_RW,
-    &tcp_persmin, 0, sysctl_msec_to_ticks, "I", "minimum persistence interval");
+SYSCTL_PROC(_net_inet_tcp, OID_AUTO, persmin,
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
+    &tcp_persmin, 0, sysctl_msec_to_ticks, "I",
+    "minimum persistence interval");
 
 int    tcp_persmax;
-SYSCTL_PROC(_net_inet_tcp, OID_AUTO, persmax, CTLTYPE_INT|CTLFLAG_RW,
-    &tcp_persmax, 0, sysctl_msec_to_ticks, "I", "maximum persistence interval");
+SYSCTL_PROC(_net_inet_tcp, OID_AUTO, persmax,
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
+    &tcp_persmax, 0, sysctl_msec_to_ticks, "I",
+    "maximum persistence interval");
 
 int	tcp_keepinit;
-SYSCTL_PROC(_net_inet_tcp, TCPCTL_KEEPINIT, keepinit, CTLTYPE_INT|CTLFLAG_RW,
-    &tcp_keepinit, 0, sysctl_msec_to_ticks, "I", "time to establish connection");
+SYSCTL_PROC(_net_inet_tcp, TCPCTL_KEEPINIT, keepinit,
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
+    &tcp_keepinit, 0, sysctl_msec_to_ticks, "I",
+    "time to establish connection");
 
 int	tcp_keepidle;
-SYSCTL_PROC(_net_inet_tcp, TCPCTL_KEEPIDLE, keepidle, CTLTYPE_INT|CTLFLAG_RW,
-    &tcp_keepidle, 0, sysctl_msec_to_ticks, "I", "time before keepalive probes begin");
+SYSCTL_PROC(_net_inet_tcp, TCPCTL_KEEPIDLE, keepidle,
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
+    &tcp_keepidle, 0, sysctl_msec_to_ticks, "I",
+    "time before keepalive probes begin");
 
 int	tcp_keepintvl;
-SYSCTL_PROC(_net_inet_tcp, TCPCTL_KEEPINTVL, keepintvl, CTLTYPE_INT|CTLFLAG_RW,
-    &tcp_keepintvl, 0, sysctl_msec_to_ticks, "I", "time between keepalive probes");
+SYSCTL_PROC(_net_inet_tcp, TCPCTL_KEEPINTVL, keepintvl,
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
+    &tcp_keepintvl, 0, sysctl_msec_to_ticks, "I",
+    "time between keepalive probes");
 
 int	tcp_delacktime;
-SYSCTL_PROC(_net_inet_tcp, TCPCTL_DELACKTIME, delacktime, CTLTYPE_INT|CTLFLAG_RW,
+SYSCTL_PROC(_net_inet_tcp, TCPCTL_DELACKTIME, delacktime,
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
     &tcp_delacktime, 0, sysctl_msec_to_ticks, "I",
     "Time before a delayed ACK is sent");
 
-int	tcp_msl;
-SYSCTL_PROC(_net_inet_tcp, OID_AUTO, msl, CTLTYPE_INT|CTLFLAG_RW,
-    &tcp_msl, 0, sysctl_msec_to_ticks, "I", "Maximum segment lifetime");
+VNET_DEFINE(int, tcp_msl);
+SYSCTL_PROC(_net_inet_tcp, OID_AUTO, msl,
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_VNET,
+    &VNET_NAME(tcp_msl), 0, sysctl_msec_to_ticks, "I",
+    "Maximum segment lifetime");
 
 int	tcp_rexmit_initial;
-SYSCTL_PROC(_net_inet_tcp, OID_AUTO, rexmit_initial, CTLTYPE_INT|CTLFLAG_RW,
+SYSCTL_PROC(_net_inet_tcp, OID_AUTO, rexmit_initial,
+   CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
     &tcp_rexmit_initial, 0, sysctl_msec_to_ticks, "I",
     "Initial Retransmission Timeout");
 
 int	tcp_rexmit_min;
-SYSCTL_PROC(_net_inet_tcp, OID_AUTO, rexmit_min, CTLTYPE_INT|CTLFLAG_RW,
+SYSCTL_PROC(_net_inet_tcp, OID_AUTO, rexmit_min,
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
     &tcp_rexmit_min, 0, sysctl_msec_to_ticks, "I",
     "Minimum Retransmission Timeout");
 
 int	tcp_rexmit_slop;
-SYSCTL_PROC(_net_inet_tcp, OID_AUTO, rexmit_slop, CTLTYPE_INT|CTLFLAG_RW,
+SYSCTL_PROC(_net_inet_tcp, OID_AUTO, rexmit_slop,
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
     &tcp_rexmit_slop, 0, sysctl_msec_to_ticks, "I",
     "Retransmission Timer Slop");
 
@@ -130,13 +145,15 @@ SYSCTL_INT(_net_inet_tcp, OID_AUTO, always_keepalive, CTLFLAG_VNET|CTLFLAG_RW,
     "Assume SO_KEEPALIVE on all TCP connections");
 
 int    tcp_fast_finwait2_recycle = 0;
-SYSCTL_INT(_net_inet_tcp, OID_AUTO, fast_finwait2_recycle, CTLFLAG_RW, 
+SYSCTL_INT(_net_inet_tcp, OID_AUTO, fast_finwait2_recycle, CTLFLAG_RW,
     &tcp_fast_finwait2_recycle, 0,
     "Recycle closed FIN_WAIT_2 connections faster");
 
 int    tcp_finwait2_timeout;
-SYSCTL_PROC(_net_inet_tcp, OID_AUTO, finwait2_timeout, CTLTYPE_INT|CTLFLAG_RW,
-    &tcp_finwait2_timeout, 0, sysctl_msec_to_ticks, "I", "FIN-WAIT2 timeout");
+SYSCTL_PROC(_net_inet_tcp, OID_AUTO, finwait2_timeout,
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
+    &tcp_finwait2_timeout, 0, sysctl_msec_to_ticks, "I",
+    "FIN-WAIT2 timeout");
 
 int	tcp_keepcnt = TCPTV_KEEPCNT;
 SYSCTL_INT(_net_inet_tcp, OID_AUTO, keepcnt, CTLFLAG_RW, &tcp_keepcnt, 0,
@@ -191,17 +208,14 @@ inp_to_cpuid(struct inpcb *inp)
 {
 	u_int cpuid;
 
-#ifdef	RSS
 	if (per_cpu_timers) {
+#ifdef	RSS
 		cpuid = rss_hash2cpuid(inp->inp_flowid, inp->inp_flowtype);
 		if (cpuid == NETISR_CPUID_NONE)
 			return (curcpu);	/* XXX */
 		else
 			return (cpuid);
-	}
-#else
-	/* Legacy, pre-RSS behaviour */
-	if (per_cpu_timers) {
+#endif
 		/*
 		 * We don't have a flowid -> cpuid mapping, so cheat and
 		 * just map unknown cpuids to curcpu.  Not the best, but
@@ -211,10 +225,7 @@ inp_to_cpuid(struct inpcb *inp)
 		if (! CPU_ABSENT(cpuid))
 			return (cpuid);
 		return (curcpu);
-	}
-#endif
-	/* Default for RSS and non-RSS - cpuid 0 */
-	else {
+	} else {
 		return (0);
 	}
 }
@@ -250,10 +261,15 @@ int tcp_totbackoff = 2559;	/* sum of tcp_backoff[] */
 void
 tcp_timer_delack(void *xtp)
 {
+	struct epoch_tracker et;
 	struct tcpcb *tp = xtp;
 	struct inpcb *inp;
-	CURVNET_SET(tp->t_vnet);
+#ifdef TCPDEBUG
+	int ostate;
 
+	ostate = tp->t_state;
+#endif
+	CURVNET_SET(tp->t_vnet);
 	inp = tp->t_inpcb;
 	KASSERT(inp != NULL, ("%s: tp %p tp->t_inpcb == NULL", __func__, tp));
 	INP_WLOCK(inp);
@@ -271,8 +287,15 @@ tcp_timer_delack(void *xtp)
 	}
 	tp->t_flags |= TF_ACKNOW;
 	TCPSTAT_INC(tcps_delack);
+	NET_EPOCH_ENTER(et);
 	(void) tp->t_fb->tfb_tcp_output(tp);
+#ifdef TCPDEBUG
+	if (inp->inp_socket->so_options & SO_DEBUG)
+		tcp_trace(TA_USER, ostate, tp, (void *)0, (struct tcphdr *)0,
+			  (TCPT_DELACK << 8) | PRU_FASTTIMO);
+#endif
 	INP_WUNLOCK(inp);
+	NET_EPOCH_EXIT(et);
 	CURVNET_RESTORE();
 }
 
@@ -322,8 +345,8 @@ tcp_timer_2msl(void *xtp)
 	 * If in TIME_WAIT state just ignore as this timeout is handled in
 	 * tcp_tw_2msl_scan().
 	 *
-	 * If fastrecycle of FIN_WAIT_2, in FIN_WAIT_2 and receiver has closed, 
-	 * there's no point in hanging onto FIN_WAIT_2 socket. Just close it. 
+	 * If fastrecycle of FIN_WAIT_2, in FIN_WAIT_2 and receiver has closed,
+	 * there's no point in hanging onto FIN_WAIT_2 socket. Just close it.
 	 * Ignore fact that there were recent incoming segments.
 	 */
 	if ((inp->inp_flags & INP_TIMEWAIT) != 0) {
@@ -332,16 +355,16 @@ tcp_timer_2msl(void *xtp)
 		return;
 	}
 	if (tcp_fast_finwait2_recycle && tp->t_state == TCPS_FIN_WAIT_2 &&
-	    tp->t_inpcb && tp->t_inpcb->inp_socket && 
+	    tp->t_inpcb && tp->t_inpcb->inp_socket &&
 	    (tp->t_inpcb->inp_socket->so_rcv.sb_state & SBS_CANTRCVMORE)) {
 		TCPSTAT_INC(tcps_finwait2_drops);
 		if (inp->inp_flags & (INP_TIMEWAIT | INP_DROPPED)) {
 			tcp_inpinfo_lock_del(inp, tp);
 			goto out;
 		}
-		INP_INFO_RLOCK_ET(&V_tcbinfo, et);
-		tp = tcp_close(tp);             
-		INP_INFO_RUNLOCK_ET(&V_tcbinfo, et);
+		NET_EPOCH_ENTER(et);
+		tp = tcp_close(tp);
+		NET_EPOCH_EXIT(et);
 		tcp_inpinfo_lock_del(inp, tp);
 		goto out;
 	} else {
@@ -353,9 +376,9 @@ tcp_timer_2msl(void *xtp)
 				tcp_inpinfo_lock_del(inp, tp);
 				goto out;
 			}
-			INP_INFO_RLOCK_ET(&V_tcbinfo, et);
+			NET_EPOCH_ENTER(et);
 			tp = tcp_close(tp);
-			INP_INFO_RUNLOCK_ET(&V_tcbinfo, et);
+			NET_EPOCH_EXIT(et);
 			tcp_inpinfo_lock_del(inp, tp);
 			goto out;
 		}
@@ -364,7 +387,7 @@ tcp_timer_2msl(void *xtp)
 #ifdef TCPDEBUG
 	if (tp != NULL && (tp->t_inpcb->inp_socket->so_options & SO_DEBUG))
 		tcp_trace(TA_USER, ostate, tp, (void *)0, (struct tcphdr *)0,
-			  PRU_SLOWTIMO);
+			  (TCPT_2MSL << 8) | PRU_SLOWTIMO);
 #endif
 	TCP_PROBE2(debug__user, tp, PRU_SLOWTIMO);
 
@@ -451,9 +474,11 @@ tcp_timer_keep(void *xtp)
 		TCPSTAT_INC(tcps_keepprobe);
 		t_template = tcpip_maketemplate(inp);
 		if (t_template) {
+			NET_EPOCH_ENTER(et);
 			tcp_respond(tp, t_template->tt_ipgen,
 				    &t_template->tt_t, (struct mbuf *)NULL,
 				    tp->rcv_nxt, tp->snd_una - 1, 0);
+			NET_EPOCH_EXIT(et);
 			free(t_template, M_TEMP);
 		}
 		callout_reset(&tp->t_timers->tt_keep, TP_KEEPINTVL(tp),
@@ -478,16 +503,16 @@ dropit:
 		tcp_inpinfo_lock_del(inp, tp);
 		goto out;
 	}
-	INP_INFO_RLOCK_ET(&V_tcbinfo, et);
+	NET_EPOCH_ENTER(et);
 	tp = tcp_drop(tp, ETIMEDOUT);
 
 #ifdef TCPDEBUG
 	if (tp != NULL && (tp->t_inpcb->inp_socket->so_options & SO_DEBUG))
 		tcp_trace(TA_USER, ostate, tp, (void *)0, (struct tcphdr *)0,
-			  PRU_SLOWTIMO);
+			  (TCPT_KEEP << 8) | PRU_SLOWTIMO);
 #endif
 	TCP_PROBE2(debug__user, tp, PRU_SLOWTIMO);
-	INP_INFO_RUNLOCK_ET(&V_tcbinfo, et);
+	NET_EPOCH_EXIT(et);
 	tcp_inpinfo_lock_del(inp, tp);
  out:
 	CURVNET_RESTORE();
@@ -542,9 +567,9 @@ tcp_timer_persist(void *xtp)
 			tcp_inpinfo_lock_del(inp, tp);
 			goto out;
 		}
-		INP_INFO_RLOCK_ET(&V_tcbinfo, et);
+		NET_EPOCH_ENTER(et);
 		tp = tcp_drop(tp, ETIMEDOUT);
-		INP_INFO_RUNLOCK_ET(&V_tcbinfo, et);
+		NET_EPOCH_EXIT(et);
 		tcp_inpinfo_lock_del(inp, tp);
 		goto out;
 	}
@@ -559,20 +584,23 @@ tcp_timer_persist(void *xtp)
 			tcp_inpinfo_lock_del(inp, tp);
 			goto out;
 		}
-		INP_INFO_RLOCK_ET(&V_tcbinfo, et);
+		NET_EPOCH_ENTER(et);
 		tp = tcp_drop(tp, ETIMEDOUT);
-		INP_INFO_RUNLOCK_ET(&V_tcbinfo, et);
+		NET_EPOCH_EXIT(et);
 		tcp_inpinfo_lock_del(inp, tp);
 		goto out;
 	}
 	tcp_setpersist(tp);
 	tp->t_flags |= TF_FORCEDATA;
+	NET_EPOCH_ENTER(et);
 	(void) tp->t_fb->tfb_tcp_output(tp);
+	NET_EPOCH_EXIT(et);
 	tp->t_flags &= ~TF_FORCEDATA;
 
 #ifdef TCPDEBUG
 	if (tp != NULL && tp->t_inpcb->inp_socket->so_options & SO_DEBUG)
-		tcp_trace(TA_USER, ostate, tp, NULL, NULL, PRU_SLOWTIMO);
+		tcp_trace(TA_USER, ostate, tp, NULL, NULL,
+			  (TCPT_PERSIST << 8) | PRU_SLOWTIMO);
 #endif
 	TCP_PROBE2(debug__user, tp, PRU_SLOWTIMO);
 	INP_WUNLOCK(inp);
@@ -629,9 +657,9 @@ tcp_timer_rexmt(void * xtp)
 			tcp_inpinfo_lock_del(inp, tp);
 			goto out;
 		}
-		INP_INFO_RLOCK_ET(&V_tcbinfo, et);
+		NET_EPOCH_ENTER(et);
 		tp = tcp_drop(tp, ETIMEDOUT);
-		INP_INFO_RUNLOCK_ET(&V_tcbinfo, et);
+		NET_EPOCH_EXIT(et);
 		tcp_inpinfo_lock_del(inp, tp);
 		goto out;
 	}
@@ -744,7 +772,7 @@ tcp_timer_rexmt(void * xtp)
 				tp->t_pmtud_saved_maxseg = tp->t_maxseg;
 			}
 
-			/* 
+			/*
 			 * Reduce the MSS to blackhole value or to the default
 			 * in an attempt to retransmit.
 			 */
@@ -849,13 +877,13 @@ tcp_timer_rexmt(void * xtp)
 	tp->t_rtttime = 0;
 
 	cc_cong_signal(tp, NULL, CC_RTO);
-
+	NET_EPOCH_ENTER(et);
 	(void) tp->t_fb->tfb_tcp_output(tp);
-
+	NET_EPOCH_EXIT(et);
 #ifdef TCPDEBUG
 	if (tp != NULL && (tp->t_inpcb->inp_socket->so_options & SO_DEBUG))
 		tcp_trace(TA_USER, ostate, tp, (void *)0, (struct tcphdr *)0,
-			  PRU_SLOWTIMO);
+			  (TCPT_REXMT << 8) | PRU_SLOWTIMO);
 #endif
 	TCP_PROBE2(debug__user, tp, PRU_SLOWTIMO);
 	INP_WUNLOCK(inp);
@@ -867,7 +895,7 @@ void
 tcp_timer_activate(struct tcpcb *tp, uint32_t timer_type, u_int delta)
 {
 	struct callout *t_callout;
-	timeout_t *f_callout;
+	callout_func_t *f_callout;
 	struct inpcb *inp = tp->t_inpcb;
 	int cpu = inp_to_cpuid(inp);
 
@@ -950,7 +978,7 @@ tcp_timer_active(struct tcpcb *tp, uint32_t timer_type)
  * timer never to run. The flag is needed to assure
  * a race does not leave it running and cause
  * the timer to possibly restart itself (keep and persist
- * especially do this). 
+ * especially do this).
  */
 int
 tcp_timer_suspend(struct tcpcb *tp, uint32_t timer_type)
@@ -1008,7 +1036,7 @@ tcp_timers_unsuspend(struct tcpcb *tp, uint32_t timer_type)
 				    (tcp_timer_active((tp), TT_PERSIST) == 0) &&
 				    tp->snd_wnd) {
 					/* We have outstanding data activate a timer */
-					tcp_timer_activate(tp, TT_REXMT, 
+					tcp_timer_activate(tp, TT_REXMT,
                                             tp->t_rxtcur);
 				}
 			}
@@ -1073,7 +1101,7 @@ tcp_timer_stop(struct tcpcb *tp, uint32_t timer_type)
 			break;
 		default:
 			if (tp->t_fb->tfb_tcp_timer_stop) {
-				/* 
+				/*
 				 * XXXrrs we need to look at this with the
 				 * stop case below (flags).
 				 */
@@ -1087,7 +1115,7 @@ tcp_timer_stop(struct tcpcb *tp, uint32_t timer_type)
 		/*
 		 * Can't stop the callout, defer tcpcb actual deletion
 		 * to the last one. We do this using the async drain
-		 * function and incrementing the count in 
+		 * function and incrementing the count in
 		 */
 		tp->t_timers->tt_draincnt++;
 	}

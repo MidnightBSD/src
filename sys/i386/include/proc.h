@@ -65,7 +65,6 @@ struct syscall_args {
 	u_int code;
 	struct sysent *callp;
 	register_t args[8];
-	int narg;
 };
 
 #ifdef	_KERNEL

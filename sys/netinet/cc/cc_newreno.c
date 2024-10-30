@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1982, 1986, 1988, 1990, 1993, 1994, 1995
  *	The Regents of the University of California.
@@ -56,7 +56,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
@@ -85,8 +84,8 @@ static void	newreno_cong_signal(struct cc_var *ccv, uint32_t type);
 static void	newreno_post_recovery(struct cc_var *ccv);
 static int newreno_ctl_output(struct cc_var *ccv, struct sockopt *sopt, void *buf);
 
-VNET_DEFINE_STATIC(uint32_t, newreno_beta) = 50;
-VNET_DEFINE_STATIC(uint32_t, newreno_beta_ecn) = 80;
+VNET_DEFINE(uint32_t, newreno_beta) = 50;
+VNET_DEFINE(uint32_t, newreno_beta_ecn) = 80;
 #define V_newreno_beta VNET(newreno_beta)
 #define V_newreno_beta_ecn VNET(newreno_beta_ecn)
 
@@ -100,11 +99,6 @@ struct cc_algo newreno_cc_algo = {
 	.ctl_output = newreno_ctl_output,
 };
 
-struct newreno {
-	uint32_t beta;
-	uint32_t beta_ecn;
-};
-
 static inline struct newreno *
 newreno_malloc(struct cc_var *ccv)
 {
@@ -115,6 +109,7 @@ newreno_malloc(struct cc_var *ccv)
 		/* NB: nreno is not zeroed, so initialise all fields. */
 		nreno->beta = V_newreno_beta;
 		nreno->beta_ecn = V_newreno_beta_ecn;
+		nreno->newreno_flags = 0;
 		ccv->cc_data = nreno;
 	}
 
@@ -181,9 +176,15 @@ newreno_ack_received(struct cc_var *ccv, uint16_t type)
 			 * XXXLAS: Find a way to signal SS after RTO that
 			 * doesn't rely on tcpcb vars.
 			 */
+			uint16_t abc_val;
+
+			if (ccv->flags & CCF_USE_LOCAL_ABC)
+				abc_val = ccv->labc;
+			else
+				abc_val = V_tcp_abc_l_var;
 			if (CCV(ccv, snd_nxt) == CCV(ccv, snd_max))
 				incr = min(ccv->bytes_this_ack,
-				    ccv->nsegs * V_tcp_abc_l_var *
+				    ccv->nsegs * abc_val *
 				    CCV(ccv, t_maxseg));
 			else
 				incr = min(ccv->bytes_this_ack, CCV(ccv, t_maxseg));
@@ -198,7 +199,7 @@ newreno_ack_received(struct cc_var *ccv, uint16_t type)
 static void
 newreno_after_idle(struct cc_var *ccv)
 {
-	int rw;
+	uint32_t rw;
 
 	/*
 	 * If we've been idle for more than one retransmit timeout the old
@@ -217,11 +218,7 @@ newreno_after_idle(struct cc_var *ccv)
 	 * maximum of the former ssthresh or 3/4 of the old cwnd, to
 	 * not exit slow-start prematurely.
 	 */
-	if (V_tcp_do_rfc3390)
-		rw = min(4 * CCV(ccv, t_maxseg),
-		    max(2 * CCV(ccv, t_maxseg), 4380));
-	else
-		rw = CCV(ccv, t_maxseg) * 2;
+	rw = tcp_compute_initwnd(tcp_maxseg(ccv->ccvc.tcp));
 
 	CCV(ccv, snd_ssthresh) = max(CCV(ccv, snd_ssthresh),
 	    CCV(ccv, snd_cwnd)-(CCV(ccv, snd_cwnd)>>2));
@@ -240,7 +237,7 @@ newreno_cong_signal(struct cc_var *ccv, uint32_t type)
 	u_int mss;
 
 	cwin = CCV(ccv, snd_cwnd);
-	mss = tcp_maxseg(ccv->ccvc.tcp);
+	mss = tcp_fixed_maxseg(ccv->ccvc.tcp);
 	/*
 	 * Other TCP congestion controls use newreno_cong_signal(), but
 	 * with their own private cc_data. Make sure the cc_data is used
@@ -249,7 +246,16 @@ newreno_cong_signal(struct cc_var *ccv, uint32_t type)
 	nreno = (CC_ALGO(ccv->ccvc.tcp) == &newreno_cc_algo) ? ccv->cc_data : NULL;
 	beta = (nreno == NULL) ? V_newreno_beta : nreno->beta;
 	beta_ecn = (nreno == NULL) ? V_newreno_beta_ecn : nreno->beta_ecn;
-	if (V_cc_do_abe && type == CC_ECN)
+
+	/*
+	 * Note that we only change the backoff for ECN if the
+	 * global sysctl V_cc_do_abe is set <or> the stack itself
+	 * has set a flag in our newreno_flags (due to pacing) telling
+	 * us to use the lower valued back-off.
+	 */
+	if ((type == CC_ECN) &&
+	    (V_cc_do_abe ||
+	    ((nreno != NULL) && (nreno->newreno_flags & CC_NEWRENO_BETA_ECN))))
 		factor = beta_ecn;
 	else
 		factor = beta;
@@ -268,8 +274,7 @@ newreno_cong_signal(struct cc_var *ccv, uint32_t type)
 			    V_cc_do_abe && V_cc_abe_frlossreduce)) {
 				CCV(ccv, snd_ssthresh) =
 				    ((uint64_t)CCV(ccv, snd_ssthresh) *
-				    (uint64_t)beta) /
-				    (100ULL * (uint64_t)beta_ecn);
+				     (uint64_t)beta) / (uint64_t)beta_ecn;
 			}
 			if (!IN_CONGRECOVERY(CCV(ccv, t_flags)))
 				CCV(ccv, snd_ssthresh) = cwin;
@@ -355,7 +360,7 @@ newreno_ctl_output(struct cc_var *ccv, struct sockopt *sopt, void *buf)
 			nreno->beta = opt->val;
 			break;
 		case CC_NEWRENO_BETA_ECN:
-			if (!V_cc_do_abe)
+			if ((!V_cc_do_abe) && ((nreno->newreno_flags & CC_NEWRENO_BETA_ECN) == 0))
 				return (EACCES);
 			nreno->beta_ecn = opt->val;
 			break;
@@ -405,18 +410,19 @@ newreno_beta_handler(SYSCTL_HANDLER_ARGS)
 }
 
 SYSCTL_DECL(_net_inet_tcp_cc_newreno);
-SYSCTL_NODE(_net_inet_tcp_cc, OID_AUTO, newreno, CTLFLAG_RW, NULL,
+SYSCTL_NODE(_net_inet_tcp_cc, OID_AUTO, newreno,
+    CTLFLAG_RW | CTLFLAG_MPSAFE, NULL,
     "New Reno related settings");
 
 SYSCTL_PROC(_net_inet_tcp_cc_newreno, OID_AUTO, beta,
-	CTLFLAG_VNET | CTLTYPE_UINT | CTLFLAG_RW,
-	&VNET_NAME(newreno_beta), 3, &newreno_beta_handler, "IU",
-	"New Reno beta, specified as number between 1 and 100");
+    CTLFLAG_VNET | CTLTYPE_UINT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
+    &VNET_NAME(newreno_beta), 3, &newreno_beta_handler, "IU",
+    "New Reno beta, specified as number between 1 and 100");
 
 SYSCTL_PROC(_net_inet_tcp_cc_newreno, OID_AUTO, beta_ecn,
-	CTLFLAG_VNET | CTLTYPE_UINT | CTLFLAG_RW,
-	&VNET_NAME(newreno_beta_ecn), 3, &newreno_beta_handler, "IU",
-	"New Reno beta ecn, specified as number between 1 and 100");
+    CTLFLAG_VNET | CTLTYPE_UINT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
+    &VNET_NAME(newreno_beta_ecn), 3, &newreno_beta_handler, "IU",
+    "New Reno beta ecn, specified as number between 1 and 100");
 
 DECLARE_CC_MODULE(newreno, &newreno_cc_algo);
 MODULE_VERSION(newreno, 1);

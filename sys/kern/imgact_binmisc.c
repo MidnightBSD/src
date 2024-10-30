@@ -25,19 +25,21 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/ctype.h>
 #include <sys/exec.h>
+#include <sys/fcntl.h>
 #include <sys/imgact.h>
 #include <sys/imgact_binmisc.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/mutex.h>
+#include <sys/namei.h>
 #include <sys/sbuf.h>
 #include <sys/sysctl.h>
 #include <sys/sx.h>
+#include <sys/vnode.h>
 
 #include <machine/atomic.h>
 
@@ -62,6 +64,7 @@ typedef struct imgact_binmisc_entry {
 	uint8_t				 *ibe_magic;
 	uint8_t				 *ibe_mask;
 	uint8_t				 *ibe_interpreter;
+	struct vnode			 *ibe_interpreter_vnode;
 	ssize_t				  ibe_interp_offset;
 	uint32_t			  ibe_interp_argcnt;
 	uint32_t			  ibe_interp_length;
@@ -113,7 +116,7 @@ static struct sx interp_list_sx;
  * Populate the entry with the information about the interpreter.
  */
 static void
-imgact_binmisc_populate_interp(char *str, imgact_binmisc_entry_t *ibe)
+imgact_binmisc_populate_interp(char *str, imgact_binmisc_entry_t *ibe, int flags)
 {
 	uint32_t len = 0, argc = 1;
 	char t[IBE_INTERP_LEN_MAX];
@@ -149,6 +152,30 @@ imgact_binmisc_populate_interp(char *str, imgact_binmisc_entry_t *ibe)
 	memcpy(ibe->ibe_interpreter, t, len);
 	ibe->ibe_interp_argcnt = argc;
 	ibe->ibe_interp_length = len;
+
+	ibe->ibe_interpreter_vnode = NULL;
+	if (flags & IBF_PRE_OPEN) {
+		struct nameidata nd;
+		int error;
+
+		tp = t;
+		while (*tp != '\0' && *tp != ' ') {
+			tp++;
+		}
+		*tp = '\0';
+		NDINIT(&nd, LOOKUP, FOLLOW | ISOPEN, UIO_SYSSPACE, t, curthread);
+
+		/*
+		 * If there is an error, just stop now and fall back
+		 * to the non pre-open case where we lookup during
+		 * exec.
+		 */
+		error = namei(&nd);
+		if (error)
+			return;
+
+		ibe->ibe_interpreter_vnode = nd.ni_vp;
+	}
 }
 
 /*
@@ -166,7 +193,7 @@ imgact_binmisc_new_entry(ximgact_binmisc_entry_t *xbe, ssize_t interp_offset,
 	ibe->ibe_name = malloc(namesz, M_BINMISC, M_WAITOK|M_ZERO);
 	strlcpy(ibe->ibe_name, xbe->xbe_name, namesz);
 
-	imgact_binmisc_populate_interp(xbe->xbe_interpreter, ibe);
+	imgact_binmisc_populate_interp(xbe->xbe_interpreter, ibe, xbe->xbe_flags);
 
 	ibe->ibe_magic = malloc(xbe->xbe_msize, M_BINMISC, M_WAITOK|M_ZERO);
 	memcpy(ibe->ibe_magic, xbe->xbe_magic, xbe->xbe_msize);
@@ -198,6 +225,8 @@ imgact_binmisc_destroy_entry(imgact_binmisc_entry_t *ibe)
 		free(ibe->ibe_interpreter, M_BINMISC);
 	if (ibe->ibe_name)
 		free(ibe->ibe_name, M_BINMISC);
+	if (ibe->ibe_interpreter_vnode)
+		vrele(ibe->ibe_interpreter_vnode);
 	if (ibe)
 		free(ibe, M_BINMISC);
 }
@@ -270,14 +299,19 @@ imgact_binmisc_add_entry(ximgact_binmisc_entry_t *xbe)
 		}
 	}
 
+	/*
+	 * Preallocate a new entry. We do this without holding the
+	 * lock to avoid lock-order problems if IBF_PRE_OPEN is
+	 * set.
+	 */
+	ibe = imgact_binmisc_new_entry(xbe, interp_offset, argv0_cnt);
+
 	INTERP_LIST_WLOCK();
 	if (imgact_binmisc_find_entry(xbe->xbe_name) != NULL) {
 		INTERP_LIST_WUNLOCK();
+		imgact_binmisc_destroy_entry(ibe);
 		return (EEXIST);
 	}
-
-	/* Preallocate a new entry. */
-	ibe = imgact_binmisc_new_entry(xbe, interp_offset, argv0_cnt);
 
 	SLIST_INSERT_HEAD(&interpreter_list, ibe, link);
 	interp_list_entry_count++;
@@ -518,7 +552,7 @@ sysctl_kern_binmisc(SYSCTL_HANDLER_ARGS)
 	return (error);
 }
 
-SYSCTL_NODE(_kern, OID_AUTO, binmisc, CTLFLAG_RW, 0,
+SYSCTL_NODE(_kern, OID_AUTO, binmisc, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
     "Image activator for miscellaneous binaries");
 
 SYSCTL_PROC(_kern_binmisc, OID_AUTO, add,
@@ -633,7 +667,6 @@ imgact_binmisc_exec(struct image_params *imgp)
 		namelen = strlen(fname);
 	}
 
-
 	/*
 	 * We need to "push" the interpreter in the arg[] list.  To do this,
 	 * we first shift all the other values in the `begin_argv' area to
@@ -648,20 +681,11 @@ imgact_binmisc_exec(struct image_params *imgp)
 	MPASS(ibe->ibe_argv0_cnt == 0 || namelen > 0);
 	offset += ibe->ibe_argv0_cnt * (namelen - 2);
 
-	/* Check to make sure we won't overrun the stringspace. */
-	if (offset > imgp->args->stringspace) {
-		error = E2BIG;
+	/* Make room for the interpreter */
+	error = exec_args_adjust_args(imgp->args, 0, offset);
+	if (error != 0) {
 		goto done;
 	}
-
-	/* Make room for the interpreter */
-	bcopy(imgp->args->begin_argv, imgp->args->begin_argv + offset,
-	    imgp->args->endp - imgp->args->begin_argv);
-
-	/* Adjust everything by the offset. */
-	imgp->args->begin_envv += offset;
-	imgp->args->endp += offset;
-	imgp->args->stringspace -= offset;
 
 	/* Add the new argument(s) in the count. */
 	imgp->args->argc += ibe->ibe_interp_argcnt;
@@ -707,7 +731,10 @@ imgact_binmisc_exec(struct image_params *imgp)
 	/* Catch ibe->ibe_argv0_cnt counting more #a than we did. */
 	MPASS(ibe->ibe_argv0_cnt == argv0_cnt);
 	imgp->interpreter_name = imgp->args->begin_argv;
-
+	if (ibe->ibe_interpreter_vnode) {
+		imgp->interpreter_vp = ibe->ibe_interpreter_vnode;
+		vref(imgp->interpreter_vp);
+	}
 
 done:
 	INTERP_LIST_RUNLOCK();

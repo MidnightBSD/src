@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2001, John Baldwin <jhb@FreeBSD.org>.
  *
@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -75,7 +74,8 @@ int mp_maxcpus = MAXCPU;
 volatile int smp_started;
 u_int mp_maxid;
 
-static SYSCTL_NODE(_kern, OID_AUTO, smp, CTLFLAG_RD|CTLFLAG_CAPRD, NULL,
+static SYSCTL_NODE(_kern, OID_AUTO, smp,
+    CTLFLAG_RD | CTLFLAG_CAPRD | CTLFLAG_MPSAFE, NULL,
     "Kernel SMP");
 
 SYSCTL_INT(_kern_smp, OID_AUTO, maxid, CTLFLAG_RD|CTLFLAG_CAPRD, &mp_maxid, 0,
@@ -123,11 +123,11 @@ static void (*volatile smp_rv_teardown_func)(void *arg);
 static void *volatile smp_rv_func_arg;
 static volatile int smp_rv_waiters[4];
 
-/* 
+/*
  * Shared mutex to restrict busywaits between smp_rendezvous() and
  * smp(_targeted)_tlb_shootdown().  A deadlock occurs if both of these
  * functions trigger at once and cause multiple CPUs to busywait with
- * interrupts disabled. 
+ * interrupts disabled.
  */
 struct mtx smp_ipi_mtx;
 
@@ -146,6 +146,8 @@ mp_setmaxid(void *dummy)
 	KASSERT(mp_maxid >= mp_ncpus - 1,
 	    ("%s: counters out of sync: max %d, count %d", __func__,
 		mp_maxid, mp_ncpus));
+
+	cpusetsizemin = howmany(mp_maxid + 1, NBBY);
 }
 SYSINIT(cpu_mp_setmaxid, SI_SUB_TUNABLES, SI_ORDER_FIRST, mp_setmaxid, NULL);
 
@@ -167,7 +169,7 @@ mp_start(void *dummy)
 	}
 
 	cpu_mp_start();
-	printf("MidnightBSD/SMP: Multiprocessor System Detected: %d CPUs\n",
+	printf("FreeBSD/SMP: Multiprocessor System Detected: %d CPUs\n",
 	    mp_ncpus);
 
 	/* Provide a default for most architectures that don't have SMT/HTT. */
@@ -194,7 +196,7 @@ forward_signal(struct thread *td)
 
 	CTR1(KTR_SMP, "forward_signal(%p)", td->td_proc);
 
-	if (!smp_started || cold || panicstr)
+	if (!smp_started || cold || KERNEL_PANICKED())
 		return;
 	if (!forward_signal_enabled)
 		return;
@@ -330,7 +332,7 @@ suspend_cpus(cpuset_t map)
 #endif
 
 /*
- * Called by a CPU to restart stopped CPUs. 
+ * Called by a CPU to restart stopped CPUs.
  *
  * Usually (but not necessarily) called with 'stopped_cpus' as its arg.
  *
@@ -350,42 +352,68 @@ generic_restart_cpus(cpuset_t map, u_int type)
 #endif
 	volatile cpuset_t *cpus;
 
-	KASSERT(type == IPI_STOP || type == IPI_STOP_HARD
 #if X86
-	    || type == IPI_SUSPEND
-#endif
-	    , ("%s: invalid stop type", __func__));
+	KASSERT(type == IPI_STOP || type == IPI_STOP_HARD
+	    || type == IPI_SUSPEND, ("%s: invalid stop type", __func__));
 
 	if (!smp_started)
 		return (0);
 
 	CTR1(KTR_SMP, "restart_cpus(%s)", cpusetobj_strprint(cpusetbuf, &map));
 
-#if X86
 	if (type == IPI_SUSPEND)
 		cpus = &resuming_cpus;
 	else
-#endif
 		cpus = &stopped_cpus;
 
 	/* signal other cpus to restart */
-#if X86
 	if (type == IPI_SUSPEND)
 		CPU_COPY_STORE_REL(&map, &toresume_cpus);
 	else
-#endif
 		CPU_COPY_STORE_REL(&map, &started_cpus);
 
-#if X86
+	/*
+	 * Wake up any CPUs stopped with MWAIT.  From MI code we can't tell if
+	 * MONITOR/MWAIT is enabled, but the potentially redundant writes are
+	 * relatively inexpensive.
+	 */
+	if (type == IPI_STOP) {
+		struct monitorbuf *mb;
+		u_int id;
+
+		CPU_FOREACH(id) {
+			if (!CPU_ISSET(id, &map))
+				continue;
+
+			mb = &pcpu_find(id)->pc_monitorbuf;
+			atomic_store_int(&mb->stop_state,
+			    MONITOR_STOPSTATE_RUNNING);
+		}
+	}
+
 	if (!nmi_is_broadcast || nmi_kdb_lock == 0) {
-#endif
+		/* wait for each to clear its bit */
+		while (CPU_OVERLAP(cpus, &map))
+			cpu_spinwait();
+	}
+#else /* !X86 */
+	KASSERT(type == IPI_STOP || type == IPI_STOP_HARD,
+	    ("%s: invalid stop type", __func__));
+
+	if (!smp_started)
+		return (0);
+
+	CTR1(KTR_SMP, "restart_cpus(%s)", cpusetobj_strprint(cpusetbuf, &map));
+
+	cpus = &stopped_cpus;
+
+	/* signal other cpus to restart */
+	CPU_COPY_STORE_REL(&map, &started_cpus);
+
 	/* wait for each to clear its bit */
 	while (CPU_OVERLAP(cpus, &map))
 		cpu_spinwait();
-#if X86
-	}
 #endif
-
 	return (1);
 }
 
@@ -407,7 +435,7 @@ resume_cpus(cpuset_t map)
 #undef X86
 
 /*
- * All-CPU rendezvous.  CPUs are signalled, all execute the setup function 
+ * All-CPU rendezvous.  CPUs are signalled, all execute the setup function
  * (if specified), rendezvous, execute the action function (if specified),
  * rendezvous again, execute the teardown function (if specified), and then
  * resume.
@@ -465,15 +493,15 @@ smp_rendezvous_action(void)
 #ifdef INVARIANTS
 	owepreempt = td->td_owepreempt;
 #endif
-	
+
 	/*
 	 * If requested, run a setup function before the main action
 	 * function.  Ensure all CPUs have completed the setup
 	 * function before moving on to the action function.
 	 */
 	if (local_setup_func != smp_no_rendezvous_barrier) {
-		if (smp_rv_setup_func != NULL)
-			smp_rv_setup_func(smp_rv_func_arg);
+		if (local_setup_func != NULL)
+			local_setup_func(local_func_arg);
 		atomic_add_int(&smp_rv_waiters[1], 1);
 		while (smp_rv_waiters[1] < smp_rv_ncpus)
                 	cpu_spinwait();
@@ -523,7 +551,7 @@ smp_rendezvous_cpus(cpuset_t map,
 {
 	int curcpumap, i, ncpus = 0;
 
-	/* Look comments in the !SMP case. */
+	/* See comments in the !SMP case. */
 	if (!smp_started) {
 		spinlock_enter();
 		if (setup_func != NULL)
@@ -535,6 +563,12 @@ smp_rendezvous_cpus(cpuset_t map,
 		spinlock_exit();
 		return;
 	}
+
+	/*
+	 * Make sure we come here with interrupts enabled.  Otherwise we
+	 * livelock if smp_ipi_mtx is owned by a thread which sent us an IPI.
+	 */
+	MPASS(curthread->td_md.md_spinlock_count == 0);
 
 	CPU_FOREACH(i) {
 		if (CPU_ISSET(i, &map))
@@ -594,13 +628,29 @@ smp_rendezvous(void (* setup_func)(void *),
 	smp_rendezvous_cpus(all_cpus, setup_func, action_func, teardown_func, arg);
 }
 
-static struct cpu_group group[MAXCPU * MAX_CACHE_LEVELS + 1];
+static void
+smp_topo_fill(struct cpu_group *cg)
+{
+	int c;
+
+	for (c = 0; c < cg->cg_children; c++)
+		smp_topo_fill(&cg->cg_child[c]);
+	cg->cg_first = CPU_FFS(&cg->cg_mask) - 1;
+	cg->cg_last = CPU_FLS(&cg->cg_mask) - 1;
+}
 
 struct cpu_group *
 smp_topo(void)
 {
 	char cpusetbuf[CPUSETBUFSIZ], cpusetbuf2[CPUSETBUFSIZ];
-	struct cpu_group *top;
+	static struct cpu_group *top = NULL;
+
+	/*
+	 * The first call to smp_topo() is guaranteed to occur
+	 * during the kernel boot while we are still single-threaded.
+	 */
+	if (top != NULL)
+		return (top);
 
 	/*
 	 * Check for a fake topology request for debugging purposes.
@@ -659,15 +709,21 @@ smp_topo(void)
 		top = &top->cg_child[0];
 		top->cg_parent = NULL;
 	}
+	smp_topo_fill(top);
 	return (top);
 }
 
 struct cpu_group *
 smp_topo_alloc(u_int count)
 {
+	static struct cpu_group *group = NULL;
 	static u_int index;
 	u_int curr;
 
+	if (group == NULL) {
+		group = mallocarray((mp_maxid + 1) * MAX_CACHE_LEVELS + 1,
+		    sizeof(*group), M_DEVBUF, M_WAITOK | M_ZERO);
+	}
 	curr = index;
 	index += count;
 	return (&group[curr]);
@@ -678,7 +734,7 @@ smp_topo_none(void)
 {
 	struct cpu_group *top;
 
-	top = &group[0];
+	top = smp_topo_alloc(1);
 	top->cg_parent = NULL;
 	top->cg_child = NULL;
 	top->cg_mask = all_cpus;
@@ -686,7 +742,7 @@ smp_topo_none(void)
 	top->cg_children = 0;
 	top->cg_level = CG_SHARE_NONE;
 	top->cg_flags = 0;
-	
+
 	return (top);
 }
 
@@ -715,7 +771,7 @@ smp_topo_addleaf(struct cpu_group *parent, struct cpu_group *child, int share,
 			    parent,
 			    cpusetobj_strprint(cpusetbuf, &parent->cg_mask),
 			    cpusetobj_strprint(cpusetbuf2, &child->cg_mask));
-		CPU_OR(&parent->cg_mask, &child->cg_mask);
+		CPU_OR(&parent->cg_mask, &parent->cg_mask, &child->cg_mask);
 		parent->cg_count += child->cg_count;
 	}
 
@@ -732,9 +788,9 @@ smp_topo_1level(int share, int count, int flags)
 	int i;
 
 	cpu = 0;
-	top = &group[0];
 	packages = mp_ncpus / count;
-	top->cg_child = child = &group[1];
+	top = smp_topo_alloc(1 + packages);
+	top->cg_child = child = top + 1;
 	top->cg_level = CG_SHARE_NONE;
 	for (i = 0; i < packages; i++, child++)
 		cpu = smp_topo_addleaf(top, child, share, count, flags, cpu);
@@ -753,8 +809,9 @@ smp_topo_2level(int l2share, int l2count, int l1share, int l1count,
 	int j;
 
 	cpu = 0;
-	top = &group[0];
-	l2g = &group[1];
+	top = smp_topo_alloc(1 + mp_ncpus / (l2count * l1count) +
+	    mp_ncpus / l1count);
+	l2g = top + 1;
 	top->cg_child = l2g;
 	top->cg_level = CG_SHARE_NONE;
 	top->cg_children = mp_ncpus / (l2count * l1count);
@@ -769,7 +826,6 @@ smp_topo_2level(int l2share, int l2count, int l1share, int l1count,
 	}
 	return (top);
 }
-
 
 struct cpu_group *
 smp_topo_find(struct cpu_group *top, int cpu)
@@ -852,26 +908,90 @@ smp_no_rendezvous_barrier(void *dummy)
 #endif
 }
 
+void
+smp_rendezvous_cpus_retry(cpuset_t map,
+	void (* setup_func)(void *),
+	void (* action_func)(void *),
+	void (* teardown_func)(void *),
+	void (* wait_func)(void *, int),
+	struct smp_rendezvous_cpus_retry_arg *arg)
+{
+	int cpu;
+
+	CPU_COPY(&map, &arg->cpus);
+
+	/*
+	 * Only one CPU to execute on.
+	 */
+	if (!smp_started) {
+		spinlock_enter();
+		if (setup_func != NULL)
+			setup_func(arg);
+		if (action_func != NULL)
+			action_func(arg);
+		if (teardown_func != NULL)
+			teardown_func(arg);
+		spinlock_exit();
+		return;
+	}
+
+	/*
+	 * Execute an action on all specified CPUs while retrying until they
+	 * all acknowledge completion.
+	 */
+	for (;;) {
+		smp_rendezvous_cpus(
+		    arg->cpus,
+		    setup_func,
+		    action_func,
+		    teardown_func,
+		    arg);
+
+		if (CPU_EMPTY(&arg->cpus))
+			break;
+
+		CPU_FOREACH(cpu) {
+			if (!CPU_ISSET(cpu, &arg->cpus))
+				continue;
+			wait_func(arg, cpu);
+		}
+	}
+}
+
+void
+smp_rendezvous_cpus_done(struct smp_rendezvous_cpus_retry_arg *arg)
+{
+
+	CPU_CLR_ATOMIC(curcpu, &arg->cpus);
+}
+
 /*
+ * If (prio & PDROP) == 0:
  * Wait for specified idle threads to switch once.  This ensures that even
  * preempted threads have cycled through the switch function once,
  * exiting their codepaths.  This allows us to change global pointers
  * with no other synchronization.
+ * If (prio & PDROP) != 0:
+ * Force the specified CPUs to switch context at least once.
  */
 int
 quiesce_cpus(cpuset_t map, const char *wmesg, int prio)
 {
 	struct pcpu *pcpu;
-	u_int gen[MAXCPU];
+	u_int *gen;
 	int error;
 	int cpu;
 
 	error = 0;
-	for (cpu = 0; cpu <= mp_maxid; cpu++) {
-		if (!CPU_ISSET(cpu, &map) || CPU_ABSENT(cpu))
-			continue;
-		pcpu = pcpu_find(cpu);
-		gen[cpu] = pcpu->pc_idlethread->td_generation;
+	if ((prio & PDROP) == 0) {
+		gen = mallocarray(sizeof(u_int), mp_maxid + 1, M_TEMP,
+		    M_WAITOK);
+		for (cpu = 0; cpu <= mp_maxid; cpu++) {
+			if (!CPU_ISSET(cpu, &map) || CPU_ABSENT(cpu))
+				continue;
+			pcpu = pcpu_find(cpu);
+			gen[cpu] = pcpu->pc_idlethread->td_generation;
+		}
 	}
 	for (cpu = 0; cpu <= mp_maxid; cpu++) {
 		if (!CPU_ISSET(cpu, &map) || CPU_ABSENT(cpu))
@@ -880,8 +1000,10 @@ quiesce_cpus(cpuset_t map, const char *wmesg, int prio)
 		thread_lock(curthread);
 		sched_bind(curthread, cpu);
 		thread_unlock(curthread);
+		if ((prio & PDROP) != 0)
+			continue;
 		while (gen[cpu] == pcpu->pc_idlethread->td_generation) {
-			error = tsleep(quiesce_cpus, prio, wmesg, 1);
+			error = tsleep(quiesce_cpus, prio & ~PDROP, wmesg, 1);
 			if (error != EWOULDBLOCK)
 				goto out;
 			error = 0;
@@ -891,6 +1013,8 @@ out:
 	thread_lock(curthread);
 	sched_unbind(curthread);
 	thread_unlock(curthread);
+	if ((prio & PDROP) == 0)
+		free(gen, M_TEMP);
 
 	return (error);
 }
@@ -900,6 +1024,66 @@ quiesce_all_cpus(const char *wmesg, int prio)
 {
 
 	return quiesce_cpus(all_cpus, wmesg, prio);
+}
+
+/*
+ * Observe all CPUs not executing in critical section.
+ * We are not in one so the check for us is safe. If the found
+ * thread changes to something else we know the section was
+ * exited as well.
+ */
+void
+quiesce_all_critical(void)
+{
+	struct thread *td, *newtd;
+	struct pcpu *pcpu;
+	int cpu;
+
+	MPASS(curthread->td_critnest == 0);
+
+	CPU_FOREACH(cpu) {
+		pcpu = cpuid_to_pcpu[cpu];
+		td = pcpu->pc_curthread;
+		for (;;) {
+			if (td->td_critnest == 0)
+				break;
+			cpu_spinwait();
+			newtd = (struct thread *)
+			    atomic_load_acq_ptr((void *)pcpu->pc_curthread);
+			if (td != newtd)
+				break;
+		}
+	}
+}
+
+static void
+cpus_fence_seq_cst_issue(void *arg __unused)
+{
+
+	atomic_thread_fence_seq_cst();
+}
+
+/*
+ * Send an IPI forcing a sequentially consistent fence.
+ *
+ * Allows replacement of an explicitly fence with a compiler barrier.
+ * Trades speed up during normal execution for a significant slowdown when
+ * the barrier is needed.
+ */
+void
+cpus_fence_seq_cst(void)
+{
+
+#ifdef SMP
+	smp_rendezvous(
+	    smp_no_rendezvous_barrier,
+	    cpus_fence_seq_cst_issue,
+	    smp_no_rendezvous_barrier,
+	    NULL
+	);
+#else
+	cpus_fence_seq_cst_issue(NULL);
+#endif
 }
 
 /* Extra care is taken with this sysctl because the data type is volatile */
@@ -912,7 +1096,6 @@ sysctl_kern_smp_active(SYSCTL_HANDLER_ARGS)
 	error = SYSCTL_OUT(req, &active, sizeof(active));
 	return (error);
 }
-
 
 #ifdef SMP
 void
@@ -1169,4 +1352,3 @@ topo_analyze(struct topo_node *topo_root, int all,
 }
 
 #endif /* SMP */
-

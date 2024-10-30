@@ -44,7 +44,6 @@ static char sccsid[] = "@(#)look.c	8.2 (Berkeley) 5/4/95";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-
 /*
  * look -- find lines in a sorted list.
  *

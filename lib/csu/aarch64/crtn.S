@@ -28,7 +28,6 @@
  */
 
 #include <machine/asm.h>
-
 	.section .init,"ax",@progbits
 	ldr	lr, [sp]
 	add	sp, sp, #16

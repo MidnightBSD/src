@@ -52,7 +52,6 @@ this code that are retained.
 */
 
 #include <sys/cdefs.h>
-
 #ifdef SOFTFLOAT_FOR_GCC
 #include "softfloat-for-gcc.h"
 #endif

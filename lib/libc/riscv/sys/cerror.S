@@ -33,7 +33,6 @@
  */
 
 #include <machine/asm.h>
-
 ENTRY(cerror)
 	addi	sp, sp, -16
 	sd	a0, 0(sp)

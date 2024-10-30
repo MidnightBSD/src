@@ -321,7 +321,7 @@ key_attach(struct socket *so, int proto, struct thread *td)
 static int
 key_bind(struct socket *so, struct sockaddr *nam, struct thread *td)
 {
-  return EINVAL;
+	return EINVAL;
 }
 
 /*
@@ -430,7 +430,8 @@ struct pr_usrreqs key_usrreqs = {
 };
 
 /* sysctl */
-SYSCTL_NODE(_net, PF_KEY, key, CTLFLAG_RW, 0, "Key Family");
+SYSCTL_NODE(_net, PF_KEY, key, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "Key Family");
 
 /*
  * Definitions of protocols supported in the KEY domain.

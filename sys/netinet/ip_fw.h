@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2002-2009 Luigi Rizzo, Universita` di Pisa
  *
@@ -23,7 +23,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _IPFW2_H
@@ -33,7 +32,7 @@
  * The default rule number.  By the design of ip_fw, the default rule
  * is the last one, so its number can also serve as the highest number
  * allowed for a rule.  The ip_fw code relies on both meanings of this
- * constant. 
+ * constant.
  */
 #define	IPFW_DEFAULT_RULE	65535
 
@@ -238,7 +237,7 @@ enum ipfw_opcodes {		/* arguments (4 byte each)	*/
 	O_FORWARD_MAC,		/* fwd mac			*/
 	O_NAT,                  /* nope                         */
 	O_REASS,                /* none                         */
-	
+
 	/*
 	 * More opcodes.
 	 */
@@ -276,7 +275,7 @@ enum ipfw_opcodes {		/* arguments (4 byte each)	*/
 
 	O_SETFIB,		/* arg1=FIB number */
 	O_FIB,			/* arg1=FIB desired fib number */
-	
+
 	O_SOCKARG,		/* socket argument */
 
 	O_CALLRETURN,		/* arg1=called rule number */
@@ -294,7 +293,25 @@ enum ipfw_opcodes {		/* arguments (4 byte each)	*/
 	O_SKIP_ACTION,		/* none				*/
 	O_TCPMSS,		/* arg1=MSS value */
 
+	O_MAC_SRC_LOOKUP,	/* arg1=table number, u32=value */
+	O_MAC_DST_LOOKUP,	/* arg1=table number, u32=value */
+
 	O_LAST_OPCODE		/* not an opcode!		*/
+};
+
+/*
+ * Defines key types used by lookup instruction
+ */
+enum ipfw_table_lookup_type {
+	LOOKUP_DST_IP,
+	LOOKUP_SRC_IP,
+	LOOKUP_DST_PORT,
+	LOOKUP_SRC_PORT,
+	LOOKUP_UID,
+	LOOKUP_JAIL,
+	LOOKUP_DSCP,
+	LOOKUP_DST_MAC,
+	LOOKUP_SRC_MAC,
 };
 
 /*
@@ -338,7 +355,7 @@ enum ipfw_opcodes {		/* arguments (4 byte each)	*/
  *
  */
 typedef struct	_ipfw_insn {	/* template for instructions */
-	u_int8_t 	opcode;
+	_Alignas(_Alignof(u_int32_t)) u_int8_t 	opcode;
 	u_int8_t	len;	/* number of 32-bit words */
 #define	F_NOT		0x80
 #define	F_OR		0x40
@@ -484,9 +501,9 @@ struct cfg_redir {
 	u_short                 pport_cnt;      /* number of public ports */
 	u_short                 rport_cnt;      /* number of remote ports */
 	int                     proto;          /* protocol: tcp/udp */
-	struct alias_link       **alink;	
+	struct alias_link       **alink;
 	/* num of entry in spool chain */
-	u_int16_t               spool_cnt;      
+	u_int16_t               spool_cnt;
 	/* chain of spool instances */
 	LIST_HEAD(spool_chain, cfg_spool) spool_chain;
 };
@@ -503,9 +520,9 @@ struct cfg_nat {
 	int                     mode;                   /* aliasing mode */
 	struct libalias	        *lib;                   /* libalias instance */
 	/* number of entry in spool chain */
-	int                     redir_cnt;              
+	int                     redir_cnt;
 	/* chain of redir instances */
-	LIST_HEAD(redir_chain, cfg_redir) redir_chain;  
+	LIST_HEAD(redir_chain, cfg_redir) redir_chain;
 };
 #endif
 
@@ -514,7 +531,6 @@ struct cfg_nat {
 #define SOF_SPOOL       sizeof(struct cfg_spool)
 
 #endif	/* ifndef _KERNEL */
-
 
 struct nat44_cfg_spool {
 	struct in_addr	addr;
@@ -536,7 +552,7 @@ struct nat44_cfg_redir {
 	uint16_t	pport_cnt;	/* number of public ports */
 	uint16_t	rport_cnt;	/* number of remote ports */
 	uint16_t	mode;		/* type of redirect mode */
-	uint16_t	spool_cnt;	/* num of entry in spool chain */ 
+	uint16_t	spool_cnt;	/* num of entry in spool chain */
 	uint16_t	spare;
 	uint32_t	proto;		/* protocol: tcp/udp */
 };
@@ -556,7 +572,7 @@ struct nat44_cfg_nat {
 /* Nat command. */
 typedef struct	_ipfw_insn_nat {
  	ipfw_insn	o;
- 	struct cfg_nat *nat;	
+ 	struct cfg_nat *nat;
 } ipfw_insn_nat;
 
 /* Apply ipv6 mask on ipv6 addr */
@@ -580,7 +596,7 @@ typedef struct _ipfw_insn_icmp6 {
        uint32_t d[7]; /* XXX This number si related to the netinet/icmp6.h
                        *     define ICMP6_MAXTYPE
                        *     as follows: n = ICMP6_MAXTYPE/32 + 1
-                        *     Actually is 203 
+                        *     Actually is 203
                        */
 } ipfw_insn_icmp6;
 
@@ -639,7 +655,6 @@ struct ip_fw_bcounter {
 	uint64_t	bcnt;		/* Byte counter			*/
 };
 
-
 #ifndef	_KERNEL
 /*
  * Legacy rule format
@@ -669,7 +684,6 @@ struct ip_fw {
 	(ipfw_insn *)( (u_int32_t *)((rule)->cmd) + ((rule)->act_ofs) )
 
 #define RULESIZE(rule)  (sizeof(*(rule)) + (rule)->cmd_len * 4 - 4)
-
 
 #if 1 // should be moved to in.h
 /*
@@ -756,7 +770,8 @@ struct _ipfw_dyn_rule {
 #define	IPFW_TABLE_INTERFACE	2	/* Table for holding interface names */
 #define	IPFW_TABLE_NUMBER	3	/* Table for holding ports/uid/gid/etc */
 #define	IPFW_TABLE_FLOW		4	/* Table for holding flow data */
-#define	IPFW_TABLE_MAXTYPE	4	/* Maximum valid number */
+#define	IPFW_TABLE_MAC		5	/* Table for holding mac address prefixes */
+#define	IPFW_TABLE_MAXTYPE	5	/* Maximum valid number */
 
 #define	IPFW_TABLE_CIDR	IPFW_TABLE_ADDR	/* compat */
 
@@ -773,6 +788,9 @@ struct _ipfw_dyn_rule {
 #define	IPFW_VTYPE_LIMIT	0x00000100	/* limit */
 #define	IPFW_VTYPE_NH4		0x00000200	/* IPv4 nexthop */
 #define	IPFW_VTYPE_NH6		0x00000400	/* IPv6 nexthop */
+
+/* MAC/InfiniBand/etc address length */
+#define	IPFW_MAX_L2_ADDR_LEN	20
 
 typedef struct	_ipfw_table_entry {
 	in_addr_t	addr;		/* network address		*/
@@ -897,11 +915,12 @@ typedef struct	_ipfw_obj_tentry {
 	uint16_t	spare1;
 	union {
 		/* Longest field needs to be aligned by 8-byte boundary	*/
-		struct in_addr		addr;	/* IPv4 address		*/
-		uint32_t		key;		/* uid/gid/port	*/
-		struct in6_addr		addr6;	/* IPv6 address 	*/
-		char	iface[IF_NAMESIZE];	/* interface name	*/
-		struct tflow_entry	flow;	
+		struct in_addr		addr;		/* IPv4 address		*/
+		uint32_t		key;		/* uid/gid/port		*/
+		struct in6_addr		addr6;		/* IPv6 address 	*/
+		char	iface[IF_NAMESIZE];		/* interface name	*/
+		u_char	mac[IPFW_MAX_L2_ADDR_LEN];	/* MAC address		*/
+		struct tflow_entry	flow;
 	} k;
 	union {
 		ipfw_table_value	value;	/* value data */

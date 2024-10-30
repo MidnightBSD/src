@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/bio.h>
@@ -218,6 +217,63 @@ sglist_count_vmpages(vm_page_t *m, size_t pgoff, size_t len)
 }
 
 /*
+ * Determine the number of scatter/gather list elements needed to
+ * describe an M_EXTPG mbuf.
+ */
+int
+sglist_count_mbuf_epg(struct mbuf *m, size_t off, size_t len)
+{
+	vm_paddr_t nextaddr, paddr;
+	size_t seglen, segoff;
+	int i, nsegs, pglen, pgoff;
+
+	if (len == 0)
+		return (0);
+
+	nsegs = 0;
+	if (m->m_epg_hdrlen != 0) {
+		if (off >= m->m_epg_hdrlen) {
+			off -= m->m_epg_hdrlen;
+		} else {
+			seglen = m->m_epg_hdrlen - off;
+			segoff = off;
+			seglen = MIN(seglen, len);
+			off = 0;
+			len -= seglen;
+			nsegs += sglist_count(&m->m_epg_hdr[segoff],
+			    seglen);
+		}
+	}
+	nextaddr = 0;
+	pgoff = m->m_epg_1st_off;
+	for (i = 0; i < m->m_epg_npgs && len > 0; i++) {
+		pglen = m_epg_pagelen(m, i, pgoff);
+		if (off >= pglen) {
+			off -= pglen;
+			pgoff = 0;
+			continue;
+		}
+		seglen = pglen - off;
+		segoff = pgoff + off;
+		off = 0;
+		seglen = MIN(seglen, len);
+		len -= seglen;
+		paddr = m->m_epg_pa[i] + segoff;
+		if (paddr != nextaddr)
+			nsegs++;
+		nextaddr = paddr + seglen;
+		pgoff = 0;
+	};
+	if (len != 0) {
+		seglen = MIN(len, m->m_epg_trllen - off);
+		len -= seglen;
+		nsegs += sglist_count(&m->m_epg_trail[off], seglen);
+	}
+	KASSERT(len == 0, ("len != 0"));
+	return (nsegs);
+}
+
+/*
  * Allocate a scatter/gather list along with 'nsegs' segments.  The
  * 'mflags' parameters are the same as passed to malloc(9).  The caller
  * should use sglist_free() to free this list.
@@ -319,6 +375,62 @@ sglist_append_phys(struct sglist *sg, vm_paddr_t paddr, size_t len)
 }
 
 /*
+ * Append the segments of single multi-page mbuf.
+ * If there are insufficient segments, then this fails with EFBIG.
+ */
+int
+sglist_append_mbuf_epg(struct sglist *sg, struct mbuf *m, size_t off,
+    size_t len)
+{
+	size_t seglen, segoff;
+	vm_paddr_t paddr;
+	int error, i, pglen, pgoff;
+
+	M_ASSERTEXTPG(m);
+
+	error = 0;
+	if (m->m_epg_hdrlen != 0) {
+		if (off >= m->m_epg_hdrlen) {
+			off -= m->m_epg_hdrlen;
+		} else {
+			seglen = m->m_epg_hdrlen - off;
+			segoff = off;
+			seglen = MIN(seglen, len);
+			off = 0;
+			len -= seglen;
+			error = sglist_append(sg,
+			    &m->m_epg_hdr[segoff], seglen);
+		}
+	}
+	pgoff = m->m_epg_1st_off;
+	for (i = 0; i < m->m_epg_npgs && error == 0 && len > 0; i++) {
+		pglen = m_epg_pagelen(m, i, pgoff);
+		if (off >= pglen) {
+			off -= pglen;
+			pgoff = 0;
+			continue;
+		}
+		seglen = pglen - off;
+		segoff = pgoff + off;
+		off = 0;
+		seglen = MIN(seglen, len);
+		len -= seglen;
+		paddr = m->m_epg_pa[i] + segoff;
+		error = sglist_append_phys(sg, paddr, seglen);
+		pgoff = 0;
+	};
+	if (error == 0 && len > 0) {
+		seglen = MIN(len, m->m_epg_trllen - off);
+		len -= seglen;
+		error = sglist_append(sg,
+		    &m->m_epg_trail[off], seglen);
+	}
+	if (error == 0)
+		KASSERT(len == 0, ("len != 0"));
+	return (error);
+}
+
+/*
  * Append the segments that describe a single mbuf chain to a
  * scatter/gather list.  If there are insufficient segments, then this
  * fails with EFBIG.
@@ -337,7 +449,12 @@ sglist_append_mbuf(struct sglist *sg, struct mbuf *m0)
 	SGLIST_SAVE(sg, save);
 	for (m = m0; m != NULL; m = m->m_next) {
 		if (m->m_len > 0) {
-			error = sglist_append(sg, m->m_data, m->m_len);
+			if ((m->m_flags & M_EXTPG) != 0)
+				error = sglist_append_mbuf_epg(sg, m,
+				    mtod(m, vm_offset_t), m->m_len);
+			else
+				error = sglist_append(sg, m->m_data,
+				    m->m_len);
 			if (error) {
 				SGLIST_RESTORE(sg, save);
 				return (error);
@@ -345,6 +462,21 @@ sglist_append_mbuf(struct sglist *sg, struct mbuf *m0)
 		}
 	}
 	return (0);
+}
+
+/*
+ * Append the segments that describe a single mbuf to a scatter/gather
+ * list.  If there are insufficient segments, then this fails with
+ * EFBIG.
+ */
+int
+sglist_append_single_mbuf(struct sglist *sg, struct mbuf *m)
+{
+	if ((m->m_flags & M_EXTPG) != 0)
+		return (sglist_append_mbuf_epg(sg, m,
+		    mtod(m, vm_offset_t), m->m_len));
+	else
+		return (sglist_append(sg, m->m_data, m->m_len));
 }
 
 /*

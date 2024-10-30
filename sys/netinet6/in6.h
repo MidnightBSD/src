@@ -75,7 +75,7 @@
  * has the table of implementation/integration differences.
  */
 #define __KAME__
-#define __KAME_VERSION		"MidnightBSD"
+#define __KAME_VERSION		"FreeBSD"
 
 /*
  * IPv6 port allocation rules should mirror the IPv4 rules and are controlled
@@ -102,7 +102,7 @@ struct in6_addr {
 };
 
 #define s6_addr   __u6_addr.__u6_addr8
-#ifdef _KERNEL	/* XXX nonstandard */
+#if defined(_KERNEL) || defined(_STANDALONE) /* XXX nonstandard */
 #define s6_addr8  __u6_addr.__u6_addr8
 #define s6_addr16 __u6_addr.__u6_addr16
 #define s6_addr32 __u6_addr.__u6_addr32
@@ -218,18 +218,10 @@ extern const struct in6_addr in6addr_linklocal_allv2routers;
 
 /*
  * Equality
- * NOTE: Some of kernel programming environment (for example, openbsd/sparc)
- * does not supply memcmp().  For userland memcmp() is preferred as it is
- * in ANSI standard.
  */
-#ifdef _KERNEL
-#define IN6_ARE_ADDR_EQUAL(a, b)			\
-    (bcmp(&(a)->s6_addr[0], &(b)->s6_addr[0], sizeof(struct in6_addr)) == 0)
-#else
 #if __BSD_VISIBLE
 #define IN6_ARE_ADDR_EQUAL(a, b)			\
     (memcmp(&(a)->s6_addr[0], &(b)->s6_addr[0], sizeof(struct in6_addr)) == 0)
-#endif
 #endif
 
 /*
@@ -374,8 +366,9 @@ extern const struct in6_addr in6addr_linklocal_allv2routers;
  * IP6 route structure
  */
 #if __BSD_VISIBLE
+struct nhop_object;
 struct route_in6 {
-	struct	rtentry *ro_rt;
+	struct nhop_object *ro_nh;
 	struct	llentry *ro_lle;
 	/*
 	 * ro_prepend and ro_plen are only used for bpf to pass in a
@@ -666,10 +659,10 @@ struct ip6_mtuinfo {
 struct cmsghdr;
 struct ip6_hdr;
 
+int	in6_cksum(struct mbuf *, uint8_t, uint32_t, uint32_t);
+int	in6_cksum_partial(struct mbuf *, uint8_t, uint32_t, uint32_t, uint32_t);
 int	in6_cksum_pseudo(struct ip6_hdr *, uint32_t, uint8_t, uint16_t);
-int	in6_cksum(struct mbuf *, u_int8_t, u_int32_t, u_int32_t);
-int	in6_cksum_partial(struct mbuf *, u_int8_t, u_int32_t, u_int32_t,
-			  u_int32_t);
+
 int	in6_localaddr(struct in6_addr *);
 int	in6_localip(struct in6_addr *);
 int	in6_ifhasaddr(struct ifnet *, struct in6_addr *);

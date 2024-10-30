@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) KATO Takenori, 1997, 1998.
  *
@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_cpu.h"
 
 #include <sys/param.h>
@@ -158,7 +157,6 @@ init_486dlc(void)
 	intr_restore(saveintr);
 }
 
-
 /*
  * Cyrix 486S/DX series
  */
@@ -179,7 +177,6 @@ init_cy486dx(void)
 	write_cyrix_reg(CCR2, ccr2);
 	intr_restore(saveintr);
 }
-
 
 /*
  * Cyrix 5x86
@@ -644,6 +641,7 @@ extern int elf32_nxstack;
 void
 initializecpu(void)
 {
+	uint64_t msr;
 
 	switch (cpu) {
 #ifdef I486_CPU
@@ -764,16 +762,10 @@ initializecpu(void)
 		load_cr4(rcr4() | CR4_FXSR | CR4_XMM);
 		cpu_fxsr = hw_instruction_sse = 1;
 	}
-#if defined(PAE) || defined(PAE_TABLES)
-	if ((amd_feature & AMDID_NX) != 0) {
-		uint64_t msr;
-
+	if (elf32_nxstack) {
 		msr = rdmsr(MSR_EFER) | EFER_NXE;
 		wrmsr(MSR_EFER, msr);
-		pg_nx = PG_NX;
-		elf32_nxstack = 1;
 	}
-#endif
 	if ((amd_feature & AMDID_RDTSCP) != 0 ||
 	    (cpu_stdext_feature2 & CPUID_STDEXT2_RDPID) != 0)
 		wrmsr(MSR_TSC_AUX, cpu_auxmsr());
@@ -873,7 +865,7 @@ enable_K6_wt_alloc(void)
 	 */
 	/*
 	 * The AMD-K6 processer provides the 64-bit Test Register 12(TR12),
-	 * but only the Cache Inhibit(CI) (bit 3 of TR12) is suppported.
+	 * but only the Cache Inhibit(CI) (bit 3 of TR12) is supported.
 	 * All other bits in TR12 have no effect on the processer's operation.
 	 * The I/O Trap Restart function (bit 9 of TR12) is always enabled
 	 * on the AMD-K6.
@@ -923,7 +915,7 @@ enable_K6_2_wt_alloc(void)
 	 */
 	/*
 	 * The AMD-K6 processer provides the 64-bit Test Register 12(TR12),
-	 * but only the Cache Inhibit(CI) (bit 3 of TR12) is suppported.
+	 * but only the Cache Inhibit(CI) (bit 3 of TR12) is supported.
 	 * All other bits in TR12 have no effect on the processer's operation.
 	 * The I/O Trap Restart function (bit 9 of TR12) is always enabled
 	 * on the AMD-K6.
@@ -971,7 +963,6 @@ DB_SHOW_COMMAND(cyrixreg, cyrixreg)
 	cr0 = rcr0();
 	if (cpu_vendor_id == CPU_VENDOR_CYRIX) {
 		saveintr = intr_disable();
-
 
 		if ((cpu != CPU_M1SC) && (cpu != CPU_CY486DX)) {
 			ccr0 = read_cyrix_reg(CCR0);

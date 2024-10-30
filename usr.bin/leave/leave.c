@@ -41,7 +41,6 @@ static char sccsid[] = "@(#)leave.c	8.1 (Berkeley) 6/6/93";
 #endif
 #endif /* not lint */
 #include <sys/cdefs.h>
-
 #include <err.h>
 #include <ctype.h>
 #include <locale.h>

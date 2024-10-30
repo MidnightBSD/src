@@ -41,7 +41,6 @@ static const char sccsid[] = "@(#)pom.c       8.1 (Berkeley) 5/31/93";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-
 /*
  * Phase of the Moon.  Calculates the current phase of the moon.
  * Based on routines from `Practical Astronomy with Your Calculator',

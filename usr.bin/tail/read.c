@@ -32,8 +32,6 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 
 #ifndef lint
 static const char sccsid[] = "@(#)read.c	8.1 (Berkeley) 6/6/93";
@@ -49,6 +47,9 @@ static const char sccsid[] = "@(#)read.c	8.1 (Berkeley) 6/6/93";
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+#include <libcasper.h>
+#include <casper/cap_fileargs.h>
 
 #include "extern.h"
 
@@ -71,7 +72,7 @@ bytes(FILE *fp, const char *fn, off_t off)
 	char *sp;
 
 	if ((sp = p = malloc(off)) == NULL)
-		err(1, "malloc");
+		err(1, "failed to allocate memory");
 
 	for (wrap = 0, ep = p + off; (ch = getc(fp)) != EOF;) {
 		*p = ch;
@@ -145,7 +146,7 @@ lines(FILE *fp, const char *fn, off_t off)
 	int blen, cnt, recno, wrap;
 
 	if ((llines = calloc(off, sizeof(*llines))) == NULL)
-		err(1, "calloc");
+		err(1, "failed to allocate memory");
 	p = sp = NULL;
 	blen = cnt = recno = wrap = 0;
 	rc = 0;
@@ -153,7 +154,7 @@ lines(FILE *fp, const char *fn, off_t off)
 	while ((ch = getc(fp)) != EOF) {
 		if (++cnt > blen) {
 			if ((sp = realloc(sp, blen += 1024)) == NULL)
-				err(1, "realloc");
+				err(1, "failed to allocate memory");
 			p = sp + cnt - 1;
 		}
 		*p++ = ch;
@@ -162,7 +163,7 @@ lines(FILE *fp, const char *fn, off_t off)
 				llines[recno].blen = cnt + 256;
 				if ((llines[recno].l = realloc(llines[recno].l,
 				    llines[recno].blen)) == NULL)
-					err(1, "realloc");
+					err(1, "failed to allocate memory");
 			}
 			bcopy(sp, llines[recno].l, llines[recno].len = cnt);
 			cnt = 0;

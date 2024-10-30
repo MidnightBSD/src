@@ -4,7 +4,7 @@
 
 PROG=	netstat
 SRCS=	if.c inet.c main.c mbuf.c mroute.c netisr.c nl_symbols.c route.c \
-	unix.c mroute6.c ipsec.c bpf.c pfkey.c sctp.c \
+	unix.c mroute6.c ipsec.c bpf.c pfkey.c sctp.c common.c nhops.c nhgrp.c \
 	nl_defs.h
 
 nl_symbols.c: nlist_symbols
@@ -60,6 +60,11 @@ LIBADD=	kvm memstat xo util
 SRCS+=	netgraph.c
 LIBADD+=	netgraph
 CFLAGS+=-DNETGRAPH
+.endif
+
+.if ${MK_JAIL} != "no" && !defined(RESCUE)
+CFLAGS+= -DJAIL
+LIBADD+= jail
 .endif
 
 .include <bsd.prog.mk>

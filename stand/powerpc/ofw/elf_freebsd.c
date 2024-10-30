@@ -25,8 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
-
 #include <sys/param.h>
 #include <sys/linker.h>
 
@@ -41,6 +39,7 @@ __FBSDID("$FreeBSD$");
 #include "bootstrap.h"
 #include "libofw.h"
 #include "openfirm.h"
+#include "modinfo.h"
 
 extern char		end[];
 extern vm_offset_t	reloc;	/* From <arch>/conf.c */

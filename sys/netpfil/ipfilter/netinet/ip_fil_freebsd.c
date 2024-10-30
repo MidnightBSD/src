@@ -20,6 +20,8 @@ static const char rcsid[] = "@(#)$Id$";
 # include "opt_inet6.h"
 #endif
 #include <sys/param.h>
+#include <sys/eventhandler.h>
+#include <sys/conf.h>
 #include <sys/errno.h>
 #include <sys/types.h>
 #include <sys/file.h>
@@ -41,6 +43,7 @@ static const char rcsid[] = "@(#)$Id$";
 #include <net/if_var.h>
 #include <net/netisr.h>
 #include <net/route.h>
+#include <net/route/nhop.h>
 #include <netinet/in.h>
 #include <netinet/in_fib.h>
 #include <netinet/in_pcb.h>
@@ -123,46 +126,33 @@ static void ipf_ifevent(void *arg, struct ifnet *ifp)
 
 
 
-static int
-ipf_check_wrapper(void *arg, struct mbuf **mp, struct ifnet *ifp, int dir)
+static pfil_return_t
+ipf_check_wrapper(struct mbuf **mp, struct ifnet *ifp, int flags,
+    void *ruleset __unused, struct inpcb *inp)
 {
 	struct ip *ip = mtod(*mp, struct ip *);
-	int rv;
+	pfil_return_t rv;
 
-	/*
-	 * IPFilter expects evreything in network byte order
-	 */
-#if (__FreeBSD_version < 1000019)
-	ip->ip_len = htons(ip->ip_len);
-	ip->ip_off = htons(ip->ip_off);
-#endif
 	CURVNET_SET(ifp->if_vnet);
-	rv = ipf_check(&V_ipfmain, ip, ip->ip_hl << 2, ifp, (dir == PFIL_OUT),
-		       mp);
+	rv = ipf_check(&V_ipfmain, ip, ip->ip_hl << 2, ifp,
+	    !!(flags & PFIL_OUT), mp);
 	CURVNET_RESTORE();
-#if (__FreeBSD_version < 1000019)
-	if ((rv == 0) && (*mp != NULL)) {
-		ip = mtod(*mp, struct ip *);
-		ip->ip_len = ntohs(ip->ip_len);
-		ip->ip_off = ntohs(ip->ip_off);
-	}
-#endif
-	return (rv);
+	return (rv == 0 ? PFIL_PASS : PFIL_DROPPED);
 }
 
-# ifdef USE_INET6
-#  include <netinet/ip6.h>
-
-static int
-ipf_check_wrapper6(void *arg, struct mbuf **mp, struct ifnet *ifp, int dir)
+#ifdef USE_INET6
+static pfil_return_t
+ipf_check_wrapper6(struct mbuf **mp, struct ifnet *ifp, int flags,
+    void *ruleset __unused, struct inpcb *inp)
 {
-	int error;
+	pfil_return_t rv;
 
 	CURVNET_SET(ifp->if_vnet);
-	error = ipf_check(&V_ipfmain, mtod(*mp, struct ip *),
-			  sizeof(struct ip6_hdr), ifp, (dir == PFIL_OUT), mp);
+	rv = ipf_check(&V_ipfmain, mtod(*mp, struct ip *),
+	    sizeof(struct ip6_hdr), ifp, !!(flags & PFIL_OUT), mp);
 	CURVNET_RESTORE();
-	return (error);
+
+	return (rv == 0 ? PFIL_PASS : PFIL_DROPPED);
 }
 # endif
 #if	defined(IPFILTER_LKM)
@@ -481,7 +471,7 @@ ipf_send_ip(fr_info_t *fin, mb_t *m)
 	default :
 		return (EINVAL);
 	}
-#ifdef IPSEC
+#ifdef IPSEC_SUPPORT
 	m->m_pkthdr.rcvif = NULL;
 #endif
 
@@ -686,8 +676,10 @@ ipf_fastroute(mb_t *m0, mb_t **mpp, fr_info_t *fin, frdest_t *fdp)
 	register struct mbuf *m = *mpp;
 	int len, off, error = 0, hlen, code;
 	struct ifnet *ifp, *sifp;
-	struct sockaddr_in dst;
-	struct nhop4_extended nh4;
+	struct route ro;
+	struct sockaddr_in *dst;
+	const struct sockaddr *gw;
+	struct nhop_object *nh;
 	u_long fibnum = 0;
 	u_short ip_off;
 	frdest_t node;
@@ -736,10 +728,12 @@ ipf_fastroute(mb_t *m0, mb_t **mpp, fr_info_t *fin, frdest_t *fdp)
 	/*
 	 * Route packet.
 	 */
-	bzero(&dst, sizeof (dst));
-	dst.sin_family = AF_INET;
-	dst.sin_addr = ip->ip_dst;
-	dst.sin_len = sizeof(dst);
+	bzero(&ro, sizeof (ro));
+	dst = (struct sockaddr_in *)&ro.ro_dst;
+	dst->sin_family = AF_INET;
+	dst->sin_addr = ip->ip_dst;
+	dst->sin_len = sizeof(dst);
+	gw = (const struct sockaddr *)dst;
 
 	fr = fin->fin_fr;
 	if ((fr != NULL) && !(fr->fr_flags & FR_KEEPSTATE) && (fdp != NULL) &&
@@ -759,10 +753,12 @@ ipf_fastroute(mb_t *m0, mb_t **mpp, fr_info_t *fin, frdest_t *fdp)
 	}
 
 	if ((fdp != NULL) && (fdp->fd_ip.s_addr != 0))
-		dst.sin_addr = fdp->fd_ip;
+		dst->sin_addr = fdp->fd_ip;
 
 	fibnum = M_GETFIB(m0);
-	if (fib4_lookup_nh_ext(fibnum, dst.sin_addr, NHR_REF, 0, &nh4) != 0) {
+	NET_EPOCH_ASSERT();
+	nh = fib4_lookup(fibnum, dst->sin_addr, 0, NHR_NONE, 0);
+	if (nh == NULL) {
 		if (in_localaddr(ip->ip_dst))
 			error = EHOSTUNREACH;
 		else
@@ -771,9 +767,11 @@ ipf_fastroute(mb_t *m0, mb_t **mpp, fr_info_t *fin, frdest_t *fdp)
 	}
 
 	if (ifp == NULL)
-		ifp = nh4.nh_ifp;
-	if (nh4.nh_flags & NHF_GATEWAY)
-		dst.sin_addr = nh4.nh_addr;
+		ifp = nh->nh_ifp;
+	if (nh->nh_flags & NHF_GATEWAY) {
+		gw = &nh->gw_sa;
+		ro.ro_flags |= RT_HAS_GW;
+	}
 
 	/*
 	 * For input packets which are being "fastrouted", they won't
@@ -817,9 +815,7 @@ ipf_fastroute(mb_t *m0, mb_t **mpp, fr_info_t *fin, frdest_t *fdp)
 	if (ntohs(ip->ip_len) <= ifp->if_mtu) {
 		if (!ip->ip_sum)
 			ip->ip_sum = in_cksum(m, hlen);
-		error = (*ifp->if_output)(ifp, m, (struct sockaddr *)&dst,
-			    NULL
-			);
+		error = (*ifp->if_output)(ifp, m, gw, &ro);
 		goto done;
 	}
 	/*
@@ -899,10 +895,7 @@ sendorfree:
 		m0 = m->m_act;
 		m->m_act = 0;
 		if (error == 0)
-			error = (*ifp->if_output)(ifp, m,
-			    (struct sockaddr *)&dst,
-			    NULL
-			    );
+			error = (*ifp->if_output)(ifp, m, gw, &ro);
 		else
 			FREE_MB_T(m);
 	}
@@ -933,11 +926,13 @@ int
 ipf_verifysrc(fin)
 	fr_info_t *fin;
 {
-	struct nhop4_basic nh4;
+	struct nhop_object *nh;
 
-	if (fib4_lookup_nh_basic(0, fin->fin_src, 0, 0, &nh4) != 0)
+	NET_EPOCH_ASSERT();
+	nh = fib4_lookup(RT_DEFAULT_FIB, fin->fin_src, 0, NHR_NONE, 0);
+	if (nh == NULL)
 		return (0);
-	return (fin->fin_ifp == nh4.nh_ifp);
+	return (fin->fin_ifp == nh->nh_ifp);
 }
 
 
@@ -1284,8 +1279,10 @@ ipf_pullup(mb_t *xmin, fr_info_t *fin, int len)
 int
 ipf_inject(fr_info_t *fin, mb_t *m)
 {
+	struct epoch_tracker et;
 	int error = 0;
 
+	NET_EPOCH_ENTER(et);
 	if (fin->fin_out == 0) {
 		netisr_dispatch(NETISR_IP, m);
 	} else {
@@ -1293,57 +1290,68 @@ ipf_inject(fr_info_t *fin, mb_t *m)
 		fin->fin_ip->ip_off = ntohs(fin->fin_ip->ip_off);
 		error = ip_output(m, NULL, NULL, IP_FORWARDING, NULL, NULL);
 	}
+	NET_EPOCH_EXIT(et);
 
 	return (error);
 }
 
-int ipf_pfil_unhook(void) {
-	struct pfil_head *ph_inet;
-#ifdef USE_INET6
-	struct pfil_head *ph_inet6;
-#endif
+VNET_DEFINE_STATIC(pfil_hook_t, ipf_inet_hook);
+VNET_DEFINE_STATIC(pfil_hook_t, ipf_inet6_hook);
+#define	V_ipf_inet_hook		VNET(ipf_inet_hook)
+#define	V_ipf_inet6_hook	VNET(ipf_inet6_hook)
 
-	ph_inet = pfil_head_get(PFIL_TYPE_AF, AF_INET);
-	if (ph_inet != NULL)
-		pfil_remove_hook((void *)ipf_check_wrapper, NULL,
-		    PFIL_IN|PFIL_OUT|PFIL_WAITOK, ph_inet);
-# ifdef USE_INET6
-	ph_inet6 = pfil_head_get(PFIL_TYPE_AF, AF_INET6);
-	if (ph_inet6 != NULL)
-		pfil_remove_hook((void *)ipf_check_wrapper6, NULL,
-		    PFIL_IN|PFIL_OUT|PFIL_WAITOK, ph_inet6);
-# endif
+int ipf_pfil_unhook(void) {
+
+	pfil_remove_hook(V_ipf_inet_hook);
+
+#ifdef USE_INET6
+	pfil_remove_hook(V_ipf_inet6_hook);
+#endif
 
 	return (0);
 }
 
 int ipf_pfil_hook(void) {
-	struct pfil_head *ph_inet;
+	struct pfil_hook_args pha;
+	struct pfil_link_args pla;
+	int error, error6;
+
+	pha.pa_version = PFIL_VERSION;
+	pha.pa_flags = PFIL_IN | PFIL_OUT;
+	pha.pa_modname = "ipfilter";
+	pha.pa_rulname = "default-ip4";
+	pha.pa_func = ipf_check_wrapper;
+	pha.pa_ruleset = NULL;
+	pha.pa_type = PFIL_TYPE_IP4;
+	V_ipf_inet_hook = pfil_add_hook(&pha);
+
 #ifdef USE_INET6
-	struct pfil_head *ph_inet6;
+	pha.pa_rulname = "default-ip6";
+	pha.pa_func = ipf_check_wrapper6;
+	pha.pa_type = PFIL_TYPE_IP6;
+	V_ipf_inet6_hook = pfil_add_hook(&pha);
 #endif
 
-	ph_inet = pfil_head_get(PFIL_TYPE_AF, AF_INET);
-#    ifdef USE_INET6
-	ph_inet6 = pfil_head_get(PFIL_TYPE_AF, AF_INET6);
-#    endif
-	if (ph_inet == NULL
-#    ifdef USE_INET6
-	    && ph_inet6 == NULL
-#    endif
-	   ) {
-		return ENODEV;
-	}
+	pla.pa_version = PFIL_VERSION;
+	pla.pa_flags = PFIL_IN | PFIL_OUT |
+	    PFIL_HEADPTR | PFIL_HOOKPTR;
+	pla.pa_head = V_inet_pfil_head;
+	pla.pa_hook = V_ipf_inet_hook;
+	error = pfil_link(&pla);
 
-	if (ph_inet != NULL)
-		pfil_add_hook((void *)ipf_check_wrapper, NULL,
-		    PFIL_IN|PFIL_OUT|PFIL_WAITOK, ph_inet);
-#  ifdef USE_INET6
-	if (ph_inet6 != NULL)
-		pfil_add_hook((void *)ipf_check_wrapper6, NULL,
-				      PFIL_IN|PFIL_OUT|PFIL_WAITOK, ph_inet6);
-#  endif
-	return (0);
+	error6 = 0;
+#ifdef USE_INET6
+	pla.pa_head = V_inet6_pfil_head;
+	pla.pa_hook = V_ipf_inet6_hook;
+	error6 = pfil_link(&pla);
+#endif
+
+	if (error || error6)
+		error = ENODEV;
+	else
+		error = 0;
+
+	return (error);
 }
 
 void

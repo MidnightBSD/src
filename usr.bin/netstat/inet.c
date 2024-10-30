@@ -34,7 +34,6 @@ static char sccsid[] = "@(#)inet.c	8.5 (Berkeley) 5/24/95";
 #endif
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/queue.h>
 #include <sys/domain.h>
@@ -295,14 +294,14 @@ protopr(u_long off, const char *name, int af1, int proto)
 		    (
 		     (istcp && tp->t_state == TCPS_LISTEN)
 		     || (af1 == AF_INET &&
-		      inet_lnaof(inp->inp_laddr) == INADDR_ANY)
+		      inp->inp_laddr.s_addr == INADDR_ANY)
 #ifdef INET6
 		     || (af1 == AF_INET6 &&
 			 IN6_IS_ADDR_UNSPECIFIED(&inp->in6p_laddr))
 #endif /* INET6 */
 		     || (af1 == AF_UNSPEC &&
 			 (((inp->inp_vflag & INP_IPV4) != 0 &&
-			   inet_lnaof(inp->inp_laddr) == INADDR_ANY)
+			   inp->inp_laddr.s_addr == INADDR_ANY)
 #ifdef INET6
 			  || ((inp->inp_vflag & INP_IPV6) != 0 &&
 			      IN6_IS_ADDR_UNSPECIFIED(&inp->in6p_laddr))
@@ -663,6 +662,10 @@ tcp_stats(u_long off, const char *name, int af1 __unused, int proto __unused)
 	    "{N:(for} {:received-ack-bytes/%ju} {N:/byte%s})\n");
 	p(tcps_rcvdupack, "\t\t{:received-duplicate-acks/%ju} "
 	    "{N:/duplicate ack%s}\n");
+	p(tcps_tunneled_pkts, "\t\t{:received-udp-tunneled-pkts/%ju} "
+	    "{N:/UDP tunneled pkt%s}\n");
+	p(tcps_tunneled_errs, "\t\t{:received-bad-udp-tunneled-pkts/%ju} "
+	    "{N:/UDP tunneled pkt cnt with error%s}\n");
 	p(tcps_rcvacktoomuch, "\t\t{:received-acks-for-unsent-data/%ju} "
 	    "{N:/ack%s for unsent data}\n");
 	p2(tcps_rcvpack, tcps_rcvbyte, "\t\t"
@@ -844,13 +847,23 @@ tcp_stats(u_long off, const char *name, int af1 __unused, int proto __unused)
 	    "{N:/Path MTU discovery black hole detection min MSS activation%s}\n");
 	p(tcps_pmtud_blackhole_failed, "\t{:pmtud-failed/%ju} "
 	    "{N:/Path MTU discovery black hole detection failure%s}\n");
+
+	xo_close_container("pmtud");
+	xo_open_container("tw");
+
+	p(tcps_tw_responds, "\t{:tw_responds/%ju} "
+	    "{N:/time%s connection in TIME-WAIT responded with ACK}\n");
+	p(tcps_tw_recycles, "\t{:tw_recycles/%ju} "
+	    "{N:/time%s connection in TIME-WAIT was actively recycled}\n");
+	p(tcps_tw_resets, "\t{:tw_resets/%ju} "
+	    "{N:/time%s connection in TIME-WAIT responded with RST}\n");
+
+	xo_close_container("tw");
  #undef p
  #undef p1a
  #undef p2
  #undef p2a
  #undef p3
-	xo_close_container("pmtud");
-
 
 	xo_open_container("TCP connection count by state");
 	xo_emit("{T:/TCP connection count by state}:\n");
@@ -1102,12 +1115,13 @@ arp_stats(u_long off, const char *name, int af1 __unused, int proto __unused)
 	xo_emit("\t" m, (uintmax_t)arpstat.f, pluralies(arpstat.f))
 
 	p(txrequests, "{:sent-requests/%ju} {N:/ARP request%s sent}\n");
+	p(txerrors, "{:sent-failures/%ju} {N:/ARP request%s failed to sent}\n");
 	p2(txreplies, "{:sent-replies/%ju} {N:/ARP repl%s sent}\n");
 	p(rxrequests, "{:received-requests/%ju} "
 	    "{N:/ARP request%s received}\n");
 	p2(rxreplies, "{:received-replies/%ju} "
 	    "{N:/ARP repl%s received}\n");
-	p(received, "{:received-packers/%ju} "
+	p(received, "{:received-packets/%ju} "
 	    "{N:/ARP packet%s received}\n");
 	p(dropped, "{:dropped-no-entry/%ju} "
 	    "{N:/total packet%s dropped due to no ARP entry}\n");
@@ -1279,10 +1293,26 @@ void
 igmp_stats(u_long off, const char *name, int af1 __unused, int proto __unused)
 {
 	struct igmpstat igmpstat;
+	int error, zflag0;
 
 	if (fetch_stats("net.inet.igmp.stats", 0, &igmpstat,
 	    sizeof(igmpstat), kread) != 0)
 		return;
+	/*
+	 * Reread net.inet.igmp.stats when zflag == 1.
+	 * This is because this MIB contains version number and
+	 * length of the structure which are not set when clearing
+	 * the counters.
+	 */
+	zflag0 = zflag;
+	if (zflag) {
+		zflag = 0;
+		error = fetch_stats("net.inet.igmp.stats", 0, &igmpstat,
+		    sizeof(igmpstat), kread);
+		zflag = zflag0;
+		if (error)
+			return;
+	}
 
 	if (igmpstat.igps_version != IGPS_VERSION_3) {
 		xo_warnx("%s: version mismatch (%d != %d)", __func__,
@@ -1449,24 +1479,13 @@ inetname(struct in_addr *inp)
 	char *cp;
 	static char line[MAXHOSTNAMELEN];
 	struct hostent *hp;
-	struct netent *np;
 
 	cp = 0;
 	if (!numeric_addr && inp->s_addr != INADDR_ANY) {
-		int net = inet_netof(*inp);
-		int lna = inet_lnaof(*inp);
-
-		if (lna == INADDR_ANY) {
-			np = getnetbyaddr(net, AF_INET);
-			if (np)
-				cp = np->n_name;
-		}
-		if (cp == NULL) {
-			hp = gethostbyaddr((char *)inp, sizeof (*inp), AF_INET);
-			if (hp) {
-				cp = hp->h_name;
-				trimdomain(cp, strlen(cp));
-			}
+		hp = gethostbyaddr((char *)inp, sizeof (*inp), AF_INET);
+		if (hp) {
+			cp = hp->h_name;
+			trimdomain(cp, strlen(cp));
 		}
 	}
 	if (inp->s_addr == INADDR_ANY)

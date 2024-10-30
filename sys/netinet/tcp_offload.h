@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012 Chelsio Communications, Inc.
  * All rights reserved.
@@ -25,7 +25,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- *
  */
 
 #ifndef _NETINET_TCP_OFFLOAD_H_
@@ -44,7 +43,8 @@ void tcp_offload_input(struct tcpcb *, struct mbuf *);
 int  tcp_offload_output(struct tcpcb *);
 void tcp_offload_rcvd(struct tcpcb *);
 void tcp_offload_ctloutput(struct tcpcb *, int, int);
-void tcp_offload_tcp_info(struct tcpcb *, struct tcp_info *);
+void tcp_offload_tcp_info(const struct tcpcb *, struct tcp_info *);
+int  tcp_offload_alloc_tls_session(struct tcpcb *, struct ktls_session *, int);
 void tcp_offload_detach(struct tcpcb *);
 
 #endif

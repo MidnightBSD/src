@@ -2,7 +2,6 @@
  * Linker script for 32-bit vDSO.
  * Copied from Linux kernel arch/x86/vdso/vdso-layout.lds.S
  * and arch/x86/vdso/vdso32/vdso32.lds.S
- *
  */
 
 SECTIONS
@@ -50,15 +49,34 @@ PHDRS
 	eh_frame_hdr	PT_GNU_EH_FRAME;
 }
 
-ENTRY(linux_vsyscall);
-
 VERSION
 {
+	LINUX_2.6 {
+	global:
+		__vdso_clock_gettime;
+		__vdso_gettimeofday;
+		__vdso_time;
+		__vdso_getcpu;
+		__vdso_clock_getres;
+		__vdso_clock_gettime64;
+	};
+
 	LINUX_2.5 {
 	global:
-		linux_vsyscall;
-		linux_sigcode;
-		linux_rt_sigcode;
+		__kernel_vsyscall;
+		__kernel_sigreturn;
+		__kernel_rt_sigreturn;
+	local: *;
+	};
+
+	LINUX_0.0 {
+	global:
+		linux_platform;
+		kern_timekeep_base;
+		kern_tsc_selector;
+		kern_cpu_selector;
+		linux_vdso_sigcode;
+		linux_vdso_rt_sigcode;
 	local: *;
 	};
 }

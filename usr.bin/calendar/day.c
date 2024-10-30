@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <err.h>
 #include <locale.h>
 #include <stdio.h>
@@ -49,7 +48,6 @@ int			year1, year2;
 void
 settimes(time_t now, int before, int after, int friday, struct tm *tp1, struct tm *tp2)
 {
-	char *oldl, *lbufp;
 	struct tm tp;
 
 	localtime_r(&now, &tp);
@@ -66,15 +64,6 @@ settimes(time_t now, int before, int after, int friday, struct tm *tp1, struct t
 	year2 = 1900 + tp2->tm_year;
 
 	strftime(dayname, sizeof(dayname) - 1, "%A, %d %B %Y", tp1);
-
-	oldl = NULL;
-	lbufp = setlocale(LC_TIME, NULL);
-	if (lbufp != NULL && (oldl = strdup(lbufp)) == NULL)
-		errx(1, "cannot allocate memory");
-	(void)setlocale(LC_TIME, "C");
-	(void)setlocale(LC_TIME, (oldl != NULL ? oldl : ""));
-	if (oldl != NULL)
-		free(oldl);
 
 	setnnames();
 }

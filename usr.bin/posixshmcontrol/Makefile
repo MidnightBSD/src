@@ -1,6 +1,5 @@
 
 PROG=   posixshmcontrol
-LIBADD=	util
-WARNS?=	6
+LIBADD=	jail util
 
 .include <bsd.prog.mk>

@@ -26,9 +26,8 @@
 .\" SUCH DAMAGE.
 .\"
 .\"     @(#)look.1	8.1 (Berkeley) 6/14/93
-.\" $FreeBSD: stable/11/usr.bin/look/look.1 289677 2015-10-21 05:37:09Z eadler $
 .\"
-.Dd July 17, 2004
+.Dd December 29, 2020
 .Dt LOOK 1
 .Os
 .Sh NAME
@@ -96,6 +95,35 @@ The
 .Nm
 utility exits 0 if one or more lines were found and displayed,
 1 if no lines were found, and >1 if an error occurred.
+.Sh EXAMPLES
+Look for lines starting with
+.Ql xylen
+in the file
+.Pa /usr/share/dict/words :
+.Bd -literal -offset indent
+$ look xylen
+xylene
+xylenol
+xylenyl
+.Ed
+.Pp
+Same as above, but do not consider any characters in
+.Ar string
+beyond the first
+.Ql e .
+Note that
+.Fl f
+is implicit since we are searching the default file
+.Pa /usr/share/dict/words :
+.Bd -literal -offset indent
+$ look -t e xylen
+Xyleborus
+xylem
+xylene
+xylenol
+xylenyl
+xyletic
+.Ed
 .Sh COMPATIBILITY
 The original manual page stated that tabs and blank characters participated
 in comparisons when the

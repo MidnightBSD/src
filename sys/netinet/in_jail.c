@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_ddb.h"
 #include "opt_inet.h"
 #include "opt_inet6.h"
@@ -50,7 +49,6 @@
 #include <sys/racct.h>
 #include <sys/refcount.h>
 #include <sys/sx.h>
-#include <sys/sysent.h>
 #include <sys/namei.h>
 #include <sys/mount.h>
 #include <sys/queue.h>

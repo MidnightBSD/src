@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2001 Charles Mott <cm@linktel.net>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
     Alias.c provides supervisory control for the functions of the
     packet aliasing software.  It consists of routines to monitor
@@ -152,7 +151,8 @@
 
 SYSCTL_DECL(_net_inet);
 SYSCTL_DECL(_net_inet_ip);
-SYSCTL_NODE(_net_inet_ip, OID_AUTO, alias, CTLFLAG_RW, NULL, "Libalias sysctl API");
+SYSCTL_NODE(_net_inet_ip, OID_AUTO, alias, CTLFLAG_RW | CTLFLAG_MPSAFE, NULL,
+    "Libalias sysctl API");
 
 #endif
 

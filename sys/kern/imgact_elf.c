@@ -31,8 +31,6 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 #include "opt_capsicum.h"
 
 #include <sys/param.h>
@@ -49,11 +47,11 @@
 #include <sys/mount.h>
 #include <sys/mman.h>
 #include <sys/namei.h>
-#include <sys/pioctl.h>
 #include <sys/proc.h>
 #include <sys/procfs.h>
 #include <sys/ptrace.h>
 #include <sys/racct.h>
+#include <sys/reg.h>
 #include <sys/resourcevar.h>
 #include <sys/rwlock.h>
 #include <sys/sbuf.h>

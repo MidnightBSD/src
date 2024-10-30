@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012 Ian Lepore
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Buffer allocation support routines for bus_dmamem_alloc implementations.
  */
@@ -170,4 +169,3 @@ busdma_bufalloc_free_uncacheable(void *item, vm_size_t size, uint8_t pflag)
 
 	kmem_free((vm_offset_t)item, size);
 }
-

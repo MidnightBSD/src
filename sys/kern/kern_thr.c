@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2003, Jeffrey Roberson <jeff@freebsd.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_posix.h"
 #include "opt_hwpmc_hooks.h"
 #include <sys/param.h>
@@ -53,7 +52,7 @@
 #include <sys/ucontext.h>
 #include <sys/thr.h>
 #include <sys/rtprio.h>
-#include <sys/umtx.h>
+#include <sys/umtxvar.h>
 #include <sys/limits.h>
 #ifdef	HWPMC_HOOKS
 #include <sys/pmckern.h>
@@ -63,10 +62,10 @@
 
 #include <security/audit/audit.h>
 
-static SYSCTL_NODE(_kern, OID_AUTO, threads, CTLFLAG_RW, 0,
+static SYSCTL_NODE(_kern, OID_AUTO, threads, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
     "thread allocation");
 
-static int max_threads_per_proc = 1500;
+int max_threads_per_proc = 1500;
 SYSCTL_INT(_kern_threads, OID_AUTO, max_threads_per_proc, CTLFLAG_RW,
     &max_threads_per_proc, 0, "Limit on threads per proc");
 
@@ -147,6 +146,7 @@ thr_new_initthr(struct thread *td, void *thunk)
 {
 	stack_t stack;
 	struct thr_param *param;
+	int error;
 
 	/*
 	 * Here we copy out tid to two places, one for child and one
@@ -166,7 +166,9 @@ thr_new_initthr(struct thread *td, void *thunk)
 	stack.ss_sp = param->stack_base;
 	stack.ss_size = param->stack_size;
 	/* Set upcall address to user thread entry function. */
-	cpu_set_upcall(td, param->start_func, param->arg, &stack);
+	error = cpu_set_upcall(td, param->start_func, param->arg, &stack);
+	if (error != 0)
+		return (error);
 	/* Setup user TLS address and TLS pointer register. */
 	return (cpu_set_user_tls(td, param->tls_base));
 }
@@ -230,17 +232,15 @@ thread_create(struct thread *td, struct rtprio *rtp,
 	if (error)
 		goto fail;
 
-	cpu_copy_thread(newtd, td);
-
 	bzero(&newtd->td_startzero,
 	    __rangeof(struct thread, td_startzero, td_endzero));
-	newtd->td_pflags2 = 0;
-	newtd->td_errno = 0;
 	bcopy(&td->td_startcopy, &newtd->td_startcopy,
 	    __rangeof(struct thread, td_startcopy, td_endcopy));
 	newtd->td_proc = td->td_proc;
 	newtd->td_rb_list = newtd->td_rbp_list = newtd->td_rb_inact = 0;
 	thread_cow_get(newtd, td);
+
+	cpu_copy_thread(newtd, td);
 
 	error = initialize_thread(newtd, thunk);
 	if (error != 0) {
@@ -272,17 +272,14 @@ thread_create(struct thread *td, struct rtprio *rtp,
 
 	tidhash_add(newtd);
 
+	/* ignore timesharing class */
+	if (rtp != NULL && !(td->td_pri_class == PRI_TIMESHARE &&
+	    rtp->type == RTP_PRIO_NORMAL))
+		rtp_to_pri(rtp, newtd);
+
 	thread_lock(newtd);
-	if (rtp != NULL) {
-		if (!(td->td_pri_class == PRI_TIMESHARE &&
-		      rtp->type == RTP_PRIO_NORMAL)) {
-			rtp_to_pri(rtp, newtd);
-			sched_prio(newtd, newtd->td_user_pri);
-		} /* ignore timesharing class */
-	}
 	TD_SET_CAN_RUN(newtd);
 	sched_add(newtd, SRQ_BORING);
-	thread_unlock(newtd);
 
 	return (0);
 
@@ -318,8 +315,8 @@ sys_thr_exit(struct thread *td, struct thr_exit_args *uap)
 
 	/* Signal userland that it can free the stack. */
 	if ((void *)uap->state != NULL) {
-		suword_lwpid(uap->state, 1);
-		kern_umtx_wake(td, uap->state, INT_MAX, 0);
+		(void)suword_lwpid(uap->state, 1);
+		(void)kern_umtx_wake(td, uap->state, INT_MAX, 0);
 	}
 
 	return (kern_thr_exit(td));
@@ -357,14 +354,16 @@ kern_thr_exit(struct thread *td)
 		return (0);
 	}
 
-	p->p_pendingexits++;
+	if (p->p_sysent->sv_ontdexit != NULL)
+		p->p_sysent->sv_ontdexit(td);
+
 	td->td_dbgflags |= TDB_EXIT;
-	if (p->p_ptevents & PTRACE_LWP)
+	if (p->p_ptevents & PTRACE_LWP) {
+		p->p_pendingexits++;
 		ptracestop(td, SIGTRAP, NULL);
-	PROC_UNLOCK(p);
+		p->p_pendingexits--;
+	}
 	tidhash_remove(td);
-	PROC_LOCK(p);
-	p->p_pendingexits--;
 
 	/*
 	 * The check above should prevent all other threads from this

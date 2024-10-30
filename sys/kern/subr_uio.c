@@ -42,7 +42,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -217,6 +216,8 @@ uiomove_faultflag(void *cp, int n, struct uio *uio, int nofault)
 	    ("uiomove: mode"));
 	KASSERT(uio->uio_segflg != UIO_USERSPACE || uio->uio_td == curthread,
 	    ("uiomove proc"));
+	KASSERT(uio->uio_resid >= 0,
+	    ("%s: uio %p resid underflow", __func__, uio));
 
 	if (uio->uio_segflg == UIO_USERSPACE) {
 		newflags = TDP_DEADLKTREAT;
@@ -235,6 +236,9 @@ uiomove_faultflag(void *cp, int n, struct uio *uio, int nofault)
 	}
 
 	while (n > 0 && uio->uio_resid) {
+		KASSERT(uio->uio_iovcnt > 0,
+		    ("%s: uio %p iovcnt underflow", __func__, uio));
+
 		iov = uio->uio_iov;
 		cnt = iov->iov_len;
 		if (cnt == 0) {
@@ -246,7 +250,6 @@ uiomove_faultflag(void *cp, int n, struct uio *uio, int nofault)
 			cnt = n;
 
 		switch (uio->uio_segflg) {
-
 		case UIO_USERSPACE:
 			maybe_yield();
 			if (uio->uio_rw == UIO_READ)
@@ -323,7 +326,6 @@ again:
 		goto again;
 	}
 	switch (uio->uio_segflg) {
-
 	case UIO_USERSPACE:
 		if (subyte(iov->iov_base, c) < 0)
 			return (EFAULT);
@@ -342,44 +344,6 @@ again:
 	uio->uio_resid--;
 	uio->uio_offset++;
 	return (0);
-}
-
-int
-copyinfrom(const void * __restrict src, void * __restrict dst, size_t len,
-    int seg)
-{
-	int error = 0;
-
-	switch (seg) {
-	case UIO_USERSPACE:
-		error = copyin(src, dst, len);
-		break;
-	case UIO_SYSSPACE:
-		bcopy(src, dst, len);
-		break;
-	default:
-		panic("copyinfrom: bad seg %d\n", seg);
-	}
-	return (error);
-}
-
-int
-copyinstrfrom(const void * __restrict src, void * __restrict dst, size_t len,
-    size_t * __restrict copied, int seg)
-{
-	int error = 0;
-
-	switch (seg) {
-	case UIO_USERSPACE:
-		error = copyinstr(src, dst, len, copied);
-		break;
-	case UIO_SYSSPACE:
-		error = copystr(src, dst, len, copied);
-		break;
-	default:
-		panic("copyinstrfrom: bad seg %d\n", seg);
-	}
-	return (error);
 }
 
 int
@@ -500,77 +464,6 @@ copyout_unmap(struct thread *td, vm_offset_t addr, size_t sz)
 	return (0);
 }
 
-#ifdef NO_FUEWORD
-/*
- * XXXKIB The temporal implementation of fue*() functions which do not
- * handle usermode -1 properly, mixing it with the fault code.  Keep
- * this until MD code is written.  Currently sparc64 does not have a
- * proper implementation.
- */
-
-int
-fueword(volatile const void *base, long *val)
-{
-	long res;
-
-	res = fuword(base);
-	if (res == -1)
-		return (-1);
-	*val = res;
-	return (0);
-}
-
-int
-fueword32(volatile const void *base, int32_t *val)
-{
-	int32_t res;
-
-	res = fuword32(base);
-	if (res == -1)
-		return (-1);
-	*val = res;
-	return (0);
-}
-
-#ifdef _LP64
-int
-fueword64(volatile const void *base, int64_t *val)
-{
-	int64_t res;
-
-	res = fuword64(base);
-	if (res == -1)
-		return (-1);
-	*val = res;
-	return (0);
-}
-#endif
-
-int
-casueword32(volatile uint32_t *base, uint32_t oldval, uint32_t *oldvalp,
-    uint32_t newval)
-{
-	int32_t ov;
-
-	ov = casuword32(base, oldval, newval);
-	if (ov == -1)
-		return (-1);
-	*oldvalp = ov;
-	return (0);
-}
-
-int
-casueword(volatile u_long *p, u_long oldval, u_long *oldvalp, u_long newval)
-{
-	u_long ov;
-
-	ov = casuword(p, oldval, newval);
-	if (ov == -1)
-		return (-1);
-	*oldvalp = ov;
-	return (0);
-}
-#else /* NO_FUEWORD */
 int32_t
 fuword32(volatile const void *addr)
 {
@@ -622,5 +515,3 @@ casuword(volatile u_long *addr, u_long old, u_long new)
 	rv = casueword(addr, old, &val, new);
 	return (rv == -1 ? -1 : val);
 }
-
-#endif /* NO_FUEWORD */

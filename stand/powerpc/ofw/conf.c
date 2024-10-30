@@ -25,8 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
-
 #include <stand.h>
 #include "bootstrap.h"
 #include "libofw.h"
@@ -48,13 +46,13 @@ void (*exitfn)(int) = exit;
  * XXX rename these arrays to be consistent and less namespace-hostile
  */
 
-/* Exported for libstand */
+/* Exported for libsa */
 struct devsw *devsw[] = {
 #if defined(LOADER_DISK_SUPPORT) || defined(LOADER_CD9660_SUPPORT)
     &ofwdisk,
 #endif
 #if defined(LOADER_NET_SUPPORT)
-    &netdev,
+    &ofw_netdev,
 #endif
     NULL
 };
@@ -68,6 +66,9 @@ struct fs_ops *file_system[] = {
 #endif
 #if defined(LOADER_EXT2FS_SUPPORT)
     &ext2fs_fsops,
+#endif
+#if defined(LOADER_MSDOS_SUPPORT)
+    &dosfs_fsops,
 #endif
 #if defined(LOADER_NFS_SUPPORT)
     &nfs_fsops,

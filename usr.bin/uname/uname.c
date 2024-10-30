@@ -34,8 +34,6 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 
 #ifndef lint
 static const char copyright[] =
@@ -66,9 +64,10 @@ static const char sccsid[] = "@(#)uname.c	8.2 (Berkeley) 5/4/95";
 #define	IFLAG	0x40
 #define	UFLAG	0x80
 #define	KFLAG	0x100
+#define	BFLAG	0x200
 
 typedef void (*get_t)(void);
-static get_t get_ident, get_platform, get_hostname, get_arch,
+static get_t get_buildid, get_ident, get_platform, get_hostname, get_arch,
     get_release, get_sysname, get_kernvers, get_uservers, get_version;
 
 static void native_ident(void);
@@ -80,11 +79,13 @@ static void native_sysname(void);
 static void native_version(void);
 static void native_kernvers(void);
 static void native_uservers(void);
+static void native_buildid(void);
 static void print_uname(u_int);
 static void setup_get(void);
-static void usage(void);
+static void usage(void) __dead2;
 
-static char *ident, *platform, *hostname, *arch, *release, *sysname, *version, *kernvers, *uservers;
+static char *buildid, *ident, *platform, *hostname, *arch, *release, *sysname,
+    *version, *kernvers, *uservers;
 static int space;
 
 int
@@ -96,10 +97,13 @@ main(int argc, char *argv[])
 	setup_get();
 	flags = 0;
 
-	while ((ch = getopt(argc, argv, "aiKmnoprsUv")) != -1)
+	while ((ch = getopt(argc, argv, "abiKmnoprsUv")) != -1)
 		switch(ch) {
 		case 'a':
 			flags |= (MFLAG | NFLAG | RFLAG | SFLAG | VFLAG);
+			break;
+		case 'b':
+			flags |= BFLAG;
 			break;
 		case 'i':
 			flags |= IFLAG;
@@ -168,6 +172,7 @@ setup_get(void)
 	CHECK_ENV("i", ident);
 	CHECK_ENV("K", kernvers);
 	CHECK_ENV("U", uservers);
+	CHECK_ENV("b", buildid);
 }
 
 #define	PRINT_FLAG(flags,flag,var)		\
@@ -193,6 +198,7 @@ print_uname(u_int flags)
 	PRINT_FLAG(flags, IFLAG, ident);
 	PRINT_FLAG(flags, KFLAG, kernvers);
 	PRINT_FLAG(flags, UFLAG, uservers);
+	PRINT_FLAG(flags, BFLAG, buildid);
 	printf("\n");
 }
 
@@ -247,8 +253,12 @@ NATIVE_SYSCTL2_GET(version, CTL_KERN, KERN_VERSION) {
 	p = NATIVE_BUFFER;
 	n = NATIVE_LENGTH;
 	for (; n--; ++p)
-		if (*p == '\n' || *p == '\t')
-			*p = ' ';
+		if (*p == '\n' || *p == '\t') {
+			if (n > 1)
+				*p = ' ';
+			else
+				*p = '\0';
+		}
 } NATIVE_SET;
 
 NATIVE_SYSCTL2_GET(platform, CTL_HW, HW_MACHINE) {
@@ -258,6 +268,9 @@ NATIVE_SYSCTL2_GET(arch, CTL_HW, HW_MACHINE_ARCH) {
 } NATIVE_SET;
 
 NATIVE_SYSCTLNAME_GET(ident, "kern.ident") {
+} NATIVE_SET;
+
+NATIVE_SYSCTLNAME_GET(buildid, "kern.build_id") {
 } NATIVE_SET;
 
 static void
@@ -281,6 +294,6 @@ native_kernvers(void)
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: uname [-aiKmnoprsUv]\n");
+	fprintf(stderr, "usage: uname [-abiKmnoprsUv]\n");
 	exit(1);
 }

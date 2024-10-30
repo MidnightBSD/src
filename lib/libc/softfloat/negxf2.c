@@ -9,7 +9,6 @@
 #include "softfloat.h"
 
 #include <sys/cdefs.h>
-
 #ifdef FLOATX80
 
 floatx80 __negxf2(floatx80);

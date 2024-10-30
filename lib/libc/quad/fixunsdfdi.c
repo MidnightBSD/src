@@ -37,7 +37,6 @@
 static char sccsid[] = "@(#)fixunsdfdi.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-
 #include "quad.h"
 
 #define	ONE_FOURTH	(1L << (LONG_BITS - 2))
@@ -50,8 +49,7 @@ static char sccsid[] = "@(#)fixunsdfdi.c	8.1 (Berkeley) 6/4/93";
  * of range becomes UQUAD_MAX.
  */
 u_quad_t
-__fixunsdfdi(x)
-	double x;
+__fixunsdfdi(double x)
 {
 	double toppart;
 	union uu t;

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1994-1996 Søren Schmidt
  * All rights reserved.
@@ -30,7 +30,6 @@
 #define	_I386_LINUX_H_
 
 #include <sys/abi_compat.h>
-#include <sys/signal.h>	/* for sigval union */
 
 #include <compat/linux/linux.h>
 #include <i386/linux/linux_syscall.h>
@@ -38,9 +37,6 @@
 #define LINUX_LEGACY_SYSCALLS
 
 #define	LINUX_DTRACE	linuxulator
-
-#define	LINUX_SHAREDPAGE	(VM_MAXUSER_ADDRESS - PAGE_SIZE)
-#define	LINUX_USRSTACK		LINUX_SHAREDPAGE
 
 /*
  * Provide a separate set of types for the Linux types.
@@ -58,7 +54,6 @@ typedef char		*l_caddr_t;
 typedef l_ulong		l_uintptr_t;
 typedef l_long		l_clock_t;
 typedef l_int		l_daddr_t;
-typedef l_ushort	l_dev_t;
 typedef l_uint		l_gid_t;
 typedef l_ushort	l_gid16_t;
 typedef l_ulong		l_ino_t;
@@ -70,11 +65,14 @@ typedef l_int		l_pid_t;
 typedef l_uint		l_size_t;
 typedef l_long		l_suseconds_t;
 typedef l_long		l_time_t;
+typedef l_longlong	l_time64_t;
 typedef l_uint		l_uid_t;
 typedef l_ushort	l_uid16_t;
 typedef l_int		l_timer_t;
 typedef l_int		l_mqd_t;
 typedef	l_ulong		l_fd_mask;
+
+#include <compat/linux/linux_siginfo.h>
 
 typedef struct {
 	l_int		val[2];
@@ -85,14 +83,19 @@ typedef struct {
 	l_suseconds_t	tv_usec;
 } l_timeval;
 
+typedef struct {
+	l_time64_t	tv_sec;
+	l_time64_t	tv_usec;
+} l_sock_timeval;
+
 #define	l_fd_set	fd_set
 
 /*
  * Miscellaneous
  */
-#define LINUX_AT_COUNT		20	/* Count of used aux entry types.
+#define LINUX_AT_COUNT		22	/* Count of used aux entry types.
 					 * Keep this synchronized with
-					 * linux_fixup_elf() code.
+					 * linux_copyout_auxargs() code.
 					 */
 struct l___sysctl_args
 {
@@ -131,7 +134,7 @@ struct l_mmap_argv {
 	l_int		flags;
 	l_int		fd;
 	l_off_t		pgoff;
-} __packed;
+};
 
 /*
  * stat family of syscalls
@@ -141,16 +144,20 @@ struct l_timespec {
 	l_long		tv_nsec;
 };
 
+/* __kernel_timespec */
+struct l_timespec64 {
+	l_time64_t	tv_sec;
+	l_longlong	tv_nsec;
+};
+
 struct l_newstat {
-	l_ushort	st_dev;
-	l_ushort	__pad1;
+	l_ulong		st_dev;
 	l_ulong		st_ino;
 	l_ushort	st_mode;
 	l_ushort	st_nlink;
 	l_ushort	st_uid;
 	l_ushort	st_gid;
-	l_ushort	st_rdev;
-	l_ushort	__pad2;
+	l_ulong		st_rdev;
 	l_ulong		st_size;
 	l_ulong		st_blksize;
 	l_ulong		st_blocks;
@@ -161,7 +168,8 @@ struct l_newstat {
 	l_ulong		__unused5;
 };
 
-struct l_stat {
+/* __old_kernel_stat now */
+struct l_old_stat {
 	l_ushort	st_dev;
 	l_ulong		st_ino;
 	l_ushort	st_mode;
@@ -180,19 +188,18 @@ struct l_stat {
 };
 
 struct l_stat64 {
-	l_ushort	st_dev;
-	u_char		__pad0[10];
+	l_ulonglong	st_dev;
+	u_char		__pad0[4];
 	l_ulong		__st_ino;
 	l_uint		st_mode;
 	l_uint		st_nlink;
 	l_ulong		st_uid;
 	l_ulong		st_gid;
-	l_ushort	st_rdev;
-	u_char		__pad3[10];
+	l_ulonglong	st_rdev;
+	u_char		__pad3[4];
 	l_longlong	st_size;
 	l_ulong		st_blksize;
-	l_ulong		st_blocks;
-	l_ulong		__pad4;
+	l_ulonglong	st_blocks;
 	struct l_timespec	st_atim;
 	struct l_timespec	st_mtim;
 	struct l_timespec	st_ctim;
@@ -214,8 +221,6 @@ struct l_statfs64 {
 	l_int		f_spare[4];
 };
 
-#define	LINUX_NSIG_WORDS	2
-
 /* sigaction flags */
 #define	LINUX_SA_NOCLDSTOP	0x00000001
 #define	LINUX_SA_NOCLDWAIT	0x00000002
@@ -226,11 +231,6 @@ struct l_statfs64 {
 #define	LINUX_SA_INTERRUPT	0x20000000
 #define	LINUX_SA_NOMASK		0x40000000
 #define	LINUX_SA_ONESHOT	0x80000000
-
-/* sigprocmask actions */
-#define	LINUX_SIG_BLOCK		0
-#define	LINUX_SIG_UNBLOCK	1
-#define	LINUX_SIG_SETMASK	2
 
 /* sigaltstack */
 #define	LINUX_MINSIGSTKSZ	2048
@@ -253,172 +253,10 @@ typedef struct {
 } l_sigaction_t;
 
 typedef struct {
-	void		*ss_sp;
+	l_uintptr_t	ss_sp;
 	l_int		ss_flags;
 	l_size_t	ss_size;
 } l_stack_t;
-
-/* The Linux sigcontext, pretty much a standard 386 trapframe. */
-struct l_sigcontext {
-	l_int		sc_gs;
-	l_int		sc_fs;
-	l_int		sc_es;
-	l_int		sc_ds;
-	l_int		sc_edi;
-	l_int		sc_esi;
-	l_int		sc_ebp;
-	l_int		sc_esp;
-	l_int		sc_ebx;
-	l_int		sc_edx;
-	l_int		sc_ecx;
-	l_int		sc_eax;
-	l_int		sc_trapno;
-	l_int		sc_err;
-	l_int		sc_eip;
-	l_int		sc_cs;
-	l_int		sc_eflags;
-	l_int		sc_esp_at_signal;
-	l_int		sc_ss;
-	l_int		sc_387;
-	l_int		sc_mask;
-	l_int		sc_cr2;
-};
-
-struct l_ucontext {
-	l_ulong		uc_flags;
-	void		*uc_link;
-	l_stack_t	uc_stack;
-	struct l_sigcontext	uc_mcontext;
-	l_sigset_t	uc_sigmask;
-};
-
-#define	LINUX_SI_MAX_SIZE	128
-#define	LINUX_SI_PAD_SIZE	((LINUX_SI_MAX_SIZE/sizeof(l_int)) - 3)
-
-typedef union l_sigval {
-	l_int		sival_int;
-	l_uintptr_t	sival_ptr;
-} l_sigval_t;
-
-typedef struct l_siginfo {
-	l_int		lsi_signo;
-	l_int		lsi_errno;
-	l_int		lsi_code;
-	union {
-		l_int	_pad[LINUX_SI_PAD_SIZE];
-
-		struct {
-			l_pid_t		_pid;
-			l_uid_t		_uid;
-		} _kill;
-
-		struct {
-			l_timer_t	_tid;
-			l_int		_overrun;
-			char		_pad[sizeof(l_uid_t) - sizeof(l_int)];
-			l_sigval_t	_sigval;
-			l_int		_sys_private;
-		} _timer;
-
-		struct {
-			l_pid_t		_pid;		/* sender's pid */
-			l_uid_t		_uid;		/* sender's uid */
-			l_sigval_t	_sigval;
-		} _rt;
-
-		struct {
-			l_pid_t		_pid;		/* which child */
-			l_uid_t		_uid;		/* sender's uid */
-			l_int		_status;	/* exit code */
-			l_clock_t	_utime;
-			l_clock_t	_stime;
-		} _sigchld;
-
-		struct {
-			l_uintptr_t	_addr;	/* Faulting insn/memory ref. */
-		} _sigfault;
-
-		struct {
-			l_long		_band;	/* POLL_IN,POLL_OUT,POLL_MSG */
-			l_int		_fd;
-		} _sigpoll;
-	} _sifields;
-} l_siginfo_t;
-
-#define	lsi_pid		_sifields._kill._pid
-#define	lsi_uid		_sifields._kill._uid
-#define	lsi_tid		_sifields._timer._tid
-#define	lsi_overrun	_sifields._timer._overrun
-#define	lsi_sys_private	_sifields._timer._sys_private
-#define	lsi_status	_sifields._sigchld._status
-#define	lsi_utime	_sifields._sigchld._utime
-#define	lsi_stime	_sifields._sigchld._stime
-#define	lsi_value	_sifields._rt._sigval
-#define	lsi_int		_sifields._rt._sigval.sival_int
-#define	lsi_ptr		_sifields._rt._sigval.sival_ptr
-#define	lsi_addr	_sifields._sigfault._addr
-#define	lsi_band	_sifields._sigpoll._band
-#define	lsi_fd		_sifields._sigpoll._fd
-
-struct l_fpreg {
-	u_int16_t	significand[4];
-	u_int16_t	exponent;
-};
-
-struct l_fpxreg {
-	u_int16_t	significand[4];
-	u_int16_t	exponent;
-	u_int16_t	padding[3];
-};
-
-struct l_xmmreg {
-	u_int32_t	element[4];
-};
-
-struct l_fpstate {
-	/* Regular FPU environment */
-	u_int32_t		cw;
-	u_int32_t		sw;
-	u_int32_t		tag;
-	u_int32_t		ipoff;
-	u_int32_t		cssel;
-	u_int32_t		dataoff;
-	u_int32_t		datasel;
-	struct l_fpreg		_st[8];
-	u_int16_t		status;
-	u_int16_t		magic;		/* 0xffff = regular FPU data */
-
-	/* FXSR FPU environment */
-	u_int32_t		_fxsr_env[6];	/* env is ignored. */
-	u_int32_t		mxcsr;
-	u_int32_t		reserved;
-	struct l_fpxreg		_fxsr_st[8];	/* reg data is ignored. */
-	struct l_xmmreg		_xmm[8];
-	u_int32_t		padding[56];
-};
-
-/*
- * We make the stack look like Linux expects it when calling a signal
- * handler, but use the BSD way of calling the handler and sigreturn().
- * This means that we need to pass the pointer to the handler too.
- * It is appended to the frame to not interfere with the rest of it.
- */
-struct l_sigframe {
-	l_int			sf_sig;
-	struct l_sigcontext	sf_sc;
-	struct l_fpstate	sf_fpstate;
-	l_uint			sf_extramask[LINUX_NSIG_WORDS-1];
-	l_handler_t		sf_handler;
-};
-
-struct l_rt_sigframe {
-	l_int			sf_sig;
-	l_siginfo_t		*sf_siginfo;
-	struct l_ucontext	*sf_ucontext;
-	l_siginfo_t		sf_si;
-	struct l_ucontext	sf_sc;
-	l_handler_t		sf_handler;
-};
 
 extern struct sysentvec linux_sysvec;
 
@@ -470,27 +308,6 @@ struct l_ifreq {
 #define	ifr_hwaddr	ifr_ifru.ifru_hwaddr	/* MAC address */
 #define	ifr_ifindex	ifr_ifru.ifru_ivalue	/* Interface index */
 
-/*
- * poll()
- */
-#define	LINUX_POLLIN		0x0001
-#define	LINUX_POLLPRI		0x0002
-#define	LINUX_POLLOUT		0x0004
-#define	LINUX_POLLERR		0x0008
-#define	LINUX_POLLHUP		0x0010
-#define	LINUX_POLLNVAL		0x0020
-#define	LINUX_POLLRDNORM	0x0040
-#define	LINUX_POLLRDBAND	0x0080
-#define	LINUX_POLLWRNORM	0x0100
-#define	LINUX_POLLWRBAND	0x0200
-#define	LINUX_POLLMSG		0x0400
-
-struct l_pollfd {
-	l_int		fd;
-	l_short		events;
-	l_short		revents;
-};
-
 struct l_user_desc {
 	l_uint		entry_number;
 	l_uint		base_addr;
@@ -506,7 +323,6 @@ struct l_user_desc {
 struct l_desc_struct {
 	unsigned long	a, b;
 };
-
 
 #define	LINUX_LOWERWORD	0x0000ffff
 
@@ -575,15 +391,32 @@ struct l_desc_struct {
 
 #define	linux_copyout_rusage(r, u)	copyout(r, u, sizeof(*r))
 
-/* robust futexes */
-struct linux_robust_list {
-	struct linux_robust_list	*next;
+/* This corresponds to 'struct user_regs_struct' in Linux. */
+struct linux_pt_regset {
+	l_uint ebx;
+	l_uint ecx;
+	l_uint edx;
+	l_uint esi;
+	l_uint edi;
+	l_uint ebp;
+	l_uint eax;
+	l_uint ds;
+	l_uint es;
+	l_uint fs;
+	l_uint gs;
+	l_uint orig_eax;
+	l_uint eip;
+	l_uint cs;
+	l_uint eflags;
+	l_uint esp;
+	l_uint ss;
 };
 
-struct linux_robust_list_head {
-	struct linux_robust_list	list;
-	l_long				futex_offset;
-	struct linux_robust_list	*pending_list;
-};
+#ifdef _KERNEL
+struct reg;
+
+void	bsd_to_linux_regset(const struct reg *b_reg,
+	    struct linux_pt_regset *l_regset);
+#endif /* _KERNEL */
 
 #endif /* !_I386_LINUX_H_ */

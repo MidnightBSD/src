@@ -9,7 +9,6 @@
  * ----------------------------------------------------------------------------
  *
  * Copyright (c) 2011, 2015, 2016 The FreeBSD Foundation
- * All rights reserved.
  *
  * Portions of this software were developed by Julien Ridoux at the University
  * of Melbourne under sponsorship from the FreeBSD Foundation.
@@ -19,7 +18,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_ntp.h"
 #include "opt_ffclock.h"
 
@@ -97,20 +95,28 @@ static struct timehands *volatile timehands = &ths[0];
 struct timecounter *timecounter = &dummy_timecounter;
 static struct timecounter *timecounters = &dummy_timecounter;
 
+/* Mutex to protect the timecounter list. */
+static struct mtx tc_lock;
+
 int tc_min_ticktock_freq = 1;
 
 volatile time_t time_second = 1;
 volatile time_t time_uptime = 1;
 
 static int sysctl_kern_boottime(SYSCTL_HANDLER_ARGS);
-SYSCTL_PROC(_kern, KERN_BOOTTIME, boottime, CTLTYPE_STRUCT|CTLFLAG_RD,
-    NULL, 0, sysctl_kern_boottime, "S,timeval", "System boottime");
+SYSCTL_PROC(_kern, KERN_BOOTTIME, boottime,
+    CTLTYPE_STRUCT | CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, 0,
+    sysctl_kern_boottime, "S,timeval",
+    "System boottime");
 
-SYSCTL_NODE(_kern, OID_AUTO, timecounter, CTLFLAG_RW, 0, "");
-static SYSCTL_NODE(_kern_timecounter, OID_AUTO, tc, CTLFLAG_RW, 0, "");
+SYSCTL_NODE(_kern, OID_AUTO, timecounter, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "");
+static SYSCTL_NODE(_kern_timecounter, OID_AUTO, tc,
+    CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "");
 
 static int timestepwarnings;
-SYSCTL_INT(_kern_timecounter, OID_AUTO, stepwarnings, CTLFLAG_RW,
+SYSCTL_INT(_kern_timecounter, OID_AUTO, stepwarnings, CTLFLAG_RWTUN,
     &timestepwarnings, 0, "Log time steps");
 
 static int timehands_count = 2;
@@ -141,6 +147,7 @@ static void tc_windup(struct bintime *new_boottimebin);
 static void cpu_tick_calibrate(int);
 
 void dtrace_getnanotime(struct timespec *tsp);
+void dtrace_getnanouptime(struct timespec *tsp);
 
 static int
 sysctl_kern_boottime(SYSCTL_HANDLER_ARGS)
@@ -149,7 +156,8 @@ sysctl_kern_boottime(SYSCTL_HANDLER_ARGS)
 
 	getboottime(&boottime);
 
-#ifndef __mips__
+/* i386 is the only arch which uses a 32bits time_t */
+#ifdef __amd64__
 #ifdef SCTL_MASK32
 	int tv[2];
 
@@ -243,11 +251,9 @@ bintime_off(struct bintime *bt, u_int off)
 }
 #define	GETTHBINTIME(dst, member)					\
 do {									\
-/*									\
 	_Static_assert(_Generic(((struct timehands *)NULL)->member,	\
 	    struct bintime: 1, default: 0) == 1,			\
 	    "struct timehands member is not of struct bintime type");	\
-*/									\
 	bintime_off(dst, __offsetof(struct timehands, member));		\
 } while (0)
 
@@ -266,12 +272,10 @@ getthmember(void *out, size_t out_size, u_int off)
 }
 #define	GETTHMEMBER(dst, member)					\
 do {									\
-/*									\
 	_Static_assert(_Generic(*dst,					\
 	    __typeof(((struct timehands *)NULL)->member): 1,		\
 	    default: 0) == 1,						\
 	    "*dst and struct timehands member have different types");	\
-*/									\
 	getthmember(dst, sizeof(*dst), __offsetof(struct timehands,	\
 	    member));							\
 } while (0)
@@ -1005,6 +1009,20 @@ dtrace_getnanotime(struct timespec *tsp)
 }
 
 /*
+ * This is a clone of getnanouptime used for time since boot.
+ * The dtrace_ prefix prevents fbt from creating probes for
+ * it so an uptime that can be safely used in all fbt probes.
+ */
+void
+dtrace_getnanouptime(struct timespec *tsp)
+{
+	struct bintime bt;
+
+	GETTHMEMBER(&bt, th_offset);
+	bintime2timespec(&bt, tsp);
+}
+
+/*
  * System clock currently providing time to the system. Modifiable via sysctl
  * when the FFCLOCK option is defined.
  */
@@ -1174,26 +1192,32 @@ tc_init(struct timecounter *tc)
 		    tc->tc_quality);
 	}
 
-	tc->tc_next = timecounters;
-	timecounters = tc;
 	/*
 	 * Set up sysctl tree for this counter.
 	 */
 	tc_root = SYSCTL_ADD_NODE_WITH_LABEL(NULL,
 	    SYSCTL_STATIC_CHILDREN(_kern_timecounter_tc), OID_AUTO, tc->tc_name,
-	    CTLFLAG_RW, 0, "timecounter description", "timecounter");
+	    CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+	    "timecounter description", "timecounter");
 	SYSCTL_ADD_UINT(NULL, SYSCTL_CHILDREN(tc_root), OID_AUTO,
 	    "mask", CTLFLAG_RD, &(tc->tc_counter_mask), 0,
 	    "mask for implemented bits");
 	SYSCTL_ADD_PROC(NULL, SYSCTL_CHILDREN(tc_root), OID_AUTO,
-	    "counter", CTLTYPE_UINT | CTLFLAG_RD, tc, sizeof(*tc),
-	    sysctl_kern_timecounter_get, "IU", "current timecounter value");
+	    "counter", CTLTYPE_UINT | CTLFLAG_RD | CTLFLAG_MPSAFE, tc,
+	    sizeof(*tc), sysctl_kern_timecounter_get, "IU",
+	    "current timecounter value");
 	SYSCTL_ADD_PROC(NULL, SYSCTL_CHILDREN(tc_root), OID_AUTO,
-	    "frequency", CTLTYPE_U64 | CTLFLAG_RD, tc, sizeof(*tc),
-	     sysctl_kern_timecounter_freq, "QU", "timecounter frequency");
+	    "frequency", CTLTYPE_U64 | CTLFLAG_RD | CTLFLAG_MPSAFE, tc,
+	    sizeof(*tc), sysctl_kern_timecounter_freq, "QU",
+	    "timecounter frequency");
 	SYSCTL_ADD_INT(NULL, SYSCTL_CHILDREN(tc_root), OID_AUTO,
 	    "quality", CTLFLAG_RD, &(tc->tc_quality), 0,
 	    "goodness of time counter");
+
+	mtx_lock(&tc_lock);
+	tc->tc_next = timecounters;
+	timecounters = tc;
+
 	/*
 	 * Do not automatically switch if the current tc was specifically
 	 * chosen.  Never automatically use a timecounter with negative quality.
@@ -1201,22 +1225,24 @@ tc_init(struct timecounter *tc)
 	 * worse since this timecounter may not be monotonic.
 	 */
 	if (tc_chosen)
-		return;
+		goto unlock;
 	if (tc->tc_quality < 0)
-		return;
+		goto unlock;
 	if (tc_from_tunable[0] != '\0' &&
 	    strcmp(tc->tc_name, tc_from_tunable) == 0) {
 		tc_chosen = 1;
 		tc_from_tunable[0] = '\0';
 	} else {
 		if (tc->tc_quality < timecounter->tc_quality)
-			return;
+			goto unlock;
 		if (tc->tc_quality == timecounter->tc_quality &&
 		    tc->tc_frequency < timecounter->tc_frequency)
-			return;
+			goto unlock;
 	}
 	(void)tc->tc_get_timecount(tc);
 	timecounter = tc;
+unlock:
+	mtx_unlock(&tc_lock);
 }
 
 /* Report the frequency of the current timecounter. */
@@ -1285,6 +1311,40 @@ tc_setclock(struct timespec *ts)
 }
 
 /*
+ * Recalculate the scaling factor.  We want the number of 1/2^64
+ * fractions of a second per period of the hardware counter, taking
+ * into account the th_adjustment factor which the NTP PLL/adjtime(2)
+ * processing provides us with.
+ *
+ * The th_adjustment is nanoseconds per second with 32 bit binary
+ * fraction and we want 64 bit binary fraction of second:
+ *
+ *	 x = a * 2^32 / 10^9 = a * 4.294967296
+ *
+ * The range of th_adjustment is +/- 5000PPM so inside a 64bit int
+ * we can only multiply by about 850 without overflowing, that
+ * leaves no suitably precise fractions for multiply before divide.
+ *
+ * Divide before multiply with a fraction of 2199/512 results in a
+ * systematic undercompensation of 10PPM of th_adjustment.  On a
+ * 5000PPM adjustment this is a 0.05PPM error.  This is acceptable.
+ *
+ * We happily sacrifice the lowest of the 64 bits of our result
+ * to the goddess of code clarity.
+ */
+static void
+recalculate_scaling_factor_and_large_delta(struct timehands *th)
+{
+	uint64_t scale;
+
+	scale = (uint64_t)1 << 63;
+	scale += (th->th_adjustment / 1024) * 2199;
+	scale /= th->th_counter->tc_frequency;
+	th->th_scale = scale * 2;
+	th->th_large_delta = MIN(((uint64_t)1 << 63) / scale, UINT_MAX);
+}
+
+/*
  * Initialize the next struct timehands in the ring and make
  * it the active timehands.  Along the way we might switch to a different
  * timecounter and/or do seconds processing in NTP.  Slightly magic.
@@ -1293,8 +1353,8 @@ static void
 tc_windup(struct bintime *new_boottimebin)
 {
 	struct bintime bt;
+	struct timecounter *tc;
 	struct timehands *th, *tho;
-	uint64_t scale;
 	u_int delta, ncount, ogen;
 	int i;
 	time_t t;
@@ -1322,9 +1382,10 @@ tc_windup(struct bintime *new_boottimebin)
 	 * changing timecounters, a counter value from the new timecounter.
 	 * Update the offset fields accordingly.
 	 */
+	tc = atomic_load_ptr(&timecounter);
 	delta = tc_delta(th);
-	if (th->th_counter != timecounter)
-		ncount = timecounter->tc_get_timecount(timecounter);
+	if (th->th_counter != tc)
+		ncount = tc->tc_get_timecount(tc);
 	else
 		ncount = 0;
 #ifdef FFCLOCK
@@ -1347,7 +1408,7 @@ tc_windup(struct bintime *new_boottimebin)
 		tho->th_counter->tc_poll_pps(tho->th_counter);
 
 	/*
-	 * Deal with NTP second processing.  The for loop normally
+	 * Deal with NTP second processing.  The loop normally
 	 * iterates at most once, but in extreme situations it might
 	 * keep NTP sane if timeouts are not run for several seconds.
 	 * At boot, the time step can be large when the TOD hardware
@@ -1358,64 +1419,43 @@ tc_windup(struct bintime *new_boottimebin)
 	bt = th->th_offset;
 	bintime_add(&bt, &th->th_boottime);
 	i = bt.sec - tho->th_microtime.tv_sec;
-	if (i > LARGE_STEP)
-		i = 2;
-	for (; i > 0; i--) {
-		t = bt.sec;
-		ntp_update_second(&th->th_adjustment, &bt.sec);
-		if (bt.sec != t)
-			th->th_boottime.sec += bt.sec - t;
+	if (i > 0) {
+		if (i > LARGE_STEP)
+			i = 2;
+
+		do {
+			t = bt.sec;
+			ntp_update_second(&th->th_adjustment, &bt.sec);
+			if (bt.sec != t)
+				th->th_boottime.sec += bt.sec - t;
+			--i;
+		} while (i > 0);
+
+		recalculate_scaling_factor_and_large_delta(th);
 	}
+
 	/* Update the UTC timestamps used by the get*() functions. */
 	th->th_bintime = bt;
 	bintime2timeval(&bt, &th->th_microtime);
 	bintime2timespec(&bt, &th->th_nanotime);
 
 	/* Now is a good time to change timecounters. */
-	if (th->th_counter != timecounter) {
+	if (th->th_counter != tc) {
 #ifndef __arm__
-		if ((timecounter->tc_flags & TC_FLAGS_C2STOP) != 0)
+		if ((tc->tc_flags & TC_FLAGS_C2STOP) != 0)
 			cpu_disable_c2_sleep++;
 		if ((th->th_counter->tc_flags & TC_FLAGS_C2STOP) != 0)
 			cpu_disable_c2_sleep--;
 #endif
-		th->th_counter = timecounter;
+		th->th_counter = tc;
 		th->th_offset_count = ncount;
-		tc_min_ticktock_freq = max(1, timecounter->tc_frequency /
-		    (((uint64_t)timecounter->tc_counter_mask + 1) / 3));
+		tc_min_ticktock_freq = max(1, tc->tc_frequency /
+		    (((uint64_t)tc->tc_counter_mask + 1) / 3));
+		recalculate_scaling_factor_and_large_delta(th);
 #ifdef FFCLOCK
 		ffclock_change_tc(th);
 #endif
 	}
-
-	/*-
-	 * Recalculate the scaling factor.  We want the number of 1/2^64
-	 * fractions of a second per period of the hardware counter, taking
-	 * into account the th_adjustment factor which the NTP PLL/adjtime(2)
-	 * processing provides us with.
-	 *
-	 * The th_adjustment is nanoseconds per second with 32 bit binary
-	 * fraction and we want 64 bit binary fraction of second:
-	 *
-	 *	 x = a * 2^32 / 10^9 = a * 4.294967296
-	 *
-	 * The range of th_adjustment is +/- 5000PPM so inside a 64bit int
-	 * we can only multiply by about 850 without overflowing, that
-	 * leaves no suitably precise fractions for multiply before divide.
-	 *
-	 * Divide before multiply with a fraction of 2199/512 results in a
-	 * systematic undercompensation of 10PPM of th_adjustment.  On a
-	 * 5000PPM adjustment this is a 0.05PPM error.  This is acceptable.
- 	 *
-	 * We happily sacrifice the lowest of the 64 bits of our result
-	 * to the goddess of code clarity.
-	 *
-	 */
-	scale = (uint64_t)1 << 63;
-	scale += (th->th_adjustment / 1024) * 2199;
-	scale /= th->th_counter->tc_frequency;
-	th->th_scale = scale * 2;
-	th->th_large_delta = MIN(((uint64_t)1 << 63) / scale, UINT_MAX);
 
 	/*
 	 * Now that the struct timehands is again consistent, set the new
@@ -1453,16 +1493,22 @@ sysctl_kern_timecounter_hardware(SYSCTL_HANDLER_ARGS)
 	struct timecounter *newtc, *tc;
 	int error;
 
+	mtx_lock(&tc_lock);
 	tc = timecounter;
 	strlcpy(newname, tc->tc_name, sizeof(newname));
+	mtx_unlock(&tc_lock);
 
 	error = sysctl_handle_string(oidp, &newname[0], sizeof(newname), req);
 	if (error != 0 || req->newptr == NULL)
 		return (error);
+
+	mtx_lock(&tc_lock);
 	/* Record that the tc in use now was specifically chosen. */
 	tc_chosen = 1;
-	if (strcmp(newname, tc->tc_name) == 0)
+	if (strcmp(newname, tc->tc_name) == 0) {
+		mtx_unlock(&tc_lock);
 		return (0);
+	}
 	for (newtc = timecounters; newtc != NULL; newtc = newtc->tc_next) {
 		if (strcmp(newname, newtc->tc_name) != 0)
 			continue;
@@ -1480,16 +1526,15 @@ sysctl_kern_timecounter_hardware(SYSCTL_HANDLER_ARGS)
 		 * use any locking and that it can be called in hard interrupt
 		 * context via 'tc_windup()'.
 		 */
-		return (0);
+		break;
 	}
-	return (EINVAL);
+	mtx_unlock(&tc_lock);
+	return (newtc != NULL ? 0 : EINVAL);
 }
-
 SYSCTL_PROC(_kern_timecounter, OID_AUTO, hardware,
     CTLTYPE_STRING | CTLFLAG_RWTUN | CTLFLAG_NOFETCH | CTLFLAG_MPSAFE, 0, 0,
     sysctl_kern_timecounter_hardware, "A",
     "Timecounter hardware selected");
-
 
 /* Report the available timecounter hardware. */
 static int
@@ -1499,19 +1544,26 @@ sysctl_kern_timecounter_choice(SYSCTL_HANDLER_ARGS)
 	struct timecounter *tc;
 	int error;
 
+	error = sysctl_wire_old_buffer(req, 0);
+	if (error != 0)
+		return (error);
 	sbuf_new_for_sysctl(&sb, NULL, 0, req);
+	mtx_lock(&tc_lock);
 	for (tc = timecounters; tc != NULL; tc = tc->tc_next) {
 		if (tc != timecounters)
 			sbuf_putc(&sb, ' ');
 		sbuf_printf(&sb, "%s(%d)", tc->tc_name, tc->tc_quality);
 	}
+	mtx_unlock(&tc_lock);
 	error = sbuf_finish(&sb);
 	sbuf_delete(&sb);
 	return (error);
 }
 
-SYSCTL_PROC(_kern_timecounter, OID_AUTO, choice, CTLTYPE_STRING | CTLFLAG_RD,
-    0, 0, sysctl_kern_timecounter_choice, "A", "Timecounter hardware detected");
+SYSCTL_PROC(_kern_timecounter, OID_AUTO, choice,
+    CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_MPSAFE, 0, 0,
+    sysctl_kern_timecounter_choice, "A",
+    "Timecounter hardware detected");
 
 /*
  * RFC 2783 PPS-API implementation.
@@ -1928,6 +1980,8 @@ inittimehands(void *dummy)
 
 	TUNABLE_STR_FETCH("kern.timecounter.hardware", tc_from_tunable,
 	    sizeof(tc_from_tunable));
+
+	mtx_init(&tc_lock, "tc", NULL, MTX_DEF);
 }
 SYSINIT(timehands, SI_SUB_TUNABLES, SI_ORDER_ANY, inittimehands, NULL);
 
@@ -1973,7 +2027,7 @@ SYSINIT(timecounter, SI_SUB_CLOCKS, SI_ORDER_SECOND, inittimecounter, NULL);
 
 /* Cpu tick handling -------------------------------------------------*/
 
-static int cpu_tick_variable;
+static bool cpu_tick_variable;
 static uint64_t	cpu_tick_frequency;
 
 DPCPU_DEFINE_STATIC(uint64_t, tc_cpu_ticks_base);
@@ -2066,14 +2120,14 @@ cpu_tick_calibrate(int reset)
 }
 
 void
-set_cputicker(cpu_tick_f *func, uint64_t freq, unsigned var)
+set_cputicker(cpu_tick_f *func, uint64_t freq, bool isvariable)
 {
 
 	if (func == NULL) {
 		cpu_ticks = tc_cpu_ticks;
 	} else {
 		cpu_tick_frequency = freq;
-		cpu_tick_variable = var;
+		cpu_tick_variable = isvariable;
 		cpu_ticks = func;
 	}
 }

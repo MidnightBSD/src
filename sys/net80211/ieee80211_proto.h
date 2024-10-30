@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2001 Atsushi Onoe
  * Copyright (c) 2002-2009 Sam Leffler, Errno Consulting
@@ -24,7 +24,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 #ifndef _NET80211_IEEE80211_PROTO_H_
 #define _NET80211_IEEE80211_PROTO_H_
@@ -113,6 +112,8 @@ struct mbuf *ieee80211_encap(struct ieee80211vap *, struct ieee80211_node *,
 void	ieee80211_free_mbuf(struct mbuf *);
 int	ieee80211_send_mgmt(struct ieee80211_node *, int, int);
 struct ieee80211_appie;
+int	ieee80211_probereq_ie(struct ieee80211vap *, struct ieee80211com *,
+		uint8_t **, uint32_t *, const uint8_t *, size_t, bool);
 int	ieee80211_send_probereq(struct ieee80211_node *ni,
 		const uint8_t sa[IEEE80211_ADDR_LEN],
 		const uint8_t da[IEEE80211_ADDR_LEN],
@@ -456,8 +457,8 @@ void	ieee80211_notify_cac(struct ieee80211com *,
 		enum ieee80211_notify_cac_event);
 void	ieee80211_notify_node_deauth(struct ieee80211_node *);
 void	ieee80211_notify_node_auth(struct ieee80211_node *);
-void	ieee80211_notify_country(struct ieee80211vap *, const uint8_t [],
-		const uint8_t cc[2]);
+void	ieee80211_notify_country(struct ieee80211vap *,
+		const uint8_t [IEEE80211_ADDR_LEN], const uint8_t cc[2]);
 void	ieee80211_notify_radio(struct ieee80211com *, int);
 void	ieee80211_notify_ifnet_change(struct ieee80211vap *);
 #endif /* _NET80211_IEEE80211_PROTO_H_ */

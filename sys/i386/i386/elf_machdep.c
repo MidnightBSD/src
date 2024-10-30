@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright 1996-1998 John D. Polstra.
  * All rights reserved.
@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_cpu.h"
 
 #include <sys/param.h>
@@ -35,6 +34,7 @@
 #include <sys/exec.h>
 #include <sys/imgact.h>
 #include <sys/linker.h>
+#include <sys/reg.h>
 #include <sys/proc.h>
 #include <sys/sysent.h>
 #include <sys/imgact_elf.h>
@@ -53,29 +53,30 @@
 struct sysentvec elf32_freebsd_sysvec = {
 	.sv_size	= SYS_MAXSYSCALL,
 	.sv_table	= sysent,
-	.sv_mask	= 0,
-	.sv_errsize	= 0,
-	.sv_errtbl	= NULL,
-	.sv_transtrap	= NULL,
 	.sv_fixup	= __elfN(freebsd_fixup),
 	.sv_sendsig	= sendsig,
 	.sv_sigcode	= sigcode,
 	.sv_szsigcode	= &szsigcode,
 	.sv_name	= "FreeBSD ELF32",
 	.sv_coredump	= __elfN(coredump),
+	.sv_elf_core_osabi = ELFOSABI_FREEBSD,
+	.sv_elf_core_abi_vendor = FREEBSD_ABI_VENDOR,
+	.sv_elf_core_prepare_notes = __elfN(prepare_notes),
 	.sv_imgact_try	= NULL,
 	.sv_minsigstksz	= MINSIGSTKSZ,
 	.sv_minuser	= VM_MIN_ADDRESS,
 	.sv_maxuser	= VM_MAXUSER_ADDRESS,
 	.sv_usrstack	= USRSTACK,
 	.sv_psstrings	= PS_STRINGS,
+	.sv_psstringssz	= sizeof(struct ps_strings),
 	.sv_stackprot	= VM_PROT_ALL,
+	.sv_copyout_auxargs = __elfN(freebsd_copyout_auxargs),
 	.sv_copyout_strings	= exec_copyout_strings,
 	.sv_setregs	= exec_setregs,
 	.sv_fixlimit	= NULL,
 	.sv_maxssiz	= NULL,
 	.sv_flags	= SV_ABI_FREEBSD | SV_ASLR | SV_IA32 | SV_ILP32 |
-			    SV_SHP | SV_TIMEKEEP,
+			    SV_SHP | SV_TIMEKEEP | SV_RNG_SEED_VER | SV_SIGSYS,
 	.sv_set_syscall_retval = cpu_set_syscall_retval,
 	.sv_fetch_syscall_args = cpu_fetch_syscall_args,
 	.sv_syscallnames = syscallnames,
@@ -84,6 +85,11 @@ struct sysentvec elf32_freebsd_sysvec = {
 	.sv_schedtail	= NULL,
 	.sv_thread_detach = NULL,
 	.sv_trap	= NULL,
+	.sv_onexec_old	= exec_onexec_old,
+	.sv_onexit	= exit_onexit,
+	.sv_regset_begin = SET_BEGIN(__elfN(regset)),
+	.sv_regset_end  = SET_LIMIT(__elfN(regset)),
+	.sv_set_fork_retval = x86_set_fork_retval,
 };
 INIT_SYSENTVEC(elf32_sysvec, &elf32_freebsd_sysvec);
 
@@ -208,14 +214,13 @@ elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
 	}
 
 	switch (rtype) {
-
 		case R_386_NONE:	/* none */
 			break;
 
 		case R_386_32:		/* S + A */
 			error = lookup(lf, symidx, 1, &addr);
 			if (error != 0)
-				return -1;
+				return (-1);
 			addr += addend;
 			if (*where != addr)
 				*where = addr;
@@ -224,7 +229,7 @@ elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
 		case R_386_PC32:	/* S + A - P */
 			error = lookup(lf, symidx, 1, &addr);
 			if (error != 0)
-				return -1;
+				return (-1);
 			addr += addend - (Elf_Addr)where;
 			if (*where != addr)
 				*where = addr;
@@ -235,14 +240,15 @@ elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
 			 * There shouldn't be copy relocations in kernel
 			 * objects.
 			 */
-			printf("kldload: unexpected R_COPY relocation\n");
-			return -1;
+			printf("kldload: unexpected R_COPY relocation, "
+			    "symbol index %d\n", symidx);
+			return (-1);
 			break;
 
 		case R_386_GLOB_DAT:	/* S */
 			error = lookup(lf, symidx, 1, &addr);
 			if (error != 0)
-				return -1;
+				return (-1);
 			if (*where != addr)
 				*where = addr;
 			break;
@@ -256,10 +262,11 @@ elf_reloc_internal(linker_file_t lf, Elf_Addr relocbase, const void *data,
 			if (*where != addr)
 				*where = addr;
 			break;
+
 		default:
-			printf("kldload: unexpected relocation type %d\n",
-			       rtype);
-			return -1;
+			printf("kldload: unexpected relocation type %d, "
+			    "symbol index %d\n", rtype, symidx);
+			return (-1);
 	}
 	return(0);
 }
@@ -290,6 +297,13 @@ elf_cpu_load_file(linker_file_t lf __unused)
 
 int
 elf_cpu_unload_file(linker_file_t lf __unused)
+{
+
+	return (0);
+}
+
+int
+elf_cpu_parse_dynamic(caddr_t loadbase __unused, Elf_Dyn *dynamic __unused)
 {
 
 	return (0);

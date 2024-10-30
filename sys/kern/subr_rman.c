@@ -58,7 +58,6 @@
 #include "opt_ddb.h"
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -1069,7 +1068,8 @@ found:
 	return (error);
 }
 
-static SYSCTL_NODE(_hw_bus, OID_AUTO, rman, CTLFLAG_RD, sysctl_rman,
+static SYSCTL_NODE(_hw_bus, OID_AUTO, rman, CTLFLAG_RD | CTLFLAG_MPSAFE,
+    sysctl_rman,
     "kernel resource manager");
 
 #ifdef DDB

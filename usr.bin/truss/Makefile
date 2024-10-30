@@ -1,5 +1,4 @@
 
-#NO_WERROR=
 PROG=	truss
 SRCS=	main.c setup.c syscalls.c
 

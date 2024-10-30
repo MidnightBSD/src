@@ -1,5 +1,4 @@
 #include <machine/asm.h>
-
 	.section .init,"ax",%progbits
 	ldmea	fp, {fp, sp, pc}
 	mov	pc, lr

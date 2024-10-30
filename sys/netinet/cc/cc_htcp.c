@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2007-2008
  * 	Swinburne University of Technology, Melbourne, Australia
@@ -50,7 +50,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/limits.h>
@@ -227,9 +226,9 @@ htcp_ack_received(struct cc_var *ccv, uint16_t type)
 				 * per RTT.
 				 */
 				CCV(ccv, snd_cwnd) += (((htcp_data->alpha <<
-				    HTCP_SHIFT) / (CCV(ccv, snd_cwnd) /
-				    CCV(ccv, t_maxseg))) * CCV(ccv, t_maxseg))
-				    >> HTCP_SHIFT;
+				    HTCP_SHIFT) / (max(1,
+				    CCV(ccv, snd_cwnd) / CCV(ccv, t_maxseg)))) *
+				    CCV(ccv, t_maxseg))  >> HTCP_SHIFT;
 		}
 	}
 }
@@ -369,7 +368,7 @@ htcp_post_recovery(struct cc_var *ccv)
 			pipe = tcp_compute_pipe(ccv->ccvc.tcp);
 		else
 			pipe = CCV(ccv, snd_max) - ccv->curack;
-		
+
 		if (pipe < CCV(ccv, snd_ssthresh))
 			/*
 			 * Ensure that cwnd down not collape to 1 MSS under
@@ -523,10 +522,9 @@ htcp_ssthresh_update(struct cc_var *ccv)
 	}
 }
 
-
 SYSCTL_DECL(_net_inet_tcp_cc_htcp);
-SYSCTL_NODE(_net_inet_tcp_cc, OID_AUTO, htcp, CTLFLAG_RW,
-    NULL, "H-TCP related settings");
+SYSCTL_NODE(_net_inet_tcp_cc, OID_AUTO, htcp, CTLFLAG_RW | CTLFLAG_MPSAFE, NULL,
+    "H-TCP related settings");
 SYSCTL_UINT(_net_inet_tcp_cc_htcp, OID_AUTO, adaptive_backoff,
     CTLFLAG_VNET | CTLFLAG_RW, &VNET_NAME(htcp_adaptive_backoff), 0,
     "enable H-TCP adaptive backoff");

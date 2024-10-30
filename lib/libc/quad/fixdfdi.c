@@ -37,7 +37,6 @@
 static char sccsid[] = "@(#)fixdfdi.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-
 #include "quad.h"
 
 /*
@@ -45,8 +44,7 @@ static char sccsid[] = "@(#)fixdfdi.c	8.1 (Berkeley) 6/4/93";
  * We clamp anything that is out of range.
  */
 quad_t
-__fixdfdi(x)
-	double x;
+__fixdfdi(double x)
 {
 	if (x < 0)
 		if (x <= (double)QUAD_MIN)

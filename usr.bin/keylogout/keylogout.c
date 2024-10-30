@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * unset the secret key on local machine
  */

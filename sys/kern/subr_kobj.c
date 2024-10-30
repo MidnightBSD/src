@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000,2003 Doug Rabson
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/kobj.h>
@@ -66,7 +65,8 @@ static int kobj_next_id = 1;
 #define	KOBJ_ASSERT(what)	mtx_assert(&kobj_mtx, what);
 
 SYSCTL_INT(_kern, OID_AUTO, kobj_methodcount, CTLFLAG_RD,
-	   &kobj_next_id, 0, "");
+    &kobj_next_id, 0,
+    "Number of kernel object methods registered");
 
 static void
 kobj_init_mutex(void *arg)
@@ -251,7 +251,7 @@ kobj_class_free(kobj_class_t cls)
 		ops = cls->ops;
 		cls->ops = NULL;
 	}
-	
+
 	KOBJ_UNLOCK();
 
 	if (ops)

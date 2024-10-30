@@ -37,7 +37,6 @@
 static char sccsid[] = "@(#)rpcb_clnt.c 1.30 89/06/21 Copyr 1988 Sun Micro";
 #endif
 #include <sys/cdefs.h>
-
 /*
  * rpcb_clnt.c
  * interface to rpcbind rpc service.
@@ -741,6 +740,16 @@ __rpcb_findaddr_timed(rpcprog_t program, rpcvers_t version,
 		struct pmap pmapparms;
 
 		/*
+		 * The comment below is now very old, having
+		 * been committed to FreeBSD during an import
+		 * from NetBSD in 2001.  I do not believe there
+		 * will still be any rpcbind servers that do
+		 * UDP only and, since Azure requires use of
+		 * TCP for NFSv3 mounts, comment this out
+		 * so that NFSv3 mounts on Azure can work.
+		 */
+#ifdef notnow
+		/*
 		 * Try UDP only - there are some portmappers out
 		 * there that use UDP only.
 		 */
@@ -753,9 +762,9 @@ __rpcb_findaddr_timed(rpcprog_t program, rpcvers_t version,
 			}
 			client = getclnthandle(host, newnconf, &parms.r_addr);
 			freenetconfigent(newnconf);
-		} else {
+		} else
+#endif
 			client = getclnthandle(host, nconf, &parms.r_addr);
-		}
 		if (client == NULL)
 			return (NULL);
 

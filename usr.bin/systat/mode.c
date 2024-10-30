@@ -56,8 +56,6 @@
  * mode in the command line.
  */
 
-#include <sys/cdefs.h>
-
 
 #include <sys/types.h>
 

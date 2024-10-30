@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010 Fabio Checconi, Luigi Rizzo, Paolo Valente
  * All rights reserved
@@ -83,7 +83,7 @@ int fls(unsigned int n)
 }
 #endif
 
-#if !defined(_KERNEL) || defined( __MidnightBSD__ ) || defined(_WIN32) || (defined(__MIPSEL__) && defined(LINUX_24))
+#if !defined(_KERNEL) || defined( __FreeBSD__ ) || defined(_WIN32) || (defined(__MIPSEL__) && defined(LINUX_24))
 static inline unsigned long __fls(unsigned long word)
 {
 	return fls(word) - 1;
@@ -499,7 +499,6 @@ qfq_slot_rotate(struct qfq_sched *q, struct qfq_group *grp, uint64_t roundedS)
 	grp->front = (grp->front - i) % QFQ_MAX_SLOTS;
 }
 
-
 static inline void
 qfq_update_eligible(struct qfq_sched *q, uint64_t old_V)
 {
@@ -708,7 +707,6 @@ skip_update:
 
 	return 0;
 }
-
 
 #if 0
 static inline void

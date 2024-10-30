@@ -39,7 +39,6 @@ static char sccsid[] = "@(#)reverse.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/queue.h>
 #include <sys/stat.h>
@@ -53,6 +52,9 @@ static char sccsid[] = "@(#)reverse.c	8.1 (Berkeley) 6/6/93";
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+#include <libcasper.h>
+#include <casper/cap_fileargs.h>
 
 #include "extern.h"
 
@@ -210,7 +212,7 @@ r_buf(FILE *fp, const char *fn)
 		while ((tl = malloc(sizeof(bfelem_t))) == NULL) {
 			first = TAILQ_FIRST(&head);
 			if (TAILQ_EMPTY(&head))
-				err(1, "malloc");
+				err(1, "failed to allocate memory");
 			enomem += first->len;
 			TAILQ_REMOVE(&head, first, entries);
 			free(first);

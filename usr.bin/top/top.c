@@ -8,7 +8,6 @@
  *  Copyright (c) 1989 - 1994, William LeFebvre, Northwestern University
  *  Copyright (c) 1994, 1995, William LeFebvre, Argonne National Laboratory
  *  Copyright (c) 1996, William LeFebvre, Group sys Consulting
- *
  */
 
 #include <sys/types.h>
@@ -24,6 +23,7 @@
 #include <errno.h>
 #include <getopt.h>
 #include <jail.h>
+#include <locale.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -264,6 +264,11 @@ main(int argc, const char *argv[])
 #else
     setbuffer(stdout, stdoutbuf, Buffersize);
 #endif
+
+    if (setlocale(LC_ALL, "") == NULL) {
+        fprintf(stderr, "invalid locale.\n");
+	exit(1);
+    }
 
     mypid = getpid();
 
@@ -612,6 +617,9 @@ restart:
 	/* display the load averages */
 	(*d_loadave)(system_info.last_pid,
 		     system_info.load_avg);
+
+	/* display the battery info (if any) */
+	i_battery(statics.nbatteries, system_info.battery);
 
 	/* display the current time */
 	/* this method of getting the time SHOULD be fairly portable */

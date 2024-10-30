@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000,2001 Peter Wemm <peter@FreeBSD.org>
  * All rights reserved.
@@ -27,9 +27,9 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/lock.h>
+#include <sys/kenv.h>
 #include <sys/kernel.h>
 #include <sys/malloc.h>
 #include <sys/mutex.h>
@@ -133,7 +133,6 @@ res_find(char **hintp_cookie, int *line, int *startln,
 	const char *s, *cp;
 	char *hintp, *p;
 	bool dyn_used = false;
-
 
 	/*
 	 * We are expecting that the caller will pass us a hintp_cookie that
@@ -451,7 +450,6 @@ resource_find_match(int *anchor, const char **name, int *unit,
 	*anchor = newln;
 	return ret;
 }
-
 
 /*
  * err = resource_find_dev(&anchor, name, &unit, res, value);

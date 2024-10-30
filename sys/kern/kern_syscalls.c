@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999 Assar Westerlund
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
@@ -62,6 +61,17 @@ lkmressys(struct thread *td, struct nosys_args *args)
 	return (nosys(td, args));
 }
 
+struct sysent nosys_sysent = {
+	.sy_call =	(sy_call_t *)nosys,
+	.sy_systrace_args_func = NULL,
+	.sy_narg =	0,
+	.sy_flags =	SYF_CAPENABLED,
+	.sy_auevent =	AUE_NULL,
+	.sy_entry =	0, /* DTRACE_IDNONE */
+	.sy_return =	0,
+	.sy_thrcnt =	SY_THR_STATIC,
+};
+
 static void
 syscall_thread_drain(struct sysent *se)
 {
@@ -79,23 +89,31 @@ syscall_thread_drain(struct sysent *se)
 }
 
 int
-_syscall_thread_enter(struct thread *td, struct sysent *se)
+syscall_thread_enter(struct thread *td, struct sysent **se)
 {
 	u_int32_t cnt, oldcnt;
 
+	KASSERT(((*se)->sy_thrcnt & SY_THR_STATIC) == 0,
+	    ("%s: not a static syscall", __func__));
+
 	do {
-		oldcnt = se->sy_thrcnt;
-		if ((oldcnt & (SY_THR_DRAINING | SY_THR_ABSENT)) != 0)
-			return (ENOSYS);
+		oldcnt = (*se)->sy_thrcnt;
+		if ((oldcnt & (SY_THR_DRAINING | SY_THR_ABSENT)) != 0) {
+			*se = &nosys_sysent;
+			return (0);
+		}
 		cnt = oldcnt + SY_THR_INCR;
-	} while (atomic_cmpset_acq_32(&se->sy_thrcnt, oldcnt, cnt) == 0);
+	} while (atomic_cmpset_acq_32(&(*se)->sy_thrcnt, oldcnt, cnt) == 0);
 	return (0);
 }
 
 void
-_syscall_thread_exit(struct thread *td, struct sysent *se)
+syscall_thread_exit(struct thread *td, struct sysent *se)
 {
 	u_int32_t cnt, oldcnt;
+
+	KASSERT((se->sy_thrcnt & SY_THR_STATIC) == 0,
+	    ("%s: not a static syscall", __func__));
 
 	do {
 		oldcnt = se->sy_thrcnt;
@@ -119,11 +137,14 @@ kern_syscall_register(struct sysent *sysents, int *offset,
 		if (i == SYS_MAXSYSCALL)
 			return (ENFILE);
 		*offset = i;
-	} else if (*offset < 0 || *offset >= SYS_MAXSYSCALL)
+	} else if (*offset < 0 || *offset >= SYS_MAXSYSCALL) {
 		return (EINVAL);
-	else if (sysents[*offset].sy_call != (sy_call_t *)lkmnosys &&
-	    sysents[*offset].sy_call != (sy_call_t *)lkmressys)
+	} else if (sysents[*offset].sy_call != (sy_call_t *)lkmnosys &&
+	    sysents[*offset].sy_call != (sy_call_t *)lkmressys) {
+		KASSERT(sysents[*offset].sy_call != NULL,
+		    ("undefined syscall %d", *offset));
 		return (EEXIST);
+	}
 
 	KASSERT(sysents[*offset].sy_thrcnt == SY_THR_ABSENT,
 	    ("dynamic syscall is not protected"));
@@ -163,7 +184,7 @@ kern_syscall_module_handler(struct sysent *sysents, struct module *mod,
     int what, void *arg)
 {
 	struct syscall_module_data *data = arg;
-	modspecific_t ms;
+	modspecific_t ms = { 0 };
 	int error;
 
 	switch (what) {

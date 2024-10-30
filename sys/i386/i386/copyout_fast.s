@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2018 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Konstantin Belousov <kib@FreeBSD.org>
  * under sponsorship from the FreeBSD Foundation.
@@ -27,7 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <machine/asmacros.h>
@@ -37,6 +35,17 @@
 
 #include "assym.inc"
 
+/*
+ * Fast path for copyout code.  We switch to user space %cr3 and perform
+ * move operation between user memory and copyout buffer, located in the
+ * trampoline area.  We must switch to trampoline stack, because both
+ * user and kernel buffer accesses might cause page fault.
+ *
+ * Page fault handler expects %edx to point to the onfault routine.
+ * Handler switches to idlePTD and calls the routine.
+ * The routine must restore the stack, enable interrupts, and
+ * return to the caller, informing it about failure.
+ */
 	.text
 
 ENTRY(copyout_fast)
@@ -46,59 +55,31 @@ ENTRY(copyout_fast)
 	pushl	%edi
 	pushl	%ebx
 
+	movl	20(%ebp),%ebx		/* KCR3 */
+	/* bcopy(%esi = kaddr, %edi = PCPU(copyout_buf), %ecx = len) */
+	movl	16(%ebp),%ecx
+	movl	8(%ebp),%esi
+	movl	%esp,%eax
 	movl	$copyout_fault,%edx
-	movl	20(%ebp),%ebx	/* KCR3 */
-
-	movl	PCPU(CURPCB),%eax
-	movl	PCB_CR3(%eax),%edi
 
 	cli
-	movl	PCPU(TRAMPSTK),%esi
-	movl	PCPU(COPYOUT_BUF),%eax
-	subl	$4,%esi
-	movl	%eax,(%esi)
-	movl	12(%ebp),%eax	/* udaddr */
-	subl	$4,%esi
-	movl	%eax,(%esi)
-	movl	16(%ebp),%eax	/* len */
-	subl	$4,%esi
-	movl	%eax,(%esi)
+	movl	PCPU(COPYOUT_BUF),%edi
+pf_y1:	rep; movsb
 
-	subl	$4, %esi
-	movl	%edi, (%esi)
-
-	movl	8(%ebp),%eax	/* kaddr */
-	subl	$4,%esi
-	movl	%eax,(%esi)
-	movl	PCPU(COPYOUT_BUF),%eax
-	subl	$4,%esi
-	movl	%eax,(%esi)
-	movl	16(%ebp),%eax	/* len */
-	subl	$4,%esi
-	movl	%eax,(%esi)
-
-	movl	%esp,%eax
-	movl	%esi,%esp
-
-	/* bcopy(%esi = kaddr, %edi = PCPU(copyout_buf), %ecx = len) */
-	popl	%ecx
-	popl	%edi
-	popl	%esi
-	rep; movsb
-
-	popl	%edi
-	movl	%edi,%cr3
-
+	movl	16(%ebp),%ecx		/* len */
+	movl	PCPU(COPYOUT_BUF),%esi	/* kaddr */
+	movl	12(%ebp),%edi		/* uaddr */
+	movl	PCPU(TRAMPSTK),%esp
+	movl	PCPU(CURPCB),%edx
+	movl	PCB_CR3(%edx),%edx	/* UCR3 */
+	movl	%edx,%cr3
+	movl	$copyout_fault,%edx
 	/* bcopy(%esi = PCPU(copyout_buf), %edi = udaddr, %ecx = len) */
-	popl	%ecx
-	popl	%edi
-	popl	%esi
-	rep; movsb
+pf_x1:	rep; movsb
 
 	movl	%ebx,%cr3
 	movl	%eax,%esp
 	sti
-
 	xorl	%eax,%eax
 	popl	%ebx
 	popl	%edi
@@ -114,55 +95,31 @@ ENTRY(copyin_fast)
 	pushl	%edi
 	pushl	%ebx
 
-	movl	$copyout_fault,%edx
-	movl	20(%ebp),%ebx	/* KCR3 */
-
+	movl	20(%ebp),%ebx		/* KCR3 */
 	movl	PCPU(CURPCB),%eax
-	movl	PCB_CR3(%eax),%edi
+	movl	PCB_CR3(%eax),%edx	/* UCR3 */
+	movl	16(%ebp),%ecx		/* len */
+	movl	8(%ebp),%esi		/* udaddr */
+	movl	%esp,%eax
 
 	cli
-	movl	PCPU(TRAMPSTK),%esi
-	movl	PCPU(COPYOUT_BUF),%eax
-	subl	$4,%esi
-	movl	%eax,(%esi)
-	movl	12(%ebp),%eax	/* kaddr */
-	subl	$4,%esi
-	movl	%eax,(%esi)
-	movl	16(%ebp),%eax	/* len */
-	subl	$4,%esi
-	movl	%eax,(%esi)
-
-	movl	8(%ebp),%eax	/* udaddr */
-	subl	$4,%esi
-	movl	%eax,(%esi)
-	movl	PCPU(COPYOUT_BUF),%eax
-	subl	$4,%esi
-	movl	%eax,(%esi)
-	movl	16(%ebp),%eax	/* len */
-	subl	$4,%esi
-	movl	%eax,(%esi)
-
-	movl	%esp,%eax
-	movl	%esi,%esp
-	movl	%edi,%cr3
-
+	movl	PCPU(COPYOUT_BUF),%edi	/* kaddr */
+	movl	PCPU(TRAMPSTK),%esp
+	movl	%edx,%cr3
+	movl	$copyout_fault,%edx
 	/* bcopy(%esi = udaddr, %edi = PCPU(copyout_buf), %ecx = len) */
-	popl	%ecx
-	popl	%edi
-	popl	%esi
-	rep; movsb
+pf_x2:	rep; movsb
 
 	movl	%ebx,%cr3
+	movl	%eax,%esp
 
 	/* bcopy(%esi = PCPU(copyout_buf), %edi = kaddr, %ecx = len) */
-	popl	%ecx
-	popl	%edi
-	popl	%esi
-	rep; movsb
+	movl	16(%ebp),%ecx
+	movl	12(%ebp),%edi
+	movl	PCPU(COPYOUT_BUF),%esi
+pf_y2:	rep; movsb
 
-	movl	%eax,%esp
 	sti
-
 	xorl	%eax,%eax
 	popl	%ebx
 	popl	%edi
@@ -197,7 +154,7 @@ ENTRY(fueword_fast)
 	cli
 	movl	PCPU(TRAMPSTK),%esp
 	movl	%eax,%cr3
-	movl	(%ecx),%eax
+pf_x3:	movl	(%ecx),%eax
 	movl	%ebx,%cr3
 	movl	%esi,%esp
 	sti
@@ -226,7 +183,7 @@ ENTRY(fuword16_fast)
 	cli
 	movl	PCPU(TRAMPSTK),%esp
 	movl	%eax,%cr3
-	movzwl	(%ecx),%eax
+pf_x4:	movzwl	(%ecx),%eax
 	movl	%ebx,%cr3
 	movl	%esi,%esp
 	sti
@@ -252,7 +209,7 @@ ENTRY(fubyte_fast)
 	cli
 	movl	PCPU(TRAMPSTK),%esp
 	movl	%eax,%cr3
-	movzbl	(%ecx),%eax
+pf_x5:	movzbl	(%ecx),%eax
 	movl	%ebx,%cr3
 	movl	%esi,%esp
 	sti
@@ -291,7 +248,7 @@ ENTRY(suword_fast)
 	cli
 	movl	PCPU(TRAMPSTK),%esp
 	movl	%eax,%cr3
-	movl	%edi,(%ecx)
+pf_x6:	movl	%edi,(%ecx)
 	movl	%ebx,%cr3
 	movl	%esi,%esp
 	sti
@@ -319,7 +276,7 @@ ENTRY(suword16_fast)
 	cli
 	movl	PCPU(TRAMPSTK),%esp
 	movl	%eax,%cr3
-	movw	%di,(%ecx)
+pf_x7:	movw	%di,(%ecx)
 	movl	%ebx,%cr3
 	movl	%esi,%esp
 	sti
@@ -348,7 +305,7 @@ ENTRY(subyte_fast)
 	movl	PCPU(TRAMPSTK),%esp
 	movl	%eax,%cr3
 	movl	%edi,%eax
-	movb	%al,(%ecx)
+pf_x8:	movb	%al,(%ecx)
 	movl	%ebx,%cr3
 	movl	%esi,%esp
 	sti

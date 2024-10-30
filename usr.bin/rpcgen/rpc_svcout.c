@@ -35,7 +35,6 @@ static char sccsid[] = "@(#)rpc_svcout.c 1.29 89/03/30 (C) 1987 SMI";
 #endif
 
 #include <sys/cdefs.h>
-
 /*
  * rpc_svcout.c, Server-skeleton outputter for the RPC protocol compiler
  * Copyright (C) 1987, Sun Microsystems, Inc.
@@ -618,7 +617,7 @@ print_return(const char *space)
 		if (timerflag) {
 			if (mtflag)
 				f_print(fout, "%spthread_mutex_lock(&_svcstate_lock);\n", space);
-				f_print(fout, "%s_rpcsvcstate = _SERVED;\n", space);
+			f_print(fout, "%s_rpcsvcstate = _SERVED;\n", space);
 			if (mtflag)
 				f_print(fout, "%spthread_mutex_unlock(&_svcstate_lock);\n", space);
 		}

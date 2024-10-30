@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1997 Michael Smith
  * Copyright (c) 1998 Jonathan Lemon
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Code for dealing with the BIOS in x86 PC systems.
  */
@@ -90,7 +89,6 @@ bios32_init(void *junk)
     
     /* look for the signature */
     if ((sigaddr = bios_sigsearch(0, "_32_", 4, 16, 0)) != 0) {
-
 	/* get a virtual pointer to the structure */
 	sdh = (struct bios32_SDheader *)(uintptr_t)BIOS_PADDRTOVADDR(sigaddr);
 	for (cv = (u_int8_t *)sdh, ck = 0, i = 0; i < (sdh->len * 16); i++) {
@@ -108,7 +106,6 @@ bios32_init(void *junk)
 
 	    /* Allow user override of PCI BIOS search */
 	    if (((p = kern_getenv("machdep.bios.pci")) == NULL) || strcmp(p, "disable")) {
-
 		/* See if there's a PCI BIOS entrypoint here */
 		PCIbios.ident.id = 0x49435024;	/* PCI systems should have this */
 		if (!bios32_SDlookup(&PCIbios) && bootverbose)
@@ -128,7 +125,6 @@ bios32_init(void *junk)
      */
     if ((((p = kern_getenv("machdep.bios.pnp")) == NULL) || strcmp(p, "disable")) &&
 	((sigaddr = bios_sigsearch(0, "$PnP", 4, 16, 0)) != 0)) {
-
 	/* get a virtual pointer to the structure */
 	pt = (struct PnPBIOS_table *)(uintptr_t)BIOS_PADDRTOVADDR(sigaddr);
 	for (cv = (u_int8_t *)pt, ck = 0, i = 0; i < pt->len; i++) {
@@ -187,7 +183,6 @@ bios32_SDlookup(struct bios32_SDentry *ent)
     return (1);				/* failed */
 }
 
-
 /*
  * bios_sigsearch
  *
@@ -226,7 +221,6 @@ bios_sigsearch(u_int32_t start, u_char *sig, int siglen, int paralen, int sigofs
 
     /* loop searching */
     while ((sp + sigofs + siglen) < end) {
-	
 	/* compare here */
 	if (!bcmp(sp + sigofs, sig, siglen)) {
 	    /* convert back to physical address */
@@ -271,7 +265,7 @@ set_bios_selectors(struct bios_segments *seg, int flags)
 #else
     p_gdt = gdt;
 #endif
-	
+
     ssd.ssd_base = seg->code32.base;
     ssd.ssd_limit = seg->code32.limit;
     ssdtosd(&ssd, &p_gdt[GBIOSCODE32_SEL].sd);
@@ -328,9 +322,7 @@ bios16(struct bios_args *args, char *fmt, ...)
     va_list 	ap;
     int 	flags = BIOSCODE_FLAG | BIOSDATA_FLAG;
     u_int 	i, arg_start, arg_end;
-    pt_entry_t	*pte;
-    pd_entry_t	*ptd, orig_ptd;
-
+    void	*bios16_pmap_handle;
     arg_start = 0xffffffff;
     arg_end = 0;
 
@@ -387,18 +379,10 @@ bios16(struct bios_args *args, char *fmt, ...)
 	args->seg.args.limit = 0xffff;
     }
 
-    args->seg.code32.base = (u_int)&bios16_jmp & PG_FRAME;
+    args->seg.code32.base = pmap_pg_frame((u_int)&bios16_jmp);
     args->seg.code32.limit = 0xffff;	
 
-    /*
-     * no page table, so create one and install it.
-     */
-    pte = (pt_entry_t *)malloc(PAGE_SIZE, M_TEMP, M_WAITOK);
-    ptd = IdlePTD;
-    *pte = vm86phystk | PG_RW | PG_V;
-    orig_ptd = *ptd;
-    *ptd = vtophys(pte) | PG_RW | PG_V;
-    pmap_invalidate_all(kernel_pmap);	/* XXX insurance for now */
+    bios16_pmap_handle = pmap_bios16_enter();
 
     stack_top = stack;
     va_start(ap, fmt);
@@ -450,13 +434,7 @@ bios16(struct bios_args *args, char *fmt, ...)
     bioscall_vector.vec16.segment = GSEL(GBIOSCODE16_SEL, SEL_KPL);
 
     i = bios16_call(&args->r, stack_top);
-
-    *ptd = orig_ptd;		/* remove page table */
-    /*
-     * XXX only needs to be invlpg(0) but that doesn't work on the 386
-     */
-    pmap_invalidate_all(kernel_pmap);
-    free(pte, M_TEMP);		/* ... and free it */
+    pmap_bios16_leave(bios16_pmap_handle);
     return (i);
 }
 
@@ -634,7 +612,6 @@ pnpbios_identify(driver_t *driver, device_t parent)
     pd = &pda->node;
 
     for (currdev = 0, left = ndevs; (currdev != 0xff) && (left > 0); left--) {
-
 	bzero(pd, bigdev);
 	pda->next = currdev;
 	/* get current configuration */
@@ -663,7 +640,7 @@ pnpbios_identify(driver_t *driver, device_t parent)
 	    continue;
 	if (!strcmp(pnp_eisaformat(pd->devid), "PNP0003"))	/* APIC */
 	    continue;
-	
+
 	/* Add the device and parse its resources */
 	dev = BUS_ADD_CHILD(parent, ISA_ORDER_PNPBIOS, NULL, -1);
 	isa_set_vendorid(dev, pd->devid);
@@ -733,7 +710,6 @@ pnpbios_identify(driver_t *driver, device_t parent)
 static device_method_t pnpbios_methods[] = {
 	/* Device interface */
 	DEVMETHOD(device_identify,	pnpbios_identify),
-
 	{ 0, 0 }
 };
 

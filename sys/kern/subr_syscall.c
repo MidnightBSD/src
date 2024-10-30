@@ -42,8 +42,6 @@
 
 #include "opt_capsicum.h"
 #include "opt_ktrace.h"
-
-
 #include <sys/capsicum.h>
 #include <sys/ktr.h>
 #include <sys/vmmeter.h>
@@ -58,57 +56,62 @@ syscallenter(struct thread *td)
 {
 	struct proc *p;
 	struct syscall_args *sa;
+	struct sysent *se;
 	int error, traced;
+	bool sy_thr_static;
 
 	VM_CNT_INC(v_syscall);
 	p = td->td_proc;
 	sa = &td->td_sa;
 
 	td->td_pticks = 0;
-	if (td->td_cowgen != p->p_cowgen)
+	if (__predict_false(td->td_cowgen != p->p_cowgen))
 		thread_cow_update(td);
 	traced = (p->p_flag & P_TRACED) != 0;
-	if (traced || td->td_dbgflags & TDB_USERWR) {
+	if (__predict_false(traced || td->td_dbgflags & TDB_USERWR)) {
 		PROC_LOCK(p);
+		MPASS((td->td_dbgflags & TDB_BOUNDARY) == 0);
 		td->td_dbgflags &= ~TDB_USERWR;
 		if (traced)
 			td->td_dbgflags |= TDB_SCE;
 		PROC_UNLOCK(p);
 	}
 	error = (p->p_sysent->sv_fetch_syscall_args)(td);
+	se = sa->callp;
 #ifdef KTRACE
 	if (KTRPOINT(td, KTR_SYSCALL))
-		ktrsyscall(sa->code, sa->narg, sa->args);
+		ktrsyscall(sa->code, se->sy_narg, sa->args);
 #endif
 	KTR_START4(KTR_SYSC, "syscall", syscallname(p, sa->code),
 	    (uintptr_t)td, "pid:%d", td->td_proc->p_pid, "arg0:%p", sa->args[0],
 	    "arg1:%p", sa->args[1], "arg2:%p", sa->args[2]);
 
-	if (error != 0) {
+	if (__predict_false(error != 0)) {
 		td->td_errno = error;
 		goto retval;
 	}
 
-	STOPEVENT(p, S_SCE, sa->narg);
-	if ((p->p_flag & P_TRACED) != 0) {
+	if (__predict_false(traced)) {
 		PROC_LOCK(p);
 		if (p->p_ptevents & PTRACE_SCE)
 			ptracestop((td), SIGTRAP, NULL);
 		PROC_UNLOCK(p);
-	}
-	if ((td->td_dbgflags & TDB_USERWR) != 0) {
-		/*
-		 * Reread syscall number and arguments if debugger
-		 * modified registers or memory.
-		 */
-		error = (p->p_sysent->sv_fetch_syscall_args)(td);
+
+		if ((td->td_dbgflags & TDB_USERWR) != 0) {
+			/*
+			 * Reread syscall number and arguments if debugger
+			 * modified registers or memory.
+			 */
+			error = (p->p_sysent->sv_fetch_syscall_args)(td);
+			se = sa->callp;
 #ifdef KTRACE
-		if (KTRPOINT(td, KTR_SYSCALL))
-			ktrsyscall(sa->code, sa->narg, sa->args);
+			if (KTRPOINT(td, KTR_SYSCALL))
+				ktrsyscall(sa->code, se->sy_narg, sa->args);
 #endif
-		if (error != 0) {
-			td->td_errno = error;
-			goto retval;
+			if (error != 0) {
+				td->td_errno = error;
+				goto retval;
+			}
 		}
 	}
 
@@ -117,62 +120,87 @@ syscallenter(struct thread *td)
 	 * In capability mode, we only allow access to system calls
 	 * flagged with SYF_CAPENABLED.
 	 */
-	if (IN_CAPABILITY_MODE(td) &&
-	    !(sa->callp->sy_flags & SYF_CAPENABLED)) {
+	if (__predict_false(IN_CAPABILITY_MODE(td) &&
+	    (se->sy_flags & SYF_CAPENABLED) == 0)) {
 		td->td_errno = error = ECAPMODE;
 		goto retval;
 	}
 #endif
 
-	error = syscall_thread_enter(td, sa->callp);
-	if (error != 0) {
-		td->td_errno = error;
-		goto retval;
-	}
-
-#ifdef KDTRACE_HOOKS
-	/* Give the syscall:::entry DTrace probe a chance to fire. */
-	if (__predict_false(systrace_enabled && sa->callp->sy_entry != 0))
-		(*systrace_probe_func)(sa, SYSTRACE_ENTRY, 0);
-#endif
+	/*
+	 * Fetch fast sigblock value at the time of syscall entry to
+	 * handle sleepqueue primitives which might call cursig().
+	 */
+	if (__predict_false(sigfastblock_fetch_always))
+		(void)sigfastblock_fetch(td);
 
 	/* Let system calls set td_errno directly. */
-	td->td_pflags &= ~TDP_NERRNO;
+	KASSERT((td->td_pflags & TDP_NERRNO) == 0,
+	    ("%s: TDP_NERRNO set", __func__));
 
-	AUDIT_SYSCALL_ENTER(sa->code, td);
-	error = (sa->callp->sy_call)(td, sa->args);
+	sy_thr_static = (se->sy_thrcnt & SY_THR_STATIC) != 0;
 
-	/*
-	 * Note that some syscall implementations (e.g., sys_execve)
-	 * will commit the audit record just before their final return.
-	 * These were done under the assumption that nothing of interest
-	 * would happen between their return and here, where we would
-	 * normally commit the audit record.  These assumptions will
-	 * need to be revisited should any substantial logic be added
-	 * above.
-	 */
-	AUDIT_SYSCALL_EXIT(error, td);
-
-	/* Save the latest error return value. */
-	if ((td->td_pflags & TDP_NERRNO) == 0)
-		td->td_errno = error;
+	if (__predict_false(SYSTRACE_ENABLED() ||
+	    AUDIT_SYSCALL_ENTER(sa->code, td) ||
+	    !sy_thr_static)) {
+		if (!sy_thr_static) {
+			error = syscall_thread_enter(td, &se);
+			sy_thr_static = (se->sy_thrcnt & SY_THR_STATIC) != 0;
+			if (error != 0) {
+				td->td_errno = error;
+				goto retval;
+			}
+		}
 
 #ifdef KDTRACE_HOOKS
-	/* Give the syscall:::return DTrace probe a chance to fire. */
-	if (__predict_false(systrace_enabled && sa->callp->sy_return != 0))
-		(*systrace_probe_func)(sa, SYSTRACE_RETURN,
-		    error ? -1 : td->td_retval[0]);
+		/* Give the syscall:::entry DTrace probe a chance to fire. */
+		if (__predict_false(se->sy_entry != 0))
+			(*systrace_probe_func)(sa, SYSTRACE_ENTRY, 0);
 #endif
-	syscall_thread_exit(td, sa->callp);
+		error = (se->sy_call)(td, sa->args);
+		/* Save the latest error return value. */
+		if (__predict_false((td->td_pflags & TDP_NERRNO) != 0))
+			td->td_pflags &= ~TDP_NERRNO;
+		else
+			td->td_errno = error;
+
+		/*
+		 * Note that some syscall implementations (e.g., sys_execve)
+		 * will commit the audit record just before their final return.
+		 * These were done under the assumption that nothing of interest
+		 * would happen between their return and here, where we would
+		 * normally commit the audit record.  These assumptions will
+		 * need to be revisited should any substantial logic be added
+		 * above.
+		 */
+		AUDIT_SYSCALL_EXIT(error, td);
+
+#ifdef KDTRACE_HOOKS
+		/* Give the syscall:::return DTrace probe a chance to fire. */
+		if (__predict_false(se->sy_return != 0))
+			(*systrace_probe_func)(sa, SYSTRACE_RETURN,
+			    error ? -1 : td->td_retval[0]);
+#endif
+
+		if (!sy_thr_static)
+			syscall_thread_exit(td, se);
+	} else {
+		error = (se->sy_call)(td, sa->args);
+		/* Save the latest error return value. */
+		if (__predict_false((td->td_pflags & TDP_NERRNO) != 0))
+			td->td_pflags &= ~TDP_NERRNO;
+		else
+			td->td_errno = error;
+	}
 
  retval:
 	KTR_STOP4(KTR_SYSC, "syscall", syscallname(p, sa->code),
 	    (uintptr_t)td, "pid:%d", td->td_proc->p_pid, "error:%d", error,
 	    "retval0:%#lx", td->td_retval[0], "retval1:%#lx",
 	    td->td_retval[1]);
-	if (traced) {
+	if (__predict_false(traced)) {
 		PROC_LOCK(p);
-		td->td_dbgflags &= ~TDB_SCE;
+		td->td_dbgflags &= ~(TDB_SCE | TDB_BOUNDARY);
 		PROC_UNLOCK(p);
 	}
 	(p->p_sysent->sv_set_syscall_retval)(td, error);
@@ -181,19 +209,22 @@ syscallenter(struct thread *td)
 static inline void
 syscallret(struct thread *td)
 {
-	struct proc *p, *p2;
+	struct proc *p;
 	struct syscall_args *sa;
 	ksiginfo_t ksi;
 	int traced;
 
 	KASSERT((td->td_pflags & TDP_FORKING) == 0,
 	    ("fork() did not clear TDP_FORKING upon completion"));
+	KASSERT(td->td_errno != ERELOOKUP,
+	    ("ERELOOKUP not consumed syscall %d", td->td_sa.code));
 
 	p = td->td_proc;
 	sa = &td->td_sa;
-	if ((trap_enotcap || (p->p_flag2 & P2_TRAPCAP) != 0) &&
-	    IN_CAPABILITY_MODE(td)) {
-		if (td->td_errno == ENOTCAPABLE || td->td_errno == ECAPMODE) {
+	if (__predict_false(td->td_errno == ENOTCAPABLE ||
+	    td->td_errno == ECAPMODE)) {
+		if ((trap_enotcap ||
+		    (p->p_flag2 & P2_TRAPCAP) != 0) && IN_CAPABILITY_MODE(td)) {
 			ksiginfo_init_trap(&ksi);
 			ksi.ksi_signo = SIGTRAP;
 			ksi.ksi_errno = td->td_errno;
@@ -213,21 +244,34 @@ syscallret(struct thread *td)
 	}
 #endif
 
-	if (p->p_flag & P_TRACED) {
+	traced = 0;
+	if (__predict_false(p->p_flag & P_TRACED)) {
 		traced = 1;
 		PROC_LOCK(p);
 		td->td_dbgflags |= TDB_SCX;
 		PROC_UNLOCK(p);
-	} else
-		traced = 0;
-	/*
-	 * This works because errno is findable through the
-	 * register set.  If we ever support an emulation where this
-	 * is not the case, this code will need to be revisited.
-	 */
-	STOPEVENT(p, S_SCX, sa->code);
-	if (traced || (td->td_dbgflags & (TDB_EXEC | TDB_FORK)) != 0) {
+	}
+	if (__predict_false(traced ||
+	    (td->td_dbgflags & (TDB_EXEC | TDB_FORK)) != 0)) {
 		PROC_LOCK(p);
+		/*
+		 * Linux debuggers expect an additional stop for exec,
+		 * between the usual syscall entry and exit.  Raise
+		 * the exec event now and then clear TDB_EXEC so that
+		 * the next stop is reported as a syscall exit by
+		 * linux_ptrace_status().
+		 *
+		 * We are accessing p->p_pptr without any additional
+		 * locks here: it cannot change while p is kept locked;
+		 * while the debugger could in theory change its ABI
+		 * while tracing another process, the outcome of such
+		 * a race wouln't be deterministic anyway.
+		 */
+		if (traced && (td->td_dbgflags & TDB_EXEC) != 0 &&
+		    SV_PROC_ABI(p->p_pptr) == SV_ABI_LINUX) {
+			ptracestop(td, SIGTRAP, NULL);
+			td->td_dbgflags &= ~TDB_EXEC;
+		}
 		/*
 		 * If tracing the execed process, trap to the debugger
 		 * so that breakpoints can be set before the program
@@ -236,47 +280,16 @@ syscallret(struct thread *td)
 		 */
 		if (traced &&
 		    ((td->td_dbgflags & (TDB_FORK | TDB_EXEC)) != 0 ||
-		    (p->p_ptevents & PTRACE_SCX) != 0))
+		    (p->p_ptevents & PTRACE_SCX) != 0)) {
+			MPASS((td->td_dbgflags & TDB_BOUNDARY) == 0);
+			td->td_dbgflags |= TDB_BOUNDARY;
 			ptracestop(td, SIGTRAP, NULL);
-		td->td_dbgflags &= ~(TDB_SCX | TDB_EXEC | TDB_FORK);
+		}
+		td->td_dbgflags &= ~(TDB_SCX | TDB_EXEC | TDB_FORK |
+		    TDB_BOUNDARY);
 		PROC_UNLOCK(p);
 	}
 
-	if (td->td_pflags & TDP_RFPPWAIT) {
-		/*
-		 * Preserve synchronization semantics of vfork.  If
-		 * waiting for child to exec or exit, fork set
-		 * P_PPWAIT on child, and there we sleep on our proc
-		 * (in case of exit).
-		 *
-		 * Do it after the ptracestop() above is finished, to
-		 * not block our debugger until child execs or exits
-		 * to finish vfork wait.
-		 */
-		td->td_pflags &= ~TDP_RFPPWAIT;
-		p2 = td->td_rfppwait_p;
-again:
-		PROC_LOCK(p2);
-		while (p2->p_flag & P_PPWAIT) {
-			PROC_LOCK(p);
-			if (thread_suspend_check_needed()) {
-				PROC_UNLOCK(p2);
-				thread_suspend_check(0);
-				PROC_UNLOCK(p);
-				goto again;
-			} else {
-				PROC_UNLOCK(p);
-			}
-			cv_timedwait(&p2->p_pwait, &p2->p_mtx, hz);
-		}
-		PROC_UNLOCK(p2);
-
-		if (td->td_dbgflags & TDB_VFORK) {
-			PROC_LOCK(p);
-			if (p->p_ptevents & PTRACE_VFORK)
-				ptracestop(td, SIGTRAP, NULL);
-			td->td_dbgflags &= ~TDB_VFORK;
-			PROC_UNLOCK(p);
-		}
-	}
+	if (__predict_false(td->td_pflags & TDP_RFPPWAIT))
+		fork_rfppwait(td);
 }

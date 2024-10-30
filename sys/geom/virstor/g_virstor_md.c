@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2005 Ivan Voras <ivoras@freebsd.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/endian.h>
 
@@ -61,7 +60,6 @@ virstor_metadata_encode(struct g_virstor_metadata *md, unsigned char *data)
 	bs_write_u16(&bs, md->chunk_reserved);
 	bs_write_u16(&bs, md->flags);
 }
-
 
 /*
  * Decode data from endian-independent byte stream into g_virstor_metadata

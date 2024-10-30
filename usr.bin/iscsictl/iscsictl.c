@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Edward Tomasz Napierala under sponsorship
  * from the FreeBSD Foundation.
@@ -31,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/ioctl.h>
 #include <sys/param.h>
 #include <sys/linker.h>
@@ -87,6 +85,7 @@ target_new(struct conf *conf)
 		xo_err(1, "calloc");
 	targ->t_conf = conf;
 	targ->t_dscp = -1;
+	targ->t_pcp = -1;
 	TAILQ_INSERT_TAIL(&conf->conf_targets, targ, t_next);
 
 	return (targ);
@@ -359,6 +358,7 @@ conf_from_target(struct iscsi_session_conf *conf,
 	else
 		conf->isc_data_digest = ISCSI_DIGEST_NONE;
 	conf->isc_dscp = targ->t_dscp;
+	conf->isc_pcp = targ->t_pcp;
 }
 
 static int
@@ -539,6 +539,9 @@ kernel_list(int iscsi_fd, const struct target *targ __unused,
 			if (conf->isc_dscp != -1)
 				xo_emit("{L:/%-26s}{V:dscp/0x%02x}\n",
 				    "Target DSCP:", conf->isc_dscp);
+			if (conf->isc_pcp != -1)
+				xo_emit("{L:/%-26s}{V:pcp/0x%02x}\n",
+				    "Target PCP:", conf->isc_pcp);
 			xo_close_container("target");
 
 			xo_open_container("auth");

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1997 Jonathan Lemon
  * All rights reserved.
@@ -27,7 +27,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _MACHINE_VM86_H_
@@ -110,7 +109,7 @@ struct vm86context {
 		int	flags;
 		int	pte_num;
 		vm_offset_t	kva;
-		u_int	old_pte;
+		uint64_t	old_pte;
 	} pmap[VM86_PMAPSIZE];
 };
 

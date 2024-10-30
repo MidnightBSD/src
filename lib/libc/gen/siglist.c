@@ -31,7 +31,6 @@
 
 #include <sys/cdefs.h>
 __SCCSID("@(#)siglist.c	8.1 (Berkeley) 6/4/93");
-
 #include <signal.h>
 
 const char *const sys_signame[NSIG] = {

@@ -26,7 +26,6 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 /*
@@ -53,6 +52,8 @@ extern int lineno;
 extern int undefok;	/* mostly ignore undefined symbols */
 extern int warnok;
 extern int warnings;
+
+extern char *version;
 
 int yylex(void);
 void yyerror(const char *);
@@ -173,4 +174,4 @@ const char *get_wide_encoding(void);
 int max_wide(void);
 
 //#define	_(x)	gettext(x)
-#define	INTERR	fprintf(stderr,"internal fault (%s:%d)", __FILE__, __LINE__)
+#define	INTERR	fprintf(stderr,"internal fault (%s:%d)\n", __FILE__, __LINE__)

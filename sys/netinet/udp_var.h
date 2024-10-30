@@ -59,7 +59,7 @@ struct mbuf;
 typedef void(*udp_tun_func_t)(struct mbuf *, int, struct inpcb *,
 			      const struct sockaddr *, void *);
 typedef void(*udp_tun_icmp_t)(int, struct sockaddr *, void *, void *);
-			      
+
 /*
  * UDP control block; one per udp.
  */
@@ -148,10 +148,15 @@ extern u_long			udp_sendspace;
 extern u_long			udp_recvspace;
 VNET_DECLARE(int, udp_cksum);
 VNET_DECLARE(int, udp_blackhole);
+VNET_DECLARE(bool, udp_blackhole_local);
 VNET_DECLARE(int, udp_log_in_vain);
 #define	V_udp_cksum		VNET(udp_cksum)
 #define	V_udp_blackhole		VNET(udp_blackhole)
+#define	V_udp_blackhole_local	VNET(udp_blackhole_local)
 #define	V_udp_log_in_vain	VNET(udp_log_in_vain)
+
+VNET_DECLARE(int, zero_checksum_port);
+#define	V_zero_checksum_port	VNET(zero_checksum_port)
 
 static __inline struct inpcbinfo *
 udp_get_inpcbinfo(int protocol)

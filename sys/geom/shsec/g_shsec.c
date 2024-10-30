@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2005 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -40,6 +39,7 @@
 #include <sys/malloc.h>
 #include <vm/uma.h>
 #include <geom/geom.h>
+#include <geom/geom_dbg.h>
 #include <geom/shsec/g_shsec.h>
 
 FEATURE(geom_shsec, "GEOM shared secret device support");
@@ -69,13 +69,14 @@ struct g_class g_shsec_class = {
 };
 
 SYSCTL_DECL(_kern_geom);
-static SYSCTL_NODE(_kern_geom, OID_AUTO, shsec, CTLFLAG_RW, 0,
+static SYSCTL_NODE(_kern_geom, OID_AUTO, shsec, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
     "GEOM_SHSEC stuff");
-static u_int g_shsec_debug = 0;
+static u_int g_shsec_debug;
 SYSCTL_UINT(_kern_geom_shsec, OID_AUTO, debug, CTLFLAG_RWTUN, &g_shsec_debug, 0,
     "Debug level");
-static u_int g_shsec_maxmem = MAXPHYS * 100;
-SYSCTL_UINT(_kern_geom_shsec, OID_AUTO, maxmem, CTLFLAG_RDTUN, &g_shsec_maxmem,
+static u_long g_shsec_maxmem;
+SYSCTL_ULONG(_kern_geom_shsec, OID_AUTO, maxmem,
+    CTLFLAG_RDTUN | CTLFLAG_NOFETCH, &g_shsec_maxmem,
     0, "Maximum memory that can be allocated for I/O (in bytes)");
 static u_int g_shsec_alloc_failed = 0;
 SYSCTL_UINT(_kern_geom_shsec, OID_AUTO, alloc_failed, CTLFLAG_RD,
@@ -111,10 +112,12 @@ static void
 g_shsec_init(struct g_class *mp __unused)
 {
 
-	g_shsec_zone = uma_zcreate("g_shsec_zone", MAXPHYS, NULL, NULL, NULL,
+	g_shsec_maxmem = maxphys * 100;
+	TUNABLE_ULONG_FETCH("kern.geom.shsec.maxmem,", &g_shsec_maxmem);
+	g_shsec_zone = uma_zcreate("g_shsec_zone", maxphys, NULL, NULL, NULL,
 	    NULL, 0, 0);
-	g_shsec_maxmem -= g_shsec_maxmem % MAXPHYS;
-	uma_zone_set_max(g_shsec_zone, g_shsec_maxmem / MAXPHYS);
+	g_shsec_maxmem -= g_shsec_maxmem % maxphys;
+	uma_zone_set_max(g_shsec_zone, g_shsec_maxmem / maxphys);
 }
 
 static void
@@ -267,8 +270,10 @@ g_shsec_done(struct bio *bp)
 			    (ssize_t)pbp->bio_length);
 		}
 	}
-	bzero(bp->bio_data, bp->bio_length);
-	uma_zfree(g_shsec_zone, bp->bio_data);
+	if (bp->bio_data != NULL) {
+		explicit_bzero(bp->bio_data, bp->bio_length);
+		uma_zfree(g_shsec_zone, bp->bio_data);
+	}
 	g_destroy_bio(bp);
 	pbp->bio_inbed++;
 	if (pbp->bio_children == pbp->bio_inbed) {
@@ -314,6 +319,7 @@ g_shsec_start(struct bio *bp)
 	case BIO_READ:
 	case BIO_WRITE:
 	case BIO_FLUSH:
+	case BIO_SPEEDUP:
 		/*
 		 * Only those requests are supported.
 		 */
@@ -345,20 +351,22 @@ g_shsec_start(struct bio *bp)
 		 * Fill in the component buf structure.
 		 */
 		cbp->bio_done = g_shsec_done;
-		cbp->bio_data = uma_zalloc(g_shsec_zone, M_NOWAIT);
-		if (cbp->bio_data == NULL) {
-			g_shsec_alloc_failed++;
-			error = ENOMEM;
-			goto failure;
-		}
 		cbp->bio_caller2 = sc->sc_disks[no];
-		if (bp->bio_cmd == BIO_WRITE) {
-			if (no == 0) {
-				dst = (uint32_t *)cbp->bio_data;
-				bcopy(bp->bio_data, dst, len);
-			} else {
-				g_shsec_xor2((uint32_t *)cbp->bio_data, dst,
-				    len);
+		if (bp->bio_cmd == BIO_READ || bp->bio_cmd == BIO_WRITE) {
+			cbp->bio_data = uma_zalloc(g_shsec_zone, M_NOWAIT);
+			if (cbp->bio_data == NULL) {
+				g_shsec_alloc_failed++;
+				error = ENOMEM;
+				goto failure;
+			}
+			if (bp->bio_cmd == BIO_WRITE) {
+				if (no == 0) {
+					dst = (uint32_t *)cbp->bio_data;
+					bcopy(bp->bio_data, dst, len);
+				} else {
+					g_shsec_xor2((uint32_t *)cbp->bio_data,
+					    dst, len);
+				}
 			}
 		}
 	}
@@ -381,7 +389,7 @@ failure:
 		TAILQ_REMOVE(&queue, cbp, bio_queue);
 		bp->bio_children--;
 		if (cbp->bio_data != NULL) {
-			bzero(cbp->bio_data, cbp->bio_length);
+			explicit_bzero(cbp->bio_data, cbp->bio_length);
 			uma_zfree(g_shsec_zone, cbp->bio_data);
 		}
 		g_destroy_bio(cbp);
@@ -643,9 +651,12 @@ g_shsec_taste(struct g_class *mp, struct g_provider *pp, int flags __unused)
 	gp->access = g_shsec_access;
 	gp->orphan = g_shsec_orphan;
 	cp = g_new_consumer(gp);
-	g_attach(cp, pp);
-	error = g_shsec_read_metadata(cp, &md);
-	g_detach(cp);
+	cp->flags |= G_CF_DIRECT_SEND | G_CF_DIRECT_RECEIVE;
+	error = g_attach(cp, pp);
+	if (error == 0) {
+		error = g_shsec_read_metadata(cp, &md);
+		g_detach(cp);
+	}
 	g_destroy_consumer(cp);
 	g_destroy_geom(gp);
 	if (error != 0)

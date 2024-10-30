@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010 Rui Paulo <rpaulo@FreeBSD.org>
  * All rights reserved.
@@ -23,8 +23,10 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
+
+#ifndef _NET80211_IEEE80211_RATECTL_H_
+#define _NET80211_IEEE80211_RATECTL_H_
 
 enum ieee80211_ratealgs {
 	IEEE80211_RATECTL_AMRR		= 0,
@@ -168,3 +170,5 @@ ieee80211_ratectl_node_stats(struct ieee80211_node *ni, struct sbuf *s)
 		return;
 	vap->iv_rate->ir_node_stats(ni, s);
 }
+
+#endif	/* _NET80211_IEEE80211_RATECTL_H_ */

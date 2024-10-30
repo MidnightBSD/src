@@ -57,17 +57,9 @@
  *
  * We try to do the least expensive (in CPU ops) checks and operations
  * first to catch junk with as little overhead as possible.
- * 
+ *
  * We take full advantage of hardware support for IP checksum and
  * fragmentation offloading.
- *
- * We don't do ICMP redirect in the fast forwarding path. I have had my own
- * cases where two core routers with Zebra routing suite would send millions
- * ICMP redirects to connected hosts if the destination router was not the
- * default gateway. In one case it was filling the routing table of a host
- * with approximately 300.000 cloned redirect entries until it ran out of
- * kernel memory. However the networking code proved very robust and it didn't
- * crash or fail in other ways.
  */
 
 /*
@@ -76,7 +68,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_ipstealth.h"
 
 #include <sys/param.h>
@@ -89,12 +80,13 @@
 #include <sys/socket.h>
 #include <sys/sysctl.h>
 
-#include <net/pfil.h>
 #include <net/if.h>
 #include <net/if_types.h>
 #include <net/if_var.h>
 #include <net/if_dl.h>
+#include <net/pfil.h>
 #include <net/route.h>
+#include <net/route/nhop.h>
 #include <net/vnet.h>
 
 #include <netinet/in.h>
@@ -111,23 +103,70 @@
 
 #define	V_ipsendredirects	VNET(ipsendredirects)
 
-struct mbuf *
-ip_redir_alloc(struct mbuf *m, struct ip *ip, struct in_addr dest,
-    in_addr_t *addr);
-
-
-struct mbuf *
-ip_redir_alloc(struct mbuf *m, struct ip *ip, struct in_addr dest,
-    in_addr_t *addr)
+static struct mbuf *
+ip_redir_alloc(struct mbuf *m, struct nhop_object *nh, u_short ip_len,
+    struct in_addr *osrc, struct in_addr *newgw)
 {
-	struct sockaddr_in s;
-	struct nhop4_extended nh;
-	struct mbuf *mcopy = m_gethdr(M_NOWAIT, m->m_type);
+	struct in_ifaddr *nh_ia;
+	struct mbuf *mcopy;
 
-	if (mcopy == NULL)
+	KASSERT(nh != NULL, ("%s: m %p nh is NULL\n", __func__, m));
+
+	/*
+	 * Only send a redirect if:
+	 * - Redirects are not disabled (must be checked by caller),
+	 * - We have not applied NAT (must be checked by caller as possible),
+	 * - Neither a MCAST or BCAST packet (must be checked by caller)
+	 *   [RFC1009 Appendix A.2].
+	 * - The packet does not do IP source routing or having any other
+	 *   IP options (this case was handled already by ip_input() calling
+	 *   ip_dooptions() [RFC792, p13],
+	 * - The packet is being forwarded out the same physical interface
+	 *   that it was received from [RFC1812, 5.2.7.2].
+	 */
+
+	/*
+	 * - The forwarding route was not created by a redirect
+	 *   [RFC1812, 5.2.7.2], or
+	 *   if it was to follow a default route (see below).
+	 * - The next-hop is reachable by us [RFC1009 Appendix A.2].
+	 */
+	if ((nh->nh_flags & (NHF_DEFAULT | NHF_REDIRECT |
+	    NHF_BLACKHOLE | NHF_REJECT)) != 0)
 		return (NULL);
 
-	if (fib4_lookup_nh_ext(M_GETFIB(m), dest, 0, 0, &nh) != 0)
+	/* Get the new gateway. */
+	if ((nh->nh_flags & NHF_GATEWAY) == 0 || nh->gw_sa.sa_family != AF_INET)
+		return (NULL);
+	newgw->s_addr = nh->gw4_sa.sin_addr.s_addr;
+
+	/*
+	 * - The resulting forwarding destination is not "This host on this
+	 *   network" [RFC1122, Section 3.2.1.3] (default route check above).
+	 */
+	if (newgw->s_addr == 0)
+		return (NULL);
+
+	/*
+	 * - We know how to reach the sender and the source address is
+	 *   directly connected to us [RFC792, p13].
+	 * + The new gateway address and the source address are on the same
+	 *   subnet [RFC1009 Appendix A.2, RFC1122 3.2.2.2, RFC1812, 5.2.7.2].
+	 * NB: if you think multiple logical subnets on the same wire should
+	 *     receive redirects read [RFC1812, APPENDIX C (14->15)].
+	 */
+	nh_ia = (struct in_ifaddr *)nh->nh_ifa;
+	if ((ntohl(osrc->s_addr) & nh_ia->ia_subnetmask) != nh_ia->ia_subnet)
+		return (NULL);
+
+	/* Prepare for sending the redirect. */
+
+	/*
+	 * Make a copy of as much as we need of the packet as the original
+	 * one will be forwarded but we need (a portion) for icmp_error().
+	 */
+	mcopy = m_gethdr(M_NOWAIT, m->m_type);
+	if (mcopy == NULL)
 		return (NULL);
 
 	if (m_dup_pkthdr(mcopy, m, M_NOWAIT) == 0) {
@@ -140,37 +179,22 @@ ip_redir_alloc(struct mbuf *m, struct ip *ip, struct in_addr dest,
 		m_free(mcopy);
 		return (NULL);
 	}
-	mcopy->m_len = min(ntohs(ip->ip_len), M_TRAILINGSPACE(mcopy));
+	mcopy->m_len = min(ip_len, M_TRAILINGSPACE(mcopy));
 	mcopy->m_pkthdr.len = mcopy->m_len;
 	m_copydata(m, 0, mcopy->m_len, mtod(mcopy, caddr_t));
-
-	s.sin_len = sizeof(struct sockaddr_in);
-	s.sin_family= AF_INET;
-	s.sin_addr = nh.nh_src;
-
-	if (((nh.nh_flags & (NHF_REDIRECT|NHF_DEFAULT)) == 0)) {
-		struct in_ifaddr *nh_ia = (struct in_ifaddr *)ifaof_ifpforaddr((struct sockaddr *)&s, nh.nh_ifp);
-		u_long src = ntohl(ip->ip_src.s_addr);
-		
-		if (nh_ia != NULL && (src & nh_ia->ia_subnetmask) == nh_ia->ia_subnet) {
-			if (nh.nh_flags & NHF_GATEWAY)
-				*addr = nh.nh_addr.s_addr;
-			else
-				*addr = ip->ip_dst.s_addr;
-		}
-	}
-
 
 	return (mcopy);
 }
 
 
 static int
-ip_findroute(struct nhop4_basic *pnh, struct in_addr dest, struct mbuf *m)
+ip_findroute(struct nhop_object **pnh, struct in_addr dest, struct mbuf *m)
 {
+	struct nhop_object *nh;
 
-	bzero(pnh, sizeof(*pnh));
-	if (fib4_lookup_nh_basic(M_GETFIB(m), dest, 0, 0, pnh) != 0) {
+	nh = fib4_lookup(M_GETFIB(m), dest, 0, NHR_NONE,
+	    m->m_pkthdr.flowid);
+	if (nh == NULL) {
 		IPSTAT_INC(ips_noroute);
 		IPSTAT_INC(ips_cantforward);
 		icmp_error(m, ICMP_UNREACH, ICMP_UNREACH_HOST, 0, 0);
@@ -179,17 +203,19 @@ ip_findroute(struct nhop4_basic *pnh, struct in_addr dest, struct mbuf *m)
 	/*
 	 * Drop blackholed traffic and directed broadcasts.
 	 */
-	if ((pnh->nh_flags & (NHF_BLACKHOLE | NHF_BROADCAST)) != 0) {
+	if ((nh->nh_flags & (NHF_BLACKHOLE | NHF_BROADCAST)) != 0) {
 		IPSTAT_INC(ips_cantforward);
 		m_freem(m);
 		return (EHOSTUNREACH);
 	}
 
-	if (pnh->nh_flags & NHF_REJECT) {
+	if (nh->nh_flags & NHF_REJECT) {
 		IPSTAT_INC(ips_cantforward);
 		icmp_error(m, ICMP_UNREACH, ICMP_UNREACH_HOST, 0, 0);
 		return (EHOSTUNREACH);
 	}
+
+	*pnh = nh;
 
 	return (0);
 }
@@ -206,9 +232,11 @@ ip_tryforward(struct mbuf *m)
 {
 	struct ip *ip;
 	struct mbuf *m0 = NULL;
-	struct nhop4_basic nh;
-	struct sockaddr_in dst;
-	struct in_addr dest, odest, rtdest;
+	struct nhop_object *nh = NULL;
+	struct route ro;
+	struct sockaddr_in *dst;
+	const struct sockaddr *gw;
+	struct in_addr dest, odest, rtdest, osrc;
 	uint16_t ip_len, ip_off;
 	int error = 0;
 	struct m_tag *fwd_tag = NULL;
@@ -280,16 +308,16 @@ ip_tryforward(struct mbuf *m)
 	 */
 
 	odest.s_addr = dest.s_addr = ip->ip_dst.s_addr;
+	osrc.s_addr = ip->ip_src.s_addr;
 
 	/*
 	 * Run through list of ipfilter hooks for input packets
 	 */
-	if (!PFIL_HOOKED(&V_inet_pfil_hook))
+	if (!PFIL_HOOKED_IN(V_inet_pfil_head))
 		goto passin;
 
-	if (pfil_run_hooks(
-	    &V_inet_pfil_hook, &m, m->m_pkthdr.rcvif, PFIL_IN, 0, NULL) ||
-	    m == NULL)
+	if (pfil_run_hooks(V_inet_pfil_head, &m, m->m_pkthdr.rcvif, PFIL_IN,
+	    NULL) != PFIL_PASS)
 		goto drop;
 
 	M_ASSERTVALID(m);
@@ -377,13 +405,12 @@ passin:
 	/*
 	 * Step 5: outgoing firewall packet processing
 	 */
-	if (!PFIL_HOOKED(&V_inet_pfil_hook))
+	if (!PFIL_HOOKED_OUT(V_inet_pfil_head))
 		goto passout;
 
-	if (pfil_run_hooks(&V_inet_pfil_hook, &m, nh.nh_ifp, PFIL_OUT, PFIL_FWD,
-	    NULL) || m == NULL) {
+	if (pfil_run_hooks(V_inet_pfil_head, &m, nh->nh_ifp,
+	    PFIL_OUT | PFIL_FWD, NULL) != PFIL_PASS)
 		goto drop;
-	}
 
 	M_ASSERTVALID(m);
 	M_ASSERTPKTHDR(m);
@@ -431,22 +458,27 @@ passout:
 	ip_len = ntohs(ip->ip_len);
 	ip_off = ntohs(ip->ip_off);
 
-	bzero(&dst, sizeof(dst));
-	dst.sin_family = AF_INET;
-	dst.sin_len = sizeof(dst);
-	dst.sin_addr = nh.nh_addr;
+	bzero(&ro, sizeof(ro));
+	dst = (struct sockaddr_in *)&ro.ro_dst;
+	dst->sin_family = AF_INET;
+	dst->sin_len = sizeof(*dst);
+	dst->sin_addr = dest;
+	if (nh->nh_flags & NHF_GATEWAY) {
+		gw = &nh->gw_sa;
+		ro.ro_flags |= RT_HAS_GW;
+	} else
+		gw = (const struct sockaddr *)dst;
 
-	/*
-	 * Handle redirect case.
-	 */
+	/* Handle redirect case. */
 	redest.s_addr = 0;
-	if (V_ipsendredirects && (nh.nh_ifp == m->m_pkthdr.rcvif))
-		mcopy = ip_redir_alloc(m, ip, dest, &redest.s_addr);
+	if (V_ipsendredirects && osrc.s_addr == ip->ip_src.s_addr &&
+	    nh->nh_ifp == m->m_pkthdr.rcvif)
+		mcopy = ip_redir_alloc(m, nh, ip_len, &osrc, &redest);
 
 	/*
 	 * Check if packet fits MTU or if hardware will fragment for us
 	 */
-	if (ip_len <= nh.nh_mtu) {
+	if (ip_len <= nh->nh_mtu) {
 		/*
 		 * Avoid confusing lower layers.
 		 */
@@ -454,9 +486,8 @@ passout:
 		/*
 		 * Send off the packet via outgoing interface
 		 */
-		IP_PROBE(send, NULL, NULL, ip, nh.nh_ifp, ip, NULL);
-		error = (*nh.nh_ifp->if_output)(nh.nh_ifp, m,
-		    (struct sockaddr *)&dst, NULL);
+		IP_PROBE(send, NULL, NULL, ip, nh->nh_ifp, ip, NULL);
+		error = (*nh->nh_ifp->if_output)(nh->nh_ifp, m, gw, &ro);
 	} else {
 		/*
 		 * Handle EMSGSIZE with icmp reply needfrag for TCP MTU discovery
@@ -464,15 +495,15 @@ passout:
 		if (ip_off & IP_DF) {
 			IPSTAT_INC(ips_cantfrag);
 			icmp_error(m, ICMP_UNREACH, ICMP_UNREACH_NEEDFRAG,
-				0, nh.nh_mtu);
+				0, nh->nh_mtu);
 			goto consumed;
 		} else {
 			/*
 			 * We have to fragment the packet
 			 */
 			m->m_pkthdr.csum_flags |= CSUM_IP;
-			if (ip_fragment(ip, &m, nh.nh_mtu,
-			    nh.nh_ifp->if_hwassist) != 0)
+			if (ip_fragment(ip, &m, nh->nh_mtu,
+			    nh->nh_ifp->if_hwassist) != 0)
 				goto drop;
 			KASSERT(m != NULL, ("null mbuf and no error"));
 			/*
@@ -488,11 +519,10 @@ passout:
 				m_clrprotoflags(m);
 
 				IP_PROBE(send, NULL, NULL,
-				    mtod(m, struct ip *), nh.nh_ifp,
+				    mtod(m, struct ip *), nh->nh_ifp,
 				    mtod(m, struct ip *), NULL);
-				/* XXX: we can use cached route here */
-				error = (*nh.nh_ifp->if_output)(nh.nh_ifp, m,
-				    (struct sockaddr *)&dst, NULL);
+				error = (*nh->nh_ifp->if_output)(nh->nh_ifp, m,
+				    gw, &ro);
 				if (error)
 					break;
 			} while ((m = m0) != NULL);
@@ -517,7 +547,7 @@ passout:
 	/* Send required redirect */
 	if (mcopy != NULL) {
 		icmp_error(mcopy, ICMP_REDIRECT, ICMP_REDIRECT_HOST, redest.s_addr, 0);
-		mcopy = NULL; /* Freed by caller */
+		mcopy = NULL; /* Was consumed by callee. */
 	}
 
 consumed:

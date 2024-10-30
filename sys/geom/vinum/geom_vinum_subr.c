@@ -42,13 +42,13 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/malloc.h>
 #include <sys/sbuf.h>
 #include <sys/systm.h>
 
 #include <geom/geom.h>
+#include <geom/geom_dbg.h>
 #include <geom/vinum/geom_vinum_var.h>
 #include <geom/vinum/geom_vinum.h>
 #include <geom/vinum/geom_vinum_share.h>
@@ -646,7 +646,6 @@ gv_sd_to_drive(struct gv_sd *s, struct gv_drive *d)
 
 	/* No drive offset given, try to calculate it. */
 	if (s->drive_offset == -1) {
-
 		/* Add offsets and sizes from other subdisks on this drive. */
 		LIST_FOREACH(s2, &d->subdisks, from_drive) {
 			s->drive_offset = s2->drive_offset + s2->size;
@@ -782,7 +781,6 @@ gv_free_sd(struct gv_sd *s)
 
 	/* If there is no free slot behind this subdisk, so create one. */
 	if (fl == NULL) {
-
 		fl = g_malloc(sizeof(*fl), M_WAITOK | M_ZERO);
 		fl->size = s->size;
 		fl->offset = s->drive_offset;
@@ -833,7 +831,6 @@ gv_adjust_freespace(struct gv_sd *s, off_t remainder)
 
 	/* If there is no free slot behind this subdisk, so create one. */
 	if (fl == NULL) {
-
 		fl = g_malloc(sizeof(*fl), M_WAITOK | M_ZERO);
 		fl->size = remainder;
 		fl->offset = s->drive_offset + s->size - remainder;

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bio.h>
 #include <sys/gsb_crc32.h>
@@ -43,6 +42,7 @@
 #include <sys/clock.h>
 #include <sys/disk.h>
 #include <geom/geom.h>
+#include <geom/geom_dbg.h>
 #include "geom/raid/g_raid.h"
 #include "geom/raid/md_ddf.h"
 #include "g_raid_md_if.h"
@@ -1044,8 +1044,11 @@ ddf_meta_read(struct g_consumer *cp, struct ddf_meta *meta)
 	uint32_t val;
 
 	ddf_meta_free(meta);
+
 	pp = cp->provider;
 	ss = meta->sectorsize = pp->sectorsize;
+	if (ss < sizeof(*hdr))
+		return (ENXIO);
 	/* Read anchor block. */
 	abuf = g_read_data(cp, pp->mediasize - ss, ss, &error);
 	if (abuf == NULL) {
@@ -1158,12 +1161,12 @@ hdrerror:
 		    (GET16(meta, hdr->Configuration_Record_Length) * ss - 512) / 12));
 	}
 
-	if (GET32(meta, hdr->cd_length) * ss >= MAXPHYS ||
-	    GET32(meta, hdr->pdr_length) * ss >= MAXPHYS ||
-	    GET32(meta, hdr->vdr_length) * ss >= MAXPHYS ||
-	    GET32(meta, hdr->cr_length) * ss >= MAXPHYS ||
-	    GET32(meta, hdr->pdd_length) * ss >= MAXPHYS ||
-	    GET32(meta, hdr->bbmlog_length) * ss >= MAXPHYS) {
+	if (GET32(meta, hdr->cd_length) * ss >= maxphys ||
+	    GET32(meta, hdr->pdr_length) * ss >= maxphys ||
+	    GET32(meta, hdr->vdr_length) * ss >= maxphys ||
+	    GET32(meta, hdr->cr_length) * ss >= maxphys ||
+	    GET32(meta, hdr->pdd_length) * ss >= maxphys ||
+	    GET32(meta, hdr->bbmlog_length) * ss >= maxphys) {
 		G_RAID_DEBUG(1, "%s: Blocksize is too big.", pp->name);
 		goto hdrerror;
 	}
@@ -2268,7 +2271,6 @@ g_raid_md_ctl_ddf(struct g_raid_md_object *md,
 	error = 0;
 
 	if (strcmp(verb, "label") == 0) {
-
 		if (*nargs < 4) {
 			gctl_error(req, "Invalid number of arguments.");
 			return (-1);
@@ -2509,13 +2511,11 @@ g_raid_md_ctl_ddf(struct g_raid_md_object *md,
 		return (0);
 	}
 	if (strcmp(verb, "add") == 0) {
-
 		gctl_error(req, "`add` command is not applicable, "
 		    "use `label` instead.");
 		return (-99);
 	}
 	if (strcmp(verb, "delete") == 0) {
-
 		nodename = gctl_get_asciiparam(req, "arg0");
 		if (nodename != NULL && strcasecmp(sc->sc_name, nodename) != 0)
 			nodename = NULL;
@@ -2616,7 +2616,7 @@ g_raid_md_ctl_ddf(struct g_raid_md_object *md,
 				error = -2;
 				break;
 			}
-			if (strncmp(diskname, "/dev/", 5) == 0)
+			if (strncmp(diskname, _PATH_DEV, 5) == 0)
 				diskname += 5;
 
 			TAILQ_FOREACH(disk, &sc->sc_disks, d_next) {

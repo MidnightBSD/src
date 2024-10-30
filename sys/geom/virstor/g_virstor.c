@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2006-2007 Ivan Voras <ivoras@freebsd.org>
  * All rights reserved.
@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
@@ -50,6 +49,7 @@
 #include <sys/mutex.h>
 #include <vm/uma.h>
 #include <geom/geom.h>
+#include <geom/geom_dbg.h>
 
 #include <geom/virstor/g_virstor.h>
 #include <geom/virstor/g_virstor_md.h>
@@ -81,7 +81,8 @@ struct g_class g_virstor_class = {
 
 /* Declare sysctl's and loader tunables */
 SYSCTL_DECL(_kern_geom);
-static SYSCTL_NODE(_kern_geom, OID_AUTO, virstor, CTLFLAG_RW, 0,
+static SYSCTL_NODE(_kern_geom, OID_AUTO, virstor,
+    CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
     "GEOM_GVIRSTOR information");
 
 static u_int g_virstor_debug = 2; /* XXX: lower to 2 when released to public */
@@ -145,8 +146,8 @@ g_virstor_init(struct g_class *mp __unused)
 {
 
 	/* Catch map struct size mismatch at compile time; Map entries must
-	 * fit into MAXPHYS exactly, with no wasted space. */
-	CTASSERT(VIRSTOR_MAP_BLOCK_ENTRIES*VIRSTOR_MAP_ENTRY_SIZE == MAXPHYS);
+	 * fit into maxphys exactly, with no wasted space. */
+	MPASS(VIRSTOR_MAP_BLOCK_ENTRIES * VIRSTOR_MAP_ENTRY_SIZE == maxphys);
 
 	/* Init UMA zones, TAILQ's, other global vars */
 }
@@ -224,7 +225,7 @@ virstor_ctl_stop(struct gctl_req *req, struct g_class *cp)
 		struct g_virstor_softc *sc;
 		int error;
 
-		sprintf(param, "arg%d", i);
+		snprintf(param, sizeof(param), "arg%d", i);
 		name = gctl_get_asciiparam(req, param);
 		if (name == NULL) {
 			gctl_error(req, "No 'arg%d' argument", i);
@@ -310,32 +311,19 @@ virstor_ctl_add(struct gctl_req *req, struct g_class *cp)
 	for (i = 1; i < *nargs; i++) {
 		struct g_virstor_metadata md;
 		char aname[8];
-		const char *prov_name;
 		struct g_provider *pp;
 		struct g_consumer *cp;
 		u_int nc;
 		u_int j;
 
 		snprintf(aname, sizeof aname, "arg%d", i);
-		prov_name = gctl_get_asciiparam(req, aname);
-		if (prov_name == NULL) {
-			gctl_error(req, "Error fetching argument '%s'", aname);
-			g_topology_unlock();
-			return;
-		}
-		if (strncmp(prov_name, _PATH_DEV, sizeof(_PATH_DEV) - 1) == 0)
-			prov_name += sizeof(_PATH_DEV) - 1;
-
-		pp = g_provider_by_name(prov_name);
+		pp = gctl_get_provider(req, aname);
 		if (pp == NULL) {
 			/* This is the most common error so be verbose about it */
 			if (added != 0) {
-				gctl_error(req, "Invalid provider: '%s' (added"
-				    " %u components)", prov_name, added);
+				gctl_error(req, "Invalid provider. (added"
+				    " %u components)", added);
 				update_metadata(sc);
-			} else {
-				gctl_error(req, "Invalid provider: '%s'",
-				    prov_name);
 			}
 			g_topology_unlock();
 			return;
@@ -407,7 +395,6 @@ virstor_ctl_add(struct gctl_req *req, struct g_class *cp)
 		 * incremented */
 		sc->n_components++;
 		added++;
-
 	}
 	/* This call to update_metadata() is critical. In case there's a
 	 * power failure in the middle of it and some components are updated
@@ -575,7 +562,7 @@ virstor_ctl_remove(struct gctl_req *req, struct g_class *cp)
 		int j, found;
 		struct g_virstor_component *newcomp, *compbak;
 
-		sprintf(param, "arg%d", i);
+		snprintf(param, sizeof(param), "arg%d", i);
 		prov_name = gctl_get_asciiparam(req, param);
 		if (prov_name == NULL) {
 			gctl_error(req, "Error fetching argument '%s'", param);
@@ -693,7 +680,7 @@ g_virstor_destroy_geom(struct gctl_req *req __unused, struct g_class *mp,
 
 	sc = gp->softc;
 	KASSERT(sc != NULL, ("%s: NULL sc", __func__));
-	
+
 	exitval = 0;
 	LOG_MSG(LVL_DEBUG, "%s called for %s, sc=%p", __func__, gp->name,
 	    gp->softc);
@@ -791,9 +778,12 @@ g_virstor_taste(struct g_class *mp, struct g_provider *pp, int flags)
 	gp->orphan = (void *)invalid_call;	/* I really want these to fail. */
 
 	cp = g_new_consumer(gp);
-	g_attach(cp, pp);
-	error = read_metadata(cp, &md);
-	g_detach(cp);
+	cp->flags |= G_CF_DIRECT_SEND | G_CF_DIRECT_RECEIVE;
+	error = g_attach(cp, pp);
+	if (error == 0) {
+		error = read_metadata(cp, &md);
+		g_detach(cp);
+	}
 	g_destroy_consumer(cp);
 	g_destroy_geom(gp);
 
@@ -1254,7 +1244,7 @@ virstor_check_and_run(struct g_virstor_softc *sc)
 		struct g_virstor_map_entry *mapbuf;
 		size_t bs;
 
-		bs = MIN(MAXPHYS, sc->map_size - count);
+		bs = MIN(maxphys, sc->map_size - count);
 		if (bs % sc->sectorsize != 0) {
 			/* Check for alignment errors */
 			bs = rounddown(bs, sc->sectorsize);

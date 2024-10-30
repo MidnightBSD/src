@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
@@ -59,11 +58,7 @@ VNET_DEFINE(int, ip6_use_defzone) = 1;
 #else
 VNET_DEFINE(int, ip6_use_defzone) = 0;
 #endif
-VNET_DEFINE(int, deembed_scopeid) = 1;
 SYSCTL_DECL(_net_inet6_ip6);
-SYSCTL_INT(_net_inet6_ip6, OID_AUTO, deembed_scopeid, CTLFLAG_VNET | CTLFLAG_RW,
-    &VNET_NAME(deembed_scopeid), 0,
-    "Extract embedded zone ID and set it to sin6_scope_id in sockaddr_in6.");
 
 /*
  * The scope6_lock protects the global sid default stored in
@@ -208,19 +203,20 @@ scope6_set(struct ifnet *ifp, struct scope6_id *idlist)
 static int
 scope6_get(struct ifnet *ifp, struct scope6_id *idlist)
 {
+	struct epoch_tracker et;
 	struct scope6_id *sid;
 
 	/* We only need to lock the interface's afdata for SID() to work. */
-	IF_AFDATA_RLOCK(ifp);
+	NET_EPOCH_ENTER(et);
 	sid = SID(ifp);
 	if (sid == NULL) {	/* paranoid? */
-		IF_AFDATA_RUNLOCK(ifp);
+		NET_EPOCH_EXIT(et);
 		return (EINVAL);
 	}
 
 	*idlist = *sid;
 
-	IF_AFDATA_RUNLOCK(ifp);
+	NET_EPOCH_EXIT(et);
 	return (0);
 }
 
@@ -417,14 +413,16 @@ in6_setscope(struct in6_addr *in6, struct ifnet *ifp, u_int32_t *ret_id)
 			zoneid = ifp->if_index;
 			in6->s6_addr16[1] = htons(zoneid & 0xffff); /* XXX */
 		} else if (scope != IPV6_ADDR_SCOPE_GLOBAL) {
-			IF_AFDATA_RLOCK(ifp);
+			struct epoch_tracker et;
+
+			NET_EPOCH_ENTER(et);
 			if (ifp->if_afdata[AF_INET6] == NULL) {
-				IF_AFDATA_RUNLOCK(ifp);
+				NET_EPOCH_EXIT(et);
 				return (ENETDOWN);
 			}
 			sid = SID(ifp);
 			zoneid = sid->s6id_list[scope];
-			IF_AFDATA_RUNLOCK(ifp);
+			NET_EPOCH_EXIT(et);
 		}
 	}
 
@@ -466,6 +464,28 @@ in6_getscope(const struct in6_addr *in6)
 }
 
 /*
+ * Returns scope zone id for the unicast address @in6.
+ *
+ * Returns 0 for global unicast and loopback addresses.
+ * Returns interface index for the link-local addresses.
+ */
+uint32_t
+in6_get_unicast_scopeid(const struct in6_addr *in6, const struct ifnet *ifp)
+{
+
+	if (IN6_IS_SCOPE_LINKLOCAL(in6))
+		return (ifp->if_index);
+	return (0);
+}
+
+void
+in6_set_unicast_scopeid(struct in6_addr *in6, uint32_t scopeid)
+{
+
+	in6->s6_addr16[1] = htons(scopeid & 0xffff);
+}
+
+/*
  * Return pointer to ifnet structure, corresponding to the zone id of
  * link-local scope.
  */
@@ -492,7 +512,7 @@ in6_getscopezone(const struct ifnet *ifp, int scope)
 }
 
 /*
- * Extracts scope from adddress @dst, stores cleared address
+ * Extracts scope from address @dst, stores cleared address
  * inside @dst and zone inside @scopeid
  */
 void
@@ -573,5 +593,3 @@ sa6_checkzone_ifp(struct ifnet *ifp, struct sockaddr_in6 *sa6)
 	}
 	return (sa6_checkzone(sa6));
 }
-
-

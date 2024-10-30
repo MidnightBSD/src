@@ -6,7 +6,7 @@
  *	The Regents of the University of California.  All rights reserved.
  *
  * Copyright (c) 2011 The FreeBSD Foundation
- * All rights reserved.
+ *
  * Portions of this software were developed by David Chisnall
  * under sponsorship from the FreeBSD Foundation.
  *
@@ -44,7 +44,6 @@
 static char sccsid[] = "@(#)regcomp.c	8.5 (Berkeley) 3/20/94";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <stdio.h>
 #include <string.h>
@@ -367,8 +366,24 @@ regcomp(regex_t * __restrict preg,
 	int cflags)
 {
 
+	return (regcomp_internal(preg, pattern, cflags, 0));
+}
+
+#ifndef LIBREGEX
+/*
+ * Legacy interface that requires more lax escaping behavior.
+ */
+int
+freebsd12_regcomp(regex_t * __restrict preg,
+	const char * __restrict pattern,
+	int cflags, int pflags)
+{
+
 	return (regcomp_internal(preg, pattern, cflags, PFLAG_LEGACY_ESC));
 }
+
+__sym_compat(regcomp, freebsd12_regcomp, FBSD_1.0);
+#endif	/* !LIBREGEX */
 
 /*
  - p_ere_exp - parse one subERE, an atom possibly followed by a repetition op,
@@ -1577,17 +1592,32 @@ singleton(cset *cs)
 {
 	wint_t i, s, n;
 
+	/* Exclude the complicated cases we don't want to deal with */
+	if (cs->nranges != 0 || cs->ntypes != 0 || cs->icase != 0)
+		return (OUT);
+
+	if (cs->nwides > 1)
+		return (OUT);
+
+	/* Count the number of characters present in the bitmap */
 	for (i = n = 0; i < NC; i++)
 		if (CHIN(cs, i)) {
 			n++;
 			s = i;
 		}
-	if (n == 1)
-		return (s);
-	if (cs->nwides == 1 && cs->nranges == 0 && cs->ntypes == 0 &&
-	    cs->icase == 0)
+
+	if (n > 1)
+		return (OUT);
+
+	if (n == 1) {
+		if (cs->nwides == 0)
+			return (s);
+		else
+			return (OUT);
+	}
+	if (cs->nwides == 1)
 		return (cs->wides[0]);
-	/* Don't bother handling the other cases. */
+
 	return (OUT);
 }
 
@@ -2078,7 +2108,7 @@ computejumps(struct parse *p, struct re_guts *g)
 	if (p->error != 0)
 		return;
 
-	g->charjump = (int*) malloc((NC + 1) * sizeof(int));
+	g->charjump = (int *)malloc((NC_MAX + 1) * sizeof(int));
 	if (g->charjump == NULL)	/* Not a fatal error */
 		return;
 	/* Adjust for signed chars, if necessary */

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2007-2009 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -23,7 +23,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 #ifndef _NET80211_IEEE80211_INPUT_H_
 #define _NET80211_IEEE80211_INPUT_H_
@@ -177,7 +176,7 @@ ieee80211_check_rxseq_amsdu_more(const struct ieee80211_rx_stats *rxs)
  *
  * The routine only eliminates packets whose sequence/fragment
  * match or are less than the last seen sequence/fragment number
- * AND are retransmits It doesn't try to eliminate out of order packets.
+ * AND are retransmits. It doesn't try to eliminate out of order packets.
  *
  * Since all frames after sequence number 4095 will be less than 4095
  * (as the seqnum wraps), handle that special case so packets aren't

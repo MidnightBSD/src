@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2018 Conrad Meyer <cem@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/errno.h>
 #include <sys/limits.h>
@@ -37,10 +36,10 @@
 #include <sys/systm.h>
 #include <sys/uio.h>
 
-#define GRND_VALIDFLAGS	(GRND_NONBLOCK | GRND_RANDOM)
+#define GRND_VALIDFLAGS	(GRND_NONBLOCK | GRND_RANDOM | GRND_INSECURE)
 
 /*
- * random_read_uio(9) returns EWOULDBLOCK if a nonblocking request would block,
+ * read_random_uio(9) returns EWOULDBLOCK if a nonblocking request would block,
  * but the Linux API name is EAGAIN.  On FreeBSD, they have the same numeric
  * value for now.
  */
@@ -58,6 +57,40 @@ kern_getrandom(struct thread *td, void *user_buf, size_t buflen,
 		return (EINVAL);
 	if (buflen > IOSIZE_MAX)
 		return (EINVAL);
+
+	/*
+	 * Linux compatibility: We have two choices for handling Linux's
+	 * GRND_INSECURE.
+	 *
+	 * 1. We could ignore it completely (like GRND_RANDOM).  However, this
+	 * might produce the surprising result of GRND_INSECURE requests
+	 * blocking, when the Linux API does not block.
+	 *
+	 * 2. Alternatively, we could treat GRND_INSECURE requests as requests
+	 * for GRND_NONBLOCK.  Here, the surprising result for Linux programs
+	 * is that invocations with unseeded random(4) will produce EAGAIN,
+	 * rather than garbage.
+	 *
+	 * Honoring the flag in the way Linux does seems fraught.  If we
+	 * actually use the output of a random(4) implementation prior to
+	 * seeding, we leak some entropy about the initial seed to attackers.
+	 * This seems unacceptable -- it defeats the purpose of blocking on
+	 * initial seeding.
+	 *
+	 * Secondary to that concern, before seeding we may have arbitrarily
+	 * little entropy collected; producing output from zero or a handful of
+	 * entropy bits does not seem particularly useful to userspace.
+	 *
+	 * If userspace can accept garbage, insecure non-random bytes, they can
+	 * create their own insecure garbage with srandom(time(NULL)) or
+	 * similar.  Asking the kernel to produce it from the secure
+	 * getrandom(2) API seems inane.
+	 *
+	 * We elect to emulate GRND_INSECURE as an alternative spelling of
+	 * GRND_NONBLOCK (2).
+	 */
+	if ((flags & GRND_INSECURE) != 0)
+		flags |= GRND_NONBLOCK;
 
 	if (buflen == 0) {
 		td->td_retval[0] = 0;

@@ -28,7 +28,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _MACHINE_ASMACROS_H_
@@ -156,6 +155,7 @@
 	movw	%es,(%esp)
 	pushl	$0
 	movw	%fs,(%esp)
+	movl	%esp,%ebp
 	.endm
 
 	.macro	PUSH_FRAME
@@ -163,7 +163,7 @@
 	pushl	$0		/* dummy trap type */
 	PUSH_FRAME2
 	.endm
-	
+
 /*
  * Access per-CPU data.
  */

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bio.h>
 #include <sys/endian.h>
@@ -356,6 +355,7 @@ g_raid_tr_iostart_raid5(struct g_raid_tr_object *tr, struct bio *bp)
 	case BIO_WRITE:
 	case BIO_DELETE:
 	case BIO_FLUSH:
+	case BIO_SPEEDUP:
 		g_raid_iodone(bp, ENODEV);
 		break;
 	default:
@@ -383,8 +383,8 @@ g_raid_tr_iodone_raid5(struct g_raid_tr_object *tr,
 }
 
 static int
-g_raid_tr_kerneldump_raid5(struct g_raid_tr_object *tr,
-    void *virtual, vm_offset_t physical, off_t offset, size_t length)
+g_raid_tr_kerneldump_raid5(struct g_raid_tr_object *tr, void *virtual,
+    off_t offset, size_t length)
 {
 
 	return (ENODEV);

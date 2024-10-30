@@ -32,8 +32,6 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 #ifndef _NETINET_SCTP_OS_H_
 #define _NETINET_SCTP_OS_H_
 
@@ -62,9 +60,6 @@
  */
 
 #include <netinet/sctp_os_bsd.h>
-
-
-
 
 /* All os's must implement this address gatherer. If
  * no VRF's exist, then vrf 0 is the only one and all

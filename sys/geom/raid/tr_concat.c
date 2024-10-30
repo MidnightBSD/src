@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bio.h>
 #include <sys/endian.h>
@@ -38,6 +37,7 @@
 #include <sys/mutex.h>
 #include <sys/systm.h>
 #include <geom/geom.h>
+#include <geom/geom_dbg.h>
 #include "geom/raid/g_raid.h"
 #include "g_raid_tr_if.h"
 
@@ -121,7 +121,6 @@ g_raid_tr_update_state_concat(struct g_raid_volume *vol)
 			s = G_RAID_VOLUME_S_BROKEN;
 	}
 	if (s != vol->v_state) {
-
 		/*
 		 * Some metadata modules may not know CONCAT volume
 		 * mediasize until all disks connected. Recalculate.
@@ -222,7 +221,7 @@ g_raid_tr_iostart_concat(struct g_raid_tr_object *tr, struct bio *bp)
 		g_raid_iodone(bp, EIO);
 		return;
 	}
-	if (bp->bio_cmd == BIO_FLUSH) {
+	if (bp->bio_cmd == BIO_FLUSH || bp->bio_cmd == BIO_SPEEDUP) {
 		g_raid_tr_flush_common(tr, bp);
 		return;
 	}
@@ -285,8 +284,8 @@ failure:
 }
 
 static int
-g_raid_tr_kerneldump_concat(struct g_raid_tr_object *tr,
-    void *virtual, vm_offset_t physical, off_t boffset, size_t blength)
+g_raid_tr_kerneldump_concat(struct g_raid_tr_object *tr, void *virtual,
+    off_t boffset, size_t blength)
 {
 	struct g_raid_volume *vol;
 	struct g_raid_subdisk *sd;
@@ -313,7 +312,7 @@ g_raid_tr_kerneldump_concat(struct g_raid_tr_object *tr,
 		sd = &vol->v_subdisks[no];
 		length = MIN(sd->sd_size - offset, remain);
 		error = g_raid_subdisk_kerneldump(&vol->v_subdisks[no],
-		    addr, 0, offset, length);
+		    addr, offset, length);
 		if (error != 0)
 			return (error);
 		remain -= length;

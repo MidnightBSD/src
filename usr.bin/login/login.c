@@ -47,7 +47,6 @@ static char sccsid[] = "@(#)login.c	8.4 (Berkeley) 4/2/94";
 #endif
 
 #include <sys/cdefs.h>
-
 /*
  * login [ name ]
  * login -h hostname	(for telnetd, etc.)
@@ -117,6 +116,8 @@ static u_int		timeout = 300;
 /* Buffer for signal handling of timeout */
 static jmp_buf		 timeout_buf;
 
+char			 pwbuf[1024];
+struct passwd		 pwres;
 struct passwd		*pwd;
 static int		 failures;
 
@@ -198,7 +199,7 @@ main(int argc, char *argv[])
 	(void)alarm(timeout);
 	(void)setpriority(PRIO_PROCESS, 0, 0);
 
-	openlog("login", 0, LOG_AUTH);
+	openlog("login", LOG_CONS, LOG_AUTH);
 
 	uid = getuid();
 	euid = geteuid();
@@ -322,7 +323,7 @@ main(int argc, char *argv[])
 			bail(NO_SLEEP_EXIT, 1);
 		}
 
-		pwd = getpwnam(username);
+		(void)getpwnam_r(username, &pwres, pwbuf, sizeof(pwbuf), &pwd);
 		if (pwd != NULL && pwd->pw_uid == 0)
 			rootlogin = 1;
 
@@ -345,7 +346,7 @@ main(int argc, char *argv[])
 			(void)setpriority(PRIO_PROCESS, 0, 0);
 		}
 
-		if (pwd && rval == 0)
+		if (pwd != NULL && rval == 0)
 			break;
 
 		pam_cleanup();
@@ -709,8 +710,10 @@ auth_pam(void)
 		pam_err = pam_get_item(pamh, PAM_USER, &item);
 		if (pam_err == PAM_SUCCESS) {
 			tmpl_user = (const char *)item;
-			if (strcmp(username, tmpl_user) != 0)
-				pwd = getpwnam(tmpl_user);
+			if (strcmp(username, tmpl_user) != 0) {
+				(void)getpwnam_r(tmpl_user, &pwres, pwbuf,
+				    sizeof(pwbuf), &pwd);
+			}
 		} else {
 			pam_syslog("pam_get_item(PAM_USER)");
 		}
@@ -792,6 +795,7 @@ export(const char *s)
 	char *p;
 	const char **pp;
 	size_t n;
+	int rv;
 
 	if (strlen(s) > 1024 || (p = strchr(s, '=')) == NULL)
 		return (0);
@@ -803,8 +807,10 @@ export(const char *s)
 			return (0);
 	}
 	*p = '\0';
-	(void)setenv(s, p + 1, 1);
+	rv = setenv(s, p + 1, 1);
 	*p = '=';
+	if (rv == -1)
+		return (0);
 	return (1);
 }
 

@@ -34,6 +34,12 @@
 #ifndef _NETINET_TCP_TIMER_H_
 #define _NETINET_TCP_TIMER_H_
 
+#define	TCPT_REXMT	0		/* retransmit */
+#define	TCPT_PERSIST	1		/* retransmit persistance */
+#define	TCPT_KEEP	2		/* keep alive */
+#define	TCPT_2MSL	3		/* 2*msl quiet time timer */
+#define	TCPT_DELACK	4		/* delay ack */
+
 /*
  * The TCPT_REXMT timer is used to force retransmissions.
  * The TCP has the TCPT_REXMT timer set whenever segments
@@ -165,7 +171,7 @@ struct tcp_timer {
 #define TT_2MSL		0x0010
 #define TT_MASK		(TT_DELACK|TT_REXMT|TT_PERSIST|TT_KEEP|TT_2MSL)
 
-/* 
+/*
  * Suspend flags - used when suspending a timer
  * from ever running again.
  */
@@ -194,7 +200,6 @@ extern int tcp_maxpersistidle;
 extern int tcp_rexmit_initial;
 extern int tcp_rexmit_min;
 extern int tcp_rexmit_slop;
-extern int tcp_msl;
 extern int tcp_ttl;			/* time to live for TCP segs */
 extern int tcp_backoff[];
 extern int tcp_totbackoff;
@@ -211,6 +216,8 @@ VNET_DECLARE(int, tcp_pmtud_blackhole_mss);
 #define	V_tcp_pmtud_blackhole_mss	VNET(tcp_pmtud_blackhole_mss)
 VNET_DECLARE(int, tcp_v6pmtud_blackhole_mss);
 #define V_tcp_v6pmtud_blackhole_mss	VNET(tcp_v6pmtud_blackhole_mss)
+VNET_DECLARE(int, tcp_msl);
+#define V_tcp_msl			VNET(tcp_msl)
 
 void tcp_inpinfo_lock_del(struct inpcb *inp, struct tcpcb *tp);
 

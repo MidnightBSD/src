@@ -40,7 +40,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * Print multicast routing structures and statistics.
  *

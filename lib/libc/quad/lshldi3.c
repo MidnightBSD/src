@@ -37,7 +37,6 @@
 static char sccsid[] = "@(#)lshldi3.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-
 #include "quad.h"
 
 /*
@@ -45,9 +44,7 @@ static char sccsid[] = "@(#)lshldi3.c	8.1 (Berkeley) 6/4/93";
  * This is the same as arithmetic shift left!
  */
 quad_t
-__lshldi3(a, shift)
-	quad_t a;
-	qshift_t shift;
+__lshldi3(quad_t a, qshift_t shift)
 {
 	union uu aa;
 

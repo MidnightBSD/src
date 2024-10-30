@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright © 2002, Jörg Wunsch
  *
@@ -33,8 +33,6 @@
  */
 
 #include <sys/types.h>
-
-
 #include <sys/stat.h>
 #include <sys/sysctl.h>
 
@@ -260,6 +258,7 @@ defaults(void)
 	DIR *dir;
 	struct stat sb;
 	struct dirent *dirp;
+	const int oid[2] = {CTL_USER, USER_CS_PATH};
 
 	/* default to -bms if none has been specified */
 	if (!opt_b && !opt_m && !opt_s)
@@ -268,13 +267,12 @@ defaults(void)
 	/* -b defaults to default path + /usr/libexec +
 	 * user's path */
 	if (!bindirs) {
-		if (sysctlbyname("user.cs_path", (void *)NULL, &s,
-				 (void *)NULL, 0) == -1)
-			err(EX_OSERR, "sysctlbyname(\"user.cs_path\")");
+		if (sysctl(oid, 2, NULL, &s, NULL, 0) == -1)
+			err(EX_OSERR, "sysctl(\"user.cs_path\")");
 		if ((b = malloc(s + 1)) == NULL)
 			abort();
-		if (sysctlbyname("user.cs_path", b, &s, (void *)NULL, 0) == -1)
-			err(EX_OSERR, "sysctlbyname(\"user.cs_path\")");
+		if (sysctl(oid, 2, b, &s, NULL, 0) == -1)
+			err(EX_OSERR, "sysctl(\"user.cs_path\")");
 		nele = 0;
 		decolonify(b, &bindirs, &nele);
 		bindirs = realloc(bindirs, (nele + 2) * sizeof(char *));

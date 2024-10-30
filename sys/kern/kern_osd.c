@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2007 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/systm.h>
@@ -155,10 +154,11 @@ osd_deregister(u_int type, u_int slot)
 
 	KASSERT(type >= OSD_FIRST && type <= OSD_LAST, ("Invalid type."));
 	KASSERT(slot > 0, ("Invalid slot."));
-	KASSERT(osdm[type].osd_destructors[slot - 1] != NULL, ("Unused slot."));
 
 	sx_xlock(&osdm[type].osd_module_lock);
 	rm_wlock(&osdm[type].osd_object_lock);
+	KASSERT(osdm[type].osd_destructors[slot - 1] != NULL, ("Unused slot."));
+
 	/*
 	 * Free all OSD for the given slot.
 	 */
@@ -221,9 +221,10 @@ osd_set_reserved(u_int type, struct osd *osd, u_int slot, void **rsv,
 
 	KASSERT(type >= OSD_FIRST && type <= OSD_LAST, ("Invalid type."));
 	KASSERT(slot > 0, ("Invalid slot."));
-	KASSERT(osdm[type].osd_destructors[slot - 1] != NULL, ("Unused slot."));
 
 	rm_rlock(&osdm[type].osd_object_lock, &tracker);
+	KASSERT(osdm[type].osd_destructors[slot - 1] != NULL, ("Unused slot."));
+
 	if (slot > osd->osd_nslots) {
 		void **newptr;
 
@@ -299,9 +300,10 @@ osd_get(u_int type, struct osd *osd, u_int slot)
 
 	KASSERT(type >= OSD_FIRST && type <= OSD_LAST, ("Invalid type."));
 	KASSERT(slot > 0, ("Invalid slot."));
-	KASSERT(osdm[type].osd_destructors[slot - 1] != NULL, ("Unused slot."));
 
 	rm_rlock(&osdm[type].osd_object_lock, &tracker);
+	KASSERT(osdm[type].osd_destructors[slot - 1] != NULL, ("Unused slot."));
+
 	if (slot > osd->osd_nslots) {
 		value = NULL;
 		OSD_DEBUG("Slot doesn't exist (type=%u, slot=%u).", type, slot);
@@ -392,6 +394,9 @@ osd_call(u_int type, u_int method, void *obj, void *data)
 	error = 0;
 	sx_slock(&osdm[type].osd_module_lock);
 	for (i = 0; i < osdm[type].osd_ntslots; i++) {
+		/* Hole in the slot map; avoid dereferencing. */
+		if (osdm[type].osd_destructors[i] == NULL)
+			continue;
 		methodfun = osdm[type].osd_methods[i * osdm[type].osd_nmethods +
 		    method];
 		if (methodfun != NULL && (error = methodfun(obj, data)) != 0)

@@ -1,4 +1,5 @@
 
+PACKAGE=	rdma
 PROG=	mckey
 MAN=	mckey.1
 SRCS=	mckey.c

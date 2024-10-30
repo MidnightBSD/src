@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  *  Copyright (c) 2004, 2007 Lukas Ertl
  *  All rights reserved.
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <sys/libkern.h>
 #include <sys/malloc.h>
@@ -227,7 +226,7 @@ gv_lv(struct g_geom *gp, struct gctl_req *req, struct sbuf *sb)
 
 	LIST_FOREACH(v, &sc->volumes, volume)
 		i++;
-	
+
 	sbuf_printf(sb, "%d volume%s:\n", i, i == 1 ? "" : "s");
 
 	if (i) {
@@ -373,7 +372,7 @@ gv_ls(struct g_geom *gp, struct gctl_req *req, struct sbuf *sb)
 
 	LIST_FOREACH(s, &sc->subdisks, sd)
 		i++;
-	
+
 	sbuf_printf(sb, "%d subdisk%s:\n", i, i == 1 ? "" : "s");
 
 	if (i) {
@@ -448,7 +447,7 @@ gv_ld(struct g_geom *gp, struct gctl_req *req, struct sbuf *sb)
 
 	LIST_FOREACH(d, &sc->drives, drive)
 		i++;
-	
+
 	sbuf_printf(sb, "%d drive%s:\n", i, i == 1 ? "" : "s");
 
 	if (i) {

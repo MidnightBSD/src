@@ -268,9 +268,8 @@ device		nvram		# Access to rtc cmos via /dev/nvram
 # MISCELLANEOUS DEVICES AND OPTIONS
 
 device		speaker		#Play IBM BASIC-style noises out your speaker
-hint.speaker.0.at="isa"
-hint.speaker.0.port="0x61"
-device		apm_saver	# Requires APM
+envvar		hint.speaker.0.at="isa"
+envvar		hint.speaker.0.port="0x61"
 
 
 #####################################################################
@@ -337,8 +336,8 @@ options 	X86BIOS
 
 #
 # Hints for the non-optional Numeric Processing eXtension driver.
-hint.npx.0.flags="0x0"
-hint.npx.0.irq="13"
+envvar		hint.npx.0.flags="0x0"
+envvar		hint.npx.0.irq="13"
 
 #
 # `flags' for npx0:
@@ -364,8 +363,8 @@ hint.npx.0.irq="13"
 
 # PS/2 mouse
 device		psm
-hint.psm.0.at="atkbdc"
-hint.psm.0.irq="12"
+envvar		hint.psm.0.at="atkbdc"
+envvar		hint.psm.0.irq="12"
 
 # Options for psm:
 options 	PSM_HOOKRESUME		#hook the system resume event, useful
@@ -374,13 +373,13 @@ options 	PSM_RESETAFTERSUSPEND	#reset the device at the resume event
 
 # The keyboard controller; it controls the keyboard and the PS/2 mouse.
 device		atkbdc
-hint.atkbdc.0.at="isa"
-hint.atkbdc.0.port="0x060"
+envvar		hint.atkbdc.0.at="isa"
+envvar		hint.atkbdc.0.port="0x060"
 
 # The AT keyboard
 device		atkbd
-hint.atkbd.0.at="atkbdc"
-hint.atkbd.0.irq="1"
+envvar		hint.atkbd.0.at="atkbdc"
+envvar		hint.atkbd.0.irq="1"
 
 # Options for atkbd:
 options 	ATKBD_DFLT_KEYMAP	# specify the built-in keymap
@@ -395,7 +394,7 @@ makeoptions	ATKBD_DFLT_KEYMAP=fr.dvorak
 
 # Video card driver for VGA adapters.
 device		vga
-hint.vga.0.at="isa"
+envvar		hint.vga.0.at="isa"
 
 # Options for vga:
 # Try the following option if the mouse pointer is not drawn correctly
@@ -419,6 +418,7 @@ options 	VGA_DEBUG
 
 # vt(4) drivers.
 device		vt_vga
+device		vt_vbefb
 
 # Linear framebuffer driver for S3 VESA 1.2 cards. Works on top of VESA.
 device		s3pci
@@ -428,11 +428,11 @@ device		s3pci
 # linked to /dev/3dfx and /dev/voodoo.  Note that this is not the same as
 # the tdfx DRI module from XFree86 and is completely unrelated.
 #
-# To enable Linuxulator support, one must also include COMPAT_LINUX in the
-# config as well.  The other option is to load both as modules.
+# To enable Linuxulator support, one must also load linux.ko and tdfx_linux.ko.
 
 device		tdfx			# Enable 3Dfx Voodoo support
-device		tdfx_linux		# Enable Linuxulator support
+
+options 	IOMMU			# Enable IOMMU support
 
 #
 # ACPI support using the Intel ACPI Component Architecture reference
@@ -445,7 +445,6 @@ device		tdfx_linux		# Enable Linuxulator support
 
 device		acpi
 options 	ACPI_DEBUG
-options 	ACPI_DMAR
 
 # ACPI WMI Mapping driver
 device		acpi_wmi
@@ -483,25 +482,6 @@ device		aibs
 # The cpufreq(4) driver provides support for non-ACPI CPU frequency control
 device		cpufreq
 
-# Direct Rendering modules for 3D acceleration.
-device		drm		# DRM core module required by DRM drivers
-device		mach64drm	# ATI Rage Pro, Rage Mobility P/M, Rage XL
-device		mgadrm		# AGP Matrox G200, G400, G450, G550
-device		r128drm		# ATI Rage 128
-device		savagedrm	# S3 Savage3D, Savage4
-device		sisdrm		# SiS 300/305, 540, 630
-device		tdfxdrm		# 3dfx Voodoo 3/4/5 and Banshee
-device		viadrm		# VIA
-options 	DRM_DEBUG	# Include debug printfs (slow)
-
-#
-# mse: Logitech and ATI InPort bus mouse ports
-
-device		mse
-hint.mse.0.at="isa"
-hint.mse.0.port="0x23c"
-hint.mse.0.irq="5"
-
 #
 # Network interfaces:
 #
@@ -515,13 +495,7 @@ hint.mse.0.irq="5"
 #       V.35/RS-232/RS-530/RS-449/X.21/G.703/E1/E3/T3/STS-1
 #       serial adaptor (requires sppp (default), or NETGRAPH if
 #       NETGRAPH_CRONYX is configured)
-# cs:   IBM Etherjet and other Crystal Semi CS89x0-based adapters
-# ctau: Cronyx Tau sync dual port V.35/RS-232/RS-530/RS-449/X.21/G.703/E1
-#       serial adaptor (requires sppp (default), or NETGRAPH if
-#       NETGRAPH_CRONYX is configured)
-# ed:   Western Digital and SMC 80xx; Novell NE1000 and NE2000; 3Com 3C503
-#       HP PC Lan+, various PC Card devices
-#       (requires miibus)
+# igc:	Intel I225 2.5G Ethernet adapter
 # ipw:	Intel PRO/Wireless 2100 IEEE 802.11 adapter
 # iwi:	Intel PRO/Wireless 2200BG/2225BG/2915ABG IEEE 802.11 adapters
 #	Requires the iwi firmware module
@@ -542,42 +516,32 @@ hint.mse.0.irq="5"
 device          bxe             # Broadcom NetXtreme II BCM5771X/BCM578XX 10GbE
 device		ce
 device		cp
-device		cs		# Crystal Semiconductor CS89x0 NIC
-hint.cs.0.at="isa"
-hint.cs.0.port="0x300"
-device		ctau
-hint.ctau.0.at="isa"
-hint.ctau.0.port="0x240"
-hint.ctau.0.irq="15"
-hint.ctau.0.drq="7"
+envvar		hint.cs.0.at="isa"
+envvar		hint.cs.0.port="0x300"
 #options 	NETGRAPH_CRONYX		# Enable NETGRAPH support for Cronyx adapter(s)
-device		ed		# NE[12]000, SMC Ultra, 3c503, DS8390 cards
-options 	ED_3C503
-options 	ED_HPP
-options 	ED_SIC
-hint.ed.0.at="isa"
-hint.ed.0.port="0x280"
-hint.ed.0.irq="5"
-hint.ed.0.maddr="0xd8000"
+envvar		hint.ed.0.at="isa"
+envvar		hint.ed.0.port="0x280"
+envvar		hint.ed.0.irq="5"
+envvar		hint.ed.0.maddr="0xd8000"
 device		igc		# Intel I225 2.5G Ethernet
 device		ipw		# Intel 2100 wireless NICs.
 device		iwi		# Intel 2200BG/2225BG/2915ABG wireless NICs.
 device		iwn		# Intel 4965/1000/5000/6000 wireless NICs.
 # Hint for the i386-only ISA front-end of le(4).
-hint.le.0.at="isa"
-hint.le.0.port="0x280"
-hint.le.0.irq="10"
-hint.le.0.drq="0"
+envvar		hint.le.0.at="isa"
+envvar		hint.le.0.port="0x280"
+envvar		hint.le.0.irq="10"
+envvar		hint.le.0.drq="0"
 device  	mthca		# Mellanox HCA InfiniBand
 device		mlx4		# Shared code module between IB and Ethernet
 device  	mlx4ib		# Mellanox ConnectX HCA InfiniBand
 device  	mlx4en		# Mellanox ConnectX HCA Ethernet
 device		nfe		# nVidia nForce MCP on-board Ethernet
 device		sbni
-hint.sbni.0.at="isa"
-hint.sbni.0.port="0x210"
-hint.sbni.0.irq="0xefdead"
-hint.sbni.0.flags="0"
+envvar		hint.sbni.0.at="isa"
+envvar		hint.sbni.0.port="0x210"
+envvar		hint.sbni.0.irq="0xefdead"
+envvar		hint.sbni.0.flags="0"
 device		vmx		# VMware VMXNET3 Ethernet
 device		wpi		# Intel 3945ABG wireless NICs.
 
@@ -661,20 +625,6 @@ options 	TWA_DEBUG		# 0-10; 10 prints the most messages.
 device		twa			# 3ware 9000 series PATA/SATA RAID
 
 #
-# SCSI host adapters:
-#
-# ncv: NCR 53C500 based SCSI host adapters.
-# nsp: Workbit Ninja SCSI-3 based PC Card SCSI host adapters.
-# stg: TMC 18C30, 18C50 based SCSI host adapters.
-
-device		ncv
-device		nsp
-device		stg
-hint.stg.0.at="isa"
-hint.stg.0.port="0x140"
-hint.stg.0.port="11"
-
-#
 # Adaptec FSA RAID controllers, including integrated DELL controllers,
 # the Dell PERC 2/QC and the HP NetRAID-4M
 device		aac
@@ -725,6 +675,10 @@ device         nvme    # base NVMe driver
 device         nvd     # expose NVMe namespaces as disks, depends on nvme
 
 #
+# Intel Volume Management Device (VMD) support
+device		vmd
+
+#
 # PMC-Sierra SAS/SATA controller
 device		pmspcv
 #
@@ -768,14 +722,18 @@ device		virtio_console	# VirtIO Console device
 # Linux KVM paravirtualization support
 device 		kvm_clock	# KVM paravirtual clock driver
 
-device 		hyperv		# HyperV drivers
+# Google Virtual NIC
+device		gve		# Google Virtual NIC (gVNIC) driver
+
+options 	HYPERV
+device		hyperv		# HyperV drivers
+device		hvhid		# HyperV HID device
 
 #####################################################################
 
 #
 # Miscellaneous hardware:
 #
-# apm: Laptop Advanced Power Management (experimental)
 # ipmi: Intelligent Platform Management Interface
 # smapi: System Management Application Program Interface driver
 # smbios: DMI/SMBIOS entry point
@@ -784,10 +742,6 @@ device 		hyperv		# HyperV drivers
 # asmc: Apple System Management Controller
 # si: Specialix International SI/XIO or SX intelligent serial card driver
 # tpm: Trusted Platform Module
-
-# Notes on APM
-#  The flags takes the following meaning for apm0:
-#    0x0020  Statclock is broken.
 
 # Notes on the Specialix SI/XIO driver:
 #  The host card is memory, not IO mapped.
@@ -807,20 +761,19 @@ device 		hyperv		# HyperV drivers
 #  is the only thing truly supported, but apparently a fair percentage
 #  of the Vaio extra features are controlled by this device.
 
-device		apm
-hint.apm.0.flags="0x20"
 device		ipmi
 device		smapi
 device		smbios
 device		vpd
 device		pbio
-hint.pbio.0.at="isa"
-hint.pbio.0.port="0x360"
+envvar		hint.pbio.0.at="isa"
+envvar		hint.pbio.0.port="0x360"
 device		asmc
 device		tpm
 device		padlock_rng	# VIA Padlock RNG
 device		rdrand_rng	# Intel Bull Mountain RNG
 device		aesni		# AES-NI OpenCrypto module
+device		ossl		# OpenSSL OpenCrypto module
 
 #
 # Laptop/Notebook options:
@@ -828,6 +781,8 @@ device		aesni		# AES-NI OpenCrypto module
 # See also:
 #  apm under `Miscellaneous hardware'
 # above.
+
+device		backlight
 
 # For older notebooks that signal a powerfail condition (external
 # power supply dropped, or battery state low) by issuing an NMI:
@@ -843,9 +798,9 @@ options 	POWERFAIL_NMI	# make it beep instead of panicing
 # pcf	Philips PCF8584 ISA-bus controller
 #
 device		pcf
-hint.pcf.0.at="isa"
-hint.pcf.0.port="0x320"
-hint.pcf.0.irq="5"
+envvar		hint.pcf.0.at="isa"
+envvar		hint.pcf.0.port="0x320"
+envvar		hint.pcf.0.irq="5"
 
 #
 # Hardware watchdog timers:
@@ -909,32 +864,21 @@ options 	PMAP_SHPGPERPROC=201
 #
 options 	NKPT=31
 
-
+#
+# HID-over-I2C support
+#
+device		iichid		# HID-over-I2C support
+options 	IICHID_DEBUG	# Enable HID-over-I2C debug messages
+options 	IICHID_SAMPLING	# Workaround missing GPIO INTR support
+
 #####################################################################
 # ABI Emulation
-
-# Enable iBCS2 runtime support for SCO and ISC binaries
-#options 	IBCS2
-
-# Emulate spx device for client side of SVR3 local X interface
-options 	SPX_HACK
 
 # Enable (32-bit) a.out binary support
 options 	COMPAT_AOUT
 
 # Enable 32-bit runtime support for CloudABI binaries.
 options 	COMPAT_CLOUDABI32
-
-# Enable Linux ABI emulation
-options 	COMPAT_LINUX
-
-# Enable the linux-like proc filesystem support (requires COMPAT_LINUX
-# and PSEUDOFS)
-options 	LINPROCFS
-
-#Enable the linux-like sys filesystem support (requires COMPAT_LINUX
-# and PSEUDOFS)
-options 	LINSYSFS
 
 # Enable NDIS binary driver support
 options 	NDISAPI
@@ -975,3 +919,5 @@ options 	VM_KMEM_SIZE_MAX
 options 	VM_KMEM_SIZE_SCALE
 
 
+# This is broken on i386
+nodevice bnxt

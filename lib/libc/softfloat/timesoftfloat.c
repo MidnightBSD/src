@@ -31,7 +31,6 @@ this code that are retained.
 */
 
 #include <sys/cdefs.h>
-
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>

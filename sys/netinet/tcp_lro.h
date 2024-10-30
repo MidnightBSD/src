@@ -1,9 +1,9 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2006, Myricom Inc.
  * Copyright (c) 2008, Intel Corporation.
- * Copyright (c) 2016 Mellanox Technologies.
+ * Copyright (c) 2016-2021 Mellanox Technologies.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,58 +26,130 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _TCP_LRO_H_
 #define _TCP_LRO_H_
 
 #include <sys/time.h>
+#include <sys/param.h>
+
+#include <netinet/in.h>
 
 #ifndef TCP_LRO_ENTRIES
 /* Define default number of LRO entries per RX queue */
 #define	TCP_LRO_ENTRIES	8
 #endif
 
+/*
+ * Flags for ACK entry for compression
+ * the bottom 8 bits has the th_flags.
+ * LRO itself adds only the TSTMP flags
+ * to indicate if either of the types
+ * of timestamps are filled and the
+ * HAS_TSTMP option to indicate if the
+ * TCP timestamp option is valid.
+ *
+ * The other 5 flag bits are for processing
+ * by a stack.
+ *
+ */
+#define TSTMP_LRO		0x0100
+#define TSTMP_HDWR		0x0200
+#define HAS_TSTMP		0x0400
+/*
+ * Default number of interrupts on the same cpu in a row
+ * that will cause us to declare a "affinity cpu".
+ */
+#define TCP_LRO_CPU_DECLARATION_THRESH 50
+
+struct inpcb;
+
+/* Precompute the LRO_RAW_ADDRESS_MAX value: */
+#define	LRO_RAW_ADDRESS_MAX \
+	howmany(12 + 2 * sizeof(struct in6_addr), sizeof(u_long))
+
+union lro_address {
+	u_long raw[LRO_RAW_ADDRESS_MAX];
+	struct {
+		uint8_t lro_type;	/* internal */
+#define	LRO_TYPE_NONE     0
+#define	LRO_TYPE_IPV4_TCP 1
+#define	LRO_TYPE_IPV6_TCP 2
+#define	LRO_TYPE_IPV4_UDP 3
+#define	LRO_TYPE_IPV6_UDP 4
+		uint8_t lro_flags;
+#define	LRO_FLAG_DECRYPTED 1
+		uint16_t vlan_id;	/* VLAN identifier */
+		uint16_t s_port;	/* source TCP/UDP port */
+		uint16_t d_port;	/* destination TCP/UDP port */
+		uint32_t vxlan_vni;	/* VXLAN virtual network identifier */
+		union {
+			struct in_addr v4;
+			struct in6_addr v6;
+		} s_addr;	/* source IPv4/IPv6 address */
+		union {
+			struct in_addr v4;
+			struct in6_addr v6;
+		} d_addr;	/* destination IPv4/IPv6 address */
+	};
+};
+
+_Static_assert(sizeof(union lro_address) == sizeof(u_long) * LRO_RAW_ADDRESS_MAX,
+    "The raw field in the lro_address union does not cover the whole structure.");
+
+/* Optimize address comparison by comparing one unsigned long at a time: */
+
+static inline bool
+lro_address_compare(const union lro_address *pa, const union lro_address *pb)
+{
+	if (pa->lro_type == LRO_TYPE_NONE && pb->lro_type == LRO_TYPE_NONE) {
+		return (true);
+	} else for (unsigned i = 0; i < LRO_RAW_ADDRESS_MAX; i++) {
+		if (pa->raw[i] != pb->raw[i])
+			return (false);
+	}
+	return (true);
+}
+
+struct lro_parser {
+	union lro_address data;
+	union {
+		uint8_t *l3;
+		struct ip *ip4;
+		struct ip6_hdr *ip6;
+	};
+	union {
+		uint8_t *l4;
+		struct tcphdr *tcp;
+		struct udphdr *udp;
+	};
+	uint16_t total_hdr_len;
+};
+
+/* This structure is zeroed frequently, try to keep it small. */
 struct lro_entry {
 	LIST_ENTRY(lro_entry)	next;
 	LIST_ENTRY(lro_entry)	hash_next;
 	struct mbuf		*m_head;
 	struct mbuf		*m_tail;
-	union {
-		struct ip	*ip4;
-		struct ip6_hdr	*ip6;
-	} leip;
-	union {
-		in_addr_t	s_ip4;
-		struct in6_addr	s_ip6;
-	} lesource;
-	union {
-		in_addr_t	d_ip4;
-		struct in6_addr	d_ip6;
-	} ledest;
-	uint16_t		source_port;
-	uint16_t		dest_port;
-	uint16_t		eh_type;	/* EthernetHeader type. */
-	uint16_t		append_cnt;
-	uint32_t		p_len;		/* IP header payload length. */
-	uint32_t		ulp_csum;	/* TCP, etc. checksum. */
+	struct mbuf		*m_last_mbuf;
+	struct lro_parser	outer;
+	struct lro_parser	inner;
 	uint32_t		next_seq;	/* tcp_seq */
 	uint32_t		ack_seq;	/* tcp_seq */
 	uint32_t		tsval;
 	uint32_t		tsecr;
+	uint16_t		compressed;
+	uint16_t		uncompressed;
 	uint16_t		window;
-	uint16_t		timestamp;	/* flag, not a TCP hdr field. */
-	struct timeval		mtime;
+	uint8_t			flags;
+	uint8_t			timestamp : 1;
+	uint8_t			needs_merge : 1;
+	struct bintime		alloc_time;	/* time when entry was allocated */
 };
-LIST_HEAD(lro_head, lro_entry);
 
-#define	le_ip4			leip.ip4
-#define	le_ip6			leip.ip6
-#define	source_ip4		lesource.s_ip4
-#define	dest_ip4		ledest.d_ip4
-#define	source_ip6		lesource.s_ip6
-#define	dest_ip6		ledest.d_ip6
+LIST_HEAD(lro_head, lro_entry);
 
 struct lro_mbuf_sort {
 	uint64_t seq;
@@ -88,6 +160,7 @@ struct lro_mbuf_sort {
 struct lro_ctrl {
 	struct ifnet	*ifp;
 	struct lro_mbuf_sort *lro_mbuf_data;
+	struct bintime	lro_last_queue_time;	/* last time data was queued */
 	uint64_t	lro_queued;
 	uint64_t	lro_flushed;
 	uint64_t	lro_bad_csum;
@@ -95,15 +168,35 @@ struct lro_ctrl {
 	unsigned	lro_mbuf_count;
 	unsigned	lro_mbuf_max;
 	unsigned short	lro_ackcnt_lim;		/* max # of aggregated ACKs */
+	unsigned short	lro_cpu;		/* Guess at the cpu we have affinity too */
 	unsigned 	lro_length_lim;		/* max len of aggregated data */
-
 	u_long		lro_hashsz;
+	uint32_t	lro_last_cpu;
+	uint32_t 	lro_cnt_of_same_cpu;
 	struct lro_head	*lro_hash;
 	struct lro_head	lro_active;
 	struct lro_head	lro_free;
+	uint8_t		lro_cpu_is_set;		/* Flag to say its ok to set the CPU on the inp */
 };
 
-#define	TCP_LRO_LENGTH_MAX	65535
+struct tcp_ackent {
+	uint64_t timestamp;	/* hardware or sofware timestamp, valid if TSTMP_LRO or TSTMP_HDRW set */
+	uint32_t seq;		/* th_seq value */
+	uint32_t ack;		/* th_ack value */
+	uint32_t ts_value;	/* If ts option value, valid if HAS_TSTMP is set */
+	uint32_t ts_echo;	/* If ts option echo, valid if HAS_TSTMP is set */
+	uint16_t win;		/* TCP window */
+	uint16_t flags;		/* Flags to say if TS is present and type of timestamp and th_flags */
+	uint8_t  codepoint;	/* IP level codepoint including ECN bits */
+	uint8_t  ack_val_set;	/* Classification of ack used by the stack */
+	uint8_t  pad[2];	/* To 32 byte boundary */
+};
+
+/* We use two M_PROTO on the mbuf */
+#define M_ACKCMP	M_PROTO4   /* Indicates LRO is sending in a  Ack-compression mbuf */
+#define M_LRO_EHDRSTRP	M_PROTO6   /* Indicates that LRO has stripped the etherenet header */
+
+#define	TCP_LRO_LENGTH_MAX	(65535 - 255)	/* safe value with room for outer headers */
 #define	TCP_LRO_ACKCNT_MAX	65535		/* unlimited */
 
 int tcp_lro_init(struct lro_ctrl *);
@@ -114,6 +207,8 @@ void tcp_lro_flush(struct lro_ctrl *, struct lro_entry *);
 void tcp_lro_flush_all(struct lro_ctrl *);
 int tcp_lro_rx(struct lro_ctrl *, struct mbuf *, uint32_t);
 void tcp_lro_queue_mbuf(struct lro_ctrl *, struct mbuf *);
+void tcp_lro_reg_mbufq(void);
+void tcp_lro_dereg_mbufq(void);
 
 #define	TCP_LRO_NO_ENTRIES	-2
 #define	TCP_LRO_CANNOT		-1

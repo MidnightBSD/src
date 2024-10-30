@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2006-2008 Marcel Moolenaar
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/apm.h>
 #include <sys/bio.h>
@@ -586,10 +585,10 @@ g_part_apm_write(struct g_part_table *basetable, struct g_consumer *cp)
 			baseentry = LIST_NEXT(baseentry, gpe_entry);
 	}
 
-	for (index = 0; index < tblsz; index += MAXPHYS / pp->sectorsize) {
+	for (index = 0; index < tblsz; index += maxphys / pp->sectorsize) {
 		error = g_write_data(cp, (1 + index) * pp->sectorsize,
 		    buf + index * pp->sectorsize,
-		    (tblsz - index > MAXPHYS / pp->sectorsize) ? MAXPHYS:
+		    (tblsz - index > maxphys / pp->sectorsize) ? maxphys:
 		    (tblsz - index) * pp->sectorsize);
 		if (error) {
 			g_free(buf);

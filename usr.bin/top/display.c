@@ -7,7 +7,6 @@
  *
  *  Copyright (c) 1984, 1989, William LeFebvre, Rice University
  *  Copyright (c) 1989, 1990, 1992, William LeFebvre, Northwestern University
- *
  */
 
 /*
@@ -1290,31 +1289,6 @@ line_update(char *old, char *new, int start, int line)
     }
 }
 
-/*
- *  printable(str) - make the string pointed to by "str" into one that is
- *	printable (i.e.: all ascii), by converting all non-printable
- *	characters into '?'.  Replacements are done in place and a pointer
- *	to the original buffer is returned.
- */
-
-char *
-printable(char str[])
-{
-    char *ptr;
-    char ch;
-
-    ptr = str;
-    while ((ch = *ptr) != '\0')
-    {
-	if (!isprint(ch))
-	{
-	    *ptr = '?';
-	}
-	ptr++;
-    }
-    return(str);
-}
-
 void
 i_uptime(struct timeval *bt, time_t *tod)
 {
@@ -1344,6 +1318,15 @@ i_uptime(struct timeval *bt, time_t *tod)
 	}
 	printf(" up %d+%02d:%02d:%02d", days, hrs, mins, secs);
     }
+}
+
+void
+i_battery(int nbat, int batt)
+{
+
+	if (nbat > 0) {
+		printf("; battery: %d%%", batt);
+	}
 }
 
 #define SETUPBUFFER_MIN_SCREENWIDTH 80

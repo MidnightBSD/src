@@ -324,11 +324,22 @@ VNET_DECLARE(int, ip6_use_defzone);	/* Whether to use the default scope
 					 * zone when unspecified */
 #define	V_ip6_use_defzone		VNET(ip6_use_defzone)
 
-VNET_DECLARE (struct pfil_head, inet6_pfil_hook);	/* packet filter hooks */
-#define	V_inet6_pfil_hook	VNET(inet6_pfil_hook)
+VNET_DECLARE(struct pfil_head *, inet6_pfil_head);
+#define	V_inet6_pfil_head	VNET(inet6_pfil_head)
+#define	PFIL_INET6_NAME		"inet6"
+
+VNET_DECLARE(struct pfil_head *, inet6_local_pfil_head);
+#define	V_inet6_local_pfil_head	VNET(inet6_local_pfil_head)
+#define	PFIL_INET6_LOCAL_NAME	"inet6-local"
+
 #ifdef IPSTEALTH
 VNET_DECLARE(int, ip6stealth);
 #define	V_ip6stealth			VNET(ip6stealth)
+#endif
+
+#ifdef EXPERIMENTAL
+VNET_DECLARE(int, nd6_ignore_ipv6_only_ra);
+#define	V_nd6_ignore_ipv6_only_ra	VNET(nd6_ignore_ipv6_only_ra)
 #endif
 
 extern struct	pr_usrreqs rip6_usrreqs;
@@ -408,10 +419,7 @@ int	in6_selectsrc_addr(uint32_t, const struct in6_addr *,
     uint32_t, struct ifnet *, struct in6_addr *, int *);
 int in6_selectroute(struct sockaddr_in6 *, struct ip6_pktopts *,
 	struct ip6_moptions *, struct route_in6 *, struct ifnet **,
-	struct rtentry **);
-int	in6_selectroute_fib(struct sockaddr_in6 *, struct ip6_pktopts *,
-	    struct ip6_moptions *, struct route_in6 *, struct ifnet **,
-	    struct rtentry **, u_int);
+	struct nhop_object **, u_int, uint32_t);
 u_int32_t ip6_randomid(void);
 u_int32_t ip6_randomflowlabel(void);
 void in6_delayed_cksum(struct mbuf *m, uint32_t plen, u_short offset);

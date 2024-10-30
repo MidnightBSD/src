@@ -1,5 +1,4 @@
 .\" Copyright (c) 2019 The FreeBSD Foundation, Inc.
-.\" All rights reserved.
 .\"
 .\" This documentation was written by
 .\" Konstantin Belousov <kib@FreeBSD.org> under sponsorship
@@ -26,8 +25,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\"
-.Dd June 28, 2019
+.Dd September 2, 2021
 .Dt PROCCONTROL 1
 .Os
 .Sh NAME
@@ -65,8 +63,19 @@ Note that process is only allowed to enable tracing for itself,
 not for any other process.
 .It Ar trapcap
 Controls the signalling of capability mode access violations.
+.It Ar protmax
+Controls the implicit PROT_MAX application for
+.Xr mmap 2 .
+.It Ar nonewprivs
+Controls disabling the setuid and sgid bits for
+.Xr execve 2 .
+.It Ar wxmap
+Controls the write exclusive execute mode for mappings.
 .It Ar kpti
 Controls the KPTI enable, AMD64 only.
+.It Ar la48
+Control limiting usermode process address space to 48 bits of address,
+AMD64 only, on machines capable of 57-bit addressing.
 .El
 .Pp
 The

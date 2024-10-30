@@ -63,13 +63,11 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_inet.h"
 #include "opt_inet6.h"
 #include "opt_ipsec.h"
 #include "opt_ipstealth.h"
 #include "opt_sctp.h"
-#include "opt_mpath.h"
 #include "opt_route.h"
 
 #include <sys/param.h>
@@ -89,9 +87,6 @@
 #include <net/if_var.h>
 #include <net/radix.h>
 #include <net/route.h>
-#ifdef RADIX_MPATH
-#include <net/radix_mpath.h>
-#endif
 
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
@@ -174,11 +169,11 @@ struct protosw inet6sw[] = {
 	.pr_input =		tcp6_input,
 	.pr_ctlinput =		tcp6_ctlinput,
 	.pr_ctloutput =		tcp_ctloutput,
-#ifndef INET	/* don't call initialization and timeout routines twice */
+#ifndef INET	/* don't call initialization, timeout, and drain routines twice */
 	.pr_init =		tcp_init,
 	.pr_slowtimo =		tcp_slowtimo,
-#endif
 	.pr_drain =		tcp_drain,
+#endif
 	.pr_usrreqs =		&tcp6_usrreqs,
 },
 #ifdef SCTP
@@ -190,8 +185,8 @@ struct protosw inet6sw[] = {
 	.pr_input =		sctp6_input,
 	.pr_ctlinput =		sctp6_ctlinput,
 	.pr_ctloutput =	sctp_ctloutput,
+#ifndef INET	/* Do not call initialization and drain routines twice. */
 	.pr_drain =		sctp_drain,
-#ifndef INET	/* Do not call initialization twice. */
 	.pr_init =		sctp_init,
 #endif
 	.pr_usrreqs =		&sctp6_usrreqs
@@ -204,7 +199,7 @@ struct protosw inet6sw[] = {
 	.pr_input =		sctp6_input,
 	.pr_ctlinput =		sctp6_ctlinput,
 	.pr_ctloutput =		sctp_ctloutput,
-	.pr_drain =		sctp_drain,
+	.pr_drain =		NULL, /* Covered by the SOCK_SEQPACKET entry. */
 	.pr_usrreqs =		&sctp6_usrreqs
 },
 #endif /* SCTP */
@@ -344,21 +339,12 @@ IP6PROTOSPACER,
 },
 };
 
-extern int in6_inithead(void **, int);
-#ifdef VIMAGE
-extern int in6_detachhead(void **, int);
-#endif
-
 struct domain inet6domain = {
 	.dom_family =		AF_INET6,
 	.dom_name =		"internet6",
 	.dom_protosw =		(struct protosw *)inet6sw,
 	.dom_protoswNPROTOSW =	(struct protosw *)&inet6sw[nitems(inet6sw)],
-#ifdef RADIX_MPATH
-	.dom_rtattach =		rn6_mpath_inithead,
-#else
 	.dom_rtattach =		in6_inithead,
-#endif
 #ifdef VIMAGE
 	.dom_rtdetach =		in6_detachhead,
 #endif
@@ -425,26 +411,31 @@ VNET_DEFINE(int, icmp6_rediraccept) = 1;/* accept and process redirects */
 VNET_DEFINE(int, icmp6_redirtimeout) = 10 * 60;	/* 10 minutes */
 VNET_DEFINE(int, icmp6errppslim) = 100;		/* 100pps */
 /* control how to respond to NI queries */
-VNET_DEFINE(int, icmp6_nodeinfo) =
-    (ICMP6_NODEINFO_FQDNOK|ICMP6_NODEINFO_NODEADDROK);
+VNET_DEFINE(int, icmp6_nodeinfo) = 0;
 VNET_DEFINE(int, icmp6_nodeinfo_oldmcprefix) = 1;
 
 /*
  * sysctl related items.
  */
-SYSCTL_NODE(_net,	PF_INET6,	inet6,	CTLFLAG_RW,	0,
-	"Internet6 Family");
+SYSCTL_NODE(_net, PF_INET6, inet6, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "Internet6 Family");
 
 /* net.inet6 */
-SYSCTL_NODE(_net_inet6,	IPPROTO_IPV6,	ip6,	CTLFLAG_RW, 0,	"IP6");
-SYSCTL_NODE(_net_inet6,	IPPROTO_ICMPV6,	icmp6,	CTLFLAG_RW, 0,	"ICMP6");
-SYSCTL_NODE(_net_inet6,	IPPROTO_UDP,	udp6,	CTLFLAG_RW, 0,	"UDP6");
-SYSCTL_NODE(_net_inet6,	IPPROTO_TCP,	tcp6,	CTLFLAG_RW, 0,	"TCP6");
+SYSCTL_NODE(_net_inet6,	IPPROTO_IPV6, ip6, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "IP6");
+SYSCTL_NODE(_net_inet6,	IPPROTO_ICMPV6, icmp6, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "ICMP6");
+SYSCTL_NODE(_net_inet6,	IPPROTO_UDP, udp6, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "UDP6");
+SYSCTL_NODE(_net_inet6,	IPPROTO_TCP, tcp6, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "TCP6");
 #if defined(SCTP) || defined(SCTP_SUPPORT)
-SYSCTL_NODE(_net_inet6,	IPPROTO_SCTP,	sctp6,	CTLFLAG_RW, 0,	"SCTP6");
+SYSCTL_NODE(_net_inet6,	IPPROTO_SCTP, sctp6, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "SCTP6");
 #endif
 #if defined(IPSEC) || defined(IPSEC_SUPPORT)
-SYSCTL_NODE(_net_inet6,	IPPROTO_ESP,	ipsec6,	CTLFLAG_RW, 0,	"IPSEC6");
+SYSCTL_NODE(_net_inet6,	IPPROTO_ESP, ipsec6, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "IPSEC6");
 #endif /* IPSEC */
 
 /* net.inet6.ip6 */
@@ -536,11 +527,11 @@ SYSCTL_INT(_net_inet6_ip6, IPV6CTL_USETEMPADDR, use_tempaddr,
 	CTLFLAG_VNET | CTLFLAG_RW, &VNET_NAME(ip6_use_tempaddr), 0,
 	"Create RFC3041 temporary addresses for autoconfigured addresses");
 SYSCTL_PROC(_net_inet6_ip6, IPV6CTL_TEMPPLTIME, temppltime,
-	CTLFLAG_VNET | CTLTYPE_INT | CTLFLAG_RW,
+	CTLFLAG_VNET | CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
 	NULL, 0, sysctl_ip6_temppltime, "I",
 	"Maximum preferred lifetime for temporary addresses");
 SYSCTL_PROC(_net_inet6_ip6, IPV6CTL_TEMPVLTIME, tempvltime,
-	CTLFLAG_VNET | CTLTYPE_INT | CTLFLAG_RW,
+	CTLFLAG_VNET | CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_NEEDGIANT,
 	NULL, 0, sysctl_ip6_tempvltime, "I",
 	"Maximum valid lifetime for temporary addresses");
 SYSCTL_INT(_net_inet6_ip6, IPV6CTL_V6ONLY, v6only,
@@ -574,7 +565,7 @@ SYSCTL_INT(_net_inet6_icmp6, ICMPV6CTL_REDIRACCEPT, rediraccept,
 	"Accept ICMPv6 redirect messages");
 SYSCTL_INT(_net_inet6_icmp6, ICMPV6CTL_REDIRTIMEOUT, redirtimeout,
 	CTLFLAG_VNET | CTLFLAG_RW, &VNET_NAME(icmp6_redirtimeout), 0,
-	""); /* XXX unused */
+	"Delay in seconds before expiring redirect route");
 SYSCTL_VNET_PCPUSTAT(_net_inet6_icmp6, ICMPV6CTL_STATS, stats,
 	struct icmp6stat, icmp6stat,
 	"ICMPv6 statistics (struct icmp6stat, netinet/icmp6.h)");
@@ -614,3 +605,10 @@ SYSCTL_INT(_net_inet6_icmp6, ICMPV6CTL_ND6_ONLINKNSRFC4861,
 	nd6_onlink_ns_rfc4861, CTLFLAG_VNET | CTLFLAG_RW,
 	&VNET_NAME(nd6_onlink_ns_rfc4861), 0,
 	"Accept 'on-link' ICMPv6 NS messages in compliance with RFC 4861");
+#ifdef EXPERIMENTAL
+SYSCTL_INT(_net_inet6_icmp6, OID_AUTO,
+	nd6_ignore_ipv6_only_ra, CTLFLAG_VNET | CTLFLAG_RW,
+	&VNET_NAME(nd6_ignore_ipv6_only_ra), 0,
+	"Ignore the 'IPv6-Only flag' in RA messages in compliance with "
+	"draft-ietf-6man-ipv6only-flag");
+#endif

@@ -1,6 +1,8 @@
 
 .include <src.opts.mk>
 
+PACKAGE=	runtime
+
 PROG=	limits
 LIBADD=	util
 

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1998-2000 Doug Rabson
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_ddb.h"
 #include "opt_gdb.h"
 
@@ -50,6 +49,7 @@
 #include <sys/fcntl.h>
 #include <sys/vnode.h>
 #include <sys/linker.h>
+#include <sys/sysctl.h>
 
 #include <machine/elf.h>
 
@@ -142,8 +142,12 @@ static int	link_elf_load_file(linker_class_t, const char *,
 		    linker_file_t *);
 static int	link_elf_lookup_symbol(linker_file_t, const char *,
 		    c_linker_sym_t *);
+static int	link_elf_lookup_debug_symbol(linker_file_t, const char *,
+		    c_linker_sym_t *);
 static int	link_elf_symbol_values(linker_file_t, c_linker_sym_t,
 		    linker_symval_t *);
+static int	link_elf_debug_symbol_values(linker_file_t, c_linker_sym_t,
+		    linker_symval_t*);
 static int	link_elf_search_symbol(linker_file_t, caddr_t,
 		    c_linker_sym_t *, long *);
 
@@ -162,7 +166,9 @@ static int	elf_lookup(linker_file_t, Elf_Size, int, Elf_Addr *);
 
 static kobj_method_t link_elf_methods[] = {
 	KOBJMETHOD(linker_lookup_symbol,	link_elf_lookup_symbol),
+	KOBJMETHOD(linker_lookup_debug_symbol,	link_elf_lookup_debug_symbol),
 	KOBJMETHOD(linker_symbol_values,	link_elf_symbol_values),
+	KOBJMETHOD(linker_debug_symbol_values,	link_elf_debug_symbol_values),
 	KOBJMETHOD(linker_search_symbol,	link_elf_search_symbol),
 	KOBJMETHOD(linker_unload,		link_elf_unload_file),
 	KOBJMETHOD(linker_load_file,		link_elf_load_file),
@@ -185,6 +191,11 @@ static struct linker_class link_elf_class = {
 #endif
 	link_elf_methods, sizeof(struct elf_file)
 };
+
+static bool link_elf_leak_locals = true;
+SYSCTL_BOOL(_debug, OID_AUTO, link_elf_leak_locals,
+    CTLFLAG_RWTUN, &link_elf_leak_locals, 0,
+    "Allow local symbols to participate in global module symbol resolution");
 
 typedef int (*elf_reloc_fn)(linker_file_t lf, Elf_Addr relocbase,
     const void *data, int type, elf_lookup_fn lookup);
@@ -211,7 +222,6 @@ elf_set_add(struct elf_set_head *list, Elf_Addr start, Elf_Addr stop, Elf_Addr b
 	set->es_base = base;
 
 	TAILQ_FOREACH(iter, list, es_link) {
-
 		KASSERT((set->es_start < iter->es_start && set->es_stop < iter->es_stop) ||
 		    (set->es_start > iter->es_start && set->es_stop > iter->es_stop),
 		    ("linker sets intersection: to insert: 0x%jx-0x%jx; inserted: 0x%jx-0x%jx",
@@ -386,7 +396,31 @@ link_elf_link_common_finish(linker_file_t lf)
 	return (0);
 }
 
+#ifdef RELOCATABLE_KERNEL
+/*
+ * __startkernel and __endkernel are symbols set up as relocation canaries.
+ *
+ * They are defined in locore to reference linker script symbols at the
+ * beginning and end of the LOAD area. This has the desired side effect of
+ * giving us variables that have relative relocations pointing at them, so
+ * relocation of the kernel object will cause the variables to be updated
+ * automatically by the runtime linker when we initialize.
+ *
+ * There are two main reasons to relocate the kernel:
+ * 1) If the loader needed to load the kernel at an alternate load address.
+ * 2) If the kernel is switching address spaces on machines like POWER9
+ *    under Radix where the high bits of the effective address are used to
+ *    differentiate between hypervisor, host, guest, and problem state.
+ */
 extern vm_offset_t __startkernel, __endkernel;
+#endif
+
+static unsigned long kern_relbase = KERNBASE;
+
+SYSCTL_ULONG(_kern, OID_AUTO, base_address, CTLFLAG_RD,
+	SYSCTL_NULL_ULONG_PTR, KERNBASE, "Kernel base address");
+SYSCTL_ULONG(_kern, OID_AUTO, relbase_address, CTLFLAG_RD,
+	&kern_relbase, 0, "Kernel relocated base address");
 
 static void
 link_elf_init(void* arg)
@@ -396,7 +430,7 @@ link_elf_init(void* arg)
 	Elf_Size *ctors_sizep;
 	caddr_t modptr, baseptr, sizeptr;
 	elf_file_t ef;
-	char *modname;
+	const char *modname;
 
 	linker_add_class(&link_elf_class);
 
@@ -415,7 +449,8 @@ link_elf_init(void* arg)
 
 	ef = (elf_file_t) linker_kernel_file;
 	ef->preloaded = 1;
-#ifdef __powerpc__
+#ifdef RELOCATABLE_KERNEL
+	/* Compute relative displacement */
 	ef->address = (caddr_t) (__startkernel - KERNBASE);
 #else
 	ef->address = 0;
@@ -427,9 +462,10 @@ link_elf_init(void* arg)
 
 	if (dp != NULL)
 		parse_dynamic(ef);
-#ifdef __powerpc__
+#ifdef RELOCATABLE_KERNEL
 	linker_kernel_file->address = (caddr_t)__startkernel;
 	linker_kernel_file->size = (intptr_t)(__endkernel - __startkernel);
+	kern_relbase = (unsigned long)__startkernel;
 #else
 	linker_kernel_file->address += KERNBASE;
 	linker_kernel_file->size = -(intptr_t)linker_kernel_file->address;
@@ -610,13 +646,17 @@ parse_dynamic(elf_file_t ef)
 	ef->ddbstrtab = ef->strtab;
 	ef->ddbstrcnt = ef->strsz;
 
-	return (0);
+	return elf_cpu_parse_dynamic(ef->address, ef->dynamic);
 }
 
+#define	LS_PADDING	0x90909090
 static int
 parse_dpcpu(elf_file_t ef)
 {
 	int error, size;
+#if defined(__i386__)
+	uint32_t pad;
+#endif
 
 	ef->pcpu_start = 0;
 	ef->pcpu_stop = 0;
@@ -629,6 +669,26 @@ parse_dpcpu(elf_file_t ef)
 	/* Empty set? */
 	if (size < 1)
 		return (0);
+#if defined(__i386__)
+	/* In case we do find __start/stop_set_ symbols double-check. */
+	if (size < 4) {
+		uprintf("Kernel module '%s' must be recompiled with "
+		    "linker script\n", ef->lf.pathname);
+		return (ENOEXEC);
+	}
+
+	/* Padding from linker-script correct? */
+	pad = *(uint32_t *)((uintptr_t)ef->pcpu_stop - sizeof(pad));
+	if (pad != LS_PADDING) {
+		uprintf("Kernel module '%s' must be recompiled with "
+		    "linker script, invalid padding %#04x (%#04x)\n",
+		    ef->lf.pathname, pad, LS_PADDING);
+		return (ENOEXEC);
+	}
+	/* If we only have valid padding, nothing to do. */
+	if (size == 4)
+		return (0);
+#endif
 	/*
 	 * Allocate space in the primary pcpu area.  Copy in our
 	 * initialization from the data section and then initialize
@@ -654,6 +714,9 @@ static int
 parse_vnet(elf_file_t ef)
 {
 	int error, size;
+#if defined(__i386__)
+	uint32_t pad;
+#endif
 
 	ef->vnet_start = 0;
 	ef->vnet_stop = 0;
@@ -666,6 +729,26 @@ parse_vnet(elf_file_t ef)
 	/* Empty set? */
 	if (size < 1)
 		return (0);
+#if defined(__i386__)
+	/* In case we do find __start/stop_set_ symbols double-check. */
+	if (size < 4) {
+		uprintf("Kernel module '%s' must be recompiled with "
+		    "linker script\n", ef->lf.pathname);
+		return (ENOEXEC);
+	}
+
+	/* Padding from linker-script correct? */
+	pad = *(uint32_t *)((uintptr_t)ef->vnet_stop - sizeof(pad));
+	if (pad != LS_PADDING) {
+		uprintf("Kernel module '%s' must be recompiled with "
+		    "linker script, invalid padding %#04x (%#04x)\n",
+		    ef->lf.pathname, pad, LS_PADDING);
+		return (ENOEXEC);
+	}
+	/* If we only have valid padding, nothing to do. */
+	if (size == 4)
+		return (0);
+#endif
 	/*
 	 * Allocate space in the primary vnet area.  Copy in our
 	 * initialization from the data section and then initialize
@@ -686,6 +769,44 @@ parse_vnet(elf_file_t ef)
 	return (0);
 }
 #endif
+#undef LS_PADDING
+
+/*
+ * Apply the specified protection to the loadable segments of a preloaded linker
+ * file.
+ */
+static int
+preload_protect(elf_file_t ef, vm_prot_t prot)
+{
+#if defined(__aarch64__) || defined(__amd64__)
+	Elf_Ehdr *hdr;
+	Elf_Phdr *phdr, *phlimit;
+	vm_prot_t nprot;
+	int error;
+
+	error = 0;
+	hdr = (Elf_Ehdr *)ef->address;
+	phdr = (Elf_Phdr *)(ef->address + hdr->e_phoff);
+	phlimit = phdr + hdr->e_phnum;
+	for (; phdr < phlimit; phdr++) {
+		if (phdr->p_type != PT_LOAD)
+			continue;
+
+		nprot = prot | VM_PROT_READ;
+		if ((phdr->p_flags & PF_W) != 0)
+			nprot |= VM_PROT_WRITE;
+		if ((phdr->p_flags & PF_X) != 0)
+			nprot |= VM_PROT_EXECUTE;
+		error = pmap_change_prot((vm_offset_t)ef->address +
+		    phdr->p_vaddr, round_page(phdr->p_memsz), nprot);
+		if (error != 0)
+			break;
+	}
+	return (error);
+#else
+	return (0);
+#endif
+}
 
 #ifdef __arm__
 /*
@@ -732,8 +853,8 @@ link_elf_locate_exidx_preload(struct linker_file *lf, caddr_t modptr)
 #endif /* __arm__ */
 
 static int
-link_elf_link_preload(linker_class_t cls,
-    const char* filename, linker_file_t *result)
+link_elf_link_preload(linker_class_t cls, const char *filename,
+    linker_file_t *result)
 {
 	Elf_Addr *ctors_addrp;
 	Elf_Size *ctors_sizep;
@@ -797,6 +918,8 @@ link_elf_link_preload(linker_class_t cls,
 	if (error == 0)
 		error = parse_vnet(ef);
 #endif
+	if (error == 0)
+		error = preload_protect(ef, VM_PROT_ALL);
 	if (error != 0) {
 		linker_file_unload(lf, LINKER_UNLOAD_FORCE);
 		return (error);
@@ -814,6 +937,8 @@ link_elf_link_preload_finish(linker_file_t lf)
 
 	ef = (elf_file_t) lf;
 	error = relocate_file(ef);
+	if (error == 0)
+		error = preload_protect(ef, VM_PROT_NONE);
 	if (error != 0)
 		return (error);
 	(void)link_elf_preload_parse_symbols(ef);
@@ -1013,7 +1138,7 @@ link_elf_load_file(linker_class_t cls, const char* filename,
 		goto out;
 	}
 #else
-	mapbase = malloc(mapsize, M_LINKER, M_EXEC | M_WAITOK);
+	mapbase = malloc_exec(mapsize, M_LINKER, M_WAITOK);
 #endif
 	ef->address = mapbase;
 
@@ -1079,7 +1204,7 @@ link_elf_load_file(linker_class_t cls, const char* filename,
 #endif
 	link_elf_reloc_local(lf);
 
-	VOP_UNLOCK(nd.ni_vp, 0);
+	VOP_UNLOCK(nd.ni_vp);
 	error = linker_load_dependencies(lf);
 	vn_lock(nd.ni_vp, LK_EXCLUSIVE | LK_RETRY);
 	if (error != 0)
@@ -1108,7 +1233,7 @@ link_elf_load_file(linker_class_t cls, const char* filename,
 		error = vm_map_protect(kernel_map,
 		    (vm_offset_t)segbase,
 		    (vm_offset_t)segbase + round_page(segs[i]->p_memsz),
-		    prot, FALSE);
+		    prot, 0, VM_MAP_PROTECT_SET_PROT);
 		if (error != KERN_SUCCESS) {
 			error = ENOMEM;
 			goto out;
@@ -1196,7 +1321,7 @@ nosyms:
 	*result = lf;
 
 out:
-	VOP_UNLOCK(nd.ni_vp, 0);
+	VOP_UNLOCK(nd.ni_vp);
 	vn_close(nd.ni_vp, FREAD, td->td_ucred, td);
 	if (error != 0 && lf != NULL)
 		linker_file_unload(lf, LINKER_UNLOAD_FORCE);
@@ -1224,7 +1349,6 @@ elf_relocaddr(linker_file_t lf, Elf_Addr x)
 #endif
 	return (x);
 }
-
 
 static void
 link_elf_unload_file(linker_file_t file)
@@ -1279,6 +1403,7 @@ link_elf_unload_file(linker_file_t file)
 static void
 link_elf_unload_preload(linker_file_t file)
 {
+
 	if (file->pathname != NULL)
 		preload_delete_name(file->pathname);
 }
@@ -1354,34 +1479,31 @@ relocate_file(elf_file_t ef)
 }
 
 /*
- * Hash function for symbol table lookup.  Don't even think about changing
- * this.  It is specified by the System V ABI.
+ * SysV hash function for symbol table lookup.  It is specified by the
+ * System V ABI.
  */
-static unsigned long
+static Elf32_Word
 elf_hash(const char *name)
 {
-	const unsigned char *p = (const unsigned char *) name;
-	unsigned long h = 0;
-	unsigned long g;
+	const unsigned char *p = (const unsigned char *)name;
+	Elf32_Word h = 0;
 
 	while (*p != '\0') {
 		h = (h << 4) + *p++;
-		if ((g = h & 0xf0000000) != 0)
-			h ^= g >> 24;
-		h &= ~g;
+		h ^= (h >> 24) & 0xf0;
 	}
-	return (h);
+	return (h & 0x0fffffff);
 }
 
 static int
-link_elf_lookup_symbol(linker_file_t lf, const char *name, c_linker_sym_t *sym)
+link_elf_lookup_symbol1(linker_file_t lf, const char *name, c_linker_sym_t *sym,
+    bool see_local)
 {
 	elf_file_t ef = (elf_file_t) lf;
 	unsigned long symnum;
 	const Elf_Sym* symp;
 	const char *strp;
-	unsigned long hash;
-	int i;
+	Elf32_Word hash;
 
 	/* If we don't have a hash, bail. */
 	if (ef->buckets == NULL || ef->nbuckets == 0) {
@@ -1412,8 +1534,11 @@ link_elf_lookup_symbol(linker_file_t lf, const char *name, c_linker_sym_t *sym)
 			    (symp->st_value != 0 &&
 			    (ELF_ST_TYPE(symp->st_info) == STT_FUNC ||
 			    ELF_ST_TYPE(symp->st_info) == STT_GNU_IFUNC))) {
-				*sym = (c_linker_sym_t) symp;
-				return (0);
+				if (see_local ||
+				    ELF_ST_BIND(symp->st_info) != STB_LOCAL) {
+					*sym = (c_linker_sym_t) symp;
+					return (0);
+				}
 			}
 			return (ENOENT);
 		}
@@ -1421,11 +1546,29 @@ link_elf_lookup_symbol(linker_file_t lf, const char *name, c_linker_sym_t *sym)
 		symnum = ef->chains[symnum];
 	}
 
-	/* If we have not found it, look at the full table (if loaded) */
-	if (ef->symtab == ef->ddbsymtab)
-		return (ENOENT);
+	return (ENOENT);
+}
 
-	/* Exhaustive search */
+static int
+link_elf_lookup_symbol(linker_file_t lf, const char *name, c_linker_sym_t *sym)
+{
+	if (link_elf_leak_locals)
+		return (link_elf_lookup_debug_symbol(lf, name, sym));
+	return (link_elf_lookup_symbol1(lf, name, sym, false));
+}
+
+static int
+link_elf_lookup_debug_symbol(linker_file_t lf, const char *name,
+    c_linker_sym_t *sym)
+{
+	elf_file_t ef = (elf_file_t)lf;
+	const Elf_Sym* symp;
+	const char *strp;
+	int i;
+
+	if (link_elf_lookup_symbol1(lf, name, sym, true) == 0)
+		return (0);
+
 	for (i = 0, symp = ef->ddbsymtab; i < ef->ddbsymcnt; i++, symp++) {
 		strp = ef->ddbstrtab + symp->st_name;
 		if (strcmp(name, strp) == 0) {
@@ -1444,8 +1587,8 @@ link_elf_lookup_symbol(linker_file_t lf, const char *name, c_linker_sym_t *sym)
 }
 
 static int
-link_elf_symbol_values(linker_file_t lf, c_linker_sym_t sym,
-    linker_symval_t *symval)
+link_elf_symbol_values1(linker_file_t lf, c_linker_sym_t sym,
+    linker_symval_t *symval, bool see_local)
 {
 	elf_file_t ef;
 	const Elf_Sym *es;
@@ -1453,7 +1596,9 @@ link_elf_symbol_values(linker_file_t lf, c_linker_sym_t sym,
 
 	ef = (elf_file_t)lf;
 	es = (const Elf_Sym *)sym;
-	if (es >= ef->symtab && es < (ef->symtab + ef->nchains)) {
+	if (es >= ef->symtab && es < ef->symtab + ef->nchains) {
+		if (!see_local && ELF_ST_BIND(es->st_info) == STB_LOCAL)
+			return (ENOENT);
 		symval->name = ef->strtab + es->st_name;
 		val = (caddr_t)ef->address + es->st_value;
 		if (ELF_ST_TYPE(es->st_info) == STT_GNU_IFUNC)
@@ -1462,8 +1607,31 @@ link_elf_symbol_values(linker_file_t lf, c_linker_sym_t sym,
 		symval->size = es->st_size;
 		return (0);
 	}
+	return (ENOENT);
+}
+
+static int
+link_elf_symbol_values(linker_file_t lf, c_linker_sym_t sym,
+    linker_symval_t *symval)
+{
+	if (link_elf_leak_locals)
+		return (link_elf_debug_symbol_values(lf, sym, symval));
+	return (link_elf_symbol_values1(lf, sym, symval, false));
+}
+
+static int
+link_elf_debug_symbol_values(linker_file_t lf, c_linker_sym_t sym,
+    linker_symval_t *symval)
+{
+	elf_file_t ef = (elf_file_t)lf;
+	const Elf_Sym *es = (const Elf_Sym *)sym;
+	caddr_t val;
+
+	if (link_elf_symbol_values1(lf, sym, symval, true) == 0)
+		return (0);
 	if (ef->symtab == ef->ddbsymtab)
 		return (ENOENT);
+
 	if (es >= ef->ddbsymtab && es < (ef->ddbsymtab + ef->ddbsymcnt)) {
 		symval->name = ef->ddbstrtab + es->st_name;
 		val = (caddr_t)ef->address + es->st_value;
@@ -1480,12 +1648,12 @@ static int
 link_elf_search_symbol(linker_file_t lf, caddr_t value,
     c_linker_sym_t *sym, long *diffp)
 {
-	elf_file_t ef = (elf_file_t) lf;
-	u_long off = (uintptr_t) (void *) value;
+	elf_file_t ef = (elf_file_t)lf;
+	u_long off = (uintptr_t)(void *)value;
 	u_long diff = off;
 	u_long st_value;
-	const Elf_Sym* es;
-	const Elf_Sym* best = NULL;
+	const Elf_Sym *es;
+	const Elf_Sym *best = NULL;
 	int i;
 
 	for (i = 0, es = ef->ddbsymtab; i < ef->ddbsymcnt; i++, es++) {
@@ -1595,7 +1763,7 @@ link_elf_each_function_nameval(linker_file_t file,
 {
 	linker_symval_t symval;
 	elf_file_t ef = (elf_file_t)file;
-	const Elf_Sym* symp;
+	const Elf_Sym *symp;
 	int i, error;
 
 	/* Exhaustive search */
@@ -1603,11 +1771,10 @@ link_elf_each_function_nameval(linker_file_t file,
 		if (symp->st_value != 0 &&
 		    (ELF_ST_TYPE(symp->st_info) == STT_FUNC ||
 		    ELF_ST_TYPE(symp->st_info) == STT_GNU_IFUNC)) {
-			error = link_elf_symbol_values(file,
+			error = link_elf_debug_symbol_values(file,
 			    (c_linker_sym_t) symp, &symval);
-			if (error != 0)
-				return (error);
-			error = callback(file, i, &symval, opaque);
+			if (error == 0)
+				error = callback(file, i, &symval, opaque);
 			if (error != 0)
 				return (error);
 		}
@@ -1762,7 +1929,7 @@ link_elf_strtab_get(linker_file_t lf, caddr_t *strtab)
 	return (ef->ddbstrcnt);
 }
 
-#if defined(__i386__) || defined(__amd64__) || defined(__aarch64__)
+#if defined(__i386__) || defined(__amd64__) || defined(__aarch64__) || defined(__powerpc__)
 /*
  * Use this lookup routine when performing relocations early during boot.
  * The generic lookup routine depends on kobj, which is not initialized
@@ -1798,9 +1965,29 @@ link_elf_ireloc(caddr_t kmdp)
 
 	ef->modptr = kmdp;
 	ef->dynamic = (Elf_Dyn *)&_DYNAMIC;
-	parse_dynamic(ef);
+
+#ifdef RELOCATABLE_KERNEL
+	ef->address = (caddr_t) (__startkernel - KERNBASE);
+#else
 	ef->address = 0;
+#endif
+	parse_dynamic(ef);
+
 	link_elf_preload_parse_symbols(ef);
 	relocate_file1(ef, elf_lookup_ifunc, elf_reloc, true);
 }
+
+#if defined(__aarch64__) || defined(__amd64__)
+void
+link_elf_late_ireloc(void)
+{
+	elf_file_t ef;
+
+	KASSERT(linker_kernel_file != NULL,
+	    ("link_elf_late_ireloc: No kernel linker file found"));
+	ef = (elf_file_t)linker_kernel_file;
+
+	relocate_file1(ef, elf_lookup_ifunc, elf_reloc_late, true);
+}
+#endif
 #endif

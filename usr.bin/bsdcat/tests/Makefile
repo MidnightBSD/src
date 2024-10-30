@@ -1,4 +1,3 @@
-# $FreeBSD: stable/11/usr.bin/bsdcat/tests/Makefile 328827 2018-02-03 02:17:04Z mm $
 
 PACKAGE=	tests
 

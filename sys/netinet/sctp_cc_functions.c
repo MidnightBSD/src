@@ -32,8 +32,6 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_var.h>
 #include <netinet/sctp_sysctl.h>
@@ -156,7 +154,6 @@ sctp_cwnd_update_after_fr(struct sctp_tcb *stcb,
 						    (uint64_t)net->mtu *
 						    (uint64_t)net->ssthresh) /
 						    (uint64_t)t_ssthresh);
-
 					}
 					if (asoc->sctp_cmt_on_off == SCTP_CMT_RPV2) {
 						uint32_t srtt;
@@ -247,7 +244,6 @@ sctp_cwnd_update_after_fr(struct sctp_tcb *stcb,
 #define SCTP_INST_LOOSING 1	/* Losing to other flows */
 #define SCTP_INST_NEUTRAL 2	/* Neutral, no indication */
 #define SCTP_INST_GAINING 3	/* Gaining, step down possible */
-
 
 static int
 cc_bw_same(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw,
@@ -686,7 +682,7 @@ sctp_cwnd_update_after_sack_common(struct sctp_tcb *stcb,
 {
 	struct sctp_nets *net;
 	int old_cwnd;
-	uint32_t t_ssthresh, t_cwnd, incr;
+	uint32_t t_ssthresh, incr;
 	uint64_t t_ucwnd_sbw;
 	uint64_t t_path_mptcp;
 	uint64_t mptcp_like_alpha;
@@ -695,7 +691,6 @@ sctp_cwnd_update_after_sack_common(struct sctp_tcb *stcb,
 
 	/* MT FIXME: Don't compute this over and over again */
 	t_ssthresh = 0;
-	t_cwnd = 0;
 	t_ucwnd_sbw = 0;
 	t_path_mptcp = 0;
 	mptcp_like_alpha = 1;
@@ -705,7 +700,6 @@ sctp_cwnd_update_after_sack_common(struct sctp_tcb *stcb,
 		max_path = 0;
 		TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 			t_ssthresh += net->ssthresh;
-			t_cwnd += net->cwnd;
 			/* lastsa>>3;  we don't need to devide ... */
 			srtt = net->lastsa;
 			if (srtt > 0) {
@@ -737,7 +731,6 @@ sctp_cwnd_update_after_sack_common(struct sctp_tcb *stcb,
 	/* update cwnd and Early FR   */
 	/******************************/
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
-
 #ifdef JANA_CMT_FAST_RECOVERY
 		/*
 		 * CMT fast recovery code. Need to debug.
@@ -1010,7 +1003,6 @@ sctp_cwnd_update_exit_pf_common(struct sctp_tcb *stcb, struct sctp_nets *net)
 	    (void *)net, net->cwnd);
 }
 
-
 static void
 sctp_cwnd_update_after_timeout(struct sctp_tcb *stcb, struct sctp_nets *net)
 {
@@ -1119,7 +1111,6 @@ sctp_cwnd_update_after_ecn_echo_common(struct sctp_tcb *stcb, struct sctp_nets *
 			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
 				sctp_log_cwnd(stcb, net, (net->cwnd - old_cwnd), SCTP_CWND_LOG_FROM_SAT);
 			}
-
 		}
 		SCTP_STAT_INCR(sctps_ecnereducedcwnd);
 	} else {
@@ -1329,7 +1320,7 @@ sctp_cwnd_prepare_rtcc_net_for_sack(struct sctp_tcb *stcb SCTP_UNUSED,
     struct sctp_nets *net)
 {
 	if (net->cc_mod.rtcc.tls_needs_set > 0) {
-		/* We had a bw measurment going on */
+		/* We had a bw measurement going on */
 		struct timeval ltls;
 
 		SCTP_GETPTIME_TIMEVAL(&ltls);
@@ -1434,7 +1425,6 @@ sctp_set_rtcc_initial_cc_param(struct sctp_tcb *stcb,
 	net->cc_mod.rtcc.use_dccc_ecn = SCTP_BASE_SYSCTL(sctp_use_dccc_ecn);
 	net->cc_mod.rtcc.step_cnt = 0;
 	net->cc_mod.rtcc.last_step_state = 0;
-
 }
 
 static int
@@ -1759,7 +1749,6 @@ sctp_hs_cwnd_update_after_sack(struct sctp_tcb *stcb,
 	/* update cwnd and Early FR   */
 	/******************************/
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
-
 #ifdef JANA_CMT_FAST_RECOVERY
 		/*
 		 * CMT fast recovery code. Need to debug.
@@ -1844,7 +1833,6 @@ sctp_hs_cwnd_update_after_sack(struct sctp_tcb *stcb,
 	}
 }
 
-
 /*
  * H-TCP congestion control. The algorithm is detailed in:
  * R.N.Shorten, D.J.Leith:
@@ -1852,7 +1840,6 @@ sctp_hs_cwnd_update_after_sack(struct sctp_tcb *stcb,
  *   Proc. PFLDnet, Argonne, 2004.
  * http://www.hamilton.ie/net/htcp3.pdf
  */
-
 
 static int use_rtt_scaling = 1;
 static int use_bandwidth_switch = 1;
@@ -2066,7 +2053,6 @@ htcp_cong_avoid(struct sctp_tcb *stcb, struct sctp_nets *net)
 					sctp_log_cwnd(stcb, net, net->net_ack,
 					    SCTP_CWND_LOG_FROM_SS);
 				}
-
 			}
 			sctp_enforce_cwnd_limit(&stcb->asoc, net);
 		} else {
@@ -2155,7 +2141,6 @@ sctp_htcp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 	/* update cwnd and Early FR   */
 	/******************************/
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
-
 #ifdef JANA_CMT_FAST_RECOVERY
 		/*
 		 * CMT fast recovery code. Need to debug.

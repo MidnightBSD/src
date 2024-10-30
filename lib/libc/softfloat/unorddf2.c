@@ -9,7 +9,6 @@
 #include "softfloat.h"
 
 #include <sys/cdefs.h>
-
 flag __unorddf2(float64, float64);
 
 flag

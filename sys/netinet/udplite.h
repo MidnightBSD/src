@@ -22,7 +22,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _NETINET_UDPLITE_H_
@@ -39,7 +38,7 @@ struct udplitehdr {
 	u_short	udplite_checksum;	/* UDP-Lite checksum */
 };
 
-/* 
+/*
  * User-settable options (used with setsockopt).
  */
 #define	UDPLITE_SEND_CSCOV	2	/* Sender checksum coverage. */

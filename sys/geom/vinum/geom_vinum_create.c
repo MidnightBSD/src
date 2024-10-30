@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2007 Lukas Ertl
  * Copyright (c) 2007, 2009 Ulf Lilleengen
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bio.h>
 #include <sys/conf.h>
@@ -38,6 +37,7 @@
 #include <sys/systm.h>
 
 #include <geom/geom.h>
+#include <geom/geom_dbg.h>
 #include <geom/vinum/geom_vinum_var.h>
 #include <geom/vinum/geom_vinum.h>
 
@@ -138,8 +138,7 @@ gv_create_drive(struct gv_softc *sc, struct gv_drive *d)
 			g_topology_unlock();
 			G_VINUM_DEBUG(0, "create drive '%s': unable to update "
 			    "access counts", d->name);
-			if (d->hdr != NULL)
-				g_free(d->hdr);
+			g_free(d->hdr);
 			g_free(d);
 			return (GV_ERR_CREATE);
 		}

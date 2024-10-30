@@ -32,8 +32,6 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 
 #ifndef lint
 static const char sccsid[] = "@(#)forward.c	8.1 (Berkeley) 6/6/93";
@@ -55,6 +53,9 @@ static const char sccsid[] = "@(#)forward.c	8.1 (Berkeley) 6/6/93";
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+#include <libcasper.h>
+#include <casper/cap_fileargs.h>
 
 #include "extern.h"
 
@@ -242,8 +243,8 @@ show(file_info_t *file)
 	int ch;
 
 	while ((ch = getc(file->fp)) != EOF) {
-		if (last != file && no_files > 1) {
-			if (!qflag)
+		if (last != file) {
+			if (vflag || (qflag == 0 && no_files > 1))
 				printfn(file->file_name, 1);
 			last = file;
 		}
@@ -274,7 +275,7 @@ set_events(file_info_t *files)
 
 	action = USE_KQUEUE;
 	for (i = 0, file = files; i < no_files; i++, file++) {
-		if (! file->fp)
+		if (!file->fp)
 			continue;
 
 		if (fstatfs(fileno(file->fp), &sf) == 0 &&
@@ -306,26 +307,21 @@ set_events(file_info_t *files)
 void
 follow(file_info_t *files, enum STYLE style, off_t off)
 {
-	int active, ev_change, i, n = -1;
+	int active, ev_change, i, n;
 	struct stat sb2;
 	file_info_t *file;
+	FILE *ftmp;
 	struct timespec ts;
 
 	/* Position each of the files */
-
-	file = files;
 	active = 0;
-	n = 0;
-	for (i = 0; i < no_files; i++, file++) {
-		if (file->fp) {
-			active = 1;
-			n++;
-			if (no_files > 1 && !qflag)
-				printfn(file->file_name, 1);
-			forward(file->fp, file->file_name, style, off, &file->st);
-			if (Fflag && fileno(file->fp) != STDIN_FILENO)
-				n++;
-		}
+	for (i = 0, file = files; i < no_files; i++, file++) {
+		if (!file->fp)
+			continue;
+		active = 1;
+		if (vflag || (qflag == 0 && no_files > 1))
+			printfn(file->file_name, 1);
+		forward(file->fp, file->file_name, style, off, &file->st);
 	}
 	if (!Fflag && !active)
 		return;
@@ -335,9 +331,14 @@ follow(file_info_t *files, enum STYLE style, off_t off)
 	kq = kqueue();
 	if (kq < 0)
 		err(1, "kqueue");
-	ev = malloc(n * sizeof(struct kevent));
-	if (! ev)
-	    err(1, "Couldn't allocate memory for kevents.");
+	/*
+	 * The number of kqueue events we track may vary over time and may
+	 * even grow past its initial value in the -F case, but it will
+	 * never exceed two per file, so just preallocate that.
+	 */
+	ev = malloc(no_files * 2 * sizeof(struct kevent));
+	if (ev == NULL)
+		err(1, "failed to allocate memory for kevents");
 	set_events(files);
 
 	for (;;) {
@@ -345,7 +346,9 @@ follow(file_info_t *files, enum STYLE style, off_t off)
 		if (Fflag) {
 			for (i = 0, file = files; i < no_files; i++, file++) {
 				if (!file->fp) {
-					file->fp = fopen(file->file_name, "r");
+					file->fp =
+					    fileargs_fopen(fa, file->file_name,
+					    "r");
 					if (file->fp != NULL &&
 					    fstat(fileno(file->fp), &file->st)
 					    == -1) {
@@ -358,13 +361,18 @@ follow(file_info_t *files, enum STYLE style, off_t off)
 				}
 				if (fileno(file->fp) == STDIN_FILENO)
 					continue;
-				if (stat(file->file_name, &sb2) == -1) {
+				ftmp = fileargs_fopen(fa, file->file_name, "r");
+				if (ftmp == NULL ||
+				    fstat(fileno(ftmp), &sb2) == -1) {
 					if (errno != ENOENT)
 						ierr(file->file_name);
 					show(file);
 					if (file->fp != NULL) {
 						fclose(file->fp);
 						file->fp = NULL;
+					}
+					if (ftmp != NULL) {
+						fclose(ftmp);
 					}
 					ev_change++;
 					continue;
@@ -374,14 +382,14 @@ follow(file_info_t *files, enum STYLE style, off_t off)
 				    sb2.st_dev != file->st.st_dev ||
 				    sb2.st_nlink == 0) {
 					show(file);
-					file->fp = freopen(file->file_name, "r",
-					    file->fp);
 					if (file->fp != NULL)
-						memcpy(&file->st, &sb2,
-						    sizeof(struct stat));
-					else if (errno != ENOENT)
-						ierr(file->file_name);
+						fclose(file->fp);
+					file->fp = ftmp;
+					memcpy(&file->st, &sb2,
+					    sizeof(struct stat));
 					ev_change++;
+				} else {
+					fclose(ftmp);
 				}
 			}
 		}
@@ -400,10 +408,14 @@ follow(file_info_t *files, enum STYLE style, off_t off)
 			/*
 			 * In the -F case we set a timeout to ensure that
 			 * we re-stat the file at least once every second.
+			 * If we've received EINTR, ignore it. Both reasons
+			 * for its generation are transient.
 			 */
-			n = kevent(kq, NULL, 0, ev, 1, Fflag ? &ts : NULL);
-			if (n < 0)
-				err(1, "kevent");
+			do {
+				n = kevent(kq, NULL, 0, ev, 1, Fflag ? &ts : NULL);
+				if (n < 0 && errno != EINTR)
+					err(1, "kevent");
+			} while (n < 0);
 			if (n == 0) {
 				/* timeout */
 				break;

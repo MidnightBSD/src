@@ -69,7 +69,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "opt_inet.h"
 #include "opt_mrouting.h"
 
@@ -231,7 +230,8 @@ VNET_PCPUSTAT_DEFINE_STATIC(struct pimstat, pimstat);
 VNET_PCPUSTAT_SYSINIT(pimstat);
 VNET_PCPUSTAT_SYSUNINIT(pimstat);
 
-SYSCTL_NODE(_net_inet, IPPROTO_PIM, pim, CTLFLAG_RW, 0, "PIM");
+SYSCTL_NODE(_net_inet, IPPROTO_PIM, pim, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "PIM");
 SYSCTL_VNET_PCPUSTAT(_net_inet_pim, PIMCTL_STATS, stats, struct pimstat,
     pimstat, "PIM Statistics (struct pimstat, netinet/pim_var.h)");
 
@@ -647,7 +647,7 @@ if_detached_event(void *arg __unused, struct ifnet *ifp)
 
     MROUTER_UNLOCK();
 }
-                        
+
 /*
  * Enable multicast forwarding.
  */
@@ -736,7 +736,7 @@ X_ip_mrouter_done(void)
     bzero((caddr_t)V_viftable, sizeof(*V_viftable) * MAXVIFS);
     V_numvifs = 0;
     V_pim_assert_enabled = 0;
-    
+
     VIF_UNLOCK();
 
     callout_stop(&V_expire_upcalls_ch);
@@ -872,16 +872,19 @@ add_vif(struct vifctl *vifcp)
 	 */
 	ifp = NULL;
     } else {
+	struct epoch_tracker et;
+
 	sin.sin_addr = vifcp->vifc_lcl_addr;
-	NET_EPOCH_ENTER();
+	NET_EPOCH_ENTER(et);
 	ifa = ifa_ifwithaddr((struct sockaddr *)&sin);
 	if (ifa == NULL) {
-		NET_EPOCH_EXIT();
+	    NET_EPOCH_EXIT(et);
 	    VIF_UNLOCK();
 	    return EADDRNOTAVAIL;
 	}
 	ifp = ifa->ifa_ifp;
-	NET_EPOCH_EXIT();
+	/* XXX FIXME we need to take a ref on ifp and cleanup properly! */
+	NET_EPOCH_EXIT(et);
     }
 
     if ((vifcp->vifc_flags & VIFF_TUNNEL) != 0) {
@@ -1523,7 +1526,6 @@ ip_mdq(struct mbuf *m, struct ifnet *ifp, struct mfc *rt, vifi_t xmt_vif)
 	 */
 	if (V_pim_assert_enabled && (vifi < V_numvifs) &&
 	    V_viftable[vifi].v_ifp) {
-
 	    if (ifp == &V_multicast_register_if)
 		PIMSTAT_INC(pims_rcv_registers_wrongiif);
 
@@ -1565,7 +1567,6 @@ ip_mdq(struct mbuf *m, struct ifnet *ifp, struct mfc *rt, vifi_t xmt_vif)
 	}
 	return 0;
     }
-
 
     /* If I sourced this packet, it counts as output, else it was input. */
     if (in_hosteq(ip->ip_src, V_viftable[vifi].v_lcl_addr)) {
@@ -2182,7 +2183,6 @@ unschedule_bw_meter(struct bw_meter *x)
     x->bm_time_hash = BW_METER_BUCKETS;
 }
 
-
 /*
  * Process all "<=" type of bw_meter that should be processed now,
  * and for each entry prepare an upcall if necessary. Each processed
@@ -2794,8 +2794,9 @@ out_locked:
 	return (error);
 }
 
-static SYSCTL_NODE(_net_inet_ip, OID_AUTO, mfctable, CTLFLAG_RD,
-    sysctl_mfctable, "IPv4 Multicast Forwarding Table "
+static SYSCTL_NODE(_net_inet_ip, OID_AUTO, mfctable,
+    CTLFLAG_RD | CTLFLAG_MPSAFE, sysctl_mfctable,
+    "IPv4 Multicast Forwarding Table "
     "(struct *mfc[mfchashsize], netinet/ip_mroute.h)");
 
 static int
@@ -2854,7 +2855,7 @@ vnet_mroute_uninit(const void *unused __unused)
 	V_nexpire = NULL;
 }
 
-VNET_SYSUNINIT(vnet_mroute_uninit, SI_SUB_PROTO_MC, SI_ORDER_MIDDLE, 
+VNET_SYSUNINIT(vnet_mroute_uninit, SI_SUB_PROTO_MC, SI_ORDER_MIDDLE,
 	vnet_mroute_uninit, NULL);
 
 static int
@@ -2865,7 +2866,7 @@ ip_mroute_modevent(module_t mod, int type, void *unused)
     case MOD_LOAD:
 	MROUTER_LOCK_INIT();
 
-	if_detach_event_tag = EVENTHANDLER_REGISTER(ifnet_departure_event, 
+	if_detach_event_tag = EVENTHANDLER_REGISTER(ifnet_departure_event,
 	    if_detached_event, NULL, EVENTHANDLER_PRI_ANY);
 	if (if_detach_event_tag == NULL) {
 		printf("ip_mroute: unable to register "

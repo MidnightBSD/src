@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2007-2009 Sam Leffler, Errno Consulting
  * Copyright (c) 2007-2009 Intel Corporation
@@ -24,7 +24,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 #ifndef _NET80211_IEEE80211_TDMA_H_
 #define _NET80211_IEEE80211_TDMA_H_
@@ -86,7 +85,7 @@ struct ieee80211_tdma_state {
 		    const struct ieee80211_rx_stats *rxs, int, int);
 	void	(*tdma_opdetach)(struct ieee80211vap *);
 };
- 
+
 #define	TDMA_UPDATE_SLOT	0x0001	/* tdma_slot changed */
 #define	TDMA_UPDATE_SLOTCNT	0x0002	/* tdma_slotcnt changed */
 #define	TDMA_UPDATE_SLOTLEN	0x0004	/* tdma_slotlen changed */

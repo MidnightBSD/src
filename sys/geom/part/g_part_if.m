@@ -47,8 +47,36 @@ CODE {
 	{
 		char buf[32];
 
-		sbuf_printf(sb, "%s%s", pfx,
+		sbuf_printf(sb, "%s%s%s", pfx, g_part_separator,
 		    G_PART_NAME(table, entry, buf, sizeof(buf)));
+	}
+
+	static struct g_provider *
+	default_new_provider(struct g_part_table *table, struct g_geom *gp,
+	    struct g_part_entry *entry, const char *pfx)
+	{
+		struct g_provider *ret;
+		struct sbuf *sb;
+
+		sb = sbuf_new_auto();
+		G_PART_FULLNAME(table, entry, sb, pfx);
+		sbuf_finish(sb);
+		ret = g_new_providerf(gp, "%s", sbuf_data(sb));
+		sbuf_delete(sb);
+		return (ret);
+	}
+
+	static void
+	default_add_alias(struct g_part_table *table, struct g_provider *pp,
+	    struct g_part_entry *entry, const char *pfx)
+	{
+		struct sbuf *sb;
+
+		sb = sbuf_new_auto();
+		G_PART_FULLNAME(table, entry, sb, pfx);
+		sbuf_finish(sb);
+		g_provider_add_alias(pp, "%s", sbuf_data(sb));
+		sbuf_delete(sb);
 	}
 
 	static int
@@ -86,6 +114,15 @@ METHOD int add {
 	struct g_part_entry *entry;
 	struct g_part_parms *gpp;
 };
+
+# add_alias() - Create aliases for the partition's provider with the given
+# alias prefixes.
+METHOD void add_alias {
+	struct g_part_table *table;
+	struct g_provider *pp;
+	struct g_part_entry *entry;
+	const char *pfx;
+} DEFAULT default_add_alias;
 
 # bootcode() - scheme specific processing for the bootcode verb.
 METHOD int bootcode {
@@ -143,6 +180,14 @@ METHOD int modify {
 	struct g_part_entry *entry;
 	struct g_part_parms *gpp;
 };
+
+# new_provider() - Create the partition's provider(s).
+METHOD struct g_provider * new_provider {
+	struct g_part_table *table;
+	struct g_geom *gp;
+	struct g_part_entry *entry;
+	const char *pfx;
+} DEFAULT default_new_provider;
 
 # resize() - scheme specific processing for the resize verb.
 METHOD int resize {

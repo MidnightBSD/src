@@ -29,8 +29,6 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-
 
 #ifndef lint
 static const char sccsid[] = "@(#)str.c	8.2 (Berkeley) 4/28/95";

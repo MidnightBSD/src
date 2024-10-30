@@ -29,7 +29,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -86,9 +85,11 @@ enum Argtype {
 	/* Encoded scalar values. */
 	Accessmode,
 	Acltype,
+	AiofsyncOp,
 	Atfd,
 	Atflags,
 	CapFcntlRights,
+	Closerangeflags,
 	Extattrnamespace,
 	Fadvice,
 	Fcntl,
@@ -98,8 +99,10 @@ enum Argtype {
 	Getfsstatmode,
 	Idtype,
 	Ioctl,
+	Itimerwhich,
 	Kldsymcmd,
 	Kldunloadflags,
+	LioMode,
 	Madvice,
 	Minherit,
 	Msgflags,
@@ -114,6 +117,8 @@ enum Argtype {
 	Procctl,
 	Priowhich,
 	Ptraceop,
+	Sendfileflags,
+	Sendfilehdtr,
 	Quotactlcmd,
 	Reboothowto,
 	Resource,
@@ -121,6 +126,7 @@ enum Argtype {
 	Rtpriofunc,
 	RusageWho,
 	Schedpolicy,
+	ShmFlags,
 	Shutdown,
 	Signal,
 	Sigprocmask,
@@ -137,6 +143,8 @@ enum Argtype {
 
 	/* Pointers to non-structures. */
 	Ptr,
+	AiocbArray,
+	AiocbPointer,
 	BinString,
 	CapRights,
 	ExecArgs,
@@ -151,9 +159,11 @@ enum Argtype {
 	PQuadHex,
 	PUInt,
 	Readlinkres,
+	ShmName,
 	StringArray,
 
 	/* Pointers to structures. */
+	Aiocb,
 	Itimerval,
 	Kevent,
 	Kevent11,
@@ -165,6 +175,7 @@ enum Argtype {
 	Schedparam,
 	Sctpsndrcvinfo,
 	Sigaction,
+	Sigevent,
 	Siginfo,
 	Sigset,
 	Sockaddr,
@@ -207,18 +218,28 @@ enum Argtype {
 _Static_assert(ARG_MASK > MAX_ARG_TYPE,
     "ARG_MASK overlaps with Argtype values");
 
-struct syscall_args {
+struct syscall_arg {
 	enum Argtype type;
 	int offset;
 };
 
+struct syscall_decode {
+	const char *name; /* Name for calling convention lookup. */
+	/*
+	 * Syscall return type:
+	 * 0: no return value (e.g. exit)
+	 * 1: normal return value (a single int/long/pointer)
+	 * 2: off_t return value (two values for 32-bit ABIs)
+	 */
+	u_int ret_type;
+	u_int nargs;		     /* number of meaningful arguments */
+	struct syscall_arg args[10]; /* Hopefully no syscalls with > 10 args */
+};
+
 struct syscall {
 	STAILQ_ENTRY(syscall) entries;
-	const char *name;
-	u_int ret_type;	/* 0, 1, or 2 return values */
-	u_int nargs;	/* actual number of meaningful arguments */
-			/* Hopefully, no syscalls with > 10 args */
-	struct syscall_args args[10];
+	const char *name;	/* Name to be displayed, might be malloc()'d */
+	struct syscall_decode decode;
 	struct timespec time; /* Time spent for this call */
 	int ncalls;	/* Number of calls */
 	int nerror;	/* Number of calls that returned with error */
@@ -226,7 +247,7 @@ struct syscall {
 };
 
 struct syscall *get_syscall(struct threadinfo *, u_int, u_int);
-char *print_arg(struct syscall_args *, unsigned long*, register_t *,
+char *print_arg(struct syscall_arg *, unsigned long *, register_t *,
     struct trussinfo *);
 
 /*
@@ -269,7 +290,6 @@ struct linux_socketcall_args {
     char args_l_[PADL_(l_ulong)]; l_ulong args; char args_r_[PADR_(l_ulong)];
 };
 
-void init_syscalls(void);
 void print_syscall(struct trussinfo *);
 void print_syscall_ret(struct trussinfo *, int, register_t *);
 void print_summary(struct trussinfo *trussinfo);

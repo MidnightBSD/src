@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010 Alexander Motin <mav@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/bio.h>
 #include <sys/endian.h>
@@ -38,6 +37,7 @@
 #include <sys/mutex.h>
 #include <sys/systm.h>
 #include <geom/geom.h>
+#include <geom/geom_dbg.h>
 #include "geom/raid/g_raid.h"
 #include "g_raid_tr_if.h"
 
@@ -202,7 +202,7 @@ g_raid_tr_iostart_raid0(struct g_raid_tr_object *tr, struct bio *bp)
 		g_raid_iodone(bp, EIO);
 		return;
 	}
-	if (bp->bio_cmd == BIO_FLUSH) {
+	if (bp->bio_cmd == BIO_FLUSH || bp->bio_cmd == BIO_SPEEDUP) {
 		g_raid_tr_flush_common(tr, bp);
 		return;
 	}
@@ -267,7 +267,7 @@ failure:
 
 static int
 g_raid_tr_kerneldump_raid0(struct g_raid_tr_object *tr,
-    void *virtual, vm_offset_t physical, off_t boffset, size_t blength)
+    void *virtual, off_t boffset, size_t blength)
 {
 	struct g_raid_volume *vol;
 	char *addr;
@@ -294,8 +294,8 @@ g_raid_tr_kerneldump_raid0(struct g_raid_tr_object *tr,
 
 	do {
 		length = MIN(strip_size - start, remain);
-		error = g_raid_subdisk_kerneldump(&vol->v_subdisks[no],
-		    addr, 0, offset + start, length);
+		error = g_raid_subdisk_kerneldump(&vol->v_subdisks[no], addr,
+		    offset + start, length);
 		if (error != 0)
 			return (error);
 		if (++no >= vol->v_disks_count) {

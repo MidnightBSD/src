@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Authors: Doug Rabson <dfr@rabson.org>
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/kobj.h>
@@ -60,7 +59,7 @@ gss_canonicalize_name(OM_uint32 *minor_status,
 
 	args.input_name = input_name->handle;
 	args.mech_type = mech_type;
-	
+
 	bzero(&res, sizeof(res));
 	stat = gssd_canonicalize_name_1(&args, &res, cl);
 	CLNT_RELEASE(cl);

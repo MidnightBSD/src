@@ -77,11 +77,9 @@ static char sccsid[] = "@(#)nfsstat.c	8.2 (Berkeley) 3/31/95";
 #include <sys/mount.h>
 #include <sys/time.h>
 #include <sys/sysctl.h>
-#include <nfs/nfsproto.h>
-#include <nfsclient/nfs.h>
-#include <nfsserver/nfs.h>
 #include <nfs/nfssvc.h>
 
+#include <fs/nfs/nfsproto.h>
 #include <fs/nfs/nfsport.h>
 
 #include <signal.h>
@@ -149,14 +147,12 @@ main(int argc, char **argv)
 	int serverOnly = -1;
 	int newStats = 0;
 	int ch;
-	char *memf, *nlistf;
 	int mntlen, i;
 	char buf[1024];
 	struct statfs *mntbuf;
 	struct nfscl_dumpmntopts dumpmntopts;
 
 	interval = 0;
-	memf = nlistf = NULL;
 
 	argc = xo_parse_args(argc, argv);
 	if (argc < 0)
@@ -167,7 +163,7 @@ main(int argc, char **argv)
 	while ((ch = getopt(argc, argv, "cdEesWM:mN:w:zq")) != -1)
 		switch(ch) {
 		case 'M':
-			memf = optarg;
+			printf("*** -M option deprecated, ignored\n\n");
 			break;
 		case 'm':
 			/* Display mount options for NFS mount points. */
@@ -191,7 +187,7 @@ main(int argc, char **argv)
 			}
 			exit(0);
 		case 'N':
-			nlistf = optarg;
+			printf("*** -N option deprecated, ignored\n\n");
 			break;
 		case 'W':
 			widemode = 1;
@@ -239,14 +235,8 @@ main(int argc, char **argv)
 
 #define	BACKWARD_COMPATIBILITY
 #ifdef	BACKWARD_COMPATIBILITY
-	if (*argv) {
+	if (*argv)
 		interval = atoi(*argv);
-		if (*++argv) {
-			nlistf = *argv;
-			if (*++argv)
-				memf = *argv;
-		}
-	}
 #endif
 	if (modfind("nfscommon") < 0)
 		xo_err(1, "NFS client/server not loaded");
@@ -292,7 +282,8 @@ intpr(int clientOnly, int serverOnly)
 			xo_emit("{T:Client Info:\n");
 
 		xo_open_container("operations");
-		xo_emit("{T:Rpc Counts:}\n");
+		if (printtitle)
+			xo_emit("{T:Rpc Counts:}\n");
 
 		xo_emit("{T:Getattr/%13.13s}{T:Setattr/%13.13s}"
 		    "{T:Lookup/%13.13s}{T:Readlink/%13.13s}"
@@ -343,7 +334,8 @@ intpr(int clientOnly, int serverOnly)
 		xo_close_container("operations");
 
 		xo_open_container("rpcs");
-		xo_emit("{T:Rpc Info:}\n");
+		if (printtitle)
+			xo_emit("{T:Rpc Info:}\n");
 
 		xo_emit("{T:TimedOut/%13.13s}{T:Invalid/%13.13s}"
 		    "{T:X Replies/%13.13s}{T:Retries/%13.13s}"
@@ -359,7 +351,8 @@ intpr(int clientOnly, int serverOnly)
 		xo_close_container("rpcs");
 
 		xo_open_container("cache");
-		xo_emit("{T:Cache Info:}\n");
+		if (printtitle)
+			xo_emit("{T:Cache Info:}\n");
 
 		xo_emit("{T:Attr Hits/%13.13s}{T:Attr Misses/%13.13s}"
 		    "{T:Lkup Hits/%13.13s}{T:Lkup Misses/%13.13s}"
@@ -406,7 +399,8 @@ intpr(int clientOnly, int serverOnly)
 	if (serverOnly) {
 		xo_open_container("serverstats");
 
-		xo_emit("{T:Server Info:}\n");
+		if (printtitle)
+			xo_emit("{T:Server Info:}\n");
 		xo_open_container("operations");
 
 		xo_emit("{T:Getattr/%13.13s}{T:Setattr/%13.13s}"
@@ -458,13 +452,9 @@ intpr(int clientOnly, int serverOnly)
 		xo_close_container("operations");
 
 		xo_open_container("server");
-		xo_emit("{T:Server Re-Failed}\n");
-		xo_emit("{:retfailed/%16ju}\n", (uintmax_t)ext_nfsstats.srvrpc_errs);
 
-		xo_emit("{T:Server Faults}\n");
-		xo_emit("{:faults/%13ju}\n", (uintmax_t)ext_nfsstats.srv_errs);
-
-		xo_emit("{T:Server Write Gathering:/%13.13s}\n");
+		if (printtitle)
+			xo_emit("{T:Server Write Gathering:/%13.13s}\n");
 
 		xo_emit("{T:WriteOps/%13.13s}{T:WriteRPC/%13.13s}"
 		    "{T:Opsaved/%13.13s}\n");
@@ -480,13 +470,12 @@ intpr(int clientOnly, int serverOnly)
 		xo_close_container("server");
 
 		xo_open_container("cache");
-		xo_emit("{T:Server Cache Stats:/%13.13s}\n");
-		xo_emit("{T:Inprog/%13.13s}{T:Idem/%13.13s}"
+		if (printtitle)
+			xo_emit("{T:Server Cache Stats:/%13.13s}\n");
+		xo_emit("{T:Inprog/%13.13s}"
 		    "{T:Non-Idem/%13.13s}{T:Misses/%13.13s}\n");
-		xo_emit("{:inprog/%13ju}{:idem/%13ju}"
-		    "{:nonidem/%13ju}{:misses/%13ju}\n",
+		xo_emit("{:inprog/%13ju}{:nonidem/%13ju}{:misses/%13ju}\n",
 			(uintmax_t)ext_nfsstats.srvcache_inproghits,
-			(uintmax_t)ext_nfsstats.srvcache_idemdonehits,
 			(uintmax_t)ext_nfsstats.srvcache_nonidemdonehits,
 			(uintmax_t)ext_nfsstats.srvcache_misses);
 		xo_close_container("cache");
@@ -529,7 +518,7 @@ static void
 usage(void)
 {
 	(void)fprintf(stderr,
-	    "usage: nfsstat [-cdemszW] [-M core] [-N system] [-w wait]\n");
+	    "usage: nfsstat [-cdEemqszW] [-w wait]\n");
 	exit(1);
 }
 
@@ -764,15 +753,50 @@ exp_intpr(int clientOnly, int serverOnly, int nfs41)
 			  (uintmax_t)ext_nfsstats.rpccnt[NFSPROC_WRITEDS],
 			  (uintmax_t)ext_nfsstats.rpccnt[NFSPROC_COMMITDS]);
 
-			xo_emit("{T:OpenLayout/%13.13s}{T:CreateLayout/%13.13s}\n");
-			xo_emit("{:openlayout/%13ju}{:createlayout/%13ju}\n",
+			xo_emit("{T:OpenLayout/%13.13s}{T:CreateLayout/%13.13s}"
+			    "{T:BindConnSess/%13.13s}{T:LookupOpen/%13.13s}\n");
+			xo_emit("{:openlayout/%13ju}{:createlayout/%13ju}"
+			    "{:bindconnsess/%13ju}{:lookupopen/%13ju}\n",
 			    (uintmax_t)ext_nfsstats.rpccnt[NFSPROC_OPENLAYGET],
-			    (uintmax_t)ext_nfsstats.rpccnt[NFSPROC_CREATELAYGET]);
+			    (uintmax_t)ext_nfsstats.rpccnt[NFSPROC_CREATELAYGET],
+			    (uintmax_t)ext_nfsstats.rpccnt[NFSPROC_BINDCONNTOSESS],
+			    (uintmax_t)ext_nfsstats.rpccnt[NFSPROC_LOOKUPOPEN]);
 
 			xo_close_container("nfsv41");
+
+			xo_open_container("nfsv42");
+
+			xo_emit("{T:IOAdvise/%13.13s}{T:Allocate/%13.13s}"
+			    "{T:Copy/%13.13s}{T:Seek/%13.13s}"
+			    "{T:SeekDataS/%13.13s}{T:GetExtattr/%13.13s}\n");
+			xo_emit("{:ioadvise/%13ju}{:allocate/%13ju}"
+			    "{:copy/%13ju}{:seek/%13ju}"
+			    "{:seekdatas/%13ju}{:getextattr/%13ju}\n",
+			    (uintmax_t)ext_nfsstats.rpccnt[NFSPROC_IOADVISE],
+			    (uintmax_t)ext_nfsstats.rpccnt[NFSPROC_ALLOCATE],
+			    (uintmax_t)ext_nfsstats.rpccnt[NFSPROC_COPY],
+			    (uintmax_t)ext_nfsstats.rpccnt[NFSPROC_SEEK],
+			    (uintmax_t)ext_nfsstats.rpccnt[NFSPROC_SEEKDS],
+			    (uintmax_t)ext_nfsstats.rpccnt[NFSPROC_GETEXTATTR]);
+
+			xo_emit("{T:SetExtattr/%13.13s}{T:RmExtattr/%13.13s}"
+			    "{T:ListExtattr/%13.13s}{T:Deallocate/%13.13s}"
+			    "{T:LayoutError/%13.13s}\n");
+			xo_emit("{:setextattr/%13ju}{:rmextattr/%13ju}"
+			    "{:listextattr/%13ju}{:deallocate/%13ju}"
+			    "{:layouterror/%13ju}\n",
+			    (uintmax_t)ext_nfsstats.rpccnt[NFSPROC_SETEXTATTR],
+			    (uintmax_t)ext_nfsstats.rpccnt[NFSPROC_RMEXTATTR],
+			    (uintmax_t)ext_nfsstats.rpccnt[NFSPROC_LISTEXTATTR],
+			    (uintmax_t)ext_nfsstats.rpccnt[NFSPROC_DEALLOCATE],
+			    (uintmax_t)ext_nfsstats.rpccnt[NFSPROC_LAYOUTERROR]);
+
+			xo_close_container("nfsv42");
 		}
 		xo_close_container("operations");
 
+		if (printtitle)
+			xo_emit("{T:Client:}\n");
 		xo_open_container("client");
 		xo_emit("{T:OpenOwner/%13.13s}{T:Opens/%13.13s}"
 		    "{T:LockOwner/%13.13s}{T:Locks/%13.13s}"
@@ -788,12 +812,13 @@ exp_intpr(int clientOnly, int serverOnly, int nfs41)
 		    (uintmax_t)ext_nfsstats.cllocalopenowners);
 
 		xo_emit("{T:LocalOpen/%13.13s}{T:LocalLown/%13.13s}"
-		    "{T:LocalLock/%13.13s}\n");
+		    "{T:LocalLock/%13.13s}{T:Layouts/%13.13s}\n");
 		xo_emit("{:localopen/%13ju}{:locallown/%13ju}"
-		    "{:locallock/%13ju}\n",
+		    "{:locallock/%13ju}{:layouts/%13ju}\n",
 		    (uintmax_t)ext_nfsstats.cllocalopens,
 		    (uintmax_t)ext_nfsstats.cllocallockowners,
-		    (uintmax_t)ext_nfsstats.cllocallocks);
+		    (uintmax_t)ext_nfsstats.cllocallocks,
+		    (uintmax_t)ext_nfsstats.cllayouts);
 		xo_close_container("client");
 
 		xo_open_container("rpc");
@@ -991,6 +1016,48 @@ exp_intpr(int clientOnly, int serverOnly, int nfs41)
 			    (uintmax_t)ext_nfsstats.srvrpccnt[NFSV4OP_RECLAIMCOMPL]);
 
 			xo_close_container("nfsv41");
+
+			xo_open_container("nfsv42");
+
+			xo_emit("{T:Allocate/%13.13s}{T:Copy/%13.13s}"
+			    "{T:CopyNotify/%13.13s}{T:Deallocate/%13.13s}"
+			    "{T:IOAdvise/%13.13s}{T:LayoutError/%13.13s}\n");
+			xo_emit("{:allocate/%13ju}{:copy/%13ju}"
+			    "{:copynotify/%13ju}{:deallocate/%13ju}"
+			    "{:ioadvise/%13ju}{:layouterror/%13ju}\n",
+			    (uintmax_t)ext_nfsstats.srvrpccnt[NFSV4OP_ALLOCATE],
+			    (uintmax_t)ext_nfsstats.srvrpccnt[NFSV4OP_COPY],
+			    (uintmax_t)ext_nfsstats.srvrpccnt[NFSV4OP_COPYNOTIFY],
+			    (uintmax_t)ext_nfsstats.srvrpccnt[NFSV4OP_DEALLOCATE],
+			    (uintmax_t)ext_nfsstats.srvrpccnt[NFSV4OP_IOADVISE],
+			    (uintmax_t)ext_nfsstats.srvrpccnt[NFSV4OP_LAYOUTERROR]);
+
+			xo_emit("{T:LayoutStats/%13.13s}{T:OffloadCncl/%13.13s}"
+			    "{T:OffloadStat/%13.13s}{T:ReadPlus/%13.13s}"
+			    "{T:Seek/%13.13s}{T:WriteSame/%13.13s}\n");
+			xo_emit("{:layoutstats/%13ju}{:offloadcncl/%13ju}"
+			    "{:offloadstat/%13ju}{:readplus/%13ju}"
+			    "{:seek/%13ju}{:writesame/%13ju}\n",
+			    (uintmax_t)ext_nfsstats.srvrpccnt[NFSV4OP_LAYOUTSTATS],
+			    (uintmax_t)ext_nfsstats.srvrpccnt[NFSV4OP_OFFLOADCANCEL],
+			    (uintmax_t)ext_nfsstats.srvrpccnt[NFSV4OP_OFFLOADSTATUS],
+			    (uintmax_t)ext_nfsstats.srvrpccnt[NFSV4OP_READPLUS],
+			    (uintmax_t)ext_nfsstats.srvrpccnt[NFSV4OP_SEEK],
+			    (uintmax_t)ext_nfsstats.srvrpccnt[NFSV4OP_WRITESAME]);
+
+			xo_emit("{T:Clone/%13.13s}{T:GetExtattr/%13.13s}"
+			    "{T:SetExtattr/%13.13s}{T:ListExtattr/%13.13s}"
+			    "{T:RmExtattr/%13.13s}\n");
+			xo_emit("{:clone/%13ju}{:getextattr/%13ju}"
+			    "{:setextattr/%13ju}{:listextattr/%13ju}"
+			    "{:rmextattr/%13ju}\n",
+			    (uintmax_t)ext_nfsstats.srvrpccnt[NFSV4OP_CLONE],
+			    (uintmax_t)ext_nfsstats.srvrpccnt[NFSV4OP_GETXATTR],
+			    (uintmax_t)ext_nfsstats.srvrpccnt[NFSV4OP_SETXATTR],
+			    (uintmax_t)ext_nfsstats.srvrpccnt[NFSV4OP_LISTXATTRS],
+			    (uintmax_t)ext_nfsstats.srvrpccnt[NFSV4OP_REMOVEXATTR]);
+
+			xo_close_container("nfsv42");
 		}
 
 		xo_close_container("operations");
@@ -998,34 +1065,31 @@ exp_intpr(int clientOnly, int serverOnly, int nfs41)
 		if (printtitle)
 			xo_emit("{T:Server:}\n");
 		xo_open_container("server");
-		xo_emit("{T:Retfailed/%13.13s}{T:Faults/%13.13s}"
-		    "{T:Clients/%13.13s}\n");
-		xo_emit("{:retfailed/%13ju}{:faults/%13ju}{:clients/%13ju}\n",
-		    (uintmax_t)ext_nfsstats.srv_errs,
-		    (uintmax_t)ext_nfsstats.srvrpc_errs,
-		    (uintmax_t)ext_nfsstats.srvclients);
-		xo_emit("{T:OpenOwner/%13.13s}{T:Opens/%13.13s}"
-		    "{T:LockOwner/%13.13s}{T:Locks/%13.13s}"
+		xo_emit("{T:Clients/%13.13s}{T:OpenOwner/%13.13s}"
+		    "{T:Opens/%13.13s}{T:LockOwner/%13.13s}{T:Locks/%13.13s}"
 		    "{T:Delegs/%13.13s}\n");
-		xo_emit("{:openowner/%13ju}{:opens/%13ju}{:lockowner/%13ju}"
-		  "{:locks/%13ju}{:delegs/%13ju}\n",
+		xo_emit("{:clients/%13ju}{:openowner/%13ju}{:opens/%13ju}"
+		    "{:lockowner/%13ju}{:locks/%13ju}{:delegs/%13ju}\n",
+		    (uintmax_t)ext_nfsstats.srvclients,
 		    (uintmax_t)ext_nfsstats.srvopenowners,
 		    (uintmax_t)ext_nfsstats.srvopens,
 		    (uintmax_t)ext_nfsstats.srvlockowners,
 		    (uintmax_t)ext_nfsstats.srvlocks,
 		    (uintmax_t)ext_nfsstats.srvdelegates);
+		xo_emit("{T:Layouts/%13.13s}\n");
+		xo_emit("{:layouts/%13ju}\n",
+		    (uintmax_t)ext_nfsstats.srvlayouts);
 		xo_close_container("server");
 
 		if (printtitle)
 			xo_emit("{T:Server Cache Stats:}\n");
 		xo_open_container("cache");
-		xo_emit("{T:Inprog/%13.13s}{T:Idem/%13.13s}"
+		xo_emit("{T:Inprog/%13.13s}"
 		    "{T:Non-idem/%13.13s}{T:Misses/%13.13s}"
 		    "{T:CacheSize/%13.13s}{T:TCPPeak/%13.13s}\n");
-		xo_emit("{:inprog/%13ju}{:idem/%13ju}{:nonidem/%13ju}"
+		xo_emit("{:inprog/%13ju}{:nonidem/%13ju}"
 		    "{:misses/%13ju}{:cachesize/%13ju}{:tcppeak/%13ju}\n",
 		    (uintmax_t)ext_nfsstats.srvcache_inproghits,
-		    (uintmax_t)ext_nfsstats.srvcache_idemdonehits,
 		    (uintmax_t)ext_nfsstats.srvcache_nonidemdonehits,
 		    (uintmax_t)ext_nfsstats.srvcache_misses,
 		    (uintmax_t)ext_nfsstats.srvcache_size,

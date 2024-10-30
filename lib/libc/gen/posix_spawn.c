@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008 Ed Schouten <ed@FreeBSD.org>
  * All rights reserved.
@@ -27,9 +27,9 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "namespace.h"
 #include <sys/param.h>
+#include <sys/procctl.h>
 #include <sys/queue.h>
 #include <sys/wait.h>
 
@@ -43,8 +43,6 @@
 #include <unistd.h>
 #include "un-namespace.h"
 #include "libc_private.h"
-
-extern char **environ;
 
 struct __posix_spawnattr {
 	short			sa_flags;
@@ -61,7 +59,14 @@ struct __posix_spawn_file_actions {
 
 typedef struct __posix_spawn_file_actions_entry {
 	STAILQ_ENTRY(__posix_spawn_file_actions_entry) fae_list;
-	enum { FAE_OPEN, FAE_DUP2, FAE_CLOSE } fae_action;
+	enum {
+		FAE_OPEN,
+		FAE_DUP2,
+		FAE_CLOSE,
+		FAE_CHDIR,
+		FAE_FCHDIR,
+		FAE_CLOSEFROM,
+	} fae_action;
 
 	int fae_fildes;
 	union {
@@ -88,7 +93,7 @@ static int
 process_spawnattr(const posix_spawnattr_t sa)
 {
 	struct sigaction sigact = { .sa_flags = 0, .sa_handler = SIG_DFL };
-	int i;
+	int aslr, i;
 
 	/*
 	 * POSIX doesn't really describe in which order everything
@@ -136,6 +141,13 @@ process_spawnattr(const posix_spawnattr_t sa)
 		}
 	}
 
+	/* Disable ASLR. */
+	if ((sa->sa_flags & POSIX_SPAWN_DISABLE_ASLR_NP) != 0) {
+		aslr = PROC_ASLR_FORCE_DISABLE;
+		if (procctl(P_PID, 0, PROC_ASLR_CTL, &aslr) != 0)
+			return (errno);
+	}
+
 	return (0);
 }
 
@@ -174,6 +186,17 @@ process_file_actions_entry(posix_spawn_file_actions_entry_t *fae)
 	case FAE_CLOSE:
 		/* Perform a close(), do not fail if already closed */
 		(void)_close(fae->fae_fildes);
+		break;
+	case FAE_CHDIR:
+		if (chdir(fae->fae_path) != 0)
+			return (errno);
+		break;
+	case FAE_FCHDIR:
+		if (fchdir(fae->fae_fildes) != 0)
+			return (errno);
+		break;
+	case FAE_CLOSEFROM:
+		closefrom(fae->fae_fildes);
 		break;
 	}
 	return (0);
@@ -303,11 +326,16 @@ do_posix_spawn(pid_t *pid, const char *path,
 	 * ideal vfork(2) if we get an EINVAL from rfork -- this should only
 	 * happen with newer libc on older kernel that doesn't accept
 	 * RFSPAWN.
+	 *
+	 * Combination of vfork() (or its equivalent rfork() form) and
+	 * a special property of the libthr rtld locks ensure that
+	 * rtld is operational in the child.  In particular, libthr
+	 * rtld locks do not store owner' tid into the lock word.
 	 */
 #ifdef _RFORK_THREAD_STACK_SIZE
 	/*
 	 * x86 stores the return address on the stack, so rfork(2) cannot work
-	 * as-is because the child would clobber the return address om the
+	 * as-is because the child would clobber the return address of the
 	 * parent.  Because of this, we must use rfork_thread instead while
 	 * almost every other arch stores the return address in a register.
 	 */
@@ -348,7 +376,7 @@ posix_spawn(pid_t *pid, const char *path,
     const posix_spawnattr_t *sa,
     char * const argv[], char * const envp[])
 {
-	return do_posix_spawn(pid, path, fa, sa, argv, envp, 0);
+	return (do_posix_spawn(pid, path, fa, sa, argv, envp, 0));
 }
 
 int
@@ -357,7 +385,7 @@ posix_spawnp(pid_t *pid, const char *path,
     const posix_spawnattr_t *sa,
     char * const argv[], char * const envp[])
 {
-	return do_posix_spawn(pid, path, fa, sa, argv, envp, 1);
+	return (do_posix_spawn(pid, path, fa, sa, argv, envp, 1));
 }
 
 /*
@@ -388,7 +416,8 @@ posix_spawn_file_actions_destroy(posix_spawn_file_actions_t *fa)
 		STAILQ_REMOVE_HEAD(&(*fa)->fa_list, fae_list);
 
 		/* Deallocate file action entry */
-		if (fae->fae_action == FAE_OPEN)
+		if (fae->fae_action == FAE_OPEN ||
+		    fae->fae_action == FAE_CHDIR)
 			free(fae->fae_path);
 		free(fae);
 	}
@@ -473,6 +502,71 @@ posix_spawn_file_actions_addclose(posix_spawn_file_actions_t *fa,
 	return (0);
 }
 
+int
+posix_spawn_file_actions_addchdir_np(posix_spawn_file_actions_t *
+    __restrict fa, const char *__restrict path)
+{
+	posix_spawn_file_actions_entry_t *fae;
+	int error;
+
+	fae = malloc(sizeof(posix_spawn_file_actions_entry_t));
+	if (fae == NULL)
+		return (errno);
+
+	fae->fae_action = FAE_CHDIR;
+	fae->fae_path = strdup(path);
+	if (fae->fae_path == NULL) {
+		error = errno;
+		free(fae);
+		return (error);
+	}
+
+	STAILQ_INSERT_TAIL(&(*fa)->fa_list, fae, fae_list);
+	return (0);
+}
+
+int
+posix_spawn_file_actions_addfchdir_np(posix_spawn_file_actions_t *__restrict fa,
+    int fildes)
+{
+	posix_spawn_file_actions_entry_t *fae;
+
+	if (fildes < 0)
+		return (EBADF);
+
+	/* Allocate object */
+	fae = malloc(sizeof(posix_spawn_file_actions_entry_t));
+	if (fae == NULL)
+		return (errno);
+
+	fae->fae_action = FAE_FCHDIR;
+	fae->fae_fildes = fildes;
+
+	STAILQ_INSERT_TAIL(&(*fa)->fa_list, fae, fae_list);
+	return (0);
+}
+
+int
+posix_spawn_file_actions_addclosefrom_np (posix_spawn_file_actions_t *
+    __restrict fa, int from)
+{
+	posix_spawn_file_actions_entry_t *fae;
+
+	if (from < 0)
+		return (EBADF);
+
+	/* Allocate object */
+	fae = malloc(sizeof(posix_spawn_file_actions_entry_t));
+	if (fae == NULL)
+		return (errno);
+
+	fae->fae_action = FAE_CLOSEFROM;
+	fae->fae_fildes = from;
+
+	STAILQ_INSERT_TAIL(&(*fa)->fa_list, fae, fae_list);
+	return (0);
+}
+
 /*
  * Spawn attributes
  */
@@ -549,6 +643,11 @@ posix_spawnattr_getsigmask(const posix_spawnattr_t * __restrict sa,
 int
 posix_spawnattr_setflags(posix_spawnattr_t *sa, short flags)
 {
+	if ((flags & ~(POSIX_SPAWN_RESETIDS | POSIX_SPAWN_SETPGROUP |
+	    POSIX_SPAWN_SETSCHEDPARAM | POSIX_SPAWN_SETSCHEDULER |
+	    POSIX_SPAWN_SETSIGDEF | POSIX_SPAWN_SETSIGMASK |
+	    POSIX_SPAWN_DISABLE_ASLR_NP)) != 0)
+		return (EINVAL);
 	(*sa)->sa_flags = flags;
 	return (0);
 }

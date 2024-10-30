@@ -36,7 +36,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/conf.h>
@@ -97,10 +96,10 @@ static struct cv	log_wakeup;
 struct mtx		msgbuf_lock;
 MTX_SYSINIT(msgbuf_lock, &msgbuf_lock, "msgbuf lock", MTX_DEF);
 
-/* Times per second to check for a pending syslog wakeup. */
 static int	log_wakeups_per_second = 5;
 SYSCTL_INT(_kern, OID_AUTO, log_wakeups_per_second, CTLFLAG_RW,
-    &log_wakeups_per_second, 0, "");
+    &log_wakeups_per_second, 0,
+    "How often (times per second) to check for /dev/log waiters.");
 
 /*ARGSUSED*/
 static	int
@@ -257,7 +256,6 @@ logioctl(struct cdev *dev, u_long com, caddr_t data, int flag, struct thread *td
 {
 
 	switch (com) {
-
 	/* return number of characters immediately available */
 	case FIONREAD:
 		*(int *)data = msgbuf_getcount(msgbufp);

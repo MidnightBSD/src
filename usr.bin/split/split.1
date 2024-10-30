@@ -27,7 +27,7 @@
 .\"
 .\"	@(#)split.1	8.3 (Berkeley) 4/16/94
 .\"
-.Dd May 9, 2013
+.Dd May 26, 2023
 .Dt SPLIT 1
 .Os
 .Sh NAME
@@ -35,12 +35,12 @@
 .Nd split a file into pieces
 .Sh SYNOPSIS
 .Nm
-.Fl d
+.Op Fl cd
 .Op Fl l Ar line_count
 .Op Fl a Ar suffix_length
 .Op Ar file Op Ar prefix
 .Nm
-.Fl d
+.Op Fl cd
 .Fl b Ar byte_count Ns
 .Oo
 .Sm off
@@ -50,12 +50,12 @@
 .Op Fl a Ar suffix_length
 .Op Ar file Op Ar prefix
 .Nm
-.Fl d
+.Op Fl cd
 .Fl n Ar chunk_count
 .Op Fl a Ar suffix_length
 .Op Ar file Op Ar prefix
 .Nm
-.Fl d
+.Op Fl cd
 .Fl p Ar pattern
 .Op Fl a Ar suffix_length
 .Op Ar file Op Ar prefix
@@ -111,6 +111,9 @@ or
 is appended to the number, the file is split into
 .Ar byte_count
 gigabyte pieces.
+.It Fl c
+Continue creating files and do not overwrite existing
+output files.
 .It Fl d
 Use a numeric suffix instead of a alphabetic suffix.
 .It Fl l Ar line_count
@@ -121,6 +124,12 @@ lines in length.
 Split file into
 .Ar chunk_count
 smaller files.
+The first n - 1 files will be of size (size of
+.Ar file
+/
+.Ar chunk_count
+)
+and the last file will contain the remaining bytes.
 .It Fl p Ar pattern
 The file is split whenever an input line matches
 .Ar pattern ,
@@ -144,7 +153,11 @@ characters in the range
 .Dq Li a Ns - Ns Li z .
 If
 .Fl a
-is not specified, two letters are used as the suffix.
+is not specified, two letters are used as the initial suffix.
+If the output does not fit into the resulting number of files and the
+.Fl d
+flag is not specified, then the suffix length is automatically extended as
+needed such that all output files continue to sort in lexical order.
 .Pp
 If the
 .Ar prefix
@@ -152,6 +165,15 @@ argument is not specified, the file is split into lexically ordered
 files named with the prefix
 .Dq Li x
 and with suffixes as above.
+.Pp
+By default,
+.Nm
+will overwrite any existing output files.
+If the
+.Fl c
+flag is specified,
+.Nm
+will instead create files with names that do not already exist.
 .Sh ENVIRONMENT
 The
 .Ev LANG , LC_ALL , LC_CTYPE
@@ -163,6 +185,36 @@ as described in
 .Xr environ 7 .
 .Sh EXIT STATUS
 .Ex -std
+.Sh EXAMPLES
+Split input into as many files as needed, so that each file contains at most 2
+lines:
+.Bd -literal -offset indent
+$ echo -e "first line\\nsecond line\\nthird line\\nforth line" | split -l2
+.Ed
+.Pp
+Split input in chunks of 10 bytes using numeric prefixes for file names.
+This generates two files of 10 bytes (x00 and x01) and a third file (x02) with the
+remaining 2 bytes:
+.Bd -literal -offset indent
+$ echo -e "This is 22 bytes long" | split -d -b10
+.Ed
+.Pp
+Split input generating 6 files:
+.Bd -literal -offset indent
+$ echo -e "This is 22 bytes long" | split -n 6
+.Ed
+.Pp
+Split input creating a new file every time a line matches the regular expression
+for a
+.Dq t
+followed by either
+.Dq a
+or
+.Dq u
+thus creating two files:
+.Bd -literal -offset indent
+$ echo -e "stack\\nstock\\nstuck\\nanother line" | split -p 't[au]'
+.Ed
 .Sh SEE ALSO
 .Xr csplit 1 ,
 .Xr re_format 7
@@ -176,5 +228,7 @@ A
 .Nm
 command appeared in
 .At v3 .
-.Sh BUGS
-The maximum line length for matching patterns is 65536.
+.Pp
+Before
+.Fx 14 ,
+pattern and line matching only operated on lines shorter than 65,536 bytes.

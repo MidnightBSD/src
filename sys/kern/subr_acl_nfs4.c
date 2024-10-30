@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008-2010 Edward Tomasz Napierała <trasz@FreeBSD.org>
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,7 +33,6 @@
 
 #ifdef _KERNEL
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/module.h>
@@ -171,7 +169,7 @@ _acl_denies(const struct acl *aclp, int access_mask, struct ucred *cred,
 
 int
 vaccess_acl_nfs4(enum vtype type, uid_t file_uid, gid_t file_gid,
-    struct acl *aclp, accmode_t accmode, struct ucred *cred, int *privused)
+    struct acl *aclp, accmode_t accmode, struct ucred *cred)
 {
 	accmode_t priv_granted = 0;
 	int denied, explicitly_denied, access_mask, is_directory,
@@ -185,9 +183,6 @@ vaccess_acl_nfs4(enum vtype type, uid_t file_uid, gid_t file_gid,
 	    ("invalid bit in accmode"));
 	KASSERT((accmode & VAPPEND) == 0 || (accmode & VWRITE),
 	    	("VAPPEND without VWRITE"));
-
-	if (privused != NULL)
-		*privused = 0;
 
 	if (accmode & VADMIN)
 		must_be_owner = 1;
@@ -258,8 +253,7 @@ vaccess_acl_nfs4(enum vtype type, uid_t file_uid, gid_t file_gid,
 	 * No match.  Try to use privileges, if there are any.
 	 */
 	if (is_directory) {
-		if ((accmode & VEXEC) && !priv_check_cred(cred,
-		    PRIV_VFS_LOOKUP, 0))
+		if ((accmode & VEXEC) && !priv_check_cred(cred, PRIV_VFS_LOOKUP))
 			priv_granted |= VEXEC;
 	} else {
 		/*
@@ -269,29 +263,26 @@ vaccess_acl_nfs4(enum vtype type, uid_t file_uid, gid_t file_gid,
 		 */
 		if ((accmode & VEXEC) && (file_mode &
 		    (S_IXUSR | S_IXGRP | S_IXOTH)) != 0 &&
-		    !priv_check_cred(cred, PRIV_VFS_EXEC, 0))
+		    !priv_check_cred(cred, PRIV_VFS_EXEC))
 			priv_granted |= VEXEC;
 	}
 
-	if ((accmode & VREAD) && !priv_check_cred(cred, PRIV_VFS_READ, 0))
+	if ((accmode & VREAD) && !priv_check_cred(cred, PRIV_VFS_READ))
 		priv_granted |= VREAD;
 
 	if ((accmode & (VWRITE | VAPPEND | VDELETE_CHILD)) &&
-	    !priv_check_cred(cred, PRIV_VFS_WRITE, 0))
+	    !priv_check_cred(cred, PRIV_VFS_WRITE))
 		priv_granted |= (VWRITE | VAPPEND | VDELETE_CHILD);
 
 	if ((accmode & VADMIN_PERMS) &&
-	    !priv_check_cred(cred, PRIV_VFS_ADMIN, 0))
+	    !priv_check_cred(cred, PRIV_VFS_ADMIN))
 		priv_granted |= VADMIN_PERMS;
 
 	if ((accmode & VSTAT_PERMS) &&
-	    !priv_check_cred(cred, PRIV_VFS_STAT, 0))
+	    !priv_check_cred(cred, PRIV_VFS_STAT))
 		priv_granted |= VSTAT_PERMS;
 
 	if ((accmode & priv_granted) == accmode) {
-		if (privused != NULL)
-			*privused = 1;
-
 		return (0);
 	}
 

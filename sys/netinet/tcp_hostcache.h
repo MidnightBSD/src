@@ -27,7 +27,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -72,6 +71,7 @@ struct tcp_hostcache {
 	uma_zone_t	zone;
 	u_int		hashsize;
 	u_int		hashmask;
+	u_int		hashsalt;
 	u_int		bucket_limit;
 	u_int		cache_count;
 	u_int		cache_limit;

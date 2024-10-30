@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008 Isilon Inc http://www.isilon.com/
  * Authors: Doug Rabson <dfr@rabson.org>
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/kernel.h>
 #include <sys/kobj.h>
@@ -63,7 +62,7 @@ gss_display_status(OM_uint32 *minor_status,
 	args.status_type = status_type;
 	args.mech_type = mech_type;
 	args.message_context = *message_context;
-	
+
 	bzero(&res, sizeof(res));
 	stat = gssd_display_status_1(&args, &res, cl);
 	CLNT_RELEASE(cl);

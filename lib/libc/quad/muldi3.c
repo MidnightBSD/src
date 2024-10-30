@@ -37,7 +37,6 @@
 static char sccsid[] = "@(#)muldi3.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-
 #include "quad.h"
 
 /*
@@ -100,8 +99,7 @@ static char sccsid[] = "@(#)muldi3.c	8.1 (Berkeley) 6/4/93";
 static quad_t __lmulq(u_long, u_long);
 
 quad_t
-__muldi3(a, b)
-	quad_t a, b;
+__muldi3(quad_t a, quad_t b)
 {
 	union uu u, v, low, prod;
 	u_long high, mid, udiff, vdiff;

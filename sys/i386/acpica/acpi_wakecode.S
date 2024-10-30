@@ -25,7 +25,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <machine/asmacros.h>
@@ -142,15 +141,25 @@ wakeup_32:
 	mov	$bootdata32 - bootgdt, %eax
 	mov	%ax, %ds
 
-	/* Get PCB and return address. */
-	movl	wakeup_pcb - wakeup_start(%ebx), %ecx
-	movl	wakeup_ret - wakeup_start(%ebx), %edx
-
-	/* Restore CR4 and CR3. */
-	movl	wakeup_cr4 - wakeup_start(%ebx), %eax
+	/* Restore EFER, CR4 and CR3. */
+	movl	wakeup_efer - wakeup_start(%ebx), %eax
+	movl	wakeup_efer - wakeup_start + 4(%ebx), %edx
+	cmpl	$0, %eax
+	jne	1f
+	cmpl	$0, %edx
+	je	2f
+1:	movl	$MSR_EFER, %ecx
+	wrmsr
+2:	movl	wakeup_cr4 - wakeup_start(%ebx), %eax
+	cmpl	$0, %eax
+	je	3f
 	mov	%eax, %cr4
-	movl	wakeup_cr3 - wakeup_start(%ebx), %eax
+3:	movl	wakeup_cr3 - wakeup_start(%ebx), %eax
 	mov	%eax, %cr3
+
+	/* Get PCB and return address. */
+	movl	wakeup_ret - wakeup_start(%ebx), %edx
+	movl	wakeup_pcb - wakeup_start(%ebx), %ecx
 
 	/* Enable paging. */
 	mov	%cr0, %eax
@@ -186,6 +195,9 @@ bootgdtdesc:
 	.long	bootgdt - wakeup_start	/* Offset plus %ds << 4 */
 
 	ALIGN_DATA
+wakeup_efer:
+	.long	0
+	.long	0
 wakeup_cr4:
 	.long	0
 wakeup_cr3:

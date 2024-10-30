@@ -37,15 +37,13 @@
 static char sccsid[] = "@(#)umoddi3.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-
 #include "quad.h"
 
 /*
  * Return remainder after dividing two unsigned quads.
  */
 u_quad_t
-__umoddi3(a, b)
-	u_quad_t a, b;
+__umoddi3(u_quad_t a, u_quad_t b)
 {
 	u_quad_t r;
 

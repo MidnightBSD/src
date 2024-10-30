@@ -13,7 +13,7 @@ LINKS+=	${BINDIR}/lex ${BINDIR}/lex++
 LINKS+=	${BINDIR}/lex ${BINDIR}/flex
 LINKS+=	${BINDIR}/lex ${BINDIR}/flex++
 
-FLEXDIR=	${SRCTOP}/contrib/flex
+FLEXDIR=	${SRCTOP}/contrib/flex/src
 
 .PATH:		${FLEXDIR}
 
@@ -29,7 +29,7 @@ MLINKS+=	lex.1 flex.1
 MLINKS+=	lex.1 flex++.1
 MLINKS+=	lex.1 lex++.1
 
-WARNS?=		0
+WARNS?=		3
 
 NO_WMISLEADING_INDENTATION=
 
@@ -41,11 +41,7 @@ SUBDIR=		lib
 FLEX_VERSION=	`awk -f ${.CURDIR}/version.awk ${.CURDIR}/config.h`
 
 skel.c: config.h mkskel.sh flex.skl version.awk
-	sed 's/m4_/m4postproc_/g; s/m4preproc_/m4_/g' \
-	    ${FLEXDIR}/flex.skl | \
-	m4 -I${FLEXDIR} -P ${FLEX_VERSION} | \
-	sed 's/m4postproc_/m4_/g' | \
-	sh ${FLEXDIR}/mkskel.sh > ${.TARGET}
+	sh ${FLEXDIR}/mkskel.sh ${FLEXDIR} m4 ${FLEX_VERSION} > ${.TARGET}
 
 bootstrap: ${GENFILES:S/^/init/g}
 .for _f in ${GENFILES}

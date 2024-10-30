@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009 Sam Leffler, Errno Consulting
  * All rights reserved.
@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * IEEE 802.11 radiotap support.
  */
@@ -38,9 +37,9 @@
 #include <sys/malloc.h>
 #include <sys/endian.h>
 #include <sys/kernel.h>
- 
+
 #include <sys/socket.h>
- 
+
 #include <net/bpf.h>
 #include <net/if.h>
 #include <net/if_var.h>
@@ -126,7 +125,7 @@ ieee80211_radiotap_vattach(struct ieee80211vap *vap)
 void
 ieee80211_radiotap_vdetach(struct ieee80211vap *vap)
 {
-	/* NB: bpfattach is called by ether_ifdetach and claims all taps */
+	/* NB: bpfdetach is called by ether_ifdetach and claims all taps */
 }
 
 static void

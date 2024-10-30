@@ -35,7 +35,6 @@
  * SUCH DAMAGE.
  *
  *	@(#)mdef.h	8.1 (Berkeley) 6/6/93
- * $FreeBSD: stable/11/usr.bin/m4/mdef.h 331722 2018-03-29 02:50:57Z eadler $
  */
 
 #ifdef __GNUC__

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010 Riccardo Panicucci, Universita` di Pisa
  * All rights reserved
@@ -136,7 +136,6 @@ remove_queue_q(struct rr_queue *q, struct rr_si *si)
 		break;
 	}
 }
-
 
 static inline void
 next_pointer(struct rr_si *si)
@@ -320,6 +319,5 @@ static struct dn_alg rr_desc = {
 	_SI( .getconfig = )  NULL,
 #endif
 };
-
 
 DECLARE_DNSCHED_MODULE(dn_rr, &rr_desc);

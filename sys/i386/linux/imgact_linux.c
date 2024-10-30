@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1994-1996 Søren Schmidt
  * All rights reserved.
@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/exec.h>
@@ -114,7 +113,7 @@ exec_linux_imgact(struct image_params *imgp)
 	}
 	PROC_UNLOCK(imgp->proc);
 
-	VOP_UNLOCK(imgp->vp, 0);
+	VOP_UNLOCK(imgp->vp);
 
 	/*
 	 * Destroy old process VM and create a new one (with a new stack)
@@ -157,7 +156,8 @@ exec_linux_imgact(struct image_params *imgp)
 		 * remove write enable on the 'text' part
 		 */
 		error = vm_map_protect(&vmspace->vm_map, vmaddr,
-		    vmaddr + a_out->a_text, VM_PROT_EXECUTE|VM_PROT_READ, TRUE);
+		    vmaddr + a_out->a_text, 0, VM_PROT_EXECUTE | VM_PROT_READ,
+		    VM_MAP_PROTECT_SET_MAXPROT);
 		if (error)
 			goto fail;
 	} else {
@@ -184,7 +184,8 @@ exec_linux_imgact(struct image_params *imgp)
 		 * allow read/write of data
 		 */
 		error = vm_map_protect(&vmspace->vm_map, vmaddr + a_out->a_text,
-		    vmaddr + a_out->a_text + a_out->a_data, VM_PROT_ALL, FALSE);
+		    vmaddr + a_out->a_text + a_out->a_data, VM_PROT_ALL, 0,
+		    VM_MAP_PROTECT_SET_PROT);
 		if (error)
 			goto fail;
 
@@ -209,6 +210,10 @@ exec_linux_imgact(struct image_params *imgp)
 	vmspace->vm_taddr = (caddr_t)(void *)(uintptr_t)virtual_offset;
 	vmspace->vm_daddr =
 	    (caddr_t)(void *)(uintptr_t)(virtual_offset + a_out->a_text);
+
+	error = exec_map_stack(imgp);
+	if (error != 0)
+		goto fail;
 
 	/* Fill in image_params */
 	imgp->interpreted = 0;

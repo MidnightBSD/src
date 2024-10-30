@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2009 Gabor Kovesdan <gabor@FreeBSD.org>
  * Copyright (C) 2012 Oleg Moskalenko <mom040267@gmail.com>
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -62,25 +61,17 @@ const char *compress_program;
 size_t max_open_files = 16;
 
 /*
- * How much space we read from file at once
- */
-#define READ_CHUNK (4096)
-
-/*
  * File reader structure
  */
 struct file_reader
 {
-	struct reader_buffer	 rb;
 	FILE			*file;
 	char			*fname;
-	unsigned char		*buffer;
+	char			*buffer;
 	unsigned char		*mmapaddr;
 	unsigned char		*mmapptr;
 	size_t			 bsz;
-	size_t			 cbsz;
 	size_t			 mmapsize;
-	size_t			 strbeg;
 	int			 fd;
 	char			 elsymb;
 };
@@ -194,15 +185,15 @@ file_is_tmp(const char* fn)
 char *
 new_tmp_file_name(void)
 {
-	static size_t tfcounter = 0;
-	static const char *fn = ".bsdsort.";
 	char *ret;
-	size_t sz;
+	int fd;
 
-	sz = strlen(tmpdir) + 1 + strlen(fn) + 32 + 1;
-	ret = sort_malloc(sz);
+	if (asprintf(&ret, "%s/.bsdsort.XXXXXXXXXX", tmpdir) == -1)
+		err(2, "asprintf()");
+	if ((fd = mkstemp(ret)) == -1)
+		err(2, "mkstemp()");
+	close(fd);
 
-	sprintf(ret, "%s/%s%d.%lu", tmpdir, fn, (int) getpid(), (unsigned long)(tfcounter++));
 	tmp_file_atexit(ret);
 	return (ret);
 }
@@ -215,9 +206,7 @@ file_list_init(struct file_list *fl, bool tmp)
 {
 
 	if (fl) {
-		fl->count = 0;
-		fl->sz = 0;
-		fl->fns = NULL;
+		memset(fl, 0, sizeof(*fl));
 		fl->tmp = tmp;
 	}
 }
@@ -292,10 +281,8 @@ sort_list_init(struct sort_list *l)
 {
 
 	if (l) {
-		l->count = 0;
-		l->size = 0;
+		memset(l, 0, sizeof(*l));
 		l->memsize = sizeof(struct sort_list);
-		l->list = NULL;
 	}
 }
 
@@ -538,46 +525,43 @@ openfile(const char *fn, const char *mode)
 {
 	FILE *file;
 
-	if (strcmp(fn, "-") == 0) {
+	if (strcmp(fn, "-") == 0)
 		return ((mode && mode[0] == 'r') ? stdin : stdout);
-	} else {
-		mode_t orig_file_mask = 0;
-		int is_tmp = file_is_tmp(fn);
 
-		if (is_tmp && (mode[0] == 'w'))
-			orig_file_mask = umask(S_IWGRP | S_IWOTH |
-			    S_IRGRP | S_IROTH);
+	mode_t orig_file_mask = 0;
+	int is_tmp = file_is_tmp(fn);
 
-		if (is_tmp && (compress_program != NULL)) {
-			char *cmd;
-			size_t cmdsz;
+	if (is_tmp && (mode[0] == 'w'))
+		orig_file_mask = umask(S_IWGRP | S_IWOTH |
+		    S_IRGRP | S_IROTH);
 
-			cmdsz = strlen(fn) + 128;
-			cmd = sort_malloc(cmdsz);
+	if (is_tmp && (compress_program != NULL)) {
+		int r;
+		char *cmd;
 
-			fflush(stdout);
+		fflush(stdout);
 
-			if (mode[0] == 'r')
-				snprintf(cmd, cmdsz - 1, "cat %s | %s -d",
-				    fn, compress_program);
-			else if (mode[0] == 'w')
-				snprintf(cmd, cmdsz - 1, "%s > %s",
-				    compress_program, fn);
-			else
-				err(2, "%s", getstr(7));
+		if (mode[0] == 'r')
+			r = asprintf(&cmd, "cat %s | %s -d",
+			    fn, compress_program);
+		else if (mode[0] == 'w')
+			r = asprintf(&cmd, "%s > %s",
+			    compress_program, fn);
+		else
+			err(2, "%s", getstr(7));
 
-			if ((file = popen(cmd, mode)) == NULL)
-				err(2, NULL);
+		if (r == -1)
+			err(2, "aspritnf()");
 
-			sort_free(cmd);
+		if ((file = popen(cmd, mode)) == NULL)
+			err(2, NULL);
+		free(cmd);
+	} else
+		if ((file = fopen(fn, mode)) == NULL)
+			err(2, NULL);
 
-		} else
-			if ((file = fopen(fn, mode)) == NULL)
-				err(2, NULL);
-
-		if (is_tmp && (mode[0] == 'w'))
-			umask(orig_file_mask);
-	}
+	if (is_tmp && (mode[0] == 'w'))
+		umask(orig_file_mask);
 
 	return (file);
 }
@@ -588,19 +572,17 @@ openfile(const char *fn, const char *mode)
 void
 closefile(FILE *f, const char *fn)
 {
-	if (f == NULL) {
-		;
-	} else if (f == stdin) {
-		;
-	} else if (f == stdout) {
+	if (f == NULL || f == stdin)
+		return;
+	if (f == stdout) {
 		fflush(f);
-	} else {
-		if (file_is_tmp(fn) && compress_program != NULL) {
-			if(pclose(f)<0)
-				err(2,NULL);
-		} else
-			fclose(f);
+		return;
 	}
+	if (file_is_tmp(fn) && compress_program != NULL) {
+		if(pclose(f)<0)
+			err(2,NULL);
+	} else
+		fclose(f);
 }
 
 /*
@@ -614,13 +596,9 @@ file_reader_init(const char *fsrc)
 	if (fsrc == NULL)
 		fsrc = "-";
 
-	ret = sort_malloc(sizeof(struct file_reader));
-	memset(ret, 0, sizeof(struct file_reader));
+	ret = sort_calloc(1, sizeof(struct file_reader));
 
-	ret->elsymb = '\n';
-	if (sort_opts_vals.zflag)
-		ret->elsymb = 0;
-
+	ret->elsymb = sort_opts_vals.zflag ? '\0' : '\n';
 	ret->fname = sort_strdup(fsrc);
 
 	if (strcmp(fsrc, "-") && (compress_program == NULL) && use_mmap) {
@@ -666,19 +644,6 @@ file_reader_init(const char *fsrc)
 		ret->file = openfile(fsrc, "r");
 		if (ret->file == NULL)
 			err(2, NULL);
-
-		if (strcmp(fsrc, "-")) {
-			ret->cbsz = READ_CHUNK;
-			ret->buffer = sort_malloc(ret->cbsz);
-			ret->bsz = 0;
-			ret->strbeg = 0;
-
-			ret->bsz = fread(ret->buffer, 1, ret->cbsz, ret->file);
-			if (ret->bsz == 0) {
-				if (ferror(ret->file))
-					err(2, NULL);
-			}
-		}
 	}
 
 	return (ret);
@@ -711,84 +676,18 @@ file_reader_readline(struct file_reader *fr)
 				fr->mmapptr = strend + 1;
 			}
 		}
-
-	} else if (fr->file != stdin) {
-		unsigned char *strend;
-		size_t bsz1, remsz, search_start;
-
-		search_start = 0;
-		remsz = 0;
-		strend = NULL;
-
-		if (fr->bsz > fr->strbeg)
-			remsz = fr->bsz - fr->strbeg;
-
-		/* line read cycle */
-		for (;;) {
-			if (remsz > search_start)
-				strend = memchr(fr->buffer + fr->strbeg +
-				    search_start, fr->elsymb, remsz -
-				    search_start);
-			else
-				strend = NULL;
-
-			if (strend)
-				break;
-			if (feof(fr->file))
-				break;
-
-			if (fr->bsz != fr->cbsz)
-				/* NOTREACHED */
-				err(2, "File read software error 1");
-
-			if (remsz > (READ_CHUNK >> 1)) {
-				search_start = fr->cbsz - fr->strbeg;
-				fr->cbsz += READ_CHUNK;
-				fr->buffer = sort_realloc(fr->buffer,
-				    fr->cbsz);
-				bsz1 = fread(fr->buffer + fr->bsz, 1,
-				    READ_CHUNK, fr->file);
-				if (bsz1 == 0) {
-					if (ferror(fr->file))
-						err(2, NULL);
-					break;
-				}
-				fr->bsz += bsz1;
-				remsz += bsz1;
-			} else {
-				if (remsz > 0 && fr->strbeg>0)
-					bcopy(fr->buffer + fr->strbeg,
-					    fr->buffer, remsz);
-
-				fr->strbeg = 0;
-				search_start = remsz;
-				bsz1 = fread(fr->buffer + remsz, 1,
-				    fr->cbsz - remsz, fr->file);
-				if (bsz1 == 0) {
-					if (ferror(fr->file))
-						err(2, NULL);
-					break;
-				}
-				fr->bsz = remsz + bsz1;
-				remsz = fr->bsz;
-			}
-		}
-
-		if (strend == NULL)
-			strend = fr->buffer + fr->bsz;
-
-		if ((fr->buffer + fr->strbeg <= strend) &&
-		    (fr->strbeg < fr->bsz) && (remsz>0))
-			ret = bwscsbdup(fr->buffer + fr->strbeg, strend -
-			    fr->buffer - fr->strbeg);
-
-		fr->strbeg = (strend - fr->buffer) + 1;
-
 	} else {
-		size_t len = 0;
+		ssize_t len;
 
-		ret = bwsfgetln(fr->file, &len, sort_opts_vals.zflag,
-		    &(fr->rb));
+		len = getdelim(&fr->buffer, &fr->bsz, fr->elsymb, fr->file);
+		if (len < 0) {
+			if (!feof(fr->file))
+				err(2, NULL);
+			return (NULL);
+		}
+		if (len > 0 && fr->buffer[len - 1] == fr->elsymb)
+			len--;
+		ret = bwscsbdup(fr->buffer, len);
 	}
 
 	return (ret);
@@ -798,35 +697,28 @@ static void
 file_reader_clean(struct file_reader *fr)
 {
 
-	if (fr) {
-		if (fr->mmapaddr)
-			munmap(fr->mmapaddr, fr->mmapsize);
+	if (fr == NULL)
+		return;
 
-		if (fr->fd)
-			close(fr->fd);
+	if (fr->mmapaddr)
+		munmap(fr->mmapaddr, fr->mmapsize);
+	if (fr->fd)
+		close(fr->fd);
 
-		if (fr->buffer)
-			sort_free(fr->buffer);
-
-		if (fr->file)
-			if (fr->file != stdin)
-				closefile(fr->file, fr->fname);
-
-		if(fr->fname)
-			sort_free(fr->fname);
-
-		memset(fr, 0, sizeof(struct file_reader));
-	}
+	free(fr->buffer);
+	closefile(fr->file, fr->fname);
+	free(fr->fname);
+	memset(fr, 0, sizeof(struct file_reader));
 }
 
 void
 file_reader_free(struct file_reader *fr)
 {
 
-	if (fr) {
-		file_reader_clean(fr);
-		sort_free(fr);
-	}
+	if (fr == NULL)
+		return;
+	file_reader_clean(fr);
+	free(fr);
 }
 
 int
@@ -926,10 +818,8 @@ file_header_close(struct file_header **fh)
 {
 
 	if (fh && *fh) {
-		if ((*fh)->fr) {
-			file_reader_free((*fh)->fr);
-			(*fh)->fr = NULL;
-		}
+		file_reader_free((*fh)->fr);
+		(*fh)->fr = NULL;
 		if ((*fh)->si) {
 			sort_list_item_clean((*fh)->si);
 			sort_free((*fh)->si);

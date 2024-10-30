@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 /*
  * The main module for truss.  Surprisingly simple, but, then, the other
  * files handle the bulk of the work.  And, of course, the kernel has to
@@ -54,7 +53,7 @@
 #include "extern.h"
 #include "syscall.h"
 
-static void
+static __dead2 void
 usage(void)
 {
 	fprintf(stderr, "%s\n%s\n",
@@ -86,7 +85,6 @@ main(int ac, char **av)
 	trussinfo->strsize = 32;
 	trussinfo->curthread = NULL;
 	LIST_INIT(&trussinfo->proclist);
-	init_syscalls();
 	while ((c = getopt(ac, av, "p:o:facedDs:SH")) != -1) {
 		switch (c) {
 		case 'p':	/* specified pid */
@@ -118,7 +116,8 @@ main(int ac, char **av)
 			fname = optarg;
 			break;
 		case 's':	/* Specified string size */
-			trussinfo->strsize = strtonum(optarg, 0, INT_MAX, &errstr);
+			trussinfo->strsize = (int)strtonum(optarg, 0, INT_MAX,
+			    &errstr);
 			if (errstr)
 				errx(1, "maximum string size is %s: %s", errstr, optarg);
 			break;

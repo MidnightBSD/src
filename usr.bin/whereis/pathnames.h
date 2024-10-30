@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright © 2002, Jörg Wunsch
  *
@@ -23,7 +23,6 @@
  * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
  * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 /* Where to look for libexec */
@@ -35,7 +34,7 @@
 "/usr/src/usr.sbin:/usr/src/libexec:"			\
 "/usr/src/gnu/bin:/usr/src/gnu/usr.bin:"		\
 "/usr/src/gnu/sbin:/usr/src/gnu/usr.sbin:"		\
-"/usr/src/gnu/libexec:/usr/src/contrib:"		\
+"/usr/src/contrib:"					\
 "/usr/src/secure/bin:/usr/src/secure/usr.bin:"		\
 "/usr/src/secure/sbin:/usr/src/secure/usr.sbin:"	\
 "/usr/src/secure/libexec:/usr/src/crypto:"		\

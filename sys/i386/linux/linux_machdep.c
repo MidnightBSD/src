@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2000 Marcel Moolenaar
  * All rights reserved.
@@ -27,55 +27,53 @@
  */
 
 #include <sys/cdefs.h>
+#include "opt_posix.h"
 
 #include <sys/param.h>
-#include <sys/capsicum.h>
+#include <sys/imgact_aout.h>
 #include <sys/fcntl.h>
-#include <sys/file.h>
-#include <sys/imgact.h>
 #include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/mman.h>
 #include <sys/mutex.h>
+#include <sys/namei.h>
 #include <sys/priv.h>
 #include <sys/proc.h>
-#include <sys/queue.h>
+#include <sys/racct.h>
 #include <sys/resource.h>
 #include <sys/resourcevar.h>
-#include <sys/sched.h>
-#include <sys/signalvar.h>
 #include <sys/syscallsubr.h>
 #include <sys/sysproto.h>
-#include <sys/systm.h>
-#include <sys/sx.h>
-#include <sys/unistd.h>
-#include <sys/wait.h>
+#include <sys/vnode.h>
+
+#include <security/audit/audit.h>
+#include <security/mac/mac_framework.h>
 
 #include <machine/frame.h>
+#include <machine/pcb.h>			/* needed for pcb definition in linux_set_thread_area */
 #include <machine/psl.h>
 #include <machine/segments.h>
 #include <machine/sysarch.h>
 
 #include <vm/pmap.h>
 #include <vm/vm.h>
+#include <vm/vm_extern.h>
+#include <vm/vm_kern.h>
 #include <vm/vm_map.h>
+#include <vm/vm_param.h>
 
-#include <security/audit/audit.h>
+#include <x86/reg.h>
 
 #include <i386/linux/linux.h>
 #include <i386/linux/linux_proto.h>
 #include <compat/linux/linux_emul.h>
+#include <compat/linux/linux_fork.h>
 #include <compat/linux/linux_ipc.h>
 #include <compat/linux/linux_misc.h>
 #include <compat/linux/linux_mmap.h>
 #include <compat/linux/linux_signal.h>
 #include <compat/linux/linux_util.h>
 
-#include <i386/include/pcb.h>			/* needed for pcb definition in linux_set_thread_area */
-
-#include "opt_posix.h"
-
-extern struct sysentvec elf32_freebsd_sysvec;	/* defined in i386/i386/elf_machdep.c */
 
 struct l_descriptor {
 	l_uint		entry_number;
@@ -97,25 +95,6 @@ struct l_old_select_argv {
 	struct l_timeval	*timeout;
 };
 
-
-int
-linux_execve(struct thread *td, struct linux_execve_args *args)
-{
-	struct image_args eargs;
-	char *newpath;
-	int error;
-
-	LCONVPATHEXIST(td, args->path, &newpath);
-
-	error = exec_copyin_args(&eargs, newpath, UIO_SYSSPACE,
-	    args->argp, args->envp);
-	free(newpath, M_TEMP);
-	if (error == 0)
-		error = linux_common_execve(td, &eargs);
-	AUDIT_SYSCALL_EXIT(error == EJUSTRETURN ? 0 : error, td);
-	return (error);
-}
-
 struct l_ipc_kludge {
 	struct l_msgbuf *msgp;
 	l_long msgtyp;
@@ -127,12 +106,9 @@ linux_ipc(struct thread *td, struct linux_ipc_args *args)
 
 	switch (args->what & 0xFFFF) {
 	case LINUX_SEMOP: {
-		struct linux_semop_args a;
 
-		a.semid = args->arg1;
-		a.tsops = PTRIN(args->ptr);
-		a.nsops = args->arg2;
-		return (linux_semop(td, &a));
+		return (kern_semop(td, args->arg1, PTRIN(args->ptr),
+		    args->arg2, NULL));
 	}
 	case LINUX_SEMGET: {
 		struct linux_semget_args a;
@@ -153,6 +129,15 @@ linux_ipc(struct thread *td, struct linux_ipc_args *args)
 		if (error)
 			return (error);
 		return (linux_semctl(td, &a));
+	}
+	case LINUX_SEMTIMEDOP: {
+		struct linux_semtimedop_args a;
+
+		a.semid = args->arg1;
+		a.tsops = PTRIN(args->ptr);
+		a.nsops = args->arg2;
+		a.timeout = PTRIN(args->arg5);
+		return (linux_semtimedop(td, &a));
 	}
 	case LINUX_MSGSND: {
 		struct linux_msgsnd_args a;
@@ -310,7 +295,7 @@ linux_set_cloned_tls(struct thread *td, void *desc)
 }
 
 int
-linux_set_upcall_kse(struct thread *td, register_t stack)
+linux_set_upcall(struct thread *td, register_t stack)
 {
 
 	if (stack)
@@ -504,24 +489,6 @@ linux_sigsuspend(struct thread *td, struct linux_sigsuspend_args *args)
 }
 
 int
-linux_rt_sigsuspend(struct thread *td, struct linux_rt_sigsuspend_args *uap)
-{
-	l_sigset_t lmask;
-	sigset_t sigmask;
-	int error;
-
-	if (uap->sigsetsize != sizeof(l_sigset_t))
-		return (EINVAL);
-
-	error = copyin(uap->newset, &lmask, sizeof(l_sigset_t));
-	if (error)
-		return (error);
-
-	linux_to_bsd_sigset(&lmask, &sigmask);
-	return (kern_sigsuspend(td, sigmask));
-}
-
-int
 linux_pause(struct thread *td, struct linux_pause_args *args)
 {
 	struct proc *p = td->td_proc;
@@ -531,34 +498,6 @@ linux_pause(struct thread *td, struct linux_pause_args *args)
 	sigmask = td->td_sigmask;
 	PROC_UNLOCK(p);
 	return (kern_sigsuspend(td, sigmask));
-}
-
-int
-linux_sigaltstack(struct thread *td, struct linux_sigaltstack_args *uap)
-{
-	stack_t ss, oss;
-	l_stack_t lss;
-	int error;
-
-	if (uap->uss != NULL) {
-		error = copyin(uap->uss, &lss, sizeof(l_stack_t));
-		if (error)
-			return (error);
-
-		ss.ss_sp = lss.ss_sp;
-		ss.ss_size = lss.ss_size;
-		ss.ss_flags = linux_to_bsd_sigaltstack(lss.ss_flags);
-	}
-	error = kern_sigaltstack(td, (uap->uss != NULL) ? &ss : NULL,
-	    (uap->uoss != NULL) ? &oss : NULL);
-	if (!error && uap->uoss != NULL) {
-		lss.ss_sp = oss.ss_sp;
-		lss.ss_size = oss.ss_size;
-		lss.ss_flags = bsd_to_linux_sigaltstack(oss.ss_flags);
-		error = copyout(&lss, uap->uoss, sizeof(l_stack_t));
-	}
-
-	return (error);
 }
 
 int
@@ -736,4 +675,278 @@ linux_mq_getsetattr(struct thread *td, struct linux_mq_getsetattr_args *args)
 #else
 	return (ENOSYS);
 #endif
+}
+
+void
+bsd_to_linux_regset(const struct reg *b_reg,
+    struct linux_pt_regset *l_regset)
+{
+
+	l_regset->ebx = b_reg->r_ebx;
+	l_regset->ecx = b_reg->r_ecx;
+	l_regset->edx = b_reg->r_edx;
+	l_regset->esi = b_reg->r_esi;
+	l_regset->edi = b_reg->r_edi;
+	l_regset->ebp = b_reg->r_ebp;
+	l_regset->eax = b_reg->r_eax;
+	l_regset->ds = b_reg->r_ds;
+	l_regset->es = b_reg->r_es;
+	l_regset->fs = b_reg->r_fs;
+	l_regset->gs = b_reg->r_gs;
+	l_regset->orig_eax = b_reg->r_eax;
+	l_regset->eip = b_reg->r_eip;
+	l_regset->cs = b_reg->r_cs;
+	l_regset->eflags = b_reg->r_eflags;
+	l_regset->esp = b_reg->r_esp;
+	l_regset->ss = b_reg->r_ss;
+}
+
+int
+linux_uselib(struct thread *td, struct linux_uselib_args *args)
+{
+	struct nameidata ni;
+	struct vnode *vp;
+	struct exec *a_out;
+	vm_map_t map;
+	vm_map_entry_t entry;
+	struct vattr attr;
+	vm_offset_t vmaddr;
+	unsigned long file_offset;
+	unsigned long bss_size;
+	char *library;
+	ssize_t aresid;
+	int error;
+	bool locked, opened, textset;
+
+	a_out = NULL;
+	vp = NULL;
+	locked = false;
+	textset = false;
+	opened = false;
+
+	if (!LUSECONVPATH(td)) {
+		NDINIT(&ni, LOOKUP, ISOPEN | FOLLOW | LOCKLEAF | AUDITVNODE1,
+		    UIO_USERSPACE, args->library, td);
+		error = namei(&ni);
+	} else {
+		LCONVPATHEXIST(args->library, &library);
+		NDINIT(&ni, LOOKUP, ISOPEN | FOLLOW | LOCKLEAF | AUDITVNODE1,
+		    UIO_SYSSPACE, library, td);
+		error = namei(&ni);
+		LFREEPATH(library);
+	}
+	if (error)
+		goto cleanup;
+
+	vp = ni.ni_vp;
+	NDFREE(&ni, NDF_ONLY_PNBUF);
+
+	/*
+	 * From here on down, we have a locked vnode that must be unlocked.
+	 * XXX: The code below largely duplicates exec_check_permissions().
+	 */
+	locked = true;
+
+	/* Executable? */
+	error = VOP_GETATTR(vp, &attr, td->td_ucred);
+	if (error)
+		goto cleanup;
+
+	if ((vp->v_mount->mnt_flag & MNT_NOEXEC) ||
+	    ((attr.va_mode & 0111) == 0) || (attr.va_type != VREG)) {
+		/* EACCESS is what exec(2) returns. */
+		error = ENOEXEC;
+		goto cleanup;
+	}
+
+	/* Sensible size? */
+	if (attr.va_size == 0) {
+		error = ENOEXEC;
+		goto cleanup;
+	}
+
+	/* Can we access it? */
+	error = VOP_ACCESS(vp, VEXEC, td->td_ucred, td);
+	if (error)
+		goto cleanup;
+
+	/*
+	 * XXX: This should use vn_open() so that it is properly authorized,
+	 * and to reduce code redundancy all over the place here.
+	 * XXX: Not really, it duplicates far more of exec_check_permissions()
+	 * than vn_open().
+	 */
+#ifdef MAC
+	error = mac_vnode_check_open(td->td_ucred, vp, VREAD);
+	if (error)
+		goto cleanup;
+#endif
+	error = VOP_OPEN(vp, FREAD, td->td_ucred, td, NULL);
+	if (error)
+		goto cleanup;
+	opened = true;
+
+	/* Pull in executable header into exec_map */
+	error = vm_mmap(exec_map, (vm_offset_t *)&a_out, PAGE_SIZE,
+	    VM_PROT_READ, VM_PROT_READ, 0, OBJT_VNODE, vp, 0);
+	if (error)
+		goto cleanup;
+
+	/* Is it a Linux binary ? */
+	if (((a_out->a_magic >> 16) & 0xff) != 0x64) {
+		error = ENOEXEC;
+		goto cleanup;
+	}
+
+	/*
+	 * While we are here, we should REALLY do some more checks
+	 */
+
+	/* Set file/virtual offset based on a.out variant. */
+	switch ((int)(a_out->a_magic & 0xffff)) {
+	case 0413:			/* ZMAGIC */
+		file_offset = 1024;
+		break;
+	case 0314:			/* QMAGIC */
+		file_offset = 0;
+		break;
+	default:
+		error = ENOEXEC;
+		goto cleanup;
+	}
+
+	bss_size = round_page(a_out->a_bss);
+
+	/* Check various fields in header for validity/bounds. */
+	if (a_out->a_text & PAGE_MASK || a_out->a_data & PAGE_MASK) {
+		error = ENOEXEC;
+		goto cleanup;
+	}
+
+	/* text + data can't exceed file size */
+	if (a_out->a_data + a_out->a_text > attr.va_size) {
+		error = EFAULT;
+		goto cleanup;
+	}
+
+	/*
+	 * text/data/bss must not exceed limits
+	 * XXX - this is not complete. it should check current usage PLUS
+	 * the resources needed by this library.
+	 */
+	PROC_LOCK(td->td_proc);
+	if (a_out->a_text > maxtsiz ||
+	    a_out->a_data + bss_size > lim_cur_proc(td->td_proc, RLIMIT_DATA) ||
+	    racct_set(td->td_proc, RACCT_DATA, a_out->a_data +
+	    bss_size) != 0) {
+		PROC_UNLOCK(td->td_proc);
+		error = ENOMEM;
+		goto cleanup;
+	}
+	PROC_UNLOCK(td->td_proc);
+
+	/*
+	 * Prevent more writers.
+	 */
+	error = VOP_SET_TEXT(vp);
+	if (error != 0)
+		goto cleanup;
+	textset = true;
+
+	/*
+	 * Lock no longer needed
+	 */
+	locked = false;
+	VOP_UNLOCK(vp);
+
+	/*
+	 * Check if file_offset page aligned. Currently we cannot handle
+	 * misalinged file offsets, and so we read in the entire image
+	 * (what a waste).
+	 */
+	if (file_offset & PAGE_MASK) {
+		/* Map text+data read/write/execute */
+
+		/* a_entry is the load address and is page aligned */
+		vmaddr = trunc_page(a_out->a_entry);
+
+		/* get anon user mapping, read+write+execute */
+		error = vm_map_find(&td->td_proc->p_vmspace->vm_map, NULL, 0,
+		    &vmaddr, a_out->a_text + a_out->a_data, 0, VMFS_NO_SPACE,
+		    VM_PROT_ALL, VM_PROT_ALL, 0);
+		if (error)
+			goto cleanup;
+
+		error = vn_rdwr(UIO_READ, vp, (void *)vmaddr, file_offset,
+		    a_out->a_text + a_out->a_data, UIO_USERSPACE, 0,
+		    td->td_ucred, NOCRED, &aresid, td);
+		if (error != 0)
+			goto cleanup;
+		if (aresid != 0) {
+			error = ENOEXEC;
+			goto cleanup;
+		}
+	} else {
+		/*
+		 * for QMAGIC, a_entry is 20 bytes beyond the load address
+		 * to skip the executable header
+		 */
+		vmaddr = trunc_page(a_out->a_entry);
+
+		/*
+		 * Map it all into the process's space as a single
+		 * copy-on-write "data" segment.
+		 */
+		map = &td->td_proc->p_vmspace->vm_map;
+		error = vm_mmap(map, &vmaddr,
+		    a_out->a_text + a_out->a_data, VM_PROT_ALL, VM_PROT_ALL,
+		    MAP_PRIVATE | MAP_FIXED, OBJT_VNODE, vp, file_offset);
+		if (error)
+			goto cleanup;
+		vm_map_lock(map);
+		if (!vm_map_lookup_entry(map, vmaddr, &entry)) {
+			vm_map_unlock(map);
+			error = EDOOFUS;
+			goto cleanup;
+		}
+		entry->eflags |= MAP_ENTRY_VN_EXEC;
+		vm_map_unlock(map);
+		textset = false;
+	}
+
+	if (bss_size != 0) {
+		/* Calculate BSS start address */
+		vmaddr = trunc_page(a_out->a_entry) + a_out->a_text +
+		    a_out->a_data;
+
+		/* allocate some 'anon' space */
+		error = vm_map_find(&td->td_proc->p_vmspace->vm_map, NULL, 0,
+		    &vmaddr, bss_size, 0, VMFS_NO_SPACE, VM_PROT_ALL,
+		    VM_PROT_ALL, 0);
+		if (error)
+			goto cleanup;
+	}
+
+cleanup:
+	if (opened) {
+		if (locked)
+			VOP_UNLOCK(vp);
+		locked = false;
+		VOP_CLOSE(vp, FREAD, td->td_ucred, td);
+	}
+	if (textset) {
+		if (!locked) {
+			locked = true;
+			VOP_LOCK(vp, LK_SHARED | LK_RETRY);
+		}
+		VOP_UNSET_TEXT_CHECKED(vp);
+	}
+	if (locked)
+		VOP_UNLOCK(vp);
+
+	/* Release the temporary mapping. */
+	if (a_out)
+		kmap_free_wakeup(exec_map, (vm_offset_t)a_out, PAGE_SIZE);
+
+	return (error);
 }

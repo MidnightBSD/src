@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright 2001 Jamey Wood
  *
@@ -23,7 +23,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/queue.h>
@@ -57,6 +56,8 @@ struct extra_syscall {
 struct procabi {
 	const char *type;
 	enum sysdecode_abi abi;
+	size_t pointer_size;
+	const char *compat_prefix;
 	STAILQ_HEAD(, extra_syscall) extra_syscalls;
 	struct syscall *syscalls[SYSCALL_NORMAL_COUNT];
 };
