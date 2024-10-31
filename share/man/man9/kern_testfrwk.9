@@ -21,8 +21,6 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
-.\"
 .Dd November 12, 2015
 .Dt KERN_TESTFRWK 9
 .Os
@@ -30,13 +28,15 @@
 .Nm kern_testfrwk
 .Nd A kernel testing framework
 .Sh SYNOPSIS
-kld_load kern_testfrwk
+kldload kern_testfrwk
 .Sh DESCRIPTION
 .\" This whole section is not written in manual page style and should be ripped
 .\" out and replaced. -CEM
 So what is this sys/tests directory in the kernel all about?
 .Pp
-Have you ever wanted to test a part of the FreeBSD kernel in some way and you
+Have you ever wanted to test a part of the
+.Fx
+kernel in some way and you
 had no real way from user-land to make what you want to occur happen?
 Say an error path or situation where locking occurs in a particular manner that
 happens only once in a blue moon?

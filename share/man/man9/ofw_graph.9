@@ -20,8 +20,6 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
-.\"
 .Dd April 10, 2019
 .Dt ofw_graph 9
 .Os
@@ -32,7 +30,7 @@
 .Nm ofw_graph_get_endpoint_by_idx ,
 .Nm ofw_graph_get_remote_endpoint ,
 .Nm ofw_graph_get_remote_parent ,
-.Nm ofw_graph_get_device_by_port_ep ,
+.Nm ofw_graph_get_device_by_port_ep
 .Nd Helpers for the graph bindings
 .Sh SYNOPSIS
 .In dev/ofw/openfirm.h
@@ -50,7 +48,6 @@
 .Ft device_t
 .Fn ofw_graph_get_device_by_port_ep "phandle_t node" "uint32_t port_id" "uin32_t ep_id"
 .Sh DESCRIPTION
-.Pp
 The ofw_graph functions are helpers to parse the DTS graph bindings
 .Pp
 .Fn ofw_graph_get_port_by_idx
@@ -60,7 +57,8 @@ It will first check node named
 .Fa port@idx
 and then fallback on checking the
 .Fa ports
-child for a child node matching the id. If no ports matching
+child for a child node matching the id.
+If no ports matching
 .Fa idx
 is found the function return 0.
 .Pp
@@ -72,8 +70,8 @@ return the endpoint with id
 .Fa idx .
 It will first check if there is a single child named
 .Fa endpoint
-and returns it if there is. If there is multiple endpoints it will check
-the
+and returns it if there is.
+If there is multiple endpoints it will check the
 .Fa reg
 property and returns the correct
 .Fa phandle_t
@@ -91,10 +89,10 @@ phandle or 0 if none.
 .Fn ofw_graph_get_device_by_port_ep
 returns the device associated with the port and endpoint or
 .Fa NULL
-if none. The device driver should have called
+if none.
+The device driver should have called
 .Fn OF_device_register_xref
 before.
-.Fn 
 .Sh HISTORY
 The
 .Nm ofw_graph

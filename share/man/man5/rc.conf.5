@@ -2450,9 +2450,40 @@ is set to
 .Dq Li YES
 and
 .Va nfsv4_server_enable
-are set to
+is set to
 .Dq Li YES ,
 enable the server for NFSv4 as well as NFSv2 and NFSv3.
+.It Va nfsv4_server_only
+.Pq Vt bool
+If
+.Va nfs_server_enable
+is set to
+.Dq Li YES
+and
+.Va nfsv4_server_only
+is set to
+.Dq Li YES ,
+enable the NFS server for NFSv4 only.
+.It Va nfs_server_maxio
+.Pq Vt int
+value to set vfs.nfsd.srvmaxio to, which is the
+maximum I/O size for the NFS server.
+.It Va tlsclntd_enable
+.Pq Vt bool
+If set to
+.Dq Li YES ,
+run the
+.Xr rpc.tlsclntd 8
+daemon, which is needed for NFS-over-TLS NFS mounts.
+.It Va tlsservd_enable
+.Pq Vt bool
+If set to
+.Dq Li YES ,
+run the
+.Xr rpc.tlsservd 8
+daemon, which is needed for the
+.Xr nfsd 8
+to support NFS-over-TLS NFS mounts.
 .It Va nfsuserd_enable
 .Pq Vt bool
 If
@@ -2632,29 +2663,6 @@ This is mandatory when
 .Va pppoed_enable
 is set to
 .Dq Li YES .
-.It Va timed_enable
-.Pq Vt bool
-If set to
-.Dq Li YES ,
-run the
-.Xr timed 8
-service at boot time.
-This command is intended for networks of
-machines where a consistent
-.Dq "network time"
-for all hosts must be established.
-This is often useful in large NFS
-environments where time stamps on files are expected to be consistent
-network-wide.
-.It Va timed_flags
-.Pq Vt str
-If
-.Va timed_enable
-is set to
-.Dq Li YES ,
-these are the flags to pass to the
-.Xr timed 8
-service.
 .It Va ntpdate_enable
 .Pq Vt bool
 If set to
@@ -2876,10 +2884,19 @@ If not set to
 create a default route to this host name or IP address
 (use an IP address if this router is also required to get to the
 name server!).
+.It Va defaultrouter_fibN
+.Pq Vt str
+If not set to
+.Dq Li NO ,
+create a default route in FIB N to this host name or IP address.
 .It Va ipv6_defaultrouter
 .Pq Vt str
 The IPv6 equivalent of
 .Va defaultrouter .
+.It Va ipv6_defaultrouter_fibN
+.Pq Vt str
+The IPv6 equivalent of
+.Va defaultrouter_fibN .
 .It Va static_arp_pairs
 .Pq Vt str
 Set to the list of static ARP pairs that are to be added at system
@@ -3360,11 +3377,9 @@ is set to
 this is the actual port the mouse is on.
 It might be
 .Pa /dev/cuau0
-for a COM1 serial mouse,
+for a COM1 serial mouse, or
 .Pa /dev/psm0
-for a PS/2 mouse or
-.Pa /dev/mse0
-for a bus mouse, for example.
+for a PS/2 mouse, for example.
 .It Va moused_flags
 .Pq Vt str
 If
@@ -3537,7 +3552,9 @@ the first suitable swap device listed in
 .Pa /etc/fstab
 will be used as dump device.
 Otherwise, the value of this variable is passed as the argument to
-.Xr dumpon 8 .
+.Xr dumpon 8
+and
+.Xr savecore 8 .
 To disable crash dumps, set this variable to
 .Dq Li NO .
 .It Va dumpon_flags
@@ -3646,21 +3663,6 @@ Set to
 to enable system accounting through the
 .Xr accton 8
 facility.
-.It Va ibcs2_enable
-.Pq Vt bool
-Set to
-.Dq Li YES
-to enable iBCS2 (SCO) binary emulation at system initial boot
-time.
-.It Va ibcs2_loaders
-.Pq Vt str
-If not set to
-.Dq Li NO
-and if
-.Va ibcs2_enable
-is set to
-.Dq Li YES ,
-this specifies a list of additional iBCS2 loaders to enable.
 .It Va firstboot_sentinel
 .Pq Vt str
 This variable specifies the full path to a
@@ -3718,13 +3720,6 @@ will always be added first, so they need not appear in this list.
 Set to the list of 32-bit compatibility shared library paths to
 use with
 .Xr ldconfig 8 .
-.It Va ldconfig_paths_aout
-.Pq Vt str
-Set to the list of shared library paths to use with
-.Xr ldconfig 8
-legacy
-.Xr a.out 5
-support.
 .It Va ldconfig_insecure
 .Pq Vt bool
 The
@@ -3933,6 +3928,13 @@ The configuration filename used by
 utility.
 The default value is
 .Pa /etc/jail.conf .
+.Pa /etc/jail\&.  Ns Ao Ar jname Ac Ns Va .conf
+and
+.Pa /etc/jail.conf.d/ Ns Ao Ar jname Ac Ns Va .conf
+will also be used if
+.Va Ao Ar jname Ac Va
+is set in
+.Va jail_list .
 .It Va jail_parallel_start
 .Pq Vt bool
 If set to
@@ -4660,12 +4662,44 @@ If set to
 removes empty
 .Dq Li rc.conf.d
 files.
+.It Va zfs_bootonce_activate
+.Pq Vt bool
+If set to
+.Dq Li YES ,
+and a boot environment marked bootonce is successfully booted,
+it will be made permanently active.
+.It Va zfskeys_enable
+.Pq Vt bool
+If set to
+.Dq Li YES ,
+enable auto-loading of encryption keys for encrypted ZFS datasets.
+For every dataset the script will first load the appropriate encryption key
+and then attempt to unlock the dataset.
+.Pp
+The script operates only on datasets which are encrypted with
+ZFS native encryption
+and have a ZFS
+.Dq Li keylocation
+dataset property beginning with
+.Dq Li file:// .
+.It Va zfskeys_datasets
+.Pq Vt str
+A whitespace-separated list of ZFS datasets to unlock.
+The list is empty by default,
+which means that the script will attempt to unlock all datasets.
+.It Va zfskeys_timeout
+.Pq Vt int
+Define the total number of seconds to wait for the zfskeys script
+to unlock an encrypted dataset.
+The default is 10.
 .El
 .Sh FILES
-.Bl -tag -width ".Pa /etc/defaults/rc.conf" -compact
+.Bl -tag -width "/etc/defaults/rc.conf" -compact
 .It Pa /etc/defaults/rc.conf
+.It Pa /etc/defaults/vendor.conf
 .It Pa /etc/rc.conf
 .It Pa /etc/rc.conf.local
+.It Pa /etc/rc.conf.d/
 .El
 .Sh SEE ALSO
 .Xr chmod 1 ,
@@ -4702,7 +4736,6 @@ files.
 .Xr pf.conf 5 ,
 .Xr security 7 ,
 .Xr accton 8 ,
-.Xr amd 8 ,
 .Xr apm 8 ,
 .Xr bsdinstall 8 ,
 .Xr bthidd 8 ,
@@ -4749,6 +4782,8 @@ files.
 .Xr routed 8 ,
 .Xr rpc.lockd 8 ,
 .Xr rpc.statd 8 ,
+.Xr rpc.tlsclntd 8 ,
+.Xr rpc.tlsservd 8 ,
 .Xr rpcbind 8 ,
 .Xr rwhod 8 ,
 .Xr savecore 8 ,
@@ -4759,7 +4794,6 @@ files.
 .Xr sysctl 8 ,
 .Xr syslogd 8 ,
 .Xr sysrc 8 ,
-.Xr timed 8 ,
 .Xr unbound 8 ,
 .Xr usbconfig 8 ,
 .Xr wlandebug 8 ,

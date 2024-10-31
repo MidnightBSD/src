@@ -1,5 +1,4 @@
-.\" $FreeBSD$
-.Dd May 24, 2017
+.Dd May 21, 2019
 .Dt IFLIBDI 9
 .Os
 .Sh NAME
@@ -100,7 +99,6 @@ Each queue has its own transmit (iflib_txq_t) and receive (iflib_rxq_t) queue.
 The transmit queue is used to hold packets while the interface is in the
 process of sending another.
 The receive queue is used to receive packets that are awaiting processing.
-.Pp
 .Ss The if_ctx_t Structure
 The fields of
 .Vt "struct if_ctx_t"
@@ -194,10 +192,10 @@ Allocate and initialize the
 \fIif_ctx_t\fP structure.
 Setup and initialize the MSI or MSI/X interrupt queues if necessary.
 Allocate memory for queues and qset structure setup.
-.It Fn iflib_device_irq_alloc
+.It Fn iflib_irq_alloc
 Allocate an interrupt resource for a given rid value with an associated filter
 and handler function.
-.It Fn iflib_device_irq_alloc_generic
+.It Fn iflib_irq_alloc_generic
 Performs the same function as iflib_device_irq_alloc along with the additional
 functionality of adding a taskgroup.
 The data fields and callback function are determined by the type of interrupt,

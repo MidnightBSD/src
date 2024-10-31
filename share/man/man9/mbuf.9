@@ -22,9 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
-.\"
-.Dd September 27, 2017
+.Dd December 28, 2023
 .Dt MBUF 9
 .Os
 .\"
@@ -54,7 +52,10 @@
 .Fc
 .\"
 .Ss Mbuf utility macros
+.Ft type
 .Fn mtod "struct mbuf *mbuf" "type"
+.Ft void *
+.Fn mtodo "struct mbuf *mbuf" "offset"
 .Fn M_ALIGN "struct mbuf *mbuf" "u_int len"
 .Fn MH_ALIGN "struct mbuf *mbuf" "u_int len"
 .Ft int
@@ -209,11 +210,21 @@ The
 .Vt mbuf
 flag bits are defined as follows:
 .Bd -literal
-/* mbuf flags */
 #define	M_EXT		0x00000001 /* has associated external storage */
 #define	M_PKTHDR	0x00000002 /* start of record */
 #define	M_EOR		0x00000004 /* end of record */
 #define	M_RDONLY	0x00000008 /* associated data marked read-only */
+#define	M_BCAST		0x00000010 /* send/received as link-level broadcast */
+#define	M_MCAST		0x00000020 /* send/received as link-level multicast */
+#define	M_PROMISC	0x00000040 /* packet was not for us */
+#define	M_VLANTAG	0x00000080 /* ether_vtag is valid */
+#define	M_EXTPG		0x00000100 /* has array of unmapped pages and TLS */
+#define	M_NOFREE	0x00000200 /* do not free mbuf, embedded in cluster */
+#define	M_TSTMP		0x00000400 /* rcv_tstmp field is valid */
+#define	M_TSTMP_HPREC	0x00000800 /* rcv_tstmp is high-prec, typically
+				      hw-stamped on port (useful for IEEE 1588
+				      and 802.1AS) */
+
 #define	M_PROTO1	0x00001000 /* protocol-specific */
 #define	M_PROTO2	0x00002000 /* protocol-specific */
 #define	M_PROTO3	0x00004000 /* protocol-specific */
@@ -226,38 +237,58 @@ flag bits are defined as follows:
 #define	M_PROTO10	0x00200000 /* protocol-specific */
 #define	M_PROTO11	0x00400000 /* protocol-specific */
 #define	M_PROTO12	0x00800000 /* protocol-specific */
-
-/* mbuf pkthdr flags (also stored in m_flags) */
-#define	M_BCAST		0x00000010 /* send/received as link-level broadcast */
-#define	M_MCAST		0x00000020 /* send/received as link-level multicast */
 .Ed
 .Pp
 The available
 .Vt mbuf
 types are defined as follows:
 .Bd -literal
-/* mbuf types */
 #define	MT_DATA		1	/* dynamic (data) allocation */
 #define	MT_HEADER	MT_DATA	/* packet header */
+
+#define	MT_VENDOR1	4	/* for vendor-internal use */
+#define	MT_VENDOR2	5	/* for vendor-internal use */
+#define	MT_VENDOR3	6	/* for vendor-internal use */
+#define	MT_VENDOR4	7	/* for vendor-internal use */
+
 #define	MT_SONAME	8	/* socket name */
+
+#define	MT_EXP1		9	/* for experimental use */
+#define	MT_EXP2		10	/* for experimental use */
+#define	MT_EXP3		11	/* for experimental use */
+#define	MT_EXP4		12	/* for experimental use */
+
 #define	MT_CONTROL	14	/* extra-data protocol message */
-#define	MT_OOBDATA	15	/* expedited data */
+#define	MT_EXTCONTROL	15	/* control message with externalized contents */
+#define	MT_OOBDATA	16	/* expedited data  */
 .Ed
 .Pp
 The available external buffer types are defined as follows:
 .Bd -literal
-/* external buffer types */
-#define EXT_CLUSTER	1	/* mbuf cluster */
-#define EXT_SFBUF	2	/* sendfile(2)'s sf_bufs */
-#define EXT_JUMBOP	3	/* jumbo cluster 4096 bytes */
-#define EXT_JUMBO9	4	/* jumbo cluster 9216 bytes */
-#define EXT_JUMBO16	5	/* jumbo cluster 16184 bytes */
-#define EXT_PACKET	6	/* mbuf+cluster from packet zone */
-#define EXT_MBUF	7	/* external mbuf reference */
-#define EXT_NET_DRV	252	/* custom ext_buf provided by net driver(s) */
-#define EXT_MOD_TYPE	253	/* custom module's ext_buf type */
-#define EXT_DISPOSABLE	254	/* can throw this buffer away w/page flipping */
-#define EXT_EXTREF	255	/* has externally maintained ref_cnt ptr */
+#define	EXT_CLUSTER	1	/* mbuf cluster */
+#define	EXT_SFBUF	2	/* sendfile(2)'s sf_bufs */
+#define	EXT_JUMBOP	3	/* jumbo cluster 4096 bytes */
+#define	EXT_JUMBO9	4	/* jumbo cluster 9216 bytes */
+#define	EXT_JUMBO16	5	/* jumbo cluster 16184 bytes */
+#define	EXT_PACKET	6	/* mbuf+cluster from packet zone */
+#define	EXT_MBUF	7	/* external mbuf reference */
+#define	EXT_RXRING	8	/* data in NIC receive ring */
+#define	EXT_PGS		9	/* array of unmapped pages */
+
+#define	EXT_VENDOR1	224	/* for vendor-internal use */
+#define	EXT_VENDOR2	225	/* for vendor-internal use */
+#define	EXT_VENDOR3	226	/* for vendor-internal use */
+#define	EXT_VENDOR4	227	/* for vendor-internal use */
+
+#define	EXT_EXP1	244	/* for experimental use */
+#define	EXT_EXP2	245	/* for experimental use */
+#define	EXT_EXP3	246	/* for experimental use */
+#define	EXT_EXP4	247	/* for experimental use */
+
+#define	EXT_NET_DRV	252	/* custom ext_buf provided by net driver(s) */
+#define	EXT_MOD_TYPE	253	/* custom module's ext_buf type */
+#define	EXT_DISPOSABLE	254	/* can throw this buffer away w/page flipping */
+#define	EXT_EXTREF	255	/* has externally maintained ref_cnt ptr */
 .Ed
 .Pp
 If the
@@ -364,6 +395,14 @@ It is advisable to ensure that there is enough contiguous data in
 See
 .Fn m_pullup
 for details.
+.It Fn mtodo mbuf offset
+Return a data pointer at an offset (in bytes) into the data attached to
+.Fa mbuf .
+Returns a
+.Ft void *
+pointer .
+.Sy Note :
+The caller must ensure that the offset is in bounds of the attached data.
 .It Fn MGET mbuf how type
 Allocate an
 .Vt mbuf
@@ -544,6 +583,9 @@ for non-critical paths.
 Allocate an
 .Vt mbuf
 with enough space to hold specified amount of data.
+If the size is is larger than
+.Dv MJUMPAGESIZE , NULL
+will be returned.
 .It Fn m_getm orig len how type
 Allocate
 .Fa len
@@ -602,9 +644,12 @@ on failure.
 .It Fn m_getjcl how type flags size
 This is like
 .Fn m_getcl
-but it the size of the cluster allocated will be large enough for
+but the specified
 .Fa size
-bytes.
+of the cluster to be allocated must be one of
+.Dv MCLBYTES , MJUMPAGESIZE , MJUM9BYTES ,
+or
+.Dv MJUM16BYTES .
 .It Fn m_free mbuf
 Frees
 .Vt mbuf .
@@ -730,7 +775,9 @@ in the
 are contiguous and lay in the data area of
 .Fa mbuf ,
 so they are accessible with
-.Fn mtod mbuf type .
+.Fn mtod
+or
+.Fn mtodo .
 .Fa len
 must be smaller than, or equal to, the size of an
 .Vt mbuf cluster .
@@ -744,12 +791,13 @@ to the data contained in the returned mbuf is stored in
 If
 .Fa offsetp
 is NULL, the region may be accessed using
-.Fn mtod mbuf type .
+.Fn mtod mbuf type
+or
+.Fn mtodo mbuf 0 .
 If
 .Fa offsetp
 is non-NULL, the region may be accessed using
-.Fn mtod mbuf uint8_t
-+ *offsetp.
+.Fn mtodo mbuf *offsetp .
 The region of the mbuf chain between its beginning and
 .Fa offset
 is not modified, therefore it is safe to hold pointers to data within
@@ -1180,6 +1228,15 @@ See above.
 .Sh SEE ALSO
 .Xr ifnet 9 ,
 .Xr mbuf_tags 9
+.Rs
+.\" 4.4BSD SMM:18
+.%A S. J. Leffler
+.%A W. N. Joy
+.%A R. S. Fabry
+.%A M. J. Karels
+.%T Networking Implementation Notes
+.%B 4.4BSD System Manager's Manual (SMM)
+.Re
 .Sh HISTORY
 .\" Please correct me if I'm wrong
 .Vt Mbufs

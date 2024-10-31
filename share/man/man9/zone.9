@@ -23,9 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
-.\"
-.Dd August 20, 2020
+.Dd February 15, 2022
 .Dt UMA 9
 .Os
 .Sh NAME
@@ -35,8 +33,6 @@
 .In sys/param.h
 .In sys/queue.h
 .In vm/uma.h
-.Cd "options UMA_FIRSTTOUCH"
-.Cd "options UMA_XDOMAIN"
 .Bd -literal
 typedef int (*uma_ctor)(void *mem, int size, void *arg, int flags);
 typedef void (*uma_dtor)(void *mem, int size, void *arg);
@@ -86,8 +82,6 @@ typedef void (*uma_free)(void *item, vm_size_t size, uint8_t pflag);
 .Ft void
 .Fn uma_zfree_arg "uma_zone_t zone" "void *item" "void *arg"
 .Ft void
-.Fn uma_zfree_domain "uma_zone_t zone" "void *item" "void *arg"
-.Ft void
 .Fn uma_zfree_pcpu "uma_zone_t zone" "void *item"
 .Ft void
 .Fn uma_zfree_pcpu_arg "uma_zone_t zone" "void *item" "void *arg"
@@ -98,12 +92,20 @@ typedef void (*uma_free)(void *item, vm_size_t size, uint8_t pflag);
 .Ft void
 .Fn uma_zone_reserve_kva "uma_zone_t zone" "int nitems"
 .Ft void
+.Fn uma_reclaim "int req"
+.Ft void
+.Fn uma_reclaim_domain "int req" "int domain"
+.Ft void
+.Fn uma_zone_reclaim "uma_zone_t zone" "int req"
+.Ft void
+.Fn uma_zone_reclaim_domain "uma_zone_t zone" "int req" "int domain"
+.Ft void
 .Fn uma_zone_set_allocf "uma_zone_t zone" "uma_alloc allocf"
 .Ft void
 .Fn uma_zone_set_freef "uma_zone_t zone" "uma_free freef"
 .Ft int
 .Fn uma_zone_set_max "uma_zone_t zone" "int nitems"
-.Ft int
+.Ft void
 .Fn uma_zone_set_maxcache "uma_zone_t zone" "int nitems"
 .Ft int
 .Fn uma_zone_get_max "uma_zone_t zone"
@@ -288,18 +290,12 @@ To obtain zeroed memory from a PCPU zone, use the
 .Fn uma_zalloc_pcpu
 function and its variants instead, and pass
 .Dv M_ZERO .
-.It Dv UMA_ZONE_OFFPAGE
-By default book-keeping of items within a slab is done in the slab page itself.
-This flag explicitly tells subsystem that book-keeping structure should be
-allocated separately from special internal zone.
-This flag requires either
-.Dv UMA_ZONE_VTOSLAB
-or
-.Dv UMA_ZONE_HASH ,
-since subsystem requires a mechanism to find a book-keeping structure
-to an item being freed.
-The subsystem may choose to prefer offpage book-keeping for certain zones
-implicitly.
+.It Dv UMA_ZONE_NOTOUCH
+The UMA subsystem may not directly touch (i.e. read or write) the slab memory.
+Otherwise, by default, book-keeping of items within a slab may be done in the
+slab page itself, and
+.Dv INVARIANTS
+kernels may also do use-after-free checking by accessing the slab memory.
 .It Dv UMA_ZONE_ZINIT
 The zone will have its
 .Ft uma_init
@@ -313,37 +309,27 @@ A zone with
 .Dv UMA_ZONE_ZINIT
 flag would not return zeroed memory on every
 .Fn uma_zalloc .
-.It Dv UMA_ZONE_HASH
-The zone should use an internal hash table to find slab book-keeping
-structure where an allocation being freed belongs to.
-.It Dv UMA_ZONE_VTOSLAB
-The zone should use special field of
-.Vt vm_page_t
-to find slab book-keeping structure where an allocation being freed belongs to.
+.It Dv UMA_ZONE_NOTPAGE
+An allocator function will be supplied with
+.Fn uma_zone_set_allocf
+and the memory that it returns may not be kernel virtual memory backed by VM
+pages in the page array.
 .It Dv UMA_ZONE_MALLOC
 The zone is for the
 .Xr malloc 9
 subsystem.
 .It Dv UMA_ZONE_VM
 The zone is for the VM subsystem.
-.It Dv UMA_ZONE_NUMA
-The zone should use a first-touch NUMA policy rather than the round-robin
-default.
-If the
-.Dv UMA_FIRSTTOUCH
-kernel option is configured, all zones implicitly use a first-touch policy,
-and the
-.Dv UMA_ZONE_NUMA
-flag has no effect.
-The
-.Dv UMA_XDOMAIN
-kernel option, when configured, causes UMA to do the extra tracking to ensure
-that allocations from first-touch zones are always local.
-Otherwise, consumers that do not free memory on the same domain from which it
-was allocated will cause mixing in per-CPU caches.
-See
-.Xr numa 4
-for more details.
+.It Dv UMA_ZONE_CONTIG
+Items in this zone must be contiguous in physical address space.
+Items will follow normal alignment constraints and may span page boundaries
+between pages with contiguous physical addresses.
+.It Dv UMA_ZONE_UNMANAGED
+By default, UMA zone caches are shrunk to help resolve free page shortages.
+Cached items that have not been used for a long period may also be freed from
+zone.
+When this flag is set, the system will not reclaim memory from the zone's
+caches.
 .El
 .Pp
 Zones can be destroyed using
@@ -387,6 +373,22 @@ specify an argument for the
 and
 .Dv dtor
 functions of the zone, respectively.
+The variants
+.Fn uma_zalloc_pcpu
+and
+.Fn uma_zfree_pcpu
+allocate and free
+.Va mp_ncpu
+shadow copies as described for
+.Dv UMA_ZONE_PCPU .
+If
+.Fa item
+is
+.Dv NULL ,
+then
+.Fn uma_zfree_pcpu
+does nothing.
+.Pp
 The
 .Fn uma_zalloc_domain
 function allows callers to specify a fixed
@@ -394,11 +396,6 @@ function allows callers to specify a fixed
 domain to allocate from.
 This uses a guaranteed but slow path in the allocator which reduces
 concurrency.
-The
-.Fn uma_zfree_domain
-function should be used to return memory allocated in this fashion.
-This function infers the domain from the pointer and does not require it as an
-argument.
 .Pp
 The
 .Fn uma_prealloc
@@ -438,17 +435,47 @@ does not restrict the use of the pre-allocation to
 requests.
 .Pp
 The
+.Fn uma_reclaim
+and
+.Fn uma_zone_reclaim
+functions reclaim cached items from UMA zones, releasing unused memory.
+The
+.Fn uma_reclaim
+function reclaims items from all regular zones, while
+.Fn uma_zone_reclaim
+reclaims items only from the specified zone.
+The
+.Fa req
+parameter must be one of three values which specify how aggressively
+items are to be reclaimed:
+.Bl -tag -width indent
+.It Dv UMA_RECLAIM_TRIM
+Reclaim items only in excess of the zone's estimated working set size.
+The working set size is periodically updated and tracks the recent history
+of the zone's usage.
+.It Dv UMA_RECLAIM_DRAIN
+Reclaim all items from the unbounded cache.
+Free items in the per-CPU caches are left alone.
+.It Dv UMA_RECLAIM_DRAIN_CPU
+Reclaim all cached items.
+.El
+The
+.Fn uma_reclaim_domain
+and
+.Fn uma_zone_reclaim_domain
+functions apply only to items allocated from the specified domain.
+In the case of domains using a round-robin NUMA policy, cached items from all
+domains are freed to the keg, but only slabs from the specific domain will
+be freed.
+.Pp
+The
 .Fn uma_zone_set_allocf
 and
 .Fn uma_zone_set_freef
 functions allow a zone's default slab allocation and free functions to be
 overridden.
-This is useful if the zone's items have special memory allocation constraints.
-For example, if multi-page objects are required to be physically contiguous,
-an
-.Fa allocf
-function which requests contiguous memory from the kernel's page allocator
-may be used.
+This is useful if memory with special constraints such as attributes,
+alignment, or address ranges must be used.
 .Pp
 The
 .Fn uma_zone_set_max
@@ -471,11 +498,8 @@ other CPUs when the limit is hit.
 .Pp
 The
 .Fn uma_zone_set_maxcache
-function limits the number of free items which may be cached in the zone,
-excluding the per-CPU caches, which are bounded in size.
-For example, to implement a
-.Ql pure
-per-CPU cache, a cache zone may be configured with a maximum cache size of 0.
+function limits the number of free items which may be cached in the zone.
+This limit applies to both the per-CPU caches and the cache of free buckets.
 .Pp
 The
 .Fn uma_zone_get_max

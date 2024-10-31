@@ -20,9 +20,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
-.\"
-.Dd February 24, 2021
+.Dd January 16, 2023
 .Dt ATOMIC 9
 .Os
 .Sh NAME
@@ -40,7 +38,6 @@
 .Nm atomic_thread_fence
 .Nd atomic operations
 .Sh SYNOPSIS
-.In sys/types.h
 .In machine/atomic.h
 .Ft void
 .Fn atomic_add_[acq_|rel_]<type> "volatile <type> *p" "<type> v"
@@ -275,7 +272,9 @@ In C11, a release fence by one thread synchronizes with an acquire fence by
 another thread when an atomic load that is prior to the acquire fence (by
 program order) reads the value written by an atomic store that is subsequent
 to the release fence.
-In constrast, in FreeBSD, because of the atomicity of ordinary, naturally
+In constrast, in
+.Fx ,
+because of the atomicity of ordinary, naturally
 aligned loads and stores, fences can also be synchronized by ordinary loads
 and stores.
 This simplifies the implementation and use of some synchronization
@@ -295,11 +294,11 @@ For example, they can be used to avoid executing a memory barrier until a
 memory access shows that some condition is satisfied.
 .Ss Interrupt Fence Operations
 The
-.Fn atomic_interrupt_fence()
+.Fn atomic_interrupt_fence
 function establishes ordering between its call location and any interrupt
 handler executing on the same CPU.
 It is modeled after the similar C11 function
-.Fn atomic_signal_fence() ,
+.Fn atomic_signal_fence ,
 and adapted for the kernel environment.
 .Ss Multiple Processors
 In multiprocessor systems, the atomicity of the atomic operations on memory
@@ -490,8 +489,9 @@ The type
 .Dq Li 64
 is currently not implemented for some of the atomic operations on the
 .Tn arm ,
-and
 .Tn i386 ,
+and
+.Tn powerpc
 architectures.
 .Sh RETURN VALUES
 The
@@ -609,3 +609,8 @@ and
 .Fn atomic_store
 were added in
 .Fx 12.0 .
+.Pp
+The
+.Fn atomic_interrupt_fence
+operation was added in
+.Fx 13.0 .

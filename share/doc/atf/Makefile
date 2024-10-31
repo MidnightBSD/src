@@ -23,7 +23,6 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $FreeBSD$
 
 ATF=	${SRCTOP}/contrib/atf
 .PATH: ${ATF} ${ATF}/doc
@@ -32,5 +31,6 @@ FILESGROUPS=	TOP
 
 TOPDIR=		${SHAREDIR}/doc/atf
 TOP=		AUTHORS COPYING NEWS README
+TOPTAGS=	package=tests
 
 .include <bsd.prog.mk>

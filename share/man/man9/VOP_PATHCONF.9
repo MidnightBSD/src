@@ -26,9 +26,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
-.\"
-.Dd July 21, 2019
+.Dd December 31, 2020
 .Dt VOP_PATHCONF 9
 .Os
 .Sh NAME
@@ -72,6 +70,8 @@ Return 1 if file names longer than
 .Dv KERN_NAME_MAX
 are truncated.
 .El
+.Sh LOCKS
+The vnode will be locked on entry and should remain locked on return.
 .Sh RETURN VALUES
 If
 .Fa name

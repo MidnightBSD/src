@@ -25,9 +25,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
-.\"
-.Dd November 18, 2021
+.Dd July 17, 2023
 .Dt STYLE.MAKEFILE 5
 .Os
 .Sh NAME
@@ -43,7 +41,7 @@ source tree.
 .Bl -bullet
 .It
 .Cm .PATH :
-comes next if needed, and is spelled
+comes first if needed, and is spelled
 .Dq Li ".PATH: " ,
 with a single
 .Tn ASCII
@@ -66,11 +64,12 @@ order is:
 .Va PROG Ns / Ns Oo Va SH Oc Ns Va LIB Ns / Ns Va SCRIPTS
 .Va FILES
 .Va LINKS
-.Oo Va NO_ Oc Ns Va MAN
+.Va MAN
 .Va MLINKS
 .Va INCS
 .Va SRCS
 .Va WARNS
+.Va CSTD
 .Va CFLAGS
 .Va DPADD
 .Va LDADD .
@@ -80,13 +79,14 @@ order is:
 .Va PROG Ns / Ns Oo Va SH Oc Ns Va LIB Ns / Ns Va SCRIPTS
 .Va SRCS
 .Va WARNS
+.Va CSTD
 .Va CFLAGS
 .Va DPADD
 .Va LDADD
 .Va INCS
 .Va FILES
 .Va LINKS
-.Oo Va NO_ Oc Ns Va MAN
+.Va MAN
 .Va MLINKS .
 .It
 Omit
@@ -147,7 +147,7 @@ is spelled
 so that it may be overridden on the command line or in
 .Xr make.conf 5 .
 .It
-.Dq Li "NO_WERROR= yes"
+.Dq Li "MK_WERROR=no"
 should not be used,
 it defeats the purpose of
 .Va WARNS .
@@ -241,8 +241,6 @@ The simplest program
 .Pa Makefile
 is:
 .Bd -literal -offset indent
-# $FreeBSD\&$
-
 PROG=	foo
 
 \&.include <bsd.prog.mk>
@@ -252,8 +250,6 @@ The simplest library
 .Pa Makefile
 is:
 .Bd -literal -offset indent
-# $FreeBSD\&$
-
 LIB=	foo
 SHLIB_MAJOR= 1
 MAN=	libfoo.3

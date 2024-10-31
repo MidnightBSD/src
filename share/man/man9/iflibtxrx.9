@@ -1,5 +1,4 @@
-.\" $FreeBSD$
-.Dd April 16, 2019
+.Dd December 17, 2020
 .Dt IFLIBTXTX 9
 .Os
 .Sh NAME
@@ -11,7 +10,7 @@
 .Ft int
 .Fo isc_txd_encap
 .Fa "void *sc"
-.Fa "if_pkt_into_t pi"
+.Fa "if_pkt_info_t pi"
 .Fc
 .Ft void
 .Fo isc_txd_flush
@@ -61,7 +60,6 @@ primarily defined by the functions named above.
 The if_pkt_info data structure contains statistics and identifying info
 necessary for packet transmission.
 While the data structure for packet receipt is the if_rxd_info structure.
-.Pp
 .Ss The if_pkt_info Structure
 The fields of
 .Vt "struct if_pkt_info"

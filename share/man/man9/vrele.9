@@ -27,8 +27,6 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
-.\"
 .Dd February 24, 2016
 .Dt VRELE 9
 .Os
@@ -68,7 +66,7 @@ The
 is operationally equivalent to calling
 .Xr VOP_UNLOCK 9
 followed by
-.Xr vrele 9 ,
+.Fn vrele ,
 with less overhead.
 .Pp
 The

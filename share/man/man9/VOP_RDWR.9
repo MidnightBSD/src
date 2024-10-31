@@ -26,8 +26,6 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
-.\"
 .Dd July 24, 1996
 .Dt VOP_RDWR 9
 .Os
@@ -83,6 +81,7 @@ Data already in VMIO space.
 .El
 .Sh LOCKS
 The file should be locked on entry and will still be locked on exit.
+Rangelock covering the whole i/o range should be owned around the call.
 .Sh RETURN VALUES
 Zero is returned on success, otherwise an error code is returned.
 .Sh ERRORS

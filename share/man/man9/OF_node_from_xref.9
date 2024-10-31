@@ -23,8 +23,6 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
-.\"
 .Dd April 9, 2018
 .Dt OF_NODE_FROM_XREF 9
 .Os
@@ -40,7 +38,6 @@
 .Ft phandle_t
 .Fn OF_xref_from_node "phandle_t node"
 .Sh DESCRIPTION
-.Pp
 Some OpenFirmware implementations (FDT, IBM) have a concept
 of effective phandle or xrefs.
 They are used to cross-reference device tree nodes.
@@ -92,7 +89,7 @@ the input value.
         return;
 .Ed
 .Sh SEE ALSO
-.Xr OF_device_from_xref 9
+.Xr OF_device_from_xref 9 ,
 .Xr OF_device_register_xref 9
 .Sh AUTHORS
 .An -nosplit

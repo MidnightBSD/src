@@ -26,8 +26,6 @@
 .\" OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
-.\"
 .Dd September 28, 2020
 .Dt IFNET 9
 .Os
@@ -48,6 +46,10 @@
 .Ss "Interface Manipulation Functions"
 .Ft "struct ifnet *"
 .Fn if_alloc "u_char type"
+.Ft "struct ifnet *"
+.Fn if_alloc_dev "u_char type" "device_t dev"
+.Ft "struct ifnet *"
+.Fn if_alloc_domain "u_char type" "int numa_domain"
 .Ft void
 .Fn if_attach "struct ifnet *ifp"
 .Ft void
@@ -214,7 +216,6 @@ Interfaces are also associated with an output queue, defined as a
 .Vt "struct ifqueue" ;
 this structure is used to hold packets while the interface is in the
 process of sending another.
-.Pp
 .Ss The ifnet Structure
 The fields of
 .Vt "struct ifnet"
@@ -440,6 +441,15 @@ It is used to cache the type passed to
 but unlike
 .Va if_type ,
 it would not be changed by drivers.
+.It Va if_numa_domain
+.Pq Vt uint8_t
+The NUMA domain of the hardware device associated with the interface.
+This is filled in with a wildcard value unless the kernel is NUMA
+aware, the system is a NUMA system, and the ifnet is allocated
+using
+.Fn if_alloc_dev
+or
+.Fn if_alloc_domain .
 .El
 .Pp
 References to
@@ -1151,6 +1161,24 @@ include the allocation of a
 .Fa type
 specific structure in
 .Va if_l2com .
+.It Fn if_alloc_dev
+Allocate and initialize
+.Vt "struct ifnet"
+as
+.Fn if_alloc
+does, with the addition that the ifnet can be tagged with the
+appropriate NUMA domain derived from the
+.Fa dev
+argument passed by the caller.
+.It Fn if_alloc_domain
+Allocate and initialize
+.Vt "struct ifnet"
+as
+.Fn if_alloc
+does, with the addition that the ifnet will be tagged with the NUMA
+domain via the
+.Fa numa_domain
+argument passed by the caller.
 .It Fn if_attach
 Link the specified interface
 .Fa ifp
@@ -1168,7 +1196,10 @@ function.)
 The
 .Fa ifp
 must have been allocated by
-.Fn if_alloc .
+.Fn if_alloc ,
+.Fn if_alloc_dev
+or
+.Fn if_alloc_domain .
 .It Fn if_detach
 Shut down and unlink the specified
 .Fa ifp

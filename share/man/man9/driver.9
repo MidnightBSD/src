@@ -26,9 +26,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
-.\"
-.Dd April 30, 2020
+.Dd April 19, 2022
 .Dt DRIVER 9
 .Os
 .Sh NAME
@@ -67,9 +65,7 @@ static driver_t foo_driver = {
 	sizeof(struct foo_softc)
 };
 
-static devclass_t foo_devclass;
-
-DRIVER_MODULE(foo, bogo, foo_driver, foo_devclass, NULL, NULL);
+DRIVER_MODULE(foo, bogo, foo_driver, NULL, NULL);
 .Ed
 .Sh DESCRIPTION
 Each driver in the kernel is described by a
@@ -102,11 +98,6 @@ macro will also create the devclass with the name of the driver and
 can optionally call extra initialisation code in the driver by
 specifying an extra module event handler and argument as the last two
 arguments.
-.Sh HISTORY
-The
-.Nm
-framework first appeared in
-.Fx 2.2.7 .
 .Sh SEE ALSO
 .Xr devclass 9 ,
 .Xr device 9 ,

@@ -53,15 +53,16 @@ errmsg() {
 usage() {
 	local msg=$1
 
-	echo "Usage: vmrun.sh [-aAEhiTv] [-c <CPUs>] [-C <console>]" \
+	echo "Usage: vmrun.sh [-aAEhiTuvw] [-c <CPUs>] [-C <console>]" \
 	    "[-d <disk file>]"
 	echo "                [-e <name=value>] [-f <path of firmware>]" \
 	    "[-F <size>]"
-	echo "                [-g <gdbport> ] [-H <directory>]"
+	echo "                [-G [w][address:]port] [-H <directory>]"
 	echo "                [-I <location of installation iso>] [-l <loader>]"
 	echo "                [-L <VNC IP for UEFI framebuffer>]"
 	echo "                [-m <memsize>]" \
 	    "[-n <network adapter emulation type>]"
+	echo "                [-p <pcidev|bus/slot/func>]"
 	echo "                [-P <port>] [-t <tapdev>] <vmname>"
 	echo ""
 	echo "       -h: display this help message"
@@ -75,19 +76,19 @@ usage() {
 	echo "       -f: Use a specific UEFI firmware"
 	echo "       -F: Use a custom UEFI GOP framebuffer size" \
 	    "(default: ${DEFAULT_VNCSIZE})"
-	echo "       -g: listen for connection from kgdb at <gdbport>"
+	echo "       -G: bind the GDB stub to the specified address"
 	echo "       -H: host filesystem to export to the loader"
 	echo "       -i: force boot of the Installation CDROM image"
 	echo "       -I: Installation CDROM image location" \
 	    "(default: ${DEFAULT_ISOFILE})"
 	echo "       -l: the OS loader to use (default: /boot/userboot.so)"
 	echo "       -L: IP address for UEFI GOP VNC server" \
-	    "(default: ${DEFAULT_VNCHOST}"
+	    "(default: ${DEFAULT_VNCHOST})"
 	echo "       -m: memory size (default: ${DEFAULT_MEMSIZE})"
 	echo "       -n: network adapter emulation type" \
 	    "(default: ${DEFAULT_NIC})"
-	echo "       -p: pass-through a host PCI device at bus/slot/func" \
-	    "(e.g. 10/0/0)"
+	echo "       -p: pass-through a host PCI device (e.g ppt0 or" \
+	    "bus/slot/func)"
 	echo "       -P: UEFI GOP VNC port (default: ${DEFAULT_VNCPORT})"
 	echo "       -t: tap device for virtio-net (default: $DEFAULT_TAPDEV)"
 	echo "       -T: Enable tablet device (for UEFI GOP)"
@@ -119,7 +120,6 @@ nic=${DEFAULT_NIC}
 tap_total=0
 disk_total=0
 disk_emulation=${DEFAULT_DISK}
-gdbport=0
 loader_opt=""
 bhyverun_opt="-H -A -P"
 pass_total=0
@@ -133,7 +133,7 @@ vncport=${DEFAULT_VNCPORT}
 vncsize=${DEFAULT_VNCSIZE}
 tablet=""
 
-while getopts aAc:C:d:e:Ef:F:g:hH:iI:l:L:m:n:p:P:t:Tuvw c ; do
+while getopts aAc:C:d:e:Ef:F:G:hH:iI:l:L:m:n:p:P:t:Tuvw c ; do
 	case $c in
 	a)
 		bhyverun_opt="${bhyverun_opt} -a"
@@ -166,8 +166,8 @@ while getopts aAc:C:d:e:Ef:F:g:hH:iI:l:L:m:n:p:P:t:Tuvw c ; do
 	F)
 		vncsize="${OPTARG}"
 		;;
-	g)	
-		gdbport=${OPTARG}
+	G)
+		bhyverun_opt="${bhyverun_opt} -G ${OPTARG}"
 		;;
 	H)
 		host_base=`realpath ${OPTARG}`
@@ -351,10 +351,21 @@ while [ 1 ]; do
 
 	i=0
 	while [ $i -lt $pass_total ] ; do
-	    eval "pass=\$pass_dev${i}"
-	    devargs="$devargs -s $nextslot:0,passthru,${pass} "
-	    nextslot=$(($nextslot + 1))
-	    i=$(($i + 1))
+		eval "pass=\$pass_dev${i}"
+		bsfform="$(echo "${pass}" | grep "^[0-9]\+/[0-9]\+/[0-9]\+$")"
+		if [ -z "${bsfform}" ]; then
+			bsf="$(pciconf -l "${pass}" 2>/dev/null)"
+			if [ $? -ne 0 ]; then
+				errmsg "${pass} is not a host PCI device"
+				exit 1
+			fi
+			bsf="$(echo "${bsf}" | awk -F: '{print $2"/"$3"/"$4}')"
+		else
+			bsf="${pass}"
+		fi
+		devargs="$devargs -s $nextslot:0,passthru,${bsf} "
+		nextslot=$(($nextslot + 1))
+		i=$(($i + 1))
         done
 
 	efiargs=""
@@ -366,7 +377,6 @@ while [ 1 ]; do
 	fi
 
 	${FBSDRUN} -c ${cpus} -m ${memsize} ${bhyverun_opt}		\
-		-g ${gdbport}						\
 		-s 0:0,hostbridge					\
 		-s 1:0,lpc						\
 		${efiargs}						\

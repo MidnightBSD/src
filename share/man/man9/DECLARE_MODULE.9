@@ -26,8 +26,6 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
-.\"
 .Dd February 13, 2018
 .Dt DECLARE_MODULE 9
 .Os
@@ -66,10 +64,11 @@ This declaration should be used by modules which depend on interfaces beyond
 the stable kernel KBI (such as ABI emulators or hypervisors that rely on
 internal kernel structures).
 .Fn DECLARE_MODULE
-will behave like 
+will behave like
 .Fn DECLARE_MODULE_TIED
-when compiled with modules built with the kernel. This allows locks and
-other synchronization primitives to be inlined safely.
+when compiled with modules built with the kernel.
+This allows locks and other synchronization primitives
+to be inlined safely.
 .Pp
 The arguments are:
 .Bl -tag -width indent

@@ -23,8 +23,6 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
-.\"
 .Dd June 20, 2019
 .Dt VM_MAP_PROTECT 9
 .Os
@@ -95,6 +93,11 @@ would exceed
 .Va max_protection
 for an entry within the range,
 .Dv KERN_PROTECTION_FAILURE
+is returned.
+If a copy-on-write mapping is transitioned from read-only to
+read-write, and too little swap space is available for backing the
+copied pages,
+.Dv KERN_RESOURCE_SHORTAGE
 is returned.
 .Sh SEE ALSO
 .Xr vm_map 9
