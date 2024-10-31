@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2017 Netflix, Inc.
+ * Copyright (c) 2017-2019 Netflix, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,7 +24,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <ctype.h>
 #include <efivar.h>
 #include <efivar-dp.h>
@@ -114,9 +113,12 @@ bindump(uint8_t *data, size_t datalen)
 
 #define LOAD_OPTION_ACTIVE 1
 
+#define SIZE(dp, edp) (size_t)((intptr_t)(void *)edp - (intptr_t)(void *)dp)
+
 void
 efi_print_load_option(uint8_t *data, size_t datalen, int Aflag, int bflag, int uflag)
 {
+	char *dev, *relpath, *abspath;
 	uint8_t *ep = data + datalen;
 	uint8_t *walker = data;
 	uint32_t attr;
@@ -128,6 +130,7 @@ efi_print_load_option(uint8_t *data, size_t datalen, int Aflag, int bflag, int u
 	int len;
 	void *opt;
 	int optlen;
+	int rv;
 
 	if (datalen < sizeof(attr) + sizeof(fplen) + sizeof(efi_char))
 		return;
@@ -155,17 +158,27 @@ efi_print_load_option(uint8_t *data, size_t datalen, int Aflag, int bflag, int u
 	// We got to here, everything is good
 	printf("%c ", attr & LOAD_OPTION_ACTIVE ? '*' : ' ');
 	ucs2_to_utf8(descr, &str);
-	printf("%s", str);
+	printf("%s\n", str);
 	free(str);
-	while (dp < edp) {
-		efidp_format_device_path(buf, sizeof(buf), dp,
-		    (intptr_t)(void *)edp - (intptr_t)(void *)dp);
-		dp = (efidp)((char *)dp + efidp_size(dp));
-		printf(" %s\n", buf);
+	if (fplen <= 4) {
+		printf("Empty path\n");
+	} else {
+		while (dp < edp && SIZE(dp, edp) > sizeof(efidp_header)) {
+			efidp_format_device_path(buf, sizeof(buf), dp, SIZE(dp, edp));
+			rv = efivar_device_path_to_unix_path(dp, &dev, &relpath, &abspath);
+			dp = (efidp)((char *)dp + efidp_size(dp));
+			printf(" %s\n", buf);
+			if (rv == 0) {
+				printf("      %*s:%s\n", len + (int)strlen(dev), dev, relpath);
+				free(dev);
+				free(relpath);
+				free(abspath);
+			}
+		}
 	}
 	if (optlen == 0)
 		return;
-	printf("Options: ");
+	printf("Option:\n");
 	if (Aflag)
 		asciidump(opt, optlen);
 	else if (bflag)

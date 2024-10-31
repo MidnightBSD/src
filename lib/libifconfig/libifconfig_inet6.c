@@ -25,7 +25,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 #include <sys/param.h>
 #include <sys/ioctl.h>
@@ -96,7 +95,7 @@ ifconfig_inet6_get_addrinfo(ifconfig_handle_t *h,
 	addr->lifetime = ifr6.ifr_ifru.ifru_lifetime; /* struct copy */
 
 	/* Set the vhid */
-	if (ifa->ifa_data && ifa->ifa_data) {
+	if (ifa->ifa_data) {
 		addr->vhid = ((struct if_data *)ifa->ifa_data)->ifi_vhid;
 	}
 

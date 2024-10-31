@@ -1,7 +1,6 @@
 %{
 /*
  * Copyright is disclaimed as to the contents of this file.
- *
  */
 
 #include <sys/types.h>

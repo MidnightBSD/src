@@ -1,4 +1,6 @@
 
+PACKAGE=	efi-tools
+
 PROG=	efidp
 MAN=	efidp.8
 

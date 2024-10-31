@@ -86,6 +86,10 @@ LIBADD=	pthread
 # integer to pointer, which is a GNU extension.
 #
 # Turn off the warning, because this is in contributed code.
-.if ${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} >= 60000
+.if ${COMPILER_TYPE} == "clang"
 CWARNFLAGS+=	-Wno-null-pointer-arithmetic
 .endif
+
+# AcpiUtInitStackPtrTrace intentionally leaks a pointer to an
+# on-stack variable.
+CWARNFLAGS.utdebug.c+= ${NO_WDANGLING_POINTER}

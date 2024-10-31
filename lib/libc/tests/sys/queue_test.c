@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/queue.h>
 #include <stdio.h>
 #include <stdlib.h>

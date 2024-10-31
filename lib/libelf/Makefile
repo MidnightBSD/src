@@ -1,4 +1,4 @@
-PACKAGE=lib${LIB}
+
 SHLIBDIR?= /lib
 
 .include <bsd.own.mk>
@@ -8,6 +8,7 @@ SRCDIR=	${ELFTCDIR}/libelf
 
 .PATH:	${SRCDIR}
 
+PACKAGE=	runtime
 LIB=	elf
 
 SRCS=	elf.c							\
@@ -130,6 +131,7 @@ MAN=	elf.3							\
 	gelf_checksum.3						\
 	gelf_fsize.3						\
 	gelf_getcap.3						\
+	gelf_getchdr.3						\
 	gelf_getclass.3						\
 	gelf_getdyn.3						\
 	gelf_getehdr.3						\
@@ -177,6 +179,7 @@ MLINKS+= \
 MLINKS+= \
 	gelf_checksum.3	elf${E}_checksum.3 	\
 	gelf_fsize.3	elf${E}_fsize.3 	\
+	gelf_getchdr.3	elf${E}_getchdr.3	\
 	gelf_getehdr.3	elf${E}_getehdr.3	\
 	gelf_getphdr.3	elf${E}_getphdr.3	\
 	gelf_getshdr.3	elf${E}_getshdr.3	\

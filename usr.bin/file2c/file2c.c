@@ -8,7 +8,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>

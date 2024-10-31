@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1994, Garrett Wollman
  *
@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "namespace.h"
 #include "reentrant.h"
 #include <sys/param.h>
@@ -120,12 +119,12 @@ static int
 net_marshal_func(char *buffer, size_t *buffer_size, void *retval, va_list ap,
     void *cache_mdata)
 {
-	char *name;
-	uint32_t net;
-	int type;
+	char *name __unused;
+	uint32_t net __unused;
+	int type __unused;
 	struct netent *ne;
-	char *orig_buf;
-	size_t orig_buf_size;
+	char *orig_buf __unused;
+	size_t orig_buf_size __unused;
 
 	struct netent new_ne;
 	size_t desired_size, size, aliases_size;
@@ -209,9 +208,9 @@ static int
 net_unmarshal_func(char *buffer, size_t buffer_size, void *retval, va_list ap,
     void *cache_mdata)
 {
-	char *name;
-	uint32_t net;
-	int type;
+	char *name __unused;
+	uint32_t net __unused;
+	int type __unused;
 	struct netent *ne;
 	char *orig_buf;
 	size_t orig_buf_size;

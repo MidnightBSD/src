@@ -25,8 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libfigpar/string_m.c 344127 2019-02-14 15:42:29Z se $");
-
 #include <sys/types.h>
 
 #include <ctype.h>

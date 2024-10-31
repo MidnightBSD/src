@@ -1,6 +1,5 @@
 #!/bin/sh
 #
-# $FreeBSD: stable/11/release/scripts/make-pkg-package.sh 317259 2017-04-21 16:47:09Z gjb $
 #
 
 # Simulate the build environment.

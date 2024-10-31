@@ -53,18 +53,18 @@
 #include <sys/errno.h>
 
 #include <assert.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <strings.h>
 
-#include <fs/msdosfs/bpb.h>
-
 #include "ffs/buf.h"
 
-#include "msdos/denode.h"
+#include <fs/msdosfs/bpb.h>
 #include "msdos/direntry.h"
-#include "msdos/fat.h"
-#include "msdos/msdosfsmount.h"
+#include <fs/msdosfs/denode.h>
+#include <fs/msdosfs/fat.h>
+#include <fs/msdosfs/msdosfsmount.h>
 
 #include "makefs.h"
 #include "msdos.h"
@@ -137,7 +137,7 @@ pcbmap(struct denode *dep, u_long findcn, daddr_t *bnp, u_long *cnp, int *sp)
 	int error;
 	u_long i;
 	u_long cn;
-	u_long prevcn = 0; /* XXX: prevcn could be used unititialized */
+	u_long prevcn = 0; /* XXX: prevcn could be used uninitialized */
 	u_long byteoffset;
 	u_long bn;
 	u_long bo;
@@ -409,24 +409,21 @@ usemap_free(struct msdosfsmount *pmp, u_long cn)
 	pmp->pm_inusemap[cn / N_INUSEBITS] &= ~(1U << (cn % N_INUSEBITS));
 }
 
-int
-clusterfree(struct msdosfsmount *pmp, u_long cluster, u_long *oldcnp)
+void
+clusterfree(struct msdosfsmount *pmp, u_long cluster)
 {
 	int error;
 	u_long oldcn;
 
 	error = fatentry(FAT_GET_AND_SET, pmp, cluster, &oldcn, MSDOSFSFREE);
-	if (error)
-		return (error);
+	if (error != 0)
+		return;
 	/*
 	 * If the cluster was successfully marked free, then update
 	 * the count of free clusters, and turn off the "allocated"
 	 * bit in the "in use" cluster bit map.
 	 */
 	usemap_free(pmp, cluster);
-	if (oldcnp)
-		*oldcnp = oldcn;
-	return (0);
 }
 
 /*
@@ -672,7 +669,7 @@ chainlength(struct msdosfsmount *pmp, u_long start, u_long count)
 }
 
 /*
- * Allocate contigous free clusters.
+ * Allocate contiguous free clusters.
  *
  * pmp	      - mount point.
  * start      - start of cluster chain.
@@ -741,7 +738,7 @@ clusteralloc1(struct msdosfsmount *pmp, u_long start, u_long count,
 {
 	u_long idx;
 	u_long len, newst, foundl, cn, l;
-	u_long foundcn = 0; /* XXX: foundcn could be used unititialized */
+	u_long foundcn = 0; /* XXX: foundcn could be used uninitialized */
 	u_int map;
 
 	MSDOSFS_DPRINTF(("clusteralloc(): find %lu clusters\n", count));
@@ -1023,7 +1020,7 @@ extendfile(struct denode *dep, u_long count, struct buf **bpp, u_long *ncp,
 					 dep->de_fc[FC_LASTFC].fc_fsrcn,
 					 0, cn);
 			if (error) {
-				clusterfree(pmp, cn, NULL);
+				clusterfree(pmp, cn);
 				return (error);
 			}
 			frcn = dep->de_fc[FC_LASTFC].fc_frcn + 1;

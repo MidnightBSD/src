@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2014 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Edward Tomasz Napierala under sponsorship
  * from the FreeBSD Foundation.
@@ -29,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/capsicum.h>
 #include <sys/disk.h>
 #include <sys/ioctl.h>
@@ -61,14 +59,19 @@ static struct {
 	const char	*name;
 	fstyp_function	function;
 	bool		unmountable;
-	char		*precache_encoding;
+	const char	*precache_encoding;
 } fstypes[] = {
+	{ "apfs", &fstyp_apfs, true, NULL },
+	{ "befs", &fstyp_befs, false, NULL },
 	{ "cd9660", &fstyp_cd9660, false, NULL },
 	{ "exfat", &fstyp_exfat, false, EXFAT_ENC },
 	{ "ext2fs", &fstyp_ext2fs, false, NULL },
 	{ "geli", &fstyp_geli, true, NULL },
+	{ "hammer", &fstyp_hammer, true, NULL },
+	{ "hammer2", &fstyp_hammer2, true, NULL },
+	{ "hfs+", &fstyp_hfsp, false, NULL },
 	{ "msdosfs", &fstyp_msdosfs, false, NULL },
-	{ "ntfs", &fstyp_ntfs, false, NULL },
+	{ "ntfs", &fstyp_ntfs, false, NTFS_ENC },
 	{ "ufs", &fstyp_ufs, false, NULL },
 #ifdef HAVE_ZFS
 	{ "zfs", &fstyp_zfs, true, NULL },
@@ -201,7 +204,7 @@ main(int argc, char **argv)
 #ifdef WITH_ICONV
 	/* Cache iconv conversion data before entering capability mode. */
 	if (show_label) {
-		for (i = 0; i < nitems(fstypes); i++) {
+		for (i = 0; i < (int)nitems(fstypes); i++) {
 			iconv_t cd;
 
 			if (fstypes[i].precache_encoding == NULL)

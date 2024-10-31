@@ -26,8 +26,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\"
-.Dd May 5, 2020
+.Dd January 3, 2021
 .Dt LIBCASPER 3
 .Os
 .Sh NAME
@@ -199,21 +198,20 @@ obtained via the
 function.
 The function returns capability that provides access to opened service.
 Casper supports the following services in the base system:
-.Bl -tag -width "system.random" -compact -offset indent
 .Pp
+.Bl -tag -width "system.random" -compact -offset indent
 .It system.dns
 provides DNS libc compatible API
 .It system.grp
 provides
 .Xr getgrent 3
 compatible API
+.It system.net
+provides network libc compatible API
 .It system.pwd
 provides
 .Xr getpwent 3
 compatible API
-.It system.random
-allows to obtain entropy from
-.Pa /dev/random
 .It system.sysctl
 provides
 .Xr sysctlbyname 3
@@ -222,6 +220,7 @@ compatible API
 provides
 .Xr syslog 3
 compatible API
+.El
 .Sh RETURN VALUES
 The
 .Fn cap_clone ,
@@ -262,8 +261,8 @@ functions always succeed.
 .Xr select 2 ,
 .Xr cap_dns 3 ,
 .Xr cap_grp 3 ,
+.Xr cap_net 3 ,
 .Xr cap_pwd 3 ,
-.Xr cap_random 3 ,
 .Xr cap_sysctl 3 ,
 .Xr cap_syslog 3 ,
 .Xr libcasper_service 3 ,

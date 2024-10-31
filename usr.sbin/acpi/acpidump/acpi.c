@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1998 Doug Rabson
  * Copyright (c) 2000 Mitsuru IWASAKI <iwasaki@FreeBSD.org>
@@ -26,7 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/param.h>
@@ -210,7 +209,7 @@ acpi_print_gas(ACPI_GENERIC_ADDRESS *gas)
 
 /* The FADT revision indicates whether we use the DSDT or X_DSDT addresses. */
 static int
-acpi_get_fadt_revision(ACPI_TABLE_FADT *fadt)
+acpi_get_fadt_revision(ACPI_TABLE_FADT *fadt __unused)
 {
 	int fadt_revision;
 
@@ -218,16 +217,22 @@ acpi_get_fadt_revision(ACPI_TABLE_FADT *fadt)
 	if (addr_size == 8) {
 		fadt_revision = 2;
 
+#if defined(__i386__)
 		/*
 		 * A few systems (e.g., IBM T23) have an RSDP that claims
 		 * revision 2 but the 64 bit addresses are invalid.  If
 		 * revision 2 and the 32 bit address is non-zero but the
 		 * 32 and 64 bit versions don't match, prefer the 32 bit
 		 * version for all subsequent tables.
+		 *
+		 * The only known ACPI systems this affects are early
+		 * implementations on 32-bit x86. Because of this limit the
+		 * workaround to i386.
 		 */
 		if (fadt->Facs != 0 &&
 		    (fadt->XFacs & 0xffffffff) != fadt->Facs)
 			fadt_revision = 1;
+#endif
 	} else
 		fadt_revision = 1;
 	return (fadt_revision);
@@ -239,6 +244,7 @@ acpi_handle_fadt(ACPI_TABLE_HEADER *sdp)
 	ACPI_TABLE_HEADER *dsdp;
 	ACPI_TABLE_FACS	*facs;
 	ACPI_TABLE_FADT *fadt;
+	vm_offset_t	addr;
 	int		fadt_revision;
 
 	fadt = (ACPI_TABLE_FADT *)sdp;
@@ -246,12 +252,17 @@ acpi_handle_fadt(ACPI_TABLE_HEADER *sdp)
 
 	fadt_revision = acpi_get_fadt_revision(fadt);
 	if (fadt_revision == 1)
-		facs = (ACPI_TABLE_FACS *)acpi_map_sdt(fadt->Facs);
+		addr = fadt->Facs;
 	else
-		facs = (ACPI_TABLE_FACS *)acpi_map_sdt(fadt->XFacs);
-	if (memcmp(facs->Signature, ACPI_SIG_FACS, 4) != 0 || facs->Length < 64)
-		errx(1, "FACS is corrupt");
-	acpi_print_facs(facs);
+		addr = fadt->XFacs;
+	if (addr != 0) {
+		facs = (ACPI_TABLE_FACS *)acpi_map_sdt(addr);
+
+		if (memcmp(facs->Signature, ACPI_SIG_FACS, 4) != 0 ||
+		    facs->Length < 64)
+			errx(1, "FACS is corrupt");
+		acpi_print_facs(facs);
+	}
 
 	if (fadt_revision == 1)
 		dsdp = (ACPI_TABLE_HEADER *)acpi_map_sdt(fadt->Dsdt);
@@ -542,7 +553,8 @@ acpi_print_madt(ACPI_SUBTABLE_HEADER *mp)
 		printf("\tGICR ADDR=%016jx\n",
 		    (uintmax_t)gicc->GicrBaseAddress);
 		printf("\tMPIDR=%jx\n", (uintmax_t)gicc->ArmMpidr);
-		printf("\tEfficency Class=%d\n", (u_int)gicc->EfficiencyClass);
+		printf("\tEfficiency Class=%d\n", (u_int)gicc->EfficiencyClass);
+		printf("\tSPE INTR=%d\n", gicc->SpeInterrupt);
 		break;
 	case ACPI_MADT_TYPE_GENERIC_DISTRIBUTOR:
 		gicd = (ACPI_MADT_GENERIC_DISTRIBUTOR *)mp;
@@ -1564,7 +1576,7 @@ static void
 acpi_print_nfit(ACPI_NFIT_HEADER *nfit)
 {
 	char *uuidstr;
-	uint32_t status;
+	uint32_t m, status;
 
 	ACPI_NFIT_SYSTEM_ADDRESS *sysaddr;
 	ACPI_NFIT_MEMORY_MAP *mmap;
@@ -1585,7 +1597,7 @@ acpi_print_nfit(ACPI_NFIT_HEADER *nfit)
 		printf("\tRangeIndex=%u\n", (u_int)sysaddr->RangeIndex);
 		printf("\tProximityDomain=%u\n",
 		    (u_int)sysaddr->ProximityDomain);
-		uuid_to_string((uuid_t *)(sysaddr->RangeGuid),
+		uuid_to_string((uuid_t *)(uintptr_t)(sysaddr->RangeGuid),
 		    &uuidstr, &status);
 		if (status != uuid_s_ok)
 			errx(1, "uuid_to_string: status=%u", status);
@@ -1641,7 +1653,10 @@ acpi_print_nfit(ACPI_NFIT_HEADER *nfit)
 		    (u_int)ileave->InterleaveIndex);
 		printf("\tLineCount=%u\n", (u_int)ileave->LineCount);
 		printf("\tLineSize=%u\n", (u_int)ileave->LineSize);
-		/* XXX ileave->LineOffset[i] output is not supported */
+		for (m = 0; m < ileave->LineCount; m++) {
+			printf("\tLine%uOffset=0x%08x\n", (u_int)m + 1,
+			    (u_int)ileave->LineOffset[m]);
+		}
 		break;
 	case ACPI_NFIT_TYPE_SMBIOS:
 		smbios = (ACPI_NFIT_SMBIOS *)nfit;
@@ -1702,7 +1717,10 @@ acpi_print_nfit(ACPI_NFIT_HEADER *nfit)
 		fladdr = (ACPI_NFIT_FLUSH_ADDRESS *)nfit;
 		printf("\tDeviceHandle=%u\n", (u_int)fladdr->DeviceHandle);
 		printf("\tHintCount=%u\n", (u_int)fladdr->HintCount);
-		/* XXX fladdr->HintAddress[i] output is not supported */
+		for (m = 0; m < fladdr->HintCount; m++) {
+			printf("\tHintAddress%u=0x%016jx\n", (u_int)m + 1,
+			    (uintmax_t)fladdr->HintAddress[m]);
+		}
 		break;
 	case ACPI_NFIT_TYPE_CAPABILITIES:
 		caps = (ACPI_NFIT_CAPABILITIES *)nfit;
@@ -2215,7 +2233,7 @@ aml_disassemble(ACPI_TABLE_HEADER *rsdt, ACPI_TABLE_HEADER *dsdp)
 		goto out;
 	}
 	if (status != 0) {
-		fprintf(stderr, "iast exit status = %d\n", status);
+		fprintf(stderr, "iasl exit status = %d\n", status);
 	}
 
 	/* Dump iasl's output to stdout */

@@ -1,5 +1,4 @@
 #	@(#)Makefile	8.2 (Berkeley) 9/21/96
-# $FreeBSD: stable/11/usr.sbin/mailstats/Makefile 319119 2017-05-29 10:15:41Z ngie $
 
 SENDMAIL_DIR= ${SRCTOP}/contrib/sendmail
 .PATH: ${SENDMAIL_DIR}/mailstats

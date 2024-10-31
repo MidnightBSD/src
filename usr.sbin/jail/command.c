@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011 James Gritton
  * All rights reserved.
@@ -27,8 +27,8 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
+#include <sys/cpuset.h>
 #include <sys/event.h>
 #include <sys/mount.h>
 #include <sys/stat.h>
@@ -82,6 +82,20 @@ static struct cfjails runnable = TAILQ_HEAD_INITIALIZER(runnable);
 static struct cfstring dummystring = { .len = 1 };
 static struct phhead phash[PHASH_SIZE];
 static int kq;
+
+static cpusetid_t
+root_cpuset_id(void)
+{
+	static cpusetid_t setid = CPUSET_INVALID;
+	static int error;
+
+	/* Only try to get the cpuset once. */
+	if (error == 0 && setid == CPUSET_INVALID)
+		error = cpuset_getid(CPU_LEVEL_ROOT, CPU_WHICH_PID, -1, &setid);
+	if (error != 0)
+		return (CPUSET_INVALID);
+	return (setid);
+}
 
 /*
  * Run the next command associated with a jail.
@@ -282,6 +296,7 @@ run_command(struct cfjail *j)
 	enum intparam comparam;
 	size_t comlen;
 	pid_t pid;
+	cpusetid_t setid;
 	int argc, bg, clean, consfd, down, fib, i, injail, sjuser, timeout;
 #if defined(INET) || defined(INET6)
 	char *addr, *extrap, *p, *val;
@@ -475,7 +490,6 @@ run_command(struct cfjail *j)
 		if (down) {
 			argv[4] = NULL;
 			argv[3] = argv[1];
-			argv[1] = "-ft";
 			argv[0] = "/sbin/umount";
 		} else {
 			if (argc == 4) {
@@ -489,9 +503,9 @@ run_command(struct cfjail *j)
 				argv[4] = argv[1];
 				argv[3] = argv[0];
 			}
-			argv[1] = "-t";
 			argv[0] = _PATH_MOUNT;
 		}
+		argv[1] = "-t";
 		break;
 
 	case IP_MOUNT_DEVFS:
@@ -632,6 +646,10 @@ run_command(struct cfjail *j)
 
 	injail = comparam == IP_EXEC_START || comparam == IP_COMMAND ||
 	    comparam == IP_EXEC_STOP;
+	if (injail)
+		setid = root_cpuset_id();
+	else
+		setid = CPUSET_INVALID;
 	clean = bool_param(j->intparams[IP_EXEC_CLEAN]);
 	username = string_param(j->intparams[injail
 	    ? IP_EXEC_JAIL_USER : IP_EXEC_SYSTEM_USER]);
@@ -700,6 +718,19 @@ run_command(struct cfjail *j)
 			jail_warnx(j, "setfib: %s", strerror(errno));
 			exit(1);
 		}
+
+		/*
+		 * We wouldn't have specialized our affinity, so just setid to
+		 * root.  We do this prior to attaching to avoid the kernel
+		 * having to create a transient cpuset that we'll promptly
+		 * free up with a reset to the jail's cpuset.
+		 *
+		 * This is just a best-effort to use as wide of mask as
+		 * possible.
+		 */
+		if (setid != CPUSET_INVALID)
+			(void)cpuset_setid(CPU_WHICH_PID, -1, setid);
+
 		if (jail_attach(j->jid) < 0) {
 			jail_warnx(j, "jail_attach: %s", strerror(errno));
 			exit(1);

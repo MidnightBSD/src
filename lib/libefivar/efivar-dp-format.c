@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <efivar.h>
 #include <stdio.h>
 #include <string.h>
@@ -1007,9 +1006,10 @@ DevPathToTextUsbWWID (
     //
     // In case no NULL terminator in SerialNumber, create a new one with NULL terminator
     //
-    NewStr = AllocateCopyPool ((Length + 1) * sizeof (CHAR16), SerialNumberStr);
+    NewStr = AllocatePool ((Length + 1) * sizeof (CHAR16));
     ASSERT (NewStr != NULL);
-    NewStr [Length] = 0;
+    CopyMem (NewStr, SerialNumberStr, Length * sizeof (CHAR16));
+    NewStr[Length]  = 0;
     SerialNumberStr = NewStr;
   }
 
@@ -2411,12 +2411,19 @@ UefiDevicePathLibConvertDevicePathToText (
   }
 }
 
-
 ssize_t
 efidp_format_device_path(char *buf, size_t len, const_efidp dp, ssize_t max)
 {
 	char *str;
 	ssize_t retval;
+
+	/*
+	 * Basic sanity check on the device path.
+	 */
+	if (!IsDevicePathValid((CONST EFI_DEVICE_PATH_PROTOCOL *) dp, max)) {
+		*buf = '\0';
+		return 0;
+	}
 
 	str = UefiDevicePathLibConvertDevicePathToText (
 		__DECONST(EFI_DEVICE_PATH_PROTOCOL *, dp), FALSE, TRUE);

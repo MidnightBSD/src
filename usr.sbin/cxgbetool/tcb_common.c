@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2018 Chelsio Communications, Inc.
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "tcb_common.h"
 
 /***:-----------------------------------------------------------------------
@@ -168,7 +167,7 @@ tcb_startswith_nc(char *cs, char *ct)
 
 
 /***:-----------------------------------------------------------------------
- ***: print utilties
+ ***: print utilities
  ***:-----------------------------------------------------------------------
  */
 

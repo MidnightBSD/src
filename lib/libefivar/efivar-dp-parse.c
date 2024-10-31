@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2017 Netflix, Inc.
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,8 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libefivar/efivar-dp-parse.c 332123 2018-04-06 18:10:38Z kevans $");
-
 #include <ctype.h>
 #include <efivar.h>
 #include <stdio.h>

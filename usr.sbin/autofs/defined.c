@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2014 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Edward Tomasz Napierala under sponsorship
  * from the FreeBSD Foundation.
@@ -36,7 +35,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/ioctl.h>
@@ -265,6 +263,7 @@ defined_init(void)
 
 	defined_add("ARCH", name.machine);
 	defined_add("CPU", name.machine);
+	defined_add("DOLLAR", "$");
 	defined_add("HOST", name.nodename);
 	defined_add("OSNAME", name.sysname);
 	defined_add("OSREL", name.release);

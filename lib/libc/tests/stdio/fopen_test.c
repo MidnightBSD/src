@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <fcntl.h>
 #include <paths.h>
 #include <stdio.h>

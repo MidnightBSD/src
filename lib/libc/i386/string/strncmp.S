@@ -29,7 +29,6 @@
  */
 
 #include <machine/asm.h>
-
 /*
  * strncmp(s1, s2, n)
  *	return an integer greater than, equal to, or less than 0,

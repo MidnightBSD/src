@@ -1,4 +1,3 @@
-# $FreeBSD: stable/11/usr.sbin/pw/tests/pw_userdel_test.sh 359588 2020-04-03 05:06:08Z bapt $
 
 # Import helper functions
 . $(atf_get_srcdir)/helper_functions.shin

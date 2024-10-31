@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012 NetApp, Inc.
  * All rights reserved.
@@ -24,16 +24,15 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 
 #include <stdio.h>
 
 #include "bhyverun.h"
+#include "config.h"
 #include "debug.h"
 #include "pci_emul.h"
 #include "uart_emul.h"
@@ -63,19 +62,17 @@ pci_uart_intr_deassert(void *arg)
 }
 
 static void
-pci_uart_write(struct vmctx *ctx, int vcpu, struct pci_devinst *pi,
-	       int baridx, uint64_t offset, int size, uint64_t value)
+pci_uart_write(struct pci_devinst *pi, int baridx, uint64_t offset, int size,
+    uint64_t value)
 {
-
 	assert(baridx == 0);
 	assert(size == 1);
 
 	uart_write(pi->pi_arg, offset, value);
 }
 
-uint64_t
-pci_uart_read(struct vmctx *ctx, int vcpu, struct pci_devinst *pi,
-	      int baridx, uint64_t offset, int size)
+static uint64_t
+pci_uart_read(struct pci_devinst *pi, int baridx, uint64_t offset, int size)
 {
 	uint8_t val;
 
@@ -87,9 +84,19 @@ pci_uart_read(struct vmctx *ctx, int vcpu, struct pci_devinst *pi,
 }
 
 static int
-pci_uart_init(struct vmctx *ctx, struct pci_devinst *pi, char *opts)
+pci_uart_legacy_config(nvlist_t *nvl, const char *opts)
+{
+
+	if (opts != NULL)
+		set_config_value_node(nvl, "path", opts);
+	return (0);
+}
+
+static int
+pci_uart_init(struct pci_devinst *pi, nvlist_t *nvl)
 {
 	struct uart_softc *sc;
+	const char *device;
 
 	pci_emul_alloc_bar(pi, 0, PCIBAR_IO, UART_IO_BAR_SIZE);
 	pci_lintr_request(pi);
@@ -102,18 +109,20 @@ pci_uart_init(struct vmctx *ctx, struct pci_devinst *pi, char *opts)
 	sc = uart_init(pci_uart_intr_assert, pci_uart_intr_deassert, pi);
 	pi->pi_arg = sc;
 
-	if (uart_set_backend(sc, opts) != 0) {
+	device = get_config_value_node(nvl, "path");
+	if (uart_set_backend(sc, device) != 0) {
 		EPRINTLN("Unable to initialize backend '%s' for "
-		    "pci uart at %d:%d", opts, pi->pi_slot, pi->pi_func);
+		    "pci uart at %d:%d", device, pi->pi_slot, pi->pi_func);
 		return (-1);
 	}
 
 	return (0);
 }
 
-struct pci_devemu pci_de_com = {
+static const struct pci_devemu pci_de_com = {
 	.pe_emu =	"uart",
 	.pe_init =	pci_uart_init,
+	.pe_legacy_config = pci_uart_legacy_config,
 	.pe_barwrite =	pci_uart_write,
 	.pe_barread =	pci_uart_read
 };

@@ -173,7 +173,6 @@ static const char copyright[] =
 "Copyright (c) 1997 Gareth McCaughan. All rights reserved.\n";
 #endif	/* not lint */
 #include <sys/cdefs.h>
-
 #include <err.h>
 #include <limits.h>
 #include <locale.h>

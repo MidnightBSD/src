@@ -1,4 +1,5 @@
 
+PACKAGE=	bluetooth
 SCRIPTS=bluetooth-config.sh
 MAN=	bluetooth-config.8
 

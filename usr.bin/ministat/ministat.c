@@ -11,12 +11,12 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/capsicum.h>
 #include <sys/ioctl.h>
 #include <sys/queue.h>
 #include <sys/ttycom.h>
 
+#include <assert.h>
 #include <capsicum_helpers.h>
 #include <ctype.h>
 #include <err.h>
@@ -30,7 +30,7 @@
 #define NSTUDENT 100
 #define NCONF 6
 static double const studentpct[] = { 80, 90, 95, 98, 99, 99.5 };
-static double student[NSTUDENT + 1][NCONF] = {
+static double const student[NSTUDENT + 1][NCONF] = {
 /* inf */	{	1.282,	1.645,	1.960,	2.326,	2.576,	3.090  },
 /* 1. */	{	3.078,	6.314,	12.706,	31.821,	63.657,	318.313  },
 /* 2. */	{	1.886,	2.920,	4.303,	6.965,	9.925,	22.327  },
@@ -140,9 +140,9 @@ static char symbol[MAX_DS] = { ' ', 'x', '+', '*', '%', '#', '@', 'O' };
 struct dataset {
 	char *name;
 	double	*points;
-	unsigned lpoints;
+	size_t lpoints;
 	double sy, syy;
-	unsigned n;
+	size_t n;
 };
 
 static struct dataset *
@@ -151,8 +151,11 @@ NewSet(void)
 	struct dataset *ds;
 
 	ds = calloc(1, sizeof *ds);
+	assert(ds != NULL);
 	ds->lpoints = 100000;
 	ds->points = calloc(sizeof *ds->points, ds->lpoints);
+	assert(ds->points != NULL);
+	ds->syy = NAN;
 	return(ds);
 }
 
@@ -165,55 +168,58 @@ AddPoint(struct dataset *ds, double a)
 		dp = ds->points;
 		ds->lpoints *= 4;
 		ds->points = calloc(sizeof *ds->points, ds->lpoints);
+		assert(ds->points != NULL);
 		memcpy(ds->points, dp, sizeof *dp * ds->n);
 		free(dp);
 	}
 	ds->points[ds->n++] = a;
 	ds->sy += a;
-	ds->syy += a * a;
 }
 
 static double
-Min(struct dataset *ds)
+Min(const struct dataset *ds)
 {
 
 	return (ds->points[0]);
 }
 
 static double
-Max(struct dataset *ds)
+Max(const struct dataset *ds)
 {
 
 	return (ds->points[ds->n -1]);
 }
 
 static double
-Avg(struct dataset *ds)
+Avg(const struct dataset *ds)
 {
 
 	return(ds->sy / ds->n);
 }
 
 static double
-Median(struct dataset *ds)
+Median(const struct dataset *ds)
 {
+	const size_t m = ds->n / 2;
+
 	if ((ds->n % 2) == 0)
-		return ((ds->points[ds->n / 2] + (ds->points[(ds->n / 2) - 1])) / 2);
-    	else
-		return (ds->points[ds->n / 2]);
+		return ((ds->points[m] + (ds->points[m - 1])) / 2);
+	return (ds->points[m]);
 }
 
 static double
 Var(struct dataset *ds)
 {
+	size_t z;
+	const double a = Avg(ds);
 
-	/*
-	 * Due to limited precision it is possible that sy^2/n > syy,
-	 * but variance cannot actually be negative.
-	 */
-	if (ds->syy <= ds->sy * ds->sy / ds->n)
-		return (0);
-	return (ds->syy - ds->sy * ds->sy / ds->n) / (ds->n - 1.0);
+	if (isnan(ds->syy)) {
+		ds->syy = 0.0;
+		for (z = 0; z < ds->n; z++)
+			ds->syy += (ds->points[z] - a) * (ds->points[z] - a);
+	}
+
+	return (ds->syy / (ds->n - 1.0));
 }
 
 static double
@@ -234,7 +240,7 @@ static void
 Vitals(struct dataset *ds, int flag)
 {
 
-	printf("%c %3d %13.8g %13.8g %13.8g %13.8g %13.8g", symbol[flag],
+	printf("%c %3zu %13.8g %13.8g %13.8g %13.8g %13.8g", symbol[flag],
 	    ds->n, Min(ds), Max(ds), Median(ds), Avg(ds), Stddev(ds));
 	printf("\n");
 }
@@ -244,13 +250,13 @@ Relative(struct dataset *ds, struct dataset *rs, int confidx)
 {
 	double spool, s, d, e, t;
 	double re;
-	int i;
+	size_t z;
 
-	i = ds->n + rs->n - 2;
-	if (i > NSTUDENT)
+	z = ds->n + rs->n - 2;
+	if (z > NSTUDENT)
 		t = student[0][confidx];
 	else
-		t = student[i][confidx];
+		t = student[z][confidx];
 	spool = (ds->n - 1) * Var(ds) + (rs->n - 1) * Var(rs);
 	spool /= ds->n + rs->n - 2;
 	spool = sqrt(spool);
@@ -264,7 +270,6 @@ Relative(struct dataset *ds, struct dataset *rs, int confidx)
 	re = t * sqrt(re);
 
 	if (fabs(d) > e) {
-	
 		printf("Difference at %.1f%% confidence\n", studentpct[confidx]);
 		printf("	%g +/- %g\n", d, e);
 		printf("	%g%% +/- %g%%\n", d * 100 / Avg(rs), re * 100 / Avg(rs));
@@ -282,7 +287,7 @@ struct plot {
 	int		width;
 
 	double		x0, dx;
-	int		height;
+	size_t		height;
 	char		*data;
 	char		**bar;
 	int		separate_bars;
@@ -335,9 +340,11 @@ static void
 PlotSet(struct dataset *ds, int val)
 {
 	struct plot *pl;
-	int i, j, m, x;
-	unsigned n;
+	int i, x;
+	size_t m, j, z;
+	size_t n;
 	int bar;
+	double av, sd;
 
 	pl = &plot;
 	if (pl->span == 0)
@@ -348,16 +355,21 @@ PlotSet(struct dataset *ds, int val)
 	else
 		bar = 0;
 
-	if (pl->bar == NULL)
+	if (pl->bar == NULL) {
 		pl->bar = calloc(sizeof(char *), pl->num_datasets);
+		assert(pl->bar != NULL);
+	}
+
 	if (pl->bar[bar] == NULL) {
 		pl->bar[bar] = malloc(pl->width);
+		assert(pl->bar[bar] != NULL);
 		memset(pl->bar[bar], 0, pl->width);
 	}
-	
+
 	m = 1;
 	i = -1;
 	j = 0;
+	/* Set m to max(j) + 1, to allocate required memory */
 	for (n = 0; n < ds->n; n++) {
 		x = (ds->points[n] - pl->x0) / pl->dx;
 		if (x == i) {
@@ -372,6 +384,7 @@ PlotSet(struct dataset *ds, int val)
 	m += 1;
 	if (m > pl->height) {
 		pl->data = realloc(pl->data, pl->width * m);
+		assert(pl->data != NULL);
 		memset(pl->data + pl->height * pl->width, 0,
 		    (m - pl->height) * pl->width);
 	}
@@ -387,18 +400,20 @@ PlotSet(struct dataset *ds, int val)
 		}
 		pl->data[j * pl->width + x] |= val;
 	}
-	if (!isnan(Stddev(ds))) {
-		x = ((Avg(ds) - Stddev(ds)) - pl->x0) / pl->dx;
-		m = ((Avg(ds) + Stddev(ds)) - pl->x0) / pl->dx;
+	av = Avg(ds);
+	sd = Stddev(ds);
+	if (!isnan(sd)) {
+		x = ((av - sd) - pl->x0) / pl->dx;
+		m = ((av + sd) - pl->x0) / pl->dx;
 		pl->bar[bar][m] = '|';
 		pl->bar[bar][x] = '|';
-		for (i = x + 1; i < m; i++)
-			if (pl->bar[bar][i] == 0)
-				pl->bar[bar][i] = '_';
+		for (z = x + 1; z < m; z++)
+			if (pl->bar[bar][z] == 0)
+				pl->bar[bar][z] = '_';
 	}
 	x = (Median(ds) - pl->x0) / pl->dx;
 	pl->bar[bar][x] = 'M';
-	x = (Avg(ds) - pl->x0) / pl->dx;
+	x = (av - pl->x0) / pl->dx;
 	pl->bar[bar][x] = 'A';
 }
 
@@ -407,6 +422,7 @@ DumpPlot(void)
 {
 	struct plot *pl;
 	int i, j, k;
+	size_t z;
 
 	pl = &plot;
 	if (pl->span == 0) {
@@ -419,10 +435,10 @@ DumpPlot(void)
 		putchar('-');
 	putchar('+');
 	putchar('\n');
-	for (i = 1; i < pl->height; i++) {
+	for (z = 1; z < pl->height; z++) {
 		putchar('|');
 		for (j = 0; j < pl->width; j++) {
-			k = pl->data[(pl->height - i) * pl->width + j];
+			k = pl->data[(pl->height - z) * pl->width + j];
 			if (k >= 0 && k < MAX_DS)
 				putchar(symbol[k]);
 			else
@@ -476,6 +492,7 @@ ReadSet(FILE *f, const char *n, int column, const char *delim)
 
 	s = NewSet();
 	s->name = strdup(n);
+	assert(s->name != NULL);
 	line = 0;
 	while (fgets(buf, sizeof buf, f) != NULL) {
 		line++;
@@ -618,7 +635,10 @@ main(int argc, char **argv)
 		nds = argc;
 		for (i = 0; i < nds; i++) {
 			setfilenames[i] = argv[i];
-			setfiles[i] = fopen(argv[i], "r");
+			if (!strcmp(argv[i], "-"))
+				setfiles[0] = stdin;
+			else
+				setfiles[i] = fopen(argv[i], "r");
 			if (setfiles[i] == NULL)
 				err(2, "Cannot open %s", argv[i]);
 		}
@@ -638,10 +658,11 @@ main(int argc, char **argv)
 
 	for (i = 0; i < nds; i++) {
 		ds[i] = ReadSet(setfiles[i], setfilenames[i], column, delim);
-		fclose(setfiles[i]);
+		if (setfiles[i] != stdin)
+			fclose(setfiles[i]);
 	}
 
-	for (i = 0; i < nds; i++) 
+	for (i = 0; i < nds; i++)
 		printf("%c %s\n", symbol[i+1], ds[i]->name);
 
 	if (!flag_n && !suppress_plot) {

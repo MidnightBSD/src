@@ -18,6 +18,11 @@
 # extra-bits-dir, if provided, contains additional files to be merged
 # into base-bits-dir as part of making the image.
 
+set -e
+
+scriptdir=$(dirname $(realpath $0))
+. ${scriptdir}/../../tools/boot/install-boot.sh
+
 if [ -z $ETDUMP ]; then
 	ETDUMP=etdump
 fi
@@ -33,18 +38,13 @@ fi
 if [ "$1" = "-b" ]; then
 	BASEBITSDIR="$4"
 
-	# Make EFI system partition (should be done with makefs in the future)
-	dd if=/dev/zero of=efiboot.img bs=4k count=200
-	device=`mdconfig -a -t vnode -f efiboot.img`
-	newfs_msdos -F 12 -m 0xf8 /dev/$device
-	mkdir efi
-	mount -t msdosfs /dev/$device efi
-	mkdir -p efi/efi/boot
-	cp -p "$BASEBITSDIR/boot/loader.efi" efi/efi/boot/bootaa64.efi
-	umount efi
-	rmdir efi
-	mdconfig -d -u $device
-	bootable="-o bootimage=i386;efiboot.img -o no-emul-boot -o platformid=efi"
+	# Make an EFI system partition.
+	espfilename=$(mktemp /tmp/efiboot.XXXXXX)
+	# ESP file size in KB.
+	espsize="2048"
+	make_esp_file ${espfilename} ${espsize} ${BASEBITSDIR}/boot/loader.efi
+
+	bootable="-o bootimage=efi;${espfilename} -o no-emul-boot -o platformid=efi"
 
 	shift
 else

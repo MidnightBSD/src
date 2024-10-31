@@ -99,8 +99,8 @@ PORTBRANCH="master"
 
 ## If WITH_VMIMAGES is set to a non-empty value, this is the size of the
 ## virtual machine disk filesystem.  Valid size values are described in
-## the truncate(1) manual page.
-#VMSIZE="20G"
+## the makefs(8) manual page.
+#VMSIZE="20g"
 
 ## If WITH_VMIMAGES is set to a non-empty value, this is a list of disk
 ## image formats to create.  Valid values are listed in the mkimg(1)
@@ -113,4 +113,4 @@ PORTBRANCH="master"
 
 ## If WITH_CLOUDWARE is set to a non-empty value, this is a list of providers
 ## to create disk images.
-#CLOUDWARE="EC2 GCE VAGRANT-VIRTUALBOX VAGRANT-VMWARE"
+#CLOUDWARE="EC2 GCE OCI VAGRANT-VIRTUALBOX VAGRANT-VMWARE"

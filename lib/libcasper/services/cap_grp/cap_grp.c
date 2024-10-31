@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Pawel Jakub Dawidek under sponsorship from
  * the FreeBSD Foundation.
@@ -30,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/dnv.h>
 #include <sys/nv.h>
 #include <sys/param.h>
@@ -156,7 +154,7 @@ group_unpack(const nvlist_t *nvl, struct group *grp, char *buffer,
 	if (!nvlist_exists_string(nvl, "gr_name"))
 		return (EINVAL);
 
-	memset(grp, 0, sizeof(*grp));
+	explicit_bzero(grp, sizeof(*grp));
 
 	error = group_unpack_string(nvl, "gr_name", &grp->gr_name, &buffer,
 	    &bufsize);

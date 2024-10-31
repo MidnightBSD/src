@@ -29,7 +29,6 @@
  */
 
 #include <machine/asm.h>
-
 /*
  * strrchr(s, c)
  *	return a pointer to the last occurrence of the character c in

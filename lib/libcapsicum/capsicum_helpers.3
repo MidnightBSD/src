@@ -22,8 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\"
-.Dd November 4, 2018
+.Dd January 2, 2020
 .Dt CAPSICUM_HELPERS 3
 .Os
 .Sh NAME
@@ -32,6 +31,7 @@
 .Nm caph_limit_stderr ,
 .Nm caph_limit_stdout ,
 .Nm caph_limit_stdio ,
+.Nm caph_stream_rights ,
 .Nm caph_cache_tzdata ,
 .Nm caph_cache_catpages ,
 .Nm caph_enter ,
@@ -49,11 +49,13 @@
 .Ft int
 .Fn caph_enter_casper "void"
 .Ft int
-.Fn caph_rights_limit "inf fd" "const cap_righst_t *rights"
+.Fn caph_rights_limit "int fd" "const cap_rights_t *rights"
 .Ft int
-.Fn caph_ioctls_limit "inf fd" "const unsigned long *cmds" "size_t ncmds"
+.Fn caph_ioctls_limit "int fd" "const unsigned long *cmds" "size_t ncmds"
 .Ft int
-.Fn caph_fcntls_limit "inf fd" "uint32_t fcntlrights"
+.Fn caph_fcntls_limit "int fd" "uint32_t fcntlrights"
+.Ft int
+.Fn caph_limit_stream "int fd" "int flags"
 .Ft int
 .Fn caph_limit_stdin "void"
 .Ft int
@@ -62,6 +64,8 @@
 .Fn caph_limit_stdout "void"
 .Ft int
 .Fn caph_limit_stdio "void"
+.Ft void
+.Fn caph_stream_rights "cap_rights_t *" "int flags"
 .Ft void
 .Fn caph_cache_tzdata "void"
 .Ft void
@@ -125,6 +129,14 @@ function.
 .Pp
 .Fn caph_limit_stdio
 limits stdin, stderr and stdout.
+.Pp
+.Nm caph_stream_rights
+may be used to initialize
+.Fa rights
+with the same rights that a stream would be limited to, as if
+.Fn caph_limit_stream
+had been invoked using the same
+.Fa flags .
 .Pp
 .Fn caph_cache_tzdata
 precaches all timezone data needed to use

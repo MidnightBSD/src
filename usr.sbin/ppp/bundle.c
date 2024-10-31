@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1998 Brian Somers <brian@Awfulhak.org>
  * All rights reserved.
@@ -24,8 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: stable/11/usr.sbin/ppp/bundle.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/param.h>
@@ -678,12 +676,9 @@ bundle_LockTun(struct bundle *bundle)
   if (lockfile != NULL) {
     fprintf(lockfile, "%d\n", (int)getpid());
     fclose(lockfile);
-  }
-#ifndef RELEASE_CRUNCH
-  else
+  } else
     log_Printf(LogERROR, "Warning: Can't create %s: %s\n",
                pidfile, strerror(errno));
-#endif
 }
 
 static void

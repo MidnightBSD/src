@@ -22,9 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
-.\"
-.Dd September 1, 2020
+.Dd July 21, 2022
 .Dt RELEASE 7
 .Os
 .Sh NAME
@@ -334,9 +332,6 @@ directory in
 Set to the list of any ports that are required for the target device
 in the format of
 .Fa category/port .
-The
-.Fa devel/subversion
-port is built by default.
 .It Va EMBEDDED_TARGET
 When set, its value is passed to
 .Xr make 1
@@ -383,9 +378,9 @@ The default value is
 .It Va VMSIZE
 Set to change the size of the virtual machine disk capacity.
 The default value is
-.Va 20G .
+.Va 20g .
 See
-.Xr truncate 1
+.Xr makefs 8
 for valid values.
 .Pp
 Virtual machine disk images are, by default, created as sparse images.
@@ -534,7 +529,7 @@ Displays the list of valid
 values.
 .It Cm list-vmtargets
 Displays the list of valid
-.Va VMFORMAT
+.Va VMFORMATS
 and
 .Va CLOUDWARE
 values.
@@ -679,12 +674,7 @@ cd /usr/src/release
 sh release.sh
 .Ed
 .Pp
-Optionally, a configuration file can be used customize the release build,
-such as the subversion revision to use, the branch of the subversion tree for
-.Li src/ ,
-.Li ports/ ,
-and
-.Li doc/ .
+Optionally, a configuration file can be used to customize the release build:
 .Bd -literal -offset indent
 cd /usr/src/release
 sh release.sh -c $HOME/release.conf
@@ -729,11 +719,11 @@ variable in
 .Xr sysctl 8
 .Rs
 .%T "FreeBSD Release Engineering"
-.%U https://www.FreeBSD.org/doc/en_US.ISO8859-1/articles/freebsd-releng/
+.%U https://docs.freebsd.org/en/articles/freebsd-releng/
 .Re
 .Rs
 .%T "FreeBSD Developers' Handbook"
-.%U https://www.FreeBSD.org/doc/en_US.ISO8859-1/books/developers-handbook/
+.%U https://docs.freebsd.org/en/books/developers-handbook/
 .Re
 .Sh HISTORY
 .Fx

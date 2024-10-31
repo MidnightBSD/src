@@ -1,10 +1,11 @@
 #
 #
 
-PACKAGE=lib${LIB}
 SHLIBDIR?=	/lib
 
 .include <src.opts.mk>
+
+PACKAGE=	runtime
 
 SHLIB_MAJOR=	5
 LIB=		crypt
@@ -18,7 +19,7 @@ SRCS=		crypt.c misc.c \
 MAN=		crypt.3
 MLINKS=		crypt.3 crypt_get_format.3 crypt.3 crypt_r.3 \
 		crypt.3 crypt_set_format.3
-CFLAGS+=	-I${SRCTOP}/lib/libmd -I${SRCTOP}/lib/libutil \
+CFLAGS+=	-I${SRCTOP}/lib/libmd \
 		-I${SRCTOP}/sys/crypto/sha2
 
 # Pull in the strong crypto, if it is present.

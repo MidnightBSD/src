@@ -26,8 +26,7 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\"
-.Dd June 1, 2020
+.Dd April 28, 2024
 .Dt RTLD 1
 .Os
 .Sh NAME
@@ -75,6 +74,14 @@ Translated to the name of the operating system implementation.
 Translated to the release level of the operating system.
 .It Pa $PLATFORM
 Translated to the machine hardware platform.
+.It Pa $LIB
+Translated to the system library path component on the platform.
+It is
+.Pa lib
+for native binaries, and typically
+.Pa lib32
+for compat32 binaries.
+Other translations might exist for other ABIs supported on the platform.
 .El
 .Pp
 The
@@ -130,6 +137,7 @@ all the environment variables listed below, but is being prefixed with
 .Ev LD_32_ ,
 for example:
 .Ev LD_32_TRACE_LOADED_OBJECTS .
+If the activated image is setuid or setgid, the variables are ignored.
 .Bl -tag -width ".Ev LD_LIBMAP_DISABLE"
 .It Ev LD_DUMP_REL_POST
 If set,
@@ -141,6 +149,24 @@ If set,
 .Nm
 will print a table containing all relocations before symbol
 binding and relocation.
+.It Ev LD_DYNAMIC_WEAK
+If set, use the ELF standard-compliant symbol lookup behavior:
+resolve to the first found symbol definition.
+.Pp
+By default,
+.Fx
+provides the non-standard symbol lookup behavior:
+when a weak symbol definition is found, remember the definition and
+keep searching in the remaining shared objects for a non-weak definition.
+If found, the non-weak definition is preferred, otherwise the remembered
+weak definition is returned.
+.Pp
+Symbols exported by dynamic linker itself (see
+.Xr dlfcn 3 )
+are always resolved using
+.Fx
+rules regardless of the presence of the variable.
+This variable is unset for set-user-ID and set-group-ID programs.
 .It Ev LD_LIBMAP
 A library replacement list in the same format as
 .Xr libmap.conf 5 .
@@ -192,6 +218,14 @@ the directories specified by
 will be searched first
 followed by the set of built-in standard directories.
 This variable is unset for set-user-ID and set-group-ID programs.
+.It Ev LD_PRELOAD_FDS
+A colon separated list of file descriptor numbers for libraries.
+This is intended for preloading libraries in which we already have a file
+descriptor.
+This may optimize the process of loading libraries because we do not have to
+look for them in directories.
+It may also be useful in a capability base system where we do not have access to
+global namespaces such as the filesystem.
 .It Ev LD_LIBRARY_PATH_FDS
 A colon separated list of file descriptor numbers for library directories.
 This is intended for use within
@@ -281,6 +315,20 @@ will process the filtee dependencies of the loaded objects immediately,
 instead of postponing it until required.
 Normally, the filtees are opened at the time of the first symbol resolution
 from the filter object.
+.It Ev LD_SHOW_AUXV
+If set, causes
+.Nm
+to dump content of the aux vector to standard output, before passing
+control to any user code.
+.It Ev LD_STATIC_TLS_EXTRA
+If the variable is specified and has a numeric value,
+.Nm
+will set the size of the static TLS extra space to the specified number
+of bytes.
+The static TLS extra space is used when loading objects compiled for
+initial-exec TLS code model with
+.Xr dlopen 3 .
+The minimum value that can be specified is \'128\'.
 .El
 .Sh DIRECT EXECUTION MODE
 .Nm
@@ -302,8 +350,12 @@ The syntax of the direct invocation is
 .Bd -ragged -offset indent
 .Pa /libexec/ld-elf.so.1
 .Op Fl b Ar exe
+.Op Fl d
 .Op Fl f Ar fd
+.Op Fl o Ar OPT=NAME
 .Op Fl p
+.Op Fl u
+.Op Fl v
 .Op Fl -
 .Pa image_path
 .Op Ar image arguments
@@ -322,6 +374,8 @@ If this option is specified,
 is only used to provide the
 .Va argv[0]
 value to the program.
+.It Fl d
+Turn off the emulation of the binary execute permission.
 .It Fl f Ar fd
 File descriptor
 .Ar fd
@@ -334,6 +388,23 @@ If this option is specified,
 is only used to provide the
 .Va argv[0]
 value to the program.
+.It Fl o Ar OPT=VALUE
+Set the
+.Ar OPT
+configuration variable to the value
+.Ar VALUE .
+The possible variable names are listed above as
+.Ev LD_
+prefixed environment variables, but here are referenced without the
+.Ev LD_
+prefix.
+A configuration variable set this way does not leak into
+the activated image's environment.
+.Pp
+The option can be repeated as many times as needed to set
+all configuration parameters.
+The parameters set using this option have priority over
+the same parameters assigned via environment.
 .It Fl p
 If the
 .Pa image_path
@@ -344,6 +415,13 @@ character,
 uses the search path provided by the environment variable
 .Dv PATH
 to find the binary to execute.
+.It Fl u
+Ignore all
+.Ev LD_
+environment variables and previous command line
+.Fl o
+options that otherwise affect the dynamic
+linker behavior.
 .It Fl v
 Display information about this run-time linker binary, then exit.
 .It Fl -
@@ -359,7 +437,7 @@ In the direct execution mode,
 .Nm
 emulates verification of the binary execute permission for the
 current user.
-This is done to avoid breaking user expectations in naively restricted 
+This is done to avoid breaking user expectations in naively restricted
 execution environments.
 The verification only uses Unix
 .Dv DACs ,
@@ -368,6 +446,9 @@ ignores
 and is naturally prone to race conditions.
 Environments which rely on such restrictions are weak
 and breakable on their own.
+It can be turned off with the
+.Fl d
+option.
 .Sh VERSIONING
 Newer
 .Nm
@@ -415,6 +496,13 @@ See
 Also it indicates the presence of
 .Va l_refname
 member of the structure.
+.It Dv _rtld_version_dlpi_tls_data
+The
+.Va dlpi_tls_data
+member of the structure
+.Vt dl_phdr_info
+contains the address of the module TLS segment for the calling thread,
+and not the address of the initialization segment.
 .El
 .Sh FILES
 .Bl -tag -width ".Pa /var/run/ld-elf32.so.hints" -compact

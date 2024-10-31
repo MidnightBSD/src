@@ -1,4 +1,3 @@
-# $MidnightBSD: src/share/skel/dot.cshrc,v 1.6 2012/06/15 03:46:47 laffer1 Exp $
 #
 # .cshrc - csh resource script, read at beginning of execution by each shell
 #

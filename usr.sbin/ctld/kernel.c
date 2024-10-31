@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2003, 2004 Silicon Graphics International Corp.
  * Copyright (c) 1997-2007 Kenneth D. Merry
@@ -38,7 +38,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/capsicum.h>
 #include <sys/callout.h>
@@ -51,6 +50,7 @@
 #include <sys/stat.h>
 #include <assert.h>
 #include <bsdxml.h>
+#include <capsicum_helpers.h>
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -236,10 +236,16 @@ cctl_end_element(void *user_data, const char *name)
 		cur_lun->backend_type = str;
 		str = NULL;
 	} else if (strcmp(name, "lun_type") == 0) {
+		if (str == NULL)
+			log_errx(1, "%s: %s missing its argument", __func__, name);
 		cur_lun->device_type = strtoull(str, NULL, 0);
 	} else if (strcmp(name, "size") == 0) {
+		if (str == NULL)
+			log_errx(1, "%s: %s missing its argument", __func__, name);
 		cur_lun->size_blocks = strtoull(str, NULL, 0);
 	} else if (strcmp(name, "blocksize") == 0) {
+		if (str == NULL)
+			log_errx(1, "%s: %s missing its argument", __func__, name);
 		cur_lun->blocksize = strtoul(str, NULL, 0);
 	} else if (strcmp(name, "serial_number") == 0) {
 		cur_lun->serial_number = str;
@@ -355,15 +361,23 @@ cctl_end_pelement(void *user_data, const char *name)
 		cur_port->port_name = str;
 		str = NULL;
 	} else if (strcmp(name, "physical_port") == 0) {
+		if (str == NULL)
+			log_errx(1, "%s: %s missing its argument", __func__, name);
 		cur_port->pp = strtoul(str, NULL, 0);
 	} else if (strcmp(name, "virtual_port") == 0) {
+		if (str == NULL)
+			log_errx(1, "%s: %s missing its argument", __func__, name);
 		cur_port->vp = strtoul(str, NULL, 0);
 	} else if (strcmp(name, "cfiscsi_target") == 0) {
 		cur_port->cfiscsi_target = str;
 		str = NULL;
 	} else if (strcmp(name, "cfiscsi_state") == 0) {
+		if (str == NULL)
+			log_errx(1, "%s: %s missing its argument", __func__, name);
 		cur_port->cfiscsi_state = strtoul(str, NULL, 0);
 	} else if (strcmp(name, "cfiscsi_portal_group_tag") == 0) {
+		if (str == NULL)
+			log_errx(1, "%s: %s missing its argument", __func__, name);
 		cur_port->cfiscsi_portal_group_tag = strtoul(str, NULL, 0);
 	} else if (strcmp(name, "ctld_portal_group_name") == 0) {
 		cur_port->ctld_portal_group_name = str;
@@ -601,6 +615,22 @@ retry_port:
 		}
 		cp->p_ctl_port = port->port_id;
 	}
+	while ((port = STAILQ_FIRST(&devlist.port_list))) {
+		struct cctl_lun_nv *nv;
+
+		STAILQ_REMOVE_HEAD(&devlist.port_list, links);
+		free(port->port_frontend);
+		free(port->port_name);
+		free(port->cfiscsi_target);
+		free(port->ctld_portal_group_name);
+		while ((nv = STAILQ_FIRST(&port->attr_list))) {
+			STAILQ_REMOVE_HEAD(&port->attr_list, links);
+			free(nv->value);
+			free(nv->name);
+			free(nv);
+		}
+		free(port);
+	}
 	free(name);
 
 	STAILQ_FOREACH(lun, &devlist.lun_list, links) {
@@ -650,6 +680,18 @@ retry_port:
 				    nv->name, (uintmax_t) lun->lun_id,
 				    cl->l_name);
 		}
+	}
+	while ((lun = STAILQ_FIRST(&devlist.lun_list))) {
+		struct cctl_lun_nv *nv;
+
+		STAILQ_REMOVE_HEAD(&devlist.lun_list, links);
+		while ((nv = STAILQ_FIRST(&lun->attr_list))) {
+			STAILQ_REMOVE_HEAD(&lun->attr_list, links);
+			free(nv->value);
+			free(nv->name);
+			free(nv);
+		}
+		free(lun);
 	}
 
 	return (conf);
@@ -728,12 +770,14 @@ kernel_lun_add(struct lun *lun)
 
 		req.args = nvlist_pack(req.args_nvl, &req.args_len);
 		if (req.args == NULL) {
+			nvlist_destroy(req.args_nvl);
 			log_warn("error packing nvlist");
 			return (1);
 		}
 	}
 
 	error = ioctl(ctl_fd, CTL_LUN_REQ, &req);
+	free(req.args);
 	nvlist_destroy(req.args_nvl);
 
 	if (error != 0) {
@@ -811,12 +855,14 @@ kernel_lun_modify(struct lun *lun)
 
 		req.args = nvlist_pack(req.args_nvl, &req.args_len);
 		if (req.args == NULL) {
+			nvlist_destroy(req.args_nvl);
 			log_warn("error packing nvlist");
 			return (1);
 		}
 	}
 
 	error = ioctl(ctl_fd, CTL_LUN_REQ, &req);
+	free(req.args);
 	nvlist_destroy(req.args_nvl);
 
 	if (error != 0) {
@@ -877,7 +923,7 @@ kernel_lun_remove(struct lun *lun)
 }
 
 void
-kernel_handoff(struct connection *conn)
+kernel_handoff(struct ctld_connection *conn)
 {
 	struct ctl_iscsi req;
 
@@ -903,27 +949,28 @@ kernel_handoff(struct connection *conn)
 	}
 #ifdef ICL_KERNEL_PROXY
 	if (proxy_mode)
-		req.data.handoff.connection_id = conn->conn_socket;
+		req.data.handoff.connection_id = conn->conn.conn_socket;
 	else
-		req.data.handoff.socket = conn->conn_socket;
+		req.data.handoff.socket = conn->conn.conn_socket;
 #else
-	req.data.handoff.socket = conn->conn_socket;
+	req.data.handoff.socket = conn->conn.conn_socket;
 #endif
 	req.data.handoff.portal_group_tag =
 	    conn->conn_portal->p_portal_group->pg_tag;
-	if (conn->conn_header_digest == CONN_DIGEST_CRC32C)
+	if (conn->conn.conn_header_digest == CONN_DIGEST_CRC32C)
 		req.data.handoff.header_digest = CTL_ISCSI_DIGEST_CRC32C;
-	if (conn->conn_data_digest == CONN_DIGEST_CRC32C)
+	if (conn->conn.conn_data_digest == CONN_DIGEST_CRC32C)
 		req.data.handoff.data_digest = CTL_ISCSI_DIGEST_CRC32C;
-	req.data.handoff.cmdsn = conn->conn_cmdsn;
-	req.data.handoff.statsn = conn->conn_statsn;
+	req.data.handoff.cmdsn = conn->conn.conn_cmdsn;
+	req.data.handoff.statsn = conn->conn.conn_statsn;
 	req.data.handoff.max_recv_data_segment_length =
-	    conn->conn_max_recv_data_segment_length;
+	    conn->conn.conn_max_recv_data_segment_length;
 	req.data.handoff.max_send_data_segment_length =
-	    conn->conn_max_send_data_segment_length;
-	req.data.handoff.max_burst_length = conn->conn_max_burst_length;
-	req.data.handoff.first_burst_length = conn->conn_first_burst_length;
-	req.data.handoff.immediate_data = conn->conn_immediate_data;
+	    conn->conn.conn_max_send_data_segment_length;
+	req.data.handoff.max_burst_length = conn->conn.conn_max_burst_length;
+	req.data.handoff.first_burst_length =
+	    conn->conn.conn_first_burst_length;
+	req.data.handoff.immediate_data = conn->conn.conn_immediate_data;
 
 	if (ioctl(ctl_fd, CTL_ISCSI, &req) == -1) {
 		log_err(1, "error issuing CTL_ISCSI ioctl; "
@@ -937,7 +984,7 @@ kernel_handoff(struct connection *conn)
 }
 
 void
-kernel_limits(const char *offload, int *max_recv_dsl, int *max_send_dsl,
+kernel_limits(const char *offload, int s, int *max_recv_dsl, int *max_send_dsl,
     int *max_burst_length, int *first_burst_length)
 {
 	struct ctl_iscsi req;
@@ -950,6 +997,7 @@ kernel_limits(const char *offload, int *max_recv_dsl, int *max_send_dsl,
 	if (offload != NULL) {
 		strlcpy(cilp->offload, offload, sizeof(cilp->offload));
 	}
+	cilp->socket = s;
 
 	if (ioctl(ctl_fd, CTL_ISCSI, &req) == -1) {
 		log_err(1, "error issuing CTL_ISCSI ioctl; "
@@ -1037,6 +1085,7 @@ kernel_port_add(struct port *port)
 
 		req.args = nvlist_pack(req.args_nvl, &req.args_len);
 		if (req.args == NULL) {
+			nvlist_destroy(req.args_nvl);
 			log_warn("error packing nvlist");
 			return (1);
 		}
@@ -1044,6 +1093,7 @@ kernel_port_add(struct port *port)
 		req.result = result_buf;
 		req.result_len = sizeof(result_buf);
 		error = ioctl(ctl_fd, CTL_PORT_REQ, &req);
+		free(req.args);
 		nvlist_destroy(req.args_nvl);
 
 		if (error != 0) {
@@ -1187,11 +1237,13 @@ kernel_port_remove(struct port *port)
 
 		req.args = nvlist_pack(req.args_nvl, &req.args_len);
 		if (req.args == NULL) {
+			nvlist_destroy(req.args_nvl);
 			log_warn("error packing nvlist");
 			return (1);
 		}
 
 		error = ioctl(ctl_fd, CTL_PORT_REQ, &req);
+		free(req.args);
 		nvlist_destroy(req.args_nvl);
 
 		if (error != 0) {
@@ -1336,22 +1388,17 @@ kernel_receive(struct pdu *pdu)
 void
 kernel_capsicate(void)
 {
-	int error;
 	cap_rights_t rights;
 	const unsigned long cmds[] = { CTL_ISCSI };
 
 	cap_rights_init(&rights, CAP_IOCTL);
-	error = cap_rights_limit(ctl_fd, &rights);
-	if (error != 0 && errno != ENOSYS)
+	if (caph_rights_limit(ctl_fd, &rights) < 0)
 		log_err(1, "cap_rights_limit");
 
-	error = cap_ioctls_limit(ctl_fd, cmds, nitems(cmds));
-
-	if (error != 0 && errno != ENOSYS)
+	if (caph_ioctls_limit(ctl_fd, cmds, nitems(cmds)) < 0)
 		log_err(1, "cap_ioctls_limit");
 
-	error = cap_enter();
-	if (error != 0 && errno != ENOSYS)
+	if (caph_enter() < 0)
 		log_err(1, "cap_enter");
 
 	if (cap_sandboxed())

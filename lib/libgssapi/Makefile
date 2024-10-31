@@ -1,6 +1,5 @@
-# $FreeBSD: stable/11/lib/libgssapi/Makefile 313538 2017-02-10 07:32:40Z ngie $
 
-PACKAGE=lib${LIB}
+PACKAGE= runtime
 LIB=		gssapi
 SHLIB_MAJOR=	10
 VERSION_DEF=	${SRCTOP}/lib/libc/Versions.def

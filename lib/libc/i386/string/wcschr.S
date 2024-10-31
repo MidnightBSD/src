@@ -25,7 +25,6 @@
  */
 
 #include <machine/asm.h>
-
 /*
  * wchar_t *
  * wcschr(const wchar_t *s, wchar_t c) --

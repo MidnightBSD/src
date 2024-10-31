@@ -1,5 +1,5 @@
 /*
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2016 Alexander Motin <mav@FreeBSD.org>
  * Copyright (c) 2015 Peter Grehan <grehan@freebsd.org>
@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #ifndef WITHOUT_CAPSICUM
 #include <sys/capsicum.h>
@@ -45,6 +44,8 @@
 #ifndef WITHOUT_CAPSICUM
 #include <capsicum_helpers.h>
 #endif
+#include <machine/vmm_snapshot.h>
+
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -62,6 +63,7 @@
 #include "mii.h"
 
 #include "bhyverun.h"
+#include "config.h"
 #include "debug.h"
 #include "pci_emul.h"
 #include "mevent.h"
@@ -260,7 +262,7 @@ struct e82545_softc {
 	uint32_t	esc_FCTTV;	/* x0170 flow ctl tx timer */
 	uint32_t	esc_LEDCTL;	/* x0E00 LED control */
 	uint32_t	esc_PBA;	/* x1000 pkt buffer allocation */
-	
+
 	/* Interrupt control */
 	int		esc_irq_asserted;
 	uint32_t	esc_ICR;	/* x00C0 cause read/clear */
@@ -290,12 +292,12 @@ struct e82545_softc {
 	uint32_t	esc_TIDV;	/* x3820 intr delay */
 	uint32_t	esc_TXDCTL;	/* x3828 desc control */
 	uint32_t	esc_TADV;	/* x382C intr absolute delay */
-	
+
 	/* L2 frame acceptance */
 	struct eth_uni	esc_uni[16];	/* 16 x unicast MAC addresses */
 	uint32_t	esc_fmcast[128]; /* Multicast filter bit-match */
 	uint32_t	esc_fvlan[128]; /* VLAN 4096-bit filter */
-	
+
 	/* Receive */
 	struct e1000_rx_desc *esc_rxdesc;
 	pthread_cond_t	esc_rx_cond;
@@ -316,7 +318,7 @@ struct e82545_softc {
 	uint32_t	esc_RADV;	/* x282C intr absolute delay */
 	uint32_t	esc_RSRPD;	/* x2C00 recv small packet detect */
 	uint32_t	esc_RXCSUM;     /* x5000 receive cksum ctl */
-	
+
 	/* IO Port register access */
 	uint32_t io_addr;
 
@@ -360,7 +362,7 @@ static void e82545_tx_start(struct e82545_softc *sc);
 static void e82545_tx_enable(struct e82545_softc *sc);
 static void e82545_tx_disable(struct e82545_softc *sc);
 
-static inline int
+static inline int __unused
 e82545_size_stat_index(uint32_t size)
 {
 	if (size <= 64) {
@@ -403,15 +405,15 @@ e82545_init_eeprom(struct e82545_softc *sc)
 }
 
 static void
-e82545_write_mdi(struct e82545_softc *sc, uint8_t reg_addr,
-			uint8_t phy_addr, uint32_t data)
+e82545_write_mdi(struct e82545_softc *sc __unused, uint8_t reg_addr,
+    uint8_t phy_addr, uint32_t data)
 {
 	DPRINTF("Write mdi reg:0x%x phy:0x%x data: 0x%x", reg_addr, phy_addr, data);
 }
 
 static uint32_t
-e82545_read_mdi(struct e82545_softc *sc, uint8_t reg_addr,
-			uint8_t phy_addr)
+e82545_read_mdi(struct e82545_softc *sc __unused, uint8_t reg_addr,
+    uint8_t phy_addr)
 {
 	//DPRINTF("Read mdi reg:0x%x phy:0x%x", reg_addr, phy_addr);
 	switch (reg_addr) {
@@ -550,7 +552,7 @@ e82545_eecd_strobe(struct e82545_softc *sc)
 }
 
 static void
-e82545_itr_callback(int fd, enum ev_type type, void *param)
+e82545_itr_callback(int fd __unused, enum ev_type type __unused, void *param)
 {
 	uint32_t new;
 	struct e82545_softc *sc = param;
@@ -574,7 +576,7 @@ e82545_icr_assert(struct e82545_softc *sc, uint32_t bits)
 	uint32_t new;
 
 	DPRINTF("icr assert: 0x%x", bits);
-	
+
 	/*
 	 * An interrupt is only generated if bits are set that
 	 * aren't already in the ICR, these bits are unmasked,
@@ -650,7 +652,7 @@ e82545_intr_write(struct e82545_softc *sc, uint32_t offset, uint32_t value)
 {
 
 	DPRINTF("intr_write: off %x, val %x", offset, value);
-	
+
 	switch (offset) {
 	case E1000_ICR:
 		e82545_icr_deassert(sc, value);
@@ -684,7 +686,7 @@ e82545_intr_read(struct e82545_softc *sc, uint32_t offset)
 	retval = 0;
 
 	DPRINTF("intr_read: off %x", offset);
-	
+
 	switch (offset) {
 	case E1000_ICR:
 		retval = sc->esc_ICR;
@@ -730,10 +732,10 @@ e82545_rx_update_rdba(struct e82545_softc *sc)
 	/* XXX verify desc base/len within phys mem range */
 	sc->esc_rdba = (uint64_t)sc->esc_RDBAH << 32 |
 	    sc->esc_RDBAL;
-	
+
 	/* Cache host mapping of guest descriptor array */
 	sc->esc_rxdesc = paddr_guest2host(sc->esc_ctx,
-	    sc->esc_rdba, sc->esc_RDLEN);	
+	    sc->esc_rdba, sc->esc_RDLEN);
 }
 
 static void
@@ -788,7 +790,7 @@ static void
 e82545_tx_ctl(struct e82545_softc *sc, uint32_t val)
 {
 	int on;
-	
+
 	on = ((val & E1000_TCTL_EN) == E1000_TCTL_EN);
 
 	/* ignore TCTL_EN settings that don't change state */
@@ -808,7 +810,7 @@ e82545_tx_ctl(struct e82545_softc *sc, uint32_t val)
 	sc->esc_TCTL = val & ~0xFE800005;
 }
 
-int
+static int
 e82545_bufsz(uint32_t rctl)
 {
 
@@ -826,12 +828,13 @@ e82545_bufsz(uint32_t rctl)
 
 /* XXX one packet at a time until this is debugged */
 static void
-e82545_rx_callback(int fd, enum ev_type type, void *param)
+e82545_rx_callback(int fd __unused, enum ev_type type __unused, void *param)
 {
 	struct e82545_softc *sc = param;
 	struct e1000_rx_desc *rxd;
 	struct iovec vec[64];
-	int left, len, lim, maxpktsz, maxpktdesc, bufsz, i, n, size;
+	ssize_t len;
+	int left, lim, maxpktsz, maxpktdesc, bufsz, i, n, size;
 	uint32_t cause = 0;
 	uint16_t *tp, tag, head;
 
@@ -873,7 +876,7 @@ e82545_rx_callback(int fd, enum ev_type type, void *param)
 		}
 		len = netbe_recv(sc->esc_be, vec, maxpktdesc);
 		if (len <= 0) {
-			DPRINTF("netbe_recv() returned %d", len);
+			DPRINTF("netbe_recv() returned %zd", len);
 			goto done;
 		}
 
@@ -888,7 +891,7 @@ e82545_rx_callback(int fd, enum ev_type type, void *param)
 			len += ETHER_CRC_LEN;
 		n = (len + bufsz - 1) / bufsz;
 
-		DPRINTF("packet read %d bytes, %d segs, head %d",
+		DPRINTF("packet read %zd bytes, %d segs, head %d",
 		    len, n, head);
 
 		/* Apply VLAN filter. */
@@ -925,7 +928,7 @@ e82545_rx_callback(int fd, enum ev_type type, void *param)
 		    E1000_RXD_STAT_EOP | E1000_RXD_STAT_DD;
 
 		/* Schedule receive interrupts. */
-		if (len <= sc->esc_RSRPD) {
+		if ((uint32_t)len <= sc->esc_RSRPD) {
 			cause |= E1000_ICR_SRPD | E1000_ICR_RXT0;
 		} else {
 			/* XXX: RDRT and RADV timers should be here. */
@@ -972,7 +975,7 @@ e82545_buf_checksum(uint8_t *buf, int len)
 	uint32_t sum = 0;
 
 	/* Checksum all the pairs of bytes first... */
-	for (i = 0; i < (len & ~1U); i += 2)
+	for (i = 0; i < (len & ~1); i += 2)
 		sum += *((u_int16_t *)(buf + i));
 
 	/*
@@ -987,9 +990,10 @@ e82545_buf_checksum(uint8_t *buf, int len)
 }
 
 static uint16_t
-e82545_iov_checksum(struct iovec *iov, int iovcnt, int off, int len)
+e82545_iov_checksum(struct iovec *iov, int iovcnt, unsigned int off,
+    unsigned int len)
 {
-	int now, odd;
+	unsigned int now, odd;
 	uint32_t sum = 0, s;
 
 	/* Skip completely unneeded vectors. */
@@ -1003,7 +1007,7 @@ e82545_iov_checksum(struct iovec *iov, int iovcnt, int off, int len)
 	odd = 0;
 	while (len > 0 && iovcnt > 0) {
 		now = MIN(len, iov->iov_len - off);
-		s = e82545_buf_checksum(iov->iov_base + off, now);
+		s = e82545_buf_checksum((uint8_t *)iov->iov_base + off, now);
 		sum += odd ? (s << 8) : s;
 		odd ^= (now & 1);
 		len -= now;
@@ -1018,13 +1022,13 @@ e82545_iov_checksum(struct iovec *iov, int iovcnt, int off, int len)
 /*
  * Return the transmit descriptor type.
  */
-int
+static int
 e82545_txdesc_type(uint32_t lower)
 {
 	int type;
 
 	type = 0;
-	
+
 	if (lower & E1000_TXD_CMD_DEXT)
 		type = lower & E1000_TXD_MASK;
 
@@ -1035,11 +1039,11 @@ static void
 e82545_transmit_checksum(struct iovec *iov, int iovcnt, struct ck_info *ck)
 {
 	uint16_t cksum;
-	int cklen;
+	unsigned int cklen;
 
 	DPRINTF("tx cksum: iovcnt/s/off/len %d/%d/%d/%d",
 	    iovcnt, ck->ck_start, ck->ck_off, ck->ck_len);
-	cklen = ck->ck_len ? ck->ck_len - ck->ck_start + 1 : INT_MAX;
+	cklen = ck->ck_len ? ck->ck_len - ck->ck_start + 1U : UINT_MAX;
 	cksum = e82545_iov_checksum(iov, iovcnt, ck->ck_start, cklen);
 	*(uint16_t *)((uint8_t *)iov[0].iov_base + ck->ck_off) = ~cksum;
 }
@@ -1080,9 +1084,8 @@ e82545_transmit(struct e82545_softc *sc, uint16_t head, uint16_t tail,
 	struct ck_info ckinfo[2];
 	struct iovec *iov;
 	union  e1000_tx_udesc *dsc;
-	int desc, dtype, len, ntype, iovcnt, tcp, tso;
-	int mss, paylen, seg, tiovcnt, left, now, nleft, nnow, pv, pvoff;
-	unsigned hdrlen, vlen, pktlen;
+	int desc, dtype, ntype, iovcnt, tcp, tso, paylen, seg, tiovcnt, pv;
+	unsigned hdrlen, vlen, pktlen, len, left, mss, now, nnow, nleft, pvoff;
 	uint32_t tcpsum, tcpseq;
 	uint16_t ipcs, tcpcs, ipid, ohead;
 	bool invalid;
@@ -1226,9 +1229,9 @@ e82545_transmit(struct e82545_softc *sc, uint16_t head, uint16_t tail,
 	if (!tso) {
 		/* Estimate required writable space for checksums. */
 		if (ckinfo[0].ck_valid)
-			hdrlen = MAX(hdrlen, ckinfo[0].ck_off + 2);
+			hdrlen = MAX(hdrlen, ckinfo[0].ck_off + 2U);
 		if (ckinfo[1].ck_valid)
-			hdrlen = MAX(hdrlen, ckinfo[1].ck_off + 2);
+			hdrlen = MAX(hdrlen, ckinfo[1].ck_off + 2U);
 		/* Round up writable space to the first vector. */
 		if (hdrlen != 0 && iov[0].iov_len > hdrlen &&
 		    iov[0].iov_len < hdrlen + 100)
@@ -1277,26 +1280,26 @@ e82545_transmit(struct e82545_softc *sc, uint16_t head, uint16_t tail,
 		 * TCP    | flags | 13     | 1
 		 * UDP    | len   | 4      | 4
 		 */
-		if (hdrlen < ckinfo[0].ck_start + 6 ||
-		    hdrlen < ckinfo[0].ck_off + 2) {
+		if (hdrlen < ckinfo[0].ck_start + 6U ||
+		    hdrlen < ckinfo[0].ck_off + 2U) {
 			WPRINTF("TSO hdrlen too small for IP fields (%d) "
 			    "-- dropped", hdrlen);
 			goto done;
 		}
 		if (sc->esc_txctx.cmd_and_length & E1000_TXD_CMD_TCP) {
-			if (hdrlen < ckinfo[1].ck_start + 14) {
+			if (hdrlen < ckinfo[1].ck_start + 14U) {
 				WPRINTF("TSO hdrlen too small for TCP fields "
 				    "(%d) -- dropped", hdrlen);
 				goto done;
 			}
 		} else {
-			if (hdrlen < ckinfo[1].ck_start + 8) {
+			if (hdrlen < ckinfo[1].ck_start + 8U) {
 				WPRINTF("TSO hdrlen too small for UDP fields "
 				    "(%d) -- dropped", hdrlen);
 				goto done;
 			}
 		}
-		if (ckinfo[1].ck_valid && hdrlen < ckinfo[1].ck_off + 2) {
+		if (ckinfo[1].ck_valid && hdrlen < ckinfo[1].ck_off + 2U) {
 			WPRINTF("TSO hdrlen too small for TCP/UDP fields "
 			    "(%d) -- dropped", hdrlen);
 			goto done;
@@ -1316,7 +1319,7 @@ e82545_transmit(struct e82545_softc *sc, uint16_t head, uint16_t tail,
 		    left -= now, hdrp += now) {
 			now = MIN(left, iov->iov_len);
 			memcpy(hdrp, iov->iov_base, now);
-			iov->iov_base += now;
+			iov->iov_base = (uint8_t *)iov->iov_base + now;
 			iov->iov_len -= now;
 			if (iov->iov_len == 0) {
 				iov++;
@@ -1367,7 +1370,7 @@ e82545_transmit(struct e82545_softc *sc, uint16_t head, uint16_t tail,
 	tcp = (sc->esc_txctx.cmd_and_length & E1000_TXD_CMD_TCP) != 0;
 	mss = sc->esc_txctx.tcp_seg_setup.fields.mss;
 	paylen = (sc->esc_txctx.cmd_and_length & 0x000fffff);
-	DPRINTF("tx %s segmentation offload %d+%d/%d bytes %d iovs",
+	DPRINTF("tx %s segmentation offload %d+%d/%u bytes %d iovs",
 	    tcp ? "TCP" : "UDP", hdrlen, paylen, mss, iovcnt);
 	ipid = ntohs(*(uint16_t *)&hdr[ckinfo[0].ck_start + 4]);
 	tcpseq = 0;
@@ -1390,7 +1393,8 @@ e82545_transmit(struct e82545_softc *sc, uint16_t head, uint16_t tail,
 		/* Include respective part of payload IOV. */
 		for (nleft = now; pv < iovcnt && nleft > 0; nleft -= nnow) {
 			nnow = MIN(nleft, iov[pv].iov_len - pvoff);
-			tiov[tiovcnt].iov_base = iov[pv].iov_base + pvoff;
+			tiov[tiovcnt].iov_base = (uint8_t *)iov[pv].iov_base +
+			    pvoff;
 			tiov[tiovcnt++].iov_len = nnow;
 			if (pvoff + nnow == iov[pv].iov_len) {
 				pv++;
@@ -1610,14 +1614,14 @@ e82545_read_ra(struct e82545_softc *sc, int reg)
 			 eu->eu_eth.octet[0];
 	}
 
-	return (retval);	
+	return (retval);
 }
 
 static void
 e82545_write_register(struct e82545_softc *sc, uint32_t offset, uint32_t value)
 {
 	int ridx;
-	
+
 	if (offset & 0x3) {
 		DPRINTF("Unaligned register write offset:0x%x value:0x%x", offset, value);
 		return;
@@ -1768,7 +1772,7 @@ e82545_write_register(struct e82545_softc *sc, uint32_t offset, uint32_t value)
 		break;
 	case E1000_VFTA ... (E1000_VFTA + (127*4)):
 		sc->esc_fvlan[(offset - E1000_VFTA) >> 2] = value;
-		break;		
+		break;
 	case E1000_EECD:
 	{
 		//DPRINTF("EECD write 0x%x -> 0x%x", sc->eeprom_control, value);
@@ -1823,7 +1827,7 @@ e82545_write_register(struct e82545_softc *sc, uint32_t offset, uint32_t value)
 		return;
 	}
 	case E1000_MANC:
-	case E1000_STATUS: 
+	case E1000_STATUS:
 		return;
 	default:
 		DPRINTF("Unknown write register: 0x%x value:%x", offset, value);
@@ -1916,7 +1920,7 @@ e82545_read_register(struct e82545_softc *sc, uint32_t offset)
 	case E1000_RSRPD:
 		retval = sc->esc_RSRPD;
 		break;
-	case E1000_RXCSUM:	       
+	case E1000_RXCSUM:
 		retval = sc->esc_RXCSUM;
 		break;
 	case E1000_TXCW:
@@ -1965,7 +1969,7 @@ e82545_read_register(struct e82545_softc *sc, uint32_t offset)
 		break;
 	case E1000_VFTA ... (E1000_VFTA + (127*4)):
 		retval = sc->esc_fvlan[(offset - E1000_VFTA) >> 2];
-		break;		
+		break;
 	case E1000_EECD:
 		//DPRINTF("EECD read %x", sc->eeprom_control);
 		retval = sc->eeprom_control;
@@ -2106,8 +2110,8 @@ e82545_read_register(struct e82545_softc *sc, uint32_t offset)
 }
 
 static void
-e82545_write(struct vmctx *ctx, int vcpu, struct pci_devinst *pi, int baridx,
-	     uint64_t offset, int size, uint64_t value)
+e82545_write(struct pci_devinst *pi, int baridx, uint64_t offset, int size,
+    uint64_t value)
 {
 	struct e82545_softc *sc;
 
@@ -2156,12 +2160,11 @@ e82545_write(struct vmctx *ctx, int vcpu, struct pci_devinst *pi, int baridx,
 }
 
 static uint64_t
-e82545_read(struct vmctx *ctx, int vcpu, struct pci_devinst *pi, int baridx,
-	    uint64_t offset, int size)
+e82545_read(struct pci_devinst *pi, int baridx, uint64_t offset, int size)
 {
 	struct e82545_softc *sc;
 	uint64_t retval;
-	
+
 	//DPRINTF("Read  bar:%d offset:0x%lx size:%d", baridx, offset, size);
 	sc = pi->pi_arg;
 	retval = 0;
@@ -2233,7 +2236,7 @@ e82545_reset(struct e82545_softc *sc, int drvr)
 	}
 	sc->esc_LEDCTL = 0x07061302;
 	sc->esc_PBA = 0x00100030;
-	
+
 	/* start nvm in opcode mode. */
 	sc->nvm_opaddr = 0;
 	sc->nvm_mode = E82545_NVM_MODE_OPADDR;
@@ -2247,7 +2250,7 @@ e82545_reset(struct e82545_softc *sc, int drvr)
 	sc->esc_ICS = 0;
 	sc->esc_IMS = 0;
 	sc->esc_IMC = 0;
-		
+
 	/* L2 filters */
 	if (!drvr) {
 		memset(sc->esc_fvlan, 0, sizeof(sc->esc_fvlan));
@@ -2263,7 +2266,7 @@ e82545_reset(struct e82545_softc *sc, int drvr)
 		for (i = 0; i < 16; i++)
 			sc->esc_uni[i].eu_valid = 0;
 	}
-	
+
 	/* receive */
 	if (!drvr) {
 		sc->esc_RDBAL = 0;
@@ -2300,22 +2303,19 @@ e82545_reset(struct e82545_softc *sc, int drvr)
 }
 
 static int
-e82545_init(struct vmctx *ctx, struct pci_devinst *pi, char *opts)
+e82545_init(struct pci_devinst *pi, nvlist_t *nvl)
 {
 	char nstr[80];
 	struct e82545_softc *sc;
-	char *devname;
-	char *vtopts;
-	int mac_provided;
-
-	DPRINTF("Loading with options: %s", opts);
+	const char *mac;
+	int err;
 
 	/* Setup our softc */
 	sc = calloc(1, sizeof(*sc));
 
 	pi->pi_arg = sc;
 	sc->esc_pi = pi;
-	sc->esc_ctx = ctx;
+	sc->esc_ctx = pi->pi_vmctx;
 
 	pthread_mutex_init(&sc->esc_mtx, NULL);
 	pthread_cond_init(&sc->esc_rx_cond, NULL);
@@ -2334,7 +2334,7 @@ e82545_init(struct vmctx *ctx, struct pci_devinst *pi, char *opts)
 
 	pci_set_cfgdata8(pi,  PCIR_HDRTYPE, PCIM_HDRTYPE_NORMAL);
 	pci_set_cfgdata8(pi,  PCIR_INTPIN, 0x1);
-	
+
 	/* TODO: this card also supports msi, but the freebsd driver for it
 	 * does not, so I have not implemented it. */
 	pci_lintr_request(pi);
@@ -2346,53 +2346,20 @@ e82545_init(struct vmctx *ctx, struct pci_devinst *pi, char *opts)
 	pci_emul_alloc_bar(pi, E82545_BAR_IO, PCIBAR_IO,
 		E82545_BAR_IO_LEN);
 
-	/*
-	 * Attempt to open the net backend and read the MAC address
-	 * if specified.  Copied from virtio-net, slightly modified.
-	 */
-	mac_provided = 0;
-	sc->esc_be = NULL;
-	if (opts != NULL) {
-		int err = 0;
-
-		devname = vtopts = strdup(opts);
-		(void) strsep(&vtopts, ",");
-
-		/*
-		 * Parse the list of options in the form
-		 *     key1=value1,...,keyN=valueN.
-		 */
-		while (vtopts != NULL) {
-			char *value = vtopts;
-			char *key;
-
-			key = strsep(&value, "=");
-			if (value == NULL)
-				break;
-			vtopts = value;
-			(void) strsep(&vtopts, ",");
-
-			if (strcmp(key, "mac") == 0) {
-				err = net_parsemac(value, sc->esc_mac.octet);
-				if (err)
-					break;
-				mac_provided = 1;
-			}
-		}
-
+	mac = get_config_value_node(nvl, "mac");
+	if (mac != NULL) {
+		err = net_parsemac(mac, sc->esc_mac.octet);
 		if (err) {
-			free(devname);
+			free(sc);
 			return (err);
 		}
-
-		err = netbe_init(&sc->esc_be, devname, e82545_rx_callback, sc);
-		free(devname);
-		if (err)
-			return (err);
-	}
-
-	if (!mac_provided) {
+	} else
 		net_genmac(pi, sc->esc_mac.octet);
+
+	err = netbe_init(&sc->esc_be, nvl, e82545_rx_callback, sc);
+	if (err) {
+		free(sc);
+		return (err);
 	}
 
 	netbe_rx_enable(sc->esc_be);
@@ -2403,11 +2370,168 @@ e82545_init(struct vmctx *ctx, struct pci_devinst *pi, char *opts)
 	return (0);
 }
 
-struct pci_devemu pci_de_e82545 = {
+#ifdef BHYVE_SNAPSHOT
+static int
+e82545_snapshot(struct vm_snapshot_meta *meta)
+{
+	int i;
+	int ret;
+	struct e82545_softc *sc;
+	struct pci_devinst *pi;
+	uint64_t bitmap_value;
+
+	pi = meta->dev_data;
+	sc = pi->pi_arg;
+
+	/* esc_mevp and esc_mevpitr should be reinitiated at init. */
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_mac, meta, ret, done);
+
+	/* General */
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_CTRL, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_FCAL, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_FCAH, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_FCT, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_VET, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_FCTTV, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_LEDCTL, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_PBA, meta, ret, done);
+
+	/* Interrupt control */
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_irq_asserted, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_ICR, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_ITR, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_ICS, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_IMS, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_IMC, meta, ret, done);
+
+	/*
+	 * Transmit
+	 *
+	 * The fields in the unions are in superposition to access certain
+	 * bytes in the larger uint variables.
+	 * e.g., ip_config = [ipcss|ipcso|ipcse0|ipcse1]
+	 */
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_txctx.lower_setup.ip_config, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_txctx.upper_setup.tcp_config, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_txctx.cmd_and_length, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_txctx.tcp_seg_setup.data, meta, ret, done);
+
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_tx_enabled, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_tx_active, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_TXCW, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_TCTL, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_TIPG, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_AIT, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_tdba, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_TDBAL, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_TDBAH, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_TDLEN, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_TDH, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_TDHr, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_TDT, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_TIDV, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_TXDCTL, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_TADV, meta, ret, done);
+
+	/* Has dependency on esc_TDLEN; reoreder of fields from struct. */
+	SNAPSHOT_GUEST2HOST_ADDR_OR_LEAVE(sc->esc_txdesc, sc->esc_TDLEN,
+		true, meta, ret, done);
+
+	/* L2 frame acceptance */
+	for (i = 0; i < (int)nitems(sc->esc_uni); i++) {
+		SNAPSHOT_VAR_OR_LEAVE(sc->esc_uni[i].eu_valid, meta, ret, done);
+		SNAPSHOT_VAR_OR_LEAVE(sc->esc_uni[i].eu_addrsel, meta, ret, done);
+		SNAPSHOT_VAR_OR_LEAVE(sc->esc_uni[i].eu_eth, meta, ret, done);
+	}
+
+	SNAPSHOT_BUF_OR_LEAVE(sc->esc_fmcast, sizeof(sc->esc_fmcast),
+			      meta, ret, done);
+	SNAPSHOT_BUF_OR_LEAVE(sc->esc_fvlan, sizeof(sc->esc_fvlan),
+			      meta, ret, done);
+
+	/* Receive */
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_rx_enabled, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_rx_active, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_rx_loopback, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_RCTL, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_FCRTL, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_FCRTH, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_rdba, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_RDBAL, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_RDBAH, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_RDLEN, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_RDH, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_RDT, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_RDTR, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_RXDCTL, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_RADV, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_RSRPD, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->esc_RXCSUM, meta, ret, done);
+
+	/* Has dependency on esc_RDLEN; reoreder of fields from struct. */
+	SNAPSHOT_GUEST2HOST_ADDR_OR_LEAVE(sc->esc_rxdesc, sc->esc_TDLEN,
+		true, meta, ret, done);
+
+	/* IO Port register access */
+	SNAPSHOT_VAR_OR_LEAVE(sc->io_addr, meta, ret, done);
+
+	/* Shadow copy of MDIC */
+	SNAPSHOT_VAR_OR_LEAVE(sc->mdi_control, meta, ret, done);
+
+	/* Shadow copy of EECD */
+	SNAPSHOT_VAR_OR_LEAVE(sc->eeprom_control, meta, ret, done);
+
+	/* Latest NVM in/out */
+	SNAPSHOT_VAR_OR_LEAVE(sc->nvm_data, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->nvm_opaddr, meta, ret, done);
+
+	/* Stats */
+	SNAPSHOT_VAR_OR_LEAVE(sc->missed_pkt_count, meta, ret, done);
+	SNAPSHOT_BUF_OR_LEAVE(sc->pkt_rx_by_size, sizeof(sc->pkt_rx_by_size),
+			      meta, ret, done);
+	SNAPSHOT_BUF_OR_LEAVE(sc->pkt_tx_by_size, sizeof(sc->pkt_tx_by_size),
+			      meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->good_pkt_rx_count, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->bcast_pkt_rx_count, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->mcast_pkt_rx_count, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->good_pkt_tx_count, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->bcast_pkt_tx_count, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->mcast_pkt_tx_count, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->oversize_rx_count, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->tso_tx_count, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->good_octets_rx, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->good_octets_tx, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->missed_octets, meta, ret, done);
+
+	if (meta->op == VM_SNAPSHOT_SAVE)
+		bitmap_value = sc->nvm_bits;
+	SNAPSHOT_VAR_OR_LEAVE(bitmap_value, meta, ret, done);
+	if (meta->op == VM_SNAPSHOT_RESTORE)
+		sc->nvm_bits = bitmap_value;
+
+	if (meta->op == VM_SNAPSHOT_SAVE)
+		bitmap_value = sc->nvm_bits;
+	SNAPSHOT_VAR_OR_LEAVE(bitmap_value, meta, ret, done);
+	if (meta->op == VM_SNAPSHOT_RESTORE)
+		sc->nvm_bits = bitmap_value;
+
+	/* EEPROM data */
+	SNAPSHOT_BUF_OR_LEAVE(sc->eeprom_data, sizeof(sc->eeprom_data),
+			      meta, ret, done);
+
+done:
+	return (ret);
+}
+#endif
+
+static const struct pci_devemu pci_de_e82545 = {
 	.pe_emu = 	"e1000",
 	.pe_init =	e82545_init,
+	.pe_legacy_config = netbe_legacy_config,
 	.pe_barwrite =	e82545_write,
-	.pe_barread =	e82545_read
+	.pe_barread =	e82545_read,
+#ifdef BHYVE_SNAPSHOT
+	.pe_snapshot =	e82545_snapshot,
+#endif
 };
 PCI_EMUL_SET(pci_de_e82545);
-

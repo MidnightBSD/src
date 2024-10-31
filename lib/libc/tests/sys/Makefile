@@ -7,6 +7,7 @@ PACKAGE=			tests
 ATF_TESTS_C+=			brk_test
 .endif
 ATF_TESTS_C+=			cpuset_test
+ATF_TESTS_C+=			errno_test
 ATF_TESTS_C+=			queue_test
 ATF_TESTS_C+=			sendfile_test
 
@@ -70,10 +71,15 @@ NETBSD_ATF_TESTS_C+=		wait_noproc_test
 NETBSD_ATF_TESTS_C+=		wait_noproc_wnohang_test
 NETBSD_ATF_TESTS_C+=		write_test
 
-CSTD?=				c99
-
 LIBADD.getpid_test+=		pthread
 LIBADD.timer_create_test+=	rt
+
+# Message queue IPC tests need to be executed serially since they variously
+# use global keys and exhaust global IPC limits.
+TEST_METADATA.msgctl_test+=	is_exclusive="true"
+TEST_METADATA.msgget_test+=	is_exclusive="true"
+TEST_METADATA.msgsnd_test+=	is_exclusive="true"
+TEST_METADATA.msgrcv_test+=	is_exclusive="true"
 
 .include "../Makefile.netbsd-tests"
 
@@ -90,7 +96,11 @@ truncate_test_FILESGRP= wheel
 truncate_test_FILESPACKAGE=	${PACKAGE}
 
 CLEANFILES=	truncate_test.root_owned
+# The dd status=none option is non-standard. Only use it when this test succeeds
+# rather than require dd to be a bootstrap tool.
+DD_NOSTATUS!=(dd status=none count=0 2> /dev/null && echo status=none) || true
+DD=dd ${DD_NOSTATUS}
 truncate_test.root_owned:
-	dd if=/dev/null bs=1 count=1 of=${.TARGET} status=none
+	${DD} if=/dev/null bs=1 count=1 of=${.TARGET}
 
 .include <bsd.test.mk>

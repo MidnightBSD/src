@@ -50,27 +50,26 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/errno.h>
-#include <sys/vnode.h>
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <util.h>
 
+#include "ffs/buf.h"
+
 #include <fs/msdosfs/bpb.h>
+#include <fs/msdosfs/direntry.h>
+#include <fs/msdosfs/denode.h>
+#include <fs/msdosfs/fat.h>
+#include <fs/msdosfs/msdosfsmount.h>
 
 #include "makefs.h"
 #include "msdos.h"
 
-#include "ffs/buf.h"
-
-#include "msdos/denode.h"
-#include "msdos/direntry.h"
-#include "msdos/fat.h"
-#include "msdos/msdosfsmount.h"
 
 /*
  * If deget() succeeds it returns with the gotten denode locked().
@@ -86,7 +85,7 @@
  */
 int
 deget(struct msdosfsmount *pmp, u_long dirclust, u_long diroffset,
-    struct denode **depp)
+    int lkflags __unused, struct denode **depp)
 {
 	int error;
 	uint64_t inode;
@@ -209,10 +208,9 @@ deget(struct msdosfsmount *pmp, u_long dirclust, u_long diroffset,
  * Truncate the file described by dep to the length specified by length.
  */
 int
-detrunc(struct denode *dep, u_long length, int flags)
+detrunc(struct denode *dep, u_long length, int flags, struct ucred *cred)
 {
 	int error;
-	int allerror;
 	u_long eofentry;
 	u_long chaintofree;
 	daddr_t bn;
@@ -241,7 +239,7 @@ detrunc(struct denode *dep, u_long length, int flags)
 	}
 
 	if (dep->de_FileSize < length)
-		return deextend(dep, length);
+		return deextend(dep, length, cred);
 
 	/*
 	 * If the desired length is 0 then remember the starting cluster of
@@ -255,7 +253,7 @@ detrunc(struct denode *dep, u_long length, int flags)
 	if (length == 0) {
 		chaintofree = dep->de_StartCluster;
 		dep->de_StartCluster = 0;
-		eofentry = ~0;
+		eofentry = ~0ul;
 	} else {
 		error = pcbmap(dep, de_clcount(pmp, length) - 1, 0,
 		    &eofentry, 0);
@@ -286,10 +284,7 @@ detrunc(struct denode *dep, u_long length, int flags)
 				return (error);
 			}
 			memset(bp->b_data + boff, 0, pmp->pm_bpcluster - boff);
-			if (flags & IO_SYNC)
-				bwrite(bp);
-			else
-				bdwrite(bp);
+			bwrite(bp);
 		}
 	}
 
@@ -300,14 +295,13 @@ detrunc(struct denode *dep, u_long length, int flags)
 	dep->de_FileSize = length;
 	if (!isadir)
 		dep->de_flag |= DE_UPDATE|DE_MODIFIED;
-	MSDOSFS_DPRINTF(("detrunc(): allerror %d, eofentry %lu\n",
-	    allerror, eofentry));
+	MSDOSFS_DPRINTF(("detrunc(): eofentry %lu\n", eofentry));
 
 	/*
 	 * If we need to break the cluster chain for the file then do it
 	 * now.
 	 */
-	if (eofentry != ~0) {
+	if (eofentry != ~0ul) {
 		error = fatentry(FAT_GET_AND_SET, pmp, eofentry,
 				 &chaintofree, CLUST_EOFE);
 		if (error) {
@@ -326,14 +320,14 @@ detrunc(struct denode *dep, u_long length, int flags)
 	if (chaintofree != 0 && !MSDOSFSEOF(pmp, chaintofree))
 		freeclusterchain(pmp, chaintofree);
 
-	return (allerror);
+	return (0);
 }
 
 /*
  * Extend the file described by dep to length specified by length.
  */
 int
-deextend(struct denode *dep, u_long length)
+deextend(struct denode *dep, u_long length, struct ucred *cred)
 {
 	struct msdosfsmount *pmp = dep->de_pmp;
 	u_long count;
@@ -364,7 +358,7 @@ deextend(struct denode *dep, u_long length)
 		error = extendfile(dep, count, NULL, NULL, DE_CLEAR);
 		if (error) {
 			/* truncate the added clusters away again */
-			(void) detrunc(dep, dep->de_FileSize, 0);
+			(void) detrunc(dep, dep->de_FileSize, 0, cred);
 			return (error);
 		}
 	}

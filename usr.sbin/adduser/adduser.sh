@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+# SPDX-License-Identifier: BSD-2-Clause
 #
 # Copyright (c) 2002-2004 Michael Telahun Makonnen. All rights reserved.
 #
@@ -26,7 +26,6 @@
 #
 #       Email: Mike Makonnen <mtm@FreeBSD.Org>
 #
-# $FreeBSD: stable/11/usr.sbin/adduser/adduser.sh 360390 2020-04-27 19:29:48Z kevans $
 #
 
 # err msg

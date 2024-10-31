@@ -48,7 +48,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/endian.h>
 
@@ -57,14 +56,11 @@
 #include <string.h>
 
 #include <fs/msdosfs/bpb.h>
+#include "msdos/direntry.h"
+#include <fs/msdosfs/msdosfsmount.h>
 
 #include "makefs.h"
 #include "msdos.h"
-
-#include "msdos/denode.h"
-#include "msdos/direntry.h"
-#include "msdos/fat.h"
-#include "msdos/msdosfsmount.h"
 
 static int char8ucs2str(const uint8_t *in, int n, uint16_t *out, int m);
 static void ucs2pad(uint16_t *buf, int len, int size);

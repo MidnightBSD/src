@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2016 Jakub Klama <jceel@FreeBSD.org>.
  * Copyright (c) 2018 Alexander Motin <mav@FreeBSD.org>
@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/uio.h>
@@ -110,7 +109,7 @@ iov_to_buf(const struct iovec *iov, int niov, void **buf)
 		return (-1);
 
 	for (i = 0, ptr = 0; i < niov; i++) {
-		memcpy(*buf + ptr, iov[i].iov_base, iov[i].iov_len);
+		memcpy((uint8_t *)*buf + ptr, iov[i].iov_base, iov[i].iov_len);
 		ptr += iov[i].iov_len;
 	}
 
@@ -136,7 +135,7 @@ buf_to_iov(const void *buf, size_t buflen, const struct iovec *iov, int niov,
 
 	for (i = 0; i < niov && off < buflen; i++) {
 		len = MIN(iov[i].iov_len, buflen - off);
-		memcpy(iov[i].iov_base, buf + off, len);
+		memcpy(iov[i].iov_base, (const uint8_t *)buf + off, len);
 		off += len;
 	}
 

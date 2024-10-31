@@ -24,7 +24,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>

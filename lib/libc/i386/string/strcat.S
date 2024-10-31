@@ -29,7 +29,6 @@
  */
 
 #include <machine/asm.h>
-
 /*
  * strcat(s, append)
  *	append a copy of the null-terminated string "append" to the end

@@ -29,7 +29,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <stdbool.h>
@@ -59,11 +58,14 @@
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: diskinfo [-cipsStvw] disk ...\n");
+	fprintf(stderr, "usage: diskinfo [-ciStvw] disk ...\n"
+			"       diskinfo [-l] -p disk ...\n"
+			"       diskinfo [-l] -s disk ...\n"
+				);
 	exit (1);
 }
 
-static int opt_c, opt_i, opt_p, opt_s, opt_S, opt_t, opt_v, opt_w;
+static int opt_c, opt_i, opt_l, opt_p, opt_s, opt_S, opt_t, opt_v, opt_w;
 
 static bool candelete(int fd);
 static void speeddisk(int fd, off_t mediasize, u_int sectorsize);
@@ -89,7 +91,7 @@ main(int argc, char **argv)
 	u_int	sectorsize, fwsectors, fwheads, zoned = 0, isreg;
 	uint32_t zone_mode;
 
-	while ((ch = getopt(argc, argv, "cipsStvw")) != -1) {
+	while ((ch = getopt(argc, argv, "cilpsStvw")) != -1) {
 		switch (ch) {
 		case 'c':
 			opt_c = 1;
@@ -98,6 +100,9 @@ main(int argc, char **argv)
 		case 'i':
 			opt_i = 1;
 			opt_v = 1;
+			break;
+		case 'l':
+			opt_l = 1;
 			break;
 		case 'p':
 			opt_p = 1;
@@ -170,6 +175,9 @@ main(int argc, char **argv)
 				goto out;
 			}
 		} else {
+			if (opt_l && (opt_p || opt_s)) {
+				printf("%s\t", argv[i]);
+			}
 			if (opt_p) {
 				if (ioctl(fd, DIOCGPHYSPATH, physpath) == 0) {
 					printf("%s\n", physpath);
@@ -250,6 +258,10 @@ main(int argc, char **argv)
 				printf("\t%-12s\t# Disk descr.\n", arg.value.str);
 			if (ioctl(fd, DIOCGIDENT, ident) == 0)
 				printf("\t%-12s\t# Disk ident.\n", ident);
+			strlcpy(arg.name, "GEOM::attachment", sizeof(arg.name));
+			arg.len = sizeof(arg.value.str);
+			if (ioctl(fd, DIOCGATTR, &arg) == 0)
+				printf("\t%-12s\t# Attachment\n", arg.value.str);
 			if (ioctl(fd, DIOCGPHYSPATH, physpath) == 0)
 				printf("\t%-12s\t# Physical path\n", physpath);
 			printf("\t%-12s\t# TRIM/UNMAP support\n",
@@ -639,6 +651,9 @@ iopsbench(int fd, off_t mediasize, u_int sectorsize)
 	printf("\t128 kbytes:  ");
 	iops(fd, mediasize, 128 * 1024);
 
+	printf("\t1024 kbytes: ");
+	iops(fd, mediasize, 1024 * 1024);
+	
 	printf("\n");
 }
 

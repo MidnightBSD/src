@@ -33,7 +33,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/param.h>
@@ -43,6 +42,7 @@
 #include <string.h>
 #include <unistd.h>
 #include "rtld_printf.h"
+#include "rtld_libc.h"
 
 #define MAXNBUF	(sizeof(intmax_t) * NBBY + 1)
 
@@ -81,11 +81,10 @@ snprintf_func(int ch, struct snprintf_arg *const info)
 		}
 		break;
 	case PRINT_METHOD_WRITE:
-		if (info->remain > 0) {
-			*info->str++ = ch;
-			info->remain--;
-		} else
+		if (info->remain == 0)
 			printf_out(info);
+		*info->str++ = ch;
+		info->remain--;
 		break;
 	}
 }
@@ -477,6 +476,18 @@ rtld_vfdprintf(int fd, const char *fmt, va_list ap)
 
 int
 rtld_fdprintf(int fd, const char *fmt, ...)
+{
+	va_list ap;
+	int retval;
+
+	va_start(ap, fmt);
+	retval = rtld_vfdprintf(fd, fmt, ap);
+	va_end(ap);
+	return (retval);
+}
+
+int
+rtld_fdprintfx(int fd, const char *fmt, ...)
 {
 	va_list ap;
 	int retval;

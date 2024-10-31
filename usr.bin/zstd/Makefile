@@ -8,8 +8,7 @@ SRCS=	\
 	fileio.c \
 	timefn.c \
 	util.c \
-	zstdcli.c \
-	zstdcli_trace.c
+	zstdcli.c
 
 CFLAGS+=	-I${SRCTOP}/sys/contrib/zstd/programs \
 		-I${SRCTOP}/sys/contrib/zstd/lib/common \

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2006 Shteryana Shopova <syrinx@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  *
  * Bridge MIB implementation for SNMPd.
  * Bridge OS specific ioctls.
- *
  */
 
 #include <sys/ioctl.h>
@@ -585,8 +584,7 @@ bridge_get_basemac(const char *bif_name, u_char *mac, size_t mlen)
 			continue;
 
 		/*
-		 * Not just casting because of alignment constraints
-		 * on sparc64.
+		 * Not just casting because of alignment constraints.
 		 */
 		bcopy(ifa->ifa_addr, &sdl, sizeof(struct sockaddr_dl));
 

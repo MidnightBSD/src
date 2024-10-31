@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <wchar.h>
 #include <locale.h>
 #include <stdlib.h>

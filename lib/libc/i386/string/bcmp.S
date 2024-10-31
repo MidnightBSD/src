@@ -29,7 +29,6 @@
  */
 
 #include <machine/asm.h>
-
 /*
  * bcmp (void *b1, void *b2, size_t len)
  *

@@ -2,7 +2,7 @@
 /*	$OpenBSD: util.c,v 1.39 2010/07/02 22:18:03 tedu Exp $	*/
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999 James Howard and Dag-Erling Coïdan Smørgrav
  * Copyright (C) 2008-2010 Gabor Kovesdan <gabor@FreeBSD.org>
@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -152,7 +151,7 @@ grep_tree(char **argv)
 	    __DECONST(char * const *, wd) : argv, fts_flags, NULL);
 	if (fts == NULL)
 		err(2, "fts_open");
-	while ((p = fts_read(fts)) != NULL) {
+	while (errno = 0, (p = fts_read(fts)) != NULL) {
 		switch (p->fts_info) {
 		case FTS_DNR:
 			/* FALLTHROUGH */
@@ -185,6 +184,8 @@ grep_tree(char **argv)
 			break;
 		}
 	}
+	if (errno != 0)
+		err(2, "fts_read");
 
 	fts_close(fts);
 	return (matched);
@@ -649,6 +650,8 @@ grep_malloc(size_t size)
 {
 	void *ptr;
 
+	if (size == 0)
+		return (NULL);
 	if ((ptr = malloc(size)) == NULL)
 		err(2, "malloc");
 	return (ptr);
@@ -662,6 +665,8 @@ grep_calloc(size_t nmemb, size_t size)
 {
 	void *ptr;
 
+	if (nmemb == 0 || size == 0)
+		return (NULL);
 	if ((ptr = calloc(nmemb, size)) == NULL)
 		err(2, "calloc");
 	return (ptr);

@@ -35,7 +35,6 @@ static const char sccsid[] = "@(#)pass1.c	8.6 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/stat.h>
 #include <sys/sysctl.h>
@@ -55,7 +54,7 @@ static ufs2_daddr_t badblk;
 static ufs2_daddr_t dupblk;
 static ino_t lastino;		/* last inode in use */
 
-static int checkinode(ino_t inumber, struct inodesc *, int rebuildcg);
+static int checkinode(ino_t inumber, struct inodesc *, int rebuiltcg);
 
 void
 pass1(void)
@@ -67,7 +66,7 @@ pass1(void)
 	ino_t inumber, inosused, mininos;
 	ufs2_daddr_t i, cgd;
 	u_int8_t *cp;
-	int c, rebuildcg;
+	int c, rebuiltcg;
 
 	badblk = dupblk = lastino = 0;
 
@@ -96,19 +95,28 @@ pass1(void)
 	n_files = n_blks = 0;
 	for (c = 0; c < sblock.fs_ncg; c++) {
 		inumber = c * sblock.fs_ipg;
-		setinodebuf(inumber);
 		cgbp = cglookup(c);
 		cgp = cgbp->b_un.b_cg;
-		rebuildcg = 0;
-		if (!check_cgmagic(c, cgbp))
-			rebuildcg = 1;
-		if (!rebuildcg && sblock.fs_magic == FS_UFS2_MAGIC) {
+		rebuiltcg = 0;
+		if (!check_cgmagic(c, cgbp)) {
+			if (!reply("REBUILD CYLINDER GROUP")) {
+				cgheader_corrupt = 1;
+				if (!nflag) {
+					pwarn("YOU WILL NEED TO RERUN FSCK.\n");
+					rerun = 1;
+				}
+			} else {
+				rebuild_cg(c, cgbp);
+				rebuiltcg = 1;
+			}
+		}
+		if (!rebuiltcg && sblock.fs_magic == FS_UFS2_MAGIC) {
 			inosused = cgp->cg_initediblk;
 			if (inosused > sblock.fs_ipg) {
-				pfatal(
-"Too many initialized inodes (%ju > %d) in cylinder group %d\nReset to %d\n",
-				    (uintmax_t)inosused,
-				    sblock.fs_ipg, c, sblock.fs_ipg);
+				pfatal("Too many initialized inodes (%ju > %d) "
+				    "in cylinder group %d\nReset to %d\n",
+				    (uintmax_t)inosused, sblock.fs_ipg, c,
+				    sblock.fs_ipg);
 				inosused = sblock.fs_ipg;
 			}
 		} else {
@@ -132,7 +140,7 @@ pass1(void)
 		 * to find the inodes that are really in use, and then
 		 * read only those inodes in from disk.
 		 */
-		if ((preen || inoopt) && usedsoftdep && !rebuildcg) {
+		if ((preen || inoopt) && usedsoftdep && !rebuiltcg) {
 			cp = &cg_inosused(cgp)[(inosused - 1) / CHAR_BIT];
 			for ( ; inosused != 0; cp--) {
 				if (*cp == 0) {
@@ -166,9 +174,10 @@ pass1(void)
 		/*
 		 * Scan the allocated inodes.
 		 */
+		setinodebuf(c, inosused);
 		for (i = 0; i < inosused; i++, inumber++) {
 			if (inumber < UFS_ROOTINO) {
-				(void)getnextinode(inumber, rebuildcg);
+				(void)getnextinode(inumber, rebuiltcg);
 				continue;
 			}
 			/*
@@ -177,7 +186,7 @@ pass1(void)
 			 * We always keep trying until we get to the minimum
 			 * valid number for this cylinder group.
 			 */
-			if (checkinode(inumber, &idesc, rebuildcg) == 0 &&
+			if (checkinode(inumber, &idesc, rebuiltcg) == 0 &&
 			    i > cgp->cg_initediblk)
 				break;
 		}
@@ -188,7 +197,7 @@ pass1(void)
 		 * fewer in use.
 		 */
 		mininos = roundup(inosused + INOPB(&sblock), INOPB(&sblock));
-		if (inoopt && !preen && !rebuildcg &&
+		if (inoopt && !preen && !rebuiltcg &&
 		    sblock.fs_magic == FS_UFS2_MAGIC &&
 		    cgp->cg_initediblk > 2 * INOPB(&sblock) &&
 		    mininos < cgp->cg_initediblk) {
@@ -199,7 +208,7 @@ pass1(void)
 				cgp->cg_initediblk = mininos;
 			pwarn("CYLINDER GROUP %d: RESET FROM %ju TO %d %s\n",
 			    c, i, cgp->cg_initediblk, "VALID INODES");
-			dirty(cgbp);
+			cgdirty(cgbp);
 		}
 		if (inosused < sblock.fs_ipg)
 			continue;
@@ -208,7 +217,7 @@ pass1(void)
 			inosused = 0;
 		else
 			inosused = lastino - (c * sblock.fs_ipg);
-		if (rebuildcg && inosused > cgp->cg_initediblk &&
+		if (rebuiltcg && inosused > cgp->cg_initediblk &&
 		    sblock.fs_magic == FS_UFS2_MAGIC) {
 			cgp->cg_initediblk = roundup(inosused, INOPB(&sblock));
 			pwarn("CYLINDER GROUP %d: FOUND %d VALID INODES\n", c,
@@ -218,9 +227,10 @@ pass1(void)
 		 * If we were not able to determine in advance which inodes
 		 * were in use, then reduce the size of the inoinfo structure
 		 * to the size necessary to describe the inodes that we
-		 * really found.
+		 * really found. Always leave map space in the first cylinder
+		 * group in case we need to a root or lost+found directory.
 		 */
-		if (inumber == lastino)
+		if (inumber == lastino || c == 0)
 			continue;
 		inostathead[c].il_numalloced = inosused;
 		if (inosused == 0) {
@@ -240,79 +250,79 @@ pass1(void)
 }
 
 static int
-checkinode(ino_t inumber, struct inodesc *idesc, int rebuildcg)
+checkinode(ino_t inumber, struct inodesc *idesc, int rebuiltcg)
 {
+	struct inode ip;
 	union dinode *dp;
-	off_t kernmaxfilesize;
 	ufs2_daddr_t ndb;
 	mode_t mode;
 	intmax_t size, fixsize;
 	int j, ret, offset;
 
-	if ((dp = getnextinode(inumber, rebuildcg)) == NULL)
+	if ((dp = getnextinode(inumber, rebuiltcg)) == NULL) {
+		pfatal("INVALID INODE");
 		goto unknown;
+	}
 	mode = DIP(dp, di_mode) & IFMT;
 	if (mode == 0) {
 		if ((sblock.fs_magic == FS_UFS1_MAGIC &&
-		     (memcmp(dp->dp1.di_db, ufs1_zino.di_db,
+		     (memcmp(dp->dp1.di_db, zino.dp1.di_db,
 			UFS_NDADDR * sizeof(ufs1_daddr_t)) ||
-		      memcmp(dp->dp1.di_ib, ufs1_zino.di_ib,
+		      memcmp(dp->dp1.di_ib, zino.dp1.di_ib,
 			UFS_NIADDR * sizeof(ufs1_daddr_t)) ||
 		      dp->dp1.di_mode || dp->dp1.di_size)) ||
 		    (sblock.fs_magic == FS_UFS2_MAGIC &&
-		     (memcmp(dp->dp2.di_db, ufs2_zino.di_db,
+		     (memcmp(dp->dp2.di_db, zino.dp2.di_db,
 			UFS_NDADDR * sizeof(ufs2_daddr_t)) ||
-		      memcmp(dp->dp2.di_ib, ufs2_zino.di_ib,
+		      memcmp(dp->dp2.di_ib, zino.dp2.di_ib,
 			UFS_NIADDR * sizeof(ufs2_daddr_t)) ||
 		      dp->dp2.di_mode || dp->dp2.di_size))) {
 			pfatal("PARTIALLY ALLOCATED INODE I=%lu",
 			    (u_long)inumber);
 			if (reply("CLEAR") == 1) {
-				dp = ginode(inumber);
-				clearinode(dp);
-				inodirty(dp);
+				ginode(inumber, &ip);
+				clearinode(ip.i_dp);
+				inodirty(&ip);
+				irelse(&ip);
 			}
 		}
 		inoinfo(inumber)->ino_state = USTATE;
 		return (1);
 	}
 	lastino = inumber;
-	/* This should match the file size limit in ffs_mountfs(). */
-	if (sblock.fs_magic == FS_UFS1_MAGIC)
-		kernmaxfilesize = (off_t)0x40000000 * sblock.fs_bsize - 1;
-	else
-		kernmaxfilesize = sblock.fs_maxfilesize;
-	if (DIP(dp, di_size) > kernmaxfilesize ||
-	    DIP(dp, di_size) > sblock.fs_maxfilesize ||
-	    (mode == IFDIR && DIP(dp, di_size) > MAXDIRSIZE)) {
-		if (debug)
-			printf("bad size %ju:", (uintmax_t)DIP(dp, di_size));
+	if (chkfilesize(mode, DIP(dp, di_size)) == 0) {
+		pfatal("BAD FILE SIZE");
 		goto unknown;
 	}
 	if (!preen && mode == IFMT && reply("HOLD BAD BLOCK") == 1) {
-		dp = ginode(inumber);
+		ginode(inumber, &ip);
+		dp = ip.i_dp;
 		DIP_SET(dp, di_size, sblock.fs_fsize);
 		DIP_SET(dp, di_mode, IFREG|0600);
-		inodirty(dp);
+		inodirty(&ip);
+		irelse(&ip);
 	}
 	if ((mode == IFBLK || mode == IFCHR || mode == IFIFO ||
 	     mode == IFSOCK) && DIP(dp, di_size) != 0) {
 		if (debug)
 			printf("bad special-file size %ju:",
 			    (uintmax_t)DIP(dp, di_size));
+		pfatal("BAD SPECIAL-FILE SIZE");
 		goto unknown;
 	}
 	if ((mode == IFBLK || mode == IFCHR) &&
 	    (dev_t)DIP(dp, di_rdev) == NODEV) {
 		if (debug)
 			printf("bad special-file rdev NODEV:");
+		pfatal("BAD SPECIAL-FILE RDEV");
 		goto unknown;
 	}
 	ndb = howmany(DIP(dp, di_size), sblock.fs_bsize);
 	if (ndb < 0) {
 		if (debug)
-			printf("bad size %ju ndb %ju:",
+			printf("negative size %ju ndb %ju:",
 				(uintmax_t)DIP(dp, di_size), (uintmax_t)ndb);
+		pfatal("NEGATIVE FILE SIZE");
 		goto unknown;
 	}
 	if (mode == IFBLK || mode == IFCHR)
@@ -337,33 +347,52 @@ checkinode(ino_t inumber, struct inodesc *idesc, int rebuildcg)
 			}
 		}
 	}
-	for (j = ndb; ndb < UFS_NDADDR && j < UFS_NDADDR; j++)
-		if (DIP(dp, di_db[j]) != 0) {
-			if (debug)
-				printf("bad direct addr[%d]: %ju\n", j,
-				    (uintmax_t)DIP(dp, di_db[j]));
-			goto unknown;
+	for (j = ndb; ndb < UFS_NDADDR && j < UFS_NDADDR; j++) {
+		if (DIP(dp, di_db[j]) == 0)
+			continue;
+		if (debug)
+			printf("invalid direct addr[%d]: %ju\n", j,
+			    (uintmax_t)DIP(dp, di_db[j]));
+		pfatal("INVALID DIRECT BLOCK");
+		ginode(inumber, &ip);
+		prtinode(&ip);
+		if (reply("CLEAR") == 1) {
+			DIP_SET(ip.i_dp, di_db[j], 0);
+			inodirty(&ip);
 		}
+		irelse(&ip);
+	}
 	for (j = 0, ndb -= UFS_NDADDR; ndb > 0; j++)
 		ndb /= NINDIR(&sblock);
-	for (; j < UFS_NIADDR; j++)
-		if (DIP(dp, di_ib[j]) != 0) {
-			if (debug)
-				printf("bad indirect addr: %ju\n",
-				    (uintmax_t)DIP(dp, di_ib[j]));
-			goto unknown;
+	for (; j < UFS_NIADDR; j++) {
+		if (DIP(dp, di_ib[j]) == 0)
+			continue;
+		if (debug)
+			printf("invalid indirect addr: %ju\n",
+			    (uintmax_t)DIP(dp, di_ib[j]));
+		pfatal("INVALID INDIRECT BLOCK");
+		ginode(inumber, &ip);
+		prtinode(&ip);
+		if (reply("CLEAR") == 1) {
+			DIP_SET(ip.i_dp, di_ib[j], 0);
+			inodirty(&ip);
 		}
-	if (ftypeok(dp) == 0)
+		irelse(&ip);
+	}
+	if (ftypeok(dp) == 0) {
+		pfatal("UNKNOWN FILE TYPE");
 		goto unknown;
+	}
 	n_files++;
 	inoinfo(inumber)->ino_linkcnt = DIP(dp, di_nlink);
 	if (mode == IFDIR) {
-		if (DIP(dp, di_size) == 0)
+		if (DIP(dp, di_size) == 0) {
 			inoinfo(inumber)->ino_state = DCLEAR;
-		else if (DIP(dp, di_nlink) <= 0)
+		} else if (DIP(dp, di_nlink) == 0) {
 			inoinfo(inumber)->ino_state = DZLINK;
-		else
+		} else {
 			inoinfo(inumber)->ino_state = DSTATE;
+		}
 		cacheino(dp, inumber);
 		countdirs++;
 	} else if (DIP(dp, di_nlink) <= 0)
@@ -374,12 +403,12 @@ checkinode(ino_t inumber, struct inodesc *idesc, int rebuildcg)
 	badblk = dupblk = 0;
 	idesc->id_number = inumber;
 	if (DIP(dp, di_flags) & SF_SNAPSHOT)
-		idesc->id_type = SNAP;
+		inoinfo(inumber)->ino_idtype = SNAP;
 	else
-		idesc->id_type = ADDR;
+		inoinfo(inumber)->ino_idtype = ADDR;
+	idesc->id_type = inoinfo(inumber)->ino_idtype;
 	(void)ckinode(dp, idesc);
 	if (sblock.fs_magic == FS_UFS2_MAGIC && dp->dp2.di_extsize > 0) {
-		idesc->id_type = ADDR;
 		ndb = howmany(dp->dp2.di_extsize, sblock.fs_bsize);
 		for (j = 0; j < UFS_NXADDR; j++) {
 			if (--ndb == 0 &&
@@ -408,9 +437,10 @@ checkinode(ino_t inumber, struct inodesc *idesc, int rebuildcg)
 		else if (reply("CORRECT") == 0)
 			return (1);
 		if (bkgrdflag == 0) {
-			dp = ginode(inumber);
-			DIP_SET(dp, di_blocks, idesc->id_entryno);
-			inodirty(dp);
+			ginode(inumber, &ip);
+			DIP_SET(ip.i_dp, di_blocks, idesc->id_entryno);
+			inodirty(&ip);
+			irelse(&ip);
 		} else {
 			cmd.value = idesc->id_number;
 			cmd.size = idesc->id_entryno - DIP(dp, di_blocks);
@@ -459,9 +489,10 @@ checkinode(ino_t inumber, struct inodesc *idesc, int rebuildcg)
 		else if (reply("ADJUST") == 0)
 			return (1);
 		if (bkgrdflag == 0) {
-			dp = ginode(inumber);
-			DIP_SET(dp, di_size, fixsize);
-			inodirty(dp);
+			ginode(inumber, &ip);
+			DIP_SET(ip.i_dp, di_size, fixsize);
+			inodirty(&ip);
+			irelse(&ip);
 		} else {
 			cmd.value = idesc->id_number;
 			cmd.size = fixsize;
@@ -476,14 +507,14 @@ checkinode(ino_t inumber, struct inodesc *idesc, int rebuildcg)
 	}
 	return (1);
 unknown:
-	pfatal("UNKNOWN FILE TYPE I=%lu", (u_long)inumber);
-	inoinfo(inumber)->ino_state = FCLEAR;
+	ginode(inumber, &ip);
+	prtinode(&ip);
+	inoinfo(inumber)->ino_state = USTATE;
 	if (reply("CLEAR") == 1) {
-		inoinfo(inumber)->ino_state = USTATE;
-		dp = ginode(inumber);
-		clearinode(dp);
-		inodirty(dp);
+		clearinode(ip.i_dp);
+		inodirty(&ip);
 	}
+	irelse(&ip);
 	return (1);
 }
 

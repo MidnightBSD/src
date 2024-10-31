@@ -29,7 +29,6 @@
  */
 
 #include <machine/asm.h>
-
 /*
  * memset(void *b, int c, size_t len)
  *	write len bytes of value c (converted to an unsigned char) to 

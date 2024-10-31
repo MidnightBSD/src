@@ -41,8 +41,7 @@ static char sccsid[] = "@(#)main.c	8.6 (Berkeley) 5/14/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-
-#define	IN_RTLD			/* So we pickup the P_OSREL defines */
+#define _WANT_P_OSREL
 #include <sys/param.h>
 #include <sys/file.h>
 #include <sys/mount.h>
@@ -60,6 +59,7 @@ static char sccsid[] = "@(#)main.c	8.6 (Berkeley) 5/14/95";
 #include <fstab.h>
 #include <grp.h>
 #include <inttypes.h>
+#include <libufs.h>
 #include <mntopts.h>
 #include <paths.h>
 #include <stdint.h>
@@ -68,13 +68,13 @@ static char sccsid[] = "@(#)main.c	8.6 (Berkeley) 5/14/95";
 
 #include "fsck.h"
 
-int	restarts;
+static int  restarts;
+static char snapname[BUFSIZ];	/* when doing snapshots, the name of the file */
 
 static void usage(void) __dead2;
 static intmax_t argtoimax(int flag, const char *req, const char *str, int base);
 static int checkfilesys(char *filesys);
-static int chkdoreload(struct statfs *mntp);
-static struct statfs *getmntpt(const char *);
+static int setup_bkgrdchk(struct statfs *mntp, int sbrdfailed, char **filesys);
 
 int
 main(int argc, char *argv[])
@@ -179,6 +179,11 @@ main(int argc, char *argv[])
 	if (!argc)
 		usage();
 
+	if (bkgrdflag && cvtlevel > 0) {
+		pfatal("CANNOT CONVERT A SNAPSHOT\n");
+		exit(EEXIT);
+	}
+
 	if (signal(SIGINT, SIG_IGN) != SIG_IGN)
 		(void)signal(SIGINT, catch);
 	if (ckclean)
@@ -235,19 +240,10 @@ checkfilesys(char *filesys)
 	ufs2_daddr_t n_ffree, n_bfree;
 	struct dups *dp;
 	struct statfs *mntp;
-	struct stat snapdir;
-	struct group *grp;
-	struct iovec *iov;
-	char errmsg[255];
-	int ofsmodified;
-	int iovlen;
-	int cylno;
 	intmax_t blks, files;
 	size_t size;
+	int sbreadfailed, ofsmodified;
 
-	iov = NULL;
-	iovlen = 0;
-	errmsg[0] = '\0';
 	fsutilinit();
 	fsckinit();
 
@@ -259,7 +255,7 @@ checkfilesys(char *filesys)
 	 * if it is listed among the mounted file systems. Failing that
 	 * check to see if it is listed in /etc/fstab.
 	 */
-	mntp = getmntpt(filesys);
+	mntp = getmntpoint(filesys);
 	if (mntp != NULL)
 		filesys = mntp->f_mntfromname;
 	else
@@ -271,13 +267,22 @@ checkfilesys(char *filesys)
 	 * exit status will cause a foreground check to be run.
 	 */
 	sblock_init();
+	sbreadfailed = 0;
+	if (openfilesys(filesys) == 0 || readsb(0) == 0)
+		sbreadfailed = 1;
 	if (bkgrdcheck) {
-		if ((fsreadfd = open(filesys, O_RDONLY)) < 0 || readsb(0) == 0)
+		if (sbreadfailed)
 			exit(3);	/* Cannot read superblock */
-		close(fsreadfd);
-		/* Earlier background failed or journaled */
-		if (sblock.fs_flags & (FS_NEEDSFSCK | FS_SUJ))
-			exit(4);
+		if ((sblock.fs_flags & FS_NEEDSFSCK) == FS_NEEDSFSCK)
+			exit(4);	/* Earlier background failed */
+		if ((sblock.fs_flags & FS_SUJ) == FS_SUJ) {
+			maxino = sblock.fs_ncg * sblock.fs_ipg;
+			maxfsblock = sblock.fs_size;
+			bufinit();
+			preen = 1;
+			if (suj_check(filesys) == 0)
+				exit(4); /* Journal good, run it now */
+		}
 		if ((sblock.fs_flags & FS_DOSOFTDEP) == 0)
 			exit(5);	/* Not running soft updates */
 		size = MIBSIZE;
@@ -292,113 +297,44 @@ checkfilesys(char *filesys)
 		/*
 		 * If file system is gjournaled, check it here.
 		 */
-		if ((fsreadfd = open(filesys, O_RDONLY)) < 0 || readsb(0) == 0)
+		if (sbreadfailed)
 			exit(3);	/* Cannot read superblock */
-		close(fsreadfd);
+		if (bkgrdflag == 0 &&
+		    (nflag || (fswritefd = open(filesys, O_WRONLY)) < 0)) {
+			fswritefd = -1;
+			if (preen)
+				pfatal("NO WRITE ACCESS");
+			printf(" (NO WRITE)");
+		}
 		if ((sblock.fs_flags & FS_GJOURNAL) != 0) {
-			//printf("GJournaled file system detected on %s.\n",
-			//    filesys);
 			if (sblock.fs_clean == 1) {
 				pwarn("FILE SYSTEM CLEAN; SKIPPING CHECKS\n");
 				exit(0);
 			}
-			if ((sblock.fs_flags & (FS_UNCLEAN | FS_NEEDSFSCK)) == 0) {
+			if ((sblock.fs_flags &
+			    (FS_UNCLEAN | FS_NEEDSFSCK)) == 0) {
+				bufinit();
 				gjournal_check(filesys);
-				if (chkdoreload(mntp) == 0)
+				if (chkdoreload(mntp, pwarn) == 0)
 					exit(0);
 				exit(4);
 			} else {
-				pfatal(
-			    "UNEXPECTED INCONSISTENCY, CANNOT RUN FAST FSCK\n");
+				pfatal("FULL FSCK NEEDED, CANNOT RUN FAST "
+				    "FSCK\n");
 			}
 		}
+		close(fswritefd);
+		fswritefd = -1;
 	}
-	/*
-	 * If we are to do a background check:
-	 *	Get the mount point information of the file system
-	 *	create snapshot file
-	 *	return created snapshot file
-	 *	if not found, clear bkgrdflag and proceed with normal fsck
-	 */
 	if (bkgrdflag) {
-		if (mntp == NULL) {
-			bkgrdflag = 0;
-			pfatal("NOT MOUNTED, CANNOT RUN IN BACKGROUND\n");
-		} else if ((mntp->f_flags & MNT_SOFTDEP) == 0) {
-			bkgrdflag = 0;
-			pfatal(
-			  "NOT USING SOFT UPDATES, CANNOT RUN IN BACKGROUND\n");
-		} else if ((mntp->f_flags & MNT_RDONLY) != 0) {
-			bkgrdflag = 0;
-			pfatal("MOUNTED READ-ONLY, CANNOT RUN IN BACKGROUND\n");
-		} else if ((fsreadfd = open(filesys, O_RDONLY)) >= 0) {
-			if (readsb(0) != 0) {
-				if (sblock.fs_flags & (FS_NEEDSFSCK | FS_SUJ)) {
-					bkgrdflag = 0;
-					pfatal(
-			"UNEXPECTED INCONSISTENCY, CANNOT RUN IN BACKGROUND\n");
-				}
-				if ((sblock.fs_flags & FS_UNCLEAN) == 0 &&
-				    skipclean && ckclean) {
-					/*
-					 * file system is clean;
-					 * skip snapshot and report it clean
-					 */
-					pwarn(
-					"FILE SYSTEM CLEAN; SKIPPING CHECKS\n");
-					goto clean;
-				}
-			}
-			close(fsreadfd);
-		}
-		if (bkgrdflag) {
-			snprintf(snapname, sizeof snapname, "%s/.snap",
-			    mntp->f_mntonname);
-			if (stat(snapname, &snapdir) < 0) {
-				if (errno != ENOENT) {
-					bkgrdflag = 0;
-					pfatal(
-	"CANNOT FIND SNAPSHOT DIRECTORY %s: %s, CANNOT RUN IN BACKGROUND\n",
-					    snapname, strerror(errno));
-				} else if ((grp = getgrnam("operator")) == NULL ||
-					   mkdir(snapname, 0770) < 0 ||
-					   chown(snapname, -1, grp->gr_gid) < 0 ||
-					   chmod(snapname, 0770) < 0) {
-					bkgrdflag = 0;
-					pfatal(
-	"CANNOT CREATE SNAPSHOT DIRECTORY %s: %s, CANNOT RUN IN BACKGROUND\n",
-					    snapname, strerror(errno));
-				}
-			} else if (!S_ISDIR(snapdir.st_mode)) {
-				bkgrdflag = 0;
-				pfatal(
-			"%s IS NOT A DIRECTORY, CANNOT RUN IN BACKGROUND\n",
-				    snapname);
-			}
-		}
-		if (bkgrdflag) {
-			snprintf(snapname, sizeof snapname,
-			    "%s/.snap/fsck_snapshot", mntp->f_mntonname);
-			build_iovec(&iov, &iovlen, "fstype", "ffs", 4);
-			build_iovec(&iov, &iovlen, "from", snapname,
-			    (size_t)-1);
-			build_iovec(&iov, &iovlen, "fspath", mntp->f_mntonname,
-			    (size_t)-1);
-			build_iovec(&iov, &iovlen, "errmsg", errmsg,
-			    sizeof(errmsg));
-			build_iovec(&iov, &iovlen, "update", NULL, 0);
-			build_iovec(&iov, &iovlen, "snapshot", NULL, 0);
-
-			while (nmount(iov, iovlen, mntp->f_flags) < 0) {
-				if (errno == EEXIST && unlink(snapname) == 0)
-					continue;
-				bkgrdflag = 0;
-				pfatal("CANNOT CREATE SNAPSHOT %s: %s %s\n",
-				    snapname, strerror(errno), errmsg);
-				break;
-			}
-			if (bkgrdflag != 0)
-				filesys = snapname;
+		switch (setup_bkgrdchk(mntp, sbreadfailed, &filesys)) {
+		case -1: /* filesystem clean */
+			goto clean;
+		case 0: /* cannot do background, give up */
+			exit(EEXIT);
+		case 1: /* doing background check, preen rules apply */
+			preen = 1;
+			break;
 		}
 	}
 
@@ -406,7 +342,7 @@ checkfilesys(char *filesys)
 	case 0:
 		if (preen)
 			pfatal("CAN'T CHECK FILE SYSTEM.");
-		return (0);
+		return (EEXIT);
 	case -1:
 	clean:
 		pwarn("clean, %ld free ", (long)(sblock.fs_cstotal.cs_nffree +
@@ -420,27 +356,33 @@ checkfilesys(char *filesys)
 	/*
 	 * Determine if we can and should do journal recovery.
 	 */
-	if ((sblock.fs_flags & FS_SUJ) == FS_SUJ) {
-		if ((sblock.fs_flags & FS_NEEDSFSCK) != FS_NEEDSFSCK && skipclean) {
+	if (bkgrdflag == 0 && (sblock.fs_flags & FS_SUJ) == FS_SUJ) {
+		if ((sblock.fs_flags & FS_NEEDSFSCK) != FS_NEEDSFSCK &&
+		    skipclean) {
+			sujrecovery = 1;
 			if (suj_check(filesys) == 0) {
-				printf("\n***** FILE SYSTEM MARKED CLEAN *****\n");
-				if (chkdoreload(mntp) == 0)
+				pwarn("\n**** FILE SYSTEM MARKED CLEAN ****\n");
+				if (chkdoreload(mntp, pwarn) == 0)
 					exit(0);
 				exit(4);
 			}
-			printf("** Skipping journal, falling through to full fsck\n\n");
+			sujrecovery = 0;
+			pwarn("Skipping journal, "
+			    "falling through to full fsck\n");
 		}
-		/*
-		 * Write the superblock so we don't try to recover the
-		 * journal on another pass. If this is the only change
-		 * to the filesystem, we do not want it to be called
-		 * out as modified.
-		 */
-		sblock.fs_mtime = time(NULL);
-		sbdirty();
-		ofsmodified = fsmodified;
-		flush(fswritefd, &sblk);
-		fsmodified = ofsmodified;
+		if (fswritefd != -1) {
+			/*
+			 * Write the superblock so we don't try to recover the
+			 * journal on another pass. If this is the only change
+			 * to the filesystem, we do not want it to be called
+			 * out as modified.
+			 */
+			sblock.fs_mtime = time(NULL);
+			sbdirty();
+			ofsmodified = fsmodified;
+			flush(fswritefd, &sblk);
+			fsmodified = ofsmodified;
+		}
 	}
 	/*
 	 * If the filesystem was run on an old kernel that did not
@@ -459,28 +401,40 @@ checkfilesys(char *filesys)
 	if (preen == 0 && yflag == 0 && sblock.fs_magic != FS_UFS1_MAGIC &&
 	    fswritefd != -1 && getosreldate() >= P_OSREL_CK_CYLGRP) {
 		if ((sblock.fs_metackhash & CK_CYLGRP) == 0 &&
-		    reply("ADD CYLINDER GROUP CHECK-HASH PROTECTION") != 0)
+		    reply("ADD CYLINDER GROUP CHECK-HASH PROTECTION") != 0) {
 			ckhashadd |= CK_CYLGRP;
-#ifdef notyet
+			sblock.fs_metackhash |= CK_CYLGRP;
+		}
 		if ((sblock.fs_metackhash & CK_SUPERBLOCK) == 0 &&
 		    getosreldate() >= P_OSREL_CK_SUPERBLOCK &&
-		    reply("ADD SUPERBLOCK CHECK-HASH PROTECTION") != 0)
+		    reply("ADD SUPERBLOCK CHECK-HASH PROTECTION") != 0) {
 			ckhashadd |= CK_SUPERBLOCK;
+			sblock.fs_metackhash |= CK_SUPERBLOCK;
+		}
 		if ((sblock.fs_metackhash & CK_INODE) == 0 &&
 		    getosreldate() >= P_OSREL_CK_INODE &&
-		    reply("ADD INODE CHECK-HASH PROTECTION") != 0)
+		    reply("ADD INODE CHECK-HASH PROTECTION") != 0) {
 			ckhashadd |= CK_INODE;
+			sblock.fs_metackhash |= CK_INODE;
+		}
+#ifdef notyet
 		if ((sblock.fs_metackhash & CK_INDIR) == 0 &&
 		    getosreldate() >= P_OSREL_CK_INDIR &&
-		    reply("ADD INDIRECT BLOCK CHECK-HASH PROTECTION") != 0)
+		    reply("ADD INDIRECT BLOCK CHECK-HASH PROTECTION") != 0) {
 			ckhashadd |= CK_INDIR;
+			sblock.fs_metackhash |= CK_INDIR;
+		}
 		if ((sblock.fs_metackhash & CK_DIR) == 0 &&
 		    getosreldate() >= P_OSREL_CK_DIR &&
-		    reply("ADD DIRECTORY CHECK-HASH PROTECTION") != 0)
+		    reply("ADD DIRECTORY CHECK-HASH PROTECTION") != 0) {
 			ckhashadd |= CK_DIR;
+			sblock.fs_metackhash |= CK_DIR;
+		}
 #endif /* notyet */
-		if (ckhashadd != 0)
+		if (ckhashadd != 0) {
 			sblock.fs_flags |= FS_METACKHASH;
+			sbdirty();
+		}
 	}
 	/*
 	 * Cleared if any questions answered no. Used to decide if
@@ -490,7 +444,7 @@ checkfilesys(char *filesys)
 	/*
 	 * 1: scan inodes tallying blocks used
 	 */
-	if (preen == 0) {
+	if (preen == 0 || debug) {
 		printf("** Last Mounted on %s\n", sblock.fs_fsmnt);
 		if (mntp != NULL && mntp->f_flags & MNT_ROOTFS)
 			printf("** Root file system\n");
@@ -505,11 +459,12 @@ checkfilesys(char *filesys)
 	 */
 	if (duplist) {
 		if (preen || usedsoftdep)
-			pfatal("INTERNAL ERROR: dups with %s%s%s",
+			pfatal("INTERNAL ERROR: DUPS WITH %s%s%s",
 			    preen ? "-p" : "",
-			    (preen && usedsoftdep) ? " and " : "",
-			    usedsoftdep ? "softupdates" : "");
-		printf("** Phase 1b - Rescan For More DUPS\n");
+			    (preen && usedsoftdep) ? " AND " : "",
+			    usedsoftdep ? "SOFTUPDATES" : "");
+		if (preen == 0 || debug)
+			printf("** Phase 1b - Rescan For More DUPS\n");
 		pass1b();
 		IOstats("Pass1b");
 	}
@@ -517,7 +472,7 @@ checkfilesys(char *filesys)
 	/*
 	 * 2: traverse directories from root to mark all connected directories
 	 */
-	if (preen == 0)
+	if (preen == 0 || debug)
 		printf("** Phase 2 - Check Pathnames\n");
 	pass2();
 	IOstats("Pass2");
@@ -525,7 +480,7 @@ checkfilesys(char *filesys)
 	/*
 	 * 3: scan inodes looking for disconnected directories
 	 */
-	if (preen == 0)
+	if (preen == 0 || debug)
 		printf("** Phase 3 - Check Connectivity\n");
 	pass3();
 	IOstats("Pass3");
@@ -533,7 +488,7 @@ checkfilesys(char *filesys)
 	/*
 	 * 4: scan inodes looking for disconnected files; check reference counts
 	 */
-	if (preen == 0)
+	if (preen == 0 || debug)
 		printf("** Phase 4 - Check Reference Counts\n");
 	pass4();
 	IOstats("Pass4");
@@ -541,10 +496,16 @@ checkfilesys(char *filesys)
 	/*
 	 * 5: check and repair resource counts in cylinder groups
 	 */
-	if (preen == 0)
+	if (preen == 0 || debug)
 		printf("** Phase 5 - Check Cyl groups\n");
-	pass5();
-	IOstats("Pass5");
+	snapflush(std_checkblkavail);
+	if (cgheader_corrupt) {
+		printf("PHASE 5 SKIPPED DUE TO CORRUPT CYLINDER GROUP "
+		    "HEADER(S)\n\n");
+	} else {
+		pass5();
+		IOstats("Pass5");
+	}
 
 	/*
 	 * print out summary statistics
@@ -587,18 +548,15 @@ checkfilesys(char *filesys)
 		sblock.fs_time = time(NULL);
 		sbdirty();
 	}
-	if (cvtlevel && sblk.b_dirty) {
+	if (cvtlevel && (sblk.b_flags & B_DIRTY) != 0) {
 		/*
 		 * Write out the duplicate super blocks
 		 */
-		for (cylno = 0; cylno < sblock.fs_ncg; cylno++)
-			blwrite(fswritefd, (char *)&sblock,
-			    fsbtodb(&sblock, cgsblock(&sblock, cylno)),
-			    SBLOCKSIZE);
+		if (sbput(fswritefd, &sblock, sblock.fs_ncg) == 0)
+			fsmodified = 1;
 	}
 	if (rerun)
 		resolved = 0;
-	finalIOstats();
 
 	/*
 	 * Check to see if the file system is mounted read-write.
@@ -607,11 +565,6 @@ checkfilesys(char *filesys)
 		resolved = 0;
 	ckfini(resolved);
 
-	for (cylno = 0; cylno < sblock.fs_ncg; cylno++)
-		if (inostathead[cylno].il_stat != NULL)
-			free((char *)inostathead[cylno].il_stat);
-	free((char *)inostathead);
-	inostathead = NULL;
 	if (fsmodified && !preen)
 		printf("\n***** FILE SYSTEM WAS MODIFIED *****\n");
 	if (rerun) {
@@ -620,7 +573,7 @@ checkfilesys(char *filesys)
 			return (ERESTART);
 		printf("\n***** PLEASE RERUN FSCK *****\n");
 	}
-	if (chkdoreload(mntp) != 0) {
+	if (chkdoreload(mntp, pwarn) != 0) {
 		if (!fsmodified)
 			return (0);
 		if (!preen)
@@ -631,90 +584,144 @@ checkfilesys(char *filesys)
 	return (rerun ? ERERUN : 0);
 }
 
+/*
+ * If we are to do a background check:
+ *	Get the mount point information of the file system
+ *	If already clean, return -1
+ *	Check that kernel supports background fsck
+ *	Find or create the snapshot directory
+ *	Create the snapshot file
+ *	Open snapshot
+ *	If anything fails print reason and return 0 which exits
+ */
 static int
-chkdoreload(struct statfs *mntp)
+setup_bkgrdchk(struct statfs *mntp, int sbreadfailed, char **filesys)
 {
+	struct stat snapdir;
+	struct group *grp;
 	struct iovec *iov;
-	int iovlen;
 	char errmsg[255];
+	int iovlen;
+	size_t size;
 
-	if (mntp == NULL)
+	/* Get the mount point information of the file system */
+	if (mntp == NULL) {
+		pwarn("NOT MOUNTED, CANNOT RUN IN BACKGROUND\n");
 		return (0);
-
+	}
+	if ((mntp->f_flags & MNT_RDONLY) != 0) {
+		pwarn("MOUNTED READ-ONLY, CANNOT RUN IN BACKGROUND\n");
+		return (0);
+	}
+	if ((mntp->f_flags & MNT_SOFTDEP) == 0) {
+		pwarn("NOT USING SOFT UPDATES, CANNOT RUN IN BACKGROUND\n");
+		return (0);
+	}
+	if (sbreadfailed) {
+		pwarn("SUPERBLOCK READ FAILED, CANNOT RUN IN BACKGROUND\n");
+		return (0);
+	}
+	if ((sblock.fs_flags & FS_NEEDSFSCK) != 0) {
+		pwarn("FULL FSCK NEEDED, CANNOT RUN IN BACKGROUND\n");
+		return (0);
+	}
+	if (skipclean && ckclean &&
+	   (sblock.fs_flags & (FS_UNCLEAN|FS_NEEDSFSCK)) == 0) {
+		/*
+		 * file system is clean;
+		 * skip snapshot and report it clean
+		 */
+		pwarn("FILE SYSTEM CLEAN; SKIPPING CHECKS\n");
+		return (-1);
+	}
+	/* Check that kernel supports background fsck */
+	size = MIBSIZE;
+	if (sysctlnametomib("vfs.ffs.adjrefcnt", adjrefcnt, &size) < 0||
+	    sysctlnametomib("vfs.ffs.adjblkcnt", adjblkcnt, &size) < 0||
+	    sysctlnametomib("vfs.ffs.setsize", setsize, &size) < 0 ||
+	    sysctlnametomib("vfs.ffs.freefiles", freefiles, &size) < 0||
+	    sysctlnametomib("vfs.ffs.freedirs", freedirs, &size) < 0 ||
+	    sysctlnametomib("vfs.ffs.freeblks", freeblks, &size) < 0) {
+		pwarn("KERNEL LACKS BACKGROUND FSCK SUPPORT\n");
+		return (0);
+	}
+	/*
+	 * When kernel lacks runtime bgfsck superblock summary
+	 * adjustment functionality, it does not mean we can not
+	 * continue, as old kernels will recompute the summary at
+	 * mount time. However, it will be an unexpected softupdates
+	 * inconsistency if it turns out that the summary is still
+	 * incorrect. Set a flag so subsequent operation can know this.
+	 */
+	bkgrdsumadj = 1;
+	if (sysctlnametomib("vfs.ffs.adjndir", adjndir, &size) < 0 ||
+	   sysctlnametomib("vfs.ffs.adjnbfree", adjnbfree, &size) < 0 ||
+	   sysctlnametomib("vfs.ffs.adjnifree", adjnifree, &size) < 0 ||
+	   sysctlnametomib("vfs.ffs.adjnffree", adjnffree, &size) < 0 ||
+	   sysctlnametomib("vfs.ffs.adjnumclusters", adjnumclusters,
+	   &size) < 0) {
+		bkgrdsumadj = 0;
+		pwarn("KERNEL LACKS RUNTIME SUPERBLOCK SUMMARY ADJUSTMENT "
+		    "SUPPORT\n");
+	}
+	/* Find or create the snapshot directory */
+	snprintf(snapname, sizeof snapname, "%s/.snap", mntp->f_mntonname);
+	if (stat(snapname, &snapdir) < 0) {
+		if (errno != ENOENT) {
+			pwarn("CANNOT FIND SNAPSHOT DIRECTORY %s: %s, CANNOT "
+			    "RUN IN BACKGROUND\n", snapname, strerror(errno));
+			return (0);
+		}
+		if ((grp = getgrnam("operator")) == NULL ||
+			   mkdir(snapname, 0770) < 0 ||
+			   chown(snapname, -1, grp->gr_gid) < 0 ||
+			   chmod(snapname, 0770) < 0) {
+			pwarn("CANNOT CREATE SNAPSHOT DIRECTORY %s: %s, "
+			    "CANNOT RUN IN BACKGROUND\n", snapname,
+			    strerror(errno));
+			return (0);
+		}
+	} else if (!S_ISDIR(snapdir.st_mode)) {
+		pwarn("%s IS NOT A DIRECTORY, CANNOT RUN IN BACKGROUND\n",
+		    snapname);
+		return (0);
+	}
+	/* Create the snapshot file */
 	iov = NULL;
 	iovlen = 0;
 	errmsg[0] = '\0';
-	/*
-	 * We modified a mounted file system.  Do a mount update on
-	 * it unless it is read-write, so we can continue using it
-	 * as safely as possible.
-	 */
-	if (mntp->f_flags & MNT_RDONLY) {
-		build_iovec(&iov, &iovlen, "fstype", "ffs", 4);
-		build_iovec(&iov, &iovlen, "from", mntp->f_mntfromname,
-		    (size_t)-1);
-		build_iovec(&iov, &iovlen, "fspath", mntp->f_mntonname,
-		    (size_t)-1);
-		build_iovec(&iov, &iovlen, "errmsg", errmsg,
-		    sizeof(errmsg));
-		build_iovec(&iov, &iovlen, "update", NULL, 0);
-		build_iovec(&iov, &iovlen, "reload", NULL, 0);
-		/*
-		 * XX: We need the following line until we clean up
-		 * nmount parsing of root mounts and NFS root mounts.
-		 */
-		build_iovec(&iov, &iovlen, "ro", NULL, 0);
-		if (nmount(iov, iovlen, mntp->f_flags) == 0) {
-			return (0);
-		}
-		pwarn("mount reload of '%s' failed: %s %s\n\n",
-		    mntp->f_mntonname, strerror(errno), errmsg);
-		return (1);
+	snprintf(snapname, sizeof snapname, "%s/.snap/fsck_snapshot",
+	    mntp->f_mntonname);
+	build_iovec(&iov, &iovlen, "fstype", "ffs", 4);
+	build_iovec(&iov, &iovlen, "from", snapname, (size_t)-1);
+	build_iovec(&iov, &iovlen, "fspath", mntp->f_mntonname, (size_t)-1);
+	build_iovec(&iov, &iovlen, "errmsg", errmsg, sizeof(errmsg));
+	build_iovec(&iov, &iovlen, "update", NULL, 0);
+	build_iovec(&iov, &iovlen, "snapshot", NULL, 0);
+	/* Create snapshot, removing old snapshot if it exists */
+	while (nmount(iov, iovlen, mntp->f_flags) < 0) {
+		if (errno == EEXIST && unlink(snapname) == 0)
+			continue;
+		pwarn("CANNOT CREATE SNAPSHOT %s: %s %s\n", snapname,
+		    strerror(errno), errmsg);
+		return (0);
 	}
-	return (0);
-}
-
-/*
- * Get the mount point information for name.
- */
-static struct statfs *
-getmntpt(const char *name)
-{
-	struct stat devstat, mntdevstat;
-	char device[sizeof(_PATH_DEV) - 1 + MNAMELEN];
-	char *ddevname;
-	struct statfs *mntbuf, *statfsp;
-	int i, mntsize, isdev;
-
-	if (stat(name, &devstat) != 0)
-		return (NULL);
-	if (S_ISCHR(devstat.st_mode) || S_ISBLK(devstat.st_mode))
-		isdev = 1;
-	else
-		isdev = 0;
-	mntsize = getmntinfo(&mntbuf, MNT_NOWAIT);
-	for (i = 0; i < mntsize; i++) {
-		statfsp = &mntbuf[i];
-		ddevname = statfsp->f_mntfromname;
-		if (*ddevname != '/') {
-			if (strlen(_PATH_DEV) + strlen(ddevname) + 1 >
-			    sizeof(statfsp->f_mntfromname))
-				continue;
-			strcpy(device, _PATH_DEV);
-			strcat(device, ddevname);
-			strcpy(statfsp->f_mntfromname, device);
-		}
-		if (isdev == 0) {
-			if (strcmp(name, statfsp->f_mntonname))
-				continue;
-			return (statfsp);
-		}
-		if (stat(ddevname, &mntdevstat) == 0 &&
-		    mntdevstat.st_rdev == devstat.st_rdev)
-			return (statfsp);
+	/* Open snapshot */
+	if (openfilesys(snapname) == 0) {
+		unlink(snapname);
+		pwarn("CANNOT OPEN SNAPSHOT %s: %s, CANNOT RUN IN "
+		    "BACKGROUND\n", snapname, strerror(errno));
+		return (0);
 	}
-	statfsp = NULL;
-	return (statfsp);
+	/* Immediately unlink snapshot so that it will be deleted when closed */
+	unlink(snapname);
+	free(sblock.fs_csp);
+	free(sblock.fs_si);
+	havesb = 0;
+	*filesys = snapname;
+	cmd.version = FFS_CMD_VERSION;
+	cmd.handle = fsreadfd;
+	return (1);
 }
 
 static void

@@ -68,7 +68,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <stdio.h>
 #include <paths.h>
 #include <sys/param.h>

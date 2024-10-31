@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012-2013 The FreeBSD Foundation
  * Copyright (c) 2015-2017 Mariusz Zaborski <oshogbo@FreeBSD.org>
@@ -28,7 +28,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef	_LIBCASPER_H_
@@ -122,8 +121,21 @@ cap_channel_t	*cap_service_open(const cap_channel_t *chan, const char *name);
 int		 cap_service_limit(const cap_channel_t *chan,
 		    const char * const *names, size_t nnames);
 #else
-#define	cap_service_open(chan, name)		(cap_init())
-#define	cap_service_limit(chan, names, nnames)	(0)
+static inline cap_channel_t *
+cap_service_open(const cap_channel_t *chan __unused,
+    const char *name __unused)
+{
+
+	return (cap_init());
+}
+
+static inline int
+cap_service_limit(const cap_channel_t *chan __unused,
+    const char * const *names __unused, size_t nnames __unused)
+{
+
+	return (0);
+}
 #endif
 
 /*
@@ -228,7 +240,13 @@ int	cap_sock(const cap_channel_t *chan);
 #ifdef WITH_CASPER
 int	cap_limit_set(const cap_channel_t *chan, nvlist_t *limits);
 #else
-#define	cap_limit_set(chan, limits)	(0)
+static inline int
+cap_limit_set(const cap_channel_t *chan __unused,
+    nvlist_t *limits __unused)
+{
+
+	return (0);
+}
 #endif
 
 /*

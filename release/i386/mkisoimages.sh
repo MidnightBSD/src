@@ -22,7 +22,9 @@
 # extra-bits-dir, if provided, contains additional files to be merged
 # into base-bits-dir as part of making the image.
 
-if [ "x$1" = "x-b" ]; then
+set -e
+
+if [ "$1" = "-b" ]; then
 	# This is highly x86-centric and will be used directly below.
 	bootable="-o bootimage=i386;$4/boot/cdboot -o no-emul-boot"
 	shift

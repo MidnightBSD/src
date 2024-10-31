@@ -2,15 +2,14 @@
 .include <src.opts.mk>
 
 PROG=	fstyp
-SRCS=	cd9660.c exfat.c ext2fs.c fstyp.c geli.c msdosfs.c ntfs.c ufs.c
+SRCS=	apfs.c befs.c cd9660.c exfat.c ext2fs.c fstyp.c geli.c hammer.c	\
+	hammer2.c hfsplus.c msdosfs.c ntfs.c ufs.c
 
 .if ${MK_ZFS} != "no"
 SRCS +=	zfs.c
 .endif
 
 MAN=	fstyp.8
-
-WARNS?=	2
 
 .if ${MK_ICONV} == "yes"
 CFLAGS+=	-DWITH_ICONV
@@ -26,23 +25,28 @@ SUBDIR.${MK_TESTS}+= tests
 .if ${MK_ZFS} != "no"
 IGNORE_PRAGMA=  YES
 
-CFLAGS+= -DNEED_SOLARIS_BOOLEAN -DHAVE_ZFS
-CFLAGS+= -I${SRCTOP}/sys/cddl/compat/opensolaris
-CFLAGS+= -I${SRCTOP}/cddl/compat/opensolaris/include
-CFLAGS+= -I${SRCTOP}/cddl/compat/opensolaris/lib/libumem
-CFLAGS+= -I${SRCTOP}/cddl/contrib/opensolaris/lib/libnvpair
-CFLAGS+= -I${SRCTOP}/cddl/contrib/opensolaris/lib/libzpool/common
-CFLAGS+= -I${SRCTOP}/sys/cddl/contrib/opensolaris/uts/common/fs/zfs
-CFLAGS+= -I${SRCTOP}/sys/cddl/contrib/opensolaris/uts/common
-CFLAGS+= -I${SRCTOP}/cddl/contrib/opensolaris/head
+CFLAGS+= -DHAVE_ZFS
+CFLAGS.zfs.c+= -DIN_BASE
+CFLAGS.zfs.c+= -I${SRCTOP}/sys/contrib/openzfs/include
+CFLAGS.zfs.c+= -I${SRCTOP}/sys/contrib/openzfs/lib/libspl/include
+CFLAGS.zfs.c+= -I${SRCTOP}/sys/contrib/openzfs/lib/libspl/include/os/freebsd
+CFLAGS.zfs.c+= -I${SRCTOP}/sys/contrib/openzfs/module/icp/include
+CFLAGS.zfs.c+= -include ${SRCTOP}/sys/contrib/openzfs/include/os/freebsd/spl/sys/ccompile.h
+CFLAGS.zfs.c+= -DHAVE_ISSETUGID
+CFLAGS.zfs.c+= -include ${SRCTOP}/sys/modules/zfs/zfs_config.h
 .endif
 
-CFLAGS+=-I${SRCTOP}/sys
+.for src in ${SRCS}
+.if ${src} != "zfs.c"
+CFLAGS.${src}+=-I${SRCTOP}/sys
+.endif
+.endfor
+
 
 LIBADD=	geom md ufs
 
 .if ${MK_ZFS} != "no"
-LIBADD+=nvpair zfs
+LIBADD+=nvpair zfs spl
 .endif
 
 .include <bsd.prog.mk>

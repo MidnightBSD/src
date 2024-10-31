@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2008 Edwin Groothuis. All rights reserved.
  * 
@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 void	tftp_send(int peer, uint16_t *block, struct tftp_stats *tp);
 void	tftp_receive(int peer, uint16_t *block, struct tftp_stats *tp,
 	    struct tftphdr *firstblock, size_t fb_size);

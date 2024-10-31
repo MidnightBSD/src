@@ -35,7 +35,6 @@
 
 #include <sys/cdefs.h>
 #ifndef lint
-__RCSID("$FreeBSD: stable/11/usr.sbin/lastlogin/lastlogin.c 338452 2018-09-04 09:58:13Z philip $");
 __RCSID("$NetBSD: lastlogin.c,v 1.4 1998/02/03 04:45:35 perry Exp $");
 #endif
 

@@ -64,8 +64,7 @@ If you need a reminder to leave your terminal, type "leave +hhmm" where
 %
 If you need to ask a question on the FreeBSD-questions mailing list then
 
-	https://www.FreeBSD.org/doc/en_US.ISO8859-1/articles/\
-		freebsd-questions/index.html
+	https://docs.freebsd.org/en/articles/freebsd-questions
 
 contains lots of useful advice to help you get the best results.
 %
@@ -390,7 +389,7 @@ You can make a log of your terminal session with script(1).
 You can often get answers to your questions about FreeBSD by searching in the
 FreeBSD mailing list archives at
 
-	http://freebsd.markmail.org
+	https://lists.freebsd.org/search
 %
 You can open up a new split-screen window in (n)vi with :N or :E and then
 use ^w to switch between the two.
@@ -583,7 +582,7 @@ zfs list -o space
 		-- Benedict Reuschling <bcr@FreeBSD.org>
 %
 To learn more about what your system is doing, take a look at systat(1). For
-example, to get various of statistics related to virtual memory usage, process
+example, to get various statistics related to virtual memory usage, process
 scheduling, device interrupts, system name translation caching, and disk I/O,
 enter the following:
 

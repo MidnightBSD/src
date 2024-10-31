@@ -2,8 +2,6 @@
 
 .include <src.opts.mk>
 
-PACKAGE=runtime-manuals
-
 #MISSING: dump.5 plot.5
 MAN=	acct.5 \
 	ar.5 \
@@ -34,6 +32,7 @@ MAN=	acct.5 \
 	hosts.lpd.5 \
 	intro.5 \
 	libmap.conf.5 \
+	lindebugfs.5 \
 	link.5 \
 	linprocfs.5 \
 	linsysfs.5 \
@@ -69,6 +68,7 @@ MAN=	acct.5 \
 	src.conf.5 \
 	stab.5 \
 	style.Makefile.5 \
+	style.mdoc.5 \
 	sysctl.conf.5 \
 	tmpfs.5 \
 	unionfs.5
@@ -97,16 +97,13 @@ MAN+=	bluetooth.device.conf.5 \
 	bluetooth.protocols.5
 .endif
 
-.if ${MK_HESIOD} != "no"
-MAN+=	hesiod.conf.5 
-.endif
 
 .if ${MK_MIDNIGHTBSD_UPDATE} != "no"
 MAN+=	midnightbsd-update.conf.5
 .endif
 
-.if ${MK_NAND} != "no"
-MAN+=	nandfs.5
+.if ${MK_HESIOD} != "no"
+MAN+=	hesiod.conf.5 
 .endif
 
 .if ${MK_PF} != "no"

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
@@ -24,18 +24,15 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/linker_set.h>
 #include <sys/_iovec.h>
 #include <sys/mman.h>
 
 #include <x86/psl.h>
-#include <x86/segments.h>
 
 #include <machine/vmm.h>
 #include <machine/vmm_instruction_emul.h>
@@ -46,6 +43,7 @@
 #include <assert.h>
 
 #include "bhyverun.h"
+#include "config.h"
 #include "inout.h"
 
 SET_DECLARE(inout_port_set, struct inout_port);
@@ -63,8 +61,8 @@ static struct {
 } inout_handlers[MAX_IOPORTS];
 
 static int
-default_inout(struct vmctx *ctx, int vcpu, int in, int port, int bytes,
-              uint32_t *eax, void *arg)
+default_inout(struct vmctx *ctx __unused, int in,
+    int port __unused, int bytes, uint32_t *eax, void *arg __unused)
 {
 	if (in) {
 		switch (bytes) {
@@ -83,11 +81,11 @@ default_inout(struct vmctx *ctx, int vcpu, int in, int port, int bytes,
 	return (0);
 }
 
-static void 
+static void
 register_default_iohandler(int start, int size)
 {
 	struct inout_port iop;
-	
+
 	VERIFY_IOPORT(start, size);
 
 	bzero(&iop, sizeof(iop));
@@ -101,7 +99,7 @@ register_default_iohandler(int start, int size)
 }
 
 int
-emulate_inout(struct vmctx *ctx, int vcpu, struct vm_exit *vmexit, int strict)
+emulate_inout(struct vmctx *ctx, int vcpu, struct vm_exit *vmexit)
 {
 	int addrsize, bytes, flags, in, port, prot, rep;
 	uint32_t eax, val;
@@ -122,7 +120,8 @@ emulate_inout(struct vmctx *ctx, int vcpu, struct vm_exit *vmexit, int strict)
 
 	handler = inout_handlers[port].handler;
 
-	if (strict && handler == default_inout)
+	if (handler == default_inout &&
+	    get_config_bool_default("x86.strictio", false))
 		return (-1);
 
 	flags = inout_handlers[port].flags;
@@ -180,14 +179,14 @@ emulate_inout(struct vmctx *ctx, int vcpu, struct vm_exit *vmexit, int strict)
 
 			val = 0;
 			if (!in)
-				vm_copyin(ctx, vcpu, iov, &val, bytes);
+				vm_copyin(iov, &val, bytes);
 
-			retval = handler(ctx, vcpu, in, port, bytes, &val, arg);
+			retval = handler(ctx, in, port, bytes, &val, arg);
 			if (retval != 0)
 				break;
 
 			if (in)
-				vm_copyout(ctx, vcpu, &val, iov, bytes);
+				vm_copyout(&val, iov, bytes);
 
 			/* Update index */
 			if (vis->rflags & PSL_D)
@@ -221,7 +220,7 @@ emulate_inout(struct vmctx *ctx, int vcpu, struct vm_exit *vmexit, int strict)
 	} else {
 		eax = vmexit->u.inout.eax;
 		val = eax & vie_size2mask(bytes);
-		retval = handler(ctx, vcpu, in, port, bytes, &val, arg);
+		retval = handler(ctx, in, port, bytes, &val, arg);
 		if (retval == 0 && in) {
 			eax &= ~vie_size2mask(bytes);
 			eax |= val & vie_size2mask(bytes);

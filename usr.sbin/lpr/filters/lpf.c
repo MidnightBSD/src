@@ -42,7 +42,6 @@ static char sccsid[] = "@(#)lpf.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include "lp.cdefs.h"		/* A cross-platform version of <sys/cdefs.h> */
-
 /*
  * 	filter which reads the output of nroff and converts lines
  *	with ^H's to overwritten lines.  Thus this works like 'ul'

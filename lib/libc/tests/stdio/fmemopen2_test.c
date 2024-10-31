@@ -29,7 +29,6 @@ SUCH DAMAGE.
  */
 
 #include <sys/cdefs.h>
-
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>

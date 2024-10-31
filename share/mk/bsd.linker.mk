@@ -1,3 +1,4 @@
+
 # Setup variables for the linker.
 #
 # LINKER_TYPE is the major type of linker. Currently binutils and lld support

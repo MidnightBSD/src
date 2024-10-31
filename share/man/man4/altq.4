@@ -23,9 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD$
-.\"
-.Dd March 20, 2018
+.Dd December 26, 2020
 .Dt ALTQ 4
 .Os
 .Sh NAME
@@ -140,15 +138,11 @@ They have been applied to the following hardware drivers:
 .Xr cas 4 ,
 .Xr cxgbe 4 ,
 .Xr dc 4 ,
-.Xr de 4 ,
-.Xr ed 4 ,
 .Xr em 4 ,
-.Xr ep 4 ,
 .Xr epair 4 ,
 .Xr et 4 ,
 .Xr fxp 4 ,
 .Xr gem 4 ,
-.Xr hme 4 ,
 .Xr igb 4 ,
 .Xr ixgbe 4 ,
 .Xr jme 4 ,
@@ -163,14 +157,12 @@ They have been applied to the following hardware drivers:
 .Xr qlxgb 4 ,
 .Xr re 4 ,
 .Xr rl 4 ,
-.Xr sf 4 ,
 .Xr sge 4 ,
 .Xr sis 4 ,
 .Xr sk 4 ,
 .Xr ste 4 ,
 .Xr stge 4 ,
 .Xr ti 4 ,
-.Xr txp 4 ,
 .Xr udav 4 ,
 .Xr vge 4 ,
 .Xr vr 4 ,
@@ -190,6 +182,23 @@ and
 .Xr ng_iface 4
 pseudo drivers also do support
 .Nm .
+.Pp
+The
+.Xr vlan 4
+driver does not directly support
+.Nm ,
+but as packets (mbufs) are passed to the underlying interface, a queue
+can be defined for the underlying interface, and any packets directed
+to the queue will be processed at the interface level.
+An example:
+.Pp
+.Bd -literal -offset indent
+altq on igb0 cbq queue { def aq }
+queue def bandwidth 90% cbq (default borrow)
+queue aq bandwidth 10Mb cbq
+
+pass in on igb0.10 proto udp all queue aq keep state
+.Ed
 .Sh SEE ALSO
 .Xr pf 4 ,
 .Xr pf.conf 5 ,

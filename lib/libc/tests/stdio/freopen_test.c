@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <errno.h>
 #include <paths.h>
 #include <stdbool.h>

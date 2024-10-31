@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012 NetApp, Inc.
  * All rights reserved.
@@ -24,11 +24,9 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <sys/errno.h>
 #include <x86/mptable.h>
@@ -178,7 +176,7 @@ mpt_build_bus_entries(bus_entry_ptr mpeb)
 
 	memset(mpeb, 0, sizeof(*mpeb));
 	mpeb->type = MPCT_ENTRY_BUS;
-	mpeb->bus_id = 1;	
+	mpeb->bus_id = 1;
 	memcpy(mpeb->bus_type, MPE_BUSNAME_ISA, MPE_BUSNAME_LEN);
 }
 
@@ -211,8 +209,8 @@ mpt_count_ioint_entries(void)
 }
 
 static void
-mpt_generate_pci_int(int bus, int slot, int pin, int pirq_pin, int ioapic_irq,
-    void *arg)
+mpt_generate_pci_int(int bus, int slot, int pin, int pirq_pin __unused,
+    int ioapic_irq, void *arg)
 {
 	int_entry_ptr *mpiep, mpie;
 
@@ -241,7 +239,7 @@ mpt_build_ioint_entries(int_entry_ptr mpie, int id)
 
 	/*
 	 * The following config is taken from kernel mptable.c
-	 * mptable_parse_default_config_ints(...), for now 
+	 * mptable_parse_default_config_ints(...), for now
 	 * just use the default config, tweek later if needed.
 	 */
 
@@ -285,7 +283,7 @@ mpt_build_ioint_entries(int_entry_ptr mpie, int id)
 
 	/* Next, generate entries for any PCI INTx interrupts. */
 	for (bus = 0; bus <= PCI_BUSMAX; bus++)
-		pci_walk_lintr(bus, mpt_generate_pci_int, &mpie); 
+		pci_walk_lintr(bus, mpt_generate_pci_int, &mpie);
 }
 
 void

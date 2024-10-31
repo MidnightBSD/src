@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "ypupdate_prot.h"
 #include <stdio.h>
 #include <stdlib.h> /* getenv, exit */

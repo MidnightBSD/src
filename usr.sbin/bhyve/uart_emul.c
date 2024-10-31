@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012 NetApp, Inc.
  * Copyright (c) 2013 Neel Natu <neel@freebsd.org>
@@ -25,17 +25,17 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <dev/ic/ns16550.h>
 #ifndef WITHOUT_CAPSICUM
 #include <sys/capsicum.h>
 #include <capsicum_helpers.h>
 #endif
+
+#include <machine/vmm_snapshot.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -377,11 +377,11 @@ uart_drain(int fd, enum ev_type ev, void *arg)
 	struct uart_softc *sc;
 	int ch;
 
-	sc = arg;	
+	sc = arg;
 
 	assert(fd == sc->tty.rfd);
 	assert(ev == EVF_READ);
-	
+
 	/*
 	 * This routine is called in the context of the mevent thread
 	 * to take out the softc lock to protect against concurrent
@@ -418,7 +418,7 @@ uart_write(struct uart_softc *sc, int offset, uint8_t value)
 			sc->dll = value;
 			goto done;
 		}
-		
+
 		if (offset == REG_DLH) {
 			sc->dlh = value;
 			goto done;
@@ -436,6 +436,9 @@ uart_write(struct uart_softc *sc, int offset, uint8_t value)
 		sc->thre_int_pending = true;
 		break;
 	case REG_IER:
+		/* Set pending when IER_ETXRDY is raised (edge-triggered). */
+		if ((sc->ier & IER_ETXRDY) == 0 && (value & IER_ETXRDY) != 0)
+			sc->thre_int_pending = true;
 		/*
 		 * Apply mask so that bits 4-7 are 0
 		 * Also enables bits 0-3 only if they're 1
@@ -533,7 +536,7 @@ uart_read(struct uart_softc *sc, int offset)
 			reg = sc->dll;
 			goto done;
 		}
-		
+
 		if (offset == REG_DLH) {
 			reg = sc->dlh;
 			goto done;
@@ -551,7 +554,7 @@ uart_read(struct uart_softc *sc, int offset)
 		iir = (sc->fcr & FCR_ENABLE) ? IIR_FIFO_MASK : 0;
 
 		intr_reason = uart_intr_reason(sc);
-			
+
 		/*
 		 * Deal with side effects of reading the IIR register
 		 */
@@ -609,7 +612,7 @@ int
 uart_legacy_alloc(int which, int *baseaddr, int *irq)
 {
 
-	if (which < 0 || which >= UART_NLDEVS || uart_lres[which].inuse)
+	if (which < 0 || which >= (int)UART_NLDEVS || uart_lres[which].inuse)
 		return (-1);
 
 	uart_lres[which].inuse = true;
@@ -672,7 +675,7 @@ uart_stdio_backend(struct uart_softc *sc)
 }
 
 static int
-uart_tty_backend(struct uart_softc *sc, const char *opts)
+uart_tty_backend(struct uart_softc *sc, const char *path)
 {
 #ifndef WITHOUT_CAPSICUM
 	cap_rights_t rights;
@@ -680,9 +683,14 @@ uart_tty_backend(struct uart_softc *sc, const char *opts)
 #endif
 	int fd;
 
-	fd = open(opts, O_RDWR | O_NONBLOCK);
-	if (fd < 0 || !isatty(fd))
+	fd = open(path, O_RDWR | O_NONBLOCK);
+	if (fd < 0)
 		return (-1);
+
+	if (!isatty(fd)) {
+		close(fd);
+		return (-1);
+	}
 
 	sc->tty.rfd = sc->tty.wfd = fd;
 	sc->tty.opened = true;
@@ -699,19 +707,51 @@ uart_tty_backend(struct uart_softc *sc, const char *opts)
 }
 
 int
-uart_set_backend(struct uart_softc *sc, const char *opts)
+uart_set_backend(struct uart_softc *sc, const char *device)
 {
 	int retval;
 
-	if (opts == NULL)
+	if (device == NULL)
 		return (0);
 
-	if (strcmp("stdio", opts) == 0)
+	if (strcmp("stdio", device) == 0)
 		retval = uart_stdio_backend(sc);
 	else
-		retval = uart_tty_backend(sc, opts);
+		retval = uart_tty_backend(sc, device);
 	if (retval == 0)
 		uart_opentty(sc);
 
 	return (retval);
 }
+
+#ifdef BHYVE_SNAPSHOT
+int
+uart_snapshot(struct uart_softc *sc, struct vm_snapshot_meta *meta)
+{
+	int ret;
+
+	SNAPSHOT_VAR_OR_LEAVE(sc->data, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->ier, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->lcr, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->mcr, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->lsr, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->msr, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->fcr, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->scr, meta, ret, done);
+
+	SNAPSHOT_VAR_OR_LEAVE(sc->dll, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->dlh, meta, ret, done);
+
+	SNAPSHOT_VAR_OR_LEAVE(sc->rxfifo.rindex, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->rxfifo.windex, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->rxfifo.num, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->rxfifo.size, meta, ret, done);
+	SNAPSHOT_BUF_OR_LEAVE(sc->rxfifo.buf, sizeof(sc->rxfifo.buf),
+			      meta, ret, done);
+
+	sc->thre_int_pending = 1;
+
+done:
+	return (ret);
+}
+#endif

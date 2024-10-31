@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013 Hudson River Trading LLC
  * Written by: John H. Baldwin <jhb@FreeBSD.org>
@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <machine/vmm.h>
 
@@ -59,8 +58,8 @@ static const unsigned gpe0_valid = (1u << GPE_VMGENC);
  * reset.
  */
 static int
-reset_handler(struct vmctx *ctx, int vcpu, int in, int port, int bytes,
-    uint32_t *eax, void *arg)
+reset_handler(struct vmctx *ctx __unused, int in,
+    int port __unused, int bytes, uint32_t *eax, void *arg __unused)
 {
 	int error;
 
@@ -157,8 +156,8 @@ sci_update(struct vmctx *ctx)
 }
 
 static int
-pm1_status_handler(struct vmctx *ctx, int vcpu, int in, int port, int bytes,
-    uint32_t *eax, void *arg)
+pm1_status_handler(struct vmctx *ctx, int in,
+    int port __unused, int bytes, uint32_t *eax, void *arg __unused)
 {
 
 	if (bytes != 2)
@@ -181,8 +180,8 @@ pm1_status_handler(struct vmctx *ctx, int vcpu, int in, int port, int bytes,
 }
 
 static int
-pm1_enable_handler(struct vmctx *ctx, int vcpu, int in, int port, int bytes,
-    uint32_t *eax, void *arg)
+pm1_enable_handler(struct vmctx *ctx, int in,
+    int port __unused, int bytes, uint32_t *eax, void *arg __unused)
 {
 
 	if (bytes != 2)
@@ -207,7 +206,7 @@ INOUT_PORT(pm1_status, PM1A_EVT_ADDR, IOPORT_F_INOUT, pm1_status_handler);
 INOUT_PORT(pm1_enable, PM1A_EVT_ADDR + 2, IOPORT_F_INOUT, pm1_enable_handler);
 
 static void
-power_button_handler(int signal, enum ev_type type, void *arg)
+power_button_handler(int signal __unused, enum ev_type type __unused, void *arg)
 {
 	struct vmctx *ctx;
 
@@ -234,8 +233,8 @@ static uint16_t pm1_control;
 #define	PM1_ALWAYS_ZERO	0xc003
 
 static int
-pm1_control_handler(struct vmctx *ctx, int vcpu, int in, int port, int bytes,
-    uint32_t *eax, void *arg)
+pm1_control_handler(struct vmctx *ctx, int in,
+    int port __unused, int bytes, uint32_t *eax, void *arg __unused)
 {
 	int error;
 
@@ -284,8 +283,8 @@ acpi_raise_gpe(struct vmctx *ctx, unsigned bit)
 }
 
 static int
-gpe0_sts(struct vmctx *ctx, int vcpu, int in, int port, int bytes,
-    uint32_t *eax, void *arg)
+gpe0_sts(struct vmctx *ctx, int in, int port __unused,
+    int bytes, uint32_t *eax, void *arg __unused)
 {
 	/*
 	 * ACPI 6.2 specifies the GPE register blocks are accessed
@@ -308,8 +307,8 @@ gpe0_sts(struct vmctx *ctx, int vcpu, int in, int port, int bytes,
 INOUT_PORT(gpe0_sts, IO_GPE0_STS, IOPORT_F_INOUT, gpe0_sts);
 
 static int
-gpe0_en(struct vmctx *ctx, int vcpu, int in, int port, int bytes,
-    uint32_t *eax, void *arg)
+gpe0_en(struct vmctx *ctx, int in, int port __unused,
+    int bytes, uint32_t *eax, void *arg __unused)
 {
 	if (bytes != 1)
 		return (-1);
@@ -332,8 +331,8 @@ INOUT_PORT(gpe0_en, IO_GPE0_EN, IOPORT_F_INOUT, gpe0_en);
  * This write-only register is used to enable and disable ACPI.
  */
 static int
-smi_cmd_handler(struct vmctx *ctx, int vcpu, int in, int port, int bytes,
-    uint32_t *eax, void *arg)
+smi_cmd_handler(struct vmctx *ctx, int in, int port __unused,
+    int bytes, uint32_t *eax, void *arg __unused)
 {
 
 	assert(!in);

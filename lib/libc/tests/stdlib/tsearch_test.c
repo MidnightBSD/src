@@ -24,7 +24,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <atf-c.h>
 #define _SEARCH_PRIVATE
 #include <search.h>

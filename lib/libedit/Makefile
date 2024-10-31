@@ -1,13 +1,12 @@
 #	$NetBSD: Makefile,v 1.56 2016/03/02 19:24:20 christos Exp $
 #	@(#)Makefile	8.1 (Berkeley) 6/4/93
-# $FreeBSD: stable/11/lib/libedit/Makefile 328884 2018-02-05 15:02:35Z pfg $
 
 PACKAGE=clibs
 
 EDITDIR=	${SRCTOP}/contrib/libedit
 .PATH: ${EDITDIR}
 
-SHLIB_MAJOR=	7
+SHLIB_MAJOR=	8
 SHLIBDIR?= /lib
 
 WARNS?=	3
@@ -65,7 +64,7 @@ MLINKS=	\
 	editline.3 tok_wreset.3 \
 	editline.3 tok_wstr.3
 
-INCS=	histedit.h
+INCS=	histedit.h filecomplete.h
 
 SRCS+=	common.h emacs.h fcns.h func.h help.h vi.h
 CLEANFILES+= common.h emacs.h fcns.h func.h help.h vi.h
@@ -97,3 +96,5 @@ test: tc1.o libedit.a ${DPADD} ${LIBTERMCAP}
 	${CC} ${CFLAGS} ${.ALLSRC} -o ${.TARGET} libedit.a ${LDADD}
 
 .include <bsd.lib.mk>
+
+CWARNFLAGS.chartype.c=	${NO_WUSE_AFTER_FREE}

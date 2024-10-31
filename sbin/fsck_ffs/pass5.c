@@ -35,7 +35,6 @@ static const char sccsid[] = "@(#)pass5.c	8.9 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/sysctl.h>
 
@@ -74,11 +73,8 @@ pass5(void)
 	memset(newcg, 0, (size_t)fs->fs_cgsize);
 	newcg->cg_niblk = fs->fs_ipg;
 	/* check to see if we are to add a cylinder group check hash */
-	if ((ckhashadd & CK_CYLGRP) != 0) {
-		fs->fs_metackhash |= CK_CYLGRP;
+	if ((ckhashadd & CK_CYLGRP) != 0)
 		rewritecg = 1;
-		sbdirty();
-	}
 	if (cvtlevel >= 3) {
 		if (fs->fs_maxcontig < 2 && fs->fs_contigsumsize > 0) {
 			if (preen)
@@ -118,7 +114,7 @@ pass5(void)
 			}
 		}
 	}
-	basesize = &newcg->cg_space[0] - (u_char *)(&newcg->cg_firstfield);
+	basesize = sizeof(*newcg);
 	if (sblock.fs_magic == FS_UFS2_MAGIC) {
 		newcg->cg_iusedoff = basesize;
 	} else {
@@ -133,7 +129,7 @@ pass5(void)
 		    fs->fs_old_cpg * sizeof(int32_t);
 		newcg->cg_iusedoff = newcg->cg_old_boff +
 		    fs->fs_old_cpg * fs->fs_old_nrpos * sizeof(u_int16_t);
-		memset(&newcg->cg_space[0], 0, newcg->cg_iusedoff - basesize);
+		memset(&newcg[1], 0, newcg->cg_iusedoff - basesize);
 	}
 	inomapsize = howmany(fs->fs_ipg, CHAR_BIT);
 	newcg->cg_freeoff = newcg->cg_iusedoff + inomapsize;
@@ -185,14 +181,19 @@ pass5(void)
 			ckhash = cg->cg_ckhash;
 			cg->cg_ckhash = 0;
 			thishash = calculate_crc32c(~0L, cg, fs->fs_cgsize);
-			if (ckhash != thishash)
+			if (ckhash == thishash) {
+				cg->cg_ckhash = ckhash;
+			} else {
 				pwarn("CG %d: BAD CHECK-HASH %#x vs %#x\n",
 				    c, ckhash, thishash);
-			cg->cg_ckhash = ckhash;
+				cg->cg_ckhash = thishash;
+				cgdirty(cgbp);
+			}
 		}
 		newcg->cg_time = cg->cg_time;
 		newcg->cg_old_time = cg->cg_old_time;
 		newcg->cg_unrefs = cg->cg_unrefs;
+		newcg->cg_ckhash = cg->cg_ckhash;
 		newcg->cg_cgx = c;
 		dbase = cgbase(fs, c);
 		dmax = dbase + fs->fs_fpg;
@@ -329,11 +330,6 @@ pass5(void)
 				sump[run]++;
 			}
 		}
-		if ((fs->fs_metackhash & CK_CYLGRP) != 0) {
-			newcg->cg_ckhash = 0;
-			newcg->cg_ckhash =
-			    calculate_crc32c(~0L, (void *)newcg, fs->fs_cgsize);
-		}
 
 		if (bkgrdflag != 0) {
 			cstotal.cs_nffree += cg->cg_cs.cs_nffree;
@@ -355,14 +351,14 @@ pass5(void)
 		}
 		if (rewritecg) {
 			memmove(cg, newcg, (size_t)fs->fs_cgsize);
-			dirty(cgbp);
+			cgdirty(cgbp);
 			continue;
 		}
 		if (cursnapshot == 0 &&
 		    memcmp(newcg, cg, basesize) != 0 &&
 		    dofix(&idesc[2], "SUMMARY INFORMATION BAD")) {
 			memmove(cg, newcg, (size_t)basesize);
-			dirty(cgbp);
+			cgdirty(cgbp);
 		}
 		if (bkgrdflag != 0 || usedsoftdep || debug)
 			update_maps(cg, newcg, bkgrdflag);
@@ -371,12 +367,28 @@ pass5(void)
 		    dofix(&idesc[1], "BLK(S) MISSING IN BIT MAPS")) {
 			memmove(cg_inosused(cg), cg_inosused(newcg),
 			      (size_t)mapsize);
-			dirty(cgbp);
+			cgdirty(cgbp);
 		}
 	}
 	if (cursnapshot == 0 &&
 	    memcmp(&cstotal, &fs->fs_cstotal, sizeof cstotal) != 0
 	    && dofix(&idesc[0], "SUMMARY BLK COUNT(S) WRONG IN SUPERBLK")) {
+		if (debug) {
+			printf("cstotal is currently: %jd dirs, %jd blks free, "
+			    "%jd frags free, %jd inos free, %jd clusters\n",
+			    (intmax_t)fs->fs_cstotal.cs_ndir,
+			    (intmax_t)fs->fs_cstotal.cs_nbfree,
+			    (intmax_t)fs->fs_cstotal.cs_nffree,
+			    (intmax_t)fs->fs_cstotal.cs_nifree,
+			    (intmax_t)fs->fs_cstotal.cs_numclusters);
+			printf("cstotal ought to be:  %jd dirs, %jd blks free, "
+			    "%jd frags free, %jd inos free, %jd clusters\n",
+			    (intmax_t)cstotal.cs_ndir,
+			    (intmax_t)cstotal.cs_nbfree,
+			    (intmax_t)cstotal.cs_nffree,
+			    (intmax_t)cstotal.cs_nifree,
+			    (intmax_t)cstotal.cs_numclusters);
+		}
 		memmove(&fs->fs_cstotal, &cstotal, sizeof cstotal);
 		fs->fs_ronly = 0;
 		fs->fs_fmod = 0;
@@ -397,43 +409,53 @@ pass5(void)
 				printf("adjndir by %+" PRIi64 "\n", cmd.value);
 			if (bkgrdsumadj == 0 || sysctl(adjndir, MIBSIZE, 0, 0,
 			    &cmd, sizeof cmd) == -1)
-				rwerror("ADJUST NUMBER OF DIRECTORIES", cmd.value);
+				rwerror("ADJUST NUMBER OF DIRECTORIES",
+				    cmd.value);
 		}
 
 		cmd.value = cstotal.cs_nbfree - fs->fs_cstotal.cs_nbfree;
 		if (cmd.value != 0) {
 			if (debug)
-				printf("adjnbfree by %+" PRIi64 "\n", cmd.value);
+				printf("adjnbfree by %+" PRIi64 "\n",
+				    cmd.value);
 			if (bkgrdsumadj == 0 || sysctl(adjnbfree, MIBSIZE, 0, 0,
 			    &cmd, sizeof cmd) == -1)
-				rwerror("ADJUST NUMBER OF FREE BLOCKS", cmd.value);
+				rwerror("ADJUST NUMBER OF FREE BLOCKS",
+				    cmd.value);
 		}
 
 		cmd.value = cstotal.cs_nifree - fs->fs_cstotal.cs_nifree;
 		if (cmd.value != 0) {
 			if (debug)
-				printf("adjnifree by %+" PRIi64 "\n", cmd.value);
+				printf("adjnifree by %+" PRIi64 "\n",
+				    cmd.value);
 			if (bkgrdsumadj == 0 || sysctl(adjnifree, MIBSIZE, 0, 0,
 			    &cmd, sizeof cmd) == -1)
-				rwerror("ADJUST NUMBER OF FREE INODES", cmd.value);
+				rwerror("ADJUST NUMBER OF FREE INODES",
+				    cmd.value);
 		}
 
 		cmd.value = cstotal.cs_nffree - fs->fs_cstotal.cs_nffree;
 		if (cmd.value != 0) {
 			if (debug)
-				printf("adjnffree by %+" PRIi64 "\n", cmd.value);
+				printf("adjnffree by %+" PRIi64 "\n",
+				    cmd.value);
 			if (bkgrdsumadj == 0 || sysctl(adjnffree, MIBSIZE, 0, 0,
 			    &cmd, sizeof cmd) == -1)
-				rwerror("ADJUST NUMBER OF FREE FRAGS", cmd.value);
+				rwerror("ADJUST NUMBER OF FREE FRAGS",
+				    cmd.value);
 		}
 
-		cmd.value = cstotal.cs_numclusters - fs->fs_cstotal.cs_numclusters;
+		cmd.value = cstotal.cs_numclusters -
+		    fs->fs_cstotal.cs_numclusters;
 		if (cmd.value != 0) {
 			if (debug)
-				printf("adjnumclusters by %+" PRIi64 "\n", cmd.value);
-			if (bkgrdsumadj == 0 || sysctl(adjnumclusters, MIBSIZE, 0, 0,
-			    &cmd, sizeof cmd) == -1)
-				rwerror("ADJUST NUMBER OF FREE CLUSTERS", cmd.value);
+				printf("adjnumclusters by %+" PRIi64 "\n",
+				    cmd.value);
+			if (bkgrdsumadj == 0 || sysctl(adjnumclusters, MIBSIZE,
+			    0, 0, &cmd, sizeof cmd) == -1)
+				rwerror("ADJUST NUMBER OF FREE CLUSTERS",
+				    cmd.value);
 		}
 	}
 }

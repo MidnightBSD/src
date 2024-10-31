@@ -33,8 +33,7 @@
 .\"
 .\"     from: @(#)strcpy.3	8.1 (Berkeley) 6/4/93
 .\"
-.\"
-.Dd March 4, 2009
+.Dd March 21, 2024
 .Dt WMEMCHR 3
 .Os
 .Sh NAME
@@ -42,6 +41,7 @@
 .Nm wmemcmp ,
 .Nm wmemcpy ,
 .Nm wmemmove ,
+.Nm wmempcpy ,
 .Nm wmemset ,
 .Nm wcpcpy ,
 .Nm wcpncpy ,
@@ -78,11 +78,13 @@
 .Ft wchar_t *
 .Fn wmemmove "wchar_t *s1" "const wchar_t *s2" "size_t n"
 .Ft wchar_t *
+.Fn wmempcpy "wchar_t * restrict s1" "const wchar_t * restrict s2" "size_t n"
+.Ft wchar_t *
 .Fn wmemset "wchar_t *s" "wchar_t c" "size_t n"
 .Ft wchar_t *
-.Fn wcpcpy "wchar_t *s1" "wchar_t *s2"
+.Fn wcpcpy "wchar_t * restrict s1" "const wchar_t * restrict s2"
 .Ft wchar_t *
-.Fn wcpncpy "wchar_t *s1" "wchar_t *s2" "size_t n"
+.Fn wcpncpy "wchar_t * restrict s1" "const wchar_t * restrict s2" "size_t n"
 .Ft int
 .Fn wcscasecmp "const wchar_t *s1" "const wchar_t *s2"
 .Ft wchar_t *
@@ -167,7 +169,8 @@ and
 which conform to
 .St -p1003.1-2008 ;
 and
-.Fn wcslcat
-and
+.Fn wcslcat ,
 .Fn wcslcpy ,
+and
+.Fn wmempcpy ,
 which are extensions.

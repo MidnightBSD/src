@@ -26,8 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
-
 #include "namespace.h"
 #include <sys/types.h>
 #include <errno.h>
@@ -37,7 +35,7 @@
 #include <string.h>
 #include <unistd.h>
 #include "un-namespace.h"
-
+#include "libc_private.h"
 
 static const char CorruptEnvFindMsg[] = "environment corrupt; unable to find ";
 static const char CorruptEnvValueMsg[] =

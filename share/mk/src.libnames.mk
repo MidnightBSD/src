@@ -14,21 +14,27 @@ __<src.libnames.mk>__:
 _PRIVATELIBS=	\
 		atf_c \
 		atf_cxx \
+		auditd \
 		bsdstat \
+		cbor \
 		devdctl \
-		event \
+		event1 \
+		fido2 \
 		gmock \
 		gtest \
 		gmock_main \
 		gtest_main \
 		heimipcc \
 		heimipcs \
-		ifconfig \
 		ldns \
 		ssh \
 		ucl \
 		unbound \
 		zstd
+
+# Let projects based on FreeBSD append to _PRIVATELIBS
+# by maintaining their own LOCAL_PRIVATELIBS list.
+_PRIVATELIBS+=	${LOCAL_PRIVATELIBS}
 
 _INTERNALLIBS=	\
 		amu \
@@ -37,9 +43,12 @@ _INTERNALLIBS=	\
 		cron \
 		elftc \
 		fifolog \
+		ifconfig \
 		ipf \
+		iscsiutil \
 		lpr \
 		lua \
+		lutok \
 		netbsd \
 		ntp \
 		ntpevent \
@@ -65,25 +74,30 @@ _INTERNALLIBS=	\
 		wpaeapol_auth \
 		wpaeapol_supp \
 		wpal2_packet \
+		wpapasn \
 		wparadius \
 		wparsn_supp \
 		wpatls \
 		wpautils \
 		wpawps
 
+# Let projects based on FreeBSD append to _INTERNALLIBS
+# by maintaining their own LOCAL_INTERNALLIBS list.
+_INTERNALLIBS+=	${LOCAL_INTERNALLIBS}
+
 _LIBRARIES=	\
 		${_PRIVATELIBS} \
 		${_INTERNALLIBS} \
 		${LOCAL_LIBRARIES} \
 		80211 \
+		9p \
 		alias \
 		archive \
 		asn1 \
-		auditd \
 		avl \
+		BlocksRuntime \
 		be \
 		begemot \
-		BlocksRuntime \
 		bluetooth \
 		bsdxml \
 		bsm \
@@ -95,9 +109,10 @@ _LIBRARIES=	\
 		cam \
 		casper \
 		cap_dns \
+		cap_fileargs \
 		cap_grp \
+		cap_net \
 		cap_pwd \
-		cap_random \
 		cap_sysctl \
 		cap_syslog \
 		com_err \
@@ -125,7 +140,6 @@ _LIBRARIES=	\
 		fetch \
 		figpar \
 		geom \
-		gnuregex \
 		gpio \
 		gssapi \
 		gssapi_krb5 \
@@ -134,6 +148,7 @@ _LIBRARIES=	\
 		heimntlm \
 		heimsqlite \
 		hx509 \
+		icp \
 		ipsec \
 		ipt \
 		jail \
@@ -155,8 +170,6 @@ _LIBRARIES=	\
 		mport \
 		msearch \
 		mt \
-		nandfs \
-		ncurses \
 		ncursesw \
 		netgraph \
 		netmap \
@@ -187,15 +200,17 @@ _LIBRARIES=	\
 		sdp \
 		sm \
 		smb \
+		spl \
 		ssl \
 		ssp_nonshared \
+		stats \
 		stdthreads \
 		supcplusplus \
 		sysdecode \
 		sqlite3 \
 		tacplus \
-		termcap \
 		termcapw \
+		tpool \
 		ufs \
 		ugidfw \
 		ulog \
@@ -213,7 +228,9 @@ _LIBRARIES=	\
 		z \
 		zfs_core \
 		zfs \
+		zfsbootenv \
 		zpool \
+		zutil
 
 .if ${MK_BLACKLIST} != "no"
 _LIBRARIES+= \
@@ -229,6 +246,7 @@ _LIBRARIES+= \
 		ibnetdisc \
 		ibumad \
 		ibverbs \
+		irdma \
 		mlx4 \
 		mlx5 \
 		rdmacm \
@@ -255,7 +273,9 @@ LIBVERIEXEC?=	${LIBVERIEXECDIR}/libveriexec.a
 # Each library's LIBADD needs to be duplicated here for static linkage of
 # 2nd+ order consumers.  Auto-generating this would be better.
 _DP_80211=	sbuf bsdxml
+_DP_9p=		sbuf
 _DP_archive=	z bz2 lzma bsdxml zstd
+_DP_avl=	spl
 _DP_zstd=	pthread
 .if ${MK_BLACKLIST} != "no"
 _DP_blacklist+=	pthread
@@ -281,9 +301,9 @@ _DP_cam=	sbuf
 _DP_kvm=	elf
 _DP_casper=	nv
 _DP_cap_dns=	nv
+_DP_cap_fileargs=	nv
 _DP_cap_grp=	nv
 _DP_cap_pwd=	nv
-_DP_cap_random=	nv
 _DP_cap_sysctl=	nv
 _DP_cap_syslog=	nv
 .if ${MK_OFED} != "no"
@@ -302,22 +322,19 @@ _DP_radius=	crypto
 _DP_rtld_db=	elf procstat
 _DP_procstat=	kvm util elf
 .if ${MK_CXX} == "yes"
-.if ${MK_LIBCPLUSPLUS} != "no"
 _DP_proc=	cxxrt
-.else
-_DP_proc=	supcplusplus
-.endif
 .endif
 .if ${MK_CDDL} != "no"
 _DP_proc+=	ctf
 .endif
-_DP_proc+=	elf procstat rtld_db util
+_DP_proc+=	elf procstat rtld_db util z
 _DP_mp=	crypto
 _DP_memstat=	kvm
 _DP_magic=	z
 _DP_mt=		sbuf bsdxml
 _DP_ldns=	ssl crypto
 _DP_lua=	m
+_DP_lutok=	lua
 .if ${MK_OPENSSL} != "no"
 _DP_fetch=	ssl crypto
 .else
@@ -329,7 +346,7 @@ _DP_dpv=	dialog figpar util ncursesw
 _DP_dialog=	ncursesw m
 _DP_cuse=	pthread
 _DP_atf_cxx=	atf_c
-_DP_gtest=	pthread
+_DP_gtest=	pthread regex
 _DP_gmock=	gtest
 _DP_gmock_main=	gmock
 _DP_gtest_main=	gtest
@@ -339,6 +356,7 @@ _DP_pam=	radius tacplus opie md util
 _DP_pam+=	krb5
 .endif
 .if ${MK_OPENSSH} != "no"
+_DP_fido2+=	crypto z
 _DP_pam+=	ssh
 .endif
 .if ${MK_NIS} != "no"
@@ -363,7 +381,7 @@ _DP_lzma=	md pthread
 _DP_ucl=	m
 _DP_vmmapi=	util
 _DP_opencsd=	cxxrt
-_DP_ctf=	z
+_DP_ctf=	spl z
 _DP_dtrace=	ctf elf proc pthread rtld_db
 _DP_xo=		util
 # The libc dependencies are not strictly needed but are defined to make the
@@ -400,6 +418,7 @@ _DP_ibmad=	ibumad
 _DP_ibnetdisc=	osmcomp ibmad ibumad
 _DP_ibumad=	
 _DP_ibverbs=
+_DP_irdma=	ibverbs pthread
 _DP_mlx4=	ibverbs pthread
 _DP_mlx5=	ibverbs pthread
 _DP_rdmacm=	ibverbs

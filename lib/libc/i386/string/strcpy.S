@@ -29,7 +29,6 @@
  */
 
 #include <machine/asm.h>
-
 /*
  * strcpy (dst, src)
  *	copy the string src to dst.

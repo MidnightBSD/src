@@ -22,7 +22,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _CAPSICUM_HELPERS_H_
@@ -47,32 +46,52 @@
 
 __BEGIN_DECLS
 
+static const unsigned long caph_stream_cmds[] =
+    {
+#ifdef TIOCGETA
+	TIOCGETA,
+#endif
+#ifdef TIOCGWINSZ
+	TIOCGWINSZ,
+#endif
+#ifdef FIODTYPE
+	FIODTYPE,
+#endif
+    };
+static const uint32_t caph_stream_fcntls = CAP_FCNTL_GETFL;
+
+static __inline void
+caph_stream_rights(cap_rights_t *rights, int flags)
+{
+
+	cap_rights_init(rights, CAP_EVENT, CAP_FCNTL, CAP_FSTAT,
+	    CAP_IOCTL, CAP_SEEK);
+
+	if ((flags & CAPH_READ) != 0)
+		cap_rights_set(rights, CAP_READ);
+	if ((flags & CAPH_WRITE) != 0)
+		cap_rights_set(rights, CAP_WRITE);
+	if ((flags & CAPH_LOOKUP) != 0)
+		cap_rights_set(rights, CAP_LOOKUP);
+}
+
 static __inline int
 caph_limit_stream(int fd, int flags)
 {
 	cap_rights_t rights;
-	unsigned long cmds[] = { TIOCGETA, TIOCGWINSZ, FIODTYPE };
 
-	cap_rights_init(&rights, CAP_EVENT, CAP_FCNTL, CAP_FSTAT,
-	    CAP_IOCTL, CAP_SEEK);
-
-	if ((flags & CAPH_READ) != 0)
-		cap_rights_set(&rights, CAP_READ);
-	if ((flags & CAPH_WRITE) != 0)
-		cap_rights_set(&rights, CAP_WRITE);
-	if ((flags & CAPH_LOOKUP) != 0)
-		cap_rights_set(&rights, CAP_LOOKUP);
-
+	caph_stream_rights(&rights, flags);
 	if (cap_rights_limit(fd, &rights) < 0 && errno != ENOSYS) {
 		if (errno == EBADF && (flags & CAPH_IGNORE_EBADF) != 0)
 			return (0);
 		return (-1);
 	}
 
-	if (cap_ioctls_limit(fd, cmds, nitems(cmds)) < 0 && errno != ENOSYS)
+	if (cap_ioctls_limit(fd, caph_stream_cmds,
+	    nitems(caph_stream_cmds)) < 0 && errno != ENOSYS)
 		return (-1);
 
-	if (cap_fcntls_limit(fd, CAP_FCNTL_GETFL) < 0 && errno != ENOSYS)
+	if (cap_fcntls_limit(fd, caph_stream_fcntls) < 0 && errno != ENOSYS)
 		return (-1);
 
 	return (0);
@@ -114,8 +133,17 @@ caph_limit_stdio(void)
 static __inline void
 caph_cache_tzdata(void)
 {
+	time_t delta;
 
 	tzset();
+
+	/*
+	 * The tzset() function does not cache all time zones.
+	 * Some functions, such as gmtime(), require a GMT time zone.
+	 * The only way to cache them is to call the function directly.
+	 */
+	delta = 0;
+	(void)gmtime(&delta);
 }
 
 static __inline void

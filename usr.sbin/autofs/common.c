@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2014 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Edward Tomasz Napierala under sponsorship
  * from the FreeBSD Foundation.
@@ -31,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/ioctl.h>
@@ -364,7 +362,7 @@ expand_ampersand(char *string, const char *key)
 		 * of characters before the '&'.
 		 */
 		before_len = i;
-		//assert(i + 1 < (int)strlen(string));
+		//assert(i < (int)strlen(string));
 
 		ret = asprintf(&expanded, "%.*s%s%s",
 		    before_len, string, key, string + before_len + 1);
@@ -379,6 +377,8 @@ expand_ampersand(char *string, const char *key)
 		 */
 		string = expanded;
 		i = before_len + strlen(key);
+		if (i == (int)strlen(string))
+			break;
 		backslashed = false;
 		//assert(i < (int)strlen(string));
 	}
@@ -1200,6 +1200,19 @@ lesser_daemon(void)
 		/* Bloody hell. */
 		log_warn("close");
 	}
+}
+
+/*
+ * Applicable to NFSv3 only, see rpc.umntall(8).
+ */
+void
+rpc_umntall(void)
+{
+	FILE *f;
+
+	f = auto_popen("rpc.umntall", "-k", NULL);
+	assert(f != NULL);
+	auto_pclose(f);
 }
 
 int

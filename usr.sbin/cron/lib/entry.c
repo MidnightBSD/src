@@ -156,7 +156,7 @@ load_entry(file, error_func, pw, envp)
 			bit_set(e->hour, 0);
 			bit_set(e->dom, 0);
 			bit_set(e->month, 0);
-			bit_nset(e->dow, 0, (LAST_DOW-FIRST_DOW));
+			bit_nset(e->dow, 0, (LAST_DOW-FIRST_DOW+1));
 			e->flags |= DOW_STAR;
 		} else if (!strcmp("monthly", cmd)) {
 			Debug(DPARS, ("load_entry()...monthly shortcut\n"))
@@ -164,51 +164,51 @@ load_entry(file, error_func, pw, envp)
 			bit_set(e->minute, 0);
 			bit_set(e->hour, 0);
 			bit_set(e->dom, 0);
-			bit_nset(e->month, 0, (LAST_MONTH-FIRST_MONTH));
-			bit_nset(e->dow, 0, (LAST_DOW-FIRST_DOW));
+			bit_nset(e->month, 0, (LAST_MONTH-FIRST_MONTH+1));
+			bit_nset(e->dow, 0, (LAST_DOW-FIRST_DOW+1));
 			e->flags |= DOW_STAR;
 		} else if (!strcmp("weekly", cmd)) {
 			Debug(DPARS, ("load_entry()...weekly shortcut\n"))
 			bit_set(e->second, 0);
 			bit_set(e->minute, 0);
 			bit_set(e->hour, 0);
-			bit_nset(e->dom, 0, (LAST_DOM-FIRST_DOM));
+			bit_nset(e->dom, 0, (LAST_DOM-FIRST_DOM+1));
 			e->flags |= DOM_STAR;
-			bit_nset(e->month, 0, (LAST_MONTH-FIRST_MONTH));
+			bit_nset(e->month, 0, (LAST_MONTH-FIRST_MONTH+1));
 			bit_set(e->dow, 0);
 		} else if (!strcmp("daily", cmd) || !strcmp("midnight", cmd)) {
 			Debug(DPARS, ("load_entry()...daily shortcut\n"))
 			bit_set(e->second, 0);
 			bit_set(e->minute, 0);
 			bit_set(e->hour, 0);
-			bit_nset(e->dom, 0, (LAST_DOM-FIRST_DOM));
-			bit_nset(e->month, 0, (LAST_MONTH-FIRST_MONTH));
-			bit_nset(e->dow, 0, (LAST_DOW-FIRST_DOW));
+			bit_nset(e->dom, 0, (LAST_DOM-FIRST_DOM+1));
+			bit_nset(e->month, 0, (LAST_MONTH-FIRST_MONTH+1));
+			bit_nset(e->dow, 0, (LAST_DOW-FIRST_DOW+1));
 		} else if (!strcmp("hourly", cmd)) {
 			Debug(DPARS, ("load_entry()...hourly shortcut\n"))
 			bit_set(e->second, 0);
 			bit_set(e->minute, 0);
-			bit_nset(e->hour, 0, (LAST_HOUR-FIRST_HOUR));
-			bit_nset(e->dom, 0, (LAST_DOM-FIRST_DOM));
-			bit_nset(e->month, 0, (LAST_MONTH-FIRST_MONTH));
-			bit_nset(e->dow, 0, (LAST_DOW-FIRST_DOW));
+			bit_nset(e->hour, 0, (LAST_HOUR-FIRST_HOUR+1));
+			bit_nset(e->dom, 0, (LAST_DOM-FIRST_DOM+1));
+			bit_nset(e->month, 0, (LAST_MONTH-FIRST_MONTH+1));
+			bit_nset(e->dow, 0, (LAST_DOW-FIRST_DOW+1));
 		} else if (!strcmp("every_minute", cmd)) {
 			Debug(DPARS, ("load_entry()...every_minute shortcut\n"))
 			bit_set(e->second, 0);
-			bit_nset(e->minute, 0, (LAST_MINUTE-FIRST_MINUTE));
-			bit_nset(e->hour, 0, (LAST_HOUR-FIRST_HOUR));
-			bit_nset(e->dom, 0, (LAST_DOM-FIRST_DOM));
-			bit_nset(e->month, 0, (LAST_MONTH-FIRST_MONTH));
-			bit_nset(e->dow, 0, (LAST_DOW-FIRST_DOW));
+			bit_nset(e->minute, 0, (LAST_MINUTE-FIRST_MINUTE+1));
+			bit_nset(e->hour, 0, (LAST_HOUR-FIRST_HOUR+1));
+			bit_nset(e->dom, 0, (LAST_DOM-FIRST_DOM+1));
+			bit_nset(e->month, 0, (LAST_MONTH-FIRST_MONTH+1));
+			bit_nset(e->dow, 0, (LAST_DOW-FIRST_DOW+1));
 		} else if (!strcmp("every_second", cmd)) {
 			Debug(DPARS, ("load_entry()...every_second shortcut\n"))
 			e->flags |= SEC_RES;
-			bit_nset(e->second, 0, (LAST_SECOND-FIRST_SECOND));
-			bit_nset(e->minute, 0, (LAST_MINUTE-FIRST_MINUTE));
-			bit_nset(e->hour, 0, (LAST_HOUR-FIRST_HOUR));
-			bit_nset(e->dom, 0, (LAST_DOM-FIRST_DOM));
-			bit_nset(e->month, 0, (LAST_MONTH-FIRST_MONTH));
-			bit_nset(e->dow, 0, (LAST_DOW-FIRST_DOW));
+			bit_nset(e->second, 0, (LAST_SECOND-FIRST_SECOND+1));
+			bit_nset(e->minute, 0, (LAST_MINUTE-FIRST_MINUTE+1));
+			bit_nset(e->hour, 0, (LAST_HOUR-FIRST_HOUR+1));
+			bit_nset(e->dom, 0, (LAST_DOM-FIRST_DOM+1));
+			bit_nset(e->month, 0, (LAST_MONTH-FIRST_MONTH+1));
+			bit_nset(e->dow, 0, (LAST_DOW-FIRST_DOW+1));
 		} else if (*cmd != '\0' &&
 		    (interval = strtol(cmd, &endptr, 10)) > 0 &&
 		    *endptr == '\0') {
@@ -310,6 +310,9 @@ load_entry(file, error_func, pw, envp)
 			goto eof;
 		}
 
+		/* need to have consumed blanks when checking options below */
+		Skip_Blanks(ch, file)
+		unget_char(ch, file);
 #ifdef LOGIN_CAP
 		if ((s = strrchr(username, '/')) != NULL) {
 			*s = '\0';
@@ -364,7 +367,8 @@ load_entry(file, error_func, pw, envp)
 	e->gid = pw->pw_gid;
 
 	/* copy and fix up environment.  some variables are just defaults and
-	 * others are overrides.
+	 * others are overrides; we process only the overrides here, defaults
+	 * are handled in do_command after login.conf is processed.
 	 */
 	e->envp = env_copy(envp);
 	if (e->envp == NULL) {
@@ -383,6 +387,10 @@ load_entry(file, error_func, pw, envp)
 			goto eof;
 		}
 	}
+	/* If LOGIN_CAP, this is deferred to do_command where the login class
+	 * is processed. If !LOGIN_CAP, do it here.
+	 */
+#ifndef LOGIN_CAP
 	if (!env_get("HOME", e->envp)) {
 		prev_env = e->envp;
 		sprintf(envstr, "HOME=%s", pw->pw_dir);
@@ -394,17 +402,7 @@ load_entry(file, error_func, pw, envp)
 			goto eof;
 		}
 	}
-	if (!env_get("PATH", e->envp)) {
-		prev_env = e->envp;
-		sprintf(envstr, "PATH=%s", _PATH_DEFPATH);
-		e->envp = env_set(e->envp, envstr);
-		if (e->envp == NULL) {
-			warn("env_set(%s)", envstr);
-			env_free(prev_env);
-			ecode = e_mem;
-			goto eof;
-		}
-	}
+#endif
 	prev_env = e->envp;
 	sprintf(envstr, "%s=%s", "LOGNAME", pw->pw_name);
 	e->envp = env_set(e->envp, envstr);

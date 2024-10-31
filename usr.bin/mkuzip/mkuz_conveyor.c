@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <err.h>
 #include <inttypes.h>
@@ -41,8 +40,8 @@
 #include "mkuz_conveyor.h"
 #include "mkuz_cfg.h"
 #include "mkuzip.h"
-#include "mkuz_format.h"
 #include "mkuz_blk.h"
+#include "mkuz_format.h"
 #include "mkuz_fqueue.h"
 #include "mkuz_blk_chain.h"
 
@@ -66,7 +65,7 @@ cworker(void *p)
     cfp = cwp->cfp;
     cvp = cwp->cvp;
     free(cwp);
-    c_ctx = cfp->handler->f_init(cfp->blksz);
+    c_ctx = cfp->handler->f_init(&cfp->comp_level);
     for (;;) {
         iblk = mkuz_fqueue_deq(cvp->wrk_queue);
         if (iblk == MKUZ_BLK_EOF) {
@@ -79,7 +78,8 @@ cworker(void *p)
             /* All zeroes block */
             oblk = mkuz_blk_ctor(0);
         } else {
-            oblk = cfp->handler->f_compress(c_ctx, iblk);
+            oblk = mkuz_blk_ctor(cfp->cbound_blksz);
+            cfp->handler->f_compress(c_ctx, iblk, oblk);
             if (cfp->en_dedup != 0) {
                 compute_digest(oblk);
             }

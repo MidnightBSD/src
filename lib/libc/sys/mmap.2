@@ -112,6 +112,22 @@ Pages may be written.
 Pages may be executed.
 .El
 .Pp
+In addition to these protection flags,
+.Fx
+provides the ability to set the maximum protection of a region allocated by
+.Nm
+and later altered by
+.Xr mprotect 2 .
+This is accomplished by
+.Em or Ns 'ing
+one or more
+.Dv PROT_
+values wrapped in the
+.Dv PROT_MAX()
+macro into the
+.Fa prot
+argument.
+.Pp
 The
 .Fa flags
 argument specifies the type of the mapped object, mapping options and
@@ -302,9 +318,30 @@ Modifications are private.
 .It Dv MAP_SHARED
 Modifications are shared.
 .It Dv MAP_STACK
+Creates both a mapped region that grows downward on demand and an
+adjoining guard that both reserves address space for the mapped region
+to grow into and limits the mapped region's growth.
+Together, the mapped region and the guard occupy
+.Fa len
+bytes of the address space.
+The guard starts at the returned address, and the mapped region ends at
+the returned address plus
+.Fa len
+bytes.
+Upon access to the guard, the mapped region automatically grows in size,
+and the guard shrinks by an equal amount.
+Essentially, the boundary between the guard and the mapped region moves
+downward so that the access falls within the enlarged mapped region.
+However, the guard will never shrink to less than the number of pages
+specified by the sysctl
+.Dv security.bsd.stack_guard_page ,
+thereby ensuring that a gap for detecting stack overflow always exists
+between the downward growing mapped region and the closest mapped region
+beneath it.
+.Pp
 .Dv MAP_STACK
 implies
-.Dv MAP_ANON ,
+.Dv MAP_ANON
 and
 .Fa offset
 of 0.
@@ -317,23 +354,6 @@ must include at least
 .Dv PROT_READ
 and
 .Dv PROT_WRITE .
-.Pp
-This option creates
-a memory region that grows to at most
-.Fa len
-bytes in size, starting from the stack top and growing down.
-The
-stack top is the starting address returned by the call, plus
-.Fa len
-bytes.
-The bottom of the stack at maximum growth is the starting
-address returned by the call.
-.Pp
-Stacks created with
-.Dv MAP_STACK
-automatically grow.
-Guards prevent inadvertent use of the regions into which those
-stacks can grow without requiring mapping the whole stack in advance.
 The size of the guard, in pages, is specified by sysctl
 .Dv security.bsd.stack_guard_page .
 .El
@@ -515,6 +535,11 @@ was specified and the
 argument was not available.
 .Dv MAP_ANON
 was specified and insufficient memory was available.
+.It Bq Er ENOTSUP
+The
+.Fa prot
+argument contains protections which are not a subset of the specified
+maximum protections.
 .El
 .Sh SEE ALSO
 .Xr madvise 2 ,
@@ -527,3 +552,16 @@ was specified and insufficient memory was available.
 .Xr munmap 2 ,
 .Xr getpagesize 3 ,
 .Xr getpagesizes 3
+.Sh HISTORY
+The
+.Nm
+system call was first documented in
+.Bx 4.2
+and implemented in
+.Bx 4.4 .
+.\" XXX: lots of missing history of FreeBSD additions.
+.Pp
+The
+.Dv PROT_MAX
+functionality was introduced in
+.Fx 13 .

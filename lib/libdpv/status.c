@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <curses.h>
 #include <dialog.h>
 #include <stdarg.h>

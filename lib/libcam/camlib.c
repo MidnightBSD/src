@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1997, 1998, 1999, 2002 Kenneth D. Merry.
  * All rights reserved.
@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <sys/param.h>
 #include <assert.h>
@@ -78,9 +77,8 @@ cam_getccb(struct cam_device *dev)
 {
 	union ccb *ccb;
 
-	ccb = (union ccb *)malloc(sizeof(union ccb));
+	ccb = calloc(1, sizeof(*ccb));
 	if (ccb != NULL) {
-		bzero(&ccb->ccb_h, sizeof(struct ccb_hdr));
 		ccb->ccb_h.path_id = dev->path_id;
 		ccb->ccb_h.target_id = dev->target_id;
 		ccb->ccb_h.target_lun = dev->target_lun;
@@ -128,10 +126,13 @@ cam_get_device(const char *path, char *dev_name, int devnamelen, int *unit)
 	}
 
 	/*
-	 * We can be rather destructive to the path string.  Make a copy of
-	 * it so we don't hose the user's string.
+	 * Resolve the given path to a real device path in case we are given
+	 * an alias or other symbolic link.  If the path cannot be resolved
+	 * then try to parse it as is.
 	 */
-	newpath = (char *)strdup(path);
+	newpath = realpath(path, NULL);
+	if (newpath == NULL)
+		newpath = strdup(path);
 	if (newpath == NULL)
 		return (-1);
 

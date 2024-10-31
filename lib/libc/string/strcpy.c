@@ -33,11 +33,19 @@
 static char sccsid[] = "@(#)strcpy.c	8.1 (Berkeley) 6/4/93";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-
 #include <string.h>
 
+#ifdef WEAK_STRCPY
+__weak_reference(__strcpy, strcpy);
+#endif
+
 char *
-strcpy(char * __restrict to, const char * __restrict from)
+#ifdef WEAK_STRCPY
+__strcpy
+#else
+strcpy
+#endif
+(char * __restrict to, const char * __restrict from)
 {
 	char *save = to;
 

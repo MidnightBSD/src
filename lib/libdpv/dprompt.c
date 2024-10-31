@@ -25,8 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libdpv/dprompt.c 335406 2018-06-20 05:45:41Z dteske $");
-
 #include <sys/types.h>
 
 #define _BSD_SOURCE /* to get dprintf() prototype in stdio.h below */

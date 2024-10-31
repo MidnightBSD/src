@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <string.h>
 #include <sys/types.h>
 

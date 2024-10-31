@@ -16,7 +16,6 @@
  */
 
 /* config.h - configurables for Vixie Cron
- *
  */
 
 #if !defined(_PATH_SENDMAIL)

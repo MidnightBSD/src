@@ -21,7 +21,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef	_EFI_OSDEP_H_
@@ -103,6 +102,8 @@ typedef void VOID;
 #define MDE_CPU_ARM
 #elif defined(__aarch64__)
 #define MDE_CPU_AARCH64
+#elif defined(__riscv)
+#define MDE_CPU_RISCV64
 #endif
 /* FreeBSD doesn't have/use MDE_CPU_EBC or MDE_CPU_IPF (ia64) */
 

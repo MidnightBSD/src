@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011 James Gritton
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <sys/errno.h>
 #include <sys/socket.h>
@@ -368,11 +367,13 @@ add_param(struct cfjail *j, const struct cfparam *p, enum intparam ipnum,
 		if ((flags ^ dp->flags) & PF_VAR) {
 			jail_warnx(j, "variable \"$%s\" cannot have the same "
 			    "name as a parameter.", name);
+			j->flags |= JF_FAILED;
 			return;
 		}
 		if (dp->flags & PF_IMMUTABLE) {
 			jail_warnx(j, "cannot redefine parameter \"%s\".",
 			    dp->name);
+			j->flags |= JF_FAILED;
 			return;
 		}
 		if (strcmp(dp->name, name)) {
@@ -404,6 +405,7 @@ add_param(struct cfjail *j, const struct cfparam *p, enum intparam ipnum,
 						    "cannot have the same "
 						    "name as a parameter.",
 						    name);
+						j->flags |= JF_FAILED;
 						return;
 					}
 					j->intparams[ipnum] = np;
@@ -610,8 +612,8 @@ check_intparams(struct cfjail *j)
 			if (cs || defif)
 				add_param(j, NULL, IP__IP4_IFADDR, s->s);
 			if (cs) {
-				strcpy(s->s, cs + 1);
 				s->len -= cs + 1 - s->s;
+				memmove(s->s, cs + 1, s->len + 1);
 			}
 			if ((cs = strchr(s->s, '/')) != NULL) {
 				*cs = '\0';
@@ -631,8 +633,8 @@ check_intparams(struct cfjail *j)
 			if (cs || defif)
 				add_param(j, NULL, IP__IP6_IFADDR, s->s);
 			if (cs) {
-				strcpy(s->s, cs + 1);
 				s->len -= cs + 1 - s->s;
+				memmove(s->s, cs + 1, s->len + 1);
 			}
 			if ((cs = strchr(s->s, '/')) != NULL) {
 				*cs = '\0';

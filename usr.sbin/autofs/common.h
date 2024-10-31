@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2014 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Edward Tomasz Napierala under sponsorship
  * from the FreeBSD Foundation.
@@ -27,7 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef AUTOMOUNTD_H
@@ -96,6 +94,7 @@ char	*defined_expand(const char *string);
 void	defined_init(void);
 void	defined_parse_and_add(char *def);
 void	lesser_daemon(void);
+void	rpc_umntall(void);
 
 int	main_automount(int argc, char **argv);
 int	main_automountd(int argc, char **argv);

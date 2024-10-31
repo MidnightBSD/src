@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <err.h>
 #include <errno.h>
 #include <limits.h>

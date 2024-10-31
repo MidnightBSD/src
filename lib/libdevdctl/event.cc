@@ -62,8 +62,6 @@
 #include "event.h"
 #include "event_factory.h"
 #include "exception.h"
-
-
 /*================================== Macros ==================================*/
 #define NUM_ELEMENTS(x) (sizeof(x) / sizeof(*x))
 

@@ -25,7 +25,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -80,6 +79,7 @@
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <paths.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -147,7 +147,7 @@ static int32_t pbchar = -1;
 
 static const char *paths[MAX_PATHS + 1] = {
 	"/usr/share/snmp/defs",
-	"/usr/local/share/snmp/defs",
+	_PATH_LOCALBASE "/share/snmp/defs",
 	NULL
 };
 

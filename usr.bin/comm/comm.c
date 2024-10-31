@@ -45,7 +45,6 @@ static char sccsid[] = "From: @(#)comm.c	8.4 (Berkeley) 5/4/95";
 #endif
 
 #include <sys/cdefs.h>
-
 #include <err.h>
 #include <limits.h>
 #include <locale.h>

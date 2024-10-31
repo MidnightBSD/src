@@ -1,5 +1,6 @@
 
 PROG=	ac
+PACKAGE=	acct
 MAN=	ac.8
 
 # If "CONSOLE_TTY" is not defined, this program is compatible with the

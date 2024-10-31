@@ -1,5 +1,5 @@
 .\"
-.\" Copyright (c) 2017 Netflix, Inc.
+.\" Copyright (c) 2017-2021 Netflix, Inc.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
 .\" modification, are permitted provided that the following conditions
@@ -22,8 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\"
-.Dd June 18, 2020
+.Dd April 7, 2021
 .Dt EFIVAR 8
 .Os
 .Sh NAME
@@ -31,7 +30,7 @@
 .Nd UEFI environment variable interaction
 .Sh SYNOPSIS
 .Nm
-.Op Fl abdDHlLNpRtuw
+.Op Fl abdDHlLNpqRtuw
 .Op Fl n Ar name
 .Op Fl f Ar file
 .Op Fl -append
@@ -45,10 +44,12 @@
 .Op Fl -hex
 .Op Fl -list-guids
 .Op Fl -list
+.Op Fl -load-option
 .Op Fl -name Ar name
 .Op Fl -no-name
 .Op Fl -print
 .Op Fl -print-decimal
+.Op Fl -quiet
 .Op Fl -raw-guid
 .Op Fl -utf8
 .Op Fl -write
@@ -85,8 +86,17 @@ This flag implies
 .Fl -write
 unless the
 .Fl -append
-flag is given.
-This behavior is not well understood and is currently unimplemented.
+or
+.Fl -print
+flags are given.
+This behavior is not well understood and is currently unimplemented
+for writes.
+When
+.Fl -print
+is specified, the contents of the file are used as the value to
+print using any other specified flags.
+This is used primarily for testing purposes for more complicated
+variable decoding.
 .It Fl a Fl -append
 Append the specified value to the UEFI variable rather than replacing
 it.
@@ -138,10 +148,15 @@ List all the variables.
 If the
 .Fl -print
 flag is also listed, their values will be displayed.
+.It Fl -load-option
+Decode the variable as if it were a UEFI Boot Option, including information about what device and/or paths the UEFI DevicePaths decode to.
 .It Fl N Fl -no-name
 Do not display the variable name.
 .It Fl p Fl -print
 Print the value of the variable.
+.It Fl q Fl -quiet
+When an error occurs, exit with a non-zero value without outputting any error messages.
+Otherwise, produce the normal output and exit with a zero status.
 .It Fl R Fl -raw-guid
 Do not substitute well known names for GUID numeric values in output.
 .It Fl u Fl -utf8

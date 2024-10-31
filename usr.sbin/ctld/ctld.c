@@ -1,8 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Edward Tomasz Napierala under sponsorship
  * from the FreeBSD Foundation.
@@ -31,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/socket.h>
@@ -54,6 +52,13 @@
 #include "ctld.h"
 #include "isns.h"
 
+static bool	timed_out(void);
+#ifdef ICL_KERNEL_PROXY
+static void	pdu_receive_proxy(struct pdu *pdu);
+static void	pdu_send_proxy(struct pdu *pdu);
+#endif /* ICL_KERNEL_PROXY */
+static void	pdu_fail(const struct connection *conn, const char *reason);
+
 bool proxy_mode = false;
 
 static volatile bool sighup_received = false;
@@ -63,23 +68,22 @@ static volatile bool sigalrm_received = false;
 static int nchildren = 0;
 static uint16_t last_portal_group_tag = 0xff;
 
+static struct connection_ops conn_ops = {
+	.timed_out = timed_out,
+#ifdef ICL_KERNEL_PROXY
+	.pdu_receive_proxy = pdu_receive_proxy,
+	.pdu_send_proxy = pdu_send_proxy,
+#endif
+	.fail = pdu_fail,
+};
+
 static void
 usage(void)
 {
 
 	fprintf(stderr, "usage: ctld [-d][-u][-f config-file]\n");
+	fprintf(stderr, "       ctld -t [-u][-f config-file]\n");
 	exit(1);
-}
-
-char *
-checked_strdup(const char *s)
-{
-	char *c;
-
-	c = strdup(s);
-	if (c == NULL)
-		log_err(1, "strdup");
-	return (c);
 }
 
 struct conf *
@@ -529,6 +533,7 @@ auth_group_find(const struct conf *conf, const char *name)
 {
 	struct auth_group *ag;
 
+	assert(name != NULL);
 	TAILQ_FOREACH(ag, &conf->conf_auth_groups, ag_next) {
 		if (ag->ag_name != NULL && strcmp(ag->ag_name, name) == 0)
 			return (ag);
@@ -624,6 +629,7 @@ portal_group_new(struct conf *conf, const char *name)
 	pg->pg_conf = conf;
 	pg->pg_tag = 0;		/* Assigned later in conf_apply(). */
 	pg->pg_dscp = -1;
+	pg->pg_pcp = -1;
 	TAILQ_INSERT_TAIL(&conf->conf_portal_groups, pg, pg_next);
 
 	return (pg);
@@ -929,7 +935,7 @@ void
 isns_register(struct isns *isns, struct isns *oldisns)
 {
 	struct conf *conf = isns->i_conf;
-	int s;
+	int error, s;
 	char hostname[256];
 
 	if (TAILQ_EMPTY(&conf->conf_targets) ||
@@ -941,8 +947,10 @@ isns_register(struct isns *isns, struct isns *oldisns)
 		set_timeout(0, false);
 		return;
 	}
-	gethostname(hostname, sizeof(hostname));
-
+	error = gethostname(hostname, sizeof(hostname));
+	if (error != 0)
+		log_err(1, "gethostname");
+ 
 	if (oldisns == NULL || TAILQ_EMPTY(&oldisns->i_conf->conf_targets))
 		oldisns = isns;
 	isns_do_deregister(oldisns, s, hostname);
@@ -955,7 +963,7 @@ void
 isns_check(struct isns *isns)
 {
 	struct conf *conf = isns->i_conf;
-	int s, res;
+	int error, s, res;
 	char hostname[256];
 
 	if (TAILQ_EMPTY(&conf->conf_targets) ||
@@ -967,8 +975,10 @@ isns_check(struct isns *isns)
 		set_timeout(0, false);
 		return;
 	}
-	gethostname(hostname, sizeof(hostname));
-
+	error = gethostname(hostname, sizeof(hostname));
+	if (error != 0)
+		log_err(1, "gethostname");
+ 
 	res = isns_do_check(isns, s, hostname);
 	if (res < 0) {
 		isns_do_deregister(isns, s, hostname);
@@ -982,7 +992,7 @@ void
 isns_deregister(struct isns *isns)
 {
 	struct conf *conf = isns->i_conf;
-	int s;
+	int error, s;
 	char hostname[256];
 
 	if (TAILQ_EMPTY(&conf->conf_targets) ||
@@ -992,8 +1002,10 @@ isns_deregister(struct isns *isns)
 	s = isns_do_connect(isns);
 	if (s < 0)
 		return;
-	gethostname(hostname, sizeof(hostname));
-
+	error = gethostname(hostname, sizeof(hostname));
+	if (error != 0)
+		log_err(1, "gethostname");
+ 
 	isns_do_deregister(isns, s, hostname);
 	close(s);
 	set_timeout(0, false);
@@ -1624,28 +1636,59 @@ option_set(struct option *o, const char *value)
 	o->o_value = checked_strdup(value);
 }
 
-static struct connection *
+#ifdef ICL_KERNEL_PROXY
+
+static void
+pdu_receive_proxy(struct pdu *pdu)
+{
+	struct connection *conn;
+	size_t len;
+
+	assert(proxy_mode);
+	conn = pdu->pdu_connection;
+
+	kernel_receive(pdu);
+
+	len = pdu_ahs_length(pdu);
+	if (len > 0)
+		log_errx(1, "protocol error: non-empty AHS");
+
+	len = pdu_data_segment_length(pdu);
+	assert(len <= (size_t)conn->conn_max_recv_data_segment_length);
+	pdu->pdu_data_len = len;
+}
+
+static void
+pdu_send_proxy(struct pdu *pdu)
+{
+
+	assert(proxy_mode);
+
+	pdu_set_data_segment_length(pdu, pdu->pdu_data_len);
+	kernel_send(pdu);
+}
+
+#endif /* ICL_KERNEL_PROXY */
+
+static void
+pdu_fail(const struct connection *conn __unused, const char *reason __unused)
+{
+}
+
+static struct ctld_connection *
 connection_new(struct portal *portal, int fd, const char *host,
     const struct sockaddr *client_sa)
 {
-	struct connection *conn;
+	struct ctld_connection *conn;
 
 	conn = calloc(1, sizeof(*conn));
 	if (conn == NULL)
 		log_err(1, "calloc");
+	connection_init(&conn->conn, &conn_ops, proxy_mode);
+	conn->conn.conn_socket = fd;
 	conn->conn_portal = portal;
-	conn->conn_socket = fd;
 	conn->conn_initiator_addr = checked_strdup(host);
 	memcpy(&conn->conn_initiator_sa, client_sa, client_sa->sa_len);
-
-	/*
-	 * Default values, from RFC 3720, section 12.
-	 */
-	conn->conn_max_recv_data_segment_length = 8192;
-	conn->conn_max_send_data_segment_length = 8192;
-	conn->conn_max_burst_length = 262144;
-	conn->conn_first_burst_length = 65536;
-	conn->conn_immediate_data = true;
 
 	return (conn);
 }
@@ -2069,7 +2112,7 @@ conf_apply(struct conf *oldconf, struct conf *newconf)
 	/*
 	 * Now add new ports or modify existing ones.
 	 */
-	TAILQ_FOREACH(newport, &newconf->conf_ports, p_next) {
+	TAILQ_FOREACH_SAFE(newport, &newconf->conf_ports, p_next, tmpport) {
 		if (port_is_dummy(newport))
 			continue;
 		oldport = port_find(oldconf, newport->p_name);
@@ -2086,6 +2129,8 @@ conf_apply(struct conf *oldconf, struct conf *newconf)
 			log_warnx("failed to %s port %s",
 			    (oldport == NULL) ? "add" : "update",
 			    newport->p_name);
+			if (oldport == NULL || port_is_dummy(oldport))
+				port_delete(newport);
 			/*
 			 * XXX: Uncomment after fixing the root cause.
 			 *
@@ -2170,6 +2215,10 @@ conf_apply(struct conf *oldconf, struct conf *newconf)
 			    &sockbuf, sizeof(sockbuf)) == -1)
 				log_warn("setsockopt(SO_SNDBUF) failed "
 				    "for %s", newp->p_listen);
+			if (setsockopt(newp->p_socket, SOL_SOCKET, SO_NO_DDP,
+			    &one, sizeof(one)) == -1)
+				log_warn("setsockopt(SO_NO_DDP) failed "
+				    "for %s", newp->p_listen);
 			error = setsockopt(newp->p_socket, SOL_SOCKET,
 			    SO_REUSEADDR, &one, sizeof(one));
 			if (error != 0) {
@@ -2202,6 +2251,32 @@ conf_apply(struct conf *oldconf, struct conf *newconf)
 					    IPPROTO_IPV6, IPV6_TCLASS,
 					    &tos, sizeof(tos)) == -1)
 						log_warn("setsockopt(IPV6_TCLASS) "
+						    "failed for %s",
+						    newp->p_listen);
+				}
+			}
+			if (newpg->pg_pcp != -1) {
+				struct sockaddr sa;
+				int len = sizeof(sa);
+				getsockname(newp->p_socket, &sa, &len);
+				/*
+				 * Only allow the 6-bit DSCP
+				 * field to be modified
+				 */
+				int pcp = newpg->pg_pcp;
+				if (sa.sa_family == AF_INET) {
+					if (setsockopt(newp->p_socket,
+					    IPPROTO_IP, IP_VLAN_PCP,
+					    &pcp, sizeof(pcp)) == -1)
+						log_warn("setsockopt(IP_VLAN_PCP) "
+						    "failed for %s",
+						    newp->p_listen);
+				} else
+				if (sa.sa_family == AF_INET6) {
+					if (setsockopt(newp->p_socket,
+					    IPPROTO_IPV6, IPV6_VLAN_PCP,
+					    &pcp, sizeof(pcp)) == -1)
+						log_warn("setsockopt(IPV6_VLAN_PCP) "
 						    "failed for %s",
 						    newp->p_listen);
 				}
@@ -2258,7 +2333,7 @@ conf_apply(struct conf *oldconf, struct conf *newconf)
 	return (cumulated_error);
 }
 
-bool
+static bool
 timed_out(void)
 {
 
@@ -2369,7 +2444,7 @@ static void
 handle_connection(struct portal *portal, int fd,
     const struct sockaddr *client_sa, bool dont_fork)
 {
-	struct connection *conn;
+	struct ctld_connection *conn;
 	int error;
 	pid_t pid;
 	char host[NI_MAXHOST + 1];
@@ -2689,13 +2764,17 @@ main(int argc, char **argv)
 	const char *config_path = DEFAULT_CONFIG_PATH;
 	int debug = 0, ch, error;
 	bool dont_daemonize = false;
+	bool test_config = false;
 	bool use_ucl = false;
 
-	while ((ch = getopt(argc, argv, "duf:R")) != -1) {
+	while ((ch = getopt(argc, argv, "dtuf:R")) != -1) {
 		switch (ch) {
 		case 'd':
 			dont_daemonize = true;
 			debug++;
+			break;
+		case 't':
+			test_config = true;
 			break;
 		case 'u':
 			use_ucl = true;
@@ -2727,6 +2806,10 @@ main(int argc, char **argv)
 
 	if (newconf == NULL)
 		log_errx(1, "configuration error; exiting");
+
+	if (test_config)
+		return (0);
+
 	if (debug > 0) {
 		oldconf->conf_debug = debug;
 		newconf->conf_debug = debug;
@@ -2791,6 +2874,7 @@ main(int argc, char **argv)
 			error = conf_apply(oldconf, newconf);
 			if (error != 0)
 				log_warnx("failed to apply configuration");
+			conf_delete(newconf);
 			conf_delete(oldconf);
 			oldconf = NULL;
 

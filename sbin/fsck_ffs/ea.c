@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-3-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-3-Clause
  *
  * Copyright (c) 2002 Poul-Henning Kamp
  * Copyright (c) 2002 Networks Associates Technology, Inc.
@@ -36,7 +36,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/time.h>
 #include <sys/stdint.h>
@@ -60,10 +59,9 @@ eascan(struct inodesc *idesc, struct ufs2_dinode *dp)
 	return (0);
 #else
 	struct bufarea *bp;
-	u_int dsize, n;
+	u_int n;
 	u_char *cp;
 	long blksiz;
-	char dbuf[DIRBLKSIZ];
 
 	printf("Inode %ju extsize %ju\n",
 	   (intmax_t)idesc->id_number, (uintmax_t)dp->di_extsize);
@@ -73,14 +71,17 @@ eascan(struct inodesc *idesc, struct ufs2_dinode *dp)
 		blksiz = sblock.fs_fsize;
 	else
 		blksiz = sblock.fs_bsize;
-	printf("blksiz = %ju\n", (intmax_t)blksiz);
 	bp = getdatablk(dp->di_extb[0], blksiz, BT_EXTATTR);
+	if (bp->b_errs)
+		return (STOP);
+	printf("blksiz = %ju\n", (intmax_t)blksiz);
 	cp = (u_char *)bp->b_un.b_buf;
 	for (n = 0; n < blksiz; n++) {
 		printf("%02x", cp[n]);
 		if ((n & 31) == 31)
 			printf("\n");
 	}
+	brelse(bp);
 	return (STOP);
 #endif
 }

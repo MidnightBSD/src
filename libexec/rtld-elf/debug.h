@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright 1996-1998 John D. Polstra.
  * All rights reserved.
@@ -23,8 +23,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * $FreeBSD: stable/11/libexec/rtld-elf/debug.h 346485 2019-04-21 09:13:56Z kib $
  */
 
 /*
@@ -37,7 +35,7 @@
 #include <sys/cdefs.h>
 
 #include <string.h>
-#include <unistd.h>
+#include "rtld_printf.h"
 
 void debug_printf(const char *, ...) __printflike(1, 2);
 extern int debug;
@@ -57,7 +55,7 @@ extern int debug;
 #define assert(cond)	((cond) ? (void) 0 :		\
     (msg(_MYNAME ": assert failed: " __FILE__ ":"	\
       __XSTRING(__LINE__) "\n"), abort()))
-#define msg(s)		write(STDOUT_FILENO, s, strlen(s))
+#define msg(s)		rtld_putstr(s)
 #define trace()		msg(_MYNAME ": " __XSTRING(__LINE__) "\n")
 
 

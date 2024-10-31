@@ -20,7 +20,7 @@ osrelease_start()
 {
 	local _version _version_id
 
-	check_startmsgs && echo -n "Updating ${osrelease_file} "
+	startmsg -n "Updating ${osrelease_file} "
 	_version=$(midnightbsd-version -u)
 	_version_id=${_version%%[^0-9.]*}
 	t=$(mktemp -t os-release)

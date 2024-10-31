@@ -16,7 +16,5 @@ is fully supported.
 This program may be FreeBSD specific, but should be trivial to port to
 other bsd4.4 variants.
 
-Author and maintainer: David L. Nugent, <davidn@blaze.net.au>
-
-$FreeBSD: stable/11/usr.sbin/pw/README 70588 2001-01-02 04:01:59Z peter $
+Author: David L. Nugent, <davidn@blaze.net.au>
 

@@ -1,4 +1,4 @@
-/*	$OpenBSD: arc4random.c,v 1.54 2015/09/13 08:31:47 guenther Exp $	*/
+/*	$OpenBSD: arc4random.c,v 1.58 2022/07/31 13:41:45 tb Exp $	*/
 
 /*
  * Copyright (c) 1996, David Mazieres <dm@uun.org>
@@ -24,8 +24,10 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "namespace.h"
+#if defined(__FreeBSD__)
+#include <assert.h>
+#endif
 #include <fcntl.h>
 #include <limits.h>
 #include <pthread.h>
@@ -42,6 +44,11 @@
 
 #define CHACHA_EMBED
 #define KEYSTREAM_ONLY
+#if defined(__FreeBSD__)
+#define ARC4RANDOM_FXRNG 1
+#else
+#define ARC4RANDOM_FXRNG 0
+#endif
 #include "chacha.c"
 
 #define minimum(a, b) ((a) < (b) ? (a) : (b))
@@ -57,6 +64,8 @@
 #define BLOCKSZ	64
 #define RSBUFSZ	(16*BLOCKSZ)
 
+#define REKEY_BASE	(1024*1024) /* NB. should be a power of 2 */
+
 /* Marked INHERIT_ZERO, so zero'd out in fork children. */
 static struct _rs {
 	size_t		rs_have;	/* valid bytes at end of rs_buf */
@@ -67,6 +76,9 @@ static struct _rs {
 static struct _rsx {
 	chacha_ctx	rs_chacha;	/* chacha context for random keystream */
 	u_char		rs_buf[RSBUFSZ];	/* keystream blocks */
+#ifdef __FreeBSD__
+	uint32_t	rs_seed_generation;	/* 32-bit userspace RNG version */
+#endif
 } *rsx;
 
 static inline int _rs_allocate(struct _rs **, struct _rsx **);
@@ -83,7 +95,7 @@ _rs_init(u_char *buf, size_t n)
 
 	if (rs == NULL) {
 		if (_rs_allocate(&rs, &rsx) == -1)
-			abort();
+			_exit(1);
 	}
 
 	chacha_keysetup(&rsx->rs_chacha, buf, KEYSZ * 8);
@@ -94,12 +106,45 @@ static void
 _rs_stir(void)
 {
 	u_char rnd[KEYSZ + IVSZ];
+	uint32_t rekey_fuzz = 0;
+
+#if defined(__FreeBSD__)
+	bool need_init;
+
+	/*
+	 * De-couple allocation (which locates the vdso_fxrngp pointer in
+	 * auxinfo) from initialization.  This allows us to read the root seed
+	 * version before we fetch system entropy, maintaining the invariant
+	 * that the PRF was seeded with entropy from rs_seed_generation or a
+	 * later generation.  But never seeded from an earlier generation.
+	 * This invariant prevents us from missing a root reseed event.
+	 */
+	need_init = false;
+	if (rs == NULL) {
+		if (_rs_allocate(&rs, &rsx) == -1)
+			abort();
+		need_init = true;
+	}
+	/*
+	 * Transition period: new userspace on old kernel.  This should become
+	 * a hard error at some point, if the scheme is adopted.
+	 */
+	if (vdso_fxrngp != NULL)
+		rsx->rs_seed_generation =
+		    fxrng_load_acq_generation(&vdso_fxrngp->fx_generation32);
+#endif
 
 	if (getentropy(rnd, sizeof rnd) == -1)
 		_getentropy_fail();
 
+#if !defined(__FreeBSD__)
 	if (!rs)
 		_rs_init(rnd, sizeof(rnd));
+#else /* __FreeBSD__ */
+	assert(rs != NULL);
+	if (need_init)
+		_rs_init(rnd, sizeof(rnd));
+#endif
 	else
 		_rs_rekey(rnd, sizeof(rnd));
 	explicit_bzero(rnd, sizeof(rnd));	/* discard source seed */
@@ -108,7 +153,10 @@ _rs_stir(void)
 	rs->rs_have = 0;
 	memset(rsx->rs_buf, 0, sizeof(rsx->rs_buf));
 
-	rs->rs_count = 1600000;
+	/* rekey interval should not be predictable */
+	chacha_encrypt_bytes(&rsx->rs_chacha, (uint8_t *)&rekey_fuzz,
+	    (uint8_t *)&rekey_fuzz, sizeof(rekey_fuzz));
+	rs->rs_count = REKEY_BASE + (rekey_fuzz % REKEY_BASE);
 }
 
 static inline void

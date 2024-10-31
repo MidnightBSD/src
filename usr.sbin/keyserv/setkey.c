@@ -31,8 +31,6 @@
 #if 0
 static char sccsid[] = "@(#)setkey.c	1.11	94/04/25 SMI";
 #endif
-static const char rcsid[] =
-  "$FreeBSD: stable/11/usr.sbin/keyserv/setkey.c 189092 2009-02-26 21:43:15Z ed $";
 #endif /* not lint */
 
 /*

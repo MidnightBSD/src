@@ -1,5 +1,5 @@
 #
-# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+# SPDX-License-Identifier: BSD-2-Clause
 #
 # Copyright (c) 2017 Kyle Evans <kevans@FreeBSD.org>
 #
@@ -181,6 +181,19 @@ x_flag_body()
 	    hexdump -x "$(atf_get_srcdir)/d_hexdump_c.in"
 }
 
+atf_test_case no_conv_err
+no_conv_err()
+{
+	atf_set "descr" "Verify missing conversion char error handling"
+}
+no_conv_err_body()
+{
+	atf_check -s exit:1 -e ignore \
+	    hexdump -e '"%"'
+	atf_check -s exit:1 -e ignore \
+	    hexdump -e '4/2 "%"'
+}
+
 atf_init_test_cases()
 {
 	atf_add_test_case b_flag
@@ -193,4 +206,5 @@ atf_init_test_cases()
 	atf_add_test_case s_flag
 	atf_add_test_case v_flag
 	atf_add_test_case x_flag
+	atf_add_test_case no_conv_err
 }

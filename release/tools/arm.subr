@@ -1,7 +1,6 @@
 #!/bin/sh
 #-
 # Copyright (c) 2015-2017 The FreeBSD Foundation
-# All rights reserved.
 #
 # Portions of this software were developed by Glen Barber
 # under sponsorship from the FreeBSD Foundation.
@@ -27,7 +26,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# Common subroutines used to build arm SD card images.
+# Common subroutines used to build arm, arm64, or RISC-V SD card images.
 #
 #
 
@@ -62,15 +61,19 @@ umount_loop() {
 }
 
 arm_create_disk() {
+	if [ $(sysctl -n kern.geom.part.mbr.enforce_chs) != 0 ]; then
+		return 1
+	fi
+
 	# Create the target raw file and temporary work directory.
 	chroot ${CHROOTDIR} gpart create -s ${PART_SCHEME} ${mddev}
-	if [ "${PART_SCHEME}" == "GPT" ]; then
+	if [ "${PART_SCHEME}" = "GPT" ]; then
 		chroot ${CHROOTDIR} gpart add -t efi -l efi -a 512k -s ${FAT_SIZE} ${mddev}
 		chroot ${CHROOTDIR} newfs_msdos -L efi -F ${FAT_TYPE} /dev/${mddev}p1
 		chroot ${CHROOTDIR} gpart add -t mnbsd-ufs -l rootfs -a 64k ${mddev}
 		chroot ${CHROOTDIR} newfs -U -L rootfs /dev/${mddev}p2
 	fi
-	if [ "${PART_SCHEME}" == "MBR" ]; then
+	if [ "${PART_SCHEME}" = "MBR" ]; then
 		chroot ${CHROOTDIR} gpart add -t '!12' -a 512k -s ${FAT_SIZE} ${mddev}
 		chroot ${CHROOTDIR} gpart set -a active -i 1 ${mddev}
 		chroot ${CHROOTDIR} newfs_msdos -L msdosboot -F ${FAT_TYPE} /dev/${mddev}s1
@@ -168,17 +171,22 @@ arm_setup_minimal_loader() {
 }
 
 arm_install_base() {
-	if [ "${PART_SCHEME}" == "GPT" ]; then
+	if [ "${PART_SCHEME}" = "GPT" ]; then
 		chroot ${CHROOTDIR} mount /dev/${mddev}p2 ${DESTDIR}
 	fi
-	if [ "${PART_SCHEME}" == "MBR" ]; then
+	if [ "${PART_SCHEME}" = "MBR" ]; then
 		chroot ${CHROOTDIR} mount /dev/${mddev}s2a ${DESTDIR}
 	fi
+	_OSVERSION=$(chroot ${CHROOTDIR} /usr/bin/uname -U)
+	REVISION=$(chroot ${CHROOTDIR} make -C /usr/src/release -V REVISION)
+	BRANCH=$(chroot ${CHROOTDIR} make -C /usr/src/release -V BRANCH)
+	export UNAME_r=${REVISION}-${BRANCH}
 	eval chroot ${CHROOTDIR} make -C ${WORLDDIR} \
 		TARGET=${EMBEDDED_TARGET} \
 		TARGET_ARCH=${EMBEDDED_TARGET_ARCH} \
 		DESTDIR=${DESTDIR} KERNCONF=${KERNEL} \
 		${CONF_FILES} installworld installkernel distribution
+	chroot ${CHROOTDIR} mkdir -p ${DESTDIR}/boot/efi
 	chroot ${CHROOTDIR} mkdir -p ${DESTDIR}/boot/msdos
 
 	arm_create_user
@@ -190,19 +198,19 @@ arm_install_base() {
 
 	echo '# Custom /etc/fstab for MidnightBSD embedded images' \
 		> ${CHROOTDIR}/${DESTDIR}/etc/fstab
-	if [ "${PART_SCHEME}" == "GPT" ]; then
-		echo "/dev/ufs/rootfs   /       ufs     rw      1       1" \
+	if [ "${PART_SCHEME}" = "GPT" ]; then
+		echo "/dev/ufs/rootfs		/		ufs	rw		1	1" \
 			>> ${CHROOTDIR}/${DESTDIR}/etc/fstab
-		echo "/dev/msdosfs/EFI /boot/efi msdosfs rw,noatime 0 0" \
-			>> ${CHROOTDIR}/${DESTDIR}/etc/fstab
-	fi
-	if [ "${PART_SCHEME}" == "MBR" ]; then
-		echo "/dev/ufs/rootfs   /       ufs     rw      1       1" \
-			>> ${CHROOTDIR}/${DESTDIR}/etc/fstab
-		echo "/dev/msdosfs/MSDOSBOOT /boot/msdos msdosfs rw,noatime 0 0" \
+		echo "/dev/msdosfs/EFI		/boot/efi	msdosfs	rw,noatime	0	0" \
 			>> ${CHROOTDIR}/${DESTDIR}/etc/fstab
 	fi
-	echo "tmpfs /tmp tmpfs rw,mode=1777,size=50m 0 0" \
+	if [ "${PART_SCHEME}" = "MBR" ]; then
+		echo "/dev/ufs/rootfs		/		ufs	rw		1	1" \
+			>> ${CHROOTDIR}/${DESTDIR}/etc/fstab
+		echo "/dev/msdosfs/MSDOSBOOT	/boot/msdos 	msdosfs	rw,noatime	0	0" \
+			>> ${CHROOTDIR}/${DESTDIR}/etc/fstab
+	fi
+	echo "tmpfs			/tmp		tmpfs	rw,mode=1777	0	0" \
 		>> ${CHROOTDIR}/${DESTDIR}/etc/fstab
 
 	local hostname
@@ -215,6 +223,9 @@ arm_install_base() {
 	echo 'sendmail_outbound_enable="NO"' >> ${CHROOTDIR}/${DESTDIR}/etc/rc.conf
 	echo 'sendmail_msp_queue_enable="NO"' >> ${CHROOTDIR}/${DESTDIR}/etc/rc.conf
 	echo 'growfs_enable="YES"' >> ${CHROOTDIR}/${DESTDIR}/etc/rc.conf
+	if [ -n "${CONFIG_POWERD_ENABLE}" ]; then
+		echo 'powerd_enable="YES"' >> ${CHROOTDIR}/${DESTDIR}/etc/rc.conf
+	fi
 
 	sync
 	umount_loop ${CHROOTDIR}/${DESTDIR}
@@ -226,22 +237,17 @@ arm_install_boot() {
 	FATMOUNT="${DESTDIR%${KERNEL}}/fat"
 	UFSMOUNT="${DESTDIR%${KERNEL}}/ufs"
 	chroot ${CHROOTDIR} mkdir -p "${FATMOUNT}" "${UFSMOUNT}"
-	if [ "${PART_SCHEME}" == "GPT" ]; then
+	if [ "${PART_SCHEME}" = "GPT" ]; then
 		dospart="/dev/${mddev}p1"
 		ufspart="/dev/${mddev}p2"
 	fi
-	if [ "${PART_SCHEME}" == "MBR" ]; then
+	if [ "${PART_SCHEME}" = "MBR" ]; then
 		dospart="/dev/${mddev}s1"
 		ufspart="/dev/${mddev}s2a"
 	fi
 
 	chroot ${CHROOTDIR} mount_msdosfs ${dospart} ${FATMOUNT}
 	chroot ${CHROOTDIR} mount ${ufspart} ${UFSMOUNT}
-
-	if [ "${EMBEDDED_TARGET}" == "arm" ]; then
-	chroot ${CHROOTDIR} cp -p ${UFSMOUNT}/boot/ubldr.bin \
-		${FATMOUNT}/ubldr.bin
-	fi
 
 	BOOTFILES="$(chroot ${CHROOTDIR} \
 		env TARGET=${EMBEDDED_TARGET} TARGET_ARCH=${EMBEDDED_TARGET_ARCH} \
@@ -264,11 +270,11 @@ arm_install_boot() {
 }
 
 arm_install_uboot() {
-	# Override in the arm/KERNEL.conf file.
+	# Override in the ${EMBEDDED_TARGET}/${BOARDNAME}.conf file.
 
 	return 0
 }
 
 arm_do_quirk() {
-	# Override in the arm{,64}/BOARD.conf file.
+	# Override in the ${EMBEDDED_TARGET}/${BOARDNAME}.conf file.
 }

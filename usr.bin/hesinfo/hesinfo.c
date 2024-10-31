@@ -19,7 +19,6 @@
 
 
 #include <sys/cdefs.h>
-
 #include <err.h>
 #include <errno.h>
 #include <hesiod.h>

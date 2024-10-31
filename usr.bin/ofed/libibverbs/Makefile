@@ -1,4 +1,6 @@
 
+PACKAGE=	FreeBSD-rdma
+
 SUBDIR= \
 asyncwatch \
 devinfo \

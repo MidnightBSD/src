@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/endian.h>
@@ -587,10 +586,10 @@ reloc_non_plt(Obj_Entry *obj, Obj_Entry *obj_rtld, int flags,
 			if (def == NULL)
 				return -1;
 
-			if (!defobj->tls_done && !allocate_tls_offset(obj))
+			if (!defobj->tls_static && !allocate_tls_offset(obj))
 				return -1;
 
-			val += (Elf_Addr)def->st_value - TLS_DTP_OFFSET;
+			val += (Elf_Addr)def->st_value - TLS_DTV_OFFSET;
 			store_ptr(where, val, rlen);
 
 			dbg("DTPREL %s in %s %p --> %p in %s",
@@ -615,7 +614,7 @@ reloc_non_plt(Obj_Entry *obj, Obj_Entry *obj_rtld, int flags,
 			if (def == NULL)
 				return -1;
 
-			if (!defobj->tls_done && !allocate_tls_offset(obj))
+			if (!defobj->tls_static && !allocate_tls_offset(obj))
 				return -1;
 
 			val += (Elf_Addr)(def->st_value + defobj->tlsoffset
@@ -759,15 +758,8 @@ ifunc_init(Elf_Auxinfo aux_info[__min_size(AT_COUNT)] __unused)
 }
 
 void
-pre_init(void)
-{
-
-}
-
-void
 allocate_initial_tls(Obj_Entry *objs)
 {
-	char *tls;
 	
 	/*
 	 * Fix the size of the static TLS block by using the maximum
@@ -776,74 +768,17 @@ allocate_initial_tls(Obj_Entry *objs)
 	 */
 	tls_static_space = tls_last_offset + tls_last_size + RTLD_STATIC_TLS_EXTRA;
 
-	tls = (char *) allocate_tls(objs, NULL, TLS_TCB_SIZE, 8);
-
-	sysarch(MIPS_SET_TLS, tls);
+	_tcb_set(allocate_tls(objs, NULL, TLS_TCB_SIZE, TLS_TCB_ALIGN));
 }
-
-#ifdef __mips_n64
-void *
-_mips_get_tls(void)
-{
-	uint64_t _rv;
-
-	__asm__ __volatile__ (
-	    ".set\tpush\n\t"
-	    ".set\tmips64r2\n\t"
-	    "rdhwr\t%0, $29\n\t"
-	    ".set\tpop"
-	    : "=r" (_rv));
-	/*
-	 * XXXSS See 'git show c6be4f4d2d1b71c04de5d3bbb6933ce2dbcdb317'
-	 *
-	 * Remove the offset since this really a request to get the TLS
-	 * pointer via sysarch() (in theory).  Of course, this may go away
-	 * once the TLS code is rewritten.
-	 */
-	_rv = _rv - TLS_TP_OFFSET - TLS_TCB_SIZE;
-
-	return (void *)_rv;
-}
-
-#else /* mips 32 */
-
-void *
-_mips_get_tls(void)
-{
-	uint32_t _rv;
-
-	__asm__ __volatile__ (
-	    ".set\tpush\n\t"
-	    ".set\tmips32r2\n\t"
-	    "rdhwr\t%0, $29\n\t"
-	    ".set\tpop"
-	    : "=r" (_rv));
-	/*
-	 * XXXSS See 'git show c6be4f4d2d1b71c04de5d3bbb6933ce2dbcdb317'
-	 *
-	 * Remove the offset since this really a request to get the TLS
-	 * pointer via sysarch() (in theory).  Of course, this may go away
-	 * once the TLS code is rewritten.
-	 */
-	_rv = _rv - TLS_TP_OFFSET - TLS_TCB_SIZE;
-
-	return (void *)_rv;
-}
-#endif /* ! __mips_n64 */
 
 void *
 __tls_get_addr(tls_index* ti)
 {
-	Elf_Addr** tls;
+	uintptr_t **dtvp;
 	char *p;
 
-#ifdef TLS_USE_SYSARCH
-	sysarch(MIPS_GET_TLS, &tls);
-#else
-	tls = _mips_get_tls();
-#endif
+	dtvp = &_tcb_get()->tcb_dtv;
+	p = tls_get_addr_common(dtvp, ti->ti_module, ti->ti_offset);
 
-	p = tls_get_addr_common(tls, ti->ti_module, ti->ti_offset + TLS_DTP_OFFSET);
-
-	return (p);
+	return (p + TLS_DTV_OFFSET);
 }

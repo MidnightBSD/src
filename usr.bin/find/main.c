@@ -41,7 +41,6 @@ static char sccsid[] = "@(#)main.c	8.4 (Berkeley) 5/4/95";
 #endif
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <sys/stat.h>
 
@@ -69,8 +68,10 @@ int isxargs;			/* don't permit xargs delimiting chars */
 int mindepth = -1, maxdepth = -1; /* minimum and maximum depth */
 int regexp_flags = REG_BASIC;	/* use the "basic" regexp by default*/
 int exitstatus;
+volatile sig_atomic_t showinfo = 0;
 
 static void usage(void);
+static void siginfo_handler(int sig __unused);
 
 int
 main(int argc, char *argv[])
@@ -81,6 +82,8 @@ main(int argc, char *argv[])
 	(void)setlocale(LC_ALL, "");
 
 	(void)time(&now);	/* initialize the time-of-day */
+
+	(void)signal(SIGINFO, siginfo_handler);
 
 	p = start = argv;
 	Hflag = Lflag = 0;
@@ -161,4 +164,10 @@ usage(void)
 "usage: find [-H | -L | -P] [-EXdsx] [-f path] path ... [expression]",
 "       find [-H | -L | -P] [-EXdsx] -f path [path ...] [expression]");
 	exit(1);
+}
+
+static void
+siginfo_handler(int sig __unused)
+{
+	showinfo = 1;
 }

@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/fnv_hash.h>
 
@@ -44,6 +43,7 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 
+#include <stdbool.h>
 #include <net/vnet.h>
 
 #include <assert.h>
@@ -130,7 +130,8 @@ _kvm_probe_elf_kernel(kvm_t *kd, int class, int machine)
 {
 
 	return (kd->nlehdr.e_ident[EI_CLASS] == class &&
-	    kd->nlehdr.e_type == ET_EXEC &&
+	    ((machine == EM_PPC || machine == EM_PPC64) ?
+	     kd->nlehdr.e_type == ET_DYN : kd->nlehdr.e_type == ET_EXEC) &&
 	    kd->nlehdr.e_machine == machine);
 }
 
@@ -287,14 +288,29 @@ _kvm_map_get(kvm_t *kd, u_long pa, unsigned int page_size)
 }
 
 int
-_kvm_pt_init(kvm_t *kd, size_t map_len, off_t map_off, off_t sparse_off,
-    int page_size, int word_size)
+_kvm_pt_init(kvm_t *kd, size_t dump_avail_size, off_t dump_avail_off,
+    size_t map_len, off_t map_off, off_t sparse_off, int page_size)
 {
 	uint64_t *addr;
 	uint32_t *popcount_bin;
 	int bin_popcounts = 0;
 	uint64_t pc_bins, res;
 	ssize_t rd;
+
+	kd->dump_avail_size = dump_avail_size;
+	if (dump_avail_size > 0) {
+		kd->dump_avail = mmap(NULL, kd->dump_avail_size, PROT_READ,
+		    MAP_PRIVATE, kd->pmfd, dump_avail_off);
+	} else {
+		/*
+		 * Older version minidumps don't provide dump_avail[],
+		 * so the bitmap is fully populated from 0 to
+		 * last_pa. Create an implied dump_avail that
+		 * expresses this.
+		 */
+		kd->dump_avail = calloc(4, sizeof(uint64_t));
+		kd->dump_avail[1] = _kvm64toh(kd, map_len * 8 * page_size);
+	}
 
 	/*
 	 * Map the bitmap specified by the arguments.
@@ -350,7 +366,6 @@ _kvm_pt_init(kvm_t *kd, size_t map_len, off_t map_off, off_t sparse_off,
 	kd->pt_sparse_off = sparse_off;
 	kd->pt_sparse_size = (uint64_t)*popcount_bin * page_size;
 	kd->pt_page_size = page_size;
-	kd->pt_word_size = word_size;
 
 	/*
 	 * Map the sparse page array.  This is useful for performing point
@@ -391,6 +406,49 @@ _kvm_pmap_init(kvm_t *kd, uint32_t pmap_size, off_t pmap_off)
 	return (0);
 }
 
+static inline uint64_t
+dump_avail_n(kvm_t *kd, long i)
+{
+	return (_kvm64toh(kd, kd->dump_avail[i]));
+}
+
+uint64_t
+_kvm_pa_bit_id(kvm_t *kd, uint64_t pa, unsigned int page_size)
+{
+	uint64_t adj;
+	long i;
+
+	adj = 0;
+	for (i = 0; dump_avail_n(kd, i + 1) != 0; i += 2) {
+		if (pa >= dump_avail_n(kd, i + 1)) {
+			adj += howmany(dump_avail_n(kd, i + 1), page_size) -
+			    dump_avail_n(kd, i) / page_size;
+		} else {
+			return (pa / page_size -
+			    dump_avail_n(kd, i) / page_size + adj);
+		}
+	}
+	return (_KVM_BIT_ID_INVALID);
+}
+
+uint64_t
+_kvm_bit_id_pa(kvm_t *kd, uint64_t bit_id, unsigned int page_size)
+{
+	uint64_t sz;
+	long i;
+
+	for (i = 0; dump_avail_n(kd, i + 1) != 0; i += 2) {
+		sz = howmany(dump_avail_n(kd, i + 1), page_size) -
+		    dump_avail_n(kd, i) / page_size;
+		if (bit_id < sz) {
+			return (rounddown2(dump_avail_n(kd, i), page_size) +
+			    bit_id * page_size);
+		}
+		bit_id -= sz;
+	}
+	return (_KVM_PA_INVALID);
+}
+
 /*
  * Find the offset for the given physical page address; returns -1 otherwise.
  *
@@ -409,7 +467,7 @@ off_t
 _kvm_pt_find(kvm_t *kd, uint64_t pa, unsigned int page_size)
 {
 	uint64_t *bitmap = kd->pt_map;
-	uint64_t pte_bit_id = pa / page_size;
+	uint64_t pte_bit_id = _kvm_pa_bit_id(kd, pa, page_size);
 	uint64_t pte_u64 = pte_bit_id / BITS_IN(*bitmap);
 	uint64_t popcount_id = pte_bit_id / POPCOUNT_BITS;
 	uint64_t pte_mask = 1ULL << (pte_bit_id % BITS_IN(*bitmap));
@@ -417,7 +475,8 @@ _kvm_pt_find(kvm_t *kd, uint64_t pa, unsigned int page_size)
 	uint32_t count;
 
 	/* Check whether the page address requested is in the dump. */
-	if (pte_bit_id >= (kd->pt_map_size * NBBY) ||
+	if (pte_bit_id == _KVM_BIT_ID_INVALID ||
+	    pte_bit_id >= (kd->pt_map_size * NBBY) ||
 	    (bitmap[pte_u64] & pte_mask) == 0)
 		return (-1);
 
@@ -711,12 +770,12 @@ _kvm_bitmap_init(struct kvm_bitmap *bm, u_long bitmapsize, u_long *idx)
 }
 
 void
-_kvm_bitmap_set(struct kvm_bitmap *bm, u_long pa, unsigned int page_size)
+_kvm_bitmap_set(struct kvm_bitmap *bm, u_long bm_index)
 {
-	u_long bm_index = pa / page_size;
 	uint8_t *byte = &bm->map[bm_index / 8];
 
-	*byte |= (1UL << (bm_index % 8));
+	if (bm_index / 8 < bm->size)
+		*byte |= (1UL << (bm_index % 8));
 }
 
 int
@@ -731,8 +790,8 @@ _kvm_bitmap_next(struct kvm_bitmap *bm, u_long *idx)
 
 	/* Find the next valid idx. */
 	for (; *idx < first_invalid; (*idx)++) {
-		unsigned int mask = *idx % CHAR_BIT;
-		if ((bm->map[*idx * CHAR_BIT] & mask) == 0)
+		unsigned int mask = 1U << (*idx % CHAR_BIT);
+		if ((bm->map[*idx / CHAR_BIT] & mask) != 0)
 			break;
 	}
 
@@ -753,13 +812,13 @@ _kvm_visit_cb(kvm_t *kd, kvm_walk_pages_cb_t *cb, void *arg, u_long pa,
 {
 	unsigned int pgsz = page_size ? page_size : len;
 	struct kvm_page p = {
-		.version = LIBKVM_WALK_PAGES_VERSION,
-		.paddr = pa,
-		.kmap_vaddr = kmap_vaddr,
-		.dmap_vaddr = dmap_vaddr,
-		.prot = prot,
-		.offset = _kvm_pt_find(kd, pa, pgsz),
-		.len = len,
+		.kp_version = LIBKVM_WALK_PAGES_VERSION,
+		.kp_paddr = pa,
+		.kp_kmap_vaddr = kmap_vaddr,
+		.kp_dmap_vaddr = dmap_vaddr,
+		.kp_prot = prot,
+		.kp_offset = _kvm_pt_find(kd, pa, pgsz),
+		.kp_len = len,
 	};
 
 	return cb(&p, arg);

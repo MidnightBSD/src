@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-3-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-3-Clause
  *
  * Copyright (c) 2003 Poul-Henning Kamp
  * All rights reserved.
@@ -27,7 +27,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 
@@ -407,16 +406,20 @@ main(int argc, char **argv)
 				PRINTMSG(",%.0f", (double)ld[2] * 1024);
 				if (ld[3] > 1e3) 
 					PRINTMSG(",%.0f", (double)ld[3]);
-				else
+				else if (ld[3] > 1e0)
 					PRINTMSG(",%.1f", (double)ld[3]);
+				else
+					PRINTMSG(",%.3f", (double)ld[3]);
 				PRINTMSG(",%.0f", (double)ld[4]);
 				if (flag_s)
 					PRINTMSG(",%.0f", (double)ld[14]);
 				PRINTMSG(",%.0f", (double)ld[5] * 1024);
 				if (ld[6] > 1e3) 
 					PRINTMSG(",%.0f", (double)ld[6]);
-				else
+				else if (ld[6] > 1e0)
 					PRINTMSG(",%.1f", (double)ld[6]);
+				else
+					PRINTMSG(",%.3f", (double)ld[6]);
 
 				if (flag_d) {
 					PRINTMSG(",%.0f", (double)ld[8]);
@@ -427,8 +430,11 @@ main(int argc, char **argv)
 					if (ld[10] > 1e3) 
 						PRINTMSG(",%.0f",
 								(double)ld[10]);
-					else
+					else if (ld[10] > 1e0)
 						PRINTMSG(",%.1f",
+								(double)ld[10]);
+					else
+						PRINTMSG(",%.3f",
 								(double)ld[10]);
 				}
 
@@ -437,8 +443,11 @@ main(int argc, char **argv)
 					if (ld[12] > 1e3) 
 						PRINTMSG(",%.0f",
 								(double)ld[12]);
+					else if (ld[12] > 1e0)
+						PRINTMSG(",%.1f",
+								(double)ld[12]);
 					else
-						PRINTMSG(",%.1f", 
+						PRINTMSG(",%.3f",
 								(double)ld[12]);
 				}
 				PRINTMSG(",%.1lf", (double)ld[7]);
@@ -451,16 +460,20 @@ main(int argc, char **argv)
 				PRINTMSG(" %6.0f", (double)ld[2] * 1024);
 				if (ld[3] > 1e3) 
 					PRINTMSG(" %6.0f", (double)ld[3]);
-				else
+				else if (ld[3] > 1e0)
 					PRINTMSG(" %6.1f", (double)ld[3]);
+				else
+					PRINTMSG(" %6.3f", (double)ld[3]);
 				PRINTMSG(" %6.0f", (double)ld[4]);
 				if (flag_s)
 					PRINTMSG(" %6.0f", (double)ld[14]);
 				PRINTMSG(" %6.0f", (double)ld[5] * 1024);
 				if (ld[6] > 1e3) 
 					PRINTMSG(" %6.0f", (double)ld[6]);
-				else
+				else if (ld[6] > 1e0)
 					PRINTMSG(" %6.1f", (double)ld[6]);
+				else
+					PRINTMSG(" %6.3f", (double)ld[6]);
 
 				if (flag_d) {
 					PRINTMSG(" %6.0f", (double)ld[8]);
@@ -472,8 +485,11 @@ main(int argc, char **argv)
 					if (ld[10] > 1e3) 
 						PRINTMSG(" %6.0f",
 								(double)ld[10]);
-					else
+					else if (ld[10] > 1e0)
 						PRINTMSG(" %6.1f",
+								(double)ld[10]);
+					else
+						PRINTMSG(" %6.3f",
 								(double)ld[10]);
 				}
 
@@ -482,8 +498,11 @@ main(int argc, char **argv)
 					if (ld[12] > 1e3) 
 						PRINTMSG(" %6.0f",
 								(double)ld[12]);
+					else if (ld[12] > 1e0)
+						PRINTMSG(" %6.1f",
+								(double)ld[12]);
 					else
-						PRINTMSG(" %6.1f", 
+						PRINTMSG(" %6.3f",
 								(double)ld[12]);
 				}
 
@@ -516,7 +535,8 @@ main(int argc, char **argv)
 			if (!flag_B)
 				loop = 0;
 			else
-				fflush(stdout);
+				if (fflush(stdout) == EOF)
+					goto out;
 			usleep(flag_I);
 			continue;
 		}
@@ -584,7 +604,7 @@ main(int argc, char **argv)
 			}
 		}
 	}
-
+out:
 	if (!flag_b) {
 		el_end(el);
 		endwin();

@@ -24,7 +24,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <search.h>
 #include <stdlib.h>
 

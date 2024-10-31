@@ -1,3 +1,5 @@
+
+.include <bsd.init.mk>
 .include "../llvm.pre.mk"
 
 LIB=		llvmminimal

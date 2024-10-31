@@ -22,7 +22,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /* CLOOP format and related constants */
@@ -38,9 +37,11 @@
 
 #define CLOOP_MAJVER_2	'2'
 #define CLOOP_MAJVER_3	'3'
+#define CLOOP_MAJVER_4	'4'
 
 #define CLOOP_COMP_LIBZ	'V'
 #define	CLOOP_COMP_LZMA	'L'
+#define	CLOOP_COMP_ZSTD	'Z'
 
 struct cloop_header {
         char magic[CLOOP_MAGIC_LEN];    /* cloop magic */

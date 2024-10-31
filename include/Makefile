@@ -5,7 +5,6 @@
 .include <src.opts.mk>
 
 PACKAGE=runtime
-TAGS+=	development
 CLEANFILES= osreldate.h version
 SUBDIR= arpa protocols rpcsvc rpc xlocale
 SUBDIR_PARALLEL=
@@ -21,7 +20,8 @@ INCS=	a.out.h ar.h assert.h bitstring.h byteswap.h \
 	netdb.h nl_types.h nlist.h nss.h nsswitch.h ohash.h paths.h \
 	printf.h proc_service.h pthread.h \
 	pthread_np.h pwd.h ranlib.h readpassphrase.h regex.h \
-	res_update.h resolv.h runetype.h search.h semaphore.h setjmp.h \
+	res_update.h resolv.h runetype.h sched.h \
+	search.h semaphore.h setjmp.h \
 	signal.h spawn.h stab.h stdalign.h stdbool.h stddef.h \
 	stdnoreturn.h stdio.h stdlib.h string.h stringlist.h \
 	strings.h sysexits.h tar.h termios.h tgmath.h \
@@ -34,30 +34,32 @@ INCS+=	vis.h
 
 MHDRS=	float.h floatingpoint.h stdarg.h
 
-PHDRS=	sched.h _semaphore.h
+PHDRS=	_semaphore.h
 
 LHDRS=	aio.h errno.h fcntl.h linker_set.h poll.h stdatomic.h stdint.h \
 	syslog.h ucontext.h
 
-LDIRS=	bsm cam geom net net80211 netgraph netinet netinet6 \
-	netipsec netsmb nfs nfsclient nfsserver sys vm
+LDIRS=	geom net net80211 netgraph netinet netinet6 \
+	netipsec netlink netsmb nfs nfsclient nfsserver sys vm
 
 LSUBDIRS=	cam/ata cam/mmc cam/nvme cam/scsi \
 	dev/acpica dev/agp dev/an dev/bktr dev/ciss dev/filemon dev/firewire \
 	dev/hwpmc dev/hyperv \
 	dev/ic dev/iicbus dev/io dev/mfi dev/mmc dev/nvme \
 	dev/ofw dev/pbio dev/pci ${_dev_powermac_nvram} dev/ppbus dev/pwm \
-	dev/smbus dev/speaker dev/tcp_log dev/veriexec dev/vkbd dev/wi \
-	fs/devfs fs/fdescfs fs/msdosfs fs/nandfs fs/nfs fs/nullfs \
+	dev/smbus dev/speaker dev/tcp_log dev/veriexec dev/vkbd dev/wg \
+	fs/devfs fs/fdescfs fs/msdosfs fs/nfs fs/nullfs \
 	fs/procfs fs/smbfs fs/udf fs/unionfs \
 	geom/cache geom/concat geom/eli geom/gate geom/journal geom/label \
 	geom/mirror geom/mountver geom/multipath geom/nop \
 	geom/raid geom/raid3 geom/shsec geom/stripe geom/virstor \
 	net/altq \
+	net/route \
 	netgraph/atm netgraph/netflow \
 	netinet/cc \
 	netinet/netdump \
-	security/audit \
+	netinet/tcp_stacks \
+	netlink/route \
 	security/mac_biba security/mac_bsdextended security/mac_lomac \
 	security/mac_mls security/mac_partition \
 	security/mac_veriexec \

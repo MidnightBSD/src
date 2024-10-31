@@ -41,7 +41,6 @@ static char sccsid[] = "@(#)uudecode.c	8.2 (Berkeley) 4/2/94";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-
 /*
  * uudecode [file ...]
  *
@@ -61,6 +60,7 @@ static char sccsid[] = "@(#)uudecode.c	8.2 (Berkeley) 4/2/94";
 #include <libgen.h>
 #include <pwd.h>
 #include <resolv.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -68,7 +68,7 @@ static char sccsid[] = "@(#)uudecode.c	8.2 (Berkeley) 4/2/94";
 
 static const char *infile, *outfile;
 static FILE *infp, *outfp;
-static int base64, cflag, iflag, oflag, pflag, rflag, sflag;
+static bool base64, cflag, iflag, oflag, pflag, rflag, sflag;
 
 static void	usage(void);
 static int	decode(void);
@@ -82,42 +82,42 @@ main(int argc, char *argv[])
 	int rval, ch;
 
 	if (strcmp(basename(argv[0]), "b64decode") == 0)
-		base64 = 1;
+		base64 = true;
 
 	while ((ch = getopt(argc, argv, "cimo:prs")) != -1) {
 		switch (ch) {
 		case 'c':
 			if (oflag || rflag)
 				usage();
-			cflag = 1; /* multiple uudecode'd files */
+			cflag = true; /* multiple uudecode'd files */
 			break;
 		case 'i':
-			iflag = 1; /* ask before override files */
+			iflag = true; /* ask before override files */
 			break;
 		case 'm':
-			base64 = 1;
+			base64 = true;
 			break;
 		case 'o':
 			if (cflag || pflag || rflag || sflag)
 				usage();
-			oflag = 1; /* output to the specified file */
-			sflag = 1; /* do not strip pathnames for output */
+			oflag = true; /* output to the specified file */
+			sflag = true; /* do not strip pathnames for output */
 			outfile = optarg; /* set the output filename */
 			break;
 		case 'p':
 			if (oflag)
 				usage();
-			pflag = 1; /* print output to stdout */
+			pflag = true; /* print output to stdout */
 			break;
 		case 'r':
 			if (cflag || oflag)
 				usage();
-			rflag = 1; /* decode raw data */
+			rflag = true; /* decode raw data */
 			break;
 		case 's':
 			if (oflag)
 				usage();
-			sflag = 1; /* do not strip pathnames for output */
+			sflag = true; /* do not strip pathnames for output */
 			break;
 		default:
 			usage();
@@ -184,14 +184,14 @@ decode2(void)
 	struct stat st;
 	char buf[MAXPATHLEN + 1];
 
-	base64 = 0;
+	base64 = false;
 	/* search for header line */
 	for (;;) {
 		if (fgets(buf, sizeof(buf), infp) == NULL)
 			return (EOF);
 		p = buf;
 		if (strncmp(p, "begin-base64 ", 13) == 0) {
-			base64 = 1;
+			base64 = true;
 			p += 13;
 		} else if (strncmp(p, "begin ", 6) == 0)
 			p += 6;
@@ -351,7 +351,7 @@ uu_decode(void)
 
 #define OUT_OF_RANGE do {						\
 	warnx("%s: %s: character out of range: [%d-%d]",		\
-	    infile, outfile, 1 + ' ', 077 + ' ' + 1);			\
+	    infile, outfile, ' ', 077 + ' ' + 1);			\
 	return (1);							\
 } while (0)
 
@@ -377,7 +377,7 @@ uu_decode(void)
 			} else {
 				if (i >= 1) {
 					if (!(IS_DEC(*p) && IS_DEC(*(p + 1))))
-	                                	OUT_OF_RANGE;
+						OUT_OF_RANGE;
 					ch = DEC(p[0]) << 2 | DEC(p[1]) >> 4;
 					putc(ch, outfp);
 				}

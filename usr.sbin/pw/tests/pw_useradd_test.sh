@@ -1,4 +1,3 @@
-# $FreeBSD: stable/11/usr.sbin/pw/tests/pw_useradd_test.sh 330694 2018-03-09 14:45:17Z dab $
 
 # Import helper functions
 . $(atf_get_srcdir)/helper_functions.shin
@@ -306,6 +305,22 @@ user_add_R_symlink_body() {
 	atf_check -s exit:0 -o inline:"usr/home\n" readlink ${HOME}/home
 }
 
+atf_test_case user_add_dir
+user_add_dir_body() {
+	populate_root_etc_skel
+
+	atf_check -s exit:0 ${RPW} useradd foo -M 0705 -m
+	atf_check grep -q '^foo:' $HOME/etc/master.passwd
+	atf_check test -d ${HOME}/home/foo
+	atf_check -o save:ugid \
+	      awk -F: '$1 == "foo" { print $3, $4 }' \
+	      $HOME/etc/master.passwd
+	atf_check -o file:ugid \
+	    stat -f '%u %g' ${HOME}/home/foo
+	atf_check -o inline:"40705\n" \
+	    stat -f '%p' ${HOME}/home/foo
+}
+
 atf_test_case user_add_skel
 user_add_skel_body() {
 	populate_root_etc_skel
@@ -421,6 +436,7 @@ user_add_with_pw_conf_body()
 	atf_check -s exit:0 \
 		${PW} useradd foo -C ${HOME}/pw.conf
 }
+
 atf_test_case user_add_defaultgroup
 user_add_defaultgroup_body()
 {
@@ -433,6 +449,25 @@ user_add_defaultgroup_body()
 	atf_check -s exit:0 \
 		-o inline:"foo:*:1001:442::0:0:User &:/home/foo:/bin/sh\n" \
 		${PW} usershow foo
+}
+
+atf_test_case user_add_conf_defaultpasswd
+user_add_conf_defaultpasswd_body()
+{
+	populate_etc_skel
+
+	atf_check -s exit:0 ${PW} useradd -D -w no
+	atf_check -o inline:"defaultpasswd = \"no\"\n" \
+	    grep defaultpasswd ${HOME}/pw.conf
+	atf_check -s exit:0 ${PW} useradd -D -w none
+	atf_check -o inline:"defaultpasswd = \"none\"\n" \
+	    grep defaultpasswd ${HOME}/pw.conf
+	atf_check -s exit:0 ${PW} useradd -D -w random
+	atf_check -o inline:"defaultpasswd = \"random\"\n" \
+	    grep defaultpasswd ${HOME}/pw.conf
+	atf_check -s exit:0 ${PW} useradd -D -w yes
+	atf_check -o inline:"defaultpasswd = \"yes\"\n" \
+	    grep defaultpasswd ${HOME}/pw.conf
 }
 
 atf_init_test_cases() {
@@ -460,6 +495,7 @@ atf_init_test_cases() {
 	atf_add_test_case user_add_password_from_h
 	atf_add_test_case user_add_R
 	atf_add_test_case user_add_R_symlink
+	atf_add_test_case user_add_dir
 	atf_add_test_case user_add_skel
 	atf_add_test_case user_add_uid0
 	atf_add_test_case user_add_uid_too_large
@@ -472,4 +508,6 @@ atf_init_test_cases() {
 	atf_add_test_case user_add_w_yes
 	atf_add_test_case user_add_with_pw_conf
 	atf_add_test_case user_add_defaultgroup
+
+	atf_add_test_case user_add_conf_defaultpasswd
 }

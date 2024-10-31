@@ -6,7 +6,12 @@
 PACKAGE=rescue
 MAN=
 MK_SSP=	no
+# Static-PIE is not supported so we should not be linking against _pie.a libs.
+# This is also needed to avoid linking against sanitizer-instrumented libraries
+# since MK_ASAN/MK_UBSAN will instrument the .pieo object files.
+MK_PIE=	no
 NO_SHARED=	yes
+CRUNCH_BUILDOPTS+=	MK_PIE=no NO_SHARED=yes
 
 # lld >= 16 became more strict about multiply defined symbols. Since there are
 # many of those in crunchgen'd programs, turn off the check.
@@ -61,7 +66,7 @@ CRUNCH_PROGS_bin= cat chflags chio chmod cp date dd df echo 	\
 	 ed expr getfacl hostname kenv kill ln ls mkdir mv	\
 	 pkill ps pwd realpath rm rmdir setfacl sh sleep stty	\
 	 sync test
-CRUNCH_LIBS+= -lcrypt -ledit -ljail -lkvm -lelf -ll -ltermcapw -lutil -lxo
+CRUNCH_LIBS+= -lcrypt -ledit -ljail -lkvm -lelf -ltermcapw -lutil -lxo
 CRUNCH_BUILDTOOLS+= bin/sh
 
 # Additional options for specific programs
@@ -100,7 +105,7 @@ CRUNCH_PROGS_sbin= 						\
 	md5 mdconfig mdmfs mknod mount mount_cd9660		\
 	mount_msdosfs mount_nfs mount_nullfs			\
 	mount_udf mount_unionfs newfs				\
-	newfs_msdos nos-tun ping reboot				\
+	newfs_msdos nos-tun reboot				\
 	restore rcorder route savecore		 		\
 	shutdown spppcontrol swapon sysctl tunefs umount
 
@@ -108,8 +113,12 @@ CRUNCH_PROGS_sbin= 						\
 CRUNCH_PROGS_sbin+= ccdconfig
 .endif
 
+.if ${MK_INET} != "no" || ${MK_INET6} != "no"
+CRUNCH_PROGS_sbin+= ping
+.endif
+
 .if ${MK_INET6_SUPPORT} != "no"
-CRUNCH_PROGS_sbin+= ping6
+CRUNCH_ALIAS_ping= ping6
 CRUNCH_PROGS_sbin+= rtsol
 .endif
 
@@ -135,7 +144,7 @@ CRUNCH_PROGS_usr.sbin+= zdb
 CRUNCH_LIBS+= -l80211 -lalias -lcam -lncursesw -ldevstat -lipsec -llzma
 .if ${MK_ZFS} != "no"
 CRUNCH_LIBS+= -lavl -lzpool -lzfs_core -lzfs -lnvpair -lpthread -luutil -lumem
-CRUNCH_LIBS+= -lbe
+CRUNCH_LIBS+= -lbe -lzfsbootenv -lzutil -ltpool -lspl -licp_rescue
 .else
 # liblzma needs pthread
 CRUNCH_LIBS+= -lpthread
@@ -174,7 +183,6 @@ CRUNCH_ALIAS_shutdown= poweroff
 
 # dhclient has historically been troublesome...
 CRUNCH_PROGS_sbin+= dhclient
-CRUNCH_BUILDOPTS_dhclient= -DRELEASE_CRUNCH -Dlint
 
 ##################################################################
 # Programs from stock /usr/bin
@@ -232,11 +240,18 @@ CRUNCH_PROGS_usr.sbin+= chroot
 CRUNCH_PROGS_usr.sbin+= chown
 CRUNCH_ALIAS_chown= chgrp
 ##################################################################
+
+CRUNCH_LIBS+=		${OBJTOP}/lib/libifconfig/libifconfig.a
+CRUNCH_BUILDOPTS+=	CRUNCH_CFLAGS+=-I${OBJTOP}/lib/libifconfig
+
 CRUNCH_LIBS+= -lm
 
 .if ${MK_ISCSI} != "no"
 CRUNCH_PROGS_usr.bin+=	iscsictl
 CRUNCH_PROGS_usr.sbin+=	iscsid
+
+CRUNCH_LIBS+=		${OBJTOP}/lib/libiscsiutil/libiscsiutil.a
+CRUNCH_BUILDOPTS+=	CRUNCH_CFLAGS+=-I${OBJTOP}/lib/libiscsiutil
 .endif
 
 .include <bsd.crunchgen.mk>

@@ -1,7 +1,7 @@
 /*	$NetBSD: nsdispatch.c,v 1.9 1999/01/25 00:16:17 lukem Exp $	*/
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1997, 1998, 1999 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -63,7 +63,6 @@
  *
  */
 #include <sys/cdefs.h>
-
 #include "namespace.h"
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -334,6 +333,9 @@ static int
 nss_configure(void)
 {
 	static time_t	 confmod;
+#ifndef NS_REREAD_CONF
+	static int	 already_initialized = 0;
+#endif
 	struct stat	 statbuf;
 	int		 result, isthreaded;
 	const char	*path;
@@ -351,6 +353,16 @@ nss_configure(void)
 	if (path == NULL)
 #endif
 		path = _PATH_NS_CONF;
+#ifndef NS_REREAD_CONF
+	/*
+	 * Define NS_REREAD_CONF to have nsswitch notice changes
+	 * to nsswitch.conf(5) during runtime.  This involves calling
+	 * stat(2) every time, which can result in performance hit.
+	 */
+	if (already_initialized)
+		return (0);
+	already_initialized = 1;
+#endif /* NS_REREAD_CONF */
 	if (stat(path, &statbuf) != 0)
 		return (0);
 	if (statbuf.st_mtime <= confmod)

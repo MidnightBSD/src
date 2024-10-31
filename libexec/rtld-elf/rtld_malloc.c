@@ -52,9 +52,12 @@
 #include <stddef.h>
 #include <string.h>
 #include <unistd.h>
+#ifdef IN_RTLD
 #include "rtld.h"
 #include "rtld_printf.h"
-#include "paths.h"
+#include "rtld_paths.h"
+#endif
+#include "rtld_malloc.h"
 
 /*
  * Pre-allocate mmap'ed pages
@@ -67,16 +70,12 @@ static caddr_t		pagepool_start, pagepool_end;
  * contains a pointer to the next free block, and the bottom two bits must
  * be zero.  When in use, the first byte is set to MAGIC, and the second
  * byte is the size index.  The remaining bytes are for alignment.
- * If range checking is enabled then a second word holds the size of the
- * requested block, less 1, rounded up to a multiple of sizeof(RMAGIC).
- * The order of elements is critical: ov_magic must overlay the low order
- * bits of ov_next, and ov_magic can not be a valid ov_next bit pattern.
  */
 union	overhead {
 	union	overhead *ov_next;	/* when free */
 	struct {
-		u_char	ovu_magic;	/* magic number */
-		u_char	ovu_index;	/* bucket # */
+		uint16_t ovu_index;	/* bucket # */
+		uint8_t ovu_magic;	/* magic number */
 	} ovu;
 #define	ov_magic	ovu.ovu_magic
 #define	ov_index	ovu.ovu_index
@@ -84,20 +83,21 @@ union	overhead {
 
 static void morecore(int bucket);
 static int morepages(int n);
-static int findbucket(union overhead *freep, int srchlen);
 
 #define	MAGIC		0xef		/* magic # on accounting info */
+#define	AMAGIC		0xdf		/* magic # for aligned alloc */
 
 /*
- * nextf[i] is the pointer to the next free block of size 2^(i+3).  The
- * smallest allocatable block is 8 bytes.  The overhead information
- * precedes the data area returned to the user.
+ * nextf[i] is the pointer to the next free block of size
+ * (FIRST_BUCKET_SIZE << i).  The overhead information precedes the data
+ * area returned to the user.
  */
+#define	LOW_BITS		3
+#define	FIRST_BUCKET_SIZE	(1U << LOW_BITS)
 #define	NBUCKETS 30
 static	union overhead *nextf[NBUCKETS];
 
 static	int pagesz;			/* page size */
-static	int pagebucket;			/* page size bucket */
 
 /*
  * The array of supported page sizes is provided by the user, i.e., the
@@ -107,55 +107,36 @@ static	int pagebucket;			/* page size bucket */
  * increasing order.
  */
 
+static void *
+cp2op(void *cp)
+{
+	return (((caddr_t)cp - sizeof(union overhead)));
+}
+
 void *
 __crt_malloc(size_t nbytes)
 {
 	union overhead *op;
 	int bucket;
-	ssize_t n;
 	size_t amt;
 
 	/*
-	 * First time malloc is called, setup page size and
-	 * align break pointer so all data will be page aligned.
+	 * First time malloc is called, setup page size.
 	 */
-	if (pagesz == 0) {
-		pagesz = n = pagesizes[0];
-		if (morepages(NPOOLPAGES) == 0)
-			return NULL;
-		op = (union overhead *)(pagepool_start);
-  		n = n - sizeof (*op) - ((long)op & (n - 1));
-		if (n < 0)
-			n += pagesz;
-  		if (n) {
-			pagepool_start += n;
-		}
-		bucket = 0;
-		amt = 8;
-		while ((unsigned)pagesz > amt) {
-			amt <<= 1;
-			bucket++;
-		}
-		pagebucket = bucket;
-	}
+	if (pagesz == 0)
+		pagesz = pagesizes[0];
 	/*
 	 * Convert amount of memory requested into closest block size
 	 * stored in hash buckets which satisfies request.
 	 * Account for space used per block for accounting.
 	 */
-	if (nbytes <= (unsigned long)(n = pagesz - sizeof(*op))) {
-		amt = 8;	/* size of first bucket */
-		bucket = 0;
-		n = -sizeof(*op);
-	} else {
-		amt = pagesz;
-		bucket = pagebucket;
-	}
-	while (nbytes > amt + n) {
+	amt = FIRST_BUCKET_SIZE;
+	bucket = 0;
+	while (nbytes > amt - sizeof(*op)) {
 		amt <<= 1;
-		if (amt == 0)
-			return (NULL);
 		bucket++;
+		if (amt == 0 || bucket >= NBUCKETS)
+			return (NULL);
 	}
 	/*
 	 * If nothing in hash bucket right now,
@@ -189,6 +170,28 @@ __crt_calloc(size_t num, size_t size)
 	return (ret);
 }
 
+void *
+__crt_aligned_alloc_offset(size_t align, size_t size, size_t offset)
+{
+	void *mem, *ov;
+	union overhead ov1;
+	uintptr_t x;
+
+	if (align < FIRST_BUCKET_SIZE)
+		align = FIRST_BUCKET_SIZE;
+	offset &= align - 1;
+	mem = __crt_malloc(size + align + offset + sizeof(union overhead));
+	if (mem == NULL)
+		return (NULL);
+	x = roundup2((uintptr_t)mem + sizeof(union overhead), align);
+	x += offset;
+	ov = cp2op((void *)x);
+	ov1.ov_magic = AMAGIC;
+	ov1.ov_index = x - (uintptr_t)mem + sizeof(union overhead);
+	memcpy(ov, &ov1, sizeof(ov1));
+	return ((void *)x);
+}
+
 /*
  * Allocate more memory to the indicated bucket.
  */
@@ -200,22 +203,18 @@ morecore(int bucket)
   	int amt;			/* amount to allocate */
   	int nblks;			/* how many blocks we get */
 
-	/*
-	 * sbrk_size <= 0 only for big, FLUFFY, requests (about
-	 * 2^30 bytes on a VAX, I think) or for a negative arg.
-	 */
-	if ((unsigned)bucket >= NBBY * sizeof(int) - 4)
-		return;
-	sz = 1 << (bucket + 3);
+	sz = FIRST_BUCKET_SIZE << bucket;
 	if (sz < pagesz) {
 		amt = pagesz;
   		nblks = amt / sz;
 	} else {
-		amt = sz + pagesz;
+		amt = sz;
 		nblks = 1;
 	}
 	if (amt > pagepool_end - pagepool_start)
-		if (morepages(amt/pagesz + NPOOLPAGES) == 0)
+		if (morepages(amt / pagesz + NPOOLPAGES) == 0 &&
+		    /* Retry with min required size */
+		    morepages(amt / pagesz) == 0)
 			return;
 	op = (union overhead *)pagepool_start;
 	pagepool_start += amt;
@@ -234,31 +233,22 @@ morecore(int bucket)
 void
 __crt_free(void *cp)
 {
+	union overhead *op, op1;
+	void *opx;
 	int size;
-	union overhead *op;
 
   	if (cp == NULL)
   		return;
-	op = (union overhead *)((caddr_t)cp - sizeof (union overhead));
+	opx = cp2op(cp);
+	memcpy(&op1, opx, sizeof(op1));
+	op = op1.ov_magic == AMAGIC ? (void *)((caddr_t)cp - op1.ov_index) :
+	    opx;
 	if (op->ov_magic != MAGIC)
 		return;				/* sanity */
   	size = op->ov_index;
 	op->ov_next = nextf[size];	/* also clobbers ov_magic */
   	nextf[size] = op;
 }
-
-/*
- * When a program attempts "storage compaction" as mentioned in the
- * old malloc man page, it realloc's an already freed block.  Usually
- * this is the last block it freed; occasionally it might be farther
- * back.  We have to search all the free lists for the block in order
- * to determine its bucket: 1st we make one pass through the lists
- * checking only the first block in each; if that fails we search
- * ``realloc_srchlen'' blocks in each list for a match (the variable
- * is extern so the caller can modify it).  If that fails we just copy
- * however many bytes was given to realloc() and hope it's not huge.
- */
-static int realloc_srchlen = 4;	/* 4 should be plenty, -1 =>'s whole list */
 
 void *
 __crt_realloc(void *cp, size_t nbytes)
@@ -267,78 +257,33 @@ __crt_realloc(void *cp, size_t nbytes)
 	int i;
 	union overhead *op;
   	char *res;
-	int was_alloced = 0;
 
   	if (cp == NULL)
 		return (__crt_malloc(nbytes));
-	op = (union overhead *)((caddr_t)cp - sizeof (union overhead));
-	if (op->ov_magic == MAGIC) {
-		was_alloced++;
-		i = op->ov_index;
-	} else {
-		/*
-		 * Already free, doing "compaction".
-		 *
-		 * Search for the old block of memory on the
-		 * free list.  First, check the most common
-		 * case (last element free'd), then (this failing)
-		 * the last ``realloc_srchlen'' items free'd.
-		 * If all lookups fail, then assume the size of
-		 * the memory block being realloc'd is the
-		 * largest possible (so that all "nbytes" of new
-		 * memory are copied into).  Note that this could cause
-		 * a memory fault if the old area was tiny, and the moon
-		 * is gibbous.  However, that is very unlikely.
-		 */
-		if ((i = findbucket(op, 1)) < 0 &&
-		    (i = findbucket(op, realloc_srchlen)) < 0)
-			i = NBUCKETS;
-	}
+	op = cp2op(cp);
+	if (op->ov_magic != MAGIC)
+		return (NULL);	/* Double-free or bad argument */
+	i = op->ov_index;
 	onb = 1 << (i + 3);
 	if (onb < (u_int)pagesz)
 		onb -= sizeof(*op);
 	else
 		onb += pagesz - sizeof(*op);
 	/* avoid the copy if same size block */
-	if (was_alloced) {
-		if (i) {
-			i = 1 << (i + 2);
-			if (i < pagesz)
-				i -= sizeof(*op);
-			else
-				i += pagesz - sizeof(*op);
-		}
-		if (nbytes <= onb && nbytes > (size_t)i)
-			return (cp);
-		__crt_free(cp);
+	if (i != 0) {
+		i = 1 << (i + 2);
+		if (i < pagesz)
+			i -= sizeof(*op);
+		else
+			i += pagesz - sizeof(*op);
 	}
+	if (nbytes <= onb && nbytes > (size_t)i)
+		return (cp);
   	if ((res = __crt_malloc(nbytes)) == NULL)
 		return (NULL);
-  	if (cp != res)		/* common optimization if "compacting" */
-		bcopy(cp, res, (nbytes < onb) ? nbytes : onb);
+	bcopy(cp, res, (nbytes < onb) ? nbytes : onb);
+	__crt_free(cp);
   	return (res);
-}
-
-/*
- * Search ``srchlen'' elements of each free list for a block whose
- * header starts at ``freep''.  If srchlen is -1 search the whole list.
- * Return bucket number, or -1 if not found.
- */
-static int
-findbucket(union overhead *freep, int srchlen)
-{
-	union overhead *p;
-	int i, j;
-
-	for (i = 0; i < NBUCKETS; i++) {
-		j = 0;
-		for (p = nextf[i]; p && j != srchlen; p = p->ov_next) {
-			if (p == freep)
-				return (i);
-			j++;
-		}
-	}
-	return (-1);
 }
 
 static int
@@ -348,7 +293,7 @@ morepages(int n)
 	int offset;
 
 	if (pagepool_end - pagepool_start > pagesz) {
-		addr = (caddr_t)roundup2((long)pagepool_start, pagesz);
+		addr = roundup2(pagepool_start, pagesz);
 		if (munmap(addr, pagepool_end - addr) != 0) {
 #ifdef IN_RTLD
 			rtld_fdprintf(STDERR_FILENO, _BASENAME_RTLD ": "
@@ -358,19 +303,21 @@ morepages(int n)
 		}
 	}
 
-	offset = (long)pagepool_start - rounddown2((long)pagepool_start,
-	    pagesz);
+	offset = (uintptr_t)pagepool_start - rounddown2(
+	    (uintptr_t)pagepool_start, pagesz);
 
-	pagepool_start = mmap(0, n * pagesz, PROT_READ | PROT_WRITE,
+	addr = mmap(0, n * pagesz, PROT_READ | PROT_WRITE,
 	    MAP_ANON | MAP_PRIVATE, -1, 0);
-	if (pagepool_start == MAP_FAILED) {
+	if (addr == MAP_FAILED) {
 #ifdef IN_RTLD
 		rtld_fdprintf(STDERR_FILENO, _BASENAME_RTLD ": morepages: "
 		    "cannot mmap anonymous memory: %s\n",
 		    rtld_strerror(errno));
 #endif
+		pagepool_start = pagepool_end = NULL;
 		return (0);
 	}
+	pagepool_start = addr;
 	pagepool_end = pagepool_start + n * pagesz;
 	pagepool_start += offset;
 

@@ -23,9 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/usr.sbin/gssd/gssd.8 276258 2014-12-26 21:56:23Z joel $
-.\"
-.Dd July 7, 2013
+.Dd April 10 2020
 .Dt GSSD 8
 .Os
 .Sh NAME
@@ -35,7 +33,6 @@
 .Nm
 .Op Fl d
 .Op Fl h
-.Op Fl o
 .Op Fl v
 .Op Fl s Ar dir-list
 .Op Fl c Ar file-substring
@@ -61,10 +58,6 @@ gssname
 option for the
 .Xr mount_nfs 8
 command.
-.It Fl o
-Force use of DES and the associated old style GSS-API initialization token.
-This may be required to make kerberized NFS mounts work against some
-non-FreeBSD NFS servers.
 .It Fl v
 Run in verbose mode.
 In this mode,

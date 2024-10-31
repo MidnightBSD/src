@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008-2011 Stanislav Sedov <stas@FreeBSD.org>.
  * All rights reserved.
@@ -31,12 +31,12 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <assert.h>
 #include <err.h>
 #include <errno.h>
 #include <dirent.h>
 #include <fcntl.h>
+#include <paths.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -58,7 +58,7 @@
 
 int	verbosity_level = 0;
 
-#define	DEFAULT_DATADIR	"/usr/local/share/cpucontrol"
+#define	DEFAULT_DATADIR	_PATH_LOCALBASE "/share/cpucontrol"
 
 #define	FLAG_I	0x01
 #define	FLAG_M	0x02

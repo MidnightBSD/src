@@ -27,7 +27,6 @@
  * SUCH DAMAGE.
  *
  * Textual conventions for snmp
- *
  */
 
 #ifndef	_BSNMP_TEXT_CONV_H_

@@ -1,5 +1,6 @@
 # $Id: Makefile,v 1.1 2004/01/20 21:27:55 max Exp $
 
+PACKAGE=	bluetooth
 PROG=		sdpd
 MAN=		sdpd.8
 SRCS=		audio_sink.c audio_source.c \

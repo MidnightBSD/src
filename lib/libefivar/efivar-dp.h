@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2017 Netflix, Inc.
- * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -22,8 +21,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: stable/11/lib/libefivar/efivar-dp.h 332123 2018-04-06 18:10:38Z kevans $
  */
 
 #ifndef	_EFIVAR_DP_H_

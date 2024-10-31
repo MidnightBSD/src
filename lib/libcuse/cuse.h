@@ -1,4 +1,3 @@
-/* $FreeBSD: stable/11/lib/libcuse/cuse.h 266581 2014-05-23 08:46:28Z hselasky $ */
 /*-
  * Copyright (c) 2014 Hans Petter Selasky. All rights reserved.
  *
@@ -54,7 +53,7 @@ struct cuse_methods {
 int	cuse_init(void);
 int	cuse_uninit(void);
 
-void   *cuse_vmalloc(int);
+void   *cuse_vmalloc(unsigned);
 int	cuse_is_vmalloc_addr(void *);
 void	cuse_vmfree(void *);
 unsigned long cuse_vmoffset(void *ptr);

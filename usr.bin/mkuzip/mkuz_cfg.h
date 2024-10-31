@@ -22,7 +22,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 struct mkuz_conveyor;
@@ -38,4 +37,6 @@ struct mkuz_cfg {
     const char *iname;
     off_t isize;
     const struct mkuz_format *handler;
+    size_t cbound_blksz;
+    int comp_level;
 };

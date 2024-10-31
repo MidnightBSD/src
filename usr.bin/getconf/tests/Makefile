@@ -5,6 +5,4 @@ PROGS+=		arch_type
 
 BINDIR=		${TESTSDIR}
 
-WARNS?=		6
-
 .include <bsd.test.mk>

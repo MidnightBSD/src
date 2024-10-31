@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2012 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Pawel Jakub Dawidek under sponsorship from
  * the FreeBSD Foundation.
@@ -25,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef	_CAP_DNS_H_
@@ -35,12 +33,24 @@
 #define WITH_CASPER
 #endif
 
+#include <sys/cdefs.h>
 #include <sys/socket.h>	/* socklen_t */
+
+/*
+ * Pull these in if we're just inlining calls to the underlying
+ * libc functions.
+ */
+#ifndef	WITH_CASPER
+#include <sys/types.h>
+#include <netdb.h>
+#endif	/* WITH_CASPER */
 
 struct addrinfo;
 struct hostent;
 
 #ifdef WITH_CASPER
+__BEGIN_DECLS
+
 struct hostent *cap_gethostbyname(cap_channel_t *chan, const char *name);
 struct hostent *cap_gethostbyname2(cap_channel_t *chan, const char *name,
     int type);
@@ -57,18 +67,65 @@ int cap_dns_type_limit(cap_channel_t *chan, const char * const *types,
     size_t ntypes);
 int cap_dns_family_limit(cap_channel_t *chan, const int *families,
     size_t nfamilies);
+
+__END_DECLS
 #else
-#define	cap_gethostbyname(chan, name)		 gethostbyname(name)
-#define cap_gethostbyname2(chan, name, type)	 gethostbyname2(name, type)
-#define cap_gethostbyaddr(chan, addr, len, type) gethostbyaddr(addr, len, type)
 
-#define	cap_getaddrinfo(chan, hostname, servname, hints, res)			\
-	getaddrinfo(hostname, servname, hints, res)
-#define	cap_getnameinfo(chan, sa, salen, host, hostlen, serv, servlen, flags)	\
-	getnameinfo(sa, salen, host, hostlen, serv, servlen, flags)
+static inline struct hostent *
+cap_gethostbyname(cap_channel_t *chan __unused, const char *name)
+{
 
-#define	cap_dns_type_limit(chan, types, ntypes)		(0)
-#define cap_dns_family_limit(chan, families, nfamilies)	(0)
-#endif
+	return (gethostbyname(name));
+}
+
+static inline struct hostent *
+cap_gethostbyname2(cap_channel_t *chan __unused, const char *name, int type)
+{
+
+	return (gethostbyname2(name, type));
+}
+
+static inline struct hostent *
+cap_gethostbyaddr(cap_channel_t *chan __unused, const void *addr,
+    socklen_t len, int type)
+{
+
+	return (gethostbyaddr(addr, len, type));
+}
+
+static inline int cap_getaddrinfo(cap_channel_t *chan __unused,
+    const char *hostname, const char *servname, const struct addrinfo *hints,
+    struct addrinfo **res)
+{
+
+	return (getaddrinfo(hostname, servname, hints, res));
+}
+
+static inline int cap_getnameinfo(cap_channel_t *chan __unused,
+    const struct sockaddr *sa, socklen_t salen, char *host, size_t hostlen,
+    char *serv, size_t servlen, int flags)
+{
+
+	return (getnameinfo(sa, salen, host, hostlen, serv, servlen, flags));
+}
+
+static inline int
+cap_dns_type_limit(cap_channel_t *chan __unused,
+    const char * const *types __unused,
+    size_t ntypes __unused)
+{
+
+	return (0);
+}
+
+static inline int
+cap_dns_family_limit(cap_channel_t *chan __unused,
+    const int *families __unused,
+    size_t nfamilies __unused)
+{
+
+	return (0);
+}
+#endif	/* WITH_CASPER */
 
 #endif	/* !_CAP_DNS_H_ */

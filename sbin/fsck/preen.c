@@ -29,7 +29,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/cdefs.h>
@@ -61,6 +60,7 @@ struct partentry {
 	char		  	*p_devname;	/* device name */
 	char			*p_mntpt;	/* mount point */
 	char		  	*p_type;	/* file system type */
+	int			 p_failok;	/* failok option set */
 };
 
 static TAILQ_HEAD(part, partentry) badh;
@@ -77,7 +77,7 @@ static TAILQ_HEAD(disk, diskentry) diskh;
 static int nrun = 0, ndisks = 0;
 
 static struct diskentry *finddisk(const char *);
-static void addpart(const char *, const char *, const char *);
+static void addpart(const char *, const char *, const char *, const int);
 static int startdisk(struct diskentry *, 
     int (*)(const char *, const char *, const char *, const char *, pid_t *));
 static void printpart(void);
@@ -131,7 +131,6 @@ checkfstab(int flags, int (*docheck)(struct fstab *),
 				}
 				sumstatus = (*checkit)(fs->fs_vfstype,
 				    name, fs->fs_file, NULL, NULL);
-
 				if (sumstatus)
 					return (sumstatus);
 				continue;
@@ -142,7 +141,8 @@ checkfstab(int flags, int (*docheck)(struct fstab *),
 				sumstatus |= 8;
 				continue;
 			}
-			addpart(fs->fs_vfstype, name, fs->fs_file);
+			addpart(fs->fs_vfstype, name, fs->fs_file,
+			    getfsopt(fs, "failok"));
 		}
 
 		if ((flags & CHECK_PREEN) == 0 || passno == 1 ||
@@ -171,12 +171,17 @@ checkfstab(int flags, int (*docheck)(struct fstab *),
 				continue;
 			}
 
-			if (WIFEXITED(status))
-				retcode = WEXITSTATUS(status);
-			else
-				retcode = 0;
-
 			p = TAILQ_FIRST(&d->d_part);
+
+			if (WIFEXITED(status) == 0) {
+				retcode = 0;
+			} else if (p->p_failok == 0) {
+				retcode = WEXITSTATUS(status);
+			} else {
+				retcode = 0;
+				fprintf(stderr, "%s: failok SPECIFIED, FSCK "
+				    "ERROR(S) IGNORED\n", p->p_devname);
+			}
 
 			if (flags & (CHECK_DEBUG|CHECK_VERBOSE))
 				(void) printf("done %s: %s (%s) = 0x%x\n",
@@ -242,7 +247,6 @@ checkfstab(int flags, int (*docheck)(struct fstab *),
 	return (0);
 }
 
-
 static struct diskentry *
 finddisk(const char *name)
 {
@@ -296,7 +300,7 @@ printpart(void)
 
 
 static void
-addpart(const char *type, const char *dev, const char *mntpt)
+addpart(const char *type, const char *dev, const char *mntpt, const int failok)
 {
 	struct diskentry *d = finddisk(dev);
 	struct partentry *p;
@@ -311,6 +315,7 @@ addpart(const char *type, const char *dev, const char *mntpt)
 	p->p_devname = estrdup(dev);
 	p->p_mntpt = estrdup(mntpt);
 	p->p_type = estrdup(type);
+	p->p_failok = failok;
 
 	TAILQ_INSERT_TAIL(&d->d_part, p, p_entries);
 }

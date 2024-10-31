@@ -1,6 +1,7 @@
-# $FreeBSD: stable/11/usr.sbin/gssd/Makefile 319119 2017-05-29 10:15:41Z ngie $
 
 .include <src.opts.mk>
+
+PACKAGE=	kerberos
 
 PROG=	gssd
 MAN=	gssd.8

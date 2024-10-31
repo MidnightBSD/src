@@ -1,5 +1,4 @@
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <crypt.h>
 #include <unistd.h>

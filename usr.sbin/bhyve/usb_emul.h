@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2014 Leon Dang <ldang@nahannisys.com>
  * All rights reserved.
@@ -24,12 +24,12 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _USB_EMUL_H_
 #define _USB_EMUL_H_
 
+#include <sys/nv.h>
 #include <stdlib.h>
 #include <sys/linker_set.h>
 #include <pthread.h>
@@ -40,19 +40,19 @@
 #define	USB_XFER_IN		1
 
 
-
 struct usb_hci;
 struct usb_device_request;
 struct usb_data_xfer;
+struct vm_snapshot_meta;
 
 /* Device emulation handlers */
 struct usb_devemu {
-	char	*ue_emu;	/* name of device emulation */
+	const char *ue_emu;	/* name of device emulation */
 	int	ue_usbver;	/* usb version: 2 or 3 */
 	int	ue_usbspeed;	/* usb device speed */
 
 	/* instance creation */
-	void	*(*ue_init)(struct usb_hci *hci, char *opt);
+	void	*(*ue_init)(struct usb_hci *hci, nvlist_t *nvl);
 
 	/* handlers */
 	int	(*ue_request)(void *sc, struct usb_data_xfer *xfer);
@@ -61,6 +61,7 @@ struct usb_devemu {
 	int	(*ue_reset)(void *sc);
 	int	(*ue_remove)(void *sc);
 	int	(*ue_stop)(void *sc);
+	int	(*ue_snapshot)(void *scarg, struct vm_snapshot_meta *meta);
 };
 #define	USB_EMUL_SET(x)		DATA_SET(usb_emu_set, x);
 
@@ -147,8 +148,7 @@ enum USB_ERRCODE {
 			pthread_mutex_unlock(&((x)->mtx));		\
 		} while (0)
 
-
-struct usb_devemu *usb_emu_finddev(char *name);
+struct usb_devemu *usb_emu_finddev(const char *name);
 
 struct usb_data_xfer_block *usb_data_xfer_append(struct usb_data_xfer *xfer,
                           void *buf, int blen, void *hci_data, int ccs);

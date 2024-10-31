@@ -27,7 +27,7 @@
 .\"
 .\"     @(#)chroot.2	8.1 (Berkeley) 6/4/93
 .\"
-.Dd June 26, 2020
+.Dd September 29, 2020
 .Dt CHROOT 2
 .Os
 .Sh NAME
@@ -90,7 +90,10 @@ system call.
 .Pp
 Any other value for
 .Ql kern.chroot_allow_open_directories
-will bypass the check for open directories
+will bypass the check for open directories,
+mimicking the historic insecure behavior of
+.Fn chroot
+still present on other systems.
 .Sh RETURN VALUES
 .Rv -std
 .Sh ERRORS
@@ -143,7 +146,7 @@ open directories, or a MAC check), it is possible that this system
 call may return an error, with the working directory of the process
 left changed.
 .Sh SECURITY CONSIDERATIONS
-The system have many hardcoded paths to files where it may load after
+The system has many hardcoded paths to files which it may load after
 the process starts.
 It is generally recommended to drop privileges immediately after a
 successful
@@ -151,7 +154,11 @@ successful
 call,
 and restrict write access to a limited subtree of the
 .Nm
-root,
-for instance,
+root.
+For instance,
 setup the sandbox so that the sandboxed user will have no write
 access to any well-known system directories.
+.Pp
+For complete isolation from the rest of the system, use
+.Xr jail 2
+instead.

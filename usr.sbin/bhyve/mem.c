@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2012 NetApp, Inc.
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -34,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <sys/errno.h>
 #include <sys/tree.h>
@@ -59,14 +57,15 @@ struct mmio_rb_range {
 struct mmio_rb_tree;
 RB_PROTOTYPE(mmio_rb_tree, mmio_rb_range, mr_link, mmio_rb_range_compare);
 
-RB_HEAD(mmio_rb_tree, mmio_rb_range) mmio_rb_root, mmio_rb_fallback;
+static RB_HEAD(mmio_rb_tree, mmio_rb_range) mmio_rb_root, mmio_rb_fallback;
 
 /*
  * Per-vCPU cache. Since most accesses from a vCPU will be to
  * consecutive addresses in a range, it makes sense to cache the
  * result of a lookup.
  */
-static struct mmio_rb_range	*mmio_hint[VM_MAXCPU];
+static struct mmio_rb_range	**mmio_hint;
+static int mmio_ncpu;
 
 static pthread_rwlock_t mmio_rwlock;
 
@@ -94,7 +93,7 @@ mmio_rb_lookup(struct mmio_rb_tree *rbt, uint64_t addr,
 		*entry = res;
 		return (0);
 	}
-	
+
 	return (ENOENT);
 }
 
@@ -107,9 +106,11 @@ mmio_rb_add(struct mmio_rb_tree *rbt, struct mmio_rb_range *new)
 
 	if (overlap != NULL) {
 #ifdef RB_DEBUG
-		printf("overlap detected: new %lx:%lx, tree %lx:%lx\n",
+		printf("overlap detected: new %lx:%lx, tree %lx:%lx, '%s' "
+		       "claims region already claimed for '%s'\n",
 		       new->mr_base, new->mr_end,
-		       overlap->mr_base, overlap->mr_end);
+		       overlap->mr_base, overlap->mr_end,
+		       new->mr_param.name, overlap->mr_param.name);
 #endif
 
 		return (EEXIST);
@@ -168,7 +169,7 @@ access_memory(struct vmctx *ctx, int vcpu, uint64_t paddr, mem_cb_t *cb,
 {
 	struct mmio_rb_range *entry;
 	int err, perror, immutable;
-	
+
 	pthread_rwlock_rdlock(&mmio_rwlock);
 	/*
 	 * First check the per-vCPU cache
@@ -183,7 +184,7 @@ access_memory(struct vmctx *ctx, int vcpu, uint64_t paddr, mem_cb_t *cb,
 	if (entry == NULL) {
 		if (mmio_rb_lookup(&mmio_rb_root, paddr, &entry) == 0) {
 			/* Update the per-vCPU cache */
-			mmio_hint[vcpu] = entry;			
+			mmio_hint[vcpu] = entry;
 		} else if (mmio_rb_lookup(&mmio_rb_fallback, paddr, &entry)) {
 			perror = pthread_rwlock_unlock(&mmio_rwlock);
 			assert(perror == 0);
@@ -331,24 +332,24 @@ register_mem_fallback(struct mem_range *memp)
 	return (register_mem_int(&mmio_rb_fallback, memp));
 }
 
-int 
+int
 unregister_mem(struct mem_range *memp)
 {
 	struct mem_range *mr;
 	struct mmio_rb_range *entry = NULL;
 	int err, perror, i;
-	
+
 	pthread_rwlock_wrlock(&mmio_rwlock);
 	err = mmio_rb_lookup(&mmio_rb_root, memp->base, &entry);
 	if (err == 0) {
 		mr = &entry->mr_param;
 		assert(mr->name == memp->name);
-		assert(mr->base == memp->base && mr->size == memp->size); 
+		assert(mr->base == memp->base && mr->size == memp->size);
 		assert((mr->flags & MEM_F_IMMUTABLE) == 0);
 		RB_REMOVE(mmio_rb_tree, &mmio_rb_root, entry);
 
-		/* flush Per-vCPU cache */	
-		for (i=0; i < VM_MAXCPU; i++) {
+		/* flush Per-vCPU cache */
+		for (i = 0; i < mmio_ncpu; i++) {
 			if (mmio_hint[i] == entry)
 				mmio_hint[i] = NULL;
 		}
@@ -358,14 +359,16 @@ unregister_mem(struct mem_range *memp)
 
 	if (entry)
 		free(entry);
-	
+
 	return (err);
 }
 
 void
-init_mem(void)
+init_mem(int ncpu)
 {
 
+	mmio_ncpu = ncpu;
+	mmio_hint = calloc(ncpu, sizeof(*mmio_hint));
 	RB_INIT(&mmio_rb_root);
 	RB_INIT(&mmio_rb_fallback);
 	pthread_rwlock_init(&mmio_rwlock, NULL);

@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2013 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Pawel Jakub Dawidek under sponsorship from
  * the FreeBSD Foundation.
@@ -25,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef	_CAP_PWD_H_
@@ -35,7 +33,11 @@
 #define WITH_CASPER
 #endif
 
+#include <sys/cdefs.h>
+
 #ifdef WITH_CASPER
+__BEGIN_DECLS
+
 struct passwd *cap_getpwent(cap_channel_t *chan);
 struct passwd *cap_getpwnam(cap_channel_t *chan, const char *login);
 struct passwd *cap_getpwuid(cap_channel_t *chan, uid_t uid);
@@ -57,25 +59,101 @@ int cap_pwd_limit_fields(cap_channel_t *chan, const char * const *fields,
     size_t nfields);
 int cap_pwd_limit_users(cap_channel_t *chan, const char * const *names,
     size_t nnames, uid_t *uids, size_t nuids);
+
+__END_DECLS
+
 #else
-#define	cap_getpwent(chan)		getpwent()
-#define	cap_getpwnam(chan, login)	getpwnam(login)
-#define	cap_getpwuid(chan, uid)		getpwuid(uid)
 
-#define	cap_getpwent_r(chan, pwd, buffer, bufsize, result)			\
-	getpwent_r(pwd, buffer, bufsize, result)
-#define	cap_getpwnam_r(chan, name, pwd, buffer, bufsize, result)		\
-	getpwnam_r(name, pwd, buffer, bufsize, result)
-#define	cap_getpwuid_r(chan, uid, pwd, buffer, bufsize, result)			\
-	getpwuid_r(uid, pwd, buffer, bufsize, result)
+static inline struct passwd *
+cap_getpwent(cap_channel_t *chan __unused)
+{
 
-#define	cap_setpassent(chan, stayopen)	setpassent(stayopen)
-#define	cap_setpwent(chan)		setpwent()
-#define	cap_endpwent(chan)		endpwent()
+	return (getpwent());
+}
 
-#define	cap_pwd_limit_cmds(chan, cmds, ncmds)			(0)
-#define cap_pwd_limit_fields(chan, fields, nfields)		(0)
-#define cap_pwd_limit_users(chan, names, nnames, uids, nuids)	(0)
+static inline struct passwd *
+cap_getpwnam(cap_channel_t *chan __unused, const char *login)
+{
+
+	return (getpwnam(login));
+}
+
+static inline struct passwd *
+cap_getpwuid(cap_channel_t *chan __unused, uid_t uid)
+{
+
+	return (getpwuid(uid));
+}
+
+static inline int
+cap_getpwent_r(cap_channel_t *chan __unused, struct passwd *pwd, char *buffer,
+    size_t bufsize, struct passwd **result)
+{
+
+	return (getpwent_r(pwd, buffer, bufsize, result));
+}
+
+static inline int
+cap_getpwnam_r(cap_channel_t *chan __unused, const char *name,
+    struct passwd *pwd, char *buffer, size_t bufsize, struct passwd **result)
+{
+
+	return (getpwnam_r(name, pwd, buffer, bufsize, result));
+}
+
+static inline int
+cap_getpwuid_r(cap_channel_t *chan __unused, uid_t uid, struct passwd *pwd,
+    char *buffer, size_t bufsize, struct passwd **result)
+{
+
+	return (getpwuid_r(uid, pwd, buffer, bufsize, result));
+}
+
+static inline int
+cap_setpassent(cap_channel_t *chan __unused, int stayopen)
+{
+
+	return (setpassent(stayopen));
+}
+
+static inline void
+cap_setpwent(cap_channel_t *chan __unused)
+{
+
+	return (setpwent());
+}
+
+static inline void
+cap_endpwent(cap_channel_t *chan __unused)
+{
+
+	return (endpwent());
+}
+
+static inline int
+cap_pwd_limit_cmds(cap_channel_t *chan __unused,
+    const char * const *cmds __unused, size_t ncmds __unused)
+{
+
+	return (0);
+}
+
+static inline int
+cap_pwd_limit_fields(cap_channel_t *chan __unused,
+    const char * const *fields __unused, size_t nfields __unused)
+{
+
+	return (0);
+}
+
+static inline int
+cap_pwd_limit_users(cap_channel_t *chan __unused,
+    const char * const *names __unused, size_t nnames __unused,
+    uid_t *uids __unused, size_t nuids __unused)
+{
+
+	return (0);
+}
 #endif
 
 #endif	/* !_CAP_PWD_H_ */

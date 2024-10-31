@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2008 Edwin Groothuis. All rights reserved.
  * 
@@ -26,7 +26,6 @@
  */
 
 #include <sys/cdefs.h>
-
 int	write_init(int fd, FILE *f, const char *mode);
 size_t	write_file(char *buffer, int count);
 int	write_close(void);

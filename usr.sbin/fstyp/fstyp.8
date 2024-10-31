@@ -1,5 +1,4 @@
 .\" Copyright (c) 2014 The FreeBSD Foundation
-.\" All rights reserved.
 .\"
 .\" This software was developed by Edward Tomasz Napierala under sponsorship
 .\" from the FreeBSD Foundation.
@@ -25,9 +24,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\" $FreeBSD: stable/11/usr.sbin/fstyp/fstyp.8 318489 2017-05-18 20:36:07Z trasz $
-.\"
-.Dd April 26, 2017
+.Dd December 24, 2019
 .Dt FSTYP 8
 .Os
 .Sh NAME
@@ -43,7 +40,7 @@
 The
 .Nm
 utility is used to determine the filesystem type on a given device.
-It can recognize ISO-9660, exFAT, Ext2, FAT, NTFS, and UFS filesystems.
+It can recognize BeFS (BeOS), ISO-9660, exFAT, Ext2, FAT, NTFS, and UFS filesystems.
 When the
 .Fl u
 flag is specified,
@@ -60,6 +57,8 @@ The filesystem name is printed to the standard output
 as, respectively:
 .Bl -item -offset indent -compact
 .It
+befs
+.It
 cd9660
 .It
 exfat
@@ -67,6 +66,10 @@ exfat
 ext2fs
 .It
 geli
+.It
+hammer
+.It
+hammer2
 .It
 msdosfs
 .It

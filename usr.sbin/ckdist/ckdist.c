@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1997 Robert Nordier
  * All rights reserved.
@@ -146,7 +146,7 @@ main(int argc, char *argv[])
 	    arg[0] = *argv;
 	    if ((ftsp = fts_open(arg, FTS_LOGICAL, NULL)) == NULL)
 		err(2, "fts_open");
-	    while ((f = fts_read(ftsp)) != NULL)
+	    while (errno = 0, (f = fts_read(ftsp)) != NULL)
 		switch (f->fts_info) {
 		case FTS_DC:
 		    rval = fail(f->fts_path, "Directory causes a cycle");

@@ -56,7 +56,6 @@ static char sccsid[] = "@(#)gethostnamadr.c	8.1 (Berkeley) 6/4/93";
 static char fromrcsid[] = "From: Id: gethnamaddr.c,v 8.23 1998/04/07 04:59:46 vixie Exp $";
 #endif /* LIBC_SCCS and not lint */
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -291,11 +290,14 @@ gethostanswer(const querybuf *answer, int anslen, const char *qname, int qtype,
 			continue;
 		}
 		if (type != qtype) {
-			if (type != T_SIG && type != ns_t_dname)
+#ifdef DEBUG
+			if (type != T_KEY && type != T_SIG &&
+			    type != T_DNAME && type != T_RRSIG)
 				syslog(LOG_NOTICE|LOG_AUTH,
 	"gethostby*.gethostanswer: asked for \"%s %s %s\", got type \"%s\"",
 				       qname, p_class(C_IN), p_type(qtype),
 				       p_type(type));
+#endif
 			cp += n;
 			continue;		/* XXX - had_error++ ? */
 		}

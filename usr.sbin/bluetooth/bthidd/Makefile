@@ -1,5 +1,6 @@
 # $Id: Makefile,v 1.6 2006/09/07 21:36:55 max Exp $
 
+PACKAGE=	bluetooth
 PROG=		bthidd
 MAN=		bthidd.8
 #		bthidd.conf.5

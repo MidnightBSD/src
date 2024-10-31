@@ -1,6 +1,6 @@
 #!/bin/sh
 #-
-# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+# SPDX-License-Identifier: BSD-2-Clause
 #
 # Copyright 2018 Allan Jude <allanjude@freebsd.org>
 #
@@ -29,6 +29,7 @@
 ############################################################ CONFIGURATION
 
 : ${DESTDIR:=}
+: ${DISTBASE:=}
 : ${FILEPAT:="\.pem$|\.crt$|\.cer$|\.crl$"}
 : ${VERBOSE:=0}
 
@@ -91,7 +92,8 @@ create_trusted_link()
 		install ${INSTALLFLAGS} -lrs $(realpath "$1") "$CERTDESTDIR/$hash.$suffix"
 }
 
-create_blacklisted()
+# Accepts either dot-hash form from `certctl list` or a path to a valid cert.
+resolve_certname()
 {
 	local hash srcfile filename
 	local suffix
@@ -102,14 +104,28 @@ create_blacklisted()
 		srcfile=$(realpath "$1")
 		suffix=$(get_decimal "$BLACKLISTDESTDIR" "$hash")
 		filename="$hash.$suffix"
+		echo "$srcfile" "$hash.$suffix"
 	elif [ -e "${CERTDESTDIR}/$1" ];  then
 		srcfile=$(realpath "${CERTDESTDIR}/$1")
 		hash=$(echo "$1" | sed -Ee 's/\.([0-9])+$//')
 		suffix=$(get_decimal "$BLACKLISTDESTDIR" "$hash")
 		filename="$hash.$suffix"
-	else
+		echo "$srcfile" "$hash.$suffix"
+	fi
+}
+
+create_blacklisted()
+{
+	local srcfile filename
+
+	set -- $(resolve_certname "$1")
+	srcfile=$1
+	filename=$2
+
+	if [ -z "$srcfile" -o -z "$filename" ]; then
 		return
 	fi
+
 	[ $VERBOSE -gt 0 ] && echo "Adding $filename to blacklist"
 	[ $NOOP -eq 0 ] && install ${INSTALLFLAGS} -lrs "$srcfile" "$BLACKLISTDESTDIR/$filename"
 }
@@ -238,7 +254,7 @@ usage()
 	echo "		List trusted certificates"
 	echo "	$SCRIPTNAME [-v] blacklisted"
 	echo "		List blacklisted certificates"
-	echo "	$SCRIPTNAME [-nUv] [-D <destdir>] [-M <metalog>] rehash"
+	echo "	$SCRIPTNAME [-nUv] [-D <destdir>] [-d <distbase>] [-M <metalog>] rehash"
 	echo "		Generate hash links for all certificates"
 	echo "	$SCRIPTNAME [-nv] blacklist <file>"
 	echo "		Add <file> to the list of blacklisted certificates"
@@ -249,9 +265,10 @@ usage()
 
 ############################################################ MAIN
 
-while getopts D:M:nUv flag; do
+while getopts D:d:M:nUv flag; do
 	case "$flag" in
 	D) DESTDIR=${OPTARG} ;;
+	d) DISTBASE=${OPTARG} ;;
 	M) METALOG=${OPTARG} ;;
 	n) NOOP=1 ;;
 	U) UNPRIV=1 ;;
@@ -263,11 +280,11 @@ shift $(( $OPTIND - 1 ))
 : ${METALOG:=${DESTDIR}/METALOG}
 INSTALLFLAGS=
 [ $UNPRIV -eq 1 ] && INSTALLFLAGS="-U -M ${METALOG} -D ${DESTDIR}"
-: ${LOCALBASE:=/usr/local}
-: ${TRUSTPATH:=${DESTDIR}/usr/share/certs/trusted:${DESTDIR}${LOCALBASE}/share/certs:${DESTDIR}${LOCALBASE}/etc/ssl/certs}
-: ${BLACKLISTPATH:=${DESTDIR}/usr/share/certs/blacklisted:${DESTDIR}${LOCALBASE}/etc/ssl/blacklisted}
-: ${CERTDESTDIR:=${DESTDIR}/etc/ssl/certs}
-: ${BLACKLISTDESTDIR:=${DESTDIR}/etc/ssl/blacklisted}
+: ${LOCALBASE:=$(sysctl -n user.localbase)}
+: ${TRUSTPATH:=${DESTDIR}${DISTBASE}/usr/share/certs/trusted:${DESTDIR}${LOCALBASE}/share/certs:${DESTDIR}${LOCALBASE}/etc/ssl/certs}
+: ${BLACKLISTPATH:=${DESTDIR}${DISTBASE}/usr/share/certs/blacklisted:${DESTDIR}${LOCALBASE}/etc/ssl/blacklisted}
+: ${CERTDESTDIR:=${DESTDIR}${DISTBASE}/etc/ssl/certs}
+: ${BLACKLISTDESTDIR:=${DESTDIR}${DISTBASE}/etc/ssl/blacklisted}
 
 [ $# -gt 0 ] || usage
 case "$1" in

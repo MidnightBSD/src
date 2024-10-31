@@ -1,9 +1,9 @@
 
+PACKAGE=	runtime
+
 SHLIBDIR?=	/lib
 
 .include <src.opts.mk>
-
-PACKAGE=casper
 
 .if ${MK_CASPER} != "no"
 SHLIB=	casper

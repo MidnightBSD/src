@@ -1,4 +1,3 @@
-# $FreeBSD: stable/11/share/skel/dot.shrc 327659 2018-01-07 00:31:45Z eadler $
 #
 # .shrc - bourne shell startup file 
 #
@@ -31,13 +30,21 @@ alias g='egrep -i'
 # alias mv='mv -i'
 # alias rm='rm -i'
 
+# # csh like history on arrow up and down
+bind ^[[A ed-search-prev-history
+bind ^[[B ed-search-next-history
 
-# # set prompt: ``username@hostname$ '' 
-# PS1="`whoami`@`hostname | sed 's/\..*//'`"
-# case `id -u` in
-# 	0) PS1="${PS1}# ";;
-# 	*) PS1="${PS1}$ ";;
-# esac
+# # ctrl+arrow allow to jump from words to words
+bind "\\e[1;5C" em-next-word
+bind "\\e[1;5D" ed-prev-word
+alias history='fc -l'
+
+# Fix home/del for mobaxterm
+bind ^[[5~ ed-move-to-beg
+bind ^[[6~ ed-move-to-end
+
+# set prompt: ``username@hostname:directory $ '' 
+PS1="\u@\h:\w \\$ "
 
 # search path for cd(1)
 # CDPATH=:$HOME

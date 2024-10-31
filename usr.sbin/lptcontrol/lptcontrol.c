@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <dev/ppbus/lptio.h>
 
 #include <err.h>

@@ -1,5 +1,5 @@
 #
-# SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+# SPDX-License-Identifier: BSD-2-Clause
 #
 # Copyright (c) 2017 Kyle Evans <kevans@FreeBSD.org>
 #
@@ -27,12 +27,9 @@
 
 # What grep(1) are we working with?
 # - 0 : bsdgrep
-# - 1 : gnu grep 2.51 (base)
-# - 2 : gnu grep (ports)
+# - 1 : gnu grep (ports)
 GREP_TYPE_BSD=0
-GREP_TYPE_GNU_FREEBSD=1
-GREP_TYPE_GNU=2
-GREP_TYPE_UNKNOWN=3
+GREP_TYPE_GNU=1
 
 grep_type()
 {
@@ -43,14 +40,7 @@ grep_type()
 		return $GREP_TYPE_BSD
 		;;
 	*"GNU grep"*)
-		case "$grep_version" in
-		*2.5.1-FreeBSD*)
-			return $GREP_TYPE_GNU_FREEBSD
-			;;
-		*)
-			return $GREP_TYPE_GNU
-			;;
-		esac
+		return $GREP_TYPE_GNU
 		;;
 	esac
 	atf_fail "unknown grep type: $grep_version"
@@ -86,11 +76,6 @@ gnuext_body()
 {
 	grep_type
 	_type=$?
-	if [ $_type -eq $GREP_TYPE_BSD ]; then
-		atf_expect_fail "this test requires GNU extensions in regex(3)"
-	elif [ $_type -eq $GREP_TYPE_GNU_FREEBSD ]; then
-		atf_expect_fail "\\s and \\S are known to be buggy in base gnugrep"
-	fi
 
 	atf_check -o save:grep_alnum.out grep -o '[[:alnum:]]' /COPYRIGHT
 	atf_check -o file:grep_alnum.out grep -o '\w' /COPYRIGHT
@@ -106,9 +91,22 @@ gnuext_body()
 
 }
 
+atf_test_case zflag
+zflag_body()
+{
+
+	# The -z flag should pick up 'foo' and 'bar' as on the same line with
+	# 'some kind of junk' in between; a bug was present that instead made
+	# it process this incorrectly.
+	printf "foo\nbar\0" > in
+
+	atf_check grep -qz "foo.*bar" in
+}
+
 atf_init_test_cases()
 {
 	atf_add_test_case grep_r_implied
 	atf_add_test_case rgrep
 	atf_add_test_case gnuext
+	atf_add_test_case zflag
 }

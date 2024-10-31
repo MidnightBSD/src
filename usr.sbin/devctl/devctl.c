@@ -24,7 +24,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/linker_set.h>
 #include <devctl.h>
 #include <err.h>

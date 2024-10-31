@@ -26,12 +26,12 @@
 # SUCH DAMAGE.
 #
 
-PACKAGE=lib${LIB}
 SHLIBDIR?= /lib
 
 .include <src.opts.mk>
 
 LIB=	ipsec
+PACKAGE=	runtime
 SHLIB_MAJOR= 4
 CFLAGS+=-I. -I${.CURDIR}
 CFLAGS+=-DIPSEC_DEBUG -DIPSEC

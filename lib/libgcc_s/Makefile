@@ -11,7 +11,6 @@ WARNS?=	2
 LDFLAGS+=	-nodefaultlibs
 LIBADD+=	c
 
-.if ${MK_SYMVER} == "yes"
 VERSION_DEF=	${.CURDIR}/Versions.def
 SYMBOL_MAPS=	${.CURDIR}/Symbol.map
 # Export ARM AEABI unwind routines needed by libc and libthr.
@@ -20,14 +19,13 @@ SYMBOL_MAPS+=	${.CURDIR}/${MACHINE_CPUARCH}/Symbol.map
 .else
 SYMBOL_MAPS+=	${.CURDIR}/SymbolDefault.map
 .endif
-.endif
 
 .include "../libcompiler_rt/Makefile.inc"
 .include "../libgcc_eh/Makefile.inc"
 
 # gcc has incompatible internal declarations for __divtc3 and __multc3, but has
 # no option to silence its warning, so make warnings non-fatal.
-NO_WERROR.gcc=
+MK_WERROR.gcc=	no
 
 LIBCSRCDIR=	${SRCTOP}/lib/libc
 LIBMSRCDIR=	${SRCTOP}/lib/msun/src

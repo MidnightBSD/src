@@ -27,7 +27,6 @@
  * SUCH DAMAGE.
  *
  * Helper functions for snmp client tools
- *
  */
 
 #include <sys/param.h>

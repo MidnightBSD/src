@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include "ypxfrd.h"
 
 #include <stdio.h>

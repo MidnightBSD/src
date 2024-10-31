@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2004 Doug Rabson
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -42,11 +41,10 @@
  * block is returned by this function. For architectures using
  * 'Variant I' TLS, the thread local storage follows the TCB, and for
  * 'Variant II', the thread local storage precedes it. For
- * architectures using the 'Variant II' model (e.g. i386, amd64,
- * sparc64), the TCB must begin with two pointer fields which are used
- * by rtld for its TLS implementation. For the 'Variant I' model, the
- * TCB must begin with a single pointer field for rtld's
- * implementation.
+ * architectures using the 'Variant II' model (e.g. i386, amd64) the
+ * TCB must begin with two pointer fields which are used by rtld for
+ * its TLS implementation. For the 'Variant I' model, the TCB must
+ * begin with a single pointer field for rtld's implementation.
  *
  * If the value of 'oldtls' is non-NULL, the new TLS block will be
  * initialised using the values contained in 'oldtls' and 'oldtls'
@@ -58,7 +56,7 @@
  * The value returned from this function is suitable for installing
  * directly into the thread pointer register.
  */
-void *_rtld_allocate_tls(void* oldtls, size_t tcbsize, size_t tcbalign)
+void *_rtld_allocate_tls(void *oldtls, size_t tcbsize, size_t tcbalign)
     __exported;
 
 /*

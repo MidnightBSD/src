@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2019 The FreeBSD Foundation
- * All rights reserved.
  *
  * Portions of this software were developed by Konstantin Belousov
  * under sponsorship from the FreeBSD Foundation.
@@ -28,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <machine/cpufunc.h>
 #include <machine/specialreg.h>
@@ -70,7 +68,7 @@ x86_pkru_get_perm_hw(u_int keyidx, int *access, int *modify)
 	return (0);
 }
 
-DEFINE_UIFUNC(, int, x86_pkru_get_perm, (u_int, int *, int *), static)
+DEFINE_UIFUNC(, int, x86_pkru_get_perm, (u_int, int *, int *))
 {
 
 	return ((cpu_stdext_feature2 & CPUID_STDEXT2_OSPKE) == 0 ?
@@ -105,7 +103,7 @@ x86_pkru_set_perm_hw(u_int keyidx, int access, int modify)
 	return (0);
 }
 
-DEFINE_UIFUNC(, int, x86_pkru_set_perm, (u_int, int, int), static)
+DEFINE_UIFUNC(, int, x86_pkru_set_perm, (u_int, int, int))
 {
 
 	return ((cpu_stdext_feature2 & CPUID_STDEXT2_OSPKE) == 0 ?

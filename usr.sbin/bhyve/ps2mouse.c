@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2015 Tycho Nightingale <tycho.nightingale@pluribusnetworks.com>
  * Copyright (c) 2015 Nahanni Systems Inc.
@@ -28,20 +28,23 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
+
+#include <machine/vmm_snapshot.h>
 
 #include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <strings.h>
 #include <pthread.h>
 #include <pthread_np.h>
 
 #include "atkbdc.h"
-#include "debug.h"
 #include "console.h"
+#include "debug.h"
+#include "ps2mouse.h"
 
 /* mouse device commands */
 #define	PS2MC_RESET_DEV		0xff
@@ -415,4 +418,23 @@ ps2mouse_init(struct atkbdc_softc *atkbdc_sc)
 	return (sc);
 }
 
+#ifdef BHYVE_SNAPSHOT
+int
+ps2mouse_snapshot(struct ps2mouse_softc *sc, struct vm_snapshot_meta *meta)
+{
+	int ret;
 
+	SNAPSHOT_VAR_OR_LEAVE(sc->status, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->resolution, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->sampling_rate, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->ctrlenable, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->curcmd, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->cur_x, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->cur_y, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->delta_x, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->delta_y, meta, ret, done);
+
+done:
+	return (ret);
+}
+#endif

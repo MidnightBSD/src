@@ -1,7 +1,7 @@
 /*	$OpenBSD: fsirand.c,v 1.9 1997/02/28 00:46:33 millert Exp $	*/
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1997 Todd C. Miller <Todd.Miller@courtesan.com>
  * All rights reserved.
@@ -78,8 +78,6 @@ main(int argc, char *argv[])
 	if (argc - optind < 1)
 		usage();
 
-	srandomdev();
-
 	/* Increase our data size to the max */
 	if (getrlimit(RLIMIT_DATA, &rl) == 0) {
 		rl.rlim_cur = rl.rlim_max;
@@ -121,7 +119,7 @@ fsirand(char *device)
 	dp2 = NULL;
 
 	/* Read in master superblock */
-	if ((ret = sbget(devfd, &sblock, -1)) != 0) {
+	if ((ret = sbget(devfd, &sblock, STDSB)) != 0) {
 		switch (ret) {
 		case ENOENT:
 			warn("Cannot find file system superblock");
@@ -168,7 +166,7 @@ fsirand(char *device)
 	if (!printonly) {
 		/* Randomize fs_id and write out new sblock and backups */
 		sblock->fs_id[0] = (u_int32_t)time(NULL);
-		sblock->fs_id[1] = random();
+		sblock->fs_id[1] = arc4random();
 		if (sbput(devfd, sblock, sblock->fs_ncg) != 0) {
 			warn("could not write updated superblock");
 			return (1);
@@ -176,7 +174,7 @@ fsirand(char *device)
 	}
 
 	/* For each cylinder group, randomize inodes and update backup sblock */
-	for (cg = 0, inumber = 0; cg < (int)sblock->fs_ncg; cg++) {
+	for (cg = 0, inumber = UFS_ROOTINO; cg < (int)sblock->fs_ncg; cg++) {
 		/* Read in inodes, then print or randomize generation nums */
 		dblk = fsbtodb(sblock, ino_to_fsba(sblock, inumber));
 		if (lseek(devfd, (off_t)dblk * bsize, SEEK_SET) < 0) {
@@ -188,21 +186,23 @@ fsirand(char *device)
 			return (1);
 		}
 
-		for (n = 0; n < (int)sblock->fs_ipg; n++, inumber++) {
-			if (sblock->fs_magic == FS_UFS1_MAGIC)
-				dp1 = &((struct ufs1_dinode *)inodebuf)[n];
-			else
-				dp2 = &((struct ufs2_dinode *)inodebuf)[n];
-			if (inumber >= UFS_ROOTINO) {
-				if (printonly)
-					(void)printf("ino %ju gen %08x\n",
-					    (uintmax_t)inumber,
-					    sblock->fs_magic == FS_UFS1_MAGIC ?
-					    dp1->di_gen : dp2->di_gen);
-				else if (sblock->fs_magic == FS_UFS1_MAGIC) 
-					dp1->di_gen = random(); 
-				else
-					dp2->di_gen = random();
+		dp1 = (struct ufs1_dinode *)(void *)inodebuf;
+		dp2 = (struct ufs2_dinode *)(void *)inodebuf;
+		for (n = cg > 0 ? 0 : UFS_ROOTINO;
+		     n < (int)sblock->fs_ipg;
+		     n++, inumber++) {
+			if (printonly) {
+				(void)printf("ino %ju gen %08x\n",
+				    (uintmax_t)inumber,
+				    sblock->fs_magic == FS_UFS1_MAGIC ?
+				    dp1->di_gen : dp2->di_gen);
+			} else if (sblock->fs_magic == FS_UFS1_MAGIC) {
+				dp1->di_gen = arc4random(); 
+				dp1++;
+			} else {
+				dp2->di_gen = arc4random();
+				ffs_update_dinode_ckhash(sblock, dp2);
+				dp2++;
 			}
 		}
 

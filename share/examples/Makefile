@@ -1,4 +1,3 @@
-# $FreeBSD: stable/11/share/examples/Makefile 335480 2018-06-21 14:21:11Z dteske $
 #
 # Doing a make install builds /usr/share/examples
 
@@ -15,7 +14,7 @@ LDIRS=	IPv6 \
 	drivers \
 	etc \
 	find_interface \
-	ibcs2 \
+	flua \
 	indent \
 	ipfw \
 	jails \

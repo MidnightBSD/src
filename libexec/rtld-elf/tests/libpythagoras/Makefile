@@ -9,7 +9,6 @@ SHLIBDIR=	${TESTSBASE}/libexec/rtld-elf
 
 SRCS=		pythagoras.c
 
-WARNS?=		6
 LIBADD=		m
 
 .include <bsd.lib.mk>

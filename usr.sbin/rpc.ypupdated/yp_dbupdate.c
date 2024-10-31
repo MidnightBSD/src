@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/fcntl.h>
 
 #include <stdint.h>

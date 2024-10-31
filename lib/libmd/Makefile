@@ -2,8 +2,9 @@
 SHLIBDIR?= /lib
 
 .include <src.opts.mk>
+.include <bsd.compiler.mk>
 
-PACKAGE=lib${LIB}
+PACKAGE=	runtime
 LIB=	md
 SHLIB_MAJOR= 6
 SRCS=	md4c.c md5c.c md4hl.c md5hl.c \
@@ -11,7 +12,7 @@ SRCS=	md4c.c md5c.c md4hl.c md5hl.c \
 	sha0c.c sha0hl.c sha1c.c sha1hl.c \
 	sha224hl.c sha256c.c sha256hl.c \
 	sha384hl.c \
-	sha512c.c sha512hl.c sha512thl.c \
+	sha512c.c sha512hl.c sha512t224hl.c sha512t256hl.c \
 	skein.c skein_block.c \
 	skein256hl.c skein512hl.c skein1024hl.c
 INCS=	md4.h md5.h ripemd.h sha.h sha224.h sha256.h sha384.h sha512.h \
@@ -52,6 +53,10 @@ MLINKS+=sha512.3 SHA512_Init.3  sha512.3 SHA512_Update.3
 MLINKS+=sha512.3 SHA512_Final.3 sha512.3 SHA512_End.3
 MLINKS+=sha512.3 SHA512_File.3  sha512.3 SHA512_FileChunk.3
 MLINKS+=sha512.3 SHA512_Data.3
+MLINKS+=sha512.3 SHA512_224_Init.3  sha512.3 SHA512_224_Update.3
+MLINKS+=sha512.3 SHA512_224_Final.3 sha512.3 SHA512_224_End.3
+MLINKS+=sha512.3 SHA512_224_File.3  sha512.3 SHA512_224_FileChunk.3
+MLINKS+=sha512.3 SHA512_224_Data.3
 MLINKS+=sha512.3 SHA512_256_Init.3  sha512.3 SHA512_256_Update.3
 MLINKS+=sha512.3 SHA512_256_Final.3 sha512.3 SHA512_256_End.3
 MLINKS+=sha512.3 SHA512_256_File.3  sha512.3 SHA512_256_FileChunk.3
@@ -74,7 +79,9 @@ CLEANFILES+=	md[245]hl.c md[245].ref md[245].3 mddriver \
 		sha0.ref sha0hl.c sha1.ref sha1hl.c shadriver \
 		sha224.ref sha256.ref sha224hl.c sha256hl.c \
 		sha384hl.c sha384.ref \
-		sha512.ref sha512hl.c sha512t256.ref sha512thl.c \
+		sha512.ref sha512hl.c \
+		sha512t224.ref sha512t224hl.c \
+		sha512t256.ref sha512t256hl.c \
 		skein256hl.c skein512hl.c skein1024hl.c \
 		skein256.ref skein512.ref skein1024.ref \
 		skeindriver
@@ -101,7 +108,7 @@ CFLAGS.skein_block.c+= -DSKEIN_LOOP=995
 .PATH: ${SRCTOP}/sys/crypto/skein ${SRCTOP}/sys/crypto/skein/${MACHINE_ARCH}
 
 USE_ASM_SOURCES?=1
-.if defined(BOOTSTRAPPING)
+.if defined(BOOTSTRAPPING) || ${MK_MACHDEP_OPTIMIZATIONS} == no
 # Don't build ASM sources when bootstrapping to avoid toolchain dependencies
 USE_ASM_SOURCES:=0
 .endif
@@ -115,19 +122,28 @@ CFLAGS+= -DSHA1_ASM
 SRCS+=	rmd160.S
 CFLAGS+= -DRMD160_ASM
 .endif
-.if exists(${MACHINE_ARCH}/skein_block_asm.s)
-.if defined(XAS) || ${MK_BINUTILS_BOOTSTRAP} != "no"
-AFLAGS += --strip-local-absolute
+.if exists(${MACHINE_ARCH}/skein_block_asm.S)
 # Fully unroll all loops in the assembly optimized version
-AFLAGS+= --defsym SKEIN_LOOP=0 --defsym SKEIN_USE_ASM=1792
-SRCS+= skein_block_asm.s
+ACFLAGS+= -DSKEIN_LOOP=0
+SRCS+= skein_block_asm.S
 CFLAGS+= -DSKEIN_ASM -DSKEIN_USE_ASM=1792 # list of block functions to replace with assembly: 256+512+1024 = 1792
-.else
-.warning as not available: not using optimized Skein asm
+# 20201002 Add explict Makefile dependency for r366344 (reenabled assembly
+# optimized version). SKEIN_USE_ASM determines which routines should come from
+# the assembly vs C versions, and skein_block needs to be rebuilt if it changes.
+skein_block.o skein_block.pico: Makefile
 .endif
-.endif
-.if exists(${MACHINE_ARCH}/sha.S) || exists(${MACHINE_ARCH}/rmd160.S) || exists(${MACHINE_ARCH}/skein_block_asm.s)
+.if exists(${MACHINE_ARCH}/sha.S) || exists(${MACHINE_ARCH}/rmd160.S) || exists(${MACHINE_ARCH}/skein_block_asm.S)
 ACFLAGS+= -DELF -Wa,--noexecstack
+.endif
+.if ${MACHINE_CPUARCH} == "aarch64"
+SRCS+=	sha256c_arm64.c
+CFLAGS+= -DARM64_SHA2
+CFLAGS.sha256c_arm64.c+= -march=armv8-a+crypto
+.if ${COMPILER_FEATURES:Maarch64-sha512}
+SRCS+=	sha512c_arm64.c
+CFLAGS+= -DARM64_SHA512
+CFLAGS.sha512c_arm64.c+= -march=armv8.2-a+sha3
+.endif # aarch64-sha512
 .endif
 .endif # ${USE_ASM_SOURCES} != 0
 
@@ -173,7 +189,14 @@ sha512hl.c: mdXhl.c
 			-e  's/SHA512__/SHA512_/g' \
 		${.ALLSRC}) > ${.TARGET}
 
-sha512thl.c: mdXhl.c
+sha512t224hl.c: mdXhl.c
+	(echo '#define LENGTH 28'; \
+		sed -e 's/mdX/sha512t/g' -e 's/MDX/SHA512_224_/g'	\
+			-e  's/SHA512_224__/SHA512_224_/g' \
+			-e 's/SHA512_224_CTX/SHA512_CTX/g' \
+		${.ALLSRC}) > ${.TARGET}
+
+sha512t256hl.c: mdXhl.c
 	(echo '#define LENGTH 32'; \
 		sed -e 's/mdX/sha512t/g' -e 's/MDX/SHA512_256_/g'	\
 			-e  's/SHA512_256__/SHA512_256_/g' \
@@ -317,6 +340,21 @@ sha512.ref:
 	@echo 'SHA-512 ("12345678901234567890123456789012345678901234567890123456789012345678901234567890") =' \
 		'72ec1ef1124a45b047e8b7c75a932195135bb61de24ec0d1914042246e0aec3a2354e093d76f3048b456764346900cb130d2a4fd5dd16abb5e30bcb850dee843' >> ${.TARGET}
 
+sha512t224.ref:
+	echo 'SHA-512224 test suite:' > ${.TARGET}
+	@echo 'SHA-512224 ("") =' \
+		'6ed0dd02806fa89e25de060c19d3ac86cabb87d6a0ddd05c333b84f4' >> ${.TARGET}
+	@echo 'SHA-512224 ("abc") =' \
+		'4634270f707b6a54daae7530460842e20e37ed265ceee9a43e8924aa' >> ${.TARGET}
+	@echo 'SHA-512224 ("message digest") =' \
+		'ad1a4db188fe57064f4f24609d2a83cd0afb9b398eb2fcaeaae2c564' >> ${.TARGET}
+	@echo 'SHA-512224 ("abcdefghijklmnopqrstuvwxyz") =' \
+		'ff83148aa07ec30655c1b40aff86141c0215fe2a54f767d3f38743d8' >> ${.TARGET}
+	@echo 'SHA-512224 ("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789") =' \
+		'a8b4b9174b99ffc67d6f49be9981587b96441051e16e6dd036b140d3' >> ${.TARGET}
+	@echo 'SHA-512224 ("12345678901234567890123456789012345678901234567890123456789012345678901234567890") =' \
+		'ae988faaa47e401a45f704d1272d99702458fea2ddc6582827556dd2' >> ${.TARGET}
+
 sha512t256.ref:
 	echo 'SHA-512256 test suite:' > ${.TARGET}
 	@echo 'SHA-512256 ("") =' \
@@ -389,7 +427,7 @@ skein1024.ref:
 		'cf21a613620e6c119eca31fdfaad449a8e02f95ca256c21d2a105f8e4157048f9fe1e897893ea18b64e0e37cb07d5ac947f27ba544caf7cbc1ad094e675aed77a366270f7eb7f46543bccfa61c526fd628408058ed00ed566ac35a9761d002e629c4fb0d430b2f4ad016fcc49c44d2981c4002da0eecc42144160e2eaea4855a' >> ${.TARGET}
 
 test:	md4.ref md5.ref sha0.ref rmd160.ref sha1.ref sha224.ref sha256.ref sha384.ref \
-		sha512.ref sha512t256.ref skein256.ref skein512.ref skein1024.ref
+		sha512.ref sha512t224.ref sha512t256.ref skein256.ref skein512.ref skein1024.ref
 	@${ECHO} if any of these test fail, the code produces wrong results
 	@${ECHO} and should NOT be used.
 	${CC} ${CFLAGS} ${LDFLAGS} -DMD=4 -o mddriver ${.CURDIR}/mddriver.c libmd.a
@@ -421,6 +459,10 @@ test:	md4.ref md5.ref sha0.ref rmd160.ref sha1.ref sha224.ref sha256.ref sha384.
 	${CC} ${CFLAGS} ${LDFLAGS} -DSHA=512 -o shadriver ${.CURDIR}/shadriver.c libmd.a
 	./shadriver | cmp sha512.ref -
 	@${ECHO} SHA-512 passed test
+	${CC} ${CFLAGS} ${LDFLAGS} -DSHA=512224 -o shadriver ${.CURDIR}/shadriver.c libmd.a
+	./shadriver | cmp sha512t224.ref -
+	@${ECHO} SHA-512t224 passed test
+	-rm -f shadriver
 	${CC} ${CFLAGS} ${LDFLAGS} -DSHA=512256 -o shadriver ${.CURDIR}/shadriver.c libmd.a
 	./shadriver | cmp sha512t256.ref -
 	@${ECHO} SHA-512t256 passed test

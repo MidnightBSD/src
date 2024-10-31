@@ -9,7 +9,6 @@
 #
 
 base="Base system"
-doc="Additional Documentation"
 kernel="Kernel"
 ports="Ports tree"
 src="System source tree"
@@ -18,7 +17,6 @@ tests="Test suite"
 
 desc_base="${base} (MANDATORY)"
 desc_base_dbg="${base} (Debugging)"
-desc_doc="${doc}"
 desc_kernel="${kernel} (MANDATORY)"
 desc_kernel_dbg="${kernel} (Debugging)"
 desc_kernel_alt="Alternate ${kernel}"
@@ -29,7 +27,6 @@ desc_ports="${ports}"
 desc_src="${src}"
 desc_tests="${tests}"
 
-default_doc=off
 default_src=off
 default_ports=off
 default_tests=off

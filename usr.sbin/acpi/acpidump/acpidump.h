@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999 Doug Rabson
  * Copyright (c) 2000 Mitsuru IWASAKI <iwasaki@FreeBSD.org>
@@ -25,15 +25,17 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _ACPIDUMP_H_
 #define	_ACPIDUMP_H_
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 #include <contrib/dev/acpica/include/acpi.h>
 #include <contrib/dev/acpica/include/acconfig.h>
 #include <contrib/dev/acpica/include/actbl1.h>
+#pragma GCC diagnostic pop
 
 /* GAS address space ID constants. */
 #define	ACPI_GAS_MEMORY		0

@@ -1,5 +1,5 @@
 
-PACKAGE=lib${LIB}
+PACKAGE=	runtime
 EXPAT=		${SRCTOP}/contrib/expat
 
 LIB=		bsdxml
@@ -17,9 +17,9 @@ CLEANFILES=	bsdxml.h bsdxml_external.h
 WARNS?=		2
 
 # OK, so it is not entirely unadulterated: we amend the COPYING to
-# point people to the right place, get rid of some VMS stuff and use
-# BSD-style include guards.  We also want to point it at the new
-# bsdxml_external.h rather than the old expat_external.h file.
+# point people to the right place and use FreeBSD-style include guards.
+# We also want to point it at the new bsdxml_external.h rather than the
+# old expat_external.h file.
 bsdxml.h: expat.h
 	sed -e 's/XmlParse_INCLUDED/_BSD_XML_H_/' \
 	    -e 's/COPYING/src\/contrib\/expat\/COPYING/' \

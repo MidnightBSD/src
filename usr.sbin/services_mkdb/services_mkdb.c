@@ -1,7 +1,7 @@
 /*	$NetBSD: services_mkdb.c,v 1.14 2008/04/28 20:24:17 martin Exp $	*/
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/stat.h>
 
@@ -55,7 +54,7 @@
 static char tname[MAXPATHLEN];
 
 #define	PMASK		0xffff
-#define PROTOMAX	6
+#define	PROTOMAX	6
 
 static void	add(DB *, StringList *, size_t, const char *, size_t *, int);
 static StringList ***parseservices(const char *, StringList *);

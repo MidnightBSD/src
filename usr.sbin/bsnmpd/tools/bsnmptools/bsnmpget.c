@@ -28,7 +28,6 @@
  *
  * Bsnmpget and bsnmpwalk are simple tools for querying SNMP agents,
  * bsnmpset can be used to set MIB objects in an agent.
- *
  */
 
 #include <sys/queue.h>

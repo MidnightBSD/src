@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 1996
  *	David L. Nugent.  All rights reserved.
@@ -25,7 +25,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-
 
 #include <err.h>
 #include <fcntl.h>
@@ -214,12 +213,14 @@ passwd_val(char const * str, int dflt)
 char const     *
 boolean_str(int val)
 {
-	if (val == -1)
-		return "random";
-	else if (val == -2)
-		return "none";
+	if (val == P_NO)
+		return (boolfalse[0]);
+	else if (val == P_RANDOM)
+		return ("random");
+	else if (val == P_NONE)
+		return ("none");
 	else
-		return val ? booltrue[0] : boolfalse[0];
+		return (booltrue[0]);
 }
 
 char           *

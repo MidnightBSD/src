@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/endian.h>
 #include <sys/param.h>
 #include <sys/disk.h>
@@ -137,10 +136,11 @@ do_led(int fd, unsigned int idx, elm_type_t type, bool onoff, bool setfault)
 		close(fd);
 		xo_err(EXIT_FAILURE, "ENCIOC_GETELMSTAT");
 	}
-	slot = (struct ses_ctrl_dev_slot *) &o.cstat[0];
+	ses_status_to_ctrl(type, &o.cstat[0]);
 	switch (type) {
 	case ELMTYP_DEVICE:
 	case ELMTYP_ARRAY_DEV:
+		slot = (struct ses_ctrl_dev_slot *) &o.cstat[0];
 		ses_ctrl_common_set_select(&slot->common, 1);
 		if (setfault)
 			ses_ctrl_dev_slot_set_rqst_fault(slot, state);
@@ -279,6 +279,16 @@ sesled(int argc, char **argv, bool setfault)
 			char devnames[devnames_size];
 
 			if (all) {
+				encioc_elm_status_t es;
+				memset(&es, 0, sizeof(es));
+				es.elm_idx = objp[j].elm_idx;
+				if (ioctl(fd, ENCIOC_GETELMSTAT, &es) < 0) {
+					close(fd);
+					xo_err(EXIT_FAILURE,
+						"ENCIOC_GETELMSTAT");
+				}
+				if ((es.cstat[0] & 0xf) == SES_OBJSTAT_NOACCESS)
+					continue;
 				do_led(fd, objp[j].elm_idx, objp[j].elm_type,
 				    onoff, setfault);
 				continue;
@@ -306,7 +316,7 @@ sesled(int argc, char **argv, bool setfault)
 	}
 	globfree(&g);
 	if (ndisks == 0 && all == false) {
-		xo_errx(EXIT_FAILURE, "Count not find the SES id of device '%s'",
+		xo_errx(EXIT_FAILURE, "Could not find the SES id of device '%s'",
 		    disk);
 	}
 
@@ -415,6 +425,17 @@ objmap(int argc, char **argv __unused)
 		usage(stderr, "map");
 	}
 
+	memset(&e_desc, 0, sizeof(e_desc));
+	/* SES4r02 allows element descriptors of up to 65536 characters */
+	e_desc.elm_desc_str = calloc(UINT16_MAX, sizeof(char));
+	if (e_desc.elm_desc_str == NULL)
+		xo_err(EXIT_FAILURE, "calloc()");
+
+	e_devname.elm_devnames = calloc(128, sizeof(char));
+	if (e_devname.elm_devnames == NULL)
+		xo_err(EXIT_FAILURE, "calloc()");
+	e_devname.elm_names_size = 128;
+
 	/* Get the list of ses devices */
 	if (glob(uflag, 0, NULL, &g) == GLOB_NOMATCH) {
 		globfree(&g);
@@ -479,31 +500,19 @@ objmap(int argc, char **argv __unused)
 				xo_err(EXIT_FAILURE, "ENCIOC_GETELMSTAT");
 			}
 			/* Get the description of the element */
-			memset(&e_desc, 0, sizeof(e_desc));
 			e_desc.elm_idx = e_ptr[j].elm_idx;
 			e_desc.elm_desc_len = UINT16_MAX;
-			e_desc.elm_desc_str = calloc(UINT16_MAX, sizeof(char));
-			if (e_desc.elm_desc_str == NULL) {
-				close(fd);
-				xo_err(EXIT_FAILURE, "calloc()");
-			}
 			if (ioctl(fd, ENCIOC_GETELMDESC,
 			    (caddr_t) &e_desc) < 0) {
 				close(fd);
 				xo_err(EXIT_FAILURE, "ENCIOC_GETELMDESC");
 			}
+			e_desc.elm_desc_str[e_desc.elm_desc_len] = '\0';
 			/* Get the device name(s) of the element */
-			memset(&e_devname, 0, sizeof(e_devname));
 			e_devname.elm_idx = e_ptr[j].elm_idx;
-			e_devname.elm_names_size = 128;
-			e_devname.elm_devnames = calloc(128, sizeof(char));
-			if (e_devname.elm_devnames == NULL) {
-				close(fd);
-				xo_err(EXIT_FAILURE, "calloc()");
-			}
 			if (ioctl(fd, ENCIOC_GETELMDEVNAMES,
 			    (caddr_t) &e_devname) <0) {
-				/* We don't care if this fails */
+				/* Continue even if we can't look up devnames */
 				e_devname.elm_devnames[0] = '\0';
 			}
 			xo_open_instance("elements");
@@ -523,13 +532,14 @@ objmap(int argc, char **argv __unused)
 			}
 			print_extra_status(e_ptr[j].elm_type, e_status.cstat, PRINT_STYLE_DASHED);
 			xo_close_instance("elements");
-			free(e_devname.elm_devnames);
 		}
 		xo_close_list("elements");
 		free(e_ptr);
 		close(fd);
 	}
 	globfree(&g);
+	free(e_devname.elm_devnames);
+	free(e_desc.elm_desc_str);
 	xo_close_list("enclosures");
 	xo_close_container("sesutil");
 	xo_finish();
@@ -569,17 +579,17 @@ fetch_device_details(char *devnames, char **model, char **serial, off_t *size)
 {
 	char ident[DISK_IDENT_SIZE];
 	struct diocgattr_arg arg;
-	char *device, *tmp;
+	char *tmp;
 	off_t mediasize;
+	int comma;
 	int fd;
 
-	tmp = strdup(devnames);
+	comma = (int)strcspn(devnames, ",");
+	asprintf(&tmp, "/dev/%.*s", comma, devnames);
 	if (tmp == NULL)
-		err(1, "strdup");
-
-	device = strsep(&tmp, ",");
-	asprintf(&tmp, "/dev/%s", device);
+		err(1, "asprintf");
 	fd = open(tmp, O_RDONLY);
+	free(tmp);
 	if (fd < 0) {
 		/*
 		 * This can happen with a disk so broken it cannot
@@ -588,6 +598,7 @@ fetch_device_details(char *devnames, char **model, char **serial, off_t *size)
 		*model = strdup("?");
 		*serial = strdup("?");
 		*size = -1;
+		close(fd);
 		return;
 	}
 
@@ -607,13 +618,14 @@ fetch_device_details(char *devnames, char **model, char **serial, off_t *size)
 		*size = mediasize;
 	else
 		*size = -1;
+	close(fd);
 }
 
 static void
 show_device(int fd, int elm_idx, encioc_elm_status_t e_status, encioc_elm_desc_t e_desc)
 {
 	encioc_elm_devnames_t e_devname;
-	char *model, *serial;
+	char *model = NULL, *serial = NULL;
 	off_t size;
 
 	/* Get the device name(s) of the element */
@@ -630,8 +642,6 @@ show_device(int fd, int elm_idx, encioc_elm_status_t e_status, encioc_elm_desc_t
 	    (caddr_t) &e_devname) < 0) {
 		/* We don't care if this fails */
 		e_devname.elm_devnames[0] = '\0';
-		model = NULL;
-		serial = NULL;
 		size = -1;
 	} else {
 		skip_pass_devices(e_devname.elm_devnames, 128);
@@ -647,7 +657,7 @@ show_device(int fd, int elm_idx, encioc_elm_status_t e_status, encioc_elm_desc_t
 	xo_emit("{e:model/%s}", model ? model : "");
 	xo_emit("{d:serial/%-20s} ", serial != NULL ? serial : "-");
 	xo_emit("{e:serial/%s}", serial != NULL ? serial : "");
-	if (e_status.cstat[0] == SES_OBJSTAT_OK && size >= 0) {
+	if ((e_status.cstat[0] & 0xf) == SES_OBJSTAT_OK && size >= 0) {
 		xo_emit("{h,hn-1000:size/%ld}{e:status/%s}",
 		    size, scode2ascii(e_status.cstat[0]));
 	} else {
@@ -656,6 +666,8 @@ show_device(int fd, int elm_idx, encioc_elm_status_t e_status, encioc_elm_desc_t
 	print_extra_status(ELMTYP_ARRAY_DEV, e_status.cstat, PRINT_STYLE_CSV);
 	xo_emit("\n");
 	xo_close_instance("elements");
+	free(serial);
+	free(model);
 	free(e_devname.elm_devnames);
 }
 
@@ -721,6 +733,10 @@ show(int argc, char **argv __unused)
 	}
 
 	first_ses = true;
+
+	e_desc.elm_desc_str = calloc(UINT16_MAX, sizeof(char));
+	if (e_desc.elm_desc_str == NULL)
+		xo_err(EXIT_FAILURE, "calloc()");
 
 	/* Get the list of ses devices */
 	if (glob(uflag, 0, NULL, &g) == GLOB_NOMATCH) {
@@ -803,19 +819,14 @@ show(int argc, char **argv __unused)
 				continue;
 
 			/* Get the description of the element */
-			memset(&e_desc, 0, sizeof(e_desc));
 			e_desc.elm_idx = e_ptr[j].elm_idx;
 			e_desc.elm_desc_len = UINT16_MAX;
-			e_desc.elm_desc_str = calloc(UINT16_MAX, sizeof(char));
-			if (e_desc.elm_desc_str == NULL) {
-				close(fd);
-				xo_err(EXIT_FAILURE, "calloc()");
-			}
 			if (ioctl(fd, ENCIOC_GETELMDESC,
 			    (caddr_t) &e_desc) < 0) {
 				close(fd);
 				xo_err(EXIT_FAILURE, "ENCIOC_GETELMDESC");
 			}
+			e_desc.elm_desc_str[e_desc.elm_desc_len] = '\0';
 
 			switch (e_ptr[j].elm_type) {
 			case ELMTYP_DEVICE:
@@ -857,6 +868,7 @@ show(int argc, char **argv __unused)
 		close(fd);
 	}
 	globfree(&g);
+	free(e_desc.elm_desc_str);
 	xo_close_list("enclosures");
 	xo_close_container("sesutil");
 	xo_finish();

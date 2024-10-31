@@ -1,9 +1,6 @@
 #	@(#)Makefile	8.5 (Berkeley) 3/31/94
-# $FreeBSD: stable/11/sbin/Makefile 346429 2019-04-20 04:16:51Z kevans $
 
 .include <src.opts.mk>
-
-# XXX MISSING:		badsect icheck ncheck
 
 SUBDIR=adjkerntz \
 	camcontrol \
@@ -54,7 +51,7 @@ SUBDIR=adjkerntz \
 	newfs_msdos \
 	nfsiod \
 	nos-tun \
-	ping \
+	pfilctl \
 	rcorder \
 	reboot \
 	recoverdisk \
@@ -70,19 +67,20 @@ SUBDIR=adjkerntz \
 	tunefs \
 	umount
 
+.if ${MK_INET} != "no" || ${MK_INET6} != "no"
+SUBDIR+=	ping
+.endif
+
 SUBDIR.${MK_CCD}+=	ccdconfig
 SUBDIR.${MK_CXX}+=	devd
 SUBDIR.${MK_HAST}+=	hastctl
 SUBDIR.${MK_HAST}+=	hastd
 SUBDIR.${MK_INET6}+=	dhcp6c
-SUBDIR.${MK_INET6}+=	ping6
 SUBDIR.${MK_INET6}+=	rtsol
 SUBDIR.${MK_IPFILTER}+=	ipf
 SUBDIR.${MK_IPFW}+=	ipfw
 SUBDIR.${MK_IPFW}+=	natd
 SUBDIR.${MK_ISCSI}+=	iscontrol
-SUBDIR.${MK_NAND}+=	nandfs
-SUBDIR.${MK_NAND}+=	newfs_nandfs
 SUBDIR.${MK_NVME}+=	nvmecontrol
 SUBDIR.${MK_OPENSSL}+=	decryptcore
 SUBDIR.${MK_PF}+=	pfctl

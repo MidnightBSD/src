@@ -24,7 +24,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <assert.h>
 #include <stdbool.h>
 #include <stdlib.h>

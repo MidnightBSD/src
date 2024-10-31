@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef	_MEVENT_H_
@@ -34,12 +33,19 @@ enum ev_type {
 	EVF_READ,
 	EVF_WRITE,
 	EVF_TIMER,
-	EVF_SIGNAL
+	EVF_SIGNAL,
+	EVF_VNODE,
 };
+
+/* Filter flags for EVF_VNODE */
+#define	EVFF_ATTRIB	0x0001
 
 struct mevent;
 
-struct mevent *mevent_add(int fd, enum ev_type type, 
+struct mevent *mevent_add(int fd, enum ev_type type,
+			  void (*func)(int, enum ev_type, void *),
+			  void *param);
+struct mevent *mevent_add_flags(int fd, enum ev_type type, int fflags,
 			  void (*func)(int, enum ev_type, void *),
 			  void *param);
 struct mevent *mevent_add_disabled(int fd, enum ev_type type,

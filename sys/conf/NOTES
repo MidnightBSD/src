@@ -326,19 +326,11 @@ options 	SLEEPQUEUE_PROFILING
 options 	TURNSTILE_PROFILING
 options 	UMTX_PROFILING
 
+# Debugging traces for epoch(9) misuse
+options 	EPOCH_TRACE
 
 #####################################################################
 # COMPATIBILITY OPTIONS
-
-#
-# Implement system calls compatible with 4.3BSD and older versions of
-# MidnightBSD.  You probably do NOT want to remove this as much current code
-# still relies on the 4.3 emulation.  Note that some architectures that
-# are supported by MidnightBSD do not include support for certain important
-# aspects of this compatibility option, namely those related to the
-# signal delivery mechanism.
-#
-options 	COMPAT_43
 
 # Old tty interface.
 options 	COMPAT_43TTY
@@ -366,6 +358,9 @@ options 	COMPAT_FREEBSD10
 
 # Enable FreeBSD11 compatibility syscalls
 options 	COMPAT_FREEBSD11
+
+# Enable FreeBSD12 compatibility syscalls
+options 	COMPAT_FREEBSD12
 
 # Enable Linux Kernel Programming Interface
 options 	COMPAT_LINUXKPI
@@ -415,6 +410,18 @@ options 	DDB_NUMSYM
 # Enable the remote gdb debugger backend.
 #
 options 	GDB
+
+#
+# Trashes list pointers when they become invalid (i.e., the element is
+# removed from a list).  Relatively inexpensive to enable.
+#
+options 	QUEUE_MACRO_DEBUG_TRASH
+
+#
+# Stores information about the last caller to modify the list object
+# in the list object.  Requires additional memory overhead.
+#
+#options 	QUEUE_MACRO_DEBUG_TRACE
 
 #
 # SYSCTL_DEBUG enables a 'sysctl' debug tree that can be used to dump the
@@ -643,6 +650,7 @@ options 	ROUTETABLES=2		# allocated fibs up to 65536. default is 1.
 					# but that would be a bad idea as they are large.
 
 options 	TCP_OFFLOAD		# TCP offload support.
+options		TCP_RFC7413		# TCP Fast Open
 
 options		TCPHPTS
 
@@ -655,6 +663,13 @@ options 	IPSEC			#IP security (requires device crypto)
 # configuration.
 options		IPSEC_SUPPORT
 #options 	IPSEC_DEBUG		#debug for IP security
+
+
+# TLS framing and encryption/decryption of data over TCP sockets.
+options		KERN_TLS		# TLS transmit and receive offload
+
+# Netlink kernel/user<>kernel/user messaging interface
+options		NETLINK
 
 #
 # SMB/CIFS requester
@@ -755,7 +770,6 @@ options 	NETGRAPH_DEBUG		# enable extra debugging, this
 options 	NETGRAPH_ASYNC
 options 	NETGRAPH_ATMLLC
 options 	NETGRAPH_BLUETOOTH		# ng_bluetooth(4)
-options 	NETGRAPH_BLUETOOTH_BT3C		# ng_bt3c(4)
 options 	NETGRAPH_BLUETOOTH_HCI		# ng_hci(4)
 options 	NETGRAPH_BLUETOOTH_L2CAP	# ng_l2cap(4)
 options 	NETGRAPH_BLUETOOTH_SOCKET	# ng_btsocket(4)
@@ -764,6 +778,7 @@ options 	NETGRAPH_BLUETOOTH_UBTBCMFW	# ubtbcmfw(4)
 options 	NETGRAPH_BPF
 options 	NETGRAPH_BRIDGE
 options 	NETGRAPH_CAR
+options 	NETGRAPH_CHECKSUM
 options 	NETGRAPH_CISCO
 options 	NETGRAPH_DEFLATE
 options 	NETGRAPH_DEVICE
@@ -838,7 +853,6 @@ device		vxlan
 #  and ath drivers and will eventually be required by all 802.11 drivers.
 device		wlan
 options 	IEEE80211_DEBUG		#enable debugging msgs
-options 	IEEE80211_AMPDU_AGE	#age frames in AMPDU reorder q's
 options 	IEEE80211_SUPPORT_MESH	#enable 802.11s D3.0 support
 options 	IEEE80211_SUPPORT_TDMA	#enable TDMA support
 
@@ -931,6 +945,9 @@ device		enc
 # Link aggregation interface.
 device		lagg
 
+# WireGuard interface.
+device		wg
+
 #
 # Internet family options:
 #
@@ -987,7 +1004,7 @@ device		lagg
 #
 # TCP_HHOOK enables the hhook(9) framework hooks for the TCP stack.
 #
-# RADIX_MPATH provides support for equal-cost multi-path routing.
+# ROUTE_MPATH provides support for multipath routing.
 #
 options 	MROUTING		# Multicast routing
 options 	IPFIREWALL		#firewall
@@ -1008,7 +1025,7 @@ options 	TCPDEBUG
 options 	TCPPCAP
 options 	TCP_BLACKBOX
 options 	TCP_HHOOK
-options 	RADIX_MPATH
+options 	ROUTE_MPATH
 
 # The MBUF_STRESS_TEST option enables options which create
 # various random failures / extreme cases related to mbuf
@@ -1039,9 +1056,17 @@ options 	TCP_SIGNATURE		#include support for RFC 2385
 # a smooth scheduling of the traffic.
 options 	DUMMYNET
 
+# The DEBUGNET option enables a basic debug/panic-time networking API.  It
+# is used by NETDUMP and NETGDB.
+options 	DEBUGNET
+
 # The NETDUMP option enables netdump(4) client support in the kernel.
 # This allows a panicking kernel to transmit a kernel dump to a remote host.
 options 	NETDUMP
+
+# The NETGDB option enables netgdb(4) support in the kernel.  This allows a
+# panicking kernel to be debugged as a GDB remote over the network.
+options 	NETGDB
 
 #####################################################################
 # FILESYSTEM OPTIONS
@@ -1161,9 +1186,6 @@ options 	NFS_DEBUG		# Enable NFS Debugging
 #
 options 	EXT2FS
 
-# Cryptographically secure random number generator; /dev/random
-device		random
-
 # The system memory devices; /dev/mem, /dev/kmem
 device		mem
 
@@ -1208,6 +1230,7 @@ options 	MAC_NONE
 options 	MAC_NTPD
 options 	MAC_PARTITION
 options 	MAC_PORTACL
+options 	MAC_PRIORITY
 options 	MAC_SEEOTHERUIDS
 options 	MAC_STUB
 options 	MAC_TEST
@@ -1263,8 +1286,7 @@ options 	FFCLOCK
 # removed a disk drive, you may have had to rewrite your /etc/fstab
 # file, and also that you had to be careful when adding a new disk
 # as it may have been probed earlier and moved your device configuration
-# around.  (See also option GEOM_VOL for a different solution to this
-# problem.)
+# around.
 
 # This old behavior is maintained as the default behavior.  The unit
 # assignment begins with the first non-wired down unit for a device
@@ -1273,22 +1295,22 @@ options 	FFCLOCK
 
 # The syntax for wiring down devices is:
 
-hint.scbus.0.at="ahc0"
-hint.scbus.1.at="ahc1"
-hint.scbus.1.bus="0"
-hint.scbus.3.at="ahc2"
-hint.scbus.3.bus="0"
-hint.scbus.2.at="ahc2"
-hint.scbus.2.bus="1"
-hint.da.0.at="scbus0"
-hint.da.0.target="0"
-hint.da.0.unit="0"
-hint.da.1.at="scbus3"
-hint.da.1.target="1"
-hint.da.2.at="scbus2"
-hint.da.2.target="3"
-hint.sa.1.at="scbus1"
-hint.sa.1.target="6"
+envvar		hint.scbus.0.at="ahc0"
+envvar		hint.scbus.1.at="ahc1"
+envvar		hint.scbus.1.bus="0"
+envvar		hint.scbus.3.at="ahc2"
+envvar		hint.scbus.3.bus="0"
+envvar		hint.scbus.2.at="ahc2"
+envvar		hint.scbus.2.bus="1"
+envvar		hint.da.0.at="scbus0"
+envvar		hint.da.0.target="0"
+envvar		hint.da.0.unit="0"
+envvar		hint.da.1.at="scbus3"
+envvar		hint.da.1.target="1"
+envvar		hint.da.2.at="scbus2"
+envvar		hint.da.2.target="3"
+envvar		hint.sa.1.at="scbus1"
+envvar		hint.sa.1.target="6"
 
 # "units" (SCSI logical unit number) that are not specified are
 # treated as if specified as LUN 0.
@@ -1310,9 +1332,9 @@ hint.sa.1.target="6"
 # The pt driver drives SCSI Processor devices.
 #
 # The sg driver provides a passthrough API that is compatible with the
-# Linux SG driver.  It will work in conjunction with the COMPAT_LINUX
-# option to run linux SG apps.  It can also stand on its own and provide
-# source level API compatibility for porting apps to BSD.
+# Linux SG driver.  It will work in conjunction with the Linuxulator
+# to run linux SG apps.  It can also stand on its own and provide
+# source level API compatibility for porting apps to FreeBSD.
 #
 # Target Mode support is provided here but also requires that a SIM
 # (SCSI Host Adapter Driver) provide support as well.
@@ -1462,63 +1484,6 @@ makeoptions	KBDMUX_DFLT_KEYMAP=it.iso
 
 options 	FB_DEBUG		# Frame buffer debugging
 
-device		splash			# Splash screen and screen saver support
-
-# Various screen savers.
-device		blank_saver
-device		daemon_saver
-device		dragon_saver
-device		fade_saver
-device		fire_saver
-device		green_saver
-device		logo_saver
-device		rain_saver
-device		snake_saver
-device		star_saver
-device		warp_saver
-
-# The syscons console driver (SCO color console compatible).
-device		sc
-hint.sc.0.at="isa"
-options 	MAXCONS=16		# number of virtual consoles
-options 	SC_ALT_MOUSE_IMAGE	# simplified mouse cursor in text mode
-options 	SC_DFLT_FONT		# compile font in
-makeoptions	SC_DFLT_FONT=cp850
-options 	SC_DISABLE_KDBKEY	# disable `debug' key
-options 	SC_DISABLE_REBOOT	# disable reboot key sequence
-options 	SC_HISTORY_SIZE=200	# number of history buffer lines
-options 	SC_MOUSE_CHAR=0x3	# char code for text mode mouse cursor
-options 	SC_PIXEL_MODE		# add support for the raster text mode
-
-# The following options will let you change the default colors of syscons.
-options 	SC_NORM_ATTR=(FG_GREEN|BG_BLACK)
-options 	SC_NORM_REV_ATTR=(FG_YELLOW|BG_GREEN)
-options 	SC_KERNEL_CONS_ATTR=(FG_RED|BG_BLACK)
-options 	SC_KERNEL_CONS_ATTRS=\"\x0c\x0d\x0e\x0f\x02\x09\x0a\x0b\"
-options 	SC_KERNEL_CONS_REV_ATTR=(FG_BLACK|BG_RED)
-
-# The following options will let you change the default behavior of
-# cut-n-paste feature
-options 	SC_CUT_SPACES2TABS	# convert leading spaces into tabs
-options 	SC_CUT_SEPCHARS=\"x09\"	# set of characters that delimit words
-					# (default is single space - \"x20\")
-
-# If you have a two button mouse, you may want to add the following option
-# to use the right button of the mouse to paste text.
-options 	SC_TWOBUTTON_MOUSE
-
-# You can selectively disable features in syscons.
-options 	SC_NO_CUTPASTE
-options 	SC_NO_FONT_LOADING
-options 	SC_NO_HISTORY
-options 	SC_NO_MODE_CHANGE
-options 	SC_NO_SYSMOUSE
-options 	SC_NO_SUSPEND_VTYSWITCH
-
-# `flags' for sc
-#	0x80	Put the video card in the VESA 800x600 dots, 16 color mode
-#	0x100	Probe for a keyboard device periodically if one is not present
-
 # Enable experimental features of the syscons terminal emulator (teken).
 options 	TEKEN_CONS25		# cons25-style terminal emulation
 options 	TEKEN_UTF8		# UTF-8 output handling
@@ -1544,15 +1509,11 @@ options		TERMINAL_KERN_ATTR=(FG_LIGHTRED|BG_BLACK)
 #
 # SCSI host adapters:
 #
-# adv: All Narrow SCSI bus AdvanSys controllers.
-# adw: Second Generation AdvanSys controllers including the ADV940UW.
-# aha: Adaptec 154x/1535/1640
+# aacraid: Adaptec by PMC RAID controllers, Series 6/7/8 and upcoming
+#          families. Container interface, CAM required.
 # ahc: Adaptec 274x/284x/2910/293x/294x/394x/3950x/3960x/398X/4944/
 #      19160x/29160x, aic7770/aic78xx
 # ahd: Adaptec 29320/39320 Controllers.
-# aic: Adaptec 6260/6360, APA-1460 (PC Card)
-# bt:  Most Buslogic controllers: including BT-445, BT-54x, BT-64x, BT-74x,
-#      BT-75x, BT-946, BT-948, BT-956, BT-958, SDC3211B, SDC3211F, SDC3222F
 # esp: Emulex ESP, NCR 53C9x and QLogic FAS families based controllers
 #      including the AMD Am53C974 (found on devices such as the Tekram
 #      DC-390(T)) and the Sun ESP and FAS families of controllers
@@ -1563,54 +1524,41 @@ options		TERMINAL_KERN_ATTR=(FG_LIGHTRED|BG_BLACK)
 #      Qlogic ISP 2300 and ISP 2312 2Gb Fibre Channel host adapters.
 #      Qlogic ISP 2322 and ISP 6322 2Gb Fibre Channel host adapters.
 # ispfw: Firmware module for Qlogic host adapters
+# mpr: LSI-Logic MPT/Fusion Gen 3
+# mps: LSI-Logic MPT/Fusion Gen 2
 # mpt: LSI-Logic MPT/Fusion 53c1020 or 53c1030 Ultra4
 #      or FC9x9 Fibre Channel host adapters.
-# ncr: NCR 53C810, 53C825 self-contained SCSI host adapters.
 # sym: Symbios/Logic 53C8XX family of PCI-SCSI I/O processors:
 #      53C810, 53C810A, 53C815, 53C825,  53C825A, 53C860, 53C875,
 #      53C876, 53C885,  53C895, 53C895A, 53C896,  53C897, 53C1510D,
 #      53C1010-33, 53C1010-66.
-# trm: Tekram DC395U/UW/F DC315U adapters.
 
-#
-# Note that the order is important in order for Buslogic ISA cards to be
-# probed correctly.
-#
-device		bt
-hint.bt.0.at="isa"
-hint.bt.0.port="0x330"
-device		adv
-hint.adv.0.at="isa"
-device		adw
-device		aha
-hint.aha.0.at="isa"
-device		aic
-hint.aic.0.at="isa"
+device		aacraid
 device		ahc
 device		ahd
 device		esp
 device		iscsi_initiator
 device		isp
-hint.isp.0.disable="1"
-hint.isp.0.role="3"
-hint.isp.0.prefer_iomap="1"
-hint.isp.0.prefer_memmap="1"
-hint.isp.0.fwload_disable="1"
-hint.isp.0.ignore_nvram="1"
-hint.isp.0.fullduplex="1"
-hint.isp.0.topology="lport"
-hint.isp.0.topology="nport"
-hint.isp.0.topology="lport-only"
-hint.isp.0.topology="nport-only"
+envvar		hint.isp.0.disable="1"
+envvar		hint.isp.0.role="3"
+envvar		hint.isp.0.prefer_iomap="1"
+envvar		hint.isp.0.prefer_memmap="1"
+envvar		hint.isp.0.fwload_disable="1"
+envvar		hint.isp.0.ignore_nvram="1"
+envvar		hint.isp.0.fullduplex="1"
+envvar		hint.isp.0.topology="lport"
+envvar		hint.isp.0.topology="nport"
+envvar		hint.isp.0.topology="lport-only"
+envvar		hint.isp.0.topology="nport-only"
 # we can't get u_int64_t types, nor can we get strings if it's got
 # a leading 0x, hence this silly dodge.
-hint.isp.0.portwnn="w50000000aaaa0000"
-hint.isp.0.nodewnn="w50000000aaaa0001"
+envvar		hint.isp.0.portwnn="w50000000aaaa0000"
+envvar		hint.isp.0.nodewnn="w50000000aaaa0001"
 device		ispfw
-device		mpt
-device		ncr
+device		mpr			# LSI-Logic MPT-Fusion 3
+device		mps			# LSI-Logic MPT-Fusion 2
+device		mpt			# LSI-Logic MPT-Fusion
 device		sym
-device		trm
 
 # The aic7xxx driver will attempt to use memory mapped I/O for all PCI
 # controllers that have it configured only if this option is set. Unfortunately,
@@ -1646,10 +1594,6 @@ options 	AHD_REG_PRETTY_PRINT
 # Bitmap of units to enable targetmode operations.
 options 	AHD_TMODE_ENABLE
 
-# The adw driver will attempt to use memory mapped I/O for all PCI
-# controllers that have it configured only if this option is set.
-options 	ADW_ALLOW_MEMIO
-
 # Options used in dev/iscsi (Software iSCSI stack)
 #
 options 	ISCSI_INITIATOR_DEBUG=9
@@ -1670,39 +1614,12 @@ options 	ISP_TARGET_MODE=1
 #
 options 	ISP_DEFAULT_ROLES=0
 
-# Options used in dev/sym/ (Symbios SCSI driver).
-#options 	SYM_SETUP_LP_PROBE_MAP	#-Low Priority Probe Map (bits)
-					# Allows the ncr to take precedence
-					# 1 (1<<0) -> 810a, 860
-					# 2 (1<<1) -> 825a, 875, 885, 895
-					# 4 (1<<2) -> 895a, 896, 1510d
 #options 	SYM_SETUP_SCSI_DIFF	#-HVD support for 825a, 875, 885
 					# disabled:0 (default), enabled:1
 #options 	SYM_SETUP_PCI_PARITY	#-PCI parity checking
 					# disabled:0, enabled:1 (default)
 #options 	SYM_SETUP_MAX_LUN	#-Number of LUNs supported
 					# default:8, range:[1..64]
-
-# The 'dpt' driver provides support for old DPT controllers (http://www.dpt.com/).
-# These have hardware RAID-{0,1,5} support, and do multi-initiator I/O.
-# The DPT controllers are commonly re-licensed under other brand-names -
-# some controllers by Olivetti, Dec, HP, AT&T, SNI, AST, Alphatronic, NEC and
-# Compaq are actually DPT controllers.
-#
-# See src/sys/dev/dpt for debugging and other subtle options.
-#  DPT_MEASURE_PERFORMANCE  Enables a set of (semi)invasive metrics. Various
-#                           instruments are enabled.  The tools in
-#                           /usr/sbin/dpt_* assume these to be enabled.
-#  DPT_DEBUG_xxxx           These are controllable from sys/dev/dpt/dpt.h
-#  DPT_RESET_HBA            Make "reset" actually reset the controller
-#                           instead of fudging it.  Only enable this if you
-#			    are 100% certain you need it.
-
-device		dpt
-
-# DPT options
-#!CAM# options 	DPT_MEASURE_PERFORMANCE
-options 	DPT_RESET_HBA
 
 #
 # Compaq "CISS" RAID controllers (SmartRAID 5* series)
@@ -1801,42 +1718,15 @@ device		ata
 
 #
 # For older non-PCI, non-PnPBIOS systems, these are the hints lines to add:
-hint.ata.0.at="isa"
-hint.ata.0.port="0x1f0"
-hint.ata.0.irq="14"
-hint.ata.1.at="isa"
-hint.ata.1.port="0x170"
-hint.ata.1.irq="15"
+envvar		hint.ata.0.at="isa"
+envvar		hint.ata.0.port="0x1f0"
+envvar		hint.ata.0.irq="14"
+envvar		hint.ata.1.at="isa"
+envvar		hint.ata.1.port="0x170"
+envvar		hint.ata.1.irq="15"
 
 #
-# Standard floppy disk controllers and floppy tapes, supports
-# the Y-E DATA External FDD (PC Card)
-#
-device		fdc
-hint.fdc.0.at="isa"
-hint.fdc.0.port="0x3F0"
-hint.fdc.0.irq="6"
-hint.fdc.0.drq="2"
-#
-# FDC_DEBUG enables floppy debugging.  Since the debug output is huge, you
-# gotta turn it actually on by setting the variable fd_debug with DDB,
-# however.
-options 	FDC_DEBUG
-#
-# Activate this line if you happen to have an Insight floppy tape.
-# Probing them proved to be dangerous for people with floppy disks only,
-# so it's "hidden" behind a flag:
-#hint.fdc.0.flags="1"
-
-# Specify floppy devices
-hint.fd.0.at="fdc0"
-hint.fd.0.drive="0"
-hint.fd.1.at="fdc0"
-hint.fd.1.drive="1"
-
-#
-# uart: newbusified driver for serial interfaces.  It consolidates the sio(4),
-#	sab(4) and zs(4) drivers.
+# uart: generic driver for serial interfaces.
 #
 device		uart
 
@@ -1848,26 +1738,25 @@ options 	UART_POLL_FREQ		# Set polling rate, used when hw has
 
 # The following hint should only be used for pure ISA devices.  It is not
 # needed otherwise.  Use of hints is strongly discouraged.
-hint.uart.0.at="isa"
+envvar		hint.uart.0.at="isa"
 
 # The following 3 hints are used when the UART is a system device (i.e., a
 # console or debug port), but only on platforms that don't have any other
 # means to pass the information to the kernel.  The unit number of the hint
 # is only used to bundle the hints together.  There is no relation to the
 # unit number of the probed UART.
-hint.uart.0.port="0x3f8"
-hint.uart.0.flags="0x10"
-hint.uart.0.baud="115200"
+envvar		hint.uart.0.port="0x3f8"
+envvar		hint.uart.0.flags="0x10"
+envvar		hint.uart.0.baud="115200"
 
-# `flags' for serial drivers that support consoles like sio(4) and uart(4):
+# `flags' for serial drivers that support consoles, like uart(4):
 #	0x10	enable console support for this unit.  Other console flags
 #		(if applicable) are ignored unless this is set.  Enabling
 #		console support does not make the unit the preferred console.
-#		Boot with -h or set boot_serial=YES in the loader.  For sio(4)
-#		specifically, the 0x20 flag can also be set (see above).
+#		Boot with -h or set boot_serial=YES in the loader.
 #		Currently, at most one unit can have console support; the
 #		first one (in config file order) with this flag set is
-#		preferred.  Setting this flag for sio0 gives the old behavior.
+#		preferred.
 #	0x80	use this port for serial line gdb support in ddb.  Also known
 #		as debug port.
 #
@@ -1878,12 +1767,12 @@ options 	BREAK_TO_DEBUGGER	# A BREAK/DBG on the console goes to
 
 # Solaris implements a new BREAK which is initiated by a character
 # sequence CR ~ ^b which is similar to a familiar pattern used on
-# Sun servers by the Remote Console.  There are BSD extensions:
+# Sun servers by the Remote Console.  There are FreeBSD extensions:
 # CR ~ ^p requests force panic and CR ~ ^r requests a clean reboot.
 options 	ALT_BREAK_TO_DEBUGGER
 
 # Serial Communications Controller
-# Supports the Siemens SAB 82532 and Zilog Z8530 multi-channel
+# Supports the Freescale/NXP QUad Integrated and Zilog Z8530 multi-channel
 # communications controllers.
 device		scc
 
@@ -1914,6 +1803,7 @@ device  	axphy		# Asix Semiconductor AX88x9x
 device  	bmtphy		# Broadcom BCM5201/BCM5202 and 3Com 3c905C
 device		bnxt		# Broadcom NetXtreme-C/NetXtreme-E
 device  	brgphy		# Broadcom BCM54xx/57xx 1000baseTX
+device  	cgem		# Cadence GEM Gigabit Ethernet
 device  	ciphy		# Cicada/Vitesse CS/VSC8xxx
 device  	e1000phy	# Marvell 88E1000 1000/100/10-BT
 device  	gentbi		# Generic 10-bit 1000BASE-{LX,SX} fiber ifaces
@@ -1921,7 +1811,6 @@ device  	icsphy		# ICS ICS1889-1893
 device  	ip1000phy	# IC Plus IP1000A/IP1001
 device  	jmphy		# JMicron JMP211/JMP202
 device  	lxtphy		# Level One LXT-970
-device  	mlphy		# Micro Linear 6692
 device  	nsgphy		# NatSemi DP8361/DP83865/DP83891
 device  	nsphy		# NatSemi DP83840A
 device  	nsphyter	# NatSemi DP83843/DP83815
@@ -1933,7 +1822,6 @@ device  	rlphy		# RealTek 8139
 device  	rlswitch	# RealTek 8305
 device  	smcphy		# SMSC LAN91C111
 device  	tdkphy		# TDK 89Q2120
-device  	tlphy		# Texas Instruments ThunderLAN
 device  	truephy		# LSI TruePHY
 device		xmphy		# XaQti XMAC II
 
@@ -1974,17 +1862,10 @@ device		xmphy		# XaQti XMAC II
 #       SVEC PN102-TX, CNet Pro110B, 120A, and 120B, Compex RL100-TX,
 #       LinkSys LNE100TX, LNE100TX V2.0, Jaton XpressNet, Alfa Inc GFC2204,
 #       KNE110TX.
-# de:   Digital Equipment DC21040
 # em:   Intel Pro/1000 Gigabit Ethernet 82542, 82543, 82544 based adapters.
-# ep:   3Com 3C509, 3C529, 3C556, 3C562D, 3C563D, 3C572, 3C574X, 3C579, 3C589
-#       and PC Card devices using these chipsets.
-# ex:   Intel EtherExpress Pro/10 and other i82595-based adapters,
-#       Olicom Ethernet PC Card devices.
-# fe:   Fujitsu MB86960A/MB86965A Ethernet
 # fxp:  Intel EtherExpress Pro/100B
 #	(hint of prefer_iomap can be done to prefer I/O instead of Mem mapping)
 # gem:  Apple GMAC/Sun ERI/Sun GEM
-# hme:  Sun HME (Happy Meal Ethernet)
 # jme:  JMicron JMC260 Fast Ethernet/JMC250 Gigabit Ethernet based adapters.
 # le:   AMD Am7900 LANCE and Am79C9xx PCnet
 # lge:	Support for PCI gigabit ethernet adapters based on the Level 1
@@ -2009,12 +1890,6 @@ device		xmphy		# XaQti XMAC II
 #	GigaNIX 1000TA and 1000TPC, the Addtron AEG320T, the Surecom
 #	EP-320G-TX and the Netgear GA622T.
 # oce:	Emulex 10 Gbit adapters (OneConnect Ethernet)
-# pcn:	Support for PCI fast ethernet adapters based on the AMD Am79c97x
-#	PCnet-FAST, PCnet-FAST+, PCnet-FAST III, PCnet-PRO and PCnet-Home
-#	chipsets. These can also be handled by the le(4) driver if the
-#	pcn(4) driver is left out of the kernel. The le(4) driver does not
-#	support the additional features like the MII bus and burst mode of
-#	the PCnet-FAST and greater chipsets though.
 # ral:	Ralink Technology IEEE 802.11 wireless adapter
 # re:   RealTek 8139C+/8169/816xS/811xS/8101E PCI/PCIe Ethernet adapter
 # rl:   Support for PCI fast ethernet adapters based on the RealTek 8129/8139
@@ -2027,11 +1902,6 @@ device		xmphy		# XaQti XMAC II
 #       chipset and is supported by this driver, not the 'vr' driver.
 # rtwn: RealTek wireless adapters.
 # rtwnfw: RealTek wireless firmware.
-# sf:   Support for Adaptec Duralink PCI fast ethernet adapters based on the
-#       Adaptec AIC-6915 "starfire" controller.
-#       This includes dual and quad port cards, as well as one 100baseFX card.
-#       Most of these are 64-bit PCI devices, except for one single port
-#       card which is 32-bit.
 # sge:  Silicon Integrated Systems SiS190/191 Fast/Gigabit Ethernet adapter
 # sis:  Support for NICs based on the Silicon Integrated Systems SiS 900,
 #       SiS 7016 and NS DP83815 PCI fast ethernet controller chips.
@@ -2041,8 +1911,6 @@ device		xmphy		# XaQti XMAC II
 #       (also single mode and multimode).
 #       The driver will autodetect the number of ports on the card and
 #       attach each one as a separate network interface.
-# sn:   Support for ISA and PC Card Ethernet devices using the
-#       SMC91C90/92/94/95 chips.
 # ste:  Sundance Technologies ST201 PCI fast ethernet controller, includes
 #       the D-Link DFE-550TX.
 # stge: Support for gigabit ethernet adapters based on the Sundance/Tamarack
@@ -2052,28 +1920,11 @@ device		xmphy		# XaQti XMAC II
 #       Tigon 1 and Tigon 2 chipsets.  This includes the Alteon AceNIC, the
 #       3Com 3c985, the Netgear GA620 and various others.  Note that you will
 #       probably want to bump up kern.ipc.nmbclusters a lot to use this driver.
-# tl:   Support for the Texas Instruments TNETE100 series 'ThunderLAN'
-#       cards and integrated ethernet controllers.  This includes several
-#       Compaq Netelligent 10/100 cards and the built-in ethernet controllers
-#       in several Compaq Prosignia, Proliant and Deskpro systems.  It also
-#       supports several Olicom 10Mbps and 10/100 boards.
-# tx:   SMC 9432 TX, BTX and FTX cards. (SMC EtherPower II series)
-# txp:	Support for 3Com 3cR990 cards with the "Typhoon" chipset
 # vr:   Support for various fast ethernet adapters based on the VIA
 #       Technologies VT3043 `Rhine I' and VT86C100A `Rhine II' chips,
 #       including the D-Link DFE520TX and D-Link DFE530TX (see 'rl' for
 #       DFE530TX+), the Hawking Technologies PN102TX, and the AOpen/Acer ALN-320.
 # vte:  DM&P Vortex86 RDC R6040 Fast Ethernet
-# vx:   3Com 3C590 and 3C595
-# wb:   Support for fast ethernet adapters based on the Winbond W89C840F chip.
-#       Note: this is not the same as the Winbond W89C940F, which is a
-#       NE2000 clone.
-# wi:   Lucent WaveLAN/IEEE 802.11 PCMCIA adapters. Note: this supports both
-#       the PCMCIA and ISA cards: the ISA card is really a PCMCIA to ISA
-#       bridge with a PCMCIA adapter plugged into it.
-# xe:   Xircom/Intel EtherExpress Pro100/16 PC Card ethernet controller,
-#       Accton Fast EtherCard-16, Compaq Netelligent 10/100 PC Card,
-#       Toshiba 10/100 Ethernet PC Card, Xircom 16-bit Ethernet + Modem 56
 # xl:   Support for the 3Com 3c900, 3c905, 3c905B and 3c905C (Fast)
 #       Etherlink XL cards and integrated controllers.  This includes the
 #       integrated 3c905B-TX chips in certain Dell Optiplex and Dell
@@ -2083,18 +1934,7 @@ device		xmphy		# XaQti XMAC II
 
 # Order for ISA devices is important here
 
-device		ep
-device		ex
-device		fe
-hint.fe.0.at="isa"
-hint.fe.0.port="0x300"
-device		sn
-hint.sn.0.at="isa"
-hint.sn.0.port="0x300"
-hint.sn.0.irq="10"
 device		an
-device		wi
-device		xe
 
 # PCI Ethernet NICs that use the common MII bus controller code.
 device		ae		# Attansic/Atheros L2 FastEthernet
@@ -2108,9 +1948,8 @@ device		cas		# Sun Cassini/Cassini+ and NS DP83065 Saturn
 device		dc		# DEC/Intel 21143 and various workalikes
 device		et		# Agere ET1310 10/100/Gigabit Ethernet
 device		fxp		# Intel EtherExpress PRO/100B (82557, 82558)
-hint.fxp.0.prefer_iomap="0"
+envvar		hint.fxp.0.prefer_iomap="0"
 device		gem		# Apple GMAC/Sun ERI/Sun GEM
-device		hme		# Sun HME (Happy Meal Ethernet)
 device		jme		# JMicron JMC250 Gigabit/JMC260 Fast Ethernet
 device		lge		# Level 1 LXT1001 gigabit Ethernet
 device		mlxfw		# Mellanox firmware update module
@@ -2121,18 +1960,13 @@ device		my		# Myson Fast Ethernet (MTD80X, MTD89X)
 device		nge		# NatSemi DP83820 gigabit Ethernet
 device		re		# RealTek 8139C+/8169/8169S/8110S
 device		rl		# RealTek 8129/8139
-device		pcn		# AMD Am79C97x PCI 10/100 NICs
-device		sf		# Adaptec AIC-6915 (``Starfire'')
 device		sge		# Silicon Integrated Systems SiS190/191
 device		sis		# Silicon Integrated Systems SiS 900/SiS 7016
 device		sk		# SysKonnect SK-984x & SK-982x gigabit Ethernet
 device		ste		# Sundance ST201 (D-Link DFE-550TX)
 device		stge		# Sundance/Tamarack TC9021 gigabit Ethernet
-device		tl		# Texas Instruments ThunderLAN
-device		tx		# SMC EtherPower II (83c170 ``EPIC'')
 device		vr		# VIA Rhine, Rhine II
 device		vte		# DM&P Vortex86 RDC R6040 Fast Ethernet
-device		wb		# Winbond W89C840F
 device		xl		# 3Com 3c90x (``Boomerang'', ``Cyclone'')
 
 # PCI/PCI-X/PCIe Ethernet NICs that use iflib infrastructure
@@ -2146,13 +1980,10 @@ device		cxgb		# Chelsio T3 10 Gigabit Ethernet
 device		cxgb_t3fw	# Chelsio T3 10 Gigabit Ethernet firmware
 device		cxgbe		# Chelsio T4-T6 1/10/25/40/100 Gigabit Ethernet
 device		cxgbev		# Chelsio T4-T6 Virtual Functions
-device		de		# DEC/Intel DC21x4x (``Tulip'')
 device		le		# AMD Am7900 LANCE and Am79C9xx PCnet
 device		mxge		# Myricom Myri-10G 10GbE NIC
 device		oce		# Emulex 10 GbE (OneConnect Ethernet)
 device		ti		# Alteon Networks Tigon I/II gigabit Ethernet
-device		txp		# 3Com 3cR990 (``Typhoon'')
-device		vx		# 3Com 3c590, 3c595 (``Vortex'')
 
 # PCI IEEE 802.11 Wireless NICs
 device		ath		# Atheros pci/cardbus NIC's
@@ -2167,7 +1998,6 @@ device		ath_hal		# pci/cardbus chip support
 #device		ath_rf5112
 #device		ath_rf5413
 #device		ath_ar5416	# AR5416 chips
-options 	AH_SUPPORT_AR5416	# enable AR5416 tx/rx descriptors
 # All of the AR5212 parts have a problem when paired with the AR71xx
 # CPUS.  These parts have a bug that triggers a fatal bus error on the AR71xx
 # only.  Details of the exact nature of the bug are sketchy, but some can be
@@ -2203,8 +2033,8 @@ device		rtwnfw
 # mismatch between the mbuf size assumed by the kernel and the mbuf size
 # assumed by a module.  The only driver that currently has the ability to
 # detect a mismatch is ti(4).
-options 	MCLSHIFT=12	# mbuf cluster shift in bits, 12 == 4KB
-options 	MSIZE=512	# mbuf size in bytes
+options 	MCLSHIFT=11	# mbuf cluster shift in bits, 11 == 2KB
+options 	MSIZE=256	# mbuf size in bytes
 
 #
 # Sound drivers
@@ -2228,8 +2058,6 @@ device		sound
 # snd_ad1816:		Analog Devices AD1816 ISA PnP/non-PnP.
 # snd_als4000:		Avance Logic ALS4000 PCI.
 # snd_atiixp:		ATI IXP 200/300/400 PCI.
-# snd_audiocs:		Crystal Semiconductor CS4231 SBus/EBus. Only
-#			for sparc64.
 # snd_cmi:		CMedia CMI8338/CMI8738 PCI.
 # snd_cs4281:		Crystal Semiconductor CS4281 PCI.
 # snd_csa:		Crystal Semiconductor CS461x/428x PCI. (except
@@ -2272,7 +2100,6 @@ device		sound
 device		snd_ad1816
 device		snd_als4000
 device		snd_atiixp
-#device		snd_audiocs
 device		snd_cmi
 device		snd_cs4281
 device		snd_csa
@@ -2304,20 +2131,20 @@ device		snd_via82c686
 device		snd_vibes
 
 # For non-PnP sound cards:
-hint.pcm.0.at="isa"
-hint.pcm.0.irq="10"
-hint.pcm.0.drq="1"
-hint.pcm.0.flags="0x0"
-hint.sbc.0.at="isa"
-hint.sbc.0.port="0x220"
-hint.sbc.0.irq="5"
-hint.sbc.0.drq="1"
-hint.sbc.0.flags="0x15"
-hint.gusc.0.at="isa"
-hint.gusc.0.port="0x220"
-hint.gusc.0.irq="5"
-hint.gusc.0.drq="1"
-hint.gusc.0.flags="0x13"
+envvar		hint.pcm.0.at="isa"
+envvar		hint.pcm.0.irq="10"
+envvar		hint.pcm.0.drq="1"
+envvar		hint.pcm.0.flags="0x0"
+envvar		hint.sbc.0.at="isa"
+envvar		hint.sbc.0.port="0x220"
+envvar		hint.sbc.0.irq="5"
+envvar		hint.sbc.0.drq="1"
+envvar		hint.sbc.0.flags="0x15"
+envvar		hint.gusc.0.at="isa"
+envvar		hint.gusc.0.port="0x220"
+envvar		hint.gusc.0.irq="5"
+envvar		hint.gusc.0.drq="1"
+envvar		hint.gusc.0.flags="0x13"
 
 #
 # Following options are intended for debugging/testing purposes:
@@ -2356,79 +2183,6 @@ options		SND_PCM_64
 options		SND_OLDSTEREO
 
 #
-# Miscellaneous hardware:
-#
-# bktr: Brooktree bt848/848a/849a/878/879 video capture and TV Tuner board
-# joy: joystick (including IO DATA PCJOY PC Card joystick)
-# cmx: OmniKey CardMan 4040 pccard smartcard reader
-
-device		joy			# PnP aware, hints for non-PnP only
-hint.joy.0.at="isa"
-hint.joy.0.port="0x201"
-device		cmx
-
-#
-# The 'bktr' device is a PCI video capture device using the Brooktree
-# bt848/bt848a/bt849a/bt878/bt879 chipset. When used with a TV Tuner it forms a
-# TV card, e.g. Miro PC/TV, Hauppauge WinCast/TV WinTV, VideoLogic Captivator,
-# Intel Smart Video III, AverMedia, IMS Turbo, FlyVideo.
-#
-# options 	OVERRIDE_CARD=xxx
-# options 	OVERRIDE_TUNER=xxx
-# options 	OVERRIDE_MSP=1
-# options 	OVERRIDE_DBX=1
-# These options can be used to override the auto detection
-# The current values for xxx are found in src/sys/dev/bktr/bktr_card.h
-# Using sysctl(8) run-time overrides on a per-card basis can be made
-#
-# options 	BROOKTREE_SYSTEM_DEFAULT=BROOKTREE_PAL
-# or
-# options 	BROOKTREE_SYSTEM_DEFAULT=BROOKTREE_NTSC
-# Specifies the default video capture mode.
-# This is required for Dual Crystal (28&35MHz) boards where PAL is used
-# to prevent hangs during initialization, e.g. VideoLogic Captivator PCI.
-#
-# options 	BKTR_USE_PLL
-# This is required for PAL or SECAM boards with a 28MHz crystal and no 35MHz
-# crystal, e.g. some new Bt878 cards.
-#
-# options 	BKTR_GPIO_ACCESS
-# This enables IOCTLs which give user level access to the GPIO port.
-#
-# options 	BKTR_NO_MSP_RESET
-# Prevents the MSP34xx reset. Good if you initialize the MSP in another OS first
-#
-# options 	BKTR_430_FX_MODE
-# Switch Bt878/879 cards into Intel 430FX chipset compatibility mode.
-#
-# options 	BKTR_SIS_VIA_MODE
-# Switch Bt878/879 cards into SIS/VIA chipset compatibility mode which is
-# needed for some old SiS and VIA chipset motherboards.
-# This also allows Bt878/879 chips to work on old OPTi (<1997) chipset
-# motherboards and motherboards with bad or incomplete PCI 2.1 support.
-# As a rough guess, old = before 1998
-#
-# options 	BKTR_NEW_MSP34XX_DRIVER
-# Use new, more complete initialization scheme for the msp34* soundchip.
-# Should fix stereo autodetection if the old driver does only output
-# mono sound.
-
-#
-# options 	BKTR_USE_FREEBSD_SMBUS
-# Compile with FreeBSD SMBus implementation
-#
-# Brooktree driver has been ported to the new I2C framework. Thus,
-# you'll need to have the following 3 lines in the kernel config.
-#     device smbus
-#     device iicbus
-#     device iicbb
-#     device iicsmb
-# The iic and smb devices are only needed if you want to control other
-# I2C slaves connected to the external connector of some cards.
-#
-device		bktr
- 
-#
 # PC Card/PCMCIA and Cardbus
 #
 # cbb: pci/cardbus bridge implementing YENTA interface
@@ -2444,10 +2198,11 @@ device		cardbus
 # mmc 		MMC/SD bus
 # mmcsd		MMC/SD memory card
 # sdhci		Generic PCI SD Host Controller
-#
+# rtsx		Realtek SD card reader (RTS5209, RTS5227, ...)
 device		mmc
 device		mmcsd
 device		sdhci
+device		rtsx
 
 #
 # SMB bus
@@ -2461,7 +2216,6 @@ device		sdhci
 #
 # Supported SMB interfaces:
 # iicsmb	I2C to SMB bridge with any iicbus interface
-# bktr		brooktree848 I2C hardware interface
 # intpm		Intel PIIX4 (82371AB, 82443MX) Power Management Unit
 # alpm		Acer Aladdin-IV/V/Pro2 Power Management Unit
 # ichsmb	Intel ICH SMBus controller chips (82801AA, 82801AB, 82801BA)
@@ -2502,11 +2256,8 @@ device		jedec_dimm
 # iicsmb i2c to smb bridge. Allow i2c i/o with smb commands.
 # iicoc simple polling driver for OpenCores I2C controller
 #
-# Supported interfaces:
-# bktr	brooktree848 I2C software interface
-#
 # Other:
-# iicbb	generic I2C bit-banging code (needed by lpbb, bktr)
+# iicbb	generic I2C bit-banging code (needed by lpbb)
 #
 device		iicbus		# Bus support, required for ic/iic/iicsmb below.
 device		iicbb		# bitbang driver; implements i2c on a pair of gpio pins
@@ -2545,9 +2296,6 @@ device		syr827		# Silergy Corp. DC/DC regulator
 # are automatically probed and attached when found.
 #
 # Supported devices:
-# vpo	Iomega Zip Drive
-#	Requires SCSI disk support ('scbus' and 'da'), best
-#	performance is achieved with ports in EPP 1.9 mode.
 # lpt	Parallel Printer
 # plip	Parallel network interface
 # ppi	General-purpose I/O ("Geek Port") + IEEE1284 I/O
@@ -2565,7 +2313,6 @@ options 	DEBUG_1284	# IEEE1284 signaling protocol debug
 options 	PERIPH_1284	# Makes your computer act as an IEEE1284
 				# compliant peripheral
 options 	DONTPROBE_1284	# Avoid boot detection of PnP parallel devices
-options 	VP0_DEBUG	# ZIP/ZIP+ debug
 options 	LPT_DEBUG	# Printer driver debug
 options 	PPC_DEBUG	# Parallel chipset level debug
 options 	PLIP_DEBUG	# Parallel network IP interface debug
@@ -2573,10 +2320,9 @@ options 	PCFCLOCK_VERBOSE         # Verbose pcfclock driver
 options 	PCFCLOCK_MAX_RETRIES=5   # Maximum read tries (default 10)
 
 device		ppc
-hint.ppc.0.at="isa"
-hint.ppc.0.irq="7"
+envvar		hint.ppc.0.at="isa"
+envvar		hint.ppc.0.irq="7"
 device		ppbus
-device		vpo
 device		lpt
 device		plip
 device		ppi
@@ -2585,6 +2331,7 @@ device		lpbb
 device		pcfclock
 
 # General Purpose I/O pins
+device		dwgpio		# Synopsys DesignWare APB GPIO Controller
 device  	gpio		# gpio interfaces and bus support
 device  	gpiobacklight	# sysctl control of gpio-based backlight
 device  	gpioiic		# i2c via gpio bitbang
@@ -2667,7 +2414,25 @@ options 	NSFBUFS=1024
 #
 options 	DEBUG_LOCKS
 
-
+#####################################################################
+# HID support
+device		hid		# Generic HID support
+options 	HID_DEBUG	# enable debug msgs
+device		hidbus		# HID bus
+device		hidmap		# HID to evdev mapping
+device		hidraw		# Raw access driver
+options 	HIDRAW_MAKE_UHID_ALIAS	# install /dev/uhid alias
+device		hconf		# Multitouch configuration TLC
+device		hcons		# Consumer controls
+device		hgame		# Generic game controllers
+device		hkbd		# HID keyboard
+device		hms		# HID mouse
+device		hmt		# HID multitouch (MS-compatible)
+device		hpen		# Generic pen driver
+device		hsctrl		# System controls
+device		ps4dshock	# Sony PS4 DualShock 4 gamepad driver
+device		xb360gp		# XBox 360 gamepad driver
+
 #####################################################################
 # USB support
 # UHCI controller
@@ -2685,8 +2450,6 @@ device		usb
 #
 # USB Double Bulk Pipe devices
 device		udbp
-# USB Fm Radio
-device		ufm
 # USB temperature meter
 device		ugold
 # USB LED
@@ -2714,6 +2477,9 @@ device		wsp
 device		uep
 # Diamond Rio 500 MP3 player
 device		urio
+# HID-over-USB driver
+device		usbhid
+
 #
 # USB serial support
 device		ucom
@@ -2819,7 +2585,7 @@ options 	U3G_DEBUG
 
 # options for ukbd:
 options 	UKBD_DFLT_KEYMAP	# specify the built-in keymap
-makeoptions	UKBD_DFLT_KEYMAP=jp
+makeoptions	UKBD_DFLT_KEYMAP=jp.106
 
 # options for uplcom:
 options 	UPLCOM_INTR_INTERVAL=100	# interrupt pipe interval
@@ -2873,10 +2639,6 @@ device		ccr		# Chelsio T6
 device		hifn		# Hifn 7951, 7781, etc.
 options 	HIFN_DEBUG	# enable debugging support: hw.hifn.debug
 options 	HIFN_RNDTEST	# enable rndtest support
-
-device		ubsec		# Broadcom 5501, 5601, 58xx
-options 	UBSEC_DEBUG	# enable debugging support: hw.ubsec.debug
-options 	UBSEC_RNDTEST	# enable rndtest support
 
 #####################################################################
 
@@ -2972,9 +2734,6 @@ options 	NSWBUF_MIN=120
 
 options 	CAM_DEBUG_DELAY
 
-# VFS cluster debugging.
-options 	CLUSTERDEBUG
-
 options 	DEBUG
 
 # Kernel filelock debugging.
@@ -2991,11 +2750,6 @@ options 	MSGSSZ=16	# Size of a message segment
 options 	MSGTQL=41	# Max number of messages in system
 
 options 	NBUF=512	# Number of buffer headers
-
-options 	SCSI_NCR_DEBUG
-options 	SCSI_NCR_MAX_SYNC=10000
-options 	SCSI_NCR_MAX_WIDE=1
-options 	SCSI_NCR_MYADDR=7
 
 options 	SC_DEBUG_LEVEL=5	# Syscons debug level
 options 	SC_RENDER_DEBUG	# syscons rendering debugging
@@ -3020,14 +2774,11 @@ options 	RACCT
 options 	RCTL
 
 # Yet more undocumented options for linting.
-# BKTR_ALLOC_PAGES has no effect except to cause warnings, and
-# BROOKTREE_ALLOC_PAGES hasn't actually been superseded by it, since the
-# driver still mostly spells this option BROOKTREE_ALLOC_PAGES.
-##options 	BKTR_ALLOC_PAGES=(217*4+1)
-options 	BROOKTREE_ALLOC_PAGES=(217*4+1)
 options 	MAXFILES=999
 
 # Random number generator
+# Alternative algorithm.
+#options 	RANDOM_FENESTRASX
 # Allow the CSPRNG algorithm to be loaded as a module.
 #options 	RANDOM_LOADABLE
 # Select this to allow high-rate but potentially expensive
@@ -3036,7 +2787,7 @@ options 	MAXFILES=999
 options 	RANDOM_ENABLE_UMA	# slab allocator
 
 # Select this to allow high-rate but potentially expensive
-# harvesting of of the m_next pointer in the mbuf. Note that
+# harvesting of the m_next pointer in the mbuf. Note that
 # the m_next pointer is NULL except when receiving > 4K
 # jumbo frames or sustained bursts by way of LRO. Thus in
 # the common case it is stirring zero in to the entropy
@@ -3062,8 +2813,9 @@ options         IMAGACT_BINMISC
 # This enables support for compressed core dumps.
 options 	GZIO
 
-# zstd I/O stream support
-# This enables support for Zstd compressed core dumps.
+# zstd support
+# This enables support for Zstd compressed core dumps, GEOM_UZIP images,
+# and is required by zfs if statically linked.
 options 	ZSTDIO
 
 # BHND(4) drivers
@@ -3092,3 +2844,9 @@ options 	SPIGEN_LEGACY_CDEVNAME # legacy device names for spigen
 # Compression supports.
 device		zlib		# gzip/zlib compression/decompression library
 device		xz		# xz_embedded LZMA de-compression library
+
+# Kernel support for stats(3).
+options 	STATS
+
+# File system monitoring
+device		filemon		# file monitoring for make(1) meta-mode

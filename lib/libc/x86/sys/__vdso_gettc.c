@@ -29,7 +29,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include "namespace.h"
 #include <sys/capsicum.h>
@@ -100,11 +99,25 @@ rdtsc32_mb_lfence(void)
 	return (rdtsc32());
 }
 
+static uint64_t
+rdtsc_mb_lfence(void)
+{
+	lfence();
+	return (rdtsc());
+}
+
 static u_int
 rdtsc32_mb_mfence(void)
 {
 	mfence();
 	return (rdtsc32());
+}
+
+static uint64_t
+rdtsc_mb_mfence(void)
+{
+	mfence();
+	return (rdtsc());
 }
 
 static u_int
@@ -113,32 +126,49 @@ rdtsc32_mb_none(void)
 	return (rdtsc32());
 }
 
+static uint64_t
+rdtsc_mb_none(void)
+{
+	return (rdtsc());
+}
+
 static u_int
 rdtscp32_(void)
 {
 	return (rdtscp32());
 }
 
+static uint64_t
+rdtscp_(void)
+{
+	return (rdtscp());
+}
+
 struct tsc_selector_tag {
 	u_int (*ts_rdtsc32)(void);
+	uint64_t (*ts_rdtsc)(void);
 	u_int (*ts_rdtsc_low)(const struct vdso_timehands *);
 };
 
 static const struct tsc_selector_tag tsc_selector[] = {
 	[0] = {				/* Intel, LFENCE */
 		.ts_rdtsc32 =	rdtsc32_mb_lfence,
+		.ts_rdtsc =	rdtsc_mb_lfence,
 		.ts_rdtsc_low =	rdtsc_low_mb_lfence,
 	},
 	[1] = {				/* AMD, MFENCE */
 		.ts_rdtsc32 =	rdtsc32_mb_mfence,
+		.ts_rdtsc =	rdtsc_mb_mfence,
 		.ts_rdtsc_low =	rdtsc_low_mb_mfence,
 	},
 	[2] = {				/* No SSE2 */
-		.ts_rdtsc32 = rdtsc32_mb_none,
-		.ts_rdtsc_low = rdtsc_low_mb_none,
+		.ts_rdtsc32 =	rdtsc32_mb_none,
+		.ts_rdtsc =	rdtsc_mb_none,
+		.ts_rdtsc_low =	rdtsc_low_mb_none,
 	},
 	[3] = {				/* RDTSCP */
 		.ts_rdtsc32 =	rdtscp32_,
+		.ts_rdtsc =	rdtscp_,
 		.ts_rdtsc_low =	rdtscp_low,
 	},
 };
@@ -146,7 +176,7 @@ static const struct tsc_selector_tag tsc_selector[] = {
 static int
 tsc_selector_idx(u_int cpu_feature)
 {
-	u_int amd_feature, cpu_exthigh, cpu_id, p[4], v[3];
+	u_int amd_feature, cpu_exthigh, p[4], v[3];
 	static const char amd_id[] = "AuthenticAMD";
 	static const char hygon_id[] = "HygonGenuine";
 	bool amd_cpu;
@@ -160,9 +190,6 @@ tsc_selector_idx(u_int cpu_feature)
 	v[2] = p[2];
 	amd_cpu = memcmp(v, amd_id, sizeof(amd_id) - 1) == 0 ||
 	    memcmp(v, hygon_id, sizeof(hygon_id) - 1) == 0;
-
-	do_cpuid(1, p);
-	cpu_id = p[0];
 
 	if (cpu_feature != 0) {
 		do_cpuid(0x80000000, p);
@@ -185,14 +212,19 @@ tsc_selector_idx(u_int cpu_feature)
 }
 
 DEFINE_UIFUNC(static, u_int, __vdso_gettc_rdtsc_low,
-    (const struct vdso_timehands *th), static)
+    (const struct vdso_timehands *th))
 {
 	return (tsc_selector[tsc_selector_idx(cpu_feature)].ts_rdtsc_low);
 }
 
-DEFINE_UIFUNC(static, u_int, __vdso_gettc_rdtsc32, (void), static)
+DEFINE_UIFUNC(static, u_int, __vdso_gettc_rdtsc32, (void))
 {
 	return (tsc_selector[tsc_selector_idx(cpu_feature)].ts_rdtsc32);
+}
+
+DEFINE_UIFUNC(static, uint64_t, __vdso_gettc_rdtsc, (void))
+{
+	return (tsc_selector[tsc_selector_idx(cpu_feature)].ts_rdtsc);
 }
 
 #define	HPET_DEV_MAP_MAX	10
@@ -230,7 +262,7 @@ __vdso_init_hpet(uint32_t u)
 	 * triggering trap_enocap on the device open by absolute path.
 	 */
 	if ((cap_getmode(&mode) == 0 && mode != 0) ||
-	    (fd = _open(devname, O_RDONLY)) == -1) {
+	    (fd = _open(devname, O_RDONLY | O_CLOEXEC)) == -1) {
 		/* Prevent the caller from re-entering. */
 		atomic_cmpset_rel_ptr((volatile uintptr_t *)&hpet_dev_map[u],
 		    (uintptr_t)old_map, (uintptr_t)MAP_FAILED);
@@ -266,7 +298,7 @@ __vdso_init_hyperv_tsc(void)
 	if (cap_getmode(&mode) == 0 && mode != 0)
 		goto fail;
 
-	fd = _open(HYPERV_REFTSC_DEVPATH, O_RDONLY);
+	fd = _open(HYPERV_REFTSC_DEVPATH, O_RDONLY | O_CLOEXEC);
 	if (fd < 0)
 		goto fail;
 	hyperv_ref_tsc = mmap(NULL, sizeof(*hyperv_ref_tsc), PROT_READ,
@@ -327,7 +359,7 @@ __vdso_pvclock_gettc(const struct vdso_timehands *th, u_int *tc)
 		version = atomic_load_acq_32(&ti->version);
 		stable = (ti->flags & th->th_x86_pvc_stable_mask) != 0;
 		if (stable) {
-			tsc = rdtscp();
+			tsc = __vdso_gettc_rdtsc();
 		} else {
 			(void)rdtscp_aux(&cpuid_ti);
 			ti = &pvclock_timeinfos[cpuid_ti];

@@ -29,7 +29,6 @@
  */
 
 #include <machine/asm.h>
-
 /*
  * void
  * swab (const void *src, void *dst, size_t len)

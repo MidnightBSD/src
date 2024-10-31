@@ -27,7 +27,6 @@
 /* Tests functions in sys/cam/cam.c */
 
 #include <sys/cdefs.h>
-
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>

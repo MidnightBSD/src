@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011 Konstantin Belousov <kib@FreeBSD.org>
  * All rights reserved.
@@ -27,7 +27,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <sys/ucontext.h>
 #include <errno.h>
@@ -60,7 +59,7 @@ __getcontextx_size_xfpu(void)
 	return (sizeof(ucontext_t) + xstate_sz);
 }
 
-DEFINE_UIFUNC(, int, __getcontextx_size, (void), static)
+DEFINE_UIFUNC(, int, __getcontextx_size, (void))
 {
 	u_int p[4];
 
@@ -99,7 +98,7 @@ __fillcontextx2_noxfpu(char *ctx)
 	return (0);
 }
 
-DEFINE_UIFUNC(, int, __fillcontextx2, (char *), static)
+DEFINE_UIFUNC(, int, __fillcontextx2, (char *))
 {
 
 	return ((cpu_feature2 & CPUID2_OSXSAVE) != 0 ? __fillcontextx2_xfpu : 

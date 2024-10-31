@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
@@ -24,11 +24,9 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 
 #include <machine/cpufunc.h>
@@ -47,7 +45,8 @@
 static int cpu_vendor_intel, cpu_vendor_amd, cpu_vendor_hygon;
 
 int
-emulate_wrmsr(struct vmctx *ctx, int vcpu, uint32_t num, uint64_t val)
+emulate_wrmsr(struct vmctx *ctx __unused, int vcpu __unused, uint32_t num,
+    uint64_t val __unused)
 {
 
 	if (cpu_vendor_intel) {
@@ -101,7 +100,8 @@ emulate_wrmsr(struct vmctx *ctx, int vcpu, uint32_t num, uint64_t val)
 }
 
 int
-emulate_rdmsr(struct vmctx *ctx, int vcpu, uint32_t num, uint64_t *val)
+emulate_rdmsr(struct vmctx *ctx __unused, int vcpu __unused, uint32_t num,
+    uint64_t *val)
 {
 	int error = 0;
 
@@ -113,6 +113,7 @@ emulate_rdmsr(struct vmctx *ctx, int vcpu, uint32_t num, uint64_t *val)
 		case MSR_PP0_ENERGY_STATUS:
 		case MSR_PP1_ENERGY_STATUS:
 		case MSR_DRAM_ENERGY_STATUS:
+		case MSR_MISC_FEATURE_ENABLES:
 			*val = 0;
 			break;
 		case MSR_RAPL_POWER_UNIT:
@@ -121,6 +122,14 @@ emulate_rdmsr(struct vmctx *ctx, int vcpu, uint32_t num, uint64_t *val)
 			 * "RAPL Interfaces" in Intel SDM vol3.
 			 */
 			*val = 0x000a1003;
+			break;
+		case MSR_IA32_FEATURE_CONTROL:
+			/*
+			 * Windows guests check this MSR.
+			 * Set the lock bit to avoid writes
+			 * to this MSR.
+			 */
+			*val = IA32_FEATURE_CONTROL_LOCK;
 			break;
 		default:
 			error = -1;

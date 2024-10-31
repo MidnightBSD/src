@@ -38,24 +38,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#if __amd64__
-#   include "amd64.h"
-#endif
-#if __arm__
-#   include "arm.h"
-#endif
-#if __i386__
-#   include "i386.h"
-#endif
-#if __mips__
-#   include "mips.h"
-#endif
-#if __powerpc__
-#   include "powerpc.h"
-#endif
-#if __sparc64__
-#   include "sparc64.h"
-#endif
+    /*
+     *	offset (in bytes) of the code from the entry address of a routine.
+     *	(see asgnsamples for use and explanation.)
+     */
+#define OFFSET_OF_CODE	0
+
+enum opermodes { dummy };
+typedef enum opermodes	operandenum;
 
     /*
      * booleans
@@ -262,9 +252,6 @@ void		addarc(nltype *, nltype *, long);
 bool		addcycle(arctype **, arctype **);
 void		addlist(struct stringlist *, char *);
 void		alignentries(void);
-#ifdef WITH_AOUT
-int		aout_getnfile(const char *, char ***);
-#endif
 int		arccmp(arctype *, arctype *);
 arctype		*arclookup(nltype *, nltype *);
 void		asgnsamples(void);
@@ -331,7 +318,6 @@ int		totalcmp(const void *, const void *);
 #define	TALLYDEBUG	8
 #define	TIMEDEBUG	16
 #define	SAMPLEDEBUG	32
-#define	AOUTDEBUG	64
 #define	CALLDEBUG	128
 #define	LOOKUPDEBUG	256
 #define	PROPDEBUG	512

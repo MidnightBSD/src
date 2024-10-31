@@ -58,9 +58,10 @@ MLINKS+=eui64.3 eui64_aton.3 eui64.3 eui64_hostton.3 \
 	eui64.3 eui64_ntoa.3 eui64.3 eui64_ntohost.3
 MLINKS+=getaddrinfo.3 freeaddrinfo.3 
 MLINKS+=gethostbyname.3 endhostent.3 gethostbyname.3 gethostbyaddr.3 \
-	gethostbyname.3 gethostbyname2.3 gethostbyname.3 gethostent.3 \
-	gethostbyname.3 herror.3 gethostbyname.3 hstrerror.3 \
-	gethostbyname.3 sethostent.3
+	gethostbyname.3 gethostbyaddr_r.3 gethostbyname.3 gethostbyname2.3 \
+	gethostbyname.3 gethostbyname2_r.3 gethostbyname.3 gethostbyname_r.3 \
+	gethostbyname.3 gethostent.3 gethostbyname.3 herror.3 \
+	gethostbyname.3 hstrerror.3 gethostbyname.3 sethostent.3
 MLINKS+=getifaddrs.3 freeifaddrs.3
 MLINKS+=getifmaddrs.3 freeifmaddrs.3
 MLINKS+=getipnodebyname.3 getipnodebyaddr.3 getipnodebyname.3 freehostent.3
@@ -123,8 +124,9 @@ SRCS+=	hesiod.c
 MAN+=	hesiod.3
 .endif
 
+afterinstallconfig: modify-nsswitch-conf
+modify-nsswitch-conf: .PHONY
 .if ${MK_NIS} == "no"
-afterinstallconfig:
 	sed -i "" -e 's/.*_compat:/# &/' -e 's/compat$$/files/' \
 		${DESTDIR}/etc/nsswitch.conf
 .endif

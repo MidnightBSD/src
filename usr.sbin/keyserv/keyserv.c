@@ -31,8 +31,6 @@
 #if 0
 static char sccsid[] = "@(#)keyserv.c	1.15	94/04/25 SMI";
 #endif
-static const char rcsid[] =
-  "$FreeBSD: stable/11/usr.sbin/keyserv/keyserv.c 298089 2016-04-15 22:31:22Z pfg $";
 #endif /* not lint */
 
 /*
@@ -224,38 +222,8 @@ static void
 randomize(master)
 	des_block *master;
 {
-#ifndef __FreeBSD__
-	int i;
-	int seed;
-	struct timeval tv;
-	int shift;
-
-	seed = 0;
-	for (i = 0; i < 1024; i++) {
-		(void)gettimeofday(&tv, NULL);
-		shift = i % 8 * sizeof (int);
-		seed ^= (tv.tv_usec << shift) | (tv.tv_usec >> (32 - shift));
-	}
-#endif
-#ifdef KEYSERV_RANDOM
-#ifdef __FreeBSD__
 	master->key.low = arc4random();
 	master->key.high = arc4random();
-#else
-	srandom(seed);
-	master->key.low = random();
-	master->key.high = random();
-#endif
-#else
-	/* use stupid dangerous bad rand() */
-#ifdef __FreeBSD__
-	sranddev();
-#else
-	srand(seed);
-#endif
-	master->key.low = rand();
-	master->key.high = rand();
-#endif
 }
 
 /*

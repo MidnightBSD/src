@@ -8,7 +8,6 @@ use and modify. Please send modifications and/or suggestions + bug fixes to
 */
 
 #include <sys/cdefs.h>
-
 #include <ctype.h>
 #include <err.h>
 #include <netdb.h>

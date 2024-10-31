@@ -30,7 +30,6 @@
  */
 
 #include <machine/asm.h>
-
 	.text
 	.align	0
 	.globl	.rtld_start

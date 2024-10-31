@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * ------+---------+---------+---------+---------+---------+---------+---------*
  * Copyright (c) 2002  - Garance Alistair Drosehn <gad@FreeBSD.org>.
@@ -32,7 +32,6 @@
  * or FreeBSD, Inc.
  *
  * ------+---------+---------+---------+---------+---------+---------+---------*
- * $FreeBSD: stable/11/usr.sbin/lpr/common_source/matchjobs.h 330449 2018-03-05 07:26:05Z eadler $
  * ------+---------+---------+---------+---------+---------+---------+---------*
  */
 

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright 1996, 1997, 1998, 1999, 2000 John D. Polstra.
  * All rights reserved.
@@ -23,7 +23,6 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef RTLD_H /* { */
@@ -36,6 +35,7 @@
 #include <elf-hints.h>
 #include <link.h>
 #include <stdarg.h>
+#include <stdbool.h>
 #include <setjmp.h>
 #include <stddef.h>
 
@@ -45,19 +45,16 @@
 #define NEW(type)	((type *) xmalloc(sizeof(type)))
 #define CNEW(type)	((type *) xcalloc(1, sizeof(type)))
 
-/* We might as well do booleans like C++. */
-typedef unsigned char bool;
-#define false	0
-#define true	1
-
 extern size_t tls_last_offset;
 extern size_t tls_last_size;
 extern size_t tls_static_space;
 extern Elf_Addr tls_dtv_generation;
 extern int tls_max_index;
+extern size_t ld_static_tls_extra;
 
 extern int npagesizes;
 extern size_t *pagesizes;
+extern size_t page_size;
 
 extern int main_argc;
 extern char **main_argv;
@@ -150,7 +147,6 @@ typedef struct Struct_Obj_Entry {
     /* These items are computed by map_object() or by digest_phdr(). */
     caddr_t mapbase;		/* Base address of mapped region */
     size_t mapsize;		/* Size of mapped region in bytes */
-    size_t textsize;		/* Size of text segment in bytes */
     Elf_Addr vaddrbase;		/* Base address in shared object file */
     caddr_t relocbase;		/* Relocation constant = mapbase - vaddrbase */
     const Elf_Dyn *dynamic;	/* Dynamic section */
@@ -178,6 +174,8 @@ typedef struct Struct_Obj_Entry {
     unsigned long relsize;	/* Size in bytes of relocation info */
     const Elf_Rela *rela;	/* Relocation entries with addend */
     unsigned long relasize;	/* Size in bytes of addend relocation info */
+    const Elf_Relr *relr;	/* RELR relocation entries */
+    unsigned long relrsize;	/* Size in bytes of RELR relocations */
     const Elf_Rel *pltrel;	/* PLT relocation entries */
     unsigned long pltrelsize;	/* Size in bytes of PLT relocation info */
     const Elf_Rela *pltrela;	/* PLT relocation entries with addend */
@@ -191,8 +189,12 @@ typedef struct Struct_Obj_Entry {
     Elf_Word gotsym;		/* First dynamic symbol in GOT */
     Elf_Addr *mips_pltgot;	/* Second PLT GOT */
 #endif
+#ifdef __powerpc__
 #ifdef __powerpc64__
     Elf_Addr glink;		/* GLINK PLT call stub section */
+#else
+    Elf_Addr *gotptr;		/* GOT pointer (secure-plt only) */
+#endif
 #endif
 
     const Elf_Verneed *verneed; /* Required versions. */
@@ -244,11 +246,13 @@ typedef struct Struct_Obj_Entry {
     bool ver_checked : 1;	/* True if processed by rtld_verify_object_versions */
     bool textrel : 1;		/* True if there are relocations to text seg */
     bool symbolic : 1;		/* True if generated with "-Bsymbolic" */
+    bool deepbind : 1;		/* True if loaded with RTLD_DEEPBIND" */
     bool bind_now : 1;		/* True if all relocations should be made first */
     bool traced : 1;		/* Already printed in ldd trace output */
     bool jmpslots_done : 1;	/* Already have relocated the jump slots */
     bool init_done : 1;		/* Already have added object to init list */
-    bool tls_done : 1;		/* Already allocated offset for static TLS */
+    bool tls_static : 1;	/* Already allocated offset for static TLS */
+    bool tls_dynamic : 1;	/* A non-static DTV entry has been allocated */
     bool phdr_alloc : 1;	/* Phdr is allocated and needs to be freed. */
     bool z_origin : 1;		/* Process rpath and soname tokens */
     bool z_nodelete : 1;	/* Do not unload the object and dependencies */
@@ -265,6 +269,7 @@ typedef struct Struct_Obj_Entry {
     bool on_fini_list: 1;	/* Object is already on fini list. */
     bool dag_inited : 1;	/* Object has its DAG initialized. */
     bool filtees_loaded : 1;	/* Filtees loaded */
+    bool filtees_loading : 1;	/* In process of filtees loading */
     bool irelative : 1;		/* Object has R_MACHDEP_IRELATIVE relocs */
     bool irelative_nonplt : 1;	/* Object has R_MACHDEP_IRELATIVE non-plt relocs */
     bool gnu_ifunc : 1;		/* Object has references to STT_GNU_IFUNC */
@@ -277,6 +282,8 @@ typedef struct Struct_Obj_Entry {
     bool marker : 1;		/* marker on the global obj list */
     bool unholdfree : 1;	/* unmap upon last unhold */
     bool doomed : 1;		/* Object cannot be referenced */
+
+    MD_OBJ_ENTRY;
 
     struct link_map linkmap;	/* For GDB and dlinfo() */
     Objlist dldags;		/* Object belongs to these dlopened DAGs (%) */
@@ -365,11 +372,11 @@ Obj_Entry *map_object(int, const char *, const struct stat *);
 void *xcalloc(size_t, size_t);
 void *xmalloc(size_t);
 char *xstrdup(const char *);
-void *malloc_aligned(size_t size, size_t align, size_t offset);
-void free_aligned(void *ptr);
+void *xmalloc_aligned(size_t size, size_t align, size_t offset);
 extern Elf_Addr _GLOBAL_OFFSET_TABLE_[];
 extern Elf_Sym sym_zero;	/* For resolving undefined weak refs. */
 extern bool ld_bind_not;
+extern bool ld_fast_sigblock;
 
 void dump_relocations(Obj_Entry *);
 void dump_obj_relocations(Obj_Entry *);
@@ -379,7 +386,9 @@ void dump_Elf_Rela(Obj_Entry *, const Elf_Rela *, u_long);
 /*
  * Function declarations.
  */
-unsigned long elf_hash(const char *);
+uintptr_t rtld_round_page(uintptr_t);
+uintptr_t rtld_trunc_page(uintptr_t);
+Elf32_Word elf_hash(const char *);
 const Elf_Sym *find_symdef(unsigned long, const Obj_Entry *,
   const Obj_Entry **, int, SymCache *, struct Struct_RtldLockState *);
 void lockdflt_init(void);
@@ -388,11 +397,12 @@ Obj_Entry *globallist_curr(const Obj_Entry *obj);
 Obj_Entry *globallist_next(const Obj_Entry *obj);
 void obj_free(Obj_Entry *);
 Obj_Entry *obj_new(void);
+Obj_Entry *obj_from_addr(const void *);
 void _rtld_bind_start(void);
 void *rtld_resolve_ifunc(const Obj_Entry *obj, const Elf_Sym *def);
 void symlook_init(SymLook *, const char *);
 int symlook_obj(SymLook *, const Obj_Entry *);
-void *tls_get_addr_common(Elf_Addr** dtvp, int index, size_t offset);
+void *tls_get_addr_common(uintptr_t **dtvp, int index, size_t offset);
 void *allocate_tls(Obj_Entry *, void *, size_t, size_t);
 void free_tls(void *, size_t, size_t);
 void *allocate_module_tls(int index);
@@ -400,6 +410,7 @@ bool allocate_tls_offset(Obj_Entry *obj);
 void free_tls_offset(Obj_Entry *obj);
 const Ver_Entry *fetch_ventry(const Obj_Entry *obj, unsigned long);
 int convert_prot(int elfflags);
+bool check_elf_headers(const Elf_Ehdr *hdr, const char *path);
 
 /*
  * MD function declarations.
@@ -413,13 +424,7 @@ int reloc_iresolve(Obj_Entry *, struct Struct_RtldLockState *);
 int reloc_iresolve_nonplt(Obj_Entry *, struct Struct_RtldLockState *);
 int reloc_gnu_ifunc(Obj_Entry *, int flags, struct Struct_RtldLockState *);
 void ifunc_init(Elf_Auxinfo[__min_size(AT_COUNT)]);
-void pre_init(void);
 void init_pltgot(Obj_Entry *);
 void allocate_initial_tls(Obj_Entry *);
-
-void *__crt_calloc(size_t num, size_t size);
-void __crt_free(void *cp);
-void *__crt_malloc(size_t nbytes);
-void *__crt_realloc(void *cp, size_t nbytes);
 
 #endif /* } */

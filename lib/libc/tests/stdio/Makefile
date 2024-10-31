@@ -1,7 +1,9 @@
 
 .include <bsd.own.mk>
 
+ATF_TESTS_C+=		eintr_test
 ATF_TESTS_C+=		fdopen_test
+ATF_TESTS_C+=		flushlbuf_test
 ATF_TESTS_C+=		fmemopen2_test
 ATF_TESTS_C+=		fopen2_test
 ATF_TESTS_C+=		freopen_test
@@ -29,6 +31,7 @@ NETBSD_ATF_TESTS_C+=	popen_test
 NETBSD_ATF_TESTS_C+=	printf_test
 NETBSD_ATF_TESTS_C+=	scanf_test
 
+LIBADD.eintr_test+=	 md
 LIBADD.printfloat_test+= m
 LIBADD.scanfloat_test+=  m
 

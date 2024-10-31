@@ -25,8 +25,6 @@
  */
 
 #include <machine/asm.h>
-__FBSDID("$FreeBSD: stable/11/lib/libc/amd64/gen/fabs.S 217106 2011-01-07 16:08:40Z kib $");
-
 /*
  * Return floating point absolute value of a double.
  */
@@ -39,7 +37,8 @@ ENTRY(fabs)
 	ret
 END(fabs)
 
-	.data
+	.section .rodata
+	.p2align 3
 signbit:
 	.quad	0x8000000000000000
 

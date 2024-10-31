@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2014 Hudson River Trading LLC
  * Written by: John H. Baldwin <jhb@FreeBSD.org>
@@ -29,7 +29,6 @@
 
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <machine/vmm.h>
 
@@ -62,14 +61,16 @@
 /* IRQ count to disable an IRQ. */
 #define	IRQ_DISABLED	0xff
 
+#define	NPIRQS		8
 static struct pirq {
 	uint8_t	reg;
 	int	use_count;
 	int	active_count;
 	pthread_mutex_t lock;
-} pirqs[8];
+} pirqs[NPIRQS];
 
-static u_char irq_counts[16];
+#define	NIRQ_COUNTS	16
+static u_char irq_counts[NIRQ_COUNTS];
 static int pirq_cold = 1;
 
 /*
@@ -90,7 +91,7 @@ uint8_t
 pirq_read(int pin)
 {
 
-	assert(pin > 0 && pin <= nitems(pirqs));
+	assert(pin > 0 && pin <= NPIRQS);
 	return (pirqs[pin - 1].reg);
 }
 
@@ -99,7 +100,7 @@ pirq_write(struct vmctx *ctx, int pin, uint8_t val)
 {
 	struct pirq *pirq;
 
-	assert(pin > 0 && pin <= nitems(pirqs));
+	assert(pin > 0 && pin <= NPIRQS);
 	pirq = &pirqs[pin - 1];
 	pthread_mutex_lock(&pirq->lock);
 	if (pirq->reg != (val & (PIRQ_DIS | PIRQ_IRQ))) {
@@ -116,7 +117,7 @@ void
 pci_irq_reserve(int irq)
 {
 
-	assert(irq >= 0 && irq < nitems(irq_counts));
+	assert(irq >= 0 && irq < NIRQ_COUNTS);
 	assert(pirq_cold);
 	assert(irq_counts[irq] == 0 || irq_counts[irq] == IRQ_DISABLED);
 	irq_counts[irq] = IRQ_DISABLED;
@@ -126,24 +127,24 @@ void
 pci_irq_use(int irq)
 {
 
-	assert(irq >= 0 && irq < nitems(irq_counts));
+	assert(irq >= 0 && irq < NIRQ_COUNTS);
 	assert(pirq_cold);
 	assert(irq_counts[irq] != IRQ_DISABLED);
 	irq_counts[irq]++;
 }
 
 void
-pci_irq_init(struct vmctx *ctx)
+pci_irq_init(struct vmctx *ctx __unused)
 {
 	int i;
 
-	for (i = 0; i < nitems(pirqs); i++) {
+	for (i = 0; i < NPIRQS; i++) {
 		pirqs[i].reg = PIRQ_DIS;
 		pirqs[i].use_count = 0;
 		pirqs[i].active_count = 0;
 		pthread_mutex_init(&pirqs[i].lock, NULL);
 	}
-	for (i = 0; i < nitems(irq_counts); i++) {
+	for (i = 0; i < NIRQ_COUNTS; i++) {
 		if (IRQ_PERMITTED(i))
 			irq_counts[i] = 0;
 		else
@@ -155,10 +156,12 @@ void
 pci_irq_assert(struct pci_devinst *pi)
 {
 	struct pirq *pirq;
+	int pin;
 
-	if (pi->pi_lintr.pirq_pin > 0) {
-		assert(pi->pi_lintr.pirq_pin <= nitems(pirqs));
-		pirq = &pirqs[pi->pi_lintr.pirq_pin - 1];
+	pin = pi->pi_lintr.pirq_pin;
+	if (pin > 0) {
+		assert(pin <= NPIRQS);
+		pirq = &pirqs[pin - 1];
 		pthread_mutex_lock(&pirq->lock);
 		pirq->active_count++;
 		if (pirq->active_count == 1 && pirq_valid_irq(pirq->reg)) {
@@ -176,10 +179,12 @@ void
 pci_irq_deassert(struct pci_devinst *pi)
 {
 	struct pirq *pirq;
+	int pin;
 
-	if (pi->pi_lintr.pirq_pin > 0) {
-		assert(pi->pi_lintr.pirq_pin <= nitems(pirqs));
-		pirq = &pirqs[pi->pi_lintr.pirq_pin - 1];
+	pin = pi->pi_lintr.pirq_pin;
+	if (pin > 0) {
+		assert(pin <= NPIRQS);
+		pirq = &pirqs[pin - 1];
 		pthread_mutex_lock(&pirq->lock);
 		pirq->active_count--;
 		if (pirq->active_count == 0 && pirq_valid_irq(pirq->reg)) {
@@ -208,7 +213,7 @@ pirq_alloc_pin(struct pci_devinst *pi)
 		/* Find the least-used PIRQ pin. */
 		best_pin = 0;
 		best_count = pirqs[0].use_count;
-		for (pin = 1; pin < nitems(pirqs); pin++) {
+		for (pin = 1; pin < NPIRQS; pin++) {
 			if (pirqs[pin].use_count < best_count) {
 				best_pin = pin;
 				best_count = pirqs[pin].use_count;
@@ -221,7 +226,7 @@ pirq_alloc_pin(struct pci_devinst *pi)
 	if (pirqs[best_pin].reg == PIRQ_DIS) {
 		best_irq = -1;
 		best_count = 0;
-		for (irq = 0; irq < nitems(irq_counts); irq++) {
+		for (irq = 0; irq < NIRQ_COUNTS; irq++) {
 			if (irq_counts[irq] == IRQ_DISABLED)
 				continue;
 			if (best_irq == -1 || irq_counts[irq] < best_count) {
@@ -241,7 +246,7 @@ pirq_alloc_pin(struct pci_devinst *pi)
 int
 pirq_irq(int pin)
 {
-	assert(pin > 0 && pin <= nitems(pirqs));
+	assert(pin > 0 && pin <= NPIRQS);
 	return (pirqs[pin - 1].reg & PIRQ_IRQ);
 }
 
@@ -254,7 +259,7 @@ pirq_dsdt(void)
 	int irq, pin;
 
 	irq_prs = NULL;
-	for (irq = 0; irq < nitems(irq_counts); irq++) {
+	for (irq = 0; irq < NIRQ_COUNTS; irq++) {
 		if (!IRQ_PERMITTED(irq))
 			continue;
 		if (irq_prs == NULL)
@@ -293,7 +298,7 @@ pirq_dsdt(void)
 	dsdt_line("  Return (0x01)");
 	dsdt_line("}");
 
-	for (pin = 0; pin < nitems(pirqs); pin++) {
+	for (pin = 0; pin < NPIRQS; pin++) {
 		dsdt_line("");
 		dsdt_line("Device (LNK%c)", 'A' + pin);
 		dsdt_line("{");

@@ -1,5 +1,4 @@
 #include <sys/cdefs.h>
-
 /*
  * This material, written by Henry Spencer, was released by him
  * into the public domain and is thus not subject to any copyright.

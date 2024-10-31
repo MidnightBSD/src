@@ -49,30 +49,30 @@
 
 #include <sys/cdefs.h>
 /* $NetBSD: msdosfs_vfsops.c,v 1.10 2016/01/30 09:59:27 mlelstv Exp $ */
-
 #include <sys/param.h>
 #include <sys/mount.h>
 
 #include <errno.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <util.h>
 
+#include "ffs/buf.h"
 #include <fs/msdosfs/bootsect.h>
 #include <fs/msdosfs/bpb.h>
+#include "msdos/direntry.h"
+#include <fs/msdosfs/denode.h>
+#include <fs/msdosfs/fat.h>
+#include <fs/msdosfs/msdosfsmount.h>
 
 #include <mkfs_msdos.h>
 
 #include "makefs.h"
 #include "msdos.h"
 
-#include "ffs/buf.h"
 
-#include "msdos/denode.h"
-#include "msdos/direntry.h"
-#include "msdos/fat.h"
-#include "msdos/msdosfsmount.h"
 
 struct msdosfsmount *
 msdosfs_mount(struct vnode *devvp)
@@ -351,7 +351,7 @@ msdosfs_root(struct msdosfsmount *pmp, struct vnode *vp) {
 	int error;
 
 	*vp = *pmp->pm_devvp;
-	if ((error = deget(pmp, MSDOSFSROOT, MSDOSFSROOT_OFS, &ndep)) != 0) {
+	if ((error = deget(pmp, MSDOSFSROOT, MSDOSFSROOT_OFS, 0, &ndep)) != 0) {
 		errno = error;
 		return -1;
 	}

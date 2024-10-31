@@ -27,7 +27,6 @@
  * SUCH DAMAGE.
  *
  * Textual conventions for OctetStrings
- *
  */
 
 #include <sys/param.h>

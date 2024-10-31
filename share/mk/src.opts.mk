@@ -114,6 +114,7 @@ __DEFAULT_YES_OPTIONS = \
     GPIO \
     HAST \
     HTML \
+    HYPERV \
     ICONV \
     INET \
     INET6 \
@@ -153,6 +154,7 @@ __DEFAULT_YES_OPTIONS = \
     NLS_CATALOGS \
     NS_CACHING \
     NTP \
+    NVME \
     OFED \
     OPENSSL \
     PAM \
@@ -162,6 +164,7 @@ __DEFAULT_YES_OPTIONS = \
     PMC \
     PORTSNAP \
     PPP \
+    PTHREADS_ASSERTIONS \
     QUOTAS \
     RADIUS_SUPPORT \
     RBOOTD \

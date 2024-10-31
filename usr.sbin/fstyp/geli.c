@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/disk.h>
 #include <sys/types.h>
 #include <stdio.h>

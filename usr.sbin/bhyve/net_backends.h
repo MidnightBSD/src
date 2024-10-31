@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2019 Vincenzo Maffione <vmaffione@FreeBSD.org>
  *
@@ -23,7 +23,6 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef __NET_BACKENDS_H__
@@ -36,8 +35,9 @@ typedef struct net_backend net_backend_t;
 
 /* Interface between network frontends and the network backends. */
 typedef void (*net_be_rxeof_t)(int, enum ev_type, void *param);
-int	netbe_init(net_backend_t **be, const char *devname, net_be_rxeof_t cb,
+int	netbe_init(net_backend_t **be, nvlist_t *nvl, net_be_rxeof_t cb,
             void *param);
+int	netbe_legacy_config(nvlist_t *nvl, const char *opts);
 void	netbe_cleanup(net_backend_t *be);
 uint64_t netbe_get_cap(net_backend_t *be);
 int	 netbe_set_cap(net_backend_t *be, uint64_t cap,
@@ -58,6 +58,7 @@ void	netbe_rx_enable(net_backend_t *be);
  */
 #define	VIRTIO_NET_F_CSUM	(1 <<  0) /* host handles partial cksum */
 #define	VIRTIO_NET_F_GUEST_CSUM	(1 <<  1) /* guest handles partial cksum */
+#define	VIRTIO_NET_F_MTU	(1 <<  3) /* initial MTU advice */
 #define	VIRTIO_NET_F_MAC	(1 <<  5) /* host supplies MAC */
 #define	VIRTIO_NET_F_GSO_DEPREC	(1 <<  6) /* deprecated: host handles GSO */
 #define	VIRTIO_NET_F_GUEST_TSO4	(1 <<  7) /* guest can rcv TSOv4 */
@@ -75,6 +76,7 @@ void	netbe_rx_enable(net_backend_t *be);
 #define	VIRTIO_NET_F_CTRL_VLAN	(1 << 19) /* control channel VLAN filtering */
 #define	VIRTIO_NET_F_GUEST_ANNOUNCE \
 				(1 << 21) /* guest can send gratuitous pkts */
+#define	VIRTIO_NET_F_MQ		(1 << 22) /* host supports multiple VQ pairs */
 
 /*
  * Fixed network header size

@@ -28,7 +28,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <sys/time.h>		/* XXX for mtree.h */
 #include <sys/queue.h>

@@ -7,6 +7,8 @@
 #
 #CFLAGS+=-DGATE_SERVER=\"ftp-gw.host\" # -DGATE_PORT=21
 
+PACKAGE=	ftp
+
 TNFTP=	${SRCTOP}/contrib/tnftp
 .PATH: ${TNFTP}/src
 

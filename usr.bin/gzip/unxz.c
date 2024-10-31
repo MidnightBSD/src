@@ -1,7 +1,7 @@
 /*	$NetBSD: unxz.c,v 1.8 2018/10/06 16:36:45 martin Exp $	*/
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011 The NetBSD Foundation, Inc.
  * All rights reserved.
@@ -31,7 +31,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include <sys/cdefs.h>
-
 #include <stdarg.h>
 #include <errno.h>
 #include <stdio.h>
@@ -259,8 +258,7 @@ parse_indexes(xz_file_info *xfi, int src_fd)
 {
 	struct stat st;
 
-	fstat(src_fd, &st);
-	if (st.st_size <= 0) {
+	if (fstat(src_fd, &st) != 0) {
 		return true;
 	}
 

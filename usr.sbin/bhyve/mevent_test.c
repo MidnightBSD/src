@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 /*
@@ -54,8 +53,6 @@ static pthread_mutex_t accept_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t accept_condvar = PTHREAD_COND_INITIALIZER;
 
 static struct mevent *tevp;
-
-char *vmname = "test vm";
 
 
 #define MEVENT_ECHO
@@ -112,7 +109,7 @@ timer_callback(int fd, enum ev_type type, void *param)
 #ifdef MEVENT_ECHO
 struct esync {
 	pthread_mutex_t	e_mt;
-	pthread_cond_t	e_cond;       
+	pthread_cond_t	e_cond;
 };
 
 static void

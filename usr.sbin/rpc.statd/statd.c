@@ -38,7 +38,6 @@
 /* The actual program logic is in the file procs.c			*/
 
 #include <sys/cdefs.h>
-
 #include <err.h>
 #include <errno.h>
 #include <stdio.h>
@@ -61,9 +60,9 @@
 
 int debug = 0;		/* Controls syslog() calls for debug messages	*/
 
-char **hosts, *svcport_str = NULL;
-int nhosts = 0;
-int xcreated = 0;
+static char **hosts, *svcport_str = NULL;
+static int nhosts = 0;
+static int xcreated = 0;
 static int	mallocd_svcport = 0;
 static int	*sock_fd;
 static int	sock_fdcnt;
@@ -85,7 +84,8 @@ main(int argc, char **argv)
   void *nc_handle;
   in_port_t svcport;
   int ch, i, s;
-  char *endptr, **hosts_bak;
+  char *endptr;
+  char **hosts_bak;
   int have_v6 = 1;
   int foreground = 0;
   int maxrec = RPC_MAXDATASIZE;
@@ -159,7 +159,7 @@ main(int argc, char **argv)
 	  if (hosts == NULL)
 		  out_of_mem();
 
-	  hosts[0] = "*";
+	  hosts[0] = strdup("*");
 	  nhosts = 1;
   } else {
 	  hosts_bak = hosts;
@@ -175,7 +175,7 @@ main(int argc, char **argv)
 			  hosts = hosts_bak;
 
 		  nhosts += 2;
-		  hosts[nhosts - 2] = "::1";
+		  hosts[nhosts - 2] = strdup("::1");
 	  } else {
 		  hosts_bak = realloc(hosts, (nhosts + 1) * sizeof(char *));
 		  if (hosts_bak == NULL) {
@@ -189,7 +189,7 @@ main(int argc, char **argv)
 			  hosts = hosts_bak;
 		  }
 	  }
-	  hosts[nhosts - 1] = "127.0.0.1";
+	  hosts[nhosts - 1] = strdup("127.0.0.1");
   }
 
   attempt_cnt = 1;

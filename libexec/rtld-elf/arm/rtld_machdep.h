@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999, 2000 John D. Polstra.
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef RTLD_MACHDEP_H
@@ -33,8 +32,11 @@
 #include <sys/types.h>
 #include <machine/atomic.h>
 #include <machine/acle-compat.h>
+#include <machine/tls.h>
 
 struct Struct_Obj_Entry;
+
+#define	MD_OBJ_ENTRY
 
 /* Return the address of the .dynamic section in the dynamic linker. */
 #define rtld_dynamic(obj) (&_DYNAMIC)
@@ -55,7 +57,6 @@ Elf_Addr reloc_jmpslot(Elf_Addr *where, Elf_Addr target,
 #define	call_ifunc_resolver(ptr) \
 	(((Elf_Addr (*)(void))ptr)())
 
-#define	TLS_TCB_SIZE	8
 typedef struct {
 	unsigned long ti_module;
 	unsigned long ti_offset;
@@ -67,7 +68,6 @@ typedef struct {
     round(8, align)
 #define calculate_tls_offset(prev_offset, prev_size, size, align, offset) \
     round(prev_offset + prev_size, align)
-#define calculate_tls_end(off, size)    ((off) + (size))
 #define calculate_tls_post_size(align) \
     round(TLS_TCB_SIZE, align) - TLS_TCB_SIZE
 	
@@ -80,7 +80,6 @@ extern void arm_abi_variant_hook(Elf_Auxinfo **);
 
 #ifdef __ARM_FP
 #define md_abi_variant_hook(x)		arm_abi_variant_hook(x)
-#define RTLD_VARIANT_ENV_NAMES
 #else
 #define md_abi_variant_hook(x)
 #endif

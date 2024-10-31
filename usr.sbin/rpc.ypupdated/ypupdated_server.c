@@ -39,7 +39,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <stdio.h>
 #include <rpc/rpc.h>
 #include <rpc/key_prot.h>

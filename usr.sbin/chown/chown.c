@@ -42,7 +42,6 @@ static char sccsid[] = "@(#)chown.c	8.8 (Berkeley) 4/4/94";
 #endif
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/stat.h>
 
@@ -176,7 +175,7 @@ main(int argc, char **argv)
 	if ((ftsp = fts_open(++argv, fts_options, NULL)) == NULL)
 		err(1, NULL);
 
-	for (rval = 0; (p = fts_read(ftsp)) != NULL;) {
+	for (rval = 0; errno = 0, (p = fts_read(ftsp)) != NULL;) {
 		int atflag;
 
 		if ((fts_options & FTS_LOGICAL) ||

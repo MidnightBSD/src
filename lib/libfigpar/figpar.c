@@ -25,8 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: stable/11/lib/libfigpar/figpar.c 290275 2015-11-02 20:03:59Z dteske $");
-
 #include <sys/param.h>
 
 #include <ctype.h>

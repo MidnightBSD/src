@@ -61,7 +61,6 @@
 #ifndef lint
 __RCSID("$NetBSD: crunchide.c,v 1.8 1997/11/01 06:51:45 lukem Exp $");
 #endif
-
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/errno.h>

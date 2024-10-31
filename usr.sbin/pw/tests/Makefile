@@ -1,11 +1,9 @@
-# $FreeBSD: stable/11/usr.sbin/pw/tests/Makefile 321164 2017-07-18 18:48:58Z ngie $
 
 PACKAGE=	tests
 
 BINDIR=		${TESTSDIR}
 
 PROGS+=		crypt
-WARNS?=		6
 LIBADD+=	crypt
 
 ATF_TESTS_SH=	pw_etcdir_test \

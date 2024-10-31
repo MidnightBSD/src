@@ -43,8 +43,6 @@
 #include <string>
 
 #include "exception.h"
-
-
 /*============================ Namespace Control =============================*/
 using std::string;
 using std::stringstream;

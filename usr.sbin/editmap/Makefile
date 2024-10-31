@@ -1,3 +1,4 @@
+
 SENDMAIL_DIR=${SRCTOP}/contrib/sendmail
 .PATH: ${SENDMAIL_DIR}/editmap
 

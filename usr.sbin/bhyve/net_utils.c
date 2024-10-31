@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011 NetApp, Inc.
  *
@@ -23,23 +23,27 @@
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
  * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
-#include "net_utils.h"
-#include "bhyverun.h"
-#include <md5.h>
+#include <sys/cdefs.h>
+#include <sys/types.h>
 #include <net/ethernet.h>
-#include <string.h>
-#include <stdio.h>
+
+#include <assert.h>
 #include <errno.h>
+#include <limits.h>
+#include <md5.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "bhyverun.h"
+#include "config.h"
 #include "debug.h"
 #include "net_utils.h"
 
 int
-net_parsemac(char *mac_str, uint8_t *mac_addr)
+net_parsemac(const char *mac_str, uint8_t *mac_addr)
 {
         struct ether_addr *ea;
         char zero_addr[ETHER_ADDR_LEN] = { 0, 0, 0, 0, 0, 0 };
@@ -59,6 +63,37 @@ net_parsemac(char *mac_str, uint8_t *mac_addr)
         return (0);
 }
 
+int
+net_parsemtu(const char *mtu_str, unsigned long *mtu)
+{
+	char *end;
+	unsigned long val;
+
+	assert(mtu_str != NULL);
+
+	if (*mtu_str == '-')
+		goto err;
+
+	val = strtoul(mtu_str, &end, 0);
+
+	if (*end != '\0')
+		goto err;
+
+	if (val == ULONG_MAX)
+		return (ERANGE);
+
+	if (val == 0 && errno == EINVAL)
+		return (EINVAL);
+
+	*mtu = val;
+
+	return (0);
+
+err:
+	errno = EINVAL;
+	return (EINVAL);
+}
+
 void
 net_genmac(struct pci_devinst *pi, uint8_t *macaddr)
 {
@@ -71,7 +106,7 @@ net_genmac(struct pci_devinst *pi, uint8_t *macaddr)
 	char nstr[80];
 
 	snprintf(nstr, sizeof(nstr), "%d-%d-%s", pi->pi_slot,
-	    pi->pi_func, vmname);
+	    pi->pi_func, get_config_value("name"));
 
 	MD5Init(&mdctx);
 	MD5Update(&mdctx, nstr, (unsigned int)strlen(nstr));

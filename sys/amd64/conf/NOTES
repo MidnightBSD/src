@@ -278,31 +278,21 @@ options 	ACPI_DEBUG
 # The cpufreq(4) driver provides support for non-ACPI CPU frequency control
 device		cpufreq
 
-# Direct Rendering modules for 3D acceleration.
-device		drm		# DRM core module required by DRM drivers
-device		mach64drm	# ATI Rage Pro, Rage Mobility P/M, Rage XL
-device		mgadrm		# AGP Matrox G200, G400, G450, G550
-device		r128drm		# ATI Rage 128
-device		savagedrm	# S3 Savage3D, Savage4
-device		sisdrm		# SiS 300/305, 540, 630
-device		tdfxdrm		# 3dfx Voodoo 3/4/5 and Banshee
-device		viadrm		# VIA
-options 	DRM_DEBUG	# Include debug printfs (slow)
-
 #
 # Network interfaces:
 #
 
+# axp: AMD EPYC integrated NIC
+#	Requires the miibus module
 # bxe:  Broadcom NetXtreme II (BCM5771X/BCM578XX) PCIe 10Gb Ethernet
 #       adapters.
-# ed:   Western Digital and SMC 80xx; Novell NE1000 and NE2000; 3Com 3C503
-#       HP PC Lan+, various PC Card devices
-#       (requires miibus)
 # ice:	Intel 800 Series Physical Function
 #	Requires the ice_ddp module for full functionality
 # igc:	Intel I225 2.5Gb Ethernet adapter
 # ipw:	Intel PRO/Wireless 2100 IEEE 802.11 adapter
 #	Requires the ipw firmware module
+# irdma: Intel 800 Series RDMA driver
+#        Requires the ice module
 # iwi:	Intel PRO/Wireless 2200BG/2225BG/2915ABG IEEE 802.11 adapters
 #	Requires the iwi firmware module
 # iwn:	Intel Wireless WiFi Link 1000/105/135/2000/4965/5000/6000/6050 abgn
@@ -312,16 +302,16 @@ options 	DRM_DEBUG	# Include debug printfs (slow)
 # mlx4ib: Mellanox ConnectX HCA InfiniBand
 # mlx4en: Mellanox ConnectX HCA Ethernet
 # nfe:	nVidia nForce MCP on-board Ethernet Networking (BSD open source)
+# qlxgb: QLogic 3200 and 8200 series 10 Gigabit Ethernet & CNA Adapter
+# qlxgbe: QLogic 8300 series 10 Gigabit Ethernet & CNA Adapter
+# qlxge: QLogic 8100 series 10 Gigabit Ethernet & CNA Adapter
 # sfxge: Solarflare SFC9000 family 10Gb Ethernet adapters
 # vmx:	VMware VMXNET3 Ethernet (BSD open source)
 # wpi:	Intel 3945ABG Wireless LAN controller
 #	Requires the wpi firmware module
 
+device		axp		# AMD EPYC integrated NIC
 device		bxe		# Broadcom NetXtreme II BCM5771X/BCM578XX 10GbE
-device		ed		# NE[12]000, SMC Ultra, 3c503, DS8390 cards
-options 	ED_3C503
-options 	ED_HPP
-options 	ED_SIC
 device		igc		# Intel I225 2.5G Ethernet
 device		ipw		# Intel 2100 wireless NICs.
 device		iwi		# Intel 2200BG/2225BG/2915ABG wireless NICs.
@@ -330,11 +320,15 @@ device		ixl		# Intel 700 Series Physical Function
 device		iavf		# Intel Adaptive Virtual Function
 device		ice		# Intel 800 Series Physical Function
 device		ice_ddp		# Intel 800 Series DDP Package
+device		irdma		# Intel 800 Series RDMA driver
 device  	mthca		# Mellanox HCA InfiniBand
 device  	mlx4		# Shared code module between IB and Ethernet
 device  	mlx4ib		# Mellanox ConnectX HCA InfiniBand
 device  	mlx4en		# Mellanox ConnectX HCA Ethernet
 device		nfe		# nVidia nForce MCP on-board Ethernet
+device		qlxgb		# QLogic 3200/8200 Ethernet
+device		qlxgbe		# QLogic 8300 Ethernet
+device		qlxge		# QLogic 8100 Ethernet
 device		sfxge		# Solarflare SFC9000 10Gb Ethernet
 device		vmx		# VMware VMXNET3 Ethernet
 device		wpi		# Intel 3945ABG wireless NICs.
@@ -425,25 +419,10 @@ options 	TWA_DEBUG		# 0-10; 10 prints the most messages.
 device		twa			# 3ware 9000 series PATA/SATA RAID
 
 #
-# SCSI host adapters:
-#
-# ncv: NCR 53C500 based SCSI host adapters.
-# nsp: Workbit Ninja SCSI-3 based PC Card SCSI host adapters.
-# stg: TMC 18C30, 18C50 based SCSI host adapters.
-
-device		ncv
-device		nsp
-device		stg
-
-#
 # Adaptec FSA RAID controllers, including integrated DELL controllers,
 # the Dell PERC 2/QC and the HP NetRAID-4M
 device		aac
 device		aacp	# SCSI Passthrough interface (optional, CAM required)
-
-#
-# Adaptec by PMC RAID controllers, Series 6/7/8 and upcoming families
-device		aacraid		# Container interface, CAM required
 
 #
 # Highpoint RocketRAID 27xx.
@@ -486,6 +465,10 @@ device         nvme    # base NVMe driver
 device         nvd     # expose NVMe namespaces as disks, depends on nvme
 
 #
+# Intel Volume Management Device (VMD) support
+device		vmd
+
+#
 # PMC-Sierra SAS/SATA controller
 device		pmspcv
 
@@ -522,8 +505,12 @@ device		virtio_console	# VirtIO Console device
 # Linux KVM paravirtualization support
 device		kvm_clock	# KVM paravirtual clock driver
 
+# Google Virtual NIC
+device		gve		# Google Virtual NIC (gVNIC) driver
+
 # Microsoft Hyper-V enhancement support
 device 		hyperv		# HyperV drivers
+device		hvhid		# HyperV HID device
 
 # Xen HVM Guest Optimizations
 options 	XENHVM		# Xen HVM kernel infrastructure
@@ -536,7 +523,7 @@ device 		xenpci		# Xen HVM Hypervisor services driver
 #
 # ipmi: Intelligent Platform Management Interface
 # pbio: Parallel (8255 PPI) basic I/O (mode 0) port (e.g. Advantech PCL-724)
-# smbios: DMI/SMBIOS entry point
+# smbios: DMI/SMBIOS entry point (requires EFIRT option)
 # vpd: Vital Product Data kernel interface
 # asmc: Apple System Management Controller
 # si: Specialix International SI/XIO or SX intelligent serial card
@@ -550,8 +537,8 @@ device 		xenpci		# Xen HVM Hypervisor services driver
 
 device		ipmi
 device		pbio
-hint.pbio.0.at="isa"
-hint.pbio.0.port="0x360"
+envvar		hint.pbio.0.at="isa"
+envvar		hint.pbio.0.port="0x360"
 device		smbios
 device		vpd
 device		asmc
@@ -559,12 +546,14 @@ device		tpm
 device		padlock_rng	# VIA Padlock RNG
 device		rdrand_rng	# Intel Bull Mountain RNG
 device		aesni		# AES-NI OpenCrypto module
+device		ossl		# OpenSSL OpenCrypto module
 device		ioat		# Intel I/OAT DMA engine
 
 #
 # Laptop/Notebook options:
 #
 
+device backlight
 
 #
 # I2C Bus

@@ -22,10 +22,12 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #define DEFINE_RAW_METHOD(func, rval, args...) typedef rval (*func##_t)(args)
+
+/* Use an algorithm-specific default level if no explicit level is selected. */
+#define USE_DEFAULT_LEVEL INT_MIN
 
 void *mkuz_safe_malloc(size_t);
 void *mkuz_safe_zmalloc(size_t);

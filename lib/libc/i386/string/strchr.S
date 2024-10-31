@@ -29,7 +29,6 @@
  */
 
 #include <machine/asm.h>
-
 /*
  * strchr(s, c)
  *	return a pointer to the first occurrence of the character c in

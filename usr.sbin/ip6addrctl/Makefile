@@ -1,5 +1,5 @@
-# $FreeBSD: stable/11/usr.sbin/ip6addrctl/Makefile 241134 2012-10-02 14:48:03Z eadler $
 
+PACKAGE=	runtime
 PROG=	ip6addrctl
 MAN=	ip6addrctl.8
 

@@ -26,14 +26,11 @@ SRCS+=	\
 	bsd.c \
 	ebr.c \
 	gpt.c \
-	mbr.c \
-	vtoc8.c
+	mbr.c
 
 BINDIR?=/usr/bin
 
 LIBADD=	util
-
-WARNS?=	6
 
 HAS_TESTS=
 SUBDIR.${MK_TESTS}+= tests

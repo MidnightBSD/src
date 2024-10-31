@@ -25,7 +25,6 @@
  */
 
 #include <machine/asm.h>
-
 /*
  * size_t
  * wcslen(const wchar_t *s) --

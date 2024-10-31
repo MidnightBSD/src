@@ -86,9 +86,7 @@ hlf_body()
 		col < $(atf_get_srcdir)/hlf.in
 
 	atf_check \
-		-o inline:"a f9
- f9
-a\n" \
+		-o inline:"a f9 f9a\n" \
 		-e empty \
 		-s exit:0 \
 		col -f < $(atf_get_srcdir)/hlf.in
@@ -100,8 +98,7 @@ a\n" \
 		col < $(atf_get_srcdir)/hlf2.in
 
 	atf_check \
-		-o inline:"a9
- f\n9"  \
+		-o inline:"a9 f\n9"  \
 		-e empty \
 		-s exit:0 \
 		col -f < $(atf_get_srcdir)/hlf2.in

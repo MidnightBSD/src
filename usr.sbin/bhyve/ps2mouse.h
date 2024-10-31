@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2015 Tycho Nightingale <tycho.nightingale@pluribusnetworks.com>
  * All rights reserved.
@@ -24,13 +24,13 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _PS2MOUSE_H_
 #define	_PS2MOUSE_H_
 
 struct atkbdc_softc;
+struct vm_snapshot_meta;
 
 struct ps2mouse_softc *ps2mouse_init(struct atkbdc_softc *sc);
 
@@ -38,5 +38,9 @@ int ps2mouse_read(struct ps2mouse_softc *sc, uint8_t *val);
 void ps2mouse_write(struct ps2mouse_softc *sc, uint8_t val, int insert);
 void ps2mouse_toggle(struct ps2mouse_softc *sc, int enable);
 int ps2mouse_fifocnt(struct ps2mouse_softc *sc);
+
+#ifdef BHYVE_SNAPSHOT
+int ps2mouse_snapshot(struct ps2mouse_softc *sc, struct vm_snapshot_meta *meta);
+#endif
 
 #endif /* _PS2MOUSE_H_ */

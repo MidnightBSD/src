@@ -36,7 +36,6 @@
 __RCSID("$NetBSD: exec_elf32.c,v 1.6 1999/09/20 04:12:16 christos Exp $");
 #endif
 #endif
-
 #ifndef ELFSIZE
 #define ELFSIZE         32
 #endif
@@ -161,7 +160,7 @@ ELFNAMEEND(check)(int fd, const char *fn __unused)
 	unsigned char data;
 
 	/*
-	 * Check the header to maek sure it's an ELF file (of the
+	 * Check the header to make sure it's an ELF file (of the
 	 * appropriate size).
 	 */
 	if (fstat(fd, &sb) == -1)

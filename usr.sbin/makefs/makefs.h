@@ -35,7 +35,6 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- *
  */
 
 #ifndef	_MAKEFS_H
@@ -57,7 +56,7 @@
  *
  *	name	"."		"bin"		"netbsd"
  *	type	S_IFDIR		S_IFDIR		S_IFREG
- *	next 	  >		  >		NULL
+ *	next	  >		  >		NULL
  *	parent	NULL		NULL		NULL
  *	child	NULL		  v
  *
@@ -298,7 +297,7 @@ extern	struct stat stampst;
     ((int32_t *)((uintptr_t)(cgp) + ufs_rw32((cgp)->cg_clustersumoff, ns)))
 
 struct fs;
-void   ffs_fragacct_swap(struct fs *, int, int32_t [], int, int);
+void   ffs_fragacct_swap(struct fs *, int, uint32_t [], int, int);
 
 fsinode *link_check(fsinode *);
 

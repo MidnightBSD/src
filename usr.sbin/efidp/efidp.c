@@ -24,7 +24,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <ctype.h>
 #include <efivar.h>
 #include <efivar-dp.h>

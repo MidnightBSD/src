@@ -4,5 +4,3 @@ BINDIR?= /usr/bin
 PACKAGE=	bsnmp
 
 CFLAGS+= -I. -I${.CURDIR}
-
-WARNS?=		6

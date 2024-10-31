@@ -4,6 +4,7 @@ RPCDIR=	${DESTDIR}/usr/include/rpcsvc
 .PATH: ${SRCTOP}/usr.sbin/ypserv ${SRCTOP}/usr.bin/chpass \
        ${SRCTOP}/libexec/ypxfr ${RPCDIR}
 
+PACKAGE=yp
 PROG=	rpc.yppasswdd
 SCRIPTS=yppwupdate
 SCRIPTSDIR= ${LIBEXECDIR}

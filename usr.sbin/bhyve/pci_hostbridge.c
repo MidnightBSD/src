@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011 NetApp, Inc.
  * All rights reserved.
@@ -24,20 +24,38 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/cdefs.h>
+#include <err.h>
+#include <stdlib.h>
 
+#include "config.h"
 #include "pci_emul.h"
 
 static int
-pci_hostbridge_init(struct vmctx *ctx, struct pci_devinst *pi, char *opts)
+pci_hostbridge_init(struct pci_devinst *pi, nvlist_t *nvl)
 {
+	const char *value;
+	u_int vendor, device;
+
+	vendor = 0x1275;	/* NetApp */
+	device = 0x1275;	/* NetApp */
+
+	value = get_config_value_node(nvl, "vendor");
+	if (value != NULL)
+		vendor = strtol(value, NULL, 0);
+	else
+		vendor = pci_config_read_reg(NULL, nvl, PCIR_VENDOR, 2, vendor);
+	value = get_config_value_node(nvl, "devid");
+	if (value != NULL)
+		device = strtol(value, NULL, 0);
+	else
+		device = pci_config_read_reg(NULL, nvl, PCIR_DEVICE, 2, device);
 
 	/* config space */
-	pci_set_cfgdata16(pi, PCIR_VENDOR, 0x1275);	/* NetApp */
-	pci_set_cfgdata16(pi, PCIR_DEVICE, 0x1275);	/* NetApp */
+	pci_set_cfgdata16(pi, PCIR_VENDOR, vendor);
+	pci_set_cfgdata16(pi, PCIR_DEVICE, device);
 	pci_set_cfgdata8(pi, PCIR_HDRTYPE, PCIM_HDRTYPE_NORMAL);
 	pci_set_cfgdata8(pi, PCIR_CLASS, PCIC_BRIDGE);
 	pci_set_cfgdata8(pi, PCIR_SUBCLASS, PCIS_BRIDGE_HOST);
@@ -48,23 +66,42 @@ pci_hostbridge_init(struct vmctx *ctx, struct pci_devinst *pi, char *opts)
 }
 
 static int
-pci_amd_hostbridge_init(struct vmctx *ctx, struct pci_devinst *pi, char *opts)
+pci_amd_hostbridge_legacy_config(nvlist_t *nvl, const char *opts __unused)
 {
-	(void) pci_hostbridge_init(ctx, pi, opts);
-	pci_set_cfgdata16(pi, PCIR_VENDOR, 0x1022);	/* AMD */
-	pci_set_cfgdata16(pi, PCIR_DEVICE, 0x7432);	/* made up */
+	nvlist_t *pci_regs;
+
+	pci_regs = create_relative_config_node(nvl, "pcireg");
+	if (pci_regs == NULL) {
+		warnx("amd_hostbridge: failed to create pciregs node");
+		return (-1);
+	}
+
+	set_config_value_node(pci_regs, "vendor", "0x1022"); /* AMD */
+	set_config_value_node(pci_regs, "device", "0x7432"); /* made up */
 
 	return (0);
 }
 
-struct pci_devemu pci_de_amd_hostbridge = {
+#ifdef BHYVE_SNAPSHOT
+static int
+pci_de_snapshot(struct vm_snapshot_meta *meta __unused)
+{
+	return (0);
+}
+#endif
+
+static const struct pci_devemu pci_de_amd_hostbridge = {
 	.pe_emu = "amd_hostbridge",
-	.pe_init = pci_amd_hostbridge_init,
+	.pe_legacy_config = pci_amd_hostbridge_legacy_config,
+	.pe_alias = "hostbridge",
 };
 PCI_EMUL_SET(pci_de_amd_hostbridge);
 
-struct pci_devemu pci_de_hostbridge = {
+static const struct pci_devemu pci_de_hostbridge = {
 	.pe_emu = "hostbridge",
 	.pe_init = pci_hostbridge_init,
+#ifdef BHYVE_SNAPSHOT
+	.pe_snapshot =	pci_de_snapshot,
+#endif
 };
 PCI_EMUL_SET(pci_de_hostbridge);

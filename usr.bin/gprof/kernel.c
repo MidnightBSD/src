@@ -1,5 +1,4 @@
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/linker.h>
 #include <sys/sysctl.h>

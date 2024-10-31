@@ -1,6 +1,7 @@
 #!/bin/sh
 #-
-# Copyright (c) 2013-2018 The FreeBSD Foundation
+# Copyright (c) 2020-2021 Rubicon Communications, LLC (netgate.com)
+# Copyright (c) 2013-2019 The FreeBSD Foundation
 # Copyright (c) 2013 Glen Barber
 # Copyright (c) 2011 Nathan Whitehorn
 # All rights reserved.
@@ -33,11 +34,10 @@
 #  totally clean, fresh trees.
 # Based on release/generate-release.sh written by Nathan Whitehorn
 #
-#
 
 export PATH="/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin"
 
-VERSION=2
+VERSION=3
 
 # Prototypes that can be redefined per-chroot or per-target.
 load_chroot_env() { }
@@ -50,7 +50,7 @@ usage() {
 }
 
 # env_setup(): Set up the default build environment variables, such as the
-# CHROOTDIR, VCSCMD, SVNROOT, etc.  This is called before the release.conf
+# CHROOTDIR, VCSCMD, GITROOT, etc.  This is called before the release.conf
 # file is sourced, if '-c <release.conf>' is specified.
 env_setup() {
 	# The directory within which the release will be built.
@@ -136,7 +136,7 @@ env_check() {
 		WITH_DVD=
 		WITH_COMPRESSED_IMAGES=
 		case ${EMBEDDED_TARGET}:${EMBEDDED_TARGET_ARCH} in
-			arm:arm*|arm64:aarch64)
+			arm:arm*|arm64:aarch64|riscv:riscv64*)
 				chroot_build_release_cmd="chroot_arm_build_release"
 				;;
 			*)
@@ -159,6 +159,7 @@ env_check() {
 	# this file, unless overridden by release.conf.  In most cases, these
 	# will not need to be changed.
 	CONF_FILES="__MAKE_CONF=${MAKE_CONF} SRCCONF=${SRC_CONF}"
+	NOCONF_FILES="__MAKE_CONF=/dev/null SRCCONF=/dev/null"
 	if [ -n "${TARGET}" ] && [ -n "${TARGET_ARCH}" ]; then
 		ARCH_FLAGS="TARGET=${TARGET} TARGET_ARCH=${TARGET_ARCH}"
 	else
@@ -182,9 +183,9 @@ env_check() {
 
 	CHROOT_MAKEENV="${CHROOT_MAKEENV} \
 		MAKEOBJDIRPREFIX=${CHROOTDIR}/tmp/obj"
-	CHROOT_WMAKEFLAGS="${MAKE_FLAGS} ${WORLD_FLAGS} ${CONF_FILES}"
-	CHROOT_IMAKEFLAGS="${WORLD_FLAGS} ${CONF_FILES}"
-	CHROOT_DMAKEFLAGS="${WORLD_FLAGS} ${CONF_FILES}"
+	CHROOT_WMAKEFLAGS="${MAKE_FLAGS} ${WORLD_FLAGS} ${NOCONF_FILES}"
+	CHROOT_IMAKEFLAGS="${WORLD_FLAGS} ${NOCONF_FILES}"
+	CHROOT_DMAKEFLAGS="${WORLD_FLAGS} ${NOCONF_FILES}"
 	RELEASE_WMAKEFLAGS="${MAKE_FLAGS} ${WORLD_FLAGS} ${ARCH_FLAGS} \
 		${CONF_FILES}"
 	RELEASE_KMAKEFLAGS="${MAKE_FLAGS} ${KERNEL_FLAGS} \

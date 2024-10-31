@@ -1,4 +1,3 @@
-/* $FreeBSD: stable/11/usr.sbin/mailwrapper/pathnames.h 330449 2018-03-05 07:26:05Z eadler $ */
 
 /*-
  * SPDX-License-Identifier: BSD-4-Clause

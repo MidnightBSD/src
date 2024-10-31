@@ -24,7 +24,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/errno.h>
 #include <stdlib.h>
 #include <string.h>

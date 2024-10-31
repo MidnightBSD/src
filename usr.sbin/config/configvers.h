@@ -1,6 +1,5 @@
 /*-
  * This file is in the public domain
- *
  */
 
 /*
@@ -45,9 +44,8 @@
  *     When a new feature is actually used by the build system, update the
  *     %VERSREQ field in the Makefile.$ARCH of all the affected makefiles
  *     (typically all of them).
- *
  */
-#define	CONFIGVERS	600016
+#define	CONFIGVERS	600018
 #define	MAJOR_VERS(x)	((x) / 100000)
 
 /* Last config(8) version to require envmode/hintmode */

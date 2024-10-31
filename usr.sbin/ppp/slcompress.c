@@ -37,7 +37,6 @@
  *
  * Van Jacobson (van@helios.ee.lbl.gov), Dec 31, 1989:
  *	- Initial distribution.
- *
  */
 
 #include <sys/param.h>

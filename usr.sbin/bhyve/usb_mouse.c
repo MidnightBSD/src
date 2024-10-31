@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2014 Leon Dang <ldang@nahannisys.com>
  * All rights reserved.
@@ -27,8 +27,9 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/time.h>
+
+#include <machine/vmm_snapshot.h>
 
 #include <pthread.h>
 #include <stdio.h>
@@ -71,7 +72,7 @@ enum {
 };
 
 static const char *umouse_desc_strings[] = {
-	"\x04\x09",
+	"\x09\x04",
 	"BHYVE",
 	"HID Tablet",
 	"01",
@@ -153,7 +154,7 @@ static struct usb_device_descriptor umouse_dev_desc = {
 	.bLength = sizeof(umouse_dev_desc),
 	.bDescriptorType = UDESC_DEVICE,
 	MSETW(.bcdUSB, UD_USB_3_0),
-	.bMaxPacketSize = 8,			/* max packet size */
+	.bMaxPacketSize = 9,			/* max pkt size, 2^9 = 512 */
 	MSETW(.idVendor, 0xFB5D),		/* vendor */
 	MSETW(.idProduct, 0x0001),		/* product */
 	MSETW(.bcdDevice, 0),			/* device version */
@@ -215,7 +216,7 @@ struct umouse_bos_desc {
 } __packed;
 
 
-struct umouse_bos_desc umouse_bosd = {
+static struct umouse_bos_desc umouse_bosd = {
 	.bosd = {
 		.bLength = sizeof(umouse_bosd.bosd),
 		.bDescriptorType = UDESC_BOS,
@@ -237,8 +238,6 @@ struct umouse_bos_desc umouse_bosd = {
 
 struct umouse_softc {
 	struct usb_hci *hci;
-
-	char	*opt;
 
 	struct umouse_report um_report;
 	int	newdata;
@@ -296,7 +295,7 @@ umouse_event(uint8_t button, int x, int y, void *arg)
 }
 
 static void *
-umouse_init(struct usb_hci *hci, char *opt)
+umouse_init(struct usb_hci *hci, nvlist_t *nvl __unused)
 {
 	struct umouse_softc *sc;
 
@@ -304,7 +303,6 @@ umouse_init(struct usb_hci *hci, char *opt)
 	sc->hci = hci;
 
 	sc->hid.protocol = 1;	/* REPORT protocol */
-	sc->opt = strdup(opt);
 	pthread_mutex_init(&sc->mtx, NULL);
 	pthread_mutex_init(&sc->ev_mtx, NULL);
 
@@ -535,8 +533,8 @@ umouse_request(void *scarg, struct usb_data_xfer *xfer)
 		eshort = data->blen > 0;
 		break;
 
-	case UREQ(UR_GET_STATUS, UT_READ_INTERFACE): 
-	case UREQ(UR_GET_STATUS, UT_READ_ENDPOINT): 
+	case UREQ(UR_GET_STATUS, UT_READ_INTERFACE):
+	case UREQ(UR_GET_STATUS, UT_READ_ENDPOINT):
 		DPRINTF(("umouse: (UR_GET_STATUS, UT_READ_INTERFACE)"));
 		if (data != NULL && len > 1) {
 			USETW(udata, 0);
@@ -752,7 +750,7 @@ umouse_data_handler(void *scarg, struct usb_data_xfer *xfer, int dir,
 
 		sc->polling = 0;
 		pthread_mutex_unlock(&sc->mtx);
-	} else { 
+	} else {
 		USB_DATA_SET_ERRCODE(data, USB_STALL);
 		err = USB_ERR_STALLED;
 	}
@@ -774,21 +772,42 @@ umouse_reset(void *scarg)
 }
 
 static int
-umouse_remove(void *scarg)
+umouse_remove(void *scarg __unused)
 {
-
 	return (0);
 }
 
 static int
-umouse_stop(void *scarg)
+umouse_stop(void *scarg __unused)
 {
-
 	return (0);
 }
 
+#ifdef BHYVE_SNAPSHOT
+static int
+umouse_snapshot(void *scarg, struct vm_snapshot_meta *meta)
+{
+	int ret;
+	struct umouse_softc *sc;
 
-struct usb_devemu ue_mouse = {
+	sc = scarg;
+
+	SNAPSHOT_VAR_OR_LEAVE(sc->um_report, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->newdata, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->hid.idle, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->hid.protocol, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->hid.feature, meta, ret, done);
+
+	SNAPSHOT_VAR_OR_LEAVE(sc->polling, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->prev_evt.tv_sec, meta, ret, done);
+	SNAPSHOT_VAR_OR_LEAVE(sc->prev_evt.tv_usec, meta, ret, done);
+
+done:
+	return (ret);
+}
+#endif
+
+static struct usb_devemu ue_mouse = {
 	.ue_emu =	"tablet",
 	.ue_usbver =	3,
 	.ue_usbspeed =	USB_SPEED_HIGH,
@@ -797,6 +816,9 @@ struct usb_devemu ue_mouse = {
 	.ue_data =	umouse_data_handler,
 	.ue_reset =	umouse_reset,
 	.ue_remove =	umouse_remove,
-	.ue_stop =	umouse_stop
+	.ue_stop =	umouse_stop,
+#ifdef BHYVE_SNAPSHOT
+	.ue_snapshot =	umouse_snapshot,
+#endif
 };
 USB_EMUL_SET(ue_mouse);

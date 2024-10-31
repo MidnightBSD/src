@@ -1,7 +1,6 @@
 #!/bin/sh
 #-
 # Copyright (c) 2014, 2015 The FreeBSD Foundation
-# All rights reserved.
 #
 # This software was developed by Glen Barber under sponsorship
 # from the FreeBSD Foundation.
@@ -91,8 +90,6 @@ main() {
 	if [ ! -z "${VMCONFIG}" ] && [ ! -c "${VMCONFIG}" ]; then
 		. "${VMCONFIG}"
 	fi
-
-	ROOTLABEL="gpt"
 
 	vm_create_base
 	vm_install_base

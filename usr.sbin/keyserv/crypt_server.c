@@ -42,11 +42,6 @@
 #include <rpc/des.h>
 #include "crypt.h"
 
-#ifndef lint
-static const char rcsid[] =
-  "$FreeBSD: stable/11/usr.sbin/keyserv/crypt_server.c 301005 2016-05-30 20:41:55Z pfg $";
-#endif /* not lint */
-
 /*
  * The U.S. government stupidly believes that a) it can keep strong
  * crypto code a secret and b) that doing so somehow protects national
@@ -246,9 +241,9 @@ des_crypt_1_svc(desargs *argp, struct svc_req *rqstp)
 	 * getting ECB mode.
 	 */
 #ifdef BROKEN_DES
-	if (_my_crypt != &_arcfour_crypt && argp->des_mode == CBC) {
+	if (_my_crypt != &_arcfour_crypt && argp->des_mode == CBC_DES) {
 #else
-	if (_my_crypt != &_arcfour_crypt && argp->des_mode == ECB) {
+	if (_my_crypt != &_arcfour_crypt && argp->des_mode == ECB_DES) {
 #endif
 		int			i;
 		char			*dptr;

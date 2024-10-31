@@ -33,9 +33,6 @@
 #endif
 
 #include <sys/cdefs.h>
-#if defined(__RCSID) && !defined(__lint)
-#endif	/* !__lint */
-
 #include <sys/param.h>
 
 #if !HAVE_NBTOOL_CONFIG_H
@@ -54,17 +51,15 @@
 #include <dirent.h>
 #include <util.h>
 
+#include "ffs/buf.h"
 #include "makefs.h"
 #include "msdos.h"
 
 #include <mkfs_msdos.h>
 #include <fs/msdosfs/bpb.h>
-
-#include "ffs/buf.h"
-
-#include "msdos/msdosfsmount.h"
 #include "msdos/direntry.h"
-#include "msdos/denode.h"
+#include <fs/msdosfs/denode.h>
+#include <fs/msdosfs/msdosfsmount.h>
 
 static int msdos_populate_dir(const char *, struct denode *, fsnode *,
     fsnode *, fsinfo_t *);
@@ -263,7 +258,8 @@ msdos_populate_dir(const char *path, struct denode *dir, fsnode *root,
 			    cur->name);
 			continue;
 		}
-		if (msdosfs_mkfile(pbuf, dir, cur) == NULL) {
+		if (msdosfs_mkfile(cur->contents ? cur->contents : pbuf, dir,
+		    cur) == NULL) {
 			warn("msdosfs_mkfile %s", pbuf);
 			return -1;
 		}

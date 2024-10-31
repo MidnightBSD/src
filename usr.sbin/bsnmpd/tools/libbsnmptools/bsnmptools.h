@@ -27,7 +27,6 @@
  * SUCH DAMAGE.
  *
  * Helper functions common for all tools.
- *
  */
 
 #ifndef	_BSNMP_TOOLS_H_

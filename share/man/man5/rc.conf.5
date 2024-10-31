@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.Dd August 28, 2022
+.Dd December 2, 2023
 .Dt RC.CONF 5
 .Os
 .Sh NAME
@@ -56,6 +56,11 @@ which specifies the default settings for all the available options.
 Options need only be specified in
 .Pa /etc/rc.conf
 when the system administrator wishes to override these defaults.
+The file
+.Pa /etc/defaults/vendor.conf
+allows vendors to override
+.Fx
+defaults.
 The file
 .Pa /etc/rc.conf.local
 is used to override settings in
@@ -506,7 +511,7 @@ is used to set the hostname via DHCP,
 this variable should be set to an empty string.
 Within a
 .Xr jail 8
-the hostname is generally already set and this variable may absent.
+the hostname is generally already set and this variable may be absent.
 If this value remains unset when the system is done booting
 your console login will display the default hostname of
 .Dq Amnesiac .
@@ -551,6 +556,15 @@ When specified, this variable overrides the
 variable for interface
 .Ar iface
 only.
+.It Va dhclient_arpwait
+.Pq Vt bool
+Set to
+.Dq Li NO
+to stop
+.Xr dhclient 8
+from waiting for ARP resolution, to make the system boot faster.
+This may be done on networks where the DHCP server is certain to
+know whether an address is available.
 .It Va synchronous_dhclient
 .Pq Vt bool
 Set to
@@ -1058,6 +1072,42 @@ is set to
 these flags are passed to the
 .Xr pfctl 8
 program when loading the ruleset.
+.It Va pf_fallback_rules_enable
+.Pq Vt bool
+Set to
+.Dq Li NO
+by default.
+Setting this to
+.Dq Li YES
+enables loading
+.Va pf_fallback_rules_file
+or
+.Va pf_fallback_rules
+in case of a problem when loading the ruleset in
+.Va pf_rules .
+.It Va pf_fallback_rules_file
+.Pq Vt str
+Path to a pf ruleset to load in case of failure when loading the
+ruleset in
+.Va pf_rules
+(default
+.Pa /etc/pf-fallback.conf ) .
+.It Va pf_fallback_rules
+.Pq Vt str
+A pf ruleset to load in case of failure when loading the ruleset in
+.Va pf_rules
+and
+.Va pf_fallback_rules_file
+is not found.
+Multiple rules can be set as follows:
+.Bd -literal
+pf_fallback_rules="\\
+	block drop log all\\
+	pass in quick on em0"
+.Pp
+.Ed
+The default fallback rule is
+.Dq block drop log all
 .It Va pflog_enable
 .Pq Vt bool
 Set to
@@ -1263,11 +1313,20 @@ break some legitimate applications.
 .It Va icmp_drop_redirect
 .Pq Vt bool
 Set to
-.Dq Li NO
+.Dq Li AUTO
 by default.
+This setting will be identical to
+.Dq Li YES ,
+if a dynamicrouting daemon is enabled, because redirect processing may
+cause performance issues for large routing tables.
+If no such service is enabled, this setting behaves like a
+.Dq Li NO .
 Setting to
 .Dq Li YES
 will cause the kernel to ignore ICMP REDIRECT packets.
+Setting to
+.Dq Li NO
+will cause the kernel to process ICMP REDIRECT packets.
 Refer to
 .Xr icmp 4
 for more information.
@@ -1345,11 +1404,11 @@ It is possible to add IP alias entries using
 syntax with the address family keyword such as
 .Li inet .
 Assuming that the interface in question was
-.Li ed0 ,
+.Li em0 ,
 it might look something like this:
 .Bd -literal
-ifconfig_ed0_alias0="inet 127.0.0.253 netmask 0xffffffff"
-ifconfig_ed0_alias1="inet 127.0.0.254 netmask 0xffffffff"
+ifconfig_em0_alias0="inet 127.0.0.253 netmask 0xffffffff"
+ifconfig_em0_alias1="inet 127.0.0.254 netmask 0xffffffff"
 .Ed
 .Pp
 It also possible to configure multiple IP addresses in Classless
@@ -1389,21 +1448,21 @@ not for the other address families such as
 .Li inet6 .
 .Pp
 With the interface in question being
-.Li ed0 ,
+.Li em0 ,
 an example could look like:
 .Bd -literal
-ifconfig_ed0_alias2="inet 192.0.2.129/27"
-ifconfig_ed0_alias3="inet 192.0.2.1-5/28"
+ifconfig_em0_alias2="inet 192.0.2.129/27"
+ifconfig_em0_alias3="inet 192.0.2.1-5/28"
 .Ed
 .Pp
 and so on.
 .Pp
-Note that
+Note that deprecated
 .Va ipv4_addrs_ Ns Aq Ar interface
 variable was supported for IPv4 CIDR address notation.
-It is now deprecated because the functionality was integrated into
+The
 .Va ifconfig_ Ns Ao Ar interface Ac Ns Va _alias Ns Aq Ar n
-though
+variable replaces it, though
 .Va ipv4_addrs_ Ns Aq Ar interface
 is still supported for backward compatibility.
 .Pp
@@ -1415,10 +1474,10 @@ its contents are passed to
 Execution stops at the first unsuccessful access, so if
 something like this is present:
 .Bd -literal
-ifconfig_ed0_alias0="inet 127.0.0.251 netmask 0xffffffff"
-ifconfig_ed0_alias1="inet 127.0.0.252 netmask 0xffffffff"
-ifconfig_ed0_alias2="inet 127.0.0.253 netmask 0xffffffff"
-ifconfig_ed0_alias4="inet 127.0.0.254 netmask 0xffffffff"
+ifconfig_em0_alias0="inet 127.0.0.251 netmask 0xffffffff"
+ifconfig_em0_alias1="inet 127.0.0.252 netmask 0xffffffff"
+ifconfig_em0_alias2="inet 127.0.0.253 netmask 0xffffffff"
+ifconfig_em0_alias4="inet 127.0.0.254 netmask 0xffffffff"
 .Ed
 .Pp
 Then note that alias4 would
@@ -1434,7 +1493,7 @@ variable, which has the same functionality as
 .Va ifconfig_ Ns Ao Ar interface Ac Ns Va _alias Ns Aq Ar n
 and can have all of entries in a variable like the following:
 .Bd -literal
-ifconfig_ed0_aliases="\\
+ifconfig_em0_aliases="\\
 	inet 127.0.0.251 netmask 0xffffffff \\
 	inet 127.0.0.252 netmask 0xffffffff \\
 	inet 127.0.0.253 netmask 0xffffffff \\
@@ -1541,11 +1600,11 @@ to the
 .Va ifconfig_ Ns Aq Ar interface
 variable.
 For instance, to initialize the
-.Li ed0
+.Li em0
 device via DHCP,
 it is possible to use something like:
 .Bd -literal
-ifconfig_ed0="DHCP"
+ifconfig_em0="DHCP"
 .Ed
 .Pp
 If you want to configure your wireless interface with
@@ -1596,7 +1655,7 @@ variable.
 .Pp
 It is also possible to rename an interface by doing:
 .Bd -literal
-ifconfig_ed0_name="net0"
+ifconfig_em0_name="net0"
 ifconfig_net0="inet 192.0.2.1 netmask 0xffffff00"
 .Ed
 .It Va ipv6_enable
@@ -1746,7 +1805,8 @@ This static setting may be overridden by commands
 started with dynamic interface configuration utilities
 like
 .Xr dhclient 8
-hooks. The description can be seen with
+hooks.
+The description can be seen with
 .Xr ifconfig 8
 command and it may be exported with
 .Xr bsnmpd 1
@@ -1769,8 +1829,8 @@ with
 keyword.
 For example:
 .Bd -literal
-ifconfig_ed0_ipv6="inet6 2001:db8:1::1 prefixlen 64"
-ifconfig_ed0_alias0="inet6 2001:db8:2::1 prefixlen 64"
+ifconfig_em0_ipv6="inet6 2001:db8:1::1 prefixlen 64"
+ifconfig_em0_alias0="inet6 2001:db8:2::1 prefixlen 64"
 .Ed
 .Pp
 Interfaces that have an
@@ -1797,7 +1857,7 @@ defined in
 If only a link-local address is needed on the interface,
 the following configuration can be used:
 .Bd -literal
-ifconfig_ed0_ipv6="inet6 auto_linklocal"
+ifconfig_em0_ipv6="inet6 auto_linklocal"
 .Ed
 .Pp
 A link-local address can also be configured manually.
@@ -1806,7 +1866,7 @@ so that it does not change when the network interface
 card is replaced.
 For example:
 .Bd -literal
-ifconfig_ed0_ipv6="inet6 fe80::1 prefixlen 64"
+ifconfig_em0_ipv6="inet6 fe80::1 prefixlen 64"
 .Ed
 .It Va ipv6_prefix_ Ns Aq Ar interface
 .Pq Vt str
@@ -1820,15 +1880,15 @@ is empty.
 .Pp
 For example, the following configuration
 .Bd -literal
-ipv6_prefix_ed0="2001:db8:1:0 2001:db8:2:0"
+ipv6_prefix_em0="2001:db8:1:0 2001:db8:2:0"
 .Ed
 .Pp
 is equivalent to the following:
 .Bd -literal
-ifconfig_ed0_alias0="inet6 2001:db8:1:: eui64 prefixlen 64"
-ifconfig_ed0_alias1="inet6 2001:db8:1:: prefixlen 64 anycast"
-ifconfig_ed0_alias2="inet6 2001:db8:2:: eui64 prefixlen 64"
-ifconfig_ed0_alias3="inet6 2001:db8:2:: prefixlen 64 anycast"
+ifconfig_em0_alias0="inet6 2001:db8:1:: eui64 prefixlen 64"
+ifconfig_em0_alias1="inet6 2001:db8:1:: prefixlen 64 anycast"
+ifconfig_em0_alias2="inet6 2001:db8:2:: eui64 prefixlen 64"
+ifconfig_em0_alias3="inet6 2001:db8:2:: prefixlen 64 anycast"
 .Ed
 .Pp
 These Subnet-Router anycast addresses will be added only when
@@ -1860,10 +1920,10 @@ or
 .Dq Li ipv6_prefer
 is specified,
 .Xr ip6addrctl 8
-installs a pre-defined policy table described in Section 2.1
-.Pq IPv6-preferred
-or 10.3
+installs a pre-defined policy table described in Section 10.3
 .Pq IPv4-preferred
+or 2.1
+.Pq IPv6-preferred
 of RFC 3484.
 .Pp
 If
@@ -2021,6 +2081,8 @@ Used in conjunction with
 .Va gateway_enable
 allows hosts on private network addresses access to the Internet using
 this host as a network address translating router.
+Default is
+.Dq Li YES .
 .It Va ppp_ Ns Ao Ar profile Ac Ns _nat
 .Pq Vt str
 Overrides the global
@@ -2061,6 +2123,12 @@ If set to
 .Pa /etc/rc.d/zfs
 will attempt to automatically mount ZFS file systems and initialize ZFS volumes
 (ZVOLs).
+.It Va zpool_reguid
+.Pq Vt str
+A space-separated list of ZFS pool names for which new pool GUIDs should be
+assigned upon first boot.
+This is useful when using a ZFS pool copied from a template, such as a virtual
+machine image.
 .It Va gptboot_enable
 .Pq Vt bool
 If set to
@@ -2366,39 +2434,6 @@ If
 is set to
 .Dq Li YES ,
 these are the flags to pass to it.
-.It Va amd_enable
-.Pq Vt bool
-If set to
-.Dq Li YES ,
-run the
-.Xr amd 8
-daemon at boot time.
-.It Va amd_flags
-.Pq Vt str
-If
-.Va amd_enable
-is set to
-.Dq Li YES ,
-these are the flags to pass to it.
-See the
-.Xr amd 8
-manpage for more information.
-.It Va amd_map_program
-.Pq Vt str
-If set,
-the specified program is run to get the list of
-.Xr amd 8
-maps.
-For example, if the
-.Xr amd 8
-maps are stored in NIS, one can set this to
-run
-.Xr ypcat 1
-to get a list of
-.Xr amd 8
-maps from the
-.Pa amd.master
-NIS map.
 .It Va update_motd
 .Pq Vt bool
 If set to

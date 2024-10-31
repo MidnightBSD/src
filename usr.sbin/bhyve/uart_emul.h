@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013 Neel Natu <neel@freebsd.org>
  * All rights reserved.
@@ -24,16 +24,15 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _UART_EMUL_H_
 #define	_UART_EMUL_H_
 
-
 #define	UART_IO_BAR_SIZE	8
 
 struct uart_softc;
+struct vm_snapshot_meta;
 
 typedef void (*uart_intr_func_t)(void *arg);
 struct uart_softc *uart_init(uart_intr_func_t intr_assert,
@@ -42,5 +41,8 @@ struct uart_softc *uart_init(uart_intr_func_t intr_assert,
 int	uart_legacy_alloc(int unit, int *ioaddr, int *irq);
 uint8_t	uart_read(struct uart_softc *sc, int offset);
 void	uart_write(struct uart_softc *sc, int offset, uint8_t value);
-int	uart_set_backend(struct uart_softc *sc, const char *opt);
+int	uart_set_backend(struct uart_softc *sc, const char *device);
+#ifdef BHYVE_SNAPSHOT
+int	uart_snapshot(struct uart_softc *sc, struct vm_snapshot_meta *meta);
+#endif
 #endif

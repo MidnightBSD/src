@@ -52,17 +52,16 @@
 #include <sys/param.h>
 #include <sys/errno.h>
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 
-#include <fs/msdosfs/bpb.h>
-
 #include "ffs/buf.h"
-
-#include "msdos/denode.h"
+#include <fs/msdosfs/bpb.h>
 #include "msdos/direntry.h"
-#include "msdos/fat.h"
-#include "msdos/msdosfsmount.h"
+#include <fs/msdosfs/denode.h>
+#include <fs/msdosfs/fat.h>
+#include <fs/msdosfs/msdosfsmount.h>
 
 #include "makefs.h"
 #include "msdos.h"
@@ -103,7 +102,7 @@ createde(struct denode *dep, struct denode *ddep, struct denode **depp,
 		dirclust = de_clcount(pmp, diroffset);
 		error = extendfile(ddep, dirclust, 0, 0, DE_CLEAR);
 		if (error) {
-			(void)detrunc(ddep, ddep->de_FileSize, 0);
+			(void)detrunc(ddep, ddep->de_FileSize, 0, NULL);
 			return error;
 		}
 
@@ -126,7 +125,6 @@ createde(struct denode *dep, struct denode *ddep, struct denode **depp,
 	if (dirclust != MSDOSFSROOT)
 		diroffset &= pmp->pm_crbomask;
 	if ((error = bread(pmp->pm_devvp, bn, blsize, NOCRED, &bp)) != 0) {
-		brelse(bp);
 		return error;
 	}
 	ndep = bptoep(pmp, bp, ddep->de_fndoffset);
@@ -158,7 +156,6 @@ createde(struct denode *dep, struct denode *ddep, struct denode **depp,
 				error = bread(pmp->pm_devvp, bn, blsize,
 					      NOCRED, &bp);
 				if (error) {
-					brelse(bp);
 					return error;
 				}
 				ndep = bptoep(pmp, bp, ddep->de_fndoffset);
@@ -188,7 +185,7 @@ createde(struct denode *dep, struct denode *ddep, struct denode **depp,
 			else
 				diroffset = 0;
 		}
-		return deget(pmp, dirclust, diroffset, depp);
+		return deget(pmp, dirclust, diroffset, 0, depp);
 	}
 
 	return 0;
@@ -213,7 +210,6 @@ readep(struct msdosfsmount *pmp, u_long dirclust, u_long diroffset,
 		blsize = de_bn2off(pmp, pmp->pm_rootdirsize) & pmp->pm_crbomask;
 	bn = detobn(pmp, dirclust, diroffset);
 	if ((error = bread(pmp->pm_devvp, bn, blsize, NOCRED, bpp)) != 0) {
-		brelse(*bpp);
 		*bpp = NULL;
 		return (error);
 	}
@@ -273,7 +269,6 @@ uniqdosname(struct denode *dep, struct componentname *cnp, u_char *cp)
 			}
 			error = bread(pmp->pm_devvp, bn, blsize, NOCRED, &bp);
 			if (error) {
-				brelse(bp);
 				return error;
 			}
 			for (dentp = (struct direntry *)bp->b_data;

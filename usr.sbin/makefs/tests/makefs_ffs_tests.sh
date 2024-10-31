@@ -23,8 +23,6 @@
 # THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#
-#
 
 MAKEFS="makefs -t ffs"
 MOUNT="mount"
@@ -56,7 +54,6 @@ check_ffs_image_contents()
 atf_test_case autocalculate_image_size cleanup
 autocalculate_image_size_body()
 {
-	atf_expect_fail "PR 229929 makefs(8) can underestimate image size"
 	create_test_inputs
 
 	atf_check -e empty -o save:$TEST_SPEC_FILE -s exit:0 \

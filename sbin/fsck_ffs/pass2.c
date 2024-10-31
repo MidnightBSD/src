@@ -35,7 +35,6 @@ static const char sccsid[] = "@(#)pass2.c	8.9 (Berkeley) 4/28/95";
 #endif /* not lint */
 #endif
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/sysctl.h>
 
@@ -60,6 +59,7 @@ static int pass2check(struct inodesc *);
 void
 pass2(void)
 {
+	struct inode ip;
 	union dinode *dp;
 	struct inoinfo **inpp, *inp;
 	struct inoinfo **inpend;
@@ -83,7 +83,7 @@ pass2(void)
 	case DCLEAR:
 		pfatal("DUPS/BAD IN ROOT INODE");
 		if (reply("REALLOCATE")) {
-			freeino(UFS_ROOTINO);
+			freedirino(UFS_ROOTINO, UFS_ROOTINO);
 			if (allocdir(UFS_ROOTINO, UFS_ROOTINO, 0755) !=
 			    UFS_ROOTINO)
 				errx(EEXIT, "CANNOT ALLOCATE ROOT INODE");
@@ -110,10 +110,12 @@ pass2(void)
 			ckfini(0);
 			exit(EEXIT);
 		}
-		dp = ginode(UFS_ROOTINO);
+		ginode(UFS_ROOTINO, &ip);
+		dp = ip.i_dp;
 		DIP_SET(dp, di_mode, DIP(dp, di_mode) & ~IFMT);
 		DIP_SET(dp, di_mode, DIP(dp, di_mode) | IFDIR);
-		inodirty(dp);
+		inodirty(&ip);
+		irelse(&ip);
 		break;
 
 	case DSTATE:
@@ -157,9 +159,10 @@ pass2(void)
 			direrror(inp->i_number, "DIRECTORY TOO SHORT");
 			inp->i_isize = roundup(MINDIRSIZE, DIRBLKSIZ);
 			if (reply("FIX") == 1) {
-				dp = ginode(inp->i_number);
-				DIP_SET(dp, di_size, inp->i_isize);
-				inodirty(dp);
+				ginode(inp->i_number, &ip);
+				DIP_SET(ip.i_dp, di_size, inp->i_isize);
+				inodirty(&ip);
+				irelse(&ip);
 			}
 		} else if ((inp->i_isize & (DIRBLKSIZ - 1)) != 0) {
 			getpathname(pathbuf, inp->i_number, inp->i_number);
@@ -175,10 +178,11 @@ pass2(void)
 				printf(" (ADJUSTED)\n");
 			inp->i_isize = roundup(inp->i_isize, DIRBLKSIZ);
 			if (preen || reply("ADJUST") == 1) {
-				dp = ginode(inp->i_number);
-				DIP_SET(dp, di_size,
+				ginode(inp->i_number, &ip);
+				DIP_SET(ip.i_dp, di_size,
 				    roundup(inp->i_isize, DIRBLKSIZ));
-				inodirty(dp);
+				inodirty(&ip);
+				irelse(&ip);
 			}
 		}
 		dp = &dino;
@@ -204,16 +208,18 @@ pass2(void)
 		if (inp->i_parent == 0 || inp->i_isize == 0)
 			continue;
 		if (inoinfo(inp->i_parent)->ino_state == DFOUND &&
-		    INO_IS_DUNFOUND(inp->i_number))
+		    INO_IS_DUNFOUND(inp->i_number)) {
 			inoinfo(inp->i_number)->ino_state = DFOUND;
+			check_dirdepth(inp);
+		}
 		if (inp->i_dotdot == inp->i_parent ||
 		    inp->i_dotdot == (ino_t)-1)
 			continue;
 		if (inp->i_dotdot == 0) {
 			inp->i_dotdot = inp->i_parent;
-			fileerror(inp->i_parent, inp->i_number, "MISSING '..'");
-			if (reply("FIX") == 0)
-				continue;
+			if (debug)
+				fileerror(inp->i_parent, inp->i_number,
+				    "DEFERRED MISSING '..' FIX");
 			(void)makeentry(inp->i_number, inp->i_parent, "..");
 			inoinfo(inp->i_parent)->ino_linkcnt--;
 			continue;
@@ -265,7 +271,8 @@ pass2(void)
 		inoinfo(inp->i_dotdot)->ino_linkcnt++;
 		inoinfo(inp->i_parent)->ino_linkcnt--;
 		inp->i_dotdot = inp->i_parent;
-		(void)changeino(inp->i_number, "..", inp->i_parent);
+		(void)changeino(inp->i_number, "..", inp->i_parent,
+		    getinoinfo(inp->i_parent)->i_depth  + 1);
 	}
 	/*
 	 * Mark all the directories that can be found from the root.
@@ -280,59 +287,65 @@ pass2check(struct inodesc *idesc)
 	char dirname[MAXPATHLEN + 1];
 	struct inoinfo *inp;
 	int n, entrysize, ret = 0;
+	struct inode ip;
 	union dinode *dp;
 	const char *errmsg;
-	struct direct proto;
+	struct direct proto, *newdirp;
 
 	/*
 	 * check for "."
 	 */
-	if (dirp->d_ino > maxino)
-		goto chk2;
 	if (idesc->id_entryno != 0)
 		goto chk1;
 	if (dirp->d_ino != 0 && strcmp(dirp->d_name, ".") == 0) {
 		if (dirp->d_ino != idesc->id_number) {
 			direrror(idesc->id_number, "BAD INODE NUMBER FOR '.'");
-			dirp->d_ino = idesc->id_number;
-			if (reply("FIX") == 1)
+			if (reply("FIX") == 1) {
+				dirp->d_ino = idesc->id_number;
 				ret |= ALTERED;
+			}
 		}
 		if (dirp->d_type != DT_DIR) {
 			direrror(idesc->id_number, "BAD TYPE VALUE FOR '.'");
-			dirp->d_type = DT_DIR;
-			if (reply("FIX") == 1)
+			if (reply("FIX") == 1) {
+				dirp->d_type = DT_DIR;
 				ret |= ALTERED;
+			}
 		}
 		goto chk1;
 	}
-	direrror(idesc->id_number, "MISSING '.'");
 	proto.d_ino = idesc->id_number;
 	proto.d_type = DT_DIR;
 	proto.d_namlen = 1;
 	(void)strcpy(proto.d_name, ".");
 	entrysize = DIRSIZ(0, &proto);
-	if (dirp->d_ino != 0 && strcmp(dirp->d_name, "..") != 0) {
-		pfatal("CANNOT FIX, FIRST ENTRY IN DIRECTORY CONTAINS %s\n",
-			dirp->d_name);
-	} else if (dirp->d_reclen < entrysize) {
-		pfatal("CANNOT FIX, INSUFFICIENT SPACE TO ADD '.'\n");
-	} else if (dirp->d_reclen < 2 * entrysize) {
+	direrror(idesc->id_number, "MISSING '.'");
+	errmsg = "ADD '.' ENTRY";
+	if (dirp->d_reclen < entrysize + DIRSIZ(0, dirp)) {
+		/* Not enough space to add '.', replace first entry with '.' */
+		if (dirp->d_ino != 0) {
+			pwarn("\nFIRST ENTRY IN DIRECTORY CONTAINS %s\n",
+			     dirp->d_name);
+			errmsg = "REPLACE WITH '.'";
+		}
+		if (reply(errmsg) == 0)
+			goto chk1;
 		proto.d_reclen = dirp->d_reclen;
 		memmove(dirp, &proto, (size_t)entrysize);
-		if (reply("FIX") == 1)
-			ret |= ALTERED;
+		ret |= ALTERED;
 	} else {
-		n = dirp->d_reclen - entrysize;
+		/* Move over first entry and add '.' entry */
+		if (reply(errmsg) == 0)
+			goto chk1;
+		newdirp = (struct direct *)((char *)(dirp) + entrysize);
+		dirp->d_reclen -= entrysize;
+		memmove(newdirp, dirp, dirp->d_reclen);
 		proto.d_reclen = entrysize;
 		memmove(dirp, &proto, (size_t)entrysize);
 		idesc->id_entryno++;
-		inoinfo(dirp->d_ino)->ino_linkcnt--;
-		dirp = (struct direct *)((char *)(dirp) + entrysize);
-		memset(dirp, 0, (size_t)n);
-		dirp->d_reclen = n;
-		if (reply("FIX") == 1)
-			ret |= ALTERED;
+		inoinfo(idesc->id_number)->ino_linkcnt--;
+		dirp = newdirp;
+		ret |= ALTERED;
 	}
 chk1:
 	if (idesc->id_entryno > 1)
@@ -356,6 +369,20 @@ chk1:
 		dirp->d_reclen = proto.d_reclen;
 	}
 	if (dirp->d_ino != 0 && strcmp(dirp->d_name, "..") == 0) {
+		if (dirp->d_ino >= maxino) {
+			direrror(idesc->id_number, "BAD INODE NUMBER FOR '..'");
+			/*
+			 * If we know parent set it now, otherwise let it
+			 * point to the root inode and it will get cleaned
+			 * up later if that is not correct.
+			 */
+			if (inp->i_parent != 0)
+				dirp->d_ino = inp->i_parent;
+			else
+				dirp->d_ino = UFS_ROOTINO;
+			if (reply("FIX") == 1)
+				ret |= ALTERED;
+		}
 		inp->i_dotdot = dirp->d_ino;
 		if (dirp->d_type != DT_DIR) {
 			direrror(idesc->id_number, "BAD TYPE VALUE FOR '..'");
@@ -365,30 +392,60 @@ chk1:
 		}
 		goto chk2;
 	}
-	if (dirp->d_ino != 0 && strcmp(dirp->d_name, ".") != 0) {
-		fileerror(inp->i_parent, idesc->id_number, "MISSING '..'");
-		pfatal("CANNOT FIX, SECOND ENTRY IN DIRECTORY CONTAINS %s\n",
-			dirp->d_name);
-		inp->i_dotdot = (ino_t)-1;
-	} else if (dirp->d_reclen < entrysize) {
-		fileerror(inp->i_parent, idesc->id_number, "MISSING '..'");
-		pfatal("CANNOT FIX, INSUFFICIENT SPACE TO ADD '..'\n");
-		inp->i_dotdot = (ino_t)-1;
-	} else if (inp->i_parent != 0) {
-		/*
-		 * We know the parent, so fix now.
-		 */
-		inp->i_dotdot = inp->i_parent;
-		fileerror(inp->i_parent, idesc->id_number, "MISSING '..'");
+	fileerror(inp->i_parent != 0 ? inp->i_parent : idesc->id_number,
+	    idesc->id_number, "MISSING '..'");
+	errmsg = "ADD '..' ENTRY";
+	if (dirp->d_reclen < entrysize + DIRSIZ(0, dirp)) {
+		/* No space to add '..', replace second entry with '..' */
+		if (dirp->d_ino != 0) {
+			pfatal("SECOND ENTRY IN DIRECTORY CONTAINS %s\n",
+			    dirp->d_name);
+			errmsg = "REPLACE WITH '..'";
+		}
+		if (reply(errmsg) == 0) {
+			inp->i_dotdot = (ino_t)-1;
+			goto chk2;
+		}
+		if (proto.d_ino == 0) {
+			/* Defer processing until parent known */
+			idesc->id_entryno++;
+			if (debug)
+				printf("(FIX DEFERRED)\n");
+		}
+		inp->i_dotdot = proto.d_ino;
 		proto.d_reclen = dirp->d_reclen;
 		memmove(dirp, &proto, (size_t)entrysize);
-		if (reply("FIX") == 1)
-			ret |= ALTERED;
+		ret |= ALTERED;
+	} else {
+		/* Move over second entry and add '..' entry */
+		if (reply(errmsg) == 0) {
+			inp->i_dotdot = (ino_t)-1;
+			goto chk2;
+		}
+		if (proto.d_ino == 0) {
+			/* Defer processing until parent known */
+			idesc->id_entryno++;
+			if (debug)
+				printf("(FIX DEFERRED)\n");
+		}
+		inp->i_dotdot = proto.d_ino;
+		if (dirp->d_ino == 0) {
+			proto.d_reclen = dirp->d_reclen;
+			memmove(dirp, &proto, (size_t)entrysize);
+		} else {
+			newdirp = (struct direct *)((char *)(dirp) + entrysize);
+			dirp->d_reclen -= entrysize;
+			memmove(newdirp, dirp, dirp->d_reclen);
+			proto.d_reclen = entrysize;
+			memmove(dirp, &proto, (size_t)entrysize);
+			if (dirp->d_ino != 0) {
+				idesc->id_entryno++;
+				inoinfo(dirp->d_ino)->ino_linkcnt--;
+			}
+			dirp = newdirp;
+		}
+		ret |= ALTERED;
 	}
-	idesc->id_entryno++;
-	if (dirp->d_ino != 0)
-		inoinfo(dirp->d_ino)->ino_linkcnt--;
-	return (ret|KEEPON);
 chk2:
 	if (dirp->d_ino == 0)
 		return (ret|KEEPON);
@@ -412,7 +469,7 @@ chk2:
 	}
 	idesc->id_entryno++;
 	n = 0;
-	if (dirp->d_ino > maxino) {
+	if (dirp->d_ino >= maxino) {
 		fileerror(idesc->id_number, dirp->d_ino, "I OUT OF RANGE");
 		n = reply("REMOVE");
 	} else if (((dirp->d_ino == UFS_WINO && dirp->d_type != DT_WHT) ||
@@ -475,10 +532,12 @@ again:
 			fileerror(idesc->id_number, dirp->d_ino, errmsg);
 			if ((n = reply("REMOVE")) == 1)
 				break;
-			dp = ginode(dirp->d_ino);
+			ginode(dirp->d_ino, &ip);
+			dp = ip.i_dp;
 			inoinfo(dirp->d_ino)->ino_state =
 			   (DIP(dp, di_mode) & IFMT) == IFDIR ? DSTATE : FSTATE;
 			inoinfo(dirp->d_ino)->ino_linkcnt = DIP(dp, di_nlink);
+			irelse(&ip);
 			goto again;
 
 		case DSTATE:
@@ -490,10 +549,12 @@ again:
 		case DFOUND:
 			inp = getinoinfo(dirp->d_ino);
 			if (idesc->id_entryno > 2) {
-				if (inp->i_parent == 0)
+				if (inp->i_parent == 0) {
 					inp->i_parent = idesc->id_number;
-				else if ((n = fix_extraneous(inp, idesc)) == 1)
+					check_dirdepth(inp);
+				} else if ((n = fix_extraneous(inp, idesc))) {
 					break;
+				}
 			}
 			/* FALLTHROUGH */
 
@@ -525,6 +586,7 @@ static int
 fix_extraneous(struct inoinfo *inp, struct inodesc *idesc)
 {
 	char *cp;
+	struct inode ip;
 	struct inodesc dotdesc;
 	char oldname[MAXPATHLEN + 1];
 	char newname[MAXPATHLEN + 1];
@@ -539,8 +601,11 @@ fix_extraneous(struct inoinfo *inp, struct inodesc *idesc)
 		dotdesc.id_number = idesc->id_dirp->d_ino;
 		dotdesc.id_func = findino;
 		dotdesc.id_name = strdup("..");
-		if ((ckinode(ginode(dotdesc.id_number), &dotdesc) & FOUND))
+		ginode(dotdesc.id_number, &ip);
+		if ((ckinode(ip.i_dp, &dotdesc) & FOUND))
 			inp->i_dotdot = dotdesc.id_parent;
+		irelse(&ip);
+		free(dotdesc.id_name);
 	}
 	/*
 	 * We have the previously found old name (inp->i_parent) and the
@@ -640,8 +705,10 @@ fix_extraneous(struct inoinfo *inp, struct inodesc *idesc)
 	dotdesc.id_number = inp->i_parent; /* directory in which name appears */
 	dotdesc.id_parent = inp->i_number; /* inode number in entry to delete */
 	dotdesc.id_func = deleteentry;
-	if ((ckinode(ginode(dotdesc.id_number), &dotdesc) & FOUND) && preen)
+	ginode(dotdesc.id_number, &ip);
+	if ((ckinode(ip.i_dp, &dotdesc) & FOUND) && preen)
 		printf(" (REMOVED)\n");
+	irelse(&ip);
 	inp->i_parent = idesc->id_number;  /* reparent to correct directory */
 	inoinfo(inp->i_number)->ino_linkcnt++; /* name gone, return reference */
 	return (0);

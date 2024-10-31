@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/endian.h>
 
@@ -110,7 +109,7 @@ struct exfat_dirent {
 	} u;
 	uint32_t	xde_first_cluster;
 	uint64_t	xde_data_len;
-} __packed;
+};
 #define	xde_generic		u.xde_generic_
 #define	xde_secondary_count	u.xde_primary_.xde_secondary_count
 #define	xde_set_chksum		u.xde_primary_.xde_set_chksum_
@@ -123,7 +122,7 @@ struct exfat_de_label {
 	uint8_t		xdel_char_cnt;	/* Length of UCS-2 label */
 	uint16_t	xdel_vol_lbl[11];
 	uint8_t		xdel_reserved[8];
-} __packed;
+};
 _Static_assert(sizeof(struct exfat_de_label) == 32, "spec");
 
 #define	MAIN_BOOT_REGION_SECT	0
@@ -364,6 +363,11 @@ fstyp_exfat(FILE *fp, char *label, size_t size)
 #ifdef WITH_ICONV
 	if (show_label)
 		exfat_find_label(fp, ev, bytespersec, label, size);
+#else
+	if (show_label) {
+		warnx("label not available without iconv support");
+		memset(label, 0, size);
+	}
 #endif
 
 out:

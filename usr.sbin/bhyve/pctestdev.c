@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2020 Adam Fenn <adam@fenn.io>
  *
@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <machine/vmm.h>
@@ -71,29 +70,20 @@ static bool	pctestdev_inited;
 static uint8_t	pctestdev_iomem_buf[IOMEM_LEN];
 static uint32_t	pctestdev_ioport_data;
 
-static int	pctestdev_debugexit_io(struct vmctx *ctx, int vcpu, int in,
+static int	pctestdev_debugexit_io(struct vmctx *ctx, int in,
 		    int port, int bytes, uint32_t *eax, void *arg);
 static int	pctestdev_iomem_io(struct vmctx *ctx, int vcpu, int dir,
 		    uint64_t addr, int size, uint64_t *val, void *arg1,
 		    long arg2);
-static int	pctestdev_ioport_io(struct vmctx *ctx, int vcpu, int in,
+static int	pctestdev_ioport_io(struct vmctx *ctx, int in,
 		    int port, int bytes, uint32_t *eax, void *arg);
-static int	pctestdev_irq_io(struct vmctx *ctx, int vcpu, int in,
+static int	pctestdev_irq_io(struct vmctx *ctx, int in,
 		    int port, int bytes, uint32_t *eax, void *arg);
 
 const char *
 pctestdev_getname(void)
 {
 	return (PCTESTDEV_NAME);
-}
-
-int
-pctestdev_parse(const char *opts)
-{
-	if (opts != NULL && *opts != '\0')
-		return (-1);
-
-	return (0);
 }
 
 int
@@ -186,8 +176,8 @@ fail:
 }
 
 static int
-pctestdev_debugexit_io(struct vmctx *ctx, int vcpu, int in, int port,
-    int bytes, uint32_t *eax, void *arg)
+pctestdev_debugexit_io(struct vmctx *ctx __unused, int in,
+    int port __unused, int bytes __unused, uint32_t *eax, void *arg __unused)
 {
 	if (in)
 		*eax = 0;
@@ -198,8 +188,9 @@ pctestdev_debugexit_io(struct vmctx *ctx, int vcpu, int in, int port,
 }
 
 static int
-pctestdev_iomem_io(struct vmctx *ctx, int vcpu, int dir, uint64_t addr,
-    int size, uint64_t *val, void *arg1, long arg2)
+pctestdev_iomem_io(struct vmctx *ctx __unused, int vcpu __unused, int dir,
+    uint64_t addr, int size, uint64_t *val, void *arg1 __unused,
+    long arg2 __unused)
 {
 	uint64_t offset;
 
@@ -218,8 +209,8 @@ pctestdev_iomem_io(struct vmctx *ctx, int vcpu, int dir, uint64_t addr,
 }
 
 static int
-pctestdev_ioport_io(struct vmctx *ctx, int vcpu, int in, int port,
-    int bytes, uint32_t *eax, void *arg)
+pctestdev_ioport_io(struct vmctx *ctx __unused, int in,
+    int port, int bytes, uint32_t *eax, void *arg __unused)
 {
 	uint32_t mask;
 	int lsb;
@@ -241,8 +232,8 @@ pctestdev_ioport_io(struct vmctx *ctx, int vcpu, int in, int port,
 }
 
 static int
-pctestdev_irq_io(struct vmctx *ctx, int vcpu, int in, int port, int bytes,
-    uint32_t *eax, void *arg)
+pctestdev_irq_io(struct vmctx *ctx, int in, int port,
+    int bytes, uint32_t *eax, void *arg __unused)
 {
 	int irq;
 

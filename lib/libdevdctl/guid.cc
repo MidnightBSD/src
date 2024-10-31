@@ -28,7 +28,6 @@
  * POSSIBILITY OF SUCH DAMAGES.
  *
  * Authors: Alan Somers         (Spectra Logic Corporation)
- *
  */
 
 /**
@@ -46,7 +45,6 @@
 #include <string>
 
 #include "guid.h"
-
 /*============================ Namespace Control =============================*/
 using std::string;
 namespace DevdCtl

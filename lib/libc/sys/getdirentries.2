@@ -131,7 +131,7 @@ the end of the directory has been reached.
 .Pp
 If the
 .Fa basep
-pointer value is non-NULL ,
+pointer value is non-NULL,
 the
 .Fn getdirentries
 system call writes the position of the block read into the location pointed to by
@@ -192,6 +192,8 @@ An
 error occurred while reading from or writing to the file system.
 .It Bq Er EINTEGRITY
 Corrupted data was detected while reading from the file system.
+.It Bq Er ENOENT
+Directory unlinked but still open.
 .El
 .Sh SEE ALSO
 .Xr lseek 2 ,

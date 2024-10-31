@@ -30,7 +30,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <stdio.h>
 
 #include "spinlock.h"

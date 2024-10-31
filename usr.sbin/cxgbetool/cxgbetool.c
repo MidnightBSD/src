@@ -26,12 +26,12 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/sysctl.h>
 
 #include <arpa/inet.h>
 #include <net/ethernet.h>
@@ -43,6 +43,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -56,8 +57,16 @@
 #define in_range(val, lo, hi) ( val < 0 || (val <= hi && val >= lo))
 #define	max(x, y) ((x) > (y) ? (x) : (y))
 
-static const char *progname, *nexus;
-static int chip_id;	/* 4 for T4, 5 for T5 */
+static struct {
+	const char *progname, *nexus;
+	int chip_id;	/* 4 for T4, 5 for T5, and so on. */
+	int inst;	/* instance of nexus device */
+	int pf;		/* PF# of the nexus (if not VF). */
+	bool vf;	/* Nexus is a VF. */
+
+	int fd;
+	bool warn_on_ioctl_err;
+} g;
 
 struct reg_info {
 	const char *name;
@@ -87,9 +96,11 @@ struct field_desc {
 static void
 usage(FILE *fp)
 {
-	fprintf(fp, "Usage: %s <nexus> [operation]\n", progname);
+	fprintf(fp, "Usage: %s <nexus> [operation]\n", g.progname);
 	fprintf(fp,
 	    "\tclearstats <port>                   clear port statistics\n"
+	    "\tclip hold|release <ip6>             hold/release an address\n"
+	    "\tclip list                           list the CLIP table\n"
 	    "\tcontext <type> <id>                 show an SGE context\n"
 	    "\tdumpstate <dump.bin>                dump chip state\n"
 	    "\tfilter <idx> [<param> <val>] ...    set a filter\n"
@@ -99,7 +110,7 @@ usage(FILE *fp)
 	    "\thashfilter [<param> <val>] ...      set a hashfilter\n"
 	    "\thashfilter <idx> delete|clear       delete a hashfilter\n"
 	    "\thashfilter list                     list all hashfilters\n"
-	    "\thashfilter mode                     get global hashfilter mode\n"
+	    "\thashfilter mode [<match>] ...       get/set global hashfilter mode\n"
 	    "\ti2c <port> <devaddr> <addr> [<len>] read from i2c device\n"
 	    "\tloadboot <bi.bin> [pf|offset <val>] install boot image\n"
 	    "\tloadboot clear [pf|offset <val>]    remove boot image\n"
@@ -119,7 +130,7 @@ usage(FILE *fp)
 	    "\tsched-queue <port> <queue> <class>  bind NIC queues to TX Scheduling class\n"
 	    "\tstdio                               interactive mode\n"
 	    "\ttcb <tid>                           read TCB\n"
-	    "\ttracer <idx> tx<n>|rx<n>            set and enable a tracer\n"
+	    "\ttracer <idx> tx<n>|rx<n>|lo<n>      set and enable a tracer\n"
 	    "\ttracer <idx> disable|enable         disable or enable a tracer\n"
 	    "\ttracer list                         list all tracers\n"
 	    );
@@ -134,27 +145,12 @@ get_card_vers(unsigned int version)
 static int
 real_doit(unsigned long cmd, void *data, const char *cmdstr)
 {
-	static int fd = -1;
-	int rc = 0;
-
-	if (fd == -1) {
-		char buf[64];
-
-		snprintf(buf, sizeof(buf), "/dev/%s", nexus);
-		if ((fd = open(buf, O_RDWR)) < 0) {
-			warn("open(%s)", nexus);
-			rc = errno;
-			return (rc);
-		}
+	if (ioctl(g.fd, cmd, data) < 0) {
+		if (g.warn_on_ioctl_err)
+			warn("%s", cmdstr);
+		return (errno);
 	}
-
-	rc = ioctl(fd, cmd, data);
-	if (rc < 0) {
-		warn("%s", cmdstr);
-		rc = errno;
-	}
-
-	return (rc);
+	return (0);
 }
 #define doit(x, y) real_doit(x, y, #x)
 
@@ -520,7 +516,7 @@ dump_regs(int argc, const char *argv[])
 			rc = dump_regs_t6(argc, argv, regs.data);
 	} else {
 		warnx("%s (type %d, rev %d) is not a known card.",
-		    nexus, vers, revision);
+		    g.nexus, vers, revision);
 		return (ENOTSUP);
 	}
 
@@ -539,46 +535,36 @@ do_show_info_header(uint32_t mode)
 		case T4_FILTER_FCoE:
 			printf(" FCoE");
 			break;
-
 		case T4_FILTER_PORT:
 			printf(" Port");
 			break;
-
 		case T4_FILTER_VNIC:
 			if (mode & T4_FILTER_IC_VNIC)
 				printf("   VFvld:PF:VF");
 			else
 				printf("     vld:oVLAN");
 			break;
-
 		case T4_FILTER_VLAN:
 			printf("      vld:VLAN");
 			break;
-
 		case T4_FILTER_IP_TOS:
 			printf("   TOS");
 			break;
-
 		case T4_FILTER_IP_PROTO:
 			printf("  Prot");
 			break;
-
 		case T4_FILTER_ETH_TYPE:
 			printf("   EthType");
 			break;
-
 		case T4_FILTER_MAC_IDX:
 			printf("  MACIdx");
 			break;
-
 		case T4_FILTER_MPS_HIT_TYPE:
 			printf(" MPS");
 			break;
-
 		case T4_FILTER_IP_FRAGMENT:
 			printf(" Frag");
 			break;
-
 		default:
 			/* compressed filter field not enabled */
 			break;
@@ -820,11 +806,9 @@ do_show_one_filter_info(struct t4_filter *t, uint32_t mode)
 		case T4_FILTER_FCoE:
 			printf("  %1d/%1d", t->fs.val.fcoe, t->fs.mask.fcoe);
 			break;
-
 		case T4_FILTER_PORT:
 			printf("  %1d/%1d", t->fs.val.iport, t->fs.mask.iport);
 			break;
-
 		case T4_FILTER_VNIC:
 			if (mode & T4_FILTER_IC_VNIC) {
 				printf(" %1d:%1x:%02x/%1d:%1x:%02x",
@@ -840,40 +824,32 @@ do_show_one_filter_info(struct t4_filter *t, uint32_t mode)
 				    t->fs.mask.ovlan_vld, t->fs.mask.vnic);
 			}
 			break;
-
 		case T4_FILTER_VLAN:
 			printf(" %1d:%04x/%1d:%04x",
 			    t->fs.val.vlan_vld, t->fs.val.vlan,
 			    t->fs.mask.vlan_vld, t->fs.mask.vlan);
 			break;
-
 		case T4_FILTER_IP_TOS:
 			printf(" %02x/%02x", t->fs.val.tos, t->fs.mask.tos);
 			break;
-
 		case T4_FILTER_IP_PROTO:
 			printf(" %02x/%02x", t->fs.val.proto, t->fs.mask.proto);
 			break;
-
 		case T4_FILTER_ETH_TYPE:
 			printf(" %04x/%04x", t->fs.val.ethtype,
 			    t->fs.mask.ethtype);
 			break;
-
 		case T4_FILTER_MAC_IDX:
 			printf(" %03x/%03x", t->fs.val.macidx,
 			    t->fs.mask.macidx);
 			break;
-
 		case T4_FILTER_MPS_HIT_TYPE:
 			printf(" %1x/%1x", t->fs.val.matchtype,
 			    t->fs.mask.matchtype);
 			break;
-
 		case T4_FILTER_IP_FRAGMENT:
 			printf("  %1d/%1d", t->fs.val.frag, t->fs.mask.frag);
 			break;
-
 		default:
 			/* compressed filter field not enabled */
 			break;
@@ -932,7 +908,7 @@ do_show_one_filter_info(struct t4_filter *t, uint32_t mode)
 				printf("(hash)");
 		}
 	}
-	if (chip_id <= 5 && t->fs.prio)
+	if (g.chip_id <= 5 && t->fs.prio)
 		printf(" Prio");
 	if (t->fs.rpttid)
 		printf(" RptTID");
@@ -951,7 +927,7 @@ show_filters(int hash)
 	if (rc != 0)
 		return (rc);
 
-	if (!hash && chip_id >= 6) {
+	if (!hash && g.chip_id >= 6) {
 		header = 0;
 		bzero(&t, sizeof (t));
 		t.idx = 0;
@@ -1005,113 +981,111 @@ get_filter_mode(int hashfilter)
 
 	if (mode & T4_FILTER_IPv4)
 		printf("ipv4 ");
-
 	if (mode & T4_FILTER_IPv6)
 		printf("ipv6 ");
-
 	if (mode & T4_FILTER_IP_SADDR)
 		printf("sip ");
-
 	if (mode & T4_FILTER_IP_DADDR)
 		printf("dip ");
-
 	if (mode & T4_FILTER_IP_SPORT)
 		printf("sport ");
-
 	if (mode & T4_FILTER_IP_DPORT)
 		printf("dport ");
-
 	if (mode & T4_FILTER_IP_FRAGMENT)
 		printf("frag ");
-
 	if (mode & T4_FILTER_MPS_HIT_TYPE)
 		printf("matchtype ");
-
 	if (mode & T4_FILTER_MAC_IDX)
 		printf("macidx ");
-
 	if (mode & T4_FILTER_ETH_TYPE)
 		printf("ethtype ");
-
 	if (mode & T4_FILTER_IP_PROTO)
 		printf("proto ");
-
 	if (mode & T4_FILTER_IP_TOS)
 		printf("tos ");
-
 	if (mode & T4_FILTER_VLAN)
 		printf("vlan ");
-
 	if (mode & T4_FILTER_VNIC) {
 		if (mode & T4_FILTER_IC_VNIC)
 			printf("vnic_id ");
+		else if (mode & T4_FILTER_IC_ENCAP)
+			printf("encap ");
 		else
 			printf("ovlan ");
 	}
-
 	if (mode & T4_FILTER_PORT)
 		printf("iport ");
-
 	if (mode & T4_FILTER_FCoE)
 		printf("fcoe ");
-
 	printf("\n");
 
 	return (0);
 }
 
 static int
-set_filter_mode(int argc, const char *argv[])
+set_filter_mode(int argc, const char *argv[], int hashfilter)
 {
 	uint32_t mode = 0;
-	int vnic = 0, ovlan = 0;
+	int vnic = 0, ovlan = 0, invalid = 0;
 
 	for (; argc; argc--, argv++) {
-		if (!strcmp(argv[0], "frag"))
+		if (!strcmp(argv[0], "ipv4") || !strcmp(argv[0], "ipv6") ||
+		    !strcmp(argv[0], "sip") || !strcmp(argv[0], "dip") ||
+		    !strcmp(argv[0], "sport") || !strcmp(argv[0], "dport")) {
+			/* These are always available and enabled. */
+			continue;
+		} else if (!strcmp(argv[0], "frag"))
 			mode |= T4_FILTER_IP_FRAGMENT;
-
-		if (!strcmp(argv[0], "matchtype"))
+		else if (!strcmp(argv[0], "matchtype"))
 			mode |= T4_FILTER_MPS_HIT_TYPE;
-
-		if (!strcmp(argv[0], "macidx"))
+		else if (!strcmp(argv[0], "macidx"))
 			mode |= T4_FILTER_MAC_IDX;
-
-		if (!strcmp(argv[0], "ethtype"))
+		else if (!strcmp(argv[0], "ethtype"))
 			mode |= T4_FILTER_ETH_TYPE;
-
-		if (!strcmp(argv[0], "proto"))
+		else if (!strcmp(argv[0], "proto"))
 			mode |= T4_FILTER_IP_PROTO;
-
-		if (!strcmp(argv[0], "tos"))
+		else if (!strcmp(argv[0], "tos"))
 			mode |= T4_FILTER_IP_TOS;
-
-		if (!strcmp(argv[0], "vlan"))
+		else if (!strcmp(argv[0], "vlan"))
 			mode |= T4_FILTER_VLAN;
-
-		if (!strcmp(argv[0], "ovlan")) {
+		else if (!strcmp(argv[0], "ovlan")) {
 			mode |= T4_FILTER_VNIC;
-			ovlan++;
-		}
-
-		if (!strcmp(argv[0], "vnic_id")) {
+			ovlan = 1;
+		} else if (!strcmp(argv[0], "vnic_id")) {
 			mode |= T4_FILTER_VNIC;
 			mode |= T4_FILTER_IC_VNIC;
-			vnic++;
+			vnic = 1;
 		}
-
-		if (!strcmp(argv[0], "iport"))
+#ifdef notyet
+		else if (!strcmp(argv[0], "encap")) {
+			mode |= T4_FILTER_VNIC;
+			mode |= T4_FILTER_IC_ENCAP;
+			encap = 1;
+		}
+#endif
+		else if (!strcmp(argv[0], "iport"))
 			mode |= T4_FILTER_PORT;
-
-		if (!strcmp(argv[0], "fcoe"))
+		else if (!strcmp(argv[0], "fcoe"))
 			mode |= T4_FILTER_FCoE;
+		else {
+			warnx("\"%s\" is not valid while setting filter mode.",
+			    argv[0]);
+			invalid++;
+		}
 	}
 
-	if (vnic > 0 && ovlan > 0) {
+	if (vnic + ovlan > 1) {
 		warnx("\"vnic_id\" and \"ovlan\" are mutually exclusive.");
-		return (EINVAL);
+		invalid++;
 	}
 
-	return doit(CHELSIO_T4_SET_FILTER_MODE, &mode);
+	if (invalid > 0)
+		return (EINVAL);
+
+	if (hashfilter)
+		return doit(CHELSIO_T4_SET_FILTER_MASK, &mode);
+	else
+		return doit(CHELSIO_T4_SET_FILTER_MODE, &mode);
 }
 
 static int
@@ -1419,8 +1393,8 @@ filter_cmd(int argc, const char *argv[], int hashfilter)
 		return get_filter_mode(hashfilter);
 
 	/* mode <mode> */
-	if (!hashfilter && strcmp(argv[0], "mode") == 0)
-		return set_filter_mode(argc - 1, argv + 1);
+	if (strcmp(argv[0], "mode") == 0)
+		return set_filter_mode(argc - 1, argv + 1, hashfilter);
 
 	/* <idx> ... */
 	s = str_to_number(argv[0], NULL, &val);
@@ -1944,10 +1918,10 @@ get_sge_context(int argc, const char *argv[])
 	if (rc != 0)
 		return (rc);
 
-	if (chip_id == 4)
+	if (g.chip_id == 4)
 		show_t4_ctxt(&cntxt);
 	else
-		show_t5t6_ctxt(&cntxt, chip_id);
+		show_t5t6_ctxt(&cntxt, g.chip_id);
 
 	return (0);
 }
@@ -2263,7 +2237,7 @@ show_tcb(uint32_t *buf, uint32_t len)
 		}
 		printf("\n");
 	}
-	set_tcb_info(TIDTYPE_TCB, chip_id);
+	set_tcb_info(TIDTYPE_TCB, g.chip_id);
 	set_print_style(PRNTSTYL_COMP);
 	swizzle_tcb(tcb);
 	parse_n_display_xcb(tcb);
@@ -2467,7 +2441,7 @@ static void
 create_tracing_ifnet()
 {
 	char *cmd[] = {
-		"/sbin/ifconfig", __DECONST(char *, nexus), "create", NULL
+		"/sbin/ifconfig", __DECONST(char *, g.nexus), "create", NULL
 	};
 	char *env[] = {NULL};
 
@@ -2495,17 +2469,24 @@ set_tracer(uint8_t idx, int argc, const char *argv[])
 	t.valid = 1;
 
 	if (argc != 1) {
-		warnx("must specify tx<n> or rx<n>.");
+		warnx("must specify one of tx/rx/lo<n>");
 		return (EINVAL);
 	}
 
 	len = strlen(argv[0]);
 	if (len != 3) {
-		warnx("argument must be 3 characters (tx<n> or rx<n>)");
+		warnx("argument must be 3 characters (tx/rx/lo<n>). eg. tx0");
 		return (EINVAL);
 	}
 
-	if (strncmp(argv[0], "tx", 2) == 0) {
+	if (strncmp(argv[0], "lo", 2) == 0) {
+		port = argv[0][2] - '0';
+		if (port < 0 || port > 3) {
+			warnx("'%c' in %s is invalid", argv[0][2], argv[0]);
+			return (EINVAL);
+		}
+		port += 8;
+	} else if (strncmp(argv[0], "tx", 2) == 0) {
 		port = argv[0][2] - '0';
 		if (port < 0 || port > 3) {
 			warnx("'%c' in %s is invalid", argv[0][2], argv[0]);
@@ -3131,14 +3112,17 @@ parse_offload_settings_word(const char *s, char **pnext, const char *ws,
 			os->sched_class = val;
 		} else if (!strcmp(s, "bind") || !strcmp(s, "txq") ||
 		    !strcmp(s, "rxq")) {
-			val = -1;
-			if (strcmp(param, "random")) {
+			if (!strcmp(param, "random")) {
+				val = QUEUE_RANDOM;
+			} else if (!strcmp(param, "roundrobin")) {
+				val = QUEUE_ROUNDROBIN;
+			} else {
 				p = str_to_number(param, &val, NULL);
 				if (*p || val < 0 || val > 0xffff) {
 					warnx("invalid queue specification "
 					    "\"%s\".  \"%s\" needs an integer"
-					    " value, or \"random\".",
-					    param, s);
+					    " value, \"random\", or "
+					    "\"roundrobin\".", param, s);
 					return (EINVAL);
 				}
 			}
@@ -3188,8 +3172,8 @@ parse_offload_settings(const char *settings_ro, struct offload_settings *os)
 		.ecn = -1,
 		.ddp = -1,
 		.tls = -1,
-		.txq = -1,
-		.rxq = -1,
+		.txq = QUEUE_RANDOM,
+		.rxq = QUEUE_RANDOM,
 		.mss = -1,
 	};
 
@@ -3492,6 +3476,69 @@ load_offload_policy(int argc, const char *argv[])
 }
 
 static int
+display_clip(void)
+{
+	size_t clip_buf_size = 4096;
+	char *buf, name[32];
+	int rc;
+
+	buf = malloc(clip_buf_size);
+	if (buf == NULL) {
+		warn("%s", __func__);
+		return (errno);
+	}
+
+	snprintf(name, sizeof(name), "dev.t%unex.%u.misc.clip", g.chip_id, g.inst);
+	rc = sysctlbyname(name, buf, &clip_buf_size, NULL, 0);
+	if (rc != 0) {
+		warn("sysctl %s", name);
+		free(buf);
+		return (errno);
+	}
+
+	printf("%s\n", buf);
+	free(buf);
+	return (0);
+}
+
+static int
+clip_cmd(int argc, const char *argv[])
+{
+	int rc, af = AF_INET6, add;
+	struct t4_clip_addr ca = {0};
+
+	if (argc == 1 && !strcmp(argv[0], "list")) {
+		rc = display_clip();
+		return (rc);
+	}
+
+	if (argc != 2) {
+		warnx("incorrect number of arguments.");
+		return (EINVAL);
+	}
+
+	if (!strcmp(argv[0], "hold")) {
+		add = 1;
+	} else if (!strcmp(argv[0], "rel") || !strcmp(argv[0], "release")) {
+		add = 0;
+	} else {
+		warnx("first argument must be \"hold\" or \"release\"");
+		return (EINVAL);
+	}
+
+	rc = parse_ipaddr(argv[0], argv, &af, &ca.addr[0], &ca.mask[0], 1);
+	if (rc != 0)
+		return (rc);
+
+	if (add)
+		rc = doit(CHELSIO_T4_HOLD_CLIP_ADDR, &ca);
+	else
+		rc = doit(CHELSIO_T4_RELEASE_CLIP_ADDR, &ca);
+
+	return (rc);
+}
+
+static int
 run_cmd(int argc, const char *argv[])
 {
 	int rc = -1;
@@ -3541,6 +3588,8 @@ run_cmd(int argc, const char *argv[])
 		rc = load_offload_policy(argc, argv);
 	else if (!strcmp(cmd, "hashfilter"))
 		rc = filter_cmd(argc, argv, 1);
+	else if (!strcmp(cmd, "clip"))
+		rc = clip_cmd(argc, argv);
 	else {
 		rc = EINVAL;
 		warnx("invalid command \"%s\"", cmd);
@@ -3594,12 +3643,65 @@ run_cmd_loop(void)
 	return (rc);
 }
 
+#define A_PL_WHOAMI 0x19400
+#define A_PL_REV 0x1943c
+#define A_PL_VF_WHOAMI 0x200
+#define A_PL_VF_REV 0x204
+
+static void
+open_nexus_device(const char *s)
+{
+	const int len = strlen(s);
+	long long val;
+	const char *num;
+	int rc;
+	u_int chip_id, whoami;
+	char buf[128];
+
+	if (len < 2 || isdigit(s[0]) || !isdigit(s[len - 1]))
+		errx(1, "invalid nexus name \"%s\"", s);
+	for (num = s + len - 1; isdigit(*num); num--)
+		continue;
+	g.inst = strtoll(num, NULL, 0);
+	g.nexus = s;
+	snprintf(buf, sizeof(buf), "/dev/%s", g.nexus);
+	if ((g.fd = open(buf, O_RDWR)) < 0)
+		err(1, "open(%s)", buf);
+
+	g.warn_on_ioctl_err = false;
+	rc = read_reg(A_PL_REV, 4, &val);
+	if (rc == 0) {
+		/* PF */
+		g.vf = false;
+		whoami = A_PL_WHOAMI;
+	} else {
+		rc = read_reg(A_PL_VF_REV, 4, &val);
+		if (rc != 0)
+			errx(1, "%s is not a Terminator device.", s);
+		/* VF */
+		g.vf = true;
+		whoami = A_PL_VF_WHOAMI;
+	}
+	chip_id = (val >> 4) & 0xf;
+	if (chip_id == 0)
+		chip_id = 4;
+	if (chip_id < 4 || chip_id > 7)
+		warnx("%s reports chip_id %d.", s, chip_id);
+	g.chip_id = chip_id;
+
+	rc = read_reg(whoami, 4, &val);
+	if (rc != 0)
+		errx(rc, "failed to read whoami(0x%x): %d", whoami, rc);
+	g.pf = g.chip_id > 5 ? (val >> 9) & 7 : (val >> 8) & 7;
+	g.warn_on_ioctl_err = true;
+}
+
 int
 main(int argc, const char *argv[])
 {
 	int rc = -1;
 
-	progname = argv[0];
+	g.progname = argv[0];
 
 	if (argc == 2) {
 		if (!strcmp(argv[1], "-h") || !strcmp(argv[1], "--help")) {
@@ -3613,8 +3715,7 @@ main(int argc, const char *argv[])
 		exit(EINVAL);
 	}
 
-	nexus = argv[1];
-	chip_id = nexus[1] - '0';
+	open_nexus_device(argv[1]);
 
 	/* progname and nexus */
 	argc -= 2;

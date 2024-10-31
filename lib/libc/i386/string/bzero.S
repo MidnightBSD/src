@@ -29,7 +29,6 @@
  */
 
 #include <machine/asm.h>
-
 /*
  * bzero (void *b, size_t len)
  *	write len zero bytes to the string b.

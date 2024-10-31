@@ -17,6 +17,9 @@ SRCS_EXC+=	UnwindRegistersSave.S
 SRCS_EXC+=	libunwind.cpp
 
 SRCS+=		${SRCS_EXC}
+.if ${MACHINE} == "amd64" || ${MACHINE} == "i386" || ${MACHINE} == "powerpc"
+CFLAGS.UnwindLevel1-gcc-ext.c+=	-D_LIBUNWIND_SUPPORT_FRAME_APIS
+.endif
 .for file in ${SRCS_EXC:M*.c}
 CFLAGS.${file}+=	-fno-exceptions -funwind-tables
 .endfor
@@ -25,7 +28,6 @@ CXXFLAGS.${file}+=	-fno-exceptions -funwind-tables
 .endfor
 
 CFLAGS+=	-I${UNWINDINCDIR}
-CFLAGS+=	-I${.CURDIR}
 CFLAGS+=	-D_LIBUNWIND_IS_NATIVE_ONLY
 CFLAGS+=	-D_LIBUNWIND_USE_FRAME_HEADER_CACHE
 CXXFLAGS+=	-fno-rtti

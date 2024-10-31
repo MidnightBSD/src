@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/cdio.h>
 #include <sys/cdrio.h>
 #include <sys/file.h>

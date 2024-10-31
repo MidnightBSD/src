@@ -33,7 +33,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <stdio.h>
 #include <time.h>
 #include <sys/types.h>

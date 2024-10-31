@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 /*
  * Copyright (c) 1998 - 2005 Kungliga Tekniska Högskolan
@@ -172,16 +171,6 @@ supplementary_error(OM_uint32 v)
     else
 	return msgs[v];
 }
-
-#if defined(__NO_TLS)
-
-/*
- * These platforms don't support TLS on FreeBSD - threads will just
- * have to step on each other's error values for now.
- */
-#define __thread
-
-#endif
 
 struct mg_thread_ctx {
     gss_OID mech;

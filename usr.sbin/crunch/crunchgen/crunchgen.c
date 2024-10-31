@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/stat.h>
 
@@ -1130,8 +1129,8 @@ prog_makefile_rules(FILE *outmk, prog_t *p)
 	    "int _crunched_%s_stub(int argc, char **argv, char **envp)"
 	    "{return main(argc,argv,envp);}\" >%s_stub.c\n",
 	    p->ident, p->ident, p->name);
-	fprintf(outmk, "%s.lo: %s_stub.o $(%s_OBJPATHS)",
-	    p->name, p->name, p->ident);
+	fprintf(outmk, "%s.lo: %s_stub.o $(%s_OBJPATHS) %s",
+	    p->name, p->name, p->ident, outmkname);
 	if (p->libs)
 		fprintf(outmk, " $(%s_LIBS)", p->ident);
 
@@ -1143,7 +1142,7 @@ prog_makefile_rules(FILE *outmk, prog_t *p)
 	fprintf(outmk, "\n");
 	fprintf(outmk, "\tcrunchide -k _crunched_%s_stub ", p->ident);
 	for (lst = p->keeplist; lst != NULL; lst = lst->next)
-		fprintf(outmk, "-k _%s ", lst->str);
+		fprintf(outmk, "-k %s ", lst->str);
 	fprintf(outmk, "%s.lo\n", p->name);
 }
 

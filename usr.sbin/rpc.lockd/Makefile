@@ -1,5 +1,7 @@
 #	$NetBSD: Makefile,v 1.12 2000/08/07 16:23:31 thorpej Exp $
 
+PACKAGE=	nfs
+
 PROG=	rpc.lockd
 MAN=	rpc.lockd.8
 MLINKS=	rpc.lockd.8 lockd.8

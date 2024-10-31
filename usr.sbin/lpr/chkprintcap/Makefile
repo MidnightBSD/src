@@ -1,4 +1,3 @@
-# $FreeBSD: stable/11/usr.sbin/lpr/chkprintcap/Makefile 321276 2017-07-20 01:07:15Z ngie $
 
 .PATH: ${.CURDIR:H}/common_source
 

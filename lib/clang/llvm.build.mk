@@ -1,3 +1,4 @@
+
 .include <src.opts.mk>
 
 .ifndef LLVM_BASE
@@ -10,6 +11,10 @@
 
 .ifndef SRCDIR
 .error Please define SRCDIR before including this file
+.endif
+
+.ifndef OS_REVISION
+.error Please define OS_REVISION before including this file
 .endif
 
 .PATH:		${LLVM_BASE}/${SRCDIR}
@@ -66,6 +71,12 @@ LLVM_NATIVE_ARCH=	ARM
 .if ${MK_LLVM_TARGET_BPF} != "no"
 CFLAGS+=	-DLLVM_TARGET_ENABLE_BPF
 .endif
+.if ${MK_LLVM_TARGET_MIPS} != "no"
+CFLAGS+=	-DLLVM_TARGET_ENABLE_MIPS
+. if ${MACHINE_CPUARCH} == "mips"
+LLVM_NATIVE_ARCH=	Mips
+. endif
+.endif
 .if ${MK_LLVM_TARGET_POWERPC} != "no"
 CFLAGS+=	-DLLVM_TARGET_ENABLE_POWERPC
 . if ${MACHINE_CPUARCH} == "powerpc"
@@ -103,7 +114,7 @@ LDFLAGS+=	-Wl,-dead_strip
 LDFLAGS+=	-Wl,--gc-sections
 .endif
 
-CXXSTD?=	c++14
+CXXSTD?=	c++17
 CXXFLAGS+=	-fno-exceptions
 CXXFLAGS+=	-fno-rtti
 .if ${.MAKE.OS} == "MidnightBSD"  || ${.MAKE.OS} == "FreeBSD" || !defined(BOOTSTRAPPING)

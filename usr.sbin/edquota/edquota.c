@@ -45,7 +45,6 @@ static char sccsid[] = "@(#)edquota.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
-
 /*
  * Disk quota editor.
  */
@@ -82,9 +81,9 @@ static char sccsid[] = "@(#)edquota.c	8.1 (Berkeley) 6/6/93";
 #define dbtokb(db)	(db)
 #endif
 
-const char *qfextension[] = INITQFNAMES;
-char tmpfil[] = _PATH_TMP;
-int hflag;
+static const char *qfextension[] = INITQFNAMES;
+static char tmpfil[] = _PATH_TMP;
+static int hflag;
 
 struct quotause {
 	struct	quotause *next;

@@ -26,7 +26,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 /*
  * Parts of this program are derived from the original FreeBSD iostat
@@ -169,7 +168,7 @@ usage(void)
 	 * This isn't mentioned in the man page, or the usage statement,
 	 * but it is supported.
 	 */
-	fprintf(stderr, "usage: iostat [-CdhIKoTxz?] [-c count] [-M core]"
+	fprintf(stderr, "usage: iostat [-CdhIKoTxz] [-c count] [-M core]"
 		" [-n devs] [-N system]\n"
 		"\t      [-t type,if,pass] [-w wait] [drives]\n");
 }
@@ -198,16 +197,16 @@ main(int argc, char **argv)
 	matches = NULL;
 	maxshowdevs = 3;
 
-	while ((c = getopt(argc, argv, "c:CdhIKM:n:N:ot:Tw:xz?")) != -1) {
-		switch(c) {
+	while ((c = getopt(argc, argv, "Cc:dhIKM:N:n:oTt:w:xz")) != -1) {
+		switch (c) {
+			case 'C':
+				Cflag++;
+				break;
 			case 'c':
 				cflag++;
 				count = atoi(optarg);
 				if (count < 1)
 					errx(1, "count %d is < 1", count);
-				break;
-			case 'C':
-				Cflag++;
 				break;
 			case 'd':
 				dflag++;
@@ -224,6 +223,9 @@ main(int argc, char **argv)
 			case 'M':
 				memf = optarg;
 				break;
+			case 'N':
+				nlistf = optarg;
+				break;
 			case 'n':
 				nflag++;
 				maxshowdevs = atoi(optarg);
@@ -231,20 +233,17 @@ main(int argc, char **argv)
 					errx(1, "number of devices %d is < 0",
 					     maxshowdevs);
 				break;
-			case 'N':
-				nlistf = optarg;
-				break;
 			case 'o':
 				oflag++;
+				break;
+			case 'T':
+				Tflag++;
 				break;
 			case 't':
 				tflag++;
 				if (devstat_buildmatch(optarg, &matches,
 						       &num_matches) != 0)
 					errx(1, "%s", devstat_errbuf);
-				break;
-			case 'T':
-				Tflag++;
 				break;
 			case 'w':
 				wflag++;
@@ -768,9 +767,9 @@ phdr(void)
 					(void)printf(" blk xfr msps ");
 			} else {
 				if (Iflag == 0)
-					printf("  KB/t tps  MB/s ");
+					printf(" KB/t  tps  MB/s ");
 				else
-					printf("  KB/t xfrs   MB ");
+					printf(" KB/t xfrs    MB ");
 			}
 			printed++;
 		}
@@ -928,7 +927,7 @@ devstats(int perf_select, long double etime, int havelast)
 			}
 			free(devicename);
 		} else if (oflag > 0) {
-			int msdig = (ms_per_transaction < 100.0) ? 1 : 0;
+			int msdig = (ms_per_transaction < 99.94) ? 1 : 0;
 
 			if (Iflag == 0)
 				printf("%4.0Lf%4.0Lf%5.*Lf ",
@@ -944,15 +943,17 @@ devstats(int perf_select, long double etime, int havelast)
 				       ms_per_transaction);
 		} else {
 			if (Iflag == 0)
-				printf(" %5.2Lf %3.0Lf %5.2Lf ",
+				printf(" %4.*Lf %4.0Lf %5.*Lf ",
+				       kb_per_transfer >= 100 ? 0 : 1,
 				       kb_per_transfer,
 				       transfers_per_second,
+				       mb_per_second >= 1000 ? 0 : 1,
 				       mb_per_second);
 			else {
 				total_mb = total_bytes;
 				total_mb /= 1024 * 1024;
 
-				printf(" %5.2Lf %3.1" PRIu64 " %5.2Lf ",
+				printf(" %4.1Lf %4.1" PRIu64 " %5.2Lf ",
 				       kb_per_transfer,
 				       total_transfers,
 				       total_mb);
