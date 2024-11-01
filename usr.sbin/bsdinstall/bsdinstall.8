@@ -23,8 +23,7 @@
 .\" ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 .\" POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\"
-.Dd July 18, 2022
+.Dd November 18, 2023
 .Dt BSDINSTALL 8
 .Os
 .Sh NAME
@@ -70,7 +69,7 @@ For interactive use, most users will be interested only in the
 and
 .Cm script
 targets.
-.Bl -tag -width ".Cm jail Ar destination"
+.Bl -tag -width "jail destination"
 .It Cm auto
 Run the standard interactive installation, including disk partitioning.
 .It Cm jail Ar destination
@@ -120,7 +119,7 @@ Defaults to UFS.
 .It Cm bootconfig
 Detects an appropriate partition and installs UEFI boot loader files.
 .It Cm zfsboot
-Provides an alternative ZFS-only automatic interactive disk partitioner.
+Provides a ZFS-only automatic interactive disk partitioner.
 Creates a single
 .Ic zpool
 with separate datasets for
@@ -157,7 +156,13 @@ Multiple disk setups are separated by semicolons.
 The
 .Ar disk
 argument specifies the disk on which to operate (which will be erased),
-while the
+or the special value
+.Em DEFAULT ,
+which will result in either a selection window (as in
+.Cm autopart )
+for the destination disk or, if there is only one possible disk, will
+automatically select it.
+The
 .Ar scheme
 argument specifies the
 .Xr gpart 8
@@ -203,6 +208,10 @@ A shorter invocation to use the default partitioning (as
 would have used) on the same disk:
 .Pp
 bsdinstall scriptedpart ada0
+.Pp
+or, even shorter:
+.Pp
+bsdinstall scriptedpart DEFAULT
 .It Cm mount
 Mounts the file systems previously configured by
 .Cm autopart ,
@@ -259,7 +268,11 @@ Many are used internally during installation and have reasonable default values
 for most installation scenarios.
 Others are set by various interactive user prompts, and can be usefully
 overridden when making scripted or customized installers.
-.Bl -tag -width ".Ev BSDINSTALL_DISTSITE"
+.Bl -tag -width "BSDINSTALL_DISTSITE"
+.It Ev TMPDIR
+The directory to use for temporary files.
+Default:
+.Dq Pa /tmp
 .It Ev DISTRIBUTIONS
 The set of distributions to install, e.g., "base.txz kernel.txz ports.txz".
 Default: unset
@@ -270,7 +283,9 @@ See
 of
 the
 .Sx TARGETS
-section for format details.
+section for format details. If this variable is unset, the installer will
+use the default partitioning as in
+.Cm autopart .
 Default: unset
 .It Ev BSDINSTALL_DISTDIR
 The directory in which the distribution files can be found (or to which they
@@ -301,7 +316,59 @@ Default:
 .It Ev BSDINSTALL_LOG
 Path to a log file for the installation.
 Default:
-.Dq Pa /tmp/bsdinstall_log
+.Dq Pa $TMPDIR/bsdinstall_log
+.It Ev BSDINSTALL_SKIP_HARDENING
+If not empty, the
+.Cm auto
+target
+will not invoke the
+.Cm hardening
+target.
+.It Ev BSDINSTALL_SKIP_HOSTNAME
+If not empty, the
+.Cm auto
+target
+will not invoke the
+.Cm hostname
+target.
+.It Ev BSDINSTALL_SKIP_KEYMAP
+If not empty, the
+.Cm auto
+target
+will not invoke the
+.Cm keymap
+target.
+.It Ev BSDINSTALL_SKIP_MANUAL
+If not empty, the
+.Cm auto
+target will not offer to open a shell in the new system
+for final manual modifications.
+.It Ev BSDINSTALL_SKIP_SERVICES
+If not empty, the
+.Cm auto
+target
+will not invoke the
+.Cm services
+target.
+.It Ev BSDINSTALL_SKIP_TIME
+If not empty, the
+.Cm auto
+target
+will not invoke the
+.Cm time
+target.
+.It Ev BSDINSTALL_SKIP_USERS
+If not empty, the
+.Cm auto
+target
+will not invoke the
+.Cm adduser
+target.
+.It Ev BSDINSTALL_SKIP_FINALCONFIG
+If not empty, the
+.Cm auto
+target will not show the final configuration dialog,
+where earlier configuration choices can be revisited.
 .It Ev BSDINSTALL_TMPETC
 Directory where files destined for the new system's
 .Pa /etc
@@ -310,7 +377,7 @@ will be stored until the
 target is executed.
 If this directory does not already exist, it will be created.
 Default:
-.Dq Pa /tmp/bsdinstall_etc
+.Dq Pa $TMPDIR/bsdinstall_etc
 .It Ev BSDINSTALL_TMPBOOT
 Directory where files destined for the new system's
 .Pa /boot
@@ -319,7 +386,7 @@ will be stored until the
 target is executed.
 If this directory does not already exist, it will be created.
 Default:
-.Dq Pa /tmp/bsdinstall_boot
+.Dq Pa $TMPDIR/bsdinstall_boot
 .It Ev ZFSBOOT_POOL_NAME
 Name for the pool containing the base system.
 Default:
@@ -346,13 +413,16 @@ Default:
 The type of pool to be created for the base system.
 This variable can take one of this values: stripe (No redundancy),
 mirror (n-Way mirroring), raid10 (RAID 1+0 - n x 2-Way Mirrors),
-raidz1 (RAID-Z1 - Single Redundacy RAID), raidz2 (RAID-Z2 - Double Redundacy RAID)
-or raidz3 (RAID-Z3 Triple Redundacy RAID).
+raidz1 (RAID-Z1 - Single Redundancy RAID), raidz2 (RAID-Z2 - Double Redundancy RAID)
+or raidz3 (RAID-Z3 Triple Redundancy RAID).
 Default:
 .Dq stripe
 .It Ev ZFSBOOT_FORCE_4K_SECTORS
-Indicates either the pool will use 4K or 512 sectors.
-If this variable is not empty, 4K sectors will be used.
+Controls the minimum sector size of the pool.
+If this variable is not empty, the minimum sector size is 4K.
+If this variable is empty, the minimum sector size is 512.
+Note that the sector size of the pool will always be at least
+the sector size of the backing disks.
 Default:
 .Dq 1
 .It Ev ZFSBOOT_GELI_ENCRYPTION
@@ -429,6 +499,19 @@ Default:
 .El
 .Sh SCRIPTING
 .Nm
+supports unattended, or minimally-attended, installations using scripting.
+This can be used with either modified physical installation media or with
+.Xr diskless 8
+installations over the network; information on preparing such media can be
+found in
+.Sx BUILDING AUTOMATIC INSTALL MEDIA
+.Pp
+Scripted installations follow an essentially identical path to interactive
+installations, though with some minor feature differences (for example,
+scripted installations do not support fetching of remote distribution files
+since scripted installations normally install the same files and the distributions
+can be added directly to the installation media).
+.Nm
 scripts consist of two parts: a
 .Em preamble
 and a
@@ -455,11 +538,12 @@ sysrc sshd_enable=YES
 mport install puppet
 .Ed
 .Pp
-For a ZFS scripted installation, the script looks like this:
+For a scripted installation involving a ZFS pool spanning multiple disks,
+the script instead looks like this:
 .Bd -literal -offset indent
 DISTRIBUTIONS="kernel.txz base.txz"
 export ZFSBOOT_VDEV_TYPE=stripe
-export ZFSBOOT_DISKS=ada0
+export ZFSBOOT_DISKS="ada0 ada1"
 export nonInteractive="YES"
 
 #!/bin/sh

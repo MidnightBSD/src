@@ -32,7 +32,6 @@
 #include <strings.h>
 #include <ctype.h>
 #include "eval_expr.h"
-
 static struct expression *
 alloc_and_hook_expr(struct expression **exp_p, struct expression **last_p)
 {

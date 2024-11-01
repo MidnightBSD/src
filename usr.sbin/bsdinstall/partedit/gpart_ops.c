@@ -509,15 +509,15 @@ gpart_edit(struct gprovider *pp)
 	const char *errstr, *oldtype, *scheme;
 	struct partition_metadata *md;
 	char sizestr[32];
-	char newfs[255];
+	char *newfs;
 	intmax_t idx;
 	int hadlabel, choice, junk, nitems;
 	unsigned i;
 
 	DIALOG_FORMITEM items[] = {
 		{0, "Type:", 5, 0, 0, FALSE, "", 11, 0, 12, 15, 0,
-		    FALSE, "Filesystem type (e.g. mnbsd-ufs, mnbsd-zfs, "
-		    "mnbsd-swap)", FALSE},
+		    FALSE, "Filesystem type (e.g. freebsd-ufs, freebsd-zfs, "
+		    "freebsd-swap)", FALSE},
 		{0, "Size:", 5, 1, 0, FALSE, "", 11, 1, 12, 0, 0,
 		    FALSE, "Partition size. Append K, M, G for kilobytes, "
 		    "megabytes or gigabytes.", FALSE},

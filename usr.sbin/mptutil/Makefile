@@ -1,4 +1,3 @@
-# $FreeBSD: stable/11/usr.sbin/mptutil/Makefile 275054 2014-11-25 16:57:27Z bapt $
 
 PROG=	mptutil
 SRCS=	mptutil.c mpt_cam.c mpt_cmd.c mpt_config.c mpt_drive.c mpt_evt.c \

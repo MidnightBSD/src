@@ -27,121 +27,127 @@
 .\"
 .\"	@(#)hier.7	8.1 (Berkeley) 6/5/93
 .\"
-.Dd November 23, 2022
+.Dd July 6, 2023
 .Dt HIER 7
 .Os
 .Sh NAME
 .Nm hier
 .Nd layout of file systems
 .Sh SYNOPSIS
-A sketch of the file system hierarchy.
+An overview of the file system hierarchy.
 .Sh DESCRIPTION
 .Bl -tag -width "/libexec/"
 .It Pa /
-root directory of the file system
+root directory
 .It Pa /bin/
-user utilities fundamental to both single-user and multi-user environments
+user utilities that are fundamental to single-user and multi-user modes
 .It Pa /boot/
-programs and configuration files used during operating system bootstrap
+programs and configuration files used during bootstrap of the operating system
 .Pp
-.Bl -tag -width "defaults/" -compact
+.Bl -tag -width "nvmecontrol/" -compact
 .It Pa defaults/
-default bootstrapping configuration files; see
+default bootstrap configuration files; see
 .Xr loader.conf 5
 .It Pa dtb/
-Compiled flattened device tree (FDT) files; see
+compiled flattened device tree (FDT) files; see
 .Xr fdt 4
 and
 .Xr dtc 1
-.It Pa firmware/
-loadable kernel modules containing binary firmware for hardware that needs
-firmware downloaded to it to function
-.It Pa kernel/
-pure kernel executable (the operating system loaded into memory
-at boot time) and kernel modules
-.It Pa modules/
-third-party loadable kernel modules;
-see
-.Xr kldstat 8
+.Pp
+.Bl -tag -width "overlays/" -compact
 .It Pa overlays/
-Compiled flattened device tree (FDT) overlays; see
-.Xr fdt 4
-and
-.Xr dtc 1
+compiled flattened device tree (FDT) overlays; these can be applied using the
+.Va fdt_overlays
+setting in
+.Xr loader.conf 5
+.El
+.Pp
+.It Pa efi/
+mount point for the EFI System Partition (ESP) on UEFI systems
+.It Pa firmware/
+loadable kernel modules containing binary firmware, for hardware to which
+firmware must be downloaded
+.It Pa kernel/
+pure kernel executable (the operating system loaded into memory at boot time)
+and kernel modules
+.It Pa modules/
+third-party loadable kernel modules, such as those associated with
+.Xr ports 7
 .It Pa zfs/
 .Xr zfs 8
-zpool cache files
+pool cache files
 .El
 .It Pa /compat/
-normally a link to
-.Pa /usr/compat .
-If not, then the
-.Pa /usr/compat
-comments apply
+files supporting binary compatibility with other operating systems
+.Pp
+.Bl -tag -width "nvmecontrol/" -compact
+.It Pa linux/
+default location for
+.Xr linux 4
+compatibility run-time
+.El
+.Pp
 .It Pa /dev/
-device special files managed by
+the normal mount point for
 .Xr devfs 5
 .Pp
-.Bl -tag -width "defaults/" -compact
+.Bl -tag -width "nvmecontrol/" -compact
 .It Pa fd/
-file descriptor files;
-see
-.Xr \&fd 4
+file descriptor files; see
+.Xr fd 4
 .El
+.It Pa /home/
+user HOME directories.
+This is a symlink to
+.Pa /usr/home/
 .It Pa /etc/
 system configuration files and scripts
 .Pp
-.Bl -tag -width "defaults/" -compact
-.It Pa defaults/
-default system configuration files;
-see
-.Xr rc 8
+.Bl -tag -width "nvmecontrol/" -compact
 .It Pa bluetooth/
 bluetooth configuration files
+.It Pa defaults/
+default system configuration files; see
+.Xr rc 8
 .It Pa localtime
-local timezone information;
-see
+local timezone information; see
 .Xr ctime 3
 .It Pa mail/
-Sendmail control files
+.Xr sendmail 8
+control files
 .It Pa mtree/
-mtree configuration files;
-see
 .Xr mtree 8
+configuration files
 .It Pa pam.d/
-configuration files for the Pluggable Authentication Modules (PAM)
-library
+configuration files for the Pluggable Authentication Modules (PAM) library; see
+.Xr pam 3
 .It Pa periodic/
-scripts that are run daily, weekly, and monthly, via
+scripts that are run daily, weekly, or monthly by
 .Xr cron 8 ;
 see
 .Xr periodic 8
+.It Pa ppp/
+PPP configuration files; see
+.Xr ppp 8
 .It Pa rc.d/
-system and daemon startup/control scripts;
-see
+system and daemon startup/control scripts; see
 .Xr rc 8
 .It Pa security/
-OpenBSM audit configuration files;
-see
+OpenBSM audit configuration files; see
 .Xr audit 8
-.It Pa ppp/
-ppp configuration files;
-see
-.Xr ppp 8
 .It Pa ssh/
-OpenSSH configuration files;
-see
+OpenSSH configuration files; see
 .Xr ssh 1
 .It Pa ssl/
 OpenSSL configuration files
 .El
 .It Pa /lib/
-critical system libraries needed for binaries in
+system libraries that are critical to binaries in
 .Pa /bin
 and
 .Pa /sbin
 .Pp
-.Bl -tag -width "defaults/" -compact
+.Bl -tag -width "nvmecontrol/" -compact
 .It Pa casper/
 service-specific
 .Xr libcasper 3
@@ -156,207 +162,61 @@ vendor-specific libraries to extend the
 utility
 .El
 .It Pa /libexec/
-critical system utilities needed for binaries in
+system utilities that are critical to binaries in
 .Pa /bin
 and
 .Pa /sbin
 .It Pa /media/
-contains subdirectories to be used as mount points
-for removable media such as CDs, USB drives, and
-floppy disks
+empty directory commonly containing mount points for removable media such as
+USB drives, CDs, and DVDs
 .It Pa /mnt/
-empty directory commonly used by
-system administrators as a temporary mount point
+empty directory commonly used by system administrators as a temporary mount
+point
 .It Pa /net/
-automounted NFS shares;
-see
+automounted NFS shares; see
 .Xr auto_master 5
 .It Pa /nonexistent/
-a non-existent directory;
-by convention, it serves as a home directory
-for special user accounts
-that need no home directory;
-see also
+a non-existent directory; conventionally, a home directory for special user
+accounts that do not require a home directory.  See also
 .Pa /var/empty/
 .It Pa /proc/
-process file system;
-see
+process file system; see
 .Xr procfs 5
 .It Pa /rescue/
-statically linked programs for emergency recovery;
-see
+statically-linked programs for emergency recovery; see
 .Xr rescue 8
 .It Pa /root/
-root's HOME directory
+home directory of the root user
 .It Pa /sbin/
-system programs and administration utilities
-fundamental to both single-user and multi-user environments
+system programs and administration utilities that are fundamental to
+single-user and multi-user modes
 .It Pa /tmp/
-temporary files that are not guaranteed to persist across system reboots
+temporary files that may be removed by
+.Xr rc 8 ;
+see the
+.Va clear_tmp_enable
+variable of
+.Xr rc.conf 5
 .It Pa /usr/
 contains the majority of user utilities and applications
 .Pp
 .Bl -tag -width "freebsd-dist/" -compact
 .It Pa bin/
 common utilities, programming tools, and applications
-.It Pa compat/
-files needed to support binary compatibility with other operating systems,
-such as Linux
 .It Pa freebsd-dist/
 distribution files
-.Pq like base.txz ;
-see
+.Pq like base.txz ; see
 .Xr release 7
 and
 .Xr bsdinstall 8
 .It Pa include/
 standard C include files
-.Pp
-.Bl -tag -width "kerberos5/" -compact
-.It Pa arpa/
-C include files for Internet service protocols
-.It Pa bsnmp/
-C include files for the SNMP daemon
-.It Pa c++/
-C++ include files
-.It Pa cam/
-C include files for the Common Access Methods Layer
-.Bl -tag -width "kerberos5/" -compact
-.It Pa scsi/
-SCSI device on top of CAM
-.El
-.It Pa dev/
-C include files for programming various
-.Mx
-devices
-.Bl -tag -width "kerberos5/" -compact
-.It Pa ic/
-various header files describing driver- and bus-independent
-hardware circuits
-.It Pa ofw/
-Open Firmware support
-.It Pa pbio/
-8255 PPI cards;
-see
-.Xr pbio 4
-.It Pa ppbus/
-parallel port bus;
-see
-.Xr ppbus 4
-.It Pa usb/
-USB subsystem
-.It Pa wi/
-.Xr wi 4
-WaveLAN driver
-.El
-.It Pa fs/
-.Bl -tag -width "kerberos5/" -compact
-.It Pa fdescfs/
-per-process file descriptors file system
-.It Pa msdosfs/
-MS-DOS file system
-.It Pa nfs/
-C include files for NFS (Network File System) version 2, 3 and 4
-.It Pa nullfs/
-loopback file system
-.It Pa procfs/
-process file system
-.It Pa smbfs/
-SMB/CIFS file system
-.It Pa udf/
-UDF file system
-.It Pa unionfs
-union file system
-.El
-.It Pa geom/
-GEOM framework
-.Bl -tag -width "kerberos5/" -compact
-.It Pa concat/
-CONCAT GEOM class
-.It Pa gate/
-GATE GEOM class
-.It Pa mirror/
-MIRROR GEOM class
-.It Pa nop/
-NOP GEOM class
-.It Pa raid3/
-RAID3 GEOM class
-.It Pa stripe/
-STRIPE GEOM class
-.El
-.It Pa libmilter/
-C include files for libmilter,
-the
-.Xr sendmail 8
-mail filter API
-.It Pa machine/
-machine-specific C include files
-.It Pa net/
-miscellaneous network C include files
-.Bl -tag -width Fl -compact
-.It Pa altq/
-C include files for alternate queuing
-.El
-.It Pa net80211/
-C include files for 802.11 wireless networking;
-see
-.Xr net80211 4
-.It Pa netinet/
-C include files for Internet standard protocols;
-see
-.Xr inet 4
-.It Pa netinet6/
-C include files for Internet protocol version 6;
-see
-.Xr inet6 4
-.It Pa netipsec/
-kernel key-management service;
-see
-.Xr ipsec 4
-.It Pa netsmb/
-SMB/CIFS requester
-.It Pa nfs/
-C include files for NFS (Network File System) version 2 and 3 (legacy)
-.It Pa openssl/
-OpenSSL (Cryptography/SSL toolkit) headers
-.It Pa protocols/
-C include files for Berkeley service protocols
-.It Pa rpc/
-remote procedure calls;
-see
-.Xr rpc 3
-.It Pa rpcsvc/
-definition of RPC service structures; see
-.Xr rpc 3
-.It Pa security/
-PAM; see
-.Xr pam 3
-.It Pa sys/
-system C include files (kernel data structures)
-.\" .It Pa tcl/
-.\" Tcl language;
-.\" see
-.\" .Xr Tcl n
-.\" .Bl -tag -width "kerberos5/" -compact
-.\" .It Pa generic/
-.\" ???
-.\" .It Pa unix/
-.\" ???
-.\" .El
-.It Pa ufs/
-C include files for UFS (The U-word File System)
-.Bl -tag -width "kerberos5/" -compact
-.It Pa ffs/
-Fast file system
-.It Pa ufs/
-UFS file system
-.El
-.It Pa vm/
-virtual memory;
-see
-.Xr vmstat 8
-.El
-.Pp
+.It Pa home/
+users' HOME directories;
+the layout is not standardized, but a typical interactive user
+.Dv beastie
+might receive their own directory under
+.Pa /usr/home/beastie
 .It Pa lib/
 shared and archive
 .Xr ar 1 Ns -type
@@ -365,7 +225,6 @@ libraries
 .Bl -tag -width Fl -compact
 .It Pa compat/
 shared libraries for compatibility
-.El
 .It Pa debug/
 standalone debug data for the kernel and base system libraries and binaries
 .It Pa dtrace/
@@ -381,13 +240,16 @@ miscellaneous utility data files
 .It Pa gcc/
 GCC configuration data
 .It Pa ldscripts/
-linker scripts;
-see
+linker scripts; see
 .Xr ld 1
+.It Pa pkgconfig/
+.Xr pc 5 Pq Pa ports/devel/pkgconf
+files; collections of compiler flags, linker flags, and other information
+relevant to library use
 .El
 .Pp
 .It Pa libexec/
-system daemons & system utilities (executed by other programs)
+system daemons and system utilities that are executed by other programs
 .Pp
 .Bl -tag -width Fl -compact
 .It Pa aout/
@@ -395,14 +257,12 @@ utilities to manipulate a.out executables
 .It Pa elf/
 utilities to manipulate ELF executables
 .It Pa lpr/
-utilities and filters for LP print system;
-see
+utilities and filters for LP print system; see
 .Xr lpr 1
 .It Pa sendmail/
 the
 .Xr sendmail 8
-binary;
-see
+binary; see
 .Xr mailwrapper 8
 .It Pa sm.bin/
 restricted shell for
@@ -423,8 +283,7 @@ the general layout sketched out by
 for
 .Pa /usr
 should be used.
-Exceptions are the
-ports documentation
+Exceptions are the ports documentation
 .Po in
 .Pa share/doc/<port>/ Ns Pc ,
 and
@@ -443,19 +302,18 @@ the
 .Mx
 ports collection.
 .It Pa sbin/
-system daemons & system utilities (executed by users)
+system daemons and system utilities that are executed by users
 .It Pa share/
 architecture-independent files
 .Pp
 .Bl -tag -width Fl -compact
 .It Pa calendar/
-a variety of pre-fab calendar files;
-see
+system-wide calendar files; see
 .Xr calendar 1
 .It Pa dict/
-word lists;
-see
+word lists; see
 .Xr look 1
+.Pp
 .Bl -tag -width Fl -compact
 .It Pa freebsd
 .Mx Ns -specific
@@ -463,40 +321,9 @@ terms, proper names, and jargon
 .It Pa web2
 words from Webster's Second International
 .El
+.Pp
 .It Pa doc/
-miscellaneous documentation;
-source for most of the printed
-.Bx
-manuals (available
-from the USENIX association)
-.Bl -tag -width Fl -compact
-.It Pa FAQ/
-Frequently Asked Questions
-.It Pa IPv6/
-implementation notes for IPv6
-.It Pa es/
-Spanish translations of documents in /usr/share/doc
-.It Pa handbook/
-.Mx
-Handbook
-.It Pa ja/
-Japanese translations of documents in /usr/share/doc
-.It Pa legal/
-License files for vendor supplied firmware files
-.It Pa ncurses/
-HTML documents pertaining to ncurses;
-see
-.Xr ncurses 3
-.It Pa ntp/
-HTML documents pertaining to the Network Time Protocol
-.It Pa ru/
-Russian translations of documents in /usr/share/doc
-.It Pa tutorials/
-.Mx
-tutorials
-.It Pa zh/
-Chinese translations of documents in /usr/share/doc
-.El
+miscellaneous documentation
 .It Pa examples/
 various examples for users and programmers
 .It Pa firmware/

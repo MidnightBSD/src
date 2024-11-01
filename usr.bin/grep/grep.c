@@ -2,7 +2,7 @@
 /*	$OpenBSD: grep.c,v 1.42 2010/07/02 22:18:03 tedu Exp $	*/
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 1999 James Howard and Dag-Erling Coïdan Smørgrav
  * Copyright (C) 2008-2009 Gabor Kovesdan <gabor@FreeBSD.org>
@@ -30,10 +30,7 @@
  * SUCH DAMAGE.
  */
 
-#define _WITH_GETLINE
-
 #include <sys/cdefs.h>
-
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -62,8 +59,7 @@ const char	*errstr[] = {
 /* 5*/	"\t[--context=num] [--directories=action] [--label] [--line-buffered]\n",
 /* 6*/	"\t[--null] [pattern] [file ...]\n",
 /* 7*/	"Binary file %s matches\n",
-/* 8*/	"%s (BSD grep) %s\n",
-/* 9*/	"%s (BSD grep, GNU compatible) %s\n",
+/* 8*/	"%s (BSD grep, GNU compatible) %s\n",
 };
 
 /* Flags passed to regcomp() and regexec() */
@@ -548,11 +544,7 @@ main(int argc, char *argv[])
 			filebehave = FILE_MMAP;
 			break;
 		case 'V':
-#ifdef WITH_GNU_COMPAT
-			printf(errstr[9], getprogname(), VERSION);
-#else
 			printf(errstr[8], getprogname(), VERSION);
-#endif
 			exit(0);
 		case 'v':
 			vflag = true;
@@ -567,6 +559,7 @@ main(int argc, char *argv[])
 			break;
 		case 'z':
 			fileeol = '\0';
+			cflags &= ~REG_NEWLINE;
 			break;
 		case BIN_OPT:
 			if (strcasecmp("binary", optarg) == 0)

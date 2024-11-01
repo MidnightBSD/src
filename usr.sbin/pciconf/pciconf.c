@@ -71,7 +71,7 @@ static struct pcisel getsel(const char *str);
 static void list_bridge(int fd, struct pci_conf *p);
 static void list_bars(int fd, struct pci_conf *p);
 static void list_devs(const char *name, int verbose, int bars, int bridge,
-    int caps, int errors, int vpd);
+    int caps, int errors, int vpd, int listmode);
 static void list_verbose(struct pci_conf *p);
 static void list_vpd(int fd, struct pci_conf *p);
 static const char *guess_class(struct pci_conf *p);
@@ -126,7 +126,7 @@ main(int argc, char **argv)
 			break;
 
 		case 'c':
-			caps = 1;
+			caps++;
 			break;
 
 		case 'D':
@@ -142,7 +142,7 @@ main(int argc, char **argv)
 			break;
 
 		case 'l':
-			listmode = 1;
+			listmode++;
 			break;
 
 		case 'r':
@@ -180,7 +180,7 @@ main(int argc, char **argv)
 
 	if (listmode) {
 		list_devs(optind + 1 == argc ? argv[optind] : NULL, verbose,
-		    bars, bridge, caps, errors, vpd);
+		    bars, bridge, caps, errors, vpd, listmode);
 	} else if (attachedmode) {
 		chkattached(argv[optind]);
 	} else if (readmode) {
@@ -202,7 +202,7 @@ main(int argc, char **argv)
 
 static void
 list_devs(const char *name, int verbose, int bars, int bridge, int caps,
-    int errors, int vpd)
+    int errors, int vpd, int listmode)
 {
 	int fd;
 	struct pci_conf_io pc;
@@ -255,19 +255,37 @@ list_devs(const char *name, int verbose, int bars, int bridge, int caps,
 			close(fd);
 			return;
 		}
+		if (listmode == 2)
+			printf("drv\tselector\tclass    rev  hdr  "
+			    "vendor device subven subdev\n");
 		for (p = conf; p < &conf[pc.num_matches]; p++) {
-			printf("%s%d@pci%d:%d:%d:%d:\tclass=0x%06x card=0x%08x "
-			    "chip=0x%08x rev=0x%02x hdr=0x%02x\n",
-			    *p->pd_name ? p->pd_name :
-			    "none",
-			    *p->pd_name ? (int)p->pd_unit :
-			    none_count++, p->pc_sel.pc_domain,
-			    p->pc_sel.pc_bus, p->pc_sel.pc_dev,
-			    p->pc_sel.pc_func, (p->pc_class << 16) |
-			    (p->pc_subclass << 8) | p->pc_progif,
-			    (p->pc_subdevice << 16) | p->pc_subvendor,
-			    (p->pc_device << 16) | p->pc_vendor,
-			    p->pc_revid, p->pc_hdr);
+			if (listmode == 2)
+				printf("%s%d@pci%d:%d:%d:%d:"
+				    "\t%06x   %02x   %02x   "
+				    "%04x   %04x   %04x   %04x\n",
+				    *p->pd_name ? p->pd_name : "none",
+				    *p->pd_name ? (int)p->pd_unit :
+				    none_count++, p->pc_sel.pc_domain,
+				    p->pc_sel.pc_bus, p->pc_sel.pc_dev,
+				    p->pc_sel.pc_func, (p->pc_class << 16) |
+				    (p->pc_subclass << 8) | p->pc_progif,
+				    p->pc_revid, p->pc_hdr,
+				    p->pc_vendor, p->pc_device,
+				    p->pc_subvendor, p->pc_subdevice);
+			else
+				printf("%s%d@pci%d:%d:%d:%d:"
+				    "\tclass=0x%06x rev=0x%02x hdr=0x%02x "
+				    "vendor=0x%04x device=0x%04x "
+				    "subvendor=0x%04x subdevice=0x%04x\n",
+				    *p->pd_name ? p->pd_name : "none",
+				    *p->pd_name ? (int)p->pd_unit :
+				    none_count++, p->pc_sel.pc_domain,
+				    p->pc_sel.pc_bus, p->pc_sel.pc_dev,
+				    p->pc_sel.pc_func, (p->pc_class << 16) |
+				    (p->pc_subclass << 8) | p->pc_progif,
+				    p->pc_revid, p->pc_hdr,
+				    p->pc_vendor, p->pc_device,
+				    p->pc_subvendor, p->pc_subdevice);
 			if (verbose)
 				list_verbose(p);
 			if (bars)
@@ -275,7 +293,7 @@ list_devs(const char *name, int verbose, int bars, int bridge, int caps,
 			if (bridge)
 				list_bridge(fd, p);
 			if (caps)
-				list_caps(fd, p);
+				list_caps(fd, p, caps);
 			if (errors)
 				list_errors(fd, p);
 			if (vpd)
@@ -736,7 +754,7 @@ static struct
 	{PCIC_SATCOM,		PCIS_SATCOM_DATA,	"sat data"},
 	{PCIC_CRYPTO,		-1,			"encrypt/decrypt"},
 	{PCIC_CRYPTO,		PCIS_CRYPTO_NETCOMP,	"network/computer crypto"},
-	{PCIC_CRYPTO,		PCIS_CRYPTO_NETCOMP,	"entertainment crypto"},
+	{PCIC_CRYPTO,		PCIS_CRYPTO_ENTERTAIN,	"entertainment crypto"},
 	{PCIC_DASP,		-1,			"dasp"},
 	{PCIC_DASP,		PCIS_DASP_DPIO,		"DPIO module"},
 	{PCIC_DASP,		PCIS_DASP_PERFCNTRS,	"performance counters"},
@@ -1103,7 +1121,7 @@ dump_bar(const char *name, const char *reg, const char *bar_start,
 	if (*reg == '\0' || *el != '\0')
 		errx(1, "Invalid bar specification %s", reg);
 	pbm.pbm_flags = 0;
-	pbm.pbm_memattr = VM_MEMATTR_UNCACHEABLE; /* XXX */
+	pbm.pbm_memattr = VM_MEMATTR_DEVICE;
 
 	fd = open(_PATH_DEVPCI, O_RDWR, 0);
 	if (fd < 0)

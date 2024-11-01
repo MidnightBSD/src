@@ -1,7 +1,7 @@
 /*	$NetBSD: cd9660_eltorito.h,v 1.6 2017/01/24 11:22:43 nonaka Exp $	*/
 
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-NetBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2005 Daniel Watt, Walter Deignan, Ryan Gabrys, Alan
  * Perez-Rathke and Ram Vedam.  All rights reserved.
@@ -32,7 +32,6 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
  * OF SUCH DAMAGE.
- *
  */
 
 #ifndef _CD9660_ELTORITO_H_
@@ -130,7 +129,7 @@ struct boot_catalog_entry {
 	char entry_type;
 	union {
 		boot_catalog_validation_entry		VE;
-		boot_catalog_initial_entry 		IE;
+		boot_catalog_initial_entry		IE;
 		boot_catalog_section_header		SH;
 		boot_catalog_section_entry		SE;
 		boot_catalog_section_entry_extension	EX;
@@ -143,7 +142,7 @@ struct boot_catalog_entry {
 struct cd9660_boot_image {
 	char *filename;
 	int size;
-	int sector; 			/* copied to LoadRBA */
+	int sector;			/* copied to LoadRBA */
 	int num_sectors;
 	unsigned int loadSegment;
 	u_char targetMode;

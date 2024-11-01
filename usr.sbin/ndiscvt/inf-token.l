@@ -34,7 +34,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <regex.h>
 #include <ctype.h>
 #include <err.h>

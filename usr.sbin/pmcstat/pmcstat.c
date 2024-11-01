@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2003-2008, Joseph Koshy
  * Copyright (c) 2007 The FreeBSD Foundation
@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/cpuset.h>
 #include <sys/event.h>
@@ -373,7 +372,7 @@ pmcstat_show_usage(void)
 	    "\t -R file\t read events from \"file\"\n"
 	    "\t -S spec\t allocate a system-wide sampling PMC\n"
 	    "\t -T\t\t start in top mode\n"
-	    "\t -U \t\n merged user kernel stack capture\n"
+	    "\t -U \t\t merged user kernel stack capture\n"
 	    "\t -W\t\t (toggle) show counts per context switch\n"
 	    "\t -a file\t print sampled PCs and callgraph to \"file\"\n"
 	    "\t -c cpu-list\t set cpus for subsequent system-wide PMCs\n"
@@ -510,8 +509,12 @@ main(int argc, char **argv)
 	CPU_COPY(&rootmask, &cpumask);
 
 	while ((option = getopt(argc, argv,
-	    "CD:EF:G:ILM:NO:P:R:S:TUWZa:c:def:gi:k:l:m:n:o:p:qr:s:t:u:vw:z:")) != -1)
+	    "ACD:EF:G:ILM:NO:P:R:S:TUWZa:c:def:gi:k:l:m:n:o:p:qr:s:t:u:vw:z:")) != -1)
 		switch (option) {
+		case 'A':
+			args.pa_flags |= FLAG_SKIP_TOP_FN_RES;
+			break;
+
 		case 'a':	/* Annotate + callgraph */
 			args.pa_flags |= FLAG_DO_ANNOTATE;
 			args.pa_plugin = PMCSTAT_PL_ANNOTATE_CG;
@@ -585,12 +588,13 @@ main(int argc, char **argv)
 			args.pa_plugin	= PMCSTAT_PL_GPROF;
 			break;
 
-		case 'I':
-			args.pa_flags |= FLAG_SKIP_TOP_FN_RES;
-			break;
 		case 'i':
 			args.pa_flags |= FLAG_FILTER_THREAD_ID;
 			args.pa_tid = strtol(optarg, &end, 0);
+			break;
+
+		case 'I':
+			args.pa_flags |= FLAG_SHOW_OFFSET;
 			break;
 
 		case 'k':	/* pathname to the kernel */
@@ -669,7 +673,7 @@ main(int argc, char **argv)
 			if (option == 'S' || option == 'P')
 				ev->ev_count = current_sampling_count ? current_sampling_count : pmc_pmu_sample_rate_get(ev->ev_spec);
 			else
-				ev->ev_count = -1;
+				ev->ev_count = 0;
 
 			if (option == 'S' || option == 's')
 				ev->ev_cpu = CPU_FFS(&cpumask) - 1;
@@ -892,7 +896,8 @@ main(int argc, char **argv)
 		pmcstat_show_usage();
 
 	/* check for -t pid without a process PMC spec */
-	if ((args.pa_required & FLAG_HAS_TARGET) &&
+	if ((args.pa_flags & FLAG_HAS_TARGET) &&
+	    (args.pa_required & FLAG_HAS_PROCESS_PMCS) &&
 	    (args.pa_flags & FLAG_HAS_PROCESS_PMCS) == 0)
 		errx(EX_USAGE,
 "ERROR: option -t requires a process mode PMC to be specified."
@@ -916,7 +921,7 @@ main(int argc, char **argv)
 	if ((args.pa_required & FLAG_HAS_PROCESS_PMCS) &&
 	    (args.pa_flags & FLAG_HAS_PROCESS_PMCS) == 0)
 		errx(EX_USAGE,
-"ERROR: options -d, -E, and -W require a process mode PMC to be specified."
+"ERROR: options -d, -E, -t, and -W require a process mode PMC to be specified."
 		    );
 
 	/* check for -c cpu with no system mode PMCs or logfile. */
@@ -1448,7 +1453,7 @@ main(int argc, char **argv)
 		    args.pa_verbosity > 0)
 			warnx(
 "WARNING: at least %u event%s were discarded while running.\n"
-"Please consider tuning the \"kern.hwpmc.nbuffers\" tunable.",
+"Please consider tuning the \"kern.hwpmc.nbuffers_pcpu\" tunable.",
 	 		    ds_end.pm_buffer_requests_failed -
 			    ds_start.pm_buffer_requests_failed,
 			    ((ds_end.pm_buffer_requests_failed -

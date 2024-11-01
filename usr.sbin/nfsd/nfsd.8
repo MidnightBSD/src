@@ -27,14 +27,13 @@
 .\"
 .\"	@(#)nfsd.8	8.4 (Berkeley) 3/29/95
 .\"
-.Dd February 14, 2019
+.Dd March 16, 2024
 .Dt NFSD 8
 .Os
 .Sh NAME
 .Nm nfsd
 .Nd remote
-.Tn NFS
-server
+NFS server
 .Sh SYNOPSIS
 .Nm
 .Op Fl ardute
@@ -48,23 +47,34 @@ server
 .Sh DESCRIPTION
 The
 .Nm
-utility runs on a server machine to service
-.Tn NFS
-requests from client machines.
+utility runs on a server machine to service NFS requests from client machines.
 At least one
 .Nm
 must be running for a machine to operate as a server.
 .Pp
-Unless otherwise specified, eight servers per CPU for
-.Tn UDP
-transport are started.
+Unless otherwise specified, eight servers per CPU for UDP transport are
+started.
+.Pp
+When
+.Nm
+is run in an appropriately configured vnet jail, the server is restricted
+to TCP transport and no pNFS service.
+Therefore, the
+.Fl t
+option must be specified and none of the
+.Fl u ,
+.Fl p
+and
+.Fl m
+options can be specified when run in a vnet jail.
+See
+.Xr jail 8
+for more information.
 .Pp
 The following options are available:
 .Bl -tag -width Ds
 .It Fl r
-Register the
-.Tn NFS
-service with
+Register the NFS service with
 .Xr rpcbind 8
 without creating any servers.
 This option can be used along with the
@@ -73,16 +83,15 @@ or
 .Fl t
 options to re-register NFS if the rpcbind server is restarted.
 .It Fl d
-Unregister the
-.Tn NFS
-service with
+Unregister the NFS service with
 .Xr rpcbind 8
 without creating any servers.
 .It Fl V Ar virtual_hostname
 Specifies a hostname to be used as a principal name, instead of
 the default hostname.
 .It Fl n Ar threads
-Specifies how many servers to create.  This option is equivalent to specifying
+Specifies how many servers to create.
+This option is equivalent to specifying
 .Fl Fl maxthreads
 and
 .Fl Fl minthreads
@@ -113,13 +122,14 @@ Enables pNFS support in the server and specifies the information that the
 daemon needs to start it.
 This option can only be used on one server and specifies that this server
 will be the MetaData Server (MDS) for the pNFS service.
-This can only be done if there is at least one FreeBSD system configured
+This can only be done if there is at least one
+.Fx
+system configured
 as a Data Server (DS) for it to use.
 .Pp
 The
 .Ar pnfs_setup
 string is a set of fields separated by ',' characters:
-.Bl -tag -width Ds
 Each of these fields specifies one DS.
 It consists of a server hostname, followed by a ':'
 and the directory path where the DS's data storage file system is mounted on
@@ -158,7 +168,6 @@ data files for
 .Dq /export1
 and nfsv4-data1 will be used to store data files for
 .Dq /export2 .
-.El
 .sp
 When using IPv6 addresses for DSs
 be wary of using link local addresses.
@@ -200,28 +209,20 @@ If mirroring is enabled, the server must use the Flexible File
 layout.
 If mirroring is not enabled, the server will use the File layout
 by default, but this default can be changed to the Flexible File layout if the
-.Xr sysctl 1
+.Xr sysctl 8
 vfs.nfsd.default_flexfile
 is set non-zero.
 .It Fl t
-Serve
-.Tn TCP NFS
-clients.
+Serve TCP NFS clients.
 .It Fl u
-Serve
-.Tn UDP NFS
-clients.
+Serve UDP NFS clients.
 .It Fl e
 Ignored; included for backward compatibility.
 .El
 .Pp
 For example,
 .Dq Li "nfsd -u -t -n 6"
-serves
-.Tn UDP
-and
-.Tn TCP
-transports using six daemons.
+serves UDP and TCP transports using six daemons.
 .Pp
 A server should run enough daemons to handle
 the maximum level of concurrency from its clients,
@@ -230,29 +231,29 @@ typically four to six.
 The
 .Nm
 utility listens for service requests at the port indicated in the
-.Tn NFS
-server specification; see
+NFS server specification; see
 .%T "Network File System Protocol Specification" ,
 RFC1094,
 .%T "NFS: Network File System Version 3 Protocol Specification" ,
 RFC1813,
 .%T "Network File System (NFS) Version 4 Protocol" ,
-RFC3530 and
+RFC7530,
 .%T "Network File System (NFS) Version 4 Minor Version 1 Protocol" ,
-RFC5661.
+RFC5661,
+.%T "Network File System (NFS) Version 4 Minor Version 2 Protocol" ,
+RFC7862,
+.%T "File System Extended Attributes in NFSv4" ,
+RFC8276 and
+.%T "Parallel NFS (pNFS) Flexible File Layout" ,
+RFC8435.
 .Pp
 If
 .Nm
 detects that
-.Tn NFS
-is not loaded in the running kernel, it will attempt
-to load a loadable kernel module containing
-.Tn NFS
-support using
+NFS is not loaded in the running kernel, it will attempt
+to load a loadable kernel module containing NFS support using
 .Xr kldload 2 .
-If this fails, or no
-.Tn NFS
-KLD is available,
+If this fails, or no NFS KLD is available,
 .Nm
 will exit with an error.
 .Pp
@@ -270,7 +271,7 @@ that the NFS sockets can only be accessed by the inside interface.
 The
 .Nm ipfw
 utility
-would then be used to block nfs-related packets that come in on the outside
+would then be used to block NFS-related packets that come in on the outside
 interface.
 .Pp
 If the server has stopped servicing clients and has generated a console message
@@ -321,6 +322,7 @@ just do a
 .Xr stablerestart 5 ,
 .Xr gssd 8 ,
 .Xr ipfw 8 ,
+.Xr jail 8 ,
 .Xr mountd 8 ,
 .Xr nfsiod 8 ,
 .Xr nfsrevoke 8 ,
@@ -336,20 +338,42 @@ If
 .Nm
 is started when
 .Xr gssd 8
-is not running, it will service AUTH_SYS requests only. To fix the problem
-you must kill
+is not running, it will service AUTH_SYS requests only.
+To fix the problem you must kill
 .Nm
 and then restart it, after the
 .Xr gssd 8
 is running.
 .Pp
-If mirroring is enabled via the
-.Fl m
-option and there are Linux clients doing NFSv4.1 mounts, those clients
-need to be patched to support the
-.Dq tightly coupled
-variant of
-the Flexible File layout or the
-.Xr sysctl 1
+For a Flexible File Layout pNFS server,
+if there are Linux clients doing NFSv4.1 or NFSv4.2 mounts, those
+clients might need the
+.Xr sysctl 8
 vfs.nfsd.flexlinuxhack
-must be set to one on the MDS as a workaround.
+to be set to one on the MDS as a workaround.
+.Pp
+Linux 5.n kernels appear to have been patched such that this
+.Xr sysctl 8
+does not need to be set.
+.Pp
+For NFSv4.2, a Copy operation can take a long time to complete.
+If there is a concurrent ExchangeID or DelegReturn operation
+which requires the exclusive lock on all NFSv4 state, this can
+result in a
+.Dq stall
+of the
+.Nm
+server.
+If your storage is on ZFS without block cloning enabled,
+setting the
+.Xr sysctl 8
+.Va vfs.zfs.dmu_offset_next_sync
+to 0 can often avoid this problem.
+It is also possible to set the
+.Xr sysctl 8
+.Va vfs.nfsd.maxcopyrange
+to 10-100 megabytes to try and reduce Copy operation times.
+As a last resort, setting
+.Xr sysctl 8
+.Va vfs.nfsd.maxcopyrange
+to 0 disables the Copy operation.

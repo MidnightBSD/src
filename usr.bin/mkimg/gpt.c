@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/errno.h>
 #include <stddef.h>
 #include <stdint.h>

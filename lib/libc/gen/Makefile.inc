@@ -1,9 +1,11 @@
 #	@(#)Makefile.inc	8.6 (Berkeley) 5/4/95
 
 # machine-independent gen sources
-.PATH: ${LIBC_SRCTOP}/${LIBC_ARCH}/gen ${LIBC_SRCTOP}/gen
+.PATH: ${LIBC_SRCTOP}/${LIBC_ARCH}/gen ${LIBC_SRCTOP}/gen ${SRCTOP}/etc
 
-CONFS=	shells
+CONFS+=	group master.passwd shells
+CONFSMODE_master.passwd=	600
+CONFSPACKAGE=   runtime
 
 SRCS+=	__getosreldate.c \
 	__pthread_mutex_init_calloc_cb_stub.c \
@@ -27,10 +29,13 @@ SRCS+=	__getosreldate.c \
 	clock_getcpuclockid.c \
 	closedir.c \
 	confstr.c \
+	cpuset_alloc.c \
+	cpuset_free.c \
 	crypt.c \
 	ctermid.c \
 	daemon.c \
 	devname.c \
+	devname-compat11.c \
 	dirfd.c \
 	dirname.c \
 	dirname_compat.c \
@@ -43,6 +48,7 @@ SRCS+=	__getosreldate.c \
 	err.c \
 	errlst.c \
 	errno.c \
+	eventfd.c \
 	exec.c \
 	exect.c \
 	fdevname.c \
@@ -55,7 +61,10 @@ SRCS+=	__getosreldate.c \
 	fstab.c \
 	ftok.c \
 	fts.c \
+	fts-compat.c \
+	fts-compat11.c \
 	ftw.c \
+	ftw-compat11.c \
 	getbootfile.c \
 	getbsize.c \
 	getcap.c \
@@ -68,6 +77,7 @@ SRCS+=	__getosreldate.c \
 	getloadavg.c \
 	getlogin.c \
 	getmntinfo.c \
+	getmntinfo-compat11.c \
 	getnetgrent.c \
 	getosreldate.c \
 	getpagesize.c \
@@ -80,11 +90,13 @@ SRCS+=	__getosreldate.c \
 	getutxent.c \
 	getvfsbyname.c \
 	glob.c \
+	glob-compat11.c \
 	initgroups.c \
 	isatty.c \
 	isinf.c \
 	isnan.c \
 	jrand48.c \
+	kqueue1.c \
 	lcong48.c \
 	libc_dlopen.c \
 	lockf.c \
@@ -92,6 +104,7 @@ SRCS+=	__getosreldate.c \
 	memalign.c \
 	mrand48.c \
 	nftw.c \
+	nftw-compat11.c \
 	nice.c \
 	nlist.c \
 	nrand48.c \
@@ -105,11 +118,15 @@ SRCS+=	__getosreldate.c \
 	pw_scan.c \
 	raise.c \
 	readdir.c \
+	readdir-compat11.c \
 	readpassphrase.c \
 	recvmmsg.c \
 	rewinddir.c \
 	scandir.c \
 	scandir_b.c \
+	scandir-compat11.c \
+	sched_getaffinity.c \
+	sched_setaffinity.c \
 	seed48.c \
 	seekdir.c \
 	semctl.c \
@@ -146,6 +163,7 @@ SRCS+=	__getosreldate.c \
 	ualarm.c \
 	ulimit.c \
 	uname.c \
+	unvis-compat.c \
 	usleep.c \
 	utime.c \
 	utxdb.c \
@@ -155,20 +173,13 @@ SRCS+=	__getosreldate.c \
 	waitpid.c \
 	waitid.c \
 	wordexp.c
-.if ${MK_SYMVER} == yes
-SRCS+=	devname-compat11.c \
-	fts-compat.c \
-	fts-compat11.c \
-	ftw-compat11.c \
-	getmntinfo-compat11.c \
-	glob-compat11.c \
-	nftw-compat11.c \
-	readdir-compat11.c \
-	scandir-compat11.c \
-	unvis-compat.c
-.endif
 
 CFLAGS.arc4random.c= -I${SRCTOP}/sys -I${SRCTOP}/sys/crypto/chacha20
+
+CFLAGS.sysconf.c= -I${SRCTOP}/contrib/tzcode
+
+CFLAGS.dlfcn.c= ${RTLD_HDRS}
+CFLAGS.tls.c= ${RTLD_HDRS}
 
 .PATH: ${SRCTOP}/contrib/libc-pwcache
 SRCS+=	pwcache.c pwcache.h
@@ -456,7 +467,10 @@ MLINKS+=modf.3 modff.3 \
 MLINKS+=popen.3 pclose.3
 MLINKS+=posix_spawn.3 posix_spawnp.3 \
 	posix_spawn_file_actions_addopen.3 posix_spawn_file_actions_addclose.3 \
+	posix_spawn_file_actions_addopen.3 posix_spawn_file_actions_addclosefrom_np.3 \
 	posix_spawn_file_actions_addopen.3 posix_spawn_file_actions_adddup2.3 \
+	posix_spawn_file_actions_addopen.3 posix_spawn_file_actions_addchdir_np.3 \
+	posix_spawn_file_actions_addopen.3 posix_spawn_file_actions_addfchdir_np.3 \
 	posix_spawn_file_actions_init.3 posix_spawn_file_actions_destroy.3 \
 	posix_spawnattr_getflags.3 posix_spawnattr_setflags.3 \
 	posix_spawnattr_getpgroup.3 posix_spawnattr_setpgroup.3 \
@@ -481,7 +495,10 @@ MLINKS+=rand48.3 _rand48.3 \
 	rand48.3 seed48.3 \
 	rand48.3 srand48.3
 MLINKS+=recv.2 recvmmsg.2
-MLINKS+=scandir.3 alphasort.3
+MLINKS+=scandir.3 alphasort.3 \
+	scandir.3 scandirat.3 \
+	scandir.3 scandir_b.3 \
+	scandir.3 versionsort.3
 MLINKS+=sem_open.3 sem_close.3 \
 	sem_open.3 sem_unlink.3
 MLINKS+=sem_wait.3 sem_trywait.3
@@ -550,3 +567,19 @@ MLINKS+=vis.3 nvis.3 \
 	vis.3 svis.3
 
 MLINKS+=wordexp.3 wordfree.3
+
+.include <src.tools.mk>
+
+afterinstallconfig: install-passwd
+install-passwd: .PHONY
+.if ${MK_TCSH} == "no"
+	sed -i "" -e 's;/bin/csh;/bin/sh;' ${DESTDIR}/etc/master.passwd
+.endif
+	${PWD_MKDB_CMD} -i -p -d ${DESTDIR}/etc ${DESTDIR}/etc/master.passwd
+.if defined(NO_ROOT) && defined(METALOG)
+	( \
+		echo "./etc/pwd.db type=file mode=0644 uname=root gname=wheel"; \
+		echo "./etc/spwd.db type=file mode=0600 uname=root gname=wheel"; \
+		echo "./etc/passwd type=file mode=0644 uname=root gname=wheel"; \
+	) | cat -l >> ${METALOG}
+.endif

@@ -1,4 +1,3 @@
-# $FreeBSD: stable/11/usr.sbin/bsdinstall/partedit/Makefile 319016 2017-05-28 00:13:44Z rgrimes $
 
 BINDIR= ${LIBEXECDIR}/bsdinstall
 PROG=	partedit
@@ -10,6 +9,8 @@ LIBADD+=	geom ncursesw util dialog m
 PARTEDIT_ARCH= ${MACHINE}
 .if ${MACHINE} == "i386" || ${MACHINE} == "amd64"
 PARTEDIT_ARCH= x86
+.elif ${MACHINE} == "arm64" || ${MACHINE} == "riscv"
+PARTEDIT_ARCH= efi
 .endif
 .if !exists(partedit_${PARTEDIT_ARCH}.c)
 PARTEDIT_ARCH= generic

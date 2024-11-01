@@ -20,35 +20,19 @@ STAGE_TARGETS?=		iso-images-stage
 .endif
 
 .if (defined(EMBEDDED_TARGET) && !empty(EMBEDDED_TARGET)) || (defined(EMBEDDEDBUILD) && !empty(EMBEDDEDBUILD))
-. if ${TARGET:Marm*} != "" || ${EMBEDDED_TARGET:Marm*} != ""
+. if ${TARGET:Marm*} != "" || ${EMBEDDED_TARGET:Marm*} != "" || ${TARGET:Mriscv*} != ""
 EMBEDDED=		1
 . endif
 .endif
 
 # snapshot
-.if ${BRANCH} == "STABLE" || ${BRANCH} == "CURRENT" || ${BRANCH} == "PRERELEASE"
+.if ${BRANCH} == "STABLE" || ${BRANCH} == "CURRENT" || ${BRANCH} == "PRERELEASE" || ${BRANCH:MALPHA*} != ""
 SNAPSHOT=		1
 TLD?=			${FTPDIR}/snapshots
-. if !defined(SVNREVISION) || empty(SVNREVISION)
-.  for _D in /usr/bin /usr/local/bin
-.   for _S in svnversion svnliteversion
-.    if exists(${_D}/${_S})
-SVNVERSION?=		${_D}/${_S}
-.    endif
-.   endfor
-.  endfor
-.  if exists(${SVNVERSION}) && !empty(SVNVERSION)
-SVNREVISION!=		${SVNVERSION} ${WORLDDIR}/Makefile
-.  endif
-. endif # !defined(SVNREVISION)
-. if !defined(BUILDDATE) || empty(BUILDDATE)
-.  if exists(${.CURDIR}/${.OBJDIR}/dist/base/bin/sh)
-BUILDDATE!=		cd ${.CURDIR} && date -j -f '%s' $$(stat -f "%c" ${.OBJDIR}/dist/base/bin/sh) +%Y%m%d
-.  else
+.if !defined(BUILDDATE) || empty(BUILDDATE)
 BUILDDATE!=		date +%Y%m%d
-.  endif
-. endif
-_SNAP_SUFFIX:=		${BUILDDATE}-r${SVNREVISION}
+.endif
+_SNAP_SUFFIX:=		${BUILDDATE}-${GITREV}-${GITCOUNT}
 .else
 # release
 SNAPSHOT=
@@ -56,13 +40,8 @@ TLD?=			${FTPDIR}/releases
 .endif
 
 .if defined(EMBEDDED) && !empty(EMBEDDED)
-. if ${TARGET:Marm*} != "" && ${TARGET_ARCH:Marm*} != ""
-.  if !defined(BOARDNAME) && empty(BOARDNAME)
-BOARDNAME:=		${KERNCONF}
-.  else
-OLDNAME:=		${KERNCONF}
-.  endif
-.  if ${BRANCH} == "STABLE" || ${BRANCH} == "CURRENT" || ${BRANCH} == "PRERELEASE"
+. if ${TARGET:Marm*} != "" && (${TARGET_ARCH:Marm*} != "" || ${TARGET_ARCH} == "aarch64") || ${TARGET:Mriscv*} != ""
+.  if ${BRANCH} == "STABLE" || ${BRANCH} == "CURRENT" || ${BRANCH} == "PRERELEASE" || ${BRANCH:MALPHA*} != ""
 SNAPSHOT=		1
 .  endif
 IMAGES:=		img
@@ -72,6 +51,11 @@ IMAGES:=		img
 .if defined(WITH_VMIMAGES) && !empty(WITH_VMIMAGES)
 STAGE_TARGETS+=		vm-images-stage
 VM_DIR=			${TLD}/VM-IMAGES/${REVISION}-${BRANCH}/${TARGET_ARCH}
+.endif
+
+.if defined(WITH_CLOUDWARE) && !empty(WITH_CLOUDWARE)
+STAGE_TARGETS+=		ci-images-stage
+CI_DIR=			${TLD}/CI-IMAGES/${REVISION}-${BRANCH}/${TARGET_ARCH}
 .endif
 
 CLEANFILES+=		${STAGE_TARGETS}
@@ -90,12 +74,6 @@ iso-images-stage:
 	cd ${RELEASEDIR} && rm -f CHECKSUM.*
 . for IMAGE in ${IMAGES}
 .  if defined(EMBEDDED) && !empty(EMBEDDED)
-.   if defined(OLDNAME) && !empty(OLDNAME)
-	@# arm/armv6 IMX6 -> WANDBOARD, for example.
-	cd ${RELEASEDIR} && \
-		mv ${OSRELEASE}-${OLDNAME}.${IMAGE}.xz \
-		${OSRELEASE}-${BOARDNAME}.${IMAGE}.xz
-.   endif
 	cd ${RELEASEDIR} && \
 		mv ${OSRELEASE}-${BOARDNAME}.${IMAGE}.xz \
 		${OSRELEASE}-${BOARDNAME}-${SNAP_SUFFIX}.${IMAGE}.xz
@@ -149,12 +127,6 @@ iso-images-stage:
 .else # not snapshot
 . for IMAGE in ${IMAGES}
 .  if defined(EMBEDDED) && !empty(EMBEDDED)
-.   if defined(OLDNAME) && !empty(OLDNAME)
-	@# arm/armv6 IMX6 -> WANDBOARD, for example.
-	cd ${RELEASEDIR} && \
-		mv ${OSRELEASE}-${OLDNAME}.${IMAGE}.xz \
-		${OSRELEASE}-${BOARDNAME}.${IMAGE}.xz
-.   endif
 	cp -p ${RELEASEDIR}/${OSRELEASE}-${BOARDNAME}.${IMAGE}.xz \
 		${ISO_DIR}/${OSRELEASE}-${BOARDNAME}.${IMAGE}.xz
 	cd ${TLD}/ISO-IMAGES/${REVISION} && \
@@ -201,6 +173,9 @@ iso-images-stage:
 .if exists(${RELEASEDIR}/ftp)
 	mkdir -p ${FTP_DIR}
 	cp -p ${RELEASEDIR}/ftp/*.txz ${RELEASEDIR}/ftp/MANIFEST ${FTP_DIR}
+	echo ${BUILDDATE} > ${FTP_DIR}/BUILDDATE
+	echo ${GITBRANCH} > ${FTP_DIR}/GITBRANCH
+	echo ${GITREV} > ${FTP_DIR}/REVISION
 	cd ${TLD}/${TARGET} && \
 		ln -s ${TARGET_ARCH}/${REVISION}-${BRANCH} \
 			${REVISION}-${BRANCH}
@@ -246,6 +221,53 @@ vm-images-stage:
 . for CHECKSUM in ${CHECKSUM_FILES}
 	cp -p ${RELEASEDIR}/vmimages/CHECKSUM.${CHECKSUM} \
 		${VM_DIR}/Latest/CHECKSUM.${CHECKSUM}
+. endfor
+.endif
+
+ci-images-stage:
+	mkdir -p ${CI_DIR}
+.if defined(SNAPSHOT) && !empty(SNAPSHOT)
+. if exists(${CI_DIR}/Latest)
+	rm -rf ${CI_DIR}/Latest
+. endif
+	mkdir -p ${CI_DIR}/Latest
+	mkdir -p ${CI_DIR}/${BUILDDATE}
+. for CW in ${CLOUDWARE}
+.  if ${CW} == BASIC-CI
+	cd ${RELEASEDIR}/ciimages && \
+		mv ${OSRELEASE}-${CW}.raw.xz \
+		${OSRELEASE}-${CW}-${SNAP_SUFFIX}.raw.xz
+	cp -p ${RELEASEDIR}/ciimages/${OSRELEASE}-${CW}-${SNAP_SUFFIX}.raw.xz \
+		${CI_DIR}/${BUILDDATE}/${OSRELEASE}-${CW}-${SNAP_SUFFIX}.raw.xz
+	cd ${CI_DIR}/Latest && \
+		ln -s ../${BUILDDATE}/${OSRELEASE}-${CW}-${SNAP_SUFFIX}.raw.xz \
+		${OSRELEASE}-${CW}.raw.xz
+.  endif
+. endfor
+	cd ${RELEASEDIR}/ciimages && rm -f CHECKSUM.*
+. for CHECKSUM in ${CHECKSUM_FILES}
+	cd ${RELEASEDIR}/ciimages && \
+		${CHECKSUM:tl} ${OSRELEASE}* > CHECKSUM.${CHECKSUM}-${SNAP_SUFFIX}
+	cp -p ${RELEASEDIR}/ciimages/CHECKSUM.${CHECKSUM}-${SNAP_SUFFIX} \
+		${CI_DIR}/${BUILDDATE}/CHECKSUM.${CHECKSUM}-${SNAP_SUFFIX}
+	cd ${CI_DIR}/Latest && \
+		ln -s ../${BUILDDATE}/CHECKSUM.${CHECKSUM}-${SNAP_SUFFIX} \
+		CHECKSUM.${CHECKSUM}
+. endfor
+.else # not snapshot
+. if exists(${CI_DIR}/Latest)
+	rm -rf ${CI_DIR}/Latest
+. endif
+	mkdir -p ${CI_DIR}/Latest
+. for CW in ${CLOUDWARE}
+.  if ${CW} == BASIC-CI
+	cp -p ${RELEASEDIR}/ciimages/${OSRELEASE}-${CW}.raw.xz \
+		${CI_DIR}/Latest/${OSRELEASE}-${CW}.raw.xz
+.  endif
+. endfor
+. for CHECKSUM in ${CHECKSUM_FILES}
+	cp -p ${RELEASEDIR}/ciimages/CHECKSUM.${CHECKSUM} \
+		${CI_DIR}/Latest/CHECKSUM.${CHECKSUM}
 . endfor
 .endif
 

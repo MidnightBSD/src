@@ -77,43 +77,18 @@ The default
 boot configuration for
 .Fx
 installs
-.Pa boot1.efi
+.Pa loader.efi
 in the default path.
 .It
-.Pa boot1.efi
+.Pa loader.efi
 reads boot configuration from
 .Pa /boot.config
 or
 .Pa /boot/config .
-Unlike other first-stage boot loaders,
-.Pa boot1.efi
-passes the configuration to the next stage boot loader and does not
-itself act on the contents of the file.
-.It
-.Pa boot1.efi
-searches partitions of type
-.Li freebsd-ufs
-and
-.Li freebsd-zfs
-for
-.Pa loader.efi .
-The search begins with partitions on the device from which
-.Pa boot1.efi
-was loaded, and continues with other available partitions.
-If both
-.Li freebsd-ufs
-and
-.Li freebsd-zfs
-partitions exist on the same device the
-.Li freebsd-zfs
-partition is preferred.
-.Pa boot1.efi
-then loads and executes
-.Pa loader.efi .
 .It
 .Pa loader.efi
 loads and boots the kernel, as described in
-.Xr loader 8 .
+.Xr loader.efi 8 .
 .El
 .Pp
 The
@@ -122,20 +97,8 @@ system console is automatically selected when booting via
 .Nm .
 .Sh FILES
 .Bl -tag -width /boot/loader -compact
-.It Pa /boot/boot1.efi
-First stage
 .Nm
 bootstrap
-.It Pa /boot/boot1.efifat
-.Xr msdosfs 5
-FAT file system image containing
-.Pa boot1.efi
-for use by
-.Xr bsdinstall 8
-and the
-.Ar bootcode
-argument to
-.Xr gpart 8 .
 .It Pa /boot/loader.efi
 Final stage bootstrap
 .It Pa /boot/kernel/kernel
@@ -152,16 +115,17 @@ Typical non-default kernel (optional)
 .Xr efidp 8 ,
 .Xr efivar 8 ,
 .Xr gpart 8 ,
+.Xr loader.efi 8 ,
 .Xr uefisign 8
 .Sh HISTORY
 EFI boot support for the ia64 architecture first appeared in
 .Fx 5.0 .
 .Nm
 boot support for amd64 first appeared in
-.Fx 10.1
-and for arm64 in
-.Fx 11.0 .
-.Sh CAVEATS
-EFI environment variables are not supported by
-.Xr loader 8
-or the kernel.
+.Fx 10.1 ;
+for arm64 in
+.Fx 11.0 ;
+for armv6 and armv7 in
+.Fx 12.0 ;
+and for riscv in
+.Fx 13.0 .

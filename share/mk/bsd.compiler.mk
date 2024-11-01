@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 # Setup variables for the compiler
 #
@@ -24,6 +23,14 @@
 # - c++11:     supports full (or nearly full) C++11 programming environment.
 # - retpoline: supports the retpoline speculative execution vulnerability
 #              mitigation.
+# - init-all:  supports stack variable initialization.
+# - aarch64-sha512: supports the AArch64 sha512 intrinsic functions.
+#
+# When bootstrapping on macOS, 'apple-clang' will be set in COMPILER_FEATURES
+# to differentiate Apple's version of Clang. Apple Clang uses a different
+# versioning scheme and may not support the same -W/-Wno warning flags. For a
+# mapping of Apple Clang versions to upstream clang versions see
+# https://en.wikipedia.org/wiki/Xcode#Xcode_7.0_-_12.x_(since_Free_On-Device_Development)
 #
 # These variables with an X_ prefix will also be provided if XCC is set.
 #
@@ -35,6 +42,16 @@ __<bsd.compiler.mk>__:
 
 .include <bsd.opts.mk>
 
+.if defined(_NO_INCLUDE_COMPILERMK)
+# If _NO_INCLUDE_COMPILERMK is set we are doing a make obj/cleandir/cleanobj
+# and might not have a valid compiler in $PATH yet. In this case just set the
+# variables that are expected by the other .mk files and return
+COMPILER_TYPE=none
+X_COMPILER_TYPE=none
+COMPILER_VERSION=0
+X_COMPILER_VERSION=0
+COMPILER_FEATURES=none
+.else
 # command = /usr/local/bin/ccache cc ...
 # wrapper = /usr/local/libexec/ccache/cc ...
 CCACHE_BUILD_TYPE?=	command
@@ -118,7 +135,16 @@ ccache-print-options: .PHONY
 .endif	# exists(${CCACHE_BIN})
 .endif	# ${MK_CCACHE_BUILD} == "yes"
 
-.for cc X_ in CC $${_empty_var_} XCC X_
+_cc_vars=CC $${_empty_var_}
+.if !empty(_WANT_TOOLCHAIN_CROSS_VARS)
+# Only the toplevel makefile needs to compute the X_COMPILER_* variables.
+# Skipping the computation of the unused X_COMPILER_* in the subdirectory
+# makefiles can save a noticeable amount of time when walking the whole source
+# tree (e.g. during make includes, etc.).
+_cc_vars+=XCC X_
+.endif
+
+.for cc X_ in ${_cc_vars}
 .if ${cc} == "CC" || !empty(XCC)
 # Try to import COMPILER_TYPE and COMPILER_VERSION from parent make.
 # The value is only used/exported for the same environment that impacts
@@ -127,17 +153,20 @@ _exported_vars=	${X_}COMPILER_TYPE ${X_}COMPILER_VERSION \
 		${X_}COMPILER_MIDNIGHTBSD_VERSION
 ${X_}_cc_hash=	${${cc}}${MACHINE}${PATH}
 ${X_}_cc_hash:=	${${X_}_cc_hash:hash}
-# Only import if none of the vars are set somehow else.
+# Only import if none of the vars are set differently somehow else.
 _can_export=	yes
 .for var in ${_exported_vars}
-.if defined(${var})
+.if defined(${var}) && (!defined(${var}__${${X_}_cc_hash}) || ${${var}__${${X_}_cc_hash}} != ${${var}})
+.if defined(${var}__${${X_}_ld_hash})
+.info "Cannot import ${X_}COMPILER variables since cached ${var} is different: ${${var}__${${X_}_cc_hash}} != ${${var}}"
+.endif
 _can_export=	no
 .endif
 .endfor
 .if ${_can_export} == yes
 .for var in ${_exported_vars}
-.if defined(${var}.${${X_}_cc_hash})
-${var}=	${${var}.${${X_}_cc_hash}}
+.if defined(${var}__${${X_}_cc_hash})
+${var}=	${${var}__${${X_}_cc_hash}}
 .endif
 .endfor
 .endif
@@ -164,11 +193,24 @@ ${X_}COMPILER_TYPE:=	gcc
 . elif ${_v:Mclang} || ${_v:M(clang-*.*.*)}
 ${X_}COMPILER_TYPE:=	clang
 . else
+# With GCC, cc --version prints "cc $VERSION ($PKGVERSION)", so if a
+# distribution overrides the default GCC PKGVERSION it is not identified.
+# However, its -v output always says "gcc version" in it, so fall back on that.
+_gcc_version!=	${${cc}:N${CCACHE_BIN}} -v 2>&1 | grep "gcc version"
+.  if !empty(_gcc_version)
+${X_}COMPILER_TYPE:=	gcc
+.  else
 .error Unable to determine compiler type for ${cc}=${${cc}}.  Consider setting ${X_}COMPILER_TYPE.
+.  endif
+.undef _gcc_version
 . endif
 .endif
 .if !defined(${X_}COMPILER_VERSION)
 ${X_}COMPILER_VERSION!=echo "${_v:M[1-9]*.[0-9]*}" | awk -F. '{print $$1 * 10000 + $$2 * 100 + $$3;}'
+.endif
+# Detect apple clang when bootstrapping to select appropriate warning flags.
+.if !defined(${X_}COMPILER_FEATURES) && ${_v:[*]:M*Apple clang version*}
+${X_}COMPILER_FEATURES=	apple-clang
 .endif
 .undef _v
 .endif

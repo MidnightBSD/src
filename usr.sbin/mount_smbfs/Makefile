@@ -1,4 +1,3 @@
-# $FreeBSD: stable/11/usr.sbin/mount_smbfs/Makefile 319119 2017-05-29 10:15:41Z ngie $
 
 PROG=	mount_smbfs
 SRCS=	mount_smbfs.c getmntopts.c

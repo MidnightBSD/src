@@ -68,7 +68,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #if HAVE_NBTOOL_CONFIG_H
 #include "nbtool_config.h"
 #endif
@@ -323,7 +322,6 @@ ffs_makefs(const char *image, const char *dir, fsnode *root, fsinfo_t *fsopts)
 static void
 ffs_validate(const char *dir, fsnode *root, fsinfo_t *fsopts)
 {
-	int32_t	ncg = 1;
 #ifdef notyet
 	int32_t	spc, nspf, ncyl, fssize;
 #endif
@@ -342,6 +340,9 @@ ffs_validate(const char *dir, fsnode *root, fsinfo_t *fsopts)
 		/* set FFS defaults */
 	if (fsopts->sectorsize == -1)
 		fsopts->sectorsize = DFL_SECSIZE;
+	if (fsopts->sectorsize != DFL_SECSIZE)
+		warnx("sectorsize %d may produce nonfunctional image",
+		    fsopts->sectorsize);
 	if (ffs_opts->fsize == -1)
 		ffs_opts->fsize = MAX(DFL_FRAGSIZE, fsopts->sectorsize);
 	if (ffs_opts->bsize == -1)
@@ -394,22 +395,26 @@ ffs_validate(const char *dir, fsnode *root, fsinfo_t *fsopts)
 		fsopts->size =
 		    fsopts->size * (100 + fsopts->freeblockpc) / 100;
 
-		/* add space needed for superblocks */
 	/*
-	 * The old SBOFF (SBLOCK_UFS1) is used here because makefs is
-	 * typically used for small filesystems where space matters.
-	 * XXX make this an option.
+	 * Add space needed for superblock, cylblock and to store inodes.
+	 * All of those segments are aligned to the block size.
+	 * XXX: This has to match calculations done in ffs_mkfs.
 	 */
-	fsopts->size += (SBLOCK_UFS1 + SBLOCKSIZE) * ncg;
-		/* add space needed to store inodes, x3 for blockmaps, etc */
-	if (ffs_opts->version == 1)
-		fsopts->size += ncg * DINODE1_SIZE *
-		    roundup(fsopts->inodes / ncg, 
-			ffs_opts->bsize / DINODE1_SIZE);
-	else
-		fsopts->size += ncg * DINODE2_SIZE *
-		    roundup(fsopts->inodes / ncg, 
-			ffs_opts->bsize / DINODE2_SIZE);
+	if (ffs_opts->version == 1) {
+		fsopts->size +=
+		    roundup(SBLOCK_UFS1 + SBLOCKSIZE, ffs_opts->bsize);
+		fsopts->size += roundup(SBLOCKSIZE, ffs_opts->bsize);
+		fsopts->size += ffs_opts->bsize;
+		fsopts->size +=  DINODE1_SIZE *
+		    roundup(fsopts->inodes, ffs_opts->bsize / DINODE1_SIZE);
+	} else {
+		fsopts->size +=
+		    roundup(SBLOCK_UFS2 + SBLOCKSIZE, ffs_opts->bsize);
+		fsopts->size += roundup(SBLOCKSIZE, ffs_opts->bsize);
+		fsopts->size += ffs_opts->bsize;
+		fsopts->size += DINODE2_SIZE *
+		    roundup(fsopts->inodes, ffs_opts->bsize / DINODE2_SIZE);
+	}
 
 		/* add minfree */
 	if (ffs_opts->minfree > 0)
@@ -577,7 +582,7 @@ ffs_create_image(const char *image, fsinfo_t *fsopts)
 		    (long long)fs->fs_cstotal.cs_ndir);
 	}
 
-	if (fs->fs_cstotal.cs_nifree + UFS_ROOTINO < fsopts->inodes) {
+	if (fs->fs_cstotal.cs_nifree + (off_t)UFS_ROOTINO < fsopts->inodes) {
 		warnx(
 		"Image file `%s' has %lld free inodes; %lld are required.",
 		    image,
@@ -619,12 +624,19 @@ ffs_size_dir(fsnode *root, fsinfo_t *fsopts)
 		    e, tmpdir.d_namlen, this, curdirsize);		\
 } while (0);
 
-	/*
-	 * XXX	this needs to take into account extra space consumed
-	 *	by indirect blocks, etc.
-	 */
 #define	ADDSIZE(x) do {							\
-	fsopts->size += roundup((x), ffs_opts->fsize);			\
+	if ((size_t)(x) < UFS_NDADDR * (size_t)ffs_opts->bsize) {	\
+		fsopts->size += roundup((x), ffs_opts->fsize);		\
+	} else {							\
+		/* Count space consumed by indirecttion blocks. */	\
+		fsopts->size +=	ffs_opts->bsize *			\
+		    (howmany((x), UFS_NDADDR * ffs_opts->bsize) - 1);	\
+		/*							\
+		 * If the file is big enough to use indirect blocks,	\
+		 * we allocate bsize block for trailing data.		\
+		 */							\
+		fsopts->size += roundup((x), ffs_opts->bsize);		\
+	}								\
 } while (0);
 
 	curdirsize = 0;
@@ -703,7 +715,7 @@ ffs_build_dinode1(struct ufs1_dinode *dinp, dirbuf_t *dbufp, fsnode *cur,
 	} else if (S_ISLNK(cur->type)) {	/* symlink */
 		slen = strlen(cur->symlink);
 		if (slen < UFS1_MAXSYMLINKLEN) {	/* short link */
-			memcpy(dinp->di_db, cur->symlink, slen);
+			memcpy(dinp->di_shortlink, cur->symlink, slen);
 		} else
 			membuf = cur->symlink;
 		dinp->di_size = slen;
@@ -733,15 +745,22 @@ ffs_build_dinode2(struct ufs2_dinode *dinp, dirbuf_t *dbufp, fsnode *cur,
 	dinp->di_atime = st->st_atime;
 	dinp->di_mtime = st->st_mtime;
 	dinp->di_ctime = st->st_ctime;
+#if HAVE_STRUCT_STAT_BIRTHTIME
+	dinp->di_birthtime = st->st_birthtime;
+#else
+	dinp->di_birthtime = st->st_ctime;
+#endif
 #if HAVE_STRUCT_STAT_ST_MTIMENSEC
 	dinp->di_atimensec = st->st_atimensec;
 	dinp->di_mtimensec = st->st_mtimensec;
 	dinp->di_ctimensec = st->st_ctimensec;
-#endif
 #if HAVE_STRUCT_STAT_BIRTHTIME
-	dinp->di_birthtime = st->st_birthtime;
 	dinp->di_birthnsec = st->st_birthtimensec;
+#else
+	dinp->di_birthnsec = st->st_ctimensec;
 #endif
+#endif
+
 		/* not set: di_db, di_ib, di_blocks, di_spare */
 
 	membuf = NULL;
@@ -755,7 +774,7 @@ ffs_build_dinode2(struct ufs2_dinode *dinp, dirbuf_t *dbufp, fsnode *cur,
 	} else if (S_ISLNK(cur->type)) {	/* symlink */
 		slen = strlen(cur->symlink);
 		if (slen < UFS2_MAXSYMLINKLEN) {	/* short link */
-			memcpy(dinp->di_db, cur->symlink, slen);
+			memcpy(dinp->di_shortlink, cur->symlink, slen);
 		} else
 			membuf = cur->symlink;
 		dinp->di_size = slen;
@@ -889,7 +908,7 @@ ffs_populate_dir(const char *dir, fsnode *root, fsinfo_t *fsopts)
 static void
 ffs_write_file(union dinode *din, uint32_t ino, void *buf, fsinfo_t *fsopts)
 {
-	int 	isfile, ffd;
+	int	isfile, ffd;
 	char	*fbuf, *p;
 	off_t	bufleft, chunk, offset;
 	ssize_t nread;
@@ -936,7 +955,7 @@ ffs_write_file(union dinode *din, uint32_t ino, void *buf, fsinfo_t *fsopts)
 
 	if (isfile) {
 		fbuf = emalloc(ffs_opts->bsize);
-		if ((ffd = open((char *)buf, O_RDONLY, 0444)) == -1) {
+		if ((ffd = open((char *)buf, O_RDONLY)) == -1) {
 			err(EXIT_FAILURE, "Can't open `%s' for reading", (char *)buf);
 		}
 	} else {
@@ -984,7 +1003,6 @@ ffs_write_file(union dinode *din, uint32_t ino, void *buf, fsinfo_t *fsopts)
 		errno = bwrite(bp);
 		if (errno != 0)
 			goto bad_ffs_write_file;
-		brelse(bp);
 		if (!isfile)
 			p += chunk;
 	}
@@ -1079,7 +1097,7 @@ ffs_make_dirbuf(dirbuf_t *dbuf, const char *name, fsnode *node, int needswap)
 static void
 ffs_write_inode(union dinode *dp, uint32_t ino, const fsinfo_t *fsopts)
 {
-	char 		*buf;
+	char		*buf;
 	struct ufs1_dinode *dp1;
 	struct ufs2_dinode *dp2, *dip;
 	struct cg	*cgp;

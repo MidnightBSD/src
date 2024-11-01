@@ -25,7 +25,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <stdio.h>
 #include <syslog.h>
 #include <unistd.h>

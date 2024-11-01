@@ -1,5 +1,4 @@
 #
-# $FreeBSD: stable/11/release/Makefile.vagrant 315043 2017-03-11 02:20:11Z gjb $
 #
 # Makefile for producing and uploading Vagrant boxes to Hashicorp Atlas
 #
@@ -29,7 +28,7 @@ ATLAS${VAR}:=		${VAGRANT${VAR}}
 .endif
 
 .if ${BRANCH} == "STABLE" || ${BRANCH} == "CURRENT" || ${BRANCH} == "PRERELEASE"
-SNAPSHOT_DATE!=		date +-%Y%m%d
+SNAPSHOT_DATE!=		date +-${BUILDDATE}
 .endif
 
 VAGRANT_VERSION!=	date +%Y.%m.%d
@@ -58,7 +57,9 @@ vagrant-check-depends:
 .  endif
 	env ASSUME_ALWAYS_YES=yes pkg install -y curl
 . else
-	make -C ${PORTSDIR}/ftp/curl BATCH=1 all install clean
+	env UNAME_r=${UNAME_r} make -C ${PORTSDIR}/ftp/curl \
+	    BATCH=1 WRKDIRPREFIX=/tmp/ports DISTDIR=/tmp/distfiles \
+	    all install clean
 . endif
 .endif
 

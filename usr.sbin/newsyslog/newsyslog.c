@@ -54,7 +54,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #define	OSF
 
 #include <sys/param.h>

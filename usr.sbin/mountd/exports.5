@@ -27,7 +27,7 @@
 .\"
 .\"     @(#)exports.5	8.3 (Berkeley) 3/29/95
 .\"
-.Dd February 11, 2019
+.Dd April 7, 2024
 .Dt EXPORTS 5
 .Os
 .Sh NAME
@@ -116,9 +116,13 @@ exported to the host set.
 The option flags specify whether the file system
 is exported read-only or read-write and how the client UID is mapped to
 user credentials on the server.
-For the NFSv4 tree root, the only option that can be specified in this
-section is
-.Fl sec .
+For the NFSv4 tree root, the only options that can be specified in this
+section are ones related to security:
+.Fl sec ,
+.Fl tls ,
+.Fl tlscert
+and
+.Fl tlscertuser .
 .Pp
 Export options are specified as follows:
 .Pp
@@ -240,6 +244,48 @@ or
 .Fl webnfs
 flags.
 .Pp
+The
+.Fl tls ,
+.Fl tlscert
+and
+.Fl tlscertuser
+export options are used to require the client to use TLS for the mount(s)
+per RFC 9289.
+For NFS mounts using TLS to work,
+.Xr rpc.tlsservd 8
+must be running on the server.
+.Bd -filled -offset indent
+.Fl tls
+requires that the client use TLS.
+.br
+.Fl tlscert
+requires that the client use TLS and provide a verifiable X.509 certificate
+during TLS handshake.
+.br
+.Fl tlscertuser
+requires that the client use TLS and provide a verifiable X.509 certificate.
+The otherName component of the certificate's subjAltName must have a
+an OID of 1.3.6.1.4.1.2238.1.1.1 and a UTF8 string of the form
+.Dq user@domain .
+.Dq user@domain
+will be translated to the credentials of the specified user in the same
+manner as
+.Xr nfsuserd 8 ,
+where
+.Dq user
+is normally a username is the server's password database and
+.Dq domain
+is the DNS domain name for the server.
+All RPCs will be performed using these credentials instead of the
+ones in the RPC header in a manner similar to
+.Sm off
+.Fl mapall Li = Sy user .
+.Sm on
+.Ed
+.Pp
+If none of these three flags are specified, TLS mounts are permitted but
+not required.
+.Pp
 Specifying the
 .Fl quiet
 option will inhibit some of the syslog diagnostics for bad lines in
@@ -291,9 +337,10 @@ to the
 option, or by using a separate
 .Fl mask
 option.
-If the mask is not specified, it will default to the mask for that network
-class (A, B or C; see
+If the mask is not specified, it will default to the historical mask
+for that network class (A, B, or C; see
 .Xr inet 4 ) .
+This usage is deprecated, and will elicit a warning log message.
 See the
 .Sx EXAMPLES
 section below.
@@ -364,6 +411,13 @@ file.
 the default remote mount-point file
 .El
 .Sh EXAMPLES
+Given that
+.Pa /usr , /u , /a
+and
+.Pa /u2
+are
+local file system mount points, let's consider the following example:
+.Pp
 .Bd -literal -offset indent
 /usr /usr/local -maproot=0:10 friends
 /usr -maproot=daemon grumpy.cis.uoguelph.ca 131.104.48.16
@@ -380,27 +434,21 @@ V4: /	-sec=krb5:krb5i:krb5p -network 131.104.48 -mask 255.255.255.0
 V4: /	-sec=sys:krb5:krb5i:krb5p grumpy.cis.uoguelph.ca
 .Ed
 .Pp
-Given that
-.Pa /usr , /u , /a
+The file systems rooted at
+.Pa /usr
 and
-.Pa /u2
-are
-local file system mount points, the above example specifies the following:
+.Pa /usr/local
+are exported to hosts within the
+.Dq friends
+network group
+with users mapped to their remote credentials and
+root mapped to UID 0 and group 10.
+They are exported read-write and the hosts in
+.Dq friends .
 .Pp
 The file system rooted at
 .Pa /usr
-is exported to hosts
-.Em friends
-where friends is specified in the netgroup file
-with users mapped to their remote credentials and
-root mapped to UID 0 and group 10.
-It is exported read-write and the hosts in
-.Dq friends
-can mount either
-.Pa /usr
-or
-.Pa /usr/local .
-It is exported to
+is exported to
 .Em 131.104.48.16
 and
 .Em grumpy.cis.uoguelph.ca
@@ -540,7 +588,24 @@ afterwards, whereas NFSv3 rejects the mount request.
 .Xr netgroup 5 ,
 .Xr mountd 8 ,
 .Xr nfsd 8 ,
+.Xr rpc.tlsservd 8 ,
 .Xr showmount 8
+.Sh STANDARDS
+The implementation is based on the following documents:
+.Bl -dash
+.It
+.Rs
+.%T "Network File System Protocol Specification, Appendix A, RFC 1094"
+.Re
+.It
+.Rs
+.%T "NFS: Network File System Version 3, Appendix I, RFC 1813"
+.Re
+.It
+.Rs
+.%T "Towards Remote Procedure Call Encryption by Default, RFC 9289"
+.Re
+.El
 .Sh BUGS
 The export options are tied to the local mount points in the kernel and
 must be non-contradictory for any exported subdirectory of the local

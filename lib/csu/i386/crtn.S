@@ -23,6 +23,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <machine/asm.h>
 	.section .init,"ax",@progbits
 	add	$12,%esp
 	ret
@@ -32,4 +33,3 @@
 	ret
 
 	.section .note.GNU-stack,"",%progbits
-

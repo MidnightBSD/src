@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008 Nokia Corporation
  * All rights reserved.
@@ -31,7 +31,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/queue.h>
 
@@ -433,11 +432,6 @@ fqueue_getall(const char *bin, char *temp, int asmf)
 		start = agg->ag_ostart;
 		end = agg->ag_oend;
 
-		/*
-		 * Fix-up the end address in order to show it in the objdump's
-		 * trace.
-		 */
-		end++;
 		if (asmf)
 			snprintf(tmpf, sizeof(tmpf),
 			    "objdump --start-address=%p "

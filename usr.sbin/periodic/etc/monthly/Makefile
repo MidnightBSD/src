@@ -1,6 +1,8 @@
 
 .include <src.opts.mk>
 
+PACKAGE=	periodic
+
 CONFGROUPS=	CONFS
 
 CONFS=	450.status-security \

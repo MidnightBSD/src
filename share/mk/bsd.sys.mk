@@ -1,13 +1,11 @@
-# $FreeBSD: stable/11/share/mk/bsd.sys.mk 359715 2020-04-07 19:44:40Z bdrewery $
 #
-# This file contains common settings used for building MidnightBSD
+# This file contains common settings used for building FreeBSD
 # sources.
 
 # Enable various levels of compiler warning checks.  These may be
 # overridden (e.g. if using a non-gcc compiler) by defining MK_WARNS=no.
 
-# for 4.2.1 GCC:   http://gcc.gnu.org/onlinedocs/gcc-4.2.1/gcc/Warning-Options.html
-# for current GCC: https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html
+# for GCC:   https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html
 # for clang: https://clang.llvm.org/docs/DiagnosticsReference.html
 
 .include <bsd.compiler.mk>
@@ -29,13 +27,12 @@ CFLAGS+=	-std=${CSTD}
 CXXFLAGS+=	-std=${CXXSTD}
 .endif
 
-#
-# Turn off -Werror for gcc 4.2.1. The compiler is on the glide path out of the
-# system, and any warnings specific to it are no longer relevant as there are
-# too many false positives.
-#
-.if ${COMPILER_VERSION} <  50000
-NO_WERROR.gcc=	yes
+# This gives the Makefile we're evaluating at the top-level a chance to set
+# WARNS.  If it doesn't do so, we may freely pull a DEFAULTWARNS if it's set
+# and use that.  This allows us to default WARNS to 6 for src builds without
+# needing to set the default in various Makefile.inc.
+.if !defined(WARNS) && defined(DEFAULTWARNS)
+WARNS=	${DEFAULTWARNS}
 .endif
 
 # -pedantic is problematic because it also imposes namespace restrictions
@@ -43,16 +40,19 @@ NO_WERROR.gcc=	yes
 .if defined(WARNS)
 .if ${WARNS} >= 1
 CWARNFLAGS+=	-Wsystem-headers
-.if !defined(NO_WERROR) && !defined(NO_WERROR.${COMPILER_TYPE})
+.if ${MK_WERROR} != "no" && ${MK_WERROR.${COMPILER_TYPE}:Uyes} != "no"
 CWARNFLAGS+=	-Werror
-.endif # !NO_WERROR && !NO_WERROR.${COMPILER_TYPE}
+.endif # ${MK_WERROR} != "no" && ${MK_WERROR.${COMPILER_TYPE}:Uyes} != "no"
 .endif # WARNS >= 1
 .if ${WARNS} >= 2
 CWARNFLAGS+=	-Wall -Wno-format-y2k
 .endif # WARNS >= 2
 .if ${WARNS} >= 3
-CWARNFLAGS+=	-W -Wno-unused-parameter -Wstrict-prototypes\
-		-Wmissing-prototypes -Wpointer-arith
+CWARNFLAGS+=	-W -Wno-unused-parameter
+.if ${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} < 150000
+CWARNFLAGS+=	-Wstrict-prototypes
+.endif
+CWARNFLAGS+=	-Wmissing-prototypes -Wpointer-arith
 .endif # WARNS >= 3
 .if ${WARNS} >= 4
 CWARNFLAGS+=	-Wreturn-type -Wcast-qual -Wwrite-strings -Wswitch -Wshadow\
@@ -61,8 +61,13 @@ CWARNFLAGS+=	-Wreturn-type -Wcast-qual -Wwrite-strings -Wswitch -Wshadow\
 CWARNFLAGS+=	-Wcast-align
 .endif # !NO_WCAST_ALIGN !NO_WCAST_ALIGN.${COMPILER_TYPE}
 .endif # WARNS >= 4
+.if ${WARNS} >= 5
+.if ${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} >= 150000
+CWARNFLAGS+=	-Wstrict-prototypes
+.endif
+.endif # WARNS >= 4
 .if ${WARNS} >= 6
-CWARNFLAGS+=	-Wchar-subscripts -Winline -Wnested-externs \
+CWARNFLAGS+=	-Wchar-subscripts -Wnested-externs \
 		-Wold-style-definition
 .if !defined(NO_WMISSING_VARIABLE_DECLARATIONS)
 CWARNFLAGS.clang+=	-Wmissing-variable-declarations
@@ -81,22 +86,21 @@ CWARNFLAGS+=	-Wno-pointer-sign
 # is set to low values, these have to be disabled explicitly.
 .if ${WARNS} <= 6
 CWARNFLAGS.clang+=	-Wno-empty-body -Wno-string-plus-int
-.if ${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} >= 30400
 CWARNFLAGS.clang+=	-Wno-unused-const-variable
-.endif
 .if ${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} >= 130000
 CWARNFLAGS.clang+=	-Wno-error=unused-but-set-variable
+.endif
+.if ${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} >= 150000
+CWARNFLAGS.clang+=	-Wno-error=array-parameter
+CWARNFLAGS.clang+=	-Wno-error=deprecated-non-prototype
+CWARNFLAGS.clang+=	-Wno-error=unused-but-set-parameter
 .endif
 .endif # WARNS <= 6
 .if ${WARNS} <= 3
 CWARNFLAGS.clang+=	-Wno-tautological-compare -Wno-unused-value\
 		-Wno-parentheses-equality -Wno-unused-function -Wno-enum-conversion
-.if ${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} >= 30600
 CWARNFLAGS.clang+=	-Wno-unused-local-typedef
-.endif
-.if ${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} >= 40000
 CWARNFLAGS.clang+=	-Wno-address-of-packed-member
-.endif
 .if ${COMPILER_TYPE} == "gcc" && ${COMPILER_VERSION} >= 90100
 CWARNFLAGS.gcc+=	-Wno-address-of-packed-member
 .endif
@@ -116,9 +120,25 @@ CWARNFLAGS.clang+=	-Wno-array-bounds
 .endif # NO_WARRAY_BOUNDS
 .if defined(NO_WMISLEADING_INDENTATION) && \
     ((${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} >= 100000) || \
-     (${COMPILER_TYPE} == "gcc" && ${COMPILER_VERSION} >= 60100))
+      ${COMPILER_TYPE} == "gcc")
 CWARNFLAGS+=		-Wno-misleading-indentation
 .endif # NO_WMISLEADING_INDENTATION
+.if ${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} >= 140000
+NO_WBITWISE_INSTEAD_OF_LOGICAL=	-Wno-bitwise-instead-of-logical
+.endif
+.if ${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} >= 150000
+NO_WDEPRECATED_NON_PROTOTYPE=-Wno-deprecated-non-prototype
+.endif
+.if ${COMPILER_TYPE} == "gcc" && ${COMPILER_VERSION} >= 100100
+NO_WZERO_LENGTH_BOUNDS=	-Wno-zero-length-bounds
+.endif
+.if ${COMPILER_TYPE} == "gcc" && ${COMPILER_VERSION} >= 110100
+NO_WARRAY_PARAMETER=	-Wno-array-parameter
+.endif
+.if ${COMPILER_TYPE} == "gcc" && ${COMPILER_VERSION} >= 120100
+NO_WUSE_AFTER_FREE=	-Wno-use-after-free
+NO_WDANGLING_POINTER=	-Wno-dangling-pointer
+.endif
 .endif # WARNS
 
 .if defined(FORMAT_AUDIT)
@@ -131,17 +151,24 @@ CWARNFLAGS+=	-Wformat=2 -Wno-format-extra-args
 .if ${WARNS} <= 3
 CWARNFLAGS.clang+=	-Wno-format-nonliteral
 .endif # WARNS <= 3
-.if !defined(NO_WERROR) && !defined(NO_WERROR.${COMPILER_TYPE})
+.if ${MK_WERROR} != "no" && ${MK_WERROR.${COMPILER_TYPE}:Uyes} != "no"
 CWARNFLAGS+=	-Werror
-.endif # !NO_WERROR && !NO_WERROR.${COMPILER_TYPE}
+.endif # ${MK_WERROR} != "no" && ${MK_WERROR.${COMPILER_TYPE}:Uyes} != "no"
 .endif # WFORMAT > 0
 .endif # WFORMAT
 .if defined(NO_WFORMAT) || defined(NO_WFORMAT.${COMPILER_TYPE})
 CWARNFLAGS+=	-Wno-format
 .endif # NO_WFORMAT || NO_WFORMAT.${COMPILER_TYPE}
 
+# GCC
+# We should clean up warnings produced with these flags.
+# They were originally added as a quick hack to enable gcc5/6.
+# The base system requires at least GCC 6.4, but some ports
+# use this file with older compilers.  Request an exprun
+# before changing these.
+.if ${COMPILER_TYPE} == "gcc"
 # GCC 5.2.0
-.if ${COMPILER_TYPE} == "gcc" && ${COMPILER_VERSION} >= 50200
+.if ${COMPILER_VERSION} >= 50200
 CWARNFLAGS+=	-Wno-error=address			\
 		-Wno-error=array-bounds			\
 		-Wno-error=attributes			\
@@ -151,7 +178,6 @@ CWARNFLAGS+=	-Wno-error=address			\
 		-Wno-error=deprecated-declarations	\
 		-Wno-error=enum-compare			\
 		-Wno-error=extra			\
-		-Wno-error=inline			\
 		-Wno-error=logical-not-parentheses	\
 		-Wno-error=strict-aliasing		\
 		-Wno-error=uninitialized		\
@@ -161,7 +187,7 @@ CWARNFLAGS+=	-Wno-error=address			\
 .endif
 
 # GCC 6.1.0
-.if ${COMPILER_TYPE} == "gcc" && ${COMPILER_VERSION} >= 60100
+.if ${COMPILER_VERSION} >= 60100
 CWARNFLAGS+=	-Wno-error=empty-body			\
 		-Wno-error=maybe-uninitialized		\
 		-Wno-error=nonnull-compare		\
@@ -171,7 +197,7 @@ CWARNFLAGS+=	-Wno-error=empty-body			\
 .endif
 
 # GCC 7.1.0
-.if ${COMPILER_TYPE} == "gcc" && ${COMPILER_VERSION} >= 70100
+.if ${COMPILER_VERSION} >= 70100
 CWARNFLAGS+=	-Wno-error=bool-operation		\
 		-Wno-error=deprecated			\
 		-Wno-error=expansion-to-defined		\
@@ -187,7 +213,7 @@ CWARNFLAGS+=	-Wno-error=bool-operation		\
 .endif
 
 # GCC 8.1.0
-.if ${COMPILER_TYPE} == "gcc" && ${COMPILER_VERSION} >= 80100
+.if ${COMPILER_VERSION} >= 80100
 CWARNFLAGS+=	-Wno-error=aggressive-loop-optimizations	\
 		-Wno-error=cast-function-type			\
 		-Wno-error=catch-value				\
@@ -195,13 +221,33 @@ CWARNFLAGS+=	-Wno-error=aggressive-loop-optimizations	\
 		-Wno-error=restrict				\
 		-Wno-error=sizeof-pointer-memaccess		\
 		-Wno-error=stringop-truncation
+CXXWARNFLAGS+=	-Wno-error=class-memaccess
 .endif
 
-.if ${COMPILER_TYPE} == "gcc"
+# GCC 9.2.0
+.if ${COMPILER_VERSION} >= 90200
+.if ${MACHINE_ARCH} == "i386"
+CWARNFLAGS+=	-Wno-error=overflow
+.endif
+.endif
+
+# GCC 12.1.0
+.if ${COMPILER_VERSION} >= 120100
+# These warnings are raised by headers in libc++ so are disabled
+# globally for all C++
+CXXWARNFLAGS+=	-Wno-literal-suffix 			\
+		-Wno-error=unknown-pragmas
+.endif
+
 # GCC produces false positives for functions that switch on an
 # enum (GCC bug 87950)
 CWARNFLAGS+=	-Wno-return-type
+
+# GCC's own arm_neon.h triggers various warnings
+.if ${MACHINE_CPUARCH} == "aarch64"
+CWARNFLAGS+=	-Wno-system-headers
 .endif
+.endif	# gcc
 
 # How to handle MidnightBSD custom printf format specifiers.
 .if ${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} >= 30600
@@ -301,6 +347,27 @@ LIBADD+=	${LIBADD.${.TARGET:T}}
 # Prevent rebuilding during install to support read-only objdirs.
 .if ${.TARGETS:M*install*} == ${.TARGETS} && empty(.MAKE.MODE:Mmeta)
 CFLAGS+=	ERROR-tried-to-rebuild-during-make-install
+.endif
+.endif
+
+# Please keep this if in sync with kern.mk
+.if ${LD} != "ld" && (${CC:[1]:H} != ${LD:[1]:H} || ${LD:[1]:T} != "ld")
+# Add -fuse-ld=${LD} if $LD is in a different directory or not called "ld".
+.if ${COMPILER_TYPE} == "clang"
+# Note: Clang does not like relative paths for ld so we map ld.lld -> lld.
+.if ${COMPILER_VERSION} >= 120000
+LDFLAGS+=	--ld-path=${LD:[1]:S/^ld.//1W}
+.else
+LDFLAGS+=	-fuse-ld=${LD:[1]:S/^ld.//1W}
+.endif
+.elif ${COMPILER_TYPE} == "gcc"
+# GCC does not support an absolute path for -fuse-ld so we just print this
+# warning instead and let the user add the required symlinks.
+# However, we can avoid this warning if -B is set appropriately (e.g. for
+# CROSS_TOOLCHAIN=...-gcc).
+.if !(${LD:[1]:T} == "ld" && ${CC:tw:M-B${LD:[1]:H}/})
+.warning LD (${LD}) is not the default linker for ${CC} but -fuse-ld= is not supported
+.endif
 .endif
 .endif
 

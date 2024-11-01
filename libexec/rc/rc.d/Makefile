@@ -3,7 +3,7 @@
 
 CONFDIR=	/etc/rc.d
 CONFGROUPS=	CONFS
-#PACKAGE=rc
+CONFSPACKAGE=	rc
 
 CONFS=	DAEMON \
 	FILESYSTEMS \
@@ -15,9 +15,7 @@ CONFS=	DAEMON \
 	archdep \
 	bgfsck \
 	${_blacklistd} \
-	${_bluetooth} \
 	bridge \
-	${_bthidd} \
 	cfumass \
 	cleanvar \
 	cleartmp \
@@ -25,10 +23,7 @@ CONFS=	DAEMON \
 	ctld \
 	ddb \
 	defaultroute \
-	devd \
 	devfs \
-	devmatch \
-	dhclient \
 	dhcp6c \
 	dmesg \
 	dumpon \
@@ -39,8 +34,7 @@ CONFS=	DAEMON \
 	geli2 \
 	gptboot \
 	growfs \
-	gssd \
-	${_hcsecd} \
+	growfs_fstab \
 	hostid \
 	hostid_save \
 	hostname \
@@ -95,7 +89,6 @@ CONFS=	DAEMON \
 	rarpd \
 	rctl \
 	rdate \
-	resolv \
 	root \
 	route6d \
 	routing \
@@ -118,12 +111,27 @@ CONFS=	DAEMON \
 	syslogd \
 	sysvipc \
 	tmp \
-	${_ubthidhci} \
 	ugidfw \
 	${_utx} \
 	var \
 	var_run \
 	watchdogd
+
+CONFGROUPS+=		DEVD
+DEVD=			devd
+DEVDPACKAGE=		devd
+
+CONFGROUPS+=		DEVMATCH
+DEVMATCH=		devmatch
+DEVMATCHPACKAGE=	devmatch
+
+CONFGROUPS+=		DHCLIENT
+DHCLIENT=		dhclient
+DHCLIENTPACKAGE=	dhclient
+
+CONFGROUPS+=		RESOLVCONF
+RESOLVCONF=		resolv
+RESOLVCONFPACKAGE=	resolvconf
 
 .if ${MK_NIS} != "no"
 CONFS+=	ypbind \
@@ -147,12 +155,6 @@ ACPI=		power_profile
 ACPIPACKAGE=	acpi
 .endif
 
-.if ${MK_AMD} != "no"
-CONFGROUPS+=	AMD
-AMD+=		amd
-AMDPACKAGE=	amd
-.endif
-
 .if ${MK_APM} != "no"
 CONFGROUPS+=	APM
 APM+=		apm
@@ -166,6 +168,7 @@ APMPACKAGE=	apm
 CONFGROUPS+=	AUDIT
 AUDIT+=		auditd
 AUDIT+=		auditdistd
+AUDITPACKAGE=	rc
 .endif
 
 .if ${MK_AUTOFS} != "no"
@@ -179,12 +182,14 @@ _blacklistd+=	blacklistd
 .endif
 
 .if ${MK_BLUETOOTH} != "no"
-_bluetooth=	bluetooth
-_bthidd=	bthidd
-_hcsecd=	hcsecd
-CONFS+=		rfcomm_pppd_server
-CONFS+=		sdpd
-_ubthidhci=	ubthidhci
+CONFGROUPS+=	BLUETOOTH
+BLUETOOTH+=	bluetooth \
+		bthidd \
+		hcsecd \
+		rfcomm_pppd_server \
+		sdpd \
+		ubthidhci
+BLUETOOTHPACKAGE=	bluetooth
 .endif
 
 .if ${MK_BOOTPARAMD} != "no"
@@ -203,6 +208,12 @@ CONFS+=		ccd
 
 .if ${MK_FTP} != "no"
 CONFS+=		ftpd
+.endif
+
+.if ${MK_GSSAPI} != "no"
+CONFGROUPS+=	GSSD
+GSSD=		gssd
+GSSDPACKAGE=	kerberos
 .endif
 
 .if ${MK_HAST} != "no"
@@ -281,6 +292,10 @@ _opensm=	opensm
 
 .if ${MK_OPENSSL} != "no"
 CONFS+=		keyserv
+.if ${MK_OPENSSL_KTLS} != "no"
+CONFS+=		tlsclntd \
+		tlsservd
+.endif
 .endif
 
 .if ${MK_OPENSSH} != "no"
@@ -301,10 +316,6 @@ CONFS+=		routed
 CONFGROUPS+=	SMRCD
 SMRCD=		sendmail
 SMRCDPACKAGE=	sendmail
-.endif
-
-.if ${MK_TIMED} != "no"
-CONFS+=		timed
 .endif
 
 .if ${MK_UNBOUND} != "no"
@@ -333,11 +344,11 @@ CONFGROUPS+=	ZFS
 ZFS+=		zfs
 ZFS+=		zfsbe
 ZFS+=		zfsd
+ZFS+=		zfskeys
+ZFS+=		zpool
+ZFS+=		zpoolreguid
 ZFS+=		zvol
-ZFSPACKAGE=	zfs
-DIRS+=	ETC_ZFS
-ETC_ZFS=	/etc/zfs
-ETC_ZFSPACKAGE=	zfs
+ZFSPACKAGE=	rc
 .endif
 
 .for fg in ${CONFGROUPS}

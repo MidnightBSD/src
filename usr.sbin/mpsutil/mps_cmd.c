@@ -34,16 +34,9 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/errno.h>
 #include <sys/ioctl.h>
-#if 0
-#include <sys/mps_ioctl.h>
-#else
-#include "mps_ioctl.h"
-#include "mpr_ioctl.h"
-#endif
 #include <sys/sysctl.h>
 #include <sys/uio.h>
 #include <sys/endian.h>
@@ -56,6 +49,8 @@
 #include <unistd.h>
 
 #include "mpsutil.h"
+#include <dev/mps/mps_ioctl.h>
+#include <dev/mpr/mpr_ioctl.h>
 
 #ifndef USE_MPT_IOCTLS
 #define USE_MPT_IOCTLS

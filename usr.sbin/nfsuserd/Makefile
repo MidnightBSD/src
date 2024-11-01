@@ -1,6 +1,7 @@
-# $FreeBSD: stable/11/usr.sbin/nfsuserd/Makefile 346464 2019-04-21 00:51:43Z rmacklem $
 
 .include <src.opts.mk>
+
+PACKAGE=	nfs
 
 PROG=	nfsuserd
 MAN=	nfsuserd.8

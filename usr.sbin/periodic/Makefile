@@ -1,4 +1,6 @@
 
+PACKAGE=	periodic
+
 CONFS=	periodic.conf
 CONFSDIR=	/etc/defaults
 SCRIPTS=periodic.sh

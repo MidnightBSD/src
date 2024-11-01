@@ -1,4 +1,6 @@
 
+PACKAGE=	nfs
+
 PROG=	pnfsdskill
 MAN=	pnfsdskill.8
 

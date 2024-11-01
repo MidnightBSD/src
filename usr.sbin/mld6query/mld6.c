@@ -32,7 +32,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/uio.h>
 #include <sys/socket.h>
@@ -239,7 +238,7 @@ make_msg(int index, struct in6_addr *addr, u_int type, struct in6_addr *qaddr)
 		break;
 	}
 	if (ifap == NULL)
-		errx(1, "no linkocal address is available");
+		errx(1, "no linklocal address is available");
 	memcpy(&src, &((struct sockaddr_in6 *)ifap->ifa_addr)->sin6_addr,
 	       sizeof(src));
 	freeifaddrs(ifa);

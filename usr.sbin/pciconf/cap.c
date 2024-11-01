@@ -45,6 +45,8 @@
 
 static void	list_ecaps(int fd, struct pci_conf *p);
 
+static int cap_level;
+
 static void
 cap_power(int fd, struct pci_conf *p, uint8_t ptr)
 {
@@ -366,9 +368,124 @@ static void
 cap_subvendor(int fd, struct pci_conf *p, uint8_t ptr)
 {
 	uint32_t id;
+	uint16_t ssid, ssvid;
 
 	id = read_config(fd, &p->pc_sel, ptr + PCIR_SUBVENDCAP_ID, 4);
-	printf("PCI Bridge card=0x%08x", id);
+	ssid = id >> 16;
+	ssvid = id & 0xffff;
+	printf("PCI Bridge subvendor=0x%04x subdevice=0x%04x", ssvid, ssid);
+}
+
+static const char *
+cap_secdev_amdiommu_decode_vasize(uint32_t misc0)
+{
+	switch (misc0 & PCIM_AMDIOMMU_MISC0_VASIZE_MASK) {
+	case PCIM_AMDIOMMU_MISC0_VASIZE_32:
+		return ("32bit");
+	case PCIM_AMDIOMMU_MISC0_VASIZE_40:
+		return ("40bit");
+	case PCIM_AMDIOMMU_MISC0_VASIZE_48:
+		return ("48bit");
+	case PCIM_AMDIOMMU_MISC0_VASIZE_64:
+		return ("64bit");
+	default:
+		return ("unknown");
+	}
+}
+
+static const char *
+cap_secdev_amdiommu_decode_pasize(uint32_t misc0)
+{
+	switch (misc0 & PCIM_AMDIOMMU_MISC0_PASIZE_MASK) {
+	case PCIM_AMDIOMMU_MISC0_PASIZE_40:
+		return ("40bit");
+	case PCIM_AMDIOMMU_MISC0_PASIZE_48:
+		return ("48bit");
+	case PCIM_AMDIOMMU_MISC0_PASIZE_52:
+		return ("52bit");
+	default:
+		return ("unknown");
+	}
+}
+
+static const char *
+cap_secdev_amdiommu_decode_gvasize(uint32_t misc0)
+{
+	switch (misc0 & PCIM_AMDIOMMU_MISC0_GVASIZE_MASK) {
+	case PCIM_AMDIOMMU_MISC0_GVASIZE_48:
+		return ("48bit");
+	case PCIM_AMDIOMMU_MISC0_GVASIZE_57:
+		return ("57bit");
+	default:
+		return ("unknown");
+	}
+}
+
+static void
+cap_secdev(int fd, struct pci_conf *p, uint8_t ptr)
+{
+	uint32_t cap_h;
+	uint32_t cap_type, cap_rev;
+	uint32_t base_low, base_high;
+	uint32_t range;
+	uint32_t misc0, misc1;
+	const char *delim;
+
+	cap_h = read_config(fd, &p->pc_sel, ptr + PCIR_AMDIOMMU_CAP_HEADER, 4);
+	cap_type = cap_h & PCIM_AMDIOMMU_CAP_TYPE_MASK;
+	cap_rev = cap_h & PCIM_AMDIOMMU_CAP_REV_MASK;
+	if (cap_type != PCIM_AMDIOMMU_CAP_TYPE_VAL ||
+	    cap_rev != PCIM_AMDIOMMU_CAP_REV_VAL) {
+		printf("Secure Device Type=0x%1x Rev=0x%02x\n",
+		    cap_type >> 16, cap_rev >> 19);
+		return;
+	}
+	base_low = read_config(fd, &p->pc_sel, ptr + PCIR_AMDIOMMU_BASE_LOW,
+	    4);
+	base_high = read_config(fd, &p->pc_sel, ptr + PCIR_AMDIOMMU_BASE_HIGH,
+	    4);
+	printf("AMD IOMMU Base Capability Base=%#018jx/%sabled",
+	    (uintmax_t)(base_low & PCIM_AMDIOMMU_BASE_LOW_ADDRM) +
+	    ((uintmax_t)base_high << 32),
+	    (base_low & PCIM_AMDIOMMU_BASE_LOW_EN) != 0 ? "En" : "Dis");
+
+	delim = "\n\t\t";
+#define	PRINTCAP(bit, name)				\
+	if ((cap_h & PCIM_AMDIOMMU_CAP_ ##bit) != 0) {	\
+		printf("%s%s", delim, #name);		\
+		delim = ",";				\
+	}
+	PRINTCAP(CAPEXT, CapExt);
+	PRINTCAP(EFR, EFRSup);
+	PRINTCAP(NPCACHE, NpCache);
+	PRINTCAP(HTTUN, HtTunnel);
+	PRINTCAP(IOTLB, IotlbSup);
+#undef PRINTCAP
+
+	range = read_config(fd, &p->pc_sel, ptr + PCIR_AMDIOMMU_RANGE, 4);
+	printf("\n\t\tUnitId=%d", range & PCIM_AMDIOMMU_RANGE_UNITID_MASK);
+	if ((range & PCIM_AMDIOMMU_RANGE_RNGVALID) != 0) {
+		printf(" BusNum=%#06x FirstDev=%#06x LastDev=%#06x",
+		    (range & PCIM_AMDIOMMU_RANGE_BUSNUM_MASK) >> 8,
+		    (range & PCIM_AMDIOMMU_RANGE_FIRSTDEV_MASK) >> 16,
+		    (range & PCIM_AMDIOMMU_RANGE_LASTDEV_MASK) >> 24);
+	}
+
+	misc0 = read_config(fd, &p->pc_sel, ptr + PCIR_AMDIOMMU_MISC0, 4);
+	printf("\n\t\tMsiNum=%d MsiNumPPR=%d HtAtsResv=%d",
+	    misc0 & PCIM_AMDIOMMU_MISC0_MSINUM_MASK,
+	    (misc0 & PCIM_AMDIOMMU_MISC0_MSINUMPPR_MASK) >> 27,
+	    (misc0 & PCIM_AMDIOMMU_MISC0_HTATSRESV) != 0);
+	if ((cap_h & PCIM_AMDIOMMU_CAP_CAPEXT) != 0) {
+		misc1 = read_config(fd, &p->pc_sel,
+		    ptr + PCIR_AMDIOMMU_MISC1, 4);
+		printf(" MsiNumGA=%d",
+		    misc1 & PCIM_AMDIOMMU_MISC1_MSINUMGA_MASK);
+	}
+	printf("\n\t\tVAsize=%s PAsize=%s GVAsize=%s",
+	    cap_secdev_amdiommu_decode_vasize(misc0),
+	    cap_secdev_amdiommu_decode_pasize(misc0),
+	    cap_secdev_amdiommu_decode_gvasize(misc0));
 }
 
 #define	MAX_PAYLOAD(field)		(128 << (field))
@@ -745,7 +862,7 @@ cap_ea(int fd, struct pci_conf *p, uint8_t ptr)
 }
 
 void
-list_caps(int fd, struct pci_conf *p)
+list_caps(int fd, struct pci_conf *p, int level)
 {
 	int express;
 	uint16_t sta;
@@ -755,6 +872,8 @@ list_caps(int fd, struct pci_conf *p)
 	sta = read_config(fd, &p->pc_sel, PCIR_STATUS, 2);
 	if (!(sta & PCIM_STATUS_CAPPRESENT))
 		return;
+
+	cap_level = level;
 
 	switch (p->pc_hdr & PCIM_HDRTYPE) {
 	case PCIM_HDRTYPE_NORMAL:
@@ -801,6 +920,9 @@ list_caps(int fd, struct pci_conf *p)
 			break;
 		case PCIY_SUBVENDOR:
 			cap_subvendor(fd, p, ptr);
+			break;
+		case PCIY_SECDEV:
+			cap_secdev(fd, p, ptr);
 			break;
 		case PCIY_EXPRESS:
 			express = 1;
@@ -897,13 +1019,35 @@ ecap_sernum(int fd, struct pci_conf *p, uint16_t ptr, uint8_t ver)
 static void
 ecap_vendor(int fd, struct pci_conf *p, uint16_t ptr, uint8_t ver)
 {
-	uint32_t val;
+	uint32_t val, hdr;
+	uint16_t nextptr, len;
+	int i;
 
-	printf("Vendor %d", ver);
-	if (ver < 1)
+	val = read_config(fd, &p->pc_sel, ptr, 4);
+	nextptr = PCI_EXTCAP_NEXTPTR(val);
+	hdr = read_config(fd, &p->pc_sel, ptr + PCIR_VSEC_HEADER, 4);
+	len = PCIR_VSEC_LENGTH(hdr);
+	if (len == 0) {
+		if (nextptr == 0)
+			nextptr = 0x1000;
+		len = nextptr - ptr;
+	}
+
+	printf("Vendor [%d] ID %04x Rev %d Length %d\n", ver,
+	    PCIR_VSEC_ID(hdr), PCIR_VSEC_REV(hdr), len);
+	if ((ver < 1) || (cap_level <= 1))
 		return;
-	val = read_config(fd, &p->pc_sel, ptr + 4, 4);
-	printf(" ID %d\n", val & 0xffff);
+	for (i = 0; i < len; i += 4) {
+		val = read_config(fd, &p->pc_sel, ptr + i, 4);
+		if ((i % 16) == 0)
+			printf("                 ");
+		printf("%02x %02x %02x %02x", val & 0xff, (val >> 8) & 0xff,
+		    (val >> 16) & 0xff, (val >> 24) & 0xff);
+		if ((((i + 4) % 16) == 0 ) || ((i + 4) >= len))
+			printf("\n");
+		else
+			printf(" ");
+	}
 }
 
 static void
@@ -980,6 +1124,64 @@ ecap_sriov(int fd, struct pci_conf *p, uint16_t ptr, uint8_t ver)
 
 	for (i = 0; i <= PCIR_MAX_BAR_0; i++)
 		print_bar(fd, p, "iov bar  ", ptr + PCIR_SRIOV_BAR(i));
+}
+
+static const char *
+check_avail_and_state(u_int cap, u_int capbit, u_int ctl, u_int ctlbit)
+{
+
+	if (cap & capbit)
+		return (ctl & ctlbit ? "enabled" : "disabled");
+	else
+		return "unavailable";
+}
+
+static void
+ecap_acs(int fd, struct pci_conf *p, uint16_t ptr, uint8_t ver)
+{
+	uint16_t acs_cap, acs_ctl;
+	static const char *const acc[] = { "access enabled", "blocking enabled",
+		"redirect enabled", "reserved" };
+
+	printf("ACS %d ", ver);
+	if (ver != 1) {
+		printf("\n");
+		return;
+	}
+
+#define	CHECK_AVAIL_STATE(bit) \
+	check_avail_and_state(acs_cap, bit, acs_ctl, bit##_ENABLE)
+
+	acs_cap = read_config(fd, &p->pc_sel, ptr + PCIR_ACS_CAP, 2);
+	acs_ctl = read_config(fd, &p->pc_sel, ptr + PCIR_ACS_CTL, 2);
+	printf("Source Validation %s, Translation Blocking %s\n",
+	    CHECK_AVAIL_STATE(PCIM_ACS_SOURCE_VALIDATION),
+	    CHECK_AVAIL_STATE(PCIM_ACS_TRANSLATION_BLOCKING));
+
+	printf("                     ");
+	printf("P2P Req Redirect %s, P2P Cmpl Redirect %s\n",
+	    CHECK_AVAIL_STATE(PCIM_ACS_P2P_REQ_REDIRECT),
+	    CHECK_AVAIL_STATE(PCIM_ACS_P2P_CMP_REDIRECT));
+	printf("                     ");
+	printf("P2P Upstream Forwarding %s, P2P Egress Control %s\n",
+	    CHECK_AVAIL_STATE(PCIM_ACS_P2P_UPSTREAM_FORWARDING),
+	    CHECK_AVAIL_STATE(PCIM_ACS_P2P_EGRESS_CTL));
+	printf("                     ");
+	printf("P2P Direct Translated %s, Enhanced Capability %s\n",
+	    CHECK_AVAIL_STATE(PCIM_ACS_P2P_DIRECT_TRANSLATED),
+	    acs_ctl & PCIM_ACS_ENHANCED_CAP ? "available" : "unavailable");
+#undef	CHECK_AVAIL_STATE
+
+	if (acs_cap & PCIM_ACS_ENHANCED_CAP) {
+		printf("                     ");
+		printf("I/O Req Blocking %s, Unclaimed Req Redirect Control %s\n",
+		    check_enabled(acs_ctl & PCIM_ACS_IO_REQ_BLOCKING_ENABLE),
+		    check_enabled(acs_ctl & PCIM_ACS_UNCLAIMED_REQ_REDIRECT_CTL));
+		printf("                     ");
+		printf("DSP BAR %s, USP BAR %s\n",
+		    acc[(acs_cap & PCIM_ACS_DSP_MEM_TGT_ACC_CTL) >> 8],
+		    acc[(acs_cap & PCIM_ACS_USP_MEM_TGT_ACC_CTL) >> 10]);
+	}
 }
 
 static struct {
@@ -1064,6 +1266,9 @@ list_ecaps(int fd, struct pci_conf *p)
 			break;
 		case PCIZ_SRIOV:
 			ecap_sriov(fd, p, ptr, PCI_EXTCAP_VER(ecap));
+			break;
+		case PCIZ_ACS:
+			ecap_acs(fd, p, ptr, PCI_EXTCAP_VER(ecap));
 			break;
 		default:
 			name = "unknown";

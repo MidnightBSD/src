@@ -6246,17 +6246,26 @@ parse_args(char* argv[], int argc, bool *use_pathp, int *fdp,
 				mib[1] = HW_MACHINE;
 				sz = sizeof(machine);
 				sysctl(mib, nitems(mib), machine, &sz, NULL, 0);
+				ld_elf_hints_path = ld_get_env_var(
+				    LD_ELF_HINTS_PATH);
+				set_ld_elf_hints_path();
 				rtld_printf(
 				    "MidnightBSD ld-elf.so.1 %s\n"
 				    "MidnightBSD_version %d\n"
 				    "Default lib path %s\n"
+				    "Hints lib path %s\n"
 				    "Env prefix %s\n"
+				    "Default hint file %s\n"
 				    "Hint file %s\n"
-				    "libmap file %s\n",
+				    "libmap file %s\n"
+				    "Optional static TLS size %zd bytes\n",
 				    machine,
 				    __MidnightBSD_version, ld_standard_library_path,
+				    gethints(false),
 				    ld_env_prefix, ld_elf_hints_default,
-				    ld_path_libmap_conf);
+				    ld_elf_hints_path,
+				    ld_path_libmap_conf,
+				    ld_static_tls_extra);
 				_exit(0);
 			} else {
 				_rtld_error("Invalid argument: '%s'", arg);
@@ -6303,13 +6312,16 @@ print_usage(const char *argv0)
 {
 
 	rtld_printf(
-	    "Usage: %s [-h] [-b <exe>] [-f <FD>] [-p] [--] <binary> [<args>]\n"
+	    "Usage: %s [-h] [-b <exe>] [-d] [-f <FD>] [-p] [--] <binary> [<args>]\n"
 	    "\n"
 	    "Options:\n"
 	    "  -h        Display this help message\n"
 	    "  -b <exe>  Execute <exe> instead of <binary>, arg0 is <binary>\n"
+	    "  -d        Ignore lack of exec permissions for the binary\n"
 	    "  -f <FD>   Execute <FD> instead of searching for <binary>\n"
+	    "  -o <OPT>=<VAL> Set LD_<OPT> to <VAL>, without polluting env\n"
 	    "  -p        Search in PATH for named binary\n"
+	    "  -u        Ignore LD_ environment variables\n"
 	    "  -v        Display identification information\n"
 	    "  --        End of RTLD options\n"
 	    "  <binary>  Name of process to execute\n"
@@ -6359,6 +6371,7 @@ static const struct auxfmt {
 	AUXFMT(AT_USRSTACKBASE, "%#lx"),
 	AUXFMT(AT_USRSTACKLIM, "%#lx"),
 };
+
 static bool
 is_ptr_fmt(const char *fmt)
 {

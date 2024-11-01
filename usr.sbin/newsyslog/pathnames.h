@@ -18,7 +18,6 @@ M.I.T. and the M.I.T. S.I.P.B. make no representations about
 the suitability of this software for any purpose.  It is
 provided "as is" without express or implied warranty.
 
-
 */
 
 #define	_PATH_CONF	"/etc/newsyslog.conf"

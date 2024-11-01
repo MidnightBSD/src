@@ -38,7 +38,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <err.h>
 #include <netgraph.h>
 #include <stdio.h>

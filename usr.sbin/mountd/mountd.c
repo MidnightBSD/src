@@ -45,8 +45,8 @@ static char sccsid[] = "@(#)mountd.c	8.15 (Berkeley) 5/1/95";
 #endif
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
+#include <sys/conf.h>
 #include <sys/fcntl.h>
 #include <sys/fnv_hash.h>
 #include <sys/linker.h>
@@ -111,6 +111,19 @@ struct dirlist {
 #define	DP_DEFSET	0x1
 #define DP_HOSTSET	0x2
 
+/*
+ * maproot/mapall credentials.
+ * cr_smallgrps can be used for a group list up to SMALLNGROUPS in size.
+ * Larger group lists are malloc'd/free'd.
+ */
+#define	SMALLNGROUPS	32
+struct expcred {
+	uid_t		cr_uid;
+	int		cr_ngroups;
+	gid_t		cr_smallgrps[SMALLNGROUPS];
+	gid_t		*cr_groups;
+};
+
 struct exportlist {
 	struct dirlist	*ex_dirl;
 	struct dirlist	*ex_defdir;
@@ -119,8 +132,8 @@ struct exportlist {
 	fsid_t		ex_fs;
 	char		*ex_fsdir;
 	char		*ex_indexfile;
-	struct xucred	ex_defanon;
-	int		ex_defexflags;
+	struct expcred	ex_defanon;
+	uint64_t	ex_defexflags;
 	int		ex_numsecflavors;
 	int		ex_secflavors[MAXSECFLAVORS];
 	int		ex_defnumsecflavors;
@@ -151,8 +164,8 @@ struct grouplist {
 	int gr_type;
 	union grouptypes gr_ptr;
 	struct grouplist *gr_next;
-	struct xucred gr_anon;
-	int gr_exflags;
+	struct expcred gr_anon;
+	uint64_t gr_exflags;
 	int gr_flag;
 	int gr_numsecflavors;
 	int gr_secflavors[MAXSECFLAVORS];
@@ -193,7 +206,7 @@ struct fhreturn {
 static char	*add_expdir(struct dirlist **, char *, int);
 static void	add_dlist(struct dirlist **, struct dirlist *,
 		    struct grouplist *, int, struct exportlist *,
-		    struct xucred *, int);
+		    struct expcred *, uint64_t);
 static void	add_mlist(char *, char *);
 static int	check_dirpath(char *);
 static int	check_options(struct dirlist *);
@@ -207,10 +220,10 @@ static void	clearout_service(void);
 static void	del_mlist(char *hostp, char *dirp);
 static struct dirlist	*dirp_search(struct dirlist *, char *);
 static int	do_export_mount(struct exportlist *, struct statfs *);
-static int	do_mount(struct exportlist *, struct grouplist *, int,
-		    struct xucred *, char *, int, struct statfs *, int, int *);
+static int	do_mount(struct exportlist *, struct grouplist *, uint64_t,
+		    struct expcred *, char *, int, struct statfs *, int, int *);
 static int	do_opt(char **, char **, struct exportlist *,
-		    struct grouplist *, int *, int *, struct xucred *);
+		    struct grouplist *, int *, uint64_t *, struct expcred *);
 static struct exportlist	*ex_search(fsid_t *, struct exportlisthead *);
 static struct exportlist	*get_exp(void);
 static void	free_dir(struct dirlist *);
@@ -225,7 +238,7 @@ static void	free_exports(struct exportlisthead *);
 static void	read_exportfile(int);
 static int	compare_nmount_exportlist(struct iovec *, int, char *);
 static int	compare_export(struct exportlist *, struct exportlist *);
-static int	compare_cred(struct xucred *, struct xucred *);
+static int	compare_cred(struct expcred *, struct expcred *);
 static int	compare_secflavor(int *, int *, int);
 static void	delete_export(struct iovec *, int, struct statfs *, char *);
 static int	get_host(char *, struct grouplist *, struct grouplist *);
@@ -236,13 +249,13 @@ static int	get_net(char *, struct netmsk *, int);
 static void	getexp_err(struct exportlist *, struct grouplist *, const char *);
 static struct grouplist	*get_grp(void);
 static void	hang_dirp(struct dirlist *, struct grouplist *,
-		    struct exportlist *, int, struct xucred *, int);
+		    struct exportlist *, int, struct expcred *, uint64_t);
 static void	huphandler(int sig);
 static int	makemask(struct sockaddr_storage *ssp, int bitlen);
 static void	mntsrv(struct svc_req *, SVCXPRT *);
 static void	nextfield(char **, char **);
 static void	out_of_mem(void);
-static void	parsecred(char *, struct xucred *);
+static void	parsecred(char *, struct expcred *);
 static int	parsesec(char *, struct exportlist *);
 static int	put_exlist(struct dirlist *, XDR *, struct dirlist *,
 		    int *, int);
@@ -258,6 +271,7 @@ static int	xdr_explist_common(XDR *, caddr_t, int);
 static int	xdr_fhs(XDR *, caddr_t);
 static int	xdr_mlist(XDR *, caddr_t);
 static void	terminate(int);
+static void	cp_cred(struct expcred *, struct expcred *);
 
 #define	EXPHASH(f)	(fnv_32_buf((f), sizeof(fsid_t), 0) % exphashsize)
 static struct exportlisthead *exphead = NULL;
@@ -267,13 +281,6 @@ static SLIST_HEAD(, mountlist) mlhead = SLIST_HEAD_INITIALIZER(&mlhead);
 static char *exnames_default[2] = { _PATH_EXPORTS, NULL };
 static char **exnames;
 static char **hosts = NULL;
-static struct xucred def_anon = {
-	XUCRED_VERSION,
-	(uid_t)65534,
-	1,
-	{ (gid_t)65533 },
-	{ NULL }
-};
 static int force_v2 = 0;
 static int resvport_only = 1;
 static int nhosts = 0;
@@ -310,6 +317,7 @@ static struct pidfh *pfh = NULL;
 #define	OP_QUIET	0x100
 #define OP_MASKLEN	0x200
 #define OP_SEC		0x400
+#define OP_CLASSMASK	0x800	/* mask not specified, is Class A/B/C default */
 
 #ifdef DEBUG
 static int debug = 1;
@@ -1546,11 +1554,13 @@ get_exportlist_one(int passno)
 	struct grouplist *grp, *tgrp, *savgrp;
 	struct dirlist *dirhead;
 	struct statfs fsb;
-	struct xucred anon;
+	struct expcred anon;
 	char *cp, *endcp, *dirp, *hst, *usr, *dom, savedc;
-	int len, has_host, exflags, got_nondir, dirplen, netgrp;
+	int len, has_host, got_nondir, dirplen, netgrp;
+	uint64_t exflags;
 
 	v4root_phase = 0;
+	anon.cr_groups = NULL;
 	dirhead = (struct dirlist *)NULL;
 	while (get_line()) {
 		if (debug)
@@ -1564,7 +1574,10 @@ get_exportlist_one(int passno)
 		 * Set defaults.
 		 */
 		has_host = FALSE;
-		anon = def_anon;
+		anon.cr_groups = anon.cr_smallgrps;
+		anon.cr_uid = UID_NOBODY;
+		anon.cr_ngroups = 1;
+		anon.cr_groups[0] = GID_NOGROUP;
 		exflags = MNT_EXPORTED;
 		got_nondir = 0;
 		opt_flags = 0;
@@ -1735,6 +1748,11 @@ get_exportlist_one(int passno)
 			nextfield(&cp, &endcp);
 			len = endcp - cp;
 		}
+		if (opt_flags & OP_CLASSMASK)
+			syslog(LOG_WARNING,
+			    "WARNING: No mask specified for %s, "
+			    "using out-of-date default",
+			    (&grp->gr_ptr.gt_net)->nt_name);
 		if (check_options(dirhead)) {
 			getexp_err(ep, tgrp, NULL);
 			goto nextline;
@@ -1781,7 +1799,7 @@ get_exportlist_one(int passno)
 		grp = tgrp;
 		do {
 			grp->gr_exflags = exflags;
-			grp->gr_anon = anon;
+			cp_cred(&grp->gr_anon, &anon);
 			if (v4root_phase == 2 && passno == 0)
 				LOGDEBUG("do_mount v4root");
 			if (passno == 0 && do_mount(ep, grp, exflags, &anon,
@@ -1857,6 +1875,10 @@ nextline:
 			free_dir(dirhead);
 			dirhead = (struct dirlist *)NULL;
 		}
+		if (anon.cr_groups != anon.cr_smallgrps) {
+			free(anon.cr_groups);
+			anon.cr_groups = NULL;
+		}
 	}
 }
 
@@ -1922,7 +1944,7 @@ get_exportlist(int passno)
 	 */
 	bzero(&eargs, sizeof (eargs));
 	eargs.export.ex_flags = MNT_DELEXPORT;
-	if (nfssvc(NFSSVC_V4ROOTEXPORT, (caddr_t)&eargs) < 0 &&
+	if (nfssvc(NFSSVC_V4ROOTEXPORT | NFSSVC_NEWSTRUCT, (caddr_t)&eargs) < 0 &&
 	    errno != ENOENT)
 		syslog(LOG_ERR, "Can't delete exports for V4:");
 
@@ -2316,10 +2338,10 @@ compare_export(struct exportlist *ep, struct exportlist *oep)
 	} while (0)
 
 /*
- * Compare to struct xucred's.  Return 0 if the same and 1 otherwise.
+ * Compare two struct expcred's.  Return 0 if the same and 1 otherwise.
  */
 static int
-compare_cred(struct xucred *cr0, struct xucred *cr1)
+compare_cred(struct expcred *cr0, struct expcred *cr1)
 {
 
 	if (cr0->cr_uid != cr1->cr_uid || cr0->cr_ngroups != cr1->cr_ngroups)
@@ -2484,7 +2506,7 @@ add_expdir(struct dirlist **dpp, char *cp, int len)
  */
 static void
 hang_dirp(struct dirlist *dp, struct grouplist *grp, struct exportlist *ep,
-	int flags, struct xucred *anoncrp, int exflags)
+	int flags, struct expcred *anoncrp, uint64_t exflags)
 {
 	struct hostlist *hp;
 	struct dirlist *dp2;
@@ -2502,7 +2524,7 @@ hang_dirp(struct dirlist *dp, struct grouplist *grp, struct exportlist *ep,
 			if (ep->ex_numsecflavors > 0)
 				memcpy(ep->ex_defsecflavors, ep->ex_secflavors,
 				    sizeof(ep->ex_secflavors));
-			ep->ex_defanon = *anoncrp;
+			cp_cred(&ep->ex_defanon, anoncrp);
 			ep->ex_defexflags = exflags;
 		} else while (grp) {
 			hp = get_ht();
@@ -2536,7 +2558,8 @@ hang_dirp(struct dirlist *dp, struct grouplist *grp, struct exportlist *ep,
  */
 static void
 add_dlist(struct dirlist **dpp, struct dirlist *newdp, struct grouplist *grp,
-	int flags, struct exportlist *ep, struct xucred *anoncrp, int exflags)
+	int flags, struct exportlist *ep, struct expcred *anoncrp,
+	uint64_t exflags)
 {
 	struct dirlist *dp;
 	struct hostlist *hp;
@@ -2585,7 +2608,7 @@ add_dlist(struct dirlist **dpp, struct dirlist *newdp, struct grouplist *grp,
 		if (ep->ex_numsecflavors > 0)
 			memcpy(ep->ex_defsecflavors, ep->ex_secflavors,
 			    sizeof(ep->ex_secflavors));
-		ep->ex_defanon = *anoncrp;
+		cp_cred(&ep->ex_defanon, anoncrp);
 		ep->ex_defexflags = exflags;
 	}
 }
@@ -2757,11 +2780,11 @@ parsesec(char *seclist, struct exportlist *ep)
  */
 static int
 do_opt(char **cpp, char **endcpp, struct exportlist *ep, struct grouplist *grp,
-	int *has_hostp, int *exflagsp, struct xucred *cr)
+	int *has_hostp, uint64_t *exflagsp, struct expcred *cr)
 {
 	char *cpoptarg, *cpoptend;
 	char *cp, *endcp, *cpopt, savedc, savedc2;
-	int allflag, usedarg;
+	int allflag, usedarg, fnd_equal;
 
 	savedc2 = '\0';
 	cpopt = *cpp;
@@ -2772,14 +2795,18 @@ do_opt(char **cpp, char **endcpp, struct exportlist *ep, struct grouplist *grp,
 	while (cpopt && *cpopt) {
 		allflag = 1;
 		usedarg = -2;
+		fnd_equal = 0;
 		if ((cpoptend = strchr(cpopt, ','))) {
 			*cpoptend++ = '\0';
-			if ((cpoptarg = strchr(cpopt, '=')))
+			if ((cpoptarg = strchr(cpopt, '='))) {
 				*cpoptarg++ = '\0';
+				fnd_equal = 1;
+			}
 		} else {
-			if ((cpoptarg = strchr(cpopt, '=')))
+			if ((cpoptarg = strchr(cpopt, '='))) {
 				*cpoptarg++ = '\0';
-			else {
+				fnd_equal = 1;
+			} else {
 				*cp = savedc;
 				nextfield(&cp, &endcp);
 				**endcpp = '\0';
@@ -2792,6 +2819,10 @@ do_opt(char **cpp, char **endcpp, struct exportlist *ep, struct grouplist *grp,
 			}
 		}
 		if (!strcmp(cpopt, "ro") || !strcmp(cpopt, "o")) {
+			if (fnd_equal == 1) {
+				syslog(LOG_ERR, "= after op: %s", cpopt);
+				return (1);
+			}
 			*exflagsp |= MNT_EXRDONLY;
 		} else if (cpoptarg && (!strcmp(cpopt, "maproot") ||
 		    !(allflag = strcmp(cpopt, "mapall")) ||
@@ -2830,21 +2861,56 @@ do_opt(char **cpp, char **endcpp, struct exportlist *ep, struct grouplist *grp,
 			usedarg++;
 			opt_flags |= OP_NET;
 		} else if (!strcmp(cpopt, "alldirs")) {
+			if (fnd_equal == 1) {
+				syslog(LOG_ERR, "= after op: %s", cpopt);
+				return (1);
+			}
 			opt_flags |= OP_ALLDIRS;
 		} else if (!strcmp(cpopt, "public")) {
+			if (fnd_equal == 1) {
+				syslog(LOG_ERR, "= after op: %s", cpopt);
+				return (1);
+			}
 			*exflagsp |= MNT_EXPUBLIC;
 		} else if (!strcmp(cpopt, "webnfs")) {
+			if (fnd_equal == 1) {
+				syslog(LOG_ERR, "= after op: %s", cpopt);
+				return (1);
+			}
 			*exflagsp |= (MNT_EXPUBLIC|MNT_EXRDONLY|MNT_EXPORTANON);
 			opt_flags |= OP_MAPALL;
 		} else if (cpoptarg && !strcmp(cpopt, "index")) {
 			ep->ex_indexfile = strdup(cpoptarg);
 		} else if (!strcmp(cpopt, "quiet")) {
+			if (fnd_equal == 1) {
+				syslog(LOG_ERR, "= after op: %s", cpopt);
+				return (1);
+			}
 			opt_flags |= OP_QUIET;
 		} else if (cpoptarg && !strcmp(cpopt, "sec")) {
 			if (parsesec(cpoptarg, ep))
 				return (1);
 			opt_flags |= OP_SEC;
 			usedarg++;
+		} else if (!strcmp(cpopt, "tls")) {
+			if (fnd_equal == 1) {
+				syslog(LOG_ERR, "= after op: %s", cpopt);
+				return (1);
+			}
+			*exflagsp |= MNT_EXTLS;
+		} else if (!strcmp(cpopt, "tlscert")) {
+			if (fnd_equal == 1) {
+				syslog(LOG_ERR, "= after op: %s", cpopt);
+				return (1);
+			}
+			*exflagsp |= (MNT_EXTLS | MNT_EXTLSCERT);
+		} else if (!strcmp(cpopt, "tlscertuser")) {
+			if (fnd_equal == 1) {
+				syslog(LOG_ERR, "= after op: %s", cpopt);
+				return (1);
+			}
+			*exflagsp |= (MNT_EXTLS | MNT_EXTLSCERT |
+			    MNT_EXTLSCERTUSER);
 		} else {
 			syslog(LOG_ERR, "bad opt %s", cpopt);
 			return (1);
@@ -2948,6 +3014,8 @@ free_exp(struct exportlist *ep)
 		grp = grp->gr_next;
 		free_grp(tgrp);
 	}
+	if (ep->ex_defanon.cr_groups != ep->ex_defanon.cr_smallgrps)
+		free(ep->ex_defanon.cr_groups);
 	free((caddr_t)ep);
 }
 
@@ -3019,7 +3087,7 @@ do_export_mount(struct exportlist *ep, struct statfs *fsp)
 		defgrp.gr_type = GT_DEFAULT;
 		defgrp.gr_next = NULL;
 		/* We have an entry for all other hosts/nets. */
-		LOGDEBUG("ex_defexflags=0x%x", ep->ex_defexflags);
+		LOGDEBUG("ex_defexflags=0x%jx", (uintmax_t)ep->ex_defexflags);
 		ret = do_mount(ep, &defgrp, ep->ex_defexflags, &ep->ex_defanon,
 		    ep->ex_fsdir, dirlen, fsp, ep->ex_defnumsecflavors,
 		    ep->ex_defsecflavors);
@@ -3030,8 +3098,8 @@ do_export_mount(struct exportlist *ep, struct statfs *fsp)
 	/* Do a mount for each group. */
 	grp = ep->ex_grphead;
 	while (grp != NULL) {
-		LOGDEBUG("do mount gr_type=0x%x gr_exflags=0x%x",
-		    grp->gr_type, grp->gr_exflags);
+		LOGDEBUG("do mount gr_type=0x%x gr_exflags=0x%jx",
+		    grp->gr_type, (uintmax_t)grp->gr_exflags);
 		ret = do_mount(ep, grp, grp->gr_exflags, &grp->gr_anon,
 		    ep->ex_fsdir, dirlen, fsp, grp->gr_numsecflavors,
 		    grp->gr_secflavors);
@@ -3047,8 +3115,8 @@ do_export_mount(struct exportlist *ep, struct statfs *fsp)
  * the kernel.
  */
 static int
-do_mount(struct exportlist *ep, struct grouplist *grp, int exflags,
-    struct xucred *anoncrp, char *dirp, int dirplen, struct statfs *fsb,
+do_mount(struct exportlist *ep, struct grouplist *grp, uint64_t exflags,
+    struct expcred *anoncrp, char *dirp, int dirplen, struct statfs *fsb,
     int numsecflavors, int *secflavors)
 {
 	struct statfs fsb1;
@@ -3074,8 +3142,14 @@ do_mount(struct exportlist *ep, struct grouplist *grp, int exflags,
 	bzero(eap, sizeof (struct export_args));
 	bzero(errmsg, sizeof(errmsg));
 	eap->ex_flags = exflags;
-	eap->ex_anon = *anoncrp;
-	LOGDEBUG("do_mount exflags=0x%x", exflags);
+	eap->ex_uid = anoncrp->cr_uid;
+	eap->ex_ngroups = anoncrp->cr_ngroups;
+	if (eap->ex_ngroups > 0) {
+		eap->ex_groups = malloc(eap->ex_ngroups * sizeof(gid_t));
+		memcpy(eap->ex_groups, anoncrp->cr_groups, eap->ex_ngroups *
+		    sizeof(gid_t));
+	}
+	LOGDEBUG("do_mount exflags=0x%jx", (uintmax_t)exflags);
 	eap->ex_indexfile = ep->ex_indexfile;
 	if (grp->gr_type == GT_HOST)
 		ai = grp->gr_ptr.gt_addrinfo;
@@ -3145,9 +3219,11 @@ do_mount(struct exportlist *ep, struct grouplist *grp, int exflags,
 		 */
 		if (v4root_phase == 2) {
 			nfsea.fspec = v4root_dirpath;
-			if (nfssvc(NFSSVC_V4ROOTEXPORT, (caddr_t)&nfsea) < 0) {
+			if (nfssvc(NFSSVC_V4ROOTEXPORT | NFSSVC_NEWSTRUCT,
+			    (caddr_t)&nfsea) < 0) {
 				syslog(LOG_ERR, "Exporting V4: failed");
-				return (2);
+				ret = 2;
+				goto error_exit;
 			}
 		} else {
 			/*
@@ -3262,6 +3338,7 @@ skip:
 	if (cp)
 		*cp = savedc;
 error_exit:
+	free(eap->ex_groups);
 	/* free strings allocated by strdup() in getmntopts.c */
 	if (iov != NULL) {
 		free(iov[0].iov_base); /* fstype */
@@ -3348,6 +3425,7 @@ get_net(char *cp, struct netmsk *net, int maskflg)
 			goto fail;
 		bcopy(sa, &net->nt_mask, sa->sa_len);
 		opt_flags |= OP_HAVEMASK;
+		opt_flags &= ~OP_CLASSMASK;
 	} else {
 		/* The specified sockaddr is a network address. */
 		bcopy(sa, &net->nt_net, sa->sa_len);
@@ -3388,14 +3466,14 @@ get_net(char *cp, struct netmsk *net, int maskflg)
 				preflen = 16;
 			else if (IN_CLASSC(addr))
 				preflen = 24;
-			else if (IN_CLASSD(addr))
+			else if (IN_CLASSD(addr))	/* XXX Multicast??? */
 				preflen = 28;
 			else
 				preflen = 32;	/* XXX */
 
 			bcopy(sa, &net->nt_mask, sa->sa_len);
 			makemask(&net->nt_mask, (int)preflen);
-			opt_flags |= OP_HAVEMASK;
+			opt_flags |= OP_HAVEMASK | OP_CLASSMASK;
 		}
 	}
 
@@ -3488,22 +3566,24 @@ get_line(void)
  * Parse a description of a credential.
  */
 static void
-parsecred(char *namelist, struct xucred *cr)
+parsecred(char *namelist, struct expcred *cr)
 {
 	char *name;
-	int cnt;
+	int inpos;
 	char *names;
 	struct passwd *pw;
 	struct group *gr;
-	gid_t groups[XU_NGROUPS + 1];
+	gid_t groups[NGROUPS_MAX + 1];
 	int ngroups;
+	unsigned long name_ul;
+	char *end = NULL;
 
-	cr->cr_version = XUCRED_VERSION;
 	/*
 	 * Set up the unprivileged user.
 	 */
-	cr->cr_uid = 65534;
-	cr->cr_groups[0] = 65533;
+	cr->cr_groups = cr->cr_smallgrps;
+	cr->cr_uid = UID_NOBODY;
+	cr->cr_groups[0] = GID_NOGROUP;
 	cr->cr_ngroups = 1;
 	/*
 	 * Get the user's password table entry.
@@ -3511,10 +3591,11 @@ parsecred(char *namelist, struct xucred *cr)
 	names = namelist;
 	name = strsep_quote(&names, ":");
 	/* Bug?  name could be NULL here */
-	if (isdigit(*name) || *name == '-')
-		pw = getpwuid(atoi(name));
-	else
+	name_ul = strtoul(name, &end, 10);
+	if (*end != '\0' || end == name)
 		pw = getpwnam(name);
+	else
+		pw = getpwuid((uid_t)name_ul);
 	/*
 	 * Credentials specified as those of a user.
 	 */
@@ -3524,56 +3605,62 @@ parsecred(char *namelist, struct xucred *cr)
 			return;
 		}
 		cr->cr_uid = pw->pw_uid;
-		ngroups = XU_NGROUPS + 1;
+		ngroups = NGROUPS_MAX + 1;
 		if (getgrouplist(pw->pw_name, pw->pw_gid, groups, &ngroups)) {
 			syslog(LOG_ERR, "too many groups");
-			ngroups = XU_NGROUPS + 1;
+			ngroups = NGROUPS_MAX + 1;
 		}
 
 		/*
 		 * Compress out duplicate.
 		 */
-		cr->cr_groups[0] = groups[0];
 		if (ngroups > 1 && groups[0] == groups[1]) {
-			cr->cr_ngroups = ngroups - 1;
-			for (cnt = 2; cnt < ngroups; cnt++)
-				cr->cr_groups[cnt - 1] = groups[cnt];
+			ngroups--;
+			inpos = 2;
 		} else {
-			cr->cr_ngroups = ngroups;
-			if (cr->cr_ngroups > XU_NGROUPS)
-				cr->cr_ngroups = XU_NGROUPS;
-			for (cnt = 1; cnt < cr->cr_ngroups; cnt++)
-				cr->cr_groups[cnt] = groups[cnt];
+			inpos = 1;
 		}
+		if (ngroups > NGROUPS_MAX)
+			ngroups = NGROUPS_MAX;
+		if (ngroups > SMALLNGROUPS)
+			cr->cr_groups = malloc(ngroups * sizeof(gid_t));
+		cr->cr_ngroups = ngroups;
+		cr->cr_groups[0] = groups[0];
+		memcpy(&cr->cr_groups[1], &groups[inpos], (ngroups - 1) *
+		    sizeof(gid_t));
 		return;
 	}
 	/*
 	 * Explicit credential specified as a colon separated list:
 	 *	uid:gid:gid:...
 	 */
-	if (pw != NULL)
+	if (pw != NULL) {
 		cr->cr_uid = pw->pw_uid;
-	else if (isdigit(*name) || *name == '-')
-		cr->cr_uid = atoi(name);
-	else {
+	} else if (*end != '\0' || end == name) {
 		syslog(LOG_ERR, "unknown user: %s", name);
 		return;
+	} else {
+		cr->cr_uid = name_ul;
 	}
 	cr->cr_ngroups = 0;
-	while (names != NULL && *names != '\0' && cr->cr_ngroups < XU_NGROUPS) {
+	while (names != NULL && *names != '\0' && cr->cr_ngroups < NGROUPS_MAX) {
 		name = strsep_quote(&names, ":");
-		if (isdigit(*name) || *name == '-') {
-			cr->cr_groups[cr->cr_ngroups++] = atoi(name);
-		} else {
+		name_ul = strtoul(name, &end, 10);
+		if (*end != '\0' || end == name) {
 			if ((gr = getgrnam(name)) == NULL) {
 				syslog(LOG_ERR, "unknown group: %s", name);
 				continue;
 			}
-			cr->cr_groups[cr->cr_ngroups++] = gr->gr_gid;
+			groups[cr->cr_ngroups++] = gr->gr_gid;
+		} else {
+			groups[cr->cr_ngroups++] = name_ul;
 		}
 	}
-	if (names != NULL && *names != '\0' && cr->cr_ngroups == XU_NGROUPS)
+	if (names != NULL && *names != '\0' && cr->cr_ngroups == NGROUPS_MAX)
 		syslog(LOG_ERR, "too many groups");
+	if (cr->cr_ngroups > SMALLNGROUPS)
+		cr->cr_groups = malloc(cr->cr_ngroups * sizeof(gid_t));
+	memcpy(cr->cr_groups, groups, cr->cr_ngroups * sizeof(gid_t));
 }
 
 #define	STRSIZ	(MNTNAMLEN+MNTPATHLEN+50)
@@ -3682,6 +3769,8 @@ free_grp(struct grouplist *grp)
 		if (grp->gr_ptr.gt_net.nt_name)
 			free(grp->gr_ptr.gt_net.nt_name);
 	}
+	if (grp->gr_anon.cr_groups != grp->gr_anon.cr_smallgrps)
+		free(grp->gr_anon.cr_groups);
 	free((caddr_t)grp);
 }
 
@@ -3892,4 +3981,18 @@ terminate(int sig __unused)
 	rpcb_unset(MOUNTPROG, MOUNTVERS, NULL);
 	rpcb_unset(MOUNTPROG, MOUNTVERS3, NULL);
 	exit (0);
+}
+
+static void
+cp_cred(struct expcred *outcr, struct expcred *incr)
+{
+
+	outcr->cr_uid = incr->cr_uid;
+	outcr->cr_ngroups = incr->cr_ngroups;
+	if (outcr->cr_ngroups > SMALLNGROUPS)
+		outcr->cr_groups = malloc(outcr->cr_ngroups * sizeof(gid_t));
+	else
+		outcr->cr_groups = outcr->cr_smallgrps;
+	memcpy(outcr->cr_groups, incr->cr_groups, incr->cr_ngroups *
+	    sizeof(gid_t));
 }

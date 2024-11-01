@@ -41,7 +41,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <ctype.h>
 #include <limits.h>
 #include <stdio.h>
@@ -278,6 +277,10 @@ parseDWM(struct ptime_data *ptime, const char *s)
 				if (tm.tm_mday > daysmon) {
 					tm.tm_mon++;
 					tm.tm_mday = tm.tm_mday - daysmon;
+					if (tm.tm_mon >= 12) {
+						tm.tm_mon = 0;
+						tm.tm_year++;
+					}
 				}
 			}
 			break;

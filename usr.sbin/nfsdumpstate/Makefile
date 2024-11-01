@@ -1,6 +1,7 @@
-# $FreeBSD: stable/11/usr.sbin/nfsdumpstate/Makefile 346775 2019-04-27 02:13:15Z rmacklem $
 
 .include <src.opts.mk>
+
+PACKAGE=	nfs
 
 PROG=	nfsdumpstate
 MAN=	nfsdumpstate.8

@@ -30,7 +30,6 @@
  */
 /*
  * cd9660_archimedes.c - support for RISC OS "ARCHIMEDES" extension
- *
  */
 
 struct ISO_ARCHIMEDES {

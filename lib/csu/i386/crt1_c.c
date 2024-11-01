@@ -22,19 +22,13 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * $FreeBSD: stable/10/lib/csu/i386-elf/crt1_c.c 300323 2016-05-20 19:14:15Z emaste $
  */
 
 #include <sys/cdefs.h>
-
 #include <stdlib.h>
 
 #include "libc_private.h"
-#include "crtbrand.c"
 #include "ignore_init.c"
-
-typedef void (*fptr)(void);
 
 extern void _start(char *, ...);
 
@@ -45,11 +39,11 @@ extern int eprol;
 extern int etext;
 #endif
 
-void _start1(fptr, int, char *[]) __dead2;
+void _start1(void (*)(void), int, char *[]) __dead2;
 
 /* The entry function, C part. */
 void
-_start1(fptr cleanup, int argc, char *argv[])
+_start1(void (*cleanup)(void), int argc, char *argv[])
 {
 	char **env;
 

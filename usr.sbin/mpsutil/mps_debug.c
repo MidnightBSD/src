@@ -28,13 +28,11 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/errno.h>
 #include <sys/types.h>
 #include <sys/sysctl.h>
 #include <err.h>
-#include <libutil.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -135,11 +133,9 @@ print_sgl(char *buf, int offset, int numframes)
 {
 	MPI2_SGE_SIMPLE64 *sge;
 	MPI2_SGE_CHAIN_UNION *sgc;
-	MPI2_REQUEST_HEADER *req;
 	u_int i = 0, flags;
 	char *frame, tmpbuf[128];
 
-	req = (MPI2_REQUEST_HEADER *)buf;
 	frame = (char *)buf;
 	sge = (MPI2_SGE_SIMPLE64 *)&frame[offset * 4];
 	printf("SGL for command\n");

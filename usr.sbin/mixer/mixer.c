@@ -12,7 +12,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <err.h>
 #include <fcntl.h>
 #include <libgen.h>

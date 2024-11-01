@@ -1,5 +1,4 @@
 #	From: @(#)Makefile	8.1 (Berkeley) 6/8/93
-# $FreeBSD: stable/10/share/misc/Makefile 280419 2015-03-24 06:55:08Z ngie $
 
 .include <src.opts.mk>
 

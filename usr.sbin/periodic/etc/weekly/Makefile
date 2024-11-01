@@ -1,6 +1,8 @@
 
 .include <src.opts.mk>
 
+PACKAGE=	periodic
+
 CONFS=	340.noid \
 	350.msearch \
 	450.status-security \

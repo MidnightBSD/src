@@ -23,8 +23,7 @@ GCE_FAMILY=		${TYPE:tl}-${REVISION:S,.,-,}
 .endif
 
 .if ${BRANCH} == "STABLE" || ${BRANCH} == "CURRENT" || ${BRANCH} == "PRERELEASE"
-_SNAPSHOT_DATE!=	date +%Y%m%d
-SNAPSHOT_DATE=		-v${_SNAPSHOT_DATE}
+SNAPSHOT_DATE=		-v${BUILDDATE}
 GCE_FAMILY_SUFX=	-snap
 .endif
 
@@ -49,8 +48,12 @@ gce-check-depends:
 	env ASSUME_ALWAYS_YES=yes pkg install -y net/google-cloud-sdk \
 		lang/python
 . else
-	env UNAME_r=${UNAME_r} make -C ${PORTSDIR}/net/google-cloud-sdk BATCH=1 all install clean
-	env UNAME_r=${UNAME_r} make -C ${PORTSDIR}/lang/python BATCH=1 all install clean
+	env UNAME_r=${UNAME_r} make -C ${PORTSDIR}/net/google-cloud-sdk \
+	    BATCH=1 WRKDIRPREFIX=/tmp/ports DISTDIR=/tmp/distfiles \
+	    all install clean
+	env UNAME_r=${UNAME_r} make -C ${PORTSDIR}/lang/python \
+	    BATCH=1 WRKDIRPREFIX=/tmp/ports DISTDIR=/tmp/distfiles \
+	    all install clean
 . endif
 .endif
 
@@ -73,6 +76,7 @@ gce-do-upload:
 		gs://${GCE_BUCKET}/
 	/usr/local/bin/gcloud compute images create ${GCE_TARGET} \
 		--family=${GCE_FAMILY}${GCE_FAMILY_SUFX} ${GCE_LICENSE} \
+		--guest-os-features=GVNIC,UEFI_COMPATIBLE \
 		--source-uri gs://${GCE_BUCKET}/${GCE_TARGET}.tar.gz
 	touch ${.OBJDIR}/${.TARGET}
 

@@ -81,7 +81,7 @@
  * PIPEC is 1 if you wish to have the "|" command
  * which allows the user to pipe data into a shell command.
  */
-#define	PIPEC		(!SECURE)
+#define	PIPEC		(!SECURE && HAVE_POPEN)
 
 /*
  * LOGFILE is 1 if you wish to allow the -o option (to create log files).
@@ -113,6 +113,7 @@
 #define	LESSKEYFILE		".less"
 #define	LESSKEYFILE_SYS		"/etc/lesskey"
 #define	DEF_LESSKEYINFILE	".lesskey"
+#define	LESSKEYINFILE_SYS	"/etc/syslesskey"
 #define LESSHISTFILE		".lesshst"
 
 

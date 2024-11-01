@@ -1,4 +1,3 @@
-# $FreeBSD$
 
 .include <src.opts.mk>
 .include "${SRCTOP}/secure/ssh.mk"
@@ -55,6 +54,10 @@ LIBADD+=	ldns
 .if ${MK_GSSAPI} != "no" && ${MK_KERBEROS_SUPPORT} != "no"
 CFLAGS+= -include krb5_config.h
 SRCS+=	 krb5_config.h
+.endif
+
+.if defined(LOCALBASE)
+CFLAGS+= -D_PATH_SSH_ASKPASS_DEFAULT='"${LOCALBASE}/bin/ssh-askpass"'
 .endif
 
 NO_LINT=

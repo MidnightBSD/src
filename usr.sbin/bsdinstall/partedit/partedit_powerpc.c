@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011 Nathan Whitehorn
  * All rights reserved.
@@ -24,8 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: stable/10/usr.sbin/bsdinstall/partedit/partedit_powerpc.c 273831 2014-10-29 16:48:18Z nwhitehorn $
  */
 
 #include <sys/types.h>
@@ -94,9 +92,10 @@ bootpart_size(const char *part_type)
 		return (0);
 	if (strcmp(platform, "chrp") == 0)
 		return (800*1024);
-	if (strcmp(platform, "ps3") == 0 || strcmp(platform, "powernv") == 0 ||
-	    strcmp(platform, "mpc85xx") == 0)
+	if (strcmp(platform, "ps3") == 0 || strcmp(platform, "powernv") == 0)
 		return (512*1024*1024);
+	if (strcmp(platform, "mpc85xx") == 0)
+		return (16*1024*1024);
 	return (0);
 }
 
@@ -111,16 +110,19 @@ bootpart_type(const char *scheme, const char **mountpoint)
 		return ("prep-boot");
 	if (strcmp(platform, "powermac") == 0)
 		return ("apple-boot");
-	if (strcmp(platform, "powernv") == 0 || strcmp(platform, "ps3") == 0 ||
-	    strcmp(platform, "mpc85xx") == 0) {
+	if (strcmp(platform, "powernv") == 0 || strcmp(platform, "ps3") == 0) {
 		*mountpoint = "/boot";
 		if (strcmp(scheme, "GPT") == 0)
 			return ("ms-basic-data");
 		else if (strcmp(scheme, "MBR") == 0)
 			return ("fat32");
 	}
+	if (strcmp(platform, "mpc85xx") == 0) {
+		*mountpoint = "/boot/uboot";
+		return ("fat16");
+	}
 
-	return ("mnbsd-boot");
+	return ("freebsd-boot");
 }
 
 const char *

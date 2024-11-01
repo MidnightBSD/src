@@ -1,5 +1,4 @@
 #!/bin/sh
-
 # Created by: Miroslav Lachman <000.fbsd@quip.cz>
 
 # Backup output from `gmirror list`, which provides detailed information
@@ -26,7 +25,7 @@ rotate() {
 			rm "${file}.tmp"
 		else
 			rc=1
-			[ -n "$show_diff" ] && diff "${file}.bak" "${file}.tmp"
+			[ -n "$show_diff" ] && diff ${daily_diff_flags} "${file}.bak" "${file}.tmp"
 			mv "${file}.bak" "${file}.bak2" || rc=3
 			mv "${file}.tmp" "${file}.bak" || rc=3
 		fi
