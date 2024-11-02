@@ -148,10 +148,10 @@ TGTS=	all all-man buildenv buildenvvars buildkernel buildworld \
 	build32 distribute32 install32 buildsoft distributesoft installsoft \
 	builddtb xdev xdev-build xdev-install \
 	xdev-links native-xtools native-xtools-install stageworld stagekernel \
-	stage-packages \
+	stage-packages stage-packages-kernel stage-packages-world \
 	create-packages-world create-packages-kernel create-packages \
-	packages installconfig real-packages sign-packages package-pkg \
-	print-dir test-system-compiler test-system-linker
+	update-packages packages installconfig real-packages real-update-packages \
+	sign-packages package-pkg print-dir test-system-compiler test-system-linker
 
 # These targets require a TARGET and TARGET_ARCH be defined.
 XTGTS=	native-xtools native-xtools-install xdev xdev-build xdev-install \
@@ -443,8 +443,8 @@ MMAKE=		${MMAKEENV} ${MAKE} \
 		OBJTOP=${MYMAKE:H}/obj \
 		OBJROOT='$${OBJTOP}/' \
 		MAKEOBJDIRPREFIX= \
-		MAN= -DNO_SHARED \
-		-DNO_CPU_CFLAGS -DNO_WERROR \
+		MK_MAN=no -DNO_SHARED \
+		-DNO_CPU_CFLAGS MK_WERROR=no \
 		-DNO_SUBDIR \
 		DESTDIR= PROGNAME=${MYMAKE:T}
 
@@ -475,7 +475,7 @@ kernel-toolchains: .PHONY
 	@cd ${.CURDIR}; ${SUB_MAKE} UNIVERSE_TARGET=kernel-toolchain universe
 
 kernels: .PHONY
-	@cd ${.CURDIR}; ${SUB_MAKE} UNIVERSE_TARGET=buildkernel universe
+	@cd ${.CURDIR}; ${SUB_MAKE} universe -DWITHOUT_WORLDS
 
 worlds: .PHONY
 	@cd ${.CURDIR}; ${SUB_MAKE} UNIVERSE_TARGET=buildworld universe
@@ -489,21 +489,60 @@ worlds: .PHONY
 #
 .if make(universe) || make(universe_kernels) || make(tinderbox) || \
     make(targets) || make(universe-toolchain)
-TARGETS?=amd64 arm arm64 i386 powerpc riscv
+#
+# Don't build rarely used, semi-supported architectures unless requested.
+#
+.if defined(EXTRA_TARGETS)
+EXTRA_ARCHES_mips=	mipsel mipshf mipselhf mips64el mips64hf mips64elhf
+EXTRA_ARCHES_mips+=	mipsn32
+# powerpcspe excluded from main list until clang fixed
+EXTRA_ARCHES_powerpc=	powerpcspe powerpc64le
+.endif
+TARGETS?=amd64 arm arm64 i386 mips powerpc riscv
 _UNIVERSE_TARGETS=	${TARGETS}
-TARGET_ARCHES_arm?=	arm armv6 armv7
+TARGET_ARCHES_arm?=	armv6 armv7
 TARGET_ARCHES_arm64?=	aarch64
-TARGET_ARCHES_powerpc?=	powerpc powerpc64 powerpcspe
+TARGET_ARCHES_mips?=	mips mips64 ${EXTRA_ARCHES_mips}
+TARGET_ARCHES_powerpc?=	powerpc powerpc64 ${EXTRA_ARCHES_powerpc}
 TARGET_ARCHES_riscv?=	riscv64 riscv64sf
 .for target in ${TARGETS}
 TARGET_ARCHES_${target}?= ${target}
 .endfor
 
-.if defined(UNIVERSE_TARGET)
-MAKE_JUST_WORLDS=	YES
-.else
-UNIVERSE_TARGET?=	buildworld
+.if defined(USE_GCC_TOOLCHAINS)
+TOOLCHAINS_amd64=	amd64-gcc9
+TOOLCHAINS_arm=		armv6-gcc9 armv7-gcc9
+TOOLCHAIN_armv7=	armv7-gcc9
+TOOLCHAINS_arm64=	aarch64-gcc9
+TOOLCHAINS_i386=	i386-gcc9
+TOOLCHAINS_mips=	mips-gcc9
+TOOLCHAINS_powerpc=	powerpc-gcc9 powerpc64-gcc9
+TOOLCHAIN_powerpc64=	powerpc64-gcc9
+TOOLCHAINS_riscv=	riscv64-gcc9
 .endif
+
+# If a target is using an external toolchain, set MAKE_PARAMS to enable use
+# of the toolchain.  If the external toolchain is missing, exclude the target
+# from universe.
+.for target in ${_UNIVERSE_TARGETS}
+.if !empty(TOOLCHAINS_${target})
+.for toolchain in ${TOOLCHAINS_${target}}
+.if !exists(/usr/local/share/toolchains/${toolchain}.mk)
+_UNIVERSE_TARGETS:= ${_UNIVERSE_TARGETS:N${target}}
+universe: universe_${toolchain}_skip .PHONY
+universe_epilogue: universe_${toolchain}_skip .PHONY
+universe_${toolchain}_skip: universe_prologue .PHONY
+	@echo ">> ${target} skipped - install ${toolchain} port or package to build"
+.endif
+.endfor
+.for arch in ${TARGET_ARCHES_${target}}
+TOOLCHAIN_${arch}?=	${TOOLCHAINS_${target}:[1]}
+MAKE_PARAMS_${arch}?=	CROSS_TOOLCHAIN=${TOOLCHAIN_${arch}}
+.endfor
+.endif
+.endfor
+
+UNIVERSE_TARGET?=	buildworld
 KERNSRCDIR?=		${.CURDIR}/sys
 
 targets:	.PHONY
@@ -596,10 +635,13 @@ _need_lld_${target}_${target_arch} != \
 # XXX: Passing HOST_OBJTOP into the PATH would allow skipping legacy,
 #      bootstrap-tools, and cross-tools.  Need to ensure each tool actually
 #      supports all TARGETS though.
+# For now we only pass UNIVERSE_TOOLCHAIN_PATH which will be added at the end
+# of STRICTTMPPATH to ensure that the target-specific binaries come first.
 MAKE_PARAMS_${target_arch}+= \
 	XCC="${HOST_OBJTOP}/tmp/usr/bin/cc" \
 	XCXX="${HOST_OBJTOP}/tmp/usr/bin/c++" \
-	XCPP="${HOST_OBJTOP}/tmp/usr/bin/cpp"
+	XCPP="${HOST_OBJTOP}/tmp/usr/bin/cpp" \
+	UNIVERSE_TOOLCHAIN_PATH=${HOST_OBJTOP}/tmp/usr/bin
 .endif
 .if defined(_need_lld_${target}_${target_arch}) && \
     ${_need_lld_${target}_${target_arch}} == "yes"

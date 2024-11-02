@@ -1,4 +1,5 @@
 #
+#
 # Make command line options:
 #	-DNO_CLEANDIR run ${MAKE} clean, instead of ${MAKE} cleandir
 #	-DNO_CLEAN do not clean at all
@@ -182,21 +183,7 @@ MK_SYSTEM_LINKER=	no
 .if defined(CROSS_TOOLCHAIN_PREFIX)
 CROSS_BINUTILS_PREFIX?=${CROSS_TOOLCHAIN_PREFIX}
 .endif
-# If we do not have a bootstrap binutils (because the in-tree one does not
-# support the target architecture), provide a default cross-binutils prefix.
-# This allows riscv64 builds, for example, to automatically use the
-# riscv64-binutils port or package.
-.if !make(showconfig)
-.if !empty(BROKEN_OPTIONS:MBINUTILS_BOOTSTRAP) && \
-    ${MK_LLD_BOOTSTRAP} == "no" && \
-    !defined(CROSS_BINUTILS_PREFIX)
-CROSS_BINUTILS_PREFIX=/usr/local/${TARGET_TRIPLE}/bin/
-.if !exists(${CROSS_BINUTILS_PREFIX})
-.error In-tree binutils does not support the ${TARGET_ARCH} architecture. Install the ${TARGET_ARCH}-binutils port or package or set CROSS_BINUTILS_PREFIX.
-.endif
-.endif
-.endif
-XBINUTILS=	AS AR LD NM OBJCOPY RANLIB SIZE STRINGS
+XBINUTILS=	AS AR ELFCTL LD NM OBJCOPY RANLIB SIZE STRINGS STRIPBIN
 .for BINUTIL in ${XBINUTILS}
 .if defined(CROSS_BINUTILS_PREFIX) && \
     exists(${CROSS_BINUTILS_PREFIX}/${${BINUTIL}})
@@ -224,8 +211,6 @@ _WANT_TOOLCHAIN_CROSS_VARS=	t
 # Which compiler is expected to be used?
 .if ${MK_CLANG_BOOTSTRAP} == "yes"
 WANT_COMPILER_TYPE=	clang
-.elif ${MK_GCC_BOOTSTRAP} == "yes"
-WANT_COMPILER_TYPE=	gcc
 .else
 WANT_COMPILER_TYPE=
 .endif
@@ -260,7 +245,7 @@ WANT_COMPILER_VERSION!= \
 # TARGET_ARCH!=MACHINE_ARCH.
 .if ${MK_SYSTEM_COMPILER} == "yes" && \
     defined(WANT_COMPILER_MIDNIGHTBSD_VERSION) && \
-    (${MK_CLANG_BOOTSTRAP} == "yes" || ${MK_GCC_BOOTSTRAP} == "yes") && \
+    ${MK_CLANG_BOOTSTRAP} == "yes" && \
     !make(xdev*) && \
     ${X_COMPILER_TYPE} == ${WANT_COMPILER_TYPE} && \
     (${X_COMPILER_TYPE} == "clang" || ${TARGET_ARCH} == ${MACHINE_ARCH}) && \

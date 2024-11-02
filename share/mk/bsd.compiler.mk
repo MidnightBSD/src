@@ -224,21 +224,32 @@ ${X_}COMPILER_MIDNIGHTBSD_VERSION=	unknown
 .endif
 .endif
 
-${X_}COMPILER_FEATURES=
-.if (${${X_}COMPILER_TYPE} == "clang" && ${${X_}COMPILER_VERSION} >= 30300) || \
-	(${${X_}COMPILER_TYPE} == "gcc" && ${${X_}COMPILER_VERSION} >= 40800)
-${X_}COMPILER_FEATURES+=	c++11
+.if !defined(${X_}COMPILER_RESOURCE_DIR)
+${X_}COMPILER_RESOURCE_DIR!=	${${cc}:N${CCACHE_BIN}} -print-resource-dir 2>/dev/null || echo unknown
 .endif
-.if (${${X_}COMPILER_TYPE} == "clang" && ${${X_}COMPILER_VERSION} >= 30400) || \
-	(${${X_}COMPILER_TYPE} == "gcc" && ${${X_}COMPILER_VERSION} >= 50000)
-${X_}COMPILER_FEATURES+=	c++14
-.endif
-.if (${${X_}COMPILER_TYPE} == "clang" && ${${X_}COMPILER_VERSION} >= 50000) || \
+
+${X_}COMPILER_FEATURES+=		c++11 c++14
+.if ${${X_}COMPILER_TYPE} == "clang" || \
 	(${${X_}COMPILER_TYPE} == "gcc" && ${${X_}COMPILER_VERSION} >= 70000)
 ${X_}COMPILER_FEATURES+=	c++17
 .endif
-.if ${${X_}COMPILER_TYPE} == "clang" && ${${X_}COMPILER_VERSION} >= 60000
+.if (${${X_}COMPILER_TYPE} == "clang" && ${${X_}COMPILER_VERSION} >= 100000) || \
+	(${${X_}COMPILER_TYPE} == "gcc" && ${${X_}COMPILER_VERSION} >= 100100)
+${X_}COMPILER_FEATURES+=	c++20
+.endif
+.if ${${X_}COMPILER_TYPE} == "clang" || \
+	(${${X_}COMPILER_TYPE} == "gcc" && ${${X_}COMPILER_VERSION} >= 120000)
+${X_}COMPILER_FEATURES+=	init-all
+.endif
+.if ${${X_}COMPILER_TYPE} == "clang"
 ${X_}COMPILER_FEATURES+=	retpoline
+.endif
+
+.if (${${X_}COMPILER_TYPE} == "clang" && ${${X_}COMPILER_VERSION} >= 130000) || \
+	(${${X_}COMPILER_TYPE} == "gcc" && ${${X_}COMPILER_VERSION} >= 90000)
+# AArch64 sha512 intrinsics are supported (and have been tested) in
+# clang 13 and gcc 9.
+${X_}COMPILER_FEATURES+=	aarch64-sha512
 .endif
 
 .else
@@ -247,14 +258,15 @@ X_COMPILER_TYPE=	${COMPILER_TYPE}
 X_COMPILER_VERSION=	${COMPILER_VERSION}
 X_COMPILER_MIDNIGHTBSD_VERSION=	${COMPILER_MIDNIGHTBSD_VERSION}
 X_COMPILER_FEATURES=	${COMPILER_FEATURES}
+X_COMPILER_RESOURCE_DIR=	${COMPILER_RESOURCE_DIR}
 .endif	# ${cc} == "CC" || (${cc} == "XCC" && ${XCC} != ${CC})
 
 # Export the values so sub-makes don't have to look them up again, using the
 # hash key computed above.
 .for var in ${_exported_vars}
-${var}.${${X_}_cc_hash}:=	${${var}}
-.export-env ${var}.${${X_}_cc_hash}
-.undef ${var}.${${X_}_cc_hash}
+${var}__${${X_}_cc_hash}:=	${${var}}
+.export-env ${var}__${${X_}_cc_hash}
+.undef ${var}__${${X_}_cc_hash}
 .endfor
 
 .endif	# ${cc} == "CC" || !empty(XCC)
@@ -263,4 +275,5 @@ ${var}.${${X_}_cc_hash}:=	${${var}}
 .if !defined(_NO_INCLUDE_LINKERMK)
 .include <bsd.linker.mk>
 .endif
+.endif	# defined(_NO_INCLUDE_COMPILERMK)
 .endif	# !target(__<bsd.compiler.mk>__)

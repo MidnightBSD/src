@@ -1,3 +1,4 @@
+
 .include "${SRCTOP}/lib/clang/clang.pre.mk"
 
 CFLAGS+=	-I${OBJTOP}/lib/clang/libclang

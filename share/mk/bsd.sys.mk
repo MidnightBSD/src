@@ -263,20 +263,27 @@ CWARNFLAGS+=	-Wno-unknown-pragmas
 # This warning is utter nonsense
 CFLAGS+=	-Wno-format-zero-length
 
+.if ${COMPILER_TYPE} == "clang"
+# The headers provided by clang are incompatible with the FreeBSD headers.
+# If the version of clang is not one that has been patched to omit the
+# incompatible headers, we need to compile with -nobuiltininc and add the
+# resource dir to the end of the search paths. This ensures that headers such as
+# immintrin.h are still found but stddef.h, etc. are picked up from FreeBSD.
+#
+# XXX: This is a hack to support complete external installs of clang while
+# we work to synchronize our decleration guards with those in the clang tree.
+.if ${MK_CLANG_BOOTSTRAP:Uno} == "no" && \
+    ${COMPILER_RESOURCE_DIR} != "unknown" && !defined(BOOTSTRAPPING)
+CFLAGS+=-nobuiltininc -idirafter ${COMPILER_RESOURCE_DIR}/include
+.endif
+.endif
+
 CLANG_OPT_SMALL= -mstack-alignment=8 -mllvm -inline-threshold=3
 .if ${COMPILER_VERSION} < 130000
 CLANG_OPT_SMALL+= -mllvm -simplifycfg-dup-ret
 .endif
-.if ${COMPILER_VERSION} >= 30500 && ${COMPILER_VERSION} < 30700
-CLANG_OPT_SMALL+= -mllvm -enable-gvn=false
-.else
 CLANG_OPT_SMALL+= -mllvm -enable-load-pre=false
-.endif
 CFLAGS.clang+=	 -Qunused-arguments
-.if ${MACHINE_CPUARCH} == "sparc64"
-# Don't emit .cfi directives, since we must use GNU as on sparc64, for now.
-CFLAGS.clang+=	 -fno-dwarf2-cfi-asm
-.endif # SPARC64
 # The libc++ headers use c++11 extensions.  These are normally silenced because
 # they are treated as system headers, but we explicitly disable that warning
 # suppression when building the base system to catch bugs in our headers.
@@ -284,18 +291,11 @@ CFLAGS.clang+=	 -fno-dwarf2-cfi-asm
 # but not yet.
 CXXFLAGS.clang+=	 -Wno-c++11-extensions
 
-.if ${MK_SSP} != "no" && \
-    ${MACHINE_CPUARCH} != "arm" && ${MACHINE_CPUARCH} != "mips"
-.if (${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} >= 30500) || \
-    (${COMPILER_TYPE} == "gcc" && \
-     (${COMPILER_VERSION} == 40201 || ${COMPILER_VERSION} >= 40900))
+.if ${MK_SSP} != "no"
 # Don't use -Wstack-protector as it breaks world with -Werror.
 SSP_CFLAGS?=	-fstack-protector-strong
-.else
-SSP_CFLAGS?=	-fstack-protector
-.endif
 CFLAGS+=	${SSP_CFLAGS}
-.endif # SSP && !ARM && !MIPS
+.endif # SSP
 
 # Additional flags passed in CFLAGS and CXXFLAGS when MK_DEBUG_FILES is
 # enabled.

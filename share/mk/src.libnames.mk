@@ -384,12 +384,17 @@ _DP_opencsd=	cxxrt
 _DP_ctf=	spl z
 _DP_dtrace=	ctf elf proc pthread rtld_db
 _DP_xo=		util
+_DP_ztest=	geom m nvpair umem zpool pthread avl zfs_core spl zutil zfs uutil icp
 # The libc dependencies are not strictly needed but are defined to make the
 # assert happy.
 _DP_c=		compiler_rt
-.if ${MK_SSP} != "no"
+# Use libssp_nonshared only on i386 and power*.  Other archs emit direct calls
+# to __stack_chk_fail, not __stack_chk_fail_local provided by libssp_nonshared.
+.if ${MK_SSP} != "no" && \
+    (${MACHINE_ARCH} == "i386" || ${MACHINE_ARCH:Mpower*} != "")
 _DP_c+=		ssp_nonshared
 .endif
+_DP_stats=	sbuf pthread
 _DP_stdthreads=	pthread
 _DP_tacplus=	md
 _DP_panel=	ncurses
@@ -515,8 +520,9 @@ DPADD+=		${DPADD_${_l}}
 LDADD+=		${LDADD_${_l}}
 .endfor
 
+_LIB_OBJTOP?=	${OBJTOP}
 # INTERNALLIB definitions.
-LIBELFTCDIR=	${OBJTOP}/lib/libelftc
+LIBELFTCDIR=	${_LIB_OBJTOP}/lib/libelftc
 LIBELFTC?=	${LIBELFTCDIR}/libelftc${PIE_SUFFIX}.a
 
 LIBLUADIR=	${OBJTOP}/lib/liblua
