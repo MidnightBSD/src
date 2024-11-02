@@ -105,11 +105,8 @@ __DEFAULT_YES_OPTIONS = \
     FP_LIBC \
     FTP \
     GAMES \
-    GCOV \
-    GDB \
+    GH_BC \
     GNU_DIFF \
-    GNU_GREP \
-    GNU_GREP_COMPAT \
     GOOGLETEST \
     GPIO \
     HAST \
@@ -159,7 +156,6 @@ __DEFAULT_YES_OPTIONS = \
     OFED \
     OPENSSL \
     PAM \
-    PC_SYSINSTALL \
     PF \
     PKGBOOTSTRAP \
     PMC \
@@ -203,8 +199,7 @@ __DEFAULT_YES_OPTIONS = \
 
 __DEFAULT_NO_OPTIONS = \
     BEARSSL \
-    BSD_CRTBEGIN \
-    BSD_GREP \
+    BHYVE_SNAPSHOT \
     CLANG_EXTRAS \
     CLANG_FORMAT \
     DETECT_TZ_CHANGES \
@@ -218,7 +213,6 @@ __DEFAULT_NO_OPTIONS = \
     LOADER_VERBOSE \
     LOADER_VERIEXEC_PASS_MANIFEST \
     LLVM_FULL_DEBUGINFO \
-    NAND \
     OFED_EXTRA \
     OPENLDAP \
     RPCBIND_WARMSTART_SUPPORT \
@@ -345,41 +339,30 @@ __DEFAULT_YES_OPTIONS+=OPENSSL_KTLS
 .else
 __DEFAULT_NO_OPTIONS+=OPENSSL_KTLS
 .endif
+
 .if ${__T:Mmips64*}
 # profiling won't work on MIPS64 because there is only assembly for o32
 BROKEN_OPTIONS+=PROFILE
 .endif
-.if ${__T} == "aarch64" || ${__T} == "amd64" || ${__T} == "i386" || \
-    ${__T} == "powerpc64" || ${__T} == "sparc64"
-__DEFAULT_YES_OPTIONS+=CXGBETOOL
-__DEFAULT_YES_OPTIONS+=MLX5TOOL
-.else
-__DEFAULT_NO_OPTIONS+=CXGBETOOL
-__DEFAULT_NO_OPTIONS+=MLX5TOOL
+.if ${__T} != "aarch64" && ${__T} != "amd64" && ${__T} != "i386" && \
+    ${__T} != "powerpc64"
+BROKEN_OPTIONS+=CXGBETOOL
+BROKEN_OPTIONS+=MLX5TOOL
 .endif
 
 # HyperV is currently x86-only
-.if ${__T} == "amd64" || ${__T} == "i386"
-__DEFAULT_YES_OPTIONS+=HYPERV
-.else
-__DEFAULT_NO_OPTIONS+=HYPERV
+.if ${__T} != "amd64" && ${__T} != "i386"
+BROKEN_OPTIONS+=HYPERV
 .endif
 
-# NVME is only x86 and powerpc64
-.if ${__T} == "amd64" || ${__T} == "i386" || ${__T} == "powerpc64"
-__DEFAULT_YES_OPTIONS+=NVME
-.else
-__DEFAULT_NO_OPTIONS+=NVME
+# NVME is only aarch64, x86 and powerpc64*
+.if ${__T} != "aarch64" && ${__T} != "amd64" && ${__T} != "i386" && \
+    ${__T:Mpowerpc64*} == ""
+BROKEN_OPTIONS+=NVME
 .endif
 
-# Sparc64 need extra crt*.o files
-.if ${__T:Msparc64}
-BROKEN_OPTIONS+=BSD_CRTBEGIN
-.endif
-
-.if ${COMPILER_FEATURES:Mc++11} && \
-    (${__T} == "aarch64" || ${__T} == "amd64" || ${__T} == "i386" || \
-     ${__T} == "powerpc64")
+.if ${__T} == "aarch64" || ${__T} == "amd64" || ${__T} == "i386" || \
+    ${__T:Mpowerpc64*} != "" || ${__T:Mriscv64*} != ""
 __DEFAULT_YES_OPTIONS+=OPENMP
 .else
 __DEFAULT_NO_OPTIONS+=OPENMP
@@ -388,46 +371,11 @@ __DEFAULT_NO_OPTIONS+=OPENMP
 .include <bsd.mkopt.mk>
 
 #
-# MK_* options that default to "yes" if the compiler is a C++11 compiler.
-#
-.for var in \
-    LIBCPLUSPLUS
-.if !defined(MK_${var})
-.if ${COMPILER_FEATURES:Mc++11}
-.if defined(WITHOUT_${var})
-MK_${var}:=	no
-.else
-MK_${var}:=	yes
-.endif
-.else
-.if defined(WITH_${var})
-MK_${var}:=	yes
-.else
-MK_${var}:=	no
-.endif
-.endif
-.endif
-.endfor
-
-#
 # Force some options off if their dependencies are off.
 # Order is somewhat important.
 #
-.if !${COMPILER_FEATURES:Mc++11}
-MK_GOOGLETEST:=	no
-MK_LLVM_LIBUNWIND:=	no
-.endif
-
-.if ${MK_BINUTILS} == "no"
-MK_GDB:=	no
-.endif
-
 .if ${MK_CAPSICUM} == "no"
 MK_CASPER:=	no
-.endif
-
-.if ${MK_LIBPTHREAD} == "no"
-MK_LIBTHR:=	no
 .endif
 
 .if ${MK_SOURCELESS} == "no"
@@ -450,13 +398,20 @@ MK_KERBEROS_SUPPORT:=	no
 
 .if ${MK_CXX} == "no"
 MK_CLANG:=	no
-MK_GNUCXX:=	no
+MK_LLD:=	no
+MK_LLDB:=	no
+MK_LLVM_BINUTILS:= no
+MK_GOOGLETEST:=	no
+MK_OFED:=	no
+MK_OPENMP:=	no
+MK_PMC:=	no
 MK_TESTS:=	no
 .endif
 
 .if ${MK_DIALOG} == "no"
 MK_BSDINSTALL:=	no
 .endif
+
 
 .if ${MK_MAIL} == "no"
 MK_MAILWRAPPER:= no
@@ -476,10 +431,12 @@ MK_NLS_CATALOGS:= no
 .if ${MK_OPENSSL} == "no"
 MK_DMAGENT:=	no
 MK_OPENSSH:=	no
+MK_OPENSSL_KTLS:=	no
 MK_KERBEROS:=	no
 MK_KERBEROS_SUPPORT:=	no
 MK_LDNS:=	no
 MK_PKGBOOTSTRAP:=	no
+MK_ZFS:=	no
 .endif
 
 .if ${MK_LDNS} == "no"
@@ -508,18 +465,13 @@ MK_ZONEINFO_LEAPSECONDS_SUPPORT:= no
 .endif
 
 .if ${MK_CROSS_COMPILER} == "no"
-MK_BINUTILS_BOOTSTRAP:= no
 MK_CLANG_BOOTSTRAP:= no
 MK_ELFTOOLCHAIN_BOOTSTRAP:= no
-MK_GCC_BOOTSTRAP:= no
 MK_LLD_BOOTSTRAP:= no
 .endif
 
 .if ${MK_TOOLCHAIN} == "no"
-MK_BINUTILS:=	no
 MK_CLANG:=	no
-MK_GCC:=	no
-MK_GDB:=	no
 MK_INCLUDES:=	no
 MK_LLD:=	no
 MK_LLDB:=	no
@@ -561,20 +513,5 @@ MK_${vv:H}:=	${MK_${vv:T}}
 #
 # Set defaults for the MK_*_SUPPORT variables.
 #
-
-.if !${COMPILER_FEATURES:Mc++11}
-MK_LLDB:=	no
-.endif
-
-# gcc 4.8 and newer supports libc++, so suppress gnuc++ in that case.
-# while in theory we could build it with that, we don't want to do
-# that since it creates too much confusion for too little gain.
-# XXX: This is incomplete and needs X_COMPILER_TYPE/VERSION checks too
-#      to prevent Makefile.inc1 from bootstrapping unneeded dependencies
-#      and to support 'make delete-old' when supplying an external toolchain.
-.if ${COMPILER_TYPE} == "gcc" && ${COMPILER_VERSION} >= 40800
-MK_GNUCXX:=no
-MK_GCC:=no
-.endif
 
 .endif #  !target(__<src.opts.mk>__)
