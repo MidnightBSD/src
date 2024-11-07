@@ -1,9 +1,10 @@
 # RCSid:
-#	$Id: host-target.mk,v 1.12 2020/07/08 23:35:29 sjg Exp $
+#	$Id: host-target.mk,v 1.14 2022/02/04 18:05:22 sjg Exp $
 
 # Host platform information; may be overridden
 .if !defined(_HOST_OSNAME)
-_HOST_OSNAME !=	uname -s
+# use .MAKE.OS if available
+_HOST_OSNAME := ${.MAKE.OS:U${uname -s:L:sh}}
 .export _HOST_OSNAME
 .endif
 .if !defined(_HOST_OSREL)
@@ -15,8 +16,8 @@ _HOST_MACHINE != uname -m
 .export _HOST_MACHINE
 .endif
 .if !defined(_HOST_ARCH)
-# for NetBSD prefer $MACHINE (amd64 rather than x86_64)
-.if ${_HOST_OSNAME:NNetBSD} == ""
+# for Darwin and NetBSD prefer $MACHINE (amd64 rather than x86_64)
+.if ${_HOST_OSNAME:NDarwin:NNetBSD} == ""
 _HOST_ARCH := ${_HOST_MACHINE}
 .else
 _HOST_ARCH != uname -p 2> /dev/null || uname -m
