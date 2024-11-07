@@ -1,7 +1,7 @@
 $ $
 $ SPDX-License-Identifier: BSD-2-Clause
 $ $
-$ Copyright (c) 2018-2021 Gavin D. Howard and contributors.
+$ Copyright (c) 2018-2024 Gavin D. Howard and contributors.
 $ $
 $ Redistribution and use in source and binary forms, with or without
 $ modification, are permitted provided that the following conditions are met:
@@ -28,13 +28,8 @@ $ $
 
 $quote "
 
-$ 杂项信息。
-$set 1
-
-1 "函数："
-
 $ 错误类型。
-$set 2
+$set 1
 
 1 "数学错误："
 2 "解析错误："
@@ -43,7 +38,7 @@ $set 2
 5 "警告："
 
 $ 数学错误。
-$set 3
+$set 2
 
 1 "负数"
 2 "非整数"
@@ -51,7 +46,7 @@ $set 3
 4 "除以0"
 
 $ 解析错误。
-$set 4
+$set 3
 
 1 "文件结束"
 2 "无效字符'%c'"
@@ -77,13 +72,15 @@ $set 4
 22 "POSIX不允许在if语句或循环之外的比较运算符"
 23 "POSIX要求每个条件的比较运算符为0或1个"
 24 "POSIX要求for循环的所有3个部分必须是非空的"
-25 "POSIX不允许使用指数符号"
-26 "POSIX不允许数组引用作为函数参数"
-27 "POSIX要求左边的括号和函数头在同一行上"
-28 "POSIX不允许将字符串分配给变量或数组"
+25 "POSIX要求在分号和函数定义之间使用换行符"
+26 "POSIX不允许使用指数符号"
+27 "POSIX不允许数组引用作为函数参数"
+28 "POSIX不允许无效函数"
+29 "POSIX要求左边的括号和函数头在同一行上"
+30 "POSIX不允许将字符串分配给变量或数组"
 
 $ 运行时错误。
-$set 5
+$set 4
 
 1 "无效的ibase: 必须是[%lu, %lu]"
 2 "无效的obase：必须是[%lu，%lu]"
@@ -98,7 +95,7 @@ $set 5
 11 “不能在表达式中使用空值”
 
 $ 致命错误。
-$set 6
+$set 5
 
 1 "内存分配失败"
 2 "I/O错误"
