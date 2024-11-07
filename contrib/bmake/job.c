@@ -263,16 +263,16 @@ typedef struct ShellWriter {
  * pass jobs queue to sub-makes.
  * Use .MAKE.ALWAYS_PASS_JOB_QUEUE=no to disable.
  */
-#define MAKE_ALWAYS_PASS_JOB_QUEUE ".MAKE.ALWAYS_PASS_JOB_QUEUE"
-static int Always_pass_job_queue = TRUE;
+#define MAKE_ALWAYS_PASS_JOB_QUEUE "${.MAKE.ALWAYS_PASS_JOB_QUEUE:U}"
+static bool Always_pass_job_queue = true;
 /*
  * FreeBSD: aborting entire parallel make isn't always
  * desired. When doing tinderbox for example, failure of
  * one architecture should not stop all.
  * We still want to bail on interrupt though.
  */
-#define MAKE_JOB_ERROR_TOKEN "MAKE_JOB_ERROR_TOKEN"
-static int Job_error_token = TRUE;
+#define MAKE_JOB_ERROR_TOKEN "${MAKE_JOB_ERROR_TOKEN:U}"
+static bool Job_error_token = true;
 
 /*
  * error handling variables
@@ -1501,7 +1501,8 @@ JobExec(Job *job, char **argv)
 		if (lseek(0, 0, SEEK_SET) == -1)
 			execDie("lseek to 0", "stdin");
 
-		if (job->node->type & (OP_MAKE | OP_SUBMAKE)) {
+		if (Always_pass_job_queue ||
+		    (job->node->type & (OP_MAKE | OP_SUBMAKE))) {
 			/*
 			 * Pass job token pipe to submakes.
 			 */
@@ -2276,6 +2277,12 @@ Job_Init(void)
 	aborting = ABORT_NONE;
 	job_errors = 0;
 
+	Always_pass_job_queue = GetBooleanExpr(MAKE_ALWAYS_PASS_JOB_QUEUE,
+	    Always_pass_job_queue);
+
+	Job_error_token = GetBooleanExpr(MAKE_JOB_ERROR_TOKEN, Job_error_token);
+
+
 	/*
 	 * There is a non-zero chance that we already have children.
 	 * eg after 'make -f- <<EOF'
@@ -2834,6 +2841,12 @@ static void
 JobTokenAdd(void)
 {
 	char tok = JOB_TOKENS[aborting], tok1;
+
+	if (!Job_error_token && aborting == ABORT_ERROR) {
+		if (jobTokensRunning == 0)
+			return;
+		tok = '+';		/* no error token */
+	}
 
 	/* If we are depositing an error token flush everything else */
 	while (tok != '+' && read(tokenWaitJob.inPipe, &tok1, 1) == 1)

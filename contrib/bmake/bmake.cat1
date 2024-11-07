@@ -1,4 +1,4 @@
-BMAKE(1)                MidnightBSD General Commands Manual               BMAKE(1)
+BMAKE(1)            MidnightBSD General Commands Manual               BMAKE(1)
 
 [1mNAME[0m
      [1mbmake [22m-- maintain program dependencies
@@ -1622,4 +1622,4 @@ BMAKE(1)                MidnightBSD General Commands Manual               BMAKE(
 
      There is no way of escaping a space character in a filename.
 
-MidnightBSD 4.0                 January 28, 2022               MidnightBSD 4.0
+MidnightBSD 4.0                January 28, 2022                MidnightBSD 4.0
