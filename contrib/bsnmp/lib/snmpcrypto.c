@@ -1,6 +1,5 @@
 /*-
  * Copyright (c) 2010 The FreeBSD Foundation
- * All rights reserved.
  *
  * This software was developed by Shteryana Sotirova Shopova under
  * sponsorship from the FreeBSD Foundation.
@@ -57,10 +56,10 @@
 #define	SNMP_AUTH_KEY_LOOPCNT		1048576
 #define	SNMP_AUTH_BUF_SIZE		72
 
+#ifdef HAVE_LIBCRYPTO
+
 static const uint8_t ipad = 0x36;
 static const uint8_t opad = 0x5c;
-
-#ifdef HAVE_LIBCRYPTO
 
 static int32_t
 snmp_digest_init(const struct snmp_user *user, EVP_MD_CTX *ctx,

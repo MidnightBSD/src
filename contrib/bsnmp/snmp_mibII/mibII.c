@@ -411,7 +411,7 @@ mibif_reset_hc_timer(void)
 		hc_update_timer = NULL;
 	}
 	update_hc_counters(NULL);
-	if ((hc_update_timer = timer_start_repeat(ticks * 10, ticks * 10,
+	if ((hc_update_timer = timer_start_repeat(ticks, ticks,
 	    update_hc_counters, NULL, module)) == NULL) {
 		syslog(LOG_ERR, "timer_start(%u): %m", ticks);
 		return;
@@ -447,7 +447,7 @@ mib_fetch_ifmib(struct mibif *ifp)
 	void *newmib;
 	struct ifmibdata oldmib = ifp->mib;
 	struct ifreq irr;
-	unsigned int alias_maxlen = MIBIF_ALIAS_SIZE_MAX;
+	u_int alias_maxlen = MIBIF_ALIAS_SIZE_MAX;
 
 	if (fetch_generic_mib(ifp, &oldmib) == -1)
 		return (-1);
@@ -519,7 +519,6 @@ mib_fetch_ifmib(struct mibif *ifp)
 	}
 
   out:
-
 	/*
 	 * Find sysctl mib for net.ifdescr_maxlen (one time).
 	 * kmib[0] == -1 at first call to mib_fetch_ifmib().
@@ -581,7 +580,7 @@ mib_fetch_ifmib(struct mibif *ifp)
 			ifp->alias = realloc(ifp->alias, ifp->alias_size);
 	}
 
-fin:
+  fin:
 	ifp->mibtick = get_ticks();
 	return (0);
 }
