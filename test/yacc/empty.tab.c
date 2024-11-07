@@ -144,7 +144,7 @@ typedef int YYSTYPE;
 extern int YYPARSE_DECL();
 
 #define YYERRCODE 256
-typedef int YYINT;
+typedef short YYINT;
 static const YYINT empty_lhs[] = {                       -1,
     0,
 };
@@ -194,13 +194,15 @@ static const char *const empty_rule[] = {
 };
 #endif
 
+#if YYDEBUG
 int      yydebug;
-int      yynerrs;
+#endif
 
 int      yyerrflag;
 int      yychar;
 YYSTYPE  yyval;
 YYSTYPE  yylval;
+int      yynerrs;
 
 /* define the initial stack-sizes */
 #ifdef YYSTACKSIZE
@@ -240,7 +242,7 @@ static void
 YYERROR_DECL() {
   printf("%s\n",s);
 }
-#line 244 "empty.tab.c"
+#line 246 "empty.tab.c"
 
 #if YYDEBUG
 #include <stdio.h>	/* needed for printf */

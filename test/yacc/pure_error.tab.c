@@ -152,7 +152,7 @@ typedef int YYSTYPE;
 extern int YYPARSE_DECL();
 
 #define YYERRCODE 256
-typedef int YYINT;
+typedef short YYINT;
 static const YYINT error_lhs[] = {                       -1,
     0,
 };
@@ -202,8 +202,9 @@ static const char *const error_rule[] = {
 };
 #endif
 
+#if YYDEBUG
 int      yydebug;
-int      yynerrs;
+#endif
 
 /* define the initial stack-sizes */
 #ifdef YYSTACKSIZE
@@ -254,7 +255,7 @@ yyerror(const char* s)
 {
     printf("%s\n", s);
 }
-#line 258 "pure_error.tab.c"
+#line 259 "pure_error.tab.c"
 
 #if YYDEBUG
 #include <stdio.h>	/* needed for printf */
@@ -321,6 +322,7 @@ YYPARSE_DECL()
     int      yychar;
     YYSTYPE  yyval;
     YYSTYPE  yylval;
+    int      yynerrs;
 
     /* variables for the parser stack */
     YYSTACKDATA yystack;

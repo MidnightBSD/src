@@ -16,7 +16,7 @@
 #line 17 "rename_debug.c"
 #include "rename_debug.i"
 #include "rename_debug.h"
-typedef int YYINT;
+typedef short YYINT;
 static const YYINT yylhs[] = {                           -1,
     0,
 };
@@ -66,13 +66,15 @@ static const char *const yyrule[] = {
 };
 #endif
 
+#if YYDEBUG
 int      yydebug;
-int      yynerrs;
+#endif
 
 int      yyerrflag;
 int      yychar;
 YYSTYPE  yyval;
 YYSTYPE  yylval;
+int      yynerrs;
 
 /* define the initial stack-sizes */
 #ifdef YYSTACKSIZE
@@ -125,7 +127,7 @@ yyerror(const char* s)
 {
     printf("%s\n", s);
 }
-#line 130 "rename_debug.c"
+#line 132 "rename_debug.c"
 
 #if YYDEBUG
 #include <stdio.h>	/* needed for printf */

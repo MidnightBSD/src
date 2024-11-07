@@ -152,7 +152,7 @@ typedef int YYSTYPE;
 #define YYTRANSLATE(a) ((a) > YYMAXTOKEN ? YYUNDFTOKEN : (a))
 
 extern int YYPARSE_DECL();
-typedef int YYINT;
+typedef short YYINT;
 extern YYINT yylhs[];
 extern YYINT yylen[];
 extern YYINT yydefred[];
@@ -170,13 +170,15 @@ extern char *yyname[];
 extern char *yyrule[];
 #endif
 
+#if YYDEBUG
 int      yydebug;
-int      yynerrs;
+#endif
 
 int      yyerrflag;
 int      yychar;
 YYSTYPE  yyval;
 YYSTYPE  yylval;
+int      yynerrs;
 
 /* define the initial stack-sizes */
 #ifdef YYSTACKSIZE
@@ -229,7 +231,7 @@ yyerror(const char* s)
 {
     printf("%s\n", s);
 }
-#line 233 "code_error.code.c"
+#line 235 "code_error.code.c"
 
 #if YYDEBUG
 #include <stdio.h>	/* needed for printf */
