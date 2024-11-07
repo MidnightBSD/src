@@ -1,14 +1,14 @@
-# $Id: rst2htm.mk,v 1.10 2015/09/08 22:17:46 sjg Exp $
+# $Id: rst2htm.mk,v 1.12 2021/05/26 04:20:31 sjg Exp $
 #
 #	@(#) Copyright (c) 2009, Simon J. Gerraty
 #
 #	This file is provided in the hope that it will
 #	be of use.  There is absolutely NO WARRANTY.
 #	Permission to copy, redistribute or otherwise
-#	use this file is hereby granted provided that 
+#	use this file is hereby granted provided that
 #	the above copyright notice and this notice are
-#	left intact. 
-#      
+#	left intact.
+#
 #	Please send copies of changes and bug-fixes to:
 #	sjg@crufty.net
 #
@@ -21,7 +21,9 @@ TXTSRCS != 'ls' -1t ${.CURDIR}/*.txt ${.CURDIR}/*.rst 2>/dev/null; echo
 .endif
 RSTSRCS ?= ${TXTSRCS}
 HTMFILES ?= ${RSTSRCS:R:T:O:u:%=%.htm}
-RST2HTML ?= rst2html.py
+# can be empty, 4 or 5
+HTML_VERSION ?= 
+RST2HTML ?= rst2html${HTML_VERSION}.py
 RST2PDF ?= rst2pdf
 RST2S5 ?= rst2s5.py
 # the following will run RST2S5 if the target name contains the word 'slides'
