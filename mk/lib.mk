@@ -1,4 +1,4 @@
-# $Id: lib.mk,v 1.62 2017/06/11 03:24:04 sjg Exp $
+# $Id: lib.mk,v 1.70 2020/05/02 02:10:20 sjg Exp $
 
 .if !target(__${.PARSEFILE}__)
 __${.PARSEFILE}__:
@@ -36,6 +36,8 @@ PICO?= .pico
 .SUFFIXES: .sh .m4 .m
 
 CFLAGS+=	${COPTS}
+
+META_NOECHO?= echo
 
 # Originally derrived from NetBSD-1.6
 
@@ -168,13 +170,15 @@ LD_solib= lib${LIB}_pic.a
 .elif ${TARGET_OSNAME} == "Linux"
 SHLIB_LD = ${CC}
 # this is ambiguous of course
-LD_shared=-shared -Wl,"-h lib${LIB}.so.${SHLIB_MAJOR}"
+LD_shared=-shared -Wl,"-soname lib${LIB}.so.${SHLIB_MAJOR}"
 LD_solib= -Wl,--whole-archive lib${LIB}_pic.a -Wl,--no-whole-archive
+.if ${COMPILER_TYPE} == "gcc"
 # Linux uses GNU ld, which is a multi-pass linker
 # so we don't need to use lorder or tsort
 LD_objs = ${OBJS}
 LD_pobjs = ${POBJS}
 LD_sobjs = ${SOBJS}
+.endif
 .elif ${TARGET_OSNAME} == "Darwin"
 SHLIB_LD = ${CC}
 SHLIB_INSTALL_VERSION ?= ${SHLIB_MAJOR}
@@ -370,6 +374,11 @@ _LIBS+=llib-l${LIB}.ln
 
 .if empty(LIB)
 _LIBS=
+.elif ${MK_LDORDER_MK} != "no"
+# Record any libs that we need to be linked with
+_LIBS+= ${libLDORDER_INC}
+
+.include <ldorder.mk>
 .endif
 
 .if !defined(_SKIP_BUILD)
@@ -399,18 +408,18 @@ SHLIB_AGE?=0
 
 # can't really do profiled libs with libtool - its too fascist about
 # naming the output...
-lib${LIB}.a:: ${OBJS}
+lib${LIB}.a: ${OBJS}
 	@rm -f ${.TARGET}
 	${LIBTOOL} --mode=link ${CC} ${LT_STATIC} -o ${.TARGET:.a=.la} ${OBJS:.o=.lo} -rpath ${SHLIBDIR}:/usr/lib -version-info ${SHLIB_MAJOR}:${SHLIB_MINOR}:${SHLIB_AGE}
 	@ln .libs/${.TARGET} .
 
-lib${LIB}.${LD_so}:: lib${LIB}.a
+lib${LIB}.${LD_so}: lib${LIB}.a
 	@[ -s ${.TARGET}.${SHLIB_AGE} ] || { ln -s .libs/lib${LIB}.${LD_so}* . 2>/dev/null; : }
 	@[ -s ${.TARGET} ] || ln -s ${.TARGET}.${SHLIB_AGE} ${.TARGET}
 
 .else  # MK_LIBTOOL=yes
 
-lib${LIB}.a:: ${OBJS}
+lib${LIB}.a: ${OBJS}
 	@${META_NOECHO} building standard ${LIB} library
 	@rm -f ${.TARGET}
 	@${AR} ${AR_cq} ${.TARGET} ${LD_objs}
@@ -418,7 +427,7 @@ lib${LIB}.a:: ${OBJS}
 
 POBJS+=	${OBJS:.o=.po}
 .NOPATH:	${POBJS}
-lib${LIB}_p.a:: ${POBJS}
+lib${LIB}_p.a: ${POBJS}
 	@${META_NOECHO} building profiled ${LIB} library
 	@rm -f ${.TARGET}
 	@${AR} ${AR_cq} ${.TARGET} ${LD_pobjs}
@@ -426,7 +435,7 @@ lib${LIB}_p.a:: ${POBJS}
 
 SOBJS+=	${OBJS:.o=${PICO}}
 .NOPATH:	${SOBJS}
-lib${LIB}_pic.a:: ${SOBJS}
+lib${LIB}_pic.a: ${SOBJS}
 	@${META_NOECHO} building shared object ${LIB} library
 	@rm -f ${.TARGET}
 	@${AR} ${AR_cq} ${.TARGET} ${LD_sobjs}
@@ -507,20 +516,24 @@ libinstall:
 	[ -d ${DESTDIR}/${LIBDIR} ] || \
 	${INSTALL} -d ${LIB_INSTALL_OWN} -m 775 ${DESTDIR}${LIBDIR}
 .if ${MK_ARCHIVE} != "no"
-	${INSTALL} ${COPY} ${LIB_INSTALL_OWN} -m 600 lib${LIB}.a \
+	${INSTALL} ${COPY} ${LIB_INSTALL_OWN} -m 644 lib${LIB}.a \
 	    ${DESTDIR}${LIBDIR}
 	${RANLIB} ${DESTDIR}${LIBDIR}/lib${LIB}.a
 	chmod ${LIBMODE} ${DESTDIR}${LIBDIR}/lib${LIB}.a
 .endif
 .if ${MK_PROFILE} != "no"
-	${INSTALL} ${COPY} ${LIB_INSTALL_OWN} -m 600 \
+	${INSTALL} ${COPY} ${LIB_INSTALL_OWN} -m 644 \
 	    lib${LIB}_p.a ${DESTDIR}${LIBDIR}
 	${RANLIB} ${DESTDIR}${LIBDIR}/lib${LIB}_p.a
 	chmod ${LIBMODE} ${DESTDIR}${LIBDIR}/lib${LIB}_p.a
 .endif
+.if ${MK_LDORDER_MK} != "no"
+	${INSTALL} ${COPY} ${LIB_INSTALL_OWN} -m 644 \
+		lib${LIB}.ldorder.inc ${DESTDIR}${LIBDIR}
+.endif
 .if ${MK_PIC} != "no"
 .if ${MK_PICLIB} != "no"
-	${INSTALL} ${COPY} ${LIB_INSTALL_OWN} -m 600 \
+	${INSTALL} ${COPY} ${LIB_INSTALL_OWN} -m 644 \
 	    lib${LIB}_pic.a ${DESTDIR}${LIBDIR}
 	${RANLIB} ${DESTDIR}${LIBDIR}/lib${LIB}_pic.a
 	chmod ${LIBMODE} ${DESTDIR}${LIBDIR}/lib${LIB}_pic.a

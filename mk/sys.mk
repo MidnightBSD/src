@@ -1,4 +1,4 @@
-# $Id: sys.mk,v 1.45 2017/02/05 01:26:13 sjg Exp $
+# $Id: sys.mk,v 1.47 2020/04/17 21:08:17 sjg Exp $
 #
 #	@(#) Copyright (c) 2003-2009, Simon J. Gerraty
 #
@@ -84,7 +84,7 @@ OPTIONS_DEFAULT_DEPENDENT += \
 MK_META_MODE = yes
 .-include <meta.sys.mk>
 .elif ${MK_META_MODE:Uno} == "yes"
-.MAKE.MODE = meta verbose
+.MAKE.MODE = meta verbose ${META_MODE}
 .endif
 # make sure we have a harmless value
 .MAKE.MODE ?= normal
@@ -115,6 +115,10 @@ ROOT_GROUP != sed -n /:0:/s/:.*//p /etc/group
 .endif
 
 unix ?= We run ${_HOST_OSNAME}.
+
+# We need a Bourne/POSIX shell 
+MAKE_SHELL ?= sh
+SHELL ?= ${MAKE_SHELL}
 
 # A race condition in mkdir, means that it can bail if another
 # process made a dir that mkdir expected to.

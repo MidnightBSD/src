@@ -1,4 +1,4 @@
-# $Id: sys.vars.mk,v 1.2 2017/01/31 07:44:45 sjg Exp $
+# $Id: sys.vars.mk,v 1.4 2019/05/27 20:22:52 sjg Exp $
 #
 #	@(#) Copyright (c) 2003-2009, Simon J. Gerraty
 #
@@ -45,7 +45,7 @@ M_L_TARGETS = ${M_ListToMatch:S,V,_TARGETS,}
 
 # turn a list into a set of :N modifiers
 # NskipFoo = ${Foo:${M_ListToSkip}}
-M_ListToSkip= O:u:ts::S,:,:N,g:S,^,N,
+M_ListToSkip= O:u:S,^,N,:ts:
 
 # type should be a builtin in any sh since about 1980,
 # but sadly there are exceptions!
@@ -78,3 +78,8 @@ M_cmpv = S,., ,g:_:range:@i@+ $${_:[-$$i]} \* $${M_cmpv.units:[$$i]}@:S,^,expr 0
 
 # absoulte path to what we are reading.
 _PARSEDIR = ${.PARSEDIR:${M_tA}}
+
+# many projects use MAJOR MINOR PATCH versioning
+# ${OPENSSL:${M_M.M.P_VERSION}} is equivalent to
+# ${OPENSSL_MAJOR_VERSION}.${OPENSSL_MINOR_VERSION}.${OPENSSL_PATCH_VERSION}
+M_M.M.P_VERSION = L:@v@$${MAJOR MINOR PATCH:L:@t@$${$$v_$$t_VERSION:U0}@}@:ts.
