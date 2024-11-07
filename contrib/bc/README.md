@@ -1,7 +1,12 @@
 # `bc`
 
-***WARNING: This project has moved to [https://git.yzena.com/][20] for [these
-reasons][21], though GitHub will remain a mirror.***
+***WARNING: New user registration for <https://git.gavinhoward.com/> is disabled
+because of spam. If you need to report a bug with `bc`, email gavin at this site
+minus the `git.` part for an account, and I will create one for you. Or you can
+report an issue at [GitHub][29].***
+
+***WARNING: This project has moved to [https://git.gavinhoward.com/][20] for
+[these reasons][21], though GitHub will remain a mirror.***
 
 This is an implementation of the [POSIX `bc` calculator][12] that implements
 [GNU `bc`][1] extensions, as well as the period (`.`) extension for the BSD
@@ -43,7 +48,7 @@ POSIX-compatible systems that are known to work:
 * FreeBSD
 * OpenBSD
 * NetBSD
-* Mac OSX
+* macOS
 * Solaris* (as long as the Solaris version supports POSIX 2008)
 * AIX
 * HP-UX* (except for history)
@@ -58,8 +63,8 @@ system.
 This `bc` should build unmodified on any POSIX-compliant system or on Windows
 starting with Windows 10 (though earlier versions may work).
 
-For more complex build requirements than the ones below, see the
-[build manual][5].
+For more complex build requirements than the ones below, see the [build
+manual][5].
 
 ### Windows
 
@@ -71,43 +76,50 @@ Also, if building with MSBuild, the MSBuild bundled with Visual Studio is
 required.
 
 **Note**: Unlike the POSIX-compatible platforms, only one build configuration is
-supported on Windows: extra math and prompt enabled, history and NLS (locale
-support) disabled, with both calculators built.
+supported on Windows: extra math and history enabled, NLS (locale support)
+disabled, with both calculators built.
 
 #### `bc`
 
-To build `bc`, you can open the `bc.sln` file in Visual Studio, select the
+To build `bc`, you can open the `vs/bc.sln` file in Visual Studio, select the
 configuration, and build.
 
 You can also build using MSBuild with the following from the root directory:
 
 ```
-msbuild -property:Configuration=<config> bc.sln
+msbuild -property:Configuration=<config> vs/bc.sln
 ```
 
 where `<config>` is either one of `Debug` or `Release`.
 
+On Windows, the calculators are built as `vs/bin/<platform>/<config>/bc.exe` and
+`vs/bin/<Platform>/<Config>/dc.exe`, where `<platform>` can be either `Win32` or
+`x64`, and `<config>` can be `Debug` or `Release`.
+
+**Note**: On Windows, `dc.exe` is just copied from `bc.exe`; it is not linked.
+Patches are welcome for a way to do that.
+
 #### `bcl` (Library)
 
-To build the library, you can open the `bcl.sln` file in Visual Studio, select
-the configuration, and build.
+To build the library, you can open the `vs/bcl.sln` file in Visual Studio,
+select the configuration, and build.
 
 You can also build using MSBuild with the following from the root directory:
 
 ```
-msbuild -property:Configuration=<config> bcl.sln
+msbuild -property:Configuration=<config> vs/bcl.sln
 ```
 
-where `<config>` is either one of `Debug` or `Release`.
+where `<config>` is either one of `Debug`, `ReleaseMD`, or `ReleaseMT`.
+
+On Windows, the library is built as `vs/lib/<platform>/<config>/bcl.lib`, where
+`<platform>` can be either `Win32` or `x64`, and `<config>` can be `Debug`,
+`ReleaseMD`, or `ReleaseMT`.
 
 ### POSIX-Compatible Systems
 
 On POSIX-compatible systems, `bc` is built as `bin/bc` and `dc` is built as
-`bin/dc` by default. On Windows, they are built as `Release/bc/bc.exe` and
-`Release/bc/dc.exe`.
-
-**Note**: On Windows, `dc.exe` is just copied from `bc.exe`; it is not linked.
-Patches are welcome for a way to do that.
+`bin/dc` by default.
 
 #### Default
 
@@ -159,8 +171,8 @@ other locations, use the `PREFIX` environment variable when running
 
 #### Library
 
-This `bc` does provide a way to build a math library with C bindings. This is
-done by the `-a` or `--library` options to `configure.sh`:
+To build the math library, pass the `-a` or `--library` options to
+`configure.sh`:
 
 ```
 ./configure.sh -a
@@ -172,10 +184,25 @@ see the [build manual][5].
 The library API can be found in [`manuals/bcl.3.md`][26] or `man bcl` once the
 library is installed.
 
-The library is built as `bin/libbcl.a` on POSIX-compatible systems or as
-`Release/bcl/bcl.lib` on Windows.
-
 #### Package and Distro Maintainers
+
+This section is for package and distro maintainers.
+
+##### Out-of-Source Builds
+
+Out-of-source builds are supported; just call `configure.sh` from the directory
+where the actual build will happen.
+
+For example, if the source is in `bc`, the build should happen in `build`, then
+call `configure.sh` and `make` like so:
+
+```
+../bc/configure.sh
+make
+```
+
+***WARNING***: The path to `configure.sh` from the build directory must not have
+spaces because `make` does not support target names with spaces.
 
 ##### Recommended Compiler
 
@@ -264,8 +291,7 @@ with POSIX `bc`. The math has been tested with 40+ million random problems, so
 it is as correct as I can make it.
 
 This `bc` can be used as a drop-in replacement for any existing `bc`. This `bc`
-is also compatible with MinGW toolchains, though history is not supported on
-Windows.
+is also compatible with MinGW toolchains.
 
 In addition, this `bc` is considered complete; i.e., there will be no more
 releases with additional features. However, it *is* actively maintained, so if
@@ -292,7 +318,8 @@ may prove useful to any serious users.
 This `bc` compares favorably to GNU `bc`.
 
 * This `bc` builds natively on Windows.
-* It has more extensions, which make this `bc` more useful for scripting.
+* It has more extensions, which make this `bc` more useful for scripting. (See
+  [Extensions](#extensions).)
 * This `bc` is a bit more POSIX compliant.
 * It has a much less buggy parser. The GNU `bc` will give parse errors for what
   is actually valid `bc` code, or should be. For example, putting an `else` on
@@ -314,6 +341,60 @@ found at [manuals/benchmarks.md][19].
 There is one instance where this `bc` is slower: if scripts are light on math.
 This is because this `bc`'s intepreter is slightly slower than GNU `bc`, but
 that is because it is more robust. See the [benchmarks][19].
+
+### Extensions
+
+Below is a non-comprehensive list of extensions that this `bc` and `dc` have
+that all others do not.
+
+* **The `!` operator has higher precedence than the `!` operator in other `bc`
+  implementations.**
+* An extended math library. (See [here][30] for more information.)
+* A command-line prompt.
+* Turning on and off digit clamping. (Digit clamping is about how to treat
+  "invalid" digits for a particular base. GNU `bc` uses it, and the BSD `bc`
+  does not. Mine does both.)
+* A pseudo-random number generator. This includes the ability to set the seed
+  and get reproducible streams of random numbers.
+* The ability to use stacks for the globals `scale`, `ibase`, and `obase`
+  instead of needing to restore them in *every* function.
+* The ability to *not* use non-standard keywords. For example, `abs` is a
+  keyword (a built-in function), but if some script actually defines a function
+  called that, it's possible to tell my `bc` to not treat it as a keyword, which
+  will make the script parses correctly.
+* The ability to turn on and off printing leading zeroes on numbers greater than
+  `-1` and less than `1`.
+* Outputting in scientific and engineering notation.
+* Accepting input in scientific and engineering notation.
+* Passing strings and arrays to the `length()` built-in function. (In `dc`, the
+  `Y` command will do this for arrays, and the `Z` command will do this for both
+  numbers and strings.)
+* The `abs()` built-in function. (This is the `b` command in `dc`.)
+* The `is_number()` and `is_string()` built-in functions. (These tell whether a
+  variable is holding a string or a number, for runtime type checking. The
+  commands are `u` and `t` in `dc`.)
+* For `bc` only, the `divmod()` built-in function for computing a quotient and
+  remainder at the same time.
+* For `bc` only, the `asciify()` built-in function for converting an array to a
+  string.
+* The `$` truncation operator. (It's the same in `bc` and `dc`.)
+* The `@` "set scale" operator. (It's the same in `bc` and `dc`.)
+* The decimal shift operators. (`<<` and `>>` in `bc`, `H` and `h` in `dc`.)
+* Built-in functions or commands to get the max of `scale`, `ibase`, and
+  `obase`.
+* The ability to put strings into variables in `bc`. (This always existed in
+  `dc`.)
+* The `'` command in `dc` for the depth of the execution stack.
+* The `y` command in `dc` for the depth of register stacks.
+* Built-in functions or commands to get the value of certain environment
+  variables that might affect execution.
+* The `stream` keyword to do the same thing as the `P` command in `dc`.
+* Defined order of evaluation.
+* Defined exit statuses.
+* All environment variables other than `POSIXLY_CORRECT`, `BC_ENV_ARGS`, and
+  `BC_LINE_LENGTH`.
+* The ability for users to define their own defaults for various options during
+  build. (See [here][31] for more information.)
 
 ## Algorithms
 
@@ -343,13 +424,25 @@ Other projects based on this bc are:
 
 * [busybox `bc`][8]. The busybox maintainers have made their own changes, so any
   bugs in the busybox `bc` should be reported to them.
-
 * [toybox `bc`][9]. The maintainer has also made his own changes, so bugs in the
   toybox `bc` should be reported there.
-
 * [FreeBSD `bc`][23]. While the `bc` in FreeBSD is kept up-to-date, it is better
   to [report bugs there][24], as well as [submit patches][25], and the
   maintainers of the package will contact me if necessary.
+* [macOS `bc`][35]. Any bugs in that `bc` should be reported to me, but do
+  expect bugs because the version is old.
+* [Android Open Source `bc`][32]. Any bugs in that `bc` can be reported here.
+* [A Fedora package][36]. If this package does not have any patches, you can
+  report bugs to me.
+
+This is a non-comprehensive list of Linux distros that use this `bc` as the
+system `bc`:
+
+* [Gentoo][33]; it is a first-class alternative to GNU `bc`, but not exclusive.
+* [Linux from Scratch][34].
+
+Other Linux distros package it as a second-class alternative, usually as `bc-gh`
+or `howard-bc`.
 
 ## Language
 
@@ -364,6 +457,10 @@ This `bc` uses the commit message guidelines laid out in [this blog post][10].
 
 This `bc` uses [semantic versioning][11].
 
+## AI-Free
+
+This repository is 100% AI-Free code.
+
 ## Contents
 
 Items labeled with `(maintainer use only)` are not included in release source
@@ -373,28 +470,25 @@ Files:
 
 	.gitignore           The git ignore file (maintainer use only).
 	.gitattributes       The git attributes file (maintainer use only).
-	bc.sln               The Visual Studio solution file for bc.
-	bc.vcxproj           The Visual Studio project file for bc.
-	bc.vcxproj.filters   The Visual Studio filters file for bc.
-	bcl.sln              The Visual Studio solution file for bcl.
-	bcl.vcxproj          The Visual Studio project file for bcl.
-	bcl.vcxproj.filters  The Visual Studio filters file for bcl.
+	bcl.pc.in            A template pkg-config file for bcl.
 	configure            A symlink to configure.sh to make packaging easier.
 	configure.sh         The configure script.
 	LICENSE.md           A Markdown form of the BSD 2-clause License.
 	Makefile.in          The Makefile template.
+	NEWS.md              The changelog.
 	NOTICE.md            List of contributors and copyright owners.
-	RELEASE.md           A checklist for making a release (maintainer use only).
 
 Folders:
 
-	gen      The bc math library, help texts, and code to generate C source.
-	include  All header files.
-	locales  Locale files, in .msg format. Patches welcome for translations.
-	manuals  Manuals for both programs.
-	src      All source code.
-	scripts  A bunch of shell scripts to help with development and building.
-	tests    All tests.
+	benchmarks  A folder of benchmarks for various aspects of bc performance.
+	gen         The bc math library, help texts, and code to generate C source.
+	include     All header files.
+	locales     Locale files, in .msg format. Patches welcome for translations.
+	manuals     Manuals for both programs.
+	src         All source code.
+	scripts     A bunch of shell scripts to help with development and building.
+	tests       All tests.
+	vs          Files needed for the build on Windows.
 
 [1]: https://www.gnu.org/software/bc/
 [4]: ./LICENSE.md
@@ -405,10 +499,10 @@ Folders:
 [10]: http://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html
 [11]: http://semver.org/
 [12]: https://pubs.opengroup.org/onlinepubs/9699919799/utilities/bc.html
-[17]: https://git.yzena.com/gavin/vim-bc
-[18]: https://git.yzena.com/gavin/bc_libs
+[17]: https://git.gavinhoward.com/gavin/vim-bc
+[18]: https://git.gavinhoward.com/gavin/bc_libs
 [19]: ./manuals/benchmarks.md
-[20]: https://git.yzena.com/gavin/bc
+[20]: https://git.gavinhoward.com/gavin/bc
 [21]: https://gavinhoward.com/2020/04/i-am-moving-away-from-github/
 [22]: https://www.deepl.com/translator
 [23]: https://cgit.freebsd.org/src/tree/contrib/bc
@@ -417,3 +511,11 @@ Folders:
 [26]: ./manuals/bcl.3.md
 [27]: https://en.wikipedia.org/wiki/Bus_factor
 [28]: ./manuals/development.md
+[29]: https://github.com/gavinhoward/bc
+[30]: ./manuals/bc/A.1.md#extended-library
+[31]: ./manuals/build.md#settings
+[32]: https://android.googlesource.com/platform/external/bc/
+[33]: https://github.com/gentoo/gentoo/blob/master/app-alternatives/bc/bc-0.ebuild#L8
+[34]: https://www.linuxfromscratch.org/lfs/view/stable/chapter08/bc.html
+[35]: https://github.com/apple-oss-distributions/bc/tree/main/bc
+[36]: https://copr.fedorainfracloud.org/coprs/tkbcopr/bc-gh/
