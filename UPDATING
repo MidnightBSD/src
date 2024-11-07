@@ -1,5 +1,13 @@
 Updating Information for MidnightBSD users.
 
+20241107:
+	atf 0.22 + bugfixes
+
+	bearssl 20230220
+
+20241028:
+	FreeBSD 13 stable import code from this date.
+
 20240822:
 	mport 2.6.4
 
