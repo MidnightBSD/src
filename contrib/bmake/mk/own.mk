@@ -205,7 +205,7 @@ OBJECT_FMT?=a.out
 # sys.mk should set something appropriate if need be.
 OBJECT_FMT?=ELF
 
-.if (${_HOST_OSNAME} == "FreeBSD")
+.if (${_HOST_OSNAME} == "FreeBSD" || ${_HOST_OSNAME} == "MidnightBSD")
 CFLAGS+= ${CPPFLAGS}
 .endif
 

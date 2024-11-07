@@ -1,4 +1,4 @@
-BMAKE(1)                FreeBSD General Commands Manual               BMAKE(1)
+BMAKE(1)                MidnightBSD General Commands Manual               BMAKE(1)
 
 [1mNAME[0m
      [1mbmake [22m-- maintain program dependencies
@@ -1556,4 +1556,4 @@ BMAKE(1)                FreeBSD General Commands Manual               BMAKE(1)
 
      There is no way of escaping a space character in a filename.
 
-FreeBSD 11.3                     June 5, 2020                     FreeBSD 11.3
+MidnightBSD 3.0                     June 5, 2020                     MidnightBSD 3.0
