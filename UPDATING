@@ -7,6 +7,8 @@ Updating Information for MidnightBSD users.
 
 	bmake 20220208
 
+	Remove amd
+
 20241028:
 	FreeBSD 13 stable import code from this date.
 
