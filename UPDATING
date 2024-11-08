@@ -13,6 +13,8 @@ Updating Information for MidnightBSD users.
 
 	libdialog 1.3-20210117
 
+	pnglite 2013
+
 	jemalloc 5.2.1
 
 	Removed gcc and binutils
