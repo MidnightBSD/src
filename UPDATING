@@ -13,6 +13,10 @@ Updating Information for MidnightBSD users.
 
 	libdialog 1.3-20210117
 
+	jemalloc 5.2.1
+
+	Removed gcc and binutils
+
 20241028:
 	FreeBSD 13 stable import code from this date.
 
