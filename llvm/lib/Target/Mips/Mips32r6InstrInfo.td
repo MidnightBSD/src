@@ -39,6 +39,7 @@ def brtarget21 : Operand<OtherVT> {
   let OperandType = "OPERAND_PCREL";
   let DecoderMethod = "DecodeBranchTarget21";
   let ParserMatchClass = MipsJumpTargetAsmOperand;
+  let PrintMethod = "printBranchOperand";
 }
 
 def brtarget26 : Operand<OtherVT> {
@@ -46,6 +47,7 @@ def brtarget26 : Operand<OtherVT> {
   let OperandType = "OPERAND_PCREL";
   let DecoderMethod = "DecodeBranchTarget26";
   let ParserMatchClass = MipsJumpTargetAsmOperand;
+  let PrintMethod = "printBranchOperand";
 }
 
 def jmpoffset16 : Operand<OtherVT> {
@@ -150,15 +152,15 @@ class SELNEZ_ENC : SPECIAL_3R_FM<0b00000, 0b110111>;
 
 class LWPC_ENC   : PCREL19_FM<OPCODE2_LWPC>;
 
-class MAX_S_ENC : COP1_3R_FM<0b011101, FIELD_FMT_S>;
-class MAX_D_ENC : COP1_3R_FM<0b011101, FIELD_FMT_D>;
+class MAX_S_ENC : COP1_3R_FM<0b011110, FIELD_FMT_S>;
+class MAX_D_ENC : COP1_3R_FM<0b011110, FIELD_FMT_D>;
 class MIN_S_ENC : COP1_3R_FM<0b011100, FIELD_FMT_S>;
 class MIN_D_ENC : COP1_3R_FM<0b011100, FIELD_FMT_D>;
 
 class MAXA_S_ENC : COP1_3R_FM<0b011111, FIELD_FMT_S>;
 class MAXA_D_ENC : COP1_3R_FM<0b011111, FIELD_FMT_D>;
-class MINA_S_ENC : COP1_3R_FM<0b011110, FIELD_FMT_S>;
-class MINA_D_ENC : COP1_3R_FM<0b011110, FIELD_FMT_D>;
+class MINA_S_ENC : COP1_3R_FM<0b011101, FIELD_FMT_S>;
+class MINA_D_ENC : COP1_3R_FM<0b011101, FIELD_FMT_D>;
 
 class SELEQZ_S_ENC : COP1_3R_FM<0b010100, FIELD_FMT_S>;
 class SELEQZ_D_ENC : COP1_3R_FM<0b010100, FIELD_FMT_D>;
@@ -700,8 +702,7 @@ class RINT_D_DESC : CLASS_RINT_DESC_BASE<"rint.d", FGR64Opnd, II_RINT_D>;
 class CLASS_S_DESC : CLASS_RINT_DESC_BASE<"class.s", FGR32Opnd, II_CLASS_S>;
 class CLASS_D_DESC : CLASS_RINT_DESC_BASE<"class.d", FGR64Opnd, II_CLASS_D>;
 
-class CACHE_HINT_DESC<string instr_asm, Operand MemOpnd,
-                      RegisterOperand GPROpnd, InstrItinClass itin>
+class CACHE_HINT_DESC<string instr_asm, Operand MemOpnd, InstrItinClass itin>
                      : MipsR6Arch<instr_asm> {
   dag OutOperandList = (outs);
   dag InOperandList = (ins MemOpnd:$addr, uimm5:$hint);
@@ -711,8 +712,8 @@ class CACHE_HINT_DESC<string instr_asm, Operand MemOpnd,
   InstrItinClass Itinerary = itin;
 }
 
-class CACHE_DESC : CACHE_HINT_DESC<"cache", mem_simm9, GPR32Opnd, II_CACHE>;
-class PREF_DESC : CACHE_HINT_DESC<"pref", mem_simm9, GPR32Opnd, II_PREF>;
+class CACHE_DESC : CACHE_HINT_DESC<"cache", mem_simm9, II_CACHE>;
+class PREF_DESC : CACHE_HINT_DESC<"pref", mem_simm9, II_PREF>;
 
 class COP2LD_DESC_BASE<string instr_asm, RegisterOperand COPOpnd,
                        InstrItinClass itin> {
@@ -840,6 +841,7 @@ class GINV_DESC_BASE<string instr_asm, RegisterOperand GPROpnd,
 }
 
 class GINVI_DESC : GINV_DESC_BASE<"ginvi", GPR32Opnd, II_GINVI> {
+  bits<2> type_ = 0b00;
   dag InOperandList = (ins GPR32Opnd:$rs);
   string AsmString = "ginvi\t$rs";
 }

@@ -1,9 +1,8 @@
 //===--- JSONNodeDumper.h - Printing of AST nodes to JSON -----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -161,6 +160,7 @@ class JSONNodeDumper
   std::string createPointerRepresentation(const void *Ptr);
   llvm::json::Object createQualType(QualType QT, bool Desugar = true);
   llvm::json::Object createBareDeclRef(const Decl *D);
+  llvm::json::Object createFPOptions(FPOptionsOverride FPO);
   void writeBareDeclRef(const Decl *D);
   llvm::json::Object createCXXRecordDefinitionData(const CXXRecordDecl *RD);
   llvm::json::Object createCXXBaseSpecifier(const CXXBaseSpecifier &BS);
@@ -208,7 +208,16 @@ public:
   void Visit(const concepts::Requirement *R);
   void Visit(const APValue &Value, QualType Ty);
 
+  void VisitAliasAttr(const AliasAttr *AA);
+  void VisitCleanupAttr(const CleanupAttr *CA);
+  void VisitDeprecatedAttr(const DeprecatedAttr *DA);
+  void VisitUnavailableAttr(const UnavailableAttr *UA);
+  void VisitSectionAttr(const SectionAttr *SA);
+  void VisitVisibilityAttr(const VisibilityAttr *VA);
+  void VisitTLSModelAttr(const TLSModelAttr *TA);
+
   void VisitTypedefType(const TypedefType *TT);
+  void VisitUsingType(const UsingType *TT);
   void VisitFunctionType(const FunctionType *T);
   void VisitFunctionProtoType(const FunctionProtoType *T);
   void VisitRValueReferenceType(const ReferenceType *RT);
@@ -220,6 +229,9 @@ public:
   void VisitUnaryTransformType(const UnaryTransformType *UTT);
   void VisitTagType(const TagType *TT);
   void VisitTemplateTypeParmType(const TemplateTypeParmType *TTPT);
+  void VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *STTPT);
+  void
+  VisitSubstTemplateTypeParmPackType(const SubstTemplateTypeParmPackType *T);
   void VisitAutoType(const AutoType *AT);
   void VisitTemplateSpecializationType(const TemplateSpecializationType *TST);
   void VisitInjectedClassNameType(const InjectedClassNameType *ICNT);
@@ -245,6 +257,7 @@ public:
   void VisitEnumConstantDecl(const EnumConstantDecl *ECD);
   void VisitRecordDecl(const RecordDecl *RD);
   void VisitCXXRecordDecl(const CXXRecordDecl *RD);
+  void VisitHLSLBufferDecl(const HLSLBufferDecl *D);
   void VisitTemplateTypeParmDecl(const TemplateTypeParmDecl *D);
   void VisitNonTypeTemplateParmDecl(const NonTypeTemplateParmDecl *D);
   void VisitTemplateTemplateParmDecl(const TemplateTemplateParmDecl *D);
@@ -272,6 +285,7 @@ public:
   void VisitBinaryOperator(const BinaryOperator *BO);
   void VisitCompoundAssignOperator(const CompoundAssignOperator *CAO);
   void VisitMemberExpr(const MemberExpr *ME);
+  void VisitAtomicExpr(const AtomicExpr *AE);
   void VisitCXXNewExpr(const CXXNewExpr *NE);
   void VisitCXXDeleteExpr(const CXXDeleteExpr *DE);
   void VisitCXXThisExpr(const CXXThisExpr *TE);
@@ -318,6 +332,7 @@ public:
   void VisitGotoStmt(const GotoStmt *GS);
   void VisitWhileStmt(const WhileStmt *WS);
   void VisitObjCAtCatchStmt(const ObjCAtCatchStmt *OACS);
+  void VisitCompoundStmt(const CompoundStmt *IS);
 
   void VisitNullTemplateArgument(const TemplateArgument &TA);
   void VisitTypeTemplateArgument(const TemplateArgument &TA);
@@ -379,7 +394,7 @@ class JSONDumper : public ASTNodeTraverser<JSONDumper, JSONNodeDumper> {
       case TSK_ExplicitInstantiationDefinition:
         if (!DumpExplicitInst)
           break;
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case TSK_Undeclared:
       case TSK_ImplicitInstantiation:
         if (DumpRefOnly)

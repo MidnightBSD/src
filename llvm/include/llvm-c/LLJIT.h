@@ -1,4 +1,4 @@
-/*===----------- llvm-c/LLJIT.h - OrcV2 LLJIT C bindings --------*- C++ -*-===*\
+/*===----------- llvm-c/LLJIT.h - OrcV2 LLJIT C bindings ----------*- C -*-===*\
 |*                                                                            *|
 |* Part of the LLVM Project, under the Apache License v2.0 with LLVM          *|
 |* Exceptions.                                                                *|
@@ -30,6 +30,13 @@
 #include "llvm-c/Types.h"
 
 LLVM_C_EXTERN_C_BEGIN
+
+/**
+ * @defgroup LLVMCExecutionEngineLLJIT LLJIT
+ * @ingroup LLVMCExecutionEngine
+ *
+ * @{
+ */
 
 /**
  * A function for constructing an ObjectLinkingLayer instance to be used
@@ -234,6 +241,10 @@ LLVMOrcIRTransformLayerRef LLVMOrcLLJITGetIRTransformLayer(LLVMOrcLLJITRef J);
  * by the caller.
  */
 const char *LLVMOrcLLJITGetDataLayoutStr(LLVMOrcLLJITRef J);
+
+/**
+ * @}
+ */
 
 LLVM_C_EXTERN_C_END
 

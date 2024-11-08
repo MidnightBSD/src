@@ -18,7 +18,7 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
-#include "llvm/ADT/DenseSet.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -68,8 +68,7 @@ public:
     if (auto *F = CE->getDirectCallee()) {
       // Skip the first argument for overloaded member operators (e. g. lambda
       // or std::function call operator).
-      unsigned ArgIdx =
-          isa<CXXOperatorCallExpr>(CE) && dyn_cast_or_null<CXXMethodDecl>(F);
+      unsigned ArgIdx = isa<CXXOperatorCallExpr>(CE) && isa_and_nonnull<CXXMethodDecl>(F);
 
       for (auto P = F->param_begin();
            // FIXME: Also check variadic function parameters.
@@ -86,7 +85,7 @@ public:
           continue; // FIXME? Should we bail?
 
         // FIXME: more complex types (arrays, references to raw pointers, etc)
-        Optional<bool> IsUncounted = isUncountedPtr(ArgType);
+        std::optional<bool> IsUncounted = isUncountedPtr(ArgType);
         if (!IsUncounted || !(*IsUncounted))
           continue;
 
@@ -149,7 +148,7 @@ public:
 
     auto name = safeGetName(Callee);
     if (name == "adoptRef" || name == "getPtr" || name == "WeakPtr" ||
-        name == "makeWeakPtr" || name == "downcast" || name == "bitwise_cast" ||
+        name == "dynamicDowncast" || name == "downcast" || name == "bitwise_cast" ||
         name == "is" || name == "equal" || name == "hash" ||
         name == "isType"
         // FIXME: Most/all of these should be implemented via attributes.

@@ -42,6 +42,10 @@ let Defs = [R1D, R15D, CC], Uses = [R15D], hasNoSchedulingInfo = 1,
     hasSideEffects = 1 in
   def PROBED_STACKALLOC : Pseudo<(outs), (ins i64imm:$stacksize), []>;
 
+let Defs = [R3D, CC], Uses = [R3D, R4D], hasNoSchedulingInfo = 1,
+    hasSideEffects = 1 in
+  def XPLINK_STACKALLOC : Pseudo<(outs), (ins), []>;
+
 //===----------------------------------------------------------------------===//
 // Branch instructions
 //===----------------------------------------------------------------------===//
@@ -108,7 +112,7 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1 in {
 // condition mask set to "never".  NOP_bare can't be an InstAlias since it
 // would need R0D hard coded which is not part of ADDR64BitRegClass.
 def NOP  : InstAlias<"nop\t$XBD", (BCAsm 0, bdxaddr12only:$XBD), 0>;
-let isAsmParserOnly = 1, hasNoSchedulingInfo = 1, M1 = 0, XBD2 = 0 in
+let isAsmParserOnly = 1, hasNoSchedulingInfo = 1, M1 = 0, X2 = 0, B2 = 0, D2 = 0 in
   def NOP_bare  : InstRXb<0x47,(outs), (ins), "nop", []>;
 def NOPR : InstAlias<"nopr\t$R", (BCRAsm 0, GR64:$R), 0>;
 def NOPR_bare : InstAlias<"nopr", (BCRAsm 0, R0D), 0>;
@@ -277,6 +281,9 @@ let isCall = 1, Defs = [CC] in {
   def BASR  : CallRR <"basr", 0x0D>;
 }
 
+// A symbol in the ADA (z/OS only).
+def adasym : Operand<i64>;
+
 // z/OS XPLINK
 let Predicates = [IsTargetXPLINK64] in {
   let isCall = 1, Defs = [R7D, CC], Uses = [FPC] in {
@@ -285,6 +292,23 @@ let Predicates = [IsTargetXPLINK64] in {
     def CallBASR_XPLINK64  : Alias<4, (outs), (ins ADDR64:$R2, variable_ops),
                           [(z_call ADDR64:$R2)]>;
   }
+
+  let isCall = 1, Defs = [R3D, CC], Uses = [FPC] in {
+    def CallBASR_STACKEXT  : Alias<4, (outs), (ins ADDR64:$R2), []>;
+  }
+
+  let hasNoSchedulingInfo = 1, Defs = [CC] in {
+    def ADA_ENTRY : Alias<12, (outs GR64:$Reg), (ins adasym:$addr,
+                              ADDR64:$ADA, imm64:$Offset),
+                            [(set i64:$Reg, (z_ada_entry i64:$addr,
+                              i64:$ADA, i64:$Offset))]>;
+  }
+  let mayLoad = 1, AddedComplexity = 20, hasNoSchedulingInfo = 1, Defs = [CC] in {
+    def ADA_ENTRY_VALUE : Alias<12, (outs GR64:$Reg), (ins adasym:$addr,
+                              ADDR64:$ADA, imm64:$Offset),
+                            [(set i64:$Reg, (load (z_ada_entry
+                              iPTR:$addr, iPTR:$ADA, i64:$Offset)))]>;
+ }
 }
 
 // Regular calls.
@@ -336,13 +360,25 @@ let isCall = 1, isTerminator = 1, isReturn = 1 in {
   def CLGIBCall : Alias<6, (outs), (ins GR64:$R1, imm64zx8:$I2, cond4:$M3, ADDR64:$R4), []>;
 }
 
-// A return instruction (br %r14) for ELF and (b 2 %r7) for XPLink.
-let isReturn = 1, isTerminator = 1, isBarrier = 1, hasCtrlDep = 1 in
-  def Return : Alias<2, (outs), (ins), [(z_retflag)]>;
+let Predicates = [IsTargetXPLINK64] in {
+  // A return instruction (b 2(%r7)).
+  let isReturn = 1, isTerminator = 1, isBarrier = 1, hasCtrlDep = 1 in
+    def Return_XPLINK : Alias<4, (outs), (ins), [(z_retglue)]>;
 
-// A conditional return instruction (bcr <cond>, %r14).
-let isReturn = 1, isTerminator = 1, hasCtrlDep = 1, CCMaskFirst = 1, Uses = [CC] in
-  def CondReturn : Alias<2, (outs), (ins cond4:$valid, cond4:$R1), []>;
+  // A conditional return instruction (bc <cond>, 2(%r7)).
+  let isReturn = 1, isTerminator = 1, hasCtrlDep = 1, CCMaskFirst = 1, Uses = [CC] in
+    def CondReturn_XPLINK : Alias<4, (outs), (ins cond4:$valid, cond4:$R1), []>;
+}
+
+let Predicates = [IsTargetELF] in {
+  // A return instruction (br %r14).
+  let isReturn = 1, isTerminator = 1, isBarrier = 1, hasCtrlDep = 1 in
+    def Return : Alias<2, (outs), (ins), [(z_retglue)]>;
+
+  // A conditional return instruction (bcr <cond>, %r14).
+  let isReturn = 1, isTerminator = 1, hasCtrlDep = 1, CCMaskFirst = 1, Uses = [CC] in
+    def CondReturn : Alias<2, (outs), (ins cond4:$valid, cond4:$R1), []>;
+}
 
 // Fused compare and conditional returns.
 let isReturn = 1, isTerminator = 1, hasCtrlDep = 1 in {
@@ -503,12 +539,18 @@ def MVGHI : StoreSIL<"mvghi", 0xE548, store,         imm64sx16>;
 
 // Memory-to-memory moves.
 let mayLoad = 1, mayStore = 1 in
-  defm MVC : MemorySS<"mvc", 0xD2, z_mvc, z_mvc_loop>;
+  defm MVC : MemorySS<"mvc", 0xD2, z_mvc>;
 let mayLoad = 1, mayStore = 1, Defs = [CC] in {
   def MVCL  : SideEffectBinaryMemMemRR<"mvcl", 0x0E, GR128, GR128>;
   def MVCLE : SideEffectTernaryMemMemRS<"mvcle", 0xA8, GR128, GR128>;
   def MVCLU : SideEffectTernaryMemMemRSY<"mvclu", 0xEB8E, GR128, GR128>;
 }
+
+// Memset[Length][Byte] pseudos.
+def MemsetImmImm : MemsetPseudo<imm64, imm32zx8trunc>;
+def MemsetImmReg : MemsetPseudo<imm64, GR32>;
+def MemsetRegImm : MemsetPseudo<ADDR64, imm32zx8trunc>;
+def MemsetRegReg : MemsetPseudo<ADDR64, GR32>;
 
 // Move right.
 let Predicates = [FeatureMiscellaneousExtensions3],
@@ -1200,7 +1242,7 @@ let Defs = [CC] in {
 
   // Block AND.
   let mayLoad = 1, mayStore = 1 in
-    defm NC : MemorySS<"nc", 0xD4, z_nc, z_nc_loop>;
+    defm NC : MemorySS<"nc", 0xD4, z_nc>;
 }
 defm : RMWIByte<and, bdaddr12pair, NI>;
 defm : RMWIByte<and, bdaddr20pair, NIY>;
@@ -1257,7 +1299,7 @@ let Defs = [CC] in {
 
   // Block OR.
   let mayLoad = 1, mayStore = 1 in
-    defm OC : MemorySS<"oc", 0xD6, z_oc, z_oc_loop>;
+    defm OC : MemorySS<"oc", 0xD6, z_oc>;
 }
 defm : RMWIByte<or, bdaddr12pair, OI>;
 defm : RMWIByte<or, bdaddr20pair, OIY>;
@@ -1297,7 +1339,7 @@ let Defs = [CC] in {
 
   // Block XOR.
   let mayLoad = 1, mayStore = 1 in
-    defm XC : MemorySS<"xc", 0xD7, z_xc, z_xc_loop>;
+    defm XC : MemorySS<"xc", 0xD7, z_xc>;
 }
 defm : RMWIByte<xor, bdaddr12pair, XI>;
 defm : RMWIByte<xor, bdaddr20pair, XIY>;
@@ -1624,7 +1666,7 @@ defm : ZXB<z_ucmp, GR64, CLGFR>;
 
 // Memory-to-memory comparison.
 let mayLoad = 1, Defs = [CC] in {
-  defm CLC : CompareMemorySS<"clc", 0xD5, z_clc, z_clc_loop>;
+  defm CLC : CompareMemorySS<"clc", 0xD5, z_clc>;
   def CLCL  : SideEffectBinaryMemMemRR<"clcl", 0x0F, GR128, GR128>;
   def CLCLE : SideEffectTernaryMemMemRS<"clcle", 0xA9, GR128, GR128>;
   def CLCLU : SideEffectTernaryMemMemRSY<"clclu", 0xEB8F, GR128, GR128>;
@@ -1690,10 +1732,6 @@ let Predicates = [FeatureExecutionHint], hasSideEffects = 1 in {
 let hasSideEffects = 1 in
 def Serialize : Alias<2, (outs), (ins), []>;
 
-// A pseudo instruction that serves as a compiler barrier.
-let hasSideEffects = 1, hasNoSchedulingInfo = 1 in
-def MemBarrier : Pseudo<(outs), (ins), [(z_membarrier)]>;
-
 let Predicates = [FeatureInterlockedAccess1], Defs = [CC] in {
   def LAA   : LoadAndOpRSY<"laa",   0xEBF8, atomic_load_add_32, GR32>;
   def LAAG  : LoadAndOpRSY<"laag",  0xEBE8, atomic_load_add_64, GR64>;
@@ -1708,112 +1746,29 @@ let Predicates = [FeatureInterlockedAccess1], Defs = [CC] in {
 }
 
 def ATOMIC_SWAPW   : AtomicLoadWBinaryReg<z_atomic_swapw>;
-def ATOMIC_SWAP_32 : AtomicLoadBinaryReg32<atomic_swap_32>;
-def ATOMIC_SWAP_64 : AtomicLoadBinaryReg64<atomic_swap_64>;
 
 def ATOMIC_LOADW_AR  : AtomicLoadWBinaryReg<z_atomic_loadw_add>;
 def ATOMIC_LOADW_AFI : AtomicLoadWBinaryImm<z_atomic_loadw_add, simm32>;
-let Predicates = [FeatureNoInterlockedAccess1] in {
-  def ATOMIC_LOAD_AR   : AtomicLoadBinaryReg32<atomic_load_add_32>;
-  def ATOMIC_LOAD_AHI  : AtomicLoadBinaryImm32<atomic_load_add_32, imm32sx16>;
-  def ATOMIC_LOAD_AFI  : AtomicLoadBinaryImm32<atomic_load_add_32, simm32>;
-  def ATOMIC_LOAD_AGR  : AtomicLoadBinaryReg64<atomic_load_add_64>;
-  def ATOMIC_LOAD_AGHI : AtomicLoadBinaryImm64<atomic_load_add_64, imm64sx16>;
-  def ATOMIC_LOAD_AGFI : AtomicLoadBinaryImm64<atomic_load_add_64, imm64sx32>;
-}
 
 def ATOMIC_LOADW_SR : AtomicLoadWBinaryReg<z_atomic_loadw_sub>;
-def ATOMIC_LOAD_SR  : AtomicLoadBinaryReg32<atomic_load_sub_32>;
-def ATOMIC_LOAD_SGR : AtomicLoadBinaryReg64<atomic_load_sub_64>;
 
 def ATOMIC_LOADW_NR   : AtomicLoadWBinaryReg<z_atomic_loadw_and>;
 def ATOMIC_LOADW_NILH : AtomicLoadWBinaryImm<z_atomic_loadw_and, imm32lh16c>;
-let Predicates = [FeatureNoInterlockedAccess1] in {
-  def ATOMIC_LOAD_NR     : AtomicLoadBinaryReg32<atomic_load_and_32>;
-  def ATOMIC_LOAD_NILL   : AtomicLoadBinaryImm32<atomic_load_and_32,
-                                                 imm32ll16c>;
-  def ATOMIC_LOAD_NILH   : AtomicLoadBinaryImm32<atomic_load_and_32,
-                                                 imm32lh16c>;
-  def ATOMIC_LOAD_NILF   : AtomicLoadBinaryImm32<atomic_load_and_32, uimm32>;
-  def ATOMIC_LOAD_NGR    : AtomicLoadBinaryReg64<atomic_load_and_64>;
-  def ATOMIC_LOAD_NILL64 : AtomicLoadBinaryImm64<atomic_load_and_64,
-                                                 imm64ll16c>;
-  def ATOMIC_LOAD_NILH64 : AtomicLoadBinaryImm64<atomic_load_and_64,
-                                                 imm64lh16c>;
-  def ATOMIC_LOAD_NIHL64 : AtomicLoadBinaryImm64<atomic_load_and_64,
-                                                 imm64hl16c>;
-  def ATOMIC_LOAD_NIHH64 : AtomicLoadBinaryImm64<atomic_load_and_64,
-                                                 imm64hh16c>;
-  def ATOMIC_LOAD_NILF64 : AtomicLoadBinaryImm64<atomic_load_and_64,
-                                                 imm64lf32c>;
-  def ATOMIC_LOAD_NIHF64 : AtomicLoadBinaryImm64<atomic_load_and_64,
-                                                 imm64hf32c>;
-}
 
 def ATOMIC_LOADW_OR     : AtomicLoadWBinaryReg<z_atomic_loadw_or>;
 def ATOMIC_LOADW_OILH   : AtomicLoadWBinaryImm<z_atomic_loadw_or, imm32lh16>;
-let Predicates = [FeatureNoInterlockedAccess1] in {
-  def ATOMIC_LOAD_OR     : AtomicLoadBinaryReg32<atomic_load_or_32>;
-  def ATOMIC_LOAD_OILL   : AtomicLoadBinaryImm32<atomic_load_or_32, imm32ll16>;
-  def ATOMIC_LOAD_OILH   : AtomicLoadBinaryImm32<atomic_load_or_32, imm32lh16>;
-  def ATOMIC_LOAD_OILF   : AtomicLoadBinaryImm32<atomic_load_or_32, uimm32>;
-  def ATOMIC_LOAD_OGR    : AtomicLoadBinaryReg64<atomic_load_or_64>;
-  def ATOMIC_LOAD_OILL64 : AtomicLoadBinaryImm64<atomic_load_or_64, imm64ll16>;
-  def ATOMIC_LOAD_OILH64 : AtomicLoadBinaryImm64<atomic_load_or_64, imm64lh16>;
-  def ATOMIC_LOAD_OIHL64 : AtomicLoadBinaryImm64<atomic_load_or_64, imm64hl16>;
-  def ATOMIC_LOAD_OIHH64 : AtomicLoadBinaryImm64<atomic_load_or_64, imm64hh16>;
-  def ATOMIC_LOAD_OILF64 : AtomicLoadBinaryImm64<atomic_load_or_64, imm64lf32>;
-  def ATOMIC_LOAD_OIHF64 : AtomicLoadBinaryImm64<atomic_load_or_64, imm64hf32>;
-}
 
 def ATOMIC_LOADW_XR     : AtomicLoadWBinaryReg<z_atomic_loadw_xor>;
 def ATOMIC_LOADW_XILF   : AtomicLoadWBinaryImm<z_atomic_loadw_xor, uimm32>;
-let Predicates = [FeatureNoInterlockedAccess1] in {
-  def ATOMIC_LOAD_XR     : AtomicLoadBinaryReg32<atomic_load_xor_32>;
-  def ATOMIC_LOAD_XILF   : AtomicLoadBinaryImm32<atomic_load_xor_32, uimm32>;
-  def ATOMIC_LOAD_XGR    : AtomicLoadBinaryReg64<atomic_load_xor_64>;
-  def ATOMIC_LOAD_XILF64 : AtomicLoadBinaryImm64<atomic_load_xor_64, imm64lf32>;
-  def ATOMIC_LOAD_XIHF64 : AtomicLoadBinaryImm64<atomic_load_xor_64, imm64hf32>;
-}
 
 def ATOMIC_LOADW_NRi    : AtomicLoadWBinaryReg<z_atomic_loadw_nand>;
 def ATOMIC_LOADW_NILHi  : AtomicLoadWBinaryImm<z_atomic_loadw_nand,
                                                imm32lh16c>;
-def ATOMIC_LOAD_NRi     : AtomicLoadBinaryReg32<atomic_load_nand_32>;
-def ATOMIC_LOAD_NILLi   : AtomicLoadBinaryImm32<atomic_load_nand_32,
-                                                imm32ll16c>;
-def ATOMIC_LOAD_NILHi   : AtomicLoadBinaryImm32<atomic_load_nand_32,
-                                                imm32lh16c>;
-def ATOMIC_LOAD_NILFi   : AtomicLoadBinaryImm32<atomic_load_nand_32, uimm32>;
-def ATOMIC_LOAD_NGRi    : AtomicLoadBinaryReg64<atomic_load_nand_64>;
-def ATOMIC_LOAD_NILL64i : AtomicLoadBinaryImm64<atomic_load_nand_64,
-                                                imm64ll16c>;
-def ATOMIC_LOAD_NILH64i : AtomicLoadBinaryImm64<atomic_load_nand_64,
-                                                imm64lh16c>;
-def ATOMIC_LOAD_NIHL64i : AtomicLoadBinaryImm64<atomic_load_nand_64,
-                                                imm64hl16c>;
-def ATOMIC_LOAD_NIHH64i : AtomicLoadBinaryImm64<atomic_load_nand_64,
-                                                imm64hh16c>;
-def ATOMIC_LOAD_NILF64i : AtomicLoadBinaryImm64<atomic_load_nand_64,
-                                                imm64lf32c>;
-def ATOMIC_LOAD_NIHF64i : AtomicLoadBinaryImm64<atomic_load_nand_64,
-                                                imm64hf32c>;
 
 def ATOMIC_LOADW_MIN    : AtomicLoadWBinaryReg<z_atomic_loadw_min>;
-def ATOMIC_LOAD_MIN_32  : AtomicLoadBinaryReg32<atomic_load_min_32>;
-def ATOMIC_LOAD_MIN_64  : AtomicLoadBinaryReg64<atomic_load_min_64>;
-
 def ATOMIC_LOADW_MAX    : AtomicLoadWBinaryReg<z_atomic_loadw_max>;
-def ATOMIC_LOAD_MAX_32  : AtomicLoadBinaryReg32<atomic_load_max_32>;
-def ATOMIC_LOAD_MAX_64  : AtomicLoadBinaryReg64<atomic_load_max_64>;
-
 def ATOMIC_LOADW_UMIN   : AtomicLoadWBinaryReg<z_atomic_loadw_umin>;
-def ATOMIC_LOAD_UMIN_32 : AtomicLoadBinaryReg32<atomic_load_umin_32>;
-def ATOMIC_LOAD_UMIN_64 : AtomicLoadBinaryReg64<atomic_load_umin_64>;
-
 def ATOMIC_LOADW_UMAX   : AtomicLoadWBinaryReg<z_atomic_loadw_umax>;
-def ATOMIC_LOAD_UMAX_32 : AtomicLoadBinaryReg32<atomic_load_umax_32>;
-def ATOMIC_LOAD_UMAX_64 : AtomicLoadBinaryReg64<atomic_load_umax_64>;
 
 def ATOMIC_CMP_SWAPW
   : Pseudo<(outs GR32:$dst), (ins bdaddr20only:$addr, GR32:$cmp, GR32:$swap,
@@ -2173,7 +2128,7 @@ let hasSideEffects = 1 in {
   def EX   : SideEffectBinaryRX<"ex", 0x44, ADDR64>;
   def EXRL : SideEffectBinaryRILPC<"exrl", 0xC60, ADDR64>;
   let hasNoSchedulingInfo = 1 in
-    def EXRL_Pseudo : Pseudo<(outs), (ins i64imm:$TargetOpc, ADDR64:$lenMinus1,
+    def EXRL_Pseudo : Alias<6, (outs), (ins i64imm:$TargetOpc, ADDR64:$lenMinus1,
                                           bdaddr12only:$bdl1, bdaddr12only:$bd2),
                                           []>;
 }
@@ -2199,7 +2154,7 @@ let isCodeGenOnly = 1, hasSideEffects = 1 in {
   def InsnRIS : DirectiveInsnRIS<(outs),
                                  (ins imm64zx48:$enc, AnyReg:$R1,
                                       imm32sx8:$I2, imm32zx4:$M3,
-                                      bdaddr12only:$BD4),
+                                      (bdaddr12only $B4, $D4):$BD4),
                                  ".insn ris,$enc,$R1,$I2,$M3,$BD4", []>;
   def InsnRR : DirectiveInsnRR<(outs),
                                (ins imm64zx16:$enc, AnyReg:$R1, AnyReg:$R2),
@@ -2214,15 +2169,15 @@ let isCodeGenOnly = 1, hasSideEffects = 1 in {
   def InsnRRS : DirectiveInsnRRS<(outs),
                                  (ins imm64zx48:$enc, AnyReg:$R1,
                                       AnyReg:$R2, imm32zx4:$M3,
-                                      bdaddr12only:$BD4),
+                                      (bdaddr12only $B4, $D4):$BD4),
                                  ".insn rrs,$enc,$R1,$R2,$M3,$BD4", []>;
   def InsnRS  : DirectiveInsnRS<(outs),
                                 (ins imm64zx32:$enc, AnyReg:$R1,
-                                     AnyReg:$R3, bdaddr12only:$BD2),
+                                     AnyReg:$R3, (bdaddr12only $B2, $D2):$BD2),
                                 ".insn rs,$enc,$R1,$R3,$BD2", []>;
   def InsnRSE : DirectiveInsnRSE<(outs),
                                  (ins imm64zx48:$enc, AnyReg:$R1,
-                                      AnyReg:$R3, bdaddr12only:$BD2),
+                                      AnyReg:$R3, (bdaddr12only $B2, $D2):$BD2),
                                  ".insn rse,$enc,$R1,$R3,$BD2", []>;
   def InsnRSI : DirectiveInsnRSI<(outs),
                                  (ins imm64zx48:$enc, AnyReg:$R1,
@@ -2230,47 +2185,47 @@ let isCodeGenOnly = 1, hasSideEffects = 1 in {
                                  ".insn rsi,$enc,$R1,$R3,$RI2", []>;
   def InsnRSY : DirectiveInsnRSY<(outs),
                                  (ins imm64zx48:$enc, AnyReg:$R1,
-                                      AnyReg:$R3, bdaddr20only:$BD2),
+                                      AnyReg:$R3, (bdaddr20only $B2, $D2):$BD2),
                                  ".insn rsy,$enc,$R1,$R3,$BD2", []>;
   def InsnRX  : DirectiveInsnRX<(outs), (ins imm64zx32:$enc, AnyReg:$R1,
-                                             bdxaddr12only:$XBD2),
+                                             (bdxaddr12only $B2, $D2, $X2):$XBD2),
                                 ".insn rx,$enc,$R1,$XBD2", []>;
   def InsnRXE : DirectiveInsnRXE<(outs), (ins imm64zx48:$enc, AnyReg:$R1,
-                                              bdxaddr12only:$XBD2),
+                                              (bdxaddr12only $B2, $D2, $X2):$XBD2),
                                  ".insn rxe,$enc,$R1,$XBD2", []>;
   def InsnRXF : DirectiveInsnRXF<(outs),
                                  (ins imm64zx48:$enc, AnyReg:$R1,
-                                      AnyReg:$R3, bdxaddr12only:$XBD2),
+                                      AnyReg:$R3, (bdxaddr12only $B2, $D2, $X2):$XBD2),
                                  ".insn rxf,$enc,$R1,$R3,$XBD2", []>;
   def InsnRXY : DirectiveInsnRXY<(outs), (ins imm64zx48:$enc, AnyReg:$R1,
-                                              bdxaddr20only:$XBD2),
+                                              (bdxaddr20only $B2, $D2, $X2):$XBD2),
                                  ".insn rxy,$enc,$R1,$XBD2", []>;
   def InsnS : DirectiveInsnS<(outs),
-                             (ins imm64zx32:$enc, bdaddr12only:$BD2),
+                             (ins imm64zx32:$enc, (bdaddr12only $B2, $D2):$BD2),
                              ".insn s,$enc,$BD2", []>;
   def InsnSI : DirectiveInsnSI<(outs),
-                               (ins imm64zx32:$enc, bdaddr12only:$BD1,
+                               (ins imm64zx32:$enc, (bdaddr12only $B1, $D1):$BD1,
                                     imm32sx8:$I2),
                                ".insn si,$enc,$BD1,$I2", []>;
   def InsnSIY : DirectiveInsnSIY<(outs),
                                  (ins imm64zx48:$enc,
-                                      bdaddr20only:$BD1, imm32zx8:$I2),
+                                      (bdaddr20only $B1, $D1):$BD1, imm32zx8:$I2),
                                  ".insn siy,$enc,$BD1,$I2", []>;
   def InsnSIL : DirectiveInsnSIL<(outs),
-                                 (ins imm64zx48:$enc, bdaddr12only:$BD1,
+                                 (ins imm64zx48:$enc, (bdaddr12only $B1, $D1):$BD1,
                                       imm32zx16:$I2),
                                  ".insn sil,$enc,$BD1,$I2", []>;
   def InsnSS : DirectiveInsnSS<(outs),
-                               (ins imm64zx48:$enc, bdraddr12only:$RBD1,
-                                    bdaddr12only:$BD2, AnyReg:$R3),
+                               (ins imm64zx48:$enc, (bdraddr12only $B1, $D1, $R1):$RBD1,
+                                    (bdaddr12only $B2, $D2):$BD2, AnyReg:$R3),
                                ".insn ss,$enc,$RBD1,$BD2,$R3", []>;
   def InsnSSE : DirectiveInsnSSE<(outs),
                                  (ins imm64zx48:$enc,
-                                      bdaddr12only:$BD1,bdaddr12only:$BD2),
+                                      (bdaddr12only $B1, $D1):$BD1,(bdaddr12only $B2, $D2):$BD2),
                                  ".insn sse,$enc,$BD1,$BD2", []>;
   def InsnSSF : DirectiveInsnSSF<(outs),
-                                 (ins imm64zx48:$enc, bdaddr12only:$BD1,
-                                      bdaddr12only:$BD2, AnyReg:$R3),
+                                 (ins imm64zx48:$enc, (bdaddr12only $B1, $D1):$BD1,
+                                      (bdaddr12only $B2, $D2):$BD2, AnyReg:$R3),
                                  ".insn ssf,$enc,$BD1,$BD2,$R3", []>;
   def InsnVRI : DirectiveInsnVRI<(outs),
                                  (ins imm64zx48:$enc, VR128:$V1, VR128:$V2,
@@ -2283,19 +2238,19 @@ let isCodeGenOnly = 1, hasSideEffects = 1 in {
                                   ".insn vrr,$enc,$V1,$V2,$V3,$M4,$M5,$M6", []>;
   def InsnVRS : DirectiveInsnVRS<(outs),
                                  (ins imm64zx48:$enc, AnyReg:$R1, VR128:$V3,
-                                  bdaddr12only:$BD2, imm32zx4:$M4),
+                                  (bdaddr12only $B2, $D2):$BD2, imm32zx4:$M4),
                                  ".insn vrs,$enc,$BD2,$M4", []>;
   def InsnVRV : DirectiveInsnVRV<(outs),
                                  (ins imm64zx48:$enc, VR128:$V1,
-                                      bdvaddr12only:$VBD2, imm32zx4:$M3),
+                                      (bdvaddr12only $B2, $D2, $V2):$VBD2, imm32zx4:$M3),
                                  ".insn vrv,$enc,$V1,$VBD2,$M3", []>;
   def InsnVRX : DirectiveInsnVRX<(outs),
                                  (ins imm64zx48:$enc, VR128:$V1,
-                                  bdxaddr12only:$XBD2, imm32zx4:$M3),
+                                  (bdxaddr12only $B2, $D2, $X2):$XBD2, imm32zx4:$M3),
                                  ".insn vrx,$enc,$V1,$XBD2,$M3", []>;
   def InsnVSI : DirectiveInsnVSI<(outs),
                                  (ins imm64zx48:$enc, VR128:$V1,
-                                  bdaddr12only:$BD2, imm32zx8:$I3),
+                                  (bdaddr12only $B2, $D2):$BD2, imm32zx8:$I3),
                                   ".insn vsi,$enc,$V1,$BD2,$I3", []>;
 }
 
@@ -2307,6 +2262,10 @@ let isCodeGenOnly = 1, hasSideEffects = 1 in {
 // equivalent to (and (xor x, -1), y)
 def : Pat<(and (xor GR64:$x, (i64 -1)), GR64:$y),
                           (XGR GR64:$y, (NGR GR64:$y, GR64:$x))>;
+
+// Use LCGR/AGHI for i64 xor with -1.
+def : Pat<(xor GR64:$x, (i64 -1)),
+          (AGHI (LCGR GR64:$x), (i64 -1))>;
 
 // Shift/rotate instructions only use the last 6 bits of the second operand
 // register, so we can safely use NILL (16 fewer bits than NILF) to only AND the
@@ -2355,21 +2314,15 @@ let AddedComplexity = 4 in {
             (RLLG GR64:$val, (LCR GR32:$shift), 0)>;
 }
 
-// Peepholes for turning scalar operations into block operations.
-defm : BlockLoadStore<anyextloadi8, i32, MVCSequence, NCSequence, OCSequence,
-                      XCSequence, 1>;
-defm : BlockLoadStore<anyextloadi16, i32, MVCSequence, NCSequence, OCSequence,
-                      XCSequence, 2>;
-defm : BlockLoadStore<load, i32, MVCSequence, NCSequence, OCSequence,
-                      XCSequence, 4>;
-defm : BlockLoadStore<anyextloadi8, i64, MVCSequence, NCSequence,
-                      OCSequence, XCSequence, 1>;
-defm : BlockLoadStore<anyextloadi16, i64, MVCSequence, NCSequence, OCSequence,
-                      XCSequence, 2>;
-defm : BlockLoadStore<anyextloadi32, i64, MVCSequence, NCSequence, OCSequence,
-                      XCSequence, 4>;
-defm : BlockLoadStore<load, i64, MVCSequence, NCSequence, OCSequence,
-                      XCSequence, 8>;
+// Peepholes for turning scalar operations into block operations.  The length
+// is given as one less for these pseudos.
+defm : BlockLoadStore<anyextloadi8, i32, MVCImm, NCImm, OCImm, XCImm, 0>;
+defm : BlockLoadStore<anyextloadi16, i32, MVCImm, NCImm, OCImm, XCImm, 1>;
+defm : BlockLoadStore<load, i32, MVCImm, NCImm, OCImm, XCImm, 3>;
+defm : BlockLoadStore<anyextloadi8, i64, MVCImm, NCImm, OCImm, XCImm, 0>;
+defm : BlockLoadStore<anyextloadi16, i64, MVCImm, NCImm, OCImm, XCImm, 1>;
+defm : BlockLoadStore<anyextloadi32, i64, MVCImm, NCImm, OCImm, XCImm, 3>;
+defm : BlockLoadStore<load, i64, MVCImm, NCImm, OCImm, XCImm, 7>;
 
 //===----------------------------------------------------------------------===//
 // Mnemonic Aliases

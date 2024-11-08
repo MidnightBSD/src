@@ -1,4 +1,4 @@
-//== M68kInstrInfo.td - Main M68k Instruction Definition -*- tablegen -*-=//
+//===-- M68kInstrInfo.td - Main M68k Instruction Definition -*- tablegen -*-==//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -53,15 +53,6 @@ def MxSDT_BiArithCCRInOut : SDTypeProfile<2, 3, [
   /*   LHS */ SDTCisSameAs<0, 2>,
   /*   RHS */ SDTCisSameAs<0, 3>,
   /*   CCR */ SDTCisSameAs<1, 4>
-]>;
-
-// RES1, RES2, CCR <- op LHS, RHS
-def MxSDT_2BiArithCCROut : SDTypeProfile<3, 2, [
-  /* RES 1 */ SDTCisInt<0>,
-  /* RES 2 */ SDTCisSameAs<0, 1>,
-  /*   CCR */ SDTCisVT<1, i8>,
-  /*   LHS */ SDTCisSameAs<0, 2>,
-  /*   RHS */ SDTCisSameAs<0, 3>
 ]>;
 
 def MxSDT_CmpTest : SDTypeProfile<1, 2, [
@@ -134,10 +125,10 @@ def MxAddX : SDNode<"M68kISD::ADDX", MxSDT_BiArithCCRInOut>;
 def MxSubX : SDNode<"M68kISD::SUBX", MxSDT_BiArithCCRInOut>;
 
 def MxSMul : SDNode<"M68kISD::SMUL", MxSDT_BiArithCCROut, [SDNPCommutative]>;
-def MxUMul : SDNode<"M68kISD::UMUL", MxSDT_2BiArithCCROut, [SDNPCommutative]>;
+def MxUMul : SDNode<"M68kISD::UMUL", MxSDT_BiArithCCROut, [SDNPCommutative]>;
 
 def MxCmp     : SDNode<"M68kISD::CMP", MxSDT_CmpTest>;
-def MxBt      : SDNode<"M68kISD::BT",  MxSDT_CmpTest>;
+def MxBtst    : SDNode<"M68kISD::BTST", MxSDT_CmpTest>;
 
 def MxCmov    : SDNode<"M68kISD::CMOV",        MxSDT_Cmov>;
 def MxBrCond  : SDNode<"M68kISD::BRCOND",      MxSDT_BrCond, [SDNPHasChain]>;
@@ -164,13 +155,30 @@ class MxSize<int num, string id, string full> {
 def MxSize8  : MxSize<8,  "b", "byte">;
 def MxSize16 : MxSize<16, "w", "word">;
 def MxSize32 : MxSize<32, "l", "long">;
+def MxSizeF32 : MxSize<32, "s", "f32">;
+def MxSizeF64 : MxSize<64, "d", "f64">;
+def MxSizeF80 : MxSize<80, "x", "f80">;
 
-class MxOpClass<string name> : AsmOperandClass {
+class MxOpClass<string name,
+                list<AsmOperandClass> superClasses = []> : AsmOperandClass {
   let Name = name;
   let ParserMethod = "parseMemOp";
+  let SuperClasses = superClasses;
 }
 
 def MxRegClass : MxOpClass<"Reg">;
+// Splitting asm register class to avoid ambiguous on operands'
+// MatchClassKind. For instance, without this separation,
+// both ADD32dd and ADD32dr has {MCK_RegClass, MCK_RegClass} for
+// their operands, which makes AsmParser unable to pick the correct
+// one in a deterministic way.
+let RenderMethod = "addRegOperands", SuperClasses = [MxRegClass]in {
+  def MxARegClass : MxOpClass<"AReg">;
+  def MxDRegClass : MxOpClass<"DReg">;
+
+  def MxFPDRegClass : MxOpClass<"FPDReg">;
+  def MxFPCRegClass : MxOpClass<"FPCReg">;
+}
 
 class MxOperand<ValueType vt, MxSize size, string letter, RegisterClass rc, dag pat = (null_frag)> {
   ValueType VT = vt;
@@ -200,20 +208,37 @@ def MxXRD32_TC : MxRegOp<i32, XR32_TC, MxSize32, "r">;
 
 // DATA REGISTER DIRECT. The operand is in the data register specified by
 // the effective address register field.
-def MxDRD8  : MxRegOp<i8,  DR8,  MxSize8,  "d">;
-def MxDRD16 : MxRegOp<i16, DR16, MxSize16, "d">;
-def MxDRD32 : MxRegOp<i32, DR32, MxSize32, "d">;
+let ParserMatchClass = MxDRegClass in {
+  def MxDRD8  : MxRegOp<i8,  DR8,  MxSize8,  "d">;
+  def MxDRD16 : MxRegOp<i16, DR16, MxSize16, "d">;
+  def MxDRD32 : MxRegOp<i32, DR32, MxSize32, "d">;
 
-def MxDRD16_TC : MxRegOp<i16, DR16_TC, MxSize16, "d">;
-def MxDRD32_TC : MxRegOp<i32, DR32_TC, MxSize32, "d">;
+  def MxDRD16_TC : MxRegOp<i16, DR16_TC, MxSize16, "d">;
+  def MxDRD32_TC : MxRegOp<i32, DR32_TC, MxSize32, "d">;
+}
 
 // ADDRESS REGISTER DIRECT. The operand is in the address register specified by
 // the effective address register field.
-def MxARD16 : MxRegOp<i16, AR16, MxSize16, "a">;
-def MxARD32 : MxRegOp<i32, AR32, MxSize32, "a">;
+let ParserMatchClass = MxARegClass in {
+  def MxARD16 : MxRegOp<i16, AR16, MxSize16, "a">;
+  def MxARD32 : MxRegOp<i32, AR32, MxSize32, "a">;
 
-def MxARD16_TC : MxRegOp<i16, AR16_TC, MxSize16, "a">;
-def MxARD32_TC : MxRegOp<i32, AR32_TC, MxSize32, "a">;
+  def MxARD16_TC : MxRegOp<i16, AR16_TC, MxSize16, "a">;
+  def MxARD32_TC : MxRegOp<i32, AR32_TC, MxSize32, "a">;
+}
+
+// FLOATING POINT DATA REGISTER.
+let ParserMatchClass = MxFPDRegClass in {
+  def MxFPR32 : MxRegOp<f32, FPDR32, MxSizeF32, "fp">;
+  def MxFPR64 : MxRegOp<f64, FPDR64, MxSizeF64, "fp">;
+  def MxFPR80 : MxRegOp<f80, FPDR80, MxSizeF80, "fp">;
+}
+
+// FLOATING POINT SYSTEM CONTROL REGISTER
+let ParserMatchClass = MxFPCRegClass in {
+  def MxFPCSR : MxRegOp<i32, FPCSC, MxSize32, "fpcs">;
+  def MxFPIR  : MxRegOp<i32, FPIC,  MxSize32, "fpi">;
+}
 
 class MxMemOp<dag ops, MxSize size, string letter,
               string printMethod = "printOperand",
@@ -276,13 +301,13 @@ def MxARIPD32_TC  : MxMemOp<(ops AR32_TC), MxSize32, "e", "printARIPD32Mem", MxA
 // extension word. The reference is classified as a data reference with the
 // exception of the jump and jump-to-subroutine instructions.
 def MxARID        : MxOpClass<"ARID">;
-def MxARID8       : MxMemOp<(ops i16imm, AR32), MxSize8,  "p", "printARID8Mem", MxARID>;
-def MxARID16      : MxMemOp<(ops i16imm, AR32), MxSize16, "p", "printARID16Mem", MxARID>;
-def MxARID32      : MxMemOp<(ops i16imm, AR32), MxSize32, "p", "printARID32Mem", MxARID>;
+def MxARID8       : MxMemOp<(ops i16imm:$disp, AR32:$reg), MxSize8,  "p", "printARID8Mem", MxARID>;
+def MxARID16      : MxMemOp<(ops i16imm:$disp, AR32:$reg), MxSize16, "p", "printARID16Mem", MxARID>;
+def MxARID32      : MxMemOp<(ops i16imm:$disp, AR32:$reg), MxSize32, "p", "printARID32Mem", MxARID>;
 
-def MxARID8_TC    : MxMemOp<(ops i16imm, AR32_TC), MxSize8,  "p", "printARID8Mem", MxARID>;
-def MxARID16_TC   : MxMemOp<(ops i16imm, AR32_TC), MxSize16, "p", "printARID16Mem", MxARID>;
-def MxARID32_TC   : MxMemOp<(ops i16imm, AR32_TC), MxSize32, "p", "printARID32Mem", MxARID>;
+def MxARID8_TC    : MxMemOp<(ops i16imm:$disp, AR32_TC:$reg), MxSize8,  "p", "printARID8Mem", MxARID>;
+def MxARID16_TC   : MxMemOp<(ops i16imm:$disp, AR32_TC:$reg), MxSize16, "p", "printARID16Mem", MxARID>;
+def MxARID32_TC   : MxMemOp<(ops i16imm:$disp, AR32_TC:$reg), MxSize32, "p", "printARID32Mem", MxARID>;
 
 // ADDRESS REGISTER INDIRECT WITH INDEX. This addressing mode requires one word
 // of extension. The address of the operand is the sum of the address in the
@@ -291,22 +316,36 @@ def MxARID32_TC   : MxMemOp<(ops i16imm, AR32_TC), MxSize32, "p", "printARID32Me
 // The reference is classified as a data reference with the exception of the
 // jump and jump-to-subroutine instructions
 def MxARII       : MxOpClass<"ARII">;
-def MxARII8      : MxMemOp<(ops i8imm, AR32, XR32), MxSize8,  "f", "printARII8Mem", MxARII>;
-def MxARII16     : MxMemOp<(ops i8imm, AR32, XR32), MxSize16, "f", "printARII16Mem", MxARII>;
-def MxARII32     : MxMemOp<(ops i8imm, AR32, XR32), MxSize32, "f", "printARII32Mem", MxARII>;
+def MxARII8      : MxMemOp<(ops i8imm:$disp, AR32:$reg, XR32:$index),
+                           MxSize8,  "f", "printARII8Mem", MxARII>;
+def MxARII16     : MxMemOp<(ops i8imm:$disp, AR32:$reg, XR32:$index),
+                           MxSize16, "f", "printARII16Mem", MxARII>;
+def MxARII32     : MxMemOp<(ops i8imm:$disp, AR32:$reg, XR32:$index),
+                           MxSize32, "f", "printARII32Mem", MxARII>;
 
-def MxARII8_TC   : MxMemOp<(ops i8imm, AR32_TC, XR32_TC), MxSize8,  "f", "printARII8Mem", MxARII>;
-def MxARII16_TC  : MxMemOp<(ops i8imm, AR32_TC, XR32_TC), MxSize16, "f", "printARII16Mem", MxARII>;
-def MxARII32_TC  : MxMemOp<(ops i8imm, AR32_TC, XR32_TC), MxSize32, "f", "printARII32Mem", MxARII>;
+def MxARII8_TC   : MxMemOp<(ops i8imm:$disp, AR32_TC:$reg, XR32_TC:$index),
+                           MxSize8,  "f", "printARII8Mem", MxARII>;
+def MxARII16_TC  : MxMemOp<(ops i8imm:$disp, AR32_TC:$reg, XR32_TC:$index),
+                           MxSize16, "f", "printARII16Mem", MxARII>;
+def MxARII32_TC  : MxMemOp<(ops i8imm:$disp, AR32_TC:$reg, XR32_TC:$index),
+                           MxSize32, "f", "printARII32Mem", MxARII>;
 
 // ABSOLUTE SHORT ADDRESS. This addressing mode requires one word of extension.
 // The address of the operand is the extension word. The 16-bit address is sign
 // extended before it is used.  The reference is classified as a data reference
 // with the exception of the jump and jump-tosubroutine instructions.
 def MxAddr     : MxOpClass<"Addr">;
-def MxAS8      : MxMemOp<(ops OtherVT), MxSize8,  "B", "printAS8Mem", MxAddr>;
-def MxAS16     : MxMemOp<(ops OtherVT), MxSize16, "B", "printAS16Mem", MxAddr>;
-def MxAS32     : MxMemOp<(ops OtherVT), MxSize32, "B", "printAS32Mem", MxAddr>;
+let RenderMethod = "addAddrOperands" in {
+  // This hierarchy ensures Addr8 will always be parsed
+  // before other larger-width variants.
+  def MxAddr32   : MxOpClass<"Addr32", [MxAddr]>;
+  def MxAddr16   : MxOpClass<"Addr16", [MxAddr32]>;
+  def MxAddr8    : MxOpClass<"Addr8",  [MxAddr16]>;
+}
+
+def MxAS8      : MxMemOp<(ops OtherVT), MxSize8,  "B", "printAS8Mem",  MxAddr8>;
+def MxAS16     : MxMemOp<(ops OtherVT), MxSize16, "B", "printAS16Mem", MxAddr16>;
+def MxAS32     : MxMemOp<(ops OtherVT), MxSize32, "B", "printAS32Mem", MxAddr32>;
 
 // ABSOLUTE LONG ADDRESS. This addressing mode requires two words of extension.
 // The address of the operand is developed by the concatenation of the extension
@@ -314,9 +353,9 @@ def MxAS32     : MxMemOp<(ops OtherVT), MxSize32, "B", "printAS32Mem", MxAddr>;
 // order part of the address is the second extension word. The reference is
 // classified as a data reference with the exception of the jump and jump
 // to-subroutine instructions.
-def MxAL8      : MxMemOp<(ops OtherVT), MxSize8,  "b", "printAL8Mem", MxAddr>;
-def MxAL16     : MxMemOp<(ops OtherVT), MxSize16, "b", "printAL16Mem", MxAddr>;
-def MxAL32     : MxMemOp<(ops OtherVT), MxSize32, "b", "printAL32Mem", MxAddr>;
+def MxAL8      : MxMemOp<(ops OtherVT), MxSize8,  "b", "printAL8Mem",  MxAddr8>;
+def MxAL16     : MxMemOp<(ops OtherVT), MxSize16, "b", "printAL16Mem", MxAddr16>;
+def MxAL32     : MxMemOp<(ops OtherVT), MxSize32, "b", "printAL32Mem", MxAddr32>;
 
 def MxPCD : MxOpClass<"PCD">;
 def MxPCI : MxOpClass<"PCI">;
@@ -337,9 +376,9 @@ def MxPCD32    : MxMemOp<(ops i16imm), MxSize32, "q", "printPCD32Mem", MxPCD>;
 // word, and the contents of the index register.  The value in the program
 // counter is the address of the extension word. This reference is classified as
 // a program reference.
-def MxPCI8   : MxMemOp<(ops i8imm, XR32), MxSize8,  "k", "printPCI8Mem", MxPCI>;
-def MxPCI16  : MxMemOp<(ops i8imm, XR32), MxSize16, "k", "printPCI16Mem", MxPCI>;
-def MxPCI32  : MxMemOp<(ops i8imm, XR32), MxSize32, "k", "printPCI32Mem", MxPCI>;
+def MxPCI8   : MxMemOp<(ops i8imm:$disp, XR32:$index), MxSize8,  "k", "printPCI8Mem", MxPCI>;
+def MxPCI16  : MxMemOp<(ops i8imm:$disp, XR32:$index), MxSize16, "k", "printPCI16Mem", MxPCI>;
+def MxPCI32  : MxMemOp<(ops i8imm:$disp, XR32:$index), MxSize32, "k", "printPCI32Mem", MxPCI>;
 } // OPERAND_PCREL
 
 def MxImm : AsmOperandClass {
@@ -370,21 +409,22 @@ def Mxi16imm : MxOp<i16, MxSize16, "i">;
 def Mxi32imm : MxOp<i32, MxSize32, "i">;
 } // OPERAND_IMMEDIATE
 
-let OperandType = "OPERAND_PCREL",
-    ParserMatchClass = MxAddr,
-    PrintMethod = "printPCRelImm" in {
-
+class MxBrTargetOperand<int N> : Operand<OtherVT> {
+  let OperandType = "OPERAND_PCREL";
+  let PrintMethod = "printPCRelImm";
+  let ParserMatchClass = !cast<AsmOperandClass>("MxAddr"#N);
+}
 // Branch targets have OtherVT type and print as pc-relative values.
-def MxBrTarget8  : Operand<OtherVT>;
-def MxBrTarget16 : Operand<OtherVT>;
-def MxBrTarget32 : Operand<OtherVT>;
-
-} // OPERAND_PCREL
+def MxBrTarget8  : MxBrTargetOperand<8>;
+def MxBrTarget16 : MxBrTargetOperand<16>;
+def MxBrTarget32 : MxBrTargetOperand<32>;
 
 // Used with MOVEM
+def MxMoveMaskClass : MxOpClass<"MoveMask">;
 def MxMoveMask : MxOp<i16, MxSize16, "m"> {
   let OperandType = "OPERAND_IMMEDIATE";
   let PrintMethod = "printMoveMask";
+  let ParserMatchClass = MxMoveMaskClass;
 }
 
 //===----------------------------------------------------------------------===//
@@ -399,12 +439,16 @@ def NearData     : Predicate<"TM.getCodeModel() == CodeModel::Small ||"
                              "TM.getCodeModel() == CodeModel::Kernel">;
 def IsPIC        : Predicate<"TM.isPositionIndependent()">;
 def IsNotPIC     : Predicate<"!TM.isPositionIndependent()">;
-def IsM68000     : Predicate<"Subtarget.IsM68000()">;
-def IsM68010     : Predicate<"Subtarget.IsM68010()">;
-def IsM68020     : Predicate<"Subtarget.IsM68020()">;
-def IsM68030     : Predicate<"Subtarget.IsM68030()">;
-def IsM68040     : Predicate<"Subtarget.IsM68040()">;
 
+// ISA versions
+foreach i = [0,1,2,4,6] in
+def AtLeastM680 # i # "0" : Predicate<"Subtarget->atLeastM680"#i#"0()">,
+                            AssemblerPredicate<(all_of
+                                                !cast<SubtargetFeature>("FeatureISA"#i#"0"))>;
+def AtLeastM68881 : Predicate<"Subtarget->atLeastM68881()">,
+                    AssemblerPredicate<(all_of FeatureISA881)>;
+def AtLeastM68882 : Predicate<"Subtarget->atLeastM68882()">,
+                    AssemblerPredicate<(all_of FeatureISA882)>;
 
 //===----------------------------------------------------------------------===//
 // Condition Codes
@@ -469,9 +513,14 @@ def MxCP_PCI   : ComplexPattern<iPTR, 2, "SelectPCI",
 // Pattern Fragments
 //===----------------------------------------------------------------------===//
 
-def MximmSExt8  : PatLeaf<(i8  imm)>;
-def MximmSExt16 : PatLeaf<(i16 imm)>;
-def MximmSExt32 : PatLeaf<(i32 imm)>;
+def Mxi8immSExt8  : PatLeaf<(i8  imm)>;
+def MximmSExt8    : PatLeaf<(imm), [{ return isInt<8>(N->getSExtValue()); }]>;
+
+def Mxi16immSExt16 : PatLeaf<(i16 imm)>;
+def MximmSExt16    : PatLeaf<(imm), [{ return isInt<16>(N->getSExtValue()); }]>;
+
+def Mxi32immSExt32 : PatLeaf<(i32 imm)>;
+def MximmSExt32    : PatLeaf<(imm), [{ return isInt<32>(N->getSExtValue()); }]>;
 
 // Used for Shifts and Rotations, since M68k immediates in these instructions
 // are 1 <= i <= 8. Generally, if immediate is bigger than 8 it will be moved
@@ -492,7 +541,7 @@ def Mxloadi16 : PatFrag<(ops node:$ptr), (i16 (unindexedload node:$ptr)), [{
   if (ExtType == ISD::NON_EXTLOAD)
     return true;
   if (ExtType == ISD::EXTLOAD)
-    return LD->getAlignment() >= 2 && !LD->isSimple();
+    return LD->getAlign() >= 2 && !LD->isSimple();
   return false;
 }]>;
 
@@ -502,7 +551,7 @@ def Mxloadi32 : PatFrag<(ops node:$ptr), (i32 (unindexedload node:$ptr)), [{
   if (ExtType == ISD::NON_EXTLOAD)
     return true;
   if (ExtType == ISD::EXTLOAD)
-    return LD->getAlignment() >= 4 && !LD->isSimple();
+    return LD->getAlign() >= 4 && !LD->isSimple();
   return false;
 }]>;
 
@@ -563,8 +612,8 @@ class MxType<ValueType vt, string prefix, string postfix,
              // qOp:  Supported PCD operand
              // qPat: What PCD pattern is used
              MxOperand qOp, ComplexPattern qPat,
-             // kOp:  Supported PCD operand
-             // kPat: What PCD pattern is used
+             // kOp:  Supported PCI operand
+             // kPat: What PCI pattern is used
              MxOperand kOp, ComplexPattern kPat,
              // iOp:  Supported immediate operand
              // iPat: What immediate pattern is used
@@ -609,6 +658,81 @@ class MxType<ValueType vt, string prefix, string postfix,
   PatFrag Load = load;
 }
 
+// Provides an alternative way to access the MxOperand and
+// patterns w.r.t a specific addressing mode.
+class MxOpBundle<int size, MxOperand op, ComplexPattern pat> {
+  int Size = size;
+  MxOperand Op = op;
+  ComplexPattern Pat = pat;
+}
+
+class MxImmOpBundle<int size, MxOperand op, PatFrag pat>
+  : MxOpBundle<size, op, ?> {
+  PatFrag ImmPat = pat;
+}
+
+// TODO: We can use MxOp<S>AddrMode_<AM> in more places to
+// replace MxType-based operand factoring.
+foreach size = [8, 16, 32] in {
+  // Dn
+  def MxOp#size#AddrMode_d
+    : MxOpBundle<size, !cast<MxOperand>("MxDRD"#size), ?>;
+
+  // (An)
+  def MxOp#size#AddrMode_j
+    : MxOpBundle<size, !cast<MxOperand>("MxARI"#size), MxCP_ARI>;
+
+  // (An)+
+  def MxOp#size#AddrMode_o
+    : MxOpBundle<size, !cast<MxOperand>("MxARIPI"#size), MxCP_ARIPI>;
+
+  // -(An)
+  def MxOp#size#AddrMode_e
+    : MxOpBundle<size, !cast<MxOperand>("MxARIPD"#size), MxCP_ARIPD>;
+
+  // (i,An)
+  def MxOp#size#AddrMode_p
+    : MxOpBundle<size, !cast<MxOperand>("MxARID"#size), MxCP_ARID>;
+
+  // (i,An,Xn)
+  def MxOp#size#AddrMode_f
+    : MxOpBundle<size, !cast<MxOperand>("MxARII"#size), MxCP_ARII>;
+
+  // (ABS).L
+  def MxOp#size#AddrMode_b
+    : MxOpBundle<size, !cast<MxOperand>("MxAL"#size), MxCP_AL>;
+
+  // (i,PC)
+  def MxOp#size#AddrMode_q
+    : MxOpBundle<size, !cast<MxOperand>("MxPCD"#size), MxCP_PCD>;
+
+  // (i,PC,Xn)
+  def MxOp#size#AddrMode_k
+    : MxOpBundle<size, !cast<MxOperand>("MxPCI"#size), MxCP_PCI>;
+
+  // #imm
+  def MxOp#size#AddrMode_i
+    : MxImmOpBundle<size, !cast<MxOperand>("Mxi"#size#"imm"),
+                    !cast<PatFrag>("Mxi"#size#"immSExt"#size)>;
+} // foreach size = [8, 16, 32]
+
+foreach size = [16, 32] in {
+  // An
+  def MxOp#size#AddrMode_a
+    : MxOpBundle<size, !cast<MxOperand>("MxARD"#size), ?>;
+
+  // Xn
+  def MxOp#size#AddrMode_r
+    : MxOpBundle<size, !cast<MxOperand>("MxXRD"#size), ?>;
+} // foreach size = [16, 32]
+
+foreach size = [32, 64, 80] in
+def MxOp#size#AddrMode_fpr
+  : MxOpBundle<size, !cast<MxOperand>("MxFPR"#size), ?>;
+
+def MxOp32AddrMode_fpcs : MxOpBundle<32, MxFPCSR, ?>;
+def MxOp32AddrMode_fpi  : MxOpBundle<32, MxFPIR, ?>;
+
 class MxType8Class<string rLet, MxOperand reg>
     : MxType<i8, "b", "", rLet, reg,
              MxARI8,   MxCP_ARI,
@@ -619,7 +743,7 @@ class MxType8Class<string rLet, MxOperand reg>
              MxAL8,    MxCP_AL,
              MxPCD8,   MxCP_PCD,
              MxPCI8,   MxCP_PCI,
-             Mxi8imm,  MximmSExt8,
+             Mxi8imm,  Mxi8immSExt8,
              Mxloadi8>;
 
 def MxType8 : MxType8Class<?,?>;
@@ -634,7 +758,7 @@ class MxType16Class<string rLet, MxOperand reg>
              MxAL16,    MxCP_AL,
              MxPCD16,   MxCP_PCD,
              MxPCI16,   MxCP_PCI,
-             Mxi16imm,  MximmSExt16,
+             Mxi16imm,  Mxi16immSExt16,
              Mxloadi16>;
 
 def MxType16 : MxType16Class<?,?>;
@@ -649,7 +773,7 @@ class MxType32Class<string rLet, MxOperand reg>
              MxAL32,    MxCP_AL,
              MxPCD32,   MxCP_PCD,
              MxPCI32,   MxCP_PCI,
-             Mxi32imm,  MximmSExt32,
+             Mxi32imm,  Mxi32immSExt32,
              Mxloadi32>;
 
 def MxType32 : MxType32Class<?,?>;
@@ -683,5 +807,6 @@ include "M68kInstrShiftRotate.td"
 include "M68kInstrBits.td"
 include "M68kInstrArithmetic.td"
 include "M68kInstrControl.td"
+include "M68kInstrAtomics.td"
 
 include "M68kInstrCompiler.td"

@@ -38,7 +38,7 @@ CommandObjectApropos::CommandObjectApropos(CommandInterpreter &interpreter)
 
 CommandObjectApropos::~CommandObjectApropos() = default;
 
-bool CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
+void CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
   const size_t argc = args.GetArgumentCount();
 
   if (argc == 1) {
@@ -49,8 +49,8 @@ bool CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
       StringList commands_found;
       StringList commands_help;
 
-      m_interpreter.FindCommandsForApropos(search_word, commands_found,
-                                           commands_help, true, true, true);
+      m_interpreter.FindCommandsForApropos(
+          search_word, commands_found, commands_help, true, true, true, true);
 
       if (commands_found.GetSize() == 0) {
         result.AppendMessageWithFormat("No commands found pertaining to '%s'. "
@@ -90,6 +90,4 @@ bool CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
   } else {
     result.AppendError("'apropos' must be called with exactly one argument.\n");
   }
-
-  return result.Succeeded();
 }

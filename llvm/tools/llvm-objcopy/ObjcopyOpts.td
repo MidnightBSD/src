@@ -27,16 +27,17 @@ def O : JoinedOrSeparate<["-"], "O">,
 defm new_symbol_visibility : Eq<"new-symbol-visibility", "Visibility of "
                                 "symbols generated for binary input or added"
                                 " with --add-symbol unless otherwise"
-                                " specified. The default value is 'default'.">;
+                                " specified. The default value is 'default'">;
 
-def compress_debug_sections : Flag<["--"], "compress-debug-sections">;
-def compress_debug_sections_eq
+def compress_debug_sections
     : Joined<["--"], "compress-debug-sections=">,
-      MetaVarName<"[ zlib | zlib-gnu ]">,
-      HelpText<"Compress DWARF debug sections using specified style. Supported "
-               "styles: 'zlib-gnu' and 'zlib'">;
+      MetaVarName<"format">,
+      HelpText<"Compress DWARF debug sections using specified format. Supported "
+               "formats: zlib, zstd. Select zlib if <format> is omitted">;
+def : Flag<["--"], "compress-debug-sections">, Alias<compress_debug_sections>,
+      AliasArgs<["zlib"]>;
 def decompress_debug_sections : Flag<["--"], "decompress-debug-sections">,
-                                HelpText<"Decompress DWARF debug sections.">;
+                                HelpText<"Decompress DWARF debug sections">;
 defm split_dwo
     : Eq<"split-dwo", "Equivalent to extract-dwo on the input file to "
                       "<dwo-file>, then strip-dwo on the input file">,
@@ -50,7 +51,8 @@ defm rename_section
     : Eq<"rename-section",
          "Renames a section from old to new, optionally with specified flags. "
          "Flags supported for GNU compatibility: alloc, load, noload, "
-         "readonly, debug, code, data, rom, share, contents, merge, strings.">,
+         "readonly, exclude, debug, code, data, rom, share, contents, merge, "
+         "strings, large">,
       MetaVarName<"old=new[,flag1,...]">;
 defm redefine_symbol
     : Eq<"redefine-sym", "Change the name of a symbol old to new">,
@@ -62,7 +64,7 @@ defm redefine_symbols
          "contains two symbols per line separated with whitespace and may "
          "contain comments beginning with '#'. Leading and trailing "
          "whitespace is stripped from each line. May be repeated to read "
-         "symbols from many files.">,         
+         "symbols from many files">,         
       MetaVarName<"filename">;
 
 defm only_section : Eq<"only-section", "Remove all but <section>">,
@@ -72,19 +74,24 @@ def j : JoinedOrSeparate<["-"], "j">,
         HelpText<"Alias for --only-section">;
 defm add_section
     : Eq<"add-section",
-         "Make a section named <section> with the contents of <file>.">,
+         "Make a section named <section> with the contents of <file>">,
       MetaVarName<"section=file">;
 
 defm set_section_alignment
-    : Eq<"set-section-alignment", "Set alignment for a given section.">,
+    : Eq<"set-section-alignment", "Set alignment for a given section">,
       MetaVarName<"section=align">;
 
 defm set_section_flags
     : Eq<"set-section-flags",
          "Set section flags for a given section. Flags supported for GNU "
-         "compatibility: alloc, load, noload, readonly, debug, code, data, "
-         "rom, share, contents, merge, strings.">,
+         "compatibility: alloc, load, noload, readonly, exclude, debug, code, "
+         "data, rom, share, contents, merge, strings, large">,
       MetaVarName<"section=flag1[,flag2,...]">;
+
+defm set_section_type
+    : Eq<"set-section-type",
+         "Set the type of section <section> to the integer <type>">,
+      MetaVarName<"section=type">;
 
 def S : Flag<["-"], "S">,
         Alias<strip_all>,
@@ -103,6 +110,11 @@ defm strip_unneeded_symbols
          "Reads a list of symbols from <filename> and removes them "
          "if they are not needed by relocations">,
       MetaVarName<"filename">;
+
+defm subsystem
+    : Eq<"subsystem",
+         "Set PE subsystem and version">,
+      MetaVarName<"name[:version]">;
 
 def extract_dwo
     : Flag<["--"], "extract-dwo">,
@@ -124,7 +136,7 @@ defm localize_symbol : Eq<"localize-symbol", "Mark <symbol> as local">,
                        MetaVarName<"symbol">;
 defm localize_symbols
     : Eq<"localize-symbols",
-         "Reads a list of symbols from <filename> and marks them local.">,
+         "Reads a list of symbols from <filename> and marks them local">,
       MetaVarName<"filename">;
 
 def L : JoinedOrSeparate<["-"], "L">,
@@ -136,13 +148,13 @@ defm globalize_symbol : Eq<"globalize-symbol", "Mark <symbol> as global">,
 
 defm globalize_symbols
     : Eq<"globalize-symbols",
-         "Reads a list of symbols from <filename> and marks them global.">,
+         "Reads a list of symbols from <filename> and marks them global">,
       MetaVarName<"filename">;
 
 defm keep_global_symbol
     : Eq<"keep-global-symbol",
          "Convert all symbols except <symbol> to local. May be repeated to "
-         "convert all except a set of symbols to local.">,
+         "convert all except a set of symbols to local">,
       MetaVarName<"symbol">;
 def G : JoinedOrSeparate<["-"], "G">,
         Alias<keep_global_symbol>,
@@ -154,14 +166,14 @@ defm keep_global_symbols
          "--keep-global-symbol=<symbol> is set for each one. <filename> "
          "contains one symbol per line and may contain comments beginning with "
          "'#'. Leading and trailing whitespace is stripped from each line. May "
-         "be repeated to read symbols from many files.">,
+         "be repeated to read symbols from many files">,
       MetaVarName<"filename">;
 
 defm weaken_symbol : Eq<"weaken-symbol", "Mark <symbol> as weak">,
                      MetaVarName<"symbol">;
 defm weaken_symbols
     : Eq<"weaken-symbols",
-         "Reads a list of symbols from <filename> and marks them weak.">,
+         "Reads a list of symbols from <filename> and marks them weak">,
       MetaVarName<"filename">;
 
 def W : JoinedOrSeparate<["-"], "W">,
@@ -172,7 +184,7 @@ def weaken : Flag<["--"], "weaken">,
 
 defm strip_symbols
     : Eq<"strip-symbols",
-         "Reads a list of symbols from <filename> and removes them.">,
+         "Reads a list of symbols from <filename> and removes them">,
       MetaVarName<"filename">;
 
 defm keep_symbols
@@ -181,7 +193,7 @@ defm keep_symbols
          "--keep-symbol=<symbol> is set for each one. <filename> "
          "contains one symbol per line and may contain comments beginning with "
          "'#'. Leading and trailing whitespace is stripped from each line. May "
-         "be repeated to read symbols from many files.">,
+         "be repeated to read symbols from many files">,
       MetaVarName<"filename">;
 
 defm dump_section
@@ -197,11 +209,11 @@ defm prefix_alloc_sections
       MetaVarName<"prefix">;
 
 defm set_start : Eq<"set-start", "Set the start address to <addr>. Overrides "
-                    "any previous --change-start or --adjust-start values.">,
+                    "any previous --change-start or --adjust-start values">,
                  MetaVarName<"addr">;
 defm change_start : Eq<"change-start", "Add <incr> to the start address. Can be "                        
                        "specified multiple times, all values will be applied "
-                       "cumulatively.">,
+                       "cumulatively">,
                     MetaVarName<"incr">;
 def adjust_start : JoinedOrSeparate<["--"], "adjust-start">,
                    Alias<change_start>,
@@ -212,5 +224,21 @@ defm add_symbol
          "global, local, weak, default, hidden, protected, file, section, object, "
          "function, indirect-function. Accepted but ignored for "
          "compatibility: debug, constructor, warning, indirect, synthetic, "
-         "unique-object, before.">,
+         "unique-object, before">,
       MetaVarName<"name=[section:]value[,flags]">;
+
+defm update_section
+    : Eq<"update-section", "Replace the contents of section <name> with contents from a file <file>">,
+      MetaVarName<"name=file">;
+
+defm gap_fill
+    : Eq<"gap-fill", "Fill the gaps between sections with <value> instead of zero. "
+                     "<value> must be an unsigned 8-bit integer. "
+                     "This option is only supported for ELF input and binary output">,
+      MetaVarName<"value">;
+
+defm pad_to
+    : Eq<"pad-to", "Pad the output up to the load address <address>, using a value "
+                   "of zero or the value specified by the --gap-fill option. "
+                   "This option is only supported for ELF input and binary output">,
+      MetaVarName<"address">;

@@ -57,8 +57,12 @@ class ValueObjectConstResult;
 ///
 /// This class supports all of these use cases using simple type polymorphism,
 /// and provides necessary support methods.  Its interface is RTTI-neutral.
-class ClangExpressionVariable : public ExpressionVariable {
+class ClangExpressionVariable
+    : public llvm::RTTIExtends<ClangExpressionVariable, ExpressionVariable> {
 public:
+  // LLVM RTTI support
+  static char ID;
+
   ClangExpressionVariable(ExecutionContextScope *exe_scope,
                           lldb::ByteOrder byte_order, uint32_t addr_byte_size);
 
@@ -116,7 +120,7 @@ public:
   /// The following values should not live beyond parsing
   class ParserVars {
   public:
-    ParserVars() : m_lldb_value(), m_lldb_var() {}
+    ParserVars() = default;
 
     const clang::NamedDecl *m_named_decl =
         nullptr; ///< The Decl corresponding to this variable
@@ -129,6 +133,12 @@ public:
     const lldb_private::Symbol *m_lldb_sym =
         nullptr; ///< The original symbol for this
                  /// variable, if it was a symbol
+
+    /// Callback that provides a ValueObject for the
+    /// specified frame. Used by the materializer for
+    /// re-fetching ValueObjects when materializing
+    /// ivars.
+    ValueObjectProviderTy m_lldb_valobj_provider;
   };
 
 private:
@@ -190,11 +200,6 @@ public:
   }
 
   TypeFromUser GetTypeFromUser();
-
-  // llvm casting support
-  static bool classof(const ExpressionVariable *ev) {
-    return ev->getKind() == ExpressionVariable::eKindClang;
-  }
 
   /// Members
   ClangExpressionVariable(const ClangExpressionVariable &) = delete;

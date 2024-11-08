@@ -1,6 +1,7 @@
 #include "CommandObjectSession.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionValue.h"
@@ -30,13 +31,12 @@ public:
   void
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eDiskFileCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eDiskFileCompletion, request, nullptr);
   }
 
 protected:
-  bool DoExecute(Args &args, CommandReturnObject &result) override {
+  void DoExecute(Args &args, CommandReturnObject &result) override {
     llvm::StringRef file_path;
 
     if (!args.empty())
@@ -46,7 +46,6 @@ protected:
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     else
       result.SetStatus(eReturnStatusFailed);
-    return result.Succeeded();
   }
 };
 
@@ -62,8 +61,7 @@ public:
                             "using \"!<INDEX>\".   \"!-<OFFSET>\" will re-run "
                             "the command that is <OFFSET> commands from the end"
                             " of the list (counting the current command).",
-                            nullptr),
-        m_options() {}
+                            nullptr) {}
 
   ~CommandObjectSessionHistory() override = default;
 
@@ -73,8 +71,7 @@ protected:
   class CommandOptions : public Options {
   public:
     CommandOptions()
-        : Options(), m_start_idx(0), m_stop_idx(0), m_count(0), m_clear(false) {
-    }
+        : m_start_idx(0), m_stop_idx(0), m_count(0), m_clear(false) {}
 
     ~CommandOptions() override = default;
 
@@ -118,7 +115,7 @@ protected:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_history_options);
+      return llvm::ArrayRef(g_history_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -129,7 +126,7 @@ protected:
     OptionValueBoolean m_clear;
   };
 
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     if (m_options.m_clear.GetCurrentValue() &&
         m_options.m_clear.OptionWasSet()) {
       m_interpreter.GetCommandHistory().Clear();
@@ -191,7 +188,6 @@ protected:
                      stop_idx.second);
       }
     }
-    return result.Succeeded();
   }
 
   CommandOptions m_options;

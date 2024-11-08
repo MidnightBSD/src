@@ -17,7 +17,7 @@
 
 namespace lldb_private {
 
-class StopInfo {
+class StopInfo : public std::enable_shared_from_this<StopInfo> {
   friend class Process::ProcessEventData;
   friend class ThreadPlanBase;
 
@@ -109,13 +109,14 @@ public:
   static lldb::StopInfoSP CreateStopReasonWithBreakpointSiteID(
       Thread &thread, lldb::break_id_t break_id, bool should_stop);
 
-  static lldb::StopInfoSP CreateStopReasonWithWatchpointID(
-      Thread &thread, lldb::break_id_t watch_id,
-      lldb::addr_t watch_hit_addr = LLDB_INVALID_ADDRESS);
+  static lldb::StopInfoSP
+  CreateStopReasonWithWatchpointID(Thread &thread, lldb::break_id_t watch_id,
+                                   bool silently_continue = false);
 
   static lldb::StopInfoSP
   CreateStopReasonWithSignal(Thread &thread, int signo,
-                             const char *description = nullptr);
+                             const char *description = nullptr,
+                             std::optional<int> code = std::nullopt);
 
   static lldb::StopInfoSP CreateStopReasonToTrace(Thread &thread);
 
@@ -131,6 +132,16 @@ public:
 
   static lldb::StopInfoSP
   CreateStopReasonProcessorTrace(Thread &thread, const char *description);
+
+  static lldb::StopInfoSP CreateStopReasonFork(Thread &thread,
+                                               lldb::pid_t child_pid,
+                                               lldb::tid_t child_tid);
+
+  static lldb::StopInfoSP CreateStopReasonVFork(Thread &thread,
+                                                lldb::pid_t child_pid,
+                                                lldb::tid_t child_tid);
+
+  static lldb::StopInfoSP CreateStopReasonVForkDone(Thread &thread);
 
   static lldb::ValueObjectSP
   GetReturnValueObject(lldb::StopInfoSP &stop_info_sp);

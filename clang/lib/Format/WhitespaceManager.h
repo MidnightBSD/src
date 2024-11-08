@@ -45,6 +45,9 @@ public:
 
   bool useCRLF() const { return UseCRLF; }
 
+  /// Infers whether the input is using CRLF.
+  static bool inputUsesCRLF(StringRef Text, bool DefaultToCRLF);
+
   /// Replaces the whitespace in front of \p Tok. Only call once for
   /// each \c AnnotatedToken.
   ///
@@ -52,7 +55,7 @@ public:
   /// this replacement. It is needed for determining how \p Spaces is turned
   /// into tabs and spaces for some format styles.
   void replaceWhitespace(FormatToken &Tok, unsigned Newlines, unsigned Spaces,
-                         unsigned StartOfTokenColumn, bool isAligned = false,
+                         unsigned StartOfTokenColumn, bool IsAligned = false,
                          bool InPPDirective = false);
 
   /// Adds information about an unchangeable token's whitespace.
@@ -193,8 +196,20 @@ private:
 
   struct CellDescriptions {
     SmallVector<CellDescription> Cells;
-    unsigned CellCount = 0;
+    SmallVector<unsigned> CellCounts;
     unsigned InitialSpaces = 0;
+
+    // Determine if every row in the array
+    // has the same number of columns.
+    bool isRectangular() const {
+      if (CellCounts.size() < 2)
+        return false;
+
+      for (auto NumberOfColumns : CellCounts)
+        if (NumberOfColumns != CellCounts[0])
+          return false;
+      return true;
+    }
   };
 
   /// Calculate \c IsTrailingComment, \c TokenLength for the last tokens
@@ -216,6 +231,9 @@ private:
 
   /// Align consecutive declarations over all \c Changes.
   void alignChainedConditionals();
+
+  /// Align consecutive short case statements over all \c Changes.
+  void alignConsecutiveShortCaseStatements();
 
   /// Align trailing comments over all \c Changes.
   void alignTrailingComments();
@@ -242,7 +260,7 @@ private:
   /// as described by \p CellDescs.
   void alignArrayInitializersRightJustified(CellDescriptions &&CellDescs);
 
-  /// Align Array Initializers being careful to leftt justify the columns
+  /// Align Array Initializers being careful to left justify the columns
   /// as described by \p CellDescs.
   void alignArrayInitializersLeftJustified(CellDescriptions &&CellDescs);
 
@@ -257,13 +275,14 @@ private:
   /// Does this \p Cell contain a split element?
   static bool isSplitCell(const CellDescription &Cell);
 
-  /// Get the width of the preceeding cells from \p Start to \p End.
+  /// Get the width of the preceding cells from \p Start to \p End.
   template <typename I>
   auto getNetWidth(const I &Start, const I &End, unsigned InitialSpaces) const {
     auto NetWidth = InitialSpaces;
     for (auto PrevIter = Start; PrevIter != End; ++PrevIter) {
       // If we broke the line the initial spaces are already
       // accounted for.
+      assert(PrevIter->Index < Changes.size());
       if (Changes[PrevIter->Index].NewlinesBefore > 0)
         NetWidth = 0;
       NetWidth +=
@@ -279,7 +298,7 @@ private:
         calculateCellWidth(CellIter->Index, CellIter->EndIndex, true);
     if (Changes[CellIter->Index].NewlinesBefore == 0)
       CellWidth += NetWidth;
-    for (const auto *Next = CellIter->NextColumnElement; Next != nullptr;
+    for (const auto *Next = CellIter->NextColumnElement; Next;
          Next = Next->NextColumnElement) {
       auto ThisWidth = calculateCellWidth(Next->Index, Next->EndIndex, true);
       if (Changes[Next->Index].NewlinesBefore == 0)
@@ -292,13 +311,15 @@ private:
   /// Get The maximum width of all columns to a given cell.
   template <typename I>
   unsigned getMaximumNetWidth(const I &CellStart, const I &CellStop,
-                              unsigned InitialSpaces,
-                              unsigned CellCount) const {
+                              unsigned InitialSpaces, unsigned CellCount,
+                              unsigned MaxRowCount) const {
     auto MaxNetWidth = getNetWidth(CellStart, CellStop, InitialSpaces);
     auto RowCount = 1U;
     auto Offset = std::distance(CellStart, CellStop);
-    for (const auto *Next = CellStop->NextColumnElement; Next != nullptr;
+    for (const auto *Next = CellStop->NextColumnElement; Next;
          Next = Next->NextColumnElement) {
+      if (RowCount >= MaxRowCount)
+        break;
       auto Start = (CellStart + RowCount * CellCount);
       auto End = Start + Offset;
       MaxNetWidth =

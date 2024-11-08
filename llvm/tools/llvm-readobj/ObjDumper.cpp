@@ -13,10 +13,13 @@
 
 #include "ObjDumper.h"
 #include "llvm-readobj.h"
+#include "llvm/Object/Archive.h"
+#include "llvm/Object/Decompressor.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Support/SystemZ/zOSSupport.h"
 #include "llvm/Support/raw_ostream.h"
 #include <map>
 
@@ -52,9 +55,23 @@ static void printAsPrintable(raw_ostream &W, const uint8_t *Start, size_t Len) {
     W << (isPrint(Start[i]) ? static_cast<char>(Start[i]) : '.');
 }
 
-void ObjDumper::printAsStringList(StringRef StringContent) {
+void ObjDumper::printAsStringList(StringRef StringContent,
+                                  size_t StringDataOffset) {
+  size_t StrSize = StringContent.size();
+  if (StrSize == 0)
+    return;
+  if (StrSize < StringDataOffset) {
+    reportUniqueWarning("offset (0x" + Twine::utohexstr(StringDataOffset) +
+                        ") is past the end of the contents (size 0x" +
+                        Twine::utohexstr(StrSize) + ")");
+    return;
+  }
+
   const uint8_t *StrContent = StringContent.bytes_begin();
-  const uint8_t *CurrentWord = StrContent;
+  // Some formats contain additional metadata at the start which should not be
+  // interpreted as strings. Skip these bytes, but account for them in the
+  // string offsets.
+  const uint8_t *CurrentWord = StrContent + StringDataOffset;
   const uint8_t *StrEnd = StringContent.bytes_end();
 
   while (CurrentWord <= StrEnd) {
@@ -69,6 +86,18 @@ void ObjDumper::printAsStringList(StringRef StringContent) {
     W.startLine() << '\n';
     CurrentWord += WordSize + 1;
   }
+}
+
+void ObjDumper::printFileSummary(StringRef FileStr, object::ObjectFile &Obj,
+                                 ArrayRef<std::string> InputFilenames,
+                                 const object::Archive *A) {
+  W.startLine() << "\n";
+  W.printString("File", FileStr);
+  W.printString("Format", Obj.getFileFormatName());
+  W.printString("Arch", Triple::getArchTypeName(Obj.getArch()));
+  W.printString("AddressSize",
+                std::string(formatv("{0}bit", 8 * Obj.getBytesInAddress())));
+  this->printLoadName();
 }
 
 static std::vector<object::SectionRef>
@@ -114,8 +143,23 @@ getSectionRefsByNameOrIndex(const object::ObjectFile &Obj,
   return Ret;
 }
 
+static void maybeDecompress(const object::ObjectFile &Obj,
+                            StringRef SectionName, StringRef &SectionContent,
+                            SmallString<0> &Out) {
+  Expected<object::Decompressor> Decompressor = object::Decompressor::create(
+      SectionName, SectionContent, Obj.isLittleEndian(), Obj.is64Bit());
+  if (!Decompressor)
+    reportWarning(Decompressor.takeError(), Obj.getFileName());
+  else if (auto Err = Decompressor->resizeAndDecompress(Out))
+    reportWarning(std::move(Err), Obj.getFileName());
+  else
+    SectionContent = Out;
+}
+
 void ObjDumper::printSectionsAsString(const object::ObjectFile &Obj,
-                                      ArrayRef<std::string> Sections) {
+                                      ArrayRef<std::string> Sections,
+                                      bool Decompress) {
+  SmallString<0> Out;
   bool First = true;
   for (object::SectionRef Section :
        getSectionRefsByNameOrIndex(Obj, Sections)) {
@@ -128,12 +172,16 @@ void ObjDumper::printSectionsAsString(const object::ObjectFile &Obj,
 
     StringRef SectionContent =
         unwrapOrError(Obj.getFileName(), Section.getContents());
+    if (Decompress && Section.isCompressed())
+      maybeDecompress(Obj, SectionName, SectionContent, Out);
     printAsStringList(SectionContent);
   }
 }
 
 void ObjDumper::printSectionsAsHex(const object::ObjectFile &Obj,
-                                   ArrayRef<std::string> Sections) {
+                                   ArrayRef<std::string> Sections,
+                                   bool Decompress) {
+  SmallString<0> Out;
   bool First = true;
   for (object::SectionRef Section :
        getSectionRefsByNameOrIndex(Obj, Sections)) {
@@ -146,6 +194,8 @@ void ObjDumper::printSectionsAsHex(const object::ObjectFile &Obj,
 
     StringRef SectionContent =
         unwrapOrError(Obj.getFileName(), Section.getContents());
+    if (Decompress && Section.isCompressed())
+      maybeDecompress(Obj, SectionName, SectionContent, Out);
     const uint8_t *SecContent = SectionContent.bytes_begin();
     const uint8_t *SecEnd = SecContent + SectionContent.size();
 

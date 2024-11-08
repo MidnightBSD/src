@@ -128,16 +128,10 @@ enum InstructionType {
 
 /// Format category entry types
 enum FormatCategoryItem {
-  eFormatCategoryItemSummary = 0x0001,
-  eFormatCategoryItemRegexSummary = 0x0002,
-  eFormatCategoryItemFilter = 0x0004,
-  eFormatCategoryItemRegexFilter = 0x0008,
-  eFormatCategoryItemSynth = 0x0010,
-  eFormatCategoryItemRegexSynth = 0x0020,
-  eFormatCategoryItemValue = 0x0040,
-  eFormatCategoryItemRegexValue = 0x0080,
-  eFormatCategoryItemValidator = 0x0100,
-  eFormatCategoryItemRegexValidator = 0x0200
+  eFormatCategoryItemSummary = 1,
+  eFormatCategoryItemFilter = 1 << 1,
+  eFormatCategoryItemSynth = 1 << 2,
+  eFormatCategoryItemFormat = 1 << 3,
 };
 
 /// Expression execution policies
@@ -172,6 +166,12 @@ enum MemoryModuleLoadLevel {
   eMemoryModuleLoadLevelComplete, // Load sections and all symbols
 };
 
+// Behavior on fork/vfork
+enum FollowForkMode {
+  eFollowParent, // Follow parent process
+  eFollowChild,  // Follow child process
+};
+
 // Result enums for when reading multiple lines from IOHandlers
 enum class LineStatus {
   Success, // The line that was just edited if good and should be added to the
@@ -198,12 +198,15 @@ enum class CompilerContextKind : uint16_t {
   Variable = 1 << 7,
   Enum = 1 << 8,
   Typedef = 1 << 9,
+  Builtin = 1 << 10,
 
   Any = 1 << 15,
   /// Match 0..n nested modules.
   AnyModule = Any | Module,
   /// Match any type.
-  AnyType = Any | Class | Struct | Union | Enum | Typedef
+  AnyType = Any | Class | Struct | Union | Enum | Typedef | Builtin,
+  /// Math any declaration context.
+  AnyDeclContext = Any | Namespace | Class | Struct | Union | Enum | Function
 };
 
 // Enumerations that can be used to specify the kind of metric we're looking at
@@ -216,6 +219,20 @@ enum StatisticKind {
   StatisticMax = 4
 };
 
+// Enumeration that can be used to specify a log handler.
+enum LogHandlerKind {
+  eLogHandlerStream,
+  eLogHandlerCallback,
+  eLogHandlerCircular,
+  eLogHandlerSystem,
+  eLogHandlerDefault = eLogHandlerStream,
+};
+
+enum LoadDependentFiles {
+  eLoadDependentsDefault,
+  eLoadDependentsYes,
+  eLoadDependentsNo,
+};
 
 inline std::string GetStatDescription(lldb_private::StatisticKind K) {
    switch (K) {
@@ -254,5 +271,15 @@ template <> struct format_provider<lldb_private::Vote> {
   }
 };
 }
+
+enum SelectMostRelevant : bool {
+  SelectMostRelevantFrame = true,
+  DoNoSelectMostRelevantFrame = false,
+};
+
+enum InterruptionControl : bool {
+  AllowInterruption = true,
+  DoNotAllowInterruption = false,
+};
 
 #endif // LLDB_LLDB_PRIVATE_ENUMERATIONS_H

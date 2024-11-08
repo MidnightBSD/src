@@ -14,6 +14,7 @@
 #define LLVM_EXECUTIONENGINE_ORC_EPCEHFRAMEREGISTRAR_H
 
 #include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
+#include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 
 namespace llvm {
 namespace orc {
@@ -26,27 +27,29 @@ class EPCEHFrameRegistrar : public jitlink::EHFrameRegistrar {
 public:
   /// Create from a ExecutorProcessControl instance alone. This will use
   /// the EPC's lookupSymbols method to find the registration/deregistration
-  /// funciton addresses by name.
+  /// function addresses by name.
+  ///
+  /// If RegistrationFunctionsDylib is non-None then it will be searched to
+  /// find the registration functions. If it is None then the process dylib
+  /// will be loaded to find the registration functions.
   static Expected<std::unique_ptr<EPCEHFrameRegistrar>>
   Create(ExecutionSession &ES);
 
   /// Create a EPCEHFrameRegistrar with the given ExecutorProcessControl
   /// object and registration/deregistration function addresses.
   EPCEHFrameRegistrar(ExecutionSession &ES,
-                      JITTargetAddress RegisterEHFrameWrapperFnAddr,
-                      JITTargetAddress DeregisterEHFRameWrapperFnAddr)
-      : ES(ES), RegisterEHFrameWrapperFnAddr(RegisterEHFrameWrapperFnAddr),
-        DeregisterEHFrameWrapperFnAddr(DeregisterEHFRameWrapperFnAddr) {}
+                      ExecutorAddr RegisterEHFrameSectionWrapper,
+                      ExecutorAddr DeregisterEHFRameSectionWrapper)
+      : ES(ES), RegisterEHFrameSectionWrapper(RegisterEHFrameSectionWrapper),
+        DeregisterEHFrameSectionWrapper(DeregisterEHFRameSectionWrapper) {}
 
-  Error registerEHFrames(JITTargetAddress EHFrameSectionAddr,
-                         size_t EHFrameSectionSize) override;
-  Error deregisterEHFrames(JITTargetAddress EHFrameSectionAddr,
-                           size_t EHFrameSectionSize) override;
+  Error registerEHFrames(ExecutorAddrRange EHFrameSection) override;
+  Error deregisterEHFrames(ExecutorAddrRange EHFrameSection) override;
 
 private:
   ExecutionSession &ES;
-  JITTargetAddress RegisterEHFrameWrapperFnAddr;
-  JITTargetAddress DeregisterEHFrameWrapperFnAddr;
+  ExecutorAddr RegisterEHFrameSectionWrapper;
+  ExecutorAddr DeregisterEHFrameSectionWrapper;
 };
 
 } // end namespace orc

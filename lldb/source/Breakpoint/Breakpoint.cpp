@@ -19,13 +19,14 @@
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/SearchFilter.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Target/SectionLoadList.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadSpec.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
@@ -35,11 +36,6 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace llvm;
-
-ConstString Breakpoint::GetEventIdentifier() {
-  static ConstString g_identifier("event-identifier.breakpoint.changed");
-  return g_identifier;
-}
 
 const char *Breakpoint::g_option_names[static_cast<uint32_t>(
     Breakpoint::OptionNames::LastOptionName)]{"Names", "Hardware"};
@@ -209,10 +205,9 @@ lldb::BreakpointSP Breakpoint::CreateFromStructuredData(
   if (success && names_array) {
     size_t num_names = names_array->GetSize();
     for (size_t i = 0; i < num_names; i++) {
-      llvm::StringRef name;
-      Status error;
-      success = names_array->GetItemAtIndexAsString(i, name);
-      target.AddNameToBreakpoint(result_sp, name.str().c_str(), error);
+      if (std::optional<llvm::StringRef> maybe_name =
+              names_array->GetItemAtIndexAsString(i))
+        target.AddNameToBreakpoint(result_sp, *maybe_name, error);
     }
   }
 
@@ -242,11 +237,10 @@ bool Breakpoint::SerializedBreakpointMatchesNames(
   size_t num_names = names_array->GetSize();
 
   for (size_t i = 0; i < num_names; i++) {
-    llvm::StringRef name;
-    if (names_array->GetItemAtIndexAsString(i, name)) {
-      if (llvm::is_contained(names, name))
-        return true;
-    }
+    std::optional<llvm::StringRef> maybe_name =
+        names_array->GetItemAtIndexAsString(i);
+    if (maybe_name && llvm::is_contained(names, *maybe_name))
+      return true;
   }
   return false;
 }
@@ -326,6 +320,11 @@ uint32_t Breakpoint::GetIgnoreCount() const {
 }
 
 uint32_t Breakpoint::GetHitCount() const { return m_hit_counter.GetValue(); }
+
+void Breakpoint::ResetHitCount() {
+  m_hit_counter.Reset();
+  m_locations.ResetHitCount();
+}
 
 bool Breakpoint::IsOneShot() const { return m_options.IsOneShot(); }
 
@@ -412,7 +411,7 @@ const char *Breakpoint::GetConditionText() const {
 void Breakpoint::SetCallback(BreakpointHitCallback callback, void *baton,
                              bool is_synchronous) {
   // The default "Baton" class will keep a copy of "baton" and won't free or
-  // delete it when it goes goes out of scope.
+  // delete it when it goes out of scope.
   m_options.SetCallback(callback, std::make_shared<UntypedBaton>(baton),
                         is_synchronous);
 
@@ -439,12 +438,15 @@ BreakpointOptions &Breakpoint::GetOptions() { return m_options; }
 const BreakpointOptions &Breakpoint::GetOptions() const { return m_options; }
 
 void Breakpoint::ResolveBreakpoint() {
-  if (m_resolver_sp)
+  if (m_resolver_sp) {
+    ElapsedTime elapsed(m_resolve_time);
     m_resolver_sp->ResolveBreakpoint(*m_filter_sp);
+  }
 }
 
 void Breakpoint::ResolveBreakpointInModules(
     ModuleList &module_list, BreakpointLocationCollection &new_locations) {
+  ElapsedTime elapsed(m_resolve_time);
   m_locations.StartRecordingNewLocations(new_locations);
 
   m_resolver_sp->ResolveBreakpointInModules(*m_filter_sp, module_list);
@@ -458,18 +460,15 @@ void Breakpoint::ResolveBreakpointInModules(ModuleList &module_list,
     // If this is not an internal breakpoint, set up to record the new
     // locations, then dispatch an event with the new locations.
     if (!IsInternal() && send_event) {
-      BreakpointEventData *new_locations_event = new BreakpointEventData(
-          eBreakpointEventTypeLocationsAdded, shared_from_this());
-
+      std::shared_ptr<BreakpointEventData> new_locations_event =
+          std::make_shared<BreakpointEventData>(
+              eBreakpointEventTypeLocationsAdded, shared_from_this());
       ResolveBreakpointInModules(
           module_list, new_locations_event->GetBreakpointLocationCollection());
-
-      if (new_locations_event->GetBreakpointLocationCollection().GetSize() !=
-          0) {
+      if (new_locations_event->GetBreakpointLocationCollection().GetSize() != 0)
         SendBreakpointChangedEvent(new_locations_event);
-      } else
-        delete new_locations_event;
     } else {
+      ElapsedTime elapsed(m_resolve_time);
       m_resolver_sp->ResolveBreakpointInModules(*m_filter_sp, module_list);
     }
   }
@@ -483,7 +482,7 @@ void Breakpoint::ClearAllBreakpointSites() {
 
 void Breakpoint::ModulesChanged(ModuleList &module_list, bool load,
                                 bool delete_locations) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
+  Log *log = GetLog(LLDBLog::Breakpoints);
   LLDB_LOGF(log,
             "Breakpoint::ModulesChanged: num_modules: %zu load: %i "
             "delete_locations: %i\n",
@@ -522,12 +521,12 @@ void Breakpoint::ModulesChanged(ModuleList &module_list, bool load,
           locations_with_no_section.Add(break_loc_sp);
           continue;
         }
-          
+
         if (!break_loc_sp->IsEnabled())
           continue;
-        
+
         SectionSP section_sp(section_addr.GetSection());
-        
+
         // If we don't have a Section, that means this location is a raw
         // address that we haven't resolved to a section yet.  So we'll have to
         // look in all the new modules to resolve this location. Otherwise, if
@@ -544,9 +543,9 @@ void Breakpoint::ModulesChanged(ModuleList &module_list, bool load,
           }
         }
       }
-      
+
       size_t num_to_delete = locations_with_no_section.GetSize();
-      
+
       for (size_t i = 0; i < num_to_delete; i++)
         m_locations.RemoveLocation(locations_with_no_section.GetByIndex(i));
 
@@ -562,12 +561,10 @@ void Breakpoint::ModulesChanged(ModuleList &module_list, bool load,
     // the module list, then remove their breakpoint sites, and their locations
     // if asked to.
 
-    BreakpointEventData *removed_locations_event;
+    std::shared_ptr<BreakpointEventData> removed_locations_event;
     if (!IsInternal())
-      removed_locations_event = new BreakpointEventData(
+      removed_locations_event = std::make_shared<BreakpointEventData>(
           eBreakpointEventTypeLocationsRemoved, shared_from_this());
-    else
-      removed_locations_event = nullptr;
 
     for (ModuleSP module_sp : module_list.Modules()) {
       if (m_filter_sp->ModulePasses(module_sp)) {
@@ -602,7 +599,6 @@ void Breakpoint::ModulesChanged(ModuleList &module_list, bool load,
   }
 }
 
-namespace {
 static bool SymbolContextsMightBeEquivalent(SymbolContext &old_sc,
                                             SymbolContext &new_sc) {
   bool equivalent_scs = false;
@@ -640,11 +636,10 @@ static bool SymbolContextsMightBeEquivalent(SymbolContext &old_sc,
   }
   return equivalent_scs;
 }
-} // anonymous namespace
 
 void Breakpoint::ModuleReplaced(ModuleSP old_module_sp,
                                 ModuleSP new_module_sp) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
+  Log *log = GetLog(LLDBLog::Breakpoints);
   LLDB_LOGF(log, "Breakpoint::ModulesReplaced for %s\n",
             old_module_sp->GetSpecificationDescription().c_str());
   // First find all the locations that are in the old module
@@ -794,31 +789,30 @@ void Breakpoint::ModuleReplaced(ModuleSP old_module_sp,
     // about telling the world about removing a location we didn't tell them
     // about adding.
 
-    BreakpointEventData *locations_event;
+    std::shared_ptr<BreakpointEventData> removed_locations_event;
     if (!IsInternal())
-      locations_event = new BreakpointEventData(
+      removed_locations_event = std::make_shared<BreakpointEventData>(
           eBreakpointEventTypeLocationsRemoved, shared_from_this());
-    else
-      locations_event = nullptr;
 
     for (BreakpointLocationSP loc_sp :
          locations_to_remove.BreakpointLocations()) {
       m_locations.RemoveLocation(loc_sp);
-      if (locations_event)
-        locations_event->GetBreakpointLocationCollection().Add(loc_sp);
+      if (removed_locations_event)
+        removed_locations_event->GetBreakpointLocationCollection().Add(loc_sp);
     }
-    SendBreakpointChangedEvent(locations_event);
+    SendBreakpointChangedEvent(removed_locations_event);
 
     // And announce the new ones.
 
     if (!IsInternal()) {
-      locations_event = new BreakpointEventData(
-          eBreakpointEventTypeLocationsAdded, shared_from_this());
+      std::shared_ptr<BreakpointEventData> added_locations_event =
+          std::make_shared<BreakpointEventData>(
+              eBreakpointEventTypeLocationsAdded, shared_from_this());
       for (BreakpointLocationSP loc_sp :
            locations_to_announce.BreakpointLocations())
-        locations_event->GetBreakpointLocationCollection().Add(loc_sp);
+        added_locations_event->GetBreakpointLocationCollection().Add(loc_sp);
 
-      SendBreakpointChangedEvent(locations_event);
+      SendBreakpointChangedEvent(added_locations_event);
     }
     m_locations.Compact();
   }
@@ -838,9 +832,8 @@ bool Breakpoint::HasResolvedLocations() const {
 
 size_t Breakpoint::GetNumLocations() const { return m_locations.GetSize(); }
 
-bool Breakpoint::AddName(llvm::StringRef new_name) {
-  m_name_list.insert(new_name.str().c_str());
-  return true;
+void Breakpoint::AddName(llvm::StringRef new_name) {
+  m_name_list.insert(new_name.str());
 }
 
 void Breakpoint::GetDescription(Stream *s, lldb::DescriptionLevel level,
@@ -989,41 +982,62 @@ void Breakpoint::SendBreakpointChangedEvent(
   if (!m_being_created && !IsInternal() &&
       GetTarget().EventTypeHasListeners(
           Target::eBroadcastBitBreakpointChanged)) {
-    BreakpointEventData *data =
-        new Breakpoint::BreakpointEventData(eventKind, shared_from_this());
+    std::shared_ptr<BreakpointEventData> data =
+        std::make_shared<BreakpointEventData>(eventKind, shared_from_this());
 
     GetTarget().BroadcastEvent(Target::eBroadcastBitBreakpointChanged, data);
   }
 }
 
-void Breakpoint::SendBreakpointChangedEvent(BreakpointEventData *data) {
-  if (data == nullptr)
+void Breakpoint::SendBreakpointChangedEvent(
+    const lldb::EventDataSP &breakpoint_data_sp) {
+  if (!breakpoint_data_sp)
     return;
 
   if (!m_being_created && !IsInternal() &&
       GetTarget().EventTypeHasListeners(Target::eBroadcastBitBreakpointChanged))
-    GetTarget().BroadcastEvent(Target::eBroadcastBitBreakpointChanged, data);
-  else
-    delete data;
+    GetTarget().BroadcastEvent(Target::eBroadcastBitBreakpointChanged,
+                               breakpoint_data_sp);
+}
+
+const char *Breakpoint::BreakpointEventTypeAsCString(BreakpointEventType type) {
+  switch (type) {
+    case eBreakpointEventTypeInvalidType: return "invalid";
+    case eBreakpointEventTypeAdded: return "breakpoint added";
+    case eBreakpointEventTypeRemoved: return "breakpoint removed";
+    case eBreakpointEventTypeLocationsAdded: return "locations added";
+    case eBreakpointEventTypeLocationsRemoved: return "locations removed";
+    case eBreakpointEventTypeLocationsResolved: return "locations resolved";
+    case eBreakpointEventTypeEnabled: return "breakpoint enabled";
+    case eBreakpointEventTypeDisabled: return "breakpoint disabled";
+    case eBreakpointEventTypeCommandChanged: return "command changed";
+    case eBreakpointEventTypeConditionChanged: return "condition changed";
+    case eBreakpointEventTypeIgnoreChanged: return "ignore count changed";
+    case eBreakpointEventTypeThreadChanged: return "thread changed";
+    case eBreakpointEventTypeAutoContinueChanged: return "autocontinue changed";
+  };
+  llvm_unreachable("Fully covered switch above!");
+}
+
+Log *Breakpoint::BreakpointEventData::GetLogChannel() {
+  return GetLog(LLDBLog::Breakpoints);
 }
 
 Breakpoint::BreakpointEventData::BreakpointEventData(
     BreakpointEventType sub_type, const BreakpointSP &new_breakpoint_sp)
-    : EventData(), m_breakpoint_event(sub_type),
-      m_new_breakpoint_sp(new_breakpoint_sp) {}
+    : m_breakpoint_event(sub_type), m_new_breakpoint_sp(new_breakpoint_sp) {}
 
 Breakpoint::BreakpointEventData::~BreakpointEventData() = default;
 
-ConstString Breakpoint::BreakpointEventData::GetFlavorString() {
-  static ConstString g_flavor("Breakpoint::BreakpointEventData");
-  return g_flavor;
+llvm::StringRef Breakpoint::BreakpointEventData::GetFlavorString() {
+  return "Breakpoint::BreakpointEventData";
 }
 
-ConstString Breakpoint::BreakpointEventData::GetFlavor() const {
+llvm::StringRef Breakpoint::BreakpointEventData::GetFlavor() const {
   return BreakpointEventData::GetFlavorString();
 }
 
-BreakpointSP &Breakpoint::BreakpointEventData::GetBreakpoint() {
+BreakpointSP Breakpoint::BreakpointEventData::GetBreakpoint() const {
   return m_new_breakpoint_sp;
 }
 
@@ -1032,7 +1046,14 @@ Breakpoint::BreakpointEventData::GetBreakpointEventType() const {
   return m_breakpoint_event;
 }
 
-void Breakpoint::BreakpointEventData::Dump(Stream *s) const {}
+void Breakpoint::BreakpointEventData::Dump(Stream *s) const {
+  if (!s)
+    return;
+  BreakpointEventType event_type = GetBreakpointEventType();
+  break_id_t bkpt_id = GetBreakpoint()->GetID();
+  s->Format("bkpt: {0} type: {1}", bkpt_id,
+      BreakpointEventTypeAsCString(event_type));
+}
 
 const Breakpoint::BreakpointEventData *
 Breakpoint::BreakpointEventData::GetEventDataFromEvent(const Event *event) {
@@ -1087,4 +1108,36 @@ Breakpoint::BreakpointEventData::GetBreakpointLocationAtIndexFromEvent(
   }
 
   return bp_loc_sp;
+}
+
+json::Value Breakpoint::GetStatistics() {
+  json::Object bp;
+  bp.try_emplace("id", GetID());
+  bp.try_emplace("resolveTime", m_resolve_time.get().count());
+  bp.try_emplace("numLocations", (int64_t)GetNumLocations());
+  bp.try_emplace("numResolvedLocations", (int64_t)GetNumResolvedLocations());
+  bp.try_emplace("hitCount", (int64_t)GetHitCount());
+  bp.try_emplace("internal", IsInternal());
+  if (!m_kind_description.empty())
+    bp.try_emplace("kindDescription", m_kind_description);
+  // Put the full structured data for reproducing this breakpoint in a key/value
+  // pair named "details". This allows the breakpoint's details to be visible
+  // in the stats in case we need to reproduce a breakpoint that has long
+  // resolve times
+  StructuredData::ObjectSP bp_data_sp = SerializeToStructuredData();
+  if (bp_data_sp) {
+    std::string buffer;
+    llvm::raw_string_ostream ss(buffer);
+    json::OStream json_os(ss);
+    bp_data_sp->Serialize(json_os);
+    if (auto expected_value = llvm::json::parse(ss.str())) {
+      bp.try_emplace("details", std::move(*expected_value));
+    } else {
+      std::string details_error = toString(expected_value.takeError());
+      json::Object details;
+      details.try_emplace("error", details_error);
+      bp.try_emplace("details", std::move(details));
+    }
+  }
+  return json::Value(std::move(bp));
 }

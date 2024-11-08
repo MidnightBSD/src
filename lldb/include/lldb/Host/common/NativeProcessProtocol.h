@@ -15,6 +15,7 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/Iterable.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/TraceGDBRemotePackets.h"
 #include "lldb/Utility/UnimplementedError.h"
@@ -26,6 +27,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <mutex>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 
@@ -47,6 +49,16 @@ struct SVR4LibraryInfo {
 class NativeProcessProtocol {
 public:
   virtual ~NativeProcessProtocol() = default;
+
+  typedef std::vector<std::unique_ptr<NativeThreadProtocol>> thread_collection;
+  template <typename I>
+  static NativeThreadProtocol &thread_list_adapter(I &iter) {
+    assert(*iter);
+    return **iter;
+  }
+  typedef LockingAdaptedIterable<thread_collection, NativeThreadProtocol &,
+                                 thread_list_adapter, std::recursive_mutex>
+      ThreadIterable;
 
   virtual Status Resume(const ResumeActionList &resume_actions) = 0;
 
@@ -160,7 +172,7 @@ public:
   // Watchpoint functions
   virtual const NativeWatchpointList::WatchpointMap &GetWatchpointMap() const;
 
-  virtual llvm::Optional<std::pair<uint32_t, uint32_t>>
+  virtual std::optional<std::pair<uint32_t, uint32_t>>
   GetHardwareDebugSupportInfo() const;
 
   virtual Status SetWatchpoint(lldb::addr_t addr, size_t size,
@@ -193,7 +205,7 @@ public:
   GetAuxvData() const = 0;
 
   // Exit Status
-  virtual llvm::Optional<WaitStatus> GetExitStatus();
+  virtual std::optional<WaitStatus> GetExitStatus();
 
   virtual bool SetExitStatus(WaitStatus status, bool bNotifyStateChange);
 
@@ -204,10 +216,14 @@ public:
 
   void SetCurrentThreadID(lldb::tid_t tid) { m_current_thread_id = tid; }
 
-  lldb::tid_t GetCurrentThreadID() { return m_current_thread_id; }
+  lldb::tid_t GetCurrentThreadID() const { return m_current_thread_id; }
 
   NativeThreadProtocol *GetCurrentThread() {
     return GetThreadByID(m_current_thread_id);
+  }
+
+  ThreadIterable Threads() const {
+    return ThreadIterable(m_threads, m_threads_mutex);
   }
 
   // Access to inferior stdio
@@ -240,7 +256,7 @@ public:
   virtual Status GetFileLoadAddress(const llvm::StringRef &file_name,
                                     lldb::addr_t &load_addr) = 0;
 
-  /// Extension flag constants, returned by Factory::GetSupportedExtensions()
+  /// Extension flag constants, returned by Manager::GetSupportedExtensions()
   /// and passed to SetEnabledExtension()
   enum class Extension {
     multiprocess = (1u << 0),
@@ -250,13 +266,20 @@ public:
     auxv = (1u << 4),
     libraries_svr4 = (1u << 5),
     memory_tagging = (1u << 6),
+    savecore = (1u << 7),
+    siginfo_read = (1u << 8),
 
-    LLVM_MARK_AS_BITMASK_ENUM(memory_tagging)
+    LLVM_MARK_AS_BITMASK_ENUM(siginfo_read)
   };
 
-  class Factory {
+  class Manager {
   public:
-    virtual ~Factory();
+    Manager(MainLoop &mainloop) : m_mainloop(mainloop) {}
+    Manager(const Manager &) = delete;
+    Manager &operator=(const Manager &) = delete;
+
+    virtual ~Manager();
+
     /// Launch a process for debugging.
     ///
     /// \param[in] launch_info
@@ -276,8 +299,8 @@ public:
     ///     A NativeProcessProtocol shared pointer if the operation succeeded or
     ///     an error object if it failed.
     virtual llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
-    Launch(ProcessLaunchInfo &launch_info, NativeDelegate &native_delegate,
-           MainLoop &mainloop) const = 0;
+    Launch(ProcessLaunchInfo &launch_info,
+           NativeDelegate &native_delegate) = 0;
 
     /// Attach to an existing process.
     ///
@@ -298,15 +321,23 @@ public:
     ///     A NativeProcessProtocol shared pointer if the operation succeeded or
     ///     an error object if it failed.
     virtual llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
-    Attach(lldb::pid_t pid, NativeDelegate &native_delegate,
-           MainLoop &mainloop) const = 0;
+    Attach(lldb::pid_t pid, NativeDelegate &native_delegate) = 0;
 
     /// Get the bitmask of extensions supported by this process plugin.
     ///
     /// \return
     ///     A NativeProcessProtocol::Extension bitmask.
     virtual Extension GetSupportedExtensions() const { return {}; }
+
+  protected:
+    MainLoop &m_mainloop;
   };
+
+  /// Notify tracers that the target process will resume
+  virtual void NotifyTracersProcessWillResume() {}
+
+  /// Notify tracers that the target process just stopped
+  virtual void NotifyTracersProcessDidStop() {}
 
   /// Start tracing a process or its threads.
   ///
@@ -369,6 +400,19 @@ public:
     m_enabled_extensions = flags;
   }
 
+  /// Write a core dump (without crashing the program).
+  ///
+  /// \param[in] path_hint
+  ///     Suggested core dump path (optional, can be empty).
+  ///
+  /// \return
+  ///     Path to the core dump if successfully written, an error
+  ///     otherwise.
+  virtual llvm::Expected<std::string> SaveCore(llvm::StringRef path_hint) {
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Not implemented");
+  }
+
 protected:
   struct SoftwareBreakpoint {
     uint32_t ref_count;
@@ -386,7 +430,7 @@ protected:
   lldb::StateType m_state = lldb::eStateInvalid;
   mutable std::recursive_mutex m_state_mutex;
 
-  llvm::Optional<WaitStatus> m_exit_status;
+  std::optional<WaitStatus> m_exit_status;
 
   NativeDelegate &m_delegate;
   NativeWatchpointList m_watchpoint_list;
@@ -442,7 +486,7 @@ protected:
   ///
   /// Provide a mechanism for a delegate to clear out any exec-
   /// sensitive data.
-  void NotifyDidExec();
+  virtual void NotifyDidExec();
 
   NativeThreadProtocol *GetThreadByIDUnlocked(lldb::tid_t tid);
 

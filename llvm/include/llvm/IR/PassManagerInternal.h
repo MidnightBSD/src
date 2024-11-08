@@ -19,6 +19,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
 #include <memory>
 #include <utility>
 
@@ -46,10 +47,13 @@ struct PassConcept {
   virtual PreservedAnalyses run(IRUnitT &IR, AnalysisManagerT &AM,
                                 ExtraArgTs... ExtraArgs) = 0;
 
+  virtual void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName) = 0;
   /// Polymorphic method to access the name of a pass.
   virtual StringRef name() const = 0;
 
-  /// Polymorphic method to to let a pass optionally exempted from skipping by
+  /// Polymorphic method to let a pass optionally exempted from skipping by
   /// PassInstrumentation.
   /// To opt-in, pass should implement `static bool isRequired()`. It's no-op
   /// to have `isRequired` always return false since that is the default.
@@ -83,6 +87,12 @@ struct PassModel : PassConcept<IRUnitT, AnalysisManagerT, ExtraArgTs...> {
   PreservedAnalysesT run(IRUnitT &IR, AnalysisManagerT &AM,
                          ExtraArgTs... ExtraArgs) override {
     return Pass.run(IR, AM, ExtraArgs...);
+  }
+
+  void printPipeline(
+      raw_ostream &OS,
+      function_ref<StringRef(StringRef)> MapClassName2PassName) override {
+    Pass.printPipeline(OS, MapClassName2PassName);
   }
 
   StringRef name() const override { return PassT::name(); }
