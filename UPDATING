@@ -11,6 +11,8 @@ Updating Information for MidnightBSD users.
 
 	byacc 20200330
 
+	libdialog 1.3-20210117
+
 20241028:
 	FreeBSD 13 stable import code from this date.
 
