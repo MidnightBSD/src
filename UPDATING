@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20241108:
+	add lib9p
+
 20241107:
 	atf 0.22 + bugfixes
 
