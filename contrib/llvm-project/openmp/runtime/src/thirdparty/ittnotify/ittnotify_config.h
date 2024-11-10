@@ -32,7 +32,7 @@
 #define ITT_OS ITT_OS_WIN
 #elif defined(__APPLE__) && defined(__MACH__)
 #define ITT_OS ITT_OS_MAC
-#elif defined(__FreeBSD__)
+#elif defined(__FreeBSD__) || defined(__MidnightBSD__)
 #define ITT_OS ITT_OS_FREEBSD
 #else
 #define ITT_OS ITT_OS_LINUX

@@ -39,7 +39,7 @@
 
 #if defined(__linux__)
 #include "Plugins/Process/Linux/NativeProcessLinux.h"
-#elif defined(__FreeBSD__)
+#elif defined(__FreeBSD__) || defined(__MidnightBSD__)
 #include "Plugins/Process/FreeBSD/NativeProcessFreeBSD.h"
 #elif defined(__NetBSD__)
 #include "Plugins/Process/NetBSD/NativeProcessNetBSD.h"
