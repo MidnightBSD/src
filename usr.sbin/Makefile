@@ -14,8 +14,6 @@ SUBDIR=	adduser \
 	clear_locks \
 	crashinfo \
 	cron \
-	ctladm \
-	ctld \
 	daemon \
 	dconschat \
 	devctl \
@@ -114,7 +112,6 @@ SUBDIR=	adduser \
 
 SUBDIR.${MK_ACCT}+=	accton
 SUBDIR.${MK_ACCT}+=	sa
-SUBDIR.${MK_AMD}+=	amd
 SUBDIR.${MK_AUDIT}+=	audit
 SUBDIR.${MK_AUDIT}+=	auditd
 .if ${MK_OPENSSL} != "no"
@@ -133,7 +130,6 @@ SUBDIR.${MK_BSNMP}+=	bsnmpd
 .if ${MK_CAROOT} != "no"
 SUBDIR.${MK_OPENSSL}+=	certctl
 .endif
-SUBDIR.${MK_CTM}+=	ctm
 SUBDIR.${MK_CXGBETOOL}+=	cxgbetool
 SUBDIR.${MK_DIALOG}+=	bsdconfig
 SUBDIR.${MK_EFI}+=	efivar efidp efibootmgr
@@ -159,7 +155,7 @@ SUBDIR.${MK_INET6}+=	rtsold
 SUBDIR.${MK_INET6}+=	traceroute6
 SUBDIR.${MK_INETD}+=	inetd
 SUBDIR.${MK_IPFW}+=	ipfwpcap
-SUBDIR.${MK_ISCSI}+=	iscsid
+SUBDIR.${MK_ISCSI}+=	ctladm ctld iscsid
 SUBDIR.${MK_JAIL}+=	jail
 SUBDIR.${MK_JAIL}+=	jexec
 SUBDIR.${MK_JAIL}+=	jls
@@ -168,16 +164,12 @@ SUBDIR.${MK_LEGACY_CONSOLE}+=	kbdcontrol
 SUBDIR.${MK_LEGACY_CONSOLE}+=	kbdmap
 SUBDIR.${MK_LEGACY_CONSOLE}+=	moused
 SUBDIR.${MK_LEGACY_CONSOLE}+=	vidcontrol
-.if ${MK_LIBTHR} != "no" || ${MK_LIBPTHREAD} != "no"
 SUBDIR.${MK_PPP}+=	pppctl
 SUBDIR.${MK_NS_CACHING}+=	nscd
-.endif
 SUBDIR.${MK_LPR}+=	lpr
 SUBDIR.${MK_MAN_UTILS}+=	manctl
 SUBDIR.${MK_MIDNIGHTBSD_UPDATE}+=	midnightbsd-update
 SUBDIR.${MK_MLX5TOOL}+=	mlx5tool
-SUBDIR.${MK_NAND}+=	nandsim
-SUBDIR.${MK_NAND}+=	nandtool
 SUBDIR.${MK_NETGRAPH}+=	flowctl
 SUBDIR.${MK_NETGRAPH}+=	ngctl
 SUBDIR.${MK_NETGRAPH}+=	nghook
@@ -193,12 +185,10 @@ SUBDIR.${MK_NIS}+=	ypserv
 SUBDIR.${MK_NIS}+=	ypset
 SUBDIR.${MK_NTP}+=	ntpd
 SUBDIR.${MK_OPENSSL}+=	keyserv
-SUBDIR.${MK_PC_SYSINSTALL}+=	pc-sysinstall
+SUBDIR.${MK_OPENSSL_KTLS}+=	rpc.tlsclntd
+SUBDIR.${MK_OPENSSL_KTLS}+=	rpc.tlsservd
 SUBDIR.${MK_PF}+=	ftp-proxy
-.if ${COMPILER_FEATURES:Mc++11}
-SUBDIR.${MK_PMC}+=	pmc
-.endif
-SUBDIR.${MK_PMC}+=	pmcannotate pmccontrol pmcstat pmcstudy
+SUBDIR.${MK_PMC}+=	pmc pmcannotate pmccontrol pmcstat pmcstudy
 SUBDIR.${MK_PORTSNAP}+=	portsnap
 SUBDIR.${MK_PPP}+=	ppp
 SUBDIR.${MK_QUOTAS}+=	edquota
@@ -211,7 +201,6 @@ SUBDIR.${MK_SENDMAIL}+=	praliases
 SUBDIR.${MK_SENDMAIL}+=	sendmail
 SUBDIR.${MK_TCP_WRAPPERS}+=	tcpdchk
 SUBDIR.${MK_TCP_WRAPPERS}+=	tcpdmatch
-SUBDIR.${MK_TIMED}+=	timed
 SUBDIR.${MK_TOOLCHAIN}+=	config
 SUBDIR.${MK_TOOLCHAIN}+=	crunch
 SUBDIR.${MK_UNBOUND}+=	unbound
