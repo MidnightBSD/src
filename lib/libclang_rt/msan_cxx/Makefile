@@ -1,5 +1,4 @@
 
-
 .include <bsd.init.mk>
 
 LIB=		clang_rt.msan_cxx-${CRTARCH}

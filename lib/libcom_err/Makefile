@@ -1,5 +1,6 @@
 
-PACKAGE=lib${LIB}
+PACKAGE=	kerberos-lib
+
 LIB=	com_err
 SRCS=	com_err.c error.c
 INCS=	${COM_ERRDIR}/com_err.h ${COM_ERRDIR}/com_right.h

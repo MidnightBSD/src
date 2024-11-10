@@ -1,5 +1,4 @@
 
-PACKAGE=lib${LIB}
 LIB=	devctl
 SRCS=	devctl.c
 INCS=	devctl.h

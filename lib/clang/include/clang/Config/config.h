@@ -7,15 +7,12 @@
 
 /* Bug report URL. */
 #define BUG_REPORT_URL "https://bugreport.midnightbsd.org/"
+/* Default to -fPIE and -pie on Linux. */
+#define CLANG_DEFAULT_PIE_ON_LINUX 1
 
 /* Default linker to use. */
 #define CLANG_DEFAULT_LINKER ""
 
-/* Default C/ObjC standard to use. */
-/* #undef CLANG_DEFAULT_STD_C */
-
-/* Default C++/ObjC++ standard to use. */
-/* #undef CLANG_DEFAULT_STD_CXX */
 
 /* Default C++ stdlib to use. */
 #define CLANG_DEFAULT_CXX_STDLIB ""
@@ -32,14 +29,11 @@
 /* Default OpenMP runtime used by -fopenmp. */
 #define CLANG_DEFAULT_OPENMP_RUNTIME "libomp"
 
-/* Default architecture for OpenMP offloading to Nvidia GPUs. */
-#define CLANG_OPENMP_NVPTX_DEFAULT_ARCH "sm_35"
-
 /* Default architecture for SystemZ. */
 #define CLANG_SYSTEMZ_DEFAULT_ARCH "z10"
 
-/* Multilib suffix for libdir. */
-#define CLANG_LIBDIR_SUFFIX ""
+/* Multilib basename for libdir. */
+#define CLANG_INSTALL_LIBDIR_BASENAME "lib"
 
 /* Relative directory for resource files */
 #define CLANG_RESOURCE_DIR ""
@@ -63,8 +57,11 @@
 /* Define if we have sys/resource.h (rlimits) */
 #define CLANG_HAVE_RLIMITS 1
 
-/* The LLVM product name and version */
-#define BACKEND_PACKAGE_STRING "LLVM 13.0.0"
+/* Define if we have dlfcn.h */
+#define CLANG_HAVE_DLFCN_H 1
+
+/* Define if dladdr() is available on this platform. */
+#define CLANG_HAVE_DLADDR 1
 
 /* Linker version detected at compile time. */
 /* #undef HOST_LINK_VERSION */
@@ -74,6 +71,9 @@
 
 /* enable x86 relax relocations by default */
 #define ENABLE_X86_RELAX_RELOCATIONS 1
+
+/* Enable IEEE binary128 as default long double format on PowerPC Linux. */
+#define PPC_LINUX_DEFAULT_IEEELONGDOUBLE 0
 
 /* Enable each functionality of modules */
 /* #undef CLANG_ENABLE_ARCMT */

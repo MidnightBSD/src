@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011 Nathan Whitehorn
  * All rights reserved.
@@ -24,20 +24,20 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: stable/11/usr.sbin/bsdinstall/partedit/partedit.c 330449 2018-03-05 07:26:05Z eadler $
  */
 
 #include <sys/param.h>
 
 #include <dialog.h>
 #include <dlg_keys.h>
+#include <err.h>
 #include <errno.h>
 #include <fstab.h>
 #include <inttypes.h>
 #include <libgeom.h>
 #include <libutil.h>
 #include <stdlib.h>
+#include <sysexits.h>
 
 #include "diskeditor.h"
 #include "partedit.h"
@@ -60,9 +60,10 @@ sigint_handler(int sig)
 	struct gmesh mesh;
 
 	/* Revert all changes and exit dialog-mode cleanly on SIGINT */
-	geom_gettree(&mesh);
-	gpart_revert_all(&mesh);
-	geom_deletetree(&mesh);
+	if (geom_gettree(&mesh) == 0) {
+		gpart_revert_all(&mesh);
+		geom_deletetree(&mesh);
+	}
 
 	end_dialog();
 
@@ -209,16 +210,17 @@ main(int argc, const char **argv)
 	
 	if (prompt == NULL) {
 		error = geom_gettree(&mesh);
-		if (validate_setup()) {
-			error = apply_changes(&mesh);
-		} else {
-			gpart_revert_all(&mesh);
-			error = -1;
+		if (error == 0) {
+			if (validate_setup()) {
+				error = apply_changes(&mesh);
+			} else {
+				gpart_revert_all(&mesh);
+				error = -1;
+			}
+			geom_deletetree(&mesh);
 		}
 	}
 
-	geom_deletetree(&mesh);
-	free(items);
 	end_dialog();
 
 	return (error);
@@ -310,6 +312,22 @@ validate_setup(void)
 }
 
 static int
+mountpoint_sorter(const void *xa, const void *xb)
+{
+	struct partition_metadata *a = *(struct partition_metadata **)xa;
+	struct partition_metadata *b = *(struct partition_metadata **)xb;
+
+	if (a->fstab == NULL && b->fstab == NULL)
+		return 0;
+	if (a->fstab == NULL)
+		return 1;
+	if (b->fstab == NULL)
+		return -1;
+
+	return strcmp(a->fstab->fs_file, b->fstab->fs_file);
+}
+
+static int
 apply_changes(struct gmesh *mesh)
 {
 	struct partition_metadata *md;
@@ -318,6 +336,7 @@ apply_changes(struct gmesh *mesh)
 	const char **items;
 	const char *fstab_path;
 	FILE *fstab;
+	char *command;
 
 	nitems = 1; /* Partition table changes */
 	TAILQ_FOREACH(md, &part_metadata, metadata) {
@@ -331,8 +350,8 @@ apply_changes(struct gmesh *mesh)
 	TAILQ_FOREACH(md, &part_metadata, metadata) {
 		if (md->newfs != NULL) {
 			char *item;
-			item = malloc(255);
-			sprintf(item, "Initializing %s", md->name);
+
+			asprintf(&item, "Initializing %s", md->name);
 			items[i*2] = item;
 			items[i*2 + 1] = "Pending";
 			i++;
@@ -356,10 +375,11 @@ apply_changes(struct gmesh *mesh)
 			dialog_mixedgauge("Initializing",
 			    "Initializing file systems. Please wait.", 0, 0,
 			    i*100/nitems, nitems, __DECONST(char **, items));
-			sprintf(message, "(echo %s; %s) >>%s 2>>%s",
+			asprintf(&command, "(echo %s; %s) >>%s 2>>%s",
 			    md->newfs, md->newfs, getenv("BSDINSTALL_LOG"),
 			    getenv("BSDINSTALL_LOG"));
-			error = system(message);
+			error = system(command);
+			free(command);
 			items[i*2 + 1] = (error == 0) ? "3" : "1";
 			i++;
 		}
@@ -372,13 +392,37 @@ apply_changes(struct gmesh *mesh)
 		free(__DECONST(char *, items[i*2]));
 	free(items);
 
+	/* Sort filesystems for fstab so that mountpoints are ordered */
+	{
+		struct partition_metadata **tobesorted;
+		struct partition_metadata *tmp;
+		int nparts = 0;
+		TAILQ_FOREACH(md, &part_metadata, metadata)
+			nparts++;
+		tobesorted = malloc(sizeof(struct partition_metadata *)*nparts);
+		nparts = 0;
+		TAILQ_FOREACH_SAFE(md, &part_metadata, metadata, tmp) {
+			tobesorted[nparts++] = md;
+			TAILQ_REMOVE(&part_metadata, md, metadata);
+		}
+		qsort(tobesorted, nparts, sizeof(tobesorted[0]),
+		    mountpoint_sorter);
+
+		/* Now re-add everything */
+		while (nparts-- > 0)
+			TAILQ_INSERT_HEAD(&part_metadata,
+			    tobesorted[nparts], metadata);
+		free(tobesorted);
+	}
+
 	if (getenv("PATH_FSTAB") != NULL)
 		fstab_path = getenv("PATH_FSTAB");
 	else
 		fstab_path = "/etc/fstab";
 	fstab = fopen(fstab_path, "w+");
 	if (fstab == NULL) {
-		sprintf(message, "Cannot open fstab file %s for writing (%s)\n",
+		snprintf(message, sizeof(message),
+		    "Cannot open fstab file %s for writing (%s)\n",
 		    getenv("PATH_FSTAB"), strerror(errno));
 		dialog_msgbox("Error", message, 0, 0, TRUE);
 		return (-1);

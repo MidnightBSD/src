@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011 Nathan Whitehorn
  * All rights reserved.
@@ -24,8 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: stable/10/usr.sbin/bsdinstall/partedit/partedit.h 285769 2015-07-21 21:12:28Z allanjude $
  */
 
 #ifndef _PARTEDIT_PARTEDIT_H
@@ -58,6 +56,7 @@ void delete_part_metadata(const char *name);
 
 int part_wizard(const char *fstype);
 int scripted_editor(int argc, const char **argv);
+char *boot_disk_select(struct gmesh *mesh);
 int wizard_makeparts(struct gmesh *mesh, const char *disk, const char *fstype,
     int interactive);
 

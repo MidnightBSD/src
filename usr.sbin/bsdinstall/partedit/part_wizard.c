@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011 Nathan Whitehorn
  * All rights reserved.
@@ -24,11 +24,9 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/param.h>
-#include <sys/sysctl.h>
 #include <errno.h>
 #include <inttypes.h>
 #include <libutil.h>
@@ -43,7 +41,6 @@
 #define MIN_FREE_SPACE		(1024*1024*1024) /* 1 GB */
 #define SWAP_SIZE(available)	MIN(available/20, 4*1024*1024*1024LL)
 
-static char *boot_disk(struct gmesh *mesh);
 static char *wizard_partition(struct gmesh *mesh, const char *disk);
 
 int
@@ -61,37 +58,43 @@ part_wizard(const char *fsreq)
 
 startwizard:
 	error = geom_gettree(&mesh);
+	if (error != 0)
+		return (1);
 
 	dlg_put_backtitle();
-	error = geom_gettree(&mesh);
-	disk = boot_disk(&mesh);
-	if (disk == NULL)
+	disk = boot_disk_select(&mesh);
+	if (disk == NULL) {
+		geom_deletetree(&mesh);
 		return (1);
+	}
 
 	dlg_clear();
 	dlg_put_backtitle();
 	schemeroot = wizard_partition(&mesh, disk);
 	free(disk);
+	geom_deletetree(&mesh);
 	if (schemeroot == NULL)
 		return (1);
 
-	geom_deletetree(&mesh);
 	dlg_clear();
 	dlg_put_backtitle();
 	error = geom_gettree(&mesh);
+	if (error != 0) {
+		free(schemeroot);
+		return (1);
+	}
 
 	error = wizard_makeparts(&mesh, schemeroot, fstype, 1);
+	free(schemeroot);
+	geom_deletetree(&mesh);
 	if (error)
 		goto startwizard;
-	free(schemeroot);
-
-	geom_deletetree(&mesh);
 
 	return (0);
 }
 
-static char *
-boot_disk(struct gmesh *mesh)
+char *
+boot_disk_select(struct gmesh *mesh)
 {
 	struct gclass *classp;
 	struct gconfig *gc;
@@ -101,7 +104,7 @@ boot_disk(struct gmesh *mesh)
 	const char *type, *desc;
 	char diskdesc[512];
 	char *chosen;
-	int i, err, selected, n = 0;
+	int i, err, fd, selected, n = 0;
 
 	LIST_FOREACH(classp, &mesh->lg_class, lg_class) {
 		if (strcmp(classp->lg_name, "DISK") != 0 &&
@@ -128,6 +131,16 @@ boot_disk(struct gmesh *mesh)
 					continue;
 				if (strncmp(pp->lg_name, "cd", 2) == 0)
 					continue;
+				/*
+				 * Check if the disk is available to be opened for
+				 * write operations, it helps prevent the USB
+				 * stick used to boot from being listed as an option
+				 */
+				fd = g_open(pp->lg_name, 1);
+				if (fd == -1) {
+					continue;
+				}
+				g_close(fd);
 
 				disks = realloc(disks, (++n)*sizeof(disks[0]));
 				disks[n-1].name = pp->lg_name;
@@ -248,7 +261,8 @@ query:
 		char warning[512];
 		int subchoice;
 
-		sprintf(warning, "The existing partition scheme on this "
+		snprintf(warning, sizeof(warning),
+		    "The existing partition scheme on this "
 		    "disk (%s) is not bootable on this platform. To install "
 		    "MidnightBSD, it must be repartitioned. This will destroy all "
 		    "data on the disk. Are you sure you want to proceed?",
@@ -307,7 +321,7 @@ wizard_makeparts(struct gmesh *mesh, const char *disk, const char *fstype,
 	struct gmesh submesh;
 	char swapsizestr[10], rootsizestr[10];
 	intmax_t swapsize, available;
-	int retval;
+	int error, retval;
 
 	if (strcmp(fstype, "zfs") == 0) {
 		fsname = fsnames[1];
@@ -333,8 +347,8 @@ wizard_makeparts(struct gmesh *mesh, const char *disk, const char *fstype,
 		    HN_DECIMAL);
 		humanize_number(neededstr, 7, MIN_FREE_SPACE, "B", HN_AUTOSCALE,
 		    HN_DECIMAL);
-		sprintf(message, "There is not enough free space on %s to "
-		    "install MidnightBSD (%s free, %s required). Would you like "
+		snprintf(message, sizeof(message),
+		    "There is not enough free space on %s to "
 		    "to choose another disk or to open the partition editor?",
 		    disk, availablestr, neededstr);
 

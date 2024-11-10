@@ -23,7 +23,7 @@ CFLAGS+=	${PICFLAG}
 CFLAGS+=	-fno-builtin
 CFLAGS+=	-fno-exceptions
 CXXFLAGS+=	-fno-rtti
-.if ${COMPILER_TYPE} == clang && ${COMPILER_VERSION} >= 30700
+.if ${COMPILER_TYPE} == clang
 CFLAGS+=	-fno-sanitize=safe-stack
 .endif
 CFLAGS+=	-fno-stack-protector
@@ -32,4 +32,4 @@ CXXFLAGS+=	-fvisibility-inlines-hidden
 CXXFLAGS+=	-fvisibility=hidden
 CFLAGS+=	-I${CRTSRC}/include
 CFLAGS+=	-I${CRTSRC}/lib
-CXXSTD=		c++14
+CXXSTD=		c++17

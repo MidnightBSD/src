@@ -1,6 +1,3 @@
-# $MidnightBSD$
-# $FreeBSD: src/etc/mail/Makefile,v 1.36 2004/06/06 17:28:31 gshapiro Exp $
-#
 # This Makefile provides an easy way to generate the configuration
 # file and database maps for the sendmail(8) daemon.
 #
@@ -60,8 +57,8 @@
 # ------------------------------------------------------------------------
 #
 # The Makefile knows about the following maps:
-# access, bitdomain, domaintable, genericstable, mailertable, userdb,
-# uucpdomain, virtusertable
+# access, authinfo, bitdomain, domaintable, genericstable, mailertable,
+# userdb, uucpdomain, virtusertable
 #
 
 .ifndef SENDMAIL_MC
@@ -125,7 +122,7 @@ SENDMAIL_MAP_PERMS?=	0640
 # type to use when calling makemap.
 #
 SENDMAIL_MAP_SRC+=	mailertable domaintable bitdomain uucpdomain \
-			genericstable virtusertable access
+			genericstable virtusertable access authinfo
 SENDMAIL_MAP_OBJ=
 SENDMAIL_MAP_TYPE?=	hash
 

@@ -55,7 +55,6 @@ __RCSID("$NetBSD: hash.c,v 1.1.1.1 1999/11/19 04:30:56 mrg Exp $");
 
 #include <sys/types.h>
 
-#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -69,6 +68,7 @@ __RCSID("$NetBSD: hash.c,v 1.1.1.1 1999/11/19 04:30:56 mrg Exp $");
  * 	table.  Hash tables grow automatically as the amount of
  * 	information increases.
  */
+#include "sprite.h"
 #ifndef ORDER
 #include "make.h"
 #endif /* ORDER */
@@ -103,19 +103,18 @@ static void RebuildTable(Hash_Table *);
  *
  *---------------------------------------------------------
  */
-/*
-   *t   Structure to use to hold table. 
-   numBuckets          How many buckets to create for starters.
-                          * This number is rounded up to a power of
-                          * two.   If <= 0, a reasonable default is 
-                          * chosen. The table will grow in size later
-                          * as needed. 
-*/
+
 void
-Hash_InitTable(Hash_Table *t, int numBuckets)
+Hash_InitTable(
+	register Hash_Table *t,	/* Structure to use to hold table. */
+	int numBuckets)		/* How many buckets to create for starters.
+				 * This number is rounded up to a power of
+				 * two.   If <= 0, a reasonable default is
+				 * chosen. The table will grow in size later
+				 * as needed. */
 {
-	int i;
-	struct Hash_Entry **hp;
+	register int i;
+	register struct Hash_Entry **hp;
 
 	/*
 	 * Round up the size to a power of two.
@@ -155,8 +154,8 @@ Hash_InitTable(Hash_Table *t, int numBuckets)
 void
 Hash_DeleteTable(Hash_Table *t)
 {
-	struct Hash_Entry **hp, *h, *nexth = NULL;
-	int i;
+	register struct Hash_Entry **hp, *h, *nexth = NULL;
+	register int i;
 
 	for (hp = t->bucketPtr, i = t->size; --i >= 0;) {
 		for (h = *hp++; h != NULL; h = nexth) {
@@ -192,11 +191,13 @@ Hash_DeleteTable(Hash_Table *t)
  */
 
 Hash_Entry *
-Hash_FindEntry(Hash_Table *t, char *key)
+Hash_FindEntry(
+	Hash_Table *t,		/* Hash table to search. */
+	char *key)		/* A hash key. */
 {
-	Hash_Entry *e;
-	unsigned h;
-	char *p;
+	register Hash_Entry *e;
+	register unsigned h;
+	register char *p;
 
 	for (h = 0, p = key; *p;)
 		h = (h << 5) - h + *p++;
@@ -227,11 +228,15 @@ Hash_FindEntry(Hash_Table *t, char *key)
  */
 
 Hash_Entry *
-Hash_CreateEntry(Hash_Table *t, char *key, bool *newPtr)
+Hash_CreateEntry(
+	register Hash_Table *t,	/* Hash table to search. */
+	char *key,		/* A hash key. */
+	Boolean *newPtr)	/* Filled in with TRUE if new entry created,
+				 * FALSE otherwise. */
 {
-	Hash_Entry *e;
-	unsigned h;
-	char *p;
+	register Hash_Entry *e;
+	register unsigned h;
+	register char *p;
 	int keylen;
 	struct Hash_Entry **hp;
 
@@ -246,7 +251,7 @@ Hash_CreateEntry(Hash_Table *t, char *key, bool *newPtr)
 	for (e = t->bucketPtr[h & t->mask]; e != NULL; e = e->next) {
 		if (e->namehash == h && strcmp(e->name, p) == 0) {
 			if (newPtr != NULL)
-				*newPtr = false;
+				*newPtr = FALSE;
 			return (e);
 		}
 	}
@@ -268,7 +273,7 @@ Hash_CreateEntry(Hash_Table *t, char *key, bool *newPtr)
 	t->numEntries++;
 
 	if (newPtr != NULL)
-		*newPtr = true;
+		*newPtr = TRUE;
 	return (e);
 }
 
@@ -292,7 +297,7 @@ Hash_CreateEntry(Hash_Table *t, char *key, bool *newPtr)
 void
 Hash_DeleteEntry(Hash_Table *t, Hash_Entry *e)
 {
-	Hash_Entry **hp, *p;
+	register Hash_Entry **hp, *p;
 
 	if (e == NULL)
 		return;
@@ -329,7 +334,10 @@ Hash_DeleteEntry(Hash_Table *t, Hash_Entry *e)
  */
 
 Hash_Entry *
-Hash_EnumFirst(Hash_Table *t, Hash_Search *searchPtr)
+Hash_EnumFirst(
+	Hash_Table *t,			/* Table to be searched. */
+	register Hash_Search *searchPtr)/* Area in which to keep state
+					 * about search.*/
 {
 	searchPtr->tablePtr = t;
 	searchPtr->nextIndex = 0;
@@ -356,9 +364,11 @@ Hash_EnumFirst(Hash_Table *t, Hash_Search *searchPtr)
  */
 
 Hash_Entry *
-Hash_EnumNext(Hash_Search *searchPtr)
+Hash_EnumNext(
+	register Hash_Search *searchPtr) /* Area used to keep state about
+					    search. */
 {
-	Hash_Entry *e;
+	register Hash_Entry *e;
 	Hash_Table *t = searchPtr->tablePtr;
 
 	/*
@@ -400,11 +410,11 @@ Hash_EnumNext(Hash_Search *searchPtr)
  */
 
 static void
-RebuildTable(Hash_Table *t)
+RebuildTable(register Hash_Table *t)
 {
-	Hash_Entry *e, *next = NULL, **hp, **xp;
-	int i, mask;
-        Hash_Entry **oldhp;
+	register Hash_Entry *e, *next = NULL, **hp, **xp;
+	register int i, mask;
+        register Hash_Entry **oldhp;
 	int oldsize;
 
 	oldhp = t->bucketPtr;

@@ -329,9 +329,10 @@ various examples for users and programmers
 .It Pa firmware/
 firmware images loaded by userland programs
 .It Pa games/
-ASCII text files used by various games
+used by various games
 .It Pa keys/
-known trusted and revoked keys.
+known trusted and revoked keys
+.Pp
 .Bl -tag -width Fl -compact
 .It Pa pkg/
 fingerprints for
@@ -339,25 +340,23 @@ fingerprints for
 and
 .Xr pkg 8
 .El
+.Pp
 .It Pa locale/
-localization files;
-see
+localization files; see
 .Xr setlocale 3
 .It Pa man/
 manual pages
 .It Pa misc/
-miscellaneous system-wide ASCII text files
+miscellaneous system-wide files
+.Pp
 .Bl -tag -width Fl -compact
-.It Pa fonts/
-???
 .It Pa termcap
-terminal characteristics database;
-see
+terminal characteristics database; see
 .Xr termcap 5
 .El
+.Pp
 .It Pa mk/
-templates for make;
-see
+templates for make; see
 .Xr make 1
 .It Pa nls/
 national language support files
@@ -372,7 +371,8 @@ example
 .Pa .\&
 (dot) files for new accounts
 .It Pa snmp/
-MIBs, example files and tree definitions for the SNMP daemon.
+MIBs, example files and tree definitions for the SNMP daemon
+.Pp
 .Bl -tag -width Fl -compact
 .It Pa defs/
 tree definition files for use with
@@ -380,20 +380,19 @@ tree definition files for use with
 .It Pa mibs/
 MIB files
 .El
+.Pp
 .It Pa syscons/
-files used by syscons;
-see
 .Xr syscons 4
+files
+.Pp
 .Bl -tag -width Fl -compact
 .It Pa fonts/
-console fonts;
-see
+console fonts; see
 .Xr vidcontrol 1
 and
 .Xr vidfont 1
 .It Pa keymaps/
-console keyboard maps;
-see
+console keyboard maps; see
 .Xr kbdcontrol 1
 and
 .Xr kbdmap 1
@@ -401,36 +400,33 @@ and
 console screen maps
 .El
 .It Pa tabset/
-tab description files for a variety of terminals; used in
-the termcap file;
+tab description files for a variety of terminals; used in the termcap file;
 see
 .Xr termcap 5
 .It Pa vi/
 localization support and utilities for
 .Xr vi 1
 .It Pa vt/
-files used by vt;
-see
 .Xr vt 4
+files
+.Pp
 .Bl -tag -width Fl -compact
 .It Pa fonts/
-console fonts;
-see
+console fonts; see
 .Xr vidcontrol 1
 and
 .Xr vidfont 1
 .It Pa keymaps/
-console keyboard maps;
-see
+console keyboard maps; see
 .Xr kbdcontrol 1
 and
 .Xr kbdmap 1
 .\" .It Pa scrnmaps/
 .\" console screen maps
 .El
+.Pp
 .It Pa zoneinfo/
-timezone configuration information;
-see
+timezone configuration information; see
 .Xr tzfile 5
 .El
 .Pp
@@ -569,35 +565,33 @@ See
 for more details.
 .El
 .It Pa /var/
-multi-purpose log, temporary, transient, and spool files
+log, temporary, transient, and spool files
 .Pp
-.Bl -tag -width "defaults/" -compact
+.Bl -tag -width "preserve/" -compact
 .It Pa account/
 system accounting files
 .Pp
 .Bl -tag -width Fl -compact
 .It Pa acct
-execution accounting file;
-see
+execution accounting file; see
 .Xr acct 5
 .El
 .Pp
 .It Pa at/
-timed command scheduling files;
-see
-.Xr \&at 1
+timed command scheduling files; see
+.Xr at 1
 .Pp
 .Bl -tag -width Fl -compact
 .It Pa jobs/
-directory containing job files
+job files
 .It Pa spool/
-directory containing output spool files
+output spool files
 .El
 .Pp
 .It Pa backups/
 miscellaneous backup files
 .It Pa cache/
-miscellaneous cached files
+miscellaneous cache files
 .Pp
 .Bl -tag -width Fl -compact
 .It Pa pkg/
@@ -606,20 +600,18 @@ cached packages for
 .El
 .Pp
 .It Pa crash/
-default directory to store kernel crash dumps; see
+default directory for kernel crash dumps; see
 .Xr crash 8
 and
 .Xr savecore 8
 .It Pa cron/
-files used by cron;
-see
 .Xr cron 8
+files
 .Pp
 .Bl -tag -width Fl -compact
 .It Pa tabs/
-crontab files;
-see
 .Xr crontab 5
+files
 .El
 .Pp
 .It Pa db/

@@ -54,7 +54,6 @@ __<src.opts.mk>__:
 __DEFAULT_YES_OPTIONS = \
     ACCT \
     ACPI \
-    AMD \
     APM \
     ASH \
     AT \
@@ -139,7 +138,6 @@ __DEFAULT_YES_OPTIONS = \
     LOCATE \
     LPR \
     LS_COLORS \
-    LZMA_SUPPORT \
     MACHDEP_OPTIMIZATIONS \
     MAIL \
     MAILWRAPPER \

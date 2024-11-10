@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011 Nathan Whitehorn
  * All rights reserved.
@@ -24,12 +24,12 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #include <sys/param.h>
 #include <sys/stat.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <libutil.h>
 #include <inttypes.h>
 
@@ -56,12 +56,13 @@ gpart_show_error(const char *title, const char *explanation, const char *errstr)
 		while (errmsg[0] == ' ')
 			errmsg++;
 		if (errmsg[0] != '\0')
-			sprintf(message, "%s%s. %s", explanation,
-			    strerror(error), errmsg);
+			snprintf(message, sizeof(message), "%s%s. %s",
+			    explanation, strerror(error), errmsg);
 		else
-			sprintf(message, "%s%s", explanation, strerror(error));
+			snprintf(message, sizeof(message), "%s%s", explanation,
+			    strerror(error));
 	} else {
-		sprintf(message, "%s%s", explanation, errmsg);
+		snprintf(message, sizeof(message), "%s%s", explanation, errmsg);
 	}
 
 	dialog_msgbox(title, message, 0, 0, TRUE);
@@ -266,7 +267,9 @@ schememenu:
 
 		if (!is_scheme_bootable(scheme)) {
 			char message[512];
-			sprintf(message, "This partition scheme (%s) is not "
+
+			snprintf(message, sizeof(message),
+			    "This partition scheme (%s) is not "
 			    "bootable on this platform. Are you sure you want "
 			    "to proceed?", scheme);
 			dialog_vars.defaultno = TRUE;
@@ -399,7 +402,7 @@ gpart_bootcode(struct ggeom *gp)
 		    TRUE);
 		return;
 	}
-		
+
 	bootsize = lseek(bootfd, 0, SEEK_END);
 	boot = malloc(bootsize);
 	lseek(bootfd, 0, SEEK_SET);
@@ -448,10 +451,11 @@ gpart_partcode(struct gprovider *pp, const char *fstype)
 	}
 
 	/* Shell out to gpart for partcode for now */
-	sprintf(command, "gpart bootcode -p %s -i %s %s",
+	snprintf(command, sizeof(command), "gpart bootcode -p %s -i %s %s",
 	    partcode_path(scheme, fstype), indexstr, pp->lg_geom->lg_name);
 	if (system(command) != 0) {
-		sprintf(message, "Error installing partcode on partition %s",
+		snprintf(message, sizeof(message),
+		    "Error installing partcode on partition %s",
 		    pp->lg_name);
 		dialog_msgbox("Error", message, 0, 0, TRUE);
 	}
@@ -616,7 +620,9 @@ editpart:
 	if (strcmp(items[2].text, "/") == 0 && !is_fs_bootable(scheme,
 	    items[0].text)) {
 		char message[512];
-		sprintf(message, "This file system (%s) is not bootable "
+
+		snprintf(message, sizeof(message),
+		    "This file system (%s) is not bootable "
 		    "on this system. Are you sure you want to proceed?",
 		    items[0].text);
 		dialog_vars.defaultno = TRUE;
@@ -650,10 +656,11 @@ editpart:
 	}
 	gctl_free(r);
 
-	newfs_command(items[0].text, newfs, 1);
+	newfs = newfs_command(items[0].text, 1);
 	set_default_part_metadata(pp->lg_name, scheme, items[0].text,
 	    items[2].text, (strcmp(oldtype, items[0].text) != 0) ?
 	    newfs : NULL);
+	free(newfs);
 
 endedit:
 	if (strcmp(oldtype, items[0].text) != 0 && cp != NULL)

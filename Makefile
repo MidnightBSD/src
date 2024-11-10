@@ -281,7 +281,7 @@ MK_META_MODE= no
 # exceptions.
 .if !defined(TARGET_ARCH) && defined(TARGET)
 # T->TA mapping is usually TARGET with arm64 the odd man out
-_TARGET_ARCH=	${TARGET:S/arm64/aarch64/:S/riscv/riscv64/}
+_TARGET_ARCH=	${TARGET:S/arm64/aarch64/:S/riscv/riscv64/:S/arm/armv7/}
 .elif !defined(TARGET) && defined(TARGET_ARCH) && \
     ${TARGET_ARCH} != ${MACHINE_ARCH}
 # TA->T mapping is accidentally CPUARCH with aarch64 the odd man out
@@ -651,7 +651,7 @@ MAKE_PARAMS_${target_arch}+= \
 .endfor
 .endif	# !make(targets)
 
-.if !defined(MAKE_JUST_KERNELS)
+.if ${__DO_WORLDS} == "yes"
 universe_${target}_done: universe_${target}_worlds .PHONY
 .for target_arch in ${TARGET_ARCHES_${target}}
 universe_${target}_worlds: universe_${target}_${target_arch} .PHONY
@@ -675,22 +675,15 @@ universe_${target}_${target_arch}: universe_${target}_prologue .MAKE .PHONY
 	    ${MAKEFAIL}))
 	@echo ">> ${target}.${target_arch} ${UNIVERSE_TARGET} completed on `LC_ALL=C date`"
 .endfor
-.endif # !MAKE_JUST_KERNELS
+.endif # ${__DO_WORLDS} == "yes"
 
-.if !defined(MAKE_JUST_WORLDS)
+.if ${__DO_KERNELS} == "yes"
 universe_${target}_done: universe_${target}_kernels .PHONY
 universe_${target}_kernels: universe_${target}_worlds .PHONY
 universe_${target}_kernels: universe_${target}_prologue .MAKE .PHONY
-	@if [ -e "${KERNSRCDIR}/${target}/conf/NOTES" ]; then \
-	  (cd ${KERNSRCDIR}/${target}/conf && env __MAKE_CONF=/dev/null \
-	    ${SUB_MAKE} LINT \
-	    > ${.CURDIR}/_.${target}.makeLINT 2>&1 || \
-	    (echo "${target} 'make LINT' failed," \
-	    "check _.${target}.makeLINT for details"| ${MAKEFAIL})); \
-	fi
 	@cd ${.CURDIR}; ${SUB_MAKE} ${.MAKEFLAGS} TARGET=${target} \
 	    universe_kernels
-.endif # !MAKE_JUST_WORLDS
+.endif # ${__DO_KERNELS} == "yes"
 
 # Tell the user the worlds and kernels have completed
 universe_${target}: universe_${target}_done
@@ -720,24 +713,29 @@ KERNCONFS!=	cd ${KERNSRCDIR}/${TARGET}/conf && \
 universe_kernconfs: universe_kernels_prologue .PHONY
 .for kernel in ${KERNCONFS}
 TARGET_ARCH_${kernel}!=	cd ${KERNSRCDIR}/${TARGET}/conf && \
+	env PATH=${HOST_OBJTOP}/tmp/legacy/bin:${PATH:Q} \
 	config -m ${KERNSRCDIR}/${TARGET}/conf/${kernel} 2> /dev/null | \
 	grep -v WARNING: | cut -f 2
 .if empty(TARGET_ARCH_${kernel})
 .error "Target architecture for ${TARGET}/conf/${kernel} unknown.  config(8) likely too old."
 .endif
-universe_kernconfs: universe_kernconf_${TARGET}_${kernel}
+universe_kernconfs_${TARGET_ARCH_${kernel}}: universe_kernconf_${TARGET}_${kernel}
 universe_kernconf_${TARGET}_${kernel}: .MAKE
 	@echo ">> ${TARGET}.${TARGET_ARCH_${kernel}} ${kernel} kernel started on `LC_ALL=C date`"
 	@(cd ${.CURDIR} && env __MAKE_CONF=/dev/null \
 	    ${SUB_MAKE} ${JFLAG} buildkernel \
 	    TARGET=${TARGET} \
 	    TARGET_ARCH=${TARGET_ARCH_${kernel}} \
-	    ${MAKE_PARAMS_${TARGET_ARCH}} \
+	    ${MAKE_PARAMS_${TARGET_ARCH_${kernel}}} \
 	    KERNCONF=${kernel} \
 	    > _.${TARGET}.${kernel} 2>&1 || \
 	    (echo "${TARGET} ${kernel} kernel failed," \
 	    "check _.${TARGET}.${kernel} for details"| ${MAKEFAIL}))
 	@echo ">> ${TARGET}.${TARGET_ARCH_${kernel}} ${kernel} kernel completed on `LC_ALL=C date`"
+.endfor
+.for target_arch in ${TARGET_ARCHES_${TARGET}}
+universe_kernconfs: universe_kernconfs_${target_arch} .PHONY
+universe_kernconfs_${target_arch}:
 .endfor
 .endif	# make(universe_kernels)
 universe: universe_epilogue
@@ -754,9 +752,6 @@ universe_epilogue: .PHONY
 	fi
 .endif
 .endif
-
-buildLINT: .PHONY
-	${MAKE} -C ${.CURDIR}/sys/${_TARGET}/conf LINT
 
 .if defined(.PARSEDIR)
 # This makefile does not run in meta mode

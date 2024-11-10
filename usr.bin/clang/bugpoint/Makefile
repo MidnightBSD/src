@@ -12,6 +12,4 @@ SRCS+=		OptimizerDriver.cpp
 SRCS+=		ToolRunner.cpp
 SRCS+=		bugpoint.cpp
 
-LIBADD+=	z
-
 .include "../llvm.prog.mk"

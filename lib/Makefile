@@ -35,6 +35,7 @@ SUBDIR=	${SUBDIR_BOOTSTRAP} \
 	libarchive \
 	libauditd \
 	libbegemot \
+	libblocksruntime \
 	libbsdstat \
 	libbsm \
 	libbz2 \
@@ -47,19 +48,20 @@ SUBDIR=	${SUBDIR_BOOTSTRAP} \
 	libdevctl \
 	libdevinfo \
 	libdevstat \
-	${_libdl} \
-	libdns_sd \
+	libdl \
 	libdwarf \
 	libedit \
 	libelftc \
-	libevent \
+	libevent1 \
 	libexecinfo \
 	libexpat \
 	libfetch \
-	libfigpar \
+	libgcc_eh \
+	libgcc_s \
 	libgeom \
 	libifconfig \
 	libipsec \
+	libiscsiutil \
 	libjail \
 	libkiconv \
 	libkvm \
@@ -81,19 +83,20 @@ SUBDIR=	${SUBDIR_BOOTSTRAP} \
 	libpathconv \
 	libpcap \
 	libpjdlog \
-	${_libproc} \
+	libproc \
 	libprocstat \
 	libregex \
 	librpcsvc \
 	librss \
 	librt \
-	${_librtld_db} \
+	librtld_db \
 	libsbuf \
 	libsmb \
 	libstdbuf \
 	libstdthreads \
 	libsysdecode \
 	libtacplus \
+	libthr \
 	libthread_db \
 	libucl \
 	libufs \
@@ -106,7 +109,8 @@ SUBDIR=	${SUBDIR_BOOTSTRAP} \
 	liby \
 	libz \
 	libzstd \
-	ncurses
+	ncurses \
+	nss_tacplus
 
 # Inter-library dependencies.  When the makefile for a library contains LDADD
 # libraries, those libraries should be listed as build order dependencies here.
@@ -140,9 +144,15 @@ SUBDIR_DEPEND_libsmb= libkiconv
 SUBDIR_DEPEND_libtacplus= libmd
 SUBDIR_DEPEND_libulog= libmd
 SUBDIR_DEPEND_libunbound= ${_libldns}
-SUBDIR_DEPEND_liblzma= ${_libthr}
+SUBDIR_DEPEND_liblzma= libthr
 .if ${MK_OFED} != "no"
 SUBDIR_DEPEND_libpcap= ofed
+.endif
+SUBDIR_DEPEND_nss_tacplus= libtacplus
+
+.if !defined(COMPAT_32BIT)
+SUBDIR+=	flua
+SUBDIR_DEPEND_flua=	libjail
 .endif
 
 # NB: keep these sorted by MK_* knobs
@@ -163,25 +173,25 @@ SUBDIR+=	clang
 SUBDIR.${MK_CUSE}+= 	libcuse
 SUBDIR.${MK_CXX}+=	libdevdctl
 SUBDIR.${MK_TOOLCHAIN}+=libpe
-SUBDIR.${MK_DIALOG}+=	libdpv
+SUBDIR.${MK_DIALOG}+=	libdpv libfigpar
 SUBDIR.${MK_FILE}+=	libmagic
 SUBDIR.${MK_GPIO}+=	libgpio
 SUBDIR.${MK_GSSAPI}+=	libgssapi librpcsec_gss
 SUBDIR.${MK_ICONV}+=	libiconv_modules
 SUBDIR.${MK_KERBEROS_SUPPORT}+=	libcom_err
 SUBDIR.${MK_LDNS}+=	libldns
+SUBDIR.${MK_STATS}+=	libstats
 
-# The libraries under libclang_rt can only be built by clang, and only make
-# sense to build when clang is enabled at all.  Furthermore, they can only be
-# built for certain architectures.
-.if ${MK_CLANG} != "no" && ${COMPILER_TYPE} == "clang" && \
+# The libraries under libclang_rt can only be built by clang and when we enable
+# C++ support.  Furthermore, they can only be built for certain architectures.
+.if ${COMPILER_TYPE} == "clang" && ${MK_CXX} != "no" && \
     (${MACHINE_CPUARCH} == "aarch64" || ${MACHINE_CPUARCH} == "amd64" || \
     ${MACHINE_CPUARCH} == "arm" || ${MACHINE_CPUARCH} == "i386" || \
-    ${MACHINE_CPUARCH} == "powerpc")
+    ${MACHINE_CPUARCH} == "powerpc" || ${MACHINE_CPUARCH} == "riscv")
 _libclang_rt=	libclang_rt
 .endif
 
-.if ${MK_LIBCPLUSPLUS} != "no"
+.if ${MK_CXX} != "no"
 _libcxxrt=	libcxxrt
 _libcplusplus=	libc++
 _libcplusplus+=	libc++experimental
@@ -189,10 +199,6 @@ _libcplusplus+=	libc++experimental
 
 SUBDIR.${MK_EFI}+=	libefivar
 SUBDIR.${MK_GOOGLETEST}+=	googletest
-SUBDIR.${MK_LIBTHR}+=	libthr
-SUBDIR.${MK_LLVM_LIBUNWIND}+=	libgcc_eh
-SUBDIR.${MK_LLVM_LIBUNWIND}+=	libgcc_s
-SUBDIR.${MK_NAND}+=	libnandfs
 SUBDIR.${MK_NETGRAPH}+=	libnetgraph
 SUBDIR.${MK_NIS}+=	libypclnt
 
@@ -209,17 +215,11 @@ SUBDIR.${MK_PMC}+=	libipt
 SUBDIR.${MK_BHYVE}+=	libvmmapi
 .endif
 
-.if ${MACHINE_CPUARCH} != "sparc64"
-_libproc=	libproc
-_librtld_db=	librtld_db
-.endif
-
-.if defined(LINKER_FEATURES) && ${LINKER_FEATURES:Mfilter}
-_libdl=		libdl
-.endif
-
 .if ${MACHINE_ARCH} != "powerpc"
 SUBDIR.${MK_OPENMP}+=	libomp
+.endif
+.if !defined(COMPAT_32BIT) && ${MK_USB} != "no"
+SUBDIR.${MK_OPENSSH}+=	libcbor libfido2
 .endif
 SUBDIR.${MK_OPENSSL}+=	libmp
 SUBDIR.${MK_PF}+=	libpfctl
@@ -228,6 +228,7 @@ SUBDIR.${MK_RADIUS_SUPPORT}+=	libradius
 SUBDIR.${MK_SENDMAIL}+=	libmilter libsm libsmdb libsmutil
 SUBDIR.${MK_TELNET}+=	libtelnet
 SUBDIR.${MK_TESTS_SUPPORT}+=	atf
+SUBDIR.${MK_TESTS_SUPPORT}.${MK_CXX}+=	liblutok
 SUBDIR.${MK_TESTS}+=	tests
 SUBDIR.${MK_UNBOUND}+=	libunbound
 SUBDIR.${MK_USB}+=	libusbhid libusb

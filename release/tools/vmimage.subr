@@ -5,6 +5,8 @@
 # Common functions for virtual machine image build scripts.
 #
 
+scriptdir=$(dirname $(realpath $0))
+. ${scriptdir}/../../tools/boot/install-boot.sh
 export PATH="/bin:/usr/bin:/sbin:/usr/sbin:/usr/local/bin:/usr/local/sbin"
 trap "cleanup" INT QUIT TRAP ABRT TERM
 

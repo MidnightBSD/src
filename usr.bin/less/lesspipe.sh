@@ -1,7 +1,6 @@
 #! /bin/sh
 # ex:ts=8
 
-
 case "$1" in
 	*.zip)
 		exec unzip -c "$1" 2>/dev/null

@@ -10,21 +10,24 @@
 #	-DNO_KERNELCONFIG do not run config in ${MAKE} buildkernel
 #	-DNO_KERNELCLEAN do not run ${MAKE} clean in ${MAKE} buildkernel
 #	-DNO_KERNELOBJ do not run ${MAKE} obj in ${MAKE} buildkernel
-#	-DNO_PORTSUPDATE do not update ports in ${MAKE} update
 #	-DNO_ROOT install without using root privilege
-#	-DNO_DOCUPDATE do not update doc in ${MAKE} update
 #	-DWITHOUT_CTF do not run the DTrace CTF conversion tools on built objects
 #	LOCAL_DIRS="list of dirs" to add additional dirs to the SUBDIR list
 #	LOCAL_ITOOLS="list of tools" to add additional tools to the ITOOLS list
 #	LOCAL_LIB_DIRS="list of dirs" to add additional dirs to libraries target
 #	LOCAL_MTREE="list of mtree files" to process to allow local directories
 #	    to be created before files are installed
+#	LOCAL_LEGACY_DIRS="list of dirs" to add additional dirs to the legacy
+#	    target
+#	LOCAL_BSTOOL_DIRS="list of dirs" to add additional dirs to the
+#	    bootstrap-tools target
 #	LOCAL_TOOL_DIRS="list of dirs" to add additional dirs to the build-tools
-#	    list
+#	    target
 #	LOCAL_XTOOL_DIRS="list of dirs" to add additional dirs to the
 #	    cross-tools target
 #	METALOG="path to metadata log" to write permission and ownership
-#	    when NO_ROOT is set.  (default: ${DESTDIR}/METALOG)
+#	    when NO_ROOT is set.  (default: ${DESTDIR}/${DISTDIR}/METALOG,
+#           check /etc/make.conf for DISTDIR)
 #	TARGET="machine" to crossbuild world for a different machine type
 #	TARGET_ARCH= may be required when a TARGET supports multiple endians
 #	BUILDENV_SHELL= shell to launch for the buildenv target (def:${SHELL})
@@ -226,15 +229,6 @@ WANT_COMPILER_VERSION_FILE= lib/clang/include/clang/Basic/Version.inc
 WANT_COMPILER_VERSION!= \
 	awk '$$2 == "CLANG_VERSION" {split($$3, a, "."); print a[1] * 10000 + a[2] * 100 + a[3]}' \
 	${SRCDIR}/${WANT_COMPILER_VERSION_FILE} || echo unknown
-.elif ${WANT_COMPILER_TYPE} == "gcc"
-WANT_COMPILER_MIDNIGHTBSD_VERSION_FILE= gnu/usr.bin/cc/cc_tools/freebsd-native.h
-WANT_COMPILER_MIDNIGHTBSD_VERSION!= \
-	awk '$$2 == "FBSD_CC_VER" {printf("%d\n", $$3)}' \
-	${SRCDIR}/${WANT_COMPILER_MIDNIGHTBSD_VERSION_FILE} || echo unknown
-WANT_COMPILER_VERSION_FILE= contrib/gcc/BASE-VER
-WANT_COMPILER_VERSION!= \
-	awk -F. '{print $$1 * 10000 + $$2 * 100 + $$3}' \
-	${SRCDIR}/${WANT_COMPILER_VERSION_FILE} || echo unknown
 .endif
 .export WANT_COMPILER_MIDNIGHTBSD_VERSION WANT_COMPILER_VERSION
 .endif	# !defined(WANT_COMPILER_MIDNIGHTBSD_VERSION)
@@ -253,7 +247,6 @@ WANT_COMPILER_VERSION!= \
     ${X_COMPILER_MIDNIGHTBSD_VERSION} == ${WANT_COMPILER_MIDNIGHTBSD_VERSION}
 # Everything matches, disable the bootstrap compiler.
 MK_CLANG_BOOTSTRAP=	no
-MK_GCC_BOOTSTRAP=	no
 USING_SYSTEM_COMPILER=	yes
 .endif	# ${WANT_COMPILER_TYPE} == ${COMPILER_TYPE}
 
@@ -349,6 +342,7 @@ _TOOLCHAIN_METADATA_VARS=	COMPILER_VERSION \
 				COMPILER_TYPE \
 				COMPILER_FEATURES \
 				COMPILER_MIDNIGHTBSD_VERSION \
+				COMPILER_RESOURCE_DIR \
 				LINKER_VERSION \
 				LINKER_FEATURES \
 				LINKER_TYPE \
@@ -524,14 +518,12 @@ OSRELDATE=	0
 .endif
 
 # Set VERSION for CTFMERGE to use via the default CTFFLAGS=-L VERSION.
-.if !defined(_REVISION)
-_REVISION!=	${MAKE} -C ${SRCDIR}/release MK_AUTO_OBJ=no -V REVISION
-.export _REVISION
+.for _V in BRANCH REVISION
+.if !defined(_${_V})
+_${_V}!=	eval $$(awk '/^${_V}=/{print}' ${SRCTOP}/sys/conf/newvers.sh); echo $$${_V}
+.export _${_V}
 .endif
-.if !defined(_BRANCH)
-_BRANCH!=	${MAKE} -C ${SRCDIR}/release MK_AUTO_OBJ=no -V BRANCH
-.export _BRANCH
-.endif
+.endfor
 .if !defined(SRCRELDATE)
 SRCRELDATE!=	awk '/^\#define[[:space:]]*__MidnightBSD_version/ { print $$3 }' \
 		${SRCDIR}/sys/sys/param.h
@@ -749,10 +741,10 @@ HMAKE+=		PATH=${TMPPATH} METALOG=${METALOG} -DNO_ROOT
 
 CROSSENV+=	CC="${XCC} ${XCFLAGS}" CXX="${XCXX} ${XCXXFLAGS} ${XCFLAGS}" \
 		CPP="${XCPP} ${XCFLAGS}" \
-		AS="${XAS}" AR="${XAR}" LD="${XLD}" LLVM_LINK="${XLLVM_LINK}" \
-		NM=${XNM} OBJCOPY="${XOBJCOPY}" \
+		AS="${XAS}" AR="${XAR}" ELFCTL="${XELFCTL}" LD="${XLD}" \
+		LLVM_LINK="${XLLVM_LINK}" NM=${XNM} OBJCOPY="${XOBJCOPY}" \
 		RANLIB=${XRANLIB} STRINGS=${XSTRINGS} \
-		SIZE="${XSIZE}"
+		SIZE="${XSIZE}" STRIPBIN="${XSTRIPBIN}"
 
 .if defined(CROSS_BINUTILS_PREFIX) && exists(${CROSS_BINUTILS_PREFIX})
 # In the case of xdev-build tools, CROSS_BINUTILS_PREFIX won't be a
@@ -788,12 +780,11 @@ XCFLAGS+=	--sysroot=${WORLDTMP}
 XCFLAGS+=	${BFLAGS}
 .endif
 
-.if ${MK_LIB32} != "no" && (${TARGET_ARCH} == "amd64" || \
-    ${TARGET_ARCH} == "powerpc64" || ${TARGET_ARCH:Mmips64*} != "")
-LIBCOMPAT= 32
+.if ${MK_LIB32} == "yes"
+_LIBCOMPAT= 32
 .include "Makefile.libcompat"
-.elif ${MK_LIBSOFT} != "no" && ${TARGET_ARCH:Marmv[67]*} != ""
-LIBCOMPAT= SOFT
+.elif ${MK_LIBSOFT} == "yes"
+_LIBCOMPAT= SOFT
 .include "Makefile.libcompat"
 .endif
 
@@ -801,7 +792,7 @@ LIBCOMPAT= SOFT
 # timestamps (see NO_META_IGNORE_HOST in sys.mk).  There are known times
 # when the ABI breaks though that we want to force rebuilding WORLDTMP
 # to get updated host tools.
-.if ${MK_META_MODE} == "yes" && defined(NO_CLEAN) && \
+.if ${MK_META_MODE} == "yes" && ${MK_CLEAN} == "no" && \
     !defined(NO_META_IGNORE_HOST) && !defined(NO_META_IGNORE_HOST_HEADERS) && \
     !defined(_MKSHOWCONFIG)
 # r318736 - ino64 major ABI breakage
@@ -863,7 +854,8 @@ IMAKEENV+=	PATH=${TMPPATH}:${INSTALLTMP}
 
 # When generating install media, do not allow user and group information from
 # the build host to affect the contents of the distribution.
-.if make(distributeworld) || make(distrib-dirs) || make(distribution)
+.if make(distributeworld) || make(distrib-dirs) || make(distribution) || \
+    make(stageworld)
 DB_FROM_SRC=	yes
 .endif
 
@@ -886,14 +878,16 @@ MTREEFLAGS+=	-W
 INSTALLFLAGS+=	-h sha256
 .endif
 .if defined(DB_FROM_SRC) || defined(NO_ROOT)
-IMAKE_INSTALL=	INSTALL="install ${INSTALLFLAGS}"
-IMAKE_MTREE=	MTREE_CMD="mtree ${MTREEFLAGS}"
+IMAKE_INSTALL=	INSTALL="${INSTALL_CMD} ${INSTALLFLAGS}"
+IMAKE_MTREE=	MTREE_CMD="${MTREE_CMD} ${MTREEFLAGS}"
 .endif
 .if make(distributeworld)
-CERTCTLDESTDIR=	${DESTDIR}/${DISTDIR}/base
+CERTCTLDESTDIR=	${DESTDIR}/${DISTDIR}
+CERTCTLFLAGS+=	-d /base
 .else
 CERTCTLDESTDIR=	${DESTDIR}
 .endif
+CERTCTLFLAGS+=	-D "${CERTCTLDESTDIR}"
 
 DESTDIR_MTREEFLAGS=	-deU
 # When creating worldtmp we don't need to set the directories as owned by root
@@ -904,9 +898,12 @@ WORLDTMP_MTREEFLAGS=	-deUW
 # that are created by mtree to be owned by root/wheel.
 DESTDIR_MTREEFLAGS+=	-W
 .endif
-MTREE?=	mtree
-WORLDTMP_MTREE=	${MTREE} ${WORLDTMP_MTREEFLAGS}
-DESTDIR_MTREE=	${MTREE} ${DESTDIR_MTREEFLAGS}
+DISTR_MTREE=	${MTREE_CMD}
+.if ${BUILD_WITH_STRICT_TMPPATH} != 0
+DISTR_MTREE=	${WORLDTMP}/legacy/usr/sbin/mtree
+.endif
+WORLDTMP_MTREE=	${DISTR_MTREE} ${WORLDTMP_MTREEFLAGS}
+DESTDIR_MTREE=	${DISTR_MTREE} ${DESTDIR_MTREEFLAGS}
 
 # kernel stage
 KMAKEENV=	${WMAKEENV:NSYSROOT=*}
@@ -1064,13 +1061,18 @@ _worldtmp: .PHONY
 .if ${USING_SYSTEM_LINKER} == "yes"
 	@rm -f ${WORLDTMP}/usr/bin/ld ${WORLDTMP}/usr/bin/ld.lld
 .endif	# ${USING_SYSTEM_LINKER} == "yes"
-.endif	# !defined(NO_CLEAN)
+.endif	# ${MK_CLEAN} == "yes"
 	@mkdir -p ${WORLDTMP}
 	@touch ${WORLDTMP}/${.TARGET}
 # We can't use mtree to create the worldtmp directories since it may not be
 # available on the target system (this happens e.g. when building on non-MidnightBSD)
 	cd ${.CURDIR}/tools/build; \
 	    ${MAKE} DIRPRFX=tools/build/ DESTDIR=${WORLDTMP}/legacy installdirs
+# In order to build without inheriting $PATH we need to add symlinks to the host
+# tools in $WORLDTMP for the tools that we don't build during bootstrap-tools
+	cd ${.CURDIR}/tools/build; \
+	    ${MAKE} DIRPRFX=tools/build/ DESTDIR=${WORLDTMP}/legacy host-symlinks
+
 _legacy:
 	@echo
 	@echo "--------------------------------------------------------------"
@@ -1098,24 +1100,26 @@ _bootstrap-tools:
 	${WORLDTMP_MTREE} -f ${.CURDIR}/${_mtree} -p ${WORLDTMP} > /dev/null
 .endfor
 _cleanobj:
-.if !defined(NO_CLEAN)
+.if ${MK_CLEAN} == "yes"
 	@echo
 	@echo "--------------------------------------------------------------"
 	@echo ">>> stage 2.1: cleaning up the object tree"
 	@echo "--------------------------------------------------------------"
-	${_+_}cd ${.CURDIR}; ${WMAKE} ${CLEANDIR}
-.if defined(LIBCOMPAT)
-	${_+_}cd ${.CURDIR}; ${LIBCOMPATWMAKE} -f Makefile.inc1 ${CLEANDIR}
+	# Avoid including bsd.compiler.mk in clean and obj with _NO_INCLUDE_COMPILERMK
+	# since the restricted $PATH might not contain a valid cc binary
+	${_+_}cd ${.CURDIR}; ${WMAKE} _NO_INCLUDE_COMPILERMK=t ${CLEANDIR}
+.if defined(_LIBCOMPAT)
+	${_+_}cd ${.CURDIR}; ${LIBCOMPATWMAKE} _NO_INCLUDE_COMPILERMK=t -f Makefile.inc1 ${CLEANDIR}
 .endif
 .else
-	${_+_}cd ${.CURDIR}; ${WMAKE} _cleanobj_fast_depend_hack
-.endif	# !defined(NO_CLEAN)
+	${_+_}cd ${.CURDIR}; ${WMAKE} _NO_INCLUDE_COMPILERMK=t _cleanobj_fast_depend_hack
+.endif	# ${MK_CLEAN} == "yes"
 _obj:
 	@echo
 	@echo "--------------------------------------------------------------"
 	@echo ">>> stage 2.2: rebuilding the object tree"
 	@echo "--------------------------------------------------------------"
-	${_+_}cd ${.CURDIR}; ${WMAKE} obj
+	${_+_}cd ${.CURDIR}; ${WMAKE} _NO_INCLUDE_COMPILERMK=t obj
 _build-tools:
 	@echo
 	@echo "--------------------------------------------------------------"
@@ -1156,11 +1160,12 @@ _libraries:
 	@echo "--------------------------------------------------------------"
 	${_+_}cd ${.CURDIR}; \
 	    ${WMAKE} -DNO_FSCHG MK_HTML=no -DNO_LINT MK_MAN=no \
-	    MK_PROFILE=no MK_TESTS=no MK_TESTS_SUPPORT=${MK_TESTS} libraries
+	    MK_PROFILE=no MK_TESTS=no MK_TESTS_SUPPORT=${MK_TESTS_SUPPORT} \
+	    libraries
 everything: .PHONY
 	@echo
 	@echo "--------------------------------------------------------------"
-	@echo ">>> stage 4.3: building everything"
+	@echo ">>> stage 4.4: building everything"
 	@echo "--------------------------------------------------------------"
 	${_+_}cd ${.CURDIR}; _PARALLEL_SUBDIR_OK=1 ${WMAKE} all
 
