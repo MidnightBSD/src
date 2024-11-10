@@ -59,6 +59,15 @@ def SDT_ZBinaryWithCarry    : SDTypeProfile<2, 3,
                                              SDTCisSameAs<0, 2>,
                                              SDTCisSameAs<0, 3>,
                                              SDTCisVT<1, i32>]>;
+def SDT_ZBinaryConv         : SDTypeProfile<1, 2,
+                                            [SDTCisInt<0>,
+                                             SDTCisInt<1>,
+                                             SDTCisSameAs<1, 2>]>;
+def SDT_ZTernary            : SDTypeProfile<1, 3,
+                                            [SDTCisInt<0>,
+                                             SDTCisSameAs<0, 1>,
+                                             SDTCisSameAs<0, 2>,
+                                             SDTCisSameAs<0, 3>]>;
 def SDT_ZAtomicLoadBinaryW  : SDTypeProfile<1, 5,
                                             [SDTCisVT<0, i32>,
                                              SDTCisPtrTy<1>,
@@ -102,17 +111,10 @@ def SDT_ZMemMemLengthCC     : SDTypeProfile<1, 3,
                                              SDTCisPtrTy<1>,
                                              SDTCisPtrTy<2>,
                                              SDTCisVT<3, i64>]>;
-def SDT_ZMemMemLoop         : SDTypeProfile<0, 4,
+def SDT_ZMemsetMVC          : SDTypeProfile<0, 3,
                                             [SDTCisPtrTy<0>,
-                                             SDTCisPtrTy<1>,
-                                             SDTCisVT<2, i64>,
-                                             SDTCisVT<3, i64>]>;
-def SDT_ZMemMemLoopCC       : SDTypeProfile<1, 4,
-                                            [SDTCisVT<0, i32>,
-                                             SDTCisPtrTy<1>,
-                                             SDTCisPtrTy<2>,
-                                             SDTCisVT<3, i64>,
-                                             SDTCisVT<4, i64>]>;
+                                             SDTCisVT<1, i64>,
+                                             SDTCisVT<2, i32>]>;
 def SDT_ZString             : SDTypeProfile<1, 3,
                                             [SDTCisPtrTy<0>,
                                              SDTCisPtrTy<1>,
@@ -134,6 +136,11 @@ def SDT_ZTBegin             : SDTypeProfile<1, 2,
                                             [SDTCisVT<0, i32>,
                                              SDTCisPtrTy<1>,
                                              SDTCisVT<2, i32>]>;
+def SDT_ZADAENTRY           : SDTypeProfile<1, 3,
+                                            [SDTCisPtrTy<0>,
+                                             SDTCisPtrTy<1>,
+                                             SDTCisPtrTy<2>,
+                                             SDTCisVT<3, i64>]>;
 def SDT_ZTEnd               : SDTypeProfile<1, 0,
                                             [SDTCisVT<0, i32>]>;
 def SDT_ZInsertVectorElt    : SDTypeProfile<1, 3,
@@ -242,7 +249,7 @@ def callseq_end         : SDNode<"ISD::CALLSEQ_END",   SDT_CallSeqEnd,
 def global_offset_table : SDNode<"ISD::GLOBAL_OFFSET_TABLE", SDTPtrLeaf>;
 
 // Nodes for SystemZISD::*.  See SystemZISelLowering.h for more details.
-def z_retflag           : SDNode<"SystemZISD::RET_FLAG", SDTNone,
+def z_retglue           : SDNode<"SystemZISD::RET_GLUE", SDTNone,
                                  [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 def z_call              : SDNode<"SystemZISD::CALL", SDT_ZCall,
                                  [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue,
@@ -285,9 +292,12 @@ def z_uaddo             : SDNode<"SystemZISD::UADDO", SDT_ZBinaryWithFlags>;
 def z_usubo             : SDNode<"SystemZISD::USUBO", SDT_ZBinaryWithFlags>;
 def z_addcarry_1        : SDNode<"SystemZISD::ADDCARRY", SDT_ZBinaryWithCarry>;
 def z_subcarry_1        : SDNode<"SystemZISD::SUBCARRY", SDT_ZBinaryWithCarry>;
-
-def z_membarrier        : SDNode<"SystemZISD::MEMBARRIER", SDTNone,
-                                 [SDNPHasChain, SDNPSideEffect]>;
+def z_vacc              : SDNode<"SystemZISD::VACC", SDTIntBinOp>;
+def z_vac               : SDNode<"SystemZISD::VAC", SDT_ZTernary>;
+def z_vaccc             : SDNode<"SystemZISD::VACCC", SDT_ZTernary>;
+def z_vscbi             : SDNode<"SystemZISD::VSCBI", SDTIntBinOp>;
+def z_vsbi              : SDNode<"SystemZISD::VSBI", SDT_ZTernary>;
+def z_vsbcbi            : SDNode<"SystemZISD::VSBCBI", SDT_ZTernary>;
 
 def z_loadbswap        : SDNode<"SystemZISD::LRV", SDTLoad,
                                  [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
@@ -329,7 +339,9 @@ def z_vsrl_by_scalar    : SDNode<"SystemZISD::VSRL_BY_SCALAR",
                                  SDT_ZVecBinaryInt>;
 def z_vsra_by_scalar    : SDNode<"SystemZISD::VSRA_BY_SCALAR",
                                  SDT_ZVecBinaryInt>;
-def z_vsum              : SDNode<"SystemZISD::VSUM", SDT_ZVecBinaryConv>;
+def z_vrotl_by_scalar   : SDNode<"SystemZISD::VROTL_BY_SCALAR",
+                                 SDT_ZVecBinaryInt>;
+def z_vsum              : SDNode<"SystemZISD::VSUM", SDT_ZBinaryConv>;
 def z_vicmpe            : SDNode<"SystemZISD::VICMPE", SDT_ZVecBinary>;
 def z_vicmph            : SDNode<"SystemZISD::VICMPH", SDT_ZVecBinary>;
 def z_vicmphl           : SDNode<"SystemZISD::VICMPHL", SDT_ZVecBinary>;
@@ -361,6 +373,8 @@ def z_vround            : SDNode<"SystemZISD::VROUND", SDT_ZVecUnaryConv>;
 def z_strict_vround     : SDNode<"SystemZISD::STRICT_VROUND",
                                  SDT_ZVecUnaryConv, [SDNPHasChain]>;
 def z_vtm               : SDNode<"SystemZISD::VTM", SDT_ZCmp>;
+def z_scmp128hi         : SDNode<"SystemZISD::SCMP128HI", SDT_ZCmp>;
+def z_ucmp128hi         : SDNode<"SystemZISD::UCMP128HI", SDT_ZCmp>;
 def z_vfae_cc           : SDNode<"SystemZISD::VFAE_CC", SDT_ZVecTernaryIntCC>;
 def z_vfaez_cc          : SDNode<"SystemZISD::VFAEZ_CC", SDT_ZVecTernaryIntCC>;
 def z_vfee_cc           : SDNode<"SystemZISD::VFEE_CC", SDT_ZVecBinaryCC>;
@@ -416,24 +430,16 @@ def z_atomic_cmp_swap_128 : SDNode<"SystemZISD::ATOMIC_CMP_SWAP_128",
 
 def z_mvc               : SDNode<"SystemZISD::MVC", SDT_ZMemMemLength,
                                  [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
-def z_mvc_loop          : SDNode<"SystemZISD::MVC_LOOP", SDT_ZMemMemLoop,
-                                 [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
 def z_nc                : SDNode<"SystemZISD::NC", SDT_ZMemMemLength,
-                                  [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
-def z_nc_loop           : SDNode<"SystemZISD::NC_LOOP", SDT_ZMemMemLoop,
                                   [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
 def z_oc                : SDNode<"SystemZISD::OC", SDT_ZMemMemLength,
                                   [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
-def z_oc_loop           : SDNode<"SystemZISD::OC_LOOP", SDT_ZMemMemLoop,
-                                  [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
 def z_xc                : SDNode<"SystemZISD::XC", SDT_ZMemMemLength,
-                                  [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
-def z_xc_loop           : SDNode<"SystemZISD::XC_LOOP", SDT_ZMemMemLoop,
                                   [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
 def z_clc               : SDNode<"SystemZISD::CLC", SDT_ZMemMemLengthCC,
                                  [SDNPHasChain, SDNPMayLoad]>;
-def z_clc_loop          : SDNode<"SystemZISD::CLC_LOOP", SDT_ZMemMemLoopCC,
-                                 [SDNPHasChain, SDNPMayLoad]>;
+def z_memset_mvc        : SDNode<"SystemZISD::MEMSET_MVC", SDT_ZMemsetMVC,
+                                 [SDNPHasChain, SDNPMayStore, SDNPMayLoad]>;
 def z_strcmp            : SDNode<"SystemZISD::STRCMP", SDT_ZStringCC,
                                  [SDNPHasChain, SDNPMayLoad]>;
 def z_stpcpy            : SDNode<"SystemZISD::STPCPY", SDT_ZString,
@@ -450,6 +456,9 @@ def z_tbegin_nofloat    : SDNode<"SystemZISD::TBEGIN_NOFLOAT", SDT_ZTBegin,
                                  [SDNPHasChain, SDNPMayStore, SDNPSideEffect]>;
 def z_tend              : SDNode<"SystemZISD::TEND", SDT_ZTEnd,
                                  [SDNPHasChain, SDNPSideEffect]>;
+
+def z_ada_entry         : SDNode<"SystemZISD::ADA_ENTRY",
+                                  SDT_ZADAENTRY>;
 
 def z_vshl              : SDNode<"ISD::SHL", SDT_ZVecBinary>;
 def z_vsra              : SDNode<"ISD::SRA", SDT_ZVecBinary>;
@@ -498,11 +507,11 @@ def z_subcarry : PatFrag<(ops node:$lhs, node:$rhs),
 
 // Signed and unsigned comparisons.
 def z_scmp : PatFrag<(ops node:$a, node:$b), (z_icmp node:$a, node:$b, timm), [{
-  unsigned Type = cast<ConstantSDNode>(N->getOperand(2))->getZExtValue();
+  unsigned Type = N->getConstantOperandVal(2);
   return Type != SystemZICMP::UnsignedOnly;
 }]>;
 def z_ucmp : PatFrag<(ops node:$a, node:$b), (z_icmp node:$a, node:$b, timm), [{
-  unsigned Type = cast<ConstantSDNode>(N->getOperand(2))->getZExtValue();
+  unsigned Type = N->getConstantOperandVal(2);
   return Type != SystemZICMP::SignedOnly;
 }]>;
 
@@ -765,8 +774,25 @@ class shiftop<SDPatternOperator operator>
              [(operator node:$val, node:$count),
               (operator node:$val, (and node:$count, imm32bottom6set))]>;
 
+// Create a shift operator that optionally ignores an AND of the
+// shift count with an immediate if the bottom 7 bits are all set.
+def imm32bottom7set : PatLeaf<(i32 imm), [{
+  return (N->getZExtValue() & 0x7f) == 0x7f;
+}]>;
+class vshiftop<SDPatternOperator operator>
+  : PatFrags<(ops node:$val, node:$count),
+             [(operator node:$val, node:$count),
+              (operator node:$val, (and node:$count, imm32bottom7set))]>;
+
 def imm32mod64  : PatLeaf<(i32 imm), [{
   return (N->getZExtValue() % 64 == 0);
+}]>;
+
+def imm32nobits : PatLeaf<(i32 imm), [{
+  return (N->getZExtValue() & 0x07) == 0;
+}]>;
+def imm32nobytes : PatLeaf<(i32 imm), [{
+  return (N->getZExtValue() & 0x78) == 0;
 }]>;
 
 // Load a scalar and replicate it in all elements of a vector.

@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: BSD-2-Clause
 #
-# Copyright (c) 2018-2021 Gavin D. Howard and contributors.
+# Copyright (c) 2018-2024 Gavin D. Howard and contributors.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -126,9 +126,9 @@ def write_str(child, s):
 # Check the bc banner.
 # @param child  The child process.
 def bc_banner(child):
-	bc_banner1 = "bc [0-9]+\.[0-9]+\.[0-9]+\r\n"
-	bc_banner2 = "Copyright \(c\) 2018-[2-9][0-9][0-9][0-9] Gavin D. Howard and contributors\r\n"
-	bc_banner3 = "Report bugs at: https://git.yzena.com/gavin/bc\r\n\r\n"
+	bc_banner1 = "bc [0-9]+\\.[0-9]+\\.[0-9]+\r\n"
+	bc_banner2 = "Copyright \\(c\\) 2018-[2-9][0-9][0-9][0-9] Gavin D. Howard and contributors\r\n"
+	bc_banner3 = "Report bugs at: https://git.gavinhoward.com/gavin/bc\r\n\r\n"
 	bc_banner4 = "This is free software with ABSOLUTELY NO WARRANTY.\r\n\r\n"
 	expect(child, bc_banner1)
 	expect(child, bc_banner2)
@@ -251,9 +251,9 @@ def test_sigint_sigquit(exe, args, env):
 
 	try:
 		send(child, "\t")
-		expect(child, "        ")
+		expect(child, "\t")
 		send(child, "\x03")
-		send(child, "\x1c")
+		# send(child, "\x1c")
 		wait(child)
 	except pexpect.TIMEOUT:
 		traceback.print_tb(sys.exc_info()[2])
@@ -282,8 +282,11 @@ def test_eof(exe, args, env):
 	child = pexpect.spawn(exe, args=args, env=env)
 
 	try:
-		send(child, "\t")
-		expect(child, "        ")
+		send(child, "123")
+		expect(child, "123")
+		send(child, "\x01")
+		send(child, "\x04")
+		send(child, "\x04")
 		send(child, "\x04")
 		wait(child)
 	except pexpect.TIMEOUT:
@@ -317,7 +320,7 @@ def test_sigint(exe, args, env):
 
 	try:
 		send(child, "\t")
-		expect(child, "        ")
+		expect(child, "\t")
 		send(child, "\x03")
 		wait(child)
 	except pexpect.TIMEOUT:
@@ -352,7 +355,7 @@ def test_sigtstp(exe, args, env):
 
 	try:
 		send(child, "\t")
-		expect(child, "        ")
+		expect(child, "\t")
 		send(child, "\x13")
 		time.sleep(1)
 		if not child.isalive():
@@ -392,7 +395,7 @@ def test_sigstop(exe, args, env):
 
 	try:
 		send(child, "\t")
-		expect(child, "        ")
+		expect(child, "\t")
 		send(child, "\x14")
 		time.sleep(1)
 		if not child.isalive():
@@ -675,7 +678,7 @@ def test_bc7(exe, args, env):
 		send(child, "\x1b[0;4\x1b[0A")
 		send(child, "\n")
 		expect(child, prompt)
-		send(child, "        ")
+		send(child, "\t")
 		send(child, "\x1bb\x1bb\x1bb\x1bb\x1bb\x1bb\x1bb\x1bb\x1bb\x1bb\x1bb\x1bb")
 		send(child, "\x1bf\x1bf\x1bf\x1bf\x1bf\x1bf\x1bf\x1bf\x1bf\x1bf\x1bf\x1bf")
 		send(child, "\n")
@@ -1044,6 +1047,7 @@ dc_tests = [
 	test_dc_utf8_1,
 	test_dc_utf8_2,
 	test_dc_utf8_3,
+	test_dc_utf8_4,
 	test_sigint_sigquit,
 	test_eof,
 	test_sigint,

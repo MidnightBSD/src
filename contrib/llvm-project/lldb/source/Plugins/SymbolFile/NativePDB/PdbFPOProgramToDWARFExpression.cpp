@@ -9,7 +9,6 @@
 #include "PdbFPOProgramToDWARFExpression.h"
 #include "CodeViewRegisterMapping.h"
 
-#include "lldb/Core/StreamBuffer.h"
 #include "lldb/Symbol/PostfixExpression.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Stream.h"
@@ -18,6 +17,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/EnumTables.h"
+#include "llvm/Support/ScopedPrinter.h"
 
 using namespace lldb;
 using namespace lldb_private;

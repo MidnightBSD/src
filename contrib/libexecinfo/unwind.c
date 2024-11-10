@@ -1,4 +1,4 @@
-/*	$NetBSD: unwind.c,v 1.1 2012/05/26 22:02:29 christos Exp $	*/
+/*	$NetBSD: unwind.c,v 1.3 2019/01/30 22:46:49 mrg Exp $	*/
 
 /*-
  * Copyright (c) 2012 The NetBSD Foundation, Inc.
@@ -51,8 +51,10 @@ tracer(struct _Unwind_Context *ctx, void *arg)
 		return 0;
 	}
 	if (t->n < t->len)
-		t->arr[t->n++] = _Unwind_GetIP(ctx);
-	return 0;
+		t->arr[t->n++] = (void *)_Unwind_GetIP(ctx);
+	else
+		return _URC_END_OF_STACK;
+	return _URC_NO_REASON;
 }
 
 size_t
@@ -65,7 +67,9 @@ backtrace(void **arr, size_t len)
 	ctx.n = (size_t)~0;
 
 	_Unwind_Backtrace(tracer, &ctx);
-	if (ctx.n != (size_t)~0 && ctx.n > 0)
+	if (ctx.n == (size_t)~0)
+		ctx.n = 0;
+	else if (ctx.n > 0)
 		ctx.arr[--ctx.n] = NULL;	/* Skip frame below __start */
 
 	return ctx.n;

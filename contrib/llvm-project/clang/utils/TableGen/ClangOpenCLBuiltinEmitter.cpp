@@ -17,6 +17,7 @@
 #include "TableGenBackends.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -233,19 +234,18 @@ private:
   MapVector<BuiltinIndexListTy *, BuiltinTableEntries> SignatureListMap;
 };
 
-// OpenCL builtin test generator.  This class processes the same TableGen input
-// as BuiltinNameEmitter, but generates a .cl file that contains a call to each
-// builtin function described in the .td input.
-class OpenCLBuiltinTestEmitter {
+/// Base class for emitting a file (e.g. header or test) from OpenCLBuiltins.td
+class OpenCLBuiltinFileEmitterBase {
 public:
-  OpenCLBuiltinTestEmitter(RecordKeeper &Records, raw_ostream &OS)
+  OpenCLBuiltinFileEmitterBase(RecordKeeper &Records, raw_ostream &OS)
       : Records(Records), OS(OS) {}
+  virtual ~OpenCLBuiltinFileEmitterBase() = default;
 
   // Entrypoint to generate the functions for testing all OpenCL builtin
   // functions.
-  void emit();
+  virtual void emit() = 0;
 
-private:
+protected:
   struct TypeFlags {
     TypeFlags() : IsConst(false), IsVolatile(false), IsPointer(false) {}
     bool IsConst : 1;
@@ -282,6 +282,27 @@ private:
   expandTypesInSignature(const std::vector<Record *> &Signature,
                          SmallVectorImpl<SmallVector<std::string, 2>> &Types);
 
+  // Emit extension enabling pragmas.
+  void emitExtensionSetup();
+
+  // Emit an #if guard for a Builtin's extension.  Return the corresponding
+  // closing #endif, or an empty string if no extension #if guard was emitted.
+  std::string emitExtensionGuard(const Record *Builtin);
+
+  // Emit an #if guard for a Builtin's language version.  Return the
+  // corresponding closing #endif, or an empty string if no version #if guard
+  // was emitted.
+  std::string emitVersionGuard(const Record *Builtin);
+
+  // Emit an #if guard for all type extensions required for the given type
+  // strings.  Return the corresponding closing #endif, or an empty string
+  // if no extension #if guard was emitted.
+  StringRef
+  emitTypeExtensionGuards(const SmallVectorImpl<std::string> &Signature);
+
+  // Map type strings to type extensions (e.g. "half2" -> "cl_khr_fp16").
+  StringMap<StringRef> TypeExtMap;
+
   // Contains OpenCL builtin functions and related information, stored as
   // Record instances. They are coming from the associated TableGen file.
   RecordKeeper &Records;
@@ -290,10 +311,35 @@ private:
   raw_ostream &OS;
 };
 
+// OpenCL builtin test generator.  This class processes the same TableGen input
+// as BuiltinNameEmitter, but generates a .cl file that contains a call to each
+// builtin function described in the .td input.
+class OpenCLBuiltinTestEmitter : public OpenCLBuiltinFileEmitterBase {
+public:
+  OpenCLBuiltinTestEmitter(RecordKeeper &Records, raw_ostream &OS)
+      : OpenCLBuiltinFileEmitterBase(Records, OS) {}
+
+  // Entrypoint to generate the functions for testing all OpenCL builtin
+  // functions.
+  void emit() override;
+};
+
+// OpenCL builtin header generator.  This class processes the same TableGen
+// input as BuiltinNameEmitter, but generates a .h file that contains a
+// prototype for each builtin function described in the .td input.
+class OpenCLBuiltinHeaderEmitter : public OpenCLBuiltinFileEmitterBase {
+public:
+  OpenCLBuiltinHeaderEmitter(RecordKeeper &Records, raw_ostream &OS)
+      : OpenCLBuiltinFileEmitterBase(Records, OS) {}
+
+  // Entrypoint to generate the header.
+  void emit() override;
+};
+
 } // namespace
 
 void BuiltinNameEmitter::Emit() {
-  emitSourceFileHeader("OpenCL Builtin handling", OS);
+  emitSourceFileHeader("OpenCL Builtin handling", OS, Records);
 
   OS << "#include \"llvm/ADT/StringRef.h\"\n";
   OS << "using namespace clang;\n\n";
@@ -323,7 +369,7 @@ void BuiltinNameEmitter::ExtractEnumTypes(std::vector<Record *> &Types,
   raw_string_ostream SS(Output);
 
   for (const auto *T : Types) {
-    if (TypesSeen.find(T->getValueAsString("Name")) == TypesSeen.end()) {
+    if (!TypesSeen.contains(T->getValueAsString("Name"))) {
       SS << "  OCLT_" + T->getValueAsString("Name") << ",\n";
       // Save the type names in the same order as their enum value. Note that
       // the Record can be a VectorType or something else, only the name is
@@ -464,7 +510,7 @@ void BuiltinNameEmitter::GetOverloads() {
   std::vector<Record *> Builtins = Records.getAllDerivedDefinitions("Builtin");
   for (const auto *B : Builtins) {
     StringRef BName = B->getValueAsString("Name");
-    if (FctOverloadMap.find(BName) == FctOverloadMap.end()) {
+    if (!FctOverloadMap.contains(BName)) {
       FctOverloadMap.insert(std::make_pair(
           BName, std::vector<std::pair<const Record *, unsigned>>{}));
     }
@@ -472,10 +518,10 @@ void BuiltinNameEmitter::GetOverloads() {
     auto Signature = B->getValueAsListOfDefs("Signature");
     // Reuse signatures to avoid unnecessary duplicates.
     auto it =
-        std::find_if(SignaturesList.begin(), SignaturesList.end(),
-                     [&](const std::pair<std::vector<Record *>, unsigned> &a) {
-                       return a.first == Signature;
-                     });
+        llvm::find_if(SignaturesList,
+                      [&](const std::pair<std::vector<Record *>, unsigned> &a) {
+                        return a.first == Signature;
+                      });
     unsigned SignIndex;
     if (it == SignaturesList.end()) {
       VerifySignature(Signature, B);
@@ -564,7 +610,7 @@ static unsigned short EncodeVersions(unsigned int MinVersion,
   }
 
   unsigned VersionIDs[] = {100, 110, 120, 200, 300};
-  for (unsigned I = 0; I < sizeof(VersionIDs) / sizeof(VersionIDs[0]); I++) {
+  for (unsigned I = 0; I < std::size(VersionIDs); I++) {
     if (VersionIDs[I] >= MinVersion && VersionIDs[I] < MaxVersion) {
       Encoded |= 1 << I;
     }
@@ -709,6 +755,20 @@ static std::pair<unsigned, unsigned> isOpenCLBuiltin(llvm::StringRef Name) {
   OS << "} // isOpenCLBuiltin\n";
 }
 
+// Emit an if-statement with an isMacroDefined call for each extension in
+// the space-separated list of extensions.
+static void EmitMacroChecks(raw_ostream &OS, StringRef Extensions) {
+  SmallVector<StringRef, 2> ExtVec;
+  Extensions.split(ExtVec, " ");
+  OS << "      if (";
+  for (StringRef Ext : ExtVec) {
+    if (Ext != ExtVec.front())
+      OS << " && ";
+    OS << "S.getPreprocessor().isMacroDefined(\"" << Ext << "\")";
+  }
+  OS << ") {\n  ";
+}
+
 void BuiltinNameEmitter::EmitQualTypeFinder() {
   OS << R"(
 
@@ -774,15 +834,24 @@ static void OCL2Qual(Sema &S, const OpenCLTypeStruct &Ty,
        << "        case OCLAQ_None:\n"
        << "          llvm_unreachable(\"Image without access qualifier\");\n";
     for (const auto &Image : ITE.getValue()) {
+      StringRef Exts =
+          Image->getValueAsDef("Extension")->getValueAsString("ExtName");
       OS << StringSwitch<const char *>(
                 Image->getValueAsString("AccessQualifier"))
                 .Case("RO", "        case OCLAQ_ReadOnly:\n")
                 .Case("WO", "        case OCLAQ_WriteOnly:\n")
-                .Case("RW", "        case OCLAQ_ReadWrite:\n")
-         << "          QT.push_back("
+                .Case("RW", "        case OCLAQ_ReadWrite:\n");
+      if (!Exts.empty()) {
+        OS << "    ";
+        EmitMacroChecks(OS, Exts);
+      }
+      OS << "          QT.push_back("
          << Image->getValueAsDef("QTExpr")->getValueAsString("TypeExpr")
-         << ");\n"
-         << "          break;\n";
+         << ");\n";
+      if (!Exts.empty()) {
+        OS << "          }\n";
+      }
+      OS << "          break;\n";
     }
     OS << "      }\n"
        << "      break;\n";
@@ -801,15 +870,14 @@ static void OCL2Qual(Sema &S, const OpenCLTypeStruct &Ty,
     // Collect all QualTypes for a single vector size into TypeList.
     OS << "      SmallVector<QualType, " << BaseTypes.size() << "> TypeList;\n";
     for (const auto *T : BaseTypes) {
-      StringRef Ext =
+      StringRef Exts =
           T->getValueAsDef("Extension")->getValueAsString("ExtName");
-      if (!Ext.empty()) {
-        OS << "      if (S.getPreprocessor().isMacroDefined(\"" << Ext
-           << "\")) {\n  ";
+      if (!Exts.empty()) {
+        EmitMacroChecks(OS, Exts);
       }
       OS << "      TypeList.push_back("
          << T->getValueAsDef("QTExpr")->getValueAsString("TypeExpr") << ");\n";
-      if (!Ext.empty()) {
+      if (!Exts.empty()) {
         OS << "      }\n";
       }
     }
@@ -839,10 +907,10 @@ static void OCL2Qual(Sema &S, const OpenCLTypeStruct &Ty,
 
   for (const auto *T : Types) {
     // Check this is not an image type
-    if (ImageTypesMap.find(T->getValueAsString("Name")) != ImageTypesMap.end())
+    if (ImageTypesMap.contains(T->getValueAsString("Name")))
       continue;
     // Check we have not seen this Type
-    if (TypesSeen.find(T->getValueAsString("Name")) != TypesSeen.end())
+    if (TypesSeen.contains(T->getValueAsString("Name")))
       continue;
     TypesSeen.insert(std::make_pair(T->getValueAsString("Name"), true));
 
@@ -853,15 +921,14 @@ static void OCL2Qual(Sema &S, const OpenCLTypeStruct &Ty,
     // Emit the cases for non generic, non image types.
     OS << "    case OCLT_" << T->getValueAsString("Name") << ":\n";
 
-    StringRef Ext = T->getValueAsDef("Extension")->getValueAsString("ExtName");
-    // If this type depends on an extension, ensure the extension macro is
+    StringRef Exts = T->getValueAsDef("Extension")->getValueAsString("ExtName");
+    // If this type depends on an extension, ensure the extension macros are
     // defined.
-    if (!Ext.empty()) {
-      OS << "      if (S.getPreprocessor().isMacroDefined(\"" << Ext
-         << "\")) {\n  ";
+    if (!Exts.empty()) {
+      EmitMacroChecks(OS, Exts);
     }
     OS << "      QT.push_back(" << QT->getValueAsString("TypeExpr") << ");\n";
-    if (!Ext.empty()) {
+    if (!Exts.empty()) {
       OS << "      }\n";
     }
     OS << "      break;\n";
@@ -923,9 +990,9 @@ static void OCL2Qual(Sema &S, const OpenCLTypeStruct &Ty,
   OS << "\n} // OCL2Qual\n";
 }
 
-std::string OpenCLBuiltinTestEmitter::getTypeString(const Record *Type,
-                                                    TypeFlags Flags,
-                                                    int VectorSize) const {
+std::string OpenCLBuiltinFileEmitterBase::getTypeString(const Record *Type,
+                                                        TypeFlags Flags,
+                                                        int VectorSize) const {
   std::string S;
   if (Type->getValueAsBit("IsConst") || Flags.IsConst) {
     S += "const ";
@@ -970,7 +1037,7 @@ std::string OpenCLBuiltinTestEmitter::getTypeString(const Record *Type,
   return S;
 }
 
-void OpenCLBuiltinTestEmitter::getTypeLists(
+void OpenCLBuiltinFileEmitterBase::getTypeLists(
     Record *Type, TypeFlags &Flags, std::vector<Record *> &TypeList,
     std::vector<int64_t> &VectorList) const {
   bool isGenType = Type->isSubClassOf("GenericType");
@@ -1003,7 +1070,7 @@ void OpenCLBuiltinTestEmitter::getTypeLists(
   VectorList.push_back(Type->getValueAsInt("VecWidth"));
 }
 
-void OpenCLBuiltinTestEmitter::expandTypesInSignature(
+void OpenCLBuiltinFileEmitterBase::expandTypesInSignature(
     const std::vector<Record *> &Signature,
     SmallVectorImpl<SmallVector<std::string, 2>> &Types) {
   // Find out if there are any GenTypes in this signature, and if so, calculate
@@ -1021,7 +1088,16 @@ void OpenCLBuiltinTestEmitter::expandTypesInSignature(
     // Insert the Cartesian product of the types and vector sizes.
     for (const auto &Vector : VectorList) {
       for (const auto &Type : TypeList) {
-        ExpandedArg.push_back(getTypeString(Type, Flags, Vector));
+        std::string FullType = getTypeString(Type, Flags, Vector);
+        ExpandedArg.push_back(FullType);
+
+        // If the type requires an extension, add a TypeExtMap entry mapping
+        // the full type name to the extension.
+        StringRef Ext =
+            Type->getValueAsDef("Extension")->getValueAsString("ExtName");
+        if (!Ext.empty() && !TypeExtMap.contains(FullType)) {
+          TypeExtMap.insert({FullType, Ext});
+        }
       }
     }
     NumSignatures = std::max<unsigned>(NumSignatures, ExpandedArg.size());
@@ -1044,10 +1120,7 @@ void OpenCLBuiltinTestEmitter::expandTypesInSignature(
   }
 }
 
-void OpenCLBuiltinTestEmitter::emit() {
-  emitSourceFileHeader("OpenCL Builtin exhaustive testing", OS);
-
-  // Enable some extensions for testing.
+void OpenCLBuiltinFileEmitterBase::emitExtensionSetup() {
   OS << R"(
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
@@ -1058,6 +1131,93 @@ void OpenCLBuiltinTestEmitter::emit() {
 #pragma OPENCL EXTENSION cl_khr_3d_image_writes : enable
 
 )";
+}
+
+std::string
+OpenCLBuiltinFileEmitterBase::emitExtensionGuard(const Record *Builtin) {
+  StringRef Extensions =
+      Builtin->getValueAsDef("Extension")->getValueAsString("ExtName");
+  if (Extensions.empty())
+    return "";
+
+  OS << "#if";
+
+  SmallVector<StringRef, 2> ExtVec;
+  Extensions.split(ExtVec, " ");
+  bool isFirst = true;
+  for (StringRef Ext : ExtVec) {
+    if (!isFirst) {
+      OS << " &&";
+    }
+    OS << " defined(" << Ext << ")";
+    isFirst = false;
+  }
+  OS << "\n";
+
+  return "#endif // Extension\n";
+}
+
+std::string
+OpenCLBuiltinFileEmitterBase::emitVersionGuard(const Record *Builtin) {
+  std::string OptionalEndif;
+  auto PrintOpenCLVersion = [this](int Version) {
+    OS << "CL_VERSION_" << (Version / 100) << "_" << ((Version % 100) / 10);
+  };
+  int MinVersion = Builtin->getValueAsDef("MinVersion")->getValueAsInt("ID");
+  if (MinVersion != 100) {
+    // OpenCL 1.0 is the default minimum version.
+    OS << "#if __OPENCL_C_VERSION__ >= ";
+    PrintOpenCLVersion(MinVersion);
+    OS << "\n";
+    OptionalEndif = "#endif // MinVersion\n" + OptionalEndif;
+  }
+  int MaxVersion = Builtin->getValueAsDef("MaxVersion")->getValueAsInt("ID");
+  if (MaxVersion) {
+    OS << "#if __OPENCL_C_VERSION__ < ";
+    PrintOpenCLVersion(MaxVersion);
+    OS << "\n";
+    OptionalEndif = "#endif // MaxVersion\n" + OptionalEndif;
+  }
+  return OptionalEndif;
+}
+
+StringRef OpenCLBuiltinFileEmitterBase::emitTypeExtensionGuards(
+    const SmallVectorImpl<std::string> &Signature) {
+  SmallSet<StringRef, 2> ExtSet;
+
+  // Iterate over all types to gather the set of required TypeExtensions.
+  for (const auto &Ty : Signature) {
+    StringRef TypeExt = TypeExtMap.lookup(Ty);
+    if (!TypeExt.empty()) {
+      // The TypeExtensions are space-separated in the .td file.
+      SmallVector<StringRef, 2> ExtVec;
+      TypeExt.split(ExtVec, " ");
+      for (const auto Ext : ExtVec) {
+        ExtSet.insert(Ext);
+      }
+    }
+  }
+
+  // Emit the #if only when at least one extension is required.
+  if (ExtSet.empty())
+    return "";
+
+  OS << "#if ";
+  bool isFirst = true;
+  for (const auto Ext : ExtSet) {
+    if (!isFirst)
+      OS << " && ";
+    OS << "defined(" << Ext << ")";
+    isFirst = false;
+  }
+  OS << "\n";
+  return "#endif // TypeExtension\n";
+}
+
+void OpenCLBuiltinTestEmitter::emit() {
+  emitSourceFileHeader("OpenCL Builtin exhaustive testing", OS, Records);
+
+  emitExtensionSetup();
 
   // Ensure each test has a unique name by numbering them.
   unsigned TestID = 0;
@@ -1071,44 +1231,13 @@ void OpenCLBuiltinTestEmitter::emit() {
     expandTypesInSignature(B->getValueAsListOfDefs("Signature"), FTypes);
 
     OS << "// Test " << Name << "\n";
-    std::string OptionalEndif;
-    StringRef Extensions =
-        B->getValueAsDef("Extension")->getValueAsString("ExtName");
-    if (!Extensions.empty()) {
-      OS << "#if";
-      OptionalEndif = "#endif // Extension\n";
 
-      SmallVector<StringRef, 2> ExtVec;
-      Extensions.split(ExtVec, " ");
-      bool isFirst = true;
-      for (StringRef Ext : ExtVec) {
-        if (!isFirst) {
-          OS << " &&";
-        }
-        OS << " defined(" << Ext << ")";
-        isFirst = false;
-      }
-      OS << "\n";
-    }
-    auto PrintOpenCLVersion = [this](int Version) {
-      OS << "CL_VERSION_" << (Version / 100) << "_" << ((Version % 100) / 10);
-    };
-    int MinVersion = B->getValueAsDef("MinVersion")->getValueAsInt("ID");
-    if (MinVersion != 100) {
-      // OpenCL 1.0 is the default minimum version.
-      OS << "#if __OPENCL_C_VERSION__ >= ";
-      PrintOpenCLVersion(MinVersion);
-      OS << "\n";
-      OptionalEndif = "#endif // MinVersion\n" + OptionalEndif;
-    }
-    int MaxVersion = B->getValueAsDef("MaxVersion")->getValueAsInt("ID");
-    if (MaxVersion) {
-      OS << "#if __OPENCL_C_VERSION__ < ";
-      PrintOpenCLVersion(MaxVersion);
-      OS << "\n";
-      OptionalEndif = "#endif // MaxVersion\n" + OptionalEndif;
-    }
+    std::string OptionalExtensionEndif = emitExtensionGuard(B);
+    std::string OptionalVersionEndif = emitVersionGuard(B);
+
     for (const auto &Signature : FTypes) {
+      StringRef OptionalTypeExtEndif = emitTypeExtensionGuards(Signature);
+
       // Emit function declaration.
       OS << Signature[0] << " test" << TestID++ << "_" << Name << "(";
       if (Signature.size() > 1) {
@@ -1135,14 +1264,82 @@ void OpenCLBuiltinTestEmitter::emit() {
 
       // End of function body.
       OS << "}\n";
+      OS << OptionalTypeExtEndif;
     }
-    OS << OptionalEndif << "\n";
+
+    OS << OptionalVersionEndif;
+    OS << OptionalExtensionEndif;
   }
+}
+
+void OpenCLBuiltinHeaderEmitter::emit() {
+  emitSourceFileHeader("OpenCL Builtin declarations", OS, Records);
+
+  emitExtensionSetup();
+
+  OS << R"(
+#define __ovld __attribute__((overloadable))
+#define __conv __attribute__((convergent))
+#define __purefn __attribute__((pure))
+#define __cnfn __attribute__((const))
+
+)";
+
+  // Iterate over all builtins; sort to follow order of definition in .td file.
+  std::vector<Record *> Builtins = Records.getAllDerivedDefinitions("Builtin");
+  llvm::sort(Builtins, LessRecord());
+
+  for (const auto *B : Builtins) {
+    StringRef Name = B->getValueAsString("Name");
+
+    std::string OptionalExtensionEndif = emitExtensionGuard(B);
+    std::string OptionalVersionEndif = emitVersionGuard(B);
+
+    SmallVector<SmallVector<std::string, 2>, 4> FTypes;
+    expandTypesInSignature(B->getValueAsListOfDefs("Signature"), FTypes);
+
+    for (const auto &Signature : FTypes) {
+      StringRef OptionalTypeExtEndif = emitTypeExtensionGuards(Signature);
+
+      // Emit function declaration.
+      OS << Signature[0] << " __ovld ";
+      if (B->getValueAsBit("IsConst"))
+        OS << "__cnfn ";
+      if (B->getValueAsBit("IsPure"))
+        OS << "__purefn ";
+      if (B->getValueAsBit("IsConv"))
+        OS << "__conv ";
+
+      OS << Name << "(";
+      if (Signature.size() > 1) {
+        for (unsigned I = 1; I < Signature.size(); I++) {
+          if (I != 1)
+            OS << ", ";
+          OS << Signature[I];
+        }
+      }
+      OS << ");\n";
+
+      OS << OptionalTypeExtEndif;
+    }
+
+    OS << OptionalVersionEndif;
+    OS << OptionalExtensionEndif;
+  }
+
+  OS << "\n// Disable any extensions we may have enabled previously.\n"
+        "#pragma OPENCL EXTENSION all : disable\n";
 }
 
 void clang::EmitClangOpenCLBuiltins(RecordKeeper &Records, raw_ostream &OS) {
   BuiltinNameEmitter NameChecker(Records, OS);
   NameChecker.Emit();
+}
+
+void clang::EmitClangOpenCLBuiltinHeader(RecordKeeper &Records,
+                                         raw_ostream &OS) {
+  OpenCLBuiltinHeaderEmitter HeaderFileGenerator(Records, OS);
+  HeaderFileGenerator.emit();
 }
 
 void clang::EmitClangOpenCLBuiltinTests(RecordKeeper &Records,

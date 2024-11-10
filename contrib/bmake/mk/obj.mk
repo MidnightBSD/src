@@ -1,20 +1,20 @@
-# $Id: obj.mk,v 1.15 2012/11/11 22:37:02 sjg Exp $
+# $Id: obj.mk,v 1.17 2021/12/08 05:56:50 sjg Exp $
 #
 #	@(#) Copyright (c) 1999-2010, Simon J. Gerraty
 #
 #	This file is provided in the hope that it will
 #	be of use.  There is absolutely NO WARRANTY.
 #	Permission to copy, redistribute or otherwise
-#	use this file is hereby granted provided that 
+#	use this file is hereby granted provided that
 #	the above copyright notice and this notice are
-#	left intact. 
-#      
+#	left intact.
+#
 #	Please send copies of changes and bug-fixes to:
 #	sjg@crufty.net
 #
 
 .if !target(__${.PARSEFILE:S,bsd.,,}__)
-__${.PARSEFILE:S,bsd.,,}__:
+__${.PARSEFILE:S,bsd.,,}__: .NOTMAIN
 
 .include <init.mk>
 

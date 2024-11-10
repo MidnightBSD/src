@@ -9,13 +9,12 @@
 #ifndef _LIBCPP___ALGORITHM_REMOVE_IF_H
 #define _LIBCPP___ALGORITHM_REMOVE_IF_H
 
-#include <__config>
 #include <__algorithm/find_if.h>
-#include <utility>
-#include <type_traits>
+#include <__config>
+#include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
+#  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
@@ -24,24 +23,19 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _ForwardIterator, class _Predicate>
-_LIBCPP_NODISCARD_EXT _LIBCPP_CONSTEXPR_AFTER_CXX17 _ForwardIterator
-remove_if(_ForwardIterator __first, _ForwardIterator __last, _Predicate __pred)
-{
-    __first = _VSTD::find_if<_ForwardIterator, typename add_lvalue_reference<_Predicate>::type>
-                           (__first, __last, __pred);
-    if (__first != __last)
-    {
-        _ForwardIterator __i = __first;
-        while (++__i != __last)
-        {
-            if (!__pred(*__i))
-            {
-                *__first = _VSTD::move(*__i);
-                ++__first;
-            }
-        }
+_LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
+remove_if(_ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) {
+  __first = std::find_if<_ForwardIterator, _Predicate&>(__first, __last, __pred);
+  if (__first != __last) {
+    _ForwardIterator __i = __first;
+    while (++__i != __last) {
+      if (!__pred(*__i)) {
+        *__first = std::move(*__i);
+        ++__first;
+      }
     }
-    return __first;
+  }
+  return __first;
 }
 
 _LIBCPP_END_NAMESPACE_STD

@@ -41,8 +41,10 @@ public:
 
   virtual ~EventData();
 
-  virtual ConstString GetFlavor() const = 0;
+  virtual llvm::StringRef GetFlavor() const = 0;
 
+  virtual Log *GetLogChannel() { return nullptr; }
+  
   virtual void Dump(Stream *s) const;
 
 private:
@@ -67,7 +69,7 @@ public:
   ~EventDataBytes() override;
 
   // Member functions
-  ConstString GetFlavor() const override;
+  llvm::StringRef GetFlavor() const override;
 
   void Dump(Stream *s) const override;
 
@@ -88,7 +90,7 @@ public:
 
   static size_t GetByteSizeFromEvent(const Event *event_ptr);
 
-  static ConstString GetFlavorString();
+  static llvm::StringRef GetFlavorString();
 
 private:
   std::string m_bytes;
@@ -99,18 +101,15 @@ private:
 
 class EventDataReceipt : public EventData {
 public:
-  EventDataReceipt() : EventData(), m_predicate(false) {}
+  EventDataReceipt() : m_predicate(false) {}
 
   ~EventDataReceipt() override = default;
 
-  static ConstString GetFlavorString() {
-    static ConstString g_flavor("Process::ProcessEventData");
-    return g_flavor;
-  }
+  static llvm::StringRef GetFlavorString();
 
-  ConstString GetFlavor() const override { return GetFlavorString(); }
+  llvm::StringRef GetFlavor() const override { return GetFlavorString(); }
 
-  bool WaitForEventReceived(const Timeout<std::micro> &timeout = llvm::None) {
+  bool WaitForEventReceived(const Timeout<std::micro> &timeout = std::nullopt) {
     return m_predicate.WaitForValueEqualTo(true, timeout);
   }
 
@@ -137,7 +136,7 @@ public:
   ~EventDataStructuredData() override;
 
   // Member functions
-  ConstString GetFlavor() const override;
+  llvm::StringRef GetFlavor() const override;
 
   void Dump(Stream *s) const override;
 
@@ -164,7 +163,7 @@ public:
   static lldb::StructuredDataPluginSP
   GetPluginFromEvent(const Event *event_ptr);
 
-  static ConstString GetFlavorString();
+  static llvm::StringRef GetFlavorString();
 
 private:
   lldb::ProcessSP m_process_sp;
@@ -177,7 +176,7 @@ private:
 };
 
 // lldb::Event
-class Event {
+class Event : public std::enable_shared_from_this<Event> {
   friend class Listener;
   friend class EventData;
   friend class Broadcaster::BroadcasterImpl;
@@ -227,6 +226,12 @@ public:
 
   void Clear() { m_data_sp.reset(); }
 
+  /// This is used by Broadcasters with Primary Listeners to store the other
+  /// Listeners till after the Event's DoOnRemoval has completed.
+  void AddPendingListener(lldb::ListenerSP pending_listener_sp) {
+    m_pending_listeners.push_back(pending_listener_sp);
+  };
+
 private:
   // This is only called by Listener when it pops an event off the queue for
   // the listener.  It calls the Event Data's DoOnRemoval() method, which is
@@ -245,6 +250,8 @@ private:
       m_broadcaster_wp;        // The broadcaster that sent this event
   uint32_t m_type;             // The bit describing this event
   lldb::EventDataSP m_data_sp; // User specific data for this event
+  std::vector<lldb::ListenerSP> m_pending_listeners;
+  std::mutex m_listeners_mutex;
 
   Event(const Event &) = delete;
   const Event &operator=(const Event &) = delete;

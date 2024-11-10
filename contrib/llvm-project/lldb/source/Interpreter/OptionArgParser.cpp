@@ -8,6 +8,7 @@
 
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/DataFormatters/FormatManager.h"
+#include "lldb/Target/ABI.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
@@ -60,7 +61,7 @@ int64_t OptionArgParser::ToOptionEnum(llvm::StringRef s,
 
   for (const auto &enum_value : enum_values) {
     llvm::StringRef this_enum(enum_value.string_value);
-    if (this_enum.startswith(s))
+    if (this_enum.starts_with(s))
       return enum_value.value;
   }
 
@@ -139,16 +140,39 @@ lldb::ScriptLanguage OptionArgParser::ToScriptLanguage(
   return fail_value;
 }
 
+lldb::addr_t OptionArgParser::ToRawAddress(const ExecutionContext *exe_ctx,
+                                           llvm::StringRef s,
+                                           lldb::addr_t fail_value,
+                                           Status *error_ptr) {
+  std::optional<lldb::addr_t> maybe_addr = DoToAddress(exe_ctx, s, error_ptr);
+  return maybe_addr ? *maybe_addr : fail_value;
+}
+
 lldb::addr_t OptionArgParser::ToAddress(const ExecutionContext *exe_ctx,
                                         llvm::StringRef s,
                                         lldb::addr_t fail_value,
                                         Status *error_ptr) {
-  bool error_set = false;
+  std::optional<lldb::addr_t> maybe_addr = DoToAddress(exe_ctx, s, error_ptr);
+  if (!maybe_addr)
+    return fail_value;
+
+  lldb::addr_t addr = *maybe_addr;
+
+  if (Process *process = exe_ctx->GetProcessPtr())
+    if (ABISP abi_sp = process->GetABI())
+      addr = abi_sp->FixCodeAddress(addr);
+
+  return addr;
+}
+
+std::optional<lldb::addr_t>
+OptionArgParser::DoToAddress(const ExecutionContext *exe_ctx, llvm::StringRef s,
+                             Status *error_ptr) {
   if (s.empty()) {
     if (error_ptr)
       error_ptr->SetErrorStringWithFormat("invalid address expression \"%s\"",
                                           s.str().c_str());
-    return fail_value;
+    return {};
   }
 
   llvm::StringRef sref = s;
@@ -157,6 +181,7 @@ lldb::addr_t OptionArgParser::ToAddress(const ExecutionContext *exe_ctx,
   if (!s.getAsInteger(0, addr)) {
     if (error_ptr)
       error_ptr->Clear();
+
     return addr;
   }
 
@@ -172,7 +197,7 @@ lldb::addr_t OptionArgParser::ToAddress(const ExecutionContext *exe_ctx,
     if (error_ptr)
       error_ptr->SetErrorStringWithFormat("invalid address expression \"%s\"",
                                           s.str().c_str());
-    return fail_value;
+    return {};
   }
 
   lldb::ValueObjectSP valobj_sp;
@@ -192,57 +217,45 @@ lldb::addr_t OptionArgParser::ToAddress(const ExecutionContext *exe_ctx,
           valobj_sp->GetDynamicValueType(), true);
     // Get the address to watch.
     if (valobj_sp)
-      addr = valobj_sp->GetValueAsUnsigned(fail_value, &success);
+      addr = valobj_sp->GetValueAsUnsigned(0, &success);
     if (success) {
       if (error_ptr)
         error_ptr->Clear();
       return addr;
-    } else {
-      if (error_ptr) {
-        error_set = true;
-        error_ptr->SetErrorStringWithFormat(
-            "address expression \"%s\" resulted in a value whose type "
-            "can't be converted to an address: %s",
-            s.str().c_str(), valobj_sp->GetTypeName().GetCString());
-      }
     }
-
-  } else {
-    // Since the compiler can't handle things like "main + 12" we should try to
-    // do this for now. The compiler doesn't like adding offsets to function
-    // pointer types.
-    static RegularExpression g_symbol_plus_offset_regex(
-        "^(.*)([-\\+])[[:space:]]*(0x[0-9A-Fa-f]+|[0-9]+)[[:space:]]*$");
-
-    llvm::SmallVector<llvm::StringRef, 4> matches;
-    if (g_symbol_plus_offset_regex.Execute(sref, &matches)) {
-      uint64_t offset = 0;
-      std::string name = matches[1].str();
-      std::string sign = matches[2].str();
-      std::string str_offset = matches[3].str();
-      if (!llvm::StringRef(str_offset).getAsInteger(0, offset)) {
-        Status error;
-        addr = ToAddress(exe_ctx, name.c_str(), LLDB_INVALID_ADDRESS, &error);
-        if (addr != LLDB_INVALID_ADDRESS) {
-          if (sign[0] == '+')
-            return addr + offset;
-          else
-            return addr - offset;
-        }
-      }
-    }
-
-    if (error_ptr) {
-      error_set = true;
+    if (error_ptr)
       error_ptr->SetErrorStringWithFormat(
-          "address expression \"%s\" evaluation failed", s.str().c_str());
+          "address expression \"%s\" resulted in a value whose type "
+          "can't be converted to an address: %s",
+          s.str().c_str(), valobj_sp->GetTypeName().GetCString());
+    return {};
+  }
+
+  // Since the compiler can't handle things like "main + 12" we should try to
+  // do this for now. The compiler doesn't like adding offsets to function
+  // pointer types.
+  static RegularExpression g_symbol_plus_offset_regex(
+      "^(.*)([-\\+])[[:space:]]*(0x[0-9A-Fa-f]+|[0-9]+)[[:space:]]*$");
+
+  llvm::SmallVector<llvm::StringRef, 4> matches;
+  if (g_symbol_plus_offset_regex.Execute(sref, &matches)) {
+    uint64_t offset = 0;
+    llvm::StringRef name = matches[1];
+    llvm::StringRef sign = matches[2];
+    llvm::StringRef str_offset = matches[3];
+    if (!str_offset.getAsInteger(0, offset)) {
+      Status error;
+      addr = ToAddress(exe_ctx, name, LLDB_INVALID_ADDRESS, &error);
+      if (addr != LLDB_INVALID_ADDRESS) {
+        if (sign[0] == '+')
+          return addr + offset;
+        return addr - offset;
+      }
     }
   }
 
-  if (error_ptr) {
-    if (!error_set)
-      error_ptr->SetErrorStringWithFormat("invalid address expression \"%s\"",
-                                          s.str().c_str());
-  }
-  return fail_value;
+  if (error_ptr)
+    error_ptr->SetErrorStringWithFormat(
+        "address expression \"%s\" evaluation failed", s.str().c_str());
+  return {};
 }

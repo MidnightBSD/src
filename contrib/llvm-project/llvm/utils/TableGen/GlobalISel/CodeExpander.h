@@ -1,4 +1,4 @@
-//===- CodeExpander.h - Expand variables in a string ----------------------===//
+//===- CodeExpander.h - Expand variables in a string ------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,10 +15,10 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/SMLoc.h"
 
 namespace llvm {
 class CodeExpansions;
+class SMLoc;
 class raw_ostream;
 
 /// Emit the given code with all '${foo}' placeholders expanded to their

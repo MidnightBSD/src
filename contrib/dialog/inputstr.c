@@ -1,9 +1,9 @@
 /*
- *  $Id: inputstr.c,v 1.83 2013/09/23 23:19:26 tom Exp $
+ *  $Id: inputstr.c,v 1.91 2021/01/17 22:19:05 tom Exp $
  *
  *  inputstr.c -- functions for input/display of a string
  *
- *  Copyright 2000-2012,2013	Thomas E. Dickey
+ *  Copyright 2000-2019,2021	Thomas E. Dickey
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU Lesser General Public License, version 2.1
@@ -105,14 +105,14 @@ show_tsearch(const void *nodep, const VISIT which, const int depth)
     const CACHE *p = *(CACHE * const *) nodep;
     (void) depth;
     if (which == postorder || which == leaf) {
-	dlg_trace_msg("\tcache %p %p:%s\n", p, p->string, p->string);
+	DLG_TRACE(("# cache %p %p:%s\n", p, p->string, p->string));
     }
 }
 
 static void
 trace_cache(const char *fn, int ln)
 {
-    dlg_trace_msg("trace_cache %s@%d\n", fn, ln);
+    DLG_TRACE(("# trace_cache %s@%d\n", fn, ln));
     twalk(sorted_cache, show_tsearch);
 }
 
@@ -120,14 +120,16 @@ trace_cache(const char *fn, int ln)
 #define trace_cache(fn, ln)	/* nothing */
 #endif
 
+#define CMP(a,b) (((a) > (b)) ? 1 : (((a) < (b)) ? -1 : 0))
+
 static int
 compare_cache(const void *a, const void *b)
 {
     const CACHE *p = (const CACHE *) a;
     const CACHE *q = (const CACHE *) b;
-    int result = (p->cache_num - q->cache_num);
+    int result = CMP(p->cache_num, q->cache_num);
     if (result == 0)
-	result = (int) (p->string_at - q->string_at);
+	result = CMP(p->string_at, q->string_at);
     return result;
 }
 #endif
@@ -202,7 +204,6 @@ static CACHE my_cache;
 static bool
 same_cache2(CACHE * cache, const char *string, unsigned i_len)
 {
-    unsigned need;
     size_t s_len = strlen(string);
     bool result = TRUE;
 
@@ -210,8 +211,8 @@ same_cache2(CACHE * cache, const char *string, unsigned i_len)
 	|| cache->s_len < s_len
 	|| cache->list == 0
 	|| !SAME_CACHE(cache, string, (size_t) s_len)) {
+	unsigned need = (i_len + 1);
 
-	need = (i_len + 1);
 	if (cache->list == 0) {
 	    cache->list = dlg_malloc(int, need);
 	} else if (cache->i_len < i_len) {
@@ -320,10 +321,11 @@ dlg_count_wchars(const char *string)
 	    mbstate_t state;
 	    int part = dlg_count_wcbytes(cache->string, len);
 	    char save = cache->string[part];
-	    size_t code;
 	    wchar_t *temp = dlg_calloc(wchar_t, len + 1);
 
 	    if (temp != 0) {
+		size_t code;
+
 		cache->string[part] = '\0';
 		memset(&state, 0, sizeof(state));
 		code = mbsrtowcs(temp, &src, (size_t) part, &state);
@@ -351,11 +353,11 @@ const int *
 dlg_index_wchars(const char *string)
 {
     unsigned len = (unsigned) dlg_count_wchars(string);
-    unsigned inx;
     CACHE *cache = load_cache(cInxWideChars, string);
 
     if (!same_cache2(cache, string, len)) {
 	const char *current = string;
+	unsigned inx;
 
 	cache->list[0] = 0;
 	for (inx = 1; inx <= len; ++inx) {
@@ -405,25 +407,27 @@ const int *
 dlg_index_columns(const char *string)
 {
     unsigned len = (unsigned) dlg_count_wchars(string);
-    unsigned inx;
     CACHE *cache = load_cache(cInxCols, string);
 
     if (!same_cache2(cache, string, len)) {
+
 	cache->list[0] = 0;
 #ifdef USE_WIDE_CURSES
 	if (have_locale()) {
+	    unsigned inx;
 	    size_t num_bytes = strlen(string);
 	    const int *inx_wchars = dlg_index_wchars(string);
 	    mbstate_t state;
 
 	    for (inx = 0; inx < len; ++inx) {
-		wchar_t temp[2];
-		size_t check;
 		int result;
 
 		if (string[inx_wchars[inx]] == TAB) {
 		    result = ((cache->list[inx] | 7) + 1) - cache->list[inx];
 		} else {
+		    wchar_t temp[2];
+		    size_t check;
+
 		    memset(&state, 0, sizeof(state));
 		    memset(temp, 0, sizeof(temp));
 		    check = mbrtowc(temp,
@@ -450,13 +454,15 @@ dlg_index_columns(const char *string)
 	} else
 #endif /* USE_WIDE_CURSES */
 	{
+	    unsigned inx;
+
 	    for (inx = 0; inx < len; ++inx) {
 		chtype ch = UCH(string[inx]);
 
 		if (ch == TAB)
 		    cache->list[inx + 1] =
 			((cache->list[inx] | 7) + 1) - cache->list[inx];
-		else if (isprint(ch))
+		else if (isprint(UCH(ch)))
 		    cache->list[inx + 1] = 1;
 		else {
 		    const char *printable;
@@ -714,7 +720,7 @@ dlg_show_string(WINDOW *win,
 
 	compute_edit_offset(string, chr_offset, x_last, &input_x, &scrollamt);
 
-	(void) wattrset(win, attr);
+	dlg_attrset(win, attr);
 	(void) wmove(win, y_base, x_base);
 	for (i = scrollamt, k = 0; i < limit && k < x_last; ++i) {
 	    int check = cols[i + 1] - cols[scrollamt];

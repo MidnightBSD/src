@@ -176,7 +176,7 @@ extern int YYPARSE_DECL();
 #define CONST 259
 #define UMINUS 260
 #define YYERRCODE 256
-typedef int YYINT;
+typedef short YYINT;
 static const YYINT varsyntax_calc1_lhs[] = {             -1,
     3,    3,    0,    0,    0,    0,    0,    1,    1,    1,
     1,    1,    1,    1,    1,    2,    2,    2,    2,    2,
@@ -324,13 +324,15 @@ static const char *const varsyntax_calc1_rule[] = {
 };
 #endif
 
+#if YYDEBUG
 int      yydebug;
-int      yynerrs;
+#endif
 
 int      yyerrflag;
 int      yychar;
 YYSTYPE  yyval;
 YYSTYPE  yylval;
+int      yynerrs;
 
 /* define the initial stack-sizes */
 #ifdef YYSTACKSIZE
@@ -488,7 +490,7 @@ vdiv(double a, double b, INTERVAL v)
 {
     return (hilo(a / v.hi, a / v.lo, b / v.hi, b / v.lo));
 }
-#line 492 "varsyntax_calc1.tab.c"
+#line 494 "varsyntax_calc1.tab.c"
 
 #if YYDEBUG
 #include <stdio.h>	/* needed for printf */
@@ -850,7 +852,7 @@ case 28:
 		yyval.vval = yystack.l_mark[-1].vval;
 	}
 break;
-#line 854 "varsyntax_calc1.tab.c"
+#line 856 "varsyntax_calc1.tab.c"
     }
     yystack.s_mark -= yym;
     yystate = *yystack.s_mark;

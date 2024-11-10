@@ -1,7 +1,7 @@
 $ $
 $ SPDX-License-Identifier: BSD-2-Clause
 $ $
-$ Copyright (c) 2018-2021 Gavin D. Howard and contributors.
+$ Copyright (c) 2018-2024 Gavin D. Howard and contributors.
 $ $
 $ Redistribution and use in source and binary forms, with or without
 $ modification, are permitted provided that the following conditions are met:
@@ -28,13 +28,8 @@ $ $
 
 $quote "
 
-$ Miscellaneous messages.
-$set 1
-
-1 "Fonction :"
-
 $ Error types.
-$set 2
+$set 1
 
 1 "Erreur de calcul :"
 2 "Erreur d'analyse syntaxique :"
@@ -43,7 +38,7 @@ $set 2
 5 "Avertissement :"
 
 $ Math errors.
-$set 3
+$set 2
 
 1 "nombre strictement négatif"
 2 "nombre non entier"
@@ -51,7 +46,7 @@ $set 3
 4 "division par 0"
 
 $ Parse errors.
-$set 4
+$set 3
 
 1 "fin de fichier"
 2 "caractère invalide '%c'"
@@ -77,13 +72,15 @@ $set 4
 22 "POSIX interdit les opérateurs de comparaison en dehors des expressions 'if' ou des boucles"
 23 "POSIX impose 0 ou 1 opérateur de comparaison par condition"
 24 "POSIX interdit une expression vide dans une boucle 'for'"
-25 "POSIX interdit la notation exponentielle"
-26 "POSIX interdit les références à un tableau dans les paramètres d'une fonction"
-27 "POSIX impose que l'en-tête de la fonction et le '{' soient sur la même ligne"
-28 "POSIX interdit pas d'assigner des chaînes de caractères à des variables ou à des tableaux"
+25 "POSIX exige une nouvelle ligne entre un point-virgule et une définition de fonction"
+26 "POSIX interdit la notation exponentielle"
+27 "POSIX interdit les références à un tableau dans les paramètres d'une fonction"
+28 "POSIX n'autorise pas les fonctions void"
+29 "POSIX impose que l'en-tête de la fonction et le '{' soient sur la même ligne"
+30 "POSIX interdit pas d'assigner des chaînes de caractères à des variables ou à des tableaux"
 
 $ Runtime errors.
-$set 5
+$set 4
 
 1 "ibase invalide : doit être [%lu, %lu]"
 2 "obase invalide : doit être [%lu, %lu]"
@@ -98,7 +95,7 @@ $set 5
 11 "une valeur 'void' est inutilisable dans une expression"
 
 $ Fatal errors.
-$set 6
+$set 5
 
 1 "échec d'allocation mémoire"
 2 "erreur d'entrée-sortie"

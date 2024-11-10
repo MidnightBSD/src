@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Demangle/Demangle.h"
-#include "llvm/Demangle/StringView.h"
+#include "llvm/Demangle/StringViewExtras.h"
 #include "llvm/Demangle/Utility.h"
 
 #include <algorithm>
@@ -20,17 +20,18 @@
 #include <cstdint>
 #include <cstring>
 #include <limits>
+#include <string_view>
 
 using namespace llvm;
 
-using llvm::itanium_demangle::OutputStream;
-using llvm::itanium_demangle::StringView;
-using llvm::itanium_demangle::SwapAndRestore;
+using llvm::itanium_demangle::OutputBuffer;
+using llvm::itanium_demangle::ScopedOverride;
+using llvm::itanium_demangle::starts_with;
 
 namespace {
 
 struct Identifier {
-  StringView Name;
+  std::string_view Name;
   bool Punycode;
 
   bool empty() const { return Name.empty(); }
@@ -77,7 +78,7 @@ class Demangler {
   size_t RecursionLevel;
   size_t BoundLifetimes;
   // Input string that is being demangled with "_R" prefix removed.
-  StringView Input;
+  std::string_view Input;
   // Position in the input string.
   size_t Position;
   // When true, print methods append the output to the stream.
@@ -88,11 +89,11 @@ class Demangler {
 
 public:
   // Demangled output.
-  OutputStream Output;
+  OutputBuffer Output;
 
   Demangler(size_t MaxRecursionLevel = 500);
 
-  bool demangle(StringView MangledName);
+  bool demangle(std::string_view MangledName);
 
 private:
   bool demanglePath(IsInType Type,
@@ -119,7 +120,7 @@ private:
     if (!Print)
       return;
 
-    SwapAndRestore<size_t> SavePosition(Position, Position);
+    ScopedOverride<size_t> SavePosition(Position, Position);
     Position = Backref;
     Demangler();
   }
@@ -128,13 +129,14 @@ private:
   uint64_t parseOptionalBase62Number(char Tag);
   uint64_t parseBase62Number();
   uint64_t parseDecimalNumber();
-  uint64_t parseHexNumber(StringView &HexDigits);
+  uint64_t parseHexNumber(std::string_view &HexDigits);
 
   void print(char C);
-  void print(StringView S);
+  void print(std::string_view S);
   void printDecimalNumber(uint64_t N);
   void printBasicType(BasicType);
   void printLifetime(uint64_t Index);
+  void printIdentifier(Identifier Ident);
 
   char look() const;
   char consume();
@@ -146,57 +148,20 @@ private:
 
 } // namespace
 
-char *llvm::rustDemangle(const char *MangledName, char *Buf, size_t *N,
-                         int *Status) {
-  if (MangledName == nullptr || (Buf != nullptr && N == nullptr)) {
-    if (Status != nullptr)
-      *Status = demangle_invalid_args;
-    return nullptr;
-  }
-
+char *llvm::rustDemangle(std::string_view MangledName) {
   // Return early if mangled name doesn't look like a Rust symbol.
-  StringView Mangled(MangledName);
-  if (!Mangled.startsWith("_R")) {
-    if (Status != nullptr)
-      *Status = demangle_invalid_mangled_name;
+  if (MangledName.empty() || !starts_with(MangledName, "_R"))
     return nullptr;
-  }
 
   Demangler D;
-  if (!initializeOutputStream(nullptr, nullptr, D.Output, 1024)) {
-    if (Status != nullptr)
-      *Status = demangle_memory_alloc_failure;
-    return nullptr;
-  }
-
-  if (!D.demangle(Mangled)) {
-    if (Status != nullptr)
-      *Status = demangle_invalid_mangled_name;
+  if (!D.demangle(MangledName)) {
     std::free(D.Output.getBuffer());
     return nullptr;
   }
 
   D.Output += '\0';
-  char *Demangled = D.Output.getBuffer();
-  size_t DemangledLen = D.Output.getCurrentPosition();
 
-  if (Buf != nullptr) {
-    if (DemangledLen <= *N) {
-      std::memcpy(Buf, Demangled, DemangledLen);
-      std::free(Demangled);
-      Demangled = Buf;
-    } else {
-      std::free(Buf);
-    }
-  }
-
-  if (N != nullptr)
-    *N = DemangledLen;
-
-  if (Status != nullptr)
-    *Status = demangle_success;
-
-  return Demangled;
+  return D.Output.getBuffer();
 }
 
 Demangler::Demangler(size_t MaxRecursionLevel)
@@ -222,34 +187,34 @@ static inline bool isValid(const char C) {
 // responsibility of the caller to free the memory behind the output stream.
 //
 // <symbol-name> = "_R" <path> [<instantiating-crate>]
-bool Demangler::demangle(StringView Mangled) {
+bool Demangler::demangle(std::string_view Mangled) {
   Position = 0;
   Error = false;
   Print = true;
   RecursionLevel = 0;
   BoundLifetimes = 0;
 
-  if (!Mangled.consumeFront("_R")) {
+  if (!starts_with(Mangled, "_R")) {
     Error = true;
     return false;
   }
+  Mangled.remove_prefix(2);
   size_t Dot = Mangled.find('.');
-  Input = Mangled.substr(0, Dot);
-  StringView Suffix = Mangled.dropFront(Dot);
+  Input = Dot == std::string_view::npos ? Mangled : Mangled.substr(0, Dot);
 
   demanglePath(IsInType::No);
 
   if (Position != Input.size()) {
-    SwapAndRestore<bool> SavePrint(Print, false);
+    ScopedOverride<bool> SavePrint(Print, false);
     demanglePath(IsInType::No);
   }
 
   if (Position != Input.size())
     Error = true;
 
-  if (!Suffix.empty()) {
+  if (Dot != std::string_view::npos) {
     print(" (");
-    print(Suffix);
+    print(Mangled.substr(Dot));
     print(")");
   }
 
@@ -278,13 +243,12 @@ bool Demangler::demanglePath(IsInType InType, LeaveGenericsOpen LeaveOpen) {
     Error = true;
     return false;
   }
-  SwapAndRestore<size_t> SaveRecursionLevel(RecursionLevel, RecursionLevel + 1);
+  ScopedOverride<size_t> SaveRecursionLevel(RecursionLevel, RecursionLevel + 1);
 
   switch (consume()) {
   case 'C': {
     parseOptionalBase62Number('s');
-    Identifier Ident = parseIdentifier();
-    print(Ident.Name);
+    printIdentifier(parseIdentifier());
     break;
   }
   case 'M': {
@@ -333,7 +297,7 @@ bool Demangler::demanglePath(IsInType InType, LeaveGenericsOpen LeaveOpen) {
         print(NS);
       if (!Ident.empty()) {
         print(":");
-        print(Ident.Name);
+        printIdentifier(Ident);
       }
       print('#');
       printDecimalNumber(Disambiguator);
@@ -342,7 +306,7 @@ bool Demangler::demanglePath(IsInType InType, LeaveGenericsOpen LeaveOpen) {
       // Implementation internal namespaces.
       if (!Ident.empty()) {
         print("::");
-        print(Ident.Name);
+        printIdentifier(Ident);
       }
     }
     break;
@@ -380,7 +344,7 @@ bool Demangler::demanglePath(IsInType InType, LeaveGenericsOpen LeaveOpen) {
 // <impl-path> = [<disambiguator>] <path>
 // <disambiguator> = "s" <base-62-number>
 void Demangler::demangleImplPath(IsInType InType) {
-  SwapAndRestore<bool> SavePrint(Print, false);
+  ScopedOverride<bool> SavePrint(Print, false);
   parseOptionalBase62Number('s');
   demanglePath(InType);
 }
@@ -574,7 +538,7 @@ void Demangler::demangleType() {
     Error = true;
     return;
   }
-  SwapAndRestore<size_t> SaveRecursionLevel(RecursionLevel, RecursionLevel + 1);
+  ScopedOverride<size_t> SaveRecursionLevel(RecursionLevel, RecursionLevel + 1);
 
   size_t Start = Position;
   char C = consume();
@@ -657,7 +621,7 @@ void Demangler::demangleType() {
 // <abi> = "C"
 //       | <undisambiguated-identifier>
 void Demangler::demangleFnSig() {
-  SwapAndRestore<size_t> SaveBoundLifetimes(BoundLifetimes, BoundLifetimes);
+  ScopedOverride<size_t> SaveBoundLifetimes(BoundLifetimes, BoundLifetimes);
   demangleOptionalBinder();
 
   if (consumeIf('U'))
@@ -669,6 +633,8 @@ void Demangler::demangleFnSig() {
       print("C");
     } else {
       Identifier Ident = parseIdentifier();
+      if (Ident.Punycode)
+        Error = true;
       for (char C : Ident.Name) {
         // When mangling ABI string, the "-" is replaced with "_".
         if (C == '_')
@@ -697,7 +663,7 @@ void Demangler::demangleFnSig() {
 
 // <dyn-bounds> = [<binder>] {<dyn-trait>} "E"
 void Demangler::demangleDynBounds() {
-  SwapAndRestore<size_t> SaveBoundLifetimes(BoundLifetimes, BoundLifetimes);
+  ScopedOverride<size_t> SaveBoundLifetimes(BoundLifetimes, BoundLifetimes);
   print("dyn ");
   demangleOptionalBinder();
   for (size_t I = 0; !Error && !consumeIf('E'); ++I) {
@@ -761,7 +727,7 @@ void Demangler::demangleConst() {
     Error = true;
     return;
   }
-  SwapAndRestore<size_t> SaveRecursionLevel(RecursionLevel, RecursionLevel + 1);
+  ScopedOverride<size_t> SaveRecursionLevel(RecursionLevel, RecursionLevel + 1);
 
   char C = consume();
   BasicType Type;
@@ -806,7 +772,7 @@ void Demangler::demangleConstInt() {
   if (consumeIf('n'))
     print('-');
 
-  StringView HexDigits;
+  std::string_view HexDigits;
   uint64_t Value = parseHexNumber(HexDigits);
   if (HexDigits.size() <= 16) {
     printDecimalNumber(Value);
@@ -819,7 +785,7 @@ void Demangler::demangleConstInt() {
 // <const-data> = "0_" // false
 //              | "1_" // true
 void Demangler::demangleConstBool() {
-  StringView HexDigits;
+  std::string_view HexDigits;
   parseHexNumber(HexDigits);
   if (HexDigits == "0")
     print("false");
@@ -836,7 +802,7 @@ static bool isAsciiPrintable(uint64_t CodePoint) {
 
 // <const-data> = <hex-number>
 void Demangler::demangleConstChar() {
-  StringView HexDigits;
+  std::string_view HexDigits;
   uint64_t CodePoint = parseHexNumber(HexDigits);
   if (Error || HexDigits.size() > 6) {
     Error = true;
@@ -890,7 +856,7 @@ Identifier Demangler::parseIdentifier() {
     Error = true;
     return {};
   }
-  StringView S = Input.substr(Position, Bytes);
+  std::string_view S = Input.substr(Position, Bytes);
   Position += Bytes;
 
   if (!std::all_of(S.begin(), S.end(), isValid)) {
@@ -998,7 +964,7 @@ uint64_t Demangler::parseDecimalNumber() {
 //
 // <hex-number> = "0_"
 //              | <1-9a-f> {<0-9a-f>} "_"
-uint64_t Demangler::parseHexNumber(StringView &HexDigits) {
+uint64_t Demangler::parseHexNumber(std::string_view &HexDigits) {
   size_t Start = Position;
   uint64_t Value = 0;
 
@@ -1022,7 +988,7 @@ uint64_t Demangler::parseHexNumber(StringView &HexDigits) {
   }
 
   if (Error) {
-    HexDigits = StringView();
+    HexDigits = std::string_view();
     return 0;
   }
 
@@ -1039,7 +1005,7 @@ void Demangler::print(char C) {
   Output += C;
 }
 
-void Demangler::print(StringView S) {
+void Demangler::print(std::string_view S) {
   if (Error || !Print)
     return;
 
@@ -1075,6 +1041,172 @@ void Demangler::printLifetime(uint64_t Index) {
   } else {
     print('z');
     printDecimalNumber(Depth - 26 + 1);
+  }
+}
+
+static inline bool decodePunycodeDigit(char C, size_t &Value) {
+  if (isLower(C)) {
+    Value = C - 'a';
+    return true;
+  }
+
+  if (isDigit(C)) {
+    Value = 26 + (C - '0');
+    return true;
+  }
+
+  return false;
+}
+
+static void removeNullBytes(OutputBuffer &Output, size_t StartIdx) {
+  char *Buffer = Output.getBuffer();
+  char *Start = Buffer + StartIdx;
+  char *End = Buffer + Output.getCurrentPosition();
+  Output.setCurrentPosition(std::remove(Start, End, '\0') - Buffer);
+}
+
+// Encodes code point as UTF-8 and stores results in Output. Returns false if
+// CodePoint is not a valid unicode scalar value.
+static inline bool encodeUTF8(size_t CodePoint, char *Output) {
+  if (0xD800 <= CodePoint && CodePoint <= 0xDFFF)
+    return false;
+
+  if (CodePoint <= 0x7F) {
+    Output[0] = CodePoint;
+    return true;
+  }
+
+  if (CodePoint <= 0x7FF) {
+    Output[0] = 0xC0 | ((CodePoint >> 6) & 0x3F);
+    Output[1] = 0x80 | (CodePoint & 0x3F);
+    return true;
+  }
+
+  if (CodePoint <= 0xFFFF) {
+    Output[0] = 0xE0 | (CodePoint >> 12);
+    Output[1] = 0x80 | ((CodePoint >> 6) & 0x3F);
+    Output[2] = 0x80 | (CodePoint & 0x3F);
+    return true;
+  }
+
+  if (CodePoint <= 0x10FFFF) {
+    Output[0] = 0xF0 | (CodePoint >> 18);
+    Output[1] = 0x80 | ((CodePoint >> 12) & 0x3F);
+    Output[2] = 0x80 | ((CodePoint >> 6) & 0x3F);
+    Output[3] = 0x80 | (CodePoint & 0x3F);
+    return true;
+  }
+
+  return false;
+}
+
+// Decodes string encoded using punycode and appends results to Output.
+// Returns true if decoding was successful.
+static bool decodePunycode(std::string_view Input, OutputBuffer &Output) {
+  size_t OutputSize = Output.getCurrentPosition();
+  size_t InputIdx = 0;
+
+  // Rust uses an underscore as a delimiter.
+  size_t DelimiterPos = std::string_view::npos;
+  for (size_t I = 0; I != Input.size(); ++I)
+    if (Input[I] == '_')
+      DelimiterPos = I;
+
+  if (DelimiterPos != std::string_view::npos) {
+    // Copy basic code points before the last delimiter to the output.
+    for (; InputIdx != DelimiterPos; ++InputIdx) {
+      char C = Input[InputIdx];
+      if (!isValid(C))
+        return false;
+      // Code points are padded with zeros while decoding is in progress.
+      char UTF8[4] = {C};
+      Output += std::string_view(UTF8, 4);
+    }
+    // Skip over the delimiter.
+    ++InputIdx;
+  }
+
+  size_t Base = 36;
+  size_t Skew = 38;
+  size_t Bias = 72;
+  size_t N = 0x80;
+  size_t TMin = 1;
+  size_t TMax = 26;
+  size_t Damp = 700;
+
+  auto Adapt = [&](size_t Delta, size_t NumPoints) {
+    Delta /= Damp;
+    Delta += Delta / NumPoints;
+    Damp = 2;
+
+    size_t K = 0;
+    while (Delta > (Base - TMin) * TMax / 2) {
+      Delta /= Base - TMin;
+      K += Base;
+    }
+    return K + (((Base - TMin + 1) * Delta) / (Delta + Skew));
+  };
+
+  // Main decoding loop.
+  for (size_t I = 0; InputIdx != Input.size(); I += 1) {
+    size_t OldI = I;
+    size_t W = 1;
+    size_t Max = std::numeric_limits<size_t>::max();
+    for (size_t K = Base; true; K += Base) {
+      if (InputIdx == Input.size())
+        return false;
+      char C = Input[InputIdx++];
+      size_t Digit = 0;
+      if (!decodePunycodeDigit(C, Digit))
+        return false;
+
+      if (Digit > (Max - I) / W)
+        return false;
+      I += Digit * W;
+
+      size_t T;
+      if (K <= Bias)
+        T = TMin;
+      else if (K >= Bias + TMax)
+        T = TMax;
+      else
+        T = K - Bias;
+
+      if (Digit < T)
+        break;
+
+      if (W > Max / (Base - T))
+        return false;
+      W *= (Base - T);
+    }
+    size_t NumPoints = (Output.getCurrentPosition() - OutputSize) / 4 + 1;
+    Bias = Adapt(I - OldI, NumPoints);
+
+    if (I / NumPoints > Max - N)
+      return false;
+    N += I / NumPoints;
+    I = I % NumPoints;
+
+    // Insert N at position I in the output.
+    char UTF8[4] = {};
+    if (!encodeUTF8(N, UTF8))
+      return false;
+    Output.insert(OutputSize + I * 4, UTF8, 4);
+  }
+
+  removeNullBytes(Output, OutputSize);
+  return true;
+}
+
+void Demangler::printIdentifier(Identifier Ident) {
+  if (Error || !Print)
+    return;
+
+  if (Ident.Punycode) {
+    if (!decodePunycode(Ident.Name, Output))
+      Error = true;
+  } else {
+    print(Ident.Name);
   }
 }
 

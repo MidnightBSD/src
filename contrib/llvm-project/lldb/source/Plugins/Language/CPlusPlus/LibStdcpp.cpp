@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LibStdcpp.h"
+#include "LibCxx.h"
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/ValueObject.h"
@@ -18,6 +19,7 @@
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -53,7 +55,7 @@ public:
 
 private:
   ExecutionContextRef m_exe_ctx_ref;
-  lldb::addr_t m_pair_address;
+  lldb::addr_t m_pair_address = 0;
   CompilerType m_pair_type;
   lldb::ValueObjectSP m_pair_sp;
 };
@@ -71,14 +73,23 @@ public:
   bool MightHaveChildren() override;
 
   size_t GetIndexOfChildWithName(ConstString name) override;
+private:
+
+  // The lifetime of a ValueObject and all its derivative ValueObjects
+  // (children, clones, etc.) is managed by a ClusterManager. These
+  // objects are only destroyed when every shared pointer to any of them
+  // is destroyed, so we must not store a shared pointer to any ValueObject
+  // derived from our backend ValueObject (since we're in the same cluster).
+  ValueObject* m_ptr_obj = nullptr; // Underlying pointer (held, not owned)
+  ValueObject* m_obj_obj = nullptr; // Underlying object (held, not owned)
 };
 
 } // end of anonymous namespace
 
 LibstdcppMapIteratorSyntheticFrontEnd::LibstdcppMapIteratorSyntheticFrontEnd(
     lldb::ValueObjectSP valobj_sp)
-    : SyntheticChildrenFrontEnd(*valobj_sp), m_exe_ctx_ref(), m_pair_address(0),
-      m_pair_type(), m_pair_sp() {
+    : SyntheticChildrenFrontEnd(*valobj_sp), m_exe_ctx_ref(), m_pair_type(),
+      m_pair_sp() {
   if (valobj_sp)
     Update();
 }
@@ -99,8 +110,7 @@ bool LibstdcppMapIteratorSyntheticFrontEnd::Update() {
     return false;
   m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
 
-  ValueObjectSP _M_node_sp(
-      valobj_sp->GetChildMemberWithName(ConstString("_M_node"), true));
+  ValueObjectSP _M_node_sp(valobj_sp->GetChildMemberWithName("_M_node"));
   if (!_M_node_sp)
     return false;
 
@@ -133,7 +143,7 @@ LibstdcppMapIteratorSyntheticFrontEnd::GetChildAtIndex(size_t idx) {
       m_pair_sp = CreateValueObjectFromAddress("pair", m_pair_address,
                                                m_exe_ctx_ref, m_pair_type);
     if (m_pair_sp)
-      return m_pair_sp->GetChildAtIndex(idx, true);
+      return m_pair_sp->GetChildAtIndex(idx);
   }
   return lldb::ValueObjectSP();
 }
@@ -169,19 +179,16 @@ lldb_private::formatters::LibstdcppMapIteratorSyntheticFrontEndCreator(
 SyntheticChildrenFrontEnd *
 lldb_private::formatters::LibStdcppVectorIteratorSyntheticFrontEndCreator(
     CXXSyntheticChildren *, lldb::ValueObjectSP valobj_sp) {
-  static ConstString g_item_name;
-  if (!g_item_name)
-    g_item_name.SetCString("_M_current");
-  return (valobj_sp
-              ? new VectorIteratorSyntheticFrontEnd(valobj_sp, g_item_name)
-              : nullptr);
+  return (valobj_sp ? new VectorIteratorSyntheticFrontEnd(
+                          valobj_sp, {ConstString("_M_current")})
+                    : nullptr);
 }
 
 lldb_private::formatters::VectorIteratorSyntheticFrontEnd::
     VectorIteratorSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp,
-                                    ConstString item_name)
+                                    llvm::ArrayRef<ConstString> item_names)
     : SyntheticChildrenFrontEnd(*valobj_sp), m_exe_ctx_ref(),
-      m_item_name(item_name), m_item_sp() {
+      m_item_names(item_names), m_item_sp() {
   if (valobj_sp)
     Update();
 }
@@ -196,7 +203,8 @@ bool VectorIteratorSyntheticFrontEnd::Update() {
   if (!valobj_sp)
     return false;
 
-  ValueObjectSP item_ptr(valobj_sp->GetChildMemberWithName(m_item_name, true));
+  ValueObjectSP item_ptr =
+      formatters::GetChildMemberWithName(*valobj_sp, m_item_names);
   if (!item_ptr)
     return false;
   if (item_ptr->GetValueAsUnsigned(0) == 0)
@@ -233,8 +241,15 @@ bool lldb_private::formatters::LibStdcppStringSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   const bool scalar_is_load_addr = true;
   AddressType addr_type;
-  lldb::addr_t addr_of_string =
-      valobj.GetAddressOf(scalar_is_load_addr, &addr_type);
+  lldb::addr_t addr_of_string = LLDB_INVALID_ADDRESS;
+  if (valobj.IsPointerOrReferenceType()) {
+    Status error;
+    ValueObjectSP pointee_sp = valobj.Dereference(error);
+    if (pointee_sp && error.Success())
+      addr_of_string = pointee_sp->GetAddressOf(scalar_is_load_addr, &addr_type);
+  } else
+    addr_of_string =
+        valobj.GetAddressOf(scalar_is_load_addr, &addr_type);
   if (addr_of_string != LLDB_INVALID_ADDRESS) {
     switch (addr_type) {
     case eAddressTypeLoad: {
@@ -250,7 +265,7 @@ bool lldb_private::formatters::LibStdcppStringSummaryProvider(
           addr_of_data == LLDB_INVALID_ADDRESS)
         return false;
       options.SetLocation(addr_of_data);
-      options.SetProcessSP(process_sp);
+      options.SetTargetSP(valobj.GetTargetSP());
       options.SetStream(&stream);
       options.SetNeedsZeroTermination(false);
       options.SetBinaryZeroIsTerminator(true);
@@ -298,7 +313,7 @@ bool lldb_private::formatters::LibStdcppWStringSummaryProvider(
         return false;
 
       // Safe to pass nullptr for exe_scope here.
-      llvm::Optional<uint64_t> size = wchar_compiler_type.GetBitSize(nullptr);
+      std::optional<uint64_t> size = wchar_compiler_type.GetBitSize(nullptr);
       if (!size)
         return false;
       const uint32_t wchar_size = *size;
@@ -311,7 +326,7 @@ bool lldb_private::formatters::LibStdcppWStringSummaryProvider(
           addr_of_data == LLDB_INVALID_ADDRESS)
         return false;
       options.SetLocation(addr_of_data);
-      options.SetProcessSP(process_sp);
+      options.SetTargetSP(valobj.GetTargetSP());
       options.SetStream(&stream);
       options.SetNeedsZeroTermination(false);
       options.SetBinaryZeroIsTerminator(false);
@@ -360,24 +375,48 @@ size_t LibStdcppSharedPtrSyntheticFrontEnd::CalculateNumChildren() { return 1; }
 
 lldb::ValueObjectSP
 LibStdcppSharedPtrSyntheticFrontEnd::GetChildAtIndex(size_t idx) {
-  ValueObjectSP valobj_sp = m_backend.GetSP();
-  if (!valobj_sp)
-    return lldb::ValueObjectSP();
-
   if (idx == 0)
-    return valobj_sp->GetChildMemberWithName(ConstString("_M_ptr"), true);
-  else
-    return lldb::ValueObjectSP();
+    return m_ptr_obj->GetSP();
+  if (idx == 1) {
+    if (m_ptr_obj && !m_obj_obj) {
+      Status error;
+      ValueObjectSP obj_obj = m_ptr_obj->Dereference(error);
+      if (error.Success())
+        m_obj_obj = obj_obj->Clone(ConstString("object")).get();
+    }
+    if (m_obj_obj)
+      return m_obj_obj->GetSP();
+  }
+  return lldb::ValueObjectSP();
 }
 
-bool LibStdcppSharedPtrSyntheticFrontEnd::Update() { return false; }
+bool LibStdcppSharedPtrSyntheticFrontEnd::Update() {
+  auto backend = m_backend.GetSP();
+  if (!backend)
+    return false;
+
+  auto valobj_sp = backend->GetNonSyntheticValue();
+  if (!valobj_sp)
+    return false;
+
+  auto ptr_obj_sp = valobj_sp->GetChildMemberWithName("_M_ptr");
+  if (!ptr_obj_sp)
+    return false;
+
+  m_ptr_obj = ptr_obj_sp->Clone(ConstString("pointer")).get();
+  m_obj_obj = nullptr;
+
+  return false;
+}
 
 bool LibStdcppSharedPtrSyntheticFrontEnd::MightHaveChildren() { return true; }
 
 size_t LibStdcppSharedPtrSyntheticFrontEnd::GetIndexOfChildWithName(
     ConstString name) {
-  if (name == "_M_ptr")
+  if (name == "pointer")
     return 0;
+  if (name == "object" || name == "$$dereference$$")
+    return 1;
   return UINT32_MAX;
 }
 
@@ -394,14 +433,12 @@ bool lldb_private::formatters::LibStdcppSmartPointerSummaryProvider(
   if (!valobj_sp)
     return false;
 
-  ValueObjectSP ptr_sp(
-      valobj_sp->GetChildMemberWithName(ConstString("_M_ptr"), true));
+  ValueObjectSP ptr_sp(valobj_sp->GetChildMemberWithName("_M_ptr"));
   if (!ptr_sp)
     return false;
 
-  ValueObjectSP usecount_sp(valobj_sp->GetChildAtNamePath(
-      {ConstString("_M_refcount"), ConstString("_M_pi"),
-       ConstString("_M_use_count")}));
+  ValueObjectSP usecount_sp(
+      valobj_sp->GetChildAtNamePath({"_M_refcount", "_M_pi", "_M_use_count"}));
   if (!usecount_sp)
     return false;
 

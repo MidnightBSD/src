@@ -35,13 +35,9 @@ xmalloc(size_t len)
 	}
 	buf = malloc(len);
 	if (buf == NULL) {
-#ifndef _STANDALONE
 		fprintf(stderr, "ERROR: could not allocate %lu byte(s)\n",
 			(unsigned long)len);
 		exit(EXIT_FAILURE);
-#else 
-; 
-#endif
 	}
 	return buf;
 }
@@ -94,13 +90,9 @@ xpkeydup(const br_x509_pkey *pk)
 		pk2->key.ec.qlen = pk->key.ec.qlen;
 		break;
 	default:
-#ifndef _STANDALONE
 		fprintf(stderr, "Unknown public key type: %u\n",
 			(unsigned)pk->key_type);
 		exit(EXIT_FAILURE);
-#else 
-; 
-#endif
 	}
 	return pk2;
 }
@@ -119,13 +111,9 @@ xfreepkey(br_x509_pkey *pk)
 			xfree(pk->key.ec.q);
 			break;
 		default:
-#ifndef _STANDALONE
 			fprintf(stderr, "Unknown public key type: %u\n",
 				(unsigned)pk->key_type);
 			exit(EXIT_FAILURE);
-#else 
-; 
-#endif
 		}
 		xfree(pk);
 	}

@@ -8,10 +8,11 @@
 
 #include "lldb/Symbol/SymbolContext.h"
 
+#include "lldb/Core/Address.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/Host.h"
-#include "lldb/Host/StringConvert.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -19,9 +20,13 @@
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Symbol/Variable.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/lldb-enumerations.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -31,7 +36,7 @@ SymbolContext::SymbolContext() : target_sp(), module_sp(), line_entry() {}
 SymbolContext::SymbolContext(const ModuleSP &m, CompileUnit *cu, Function *f,
                              Block *b, LineEntry *le, Symbol *s)
     : target_sp(), module_sp(m), comp_unit(cu), function(f), block(b),
-      line_entry(), symbol(s), variable(nullptr) {
+      line_entry(), symbol(s) {
   if (le)
     line_entry = *le;
 }
@@ -40,14 +45,13 @@ SymbolContext::SymbolContext(const TargetSP &t, const ModuleSP &m,
                              CompileUnit *cu, Function *f, Block *b,
                              LineEntry *le, Symbol *s)
     : target_sp(t), module_sp(m), comp_unit(cu), function(f), block(b),
-      line_entry(), symbol(s), variable(nullptr) {
+      line_entry(), symbol(s) {
   if (le)
     line_entry = *le;
 }
 
 SymbolContext::SymbolContext(SymbolContextScope *sc_scope)
-    : target_sp(), module_sp(), comp_unit(nullptr), function(nullptr),
-      block(nullptr), line_entry(), symbol(nullptr), variable(nullptr) {
+    : target_sp(), module_sp(), line_entry() {
   sc_scope->CalculateSymbolContext(this);
 }
 
@@ -65,11 +69,11 @@ void SymbolContext::Clear(bool clear_target) {
   variable = nullptr;
 }
 
-bool SymbolContext::DumpStopContext(Stream *s, ExecutionContextScope *exe_scope,
-                                    const Address &addr, bool show_fullpaths,
-                                    bool show_module, bool show_inlined_frames,
-                                    bool show_function_arguments,
-                                    bool show_function_name) const {
+bool SymbolContext::DumpStopContext(
+    Stream *s, ExecutionContextScope *exe_scope, const Address &addr,
+    bool show_fullpaths, bool show_module, bool show_inlined_frames,
+    bool show_function_arguments, bool show_function_name,
+    std::optional<Stream::HighlightSettings> settings) const {
   bool dumped_something = false;
   if (show_module && module_sp) {
     if (show_fullpaths)
@@ -79,7 +83,6 @@ bool SymbolContext::DumpStopContext(Stream *s, ExecutionContextScope *exe_scope,
     s->PutChar('`');
     dumped_something = true;
   }
-
   if (function != nullptr) {
     SymbolContext inline_parent_sc;
     Address inline_parent_addr;
@@ -93,7 +96,7 @@ bool SymbolContext::DumpStopContext(Stream *s, ExecutionContextScope *exe_scope,
       if (!name)
         name = function->GetName();
       if (name)
-        name.Dump(s);
+        s->PutCStringColorHighlighted(name.GetStringRef(), settings);
     }
 
     if (addr.IsValid()) {
@@ -161,7 +164,7 @@ bool SymbolContext::DumpStopContext(Stream *s, ExecutionContextScope *exe_scope,
       dumped_something = true;
       if (symbol->GetType() == eSymbolTypeTrampoline)
         s->PutCString("symbol stub for: ");
-      symbol->GetName().Dump(s);
+      s->PutCStringColorHighlighted(symbol->GetName().GetStringRef(), settings);
     }
 
     if (addr.IsValid() && symbol->ValueIsAddress()) {
@@ -183,8 +186,9 @@ bool SymbolContext::DumpStopContext(Stream *s, ExecutionContextScope *exe_scope,
   return dumped_something;
 }
 
-void SymbolContext::GetDescription(Stream *s, lldb::DescriptionLevel level,
-                                   Target *target) const {
+void SymbolContext::GetDescription(
+    Stream *s, lldb::DescriptionLevel level, Target *target,
+    std::optional<Stream::HighlightSettings> settings) const {
   if (module_sp) {
     s->Indent("     Module: file = \"");
     module_sp->GetFileSpec().Dump(s->AsRawOstream());
@@ -244,7 +248,7 @@ void SymbolContext::GetDescription(Stream *s, lldb::DescriptionLevel level,
 
   if (symbol != nullptr) {
     s->Indent("     Symbol: ");
-    symbol->GetDescription(s, level, target);
+    symbol->GetDescription(s, level, target, settings);
     s->EOL();
   }
 
@@ -470,15 +474,16 @@ bool SymbolContext::GetParentOfInlinedScope(const Address &curr_frame_pc,
         next_frame_sc.line_entry.range.GetBaseAddress() = next_frame_pc;
         next_frame_sc.line_entry.file =
             curr_inlined_block_inlined_info->GetCallSite().GetFile();
-        next_frame_sc.line_entry.original_file =
-            curr_inlined_block_inlined_info->GetCallSite().GetFile();
+        next_frame_sc.line_entry.original_file_sp =
+            std::make_shared<SupportFile>(
+                curr_inlined_block_inlined_info->GetCallSite().GetFile());
         next_frame_sc.line_entry.line =
             curr_inlined_block_inlined_info->GetCallSite().GetLine();
         next_frame_sc.line_entry.column =
             curr_inlined_block_inlined_info->GetCallSite().GetColumn();
         return true;
       } else {
-        Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYMBOLS));
+        Log *log = GetLog(LLDBLog::Symbols);
 
         if (log) {
           LLDB_LOGF(
@@ -495,20 +500,16 @@ bool SymbolContext::GetParentOfInlinedScope(const Address &curr_frame_pc,
               objfile = symbol_file->GetObjectFile();
           }
           if (objfile) {
-            Host::SystemLog(
-                Host::eSystemLogWarning,
-                "warning: inlined block 0x%8.8" PRIx64
-                " doesn't have a range that contains file address 0x%" PRIx64
-                " in %s\n",
+            Debugger::ReportWarning(llvm::formatv(
+                "inlined block {0:x} doesn't have a range that contains file "
+                "address {1:x} in {2}",
                 curr_inlined_block->GetID(), curr_frame_pc.GetFileAddress(),
-                objfile->GetFileSpec().GetPath().c_str());
+                objfile->GetFileSpec().GetPath()));
           } else {
-            Host::SystemLog(
-                Host::eSystemLogWarning,
-                "warning: inlined block 0x%8.8" PRIx64
-                " doesn't have a range that contains file address 0x%" PRIx64
-                "\n",
-                curr_inlined_block->GetID(), curr_frame_pc.GetFileAddress());
+            Debugger::ReportWarning(llvm::formatv(
+                "inlined block {0:x} doesn't have a range that contains file "
+                "address {1:x}",
+                curr_inlined_block->GetID(), curr_frame_pc.GetFileAddress()));
           }
         }
 #endif
@@ -543,19 +544,20 @@ Block *SymbolContext::GetFunctionBlock() {
   return nullptr;
 }
 
-bool SymbolContext::GetFunctionMethodInfo(lldb::LanguageType &language,
-                                          bool &is_instance_method,
-                                          ConstString &language_object_name)
+llvm::StringRef SymbolContext::GetInstanceVariableName() {
+  LanguageType lang_type = eLanguageTypeUnknown;
 
-{
-  Block *function_block = GetFunctionBlock();
-  if (function_block) {
-    CompilerDeclContext decl_ctx = function_block->GetDeclContext();
-    if (decl_ctx)
-      return decl_ctx.IsClassMethod(&language, &is_instance_method,
-                                    &language_object_name);
-  }
-  return false;
+  if (Block *function_block = GetFunctionBlock())
+    if (CompilerDeclContext decl_ctx = function_block->GetDeclContext())
+      lang_type = decl_ctx.GetLanguage();
+
+  if (lang_type == eLanguageTypeUnknown)
+    lang_type = GetLanguage();
+
+  if (auto *lang = Language::FindPlugin(lang_type))
+    return lang->GetInstanceVariableName();
+
+  return {};
 }
 
 void SymbolContext::SortTypeList(TypeMap &type_map, TypeList &type_list) const {
@@ -772,14 +774,11 @@ const Symbol *SymbolContext::FindBestGlobalDataSymbol(ConstString name,
   Module *module = module_sp.get();
 
   auto ProcessMatches = [this, &name, &target,
-                         module](SymbolContextList &sc_list,
+                         module](const SymbolContextList &sc_list,
                                  Status &error) -> const Symbol * {
     llvm::SmallVector<const Symbol *, 1> external_symbols;
     llvm::SmallVector<const Symbol *, 1> internal_symbols;
-    const uint32_t matches = sc_list.GetSize();
-    for (uint32_t i = 0; i < matches; ++i) {
-      SymbolContext sym_ctx;
-      sc_list.GetContextAtIndex(i, sym_ctx);
+    for (const SymbolContext &sym_ctx : sc_list) {
       if (sym_ctx.symbol) {
         const Symbol *symbol = sym_ctx.symbol;
         const Address sym_address = symbol->GetAddress();
@@ -816,9 +815,7 @@ const Symbol *SymbolContext::FindBestGlobalDataSymbol(ConstString name,
                 reexport_module_sp =
                     target.GetImages().FindFirstModule(reexport_module_spec);
                 if (!reexport_module_sp) {
-                  reexport_module_spec.GetPlatformFileSpec()
-                      .GetDirectory()
-                      .Clear();
+                  reexport_module_spec.GetPlatformFileSpec().ClearDirectory();
                   reexport_module_sp =
                       target.GetImages().FindFirstModule(reexport_module_spec);
                 }
@@ -961,8 +958,9 @@ bool SymbolContextSpecifier::AddSpecification(const char *spec_string,
     // See if we can find the Module, if so stick it in the SymbolContext.
     FileSpec module_file_spec(spec_string);
     ModuleSpec module_spec(module_file_spec);
-    lldb::ModuleSP module_sp(
-        m_target_sp->GetImages().FindFirstModule(module_spec));
+    lldb::ModuleSP module_sp =
+        m_target_sp ? m_target_sp->GetImages().FindFirstModule(module_spec)
+                    : nullptr;
     m_type |= eModuleSpecified;
     if (module_sp)
       m_module_sp = module_sp;
@@ -977,13 +975,11 @@ bool SymbolContextSpecifier::AddSpecification(const char *spec_string,
     m_type |= eFileSpecified;
     break;
   case eLineStartSpecified:
-    m_start_line = StringConvert::ToSInt32(spec_string, 0, 0, &return_value);
-    if (return_value)
+    if ((return_value = llvm::to_integer(spec_string, m_start_line)))
       m_type |= eLineStartSpecified;
     break;
   case eLineEndSpecified:
-    m_end_line = StringConvert::ToSInt32(spec_string, 0, 0, &return_value);
-    if (return_value)
+    if ((return_value = llvm::to_integer(spec_string, m_end_line)))
       m_type |= eLineEndSpecified;
     break;
   case eFunctionSpecified:

@@ -1,5 +1,30 @@
 Updating Information for MidnightBSD users.
 
+20241108:
+	add lib9p
+
+20241107:
+	atf 0.22 + bugfixes
+
+	bearssl 20230220
+
+	bmake 20220208
+
+	Remove amd
+
+	byacc 20200330
+
+	libdialog 1.3-20210117
+
+	pnglite 2013
+
+	jemalloc 5.2.1
+
+	Removed gcc and binutils
+
+20241028:
+	FreeBSD 13 stable import code from this date.
+
 20240822:
 	mport 2.6.4
 

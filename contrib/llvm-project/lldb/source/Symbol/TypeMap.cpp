@@ -91,6 +91,12 @@ TypeSP TypeMap::GetTypeAtIndex(uint32_t idx) {
   return TypeSP();
 }
 
+lldb::TypeSP TypeMap::FirstType() const {
+  if (m_types.empty())
+    return TypeSP();
+  return m_types.begin()->second;
+}
+
 void TypeMap::ForEach(
     std::function<bool(const lldb::TypeSP &type_sp)> const &callback) const {
   for (auto pos = m_types.begin(), end = m_types.end(); pos != end; ++pos) {
@@ -121,29 +127,14 @@ bool TypeMap::Remove(const lldb::TypeSP &type_sp) {
   return false;
 }
 
-void TypeMap::Dump(Stream *s, bool show_context, lldb::DescriptionLevel level) {
-  for (iterator pos = m_types.begin(), end = m_types.end(); pos != end; ++pos) {
-    pos->second->Dump(s, show_context, level);
-  }
+void TypeMap::Dump(Stream *s, bool show_context,
+                   lldb::DescriptionLevel level) const {
+  for (const auto &pair : m_types)
+    pair.second->Dump(s, show_context, level);
 }
 
-void TypeMap::RemoveMismatchedTypes(const char *qualified_typename,
-                                    bool exact_match) {
-  llvm::StringRef type_scope;
-  llvm::StringRef type_basename;
-  TypeClass type_class = eTypeClassAny;
-  if (!Type::GetTypeScopeAndBasename(qualified_typename, type_scope,
-                                     type_basename, type_class)) {
-    type_basename = qualified_typename;
-    type_scope = "";
-  }
-  return RemoveMismatchedTypes(std::string(type_scope),
-                               std::string(type_basename), type_class,
-                               exact_match);
-}
-
-void TypeMap::RemoveMismatchedTypes(const std::string &type_scope,
-                                    const std::string &type_basename,
+void TypeMap::RemoveMismatchedTypes(llvm::StringRef type_scope,
+                                    llvm::StringRef type_basename,
                                     TypeClass type_class, bool exact_match) {
   // Our "collection" type currently is a std::map which doesn't have any good
   // way to iterate and remove items from the map so we currently just make a
@@ -211,28 +202,6 @@ void TypeMap::RemoveMismatchedTypes(const std::string &type_scope,
     if (keep_match) {
       matching_types.insert(*pos);
     }
-  }
-  m_types.swap(matching_types);
-}
-
-void TypeMap::RemoveMismatchedTypes(TypeClass type_class) {
-  if (type_class == eTypeClassAny)
-    return;
-
-  // Our "collection" type currently is a std::map which doesn't have any good
-  // way to iterate and remove items from the map so we currently just make a
-  // new list and add all of the matching types to it, and then swap it into
-  // m_types at the end
-  collection matching_types;
-
-  iterator pos, end = m_types.end();
-
-  for (pos = m_types.begin(); pos != end; ++pos) {
-    Type *the_type = pos->second.get();
-    TypeClass match_type_class =
-        the_type->GetForwardCompilerType().GetTypeClass();
-    if (match_type_class & type_class)
-      matching_types.insert(*pos);
   }
   m_types.swap(matching_types);
 }

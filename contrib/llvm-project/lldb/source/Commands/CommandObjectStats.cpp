@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "CommandObjectStats.h"
+#include "lldb/Core/Debugger.h"
+#include "lldb/Host/OptionParser.h"
+#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Target/Target.h"
 
@@ -23,17 +26,14 @@ public:
   ~CommandObjectStatsEnable() override = default;
 
 protected:
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget();
-
-    if (target.GetCollectingStats()) {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    if (DebuggerStats::GetCollectingStats()) {
       result.AppendError("statistics already enabled");
-      return false;
+      return;
     }
 
-    target.SetCollectingStats(true);
+    DebuggerStats::SetCollectingStats(true);
     result.SetStatus(eReturnStatusSuccessFinishResult);
-    return true;
   }
 };
 
@@ -47,45 +47,73 @@ public:
   ~CommandObjectStatsDisable() override = default;
 
 protected:
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget();
-
-    if (!target.GetCollectingStats()) {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    if (!DebuggerStats::GetCollectingStats()) {
       result.AppendError("need to enable statistics before disabling them");
-      return false;
+      return;
     }
 
-    target.SetCollectingStats(false);
+    DebuggerStats::SetCollectingStats(false);
     result.SetStatus(eReturnStatusSuccessFinishResult);
-    return true;
   }
 };
 
+#define LLDB_OPTIONS_statistics_dump
+#include "CommandOptions.inc"
+
 class CommandObjectStatsDump : public CommandObjectParsed {
+  class CommandOptions : public Options {
+  public:
+    CommandOptions() { OptionParsingStarting(nullptr); }
+
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
+      const int short_option = m_getopt_table[option_idx].val;
+
+      switch (short_option) {
+      case 'a':
+        m_all_targets = true;
+        break;
+      default:
+        llvm_unreachable("Unimplemented option");
+      }
+      return error;
+    }
+
+    void OptionParsingStarting(ExecutionContext *execution_context) override {
+      m_all_targets = false;
+    }
+
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::ArrayRef(g_statistics_dump_options);
+    }
+
+    bool m_all_targets = false;
+  };
+
 public:
   CommandObjectStatsDump(CommandInterpreter &interpreter)
-      : CommandObjectParsed(interpreter, "dump", "Dump statistics results",
-                            nullptr, eCommandProcessMustBePaused) {}
+      : CommandObjectParsed(
+            interpreter, "statistics dump", "Dump metrics in JSON format",
+            "statistics dump [<options>]", eCommandRequiresTarget) {}
 
   ~CommandObjectStatsDump() override = default;
 
-protected:
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
-    Target &target = GetSelectedOrDummyTarget();
+  Options *GetOptions() override { return &m_options; }
 
-    uint32_t i = 0;
-    for (auto &stat : target.GetStatistics()) {
-      result.AppendMessageWithFormat(
-          "%s : %u\n",
-          lldb_private::GetStatDescription(
-              static_cast<lldb_private::StatisticKind>(i))
-              .c_str(),
-          stat);
-      i += 1;
-    }
+protected:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    Target *target = nullptr;
+    if (!m_options.m_all_targets)
+      target = m_exe_ctx.GetTargetPtr();
+
+    result.AppendMessageWithFormatv(
+        "{0:2}", DebuggerStats::ReportStatistics(GetDebugger(), target));
     result.SetStatus(eReturnStatusSuccessFinishResult);
-    return true;
   }
+
+  CommandOptions m_options;
 };
 
 CommandObjectStats::CommandObjectStats(CommandInterpreter &interpreter)

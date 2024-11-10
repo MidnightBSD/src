@@ -1,9 +1,9 @@
 /*
- *  $Id: dlg_keys.h,v 1.32 2012/12/21 21:54:30 tom Exp $
+ *  $Id: dlg_keys.h,v 1.39 2020/11/22 23:19:24 tom Exp $
  *
  *  dlg_keys.h -- runtime binding support for dialog
  *
- *  Copyright 2005-2011,2012 Thomas E.  Dickey
+ *  Copyright 2005-2019,2020 Thomas E.  Dickey
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU Lesser General Public License, version 2.1
@@ -96,7 +96,9 @@ typedef enum {
     DLGK_FINAL,
     DLGK_SELECT,
     DLGK_HELPFILE,
-    DLGK_TRACE
+    DLGK_TRACE,
+    DLGK_TOGGLE,
+    DLGK_LEAVE
 } DLG_KEYS_ENUM;
 
 #define is_DLGK_MOUSE(code)	((code) >= M_EVENT)
@@ -110,7 +112,8 @@ typedef enum {
 #define ENTERKEY_BINDINGS \
 	DLG_KEYS_DATA( DLGK_ENTER,	   '\n' ), \
 	DLG_KEYS_DATA( DLGK_ENTER,	   '\r' ), \
-	DLG_KEYS_DATA( DLGK_ENTER,	   KEY_ENTER )
+	DLG_KEYS_DATA( DLGK_ENTER,	   KEY_ENTER ), \
+	DLG_KEYS_DATA( DLGK_LEAVE,	   CHR_LEAVE )
 
 /* ^U == 21 */
 #define INPUTSTR_BINDINGS \
@@ -146,7 +149,7 @@ typedef enum {
 	DLG_KEYS_DATA( DLGK_PAGE_PREV,	'b' )
 
 #define TRAVERSE_BINDINGS \
-	DLG_KEYS_DATA( DLGK_ENTER,	' ' ), \
+	DLG_KEYS_DATA( DLGK_ENTER,	CHR_SPACE ), \
 	DLG_KEYS_DATA( DLGK_FIELD_NEXT,	KEY_DOWN ), \
 	DLG_KEYS_DATA( DLGK_FIELD_NEXT, KEY_RIGHT ), \
 	DLG_KEYS_DATA( DLGK_FIELD_NEXT, TAB ), \
@@ -154,7 +157,12 @@ typedef enum {
 	DLG_KEYS_DATA( DLGK_FIELD_PREV, KEY_BTAB ), \
 	DLG_KEYS_DATA( DLGK_FIELD_PREV, KEY_LEFT )
 
+#define TOGGLEKEY_BINDINGS \
+	DLG_KEYS_DATA( DLGK_TOGGLE,	CHR_SPACE )
+
+extern int dlg_button_key(int /*exit_code*/, int * /*button*/, int * /*dialog_key*/, int * /*fkey*/);
 extern int dlg_lookup_key(WINDOW * /*win*/, int /*curses_key*/, int * /*dialog_key*/);
+extern int dlg_ok_button_key(int /*exit_code*/, int * /*button*/, int * /*dialog_key*/, int * /*fkey*/);
 extern int dlg_result_key(int /*dialog_key*/, int /*fkey*/, int * /*resultp*/);
 extern void dlg_register_buttons(WINDOW * /*win*/, const char * /*name*/, const char ** /*buttons*/);
 extern void dlg_register_window(WINDOW * /*win*/, const char * /*name*/, DLG_KEYS_BINDING * /*binding*/);

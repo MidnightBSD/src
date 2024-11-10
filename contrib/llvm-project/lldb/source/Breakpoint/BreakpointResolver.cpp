@@ -24,9 +24,11 @@
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
+#include <optional>
 
 using namespace lldb_private;
 using namespace lldb;
@@ -100,7 +102,7 @@ BreakpointResolverSP BreakpointResolver::CreateFromStructuredData(
     return result_sp;
   }
 
-  lldb::addr_t offset;
+  lldb::offset_t offset;
   success = subclass_options->GetValueForKeyAsInteger(
       GetKey(OptionNames::Offset), offset);
   if (!success) {
@@ -108,28 +110,26 @@ BreakpointResolverSP BreakpointResolver::CreateFromStructuredData(
     return result_sp;
   }
 
-  BreakpointResolver *resolver;
-
   switch (resolver_type) {
   case FileLineResolver:
-    resolver = BreakpointResolverFileLine::CreateFromStructuredData(
-        nullptr, *subclass_options, error);
+    result_sp = BreakpointResolverFileLine::CreateFromStructuredData(
+        *subclass_options, error);
     break;
   case AddressResolver:
-    resolver = BreakpointResolverAddress::CreateFromStructuredData(
-        nullptr, *subclass_options, error);
+    result_sp = BreakpointResolverAddress::CreateFromStructuredData(
+        *subclass_options, error);
     break;
   case NameResolver:
-    resolver = BreakpointResolverName::CreateFromStructuredData(
-        nullptr, *subclass_options, error);
+    result_sp = BreakpointResolverName::CreateFromStructuredData(
+        *subclass_options, error);
     break;
   case FileRegexResolver:
-    resolver = BreakpointResolverFileRegex::CreateFromStructuredData(
-        nullptr, *subclass_options, error);
+    result_sp = BreakpointResolverFileRegex::CreateFromStructuredData(
+        *subclass_options, error);
     break;
   case PythonResolver:
-    resolver = BreakpointResolverScripted::CreateFromStructuredData(
-        nullptr, *subclass_options, error);
+    result_sp = BreakpointResolverScripted::CreateFromStructuredData(
+        *subclass_options, error);
     break;
   case ExceptionResolver:
     error.SetErrorString("Exception resolvers are hard.");
@@ -138,13 +138,12 @@ BreakpointResolverSP BreakpointResolver::CreateFromStructuredData(
     llvm_unreachable("Should never get an unresolvable resolver type.");
   }
 
-  if (!error.Success()) {
-    return result_sp;
-  } else {
-    // Add on the global offset option:
-    resolver->SetOffset(offset);
-    return BreakpointResolverSP(resolver);
-  }
+  if (error.Fail() || !result_sp)
+    return {};
+
+  // Add on the global offset option:
+  result_sp->SetOffset(offset);
+  return result_sp;
 }
 
 StructuredData::DictionarySP BreakpointResolver::WrapOptionsDict(
@@ -181,7 +180,7 @@ namespace {
 struct SourceLoc {
   uint32_t line = UINT32_MAX;
   uint16_t column;
-  SourceLoc(uint32_t l, llvm::Optional<uint16_t> c)
+  SourceLoc(uint32_t l, std::optional<uint16_t> c)
       : line(l), column(c ? *c : LLDB_INVALID_COLUMN_NUMBER) {}
   SourceLoc(const SymbolContext &sc)
       : line(sc.line_entry.line),
@@ -202,7 +201,7 @@ bool operator<(const SourceLoc lhs, const SourceLoc rhs) {
 
 void BreakpointResolver::SetSCMatchesByLine(
     SearchFilter &filter, SymbolContextList &sc_list, bool skip_prologue,
-    llvm::StringRef log_ident, uint32_t line, llvm::Optional<uint16_t> column) {
+    llvm::StringRef log_ident, uint32_t line, std::optional<uint16_t> column) {
   llvm::SmallVector<SymbolContext, 16> all_scs;
   for (uint32_t i = 0; i < sc_list.GetSize(); ++i)
     all_scs.push_back(sc_list[i]);
@@ -215,7 +214,8 @@ void BreakpointResolver::SetSCMatchesByLine(
     auto worklist_begin = std::partition(
         all_scs.begin(), all_scs.end(), [&](const SymbolContext &sc) {
           if (sc.line_entry.file == match.line_entry.file ||
-              sc.line_entry.original_file == match.line_entry.original_file) {
+              *sc.line_entry.original_file_sp ==
+                  *match.line_entry.original_file_sp) {
             // When a match is found, keep track of the smallest line number.
             closest_line = std::min(closest_line, sc.line_entry.line);
             return false;
@@ -292,7 +292,7 @@ void BreakpointResolver::AddLocation(SearchFilter &filter,
                                      const SymbolContext &sc,
                                      bool skip_prologue,
                                      llvm::StringRef log_ident) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
+  Log *log = GetLog(LLDBLog::Breakpoints);
   Address line_start = sc.line_entry.range.GetBaseAddress();
   if (!line_start.IsValid()) {
     LLDB_LOGF(log,

@@ -228,9 +228,9 @@ public:
     uint32_t m_flags = lldb::eTypeOptionCascade;
   };
 
-  SyntheticChildren(const Flags &flags) : m_flags(flags) {}
+  SyntheticChildren(const Flags &flags);
 
-  virtual ~SyntheticChildren() = default;
+  virtual ~SyntheticChildren();
 
   bool Cascades() const { return m_flags.GetCascades(); }
 
@@ -239,8 +239,8 @@ public:
   bool SkipsReferences() const { return m_flags.GetSkipReferences(); }
 
   bool NonCacheable() const { return m_flags.GetNonCacheable(); }
-  
-  bool WantsDereference() const { return m_flags.GetFrontEndWantsDereference();} 
+
+  bool WantsDereference() const { return m_flags.GetFrontEndWantsDereference();}
 
   void SetCascades(bool value) { m_flags.SetCascades(value); }
 
@@ -266,7 +266,7 @@ public:
   uint32_t &GetRevision() { return m_my_revision; }
 
 protected:
-  uint32_t m_my_revision;
+  uint32_t m_my_revision = 0;
   Flags m_flags;
 
 private:
@@ -279,11 +279,11 @@ class TypeFilterImpl : public SyntheticChildren {
 
 public:
   TypeFilterImpl(const SyntheticChildren::Flags &flags)
-      : SyntheticChildren(flags), m_expression_paths() {}
+      : SyntheticChildren(flags) {}
 
   TypeFilterImpl(const SyntheticChildren::Flags &flags,
                  const std::initializer_list<const char *> items)
-      : SyntheticChildren(flags), m_expression_paths() {
+      : SyntheticChildren(flags) {
     for (auto path : items)
       AddExpressionPath(path);
   }
@@ -361,9 +361,9 @@ public:
                                                     lldb::ValueObjectSP)>
       CreateFrontEndCallback;
   CXXSyntheticChildren(const SyntheticChildren::Flags &flags,
-                       const char *description, CreateFrontEndCallback callback)
-      : SyntheticChildren(flags), m_create_callback(std::move(callback)),
-        m_description(description ? description : "") {}
+                       const char *description, CreateFrontEndCallback callback);
+
+  virtual ~CXXSyntheticChildren();
 
   bool IsScripted() override { return false; }
 
@@ -391,7 +391,7 @@ class ScriptedSyntheticChildren : public SyntheticChildren {
 public:
   ScriptedSyntheticChildren(const SyntheticChildren::Flags &flags,
                             const char *pclass, const char *pcode = nullptr)
-      : SyntheticChildren(flags), m_python_class(), m_python_code() {
+      : SyntheticChildren(flags) {
     if (pclass)
       m_python_class = pclass;
     if (pcode)

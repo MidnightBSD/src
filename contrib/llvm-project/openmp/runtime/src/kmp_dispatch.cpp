@@ -72,8 +72,8 @@ void __kmp_dispatch_dxo_error(int *gtid_ref, int *cid_ref, ident_t *loc_ref) {
 static inline int __kmp_get_monotonicity(ident_t *loc, enum sched_type schedule,
                                          bool use_hier = false) {
   // Pick up the nonmonotonic/monotonic bits from the scheduling type
-  // TODO: make nonmonotonic when static_steal is fixed
-  int monotonicity = SCHEDULE_MONOTONIC;
+  // Nonmonotonic as default for dynamic schedule when no modifier is specified
+  int monotonicity = SCHEDULE_NONMONOTONIC;
 
   // Let default be monotonic for executables
   // compiled with OpenMP* 4.5 or less compilers
@@ -88,6 +88,70 @@ static inline int __kmp_get_monotonicity(ident_t *loc, enum sched_type schedule,
     monotonicity = SCHEDULE_MONOTONIC;
 
   return monotonicity;
+}
+
+#if KMP_WEIGHTED_ITERATIONS_SUPPORTED
+// Return floating point number rounded to two decimal points
+static inline float __kmp_round_2decimal_val(float num) {
+  return (float)(static_cast<int>(num * 100 + 0.5)) / 100;
+}
+static inline int __kmp_get_round_val(float num) {
+  return static_cast<int>(num < 0 ? num - 0.5 : num + 0.5);
+}
+#endif
+
+template <typename T>
+inline void
+__kmp_initialize_self_buffer(kmp_team_t *team, T id,
+                             dispatch_private_info_template<T> *pr,
+                             typename traits_t<T>::unsigned_t nchunks, T nproc,
+                             typename traits_t<T>::unsigned_t &init,
+                             T &small_chunk, T &extras, T &p_extra) {
+
+#if KMP_WEIGHTED_ITERATIONS_SUPPORTED
+  if (pr->flags.use_hybrid) {
+    kmp_info_t *th = __kmp_threads[__kmp_gtid_from_tid((int)id, team)];
+    kmp_hw_core_type_t type =
+        (kmp_hw_core_type_t)th->th.th_topology_attrs.core_type;
+    T pchunks = pr->u.p.pchunks;
+    T echunks = nchunks - pchunks;
+    T num_procs_with_pcore = pr->u.p.num_procs_with_pcore;
+    T num_procs_with_ecore = nproc - num_procs_with_pcore;
+    T first_thread_with_ecore = pr->u.p.first_thread_with_ecore;
+    T big_chunk =
+        pchunks / num_procs_with_pcore; // chunks per thread with p-core
+    small_chunk =
+        echunks / num_procs_with_ecore; // chunks per thread with e-core
+
+    extras =
+        (pchunks % num_procs_with_pcore) + (echunks % num_procs_with_ecore);
+
+    p_extra = (big_chunk - small_chunk);
+
+    if (type == KMP_HW_CORE_TYPE_CORE) {
+      if (id < first_thread_with_ecore) {
+        init = id * small_chunk + id * p_extra + (id < extras ? id : extras);
+      } else {
+        init = id * small_chunk + (id - num_procs_with_ecore) * p_extra +
+               (id < extras ? id : extras);
+      }
+    } else {
+      if (id == first_thread_with_ecore) {
+        init = id * small_chunk + id * p_extra + (id < extras ? id : extras);
+      } else {
+        init = id * small_chunk + first_thread_with_ecore * p_extra +
+               (id < extras ? id : extras);
+      }
+    }
+    p_extra = (type == KMP_HW_CORE_TYPE_CORE) ? p_extra : 0;
+    return;
+  }
+#endif
+
+  small_chunk = nchunks / nproc; // chunks per thread
+  extras = nchunks % nproc;
+  p_extra = 0;
+  init = id * small_chunk + (id < extras ? id : extras);
 }
 
 #if KMP_STATIC_STEAL_ENABLED
@@ -366,7 +430,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
   switch (schedule) {
 #if KMP_STATIC_STEAL_ENABLED
   case kmp_sch_static_steal: {
-    T ntc, init;
+    T ntc, init = 0;
 
     KD_TRACE(100,
              ("__kmp_dispatch_init_algorithm: T#%d kmp_sch_static_steal case\n",
@@ -376,7 +440,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
     if (nproc > 1 && ntc >= nproc) {
       KMP_COUNT_BLOCK(OMP_LOOP_STATIC_STEAL);
       T id = tid;
-      T small_chunk, extras;
+      T small_chunk, extras, p_extra = 0;
       kmp_uint32 old = UNUSED;
       int claimed = pr->steal_flag.compare_exchange_strong(old, CLAIMED);
       if (traits_t<T>::type_size > 4) {
@@ -388,13 +452,110 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
         pr->u.p.steal_lock = (kmp_lock_t *)__kmp_allocate(sizeof(kmp_lock_t));
         __kmp_init_lock(pr->u.p.steal_lock);
       }
-      small_chunk = ntc / nproc;
-      extras = ntc % nproc;
 
-      init = id * small_chunk + (id < extras ? id : extras);
+#if KMP_WEIGHTED_ITERATIONS_SUPPORTED
+      // Iterations are divided in a 60/40 skewed distribution among CORE and
+      // ATOM processors for hybrid systems
+      bool use_hybrid = false;
+      kmp_hw_core_type_t core_type = KMP_HW_CORE_TYPE_UNKNOWN;
+      T first_thread_with_ecore = 0;
+      T num_procs_with_pcore = 0;
+      T num_procs_with_ecore = 0;
+      T p_ntc = 0, e_ntc = 0;
+      if (__kmp_is_hybrid_cpu() && __kmp_affinity.type != affinity_none &&
+          __kmp_affinity.type != affinity_explicit) {
+        use_hybrid = true;
+        core_type = (kmp_hw_core_type_t)th->th.th_topology_attrs.core_type;
+        if (core_type != KMP_HW_CORE_TYPE_UNKNOWN &&
+            __kmp_first_osid_with_ecore > -1) {
+          for (int i = 0; i < team->t.t_nproc; ++i) {
+            kmp_hw_core_type_t type = (kmp_hw_core_type_t)team->t.t_threads[i]
+                                          ->th.th_topology_attrs.core_type;
+            int id = team->t.t_threads[i]->th.th_topology_ids.os_id;
+            if (id == __kmp_first_osid_with_ecore) {
+              first_thread_with_ecore =
+                  team->t.t_threads[i]->th.th_info.ds.ds_tid;
+            }
+            if (type == KMP_HW_CORE_TYPE_CORE) {
+              num_procs_with_pcore++;
+            } else if (type == KMP_HW_CORE_TYPE_ATOM) {
+              num_procs_with_ecore++;
+            } else {
+              use_hybrid = false;
+              break;
+            }
+          }
+        }
+        if (num_procs_with_pcore > 0 && num_procs_with_ecore > 0) {
+          float multiplier = 60.0 / 40.0;
+          float p_ratio = (float)num_procs_with_pcore / nproc;
+          float e_ratio = (float)num_procs_with_ecore / nproc;
+          float e_multiplier =
+              (float)1 /
+              (((multiplier * num_procs_with_pcore) / nproc) + e_ratio);
+          float p_multiplier = multiplier * e_multiplier;
+          p_ntc = __kmp_get_round_val(ntc * p_ratio * p_multiplier);
+          if ((int)p_ntc > (int)(ntc * p_ratio * p_multiplier))
+            e_ntc =
+                (int)(__kmp_round_2decimal_val(ntc * e_ratio * e_multiplier));
+          else
+            e_ntc = __kmp_get_round_val(ntc * e_ratio * e_multiplier);
+          KMP_DEBUG_ASSERT(ntc == p_ntc + e_ntc);
+
+          // Use regular static steal if not enough chunks for skewed
+          // distribution
+          use_hybrid = (use_hybrid && (p_ntc >= num_procs_with_pcore &&
+                                       e_ntc >= num_procs_with_ecore)
+                            ? true
+                            : false);
+        } else {
+          use_hybrid = false;
+        }
+      }
+      pr->flags.use_hybrid = use_hybrid;
+      pr->u.p.pchunks = p_ntc;
+      pr->u.p.num_procs_with_pcore = num_procs_with_pcore;
+      pr->u.p.first_thread_with_ecore = first_thread_with_ecore;
+
+      if (use_hybrid) {
+        KMP_DEBUG_ASSERT(nproc == num_procs_with_pcore + num_procs_with_ecore);
+        T big_chunk = p_ntc / num_procs_with_pcore;
+        small_chunk = e_ntc / num_procs_with_ecore;
+
+        extras =
+            (p_ntc % num_procs_with_pcore) + (e_ntc % num_procs_with_ecore);
+
+        p_extra = (big_chunk - small_chunk);
+
+        if (core_type == KMP_HW_CORE_TYPE_CORE) {
+          if (id < first_thread_with_ecore) {
+            init =
+                id * small_chunk + id * p_extra + (id < extras ? id : extras);
+          } else {
+            init = id * small_chunk + (id - num_procs_with_ecore) * p_extra +
+                   (id < extras ? id : extras);
+          }
+        } else {
+          if (id == first_thread_with_ecore) {
+            init =
+                id * small_chunk + id * p_extra + (id < extras ? id : extras);
+          } else {
+            init = id * small_chunk + first_thread_with_ecore * p_extra +
+                   (id < extras ? id : extras);
+          }
+        }
+        p_extra = (core_type == KMP_HW_CORE_TYPE_CORE) ? p_extra : 0;
+      } else
+#endif
+      {
+        small_chunk = ntc / nproc;
+        extras = ntc % nproc;
+        init = id * small_chunk + (id < extras ? id : extras);
+        p_extra = 0;
+      }
       pr->u.p.count = init;
       if (claimed) { // are we succeeded in claiming own buffer?
-        pr->u.p.ub = init + small_chunk + (id < extras ? 1 : 0);
+        pr->u.p.ub = init + small_chunk + p_extra + (id < extras ? 1 : 0);
         // Other threads will inspect steal_flag when searching for a victim.
         // READY means other threads may steal from this thread from now on.
         KMP_ATOMIC_ST_REL(&pr->steal_flag, READY);
@@ -561,6 +722,7 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
         _control87(_PC_64, _MCW_PC); // 0,0x30000
 #endif
         /* value used for comparison in solver for cross-over point */
+        KMP_ASSERT(tc > 0);
         long double target = ((long double)chunk * 2 + 1) * nproc / tc;
 
         /* crossover point--chunk indexes equal to or greater than
@@ -668,6 +830,8 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
   case kmp_sch_static_chunked:
   case kmp_sch_dynamic_chunked:
   dynamic_init:
+    if (tc == 0)
+      break;
     if (pr->u.p.parm1 <= 0)
       pr->u.p.parm1 = KMP_DEFAULT_CHUNK;
     else if (pr->u.p.parm1 > tc)
@@ -1258,13 +1422,13 @@ int __kmp_dispatch_next_algorithm(int gtid,
             if (status) {
               // initialize self buffer with victim's whole range of chunks
               T id = victimId;
-              T small_chunk, extras;
-              small_chunk = nchunks / nproc; // chunks per thread
-              extras = nchunks % nproc;
-              init = id * small_chunk + (id < extras ? id : extras);
+              T small_chunk = 0, extras = 0, p_extra = 0;
+              __kmp_initialize_self_buffer<T>(team, id, pr, nchunks, nproc,
+                                              init, small_chunk, extras,
+                                              p_extra);
               __kmp_acquire_lock(lck, gtid);
               pr->u.p.count = init + 1; // exclude one we execute immediately
-              pr->u.p.ub = init + small_chunk + (id < extras ? 1 : 0);
+              pr->u.p.ub = init + small_chunk + p_extra + (id < extras ? 1 : 0);
               __kmp_release_lock(lck, gtid);
               pr->u.p.parm4 = (id + 1) % nproc; // remember neighbour tid
               // no need to reinitialize other thread invariants: lb, st, etc.
@@ -1272,10 +1436,10 @@ int __kmp_dispatch_next_algorithm(int gtid,
               {
                 char *buff;
                 // create format specifiers before the debug output
-                buff = __kmp_str_format(
-                    "__kmp_dispatch_next: T#%%d stolen chunks from T#%%d, "
-                    "count:%%%s ub:%%%s\n",
-                    traits_t<UT>::spec, traits_t<T>::spec);
+                buff = __kmp_str_format("__kmp_dispatch_next_algorithm: T#%%d "
+                                        "stolen chunks from T#%%d, "
+                                        "count:%%%s ub:%%%s\n",
+                                        traits_t<UT>::spec, traits_t<T>::spec);
                 KD_TRACE(10, (buff, gtid, id, pr->u.p.count, pr->u.p.ub));
                 __kmp_str_free(&buff);
               }
@@ -1286,7 +1450,7 @@ int __kmp_dispatch_next_algorithm(int gtid,
               break;
             }
           }
-          if (KMP_ATOMIC_LD_RLX(&v->steal_flag) != READY ||
+          if (KMP_ATOMIC_LD_ACQ(&v->steal_flag) != READY ||
               v->u.p.count >= (UT)v->u.p.ub) {
             pr->u.p.parm4 = (victimId + 1) % nproc; // shift start victim tid
             continue; // no chunks to steal, try next victim
@@ -1401,12 +1565,12 @@ int __kmp_dispatch_next_algorithm(int gtid,
             if (status) {
               // initialize self buffer with victim's whole range of chunks
               T id = victimId;
-              T small_chunk, extras;
-              small_chunk = nchunks / nproc; // chunks per thread
-              extras = nchunks % nproc;
-              init = id * small_chunk + (id < extras ? id : extras);
+              T small_chunk = 0, extras = 0, p_extra = 0;
+              __kmp_initialize_self_buffer<T>(team, id, pr, nchunks, nproc,
+                                              init, small_chunk, extras,
+                                              p_extra);
               vnew.p.count = init + 1;
-              vnew.p.ub = init + small_chunk + (id < extras ? 1 : 0);
+              vnew.p.ub = init + small_chunk + p_extra + (id < extras ? 1 : 0);
               // write pair (count, ub) at once atomically
 #if KMP_ARCH_X86
               KMP_XCHG_FIXED64((volatile kmp_int64 *)(&pr->u.p.count), vnew.b);
@@ -1419,10 +1583,10 @@ int __kmp_dispatch_next_algorithm(int gtid,
               {
                 char *buff;
                 // create format specifiers before the debug output
-                buff = __kmp_str_format(
-                    "__kmp_dispatch_next: T#%%d stolen chunks from T#%%d, "
-                    "count:%%%s ub:%%%s\n",
-                    traits_t<UT>::spec, traits_t<T>::spec);
+                buff = __kmp_str_format("__kmp_dispatch_next_algorithm: T#%%d "
+                                        "stolen chunks from T#%%d, "
+                                        "count:%%%s ub:%%%s\n",
+                                        traits_t<UT>::spec, traits_t<T>::spec);
                 KD_TRACE(10, (buff, gtid, id, pr->u.p.count, pr->u.p.ub));
                 __kmp_str_free(&buff);
               }
@@ -1713,7 +1877,7 @@ int __kmp_dispatch_next_algorithm(int gtid,
         status = 0; // nothing to do, don't try atomic op
         break;
       }
-      KMP_DEBUG_ASSERT(init % chunk == 0);
+      KMP_DEBUG_ASSERT(chunk && init % chunk == 0);
       // compare with K*nproc*(chunk+1), K=2 by default
       if ((T)remaining < pr->u.p.parm2) {
         // use dynamic-style schedule
@@ -1961,9 +2125,22 @@ int __kmp_dispatch_next_algorithm(int gtid,
           &(task_info->task_data), 0, codeptr);                                \
     }                                                                          \
   }
+#define OMPT_LOOP_DISPATCH(lb, ub, st, status)                                 \
+  if (ompt_enabled.ompt_callback_dispatch && status) {                         \
+    ompt_team_info_t *team_info = __ompt_get_teaminfo(0, NULL);                \
+    ompt_task_info_t *task_info = __ompt_get_task_info_object(0);              \
+    ompt_dispatch_chunk_t chunk;                                               \
+    ompt_data_t instance = ompt_data_none;                                     \
+    OMPT_GET_DISPATCH_CHUNK(chunk, lb, ub, st);                                \
+    instance.ptr = &chunk;                                                     \
+    ompt_callbacks.ompt_callback(ompt_callback_dispatch)(                      \
+        &(team_info->parallel_data), &(task_info->task_data),                  \
+        ompt_dispatch_ws_loop_chunk, instance);                                \
+  }
 // TODO: implement count
 #else
 #define OMPT_LOOP_END // no-op
+#define OMPT_LOOP_DISPATCH(lb, ub, st, status) // no-op
 #endif
 
 #if KMP_STATS_ENABLED
@@ -2139,6 +2316,7 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
 #if INCLUDE_SSC_MARKS
     SSC_MARK_DISPATCH_NEXT();
 #endif
+    OMPT_LOOP_DISPATCH(*p_lb, *p_ub, pr->u.p.st, status);
     OMPT_LOOP_END;
     KMP_STATS_LOOP_END;
     return status;
@@ -2262,9 +2440,222 @@ static int __kmp_dispatch_next(ident_t *loc, int gtid, kmp_int32 *p_last,
 #if INCLUDE_SSC_MARKS
   SSC_MARK_DISPATCH_NEXT();
 #endif
+  OMPT_LOOP_DISPATCH(*p_lb, *p_ub, pr->u.p.st, status);
   OMPT_LOOP_END;
   KMP_STATS_LOOP_END;
   return status;
+}
+
+/*!
+@ingroup WORK_SHARING
+@param loc  source location information
+@param global_tid  global thread number
+@return Zero if the parallel region is not active and this thread should execute
+all sections, non-zero otherwise.
+
+Beginning of sections construct.
+There are no implicit barriers in the "sections" calls, rather the compiler
+should introduce an explicit barrier if it is required.
+
+This implementation is based on __kmp_dispatch_init, using same constructs for
+shared data (we can't have sections nested directly in omp for loop, there
+should be a parallel region in between)
+*/
+kmp_int32 __kmpc_sections_init(ident_t *loc, kmp_int32 gtid) {
+
+  int active;
+  kmp_info_t *th;
+  kmp_team_t *team;
+  kmp_uint32 my_buffer_index;
+  dispatch_shared_info_template<kmp_int32> volatile *sh;
+
+  KMP_DEBUG_ASSERT(__kmp_init_serial);
+
+  if (!TCR_4(__kmp_init_parallel))
+    __kmp_parallel_initialize();
+  __kmp_resume_if_soft_paused();
+
+  /* setup data */
+  th = __kmp_threads[gtid];
+  team = th->th.th_team;
+  active = !team->t.t_serialized;
+  th->th.th_ident = loc;
+
+  KMP_COUNT_BLOCK(OMP_SECTIONS);
+  KD_TRACE(10, ("__kmpc_sections: called by T#%d\n", gtid));
+
+  if (active) {
+    // Setup sections in the same way as dynamic scheduled loops.
+    // We need one shared data: which section is to execute next.
+    // (in case parallel is not active, all sections will be executed on the
+    // same thread)
+    KMP_DEBUG_ASSERT(th->th.th_dispatch ==
+                     &th->th.th_team->t.t_dispatch[th->th.th_info.ds.ds_tid]);
+
+    my_buffer_index = th->th.th_dispatch->th_disp_index++;
+
+    // reuse shared data structures from dynamic sched loops:
+    sh = reinterpret_cast<dispatch_shared_info_template<kmp_int32> volatile *>(
+        &team->t.t_disp_buffer[my_buffer_index % __kmp_dispatch_num_buffers]);
+    KD_TRACE(10, ("__kmpc_sections_init: T#%d my_buffer_index:%d\n", gtid,
+                  my_buffer_index));
+
+    th->th.th_dispatch->th_deo_fcn = __kmp_dispatch_deo_error;
+    th->th.th_dispatch->th_dxo_fcn = __kmp_dispatch_dxo_error;
+
+    KD_TRACE(100, ("__kmpc_sections_init: T#%d before wait: my_buffer_index:%d "
+                   "sh->buffer_index:%d\n",
+                   gtid, my_buffer_index, sh->buffer_index));
+    __kmp_wait<kmp_uint32>(&sh->buffer_index, my_buffer_index,
+                           __kmp_eq<kmp_uint32> USE_ITT_BUILD_ARG(NULL));
+    // Note: KMP_WAIT() cannot be used there: buffer index and
+    // my_buffer_index are *always* 32-bit integers.
+    KMP_MB();
+    KD_TRACE(100, ("__kmpc_sections_init: T#%d after wait: my_buffer_index:%d "
+                   "sh->buffer_index:%d\n",
+                   gtid, my_buffer_index, sh->buffer_index));
+
+    th->th.th_dispatch->th_dispatch_pr_current =
+        nullptr; // sections construct doesn't need private data
+    th->th.th_dispatch->th_dispatch_sh_current =
+        CCAST(dispatch_shared_info_t *, (volatile dispatch_shared_info_t *)sh);
+  }
+
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  if (ompt_enabled.ompt_callback_work) {
+    ompt_team_info_t *team_info = __ompt_get_teaminfo(0, NULL);
+    ompt_task_info_t *task_info = __ompt_get_task_info_object(0);
+    ompt_callbacks.ompt_callback(ompt_callback_work)(
+        ompt_work_sections, ompt_scope_begin, &(team_info->parallel_data),
+        &(task_info->task_data), 0, OMPT_GET_RETURN_ADDRESS(0));
+  }
+#endif
+  KMP_PUSH_PARTITIONED_TIMER(OMP_sections);
+
+  return active;
+}
+
+/*!
+@ingroup WORK_SHARING
+@param loc  source location information
+@param global_tid  global thread number
+@param numberOfSections  number of sections in the 'sections' construct
+@return unsigned [from 0 to n) - number (id) of the section to execute next on
+this thread. n (or any other number not in range) - nothing to execute on this
+thread
+*/
+
+kmp_int32 __kmpc_next_section(ident_t *loc, kmp_int32 gtid,
+                              kmp_int32 numberOfSections) {
+
+  KMP_TIME_PARTITIONED_BLOCK(OMP_sections_overhead);
+
+  kmp_info_t *th = __kmp_threads[gtid];
+#ifdef KMP_DEBUG
+  kmp_team_t *team = th->th.th_team;
+#endif
+
+  KD_TRACE(1000, ("__kmp_dispatch_next: T#%d; number of sections:%d\n", gtid,
+                  numberOfSections));
+
+  // For serialized case we should not call this function:
+  KMP_DEBUG_ASSERT(!team->t.t_serialized);
+
+  dispatch_shared_info_template<kmp_int32> volatile *sh;
+
+  KMP_DEBUG_ASSERT(th->th.th_dispatch ==
+                   &th->th.th_team->t.t_dispatch[th->th.th_info.ds.ds_tid]);
+
+  KMP_DEBUG_ASSERT(!(th->th.th_dispatch->th_dispatch_pr_current));
+  sh = reinterpret_cast<dispatch_shared_info_template<kmp_int32> volatile *>(
+      th->th.th_dispatch->th_dispatch_sh_current);
+  KMP_DEBUG_ASSERT(sh);
+
+  kmp_int32 sectionIndex = 0;
+  bool moreSectionsToExecute = true;
+
+  // Find section to execute:
+  sectionIndex = test_then_inc<kmp_int32>((kmp_int32 *)&sh->u.s.iteration);
+  if (sectionIndex >= numberOfSections) {
+    moreSectionsToExecute = false;
+  }
+
+  // status == 0: no more sections to execute;
+  // OMPTODO: __kmpc_end_sections could be bypassed?
+  if (!moreSectionsToExecute) {
+    kmp_int32 num_done;
+
+    num_done = test_then_inc<kmp_int32>((kmp_int32 *)(&sh->u.s.num_done));
+
+    if (num_done == th->th.th_team_nproc - 1) {
+      /* NOTE: release this buffer to be reused */
+
+      KMP_MB(); /* Flush all pending memory write invalidates.  */
+
+      sh->u.s.num_done = 0;
+      sh->u.s.iteration = 0;
+
+      KMP_MB(); /* Flush all pending memory write invalidates.  */
+
+      sh->buffer_index += __kmp_dispatch_num_buffers;
+      KD_TRACE(100, ("__kmpc_next_section: T#%d change buffer_index:%d\n", gtid,
+                     sh->buffer_index));
+
+      KMP_MB(); /* Flush all pending memory write invalidates.  */
+
+    } // if
+
+    th->th.th_dispatch->th_deo_fcn = NULL;
+    th->th.th_dispatch->th_dxo_fcn = NULL;
+    th->th.th_dispatch->th_dispatch_sh_current = NULL;
+    th->th.th_dispatch->th_dispatch_pr_current = NULL;
+
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+    if (ompt_enabled.ompt_callback_dispatch) {
+      ompt_team_info_t *team_info = __ompt_get_teaminfo(0, NULL);
+      ompt_task_info_t *task_info = __ompt_get_task_info_object(0);
+      ompt_data_t instance = ompt_data_none;
+      instance.ptr = OMPT_GET_RETURN_ADDRESS(0);
+      ompt_callbacks.ompt_callback(ompt_callback_dispatch)(
+          &(team_info->parallel_data), &(task_info->task_data),
+          ompt_dispatch_section, instance);
+    }
+#endif
+  }
+
+  return sectionIndex;
+}
+
+/*!
+@ingroup WORK_SHARING
+@param loc  source location information
+@param global_tid  global thread number
+
+End of "sections" construct.
+Don't need to wait here: barrier is added separately when needed.
+*/
+void __kmpc_end_sections(ident_t *loc, kmp_int32 gtid) {
+
+  kmp_info_t *th = __kmp_threads[gtid];
+  int active = !th->th.th_team->t.t_serialized;
+
+  KD_TRACE(100, ("__kmpc_end_sections: T#%d called\n", gtid));
+
+  if (!active) {
+    // In active case call finalization is done in __kmpc_next_section
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+    if (ompt_enabled.ompt_callback_work) {
+      ompt_team_info_t *team_info = __ompt_get_teaminfo(0, NULL);
+      ompt_task_info_t *task_info = __ompt_get_task_info_object(0);
+      ompt_callbacks.ompt_callback(ompt_callback_work)(
+          ompt_work_sections, ompt_scope_end, &(team_info->parallel_data),
+          &(task_info->task_data), 0, OMPT_GET_RETURN_ADDRESS(0));
+    }
+#endif
+  }
+
+  KMP_POP_PARTITIONED_TIMER();
+  KD_TRACE(100, ("__kmpc_end_sections: T#%d returned\n", gtid));
 }
 
 template <typename T>
@@ -2652,9 +3043,11 @@ __kmp_wait_4(volatile kmp_uint32 *spinner, kmp_uint32 checker,
   kmp_uint32 spins;
   kmp_uint32 (*f)(kmp_uint32, kmp_uint32) = pred;
   kmp_uint32 r;
+  kmp_uint64 time;
 
   KMP_FSYNC_SPIN_INIT(obj, CCAST(kmp_uint32 *, spin));
   KMP_INIT_YIELD(spins);
+  KMP_INIT_BACKOFF(time);
   // main wait spin loop
   while (!f(r = TCR_4(*spin), check)) {
     KMP_FSYNC_SPIN_PREPARE(obj);
@@ -2662,7 +3055,7 @@ __kmp_wait_4(volatile kmp_uint32 *spinner, kmp_uint32 checker,
        split. It causes problems with infinite recursion because of exit lock */
     /* if ( TCR_4(__kmp_global.g.g_done) && __kmp_global.g.g_abort)
         __kmp_abort_thread(); */
-    KMP_YIELD_OVERSUB_ELSE_SPIN(spins);
+    KMP_YIELD_OVERSUB_ELSE_SPIN(spins, time);
   }
   KMP_FSYNC_SPIN_ACQUIRED(obj);
   return r;
@@ -2677,15 +3070,17 @@ void __kmp_wait_4_ptr(void *spinner, kmp_uint32 checker,
   kmp_uint32 check = checker;
   kmp_uint32 spins;
   kmp_uint32 (*f)(void *, kmp_uint32) = pred;
+  kmp_uint64 time;
 
   KMP_FSYNC_SPIN_INIT(obj, spin);
   KMP_INIT_YIELD(spins);
+  KMP_INIT_BACKOFF(time);
   // main wait spin loop
   while (!f(spin, check)) {
     KMP_FSYNC_SPIN_PREPARE(obj);
     /* if we have waited a bit, or are noversubscribed, yield */
     /* pause is in the following code */
-    KMP_YIELD_OVERSUB_ELSE_SPIN(spins);
+    KMP_YIELD_OVERSUB_ELSE_SPIN(spins, time);
   }
   KMP_FSYNC_SPIN_ACQUIRED(obj);
 }

@@ -25,15 +25,10 @@
 #ifndef BRSSL_H__
 #define BRSSL_H__
 
-#ifndef _STANDALONE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
-
-#elif !defined(STAND_H) 
-#include <stand.h> 
-#endif 
 
 #include "bearssl.h"
 

@@ -108,10 +108,21 @@ void Language::ForEach(std::function<bool(Language *)> callback) {
     }
   });
 
-  std::lock_guard<std::mutex> guard(GetLanguagesMutex());
-  LanguagesMap &map(GetLanguagesMap());
-  for (const auto &entry : map) {
-    if (!callback(entry.second.get()))
+  // callback may call a method in Language that attempts to acquire the same
+  // lock (such as Language::ForEach or Language::FindPlugin). To avoid a
+  // deadlock, we do not use callback while holding the lock.
+  std::vector<Language *> loaded_plugins;
+  {
+    std::lock_guard<std::mutex> guard(GetLanguagesMutex());
+    LanguagesMap &map(GetLanguagesMap());
+    for (const auto &entry : map) {
+      if (entry.second)
+        loaded_plugins.push_back(entry.second.get());
+    }
+  }
+
+  for (auto *lang : loaded_plugins) {
+    if (!callback(lang))
       break;
   }
 }
@@ -133,7 +144,7 @@ Language::GetHardcodedSynthetics() {
   return {};
 }
 
-std::vector<ConstString>
+std::vector<FormattersMatchCandidate>
 Language::GetPossibleFormattersMatches(ValueObject &valobj,
                                        lldb::DynamicValueType use_dynamic) {
   return {};
@@ -183,9 +194,27 @@ struct language_name_pair language_names[] = {
     {"c++14", eLanguageTypeC_plus_plus_14},
     {"fortran03", eLanguageTypeFortran03},
     {"fortran08", eLanguageTypeFortran08},
+    {"renderscript", eLanguageTypeRenderScript},
+    {"bliss", eLanguageTypeBLISS},
+    {"kotlin", eLanguageTypeKotlin},
+    {"zig", eLanguageTypeZig},
+    {"crystal", eLanguageTypeCrystal},
+    {"<invalid language>",
+     static_cast<LanguageType>(
+         0x0029)}, // Not yet taken by any language in the DWARF spec
+                   // and thus has no entry in LanguageType
+    {"c++17", eLanguageTypeC_plus_plus_17},
+    {"c++20", eLanguageTypeC_plus_plus_20},
+    {"c17", eLanguageTypeC17},
+    {"fortran18", eLanguageTypeFortran18},
+    {"ada2005", eLanguageTypeAda2005},
+    {"ada2012", eLanguageTypeAda2012},
+    {"HIP", eLanguageTypeHIP},
+    {"assembly", eLanguageTypeAssembly},
+    {"c-sharp", eLanguageTypeC_sharp},
+    {"mojo", eLanguageTypeMojo},
     // Vendor Extensions
     {"assembler", eLanguageTypeMipsAssembler},
-    {"renderscript", eLanguageTypeExtRenderScript},
     // Now synonyms, in arbitrary order
     {"objc", eLanguageTypeObjC},
     {"objc++", eLanguageTypeObjC_plus_plus},
@@ -210,6 +239,17 @@ const char *Language::GetNameForLanguageType(LanguageType language) {
     return language_names[eLanguageTypeUnknown].name;
 }
 
+void Language::PrintSupportedLanguagesForExpressions(Stream &s,
+                                                     llvm::StringRef prefix,
+                                                     llvm::StringRef suffix) {
+  auto supported = Language::GetLanguagesSupportingTypeSystemsForExpressions();
+  for (size_t idx = 0; idx < num_languages; ++idx) {
+    auto const &lang = language_names[idx];
+    if (supported[lang.type])
+      s << prefix << lang.name << suffix;
+  }
+}
+
 void Language::PrintAllLanguages(Stream &s, const char *prefix,
                                  const char *suffix) {
   for (uint32_t i = 1; i < num_languages; i++) {
@@ -231,6 +271,8 @@ bool Language::LanguageIsCPlusPlus(LanguageType language) {
   case eLanguageTypeC_plus_plus_03:
   case eLanguageTypeC_plus_plus_11:
   case eLanguageTypeC_plus_plus_14:
+  case eLanguageTypeC_plus_plus_17:
+  case eLanguageTypeC_plus_plus_20:
   case eLanguageTypeObjC_plus_plus:
     return true;
   default:
@@ -270,6 +312,8 @@ bool Language::LanguageIsCFamily(LanguageType language) {
   case eLanguageTypeC_plus_plus_03:
   case eLanguageTypeC_plus_plus_11:
   case eLanguageTypeC_plus_plus_14:
+  case eLanguageTypeC_plus_plus_17:
+  case eLanguageTypeC_plus_plus_20:
   case eLanguageTypeObjC_plus_plus:
   case eLanguageTypeObjC:
     return true;
@@ -293,6 +337,8 @@ LanguageType Language::GetPrimaryLanguage(LanguageType language) {
   case eLanguageTypeC_plus_plus_03:
   case eLanguageTypeC_plus_plus_11:
   case eLanguageTypeC_plus_plus_14:
+  case eLanguageTypeC_plus_plus_17:
+  case eLanguageTypeC_plus_plus_20:
     return eLanguageTypeC_plus_plus;
   case eLanguageTypeC:
   case eLanguageTypeC89:
@@ -328,7 +374,7 @@ LanguageType Language::GetPrimaryLanguage(LanguageType language) {
   case eLanguageTypeJulia:
   case eLanguageTypeDylan:
   case eLanguageTypeMipsAssembler:
-  case eLanguageTypeExtRenderScript:
+  case eLanguageTypeMojo:
   case eLanguageTypeUnknown:
   default:
     return language;
@@ -388,12 +434,10 @@ bool Language::ImageListTypeScavenger::Find_Impl(
   Target *target = exe_scope->CalculateTarget().get();
   if (target) {
     const auto &images(target->GetImages());
-    ConstString cs_key(key);
-    llvm::DenseSet<SymbolFile *> searched_sym_files;
-    TypeList matches;
-    images.FindTypes(nullptr, cs_key, false, UINT32_MAX, searched_sym_files,
-                     matches);
-    for (const auto &match : matches.Types()) {
+    TypeQuery query(key);
+    TypeResults type_results;
+    images.FindTypes(nullptr, query, type_results);
+    for (const auto &match : type_results.GetTypeMap().Types()) {
       if (match) {
         CompilerType compiler_type(match->GetFullCompilerType());
         compiler_type = AdjustForInclusion(compiler_type);
@@ -410,11 +454,17 @@ bool Language::ImageListTypeScavenger::Find_Impl(
   return result;
 }
 
-bool Language::GetFormatterPrefixSuffix(ValueObject &valobj,
-                                        ConstString type_hint,
-                                        std::string &prefix,
-                                        std::string &suffix) {
-  return false;
+std::pair<llvm::StringRef, llvm::StringRef>
+Language::GetFormatterPrefixSuffix(llvm::StringRef type_hint) {
+  return std::pair<llvm::StringRef, llvm::StringRef>();
+}
+
+bool Language::DemangledNameContainsPath(llvm::StringRef path,
+                                         ConstString demangled) const {
+  // The base implementation does a simple contains comparision:
+  if (path.empty())
+    return false;
+  return demangled.GetStringRef().contains(path);
 }
 
 DumpValueObjectOptions::DeclPrintingHelper Language::GetDeclPrintingHelper() {

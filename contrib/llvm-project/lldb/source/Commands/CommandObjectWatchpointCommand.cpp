@@ -15,42 +15,13 @@
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Target/Target.h"
 
 using namespace lldb;
 using namespace lldb_private;
-
-// FIXME: "script-type" needs to have its contents determined dynamically, so
-// somebody can add a new scripting language to lldb and have it pickable here
-// without having to change this enumeration by hand and rebuild lldb proper.
-static constexpr OptionEnumValueElement g_script_option_enumeration[] = {
-    {
-        eScriptLanguageNone,
-        "command",
-        "Commands are in the lldb command interpreter language",
-    },
-    {
-        eScriptLanguagePython,
-        "python",
-        "Commands are in the Python language.",
-    },
-    {
-        eScriptLanguageLua,
-        "lua",
-        "Commands are in the Lua language.",
-    },
-    {
-        eSortOrderByName,
-        "default-script",
-        "Commands are in the default scripting language.",
-    },
-};
-
-static constexpr OptionEnumValues ScriptOptionEnum() {
-  return OptionEnumValues(g_script_option_enumeration);
-}
 
 #define LLDB_OPTIONS_watchpoint_command_add
 #include "CommandOptions.inc"
@@ -66,8 +37,7 @@ public:
                             "commands previously added to it.",
                             nullptr, eCommandRequiresTarget),
         IOHandlerDelegateMultiline("DONE",
-                                   IOHandlerDelegate::Completion::LLDBCommand),
-        m_options() {
+                                   IOHandlerDelegate::Completion::LLDBCommand) {
     SetHelpLong(
         R"(
 General information about entering watchpoint commands
@@ -314,7 +284,7 @@ are no syntax errors may indicate that a function was declared but never called.
 
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options(), m_one_liner(), m_function_name() {}
+    CommandOptions() = default;
 
     ~CommandOptions() override = default;
 
@@ -379,7 +349,7 @@ are no syntax errors may indicate that a function was declared but never called.
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_watchpoint_command_add_options);
+      return llvm::ArrayRef(g_watchpoint_command_add_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -396,7 +366,7 @@ are no syntax errors may indicate that a function was declared but never called.
   };
 
 protected:
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     Target *target = &GetSelectedTarget();
 
     const WatchpointList &watchpoints = target->GetWatchpointList();
@@ -404,7 +374,7 @@ protected:
 
     if (num_watchpoints == 0) {
       result.AppendError("No watchpoints exist to have commands added");
-      return false;
+      return;
     }
 
     if (!m_options.m_function_name.empty()) {
@@ -418,7 +388,7 @@ protected:
     if (!CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(target, command,
                                                                valid_wp_ids)) {
       result.AppendError("Invalid watchpoints specification.");
-      return false;
+      return;
     }
 
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
@@ -445,17 +415,18 @@ protected:
           // Special handling for one-liner specified inline.
           if (m_options.m_use_one_liner) {
             script_interp->SetWatchpointCommandCallback(
-                wp_options, m_options.m_one_liner.c_str());
+                wp_options, m_options.m_one_liner.c_str(),
+                /*is_callback=*/false);
           }
           // Special handling for using a Python function by name instead of
           // extending the watchpoint callback data structures, we just
           // automatize what the user would do manually: make their watchpoint
           // command be a function call
           else if (!m_options.m_function_name.empty()) {
-            std::string oneliner(m_options.m_function_name);
-            oneliner += "(frame, wp, internal_dict)";
+            std::string function_signature = m_options.m_function_name;
+            function_signature += "(frame, wp, internal_dict)";
             script_interp->SetWatchpointCommandCallback(
-                wp_options, oneliner.c_str());
+                wp_options, function_signature.c_str(), /*is_callback=*/true);
           } else {
             script_interp->CollectDataForWatchpointCommandCallback(wp_options,
                                                                    result);
@@ -470,8 +441,6 @@ protected:
         }
       }
     }
-
-    return result.Succeeded();
   }
 
 private:
@@ -504,7 +473,7 @@ public:
   ~CommandObjectWatchpointCommandDelete() override = default;
 
 protected:
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     Target *target = &GetSelectedTarget();
 
     const WatchpointList &watchpoints = target->GetWatchpointList();
@@ -512,20 +481,20 @@ protected:
 
     if (num_watchpoints == 0) {
       result.AppendError("No watchpoints exist to have commands deleted");
-      return false;
+      return;
     }
 
     if (command.GetArgumentCount() == 0) {
       result.AppendError(
           "No watchpoint specified from which to delete the commands");
-      return false;
+      return;
     }
 
     std::vector<uint32_t> valid_wp_ids;
     if (!CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(target, command,
                                                                valid_wp_ids)) {
       result.AppendError("Invalid watchpoints specification.");
-      return false;
+      return;
     }
 
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
@@ -538,10 +507,9 @@ protected:
           wp->ClearCallback();
       } else {
         result.AppendErrorWithFormat("Invalid watchpoint ID: %u.\n", cur_wp_id);
-        return false;
+        return;
       }
     }
-    return result.Succeeded();
   }
 };
 
@@ -572,7 +540,7 @@ public:
   ~CommandObjectWatchpointCommandList() override = default;
 
 protected:
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     Target *target = &GetSelectedTarget();
 
     const WatchpointList &watchpoints = target->GetWatchpointList();
@@ -580,20 +548,20 @@ protected:
 
     if (num_watchpoints == 0) {
       result.AppendError("No watchpoints exist for which to list commands");
-      return false;
+      return;
     }
 
     if (command.GetArgumentCount() == 0) {
       result.AppendError(
           "No watchpoint specified for which to list the commands");
-      return false;
+      return;
     }
 
     std::vector<uint32_t> valid_wp_ids;
     if (!CommandObjectMultiwordWatchpoint::VerifyWatchpointIDs(target, command,
                                                                valid_wp_ids)) {
       result.AppendError("Invalid watchpoints specification.");
-      return false;
+      return;
     }
 
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
@@ -627,8 +595,6 @@ protected:
         }
       }
     }
-
-    return result.Succeeded();
   }
 };
 

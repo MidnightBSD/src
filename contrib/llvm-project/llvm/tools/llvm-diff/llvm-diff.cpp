@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DiffLog.h"
-#include "DifferenceEngine.h"
+#include "lib/DiffLog.h"
+#include "lib/DifferenceEngine.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -21,6 +21,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/WithColor.h"
 #include <string>
 #include <utility>
 
@@ -41,7 +42,7 @@ static std::unique_ptr<Module> readModule(LLVMContext &Context,
 static void diffGlobal(DifferenceEngine &Engine, Module &L, Module &R,
                        StringRef Name) {
   // Drop leading sigils from the global name.
-  if (Name.startswith("@")) Name = Name.substr(1);
+  Name.consume_front("@");
 
   Function *LFn = L.getFunction(Name);
   Function *RFn = R.getFunction(Name);

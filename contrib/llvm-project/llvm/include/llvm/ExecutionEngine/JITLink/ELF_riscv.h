@@ -32,7 +32,11 @@ createLinkGraphFromELFObject_riscv(MemoryBufferRef ObjectBuffer);
 void link_ELF_riscv(std::unique_ptr<LinkGraph> G,
                     std::unique_ptr<JITLinkContext> Ctx);
 
+/// Returns a pass that performs linker relaxation. Should be added to
+/// PostAllocationPasses.
+LinkGraphPassFunction createRelaxationPass_ELF_riscv();
+
 } // end namespace jitlink
 } // end namespace llvm
 
-#endif // LLVM_EXECUTIONENGINE_JITLINK_ELF_RISCV64_H
+#endif // LLVM_EXECUTIONENGINE_JITLINK_ELF_RISCV_H

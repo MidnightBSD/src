@@ -16,6 +16,7 @@
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandObject.h"
+#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionGroupFormat.h"
@@ -30,6 +31,105 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace llvm;
 
+// CommandObjectTraceSave
+#define LLDB_OPTIONS_trace_save
+#include "CommandOptions.inc"
+
+#pragma mark CommandObjectTraceSave
+
+class CommandObjectTraceSave : public CommandObjectParsed {
+public:
+  class CommandOptions : public Options {
+  public:
+    CommandOptions() { OptionParsingStarting(nullptr); }
+
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
+      const int short_option = m_getopt_table[option_idx].val;
+
+      switch (short_option) {
+      case 'c': {
+        m_compact = true;
+        break;
+      }
+      default:
+        llvm_unreachable("Unimplemented option");
+      }
+      return error;
+    }
+
+    void OptionParsingStarting(ExecutionContext *execution_context) override {
+      m_compact = false;
+    };
+
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::ArrayRef(g_trace_save_options);
+    };
+
+    bool m_compact;
+  };
+
+  Options *GetOptions() override { return &m_options; }
+
+  CommandObjectTraceSave(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "trace save",
+            "Save the trace of the current target in the specified directory, "
+            "which will be created if needed. "
+            "This directory will contain a trace bundle, with all the "
+            "necessary files the reconstruct the trace session even on a "
+            "different computer. "
+            "Part of this bundle is the bundle description file with the name "
+            "trace.json. This file can be used by the \"trace load\" command "
+            "to load this trace in LLDB."
+            "Note: if the current target contains information of multiple "
+            "processes or targets, they all will be included in the bundle.",
+            "trace save [<cmd-options>] <bundle_directory>",
+            eCommandRequiresProcess | eCommandTryTargetAPILock |
+                eCommandProcessMustBeLaunched | eCommandProcessMustBePaused |
+                eCommandProcessMustBeTraced) {
+    CommandArgumentData bundle_dir{eArgTypeDirectoryName, eArgRepeatPlain};
+    m_arguments.push_back({bundle_dir});
+  }
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eDiskFileCompletion, request, nullptr);
+  }
+
+  ~CommandObjectTraceSave() override = default;
+
+protected:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    if (command.size() != 1) {
+      result.AppendError("a single path to a directory where the trace bundle "
+                         "will be created is required");
+      return;
+    }
+
+    FileSpec bundle_dir(command[0].ref());
+    FileSystem::Instance().Resolve(bundle_dir);
+
+    ProcessSP process_sp = m_exe_ctx.GetProcessSP();
+
+    TraceSP trace_sp = process_sp->GetTarget().GetTrace();
+
+    if (llvm::Expected<FileSpec> desc_file =
+            trace_sp->SaveToDisk(bundle_dir, m_options.m_compact)) {
+      result.AppendMessageWithFormatv(
+          "Trace bundle description file written to: {0}", *desc_file);
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+    } else {
+      result.AppendError(toString(desc_file.takeError()));
+    }
+  }
+
+  CommandOptions m_options;
+};
+
 // CommandObjectTraceLoad
 #define LLDB_OPTIONS_trace_load
 #include "CommandOptions.inc"
@@ -40,7 +140,7 @@ class CommandObjectTraceLoad : public CommandObjectParsed {
 public:
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options() { OptionParsingStarting(nullptr); }
+    CommandOptions() { OptionParsingStarting(nullptr); }
 
     ~CommandOptions() override = default;
 
@@ -65,65 +165,58 @@ public:
     }
 
     ArrayRef<OptionDefinition> GetDefinitions() override {
-      return makeArrayRef(g_trace_load_options);
+      return ArrayRef(g_trace_load_options);
     }
 
     bool m_verbose; // Enable verbose logging for debugging purposes.
   };
 
   CommandObjectTraceLoad(CommandInterpreter &interpreter)
-      : CommandObjectParsed(interpreter, "trace load",
-                            "Load a processor trace session from a JSON file.",
-                            "trace load"),
-        m_options() {}
+      : CommandObjectParsed(
+            interpreter, "trace load",
+            "Load a post-mortem processor trace session from a trace bundle.",
+            "trace load <trace_description_file>") {
+    CommandArgumentData session_file_arg{eArgTypeFilename, eArgRepeatPlain};
+    m_arguments.push_back({session_file_arg});
+  }
+
+  void
+  HandleArgumentCompletion(CompletionRequest &request,
+                           OptionElementVector &opt_element_vector) override {
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eDiskFileCompletion, request, nullptr);
+  }
 
   ~CommandObjectTraceLoad() override = default;
 
   Options *GetOptions() override { return &m_options; }
 
 protected:
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     if (command.size() != 1) {
-      result.AppendError(
-          "a single path to a JSON file containing a trace session"
-          "is required");
-      return false;
+      result.AppendError("a single path to a JSON file containing a the "
+                         "description of the trace bundle is required");
+      return;
     }
 
-    auto end_with_failure = [&result](llvm::Error err) -> bool {
-      result.AppendErrorWithFormat("%s\n",
-                                   llvm::toString(std::move(err)).c_str());
-      return false;
-    };
+    const FileSpec trace_description_file(command[0].ref());
 
-    FileSpec json_file(command[0].ref());
+    llvm::Expected<lldb::TraceSP> trace_or_err =
+        Trace::LoadPostMortemTraceFromFile(GetDebugger(),
+                                           trace_description_file);
 
-    auto buffer_or_error = llvm::MemoryBuffer::getFile(json_file.GetPath());
-    if (!buffer_or_error) {
-      return end_with_failure(llvm::createStringError(
-          std::errc::invalid_argument, "could not open input file: %s - %s.",
-          json_file.GetPath().c_str(),
-          buffer_or_error.getError().message().c_str()));
+    if (!trace_or_err) {
+      result.AppendErrorWithFormat(
+          "%s\n", llvm::toString(trace_or_err.takeError()).c_str());
+      return;
     }
 
-    llvm::Expected<json::Value> session_file =
-        json::parse(buffer_or_error.get()->getBuffer().str());
-    if (!session_file)
-      return end_with_failure(session_file.takeError());
-
-    if (Expected<lldb::TraceSP> traceOrErr =
-            Trace::FindPluginForPostMortemProcess(
-                GetDebugger(), *session_file,
-                json_file.GetDirectory().AsCString())) {
-      lldb::TraceSP trace_sp = traceOrErr.get();
-      if (m_options.m_verbose && trace_sp)
-        result.AppendMessageWithFormat("loading trace with plugin %s\n",
-                                       trace_sp->GetPluginName().AsCString());
-    } else
-      return end_with_failure(traceOrErr.takeError());
+    if (m_options.m_verbose) {
+      result.AppendMessageWithFormatv("loading trace with plugin {0}\n",
+                                      trace_or_err.get()->GetPluginName());
+    }
 
     result.SetStatus(eReturnStatusSuccessFinishResult);
-    return true;
   }
 
   CommandOptions m_options;
@@ -139,7 +232,7 @@ class CommandObjectTraceDump : public CommandObjectParsed {
 public:
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options() { OptionParsingStarting(nullptr); }
+    CommandOptions() { OptionParsingStarting(nullptr); }
 
     ~CommandOptions() override = default;
 
@@ -164,7 +257,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_trace_dump_options);
+      return llvm::ArrayRef(g_trace_dump_options);
     }
 
     bool m_verbose; // Enable verbose logging for debugging purposes.
@@ -173,15 +266,14 @@ public:
   CommandObjectTraceDump(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "trace dump",
                             "Dump the loaded processor trace data.",
-                            "trace dump"),
-        m_options() {}
+                            "trace dump") {}
 
   ~CommandObjectTraceDump() override = default;
 
   Options *GetOptions() override { return &m_options; }
 
 protected:
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     Status error;
     // TODO: fill in the dumping code here!
     if (error.Success()) {
@@ -189,7 +281,6 @@ protected:
     } else {
       result.AppendErrorWithFormat("%s\n", error.AsCString());
     }
-    return result.Succeeded();
   }
 
   CommandOptions m_options;
@@ -205,7 +296,7 @@ class CommandObjectTraceSchema : public CommandObjectParsed {
 public:
   class CommandOptions : public Options {
   public:
-    CommandOptions() : Options() { OptionParsingStarting(nullptr); }
+    CommandOptions() { OptionParsingStarting(nullptr); }
 
     ~CommandOptions() override = default;
 
@@ -230,7 +321,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_trace_schema_options);
+      return llvm::ArrayRef(g_trace_schema_options);
     }
 
     bool m_verbose; // Enable verbose logging for debugging purposes.
@@ -240,20 +331,22 @@ public:
       : CommandObjectParsed(interpreter, "trace schema",
                             "Show the schema of the given trace plugin.",
                             "trace schema <plug-in>. Use the plug-in name "
-                            "\"all\" to see all schemas.\n"),
-        m_options() {}
+                            "\"all\" to see all schemas.\n") {
+    CommandArgumentData plugin_arg{eArgTypeNone, eArgRepeatPlain};
+    m_arguments.push_back({plugin_arg});
+  }
 
   ~CommandObjectTraceSchema() override = default;
 
   Options *GetOptions() override { return &m_options; }
 
 protected:
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     Status error;
     if (command.empty()) {
       result.AppendError(
           "trace schema cannot be invoked without a plug-in as argument");
-      return false;
+      return;
     }
 
     StringRef plugin_name(command[0].c_str());
@@ -279,7 +372,6 @@ protected:
     } else {
       result.AppendErrorWithFormat("%s\n", error.AsCString());
     }
-    return result.Succeeded();
   }
 
   CommandOptions m_options;
@@ -296,6 +388,8 @@ CommandObjectTrace::CommandObjectTrace(CommandInterpreter &interpreter)
                  CommandObjectSP(new CommandObjectTraceLoad(interpreter)));
   LoadSubCommand("dump",
                  CommandObjectSP(new CommandObjectTraceDump(interpreter)));
+  LoadSubCommand("save",
+                 CommandObjectSP(new CommandObjectTraceSave(interpreter)));
   LoadSubCommand("schema",
                  CommandObjectSP(new CommandObjectTraceSchema(interpreter)));
 }

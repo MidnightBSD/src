@@ -134,7 +134,7 @@ static void yyerror(const char *);
 extern int YYPARSE_DECL();
 
 #define YYERRCODE 256
-typedef int YYINT;
+typedef short YYINT;
 static const YYINT err_syntax10_lhs[] = {                -1,
     0,
 };
@@ -184,13 +184,15 @@ static const char *const err_syntax10_rule[] = {
 };
 #endif
 
+#if YYDEBUG
 int      yydebug;
-int      yynerrs;
+#endif
 
 int      yyerrflag;
 int      yychar;
 YYSTYPE  yyval;
 YYSTYPE  yylval;
+int      yynerrs;
 
 /* define the initial stack-sizes */
 #ifdef YYSTACKSIZE
@@ -239,7 +241,7 @@ yyerror(const char* s)
 {
     printf("%s\n", s);
 }
-#line 243 "err_syntax10.tab.c"
+#line 245 "err_syntax10.tab.c"
 
 #if YYDEBUG
 #include <stdio.h>	/* needed for printf */

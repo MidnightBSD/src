@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: BSD-2-Clause
 #
-# Copyright (c) 2018-2021 Gavin D. Howard and contributors.
+# Copyright (c) 2018-2024 Gavin D. Howard and contributors.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -29,7 +29,7 @@
 
 # Print usage and exit with an error.
 usage() {
-	printf "usage: %s install_dir exec_suffix\n" "$0" 1>&2
+	printf "usage: %s install_dir exec_suffix [bindir]\n" "$0" 1>&2
 	exit 1
 }
 
@@ -49,11 +49,22 @@ shift
 exec_suffix="$1"
 shift
 
-bindir="$scriptdir/../bin"
+if [ "$#" -gt 0 ]; then
+	bindir="$1"
+	shift
+else
+	bindir="$scriptdir/../bin"
+fi
 
 # Install or symlink, depending on the type of file. If it's a file, install it.
 # If it's a symlink, create an equivalent in the install directory.
 for exe in $bindir/*; do
+
+	# Skip any directories in case the bin/ directory is also used as the
+	# prefix.
+	if [ -d "$exe" ]; then
+		continue
+	fi
 
 	base=$(basename "$exe")
 

@@ -10,6 +10,10 @@
 #ifndef __MMINTRIN_H
 #define __MMINTRIN_H
 
+#if !defined(__i386__) && !defined(__x86_64__)
+#error "This header is only meant to be used on x86 and x64 architecture"
+#endif
+
 typedef long long __m64 __attribute__((__vector_size__(8), __aligned__(8)));
 
 typedef long long __v1di __attribute__((__vector_size__(8)));
@@ -18,7 +22,9 @@ typedef short __v4hi __attribute__((__vector_size__(8)));
 typedef char __v8qi __attribute__((__vector_size__(8)));
 
 /* Define the default attributes for the functions in this file. */
-#define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("mmx"), __min_vector_width__(64)))
+#define __DEFAULT_FN_ATTRS                                                     \
+  __attribute__((__always_inline__, __nodebug__, __target__("mmx,no-evex512"), \
+                 __min_vector_width__(64)))
 
 /// Clears the MMX state by setting the state of the x87 stack registers
 ///    to empty.
@@ -27,10 +33,10 @@ typedef char __v8qi __attribute__((__vector_size__(8)));
 ///
 /// This intrinsic corresponds to the <c> EMMS </c> instruction.
 ///
-static __inline__ void  __attribute__((__always_inline__, __nodebug__, __target__("mmx")))
-_mm_empty(void)
-{
-    __builtin_ia32_emms();
+static __inline__ void __attribute__((__always_inline__, __nodebug__,
+                                      __target__("mmx,no-evex512")))
+_mm_empty(void) {
+  __builtin_ia32_emms();
 }
 
 /// Constructs a 64-bit integer vector, setting the lower 32 bits to the

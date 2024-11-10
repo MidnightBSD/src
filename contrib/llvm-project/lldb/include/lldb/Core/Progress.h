@@ -13,6 +13,7 @@
 #include "lldb/lldb-types.h"
 #include <atomic>
 #include <mutex>
+#include <optional>
 
 namespace lldb_private {
 
@@ -63,12 +64,13 @@ public:
   /// @param [in] title The title of this progress activity.
   ///
   /// @param [in] total The total units of work to be done if specified, if
-  /// set to UINT64_MAX then an indeterminate progress indicator should be
+  /// set to std::nullopt then an indeterminate progress indicator should be
   /// displayed.
   ///
   /// @param [in] debugger An optional debugger pointer to specify that this
   /// progress is to be reported only to specific debuggers.
-  Progress(std::string title, uint64_t total = UINT64_MAX,
+  Progress(std::string title, std::string details = {},
+           std::optional<uint64_t> total = std::nullopt,
            lldb_private::Debugger *debugger = nullptr);
 
   /// Destroy the progress object.
@@ -86,23 +88,28 @@ public:
   /// anything nor send any progress updates.
   ///
   /// @param [in] amount The amount to increment m_completed by.
-  void Increment(uint64_t amount = 1);
+  ///
+  /// @param [in] an optional message associated with this update.
+  void Increment(uint64_t amount = 1,
+                 std::optional<std::string> updated_detail = {});
 
 private:
   void ReportProgress();
   static std::atomic<uint64_t> g_id;
   /// The title of the progress activity.
   std::string m_title;
+  std::string m_details;
   std::mutex m_mutex;
   /// A unique integer identifier for progress reporting.
   const uint64_t m_id;
   /// How much work ([0...m_total]) that has been completed.
   uint64_t m_completed;
-  /// Total amount of work, UINT64_MAX for non deterministic progress.
-  const uint64_t m_total;
+  /// Total amount of work, use a std::nullopt in the constructor for non
+  /// deterministic progress.
+  uint64_t m_total;
   /// The optional debugger ID to report progress to. If this has no value then
   /// all debuggers will receive this event.
-  llvm::Optional<lldb::user_id_t> m_debugger_id;
+  std::optional<lldb::user_id_t> m_debugger_id;
   /// Set to true when progress has been reported where m_completed == m_total
   /// to ensure that we don't send progress updates after progress has
   /// completed.

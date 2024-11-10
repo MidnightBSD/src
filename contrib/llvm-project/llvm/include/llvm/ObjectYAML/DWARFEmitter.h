@@ -15,8 +15,8 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/TargetParser/Host.h"
 #include <memory>
 
 namespace llvm {
@@ -26,7 +26,6 @@ class raw_ostream;
 namespace DWARFYAML {
 
 struct Data;
-struct PubSection;
 
 Error emitDebugAbbrev(raw_ostream &OS, const Data &DI);
 Error emitDebugStr(raw_ostream &OS, const Data &DI);

@@ -1,5 +1,6 @@
 #!/usr/bin/make -f
-# MAde with the aid of dh_make, by Craig Small
+# $Id: rules,v 1.11 2019/07/24 00:53:35 tom Exp $
+# Made with the aid of dh_make, by Craig Small
 # Sample debian/rules that uses debhelper. GNU copyright 1997 by Joey Hess.
 # Some lines taken from debmake, by Cristoph Lameter.
 
@@ -11,7 +12,20 @@
 DEB_HOST_GNU_TYPE   ?= $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
 DEB_BUILD_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
 
-CFLAGS =
+CPPFLAGS	:= $(shell dpkg-buildflags --get CPPFLAGS)
+CFLAGS		:= $(shell dpkg-buildflags --get CFLAGS)
+LDFLAGS		:= $(shell dpkg-buildflags --get LDFLAGS)
+
+TMP = $(CURDIR)/debian/tmp
+
+ACTUAL_PROG	= cdialog
+DEV_PACKAGE	= $(ACTUAL_PROG)-dev
+
+BINDIR		= /usr/bin
+LIBDIR		= /usr/lib
+LOCALE		= /usr/share/locale
+MANDIR		= /usr/share/man
+HEADER		= /usr/include
 
 ifneq (,$(findstring noopt,$(DEB_BUILD_OPTIONS)))
         CFLAGS += -O0
@@ -27,7 +41,12 @@ configure: configure-stamp
 configure-stamp:
 	dh_testdir
 
-	CFLAGS="$(CFLAGS)" ./configure \
+	cp -v package/dialog.map package/${ACTUAL_PROG}.map
+
+	CPPFLAGS="$(CPPFLAGS)" \
+	CFLAGS="$(CFLAGS)" \
+	LDFLAGS="$(LDFLAGS)" \
+	./configure \
 		--host=$(DEB_HOST_GNU_TYPE) \
 		--build=$(DEB_BUILD_GNU_TYPE) \
 		--prefix=/usr \
@@ -35,9 +54,10 @@ configure-stamp:
 		--enable-nls \
 		--enable-header-subdir \
 		--enable-widec \
-		--with-libtool \
-		--with-ncursesw \
-		--with-package=cdialog \
+		--with-shared \
+		--with-screen=ncursesw6 \
+		--with-package=${ACTUAL_PROG} \
+		--with-versioned-syms \
 		--disable-rpath-hack
 
 	touch configure-stamp
@@ -67,7 +87,31 @@ install-stamp: build-stamp
 	dh_clean -k
 	dh_installdirs
 
-	$(MAKE) install DESTDIR=$(CURDIR)/debian/cdialog
+	$(MAKE) install-full DESTDIR=$(TMP)
+
+	dh_install -p${ACTUAL_PROG} $(BINDIR)/$(ACTUAL_PROG)
+	dh_install -p${ACTUAL_PROG} $(LIBDIR)
+	dh_install -p${ACTUAL_PROG} $(LOCALE)
+	dh_install -p${ACTUAL_PROG} $(MANDIR)/man1
+	dh_install -p${DEV_PACKAGE} $(BINDIR)/$(ACTUAL_PROG)-config
+	dh_install -p${DEV_PACKAGE} $(MANDIR)/man3
+	dh_install -p${DEV_PACKAGE} $(HEADER)
+
+	echo FIXME
+	for P in lib${ACTUAL_PROG}.so*; \
+	do \
+		[ -L "$$P" ] || continue; \
+		case "$$P" in \
+		*.so) \
+			echo "DEV: $$P"; \
+			dh_link -p${DEV_PACKAGE} $(LIBDIR)/`readlink $$P` $(LIBDIR)/$$P ; \
+			;; \
+		*) \
+			echo "BIN: $$P"; \
+			dh_link -p${ACTUAL_PROG} $(LIBDIR)/`readlink $$P` $(LIBDIR)/$$P ; \
+			;; \
+		esac; \
+	done
 
 	touch install-stamp
 
@@ -86,6 +130,7 @@ binary-arch: build install
 	dh_compress
 	dh_fixperms
 	dh_installdeb
+	dh_makeshlibs
 	dh_shlibdeps
 	dh_gencontrol
 	dh_md5sums

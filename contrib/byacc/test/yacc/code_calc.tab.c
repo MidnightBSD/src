@@ -1,4 +1,4 @@
-typedef int YYINT;
+typedef short YYINT;
 const YYINT calc_lhs[] = {                        -1,
     0,    0,    0,    1,    1,    2,    2,    2,    2,    2,
     2,    2,    2,    2,    2,    2,    3,    3,

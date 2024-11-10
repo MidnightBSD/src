@@ -160,7 +160,7 @@ extern int YYPARSE_DECL();
 #define LETTER 258
 #define UMINUS 259
 #define YYERRCODE 256
-typedef int YYINT;
+typedef short YYINT;
 static const YYINT calc_lhs[] = {                        -1,
     0,    0,    0,    1,    1,    2,    2,    2,    2,    2,
     2,    2,    2,    2,    2,    2,    3,    3,
@@ -285,8 +285,9 @@ static const char *const calc_rule[] = {
 };
 #endif
 
+#if YYDEBUG
 int      yydebug;
-int      yynerrs;
+#endif
 
 /* define the initial stack-sizes */
 #ifdef YYSTACKSIZE
@@ -357,7 +358,7 @@ YYLEX_DECL()
     }
     return( c );
 }
-#line 361 "pure_calc.tab.c"
+#line 362 "pure_calc.tab.c"
 
 #if YYDEBUG
 #include <stdio.h>	/* needed for printf */
@@ -424,6 +425,7 @@ YYPARSE_DECL()
     int      yychar;
     YYSTYPE  yyval;
     YYSTYPE  yylval;
+    int      yynerrs;
 
     /* variables for the parser stack */
     YYSTACKDATA yystack;
@@ -626,7 +628,7 @@ case 18:
 #line 69 "pure_calc.y"
 	{  yyval = base * yystack.l_mark[-1] + yystack.l_mark[0]; }
 break;
-#line 630 "pure_calc.tab.c"
+#line 632 "pure_calc.tab.c"
     }
     yystack.s_mark -= yym;
     yystate = *yystack.s_mark;

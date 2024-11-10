@@ -18,12 +18,15 @@ typedef int CMP_RESULT;
 #elif __SIZEOF_POINTER__ == 8 && __SIZEOF_LONG__ == 4
 // LLP64 ABIs use long long instead of long.
 typedef long long CMP_RESULT;
+#elif __AVR__
+// AVR uses a single byte for the return value.
+typedef char CMP_RESULT;
 #else
 // Otherwise the comparison functions return long.
 typedef long CMP_RESULT;
 #endif
 
-#if !defined(__clang__) && defined(__GNUC__) && (__GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ > 2))
+#if !defined(__clang__) && defined(__GNUC__)
 // GCC uses a special __libgcc_cmp_return__ mode to define the return type, so
 // check that we are ABI-compatible when compiling the builtins with GCC.
 typedef int GCC_CMP_RESULT __attribute__((__mode__(__libgcc_cmp_return__)));

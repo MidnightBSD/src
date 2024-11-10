@@ -1,4 +1,4 @@
-#	$Id: Makefile,v 1.107 2020/06/07 21:18:46 sjg Exp $
+#	$Id: Makefile,v 1.117 2021/12/04 18:51:30 sjg Exp $
 
 PROG=	bmake
 
@@ -11,6 +11,7 @@ SRCS= \
 	for.c \
 	hash.c \
 	job.c \
+	lst.c \
 	main.c \
 	make.c \
 	make_malloc.c \
@@ -18,42 +19,11 @@ SRCS= \
 	metachar.c \
 	parse.c \
 	str.c \
-	strlist.c \
 	suff.c \
 	targ.c \
 	trace.c \
 	util.c \
 	var.c
-
-# from lst.lib/
-SRCS+= \
-	lstAppend.c \
-	lstAtEnd.c \
-	lstAtFront.c \
-	lstClose.c \
-	lstConcat.c \
-	lstDatum.c \
-	lstDeQueue.c \
-	lstDestroy.c \
-	lstDupl.c \
-	lstEnQueue.c \
-	lstFind.c \
-	lstFindFrom.c \
-	lstFirst.c \
-	lstForEach.c \
-	lstForEachFrom.c \
-	lstInit.c \
-	lstInsert.c \
-	lstIsAtEnd.c \
-	lstIsEmpty.c \
-	lstLast.c \
-	lstMember.c \
-	lstNext.c \
-	lstOpen.c \
-	lstPrev.c \
-	lstRemove.c \
-	lstReplace.c \
-	lstSucc.c
 
 .-include "VERSION"
 .-include "Makefile.inc"
@@ -78,6 +48,12 @@ CFLAGS+= -I. -I${srcdir} ${XDEFS} -DMAKE_NATIVE
 CFLAGS+= ${COPTS.${.ALLSRC:M*.c:T:u}}
 COPTS.main.c+= "-DMAKE_VERSION=\"${_MAKE_VERSION}\""
 
+.for x in FORCE_MACHINE FORCE_MACHINE_ARCH
+.ifdef $x
+COPTS.main.c+= "-D$x=\"${$x}\""
+.endif
+.endfor
+
 # meta mode can be useful even without filemon
 # should be set by now
 USE_FILEMON ?= no
@@ -97,7 +73,6 @@ COPTS.filemon_dev.c += -DHAVE_FILEMON_H -I${FILEMON_H:H}
 .endif				# USE_FILEMON
 
 .PATH:	${srcdir}
-.PATH:	${srcdir}/lst.lib
 
 .if make(obj) || make(clean)
 SUBDIR+= unit-tests
@@ -109,17 +84,18 @@ SUBDIR+= unit-tests
 # list of OS's which are derrived from BSD4.4
 BSD44_LIST= NetBSD FreeBSD OpenBSD DragonFly MirBSD Bitrig
 # we are...
-OS!= uname -s
+OS := ${.MAKE.OS:U${uname -s:L:sh}}
 # are we 4.4BSD ?
 isBSD44:=${BSD44_LIST:M${OS}}
 
 .if ${isBSD44} == ""
 MANTARGET= cat
 INSTALL?=${srcdir}/install-sh
-.if (${MACHINE} == "sun386")
+.if ${MACHINE} == "sun386"
 # even I don't have one of these anymore :-)
 CFLAGS+= -DPORTAR
-.elif (${MACHINE} != "sunos")
+.elif ${OS} != "SunOS"
+# assume the worst
 SRCS+= sigcompat.c
 CFLAGS+= -DSIGNAL_FLAGS=SA_RESTART
 .endif
@@ -155,7 +131,7 @@ EXTRACT_MAN=no
 MAN= ${PROG}.1
 MAN1= ${MAN}
 
-.if (${PROG} != "make")
+.if ${PROG} != "make"
 CLEANFILES+= my.history
 .if make(${MAN}) || !exists(${srcdir}/${MAN})
 my.history:
@@ -213,11 +189,12 @@ main.o: ${srcdir}/VERSION
 CONFIGURE_DEPS += ${.CURDIR}/VERSION
 # we do not need or want the generated makefile
 CONFIGURE_ARGS += --without-makefile
+AUTOCONF_GENERATED_MAKEFILE = Makefile.config
 .include <autoconf.mk>
 .endif
-SHARE_MK?=${SHAREDIR}/mk
-MKSRC=${srcdir}/mk
-INSTALL?=${srcdir}/install-sh
+SHARE_MK ?= ${SHAREDIR}/mk
+MKSRC = ${srcdir}/mk
+INSTALL ?= ${srcdir}/install-sh
 
 .if ${MK_INSTALL_MK} == "yes"
 install: install-mk
@@ -237,5 +214,8 @@ install-mk:
 # end-delete2
 
 # A simple unit-test driver to help catch regressions
+TEST_MAKE ?= ${.OBJDIR}/${PROG:T}
 accept test:
-	cd ${.CURDIR}/unit-tests && MAKEFLAGS= ${.MAKE} -r -m / TEST_MAKE=${TEST_MAKE:U${.OBJDIR}/${PROG:T}} ${.TARGET}
+	cd ${.CURDIR}/unit-tests && \
+	MAKEFLAGS= ${TEST_MAKE} -r -m / ${.TARGET} ${TESTS:DTESTS=${TESTS:Q}}
+

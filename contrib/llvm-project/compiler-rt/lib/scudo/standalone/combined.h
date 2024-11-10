@@ -14,6 +14,7 @@
 #include "flags.h"
 #include "flags_parser.h"
 #include "local_cache.h"
+#include "mem_map.h"
 #include "memtag.h"
 #include "options.h"
 #include "quarantine.h"
@@ -42,13 +43,14 @@ extern "C" size_t android_unsafe_frame_pointer_chase(scudo::uptr *buf,
 
 namespace scudo {
 
-template <class Params, void (*PostInitCallback)(void) = EmptyCallback>
+template <class Config, void (*PostInitCallback)(void) = EmptyCallback>
 class Allocator {
 public:
-  using PrimaryT = typename Params::Primary;
+  using PrimaryT = typename Config::template PrimaryT<Config>;
+  using SecondaryT = typename Config::template SecondaryT<Config>;
   using CacheT = typename PrimaryT::CacheT;
-  typedef Allocator<Params, PostInitCallback> ThisT;
-  typedef typename Params::template TSDRegistryT<ThisT> TSDRegistryT;
+  typedef Allocator<Config, PostInitCallback> ThisT;
+  typedef typename Config::template TSDRegistryT<ThisT> TSDRegistryT;
 
   void callPostInitCallback() {
     pthread_once(&PostInitNonce, PostInitCallback);
@@ -66,14 +68,13 @@ public:
       if (UNLIKELY(Header.State != Chunk::State::Quarantined))
         reportInvalidChunkState(AllocatorAction::Recycling, Ptr);
 
-      Chunk::UnpackedHeader NewHeader = Header;
-      NewHeader.State = Chunk::State::Available;
-      Chunk::compareExchangeHeader(Allocator.Cookie, Ptr, &NewHeader, &Header);
+      Header.State = Chunk::State::Available;
+      Chunk::storeHeader(Allocator.Cookie, Ptr, &Header);
 
-      if (allocatorSupportsMemoryTagging<Params>())
+      if (allocatorSupportsMemoryTagging<Config>())
         Ptr = untagPointer(Ptr);
-      void *BlockBegin = Allocator::getBlockBegin(Ptr, &NewHeader);
-      Cache.deallocate(NewHeader.ClassId, BlockBegin);
+      void *BlockBegin = Allocator::getBlockBegin(Ptr, &Header);
+      Cache.deallocate(Header.ClassId, BlockBegin);
     }
 
     // We take a shortcut when allocating a quarantine batch by working with the
@@ -97,7 +98,7 @@ public:
 
       // Reset tag to 0 as this chunk may have been previously used for a tagged
       // user allocation.
-      if (UNLIKELY(useMemoryTagging<Params>(Allocator.Primary.Options.load())))
+      if (UNLIKELY(useMemoryTagging<Config>(Allocator.Primary.Options.load())))
         storeTags(reinterpret_cast<uptr>(Ptr),
                   reinterpret_cast<uptr>(Ptr) + sizeof(QuarantineBatch));
 
@@ -116,9 +117,8 @@ public:
       DCHECK_EQ(Header.Offset, 0);
       DCHECK_EQ(Header.SizeOrUnusedBytes, sizeof(QuarantineBatch));
 
-      Chunk::UnpackedHeader NewHeader = Header;
-      NewHeader.State = Chunk::State::Available;
-      Chunk::compareExchangeHeader(Allocator.Cookie, Ptr, &NewHeader, &Header);
+      Header.State = Chunk::State::Available;
+      Chunk::storeHeader(Allocator.Cookie, Ptr, &Header);
       Cache.deallocate(QuarantineClassId,
                        reinterpret_cast<void *>(reinterpret_cast<uptr>(Ptr) -
                                                 Chunk::getHeaderSize()));
@@ -158,10 +158,9 @@ public:
       Primary.Options.set(OptionBit::DeallocTypeMismatch);
     if (getFlags()->delete_size_mismatch)
       Primary.Options.set(OptionBit::DeleteSizeMismatch);
-    if (allocatorSupportsMemoryTagging<Params>() &&
+    if (allocatorSupportsMemoryTagging<Config>() &&
         systemSupportsMemoryTagging())
       Primary.Options.set(OptionBit::UseMemoryTagging);
-    Primary.Options.set(OptionBit::UseOddEvenTags);
 
     QuarantineMaxChunkSize =
         static_cast<u32>(getFlags()->quarantine_max_chunk_size);
@@ -173,6 +172,8 @@ public:
     Quarantine.init(
         static_cast<uptr>(getFlags()->quarantine_size_kb << 10),
         static_cast<uptr>(getFlags()->thread_local_quarantine_size_kb << 10));
+
+    mapAndInitializeRingBuffer();
   }
 
   // Initialize the embedded GWP-ASan instance. Requires the main allocator to
@@ -185,6 +186,7 @@ public:
         getFlags()->GWP_ASAN_MaxSimultaneousAllocations;
     Opt.SampleRate = getFlags()->GWP_ASAN_SampleRate;
     Opt.InstallSignalHandlers = getFlags()->GWP_ASAN_InstallSignalHandlers;
+    Opt.Recoverable = getFlags()->GWP_ASAN_Recoverable;
     // Embedded GWP-ASan is locked through the Scudo atfork handler (via
     // Allocator::disable calling GWPASan.disable). Disable GWP-ASan's atfork
     // handler.
@@ -196,7 +198,8 @@ public:
       gwp_asan::segv_handler::installSignalHandlers(
           &GuardedAlloc, Printf,
           gwp_asan::backtrace::getPrintBacktraceFunction(),
-          gwp_asan::backtrace::getSegvBacktraceFunction());
+          gwp_asan::backtrace::getSegvBacktraceFunction(),
+          Opt.Recoverable);
 
     GuardedAllocSlotSize =
         GuardedAlloc.getAllocatorState()->maximumAllocationSize();
@@ -205,11 +208,22 @@ public:
 #endif // GWP_ASAN_HOOKS
   }
 
+#ifdef GWP_ASAN_HOOKS
+  const gwp_asan::AllocationMetadata *getGwpAsanAllocationMetadata() {
+    return GuardedAlloc.getMetadataRegion();
+  }
+
+  const gwp_asan::AllocatorState *getGwpAsanAllocatorState() {
+    return GuardedAlloc.getAllocatorState();
+  }
+#endif // GWP_ASAN_HOOKS
+
   ALWAYS_INLINE void initThreadMaybe(bool MinimalInit = false) {
     TSDRegistry.initThreadMaybe(this, MinimalInit);
   }
 
   void unmapTestOnly() {
+    unmapRingBuffer();
     TSDRegistry.unmapTestOnly(this);
     Primary.unmapTestOnly();
     Secondary.unmapTestOnly();
@@ -221,6 +235,7 @@ public:
   }
 
   TSDRegistryT *getTSDRegistry() { return &TSDRegistry; }
+  QuarantineT *getQuarantine() { return &Quarantine; }
 
   // The Cache must be provided zero-initialized.
   void initCache(CacheT *Cache) { Cache->init(&Stats, &Primary); }
@@ -231,13 +246,22 @@ public:
   // - unlinking the local stats from the global ones (destroying the cache does
   //   the last two items).
   void commitBack(TSD<ThisT> *TSD) {
-    Quarantine.drain(&TSD->QuarantineCache,
-                     QuarantineCallback(*this, TSD->Cache));
-    TSD->Cache.destroy(&Stats);
+    TSD->assertLocked(/*BypassCheck=*/true);
+    Quarantine.drain(&TSD->getQuarantineCache(),
+                     QuarantineCallback(*this, TSD->getCache()));
+    TSD->getCache().destroy(&Stats);
   }
 
+  void drainCache(TSD<ThisT> *TSD) {
+    TSD->assertLocked(/*BypassCheck=*/true);
+    Quarantine.drainAndRecycle(&TSD->getQuarantineCache(),
+                               QuarantineCallback(*this, TSD->getCache()));
+    TSD->getCache().drain();
+  }
+  void drainCaches() { TSDRegistry.drainCaches(this); }
+
   ALWAYS_INLINE void *getHeaderTaggedPointer(void *Ptr) {
-    if (!allocatorSupportsMemoryTagging<Params>())
+    if (!allocatorSupportsMemoryTagging<Config>())
       return Ptr;
     auto UntaggedPtr = untagPointer(Ptr);
     if (UntaggedPtr != Ptr)
@@ -249,7 +273,7 @@ public:
   }
 
   ALWAYS_INLINE uptr addHeaderTag(uptr Ptr) {
-    if (!allocatorSupportsMemoryTagging<Params>())
+    if (!allocatorSupportsMemoryTagging<Config>())
       return Ptr;
     return addFixedTag(Ptr, 2);
   }
@@ -272,7 +296,7 @@ public:
 #endif
   }
 
-  uptr computeOddEvenMaskForPointerMaybe(Options Options, uptr Ptr,
+  uptr computeOddEvenMaskForPointerMaybe(const Options &Options, uptr Ptr,
                                          uptr ClassId) {
     if (!Options.get(OptionBit::UseOddEvenTags))
       return 0;
@@ -287,7 +311,7 @@ public:
 
   NOINLINE void *allocate(uptr Size, Chunk::Origin Origin,
                           uptr Alignment = MinAlignment,
-                          bool ZeroContents = false) {
+                          bool ZeroContents = false) NO_THREAD_SAFETY_ANALYSIS {
     initThreadMaybe();
 
     const Options Options = Primary.Options.load();
@@ -302,8 +326,6 @@ public:
 #ifdef GWP_ASAN_HOOKS
     if (UNLIKELY(GuardedAlloc.shouldSample())) {
       if (void *Ptr = GuardedAlloc.allocate(Size, Alignment)) {
-        if (UNLIKELY(&__scudo_allocate_hook))
-          __scudo_allocate_hook(Ptr, Size);
         Stats.lock();
         Stats.add(StatAllocated, GuardedAllocSlotSize);
         Stats.sub(StatFree, GuardedAllocSlotSize);
@@ -324,7 +346,7 @@ public:
     // to be sure that there will be an address in the block that will satisfy
     // the alignment.
     const uptr NeededSize =
-        roundUpTo(Size, MinAlignment) +
+        roundUp(Size, MinAlignment) +
         ((Alignment > MinAlignment) ? Alignment : Chunk::getHeaderSize());
 
     // Takes care of extravagantly large sizes as well as integer overflows.
@@ -344,33 +366,35 @@ public:
       DCHECK_NE(ClassId, 0U);
       bool UnlockRequired;
       auto *TSD = TSDRegistry.getTSDAndLock(&UnlockRequired);
-      Block = TSD->Cache.allocate(ClassId);
-      // If the allocation failed, the most likely reason with a 32-bit primary
-      // is the region being full. In that event, retry in each successively
-      // larger class until it fits. If it fails to fit in the largest class,
-      // fallback to the Secondary.
+      TSD->assertLocked(/*BypassCheck=*/!UnlockRequired);
+      Block = TSD->getCache().allocate(ClassId);
+      // If the allocation failed, retry in each successively larger class until
+      // it fits. If it fails to fit in the largest class, fallback to the
+      // Secondary.
       if (UNLIKELY(!Block)) {
         while (ClassId < SizeClassMap::LargestClassId && !Block)
-          Block = TSD->Cache.allocate(++ClassId);
+          Block = TSD->getCache().allocate(++ClassId);
         if (!Block)
           ClassId = 0;
       }
       if (UnlockRequired)
         TSD->unlock();
     }
-    if (UNLIKELY(ClassId == 0))
+    if (UNLIKELY(ClassId == 0)) {
       Block = Secondary.allocate(Options, Size, Alignment, &SecondaryBlockEnd,
                                  FillContents);
+    }
 
     if (UNLIKELY(!Block)) {
       if (Options.get(OptionBit::MayReturnNull))
         return nullptr;
+      printStats();
       reportOutOfMemory(NeededSize);
     }
 
     const uptr BlockUptr = reinterpret_cast<uptr>(Block);
     const uptr UnalignedUserPtr = BlockUptr + Chunk::getHeaderSize();
-    const uptr UserPtr = roundUpTo(UnalignedUserPtr, Alignment);
+    const uptr UserPtr = roundUp(UnalignedUserPtr, Alignment);
 
     void *Ptr = reinterpret_cast<void *>(UserPtr);
     void *TaggedPtr = Ptr;
@@ -386,7 +410,7 @@ public:
       //
       // When memory tagging is enabled, zeroing the contents is done as part of
       // setting the tag.
-      if (UNLIKELY(useMemoryTagging<Params>(Options))) {
+      if (UNLIKELY(useMemoryTagging<Config>(Options))) {
         uptr PrevUserPtr;
         Chunk::UnpackedHeader Header;
         const uptr BlockSize = PrimaryT::getSizeByClassId(ClassId);
@@ -429,7 +453,7 @@ public:
             PrevUserPtr == UserPtr &&
             (TaggedUserPtr = loadTag(UserPtr)) != UserPtr) {
           uptr PrevEnd = TaggedUserPtr + Header.SizeOrUnusedBytes;
-          const uptr NextPage = roundUpTo(TaggedUserPtr, getPageSizeCached());
+          const uptr NextPage = roundUp(TaggedUserPtr, getPageSizeCached());
           if (NextPage < PrevEnd && loadTag(NextPage) != NextPage)
             PrevEnd = NextPage;
           TaggedPtr = reinterpret_cast<void *>(TaggedUserPtr);
@@ -442,8 +466,8 @@ public:
             // was freed, it would not have been retagged and thus zeroed, and
             // therefore it needs to be zeroed now.
             memset(TaggedPtr, 0,
-                   Min(Size, roundUpTo(PrevEnd - TaggedUserPtr,
-                                       archMemoryTagGranuleSize())));
+                   Min(Size, roundUp(PrevEnd - TaggedUserPtr,
+                                     archMemoryTagGranuleSize())));
           } else if (Size) {
             // Clear any stack metadata that may have previously been stored in
             // the chunk data.
@@ -468,7 +492,7 @@ public:
     } else {
       Block = addHeaderTag(Block);
       Ptr = addHeaderTag(Ptr);
-      if (UNLIKELY(useMemoryTagging<Params>(Options))) {
+      if (UNLIKELY(useMemoryTagging<Config>(Options))) {
         storeTags(reinterpret_cast<uptr>(Block), reinterpret_cast<uptr>(Ptr));
         storeSecondaryAllocationStackMaybe(Options, Ptr, Size);
       }
@@ -494,14 +518,14 @@ public:
         Chunk::SizeOrUnusedBytesMask;
     Chunk::storeHeader(Cookie, Ptr, &Header);
 
-    if (UNLIKELY(&__scudo_allocate_hook))
-      __scudo_allocate_hook(TaggedPtr, Size);
-
     return TaggedPtr;
   }
 
   NOINLINE void deallocate(void *Ptr, Chunk::Origin Origin, uptr DeleteSize = 0,
                            UNUSED uptr Alignment = MinAlignment) {
+    if (UNLIKELY(!Ptr))
+      return;
+
     // For a deallocation, we only ensure minimal initialization, meaning thread
     // local data will be left uninitialized for now (when using ELF TLS). The
     // fallback cache will be used instead. This is a workaround for a situation
@@ -509,12 +533,6 @@ public:
     // the TLS destructors, ending up in initialized thread specific data never
     // being destroyed properly. Any other heap operation will do a full init.
     initThreadMaybe(/*MinimalInit=*/true);
-
-    if (UNLIKELY(&__scudo_deallocate_hook))
-      __scudo_deallocate_hook(Ptr);
-
-    if (UNLIKELY(!Ptr))
-      return;
 
 #ifdef GWP_ASAN_HOOKS
     if (UNLIKELY(GuardedAlloc.pointerIsMine(Ptr))) {
@@ -594,48 +612,47 @@ public:
     if (UNLIKELY(!isAligned(reinterpret_cast<uptr>(OldPtr), MinAlignment)))
       reportMisalignedPointer(AllocatorAction::Reallocating, OldPtr);
 
-    Chunk::UnpackedHeader OldHeader;
-    Chunk::loadHeader(Cookie, OldPtr, &OldHeader);
+    Chunk::UnpackedHeader Header;
+    Chunk::loadHeader(Cookie, OldPtr, &Header);
 
-    if (UNLIKELY(OldHeader.State != Chunk::State::Allocated))
+    if (UNLIKELY(Header.State != Chunk::State::Allocated))
       reportInvalidChunkState(AllocatorAction::Reallocating, OldPtr);
 
     // Pointer has to be allocated with a malloc-type function. Some
     // applications think that it is OK to realloc a memalign'ed pointer, which
     // will trigger this check. It really isn't.
     if (Options.get(OptionBit::DeallocTypeMismatch)) {
-      if (UNLIKELY(OldHeader.OriginOrWasZeroed != Chunk::Origin::Malloc))
+      if (UNLIKELY(Header.OriginOrWasZeroed != Chunk::Origin::Malloc))
         reportDeallocTypeMismatch(AllocatorAction::Reallocating, OldPtr,
-                                  OldHeader.OriginOrWasZeroed,
+                                  Header.OriginOrWasZeroed,
                                   Chunk::Origin::Malloc);
     }
 
-    void *BlockBegin = getBlockBegin(OldTaggedPtr, &OldHeader);
+    void *BlockBegin = getBlockBegin(OldTaggedPtr, &Header);
     uptr BlockEnd;
     uptr OldSize;
-    const uptr ClassId = OldHeader.ClassId;
+    const uptr ClassId = Header.ClassId;
     if (LIKELY(ClassId)) {
       BlockEnd = reinterpret_cast<uptr>(BlockBegin) +
                  SizeClassMap::getSizeByClassId(ClassId);
-      OldSize = OldHeader.SizeOrUnusedBytes;
+      OldSize = Header.SizeOrUnusedBytes;
     } else {
       BlockEnd = SecondaryT::getBlockEnd(BlockBegin);
       OldSize = BlockEnd - (reinterpret_cast<uptr>(OldTaggedPtr) +
-                            OldHeader.SizeOrUnusedBytes);
+                            Header.SizeOrUnusedBytes);
     }
     // If the new chunk still fits in the previously allocated block (with a
     // reasonable delta), we just keep the old block, and update the chunk
     // header to reflect the size change.
     if (reinterpret_cast<uptr>(OldTaggedPtr) + NewSize <= BlockEnd) {
       if (NewSize > OldSize || (OldSize - NewSize) < getPageSizeCached()) {
-        Chunk::UnpackedHeader NewHeader = OldHeader;
-        NewHeader.SizeOrUnusedBytes =
+        Header.SizeOrUnusedBytes =
             (ClassId ? NewSize
                      : BlockEnd -
                            (reinterpret_cast<uptr>(OldTaggedPtr) + NewSize)) &
             Chunk::SizeOrUnusedBytesMask;
-        Chunk::compareExchangeHeader(Cookie, OldPtr, &NewHeader, &OldHeader);
-        if (UNLIKELY(useMemoryTagging<Params>(Options))) {
+        Chunk::storeHeader(Cookie, OldPtr, &Header);
+        if (UNLIKELY(useMemoryTagging<Config>(Options))) {
           if (ClassId) {
             resizeTaggedChunk(reinterpret_cast<uptr>(OldTaggedPtr) + OldSize,
                               reinterpret_cast<uptr>(OldTaggedPtr) + NewSize,
@@ -656,7 +673,7 @@ public:
     void *NewPtr = allocate(NewSize, Chunk::Origin::Malloc, Alignment);
     if (LIKELY(NewPtr)) {
       memcpy(NewPtr, OldTaggedPtr, Min(NewSize, OldSize));
-      quarantineOrDeallocateChunk(Options, OldTaggedPtr, &OldHeader, OldSize);
+      quarantineOrDeallocateChunk(Options, OldTaggedPtr, &Header, OldSize);
     }
     return NewPtr;
   }
@@ -664,7 +681,7 @@ public:
   // TODO(kostyak): disable() is currently best-effort. There are some small
   //                windows of time when an allocation could still succeed after
   //                this function finishes. We will revisit that later.
-  void disable() {
+  void disable() NO_THREAD_SAFETY_ANALYSIS {
     initThreadMaybe();
 #ifdef GWP_ASAN_HOOKS
     GuardedAlloc.disable();
@@ -676,7 +693,7 @@ public:
     Secondary.disable();
   }
 
-  void enable() {
+  void enable() NO_THREAD_SAFETY_ANALYSIS {
     initThreadMaybe();
     Secondary.enable();
     Primary.enable();
@@ -695,9 +712,7 @@ public:
   // sizing purposes.
   uptr getStats(char *Buffer, uptr Size) {
     ScopedString Str;
-    disable();
     const uptr Length = getStats(&Str) + 1;
-    enable();
     if (Length < Size)
       Size = Length;
     if (Buffer && Size) {
@@ -709,15 +724,22 @@ public:
 
   void printStats() {
     ScopedString Str;
-    disable();
     getStats(&Str);
-    enable();
     Str.output();
   }
 
-  void releaseToOS() {
+  void printFragmentationInfo() {
+    ScopedString Str;
+    Primary.getFragmentationInfo(&Str);
+    // Secondary allocator dumps the fragmentation data in getStats().
+    Str.output();
+  }
+
+  void releaseToOS(ReleaseToOS ReleaseType) {
     initThreadMaybe();
-    Primary.releaseToOS();
+    if (ReleaseType == ReleaseToOS::ForceAll)
+      drainCaches();
+    Primary.releaseToOS(ReleaseType);
     Secondary.releaseToOS();
   }
 
@@ -731,7 +753,7 @@ public:
       Base = untagPointer(Base);
     const uptr From = Base;
     const uptr To = Base + Size;
-    bool MayHaveTaggedPrimary = allocatorSupportsMemoryTagging<Params>() &&
+    bool MayHaveTaggedPrimary = allocatorSupportsMemoryTagging<Config>() &&
                                 systemSupportsMemoryTagging();
     auto Lambda = [this, From, To, MayHaveTaggedPrimary, Callback,
                    Arg](uptr Block) {
@@ -753,9 +775,9 @@ public:
       }
       if (Header.State == Chunk::State::Allocated) {
         uptr TaggedChunk = Chunk;
-        if (allocatorSupportsMemoryTagging<Params>())
+        if (allocatorSupportsMemoryTagging<Config>())
           TaggedChunk = untagPointer(TaggedChunk);
-        if (useMemoryTagging<Params>(Primary.Options.load()))
+        if (useMemoryTagging<Config>(Primary.Options.load()))
           TaggedChunk = loadTag(Chunk);
         Callback(TaggedChunk, getSize(reinterpret_cast<void *>(Chunk), &Header),
                  Arg);
@@ -806,9 +828,14 @@ public:
   // for it, which then forces realloc to copy the usable size of a chunk as
   // opposed to its actual size.
   uptr getUsableSize(const void *Ptr) {
-    initThreadMaybe();
     if (UNLIKELY(!Ptr))
       return 0;
+
+    return getAllocSize(Ptr);
+  }
+
+  uptr getAllocSize(const void *Ptr) {
+    initThreadMaybe();
 
 #ifdef GWP_ASAN_HOOKS
     if (UNLIKELY(GuardedAlloc.pointerIsMine(Ptr)))
@@ -818,9 +845,11 @@ public:
     Ptr = getHeaderTaggedPointer(const_cast<void *>(Ptr));
     Chunk::UnpackedHeader Header;
     Chunk::loadHeader(Cookie, Ptr, &Header);
-    // Getting the usable size of a chunk only makes sense if it's allocated.
+
+    // Getting the alloc size of a chunk only makes sense if it's allocated.
     if (UNLIKELY(Header.State != Chunk::State::Allocated))
       reportInvalidChunkState(AllocatorAction::Sizing, const_cast<void *>(Ptr));
+
     return getSize(Ptr, &Header);
   }
 
@@ -847,7 +876,7 @@ public:
   }
 
   bool useMemoryTaggingTestOnly() const {
-    return useMemoryTagging<Params>(Primary.Options.load());
+    return useMemoryTagging<Config>(Primary.Options.load());
   }
   void disableMemoryTagging() {
     // If we haven't been initialized yet, we need to initialize now in order to
@@ -857,7 +886,7 @@ public:
     // callback), which may cause mappings to be created with memory tagging
     // enabled.
     TSDRegistry.initOnceMaybe(this);
-    if (allocatorSupportsMemoryTagging<Params>()) {
+    if (allocatorSupportsMemoryTagging<Config>()) {
       Secondary.disableMemoryTagging();
       Primary.Options.clear(OptionBit::UseMemoryTagging);
     }
@@ -865,6 +894,10 @@ public:
 
   void setTrackAllocationStacks(bool Track) {
     initThreadMaybe();
+    if (getFlags()->allocation_ring_buffer_size <= 0) {
+      DCHECK(!Primary.Options.load().get(OptionBit::TrackAllocationStacks));
+      return;
+    }
     if (Track)
       Primary.Options.set(OptionBit::TrackAllocationStacks);
     else
@@ -896,11 +929,15 @@ public:
     return PrimaryT::getRegionInfoArraySize();
   }
 
-  const char *getRingBufferAddress() const {
-    return reinterpret_cast<const char *>(&RingBuffer);
+  const char *getRingBufferAddress() {
+    initThreadMaybe();
+    return RawRingBuffer;
   }
 
-  static uptr getRingBufferSize() { return sizeof(RingBuffer); }
+  uptr getRingBufferSize() {
+    initThreadMaybe();
+    return RingBufferElements ? ringBufferSizeInBytes(RingBufferElements) : 0;
+  }
 
   static const uptr MaxTraceSize = 64;
 
@@ -910,16 +947,17 @@ public:
     if (!Depot->find(Hash, &RingPos, &Size))
       return;
     for (unsigned I = 0; I != Size && I != MaxTraceSize; ++I)
-      Trace[I] = (*Depot)[RingPos + I];
+      Trace[I] = static_cast<uintptr_t>((*Depot)[RingPos + I]);
   }
 
   static void getErrorInfo(struct scudo_error_info *ErrorInfo,
                            uintptr_t FaultAddr, const char *DepotPtr,
                            const char *RegionInfoPtr, const char *RingBufferPtr,
-                           const char *Memory, const char *MemoryTags,
-                           uintptr_t MemoryAddr, size_t MemorySize) {
+                           size_t RingBufferSize, const char *Memory,
+                           const char *MemoryTags, uintptr_t MemoryAddr,
+                           size_t MemorySize) {
     *ErrorInfo = {};
-    if (!allocatorSupportsMemoryTagging<Params>() ||
+    if (!allocatorSupportsMemoryTagging<Config>() ||
         MemoryAddr + MemorySize < MemoryAddr)
       return;
 
@@ -936,7 +974,7 @@ public:
     // Check the ring buffer. For primary allocations this will only find UAF;
     // for secondary allocations we can find either UAF or OOB.
     getRingBufferErrorInfo(ErrorInfo, NextErrorReport, FaultAddr, Depot,
-                           RingBufferPtr);
+                           RingBufferPtr, RingBufferSize);
 
     // Check for OOB in the 28 blocks surrounding the 3 we checked earlier.
     // Beyond that we are likely to hit false positives.
@@ -947,7 +985,6 @@ public:
   }
 
 private:
-  using SecondaryT = MapAllocator<Params>;
   typedef typename PrimaryT::SizeClassMap SizeClassMap;
 
   static const uptr MinAlignmentLog = SCUDO_MIN_ALIGNMENT_LOG;
@@ -959,7 +996,7 @@ private:
 
   static_assert(MinAlignment >= sizeof(Chunk::PackedHeader),
                 "Minimal alignment must at least cover a chunk header.");
-  static_assert(!allocatorSupportsMemoryTagging<Params>() ||
+  static_assert(!allocatorSupportsMemoryTagging<Config>() ||
                     MinAlignment >= archMemoryTagGranuleSize(),
                 "");
 
@@ -1003,14 +1040,14 @@ private:
     };
 
     atomic_uptr Pos;
-#ifdef SCUDO_FUZZ
-    static const uptr NumEntries = 2;
-#else
-    static const uptr NumEntries = 32768;
-#endif
-    Entry Entries[NumEntries];
+    // An array of Size (at least one) elements of type Entry is immediately
+    // following to this struct.
   };
-  AllocationRingBuffer RingBuffer = {};
+  // Pointer to memory mapped area starting with AllocationRingBuffer struct,
+  // and immediately followed by Size elements of type Entry.
+  char *RawRingBuffer = {};
+  u32 RingBufferElements = 0;
+  MemMapT RawRingBufferMap;
 
   // The following might get optimized out by the compiler.
   NOINLINE void performSanityChecks() {
@@ -1059,40 +1096,40 @@ private:
     const uptr SizeOrUnusedBytes = Header->SizeOrUnusedBytes;
     if (LIKELY(Header->ClassId))
       return SizeOrUnusedBytes;
-    if (allocatorSupportsMemoryTagging<Params>())
+    if (allocatorSupportsMemoryTagging<Config>())
       Ptr = untagPointer(const_cast<void *>(Ptr));
     return SecondaryT::getBlockEnd(getBlockBegin(Ptr, Header)) -
            reinterpret_cast<uptr>(Ptr) - SizeOrUnusedBytes;
   }
 
-  void quarantineOrDeallocateChunk(Options Options, void *TaggedPtr,
-                                   Chunk::UnpackedHeader *Header, uptr Size) {
+  void quarantineOrDeallocateChunk(const Options &Options, void *TaggedPtr,
+                                   Chunk::UnpackedHeader *Header,
+                                   uptr Size) NO_THREAD_SAFETY_ANALYSIS {
     void *Ptr = getHeaderTaggedPointer(TaggedPtr);
-    Chunk::UnpackedHeader NewHeader = *Header;
     // If the quarantine is disabled, the actual size of a chunk is 0 or larger
     // than the maximum allowed, we return a chunk directly to the backend.
     // This purposefully underflows for Size == 0.
     const bool BypassQuarantine = !Quarantine.getCacheSize() ||
                                   ((Size - 1) >= QuarantineMaxChunkSize) ||
-                                  !NewHeader.ClassId;
+                                  !Header->ClassId;
     if (BypassQuarantine)
-      NewHeader.State = Chunk::State::Available;
+      Header->State = Chunk::State::Available;
     else
-      NewHeader.State = Chunk::State::Quarantined;
-    NewHeader.OriginOrWasZeroed = useMemoryTagging<Params>(Options) &&
-                                  NewHeader.ClassId &&
-                                  !TSDRegistry.getDisableMemInit();
-    Chunk::compareExchangeHeader(Cookie, Ptr, &NewHeader, Header);
+      Header->State = Chunk::State::Quarantined;
+    Header->OriginOrWasZeroed = useMemoryTagging<Config>(Options) &&
+                                Header->ClassId &&
+                                !TSDRegistry.getDisableMemInit();
+    Chunk::storeHeader(Cookie, Ptr, Header);
 
-    if (UNLIKELY(useMemoryTagging<Params>(Options))) {
+    if (UNLIKELY(useMemoryTagging<Config>(Options))) {
       u8 PrevTag = extractTag(reinterpret_cast<uptr>(TaggedPtr));
       storeDeallocationStackMaybe(Options, Ptr, PrevTag, Size);
-      if (NewHeader.ClassId) {
+      if (Header->ClassId) {
         if (!TSDRegistry.getDisableMemInit()) {
           uptr TaggedBegin, TaggedEnd;
           const uptr OddEvenMask = computeOddEvenMaskForPointerMaybe(
-              Options, reinterpret_cast<uptr>(getBlockBegin(Ptr, &NewHeader)),
-              NewHeader.ClassId);
+              Options, reinterpret_cast<uptr>(getBlockBegin(Ptr, Header)),
+              Header->ClassId);
           // Exclude the previous tag so that immediate use after free is
           // detected 100% of the time.
           setRandomTag(Ptr, Size, OddEvenMask | (1UL << PrevTag), &TaggedBegin,
@@ -1101,18 +1138,26 @@ private:
       }
     }
     if (BypassQuarantine) {
-      if (allocatorSupportsMemoryTagging<Params>())
+      if (allocatorSupportsMemoryTagging<Config>())
         Ptr = untagPointer(Ptr);
-      void *BlockBegin = getBlockBegin(Ptr, &NewHeader);
-      const uptr ClassId = NewHeader.ClassId;
+      void *BlockBegin = getBlockBegin(Ptr, Header);
+      const uptr ClassId = Header->ClassId;
       if (LIKELY(ClassId)) {
         bool UnlockRequired;
         auto *TSD = TSDRegistry.getTSDAndLock(&UnlockRequired);
-        TSD->Cache.deallocate(ClassId, BlockBegin);
+        TSD->assertLocked(/*BypassCheck=*/!UnlockRequired);
+        const bool CacheDrained =
+            TSD->getCache().deallocate(ClassId, BlockBegin);
         if (UnlockRequired)
           TSD->unlock();
+        // When we have drained some blocks back to the Primary from TSD, that
+        // implies that we may have the chance to release some pages as well.
+        // Note that in order not to block other thread's accessing the TSD,
+        // release the TSD first then try the page release.
+        if (CacheDrained)
+          Primary.tryReleaseToOS(ClassId, ReleaseToOS::Normal);
       } else {
-        if (UNLIKELY(useMemoryTagging<Params>(Options)))
+        if (UNLIKELY(useMemoryTagging<Config>(Options)))
           storeTags(reinterpret_cast<uptr>(BlockBegin),
                     reinterpret_cast<uptr>(Ptr));
         Secondary.deallocate(Options, BlockBegin);
@@ -1120,8 +1165,9 @@ private:
     } else {
       bool UnlockRequired;
       auto *TSD = TSDRegistry.getTSDAndLock(&UnlockRequired);
-      Quarantine.put(&TSD->QuarantineCache,
-                     QuarantineCallback(*this, TSD->Cache), Ptr, Size);
+      TSD->assertLocked(/*BypassCheck=*/!UnlockRequired);
+      Quarantine.put(&TSD->getQuarantineCache(),
+                     QuarantineCallback(*this, TSD->getCache()), Ptr, Size);
       if (UnlockRequired)
         TSD->unlock();
     }
@@ -1181,22 +1227,22 @@ private:
 
   void resizeTaggedChunk(uptr OldPtr, uptr NewPtr, uptr NewSize,
                          uptr BlockEnd) {
-    uptr RoundOldPtr = roundUpTo(OldPtr, archMemoryTagGranuleSize());
+    uptr RoundOldPtr = roundUp(OldPtr, archMemoryTagGranuleSize());
     uptr RoundNewPtr;
     if (RoundOldPtr >= NewPtr) {
       // If the allocation is shrinking we just need to set the tag past the end
       // of the allocation to 0. See explanation in storeEndMarker() above.
-      RoundNewPtr = roundUpTo(NewPtr, archMemoryTagGranuleSize());
+      RoundNewPtr = roundUp(NewPtr, archMemoryTagGranuleSize());
     } else {
       // Set the memory tag of the region
-      // [RoundOldPtr, roundUpTo(NewPtr, archMemoryTagGranuleSize()))
+      // [RoundOldPtr, roundUp(NewPtr, archMemoryTagGranuleSize()))
       // to the pointer tag stored in OldPtr.
       RoundNewPtr = storeTags(RoundOldPtr, NewPtr);
     }
     storeEndMarker(RoundNewPtr, NewSize, BlockEnd);
   }
 
-  void storePrimaryAllocationStackMaybe(Options Options, void *Ptr) {
+  void storePrimaryAllocationStackMaybe(const Options &Options, void *Ptr) {
     if (!UNLIKELY(Options.get(OptionBit::TrackAllocationStacks)))
       return;
     auto *Ptr32 = reinterpret_cast<u32 *>(Ptr);
@@ -1207,9 +1253,9 @@ private:
   void storeRingBufferEntry(void *Ptr, u32 AllocationTrace, u32 AllocationTid,
                             uptr AllocationSize, u32 DeallocationTrace,
                             u32 DeallocationTid) {
-    uptr Pos = atomic_fetch_add(&RingBuffer.Pos, 1, memory_order_relaxed);
+    uptr Pos = atomic_fetch_add(&getRingBuffer()->Pos, 1, memory_order_relaxed);
     typename AllocationRingBuffer::Entry *Entry =
-        &RingBuffer.Entries[Pos % AllocationRingBuffer::NumEntries];
+        getRingBufferEntry(RawRingBuffer, Pos % RingBufferElements);
 
     // First invalidate our entry so that we don't attempt to interpret a
     // partially written state in getSecondaryErrorInfo(). The fences below
@@ -1228,7 +1274,7 @@ private:
     atomic_store_relaxed(&Entry->Ptr, reinterpret_cast<uptr>(Ptr));
   }
 
-  void storeSecondaryAllocationStackMaybe(Options Options, void *Ptr,
+  void storeSecondaryAllocationStackMaybe(const Options &Options, void *Ptr,
                                           uptr Size) {
     if (!UNLIKELY(Options.get(OptionBit::TrackAllocationStacks)))
       return;
@@ -1243,8 +1289,8 @@ private:
     storeRingBufferEntry(untagPointer(Ptr), Trace, Tid, Size, 0, 0);
   }
 
-  void storeDeallocationStackMaybe(Options Options, void *Ptr, u8 PrevTag,
-                                   uptr Size) {
+  void storeDeallocationStackMaybe(const Options &Options, void *Ptr,
+                                   u8 PrevTag, uptr Size) {
     if (!UNLIKELY(Options.get(OptionBit::TrackAllocationStacks)))
       return;
 
@@ -1261,8 +1307,8 @@ private:
   }
 
   static const size_t NumErrorReports =
-      sizeof(((scudo_error_info *)0)->reports) /
-      sizeof(((scudo_error_info *)0)->reports[0]);
+      sizeof(((scudo_error_info *)nullptr)->reports) /
+      sizeof(((scudo_error_info *)nullptr)->reports[0]);
 
   static void getInlineErrorInfo(struct scudo_error_info *ErrorInfo,
                                  size_t &NextErrorReport, uintptr_t FaultAddr,
@@ -1350,15 +1396,19 @@ private:
                                      size_t &NextErrorReport,
                                      uintptr_t FaultAddr,
                                      const StackDepot *Depot,
-                                     const char *RingBufferPtr) {
+                                     const char *RingBufferPtr,
+                                     size_t RingBufferSize) {
     auto *RingBuffer =
         reinterpret_cast<const AllocationRingBuffer *>(RingBufferPtr);
+    size_t RingBufferElements = ringBufferElementsFromBytes(RingBufferSize);
+    if (!RingBuffer || RingBufferElements == 0)
+      return;
     uptr Pos = atomic_load_relaxed(&RingBuffer->Pos);
 
-    for (uptr I = Pos - 1; I != Pos - 1 - AllocationRingBuffer::NumEntries &&
+    for (uptr I = Pos - 1; I != Pos - 1 - RingBufferElements &&
                            NextErrorReport != NumErrorReports;
          --I) {
-      auto *Entry = &RingBuffer->Entries[I % AllocationRingBuffer::NumEntries];
+      auto *Entry = getRingBufferEntry(RingBufferPtr, I % RingBufferElements);
       uptr EntryPtr = atomic_load_relaxed(&Entry->Ptr);
       if (!EntryPtr)
         continue;
@@ -1421,7 +1471,65 @@ private:
     Primary.getStats(Str);
     Secondary.getStats(Str);
     Quarantine.getStats(Str);
+    TSDRegistry.getStats(Str);
     return Str->length();
+  }
+
+  static typename AllocationRingBuffer::Entry *
+  getRingBufferEntry(char *RawRingBuffer, uptr N) {
+    return &reinterpret_cast<typename AllocationRingBuffer::Entry *>(
+        &RawRingBuffer[sizeof(AllocationRingBuffer)])[N];
+  }
+  static const typename AllocationRingBuffer::Entry *
+  getRingBufferEntry(const char *RawRingBuffer, uptr N) {
+    return &reinterpret_cast<const typename AllocationRingBuffer::Entry *>(
+        &RawRingBuffer[sizeof(AllocationRingBuffer)])[N];
+  }
+
+  void mapAndInitializeRingBuffer() {
+    if (getFlags()->allocation_ring_buffer_size <= 0)
+      return;
+    u32 AllocationRingBufferSize =
+        static_cast<u32>(getFlags()->allocation_ring_buffer_size);
+    MemMapT MemMap;
+    MemMap.map(
+        /*Addr=*/0U,
+        roundUp(ringBufferSizeInBytes(AllocationRingBufferSize),
+                getPageSizeCached()),
+        "scudo:ring_buffer");
+    RawRingBuffer = reinterpret_cast<char *>(MemMap.getBase());
+    RawRingBufferMap = MemMap;
+    RingBufferElements = AllocationRingBufferSize;
+    static_assert(sizeof(AllocationRingBuffer) %
+                          alignof(typename AllocationRingBuffer::Entry) ==
+                      0,
+                  "invalid alignment");
+  }
+
+  void unmapRingBuffer() {
+    auto *RingBuffer = getRingBuffer();
+    if (RingBuffer != nullptr) {
+      RawRingBufferMap.unmap(RawRingBufferMap.getBase(),
+                             RawRingBufferMap.getCapacity());
+    }
+    RawRingBuffer = nullptr;
+  }
+
+  static constexpr size_t ringBufferSizeInBytes(u32 RingBufferElements) {
+    return sizeof(AllocationRingBuffer) +
+           RingBufferElements * sizeof(typename AllocationRingBuffer::Entry);
+  }
+
+  static constexpr size_t ringBufferElementsFromBytes(size_t Bytes) {
+    if (Bytes < sizeof(AllocationRingBuffer)) {
+      return 0;
+    }
+    return (Bytes - sizeof(AllocationRingBuffer)) /
+           sizeof(typename AllocationRingBuffer::Entry);
+  }
+
+  inline AllocationRingBuffer *getRingBuffer() {
+    return reinterpret_cast<AllocationRingBuffer *>(RawRingBuffer);
   }
 };
 

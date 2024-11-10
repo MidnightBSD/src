@@ -20,7 +20,10 @@ using namespace lldb_private;
 
 CommandObjectQuit::CommandObjectQuit(CommandInterpreter &interpreter)
     : CommandObjectParsed(interpreter, "quit", "Quit the LLDB debugger.",
-                          "quit [exit-code]") {}
+                          "quit [exit-code]") {
+  CommandArgumentData exit_code_arg{eArgTypeUnsignedInteger, eArgRepeatPlain};
+  m_arguments.push_back({exit_code_arg});
+}
 
 CommandObjectQuit::~CommandObjectQuit() = default;
 
@@ -59,7 +62,7 @@ bool CommandObjectQuit::ShouldAskForConfirmation(bool &is_a_detach) {
   return should_prompt;
 }
 
-bool CommandObjectQuit::DoExecute(Args &command, CommandReturnObject &result) {
+void CommandObjectQuit::DoExecute(Args &command, CommandReturnObject &result) {
   bool is_a_detach = true;
   if (ShouldAskForConfirmation(is_a_detach)) {
     StreamString message;
@@ -68,14 +71,14 @@ bool CommandObjectQuit::DoExecute(Args &command, CommandReturnObject &result) {
                    (is_a_detach ? "detach from" : "kill"));
     if (!m_interpreter.Confirm(message.GetString(), true)) {
       result.SetStatus(eReturnStatusFailed);
-      return false;
+      return;
     }
   }
 
   if (command.GetArgumentCount() > 1) {
     result.AppendError("Too many arguments for 'quit'. Only an optional exit "
                        "code is allowed");
-    return false;
+    return;
   }
 
   // We parse the exit code argument if there is one.
@@ -87,12 +90,12 @@ bool CommandObjectQuit::DoExecute(Args &command, CommandReturnObject &result) {
       std::string arg_str = arg.str();
       s.Printf("Couldn't parse '%s' as integer for exit code.", arg_str.data());
       result.AppendError(s.GetString());
-      return false;
+      return;
     }
     if (!m_interpreter.SetQuitExitCode(exit_code)) {
       result.AppendError("The current driver doesn't allow custom exit codes"
                          " for the quit command.");
-      return false;
+      return;
     }
   }
 
@@ -100,6 +103,4 @@ bool CommandObjectQuit::DoExecute(Args &command, CommandReturnObject &result) {
       CommandInterpreter::eBroadcastBitQuitCommandReceived;
   m_interpreter.BroadcastEvent(event_type);
   result.SetStatus(eReturnStatusQuit);
-
-  return true;
 }

@@ -1,16 +1,16 @@
 #
 # RCSid:
-#	$Id: autodep.mk,v 1.37 2020/04/17 21:08:17 sjg Exp $
+#	$Id: autodep.mk,v 1.40 2021/12/08 05:56:50 sjg Exp $
 #
 #	@(#) Copyright (c) 1999-2010, Simon J. Gerraty
 #
 #	This file is provided in the hope that it will
 #	be of use.  There is absolutely NO WARRANTY.
 #	Permission to copy, redistribute or otherwise
-#	use this file is hereby granted provided that 
+#	use this file is hereby granted provided that
 #	the above copyright notice and this notice are
-#	left intact. 
-#      
+#	left intact.
+#
 #	Please send copies of changes and bug-fixes to:
 #	sjg@crufty.net
 
@@ -20,7 +20,7 @@
 # dependencies are normally updated as part of compilation.
 
 .if !target(__${.PARSEFILE}__)
-__${.PARSEFILE}__:
+__${.PARSEFILE}__: .NOTMAIN
 
 DEPENDFILE?= .depend
 .for d in ${DEPENDFILE:N.depend}
@@ -51,7 +51,7 @@ ${s:T:R}.d:	$s
 .endfor
 
 __depsrcs:=${__depsrcs:T:R:S/$/.d/g}
-# we also need to handle makefiles where the .d's from __depsrcs 
+# we also need to handle makefiles where the .d's from __depsrcs
 # don't  match those from OBJS
 # we avoid using := here, since the modifier applied to OBJS
 # can cause trouble if there are any undefined vars in OBJS.
@@ -64,17 +64,20 @@ __dependsrcs= ${__dependsrcsx:O:u}
 
 # set this to -MMD to ignore /usr/include
 # actually it ignores <> so may not be a great idea
-CFLAGS_MD?=-MD 
+CFLAGS_MD?=-MD
 # -MF etc not available on all gcc versions.
 # we "fix" the .o later
+.if ${COMPILER_TYPE:Ugcc} == "gcc" && ${COMPILER_VERSION:U0} < 30000
+CFLAGS_MF=
+.endif
 CFLAGS_MF?=-MF ${.TARGET:T:R}.d -MT ${.TARGET:T:R}.o
 CFLAGS+= ${CFLAGS_MD} ${CFLAGS_MF}
 RM?= rm
 MAKE_SHELL?= sh
 
 # watch out for people who don't use CPPFLAGS
-CPPFLAGS_MD=${CFLAGS:M-[IUD]*} ${CPPFLAGS} 
-CXXFLAGS_MD=${CXXFLAGS:M-[IUD]*} ${CPPFLAGS} 
+CPPFLAGS_MD=${CFLAGS:M-[IUD]*} ${CPPFLAGS}
+CXXFLAGS_MD=${CXXFLAGS:M-[IUD]*} ${CPPFLAGS}
 
 # just in case these need to be different
 CC_MD?=${CC}
