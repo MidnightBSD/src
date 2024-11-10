@@ -78,7 +78,6 @@ static char sccsid[] = "@(#)ping.c	8.1 (Berkeley) 6/5/93";
 #endif
 
 #include <sys/cdefs.h>
-
 /*
  * Using the InterNet Control Message Protocol (ICMP) "ECHO" facility,
  * measure round-trip-delays and packet loss across network paths.
@@ -141,6 +140,9 @@ static char sccsid[] = "@(#)ping.c	8.1 (Berkeley) 6/5/93";
 
 #include <md5.h>
 
+#include "main.h"
+#include "ping6.h"
+
 struct tv32 {
 	u_int32_t tv32_sec;
 	u_int32_t tv32_nsec;
@@ -197,6 +199,7 @@ struct tv32 {
 #define F_DONTFRAG	0x1000000
 #define F_NOUSERDATA	(F_NODEADDR | F_FQDN | F_FQDNOLD | F_SUPTYPES)
 #define	F_WAITTIME	0x2000000
+#define	F_DOT		0x4000000
 static u_int options;
 
 #define IN6LEN		sizeof(struct in6_addr)
@@ -223,12 +226,15 @@ static int srecv;		/* receive socket file descriptor */
 static u_char outpack[MAXPACKETLEN];
 static char BSPACE = '\b';	/* characters written for flood */
 static char BBELL = '\a';	/* characters written for AUDIBLE */
-static char DOT = '.';
+static const char *DOT = ".";
+static size_t DOTlen = 1;
+static size_t DOTidx = 0;
 static char *hostname;
 static int ident;		/* process id to identify our packets */
 static u_int8_t nonce[8];	/* nonce field for node information */
 static int hoplimit = -1;	/* hoplimit */
 static int tclass = -1;		/* traffic class */
+static int pcp = -2;		/* vlan priority code point */
 static u_char *packet = NULL;
 static cap_channel_t *capdns;
 
@@ -238,6 +244,7 @@ static long npackets;		/* max packets to transmit */
 static long nreceived;		/* # of packets we got back */
 static long nrepeats;		/* number of duplicates */
 static long ntransmitted;	/* sequence # for outbound packets = #sent */
+static long ntransmitfailures;	/* number of transmit failures */
 static int interval = 1000;	/* interval between packets in ms */
 static int waittime = MAXWAIT;	/* timeout for each packet */
 static long nrcvtimeout = 0;	/* # of packets we got back after waittime */
@@ -262,7 +269,6 @@ static volatile sig_atomic_t seenint;
 static volatile sig_atomic_t seeninfo;
 #endif
 
-int	 main(int, char *[]);
 static cap_channel_t *capdns_setup(void);
 static void	 fill(char *, char *);
 static int	 get_hoplim(struct msghdr *);
@@ -288,12 +294,15 @@ static void	 pr_rthdr(void *, size_t);
 static int	 pr_bitrange(u_int32_t, int, int);
 static void	 pr_retip(struct ip6_hdr *, u_char *);
 static void	 summary(void);
+#ifdef IPSEC
+#ifdef IPSEC_POLICY_IPSEC
 static int	 setpolicy(int, char *);
+#endif
+#endif
 static char	*nigroup(char *, int);
-static void	 usage(void);
 
 int
-main(int argc, char *argv[])
+ping6(int argc, char *argv[])
 {
 	struct timespec last, intvl;
 	struct sockaddr_in6 from, *sin6;
@@ -341,20 +350,20 @@ main(int argc, char *argv[])
 	alarmtimeout = preload = 0;
 	datap = &outpack[ICMP6ECHOLEN + ICMP6ECHOTMLEN];
 	capdns = capdns_setup();
-#ifndef IPSEC
-#define ADDOPTS
-#else
-#ifdef IPSEC_POLICY_IPSEC
-#define ADDOPTS	"P:"
-#else
-#define ADDOPTS	"AE"
-#endif /*IPSEC_POLICY_IPSEC*/
-#endif
-	while ((ch = getopt(argc, argv,
-	    "a:b:c:DdfHg:h:I:i:l:mnNop:qrRS:s:tvwWx:X:z:" ADDOPTS)) != -1) {
-#undef ADDOPTS
+
+	while ((ch = getopt(argc, argv, PING6OPTS)) != -1) {
 		switch (ch) {
-		case 'a':
+		case '.':
+			options |= F_DOT;
+			if (optarg != NULL) {
+				DOT = optarg;
+				DOTlen = strlen(optarg);
+			}
+			break;
+		case '6':
+			/* This option is processed in main(). */
+			break;
+		case 'k':
 		{
 			char *cp;
 
@@ -411,6 +420,13 @@ main(int argc, char *argv[])
 "-b option ignored: SO_SNDBUF/SO_RCVBUF socket options not supported");
 #endif
 			break;
+		case 'C':		/* vlan priority code point */
+			pcp = strtol(optarg, &e, 10);
+			if (*optarg == '\0' || *e != '\0')
+				errx(1, "illegal vlan pcp %s", optarg);
+			if (7 < pcp || pcp < -1)
+				errx(1, "illegal vlan pcp -- %s", optarg);
+			break;
 		case 'c':
 			npackets = strtol(optarg, &e, 10);
 			if (npackets <= 0 || *optarg == '\0' || *e != '\0')
@@ -429,15 +445,16 @@ main(int argc, char *argv[])
 				errx(1, "Must be superuser to flood ping");
 			}
 			options |= F_FLOOD;
+			options |= F_DOT;
 			setbuf(stdout, (char *)NULL);
 			break;
-		case 'g':
+		case 'e':
 			gateway = optarg;
 			break;
 		case 'H':
 			options |= F_HOSTNAME;
 			break;
-		case 'h':		/* hoplimit */
+		case 'm':		/* hoplimit */
 			hoplimit = strtol(optarg, &e, 10);
 			if (*optarg == '\0' || *e != '\0')
 				errx(1, "illegal hoplimit %s", optarg);
@@ -481,7 +498,7 @@ main(int argc, char *argv[])
 			if (preload < 0 || *optarg == '\0' || *e != '\0')
 				errx(1, "illegal preload value -- %s", optarg);
 			break;
-		case 'm':
+		case 'u':
 #ifdef IPV6_USE_MIN_MTU
 			mflag++;
 			break;
@@ -506,10 +523,10 @@ main(int argc, char *argv[])
 		case 'q':
 			options |= F_QUIET;
 			break;
-		case 'r':
+		case 'a':
 			options |= F_AUDIBLE;
 			break;
-		case 'R':
+		case 'A':
 			options |= F_MISSED;
 			break;
 		case 'S':
@@ -543,22 +560,22 @@ main(int argc, char *argv[])
 				    MAXDATALEN);
 			}
 			break;
-		case 't':
+		case 'O':
 			options &= ~F_NOUSERDATA;
 			options |= F_SUPTYPES;
 			break;
 		case 'v':
 			options |= F_VERBOSE;
 			break;
-		case 'w':
+		case 'y':
 			options &= ~F_NOUSERDATA;
 			options |= F_FQDN;
 			break;
-		case 'W':
+		case 'Y':
 			options &= ~F_NOUSERDATA;
 			options |= F_FQDNOLD;
 			break;
-		case 'x':
+		case 'W':
 			t = strtod(optarg, &e);
 			if (*e || e == optarg || t > (double)INT_MAX)
 				err(EX_USAGE, "invalid timing interval: `%s'",
@@ -566,7 +583,7 @@ main(int argc, char *argv[])
 			options |= F_WAITTIME;
 			waittime = (int)t;
 			break;
-		case 'X':
+		case 't':
 			alarmtimeout = strtoul(optarg, &e, 0);
 			if ((alarmtimeout < 1) || (alarmtimeout == ULONG_MAX))
 				errx(EX_USAGE, "invalid timeout: `%s'",
@@ -574,7 +591,15 @@ main(int argc, char *argv[])
 			if (alarmtimeout > MAXALARM)
 				errx(EX_USAGE, "invalid timeout: `%s' > %d",
 				    optarg, MAXALARM);
-			alarm((int)alarmtimeout);
+			{
+				struct itimerval itv;
+
+				timerclear(&itv.it_interval);
+				timerclear(&itv.it_value);
+				itv.it_value.tv_sec = (time_t)alarmtimeout;
+				if (setitimer(ITIMER_REAL, &itv, NULL) != 0)
+					err(1, "setitimer");
+			}
 			break;
 		case 'z':		/* traffic class */
 			tclass = strtol(optarg, &e, 10);
@@ -598,7 +623,7 @@ main(int argc, char *argv[])
 				errx(1, "invalid security policy");
 			break;
 #else
-		case 'A':
+		case 'Z':
 			options |= F_AUTHHDR;
 			break;
 		case 'E':
@@ -652,14 +677,15 @@ main(int argc, char *argv[])
 
 	error = cap_getaddrinfo(capdns, target, NULL, &hints, &res);
 	if (error)
-		errx(1, "%s", gai_strerror(error));
+		errx(EX_NOHOST, "cannot resolve %s: %s",
+		    target, gai_strerror(error));
 	if (res->ai_canonname)
 		hostname = strdup(res->ai_canonname);
 	else
 		hostname = target;
 
 	if (!res->ai_addr)
-		errx(1, "cap_getaddrinfo failed");
+		errx(EX_NOHOST, "cannot resolve %s", target);
 
 	(void)memcpy(&dst, res->ai_addr, res->ai_addrlen);
 
@@ -940,6 +966,12 @@ main(int argc, char *argv[])
 		if (setsockopt(ssend, IPPROTO_IPV6, IPV6_TCLASS,
 		    &tclass, sizeof(tclass)) == -1)
 			err(1, "setsockopt(IPV6_TCLASS)");
+	}
+
+	if (pcp != -2) {
+		if (setsockopt(ssend, IPPROTO_IPV6, IPV6_VLAN_PCP,
+		    &pcp, sizeof(pcp)) == -1)
+			err(1, "setsockopt(IPV6_VLAN_PCP)");
 	}
 
 	if (argc > 1) {	/* some intermediate addrs are specified */
@@ -1262,7 +1294,12 @@ main(int argc, char *argv[])
         if(packet != NULL)
                 free(packet);
 
-	exit(nreceived == 0 ? 2 : 0);
+	if (nreceived > 0)
+		exit(0);
+	else if (ntransmitted > ntransmitfailures)
+		exit(2);
+	else
+		exit(EX_OSERR);
 }
 
 static void
@@ -1429,13 +1466,15 @@ pinger(void)
 	i = sendmsg(ssend, &smsghdr, 0);
 
 	if (i < 0 || i != cc)  {
-		if (i < 0)
+		if (i < 0) {
+			ntransmitfailures++;
 			warn("sendmsg");
+		}
 		(void)printf("ping6: wrote %s %d chars, ret=%d\n",
 		    hostname, cc, i);
 	}
-	if (!(options & F_QUIET) && options & F_FLOOD)
-		(void)write(STDOUT_FILENO, &DOT, 1);
+	if (!(options & F_QUIET) && options & F_DOT)
+		(void)write(STDOUT_FILENO, &DOT[DOTidx++ % DOTlen], 1);
 
 	return(0);
 }
@@ -1632,7 +1671,7 @@ pr_pack(u_char *buf, int cc, struct msghdr *mhdr)
 			return;
 		}
 
-		if (options & F_FLOOD)
+		if (options & F_DOT)
 			(void)write(STDOUT_FILENO, &BSPACE, 1);
 		else {
 			if (options & F_AUDIBLE)
@@ -1824,7 +1863,7 @@ pr_pack(u_char *buf, int cc, struct msghdr *mhdr)
 		pr_icmph(icp, end);
 	}
 
-	if (!(options & F_FLOOD)) {
+	if (!(options & F_DOT)) {
 		(void)putchar('\n');
 		if (options & F_VERBOSE)
 			pr_exthdrs(mhdr);
@@ -1849,7 +1888,7 @@ pr_exthdrs(struct msghdr *mhdr)
 
 		bufsize = CONTROLLEN - ((caddr_t)CMSG_DATA(cm) - (caddr_t)bufp);
 		if (bufsize <= 0)
-			continue; 
+			continue;
 		switch (cm->cmsg_type) {
 		case IPV6_HOPOPTS:
 			printf("  HbH Options: ");
@@ -2311,10 +2350,10 @@ summary(void)
 		/* Only display average to microseconds */
 		double num = nreceived + nrepeats;
 		double avg = tsum / num;
-		double dev = sqrt(tsumsq / num - avg * avg);
+		double stddev = sqrt(fmax(0, tsumsq / num - avg * avg));
 		(void)printf(
 		    "round-trip min/avg/max/std-dev = %.3f/%.3f/%.3f/%.3f ms\n",
-		    tmin, avg, tmax, dev);
+		    tmin, avg, tmax, stddev);
 		(void)fflush(stdout);
 	}
 	(void)fflush(stdout);
@@ -2632,7 +2671,9 @@ pr_retip(struct ip6_hdr *ip6, u_char *end)
 	nh = ip6->ip6_nxt;
 	cp += hlen;
 	while (end - cp >= 8) {
+#ifdef IPSEC
 		struct ah ah;
+#endif
 
 		switch (nh) {
 		case IPPROTO_HOPOPTS:
@@ -2797,7 +2838,7 @@ nigroup(char *name, int nig_oldmcprefix)
 	}
 	if (valid != 1)
 		return NULL;	/*XXX*/
-	
+
 	if (nig_oldmcprefix) {
 		/* draft-ietf-ipngwg-icmp-name-lookup */
 		bcopy(digest, &in6.s6_addr[12], 4);
@@ -2810,35 +2851,6 @@ nigroup(char *name, int nig_oldmcprefix)
 		return NULL;
 
 	return strdup(hbuf);
-}
-
-static void
-usage(void)
-{
-	(void)fprintf(stderr,
-#if defined(IPSEC) && !defined(IPSEC_POLICY_IPSEC)
-	    "A"
-#endif
-	    "usage: ping6 [-"
-	    "Dd"
-#if defined(IPSEC) && !defined(IPSEC_POLICY_IPSEC)
-	    "E"
-#endif
-	    "fH"
-#ifdef IPV6_USE_MIN_MTU
-	    "m"
-#endif
-	    "nNoqrRtvwW] "
-	    "[-a addrtype] [-b bufsiz] [-c count] [-g gateway]\n"
-	    "             [-h hoplimit] [-I interface] [-i wait] [-l preload]"
-#if defined(IPSEC) && defined(IPSEC_POLICY_IPSEC)
-	    " [-P policy]"
-#endif
-	    "\n"
-	    "             [-p pattern] [-S sourceaddr] [-s packetsize] "
-	    "[-x waittime]\n"
-	    "             [-X timeout] [-z tclass] [hops ...] host\n");
-	exit(1);
 }
 
 static cap_channel_t *

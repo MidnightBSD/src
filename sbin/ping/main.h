@@ -1,16 +1,12 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
- * Copyright (c) 2012 The FreeBSD Foundation
+ * Copyright (C) 2019 Jan Sucan <jansucan@FreeBSD.org>
  * All rights reserved.
- *
- * This software was developed by Semihalf under sponsorship
- * from the FreeBSD Foundation.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
- *
  * 1. Redistributions of source code must retain the above copyright
  *    notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
@@ -20,7 +16,7 @@
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
  * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -28,15 +24,31 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: stable/11/sbin/nandfs/nandfs.h 330449 2018-03-05 07:26:05Z eadler $
  */
 
-#ifndef NANDFS_H
-#define NANDFS_H
+#ifndef MAIN_H
+#define MAIN_H 1
 
-int nandfs_lssnap(int, char **);
-int nandfs_mksnap(int, char **);
-int nandfs_rmsnap(int, char **);
+#ifdef IPSEC
+#include <netipsec/ipsec.h>
+#endif /*IPSEC*/
 
-#endif /* !NANDFS_H */
+#if defined(INET) && defined(IPSEC) && defined(IPSEC_POLICY_IPSEC)
+ #define PING4ADDOPTS "P:"
+#else
+ #define PING4ADDOPTS
+#endif
+#define PING4OPTS ".::4AaC:c:DdfG:g:Hh:I:i:Ll:M:m:nop:QqRrS:s:T:t:vW:z:" PING4ADDOPTS
+
+#if defined(INET6) && defined(IPSEC) && defined(IPSEC_POLICY_IPSEC)
+ #define PING6ADDOPTS "P:"
+#elif defined(INET6) && defined(IPSEC) && !defined(IPSEC_POLICY_IPSEC)
+ #define PING6ADDOPTS "ZE"
+#else
+ #define PING6ADDOPTS
+#endif
+#define PING6OPTS ".::6Aab:C:c:Dde:fHI:i:k:l:m:nNoOp:qS:s:t:uvyYW:z:" PING6ADDOPTS
+
+void usage(void) __dead2;
+
+#endif

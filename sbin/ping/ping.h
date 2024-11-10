@@ -1,16 +1,12 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
- * Copyright (c) 2012 The FreeBSD Foundation
+ * Copyright (C) 2019 Jan Sucan <jansucan@FreeBSD.org>
  * All rights reserved.
- *
- * This software was developed by Semihalf under sponsorship
- * from the FreeBSD Foundation.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
- *
  * 1. Redistributions of source code must retain the above copyright
  *    notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
@@ -20,7 +16,7 @@
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
  * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -30,52 +26,9 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-#include <sys/types.h>
+#ifndef PING_H
+#define PING_H 1
 
-#include <stdio.h>
-#include <sysexits.h>
+int ping(int argc, char *const *argv);
 
-#include <fs/nandfs/nandfs_fs.h>
-#include <libnandfs.h>
-
-#include "nandfs.h"
-
-static void
-mksnap_usage(void)
-{
-
-	fprintf(stderr, "usage:\n");
-	fprintf(stderr, "\tmksnap node\n");
-}
-
-int
-nandfs_mksnap(int argc, char **argv)
-{
-	struct nandfs fs;
-	uint64_t cpno;
-	int error;
-
-	if (argc != 1) {
-		mksnap_usage();
-		return (EX_USAGE);
-	}
-
-	nandfs_init(&fs, argv[0]);
-	error = nandfs_open(&fs);
-	if (error == -1) {
-		fprintf(stderr, "nandfs_open: %s\n", nandfs_errmsg(&fs));
-		goto out;
-	}
-
-	error = nandfs_make_snap(&fs, &cpno);
-	if (error == -1)
-		fprintf(stderr, "nandfs_make_snap: %s\n", nandfs_errmsg(&fs));
-	else
-		printf("%jd\n", cpno);
-
-out:
-	nandfs_close(&fs);
-	nandfs_destroy(&fs);
-	return (error);
-}
+#endif
