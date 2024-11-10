@@ -75,6 +75,7 @@ public:
         return ELF::ELFOSABI_STANDALONE;
       case Triple::PS4:
       case Triple::FreeBSD:
+      case Triple::MidnightBSD:
         return ELF::ELFOSABI_FREEBSD;
       case Triple::Solaris:
         return ELF::ELFOSABI_SOLARIS;

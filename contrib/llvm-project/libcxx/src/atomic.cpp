@@ -27,7 +27,7 @@
 #  endif
 #  define _LIBCPP_FUTEX(...) syscall(SYS_futex, __VA_ARGS__)
 
-#elif defined(__FreeBSD__)
+#elif defined(__FreeBSD__) || defined(__MidnightBSD__)
 
 #  include <sys/types.h>
 #  include <sys/umtx.h>
@@ -82,7 +82,7 @@ static void __libcpp_platform_wake_by_address(__cxx_atomic_contention_t const vo
       UL_COMPARE_AND_WAIT | (__notify_one ? 0 : ULF_WAKE_ALL), const_cast<__cxx_atomic_contention_t*>(__ptr), 0);
 }
 
-#elif defined(__FreeBSD__) && __SIZEOF_LONG__ == 8
+#elif defined(__MidnightBSD__) && __SIZEOF_LONG__ == 8
 /*
  * Since __cxx_contention_t is int64_t even on 32bit FreeBSD
  * platforms, we have to use umtx ops that work on the long type, and

@@ -50,7 +50,7 @@ static int getPosixProtectionFlags(unsigned Flags) {
       llvm::sys::Memory::MF_EXEC:
     return PROT_READ | PROT_WRITE | PROT_EXEC;
   case llvm::sys::Memory::MF_EXEC:
-#if defined(__FreeBSD__) || defined(__powerpc__)
+#if defined(__FreeBSD__) || defined(__powerpc__) || defined(__MidnightBSD__)
     // On PowerPC, having an executable page that has no read permission
     // can have unintended consequences.  The function InvalidateInstruction-
     // Cache uses instructions dcbf and icbi, both of which are treated by

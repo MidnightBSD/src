@@ -143,7 +143,7 @@ _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI long double abs(long double _
 // MSVCRT already has the correct prototype in <stdlib.h> if __cplusplus is defined
 #    if !defined(_LIBCPP_MSVCRT)
 inline _LIBCPP_HIDE_FROM_ABI ldiv_t div(long __x, long __y) _NOEXCEPT { return ::ldiv(__x, __y); }
-#      if !(defined(__FreeBSD__) && !defined(__LONG_LONG_SUPPORTED))
+#      if !(defined(__FreeBSD__) && !defined(__MidnightBSD__) && !defined(__LONG_LONG_SUPPORTED))
 inline _LIBCPP_HIDE_FROM_ABI lldiv_t div(long long __x, long long __y) _NOEXCEPT { return ::lldiv(__x, __y); }
 #      endif
 #    endif // _LIBCPP_MSVCRT

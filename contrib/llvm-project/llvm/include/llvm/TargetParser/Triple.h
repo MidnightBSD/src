@@ -226,7 +226,8 @@ public:
     LiteOS,
     Serenity,
     Vulkan,      // Vulkan SPIR-V
-    LastOSType = Vulkan
+    MidnightBSD,
+    LastOSType = MidnightBSD
   };
   enum EnvironmentType {
     UnknownEnvironment,
@@ -558,6 +559,10 @@ public:
 
   bool isOSFreeBSD() const {
     return getOS() == Triple::FreeBSD;
+  }
+
+  bool isOSMidnightBSD() const {
+    return getOS() == Triple::MidnightBSD;
   }
 
   bool isOSFuchsia() const {
