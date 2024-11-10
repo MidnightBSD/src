@@ -1,8 +1,10 @@
-# $FreeBSD$
+
+.include <src.opts.mk>
 
 LIB=		ssl
 SHLIB_MAJOR=	111
 VERSION_MAP=	${.CURDIR}/Version.map
+PACKAGE=	openssl
 
 NO_LINT=
 
@@ -24,6 +26,12 @@ SRCS+=	ssl3_record.c ssl3_record_tls13.c
 SRCS+=	extensions.c extensions_clnt.c extensions_cust.c extensions_srvr.c
 SRCS+=	statem.c statem_clnt.c statem_dtls.c statem_lib.c statem_srvr.c
 
+.if ${MK_OPENSSL_KTLS} != "no"
+SRCS+=	ktls.c
+.endif
+
+SRCS+=	dummy_abi.c
+
 LIBADD=	crypto
 
 CFLAGS+=	-I${LCRYPTO_SRC}/ssl
@@ -31,7 +39,7 @@ CFLAGS+=	-I${.OBJDIR:H}/libcrypto
 
 .include <bsd.lib.mk>
 
-PICFLAG+=	-DOPENSS_PIC
+PICFLAG+=	-DOPENSSL_PIC
 
 .PATH:	${LCRYPTO_SRC}/ssl \
 	${LCRYPTO_SRC}/ssl/record \

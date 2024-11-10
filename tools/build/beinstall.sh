@@ -79,6 +79,14 @@ unmount_be() {
 	mount | grep " on ${BE_MNTPT}" | awk '{print $3}' | sort -r | xargs -t umount -f
 }
 
+copy_pkgs() {
+	# Before cleaning up, try to save progress in pkg(8) updates, to
+	# speed up future updates.  This is only called on the error path;
+	# no need to run on success.
+	echo "Rsyncing back newly saved packages..."
+	rsync -av --progress ${BE_MNTPT}/var/cache/pkg/. /var/cache/pkg/.
+}
+
 cleanup_be() {
 	# Before destroying, unmount any child filesystems that may have
 	# been mounted under the boot environment.  Sort them in reverse
@@ -189,8 +197,8 @@ else
     errx "Unable to determine source control type"
 fi
 
-commit_ver=$(${objdir}/bin/freebsd-version/midnightbsd-version -u 2>/dev/null)
-[ -z "${commit_ver}" ] && errx "Unable to determine MidnightBSD version"
+commit_ver=$(${objdir}/bin/freebsd-version/freebsd-version -u 2>/dev/null)
+[ -z "${commit_ver}" ] && errx "Unable to determine FreeBSD version"
 
 BENAME="${commit_ver}-${commit_ts}"
 
@@ -229,7 +237,11 @@ if [ -n "${CONFIG_UPDATER}" ]; then
 	[ $? -ne 0 ] && errx "${CONFIG_UPDATER} (post-world) failed!"
 fi
 
-BE_PKG="chroot ${BE_MNTPT} env ASSUME_ALWAYS_YES=true mport"
+if which rsync >/dev/null 2>&1; then
+	cleanup_commands="copy_pkgs ${cleanup_commands}"
+fi
+
+BE_PKG="chroot ${BE_MNTPT} env ASSUME_ALWAYS_YES=true pkg"
 if [ -z "${NO_PKG_UPGRADE}" ]; then
 	${BE_PKG} index || errx "Unable to fetch mport index"
 	${BE_PKG} upgrade || errx "Unable to upgrade pkgs"

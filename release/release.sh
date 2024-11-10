@@ -211,10 +211,10 @@ chroot_setup() {
 		fi
 	fi
 	if [ -z "${NOPORTS}" ] && [ -z "${PORTS_UPDATE_SKIP}" ]; then
-		if [ -d "${CHROOTDIR}/usr/mports/.git" ]; then
-			git -C ${CHROOTDIR}/usr/mports pull -q
+		if [ -d "${CHROOTDIR}/usr/ports/.git" ]; then
+			git -C ${CHROOTDIR}/usr/ports pull -q
 		else
-			${VCSCMD} ${PORT} -b ${PORTBRANCH} ${CHROOTDIR}/usr/mports
+			${VCSCMD} ${PORT} -b ${PORTBRANCH} ${CHROOTDIR}/usr/ports
 		fi
 	fi
 
@@ -252,11 +252,11 @@ extra_chroot_setup() {
 		cp ${SRC_CONF} ${CHROOTDIR}/${SRC_CONF}
 	fi
 
-	if [ -z "${NOGIT}" ]; then
-		# Install git from ports or packages if the ports tree is
-		# available and VCSCMD is unset.
-		_gitcmd="$(which git)"
-		if [ -d ${CHROOTDIR}/usr/mports -a -z "${_gitcmd}" ]; then
+	_gitcmd="$(which git)"
+	if [ -z "${NOGIT}" -a -z "${_gitcmd}" ]; then
+		# Install git from ports if the ports tree is available;
+		# otherwise install the pkg.
+		if [ -d ${CHROOTDIR}/usr/ports ]; then
 			# Trick the ports 'run-autotools-fixup' target to do the right
 			# thing.
 			_OSVERSION=$(chroot ${CHROOTDIR} /usr/bin/uname -U)
@@ -270,19 +270,19 @@ extra_chroot_setup() {
 			PBUILD_FLAGS="OSVERSION=${_OSVERSION} BATCH=yes"
 			PBUILD_FLAGS="${PBUILD_FLAGS} UNAME_r=${UNAME_r}"
 			PBUILD_FLAGS="${PBUILD_FLAGS} OSREL=${REVISION}"
-			PBUILD_FLAGS="${PBUILD_FLAGS} WRKDIRPREFIX=/tmp/mports"
+			PBUILD_FLAGS="${PBUILD_FLAGS} WRKDIRPREFIX=/tmp/ports"
 			PBUILD_FLAGS="${PBUILD_FLAGS} DISTDIR=/tmp/distfiles"
 			eval chroot ${CHROOTDIR} env OPTIONS_UNSET=\"${GITUNSETOPTS}\" \
 				${PBUILD_FLAGS} \
-				make -C /usr/mports/devel/git FORCE_PKG_REGISTER=1 \
-				WRKDIRPREFIX=/tmp/mports \
+				make -C /usr/ports/devel/git FORCE_PKG_REGISTER=1 \
+				WRKDIRPREFIX=/tmp/ports \
 				DISTDIR=/tmp/distfiles \
 				install clean distclean
 		else
 			eval chroot ${CHROOTDIR} env ASSUME_ALWAYS_YES=yes \
-				mport install git
+				pkg install -y devel/git
 			eval chroot ${CHROOTDIR} env ASSUME_ALWAYS_YES=yes \
-				mport clean
+				pkg clean -y
 		fi
 	fi
 
@@ -294,11 +294,11 @@ extra_chroot_setup() {
 		PBUILD_FLAGS="OSVERSION=${_OSVERSION} BATCH=yes"
 		PBUILD_FLAGS="${PBUILD_FLAGS} UNAME_r=${UNAME_r}"
 		PBUILD_FLAGS="${PBUILD_FLAGS} OSREL=${REVISION}"
-		PBUILD_FLAGS="${PBUILD_FLAGS} WRKDIRPREFIX=/tmp/mports"
+		PBUILD_FLAGS="${PBUILD_FLAGS} WRKDIRPREFIX=/tmp/ports"
 		PBUILD_FLAGS="${PBUILD_FLAGS} DISTDIR=/tmp/distfiles"
 		for _PORT in ${EMBEDDEDPORTS}; do
 			eval chroot ${CHROOTDIR} env ${PBUILD_FLAGS} make -C \
-				/usr/mports/${_PORT} \
+				/usr/ports/${_PORT} \
 				FORCE_PKG_REGISTER=1 deinstall install clean distclean
 		done
 	fi
@@ -335,7 +335,7 @@ chroot_build_release() {
 		fi
 		if [ -z "${VMSIZE}" ]; then
 			VMSIZE="$(eval chroot ${CHROOTDIR} \
-				make -C /usr/src/release -V VMSIZE)"
+				make -C /usr/src/release ${ARCH_FLAGS} -V VMSIZE)"
 		fi
 		RELEASE_RMAKEFLAGS="${RELEASE_RMAKEFLAGS} \
 			VMFORMATS=\"${VMFORMATS}\" VMSIZE=${VMSIZE}"
@@ -362,6 +362,9 @@ efi_boot_name()
 		amd64)
 			echo "bootx64.efi"
 			;;
+		riscv)
+			echo "bootriscv64.efi"
+			;;
 	esac
 }
 
@@ -369,7 +372,7 @@ efi_boot_name()
 chroot_arm_build_release() {
 	load_target_env
 	case ${EMBEDDED_TARGET} in
-		arm|arm64)
+		arm|arm64|riscv)
 			if [ -e "${RELENGDIR}/tools/arm.subr" ]; then
 				. "${RELENGDIR}/tools/arm.subr"
 			fi

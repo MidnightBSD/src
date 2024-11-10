@@ -431,138 +431,18 @@ timezone configuration information; see
 .El
 .Pp
 .It Pa src/
-.Bx ,
-third-party, and/or local source files
-.Pp
-.Bl -tag -width "kerberos5/" -compact
-.It Pa bin/
-source code for files in /bin
-.It Pa cddl/
-utilities covered by the Common Development and Distribution License
-.It Pa contrib/
-source code for contributed software
-.It Pa crypto/
-source code for contributed cryptography software
-.It Pa etc/
-source code for files in
-.Pa /etc
-.It Pa gnu/
-utilities covered by the GNU General Public License
-.It Pa include/
-source code for files in
-.Pa /usr/include
-.It Pa kerberos5/
-build infrastructure for Kerberos version 5
-.It Pa lib/
-source code for files in
-.Pa /lib
-and
-.Pa /usr/lib
-.It Pa libexec/
-source code for files in
-.Pa /usr/libexec
-.It Pa release/
-files required to produce a
-.Mx
-release
-.It Pa rescue/
-source code for files in
-.Pa /rescue
-.It Pa sbin/
-source code for files in
-.Pa /sbin
-.It Pa secure/
-build directory for files in
-.Pa /usr/src/crypto
-.It Pa share/
-source for files in
-.Pa /usr/share
-.It Pa stand/
-boot loader source code
-.It Pa sys/
-kernel source code
-.Bl -tag -width Fl -compact
-.It Pa amd64/
-AMD64 architecture support
-.It Pa arm/
-ARM architecture support
-.It Pa arm64/
-ARMv8 architecture support
-.It Pa cam/
-.Xr cam 4
-and
-.Xr ctl 4
-.It Pa cddl/
-CDDL-licensed optional sources, including ZFS
-and DTrace
-.It Pa ddb/
-.Xr ddb 4
-.It Pa fs/
-most filesystems
-.It Pa dev/
-device drivers
-.It Pa geom/
-.Xr geom 4
-.It Pa i386/
-i386 (32 bit) architecture support
-.It Pa kern/
-main part of the kernel
-.It Pa mips/
-MIPS architecture support
-.It Pa net80211/
-.Xr net80211 4
-.It Pa netgraph/
-.Xr netgraph 4
-.It Pa netinet/
-.Xr inet 4
-.It Pa netinet6/
-.Xr inet6 4
-.It Pa netipsec/
-.Xr ipsec 4
-.It Pa netpfil/
-.Xr ipfw 4
-and
-.Xr pf 4
-.It Pa opencrypto/
-.Xr crypto 7
-.It Pa powerpc/
-PowerPC/POWER architecture support
-.It Pa riscv/
-RISC-V architecture support
-.It Pa security/
-.Xr audit 4
-and
-.Xr mac 4
-.It Pa sys/
-kernel headers
-.It Pa ufs/
-Unix File System
-.It Pa x86/
-code shared by AMD64 and i386 architectures
-.El
-.It Pa targets/
-support for experimental DIRDEPS_BUILD
-.It Pa tests/
-source code for files in
-.Pa /usr/tests
-.It Pa tools/
-tools used for maintenance and testing of
-.Mx
-.It Pa usr.bin/
-source code for files in
-.Pa /usr/bin
-.It Pa usr.sbin/
-source code for files in
-.Pa /usr/sbin
-.El
+.Fx
+source code; see
+.Xr development 7 .
+The layout of the source tree is described by the top-level
+.Pa README.md
+file.
 .Pp
 .It Pa tests/
-The
-.Mx
-test suite.
-See
+the
+.Fx
+test suite; see
 .Xr tests 7
-for more details.
 .El
 .It Pa /var/
 log, temporary, transient, and spool files
@@ -615,12 +495,18 @@ files
 .El
 .Pp
 .It Pa db/
-miscellaneous automatically generated system-specific database files
+miscellaneous automatically-generated system-specific database files
+.Pp
+.Bl -tag -width "freebsd-update/" -compact
+.It Pa freebsd-update/
+temporary files and downloads for
+.Xr freebsd-update 8
+.El
+.Pp
 .It Pa empty/
-empty directory for use by programs that need a specifically empty directory.
-Used for instance by
+for use by programs that require an empty directory.
+Uses include privilege separation by
 .Xr sshd 8
-for privilege separation.
 .It Pa games/
 miscellaneous game status and score files
 .It Pa heimdal/
@@ -629,49 +515,44 @@ Kerberos server databases; see
 .It Pa log/
 miscellaneous system log files
 .Pp
-.Bl -tag -width Fl -compact
+.Bl -tag -width "utx.lastlogin" -compact
 .It Pa utx.lastlogin
-last login log;
-see
+last login log; see
 .Xr getutxent 3
 .It Pa utx.log
-login/logout log;
-see
+login/logout log; see
 .Xr getutxent 3
 .El
 .Pp
 .It Pa mail/
 user mailbox files
 .It Pa msgs/
-system messages database;
-see
+system messages database; see
 .Xr msgs 1
 .It Pa preserve/
-temporary home of files preserved after an accidental death
-of an editor;
-see
-.Xr \&ex 1
+unused, present for historical reasons
 .It Pa quotas/
 file system quota information files
 .It Pa run/
-system information files describing various info about
-system since it was booted
+files containing information about the operating system since it was booted
 .Pp
 .Bl -tag -width Fl -compact
+.It Pa bhyve/
+.Xr bhyve 8
+virtual machine
+.Xr unix 4 Ns -domain sockets
 .It Pa ppp/
 writable by the
 .Dq network
 group for command connection sockets; see
 .Xr ppp 8
 .It Pa utx.active
-database of current users;
-see
+database of current users; see
 .Xr getutxent 3
 .El
 .Pp
 .It Pa rwho/
-rwho data files;
-see
+rwho data files; see
 .Xr rwhod 8 ,
 .Xr rwho 1 ,
 and
@@ -679,55 +560,50 @@ and
 .It Pa spool/
 miscellaneous printer and mail system spooling directories
 .Pp
-.Bl -tag -width Fl -compact
+.Bl -tag -width "clientmqueue/" -compact
 .It Pa clientmqueue/
-undelivered submission mail queue;
-see
+undelivered submission mail queue; see
 .Xr sendmail 8
 .It Pa ftp/
-ftp root directory;
-see
+ftp root directory; see
 .Xr ftpd 8
 .It Pa mqueue/
-undelivered mail queue;
-see
+undelivered mail queue; see
 .Xr sendmail 8
 .It Pa output/
 line printer spooling directories
 .El
 .Pp
 .It Pa tmp/
-temporary files that are kept between system reboots
+temporary files that are not removed by
+.Xr rc 8
 .Pp
-.Bl -tag -width Fl -compact
+.Bl -tag -width "vi.recover/" -compact
 .It Pa vi.recover/
-the directory where recovery files are stored
+.Xr vi 1
+recovery files
 .El
 .Pp
 .It Pa yp/
-the NIS maps
+the NIS maps; see
+.Xr yp 8
 .El
 .El
 .Sh NOTES
 This manual page documents the default
-.Mx
-file system layout, but
-the actual hierarchy on a given system is defined at the system
+.Fx
+file system layout.
+The actual hierarchy on a given system is defined at the system
 administrator's discretion.
 A well-maintained installation will include a customized version of
 this document.
 .Sh SEE ALSO
 .Xr apropos 1 ,
 .Xr find 1 ,
-.Xr finger 1 ,
 .Xr grep 1 ,
 .Xr ls 1 ,
-.Xr whatis 1 ,
 .Xr whereis 1 ,
-.Xr which 1 ,
-.Xr fd 4 ,
-.Xr devfs 5 ,
-.Xr fsck 8
+.Xr which 1
 .Sh HISTORY
 A
 .Nm

@@ -34,7 +34,7 @@
 development process
 .Sh DESCRIPTION
 .Fx
-development is split into three major suprojects: doc, ports, and src.
+development is split into three major subprojects: doc, ports, and src.
 Doc is the documentation, such as the
 .Fx
 Handbook.
@@ -59,19 +59,27 @@ can be found at:
 .Lk https://docs.freebsd.org/en/articles/committers-guide/
 .Pp
 .Fx
-src development takes place in the CURRENT branch in Subversion,
-located at:
+src development takes place in the project-hosted
+Git repository, located at:
 .Pp
-.Lk https://svn.FreeBSD.org/base/head
+.Lk https://git.FreeBSD.org/src.git
 .Pp
-There is also a read-only GitHub mirror at:
+The push URL is:
 .Pp
-.Lk https://github.com/freebsd/freebsd
+.Lk ssh://git@gitrepo.FreeBSD.org/src.git
 .Pp
-Changes are first committed to CURRENT and then usually merged back
-to STABLE.
-Every few years the CURRENT branch is renamed to STABLE, and a new
-CURRENT is branched, with an incremented major version number.
+There is also a list of public, read-only Git mirrors at:
+.Pp
+.Lk https://docs.FreeBSD.org/en/books/handbook/mirrors/#external-mirrors
+.Pp
+The
+.Ql main
+Git branch represents CURRENT;
+all changes are first committed to CURRENT and then usually cherry-picked
+back to STABLE, which refers to Git branches such as
+.Ql stable/13 .
+Every few years a new STABLE is branched from CURRENT,
+with an incremented major version number.
 Releases are then branched off STABLE and numbered with consecutive minor
 numbers.
 .Pp
@@ -94,7 +102,7 @@ For coding conventions, see
 To ask questions regarding development, use the mailing lists,
 such as freebsd-arch@ and freebsd-hackers@:
 .Pp
-.Lk https://lists.FreeBSD.org/
+.Lk https://lists.FreeBSD.org
 .Pp
 To get your patches integrated into the main
 .Fx
@@ -103,7 +111,7 @@ it is a code review tool that allows other developers to review the changes,
 suggest improvements, and, eventually, allows them to pick up the change and
 commit it:
 .Pp
-.Lk https://reviews.FreeBSD.org/
+.Lk https://reviews.FreeBSD.org
 .Pp
 To check the latest
 .Fx
@@ -111,12 +119,19 @@ build and test status of CURRENT and STABLE branches,
 the continuous integration system is at:
 .Pp
 .Lk https://ci.FreeBSD.org
-.Pp
+.Sh FILES
+.Bl -compact -tag -width "/usr/src/tools/tools/git/git-arc.sh"
+.It Pa /usr/src/CONTRIBUTING.md
+.Fx
+contribution guidelines
+.It Pa /usr/src/tools/tools/git/git-arc.sh
+Phabricator review tooling
+.El
 .Sh EXAMPLES
 Check out the CURRENT branch, build it, and install, overwriting the current
 system:
 .Bd -literal -offset indent
-svnlite co https://svn.FreeBSD.org/base/head src
+git clone https://git.FreeBSD.org/src.git src
 cd src
 make -sj8 buildworld buildkernel installkernel
 shutdown -r now
@@ -172,6 +187,7 @@ make -sj8 kernel KERNFAST=1 DESTDIR=/clients/arm
 .Xr witness 4 ,
 .Xr build 7 ,
 .Xr hier 7 ,
+.Xr ports 7 ,
 .Xr release 7 ,
 .Xr tests 7 ,
 .Xr locking 9 ,

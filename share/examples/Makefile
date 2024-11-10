@@ -6,8 +6,9 @@
 PACKAGE=examples
 FILESDIR=	${SHAREDIR}/examples
 
-LDIRS=	IPv6 \
-	MidnightBSD_version \
+LDIRS=	BSD_daemon \
+	FreeBSD_version \
+	IPv6 \
 	bootforth \
 	csh \
 	diskless \
@@ -19,7 +20,6 @@ LDIRS=	IPv6 \
 	ipfw \
 	jails \
 	kld \
-	libdispatch \
 	libvgl \
 	mdoc \
 	netgraph \
@@ -33,6 +33,16 @@ LDIRS=	IPv6 \
 	sunrpc \
 	ypldap
 
+
+SE_DIRS+=	BSD_daemon
+SE_BSD_DAEMON= \
+	FreeBSD.pfa \
+	README \
+	beastie.eps \
+	beastie.fig \
+	eps.patch \
+	poster.sh
+
 .if ${MACHINE_CPUARCH} == "amd64"
 .if ${MK_BHYVE} != "no"
 LDIRS+=		bhyve
@@ -42,9 +52,9 @@ PACKAGE_bhyve/vmrun.sh=	bhyve
 .endif
 .endif
 
-SE_DIRS+=	MidnightBSD_version
-SE_MIDNIGHTBSD_VERSION= \
-	MidnightBSD_version.c \
+SE_DIRS+=	FreeBSD_version
+SE_FREEBSD_VERSION= \
+	FreeBSD_version.c \
 	Makefile \
 	README
 
@@ -89,10 +99,8 @@ SE_FIND_INTERFACE= \
 	README \
 	find_interface.c
 
-SE_DIRS+=	ibcs2
-SE_IBCS2=	\
-	README \
-	hello.uu
+SE_DIRS+=	flua
+SE_FLUA=	libjail.lua
 
 SE_DIRS+=	indent
 SE_INDENT=	indent.pro
@@ -187,11 +195,6 @@ SE_MDOC= \
 	example.3 \
 	example.4 \
 	example.9
-
-SE_DIRS+=	libdispatch
-SE_LIBDISPATCH= \
-	deferred_noblocks.c \
-	README
 
 SE_DIRS+=	netgraph
 SE_NETGRAPH= \
@@ -316,6 +319,8 @@ SE_DIRS+=	sound
 SE_SOUND= \
 	basic.c \
 	ossinit.h \
+	ossmidi.h \
+	midi.c \
 	README
 
 SE_DIRS+=	sunrpc
@@ -388,9 +393,8 @@ SER_${d:tu:C/\//_/g}DIR+=	${SHAREDIR}/examples/${d}
 
 BINDIR= ${SHAREDIR}/examples
 
-beforeinstall: copies etc-examples
+beforeinstall: copies
 META_TARGETS+=	copies
-.ORDER: etc-examples
 
 copies:
 .for i in ${LDIRS}
@@ -398,9 +402,6 @@ copies:
 		rm -f ${DESTDIR}${BINDIR}/$i; \
 	fi
 .endfor
-
-etc-examples:
-	${_+_}(cd ${SRCTOP}/etc; ${MAKE} etc-examples)
 
 SUBDIR+=	smbfs
 

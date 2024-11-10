@@ -33,63 +33,38 @@
 
 # Command line options:
 #
-#     -r               Reproducible build.  Do not embed directory names, user
-#                      names, time stamps or other dynamic information into
-#                      the output file.  This is intended to allow two builds
-#                      done at different times and even by different people on
-#                      different hosts to produce identical output.
+#	-c	Print the copyright / license statement as a C comment and exit
 #
-#     -R               Reproducible build if the tree represents an unmodified
-#                      checkout from a version control system.  Metadata is
-#                      included if the tree is modified.
+#	-r	Reproducible build.  Do not embed directory names, user	names,
+#		time stamps or other dynamic information into the output file.
+#		This is intended to allow two builds done at different times
+#		and even by different people on different hosts to produce
+#		identical output.
+#
+#	-R	Reproducible build if the tree represents an unmodified
+#		checkout from a version control system.  Metadata is included
+#		if the tree is modified.
+#
+#	-V var	Print ${var}="${val-of-var}" and exit
+#
+#	-v	Print TYPE REVISION BRANCH RELEASE VERSION RELDATE variables
+#		like the -V command
+#
 
-# Note: usr.sbin/amd/include/newvers.sh assumes all variable assignments of
-# upper case variables starting in column 1 are on one line w/o continuation.
-
-TYPE="MidnightBSD"
-REVISION="4.0.0"
-RELEASE="${REVISION}"
+TYPE="FreeBSD"
+REVISION="13.4"
+BRANCH="STABLE"
+if [ -n "${BRANCH_OVERRIDE}" ]; then
+	BRANCH=${BRANCH_OVERRIDE}
+fi
+RELEASE="${REVISION}-${BRANCH}"
 VERSION="${TYPE} ${RELEASE}"
-
-#
-# findvcs dir
-#	Looks up directory dir at world root and up the filesystem
-#
-findvcs()
-{
-	local savedir
-
-	savedir=$(pwd)
-	cd ${SYSDIR}/..
-	while [ $(pwd) != "/" ]; do
-		if [ -e "./$1" ]; then
-			VCSDIR=$(pwd)"/$1"
-			cd ${savedir}
-			return 0
-		fi
-		cd ..
-	done
-	cd ${savedir}
-	return 1
-}
-
-git_tree_modified()
-{
-	! $git_cmd "--work-tree=${VCSTOP}" -c core.checkStat=minimal -c core.fileMode=off diff --quiet
-}
-
 
 if [ -z "${SYSDIR}" ]; then
     SYSDIR=$(dirname $0)/..
 fi
 
-if [ -n "${PARAMFILE}" ]; then
-	RELDATE=$(awk '/__MidnightBSD_version.*propagated to newvers/ {print $3}' \
-		${PARAMFILE})
-else
-	RELDATE=$(awk '/__MidnightBSD_version.*propagated to newvers/ {print $3}' \
-		${SYSDIR}/sys/param.h)
-fi
+RELDATE=$(awk '/__FreeBSD_version.*propagated to newvers/ {print $3}' ${PARAMFILE:-${SYSDIR}/sys/param.h})
 
 if [ -r "${SYSDIR}/../COPYRIGHT" ]; then
 	year=$(sed -Ee '/^Copyright .* The MidnightBSD Project/!d;s/^.*2006-([0-9]*) .*$/\1/g' ${SYSDIR}/../COPYRIGHT)

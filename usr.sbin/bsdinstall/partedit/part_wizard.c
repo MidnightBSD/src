@@ -297,11 +297,13 @@ query:
 
 	if (strcmp(scheme, "MBR") == 0) {
 		struct gmesh submesh;
-		geom_gettree(&submesh);
-		gpart_create(provider_for_name(&submesh, disk),
-		    "midnightbsd", NULL, NULL, &retval,
-		    choice /* Non-interactive for "Entire Disk" */);
-		geom_deletetree(&submesh);
+
+		if (geom_gettree(&submesh) == 0) {
+			gpart_create(provider_for_name(&submesh, disk),
+			    "freebsd", NULL, NULL, &retval,
+			    choice /* Non-interactive for "Entire Disk" */);
+			geom_deletetree(&submesh);
+		}
 	} else {
 		retval = strdup(disk);
 	}
@@ -349,6 +351,7 @@ wizard_makeparts(struct gmesh *mesh, const char *disk, const char *fstype,
 		    HN_DECIMAL);
 		snprintf(message, sizeof(message),
 		    "There is not enough free space on %s to "
+		    "install FreeBSD (%s free, %s required). Would you like "
 		    "to choose another disk or to open the partition editor?",
 		    disk, availablestr, neededstr);
 
@@ -367,14 +370,18 @@ wizard_makeparts(struct gmesh *mesh, const char *disk, const char *fstype,
 	humanize_number(rootsizestr, 7, available - swapsize - 1024*1024,
 	    "B", HN_AUTOSCALE, HN_NOSPACE | HN_DECIMAL);
 
-	geom_gettree(&submesh);
+	error = geom_gettree(&submesh);
+	if (error != 0)
+		return (error);
 	pp = provider_for_name(&submesh, disk);
 	gpart_create(pp, fsname, rootsizestr, "/", NULL, 0);
 	geom_deletetree(&submesh);
 
-	geom_gettree(&submesh);
+	error = geom_gettree(&submesh);
+	if (error != 0)
+		return (error);
 	pp = provider_for_name(&submesh, disk);
-	gpart_create(pp, "mnbsd-swap", swapsizestr, NULL, NULL, 0);
+	gpart_create(pp, "freebsd-swap", swapsizestr, NULL, NULL, 0);
 	geom_deletetree(&submesh);
 
 	return (0);

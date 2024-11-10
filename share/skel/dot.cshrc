@@ -11,21 +11,18 @@ alias la	ls -aF
 alias lf	ls -FA
 alias ll	ls -lAF
 
+# These are normally set through /etc/login.conf.  You may override them here
+# if wanted.
+# set path = (/sbin /bin /usr/sbin /usr/bin /usr/local/sbin /usr/local/bin $HOME/bin)
 # A righteous umask
-umask 22
-
-set path = (/sbin /bin /usr/sbin /usr/bin /usr/games /usr/local/sbin /usr/local/bin $HOME/bin)
+# umask 22
 
 setenv	EDITOR	vi
 setenv	PAGER	less
-setenv	BLOCKSIZE	K
 
 if ($?prompt) then
 	# An interactive shell -- set some stuff up
-	if ($uid == 0) then
-		set user = root
-	endif
-	set prompt = "%n@%m:%~ %# "
+	set prompt = "%N@%m:%~ %# "
 	set promptchars = "%#"
 
 	set filec

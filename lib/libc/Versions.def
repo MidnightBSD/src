@@ -25,28 +25,29 @@ MNBSD_1.1 {
 
 MNBSD_1.2 {
 } MNBSD_1.1;
-
-# This version was first added to FreeBSD 11.0-current.
 FBSD_1.4 {
-} MNBSD_1.2;
+} FBSD_1.3;
 
-# This version was first added to FreeBSD 12.0-current.
+# This version was first added to 12.0-current.
 FBSD_1.5 {
 } FBSD_1.4;
 
-# This version was first added to MiidnightBSD 1.0-current.
-MNBSD_1.3 {
+# This version was first added to 13.0-current.
+FBSD_1.6 {
 } FBSD_1.5;
 
-FBSD_1.6 {
-} MNBSD_1.3;
-
-MNBSD_1.4 {
+FBSD_1.7 {
 } FBSD_1.6;
+
+# This version was first added to 15.0-current.
+FBSD_1.8 {
+} FBSD_1.7;
 
 # This is our private namespace.  Any global interfaces that are
 # strictly for use only by other FreeBSD applications and libraries
 # are listed here.  We use a separate namespace so we can write
 # simple ABI-checking tools.
+#
+# Please do NOT increment the version of this namespace.
 FBSDprivate_1.0 {
-} MNBSD_1.4;
+} FBSD_1.8;

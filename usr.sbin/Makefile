@@ -19,7 +19,6 @@ SUBDIR=	adduser \
 	devctl \
 	devinfo \
 	diskinfo \
-	dnsextd \
 	dumpcis \
 	etcupdate \
 	extattr \
@@ -37,7 +36,6 @@ SUBDIR=	adduser \
 	kldxref \
 	mailwrapper \
 	makefs \
-	mdnsd \
 	memcontrol \
 	mergemaster \
 	mfiutil \
@@ -45,10 +43,8 @@ SUBDIR=	adduser \
 	mlxcontrol \
 	mountd \
 	mount_smbfs \
-	mport \
 	mpsutil \
 	mptutil \
-	mrouted \
 	mtest \
 	newsyslog \
 	nfscbd \
@@ -71,7 +67,6 @@ SUBDIR=	adduser \
 	pwm \
 	quot \
 	rarpd \
-	rdate \
 	rmt \
 	rpcbind \
 	rpc.lockd \
@@ -141,6 +136,7 @@ SUBDIR.${MK_FLOPPY}+=	fdformat
 SUBDIR.${MK_FLOPPY}+=	fdread
 SUBDIR.${MK_FLOPPY}+=	fdwrite
 SUBDIR.${MK_FMTREE}+=	fmtree
+SUBDIR.${MK_FREEBSD_UPDATE}+=	freebsd-update
 SUBDIR.${MK_GSSAPI}+=	gssd
 SUBDIR.${MK_GPIO}+=	gpioctl
 SUBDIR.${MK_INET6}+=	ip6addrctl
@@ -168,7 +164,6 @@ SUBDIR.${MK_PPP}+=	pppctl
 SUBDIR.${MK_NS_CACHING}+=	nscd
 SUBDIR.${MK_LPR}+=	lpr
 SUBDIR.${MK_MAN_UTILS}+=	manctl
-SUBDIR.${MK_MIDNIGHTBSD_UPDATE}+=	midnightbsd-update
 SUBDIR.${MK_MLX5TOOL}+=	mlx5tool
 SUBDIR.${MK_NETGRAPH}+=	flowctl
 SUBDIR.${MK_NETGRAPH}+=	ngctl
@@ -183,7 +178,7 @@ SUBDIR.${MK_NIS}+=	yppoll
 SUBDIR.${MK_NIS}+=	yppush
 SUBDIR.${MK_NIS}+=	ypserv
 SUBDIR.${MK_NIS}+=	ypset
-SUBDIR.${MK_NTP}+=	ntpd
+SUBDIR.${MK_NTP}+=	ntp
 SUBDIR.${MK_OPENSSL}+=	keyserv
 SUBDIR.${MK_OPENSSL_KTLS}+=	rpc.tlsclntd
 SUBDIR.${MK_OPENSSL_KTLS}+=	rpc.tlsservd

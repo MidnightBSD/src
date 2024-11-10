@@ -1,4 +1,3 @@
-# $FreeBSD$
 MAN+= ADMISSIONS.3
 MAN+= ASN1_INTEGER_get_int64.3
 MAN+= ASN1_ITEM_lookup.3
@@ -606,6 +605,8 @@ MLINKS+= BIO_ctrl.3 BIO_eof.3
 MLINKS+= BIO_ctrl.3 BIO_flush.3
 MLINKS+= BIO_ctrl.3 BIO_get_close.3
 MLINKS+= BIO_ctrl.3 BIO_get_info_callback.3
+MLINKS+= BIO_ctrl.3 BIO_get_ktls_recv.3
+MLINKS+= BIO_ctrl.3 BIO_get_ktls_send.3
 MLINKS+= BIO_ctrl.3 BIO_info_cb.3
 MLINKS+= BIO_ctrl.3 BIO_int_ctrl.3
 MLINKS+= BIO_ctrl.3 BIO_pending.3
@@ -2852,6 +2853,7 @@ MLINKS+= SSL_want.3 SSL_want_nothing.3
 MLINKS+= SSL_want.3 SSL_want_read.3
 MLINKS+= SSL_want.3 SSL_want_write.3
 MLINKS+= SSL_want.3 SSL_want_x509_lookup.3
+MLINKS+= SSL_write.3 SSL_sendfile.3
 MLINKS+= SSL_write.3 SSL_write_ex.3
 MLINKS+= UI_STRING.3 UI_get0_action_string.3
 MLINKS+= UI_STRING.3 UI_get0_output_string.3

@@ -24,7 +24,7 @@
 #define LLVM_WINDOWS_PREFER_FORWARD_SLASH 0
 
 /* Define to 1 if you have the `backtrace' function. */
-/* LAH #define HAVE_BACKTRACE TRUE */
+#define HAVE_BACKTRACE TRUE
 
 #define BACKTRACE_HEADER <execinfo.h>
 

@@ -1,11 +1,11 @@
 .Sh ADDITIONAL DOCUMENTATION
-.Mx
+.Fx
 uses
 .Nm libxo
-version 1.0.4.
+version 1.4.0.
 Complete documentation can be found on github:
 .Bd -literal -offset indent
-http://juniper.github.io/libxo/1.0.4/libxo\-manual.html
+https://juniper.github.io/libxo/1.4.0/html/index.html
 .Ed
 .Pp
 .Nm libxo
@@ -24,6 +24,6 @@ https://github.com/Juniper/libxo/releases
 The
 .Nm libxo
 library was added in
-.Mx 2.0 .
+.Fx 11.0 .
 .Sh AUTHOR
 Phil Shafer

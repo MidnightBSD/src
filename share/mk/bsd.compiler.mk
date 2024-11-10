@@ -150,7 +150,7 @@ _cc_vars+=XCC X_
 # The value is only used/exported for the same environment that impacts
 # CC and COMPILER_* settings here.
 _exported_vars=	${X_}COMPILER_TYPE ${X_}COMPILER_VERSION \
-		${X_}COMPILER_MIDNIGHTBSD_VERSION
+		${X_}COMPILER_FREEBSD_VERSION ${X_}COMPILER_RESOURCE_DIR
 ${X_}_cc_hash=	${${cc}}${MACHINE}${PATH}
 ${X_}_cc_hash:=	${${X_}_cc_hash:hash}
 # Only import if none of the vars are set differently somehow else.

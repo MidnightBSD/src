@@ -9,7 +9,6 @@ LIB=	ldns
 PRIVATELIB= true
 
 CFLAGS+= -I${LDNSDIR}
-CFLAGS+= -DOPENSSL_API_COMPAT=0x10100000L
 
 SRCS=	buffer.c dane.c dname.c dnssec.c dnssec_sign.c dnssec_verify.c \
 	dnssec_zone.c duration.c edns.c error.c higher.c host2str.c \
@@ -23,7 +22,6 @@ LIBADD=	ssl crypto
 
 WARNS?=	3
 
-CWARNFLAGS.edns.c=	${NO_WSTRICT_PROTOTYPES}
 CWARNFLAGS.parse.c=	${NO_WUSE_AFTER_FREE}
 CWARNFLAGS.sha2.c=	${NO_WARRAY_PARAMETER}
 

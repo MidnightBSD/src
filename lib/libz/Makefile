@@ -37,8 +37,13 @@ SRCS+=		inflate.c
 SRCS+=		inftrees.c
 SRCS+=		trees.c
 SRCS+=		uncompr.c
-SRCS+=		zopen.c
 SRCS+=		zutil.c
+
+# Wrapper relies on FreeBSD-specific fpos_t representation and non-portable
+# funopen. Not needed for bootstrapping, so just disable it.
+.if ${.MAKE.OS} == "FreeBSD" || !defined(BOOTSTRAPPING)
+SRCS+=		zopen.c
+.endif
 
 .if ${MACHINE_ARCH} == "i386" || ${MACHINE_ARCH} == "amd64"
 CFLAGS+=	-DUNALIGNED_OK
@@ -47,6 +52,7 @@ CFLAGS+=	-DUNALIGNED_OK
 VERSION_DEF=	${.CURDIR}/Versions.def
 SYMBOL_MAPS=	${.CURDIR}/Symbol.map
 CFLAGS+=	-DSYMBOL_VERSIONING
+CFLAGS+=	${NO_WDEPRECATED_NON_PROTOTYPE}
 
 INCS=		zconf.h zlib.h
 
@@ -74,7 +80,6 @@ test: example minigzip
 	(export LD_LIBRARY_PATH=. ; \
 		echo hello world | ./minigzip | ./minigzip -d )
 
-FILES=		zlib.pc
-FILESDIR=	${LIBDATADIR}/pkgconfig
+PCFILES=	zlib.pc
 
 .include <bsd.lib.mk>

@@ -55,27 +55,28 @@
 /* Define to 1 if you have the `clock_gettime' function. */
 #define HAVE_CLOCK_GETTIME 1
 
+/* Define to 1 if `CLOCK_MONOTONIC' is declared in <time.h>. */
+#define HAVE_CLOCK_MONOTONIC 1
+
 /* Define to 1 if you have the <CommonCrypto/CommonDigest.h> header file. */
 /* #undef HAVE_COMMONCRYPTO_COMMONDIGEST_H */
 
+/* Define to 1 if you have the <cpuid.h> header file. */
+#define HAVE_CPUID_H 1
+
 /* Define if the GNU dcgettext() function is already present or preinstalled.
    */
-/* MidnightBSD - disabled intentionally */
+/* FreeBSD - disabled intentionally */
 /* #undef HAVE_DCGETTEXT */
-
-/* Define to 1 if you have the declaration of `CLOCK_MONOTONIC', and to 0 if
-   you don't. */
-#define HAVE_DECL_CLOCK_MONOTONIC 1
-
-/* Define to 1 if you have the declaration of `program_invocation_name', and
-   to 0 if you don't. */
-#define HAVE_DECL_PROGRAM_INVOCATION_NAME 0
 
 /* Define to 1 if any of HAVE_DECODER_foo have been defined. */
 #define HAVE_DECODERS 1
 
 /* Define to 1 if arm decoder is enabled. */
 #define HAVE_DECODER_ARM 1
+
+/* Define to 1 if arm64 decoder is enabled. */
+#define HAVE_DECODER_ARM64 1
 
 /* Define to 1 if armthumb decoder is enabled. */
 #define HAVE_DECODER_ARMTHUMB 1
@@ -110,6 +111,9 @@
 /* Define to 1 if arm encoder is enabled. */
 #define HAVE_ENCODER_ARM 1
 
+/* Define to 1 if arm64 encoder is enabled. */
+#define HAVE_ENCODER_ARM64 1
+
 /* Define to 1 if armthumb encoder is enabled. */
 #define HAVE_ENCODER_ARMTHUMB 1
 
@@ -137,6 +141,10 @@
 /* Define to 1 if you have the <fcntl.h> header file. */
 #define HAVE_FCNTL_H 1
 
+/* Define to 1 if __attribute__((__constructor__)) is supported for functions.
+   */
+#define HAVE_FUNC_ATTRIBUTE_CONSTRUCTOR 1
+
 /* Define to 1 if you have the `futimens' function. */
 #define HAVE_FUTIMENS 1
 
@@ -153,15 +161,15 @@
 #define HAVE_GETOPT_LONG 1
 
 /* Define if the GNU gettext() function is already present or preinstalled. */
-/* MidnightBSD - disabled intentionally */
+/* FreeBSD - disabled intentionally */
 /* #undef HAVE_GETTEXT */
 
 /* Define if you have the iconv() function and it works. */
 #define HAVE_ICONV 1
 
 /* Define to 1 if you have the <immintrin.h> header file. */
-/* MidnightBSD - only with clang because the base gcc does not support it */
-#if defined(__clang__) && defined(__MidnightBSD__) && defined(__amd64__)
+/* FreeBSD - only with clang because the base gcc does not support it */
+#if defined(__clang__) && defined(__FreeBSD__) && defined(__amd64__)
 #define HAVE_IMMINTRIN_H 1
 #endif
 
@@ -170,6 +178,9 @@
 
 /* Define to 1 if you have the <limits.h> header file. */
 #define HAVE_LIMITS_H 1
+
+/* Define to 1 if .lz (lzip) decompression support is enabled. */
+#define HAVE_LZIP_DECODER 1
 
 /* Define to 1 if mbrtowc and mbstate_t are properly declared. */
 #define HAVE_MBRTOWC 1
@@ -195,8 +206,14 @@
 /* Define to 1 if getopt.h declares extern int optreset. */
 #define HAVE_OPTRESET 1
 
+/* Define to 1 if you have the `pledge' function. */
+/* #undef HAVE_PLEDGE */
+
 /* Define to 1 if you have the `posix_fadvise' function. */
 #define HAVE_POSIX_FADVISE 1
+
+/* Define to 1 if `program_invocation_name' is declared in <errno.h>. */
+/* #undef HAVE_PROGRAM_INVOCATION_NAME */
 
 /* Define to 1 if you have the `pthread_condattr_setclock' function. */
 #define HAVE_PTHREAD_CONDATTR_SETCLOCK 1
@@ -268,11 +285,13 @@
 /* Define to 1 if you have the <sys/byteorder.h> header file. */
 /* #undef HAVE_SYS_BYTEORDER_H */
 
+#ifndef WITHOUT_CAPSICUM
 /* Define to 1 if you have the <sys/capsicum.h> header file. */
 #define HAVE_SYS_CAPSICUM_H 1
+#endif
 
 /* Define to 1 if you have the <sys/endian.h> header file. */
-#define HAVE_SYS_ENDIAN_H 1
+/* #undef HAVE_SYS_ENDIAN_H */
 
 /* Define to 1 if you have the <sys/param.h> header file. */
 #define HAVE_SYS_PARAM_H 1
@@ -291,6 +310,12 @@
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #define HAVE_UNISTD_H 1
+
+/* Define to 1 if _mm_set_epi64x and _mm_clmulepi64_si128 are usable. See
+   configure.ac for details. */
+#if defined(__FreeBSD__) && defined(__amd64__)
+#define HAVE_USABLE_CLMUL 1
+#endif
 
 /* Define to 1 if you have the `utime' function. */
 /* #undef HAVE_UTIME */
@@ -315,11 +340,10 @@
 /* #undef HAVE__FUTIME */
 
 /* Define to 1 if _mm_movemask_epi8 is available. */
-#if defined(__MidnightBSD__) && defined(__amd64__)
+#if defined(__FreeBSD__) && defined(__amd64__)
 #define HAVE__MM_MOVEMASK_EPI8 1
 #endif
 
-#if defined(__clang__) && defined(__MidnightBSD__)
 /* Define to 1 if the GNU C extension __builtin_assume_aligned is supported.
    */
 #define HAVE___BUILTIN_ASSUME_ALIGNED 1
@@ -327,7 +351,6 @@
 /* Define to 1 if the GNU C extensions __builtin_bswap16/32/64 are supported.
    */
 #define HAVE___BUILTIN_BSWAPXX 1
-#endif
 
 /* Define to the sub-directory where libtool stores uninstalled libraries. */
 #define LT_OBJDIR ".libs/"
@@ -399,9 +422,9 @@
    sysctl(). */
 /* #undef TUKLIB_CPUCORES_SYSCTL */
 
-/* Define to 1 if the system supports fast unaligned access to 16-bit and
-   32-bit integers. */
-/* MidnightBSD - derive from __NO_STRICT_ALIGNMENT */
+/* Define to 1 if the system supports fast unaligned access to 16-bit, 32-bit,
+   and 64-bit integers. */
+/* FreeBSD - derive from __NO_STRICT_ALIGNMENT */
 /* #undef TUKLIB_FAST_UNALIGNED_ACCESS */
 
 /* Define to 1 if the amount of physical memory can be detected with
@@ -530,7 +553,7 @@
 
 /* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
    significant byte first (like Motorola and SPARC, unlike Intel). */
-#if defined(__MidnightBSD__)
+#if defined(__FreeBSD__)
 #include <sys/_types.h>
 #if defined(__NO_STRICT_ALIGNMENT)
 #define TUKLIB_FAST_UNALIGNED_ACCESS 1
