@@ -15,6 +15,7 @@
 #include <errno.h>
 
 #include "xo.h"
+#include "xo_encoder.h"
 
 int
 main (int argc, char **argv)
@@ -39,21 +40,21 @@ main (int argc, char **argv)
 	return 1;
 
     for (argc = 1; argv[argc]; argc++) {
-	if (strcmp(argv[argc], "xml") == 0)
+	if (xo_streq(argv[argc], "xml"))
 	    xo_set_style(NULL, XO_STYLE_XML);
-	else if (strcmp(argv[argc], "json") == 0)
+	else if (xo_streq(argv[argc], "json"))
 	    xo_set_style(NULL, XO_STYLE_JSON);
-	else if (strcmp(argv[argc], "text") == 0)
+	else if (xo_streq(argv[argc], "text"))
 	    xo_set_style(NULL, XO_STYLE_TEXT);
-	else if (strcmp(argv[argc], "html") == 0)
+	else if (xo_streq(argv[argc], "html"))
 	    xo_set_style(NULL, XO_STYLE_HTML);
-	else if (strcmp(argv[argc], "pretty") == 0)
+	else if (xo_streq(argv[argc], "pretty"))
 	    xo_set_flags(NULL, XOF_PRETTY);
-	else if (strcmp(argv[argc], "xpath") == 0)
+	else if (xo_streq(argv[argc], "xpath"))
 	    xo_set_flags(NULL, XOF_XPATH);
-	else if (strcmp(argv[argc], "info") == 0)
+	else if (xo_streq(argv[argc], "info"))
 	    xo_set_flags(NULL, XOF_INFO);
-        else if (strcmp(argv[argc], "error") == 0) {
+        else if (xo_streq(argv[argc], "error")) {
             close(-1);
             xo_err(1, "error detected");
         }
@@ -114,11 +115,11 @@ main (int argc, char **argv)
 		ip->i_title, ip->i_count);
     }
 
-    xo_close_container("data3");	/* Should be a noop */
+    xo_close_container("data3");	/* warn: fails at marker 'm1' */
     xo_emit("{:test}", "one");
 
     xo_close_marker("m1");
-    xo_close_container("data3");	/* Should be a noop */
+    xo_close_container("data3");	/* this one works, post-marker */
 
     xo_emit("\n\n");
 
@@ -138,13 +139,13 @@ main (int argc, char **argv)
 	for (i = 0; i < 3; i++) {
 	    xo_open_instance("sub");
 	    xo_emit("{Lwc:/Name}{:name/%d} + 1 = {:next/%d}\n", i, i + 1);
-	    xo_close_container("data4");
+	    xo_close_container("data4"); /* warn: fails at marker 'm2' */
 	}
 	xo_close_marker("m2");
 	xo_emit("{Lwc:/Last}{:last/%d}\n", i);
     }
 
-    xo_close_container("data4");	/* Should be a noop */
+    xo_close_container("data4");	/* warn: fails at marker 'm1' */
     xo_emit("{:test}", "one");
 
     xo_emit("\n\n");

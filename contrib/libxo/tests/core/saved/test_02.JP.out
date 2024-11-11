@@ -23,6 +23,7 @@
         3,
         4
       ],
+      "granularity-lw": 155,
       "mbuf-current": 10,
       "mbuf-cache": 20,
       "mbuf-total": 30,
@@ -80,6 +81,18 @@
       "test": 4,
       "error": {
         "message": "Shut 'er down, Clancey!  She's a-pumpin' mud!  <>!,\"!<>\n"
+      },
+      "error": {
+        "message": "err message (1)"
+      },
+      "error": {
+        "message": "err message (2)\n"
+      },
+      "error": {
+        "message": "err message (1)\n"
+      },
+      "error": {
+        "message": "err message (2)\n"
       }
     }
   }
