@@ -28,6 +28,7 @@
     <bytes>2</bytes>
     <bytes>3</bytes>
     <bytes>4</bytes>
+    <granularity-lw units="mAh">155</granularity-lw>
     <mbuf-current>10</mbuf-current>
     <mbuf-cache>20</mbuf-cache>
     <mbuf-total>30</mbuf-total>
@@ -85,6 +86,21 @@
 </message>
     <error>
       <message>Shut 'er down, Clancey!  She's a-pumpin' mud!  &lt;&gt;!,"!&lt;&gt;
+</message>
+    </error>
+    <error>
+      <message>err message (1)</message>
+    </error>
+    <error>
+      <message>err message (2)
+</message>
+    </error>
+    <error>
+      <message>err message (1)
+</message>
+    </error>
+    <error>
+      <message>err message (2)
 </message>
     </error>
   </data>

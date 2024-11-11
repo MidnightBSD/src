@@ -1,4 +1,4 @@
-.. index: API
+.. index:: API
 
 The libxo API
 =============
@@ -155,14 +155,14 @@ Output Styles (XO_STYLE\_\*)
 
 The libxo functions accept a set of output styles:
 
-=============== =========================
- Flag            Description
-=============== =========================
- XO_STYLE_TEXT   Traditional text output
- XO_STYLE_XML    XML encoded data
- XO_STYLE_JSON   JSON encoded data
- XO_STYLE_HTML   HTML encoded data
-=============== =========================
+  =============== =========================
+   Flag            Description
+  =============== =========================
+   XO_STYLE_TEXT   Traditional text output
+   XO_STYLE_XML    XML encoded data
+   XO_STYLE_JSON   JSON encoded data
+   XO_STYLE_HTML   HTML encoded data
+  =============== =========================
 
 The "XML", "JSON", and "HTML" output styles all use the UTF-8
 character encoding.  "TEXT" using locale-based encoding.
@@ -256,26 +256,26 @@ Flags (XOF\_\*)
 
 The set of valid flags include:
 
-=================== =========================================
- Flag                Description
-=================== =========================================
- XOF_CLOSE_FP        Close file pointer on `xo_destroy`
- XOF_COLOR           Enable color and effects in output
- XOF_COLOR_ALLOWED   Allow color/effect for terminal output
- XOF_DTRT            Enable "do the right thing" mode
- XOF_INFO            Display info data attributes (HTML)
- XOF_KEYS            Emit the key attribute (XML)
- XOF_NO_ENV          Do not use the :ref:`libxo-options` env var
- XOF_NO_HUMANIZE     Display humanization (TEXT, HTML)
- XOF_PRETTY          Make "pretty printed" output
- XOF_UNDERSCORES     Replaces hyphens with underscores
- XOF_UNITS           Display units (XML, HMTL)
- XOF_WARN            Generate warnings for broken calls
- XOF_WARN_XML        Generate warnings in XML on stdout
- XOF_XPATH           Emit XPath expressions (HTML)
- XOF_COLUMNS         Force xo_emit to return columns used
- XOF_FLUSH           Flush output after each `xo_emit` call
-=================== =========================================
+  =================== =========================================
+   Flag                Description
+  =================== =========================================
+   XOF_CLOSE_FP        Close file pointer on `xo_destroy`
+   XOF_COLOR           Enable color and effects in output
+   XOF_COLOR_ALLOWED   Allow color/effect for terminal output
+   XOF_DTRT            Enable "do the right thing" mode
+   XOF_INFO            Display info data attributes (HTML)
+   XOF_KEYS            Emit the key attribute (XML)
+   XOF_NO_ENV          Do not use the :ref:`libxo-options` env var
+   XOF_NO_HUMANIZE     Display humanization (TEXT, HTML)
+   XOF_PRETTY          Make "pretty printed" output
+   XOF_UNDERSCORES     Replaces hyphens with underscores
+   XOF_UNITS           Display units (XML, HMTL)
+   XOF_WARN            Generate warnings for broken calls
+   XOF_WARN_XML        Generate warnings in XML on stdout
+   XOF_XPATH           Emit XPath expressions (HTML)
+   XOF_COLUMNS         Force xo_emit to return columns used
+   XOF_FLUSH           Flush output after each `xo_emit` call
+  =================== =========================================
 
 The `XOF_CLOSE_FP` flag will trigger the call of the *close_func*
 (provided via `xo_set_writer`) when the handle is destroyed.
@@ -300,12 +300,12 @@ regardless of whether warnings are enabled.
 If the style is `XO_STYLE_HTML`, the following additional flags can be
 used:
 
-=============== =========================================
- Flag            Description
-=============== =========================================
- XOF_XPATH       Emit "data-xpath" attributes
- XOF_INFO        Emit additional info fields
-=============== =========================================
+  =============== =========================================
+   Flag            Description
+  =============== =========================================
+   XOF_XPATH       Emit "data-xpath" attributes
+   XOF_INFO        Emit additional info fields
+  =============== =========================================
 
 The `XOF_XPATH` flag enables the emission of XPath expressions detailing
 the hierarchy of XML elements used to encode the data field, if the
@@ -317,11 +317,11 @@ output.  See :ref:`field-information` for details.
 If the style is `XO_STYLE_XML`, the following additional flags can be
 used:
 
-=============== =========================================
- Flag            Description
-=============== =========================================
- XOF_KEYS        Flag "key" fields for XML
-=============== =========================================
+  =============== =========================================
+   Flag            Description
+  =============== =========================================
+   XOF_KEYS        Flag "key" fields for XML
+  =============== =========================================
 
 The `XOF_KEYS` flag adds "key" attribute to the XML encoding for
 field definitions that use the "k" modifier.  The key attribute has
@@ -386,19 +386,18 @@ xo_destroy
 Emitting Content (xo_emit)
 --------------------------
 
-The functions in this section are used to emit output.
-
-The "fmt" argument is a string containing field descriptors as
-specified in :ref:`format-strings`.  The use of a handle is optional and
-`NULL` can be passed to access the internal "default" handle.  See
+The functions in this section are used to emit output.  They use a
+`format` string containing field descriptors as specified in
+:ref:`format-strings`.  The use of a handle is optional and `NULL` can
+be passed to access the internal "default" handle.  See
 :ref:`handles`.
 
 The remaining arguments to `xo_emit` and `xo_emit_h` are a set of
 arguments corresponding to the fields in the format string.  Care must
 be taken to ensure the argument types match the fields in the format
-string, since an inappropriate cast can ruin your day.  The vap
-argument to `xo_emit_hv` points to a variable argument list that can
-be used to retrieve arguments via `va_arg`.
+string, since an inappropriate or missing argument can ruin your day.
+The `vap` argument to `xo_emit_hv` points to a variable argument list
+that can be used to retrieve arguments via `va_arg`.
 
 .. c:function:: xo_ssize_t xo_emit (const char *fmt, ...)
 
@@ -428,19 +427,40 @@ be used to retrieve arguments via `va_arg`.
 Single Field Emitting Functions (xo_emit_field)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The functions in this section can also make output, but only make a
-single field at a time.  These functions are intended to avoid the
-scenario where one would otherwise need to compose a format
-descriptors using `snprintf`.  The individual parts of the format
-descriptor are passed in distinctly.
+The functions in this section emit formatted output similar to
+`xo_emit` but where `xo_emit` uses a single string argument containing
+the description for multiple fields, `xo_emit_field` emits a single
+field using multiple ar- guments to contain the field description.
+`xo_emit_field_h` adds an ex- plicit handle to use instead of the
+default handle, while `xo_emit_field_hv` accepts a va_list for
+additional flexibility.
 
-.. c:function:: xo_ssize_t xo_emit_field (const char *rolmod, const char *contents, const char *fmt, const char *efmt, ...)
+The arguments `rolmod`, `content`, `fmt`, and `efmt` are detailed in
+:ref:`field-formatting`.  Using distinct arguments allows callers to
+pass the field description in pieces, rather than having to use
+something like `snprintf` to build the format string required by
+`xo_emit`.  The arguments are each NUL-terminated strings. The `rolmod`
+argument contains the `role` and `modifier` portions of the field
+description, the `content` argument contains the `content` portion, and
+the `fmt` and `efmt` contain the `field-format` and `encoding-format` por-
+tions, respectively.
+
+As with `xo_emit`, the `fmt` and `efmt` values are both optional,
+since the `field-format` string defaults to "%s", and the
+`encoding-format`'s default value is derived from the `field-format`
+per :ref:`field-formatting`.  However, care must be taken to avoid
+using a value directly as the format, since characters like '{', '%',
+and '}' will be interpreted as formatting directives, and may cause
+xo_emit_field to dereference arbitrary values off the stack, leading
+to bugs, core files, and gnashing of teeth.
+
+.. c:function:: xo_ssize_t xo_emit_field (const char *rolmod, const char *content, const char *fmt, const char *efmt, ...)
 
   :param rolmod: A comma-separated list of field roles and field modifiers
   :type rolmod: const char *
-  :param contents: The "contents" portion of the field description string
-  :type contents: const char *
-  :param fmt: Content format string
+  :param content: The "content" portion of the field description string
+  :type content: const char *
+  :param fmt: Contents format string
   :type fmt: const char *
   :param efmt: Encoding format string, followed by additional arguments
   :type efmt: const char *
@@ -450,8 +470,11 @@ descriptor are passed in distinctly.
   ::
 
     EXAMPLE::
+        xo_emit_field("T", title, NULL, NULL, NULL);
         xo_emit_field("T", "Host name is ", NULL, NULL);
         xo_emit_field("V", "host-name", NULL, NULL, host-name);
+        xo_emit_field(",leaf-list,quotes", "sku", "%s-%u", "%s-000-%u",
+                        "gum", 1412);
 
 .. c:function:: xo_ssize_t xo_emit_field_h (xo_handle_t *xop, const char *rolmod, const char *contents, const char *fmt, const char *efmt, ...)
 
@@ -1204,6 +1227,11 @@ message associated with either *errno* or the *code* parameter::
             xo_err(1, "cannot open file '%s'", filename);
 
 .. index:: xo_error
+.. index:: xo_error_h
+.. index:: xo_error_hv
+.. index:: xo_errorn
+.. index:: xo_errorn_h
+.. index:: xo_errorn_hv
 
 xo_error
 ~~~~~~~~
@@ -1212,6 +1240,50 @@ xo_error
 
   :param fmt: Format string
   :type fmt: const char *
+  :returns: void
+
+.. c:function:: void xo_error_h (xo_handle_t *xop, const char *fmt, ...)
+
+  :param xop: libxo handle pointer
+  :type xop: xo_handle_t *
+  :param fmt: Format string
+  :type fmt: const char *
+  :returns: void
+
+.. c:function:: void xo_error_hv (xo_handle_t *xop, const char *fmt, va_list vap)
+
+  :param xop: libxo handle pointer
+  :type xop: xo_handle_t *
+  :param fmt: Format string
+  :type fmt: const char *
+  :param vap: variadic arguments
+  :type xop: va_list
+  :returns: void
+
+.. c:function:: void xo_errorn (const char *fmt, ...)
+
+  :param fmt: Format string
+  :type fmt: const char *
+  :returns: void
+
+.. c:function:: void xo_errorn_h (xo_handle_t *xop, const char *fmt, ...)
+
+  :param xop: libxo handle pointer
+  :type xop: xo_handle_t *
+  :param fmt: Format string
+  :type fmt: const char *
+  :returns: void
+
+.. c:function:: void xo_errorn_hv (xo_handle_t *xop, int need_newline, const char *fmt, va_list vap)
+
+  :param xop: libxo handle pointer
+  :type xop: xo_handle_t *
+  :param need_newline: boolean indicating need for trailing newline
+  :type need_newline: int
+  :param fmt: Format string
+  :type fmt: const char *
+  :param vap: variadic arguments
+  :type xop: va_list
   :returns: void
 
   The `xo_error` function can be used for generic errors that should
@@ -1225,6 +1297,16 @@ xo_error
         <error><message>Does not compute</message></error>
     JSON::
         "error": { "message": "Does not compute" }
+
+  The `xo_error_h` and `xo_error_hv` add a handle object and a
+  variadic-ized parameter to the signature, respectively.
+
+  The `xo_errorn` function supplies a newline at the end the error
+  message if the format string does not include one.  The
+  `xo_errorn_h` and `xo_errorn_hv` functions add a handle object and
+  a variadic-ized parameter to the signature, respectively.  The
+  `xo_errorn_hv` function also adds a boolean to indicate the need for
+  a trailing newline.
 
 .. index:: xo_no_setlocale
 .. index:: Locale
@@ -1308,52 +1390,52 @@ These values are defined in <syslog.h>.
 The priority value indicates the importance and potential impact of
 each message:
 
-============= =======================================================
- Priority      Description
-============= =======================================================
- LOG_EMERG     A panic condition, normally broadcast to all users
- LOG_ALERT     A condition that should be corrected immediately
- LOG_CRIT      Critical conditions
- LOG_ERR       Generic errors
- LOG_WARNING   Warning messages
- LOG_NOTICE    Non-error conditions that might need special handling
- LOG_INFO      Informational messages
- LOG_DEBUG     Developer-oriented messages
-============= =======================================================
+  ============= =======================================================
+   Priority      Description
+  ============= =======================================================
+   LOG_EMERG     A panic condition, normally broadcast to all users
+   LOG_ALERT     A condition that should be corrected immediately
+   LOG_CRIT      Critical conditions
+   LOG_ERR       Generic errors
+   LOG_WARNING   Warning messages
+   LOG_NOTICE    Non-error conditions that might need special handling
+   LOG_INFO      Informational messages
+   LOG_DEBUG     Developer-oriented messages
+  ============= =======================================================
 
 The facility value indicates the source of message, in fairly generic
 terms:
 
-=============== =======================================================
- Facility        Description
-=============== =======================================================
- LOG_AUTH        The authorization system (e.g. :manpage:`login(1)`)
- LOG_AUTHPRIV    As LOG_AUTH, but logged to a privileged file
- LOG_CRON        The cron daemon: :manpage:`cron(8)`
- LOG_DAEMON      System daemons, not otherwise explicitly listed
- LOG_FTP         The file transfer protocol daemons
- LOG_KERN        Messages generated by the kernel
- LOG_LPR         The line printer spooling system
- LOG_MAIL        The mail system
- LOG_NEWS        The network news system
- LOG_SECURITY    Security subsystems, such as :manpage:`ipfw(4)`
- LOG_SYSLOG      Messages generated internally by :manpage:`syslogd(8)`
- LOG_USER        Messages generated by user processes (default)
- LOG_UUCP        The uucp system
- LOG_LOCAL0..7   Reserved for local use
-=============== =======================================================
+  =============== =======================================================
+   Facility        Description
+  =============== =======================================================
+   LOG_AUTH        The authorization system (e.g. :manpage:`login(1)`)
+   LOG_AUTHPRIV    As LOG_AUTH, but logged to a privileged file
+   LOG_CRON        The cron daemon: :manpage:`cron(8)`
+   LOG_DAEMON      System daemons, not otherwise explicitly listed
+   LOG_FTP         The file transfer protocol daemons
+   LOG_KERN        Messages generated by the kernel
+   LOG_LPR         The line printer spooling system
+   LOG_MAIL        The mail system
+   LOG_NEWS        The network news system
+   LOG_SECURITY    Security subsystems, such as :manpage:`ipfw(4)`
+   LOG_SYSLOG      Messages generated internally by :manpage:`syslogd(8)`
+   LOG_USER        Messages generated by user processes (default)
+   LOG_UUCP        The uucp system
+   LOG_LOCAL0..7   Reserved for local use
+  =============== =======================================================
 
 In addition to the values listed above, xo_open_log accepts a set of
 addition flags requesting specific logging behaviors:
 
-============ ====================================================
- Flag         Description
-============ ====================================================
- LOG_CONS     If syslogd fails, attempt to write to /dev/console
- LOG_NDELAY   Open the connection to :manpage:`syslogd(8)` immediately
- LOG_PERROR   Write the message also to standard error output
- LOG_PID      Log the process id with each message
-============ ====================================================
+  ============ ====================================================
+   Flag         Description
+  ============ ====================================================
+   LOG_CONS     If syslogd fails, attempt to write to /dev/console
+   LOG_NDELAY   Open the connection to :manpage:`syslogd(8)` immediately
+   LOG_PERROR   Write the message also to standard error output
+   LOG_PID      Log the process id with each message
+  ============ ====================================================
 
 .. index:: xo_syslog
 
@@ -1588,26 +1670,26 @@ processing model of libxo.  Content is formatted within libxo, and
 callbacks are made to the encoder's handler function when data is
 ready to be processed:
 
-======================= =======================================
- Operation               Meaning  (Base function)
-======================= =======================================
- XO_OP_CREATE            Called when the handle is created
- XO_OP_OPEN_CONTAINER    Container opened (xo_open_container)
- XO_OP_CLOSE_CONTAINER   Container closed (xo_close_container)
- XO_OP_OPEN_LIST         List opened (xo_open_list)
- XO_OP_CLOSE_LIST        List closed (xo_close_list)
- XO_OP_OPEN_LEAF_LIST    Leaf list opened (xo_open_leaf_list)
- XO_OP_CLOSE_LEAF_LIST   Leaf list closed (xo_close_leaf_list)
- XO_OP_OPEN_INSTANCE     Instance opened (xo_open_instance)
- XO_OP_CLOSE_INSTANCE    Instance closed (xo_close_instance)
- XO_OP_STRING            Field with Quoted UTF-8 string
- XO_OP_CONTENT           Field with content
- XO_OP_FINISH            Finish any pending output
- XO_OP_FLUSH             Flush any buffered output
- XO_OP_DESTROY           Clean up resources
- XO_OP_ATTRIBUTE         An attribute name/value pair
- XO_OP_VERSION           A version string
-======================= =======================================
+  ======================= =======================================
+   Operation               Meaning  (Base function)
+  ======================= =======================================
+   XO_OP_CREATE            Called when the handle is created
+   XO_OP_OPEN_CONTAINER    Container opened (xo_open_container)
+   XO_OP_CLOSE_CONTAINER   Container closed (xo_close_container)
+   XO_OP_OPEN_LIST         List opened (xo_open_list)
+   XO_OP_CLOSE_LIST        List closed (xo_close_list)
+   XO_OP_OPEN_LEAF_LIST    Leaf list opened (xo_open_leaf_list)
+   XO_OP_CLOSE_LEAF_LIST   Leaf list closed (xo_close_leaf_list)
+   XO_OP_OPEN_INSTANCE     Instance opened (xo_open_instance)
+   XO_OP_CLOSE_INSTANCE    Instance closed (xo_close_instance)
+   XO_OP_STRING            Field with Quoted UTF-8 string
+   XO_OP_CONTENT           Field with content
+   XO_OP_FINISH            Finish any pending output
+   XO_OP_FLUSH             Flush any buffered output
+   XO_OP_DESTROY           Clean up resources
+   XO_OP_ATTRIBUTE         An attribute name/value pair
+   XO_OP_VERSION           A version string
+  ======================= =======================================
 
 For all the open and close operations, the name parameter holds the
 name of the construct.  For string, content, and attribute operations,

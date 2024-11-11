@@ -79,6 +79,13 @@
   <div class="note">bytes</div>
 </div>
 <div class="line">
+  <div class="label">Low/warn granularity</div>
+  <div class="decoration">:</div>
+  <div class="padding">	</div>
+  <div class="data" data-tag="granularity-lw" data-units="mAh">155</div>
+  <div class="padding"> </div>
+</div>
+<div class="line">
   <div class="data" data-tag="mbuf-current">10</div>
   <div class="text">/</div>
   <div class="data" data-tag="mbuf-cache">20</div>
@@ -223,5 +230,20 @@
 </div>
 <div class="line">
   <div class="error">Shut 'er down, Clancey!  She's a-pumpin' mud!  &lt;&gt;!,"!&lt;&gt;
+</div>
+</div>
+<div class="line">
+  <div class="error">err message (1)</div>
+</div>
+<div class="line">
+  <div class="error">err message (2)
+</div>
+</div>
+<div class="line">
+  <div class="error">err message (1)
+</div>
+</div>
+<div class="line">
+  <div class="error">err message (2)
 </div>
 </div>
