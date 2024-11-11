@@ -1,5 +1,5 @@
 {
-  "top": {
+  "top-level": {
     "type": "ethernet",
     "type": "bridge",
     "type": "18u",
@@ -21,6 +21,9 @@
     "max-chaos": "very",
     "min-chaos": 42,
     "some-chaos": "[42]",
+    "sku": [
+      "gum-000-1412"
+    ],
     "host": "my-box",
     "domain": "example.com",
     "data": {
@@ -119,6 +122,48 @@
         "ladder",
         "bolt",
         "water"
+      ]
+    },
+    "data": {
+      "item": [
+        {
+          "sku": "GRO-000-415",
+          "name": "gum",
+          "sold": 1412,
+          "on-order": 10,
+          "in-stock": 54
+        },
+        {
+          "sku": "HRD-000-212",
+          "name": "rope",
+          "sold": 85,
+          "extra": "special",
+          "on-order": 2,
+          "in-stock": 4
+        },
+        {
+          "sku": "HRD-000-517",
+          "name": "ladder",
+          "sold": 0,
+          "extra": "special",
+          "on-order": 1,
+          "in-stock": 2
+        },
+        {
+          "sku": "HRD-000-632",
+          "name": "bolt",
+          "sold": 4123,
+          "on-order": 42,
+          "in-stock": 144
+        },
+        {
+          "sku": "GRO-000-2331",
+          "name": "water",
+          "sold": 17,
+          "extra": "special",
+          "on-order": 2,
+          "in-stock": 14
+        }
       ]
     },
     "cost": 425,
