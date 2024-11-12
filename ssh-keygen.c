@@ -1,4 +1,4 @@
-/* $OpenBSD: ssh-keygen.c,v 1.466 2023/03/08 00:05:37 djm Exp $ */
+/* $OpenBSD: ssh-keygen.c,v 1.472 2024/01/11 01:45:36 djm Exp $ */
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
  * Copyright (c) 1994 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
@@ -67,11 +67,7 @@
 #include "sk-api.h" /* XXX for SSH_SK_USER_PRESENCE_REQD; remove */
 #include "cipher.h"
 
-#ifdef WITH_OPENSSL
-# define DEFAULT_KEY_TYPE_NAME "rsa"
-#else
-# define DEFAULT_KEY_TYPE_NAME "ed25519"
-#endif
+#define DEFAULT_KEY_TYPE_NAME "ed25519"
 
 /*
  * Default number of bits in the RSA, DSA and ECDSA keys.  These value can be
@@ -263,13 +259,15 @@ ask_filename(struct passwd *pw, const char *prompt)
 	char *name = NULL;
 
 	if (key_type_name == NULL)
-		name = _PATH_SSH_CLIENT_ID_RSA;
+		name = _PATH_SSH_CLIENT_ID_ED25519;
 	else {
 		switch (sshkey_type_from_name(key_type_name)) {
+#ifdef WITH_DSA
 		case KEY_DSA_CERT:
 		case KEY_DSA:
 			name = _PATH_SSH_CLIENT_ID_DSA;
 			break;
+#endif
 #ifdef OPENSSL_HAS_ECC
 		case KEY_ECDSA_CERT:
 		case KEY_ECDSA:
@@ -380,10 +378,12 @@ do_convert_to_pkcs8(struct sshkey *k)
 		if (!PEM_write_RSA_PUBKEY(stdout, k->rsa))
 			fatal("PEM_write_RSA_PUBKEY failed");
 		break;
+#ifdef WITH_DSA
 	case KEY_DSA:
 		if (!PEM_write_DSA_PUBKEY(stdout, k->dsa))
 			fatal("PEM_write_DSA_PUBKEY failed");
 		break;
+#endif
 #ifdef OPENSSL_HAS_ECC
 	case KEY_ECDSA:
 		if (!PEM_write_EC_PUBKEY(stdout, k->ecdsa))
@@ -404,10 +404,12 @@ do_convert_to_pem(struct sshkey *k)
 		if (!PEM_write_RSAPublicKey(stdout, k->rsa))
 			fatal("PEM_write_RSAPublicKey failed");
 		break;
+#ifdef WITH_DSA
 	case KEY_DSA:
 		if (!PEM_write_DSA_PUBKEY(stdout, k->dsa))
 			fatal("PEM_write_DSA_PUBKEY failed");
 		break;
+#endif
 #ifdef OPENSSL_HAS_ECC
 	case KEY_ECDSA:
 		if (!PEM_write_EC_PUBKEY(stdout, k->ecdsa))
@@ -482,8 +484,10 @@ do_convert_private_ssh2(struct sshbuf *b)
 	u_int magic, i1, i2, i3, i4;
 	size_t slen;
 	u_long e;
+#ifdef WITH_DSA
 	BIGNUM *dsa_p = NULL, *dsa_q = NULL, *dsa_g = NULL;
 	BIGNUM *dsa_pub_key = NULL, *dsa_priv_key = NULL;
+#endif
 	BIGNUM *rsa_n = NULL, *rsa_e = NULL, *rsa_d = NULL;
 	BIGNUM *rsa_p = NULL, *rsa_q = NULL, *rsa_iqmp = NULL;
 
@@ -511,10 +515,12 @@ do_convert_private_ssh2(struct sshbuf *b)
 	}
 	free(cipher);
 
-	if (strstr(type, "dsa")) {
-		ktype = KEY_DSA;
-	} else if (strstr(type, "rsa")) {
+	if (strstr(type, "rsa")) {
 		ktype = KEY_RSA;
+#ifdef WITH_DSA
+	} else if (strstr(type, "dsa")) {
+		ktype = KEY_DSA;
+#endif
 	} else {
 		free(type);
 		return NULL;
@@ -524,6 +530,7 @@ do_convert_private_ssh2(struct sshbuf *b)
 	free(type);
 
 	switch (key->type) {
+#ifdef WITH_DSA
 	case KEY_DSA:
 		if ((dsa_p = BN_new()) == NULL ||
 		    (dsa_q = BN_new()) == NULL ||
@@ -543,6 +550,7 @@ do_convert_private_ssh2(struct sshbuf *b)
 			fatal_f("DSA_set0_key failed");
 		dsa_pub_key = dsa_priv_key = NULL; /* transferred */
 		break;
+#endif
 	case KEY_RSA:
 		if ((r = sshbuf_get_u8(b, &e1)) != 0 ||
 		    (e1 < 30 && (r = sshbuf_get_u8(b, &e2)) != 0) ||
@@ -706,12 +714,14 @@ do_convert_from_pkcs8(struct sshkey **k, int *private)
 		(*k)->type = KEY_RSA;
 		(*k)->rsa = EVP_PKEY_get1_RSA(pubkey);
 		break;
+#ifdef WITH_DSA
 	case EVP_PKEY_DSA:
 		if ((*k = sshkey_new(KEY_UNSPEC)) == NULL)
 			fatal("sshkey_new failed");
 		(*k)->type = KEY_DSA;
 		(*k)->dsa = EVP_PKEY_get1_DSA(pubkey);
 		break;
+#endif
 #ifdef OPENSSL_HAS_ECC
 	case EVP_PKEY_EC:
 		if ((*k = sshkey_new(KEY_UNSPEC)) == NULL)
@@ -781,10 +791,12 @@ do_convert_from(struct passwd *pw)
 			fprintf(stdout, "\n");
 	} else {
 		switch (k->type) {
+#ifdef WITH_DSA
 		case KEY_DSA:
 			ok = PEM_write_DSAPrivateKey(stdout, k->dsa, NULL,
 			    NULL, 0, NULL, NULL);
 			break;
+#endif
 #ifdef OPENSSL_HAS_ECC
 		case KEY_ECDSA:
 			ok = PEM_write_ECPrivateKey(stdout, k->ecdsa, NULL,
@@ -997,6 +1009,7 @@ do_fingerprint(struct passwd *pw)
 		 * accept a public key prefixed with a hostname or options.
 		 * Try a bare key first, otherwise skip the leading stuff.
 		 */
+		comment = NULL;
 		if ((public = try_read_key(&cp)) == NULL) {
 			i = strtol(cp, &ep, 10);
 			if (i == 0 || ep == NULL ||
@@ -1186,7 +1199,7 @@ known_hosts_hash(struct hostkey_foreach_line *l, void *_ctx)
 	case HKF_STATUS_OK:
 	case HKF_STATUS_MATCHED:
 		/*
-		 * Don't hash hosts already already hashed, with wildcard
+		 * Don't hash hosts already hashed, with wildcard
 		 * characters or a CA/revocation marker.
 		 */
 		if (was_hashed || has_wild || l->marker != MRK_NONE) {
@@ -2222,7 +2235,7 @@ load_krl(const char *path, struct ssh_krl **krlp)
 	if ((r = sshbuf_load_file(path, &krlbuf)) != 0)
 		fatal_r(r, "Unable to load KRL %s", path);
 	/* XXX check sigs */
-	if ((r = ssh_krl_from_blob(krlbuf, krlp, NULL, 0)) != 0 ||
+	if ((r = ssh_krl_from_blob(krlbuf, krlp)) != 0 ||
 	    *krlp == NULL)
 		fatal_r(r, "Invalid KRL file %s", path);
 	sshbuf_free(krlbuf);
@@ -2245,7 +2258,8 @@ hash_to_blob(const char *cp, u_char **blobp, size_t *lenp,
 	 * OpenSSH base64 hashes omit trailing '='
 	 * characters; put them back for decode.
 	 */
-	tlen = strlen(cp);
+	if ((tlen = strlen(cp)) >= SIZE_MAX - 5)
+		fatal_f("hash too long: %zu bytes", tlen);
 	tmp = xmalloc(tlen + 4 + 1);
 	strlcpy(tmp, cp, tlen + 1);
 	while ((tlen % 4) != 0) {
@@ -2287,6 +2301,10 @@ update_krl_from_file(struct passwd *pw, const char *file, int wild_ca,
 	if (!quiet)
 		printf("Revoking from %s\n", path);
 	while (getline(&line, &linesize, krl_spec) != -1) {
+		if (linesize >= INT_MAX) {
+			fatal_f("%s contains unparsable line, len=%zu",
+			    path, linesize);
+		}
 		lnum++;
 		was_explicit_key = was_sha1 = was_sha256 = was_hash = 0;
 		cp = line + strspn(line, " \t");
@@ -2460,7 +2478,7 @@ do_gen_krl(struct passwd *pw, int updating, const char *ca_key_path,
 
 	if ((kbuf = sshbuf_new()) == NULL)
 		fatal("sshbuf_new failed");
-	if (ssh_krl_to_blob(krl, kbuf, NULL, 0) != 0)
+	if (ssh_krl_to_blob(krl, kbuf) != 0)
 		fatal("Couldn't generate KRL");
 	if ((r = sshbuf_write_file(identity_file, kbuf)) != 0)
 		fatal("write %s: %s", identity_file, strerror(errno));
@@ -3750,9 +3768,11 @@ main(int argc, char **argv)
 			n += do_print_resource_record(pw,
 			    _PATH_HOST_RSA_KEY_FILE, rr_hostname,
 			    print_generic, opts, nopts);
+#ifdef WITH_DSA
 			n += do_print_resource_record(pw,
 			    _PATH_HOST_DSA_KEY_FILE, rr_hostname,
 			    print_generic, opts, nopts);
+#endif
 			n += do_print_resource_record(pw,
 			    _PATH_HOST_ECDSA_KEY_FILE, rr_hostname,
 			    print_generic, opts, nopts);

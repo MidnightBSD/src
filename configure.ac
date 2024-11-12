@@ -149,6 +149,7 @@ fi
 
 use_stack_protector=1
 use_toolchain_hardening=1
+use_retpoline=1
 AC_ARG_WITH([stackprotect],
     [  --without-stackprotect  Don't use compiler's stack protection], [
     if test "x$withval" = "xno"; then
@@ -158,6 +159,11 @@ AC_ARG_WITH([hardening],
     [  --without-hardening     Don't use toolchain hardening flags], [
     if test "x$withval" = "xno"; then
 	use_toolchain_hardening=0
+    fi ])
+AC_ARG_WITH([retpoline],
+    [  --without-retpoline     Enable retpoline spectre mitigation], [
+    if test "x$withval" = "xno"; then
+	use_retpoline=0
     fi ])
 
 # We use -Werror for the tests only so that we catch warnings like "this is
@@ -187,7 +193,14 @@ if test "$GCC" = "yes" || test "$GCC" = "egcs"; then
 	AC_MSG_RESULT([$GCC_VER])
 
 	AC_MSG_CHECKING([clang version])
-	CLANG_VER=`$CC -v 2>&1 | $AWK '/clang version /{print $3}'`
+	ver="`$CC -v 2>&1`"
+	if echo "$ver" | grep "Apple" >/dev/null; then
+		CLANG_VER=apple-`echo "$ver" | grep 'clang version' | \
+		    $SED 's/.*clang version //g' | $AWK '{print $1}'`
+	else
+		CLANG_VER=`echo "$ver" | grep 'clang version' | \
+		    $SED 's/.*clang version //g' | $AWK '{print $1}'`
+	fi
 	AC_MSG_RESULT([$CLANG_VER])
 
 	OSSH_CHECK_CFLAG_COMPILE([-pipe])
@@ -209,8 +222,6 @@ if test "$GCC" = "yes" || test "$GCC" = "egcs"; then
 	OSSH_CHECK_CFLAG_COMPILE([-Wbitwise-instead-of-logical])
 	OSSH_CHECK_CFLAG_COMPILE([-fno-strict-aliasing])
     if test "x$use_toolchain_hardening" = "x1"; then
-	OSSH_CHECK_CFLAG_COMPILE([-mretpoline]) # clang
-	OSSH_CHECK_LDFLAG_LINK([-Wl,-z,retpolineplt])
 	OSSH_CHECK_CFLAG_COMPILE([-D_FORTIFY_SOURCE=2])
 	OSSH_CHECK_LDFLAG_LINK([-Wl,-z,relro])
 	OSSH_CHECK_LDFLAG_LINK([-Wl,-z,now])
@@ -224,11 +235,18 @@ if test "$GCC" = "yes" || test "$GCC" = "egcs"; then
 	# clang 15 seems to have a bug in -fzero-call-used-regs=all.  See
 	# https://bugzilla.mindrot.org/show_bug.cgi?id=3475 and
 	# https://github.com/llvm/llvm-project/issues/59242
+	# clang 17 has a different bug that causes an ICE when using this
+	# flag at all (https://bugzilla.mindrot.org/show_bug.cgi?id=3629)
 	case "$CLANG_VER" in
-	15.*) OSSH_CHECK_CFLAG_COMPILE([-fzero-call-used-regs=used]) ;;
-	*)    OSSH_CHECK_CFLAG_COMPILE([-fzero-call-used-regs=all]) ;;
+	apple-15*) OSSH_CHECK_CFLAG_LINK([-fzero-call-used-regs=used]) ;;
+	17*)	;;
+	*)	OSSH_CHECK_CFLAG_LINK([-fzero-call-used-regs=used]) ;;
 	esac
 	OSSH_CHECK_CFLAG_COMPILE([-ftrivial-auto-var-init=zero])
+    fi
+    if test "x$use_retpoline" = "x1"; then
+	OSSH_CHECK_CFLAG_COMPILE([-mretpoline]) # clang
+	OSSH_CHECK_LDFLAG_LINK([-Wl,-z,retpolineplt])
     fi
 
 	AC_MSG_CHECKING([if $CC accepts -fno-builtin-memset])
@@ -1464,7 +1482,7 @@ else
 	[[
 	int a=0, b=0, c=0, d=0, n, v;
 	n = sscanf(ZLIB_VERSION, "%d.%d.%d.%d", &a, &b, &c, &d);
-	if (n != 3 && n != 4)
+	if (n < 1)
 		exit(1);
 	v = a*1000000 + b*10000 + c*100 + d;
 	fprintf(stderr, "found zlib version %s (%d)\n", ZLIB_VERSION, v);
@@ -2056,6 +2074,18 @@ AC_ARG_WITH([security-key-builtin],
 	[  --with-security-key-builtin include builtin U2F/FIDO support],
 	[ enable_sk_internal=$withval ]
 )
+
+disable_ecdsa=
+AC_ARG_ENABLE([dsa-keys],
+	[  --disable-dsa-keys      disable DSA key support [no]],
+	[
+		if test "x$enableval" = "xno" ; then
+			disable_ecdsa=1
+		fi
+	]
+)
+test -z "$disable_ecdsa" &&
+    AC_DEFINE([WITH_DSA], [1], [Define if to enable DSA keys.])
 
 AC_SEARCH_LIBS([dlopen], [dl])
 AC_CHECK_FUNCS([dlopen])
@@ -2713,7 +2743,15 @@ AC_ARG_WITH([ssl-dir],
 			else
 				CPPFLAGS="-I${withval} ${CPPFLAGS}"
 			fi
-			openssl_bin_PATH="${PATH}${PATH_SEPARATOR}${withval}/bin${PATH_SEPARATOR}${withval}/apps"
+			dnl Ensure specified openssl binary works, eg it can
+			dnl find its runtime libraries, before trying to use.
+			if test -x "${withval}/bin/openssl" && \
+			    "${withval}/bin/openssl" version >/dev/null 2>&1; then
+				openssl_bin_PATH="${withval}/bin${PATH_SEPARATOR}${PATH}"
+			elif test -x "${withval}/apps/openssl" && \
+			    "${withval}/apps/openssl" version >/dev/null 2>&1; then
+				openssl_bin_PATH="${withval}/apps${PATH_SEPARATOR}${PATH}"
+			fi
 		fi
 	]
 )
@@ -2780,8 +2818,8 @@ if test "x$openssl" = "xyes" ; then
 			AC_MSG_RESULT([$ssl_header_ver])
 		],
 		[
-			AC_MSG_RESULT([not found])
-			AC_MSG_ERROR([OpenSSL version header not found.])
+			AC_MSG_RESULT([failed])
+			AC_MSG_ERROR([OpenSSL version test program failed.])
 		],
 		[
 			AC_MSG_WARN([cross compiling: not checking])
@@ -2802,55 +2840,62 @@ if test "x$openssl" = "xyes" ; then
 	#include <openssl/crypto.h>
 	#define DATA "conftest.ssllibver"
 		]], [[
-		FILE *fd;
-		int rc;
-
-		fd = fopen(DATA,"w");
-		if(fd == NULL)
+		FILE *f;
+		/* We need these legacy bits to warn for old libcrypto */
+		#ifndef OPENSSL_VERSION
+		# define OPENSSL_VERSION SSLEAY_VERSION
+		#endif
+		#ifndef HAVE_OPENSSL_VERSION
+		# define OpenSSL_version       SSLeay_version
+		#endif
+		#ifndef HAVE_OPENSSL_VERSION_NUM
+		# define OpenSSL_version_num   SSLeay
+		#endif
+		if ((f = fopen(DATA, "w")) == NULL)
 			exit(1);
-#ifndef OPENSSL_VERSION
-# define OPENSSL_VERSION SSLEAY_VERSION
-#endif
-#ifndef HAVE_OPENSSL_VERSION
-# define OpenSSL_version	SSLeay_version
-#endif
-#ifndef HAVE_OPENSSL_VERSION_NUM
-# define OpenSSL_version_num	SSLeay
-#endif
-		if ((rc = fprintf(fd, "%08lx (%s)\n",
+		if (fprintf(f, "%08lx (%s)",
 		    (unsigned long)OpenSSL_version_num(),
-		    OpenSSL_version(OPENSSL_VERSION))) < 0)
+		    OpenSSL_version(OPENSSL_VERSION)) < 0)
 			exit(1);
-
+#ifdef LIBRESSL_VERSION_NUMBER
+		if (fprintf(f, " libressl-%08lx", LIBRESSL_VERSION_NUMBER) < 0)
+			exit(1);
+#endif
+		if (fputc('\n', f) == EOF || fclose(f) == EOF)
+			exit(1);
 		exit(0);
 		]])],
 		[
-			ssl_library_ver=`cat conftest.ssllibver`
+			sslver=`cat conftest.ssllibver`
+			ssl_showver=`echo "$sslver" | sed 's/ libressl-.*//'`
 			# Check version is supported.
-			case "$ssl_library_ver" in
-			10000*|0*)
-				AC_MSG_ERROR([OpenSSL >= 1.0.1 required (have "$ssl_library_ver")])
-		                ;;
-			100*)   ;; # 1.0.x
-			101000[[0123456]]*)
-				# https://github.com/openssl/openssl/pull/4613
-				AC_MSG_ERROR([OpenSSL 1.1.x versions prior to 1.1.0g have a bug that breaks their use with OpenSSH (have "$ssl_library_ver")])
+			case "$sslver" in
+			100*|10100*) # 1.0.x, 1.1.0x
+				AC_MSG_ERROR([OpenSSL >= 1.1.1 required (have "$ssl_showver")])
 				;;
 			101*)   ;; # 1.1.x
-			200*)   ;; # LibreSSL
+			200*)   # LibreSSL
+				lver=`echo "$sslver" | sed 's/.*libressl-//'`
+				case "$lver" in
+				2*|300*) # 2.x, 3.0.0
+					AC_MSG_ERROR([LibreSSL >= 3.1.0 required (have "$ssl_showver")])
+					;;
+				*) ;;	# Assume all other versions are good.
+				esac
+				;;
 			300*)
 				# OpenSSL 3; we use the 1.1x API
 				CPPFLAGS="$CPPFLAGS -DOPENSSL_API_COMPAT=0x10100000L"
 				;;
-			301*|302*)
+			301*|302*|303*)
 				# OpenSSL development branch; request 1.1x API
 				CPPFLAGS="$CPPFLAGS -DOPENSSL_API_COMPAT=0x10100000L"
 				;;
 		        *)
-				AC_MSG_ERROR([Unknown/unsupported OpenSSL version ("$ssl_library_ver")])
+				AC_MSG_ERROR([Unknown/unsupported OpenSSL version ("$ssl_showver")])
 		                ;;
 			esac
-			AC_MSG_RESULT([$ssl_library_ver])
+			AC_MSG_RESULT([$ssl_showver])
 		],
 		[
 			AC_MSG_RESULT([not found])
@@ -2863,7 +2908,7 @@ if test "x$openssl" = "xyes" ; then
 
 	case "$host" in
 	x86_64-*)
-		case "$ssl_library_ver" in
+		case "$sslver" in
 		3000004*)
 			AC_MSG_ERROR([OpenSSL 3.0.4 has a potential RCE in its RSA implementation (CVE-2022-2274)])
 			;;
@@ -2879,9 +2924,6 @@ if test "x$openssl" = "xyes" ; then
 	#include <openssl/opensslv.h>
 	#include <openssl/crypto.h>
 		]], [[
-#ifndef HAVE_OPENSSL_VERSION_NUM
-# define OpenSSL_version_num	SSLeay
-#endif
 		exit(OpenSSL_version_num() == OPENSSL_VERSION_NUMBER ? 0 : 1);
 		]])],
 		[
@@ -2955,44 +2997,13 @@ if test "x$openssl" = "xyes" ; then
 	    )
 	)
 
-	# LibreSSL/OpenSSL 1.1x API
+	# LibreSSL/OpenSSL API differences
 	AC_CHECK_FUNCS([ \
-		OPENSSL_init_crypto \
-		DH_get0_key \
-		DH_get0_pqg \
-		DH_set0_key \
-		DH_set_length \
-		DH_set0_pqg \
-		DSA_get0_key \
-		DSA_get0_pqg \
-		DSA_set0_key \
-		DSA_set0_pqg \
-		DSA_SIG_get0 \
-		DSA_SIG_set0 \
-		ECDSA_SIG_get0 \
-		ECDSA_SIG_set0 \
 		EVP_CIPHER_CTX_iv \
 		EVP_CIPHER_CTX_iv_noconst \
 		EVP_CIPHER_CTX_get_iv \
 		EVP_CIPHER_CTX_get_updated_iv \
 		EVP_CIPHER_CTX_set_iv \
-		RSA_get0_crt_params \
-		RSA_get0_factors \
-		RSA_get0_key \
-		RSA_set0_crt_params \
-		RSA_set0_factors \
-		RSA_set0_key \
-		RSA_meth_free \
-		RSA_meth_dup \
-		RSA_meth_set1_name \
-		RSA_meth_get_finish \
-		RSA_meth_set_priv_enc \
-		RSA_meth_set_priv_dec \
-		RSA_meth_set_finish \
-		EVP_PKEY_get0_RSA \
-		EVP_MD_CTX_new \
-		EVP_MD_CTX_free \
-		EVP_chacha20 \
 	])
 
 	if test "x$openssl_engine" = "xyes" ; then
@@ -3011,7 +3022,7 @@ if test "x$openssl" = "xyes" ; then
 	fi
 
 	# Check for OpenSSL without EVP_aes_{192,256}_cbc
-	AC_MSG_CHECKING([whether OpenSSL has crippled AES support])
+	AC_MSG_CHECKING([whether OpenSSL lacks support for AES 192/256])
 	AC_LINK_IFELSE(
 		[AC_LANG_PROGRAM([[
 	#include <stdlib.h>
@@ -3050,8 +3061,8 @@ if test "x$openssl" = "xyes" ; then
 		]
 	)
 
-	# Check for SHA256, SHA384 and SHA512 support in OpenSSL
-	AC_CHECK_FUNCS([EVP_sha256 EVP_sha384 EVP_sha512])
+	# Check for various EVP support in OpenSSL
+	AC_CHECK_FUNCS([EVP_sha256 EVP_sha384 EVP_sha512 EVP_chacha20])
 
 	# Check complete ECC support in OpenSSL
 	AC_MSG_CHECKING([whether OpenSSL has NID_X9_62_prime256v1])
@@ -3161,6 +3172,30 @@ if test "x$openssl" = "xyes" ; then
 			ecdsa-sha2-nistp521 \
 			ecdsa-sha2-nistp521-cert-v01@openssh.com"
 	fi
+
+	# Check libcrypto ED25519 support
+	AC_CHECK_FUNCS([EVP_PKEY_get_raw_public_key])
+	AC_CHECK_FUNCS([EVP_PKEY_get_raw_private_key])
+	AC_MSG_CHECKING([whether OpenSSL has ED25519 support])
+	AC_LINK_IFELSE(
+		[AC_LANG_PROGRAM([[
+	#include <string.h>
+	#include <openssl/evp.h>
+		]], [[
+		unsigned char buf[64];
+		memset(buf, 0, sizeof(buf));
+		exit(EVP_PKEY_new_raw_private_key(EVP_PKEY_ED25519,
+		    buf, sizeof(buf)) == NULL);
+		]])],
+		[
+			AC_MSG_RESULT([yes])
+			AC_DEFINE([OPENSSL_HAS_ED25519], [1],
+			    [libcrypto has ed25519 support])
+		],
+		[
+			AC_MSG_RESULT([no])
+		]
+	)
 fi
 
 # PKCS11/U2F depend on OpenSSL and dlopen().
@@ -5286,6 +5321,16 @@ AC_DEFINE_UNQUOTED([_PATH_SSH_PIDDIR], ["$piddir"],
 	[Specify location of ssh.pid])
 AC_SUBST([piddir])
 
+
+AC_ARG_ENABLE([fd-passing],
+	[  --disable-fd-passing    disable file descriptor passsing [no]],
+	[
+		if test "x$enableval" = "xno" ; then
+			AC_DEFINE([DISABLE_FD_PASSING])
+		fi
+	]
+)
+
 dnl allow user to disable some login recording features
 AC_ARG_ENABLE([lastlog],
 	[  --disable-lastlog       disable use of lastlog even if detected [no]],
@@ -5572,6 +5617,15 @@ AC_SUBST([TEST_SSH_UTF8], [$TEST_SSH_UTF8])
 AC_SUBST([TEST_MALLOC_OPTIONS], [$TEST_MALLOC_OPTIONS])
 AC_SUBST([UNSUPPORTED_ALGORITHMS], [$unsupported_algorithms])
 AC_SUBST([DEPEND], [$(cat $srcdir/.depend)])
+
+# Binaries for interop tests.
+AC_PATH_PROG([PLINK], [plink])
+AC_PATH_PROG([PUTTYGEN], [puttygen])
+AC_PATH_PROG([CONCH], [conch])
+AC_PATH_PROG([DROPBEAR], [dropbear])
+AC_PATH_PROG([DBCLIENT], [dbclient])
+AC_PATH_PROG([DROPBEARKEY], [dropbearkey])
+AC_PATH_PROG([DROPBEARCONVERT], [dropbearconvert])
 
 CFLAGS="${CFLAGS} ${CFLAGS_AFTER}"
 LDFLAGS="${LDFLAGS} ${LDFLAGS_AFTER}"
