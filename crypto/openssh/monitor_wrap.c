@@ -1,4 +1,4 @@
-/* $OpenBSD: monitor_wrap.c,v 1.126 2023/01/06 02:47:18 djm Exp $ */
+/* $OpenBSD: monitor_wrap.c,v 1.129 2023/12/18 14:45:49 djm Exp $ */
 /*
  * Copyright 2002 Niels Provos <provos@citi.umich.edu>
  * Copyright 2002 Markus Friedl <markus@openbsd.org>
@@ -340,8 +340,8 @@ out:
 		log_verbose_add(options.log_verbose[i]);
 	process_permitopen(ssh, &options);
 	process_channel_timeouts(ssh, &options);
+	kex_set_server_sig_algs(ssh, options.pubkey_accepted_algos);
 	free(newopts);
-
 	sshbuf_free(m);
 
 	return (pw);
@@ -575,10 +575,8 @@ mm_pty_allocate(int *ptyfd, int *ttyfd, char *namebuf, size_t namebuflen)
 	if ((tmp1 = dup(pmonitor->m_recvfd)) == -1 ||
 	    (tmp2 = dup(pmonitor->m_recvfd)) == -1) {
 		error_f("cannot allocate fds for pty");
-		if (tmp1 > 0)
+		if (tmp1 >= 0)
 			close(tmp1);
-		if (tmp2 > 0)
-			close(tmp2);
 		return 0;
 	}
 	close(tmp1);

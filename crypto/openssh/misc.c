@@ -1,4 +1,4 @@
-/* $OpenBSD: misc.c,v 1.181 2023/03/03 02:37:58 dtucker Exp $ */
+/* $OpenBSD: misc.c,v 1.190 2024/03/04 02:16:11 djm Exp $ */
 /*
  * Copyright (c) 2000 Markus Friedl.  All rights reserved.
  * Copyright (c) 2005-2020 Damien Miller.  All rights reserved.
@@ -22,6 +22,7 @@
 
 #include <sys/types.h>
 #include <sys/ioctl.h>
+#include <sys/mman.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/time.h>
@@ -35,9 +36,15 @@
 #ifdef HAVE_POLL_H
 #include <poll.h>
 #endif
+#ifdef HAVE_NLIST_H
+#include <nlist.h>
+#endif
 #include <signal.h>
 #include <stdarg.h>
 #include <stdio.h>
+#ifdef HAVE_STDINT_H
+# include <stdint.h>
+#endif
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -306,19 +313,38 @@ set_sock_tos(int fd, int tos)
  * Returns 0 if fd ready or -1 on timeout or error (see errno).
  */
 static int
-waitfd(int fd, int *timeoutp, short events)
+waitfd(int fd, int *timeoutp, short events, volatile sig_atomic_t *stop)
 {
 	struct pollfd pfd;
-	struct timeval t_start;
+	struct timespec timeout;
 	int oerrno, r;
+	sigset_t nsigset, osigset;
 
+	if (timeoutp && *timeoutp == -1)
+		timeoutp = NULL;
 	pfd.fd = fd;
 	pfd.events = events;
-	for (; *timeoutp >= 0;) {
-		monotime_tv(&t_start);
-		r = poll(&pfd, 1, *timeoutp);
+	ptimeout_init(&timeout);
+	if (timeoutp != NULL)
+		ptimeout_deadline_ms(&timeout, *timeoutp);
+	if (stop != NULL)
+		sigfillset(&nsigset);
+	for (; timeoutp == NULL || *timeoutp >= 0;) {
+		if (stop != NULL) {
+			sigprocmask(SIG_BLOCK, &nsigset, &osigset);
+			if (*stop) {
+				sigprocmask(SIG_SETMASK, &osigset, NULL);
+				errno = EINTR;
+				return -1;
+			}
+		}
+		r = ppoll(&pfd, 1, ptimeout_get_tsp(&timeout),
+		    stop != NULL ? &osigset : NULL);
 		oerrno = errno;
-		ms_subtract_diff(&t_start, timeoutp);
+		if (stop != NULL)
+			sigprocmask(SIG_SETMASK, &osigset, NULL);
+		if (timeoutp)
+			*timeoutp = ptimeout_get_ms(&timeout);
 		errno = oerrno;
 		if (r > 0)
 			return 0;
@@ -338,8 +364,8 @@ waitfd(int fd, int *timeoutp, short events)
  * Returns 0 if fd ready or -1 on timeout or error (see errno).
  */
 int
-waitrfd(int fd, int *timeoutp) {
-	return waitfd(fd, timeoutp, POLLIN);
+waitrfd(int fd, int *timeoutp, volatile sig_atomic_t *stop) {
+	return waitfd(fd, timeoutp, POLLIN, stop);
 }
 
 /*
@@ -373,7 +399,7 @@ timeout_connect(int sockfd, const struct sockaddr *serv_addr,
 		break;
 	}
 
-	if (waitfd(sockfd, timeoutp, POLLIN | POLLOUT) == -1)
+	if (waitfd(sockfd, timeoutp, POLLIN | POLLOUT, NULL) == -1)
 		return -1;
 
 	/* Completed or failed */
@@ -926,8 +952,11 @@ urldecode(const char *src)
 {
 	char *ret, *dst;
 	int ch;
+	size_t srclen;
 
-	ret = xmalloc(strlen(src) + 1);
+	if ((srclen = strlen(src)) >= SIZE_MAX)
+		fatal_f("input too large");
+	ret = xmalloc(srclen + 1);
 	for (dst = ret; *src != '\0'; src++) {
 		switch (*src) {
 		case '+':
@@ -1220,7 +1249,7 @@ static char *
 vdollar_percent_expand(int *parseerror, int dollar, int percent,
     const char *string, va_list ap)
 {
-#define EXPAND_MAX_KEYS	16
+#define EXPAND_MAX_KEYS	64
 	u_int num_keys = 0, i;
 	struct {
 		const char *key;
@@ -2273,6 +2302,8 @@ child_set_env(char ***envp, u_int *envsizep, const char *name,
 	 * If we're passed an uninitialized list, allocate a single null
 	 * entry before continuing.
 	 */
+	if ((*envp == NULL) != (*envsizep == 0))
+		fatal_f("environment size mismatch");
 	if (*envp == NULL && *envsizep == 0) {
 		*envp = xmalloc(sizeof(char *));
 		*envp[0] = NULL;
@@ -2462,6 +2493,43 @@ format_absolute_time(uint64_t t, char *buf, size_t len)
 	strftime(buf, len, "%Y-%m-%dT%H:%M:%S", &tm);
 }
 
+/*
+ * Parse a "pattern=interval" clause (e.g. a ChannelTimeout).
+ * Returns 0 on success or non-zero on failure.
+ * Caller must free *typep.
+ */
+int
+parse_pattern_interval(const char *s, char **typep, int *secsp)
+{
+	char *cp, *sdup;
+	int secs;
+
+	if (typep != NULL)
+		*typep = NULL;
+	if (secsp != NULL)
+		*secsp = 0;
+	if (s == NULL)
+		return -1;
+	sdup = xstrdup(s);
+
+	if ((cp = strchr(sdup, '=')) == NULL || cp == sdup) {
+		free(sdup);
+		return -1;
+	}
+	*cp++ = '\0';
+	if ((secs = convtime(cp)) < 0) {
+		free(sdup);
+		return -1;
+	}
+	/* success */
+	if (typep != NULL)
+		*typep = xstrdup(sdup);
+	if (secsp != NULL)
+		*secsp = secs;
+	free(sdup);
+	return 0;
+}
+
 /* check if path is absolute */
 int
 path_absolute(const char *path)
@@ -2574,6 +2642,19 @@ opt_array_append(const char *file, const int line, const char *directive,
     char ***array, u_int *lp, const char *s)
 {
 	opt_array_append2(file, line, directive, array, NULL, lp, s, 0);
+}
+
+void
+opt_array_free2(char **array, int **iarray, u_int l)
+{
+	u_int i;
+
+	if (array == NULL || l == 0)
+		return;
+	for (i = 0; i < l; i++)
+		free(array[i]);
+	free(array);
+	free(iarray);
 }
 
 sshsig_t
@@ -2870,22 +2951,33 @@ ptimeout_deadline_ms(struct timespec *pt, long ms)
 	ptimeout_deadline_tsp(pt, &p);
 }
 
+/* Specify a poll/ppoll deadline at wall clock monotime 'when' (timespec) */
+void
+ptimeout_deadline_monotime_tsp(struct timespec *pt, struct timespec *when)
+{
+	struct timespec now, t;
+
+	monotime_ts(&now);
+
+	if (timespeccmp(&now, when, >=)) {
+		/* 'when' is now or in the past. Timeout ASAP */
+		pt->tv_sec = 0;
+		pt->tv_nsec = 0;
+	} else {
+		timespecsub(when, &now, &t);
+		ptimeout_deadline_tsp(pt, &t);
+	}
+}
+
 /* Specify a poll/ppoll deadline at wall clock monotime 'when' */
 void
 ptimeout_deadline_monotime(struct timespec *pt, time_t when)
 {
-	struct timespec now, t;
+	struct timespec t;
 
 	t.tv_sec = when;
 	t.tv_nsec = 0;
-	monotime_ts(&now);
-
-	if (timespeccmp(&now, &t, >=))
-		ptimeout_deadline_sec(pt, 0);
-	else {
-		timespecsub(&t, &now, &t);
-		ptimeout_deadline_tsp(pt, &t);
-	}
+	ptimeout_deadline_monotime_tsp(pt, &t);
 }
 
 /* Get a poll(2) timeout value in milliseconds */
@@ -2911,4 +3003,76 @@ int
 ptimeout_isset(struct timespec *pt)
 {
 	return pt->tv_sec != -1;
+}
+
+/*
+ * Returns zero if the library at 'path' contains symbol 's', nonzero
+ * otherwise.
+ */
+int
+lib_contains_symbol(const char *path, const char *s)
+{
+#ifdef HAVE_NLIST_H
+	struct nlist nl[2];
+	int ret = -1, r;
+
+	memset(nl, 0, sizeof(nl));
+	nl[0].n_name = xstrdup(s);
+	nl[1].n_name = NULL;
+	if ((r = nlist(path, nl)) == -1) {
+		error_f("nlist failed for %s", path);
+		goto out;
+	}
+	if (r != 0 || nl[0].n_value == 0 || nl[0].n_type == 0) {
+		error_f("library %s does not contain symbol %s", path, s);
+		goto out;
+	}
+	/* success */
+	ret = 0;
+ out:
+	free(nl[0].n_name);
+	return ret;
+#else /* HAVE_NLIST_H */
+	int fd, ret = -1;
+	struct stat st;
+	void *m = NULL;
+	size_t sz = 0;
+
+	memset(&st, 0, sizeof(st));
+	if ((fd = open(path, O_RDONLY)) < 0) {
+		error_f("open %s: %s", path, strerror(errno));
+		return -1;
+	}
+	if (fstat(fd, &st) != 0) {
+		error_f("fstat %s: %s", path, strerror(errno));
+		goto out;
+	}
+	if (!S_ISREG(st.st_mode)) {
+		error_f("%s is not a regular file", path);
+		goto out;
+	}
+	if (st.st_size < 0 ||
+	    (size_t)st.st_size < strlen(s) ||
+	    st.st_size >= INT_MAX/2) {
+		error_f("%s bad size %lld", path, (long long)st.st_size);
+		goto out;
+	}
+	sz = (size_t)st.st_size;
+	if ((m = mmap(NULL, sz, PROT_READ, MAP_PRIVATE, fd, 0)) == MAP_FAILED ||
+	    m == NULL) {
+		error_f("mmap %s: %s", path, strerror(errno));
+		goto out;
+	}
+	if (memmem(m, sz, s, strlen(s)) == NULL) {
+		error_f("%s does not contain expected string %s", path, s);
+		goto out;
+	}
+	/* success */
+	ret = 0;
+ out:
+	if (m != NULL && m != MAP_FAILED)
+		munmap(m, sz);
+	close(fd);
+	return ret;
+#endif /* HAVE_NLIST_H */
 }

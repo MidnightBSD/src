@@ -1,4 +1,4 @@
-/* $OpenBSD: session.c,v 1.335 2023/03/07 06:09:14 dtucker Exp $ */
+/* $OpenBSD: session.c,v 1.337 2024/02/01 02:37:33 djm Exp $ */
 /*
  * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
  *                    All rights reserved
@@ -1345,7 +1345,7 @@ safely_chroot(const char *path, uid_t uid)
 			memcpy(component, path, cp - path);
 			component[cp - path] = '\0';
 		}
-	
+
 		debug3_f("checking '%s'", component);
 
 		if (stat(component, &st) != 0)
@@ -2398,17 +2398,17 @@ session_exit_message(struct ssh *ssh, Session *s, int status)
 {
 	Channel *c;
 	int r;
+	char *note = NULL;
 
 	if ((c = channel_lookup(ssh, s->chanid)) == NULL)
 		fatal_f("session %d: no channel %d", s->self, s->chanid);
-	debug_f("session %d channel %d pid %ld",
-	    s->self, s->chanid, (long)s->pid);
 
 	if (WIFEXITED(status)) {
 		channel_request_start(ssh, s->chanid, "exit-status", 0);
 		if ((r = sshpkt_put_u32(ssh, WEXITSTATUS(status))) != 0 ||
 		    (r = sshpkt_send(ssh)) != 0)
 			sshpkt_fatal(ssh, r, "%s: exit reply", __func__);
+		xasprintf(&note, "exit %d", WEXITSTATUS(status));
 	} else if (WIFSIGNALED(status)) {
 		channel_request_start(ssh, s->chanid, "exit-signal", 0);
 #ifndef WCOREDUMP
@@ -2420,10 +2420,17 @@ session_exit_message(struct ssh *ssh, Session *s, int status)
 		    (r = sshpkt_put_cstring(ssh, "")) != 0 ||
 		    (r = sshpkt_send(ssh)) != 0)
 			sshpkt_fatal(ssh, r, "%s: exit reply", __func__);
+		xasprintf(&note, "signal %d%s", WTERMSIG(status),
+		    WCOREDUMP(status) ? " core dumped" : "");
 	} else {
 		/* Some weird exit cause.  Just exit. */
-		ssh_packet_disconnect(ssh, "wait returned status %04x.", status);
+		ssh_packet_disconnect(ssh, "wait returned status %04x.",
+		    status);
 	}
+
+	debug_f("session %d channel %d pid %ld %s", s->self, s->chanid,
+	    (long)s->pid, note == NULL ? "UNKNOWN" : note);
+	free(note);
 
 	/* disconnect channel */
 	debug_f("release channel %d", s->chanid);
