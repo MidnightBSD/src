@@ -2238,6 +2238,7 @@ main(int ac, char **av)
 	/* drop */
 	(void)setegid(getgid());
 	(void)setgid(getgid());
+	setuid(geteuid());
 
 	platform_disable_tracing(0);	/* strict=no */
 
