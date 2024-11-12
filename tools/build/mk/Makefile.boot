@@ -4,7 +4,7 @@ DPADD+=		${WORLDTMP}/legacy/usr/lib/libegacy.a
 LDADD+=		-legacy
 LDFLAGS+=	-L${WORLDTMP}/legacy/usr/lib
 
-.if ${.MAKE.OS} != "FreeBSD"
+.if ${.MAKE.OS} != "MidnightBSD" && ${.MAKE.OS} != "FreeBSD"
 # On MacOS using a non-mac ar will fail the build, similarly on Linux using
 # nm may not work as expected if the nm for the target architecture comes in
 # $PATH before a nm that supports the host architecture.
@@ -66,7 +66,7 @@ CFLAGS+=	-idirafter ${SRCTOP}/contrib/libarchive/libarchive
 .else
 .error "Unsupported build OS: ${.MAKE.OS}"
 .endif
-.endif # ${.MAKE.OS} != "FreeBSD"
+.endif # ${.MAKE.OS} != "MidnightBSD"
 
 # we do not want to capture dependencies referring to the above
 UPDATE_DEPENDFILE= no
