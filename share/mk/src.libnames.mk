@@ -443,6 +443,7 @@ _DP_osmvendor=	ibumad pthread
 
 _DP_msearch=	sqlite3 magic z
 _DP_mport=	md archive bz2 lzma z fetch sqlite3 ucl pthread util zstd
+_DP_mj=         bz2 crypto z
 _DP_dispatch=	BlocksRuntime pthread
 _DP_blocksruntime=
 
