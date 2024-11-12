@@ -421,6 +421,7 @@ _DP_zpool=	md pthread z icp spl nvpair avl umem
 _DP_zutil=	avl geom m tpool
 _DP_be=		zfs spl nvpair zfsbootenv
 _DP_netmap=
+_DP_netpgp=     bz2 crypto mj z
 _DP_ifconfig=	m
 _DP_pfctl=	nv
 
@@ -443,6 +444,7 @@ _DP_osmvendor=	ibumad pthread
 
 _DP_msearch=	sqlite3 magic z
 _DP_mport=	md archive bz2 lzma z fetch sqlite3 ucl pthread util zstd
+_DP_mj=         bz2 crypto z
 _DP_dispatch=	BlocksRuntime pthread
 _DP_blocksruntime=
 
@@ -727,6 +729,9 @@ LIBGTEST_MAINDIR=	${OBJTOP}/lib/googletest/gtest_main
 LIBALIASDIR=	${OBJTOP}/lib/libalias/libalias
 LIBBLACKLISTDIR=	${OBJTOP}/lib/libblacklist
 LIBBLOCKSRUNTIMEDIR=	${OBJTOP}/lib/libblocksruntime
+LIBDISPATCHDIR= ${OBJTOP}/lib/libdispatch
+LIBMPORTDIR=    ${OBJTOP}/lib/libmport
+LIBMSEARCHDIR=  ${OBJTOP}/lib/libmsearch
 LIBBSNMPDIR=	${OBJTOP}/lib/libbsnmp/libbsnmp
 LIBCASPERDIR=	${OBJTOP}/lib/libcasper/libcasper
 LIBCAP_DNSDIR=	${OBJTOP}/lib/libcasper/services/cap_dns
@@ -746,6 +751,8 @@ LIBMENUWDIR=	${OBJTOP}/lib/ncurses/menu
 LIBNCURSESWDIR=	${OBJTOP}/lib/ncurses/ncurses
 LIBPANELWDIR=	${OBJTOP}/lib/ncurses/panel
 LIBCRYPTODIR=	${OBJTOP}/secure/lib/libcrypto
+LIBMJDIR=       ${OBJTOP}/secure/lib/libmj
+LIBNETPGPDIR=   ${OBJTOP}/secure/lib/libnetpgp
 LIBSPLDIR=	${OBJTOP}/cddl/lib/libspl
 LIBSSHDIR=	${OBJTOP}/secure/lib/libssh
 LIBSSLDIR=	${OBJTOP}/secure/lib/libssl
