@@ -1,4 +1,0 @@
-# $FreeBSD: stable/11/gnu/usr.bin/binutils/libopcodes/Makefile.arm 160580 2006-07-22 14:59:50Z obrien $
-
-SRCS+=	arm-dis.c
-CFLAGS+= -DARCH_arm
