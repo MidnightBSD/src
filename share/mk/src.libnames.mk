@@ -421,6 +421,7 @@ _DP_zpool=	md pthread z icp spl nvpair avl umem
 _DP_zutil=	avl geom m tpool
 _DP_be=		zfs spl nvpair zfsbootenv
 _DP_netmap=
+_DP_netpgp=     bz2 crypto mj z
 _DP_ifconfig=	m
 _DP_pfctl=	nv
 
