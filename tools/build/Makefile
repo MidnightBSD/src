@@ -279,9 +279,9 @@ _host_tools_to_symlink=	basename bzip2 bunzip2 chmod chown cmp comm cp date dd \
 _make_abs!=	which "${MAKE}"
 _host_abs_tools_to_symlink=	${_make_abs}:make ${_make_abs}:bmake
 
-.if ${.MAKE.OS} == "FreeBSD"
-# When building on FreeBSD we always copy the host tools instead of linking
-# into WORLDTMP to avoid issues with incompatible libraries (see r364030).
+.if ${.MAKE.OS} == "MidnightBSD" || ${.MAKE.OS} == "FreeBSD"
+# When building on MidnightBSD we always copy the host tools instead of linking
+# into WORLDTMP to avoid issues with incompatible libraries. 
 # Note: we could create links if we don't intend to update the current machine.
 _COPY_HOST_TOOL=cp -pf
 .else
