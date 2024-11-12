@@ -172,7 +172,7 @@ _t=		${TARGET_ARCH}/${TARGET}
 .endif
 .endfor
 
-.if ${.MAKE.OS} != "FreeBSD"
+.if ${.MAKE.OS} != "MidnightBSD"
 CROSSBUILD_HOST=${.MAKE.OS}
 .if ${.MAKE.OS} != "Linux" && ${.MAKE.OS} != "Darwin"
 .warning "Unsupported crossbuild system: ${.MAKE.OS}. Build will probably fail!"
@@ -520,7 +520,7 @@ GIT_CMD=   ${_P}/git
 
 .if !defined(OSRELDATE)
 .if exists(/usr/include/osreldate.h)
-OSRELDATE!=	awk '/^\#define[[:space:]]*__FreeBSD_version/ { print $$3 }' \
+OSRELDATE!=	awk '/^\#define[[:space:]]*__MidnightBSD_version/ { print $$3 }' \
 		/usr/include/osreldate.h
 .else
 OSRELDATE=	0
@@ -536,12 +536,12 @@ _${_V}!=	eval $$(awk '/^${_V}=/{print}' ${SRCTOP}/sys/conf/newvers.sh); echo $$$
 .endif
 .endfor
 .if !defined(SRCRELDATE)
-SRCRELDATE!=	awk '/^\#define[[:space:]]*__FreeBSD_version/ { print $$3 }' \
+SRCRELDATE!=	awk '/^\#define[[:space:]]*__MidnightBSD_version/ { print $$3 }' \
 		${SRCDIR}/sys/sys/param.h
 .export SRCRELDATE
 .endif
 .if !defined(VERSION)
-VERSION=	FreeBSD ${_REVISION}-${_BRANCH:C/-p[0-9]+$//} ${TARGET_ARCH} ${SRCRELDATE}
+VERSION=	MidnightBSD ${_REVISION}-${_BRANCH:C/-p[0-9]+$//} ${TARGET_ARCH} ${SRCRELDATE}
 .export VERSION
 .endif
 
@@ -571,9 +571,9 @@ SOURCE_DATE_EPOCH=	${TIMEEPOCHNOW:gmtime}
 SOURCE_DATE_EPOCH=	${PKG_TIMESTAMP}
 .endif
 
-PKG_NAME_PREFIX?=	FreeBSD
-PKG_MAINTAINER?=	re@FreeBSD.org
-PKG_WWW?=		https://www.FreeBSD.org
+PKG_NAME_PREFIX?=	MidnightBSD
+PKG_MAINTAINER?=	re@MidnightBSD.org
+PKG_WWW?=		https://www.MidnightBSD.org
 .export PKG_NAME_PREFIX
 .export PKG_MAINTAINER
 .export PKG_WWW
@@ -589,8 +589,8 @@ _CPUTYPE!=	MAKEFLAGS= CPUTYPE=${_TARGET_CPUTYPE} ${MAKE} -f /dev/null \
 BUILD_ARCH!=	uname -p
 # On some Linux systems uname -p returns "unknown" so skip this check there.
 # This check only exists to tell people to use TARGET_ARCH instead of
-# MACHINE_ARCH so skipping it when crossbuilding on non-FreeBSD should be fine.
-.if ${MACHINE_ARCH} != ${BUILD_ARCH} && ${.MAKE.OS} == "FreeBSD"
+# MACHINE_ARCH so skipping it when crossbuilding on non-MidnightBSD should be fine.
+.if ${MACHINE_ARCH} != ${BUILD_ARCH} && ${.MAKE.OS} == "MidnightBSD"
 .error To cross-build, set TARGET_ARCH.
 .endif
 .endif
@@ -612,8 +612,8 @@ STRICTTMPPATH=	${XPATH}:${BPATH}:${UNIVERSE_TOOLCHAIN_PATH}
 # resolved it will be turned on by default.
 BUILD_WITH_STRICT_TMPPATH?=0
 .if defined(CROSSBUILD_HOST)
-# When building on non-FreeBSD we can't rely on the tools in /usr/bin being compatible
-# with what FreeBSD expects. Therefore we only use tools from STRICTTMPPATH
+# When building on non-MidnightBSD we can't rely on the tools in /usr/bin being compatible
+# with what MidnightBSD expects. Therefore we only use tools from STRICTTMPPATH
 # during the world build stage. We build most tools during the bootstrap-tools
 # phase but symlink host tools that are known to work instead of building them
 BUILD_WITH_STRICT_TMPPATH:=1
@@ -640,8 +640,8 @@ MKTEMP=mktemp
 .endif
 INSTALLTMP!=	${MKTEMP} -d -u -t install
 
-.if ${.MAKE.OS} == "FreeBSD"
-# When building on FreeBSD we always copy the host tools instead of linking
+.if ${.MAKE.OS} == "MidnightBSD"
+# When building on MidnightBSD we always copy the host tools instead of linking
 # into INSTALLTMP to avoid issues with incompatible libraries (see r364030).
 # Note: we could create links if we don't intend to update the current machine.
 INSTALLTMP_COPY_HOST_TOOL=cp
@@ -692,8 +692,8 @@ PACKAGE=	kernel
 
 BOOTSTRAPPING?=	0
 # Keep these in sync
-MINIMUM_SUPPORTED_OSREL?= 1002501
-MINIMUM_SUPPORTED_REL?= 10.3
+MINIMUM_SUPPORTED_OSREL?= 301000
+MINIMUM_SUPPORTED_REL?= 3.1
 
 # Common environment for world related stages
 CROSSENV+=	\
@@ -880,7 +880,7 @@ META_MODE_BAD_ABI_VERS+=	1200031
 .if !defined(OBJDIR_HOST_OSRELDATE)
 .if exists(${OBJTOP}/host-osreldate.h)
 OBJDIR_HOST_OSRELDATE!=	\
-    awk '/^\#define[[:space:]]*__FreeBSD_version/ { print $$3 }' \
+    awk '/^\#define[[:space:]]*__MidnightBSD_version/ { print $$3 }' \
     ${OBJTOP}/host-osreldate.h
 .elif exists(${WORLDTMP}/usr/include/osreldate.h)
 OBJDIR_HOST_OSRELDATE=	0
@@ -898,14 +898,14 @@ _meta_mode_need_rebuild=	${_ver}
 .endif
 .endfor
 .if defined(_meta_mode_need_rebuild)
-.info META_MODE: Rebuilding host tools due to ABI breakage in __FreeBSD_version ${_meta_mode_need_rebuild}.
+.info META_MODE: Rebuilding host tools due to ABI breakage in __MidnightBSD_version ${_meta_mode_need_rebuild}.
 NO_META_IGNORE_HOST_HEADERS=	1
 .export NO_META_IGNORE_HOST_HEADERS
 .endif	# defined(_meta_mode_need_rebuild)
 .endif	# defined(OBJDIR_HOST_OSRELDATE)
 .endif	# ${MK_META_MODE} == "yes" && ${MK_CLEAN} == "no" ...
 # This is only used for META_MODE+filemon to track what the oldest
-# __FreeBSD_version is in WORLDTMP.  This purposely does NOT have
+# __MidnightBSD_version is in WORLDTMP.  This purposely does NOT have
 # a make dependency on /usr/include/osreldate.h as the file should
 # only be copied when it is missing or meta mode determines it has changed.
 # Since host files are normally ignored without NO_META_IGNORE_HOST
@@ -916,8 +916,8 @@ host-osreldate.h: # DO NOT ADD /usr/include/osreldate.h here
 .if !defined(CROSSBUILD_HOST)
 	@cp -f /usr/include/osreldate.h ${.TARGET}
 .else
-	@echo "#ifndef __FreeBSD_version" > ${.TARGET}
-	@echo "#define __FreeBSD_version ${OSRELDATE}" >> ${.TARGET}
+	@echo "#ifndef __MidnightBSD_version" > ${.TARGET}
+	@echo "#define __MidnightBSD_version ${OSRELDATE}" >> ${.TARGET}
 	@echo "#endif" >> ${.TARGET}
 .endif
 
@@ -1199,7 +1199,7 @@ buildworld_prologue: .PHONY
 	@echo ">>> World build started on `LC_ALL=C date`"
 .if ${TARGET:Mmips}
 	@echo "--------------------------------------------------------------"
-	@echo "WARNING: MIPS architecture is gone in FreeBSD 14.0"
+	@echo "WARNING: MIPS architecture is gone in MidnightBSD"
 .endif
 	@echo "--------------------------------------------------------------"
 
@@ -1212,7 +1212,7 @@ buildworld_epilogue: .PHONY
 	  echo "ncpu: $$(${_ncpu_cmd})${.MAKE.JOBS:S/^/, make -j/}"
 .if ${TARGET:Mmips}
 	@echo "--------------------------------------------------------------"
-	@echo "WARNING: MIPS architecture is gone in FreeBSD 14.0"
+	@echo "WARNING: MIPS architecture is gone in MidnightBSD"
 .endif
 	@echo "--------------------------------------------------------------"
 
@@ -2072,8 +2072,8 @@ create-kernel-packages-flavor${flavor:C,^""$,${_default_flavor},}: _pkgbootstrap
 	sed -e "s/%VERSION%/${PKG_VERSION}/" \
 		-e "s/%PKGNAME%/kernel-${INSTALLKERNEL:tl}${flavor}/" \
 		-e "s/%KERNELDIR%/kernel/" \
-		-e "s/%COMMENT%/FreeBSD ${INSTALLKERNEL} kernel ${flavor}/" \
-		-e "s/%DESC%/FreeBSD ${INSTALLKERNEL} kernel ${flavor}/" \
+		-e "s/%COMMENT%/MidnightBSD ${INSTALLKERNEL} kernel ${flavor}/" \
+		-e "s/%DESC%/MidnightBSD ${INSTALLKERNEL} kernel ${flavor}/" \
 		-e "s/ %VCS_REVISION%/${VCS_REVISION}/" \
 		-e "s/%PKG_NAME_PREFIX%/${PKG_NAME_PREFIX}/" \
 		-e "s/%PKG_MAINTAINER%/${PKG_MAINTAINER}/" \
@@ -2223,7 +2223,7 @@ _bt=		_bootstrap-tools
 # programs used during the build accept different flags or generate different
 # output. On those platforms we only symlink the tools known to be compatible
 # (e.g. basic utilities such as mkdir) into ${WORLDTMP} and build all others
-# from the FreeBSD sources during the bootstrap-tools stage.
+# from the BSD sources during the bootstrap-tools stage.
 # We want to build without the user's $PATH starting in the bootstrap-tools
 # phase so the tools used in that phase (ln, cp, etc) must have already been
 # linked to $WORLDTMP. The tools are listed in the _host_tools_to_symlink
@@ -2234,9 +2234,9 @@ _bt=		_bootstrap-tools
 # If BOOTSTRAP_ALL_TOOLS is set we will build all the required tools from the
 # current source tree. Otherwise we create a symlink to the version found in
 # $PATH during the bootstrap-tools stage.
-# When building on non-FreeBSD systems we can't assume that the host binaries
+# When building on non-MidnightBSD systems we can't assume that the host binaries
 # accept compatible flags or produce compatible output. Therefore we force
-# BOOTSTRAP_ALL_TOOLS and just build the FreeBSD version of the binary.
+# BOOTSTRAP_ALL_TOOLS and just build the MidnightBSD version of the binary.
 .if defined(CROSSBUILD_HOST)
 BOOTSTRAP_ALL_TOOLS:=	1
 .endif
@@ -2270,7 +2270,7 @@ _zic=		usr.sbin/zic
 # If you add a new bootstrap tool where we could also use the host version,
 # please ensure that you also add a .else case where you add the tool to the
 # _bootstrap_tools_links variable.
-.if ${BOOTSTRAPPING} < 1000033
+.if ${BOOTSTRAPPING} < 301000
 # Note: lex needs m4 to build but m4 also depends on lex (which needs m4 to
 # generate any files). To fix this cyclic dependency we can build a bootstrap
 # version of m4 (with pre-generated files) then use that to build the real m4.
@@ -2296,23 +2296,23 @@ _bootstrap_tools_links+=m4 lex
 # r338478 fixed a crash in objcopy for mips64el objects
 # r339083 libelf: correct mips64el test to use ELF header
 # r348347 Add missing powerpc64 relocation support to libdwarf
-.if ${BOOTSTRAPPING} < 1300030
+.if ${BOOTSTRAPPING} < 400000
 _elftoolchain_libs= lib/libelf lib/libdwarf lib/libzstd
 ${_bt}-lib/libelf: ${_bt_m4_depend}
 ${_bt}-lib/libdwarf: ${_bt_m4_depend}
 .endif
 
 # flua is required to regenerate syscall files.  It first appeared during the
-# 13.0-CURRENT cycle, thus needs to be built on -older releases and stable
+# 4.0-CURRENT cycle, thus needs to be built on -older releases and stable
 # branches.
-.if ${BOOTSTRAPPING} < 1300059
+.if ${BOOTSTRAPPING} < 400000
 ${_bt}-libexec/flua: ${_bt}-lib/liblua ${_bt}-lib/libucl
 _flua= lib/liblua lib/libucl libexec/flua
 .endif
 
-# r245440 mtree -N support added
-# r313404 requires sha384.h for libnetbsd, added to libmd in r292782
-.if ${BOOTSTRAPPING} < 1100093
+# mtree -N support added
+# requires sha384.h for libnetbsd, added to libmd in r292782
+.if ${BOOTSTRAPPING} < 302000
 _nmtree=	lib/libmd \
 		lib/libnetbsd \
 		usr.sbin/nmtree
@@ -2324,34 +2324,30 @@ _bootstrap_tools_links+=mtree
 .endif
 
 # r246097: log addition login.conf.db, passwd, pwd.db, and spwd.db with cat -l
-.if ${BOOTSTRAPPING} < 1000027
+.if ${BOOTSTRAPPING} < 301000
 _cat=		bin/cat
 .else
 _bootstrap_tools_links+=cat
 .endif
 
-# r277259 crunchide: Correct 64-bit section header offset
-# r281674 crunchide: always include both 32- and 64-bit ELF support
-.if ${BOOTSTRAPPING} < 1100078
+# crunchide: Correct 64-bit section header offset
+# crunchide: always include both 32- and 64-bit ELF support
+.if ${BOOTSTRAPPING} < 302000
 _crunchide=	usr.sbin/crunch/crunchide
 .else
 _bootstrap_tools_links+=crunchide
 .endif
 
-# 1400052, 1300526, 1203507: Removed -dc from linker invocation
-.if ${BOOTSTRAPPING} < 1203507 || \
-	(${BOOTSTRAPPING} > 1300000 && ${BOOTSTRAPPING} < 1300526) || \
-	(${BOOTSTRAPPING} > 1400000 && ${BOOTSTRAPPING} < 1400052)
+# Removed -dc from linker invocation
+.if ${BOOTSTRAPPING} < 302000
 _crunchgen=	usr.sbin/crunch/crunchgen
 .else
 _bootstrap_tools_links+=crunchgen
 .endif
 
-# r296926 -P keymap search path, MFC to stable/10 in r298297
-# Note: kbdcontrol can not be bootstrapped on non-FreeBSD systems
+# Note: kbdcontrol can not be bootstrapped on non-MidnightBSD systems
 .if !defined(CROSSBUILD_HOST)
-.if (${BOOTSTRAPPING} < 1003501 || \
-	(${BOOTSTRAPPING} >= 1100000 && ${BOOTSTRAPPING} < 1100103) || \
+.if (${BOOTSTRAPPING} < 301000 || \
 	(!exists(/usr/sbin/kbdcontrol)))
 _kbdcontrol=	usr.sbin/kbdcontrol
 .else
@@ -2359,9 +2355,8 @@ _bootstrap_tools_links+=kbdcontrol
 .endif
 .endif
 
-# 1300102: VHDX support
-.if ${BOOTSTRAPPING} < 1201520 || \
-	(${BOOTSTRAPPING} > 1300000 && ${BOOTSTRAPPING} < 1300102)
+# VHDX support
+.if ${BOOTSTRAPPING} < 400000
 _mkimg=	usr.bin/mkimg
 .else
 _bootstrap_tools_links+=mkimg
@@ -2458,17 +2453,17 @@ _basic_bootstrap_tools+=usr.sbin/services_mkdb usr.sbin/pwd_mkdb
 # ldd is required for installcheck (TODO: just always use /usr/bin/ldd instead?)
 .if !defined(CROSSBUILD_HOST)
 # ldd is only needed for updating the running system so we don't need to
-# bootstrap ldd on non-FreeBSD systems
+# bootstrap ldd on non-MidnightBSD systems
 _basic_bootstrap_tools+=usr.bin/ldd
 .endif
 # sysctl/chflags are required for installkernel:
 .if !defined(CROSSBUILD_HOST)
 _basic_bootstrap_tools+=bin/chflags
-# Note: sysctl does not bootstrap on FreeBSD < 13 anymore, but that doesn't
+# Note: sysctl does not bootstrap on MidnightBSD < 4 anymore, but that doesn't
 # matter since we don't need any of the new features for the build.
 _bootstrap_tools_links+=sysctl
 .else
-# When building on non-FreeBSD, install a fake chflags instead since the
+# When building on non-MidnightBSD, install a fake chflags instead since the
 # version from the source tree cannot work. We also don't need sysctl since we
 # are install with -DNO_ROOT.
 _other_bootstrap_tools+=tools/build/cross-build/fake_chflags
@@ -2499,7 +2494,7 @@ ${_bt}-bin/expr: ${_bt_lex_depend} ${_bt}-usr.bin/yacc
 ${_bt}-usr.sbin/config: ${_bt}-usr.bin/file2c ${_bt_lex_depend}
 # Note: no symlink to make/bmake in the !BOOTSTRAP_ALL_TOOLS case here since
 # the links to make/bmake make links will have already have been created in the
-# `make legacy` step. Not adding a link to make is important on non-FreeBSD
+# `make legacy` step. Not adding a link to make is important on non-MidnightBSD
 # since "make" will usually point to GNU make there.
 _other_bootstrap_tools+=usr.bin/bmake
 
@@ -2682,7 +2677,7 @@ _elftctools=	lib/libelftc \
 		usr.bin/size \
 		usr.bin/strings
 # These are not required by the build, but can be useful for developers who
-# cross-build on a FreeBSD 10 host:
+# cross-build on a MidnightBSD 2.x host:
 _elftctools+=	usr.bin/addr2line
 .endif
 .elif ${TARGET_ARCH} != ${MACHINE_ARCH} && ${MK_ELFTOOLCHAIN_BOOTSTRAP} != "no"

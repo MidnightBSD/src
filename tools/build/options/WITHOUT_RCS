@@ -1,5 +1,0 @@
-.\" $FreeBSD: stable/11/tools/build/options/WITHOUT_RCS 275138 2014-11-26 20:43:09Z gjb $
-Set to not build
-.Xr rcs 1 ,
-.Xr etcupdate 8 ,
-and related utilities.

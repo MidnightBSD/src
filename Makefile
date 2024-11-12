@@ -199,10 +199,10 @@ META_TGT_WHITELIST+= \
 .ORDER: buildkernel reinstallkernel
 .ORDER: buildkernel reinstallkernel.debug
 
-# Only sanitize PATH on FreeBSD.
+# Only sanitize PATH on MidnightBSD.
 # PATH may include tools that are required to cross-build
-# on non-FreeBSD systems.
-.if ${.MAKE.OS} == "FreeBSD"
+# on non-MidnightBSD systems.
+.if ${.MAKE.OS} == "MidnightBSD"
 PATH=	/sbin:/bin:/usr/sbin:/usr/bin
 .endif
 MAKEOBJDIRPREFIX?=	/usr/obj
@@ -282,7 +282,7 @@ MK_META_MODE= no
 .endif	# defined(MK_META_MODE) && ${MK_META_MODE} == yes
 
 # Guess target architecture from target type, and vice versa, based on
-# historic FreeBSD practice of tending to have TARGET == TARGET_ARCH
+# historic MidnightBSD practice of tending to have TARGET == TARGET_ARCH
 # expanding to TARGET == TARGET_CPUARCH in recent times, with known
 # exceptions.
 .if !defined(TARGET_ARCH) && defined(TARGET)

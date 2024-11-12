@@ -1,2 +1,0 @@
-Do not build the GNU C++ stack (g++, libstdc++).
-This is the default on platforms where clang is the system compiler.
