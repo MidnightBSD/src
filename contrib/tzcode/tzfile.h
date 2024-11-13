@@ -1,12 +1,14 @@
 /* Layout and location of TZif files.  */
 
 #ifndef TZFILE_H
-
 #define TZFILE_H
+
 
 /*
 ** This file is in the public domain, so clarified as of
 ** 1996-06-05 by Arthur David Olson.
+**
+** $FreeBSD$
 */
 
 /*

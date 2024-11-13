@@ -200,6 +200,8 @@ static bool	rulesub(struct rule * rp,
 			const char * loyearp, const char * hiyearp,
 			const char * typep, const char * monthp,
 			const char * dayp, const char * timep);
+static void	setgroup(gid_t *flag, const char *name);
+static void	setuser(uid_t *flag, const char *name);
 static zic_t	tadd(zic_t t1, zic_t t2);
 
 /* Bound on length of what %z can expand to.  */
@@ -214,7 +216,7 @@ static bool		leapseen;
 static zic_t		leapminyear;
 static zic_t		leapmaxyear;
 static lineno		linenum;
-static int		max_abbrvar_len = PERCENT_Z_LEN_BOUND;
+static size_t		max_abbrvar_len = PERCENT_Z_LEN_BOUND;
 static int		max_format_len;
 static zic_t		max_year;
 static zic_t		min_year;
@@ -502,7 +504,7 @@ size_product(ptrdiff_t nitems, ptrdiff_t itemsize)
 ATTRIBUTE_PURE_114833 static ptrdiff_t
 align_to(ptrdiff_t size, ptrdiff_t alignment)
 {
-  ptrdiff_t lo_bits = alignment - 1, sum = size_sum(size, lo_bits);
+  size_t lo_bits = alignment - 1, sum = size_sum(size, lo_bits);
   return sum & ~lo_bits;
 }
 
@@ -657,7 +659,7 @@ close_file(FILE *stream, char const *dir, char const *name,
 	    name ? name : "", name ? ": " : "",
 	    e);
     if (tempname)
-      remove(tempname);
+      (void)remove(tempname);
     exit(EXIT_FAILURE);
   }
 }
@@ -670,7 +672,7 @@ usage(FILE *stream, int status)
 	    "\t[ -b {slim|fat} ] [ -d directory ] [ -l localtime ]"
 	    " [ -L leapseconds ] \\\n"
 	    "\t[ -p posixrules ] [ -r '[@lo][/@hi]' ] [ -R '@hi' ] \\\n"
-	    "\t[ -t localtime-link ] \\\n"
+	    "\t[ -t localtime-link ] [ -D ] [ -g gid ] [ -u uid ] \\\n"
 	    "\t[ filename ... ]\n\n"
 	    "Report bugs to %s.\n"),
 	  progname, progname, REPORT_BUGS_TO);
@@ -853,7 +855,7 @@ catch_signals(void)
 #endif
     SIGTERM
   };
-  int i;
+  size_t i;
   for (i = 0; i < sizeof signals / sizeof signals[0]; i++) {
 #ifdef SA_SIGINFO
     struct sigaction act0, act;
@@ -951,6 +953,12 @@ redundant_time_option(char *opt)
 static const char *	psxrules;
 static const char *	lcltime;
 static const char *	directory;
+static const char *	leapsec;
+static int		Dflag;
+static uid_t		uflag = (uid_t)-1;
+static gid_t		gflag = (gid_t)-1;
+static mode_t		mflag = (S_IRUSR | S_IRGRP | S_IROTH
+				 | S_IWUSR);
 static const char *	tzdefault;
 
 /* -1 if the TZif output file should be slim, 0 if default, 1 if the
@@ -986,7 +994,7 @@ main(int argc, char **argv)
 	textdomain(TZ_DOMAIN);
 #endif /* HAVE_GETTEXT */
 	main_argv = argv;
-	progname = argv[0] ? argv[0] : "zic";
+	progname = /* argv[0] ? argv[0] : */ "zic";
 	if (TYPE_BIT(zic_t) < 64) {
 		fprintf(stderr, "%s: %s\n", progname,
 			_("wild compilation-time specification of zic_t"));
@@ -1000,11 +1008,14 @@ main(int argc, char **argv)
 		} else if (strcmp(argv[k], "--help") == 0) {
 			usage(stdout, EXIT_SUCCESS);
 		}
-	while ((c = getopt(argc, argv, "b:d:l:L:p:r:R:st:vy:")) != EOF
+	while ((c = getopt(argc, argv, "Db:d:g:l:L:m:p:r:R:st:u:vy:")) != EOF
 	       && c != -1)
 		switch (c) {
 			default:
 				usage(stderr, EXIT_FAILURE);
+			case 'D':
+				Dflag = 1;
+				break;
 			case 'b':
 				if (strcmp(optarg, "slim") == 0) {
 				  if (0 < bloat)
@@ -1028,6 +1039,9 @@ main(int argc, char **argv)
 					return EXIT_FAILURE;
 				}
 				break;
+			case 'g':
+				setgroup(&gflag, optarg);
+				break;
 			case 'l':
 				if (lcltime == NULL)
 					lcltime = optarg;
@@ -1039,6 +1053,18 @@ main(int argc, char **argv)
 					return EXIT_FAILURE;
 				}
 				break;
+			case 'm':
+			{
+				void *set = setmode(optarg);
+				if (set == NULL) {
+					fprintf(stderr,
+_("invalid file mode"));
+					return EXIT_FAILURE;
+				}
+				mflag = getmode(set, mflag);
+				free(set);
+				break;
+			}
 			case 'p':
 				if (psxrules == NULL)
 					psxrules = optarg;
@@ -1059,6 +1085,9 @@ main(int argc, char **argv)
 				  return EXIT_FAILURE;
 				}
 				tzdefault = optarg;
+				break;
+			case 'u':
+				setuser(&uflag, optarg);
 				break;
 			case 'y':
 				warning(_("-y ignored"));
@@ -1244,7 +1273,10 @@ get_rand_u64(void)
       s = getrandom(entropy_buffer, sizeof entropy_buffer, 0);
     while (s < 0 && errno == EINTR);
 
-    nwords = s < 0 ? -1 : s / sizeof *entropy_buffer;
+    if (s < 0)
+      nwords = -1;
+    else
+      nwords = s / sizeof *entropy_buffer;
   }
   if (0 < nwords)
     return entropy_buffer[--nwords];
@@ -1358,6 +1390,14 @@ open_outfile(char const **outname, char **tempname)
   if (!*tempname)
     random_dirent(outname, tempname);
 
+  /*
+   * Remove old file, if any, to snap links.
+   */
+  if (remove(*outname) != 0 && errno != ENOENT && errno != EISDIR) {
+    fprintf(stderr, _("can't remove %s"), *outname);
+    exit(EXIT_FAILURE);
+  }
+
   while (! (fp = fopen(*outname, fopen_mode))) {
     int fopen_errno = errno;
     if (fopen_errno == ENOENT && !dirs_made) {
@@ -1384,7 +1424,7 @@ rename_dest(char *tempname, char const *name)
   if (tempname) {
     if (rename(tempname, name) != 0) {
       int rename_errno = errno;
-      remove(tempname);
+      (void)remove(tempname);
       fprintf(stderr, _("%s: rename to %s/%s: %s\n"),
 	      progname, directory, name, strerror(rename_errno));
       exit(EXIT_FAILURE);
@@ -1844,7 +1884,7 @@ getsave(char *field, bool *isdst)
 static void
 inrule(char **fields, int nfields)
 {
-	struct rule r;
+	struct rule r = { 0 };
 
 	if (nfields != RULE_FIELDS) {
 		error(_("wrong number of fields on Rule line"));
@@ -1921,7 +1961,7 @@ inzsub(char **fields, int nfields, bool iscont)
 {
 	register char *		cp;
 	char *			cp1;
-	struct zone z;
+	struct zone		z = { 0 };
 	int format_len;
 	register int		i_stdoff, i_rule, i_format;
 	register int		i_untilyear, i_untilmonth;
@@ -2379,6 +2419,7 @@ writezone(const char *const name, const char *const string, char version,
 {
 	register FILE *			fp;
 	register ptrdiff_t		i, j;
+	register size_t			u;
 	register int			pass;
 	char *tempname = NULL;
 	char const *outname = name;
@@ -2643,8 +2684,8 @@ writezone(const char *const name, const char *const string, char version,
 			    : i == thisdefaulttype ? old0 : i]
 		      = thistypecnt++;
 
-		for (i = 0; i < sizeof indmap / sizeof indmap[0]; ++i)
-			indmap[i] = -1;
+		for (u = 0; u < sizeof indmap / sizeof indmap[0]; ++u)
+			indmap[u] = -1;
 		thischarcnt = stdcnt = utcnt = 0;
 		for (i = old0; i < typecnt; i++) {
 			register char *	thisabbr;
@@ -2778,6 +2819,17 @@ writezone(const char *const name, const char *const string, char version,
 	}
 	fprintf(fp, "\n%s\n", string);
 	close_file(fp, directory, name, tempname);
+	if (chmod(tempname, mflag) < 0) {
+		fprintf(stderr, _("cannot change mode of %s to %03o"),
+		    tempname, (unsigned)mflag);
+		exit(EXIT_FAILURE);
+	}
+	if ((uflag != (uid_t)-1 || gflag != (gid_t)-1)
+	    && chown(tempname, uflag, gflag) < 0) {
+		fprintf(stderr, _("cannot change ownership of %s"), 
+		    tempname);
+		exit(EXIT_FAILURE);
+	}
 	rename_dest(tempname, name);
 	free(ats);
 }
@@ -3912,6 +3964,14 @@ mp = _("time zone abbreviation differs from POSIX standard");
 static void
 mkdirs(char const *argname, bool ancestors)
 {
+	/*
+	 * If -D was specified, do not create directories.  A subsequent
+	 * file operation will fail and produce an appropriate error
+	 * message.
+	 */
+	if (Dflag)
+		return;
+
 	char *name = estrdup(argname);
 	char *cp = name;
 
@@ -3959,3 +4019,62 @@ mkdirs(char const *argname, bool ancestors)
 	}
 	free(name);
 }
+
+#include <grp.h>
+#include <pwd.h>
+
+static void
+setgroup(gid_t *flag, const char *name)
+{
+	struct group *gr;
+
+	if (*flag != (gid_t)-1) {
+		fprintf(stderr, _("multiple -g flags specified"));
+		exit(EXIT_FAILURE);
+	}
+
+	gr = getgrnam(name);
+	if (gr == 0) {
+		char *ep;
+		unsigned long ul;
+
+		ul = strtoul(name, &ep, 10);
+		if (ul == (unsigned long)(gid_t)ul && *ep == '\0') {
+			*flag = ul;
+			return;
+		}
+		fprintf(stderr, _("group `%s' not found"), name);
+		exit(EXIT_FAILURE);
+	}
+	*flag = gr->gr_gid;
+}
+
+static void
+setuser(uid_t *flag, const char *name)
+{
+	struct passwd *pw;
+
+	if (*flag != (gid_t)-1) {
+		fprintf(stderr, _("multiple -u flags specified"));
+		exit(EXIT_FAILURE);
+	}
+
+	pw = getpwnam(name);
+	if (pw == 0) {
+		char *ep;
+		unsigned long ul;
+
+		ul = strtoul(name, &ep, 10);
+		if (ul == (unsigned long)(gid_t)ul && *ep == '\0') {
+			*flag = ul;
+			return;
+		}
+		fprintf(stderr, _("user `%s' not found"), name);
+		exit(EXIT_FAILURE);
+	}
+	*flag = pw->pw_uid;
+}
+
+/*
+** UNIX was a registered trademark of The Open Group in 2003.
+*/

@@ -83,7 +83,7 @@ static time_t const absolute_max_time =
   ((time_t) -1 < 0
    ? (((time_t) 1 << atime_shift) - 1 + ((time_t) 1 << atime_shift))
    : -1);
-static int	longest;
+static size_t	longest;
 static char const *progname;
 static bool	warned;
 static bool	errout;
@@ -309,6 +309,8 @@ tzfree(ATTRIBUTE_MAYBE_UNUSED timezone_t initial_environ)
 # if !HAVE_SETENV
   environ = initial_environ;
   tzset();
+# else
+  (void)initial_environ;
 # endif
 }
 #endif /* ! USE_LOCALTIME_RZ */
@@ -849,7 +851,7 @@ show(timezone_t tz, char *zone, time_t t, bool v)
 	register struct tm *	gmtmp;
 	struct tm tm, gmtm;
 
-	printf("%-*s  ", longest, zone);
+	printf("%-*s  ", (int)longest, zone);
 	if (v) {
 		gmtmp = my_gmtime_r(&t, &gmtm);
 		if (gmtmp == NULL) {
@@ -1081,7 +1083,7 @@ istrftime(char *buf, ptrdiff_t size, char const *time_fmt,
       ptrdiff_t f_prefix_len = p - f;
       ptrdiff_t f_prefix_copy_size = sumsize(f_prefix_len, 2);
       char fbuf[100];
-      bool oversized = sizeof fbuf <= f_prefix_copy_size;
+      bool oversized = sizeof fbuf <= (size_t)f_prefix_copy_size;
       char *f_prefix_copy = oversized ? xmalloc(f_prefix_copy_size) : fbuf;
       memcpy(f_prefix_copy, f, f_prefix_len);
       strcpy(f_prefix_copy + f_prefix_len, "X");
@@ -1243,10 +1245,10 @@ dumptime(register const struct tm *timeptr)
 	*/
 	printf("%s %s%3d %.2d:%.2d:%.2d ",
 		((0 <= timeptr->tm_wday
-		  && timeptr->tm_wday < sizeof wday_name / sizeof wday_name[0])
+		  && timeptr->tm_wday < (int)(sizeof wday_name / sizeof wday_name[0]))
 		 ? wday_name[timeptr->tm_wday] : "???"),
 		((0 <= timeptr->tm_mon
-		  && timeptr->tm_mon < sizeof mon_name / sizeof mon_name[0])
+		  && timeptr->tm_mon < (int)(sizeof mon_name / sizeof mon_name[0]))
 		 ? mon_name[timeptr->tm_mon] : "???"),
 		timeptr->tm_mday, timeptr->tm_hour,
 		timeptr->tm_min, timeptr->tm_sec);

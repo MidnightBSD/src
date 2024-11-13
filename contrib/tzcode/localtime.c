@@ -13,17 +13,36 @@
 /*LINTLIBRARY*/
 
 #define LOCALTIME_IMPLEMENTATION
+#include "namespace.h"
+#ifdef DETECT_TZ_CHANGES
+#ifndef DETECT_TZ_CHANGES_INTERVAL
+#define DETECT_TZ_CHANGES_INTERVAL 61
+#endif
+#include <sys/stat.h>
+#endif
+#include <fcntl.h>
+#if THREAD_SAFE
+#include <pthread.h>
+#endif
 #include "private.h"
+#include "un-namespace.h"
 
 #include "tzdir.h"
 #include "tzfile.h"
-#include <fcntl.h>
+
+#include "libc_private.h"
 
 #if defined THREAD_SAFE && THREAD_SAFE
-# include <pthread.h>
 static pthread_mutex_t locallock = PTHREAD_MUTEX_INITIALIZER;
-static int lock(void) { return pthread_mutex_lock(&locallock); }
-static void unlock(void) { pthread_mutex_unlock(&locallock); }
+static int lock(void) {
+	if (__isthreaded)
+		return _pthread_mutex_lock(&locallock);
+	return 0;
+}
+static void unlock(void) {
+	if (__isthreaded)
+		_pthread_mutex_unlock(&locallock);
+}
 #else
 static int lock(void) { return 0; }
 static void unlock(void) { }
@@ -174,6 +193,17 @@ static struct state *const gmtptr = &gmtmem;
 
 static char		lcl_TZname[TZ_STRLEN_MAX + 1];
 static int		lcl_is_set;
+
+static pthread_once_t	gmt_once = PTHREAD_ONCE_INIT;
+static pthread_once_t	gmtime_once = PTHREAD_ONCE_INIT;
+static pthread_key_t	gmtime_key;
+static int		gmtime_key_error;
+static pthread_once_t	offtime_once = PTHREAD_ONCE_INIT;
+static pthread_key_t	offtime_key;
+static int		offtime_key_error;
+static pthread_once_t	localtime_once = PTHREAD_ONCE_INIT;
+static pthread_key_t	localtime_key;
+static int		localtime_key_error;
 
 /*
 ** Section 4.12.3 of X3.159-1989 requires that
@@ -365,6 +395,45 @@ scrub_abbrs(struct state *sp)
 	return 0;
 }
 
+#ifdef DETECT_TZ_CHANGES
+/*
+ * Determine if there's a change in the timezone since the last time we checked.
+ * Returns: -1 on error
+ * 	     0 if the timezone has not changed
+ *	     1 if the timezone has changed
+ */
+static int
+change_in_tz(const char *name)
+{
+	static char old_name[PATH_MAX];
+	static struct stat old_sb;
+	struct stat sb;
+	int error;
+
+	error = stat(name, &sb);
+	if (error != 0)
+		return -1;
+
+	if (strcmp(name, old_name) != 0) {
+		strlcpy(old_name, name, sizeof(old_name));
+		old_sb = sb;
+		return 1;
+	}
+
+	if (sb.st_dev != old_sb.st_dev ||
+	    sb.st_ino != old_sb.st_ino ||
+	    sb.st_ctime != old_sb.st_ctime ||
+	    sb.st_mtime != old_sb.st_mtime) {
+		old_sb = sb;
+		return 1;
+	}
+
+	return 0;
+}
+#else /* !DETECT_TZ_CHANGES */
+#define	change_in_tz(X)	1
+#endif /* !DETECT_TZ_CHANGES */
+
 /* Input buffer for data read from a compiled tz file.  */
 union input_buffer {
   /* The first part of the buffer, interpreted as a header.  */
@@ -410,7 +479,6 @@ tzloadbody(char const *name, struct state *sp, bool doextend,
 	register int			fid;
 	register int			stored;
 	register ssize_t		nread;
-	register bool doaccess;
 	register union input_buffer *up = &lsp->u.u;
 	register int tzheadsize = sizeof(struct tzhead);
 
@@ -424,15 +492,7 @@ tzloadbody(char const *name, struct state *sp, bool doextend,
 
 	if (name[0] == ':')
 		++name;
-#ifdef SUPPRESS_TZDIR
-	/* Do not prepend TZDIR.  This is intended for specialized
-	   applications only, due to its security implications.  */
-	doaccess = true;
-#else
-	doaccess = name[0] == '/';
-#endif
-	if (!doaccess) {
-		char const *dot;
+	if (name[0] != '/') {
 		if (sizeof lsp->fullname - sizeof tzdirslash <= strlen(name))
 		  return ENAMETOOLONG;
 
@@ -442,31 +502,34 @@ tzloadbody(char const *name, struct state *sp, bool doextend,
 		memcpy(lsp->fullname, tzdirslash, sizeof tzdirslash);
 		strcpy(lsp->fullname + sizeof tzdirslash, name);
 
-		/* Set doaccess if NAME contains a ".." file name
-		   component, as such a name could read a file outside
-		   the TZDIR virtual subtree.  */
-		for (dot = name; (dot = strchr(dot, '.')); dot++)
-		  if ((dot == name || dot[-1] == '/') && dot[1] == '.'
-		      && (dot[2] == '/' || !dot[2])) {
-		    doaccess = true;
-		    break;
-		  }
-
 		name = lsp->fullname;
 	}
-	if (doaccess && access(name, R_OK) != 0)
-	  return errno;
-	fid = open(name, O_RDONLY | O_BINARY);
+	if (doextend) {
+		/*
+		 * Detect if the timezone file has changed.  Check
+		 * 'doextend' to ignore TZDEFRULES; the change_in_tz()
+		 * function can only keep state for a single file.
+		 */
+		int ret = change_in_tz(name);
+		if (ret <= 0) {
+			/*
+			 * Returns an errno value if there was an error,
+			 * and 0 if the timezone had not changed.
+			 */
+			return errno;
+		}
+	}
+	fid = _open(name, O_RDONLY | O_BINARY);
 	if (fid < 0)
 	  return errno;
 
-	nread = read(fid, up->buf, sizeof up->buf);
+	nread = _read(fid, up->buf, sizeof up->buf);
 	if (nread < tzheadsize) {
 	  int err = nread < 0 ? errno : EINVAL;
-	  close(fid);
+	  _close(fid);
 	  return err;
 	}
-	if (close(fid) < 0)
+	if (_close(fid) < 0)
 	  return errno;
 	for (stored = 4; stored <= 8; stored *= 2) {
 	    char version = up->tzhead.tzh_version[0];
@@ -1307,6 +1370,37 @@ gmtload(struct state *const sp)
 	  tzparse("UTC0", sp, NULL);
 }
 
+#ifdef DETECT_TZ_CHANGES
+static int
+recheck_tzdata()
+{
+	static time_t last_checked;
+	struct timespec now;
+	time_t current_time;
+	int error;
+
+	/*
+	 * We want to recheck the timezone file every 61 sec.
+	 */
+	error = clock_gettime(CLOCK_MONOTONIC, &now);
+	if (error < 0) {
+		/* XXX: Can we somehow report this? */
+		return 0;
+	}
+
+	current_time = now.tv_sec;
+	if ((current_time - last_checked > DETECT_TZ_CHANGES_INTERVAL) ||
+	    (last_checked > current_time)) {
+		last_checked = current_time;
+		return 1;
+	}
+
+	return 0;
+}
+#else /* !DETECT_TZ_CHANGES */
+#define	recheck_tzdata()	0
+#endif /* !DETECT_TZ_CHANGES */
+
 /* Initialize *SP to a value appropriate for the TZ setting NAME.
    Return 0 on success, an errno value on failure.  */
 static int
@@ -1335,15 +1429,15 @@ zoneinit(struct state *sp, char const *name)
 }
 
 static void
-tzset_unlocked(void)
+tzset_unlocked_name(char const *name)
 {
-  char const *name = getenv("TZ");
   struct state *sp = lclptr;
   int lcl = name ? strlen(name) < sizeof lcl_TZname : -1;
   if (lcl < 0
       ? lcl_is_set < 0
       : 0 < lcl_is_set && strcmp(lcl_TZname, name) == 0)
-    return;
+    if (recheck_tzdata() == 0)
+      return;
 #ifdef ALL_STATE
   if (! sp)
     lclptr = sp = malloc(sizeof *lclptr);
@@ -1358,6 +1452,12 @@ tzset_unlocked(void)
   lcl_is_set = lcl;
 }
 
+static void
+tzset_unlocked(void)
+{
+  tzset_unlocked_name(getenv("TZ"));
+}
+
 void
 tzset(void)
 {
@@ -1366,6 +1466,18 @@ tzset(void)
   tzset_unlocked();
   unlock();
 }
+
+void
+freebsd13_tzsetwall(void)
+{
+  if (lock() != 0)
+    return;
+  tzset_unlocked_name(NULL);
+  unlock();
+}
+__sym_compat(tzsetwall, freebsd13_tzsetwall, FBSD_1.0);
+__warn_references(tzsetwall,
+    "warning: tzsetwall() is deprecated, use tzset() instead.");
 
 static void
 gmtcheck(void)
@@ -1548,20 +1660,47 @@ localtime_tzset(time_t const *timep, struct tm *tmp, bool setname)
     errno = err;
     return NULL;
   }
+#ifndef DETECT_TZ_CHANGES
   if (setname || !lcl_is_set)
+#endif
     tzset_unlocked();
   tmp = localsub(lclptr, timep, setname, tmp);
   unlock();
   return tmp;
 }
 
+static void
+localtime_key_init(void)
+{
+
+	localtime_key_error = _pthread_key_create(&localtime_key, free);
+}
+
 struct tm *
 localtime(const time_t *timep)
 {
 #if !SUPPORT_C89
-  static struct tm tm;
+	static struct tm tm;
 #endif
-  return localtime_tzset(timep, &tm, true);
+	struct tm *p_tm = &tm;
+
+	if (__isthreaded != 0) {
+		_pthread_once(&localtime_once, localtime_key_init);
+		if (localtime_key_error != 0) {
+			errno = localtime_key_error;
+			return (NULL);
+		}
+		if ((p_tm = _pthread_getspecific(localtime_key)) == NULL) {
+			if ((p_tm = malloc(sizeof(*p_tm))) == NULL) {
+				return (NULL);
+			}
+			if (_pthread_setspecific(localtime_key, p_tm) != 0) {
+				free(p_tm);
+				return (NULL);
+			}
+		}
+	}
+	return localtime_tzset(timep, p_tm, true);
 }
 
 struct tm *
@@ -1600,17 +1739,42 @@ gmtsub(ATTRIBUTE_MAYBE_UNUSED struct state const *sp, time_t const *timep,
 struct tm *
 gmtime_r(time_t const *restrict timep, struct tm *restrict tmp)
 {
-  gmtcheck();
-  return gmtsub(gmtptr, timep, 0, tmp);
+	_once(&gmt_once, gmtcheck);
+	return gmtsub(gmtptr, timep, 0, tmp);
+}
+
+static void
+gmtime_key_init(void)
+{
+
+	gmtime_key_error = _pthread_key_create(&gmtime_key, free);
 }
 
 struct tm *
 gmtime(const time_t *timep)
 {
 #if !SUPPORT_C89
-  static struct tm tm;
+	static struct tm tm;
 #endif
-  return gmtime_r(timep, &tm);
+	struct tm *p_tm = &tm;
+
+	if (__isthreaded != 0) {
+		_pthread_once(&gmtime_once, gmtime_key_init);
+		if (gmtime_key_error != 0) {
+			errno = gmtime_key_error;
+			return (NULL);
+		}
+		if ((p_tm = _pthread_getspecific(gmtime_key)) == NULL) {
+			if ((p_tm = malloc(sizeof(*p_tm))) == NULL) {
+				return (NULL);
+			}
+			if (_pthread_setspecific(gmtime_key, p_tm) != 0) {
+				free(p_tm);
+				return (NULL);
+			}
+		}
+	}
+	return gmtime_r(timep, p_tm);
 }
 
 #if STD_INSPIRED
@@ -1619,14 +1783,44 @@ gmtime(const time_t *timep)
    Callers can instead use localtime_rz with a fixed-offset zone.  */
 
 struct tm *
+offtime_r(time_t const *restrict timep, long offset, struct tm *restrict tmp)
+{
+	_once(&gmt_once, gmtcheck);
+	return gmtsub(gmtptr, timep, offset, tmp);
+}
+
+static void
+offtime_key_init(void)
+{
+
+	offtime_key_error = _pthread_key_create(&offtime_key, free);
+}
+
+struct tm *
 offtime(const time_t *timep, long offset)
 {
-  gmtcheck();
-
 #if !SUPPORT_C89
-  static struct tm tm;
+	static struct tm tm;
 #endif
-  return gmtsub(gmtptr, timep, offset, &tm);
+	struct tm *p_tm = &tm;
+
+	if (__isthreaded != 0) {
+		_pthread_once(&offtime_once, offtime_key_init);
+		if (offtime_key_error != 0) {
+			errno = offtime_key_error;
+			return (NULL);
+		}
+		if ((p_tm = _pthread_getspecific(offtime_key)) == NULL) {
+			if ((p_tm = malloc(sizeof(*p_tm))) == NULL) {
+				return (NULL);
+			}
+			if (_pthread_setspecific(offtime_key, p_tm) != 0) {
+				free(p_tm);
+				return (NULL);
+			}
+		}
+	}
+	return offtime_r(timep, offset, p_tm);
 }
 
 #endif
@@ -2139,6 +2333,7 @@ time1(struct tm *const tmp,
 		errno = EINVAL;
 		return WRONG;
 	}
+
 	if (tmp->tm_isdst > 1)
 		tmp->tm_isdst = 1;
 	t = time2(tmp, funcp, sp, offset, &okay);
@@ -2197,7 +2392,7 @@ mktime_tzname(struct state *sp, struct tm *tmp, bool setname)
   if (sp)
     return time1(tmp, localsub, sp, setname);
   else {
-    gmtcheck();
+    _once(&gmt_once, gmtcheck);
     return time1(tmp, gmtsub, gmtptr, 0);
   }
 }
@@ -2253,7 +2448,7 @@ timeoff(struct tm *tmp, long offset)
 {
   if (tmp)
     tmp->tm_isdst = 0;
-  gmtcheck();
+  _once(&gmt_once, gmtcheck);
   return time1(tmp, gmtsub, gmtptr, offset);
 }
 
@@ -2321,7 +2516,9 @@ time2posix(time_t t)
     errno = err;
     return -1;
   }
+#ifndef DETECT_TZ_CHANGES
   if (!lcl_is_set)
+#endif
     tzset_unlocked();
   if (lclptr)
     t = time2posix_z(lclptr, t);
@@ -2366,7 +2563,9 @@ posix2time(time_t t)
     errno = err;
     return -1;
   }
+#ifndef DETECT_TZ_CHANGES
   if (!lcl_is_set)
+#endif
     tzset_unlocked();
   if (lclptr)
     t = posix2time_z(lclptr, t);

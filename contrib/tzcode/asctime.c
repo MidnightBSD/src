@@ -13,7 +13,9 @@
 
 /*LINTLIBRARY*/
 
+#include "namespace.h"
 #include "private.h"
+#include "un-namespace.h"
 #include <stdio.h>
 
 /*
@@ -82,8 +84,8 @@ asctime_r(struct tm const *restrict timeptr, char *restrict buf)
 		"Jan", "Feb", "Mar", "Apr", "May", "Jun",
 		"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
 	};
-	register const char *	wn;
-	register const char *	mn;
+	const char *	wn;
+	const char *	mn;
 	char			year[INT_STRLEN_MAXIMUM(int) + 2];
 	char result[sizeof buf_asctime];
 

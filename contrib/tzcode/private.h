@@ -65,7 +65,7 @@
 #endif
 
 /* This string was in the Factory zone through version 2016f.  */
-#define GRANDPARENTED	"Local time zone must be set--see zic manual page"
+#define GRANDPARENTED	"Local time zone must be set--use tzsetup"
 
 /*
 ** Defaults for preprocessor symbols.
@@ -643,6 +643,8 @@ typedef time_tz tz_time_t;
 # define mktime_z tz_mktime_z
 # undef  offtime
 # define offtime tz_offtime
+# undef  offtime_r
+# define offtime_r tz_offtime_r
 # undef  posix2time
 # define posix2time tz_posix2time
 # undef  posix2time_z
@@ -774,6 +776,9 @@ extern long altzone;
 #if STD_INSPIRED
 # if TZ_TIME_T || !defined offtime
 struct tm *offtime(time_t const *, long);
+# endif
+# if TZ_TIME_T || !defined offtime_r
+struct tm *offtime_r(time_t const *, long, struct tm *);
 # endif
 # if TZ_TIME_T || !defined timelocal
 time_t timelocal(struct tm *);
