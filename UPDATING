@@ -1,5 +1,12 @@
 Updating Information for MidnightBSD users.
 
+20241113:
+	unbound 1.22.0
+
+	wireguard-tools
+
+	tzcode fixes
+
 20241108:
 	add lib9p
 
