@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20241114:
+	unifdef 2.12
+
 20241113:
 	unbound 1.22.0
 
