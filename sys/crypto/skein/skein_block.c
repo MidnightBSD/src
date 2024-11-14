@@ -15,7 +15,6 @@
 ************************************************************************/
 
 #include <sys/cdefs.h>
-
 #include <sys/endian.h>
 #include <sys/types.h>
 

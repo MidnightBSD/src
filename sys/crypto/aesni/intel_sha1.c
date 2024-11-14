@@ -56,7 +56,6 @@
 *
 *******************************************************************************/
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <crypto/aesni/aesni_os.h>
 #include <crypto/aesni/sha_sse.h>

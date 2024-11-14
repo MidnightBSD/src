@@ -22,7 +22,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _AESNI_H_
@@ -39,10 +38,6 @@
 #include <machine/cputypes.h>
 #include <machine/md_var.h>
 #include <machine/specialreg.h>
-#endif
-#if defined(__i386__)
-#include <machine/npx.h>
-#elif defined(__amd64__)
 #include <machine/fpu.h>
 #endif
 
@@ -50,23 +45,23 @@
 #define	AES192_ROUNDS	12
 #define	AES256_ROUNDS	14
 #define	AES_SCHED_LEN	((AES256_ROUNDS + 1) * AES_BLOCK_LEN)
-
-/* SHA1, SHA2-224 and SHA2-256 only. */
-#define	AESNI_SHA_BLOCK_LEN	64
+#define	AES_SCHED_ALIGN	16
 
 struct aesni_session {
-	uint8_t enc_schedule[AES_SCHED_LEN] __aligned(16);
-	uint8_t dec_schedule[AES_SCHED_LEN] __aligned(16);
-	uint8_t xts_schedule[AES_SCHED_LEN] __aligned(16);
-	uint8_t hmac_key[AESNI_SHA_BLOCK_LEN];
-	int algo;
+	uint8_t schedules[3 * AES_SCHED_LEN + AES_SCHED_ALIGN];
+	uint8_t *enc_schedule;
+	uint8_t *dec_schedule;
+	uint8_t *xts_schedule;
 	int rounds;
 	/* uint8_t *ses_ictx; */
 	/* uint8_t *ses_octx; */
-	/* int ses_mlen; */
 	int used;
-	int auth_algo;
 	int mlen;
+	int hash_len;
+	void (*hash_init)(void *);
+	int (*hash_update)(void *, const void *, u_int);
+	void (*hash_finalize)(void *, void *);
+	bool hmac;
 };
 
 /*
@@ -115,13 +110,13 @@ int AES_GCM_decrypt(const unsigned char *in, unsigned char *out,
 /* CCM + CBC-MAC functions */
 void AES_CCM_encrypt(const unsigned char *in, unsigned char *out,
     const unsigned char *addt, const unsigned char *ivec,
-    unsigned char *tag, uint32_t nbytes, uint32_t abytes, int ibytes,
-    const unsigned char *key, int nr);
+    unsigned char *tag, uint32_t nbytes, uint32_t abytes, int nlen,
+    int tag_length, const unsigned char *key, int nr);
 int AES_CCM_decrypt(const unsigned char *in, unsigned char *out,
     const unsigned char *addt, const unsigned char *ivec,
-    const unsigned char *tag, uint32_t nbytes, uint32_t abytes, int ibytes,
-    const unsigned char *key, int nr);
-int aesni_cipher_setup_common(struct aesni_session *ses, const uint8_t *key,
-    int keylen);
+    const unsigned char *tag, uint32_t nbytes, uint32_t abytes, int nlen,
+    int tag_length, const unsigned char *key, int nr);
+void aesni_cipher_setup_common(struct aesni_session *ses,
+    const struct crypto_session_params *csp, const uint8_t *key, int keylen);
 
 #endif /* _AESNI_H_ */

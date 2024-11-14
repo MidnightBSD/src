@@ -37,7 +37,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <sys/cdefs.h>
 #include <sys/time.h>
@@ -55,7 +54,7 @@
 #ifndef unsupported
 
 /* constant table */
-static u_int32_t _K[] = { 0x5a827999, 0x6ed9eba1, 0x8f1bbcdc, 0xca62c1d6 };
+static uint32_t _K[] = { 0x5a827999, 0x6ed9eba1, 0x8f1bbcdc, 0xca62c1d6 };
 #define	K(t)	_K[(t) / 20]
 
 #define	F0(b, c, d)	(((b) & (c)) | ((~(b)) & (d)))
@@ -90,12 +89,11 @@ static u_int32_t _K[] = { 0x5a827999, 0x6ed9eba1, 0x8f1bbcdc, 0xca62c1d6 };
 static void sha1_step(struct sha1_ctxt *);
 
 static void
-sha1_step(ctxt)
-	struct sha1_ctxt *ctxt;
+sha1_step(struct sha1_ctxt *ctxt)
 {
-	u_int32_t	a, b, c, d, e;
+	uint32_t	a, b, c, d, e;
 	size_t t, s;
-	u_int32_t	tmp;
+	uint32_t	tmp;
 
 #if BYTE_ORDER == LITTLE_ENDIAN
 	struct sha1_ctxt tctxt;
@@ -175,8 +173,7 @@ sha1_step(ctxt)
 /*------------------------------------------------------------*/
 
 void
-sha1_init(ctxt)
-	struct sha1_ctxt *ctxt;
+sha1_init(struct sha1_ctxt *ctxt)
 {
 	bzero(ctxt, sizeof(struct sha1_ctxt));
 	H(0) = 0x67452301;
@@ -187,8 +184,7 @@ sha1_init(ctxt)
 }
 
 void
-sha1_pad(ctxt)
-	struct sha1_ctxt *ctxt;
+sha1_pad(struct sha1_ctxt *ctxt)
 {
 	size_t padlen;		/*pad length in bytes*/
 	size_t padstart;
@@ -222,10 +218,7 @@ sha1_pad(ctxt)
 }
 
 void
-sha1_loop(ctxt, input, len)
-	struct sha1_ctxt *ctxt;
-	const u_int8_t *input;
-	size_t len;
+sha1_loop(struct sha1_ctxt *ctxt, const uint8_t *input, size_t len)
 {
 	size_t gaplen;
 	size_t gapstart;
@@ -252,9 +245,9 @@ sha1_loop(ctxt, input, len)
 void
 sha1_result(struct sha1_ctxt *ctxt, char digest0[static SHA1_RESULTLEN])
 {
-	u_int8_t *digest;
+	uint8_t *digest;
 
-	digest = (u_int8_t *)digest0;
+	digest = (uint8_t *)digest0;
 	sha1_pad(ctxt);
 #if BYTE_ORDER == BIG_ENDIAN
 	bcopy(&ctxt->h.b8[0], digest, SHA1_RESULTLEN);

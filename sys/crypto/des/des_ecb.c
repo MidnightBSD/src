@@ -49,7 +49,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <crypto/des/des_locl.h>
@@ -96,13 +95,13 @@ char *des_options(void)
                 }
         return(buf);
 }
-void des_ecb_encrypt(des_cblock *input, des_cblock *output, 
+void des_ecb_encrypt(unsigned char *input, unsigned char *output, 
 		     des_key_schedule ks, int enc)
 {
 	register DES_LONG l;
 	DES_LONG ll[2];
-	const unsigned char *in=&(*input)[0];
-	unsigned char *out = &(*output)[0];
+	const unsigned char *in = input;
+	unsigned char *out = output;
 
 	c2l(in,l); ll[0]=l;
 	c2l(in,l); ll[1]=l;
@@ -112,14 +111,14 @@ void des_ecb_encrypt(des_cblock *input, des_cblock *output,
 	l=ll[0]=ll[1]=0;
 }
 
-void des_ecb3_encrypt(des_cblock *input, des_cblock *output,
+void des_ecb3_encrypt(unsigned char *input, unsigned char *output,
              des_key_schedule ks1, des_key_schedule ks2, des_key_schedule ks3,
              int enc)
 {
 	register DES_LONG l0,l1;
 	DES_LONG ll[2];
-	const unsigned char *in = &(*input)[0];
-	unsigned char *out = &(*output)[0];
+	const unsigned char *in = input;
+	unsigned char *out = output;
  
 	c2l(in,l0); 
 	c2l(in,l1);

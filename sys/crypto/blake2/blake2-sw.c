@@ -1,7 +1,6 @@
 /* This file is in the public domain. */
 
 #include <sys/cdefs.h>
-
 #include <contrib/libb2/blake2.h>
 #include <opencrypto/xform_auth.h>
 
@@ -48,7 +47,7 @@ blake2b_xform_init(void *vctx)
 }
 
 static void
-blake2b_xform_setkey(void *vctx, const uint8_t *key, uint16_t klen)
+blake2b_xform_setkey(void *vctx, const uint8_t *key, u_int klen)
 {
 	struct blake2b_xform_ctx *ctx = vctx;
 
@@ -59,7 +58,7 @@ blake2b_xform_setkey(void *vctx, const uint8_t *key, uint16_t klen)
 }
 
 static int
-blake2b_xform_update(void *vctx, const uint8_t *data, uint16_t len)
+blake2b_xform_update(void *vctx, const void *data, u_int len)
 {
 	struct blake2b_xform_ctx *ctx = vctx;
 	int rc;
@@ -116,7 +115,7 @@ blake2s_xform_init(void *vctx)
 }
 
 static void
-blake2s_xform_setkey(void *vctx, const uint8_t *key, uint16_t klen)
+blake2s_xform_setkey(void *vctx, const uint8_t *key, u_int klen)
 {
 	struct blake2s_xform_ctx *ctx = vctx;
 
@@ -127,7 +126,7 @@ blake2s_xform_setkey(void *vctx, const uint8_t *key, uint16_t klen)
 }
 
 static int
-blake2s_xform_update(void *vctx, const uint8_t *data, uint16_t len)
+blake2s_xform_update(void *vctx, const void *data, u_int len)
 {
 	struct blake2s_xform_ctx *ctx = vctx;
 	int rc;

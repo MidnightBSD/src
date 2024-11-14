@@ -57,7 +57,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <crypto/des/des_locl.h>
@@ -66,21 +65,21 @@
 
 int des_check_key=0;
 
-void des_set_odd_parity(des_cblock *key)
+void des_set_odd_parity(unsigned char *key)
 {
 	int i;
 
 	for (i=0; i<DES_KEY_SZ; i++)
-		(*key)[i]=odd_parity[(*key)[i]];
+		key[i]=odd_parity[key[i]];
 }
 
-int des_check_key_parity(des_cblock *key)
+int des_check_key_parity(const unsigned char *key)
 {
 	int i;
 
 	for (i=0; i<DES_KEY_SZ; i++)
 		{
-		if ((*key)[i] != odd_parity[(*key)[i]])
+		if (key[i] != odd_parity[key[i]])
 			return(0);
 		}
 	return(1);
@@ -116,7 +115,7 @@ static des_cblock weak_keys[NUM_WEAK_KEY]={
 	{0xE0,0xFE,0xE0,0xFE,0xF1,0xFE,0xF1,0xFE},
 	{0xFE,0xE0,0xFE,0xE0,0xFE,0xF1,0xFE,0xF1}};
 
-int des_is_weak_key(des_cblock *key)
+int des_is_weak_key(const unsigned char *key)
 {
 	int i;
 
@@ -141,7 +140,7 @@ int des_is_weak_key(des_cblock *key)
 #define HPERM_OP(a,t,n,m) ((t)=((((a)<<(16-(n)))^(a))&(m)),\
 	(a)=(a)^(t)^(t>>(16-(n))))
 
-int des_set_key(des_cblock *key, des_key_schedule schedule)
+int des_set_key(const unsigned char *key, des_key_schedule schedule)
 {
 	if (des_check_key)
 	{
@@ -158,7 +157,7 @@ int des_set_key(des_cblock *key, des_key_schedule schedule)
  * return -1 if key parity error,
  * return -2 if illegal weak key.
  */
-int des_set_key_checked(des_cblock *key, des_key_schedule schedule)
+int des_set_key_checked(const unsigned char *key, des_key_schedule schedule)
 {
 	if (!des_check_key_parity(key))
 		return(-1);
@@ -168,7 +167,7 @@ int des_set_key_checked(des_cblock *key, des_key_schedule schedule)
 	return 0;
 }
 
-void des_set_key_unchecked(des_cblock *key, des_key_schedule schedule)
+void des_set_key_unchecked(const unsigned char *key, des_key_schedule schedule)
 {
 	static int shifts2[16]={0,0,1,1,1,1,1,1,0,1,1,1,1,1,1,0};
 	DES_LONG c,d,t,s,t2;
@@ -177,7 +176,7 @@ void des_set_key_unchecked(des_cblock *key, des_key_schedule schedule)
 	int i;
 
 	k = &schedule->ks.deslong[0];
-	in = &(*key)[0];
+	in = key;
 
 	c2l(in,c);
 	c2l(in,d);
@@ -224,12 +223,12 @@ void des_set_key_unchecked(des_cblock *key, des_key_schedule schedule)
 	}
 }
 
-int des_key_sched(des_cblock *key, des_key_schedule schedule)
+int des_key_sched(const unsigned char *key, des_key_schedule schedule)
 {
 	return(des_set_key(key,schedule));
 }
 
-void des_fixup_key_parity(des_cblock *key)
+void des_fixup_key_parity(unsigned char *key)
 {
 	des_set_odd_parity(key);
 }

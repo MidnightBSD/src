@@ -1,77 +1,56 @@
 /* This file is in the public domain. */
 
 #include <sys/cdefs.h>
-
 #include <crypto/chacha20/chacha.h>
 #include <opencrypto/xform_enc.h>
 
 static int
-chacha20_xform_setkey(u_int8_t **sched, u_int8_t *key, int len)
+chacha20_xform_setkey(void *ctx, const uint8_t *key, int len)
 {
-	struct chacha_ctx *ctx;
 
 	if (len != CHACHA_MINKEYLEN && len != 32)
 		return (EINVAL);
-
-	ctx = malloc(sizeof(*ctx), M_CRYPTO_DATA, M_NOWAIT | M_ZERO);
-	*sched = (void *)ctx;
-	if (ctx == NULL)
-		return (ENOMEM);
 
 	chacha_keysetup(ctx, key, len * 8);
 	return (0);
 }
 
 static void
-chacha20_xform_reinit(caddr_t key, u_int8_t *iv)
+chacha20_xform_reinit(void *ctx, const uint8_t *iv, size_t ivlen)
 {
-	struct chacha_ctx *ctx;
-
-	ctx = (void *)key;
+	KASSERT(ivlen == CHACHA_NONCELEN + CHACHA_CTRLEN,
+	    ("%s: invalid IV length", __func__));
 	chacha_ivsetup(ctx, iv + 8, iv);
 }
 
 static void
-chacha20_xform_zerokey(u_int8_t **sched)
+chacha20_xform_crypt(void *ctx, const uint8_t *in, uint8_t *out)
 {
-	struct chacha_ctx *ctx;
 
-	ctx = (void *)*sched;
-	explicit_bzero(ctx, sizeof(*ctx));
-	free(ctx, M_CRYPTO_DATA);
-	*sched = NULL;
+	chacha_encrypt_bytes(ctx, in, out, CHACHA_BLOCKLEN);
 }
 
 static void
-chacha20_xform_crypt(caddr_t cctx, u_int8_t *bytes)
+chacha20_xform_crypt_last(void *ctx, const uint8_t *in, uint8_t *out,
+    size_t len)
 {
-	struct chacha_ctx *ctx;
 
-	ctx = (void *)cctx;
-	chacha_encrypt_bytes(ctx, bytes, bytes, 1);
-}
-
-static void
-chacha20_xform_crypt_multi(void *vctx, uint8_t *bytes, size_t len)
-{
-	struct chacha_ctx *ctx;
-
-	ctx = vctx;
-	chacha_encrypt_bytes(ctx, bytes, bytes, len);
+	chacha_encrypt_bytes(ctx, in, out, len);
 }
 
 struct enc_xform enc_xform_chacha20 = {
 	.type = CRYPTO_CHACHA20,
 	.name = "chacha20",
+	.ctxsize = sizeof(struct chacha_ctx),
 	.blocksize = 1,
+	.native_blocksize = CHACHA_BLOCKLEN,
 	.ivsize = CHACHA_NONCELEN + CHACHA_CTRLEN,
 	.minkey = CHACHA_MINKEYLEN,
 	.maxkey = 32,
 	.encrypt = chacha20_xform_crypt,
 	.decrypt = chacha20_xform_crypt,
 	.setkey = chacha20_xform_setkey,
-	.zerokey = chacha20_xform_zerokey,
 	.reinit = chacha20_xform_reinit,
-	.encrypt_multi = chacha20_xform_crypt_multi,
-	.decrypt_multi = chacha20_xform_crypt_multi,
+	.encrypt_last = chacha20_xform_crypt_last,
+	.decrypt_last = chacha20_xform_crypt_last,
 };

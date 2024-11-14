@@ -60,7 +60,6 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/types.h>
 #include <crypto/des/des_locl.h>
 

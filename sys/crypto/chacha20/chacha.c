@@ -7,7 +7,6 @@ Public domain.
 /* $OpenBSD: chacha.c,v 1.1 2013/11/21 00:45:44 djm Exp $ */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/types.h>
 
@@ -139,8 +138,10 @@ chacha_encrypt_bytes(chacha_ctx *x,const u8 *m,u8 *c,u32 bytes)
 
   for (;;) {
     if (bytes < 64) {
+#ifndef KEYSTREAM_ONLY
       for (i = 0;i < bytes;++i) tmp[i] = m[i];
       m = tmp;
+#endif
       ctarget = c;
       c = tmp;
     }

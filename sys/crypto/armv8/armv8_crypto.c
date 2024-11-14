@@ -2,6 +2,7 @@
  * Copyright (c) 2005-2008 Pawel Jakub Dawidek <pjd@FreeBSD.org>
  * Copyright (c) 2010 Konstantin Belousov <kib@FreeBSD.org>
  * Copyright (c) 2014,2016 The FreeBSD Foundation
+ * Copyright (c) 2020 Ampere Computing
  * All rights reserved.
  *
  * Portions of this software were developed by John-Mark Gurney
@@ -38,15 +39,16 @@
  */
 
 #include <sys/cdefs.h>
-
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kernel.h>
 #include <sys/bus.h>
 #include <sys/endian.h>
+#include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/module.h>
+#include <sys/mutex.h>
 #include <sys/queue.h>
 #include <sys/rwlock.h>
 #include <sys/smp.h>
@@ -55,6 +57,7 @@
 #include <machine/vfp.h>
 
 #include <opencrypto/cryptodev.h>
+#include <opencrypto/gmac.h>
 #include <cryptodev_if.h>
 #include <crypto/armv8/armv8_crypto.h>
 #include <crypto/rijndael/rijndael.h>
@@ -63,6 +66,7 @@ struct armv8_crypto_softc {
 	int		dieing;
 	int32_t		cid;
 	struct rwlock	lock;
+	bool		has_pmul;
 };
 
 static struct mtx *ctx_mtx;
@@ -82,7 +86,7 @@ static struct fpu_kern_ctx **ctx_vfp;
 	} while (0)
 
 static int armv8_crypto_cipher_process(struct armv8_crypto_session *,
-    struct cryptodesc *, struct cryptop *);
+    struct cryptop *);
 
 MALLOC_DEFINE(M_ARMV8_CRYPTO, "armv8_crypto", "ARMv8 Crypto Data");
 
@@ -104,17 +108,21 @@ armv8_crypto_probe(device_t dev)
 
 	reg = READ_SPECIALREG(id_aa64isar0_el1);
 
-	switch (ID_AA64ISAR0_AES(reg)) {
+	switch (ID_AA64ISAR0_AES_VAL(reg)) {
 	case ID_AA64ISAR0_AES_BASE:
+		ret = 0;
+		device_set_desc(dev, "AES-CBC,AES-XTS");
+		break;
 	case ID_AA64ISAR0_AES_PMULL:
 		ret = 0;
+		device_set_desc(dev, "AES-CBC,AES-XTS,AES-GCM");
+		break;
+	default:
 		break;
 	case ID_AA64ISAR0_AES_NONE:
-		device_printf(dev, "CPU lacks AES instructions");
+		device_printf(dev, "CPU lacks AES instructions\n");
 		break;
 	}
-
-	device_set_desc_copy(dev, "AES-CBC");
 
 	/* TODO: Check more fields as we support more features */
 
@@ -125,13 +133,19 @@ static int
 armv8_crypto_attach(device_t dev)
 {
 	struct armv8_crypto_softc *sc;
+	uint64_t reg;
 	int i;
 
 	sc = device_get_softc(dev);
 	sc->dieing = 0;
 
+	reg = READ_SPECIALREG(id_aa64isar0_el1);
+
+	if (ID_AA64ISAR0_AES_VAL(reg) == ID_AA64ISAR0_AES_PMULL)
+		sc->has_pmul = true;
+
 	sc->cid = crypto_get_driverid(dev, sizeof(struct armv8_crypto_session),
-	    CRYPTOCAP_F_HARDWARE | CRYPTOCAP_F_SYNC);
+	    CRYPTOCAP_F_SOFTWARE | CRYPTOCAP_F_SYNC | CRYPTOCAP_F_ACCEL_SOFTWARE);
 	if (sc->cid < 0) {
 		device_printf(dev, "Could not get crypto driver id.\n");
 		return (ENOMEM);
@@ -148,8 +162,6 @@ armv8_crypto_attach(device_t dev)
 		ctx_vfp[i] = fpu_kern_alloc_ctx(0);
 		mtx_init(&ctx_mtx[i], "armv8cryptoctx", NULL, MTX_DEF|MTX_NEW);
 	}
-
-	crypto_register(sc->cid, CRYPTO_AES_CBC, 0, 0);
 
 	return (0);
 }
@@ -184,209 +196,95 @@ armv8_crypto_detach(device_t dev)
 	return (0);
 }
 
-static int
-armv8_crypto_cipher_setup(struct armv8_crypto_session *ses,
-    struct cryptoini *encini)
-{
-	int i;
+#define SUPPORTED_SES (CSP_F_SEPARATE_OUTPUT | CSP_F_SEPARATE_AAD)
 
-	switch (ses->algo) {
-	case CRYPTO_AES_CBC:
-		switch (encini->cri_klen) {
-		case 128:
-			ses->rounds = AES128_ROUNDS;
-			break;
-		case 192:
-			ses->rounds = AES192_ROUNDS;
-			break;
-		case 256:
-			ses->rounds = AES256_ROUNDS;
+static int
+armv8_crypto_probesession(device_t dev,
+    const struct crypto_session_params *csp)
+{
+	struct armv8_crypto_softc *sc;
+
+	sc = device_get_softc(dev);
+
+	if ((csp->csp_flags & ~(SUPPORTED_SES)) != 0)
+		return (EINVAL);
+
+	switch (csp->csp_mode) {
+	case CSP_MODE_AEAD:
+		switch (csp->csp_cipher_alg) {
+		case CRYPTO_AES_NIST_GCM_16:
+			if (!sc->has_pmul)
+				return (EINVAL);
+			if (csp->csp_auth_mlen != 0 &&
+			    csp->csp_auth_mlen != GMAC_DIGEST_LEN)
+				return (EINVAL);
+			switch (csp->csp_cipher_klen * 8) {
+			case 128:
+			case 192:
+			case 256:
+				break;
+			default:
+				return (EINVAL);
+			}
 			break;
 		default:
-			CRYPTDEB("invalid CBC/ICM/GCM key length");
+			return (EINVAL);
+		}
+		break;
+	case CSP_MODE_CIPHER:
+		switch (csp->csp_cipher_alg) {
+		case CRYPTO_AES_CBC:
+			if (csp->csp_ivlen != AES_BLOCK_LEN)
+				return (EINVAL);
+			switch (csp->csp_cipher_klen * 8) {
+			case 128:
+			case 192:
+			case 256:
+				break;
+			default:
+				return (EINVAL);
+			}
+			break;
+		case CRYPTO_AES_XTS:
+			if (csp->csp_ivlen != AES_XTS_IV_LEN)
+				return (EINVAL);
+			switch (csp->csp_cipher_klen * 8) {
+			case 256:
+			case 512:
+				break;
+			default:
+				return (EINVAL);
+			}
+			break;
+		default:
 			return (EINVAL);
 		}
 		break;
 	default:
 		return (EINVAL);
 	}
-
-	rijndaelKeySetupEnc(ses->enc_schedule, encini->cri_key,
-	    encini->cri_klen);
-	rijndaelKeySetupDec(ses->dec_schedule, encini->cri_key,
-	    encini->cri_klen);
-	for (i = 0; i < nitems(ses->enc_schedule); i++) {
-		ses->enc_schedule[i] = bswap32(ses->enc_schedule[i]);
-		ses->dec_schedule[i] = bswap32(ses->dec_schedule[i]);
-	}
-
-	return (0);
+	return (CRYPTODEV_PROBE_ACCEL_SOFTWARE);
 }
 
 static int
-armv8_crypto_newsession(device_t dev, crypto_session_t cses,
-    struct cryptoini *cri)
+armv8_crypto_cipher_setup(struct armv8_crypto_session *ses,
+    const struct crypto_session_params *csp, const uint8_t *key, int keylen)
 {
-	struct armv8_crypto_softc *sc;
-	struct armv8_crypto_session *ses;
-	struct cryptoini *encini;
-	int error;
-
-	if (cri == NULL) {
-		CRYPTDEB("no cri");
-		return (EINVAL);
-	}
-
-	sc = device_get_softc(dev);
-	if (sc->dieing)
-		return (EINVAL);
-
-	ses = NULL;
-	encini = NULL;
-	for (; cri != NULL; cri = cri->cri_next) {
-		switch (cri->cri_alg) {
-		case CRYPTO_AES_CBC:
-			if (encini != NULL) {
-				CRYPTDEB("encini already set");
-				return (EINVAL);
-			}
-			encini = cri;
-			break;
-		default:
-			CRYPTDEB("unhandled algorithm");
-			return (EINVAL);
-		}
-	}
-	if (encini == NULL) {
-		CRYPTDEB("no cipher");
-		return (EINVAL);
-	}
-
-	rw_wlock(&sc->lock);
-	if (sc->dieing) {
-		rw_wunlock(&sc->lock);
-		return (EINVAL);
-	}
-
-	ses = crypto_get_driver_session(cses);
-	ses->algo = encini->cri_alg;
-
-	error = armv8_crypto_cipher_setup(ses, encini);
-	if (error != 0) {
-		CRYPTDEB("setup failed");
-		return (error);
-	}
-
-	return (0);
-}
-
-static int
-armv8_crypto_process(device_t dev, struct cryptop *crp, int hint __unused)
-{
-	struct cryptodesc *crd, *enccrd;
-	struct armv8_crypto_session *ses;
-	int error;
-
-	error = 0;
-	enccrd = NULL;
-
-	/* Sanity check. */
-	if (crp == NULL)
-		return (EINVAL);
-
-	if (crp->crp_callback == NULL || crp->crp_desc == NULL) {
-		error = EINVAL;
-		goto out;
-	}
-
-	for (crd = crp->crp_desc; crd != NULL; crd = crd->crd_next) {
-		switch (crd->crd_alg) {
-		case CRYPTO_AES_CBC:
-			if (enccrd != NULL) {
-				error = EINVAL;
-				goto out;
-			}
-			enccrd = crd;
-			break;
-		default:
-			error = EINVAL;
-			goto out;
-		}
-	}
-
-	if (enccrd == NULL) {
-		error = EINVAL;
-		goto out;
-	}
-
-	/* We can only handle full blocks for now */
-	if ((enccrd->crd_len % AES_BLOCK_LEN) != 0) {
-		error = EINVAL;
-		goto out;
-	}
-
-	ses = crypto_get_driver_session(crp->crp_session);
-	error = armv8_crypto_cipher_process(ses, enccrd, crp);
-
-out:
-	crp->crp_etype = error;
-	crypto_done(crp);
-	return (error);
-}
-
-static uint8_t *
-armv8_crypto_cipher_alloc(struct cryptodesc *enccrd, struct cryptop *crp,
-    int *allocated)
-{
-	struct mbuf *m;
-	struct uio *uio;
-	struct iovec *iov;
-	uint8_t *addr;
-
-	if (crp->crp_flags & CRYPTO_F_IMBUF) {
-		m = (struct mbuf *)crp->crp_buf;
-		if (m->m_next != NULL)
-			goto alloc;
-		addr = mtod(m, uint8_t *);
-	} else if (crp->crp_flags & CRYPTO_F_IOV) {
-		uio = (struct uio *)crp->crp_buf;
-		if (uio->uio_iovcnt != 1)
-			goto alloc;
-		iov = uio->uio_iov;
-		addr = (uint8_t *)iov->iov_base;
-	} else
-		addr = (uint8_t *)crp->crp_buf;
-	*allocated = 0;
-	addr += enccrd->crd_skip;
-	return (addr);
-
-alloc:
-	addr = malloc(enccrd->crd_len, M_ARMV8_CRYPTO, M_NOWAIT);
-	if (addr != NULL) {
-		*allocated = 1;
-		crypto_copydata(crp->crp_flags, crp->crp_buf, enccrd->crd_skip,
-		    enccrd->crd_len, addr);
-	} else
-		*allocated = 0;
-	return (addr);
-}
-
-static int
-armv8_crypto_cipher_process(struct armv8_crypto_session *ses,
-    struct cryptodesc *enccrd, struct cryptop *crp)
-{
+	__uint128_val_t H;
 	struct fpu_kern_ctx *ctx;
-	uint8_t *buf;
-	uint8_t iv[AES_BLOCK_LEN];
-	int allocated, i;
-	int encflag, ivlen;
-	int kt;
+	int kt, i;
 
-	encflag = (enccrd->crd_flags & CRD_F_ENCRYPT) == CRD_F_ENCRYPT;
+	if (csp->csp_cipher_alg == CRYPTO_AES_XTS)
+		keylen /= 2;
 
-	buf = armv8_crypto_cipher_alloc(enccrd, crp, &allocated);
-	if (buf == NULL)
-		return (ENOMEM);
+	switch (keylen * 8) {
+	case 128:
+	case 192:
+	case 256:
+		break;
+	default:
+		return (EINVAL);
+	}
 
 	kt = is_fpu_kern_thread(0);
 	if (!kt) {
@@ -395,59 +293,196 @@ armv8_crypto_cipher_process(struct armv8_crypto_session *ses,
 		    FPU_KERN_NORMAL | FPU_KERN_KTHR);
 	}
 
-	if ((enccrd->crd_flags & CRD_F_KEY_EXPLICIT) != 0) {
-		panic("CRD_F_KEY_EXPLICIT");
+	aes_v8_set_encrypt_key(key,
+	    keylen * 8, &ses->enc_schedule);
+
+	if ((csp->csp_cipher_alg == CRYPTO_AES_XTS) ||
+	    (csp->csp_cipher_alg == CRYPTO_AES_CBC))
+		aes_v8_set_decrypt_key(key,
+		    keylen * 8, &ses->dec_schedule);
+
+	if (csp->csp_cipher_alg == CRYPTO_AES_XTS)
+		aes_v8_set_encrypt_key(key + keylen, keylen * 8, &ses->xts_schedule);
+
+	if (csp->csp_cipher_alg == CRYPTO_AES_NIST_GCM_16) {
+		memset(H.c, 0, sizeof(H.c));
+		aes_v8_encrypt(H.c, H.c, &ses->enc_schedule);
+		H.u[0] = bswap64(H.u[0]);
+		H.u[1] = bswap64(H.u[1]);
+		gcm_init_v8(ses->Htable, H.u);
 	}
-
-	switch (enccrd->crd_alg) {
-	case CRYPTO_AES_CBC:
-		ivlen = AES_BLOCK_LEN;
-		break;
-	}
-
-	/* Setup iv */
-	if (encflag) {
-		if ((enccrd->crd_flags & CRD_F_IV_EXPLICIT) != 0)
-			bcopy(enccrd->crd_iv, iv, ivlen);
-		else
-			arc4rand(iv, ivlen, 0);
-
-		if ((enccrd->crd_flags & CRD_F_IV_PRESENT) == 0)
-			crypto_copyback(crp->crp_flags, crp->crp_buf,
-			    enccrd->crd_inject, ivlen, iv);
-	} else {
-		if ((enccrd->crd_flags & CRD_F_IV_EXPLICIT) != 0)
-			bcopy(enccrd->crd_iv, iv, ivlen);
-		else
-			crypto_copydata(crp->crp_flags, crp->crp_buf,
-			    enccrd->crd_inject, ivlen, iv);
-	}
-
-	/* Do work */
-	switch (ses->algo) {
-	case CRYPTO_AES_CBC:
-		if (encflag)
-			armv8_aes_encrypt_cbc(ses->rounds, ses->enc_schedule,
-			    enccrd->crd_len, buf, buf, iv);
-		else
-			armv8_aes_decrypt_cbc(ses->rounds, ses->dec_schedule,
-			    enccrd->crd_len, buf, iv);
-		break;
-	}
-
-	if (allocated)
-		crypto_copyback(crp->crp_flags, crp->crp_buf, enccrd->crd_skip,
-		    enccrd->crd_len, buf);
 
 	if (!kt) {
 		fpu_kern_leave(curthread, ctx);
 		RELEASE_CTX(i, ctx);
 	}
-	if (allocated) {
-		bzero(buf, enccrd->crd_len);
-		free(buf, M_ARMV8_CRYPTO);
-	}
+
 	return (0);
+}
+
+static int
+armv8_crypto_newsession(device_t dev, crypto_session_t cses,
+    const struct crypto_session_params *csp)
+{
+	struct armv8_crypto_softc *sc;
+	struct armv8_crypto_session *ses;
+	int error;
+
+	sc = device_get_softc(dev);
+	rw_wlock(&sc->lock);
+	if (sc->dieing) {
+		rw_wunlock(&sc->lock);
+		return (EINVAL);
+	}
+
+	ses = crypto_get_driver_session(cses);
+	error = armv8_crypto_cipher_setup(ses, csp, csp->csp_cipher_key,
+	    csp->csp_cipher_klen);
+	rw_wunlock(&sc->lock);
+	return (error);
+}
+
+static int
+armv8_crypto_process(device_t dev, struct cryptop *crp, int hint __unused)
+{
+	struct armv8_crypto_session *ses;
+
+	ses = crypto_get_driver_session(crp->crp_session);
+	crp->crp_etype = armv8_crypto_cipher_process(ses, crp);
+	crypto_done(crp);
+	return (0);
+}
+
+static uint8_t *
+armv8_crypto_cipher_alloc(struct cryptop *crp, int start, int length, int *allocated)
+{
+	uint8_t *addr;
+
+	addr = crypto_contiguous_subsegment(crp, start, length);
+	if (addr != NULL) {
+		*allocated = 0;
+		return (addr);
+	}
+	addr = malloc(crp->crp_payload_length, M_ARMV8_CRYPTO, M_NOWAIT);
+	if (addr != NULL) {
+		*allocated = 1;
+		crypto_copydata(crp, start, length, addr);
+	} else
+		*allocated = 0;
+	return (addr);
+}
+
+static int
+armv8_crypto_cipher_process(struct armv8_crypto_session *ses,
+    struct cryptop *crp)
+{
+	struct crypto_buffer_cursor fromc, toc;
+	const struct crypto_session_params *csp;
+	struct fpu_kern_ctx *ctx;
+	uint8_t *authbuf;
+	uint8_t iv[AES_BLOCK_LEN], tag[GMAC_DIGEST_LEN];
+	int authallocated, i;
+	int encflag;
+	int kt;
+	int error;
+
+	csp = crypto_get_params(crp->crp_session);
+	encflag = CRYPTO_OP_IS_ENCRYPT(crp->crp_op);
+
+	authallocated = 0;
+	authbuf = NULL;
+	kt = 1;
+
+	if (csp->csp_cipher_alg == CRYPTO_AES_NIST_GCM_16) {
+		if (crp->crp_aad != NULL)
+			authbuf = crp->crp_aad;
+		else
+			authbuf = armv8_crypto_cipher_alloc(crp, crp->crp_aad_start,
+			    crp->crp_aad_length, &authallocated);
+		if (authbuf == NULL) {
+			error = ENOMEM;
+			goto out;
+		}
+	}
+	crypto_cursor_init(&fromc, &crp->crp_buf);
+	crypto_cursor_advance(&fromc, crp->crp_payload_start);
+	if (CRYPTO_HAS_OUTPUT_BUFFER(crp)) {
+		crypto_cursor_init(&toc, &crp->crp_obuf);
+		crypto_cursor_advance(&toc, crp->crp_payload_output_start);
+	} else {
+		crypto_cursor_copy(&fromc, &toc);
+	}
+
+	kt = is_fpu_kern_thread(0);
+	if (!kt) {
+		AQUIRE_CTX(i, ctx);
+		fpu_kern_enter(curthread, ctx,
+		    FPU_KERN_NORMAL | FPU_KERN_KTHR);
+	}
+
+	if (crp->crp_cipher_key != NULL) {
+		armv8_crypto_cipher_setup(ses, csp, crp->crp_cipher_key,
+		    csp->csp_cipher_klen);
+	}
+
+	crypto_read_iv(crp, iv);
+
+	switch (csp->csp_cipher_alg) {
+	case CRYPTO_AES_CBC:
+		if ((crp->crp_payload_length % AES_BLOCK_LEN) != 0) {
+			error = EINVAL;
+			goto out;
+		}
+		if (encflag)
+			armv8_aes_encrypt_cbc(&ses->enc_schedule,
+			    crp->crp_payload_length, &fromc, &toc, iv);
+		else
+			armv8_aes_decrypt_cbc(&ses->dec_schedule,
+			    crp->crp_payload_length, &fromc, &toc, iv);
+		break;
+	case CRYPTO_AES_XTS:
+		if (encflag)
+			armv8_aes_encrypt_xts(&ses->enc_schedule,
+			    &ses->xts_schedule.aes_key, crp->crp_payload_length,
+			    &fromc, &toc, iv);
+		else
+			armv8_aes_decrypt_xts(&ses->dec_schedule,
+			    &ses->xts_schedule.aes_key, crp->crp_payload_length,
+			    &fromc, &toc, iv);
+		break;
+	case CRYPTO_AES_NIST_GCM_16:
+		if (encflag) {
+			memset(tag, 0, sizeof(tag));
+			armv8_aes_encrypt_gcm(&ses->enc_schedule,
+			    crp->crp_payload_length, &fromc, &toc,
+			    crp->crp_aad_length, authbuf, tag, iv, ses->Htable);
+			crypto_copyback(crp, crp->crp_digest_start, sizeof(tag),
+			    tag);
+		} else {
+			crypto_copydata(crp, crp->crp_digest_start, sizeof(tag),
+			    tag);
+			error = armv8_aes_decrypt_gcm(&ses->enc_schedule,
+			    crp->crp_payload_length, &fromc, &toc,
+			    crp->crp_aad_length, authbuf, tag, iv, ses->Htable);
+			if (error != 0)
+				goto out;
+		}
+		break;
+	}
+
+	error = 0;
+out:
+	if (!kt) {
+		fpu_kern_leave(curthread, ctx);
+		RELEASE_CTX(i, ctx);
+	}
+
+	if (authallocated)
+		zfree(authbuf, M_ARMV8_CRYPTO);
+	explicit_bzero(iv, sizeof(iv));
+	explicit_bzero(tag, sizeof(tag));
+
+	return (error);
 }
 
 static device_method_t armv8_crypto_methods[] = {
@@ -456,6 +491,7 @@ static device_method_t armv8_crypto_methods[] = {
 	DEVMETHOD(device_attach,	armv8_crypto_attach),
 	DEVMETHOD(device_detach,	armv8_crypto_detach),
 
+	DEVMETHOD(cryptodev_probesession, armv8_crypto_probesession),
 	DEVMETHOD(cryptodev_newsession,	armv8_crypto_newsession),
 	DEVMETHOD(cryptodev_process,	armv8_crypto_process),
 
