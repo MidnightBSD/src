@@ -1,6 +1,8 @@
 Updating Information for MidnightBSD users.
 
 20241115:
+	openzfs 2.1.15
+
 	device-tree from linux 5.9
 
 20241114:
