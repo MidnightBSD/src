@@ -2097,6 +2097,26 @@ zfs_vnodes_adjust_back(void)
 #endif
 }
 
+#if __FreeBSD_version >= 1300139
+static struct sx zfs_vnlru_lock;
+static struct vnode *zfs_vnlru_marker;
+#endif
+static arc_prune_t *zfs_prune;
+
+static void
+zfs_prune_task(uint64_t nr_to_scan, void *arg __unused)
+{
+	if (nr_to_scan > INT_MAX)
+		nr_to_scan = INT_MAX;
+#if __FreeBSD_version >= 1300139
+	sx_xlock(&zfs_vnlru_lock);
+	vnlru_free_vfsops(nr_to_scan, &zfs_vfsops, zfs_vnlru_marker);
+	sx_xunlock(&zfs_vnlru_lock);
+#else
+	vnlru_free(nr_to_scan, &zfs_vfsops);
+#endif
+}
+
 void
 zfs_init(void)
 {
@@ -2123,11 +2143,23 @@ zfs_init(void)
 	dmu_objset_register_type(DMU_OST_ZFS, zpl_get_file_info);
 
 	zfsvfs_taskq = taskq_create("zfsvfs", 1, minclsyspri, 0, 0, 0);
+
+#if __FreeBSD_version >= 1300139
+	zfs_vnlru_marker = vnlru_alloc_marker();
+	sx_init(&zfs_vnlru_lock, "zfs vnlru lock");
+#endif
+	zfs_prune = arc_add_prune_callback(zfs_prune_task, NULL);
 }
 
 void
 zfs_fini(void)
 {
+	arc_remove_prune_callback(zfs_prune);
+#if __FreeBSD_version >= 1300139
+	vnlru_free_marker(zfs_vnlru_marker);
+	sx_destroy(&zfs_vnlru_lock);
+#endif
+
 	taskq_destroy(zfsvfs_taskq);
 	zfsctl_fini();
 	zfs_znode_fini();
@@ -2525,7 +2557,9 @@ zfs_jailparam_set(void *obj, void *data)
 		mount_snapshot = -1;
 	else
 		jsys = JAIL_SYS_NEW;
-	if (jsys == JAIL_SYS_NEW) {
+	switch (jsys) {
+	case JAIL_SYS_NEW:
+	{
 		/* "zfs=new" or "zfs.*": the prison gets its own ZFS info. */
 		struct zfs_jailparam *zjp;
 
@@ -2543,12 +2577,22 @@ zfs_jailparam_set(void *obj, void *data)
 		if (mount_snapshot != -1)
 			zjp->mount_snapshot = mount_snapshot;
 		mtx_unlock(&pr->pr_mtx);
-	} else {
+		break;
+	}
+	case JAIL_SYS_INHERIT:
 		/* "zfs=inherit": inherit the parent's ZFS info. */
 		mtx_lock(&pr->pr_mtx);
 		osd_jail_del(pr, zfs_jailparam_slot);
 		mtx_unlock(&pr->pr_mtx);
+		break;
+	case -1:
+		/*
+		 * If the setting being changed is not ZFS related
+		 * then do nothing.
+		 */
+		break;
 	}
+
 	return (0);
 }
 

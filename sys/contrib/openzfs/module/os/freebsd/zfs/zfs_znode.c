@@ -1099,7 +1099,7 @@ zfs_rezget(znode_t *zp)
 	 * Such pages will be invalid and can safely be skipped here.
 	 */
 	vp = ZTOV(zp);
-#if __FreeBSD_version >= 1400042
+#if __FreeBSD_version >= 1300522
 	vn_pages_remove_valid(vp, 0, 0);
 #else
 	vn_pages_remove(vp, 0, 0);
@@ -1291,6 +1291,11 @@ zfs_znode_free(znode_t *zp)
 	list_remove(&zfsvfs->z_all_znodes, zp);
 	zfsvfs->z_nr_znodes--;
 	mutex_exit(&zfsvfs->z_znodes_lock);
+	symlink = atomic_load_ptr(&zp->z_cached_symlink);
+	if (symlink != NULL) {
+		atomic_store_rel_ptr((uintptr_t *)&zp->z_cached_symlink, (uintptr_t)NULL);
+		cache_symlink_free(symlink, strlen(symlink) + 1);
+	}
 
 #if __FreeBSD_version >= 1300139
 	symlink = atomic_load_ptr(&zp->z_cached_symlink);
