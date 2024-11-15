@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20241115:
+	device-tree from linux 5.9
+
 20241114:
 	unifdef 2.12
 
