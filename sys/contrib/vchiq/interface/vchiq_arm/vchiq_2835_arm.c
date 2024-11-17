@@ -278,8 +278,6 @@ vchiq_prepare_bulk_data(VCHIQ_BULK_T *bulk, VCHI_MEM_HANDLE_T memhandle,
 
 	WARN_ON(memhandle != VCHI_MEM_HANDLE_INVALID);
 	bi = malloc(sizeof(*bi), M_VCPAGELIST, M_WAITOK | M_ZERO);
-	if (bi == NULL)
-		return VCHIQ_ERROR;
 
 	ret = create_pagelist((char __user *)offset, size,
 			(dir == VCHIQ_BULK_RECEIVE)
@@ -377,10 +375,7 @@ vchiq_platform_handle_timeout(VCHIQ_STATE_T *state)
 static void
 pagelist_page_free(vm_page_t pp)
 {
-	vm_page_lock(pp);
-	if (vm_page_unwire(pp, PQ_INACTIVE) && pp->object == NULL)
-		vm_page_free(pp);
-	vm_page_unlock(pp);
+	vm_page_unwire(pp, PQ_INACTIVE);
 }
 
 /* There is a potential problem with partial cache lines (pages?)
@@ -472,13 +467,6 @@ create_pagelist(char __user *buf, size_t count, unsigned short type,
 		vm_page_unhold_pages(pages, actual_pages);
 		free(pagelist, M_VCPAGELIST);
 		return (-ENOMEM);
-	}
-
-	for (i = 0; i < actual_pages; i++) {
-		vm_page_lock(pages[i]);
-		vm_page_wire(pages[i]);
-		vm_page_unhold(pages[i]);
-		vm_page_unlock(pages[i]);
 	}
 
 	pagelist->length = count;

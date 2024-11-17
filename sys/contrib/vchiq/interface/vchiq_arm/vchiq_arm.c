@@ -178,7 +178,6 @@ static const char *const ioctl_names[] = {
 vchiq_static_assert((sizeof(ioctl_names)/sizeof(ioctl_names[0])) ==
 	(VCHIQ_IOC_MAX + 1));
 
-static eventhandler_tag vchiq_ehtag = NULL;
 static d_open_t		vchiq_open;
 static d_close_t	vchiq_close;
 static d_ioctl_t	vchiq_ioctl;
@@ -1755,7 +1754,7 @@ vchiq_arm_init_state(VCHIQ_STATE_T *state, VCHIQ_ARM_STATE_T *arm_state)
 
 		arm_state->suspend_timer_timeout = SUSPEND_TIMER_TIMEOUT_MS;
 		arm_state->suspend_timer_running = 0;
-		init_timer(&arm_state->suspend_timer);
+		vchiq_init_timer(&arm_state->suspend_timer);
 		arm_state->suspend_timer.data = (unsigned long)(state);
 		arm_state->suspend_timer.function = suspend_timer_callback;
 
@@ -1893,11 +1892,11 @@ set_resume_state(VCHIQ_ARM_STATE_T *arm_state,
 inline void
 start_suspend_timer(VCHIQ_ARM_STATE_T *arm_state)
 {
-	del_timer(&arm_state->suspend_timer);
+	vchiq_del_timer(&arm_state->suspend_timer);
 	arm_state->suspend_timer.expires = jiffies +
 		msecs_to_jiffies(arm_state->
 			suspend_timer_timeout);
-	add_timer(&arm_state->suspend_timer);
+	vchiq_add_timer(&arm_state->suspend_timer);
 	arm_state->suspend_timer_running = 1;
 }
 
@@ -1906,7 +1905,7 @@ static inline void
 stop_suspend_timer(VCHIQ_ARM_STATE_T *arm_state)
 {
 	if (arm_state->suspend_timer_running) {
-		del_timer(&arm_state->suspend_timer);
+		vchiq_del_timer(&arm_state->suspend_timer);
 		arm_state->suspend_timer_running = 0;
 	}
 }
@@ -2918,9 +2917,6 @@ void vchiq_exit(void);
 void
 vchiq_exit(void)
 {
-	if (vchiq_ehtag == NULL)
-		EVENTHANDLER_DEREGISTER(dev_clone, vchiq_ehtag);
-	vchiq_ehtag = NULL;
 
 	vchiq_platform_exit(&g_state);
 	if (vchiq_cdev) {
