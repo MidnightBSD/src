@@ -1,4 +1,0 @@
-
-# Chrome Embedded Controller
-hint.chrome_ec.0.at="spibus0"
-hint.chrome_ec.0.addr=0x00
