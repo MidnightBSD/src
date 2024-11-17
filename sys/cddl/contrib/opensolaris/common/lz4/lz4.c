@@ -44,6 +44,7 @@
 #include <sys/endian.h>
 #include <assert.h>
 
+#undef ASSERT
 #define	ASSERT	assert
 #else
 #include <string.h>
@@ -52,9 +53,10 @@
 #include <netinet/in.h>
 #include <assert.h>
 
+#undef ASSERT
 #define	ASSERT	assert
 #endif
-#include <lz4.h>
+#include "lz4.h"
 
 static int real_LZ4_compress(const char *source, char *dest, int isize,
     int osize);
@@ -243,16 +245,6 @@ lz4_decompress(void *s_start, void *d_start, size_t s_len, size_t d_len,
  */
 #if defined(__ARM_FEATURE_UNALIGNED)
 #define	LZ4_FORCE_UNALIGNED_ACCESS 1
-#endif
-
-/*
- * FreeBSD: can't use GCC's __builtin_ctz when using sparc64 because
- * gcc currently rely on libcompiler_rt.
- *
- * TODO: revisit this when situation changes.
- */
-#if defined(__sparc64__)
-#define	LZ4_FORCE_SW_BITCOUNT
 #endif
 
 /*
@@ -860,7 +852,7 @@ real_LZ4_compress(const char *source, char *dest, int isize, int osize)
 #if defined(_KERNEL) || defined(_FAKE_KERNEL)
 	void *ctx = kmem_cache_alloc(lz4_ctx_cache, KM_NOSLEEP);
 #else
-	void *ctx = malloc(sizeof(struct refTables));
+	void *ctx = calloc(1, sizeof(struct refTables));
 #endif
 	int result;
 
@@ -1032,7 +1024,7 @@ LZ4_uncompress_unknownOutputSize(const char *source, char *dest, int isize,
 }
 
 #if defined(_KERNEL) || defined(_FAKE_KERNEL)
-extern void
+void
 lz4_init(void)
 {
 
@@ -1042,7 +1034,7 @@ lz4_init(void)
 #endif
 }
 
-extern void
+void
 lz4_fini(void)
 {
 
