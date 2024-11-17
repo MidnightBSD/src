@@ -13,10 +13,10 @@
 #include <sys/cdefs.h>
 
 #include <sys/types.h>
+#include <sys/param.h>  /* defines used in kernel.h and module.h */
 #include <sys/module.h>
 #include <sys/systm.h>  /* uprintf */
 #include <sys/errno.h>
-#include <sys/param.h>  /* defines used in kernel.h */
 #include <sys/kernel.h> /* types used in module initialization */
 #include <sys/conf.h>   /* cdevsw struct */
 #include <sys/uio.h>    /* uio struct */
@@ -29,7 +29,8 @@
 
 #define BUFFERSIZE 512
 
-SYSCTL_NODE(_dev, OID_AUTO, krping, CTLFLAG_RW, 0, "kernel rping module");
+SYSCTL_NODE(_dev, OID_AUTO, krping, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
+    "kernel rping module");
 
 int krping_debug = 0;
 SYSCTL_INT(_dev_krping, OID_AUTO, debug, CTLFLAG_RW, &krping_debug, 0 , "");
@@ -172,12 +173,7 @@ krping_write(struct cdev *dev, struct uio *uio, int ioflag)
 	char *cp;
 	krping_t *krpingmsg;
 
-	krpingmsg = malloc(sizeof *krpingmsg, M_DEVBUF, M_WAITOK|M_ZERO);
-	if (!krpingmsg) {
-		uprintf("Could not malloc mem!\n");
-		return ENOMEM;
-	}
-
+	krpingmsg = malloc(sizeof *krpingmsg, M_DEVBUF, M_WAITOK | M_ZERO);
 	cp = krpingmsg->msg;
 	while (uio->uio_resid) {
 		amt = MIN(uio->uio_resid, remain);
