@@ -1468,7 +1468,7 @@ static t_Error CalcWredCurve(t_QmCgWredCurve *p_WredCurve, uint32_t  *p_CurveWor
     for (tmpA=(uint32_t)(64*pres) ; tmpA<128*pres; tmpA += pres )
         for (tmpN=7 ; tmpN<64; tmpN++ )
         {
-            tmp = ABS((int)(slope - tmpA/(1<<tmpN)));
+            tmp = ABS((int)(slope - tmpA/(1UL<<(tmpN%32))));
             if (tmp < gap)
             {
                sa = tmpA;
@@ -1478,7 +1478,6 @@ static t_Error CalcWredCurve(t_QmCgWredCurve *p_WredCurve, uint32_t  *p_CurveWor
         }
     sa = sa/pres;
     ASSERT_COND(sa<128 && sa>=64);
-    sn = sn;
     ASSERT_COND(sn<64 && sn>=7);
 
     *p_CurveWord = ((ma << 24) |
