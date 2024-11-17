@@ -658,7 +658,7 @@ typedef UINT64                          ACPI_INTEGER;
 /* Pointer/Integer type conversions */
 
 #define ACPI_TO_POINTER(i)              ACPI_CAST_PTR (void, (ACPI_SIZE) (i))
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 #define ACPI_TO_INTEGER(p)              ((ACPI_SIZE) (p))
 #define ACPI_OFFSET(d, f)               ((ACPI_SIZE) __offsetof(d, f))
 #else
@@ -973,15 +973,16 @@ typedef UINT8                           ACPI_ADR_SPACE_TYPE;
 #define ACPI_ADR_SPACE_GPIO             (ACPI_ADR_SPACE_TYPE) 8
 #define ACPI_ADR_SPACE_GSBUS            (ACPI_ADR_SPACE_TYPE) 9
 #define ACPI_ADR_SPACE_PLATFORM_COMM    (ACPI_ADR_SPACE_TYPE) 10
+#define ACPI_ADR_SPACE_PLATFORM_RT      (ACPI_ADR_SPACE_TYPE) 11
 
-#define ACPI_NUM_PREDEFINED_REGIONS     11
+#define ACPI_NUM_PREDEFINED_REGIONS     12
 
 /*
  * Special Address Spaces
  *
  * Note: A Data Table region is a special type of operation region
  * that has its own AML opcode. However, internally, the AML
- * interpreter simply creates an operation region with an an address
+ * interpreter simply creates an operation region with an address
  * space type of ACPI_ADR_SPACE_DATA_TABLE.
  */
 #define ACPI_ADR_SPACE_DATA_TABLE       (ACPI_ADR_SPACE_TYPE) 0x7E /* Internal to ACPICA only */
@@ -1383,7 +1384,7 @@ typedef struct acpi_pnp_device_id_list
 {
     UINT32                          Count;              /* Number of IDs in Ids array */
     UINT32                          ListSize;           /* Size of list, including ID strings */
-    ACPI_PNP_DEVICE_ID              Ids[1];             /* ID array */
+    ACPI_PNP_DEVICE_ID              Ids[];              /* ID array */
 
 } ACPI_PNP_DEVICE_ID_LIST;
 
@@ -1444,13 +1445,21 @@ typedef struct acpi_pci_id
 
 } ACPI_PCI_ID;
 
+typedef struct acpi_mem_mapping
+{
+    ACPI_PHYSICAL_ADDRESS           PhysicalAddress;
+    UINT8                           *LogicalAddress;
+    ACPI_SIZE                       Length;
+    struct acpi_mem_mapping         *NextMm;
+
+} ACPI_MEM_MAPPING;
+
 typedef struct acpi_mem_space_context
 {
     UINT32                          Length;
     ACPI_PHYSICAL_ADDRESS           Address;
-    ACPI_PHYSICAL_ADDRESS           MappedPhysicalAddress;
-    UINT8                           *MappedLogicalAddress;
-    ACPI_SIZE                       MappedLength;
+    ACPI_MEM_MAPPING                *CurMm;
+    ACPI_MEM_MAPPING                *FirstMm;
 
 } ACPI_MEM_SPACE_CONTEXT;
 

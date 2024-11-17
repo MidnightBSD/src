@@ -279,8 +279,8 @@ NamePathTail                [.]{NameSeg}
     /*
      * Begin standard ASL grammar
      */
-[0-9][a-zA-Z0-9]*            { AslCompilerlval.i = UtDoConstant ((char *) AslCompilertext);
-                                count (1); return (PARSEOP_INTEGER); }
+[0-9][a-zA-Z0-9]*            { count (1); AslCompilerlval.i = UtDoConstant ((char *) AslCompilertext);
+                                 return (PARSEOP_INTEGER); }
 
 "Include"                   { count (1); return (PARSEOP_INCLUDE); }
 "External"                  { count (1); return (PARSEOP_EXTERNAL); }
@@ -693,6 +693,7 @@ NamePathTail                [.]{NameSeg}
 "GeneralPurposeIo"          { count (0); return (PARSEOP_REGIONSPACE_GPIO); }       /* ACPI 5.0 */
 "GenericSerialBus"          { count (0); return (PARSEOP_REGIONSPACE_GSBUS); }      /* ACPI 5.0 */
 "PCC"                       { count (0); return (PARSEOP_REGIONSPACE_PCC); }        /* ACPI 5.0 */
+"PlatformRtMechanism"       { count (0); return (PARSEOP_REGIONSPACE_PRM); }
 "FFixedHW"                  { count (0); return (PARSEOP_REGIONSPACE_FFIXEDHW); }
 
     /* ResourceTypeKeyword: Resource Usage - Resource Descriptors */
@@ -840,7 +841,6 @@ NamePathTail                [.]{NameSeg}
                                      * the required length.
                                      */
                                     strcpy (s, "____");
-                                    AcpiUtStrupr (AslCompilertext);
                                 }
                                 memcpy (s, AslCompilertext, strlen (AslCompilertext));
                                 AslCompilerlval.s = s;
@@ -850,7 +850,6 @@ NamePathTail                [.]{NameSeg}
 {NameString}                { char *s;
                                 count (0);
                                 s=UtLocalCacheCalloc (strlen (AslCompilertext)+1);
-                                AcpiUtStrupr (AslCompilertext);
                                 strcpy (s, AslCompilertext);
                                 AslCompilerlval.s = s;
                                 DbgPrint (ASL_PARSE_OUTPUT, "NameString: %s\n", s);

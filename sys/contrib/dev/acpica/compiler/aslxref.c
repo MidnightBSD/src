@@ -433,6 +433,7 @@ XfNamespaceLocateBegin (
     UINT32                  i;
     ACPI_NAMESPACE_NODE     *DeclarationParentMethod;
     ACPI_PARSE_OBJECT       *ReferenceParentMethod;
+    char                    *ExternalPath;
 
 
     ACPI_FUNCTION_TRACE_PTR (XfNamespaceLocateBegin, Op);
@@ -821,9 +822,24 @@ XfNamespaceLocateBegin (
         Node->Flags |= ANOBJ_IS_REFERENCED;
     }
 
-    /* Attempt to optimize the NamePath */
-
-    OptOptimizeNamePath (Op, OpInfo->Flags, WalkState, Path, Node);
+    /*
+     * Attempt to optimize the NamePath
+     *
+     * One special case: CondRefOf operator - not all AML interpreter
+     * implementations expect optimized namepaths as a parameter to this
+     * operator. They require relative name paths with prefix operators or
+     * namepaths starting with the root scope.
+     *
+     * Other AML interpreter implementations do not perform the namespace
+     * search that starts at the current scope and recursively searching the
+     * parent scope until the root scope. The lack of search is only known to
+     * occur for the namestring parameter for the CondRefOf operator.
+     */
+    if ((Op->Asl.Parent) &&
+        (Op->Asl.Parent->Asl.ParseOpcode != PARSEOP_CONDREFOF))
+    {
+        OptOptimizeNamePath (Op, OpInfo->Flags, WalkState, Path, Node);
+    }
 
     /*
      * 1) Dereference an alias (A name reference that is an alias)
@@ -979,12 +995,14 @@ XfNamespaceLocateBegin (
          * invocation of the method, it is simply a reference to the method.
          *
          * September 2016: Removed DeRefOf from this list
+         * July 2020: Added Alias to this list
          */
         if ((Op->Asl.Parent) &&
             ((Op->Asl.Parent->Asl.ParseOpcode == PARSEOP_REFOF)     ||
             (Op->Asl.Parent->Asl.ParseOpcode == PARSEOP_PACKAGE)    ||
             (Op->Asl.Parent->Asl.ParseOpcode == PARSEOP_VAR_PACKAGE)||
-            (Op->Asl.Parent->Asl.ParseOpcode == PARSEOP_OBJECTTYPE)))
+            (Op->Asl.Parent->Asl.ParseOpcode == PARSEOP_OBJECTTYPE) ||
+            (Op->Asl.Parent->Asl.ParseOpcode == PARSEOP_ALIAS)))
         {
             return_ACPI_STATUS (AE_OK);
         }
@@ -1246,7 +1264,15 @@ XfNamespaceLocateBegin (
         Op->Asl.Parent->Asl.ParseOpcode != PARSEOP_CONDREFOF &&
         !XfRefIsGuardedByIfCondRefOf (Node, Op))
     {
-        AslError (ASL_ERROR, ASL_MSG_UNDEFINED_EXTERNAL, Op, NULL);
+        ExternalPath = AcpiNsGetNormalizedPathname (Node, TRUE);
+        sprintf (AslGbl_MsgBuffer, "full path of external object: %s",
+            ExternalPath);
+        AslDualParseOpError (ASL_ERROR, ASL_MSG_UNDEFINED_EXTERNAL, Op, NULL,
+            ASL_MSG_EXTERNAL_FOUND_HERE, Node->Op, AslGbl_MsgBuffer);
+        if (ExternalPath)
+        {
+            ACPI_FREE (ExternalPath);
+        }
     }
 
     /* 5) Check for a connection object */
