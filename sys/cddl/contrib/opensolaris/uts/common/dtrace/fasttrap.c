@@ -19,7 +19,6 @@
  * CDDL HEADER END
  *
  * Portions Copyright 2010 The FreeBSD Foundation
- *
  */
 
 /*
@@ -34,6 +33,7 @@
 #include <sys/atomic.h>
 #include <sys/errno.h>
 #include <sys/stat.h>
+#include <sys/endian.h>
 #include <sys/modctl.h>
 #include <sys/conf.h>
 #include <sys/systm.h>
@@ -53,6 +53,8 @@
 #include <sys/dtrace_impl.h>
 #include <sys/sysmacros.h>
 #include <sys/proc.h>
+#undef AT_UID
+#undef AT_GID
 #include <sys/policy.h>
 #ifdef illumos
 #include <util/qsort.h>
@@ -235,7 +237,8 @@ static unsigned long tpoints_hash_size = FASTTRAP_TPOINTS_DEFAULT_SIZE;
 
 #ifdef __MidnightBSD__
 SYSCTL_DECL(_kern_dtrace);
-SYSCTL_NODE(_kern_dtrace, OID_AUTO, fasttrap, CTLFLAG_RD, 0, "DTrace fasttrap parameters");
+SYSCTL_NODE(_kern_dtrace, OID_AUTO, fasttrap, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
+    "DTrace fasttrap parameters");
 SYSCTL_UINT(_kern_dtrace_fasttrap, OID_AUTO, max_probes, CTLFLAG_RWTUN, &fasttrap_max,
     FASTTRAP_MAX_DEFAULT, "Maximum number of fasttrap probes");
 SYSCTL_ULONG(_kern_dtrace_fasttrap, OID_AUTO, tpoints_hash_size, CTLFLAG_RDTUN, &tpoints_hash_size,
@@ -331,8 +334,9 @@ fasttrap_scraddr(struct thread *td, fasttrap_proc_t *fprc)
 		 */
 		addr = 0;
 		error = vm_map_find(&p->p_vmspace->vm_map, NULL, 0, &addr,
-		    FASTTRAP_SCRBLOCK_SIZE, 0, VMFS_ANY_SPACE, VM_PROT_ALL,
-		    VM_PROT_ALL, 0);
+		    FASTTRAP_SCRBLOCK_SIZE, 0, VMFS_ANY_SPACE,
+		    VM_PROT_READ | VM_PROT_EXECUTE,
+		    VM_PROT_READ | VM_PROT_EXECUTE, MAP_COPY_ON_WRITE);
 		if (error != KERN_SUCCESS)
 			goto done;
 
@@ -441,7 +445,7 @@ fasttrap_mod_barrier(uint64_t gen)
 /*
  * This function performs asynchronous cleanup of fasttrap providers. The
  * Solaris implementation of this mechanism use a timeout that's activated in
- * fasttrap_pid_cleanup(), but this doesn't work in FreeBSD: one may sleep while
+ * fasttrap_pid_cleanup(), but this doesn't work in MidnightBSD: one may sleep while
  * holding the DTrace mutexes, but it is unsafe to sleep in a callout handler.
  * Thus we use a dedicated process to perform the cleanup when requested.
  */
@@ -583,7 +587,7 @@ fasttrap_fork(proc_t *p, proc_t *cp)
 	fasttrap_proc_t *fprc = NULL;
 #endif
 	pid_t ppid = p->p_pid;
-	int i;
+	int error, i;
 
 	ASSERT(curproc == p);
 #ifdef illumos
@@ -673,9 +677,10 @@ fasttrap_fork(proc_t *p, proc_t *cp)
 		if (fprc != NULL) {
 			mutex_enter(&fprc->ftpc_mtx);
 			LIST_FOREACH(scrblk, &fprc->ftpc_scrblks, ftsb_next) {
-				vm_map_remove(&cp->p_vmspace->vm_map,
+				error = vm_map_remove(&cp->p_vmspace->vm_map,
 				    scrblk->ftsb_addr,
 				    scrblk->ftsb_addr + FASTTRAP_SCRBLOCK_SIZE);
+				ASSERT(error == KERN_SUCCESS);
 			}
 			mutex_exit(&fprc->ftpc_mtx);
 		}
@@ -2325,10 +2330,8 @@ err:
 		int ret;
 #endif
 
-#ifdef illumos
 		if (copyin((void *)arg, &instr, sizeof (instr)) != 0)
 			return (EFAULT);
-#endif
 
 #ifdef notyet
 		if (!PRIV_POLICY_CHOICE(cr, PRIV_ALL, B_FALSE)) {

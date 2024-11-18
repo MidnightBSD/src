@@ -49,6 +49,7 @@ extern "C" {
  */
 
 #include <sys/dtrace.h>
+#include <sys/file.h>
 
 #ifndef illumos
 #ifdef __sparcv9

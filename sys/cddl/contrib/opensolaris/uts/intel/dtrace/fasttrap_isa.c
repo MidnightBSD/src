@@ -19,7 +19,6 @@
  * CDDL HEADER END
  *
  * Portions Copyright 2010 The FreeBSD Foundation
- *
  */
 
 /*
@@ -35,11 +34,11 @@
 #include <sys/types.h>
 #include <sys/dtrace_bsd.h>
 #include <sys/proc.h>
+#include <sys/reg.h>
 #include <sys/rmlock.h>
 #include <cddl/dev/dtrace/dtrace_cddl.h>
 #include <cddl/dev/dtrace/x86/regset.h>
 #include <machine/segments.h>
-#include <machine/reg.h>
 #include <machine/pcb.h>
 #include <machine/trap.h>
 #include <sys/sysmacros.h>
@@ -854,7 +853,7 @@ fasttrap_do_seg(fasttrap_tracepoint_t *tp, struct reg *rp, uintptr_t *addr)
 #ifdef __i386__
 		desc = &gdt[ndx].sd;
 #else
-		desc = &gdt[ndx];
+		desc = PCPU_PTR(gdt)[ndx];
 #endif
 	}
 
@@ -1665,7 +1664,7 @@ fasttrap_pid_probe(struct trapframe *tf)
 
 		ASSERT(i <= sizeof (scratch));
 
-		if (fasttrap_copyout(scratch, (char *)addr, i)) {
+		if (uwrite(curproc, scratch, i, addr) != 0) {
 			fasttrap_sigtrap(p, curthread, pc);
 			new_pc = pc;
 			break;
