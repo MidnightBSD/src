@@ -49,26 +49,33 @@ extern "C" {
 
 #ifndef _ASM
 
-#include <sys/types.h>
+#include <sys/param.h>
+#include <sys/stdint.h>
+#ifdef _KERNEL
+#include <sys/endian.h>
+#endif
+#if !defined(IN_BASE) && !defined(_KERNEL)
+/* Compatibility types to allow including the CTF API */
+typedef unsigned int zoneid_t;
+typedef unsigned char uchar_t;
+typedef unsigned short ushort_t;
+typedef unsigned int uint_t;
+typedef unsigned long ulong_t;
+typedef int processorid_t;
+#else
 #include <sys/modctl.h>
 #include <sys/processor.h>
-#ifdef illumos
-#include <sys/systm.h>
-#else
 #include <sys/cpuvar.h>
 #include <sys/param.h>
 #include <sys/linker.h>
 #include <sys/ioccom.h>
+#include <sys/cred.h>
+#include <sys/proc.h>
+#include <sys/types.h>
 #include <sys/ucred.h>
+#endif
 typedef int model_t;
-#endif
 #include <sys/ctf_api.h>
-#ifdef illumos
-#include <sys/cyclic.h>
-#include <sys/int_limits.h>
-#else
-#include <sys/stdint.h>
-#endif
 
 /*
  * DTrace Universal Constants and Typedefs
@@ -1421,7 +1428,7 @@ typedef struct dof_helper {
 	char dofhp_mod[DTRACE_MODNAMELEN];	/* executable or library name */
 	uint64_t dofhp_addr;			/* base address of object */
 	uint64_t dofhp_dof;			/* address of helper DOF */
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 	pid_t dofhp_pid;			/* target process ID */
 	int dofhp_gen;
 #endif
@@ -2392,8 +2399,7 @@ extern void dtrace_safe_synchronous_signal(void);
 extern int dtrace_mach_aframes(void);
 
 #if defined(__i386) || defined(__amd64)
-extern int dtrace_instr_size(uchar_t *instr);
-extern int dtrace_instr_size_isa(uchar_t *, model_t, int *);
+extern int dtrace_instr_size_isa(uint8_t *, model_t, int *);
 extern void dtrace_invop_callsite(void);
 #endif
 extern void dtrace_invop_add(int (*)(uintptr_t, struct trapframe *, uintptr_t));
@@ -2421,6 +2427,10 @@ extern void dtrace_helpers_destroy(proc_t *);
 
 #endif /* _KERNEL */
 
+#if defined(__i386) || defined(__amd64) || defined (__riscv)
+extern int dtrace_instr_size(uint8_t *instr);
+#endif
+
 #endif	/* _ASM */
 
 #if defined(__i386) || defined(__amd64)
@@ -2433,14 +2443,17 @@ extern void dtrace_helpers_destroy(proc_t *);
 #define	DTRACE_INVOP_NOP		4
 #define	DTRACE_INVOP_RET		5
 
+#if defined(__amd64)
+#define	DTRACE_INVOP_CALL		6
+#endif
+
 #elif defined(__powerpc__)
 
-#define DTRACE_INVOP_RET	1
-#define DTRACE_INVOP_BCTR	2
-#define DTRACE_INVOP_BLR	3
-#define DTRACE_INVOP_JUMP	4
-#define DTRACE_INVOP_MFLR_R0	5
-#define DTRACE_INVOP_NOP	6
+#define DTRACE_INVOP_BCTR	1
+#define DTRACE_INVOP_BLR	2
+#define DTRACE_INVOP_JUMP	3
+#define DTRACE_INVOP_MFLR_R0	4
+#define DTRACE_INVOP_NOP	5
 
 #elif defined(__arm__)
 
@@ -2460,7 +2473,20 @@ extern void dtrace_helpers_destroy(proc_t *);
 #define	B_DATA_MASK	0x00ffffff
 #define	B_INSTR		0x14000000
 
+#define	BTI_MASK	0xffffff3f
+#define	BTI_INSTR	0xd503241f
+
+#define	NOP_INSTR	0xd503201f
+
 #define	RET_INSTR	0xd65f03c0
+
+#define	SUB_MASK	0xffc00000
+#define	SUB_INSTR	0xd1000000
+#define	SUB_RD_SHIFT	0
+#define	SUB_RN_SHIFT	5
+#define	SUB_R_MASK	0x1f
+#define	SUB_IMM_SHIFT	10
+#define	SUB_IMM_MASK	0xfff
 
 #define	LDP_STP_MASK	0xffc00000
 #define	STP_32		0x29800000
@@ -2473,13 +2499,16 @@ extern void dtrace_helpers_destroy(proc_t *);
 #define	ARG1_MASK	0x1f
 #define	ARG2_SHIFT	10
 #define	ARG2_MASK	0x1f
+#define	ADDR_SHIFT	5
+#define	ADDR_MASK	0x1f
 #define	OFFSET_SHIFT	15
 #define	OFFSET_SIZE	7
 #define	OFFSET_MASK	((1 << OFFSET_SIZE) - 1)
 
-#define	DTRACE_INVOP_PUSHM	1
+#define	DTRACE_INVOP_STP	1
 #define	DTRACE_INVOP_RET	2
 #define	DTRACE_INVOP_B		3
+#define	DTRACE_INVOP_SUB	4
 
 #elif defined(__mips__)
 
