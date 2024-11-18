@@ -1,8 +1,7 @@
-/* LINTLIBRARY */
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
- * Copyright 1996-1998 John D. Polstra.
+ * Copyright 2000 David E. O'Brien, John D. Polstra.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,51 +25,25 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
+#include <machine/asm.h>
+#include <sys/param.h>
+#include <sys/elf_common.h>
+#include "notes.h"
 
-#include <stdlib.h>
+/*
+ * Special ".note.tag" entry specifying the ABI version.  See
+ * http://www.netbsd.org/Documentation/kernel/elf-notes.html
+ * for more information.
+ */
 
-#include "libc_private.h"
-#include "crtbrand.c"
-#include "ignore_init.c"
+	.section .note.tag,"aG",%note,.midnightbsd.noteG,comdat
+	.p2align	2
+	.4byte		2f-1f
+	.4byte		4f-3f
+	.4byte		NT_MIDNIGHTBSD_ABI_TAG
+1:	.asciz		NOTE_MIDNIGHTBSD_VENDOR
+2:	.p2align	2
+3:	.4byte		__MidnightBSD_version
+4:
 
-typedef void (*fptr)(void);
-
-#ifdef GCRT
-extern void _mcleanup(void);
-extern void monstartup(void *, void *);
-extern int eprol;
-extern int etext;
-#endif
-
-void _start(char **, void (*)(void));
-
-/* The entry function. */
-void
-_start(char **ap, void (*cleanup)(void))
-{
-	int argc;
-	char **argv;
-	char **env;
-
-	argc = *(long *)(void *)ap;
-	argv = ap + 1;
-	env = ap + 2 + argc;
-	handle_argv(argc, argv, env);
-
-	if (&_DYNAMIC != NULL) {
-		atexit(cleanup);
-	} else {
-		process_irelocs();
-		_init_tls();
-	}
-
-#ifdef GCRT
-	atexit(_mcleanup);
-	monstartup(&eprol, &etext);
-__asm__("eprol:");
-#endif
-
-	handle_static_init(argc, argv, env);
-	exit(main(argc, argv, env));
-}
+	.section .note.GNU-stack,"",%progbits
