@@ -51,20 +51,16 @@
 #		like the -V command
 #
 
-TYPE="FreeBSD"
-REVISION="13.4"
-BRANCH="STABLE"
-if [ -n "${BRANCH_OVERRIDE}" ]; then
-	BRANCH=${BRANCH_OVERRIDE}
-fi
-RELEASE="${REVISION}-${BRANCH}"
+TYPE="MidnightBSD"
+REVISION="4.0"
+RELEASE="${REVISION}"
 VERSION="${TYPE} ${RELEASE}"
 
 if [ -z "${SYSDIR}" ]; then
     SYSDIR=$(dirname $0)/..
 fi
 
-RELDATE=$(awk '/__FreeBSD_version.*propagated to newvers/ {print $3}' ${PARAMFILE:-${SYSDIR}/sys/param.h})
+RELDATE=$(awk '/__MidnightBSD_version.*propagated to newvers/ {print $3}' ${PARAMFILE:-${SYSDIR}/sys/param.h})
 
 if [ -r "${SYSDIR}/../COPYRIGHT" ]; then
 	year=$(sed -Ee '/^Copyright .* The MidnightBSD Project/!d;s/^.*2006-([0-9]*) .*$/\1/g' ${SYSDIR}/../COPYRIGHT)
