@@ -172,7 +172,7 @@ _t=		${TARGET_ARCH}/${TARGET}
 .endif
 .endfor
 
-.if ${.MAKE.OS} != "MidnightBSD"
+.if ${.MAKE.OS} != "MidnightBSD" && ${.MAKE.OS} != "FreeBSD"
 CROSSBUILD_HOST=${.MAKE.OS}
 .if ${.MAKE.OS} != "Linux" && ${.MAKE.OS} != "Darwin"
 .warning "Unsupported crossbuild system: ${.MAKE.OS}. Build will probably fail!"
@@ -590,7 +590,7 @@ BUILD_ARCH!=	uname -p
 # On some Linux systems uname -p returns "unknown" so skip this check there.
 # This check only exists to tell people to use TARGET_ARCH instead of
 # MACHINE_ARCH so skipping it when crossbuilding on non-MidnightBSD should be fine.
-.if ${MACHINE_ARCH} != ${BUILD_ARCH} && ${.MAKE.OS} == "MidnightBSD"
+.if ${MACHINE_ARCH} != ${BUILD_ARCH} && (${.MAKE.OS} == "MidnightBSD" || ${.MAKE.OS} == "FreeBSD")
 .error To cross-build, set TARGET_ARCH.
 .endif
 .endif
