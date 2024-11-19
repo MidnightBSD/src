@@ -12,7 +12,28 @@ CFLAGS+=	-DWITH_ICONV
 .endif
 
 FILESGROUPS+=	CALS
-CALS=	calendars/calendar.freebsd
+CALS=	calendars/calendar.all \
+	calendars/calendar.australia \
+	calendars/calendar.birthday \
+	calendars/calendar.brazilian \
+	calendars/calendar.christian \
+	calendars/calendar.computer \
+	calendars/calendar.croatian \
+	calendars/calendar.dutch \
+	calendars/calendar.french \
+	calendars/calendar.german \
+	calendars/calendar.history \
+	calendars/calendar.holiday \
+	calendars/calendar.hungarian \
+ 	calendars/calendar.judaic \
+	calendars/calendar.lotr \
+	calendars/calendar.music \
+	calendars/calendar.newzealand \
+	calendars/calendar.russian \
+	calendars/calendar.southafrica \
+	calendars/calendar.ukrainian \
+	calendars/calendar.usholiday \
+	calendars/calendar.world
 CALSDIR=	${SHAREDIR}/calendar
 
 HAS_TESTS=
