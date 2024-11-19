@@ -39,7 +39,7 @@ HOST_INCLUDE_ROOT=${_MACOS_SDK_DIR}/usr/include
 HOST_INCLUDE_ROOT=/usr/include
 .endif
 
-# Allow building libc-internal files (also on non-FreeBSD hosts)
+# Allow building libc-internal files (also on non-BSD hosts)
 CFLAGS+=	-I${.CURDIR}/libc-bootstrap
 # Symbol versioning is not required for -legacy (and macOS bootstrap)
 MK_SYMVER=	no
@@ -104,7 +104,7 @@ INCS+=		libcasper.h
 .endif
 
 # rpcgen should build against the source tree rpc/types.h and not the host.
-# This is especially important on non-FreeBSD systems where the types may
+# This is especially important on non-BSD systems where the types may
 # not match.
 RPCINCS+=	${SRCTOP}/sys/rpc/types.h
 
@@ -144,16 +144,16 @@ SYSINCS+=	${SRCTOP}/sys/sys/imgact_aout.h
 SYSINCS+=	${SRCTOP}/sys/sys/nlist_aout.h
 
 
-.if ${.MAKE.OS} != "FreeBSD"
+.if ${.MAKE.OS} != "MidnightBSD"
 .PATH: ${.CURDIR}/cross-build
-# dbopen() behaves differently on Linux and FreeBSD so we ensure that we
-# bootstrap the FreeBSD db code. The cross-build headers #define dbopen() to
+# dbopen() behaves differently on Linux and BSD so we ensure that we
+# bootstrap the BSD db code. The cross-build headers #define dbopen() to
 # __freebsd_dbopen() so that we don't ever use the host version
 INCS+=	${SRCTOP}/include/db.h
 LIBC_SRCTOP=	${SRCTOP}/lib/libc/
 .include "${LIBC_SRCTOP}/db/Makefile.inc"
 # Do the same as we did for dbopen() for getopt() on since it's not compatible
-# on Linux (and to avoid surprises also compile the FreeBSD code on macOS)
+# on Linux (and to avoid surprises also compile the BSD code on macOS)
 .PATH: ${LIBC_SRCTOP}/stdlib
 SRCS+=	getopt.c getopt_long.c
 INCS+=	 ${SRCTOP}/include/getopt.h
@@ -264,7 +264,7 @@ SYSINCS+=	${SRCTOP}/sys/sys/ctf.h
 # programs used during the build accept different flags or generate different
 # output. On those platforms we only symlink the tools known to be compatible
 # (e.g. basic utilities such as mkdir) into ${WORLDTMP} and build all others
-# from the FreeBSD sources during the bootstrap-tools stage.
+# from the BSD sources during the bootstrap-tools stage.
 
 # basic commands: It is fine to use the host version for all of these even on
 # Linux/MacOS since we only use flags that are supported by all of them.
