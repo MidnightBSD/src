@@ -42,6 +42,7 @@
 #include <libelf.h>
 #include <link.h>
 #include <elf.h>
+#include <gelf.h>
 #ifdef illumos
 #include <sys/machelf.h>
 
@@ -168,7 +169,7 @@ symtab_init(void)
 {
 	Elf		*elf;
 	Elf_Scn		*scn = NULL;
-	Sym		*symtab, *symp, *lastsym;
+	GElf_Sym	*symtab, *symp, *lastsym;
 	char		*strtab;
 	uint_t		cnt;
 	int		fd;
@@ -192,13 +193,13 @@ symtab_init(void)
 	(void) elf_version(EV_CURRENT);
 
 	elf = elf_begin(fd, ELF_C_READ, NULL);
-
 	for (cnt = 1; (scn = elf_nextscn(elf, scn)) != NULL; cnt++) {
-		Shdr *shdr = elf_getshdr(scn);
-		if (shdr->sh_type == SHT_SYMTAB) {
-			symtab = (Sym *)elf_getdata(scn, NULL)->d_buf;
-			nsyms = shdr->sh_size / shdr->sh_entsize;
-			strindex = shdr->sh_link;
+		GElf_Shdr shdr;
+		(void) gelf_getshdr(scn, &shdr);
+		if (shdr.sh_type == SHT_SYMTAB) {
+			symtab = (GElf_Sym *)elf_getdata(scn, NULL)->d_buf;
+			nsyms = shdr.sh_size / shdr.sh_entsize;
+			strindex = shdr.sh_link;
 		}
 	}
 

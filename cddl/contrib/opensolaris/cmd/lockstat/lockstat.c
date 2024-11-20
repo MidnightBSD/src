@@ -606,14 +606,14 @@ predicate_add(char **pred, char *what, char *cmp, uintptr_t value)
 
 	if (*pred[0] != '\0') {
 		if (cmp != NULL) {
-			(void) sprintf(new, "(%s) && (%s %s 0x%p)",
+			(void) sprintf(new, "(%s) && (%s %s %p)",
 			    *pred, what, cmp, (void *)value);
 		} else {
 			(void) sprintf(new, "(%s) && (%s)", *pred, what);
 		}
 	} else {
 		if (cmp != NULL) {
-			(void) sprintf(new, "%s %s 0x%p",
+			(void) sprintf(new, "%s %s %p",
 			    what, cmp, (void *)value);
 		} else {
 			(void) sprintf(new, "%s", what);
@@ -632,7 +632,7 @@ predicate_destroy(char **pred)
 }
 
 static void
-filter_add(char **filt, char *what, uintptr_t base, uintptr_t size)
+filter_add(char **filt, char *what, uintptr_t base, size_t size)
 {
 	char buf[256], *c = buf, *new;
 	int len, newlen;
