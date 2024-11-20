@@ -18,8 +18,7 @@
 .\" CDDL HEADER END
 .\" Copyright (c) 2006, Sun Microsystems, Inc. All Rights Reserved.
 .\"
-.\"
-.Dd February 25, 2020
+.Dd September 7, 2021
 .Dt DTRACE 1
 .Os
 .Sh NAME
@@ -576,6 +575,17 @@ Must be specified in number-per-second with the
 suffix.
 .It Sy cpu Ns = Ns Ar scalar
 Specifies the CPU on which to enable tracing.
+.It Sy cpp
+Run a C preprocessor over input files.
+Same as the
+.Fl C
+flag.
+.It Sy cpppath Ns = Ns Ar path
+Use the specified path for the C preprocessor rather than
+searching for
+.Dq cpp
+in
+.Ev PATH .
 .It Sy defaultargs
 Allow references to unspecified macro arguments.
 .It Sy destructive
@@ -601,8 +611,20 @@ Number of default stack frames for
 .It Sy jstackstrsize Ns = Ns Ar scalar
 Default string space size for
 .Fn jstack .
+.It Sy ldpath Ns = Ns Ar path
+When
+.Fl G
+is specified, use the specified path for a static linker
+rather than searching for
+.Dq "ld"
+in
+.Ev PATH .
+.It Sy libdir Ns = Ns Ar path
+Add a directory to the system library path.
 .It Sy nspec Ns = Ns Ar scalar
 Number of speculations.
+.It Sy nolibs
+Do not load D system libraries.
 .It Sy quiet
 Set quiet mode.
 Same as the
@@ -626,6 +648,10 @@ output.
 Rate of status checking.
 .It Sy switchrate Ns = Ns Ar time
 Rate of buffer switching.
+.It Sy syslibdir Ns = Ns Ar path
+Path to system libraries.
+Defaults to
+.Pa /usr/lib/dtrace .
 .It Sy ustackframes Ns = Ns Ar scalar
 Maximum number of userspace stack frames to unwind when executing the
 .Fn ustack
