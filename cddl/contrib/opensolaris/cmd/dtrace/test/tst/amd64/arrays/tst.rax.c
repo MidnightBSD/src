@@ -1,5 +1,5 @@
 /*
- * CDDL HEADER SART
+ * CDDL HEADER START
  *
  * The contents of this file are subject to the terms of the
  * Common Development and Distribution License (the "License").
@@ -20,25 +20,26 @@
  */
 
 /*
- * Copyright (c) 2013 Martin Matuska <mm@FreeBSD.org>. All rights reserved.
+ * Copyright (c) 2019 Mariusz Zaborski <oshogbo@FreeBSD.org>
+ * Use is subject to license terms.
  */
 
-#ifndef	_LIBZFS_COMPAT_H
-#define	_LIBZFS_COMPAT_H
+void frax(void);
 
-#include <zfs_ioctl_compat.h>
-
-#ifdef	__cplusplus
-extern "C" {
-#endif
-
-int get_zfs_ioctl_version(void);
-int zcmd_ioctl(int fd, int request, zfs_cmd_t *zc);
-
-#define	ioctl(fd, ioc, zc)	zcmd_ioctl((fd), (ioc), (zc))
-
-#ifdef	__cplusplus
+__attribute__((optnone)) void
+frax(void)
+{
+	asm volatile("mov $0x41414141, %%rax"
+	    : : : "rax"
+	);
 }
-#endif
 
-#endif	/* _LIBZFS_COMPAT_H */
+int
+main(void)
+{
+
+	while (1) {
+		frax();
+	}
+	return (0);
+}

@@ -38,6 +38,7 @@
 #include <pthread.h>
 
 #include <sys/ccompile.h>
+#include <sys/endian.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -48,9 +49,6 @@ extern "C" {
 
 #ifndef DEBUG_LEVEL
 #define	DEBUG_LEVEL 0
-#endif
-#ifndef DEBUG_PARSE
-#define	DEBUG_PARSE 0
 #endif
 
 #ifndef DEBUG_STREAM
@@ -63,6 +61,15 @@ extern "C" {
 
 #ifndef MIN
 #define	MIN(a, b) 		((a) > (b) ? (b) : (a))
+#endif
+
+/* Sanity check for cross-build bootstrap tools */
+#if !defined(BYTE_ORDER)
+#error "Missing BYTE_ORDER defines"
+#elif !defined(_LITTLE_ENDIAN)
+#error "Missing _LITTLE_ENDIAN defines"
+#elif !defined(_BIG_ENDIAN)
+#error "Missing _BIG_ENDIAN defines"
 #endif
 
 #define	TRUE	1
@@ -90,7 +97,6 @@ extern "C" {
 
 extern const char *progname;
 extern int debug_level;
-extern int debug_parse;
 extern char *curhdr;
 
 /*
@@ -394,18 +400,6 @@ void merge_into_master(tdata_t *, tdata_t *, tdata_t *, int);
 #define	CTF_SWAP_BYTES	0x10 /* target byte order is different from host */
 
 void write_ctf(tdata_t *, const char *, const char *, int);
-
-/* parse.c */
-void parse_init(tdata_t *);
-void parse_finish(tdata_t *);
-int parse_stab(stab_t *, char *, iidesc_t **);
-tdesc_t *lookup(int);
-tdesc_t *lookupname(const char *);
-void check_hash(void);
-void resolve_typed_bitfields(void);
-
-/* stabs.c */
-int stabs_read(tdata_t *, Elf *, char *);
 
 /* dwarf.c */
 int dw_read(tdata_t *, Elf *, char *);

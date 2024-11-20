@@ -158,7 +158,7 @@ typedef struct dt_module {
 
 #ifdef __MidnightBSD__
 /*
- * A representation of a FreeBSD kernel module, used when checking module
+ * A representation of a MidnightBSD kernel module, used when checking module
  * dependencies.  This differs from dt_module_t, which refers to a KLD in the
  * case of kernel probes.  Since modules can be identified regardless of whether
  * they've been compiled into the kernel, we use them to identify DTrace
@@ -717,7 +717,7 @@ extern dt_pcb_t *yypcb;		/* pointer to current parser control block */
 extern char yyintprefix;	/* int token prefix for macros (+/-) */
 extern char yyintsuffix[4];	/* int token suffix ([uUlL]*) */
 extern int yyintdecimal;	/* int token is decimal (1) or octal/hex (0) */
-extern char yytext[];		/* lex input buffer */
+extern char *yytext;		/* lex input buffer */
 extern int yylineno;		/* lex line number */
 extern int yydebug;		/* lex debugging */
 extern dt_node_t *yypragma;	/* lex token list for control lines */

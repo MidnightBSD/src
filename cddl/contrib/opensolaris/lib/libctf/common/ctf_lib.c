@@ -27,6 +27,7 @@
 #pragma ident	"%Z%%M%	%I%	%E% SMI"
 
 #include <sys/types.h>
+#include <sys/endian.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <sys/zmod.h>
@@ -244,7 +245,8 @@ ctf_fdopen(int fd, int *errp)
 	 */
 	if (nbytes >= (ssize_t) sizeof (ctf_preamble_t) &&
 	    hdr.ctf.ctp_magic == CTF_MAGIC) {
-		if (hdr.ctf.ctp_version > CTF_VERSION)
+		if (hdr.ctf.ctp_version != CTF_VERSION_2 &&
+		    hdr.ctf.ctp_version != CTF_VERSION_3)
 			return (ctf_set_open_errno(errp, ECTF_CTFVERS));
 
 		ctfsect.cts_data = mmap64(NULL, st.st_size, PROT_READ,

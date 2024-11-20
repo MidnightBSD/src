@@ -18,16 +18,19 @@
  *
  * CDDL HEADER END
  */
+
 /*
- * Copyright 2017 Spectra Logic Corp Inc.  All rights reserved.
+ * Copyright (c) 2019 Mariusz Zaborski <oshogbo@FreeBSD.org>
  * Use is subject to license terms.
  */
 
+#pragma D option quiet
 
-#ifndef	_ZDB_H
-#define	_ZDB_H
+pid$1::frax:return / uregs[R_RAX] == 0x41414141 / {
+	exit(0);
+}
 
-void dump_intent_log(zilog_t *);
-extern uint8_t dump_opt[256];
-
-#endif	/* _ZDB_H */
+pid$1::frax:return / uregs[R_RAX] != 0x41414141 / {
+	printf("wrong rax value: %d\n", uregs[R_RAX]);
+	exit(1);
+}

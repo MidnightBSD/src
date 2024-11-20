@@ -31,6 +31,7 @@
 
 #include <assert.h>
 #include <elf.h>
+#include <sys/types.h>
 #include <fcntl.h>
 #include <gelf.h>
 #include <limits.h>
@@ -571,7 +572,7 @@ dump_elf32(dtrace_hdl_t *dtp, const dof_hdr_t *dof, int fd)
 	} else {
 		shp = &elf_file.shdr[ESHDR_REL];
 		shp->sh_name = 37; /* DTRACE_SHSTRTAB32[37] = ".rel.SUNW_dof" */
-		shp->sh_flags = SHF_ALLOC;
+		shp->sh_flags = 0;
 		shp->sh_type = SHT_REL;
 		shp->sh_entsize = sizeof (de.de_rel[0]);
 		shp->sh_link = ESHDR_SYMTAB;
@@ -646,6 +647,9 @@ dump_elf64(dtrace_hdl_t *dtp, const dof_hdr_t *dof, int fd)
 #elif defined(__mips__)
 	elf_file.ehdr.e_machine = EM_MIPS;
 #elif defined(__powerpc64__)
+#if defined(_CALL_ELF) && _CALL_ELF == 2
+	elf_file.ehdr.e_flags = 2;
+#endif
 	elf_file.ehdr.e_machine = EM_PPC64;
 #elif defined(__i386) || defined(__amd64)
 	elf_file.ehdr.e_machine = EM_AMD64;
@@ -711,7 +715,7 @@ dump_elf64(dtrace_hdl_t *dtp, const dof_hdr_t *dof, int fd)
 	} else {
 		shp = &elf_file.shdr[ESHDR_REL];
 		shp->sh_name = 37; /* DTRACE_SHSTRTAB64[37] = ".rel.SUNW_dof" */
-		shp->sh_flags = SHF_ALLOC;
+		shp->sh_flags = 0;
 		shp->sh_type = SHT_RELA;
 		shp->sh_entsize = sizeof (de.de_rel[0]);
 		shp->sh_link = ESHDR_SYMTAB;
@@ -1115,7 +1119,7 @@ process_obj(dtrace_hdl_t *dtp, const char *obj, int *eprobesp)
 	static const char dt_symfmt[] = "%s%u.%s";
 	static const char dt_weaksymfmt[] = "%s.%s";
 	char probename[DTRACE_NAMELEN];
-	int fd, i, ndx, eprobe, mod = 0;
+	int fd, i, ndx, eprobe, uses_funcdesc = 0, mod = 0;
 	Elf *elf = NULL;
 	GElf_Ehdr ehdr;
 	Elf_Scn *scn_rel, *scn_sym, *scn_str, *scn_tgt;
@@ -1167,6 +1171,9 @@ process_obj(dtrace_hdl_t *dtp, const char *obj, int *eprobesp)
 		emachine1 = emachine2 = EM_MIPS;
 #elif defined(__powerpc__)
 		emachine1 = emachine2 = EM_PPC64;
+#if !defined(_CALL_ELF) || _CALL_ELF == 1
+		uses_funcdesc = 1;
+#endif
 #elif defined(__i386) || defined(__amd64)
 		emachine1 = emachine2 = EM_AMD64;
 #elif defined(__aarch64__)
@@ -1311,7 +1318,7 @@ process_obj(dtrace_hdl_t *dtp, const char *obj, int *eprobesp)
 				continue;
 
 			if (dt_symtab_lookup(data_sym, 0, isym, rela.r_offset,
-			    shdr_rel.sh_info, &fsym, (emachine1 == EM_PPC64),
+			    shdr_rel.sh_info, &fsym, uses_funcdesc,
 			    elf) != 0) {
 				dt_strtab_destroy(strtab);
 				goto err;
@@ -1492,7 +1499,7 @@ process_obj(dtrace_hdl_t *dtp, const char *obj, int *eprobesp)
 
 			if (dt_symtab_lookup(data_sym, osym, isym,
 			    rela.r_offset, shdr_rel.sh_info, &fsym,
-			    (emachine1 == EM_PPC64), elf) == 0) {
+			    uses_funcdesc, elf) == 0) {
 				if (fsym.st_name > data_str->d_size)
 					goto err;
 
@@ -1501,7 +1508,7 @@ process_obj(dtrace_hdl_t *dtp, const char *obj, int *eprobesp)
 				s = strchr(s, '.') + 1;
 			} else if (dt_symtab_lookup(data_sym, 0, osym,
 			    rela.r_offset, shdr_rel.sh_info, &fsym,
-			    (emachine1 == EM_PPC64), elf) == 0) {
+			    uses_funcdesc, elf) == 0) {
 				u_int bind;
 
 				bind = GELF_ST_BIND(fsym.st_info) == STB_WEAK ?
