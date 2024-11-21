@@ -414,7 +414,6 @@ __clean_env_destructor(void)
 char *
 getenv(const char *name)
 {
-	int envNdx;
 	size_t nameLen;
 
 	/* Check for malformed name. */
