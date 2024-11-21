@@ -136,18 +136,3 @@ handle_argv(int argc, char *argv[], char **env)
 		}
 	}
 }
-
-static const struct {
-	int32_t	namesz;
-	int32_t	descsz;
-	int32_t	type;
-	char	name[sizeof(NOTE_MIDNIGHTBSD_VENDOR)];
-	uint32_t desc;
-} crt_noinit_tag __attribute__ ((section (NOTE_SECTION),
-    aligned(4))) __used = {
-	.namesz = sizeof(NOTE_MIDNIGHTBSD_VENDOR),
-	.descsz = sizeof(uint32_t),
-	.type = NT_MIDNIGHTBSD_NOINIT_TAG,
-	.name = NOTE_MIDNIGHTBSD_VENDOR,
-	.desc = 0
-};
