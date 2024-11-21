@@ -37,6 +37,7 @@
 extern bool tablesverify, tablesext;
 extern int trlcontxt; /* Set in  parse.y for each rule. */
 extern const char *escaped_qstart, *escaped_qend;
+extern int yylval;
 
 #define M4QSTART "[""["
 #define M4QEND "]""]"
@@ -704,7 +705,7 @@ M4QEND      "]""]"
  			 }
 nmstr[yyleng - 2 - end_is_ws] = '\0';  /* chop trailing brace */
 
-			if ( (nmdefptr = ndlookup( nmstr )) == 0 )
+			if ( (nmdefptr = ndlookup( nmstr )) == NULL )
 				format_synerr(
 					_( "undefined definition {%s}" ),
 						nmstr );

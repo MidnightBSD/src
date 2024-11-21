@@ -39,6 +39,7 @@
 /* yylex - scan for a regular expression token */
 extern char *yytext;
 extern FILE *yyout;
+extern int yylval;
 bool no_section3_escape = false;
 int     yylex (void)
 {

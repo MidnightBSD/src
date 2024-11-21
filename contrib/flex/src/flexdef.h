@@ -46,7 +46,6 @@
 #include <ctype.h>
 #include <libgen.h> /* for XPG version of basename(3) */
 #include <string.h>
-#include <math.h>
 
 #ifdef HAVE_ASSERT_H
 #include <assert.h>
@@ -127,6 +126,9 @@
  * readability.
  */
 #define NUMDATALINES 10
+
+/* Number of characters to print a line number, i.e., 1 + log10(INT_MAX) */
+#define NUMCHARLINES 10
 
 /* transition_struct_out() definitions. */
 #define TRANS_STRUCT_PRINT_LENGTH 14

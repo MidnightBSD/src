@@ -342,7 +342,7 @@ void check_options (void)
     /* Setup the filter chain. */
     output_chain = filter_create_int(NULL, filter_tee_header, headerfilename);
     if ( !(m4 = getenv("M4"))) {
-	    char *slash;
+		const char *slash;
 		m4 = M4;
 		if ((slash = strrchr(M4, '/')) != NULL) {
 			m4 = slash+1;
@@ -380,7 +380,7 @@ void check_options (void)
 			}
 		}
 	}
-    filter_create_ext(output_chain, m4, "-P", 0);
+    filter_create_ext(output_chain, m4, "-gP", 0);
     filter_create_int(output_chain, filter_fix_linedirs, NULL);
 
     /* For debugging, only run the requested number of filters. */
@@ -468,7 +468,7 @@ void check_options (void)
              char *str, *fmt = "#define %s %d\n";
              size_t strsz;
 
-             strsz = strlen(fmt) + strlen(scname[i]) + (size_t)(1 + ceil (log10(i))) + 2;
+             strsz = strlen(fmt) + strlen(scname[i]) + NUMCHARLINES + 2;
              str = malloc(strsz);
              if (!str)
                flexfatal(_("allocation of macro definition failed"));
