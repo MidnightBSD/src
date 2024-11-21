@@ -1,5 +1,9 @@
 Updating Information for MidnightBSD users.
 
+20241121:
+	restore vendor branch for flex and update to 2.6.4 in 
+	current
+
 20241119:
 	lua 5.4.2
 
