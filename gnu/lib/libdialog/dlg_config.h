@@ -4,7 +4,7 @@
  */
 
 #define CURSES_WACS_ARRAY _nc_wacs
-#define DIALOG_PATCHDATE 20180621
+#define DIALOG_PATCHDATE 20210117
 #define DIALOG_VERSION "1.3"
 #define HAVE_ALLOCA 1
 #define HAVE_BTOWC 1
