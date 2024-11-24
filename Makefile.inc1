@@ -2993,8 +2993,10 @@ _prebuild_libs=	${_libsqlite3} \
 		${_cddl_lib_libctf} ${_cddl_lib_libzfsbootenv} \
 		lib/libufs \
 		lib/libutil lib/libpjdlog ${_lib_libypclnt} lib/libz lib/msun \
-		${_secure_lib_libcrypto} ${_secure_lib_libssl} \
-		${_lib_libldns} ${_secure_lib_libssh}
+		${_secure_lib_libcrypto} ${_secure_lib_libssl} ${_secure_lib_libmj} \
+		${_lib_libldns} ${_secure_lib_libssh} \
+		lib/libarchive lib/libfetch \
+		lib/libmagic lib/libucl
 
 .if ${MK_DIALOG} != "no"
 _prebuild_libs+= gnu/lib/libdialog
@@ -3100,6 +3102,10 @@ lib/librtld_db__L: lib/libprocstat__L
 .if ${MK_OPENSSL} != "no"
 _secure_lib_libcrypto= secure/lib/libcrypto
 _secure_lib_libssl= secure/lib/libssl
+_secure_lib_libmj= secure/lib/libmj
+_secure_lib_libnetpgp= secure/lib/libnetpgp
+secure/lib/libmj__L: secure/lib/libssl__L secure/lib/libcrypto__L
+secure/lib/libnetpgp__L: secure/lib/libssl__L secure/lib/libcrypto__L secure/lib/libmj__L
 lib/libradius__L secure/lib/libssl__L: secure/lib/libcrypto__L
 secure/lib/libcrypto__L: lib/libthr__L
 .if ${MK_LDNS} != "no"
