@@ -2960,11 +2960,11 @@ lib/libgcc_s__L: lib/libc_nonshared__L
 lib/libcxxrt__L: lib/libgcc_s__L
 .endif
 
-_prebuild_libs=	${_kerberos5_lib_libasn1} \
+_prebuild_libs=	${_libsqlite3} \
+		${_kerberos5_lib_libasn1} \
 		${_kerberos5_lib_libhdb} \
 		${_kerberos5_lib_libheimbase} \
 		${_kerberos5_lib_libheimntlm} \
-		${_libsqlite3} \
 		${_kerberos5_lib_libheimipcc} \
 		${_kerberos5_lib_libhx509} ${_kerberos5_lib_libkrb5} \
 		${_kerberos5_lib_libroken} \
