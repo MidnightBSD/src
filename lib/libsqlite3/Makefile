@@ -1,7 +1,7 @@
 PACKAGE=lib${LIB}
 LIB=		sqlite3
 SHLIB_MAJOR=	1
-LIBADD+=	pthread z
+LIBADD+=	m pthread z
 
 SRCS=	sqlite3.c
 INCS=	sqlite3.h sqlite3ext.h
