@@ -7,15 +7,9 @@ DIRDEPS = \
 	lib/${CSU_DIR} \
 	lib/libc \
 	lib/libcompiler_rt \
-	lib/libbz2 \
-	lib/libfetch \
 	lib/libsqlite3 \
-	lib/libucl \
-	lib/libutil \
 	lib/libz \
-	lib/libmport \
-	secure/lib/libcrypto \
-	secure/lib/libssl \
+	lib/libmsearch \
 
 
 .include <dirdeps.mk>
