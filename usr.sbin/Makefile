@@ -19,6 +19,7 @@ SUBDIR=	adduser \
 	devctl \
 	devinfo \
 	diskinfo \
+	dnsextd \
 	dumpcis \
 	etcupdate \
 	extattr \
@@ -36,6 +37,7 @@ SUBDIR=	adduser \
 	kldxref \
 	mailwrapper \
 	makefs \
+	mdnsd \
 	memcontrol \
 	mergemaster \
 	mfiutil \
@@ -43,8 +45,10 @@ SUBDIR=	adduser \
 	mlxcontrol \
 	mountd \
 	mount_smbfs \
+	mport \
 	mpsutil \
 	mptutil \
+	mrouted \
 	mtest \
 	newsyslog \
 	nfscbd \
