@@ -44,6 +44,14 @@ struct loginclass;
 
 #define	XU_NGROUPS	16
 
+#if defined(_KERNEL) || defined(_WANT_UCRED)
+/*
+ * Number of groups inlined in 'struct ucred'.  It must stay reasonably low as
+ * it is also used by some functions to allocate an array of this size on the
+ * stack.
+ */
+#define	CRED_SMALLGROUPS_NB	16
+
 /*
  * Credentials.
  *
@@ -57,7 +65,6 @@ struct loginclass;
  *
  * See "Credential management" comment in kern_prot.c for more information.
  */
-#if defined(_KERNEL) || defined(_WANT_UCRED)
 struct ucred {
 	struct mtx cr_mtx;
 	u_int	cr_ref;			/* (c) reference count */
@@ -67,6 +74,10 @@ struct ucred {
 	uid_t	cr_uid;			/* effective user id */
 	uid_t	cr_ruid;		/* real user id */
 	uid_t	cr_svuid;		/* saved user id */
+	/*
+	 * XXXOC: On the next ABI change, please move 'cr_ngroups' out of the
+	 * copied area (crcopy() already copes with this change).
+	 */
 	int	cr_ngroups;		/* number of groups */
 	gid_t	cr_rgid;		/* real group id */
 	gid_t	cr_svgid;		/* saved group id */
@@ -75,12 +86,13 @@ struct ucred {
 	struct prison	*cr_prison;	/* jail(2) */
 	struct loginclass	*cr_loginclass; /* login class */
 	u_int		cr_flags;	/* credential flags */
-	void 		*cr_pspare2[2];	/* general use 2 */
+	void		*cr_pspare2[2];	/* general use 2 */
 #define	cr_endcopy	cr_label
 	struct label	*cr_label;	/* MAC label */
 	gid_t	*cr_groups;		/* groups */
 	int	cr_agroups;		/* Available groups */
-	gid_t   cr_smallgroups[XU_NGROUPS];	/* storage for small groups */
+	/* storage for small groups */
+	gid_t   cr_smallgroups[CRED_SMALLGROUPS_NB];
 };
 #define	NOCRED	((struct ucred *)0)	/* no credential available */
 #define	FSCRED	((struct ucred *)-1)	/* filesystem credential */
@@ -157,9 +169,22 @@ struct ucred	*crcowget(struct ucred *cr);
 void	crcowfree(struct thread *td);
 void	cru2x(struct ucred *cr, struct xucred *xcr);
 void	cru2xt(struct thread *td, struct xucred *xcr);
-void	crsetgroups(struct ucred *cr, int n, gid_t *groups);
-int	groupmember(gid_t gid, struct ucred *cred);
-int	realgroupmember(gid_t gid, struct ucred *cred);
+void	crsetgroups(struct ucred *cr, int ngrp, const gid_t *groups);
+void	crsetgroups_fallback(struct ucred *cr, int ngrp, const gid_t *groups,
+	    const gid_t fallback);
+
+/*
+ * Returns whether gid designates a primary group in cred.
+ */
+static inline int
+group_is_primary(const gid_t gid, const struct ucred *const cred)
+{
+	return (gid == cred->cr_groups[0] || gid == cred->cr_rgid ||
+	    gid == cred->cr_svgid);
+}
+int	group_is_supplementary(const gid_t gid, const struct ucred *const cred);
+int	groupmember(gid_t gid, const struct ucred *cred);
+int	realgroupmember(gid_t gid, const struct ucred *cred);
 #endif /* _KERNEL */
 
 #endif /* !_SYS_UCRED_H_ */
