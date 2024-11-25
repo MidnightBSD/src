@@ -446,6 +446,8 @@ _DP_msearch=	sqlite3 magic z
 _DP_mport=	md archive bz2 lzma z fetch sqlite3 ucl pthread util zstd
 _DP_mj=         bz2 crypto z
 _DP_dispatch=	BlocksRuntime pthread
+_DP_dns_sd=	pthread
+_DP_nss_mdns=	pthread dns_sd
 _DP_blocksruntime=
 
 # Define special cases

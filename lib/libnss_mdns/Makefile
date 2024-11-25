@@ -2,15 +2,13 @@ PACKAGE=lib${LIB}
 
 .include <src.opts.mk>
 
-.PATH: ${SRCTOP}/contrib/mDNSResponder/mDNSPosix
+.PATH: ${SRCTOP}/contrib/mDNSResponder/mDNSPosix ${SRCTOP}/contrib/mDNSResponder/mDNSShared
 SRCDIR=	${SRCTOP}/contrib/mDNSResponder/mDNSPosix \
 	${SRCTOP}/contrib/mDNSResponder/mDNSShared
 SHLIB_MAJOR=	1
 
 LIB=	nss_mdns
 SRCS=	nss_mdns.c netbsd.c
-.PATH: ${SRCTOP}/contrib/mDNSResponder/mDNSShared
-SRCS+=	dnssd_clientlib.c dnssd_clientstub.c dnssd_ipc.c
 SHLIB_NAME?=    ${LIB}.so.${SHLIB_MAJOR}
 
 NO_PROFILE=
@@ -24,7 +22,6 @@ CFLAGS+=        -march=athlon64
 .if ${MACHINE_ARCH}x == "i386x"
 CFLAGS+=        -march=i586
 .endif
-CFLAGS+=	-I${SRCTOP}
 CFLAGS+=	-I${SRCTOP}/contrib/mDNSResponder
 CFLAGS+=	-I${SRCTOP}/contrib/mDNSResponder/mDNSPosix
 CFLAGS+=	-I${SRCTOP}/contrib/mDNSResponder/mDNShared
@@ -36,5 +33,7 @@ CFLAGS+=	-DHAVE_IPV6
 
 MAN=	nss_mdns.conf.5 \
 	libnss_mdns.8
+
+LIBADD+=        pthread dns_sd
 
 .include <bsd.lib.mk>

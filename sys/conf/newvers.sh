@@ -86,7 +86,6 @@ done
 if [ -z "$COPYRIGHT" ]; then
 	COPYRIGHT="/*-
  * Copyright (c) 2006-$year The MidnightBSD Project.
- * All rights reserved.
  *
  */"
 fi

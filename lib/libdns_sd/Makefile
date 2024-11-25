@@ -1,3 +1,5 @@
+PACKAGE=lib${LIB}
+
 .include <src.opts.mk>
 
 .PATH: ${.CURDIR}/../../contrib/mDNSResponder/mDNSShared
@@ -17,7 +19,6 @@ CFLAGS+=	-march=athlon64
 .if ${MACHINE_ARCH}x == "i386x"
 CFLAGS+=	-march=i586
 .endif
-CFLAGS+=	-I${.CURDIR}
 CFLAGS+=	-I${.CURDIR}/../../contrib/mDNSResponder
 CFLAGS+=	-I${.CURDIR}/../../contrib/mDNSResponder/mDNShared
 CFLAGS+=	-DTARGET_OS_FREEBSD
