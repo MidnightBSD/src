@@ -3125,6 +3125,8 @@ secure/lib/libssh__L: lib/libgssapi__L kerberos5/lib/libkrb5__L \
 .endif
 .endif
 .endif
+lib/libfetch__L: secure/lib/libssl__L secure/lib/libcrypto__L
+lib/libarchive__L: lib/libz__L lib/libbz2__L lib/liblzma__L lib/libexpat__L secure/lib/libssl__L secure/lib/libcrypto__L
 _secure_lib=	secure/lib
 .endif
 
