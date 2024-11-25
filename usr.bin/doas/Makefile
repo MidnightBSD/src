@@ -1,6 +1,7 @@
 SRCS=	parse.y doas.c env.c execvpe.c
 
 PROG=	doas
+CONFS=	doas.conf
 MAN=	doas.1 doas.conf.5
 
 BINOWN= root

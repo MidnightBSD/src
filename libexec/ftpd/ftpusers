@@ -1,3 +1,4 @@
+# $MidnightBSD$
 #
 # list of users disallowed any ftp access.
 # read by ftpd(8).
@@ -10,11 +11,8 @@ tty
 kmem
 games
 news
-_ntp
 man
 sshd
-smmsp
-mailnull
 bind
 unbound
 proxy
@@ -25,4 +23,7 @@ pop
 auditdistd
 www
 hast
+_ntp
 nobody
+mailnull
+smmsp
