@@ -10,6 +10,9 @@ SUBDIR+=libssh
 .endif
 .endif
 
+SUBDIR_DEPEND_libmj= libcrypto
+SUBDIR_DEPEND_libnetpgp= libcrypto libmj
+
 SUBDIR.${MK_TESTS}+= tests
 
 .include <bsd.subdir.mk>
