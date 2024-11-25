@@ -48,7 +48,6 @@ SUBDIR=	adduser \
 	mport \
 	mpsutil \
 	mptutil \
-	mrouted \
 	mtest \
 	newsyslog \
 	nfscbd \
