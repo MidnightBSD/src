@@ -1,13 +1,15 @@
+PACKAGE=lib${LIB}
+
 .include <src.opts.mk>
 
-.PATH: ${.CURDIR}/../../contrib/mDNSResponder/mDNSPosix
-SRCDIR=	${.CURDIR}/../../contrib/mDNSResponder/mDNSPosix \
-	${.CURDIR}/../../contrib/mDNSResponder/mDNSShared
+.PATH: ${SRCTOP}/contrib/mDNSResponder/mDNSPosix
+SRCDIR=	${SRCTOP}/contrib/mDNSResponder/mDNSPosix \
+	${SRCTOP}/contrib/mDNSResponder/mDNSShared
 SHLIB_MAJOR=	1
 
 LIB=	nss_mdns
 SRCS=	nss_mdns.c netbsd.c
-.PATH: ${.CURDIR}/../../contrib/mDNSResponder/mDNSShared
+.PATH: ${SRCTOP}/contrib/mDNSResponder/mDNSShared
 SRCS+=	dnssd_clientlib.c dnssd_clientstub.c dnssd_ipc.c
 SHLIB_NAME?=    ${LIB}.so.${SHLIB_MAJOR}
 
@@ -22,10 +24,10 @@ CFLAGS+=        -march=athlon64
 .if ${MACHINE_ARCH}x == "i386x"
 CFLAGS+=        -march=i586
 .endif
-CFLAGS+=	-I${.CURDIR}
-CFLAGS+=	-I${.CURDIR}/../../contrib/mDNSResponder
-CFLAGS+=	-I${.CURDIR}/../../contrib/mDNSResponder/mDNSPosix
-CFLAGS+=        -I${.CURDIR}/../../contrib/mDNSResponder/mDNShared
+CFLAGS+=	-I${SRCTOP}
+CFLAGS+=	-I${SRCTOP}/contrib/mDNSResponder
+CFLAGS+=	-I${SRCTOP}/contrib/mDNSResponder/mDNSPosix
+CFLAGS+=	-I${SRCTOP}/contrib/mDNSResponder/mDNShared
 CFLAGS+=        -DTARGET_OS_FREEBSD
 
 .if ${MK_INET6_SUPPORT} != "no"
