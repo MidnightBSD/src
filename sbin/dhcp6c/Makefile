@@ -4,6 +4,7 @@
 
 PACKAGE=	runtime
 PROG=	dhcp6c
+CONF=	dhcp6c.conf
 
 CFLAGS+= -I${.CURDIR} -I${.CURDIR}/../../contrib/wide-dhcpv6 -DPACKAGE_NAME=\"\" -DPACKAGE_TARNAME=\"\" \
 	-DPACKAGE_VERSION=\"\" -DPACKAGE_STRING=\"\" -DPACKAGE_BUGREPORT=\"\" \
