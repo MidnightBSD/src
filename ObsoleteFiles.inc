@@ -39,6 +39,207 @@
 # for generating a list from a directory
 # find  /usr/lib/perl5/5.36.0 -exec echo {} \; | cut -b 2-150  | xargs printf "OLD_FILES+=%s\n"
 
+# 20241003: caroot bundle updated
+OLD_FILES+=usr/share/certs/trusted/Security_Communication_Root_CA.pem
+# 20241002: replaced NetBSD tests for uniq with our own
+OLD_FILES+=usr/tests/usr.bin/uniq/d_basic.in
+OLD_FILES+=usr/tests/usr.bin/uniq/d_basic.out
+OLD_FILES+=usr/tests/usr.bin/uniq/d_counts.out
+OLD_FILES+=usr/tests/usr.bin/uniq/d_input.in
+OLD_FILES+=usr/tests/usr.bin/uniq/d_show_duplicates.out
+OLD_FILES+=usr/tests/usr.bin/uniq/d_show_uniques.out
+# 20241001: Removal of support for the VTOC8 partitioning scheme
+OLD_FILES+=usr/include/sys/disk/vtoc.h
+OLD_FILES+=usr/include/sys/vtoc.h
+# 20241001: meteor.4 removed, see also 20200301 entry below
+OLD_FILES+=usr/share/man/man4/meteor.4.gz
+# 20241001: remove bt(4) man page
+OLD_FILES+=usr/share/man/man4/bt.4.gz
+# 20241001: gsignal
+OLD_FILES+=usr/share/man/man9/gsignal.9.gz
+# 20241001: case-sensitive conflicts removed
+OLD_FILES+=usr/tests/bin/pkill/pgrep-F_test
+OLD_FILES+=usr/tests/bin/pkill/pgrep-LF_test
+OLD_FILES+=usr/tests/bin/pkill/pgrep-P_test
+OLD_FILES+=usr/tests/bin/pkill/pgrep-U_test
+OLD_FILES+=usr/tests/bin/pkill/pkill-F_test
+OLD_FILES+=usr/tests/bin/pkill/pkill-LF_test
+OLD_FILES+=usr/tests/bin/pkill/pkill-P_test
+OLD_FILES+=usr/tests/bin/pkill/pkill-U_test
+# 20241001: vcount.9 removed
+OLD_FILES+=usr/share/man/man9/count_dev.9.gz
+OLD_FILES+=usr/share/man/man9/vcount.9.gz
+# 20241001: machine-id merged into hostid_save
+OLD_FILES+=etc/rc.d/machine-id
+# 20241001: loader help files renamed
+OLD_FILES+=boot/loader.help
+# 20241001: timeout moved from /usr/bin to /bin
+OLD_FILES+=usr/tests/usr.bin/timeout/Kyuafile
+OLD_FILES+=usr/tests/usr.bin/timeout/timeout_test
+# 20241001: update the ithread(9) man page
+OLD_FILES+=usr/share/man/man9/ithread.9.gz
+OLD_FILES+=usr/share/man/man9/ithread_add_handler.9.gz
+OLD_FILES+=usr/share/man/man9/ithread_create.9.gz
+OLD_FILES+=usr/share/man/man9/ithread_destroy.9.gz
+OLD_FILES+=usr/share/man/man9/ithread_priority.9.gz
+OLD_FILES+=usr/share/man/man9/ithread_remove_handler.9.gz
+OLD_FILES+=usr/share/man/man9/ithread_schedule.9.gz
+# 20241001: libkqueue test updates
+OLD_FILES+=usr/tests/sys/kqueue/libkqueue/kqtest
+# 20241001: LLVM clang bump from 13 to 18
+OLD_FILES+=usr/lib/clang/13.0.0/include/prfchwintrin.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/ptwriteintrin.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/rdseedintrin.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/riscv_vector.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/rtmintrin.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/s390intrin.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/serializeintrin.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/sgxintrin.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/shaintrin.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/smmintrin.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/stdalign.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/stdarg.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/stdatomic.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/stdbool.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/stddef.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/stdint.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/stdnoreturn.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/tbmintrin.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/tgmath.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/tmmintrin.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/tsxldtrkintrin.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/uintrintrin.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/unwind.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/vadefs.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/vaesintrin.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/varargs.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/vecintrin.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/vpclmulqdqintrin.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/waitpkgintrin.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/wasm_simd128.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/wbnoinvdintrin.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/wmmintrin.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/x86gprintrin.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/x86intrin.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/xmmintrin.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/xopintrin.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/xsavecintrin.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/xsaveintrin.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/xsaveoptintrin.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/xsavesintrin.h
+OLD_FILES+=usr/lib/clang/13.0.0/include/xtestintrin.h
+OLD_DIRS+=usr/lib/clang/13.0.0/include
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.asan-aarch64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.asan-aarch64.so
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.asan-arm.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.asan-arm.so
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.asan-armhf.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.asan-armhf.so
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.asan-i386.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.asan-i386.so
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.asan-preinit-aarch64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.asan-preinit-arm.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.asan-preinit-armhf.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.asan-preinit-i386.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.asan-preinit-x86_64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.asan-x86_64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.asan-x86_64.so
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.asan_cxx-aarch64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.asan_cxx-arm.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.asan_cxx-armhf.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.asan_cxx-i386.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.asan_cxx-x86_64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.cfi-aarch64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.cfi-arm.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.cfi-armhf.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.cfi-i386.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.cfi-x86_64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.cfi_diag-aarch64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.cfi_diag-arm.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.cfi_diag-armhf.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.cfi_diag-i386.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.cfi_diag-x86_64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.dd-aarch64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.dd-x86_64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.fuzzer-aarch64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.fuzzer-x86_64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.fuzzer_no_main-aarch64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.fuzzer_no_main-x86_64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.msan-aarch64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.msan-x86_64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.msan_cxx-aarch64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.msan_cxx-x86_64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.profile-aarch64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.profile-arm.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.profile-armhf.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.profile-i386.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.profile-powerpc.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.profile-powerpc64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.profile-powerpc64le.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.profile-x86_64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.safestack-aarch64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.safestack-i386.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.safestack-x86_64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.stats-aarch64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.stats-arm.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.stats-armhf.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.stats-i386.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.stats-x86_64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.stats_client-aarch64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.stats_client-arm.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.stats_client-armhf.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.stats_client-i386.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.stats_client-x86_64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.tsan-aarch64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.tsan-x86_64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.tsan_cxx-aarch64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.tsan_cxx-x86_64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.ubsan_minimal-aarch64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.ubsan_minimal-arm.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.ubsan_minimal-armhf.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.ubsan_minimal-i386.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.ubsan_minimal-x86_64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.ubsan_standalone-aarch64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.ubsan_standalone-arm.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.ubsan_standalone-armhf.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.ubsan_standalone-i386.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.ubsan_standalone-x86_64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.ubsan_standalone_cxx-aarch64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.ubsan_standalone_cxx-arm.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.ubsan_standalone_cxx-armhf.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.ubsan_standalone_cxx-i386.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.ubsan_standalone_cxx-x86_64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.xray-aarch64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.xray-arm.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.xray-armhf.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.xray-basic-aarch64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.xray-basic-arm.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.xray-basic-armhf.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.xray-basic-x86_64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.xray-fdr-aarch64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.xray-fdr-arm.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.xray-fdr-armhf.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.xray-fdr-x86_64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.xray-profiling-aarch64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.xray-profiling-arm.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.xray-profiling-armhf.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.xray-profiling-x86_64.a
+OLD_FILES+=usr/lib/clang/13.0.0/lib/freebsd/libclang_rt.xray-x86_64.a
+OLD_DIRS+=usr/lib/clang/13.0.0/lib/freebsd
+OLD_DIRS+=usr/lib/clang/13.0.0/lib
+OLD_DIRS+=usr/lib/clang/13.0.0
+
+# 20241001: new libc++ import which bumps version from 13.0.0
+OLD_FILES+=usr/include/c++/v1/__function_like.h
+OLD_FILES+=usr/include/c++/v1/__memory/pointer_safety.h
+OLD_FILES+=usr/include/c++/v1/__utility/__decay_copy.h
+
+# 20241001: unwind.h moved to /usr/include
+OLD_FILES+=usr/include/c++/v1/unwind-arm.h
+OLD_FILES+=usr/include/c++/v1/unwind-itanium.h
+OLD_FILES+=usr/include/c++/v1/unwind.h
+
+
 # 20240129: removal of Perl and brainfuck
 OLD_FILES+=usr/bin/brainfuck
 OLD_FILES+=usr/share/man/man1/brainfuck.1.gz
