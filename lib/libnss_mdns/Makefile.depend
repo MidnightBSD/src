@@ -8,7 +8,6 @@ DIRDEPS = \
 	lib/libcompiler_rt \
 	lib/libdns_sd
 
-
 .include <dirdeps.mk>
 
 .if ${DEP_RELDIR} == ${_DEP_RELDIR}

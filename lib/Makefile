@@ -20,7 +20,8 @@ SUBDIR_BOOTSTRAP= \
 	libssp \
 	libssp_nonshared \
 	msun \
-	libblocksruntime
+	libblocksruntime \
+	libdns_sd
 
 # The main list; please keep these sorted alphabetically.
 # The only exception is sqlite3: we place it at the start of the list since it
@@ -48,7 +49,6 @@ SUBDIR=	${SUBDIR_BOOTSTRAP} \
 	libdevctl \
 	libdevinfo \
 	libdevstat \
-	libdns_sd \
 	libdl \
 	libdwarf \
 	libedit \
