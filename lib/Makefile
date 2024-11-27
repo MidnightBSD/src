@@ -19,9 +19,7 @@ SUBDIR_BOOTSTRAP= \
 	libelf \
 	libssp \
 	libssp_nonshared \
-	msun \
-	libblocksruntime \
-	libdns_sd
+	msun
 
 # The main list; please keep these sorted alphabetically.
 # The only exception is sqlite3: we place it at the start of the list since it
@@ -49,7 +47,9 @@ SUBDIR=	${SUBDIR_BOOTSTRAP} \
 	libdevctl \
 	libdevinfo \
 	libdevstat \
+	libdispatch \
 	libdl \
+	libdns_sd \
 	libdwarf \
 	libedit \
 	libelftc \
@@ -76,7 +76,6 @@ SUBDIR=	${SUBDIR_BOOTSTRAP} \
 	lib80211 \
 	libnetbsd \
 	libnetmap \
-	libnss_mdns \
 	libnv \
 	libopenbsd \
 	libopie \
@@ -110,6 +109,7 @@ SUBDIR=	${SUBDIR_BOOTSTRAP} \
 	liby \
 	libz \
 	libzstd \
+	libnss_mdns \
 	ncurses \
 	nss_tacplus
 
@@ -151,6 +151,7 @@ SUBDIR_DEPEND_libpcap= ofed
 .endif
 SUBDIR_DEPEND_nss_tacplus= libtacplus
 SUBDIR_DEPEND_libnss_mdns=	libdns_sd
+SUBDIR_DEPEND_libdispatch=	libblocksruntime
 
 .if !defined(COMPAT_32BIT)
 SUBDIR+=	flua
