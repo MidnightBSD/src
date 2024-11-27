@@ -106,12 +106,12 @@ _CPUCFLAGS = -mfloat-abi=softfp
 .  elif ${CPUTYPE} == "cortexa"
 _CPUCFLAGS = -march=armv7 -mfpu=vfp
 .  elif ${CPUTYPE:Marmv[4567]*} != ""
-# Handle all the armvX types that FreeBSD runs:
+# Handle all the armvX types that MidnightBSD runs:
 #	armv4, armv4t, armv5, armv5te, armv6, armv6t2, armv7, armv7-a, armv7ve
 # they require -march=. All the others require -mcpu=.
 _CPUCFLAGS = -march=${CPUTYPE}
 .  else
-# Common values for FreeBSD
+# Common values for MidnightBSD
 # arm: (any arm v4 or v5 processor you are targeting)
 #	arm920t, arm926ej-s, marvell-pj4, fa526, fa626,
 #	fa606te, fa626te, fa726te
@@ -368,7 +368,7 @@ MACHINE_CPU += armv7
 . if ${MACHINE_ARCH:Marmv[67]*} == ""
 MACHINE_CPU += softfp
 . endif
-# Normally armv6 and armv7 are hard float ABI from FreeBSD 11 onwards. However
+# Normally armv6 and armv7 are hard float ABI from MidnightBSD 3.x onwards. However
 # when CPUTYPE has 'soft' in it, we use the soft-float ABI to allow building of
 # soft-float ABI libraries. In this case, we have to add the -mfloat-abi=softfp
 # to force that.
@@ -377,7 +377,7 @@ MACHINE_CPU += softfp
 # not a nice optimization. Please note: softfp ABI uses hardware floating
 # instructions, but passes arguments to function calls in integer regsiters.
 # -mfloat-abi=soft is full software floating point, but is not currently
-# supported. softfp support in FreeBSD may disappear in FreeBSD 13.0 since
+# supported. softfp support in MidnightBSD may disappear in FreeBSD 13.0 since
 # it was a transition tool from FreeBSD 10 to 11 and is a bit of an odd duck.
 CFLAGS += -mfloat-abi=softfp
 . endif
