@@ -1,5 +1,3 @@
-# $FreeBSD: stable/11/share/mk/src.opts.mk 360290 2020-04-25 05:51:58Z delphij $
-#
 # Option file for MidnightBSD /usr/src builds.
 #
 # Users define WITH_FOO and WITHOUT_FOO on the command line or in /etc/src.conf

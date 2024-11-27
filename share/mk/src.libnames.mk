@@ -32,7 +32,7 @@ _PRIVATELIBS=	\
 		unbound \
 		zstd
 
-# Let projects based on FreeBSD append to _PRIVATELIBS
+# Let projects based on MidnightBSD append to _PRIVATELIBS
 # by maintaining their own LOCAL_PRIVATELIBS list.
 _PRIVATELIBS+=	${LOCAL_PRIVATELIBS}
 
@@ -81,7 +81,7 @@ _INTERNALLIBS=	\
 		wpautils \
 		wpawps
 
-# Let projects based on FreeBSD append to _INTERNALLIBS
+# Let projects based on MidnightBSD append to _INTERNALLIBS
 # by maintaining their own LOCAL_INTERNALLIBS list.
 _INTERNALLIBS+=	${LOCAL_INTERNALLIBS}
 
@@ -274,9 +274,9 @@ LIBVERIEXEC?=	${LIBVERIEXECDIR}/libveriexec.a
 # 2nd+ order consumers.  Auto-generating this would be better.
 _DP_80211=	sbuf bsdxml
 _DP_9p=		sbuf
-# XXX: Not bootstrapped so uses host version on non-FreeBSD, so don't use a
-# FreeBSD-specific dependency list
-.if ${.MAKE.OS} == "FreeBSD" || !defined(BOOTSTRAPPING)
+# XXX: Not bootstrapped so uses host version on non-MidnightBSD, so don't use a
+# MidnightBSD-specific dependency list
+.if ${.MAKE.OS} == "MidnightBSD" || !defined(BOOTSTRAPPING)
 _DP_archive=	z bz2 lzma bsdxml zstd
 .endif
 _DP_avl=	spl
@@ -286,7 +286,7 @@ _DP_blacklist+=	pthread
 .endif
 _DP_crypto=	pthread
 # See comment by _DP_archive above
-.if ${.MAKE.OS} == "FreeBSD" || !defined(BOOTSTRAPPING)
+.if ${.MAKE.OS} == "MidnightBSD" || !defined(BOOTSTRAPPING)
 .if ${MK_OPENSSL} != "no"
 _DP_archive+=	crypto
 .else
@@ -487,12 +487,12 @@ LDADD_${_l}?=	${LDADD_${_l}_L} -l${_l:S/${PIE_SUFFIX}//}${PIE_SUFFIX}
 LDADD_${_l}?=	${LDADD_${_l}_L} -l${_l}
 .endif
 # Add in all dependencies for static linkage.
-# Bootstrapping from non-FreeBSD needs special handling, since it overrides
+# Bootstrapping from non-MidnightBSD needs special handling, since it overrides
 # NO_SHARED back to yes despite only building static versions of bootstrap
 # libraries (see tools/build/mk/Makefile.boot.pre).
 .if defined(_DP_${_l}) && (${_INTERNALLIBS:M${_l}} || \
     (defined(NO_SHARED) && ${NO_SHARED:tl} != "no") || \
-    (defined(BOOTSTRAPPING) && ${.MAKE.OS} != "FreeBSD"))
+    (defined(BOOTSTRAPPING) && ${.MAKE.OS} != "MidnightBSD"))
 .for _d in ${_DP_${_l}}
 DPADD_${_l}+=	${DPADD_${_d}}
 LDADD_${_l}+=	${LDADD_${_d}}

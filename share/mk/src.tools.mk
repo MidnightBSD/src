@@ -1,4 +1,4 @@
-# Various tools used by the FreeBSD make installworld / distrib-dirs /
+# Various tools used by the MidnightBSD make installworld / distrib-dirs /
 # distribution / installkernel targets. Also called "bootstrap tools"
 # historically, however that name seemed to be ambiguous, as those tools
 # merely help distributing the OS build artefacts into staging / production

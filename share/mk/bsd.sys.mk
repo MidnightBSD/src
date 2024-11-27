@@ -1,5 +1,5 @@
 #
-# This file contains common settings used for building FreeBSD
+# This file contains common settings used for building MidnightBSD
 # sources.
 
 # Enable various levels of compiler warning checks.  These may be
@@ -265,11 +265,11 @@ CWARNFLAGS+=	-Wno-unknown-pragmas
 CFLAGS+=	-Wno-format-zero-length
 
 .if ${COMPILER_TYPE} == "clang"
-# The headers provided by clang are incompatible with the FreeBSD headers.
+# The headers provided by clang are incompatible with the MidnightBSD headers.
 # If the version of clang is not one that has been patched to omit the
 # incompatible headers, we need to compile with -nobuiltininc and add the
 # resource dir to the end of the search paths. This ensures that headers such as
-# immintrin.h are still found but stddef.h, etc. are picked up from FreeBSD.
+# immintrin.h are still found but stddef.h, etc. are picked up from MidnightBSD.
 #
 # XXX: This is a hack to support complete external installs of clang while
 # we work to synchronize our decleration guards with those in the clang tree.
