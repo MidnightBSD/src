@@ -146,7 +146,8 @@ const unsigned struct_kexec_segment_sz = 4 * sizeof(unsigned long);
 
 #if SANITIZER_LINUX
 
-#if defined(__powerpc64__) || defined(__s390__) || defined(__loongarch__)
+#if defined(__powerpc64__) || defined(__s390__) || defined(__loongarch__) || \
+    defined(__riscv)
 const unsigned struct___old_kernel_stat_sz = 0;
 #elif !defined(__sparc__)
 const unsigned struct___old_kernel_stat_sz = 32;
@@ -541,7 +542,7 @@ typedef long long __sanitizer___kernel_off_t;
 typedef long __sanitizer___kernel_off_t;
 #endif
 
-#if defined(__powerpc__) || defined(__mips__)
+#if defined(__powerpc__) || defined(__mips__) || defined(__riscv)
 typedef unsigned int __sanitizer___kernel_old_uid_t;
 typedef unsigned int __sanitizer___kernel_old_gid_t;
 #else
