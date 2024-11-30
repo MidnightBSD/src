@@ -45,6 +45,7 @@ enum class errc
     identifier_removed,                 // EIDRM
     illegal_byte_sequence,              // EILSEQ
     inappropriate_io_control_operation, // ENOTTY
+    integrity_check_failed,             // EINTEGRITY // FreeBSD customization
     interrupted,                        // EINTR
     invalid_argument,                   // EINVAL
     invalid_seek,                       // ESPIPE
@@ -141,6 +142,9 @@ _LIBCPP_DECLARE_STRONG_ENUM(errc){
     identifier_removed                 = EIDRM,
     illegal_byte_sequence              = EILSEQ,
     inappropriate_io_control_operation = ENOTTY,
+#ifdef EINTEGRITY
+    integrity_check_failed             = EINTEGRITY, // FreeBSD customization
+#endif
     interrupted                        = EINTR,
     invalid_argument                   = EINVAL,
     invalid_seek                       = ESPIPE,
