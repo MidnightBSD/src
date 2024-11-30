@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "ABIAArch64.h"
+#ifdef LLDB_ENABLE_ALL
 #include "ABIMacOSX_arm64.h"
+#endif // LLDB_ENABLE_ALL
 #include "ABISysV_arm64.h"
 #include "Utility/ARM64_DWARF_Registers.h"
 #include "lldb/Core/PluginManager.h"
@@ -20,12 +22,16 @@ LLDB_PLUGIN_DEFINE(ABIAArch64)
 
 void ABIAArch64::Initialize() {
   ABISysV_arm64::Initialize();
+#ifdef LLDB_ENABLE_ALL
   ABIMacOSX_arm64::Initialize();
+#endif // LLDB_ENABLE_ALL
 }
 
 void ABIAArch64::Terminate() {
   ABISysV_arm64::Terminate();
+#ifdef LLDB_ENABLE_ALL
   ABIMacOSX_arm64::Terminate();
+#endif // LLDB_ENABLE_ALL
 }
 
 lldb::addr_t ABIAArch64::FixCodeAddress(lldb::addr_t pc) {

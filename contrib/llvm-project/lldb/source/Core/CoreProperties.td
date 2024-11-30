@@ -75,7 +75,7 @@ let Definition = "debugger" in {
     Desc<"When in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the prompt.">;
   def ScriptLanguage: Property<"script-lang", "Enum">,
     Global,
-    DefaultEnumValue<"eScriptLanguagePython">,
+    DefaultEnumValue<"eScriptLanguageLua">,
     EnumValues<"OptionEnumValues(g_language_enumerators)">,
     Desc<"The script language to be used for evaluating user-written scripts.">;
   def REPLLanguage: Property<"repl-lang", "Language">,

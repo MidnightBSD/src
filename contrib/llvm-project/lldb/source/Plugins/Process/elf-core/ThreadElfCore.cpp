@@ -19,7 +19,9 @@
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_powerpc.h"
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_x86_64.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_i386.h"
+#ifdef LLDB_ENABLE_ALL
 #include "Plugins/Process/Utility/RegisterContextLinux_s390x.h"
+#endif // LLDB_ENABLE_ALL
 #include "Plugins/Process/Utility/RegisterContextLinux_x86_64.h"
 #include "Plugins/Process/Utility/RegisterContextNetBSD_i386.h"
 #include "Plugins/Process/Utility/RegisterContextNetBSD_x86_64.h"
@@ -35,7 +37,9 @@
 #include "RegisterContextPOSIXCore_mips64.h"
 #include "RegisterContextPOSIXCore_powerpc.h"
 #include "RegisterContextPOSIXCore_ppc64le.h"
+#ifdef LLDB_ENABLE_ALL
 #include "RegisterContextPOSIXCore_s390x.h"
+#endif // LLDB_ENABLE_ALL
 #include "RegisterContextPOSIXCore_x86_64.h"
 #include "ThreadElfCore.h"
 
@@ -132,9 +136,11 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
       case llvm::Triple::ppc64le:
         reg_interface = new RegisterInfoPOSIX_ppc64le(arch);
         break;
+#ifdef LLDB_ENABLE_ALL
       case llvm::Triple::systemz:
         reg_interface = new RegisterContextLinux_s390x(arch);
         break;
+#endif // LLDB_ENABLE_ALL
       case llvm::Triple::x86:
         reg_interface = new RegisterContextLinux_i386(arch);
         break;
@@ -203,10 +209,12 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
       m_thread_reg_ctx_sp = std::make_shared<RegisterContextCorePOSIX_ppc64le>(
           *this, reg_interface, m_gpregset_data, m_notes);
       break;
+#ifdef LLDB_ENABLE_ALL
     case llvm::Triple::systemz:
       m_thread_reg_ctx_sp = std::make_shared<RegisterContextCorePOSIX_s390x>(
           *this, reg_interface, m_gpregset_data, m_notes);
       break;
+#endif // LLDB_ENABLE_ALL
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
       if (is_linux) {
