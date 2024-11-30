@@ -39,6 +39,11 @@
 # for generating a list from a directory
 # find  /usr/lib/perl5/5.36.0 -exec echo {} \; | cut -b 2-150  | xargs printf "OLD_FILES+=%s\n"
 
+# 20241130: libdispatch
+OLD_FILES+=usr/lib/libdispatch.a
+OLD_LIBS+=usr/lib/libdispatch.so
+OLD_LIBS+=usr/lib/libdispatch.so.0
+OLD_FILES+=usr/lib/libdispatch_p.a
 # 20241003: caroot bundle updated
 OLD_FILES+=usr/share/certs/trusted/Security_Communication_Root_CA.pem
 # 20241002: replaced NetBSD tests for uniq with our own

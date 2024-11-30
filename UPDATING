@@ -1,5 +1,9 @@
 Updating Information for MidnightBSD users.
 
+20241130:
+	remove libdispatch.  only consumer was mport and that no
+	longer uses it. Apple has backed off from it also. 
+
 20241121:
 	restore vendor branch for flex and update to 2.6.4 in 
 	current

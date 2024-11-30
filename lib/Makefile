@@ -47,7 +47,6 @@ SUBDIR=	${SUBDIR_BOOTSTRAP} \
 	libdevctl \
 	libdevinfo \
 	libdevstat \
-	libdispatch \
 	libdl \
 	libdns_sd \
 	libdwarf \
@@ -151,7 +150,6 @@ SUBDIR_DEPEND_libpcap= ofed
 .endif
 SUBDIR_DEPEND_nss_tacplus= libtacplus
 SUBDIR_DEPEND_libnss_mdns=	libdns_sd
-SUBDIR_DEPEND_libdispatch=	libblocksruntime
 
 .if !defined(COMPAT_32BIT)
 SUBDIR+=	flua
