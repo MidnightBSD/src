@@ -44,7 +44,7 @@
 #endif
 #elif defined(__FreeBSD__) || defined(__MidnightBSD__)
 #include <osreldate.h>
-#if __FreeBSD_version >= 1300057
+#if __MidnightBSD_version >= 400000
 #include <sys/auxv.h>
 #else
 #include <machine/elf.h>
@@ -74,7 +74,7 @@ extern char **environ;
 
 #include <sys/types.h>
 #if !defined(__APPLE__) && !defined(__OpenBSD__) && !defined(__FreeBSD__) &&   \
-    !defined(__linux__) && !defined(__FreeBSD_kernel__) && !defined(_AIX) && !defined(__MidnightBSD__)
+    !defined(__linux__) && !defined(__FreeBSD_kernel__) && !defined(_AIX) && !defined(__MidnightBSD__) && !defined(__MidnightBSD_kerenl__)
 #include <sys/statvfs.h>
 #define STATVFS statvfs
 #define FSTATVFS fstatvfs
@@ -128,7 +128,7 @@ const file_t kInvalidFile = -1;
 
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__MidnightBSD__) ||     \
     defined(__FreeBSD_kernel__) || defined(__linux__) || defined(__CYGWIN__) || \
-    defined(__DragonFly__) || defined(_AIX) || defined(__GNU__) ||              \
+    defined(__DragonFly__) || defined(_AIX) || defined(__GNU__) || defined(__MidnightBSD_kernel__) ||             \
     (defined(__sun__) && defined(__svr4__) || defined(__HAIKU__))
 static int test_dir(char ret[PATH_MAX], const char *dir, const char *bin) {
   struct stat sb;
@@ -208,7 +208,7 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
   // sysctl may not return the desired path if there are multiple hardlinks
   // to the file.
   char exe_path[PATH_MAX];
-#if __FreeBSD_version >= 1300057
+#if __MidnightBSD_version >= 400000
   if (elf_aux_info(AT_EXECPATH, exe_path, sizeof(exe_path)) == 0) {
     char link_path[PATH_MAX];
     if (realpath(exe_path, link_path))
