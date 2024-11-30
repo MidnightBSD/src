@@ -448,7 +448,6 @@ _DP_mj=         bz2 crypto z
 _DP_dispatch=	BlocksRuntime pthread
 _DP_dns_sd=	pthread
 _DP_nss_mdns=	pthread dns_sd
-_DP_BlocksRuntime=
 
 # Define special cases
 LDADD_supcplusplus=	-lsupc++
