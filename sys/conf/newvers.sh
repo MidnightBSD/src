@@ -72,10 +72,10 @@ b=share/examples/etc/bsd-style-copyright
 for bsd_copyright in $b ../$b ../../$b ../../../$b /usr/src/$b /usr/$b
 do
 	if [ -r "$bsd_copyright" ]; then
+		COPYRIGHT=$(sed \
 		    -e "s/\[year\]/2006-$year/" \
 		    -e 's/\[your name here\]\.* /The MidnightBSD Project./' \
 		    -e 's/\[your name\]\.*/The MidnightBSD Project./' \
-		COPYRIGHT=$(sed \
 		    -e '/\[id for your version control system, if any\]/d' \
 		    $bsd_copyright)
 		break
