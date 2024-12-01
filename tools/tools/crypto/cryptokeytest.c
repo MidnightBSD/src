@@ -1,4 +1,3 @@
-/* $FreeBSD: src/tools/tools/crypto/cryptokeytest.c,v 1.1 2003/01/06 22:11:56 sam Exp $ */
 /*
  * The big num stuff is a bit broken at the moment and I've not yet fixed it.
  * The symtom is that odd size big nums will fail.  Test code below (it only
@@ -7,107 +6,126 @@
  * --Jason L. Wright
  */
 #include <sys/types.h>
+#include <sys/endian.h>
 #include <sys/ioctl.h>
-#include <machine/endian.h>
 #include <sys/time.h>
 #include <crypto/cryptodev.h>
-#include <openssl/bn.h>
-#include <fcntl.h>
+
 #include <err.h>
+#include <fcntl.h>
+#include <paths.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <stdlib.h>
 
-static int crypto_fd = -1;
+#include <openssl/bn.h>
+#include <openssl/err.h>
 
-/*
- * Convert a little endian byte string in 'p' that
- * is 'plen' bytes long to a BIGNUM. If 'dst' is NULL,
- * a new BIGNUM is allocated.  Returns NULL on failure.
- *
- * XXX there has got to be a more efficient way to do
- * this, but I haven't figured out enough of the OpenSSL
- * magic.
- */
-BIGNUM *
-le_to_bignum(BIGNUM *dst, u_int8_t *p, int plen)
+int	crid = CRYPTO_FLAG_HARDWARE;
+int	verbose = 0;
+
+static int
+devcrypto(void)
 {
-	u_int8_t *pd;
-	int i;
+	static int fd = -1;
 
-	if (plen == 0)
-		return (NULL);
+	if (fd < 0) {
+		fd = open(_PATH_DEV "crypto", O_RDWR, 0);
+		if (fd < 0)
+			err(1, _PATH_DEV "crypto");
+		if (fcntl(fd, F_SETFD, 1) == -1)
+			err(1, "fcntl(F_SETFD) (devcrypto)");
+	}
+	return fd;
+}
 
-	if ((pd = (u_int8_t *)malloc(plen)) == NULL)
-		return (NULL);
+static int
+crlookup(const char *devname)
+{
+	struct crypt_find_op find;
 
-	for (i = 0; i < plen; i++)
-		pd[i] = p[plen - i - 1];
+	find.crid = -1;
+	strlcpy(find.name, devname, sizeof(find.name));
+	if (ioctl(devcrypto(), CIOCFINDDEV, &find) == -1)
+		err(1, "ioctl(CIOCFINDDEV)");
+	return find.crid;
+}
 
-	dst = BN_bin2bn(pd, plen, dst);
-	free(pd);
-	return (dst);
+static const char *
+crfind(int crid)
+{
+	static struct crypt_find_op find;
+
+	bzero(&find, sizeof(find));
+	find.crid = crid;
+	if (ioctl(devcrypto(), CIOCFINDDEV, &find) == -1)
+		err(1, "ioctl(CIOCFINDDEV)");
+	return find.name;
 }
 
 /*
- * Convert a BIGNUM to a little endian byte string.
- * If 'rd' is NULL, allocate space for it, otherwise
- * 'rd' is assumed to have room for BN_num_bytes(n)
- * bytes.  Returns NULL on failure.
+ * Convert a little endian byte string in 'p' that is 'plen' bytes long to a
+ * BIGNUM.  A new BIGNUM is allocated.  Returns NULL on failure.
  */
-u_int8_t *
-bignum_to_le(BIGNUM *n, u_int8_t *rd)
+static BIGNUM *
+le_to_bignum(BIGNUM *res, const void *p, int plen)
 {
-	int i, j, k;
-	int blen = BN_num_bytes(n);
 
+	res = BN_lebin2bn(p, plen, res);
+	if (res == NULL)
+		ERR_print_errors_fp(stderr);
+
+	return (res);
+}
+
+/*
+ * Convert a BIGNUM to a little endian byte string.  Space for BN_num_bytes(n)
+ * is allocated.
+ * Returns NULL on failure.
+ */
+static void *
+bignum_to_le(const BIGNUM *n)
+{
+	int blen, error;
+	void *rd;
+
+	blen = BN_num_bytes(n);
 	if (blen == 0)
 		return (NULL);
-	if (rd == NULL)
-		rd = (u_int8_t *)malloc(blen);
+
+	rd = malloc(blen);
 	if (rd == NULL)
 		return (NULL);
 
-	for (i = 0, j = 0; i < n->top; i++) {
-		for (k = 0; k < BN_BITS2 / 8; k++) {
-			if ((j + k) >= blen)
-				goto out;
-			rd[j + k] = n->d[i] >> (k * 8);
-		}
-		j += BN_BITS2 / 8;
+	error = BN_bn2lebinpad(n, rd, blen);
+	if (error < 0) {
+		ERR_print_errors_fp(stderr);
+		free(rd);
+		return (NULL);
 	}
-out:
+
 	return (rd);
 }
 
-int
-UB_mod_exp(BIGNUM *res, BIGNUM *a, BIGNUM *b, BIGNUM *c, BN_CTX *ctx)
+static int
+UB_mod_exp(BIGNUM *res, const BIGNUM *a, const BIGNUM *b, const BIGNUM *c)
 {
 	struct crypt_kop kop;
-	u_int8_t *ale, *ble, *cle;
+	void *ale, *ble, *cle;
+	int crypto_fd = devcrypto();
 
-	if (crypto_fd == -1) {
-		int fd, fdc = open("/dev/crypto", O_RDONLY);
-
-		if (fdc == -1)
-			err(1, "/dev/crypto");
-		if (ioctl(fdc, CRIOGET, &fd) == -1)
-			err(1, "CRIOGET");
-		close(fdc);
-		crypto_fd = fd;
-	}
-
-	if ((ale = bignum_to_le(a, NULL)) == NULL)
+	if ((ale = bignum_to_le(a)) == NULL)
 		err(1, "bignum_to_le, a");
-	if ((ble = bignum_to_le(b, NULL)) == NULL)
+	if ((ble = bignum_to_le(b)) == NULL)
 		err(1, "bignum_to_le, b");
-	if ((cle = bignum_to_le(c, NULL)) == NULL)
+	if ((cle = bignum_to_le(c)) == NULL)
 		err(1, "bignum_to_le, c");
 
 	bzero(&kop, sizeof(kop));
 	kop.crk_op = CRK_MOD_EXP;
 	kop.crk_iparams = 3;
 	kop.crk_oparams = 1;
+	kop.crk_crid = crid;
 	kop.crk_param[0].crp_p = ale;
 	kop.crk_param[0].crp_nbits = BN_num_bytes(a) * 8;
 	kop.crk_param[1].crp_p = ble;
@@ -117,22 +135,24 @@ UB_mod_exp(BIGNUM *res, BIGNUM *a, BIGNUM *b, BIGNUM *c, BN_CTX *ctx)
 	kop.crk_param[3].crp_p = cle;
 	kop.crk_param[3].crp_nbits = BN_num_bytes(c) * 8;
 
-	if (ioctl(crypto_fd, CIOCKEY, &kop) == -1)
-		err(1, "CIOCKEY");
+	if (ioctl(crypto_fd, CIOCKEY2, &kop) == -1)
+		err(1, "CIOCKEY2");
+	if (verbose)
+		printf("device = %s\n", crfind(kop.crk_crid));
 
-	bzero(ale, BN_num_bytes(a));
+	explicit_bzero(ale, BN_num_bytes(a));
 	free(ale);
-	bzero(ble, BN_num_bytes(b));
+	explicit_bzero(ble, BN_num_bytes(b));
 	free(ble);
 
 	if (kop.crk_status != 0) {
 		printf("error %d\n", kop.crk_status);
-		bzero(cle, BN_num_bytes(c));
+		explicit_bzero(cle, BN_num_bytes(c));
 		free(cle);
 		return (-1);
 	} else {
 		res = le_to_bignum(res, cle, BN_num_bytes(c));
-		bzero(cle, BN_num_bytes(c));
+		explicit_bzero(cle, BN_num_bytes(c));
 		free(cle);
 		if (res == NULL)
 			err(1, "le_to_bignum");
@@ -141,9 +161,9 @@ UB_mod_exp(BIGNUM *res, BIGNUM *a, BIGNUM *b, BIGNUM *c, BN_CTX *ctx)
 	return (0);
 }
 
-void
-show_result(a, b, c, sw, hw)
-BIGNUM *a, *b, *c, *sw, *hw;
+static void
+show_result(const BIGNUM *a, const BIGNUM *b, const BIGNUM *c,
+    const BIGNUM *sw, const BIGNUM *hw)
 {
 	printf("\n");
 
@@ -170,7 +190,7 @@ BIGNUM *a, *b, *c, *sw, *hw;
 	printf("\n");
 }
 
-void
+static void
 testit(void)
 {
 	BIGNUM *a, *b, *c, *r1, *r2;
@@ -192,10 +212,10 @@ testit(void)
 		BIGNUM *rem = BN_new();
 
 		BN_mod(rem, a, c, ctx);
-		UB_mod_exp(r2, rem, b, c, ctx);
+		UB_mod_exp(r2, rem, b, c);
 		BN_free(rem);
 	} else {
-		UB_mod_exp(r2, a, b, c, ctx);
+		UB_mod_exp(r2, a, b, c);
 	}
 	BN_mod_exp(r1, a, b, c, ctx);
 
@@ -211,10 +231,35 @@ testit(void)
 	BN_CTX_free(ctx);
 }
 
-int
-main()
+static void
+usage(const char* cmd)
 {
-	int i;
+	printf("usage: %s [-d dev] [-v] [count]\n", cmd);
+	printf("count is the number of bignum ops to do\n");
+	printf("\n");
+	printf("-d use specific device\n");
+	printf("-v be verbose\n");
+	exit(-1);
+}
+
+int
+main(int argc, char *argv[])
+{
+	int c, i;
+
+	while ((c = getopt(argc, argv, "d:v")) != -1) {
+		switch (c) {
+		case 'd':
+			crid = crlookup(optarg);
+			break;
+		case 'v':
+			verbose = 1;
+			break;
+		default:
+			usage(argv[0]);
+		}
+	}
+	argc -= optind, argv += optind;
 
 	for (i = 0; i < 1000; i++) {
 		fprintf(stderr, "test %d\n", i);

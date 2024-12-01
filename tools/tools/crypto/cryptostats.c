@@ -22,20 +22,24 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $FreeBSD: src/tools/tools/crypto/cryptostats.c,v 1.2 2003/03/19 01:53:55 sam Exp $
  */
 
 /*
  * Little program to dump the crypto statistics block and, optionally,
  * zero all the stats or just the timing stuff.
  */
-#include <stdio.h>
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
 #include <sys/time.h>
+
 #include <crypto/cryptodev.h>
+
+#include <err.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
 
 static void
 printt(const char* tag, struct cryptotstat *ts)
@@ -58,7 +62,7 @@ main(int argc, char *argv[])
 	size_t slen;
 
 	slen = sizeof (stats);
-	if (sysctlbyname("kern.crypto_stats", &stats, &slen, NULL, NULL) < 0)
+	if (sysctlbyname("kern.crypto_stats", &stats, &slen, NULL, 0) < 0)
 		err(1, "kern.cryptostats");
 
 	if (argc > 1 && strcmp(argv[1], "-z") == 0) {
