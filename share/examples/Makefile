@@ -6,9 +6,8 @@
 PACKAGE=examples
 FILESDIR=	${SHAREDIR}/examples
 
-LDIRS=	BSD_daemon \
-	FreeBSD_version \
-	IPv6 \
+LDIRS=	IPv6 \
+	MidnightBSD_version \
 	bootforth \
 	csh \
 	diskless \
