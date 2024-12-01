@@ -53,8 +53,6 @@ FBSD_1.0 {
 	radixsort;
 	sradixsort;
 	rand_r;
-	rand;
-	srand;
 	srandom;
 	srandomdev;
 	initstate;
@@ -124,6 +122,8 @@ FBSD_1.5 {
 FBSD_1.6 {
 	ptsname_r;
 	qsort_s;
+	rand;
+	srand;
 };
 
 MNBSD_1.1 {
