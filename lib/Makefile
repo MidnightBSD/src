@@ -26,6 +26,7 @@ SUBDIR_BOOTSTRAP= \
 # takes a long time to build and starting it first improves parallelism.
 
 SUBDIR=	${SUBDIR_BOOTSTRAP} \
+	libdns_sd \
 	.WAIT \
 	libsqlite3 \
 	geom \
@@ -48,7 +49,6 @@ SUBDIR=	${SUBDIR_BOOTSTRAP} \
 	libdevinfo \
 	libdevstat \
 	libdl \
-	libdns_sd \
 	libdwarf \
 	libedit \
 	libelftc \
