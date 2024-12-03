@@ -38,7 +38,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sysexits.h>
 #include <unistd.h>
 
 #define EXIT_TIMEOUT 124
@@ -56,7 +55,7 @@ usage(void)
 	    " [--kill-after time | -k time] [--foreground] <duration> <command>"
 	    " <arg ...>\n", getprogname());
 
-	exit(EX_USAGE);
+	exit(EXIT_FAILURE);
 }
 
 static double
@@ -73,7 +72,7 @@ parse_duration(const char *duration)
 		return (ret);
 
 	if (end != NULL && *(end + 1) != '\0')
-		errx(EX_USAGE, "invalid duration");
+		errx(125, "invalid duration");
 
 	switch (*end) {
 	case 's':
@@ -126,7 +125,7 @@ sig_handler(int signo)
 		return;
 	}
 
-	switch(signo) {
+	switch (signo) {
 	case 0:
 	case SIGINT:
 	case SIGHUP:
@@ -154,7 +153,7 @@ set_interval(double iv)
 	tim.it_value.tv_usec = (suseconds_t)(iv * 1000000UL);
 
 	if (setitimer(ITIMER_REAL, &tim, NULL) == -1)
-		err(EX_OSERR, "setitimer()");
+		err(EXIT_FAILURE, "setitimer()");
 }
 
 int
@@ -227,7 +226,7 @@ main(int argc, char **argv)
 	if (!foreground) {
 		/* Acquire a reaper */
 		if (procctl(P_PID, getpid(), PROC_REAP_ACQUIRE, NULL) == -1)
-			err(EX_OSERR, "Fail to acquire the reaper");
+			err(EXIT_FAILURE, "Fail to acquire the reaper");
 	}
 
 	memset(&signals, 0, sizeof(signals));
@@ -236,23 +235,23 @@ main(int argc, char **argv)
 	if (killsig != SIGKILL && killsig != SIGSTOP)
 		signums[0] = killsig;
 
-	for (i = 0; i < sizeof(signums) / sizeof(signums[0]); i ++)
+	for (i = 0; i < sizeof(signums) / sizeof(signums[0]); i++)
 		sigaddset(&signals.sa_mask, signums[i]);
 
 	signals.sa_handler = sig_handler;
 	signals.sa_flags = SA_RESTART;
 
-	for (i = 0; i < sizeof(signums) / sizeof(signums[0]); i ++)
+	for (i = 0; i < sizeof(signums) / sizeof(signums[0]); i++)
 		if (signums[i] != -1 && signums[i] != 0 &&
 		    sigaction(signums[i], &signals, NULL) == -1)
-			err(EX_OSERR, "sigaction()");
+			err(EXIT_FAILURE, "sigaction()");
 
 	signal(SIGTTIN, SIG_IGN);
 	signal(SIGTTOU, SIG_IGN);
 
 	pid = fork();
 	if (pid == -1)
-		err(EX_OSERR, "fork()");
+		err(EXIT_FAILURE, "fork()");
 	else if (pid == 0) {
 		/* child process */
 		signal(SIGTTIN, SIG_DFL);
@@ -268,7 +267,7 @@ main(int argc, char **argv)
 	}
 
 	if (sigprocmask(SIG_BLOCK, &signals.sa_mask, NULL) == -1)
-		err(EX_OSERR, "sigprocmask()");
+		err(EXIT_FAILURE, "sigprocmask()");
 
 	/* parent continues here */
 	set_interval(first_kill);
@@ -342,7 +341,7 @@ main(int argc, char **argv)
 
 	while (!child_done && wait(&pstat) == -1) {
 		if (errno != EINTR)
-			err(EX_OSERR, "waitpid()");
+			err(EXIT_FAILURE, "waitpid()");
 	}
 
 	if (!foreground)
@@ -350,7 +349,7 @@ main(int argc, char **argv)
 
 	if (WEXITSTATUS(pstat))
 		pstat = WEXITSTATUS(pstat);
-	else if(WIFSIGNALED(pstat))
+	else if (WIFSIGNALED(pstat))
 		pstat = 128 + WTERMSIG(pstat);
 
 	if (timedout && !preserve)
