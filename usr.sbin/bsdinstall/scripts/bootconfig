@@ -27,7 +27,7 @@
 #
 
 
-FREEBSD_BOOTLABEL="FreeBSD"
+FREEBSD_BOOTLABEL="MidnightBSD"
 
 BSDCFG_SHARE="/usr/share/bsdconfig"
 . $BSDCFG_SHARE/common.subr || exit 1
@@ -64,7 +64,7 @@ dialog_uefi_entryname()
 
 update_uefi_bootentry()
 {
-	nentries=$(efibootmgr | grep -c 'FreeBSD$')
+	nentries=$(efibootmgr | grep -c 'MidnightBSD$')
 	# No entries so directly create one and return
 	if [ ${nentries} -eq 0 ]; then
 		f_dprintf "Creating UEFI boot entry"
@@ -72,10 +72,10 @@ update_uefi_bootentry()
 		return
 	fi
 
-	$DIALOG --backtitle 'FreeBSD Installer' --title 'Boot configuration' \
-	    --yesno 'There is multiple "FreeBSD" efi boot entries, would you like to remove them all and add a new one?' 0 0
+	$DIALOG --backtitle 'MidnightBSD Installer' --title 'Boot configuration' \
+	    --yesno 'There is multiple "MidnightBSD" efi boot entries, would you like to remove them all and add a new one?' 0 0
 	if [ $? -eq $DIALOG_OK ]; then
-		for entry in $(efibootmgr | awk '$NF == "FreeBSD" { sub(/.*Boot/,"", $1); sub(/\*/,"", $1); print $1 }'); do
+		for entry in $(efibootmgr | awk '$NF == "MidnightBSD" { sub(/.*Boot/,"", $1); sub(/\*/,"", $1); print $1 }'); do
 			efibootmgr -B -b ${entry}
 		done
 		efibootmgr --create --activate --label "$FREEBSD_BOOTLABEL" --loader "${mntpt}/${FREEBSD_BOOTNAME}" > /dev/null
@@ -88,7 +88,7 @@ update_uefi_bootentry()
 }
 
 f_dialog_title "Boot configuration"
-f_dialog_backtitle "FreeBSD Installer"
+f_dialog_backtitle "MidnightBSD Installer"
 
 if [ `uname -m` == powerpc ]; then
 	platform=`sysctl -n hw.platform`

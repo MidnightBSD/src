@@ -42,7 +42,7 @@ for dist in $DISTRIBUTIONS; do
 	for i in $DISTRIBUTIONS; do
 		items="$items $i `eval echo \\\${$(dist_to_statusvar $i):-Pending}`"
 	done
-	dialog --backtitle "FreeBSD Installer" --title "Checksum Verification" \
+	dialog --backtitle "MidnightBSD Installer" --title "Checksum Verification" \
 	    --mixedgauge "Verifying checksums of selected distributions." \
 	    0 0 $percentage $items
 
@@ -69,11 +69,11 @@ for dist in $DISTRIBUTIONS; do
 		eval "$statusvar=1"
 		case $(/bin/freebsd-version -u) in
 		*-ALPHA*|*-CURRENT|*-STABLE|*-PRERELEASE)
-			dialog --backtitle "FreeBSD Installer" --title "Error" \
-			    --msgbox "The checksum for $dist does not match. It may have become corrupted, or it may be from a newer version of FreeBSD. Please check for a newer snapshot." 0 0
+			dialog --backtitle "MidnightBSD Installer" --title "Error" \
+			    --msgbox "The checksum for $dist does not match. It may have become corrupted, or it may be from a newer version of MidnightBSD. Please check for a newer snapshot." 0 0
 			;;
 		*)
-			dialog --backtitle "FreeBSD Installer" --title "Error" \
+			dialog --backtitle "MidnightBSD Installer" --title "Error" \
 			    --msgbox "The checksum for $dist does not match. It may have become corrupted, and should be redownloaded." 0 0
 			;;
 		esac
