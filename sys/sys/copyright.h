@@ -32,7 +32,7 @@
 
 /* MidnightBSD */
 #define COPYRIGHT_MidnightBSD \
-	"Copyright (c) 2006-2024 The MidnightBSD Project.\n"
+	"Copyright (c) 2006-2025 The MidnightBSD Project.\n"
 
 /* FreeBSD */
 #define COPYRIGHT_FreeBSD \
