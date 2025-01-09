@@ -1,5 +1,3 @@
-# $FreeBSD$
-
 LIB=		ssl
 SHLIB_MAJOR=	111
 VERSION_MAP=	${.CURDIR}/Version.map
@@ -7,6 +5,8 @@ VERSION_MAP=	${.CURDIR}/Version.map
 NO_LINT=
 
 PCFILES=	libssl.pc openssl.pc
+FILES=          libssl.pc openssl.pc
+FILESDIR=       ${LIBDATADIR}/pkgconfig
 
 .include "../libcrypto/Makefile.inc"
 
