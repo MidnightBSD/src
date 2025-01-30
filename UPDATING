@@ -1,7 +1,30 @@
 Updating Information for MidnightBSD users.
 
+20250130:
+	3.2.2 RELEASE
+
+	A NFS server that exports a cd9660, tarfs, or ext2fs file system can be made
+	to panic by mounting and accessing the export with an NFS client.  Further
+	exploitation (e.g., bypassing file permission checking or remote kernel code
+	execution) is potentially possible, though this has not been demonstrated.  In
+	particular, release kernels are compiled with stack protection enabled, and
+	some instances of the overflow are caught by this mechanism, causing a panic.
+
+	Fix permissions on etcupdate use.  (security issue)
+	Previously sensitive files could end up in the conflicts directory world readable.
+
+	Make kernel modules non executable on file system.
+
+	Update portsnap key!
+
+	pkg-config files are now installed for base openssl
+
+	Ravenports bootstrap changed after switch of their package manager.
+
+	Base system config(8) updated
+
 20240919:
-	Version bump to 3.2.1
+	3.2.1 RELEASE
 
 	nproc(1) added. (clone of GNU utility)
 
