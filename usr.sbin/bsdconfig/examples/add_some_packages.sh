@@ -4,7 +4,7 @@
 #
 [ "$_SCRIPT_SUBR" ] || . /usr/share/bsdconfig/script.subr || exit 1
 nonInteractive=1
-_httpPath=http://pkg.midnightbsd.org
+_httpPath=http://www.midnightbsd.org/ftp/MidnightBSD/mports/packages/
 mediaSetHTTP
 mediaOpen
 for package in wget bash rsync; do

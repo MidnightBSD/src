@@ -44,9 +44,9 @@ PACKAGE_INDEX=
 _INDEX_INITTED=
 
 #
-# Default path to pkg(8) repo-packagesite.sqlite database
+# Default path to mport(8) database
 #
-SQLITE_REPO="/var/db/pkg/repo-FreeBSD.sqlite"
+SQLITE_REPO="/var/db/mport/index.db"
 
 #
 # Default path to on-disk cache INDEX file

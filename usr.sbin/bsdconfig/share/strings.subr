@@ -90,7 +90,7 @@ case "$BASH_VERSION" in
 	}
 	;;
 *)
-	# NB: On FreeBSD, sh(1) runs this faster than bash(1) runs the above
+	# NB: On BSD, sh(1) runs this faster than bash(1) runs the above
 	f_substr()
 	{
 		local OPTIND=1 OPTARG __flag __var_to_set=
@@ -203,7 +203,7 @@ case "$BASH_VERSION" in
 	}
 	;;
 *)
-	# NB: On FreeBSD, sh(1) runs this faster than bash(1) runs the above
+	# NB: On BSD, sh(1) runs this faster than bash(1) runs the above
 	f_sprintf()
 	{
 		local __var_to_set="$1"
