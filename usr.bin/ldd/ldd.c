@@ -322,6 +322,14 @@ has_freebsd_abi_tag(const char *fname, Elf *elf, GElf_Ehdr *ehdr, off_t offset,
 			has_abi_tag = true;
 			break;
 		}
+		if (note->n_namesz == sizeof(ELF_NOTE_MIDNIGHTBSD) &&
+		    strncmp(name, ELF_NOTE_MIDNIGHTBSD, note->n_namesz) == 0 &&
+		    note->n_type == NT_MIDNIGHTBSD_ABI_TAG &&
+		    note->n_descsz == sizeof(uint32_t)) {
+			has_abi_tag = true;
+			break;
+		}
+
 
 		buf += namesz + descsz;
 		len -= namesz + descsz;
