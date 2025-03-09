@@ -125,6 +125,7 @@ static int	sysctl_remove_oid_locked(struct sysctl_oid *oidp, int del,
 		    int recurse);
 static int	sysctl_old_kernel(struct sysctl_req *, const void *, size_t);
 static int	sysctl_new_kernel(struct sysctl_req *, void *, size_t);
+static int	name2oid(const char *, int *, int *, struct sysctl_oid **);
 
 static struct sysctl_oid *
 sysctl_find_oidname(const char *name, struct sysctl_oid_list *list)
@@ -136,6 +137,21 @@ sysctl_find_oidname(const char *name, struct sysctl_oid_list *list)
 		if (strcmp(oidp->oid_name, name) == 0) {
 			return (oidp);
 		}
+	}
+	return (NULL);
+}
+
+static struct sysctl_oid *
+sysctl_find_oidnamelen(const char *name, size_t len,
+    struct sysctl_oid_list *list)
+{
+	struct sysctl_oid *oidp;
+
+	SYSCTL_ASSERT_LOCKED();
+	SYSCTL_FOREACH(oidp, list) {
+		if (strncmp(oidp->oid_name, name, len) == 0 &&
+		    oidp->oid_name[len] == '\0')
+			return (oidp);
 	}
 	return (NULL);
 }
@@ -387,7 +403,7 @@ sysctl_warn_reuse(const char *func, struct sysctl_oid *leaf)
 	(void)sbuf_new(&sb, buf, sizeof(buf), SBUF_FIXEDLEN | SBUF_INCLUDENUL);
 	sbuf_set_drain(&sb, sbuf_printf_drain, NULL);
 
-	sbuf_printf(&sb, "%s: can't re-use a leaf (", __func__);
+	sbuf_printf(&sb, "%s: can't re-use a leaf (", func);
 
 	memset(nodes, 0, sizeof(nodes));
 	rc = sysctl_search_oid(nodes, leaf);
@@ -508,9 +524,6 @@ retry:
 		SLIST_INSERT_HEAD(parent, oidp, oid_link);
 
 	if ((oidp->oid_kind & CTLTYPE) != CTLTYPE_NODE &&
-#ifdef VIMAGE
-	    (oidp->oid_kind & CTLFLAG_VNET) == 0 &&
-#endif
 	    (oidp->oid_kind & CTLFLAG_TUN) != 0 &&
 	    (oidp->oid_kind & CTLFLAG_NOFETCH) == 0) {
 		/* only fetch value once */
@@ -1319,27 +1332,26 @@ static SYSCTL_NODE(_sysctl, CTL_SYSCTL_NEXTNOSKIP, nextnoskip, CTLFLAG_RD |
     CTLFLAG_MPSAFE | CTLFLAG_CAPRD, sysctl_sysctl_next, "");
 
 static int
-name2oid(char *name, int *oid, int *len, struct sysctl_oid **oidpp)
+name2oid(const char *name, int *oid, int *len, struct sysctl_oid **oidpp)
 {
 	struct sysctl_oid *oidp;
 	struct sysctl_oid_list *lsp = &sysctl__children;
-	char *p;
+	const char *n;
 
 	SYSCTL_ASSERT_LOCKED();
 
 	for (*len = 0; *len < CTL_MAXNAME;) {
-		p = strsep(&name, ".");
-
-		SYSCTL_FOREACH(oidp, lsp) {
-			if (strcmp(p, oidp->oid_name) == 0)
-				break;
-		}
+		n = strchrnul(name, '.');
+		oidp = sysctl_find_oidnamelen(name, n - name, lsp);
 		if (oidp == NULL)
 			return (ENOENT);
 		*oid++ = oidp->oid_number;
 		(*len)++;
 
-		if (name == NULL || *name == '\0') {
+		name = n;
+		if (*name == '.')
+			name++;
+		if (*name == '\0') {
 			if (oidpp)
 				*oidpp = oidp;
 			return (0);
@@ -1775,8 +1787,7 @@ int
 sysctl_handle_string(SYSCTL_HANDLER_ARGS)
 {
 	char *tmparg;
-	size_t outlen;
-	int error = 0, ro_string = 0;
+	int error = 0;
 
 	/*
 	 * If the sysctl isn't writable and isn't a preallocated tunable that
@@ -1788,33 +1799,32 @@ sysctl_handle_string(SYSCTL_HANDLER_ARGS)
 	 */
 	if ((oidp->oid_kind & (CTLFLAG_WR | CTLFLAG_TUN)) == 0 ||
 	    arg2 == 0 || kdb_active) {
-		arg2 = strlen((char *)arg1) + 1;
-		ro_string = 1;
-	}
+		size_t outlen;
 
-	if (req->oldptr != NULL) {
-		if (ro_string) {
-			tmparg = arg1;
-			outlen = strlen(tmparg) + 1;
-		} else {
+		if (arg2 == 0)
+			outlen = arg2 = strlen(arg1) + 1;
+		else
+			outlen = strnlen(arg1, arg2 - 1) + 1;
+
+		tmparg = req->oldptr != NULL ? arg1 : NULL;
+		error = SYSCTL_OUT(req, tmparg, outlen);
+	} else {
+		size_t outlen;
+
+		if (req->oldptr != NULL) {
 			tmparg = malloc(arg2, M_SYSCTLTMP, M_WAITOK);
 			sx_slock(&sysctlstringlock);
 			memcpy(tmparg, arg1, arg2);
 			sx_sunlock(&sysctlstringlock);
-			outlen = strlen(tmparg) + 1;
-		}
-
-		error = SYSCTL_OUT(req, tmparg, outlen);
-
-		if (!ro_string)
-			free(tmparg, M_SYSCTLTMP);
-	} else {
-		if (!ro_string)
+			outlen = strnlen(tmparg, arg2 - 1) + 1;
+		} else {
+			tmparg = NULL;
 			sx_slock(&sysctlstringlock);
-		outlen = strlen((char *)arg1) + 1;
-		if (!ro_string)
+			outlen = strnlen(arg1, arg2 - 1) + 1;
 			sx_sunlock(&sysctlstringlock);
-		error = SYSCTL_OUT(req, NULL, outlen);
+		}
+		error = SYSCTL_OUT(req, tmparg, outlen);
+		free(tmparg, M_SYSCTLTMP);
 	}
 	if (error || !req->newptr)
 		return (error);
@@ -2915,7 +2925,7 @@ db_show_sysctl_all(int *oid, size_t len, int flags)
  * Show a sysctl by its user facing string
  */
 static int
-db_sysctlbyname(char *name, int flags)
+db_sysctlbyname(const char *name, int flags)
 {
 	struct sysctl_oid *oidp;
 	int oid[CTL_MAXNAME];

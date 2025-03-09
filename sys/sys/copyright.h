@@ -1,7 +1,7 @@
 /*-
  * SPDX-License-Identifier: BSD-2-Clause
  *
- * Copyright (C) 2006-2022 Lucas Holt. Allrights reserved.
+ * Copyright (C) 2006-2025 Lucas Holt. Allrights reserved.
  * Copyright (C) 1992-2021 The FreeBSD Project. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

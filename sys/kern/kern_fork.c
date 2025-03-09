@@ -1049,7 +1049,7 @@ fork1(struct thread *td, struct fork_req *fr)
 	 * XXX: This is ugly; when we copy resource usage, we need to bump
 	 *      per-cred resource counters.
 	 */
-	proc_set_cred_init(newproc, td->td_ucred);
+	newproc->p_ucred = crcowget(td->td_ucred);
 
 	/*
 	 * Initialize resource accounting for the child process.
@@ -1087,7 +1087,7 @@ fail0:
 #endif
 	racct_proc_exit(newproc);
 fail1:
-	proc_unset_cred(newproc);
+	proc_unset_cred(newproc, false);
 fail2:
 	if (vm2 != NULL)
 		vmspace_free(vm2);

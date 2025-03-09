@@ -1302,11 +1302,13 @@ keyattach:
 					s->timeout = PFTM_UNLINKED;
 					PF_HASHROW_UNLOCK(ih);
 					KEYS_UNLOCK();
-					uma_zfree(V_pf_state_key_z, skw);
-					if (skw != sks)
-						uma_zfree(V_pf_state_key_z, sks);
-					if (idx == PF_SK_STACK)
+					if (idx == PF_SK_WIRE) {
+						uma_zfree(V_pf_state_key_z, skw);
+						if (skw != sks)
+							uma_zfree(V_pf_state_key_z, sks);
+					} else {
 						pf_detach_state(s);
+					}
 					return (EEXIST); /* collision! */
 				}
 			}
@@ -5804,12 +5806,7 @@ again:
 			j->pd.sctp_flags |= PFDESC_SCTP_ADD_IP;
 			PF_RULES_RLOCK();
 			sm = NULL;
-			/*
-			 * New connections need to be floating, because
-			 * we cannot know what interfaces it will use.
-			 * That's why we pass V_pfi_all rather than kif.
-			 */
-			ret = pf_test_rule(&r, &sm, pd->dir, V_pfi_all,
+			ret = pf_test_rule(&r, &sm, pd->dir, kif,
 			    j->m, off, &j->pd, &ra, &rs, NULL);
 			PF_RULES_RUNLOCK();
 			SDT_PROBE4(pf, sctp, multihome, test, kif, r, j->m, ret);
@@ -7471,6 +7468,7 @@ pf_test(int dir, int pflags, struct ifnet *ifp, struct mbuf **m0, struct inpcb *
 			pd.pf_mtag->flags &= ~PF_FASTFWD_OURS_PRESENT;
 		}
 	} else if (pf_normalize_ip(m0, dir, kif, &reason, &pd) != PF_PASS) {
+		m = *m0;
 		/* We do IP header normalization and packet reassembly here */
 		action = PF_DROP;
 		goto done;
@@ -7682,6 +7680,10 @@ pf_test(int dir, int pflags, struct ifnet *ifp, struct mbuf **m0, struct inpcb *
 
 done:
 	PF_RULES_RUNLOCK();
+
+	if (m == NULL)
+		goto out;
+
 	if (action == PF_PASS && h->ip_hl > 5 &&
 	    !((s && s->state_flags & PFSTATE_ALLOWOPTS) || r->allow_opts)) {
 		action = PF_DROP;
@@ -7939,6 +7941,7 @@ pf_test6(int dir, int pflags, struct ifnet *ifp, struct mbuf **m0, struct inpcb 
 
 	/* We do IP header normalization and packet reassembly here */
 	if (pf_normalize_ip6(m0, dir, kif, &reason, &pd) != PF_PASS) {
+		m = *m0;
 		action = PF_DROP;
 		goto done;
 	}
@@ -8212,6 +8215,9 @@ done:
 		m_freem(n);
 		n = NULL;
 	}
+
+	if (m == NULL)
+		goto out;
 
 	/* handle dangerous IPv6 extension headers. */
 	if (action == PF_PASS && rh_cnt &&

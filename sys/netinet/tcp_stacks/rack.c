@@ -14419,7 +14419,7 @@ rack_get_pacing_delay(struct tcp_rack *rack, struct tcpcb *tp, uint32_t len, str
 		 * the peer to have a gap in data sending.
 		 */
 		uint32_t srtt, cwnd, tr_perms = 0;
-		int32_t reduce = 0;
+		int32_t reduce;
 
 	old_method:
 		/*
@@ -14456,7 +14456,8 @@ rack_get_pacing_delay(struct tcp_rack *rack, struct tcpcb *tp, uint32_t len, str
 				slot -= reduce;
 			} else
 				slot = 0;
-		}
+		} else
+			reduce = 0;
 		slot *= HPTS_USEC_IN_MSEC;
 		if (rack->rc_pace_to_cwnd) {
 			uint64_t rate_wanted = 0;
@@ -16066,7 +16067,6 @@ again:
 	}
 	rack_log_output(tp, &to, len, tp->snd_max, flags, error, rack_to_usec_ts(tv),
 			NULL, add_flag, s_mb, s_soff, rack->r_ctl.fsb.hw_tls);
-	m = NULL;
 	if (tp->snd_una == tp->snd_max) {
 		rack->r_ctl.rc_tlp_rxt_last_time = cts;
 		rack_log_progress_event(rack, tp, ticks, PROGRESS_START, __LINE__);
@@ -16367,10 +16367,11 @@ rack_output(struct tcpcb *tp)
 	     (tp->t_state == TCPS_SYN_SENT)) &&
 	    SEQ_GT(tp->snd_max, tp->snd_una) && /* initial SYN or SYN|ACK sent */
 	    (tp->t_rxtshift == 0)) {              /* not a retransmit */
-		cwnd_to_use = rack->r_ctl.cwnd_to_use = tp->snd_cwnd;
-		so = inp->inp_socket;
-		sb = &so->so_snd;
-		goto just_return_nolock;
+		rack_start_hpts_timer(rack, tp, cts, 0, 0, 0);
+#ifdef TCP_ACCOUNTING
+		sched_unpin();
+#endif
+		return (0);
 	}
 	/*
 	 * Determine length of data that should be transmitted, and flags
@@ -18566,6 +18567,7 @@ nomore:
 			return (error);
 		case ENETUNREACH:
 			counter_u64_add(rack_saw_enetunreach, 1);
+			/* FALLTHROUGH */
 		case EHOSTDOWN:
 		case EHOSTUNREACH:
 		case ENETDOWN:

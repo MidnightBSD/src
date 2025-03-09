@@ -56,7 +56,7 @@
 
 /* Version of FreeBSD we're compatible with */
 #undef __FreeBSD_version
-#define __FreeBSD_version 1304500	/* Master, propagated to newvers */
+#define __FreeBSD_version 1305500	/* Master, propagated to newvers */
 
 /*
  * It is tempting to use this macro in userland code when we want to enable

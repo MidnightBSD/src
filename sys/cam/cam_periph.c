@@ -760,6 +760,7 @@ camperiphfree(struct cam_periph *periph)
 		union ccb ccb;
 		void *arg;
 
+		memset(&ccb, 0, sizeof(ccb));
 		switch (periph->deferred_ac) {
 		case AC_FOUND_DEVICE:
 			ccb.ccb_h.func_code = XPT_GDEV_TYPE;
@@ -1333,6 +1334,7 @@ cam_freeze_devq(struct cam_path *path)
 	struct ccb_hdr ccb_h;
 
 	CAM_DEBUG(path, CAM_DEBUG_TRACE, ("cam_freeze_devq\n"));
+	memset(&ccb_h, 0, sizeof(ccb_h));
 	xpt_setup_ccb(&ccb_h, path, /*priority*/1);
 	ccb_h.func_code = XPT_NOOP;
 	ccb_h.flags = CAM_DEV_QFREEZE;
@@ -1348,6 +1350,7 @@ cam_release_devq(struct cam_path *path, u_int32_t relsim_flags,
 
 	CAM_DEBUG(path, CAM_DEBUG_TRACE, ("cam_release_devq(%u, %u, %u, %d)\n",
 	    relsim_flags, openings, arg, getcount_only));
+	memset(&crs, 0, sizeof(crs));
 	xpt_setup_ccb(&crs.ccb_h, path, CAM_PRIORITY_NORMAL);
 	crs.ccb_h.func_code = XPT_REL_SIMQ;
 	crs.ccb_h.flags = getcount_only ? CAM_DEV_QFREEZE : 0;
@@ -1472,6 +1475,7 @@ cam_periph_bus_settle(struct cam_periph *periph, u_int bus_settle)
 {
 	struct ccb_getdevstats cgds;
 
+	memset(&cgds, 0, sizeof(cgds));
 	xpt_setup_ccb(&cgds.ccb_h, periph->path, CAM_PRIORITY_NORMAL);
 	cgds.ccb_h.func_code = XPT_GDEV_STATS;
 	xpt_action((union ccb *)&cgds);
@@ -1543,6 +1547,7 @@ camperiphscsistatuserror(union ccb *ccb, union ccb **orig_ccb,
 		 * First off, find out what the current
 		 * transaction counts are.
 		 */
+		memset(&cgds, 0, sizeof(cgds));
 		xpt_setup_ccb(&cgds.ccb_h,
 			      ccb->ccb_h.path,
 			      CAM_PRIORITY_NORMAL);
@@ -1598,7 +1603,7 @@ camperiphscsistatuserror(union ccb *ccb, union ccb **orig_ccb,
 		 */
 		periph = xpt_path_periph(ccb->ccb_h.path);
 		if (periph->flags & CAM_PERIPH_INVALID) {
-			error = EIO;
+			error = ENXIO;
 			*action_string = "Periph was invalidated";
 		} else if ((sense_flags & SF_RETRY_BUSY) != 0 ||
 		    ccb->ccb_h.retry_count > 0) {
@@ -1661,6 +1666,7 @@ camperiphscsisenseerror(union ccb *ccb, union ccb **orig,
 		/*
 		 * Grab the inquiry data for this device.
 		 */
+		memset(&cgd, 0, sizeof(cgd));
 		xpt_setup_ccb(&cgd.ccb_h, ccb->ccb_h.path, CAM_PRIORITY_NORMAL);
 		cgd.ccb_h.func_code = XPT_GDEV_TYPE;
 		xpt_action((union ccb *)&cgd);
@@ -1940,7 +1946,7 @@ cam_periph_error(union ccb *ccb, cam_flags camflags,
 		/* Unconditional requeue if device is still there */
 		if (periph->flags & CAM_PERIPH_INVALID) {
 			action_string = "Periph was invalidated";
-			error = EIO;
+			error = ENXIO;
 		} else if (sense_flags & SF_NO_RETRY) {
 			error = EIO;
 			action_string = "Retry was blocked";
@@ -1968,7 +1974,7 @@ cam_periph_error(union ccb *ccb, cam_flags camflags,
 	case CAM_DATA_RUN_ERR:
 	default:
 		if (periph->flags & CAM_PERIPH_INVALID) {
-			error = EIO;
+			error = ENXIO;
 			action_string = "Periph was invalidated";
 		} else if (ccb->ccb_h.retry_count == 0) {
 			error = EIO;
