@@ -96,6 +96,7 @@ main(int argc, char **argv)
 	char *cryptpw;
 #endif
 
+	fprintf(stderr, "chkey is deprecated and will be removed.\n");
 	while ((ch = getopt(argc, argv, "f")) != -1)
 		switch(ch) {
 		case 'f':
