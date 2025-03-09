@@ -27,16 +27,16 @@
 #
 #
 # Usage:
-# 	$0 PACKAGE_DUMP NANO_PACKAGE_DIR /usr/ports/foo/bar [package.txz]...
+# 	$0 [-cv] PACKAGE_DUMP NANO_PACKAGE_DIR /usr/mports/foo/bar [package.mport]...
 #
-# Will symlink the packages listed, including their runtime dependencies,
+# Will symlink/copy the packages listed, including their runtime dependencies,
 # from the PACKAGE_DUMP to the NANO_PACKAGE_DIR.
 #
 
 : ${PORTSDIR:=/usr/ports}
 
 usage () {
-	echo "Usage: $0 [-v] package-dump-dir nano-package-dir port-dir-or-pkg ..." 1>&2
+	echo "Usage: $0 [-cv] package-dump-dir nano-package-dir port-dir-or-mport ..." 1>&2
 	exit 2
 }
 
@@ -53,29 +53,29 @@ ports_recurse() (
 	for p do
 		if [ -d "$p" -a -f "$p/Makefile" ] ; then
 			msg 3 "$p: full path to port"
-			pkgname=`cd "$p" && make -V pkgname`
+			pkgname=`cd "$p" && make package-name`
 			type=port
 			fullpath=$p
 		elif [ -d "${PORTSDIR}/$p" -a -f "${PORTSDIR}/$p/Makefile" ] ; then
 			msg 3 "$p: path to port relative to ${PORTSDIR}}"
-			pkgname=`cd "${PORTSDIR}/$p" && make -V pkgname`
+			pkgname=`cd "${PORTSDIR}/$p" && make package-name`
 			type=port
 			fullpath=${PORTSDIR}/$p
-		elif [ "${p%.txz}" != "$p" -a -f "$p" ] && pkg info -F "$p" > /dev/null 2>&1 ; then
+		elif [ "${p%.mport}" != "$p" -a -f "$p" ] && mport info -F "$p" > /dev/null 2>&1 ; then
 			msg 3 "$p: full package file name"
-			pkgname=`basename "$p" | sed 's/\.txz$//I'`
-			type=pkg
+			pkgname=`basename "$p" | sed 's/\.mport$//I'`
+			type=mport
 			fullpath=$p
-		elif [ "${p%.txz}" != "$p" -a -f "$dumpdir/$p" ] && pkg info -F "$dumpdir/$p" > /dev/null 2>&1 ; then
+		elif [ "${p%.mport}" != "$p" -a -f "$dumpdir/$p" ] && mport info -F "$dumpdir/$p" > /dev/null 2>&1 ; then
 			msg 3 "$p: package file name relative to $dumpdir"
-			pkgname=`basename "$p" | sed 's/\.txz$//I'`
-			type=pkg
+			pkgname=`basename "$p" | sed 's/\.mport$//I'`
+			type=mport
 			fullpath=$dumpdir/$p
-		elif [ -f "$dumpdir/$p.txz" ] && pkg info -F "$dumpdir/$p.txz" > /dev/null 2>&1 ; then
+		elif [ -f "$dumpdir/$p.mport" ] && mport info -F "$dumpdir/$p.mport" > /dev/null 2>&1 ; then
 			msg 3 "$p: package name relative to $dumpdir"
 			pkgname=`basename "$p"`
-			type=pkg
-			fullpath=$dumpdir/$p.txz
+			type=mport
+			fullpath=$dumpdir/$p.mport
 		else
 			echo "Missing port or package $p" 1>&2
 			exit 2
@@ -104,9 +104,9 @@ ports_recurse() (
 			else
 			  dir=${dir}/
 			fi
-			deps=`pkg info -dF "$fullpath" | grep -v "$pkgname:"`
+			deps=`mport info -dF "$fullpath" | grep -v "$pkgname:"`
 			for dep in $deps ; do
-				arg=`echo $dep | sed -e "s|^|$dir|" -e 's/$/.txz/'`
+				arg=`echo $dep | sed -e "s|^|$dir|" -e 's/$/.mport/'`
 				msg 2 "Check $arg as requirement for package $pkgname"
 				ports_recurse "$outputfile" "$dumpdir" "$arg"
 			done
@@ -116,10 +116,12 @@ ports_recurse() (
 	done
 )
 
+COPY="ln -s"
 VERBOSE=0
 
-while getopts v opt ; do
+while getopts cv opt ; do
 	case "$opt" in
+	  c) COPY="cp -p"              ;;
 	  v) VERBOSE=$(($VERBOSE + 1)) ;;
 	[?]) usage                     ;;
 	esac
@@ -155,10 +157,10 @@ for p do
 done
 
 for i in `cat "$PL"` ; do
-	if [ -f "$NANO_PKG_DUMP/$i.txz" ] ; then
-		ln -s "$NANO_PKG_DUMP/$i.txz" "$NANO_PKG_DIR"
+	if [ -f "$NANO_PKG_DUMP/$i.mport" ] ; then
+		$COPY "$NANO_PKG_DUMP/$i.mport" "$NANO_PKG_DIR"
 	else
-		echo "Package $i misssing in $NANO_PKG_DUMP" 1>&2
+		echo "Package $i missing in $NANO_PKG_DUMP" 1>&2
 		exit 1
 	fi
 done
