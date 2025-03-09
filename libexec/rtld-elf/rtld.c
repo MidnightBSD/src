@@ -1783,7 +1783,9 @@ digest_notes(Obj_Entry *obj, Elf_Addr note_start, Elf_Addr note_end)
 			continue;
 		note_name = (const char *)(note + 1);
 		if (strncmp(NOTE_MIDNIGHTBSD_VENDOR, note_name,
-		    sizeof(NOTE_MIDNIGHTBSD_VENDOR)) != 0)
+		    sizeof(NOTE_MIDNIGHTBSD_VENDOR)) != 0 && 
+		    strncmp(NOTE_FREEBSD_VENDOR, note_name,
+ 		    sizeof(NOTE_FREEBSD_VENDOR)) != 0))
 			continue;
 		switch (note->n_type) {
 		case NT_MIDNIGHTBSD_ABI_TAG:
@@ -6477,6 +6479,8 @@ realloc(void *cp, size_t nbytes)
 
 extern int _rtld_version__MidnightBSD_version __exported;
 int _rtld_version__MidnightBSD_version = __MidnightBSD_version;
+extern int _rtld_version__FreeBSD_version __exported;
+int _rtld_version__FreeBSD_version = __FreeBSD_version;
 
 extern char _rtld_version_laddr_offset __exported;
 char _rtld_version_laddr_offset;
