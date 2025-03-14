@@ -32,6 +32,7 @@ struct eap_sim_data {
 	u8 msk[EAP_SIM_KEYING_DATA_LEN];
 	u8 emsk[EAP_EMSK_LEN];
 	u8 rand[3][GSM_RAND_LEN];
+	u8 reauth_mac[EAP_SIM_MAC_LEN];
 
 	int num_id_req, num_notification;
 	u8 *pseudonym;
@@ -43,9 +44,11 @@ struct eap_sim_data {
 	u8 *last_eap_identity;
 	size_t last_eap_identity_len;
 	enum {
-		CONTINUE, RESULT_SUCCESS, RESULT_FAILURE, SUCCESS, FAILURE
+		CONTINUE, START_DONE, RESULT_SUCCESS, SUCCESS, FAILURE
 	} state;
 	int result_ind, use_result_ind;
+	int use_pseudonym;
+	int error_code;
 };
 
 
@@ -55,10 +58,10 @@ static const char * eap_sim_state_txt(int state)
 	switch (state) {
 	case CONTINUE:
 		return "CONTINUE";
+	case START_DONE:
+		return "START_DONE";
 	case RESULT_SUCCESS:
 		return "RESULT_SUCCESS";
-	case RESULT_FAILURE:
-		return "RESULT_FAILURE";
 	case SUCCESS:
 		return "SUCCESS";
 	case FAILURE:
@@ -95,6 +98,9 @@ static void * eap_sim_init(struct eap_sm *sm)
 		return NULL;
 	}
 
+	/* Zero is a valid error code, so we need to initialize */
+	data->error_code = NO_EAP_METHOD_ERROR;
+
 	data->min_num_chal = 2;
 	if (config && config->phase1) {
 		char *pos = os_strstr(config->phase1, "sim_min_num_chal=");
@@ -117,7 +123,8 @@ static void * eap_sim_init(struct eap_sm *sm)
 			NULL;
 	}
 
-	if (config && config->anonymous_identity) {
+	data->use_pseudonym = !sm->init_phase2;
+	if (config && config->anonymous_identity && data->use_pseudonym) {
 		data->pseudonym = os_malloc(config->anonymous_identity_len);
 		if (data->pseudonym) {
 			os_memcpy(data->pseudonym, config->anonymous_identity,
@@ -132,6 +139,20 @@ static void * eap_sim_init(struct eap_sm *sm)
 }
 
 
+static void eap_sim_clear_keys(struct eap_sim_data *data, int reauth)
+{
+	if (!reauth) {
+		os_memset(data->mk, 0, EAP_SIM_MK_LEN);
+		os_memset(data->k_aut, 0, EAP_SIM_K_AUT_LEN);
+		os_memset(data->k_encr, 0, EAP_SIM_K_ENCR_LEN);
+	}
+	os_memset(data->kc, 0, 3 * EAP_SIM_KC_LEN);
+	os_memset(data->sres, 0, 3 * EAP_SIM_SRES_LEN);
+	os_memset(data->msk, 0, EAP_SIM_KEYING_DATA_LEN);
+	os_memset(data->emsk, 0, EAP_EMSK_LEN);
+}
+
+
 static void eap_sim_deinit(struct eap_sm *sm, void *priv)
 {
 	struct eap_sim_data *data = priv;
@@ -140,8 +161,83 @@ static void eap_sim_deinit(struct eap_sm *sm, void *priv)
 		os_free(data->pseudonym);
 		os_free(data->reauth_id);
 		os_free(data->last_eap_identity);
+		eap_sim_clear_keys(data, 0);
 		os_free(data);
 	}
+}
+
+
+static int eap_sim_ext_sim_req(struct eap_sm *sm, struct eap_sim_data *data)
+{
+	char req[200], *pos, *end;
+	size_t i;
+
+	wpa_printf(MSG_DEBUG, "EAP-SIM: Use external SIM processing");
+	pos = req;
+	end = pos + sizeof(req);
+	pos += os_snprintf(pos, end - pos, "GSM-AUTH");
+	for (i = 0; i < data->num_chal; i++) {
+		pos += os_snprintf(pos, end - pos, ":");
+		pos += wpa_snprintf_hex(pos, end - pos, data->rand[i],
+					GSM_RAND_LEN);
+	}
+
+	eap_sm_request_sim(sm, req);
+	return 1;
+}
+
+
+static int eap_sim_ext_sim_result(struct eap_sm *sm, struct eap_sim_data *data,
+				  struct eap_peer_config *conf)
+{
+	char *resp, *pos;
+	size_t i;
+
+	wpa_printf(MSG_DEBUG,
+		   "EAP-SIM: Use result from external SIM processing");
+
+	resp = conf->external_sim_resp;
+	conf->external_sim_resp = NULL;
+
+	if (os_strncmp(resp, "GSM-AUTH:", 9) != 0) {
+		wpa_printf(MSG_DEBUG, "EAP-SIM: Unrecognized external SIM processing response");
+		os_free(resp);
+		return -1;
+	}
+
+	pos = resp + 9;
+	for (i = 0; i < data->num_chal; i++) {
+		wpa_hexdump(MSG_DEBUG, "EAP-SIM: RAND",
+			    data->rand[i], GSM_RAND_LEN);
+
+		if (hexstr2bin(pos, data->kc[i], EAP_SIM_KC_LEN) < 0)
+			goto invalid;
+		wpa_hexdump_key(MSG_DEBUG, "EAP-SIM: Kc",
+				data->kc[i], EAP_SIM_KC_LEN);
+		pos += EAP_SIM_KC_LEN * 2;
+		if (*pos != ':')
+			goto invalid;
+		pos++;
+
+		if (hexstr2bin(pos, data->sres[i], EAP_SIM_SRES_LEN) < 0)
+			goto invalid;
+		wpa_hexdump_key(MSG_DEBUG, "EAP-SIM: SRES",
+				data->sres[i], EAP_SIM_SRES_LEN);
+		pos += EAP_SIM_SRES_LEN * 2;
+		if (i + 1 < data->num_chal) {
+			if (*pos != ':')
+				goto invalid;
+			pos++;
+		}
+	}
+
+	os_free(resp);
+	return 0;
+
+invalid:
+	wpa_printf(MSG_DEBUG, "EAP-SIM: Invalid external SIM processing GSM-AUTH response");
+	os_free(resp);
+	return -1;
 }
 
 
@@ -154,6 +250,15 @@ static int eap_sim_gsm_auth(struct eap_sm *sm, struct eap_sim_data *data)
 	conf = eap_get_config(sm);
 	if (conf == NULL)
 		return -1;
+
+	if (sm->external_sim) {
+		if (conf->external_sim_resp)
+			return eap_sim_ext_sim_result(sm, data, conf);
+		else
+			return eap_sim_ext_sim_req(sm, data);
+	}
+
+#ifdef PCSC_FUNCS
 	if (conf->pcsc) {
 		if (scard_gsm_auth(sm->scard_ctx, data->rand[0],
 				   data->sres[0], data->kc[0]) ||
@@ -168,6 +273,7 @@ static int eap_sim_gsm_auth(struct eap_sm *sm, struct eap_sim_data *data)
 		}
 		return 0;
 	}
+#endif /* PCSC_FUNCS */
 
 #ifdef CONFIG_SIM_SIMULATOR
 	if (conf->password) {
@@ -275,7 +381,8 @@ static void eap_sim_clear_identities(struct eap_sm *sm,
 		os_free(data->pseudonym);
 		data->pseudonym = NULL;
 		data->pseudonym_len = 0;
-		eap_set_anon_id(sm, NULL, 0);
+		if (data->use_pseudonym)
+			eap_set_anon_id(sm, NULL, 0);
 	}
 	if ((id & CLEAR_REAUTH_ID) && data->reauth_id) {
 		wpa_printf(MSG_DEBUG, "EAP-SIM: forgetting old reauth_id");
@@ -330,20 +437,21 @@ static int eap_sim_learn_ids(struct eap_sm *sm, struct eap_sim_data *data,
 				  realm, realm_len);
 		}
 		data->pseudonym_len = attr->next_pseudonym_len + realm_len;
-		eap_set_anon_id(sm, data->pseudonym, data->pseudonym_len);
+		if (data->use_pseudonym)
+			eap_set_anon_id(sm, data->pseudonym,
+					data->pseudonym_len);
 	}
 
 	if (attr->next_reauth_id) {
 		os_free(data->reauth_id);
-		data->reauth_id = os_malloc(attr->next_reauth_id_len);
+		data->reauth_id = os_memdup(attr->next_reauth_id,
+					    attr->next_reauth_id_len);
 		if (data->reauth_id == NULL) {
 			wpa_printf(MSG_INFO, "EAP-SIM: (encr) No memory for "
 				   "next reauth_id");
 			data->reauth_id_len = 0;
 			return -1;
 		}
-		os_memcpy(data->reauth_id, attr->next_reauth_id,
-			  attr->next_reauth_id_len);
 		data->reauth_id_len = attr->next_reauth_id_len;
 		wpa_hexdump_ascii(MSG_DEBUG,
 				  "EAP-SIM: (encr) AT_NEXT_REAUTH_ID",
@@ -369,7 +477,7 @@ static struct wpabuf * eap_sim_client_error(struct eap_sim_data *data, u8 id,
 	msg = eap_sim_msg_init(EAP_CODE_RESPONSE, id, EAP_TYPE_SIM,
 			       EAP_SIM_SUBTYPE_CLIENT_ERROR);
 	eap_sim_msg_add(msg, EAP_SIM_AT_CLIENT_ERROR_CODE, err, NULL, 0);
-	return eap_sim_msg_finish(msg, NULL, NULL, 0);
+	return eap_sim_msg_finish(msg, EAP_TYPE_SIM, NULL, NULL, 0);
 }
 
 
@@ -380,6 +488,7 @@ static struct wpabuf * eap_sim_response_start(struct eap_sm *sm,
 	const u8 *identity = NULL;
 	size_t identity_len = 0;
 	struct eap_sim_msg *msg;
+	struct wpabuf *resp;
 
 	data->reauth = 0;
 	if (id_req == ANY_ID && data->reauth_id) {
@@ -387,15 +496,22 @@ static struct wpabuf * eap_sim_response_start(struct eap_sm *sm,
 		identity_len = data->reauth_id_len;
 		data->reauth = 1;
 	} else if ((id_req == ANY_ID || id_req == FULLAUTH_ID) &&
-		   data->pseudonym) {
+		   data->pseudonym &&
+		   !eap_sim_anonymous_username(data->pseudonym,
+					       data->pseudonym_len)) {
 		identity = data->pseudonym;
 		identity_len = data->pseudonym_len;
 		eap_sim_clear_identities(sm, data, CLEAR_REAUTH_ID);
 	} else if (id_req != NO_ID_REQ) {
 		identity = eap_get_config_identity(sm, &identity_len);
 		if (identity) {
-			eap_sim_clear_identities(sm, data, CLEAR_PSEUDONYM |
-						 CLEAR_REAUTH_ID);
+			int ids = CLEAR_PSEUDONYM | CLEAR_REAUTH_ID;
+
+			if (data->pseudonym &&
+			    eap_sim_anonymous_username(data->pseudonym,
+						       data->pseudonym_len))
+				ids &= ~CLEAR_PSEUDONYM;
+			eap_sim_clear_identities(sm, data, ids);
 		}
 	}
 	if (id_req != NO_ID_REQ)
@@ -404,6 +520,12 @@ static struct wpabuf * eap_sim_response_start(struct eap_sm *sm,
 	wpa_printf(MSG_DEBUG, "Generating EAP-SIM Start (id=%d)", id);
 	msg = eap_sim_msg_init(EAP_CODE_RESPONSE, id,
 			       EAP_TYPE_SIM, EAP_SIM_SUBTYPE_START);
+	if (identity) {
+		wpa_hexdump_ascii(MSG_DEBUG, "   AT_IDENTITY",
+				  identity, identity_len);
+		eap_sim_msg_add(msg, EAP_SIM_AT_IDENTITY, identity_len,
+				identity, identity_len);
+	}
 	if (!data->reauth) {
 		wpa_hexdump(MSG_DEBUG, "   AT_NONCE_MT",
 			    data->nonce_mt, EAP_SIM_NONCE_MT_LEN);
@@ -415,14 +537,10 @@ static struct wpabuf * eap_sim_response_start(struct eap_sm *sm,
 				data->selected_version, NULL, 0);
 	}
 
-	if (identity) {
-		wpa_hexdump_ascii(MSG_DEBUG, "   AT_IDENTITY",
-				  identity, identity_len);
-		eap_sim_msg_add(msg, EAP_SIM_AT_IDENTITY, identity_len,
-				identity, identity_len);
-	}
-
-	return eap_sim_msg_finish(msg, NULL, NULL, 0);
+	resp = eap_sim_msg_finish(msg, EAP_TYPE_SIM, NULL, NULL, 0);
+	if (resp)
+		eap_sim_state(data, START_DONE);
+	return resp;
 }
 
 
@@ -440,7 +558,8 @@ static struct wpabuf * eap_sim_response_challenge(struct eap_sim_data *data,
 	}
 	wpa_printf(MSG_DEBUG, "   AT_MAC");
 	eap_sim_msg_add_mac(msg, EAP_SIM_AT_MAC);
-	return eap_sim_msg_finish(msg, data->k_aut, (u8 *) data->sres,
+	return eap_sim_msg_finish(msg, EAP_TYPE_SIM, data->k_aut,
+				  (u8 *) data->sres,
 				  data->num_chal * EAP_SIM_SRES_LEN);
 }
 
@@ -482,7 +601,7 @@ static struct wpabuf * eap_sim_response_reauth(struct eap_sim_data *data,
 	}
 	wpa_printf(MSG_DEBUG, "   AT_MAC");
 	eap_sim_msg_add_mac(msg, EAP_SIM_AT_MAC);
-	return eap_sim_msg_finish(msg, data->k_aut, nonce_s,
+	return eap_sim_msg_finish(msg, EAP_TYPE_SIM, data->k_aut, nonce_s,
 				  EAP_SIM_NONCE_S_LEN);
 }
 
@@ -516,7 +635,7 @@ static struct wpabuf * eap_sim_response_notification(struct eap_sim_data *data,
 		wpa_printf(MSG_DEBUG, "   AT_MAC");
 		eap_sim_msg_add_mac(msg, EAP_SIM_AT_MAC);
 	}
-	return eap_sim_msg_finish(msg, k_aut, (u8 *) "", 0);
+	return eap_sim_msg_finish(msg, EAP_TYPE_SIM, k_aut, (u8 *) "", 0);
 }
 
 
@@ -537,14 +656,13 @@ static struct wpabuf * eap_sim_process_start(struct eap_sm *sm,
 	}
 
 	os_free(data->ver_list);
-	data->ver_list = os_malloc(attr->version_list_len);
+	data->ver_list = os_memdup(attr->version_list, attr->version_list_len);
 	if (data->ver_list == NULL) {
 		wpa_printf(MSG_DEBUG, "EAP-SIM: Failed to allocate "
 			   "memory for version list");
 		return eap_sim_client_error(data, id,
 					    EAP_SIM_UNABLE_TO_PROCESS_PACKET);
 	}
-	os_memcpy(data->ver_list, attr->version_list, attr->version_list_len);
 	data->ver_list_len = attr->version_list_len;
 	pos = data->ver_list;
 	for (i = 0; i < data->ver_list_len / 2; i++) {
@@ -605,8 +723,16 @@ static struct wpabuf * eap_sim_process_challenge(struct eap_sm *sm,
 	const u8 *identity;
 	size_t identity_len;
 	struct eap_sim_attrs eattr;
+	int res;
 
 	wpa_printf(MSG_DEBUG, "EAP-SIM: subtype Challenge");
+	if (data->state != START_DONE) {
+		wpa_printf(MSG_DEBUG,
+			   "EAP-SIM: Unexpected Challenge in state %s",
+			   eap_sim_state_txt(data->state));
+		return eap_sim_client_error(data, id,
+					    EAP_SIM_UNABLE_TO_PROCESS_PACKET);
+	}
 	data->reauth = 0;
 	if (!attr->mac || !attr->rand) {
 		wpa_printf(MSG_WARNING, "EAP-SIM: Challenge message "
@@ -648,8 +774,13 @@ static struct wpabuf * eap_sim_process_challenge(struct eap_sm *sm,
 
 	os_memcpy(data->rand, attr->rand, attr->num_chal * GSM_RAND_LEN);
 	data->num_chal = attr->num_chal;
-		
-	if (eap_sim_gsm_auth(sm, data)) {
+
+	res = eap_sim_gsm_auth(sm, data);
+	if (res > 0) {
+		wpa_printf(MSG_DEBUG, "EAP-SIM: Wait for external SIM processing");
+		return NULL;
+	}
+	if (res) {
 		wpa_printf(MSG_WARNING, "EAP-SIM: GSM authentication failed");
 		return eap_sim_client_error(data, id,
 					    EAP_SIM_UNABLE_TO_PROCESS_PACKET);
@@ -657,11 +788,22 @@ static struct wpabuf * eap_sim_process_challenge(struct eap_sm *sm,
 	if (data->last_eap_identity) {
 		identity = data->last_eap_identity;
 		identity_len = data->last_eap_identity_len;
-	} else if (data->pseudonym) {
+	} else if (data->pseudonym &&
+		   !eap_sim_anonymous_username(data->pseudonym,
+					       data->pseudonym_len)) {
 		identity = data->pseudonym;
 		identity_len = data->pseudonym_len;
-	} else
-		identity = eap_get_config_identity(sm, &identity_len);
+	} else {
+		struct eap_peer_config *config;
+
+		config = eap_get_config(sm);
+		if (config && config->imsi_identity) {
+			identity = config->imsi_identity;
+			identity_len = config->imsi_identity_len;
+		} else {
+			identity = eap_get_config_identity(sm, &identity_len);
+		}
+	}
 	wpa_hexdump_ascii(MSG_DEBUG, "EAP-SIM: Selected identity for MK "
 			  "derivation", identity, identity_len);
 	eap_sim_derive_mk(identity, identity_len, data->nonce_mt,
@@ -674,8 +816,13 @@ static struct wpabuf * eap_sim_process_challenge(struct eap_sm *sm,
 			       EAP_SIM_NONCE_MT_LEN)) {
 		wpa_printf(MSG_WARNING, "EAP-SIM: Challenge message "
 			   "used invalid AT_MAC");
+#ifdef TEST_FUZZ
+		wpa_printf(MSG_INFO,
+			   "TEST: Ignore AT_MAC mismatch for fuzz testing");
+#else /* TEST_FUZZ */
 		return eap_sim_client_error(data, id,
 					    EAP_SIM_UNABLE_TO_PROCESS_PACKET);
+#endif /* TEST_FUZZ */
 	}
 
 	/* Old reauthentication identity must not be used anymore. In
@@ -700,7 +847,7 @@ static struct wpabuf * eap_sim_process_challenge(struct eap_sm *sm,
 	if (data->result_ind && attr->result_ind)
 		data->use_result_ind = 1;
 
-	if (data->state != FAILURE && data->state != RESULT_FAILURE) {
+	if (data->state != FAILURE) {
 		eap_sim_state(data, data->use_result_ind ?
 			      RESULT_SUCCESS : SUCCESS);
 	}
@@ -804,6 +951,7 @@ static struct wpabuf * eap_sim_process_notification(
 
 	eap_sim_report_notification(sm->msg_ctx, attr->notification, 0);
 	if (attr->notification >= 0 && attr->notification < 32768) {
+		data->error_code = attr->notification;
 		eap_sim_state(data, FAILURE);
 	} else if (attr->notification == EAP_SIM_SUCCESS &&
 		   data->state == RESULT_SUCCESS)
@@ -833,9 +981,29 @@ static struct wpabuf * eap_sim_process_reauthentication(
 	{
 		wpa_printf(MSG_WARNING, "EAP-SIM: Reauthentication "
 			   "did not have valid AT_MAC");
+#ifdef TEST_FUZZ
+		wpa_printf(MSG_INFO,
+			   "TEST: Ignore AT_MAC mismatch for fuzz testing");
+#else /* TEST_FUZZ */
 		return eap_sim_client_error(data, id,
 					    EAP_SIM_UNABLE_TO_PROCESS_PACKET);
+#endif /* TEST_FUZZ */
 	}
+
+	/* At this stage the received MAC has been verified. Use this MAC for
+	 * reauth Session-Id calculation if all other checks pass.
+	 * The peer does not use the local MAC but the received MAC in deriving
+	 * Session-Id. */
+#ifdef TEST_FUZZ
+	if (attr->mac)
+		os_memcpy(data->reauth_mac, attr->mac, EAP_SIM_MAC_LEN);
+	else
+		os_memset(data->reauth_mac, 0x12, EAP_SIM_MAC_LEN);
+#else /* TEST_FUZZ */
+	os_memcpy(data->reauth_mac, attr->mac, EAP_SIM_MAC_LEN);
+#endif /* TEST_FUZZ */
+	wpa_hexdump(MSG_DEBUG, "EAP-SIM: Server MAC",
+		    data->reauth_mac, EAP_SIM_MAC_LEN);
 
 	if (attr->encr_data == NULL || attr->iv == NULL) {
 		wpa_printf(MSG_WARNING, "EAP-SIM: Reauthentication "
@@ -864,9 +1032,11 @@ static struct wpabuf * eap_sim_process_reauthentication(
 	}
 
 	if (eattr.counter < 0 || (size_t) eattr.counter <= data->counter) {
+		struct wpabuf *res;
 		wpa_printf(MSG_INFO, "EAP-SIM: (encr) Invalid counter "
 			   "(%d <= %d)", eattr.counter, data->counter);
 		data->counter_too_small = eattr.counter;
+
 		/* Reply using Re-auth w/ AT_COUNTER_TOO_SMALL. The current
 		 * reauth_id must not be used to start a new reauthentication.
 		 * However, since it was used in the last EAP-Response-Identity
@@ -877,8 +1047,11 @@ static struct wpabuf * eap_sim_process_reauthentication(
 		data->last_eap_identity_len = data->reauth_id_len;
 		data->reauth_id = NULL;
 		data->reauth_id_len = 0;
+
+		res = eap_sim_response_reauth(data, id, 1, eattr.nonce_s);
 		os_free(decrypted);
-		return eap_sim_response_reauth(data, id, 1, eattr.nonce_s);
+
+		return res;
 	}
 	data->counter = eattr.counter;
 
@@ -896,7 +1069,7 @@ static struct wpabuf * eap_sim_process_reauthentication(
 	if (data->result_ind && attr->result_ind)
 		data->use_result_ind = 1;
 
-	if (data->state != FAILURE && data->state != RESULT_FAILURE) {
+	if (data->state != FAILURE) {
 		eap_sim_state(data, data->use_result_ind ?
 			      RESULT_SUCCESS : SUCCESS);
 	}
@@ -930,23 +1103,23 @@ static struct wpabuf * eap_sim_process(struct eap_sm *sm, void *priv,
 	if (eap_get_config_identity(sm, &len) == NULL) {
 		wpa_printf(MSG_INFO, "EAP-SIM: Identity not configured");
 		eap_sm_request_identity(sm);
-		ret->ignore = TRUE;
+		ret->ignore = true;
 		return NULL;
 	}
 
 	pos = eap_hdr_validate(EAP_VENDOR_IETF, EAP_TYPE_SIM, reqData, &len);
-	if (pos == NULL || len < 1) {
-		ret->ignore = TRUE;
+	if (pos == NULL || len < 3) {
+		ret->ignore = true;
 		return NULL;
 	}
 	req = wpabuf_head(reqData);
 	id = req->identifier;
 	len = be_to_host16(req->length);
 
-	ret->ignore = FALSE;
+	ret->ignore = false;
 	ret->methodState = METHOD_MAY_CONT;
 	ret->decision = DECISION_FAIL;
-	ret->allowNotifications = TRUE;
+	ret->allowNotifications = true;
 
 	subtype = *pos++;
 	wpa_printf(MSG_DEBUG, "EAP-SIM: Subtype=%d", subtype);
@@ -995,20 +1168,18 @@ done:
 			DECISION_UNCOND_SUCC : DECISION_COND_SUCC;
 		ret->methodState = data->use_result_ind ?
 			METHOD_DONE : METHOD_MAY_CONT;
-	} else if (data->state == RESULT_FAILURE)
-		ret->methodState = METHOD_CONT;
-	else if (data->state == RESULT_SUCCESS)
+	} else if (data->state == RESULT_SUCCESS)
 		ret->methodState = METHOD_CONT;
 
 	if (ret->methodState == METHOD_DONE) {
-		ret->allowNotifications = FALSE;
+		ret->allowNotifications = false;
 	}
 
 	return res;
 }
 
 
-static Boolean eap_sim_has_reauth_data(struct eap_sm *sm, void *priv)
+static bool eap_sim_has_reauth_data(struct eap_sm *sm, void *priv)
 {
 	struct eap_sim_data *data = priv;
 	return data->pseudonym || data->reauth_id;
@@ -1020,6 +1191,7 @@ static void eap_sim_deinit_for_reauth(struct eap_sm *sm, void *priv)
 	struct eap_sim_data *data = priv;
 	eap_sim_clear_identities(sm, data, CLEAR_EAP_ID);
 	data->use_result_ind = 0;
+	eap_sim_clear_keys(data, 1);
 }
 
 
@@ -1029,7 +1201,7 @@ static void * eap_sim_init_for_reauth(struct eap_sm *sm, void *priv)
 	if (random_get_bytes(data->nonce_mt, EAP_SIM_NONCE_MT_LEN)) {
 		wpa_printf(MSG_WARNING, "EAP-SIM: Failed to get random data "
 			   "for NONCE_MT");
-		os_free(data);
+		eap_sim_deinit(sm, data);
 		return NULL;
 	}
 	data->num_id_req = 0;
@@ -1058,7 +1230,7 @@ static const u8 * eap_sim_get_identity(struct eap_sm *sm, void *priv,
 }
 
 
-static Boolean eap_sim_isKeyAvailable(struct eap_sm *sm, void *priv)
+static bool eap_sim_isKeyAvailable(struct eap_sm *sm, void *priv)
 {
 	struct eap_sim_data *data = priv;
 	return data->state == SUCCESS;
@@ -1073,14 +1245,45 @@ static u8 * eap_sim_getKey(struct eap_sm *sm, void *priv, size_t *len)
 	if (data->state != SUCCESS)
 		return NULL;
 
-	key = os_malloc(EAP_SIM_KEYING_DATA_LEN);
+	key = os_memdup(data->msk, EAP_SIM_KEYING_DATA_LEN);
 	if (key == NULL)
 		return NULL;
 
 	*len = EAP_SIM_KEYING_DATA_LEN;
-	os_memcpy(key, data->msk, EAP_SIM_KEYING_DATA_LEN);
 
 	return key;
+}
+
+
+static u8 * eap_sim_get_session_id(struct eap_sm *sm, void *priv, size_t *len)
+{
+	struct eap_sim_data *data = priv;
+	u8 *id;
+
+	if (data->state != SUCCESS)
+		return NULL;
+
+	if (!data->reauth)
+		*len = 1 + data->num_chal * GSM_RAND_LEN + EAP_SIM_NONCE_MT_LEN;
+	else
+		*len = 1 + EAP_SIM_NONCE_S_LEN + EAP_SIM_MAC_LEN;
+	id = os_malloc(*len);
+	if (id == NULL)
+		return NULL;
+
+	id[0] = EAP_TYPE_SIM;
+	if (!data->reauth) {
+		os_memcpy(id + 1, data->rand, data->num_chal * GSM_RAND_LEN);
+		os_memcpy(id + 1 + data->num_chal * GSM_RAND_LEN,
+			  data->nonce_mt, EAP_SIM_NONCE_MT_LEN);
+	} else {
+		os_memcpy(id + 1, data->nonce_s, EAP_SIM_NONCE_S_LEN);
+		os_memcpy(id + 1 + EAP_SIM_NONCE_S_LEN, data->reauth_mac,
+			  EAP_SIM_MAC_LEN);
+	}
+	wpa_hexdump(MSG_DEBUG, "EAP-SIM: Derived Session-Id", id, *len);
+
+	return id;
 }
 
 
@@ -1092,21 +1295,36 @@ static u8 * eap_sim_get_emsk(struct eap_sm *sm, void *priv, size_t *len)
 	if (data->state != SUCCESS)
 		return NULL;
 
-	key = os_malloc(EAP_EMSK_LEN);
+	key = os_memdup(data->emsk, EAP_EMSK_LEN);
 	if (key == NULL)
 		return NULL;
 
 	*len = EAP_EMSK_LEN;
-	os_memcpy(key, data->emsk, EAP_EMSK_LEN);
 
 	return key;
+}
+
+
+static int eap_sim_get_error_code(void *priv)
+{
+	struct eap_sim_data *data = priv;
+	int current_data_error;
+
+	if (!data)
+		return NO_EAP_METHOD_ERROR;
+
+	current_data_error = data->error_code;
+
+	/* Now reset for next transaction */
+	data->error_code = NO_EAP_METHOD_ERROR;
+
+	return current_data_error;
 }
 
 
 int eap_peer_sim_register(void)
 {
 	struct eap_method *eap;
-	int ret;
 
 	eap = eap_peer_method_alloc(EAP_PEER_METHOD_INTERFACE_VERSION,
 				    EAP_VENDOR_IETF, EAP_TYPE_SIM, "SIM");
@@ -1118,14 +1336,13 @@ int eap_peer_sim_register(void)
 	eap->process = eap_sim_process;
 	eap->isKeyAvailable = eap_sim_isKeyAvailable;
 	eap->getKey = eap_sim_getKey;
+	eap->getSessionId = eap_sim_get_session_id;
 	eap->has_reauth_data = eap_sim_has_reauth_data;
 	eap->deinit_for_reauth = eap_sim_deinit_for_reauth;
 	eap->init_for_reauth = eap_sim_init_for_reauth;
 	eap->get_identity = eap_sim_get_identity;
 	eap->get_emsk = eap_sim_get_emsk;
+	eap->get_error_code = eap_sim_get_error_code;
 
-	ret = eap_peer_method_register(eap);
-	if (ret)
-		eap_peer_method_free(eap);
-	return ret;
+	return eap_peer_method_register(eap);
 }

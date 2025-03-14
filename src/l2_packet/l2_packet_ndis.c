@@ -294,7 +294,8 @@ static void l2_packet_callback(struct l2_packet_data *l2)
 	}
 	rx_src = ethhdr->h_source;
 
-	l2->rx_callback(l2->rx_callback_ctx, rx_src, rx_buf, rx_len);
+	if (l2->rx_callback)
+		l2->rx_callback(l2->rx_callback_ctx, rx_src, rx_buf, rx_len);
 #ifndef _WIN32_WCE
 	l2_ndisuio_start_read(l2, 1);
 #endif /* _WIN32_WCE */
@@ -450,6 +451,18 @@ struct l2_packet_data * l2_packet_init(
 }
 
 
+struct l2_packet_data * l2_packet_init_bridge(
+	const char *br_ifname, const char *ifname, const u8 *own_addr,
+	unsigned short protocol,
+	void (*rx_callback)(void *ctx, const u8 *src_addr,
+			    const u8 *buf, size_t len),
+	void *rx_callback_ctx, int l2_hdr)
+{
+	return l2_packet_init(br_ifname, own_addr, protocol, rx_callback,
+			      rx_callback_ctx, l2_hdr);
+}
+
+
 void l2_packet_deinit(struct l2_packet_data *l2)
 {
 	if (l2 == NULL)
@@ -513,4 +526,11 @@ int l2_packet_get_ip_addr(struct l2_packet_data *l2, char *buf, size_t len)
 
 void l2_packet_notify_auth_start(struct l2_packet_data *l2)
 {
+}
+
+
+int l2_packet_set_packet_filter(struct l2_packet_data *l2,
+				enum l2_packet_filter_type type)
+{
+	return -1;
 }

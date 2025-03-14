@@ -109,23 +109,21 @@ static void * eap_mschapv2_init(struct eap_sm *sm)
 		return NULL;
 
 	if (sm->peer_challenge) {
-		data->peer_challenge = os_malloc(MSCHAPV2_CHAL_LEN);
+		data->peer_challenge = os_memdup(sm->peer_challenge,
+						 MSCHAPV2_CHAL_LEN);
 		if (data->peer_challenge == NULL) {
 			eap_mschapv2_deinit(sm, data);
 			return NULL;
 		}
-		os_memcpy(data->peer_challenge, sm->peer_challenge,
-			  MSCHAPV2_CHAL_LEN);
 	}
 
 	if (sm->auth_challenge) {
-		data->auth_challenge = os_malloc(MSCHAPV2_CHAL_LEN);
+		data->auth_challenge = os_memdup(sm->auth_challenge,
+						 MSCHAPV2_CHAL_LEN);
 		if (data->auth_challenge == NULL) {
 			eap_mschapv2_deinit(sm, data);
 			return NULL;
 		}
-		os_memcpy(data->auth_challenge, sm->auth_challenge,
-			  MSCHAPV2_CHAL_LEN);
 	}
 
 	data->phase2 = sm->init_phase2;
@@ -140,7 +138,7 @@ static void eap_mschapv2_deinit(struct eap_sm *sm, void *priv)
 	os_free(data->peer_challenge);
 	os_free(data->auth_challenge);
 	wpabuf_free(data->prev_challenge);
-	os_free(data);
+	bin_clear_free(data, sizeof(*data));
 }
 
 
@@ -252,7 +250,7 @@ static struct wpabuf * eap_mschapv2_challenge(
 	if (req_len < sizeof(*req) + 1) {
 		wpa_printf(MSG_INFO, "EAP-MSCHAPV2: Too short challenge data "
 			   "(len %lu)", (unsigned long) req_len);
-		ret->ignore = TRUE;
+		ret->ignore = true;
 		return NULL;
 	}
 	pos = (const u8 *) (req + 1);
@@ -261,7 +259,7 @@ static struct wpabuf * eap_mschapv2_challenge(
 	if (challenge_len != MSCHAPV2_CHAL_LEN) {
 		wpa_printf(MSG_INFO, "EAP-MSCHAPV2: Invalid challenge length "
 			   "%lu", (unsigned long) challenge_len);
-		ret->ignore = TRUE;
+		ret->ignore = true;
 		return NULL;
 	}
 
@@ -269,7 +267,7 @@ static struct wpabuf * eap_mschapv2_challenge(
 		wpa_printf(MSG_INFO, "EAP-MSCHAPV2: Too short challenge"
 			   " packet: len=%lu challenge_len=%lu",
 			   (unsigned long) len, (unsigned long) challenge_len);
-		ret->ignore = TRUE;
+		ret->ignore = true;
 		return NULL;
 	}
 
@@ -284,10 +282,10 @@ static struct wpabuf * eap_mschapv2_challenge(
 	wpa_hexdump_ascii(MSG_DEBUG, "EAP-MSCHAPV2: Authentication Servername",
 		    pos, len);
 
-	ret->ignore = FALSE;
+	ret->ignore = false;
 	ret->methodState = METHOD_MAY_CONT;
 	ret->decision = DECISION_FAIL;
-	ret->allowNotifications = TRUE;
+	ret->allowNotifications = true;
 
 	return eap_mschapv2_challenge_reply(sm, data, id, req->mschapv2_id,
 					    challenge);
@@ -303,18 +301,23 @@ static void eap_mschapv2_password_changed(struct eap_sm *sm,
 			WPA_EVENT_PASSWORD_CHANGED
 			"EAP-MSCHAPV2: Password changed successfully");
 		data->prev_error = 0;
-		os_free(config->password);
+		bin_clear_free(config->password, config->password_len);
 		if (config->flags & EAP_CONFIG_FLAGS_EXT_PASSWORD) {
 			/* TODO: update external storage */
 		} else if (config->flags & EAP_CONFIG_FLAGS_PASSWORD_NTHASH) {
 			config->password = os_malloc(16);
 			config->password_len = 16;
-			if (config->password) {
-				nt_password_hash(config->new_password,
-						 config->new_password_len,
-						 config->password);
+			if (config->password &&
+			    nt_password_hash(config->new_password,
+					     config->new_password_len,
+					     config->password)) {
+				bin_clear_free(config->password,
+					       config->password_len);
+				config->password = NULL;
+				config->password_len = 0;
 			}
-			os_free(config->new_password);
+			bin_clear_free(config->new_password,
+				       config->new_password_len);
 		} else {
 			config->password = config->new_password;
 			config->password_len = config->new_password_len;
@@ -374,7 +377,7 @@ static struct wpabuf * eap_mschapv2_success(struct eap_sm *sm,
 	if (resp == NULL) {
 		wpa_printf(MSG_DEBUG, "EAP-MSCHAPV2: Failed to allocate "
 			   "buffer for success response");
-		ret->ignore = TRUE;
+		ret->ignore = true;
 		return NULL;
 	}
 
@@ -382,7 +385,7 @@ static struct wpabuf * eap_mschapv2_success(struct eap_sm *sm,
 
 	ret->methodState = METHOD_DONE;
 	ret->decision = DECISION_UNCOND_SUCC;
-	ret->allowNotifications = FALSE;
+	ret->allowNotifications = false;
 	data->success = 1;
 
 	if (data->prev_error == ERROR_PASSWD_EXPIRED)
@@ -467,6 +470,13 @@ static int eap_mschapv2_failure_txt(struct eap_sm *sm,
 		pos += 2;
 		msg = pos;
 	}
+	if (data->prev_error == ERROR_AUTHENTICATION_FAILURE && retry &&
+	    config && config->phase2 &&
+	    os_strstr(config->phase2, "mschapv2_retry=0")) {
+		wpa_printf(MSG_DEBUG,
+			   "EAP-MSCHAPV2: mark password retry disabled based on local configuration");
+		retry = 0;
+	}
 	wpa_msg(sm->msg_ctx, MSG_WARNING,
 		"EAP-MSCHAPV2: failure message: '%s' (retry %sallowed, error "
 		"%d)",
@@ -499,6 +509,11 @@ static struct wpabuf * eap_mschapv2_change_password(
 	struct eap_sm *sm, struct eap_mschapv2_data *data,
 	struct eap_method_ret *ret, const struct eap_mschapv2_hdr *req, u8 id)
 {
+#ifdef CONFIG_NO_RC4
+	wpa_printf(MSG_ERROR,
+		"EAP-MSCHAPV2: RC4 not support in the build - cannot change password");
+	return NULL;
+#else /* CONFIG_NO_RC4 */
 	struct wpabuf *resp;
 	int ms_len;
 	const u8 *username, *password, *new_password;
@@ -516,10 +531,10 @@ static struct wpabuf * eap_mschapv2_change_password(
 
 	username = mschapv2_remove_domain(username, &username_len);
 
-	ret->ignore = FALSE;
+	ret->ignore = false;
 	ret->methodState = METHOD_MAY_CONT;
 	ret->decision = DECISION_COND_SUCC;
-	ret->allowNotifications = TRUE;
+	ret->allowNotifications = true;
 
 	ms_len = sizeof(*ms) + sizeof(*cp);
 	resp = eap_msg_alloc(EAP_VENDOR_IETF, EAP_TYPE_MSCHAPV2, ms_len,
@@ -549,15 +564,17 @@ static struct wpabuf * eap_mschapv2_change_password(
 	/* Encrypted-Hash */
 	if (pwhash) {
 		u8 new_password_hash[16];
-		nt_password_hash(new_password, new_password_len,
-				 new_password_hash);
-		nt_password_hash_encrypted_with_block(password,
-						      new_password_hash,
-						      cp->encr_hash);
+		if (nt_password_hash(new_password, new_password_len,
+				     new_password_hash) ||
+		    nt_password_hash_encrypted_with_block(password,
+							  new_password_hash,
+							  cp->encr_hash))
+			goto fail;
 	} else {
-		old_nt_password_hash_encrypted_with_new_nt_password_hash(
-			new_password, new_password_len,
-			password, password_len, cp->encr_hash);
+		if (old_nt_password_hash_encrypted_with_new_nt_password_hash(
+			    new_password, new_password_len,
+			    password, password_len, cp->encr_hash))
+			goto fail;
 	}
 
 	/* Peer-Challenge */
@@ -594,9 +611,13 @@ static struct wpabuf * eap_mschapv2_change_password(
 
 	/* Likewise, generate master_key here since we have the needed data
 	 * available. */
-	nt_password_hash(new_password, new_password_len, password_hash);
-	hash_nt_password_hash(password_hash, password_hash_hash);
-	get_master_key(password_hash_hash, cp->nt_response, data->master_key);
+	if (nt_password_hash(new_password, new_password_len, password_hash) ||
+	    hash_nt_password_hash(password_hash, password_hash_hash) ||
+	    get_master_key(password_hash_hash, cp->nt_response,
+			   data->master_key)) {
+		data->auth_response_valid = 0;
+		goto fail;
+	}
 	data->master_key_valid = 1;
 
 	/* Flags */
@@ -610,6 +631,7 @@ static struct wpabuf * eap_mschapv2_change_password(
 fail:
 	wpabuf_free(resp);
 	return NULL;
+#endif /* CONFIG_NO_RC4 */
 }
 
 
@@ -644,18 +666,16 @@ static struct wpabuf * eap_mschapv2_failure(struct eap_sm *sm,
 	 * must allocate a large enough temporary buffer to create that since
 	 * the received message does not include nul termination.
 	 */
-	buf = os_malloc(len + 1);
+	buf = dup_binstr(msdata, len);
 	if (buf) {
-		os_memcpy(buf, msdata, len);
-		buf[len] = '\0';
 		retry = eap_mschapv2_failure_txt(sm, data, buf);
 		os_free(buf);
 	}
 
-	ret->ignore = FALSE;
+	ret->ignore = false;
 	ret->methodState = METHOD_DONE;
 	ret->decision = DECISION_FAIL;
-	ret->allowNotifications = FALSE;
+	ret->allowNotifications = false;
 
 	if (data->prev_error == ERROR_PASSWD_EXPIRED &&
 	    data->passwd_change_version == 3) {
@@ -763,7 +783,7 @@ static struct wpabuf * eap_mschapv2_process(struct eap_sm *sm, void *priv,
 	u8 id;
 
 	if (eap_mschapv2_check_config(sm)) {
-		ret->ignore = TRUE;
+		ret->ignore = true;
 		return NULL;
 	}
 
@@ -780,13 +800,13 @@ static struct wpabuf * eap_mschapv2_process(struct eap_sm *sm, void *priv,
 	pos = eap_hdr_validate(EAP_VENDOR_IETF, EAP_TYPE_MSCHAPV2, reqData,
 			       &len);
 	if (pos == NULL || len < sizeof(*ms) + 1) {
-		ret->ignore = TRUE;
+		ret->ignore = true;
 		return NULL;
 	}
 
 	ms = (const struct eap_mschapv2_hdr *) pos;
 	if (eap_mschapv2_check_mslen(sm, len, ms)) {
-		ret->ignore = TRUE;
+		ret->ignore = true;
 		return NULL;
 	}
 
@@ -806,13 +826,13 @@ static struct wpabuf * eap_mschapv2_process(struct eap_sm *sm, void *priv,
 	default:
 		wpa_printf(MSG_INFO, "EAP-MSCHAPV2: Unknown op %d - ignored",
 			   ms->op_code);
-		ret->ignore = TRUE;
+		ret->ignore = true;
 		return NULL;
 	}
 }
 
 
-static Boolean eap_mschapv2_isKeyAvailable(struct eap_sm *sm, void *priv)
+static bool eap_mschapv2_isKeyAvailable(struct eap_sm *sm, void *priv)
 {
 	struct eap_mschapv2_data *data = priv;
 	return data->success && data->master_key_valid;
@@ -836,9 +856,13 @@ static u8 * eap_mschapv2_getKey(struct eap_sm *sm, void *priv, size_t *len)
 
 	/* MSK = server MS-MPPE-Recv-Key | MS-MPPE-Send-Key, i.e.,
 	 *	peer MS-MPPE-Send-Key | MS-MPPE-Recv-Key */
-	get_asymetric_start_key(data->master_key, key, MSCHAPV2_KEY_LEN, 1, 0);
-	get_asymetric_start_key(data->master_key, key + MSCHAPV2_KEY_LEN,
-				MSCHAPV2_KEY_LEN, 0, 0);
+	if (get_asymetric_start_key(data->master_key, key, MSCHAPV2_KEY_LEN, 1,
+				    0) < 0 ||
+	    get_asymetric_start_key(data->master_key, key + MSCHAPV2_KEY_LEN,
+				    MSCHAPV2_KEY_LEN, 0, 0) < 0) {
+		os_free(key);
+		return NULL;
+	}
 
 	wpa_hexdump_key(MSG_DEBUG, "EAP-MSCHAPV2: Derived key",
 			key, key_len);
@@ -858,7 +882,6 @@ static u8 * eap_mschapv2_getKey(struct eap_sm *sm, void *priv, size_t *len)
 int eap_peer_mschapv2_register(void)
 {
 	struct eap_method *eap;
-	int ret;
 
 	eap = eap_peer_method_alloc(EAP_PEER_METHOD_INTERFACE_VERSION,
 				    EAP_VENDOR_IETF, EAP_TYPE_MSCHAPV2,
@@ -872,8 +895,5 @@ int eap_peer_mschapv2_register(void)
 	eap->isKeyAvailable = eap_mschapv2_isKeyAvailable;
 	eap->getKey = eap_mschapv2_getKey;
 
-	ret = eap_peer_method_register(eap);
-	if (ret)
-		eap_peer_method_free(eap);
-	return ret;
+	return eap_peer_method_register(eap);
 }

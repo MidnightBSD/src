@@ -174,6 +174,11 @@ struct hostapd_radius_servers {
 	 * force_client_addr - Whether to force client (local) address
 	 */
 	int force_client_addr;
+
+	/**
+	 * force_client_dev - Bind the socket to a specified interface, if set
+	 */
+	char *force_client_dev;
 };
 
 
@@ -241,6 +246,9 @@ int radius_client_register(struct radius_client_data *radius,
 			    const u8 *shared_secret, size_t shared_secret_len,
 			    void *data),
 			   void *data);
+void radius_client_set_interim_error_cb(struct radius_client_data *radius,
+					void (*cb)(const u8 *addr, void *ctx),
+					void *ctx);
 int radius_client_send(struct radius_client_data *radius,
 		       struct radius_msg *msg,
 		       RadiusType msg_type, const u8 *addr);

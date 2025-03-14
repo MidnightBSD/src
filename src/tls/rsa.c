@@ -1,6 +1,6 @@
 /*
  * RSA
- * Copyright (c) 2006, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2006-2014, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -37,9 +37,8 @@ static const u8 * crypto_rsa_parse_integer(const u8 *pos, const u8 *end,
 		return NULL;
 
 	if (asn1_get_next(pos, end - pos, &hdr) < 0 ||
-	    hdr.class != ASN1_CLASS_UNIVERSAL || hdr.tag != ASN1_TAG_INTEGER) {
-		wpa_printf(MSG_DEBUG, "RSA: Expected INTEGER - found class %d "
-			   "tag 0x%x", hdr.class, hdr.tag);
+	    !asn1_is_integer(&hdr)) {
+		asn1_unexpected(&hdr, "RSA: Expected INTEGER");
 		return NULL;
 	}
 
@@ -80,16 +79,12 @@ crypto_rsa_import_public_key(const u8 *buf, size_t len)
 	 * PKCS #1, 7.1:
 	 * RSAPublicKey ::= SEQUENCE {
 	 *     modulus INTEGER, -- n
-	 *     publicExponent INTEGER -- e 
+	 *     publicExponent INTEGER -- e
 	 * }
 	 */
 
-	if (asn1_get_next(buf, len, &hdr) < 0 ||
-	    hdr.class != ASN1_CLASS_UNIVERSAL ||
-	    hdr.tag != ASN1_TAG_SEQUENCE) {
-		wpa_printf(MSG_DEBUG, "RSA: Expected SEQUENCE "
-			   "(public key) - found class %d tag 0x%x",
-			   hdr.class, hdr.tag);
+	if (asn1_get_next(buf, len, &hdr) < 0 || !asn1_is_sequence(&hdr)) {
+		asn1_unexpected(&hdr, "RSA: Expected SEQUENCE (public key)");
 		goto error;
 	}
 	pos = hdr.payload;
@@ -113,6 +108,29 @@ crypto_rsa_import_public_key(const u8 *buf, size_t len)
 error:
 	crypto_rsa_free(key);
 	return NULL;
+}
+
+
+struct crypto_rsa_key *
+crypto_rsa_import_public_key_parts(const u8 *n, size_t n_len,
+				   const u8 *e, size_t e_len)
+{
+	struct crypto_rsa_key *key;
+
+	key = os_zalloc(sizeof(*key));
+	if (key == NULL)
+		return NULL;
+
+	key->n = bignum_init();
+	key->e = bignum_init();
+	if (key->n == NULL || key->e == NULL ||
+	    bignum_set_unsigned_bin(key->n, n, n_len) < 0 ||
+	    bignum_set_unsigned_bin(key->e, e, e_len) < 0) {
+		crypto_rsa_free(key);
+		return NULL;
+	}
+
+	return key;
 }
 
 
@@ -168,12 +186,8 @@ crypto_rsa_import_private_key(const u8 *buf, size_t len)
 	 *
 	 * Version ::= INTEGER -- shall be 0 for this version of the standard
 	 */
-	if (asn1_get_next(buf, len, &hdr) < 0 ||
-	    hdr.class != ASN1_CLASS_UNIVERSAL ||
-	    hdr.tag != ASN1_TAG_SEQUENCE) {
-		wpa_printf(MSG_DEBUG, "RSA: Expected SEQUENCE "
-			   "(public key) - found class %d tag 0x%x",
-			   hdr.class, hdr.tag);
+	if (asn1_get_next(buf, len, &hdr) < 0 || !asn1_is_sequence(&hdr)) {
+		asn1_unexpected(&hdr, "RSA: Expected SEQUENCE (public key)");
 		goto error;
 	}
 	pos = hdr.payload;
@@ -262,7 +276,7 @@ int crypto_rsa_exptmod(const u8 *in, size_t inlen, u8 *out, size_t *outlen,
 
 	if (use_private) {
 		/*
-		 * Decrypt (or sign) using Chinese remainer theorem to speed
+		 * Decrypt (or sign) using Chinese remainder theorem to speed
 		 * up calculation. This is equivalent to tmp = tmp^d mod n
 		 * (which would require more CPU to calculate directly).
 		 *

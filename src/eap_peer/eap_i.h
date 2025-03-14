@@ -1,6 +1,6 @@
 /*
  * EAP peer state machines internal structures (RFC 4137)
- * Copyright (c) 2004-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2014, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -10,8 +10,11 @@
 #define EAP_I_H
 
 #include "wpabuf.h"
+#include "utils/list.h"
 #include "eap_peer/eap.h"
 #include "eap_common/eap_common.h"
+
+#define NO_EAP_METHOD_ERROR (-1)
 
 /* RFC 4137 - EAP Peer state machine */
 
@@ -35,7 +38,7 @@ struct eap_method_ret {
 	/**
 	 * ignore - Whether method decided to drop the current packed (OUT)
 	 */
-	Boolean ignore;
+	bool ignore;
 
 	/**
 	 * methodState - Method-specific state (IN/OUT)
@@ -50,7 +53,7 @@ struct eap_method_ret {
 	/**
 	 * allowNotifications - Whether method allows notifications (OUT)
 	 */
-	Boolean allowNotifications;
+	bool allowNotifications;
 };
 
 
@@ -69,7 +72,7 @@ struct eap_method {
 	/**
 	 * method - EAP type number (EAP_TYPE_*)
 	 */
-	EapType method;
+	enum eap_type method;
 
 	/**
 	 * name - Name of the method (e.g., "TLS")
@@ -120,9 +123,9 @@ struct eap_method {
 	 * isKeyAvailable - Find out whether EAP method has keying material
 	 * @sm: Pointer to EAP state machine allocated with eap_peer_sm_init()
 	 * @priv: Pointer to private EAP method data from eap_method::init()
-	 * Returns: %TRUE if key material (eapKeyData) is available
+	 * Returns: %true if key material (eapKeyData) is available
 	 */
-	Boolean (*isKeyAvailable)(struct eap_sm *sm, void *priv);
+	bool (*isKeyAvailable)(struct eap_sm *sm, void *priv);
 
 	/**
 	 * getKey - Get EAP method specific keying material (eapKeyData)
@@ -158,13 +161,13 @@ struct eap_method {
 	 * has_reauth_data - Whether method is ready for fast reauthentication
 	 * @sm: Pointer to EAP state machine allocated with eap_peer_sm_init()
 	 * @priv: Pointer to private EAP method data from eap_method::init()
-	 * Returns: %TRUE or %FALSE based on whether fast reauthentication is
+	 * Returns: %true or %false based on whether fast reauthentication is
 	 * possible
 	 *
 	 * This function is an optional handler that only EAP methods
 	 * supporting fast re-authentication need to implement.
 	 */
-	Boolean (*has_reauth_data)(struct eap_sm *sm, void *priv);
+	bool (*has_reauth_data)(struct eap_sm *sm, void *priv);
 
 	/**
 	 * deinit_for_reauth - Release data that is not needed for fast re-auth
@@ -203,6 +206,17 @@ struct eap_method {
 	 * that use method specific identity need to implement.
 	 */
 	const u8 * (*get_identity)(struct eap_sm *sm, void *priv, size_t *len);
+
+	/**
+	 * get_error_code - Get the latest EAP method error code
+	 * @priv: Pointer to private EAP method data from eap_method::init()
+	 * Returns: An int for the EAP method specific error code if exists or
+	 * NO_EAP_METHOD_ERROR otherwise.
+	 *
+	 * This method is an optional handler that only EAP methods that need to
+	 * report their error code need to implement.
+	 */
+	int (*get_error_code)(void *priv);
 
 	/**
 	 * free - Free EAP method data
@@ -261,8 +275,31 @@ struct eap_method {
 	 * private data or this function may derive the key.
 	 */
 	u8 * (*get_emsk)(struct eap_sm *sm, void *priv, size_t *len);
+
+	/**
+	 * getSessionId - Get EAP method specific Session-Id
+	 * @sm: Pointer to EAP state machine allocated with eap_peer_sm_init()
+	 * @priv: Pointer to private EAP method data from eap_method::init()
+	 * @len: Pointer to a variable to store Session-Id length
+	 * Returns: Session-Id or %NULL if not available
+	 *
+	 * This function can be used to get the Session-Id from the EAP method.
+	 * The Session-Id may already be stored in the method-specific private
+	 * data or this function may derive the Session-Id.
+	 */
+	u8 * (*getSessionId)(struct eap_sm *sm, void *priv, size_t *len);
 };
 
+
+struct eap_erp_key {
+	struct dl_list list;
+	size_t rRK_len;
+	size_t rIK_len;
+	u8 rRK[ERP_MAX_KEY_LEN];
+	u8 rIK[ERP_MAX_KEY_LEN];
+	u32 next_seq;
+	char keyname_nai[];
+};
 
 /**
  * struct eap_sm - EAP state machine data
@@ -275,44 +312,48 @@ struct eap_sm {
 		EAP_FAILURE
 	} EAP_state;
 	/* Long-term local variables */
-	EapType selectedMethod;
+	enum eap_type selectedMethod;
 	EapMethodState methodState;
 	int lastId;
 	struct wpabuf *lastRespData;
 	EapDecision decision;
 	/* Short-term local variables */
-	Boolean rxReq;
-	Boolean rxSuccess;
-	Boolean rxFailure;
+	bool rxReq;
+	bool rxSuccess;
+	bool rxFailure;
 	int reqId;
-	EapType reqMethod;
+	enum eap_type reqMethod;
 	int reqVendor;
 	u32 reqVendorMethod;
-	Boolean ignore;
+	bool ignore;
 	/* Constants */
 	int ClientTimeout;
 
 	/* Miscellaneous variables */
-	Boolean allowNotifications; /* peer state machine <-> methods */
+	bool allowNotifications; /* peer state machine <-> methods */
 	struct wpabuf *eapRespData; /* peer to lower layer */
-	Boolean eapKeyAvailable; /* peer to lower layer */
+	bool eapKeyAvailable; /* peer to lower layer */
 	u8 *eapKeyData; /* peer to lower layer */
 	size_t eapKeyDataLen; /* peer to lower layer */
+	u8 *eapSessionId; /* peer to lower layer */
+	size_t eapSessionIdLen; /* peer to lower layer */
 	const struct eap_method *m; /* selected EAP method */
 	/* not defined in RFC 4137 */
-	Boolean changed;
+	bool changed;
 	void *eapol_ctx;
-	struct eapol_callbacks *eapol_cb;
+	const struct eapol_callbacks *eapol_cb;
 	void *eap_method_priv;
 	int init_phase2;
 	int fast_reauth;
+	bool reauthInit; /* send EAP-Identity/Re-auth */
+	u32 erp_seq;
 
-	Boolean rxResp /* LEAP only */;
-	Boolean leap_done;
-	Boolean peap_done;
-	u8 req_md5[16]; /* MD5() of the current EAP packet */
-	u8 last_md5[16]; /* MD5() of the previously received EAP packet; used
-			  * in duplicate request detection. */
+	bool rxResp /* LEAP only */;
+	bool leap_done;
+	bool peap_done;
+	u8 req_sha1[20]; /* SHA1() of the current EAP packet */
+	u8 last_sha1[20]; /* SHA1() of the previously received EAP packet; used
+			   * in duplicate request detection. */
 
 	void *msg_ctx;
 	void *scard_ctx;
@@ -325,14 +366,25 @@ struct eap_sm {
 	u8 *peer_challenge, *auth_challenge;
 
 	int num_rounds;
+	int num_rounds_short;
 	int force_disabled;
 
 	struct wps_context *wps;
 
 	int prev_failure;
+	struct eap_peer_config *last_config;
 
 	struct ext_password_data *ext_pw;
 	struct wpabuf *ext_pw_buf;
+
+	int external_sim;
+
+	unsigned int expected_failure:1;
+	unsigned int ext_cert_check:1;
+	unsigned int waiting_ext_cert_check:1;
+	unsigned int use_machine_cred:1;
+
+	struct dl_list erp_keys; /* struct eap_erp_key */
 };
 
 const u8 * eap_get_config_identity(struct eap_sm *sm, size_t *len);

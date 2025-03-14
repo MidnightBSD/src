@@ -26,7 +26,7 @@ struct bgscan_simple_data {
 	int max_short_scans; /* maximum times we short-scan before back-off */
 	int short_interval; /* use if signal < threshold */
 	int long_interval; /* use if signal > threshold */
-	struct os_time last_bgscan;
+	struct os_reltime last_bgscan;
 };
 
 
@@ -56,12 +56,7 @@ static void bgscan_simple_timeout(void *eloop_ctx, void *timeout_ctx)
 	} else {
 		if (data->scan_interval == data->short_interval) {
 			data->short_scan_count++;
-			/*
-			 * Spend at most the duration of a long scan interval
-			 * scanning at the short scan interval. After that,
-			 * revert to the long scan interval.
-			 */
-			if (data->short_scan_count > data->max_short_scans) {
+			if (data->short_scan_count >= data->max_short_scans) {
 				data->scan_interval = data->long_interval;
 				wpa_printf(MSG_DEBUG, "bgscan simple: Backing "
 					   "off to long scan interval");
@@ -75,7 +70,7 @@ static void bgscan_simple_timeout(void *eloop_ctx, void *timeout_ctx)
 			 */
 			data->short_scan_count--;
 		}
-		os_get_time(&data->last_bgscan);
+		os_get_reltime(&data->last_bgscan);
 	}
 }
 
@@ -84,9 +79,6 @@ static int bgscan_simple_get_params(struct bgscan_simple_data *data,
 				    const char *params)
 {
 	const char *pos;
-
-	if (params == NULL)
-		return 0;
 
 	data->short_interval = atoi(params);
 
@@ -159,7 +151,7 @@ static void * bgscan_simple_init(struct wpa_supplicant *wpa_s,
 	 * us skip an immediate new scan in cases where the current signal
 	 * level is below the bgscan threshold.
 	 */
-	os_get_time(&data->last_bgscan);
+	os_get_reltime(&data->last_bgscan);
 
 	return data;
 }
@@ -211,7 +203,7 @@ static void bgscan_simple_notify_signal_change(void *priv, int above,
 {
 	struct bgscan_simple_data *data = priv;
 	int scan = 0;
-	struct os_time now;
+	struct os_reltime now;
 
 	if (data->short_interval == data->long_interval ||
 	    data->signal_threshold == 0)
@@ -225,7 +217,7 @@ static void bgscan_simple_notify_signal_change(void *priv, int above,
 		wpa_printf(MSG_DEBUG, "bgscan simple: Start using short "
 			   "bgscan interval");
 		data->scan_interval = data->short_interval;
-		os_get_time(&now);
+		os_get_reltime(&now);
 		if (now.sec > data->last_bgscan.sec + 1 &&
 		    data->short_scan_count <= data->max_short_scans)
 			/*
@@ -259,7 +251,7 @@ static void bgscan_simple_notify_signal_change(void *priv, int above,
 		 * Signal dropped further 4 dB. Request a new scan if we have
 		 * not yet scanned in a while.
 		 */
-		os_get_time(&now);
+		os_get_reltime(&now);
 		if (now.sec > data->last_bgscan.sec + 10)
 			scan = 1;
 	}

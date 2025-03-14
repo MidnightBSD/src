@@ -17,6 +17,7 @@ int main(int argc, char *argv[])
 	unsigned char psk[32];
 	int i;
 	char *ssid, *passphrase, buf[64], *pos;
+	size_t len;
 
 	if (argc < 2) {
 		printf("usage: wpa_passphrase <ssid> [passphrase]\n"
@@ -30,9 +31,9 @@ int main(int argc, char *argv[])
 	if (argc > 2) {
 		passphrase = argv[2];
 	} else {
-		printf("# reading passphrase from stdin\n");
+		fprintf(stderr, "# reading passphrase from stdin\n");
 		if (fgets(buf, sizeof(buf), stdin) == NULL) {
-			printf("Failed to read passphrase\n");
+			fprintf(stderr, "Failed to read passphrase\n");
 			return 1;
 		}
 		buf[sizeof(buf) - 1] = '\0';
@@ -47,8 +48,13 @@ int main(int argc, char *argv[])
 		passphrase = buf;
 	}
 
-	if (os_strlen(passphrase) < 8 || os_strlen(passphrase) > 63) {
-		printf("Passphrase must be 8..63 characters\n");
+	len = os_strlen(passphrase);
+	if (len < 8 || len > 63) {
+		fprintf(stderr, "Passphrase must be 8..63 characters\n");
+		return 1;
+	}
+	if (has_ctrl_char((u8 *) passphrase, len)) {
+		fprintf(stderr, "Invalid passphrase character\n");
 		return 1;
 	}
 

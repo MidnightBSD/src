@@ -1,6 +1,10 @@
 <!doctype refentry PUBLIC "-//OASIS//DTD DocBook V4.1//EN">
 
 <refentry>
+  <refentryinfo>
+    <date>07 August 2019</date>
+  </refentryinfo>
+
   <refmeta>
     <refentrytitle>wpa_supplicant</refentrytitle>
     <manvolnum>8</manvolnum>
@@ -12,7 +16,7 @@
   <refsynopsisdiv>
     <cmdsynopsis>
       <command>wpa_supplicant</command>
-      <arg>-BddfhKLqqtuvW</arg>
+      <arg>-BddfhKLqqsTtuvW</arg>
       <arg>-i<replaceable>ifname</replaceable></arg>
       <arg>-c<replaceable>config file</replaceable></arg>
       <arg>-D<replaceable>driver</replaceable></arg>
@@ -42,7 +46,7 @@
     can be used to improve the network security, but even that has inherited
     security issues due to the use of WEP for encryption. Wi-Fi Protected
     Access and IEEE 802.11i amendment to the wireless LAN standard introduce
-    a much improvement mechanism for securing wireless networks. IEEE 802.11i
+    a much improved mechanism for securing wireless networks. IEEE 802.11i
     enabled networks that are using CCMP (encryption mechanism based on strong
     cryptographic algorithm AES) can finally be called secure used for
     applications which require efficient protection against unauthorized
@@ -246,9 +250,18 @@
 
     <variablelist>
       <varlistentry>
+	<term>nl80211</term>
+	<listitem>
+	  <para>Uses the modern Linux nl80211/cfg80211 netlink-based
+	  interface (most new drivers).</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
 	<term>wext</term>
 	<listitem>
-	  <para>Linux wireless extensions (generic).</para>
+	  <para>Uses the legacy Linux wireless extensions ioctl-based
+	  interface (older hardware/drivers).</para>
 	</listitem>
       </varlistentry>
 
@@ -344,9 +357,20 @@
       </varlistentry>
 
       <varlistentry>
+	<term>-e entropy file</term>
+	<listitem>
+	  <para>File for <command>wpa_supplicant</command> to use to
+	  maintain its internal entropy store in over restarts.</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
 	<term>-f output file</term>
 	<listitem>
-	  <para>Log output to specified file instead of stdout.</para>
+	  <para>Log output to specified file instead of stdout. (This
+	  is only available if <command>wpa_supplicant</command> was
+	  built with the <literal>CONFIG_DEBUG_FILE</literal>
+	  option.)</para>
 	</listitem>
       </varlistentry>
 
@@ -366,13 +390,6 @@
       </varlistentry>
 
       <varlistentry>
-	<term>-t</term>
-	<listitem>
-	  <para>Include timestamp in debug messages.</para>
-	</listitem>
-      </varlistentry>
-
-      <varlistentry>
 	<term>-h</term>
 	<listitem>
 	  <para>Help.  Show a usage message.</para>
@@ -383,6 +400,22 @@
 	<term>-L</term>
 	<listitem>
 	  <para>Show license (BSD).</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term>-o override driver</term>
+	<listitem>
+	  <para>Override the driver parameter for new
+	  interfaces.</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term>-O override ctrl_interface</term>
+	<listitem>
+	  <para>Override the ctrl_interface parameter for new
+	  interfaces.</para>
 	</listitem>
       </varlistentry>
 
@@ -409,10 +442,40 @@
       </varlistentry>
 
       <varlistentry>
+	<term>-s</term>
+	<listitem>
+	  <para>Log output to syslog instead of stdout. (This is only
+	  available if <command>wpa_supplicant</command> was built
+	  with the <literal>CONFIG_DEBUG_SYSLOG</literal>
+	  option.)</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term>-T</term>
+	<listitem>
+	  <para>Log output to Linux tracing in addition to any other
+	  destinations. (This is only available
+	  if <command>wpa_supplicant</command> was built with
+	  the <literal>CONFIG_DEBUG_LINUX_TRACING</literal>
+	  option.)</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term>-t</term>
+	<listitem>
+	  <para>Include timestamp in debug messages.</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
 	<term>-u</term>
 	<listitem>
-	  <para>Enabled DBus control interface. If enabled, interface
-	  definitions may be omitted.</para>
+	  <para>Enable DBus control interface. If enabled, interface
+	  definitions may be omitted. (This is only available
+	  if <command>wpa_supplicant</command> was built with
+	  the <literal>CONFIG_CTRL_IFACE_DBUS_NEW</literal> option.)</para>
 	</listitem>
       </varlistentry>
 
@@ -488,10 +551,14 @@ wpa_supplicant \
 
     <itemizedlist>
       <listitem>
-	<para>Linux kernel 2.4.x or 2.6.x with Linux Wireless
-	Extensions v15 or newer</para>
+	<para>Linux kernel 2.6.30 or higher with
+	nl80211/cfg80211 support</para>
       </listitem>
 
+      <listitem>
+	<para>Linux kernel 2.4.x or higher with Linux Wireless
+	Extensions v15 or newer</para>
+      </listitem>
 
       <listitem>
 	<para>FreeBSD 6-CURRENT</para>
@@ -508,6 +575,13 @@ wpa_supplicant \
     <title>Supported Drivers</title>
     <variablelist>
       <varlistentry>
+	<term>Linux nl80211/cfg80211</term>
+	<listitem>
+	  <para>This is the preferred driver for Linux.</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
 	<term>Linux wireless extensions</term>
 	<listitem>
 	  <para>In theory, any driver that supports Linux wireless
@@ -515,7 +589,7 @@ wpa_supplicant \
 	using ap_scan=0 option in configuration file.</para>
 	</listitem>
       </varlistentry>
-      
+
       <varlistentry>
 	<term>Wired Ethernet drivers</term>
 	<listitem>
@@ -540,7 +614,7 @@ wpa_supplicant \
       </varlistentry>
     </variablelist>
 
-	
+
     <para>wpa_supplicant was designed to be portable for different
     drivers and operating systems. Hopefully, support for more wlan
     cards and OSes will be added in the future. See developer.txt for
@@ -679,7 +753,7 @@ fi
   </refsect1>
   <refsect1>
     <title>Legal</title>
-    <para>wpa_supplicant is copyright (c) 2003-2012,
+    <para>wpa_supplicant is copyright (c) 2003-2022,
     Jouni Malinen <email>j@w1.fi</email> and
     contributors.
     All Rights Reserved.</para>

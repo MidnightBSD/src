@@ -22,7 +22,8 @@ static struct eap_method *eap_methods;
  * @method: EAP type number
  * Returns: Pointer to EAP method or %NULL if not found
  */
-const struct eap_method * eap_server_get_eap_method(int vendor, EapType method)
+const struct eap_method * eap_server_get_eap_method(int vendor,
+						    enum eap_type method)
 {
 	struct eap_method *m;
 	for (m = eap_methods; m; m = m->next) {
@@ -42,7 +43,7 @@ const struct eap_method * eap_server_get_eap_method(int vendor, EapType method)
  * This function maps EAP type names into EAP type numbers based on the list of
  * EAP methods included in the build.
  */
-EapType eap_server_get_type(const char *name, int *vendor)
+enum eap_type eap_server_get_type(const char *name, int *vendor)
 {
 	struct eap_method *m;
 	for (m = eap_methods; m; m = m->next) {
@@ -69,7 +70,8 @@ EapType eap_server_get_type(const char *name, int *vendor)
  * is not needed anymore.
  */
 struct eap_method * eap_server_method_alloc(int version, int vendor,
-					    EapType method, const char *name)
+					    enum eap_type method,
+					    const char *name)
 {
 	struct eap_method *eap;
 	eap = os_zalloc(sizeof(*eap));
@@ -87,7 +89,7 @@ struct eap_method * eap_server_method_alloc(int version, int vendor,
  * eap_server_method_free - Free EAP server method structure
  * @method: Method structure allocated with eap_server_method_alloc()
  */
-void eap_server_method_free(struct eap_method *method)
+static void eap_server_method_free(struct eap_method *method)
 {
 	os_free(method);
 }
@@ -95,26 +97,31 @@ void eap_server_method_free(struct eap_method *method)
 
 /**
  * eap_server_method_register - Register an EAP server method
- * @method: EAP method to register
+ * @method: EAP method to register from eap_server_method_alloc()
  * Returns: 0 on success, -1 on invalid method, or -2 if a matching EAP method
  * has already been registered
  *
  * Each EAP server method needs to call this function to register itself as a
- * supported EAP method.
+ * supported EAP method. The caller must not free the allocated method data
+ * regardless of the return value.
  */
 int eap_server_method_register(struct eap_method *method)
 {
 	struct eap_method *m, *last = NULL;
 
 	if (method == NULL || method->name == NULL ||
-	    method->version != EAP_SERVER_METHOD_INTERFACE_VERSION)
+	    method->version != EAP_SERVER_METHOD_INTERFACE_VERSION) {
+		eap_server_method_free(method);
 		return -1;
+	}
 
 	for (m = eap_methods; m; m = m->next) {
 		if ((m->vendor == method->vendor &&
 		     m->method == method->method) ||
-		    os_strcmp(m->name, method->name) == 0)
+		    os_strcmp(m->name, method->name) == 0) {
+			eap_server_method_free(method);
 			return -2;
+		}
 		last = m;
 	}
 
@@ -153,12 +160,12 @@ void eap_server_unregister_methods(void)
  * eap_server_get_name - Get EAP method name for the given EAP type
  * @vendor: EAP Vendor-Id (0 = IETF)
  * @type: EAP method type
- * Returns: EAP method name, e.g., TLS, or %NULL if not found
+ * Returns: EAP method name, e.g., TLS, or "unknown" if not found
  *
  * This function maps EAP type numbers into EAP type names based on the list of
  * EAP methods included in the build.
  */
-const char * eap_server_get_name(int vendor, EapType type)
+const char * eap_server_get_name(int vendor, enum eap_type type)
 {
 	struct eap_method *m;
 	if (vendor == EAP_VENDOR_IETF && type == EAP_TYPE_EXPANDED)
@@ -167,5 +174,5 @@ const char * eap_server_get_name(int vendor, EapType type)
 		if (m->vendor == vendor && m->method == type)
 			return m->name;
 	}
-	return NULL;
+	return "unknown";
 }

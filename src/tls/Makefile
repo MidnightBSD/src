@@ -1,14 +1,3 @@
-all: libtls.a
-
-clean:
-	rm -f *~ *.o *.d libtls.a
-
-install:
-	@echo Nothing to be made.
-
-
-include ../lib.rules
-
 CFLAGS += -DCONFIG_INTERNAL_LIBTOMMATH
 CFLAGS += -DCONFIG_CRYPTO_INTERNAL
 CFLAGS += -DCONFIG_TLSV11
@@ -24,6 +13,7 @@ LIB_OBJS= \
 	tlsv1_client.o \
 	tlsv1_client_read.o \
 	tlsv1_client_write.o \
+	tlsv1_client_ocsp.o \
 	tlsv1_common.o \
 	tlsv1_cred.o \
 	tlsv1_record.o \
@@ -32,8 +22,4 @@ LIB_OBJS= \
 	tlsv1_server_write.o \
 	x509v3.o
 
-
-libtls.a: $(LIB_OBJS)
-	$(AR) crT $@ $?
-
--include $(OBJS:%.o=%.d)
+include ../lib.rules

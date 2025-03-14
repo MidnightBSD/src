@@ -224,6 +224,9 @@ struct l2_packet_data * l2_packet_init(
 		return NULL;
 	}
 
+	if (!rx_callback)
+		return l2;
+
 	l2->rx_avail = CreateEvent(NULL, TRUE, FALSE, NULL);
 	l2->rx_done = CreateEvent(NULL, TRUE, FALSE, NULL);
 	l2->rx_notify = CreateEvent(NULL, TRUE, FALSE, NULL);
@@ -245,6 +248,18 @@ struct l2_packet_data * l2_packet_init(
 				     &thread_id);
 
 	return l2;
+}
+
+
+struct l2_packet_data * l2_packet_init_bridge(
+	const char *br_ifname, const char *ifname, const u8 *own_addr,
+	unsigned short protocol,
+	void (*rx_callback)(void *ctx, const u8 *src_addr,
+			    const u8 *buf, size_t len),
+	void *rx_callback_ctx, int l2_hdr)
+{
+	return l2_packet_init(br_ifname, own_addr, protocol, rx_callback,
+			      rx_callback_ctx, l2_hdr);
 }
 
 

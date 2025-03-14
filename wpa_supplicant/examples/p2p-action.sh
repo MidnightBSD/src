@@ -34,13 +34,26 @@ if [ "$CMD" = "P2P-GROUP-STARTED" ]; then
 	    # start with -z to avoid that
 	    dnsmasq -x /var/run/dnsmasq.pid-$GIFNAME \
 		-i $GIFNAME \
-		-F192.168.42.11,192.168.42.99 --listen-address 192.168.42.1 -z
+		-F192.168.42.11,192.168.42.99 --listen-address 192.168.42.1 -z -p 0
 	fi
     fi
     if [ "$4" = "client" ]; then
 	kill_daemon dhclient /var/run/dhclient-$GIFNAME.pid
 	rm /var/run/dhclient.leases-$GIFNAME
 	kill_daemon dnsmasq /var/run/dnsmasq.pid-$GIFNAME
+	ipaddr=`echo "$*" | sed 's/.* ip_addr=\([^ ]*\).*/\1/'`
+	ipmask=`echo "$*" | sed 's/.* ip_mask=\([^ ]*\).*/\1/'`
+	goipaddr=`echo "$*" | sed 's/.* go_ip_addr=\([^ ]*\).*/\1/'`
+	if echo "$ipaddr$ipmask$goipaddr" | grep -q ' '; then
+	    ipaddr=""
+	    ipmask=""
+	    goipaddr=""
+	fi
+	if [ -n "$ipaddr" ]; then
+	    sudo ifconfig $GIFNAME "$ipaddr" netmask "$ipmask"
+	    sudo ip ro re default via "$goipaddr"
+	    exit 0
+	fi
 	dhclient -pf /var/run/dhclient-$GIFNAME.pid \
 	    -lf /var/run/dhclient.leases-$GIFNAME \
 	    -nw \
@@ -64,7 +77,7 @@ fi
 if [ "$CMD" = "P2P-CROSS-CONNECT-ENABLE" ]; then
     GIFNAME=$3
     UPLINK=$4
-    # enable NAT/masquarade $GIFNAME -> $UPLINK
+    # enable NAT/masquerade $GIFNAME -> $UPLINK
     iptables -P FORWARD DROP
     iptables -t nat -A POSTROUTING -o $UPLINK -j MASQUERADE
     iptables -A FORWARD -i $UPLINK -o $GIFNAME -m state --state RELATED,ESTABLISHED -j ACCEPT
@@ -75,7 +88,7 @@ fi
 if [ "$CMD" = "P2P-CROSS-CONNECT-DISABLE" ]; then
     GIFNAME=$3
     UPLINK=$4
-    # disable NAT/masquarade $GIFNAME -> $UPLINK
+    # disable NAT/masquerade $GIFNAME -> $UPLINK
     sysctl net.ipv4.ip_forward=0
     iptables -t nat -D POSTROUTING -o $UPLINK -j MASQUERADE
     iptables -D FORWARD -i $UPLINK -o $GIFNAME -m state --state RELATED,ESTABLISHED -j ACCEPT

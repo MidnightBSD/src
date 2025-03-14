@@ -45,7 +45,7 @@ ConvertStringSecurityDescriptorToSecurityDescriptorA
 
 /* Per-interface ctrl_iface */
 
-#define REQUEST_BUFSIZE 256
+#define REQUEST_BUFSIZE CTRL_IFACE_MAX_LEN
 #define REPLY_BUFSIZE 4096
 
 struct ctrl_iface_priv;
@@ -319,13 +319,12 @@ static void wpa_supplicant_ctrl_iface_rx(struct wpa_ctrl_dst *dst, size_t len)
 	}
 
 	os_free(dst->rsp_buf);
-	dst->rsp_buf = os_malloc(send_len);
+	dst->rsp_buf = os_memdup(send_buf, send_len);
 	if (dst->rsp_buf == NULL) {
 		ctrl_close_pipe(dst);
 		os_free(reply);
 		return;
 	}
-	os_memcpy(dst->rsp_buf, send_buf, send_len);
 	os_free(reply);
 
 	if (!WriteFileEx(dst->pipe, dst->rsp_buf, send_len, &dst->overlap,
@@ -424,6 +423,7 @@ static int ctrl_iface_parse(struct ctrl_iface_priv *priv, const char *params)
 
 
 static void wpa_supplicant_ctrl_iface_msg_cb(void *ctx, int level,
+					     enum wpa_msg_type type,
 					     const char *txt, size_t len)
 {
 	struct wpa_supplicant *wpa_s = ctx;
@@ -462,8 +462,11 @@ wpa_supplicant_ctrl_iface_init(struct wpa_supplicant *wpa_s)
 }
 
 
-void wpa_supplicant_ctrl_iface_deinit(struct ctrl_iface_priv *priv)
+void wpa_supplicant_ctrl_iface_deinit(struct wpa_supplicant *wpa_s,
+				      struct ctrl_iface_priv *priv)
 {
+	if (!priv)
+		return;
 	while (priv->ctrl_dst)
 		ctrl_close_pipe(priv->ctrl_dst);
 	if (priv->sec_attr_set)
@@ -738,13 +741,12 @@ static void wpa_supplicant_global_iface_rx(struct wpa_global_dst *dst,
 	}
 
 	os_free(dst->rsp_buf);
-	dst->rsp_buf = os_malloc(send_len);
+	dst->rsp_buf = os_memdup(send_buf, send_len);
 	if (dst->rsp_buf == NULL) {
 		global_close_pipe(dst);
 		os_free(reply);
 		return;
 	}
-	os_memcpy(dst->rsp_buf, send_buf, send_len);
 	os_free(reply);
 
 	if (!WriteFileEx(dst->pipe, dst->rsp_buf, send_len, &dst->overlap,

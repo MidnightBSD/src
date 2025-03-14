@@ -14,7 +14,7 @@
 #include "tls/pkcs1.h"
 #include "tls/pkcs8.h"
 
-/* Dummy structures; these are just typecast to struct crypto_rsa_key */
+/* Stub structures; these are just typecast to struct crypto_rsa_key */
 struct crypto_public_key;
 struct crypto_private_key;
 
@@ -23,6 +23,15 @@ struct crypto_public_key * crypto_public_key_import(const u8 *key, size_t len)
 {
 	return (struct crypto_public_key *)
 		crypto_rsa_import_public_key(key, len);
+}
+
+
+struct crypto_public_key *
+crypto_public_key_import_parts(const u8 *n, size_t n_len,
+			       const u8 *e, size_t e_len)
+{
+	return (struct crypto_public_key *)
+		crypto_rsa_import_public_key_parts(n, n_len, e, e_len);
 }
 
 
