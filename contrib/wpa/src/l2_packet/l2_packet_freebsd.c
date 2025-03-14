@@ -102,7 +102,7 @@ static void l2_packet_receive(int sock, void *eloop_ctx, void *sock_ctx)
 		len = hdr->caplen;
 	} else {
 		buf = (unsigned char *) (ethhdr + 1);
-		len = hdr.caplen - sizeof(*ethhdr);
+		len = hdr->caplen - sizeof(*ethhdr);
 
 		/* Handle IEEE 802.1Q encapsulated frames */
 		if (len >= ETHER_VLAN_ENCAP_LEN &&
