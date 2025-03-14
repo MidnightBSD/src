@@ -3,6 +3,8 @@ Updating Information for MidnightBSD users.
 20250314:
 	update expat 2.6.4
 
+	wpa 2.11 + hostapd 2.11
+
 20241130:
 	remove libdispatch.  only consumer was mport and that no
 	longer uses it. Apple has backed off from it also. 
