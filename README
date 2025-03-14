@@ -3,13 +3,15 @@ This is the top level of the MidnightBSD source directory.
 Source code is now on github at:
 https://github.com/MidnightBSD/src/
 
-Most users want to checkout a stable branch rather than use the current
+Most users want to check out a stable branch rather than use the current
 development branch called master. Look at the stable branches. 
 
 e.g. 
 cd /usr
-git clone https://github.com/midnightbsd/src.git
-git checkout stable/1.2
+git clone https://github.com/midnightbsd/src.git -b stable/3.2
+
+You can change branches
+git checkout master 
 
 For copyright information, please see the file COPYRIGHT in this
 directory (additional copyright information also exists for some
@@ -27,7 +29,7 @@ the Makefile in this directory for more information on the
 standard build targets and compile-time flags.
 
 Building a kernel is a somewhat more involved process, documentation
-for which can be found at:
+which can be found at:
    http://www.freebsd.org/doc/en_US.ISO8859-1/books/handbook/kernelconfig.html
 And in the config(8) man page.
 Note: If you want to build and install the kernel with the
@@ -45,7 +47,7 @@ pure reference and documentation file.
 
 Source Roadmap:
 ---------------
-apache		Various commands and libraries under the APACHE license.
+apache		Various commands and libraries are under the APACHE license.
 		Please see apache/LICENSE for more information.
 
 bin		System/user commands.
@@ -61,7 +63,7 @@ etc		Template files for /etc.
 
 games		Amusements.
 
-gnu		Various commands and libraries under the GNU Public License.
+gnu		Various commands and libraries are under the GNU Public License.
 		Please see gnu/COPYING* for more information.
 
 include		System include files.
