@@ -1079,7 +1079,11 @@ static int wpas_pasn_start(struct wpa_supplicant *wpa_s, const u8 *bssid,
 	pasn->group = group;
 	pasn->freq = freq;
 
+#ifdef CONFIG_TESTING_OPTIONS
 	if (wpa_s->conf->force_kdk_derivation ||
+#else
+	if (
+#endif
 	    (wpa_s->drv_flags2 & WPA_DRIVER_FLAGS2_SEC_LTF &&
 	     ieee802_11_rsnx_capab(beacon_rsnxe, WLAN_RSNX_CAPAB_SECURE_LTF)))
 		pasn->kdk_len = WPA_KDK_MAX_LEN;

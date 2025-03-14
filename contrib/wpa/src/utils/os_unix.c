@@ -461,6 +461,7 @@ int os_file_exists(const char *fname)
 }
 
 
+#if !defined __DragonFly__
 int os_fdatasync(FILE *stream)
 {
 	if (!fflush(stream)) {
@@ -478,6 +479,7 @@ int os_fdatasync(FILE *stream)
 
 	return -1;
 }
+#endif
 
 
 #ifndef WPA_TRACE
