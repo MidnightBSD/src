@@ -39,7 +39,13 @@
                 ..
                 engines
                 ..
+                flua
+                ..
                 i18n
+                ..
+                libxo
+                    encoder
+                    ..
                 ..
             ..
             libexec
