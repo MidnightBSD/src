@@ -29,7 +29,6 @@
 #if !defined(_WIN32) || defined(__CYGWIN__)
 
 #include "archive_platform.h"
-__FBSDID("$FreeBSD$");
 
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h>
@@ -106,6 +105,11 @@ __FBSDID("$FreeBSD$");
 #endif
 #ifndef O_CLOEXEC
 #define O_CLOEXEC	0
+#endif
+
+#if defined(__hpux) && !defined(HAVE_DIRFD)
+#define dirfd(x) ((x)->__dd_fd)
+#define HAVE_DIRFD
 #endif
 
 /*-
@@ -447,7 +451,7 @@ archive_read_disk_new(void)
 {
 	struct archive_read_disk *a;
 
-	a = (struct archive_read_disk *)calloc(1, sizeof(*a));
+	a = calloc(1, sizeof(*a));
 	if (a == NULL)
 		return (NULL);
 	a->archive.magic = ARCHIVE_READ_DISK_MAGIC;
@@ -2453,7 +2457,7 @@ tree_dir_next_posix(struct tree *t)
 #else /* HAVE_FDOPENDIR */
 		if (tree_enter_working_dir(t) == 0) {
 			t->d = opendir(".");
-#if HAVE_DIRFD || defined(dirfd)
+#ifdef HAVE_DIRFD
 			__archive_ensure_cloexec_flag(dirfd(t->d));
 #endif
 		}
