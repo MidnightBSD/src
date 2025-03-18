@@ -1,41 +1,19 @@
 .include <src.opts.mk>
 
-WARNS=0	
-
 PACKAGE=lib${LIB}
 _LIBARCHIVEDIR=	${SRCTOP}/contrib/libarchive
 
 LIB=	archive
 
-LIBADD= z bz2 lzma bsdxml zstd
-CFLAGS+=        -DHAVE_BZLIB_H=1 -DHAVE_LIBLZMA=1 -DHAVE_LZMA_H=1 \
-                -DHAVE_ZSTD_H=1 -DHAVE_LIBZSTD=1 -DHAVE_LIBZSTD_COMPRESSOR=1
-
-# BSD SHLIB_MAJOR value is managed as part of the BSD system.
+# FreeBSD SHLIB_MAJOR value is managed as part of the FreeBSD system.
 # It has no real relation to the libarchive version number.
 SHLIB_MAJOR= 7
 
-CFLAGS+=	-DPLATFORM_CONFIG_H=\"${.CURDIR}/config_midnightbsd.h\"
 CFLAGS+=	-I${.OBJDIR}
 CFLAGS+=	-I${SRCTOP}/sys/contrib/zstd/lib
+.include "Makefile.inc"
 
-.if ${MK_OPENSSL} != "no"
-CFLAGS+=        -DWITH_OPENSSL
-CFLAGS+=        -DOPENSSL_API_COMPAT=0x10100000L
-LIBADD+=        crypto
-CFLAGS.archive_hmac.c+=-Wno-error=cast-qual
-.else
-LIBADD+=        md
-.endif
-
-.if ${MK_ICONV} != "no"
-# TODO: This can be changed back to CFLAGS once iconv works correctly
-# with statically linked binaries.
-SHARED_CFLAGS+=	-DHAVE_ICONV=1 -DHAVE_ICONV_H=1 -DICONV_CONST=
-.endif
-
-.if ${MACHINE_ARCH:Marm*} != "" || ${MACHINE_ARCH:Mmips*} != "" || \
-	${MACHINE_ARCH:Msparc64*} != "" || ${MACHINE_ARCH:Mpowerpc*} != ""
+.if ${MACHINE_ARCH:Marm*} != "" || ${MACHINE_ARCH:Mpowerpc*} != ""
 NO_WCAST_ALIGN=	yes
 .if ${MACHINE_ARCH:M*64*} == ""
 CFLAGS+=	-DPPMD_32BIT
@@ -409,7 +387,6 @@ MLINKS+=	archive_write_filter.3 archive_write_add_filter_lzma.3
 MLINKS+=	archive_write_filter.3 archive_write_add_filter_none.3
 MLINKS+=	archive_write_filter.3 archive_write_add_filter_program.3
 MLINKS+=	archive_write_filter.3 archive_write_add_filter_xz.3
-MLINKS+=	archive_write_filter.3 archive_write_add_filter_zstd.3
 MLINKS+=	archive_write_format.3 archive_write_set_format_cpio.3
 MLINKS+=	archive_write_format.3 archive_write_set_format_pax.3
 MLINKS+=	archive_write_format.3 archive_write_set_format_pax_restricted.3
