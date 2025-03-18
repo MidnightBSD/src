@@ -4,8 +4,8 @@ dnl First, define all of the version numbers up front.
 dnl In particular, this allows the version macro to be used in AC_INIT
 
 dnl These first two version numbers are updated automatically on each release.
-m4_define([LIBARCHIVE_VERSION_S],[3.7.2])
-m4_define([LIBARCHIVE_VERSION_N],[3007002])
+m4_define([LIBARCHIVE_VERSION_S],[3.7.7])
+m4_define([LIBARCHIVE_VERSION_N],[3007007])
 
 dnl bsdtar and bsdcpio versioning tracks libarchive
 m4_define([BSDTAR_VERSION_S],LIBARCHIVE_VERSION_S())
@@ -108,13 +108,18 @@ case "$host_os" in
 esac
 AC_SUBST(PLATFORMCPPFLAGS)
 
+dnl Linking on Haiku needs libbsd because of readpassphrase
+case "$host_os" in
+  haiku*) LIBS="-lbsd $LIBS" ;;
+esac
+
 # Checks for programs.
 AC_PROG_CC
 AM_PROG_CC_C_O
 AC_PROG_CPP
 AC_USE_SYSTEM_EXTENSIONS
-AC_LIBTOOL_WIN32_DLL
-AC_PROG_LIBTOOL
+
+LT_INIT([win32-dll])
 AC_CHECK_TOOL([STRIP],[strip])
 AC_PROG_MKDIR_P
 
@@ -362,11 +367,12 @@ AC_CHECK_HEADERS([locale.h membership.h paths.h poll.h pthread.h pwd.h])
 AC_CHECK_HEADERS([readpassphrase.h signal.h spawn.h])
 AC_CHECK_HEADERS([stdarg.h stdint.h stdlib.h string.h])
 AC_CHECK_HEADERS([sys/acl.h sys/cdefs.h sys/ea.h sys/extattr.h])
-AC_CHECK_HEADERS([sys/ioctl.h sys/mkdev.h sys/mount.h sys/queue.h])
+AC_CHECK_HEADERS([sys/ioctl.h sys/mkdev.h sys/mount.h])
 AC_CHECK_HEADERS([sys/param.h sys/poll.h sys/richacl.h])
 AC_CHECK_HEADERS([sys/select.h sys/statfs.h sys/statvfs.h sys/sysmacros.h])
 AC_CHECK_HEADERS([sys/time.h sys/utime.h sys/utsname.h sys/vfs.h sys/xattr.h])
 AC_CHECK_HEADERS([time.h unistd.h utime.h wchar.h wctype.h])
+AC_CHECK_TYPE([suseconds_t])
 AC_CHECK_HEADERS([windows.h])
 # check windows.h first; the other headers require it.
 AC_CHECK_HEADERS([wincrypt.h winioctl.h],[],[],
@@ -380,8 +386,23 @@ AC_ARG_WITH([zlib],
   AS_HELP_STRING([--without-zlib], [Don't build support for gzip through zlib]))
 
 if test "x$with_zlib" != "xno"; then
-  AC_CHECK_HEADERS([zlib.h])
-  AC_CHECK_LIB(z,inflate)
+  old_LIBS="$LIBS"
+  LIBS="$LIBS -lz"
+  AC_LINK_IFELSE([AC_LANG_SOURCE([[
+      #include <zlib.h>
+      #if !defined(ZLIB_VERNUM)
+      // zlib 1.2.0 should work too, but it's difficult to test for.
+      // zlib 1.2.1 onwards have ZLIB_VERNUM, which is easy to check.
+      #error zlib >= 1.2.1 is required.
+      #endif
+      // Check that there's an inflate function.
+      int main(int argc, char **argv) { inflate(NULL, 0); return 0; }
+    ]])],
+    [AC_DEFINE([HAVE_ZLIB_H], [1], [Define to 1 if you have zlib >= 1.2.1])
+      AC_MSG_RESULT([found a suitable version of zlib (>= 1.2.1)])
+    ],
+    [AC_MSG_RESULT([could not find a suitable version of zlib (>= 1.2.1)])
+      LIBS="$old_LIBS"])
 fi
 
 AC_ARG_WITH([bz2lib],
@@ -461,7 +482,7 @@ if test "x$with_zstd" != "xno"; then
   AC_CHECK_HEADERS([zstd.h])
   AC_CHECK_LIB(zstd,ZSTD_decompressStream)
   AC_CHECK_LIB(zstd,ZSTD_compressStream,
-    AC_DEFINE([HAVE_LIBZSTD_COMPRESSOR], [1], [Define to 1 if you have the `zstd' library (-lzstd) with compression support.]))
+    AC_DEFINE([HAVE_ZSTD_compressStream], [1], [Define to 1 if you have the `zstd' library (-lzstd) with compression support.]))
 fi
 
 AC_ARG_WITH([lzma],
@@ -482,7 +503,7 @@ if test "x$with_lzma" != "xno"; then
                        [#if LZMA_VERSION < 50020000]
                        [#error unsupported]
                        [#endif]],
-                      [[lzma_stream_encoder_mt(0, 0);]])],
+                      [[int ignored __attribute__((unused)); ignored = lzma_stream_encoder_mt(0, 0);]])],
       [ac_cv_lzma_has_mt=yes], [ac_cv_lzma_has_mt=no])])
   if test "x$ac_cv_lzma_has_mt" != xno; then
 	  AC_DEFINE([HAVE_LZMA_STREAM_ENCODER_MT], [1], [Define to 1 if you have the `lzma_stream_encoder_mt' function.])
@@ -552,6 +573,7 @@ AC_ARG_ENABLE([posix-regex-lib],
   AS_HELP_STRING([--enable-posix-regex-lib=libc], [use libc POSIX regular expression support])
   AS_HELP_STRING([--enable-posix-regex-lib=libregex], [use libregex POSIX regular expression support])
   AS_HELP_STRING([--enable-posix-regex-lib=libpcreposix], [use libpcreposix POSIX regular expression support])
+  AS_HELP_STRING([--enable-posix-regex-lib=libpcre2posix], [use libpcre2-posix POSIX regular expression support])
   AS_HELP_STRING([--disable-posix-regex-lib], [don't enable POSIX regular expression support])],
   [], [enable_posix_regex_lib=auto])
 
@@ -603,6 +625,39 @@ if test -z $posix_regex_lib_found && (test "$enable_posix_regex_lib" = "auto" ||
     posix_regex_lib_found=1
   fi
 fi
+if test -z $posix_regex_lib_found && (test "$enable_posix_regex_lib" = "auto" || test "$enable_posix_regex_lib" = "libpcre2posix"); then
+  AC_CHECK_HEADERS([pcre2posix.h])
+  AC_CHECK_LIB(pcre2-posix,regcomp)
+  if test "x$ac_cv_lib_pcre2posix_regcomp" != xyes; then
+    AC_MSG_NOTICE(trying libpcre2posix check again with libpcre2-8)
+	unset ac_cv_lib_pcre2posix_regcomp
+	AC_CHECK_LIB(pcre2,pcre2_regexec)
+    AC_CHECK_LIB(pcre2-posix,pcre2_regcomp)
+    if test "x$ac_cv_lib_pcre2_pcre_exec" = xyes && test "x$ac_cv_lib_pcre2posix_regcomp" = xyes; then
+      AC_MSG_CHECKING(if PCRE2_STATIC needs to be defined)
+      AC_LINK_IFELSE(
+        [AC_LANG_SOURCE(#include <pcre2posix.h>
+          int main() { return pcre2_regcomp(NULL, NULL, 0); })],
+        [without_pcre2_static=yes],
+        [without_pcre2_static=no])
+      AC_LINK_IFELSE(
+        [AC_LANG_SOURCE(#define PCRE2_STATIC
+          #include <pcre2posix.h>
+          int main() { return pcre2_regcomp(NULL, NULL, 0); })],
+        [with_pcre2_static=yes],
+        [with_pcre2_static=no])
+      if test "x$without_pcre2_static" != xyes && test "x$with_pcre2_static" = xyes; then
+        AC_MSG_RESULT(yes)
+        AC_DEFINE([PCRE2_STATIC], [1], [Define to 1 if PCRE2_STATIC needs to be defined.])
+      elif test "x$without_pcre2_static" = xyes || test "x$with_pcre2_static" = xyes; then
+        AC_MSG_RESULT(no)
+      fi
+      posix_regex_lib_found=1
+    fi
+  else
+    posix_regex_lib_found=1
+  fi
+fi
 
 # TODO: Give the user the option of using a pre-existing system
 # libarchive.  This will define HAVE_LIBARCHIVE which will cause
@@ -614,21 +669,35 @@ fi
 # Checks for supported compiler flags
 AX_APPEND_COMPILE_FLAGS([-Wall -Wformat -Wformat-security])
 
-# Place the functions and data into separate sections, allowing the linker
-# to garbage collect the unused ones.
+# Place the functions and data into separate sections, allowing GNU style
+# linkers to garbage collect the unused ones.
 save_LDFLAGS=$LDFLAGS
 LDFLAGS="$LDFLAGS -Wl,--gc-sections"
 AC_MSG_CHECKING([whether ld supports --gc-sections])
 AC_LINK_IFELSE(
     [AC_LANG_SOURCE([static char UnusedFunc() { return 5; } int main() { return 0;}])],
     [AC_MSG_RESULT([yes])
-        GC_SECTIONS="-Wl,--gc-sections";
+        DEAD_CODE_REMOVAL="-Wl,--gc-sections";
         AX_APPEND_COMPILE_FLAGS([-ffunction-sections -fdata-sections])],
     [AC_MSG_RESULT([no])
-        GC_SECTIONS="";])
+        DEAD_CODE_REMOVAL="";])
 LDFLAGS=$save_LDFLAGS
 
-AC_SUBST(GC_SECTIONS)
+if test "$DEAD_CODE_REMOVAL" = ""; then
+    # Macos linkers have a -dead_strip flag, which is similar to --gc-sections.
+    save_LDFLAGS=$LDFLAGS
+    LDFLAGS="$LDFLAGS -Wl,-dead_strip"
+    AC_MSG_CHECKING([whether ld supports -dead_strip])
+    AC_LINK_IFELSE(
+        [AC_LANG_SOURCE([static char UnusedFunc() { return 5; } int main() { return 0;}])],
+        [AC_MSG_RESULT([yes])
+            DEAD_CODE_REMOVAL="-Wl,-dead_strip";],
+        [AC_MSG_RESULT([no])
+            DEAD_CODE_REMOVAL="";])
+    LDFLAGS=$save_LDFLAGS
+fi
+
+AC_SUBST(DEAD_CODE_REMOVAL)
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -729,7 +798,6 @@ AX_COMPILE_CHECK_SIZEOF(long)
 AC_CHECK_HEADERS_ONCE([sys/time.h])
 
 # Checks for library functions.
-AC_PROG_GCC_TRADITIONAL
 AC_HEADER_MAJOR
 AC_FUNC_FSEEKO
 AC_FUNC_MEMCMP
@@ -756,6 +824,7 @@ AC_CHECK_FUNCS([nl_langinfo openat pipe poll posix_spawnp readlink readlinkat])
 AC_CHECK_FUNCS([readpassphrase])
 AC_CHECK_FUNCS([select setenv setlocale sigaction statfs statvfs])
 AC_CHECK_FUNCS([strchr strdup strerror strncpy_s strnlen strrchr symlink])
+AC_CHECK_FUNCS([sysconf])
 AC_CHECK_FUNCS([timegm tzset unlinkat unsetenv utime utimensat utimes vfork])
 AC_CHECK_FUNCS([wcrtomb wcscmp wcscpy wcslen wctomb wmemcmp wmemcpy wmemmove])
 AC_CHECK_FUNCS([_fseeki64 _get_timezone])
@@ -860,9 +929,7 @@ if test "x$enable_xattr" != "xno"; then
 			  listxattr \
 			  setxattr,
 	  [ac_cv_archive_xattr_darwin=yes],
-	  [ac_cv_archive_xattr_darwin=no],
-	  [#include <sys/xattr.h>
-])
+	  [ac_cv_archive_xattr_darwin=no])
 	]
       )
     elif test "x$ac_cv_header_sys_extattr_h" = "xyes" \
@@ -878,10 +945,7 @@ if test "x$enable_xattr" != "xno"; then
 			  extattr_set_fd \
 			  extattr_set_link,
 	  [ac_cv_archive_xattr_freebsd=yes],
-	  [ac_cv_archive_xattr_freebsd=no],
-	  [#include <sys/types.h>
-#include <sys/extattr.h>
-])
+	  [ac_cv_archive_xattr_freebsd=no])
 	  ]
 	)
     elif test "x$ac_cv_header_sys_xattr_h" = "xyes" \
@@ -897,17 +961,7 @@ if test "x$enable_xattr" != "xno"; then
 			  llistxattr \
 			  lsetxattr,
 	  [ac_cv_archive_xattr_linux=yes],
-	  [ac_cv_archive_xattr_linux=no],
-	  [#if HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
-#if HAVE_SYS_XATTR_H
-#include <sys/xattr.h>
-#endif
-#if HAVE_ATTR_XATTR_H
-#include <attr/xatr.h>
-#endif
-])
+	  [ac_cv_archive_xattr_linux=no])
 	]
       )
     elif test "x$ac_cv_header_sys_ea_h" = "xyes"; then
@@ -922,9 +976,7 @@ if test "x$enable_xattr" != "xno"; then
 			  llistea \
 			  lsetea,
 	  [ac_cv_archive_xattr_aix=yes],
-	  [ac_cv_archive_xattr_aix=no],
-	  [#include <sys/ea.h>
-])
+	  [ac_cv_archive_xattr_aix=no])
 	  ]
 	)
     fi
@@ -993,7 +1045,7 @@ if test "x$enable_acl" != "xno"; then
 			  richacl_get_file \
 			  richacl_set_fd \
 			  richacl_set_file,
-	  [ac_cv_archive_acl_librichacl=yes], [ac_cv_archive_acl_librichacl=no],	  [#include <sys/richacl.h>])])
+	  [ac_cv_archive_acl_librichacl=yes], [ac_cv_archive_acl_librichacl=no])])
     fi
 
     if test "x$ac_cv_func_acl" = "xyes" \
@@ -1035,14 +1087,7 @@ if test "x$enable_acl" != "xno"; then
 			  acl_set_file \
 			  acl_set_qualifier \
 			  acl_set_tag_type,
-	  [ac_cv_posix_acl_funcs=yes], [ac_cv_posix_acl_funcs=no],
-	  [#if HAVE_SYS_TYPES_H
-	   #include <sys/types.h>
-	   #endif
-	   #if HAVE_SYS_ACL_H
-	   #include <sys/acl.h>
-	   #endif
-	  ])
+	  [ac_cv_posix_acl_funcs=yes], [ac_cv_posix_acl_funcs=no])
 	])
 
 	AC_CHECK_FUNCS(acl_get_perm)
@@ -1069,14 +1114,11 @@ if test "x$enable_acl" != "xno"; then
 			    acl_is_trivial_np \
 			    acl_set_entry_type_np \
 			    acl_set_fd_np \
-			    acl_set_link_np,,,
-	      [#include <sys/types.h>
-	       #include <sys/acl.h>])
+			    acl_set_link_np)
 
 	    AC_CHECK_FUNCS(mbr_uid_to_uuid \
 			   mbr_uuid_to_id \
-			   mbr_gid_to_uuid,,,
-	      [#include <membership.h>])
+			   mbr_gid_to_uuid)
 
 	    AC_CHECK_DECLS([ACL_TYPE_EXTENDED, ACL_TYPE_NFS4, ACL_USER,
 	      ACL_SYNCHRONIZE], [], [],
