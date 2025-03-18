@@ -36,6 +36,8 @@
             ..
             __condition_variable
             ..
+            __configuration
+            ..
             __coroutine
             ..
             __debug_utils
@@ -72,6 +74,14 @@
             ..
             __numeric
             ..
+            __ostream
+            ..
+            __pstl
+                backends
+                ..
+                cpu_algos
+                ..
+            ..
             __random
             ..
             __ranges
@@ -83,6 +93,8 @@
             __system_error
             ..
             __thread
+                support
+                ..
             ..
             __tuple
             ..
