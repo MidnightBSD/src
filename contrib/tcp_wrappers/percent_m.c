@@ -12,7 +12,6 @@ static char sccsid[] = "@(#) percent_m.c 1.1 94/12/28 17:42:37";
 #include <errno.h>
 #include <string.h>
 
-extern int errno;
 #ifndef SYS_ERRLIST_DEFINED
 extern char *sys_errlist[];
 extern int sys_nerr;
@@ -20,9 +19,7 @@ extern int sys_nerr;
 
 #include "mystdarg.h"
 
-char   *percent_m(obuf, ibuf)
-char   *obuf;
-char   *ibuf;
+char   *percent_m(char *obuf, char *ibuf)
 {
     char   *bp = obuf;
     char   *cp = ibuf;

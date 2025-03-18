@@ -3,7 +3,7 @@
   * 
   * Author: Wietse Venema, Eindhoven University of Technology, The Netherlands.
   *
-  * $FreeBSD: stable/11/contrib/tcp_wrappers/misc.c 56977 2000-02-03 10:27:03Z shin $
+  * $FreeBSD$
   */
 
 #ifndef lint
@@ -19,18 +19,13 @@ static char sccsic[] = "@(#) misc.c 1.2 96/02/11 17:01:29";
 
 #include "tcpd.h"
 
-extern char *fgets();
-
 #ifndef	INADDR_NONE
 #define	INADDR_NONE	(-1)		/* XXX should be 0xffffffff */
 #endif
 
 /* xgets - fgets() with backslash-newline stripping */
 
-char   *xgets(ptr, len, fp)
-char   *ptr;
-int     len;
-FILE   *fp;
+char   *xgets(char *ptr, int len, FILE *fp)
 {
     int     got;
     char   *start = ptr;
@@ -54,9 +49,7 @@ FILE   *fp;
 
 /* split_at - break string at delimiter or return NULL */
 
-char   *split_at(string, delimiter)
-char   *string;
-int     delimiter;
+char   *split_at(char *string, int delimiter)
 {
     char   *cp;
 
@@ -89,8 +82,7 @@ int     delimiter;
 
 /* dot_quad_addr - convert dotted quad to internal form */
 
-unsigned long dot_quad_addr(str)
-char   *str;
+unsigned long dot_quad_addr(char *str)
 {
     int     in_run = 0;
     int     runs = 0;

@@ -16,7 +16,7 @@
   * 
   * Author: Wietse Venema, Eindhoven University of Technology, The Netherlands.
   *
-  * $FreeBSD: stable/11/contrib/tcp_wrappers/hosts_access.c 350345 2019-07-26 02:49:34Z brooks $
+  * $FreeBSD$
   */
 
 #ifndef lint
@@ -45,9 +45,6 @@ static char sccsid[] = "@(#) hosts_access.c 1.21 97/02/12 02:13:22";
 #include <netdb.h>
 #endif
 #include <stdlib.h>
-
-extern char *fgets();
-extern int errno;
 
 #ifndef	INADDR_NONE
 #define	INADDR_NONE	(-1)		/* XXX should be 0xffffffff */
@@ -111,8 +108,7 @@ int     yp_get_default_domain(char  **);
 
 /* hosts_access - host access control facility */
 
-int     hosts_access(request)
-struct request_info *request;
+int     hosts_access(struct request_info *request)
 {
     int     verdict;
 
@@ -145,9 +141,7 @@ struct request_info *request;
 
 /* table_match - match table entries with (daemon, client) pair */
 
-static int table_match(table, request)
-char   *table;
-struct request_info *request;
+static int table_match(char *table, struct request_info *request)
 {
     FILE   *fp;
     char    sv_list[BUFLEN];		/* becomes list of daemons */
@@ -240,9 +234,7 @@ static int list_match(char *list, struct request_info *request,
 
 /* server_match - match server information */
 
-static int server_match(tok, request)
-char   *tok;
-struct request_info *request;
+static int server_match(char *tok, struct request_info *request)
 {
     char   *host;
 
@@ -256,9 +248,7 @@ struct request_info *request;
 
 /* client_match - match client information */
 
-static int client_match(tok, request)
-char   *tok;
-struct request_info *request;
+static int client_match(char *tok, struct request_info *request)
 {
     char   *host;
 
@@ -272,9 +262,7 @@ struct request_info *request;
 
 /* hostfile_match - look up host patterns from file */
 
-static int hostfile_match(path, host)
-char   *path;
-struct host_info *host;
+static int hostfile_match(char *path, struct host_info *host)
 {
     char    tok[BUFSIZ];
     int     match = NO;
@@ -292,9 +280,7 @@ struct host_info *host;
 
 /* host_match - match host name and/or address against pattern */
 
-static int host_match(tok, host)
-char   *tok;
-struct host_info *host;
+static int host_match(char *tok, struct host_info *host)
 {
     char   *mask;
 
@@ -329,15 +315,14 @@ struct host_info *host;
 	return (masked_match(tok, mask, eval_hostaddr(host)));
     } else {					/* anything else */
 	return (string_match(tok, eval_hostaddr(host))
-	    || (NOT_INADDR(tok) && string_match(tok, eval_hostname(host))));
+	    || (NOT_INADDR(tok) && NOT_INADDR6(tok)
+	     && string_match(tok, eval_hostname(host))));
     }
 }
 
 /* string_match - match string against pattern */
 
-static int string_match(tok, string)
-char   *tok;
-char   *string;
+static int string_match(char *tok, char *string)
 {
     int     n;
 
@@ -396,22 +381,16 @@ char   *string;
 /* masked_match - match address against netnumber/netmask */
 
 #ifdef INET6
-static int masked_match(net_tok, mask_tok, string)
-char   *net_tok;
-char   *mask_tok;
-char   *string;
+static int masked_match(char *net_tok, char *mask_tok, char *string)
 {
     return (masked_match4(net_tok, mask_tok, string) ||
 	    masked_match6(net_tok, mask_tok, string));
 }
 
-static int masked_match4(net_tok, mask_tok, string)
+static int masked_match4(char *net_tok, char *mask_tok, char *string)
 #else
-static int masked_match(net_tok, mask_tok, string)
+static int masked_match(char *net_tok, char *mask_tok, char *string)
 #endif
-char   *net_tok;
-char   *mask_tok;
-char   *string;
 {
 #ifdef INET6
     u_int32_t net;
@@ -442,10 +421,7 @@ char   *string;
 }
 
 #ifdef INET6
-static int masked_match6(net_tok, mask_tok, string)
-char   *net_tok;
-char   *mask_tok;
-char   *string;
+static int masked_match6(char *net_tok, char *mask_tok, char *string)
 {
     struct addrinfo hints, *res;
     struct sockaddr_in6 net, addr;

@@ -6,7 +6,7 @@
   * 
   * Author: Wietse Venema, Eindhoven University of Technology, The Netherlands.
   *
-  * $FreeBSD: stable/11/contrib/tcp_wrappers/refuse.c 56977 2000-02-03 10:27:03Z shin $
+  * $FreeBSD$
   */
 
 #ifndef lint
@@ -24,8 +24,7 @@ static char sccsid[] = "@(#) refuse.c 1.5 94/12/28 17:42:39";
 
 /* refuse - refuse request */
 
-void    refuse(request)
-struct request_info *request;
+void    refuse(struct request_info *request)
 {
 #ifdef INET6
     syslog(deny_severity, "refused connect from %s (%s)",

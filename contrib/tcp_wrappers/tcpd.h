@@ -3,7 +3,7 @@
   * 
   * Author: Wietse Venema, Eindhoven University of Technology, The Netherlands.
   *
-  * $FreeBSD: stable/11/contrib/tcp_wrappers/tcpd.h 311813 2017-01-09 20:13:50Z dim $
+  * $FreeBSD$
   */
 
 #ifdef INET6
@@ -70,6 +70,7 @@ extern char paranoid[];
 #define	HOSTNAME_KNOWN(s) (STR_NE((s),unknown) && STR_NE((s),paranoid))
 
 #define	NOT_INADDR(s) (s[strspn(s,"01234567890./")] != 0)
+#define	NOT_INADDR6(s) (strchr(s, ':') == NULL)
 
 /* Global functions. */
 

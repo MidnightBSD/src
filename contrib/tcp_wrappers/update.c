@@ -12,7 +12,7 @@
   * 
   * Author: Wietse Venema, Eindhoven University of Technology, The Netherlands.
   *
-  * $FreeBSD: stable/11/contrib/tcp_wrappers/update.c 257398 2013-10-30 21:18:14Z sbruno $
+  * $FreeBSD$
   */
 
 #ifndef lint
@@ -33,9 +33,8 @@ static char sccsid[] = "@(#) update.c 1.1 94/12/28 17:42:56";
 
 /* request_fill - request update engine */
 
-static struct request_info *request_fill(request, ap)
-struct request_info *request;
-va_list ap;
+static struct request_info *request_fill(struct request_info *request,
+    va_list ap)
 {
     int     key;
     char   *ptr;
