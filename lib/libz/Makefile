@@ -1,6 +1,3 @@
-#
-#
-
 PACKAGE=	runtime
 LIB=		z
 SHLIBDIR?=	/lib
