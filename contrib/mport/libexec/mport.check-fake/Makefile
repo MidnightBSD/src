@@ -1,6 +1,6 @@
 PROG= mport.check-fake
 
-CFLAGS+=	-I${.CURDIR}/../../libmport/ -I/usr/include/private/ucl
+CFLAGS+=	-I${.CURDIR}/../../libmport/ -I/usr/include/private/ucl -I ../../external/tllist/ -I/usr/include/private/zstd
 WARNS?= 	6
 
 MK_MAN=	no

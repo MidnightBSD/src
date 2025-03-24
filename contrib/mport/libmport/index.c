@@ -739,9 +739,8 @@ mport_index_list(mportInstance *mport, mportIndexEntry ***entry_vec)
 }
 
 MPORT_PUBLIC_API int
-mport_moved_lookup(mportInstance *mport, const char *pkgname, mportIndexMovedEntry ***entry_vec)
+mport_moved_lookup(mportInstance *mport, const char *origin, mportIndexMovedEntry ***entry_vec)
 {
-	char *lookup = NULL;
 	int count;
 	int i = 0, step;
 	sqlite3_stmt *stmt;
@@ -754,11 +753,7 @@ mport_moved_lookup(mportInstance *mport, const char *pkgname, mportIndexMovedEnt
 
 	MPORT_CHECK_FOR_INDEX(mport, "mport_moved_lookup()")
 
-	if (lookup_alias_inverse(mport, pkgname, &lookup) != MPORT_OK) {
-		RETURN_CURRENT_ERROR;
-	}
-
-	if (mport_db_count(mport->db, &count, "SELECT count(*) FROM idx.moved  WHERE port = %Q", lookup) != MPORT_OK) {
+	if (mport_db_count(mport->db, &count, "SELECT count(*) FROM idx.moved  WHERE port = %Q", origin) != MPORT_OK) {
 		RETURN_CURRENT_ERROR;
 	}
 
@@ -774,7 +769,7 @@ mport_moved_lookup(mportInstance *mport, const char *pkgname, mportIndexMovedEnt
 
 	if (mport_db_prepare(mport->db, &stmt,
 	                     "SELECT port, moved_to, why, date FROM idx.moved WHERE port = %Q",
-	                     lookup) != MPORT_OK) {
+	                     origin) != MPORT_OK) {
 		ret = mport_err_code();
 		goto MOVED_DONE;
 	}
@@ -789,17 +784,21 @@ mport_moved_lookup(mportInstance *mport, const char *pkgname, mportIndexMovedEnt
 			}
 
 			strlcpy(e[i]->port, sqlite3_column_text(stmt, 0), 128);
-			strlcpy(e[i]->moved_to, sqlite3_column_text(stmt, 0), 128);
-			strlcpy(e[i]->why, sqlite3_column_text(stmt, 0), 128);
-			strlcpy(e[i]->date, sqlite3_column_text(stmt, 0), 32);
+			strlcpy(e[i]->moved_to, sqlite3_column_text(stmt, 1), 128);
+			strlcpy(e[i]->why, sqlite3_column_text(stmt, 2), 128);
+			strlcpy(e[i]->date, sqlite3_column_text(stmt, 3), 32);
 
-			strlcpy(e[i]->pkgname, pkgname, 128); // original package name
+			// TODO: fix
+			char *orig_pkg = NULL;
+			lookup_alias_inverse(mport, origin, &orig_pkg);
+			strlcpy(e[i]->pkgname, orig_pkg, 128); // original package name
+
 
 			char *moved_pkg = NULL;
 			if (e[i]->moved_to[0] != '\0' && lookup_alias_inverse(mport, e[i]->moved_to, &moved_pkg) != MPORT_OK) {
 				ret = mport_err_code();
 				goto MOVED_DONE;
-			} else {
+			} else if (moved_pkg != NULL) {
 				strlcpy(e[i]->moved_to_pkgname, moved_pkg, 128);
 			}
 

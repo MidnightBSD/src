@@ -39,6 +39,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <sys/param.h>
+#include "tllist.h"
 
 typedef void (*mport_msg_cb)(const char *);
 typedef void (*mport_progress_init_cb)(const char *);
@@ -343,6 +344,7 @@ char * mport_version(mportInstance *);
 char * mport_version_short(mportInstance *);
 char * mport_get_osrelease(mportInstance *);
 int mport_drop_privileges(void);
+char * mport_string_replace(const char *str, const char *old, const char *new);
 
 /* Locks */
 enum _LockState {

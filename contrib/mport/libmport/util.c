@@ -58,7 +58,7 @@ static char *mport_get_osrelease_kern(void);
 MPORT_PUBLIC_API mportCreateExtras *
 mport_createextras_new(void)
 {
-	mportCreateExtras *extra;
+	mportCreateExtras *extra = NULL;
 	extra = (mportCreateExtras *)calloc(1, sizeof(mportCreateExtras));
 	if (extra == NULL)
 		return NULL;
@@ -119,6 +119,7 @@ mport_createextras_free(mportCreateExtras *extra)
 	}
 
 	free(extra);
+	extra = NULL;
 }
 
 MPORT_PUBLIC_API int
@@ -126,11 +127,17 @@ mport_verify_hash(const char *filename, const char *hash)
 {
 	char *filehash;
 
+	if (filename == NULL || hash == NULL)
+		return 0;
+
 	filehash = mport_hash_file(filename);
-#ifdef DEBUG
+	if (filehash == NULL)
+		return 0;
+
+#ifdef DEBUGGING
 	printf("gen: '%s'\nsql: '%s'\n", filehash, hash);
 #endif
-	if (strncmp(filehash, hash, 65) == 0) {
+	if (strncmp(filehash, hash, 64) == 0) {
 		free(filehash);
 		return 1;
 	}
@@ -138,6 +145,49 @@ mport_verify_hash(const char *filename, const char *hash)
 	free(filehash);
 	return 0;
 }
+
+char* 
+mport_extract_hash_from_file(const char *filename)
+{
+
+    FILE *file = fopen(filename, "r");
+    if (!file) {
+        perror("Failed to open file");
+        return NULL;
+    }
+
+    char *hash = calloc(65, sizeof(char)); // SHA256 hash is 64 characters + null terminator
+    if (!hash) {
+        perror("Failed to allocate memory");
+        fclose(file);
+        return NULL;
+    }
+
+    char buffer[256];
+    if (fgets(buffer, sizeof(buffer), file) == NULL) {
+        perror("Failed to read hash from file");
+        free(hash);
+        fclose(file);
+        return NULL;
+    }
+
+    fclose(file);
+
+    // Extract the hash from the format "SHA256 (index.db.zst) = <hash>"
+    char *hash_start = strchr(buffer, '=');
+    if (hash_start == NULL) {
+        perror("Invalid hash format");
+        free(hash);
+        return NULL;
+    }
+
+    hash_start += 2; // Skip the "= " part
+    strlcpy(hash, hash_start, 65);
+
+    return hash;
+}
+
+
 
 bool
 mport_starts_with(const char *pre, const char *str)
@@ -152,6 +202,7 @@ mport_starts_with(const char *pre, const char *str)
 char *
 mport_hash_file(const char *filename)
 {
+
 	return SHA256_File(filename, NULL);
 }
 
@@ -191,7 +242,7 @@ mport_chdir(mportInstance *mport, const char *dir)
 {
 
 	if (mport != NULL) {
-		char *finaldir;
+		char *finaldir = NULL;
 
 		asprintf(&finaldir, "%s%s", mport->root, dir);
 
@@ -204,6 +255,7 @@ mport_chdir(mportInstance *mport, const char *dir)
 		}
 
 		free(finaldir);
+		finaldir = NULL;
 	} else {
 		if (chdir(dir) != 0)
 			RETURN_ERRORX(
@@ -383,7 +435,7 @@ mport_str_remove(const char *str, const char ch)
 	size_t i;
 	size_t x;
 	size_t len;
-	char *output;
+	char *output = NULL;
 	
 	if (str == NULL)
 		return NULL;
@@ -391,6 +443,8 @@ mport_str_remove(const char *str, const char ch)
 	len = strlen(str);
 	
 	output = calloc(len + 1, sizeof(char));
+	if (output == NULL)
+		return NULL;
 	
 	for (i = 0, x = 0; i <= len; i++) {
 		if (str[i] != ch) {
@@ -427,6 +481,7 @@ mport_directory(const char *path)
 			return dir;
 		} else {
 			free(dir);
+			dir = NULL;
 		}
 	} else {
 		// 'path' is just a filename, so get the current working directory
@@ -462,8 +517,10 @@ mport_xsystem(mportInstance *mport, const char *fmt, ...)
 	if (vasprintf(&cmnd, fmt, args) == -1) {
 		/* XXX How will the caller know this is no mem, and not a failed exec? */
 		va_end(args);
-		if (cmnd != NULL)
+		if (cmnd != NULL) {
 			free(cmnd);
+			cmnd = NULL;
+		}
 		RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't allocate xsystem cmnd string.");
 	}
 	va_end(args);
@@ -479,6 +536,7 @@ mport_xsystem(mportInstance *mport, const char *fmt, ...)
 
 	ret = system(cmnd);
 	free(cmnd);
+	cmnd = NULL;
 
 	/* system(3) ignores SIGINT and SIGQUIT */
 	if (WIFSIGNALED(ret) && (WTERMSIG(ret) == SIGINT || WTERMSIG(ret) == SIGQUIT)) {
@@ -532,11 +590,13 @@ mport_parselist(char *opt, char ***list, size_t *list_size)
 	if (*list_size == 0) {
 		*list = NULL;
 		free(input);
+		input = NULL;
 		return;
 	}
 
 	if ((*list = (char **)calloc((*list_size + 1), sizeof(char *))) == NULL) {
 		free(input);
+		input = NULL;
 		return;
 	}
 
@@ -558,6 +618,7 @@ mport_parselist(char *opt, char ***list, size_t *list_size)
 
 	*vec = NULL;
 	free(input);
+	input = NULL;
 }
 
 /*
@@ -577,10 +638,10 @@ int
 mport_run_asset_exec(mportInstance *mport, const char *fmt, const char *cwd, const char *last_file)
 {
 	size_t l;
-	char *cmnd;
-	char *pos;
-	char *name;
-	char *lfcpy;
+	char *cmnd = NULL;
+	char *pos = NULL;
+	char *name = NULL;
+	char *lfcpy = NULL;
 	int ret;
 	static int max = 0;
 	size_t maxlen = sizeof(max);
@@ -647,6 +708,8 @@ mport_run_asset_exec(mportInstance *mport, const char *fmt, const char *cwd, con
 	/* cmnd now hold the expanded command, now execute it*/
 	ret = mport_xsystem(mport, cmnd);
 	free(cmnd);
+	cmnd = NULL;
+
 	return ret;
 }
 
@@ -657,7 +720,7 @@ mport_run_asset_exec(mportInstance *mport, const char *fmt, const char *cwd, con
 void
 mport_free_vec(void *vec)
 {
-	char *p;
+	char *p = NULL;
 
 	if (vec == NULL)
 		return;
@@ -674,59 +737,70 @@ mport_free_vec(void *vec)
 	vec = NULL;
 }
 
-/* mport_decompress_bzip2(char * input, char * output)
- *
- * Extract a bzip2 file such as an index
- */
-int
-mport_decompress_bzip2(const char *input, const char *output)
+int 
+mport_decompress_zstd(const char *input, const char *output)
 {
-	FILE *f;
-	FILE *fout;
-	BZFILE *b;
-	int nBuf;
-	char buf[4096];
-	int bzerror;
+    FILE *f;
+    FILE *fout;
+    size_t const buffInSize = ZSTD_DStreamInSize();
+    size_t const buffOutSize = ZSTD_DStreamOutSize();
+    void* const buffIn = malloc(buffInSize);
+    void* const buffOut = malloc(buffOutSize);
+    ZSTD_DStream* const dstream = ZSTD_createDStream();
+    size_t const initResult = ZSTD_initDStream(dstream);
 
-	f = fopen(input, "r");
-	if (!f) {
-		RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't open bzip2 file for reading");
-	}
+    if (ZSTD_isError(initResult)) {
+        free(buffIn);
+        free(buffOut);
+        ZSTD_freeDStream(dstream);
+        RETURN_ERROR(MPORT_ERR_FATAL, "Failed to initialize ZSTD decompression stream");
+    }
 
-	fout = fopen(output, "w");
-	if (!fout) {
-		fclose(f);
-		RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't open file for writing");
-	}
+    f = fopen(input, "rb");
+    if (!f) {
+        free(buffIn);
+        free(buffOut);
+        ZSTD_freeDStream(dstream);
+        RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't open zstd file for reading");
+    }
 
-	b = BZ2_bzReadOpen(&bzerror, f, 0, 0, NULL, 0);
-	if (bzerror != BZ_OK) {
-		BZ2_bzReadClose(&bzerror, b);
-		RETURN_ERROR(MPORT_ERR_FATAL, "Input error reading bzip2 file");
-	}
+    fout = fopen(output, "wb");
+    if (!fout) {
+        fclose(f);
+        free(buffIn);
+        free(buffOut);
+        ZSTD_freeDStream(dstream);
+        RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't open file for writing");
+    }
 
-	bzerror = BZ_OK;
-	while (bzerror == BZ_OK) {
-		nBuf = BZ2_bzRead(&bzerror, b, buf, 4096);
-		if (bzerror == BZ_OK || bzerror == BZ_STREAM_END) {
-			if (fwrite(buf, nBuf, 1, fout) < 1) {
-				fclose(fout);
-				RETURN_ERROR(MPORT_ERR_FATAL, "Error writing decompressed file");
-			}
-		}
-	}
+    size_t toRead = buffInSize;
+    while (1) {
+        size_t const read = fread(buffIn, 1, toRead, f);
+        if (read == 0) break;
 
-	if (bzerror != BZ_STREAM_END) {
-		BZ2_bzReadClose(&bzerror, b);
-		RETURN_ERROR(MPORT_ERR_FATAL, "Unknown error decompressing bzip2 file");
-	} else {
-		BZ2_bzReadClose(&bzerror, b);
-	}
+        ZSTD_inBuffer input = { buffIn, read, 0 };
+        while (input.pos < input.size) {
+            ZSTD_outBuffer output = { buffOut, buffOutSize, 0 };
+            size_t const result = ZSTD_decompressStream(dstream, &output, &input);
+            if (ZSTD_isError(result)) {
+                fclose(f);
+                fclose(fout);
+                free(buffIn);
+                free(buffOut);
+                ZSTD_freeDStream(dstream);
+                RETURN_ERROR(MPORT_ERR_FATAL, "Error decompressing zstd file");
+            }
+            fwrite(buffOut, 1, output.pos, fout);
+        }
+    }
 
-	fclose(f);
-	fclose(fout);
+    fclose(f);
+    fclose(fout);
+    free(buffIn);
+    free(buffOut);
+    ZSTD_freeDStream(dstream);
 
-	return (MPORT_OK);
+    return (MPORT_OK);
 }
 
 MPORT_PUBLIC_API char *
@@ -757,7 +831,7 @@ mport_get_osrelease_kern(void)
 {
 	char osrelease[128];
 	size_t len;
-	char *version;
+	char *version = NULL;
 
 	len = sizeof(osrelease);
 	if (sysctlbyname("kern.osrelease", &osrelease, &len, NULL, 0) < 0)
@@ -855,11 +929,12 @@ mport_get_osrelease_userland(void)
 MPORT_PUBLIC_API char *
 mport_version(mportInstance *mport)
 {
-	char *version;
+	char *version = NULL;
 	char *osrel = mport_get_osrelease(mport);
 	asprintf(&version, "mport %s for MidnightBSD %s, Bundle Version %s\n", MPORT_VERSION, osrel,
 	    MPORT_BUNDLE_VERSION_STR);
 	free(osrel);
+	osrel = NULL;
 
 	return version;
 }
@@ -867,10 +942,11 @@ mport_version(mportInstance *mport)
 MPORT_PUBLIC_API char *
 mport_version_short(mportInstance *mport)
 {
-	char *version;
+	char *version = NULL;
 	char *osrel = mport_get_osrelease(mport);
 	asprintf(&version, "%s\n", MPORT_VERSION);
 	free(osrel);
+	osrel = NULL;
 
 	return version;
 }
@@ -890,7 +966,7 @@ mport_get_time(void)
 MPORT_PUBLIC_API int
 mport_drop_privileges(void)
 {
-	struct passwd *nobody;
+	struct passwd *nobody = NULL;
 
 	if (geteuid() == 0) {
 		nobody = getpwnam("nobody");
@@ -911,7 +987,8 @@ mport_drop_privileges(void)
 }
 
 bool
-mport_check_answer_bool(char *ans) {
+mport_check_answer_bool(char *ans) 
+{
 	if (ans == NULL)
 	    return (false);
 
@@ -924,7 +1001,8 @@ mport_check_answer_bool(char *ans) {
 }
 
 MPORT_PUBLIC_API mportVerbosity 
-mport_verbosity(bool quiet, bool verbose, bool brief) {
+mport_verbosity(bool quiet, bool verbose, bool brief) 
+{
 
 	/* if both are specified, we need quiet for backward compatibility */
 
@@ -938,4 +1016,37 @@ mport_verbosity(bool quiet, bool verbose, bool brief) {
 		return (MPORT_VVERBOSE);
 		
 	return (MPORT_VNORMAL);
+}
+
+MPORT_PUBLIC_API char *
+mport_string_replace(const char *str, const char *old, const char *new)
+{
+	char *ret = NULL;
+	char *r = NULL;
+	const char *p, *q;
+	size_t oldlen = strlen(old);
+	size_t count, retlen, newlen = strlen(new);
+
+	if (oldlen != newlen) {
+		for (count = 0, p = str; (q = strstr(p, old)) != NULL; p = q + oldlen)
+			count++;
+		retlen = p - str + strlen(p) + count * (newlen - oldlen);
+	} else {
+		retlen = strlen(str);
+	}
+
+	ret = malloc(retlen + 1);
+	if (ret == NULL)
+	    return NULL;
+
+	for (r = ret, p = str; (q = strstr(p, old)) != NULL; p = q + oldlen) {
+		ptrdiff_t l = q - p;
+		memcpy(r, p, l);
+		r += l;
+		memcpy(r, new, newlen);
+		r += newlen;
+	}
+	strcpy(r, p);
+
+	return ret;
 }

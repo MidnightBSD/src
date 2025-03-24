@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
@@ -74,7 +74,9 @@ mport_version_cmp(const char *astr, const char *bstr)
 #endif
 
 	free(a.version);
+	a.version = NULL;
 	free(b.version);
+	b.version = NULL;
   
 	return (result);
 }
@@ -84,7 +86,8 @@ mport_version_cmp(const char *astr, const char *bstr)
 void
 mport_version_cmp_sqlite(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
-    char *a, *b;
+    char *a = NULL;
+	char *b = NULL;
 
     assert(argc == 2);
 
@@ -97,7 +100,9 @@ mport_version_cmp_sqlite(sqlite3_context *context, int argc, sqlite3_value **arg
     sqlite3_result_int(context, mport_version_cmp(a, b));
 
     free(a);
+	a = NULL;
     free(b);
+	b = NULL;
 }  
 
 
@@ -191,12 +196,14 @@ mport_version_require_check(const char *baseline, const char *require)
 				ret = (mport_version_cmp(baseline, &s[less[1] + 2]) <= 0) ? 0 : -1;
 				if (ret == -1) {
 					free(s);
+					s = NULL;
 					return (ret);
 				}
 			} else {
 				ret = (mport_version_cmp(baseline, &s[less[1] + 1]) < 0) ? 0 : -1;
 				if (ret == -1) {
 					free(s);
+					s = NULL;
 					return (ret);
 				}
 			}
@@ -207,12 +214,14 @@ mport_version_require_check(const char *baseline, const char *require)
 				ret = (mport_version_cmp(baseline, &s[less[0] + 2]) <= 0) ? 0 : -1;
 				if (ret == -1) {
 					free(s);
+					s = NULL;
 					return (ret);
 				}
 			} else {
 				ret = (mport_version_cmp(baseline, &s[less[0] + 1]) < 0) ? 0 : -1;
 				if (ret == -1) {
 					free(s);
+					s = NULL;
 					return (ret);
 				}
 			}
@@ -223,12 +232,14 @@ mport_version_require_check(const char *baseline, const char *require)
 				ret = (mport_version_cmp(baseline, &s[greater[1] + 2]) >= 0) ? 0 : -1;
 				if (ret == -1) {
 					free(s);
+					s = NULL;
 					return (ret);
 				}
 			} else {
 				ret = (mport_version_cmp(baseline, &s[greater[1] + 1]) > 0) ? 0 : -1;
 				if (ret == -1) {
 					free(s);
+					s = NULL;
 					return (ret);
 				}
 			}
@@ -239,12 +250,14 @@ mport_version_require_check(const char *baseline, const char *require)
 				ret = (mport_version_cmp(baseline, &s[greater[0] + 2]) >= 0) ? 0 : -1;
 				if (ret == -1) {
 					free(s);
+					s = NULL;
 					return (ret);
 				}
 			} else {
 				ret = (mport_version_cmp(baseline, &s[greater[0] + 1]) > 0) ? 0 : -1;
 				if (ret == -1) {
 					free(s);
+					s = NULL;
 					return (ret);
 				}
 			}
@@ -255,6 +268,7 @@ mport_version_require_check(const char *baseline, const char *require)
 			ret = (mport_version_cmp(baseline, &s[greater[0] + 1]) > 0) ? 0 : -1;
 			if (ret == -1) {
 				free(s);
+				s = NULL;
 				return (ret);
 			}
 		} else if (less[0] > 0) {
@@ -262,11 +276,13 @@ mport_version_require_check(const char *baseline, const char *require)
 			ret = (mport_version_cmp(baseline, &s[less[0] + 1]) < 0) ? 0 : -1;
 			if (ret == -1) {
 				free(s);
+				s = NULL;
 				return (ret);
 			}
 		}
 
 		free(s);
+		s = NULL;
 	}
 
     return (ret);

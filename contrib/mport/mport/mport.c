@@ -244,10 +244,34 @@ main(int argc, char *argv[])
 			usage();
 		}
 		loadIndex(mport);
-		for (i = 1; i < argc; i++) {
-			tempResultCode = mport_update(mport, argv[i]);
-			if (tempResultCode != 0)
-				resultCode = tempResultCode;
+
+        if (strchr(argv[1], '*') != NULL) {
+			mportPackageMeta **packs = NULL;
+			mportPackageMeta **packs_orig = NULL;
+			char *pkg = mport_string_replace(argv[1], "*", "%");
+			if (mport_pkgmeta_search_master(mport, &packs, "pkg like %Q", pkg) != MPORT_OK) {
+				warnx("%s", mport_err_string());
+				mport_instance_free(mport);
+				return (MPORT_ERR_FATAL);
+			}
+
+			if (packs == NULL) {
+				warnx("No packages installed matching '%s'", argv[1]);
+				return (MPORT_ERR_FATAL);
+			}
+
+			packs_orig = packs;
+			while (*packs != NULL) {
+				mport_update(mport, (*packs)->name);
+				packs++;
+			}
+			mport_pkgmeta_free(*packs_orig);
+		} else { 
+			for (i = 1; i < argc; i++) {
+				tempResultCode = mport_update(mport, argv[i]);
+				if (tempResultCode != 0)
+					resultCode = tempResultCode;
+			}
 		}
 	} else if (!strcmp(cmd, "download")) {
 		loadIndex(mport);
@@ -954,20 +978,22 @@ int
 cpeList(mportInstance *mport)
 {
 	mportPackageMeta **packs = NULL;
+	mportPackageMeta **packs_orig = NULL;
 	int cpe_total = 0;
 
-	if (mport_pkgmeta_list(mport, &packs) != MPORT_OK) {
+	if (mport_pkgmeta_list(mport, &packs_orig) != MPORT_OK) {
 		warnx("%s", mport_err_string());
 		return mport_err_code();
 	}
 
 	mport_drop_privileges();
 
-	if (packs == NULL) {
+	if (packs_orig == NULL) {
 		warnx("No packages installed.");
 		return (1);
 	}
 
+    packs = packs_orig;
 	while (*packs != NULL) {
 		if ((*packs)->cpe != NULL && strlen((*packs)->cpe) > 0) {
 			printf("%s\n", (*packs)->cpe);
@@ -975,7 +1001,7 @@ cpeList(mportInstance *mport)
 		}
 		packs++;
 	}
-	mport_pkgmeta_vec_free(packs);
+	mport_pkgmeta_vec_free(packs_orig);
 
 	if (cpe_total == 0) {
 		errx(EX_SOFTWARE, "No packages contained CPE information.");

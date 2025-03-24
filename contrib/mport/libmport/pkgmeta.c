@@ -493,7 +493,7 @@ mport_pkgmeta_logevent(mportInstance *mport, mportPackageMeta *pkg, const char *
 static int
 populate_vec_from_stmt(mportPackageMeta ***ref, int len, sqlite3 *db, sqlite3_stmt *stmt)
 {
-	mportPackageMeta **vec;
+	mportPackageMeta **vec = NULL;
 	int done = 0;
 	vec = (mportPackageMeta **)calloc((1 + len), sizeof(mportPackageMeta *));
 	*ref = vec;
