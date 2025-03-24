@@ -82,7 +82,7 @@ static int check_if_moved(mportInstance *mport, mportPackageMeta *pack)
 {
 	mportIndexMovedEntry **movedEntries;
 
-	if (mport_moved_lookup(mport, pack->name, &movedEntries) != MPORT_OK) {
+	if (mport_moved_lookup(mport, pack->origin, &movedEntries) != MPORT_OK) {
 		SET_ERROR(MPORT_ERR_FATAL, "The moved lookup failed.");
 		RETURN_CURRENT_ERROR;
 	}
@@ -106,7 +106,7 @@ static int check_if_deprecated(mportInstance *mport, mportPackageMeta *pack)
 {
 	mportIndexMovedEntry **movedEntries;
 
-	if (mport_moved_lookup(mport, pack->name, &movedEntries) != MPORT_OK) {
+	if (mport_moved_lookup(mport, pack->origin, &movedEntries) != MPORT_OK) {
 		SET_ERROR(MPORT_ERR_FATAL, "The moved lookup failed.");
 		RETURN_CURRENT_ERROR;
 	}

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013, 2014, 2018, 2022, 2023 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
@@ -54,9 +54,9 @@ int
 mport_db_do(sqlite3 *db, const char *fmt, ...)
 {
 	va_list args;
-	char *sql;
+	char *sql = NULL;
 	int result = MPORT_OK;
-	char *err;
+	char *err = NULL;
 
 	va_start(args, fmt);
 
@@ -81,6 +81,7 @@ mport_db_do(sqlite3 *db, const char *fmt, ...)
 	}
 
 	sqlite3_free(sql);
+	sql = NULL;
 
 	if (result == MPORT_ERR_FATAL)
 		SET_ERRORX(result, "sql error preparing '%s' : %s", sql, err);
@@ -99,9 +100,9 @@ int
 mport_db_prepare(sqlite3 *db, sqlite3_stmt **stmt, const char *fmt, ...)
 {
 	va_list args;
-	char *sql;
+	char *sql = NULL;
 	int result = MPORT_OK;
-	char *err;
+	char *err = NULL;
 
 	va_start(args, fmt);
 	sql = sqlite3_vmprintf(fmt, args);
@@ -123,6 +124,7 @@ mport_db_prepare(sqlite3 *db, sqlite3_stmt **stmt, const char *fmt, ...)
 	}
 
 	sqlite3_free(sql);
+	sql = NULL;
 
     if (result == MPORT_ERR_FATAL) {
 		if (err != NULL) {
@@ -139,9 +141,9 @@ int
 mport_db_count(sqlite3 *db, int *count, const char *fmt, ...)
 {
 	va_list args;
-	char *sql;
+	char *sql = NULL;
 	int result = MPORT_OK;
-	char *err;
+	char *err = NULL;
 	int realCount = 0;
 
 	va_start(args, fmt);
@@ -165,6 +167,7 @@ mport_db_count(sqlite3 *db, int *count, const char *fmt, ...)
 	}
 
 	sqlite3_free(sql);
+	sql = NULL;
 
 	if (result == MPORT_ERR_FATAL)
 		SET_ERRORX(result, "sql error preparing '%s' : %s", sql, err);
@@ -192,7 +195,7 @@ mport_db_count(sqlite3 *db, int *count, const char *fmt, ...)
 int
 mport_attach_stub_db(sqlite3 *db, const char *dir)
 {
-	char *file;
+	char *file = NULL;
 
 	asprintf(&file, "%s/%s", dir, MPORT_STUB_DB_FILE);
 
@@ -201,15 +204,18 @@ mport_attach_stub_db(sqlite3 *db, const char *dir)
 		if (mport_detach_stub_db(db) == MPORT_OK) {
 			if (mport_db_do(db, "ATTACH %Q AS stub", file) != MPORT_OK) {
 				free(file);
+				file = NULL;
 				RETURN_CURRENT_ERROR;
 			}
 		} else {
 			free(file);
+			file = NULL;
 			RETURN_CURRENT_ERROR;
 		}
 	}
 
 	free(file);
+	file = NULL;
 
 	return (MPORT_OK);
 }
@@ -243,8 +249,8 @@ mport_detach_stub_db(sqlite3 *db)
 int
 mport_generate_stub_schema(mportInstance *mport, sqlite3 *db)
 {
-	char *ptr;
-	char *sql;
+	char *ptr = NULL;
+	char *sql = NULL;
 
 	ptr = mport_get_osrelease(mport);
 	if (ptr == NULL)

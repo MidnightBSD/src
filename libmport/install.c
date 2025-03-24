@@ -35,8 +35,8 @@
 MPORT_PUBLIC_API int
 mport_install(mportInstance *mport, const char *pkgname, const char *version, const char *prefix, mportAutomatic automatic)
 {
-  mportIndexEntry **e;
-  char *filename;
+  mportIndexEntry **e = NULL;
+  char *filename = NULL;
   int ret = MPORT_OK;
   int e_loc = 0;
 
@@ -128,9 +128,9 @@ mport_install(mportInstance *mport, const char *pkgname, const char *version, co
 /* recursive function */
 int
 mport_install_depends(mportInstance *mport, const char *packageName, const char *version, mportAutomatic automatic) {
-	mportPackageMeta **packs;
-	mportDependsEntry **depends;
-	mportDependsEntry **depends_orig;
+	mportPackageMeta **packs = NULL;
+	mportDependsEntry **depends = NULL;
+	mportDependsEntry **depends_orig = NULL;
 
 	if (packageName == NULL || version == NULL) {
 		RETURN_ERROR(MPORT_ERR_WARN, "Dependency name or version is null");
@@ -156,6 +156,7 @@ mport_install_depends(mportInstance *mport, const char *packageName, const char 
 			if (mport_install_depends(mport, (*depends)->d_pkgname, (*depends)->d_version, MPORT_AUTOMATIC) != MPORT_OK) {
      			mport_call_msg_cb(mport, "%s", mport_err_string());
      			mport_index_depends_free_vec(depends_orig);
+          depends_orig = NULL;
 				return mport_err_code();
 			}
 			depends++;
@@ -163,17 +164,24 @@ mport_install_depends(mportInstance *mport, const char *packageName, const char 
 		if (mport_install(mport, packageName, version, NULL, automatic) != MPORT_OK) {
 			mport_call_msg_cb(mport, "%s", mport_err_string());
 			mport_index_depends_free_vec(depends_orig);
+      depends_orig = NULL;
+      depends = NULL;
 			return mport_err_code();
 		}
 		mport_index_depends_free_vec(depends_orig);
+    depends_orig = NULL;
+    depends = NULL;
 	} else {
 		/* already installed, double check we are on the latest */
 		mport_index_depends_free_vec(depends_orig);
+    depends_orig = NULL;
+    depends = NULL;
 
 		if (mport_check_preconditions(mport, packs[0], MPORT_PRECHECK_UPGRADEABLE) == MPORT_OK) {
 			if (mport_update(mport, packageName) != MPORT_OK) {
 				mport_call_msg_cb(mport, "%s", mport_err_string());
 				mport_pkgmeta_vec_free(packs);
+        packs = NULL;
 				return mport_err_code();
 			}
 		}

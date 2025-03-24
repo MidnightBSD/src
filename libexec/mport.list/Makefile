@@ -1,6 +1,6 @@
 PROG= mport.list
 
-CFLAGS+=	-I${.CURDIR}/../../libmport/
+CFLAGS+=	-I${.CURDIR}/../../libmport/ -I ../../external/tllist/ -I/usr/include/private/zstd 
 WARNS?= 	4
 
 MK_MAN= no

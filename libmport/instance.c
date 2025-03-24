@@ -195,13 +195,14 @@ mport_call_msg_cb(mportInstance *mport, const char *fmt, ...) {
 	(mport->msg_cb)(msg);
 
     free(msg);
+	msg = NULL;
 }
 
 
 void
 mport_call_progress_init_cb(mportInstance *mport, const char *fmt, ...) {
 	va_list args;
-	char *title;
+	char *title = NULL;
 
 	va_start(args, fmt);
 	(void) vasprintf(&title, fmt, args);
@@ -212,6 +213,7 @@ mport_call_progress_init_cb(mportInstance *mport, const char *fmt, ...) {
 	(mport->progress_init_cb)(title);
 
 	free(title);
+	title = NULL;
 }
 
 
@@ -222,7 +224,9 @@ mport_instance_free(mportInstance *mport) {
 	}
 
 	free(mport->root);
+	mport->root = NULL;
 	free(mport->outputPath);
+	mport->outputPath = NULL;
 	free(mport);
 
 	return MPORT_OK;

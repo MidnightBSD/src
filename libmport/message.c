@@ -79,12 +79,14 @@ mport_pkg_message_display(mportInstance *mport, mportPackageMeta *pkg)
 	if (packageMessage.minimum_version != NULL && 
 		mport_version_cmp(packageMessage.minimum_version, pkg->version) == 1) {
 			free(packageMessage.str);
+			packageMessage.str = NULL;
 			return MPORT_OK;
 	}
 
 	if (packageMessage.maximum_version != NULL && 
 		mport_version_cmp(packageMessage.maximum_version, pkg->version) == -1) {
 			free(packageMessage.str);
+			packageMessage.str = NULL;
 			return MPORT_OK;
 	}
 
@@ -95,6 +97,7 @@ mport_pkg_message_display(mportInstance *mport, mportPackageMeta *pkg)
 	}
 
 	free(packageMessage.str);
+	packageMessage.str = NULL;
 
 	return MPORT_OK;
 }

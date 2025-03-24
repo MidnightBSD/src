@@ -70,11 +70,11 @@ static uint32_t SuperFastHash(const char *);
 MPORT_PUBLIC_API int
 mport_merge_primative(mportInstance *mport, const char **filenames, const char *outfile)
 {
-  sqlite3 *db;
-  mportBundleWrite *bundle;
-  struct table_entry **table;
+  sqlite3 *db = NULL;
+  mportBundleWrite *bundle = NULL;
+  struct table_entry **table = NULL;
   char tmpdir[] = "/tmp/mport.XXXXXXXX";
-  char *dbfile;
+  char *dbfile = NULL;
   
   if ((table = (struct table_entry **)calloc(TABLE_SIZE, sizeof(struct table_entry *))) == NULL)
     RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't allocate hash table.");

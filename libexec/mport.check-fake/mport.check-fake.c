@@ -51,7 +51,6 @@ __MBSDID("$MidnightBSD$");
 static void usage(void);
 static int check_fake(mportAssetList *, const char *, const char *, const char *);
 static int grep_file(const char *, const char *);
-static char *string_replace(const char *str, const char *old, const char *new);
 
 int
 main(int argc, char *argv[]) 
@@ -229,7 +228,7 @@ grep_file(const char *filename, const char *destdir)
 	/* Should we cache the compiled regex? */
 	if (!compiled) {
 		/* + is a special character, deal with it so archivers/zipios++ works */
-		destdir_fixed = string_replace(destdir, "+", "\\+");
+		destdir_fixed = mport_string_replace(destdir, "+", "\\+");
 		DIAG("===> destdir_fixed for regular expression: %s", destdir_fixed)
 		if (regcomp(&regex, destdir_fixed, REG_EXTENDED|REG_NOSUB) != 0)
 			errx(EX_DATAERR, "Could not compile destdir regex");
@@ -269,36 +268,6 @@ grep_file(const char *filename, const char *destdir)
 	
 	regfree(&regex);
 	fclose(file);
-	return ret;
-}
-
-static char *
-string_replace(const char *str, const char *old, const char *new)
-{
-	char *ret, *r;
-	const char *p, *q;
-	size_t oldlen = strlen(old);
-	size_t count, retlen, newlen = strlen(new);
-
-	if (oldlen != newlen) {
-		for (count = 0, p = str; (q = strstr(p, old)) != NULL; p = q + oldlen)
-			count++;
-		retlen = p - str + strlen(p) + count * (newlen - oldlen);
-	} else {
-		retlen = strlen(str);
-	}
-
-	ret = malloc(retlen + 1);
-
-	for (r = ret, p = str; (q = strstr(p, old)) != NULL; p = q + oldlen) {
-		ptrdiff_t l = q - p;
-		memcpy(r, p, l);
-		r += l;
-		memcpy(r, new, newlen);
-		r += newlen;
-	}
-	strcpy(r, p);
-
 	return ret;
 }
 			

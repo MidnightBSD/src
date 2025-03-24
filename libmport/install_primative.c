@@ -107,11 +107,13 @@ get_dependencies(mportInstance *mport, mportPackageMeta *pkg)
 MPORT_PUBLIC_API int
 mport_install_primative(mportInstance *mport, const char *filename, const char *prefix, mportAutomatic automatic)
 {
-	mportBundleRead *bundle;
-	mportPackageMeta **pkgs, *pkg;
+	mportBundleRead *bundle = NULL;
+	mportPackageMeta **pkgs = NULL;
+	mportPackageMeta *pkg = NULL;
 	int i;
 	bool error = false;
-	char **dependencies, **deps;
+	char **dependencies = NULL;
+	char **deps = NULL;
 
 		/* There are two scenarios here.  
 		   1. We are installing online with an index and have already fetched dependencies. 
@@ -155,7 +157,7 @@ mport_install_primative(mportInstance *mport, const char *filename, const char *
 		deps = dependencies;
 		char *dir = mport_directory(filename);
 		while (deps!= NULL) {
-			char *dep_filename; 
+			char *dep_filename = NULL; 
 			asprintf(&dep_filename, "%s/%s.mport", dir, *deps);
 			if (dep_filename != NULL && mport_install_primative(mport, dep_filename, prefix, MPORT_AUTOMATIC)!= MPORT_OK) {
 		                mport_call_msg_cb(mport, "Unable to install %s: %s", *deps, mport_err_string());
