@@ -4,6 +4,8 @@ PACKAGE=lib${LIB}
 MPORTDIR= ${SRCTOP}/contrib/mport
 .PATH: ${MPORTDIR}/libmport
 
+ZSTDDIR=        ${SRCTOP}/sys/contrib/zstd
+
 LIB=	mport
 SRCS=	asset.c bundle_write.c bundle_read.c plist.c create_primative.c db.c \
         audit.c util.c error.c \
@@ -17,9 +19,11 @@ SRCS=	asset.c bundle_write.c bundle_read.c plist.c create_primative.c db.c \
 	service.c list.c
 INCS=	mport.h
 
-CFLAGS+=	-I${.CURDIR} -I${MPORTDIR}/libmport
+CFLAGS+=	-I${.CURDIR} -I${MPORTDIR}/libmport -I${MPORTDIR}/external/tllist/
 CFLAGS+=-I${SRCTOP}/contrib/libucl/include
 .PATH:  ${SRCTOP}/contrib/libucl/include
+CFLAGS+= -I${ZSTDDIR}/lib
+.PATH: ${ZSTDDIR}/lib
 SHLIB_MAJOR=	2
 MAN=	mport.3
 
@@ -27,6 +31,6 @@ WARNS=	3
 
 MK_PROFILE=no
 
-LIBADD=	md archive bz2 lzma z fetch sqlite3 ucl pthread util zstd
+LIBADD=	md archive lzma z fetch sqlite3 ucl pthread util zstd
 
 .include <bsd.lib.mk>
