@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2015 Tycho Nightingale <tycho.nightingale@pluribusnetworks.com>
  * All rights reserved.
@@ -24,7 +24,6 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
  */
 
 #ifndef _VGA_H_
@@ -156,6 +155,8 @@
 #define	DAC_IDX_WR_PORT			0x3c8
 #define	DAC_DATA_PORT			0x3c9
 
+struct bhyvegc;
 void	*vga_init(int io_only);
+void	vga_render(struct bhyvegc *gc, void *arg);
 
 #endif /* _VGA_H_ */
