@@ -3,6 +3,10 @@ Updating Information for MidnightBSD users.
 20250324:
 	mport 2.6.8
 
+	OpenSSH 9.9p2
+
+	cacerts refreshed
+
 20250318:
 	libarchive 3.7.7
 
