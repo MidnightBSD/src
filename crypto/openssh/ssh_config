@@ -44,4 +44,4 @@
 #   ProxyCommand ssh -q -W %h:%p gateway.example.com
 #   RekeyLimit 1G 1h
 #   UserKnownHostsFile ~/.ssh/known_hosts.d/%k
-#   VersionAddendum MidnightBSD-20241112
+#   VersionAddendum MidnightBSD-20250324

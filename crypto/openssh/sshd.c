@@ -28,6 +28,7 @@
 
 #include <sys/types.h>
 #include <sys/ioctl.h>
+#include <sys/mman.h>
 #include <sys/socket.h>
 #ifdef HAVE_SYS_STAT_H
 # include <sys/stat.h>
@@ -69,6 +70,15 @@
 #include <prot.h>
 #endif
 
+#ifdef __FreeBSD__
+#include <resolv.h>
+#if defined(GSSAPI) && defined(HAVE_GSSAPI_GSSAPI_H)
+#include <gssapi/gssapi.h>
+#elif defined(GSSAPI) && defined(HAVE_GSSAPI_H)
+#include <gssapi.h>
+#endif
+#endif
+
 #include "xmalloc.h"
 #include "ssh.h"
 #include "sshpty.h"
@@ -91,6 +101,11 @@
 #include "sk-api.h"
 #include "addr.h"
 #include "srclimit.h"
+
+#ifdef LIBWRAP
+#include <tcpd.h>
+#include <syslog.h>
+#endif /* LIBWRAP */
 
 /* Re-exec fds */
 #define REEXEC_DEVCRYPTO_RESERVED_FD	(STDERR_FILENO + 1)
@@ -625,7 +640,14 @@ drop_connection(int sock, int startups, int notify_pipe)
 static void
 usage(void)
 {
-	fprintf(stderr, "%s, %s\n", SSH_RELEASE, SSH_OPENSSL_VERSION);
+	if (options.version_addendum != NULL &&
+	    *options.version_addendum != '\0')
+		fprintf(stderr, "%s %s, %s\n",
+		    SSH_RELEASE,
+		    options.version_addendum, SSH_OPENSSL_VERSION);
+	else
+		fprintf(stderr, "%s, %s\n",
+		    SSH_RELEASE, SSH_OPENSSL_VERSION);
 	fprintf(stderr,
 "usage: sshd [-46DdeGiqTtV] [-C connection_spec] [-c host_cert_file]\n"
 "            [-E log_file] [-f config_file] [-g login_grace_time]\n"
@@ -861,6 +883,11 @@ server_accept_loop(int *sock_in, int *sock_out, int *newsock, int *config_s,
 	socklen_t fromlen;
 	u_char rnd[256];
 	sigset_t nsigset, osigset;
+#ifdef LIBWRAP
+	struct request_info req;
+
+	request_init(&req, RQ_DAEMON, __progname, 0);
+#endif
 
 	/* pipes connected to unauthenticated child sshd processes */
 	child_alloc();
@@ -1010,6 +1037,42 @@ server_accept_loop(int *sock_in, int *sock_out, int *newsock, int *config_s,
 					usleep(100 * 1000);
 				continue;
 			}
+#ifdef LIBWRAP
+			/* Check whether logins are denied from this host. */
+			request_set(&req, RQ_FILE, *newsock,
+			    RQ_CLIENT_NAME, "", RQ_CLIENT_ADDR, "", 0);
+			sock_host(&req);
+			if (!hosts_access(&req)) {
+				const struct linger l = { .l_onoff = 1,
+				    .l_linger  = 0 };
+
+				(void )setsockopt(*newsock, SOL_SOCKET,
+				    SO_LINGER, &l, sizeof(l));
+				(void )close(*newsock);
+				/*
+				 * Mimic message from libwrap's refuse() as
+				 * precisely as we can afford.  The authentic
+				 * message prints the IP address and the
+				 * hostname it resolves to in parentheses.  If
+				 * the IP address cannot be resolved to a
+				 * hostname, the IP address will be repeated
+				 * in parentheses.  As name resolution in the
+				 * main server loop could stall, and logging
+				 * resolved names adds little or no value to
+				 * incident investigation, this implementation
+				 * only repeats the IP address in parentheses.
+				 * This should resemble librwap's refuse()
+				 * closely enough not to break auditing
+				 * software like sshguard or custom scripts.
+				 */
+				syslog(LOG_WARNING,
+				    "refused connect from %s (%s)",
+				    eval_hostaddr(req.client),
+				    eval_hostaddr(req.client));
+				debug("Connection refused by tcp wrapper");
+				continue;
+			}
+#endif /* LIBWRAP */
 			if (unset_nonblock(*newsock) == -1) {
 				close(*newsock);
 				continue;
@@ -1694,6 +1757,10 @@ main(int ac, char **av)
 	/* Reinitialize the log (because of the fork above). */
 	log_init(__progname, options.log_level, options.log_facility, log_stderr);
 
+	/* Avoid killing the process in high-pressure swapping environments. */
+	if (!inetd_flag && madvise(NULL, 0, MADV_PROTECT) != 0)
+		debug("madvise(): %.200s", strerror(errno));
+
 	/*
 	 * Chdir to the root directory so that the current disk can be
 	 * unmounted if desired.
@@ -1786,6 +1853,28 @@ main(int ac, char **av)
 	execv(rexec_argv[0], rexec_argv);
 
 	fatal("rexec of %s failed: %s", rexec_argv[0], strerror(errno));
+#ifdef __FreeBSD__
+	/*
+	 * Initialize the resolver.  This may not happen automatically
+	 * before privsep chroot().
+	 */
+	if ((_res.options & RES_INIT) == 0) {
+		debug("res_init()");
+		res_init();
+	}
+#ifdef GSSAPI
+	/*
+	 * Force GSS-API to parse its configuration and load any
+	 * mechanism plugins.
+	 */
+	{
+		gss_OID_set mechs;
+		OM_uint32 minor_status;
+		gss_indicate_mechs(&minor_status, &mechs);
+		gss_release_oid_set(&minor_status, &mechs);
+	}
+#endif
+#endif
 }
 
 /* server specific fatal cleanup */

@@ -105,7 +105,7 @@ AuthorizedKeysFile	.ssh/authorized_keys
 #PermitTunnel no
 #ChrootDirectory none
 #UseBlacklist no
-#VersionAddendum MidnightBSD-20241112
+#VersionAddendum MidnightBSD-20250324
 
 # no default banner path
 #Banner none

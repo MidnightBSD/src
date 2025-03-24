@@ -109,6 +109,7 @@
 #include "sk-api.h"
 #include "srclimit.h"
 #include "dh.h"
+#include "blacklist_client.h"
 
 /* Re-exec fds */
 #define REEXEC_DEVCRYPTO_RESERVED_FD	(STDERR_FILENO + 1)
@@ -1246,6 +1247,11 @@ main(int ac, char **av)
 		cleanup_exit(255);
 	}
 
+#ifdef HAVE_LOGIN_CAP
+	/* Also caches remote hostname for sandboxed child. */
+	auth_get_canonical_hostname(ssh, options.use_dns);
+#endif
+
 	/*
 	 * The rest of the code depends on the fact that
 	 * ssh_remote_ipaddr() caches the remote ip, even if
@@ -1310,6 +1316,8 @@ main(int ac, char **av)
 	if ((loginmsg = sshbuf_new()) == NULL)
 		fatal("sshbuf_new loginmsg failed");
 	auth_debug_reset();
+
+	BLACKLIST_INIT();
 
 	if (privsep_preauth(ssh) == 1)
 		goto authenticated;
