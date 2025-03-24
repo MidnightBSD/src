@@ -34,6 +34,6 @@ CFLAGS+=	-DHAVE_IPV6
 MAN=	nss_mdns.conf.5 \
 	libnss_mdns.8
 
-LIBADD+=        pthread dns_sd
+LIBADD+=	dns_sd pthread
 
 .include <bsd.lib.mk>

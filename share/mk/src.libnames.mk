@@ -174,6 +174,7 @@ _LIBRARIES=	\
 		netmap \
 		netpgp \
 		ngatm \
+		nss_mdns \
 		nv \
 		nvpair \
 		opencsd \

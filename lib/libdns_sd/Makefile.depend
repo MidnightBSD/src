@@ -7,7 +7,6 @@ DIRDEPS = \
 	lib/libc \
 	lib/libcompiler_rt
 
-
 .include <dirdeps.mk>
 
 .if ${DEP_RELDIR} == ${_DEP_RELDIR}

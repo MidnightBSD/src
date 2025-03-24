@@ -26,8 +26,8 @@ SUBDIR_BOOTSTRAP= \
 # takes a long time to build and starting it first improves parallelism.
 
 SUBDIR=	${SUBDIR_BOOTSTRAP} \
-	libdns_sd \
 	.WAIT \
+	libdns_sd \
 	libsqlite3 \
 	geom \
 	lib9p \
@@ -133,7 +133,7 @@ SUBDIR_DEPEND_libgeom= libexpat libsbuf
 SUBDIR_DEPEND_librpcsec_gss= libgssapi
 SUBDIR_DEPEND_libmagic= libz
 SUBDIR_DEPEND_libmemstat= libkvm
-SUBDIR_DEPEND_libmport= libmd libarchive libbz2 liblzma libz libfetch libsqlite3 libucl libzstd
+SUBDIR_DEPEND_libmport= libmd libarchive libbz2 liblzma libz libfetch libsqlite3 libutil libucl libzstd libthr
 SUBDIR_DEPEND_libmsearch= libsqlite3 libmagic libz
 SUBDIR_DEPEND_libopie= libmd
 SUBDIR_DEPEND_libpam= libcrypt libopie ${_libradius} librpcsvc libtacplus libutil ${_libypclnt} ${_libcom_err} 
@@ -149,7 +149,8 @@ SUBDIR_DEPEND_liblzma= libthr
 SUBDIR_DEPEND_libpcap= ofed
 .endif
 SUBDIR_DEPEND_nss_tacplus= libtacplus
-SUBDIR_DEPEND_libnss_mdns=	libdns_sd
+SUBDIR_DEPEND_libdns_sd=	libthr
+SUBDIR_DEPEND_libnss_mdns=	libthr libdns_sd
 
 .if !defined(COMPAT_32BIT)
 SUBDIR+=	flua
