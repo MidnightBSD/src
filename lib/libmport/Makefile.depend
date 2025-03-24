@@ -8,15 +8,16 @@ DIRDEPS = \
 	include/xlocale \
 	lib/${CSU_DIR} \
 	lib/libarchive \
-	lib/libbz2 \
 	lib/libc \
 	lib/libcompiler_rt \
 	lib/libexpat \
 	lib/libfetch \
 	lib/liblzma \
 	lib/libsbuf \
+	lib/libsqlite3 \
 	lib/libthr \
 	lib/libucl \
+	lib/libutil \
 	lib/libz \
 	lib/libzstd \
 	lib/msun \
