@@ -33,6 +33,8 @@ load_rc_config $name
 : ${local_unbound_anchor:=${local_unbound_workdir}/root.key}
 : ${local_unbound_forwarders:=}
 : ${local_unbound_tls:=}
+: ${local_unbound_pidfile:=${pidfile}}
+pidfile=${local_unbound_pidfile}
 
 do_as_unbound()
 {
@@ -105,7 +107,7 @@ local_unbound_poststart()
 	local retry=5
 
 	echo -n "Waiting for nameserver to start..."
-	until "${command}-control" status | grep -q "is running" ; do
+	until "${command}-control" -c "${local_unbound_config}" status | grep -q "is running" ; do
 		if [ $((retry -= 1)) -eq 0 ] ; then
 			echo " giving up"
 			return 1
