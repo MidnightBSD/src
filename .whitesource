@@ -11,6 +11,7 @@
      "displayLicenseViolations": true
   },
   "ignoreBranches": ["vendor/mport"],
+  "ignoreCves": ["CVE-2019-6293"],
   "remediateSettings": {
       "enableRenovate": true
   }
