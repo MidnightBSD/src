@@ -17,7 +17,8 @@ SRCS=	asset.c bundle_write.c bundle_read.c plist.c create_primative.c db.c \
    	stats.c verify.c lock.c mkdir.c \
 	import_export.c upgrade.c update.c autoremove.c ping.c message.c \
 	service.c list.c
-INCS=	mport.h
+.PATH: ${MPORTDIR}/external/tllist
+INCS=	mport.h tllist.h
 
 CFLAGS+=	-I${.CURDIR} -I${MPORTDIR}/libmport -I${MPORTDIR}/external/tllist/
 CFLAGS+=-I${SRCTOP}/contrib/libucl/include
