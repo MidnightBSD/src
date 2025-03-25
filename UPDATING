@@ -3,6 +3,9 @@ Updating Information for MidnightBSD users.
 20250325:
 	less v668
 
+	Fix two CVEs in the intel iwlwifi driver
+	Fix CVE-2024-27434 and CVE-2024-35912
+
 20250324:
 	mport 2.6.8
 
