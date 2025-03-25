@@ -10,13 +10,13 @@
 
 #define NSUBEXP  10
 typedef struct regexp {
-	char *startp[NSUBEXP];
-	char *endp[NSUBEXP];
-	char regstart;		/* Internal use only. */
-	char reganch;		/* Internal use only. */
-	char *regmust;		/* Internal use only. */
-	int regmlen;		/* Internal use only. */
-	char program[1];	/* Unwarranted chumminess with compiler. */
+        constant char *startp[NSUBEXP];
+        constant char *endp[NSUBEXP];
+        char regstart;          /* Internal use only. */
+        char reganch;           /* Internal use only. */
+        char *regmust;          /* Internal use only. */
+        int regmlen;            /* Internal use only. */
+        char program[1];        /* Unwarranted chumminess with compiler. */
 } regexp;
 
 #if defined(__STDC__) || defined(__cplusplus)
@@ -25,10 +25,10 @@ typedef struct regexp {
 #   define _ANSI_ARGS_(x)       ()
 #endif
 
-extern regexp *regcomp _ANSI_ARGS_((char *exp));
-extern int regexec _ANSI_ARGS_((regexp *prog, char *string));
-extern int regexec2 _ANSI_ARGS_((regexp *prog, char *string, int notbol));
-extern void regsub _ANSI_ARGS_((regexp *prog, char *source, char *dest));
-extern void regerror _ANSI_ARGS_((char *msg));
+extern regexp *regcomp _ANSI_ARGS_((constant char *exp));
+extern int regexec _ANSI_ARGS_((regexp *prog, constant char *string));
+extern int regexec2 _ANSI_ARGS_((regexp *prog, constant char *string, int notbol));
+extern void regsub _ANSI_ARGS_((regexp *prog, constant char *source, char *dest));
+extern void regerror _ANSI_ARGS_((constant char *msg));
 
 #endif /* REGEXP */

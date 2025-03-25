@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1984-2019  Mark Nudelman
+ * Copyright (C) 1984-2024  Mark Nudelman
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Less License, as specified in the README file.
@@ -23,20 +23,78 @@
 #define _WIN32_WINNT 0x400
 #endif
 #include <windows.h>
-static DWORD console_mode;
+#ifndef ENABLE_EXTENDED_FLAGS
+#define ENABLE_EXTENDED_FLAGS 0x80
+#define ENABLE_QUICK_EDIT_MODE 0x40
+#endif
+#ifndef ENABLE_VIRTUAL_TERMINAL_INPUT
+#define ENABLE_VIRTUAL_TERMINAL_INPUT 0x0200
+#endif
 public HANDLE tty;
+public DWORD init_console_input_mode;
+public DWORD curr_console_input_mode;
+public DWORD base_console_input_mode;
+public DWORD mouse_console_input_mode;
 #else
 public int tty;
 #endif
 extern int sigs;
-extern int utf_mode;
-extern int wheel_lines;
+#if LESSTEST
+public char *ttyin_name = NULL;
+public lbool is_lesstest(void)
+{
+	return ttyin_name != NULL;
+}
+#endif /*LESSTEST*/
+
+#if !MSDOS_COMPILER
+static int open_tty_device(constant char* dev)
+{
+#if OS2
+	/* The __open() system call translates "/dev/tty" to "con". */
+	return __open(dev, OPEN_READ);
+#else
+	return open(dev, OPEN_READ);
+#endif
+}
+
+/*
+ * Open the tty device.
+ * Try ttyname(), then try /dev/tty, then use file descriptor 2.
+ * In Unix, file descriptor 2 is usually attached to the screen,
+ * but also usually lets you read from the keyboard.
+ */
+public int open_tty(void)
+{
+	int fd = -1;
+#if LESSTEST
+	if (is_lesstest())
+		fd = open_tty_device(ttyin_name);
+#endif /*LESSTEST*/
+#if HAVE_TTYNAME
+	if (fd < 0)
+	{
+		constant char *dev = ttyname(2);
+		if (dev != NULL)
+			fd = open_tty_device(dev);
+	}
+#endif
+	if (fd < 0)
+		fd = open_tty_device("/dev/tty");
+	if (fd < 0)
+		fd = 2;
+#ifdef __MVS__
+	struct f_cnvrt cvtreq = {SETCVTON, 0, 1047};
+	fcntl(fd, F_CONTROL_CVT, &cvtreq);
+#endif
+	return fd;
+}
+#endif /* MSDOS_COMPILER */
 
 /*
  * Open keyboard for input.
  */
-	public void
-open_getchr(VOID_PARAM)
+public void open_getchr(void)
 {
 #if MSDOS_COMPILER==WIN32C
 	/* Need this to let child processes inherit our console handle */
@@ -47,9 +105,14 @@ open_getchr(VOID_PARAM)
 	tty = CreateFile("CONIN$", GENERIC_READ | GENERIC_WRITE,
 			FILE_SHARE_READ, &sa, 
 			OPEN_EXISTING, 0L, NULL);
-	GetConsoleMode(tty, &console_mode);
-	/* Make sure we get Ctrl+C events. */
-	SetConsoleMode(tty, ENABLE_PROCESSED_INPUT | ENABLE_MOUSE_INPUT);
+	GetConsoleMode(tty, &init_console_input_mode);
+	/* base mode: ensure we get ctrl-C events, and don't get VT input. */
+	base_console_input_mode = (init_console_input_mode | ENABLE_PROCESSED_INPUT) & ~ENABLE_VIRTUAL_TERMINAL_INPUT;
+	/* mouse mode: enable mouse and disable quick edit. */
+	mouse_console_input_mode = (base_console_input_mode | ENABLE_MOUSE_INPUT | ENABLE_EXTENDED_FLAGS) & ~ENABLE_QUICK_EDIT_MODE;
+	/* Start with base mode. If --mouse is given, switch to mouse mode in init_mouse. */
+	curr_console_input_mode = base_console_input_mode;
+	SetConsoleMode(tty, curr_console_input_mode);
 #else
 #if MSDOS_COMPILER
 	extern int fd0;
@@ -68,20 +131,7 @@ open_getchr(VOID_PARAM)
 	(void) __djgpp_set_ctrl_c(1);
 #endif
 #else
-	/*
-	 * Try /dev/tty.
-	 * If that doesn't work, use file descriptor 2,
-	 * which in Unix is usually attached to the screen,
-	 * but also usually lets you read from the keyboard.
-	 */
-#if OS2
-	/* The __open() system call translates "/dev/tty" to "con". */
-	tty = __open("/dev/tty", OPEN_READ);
-#else
-	tty = open("/dev/tty", OPEN_READ);
-#endif
-	if (tty < 0)
-		tty = 2;
+	tty = open_tty();
 #endif
 #endif
 }
@@ -89,27 +139,24 @@ open_getchr(VOID_PARAM)
 /*
  * Close the keyboard.
  */
-	public void
-close_getchr(VOID_PARAM)
+public void close_getchr(void)
 {
 #if MSDOS_COMPILER==WIN32C
-	SetConsoleMode(tty, console_mode);
+	SetConsoleMode(tty, init_console_input_mode);
 	CloseHandle(tty);
 #endif
 }
 
 #if MSDOS_COMPILER==WIN32C
 /*
- * Close the pipe, restoring the keyboard (CMD resets it, losing the mouse).
+ * Close the pipe, restoring the console mode (CMD resets it, losing the mouse).
  */
-	int
-pclose(f)
-	FILE *f;
+public int pclose(FILE *f)
 {
 	int result;
 
 	result = _pclose(f);
-	SetConsoleMode(tty, ENABLE_PROCESSED_INPUT | ENABLE_MOUSE_INPUT);
+	SetConsoleMode(tty, curr_console_input_mode);
 	return result;
 }
 #endif
@@ -117,8 +164,7 @@ pclose(f)
 /*
  * Get the number of lines to scroll when mouse wheel is moved.
  */
-	public int
-default_wheel_lines(VOID_PARAM)
+public int default_wheel_lines(void)
 {
 	int lines = 1;
 #if MSDOS_COMPILER==WIN32C
@@ -134,19 +180,18 @@ default_wheel_lines(VOID_PARAM)
 /*
  * Get a character from the keyboard.
  */
-	public int
-getchr(VOID_PARAM)
+public int getchr(void)
 {
 	char c;
-	int result;
+	ssize_t result;
 
 	do
 	{
+		flush();
 #if MSDOS_COMPILER && MSDOS_COMPILER != DJGPPC
 		/*
 		 * In raw read, we don't see ^C so look here for it.
 		 */
-		flush();
 #if MSDOS_COMPILER==WIN32C
 		if (ABORT_SIGS())
 			return (READ_INTR);
@@ -172,6 +217,14 @@ getchr(VOID_PARAM)
 			 * because error calls getchr!
 			 */
 			quit(QUIT_ERROR);
+		}
+#endif
+#if LESSTEST
+		if (c == LESS_DUMP_CHAR)
+		{
+			dump_screen();
+			result = 0;
+			continue;
 		}
 #endif
 #if 0 /* allow entering arbitrary hex chars for testing */
