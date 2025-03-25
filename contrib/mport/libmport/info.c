@@ -77,7 +77,7 @@ mport_info(mportInstance *mport, const char *packageName) {
 		return (NULL);
 	}
 
-	if (mport_moved_lookup(mport, packageName, &movedEntries) != MPORT_OK) {
+	if (packs != NULL && mport_moved_lookup(mport, (*packs)->origin, &movedEntries) != MPORT_OK) {
 		SET_ERROR(MPORT_ERR_FATAL, "The moved lookup failed.");
 		return (NULL);
 	}
@@ -150,7 +150,7 @@ mport_info(mportInstance *mport, const char *packageName) {
 	char flatsize_str[8];
 	humanize_number(flatsize_str, sizeof(flatsize_str), flatsize, "B", HN_AUTOSCALE, HN_DECIMAL | HN_IEC_PREFIXES);
 
-	if (indexEntry == NULL || *indexEntry == NULL) {
+	if (packs !=NULL && (indexEntry == NULL || *indexEntry == NULL)) {
 		asprintf(&info_text,
 	         "%s-%s\n"
 	         "Name            : %s\nVersion         : %s\nLatest          : %s\nLicenses        : %s\nOrigin          : %s\n"

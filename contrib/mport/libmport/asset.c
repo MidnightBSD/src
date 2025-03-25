@@ -71,7 +71,7 @@ mport_asset_get_package_from_file_path(mportInstance *mport, const char *filePat
 
 		const unsigned char *pkgName = sqlite3_column_text(stmt, 0);
 		if (pkgName != NULL) {
-			mportPackageMeta **packs;
+			mportPackageMeta **packs = NULL;
 			if (mport_pkgmeta_search_master(mport, &packs, "pkg=%Q", pkgName) != MPORT_OK || packs[0] == NULL) {
 				err = "Package does not exist despite having assets";
 				result = MPORT_ERR_FATAL;
@@ -118,7 +118,7 @@ mport_asset_get_assetlist(mportInstance *mport, mportPackageMeta *pack, mportAss
 
 
 	while (1) {
-		mportAssetListEntry *e;
+		mportAssetListEntry *e = NULL;
 
 		int ret = sqlite3_step(stmt);
 

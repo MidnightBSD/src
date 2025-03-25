@@ -40,12 +40,12 @@ MPORT_PUBLIC_API int
 mport_list_print(mportInstance *mport, mportListPrint *print) 
 {
 
-	mportPackageMeta **packs;
-	mportIndexEntry **indexEntries;
-	mportIndexEntry **iestart;
-	mportIndexMovedEntry **movedEntries;
-	char *comment;
-	char *os_release;
+	mportPackageMeta **packs = NULL;
+	mportIndexEntry **indexEntries = NULL;
+	mportIndexEntry **iestart = NULL;
+	mportIndexMovedEntry **movedEntries = NULL;
+	char *comment = NULL;
+	char *os_release = NULL;
 	char name_version[30];
 
 	if (mport_pkgmeta_list(mport, &packs) != MPORT_OK) {
@@ -58,6 +58,9 @@ mport_list_print(mportInstance *mport, mportListPrint *print)
 	}
 
 	os_release = mport_get_osrelease(mport);
+	if (os_release == NULL) {
+		RETURN_ERROR(MPORT_ERR_WARN, "Unable to determine the OS release.");
+	}
 
 	while (*packs != NULL) {
 		if (print->update) {
@@ -66,7 +69,7 @@ mport_list_print(mportInstance *mport, mportListPrint *print)
 			}
 
 			if (indexEntries == NULL || *indexEntries == NULL) {
-				if (mport_moved_lookup(mport, (*packs)->name, &movedEntries) != MPORT_OK) {
+				if (mport_moved_lookup(mport, (*packs)->origin, &movedEntries) != MPORT_OK) {
 					mport_call_msg_cb(mport,"%-25s %8s is not part of the package repository.", (*packs)->name, (*packs)->version);
 					packs++;
 					continue;
@@ -113,6 +116,7 @@ mport_list_print(mportInstance *mport, mportListPrint *print)
 			}
 				
 			mport_index_entry_free_vec(iestart);
+			iestart = NULL;
 			indexEntries = NULL;
 		} else if (mport->verbosity == MPORT_VBRIEF) {
 			mport_call_msg_cb(mport, "%s-%s", (*packs)->name, (*packs)->version);
@@ -122,6 +126,7 @@ mport_list_print(mportInstance *mport, mportListPrint *print)
 			
 			mport_call_msg_cb(mport,"%-30s\t%6s\t%s", name_version, (*packs)->os_release, comment);
 			free(comment);
+			comment = NULL;
 		} else if (print->prime && (*packs)->automatic == 0) {
 			mport_call_msg_cb(mport,"%s", (*packs)->name);
 		} else if (mport->verbosity == MPORT_VQUIET && !print->origin) {

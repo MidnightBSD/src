@@ -33,9 +33,10 @@
 
 MPORT_PUBLIC_API int
 mport_update(mportInstance *mport, const char *packageName) {
-	char *path;
-	mportDependsEntry **depends, **depends_orig;
-	mportIndexEntry **indexEntry;
+	char *path = NULL;
+	mportDependsEntry **depends = NULL;
+	mportDependsEntry **depends_orig = NULL;
+	mportIndexEntry **indexEntry = NULL;
 
 	if (packageName == NULL) {
 		return (MPORT_ERR_WARN);
@@ -75,10 +76,12 @@ mport_update(mportInstance *mport, const char *packageName) {
 	if (mport_update_primative(mport, path) != MPORT_OK) {
 		mport_call_msg_cb(mport, "%s\n", mport_err_string());
 		free(path);
+		path = NULL;
 		return mport_err_code();
 	}
 
 	free(path);
+	path = NULL;
 
 	return (MPORT_OK);
 }

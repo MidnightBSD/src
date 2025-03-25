@@ -32,9 +32,12 @@
 #include "mport_private.h"
 
 MPORT_PUBLIC_API int
-mport_autoremove(mportInstance *mport) {
-    mportPackageMeta **packs, **packs_start;
-    mportPackageMeta **depends, **depends_start;
+mport_autoremove(mportInstance *mport) 
+{
+    mportPackageMeta **packs = NULL;
+    mportPackageMeta **packs_start = NULL;
+    mportPackageMeta **depends = NULL;
+    mportPackageMeta **depends_start = NULL;
 
     if (mport_pkgmeta_list(mport, &packs) != MPORT_OK) {
         RETURN_CURRENT_ERROR;
@@ -88,10 +91,15 @@ mport_autoremove(mportInstance *mport) {
             depends++;
         }
         mport_pkgmeta_vec_free(depends_start);
+        depends_start = NULL;
+        depends = NULL;
 
         packs++;
     }
+    
     mport_pkgmeta_vec_free(packs_start);
+    packs_start = NULL;
+    packs = NULL;
 
     return MPORT_OK;
 }

@@ -1,7 +1,7 @@
 /*-
  * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
  *
- * Copyright (c) 2011 Lucas Holt
+ * Copyright (c) 2011, 2025 Lucas Holt
  * Copyright (c) 2009 Chris Reinhardt
  * All rights reserved.
  *
@@ -57,6 +57,7 @@ mport_fetch_index(mportInstance *mport)
 	char **mirrors = NULL;
 	char **mirrorsPtr = NULL;
 	char *url = NULL;
+	char *hashUrl = NULL;
 	char *osrel;
 	int mirrorCount = 0;
 	
@@ -76,19 +77,37 @@ mport_fetch_index(mportInstance *mport)
 		if (*mirrorsPtr == NULL)
 			break;
 		asprintf(&url, "%s/%s/%s/%s", *mirrorsPtr,  MPORT_ARCH, osrel, MPORT_INDEX_FILE_SOURCE);
+		asprintf(&hashUrl, "%s/%s/%s/%s", *mirrorsPtr,  MPORT_ARCH, osrel, MPORT_INDEX_FILE_SOURCE ".sha256");
 
-		if (url == NULL) {
+		if (url == NULL || hashUrl == NULL) {
 			for (int mi = 0; mi < mirrorCount; mi++)
 				free(mirrors[mi]);
 			RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
 		}
 
-		if (fetch(mport, url, MPORT_INDEX_FILE_BZ2) == MPORT_OK) {
-			mport_decompress_bzip2(MPORT_INDEX_FILE_BZ2, mport_index_file_path());
-			free(url);
-			for (int mi = 0; mi < mirrorCount; mi++)
-				free(mirrors[mi]);
-			return MPORT_OK;
+		if (fetch(mport, url, MPORT_INDEX_FILE_COMPRESSED) == MPORT_OK) {
+			if (fetch(mport, hashUrl, MPORT_INDEX_FILE_HASH) == MPORT_OK) {
+				char *hash = mport_extract_hash_from_file(MPORT_INDEX_FILE_HASH);
+				free(hashUrl);
+
+				if (hash == NULL || mport_verify_hash(MPORT_INDEX_FILE_COMPRESSED, hash) == 0) {
+#ifdef DEBUGGING 
+					fprintf(stderr, "Index hash failed verification: %s\n", hash);
+#endif
+					free(hash);
+					free(url);
+					continue;
+				} else {
+					mport_decompress_zstd(MPORT_INDEX_FILE_COMPRESSED, mport_index_file_path());
+					free(url);
+					free(hash);
+					for (int mi = 0; mi < mirrorCount; mi++)
+						free(mirrors[mi]);
+					return MPORT_OK;
+				}
+			} else {
+				free(hashUrl);
+			}
 		}
 		free(url);
 		mirrorsPtr++;
@@ -119,15 +138,32 @@ mport_fetch_bootstrap_index(mportInstance *mport)
 {
 	int result;
 	char *url;
+	char *hashUrl;
 	char *osrel;
 
 	osrel = mport_get_osrelease(mport);
 
 	asprintf(&url, "%s/%s/%s/%s", MPORT_BOOTSTRAP_INDEX_URL, MPORT_ARCH, osrel, MPORT_INDEX_FILE_SOURCE);
+	asprintf(&hashUrl, "%s/%s/%s/%s", MPORT_BOOTSTRAP_INDEX_URL,  MPORT_ARCH, osrel, MPORT_INDEX_FILE_SOURCE ".sha256");
 
-	result = fetch(mport, url, MPORT_INDEX_FILE_BZ2);
-	mport_decompress_bzip2(MPORT_INDEX_FILE_BZ2, mport_index_file_path());
+	result = fetch(mport, url, MPORT_INDEX_FILE_COMPRESSED);
+	if (result == MPORT_OK && fetch(mport, hashUrl, MPORT_INDEX_FILE_HASH) == MPORT_OK) {
+		free(hashUrl);
+		char *hash = mport_extract_hash_from_file(MPORT_INDEX_FILE_HASH);
 
+		if (hash == NULL || mport_verify_hash(MPORT_INDEX_FILE_COMPRESSED, hash) == 0) {
+#ifdef DEBUGGING 
+			fprintf(stderr, "Index hash failed verification: %s\n", hash);
+#endif 
+        	} else {
+			mport_decompress_zstd(MPORT_INDEX_FILE_COMPRESSED, mport_index_file_path());
+		}
+		free(hash);
+	} else {
+		result = MPORT_ERR_FATAL;
+	}
+
+	free(hashUrl);
 	free(url);
 	free(osrel);
 
@@ -284,7 +320,7 @@ fetch_to_file(mportInstance *mport, const char *url, FILE *local, bool progress)
 			double val = ((double)got / (double) ustat.size) * 100;
 			if (val > dlpercent) {
 				dlpercent = val;
-             	snprintf(msg, 1024, "Downloading %s (%.2f%%)", pkg, dlpercent);
+				snprintf(msg, 1024, "Downloading %s (%.2f%%)", pkg, dlpercent);
 			}
 			(mport->progress_step_cb)(got, ustat.size, msg);
 		}

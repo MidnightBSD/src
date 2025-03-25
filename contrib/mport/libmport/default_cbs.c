@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
@@ -112,7 +112,7 @@ void mport_default_progress_step_cb(int current, int total, const char *msg)
   struct winsize win;
   int width, bar_width, bar_on, bar_off;
   double percent;
-  char *bar;
+  char *bar = NULL;
 
   if (current > total)
     current = total;
@@ -157,6 +157,7 @@ void mport_default_progress_step_cb(int current, int total, const char *msg)
   (void)fflush(stdout);
   
   free(bar);
+  bar = NULL;
 }
 
 void mport_default_progress_free_cb(void) 

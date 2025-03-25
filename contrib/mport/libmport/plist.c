@@ -73,9 +73,11 @@ mport_assetlist_free(mportAssetList *list) {
 
 		STAILQ_REMOVE_HEAD(list, next);
 		free(n);
+        n = NULL;
 	}
 
 	free(list_orig);
+    list_orig = NULL;
 	list = NULL;
 }
 
@@ -89,7 +91,7 @@ MPORT_PUBLIC_API int
 mport_parse_plistfile(FILE *fp, mportAssetList *list) {
     size_t length;
     size_t entrylen;
-    char *line;
+    char *line = NULL;
 
     assert(fp != NULL);
 
@@ -180,10 +182,10 @@ mport_parse_plistfile(FILE *fp, mportAssetList *list) {
  */
 static int 
 parse_file_owner_mode(mportAssetListEntry **entry, char *cmdLine) {
-	char *start;
+	char *start = NULL;
 	char *op = start = strdup(cmdLine);
 	char *permissions[3] = {NULL, NULL, NULL};
-	char *tok;
+	char *tok = NULL;
 	int i = 0;
 
 	while((tok = strsep(&op, "(,)")) != NULL) {
