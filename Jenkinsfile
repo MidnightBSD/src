@@ -4,6 +4,16 @@ pipeline {
     }
     agent none
     stages {
+        stage('Check Branch Name') {
+            steps {
+                script {
+                    if (env.BRANCH_NAME.startsWith('vendor/')) {
+                        currentBuild.result = 'NOT_BUILT'
+                        error('Skipping build for vendor branch')
+                    }
+                }
+            }
+        }
         stage('BuildAndTest') {
             matrix {
                 agent {
