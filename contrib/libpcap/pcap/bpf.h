@@ -51,7 +51,7 @@
 /*
  * If we've already included <net/bpf.h>, don't re-define this stuff.
  * We assume BSD-style multiple-include protection in <net/bpf.h>,
- * which is true of all but the oldest versions of FreeBSD and NetBSD,
+ * which is true of all but the oldest versions of MidnightBSD and NetBSD,
  * or Tru64 UNIX-style multiple-include protection (or, at least,
  * Tru64 UNIX 5.x-style; I don't have earlier versions available to check),
  * or AIX-style multiple-include protection (or, at least, AIX 5.x-style;
@@ -80,12 +80,26 @@
 #define lib_pcap_bpf_h
 
 #include <pcap/funcattrs.h>
+#if defined(__MidnightBSD__)
 #include <pcap/dlt.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/*
+ * In the past, we modified pcap/pcap.h to include the system net/bpf.h,
+ * rather than this file.  However, starting around 1.10.2, libpcap requires
+ * the extern functions defined here to build.  Simply reverting that local
+ * change is not a solution, because some ports with '#include <pcap.h>'
+ * such as mail/spamd and net/xprobe require the system net/bpf.h to be
+ * pulled in.  To accommodate both requirements, make this header a wrapper
+ * around the system net/bpf.h, but keep the extern function definitions.
+ */
+#if defined(__MidnightBSD__)
+#include <net/bpf.h>
+#else
 /* BSD style release date */
 #define BPF_RELEASE 199606
 
@@ -267,6 +281,8 @@ struct bpf_insn {
 #endif
 #define BPF_JUMP(code, k, jt, jf) { (u_short)(code), jt, jf, k }
 
+#endif /* defined(__MidnightBSD__) */
+
 PCAP_AVAILABLE_0_4
 PCAP_API u_int	bpf_filter(const struct bpf_insn *, const u_char *, u_int, u_int);
 
@@ -279,10 +295,12 @@ PCAP_API char	*bpf_image(const struct bpf_insn *, int);
 PCAP_AVAILABLE_0_6
 PCAP_API void	bpf_dump(const struct bpf_program *, int);
 
+#if !defined(__MidnightBSD__)
 /*
  * Number of scratch memory words (for BPF_LD|BPF_MEM and BPF_ST).
  */
 #define BPF_MEMWORDS 16
+#endif
 
 #ifdef __cplusplus
 }

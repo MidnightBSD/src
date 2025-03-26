@@ -902,6 +902,7 @@ PCAP_API const char *pcap_lib_version(void);
 
 #endif /* _WIN32/MSDOS/UN*X */
 
+#if 0	/* Remote capture is disabled on MidnightBSD */
 /*
  * Remote capture definitions.
  *
@@ -1262,6 +1263,7 @@ PCAP_API int	pcap_remoteact_close(const char *host, char *errbuf);
 
 PCAP_AVAILABLE_1_9_REMOTE
 PCAP_API void	pcap_remoteact_cleanup(void);
+#endif	/* Remote capture is disabled on FreeBSD */
 
 #ifdef __cplusplus
 }
