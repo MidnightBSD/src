@@ -2,7 +2,7 @@ name: Cross-build Kernel
 
 on:
   push:
-    branches: [ master, 'stable/3.2' ]
+    branches: [ master ]
   pull_request:
     branches: [ master ]
   workflow_dispatch:
