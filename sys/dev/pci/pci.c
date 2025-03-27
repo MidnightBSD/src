@@ -4497,6 +4497,7 @@ pci_add_child(device_t bus, struct pci_devinfo *dinfo)
 	resource_list_init(&dinfo->resources);
 	pci_cfg_save(dev, dinfo, 0);
 	pci_cfg_restore(dev, dinfo);
+	pci_clear_pme(dev);
 	pci_print_verbose(dinfo);
 	pci_add_resources(bus, dev, 0, 0);
 	if (pci_enable_mps_tune)
@@ -4689,6 +4690,7 @@ pci_resume_child(device_t dev, device_t child)
 
 	dinfo = device_get_ivars(child);
 	pci_cfg_restore(child, dinfo);
+	pci_clear_pme(child);
 	if (!device_is_attached(child))
 		pci_cfg_save(child, dinfo, 1);
 

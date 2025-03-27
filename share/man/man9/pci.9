@@ -30,6 +30,7 @@
 .Nm pci ,
 .Nm pci_alloc_msi ,
 .Nm pci_alloc_msix ,
+.Nm pci_clear_pme ,
 .Nm pci_disable_busmaster ,
 .Nm pci_disable_io ,
 .Nm pci_enable_busmaster ,
@@ -83,6 +84,8 @@
 .Fn pci_alloc_msi "device_t dev" "int *count"
 .Ft int
 .Fn pci_alloc_msix "device_t dev" "int *count"
+.Ft void
+.Fn pci_clear_pme "device_t dev"
 .Ft int
 .Fn pci_disable_busmaster "device_t dev"
 .Ft int
