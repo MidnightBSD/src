@@ -41,6 +41,9 @@ mport_start_stop_service(mportInstance *mport, mportPackageMeta *pack, service_a
 	const unsigned char *rc_script;
 	char *handle_rc_script;
 
+	if (getenv("MPORT_GUI") != NULL)
+		return MPORT_OK;
+
     // if handle rc scripts is disabled, we don't need to do anything
 	handle_rc_script = mport_setting_get(mport, MPORT_SETTING_HANDLE_RC_SCRIPTS);
 	if (getenv("HANDLE_RC_SCRIPTS") == NULL && !mport_check_answer_bool(handle_rc_script))
