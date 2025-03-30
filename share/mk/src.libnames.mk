@@ -538,9 +538,6 @@ LDADD+=		${LDADD_${_l}}
 _LIB_OBJTOP?=	${OBJTOP}
 # INTERNALLIB definitions.
 
-LIBDNS_SDDIR=	${_LIB_OBJTOP}/lib/libdns_sd
-LIBDNS_SD?=	${LIBDNS_SDDIR}/libdns_sd${PIE_SUFFIX}.a
-
 LIBELFTCDIR=	${_LIB_OBJTOP}/lib/libelftc
 LIBELFTC?=	${LIBELFTCDIR}/libelftc${PIE_SUFFIX}.a
 
@@ -745,6 +742,8 @@ LIBCAP_SYSCTLDIR=	${OBJTOP}/lib/libcasper/services/cap_sysctl
 LIBCAP_SYSLOGDIR=	${OBJTOP}/lib/libcasper/services/cap_syslog
 LIBCBORDIR=	${OBJTOP}/lib/libcbor
 LIBBSDXMLDIR=	${OBJTOP}/lib/libexpat
+LIBDNS_SDDIR=	${OBJTOP}/lib/libdns_sd
+LIBNSS_MDNSDDIR=	${OBJTOP}/lib/libnss_mdns
 LIBFIDO2DIR=	${OBJTOP}/lib/libfido2
 LIBKVMDIR=	${OBJTOP}/lib/libkvm
 LIBPTHREADDIR=	${OBJTOP}/lib/libthr
