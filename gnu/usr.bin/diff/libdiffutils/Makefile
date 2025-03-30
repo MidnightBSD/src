@@ -11,6 +11,8 @@ CONTRIBDIR=	${BASEDIR}/lib
 CFLAGS+=	-I${CONTRIBDIR} -I${.CURDIR} -I${.OBJDIR}
 CFLAGS+=	-DHAVE_CONFIG_H
 
+WARNS=	0
+
 SRCS=	c-stack.c \
 	c-ctype.c \
 	c-strcasecmp.c \
