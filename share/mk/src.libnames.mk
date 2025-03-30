@@ -537,6 +537,10 @@ LDADD+=		${LDADD_${_l}}
 
 _LIB_OBJTOP?=	${OBJTOP}
 # INTERNALLIB definitions.
+
+LIBDNS_SDDIR=	${_LIB_OBJTOP}/lib/libdns_sd
+LIBDNS_SD?=	${LIBDNS_SDDIR}/libdns_sd${PIE_SUFFIX}.a
+
 LIBELFTCDIR=	${_LIB_OBJTOP}/lib/libelftc
 LIBELFTC?=	${LIBELFTCDIR}/libelftc${PIE_SUFFIX}.a
 
