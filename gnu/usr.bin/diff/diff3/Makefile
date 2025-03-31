@@ -5,6 +5,8 @@ PROG=		diff3
 CFLAGS+=	-I${SRCDIR}/lib -I${.CURDIR}/../libdiffutils
 CFLAGS+=	-I${.CURDIR}/../diff -I${.CURDIR}/../libver
 
+WARNS=	0
+
 #.if ${MK_ICONV} != "no"
 #DPADD+=  ${LIBICONV}
 #LDADD+=  -liconv
