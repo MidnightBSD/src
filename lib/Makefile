@@ -48,6 +48,7 @@ SUBDIR=	${SUBDIR_BOOTSTRAP} \
 	libdevctl \
 	libdevinfo \
 	libdevstat \
+	libdiff \
 	libdl \
 	libdwarf \
 	libedit \

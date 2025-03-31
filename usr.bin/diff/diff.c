@@ -20,44 +20,65 @@
  * Materiel Command, USAF, under agreement number F39502-99-1-0512.
  */
 
-#include <sys/cdefs.h>
 #include <sys/stat.h>
 
 #include <ctype.h>
 #include <err.h>
 #include <errno.h>
 #include <getopt.h>
-#include <stdlib.h>
+#include <limits.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <limits.h>
 
 #include "diff.h"
 #include "xmalloc.h"
 
-int	 lflag, Nflag, Pflag, rflag, sflag, Tflag, cflag, Wflag;
-int	 diff_format, diff_context, status, ignore_file_case, suppress_common;
+static const char diff_version[] = "FreeBSD diff 20240307";
+bool	 lflag, Nflag, Pflag, rflag, sflag, Tflag, cflag;
+bool	 ignore_file_case, suppress_common, color, noderef;
+static bool help = false;
+int	 diff_format, diff_context, diff_algorithm, status;
+bool	 diff_algorithm_set;
 int	 tabsize = 8, width = 130;
-char	*start, *ifdefname, *diffargs, *label[2], *ignore_pats;
+static int	colorflag = COLORFLAG_NEVER;
+char	*start, *ifdefname, *diffargs, *label[2];
+char	*ignore_pats, *most_recent_pat;
 char	*group_format = NULL;
+const char	*add_code, *del_code;
 struct stat stb1, stb2;
 struct excludes *excludes_list;
-regex_t	 ignore_re;
+regex_t	 ignore_re, most_recent_re;
 
-#define	OPTIONS	"0123456789aBbC:cdD:efHhI:iL:lnNPpqrS:sTtU:uwW:X:x:y"
+static struct algorithm {
+	const char *name;
+	int id;
+} algorithms[] = {
+	{"stone", D_DIFFSTONE},
+	{"myers", D_DIFFMYERS},
+	{"patience", D_DIFFPATIENCE},
+	{NULL, D_DIFFNONE}
+};
+
+#define	OPTIONS	"0123456789A:aBbC:cdD:efF:HhI:iL:lnNPpqrS:sTtU:uwW:X:x:y"
 enum {
 	OPT_TSIZE = CHAR_MAX + 1,
 	OPT_STRIPCR,
 	OPT_IGN_FN_CASE,
 	OPT_NO_IGN_FN_CASE,
 	OPT_NORMAL,
+	OPT_HELP,
 	OPT_HORIZON_LINES,
 	OPT_CHANGED_GROUP_FORMAT,
 	OPT_SUPPRESS_COMMON,
+	OPT_COLOR,
+	OPT_NO_DEREFERENCE,
+	OPT_VERSION,
 };
 
 static struct option longopts[] = {
+	{ "algorithm",			required_argument,	0,	'A' },
 	{ "text",			no_argument,		0,	'a' },
 	{ "ignore-space-change",	no_argument,		0,	'b' },
 	{ "context",			optional_argument,	0,	'C' },
@@ -65,6 +86,7 @@ static struct option longopts[] = {
 	{ "minimal",			no_argument,		0,	'd' },
 	{ "ed",				no_argument,		0,	'e' },
 	{ "forward-ed",			no_argument,		0,	'f' },
+	{ "show-function-line",		required_argument,	0,	'F' },
 	{ "speed-large-files",		no_argument,		NULL,	'H' },
 	{ "ignore-blank-lines",		no_argument,		0,	'B' },
 	{ "ignore-matching-lines",	required_argument,	0,	'I' },
@@ -88,22 +110,29 @@ static struct option longopts[] = {
 	{ "exclude-from",		required_argument,	0,	'X' },
 	{ "side-by-side",		no_argument,		NULL,	'y' },
 	{ "ignore-file-name-case",	no_argument,		NULL,	OPT_IGN_FN_CASE },
+	{ "help",			no_argument,		NULL,	OPT_HELP},
 	{ "horizon-lines",		required_argument,	NULL,	OPT_HORIZON_LINES },
+	{ "no-dereference",		no_argument,		NULL,	OPT_NO_DEREFERENCE},
 	{ "no-ignore-file-name-case",	no_argument,		NULL,	OPT_NO_IGN_FN_CASE },
 	{ "normal",			no_argument,		NULL,	OPT_NORMAL },
 	{ "strip-trailing-cr",		no_argument,		NULL,	OPT_STRIPCR },
 	{ "tabsize",			required_argument,	NULL,	OPT_TSIZE },
 	{ "changed-group-format",	required_argument,	NULL,	OPT_CHANGED_GROUP_FORMAT},
 	{ "suppress-common-lines",	no_argument,		NULL,	OPT_SUPPRESS_COMMON },
+	{ "color",			optional_argument,	NULL,	OPT_COLOR },
+	{ "version",			no_argument,		NULL,	OPT_VERSION},
 	{ NULL,				0,			0,	'\0'}
 };
 
-void usage(void) __dead2;
-void conflicting_format(void) __dead2;
-void push_excludes(char *);
-void push_ignore_pats(char *);
-void read_excludes_file(char *file);
-void set_argstr(char **, char **);
+static void checked_regcomp(char const *, regex_t *);
+static void usage(void) __dead2;
+static void conflicting_format(void) __dead2;
+static void push_excludes(char *);
+static void push_ignore_pats(char *);
+static void read_excludes_file(char *file);
+static void set_argstr(char **, char **);
+static char *splice(char *, char *);
+static bool do_color(void);
 
 int
 main(int argc, char **argv)
@@ -121,6 +150,8 @@ main(int argc, char **argv)
 	newarg = 1;
 	diff_context = 3;
 	diff_format = D_UNSET;
+	diff_algorithm = D_DIFFMYERS;
+	diff_algorithm_set = false;
 #define	FORMAT_MISMATCHED(type)	\
 	(diff_format != D_UNSET && diff_format != (type))
 	while ((ch = getopt_long(argc, argv, OPTIONS, longopts, NULL)) != -1) {
@@ -135,6 +166,21 @@ main(int argc, char **argv)
 				usage();
 			diff_context = (diff_context * 10) + (ch - '0');
 			break;
+		case 'A':
+			diff_algorithm = D_DIFFNONE;
+			for (struct algorithm *a = algorithms; a->name;a++) {
+				if(strcasecmp(optarg, a->name) == 0) {
+					diff_algorithm = a->id;
+					diff_algorithm_set = true;
+					break;
+				}
+			}
+
+			if (diff_algorithm == D_DIFFNONE) {
+				printf("unknown algorithm: %s\n", optarg);
+				usage();
+			}
+			break;
 		case 'a':
 			dflags |= D_FORCEASCII;
 			break;
@@ -145,7 +191,7 @@ main(int argc, char **argv)
 		case 'c':
 			if (FORMAT_MISMATCHED(D_CONTEXT))
 				conflicting_format();
-			cflag = 1;
+			cflag = true;
 			diff_format = D_CONTEXT;
 			if (optarg != NULL) {
 				l = strtol(optarg, &ep, 10);
@@ -182,6 +228,12 @@ main(int argc, char **argv)
 		case 'B':
 			dflags |= D_SKIPBLANKLINES;
 			break;
+		case 'F':
+			if (dflags & D_PROTOTYPE)
+				conflicting_format();
+			dflags |= D_MATCHLAST;
+			most_recent_pat = xstrdup(optarg);
+			break;
 		case 'I':
 			push_ignore_pats(optarg);
 			break;
@@ -197,10 +249,10 @@ main(int argc, char **argv)
 				usage();
 			break;
 		case 'l':
-			lflag = 1;
+			lflag = true;
 			break;
 		case 'N':
-			Nflag = 1;
+			Nflag = true;
 			break;
 		case 'n':
 			if (FORMAT_MISMATCHED(D_NREVERSE))
@@ -208,13 +260,15 @@ main(int argc, char **argv)
 			diff_format = D_NREVERSE;
 			break;
 		case 'p':
+			if (dflags & D_MATCHLAST)
+				conflicting_format();
 			dflags |= D_PROTOTYPE;
 			break;
 		case 'P':
-			Pflag = 1;
+			Pflag = true;
 			break;
 		case 'r':
-			rflag = 1;
+			rflag = true;
 			break;
 		case 'q':
 			if (FORMAT_MISMATCHED(D_BRIEF))
@@ -225,10 +279,10 @@ main(int argc, char **argv)
 			start = optarg;
 			break;
 		case 's':
-			sflag = 1;
+			sflag = true;
 			break;
 		case 'T':
-			Tflag = 1;
+			Tflag = true;
 			break;
 		case 't':
 			dflags |= D_EXPANDTABS;
@@ -249,7 +303,6 @@ main(int argc, char **argv)
 			dflags |= D_IGNOREBLANKS;
 			break;
 		case 'W':
-			Wflag = 1;
 			width = (int) strtonum(optarg, 1, INT_MAX, &errstr);
 			if (errstr) {
 				warnx("Invalid argument for width");
@@ -273,13 +326,17 @@ main(int argc, char **argv)
 			diff_format = D_GFORMAT;
 			group_format = optarg;
 			break;
+		case OPT_HELP:
+			help = true;
+			usage();
+			break;
 		case OPT_HORIZON_LINES:
 			break; /* XXX TODO for compatibility with GNU diff3 */
 		case OPT_IGN_FN_CASE:
-			ignore_file_case = 1;
+			ignore_file_case = true;
 			break;
 		case OPT_NO_IGN_FN_CASE:
-			ignore_file_case = 0;
+			ignore_file_case = false;
 			break;
 		case OPT_NORMAL:
 			if (FORMAT_MISMATCHED(D_NORMAL))
@@ -299,6 +356,23 @@ main(int argc, char **argv)
 		case OPT_SUPPRESS_COMMON:
 			suppress_common = 1;
 			break;
+		case OPT_COLOR:
+			if (optarg == NULL || strncmp(optarg, "auto", 4) == 0)
+				colorflag = COLORFLAG_AUTO;
+			else if (strncmp(optarg, "always", 6) == 0)
+				colorflag = COLORFLAG_ALWAYS;
+			else if (strncmp(optarg, "never", 5) == 0)
+				colorflag = COLORFLAG_NEVER;
+			else
+				errx(2, "unsupported --color value '%s' (must be always, auto, or never)",
+					optarg);
+			break;
+		case OPT_NO_DEREFERENCE:
+			noderef = true;
+			break;
+		case OPT_VERSION:
+			printf("%s\n", diff_version);
+			exit(0);
 		default:
 			usage();
 			break;
@@ -314,6 +388,22 @@ main(int argc, char **argv)
 	argc -= optind;
 	argv += optind;
 
+	if (do_color()) {
+		char *p;
+		const char *env;
+
+		color = true;
+		add_code = "32";
+		del_code = "31";
+		env = getenv("DIFFCOLORS");
+		if (env != NULL && *env != '\0' && (p = strdup(env))) {
+			add_code = p;
+			strsep(&p, ":");
+			if (p != NULL)
+				del_code = p;
+		}
+	}
+
 #ifdef __OpenBSD__
 	if (pledge("stdio rpath tmppath", NULL) == -1)
 		err(2, "pledge");
@@ -325,19 +415,8 @@ main(int argc, char **argv)
 	 */
 	if (argc != 2)
 		usage();
-	if (ignore_pats != NULL) {
-		char buf[BUFSIZ];
-		int error;
-
-		if ((error = regcomp(&ignore_re, ignore_pats,
-				     REG_NEWLINE | REG_EXTENDED)) != 0) {
-			regerror(error, &ignore_re, buf, sizeof(buf));
-			if (*ignore_pats != '\0')
-				errx(2, "%s: %s", ignore_pats, buf);
-			else
-				errx(2, "%s", buf);
-		}
-	}
+	checked_regcomp(ignore_pats, &ignore_re);
+	checked_regcomp(most_recent_pat, &most_recent_re);
 	if (strcmp(argv[0], "-") == 0) {
 		fstat(STDIN_FILENO, &stb1);
 		gotstdin = 1;
@@ -360,9 +439,9 @@ main(int argc, char **argv)
 	}
 
 	if (dflags & D_EMPTY1 && dflags & D_EMPTY2){
-		warn("%s", argv[0]);	
+		warn("%s", argv[0]);
 		warn("%s", argv[1]);
-		exit(2);	
+		exit(2);
 	}
 
 	if (stb1.st_mode == 0)
@@ -389,10 +468,31 @@ main(int argc, char **argv)
 		print_status(diffreg(argv[0], argv[1], dflags, 1), argv[0],
 		    argv[1], "");
 	}
+	if (fflush(stdout) != 0)
+		err(2, "stdout");
 	exit(status);
 }
 
-void
+static void
+checked_regcomp(char const *pattern, regex_t *comp)
+{
+	char buf[BUFSIZ];
+	int error;
+
+	if (pattern == NULL)
+		return;
+
+	error = regcomp(comp, pattern, REG_NEWLINE | REG_EXTENDED);
+	if (error != 0) {
+		regerror(error, comp, buf, sizeof(buf));
+		if (*pattern != '\0')
+			errx(2, "%s: %s", pattern, buf);
+		else
+			errx(2, "%s", buf);
+	}
+}
+
+static void
 set_argstr(char **av, char **ave)
 {
 	size_t argsize;
@@ -412,24 +512,27 @@ set_argstr(char **av, char **ave)
 /*
  * Read in an excludes file and push each line.
  */
-void
+static void
 read_excludes_file(char *file)
 {
 	FILE *fp;
-	char *buf, *pattern;
-	size_t len;
+	char *pattern = NULL;
+	size_t blen = 0;
+	ssize_t len;
 
 	if (strcmp(file, "-") == 0)
 		fp = stdin;
 	else if ((fp = fopen(file, "r")) == NULL)
 		err(2, "%s", file);
-	while ((buf = fgetln(fp, &len)) != NULL) {
-		if (buf[len - 1] == '\n')
-			len--;
-		if ((pattern = strndup(buf, len)) == NULL)
-			err(2, "xstrndup");
+	while ((len = getline(&pattern, &blen, fp)) >= 0) {
+		if ((len > 0) && (pattern[len - 1] == '\n'))
+			pattern[len - 1] = '\0';
 		push_excludes(pattern);
+		/* we allocate a new string per line */
+		pattern = NULL;
+		blen = 0;
 	}
+	free(pattern);
 	if (strcmp(file, "-") != 0)
 		fclose(fp);
 }
@@ -437,7 +540,7 @@ read_excludes_file(char *file)
 /*
  * Push a pattern onto the excludes list.
  */
-void
+static void
 push_excludes(char *pattern)
 {
 	struct excludes *entry;
@@ -448,7 +551,7 @@ push_excludes(char *pattern)
 	excludes_list = entry;
 }
 
-void
+static void
 push_ignore_pats(char *pattern)
 {
 	size_t len;
@@ -465,18 +568,12 @@ push_ignore_pats(char *pattern)
 }
 
 void
-print_only(const char *path, size_t dirlen, const char *entry)
-{
-	if (dirlen > 1)
-		dirlen--;
-	printf("Only in %.*s: %s\n", (int)dirlen, path, entry);
-}
-
-void
 print_status(int val, char *path1, char *path2, const char *entry)
 {
-	if (label[0] != NULL) path1 = label[0];
-	if (label[1] != NULL) path2 = label[1];
+	if (label[0] != NULL)
+		path1 = label[0];
+	if (label[1] != NULL)
+		path2 = label[1];
 
 	switch (val) {
 	case D_BINARY:
@@ -514,37 +611,79 @@ print_status(int val, char *path1, char *path2, const char *entry)
 	}
 }
 
-void
+static void
 usage(void)
 {
-	(void)fprintf(stderr,
+	(void)fprintf(help ? stdout : stderr,
 	    "usage: diff [-aBbdilpTtw] [-c | -e | -f | -n | -q | -u] [--ignore-case]\n"
 	    "            [--no-ignore-case] [--normal] [--strip-trailing-cr] [--tabsize]\n"
-	    "            [-I pattern] [-L label] file1 file2\n"
+	    "            [-I pattern] [-F pattern] [-L label] file1 file2\n"
 	    "       diff [-aBbdilpTtw] [-I pattern] [-L label] [--ignore-case]\n"
 	    "            [--no-ignore-case] [--normal] [--strip-trailing-cr] [--tabsize]\n"
-	    "            -C number file1 file2\n"
+	    "            [-F pattern] -C number file1 file2\n"
 	    "       diff [-aBbdiltw] [-I pattern] [--ignore-case] [--no-ignore-case]\n"
 	    "            [--normal] [--strip-trailing-cr] [--tabsize] -D string file1 file2\n"
 	    "       diff [-aBbdilpTtw] [-I pattern] [-L label] [--ignore-case]\n"
 	    "            [--no-ignore-case] [--normal] [--tabsize] [--strip-trailing-cr]\n"
-	    "            -U number file1 file2\n"
+	    "            [-F pattern] -U number file1 file2\n"
 	    "       diff [-aBbdilNPprsTtw] [-c | -e | -f | -n | -q | -u] [--ignore-case]\n"
 	    "            [--no-ignore-case] [--normal] [--tabsize] [-I pattern] [-L label]\n"
-	    "            [-S name] [-X file] [-x pattern] dir1 dir2\n"
+	    "            [-F pattern] [-S name] [-X file] [-x pattern] dir1 dir2\n"
 	    "       diff [-aBbditwW] [--expand-tabs] [--ignore-all-space]\n"
-            "            [--ignore-blank-lines] [--ignore-case] [--minimal]\n"
-            "            [--no-ignore-file-name-case] [--strip-trailing-cr]\n"
-            "            [--suppress-common-lines] [--tabsize] [--text] [--width]\n"
-            "            -y | --side-by-side file1 file2\n");
+	    "            [--ignore-blank-lines] [--ignore-case] [--minimal]\n"
+	    "            [--no-ignore-file-name-case] [--strip-trailing-cr]\n"
+	    "            [--suppress-common-lines] [--tabsize] [--text] [--width]\n"
+	    "            -y | --side-by-side file1 file2\n"
+	    "       diff [--help] [--version]\n");
 
-	exit(2);
+	if (help)
+		exit(0);
+	else
+		exit(2);
 }
 
-void
+static void
 conflicting_format(void)
 {
 
 	fprintf(stderr, "error: conflicting output format options.\n");
 	usage();
+}
+
+static bool
+do_color(void)
+{
+	const char *p, *p2;
+
+	switch (colorflag) {
+	case COLORFLAG_AUTO:
+		p = getenv("CLICOLOR");
+		p2 = getenv("COLORTERM");
+		if ((p != NULL && *p != '\0') || (p2 != NULL && *p2 != '\0'))
+			return isatty(STDOUT_FILENO);
+		break;
+	case COLORFLAG_ALWAYS:
+		return (true);
+	case COLORFLAG_NEVER:
+		return (false);
+	}
+
+	return (false);
+}
+
+static char *
+splice(char *dir, char *path)
+{
+	char *tail, *buf;
+	size_t dirlen;
+
+	dirlen = strlen(dir);
+	while (dirlen != 0 && dir[dirlen - 1] == '/')
+	    dirlen--;
+	if ((tail = strrchr(path, '/')) == NULL)
+		tail = path;
+	else
+		tail++;
+	xasprintf(&buf, "%.*s/%s", (int)dirlen, dir, tail);
+	return (buf);
 }

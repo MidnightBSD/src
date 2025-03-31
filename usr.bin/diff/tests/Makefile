@@ -1,4 +1,3 @@
-
 PACKAGE=	tests
 
 ATF_TESTS_SH=	diff_test
@@ -11,6 +10,8 @@ ${PACKAGE}FILES+=	\
 	input2.in \
 	input_c1.in \
 	input_c2.in \
+	side_by_side_tabbed_a.in \
+	side_by_side_tabbed_b.in \
 	simple.out \
 	simple_e.out \
 	simple_n.out \
@@ -26,7 +27,14 @@ ${PACKAGE}FILES+=	\
 	header_ns.out \
 	ifdef.out \
 	group-format.out \
-	strip_o.out
+	strip_o.out \
+	functionname.in \
+	functionname_c.in \
+	functionname_c.out \
+	functionname_objcclassm.in \
+	functionname_objcclassm.out \
+	functionname_objcm.in \
+	functionname_objcm.out
 
 NETBSD_ATF_TESTS_SH+=	netbsd_diff_test
 

@@ -6,6 +6,7 @@ atf_test_case header_ns
 atf_test_case ifdef
 atf_test_case group_format
 atf_test_case side_by_side
+atf_test_case side_by_side_tabbed
 atf_test_case brief_format
 atf_test_case b230049
 atf_test_case stripcr_o
@@ -19,6 +20,9 @@ atf_test_case label
 atf_test_case report_identical
 atf_test_case non_regular_file
 atf_test_case binary
+atf_test_case functionname
+atf_test_case noderef
+atf_test_case ignorecase
 
 simple_body()
 {
@@ -150,6 +154,23 @@ side_by_side_body()
 	    diff -W 65 -y --suppress-common-lines A B
 }
 
+side_by_side_tabbed_body()
+{
+	file_a=$(atf_get_srcdir)/side_by_side_tabbed_a.in
+	file_b=$(atf_get_srcdir)/side_by_side_tabbed_b.in
+
+	atf_check -o save:diffout -s not-exit:0 \
+	    diff -y ${file_a} ${file_b}
+	atf_check -o save:diffout_expanded -s not-exit:0 \
+	    diff -yt ${file_a} ${file_b}
+
+	atf_check -o not-empty grep -Ee 'file A.+file B' diffout
+	atf_check -o not-empty grep -Ee 'file A.+file B' diffout_expanded
+
+	atf_check -o not-empty grep -Ee 'tabs.+tabs' diffout
+	atf_check -o not-empty grep -Ee 'tabs.+tabs' diffout_expanded
+}
+
 brief_format_body()
 {
 	atf_check mkdir A B
@@ -254,6 +275,10 @@ report_identical_body()
 {
 	printf "\tA\n" > A
 	printf "\tB\n" > B
+	atf_check -s exit:0 -o match:"are identical" \
+		  diff -s A A
+	atf_check -s exit:1 -o not-match:"are identical" \
+		  diff -s A B
 	chmod -r B
 	atf_check -s exit:2 -e inline:"diff: B: Permission denied\n" \
 		-o empty diff -s A B
@@ -284,6 +309,61 @@ binary_body()
 	atf_check -o inline:"176c\nx\n.\n" -s exit:1 diff -ae A B
 }
 
+functionname_body()
+{
+	atf_check -o file:$(atf_get_srcdir)/functionname_c.out -s exit:1 \
+		diff -u -p -L functionname.in -L functionname_c.in \
+		"$(atf_get_srcdir)/functionname.in" "$(atf_get_srcdir)/functionname_c.in"
+
+	atf_check -o file:$(atf_get_srcdir)/functionname_objcm.out -s exit:1 \
+		diff -u -p -L functionname.in -L functionname_objcm.in \
+		"$(atf_get_srcdir)/functionname.in" "$(atf_get_srcdir)/functionname_objcm.in"
+
+	atf_check -o file:$(atf_get_srcdir)/functionname_objcclassm.out -s exit:1 \
+		diff -u -p -L functionname.in -L functionname_objcclassm.in \
+		"$(atf_get_srcdir)/functionname.in" "$(atf_get_srcdir)/functionname_objcclassm.in"
+}
+
+noderef_body()
+{
+	atf_check mkdir A B
+
+	atf_check -x "echo 1 > A/test-file"
+	atf_check -x "echo 1 > test-file"
+	atf_check -x "echo 1 > test-file2"
+
+	atf_check ln -s $(pwd)/test-file B/test-file
+
+	atf_check -o empty -s exit:0 diff -r A B
+	atf_check -o inline:"File A/test-file is a file while file B/test-file is a symbolic link\n" \
+		-s exit:1 diff -r --no-dereference A B
+
+	# both test files are now the same symbolic link
+	atf_check rm A/test-file
+
+	atf_check ln -s $(pwd)/test-file A/test-file
+	atf_check -o empty -s exit:0 diff -r A B
+	atf_check -o empty -s exit:0 diff -r --no-dereference A B
+
+	# make test files different symbolic links, but same contents
+	atf_check unlink A/test-file
+	atf_check ln -s $(pwd)/test-file2 A/test-file
+
+	atf_check -o empty -s exit:0 diff -r A B
+	atf_check -o inline:"Symbolic links A/test-file and B/test-file differ\n" -s exit:1 diff -r --no-dereference A B
+}
+
+ignorecase_body()
+{
+	atf_check mkdir A
+	atf_check mkdir B
+
+	atf_check -x "echo hello > A/foo"
+	atf_check -x "echo hello > B/FOO"
+
+	atf_check -o empty -s exit:0 diff -u -r --ignore-file-name-case A B
+}
+
 atf_init_test_cases()
 {
 	atf_add_test_case simple
@@ -293,6 +373,7 @@ atf_init_test_cases()
 	atf_add_test_case ifdef
 	atf_add_test_case group_format
 	atf_add_test_case side_by_side
+	atf_add_test_case side_by_side_tabbed
 	atf_add_test_case brief_format
 	atf_add_test_case b230049
 	atf_add_test_case stripcr_o
@@ -306,4 +387,7 @@ atf_init_test_cases()
 	atf_add_test_case report_identical
 	atf_add_test_case non_regular_file
 	atf_add_test_case binary
+	atf_add_test_case functionname
+	atf_add_test_case noderef
+	atf_add_test_case ignorecase
 }

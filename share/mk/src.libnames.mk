@@ -538,6 +538,9 @@ LDADD+=		${LDADD_${_l}}
 _LIB_OBJTOP?=	${OBJTOP}
 # INTERNALLIB definitions.
 
+LIBDIFFDIR=	${_LIB_OBJTOP}/lib/libdiff
+LIBDIFF?=	${LIBDIFFDIR}/libdiff${PIE_SUFFIX}.a
+
 LIBELFTCDIR=	${_LIB_OBJTOP}/lib/libelftc
 LIBELFTC?=	${LIBELFTCDIR}/libelftc${PIE_SUFFIX}.a
 

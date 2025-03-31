@@ -27,8 +27,6 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\"     @(#)diff.1	8.1 (Berkeley) 6/30/93
-.\"
 .Dd July 26, 2024
 .Dt DIFF 1
 .Os
@@ -42,7 +40,9 @@
 .Fl c | e | f |
 .Fl n | q | u | y
 .Oc
+.Op Fl A Ar algo | Fl -algorithm Ar algo
 .Op Fl -brief
+.Op Fl -color Ns = Ns Ar when
 .Op Fl -changed-group-format Ar GFMT
 .Op Fl -ed
 .Op Fl -expand-tabs
@@ -52,6 +52,7 @@
 .Op Fl -ignore-space-change
 .Op Fl -initial-tab
 .Op Fl -minimal
+.Op Fl -no-dereference
 .Op Fl -no-ignore-file-name-case
 .Op Fl -normal
 .Op Fl -rcs
@@ -63,13 +64,17 @@
 .Op Fl -text
 .Op Fl -unified
 .Op Fl I Ar pattern | Fl -ignore-matching-lines Ar pattern
+.Op Fl F Ar pattern | Fl -show-function-line Ar pattern
 .Op Fl L Ar label | Fl -label Ar label
 .Ar file1 file2
 .Nm diff
 .Op Fl aBbdilpTtw
+.Op Fl A Ar algo | Fl -algorithm Ar algo
 .Op Fl I Ar pattern | Fl -ignore-matching-lines Ar pattern
+.Op Fl F Ar pattern | Fl -show-function-line Ar pattern
 .Op Fl L Ar label | Fl -label Ar label
 .Op Fl -brief
+.Op Fl -color Ns = Ns Ar when
 .Op Fl -changed-group-format Ar GFMT
 .Op Fl -ed
 .Op Fl -expand-tabs
@@ -79,6 +84,7 @@
 .Op Fl -ignore-space-change
 .Op Fl -initial-tab
 .Op Fl -minimal
+.Op Fl -no-dereference
 .Op Fl -no-ignore-file-name-case
 .Op Fl -normal
 .Op Fl -paginate
@@ -93,8 +99,10 @@
 .Ar file1 file2
 .Nm diff
 .Op Fl aBbdiltw
+.Op Fl A Ar algo | Fl -algorithm Ar algo
 .Op Fl I Ar pattern | Fl -ignore-matching-lines Ar pattern
 .Op Fl -brief
+.Op Fl -color Ns = Ns Ar when
 .Op Fl -changed-group-format Ar GFMT
 .Op Fl -ed
 .Op Fl -expand-tabs
@@ -104,6 +112,7 @@
 .Op Fl -ignore-space-change
 .Op Fl -initial-tab
 .Op Fl -minimal
+.Op Fl -no-dereference
 .Op Fl -no-ignore-file-name-case
 .Op Fl -normal
 .Op Fl -paginate
@@ -118,9 +127,12 @@
 .Ar file1 file2
 .Nm diff
 .Op Fl aBbdilpTtw
+.Op Fl A Ar algo | Fl -algorithm Ar algo
 .Op Fl I Ar pattern | Fl -ignore-matching-lines Ar pattern
+.Op Fl F Ar pattern | Fl -show-function-line Ar pattern
 .Op Fl L Ar label | Fl -label Ar label
 .Op Fl -brief
+.Op Fl -color Ns = Ns Ar when
 .Op Fl -changed-group-format Ar GFMT
 .Op Fl -ed
 .Op Fl -expand-tabs
@@ -130,6 +142,7 @@
 .Op Fl -ignore-space-change
 .Op Fl -initial-tab
 .Op Fl -minimal
+.Op Fl -no-dereference
 .Op Fl -no-ignore-file-name-case
 .Op Fl -normal
 .Op Fl -paginate
@@ -148,7 +161,9 @@
 .Fl c | e | f |
 .Fl n | q | u
 .Oc
+.Op Fl A Ar algo | Fl -algorithm Ar algo
 .Op Fl -brief
+.Op Fl -color Ns = Ns Ar when
 .Op Fl -changed-group-format Ar GFMT
 .Op Fl -context
 .Op Fl -ed
@@ -160,6 +175,7 @@
 .Op Fl -initial-tab
 .Op Fl -minimal
 .Op Fl -new-file
+.Op Fl -no-dereference
 .Op Fl -no-ignore-file-name-case
 .Op Fl -normal
 .Op Fl -paginate
@@ -174,6 +190,7 @@
 .Op Fl -unidirectional-new-file
 .Op Fl -unified
 .Op Fl I Ar pattern | Fl -ignore-matching-lines Ar pattern
+.Op Fl F Ar pattern | Fl -show-function-line Ar pattern
 .Bk -words
 .Op Fl L Ar label | Fl -label Ar label
 .Op Fl S Ar name | Fl -starting-file Ar name
@@ -183,11 +200,13 @@
 .Ar dir1 dir2
 .Nm diff
 .Op Fl aBbditwW
+.Op Fl -color Ns = Ns Ar when
 .Op Fl -expand-tabs
 .Op Fl -ignore-all-space
 .Op Fl -ignore-blank-lines
 .Op Fl -ignore-case
 .Op Fl -minimal
+.Op Fl -no-dereference
 .Op Fl -no-ignore-file-name-case
 .Op Fl -strip-trailing-cr
 .Op Fl -suppress-common-lines
@@ -196,6 +215,9 @@
 .Op Fl -width
 .Fl y | Fl -side-by-side
 .Ar file1 file2
+.Nm diff
+.Op Fl -help
+.Op Fl -version
 .Sh DESCRIPTION
 The
 .Nm
@@ -265,12 +287,26 @@ from their state in
 .Ar dir1
 to their state in
 .Ar dir2 .
+Note that when comparing directories with
+.Fl e ,
+the resulting file may no longer be interpreted as an
+.Xr ed 1
+script.
+Output is added to indicate which file each set of
+.Xr ed 1
+commands applies to.
+These hunks can be manually extracted to produce an
+.Xr ed 1
+script, which can also be applied with
+.Xr patch 1 .
 .It Fl f -forward-ed
 Identical output to that of the
 .Fl e
 flag, but in reverse order.
 It cannot be digested by
 .Xr ed 1 .
+.It Fl -help
+This option prints a summary to stdout and exits with status 0.
 .It Fl n
 Produces a script similar to that of
 .Fl e ,
@@ -297,6 +333,8 @@ However, unlike with
 .Fl c ,
 all lines to be changed (added and/or removed) are present in
 a single section.
+.It Fl -version
+This option prints a version string to stdout and exits with status 0.
 .It Fl y Fl -side-by-side
 Output in two columns with a marker between them.
 The marker can be one
@@ -316,6 +354,38 @@ Files differ and only the second file contains the line.
 .Pp
 Comparison options:
 .Bl -tag -width Ds
+.It Fl A Ar algo, Fl -algorithm Ar algo
+Configure the algorithm used when comparing files.
+.Nm
+supports 3 algorithms:
+.Pp
+.Bl -tag -width Ds -compact
+.It Cm myers
+The Myers diff algorithm finds the shortest edit which transforms one
+input into the other.
+It generally runs in O(N+D\(S2) time, requiring O(N) space, where N is
+the sum of the lengths of the inputs and D is the length of the
+difference between them, with a theoretical O(N\(pcD) worst case.
+If it encounters worst-case input, the implementation used by
+.Nm
+falls back to a less optimal but faster algorithm.
+.It Cm patience
+The Patience variant of the Myers algorithm attempts to create more
+aesthetically pleasing diff output by logically grouping lines.
+.It Cm stone
+The Stone algorithm (commonly known as Hunt-McIlroy or Hunt-Szymanski)
+looks for the longest common subsequence between compared files.
+Stone encounters worst case performance when there are long common
+subsequences.
+In large files this can lead to a significant performance impact.
+The Stone algorithm is maintained for compatibility.
+.El
+.Pp
+The
+.Nm
+utility defaults to the Myers algorithm, but will fall back to the
+Stone algorithm if the input or output options are not supported by
+the Myers implementation.
 .It Fl a -text
 Treat all files as ASCII text.
 Normally
@@ -331,10 +401,29 @@ Causes chunks that include only blank lines to be ignored.
 .It Fl b -ignore-space-change
 Causes trailing blanks (spaces and tabs) to be ignored, and other
 strings of blanks to compare equal.
+.It Fl -color= Ns Oo Ar when Oc
+Color the additions green, and removals red, or the value in the
+.Ev DIFFCOLORS
+environment variable.
+The possible values of
+.Ar when
+are
+.Dq Cm never ,
+.Dq Cm always
+and
+.Dq Cm auto .
+.Cm auto
+will use color if the output is a tty and the
+.Ev COLORTERM
+environment variable is set to a non-empty string.
 .It Fl d -minimal
 Try very hard to produce a diff as small as possible.
 This may consume a lot of processing power and memory when processing
 large files with many changes.
+.It Fl F Ar pattern, Fl -show-function-line Ar pattern
+Like
+.Fl p,
+but display the last line that matches provided pattern.
 .It Fl I Ar pattern Fl -ignore-matching-lines Ar pattern
 Ignores changes, insertions, and deletions whose lines match the
 extended regular expression
@@ -366,8 +455,8 @@ file name and time in the context or unified diff header.
 With unified and context diffs, show with each change
 the first 40 characters of the last line before the context beginning
 with a letter, an underscore or a dollar sign.
-For C source code following standard layout conventions, this will
-show the prototype of the function the change applies to.
+For C and Objective-C source code following standard layout conventions, this
+will show the prototype of the function the change applies to.
 .It Fl T -initial-tab
 Print a tab rather than a space before the rest of the line for the
 normal, context or unified output formats.
@@ -393,6 +482,15 @@ Output at most
 .Ar number
 columns when using side by side format.
 The default value is 130.
+Note that unless
+.It Fl t
+was specified,
+.Nm
+will always align the second column to a tab stop, so values of
+.Fl -width
+smaller than approximately five times the value of
+.Fl -tabsize
+may yield surprising results.
 .It Fl -changed-group-format Ar GFMT
 Format input groups in the provided
 .Pp
@@ -405,8 +503,10 @@ lines from FILE2
 .El
 .It Fl -ignore-file-name-case
 ignore case when comparing file names
+.It Fl -no-dereference
+do not follow symbolic links
 .It Fl -no-ignore-file-name-case
-do not ignore case wen comparing file names (default)
+do not ignore case when comparing file names (default)
 .It Fl -normal
 default diff output
 .It Fl -speed-large-files
@@ -591,6 +691,20 @@ As in
 identical
 pairs (where num1 = num2) are abbreviated as a single
 number.
+.Sh ENVIRONMENT
+.Bl -tag -width DIFFCOLORS
+.It Ev DIFFCOLORS
+The value of this variable is the form
+.Ar add Ns : Ns Ar rm ,
+where
+.Ar add
+is the ASCII escape sequence for additions and
+.Ar rm
+is the ASCII escape sequence for deletions.
+If this is unset,
+.Nm
+uses green for additions and red for removals.
+.El
 .Sh FILES
 .Bl -tag -width /tmp/diff.XXXXXXXX -compact
 .It Pa /tmp/diff.XXXXXXXX
@@ -611,6 +725,12 @@ Differences were found.
 .It >1
 An error occurred.
 .El
+.Pp
+The
+.Fl -help
+and
+.Fl -version
+options exit with a status of 0.
 .Sh EXAMPLES
 Compare
 .Pa old_dir
@@ -678,10 +798,24 @@ utility is compliant with the
 specification.
 .Pp
 The flags
-.Op Fl aDdIiLlNnPpqSsTtwXxy
+.Op Fl AaDdIiLlNnPpqSsTtwXxy
 are extensions to that specification.
 .Sh HISTORY
 A
 .Nm
 command appeared in
 .At v6 .
+The
+.Nm
+implementation used in
+.Fx
+was GNU diff until
+.Fx 11.4 .
+This was replaced in
+.Fx 12.0
+by a BSD-licensed implementation written by
+.An Todd Miller .
+Some GNUisms were lost in the process.
+.Pp
+libdiff was imported from the Game of Trees version control system and default
+algorithm was changed to Myers for FreeBSD 15.
