@@ -1,5 +1,5 @@
 /* Open a stream to a file.
-   Copyright (C) 2007-2011 Free Software Foundation, Inc.
+   Copyright (C) 2007-2013 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -26,14 +26,16 @@
 #include <stdio.h>
 #undef __need_FILE
 
-static inline FILE *
+static FILE *
 orig_freopen (const char *filename, const char *mode, FILE *stream)
 {
   return freopen (filename, mode, stream);
 }
 
 /* Specification.  */
-#include <stdio.h>
+/* Write "stdio.h" here, not <stdio.h>, otherwise OSF/1 5.1 DTK cc eliminates
+   this include because of the preliminary #include <stdio.h> above.  */
+#include "stdio.h"
 
 #include <string.h>
 

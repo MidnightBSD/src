@@ -1,8 +1,6 @@
-/* -*- buffer-read-only: t -*- vi: set ro: */
-/* DO NOT EDIT! GENERATED AUTOMATICALLY! */
 /* A substitute <strings.h>.
 
-   Copyright (C) 2007-2011 Free Software Foundation, Inc.
+   Copyright (C) 2007-2013 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -15,8 +13,7 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software Foundation,
-   Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.  */
+   along with this program; if not, see <http://www.gnu.org/licenses/>.  */
 
 #ifndef _@GUARD_PREFIX@_STRINGS_H
 
@@ -32,10 +29,17 @@
 #endif
 
 /* The include_next requires a split double-inclusion guard.  */
-#@INCLUDE_NEXT@ @NEXT_STRINGS_H@
+#if @HAVE_STRINGS_H@
+# @INCLUDE_NEXT@ @NEXT_STRINGS_H@
+#endif
 
 #ifndef _@GUARD_PREFIX@_STRINGS_H
 #define _@GUARD_PREFIX@_STRINGS_H
+
+#if ! @HAVE_DECL_STRNCASECMP@
+/* Get size_t.  */
+# include <stddef.h>
+#endif
 
 
 /* The definitions of _GL_FUNCDECL_RPL etc. are copied here.  */

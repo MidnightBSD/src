@@ -1,0 +1,1546 @@
+# Hungarian traslation of diffutils
+# Copyright (C) 2002 Free Software Foundation, Inc.
+# Gábor István <stive@mezobereny.hu>, 2002
+# Andras Timar <timar@fsf.hu>, 2004
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: diffutils 2.8.7\n"
+"Report-Msgid-Bugs-To: bug-diffutils@gnu.org\n"
+"POT-Creation-Date: 2013-03-24 11:05-0700\n"
+"PO-Revision-Date: 2004-07-04 11:22+0100\n"
+"Last-Translator: Andras Timar <timar@fsf.hu>\n"
+"Language-Team: Hungarian <translation-team-hu@lists.sourceforge.net>\n"
+"Language: hu\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=ISO-8859-2\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: KBabel 1.2\n"
+
+#: lib/c-stack.c:204 lib/c-stack.c:297
+msgid "program error"
+msgstr "programhiba"
+
+#: lib/c-stack.c:205 lib/c-stack.c:298
+msgid "stack overflow"
+msgstr "veremtúlcsordulás"
+
+#: lib/error.c:188
+msgid "Unknown system error"
+msgstr "Ismeretlen rendszerhiba"
+
+#: lib/file-type.c:38
+msgid "regular empty file"
+msgstr "reguláris üres fájl"
+
+#: lib/file-type.c:38
+msgid "regular file"
+msgstr "reguláris fájl"
+
+#: lib/file-type.c:41
+msgid "directory"
+msgstr "könyvtár"
+
+#: lib/file-type.c:44
+msgid "block special file"
+msgstr "blokkos speciális fájl"
+
+#: lib/file-type.c:47
+msgid "character special file"
+msgstr "karakteres speciális fájl"
+
+#: lib/file-type.c:50
+msgid "fifo"
+msgstr "fifo"
+
+#: lib/file-type.c:53
+msgid "symbolic link"
+msgstr "szimbolikus link"
+
+#: lib/file-type.c:56
+msgid "socket"
+msgstr "socket"
+
+#: lib/file-type.c:59
+msgid "message queue"
+msgstr "üzenetsor"
+
+#: lib/file-type.c:62
+msgid "semaphore"
+msgstr "szemafor"
+
+#: lib/file-type.c:65
+msgid "shared memory object"
+msgstr "osztott memóriaobjektum"
+
+#: lib/file-type.c:68
+msgid "typed memory object"
+msgstr "típusos memória objektum"
+
+#: lib/file-type.c:70
+msgid "weird file"
+msgstr "furcsa fájl"
+
+#: lib/getopt.c:547 lib/getopt.c:576
+#, fuzzy, c-format
+msgid "%s: option '%s' is ambiguous; possibilities:"
+msgstr "%s: a `%s' kapcsoló nem egyértelmû\n"
+
+#: lib/getopt.c:624 lib/getopt.c:628
+#, fuzzy, c-format
+msgid "%s: option '--%s' doesn't allow an argument\n"
+msgstr "%s: a `--%s' kapcsoló nem fogad el argumentumot\n"
+
+#: lib/getopt.c:637 lib/getopt.c:642
+#, fuzzy, c-format
+msgid "%s: option '%c%s' doesn't allow an argument\n"
+msgstr "%s: a `%c%s' kapcsoló nem fogad el argumentumot\n"
+
+#: lib/getopt.c:685 lib/getopt.c:704
+#, fuzzy, c-format
+msgid "%s: option '--%s' requires an argument\n"
+msgstr "%s: a `%s' kapcsolóhoz argumentum szükséges\n"
+
+#: lib/getopt.c:742 lib/getopt.c:745
+#, fuzzy, c-format
+msgid "%s: unrecognized option '--%s'\n"
+msgstr "%s: ismeretlen kapcsoló: `--%s'\n"
+
+#: lib/getopt.c:753 lib/getopt.c:756
+#, fuzzy, c-format
+msgid "%s: unrecognized option '%c%s'\n"
+msgstr "%s: ismeretlen kapcsoló: `%c%s'\n"
+
+#: lib/getopt.c:805 lib/getopt.c:808
+#, fuzzy, c-format
+msgid "%s: invalid option -- '%c'\n"
+msgstr "%s: érvénytelen kapcsoló -- %c\n"
+
+#: lib/getopt.c:861 lib/getopt.c:878 lib/getopt.c:1088 lib/getopt.c:1106
+#, fuzzy, c-format
+msgid "%s: option requires an argument -- '%c'\n"
+msgstr "%s: a kapcsoló argumentumot igényel -- %c\n"
+
+#: lib/getopt.c:934 lib/getopt.c:950
+#, fuzzy, c-format
+msgid "%s: option '-W %s' is ambiguous\n"
+msgstr "%s: a `-W %s' kapcsoló nem egyértelmû\n"
+
+#: lib/getopt.c:974 lib/getopt.c:992
+#, fuzzy, c-format
+msgid "%s: option '-W %s' doesn't allow an argument\n"
+msgstr "%s: a `-W %s' kapcsoló nem fogad el argumentumot\n"
+
+#: lib/getopt.c:1013 lib/getopt.c:1031
+#, fuzzy, c-format
+msgid "%s: option '-W %s' requires an argument\n"
+msgstr "%s: a `%s' kapcsolóhoz argumentum szükséges\n"
+
+#. TRANSLATORS:
+#. Get translations for open and closing quotation marks.
+#. The message catalog should translate "`" to a left
+#. quotation mark suitable for the locale, and similarly for
+#. "'".  For example, a French Unicode local should translate
+#. these to U+00AB (LEFT-POINTING DOUBLE ANGLE
+#. QUOTATION MARK), and U+00BB (RIGHT-POINTING DOUBLE ANGLE
+#. QUOTATION MARK), respectively.
+#.
+#. If the catalog has no translation, we will try to
+#. use Unicode U+2018 (LEFT SINGLE QUOTATION MARK) and
+#. Unicode U+2019 (RIGHT SINGLE QUOTATION MARK).  If the
+#. current locale is not Unicode, locale_quoting_style
+#. will quote 'like this', and clocale_quoting_style will
+#. quote "like this".  You should always include translations
+#. for "`" and "'" even if U+2018 and U+2019 are appropriate
+#. for your locale.
+#.
+#. If you don't know what to put here, please see
+#. <http://en.wikipedia.org/wiki/Quotation_marks_in_other_languages>
+#. and use glyphs suitable for your language.
+#: lib/quotearg.c:312
+msgid "`"
+msgstr ""
+
+#: lib/quotearg.c:313
+msgid "'"
+msgstr ""
+
+#: lib/regcomp.c:131
+msgid "Success"
+msgstr "Sikerült"
+
+#: lib/regcomp.c:134
+msgid "No match"
+msgstr "Nincs találat"
+
+#: lib/regcomp.c:137
+msgid "Invalid regular expression"
+msgstr "Érvénytelen reguláris kifejezés"
+
+#: lib/regcomp.c:140
+msgid "Invalid collation character"
+msgstr "Érvénytelen collation karakter"
+
+#: lib/regcomp.c:143
+msgid "Invalid character class name"
+msgstr "Érvénytelen karakterosztálynév"
+
+#: lib/regcomp.c:146
+msgid "Trailing backslash"
+msgstr "Záró backslash"
+
+#: lib/regcomp.c:149
+msgid "Invalid back reference"
+msgstr "Érvénytelen visszahivatkozás"
+
+#: lib/regcomp.c:152
+msgid "Unmatched [ or [^"
+msgstr "Pár nélküli [ vagy [^"
+
+#: lib/regcomp.c:155
+msgid "Unmatched ( or \\("
+msgstr "Pár nélküli ( vagy \\("
+
+#: lib/regcomp.c:158
+msgid "Unmatched \\{"
+msgstr "Pár nélküli \\{"
+
+#: lib/regcomp.c:161
+msgid "Invalid content of \\{\\}"
+msgstr "Érvénytelen tartalom a \\{\\}-ben"
+
+#: lib/regcomp.c:164
+msgid "Invalid range end"
+msgstr "Érvénytelen tartományvég"
+
+#: lib/regcomp.c:167
+msgid "Memory exhausted"
+msgstr "Elfogyott a memória"
+
+#: lib/regcomp.c:170
+msgid "Invalid preceding regular expression"
+msgstr "Érvénytelen volt az elõzõ reguláris kifejezés"
+
+#: lib/regcomp.c:173
+msgid "Premature end of regular expression"
+msgstr "A reguláris kifejezés túl hamar ért véget"
+
+#: lib/regcomp.c:176
+msgid "Regular expression too big"
+msgstr "Túl nagy reguláris kifejezés"
+
+#: lib/regcomp.c:179
+msgid "Unmatched ) or \\)"
+msgstr "Pár nélküli ) vagy \\)"
+
+#: lib/regcomp.c:704
+msgid "No previous regular expression"
+msgstr "Nincs elõzõ reguláris kifejezés"
+
+#: lib/xalloc-die.c:34
+msgid "memory exhausted"
+msgstr "elfogyott a memória"
+
+#: lib/xfreopen.c:35
+msgid "stdin"
+msgstr ""
+
+#: lib/xfreopen.c:36
+msgid "stdout"
+msgstr ""
+
+#: lib/xfreopen.c:37
+msgid "stderr"
+msgstr ""
+
+#: lib/xfreopen.c:38
+#, fuzzy
+msgid "unknown stream"
+msgstr "Ismeretlen rendszerhiba"
+
+#: lib/xfreopen.c:39
+#, c-format
+msgid "failed to reopen %s with mode %s"
+msgstr ""
+
+#: lib/xstrtol-error.c:63
+#, fuzzy, c-format
+msgid "invalid %s%s argument '%s'"
+msgstr "érvénytelen --bytes érték `%s'"
+
+#: lib/xstrtol-error.c:68
+#, c-format
+msgid "invalid suffix in %s%s argument '%s'"
+msgstr ""
+
+#: lib/xstrtol-error.c:72
+#, c-format
+msgid "%s%s argument '%s' too large"
+msgstr ""
+
+#: lib/version-etc.c:74
+#, c-format
+msgid "Packaged by %s (%s)\n"
+msgstr ""
+
+#: lib/version-etc.c:77
+#, c-format
+msgid "Packaged by %s\n"
+msgstr ""
+
+#. TRANSLATORS: Translate "(C)" to the copyright symbol
+#. (C-in-a-circle), if this symbol is available in the user's
+#. locale.  Otherwise, do not translate "(C)"; leave it as-is.
+#: lib/version-etc.c:84
+msgid "(C)"
+msgstr ""
+
+#: lib/version-etc.c:86
+msgid ""
+"\n"
+"License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl."
+"html>.\n"
+"This is free software: you are free to change and redistribute it.\n"
+"There is NO WARRANTY, to the extent permitted by law.\n"
+"\n"
+msgstr ""
+
+#. TRANSLATORS: %s denotes an author name.
+#: lib/version-etc.c:102
+#, c-format
+msgid "Written by %s.\n"
+msgstr "Írta %s.\n"
+
+#. TRANSLATORS: Each %s denotes an author name.
+#: lib/version-etc.c:106
+#, c-format
+msgid "Written by %s and %s.\n"
+msgstr "Írta %s és %s.\n"
+
+#. TRANSLATORS: Each %s denotes an author name.
+#: lib/version-etc.c:110
+#, c-format
+msgid "Written by %s, %s, and %s.\n"
+msgstr "Írta %s, %s és %s.\n"
+
+#. TRANSLATORS: Each %s denotes an author name.
+#. You can use line breaks, estimating that each author name occupies
+#. ca. 16 screen columns and that a screen line has ca. 80 columns.
+#: lib/version-etc.c:117
+#, c-format
+msgid ""
+"Written by %s, %s, %s,\n"
+"and %s.\n"
+msgstr ""
+"Írta %s, %s, %s\n"
+"és %s.\n"
+
+#. TRANSLATORS: Each %s denotes an author name.
+#. You can use line breaks, estimating that each author name occupies
+#. ca. 16 screen columns and that a screen line has ca. 80 columns.
+#: lib/version-etc.c:124
+#, c-format
+msgid ""
+"Written by %s, %s, %s,\n"
+"%s, and %s.\n"
+msgstr ""
+"Írta %s, %s, %s,\n"
+"%s és %s.\n"
+
+#. TRANSLATORS: Each %s denotes an author name.
+#. You can use line breaks, estimating that each author name occupies
+#. ca. 16 screen columns and that a screen line has ca. 80 columns.
+#: lib/version-etc.c:131
+#, c-format
+msgid ""
+"Written by %s, %s, %s,\n"
+"%s, %s, and %s.\n"
+msgstr ""
+"Írta %s, %s, %s,\n"
+"%s, %s és %s.\n"
+
+#. TRANSLATORS: Each %s denotes an author name.
+#. You can use line breaks, estimating that each author name occupies
+#. ca. 16 screen columns and that a screen line has ca. 80 columns.
+#: lib/version-etc.c:139
+#, c-format
+msgid ""
+"Written by %s, %s, %s,\n"
+"%s, %s, %s, and %s.\n"
+msgstr ""
+"Írta %s, %s, %s,\n"
+"%s, %s, %s és %s.\n"
+
+#. TRANSLATORS: Each %s denotes an author name.
+#. You can use line breaks, estimating that each author name occupies
+#. ca. 16 screen columns and that a screen line has ca. 80 columns.
+#: lib/version-etc.c:147
+#, c-format
+msgid ""
+"Written by %s, %s, %s,\n"
+"%s, %s, %s, %s,\n"
+"and %s.\n"
+msgstr ""
+"Írta %s, %s, %s,\n"
+"%s, %s, %s, %s\n"
+"és %s.\n"
+
+#. TRANSLATORS: Each %s denotes an author name.
+#. You can use line breaks, estimating that each author name occupies
+#. ca. 16 screen columns and that a screen line has ca. 80 columns.
+#: lib/version-etc.c:156
+#, c-format
+msgid ""
+"Written by %s, %s, %s,\n"
+"%s, %s, %s, %s,\n"
+"%s, and %s.\n"
+msgstr ""
+"Írta %s, %s, %s,\n"
+"%s, %s, %s, %s,\n"
+"%s és %s.\n"
+
+#. TRANSLATORS: Each %s denotes an author name.
+#. You can use line breaks, estimating that each author name occupies
+#. ca. 16 screen columns and that a screen line has ca. 80 columns.
+#: lib/version-etc.c:167
+#, c-format
+msgid ""
+"Written by %s, %s, %s,\n"
+"%s, %s, %s, %s,\n"
+"%s, %s, and others.\n"
+msgstr ""
+"Írta %s, %s, %s,\n"
+"%s, %s, %s, %s,\n"
+"%s, %s és mások.\n"
+
+#. TRANSLATORS: The placeholder indicates the bug-reporting address
+#. for this package.  Please add _another line_ saying
+#. "Report translation bugs to <...>\n" with the address for translation
+#. bugs (typically your translation team's web or email address).
+#: lib/version-etc.c:245
+#, c-format
+msgid ""
+"\n"
+"Report bugs to: %s\n"
+msgstr ""
+
+#: lib/version-etc.c:247
+#, c-format
+msgid "Report %s bugs to: %s\n"
+msgstr ""
+
+#: lib/version-etc.c:251
+#, c-format
+msgid "%s home page: <%s>\n"
+msgstr ""
+
+#: lib/version-etc.c:253
+#, c-format
+msgid "%s home page: <http://www.gnu.org/software/%s/>\n"
+msgstr ""
+
+#: lib/version-etc.c:256
+msgid "General help using GNU software: <http://www.gnu.org/gethelp/>\n"
+msgstr ""
+
+#: src/analyze.c:459 src/diff.c:1343
+#, c-format
+msgid "Files %s and %s differ\n"
+msgstr "A(z) %s és a(z) %s fájlok különböznek\n"
+
+#: src/analyze.c:462
+#, fuzzy, c-format
+msgid "Binary files %s and %s differ\n"
+msgstr "A(z) %s és a(z) %s fájlok különböznek\n"
+
+#: src/analyze.c:713 src/diff3.c:1416 src/util.c:663
+msgid "No newline at end of file"
+msgstr "Nincs újsor a fájl végén"
+
+#. This is a proper name. See the gettext manual, section Names.
+#: src/cmp.c:43
+msgid "Torbjorn Granlund"
+msgstr "Torbjorn Granlund"
+
+#. This is a proper name. See the gettext manual, section Names.
+#: src/cmp.c:44
+msgid "David MacKenzie"
+msgstr ""
+
+#: src/cmp.c:118 src/diff.c:839 src/diff3.c:414 src/sdiff.c:158
+#, fuzzy, c-format
+msgid "Try '%s --help' for more information."
+msgstr "Próbálja a `%s --help' kapcsolót további információért."
+
+#: src/cmp.c:137
+#, fuzzy, c-format
+msgid "invalid --ignore-initial value '%s'"
+msgstr "érvénytelen --ignore-initial érték: `%s'"
+
+#: src/cmp.c:147
+#, c-format
+msgid "options -l and -s are incompatible"
+msgstr "a -l és a -s kapcsolók összeférhetetlenek"
+
+#: src/cmp.c:155 src/diff.c:848 src/diff3.c:422 src/sdiff.c:167
+#: src/sdiff.c:315 src/sdiff.c:322 src/sdiff.c:874 src/util.c:278
+#: src/util.c:375 src/util.c:382
+msgid "write failed"
+msgstr "az írás sikertelen"
+
+#: src/cmp.c:157 src/diff.c:850 src/diff.c:1408 src/diff3.c:424
+#: src/sdiff.c:169
+msgid "standard output"
+msgstr "szabványos kimenet"
+
+#: src/cmp.c:161
+#, fuzzy
+msgid "-b, --print-bytes          print differing bytes"
+msgstr "-b  --print-bytes  Kiírja a különbözõ byte-okat."
+
+#: src/cmp.c:162
+#, fuzzy
+msgid "-i, --ignore-initial=SKIP         skip first SKIP bytes of both inputs"
+msgstr "-i UGRÁS  --ignore-initial=UGRÁS  Az elsõ UGRÁS db byte-ot kihagyja."
+
+#: src/cmp.c:163
+#, fuzzy
+msgid ""
+"-i, --ignore-initial=SKIP1:SKIP2  skip first SKIP1 bytes of FILE1 and\n"
+"                                      first SKIP2 bytes of FILE2"
+msgstr "  Átlépi a FÁJL1 elsõ UGRÁS1 byte-ját és a FÁJL2 elsõ UGRÁS2 byte-ját"
+
+#: src/cmp.c:165
+#, fuzzy
+msgid ""
+"-l, --verbose              output byte numbers and differing byte values"
+msgstr ""
+"-l  --verbose  Kiírja a byte-ok számát és az összes különbözõ byte értékét."
+
+#: src/cmp.c:166
+#, fuzzy
+msgid "-n, --bytes=LIMIT          compare at most LIMIT bytes"
+msgstr "-n HATÁR  --bytes=HATÁR  Legfeljebb HATÁR byte-ot hasonlít össze."
+
+#: src/cmp.c:167
+msgid "-s, --quiet, --silent      suppress all normal output"
+msgstr ""
+
+#: src/cmp.c:168
+msgid "    --help                 display this help and exit"
+msgstr ""
+
+#: src/cmp.c:169
+#, fuzzy
+msgid "-v, --version              output version information and exit"
+msgstr "-v  --version  A kimenet a verziószám."
+
+#: src/cmp.c:178
+#, c-format
+msgid "Usage: %s [OPTION]... FILE1 [FILE2 [SKIP1 [SKIP2]]]\n"
+msgstr "Használat: %s [KAPCSOLÓ]... FÁJL1 [FÁJL2 [UGRÁS1 [UGRÁS2]]]\n"
+
+#: src/cmp.c:180
+msgid "Compare two files byte by byte."
+msgstr "Összehasonlít két fájlt byte-onként."
+
+#: src/cmp.c:182
+#, fuzzy
+msgid ""
+"The optional SKIP1 and SKIP2 specify the number of bytes to skip\n"
+"at the beginning of each file (zero by default)."
+msgstr "UGRÁS1 és UGRÁS2 byte-ot lép át az egyes fájlokban."
+
+#: src/cmp.c:185 src/diff.c:956 src/diff3.c:462 src/sdiff.c:210
+msgid ""
+"Mandatory arguments to long options are mandatory for short options too.\n"
+msgstr ""
+
+#: src/cmp.c:191
+msgid ""
+"SKIP values may be followed by the following multiplicative suffixes:\n"
+"kB 1000, K 1024, MB 1,000,000, M 1,048,576,\n"
+"GB 1,000,000,000, G 1,073,741,824, and so on for T, P, E, Z, Y."
+msgstr ""
+"Az UGRÁS értékek után a következõ szorzóutótagokat lehet írni:\n"
+"kB 1000, K 1024, MB 1 000 000, M 1 048 576,\n"
+"GB 1 000 000 000, G 1 073 741 824, és így tovább: T, P, E, Z, Y."
+
+#: src/cmp.c:194
+#, fuzzy
+msgid "If a FILE is '-' or missing, read standard input."
+msgstr "Ha a FÁJL a `-' vagy hiányzik, akkor a szabványos bemenetet használja."
+
+#: src/cmp.c:195 src/diff.c:944 src/sdiff.c:220
+msgid "Exit status is 0 if inputs are the same, 1 if different, 2 if trouble."
+msgstr ""
+"A kilépési állapotkód 0, ha a bemenetek azonosak; 1, ha különbözõk; 2, ha "
+"hiba történt."
+
+#: src/cmp.c:240
+#, fuzzy, c-format
+msgid "invalid --bytes value '%s'"
+msgstr "érvénytelen --bytes érték `%s'"
+
+#: src/cmp.c:266 src/diff.c:757 src/diff3.c:318 src/sdiff.c:565
+#, fuzzy, c-format
+msgid "missing operand after '%s'"
+msgstr "hiányzó operandus a `%s' után"
+
+#: src/cmp.c:278 src/diff.c:759 src/diff3.c:320 src/sdiff.c:567
+#, fuzzy, c-format
+msgid "extra operand '%s'"
+msgstr "felesleges operandus `%s'"
+
+#: src/cmp.c:491
+#, c-format
+msgid "%s %s differ: byte %s, line %s\n"
+msgstr "%s %s eltér: byte: %s, sor: %s\n"
+
+#: src/cmp.c:507
+#, c-format
+msgid "%s %s differ: byte %s, line %s is %3o %s %3o %s\n"
+msgstr "%s %s eltér: byte %s, sor %s %3o %s %3o %s\n"
+
+#: src/cmp.c:559
+#, c-format
+msgid "cmp: EOF on %s\n"
+msgstr "cmp: EOF %s-nél\n"
+
+#. This is a proper name. See the gettext manual, section Names.
+#: src/diff.c:49
+msgid "Paul Eggert"
+msgstr ""
+
+#. This is a proper name. See the gettext manual, section Names.
+#: src/diff.c:50
+msgid "Mike Haertel"
+msgstr ""
+
+#. This is a proper name. See the gettext manual, section Names.
+#: src/diff.c:51
+msgid "David Hayes"
+msgstr ""
+
+#. This is a proper name. See the gettext manual, section Names.
+#: src/diff.c:52
+msgid "Richard Stallman"
+msgstr ""
+
+#. This is a proper name. See the gettext manual, section Names.
+#: src/diff.c:53
+msgid "Len Tower"
+msgstr ""
+
+#: src/diff.c:339
+#, fuzzy, c-format
+msgid "invalid context length '%s'"
+msgstr "érvénytelen környezethossz `%s'"
+
+#: src/diff.c:422
+#, c-format
+msgid "pagination not supported on this host"
+msgstr "a tördelés nem támogatott ezen a gépen"
+
+#: src/diff.c:437 src/diff3.c:300
+#, c-format
+msgid "too many file label options"
+msgstr "túl sok fájlcímke-beállítás"
+
+#: src/diff.c:514
+#, fuzzy, c-format
+msgid "invalid width '%s'"
+msgstr "érvénytelen szélesség `%s'"
+
+#: src/diff.c:518
+msgid "conflicting width options"
+msgstr "összeférhetlen szélességbeállítások"
+
+#: src/diff.c:543
+#, fuzzy, c-format
+msgid "invalid horizon length '%s'"
+msgstr "érvénytelen munkaszinthossz `%s'"
+
+#: src/diff.c:598
+#, fuzzy, c-format
+msgid "invalid tabsize '%s'"
+msgstr "érvénytelen tabulátorméret `%s'"
+
+#: src/diff.c:602
+msgid "conflicting tabsize options"
+msgstr "összeférhetlen tabulátorméret-beállítások"
+
+#: src/diff.c:734
+msgid "--from-file and --to-file both specified"
+msgstr "a --from-file és a --to-file is meg van adva"
+
+#: src/diff.c:854
+#, fuzzy
+msgid "    --normal                  output a normal diff (the default)"
+msgstr "--normal  A kimenet egy normál diff."
+
+#: src/diff.c:855
+#, fuzzy
+msgid "-q, --brief                   report only when files differ"
+msgstr "-q  --brief  Csak akkor van kimenet, ha a fájlok eltérnek."
+
+#: src/diff.c:856
+#, fuzzy
+msgid "-s, --report-identical-files  report when two files are the same"
+msgstr "-s  --report-identical-files  Jelenti, ha a két fájl azonos."
+
+#: src/diff.c:857
+msgid ""
+"-c, -C NUM, --context[=NUM]   output NUM (default 3) lines of copied context"
+msgstr ""
+
+#: src/diff.c:858
+#, fuzzy
+msgid ""
+"-u, -U NUM, --unified[=NUM]   output NUM (default 3) lines of unified context"
+msgstr "-w SZÁM  --width=SZÁM  Legfeljebb SZÁM széles kimenet (alapból 130)."
+
+#: src/diff.c:859
+#, fuzzy
+msgid "-e, --ed                      output an ed script"
+msgstr "-e  --ed  A kimenet egy ed-parancsfájl."
+
+#: src/diff.c:860
+#, fuzzy
+msgid "-n, --rcs                     output an RCS format diff"
+msgstr "-n  --rcs  A kimenet RCS formátumú diff."
+
+#: src/diff.c:861
+msgid "-y, --side-by-side            output in two columns"
+msgstr ""
+
+#: src/diff.c:862
+#, fuzzy
+msgid ""
+"-W, --width=NUM               output at most NUM (default 130) print columns"
+msgstr "-w SZÁM  --width=SZÁM  Legfeljebb SZÁM széles kimenet (alapból 130)."
+
+#: src/diff.c:863
+#, fuzzy
+msgid ""
+"    --left-column             output only the left column of common lines"
+msgstr "-l  --left-column  A közös sorokat csak bal oldra írja ki."
+
+#: src/diff.c:864
+#, fuzzy
+msgid "    --suppress-common-lines   do not output common lines"
+msgstr "-s  --suppress-common-lines  Nem írja ki a közös sorokat."
+
+#: src/diff.c:866
+msgid "-p, --show-c-function         show which C function each change is in"
+msgstr ""
+
+#: src/diff.c:867
+msgid "-F, --show-function-line=RE   show the most recent line matching RE"
+msgstr ""
+
+#: src/diff.c:868
+msgid ""
+"    --label LABEL             use LABEL instead of file name\n"
+"                                (can be repeated)"
+msgstr ""
+
+#: src/diff.c:871
+#, fuzzy
+msgid "-t, --expand-tabs             expand tabs to spaces in output"
+msgstr ""
+"-t  --expand-tabs  A tabulátorokat szóközzel helyettesíti a kimenetben."
+
+#: src/diff.c:872
+#, fuzzy
+msgid "-T, --initial-tab             make tabs line up by prepending a tab"
+msgstr ""
+"-T  --initial-tab  A tabulátorok helyesen jelennek meg a kezdõ tabulátornak "
+"köszönhetõen."
+
+#: src/diff.c:873
+#, fuzzy
+msgid ""
+"    --tabsize=NUM             tab stops every NUM (default 8) print columns"
+msgstr ""
+"--tabsize=NUM  Tabulátorpozíció minden NUM. nyomtatási oszlopban (alapból 8)."
+
+#: src/diff.c:874
+msgid ""
+"    --suppress-blank-empty    suppress space or tab before empty output lines"
+msgstr ""
+
+#: src/diff.c:875
+#, fuzzy
+msgid "-l, --paginate                pass output through 'pr' to paginate it"
+msgstr ""
+"-l  --paginate  A kimenet oldalainak a lapokra tördelése a`pr' programmal."
+
+#: src/diff.c:877
+#, fuzzy
+msgid ""
+"-r, --recursive                 recursively compare any subdirectories found"
+msgstr "-r  --recursive  Az összes alkönyvtárat megvizsgálja."
+
+#: src/diff.c:878
+msgid "    --no-dereference            don't follow symbolic links"
+msgstr ""
+
+#: src/diff.c:879
+#, fuzzy
+msgid "-N, --new-file                  treat absent files as empty"
+msgstr "-N  --new-file  A hiányzó fájlokat üresként kezeli."
+
+#: src/diff.c:880
+#, fuzzy
+msgid "    --unidirectional-new-file   treat absent first files as empty"
+msgstr "--unidirectional-new-file  A hiányzó elsõ fájlokat üresként kezeli."
+
+#: src/diff.c:881
+#, fuzzy
+msgid "    --ignore-file-name-case     ignore case when comparing file names"
+msgstr ""
+"--ignore-file-name-case  Fájlneveknél nem tesz különbséget\n"
+"                         a kis- és nagybetûk közt."
+
+#: src/diff.c:882
+#, fuzzy
+msgid "    --no-ignore-file-name-case  consider case when comparing file names"
+msgstr ""
+"--no-ignore-file-name-case  Fájlneveknél figyeli a kis- és nagybetûk\n"
+"                            közti különbséget"
+
+#: src/diff.c:883
+#, fuzzy
+msgid "-x, --exclude=PAT               exclude files that match PAT"
+msgstr "-x MINTA  --exclude=MINTA  Kihagyja a MINTÁ-ra illeszkedõ fájlokat."
+
+#: src/diff.c:884
+#, fuzzy
+msgid ""
+"-X, --exclude-from=FILE         exclude files that match any pattern in FILE"
+msgstr ""
+"-X FÁJL  --exclude-from=FÁJL  Kihagyja a FÁJL-ban megtalálható mintákra\n"
+"                              illeszkedõ fájlokat."
+
+#: src/diff.c:885
+#, fuzzy
+msgid ""
+"-S, --starting-file=FILE        start with FILE when comparing directories"
+msgstr ""
+"-S FÁJL  --starting-file=FÁJL  A FÁJL-lal kezdi a könyvtárak "
+"összehasolítását."
+
+#: src/diff.c:886
+#, fuzzy
+msgid ""
+"    --from-file=FILE1           compare FILE1 to all operands;\n"
+"                                  FILE1 can be a directory"
+msgstr ""
+"--from-file=FÁJL1  FÁJL1 összehasonlítása minden operandussal.\n"
+"                   FÁJL1 lehet könyvtár is."
+
+#: src/diff.c:888
+#, fuzzy
+msgid ""
+"    --to-file=FILE2             compare all operands to FILE2;\n"
+"                                  FILE2 can be a directory"
+msgstr ""
+"--to-file=FÁJL2  Minden operandus összehasonlítása FÁJL2-vel.\n"
+"                 FÁJL2 lehet könyvtár."
+
+#: src/diff.c:891
+#, fuzzy
+msgid ""
+"-i, --ignore-case               ignore case differences in file contents"
+msgstr "-i  --ignore-case  Nem tesz különbséget a kis- és nagybetûk között."
+
+#: src/diff.c:892
+#, fuzzy
+msgid "-E, --ignore-tab-expansion      ignore changes due to tab expansion"
+msgstr "-E  --ignore-tab-expansion  Nem figyeli a tab/szóköz cserét."
+
+#: src/diff.c:893
+#, fuzzy
+msgid "-Z, --ignore-trailing-space     ignore white space at line end"
+msgstr "-w  --ignore-all-space  Nem figyel semmilyen üres helyet."
+
+#: src/diff.c:894
+#, fuzzy
+msgid ""
+"-b, --ignore-space-change       ignore changes in the amount of white space"
+msgstr "-b  --ignore-space-change  Nem figyeli az üres helyek változtatását."
+
+#: src/diff.c:895
+#, fuzzy
+msgid "-w, --ignore-all-space          ignore all white space"
+msgstr "-w  --ignore-all-space  Nem figyel semmilyen üres helyet."
+
+#: src/diff.c:896
+#, fuzzy
+msgid ""
+"-B, --ignore-blank-lines        ignore changes where lines are all blank"
+msgstr "-B  --ignore-blank-lines  Figyelmen kívül hagyja az üres sorokat."
+
+#: src/diff.c:897
+#, fuzzy
+msgid "-I, --ignore-matching-lines=RE  ignore changes where all lines match RE"
+msgstr ""
+"-I RK  --ignore-matching-lines=RK  Nem figyeli a RK-re illeszkedõ sorokat."
+
+#: src/diff.c:899
+#, fuzzy
+msgid "-a, --text                      treat all files as text"
+msgstr "-a  --text  Az összes fájlt szövegként kezeli"
+
+#: src/diff.c:900
+#, fuzzy
+msgid "    --strip-trailing-cr         strip trailing carriage return on input"
+msgstr ""
+"--strip-trailing-cr  A bemenetbõl elhagyja a befejezõ kocsivissza "
+"karaktereket."
+
+#: src/diff.c:902
+#, fuzzy
+msgid "    --binary                    read and write data in binary mode"
+msgstr "--binary  Olvasás és írás bináris módban."
+
+#: src/diff.c:905
+#, fuzzy
+msgid ""
+"-D, --ifdef=NAME                output merged file with '#ifdef NAME' diffs"
+msgstr ""
+"-D NÉV--ifdef=NÉV  Kiírja az összefésült fájlt `#ifdef NÉV' direktívákkal "
+"jelölve a különbségeket."
+
+#: src/diff.c:906
+#, fuzzy
+msgid "    --GTYPE-group-format=GFMT   format GTYPE input groups with GFMT"
+msgstr ""
+"--GTYPE-group-format=GFMT  Hasonló, de a GTYPE bemeneti csoportokat formázza "
+"a GFMT formátumra."
+
+#: src/diff.c:907
+#, fuzzy
+msgid "    --line-format=LFMT          format all input lines with LFMT"
+msgstr ""
+"--line-format=LFMT  Hasonló, de minden bemeneti sort a LFMT formátumúra "
+"formáz."
+
+#: src/diff.c:908
+#, fuzzy
+msgid "    --LTYPE-line-format=LFMT    format LTYPE input lines with LFMT"
+msgstr ""
+"--LTYPE-line-format=LFMT  Hasonló, de az LTYPE típusú bemeneti sorokat LFMT "
+"formátumúra formázza."
+
+#: src/diff.c:909
+msgid ""
+"  These format options provide fine-grained control over the output\n"
+"    of diff, generalizing -D/--ifdef."
+msgstr ""
+
+#: src/diff.c:911
+#, fuzzy
+msgid "  LTYPE is 'old', 'new', or 'unchanged'.  GTYPE is LTYPE or 'changed'."
+msgstr ""
+"  az LTYPE `old', `new', vagy `unchanged'.  a GTYPE LTYPE vagy `changed'."
+
+#: src/diff.c:912
+#, fuzzy
+msgid ""
+"  GFMT (only) may contain:\n"
+"    %<  lines from FILE1\n"
+"    %>  lines from FILE2\n"
+"    %=  lines common to FILE1 and FILE2\n"
+"    %[-][WIDTH][.[PREC]]{doxX}LETTER  printf-style spec for LETTER\n"
+"      LETTERs are as follows for new group, lower case for old group:\n"
+"        F  first line number\n"
+"        L  last line number\n"
+"        N  number of lines = L-F+1\n"
+"        E  F-1\n"
+"        M  L+1\n"
+"    %(A=B?T:E)  if A equals B then T else E"
+msgstr ""
+"  GFMT tartalmazhatja:\n"
+"    %<  a FÁJL1 sorait\n"
+"    %>  a FÁJL2 sorait\n"
+"    %=  a FÁJL1 és FÁJL2 közös sorait\n"
+"    %[-][WIDTH][.[PREC]]{doxX}BETÛ  printf-stílusú formázást\n"
+"      BETÛ a következõ lehet az új csoportra, kisbetûvel régi csoportra:\n"
+"        F  elsõ sor száma\n"
+"        L  utolsó sor száma\n"
+"        N  sorok száma = L-F+1\n"
+"        E  F-1\n"
+"        M  L+1"
+
+#: src/diff.c:924
+#, fuzzy
+msgid ""
+"  LFMT (only) may contain:\n"
+"    %L  contents of line\n"
+"    %l  contents of line, excluding any trailing newline\n"
+"    %[-][WIDTH][.[PREC]]{doxX}n  printf-style spec for input line number"
+msgstr ""
+"  LFMT tartalmazhatja:\n"
+"    %L  sor tartalma\n"
+"    %l  sor tartalma, új sorral nélkül\n"
+"    %[-][WIDTH][.[PREC]]{doxX}n  bemeneti sorok számának printf-stílusú "
+"megadása"
+
+#: src/diff.c:928
+#, fuzzy
+msgid ""
+"  Both GFMT and LFMT may contain:\n"
+"    %%  %\n"
+"    %c'C'  the single character C\n"
+"    %c'\\OOO'  the character with octal code OOO\n"
+"    C    the character C (other characters represent themselves)"
+msgstr ""
+"  GFMT és LFMT is tartalmazhatja:\n"
+"    %%  %\n"
+"    %c'C'  egyetlen C karakter\n"
+"    %c'\\OOO'  karakter nyolcas számrendszer beli értéke"
+
+#: src/diff.c:934
+#, fuzzy
+msgid "-d, --minimal            try hard to find a smaller set of changes"
+msgstr "-d  --minimal  Megpróbál kevesebb különbséget találni."
+
+#: src/diff.c:935
+#, fuzzy
+msgid "    --horizon-lines=NUM  keep NUM lines of the common prefix and suffix"
+msgstr ""
+"--horizon-lines=SZÁM  SZÁM számú sort tart meg a közös elõ és utótagból."
+
+#: src/diff.c:936
+#, fuzzy
+msgid ""
+"    --speed-large-files  assume large files and many scattered small changes"
+msgstr ""
+"-H  --speed-large-files  Nagy fájlokat feltételez sok, elszórt, kis "
+"változással."
+
+#: src/diff.c:938
+msgid "    --help               display this help and exit"
+msgstr ""
+
+#: src/diff.c:939
+#, fuzzy
+msgid "-v, --version            output version information and exit"
+msgstr "-v  --version  A kimenet a verziószám."
+
+#: src/diff.c:941
+#, fuzzy
+msgid ""
+"FILES are 'FILE1 FILE2' or 'DIR1 DIR2' or 'DIR FILE...' or 'FILE... DIR'."
+msgstr ""
+"A FÁJLOK lehetnek `FÁJL1 FÁJL2' vagy `KÖNYVTÁR1 KÖNYVTÁR2' vagy\n"
+"`KÖNYVTÁR FÁJL...' vagy `FÁJL... KÖNYVTÁR'."
+
+#: src/diff.c:942
+#, fuzzy
+msgid ""
+"If --from-file or --to-file is given, there are no restrictions on FILE(s)."
+msgstr ""
+"Ha --from-file vagy --to-file meg van adva, nincsenek megszorítások a FÁJLOK-"
+"ra."
+
+#: src/diff.c:943 src/diff3.c:481 src/sdiff.c:219
+#, fuzzy
+msgid "If a FILE is '-', read standard input."
+msgstr "Ha a FÁJL `-', a szabványos bemenetrõl olvas."
+
+#: src/diff.c:953
+#, c-format
+msgid "Usage: %s [OPTION]... FILES\n"
+msgstr "Használat: %s [KAPCSOLÓK]... FÁJLOK\n"
+
+#: src/diff.c:954
+#, fuzzy
+msgid "Compare FILES line by line."
+msgstr "Fájlok összehasonlítása sorról sorra."
+
+#: src/diff.c:988
+#, fuzzy, c-format
+msgid "conflicting %s option value '%s'"
+msgstr "összeférhetetlen %s kapcsoló értéke: `%s'"
+
+#: src/diff.c:1001
+#, c-format
+msgid "conflicting output style options"
+msgstr "összeférhetetlen kimenetistílus-kapcsolók"
+
+#: src/diff.c:1058 src/diff.c:1268
+#, c-format
+msgid "Only in %s: %s\n"
+msgstr "Csak %s -ben: %s\n"
+
+#: src/diff.c:1192
+#, fuzzy
+msgid "cannot compare '-' to a directory"
+msgstr "`-'-t nem lehet összehasonlítani egy könyvtárral"
+
+#: src/diff.c:1227
+msgid "-D option not supported with directories"
+msgstr "-D kapcsoló nem támogatott könyvtárak esetén"
+
+#: src/diff.c:1236
+#, c-format
+msgid "Common subdirectories: %s and %s\n"
+msgstr "Közös alkönyvtárak: %s és %s\n"
+
+#: src/diff.c:1278 src/diff.c:1328
+#, c-format
+msgid "File %s is a %s while file %s is a %s\n"
+msgstr "A(z) %s fájl egy %s, viszont a(z) %s fájl egy %s\n"
+
+#: src/diff.c:1314
+#, fuzzy, c-format
+msgid "Symbolic links %s and %s differ\n"
+msgstr "A(z) %s és a(z) %s fájlok különböznek\n"
+
+#: src/diff.c:1399
+#, c-format
+msgid "Files %s and %s are identical\n"
+msgstr "%s és %s fájlok azonosak\n"
+
+#. This is a proper name. See the gettext manual, section Names.
+#: src/diff3.c:41
+msgid "Randy Smith"
+msgstr ""
+
+#: src/diff3.c:313
+#, c-format
+msgid "incompatible options"
+msgstr "összeférhetetlen kapcsolók"
+
+#: src/diff3.c:353
+#, fuzzy
+msgid "'-' specified for more than one input file"
+msgstr "`-' több mint egy bemeneti fájlhoz lett megadva"
+
+#: src/diff3.c:395 src/diff3.c:1241 src/diff3.c:1645 src/diff3.c:1700
+#: src/sdiff.c:307 src/sdiff.c:844 src/sdiff.c:855
+msgid "read failed"
+msgstr "olvasás sikertelen"
+
+#: src/diff3.c:428
+#, fuzzy
+msgid "-A, --show-all              output all changes, bracketing conflicts"
+msgstr "-A  --show-all  Kiírja az összes változást, zárójelezi az ütközéseket."
+
+#: src/diff3.c:430
+#, fuzzy
+msgid ""
+"-e, --ed                    output ed script incorporating changes\n"
+"                                from OLDFILE to YOURFILE into MYFILE"
+msgstr ""
+"-e  --ed  A RÉGI fájlból az ÚJ fájlba át nem került változásokat kiírja a "
+"SAJÁT fájlba."
+
+#: src/diff3.c:432
+#, fuzzy
+msgid "-E, --show-overlap          like -e, but bracket conflicts"
+msgstr ""
+"-E  --show-overlap  Kiírja az át nem vitt változásokat, zárójelezi az "
+"ütközéseket."
+
+#: src/diff3.c:433
+#, fuzzy
+msgid ""
+"-3, --easy-only             like -e, but incorporate only nonoverlapping "
+"changes"
+msgstr "-3  --easy-only  Kiírja a nem átvitt és nem átfedõ változásokat."
+
+#: src/diff3.c:434
+#, fuzzy
+msgid ""
+"-x, --overlap-only          like -e, but incorporate only overlapping changes"
+msgstr "-x  --overlap-only  Kiírja az átfedõ változtatásokat."
+
+#: src/diff3.c:435
+msgid "-X                          like -x, but bracket conflicts"
+msgstr ""
+
+#: src/diff3.c:436
+#, fuzzy
+msgid "-i                          append 'w' and 'q' commands to ed scripts"
+msgstr "-i  Hozzáfûzi a `w' és a`q' parancsokat az ed-parancsfájlhoz."
+
+#: src/diff3.c:438
+msgid ""
+"-m, --merge                 output actual merged file, according to\n"
+"                                -A if no other options are given"
+msgstr ""
+
+#: src/diff3.c:441
+#, fuzzy
+msgid "-a, --text                  treat all files as text"
+msgstr "-a  --text  Az összes fájlt szövegként kezeli"
+
+#: src/diff3.c:442
+#, fuzzy
+msgid "    --strip-trailing-cr     strip trailing carriage return on input"
+msgstr ""
+"--strip-trailing-cr  A bemenetbõl elhagyja a befejezõ kocsivissza "
+"karaktereket."
+
+#: src/diff3.c:443
+#, fuzzy
+msgid "-T, --initial-tab           make tabs line up by prepending a tab"
+msgstr ""
+"-T  --initial-tab  A tabulátorok helyesen jelennek meg a kezdõ tabulátornak "
+"köszönhetõen."
+
+#: src/diff3.c:444
+#, fuzzy
+msgid "    --diff-program=PROGRAM  use PROGRAM to compare files"
+msgstr ""
+"--diff-program=PROGRAM  A PROGRAM-ot használja a fájlok\n"
+"                        összehasonlításához."
+
+#: src/diff3.c:445
+msgid ""
+"-L, --label=LABEL           use LABEL instead of file name\n"
+"                                (can be repeated up to three times)"
+msgstr ""
+
+#: src/diff3.c:448
+msgid "    --help                  display this help and exit"
+msgstr ""
+
+#: src/diff3.c:449
+#, fuzzy
+msgid "-v, --version               output version information and exit"
+msgstr "-v  --version  A kimenet a verziószám."
+
+#: src/diff3.c:458
+#, c-format
+msgid "Usage: %s [OPTION]... MYFILE OLDFILE YOURFILE\n"
+msgstr "Használat: %s [KAPCSOLÓ]... SAJÁT RÉGI ÚJ\n"
+
+#: src/diff3.c:460
+msgid "Compare three files line by line."
+msgstr "Három fájlt hasonlít össze sorról sorra."
+
+#: src/diff3.c:470
+msgid ""
+"\n"
+"The default output format is a somewhat human-readable representation of\n"
+"the changes.\n"
+"\n"
+"The -e, -E, -x, -X (and corresponding long) options cause an ed script\n"
+"to be output instead of the default.\n"
+"\n"
+"Finally, the -m (--merge) option causes diff3 to do the merge internally\n"
+"and output the actual merged file.  For unusual input, this is more\n"
+"robust than using ed.\n"
+msgstr ""
+
+#: src/diff3.c:482
+msgid "Exit status is 0 if successful, 1 if conflicts, 2 if trouble."
+msgstr ""
+"A kilépési állapotkód 0, ha sikeres; 1, ha konfliktus van; 2, ha hiba "
+"történt."
+
+#: src/diff3.c:675
+msgid "internal error: screwup in format of diff blocks"
+msgstr "belsõ hiba: a program megzavarodott a különbségblokkok formátumánál"
+
+#: src/diff3.c:968
+#, c-format
+msgid "%s: diff failed: "
+msgstr "%s: összehasonlítás sikertelen: "
+
+#: src/diff3.c:990
+msgid "internal error: invalid diff type in process_diff"
+msgstr "belsõ hiba: érvénytelen összehasonlítási típus a process_diff-ben"
+
+#: src/diff3.c:1015
+msgid "invalid diff format; invalid change separator"
+msgstr "érvénytelen összehasonlítás-formátum; érvénytelen változáselválasztó"
+
+#: src/diff3.c:1251
+msgid "invalid diff format; incomplete last line"
+msgstr "érvénytelen összehasonlítás-formátum; befejezetlen utolsó sor"
+
+#: src/diff3.c:1275 src/sdiff.c:275 src/util.c:392
+#, fuzzy, c-format
+msgid "subsidiary program '%s' could not be invoked"
+msgstr "`%s' segédprogram nem indítható"
+
+#: src/diff3.c:1300
+msgid "invalid diff format; incorrect leading line chars"
+msgstr "érvénytelen összehasonlítási formátum; rossz sor eleji karakter"
+
+#: src/diff3.c:1373
+msgid "internal error: invalid diff type passed to output"
+msgstr "belsõ hiba: érvénytelen összehasonlítási típus került a kimenetre"
+
+#: src/diff3.c:1647 src/diff3.c:1704
+msgid "input file shrank"
+msgstr "a bementi fájl összement"
+
+#: src/dir.c:158
+#, fuzzy, c-format
+msgid "cannot compare file names '%s' and '%s'"
+msgstr "nem lehet a(z) `%s' és a(z) `%s' fájlneveket összehasonlítani"
+
+#: src/dir.c:209
+#, c-format
+msgid "%s: recursive directory loop"
+msgstr ""
+
+#. This is a proper name. See the gettext manual, section Names.
+#: src/sdiff.c:42
+msgid "Thomas Lord"
+msgstr ""
+
+#: src/sdiff.c:173
+#, fuzzy
+msgid ""
+"-o, --output=FILE            operate interactively, sending output to FILE"
+msgstr ""
+"-o FÁJL  --output=FÁJL  Interaktívan dolgozik, a kimenetet a FÁJL-ba küldi."
+
+#: src/sdiff.c:175
+#, fuzzy
+msgid ""
+"-i, --ignore-case            consider upper- and lower-case to be the same"
+msgstr "-i  --ignore-case  A kis- és nagybetûket azonosnak tekinti."
+
+#: src/sdiff.c:176
+#, fuzzy
+msgid "-E, --ignore-tab-expansion   ignore changes due to tab expansion"
+msgstr "-E  --ignore-tab-expansion  Nem figyeli a tab/szóköz cserét."
+
+#: src/sdiff.c:177
+#, fuzzy
+msgid "-Z, --ignore-trailing-space  ignore white space at line end"
+msgstr "-w  --ignore-all-space  Nem figyel semmilyen üres helyet."
+
+#: src/sdiff.c:178
+#, fuzzy
+msgid ""
+"-b, --ignore-space-change    ignore changes in the amount of white space"
+msgstr "-b  --ignore-space-change  Nem figyeli az üres helyek változtatását."
+
+#: src/sdiff.c:179
+#, fuzzy
+msgid "-W, --ignore-all-space       ignore all white space"
+msgstr "-W  --ignore-all-space  Figyelmen kívül hagy minden üres helyet."
+
+#: src/sdiff.c:180
+#, fuzzy
+msgid "-B, --ignore-blank-lines     ignore changes whose lines are all blank"
+msgstr "-B  --ignore-blank-lines  Figyelmen kívül hagyja az üres sorokat."
+
+#: src/sdiff.c:181
+#, fuzzy
+msgid "-I, --ignore-matching-lines=RE  ignore changes all whose lines match RE"
+msgstr ""
+"-I RK  --ignore-matching-lines=RK  Nem figyeli a RK-re illeszkedõ sorokat."
+
+#: src/sdiff.c:182
+#, fuzzy
+msgid "    --strip-trailing-cr      strip trailing carriage return on input"
+msgstr ""
+"--strip-trailing-cr  A bemenetbõl elhagyja a befejezõ kocsivissza "
+"karaktereket."
+
+#: src/sdiff.c:183
+#, fuzzy
+msgid "-a, --text                   treat all files as text"
+msgstr "-a  --text  Az összes fájlt szövegként kezeli"
+
+#: src/sdiff.c:185
+#, fuzzy
+msgid ""
+"-w, --width=NUM              output at most NUM (default 130) print columns"
+msgstr "-w SZÁM  --width=SZÁM  Legfeljebb SZÁM széles kimenet (alapból 130)."
+
+#: src/sdiff.c:186
+#, fuzzy
+msgid ""
+"-l, --left-column            output only the left column of common lines"
+msgstr "-l  --left-column  A közös sorokat csak bal oldra írja ki."
+
+#: src/sdiff.c:187
+#, fuzzy
+msgid "-s, --suppress-common-lines  do not output common lines"
+msgstr "-s  --suppress-common-lines  Nem írja ki a közös sorokat."
+
+#: src/sdiff.c:189
+#, fuzzy
+msgid "-t, --expand-tabs            expand tabs to spaces in output"
+msgstr ""
+"-t  --expand-tabs  A tabulátorokat szóközzel helyettesíti a kimenetben."
+
+#: src/sdiff.c:190
+#, fuzzy
+msgid ""
+"    --tabsize=NUM            tab stops at every NUM (default 8) print columns"
+msgstr ""
+"--tabsize=NUM  Tabulátorpozíció minden NUM. nyomtatási oszlopban (alapból 8)."
+
+#: src/sdiff.c:192
+#, fuzzy
+msgid "-d, --minimal                try hard to find a smaller set of changes"
+msgstr "-d  --minimal  Megpróbál kevesebb különbséget találni."
+
+#: src/sdiff.c:193
+#, fuzzy
+msgid ""
+"-H, --speed-large-files      assume large files, many scattered small changes"
+msgstr ""
+"-H  --speed-large-files  Nagy fájlokat feltételez sok, elszórt, kis "
+"változással."
+
+#: src/sdiff.c:194
+#, fuzzy
+msgid "    --diff-program=PROGRAM   use PROGRAM to compare files"
+msgstr ""
+"--diff-program=PROGRAM  A PROGRAM-ot használja a fájlok\n"
+"                        összehasonlításához."
+
+#: src/sdiff.c:196
+msgid "    --help                   display this help and exit"
+msgstr ""
+
+#: src/sdiff.c:197
+#, fuzzy
+msgid "-v, --version                output version information and exit"
+msgstr "-v  --version  A kimenet a verziószám."
+
+#: src/sdiff.c:206
+#, c-format
+msgid "Usage: %s [OPTION]... FILE1 FILE2\n"
+msgstr "Használat: %s [KAPCSOLÓ]... FÁJL1 FÁJL2\n"
+
+#: src/sdiff.c:208
+#, fuzzy
+msgid "Side-by-side merge of differences between FILE1 and FILE2."
+msgstr "Egymás mellett jeleníti a fájlokat és a különbségeiket."
+
+#: src/sdiff.c:329
+msgid "cannot interactively merge standard input"
+msgstr "nem lehet interaktívan összefûzni a szabványos bemenetet."
+
+#: src/sdiff.c:595
+msgid "both files to be compared are directories"
+msgstr "mindkét összehasonlítandó fájl könyvtár"
+
+#: src/sdiff.c:818
+#, fuzzy
+msgid ""
+"ed:\tEdit then use both versions, each decorated with a header.\n"
+"eb:\tEdit then use both versions.\n"
+"el or e1:\tEdit then use the left version.\n"
+"er or e2:\tEdit then use the right version.\n"
+"e:\tDiscard both versions then edit a new one.\n"
+"l or 1:\tUse the left version.\n"
+"r or 2:\tUse the right version.\n"
+"s:\tSilently include common lines.\n"
+"v:\tVerbosely include common lines.\n"
+"q:\tQuit.\n"
+msgstr ""
+"ed:\tSzerkesztés, majd mind a két változat használata fejlécekkel díszítve.\n"
+"eb:\tSzerkesztés, majd mind a két változat használata.\n"
+"el:\tSzerkesztés, majd a bal oldali változat használata.\n"
+"er:\tSzerkesztés, majd a jobb oldali változat használata.\n"
+"e:\tÚj változat írása.\n"
+"l:\tA bal oldali változat használata.\n"
+"r:\tA jobb oldali változat használata.\n"
+"s:\tAz azonos sorok beépítése figyelmeztetés nélkül.\n"
+"v:\tAz azonos sorok beépítése figyelmeztetéssel.\n"
+"q:\tKilépés.\n"
+
+#~ msgid "%s: illegal option -- %c\n"
+#~ msgstr "%s: nem megengedett kapcsoló -- %c\n"
+
+#~ msgid ""
+#~ "This is free software; see the source for copying conditions.  There is "
+#~ "NO\n"
+#~ "warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR "
+#~ "PURPOSE.\n"
+#~ msgstr ""
+#~ "Ez szabad szoftver; a sokszorosításra vonatkozó feltételeket lásd a "
+#~ "forrásban.\n"
+#~ "SEMMILYEN garanciát nem vállalunk, még azt sem állítjuk, hogy ez a "
+#~ "program\n"
+#~ "KERESKEDELMI CÉLOKRA ALKALMAS vagy HASZNÁLHATÓ EGY ADOTT FELADATRA.\n"
+
+#~ msgid "-i SKIP1:SKIP2  --ignore-initial=SKIP1:SKIP2"
+#~ msgstr "-i UGRÁS1:UGRÁS2  --ignore-initial=UGRÁS1:UGRÁS2"
+
+#~ msgid "-s  --quiet  --silent  Output nothing; yield exit status only."
+#~ msgstr "-s  --quiet  --silent  Nincs kimenet, csak visszatérési érték."
+
+#~ msgid "--help  Output this help."
+#~ msgstr "--help  Kiírja ezt a segítséget."
+
+#~ msgid "Report bugs to <bug-gnu-utils@gnu.org>."
+#~ msgstr "A hibákat <bug-gnu-utils@gnu.org> címre kérjük jelenteni."
+
+#~ msgid "`-%ld' option is obsolete; use `-%c %ld'"
+#~ msgstr "a `-%ld' kapcsoló elavult; használja a `-%c %ld' kapcsolót "
+
+#~ msgid "`-%ld' option is obsolete; omit it"
+#~ msgstr "a `-%ld' kapcsoló elavult; ne használja"
+
+#~ msgid ""
+#~ "-c  -C NUM  --context[=NUM]  Output NUM (default 3) lines of copied "
+#~ "context.\n"
+#~ "-u  -U NUM  --unified[=NUM]  Output NUM (default 3) lines of unified "
+#~ "context.\n"
+#~ "  --label LABEL  Use LABEL instead of file name.\n"
+#~ "  -p  --show-c-function  Show which C function each change is in.\n"
+#~ "  -F RE  --show-function-line=RE  Show the most recent line matching RE."
+#~ msgstr ""
+#~ "-c  -C SZÁM  --context[=SZÁM]  SZÁM (alapból 3) sor 'másolt' környezetet "
+#~ "ír ki.\n"
+#~ "-u  -U SZÁM  --unified[=SZÁM]  SZÁM (alapból 3) sor 'egyesített' "
+#~ "környezetet ír ki.\n"
+#~ "  --label CÍMKE  CÍMKE használata a fájlnév helyett.\n"
+#~ "  -p  --show-c-function  Megmutatja, hogy a változás melyik C függvényben "
+#~ "van.\n"
+#~ "  -F RK  --show-function-line=RK  Megmutatja a legközelebbi RK-ra "
+#~ "illeszkedõ sort."
+
+#~ msgid ""
+#~ "-y  --side-by-side  Output in two columns.\n"
+#~ "  -W NUM  --width=NUM  Output at most NUM (default 130) print columns.\n"
+#~ "  --left-column  Output only the left column of common lines.\n"
+#~ "  --suppress-common-lines  Do not output common lines."
+#~ msgstr ""
+#~ "-y  --side-by-side  A kimenet két oszlop.\n"
+#~ "  -W SZÁM  --width=SZÁM  Legfeljebb SZÁM széles kimenet (alapból 130).\n"
+#~ "  --left-column  A közös sorokat csak bal oldalon írja ki.\n"
+#~ "  --suppress-common-lines  Nem írja ki a közös sorokat."
+
+#~ msgid ""
+#~ "--speed-large-files  Assume large files and many scattered small changes."
+#~ msgstr ""
+#~ "--speed-large-files  Nagy fájlokat feltételez sok, elszórt, kis "
+#~ "változással."
+
+#~ msgid "-X  Output overlapping changes, bracketing them."
+#~ msgstr " -X  Kiírja és zárójelezi az átfedõ változtatásokat."
+
+#~ msgid "-m  --merge  Output merged file instead of ed script (default -A)."
+#~ msgstr ""
+#~ "-m  --merge  Az összefésült fájlt írja ki ed-parancsfájl helyett (alapból "
+#~ "-A)."
+
+#~ msgid "-L LABEL  --label=LABEL  Use LABEL instead of file name."
+#~ msgstr "-L CÍMKE  --label=CÍMKE  A CÍMKÉ-t használja fájlnév helyet."
+
+#~ msgid "subsidiary program `%s' not found"
+#~ msgstr "`%s' segédprogram nem található"
+
+#~ msgid "subsidiary program `%s' failed"
+#~ msgstr "`%s' segédprogram futása sikertelen"
+
+#~ msgid "subsidiary program `%s' failed (exit status %d)"
+#~ msgstr "`%s' segédprogram futása sikertelen (kilépési állapotkód: %d)"

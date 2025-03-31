@@ -35,9 +35,9 @@ diff $opt -U1 a b > out 2> err
 test $? = 1 || fail=1
 
 sed -n '/^@@/,$p' out > k && mv k out || fail=1
-compare out exp || fail=1
+compare exp out || fail=1
 # expect empty stderr
-compare err /dev/null || fail=1
+compare /dev/null err || fail=1
 
 # Repeat, but with a newline at the end of "a".
 echo >> a
@@ -46,8 +46,8 @@ diff $opt -U1 a b > out 2> err
 test $? = 1 || fail=1
 
 sed -n '/^@@/,$p' out > k && mv k out || fail=1
-compare out exp2 || fail=1
+compare exp2 out || fail=1
 # expect empty stderr
-compare err /dev/null || fail=1
+compare /dev/null err || fail=1
 
 Exit $fail

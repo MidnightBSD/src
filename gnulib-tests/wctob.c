@@ -1,7 +1,5 @@
-/* -*- buffer-read-only: t -*- vi: set ro: */
-/* DO NOT EDIT! GENERATED AUTOMATICALLY! */
 /* Convert wide character to unibyte character.
-   Copyright (C) 2008, 2010-2011 Free Software Foundation, Inc.
+   Copyright (C) 2008, 2010-2013 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2008.
 
    This program is free software: you can redistribute it and/or modify

@@ -1,5 +1,23 @@
 GNU diffutils NEWS                                    -*- outline -*-
 
+* Noteworthy changes in release 3.3 (2013-03-24) [stable]
+
+** New features
+
+  --new-file (-N) and --unidirectional-new-file now allow comparisons to "-".
+  A standard input that's closed acts like a nonexistent file.
+
+  A file name containing spaces, double quotes, backslashes or control
+  characters is now encoded in a diff header as a double-quoted C string
+  literal.  The escape sequences \\, \", \a, \b, \f, \n, \r, \t, \v and
+  \ooo (a three-digit octal number between 0 and 255) are used.
+
+** Packaging
+
+  diffutils is now designed to build with Cygwin or MinGW rather than DJGPP.
+  The ms subdirectory has been removed.
+
+
 * Noteworthy changes in release 3.2 (2011-09-02) [stable]
 
 ** Changes in behavior
@@ -55,7 +73,7 @@ GNU diffutils NEWS                                    -*- outline -*-
 
   New diff option --suppress-blank-empty.
 
-  Bring back support for `diff -NUM', where NUM is a number,
+  Bring back support for 'diff -NUM', where NUM is a number,
   even when conforming to POSIX 1003.1-2001.  This change reverts to
   the behavior of GNU diff 2.7 and earlier.  This is a change only
   when conforming to POSIX 1003.1-2001; there is no effect when
@@ -91,7 +109,7 @@ User-visible changes in version 2.8.6:
   that 'patch' creates to indicate nonexistent backups) are now
   treated as nonexistent when they are in the 'backup' file position.
 
-* If multiple SKIP values are given to cmp, e.g., `cmp -i 10 -i 20',
+* If multiple SKIP values are given to cmp, e.g., 'cmp -i 10 -i 20',
   cmp now uses the maximal value instead of the last one.
 
 * diff now omits the ".000000000" on hosts that do not support
@@ -131,7 +149,7 @@ User-visible changes in version 2.8:
 * cmp and diff now conform to POSIX 1003.1-2001 (IEEE Std 1003.1-2001)
   if the underlying system conforms to POSIX and if the _POSIX2_VERSION
   environment variable is set to 200112.  Conformance removes support
-  for `diff -NUM', where NUM is a number.  Use -C NUM or -U NUM instead.
+  for 'diff -NUM', where NUM is a number.  Use -C NUM or -U NUM instead.
 * cmp now supports trailing operands SKIP1 and SKIP2, like BSD cmp.
 * cmp -i or --ignore-initial now accepts SKIP1:SKIP2 option value.
 * New cmp option: -n or --bytes.
@@ -165,13 +183,13 @@ User-visible changes in version 2.8:
   category if possible, instead of using native byte comparison.
 * Recursive diffs now detect and report directory loops.
 * Diff printf specs can now use the "0" and "'" flags.
-* The new sdiff interactive command `ed' precedes each version with a header.
+* The new sdiff interactive command 'ed' precedes each version with a header.
 * On 64-bit hosts, files larger than 2 GB can be compared.
 * Some internationalization support has been added, but multibyte locales
   are still not completely supported yet.
 * Some diagnostics have been reworded slightly for consistency.
-  Also, `diff -D FOO' now outputs `/* ! FOO */' instead of `/* not FOO */'.
-* The `patch' part of the manual now describes `patch' version 2.5.4.
+  Also, 'diff -D FOO' now outputs '/* ! FOO */' instead of '/* not FOO */'.
+* The 'patch' part of the manual now describes 'patch' version 2.5.4.
 * Man pages are now distributed and installed.
 * There is support for DJGPP; see the 'ms' subdirectory and the files
   m4/dos.m4 and */setmode.*.
@@ -209,7 +227,7 @@ User-visible changes in version 2.4:
       A printf spec followed by one of the following letters
       causes the integer corresponding to that letter to be
       printed according to the printf specification.
-      E.g. `%5df' prints the number of the first line in the
+      E.g. '%5df' prints the number of the first line in the
       group in the old file using the "%5d" format.
 	e: line number just before the group in old file; equals f - 1
 	f: first line number in group in the old file
@@ -222,9 +240,9 @@ User-visible changes in version 2.4:
       constant or a single letter interpreted as above.  T and E are
       arbitrary format strings.  This format spec is equivalent to T if
       A's value equals B's; otherwise it is equivalent to E.  For
-      example, `%(N=0?no:%dN) line%(N=1?:s)' is equivalent to `no lines'
+      example, '%(N=0?no:%dN) line%(N=1?:s)' is equivalent to 'no lines'
       if N (the number of lines in the group in the new file) is 0,
-      to `1 line' if N is 1, and to `%dN lines' otherwise.
+      to '1 line' if N is 1, and to '%dN lines' otherwise.
   %c'C'
       where C is a single character, stands for the character C.  C may not
       be a backslash or an apostrophe.  E.g. %c':' stands for a colon.
@@ -234,7 +252,7 @@ User-visible changes in version 2.4:
 * New diff line format specifications:
   <PRINTF_SPEC>n
       The line number, printed with <PRINTF_SPEC>.
-      E.g. `%5dn' prints the line number with a "%5d" format.
+      E.g. '%5dn' prints the line number with a "%5d" format.
   %c'C'
   %c'\O'
       The character C, or with octal code O, as above.
@@ -246,14 +264,14 @@ User-visible changes in version 2.4:
 * cmp and diff now conform to POSIX 1003.2-1992 (ISO/IEC 9945-2:1993)
   if the underlying system conforms to POSIX:
   - Some messages' wordings are changed in minor ways.
-  - ``White space'' is now whatever C's `isspace' says it is.
-  - When comparing directories, if `diff' finds a file that is not a regular
+  - "White space" is now whatever C's 'isspace' says it is.
+  - When comparing directories, if 'diff' finds a file that is not a regular
     file or a directory, it reports the file's type instead of diffing it.
     (As usual, it follows symbolic links first.)
   - When signaled, sdiff exits with the signal's status, not with status 2.
 * Now portable to hosts where int, long, pointer, etc. are not all the same
   size.
-* `cmp - -' now works like `diff - -'.
+* 'cmp - -' now works like 'diff - -'.
 
 
 User-visible changes in version 2.3:
@@ -306,7 +324,7 @@ User-visible changes in version 2.0:
 
 
 
-Copyright (C) 1993-1994, 1998, 2001-2002, 2004, 2006, 2009-2011 Free Software
+Copyright (C) 1993-1994, 1998, 2001-2002, 2004, 2006, 2009-2013 Free Software
 Foundation, Inc.
 
 This file is part of GNU Diffutils.

@@ -11,8 +11,8 @@ fail=0
 diff -r a b/ > out 2> err && fail=1
 
 # expect no stderr
-compare err /dev/null || fail=1
+compare /dev/null err || fail=1
 
-compare out expected-out || fail=1
+compare expected-out out || fail=1
 
 Exit $fail

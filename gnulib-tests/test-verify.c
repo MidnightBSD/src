@@ -1,8 +1,6 @@
-/* -*- buffer-read-only: t -*- vi: set ro: */
-/* DO NOT EDIT! GENERATED AUTOMATICALLY! */
 /* Test the "verify" module.
 
-   Copyright (C) 2005, 2009-2011 Free Software Foundation, Inc.
+   Copyright (C) 2005, 2009-2013 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
