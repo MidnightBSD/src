@@ -27,6 +27,7 @@
 #define	CSU_COMMON_NOTES_H
 
 #define NOTE_MIDNIGHTBSD_VENDOR	"MidnightBSD"
+#define NOTE_FREEBSD_VENDOR	"FreeBSD"
 
 #define NOTE_SECTION		".note.tag"
 
