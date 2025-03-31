@@ -41,6 +41,7 @@ _INTERNALLIBS=	\
 		bsnmptools \
 		c_nossp_pic \
 		cron \
+		diff \
 		elftc \
 		fifolog \
 		ifconfig \
