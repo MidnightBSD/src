@@ -1,0 +1,1530 @@
+# Dutch translations for GNU diffutils.
+# Copyright (C) 2012 Free Software Foundation, Inc.
+# This file is distributed under the same license as the diffutils package.
+#
+# Would she be called Adinda...
+#
+# Benno Schulenberg <benno@vertaalt.nl>, 2007, 2008, 2010, 2011, 2012.
+# Elros Cyriatan <cyriatan@fastmail.fm>, 2004.
+msgid ""
+msgstr ""
+"Project-Id-Version: diffutils-3.3-pre1\n"
+"Report-Msgid-Bugs-To: bug-diffutils@gnu.org\n"
+"POT-Creation-Date: 2013-03-24 11:05-0700\n"
+"PO-Revision-Date: 2012-10-31 21:04+0100\n"
+"Last-Translator: Benno Schulenberg <benno@vertaalt.nl>\n"
+"Language-Team: Dutch <vertaling@vrijschrift.org>\n"
+"Language: nl\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Lokalize 1.0\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: lib/c-stack.c:204 lib/c-stack.c:297
+msgid "program error"
+msgstr "programmafout"
+
+#: lib/c-stack.c:205 lib/c-stack.c:298
+msgid "stack overflow"
+msgstr "stack-overloop"
+
+#: lib/error.c:188
+msgid "Unknown system error"
+msgstr "Onbekende systeemfout"
+
+#: lib/file-type.c:38
+msgid "regular empty file"
+msgstr "leeg normaal bestand"
+
+#: lib/file-type.c:38
+msgid "regular file"
+msgstr "normaal bestand"
+
+#: lib/file-type.c:41
+msgid "directory"
+msgstr "map"
+
+#: lib/file-type.c:44
+msgid "block special file"
+msgstr "blok-apparaat"
+
+#: lib/file-type.c:47
+msgid "character special file"
+msgstr "byte-apparaat"
+
+#: lib/file-type.c:50
+msgid "fifo"
+msgstr "fifo"
+
+#: lib/file-type.c:53
+msgid "symbolic link"
+msgstr "symbolische koppeling"
+
+#: lib/file-type.c:56
+msgid "socket"
+msgstr "socket"
+
+#: lib/file-type.c:59
+msgid "message queue"
+msgstr "berichtenwachtrij"
+
+#: lib/file-type.c:62
+msgid "semaphore"
+msgstr "semafoor"
+
+#: lib/file-type.c:65
+msgid "shared memory object"
+msgstr "gedeeld geheugenobject"
+
+#: lib/file-type.c:68
+msgid "typed memory object"
+msgstr "zelfstandig geheugenobject"
+
+#: lib/file-type.c:70
+msgid "weird file"
+msgstr "merkwaardig bestand"
+
+#: lib/getopt.c:547 lib/getopt.c:576
+#, c-format
+msgid "%s: option '%s' is ambiguous; possibilities:"
+msgstr "%s: optie '%s' is niet eenduidig; mogelijkheden zijn:"
+
+#: lib/getopt.c:624 lib/getopt.c:628
+#, c-format
+msgid "%s: option '--%s' doesn't allow an argument\n"
+msgstr "%s: optie '--%s' staat geen argument toe\n"
+
+#: lib/getopt.c:637 lib/getopt.c:642
+#, c-format
+msgid "%s: option '%c%s' doesn't allow an argument\n"
+msgstr "%s: optie '%c%s' staat geen argument toe\n"
+
+#: lib/getopt.c:685 lib/getopt.c:704
+#, c-format
+msgid "%s: option '--%s' requires an argument\n"
+msgstr "%s: optie '--%s' vereist een argument\n"
+
+#: lib/getopt.c:742 lib/getopt.c:745
+#, c-format
+msgid "%s: unrecognized option '--%s'\n"
+msgstr "%s: onbekende optie '--%s'\n"
+
+#: lib/getopt.c:753 lib/getopt.c:756
+#, c-format
+msgid "%s: unrecognized option '%c%s'\n"
+msgstr "%s: onbekende optie '%c%s'\n"
+
+#: lib/getopt.c:805 lib/getopt.c:808
+#, c-format
+msgid "%s: invalid option -- '%c'\n"
+msgstr "%s: ongeldige optie -- '%c'\n"
+
+#: lib/getopt.c:861 lib/getopt.c:878 lib/getopt.c:1088 lib/getopt.c:1106
+#, c-format
+msgid "%s: option requires an argument -- '%c'\n"
+msgstr "%s: optie vereist een argument -- '%c'\n"
+
+#: lib/getopt.c:934 lib/getopt.c:950
+#, c-format
+msgid "%s: option '-W %s' is ambiguous\n"
+msgstr "%s: optie '-W %s' is niet eenduidig\n"
+
+#: lib/getopt.c:974 lib/getopt.c:992
+#, c-format
+msgid "%s: option '-W %s' doesn't allow an argument\n"
+msgstr "%s: optie '-W %s' staat geen argument toe\n"
+
+#: lib/getopt.c:1013 lib/getopt.c:1031
+#, c-format
+msgid "%s: option '-W %s' requires an argument\n"
+msgstr "%s: optie '-W %s' vereist een argument\n"
+
+#. TRANSLATORS:
+#. Get translations for open and closing quotation marks.
+#. The message catalog should translate "`" to a left
+#. quotation mark suitable for the locale, and similarly for
+#. "'".  For example, a French Unicode local should translate
+#. these to U+00AB (LEFT-POINTING DOUBLE ANGLE
+#. QUOTATION MARK), and U+00BB (RIGHT-POINTING DOUBLE ANGLE
+#. QUOTATION MARK), respectively.
+#.
+#. If the catalog has no translation, we will try to
+#. use Unicode U+2018 (LEFT SINGLE QUOTATION MARK) and
+#. Unicode U+2019 (RIGHT SINGLE QUOTATION MARK).  If the
+#. current locale is not Unicode, locale_quoting_style
+#. will quote 'like this', and clocale_quoting_style will
+#. quote "like this".  You should always include translations
+#. for "`" and "'" even if U+2018 and U+2019 are appropriate
+#. for your locale.
+#.
+#. If you don't know what to put here, please see
+#. <http://en.wikipedia.org/wiki/Quotation_marks_in_other_languages>
+#. and use glyphs suitable for your language.
+#: lib/quotearg.c:312
+msgid "`"
+msgstr "‘"
+
+#: lib/quotearg.c:313
+msgid "'"
+msgstr "’"
+
+#: lib/regcomp.c:131
+msgid "Success"
+msgstr "Gelukt"
+
+#: lib/regcomp.c:134
+msgid "No match"
+msgstr "Geen overeenkomsten"
+
+#: lib/regcomp.c:137
+msgid "Invalid regular expression"
+msgstr "Ongeldige reguliere expressie"
+
+# Zie http://mailman.vrijschrift.org/pipermail/vertaling/2005-August/004670.html
+#: lib/regcomp.c:140
+msgid "Invalid collation character"
+msgstr "Ongeldig samengesteld teken"
+
+#: lib/regcomp.c:143
+msgid "Invalid character class name"
+msgstr "Ongeldige tekenklassenaam"
+
+#: lib/regcomp.c:146
+msgid "Trailing backslash"
+msgstr "Backslash aan het eind"
+
+#: lib/regcomp.c:149
+msgid "Invalid back reference"
+msgstr "Ongeldige terugverwijzing"
+
+#: lib/regcomp.c:152
+msgid "Unmatched [ or [^"
+msgstr "Ongepaarde [ of [^"
+
+#: lib/regcomp.c:155
+msgid "Unmatched ( or \\("
+msgstr "Ongepaarde ( of \\("
+
+#: lib/regcomp.c:158
+msgid "Unmatched \\{"
+msgstr "Ongepaarde \\{"
+
+#: lib/regcomp.c:161
+msgid "Invalid content of \\{\\}"
+msgstr "Ongeldige inhoud van \\{\\}"
+
+#: lib/regcomp.c:164
+msgid "Invalid range end"
+msgstr "Ongeldig bereikeinde"
+
+#: lib/regcomp.c:167
+msgid "Memory exhausted"
+msgstr "Onvoldoende geheugen beschikbaar"
+
+#: lib/regcomp.c:170
+msgid "Invalid preceding regular expression"
+msgstr "Ongeldige voorafgaande reguliere expressie"
+
+#: lib/regcomp.c:173
+msgid "Premature end of regular expression"
+msgstr "Voortijdig einde van reguliere expressie"
+
+#: lib/regcomp.c:176
+msgid "Regular expression too big"
+msgstr "Reguliere expressie is te groot"
+
+#: lib/regcomp.c:179
+msgid "Unmatched ) or \\)"
+msgstr "Ongepaarde ) of \\)"
+
+#: lib/regcomp.c:704
+msgid "No previous regular expression"
+msgstr "Geen eerdere reguliere expressie"
+
+#: lib/xalloc-die.c:34
+msgid "memory exhausted"
+msgstr "onvoldoende geheugen beschikbaar"
+
+#: lib/xfreopen.c:35
+msgid "stdin"
+msgstr "standaardinvoer"
+
+#: lib/xfreopen.c:36
+msgid "stdout"
+msgstr "standaarduitvoer"
+
+#: lib/xfreopen.c:37
+msgid "stderr"
+msgstr "standaardfoutuitvoer"
+
+#: lib/xfreopen.c:38
+msgid "unknown stream"
+msgstr "onbekende gegevensstroom"
+
+#: lib/xfreopen.c:39
+#, c-format
+msgid "failed to reopen %s with mode %s"
+msgstr "opnieuw openen van '%s' met modus %s is mislukt"
+
+#: lib/xstrtol-error.c:63
+#, c-format
+msgid "invalid %s%s argument '%s'"
+msgstr "ongeldig argument '%3$s' van %1$s%2$s"
+
+#: lib/xstrtol-error.c:68
+#, c-format
+msgid "invalid suffix in %s%s argument '%s'"
+msgstr "ongeldig achtervoegsel in argument '%3$s' van %1$s%2$s"
+
+#: lib/xstrtol-error.c:72
+#, c-format
+msgid "%s%s argument '%s' too large"
+msgstr "argument '%3$s' van %1$s%2$s is te groot"
+
+#: lib/version-etc.c:74
+#, c-format
+msgid "Packaged by %s (%s)\n"
+msgstr "In pakketvorm gebracht door %s (%s)\n"
+
+#: lib/version-etc.c:77
+#, c-format
+msgid "Packaged by %s\n"
+msgstr "In pakketvorm gebracht door %s\n"
+
+#. TRANSLATORS: Translate "(C)" to the copyright symbol
+#. (C-in-a-circle), if this symbol is available in the user's
+#. locale.  Otherwise, do not translate "(C)"; leave it as-is.
+#: lib/version-etc.c:84
+msgid "(C)"
+msgstr "©"
+
+#: lib/version-etc.c:86
+msgid ""
+"\n"
+"License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl."
+"html>.\n"
+"This is free software: you are free to change and redistribute it.\n"
+"There is NO WARRANTY, to the extent permitted by law.\n"
+"\n"
+msgstr ""
+"\n"
+"Dit is vrije software: u mag het vrijelijk wijzigen en verder verspreiden.\n"
+"De precieze licentie is GPL-3+: GNU General Public License versie 3 of "
+"later.\n"
+"Zie http://gnu.org/licenses/gpl.html voor de volledige (Engelse) tekst.\n"
+"Deze software kent GEEN GARANTIE, voor zover de wet dit toestaat.\n"
+"\n"
+
+#. TRANSLATORS: %s denotes an author name.
+#: lib/version-etc.c:102
+#, c-format
+msgid "Written by %s.\n"
+msgstr "Geschreven door %s.\n"
+
+#. TRANSLATORS: Each %s denotes an author name.
+#: lib/version-etc.c:106
+#, c-format
+msgid "Written by %s and %s.\n"
+msgstr "Geschreven door %s en %s.\n"
+
+#. TRANSLATORS: Each %s denotes an author name.
+#: lib/version-etc.c:110
+#, c-format
+msgid "Written by %s, %s, and %s.\n"
+msgstr "Geschreven door %s, %s en %s.\n"
+
+#. TRANSLATORS: Each %s denotes an author name.
+#. You can use line breaks, estimating that each author name occupies
+#. ca. 16 screen columns and that a screen line has ca. 80 columns.
+#: lib/version-etc.c:117
+#, c-format
+msgid ""
+"Written by %s, %s, %s,\n"
+"and %s.\n"
+msgstr ""
+"Geschreven door %s, %s, %s\n"
+"en %s.\n"
+
+#. TRANSLATORS: Each %s denotes an author name.
+#. You can use line breaks, estimating that each author name occupies
+#. ca. 16 screen columns and that a screen line has ca. 80 columns.
+#: lib/version-etc.c:124
+#, c-format
+msgid ""
+"Written by %s, %s, %s,\n"
+"%s, and %s.\n"
+msgstr ""
+"Geschreven door %s, %s, %s,\n"
+"%s en %s.\n"
+
+#. TRANSLATORS: Each %s denotes an author name.
+#. You can use line breaks, estimating that each author name occupies
+#. ca. 16 screen columns and that a screen line has ca. 80 columns.
+#: lib/version-etc.c:131
+#, c-format
+msgid ""
+"Written by %s, %s, %s,\n"
+"%s, %s, and %s.\n"
+msgstr ""
+"Geschreven door %s, %s, %s,\n"
+"%s, %s en %s.\n"
+
+#. TRANSLATORS: Each %s denotes an author name.
+#. You can use line breaks, estimating that each author name occupies
+#. ca. 16 screen columns and that a screen line has ca. 80 columns.
+#: lib/version-etc.c:139
+#, c-format
+msgid ""
+"Written by %s, %s, %s,\n"
+"%s, %s, %s, and %s.\n"
+msgstr ""
+"Geschreven door %s, %s, %s,\n"
+"%s, %s, %s en %s.\n"
+
+#. TRANSLATORS: Each %s denotes an author name.
+#. You can use line breaks, estimating that each author name occupies
+#. ca. 16 screen columns and that a screen line has ca. 80 columns.
+#: lib/version-etc.c:147
+#, c-format
+msgid ""
+"Written by %s, %s, %s,\n"
+"%s, %s, %s, %s,\n"
+"and %s.\n"
+msgstr ""
+"Geschreven door %s, %s, %s,\n"
+"%s, %s, %s, %s\n"
+"en %s.\n"
+
+#. TRANSLATORS: Each %s denotes an author name.
+#. You can use line breaks, estimating that each author name occupies
+#. ca. 16 screen columns and that a screen line has ca. 80 columns.
+#: lib/version-etc.c:156
+#, c-format
+msgid ""
+"Written by %s, %s, %s,\n"
+"%s, %s, %s, %s,\n"
+"%s, and %s.\n"
+msgstr ""
+"Geschreven door %s, %s, %s,\n"
+"%s, %s, %s, %s,\n"
+"%s en %s.\n"
+
+#. TRANSLATORS: Each %s denotes an author name.
+#. You can use line breaks, estimating that each author name occupies
+#. ca. 16 screen columns and that a screen line has ca. 80 columns.
+#: lib/version-etc.c:167
+#, c-format
+msgid ""
+"Written by %s, %s, %s,\n"
+"%s, %s, %s, %s,\n"
+"%s, %s, and others.\n"
+msgstr ""
+"Geschreven door %s, %s, %s,\n"
+"%s, %s, %s, %s,\n"
+"%s, %s en anderen.\n"
+
+#. TRANSLATORS: The placeholder indicates the bug-reporting address
+#. for this package.  Please add _another line_ saying
+#. "Report translation bugs to <...>\n" with the address for translation
+#. bugs (typically your translation team's web or email address).
+#: lib/version-etc.c:245
+#, c-format
+msgid ""
+"\n"
+"Report bugs to: %s\n"
+msgstr ""
+"\n"
+"Rapporteer gebreken in het programma aan <%s>;\n"
+"meld fouten in de vertaling aan <vertaling@vrijschrift.org>.\n"
+
+#: lib/version-etc.c:247
+#, c-format
+msgid "Report %s bugs to: %s\n"
+msgstr ""
+"Rapporteer gebreken in het programma '%s' aan <%s>;\n"
+"meld fouten in de vertaling aan <vertaling@vrijschrift.org>.\n"
+
+#: lib/version-etc.c:251
+#, c-format
+msgid "%s home page: <%s>\n"
+msgstr "Webpagina van %s: <%s>\n"
+
+#: lib/version-etc.c:253
+#, c-format
+msgid "%s home page: <http://www.gnu.org/software/%s/>\n"
+msgstr "Webpagina van %s: <http://www.gnu.org/software/%s/>\n"
+
+#: lib/version-etc.c:256
+msgid "General help using GNU software: <http://www.gnu.org/gethelp/>\n"
+msgstr ""
+"Algemene hulp bij gebruik van GNU-software: <http://www.gnu.org/gethelp/>\n"
+
+#: src/analyze.c:459 src/diff.c:1343
+#, c-format
+msgid "Files %s and %s differ\n"
+msgstr "Bestanden %s en %s zijn verschillend\n"
+
+#: src/analyze.c:462
+#, c-format
+msgid "Binary files %s and %s differ\n"
+msgstr "Binaire bestanden %s en %s zijn verschillend\n"
+
+#: src/analyze.c:713 src/diff3.c:1416 src/util.c:663
+msgid "No newline at end of file"
+msgstr "Geen regeleindeteken (LF) aan einde van bestand"
+
+#. This is a proper name. See the gettext manual, section Names.
+#: src/cmp.c:43
+msgid "Torbjorn Granlund"
+msgstr "Torbjörn Granlund"
+
+#. This is a proper name. See the gettext manual, section Names.
+#: src/cmp.c:44
+msgid "David MacKenzie"
+msgstr "David MacKenzie"
+
+#: src/cmp.c:118 src/diff.c:839 src/diff3.c:414 src/sdiff.c:158
+#, c-format
+msgid "Try '%s --help' for more information."
+msgstr "Typ '%s --help' voor meer informatie."
+
+#: src/cmp.c:137
+#, c-format
+msgid "invalid --ignore-initial value '%s'"
+msgstr "ongeldige waarde '%s' voor '--ignore-initial'"
+
+#: src/cmp.c:147
+#, c-format
+msgid "options -l and -s are incompatible"
+msgstr "opties '-l' en '-s' gaan niet samen"
+
+#: src/cmp.c:155 src/diff.c:848 src/diff3.c:422 src/sdiff.c:167
+#: src/sdiff.c:315 src/sdiff.c:322 src/sdiff.c:874 src/util.c:278
+#: src/util.c:375 src/util.c:382
+msgid "write failed"
+msgstr "schrijven is mislukt"
+
+#: src/cmp.c:157 src/diff.c:850 src/diff.c:1408 src/diff3.c:424
+#: src/sdiff.c:169
+msgid "standard output"
+msgstr "standaarduitvoer"
+
+#: src/cmp.c:161
+msgid "-b, --print-bytes          print differing bytes"
+msgstr "-b, --print-bytes        de bytes tonen die verschillen"
+
+#: src/cmp.c:162
+msgid "-i, --ignore-initial=SKIP         skip first SKIP bytes of both inputs"
+msgstr ""
+"-i, --ignore-initial=OVERSLAAN    de eerste OVERSLAAN bytes van\n"
+"                                    beide invoeren overslaan"
+
+#: src/cmp.c:163
+msgid ""
+"-i, --ignore-initial=SKIP1:SKIP2  skip first SKIP1 bytes of FILE1 and\n"
+"                                      first SKIP2 bytes of FILE2"
+msgstr ""
+"-i, --ignore-initial=OVS1:OVS2    de eerste OVS1 bytes van BESTAND1 en de\n"
+"                                    eerste OVS2 bytes van BESTAND2 overslaan"
+
+#: src/cmp.c:165
+msgid ""
+"-l, --verbose              output byte numbers and differing byte values"
+msgstr ""
+"-l, --verbose            bytenummers en -waarden tonen van bytes die "
+"verschillen"
+
+#: src/cmp.c:166
+msgid "-n, --bytes=LIMIT          compare at most LIMIT bytes"
+msgstr "-n, --bytes=AANTAL       maximaal dit AANTAL bytes vergelijken"
+
+#: src/cmp.c:167
+msgid "-s, --quiet, --silent      suppress all normal output"
+msgstr "-s, --quiet, --silent    alle gewone uitvoer onderdrukken"
+
+#: src/cmp.c:168
+msgid "    --help                 display this help and exit"
+msgstr "    --help               deze hulptekst tonen en stoppen"
+
+#: src/cmp.c:169
+msgid "-v, --version              output version information and exit"
+msgstr "-v, --version            programmaversie tonen en stoppen"
+
+#: src/cmp.c:178
+#, c-format
+msgid "Usage: %s [OPTION]... FILE1 [FILE2 [SKIP1 [SKIP2]]]\n"
+msgstr ""
+"Gebruik:  %s [OPTIE...] BESTAND1 [BESTAND2 [OVERSLAAN1 [OVERSLAAN2]]]\n"
+"\n"
+
+#: src/cmp.c:180
+msgid "Compare two files byte by byte."
+msgstr "Twee bestanden byte-voor-byte vergelijken."
+
+#: src/cmp.c:182
+msgid ""
+"The optional SKIP1 and SKIP2 specify the number of bytes to skip\n"
+"at the beginning of each file (zero by default)."
+msgstr ""
+"De optionele waarden OVERSLAAN1 en OVERSLAAN2 geven het aantal bytes aan "
+"dat\n"
+"aan het begin van elk bestand moet worden overgeslagen (standaard nul)."
+
+#: src/cmp.c:185 src/diff.c:956 src/diff3.c:462 src/sdiff.c:210
+msgid ""
+"Mandatory arguments to long options are mandatory for short options too.\n"
+msgstr ""
+"(Een verplicht argument bij een lange optie geldt ook voor de korte vorm.)\n"
+"\n"
+
+#: src/cmp.c:191
+msgid ""
+"SKIP values may be followed by the following multiplicative suffixes:\n"
+"kB 1000, K 1024, MB 1,000,000, M 1,048,576,\n"
+"GB 1,000,000,000, G 1,073,741,824, and so on for T, P, E, Z, Y."
+msgstr ""
+"De waarden voor OVERSLAAN mogen worden gevolgd door de volgende\n"
+"vermenigvuldigende achtervoegsels:\n"
+"  kB 1000,  K 1024,  MB 1.000.000,  M 1.048.576,\n"
+"  GB 1.000.000.000,  G 1.073.741.824,  enzovoort voor T, P, E, Z, Y."
+
+#: src/cmp.c:194
+msgid "If a FILE is '-' or missing, read standard input."
+msgstr ""
+"Als een BESTAND ontbreekt of '-' is, wordt er van standaardinvoer gelezen."
+
+#: src/cmp.c:195 src/diff.c:944 src/sdiff.c:220
+msgid "Exit status is 0 if inputs are the same, 1 if different, 2 if trouble."
+msgstr ""
+"De afsluitwaarde is 0 als de invoeren gelijk zijn, 1 als ze verschillen,\n"
+"en 2 bij problemen."
+
+#: src/cmp.c:240
+#, c-format
+msgid "invalid --bytes value '%s'"
+msgstr "ongeldige waarde '%s' voor '--bytes'"
+
+#: src/cmp.c:266 src/diff.c:757 src/diff3.c:318 src/sdiff.c:565
+#, c-format
+msgid "missing operand after '%s'"
+msgstr "ontbrekend argument na '%s'"
+
+#: src/cmp.c:278 src/diff.c:759 src/diff3.c:320 src/sdiff.c:567
+#, c-format
+msgid "extra operand '%s'"
+msgstr "overtollig argument '%s'"
+
+#: src/cmp.c:491
+#, c-format
+msgid "%s %s differ: byte %s, line %s\n"
+msgstr "%s %s verschillen: byte %s, regel %s\n"
+
+#: src/cmp.c:507
+#, c-format
+msgid "%s %s differ: byte %s, line %s is %3o %s %3o %s\n"
+msgstr "%s %s verschillen: byte %s, regel %s, is %3o %s %3o %s\n"
+
+#: src/cmp.c:559
+#, c-format
+msgid "cmp: EOF on %s\n"
+msgstr "cmp: einde-van-bestand op %s\n"
+
+#. This is a proper name. See the gettext manual, section Names.
+#: src/diff.c:49
+msgid "Paul Eggert"
+msgstr "Paul Eggert"
+
+#. This is a proper name. See the gettext manual, section Names.
+#: src/diff.c:50
+msgid "Mike Haertel"
+msgstr "Mike Haertel"
+
+#. This is a proper name. See the gettext manual, section Names.
+#: src/diff.c:51
+msgid "David Hayes"
+msgstr "David Hayes"
+
+#. This is a proper name. See the gettext manual, section Names.
+#: src/diff.c:52
+msgid "Richard Stallman"
+msgstr "Richard Stallman"
+
+#. This is a proper name. See the gettext manual, section Names.
+#: src/diff.c:53
+msgid "Len Tower"
+msgstr "Len Tower"
+
+#: src/diff.c:339
+#, c-format
+msgid "invalid context length '%s'"
+msgstr "ongeldige contextlengte '%s'"
+
+#: src/diff.c:422
+#, c-format
+msgid "pagination not supported on this host"
+msgstr "het in pagina's indelen is op deze computer niet mogelijk"
+
+#: src/diff.c:437 src/diff3.c:300
+#, c-format
+msgid "too many file label options"
+msgstr "te veel bestandslabel-opties"
+
+#: src/diff.c:514
+#, c-format
+msgid "invalid width '%s'"
+msgstr "ongeldige breedte '%s'"
+
+#: src/diff.c:518
+msgid "conflicting width options"
+msgstr "conflicterende breedte-opties"
+
+#: src/diff.c:543
+#, c-format
+msgid "invalid horizon length '%s'"
+msgstr "ongeldige horizonlengte '%s'"
+
+#: src/diff.c:598
+#, c-format
+msgid "invalid tabsize '%s'"
+msgstr "ongeldige tabgrootte '%s'"
+
+#: src/diff.c:602
+msgid "conflicting tabsize options"
+msgstr "conflicterende tabgrootte-opties"
+
+#: src/diff.c:734
+msgid "--from-file and --to-file both specified"
+msgstr "zowel '--from-file' als '--to-file' zijn opgegeven"
+
+#: src/diff.c:854
+msgid "    --normal                  output a normal diff (the default)"
+msgstr "    --normal               een gewone diff produceren (standaard)"
+
+#: src/diff.c:855
+msgid "-q, --brief                   report only when files differ"
+msgstr "-q, --brief                alleen aangeven of bestanden verschillen"
+
+#: src/diff.c:856
+msgid "-s, --report-identical-files  report when two files are the same"
+msgstr ""
+"-s, --report-identical-files    vermelden of twee bestanden hetzelfde zijn"
+
+#: src/diff.c:857
+msgid ""
+"-c, -C NUM, --context[=NUM]   output NUM (default 3) lines of copied context"
+msgstr ""
+"-c, -C AANTAL, --context[=AANTAL]    dit AANTAL regels (standaard 3) van\n"
+"                                       gekopieerde context tonen"
+
+#: src/diff.c:858
+msgid ""
+"-u, -U NUM, --unified[=NUM]   output NUM (default 3) lines of unified context"
+msgstr ""
+"-u, -U AANTAL, --unified[=AANTAL]    dit AANTAL regels (standaard 3) van\n"
+"                                       geünificeerde context tonen"
+
+#: src/diff.c:859
+msgid "-e, --ed                      output an ed script"
+msgstr "-e, --ed                   een ed-script produceren"
+
+#: src/diff.c:860
+msgid "-n, --rcs                     output an RCS format diff"
+msgstr "-n, --rcs                  een diff in RCS-opmaak produceren"
+
+#: src/diff.c:861
+msgid "-y, --side-by-side            output in two columns"
+msgstr "-y, --side-by-side         het resultaat weergeven in twee kolommen"
+
+#: src/diff.c:862
+msgid ""
+"-W, --width=NUM               output at most NUM (default 130) print columns"
+msgstr ""
+"-w, --width=AANTAL         maximaal dit AANTAL kolommen tonen (standaard 130)"
+
+#: src/diff.c:863
+msgid ""
+"    --left-column             output only the left column of common lines"
+msgstr ""
+"    --left-column          bij gelijke regels alleen de linkerkolom tonen"
+
+#: src/diff.c:864
+msgid "    --suppress-common-lines   do not output common lines"
+msgstr "    --suppress-common-lines    de gelijke regels onderdrukken"
+
+#: src/diff.c:866
+msgid "-p, --show-c-function         show which C function each change is in"
+msgstr ""
+"-p, --show-c-function      vermelden in welke C-functie elke wijziging is"
+
+#: src/diff.c:867
+msgid "-F, --show-function-line=RE   show the most recent line matching RE"
+msgstr ""
+"-F, --show-function-line=RE    recentste regel overeenkomend met RE tonen"
+
+#: src/diff.c:868
+msgid ""
+"    --label LABEL             use LABEL instead of file name\n"
+"                                (can be repeated)"
+msgstr ""
+"    --label LABEL          dit LABEL gebruiken in plaats van bestandsnaam\n"
+"                             (mag herhaald worden)"
+
+#: src/diff.c:871
+msgid "-t, --expand-tabs             expand tabs to spaces in output"
+msgstr "-t, --expand-tabs          tabs uitschrijven naar spaties in uitvoer"
+
+#: src/diff.c:872
+msgid "-T, --initial-tab             make tabs line up by prepending a tab"
+msgstr ""
+"-T, --initial-tab          tabs uitlijnen door invoegen van tab aan het begin"
+
+#: src/diff.c:873
+msgid ""
+"    --tabsize=NUM             tab stops every NUM (default 8) print columns"
+msgstr ""
+"    --tabsize=AANTAL       tab-stops op elke AANTAL posities (standaard 8)"
+
+#: src/diff.c:874
+msgid ""
+"    --suppress-blank-empty    suppress space or tab before empty output lines"
+msgstr ""
+"    --suppress-blank-empty    spatie of tab onderdrukken voor lege uitregels"
+
+#: src/diff.c:875
+msgid "-l, --paginate                pass output through 'pr' to paginate it"
+msgstr ""
+"-l, --paginate             de uitvoer door 'pr' halen om deze in pagina's\n"
+"                             in te delen"
+
+#: src/diff.c:877
+msgid ""
+"-r, --recursive                 recursively compare any subdirectories found"
+msgstr "-r, --recursive            recursief elke gevonden submap vergelijken"
+
+#: src/diff.c:878
+msgid "    --no-dereference            don't follow symbolic links"
+msgstr "    --no-dereference       symbolische koppelingen niet volgen"
+
+#: src/diff.c:879
+msgid "-N, --new-file                  treat absent files as empty"
+msgstr "-N, --new-file             afwezige bestanden als leeg behandelen"
+
+#: src/diff.c:880
+msgid "    --unidirectional-new-file   treat absent first files as empty"
+msgstr ""
+"    --unidirectional-new-file    alleen bestanden die afwezig zijn in de\n"
+"                                   eerste map als leeg behandelen"
+
+#: src/diff.c:881
+msgid "    --ignore-file-name-case     ignore case when comparing file names"
+msgstr ""
+"    --ignore-file-name-case    verschil tussen hoofd- en kleine letters "
+"negeren\n"
+"                                 bij vergelijken van bestandsnamen"
+
+#: src/diff.c:882
+msgid "    --no-ignore-file-name-case  consider case when comparing file names"
+msgstr ""
+"    --no-ignore-file-name-case    onderscheid maken tussen hoofd- en kleine\n"
+"                                    letters bij vergelijken van bestandsnamen"
+
+#: src/diff.c:883
+msgid "-x, --exclude=PAT               exclude files that match PAT"
+msgstr ""
+"-x, --exclude=PATROON      bestanden uitsluiten als ze overeenkomen met "
+"PATROON"
+
+#: src/diff.c:884
+msgid ""
+"-X, --exclude-from=FILE         exclude files that match any pattern in FILE"
+msgstr ""
+"-X, --exclude-from=BESTAND    bestanden uitsluiten die overeenkomen met\n"
+"                                een patroon in BESTAND"
+
+#: src/diff.c:885
+msgid ""
+"-S, --starting-file=FILE        start with FILE when comparing directories"
+msgstr ""
+"-S, --starting-file=BESTAND    beginnen met BESTAND bij vergelijken van "
+"mappen"
+
+#: src/diff.c:886
+msgid ""
+"    --from-file=FILE1           compare FILE1 to all operands;\n"
+"                                  FILE1 can be a directory"
+msgstr ""
+"    --from-file=BESTAND1    BESTAND1 met alle argumenten vergelijken;\n"
+"                              BESTAND1 mag een map zijn"
+
+#: src/diff.c:888
+msgid ""
+"    --to-file=FILE2             compare all operands to FILE2;\n"
+"                                  FILE2 can be a directory"
+msgstr ""
+"    --to-file=BESTAND2    alle argumenten met BESTAND2 vergelijken;\n"
+"                            BESTAND2 mag een map zijn"
+
+#: src/diff.c:891
+msgid ""
+"-i, --ignore-case               ignore case differences in file contents"
+msgstr ""
+"-i, --ignore-case          verschil tussen hoofd- en kleine letters\n"
+"                             negeren in bestandsinhoud"
+
+#: src/diff.c:892
+msgid "-E, --ignore-tab-expansion      ignore changes due to tab expansion"
+msgstr "-E, --ignore-tab-expansion    omzettingen van tabs in spaties negeren"
+
+#: src/diff.c:893
+msgid "-Z, --ignore-trailing-space     ignore white space at line end"
+msgstr "-Z, --ignore-trailing-space   witruimte aan einde van regel negeren"
+
+#: src/diff.c:894
+msgid ""
+"-b, --ignore-space-change       ignore changes in the amount of white space"
+msgstr ""
+"-b, --ignore-space-change     wijzigingen in hoeveelheid witruimte negeren"
+
+#: src/diff.c:895
+msgid "-w, --ignore-all-space          ignore all white space"
+msgstr "-w, --ignore-all-space        alle witruimte negeren"
+
+#: src/diff.c:896
+msgid ""
+"-B, --ignore-blank-lines        ignore changes where lines are all blank"
+msgstr ""
+"-B, --ignore-blank-lines      wijzigingen waarvan alle regels leeg zijn "
+"negeren"
+
+#: src/diff.c:897
+msgid "-I, --ignore-matching-lines=RE  ignore changes where all lines match RE"
+msgstr ""
+"-I, --ignore-matching-lines=RE  wijzigingen waarvan alle regels "
+"overeenkomen\n"
+"                                  met reguliere expressie RE negeren"
+
+#: src/diff.c:899
+msgid "-a, --text                      treat all files as text"
+msgstr "-a, --text                 alle bestanden als tekst behandelen"
+
+#: src/diff.c:900
+msgid "    --strip-trailing-cr         strip trailing carriage return on input"
+msgstr ""
+"    --strip-trailing-cr    Enter-tekens (CR's) aan einde van regels weglaten"
+
+#: src/diff.c:902
+msgid "    --binary                    read and write data in binary mode"
+msgstr ""
+"    --binary               gegevens in binaire modus lezen en schrijven"
+
+#: src/diff.c:905
+msgid ""
+"-D, --ifdef=NAME                output merged file with '#ifdef NAME' diffs"
+msgstr ""
+"-D, --ifdef=NAAM           samengevoegd bestand tonen om verschillen in\n"
+"                             '#ifdef NAAM' te laten zien"
+
+#: src/diff.c:906
+msgid "    --GTYPE-group-format=GFMT   format GTYPE input groups with GFMT"
+msgstr ""
+"    --GSOORT-group-format=GOPMAAK    iets dergelijks, maar dan invoergroepen "
+"van\n"
+"                                       soort GSOORT opmaken met GOPMAAK"
+
+#: src/diff.c:907
+msgid "    --line-format=LFMT          format all input lines with LFMT"
+msgstr ""
+"    --line-format=LOPMAAK    iets dergelijks, maar dan alle invoerregels "
+"opmaken\n"
+"                               met LOPMAAK"
+
+#: src/diff.c:908
+msgid "    --LTYPE-line-format=LFMT    format LTYPE input lines with LFMT"
+msgstr ""
+"    --LSOORT-line-format=LOPMAAK    iets dergelijks, maar dan invoerregels "
+"van\n"
+"                                      soort LSOORT opmaken met LOPMAAK"
+
+#: src/diff.c:909
+msgid ""
+"  These format options provide fine-grained control over the output\n"
+"    of diff, generalizing -D/--ifdef."
+msgstr ""
+"  Deze opmaakopties bieden een fijnafregeling van de uitvoer aan,\n"
+"    een generalisatie van de optie '-d/--ifdef'."
+
+#: src/diff.c:911
+msgid "  LTYPE is 'old', 'new', or 'unchanged'.  GTYPE is LTYPE or 'changed'."
+msgstr ""
+"  LSOORT is 'old' (oud), 'new' (nieuw), of 'unchanged' (ongewijzigd);\n"
+"    GSOORT is LSOORT of 'changed' (gewijzigd)."
+
+#: src/diff.c:912
+msgid ""
+"  GFMT (only) may contain:\n"
+"    %<  lines from FILE1\n"
+"    %>  lines from FILE2\n"
+"    %=  lines common to FILE1 and FILE2\n"
+"    %[-][WIDTH][.[PREC]]{doxX}LETTER  printf-style spec for LETTER\n"
+"      LETTERs are as follows for new group, lower case for old group:\n"
+"        F  first line number\n"
+"        L  last line number\n"
+"        N  number of lines = L-F+1\n"
+"        E  F-1\n"
+"        M  L+1\n"
+"    %(A=B?T:E)  if A equals B then T else E"
+msgstr ""
+"  GOPMAAK mag bevatten:\n"
+"    %<  regels van BESTAND1\n"
+"    %>  regels van BESTAND2\n"
+"    %=  regels overeenkomend in BESTAND1 en BESTAND2\n"
+"    %[-][BREEDTE][.[PREC]]{doxX}LETTER  printf-stijl specificatie voor "
+"LETTER\n"
+"      LETTERs zijn als volgt voor nieuwe groep, kleine letter voor oude "
+"groep:\n"
+"        F  eerste regelnummer\n"
+"        L  laatste regelnummer\n"
+"        N  het aantal regels (L-F+1)\n"
+"        E  F-1\n"
+"        M  L+1\n"
+"    %(A=B?Z:V)  als A gelijk is aan B, dan Z anders V"
+
+#: src/diff.c:924
+msgid ""
+"  LFMT (only) may contain:\n"
+"    %L  contents of line\n"
+"    %l  contents of line, excluding any trailing newline\n"
+"    %[-][WIDTH][.[PREC]]{doxX}n  printf-style spec for input line number"
+msgstr ""
+"  LOPMAAK mag bevatten:\n"
+"    %L  inhoud van regel\n"
+"    %l  inhoud van regel, behalve eventuele witregel aan einde\n"
+"    %[-][BREEDTE][.[PREC]]{doxX}n  specificatie in printf-stijl voor\n"
+"                                   invoerregelnummer"
+
+#: src/diff.c:928
+msgid ""
+"  Both GFMT and LFMT may contain:\n"
+"    %%  %\n"
+"    %c'C'  the single character C\n"
+"    %c'\\OOO'  the character with octal code OOO\n"
+"    C    the character C (other characters represent themselves)"
+msgstr ""
+"  GOPMAAK en LOPMAAK mogen bevatten:\n"
+"    %%        een %-teken\n"
+"    %c'C'     het enkele teken C\n"
+"    %c'\\OOO'  het teken met octaalcode OOO\n"
+"    C         het teken C (andere tekens representeren zichzelf)"
+
+#: src/diff.c:934
+msgid "-d, --minimal            try hard to find a smaller set of changes"
+msgstr ""
+"-d, --minimal              moeite doen om een kleinere verzameling "
+"wijzigingen\n"
+"                             te vinden"
+
+#: src/diff.c:935
+msgid "    --horizon-lines=NUM  keep NUM lines of the common prefix and suffix"
+msgstr ""
+"    --horizon-lines=AANTAL    dit AANTAL regels met identieke kop en staart\n"
+"                                bij vergelijkingsproces meenemen"
+
+#: src/diff.c:936
+msgid ""
+"    --speed-large-files  assume large files and many scattered small changes"
+msgstr ""
+"    --speed-large-files    aannemen dat bestanden groot zijn met veel "
+"verspreide\n"
+"                             kleine wijzigingen"
+
+#: src/diff.c:938
+msgid "    --help               display this help and exit"
+msgstr "    --help                 deze hulptekst tonen en stoppen"
+
+#: src/diff.c:939
+msgid "-v, --version            output version information and exit"
+msgstr "-v, --version              programmaversie tonen en stoppen"
+
+#: src/diff.c:941
+msgid ""
+"FILES are 'FILE1 FILE2' or 'DIR1 DIR2' or 'DIR FILE...' or 'FILE... DIR'."
+msgstr ""
+"BESTANDEN is 'BESTAND1 BESTAND2' of 'MAP1 MAP2' of\n"
+"             'MAP BESTAND...' of 'BESTAND... MAP'."
+
+#: src/diff.c:942
+msgid ""
+"If --from-file or --to-file is given, there are no restrictions on FILE(s)."
+msgstr ""
+"Als '--from-file' of '--to-file' gegeven is, mag BESTANDEN van alles zijn."
+
+#: src/diff.c:943 src/diff3.c:481 src/sdiff.c:219
+msgid "If a FILE is '-', read standard input."
+msgstr "Als een BESTAND '-' is, wordt er van standaardinvoer gelezen."
+
+#: src/diff.c:953
+#, c-format
+msgid "Usage: %s [OPTION]... FILES\n"
+msgstr ""
+"Gebruik:  %s [OPTIE...] BESTANDEN\n"
+"\n"
+
+#: src/diff.c:954
+msgid "Compare FILES line by line."
+msgstr "Bestanden regel-voor-regel vergelijken."
+
+#: src/diff.c:988
+#, c-format
+msgid "conflicting %s option value '%s'"
+msgstr "conflicterende waarde '%2$s' van optie %1$s"
+
+#: src/diff.c:1001
+#, c-format
+msgid "conflicting output style options"
+msgstr "conflicterende uitvoerstijl-opties"
+
+#: src/diff.c:1058 src/diff.c:1268
+#, c-format
+msgid "Only in %s: %s\n"
+msgstr "Alleen in %s: %s\n"
+
+#: src/diff.c:1192
+msgid "cannot compare '-' to a directory"
+msgstr "kan '-' niet met een map vergelijken"
+
+#: src/diff.c:1227
+msgid "-D option not supported with directories"
+msgstr "optie '-D' is niet mogelijk bij mappen"
+
+#: src/diff.c:1236
+#, c-format
+msgid "Common subdirectories: %s and %s\n"
+msgstr "Gemeenschappelijke submappen: %s en %s\n"
+
+#: src/diff.c:1278 src/diff.c:1328
+#, c-format
+msgid "File %s is a %s while file %s is a %s\n"
+msgstr "Bestand %s is een %s terwijl bestand %s een %s is\n"
+
+#: src/diff.c:1314
+#, c-format
+msgid "Symbolic links %s and %s differ\n"
+msgstr "Symbolische koppelingen %s en %s zijn verschillend\n"
+
+#: src/diff.c:1399
+#, c-format
+msgid "Files %s and %s are identical\n"
+msgstr "Bestanden %s en %s zijn identiek\n"
+
+#. This is a proper name. See the gettext manual, section Names.
+#: src/diff3.c:41
+msgid "Randy Smith"
+msgstr "Randy Smith"
+
+#: src/diff3.c:313
+#, c-format
+msgid "incompatible options"
+msgstr "niet-samengaande opties"
+
+#: src/diff3.c:353
+msgid "'-' specified for more than one input file"
+msgstr "'-' opgegeven voor meer dan één invoerbestand"
+
+#: src/diff3.c:395 src/diff3.c:1241 src/diff3.c:1645 src/diff3.c:1700
+#: src/sdiff.c:307 src/sdiff.c:844 src/sdiff.c:855
+msgid "read failed"
+msgstr "lezen is mislukt"
+
+#: src/diff3.c:428
+msgid "-A, --show-all              output all changes, bracketing conflicts"
+msgstr ""
+"-A, --show-all             alle wijzigingen tonen, met rechte haken om de "
+"conflicten"
+
+#: src/diff3.c:430
+msgid ""
+"-e, --ed                    output ed script incorporating changes\n"
+"                                from OLDFILE to YOURFILE into MYFILE"
+msgstr ""
+"-e, --ed                   een ed-script produceren die de wijzigingen van\n"
+"                             OUDBESTAND naar UWBESTAND in MIJNBESTAND maakt"
+
+#: src/diff3.c:432
+msgid "-E, --show-overlap          like -e, but bracket conflicts"
+msgstr ""
+"-E, --show-overlap         als '-e' maar met rechte haken om de conflicten"
+
+#: src/diff3.c:433
+msgid ""
+"-3, --easy-only             like -e, but incorporate only nonoverlapping "
+"changes"
+msgstr ""
+"-3, --easy-only            als '-e' maar alleen met niet-overlappende "
+"wijzigingen"
+
+#: src/diff3.c:434
+msgid ""
+"-x, --overlap-only          like -e, but incorporate only overlapping changes"
+msgstr ""
+"-x, --overlap-only         als '-e' maar met alleen de overlappende "
+"wijzigingen"
+
+#: src/diff3.c:435
+msgid "-X                          like -x, but bracket conflicts"
+msgstr ""
+"-X                         als '-x' maar met rechte haken om de conflicten"
+
+#: src/diff3.c:436
+msgid "-i                          append 'w' and 'q' commands to ed scripts"
+msgstr ""
+"-i                         opdrachten 'w' en 'q' toevoegen aan einde van ed-"
+"scripts"
+
+#: src/diff3.c:438
+msgid ""
+"-m, --merge                 output actual merged file, according to\n"
+"                                -A if no other options are given"
+msgstr ""
+"-m, --merge                het feitelijk samengevoegde bestand tonen\n"
+"                             volgens '-A' zonder andere opties"
+
+#: src/diff3.c:441
+msgid "-a, --text                  treat all files as text"
+msgstr "-a, --text                 alle bestanden als tekst behandelen"
+
+#: src/diff3.c:442
+msgid "    --strip-trailing-cr     strip trailing carriage return on input"
+msgstr ""
+"    --strip-trailing-cr    Enter-tekens (CR's) aan einde van regels weglaten"
+
+#: src/diff3.c:443
+msgid "-T, --initial-tab           make tabs line up by prepending a tab"
+msgstr ""
+"-T, --initial-tab          tabs uitlijnen door invoegen van tab aan het begin"
+
+#: src/diff3.c:444
+msgid "    --diff-program=PROGRAM  use PROGRAM to compare files"
+msgstr ""
+"    --diff-program=PROG    dit programma gebruiken om bestanden te "
+"vergelijken"
+
+#: src/diff3.c:445
+msgid ""
+"-L, --label=LABEL           use LABEL instead of file name\n"
+"                                (can be repeated up to three times)"
+msgstr ""
+"-L, --label=LABEL          dit LABEL gebruiken in plaats van bestandsnaam\n"
+"                             (mag maximaal driemaal herhaald worden)"
+
+#: src/diff3.c:448
+msgid "    --help                  display this help and exit"
+msgstr "    --help                 deze hulptekst tonen en stoppen"
+
+#: src/diff3.c:449
+msgid "-v, --version               output version information and exit"
+msgstr "-v, --version              programmaversie tonen en stoppen"
+
+#: src/diff3.c:458
+#, c-format
+msgid "Usage: %s [OPTION]... MYFILE OLDFILE YOURFILE\n"
+msgstr ""
+"Gebruik:  %s [OPTIE]... MIJNBESTAND OUDBESTAND UWBESTAND\n"
+"\n"
+
+#: src/diff3.c:460
+msgid "Compare three files line by line."
+msgstr "Drie bestanden regel-voor-regel vergelijken."
+
+#: src/diff3.c:470
+msgid ""
+"\n"
+"The default output format is a somewhat human-readable representation of\n"
+"the changes.\n"
+"\n"
+"The -e, -E, -x, -X (and corresponding long) options cause an ed script\n"
+"to be output instead of the default.\n"
+"\n"
+"Finally, the -m (--merge) option causes diff3 to do the merge internally\n"
+"and output the actual merged file.  For unusual input, this is more\n"
+"robust than using ed.\n"
+msgstr ""
+"\n"
+"De standaard uitvoeropmaak is een enigszins leesbare representatie van\n"
+"de wijzigingen.\n"
+"\n"
+"De opties '-e', '-E', '-x', en '-X' (en hun equivalente lange versies)\n"
+"produceren een ed-script in plaats van de standaard uitvoer.\n"
+"\n"
+"De optie '-m' ('--merge') maakt dat 'diff3' de samenvoeging intern "
+"produceert\n"
+"en het samengevoegde bestand uitvoert.  Voor ongewone invoer is dit "
+"robuuster\n"
+"dan het gebruik van 'ed'.\n"
+
+#: src/diff3.c:482
+msgid "Exit status is 0 if successful, 1 if conflicts, 2 if trouble."
+msgstr ""
+"De afsluitwaarde is 0 bij succes, 1 bij conflicten, en 2 bij problemen."
+
+#: src/diff3.c:675
+msgid "internal error: screwup in format of diff blocks"
+msgstr "*interne programmafout*: opmaak van diff-blokken is verhaspeld"
+
+#: src/diff3.c:968
+#, c-format
+msgid "%s: diff failed: "
+msgstr "%s: diff is mislukt: "
+
+#: src/diff3.c:990
+msgid "internal error: invalid diff type in process_diff"
+msgstr "*interne programmmafout*: ongeldig soort diff in process_diff()"
+
+#: src/diff3.c:1015
+msgid "invalid diff format; invalid change separator"
+msgstr "ongeldige diff-opmaak: ongeldig scheidingsteken voor veranderingen"
+
+#: src/diff3.c:1251
+msgid "invalid diff format; incomplete last line"
+msgstr "ongeldige diff-opmaak: incomplete laatste regel"
+
+#: src/diff3.c:1275 src/sdiff.c:275 src/util.c:392
+#, c-format
+msgid "subsidiary program '%s' could not be invoked"
+msgstr "hulpprogramma '%s' kan niet worden aangeroepen"
+
+#: src/diff3.c:1300
+msgid "invalid diff format; incorrect leading line chars"
+msgstr "ongeldige diff-opmaak: onjuiste tekens aan begin van regel"
+
+#: src/diff3.c:1373
+msgid "internal error: invalid diff type passed to output"
+msgstr "*interne programmafout*: ongeldig soort diff naar uitvoer gestuurd"
+
+#: src/diff3.c:1647 src/diff3.c:1704
+msgid "input file shrank"
+msgstr "invoerbestand is gekrompen"
+
+#: src/dir.c:158
+#, c-format
+msgid "cannot compare file names '%s' and '%s'"
+msgstr "kan bestandsnamen '%s' en '%s' niet vergelijken"
+
+#: src/dir.c:209
+#, c-format
+msgid "%s: recursive directory loop"
+msgstr "%s: oneindige lus in de mappen"
+
+#. This is a proper name. See the gettext manual, section Names.
+#: src/sdiff.c:42
+msgid "Thomas Lord"
+msgstr "Thomas Lord"
+
+#: src/sdiff.c:173
+msgid ""
+"-o, --output=FILE            operate interactively, sending output to FILE"
+msgstr ""
+"-o, --output=BESTAND       interactief werken; het resultaat opslaan in "
+"BESTAND"
+
+#: src/sdiff.c:175
+msgid ""
+"-i, --ignore-case            consider upper- and lower-case to be the same"
+msgstr ""
+"-i, --ignore-case             hoofd- en kleine letters als hetzelfde zien"
+
+#: src/sdiff.c:176
+msgid "-E, --ignore-tab-expansion   ignore changes due to tab expansion"
+msgstr "-E, --ignore-tab-expansion    omzettingen van tabs in spaties negeren"
+
+#: src/sdiff.c:177
+msgid "-Z, --ignore-trailing-space  ignore white space at line end"
+msgstr "-Z, --ignore-trailing-space    witruimte aan einde van regel negeren"
+
+#: src/sdiff.c:178
+msgid ""
+"-b, --ignore-space-change    ignore changes in the amount of white space"
+msgstr ""
+"-b, --ignore-space-change     wijzigingen in hoeveelheid witruimte negeren"
+
+#: src/sdiff.c:179
+msgid "-W, --ignore-all-space       ignore all white space"
+msgstr "-W, --ignore-all-space        alle witruimte negeren"
+
+#: src/sdiff.c:180
+msgid "-B, --ignore-blank-lines     ignore changes whose lines are all blank"
+msgstr ""
+"-B, --ignore-blank-lines      wijzigingen waarvan alle regels leeg zijn "
+"negeren"
+
+#: src/sdiff.c:181
+msgid "-I, --ignore-matching-lines=RE  ignore changes all whose lines match RE"
+msgstr ""
+"-I, --ignore-matching-lines=RE  wijzigingen waarvan alle regels "
+"overeenkomen\n"
+"                                  met reguliere expressie RE negeren"
+
+#: src/sdiff.c:182
+msgid "    --strip-trailing-cr      strip trailing carriage return on input"
+msgstr ""
+"    --strip-trailing-cr    Enter-tekens (CR's) aan einde van regels weglaten"
+
+#: src/sdiff.c:183
+msgid "-a, --text                   treat all files as text"
+msgstr "-a, --text                 alle bestanden als tekst behandelen"
+
+#: src/sdiff.c:185
+msgid ""
+"-w, --width=NUM              output at most NUM (default 130) print columns"
+msgstr ""
+"-w, --width=AANTAL         maximaal dit AANTAL kolommen tonen (standaard 130)"
+
+#: src/sdiff.c:186
+msgid ""
+"-l, --left-column            output only the left column of common lines"
+msgstr ""
+"-l, --left-column          bij gelijke regels alleen de linkerkolom tonen"
+
+#: src/sdiff.c:187
+msgid "-s, --suppress-common-lines  do not output common lines"
+msgstr "-s, --suppress-common-lines   de gelijke regels onderdrukken"
+
+#: src/sdiff.c:189
+msgid "-t, --expand-tabs            expand tabs to spaces in output"
+msgstr "-t, --expand-tabs          tabs uitschrijven naar spaties in uitvoer"
+
+#: src/sdiff.c:190
+msgid ""
+"    --tabsize=NUM            tab stops at every NUM (default 8) print columns"
+msgstr ""
+"    --tabsize=AANTAL       tab-stops op elke AANTAL posities (standaard 8)"
+
+#: src/sdiff.c:192
+msgid "-d, --minimal                try hard to find a smaller set of changes"
+msgstr ""
+"-d, --minimal              moeite doen om een kleinere verzameling "
+"wijzigingen\n"
+"                             te vinden"
+
+#: src/sdiff.c:193
+msgid ""
+"-H, --speed-large-files      assume large files, many scattered small changes"
+msgstr ""
+"-H, --speed-large-files    aannemen dat bestanden groot zijn met veel "
+"verspreide\n"
+"                             kleine wijzigingen"
+
+#: src/sdiff.c:194
+msgid "    --diff-program=PROGRAM   use PROGRAM to compare files"
+msgstr ""
+"    --diff-program=PRGRM   dit programma gebruiken om bestanden te "
+"vergelijken"
+
+#: src/sdiff.c:196
+msgid "    --help                   display this help and exit"
+msgstr "    --help                 deze hulptekst tonen en stoppen"
+
+#: src/sdiff.c:197
+msgid "-v, --version                output version information and exit"
+msgstr "-v, --version              programmaversie tonen en stoppen"
+
+#: src/sdiff.c:206
+#, c-format
+msgid "Usage: %s [OPTION]... FILE1 FILE2\n"
+msgstr ""
+"Gebruik:  %s [OPTIE...] BESTAND1 BESTAND2\n"
+"\n"
+
+#: src/sdiff.c:208
+msgid "Side-by-side merge of differences between FILE1 and FILE2."
+msgstr "Twee bestanden naast elkaar weergeven."
+
+#: src/sdiff.c:329
+msgid "cannot interactively merge standard input"
+msgstr "kan standaardinvoer niet interactief samenvoegen"
+
+#: src/sdiff.c:595
+msgid "both files to be compared are directories"
+msgstr "de te vergelijken bestanden zijn allebei mappen"
+
+#: src/sdiff.c:818
+msgid ""
+"ed:\tEdit then use both versions, each decorated with a header.\n"
+"eb:\tEdit then use both versions.\n"
+"el or e1:\tEdit then use the left version.\n"
+"er or e2:\tEdit then use the right version.\n"
+"e:\tDiscard both versions then edit a new one.\n"
+"l or 1:\tUse the left version.\n"
+"r or 2:\tUse the right version.\n"
+"s:\tSilently include common lines.\n"
+"v:\tVerbosely include common lines.\n"
+"q:\tQuit.\n"
+msgstr ""
+"ed:       Bewerken en daarna beide versies gebruiken, beide met een kop.\n"
+"eb:       Bewerken en daarna beide versies gebruiken.\n"
+"el / e1:  Bewerken en daarna de linker versie gebruiken.\n"
+"er / e2:  Bewerken en daarna de rechter versie gebruiken.\n"
+"e:        Een nieuwe versie bewerken.\n"
+"l / 1:    De linker versie gebruiken.\n"
+"r / 2:    De rechter versie gebruiken.\n"
+"s:        Overeenkomende regels stilzwijgend invoegen.\n"
+"v:        Overeenkomende regels invoegen en tonen.\n"
+"q:        Afsluiten.\n"
+
+#~ msgid "-i SKIP1:SKIP2  --ignore-initial=SKIP1:SKIP2"
+#~ msgstr "-i OVERSLAAN1:OVERSLAAN2  --ignore-initial=OVERSLAAN1:OVERSLAAN2"
+
+#~ msgid "-s  --quiet  --silent  Output nothing; yield exit status only."
+#~ msgstr ""
+#~ "-s  --quiet  --silent  Niets tonen; alleen een afsluitwaarde leveren."
+
+#~ msgid "--help  Output this help."
+#~ msgstr "--help  Deze hulptekst tonen."
+
+#~ msgid ""
+#~ "-c  -C NUM  --context[=NUM]  Output NUM (default 3) lines of copied "
+#~ "context.\n"
+#~ "-u  -U NUM  --unified[=NUM]  Output NUM (default 3) lines of unified "
+#~ "context.\n"
+#~ "  --label LABEL  Use LABEL instead of file name.\n"
+#~ "  -p  --show-c-function  Show which C function each change is in.\n"
+#~ "  -F RE  --show-function-line=RE  Show the most recent line matching RE."
+#~ msgstr ""
+#~ "-c  -C AANTAL  --context[=AANTAL]  AANTAL (standaard 3) regels van\n"
+#~ "                                   gekopieerde context tonen.\n"
+#~ "-u  -U AANTAL  --unified[=AANTAL]  AANTAL (standaard 3) regels van\n"
+#~ "                                   geünificeerde context tonen.\n"
+#~ "--label LABEL  Dit LABEL gebruiken in plaats van bestandsnaam.\n"
+#~ "-p  --show-c-function  Vermelden in welke C-functie elke wijziging is.\n"
+#~ "-F RE  --show-function-line=RE  Recentste regel overeenkomend met RE "
+#~ "tonen."
+
+#~ msgid ""
+#~ "-y  --side-by-side  Output in two columns.\n"
+#~ "  -W NUM  --width=NUM  Output at most NUM (default 130) print columns.\n"
+#~ "  --left-column  Output only the left column of common lines.\n"
+#~ "  --suppress-common-lines  Do not output common lines."
+#~ msgstr ""
+#~ "-y  --side-by-side  Resultaat weergeven in twee kolommen.\n"
+#~ "-W AANTAL  --width=AANTAL  Maximaal AANTAL (standaard 130) kolommen "
+#~ "tonen.\n"
+#~ "--left-column  Van overeenkomende regels alleen de linker kolom tonen.\n"
+#~ "--suppress-common-lines  Overeenkomende regels niet tonen."
+
+#~ msgid ""
+#~ "--speed-large-files  Assume large files and many scattered small changes."
+#~ msgstr ""
+#~ "--speed-large-files  Aannemen dat bestanden groot zijn en veel kleine,\n"
+#~ "                     verspreide wijzigingen hebben."
+
+#~ msgid "-X  Output overlapping changes, bracketing them."
+#~ msgstr "-X  Overlappende wijzigingen tonen, tussen rechte haken."
+
+#~ msgid "-m  --merge  Output merged file instead of ed script (default -A)."
+#~ msgstr ""
+#~ "-m  --merge  Samengevoegd bestand tonen (standaard met -A) i.p.v. ed-"
+#~ "script."
+
+#~ msgid "-L LABEL  --label=LABEL  Use LABEL instead of file name."
+#~ msgstr ""
+#~ "-L LABEL  --label=LABEL  Dit LABEL gebruiken in plaats van bestandsnaam."

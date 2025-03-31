@@ -1,7 +1,5 @@
-/* -*- buffer-read-only: t -*- vi: set ro: */
-/* DO NOT EDIT! GENERATED AUTOMATICALLY! */
 /* Test of <inttypes.h> substitute.
-   Copyright (C) 2006-2007, 2009-2011 Free Software Foundation, Inc.
+   Copyright (C) 2006-2007, 2009-2013 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -20,9 +18,6 @@
 
 #include <config.h>
 
-#define __STDC_LIMIT_MACROS 1 /* to make it work also in C++ mode */
-#define __STDC_CONSTANT_MACROS 1 /* to make it work also in C++ mode */
-#define __STDC_FORMAT_MACROS 1 /* to make it work also in C++ mode */
 #include <inttypes.h>
 
 #include <stddef.h>

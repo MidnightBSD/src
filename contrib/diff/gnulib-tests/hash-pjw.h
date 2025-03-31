@@ -1,7 +1,5 @@
-/* -*- buffer-read-only: t -*- vi: set ro: */
-/* DO NOT EDIT! GENERATED AUTOMATICALLY! */
 /* hash-pjw.h -- declaration for a simple hash function
-   Copyright (C) 2001, 2003, 2009-2011 Free Software Foundation, Inc.
+   Copyright (C) 2001, 2003, 2009-2013 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -22,4 +20,4 @@
    and return the hash code modulo TABLESIZE.
    The result is platform dependent: it depends on the size of the 'size_t'
    type and on the signedness of the 'char' type.  */
-extern size_t hash_pjw (void const *x, size_t tablesize);
+extern size_t hash_pjw (void const *x, size_t tablesize) _GL_ATTRIBUTE_PURE;

@@ -11,7 +11,7 @@ printf '\0'|diff - /dev/null > out 2> err
 
 # diff must exit with status 2, stdout as above, and no stderr.
 test $? = 2 || fail=1
-compare out out-exp || fail=1
-compare err /dev/null || fail=1
+compare out-exp out || fail=1
+compare /dev/null err || fail=1
 
 Exit $fail

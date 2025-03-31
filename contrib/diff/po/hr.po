@@ -1,0 +1,1307 @@
+# Translation of diffutils to Croatian.
+# Copyright © 2012 Free Software Foundation, Inc.
+# This file is distributed under the same license as the diffutils package.
+# Tomislav Krznar <tomislav.krznar@gmail.com>, 2012.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: GNU diffutils 3.3-pre1\n"
+"Report-Msgid-Bugs-To: bug-diffutils@gnu.org\n"
+"POT-Creation-Date: 2013-03-24 11:05-0700\n"
+"PO-Revision-Date: 2012-12-21 00:37+0100\n"
+"Last-Translator: Tomislav Krznar <tomislav.krznar@gmail.com>\n"
+"Language-Team: Croatian <lokalizacija@linux.hr>\n"
+"Language: hr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n"
+"%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"X-Generator: Gtranslator 2.91.5\n"
+
+#: lib/c-stack.c:204 lib/c-stack.c:297
+msgid "program error"
+msgstr "programska greška"
+
+#: lib/c-stack.c:205 lib/c-stack.c:298
+msgid "stack overflow"
+msgstr "preljev stoga"
+
+#: lib/error.c:188
+msgid "Unknown system error"
+msgstr "Nepoznata greška sustava"
+
+#: lib/file-type.c:38
+msgid "regular empty file"
+msgstr "obična prazna datoteka"
+
+#: lib/file-type.c:38
+msgid "regular file"
+msgstr "obična datoteka"
+
+#: lib/file-type.c:41
+msgid "directory"
+msgstr "direktorij"
+
+#: lib/file-type.c:44
+msgid "block special file"
+msgstr "posebna blokovska datoteka"
+
+#: lib/file-type.c:47
+msgid "character special file"
+msgstr "posebna znakovna datoteka"
+
+#: lib/file-type.c:50
+msgid "fifo"
+msgstr "fifo"
+
+#: lib/file-type.c:53
+msgid "symbolic link"
+msgstr "simbolička veza"
+
+#: lib/file-type.c:56
+msgid "socket"
+msgstr "utičnica"
+
+#: lib/file-type.c:59
+msgid "message queue"
+msgstr "red poruka"
+
+#: lib/file-type.c:62
+msgid "semaphore"
+msgstr "semafor"
+
+#: lib/file-type.c:65
+msgid "shared memory object"
+msgstr "dijeljeni memorijski objekt"
+
+#: lib/file-type.c:68
+msgid "typed memory object"
+msgstr "tipizirani memorijski objekt"
+
+#: lib/file-type.c:70
+msgid "weird file"
+msgstr "čudna datoteka"
+
+#: lib/getopt.c:547 lib/getopt.c:576
+#, c-format
+msgid "%s: option '%s' is ambiguous; possibilities:"
+msgstr "%s: opcija „%s” je višeznačna, mogućnosti:"
+
+#: lib/getopt.c:624 lib/getopt.c:628
+#, c-format
+msgid "%s: option '--%s' doesn't allow an argument\n"
+msgstr "%s: opcija „--%s” ne dozvoljava argument\n"
+
+#: lib/getopt.c:637 lib/getopt.c:642
+#, c-format
+msgid "%s: option '%c%s' doesn't allow an argument\n"
+msgstr "%s: opcija „%c%s” ne dozvoljava argument\n"
+
+#: lib/getopt.c:685 lib/getopt.c:704
+#, c-format
+msgid "%s: option '--%s' requires an argument\n"
+msgstr "%s: opcija „--%s” zahtijeva argument\n"
+
+#: lib/getopt.c:742 lib/getopt.c:745
+#, c-format
+msgid "%s: unrecognized option '--%s'\n"
+msgstr "%s: neprepoznata opcija „--%s”\n"
+
+#: lib/getopt.c:753 lib/getopt.c:756
+#, c-format
+msgid "%s: unrecognized option '%c%s'\n"
+msgstr "%s: neprepoznata opcija „%c%s”\n"
+
+#: lib/getopt.c:805 lib/getopt.c:808
+#, c-format
+msgid "%s: invalid option -- '%c'\n"
+msgstr "%s: neispravna opcija -- „%c”\n"
+
+#: lib/getopt.c:861 lib/getopt.c:878 lib/getopt.c:1088 lib/getopt.c:1106
+#, c-format
+msgid "%s: option requires an argument -- '%c'\n"
+msgstr "%s: opcija zahtijeva argument -- „%c”\n"
+
+#: lib/getopt.c:934 lib/getopt.c:950
+#, c-format
+msgid "%s: option '-W %s' is ambiguous\n"
+msgstr "%s: opcija „-W %s” je višeznačna\n"
+
+#: lib/getopt.c:974 lib/getopt.c:992
+#, c-format
+msgid "%s: option '-W %s' doesn't allow an argument\n"
+msgstr "%s: opcija „-W %s” ne dozvoljava argument\n"
+
+#: lib/getopt.c:1013 lib/getopt.c:1031
+#, c-format
+msgid "%s: option '-W %s' requires an argument\n"
+msgstr "%s: opcija „-W %s” zahtijeva argument\n"
+
+#. TRANSLATORS:
+#. Get translations for open and closing quotation marks.
+#. The message catalog should translate "`" to a left
+#. quotation mark suitable for the locale, and similarly for
+#. "'".  For example, a French Unicode local should translate
+#. these to U+00AB (LEFT-POINTING DOUBLE ANGLE
+#. QUOTATION MARK), and U+00BB (RIGHT-POINTING DOUBLE ANGLE
+#. QUOTATION MARK), respectively.
+#.
+#. If the catalog has no translation, we will try to
+#. use Unicode U+2018 (LEFT SINGLE QUOTATION MARK) and
+#. Unicode U+2019 (RIGHT SINGLE QUOTATION MARK).  If the
+#. current locale is not Unicode, locale_quoting_style
+#. will quote 'like this', and clocale_quoting_style will
+#. quote "like this".  You should always include translations
+#. for "`" and "'" even if U+2018 and U+2019 are appropriate
+#. for your locale.
+#.
+#. If you don't know what to put here, please see
+#. <http://en.wikipedia.org/wiki/Quotation_marks_in_other_languages>
+#. and use glyphs suitable for your language.
+#: lib/quotearg.c:312
+msgid "`"
+msgstr "„"
+
+#: lib/quotearg.c:313
+msgid "'"
+msgstr "”"
+
+#: lib/regcomp.c:131
+msgid "Success"
+msgstr "Uspjeh"
+
+#: lib/regcomp.c:134
+msgid "No match"
+msgstr "Nema poklapanja"
+
+#: lib/regcomp.c:137
+msgid "Invalid regular expression"
+msgstr "Neispravan regularni izraz"
+
+#: lib/regcomp.c:140
+msgid "Invalid collation character"
+msgstr "Neispravan znak razvrstavanja"
+
+#: lib/regcomp.c:143
+msgid "Invalid character class name"
+msgstr "Neispravno ime razreda znakova"
+
+#: lib/regcomp.c:146
+msgid "Trailing backslash"
+msgstr "Obrnuta kosa crta na kraju"
+
+#: lib/regcomp.c:149
+msgid "Invalid back reference"
+msgstr "Neispravna povratna referenca"
+
+#: lib/regcomp.c:152
+msgid "Unmatched [ or [^"
+msgstr "Neuparena [ ili [^"
+
+#: lib/regcomp.c:155
+msgid "Unmatched ( or \\("
+msgstr "Neuparena ( ili \\("
+
+#: lib/regcomp.c:158
+msgid "Unmatched \\{"
+msgstr "Neuparena \\{"
+
+#: lib/regcomp.c:161
+msgid "Invalid content of \\{\\}"
+msgstr "Neispravan sadržaj \\{\\}"
+
+#: lib/regcomp.c:164
+msgid "Invalid range end"
+msgstr "Neispravan kraj raspona"
+
+#: lib/regcomp.c:167
+msgid "Memory exhausted"
+msgstr "Memorija iscrpljena"
+
+#: lib/regcomp.c:170
+msgid "Invalid preceding regular expression"
+msgstr "Neispravan prethodni regularni izraz"
+
+#: lib/regcomp.c:173
+msgid "Premature end of regular expression"
+msgstr "Preuranjen kraj regularnog izraza"
+
+#: lib/regcomp.c:176
+msgid "Regular expression too big"
+msgstr "Regularni izraz je prevelik"
+
+#: lib/regcomp.c:179
+msgid "Unmatched ) or \\)"
+msgstr "Neuparena ) ili \\)"
+
+#: lib/regcomp.c:704
+msgid "No previous regular expression"
+msgstr "Nedostaje prethodni regularni izraz"
+
+#: lib/xalloc-die.c:34
+msgid "memory exhausted"
+msgstr "memorija iscrpljena"
+
+#: lib/xfreopen.c:35
+msgid "stdin"
+msgstr "standardni ulaz"
+
+#: lib/xfreopen.c:36
+msgid "stdout"
+msgstr "standardni izlaz"
+
+#: lib/xfreopen.c:37
+msgid "stderr"
+msgstr "standardni izlaz za greške"
+
+#: lib/xfreopen.c:38
+msgid "unknown stream"
+msgstr "nepoznat tok podataka"
+
+#: lib/xfreopen.c:39
+#, c-format
+msgid "failed to reopen %s with mode %s"
+msgstr "nisam uspio ponovo otvoriti %s s modom %s"
+
+#: lib/xstrtol-error.c:63
+#, c-format
+msgid "invalid %s%s argument '%s'"
+msgstr "neispravan %s%s argument „%s”"
+
+#: lib/xstrtol-error.c:68
+#, c-format
+msgid "invalid suffix in %s%s argument '%s'"
+msgstr "neispravan sufiks u %s%s argumentu „%s”"
+
+#: lib/xstrtol-error.c:72
+#, c-format
+msgid "%s%s argument '%s' too large"
+msgstr "%s%s argument „%s” je prevelik"
+
+#: lib/version-etc.c:74
+#, c-format
+msgid "Packaged by %s (%s)\n"
+msgstr "Pakirao %s (%s)\n"
+
+#: lib/version-etc.c:77
+#, c-format
+msgid "Packaged by %s\n"
+msgstr "Pakirao %s\n"
+
+#. TRANSLATORS: Translate "(C)" to the copyright symbol
+#. (C-in-a-circle), if this symbol is available in the user's
+#. locale.  Otherwise, do not translate "(C)"; leave it as-is.
+#: lib/version-etc.c:84
+msgid "(C)"
+msgstr "©"
+
+#: lib/version-etc.c:86
+msgid ""
+"\n"
+"License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl."
+"html>.\n"
+"This is free software: you are free to change and redistribute it.\n"
+"There is NO WARRANTY, to the extent permitted by law.\n"
+"\n"
+msgstr ""
+"\n"
+"Licenca GPLv3+: GNU GPL inačica 3 ili novija <http://gnu.org/licenses/gpl."
+"html>.\n"
+"Ovo je slobodan softver: slobodno ga smijete mijenjati i dijeliti.\n"
+"NEMA JAMSTAVA, do krajnje mjere dozvoljene zakonom.\n"
+"\n"
+
+#. TRANSLATORS: %s denotes an author name.
+#: lib/version-etc.c:102
+#, c-format
+msgid "Written by %s.\n"
+msgstr "Napisao %s.\n"
+
+#. TRANSLATORS: Each %s denotes an author name.
+#: lib/version-etc.c:106
+#, c-format
+msgid "Written by %s and %s.\n"
+msgstr "Napisali %s i %s.\n"
+
+#. TRANSLATORS: Each %s denotes an author name.
+#: lib/version-etc.c:110
+#, c-format
+msgid "Written by %s, %s, and %s.\n"
+msgstr "Napisali %s, %s i %s.\n"
+
+#. TRANSLATORS: Each %s denotes an author name.
+#. You can use line breaks, estimating that each author name occupies
+#. ca. 16 screen columns and that a screen line has ca. 80 columns.
+#: lib/version-etc.c:117
+#, c-format
+msgid ""
+"Written by %s, %s, %s,\n"
+"and %s.\n"
+msgstr ""
+"Napisali %s, %s, %s\n"
+"i %s.\n"
+
+#. TRANSLATORS: Each %s denotes an author name.
+#. You can use line breaks, estimating that each author name occupies
+#. ca. 16 screen columns and that a screen line has ca. 80 columns.
+#: lib/version-etc.c:124
+#, c-format
+msgid ""
+"Written by %s, %s, %s,\n"
+"%s, and %s.\n"
+msgstr ""
+"Napisali %s, %s, %s,\n"
+"%s i %s.\n"
+
+#. TRANSLATORS: Each %s denotes an author name.
+#. You can use line breaks, estimating that each author name occupies
+#. ca. 16 screen columns and that a screen line has ca. 80 columns.
+#: lib/version-etc.c:131
+#, c-format
+msgid ""
+"Written by %s, %s, %s,\n"
+"%s, %s, and %s.\n"
+msgstr ""
+"Napisali %s, %s, %s,\n"
+"%s, %s i %s.\n"
+
+#. TRANSLATORS: Each %s denotes an author name.
+#. You can use line breaks, estimating that each author name occupies
+#. ca. 16 screen columns and that a screen line has ca. 80 columns.
+#: lib/version-etc.c:139
+#, c-format
+msgid ""
+"Written by %s, %s, %s,\n"
+"%s, %s, %s, and %s.\n"
+msgstr ""
+"Napisali %s, %s, %s,\n"
+"%s, %s, %s i %s.\n"
+
+#. TRANSLATORS: Each %s denotes an author name.
+#. You can use line breaks, estimating that each author name occupies
+#. ca. 16 screen columns and that a screen line has ca. 80 columns.
+#: lib/version-etc.c:147
+#, c-format
+msgid ""
+"Written by %s, %s, %s,\n"
+"%s, %s, %s, %s,\n"
+"and %s.\n"
+msgstr ""
+"Napisali %s, %s, %s,\n"
+"%s, %s, %s, %s\n"
+"i %s.\n"
+
+#. TRANSLATORS: Each %s denotes an author name.
+#. You can use line breaks, estimating that each author name occupies
+#. ca. 16 screen columns and that a screen line has ca. 80 columns.
+#: lib/version-etc.c:156
+#, c-format
+msgid ""
+"Written by %s, %s, %s,\n"
+"%s, %s, %s, %s,\n"
+"%s, and %s.\n"
+msgstr ""
+"Napisali %s, %s, %s,\n"
+"%s, %s, %s, %s,\n"
+"%s i %s.\n"
+
+#. TRANSLATORS: Each %s denotes an author name.
+#. You can use line breaks, estimating that each author name occupies
+#. ca. 16 screen columns and that a screen line has ca. 80 columns.
+#: lib/version-etc.c:167
+#, c-format
+msgid ""
+"Written by %s, %s, %s,\n"
+"%s, %s, %s, %s,\n"
+"%s, %s, and others.\n"
+msgstr ""
+"Napisali %s, %s, %s,\n"
+"%s, %s, %s, %s,\n"
+"%s, %s i ostali.\n"
+
+#. TRANSLATORS: The placeholder indicates the bug-reporting address
+#. for this package.  Please add _another line_ saying
+#. "Report translation bugs to <...>\n" with the address for translation
+#. bugs (typically your translation team's web or email address).
+#: lib/version-etc.c:245
+#, c-format
+msgid ""
+"\n"
+"Report bugs to: %s\n"
+msgstr ""
+"\n"
+"Prijavite greške na %s.\n"
+"Prijavite greške prijevoda na <lokalizacija@linux.hr>.\n"
+
+#: lib/version-etc.c:247
+#, c-format
+msgid "Report %s bugs to: %s\n"
+msgstr "Prijavite %s greške na %s\n"
+
+#: lib/version-etc.c:251
+#, c-format
+msgid "%s home page: <%s>\n"
+msgstr "%s početna stranica: <%s>\n"
+
+#: lib/version-etc.c:253
+#, c-format
+msgid "%s home page: <http://www.gnu.org/software/%s/>\n"
+msgstr "%s početna stranica: <http://www.gnu.org/software/%s/>\n"
+
+#: lib/version-etc.c:256
+msgid "General help using GNU software: <http://www.gnu.org/gethelp/>\n"
+msgstr ""
+"Općenita pomoć za korištenje GNU softvera: <http://www.gnu.org/gethelp/>\n"
+
+#: src/analyze.c:459 src/diff.c:1343
+#, c-format
+msgid "Files %s and %s differ\n"
+msgstr "Datoteke %s i %s se razlikuju\n"
+
+#: src/analyze.c:462
+#, c-format
+msgid "Binary files %s and %s differ\n"
+msgstr "Binarne datoteke %s i %s se razlikuju\n"
+
+#: src/analyze.c:713 src/diff3.c:1416 src/util.c:663
+msgid "No newline at end of file"
+msgstr "Nema novog retka na kraju datoteke"
+
+#. This is a proper name. See the gettext manual, section Names.
+#: src/cmp.c:43
+msgid "Torbjorn Granlund"
+msgstr "Torbjorn Granlund"
+
+#. This is a proper name. See the gettext manual, section Names.
+#: src/cmp.c:44
+msgid "David MacKenzie"
+msgstr "David MacKenzie"
+
+#: src/cmp.c:118 src/diff.c:839 src/diff3.c:414 src/sdiff.c:158
+#, c-format
+msgid "Try '%s --help' for more information."
+msgstr "Pokušajte „%s --help” za više informacija."
+
+#: src/cmp.c:137
+#, c-format
+msgid "invalid --ignore-initial value '%s'"
+msgstr "neispravna --ignore-initial vrijednost „%s”"
+
+#: src/cmp.c:147
+#, c-format
+msgid "options -l and -s are incompatible"
+msgstr "opcije -l i -s nisu kompatibilne"
+
+#: src/cmp.c:155 src/diff.c:848 src/diff3.c:422 src/sdiff.c:167
+#: src/sdiff.c:315 src/sdiff.c:322 src/sdiff.c:874 src/util.c:278
+#: src/util.c:375 src/util.c:382
+msgid "write failed"
+msgstr "pisanje nije uspjelo"
+
+#: src/cmp.c:157 src/diff.c:850 src/diff.c:1408 src/diff3.c:424
+#: src/sdiff.c:169
+msgid "standard output"
+msgstr "standardni izlaz"
+
+#: src/cmp.c:161
+msgid "-b, --print-bytes          print differing bytes"
+msgstr "-b, --print-bytes          ispiši bajtove koji se razlikuju"
+
+#: src/cmp.c:162
+msgid "-i, --ignore-initial=SKIP         skip first SKIP bytes of both inputs"
+msgstr ""
+"-i, --ignore-initial=BROJ         preskoči prvih BROJ bajtova oba ulaza"
+
+#: src/cmp.c:163
+msgid ""
+"-i, --ignore-initial=SKIP1:SKIP2  skip first SKIP1 bytes of FILE1 and\n"
+"                                      first SKIP2 bytes of FILE2"
+msgstr ""
+"-i, --ignore-initial=BROJ1:BROJ2  preskoči prvih BROJ1 bajtova DATOTEKE1\n"
+"                                      i prvih BROJ2 bajtova DATOTEKE2"
+
+#: src/cmp.c:165
+msgid ""
+"-l, --verbose              output byte numbers and differing byte values"
+msgstr ""
+"-l, --verbose              ispiši brojeve i vrijednosti bajtova koji se "
+"razlikuju"
+
+#: src/cmp.c:166
+msgid "-n, --bytes=LIMIT          compare at most LIMIT bytes"
+msgstr "-n, --bytes=BROJ           usporedi najviše BROJ bajtova"
+
+#: src/cmp.c:167
+msgid "-s, --quiet, --silent      suppress all normal output"
+msgstr "-s, --quiet, --silent      izostavi sav normalan izlaz"
+
+#: src/cmp.c:168
+msgid "    --help                 display this help and exit"
+msgstr "    --help                 prikaži ovu pomoć i izađi"
+
+#: src/cmp.c:169
+msgid "-v, --version              output version information and exit"
+msgstr "-v, --version              ispiši informacije o inačici i izađi"
+
+#: src/cmp.c:178
+#, c-format
+msgid "Usage: %s [OPTION]... FILE1 [FILE2 [SKIP1 [SKIP2]]]\n"
+msgstr "Uporaba: %s [OPCIJA]... DATOTEKA1 [DATOTEKA2 [BROJ1 [BROJ2]]]\n"
+
+#: src/cmp.c:180
+msgid "Compare two files byte by byte."
+msgstr "Usporedi dvije datoteke bajt po bajt."
+
+#: src/cmp.c:182
+msgid ""
+"The optional SKIP1 and SKIP2 specify the number of bytes to skip\n"
+"at the beginning of each file (zero by default)."
+msgstr ""
+
+#: src/cmp.c:185 src/diff.c:956 src/diff3.c:462 src/sdiff.c:210
+msgid ""
+"Mandatory arguments to long options are mandatory for short options too.\n"
+msgstr ""
+"Obavezni argumenti dugačkih opcija također su obavezni i za kratke opcije.\n"
+
+#: src/cmp.c:191
+msgid ""
+"SKIP values may be followed by the following multiplicative suffixes:\n"
+"kB 1000, K 1024, MB 1,000,000, M 1,048,576,\n"
+"GB 1,000,000,000, G 1,073,741,824, and so on for T, P, E, Z, Y."
+msgstr ""
+
+#: src/cmp.c:194
+msgid "If a FILE is '-' or missing, read standard input."
+msgstr "Ako DATOTEKA nije navedena ili je „-”, čitaj standardni ulaz."
+
+#: src/cmp.c:195 src/diff.c:944 src/sdiff.c:220
+msgid "Exit status is 0 if inputs are the same, 1 if different, 2 if trouble."
+msgstr ""
+"Izlazno stanje je 0 ako su ulazi jednaki, 1 ako se razlikuju, 2 u slučaju "
+"greške."
+
+#: src/cmp.c:240
+#, c-format
+msgid "invalid --bytes value '%s'"
+msgstr "neispravna --bytes vrijednost „%s”"
+
+#: src/cmp.c:266 src/diff.c:757 src/diff3.c:318 src/sdiff.c:565
+#, c-format
+msgid "missing operand after '%s'"
+msgstr "nedostaje operand nakon „%s”"
+
+#: src/cmp.c:278 src/diff.c:759 src/diff3.c:320 src/sdiff.c:567
+#, c-format
+msgid "extra operand '%s'"
+msgstr "operand viška „%s”"
+
+#: src/cmp.c:491
+#, c-format
+msgid "%s %s differ: byte %s, line %s\n"
+msgstr ""
+
+#: src/cmp.c:507
+#, c-format
+msgid "%s %s differ: byte %s, line %s is %3o %s %3o %s\n"
+msgstr ""
+
+#: src/cmp.c:559
+#, c-format
+msgid "cmp: EOF on %s\n"
+msgstr ""
+
+#. This is a proper name. See the gettext manual, section Names.
+#: src/diff.c:49
+msgid "Paul Eggert"
+msgstr "Paul Eggert"
+
+#. This is a proper name. See the gettext manual, section Names.
+#: src/diff.c:50
+msgid "Mike Haertel"
+msgstr "Mike Haertel"
+
+#. This is a proper name. See the gettext manual, section Names.
+#: src/diff.c:51
+msgid "David Hayes"
+msgstr "David Hayes"
+
+#. This is a proper name. See the gettext manual, section Names.
+#: src/diff.c:52
+msgid "Richard Stallman"
+msgstr "Richard Stallman"
+
+#. This is a proper name. See the gettext manual, section Names.
+#: src/diff.c:53
+msgid "Len Tower"
+msgstr "Len Tower"
+
+#: src/diff.c:339
+#, c-format
+msgid "invalid context length '%s'"
+msgstr "neispravna duljina sadržaja „%s”"
+
+#: src/diff.c:422
+#, c-format
+msgid "pagination not supported on this host"
+msgstr "straničenje nije podržano na ovom računalu"
+
+#: src/diff.c:437 src/diff3.c:300
+#, c-format
+msgid "too many file label options"
+msgstr "previše opcija oznaka datoteka"
+
+#: src/diff.c:514
+#, c-format
+msgid "invalid width '%s'"
+msgstr "neispravna širina „%s”"
+
+#: src/diff.c:518
+msgid "conflicting width options"
+msgstr "konfliktne opcije širine"
+
+#: src/diff.c:543
+#, c-format
+msgid "invalid horizon length '%s'"
+msgstr "neispravna duljina sadržaja „%s”"
+
+#: src/diff.c:598
+#, c-format
+msgid "invalid tabsize '%s'"
+msgstr "neispravna širina „%s”"
+
+#: src/diff.c:602
+msgid "conflicting tabsize options"
+msgstr "konfliktne opcije širine"
+
+#: src/diff.c:734
+msgid "--from-file and --to-file both specified"
+msgstr ""
+
+#: src/diff.c:854
+msgid "    --normal                  output a normal diff (the default)"
+msgstr "    --normal                  ispiši normalnu razliku (zadano)"
+
+#: src/diff.c:855
+msgid "-q, --brief                   report only when files differ"
+msgstr "-q, --brief                   izvještaj samo kad se datoteke razlikuju"
+
+#: src/diff.c:856
+msgid "-s, --report-identical-files  report when two files are the same"
+msgstr "-s, --report-identical-files  izvještaj samo kad su datoteke jednake"
+
+#: src/diff.c:857
+msgid ""
+"-c, -C NUM, --context[=NUM]   output NUM (default 3) lines of copied context"
+msgstr ""
+
+#: src/diff.c:858
+msgid ""
+"-u, -U NUM, --unified[=NUM]   output NUM (default 3) lines of unified context"
+msgstr ""
+
+#: src/diff.c:859
+msgid "-e, --ed                      output an ed script"
+msgstr "-e, --ed                      ispiši ed skriptu"
+
+#: src/diff.c:860
+msgid "-n, --rcs                     output an RCS format diff"
+msgstr "-n, --rcs                     ispiši razliku u RCS obliku"
+
+#: src/diff.c:861
+msgid "-y, --side-by-side            output in two columns"
+msgstr "-y, --side-by-side            ispiši u dva stupca"
+
+#: src/diff.c:862
+msgid ""
+"-W, --width=NUM               output at most NUM (default 130) print columns"
+msgstr ""
+
+#: src/diff.c:863
+msgid ""
+"    --left-column             output only the left column of common lines"
+msgstr ""
+
+#: src/diff.c:864
+msgid "    --suppress-common-lines   do not output common lines"
+msgstr ""
+
+#: src/diff.c:866
+msgid "-p, --show-c-function         show which C function each change is in"
+msgstr ""
+
+#: src/diff.c:867
+msgid "-F, --show-function-line=RE   show the most recent line matching RE"
+msgstr ""
+
+#: src/diff.c:868
+msgid ""
+"    --label LABEL             use LABEL instead of file name\n"
+"                                (can be repeated)"
+msgstr ""
+
+#: src/diff.c:871
+msgid "-t, --expand-tabs             expand tabs to spaces in output"
+msgstr "-t, --expand-tabs             pretvori tabulatore u praznine u izlazu"
+
+#: src/diff.c:872
+msgid "-T, --initial-tab             make tabs line up by prepending a tab"
+msgstr ""
+
+#: src/diff.c:873
+msgid ""
+"    --tabsize=NUM             tab stops every NUM (default 8) print columns"
+msgstr ""
+
+#: src/diff.c:874
+msgid ""
+"    --suppress-blank-empty    suppress space or tab before empty output lines"
+msgstr ""
+
+#: src/diff.c:875
+msgid "-l, --paginate                pass output through 'pr' to paginate it"
+msgstr ""
+
+#: src/diff.c:877
+msgid ""
+"-r, --recursive                 recursively compare any subdirectories found"
+msgstr ""
+
+#: src/diff.c:878
+msgid "    --no-dereference            don't follow symbolic links"
+msgstr "    --no-dereference            ne slijedi simboličke veze"
+
+#: src/diff.c:879
+msgid "-N, --new-file                  treat absent files as empty"
+msgstr ""
+"-N, --new-file                  postupaj s odsutnim datotekama kao s praznim"
+
+#: src/diff.c:880
+msgid "    --unidirectional-new-file   treat absent first files as empty"
+msgstr ""
+
+#: src/diff.c:881
+msgid "    --ignore-file-name-case     ignore case when comparing file names"
+msgstr ""
+"    --ignore-file-name-case     zanemari veličinu slova pri uspoređivanju "
+"imena datoteka"
+
+#: src/diff.c:882
+msgid "    --no-ignore-file-name-case  consider case when comparing file names"
+msgstr ""
+"    --no-ignore-file-name-case  ne zanemaruj veličinu slova pri "
+"uspoređivanju imena datoteka"
+
+#: src/diff.c:883
+msgid "-x, --exclude=PAT               exclude files that match PAT"
+msgstr ""
+
+#: src/diff.c:884
+msgid ""
+"-X, --exclude-from=FILE         exclude files that match any pattern in FILE"
+msgstr ""
+
+#: src/diff.c:885
+msgid ""
+"-S, --starting-file=FILE        start with FILE when comparing directories"
+msgstr ""
+
+#: src/diff.c:886
+msgid ""
+"    --from-file=FILE1           compare FILE1 to all operands;\n"
+"                                  FILE1 can be a directory"
+msgstr ""
+
+#: src/diff.c:888
+msgid ""
+"    --to-file=FILE2             compare all operands to FILE2;\n"
+"                                  FILE2 can be a directory"
+msgstr ""
+
+#: src/diff.c:891
+msgid ""
+"-i, --ignore-case               ignore case differences in file contents"
+msgstr ""
+
+#: src/diff.c:892
+msgid "-E, --ignore-tab-expansion      ignore changes due to tab expansion"
+msgstr ""
+
+#: src/diff.c:893
+msgid "-Z, --ignore-trailing-space     ignore white space at line end"
+msgstr ""
+
+#: src/diff.c:894
+msgid ""
+"-b, --ignore-space-change       ignore changes in the amount of white space"
+msgstr ""
+
+#: src/diff.c:895
+msgid "-w, --ignore-all-space          ignore all white space"
+msgstr ""
+
+#: src/diff.c:896
+msgid ""
+"-B, --ignore-blank-lines        ignore changes where lines are all blank"
+msgstr ""
+
+#: src/diff.c:897
+msgid "-I, --ignore-matching-lines=RE  ignore changes where all lines match RE"
+msgstr ""
+
+#: src/diff.c:899
+msgid "-a, --text                      treat all files as text"
+msgstr ""
+"-a, --text                      postupaj sa svim datotekama kao s tekstualnim"
+
+#: src/diff.c:900
+msgid "    --strip-trailing-cr         strip trailing carriage return on input"
+msgstr ""
+
+#: src/diff.c:902
+msgid "    --binary                    read and write data in binary mode"
+msgstr "    --binary                    čitaj i piši podatke u binarnom načinu"
+
+#: src/diff.c:905
+msgid ""
+"-D, --ifdef=NAME                output merged file with '#ifdef NAME' diffs"
+msgstr ""
+
+#: src/diff.c:906
+msgid "    --GTYPE-group-format=GFMT   format GTYPE input groups with GFMT"
+msgstr ""
+
+#: src/diff.c:907
+msgid "    --line-format=LFMT          format all input lines with LFMT"
+msgstr ""
+
+#: src/diff.c:908
+msgid "    --LTYPE-line-format=LFMT    format LTYPE input lines with LFMT"
+msgstr ""
+
+#: src/diff.c:909
+msgid ""
+"  These format options provide fine-grained control over the output\n"
+"    of diff, generalizing -D/--ifdef."
+msgstr ""
+
+#: src/diff.c:911
+msgid "  LTYPE is 'old', 'new', or 'unchanged'.  GTYPE is LTYPE or 'changed'."
+msgstr ""
+
+#: src/diff.c:912
+msgid ""
+"  GFMT (only) may contain:\n"
+"    %<  lines from FILE1\n"
+"    %>  lines from FILE2\n"
+"    %=  lines common to FILE1 and FILE2\n"
+"    %[-][WIDTH][.[PREC]]{doxX}LETTER  printf-style spec for LETTER\n"
+"      LETTERs are as follows for new group, lower case for old group:\n"
+"        F  first line number\n"
+"        L  last line number\n"
+"        N  number of lines = L-F+1\n"
+"        E  F-1\n"
+"        M  L+1\n"
+"    %(A=B?T:E)  if A equals B then T else E"
+msgstr ""
+
+#: src/diff.c:924
+msgid ""
+"  LFMT (only) may contain:\n"
+"    %L  contents of line\n"
+"    %l  contents of line, excluding any trailing newline\n"
+"    %[-][WIDTH][.[PREC]]{doxX}n  printf-style spec for input line number"
+msgstr ""
+
+#: src/diff.c:928
+msgid ""
+"  Both GFMT and LFMT may contain:\n"
+"    %%  %\n"
+"    %c'C'  the single character C\n"
+"    %c'\\OOO'  the character with octal code OOO\n"
+"    C    the character C (other characters represent themselves)"
+msgstr ""
+
+#: src/diff.c:934
+msgid "-d, --minimal            try hard to find a smaller set of changes"
+msgstr ""
+
+#: src/diff.c:935
+msgid "    --horizon-lines=NUM  keep NUM lines of the common prefix and suffix"
+msgstr ""
+
+#: src/diff.c:936
+msgid ""
+"    --speed-large-files  assume large files and many scattered small changes"
+msgstr ""
+
+#: src/diff.c:938
+msgid "    --help               display this help and exit"
+msgstr "    --help               prikaži ovu pomoć i izađi"
+
+#: src/diff.c:939
+msgid "-v, --version            output version information and exit"
+msgstr "-v, --version            ispiši informacije o inačici i izađi"
+
+#: src/diff.c:941
+msgid ""
+"FILES are 'FILE1 FILE2' or 'DIR1 DIR2' or 'DIR FILE...' or 'FILE... DIR'."
+msgstr ""
+"DATOTEKE su „DATOTEKA1 DATOTEKA2”, „DIR1 DIR2”, „DIR DATOTEKA...” ili "
+"„DATOTEKA... DIR”."
+
+#: src/diff.c:942
+msgid ""
+"If --from-file or --to-file is given, there are no restrictions on FILE(s)."
+msgstr ""
+
+#: src/diff.c:943 src/diff3.c:481 src/sdiff.c:219
+msgid "If a FILE is '-', read standard input."
+msgstr "Ako je DATOTEKA „-”, čitaj standardni ulaz."
+
+#: src/diff.c:953
+#, c-format
+msgid "Usage: %s [OPTION]... FILES\n"
+msgstr "Uporaba: %s [OPCIJA]... DATOTEKE\n"
+
+#: src/diff.c:954
+msgid "Compare FILES line by line."
+msgstr "Usporedi DATOTEKE redak po redak."
+
+# Ovdje trebam zamijeniti poredak... Pogledati kako se to radi.
+#: src/diff.c:988
+#, fuzzy, c-format
+msgid "conflicting %s option value '%s'"
+msgstr "konfliktna vrijednost „%s” opcije „%s”"
+
+# Notes:
+# Add Note
+#
+# Format:
+# C
+#: src/diff.c:1001
+#, c-format
+msgid "conflicting output style options"
+msgstr "konfliktne opcije izlaznog stila"
+
+#: src/diff.c:1058 src/diff.c:1268
+#, c-format
+msgid "Only in %s: %s\n"
+msgstr "Samo u %s: %s\n"
+
+#: src/diff.c:1192
+msgid "cannot compare '-' to a directory"
+msgstr "ne mogu usporediti „-” s direktorijem"
+
+#: src/diff.c:1227
+msgid "-D option not supported with directories"
+msgstr "opcija -D nije podržana s direktorijima"
+
+#: src/diff.c:1236
+#, c-format
+msgid "Common subdirectories: %s and %s\n"
+msgstr "Uobičajeni poddirektoriji: %s i %s\n"
+
+#: src/diff.c:1278 src/diff.c:1328
+#, c-format
+msgid "File %s is a %s while file %s is a %s\n"
+msgstr "Datoteka %s je %s, a datoteka %s je %s\n"
+
+#: src/diff.c:1314
+#, c-format
+msgid "Symbolic links %s and %s differ\n"
+msgstr "Simboličke veze %s i %s se razlikuju\n"
+
+#: src/diff.c:1399
+#, c-format
+msgid "Files %s and %s are identical\n"
+msgstr "Datoteke %s i %s su identične\n"
+
+#. This is a proper name. See the gettext manual, section Names.
+#: src/diff3.c:41
+msgid "Randy Smith"
+msgstr "Randy Smith"
+
+#: src/diff3.c:313
+#, c-format
+msgid "incompatible options"
+msgstr "nekompatibilne opcije"
+
+#: src/diff3.c:353
+msgid "'-' specified for more than one input file"
+msgstr "„-” je navedeno za više od jedne ulazne datoteke"
+
+#: src/diff3.c:395 src/diff3.c:1241 src/diff3.c:1645 src/diff3.c:1700
+#: src/sdiff.c:307 src/sdiff.c:844 src/sdiff.c:855
+msgid "read failed"
+msgstr "čitanje nije uspjelo"
+
+#: src/diff3.c:428
+msgid "-A, --show-all              output all changes, bracketing conflicts"
+msgstr ""
+
+#: src/diff3.c:430
+msgid ""
+"-e, --ed                    output ed script incorporating changes\n"
+"                                from OLDFILE to YOURFILE into MYFILE"
+msgstr ""
+
+#: src/diff3.c:432
+msgid "-E, --show-overlap          like -e, but bracket conflicts"
+msgstr ""
+
+#: src/diff3.c:433
+msgid ""
+"-3, --easy-only             like -e, but incorporate only nonoverlapping "
+"changes"
+msgstr ""
+
+#: src/diff3.c:434
+msgid ""
+"-x, --overlap-only          like -e, but incorporate only overlapping changes"
+msgstr ""
+
+#: src/diff3.c:435
+msgid "-X                          like -x, but bracket conflicts"
+msgstr ""
+
+#: src/diff3.c:436
+msgid "-i                          append 'w' and 'q' commands to ed scripts"
+msgstr ""
+
+#: src/diff3.c:438
+msgid ""
+"-m, --merge                 output actual merged file, according to\n"
+"                                -A if no other options are given"
+msgstr ""
+
+#: src/diff3.c:441
+msgid "-a, --text                  treat all files as text"
+msgstr ""
+"-a, --text                  postupaj sa svim datotekama kao s tekstualnim"
+
+#: src/diff3.c:442
+msgid "    --strip-trailing-cr     strip trailing carriage return on input"
+msgstr ""
+
+#: src/diff3.c:443
+msgid "-T, --initial-tab           make tabs line up by prepending a tab"
+msgstr ""
+
+#: src/diff3.c:444
+msgid "    --diff-program=PROGRAM  use PROGRAM to compare files"
+msgstr ""
+
+#: src/diff3.c:445
+msgid ""
+"-L, --label=LABEL           use LABEL instead of file name\n"
+"                                (can be repeated up to three times)"
+msgstr ""
+
+#: src/diff3.c:448
+msgid "    --help                  display this help and exit"
+msgstr "    --help                  prikaži ovu pomoć i izađi"
+
+#: src/diff3.c:449
+msgid "-v, --version               output version information and exit"
+msgstr "-v, --version               ispiši informacije o inačici i izađi"
+
+#: src/diff3.c:458
+#, c-format
+msgid "Usage: %s [OPTION]... MYFILE OLDFILE YOURFILE\n"
+msgstr ""
+
+#: src/diff3.c:460
+msgid "Compare three files line by line."
+msgstr "Usporedi tri datoteke redak po redak."
+
+#: src/diff3.c:470
+msgid ""
+"\n"
+"The default output format is a somewhat human-readable representation of\n"
+"the changes.\n"
+"\n"
+"The -e, -E, -x, -X (and corresponding long) options cause an ed script\n"
+"to be output instead of the default.\n"
+"\n"
+"Finally, the -m (--merge) option causes diff3 to do the merge internally\n"
+"and output the actual merged file.  For unusual input, this is more\n"
+"robust than using ed.\n"
+msgstr ""
+
+#: src/diff3.c:482
+msgid "Exit status is 0 if successful, 1 if conflicts, 2 if trouble."
+msgstr "Izlazno stanje je 0 za uspjeh, 1 za neuspjeh, 2 u slučaju greške."
+
+#: src/diff3.c:675
+msgid "internal error: screwup in format of diff blocks"
+msgstr ""
+
+#: src/diff3.c:968
+#, c-format
+msgid "%s: diff failed: "
+msgstr "%s: diff nije uspio: "
+
+#: src/diff3.c:990
+msgid "internal error: invalid diff type in process_diff"
+msgstr "interna greška: neispravna diff vrsta u process_diff"
+
+#: src/diff3.c:1015
+msgid "invalid diff format; invalid change separator"
+msgstr ""
+
+#: src/diff3.c:1251
+msgid "invalid diff format; incomplete last line"
+msgstr "neispravan diff oblik, nepotpun posljednji redak"
+
+#: src/diff3.c:1275 src/sdiff.c:275 src/util.c:392
+#, c-format
+msgid "subsidiary program '%s' could not be invoked"
+msgstr "podređeni program „%s” se ne može pozvati"
+
+#: src/diff3.c:1300
+msgid "invalid diff format; incorrect leading line chars"
+msgstr ""
+
+#: src/diff3.c:1373
+msgid "internal error: invalid diff type passed to output"
+msgstr ""
+
+#: src/diff3.c:1647 src/diff3.c:1704
+msgid "input file shrank"
+msgstr "ulazna datoteka se smanjila"
+
+#: src/dir.c:158
+#, c-format
+msgid "cannot compare file names '%s' and '%s'"
+msgstr "ne mogu usporediti imena datoteka „%s” i „%s”"
+
+#: src/dir.c:209
+#, c-format
+msgid "%s: recursive directory loop"
+msgstr "%s: rekurzivna petlja direktorija"
+
+#. This is a proper name. See the gettext manual, section Names.
+#: src/sdiff.c:42
+msgid "Thomas Lord"
+msgstr "Thomas Lord"
+
+#: src/sdiff.c:173
+msgid ""
+"-o, --output=FILE            operate interactively, sending output to FILE"
+msgstr ""
+
+#: src/sdiff.c:175
+msgid ""
+"-i, --ignore-case            consider upper- and lower-case to be the same"
+msgstr ""
+
+#: src/sdiff.c:176
+msgid "-E, --ignore-tab-expansion   ignore changes due to tab expansion"
+msgstr ""
+
+#: src/sdiff.c:177
+msgid "-Z, --ignore-trailing-space  ignore white space at line end"
+msgstr ""
+
+#: src/sdiff.c:178
+msgid ""
+"-b, --ignore-space-change    ignore changes in the amount of white space"
+msgstr ""
+
+#: src/sdiff.c:179
+msgid "-W, --ignore-all-space       ignore all white space"
+msgstr ""
+
+#: src/sdiff.c:180
+msgid "-B, --ignore-blank-lines     ignore changes whose lines are all blank"
+msgstr ""
+
+#: src/sdiff.c:181
+msgid "-I, --ignore-matching-lines=RE  ignore changes all whose lines match RE"
+msgstr ""
+
+#: src/sdiff.c:182
+msgid "    --strip-trailing-cr      strip trailing carriage return on input"
+msgstr ""
+
+#: src/sdiff.c:183
+msgid "-a, --text                   treat all files as text"
+msgstr ""
+"-a, --text                   postupaj sa svim datotekama kao s tekstualnim"
+
+#: src/sdiff.c:185
+msgid ""
+"-w, --width=NUM              output at most NUM (default 130) print columns"
+msgstr ""
+
+#: src/sdiff.c:186
+msgid ""
+"-l, --left-column            output only the left column of common lines"
+msgstr ""
+
+#: src/sdiff.c:187
+msgid "-s, --suppress-common-lines  do not output common lines"
+msgstr ""
+
+#: src/sdiff.c:189
+msgid "-t, --expand-tabs            expand tabs to spaces in output"
+msgstr "-t, --expand-tabs            pretvori tabulatore u praznine u izlazu"
+
+#: src/sdiff.c:190
+msgid ""
+"    --tabsize=NUM            tab stops at every NUM (default 8) print columns"
+msgstr ""
+
+#: src/sdiff.c:192
+msgid "-d, --minimal                try hard to find a smaller set of changes"
+msgstr ""
+
+#: src/sdiff.c:193
+msgid ""
+"-H, --speed-large-files      assume large files, many scattered small changes"
+msgstr ""
+
+#: src/sdiff.c:194
+msgid "    --diff-program=PROGRAM   use PROGRAM to compare files"
+msgstr ""
+
+#: src/sdiff.c:196
+msgid "    --help                   display this help and exit"
+msgstr "    --help                   prikaži ovu pomoć i izađi"
+
+#: src/sdiff.c:197
+msgid "-v, --version                output version information and exit"
+msgstr "-v, --version                ispiši informacije o inačici i izađi"
+
+#: src/sdiff.c:206
+#, c-format
+msgid "Usage: %s [OPTION]... FILE1 FILE2\n"
+msgstr "Uporaba: %s [OPCIJA]... DATOTEKA1 DATOTEKA2\n"
+
+#: src/sdiff.c:208
+msgid "Side-by-side merge of differences between FILE1 and FILE2."
+msgstr ""
+
+#: src/sdiff.c:329
+msgid "cannot interactively merge standard input"
+msgstr "ne mogu interaktivno spojiti standardni ulaz"
+
+#: src/sdiff.c:595
+msgid "both files to be compared are directories"
+msgstr "obje datoteke za usporedbu su direktoriji"
+
+#: src/sdiff.c:818
+msgid ""
+"ed:\tEdit then use both versions, each decorated with a header.\n"
+"eb:\tEdit then use both versions.\n"
+"el or e1:\tEdit then use the left version.\n"
+"er or e2:\tEdit then use the right version.\n"
+"e:\tDiscard both versions then edit a new one.\n"
+"l or 1:\tUse the left version.\n"
+"r or 2:\tUse the right version.\n"
+"s:\tSilently include common lines.\n"
+"v:\tVerbosely include common lines.\n"
+"q:\tQuit.\n"
+msgstr ""

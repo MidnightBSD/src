@@ -1,6 +1,6 @@
 /* cmp - compare two files byte by byte
 
-   Copyright (C) 1990-1996, 1998, 2001-2002, 2004, 2006-2007, 2009-2011 Free
+   Copyright (C) 1990-1996, 1998, 2001-2002, 2004, 2006-2007, 2009-2013 Free
    Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
@@ -33,10 +33,10 @@
 #include <unlocked-io.h>
 #include <version-etc.h>
 #include <xalloc.h>
-#include <xfreopen.h>
+#include <binary-io.h>
 #include <xstrtol.h>
 
-/* The official name of this program (e.g., no `g' prefix).  */
+/* The official name of this program (e.g., no 'g' prefix).  */
 #define PROGRAM_NAME "cmp"
 
 #define AUTHORS \
@@ -51,7 +51,7 @@
 
 static int cmp (void);
 static off_t file_position (int);
-static size_t block_compare (word const *, word const *);
+static size_t block_compare (word const *, word const *) _GL_ATTRIBUTE_PURE;
 static size_t block_compare_and_count (word const *, word const *, off_t *);
 static void sprintc (char *, unsigned char);
 
@@ -115,7 +115,7 @@ try_help (char const *reason_msgid, char const *operand)
   if (reason_msgid)
     error (0, 0, _(reason_msgid), operand);
   error (EXIT_TROUBLE, 0,
-	 _("Try `%s --help' for more information."), program_name);
+	 _("Try '%s --help' for more information."), program_name);
   abort ();
 }
 
@@ -134,7 +134,7 @@ specify_ignore_initial (int f, char **argptr, char delimiter)
   if (! (e == LONGINT_OK
 	 || (e == LONGINT_INVALID_SUFFIX_CHAR && **argptr == delimiter))
       || TYPE_MAXIMUM (off_t) < val)
-    try_help ("invalid --ignore-initial value `%s'", arg);
+    try_help ("invalid --ignore-initial value '%s'", arg);
   if (ignore_initial[f] < val)
     ignore_initial[f] = val;
 }
@@ -191,7 +191,7 @@ Mandatory arguments to long options are mandatory for short options too.\n\
 	  _("SKIP values may be followed by the following multiplicative suffixes:\n\
 kB 1000, K 1024, MB 1,000,000, M 1,048,576,\n\
 GB 1,000,000,000, G 1,073,741,824, and so on for T, P, E, Z, Y."),
-	  _("If a FILE is `-' or missing, read standard input."),
+	  _("If a FILE is '-' or missing, read standard input."),
 	  _("Exit status is 0 if inputs are the same, 1 if different, 2 if trouble."));
   emit_bug_reporting_address ();
 }
@@ -237,7 +237,7 @@ main (int argc, char **argv)
 	{
 	  uintmax_t n;
 	  if (xstrtoumax (optarg, 0, 0, &n, valid_suffixes) != LONGINT_OK)
-	    try_help ("invalid --bytes value `%s'", optarg);
+	    try_help ("invalid --bytes value '%s'", optarg);
 	  if (n < bytes)
 	    bytes = n;
 	}
@@ -263,7 +263,7 @@ main (int argc, char **argv)
       }
 
   if (optind == argc)
-    try_help ("missing operand after `%s'", argv[argc - 1]);
+    try_help ("missing operand after '%s'", argv[argc - 1]);
 
   file[0] = argv[optind++];
   file[1] = optind < argc ? argv[optind++] : "-";
@@ -275,7 +275,7 @@ main (int argc, char **argv)
     }
 
   if (optind < argc)
-    try_help ("extra operand `%s'", argv[optind]);
+    try_help ("extra operand '%s'", argv[optind]);
 
   for (f = 0; f < 2; f++)
     {
@@ -293,7 +293,7 @@ main (int argc, char **argv)
 	{
 	  file_desc[f1] = STDIN_FILENO;
 	  if (O_BINARY && ! isatty (STDIN_FILENO))
-	    xfreopen (NULL, "rb", stdin);
+	    set_binary_mode (STDIN_FILENO, O_BINARY);
 	}
       else
 	file_desc[f1] = open (file[f1], O_RDONLY | O_BINARY, 0);
@@ -370,8 +370,8 @@ main (int argc, char **argv)
   return exit_status;
 }
 
-/* Compare the two files already open on `file_desc[0]' and `file_desc[1]',
-   using `buffer[0]' and `buffer[1]'.
+/* Compare the two files already open on 'file_desc[0]' and 'file_desc[1]',
+   using 'buffer[0]' and 'buffer[1]'.
    Return EXIT_SUCCESS if identical, EXIT_FAILURE if different,
    >1 if error.  */
 
@@ -383,7 +383,7 @@ cmp (void)
   uintmax_t remaining = bytes;	/* Remaining number of bytes to compare.  */
   size_t read0, read1;		/* Number of bytes read from each file. */
   size_t first_diff;		/* Offset (0...) in buffers of 1st diff. */
-  size_t smaller;		/* The lesser of `read0' and `read1'. */
+  size_t smaller;		/* The lesser of 'read0' and 'read1'. */
   word *buffer0 = buffer[0];
   word *buffer1 = buffer[1];
   char *buf0 = (char *) buffer0;

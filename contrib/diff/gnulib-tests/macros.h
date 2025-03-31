@@ -1,7 +1,5 @@
-/* -*- buffer-read-only: t -*- vi: set ro: */
-/* DO NOT EDIT! GENERATED AUTOMATICALLY! */
 /* Common macros used by gnulib tests.
-   Copyright (C) 2006-2011 Free Software Foundation, Inc.
+   Copyright (C) 2006-2013 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -68,3 +66,8 @@
 /* STREQ (str1, str2)
    Return true if two strings compare equal.  */
 #define STREQ(a, b) (strcmp (a, b) == 0)
+
+/* Some numbers in the interval [0,1).  */
+extern const float randomf[1000];
+extern const double randomd[1000];
+extern const long double randoml[1000];

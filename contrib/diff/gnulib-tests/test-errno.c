@@ -1,7 +1,5 @@
-/* -*- buffer-read-only: t -*- vi: set ro: */
-/* DO NOT EDIT! GENERATED AUTOMATICALLY! */
 /* Test of <errno.h> substitute.
-   Copyright (C) 2008-2011 Free Software Foundation, Inc.
+   Copyright (C) 2008-2013 Free Software Foundation, Inc.
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -100,6 +98,8 @@ int e115 = EINPROGRESS;
 int e116 = ESTALE;
 int e122 = EDQUOT;
 int e125 = ECANCELED;
+int e130 = EOWNERDEAD;
+int e131 = ENOTRECOVERABLE;
 
 /* Don't verify that these errno values are all different, except for possibly
    EWOULDBLOCK == EAGAIN.  Even Linux/x86 does not pass this check: it has

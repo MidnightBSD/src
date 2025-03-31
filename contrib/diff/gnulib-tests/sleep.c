@@ -1,7 +1,5 @@
-/* -*- buffer-read-only: t -*- vi: set ro: */
-/* DO NOT EDIT! GENERATED AUTOMATICALLY! */
 /* Pausing execution of the current thread.
-   Copyright (C) 2007, 2009-2011 Free Software Foundation, Inc.
+   Copyright (C) 2007, 2009-2013 Free Software Foundation, Inc.
    Written by Bruno Haible <bruno@clisp.org>, 2007.
 
    This program is free software: you can redistribute it and/or modify
@@ -37,7 +35,7 @@ sleep (unsigned int seconds)
   unsigned int remaining;
 
   /* Sleep for 1 second many times, because
-       1. Sleep is not interruptiple by Ctrl-C,
+       1. Sleep is not interruptible by Ctrl-C,
        2. we want to avoid arithmetic overflow while multiplying with 1000.  */
   for (remaining = seconds; remaining > 0; remaining--)
     Sleep (1000);

@@ -19,6 +19,6 @@ echo b > b
 diff -u - b < a > out 2> err; test $? = 1 || fail=1
 # Remove date and time.
 sed -e 's/^\([-+*][-+*][-+*] [^	]*\)	.*/\1/' out > k; mv k out
-compare out exp || fail=1
+compare exp out || fail=1
 
 Exit $fail

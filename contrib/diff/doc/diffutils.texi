@@ -14,7 +14,7 @@ and documents the @acronym{GNU} @command{diff}, @command{diff3},
 differences between files and the @acronym{GNU} @command{patch} command for
 using their output to update files.
 
-Copyright @copyright{} 1992-1994, 1998, 2001-2002, 2004, 2006, 2009-2011 Free
+Copyright @copyright{} 1992-1994, 1998, 2001-2002, 2004, 2006, 2009-2013 Free
 Software Foundation, Inc.
 
 @quotation
@@ -821,7 +821,7 @@ The fractional seconds are omitted on hosts that do not support
 fractional time stamps.
 
 You can change the header's content with the
-@option{--label=@var{label}} option; see @xref{Alternate Names}.
+@option{--label=@var{label}} option. @xref{Alternate Names}.
 
 Next come one or more hunks of differences; each hunk shows one area
 where the files differ.  Unified format hunks look like this:
@@ -993,7 +993,7 @@ The corresponding lines differ, and only the second line is incomplete.
 @end table
 
 Normally, an output line is incomplete if and only if the lines that it
-contains are incomplete; @xref{Incomplete Lines}.  However, when an
+contains are incomplete.  @xref{Incomplete Lines}.  However, when an
 output line represents two differing lines, one might be incomplete
 while the other is not.  In this case, the output line is complete,
 but its the gutter is marked @samp{\} if the first line is incomplete,
@@ -1708,7 +1708,7 @@ might contain duplicate or otherwise incorrect code.
 
 The @command{patch} @option{-D @var{name}} option behaves like
 the @command{diff} @option{-D @var{name}} option, except it operates on
-a file and a diff to produce a merged file; @xref{patch Options}.
+a file and a diff to produce a merged file.  @xref{patch Options}.
 
 @node Incomplete Lines
 @chapter Incomplete Lines
@@ -1727,10 +1727,10 @@ line by a following line that starts with @samp{\}.  However, the
 @acronym{RCS} format (@pxref{RCS}) outputs the incomplete line as-is,
 without any trailing newline or following line.  The side by side
 format normally represents incomplete lines as-is, but in some cases
-uses a @samp{\} or @samp{/} gutter marker; @xref{Side by Side}.  The
+uses a @samp{\} or @samp{/} gutter marker.  @xref{Side by Side}.  The
 if-then-else line format preserves a line's incompleteness with
-@samp{%L}, and discards the newline with @samp{%l}; @xref{Line
-Formats}.  Finally, with the @command{ed} and forward @command{ed}
+@samp{%L}, and discards the newline with @samp{%l}.  @xref{Line Formats}.
+Finally, with the @command{ed} and forward @command{ed}
 output formats (@pxref{Output Formats}) @command{diff} cannot
 represent an incomplete line, so it pretends there was a newline and
 reports an error.
@@ -1784,20 +1784,23 @@ subdirectories' files, but if you use the @option{-r} or
 @option{--recursive} option, it compares every corresponding pair of files
 in the directory trees, as many levels deep as they go.
 
-For file names that are in only one of the directories, @command{diff}
-normally does not show the contents of the file that exists; it reports
-only that the file exists in that directory and not in the other.  You
-can make @command{diff} act as though the file existed but was empty in the
-other directory, so that it outputs the entire contents of the file that
+If only one file exists, @command{diff} normally does not show its
+contents; it merely reports that one file exists but the other does
+not.  You can make @command{diff} act as though the missing file is
+empty, so that it outputs the entire contents of the file that
 actually exists.  (It is output as either an insertion or a
-deletion, depending on whether it is in the first or the second
-directory given.)  To do this, use the @option{--new-file} (@option{-N})
-option.
+deletion, depending on whether the missing file is in the first or the
+second position.)  To do this, use the @option{--new-file}
+(@option{-N}) option.  This option affects command-line arguments as
+well as files found via directory traversal; for example, @samp{diff
+-N a b} treats @file{a} as empty if @file{a} does not exist but
+@file{b} does, and similarly @samp{diff -N - b} treats standard input
+as empty if it is closed but @file{b} exists.
 
-If the older directory contains one or more large files that are not in
+If the older directory contains large files that are not in
 the newer directory, you can make the patch smaller by using the
 @option{--unidirectional-new-file} option instead of @option{-N}.
-This option is like @option{-N} except that it only inserts the contents
+This option is like @option{-N} except that it inserts the contents only
 of files that appear in the second directory but not the first (that is,
 files that were added).  At the top of the patch, write instructions for
 the user applying the patch to remove the files that were deleted before
@@ -1845,6 +1848,13 @@ or an @option{--exclude-from=@var{file}} (@option{-X @var{file}}) option,
 is specified while the @option{--ignore-file-name-case} option is in
 effect, case is ignored when excluding file names matching the
 specified patterns.
+
+To avoid that @command{diff} follows symbolic links, use the
+@c later: @option{--no-dereference} (@option{-P}).
+@option{--no-dereference}.
+When this option is in use,
+symbolic links will be treated like a special kind of files, rather than
+comparing the target of each symbolic link.
 
 @node Adjusting Output
 @chapter Making @command{diff} Output Prettier
@@ -2004,8 +2014,8 @@ their location in the input files.
 @menu
 * Sample diff3 Input::    Sample @command{diff3} input for examples.
 * Example diff3 Normal::  Sample output in the normal format.
-* diff3 Hunks::           The format of normal output format.
 * Detailed diff3 Normal:: A detailed description of normal output format.
+* diff3 Hunks::           The format of normal output format.
 @end menu
 
 @node Sample diff3 Input
@@ -3183,7 +3193,7 @@ characters.
 @c locale.
 @c @item locale
 @c @c Use @t instead of @samp to avoid duplicate quoting in some output styles.
-@c Like @samp{clocale}, but quote @t{`like this'} instead of @t{"like
+@c Like @samp{clocale}, but quote @t{'like this'} instead of @t{"like
 @c this"} in the default C locale.  This looks nicer on many displays.
 @end table
 
@@ -3553,6 +3563,9 @@ second.
 @itemx --verbose
 Output the (decimal) byte numbers and (octal) values of all differing bytes,
 instead of the default standard output.
+Each output line contains a differing byte's number relative to the
+start of the input, followed by the differing byte values.
+Byte numbers start at 1.
 Also, output the @acronym{EOF} message if one file is shorter than the other.
 
 @item -n @var{count}
@@ -3836,9 +3849,8 @@ specifies the number of lines affected.  @xref{RCS}.
 
 @item -N
 @itemx --new-file
-In directory comparison, if a file is found in only one directory,
-treat it as present but empty in the other directory.  @xref{Comparing
-Directories}.
+If one file is missing, treat it as present but empty.
+@xref{Comparing Directories}.
 
 @item --new-group-format=@var{format}
 Use @var{format} to output a group of lines taken from just the second
@@ -3847,6 +3859,9 @@ file in if-then-else format.  @xref{Line Group Formats}.
 @item --new-line-format=@var{format}
 Use @var{format} to output a line taken from just the second file in
 if-then-else format.  @xref{Line Formats}.
+
+@item --no-dereference
+Act on symbolic links themselves instead of what they point to.
 
 @item --old-group-format=@var{format}
 Use @var{format} to output a group of lines taken from just the first
@@ -3927,8 +3942,7 @@ Use @var{format} to output a line common to both files in if-then-else
 format.  @xref{Line Formats}.
 
 @item --unidirectional-new-file
-When comparing directories, if a file appears only in the second
-directory of the two, treat it as present but empty in the other.
+If a first file is missing, treat it as present but empty.
 @xref{Comparing Directories}.
 
 @item -U @var{lines}
