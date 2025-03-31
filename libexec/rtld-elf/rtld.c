@@ -1785,7 +1785,7 @@ digest_notes(Obj_Entry *obj, Elf_Addr note_start, Elf_Addr note_end)
 		if (strncmp(NOTE_MIDNIGHTBSD_VENDOR, note_name,
 		    sizeof(NOTE_MIDNIGHTBSD_VENDOR)) != 0 && 
 		    strncmp(NOTE_FREEBSD_VENDOR, note_name,
- 		    sizeof(NOTE_FREEBSD_VENDOR)) != 0))
+ 		    sizeof(NOTE_FREEBSD_VENDOR)) != 0)
 			continue;
 		switch (note->n_type) {
 		case NT_MIDNIGHTBSD_ABI_TAG:
