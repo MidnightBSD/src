@@ -24,7 +24,7 @@ CFLAGS+= -I${.CURDIR}/../../contrib/mDNSResponder/mDNSCore
 CFLAGS+= -I${.CURDIR}/../../contrib/mDNSResponder/mDNSShared
 CFLAGS+= -DTARGET_OS_FREEBSD -DMDNS_VERSIONSTR_NODTS
 CFLAGS+= -DIDLESLEEPCONTROL_DISABLED
-CFLAGS+= -D_REENTRANT
+CFLAGS+= -D_REENTRANT -DMDNS_DEBUGMSGS=0
 
 # Dual stack freaks out mdnsd and it dies
 .if ${MK_INET6_SUPPORT} == "no"

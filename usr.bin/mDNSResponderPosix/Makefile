@@ -1,17 +1,16 @@
 .include <src.opts.mk>
 
 .PATH: ${.CURDIR}/../../contrib/mDNSResponder/mDNSPosix
+.PATH: ${.CURDIR}/../../contrib/mDNSResponder/mDNSShared
 
 PROG=   mDNSResponderPosix
+MAN8=	mDNSResponderPosix.8
 
 WARNS=	1
-
-MK_MAN=	no
 
 SRCS=	Responder.c mDNSPosix.c mDNSUNP.c 
 .PATH: ${.CURDIR}/../../contrib/mDNSResponder/mDNSCore
 SRCS+=	mDNS.c DNSDigest.c uDNS.c DNSCommon.c
-.PATH: ${.CURDIR}/../../contrib/mDNSResponder/mDNSShared
 SRCS+=	mDNSDebug.c dnssd_ipc.c GenLinkedList.c \
 	PlatformCommon.c CryptoAlg.c
 
@@ -24,7 +23,7 @@ CFLAGS+= -I${.CURDIR}/../../contrib/mDNSResponder/mDNSCore
 CFLAGS+= -I${.CURDIR}/../../contrib/mDNSResponder/mDNSShared
 CFLAGS+= -DTARGET_OS_FREEBSD -DMDNS_VERSIONSTR_NODTS
 CFLAGS+= -DIDLESLEEPCONTROL_DISABLED
-CFLAGS+= -D_REENTRANT
+CFLAGS+= -D_REENTRANT -DMDNS_DEBUGMSGS=0
 
 # Dual stack freaks out mdnsd and it dies
 .if ${MK_INET6_SUPPORT} == "no"
