@@ -26,4 +26,12 @@ if [ "$PWD" != "$HOME" ] && [ "$PWD" -ef "$HOME" ] ; then cd ; fi
 if [ -x /usr/bin/resizewin ] ; then /usr/bin/resizewin -z ; fi
 
 # Display a random cookie on each login.
-if [ -x /usr/bin/fortune ] ; then /usr/bin/fortune freebsd-tips ; fi
+if [ -x /usr/bin/fortune ] ; then /usr/bin/fortune fortunes ; fi
+
+if [ -x /usr/local/GNUstep/System/Makefiles/GNUstep.sh ] ; then
+. /usr/local/share/GNUstep/System/Makefiles/GNUstep.sh;
+fi
+
+if [ -x /usr/local/GNUstep/System/Library/Makefiles/GNUstep.sh ] ; then
+. /usr/local/share/GNUstep/System/Library/Makefiles/GNUstep.sh;
+fi
