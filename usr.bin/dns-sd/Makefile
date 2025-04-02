@@ -1,11 +1,12 @@
 .include <src.opts.mk>
 
 .PATH: ${.CURDIR}/../../contrib/mDNSResponder/Clients
+.PATH: ${.CURDIR}/../../contrib/mDNSResponder/mDNSShared
 
 PROG=   dns-sd
 
 WARNS=	2
-MK_MAN=	no
+#MK_MAN=	no
 
 SRCS=	dns-sd.c ClientCommon.c
 
@@ -14,7 +15,7 @@ SRCDIRS= ${.CURDIR}/../../contrib/mDNSResponder/mDNSShared \
 
 CFLAGS+= -I. -I${.CURDIR}/../../contrib/mDNSResponder/Clients
 CFLAGS+= -I${.CURDIR}/../../contrib/mDNSResponder/mDNSShared
-CFLAGS+= -ITARGET_OS_FREEBSD
+CFLAGS+= -ITARGET_OS_FREEBSD -DMDNS_DEBUGMSGS=0
 
 .if ${MK_INET6_SUPPORT} != "no"
 CFLAGS+=	-DHAVE_IPV6
