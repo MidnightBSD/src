@@ -3,6 +3,8 @@ Updating Information for MidnightBSD users.
 20250403:
 	expat 2.7.1
 
+	fix for xz CVE-2025-31115
+
 20250324:
 	unbound 1.22.0
 
