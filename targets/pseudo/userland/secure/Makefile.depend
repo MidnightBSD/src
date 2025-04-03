@@ -14,6 +14,8 @@ DIRDEPS = \
 	secure/lib/libcrypto/engines/libnuron \
 	secure/lib/libcrypto/engines/libsureware \
 	secure/lib/libcrypto/engines/libubsec \
+	secure/lib/libmj \
+	secure/lib/libnetpgp \
 	secure/lib/libssh \
 	secure/lib/libssl \
 	secure/libexec/sftp-server \
@@ -21,6 +23,8 @@ DIRDEPS = \
 	secure/libexec/ssh-pkcs11-helper \
 	secure/usr.bin/bdes \
 	secure/usr.bin/openssl \
+	secure/usr.bin/netpgp \
+	secure/usr.bin/netpgpkeys \
 	secure/usr.bin/scp \
 	secure/usr.bin/sftp \
 	secure/usr.bin/ssh \
