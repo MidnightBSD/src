@@ -1,12 +1,11 @@
+// SPDX-License-Identifier: 0BSD
+
 ///////////////////////////////////////////////////////////////////////////////
 //
 /// \file       file_io.c
 /// \brief      File opening, unlinking, and closing
 //
 //  Author:     Lasse Collin
-//
-//  This file has been put into the public domain.
-//  You can do whatever you want with this file.
 //
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -29,15 +28,33 @@ static bool warn_fchown;
 #	include <utime.h>
 #endif
 
-#ifdef HAVE_CAPSICUM
-#	ifdef HAVE_SYS_CAPSICUM_H
-#		include <sys/capsicum.h>
-#	else
-#		include <sys/capability.h>
-#	endif
-#endif
-
 #include "tuklib_open_stdxxx.h"
+
+#ifdef _MSC_VER
+#	ifdef _WIN64
+		typedef __int64 ssize_t;
+#	else
+		typedef int ssize_t;
+#	endif
+
+	typedef int mode_t;
+#	define S_IRUSR _S_IREAD
+#	define S_IWUSR _S_IWRITE
+
+#	define setmode _setmode
+#	define open _open
+#	define close _close
+#	define lseek _lseeki64
+#	define unlink _unlink
+
+	// The casts are to silence warnings.
+	// The sizes are known to be small enough.
+#	define read(fd, buf, size) _read(fd, buf, (unsigned int)(size))
+#	define write(fd, buf, size) _write(fd, buf, (unsigned int)(size))
+
+#	define S_ISDIR(m) (((m) & _S_IFMT) == _S_IFDIR)
+#	define S_ISREG(m) (((m) & _S_IFMT) == _S_IFREG)
+#endif
 
 #ifndef O_BINARY
 #	define O_BINARY 0
@@ -65,11 +82,6 @@ typedef enum {
 
 /// If true, try to create sparse files when decompressing.
 static bool try_sparse = true;
-
-#ifdef ENABLE_SANDBOX
-/// True if the conditions for sandboxing (described in main()) have been met.
-static bool sandbox_allowed = false;
-#endif
 
 #ifndef TUKLIB_DOSLIKE
 /// File status flags of standard input. This is used by io_open_src()
@@ -402,7 +414,7 @@ io_copy_attrs(const file_pair *pair)
 		message_warning(_("%s: Cannot set the file group: %s"),
 				pair->dest_name, strerror(errno));
 		// We can still safely copy some additional permissions:
-		// `group' must be at least as strict as `other' and
+		// 'group' must be at least as strict as 'other' and
 		// also vice versa.
 		//
 		// NOTE: After this, the owner of the source file may
@@ -804,7 +816,8 @@ io_open_src(const char *src_name)
 
 #ifdef ENABLE_SANDBOX
 	if (!error)
-		io_sandbox_enter(pair.src_fd);
+		sandbox_enable_strict_if_allowed(pair.src_fd,
+				user_abort_pipe[0], user_abort_pipe[1]);
 #endif
 
 	return error ? NULL : &pair;
