@@ -126,7 +126,8 @@ SRCS+=	simple_coder.c \
 	arm.c \
 	arm64.c \
 	armthumb.c \
-	sparc.c
+	sparc.c \
+	riscv.c
 
 .PATH: ${LZMADIR}
 
