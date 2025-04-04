@@ -4,6 +4,12 @@ Updating Information for MidnightBSD users.
 	xz 5.6.3
 	patch for cve-2025-31115 applied
 
+	tzdata 2025b
+
+	googletest 1.15.2
+
+	igc(4) fix for some z790 motherboards
+
 20250330:
 	expat 2.7.1
 
