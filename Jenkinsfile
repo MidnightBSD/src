@@ -65,6 +65,7 @@ pipeline {
                         steps {
                             echo "Do tests for ${ARCHITECTURE}"
                             sh 'kyua test -k tests/Kyuafile' 
+                            sh 'kyua report --output=kyua-results.txt'
                             sh 'kyua report-junit --output junit-results.xml'
                         }
                     }
