@@ -1,12 +1,7 @@
-#	$OpenBSD: percent.sh,v 1.16 2023/01/14 09:57:08 dtucker Exp $
+#	$OpenBSD: percent.sh,v 1.17 2023/03/27 03:56:50 dtucker Exp $
 #	Placed in the Public Domain.
 
 tid="percent expansions"
-
-if [ -x "/usr/xpg4/bin/id" ]; then
-	PATH=/usr/xpg4/bin:$PATH
-	export PATH
-fi
 
 USER=`id -u -n`
 USERID=`id -u`
@@ -66,7 +61,8 @@ trial()
 }
 
 for i in matchexec localcommand remotecommand controlpath identityagent \
-    forwardagent localforward remoteforward userknownhostsfile; do
+    forwardagent localforward remoteforward revokedhostkeys \
+    userknownhostsfile; do
 	verbose $tid $i percent
 	case "$i" in
 	localcommand|userknownhostsfile)

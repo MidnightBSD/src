@@ -10,8 +10,8 @@
 # possible, but leave them commented.  Uncommented options override the
 # default value.
 
-# Note that some of MidnightBSD's defaults differ from OpenBSD's, and
-# MidnightBSD has a few additional options.
+# Note that some of FreeBSD's defaults differ from OpenBSD's, and
+# FreeBSD has a few additional options.
 
 #Port 22
 #AddressFamily any
@@ -88,7 +88,7 @@ AuthorizedKeysFile	.ssh/authorized_keys
 #AllowAgentForwarding yes
 #AllowTcpForwarding yes
 #GatewayPorts no
-#X11Forwarding no
+#X11Forwarding yes
 #X11DisplayOffset 10
 #X11UseLocalhost yes
 #PermitTTY yes
@@ -105,7 +105,7 @@ AuthorizedKeysFile	.ssh/authorized_keys
 #PermitTunnel no
 #ChrootDirectory none
 #UseBlacklist no
-#VersionAddendum MidnightBSD-20231226
+#VersionAddendum FreeBSD-20250219
 
 # no default banner path
 #Banner none

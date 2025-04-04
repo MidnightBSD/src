@@ -29,6 +29,7 @@
 #ifdef GSSAPI
 
 #include <sys/types.h>
+#include <sys/param.h>
 
 #include <stdarg.h>
 #include <string.h>
@@ -105,7 +106,7 @@ ssh_gssapi_acquire_cred(Gssctxt *ctx)
 		gss_create_empty_oid_set(&status, &oidset);
 		gss_add_oid_set_member(&status, ctx->oid, &oidset);
 
-		if (gethostname(lname, MAXHOSTNAMELEN)) {
+		if (gethostname(lname, HOST_NAME_MAX)) {
 			gss_release_oid_set(&status, &oidset);
 			return (-1);
 		}

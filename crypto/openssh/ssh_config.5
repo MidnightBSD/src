@@ -33,8 +33,8 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.\" $OpenBSD: ssh_config.5,v 1.379 2023/03/10 02:32:04 djm Exp $
-.Dd $Mdocdate: March 10 2023 $
+.\" $OpenBSD: ssh_config.5,v 1.402 2024/09/09 14:41:21 naddy Exp $
+.Dd $Mdocdate: September 9 2024 $
 .Dt SSH_CONFIG 5
 .Os
 .Sh NAME
@@ -141,8 +141,10 @@ The available criteria keywords are:
 .Cm canonical ,
 .Cm final ,
 .Cm exec ,
+.Cm localnetwork ,
 .Cm host ,
 .Cm originalhost ,
+.Cm tagged ,
 .Cm user ,
 and
 .Cm localuser .
@@ -195,6 +197,17 @@ accept the tokens described in the
 .Sx TOKENS
 section.
 .Pp
+The
+.Cm localnetwork
+keyword matches the addresses of active local network interfaces against the
+supplied list of networks in CIDR format.
+This may be convenient for varying the effective configuration on devices that
+roam between networks.
+Note that network address is not a trustworthy criteria in many
+situations (e.g. when the network is automatically configured using DHCP)
+and so caution should be applied if using it to control security-sensitive
+configuration.
+.Pp
 The other keywords' criteria must be single entries or comma-separated
 lists and may use the wildcard and negation operators described in the
 .Sx PATTERNS
@@ -210,6 +223,15 @@ options.
 The
 .Cm originalhost
 keyword matches against the hostname as it was specified on the command-line.
+The
+.Cm tagged
+keyword matches a tag name specified by a prior
+.Cm Tag
+directive or on the
+.Xr ssh 1
+command-line using the
+.Fl P
+flag.
 The
 .Cm user
 keyword matches against the target username on the remote host.
@@ -433,6 +455,83 @@ Multiple
 .Cm CertificateFile
 directives will add to the list of certificates used for
 authentication.
+.It Cm ChannelTimeout
+Specifies whether and how quickly
+.Xr ssh 1
+should close inactive channels.
+Timeouts are specified as one or more
+.Dq type=interval
+pairs separated by whitespace, where the
+.Dq type
+must be the special keyword
+.Dq global
+or a channel type name from the list below, optionally containing
+wildcard characters.
+.Pp
+The timeout value
+.Dq interval
+is specified in seconds or may use any of the units documented in the
+.Sx TIME FORMATS
+section.
+For example,
+.Dq session=5m
+would cause interactive sessions to terminate after five minutes of
+inactivity.
+Specifying a zero value disables the inactivity timeout.
+.Pp
+The special timeout
+.Dq global
+applies to all active channels, taken together.
+Traffic on any active channel will reset the timeout, but when the timeout
+expires then all open channels will be closed.
+Note that this global timeout is not matched by wildcards and must be
+specified explicitly.
+.Pp
+The available channel type names include:
+.Bl -tag -width Ds
+.It Cm agent-connection
+Open connections to
+.Xr ssh-agent 1 .
+.It Cm direct-tcpip , Cm direct-streamlocal@openssh.com
+Open TCP or Unix socket (respectively) connections that have
+been established from a
+.Xr ssh 1
+local forwarding, i.e.\&
+.Cm LocalForward
+or
+.Cm DynamicForward .
+.It Cm forwarded-tcpip , Cm forwarded-streamlocal@openssh.com
+Open TCP or Unix socket (respectively) connections that have been
+established to a
+.Xr sshd 8
+listening on behalf of a
+.Xr ssh 1
+remote forwarding, i.e.\&
+.Cm RemoteForward .
+.It Cm session
+The interactive main session, including shell session, command execution,
+.Xr scp 1 ,
+.Xr sftp 1 ,
+etc.
+.It Cm tun-connection
+Open
+.Cm TunnelForward
+connections.
+.It Cm x11-connection
+Open X11 forwarding sessions.
+.El
+.Pp
+Note that in all the above cases, terminating an inactive session does not
+guarantee to remove all resources associated with the session, e.g. shell
+processes or X11 clients relating to the session may continue to execute.
+.Pp
+Moreover, terminating an inactive channel or session does not necessarily
+close the SSH connection, nor does it prevent a client from
+requesting another channel of the same type.
+In particular, expiring an inactive forwarding session does not prevent
+another identical forwarding from being subsequently created.
+.Pp
+The default is not to expire channels of any type for inactivity.
 .It Cm CheckHostIP
 If set to
 .Cm yes ,
@@ -449,8 +548,6 @@ If the option is set to
 .Cm no
 (the default),
 the check will not be executed.
-The default is
-.Cm no .
 .It Cm Ciphers
 Specifies the ciphers allowed and their order of preference.
 Multiple ciphers must be comma-separated.
@@ -887,11 +984,12 @@ sk-ssh-ed25519-cert-v01@openssh.com,
 sk-ecdsa-sha2-nistp256-cert-v01@openssh.com,
 rsa-sha2-512-cert-v01@openssh.com,
 rsa-sha2-256-cert-v01@openssh.com,
+ssh-rsa-cert-v01@openssh.com,
 ssh-ed25519,
 ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521,
 sk-ssh-ed25519@openssh.com,
 sk-ecdsa-sha2-nistp256@openssh.com,
-rsa-sha2-512,rsa-sha2-256
+rsa-sha2-512,rsa-sha2-256,ssh-rsa
 .Ed
 .Pp
 The
@@ -933,11 +1031,12 @@ sk-ssh-ed25519-cert-v01@openssh.com,
 sk-ecdsa-sha2-nistp256-cert-v01@openssh.com,
 rsa-sha2-512-cert-v01@openssh.com,
 rsa-sha2-256-cert-v01@openssh.com,
+ssh-rsa-cert-v01@openssh.com,
 ssh-ed25519,
 ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521,
 sk-ecdsa-sha2-nistp256@openssh.com,
 sk-ssh-ed25519@openssh.com,
-rsa-sha2-512,rsa-sha2-256
+rsa-sha2-512,rsa-sha2-256,ssh-rsa
 .Ed
 .Pp
 If hostkeys are known for the destination host then this default is modified
@@ -1017,7 +1116,7 @@ section and environment variables as described in the
 .Sx ENVIRONMENT VARIABLES
 section.
 .It Cm IdentityFile
-Specifies a file from which the user's DSA, ECDSA, authenticator-hosted ECDSA,
+Specifies a file from which the user's ECDSA, authenticator-hosted ECDSA,
 Ed25519, authenticator-hosted Ed25519 or RSA authentication identity is read.
 You can also specify a public key file to use the corresponding
 private key that is loaded in
@@ -1027,10 +1126,9 @@ The default is
 .Pa ~/.ssh/id_rsa ,
 .Pa ~/.ssh/id_ecdsa ,
 .Pa ~/.ssh/id_ecdsa_sk ,
-.Pa ~/.ssh/id_ed25519 ,
-.Pa ~/.ssh/id_ed25519_sk
+.Pa ~/.ssh/id_ed25519
 and
-.Pa ~/.ssh/id_dsa .
+.Pa ~/.ssh/id_ed25519_sk .
 Additionally, any identities represented by the authentication agent
 will be used for authentication unless
 .Cm IdentitiesOnly
@@ -1050,6 +1148,9 @@ may use the tilde syntax to refer to a user's home directory
 or the tokens described in the
 .Sx TOKENS
 section.
+Alternately an argument of
+.Cm none
+may be used to indicate no identity files should be loaded.
 .Pp
 It is possible to have
 multiple identity files specified in configuration files; all these
@@ -1083,7 +1184,12 @@ to unknown options that appear before it.
 Include the specified configuration file(s).
 Multiple pathnames may be specified and each pathname may contain
 .Xr glob 7
-wildcards and, for user configurations, shell-like
+wildcards,
+tokens as described in the
+.Sx TOKENS
+section, environment variables as described in the
+.Sx ENVIRONMENT VARIABLES
+section and, for user configurations, shell-like
 .Sq ~
 references to user home directories.
 Wildcards will be expanded and processed in lexical order.
@@ -1161,8 +1267,12 @@ it may be zero or more of:
 and
 .Cm pam .
 .It Cm KexAlgorithms
-Specifies the available KEX (Key Exchange) algorithms.
+Specifies the permitted KEX (Key Exchange) algorithms that will be used and
+their preference order.
+The selected algorithm will be the first algorithm in this list that
+the server also supports.
 Multiple algorithms must be comma-separated.
+.Pp
 If the specified list begins with a
 .Sq +
 character, then the specified algorithms will be appended to the default set
@@ -1175,9 +1285,11 @@ If the specified list begins with a
 .Sq ^
 character, then the specified algorithms will be placed at the head of the
 default set.
+.Pp
 The default is:
 .Bd -literal -offset indent
-sntrup761x25519-sha512@openssh.com,
+sntrup761x25519-sha512,sntrup761x25519-sha512@openssh.com,
+mlkem768x25519-sha256,
 curve25519-sha256,curve25519-sha256@libssh.org,
 ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,
 diffie-hellman-group-exchange-sha256,
@@ -1186,7 +1298,7 @@ diffie-hellman-group18-sha512,
 diffie-hellman-group14-sha256
 .Ed
 .Pp
-The list of available key exchange algorithms may also be obtained using
+The list of supported key exchange algorithms may also be obtained using
 .Qq ssh -Q kex .
 .It Cm KnownHostsCommand
 Specifies a command to use to obtain a list of host keys, in addition to
@@ -1278,8 +1390,8 @@ DEBUG and DEBUG1 are equivalent.
 DEBUG2 and DEBUG3 each specify higher levels of verbose output.
 .It Cm LogVerbose
 Specify one or more overrides to LogLevel.
-An override consists of a pattern lists that matches the source file, function
-and line number to force detailed logging for.
+An override consists of one or more pattern lists that matches the
+source file, function and line number to force detailed logging for.
 For example, an override pattern of:
 .Bd -literal -offset indent
 kex.c:*:1000,*:kex_exchange_identification():*,packet.c:*
@@ -1338,6 +1450,25 @@ or
 Specifies the number of password prompts before giving up.
 The argument to this keyword must be an integer.
 The default is 3.
+.It Cm ObscureKeystrokeTiming
+Specifies whether
+.Xr ssh 1
+should try to obscure inter-keystroke timings from passive observers of
+network traffic.
+If enabled, then for interactive sessions,
+.Xr ssh 1
+will send keystrokes at fixed intervals of a few tens of milliseconds
+and will send fake keystroke packets for some time after typing ceases.
+The argument to this keyword must be
+.Cm yes ,
+.Cm no
+or an interval specifier of the form
+.Cm interval:milliseconds
+(e.g.\&
+.Cm interval:80
+for 80 milliseconds).
+The default is to obscure keystrokes using a 20ms packet interval.
+Note that smaller intervals will result in higher fake keystroke packet rates.
 .It Cm PasswordAuthentication
 Specifies whether to use password authentication.
 The argument to this keyword must be
@@ -1520,11 +1651,12 @@ sk-ssh-ed25519-cert-v01@openssh.com,
 sk-ecdsa-sha2-nistp256-cert-v01@openssh.com,
 rsa-sha2-512-cert-v01@openssh.com,
 rsa-sha2-256-cert-v01@openssh.com,
+-ssh-rsa-cert-v01@openssh.com,
 ssh-ed25519,
 ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521,
 sk-ssh-ed25519@openssh.com,
 sk-ecdsa-sha2-nistp256@openssh.com,
-rsa-sha2-512,rsa-sha2-256
+rsa-sha2-512,rsa-sha2-256,ssh-rsa
 .Ed
 .Pp
 The list of available signature algorithms may also be obtained using
@@ -1667,6 +1799,14 @@ an OpenSSH Key Revocation List (KRL) as generated by
 .Xr ssh-keygen 1 .
 For more information on KRLs, see the KEY REVOCATION LISTS section in
 .Xr ssh-keygen 1 .
+Arguments to
+.Cm RevokedHostKeys
+may use the tilde syntax to refer to a user's home directory,
+the tokens described in the
+.Sx TOKENS
+section and environment variables as described in the
+.Sx ENVIRONMENT VARIABLES
+section.
 .It Cm SecurityKeyProvider
 Specifies a path to a library that will be used when loading any
 FIDO authenticator-hosted keys, overriding the default of using
@@ -1868,6 +2008,10 @@ To disable TCP keepalive messages, the value should be set to
 See also
 .Cm ServerAliveInterval
 for protocol-level keepalives.
+.It Cm Tag
+Specify a configuration tag name that may be later used by a
+.Cm Match
+directive to select a block of configuration.
 .It Cm Tunnel
 Request
 .Xr tun 4
@@ -1997,6 +2141,14 @@ See also
 .Sx VERIFYING HOST KEYS
 in
 .Xr ssh 1 .
+.It Cm VersionAddendum
+Specifies a string to append to the regular version string to identify
+OS- or site-specific modifications.
+The default is
+.Dq MidnightBSD-20250219 .
+The value
+.Cm none
+may be used to disable this.
 .It Cm VisualHostKey
 If this flag is set to
 .Cm yes ,
@@ -2071,7 +2223,7 @@ which are expanded at runtime:
 A literal
 .Sq % .
 .It \&%C
-Hash of %l%h%p%r.
+Hash of %l%h%p%r%j.
 .It %d
 Local user's home directory.
 .It %f
@@ -2097,6 +2249,9 @@ when preparing the host key algorithm preference list to use for the
 destination host.
 .It %i
 The local user ID.
+.It %j
+The contents of the ProxyJump option, or the empty string if this
+option is unset.
 .It %K
 The base64 encoded host key.
 .It %k
@@ -2132,14 +2287,16 @@ The local username.
 .Cm ControlPath ,
 .Cm IdentityAgent ,
 .Cm IdentityFile ,
+.Cm Include ,
 .Cm KnownHostsCommand ,
 .Cm LocalForward ,
 .Cm Match exec ,
 .Cm RemoteCommand ,
 .Cm RemoteForward ,
+.Cm RevokedHostKeys ,
 and
 .Cm UserKnownHostsFile
-accept the tokens %%, %C, %d, %h, %i, %k, %L, %l, %n, %p, %r, and %u.
+accept the tokens %%, %C, %d, %h, %i, %j, %k, %L, %l, %n, %p, %r, and %u.
 .Pp
 .Cm KnownHostsCommand
 additionally accepts the tokens %f, %H, %I, %K and %t.
@@ -2154,6 +2311,16 @@ accepts all tokens.
 and
 .Cm ProxyJump
 accept the tokens %%, %h, %n, %p, and %r.
+.Pp
+Note that some of these directives build commands for execution via the shell.
+Because
+.Xr ssh 1
+performs no filtering or escaping of characters that have special meaning in
+shell commands (e.g. quotes), it is the user's responsibility to ensure that
+the arguments passed to
+.Xr ssh 1
+do not contain such characters and that tokens are appropriately quoted
+when used.
 .Sh ENVIRONMENT VARIABLES
 Arguments to some keywords can be expanded at runtime from environment
 variables on the client by enclosing them in
@@ -2169,6 +2336,7 @@ The keywords
 .Cm ControlPath ,
 .Cm IdentityAgent ,
 .Cm IdentityFile ,
+.Cm Include ,
 .Cm KnownHostsCommand ,
 and
 .Cm UserKnownHostsFile

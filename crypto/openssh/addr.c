@@ -1,4 +1,4 @@
-/* $OpenBSD: addr.c,v 1.6 2022/10/28 02:29:34 djm Exp $ */
+/* $OpenBSD: addr.c,v 1.8 2024/04/02 09:29:31 deraadt Exp $ */
 
 /*
  * Copyright (c) 2004-2008 Damien Miller <djm@mindrot.org>
@@ -27,6 +27,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <limits.h>
 
 #include "addr.h"
 
@@ -443,7 +444,7 @@ addr_ntop(const struct xaddr *n, char *p, size_t len)
 	if (p == NULL || len == 0)
 		return -1;
 	if (getnameinfo(_SA(&ss), slen, p, len, NULL, 0,
-	    NI_NUMERICHOST) == -1)
+	    NI_NUMERICHOST) != 0)
 		return -1;
 
 	return 0;
@@ -457,8 +458,9 @@ int
 addr_pton_cidr(const char *p, struct xaddr *n, u_int *l)
 {
 	struct xaddr tmp;
-	long unsigned int masklen = 999;
-	char addrbuf[64], *mp, *cp;
+	u_int masklen = 999;
+	char addrbuf[64], *mp;
+	const char *errstr;
 
 	/* Don't modify argument */
 	if (p == NULL || strlcpy(addrbuf, p, sizeof(addrbuf)) >= sizeof(addrbuf))
@@ -467,8 +469,8 @@ addr_pton_cidr(const char *p, struct xaddr *n, u_int *l)
 	if ((mp = strchr(addrbuf, '/')) != NULL) {
 		*mp = '\0';
 		mp++;
-		masklen = strtoul(mp, &cp, 10);
-		if (*mp < '0' || *mp > '9' || *cp != '\0' || masklen > 128)
+		masklen = (u_int)strtonum(mp, 0, INT_MAX, &errstr);
+		if (errstr)
 			return -1;
 	}
 

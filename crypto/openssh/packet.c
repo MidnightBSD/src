@@ -1,4 +1,4 @@
-/* $OpenBSD: packet.c,v 1.309 2023/03/03 10:23:42 dtucker Exp $ */
+/* $OpenBSD: packet.c,v 1.318 2025/02/18 08:02:12 djm Exp $ */
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
  * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
@@ -535,6 +535,98 @@ ssh_remote_ipaddr(struct ssh *ssh)
 	return ssh->remote_ipaddr;
 }
 
+/*
+ * Returns the remote DNS hostname as a string. The returned string must not
+ * be freed. NB. this will usually trigger a DNS query. Return value is on
+ * heap and no caching is performed.
+ * This function does additional checks on the hostname to mitigate some
+ * attacks based on conflation of hostnames and addresses and will
+ * fall back to returning an address on error.
+ */
+
+char *
+ssh_remote_hostname(struct ssh *ssh)
+{
+	struct sockaddr_storage from;
+	socklen_t fromlen;
+	struct addrinfo hints, *ai, *aitop;
+	char name[NI_MAXHOST], ntop2[NI_MAXHOST];
+	const char *ntop = ssh_remote_ipaddr(ssh);
+
+	/* Get IP address of client. */
+	fromlen = sizeof(from);
+	memset(&from, 0, sizeof(from));
+	if (getpeername(ssh_packet_get_connection_in(ssh),
+	    (struct sockaddr *)&from, &fromlen) == -1) {
+		debug_f("getpeername failed: %.100s", strerror(errno));
+		return xstrdup(ntop);
+	}
+
+	ipv64_normalise_mapped(&from, &fromlen);
+	if (from.ss_family == AF_INET6)
+		fromlen = sizeof(struct sockaddr_in6);
+
+	debug3("trying to reverse map address %.100s.", ntop);
+	/* Map the IP address to a host name. */
+	if (getnameinfo((struct sockaddr *)&from, fromlen, name, sizeof(name),
+	    NULL, 0, NI_NAMEREQD) != 0) {
+		/* Host name not found.  Use ip address. */
+		return xstrdup(ntop);
+	}
+
+	/*
+	 * if reverse lookup result looks like a numeric hostname,
+	 * someone is trying to trick us by PTR record like following:
+	 *	1.1.1.10.in-addr.arpa.	IN PTR	2.3.4.5
+	 */
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_socktype = SOCK_DGRAM;	/*dummy*/
+	hints.ai_flags = AI_NUMERICHOST;
+	if (getaddrinfo(name, NULL, &hints, &ai) == 0) {
+		logit("Nasty PTR record \"%s\" is set up for %s, ignoring",
+		    name, ntop);
+		freeaddrinfo(ai);
+		return xstrdup(ntop);
+	}
+
+	/* Names are stored in lowercase. */
+	lowercase(name);
+
+	/*
+	 * Map it back to an IP address and check that the given
+	 * address actually is an address of this host.  This is
+	 * necessary because anyone with access to a name server can
+	 * define arbitrary names for an IP address. Mapping from
+	 * name to IP address can be trusted better (but can still be
+	 * fooled if the intruder has access to the name server of
+	 * the domain).
+	 */
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = from.ss_family;
+	hints.ai_socktype = SOCK_STREAM;
+	if (getaddrinfo(name, NULL, &hints, &aitop) != 0) {
+		logit("reverse mapping checking getaddrinfo for %.700s "
+		    "[%s] failed.", name, ntop);
+		return xstrdup(ntop);
+	}
+	/* Look for the address from the list of addresses. */
+	for (ai = aitop; ai; ai = ai->ai_next) {
+		if (getnameinfo(ai->ai_addr, ai->ai_addrlen, ntop2,
+		    sizeof(ntop2), NULL, 0, NI_NUMERICHOST) == 0 &&
+		    (strcmp(ntop, ntop2) == 0))
+				break;
+	}
+	freeaddrinfo(aitop);
+	/* If we reached the end of the list, the address was not there. */
+	if (ai == NULL) {
+		/* Address not found for the host name. */
+		logit("Address %.100s maps to %.600s, but this does not "
+		    "map back to the address.", ntop, name);
+		return xstrdup(ntop);
+	}
+	return xstrdup(name);
+}
+
 /* Returns the port number of the remote host. */
 
 int
@@ -924,9 +1016,8 @@ ssh_set_newkeys(struct ssh *ssh, int mode)
 	/* explicit_bzero(enc->iv,  enc->block_size);
 	   explicit_bzero(enc->key, enc->key_len);
 	   explicit_bzero(mac->key, mac->key_len); */
-	if ((comp->type == COMP_ZLIB ||
-	    (comp->type == COMP_DELAYED &&
-	    state->after_authentication)) && comp->enabled == 0) {
+	if (((comp->type == COMP_DELAYED && state->after_authentication)) &&
+	    comp->enabled == 0) {
 		if ((r = ssh_packet_init_compression(ssh)) < 0)
 			return r;
 		if (mode == MODE_OUT) {
@@ -1055,6 +1146,8 @@ int
 ssh_packet_log_type(u_char type)
 {
 	switch (type) {
+	case SSH2_MSG_PING:
+	case SSH2_MSG_PONG:
 	case SSH2_MSG_CHANNEL_DATA:
 	case SSH2_MSG_CHANNEL_EXTENDED_DATA:
 	case SSH2_MSG_CHANNEL_WINDOW_ADJUST:
@@ -1668,7 +1761,7 @@ ssh_packet_read_poll2(struct ssh *ssh, u_char *typep, u_int32_t *seqnr_p)
 		goto out;
 	if (ssh_packet_log_type(*typep))
 		debug3("receive packet: type %u", *typep);
-	if (*typep < SSH2_MSG_MIN || *typep >= SSH2_MSG_LOCAL_MIN) {
+	if (*typep < SSH2_MSG_MIN) {
 		if ((r = sshpkt_disconnect(ssh,
 		    "Invalid ssh2 packet type: %d", *typep)) != 0 ||
 		    (r = ssh_packet_write_wait(ssh)) != 0)
@@ -1707,6 +1800,8 @@ ssh_packet_read_poll_seqnr(struct ssh *ssh, u_char *typep, u_int32_t *seqnr_p)
 	u_int reason, seqnr;
 	int r;
 	u_char *msg;
+	const u_char *d;
+	size_t len;
 
 	for (;;) {
 		msg = NULL;
@@ -1765,6 +1860,29 @@ ssh_packet_read_poll_seqnr(struct ssh *ssh, u_char *typep, u_int32_t *seqnr_p)
 				return r;
 			debug("Received SSH2_MSG_UNIMPLEMENTED for %u",
 			    seqnr);
+			break;
+		case SSH2_MSG_PING:
+			if ((r = sshpkt_get_string_direct(ssh, &d, &len)) != 0)
+				return r;
+			DBG(debug("Received SSH2_MSG_PING len %zu", len));
+			if (!ssh->state->after_authentication) {
+				DBG(debug("Won't reply to PING in preauth"));
+				break;
+			}
+			if (ssh_packet_is_rekeying(ssh)) {
+				DBG(debug("Won't reply to PING during KEX"));
+				break;
+			}
+			if ((r = sshpkt_start(ssh, SSH2_MSG_PONG)) != 0 ||
+			    (r = sshpkt_put_string(ssh, d, len)) != 0 ||
+			    (r = sshpkt_send(ssh)) != 0)
+				return r;
+			break;
+		case SSH2_MSG_PONG:
+			if ((r = sshpkt_get_string_direct(ssh,
+			    NULL, &len)) != 0)
+				return r;
+			DBG(debug("Received SSH2_MSG_PONG len %zu", len));
 			break;
 		default:
 			return 0;
@@ -1903,7 +2021,7 @@ sshpkt_vfatal(struct ssh *ssh, int r, const char *fmt, va_list ap)
 	case SSH_ERR_NO_COMPRESS_ALG_MATCH:
 	case SSH_ERR_NO_KEX_ALG_MATCH:
 	case SSH_ERR_NO_HOSTKEY_ALG_MATCH:
-		if (ssh && ssh->kex && ssh->kex->failed_choice) {
+		if (ssh->kex && ssh->kex->failed_choice) {
 			BLACKLIST_NOTIFY(ssh, BLACKLIST_AUTH_FAIL, "ssh");
 			ssh_packet_clear_keys(ssh);
 			errno = oerrno;
@@ -2076,6 +2194,18 @@ ssh_packet_not_very_much_data_to_write(struct ssh *ssh)
 		return sshbuf_len(ssh->state->output) < 16384;
 	else
 		return sshbuf_len(ssh->state->output) < 128 * 1024;
+}
+
+/*
+ * returns true when there are at most a few keystrokes of data to write
+ * and the connection is in interactive mode.
+ */
+
+int
+ssh_packet_interactive_data_to_write(struct ssh *ssh)
+{
+	return ssh->state->interactive_mode &&
+	    sshbuf_len(ssh->state->output) < 256;
 }
 
 void
@@ -2516,12 +2646,6 @@ sshpkt_put_stringb(struct ssh *ssh, const struct sshbuf *v)
 	return sshbuf_put_stringb(ssh->state->outgoing_packet, v);
 }
 
-int
-sshpkt_getb_froms(struct ssh *ssh, struct sshbuf **valp)
-{
-	return sshbuf_froms(ssh->state->incoming_packet, valp);
-}
-
 #ifdef WITH_OPENSSL
 #ifdef OPENSSL_HAS_ECC
 int
@@ -2529,8 +2653,13 @@ sshpkt_put_ec(struct ssh *ssh, const EC_POINT *v, const EC_GROUP *g)
 {
 	return sshbuf_put_ec(ssh->state->outgoing_packet, v, g);
 }
-#endif /* OPENSSL_HAS_ECC */
 
+int
+sshpkt_put_ec_pkey(struct ssh *ssh, EVP_PKEY *pkey)
+{
+	return sshbuf_put_ec_pkey(ssh->state->outgoing_packet, pkey);
+}
+#endif /* OPENSSL_HAS_ECC */
 
 int
 sshpkt_put_bignum2(struct ssh *ssh, const BIGNUM *v)
@@ -2587,6 +2716,12 @@ int
 sshpkt_get_cstring(struct ssh *ssh, char **valp, size_t *lenp)
 {
 	return sshbuf_get_cstring(ssh->state->incoming_packet, valp, lenp);
+}
+
+int
+sshpkt_getb_froms(struct ssh *ssh, struct sshbuf **valp)
+{
+	return sshbuf_froms(ssh->state->incoming_packet, valp);
 }
 
 #ifdef WITH_OPENSSL
