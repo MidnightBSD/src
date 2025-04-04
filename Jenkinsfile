@@ -68,13 +68,13 @@ pipeline {
                             sh 'kyua report-junit --output junit-results.xml'
                         }
                     }
-                    post {
-                        always {
-                            junit 'junit-results.xml'
-                        }
-                    }
                 }
             }
         }
     }
+            post {
+                        always {
+                            junit 'junit-results.xml'
+                        }
+                    }
 }
