@@ -7,71 +7,46 @@ dnl
 #
 # See
 #
-#	http://ftp.gnu.org/gnu/config/README
+#	https://ftp.gnu.org/gnu/config/README
 #
 # for the URLs to use to fetch new versions of config.guess and
 # config.sub.
 #
 
-AC_PREREQ(2.61)
-AC_INIT(tcpdump.c)
+AC_PREREQ([2.69])
+AC_INIT([tcpdump],[m4_esyscmd_s(cat VERSION)])
+AC_CONFIG_SRCDIR(tcpdump.c)
 
 AC_CANONICAL_HOST
 
 AC_LBL_C_INIT_BEFORE_CC(V_INCLS)
-AC_PROG_CC
+#
+# Try to enable as many C99 features as we can.
+# At minimum, we want C++/C99-style // comments.
+#
+AC_PROG_CC_C99
+if test "$ac_cv_prog_cc_c99" = "no"; then
+	AC_MSG_WARN([The C compiler does not support C99; there may be compiler errors])
+fi
 AC_LBL_C_INIT(V_CCOPT, V_INCLS)
 AC_LBL_C_INLINE
-AC_C___ATTRIBUTE__
-if test "$ac_cv___attribute__" = "yes"; then
-	AC_C___ATTRIBUTE___UNUSED
-	AC_C___ATTRIBUTE___NORETURN_FUNCTION_POINTER
-	AC_C___ATTRIBUTE___FORMAT
-	if test "$ac_cv___attribute___format" = "yes"; then
-		AC_C___ATTRIBUTE___FORMAT_FUNCTION_POINTER
-	fi
-fi
 
-AC_CHECK_HEADERS(fcntl.h rpc/rpc.h rpc/rpcent.h)
-AC_CHECK_HEADERS(net/pfvar.h, , , [#include <sys/types.h>
-#include <sys/socket.h>
-#include <net/if.h>])
-if test "$ac_cv_header_net_pfvar_h" = yes; then
-	AC_CHECK_HEADERS(net/if_pflog.h, , , [#include <sys/types.h>
-	#include <sys/socket.h>
-	#include <net/if.h>
-	#include <net/pfvar.h>])
-	if test "$ac_cv_header_net_if_pflog_h" = yes; then
-		LOCALSRC="print-pflog.c $LOCALSRC"
-	fi
-fi
-AC_CHECK_HEADERS(netinet/if_ether.h, , , [#include <sys/types.h>
-#include <sys/socket.h>])
-if test "$ac_cv_header_netinet_if_ether_h" != yes; then
-	#
-	# The simple test didn't work.
-	# Do we need to include <net/if.h> first?
-	# Unset ac_cv_header_netinet_if_ether_h so we don't
-	# treat the previous failure as a cached value and
-	# suppress the next test.
-	#
-	AC_MSG_NOTICE([Rechecking with some additional includes])
-	unset ac_cv_header_netinet_if_ether_h
-	AC_CHECK_HEADERS(netinet/if_ether.h, , , [#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-struct mbuf;
-struct rtentry;
-#include <net/if.h>])
-fi
+AC_CHECK_HEADERS(rpc/rpc.h rpc/rpcent.h net/if.h)
+#
+# Get the size of a void *, to know whether this is a 32-bit or 64-bit build.
+#
+AC_CHECK_SIZEOF([void *])
 
-AC_HEADER_TIME
+#
+# Get the size of a time_t, to know whether it's 32-bit or 64-bit.
+#
+AC_CHECK_SIZEOF([time_t],,[#include <time.h>])
 
 case "$host_os" in
 
 darwin*)
 	AC_ARG_ENABLE(universal,
-	AC_HELP_STRING([--disable-universal],[don't build universal on OS X]))
+	AS_HELP_STRING([--disable-universal],[don't build universal on macOS]))
 	if test "$enable_universal" != "no"; then
 		case "$host_os" in
 
@@ -97,11 +72,21 @@ darwin*)
 	;;
 esac
 
+#
+# Do we have pkg-config?
+#
+PKG_PROG_PKG_CONFIG
 
-AC_ARG_WITH(smi,
-[  --with-smi              link with libsmi (allows to load MIBs on the fly to decode SNMP packets. [default=yes]
-  --without-smi           don't link with libsmi],,
-   with_smi=yes)
+#
+# Do we have the brew command from Homebrew?
+#
+AC_PATH_PROG([BREW], [brew])
+
+AC_ARG_WITH([smi],
+   [AS_HELP_STRING([--with-smi],
+     [link with libsmi (allows to load MIBs on the fly to decode SNMP packets) [default=yes, if available]])],
+   [],
+   [with_smi=yes])
 
 if test "x$with_smi" != "xno" ; then
 	AC_CHECK_HEADER(smi.h,
@@ -117,11 +102,13 @@ if test "x$with_smi" != "xno" ; then
 			AC_MSG_CHECKING([whether to enable libsmi])
 			savedlibs="$LIBS"
 			LIBS="-lsmi $LIBS"
-			AC_TRY_RUN(
-				[
+			AC_RUN_IFELSE([AC_LANG_SOURCE([[
 /* libsmi available check */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <smi.h>
-main()
+int main()
 {
   int current, revision, age, n;
   const int required = 2;
@@ -136,6 +123,7 @@ main()
     exit(4);
   exit(0);
 }
+				]])
 				],
 				[
 					AC_MSG_RESULT(yes)
@@ -167,11 +155,39 @@ main()
 	])
 fi
 
+AC_MSG_CHECKING([whether to enable the instrument functions code])
+AC_ARG_ENABLE([instrument-functions],
+   [AS_HELP_STRING([--enable-instrument-functions],
+     [enable instrument functions code [default=no]])],
+   [],
+   [enableval=no])
+case "$enableval" in
+yes)	AC_MSG_RESULT(yes)
+	AC_CHECK_LIB([bfd], [bfd_init],
+	    [true],
+	    [AC_MSG_ERROR(
+	       [--enable-instrument-functions was given, but test for library libbfd failed. Please install the 'binutils-dev' package.])],
+	    [])
+	AC_DEFINE(ENABLE_INSTRUMENT_FUNCTIONS, 1,
+	    [define if you want to build the instrument functions code])
+	LOCALSRC="$LOCALSRC instrument-functions.c"
+	# Add '-finstrument-functions' instrumentation option to generate
+	# instrumentation calls for entry and exit to functions.
+	# Try to avoid Address Space Layout Randomization (ALSR).
+	CFLAGS="$CFLAGS -O0 -ggdb -finstrument-functions -fno-stack-protector -fno-pic"
+	LDFLAGS="$LDFLAGS -O0 -ggdb -fno-stack-protector -no-pie"
+	LIBS="$LIBS -lbfd"
+	;;
+*)	AC_MSG_RESULT(no)
+	;;
+esac
+
 AC_MSG_CHECKING([whether to enable the possibly-buggy SMB printer])
-AC_ARG_ENABLE(smb,
-[  --enable-smb            enable possibly-buggy SMB printer [default=no]
-  --disable-smb           disable possibly-buggy SMB printer],,
-   enableval=no)
+AC_ARG_ENABLE([smb],
+   [AS_HELP_STRING([--enable-smb],
+     [enable possibly-buggy SMB printer [default=no]])],
+   [],
+   [enableval=no])
 case "$enableval" in
 yes)	AC_MSG_RESULT(yes)
 	AC_DEFINE(ENABLE_SMB, 1,
@@ -182,25 +198,42 @@ yes)	AC_MSG_RESULT(yes)
 	;;
 esac
 
-AC_ARG_WITH(user, [  --with-user=USERNAME    drop privileges by default to USERNAME])
 AC_MSG_CHECKING([whether to drop root privileges by default])
-if test ! -z "$with_user" ; then
-       AC_DEFINE_UNQUOTED(WITH_USER, "$withval",
-           [define if should drop privileges by default])
-       AC_MSG_RESULT(to \"$withval\")
-else
-       AC_MSG_RESULT(no)
-fi
+AC_ARG_WITH(
+	[user],
+	[AS_HELP_STRING([--with-user=USERNAME],
+		[drop privileges by default to USERNAME]
+	)],
+	[],
+	[withval=no])
+AS_CASE(["$withval"],
+	[no], [AC_MSG_RESULT(no)],
+	[''|yes], [AC_MSG_ERROR([--with-user requires a username])],
+	[
+		AC_DEFINE_UNQUOTED(WITH_USER, "$withval",
+		    [define if should drop privileges by default])
+		AC_MSG_RESULT([yes, to user "$withval"])
+	]
+)
 
-AC_ARG_WITH(chroot, [  --with-chroot=DIRECTORY when dropping privileges, chroot to DIRECTORY])
 AC_MSG_CHECKING([whether to chroot])
-if test ! -z "$with_chroot" && test "$with_chroot" != "no" ; then
-       AC_DEFINE_UNQUOTED(WITH_CHROOT, "$withval",
-           [define if should chroot when dropping privileges])
-       AC_MSG_RESULT(to \"$withval\")
-else
-       AC_MSG_RESULT(no)
-fi
+AC_ARG_WITH(
+	[chroot],
+	[AS_HELP_STRING([--with-chroot=DIRECTORY],
+		[when dropping privileges, chroot to DIRECTORY]
+	)],
+	[],
+	[withval=no]
+)
+AS_CASE(["$withval"],
+	[no], [AC_MSG_RESULT(no)],
+	[''|yes], [AC_MSG_ERROR([--with-chroot requires a directory])],
+	[
+		AC_DEFINE_UNQUOTED(WITH_CHROOT, "$withval",
+		    [define if should chroot when dropping privileges])
+		AC_MSG_RESULT([yes, to directory "$withval"])
+	]
+)
 
 AC_ARG_WITH(sandbox-capsicum,
 	AS_HELP_STRING([--with-sandbox-capsicum],
@@ -220,14 +253,32 @@ AC_ARG_WITH(sandbox-capsicum,
 # XXX - do we need to check for all of them, or are there some that, if
 # present, imply others are present?
 #
-if test ! -z "$with_sandbox-capsicum" && test "$with_sandbox-capsicum" != "no" ; then
-	AC_CHECK_FUNCS(cap_enter cap_rights_limit cap_ioctls_limit openat,
-	    ac_lbl_capsicum_function_seen=yes,
-	    ac_lbl_capsicum_function_not_seen=yes)
+if test -z "$with_sandbox_capsicum" || test "$with_sandbox_capsicum" != "no" ; then
+	#
+	# First, make sure we have the required header.
+	#
+	AC_CHECK_HEADER(sys/capsicum.h,
+	[
+		#
+		# We do; now make sure we have the required functions.
+		#
+		AC_CHECK_FUNCS(cap_enter cap_rights_limit cap_ioctls_limit openat,
+		    ac_lbl_capsicum_function_seen=yes,
+		    ac_lbl_capsicum_function_not_seen=yes)
+	])
+	AC_CHECK_LIB(casper, cap_init, LIBS="$LIBS -lcasper")
+	AC_CHECK_LIB(cap_dns, cap_gethostbyaddr, LIBS="$LIBS -lcap_dns")
 fi
 AC_MSG_CHECKING([whether to sandbox using capsicum])
 if test "x$ac_lbl_capsicum_function_seen" = "xyes" -a "x$ac_lbl_capsicum_function_not_seen" != "xyes"; then
 	AC_DEFINE(HAVE_CAPSICUM, 1, [capsicum support available])
+	AC_MSG_RESULT(yes)
+else
+	AC_MSG_RESULT(no)
+fi
+AC_MSG_CHECKING([whether to sandbox using Casper library])
+if test "x$ac_cv_lib_casper_cap_init" = "xyes" -a "x$ac_cv_lib_cap_dns_cap_gethostbyaddr" = "xyes"; then
+	AC_DEFINE(HAVE_CASPER, 1, [Casper support available])
 	AC_MSG_RESULT(yes)
 else
 	AC_MSG_RESULT(no)
@@ -251,10 +302,15 @@ AC_COMPILE_IFELSE(
     [
       AC_LANG_SOURCE(
 	[[
+#include <string.h>
 /* AF_INET6 available check */
 #include <sys/types.h>
+#ifdef _WIN32
+#include <ws2tcpip.h>
+#else
 #include <sys/socket.h>
 #include <netinet/in.h>
+#endif
 #ifdef AF_INET6
 void
 foo(struct in6_addr *addr)
@@ -385,18 +441,85 @@ if test "$ipv6" = "yes" -a "$ipv6lib" != "none"; then
 	fi
 fi
 
-AC_REPLACE_FUNCS(vfprintf strlcat strlcpy strdup strsep getopt_long)
-AC_CHECK_FUNCS(fork vfork strftime)
-AC_CHECK_FUNCS(setlinebuf alarm)
+AC_REPLACE_FUNCS(strlcat strlcpy strdup strsep getservent getopt_long)
+AC_CHECK_FUNCS(fork vfork)
+AC_CHECK_FUNCS(setlinebuf)
 
-needsnprintf=no
-AC_CHECK_FUNCS(vsnprintf snprintf,,
-	[needsnprintf=yes])
-if test $needsnprintf = yes; then
-	AC_LIBOBJ(snprintf)
-fi
+#
+# Make sure we have snprintf(); we require it.
+#
+AC_CHECK_FUNC(snprintf,,
+    AC_MSG_ERROR([snprintf() is required but wasn't found]))
 
-AC_LBL_TYPE_SIGNAL
+#
+# It became apparent at some point that using a suitable C99 compiler does not
+# automatically mean snprintf(3) implementation in the libc supports all the
+# modifiers and specifiers used in the project, so let's test that before the
+# build, not after.
+#
+# Testing the sizeof_t length modifier takes making an snprintf() call and
+# comparing the actual result with the expected result.  If this fails, it will
+# most likely happen at run time, not compile time.
+#
+# Testing the 64-bit conversion specifiers in addition to that requires the
+# <inttypes.h> header to be present and the macros to be defined, so if this
+# fails, it will more likely happen at compile time.
+#
+AC_MSG_CHECKING([whether snprintf is suitable])
+AC_RUN_IFELSE(
+    [
+        AC_LANG_SOURCE([[
+#include <stdio.h>
+#include <string.h>
+#include <inttypes.h>
+#include <sys/types.h>
+
+int main()
+{
+  char buf[100];
+  uint64_t t = (uint64_t)1 << 32;
+
+  snprintf(buf, sizeof(buf), "%zu", sizeof(buf));
+  if (strncmp(buf, "100", sizeof(buf)))
+    return 1;
+
+  snprintf(buf, sizeof(buf), "%zd", -sizeof(buf));
+  if (strncmp(buf, "-100", sizeof(buf)))
+    return 2;
+
+  snprintf(buf, sizeof(buf), "%" PRId64, -t);
+  if (strncmp(buf, "-4294967296", sizeof(buf)))
+    return 3;
+
+  snprintf(buf, sizeof(buf), "0o%" PRIo64, t);
+  if (strncmp(buf, "0o40000000000", sizeof(buf)))
+    return 4;
+
+  snprintf(buf, sizeof(buf), "0x%" PRIx64, t);
+  if (strncmp(buf, "0x100000000", sizeof(buf)))
+    return 5;
+
+  snprintf(buf, sizeof(buf), "%" PRIu64, t);
+  if (strncmp(buf, "4294967296", sizeof(buf)))
+    return 6;
+
+  return 0;
+}
+        ]])
+    ],
+    [
+        AC_MSG_RESULT(yes)
+    ],
+    [
+        AC_MSG_RESULT(no)
+        AC_MSG_ERROR(
+[The snprintf(3) implementation in this libc is not suitable,
+tcpdump would not work correctly even if it managed to compile.])
+    ],
+    [
+        AC_MSG_RESULT(not while cross-compiling)
+    ]
+)
 
 AC_CHECK_LIB(rpc, main)		dnl It's unclear why we might need -lrpc
 
@@ -412,18 +535,21 @@ AC_LBL_LIBPCAP(V_PCAPDEP, V_INCLS)
 #
 # You are in a twisty little maze of UN*Xes, all different.
 # Some might not have ether_ntohost().
-# Some might have it, but not declare it in any header file.
-# Some might have it, but declare it in <netinet/if_ether.h>.
-# Some might have it, but declare it in <netinet/ether.h>
-# (And some might have it but document it as something declared in
-# <netinet/ethernet.h>, although <netinet/if_ether.h> appears to work.)
+# Some might have it and declare it in <net/ethernet.h>.
+# Some might have it and declare it in <netinet/ether.h>
+# Some might have it and declare it in <sys/ethernet.h>.
+# Some might have it and declare it in <arpa/inet.h>.
+# Some might have it and declare it in <netinet/if_ether.h>.
+# Some might have it and not declare it in any header file.
 #
 # Before you is a C compiler.
 #
 AC_CHECK_FUNCS(ether_ntohost, [
     AC_CACHE_CHECK(for buggy ether_ntohost, ac_cv_buggy_ether_ntohost, [
-	AC_TRY_RUN([
+	AC_RUN_IFELSE([AC_LANG_SOURCE([[
 		#include <netdb.h>
+		#include <netinet/ether.h>
+		#include <stdlib.h>
 		#include <sys/types.h>
 		#include <sys/param.h>
 		#include <sys/socket.h>
@@ -437,6 +563,7 @@ AC_CHECK_FUNCS(ether_ntohost, [
 			ether_ntohost(name, (struct ether_addr *)ea);
 			exit(0);
 		}
+	]])
 	], [ac_cv_buggy_ether_ntohost=no],
 	   [ac_cv_buggy_ether_ntohost=yes],
 	   [ac_cv_buggy_ether_ntohost="not while cross-compiling"])])
@@ -448,12 +575,114 @@ AC_CHECK_FUNCS(ether_ntohost, [
 if test "$ac_cv_func_ether_ntohost" = yes -a \
     "$ac_cv_buggy_ether_ntohost" = "no"; then
 	#
-	# OK, we have ether_ntohost().  Do we have <netinet/if_ether.h>?
+	# OK, we have ether_ntohost().  Is it declared in <net/ethernet.h>?
 	#
-	if test "$ac_cv_header_netinet_if_ether_h" = yes; then
+	# This test fails if we don't have <net/ethernet.h> or if we do
+	# but it doesn't declare ether_ntohost().
+	#
+	AC_CHECK_DECL(ether_ntohost,
+	    [
+		AC_DEFINE(NET_ETHERNET_H_DECLARES_ETHER_NTOHOST,,
+		    [Define to 1 if net/ethernet.h declares `ether_ntohost'])
+	    ],,
+	    [
+#include <net/ethernet.h>
+	    ])
+	#
+	# Did that succeed?
+	#
+	if test "$ac_cv_have_decl_ether_ntohost" != yes; then
 		#
-		# Yes.  Does it declare ether_ntohost()?
+		# No, how about <netinet/ether.h>, as on Linux?
 		#
+		# This test fails if we don't have <netinet/ether.h>
+		# or if we do but it doesn't declare ether_ntohost().
+		#
+		# Unset ac_cv_have_decl_ether_ntohost so we don't
+		# treat the previous failure as a cached value and
+		# suppress the next test.
+		#
+		unset ac_cv_have_decl_ether_ntohost
+		AC_CHECK_DECL(ether_ntohost,
+		    [
+			AC_DEFINE(NETINET_ETHER_H_DECLARES_ETHER_NTOHOST,1,
+			    [Define to 1 if netinet/ether.h declares `ether_ntohost'])
+		    ],,
+		    [
+#include <netinet/ether.h>
+		    ])
+	fi
+	#
+	# Did that succeed?
+	#
+	if test "$ac_cv_have_decl_ether_ntohost" != yes; then
+		#
+		# No, how about <sys/ethernet.h>, as on Solaris 10
+		# and later?
+		#
+		# This test fails if we don't have <sys/ethernet.h>
+		# or if we do but it doesn't declare ether_ntohost().
+		#
+		# Unset ac_cv_have_decl_ether_ntohost so we don't
+		# treat the previous failure as a cached value and
+		# suppress the next test.
+		#
+		unset ac_cv_have_decl_ether_ntohost
+		AC_CHECK_DECL(ether_ntohost,
+		    [
+			AC_DEFINE(SYS_ETHERNET_H_DECLARES_ETHER_NTOHOST,,
+			    [Define to 1 if sys/ethernet.h declares `ether_ntohost'])
+		    ],,
+		    [
+#include <sys/ethernet.h>
+		    ])
+	fi
+	#
+	# Did that succeed?
+	#
+	if test "$ac_cv_have_decl_ether_ntohost" != yes; then
+		#
+		# No, how about <arpa/inet.h>, as in AIX?
+		#
+		# This test fails if we don't have <arpa/inet.h>
+		# (if we have ether_ntohost(), we should have
+		# networking, and if we have networking, we should
+		# have <arpa/inet.h>) or if we do but it doesn't
+		# declare ether_ntohost().
+		#
+		# Unset ac_cv_have_decl_ether_ntohost so we don't
+		# treat the previous failure as a cached value and
+		# suppress the next test.
+		#
+		unset ac_cv_have_decl_ether_ntohost
+		AC_CHECK_DECL(ether_ntohost,
+		    [
+			AC_DEFINE(ARPA_INET_H_DECLARES_ETHER_NTOHOST,,
+			    [Define to 1 if arpa/inet.h declares `ether_ntohost'])
+		    ],,
+		    [
+#include <arpa/inet.h>
+		    ])
+	fi
+	#
+	# Did that succeed?
+	#
+	if test "$ac_cv_have_decl_ether_ntohost" != yes; then
+		#
+		# No, how about <netinet/if_ether.h>?
+		# On some platforms, it requires <net/if.h> and
+		# <netinet/in.h>, and we always include it with
+		# both of them, so test it with both of them.
+		#
+		# This test fails if we don't have <netinet/if_ether.h>
+		# and the headers we include before it, or if we do but
+		# <netinet/if_ether.h> doesn't declare ether_hostton().
+		#
+		# Unset ac_cv_have_decl_ether_ntohost so we don't
+		# treat the previous failure as a cached value and
+		# suppress the next test.
+		#
+		unset ac_cv_have_decl_ether_ntohost
 		AC_CHECK_DECL(ether_ntohost,
 		    [
 			AC_DEFINE(NETINET_IF_ETHER_H_DECLARES_ETHER_NTOHOST,,
@@ -462,76 +691,45 @@ if test "$ac_cv_func_ether_ntohost" = yes -a \
 		    [
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-struct mbuf;
-struct rtentry;
 #include <net/if.h>
+#include <netinet/in.h>
 #include <netinet/if_ether.h>
 		    ])
 	fi
 	#
-	# Did that succeed?
+	# After all that, is ether_ntohost() declared?
 	#
-	if test "$ac_cv_have_decl_ether_ntohost" != yes; then
+	if test "$ac_cv_have_decl_ether_ntohost" = yes; then
 		#
-		# No, how about <netinet/ether.h>, as on Linux?
+		# Yes.
 		#
-		AC_CHECK_HEADERS(netinet/ether.h)
-		if test "$ac_cv_header_netinet_ether_h" = yes; then
-			#
-			# We have it - does it declare ether_ntohost()?
-			# Unset ac_cv_have_decl_ether_ntohost so we don't
-			# treat the previous failure as a cached value and
-			# suppress the next test.
-			#
-			unset ac_cv_have_decl_ether_ntohost
-			AC_CHECK_DECL(ether_ntohost,
-			    [
-				AC_DEFINE(NETINET_ETHER_H_DECLARES_ETHER_NTOHOST,,
-				    [Define to 1 if netinet/ether.h declares `ether_ntohost'])
-			    ],,
-			    [
-#include <netinet/ether.h>
-			    ])
-		fi
-	fi
-	#
-	# Is ether_ntohost() declared?
-	#
-	if test "$ac_cv_have_decl_ether_ntohost" != yes; then
+		AC_DEFINE(HAVE_DECL_ETHER_NTOHOST, 1,
+		    [Define to 1 if you have the declaration of `ether_ntohost'])
+	else
 		#
 		# No, we'll have to declare it ourselves.
-		# Do we have "struct ether_addr"?
+		# Do we have "struct ether_addr" if we include
+		# <netinet/if_ether.h>?
 		#
 		AC_CHECK_TYPES(struct ether_addr,,,
 		    [
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-struct mbuf;
-struct rtentry;
-#include <net/if.h>
-#include <netinet/if_ether.h>
+			#include <sys/types.h>
+			#include <sys/socket.h>
+			#include <net/if.h>
+			#include <netinet/in.h>
+			#include <netinet/if_ether.h>
 		    ])
-		AC_DEFINE(HAVE_DECL_ETHER_NTOHOST, 0,
-		    [Define to 1 if you have the declaration of `ether_ntohost', and to 0 if you
-don't.])
-	else
-		AC_DEFINE(HAVE_DECL_ETHER_NTOHOST, 1,
-		    [Define to 1 if you have the declaration of `ether_ntohost', and to 0 if you
-don't.])
 	fi
 fi
 
-# libdlpi is needed for Solaris 11 and later.
-AC_CHECK_LIB(dlpi, dlpi_walk, LIBS="$LIBS -ldlpi" LDFLAGS="-L/lib $LDFLAGS", ,-L/lib)
-
 dnl
-dnl Check for "pcap_list_datalinks()", "pcap_set_datalink()",
-dnl and "pcap_datalink_name_to_val()", and use substitute versions
-dnl if they're not present.
+dnl Check for "pcap_list_datalinks()" and use a substitute version if
+dnl it's not present.  If it is present, check for "pcap_free_datalinks()";
+dnl if it's not present, we don't replace it for now.  (We could do so
+dnl on UN*X, but not on Windows, where hilarity ensues if a program
+dnl built with one version of the MSVC support library tries to free
+dnl something allocated by a library built with another version of
+dnl the MSVC support library.)
 dnl
 AC_CHECK_FUNC(pcap_list_datalinks,
 	[
@@ -542,7 +740,13 @@ AC_CHECK_FUNC(pcap_list_datalinks,
 	[
 	    AC_LIBOBJ(datalinks)
 	])
-AC_CHECK_FUNCS(pcap_set_datalink)
+
+dnl
+dnl Check for "pcap_datalink_name_to_val()", and use a substitute
+dnl version if it's not present.  If it is present, check for
+dnl "pcap_datalink_val_to_description()", and if we don't have it,
+dnl use a substitute version.
+dnl
 AC_CHECK_FUNC(pcap_datalink_name_to_val,
 	[
 	    AC_DEFINE(HAVE_PCAP_DATALINK_NAME_TO_VAL, 1,
@@ -559,22 +763,18 @@ AC_CHECK_FUNC(pcap_datalink_name_to_val,
 	])
 
 dnl
+dnl Check for "pcap_set_datalink()"; you can't substitute for it if
+dnl it's absent (it has hooks into libpcap), so just define the
+dnl HAVE_ value if it's there.
+dnl
+AC_CHECK_FUNCS(pcap_set_datalink)
+
+dnl
 dnl Check for "pcap_breakloop()"; you can't substitute for it if
 dnl it's absent (it has hooks into the live capture routines),
 dnl so just define the HAVE_ value if it's there.
 dnl
 AC_CHECK_FUNCS(pcap_breakloop)
-
-dnl
-dnl Check for "pcap_dump_ftell()" and use a substitute version
-dnl if it's not present.
-dnl
-AC_CHECK_FUNC(pcap_dump_ftell,
-	AC_DEFINE(HAVE_PCAP_DUMP_FTELL, 1,
-	    [define if libpcap has pcap_dump_ftell()]),
-	[
-	    AC_LIBOBJ(pcap_dump_ftell)
-	])
 
 #
 # Do we have the new open API?  Check for pcap_create, and assume that,
@@ -599,27 +799,18 @@ fi
 # Check for a miscellaneous collection of functions which we use
 # if we have them.
 #
-AC_CHECK_FUNCS(pcap_findalldevs pcap_dump_flush pcap_lib_version pcap_setdirection pcap_set_immediate_mode)
-if test $ac_cv_func_pcap_findalldevs = "yes" ; then
-dnl Check for Mac OS X, which may ship pcap.h from 0.6 but libpcap may
-dnl be 0.8; this means that lib has pcap_findalldevs but header doesn't
-dnl have pcap_if_t.
-    savedcppflags="$CPPFLAGS"
-    CPPFLAGS="$CPPFLAGS $V_INCLS"
-    AC_CHECK_TYPES(pcap_if_t, , , [#include <pcap.h>])
-    CPPFLAGS="$savedcppflags"
-fi
-
+AC_CHECK_FUNCS(pcap_findalldevs)
+AC_CHECK_FUNCS(pcap_dump_flush pcap_lib_version)
 if test $ac_cv_func_pcap_lib_version = "no" ; then
     AC_MSG_CHECKING(whether pcap_version is defined by libpcap)
-    AC_TRY_LINK([],
-       [
+    AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [[
 	extern char pcap_version[];
 
 	return (int)pcap_version;
+       ]])
        ],
-       ac_lbl_cv_pcap_version_defined=yes,
-       ac_lbl_cv_pcap_version_defined=no)
+       [ac_lbl_cv_pcap_version_defined=yes],
+       [ac_lbl_cv_pcap_version_defined=no])
     if test "$ac_lbl_cv_pcap_version_defined" = yes ; then
 	AC_MSG_RESULT(yes)
 	AC_DEFINE(HAVE_PCAP_VERSION, 1, [define if libpcap has pcap_version])
@@ -627,6 +818,16 @@ if test $ac_cv_func_pcap_lib_version = "no" ; then
 	AC_MSG_RESULT(no)
     fi
 fi
+AC_CHECK_FUNCS(pcap_setdirection pcap_set_immediate_mode pcap_dump_ftell64)
+#
+# See the comment in AC_LBL_LIBPCAP in aclocal.m4 for the reason
+# why we don't check for remote-capture APIs if we're building
+# with the system libpcap on macOS.
+#
+if test "$_dont_check_for_remote_apis" != "yes"; then
+	AC_CHECK_FUNCS(pcap_open pcap_findalldevs_ex)
+fi
+AC_REPLACE_FUNCS(pcap_dump_ftell)
 
 #
 # Check for special debugging functions
@@ -638,14 +839,14 @@ if test "$ac_cv_func_pcap_set_parser_debug" = "no" ; then
 	# filter expression parser debug flag; can we directly set the
 	# flag?
 	AC_MSG_CHECKING(whether pcap_debug is defined by libpcap)
-	AC_TRY_LINK([],
-	   [
+	AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [[
 		extern int pcap_debug;
 
 		return pcap_debug;
+	   ]])
 	   ],
-	   ac_lbl_cv_pcap_debug_defined=yes,
-	   ac_lbl_cv_pcap_debug_defined=no)
+	   [ac_lbl_cv_pcap_debug_defined=yes],
+	   [ac_lbl_cv_pcap_debug_defined=no])
 	if test "$ac_lbl_cv_pcap_debug_defined" = yes ; then
 		AC_MSG_RESULT(yes)
 		AC_DEFINE(HAVE_PCAP_DEBUG, 1, [define if libpcap has pcap_debug])
@@ -655,14 +856,14 @@ if test "$ac_cv_func_pcap_set_parser_debug" = "no" ; then
 		# OK, what about "yydebug"?
 		#
 		AC_MSG_CHECKING(whether yydebug is defined by libpcap)
-		AC_TRY_LINK([],
-		   [
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [[
 			extern int yydebug;
 
 			return yydebug;
+		   ]])
 		   ],
-		   ac_lbl_cv_yydebug_defined=yes,
-		   ac_lbl_cv_yydebug_defined=no)
+		   [ac_lbl_cv_yydebug_defined=yes],
+		   [ac_lbl_cv_yydebug_defined=no])
 		if test "$ac_lbl_cv_yydebug_defined" = yes ; then
 			AC_MSG_RESULT(yes)
 			AC_DEFINE(HAVE_YYDEBUG, 1, [define if libpcap has yydebug])
@@ -674,10 +875,6 @@ fi
 AC_CHECK_FUNCS(pcap_set_optimizer_debug)
 AC_REPLACE_FUNCS(bpf_dump)	dnl moved to libpcap in 0.6
 
-V_GROUP=0
-if test -f /etc/group -a ! -z "`grep '^wheel:' /etc/group`" ; then
-	V_GROUP=wheel
-fi
 #
 # Assume V7/BSD convention for man pages (file formats in section 5,
 # miscellaneous info in section 7).
@@ -720,8 +917,6 @@ osf*)
 	;;
 
 solaris*)
-	V_GROUP=sys
-
 	#
 	# Use System V conventions for man pages.
 	#
@@ -730,28 +925,27 @@ solaris*)
 	;;
 esac
 
-if test -f /dev/bpf0 ; then
-	V_GROUP=bpf
-fi
-
-#
-# Make sure we have definitions for all the C99 specified-width types
-# (regardless of whether the environment is a C99 environment or not).
-#
-AC_TYPE_INT8_T
-AC_TYPE_INT16_T
-AC_TYPE_INT32_T
-AC_TYPE_INT64_T
-AC_TYPE_UINT8_T
-AC_TYPE_UINT16_T
-AC_TYPE_UINT32_T
-AC_TYPE_UINT64_T
-
 #
 # Make sure we have a definition for C99's uintptr_t (regardless of
 # whether the environment is a C99 environment or not).
 #
 AC_TYPE_UINTPTR_T
+
+savedcppflags="$CPPFLAGS"
+CPPFLAGS="$CPPFLAGS $V_INCLS"
+
+#
+# Check whether we have pcap/pcap-inttypes.h.
+# If we do, we use that to get the C99 types defined.
+#
+AC_CHECK_HEADERS(pcap/pcap-inttypes.h)
+
+#
+# At compile time HAVE_PCAP_FINDALLDEVS depends on HAVE_PCAP_IF_T.
+#
+AC_CHECK_TYPES(pcap_if_t, , , [#include <pcap.h>])
+
+CPPFLAGS="$savedcppflags"
 
 #
 # Define the old BSD specified-width types in terms of the C99 types;
@@ -782,87 +976,10 @@ AC_CHECK_TYPE([u_int64_t], ,
 #include <sys/types.h>
 ])
 
-#
-# Check for <inttypes.h>
-#
-AC_CHECK_HEADERS(inttypes.h,
-  [
-    #
-    # OK, we have inttypes.h, but does it define all the PRI[doxu]64 macros?
-    # Some systems have an inttypes.h that doesn't define all of them.
-    #
-    AC_MSG_CHECKING([[whether inttypes.h defines the PRI[doxu]64 macros]])
-    AC_COMPILE_IFELSE(
-      [
-	AC_LANG_SOURCE(
-	  [[
-	    #include <inttypes.h>
-	    #include <stdio.h>
-	    #include <sys/types.h>
-
-	    main()
-	    {
-	      printf("%" PRId64 "\n", (uint64_t)1);
-	      printf("%" PRIo64 "\n", (uint64_t)1);
-	      printf("%" PRIx64 "\n", (uint64_t)1);
-	      printf("%" PRIu64 "\n", (uint64_t)1);
-	    }
-	  ]])
-      ],
-      [
-	AC_MSG_RESULT(yes)
-	ac_lbl_inttypes_h_defines_formats=yes
-      ],
-      [
-	AC_MSG_RESULT(no)
-	ac_lbl_inttypes_h_defines_formats=no
-      ])
-  ],
-  [
-    #
-    # We don't have inttypes.h, so it obviously can't define those
-    # macros.
-    #
-    ac_lbl_inttypes_h_defines_formats=no
-  ])
-if test "$ac_lbl_inttypes_h_defines_formats" = no; then
-  AC_LBL_CHECK_64BIT_FORMAT(l,
-    [
-      AC_LBL_CHECK_64BIT_FORMAT(ll,
-        [
-          AC_LBL_CHECK_64BIT_FORMAT(L,
-	    [
-	      AC_LBL_CHECK_64BIT_FORMAT(q,
-	        [
-	          AC_MSG_ERROR([neither %llx nor %Lx nor %qx worked on a 64-bit integer])
-	        ])
-	    ])
-	])
-    ])
-fi
-
-#
-# Check for some headers introduced in later versions of libpcap
-# and used by some printers.
-#
-# Those headers use the {u_}intN_t types, so we must do this after
-# we check for what's needed to get them defined.
-#
-savedcppflags="$CPPFLAGS"
-CPPFLAGS="$CPPFLAGS $V_INCLS"
-AC_CHECK_HEADERS(pcap/bluetooth.h,,,[#include "netdissect-stdinc.h"])
-AC_CHECK_HEADERS(pcap/nflog.h,,,[#include "netdissect-stdinc.h"])
-AC_CHECK_HEADERS(pcap/usb.h,,,[#include "netdissect-stdinc.h"])
-CPPFLAGS="$savedcppflags"
-
 AC_PROG_RANLIB
 AC_CHECK_TOOL([AR], [ar])
 
 AC_LBL_DEVEL(V_CCOPT)
-
-AC_LBL_SOCKADDR_SA_LEN
-
-AC_LBL_UNALIGNED_ACCESS
 
 # Check for OpenSSL/libressl libcrypto
 AC_MSG_CHECKING(whether to use OpenSSL/libressl libcrypto)
@@ -889,13 +1006,6 @@ AC_ARG_WITH(crypto,
 		want_libcrypto=yes
 		libcrypto_root=$withval
 		AC_MSG_RESULT([yes, using the version installed in $withval])
-
-		#
-		# Put the subdirectories of the libcrypto root directory
-		# at the front of the header and library search path.
-		#
-		CFLAGS="-I$withval/include $CFLAGS"
-		LIBS="-L$withval/lib $LIBS"
 	fi
 ],[
 	#
@@ -907,42 +1017,216 @@ AC_ARG_WITH(crypto,
 ])
 if test "$want_libcrypto" != "no"; then
 	#
-	# Don't check for libcrypto unless we have its headers;
-	# Apple, bless their pointy little heads, apparently ship
-	# libcrypto as a library, but not the header files, in
-	# El Capitan, probably because they don't want you writing
-	# nasty portable code that could run on other UN*Xes, they
-	# want you writing code that uses their Shiny New Crypto
-	# Library and that only runs on OS X.
+	# Were we told where to look for libcrypto?
 	#
-	AC_CHECK_HEADER(openssl/crypto.h,
-	[
-		AC_CHECK_LIB(crypto, DES_cbc_encrypt)
-		if test "$ac_cv_lib_crypto_DES_cbc_encrypt" = "yes"; then
-			AC_CHECK_HEADERS(openssl/evp.h)
-			#
-			# OK, then:
-			#
-			# 1) do we have EVP_CIPHER_CTX_new?
-			# If so, we use it to allocate an
-			# EVP_CIPHER_CTX, as EVP_CIPHER_CTX may be
-			# opaque; otherwise, we allocate it ourselves.
-			#
-			# 2) do we have EVP_CipherInit_ex()?
-			# If so, we use it, because we need to be
-			# able to make two "initialize the cipher"
-			# calls, one with the cipher and key, and
-			# one with the IV, and, as of OpenSSL 1.1,
-			# You Can't Do That with EVP_CipherInit(),
-			# because a call to EVP_CipherInit() will
-			# unconditionally clear the context, and
-			# if you don't supply a cipher, it'll
-			# clear the cipher, rendering the context
-			# unusable and causing a crash.
-			#
-			AC_CHECK_FUNCS(EVP_CIPHER_CTX_new EVP_CipherInit_ex)
+	if test -z "$libcrypto_root"; then
+		#
+		# No.
+		#
+		# First, try looking for it with pkg-config, if we have it.
+		#
+		# Homebrew's pkg-config does not, by default, look for
+		# pkg-config files for packages it has installed.
+		# Furthermore, at least for OpenSSL, they appear to be
+		# dumped in package-specific directories whose paths are
+		# not only package-specific but package-version-specific.
+		#
+		# So the only way to find openssl is to get the value of
+		# PKG_CONFIG_PATH from "brew --env openssl" and add that
+		# to PKG_CONFIG_PATH.  (No, we can't just assume it's under
+		# /usr/local; Homebrew have conveniently chosen to put it
+		# under /opt/homebrew on ARM.)
+		#
+		# That's the nice thing about Homebrew - it makes things easier!
+		# Thanks!
+		#
+		save_PKG_CONFIG_PATH="$PKG_CONFIG_PATH"
+		if test -n "$BREW"; then
+			openssl_pkgconfig_dir=`$BREW --env --plain openssl | sed -n 's/PKG_CONFIG_PATH: //p'`
+			PKG_CONFIG_PATH="$openssl_pkgconfig_dir:$PKG_CONFIG_PATH"
 		fi
-	])
+		PKG_CHECK_MODULE(LIBCRYPTO, libcrypto,
+		    [
+			#
+			# We found OpenSSL/libressl libcrypto.
+			#
+			HAVE_LIBCRYPTO=yes
+		    ])
+		PKG_CONFIG_PATH="$save_PKG_CONFIG_PATH"
+
+		#
+		# If it wasn't found, and we have Homebrew installed, see
+		# if it's in Homebrew.
+		#
+		if test "x$HAVE_LIBCRYPTO" != "xyes" -a -n "$BREW"; then
+			AC_MSG_CHECKING(for openssl in Homebrew)
+			#
+			# The brew man page lies when it speaks of
+			# $BREW --prefix --installed <formula>
+			# outputting nothing.  In Homebrew 3.3.16,
+			# it produces output regardless of whether
+			# the formula is installed or not, so we
+			# send the standard output and error to
+			# the bit bucket.
+			#
+			# libcrypto isn't a formula, openssl is a formula.
+			#
+			if $BREW --prefix --installed openssl >/dev/null 2>&1; then
+				#
+				# Yes.  Get the include directory and library
+				# directory.  (No, we can't just assume it's
+				# under /usr/local; Homebrew have conveniently
+				# chosen to put it under /opt/homebrew on ARM.)
+				#
+				AC_MSG_RESULT(yes)
+				HAVE_LIBCRYPTO=yes
+				openssl_path=`$BREW --prefix openssl`
+				LIBCRYPTO_CFLAGS="-I$openssl_path/include"
+				LIBCRYPTO_LIBS="-L$openssl_path/lib -lcrypto"
+			else
+				AC_MSG_RESULT(no)
+			fi
+		fi
+
+		#
+		# If it wasn't found, and /usr/local/include and /usr/local/lib
+		# exist, check if it's in /usr/local.  (We check whether they
+		# exist because, if they don't exist, the compiler will warn
+		# about that and then ignore the argument, so they test
+		# using just the system header files and libraries.)
+		#
+		# We include the standard include file to 1) make sure that
+		# it's installed (if it's just a shared library for the
+		# benefit of existing programs, that's not useful) and 2)
+		# because SSL_library_init() is a library routine in some
+		# versions and a #defined wrapper around OPENSSL_init_ssl()
+		# in others.
+		#
+		if test "x$HAVE_LIBCRYPTO" != "xyes" -a -d "/usr/local/include" -a -d "/usr/local/lib"; then
+			AC_LBL_SAVE_CHECK_STATE
+			CFLAGS="$CFLAGS -I/usr/local/include"
+			LIBS="$LIBS -L/usr/local/lib -lcrypto"
+			AC_MSG_CHECKING(whether we have an OpenSSL/libressl libcrypto in /usr/local that we can use)
+			AC_LINK_IFELSE([AC_LANG_PROGRAM(
+			    [[
+#include <openssl/evp.h>
+			    ]],
+			    [[
+EVP_CIPHER_CTX_block_size((EVP_CIPHER_CTX *)0);
+return 0;
+			    ]])],
+			    [
+				AC_MSG_RESULT(yes)
+				HAVE_LIBCRYPTO=yes
+				LIBCRYPTO_CFLAGS="-I/usr/local/include"
+				LIBCRYPTO_LIBS="-L/usr/local/lib -lcrypto"
+			    ],
+			    AC_MSG_RESULT(no))
+			AC_LBL_RESTORE_CHECK_STATE
+		fi
+
+		#
+		# If it wasn't found, check if it's a system library.
+		#
+		# We include the standard include file to 1) make sure that
+		# it's installed (if it's just a shared library for the
+		# benefit of existing programs, that's not useful) and 2)
+		# make sure this isn't a newer macOS that provides libcrypto
+		# as a shared library but doesn't provide headers - Apple,
+		# bless their pointy little heads, apparently ship libcrypto
+		# as a library, but not the header files, in El Capitan and
+		# later, probably because they don't want you writing nasty
+		# portable code that could run on other UN*Xes, they want you
+		# writing code that uses their Shiny New Crypto Library and
+		# that thus only runs on macOS.
+		#
+		if test "x$HAVE_LIBCRYPTO" != "xyes"; then
+			AC_LBL_SAVE_CHECK_STATE
+			LIBS="$LIBS -lcrypto"
+			AC_MSG_CHECKING(whether we have a system OpenSSL/libressl that we can use)
+			AC_LINK_IFELSE([AC_LANG_PROGRAM(
+			    [[
+#include <openssl/evp.h>
+			    ]],
+			    [[
+EVP_CIPHER_CTX_block_size((EVP_CIPHER_CTX *)0);
+return 0;
+			    ]])],
+			    [
+				AC_MSG_RESULT(yes)
+				HAVE_LIBCRYPTO=yes
+				LIBCRYPTO_LIBS="-lcrypto"
+			    ],
+			    AC_MSG_RESULT(no))
+			AC_LBL_RESTORE_CHECK_STATE
+		fi
+	else
+		#
+		# Yes.
+		#
+		# Look for it there.
+		#
+		AC_LBL_SAVE_CHECK_STATE
+		CFLAGS="$CFLAGS -I$libcrypto_root/include"
+		LIBS="$LIBS -L$libcrypto_root/lib -lcrypto"
+		AC_MSG_CHECKING(whether we have a system OpenSSL/libressl that we can use)
+		AC_LINK_IFELSE([AC_LANG_PROGRAM(
+		    [[
+#include <openssl/evp.h>
+		    ]],
+		    [[
+EVP_CIPHER_CTX_block_size((EVP_CIPHER_CTX *)0);
+return 0;
+		    ]])],
+		    [
+			AC_MSG_RESULT(yes)
+			HAVE_LIBCRYPTO=yes
+			LIBCRYPTO_CFLAGS="-I$libcrypto_root/include"
+			LIBCRYPTO_LIBS="-L$libcrypto_root/lib -lcrypto"
+		    ],
+		    AC_MSG_RESULT(no))
+		AC_LBL_RESTORE_CHECK_STATE
+	fi
+
+	#
+	# OK, did we find it?
+	#
+	if test "x$HAVE_LIBCRYPTO" = "xyes"; then
+		AC_DEFINE([HAVE_LIBCRYPTO], [1], [Define to 1 if you have a usable `crypto' library (-lcrypto).])
+
+		#
+		# Put the subdirectories of the libcrypto root directory
+		# at the end of the header and library search path, to
+		# make sure they come after any -I or -L flags for
+		# a local libpcap - those must take precedence of any
+		# directory that might contain an installed version of
+		# libpcap.
+		#
+		V_INCLS="$V_INCLS $LIBCRYPTO_CFLAGS"
+		LIBS="$LIBS $LIBCRYPTO_LIBS"
+
+		#
+		# OK, then:
+		#
+		# 1) do we have EVP_CIPHER_CTX_new?
+		# If so, we use it to allocate an EVP_CIPHER_CTX, as
+		# EVP_CIPHER_CTX may be opaque; otherwise, we allocate it
+		# ourselves.
+		#
+		# 2) do we have EVP_DecryptInit_ex()?
+		# If so, we use it, because we need to be able to make
+		# two "initialize the cipher" calls, one with the cipher
+		# and key, and one with the IV, and, as of OpenSSL 1.1,
+		# You Can't Do That with EVP_DecryptInit(), because a
+		# call to EVP_DecryptInit() will unconditionally clear
+		# the context, and if you don't supply a cipher, it'll
+		# clear the cipher, rendering the context unusable and
+		# causing a crash.
+		#
+		AC_CHECK_FUNCS(EVP_CIPHER_CTX_new EVP_DecryptInit_ex)
+	else
+		AC_MSG_NOTICE(OpenSSL/libressl libcrypto not found)
+	fi
 fi
 
 # Check for libcap-ng
@@ -983,7 +1267,6 @@ fi
 
 AC_SUBST(V_CCOPT)
 AC_SUBST(V_DEFS)
-AC_SUBST(V_GROUP)
 AC_SUBST(V_INCLS)
 AC_SUBST(V_PCAPDEP)
 AC_SUBST(LOCALSRC)
@@ -994,10 +1277,11 @@ AC_PROG_INSTALL
 
 AC_CONFIG_HEADER(config.h)
 
-AC_OUTPUT_COMMANDS([if test -f .devel; then
+AC_CONFIG_COMMANDS([.devel],[[if test -f .devel; then
 	echo timestamp > stamp-h
-	cat Makefile-devel-adds >> Makefile
-	make depend
-fi])
-AC_OUTPUT(Makefile tcpdump.1)
+	cat $srcdir/Makefile-devel-adds >> Makefile
+	make depend || exit 1
+fi]],[[]])
+AC_CONFIG_FILES([Makefile tcpdump.1])
+AC_OUTPUT
 exit 0

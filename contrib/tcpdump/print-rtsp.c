@@ -13,17 +13,11 @@
 
 /* \summary: Real Time Streaming Protocol (RTSP) printer */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include <config.h>
 
-#include <netdissect-stdinc.h>
-
-#include <stdio.h>
-#include <stdlib.h>
+#include "netdissect-stdinc.h"
 
 #include "netdissect.h"
-#include "extract.h"
 
 static const char *rtspcmds[] = {
 	"DESCRIBE",
@@ -43,5 +37,6 @@ static const char *rtspcmds[] = {
 void
 rtsp_print(netdissect_options *ndo, const u_char *pptr, u_int len)
 {
-	txtproto_print(ndo, pptr, len, "rtsp", rtspcmds, RESP_CODE_SECOND_TOKEN);
+	ndo->ndo_protocol = "rtsp";
+	txtproto_print(ndo, pptr, len, rtspcmds, RESP_CODE_SECOND_TOKEN);
 }

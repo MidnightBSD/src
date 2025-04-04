@@ -13,11 +13,9 @@
  * Original code by Hannes Gredler (hannes@gredler.at)
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include <config.h>
 
-#include <netdissect-stdinc.h>
+#include "netdissect-stdinc.h"
 #include "netdissect.h"
 #include "nlpid.h"
 
