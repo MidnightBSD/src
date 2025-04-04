@@ -11,15 +11,16 @@
 # AND WITHOUT ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, WITHOUT
 # LIMITATION, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
 # A PARTICULAR PURPOSE.
-# $FreeBSD: stable/11/usr.sbin/ndp/Makefile 319119 2017-05-29 10:15:41Z ngie $
 
-.PATH: ${SRCTOP}/contrib/tcpdump
+.include <src.opts.mk>
 
 PROG=	ndp
 MAN=	ndp.8
-SRCS=	ndp.c gmt2local.c
+SRCS=	ndp.c
 
-CFLAGS+= -I. -I${.CURDIR} -I${SRCTOP}/contrib/tcpdump
+LIBADD=	xo
+
+CFLAGS+= -I. -I${.CURDIR}
 CFLAGS+= -D_U_=""
 
 WARNS?=	3
