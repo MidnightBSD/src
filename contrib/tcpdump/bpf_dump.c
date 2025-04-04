@@ -19,15 +19,14 @@
  * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include <config.h>
 
-#include <netdissect-stdinc.h>
+#include "netdissect-stdinc.h"
 
 #include <stdio.h>
 
 #include "netdissect.h"
+#include "interface.h"
 
 void
 bpf_dump(const struct bpf_program *p, int option)

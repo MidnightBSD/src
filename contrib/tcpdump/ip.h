@@ -51,13 +51,13 @@
  */
 struct ip {
 	nd_uint8_t	ip_vhl;		/* header length, version */
-#define IP_V(ip)	(((ip)->ip_vhl & 0xf0) >> 4)
-#define IP_HL(ip)	((ip)->ip_vhl & 0x0f)
+#define IP_V(ip)	((GET_U_1((ip)->ip_vhl) & 0xf0) >> 4)
+#define IP_HL(ip)	(GET_U_1((ip)->ip_vhl) & 0x0f)
 	nd_uint8_t	ip_tos;		/* type of service */
 	nd_uint16_t	ip_len;		/* total length */
 	nd_uint16_t	ip_id;		/* identification */
 	nd_uint16_t	ip_off;		/* fragment offset field */
-#define	IP_DF 0x4000			/* dont fragment flag */
+#define	IP_DF 0x4000			/* don't fragment flag */
 #define	IP_MF 0x2000			/* more fragments flag */
 #define	IP_OFFMASK 0x1fff		/* mask for fragmenting bits */
 	nd_uint8_t	ip_ttl;		/* time to live */
@@ -107,7 +107,6 @@ struct ip {
 #define	IPOPT_RFC1393           82              /* traceroute RFC 1393 */
 #define	IPOPT_SECURITY		130		/* provide s,c,h,tcc */
 #define	IPOPT_LSRR		131		/* loose source route */
-#define	IPOPT_SATID		136		/* satnet id */
 #define	IPOPT_SSRR		137		/* strict source route */
 #define IPOPT_RA                148             /* router-alert, rfc2113 */
 

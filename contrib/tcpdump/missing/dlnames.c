@@ -31,9 +31,7 @@
  * SUCH DAMAGE.
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
+#include <config.h>
 
 #include <netdissect-stdinc.h>
 
@@ -118,9 +116,6 @@ static struct dlt_choice dlt_choices[] = {
 #endif
 #ifdef DLT_LINUX_IRDA
 	DLT_CHOICE(DLT_LINUX_IRDA, "Linux IrDA"),
-#endif
-#ifdef DLT_LANE8023
-	DLT_CHOICE(DLT_LANE8023, "Linux 802.3 LANE"),
 #endif
 #ifdef DLT_CIP
 	DLT_CHOICE(DLT_CIP, "Linux Classical IP-over-ATM"),
