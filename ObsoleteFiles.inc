@@ -39,6 +39,25 @@
 # for generating a list from a directory
 # find  /usr/lib/perl5/5.36.0 -exec echo {} \; | cut -b 2-150  | xargs printf "OLD_FILES+=%s\n"
 
++# 20250310: caroot bundle updated
+OLD_FILES+=usr/share/certs/trusted/Entrust_Root_Certification_Authority_-_G4.pem
+OLD_FILES+=usr/share/certs/trusted/SecureSign_RootCA11.pem
+OLD_FILES+=usr/share/certs/trusted/Security_Communication_RootCA3.pem
+OLD_FILES+=usr/share/certs/trusted/SwissSign_Silver_CA_-_G2.pem
+OLD_FILES+=usr/share/certs/blacklisted/AddTrust_External_Root.pem
+OLD_FILES+=usr/share/certs/blacklisted/AddTrust_Low-Value_Services_Root.pem
+OLD_FILES+=usr/share/certs/blacklisted/Staat_der_Nederlanden_Root_CA_-_G2.pem
+OLD_FILES+=usr/share/certs/blacklisted/Cybertrust_Global_Root.pem
+OLD_FILES+=usr/share/certs/blacklisted/DST_Root_CA_X3.pem
+OLD_FILES+=usr/share/certs/blacklisted/GlobalSign_Root_CA_-_R2.pem
+OLD_FILES+=usr/share/certs/blacklisted/QuoVadis_Root_CA.pem
+OLD_FILES+=usr/share/certs/blacklisted/Sonera_Class_2_Root_CA.pem
+OLD_FILES+=usr/share/certs/blacklisted/GeoTrust_Global_CA.pem
+OLD_FILES+=usr/share/certs/blacklisted/Staat_der_Nederlanden_EV_Root_CA.pem
+OLD_FILES+=usr/share/certs/blacklisted/E-Tugra_Certification_Authority.pem
+OLD_FILES+=usr/share/certs/blacklisted/Hongkong_Post_Root_CA_1.pem
+OLD_FILES+=usr/share/certs/blacklisted/Security_Communication_Root_CA.pem
+OLD_FILES+=usr/share/certs/blacklisted/Trustis_FPS_Root_CA.pem
 # 20241130: libdispatch
 OLD_FILES+=usr/lib/libdispatch.a
 OLD_LIBS+=usr/lib/libdispatch.so
