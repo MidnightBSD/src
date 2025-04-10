@@ -64,7 +64,6 @@ firstboot_start()
 				/sbin/ipfw enable firewall
 				/usr/sbin/sysrc mlogind_enable=YES
 				/usr/sbin/sysrc dbus_enable=YES
-				/usr/sbin/sysrc hald_enable=YES
 
 			echo "The following options will help you install GPU drivers. You may need to perform further x.org configuration to make them work properly"
 
