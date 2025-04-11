@@ -1,11 +1,11 @@
-/* $NetBSD: t_fmod.c,v 1.4 2020/08/25 13:39:16 gson Exp $ */
+/*      $NetBSD: exec_prot_support.c,v 1.2 2016/12/31 11:51:20 martin Exp $ */
 
 /*-
- * Copyright (c) 2013 The NetBSD Foundation, Inc.
+ * Copyright (c) 2011 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
  * This code is derived from software contributed to The NetBSD Foundation
- * by Joerg Sonnenberger.
+ * by Jean-Yves Migeon.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,42 +29,14 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <atf-c.h>
-#include <float.h>
-#include <math.h>
+#include <sys/cdefs.h>
+__RCSID("$NetBSD: exec_prot_support.c,v 1.2 2016/12/31 11:51:20 martin Exp $");
 
-#include "isqemu.h"
+#include "../../common/exec_prot.h"
 
-ATF_TC(fmod);
-ATF_TC_HEAD(fmod, tc)
-{
-	atf_tc_set_md_var(tc, "descr","Check fmod family");
-}
-
-ATF_TC_BODY(fmod, tc)
-{
-#ifdef __NetBSD__
-	if (isQEMU())
-		atf_tc_expect_fail("PR misc/44767");
-#endif
-
-	ATF_CHECK(fmodf(2.0, 1.0) == 0);
-	ATF_CHECK(fmod(2.0, 1.0) == 0);
-	ATF_CHECK(fmodl(2.0, 1.0) == 0);
-
-	ATF_CHECK(fmodf(2.0, 0.5) == 0);
-	ATF_CHECK(fmod(2.0, 0.5) == 0);
-	ATF_CHECK(fmodl(2.0, 0.5) == 0);
-
-	ATF_CHECK(fabsf(fmodf(1.0, 0.1) - 0.1f) <= 55 * FLT_EPSILON);
-	ATF_CHECK(fabs(fmod(1.0, 0.1) - 0.1) <= 55 * DBL_EPSILON);
-	ATF_CHECK(fabsl(fmodl(1.0, 0.1L) - 0.1L) <= 55 * LDBL_EPSILON);
-}
-
-ATF_TP_ADD_TCS(tp)
+int
+exec_prot_support(void)
 {
 
-	ATF_TP_ADD_TC(tp, fmod);
-
-	return atf_no_error();
+	return PERPAGE_XP;
 }

@@ -147,11 +147,15 @@ ATF_TC(backtrace_fmt_basic);
 ATF_TC_HEAD(backtrace_fmt_basic, tc)
 {
 	atf_tc_set_md_var(tc, "descr", "Test backtrace_fmt(3)");
-	atf_tc_set_md_var(tc, "require.files", "/proc/self");
 }
 
 ATF_TC_BODY(backtrace_fmt_basic, tc)
 {
+#if defined(__amd64__)
+	if (atf_tc_get_config_var_as_bool_wd(tc, "ci", false))
+		atf_tc_skip("https://bugs.freebsd.org/246537");
+#endif
+
 	myfunc(12);
 
 	if (prevent_inline)
