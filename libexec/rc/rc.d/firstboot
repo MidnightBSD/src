@@ -41,6 +41,18 @@ firstboot_start()
 			/usr/sbin/sysrc bsdstats_enable=YES
 		fi
 
+		echo -e "\r${yellow}Would you like to report your install via hw-probe? (yes or no)${lsuffix}"
+		read installhp
+		if [ ${installhp} = "yes" ]; then
+			if [ ! -f /usr/local/bin/hw-probe ]; then
+				/sbin/ipfw disable firewall
+				/usr/sbin/mport install hw-probe
+				/sbin/ipfw enable firewall
+			fi
+			echo "Scanning and uploading... (one-time event)"
+			/usr/local/bin/hw-probe -upload -all
+		fi
+
 		if [ `uname -m` == 'amd64' ]; then
 			echo -e "\r${yellow}Would you like to install Ravenports, an alternative package manager? (yes or no)${lsuffix}"
                 	read ravenports
@@ -67,7 +79,11 @@ firstboot_start()
 
 			echo "The following options will help you install GPU drivers. You may need to perform further x.org configuration to make them work properly"
 
-			echo -e "\r${yellow}Do you wish to install drm kmod for amd or intel GPUs? (yes or no)${lsuffix}"
+			if [ -f /usr/local/bin/xconfig ]; then
+				echo "Attempting xconfig configuration.  You can run the utility again by typing xconfig to change settings."
+				/usr/local/bin/xconfig auto
+			else
+			echo -e "\r${yellow}Do you wish to install Intel or AMD GPU drivers? (yes or no)${lsuffix}"
 			read drmkmod
 			if [ ${drmkmod} = "yes" ]; then
 				/usr/sbin/mport install drm-fbsd12.0-kmod
@@ -96,6 +112,7 @@ firstboot_start()
 			fi
 			echo "Please restart to enable graphical login."
 			echo -e "\r${yellow}Done.${lsuffix}"
+			fi
 		else
 			echo "To run this utility again, rm ${receipt} and restart."
 		fi
