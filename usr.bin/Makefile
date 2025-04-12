@@ -154,6 +154,7 @@ SUBDIR+=alias \
 	script \
 	sdiff \
 	sed \
+	sensors \
 	seq \
 	shar \
 	showmount \
