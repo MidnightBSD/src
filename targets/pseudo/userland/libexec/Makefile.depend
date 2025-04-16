@@ -17,7 +17,7 @@ DIRDEPS = \
 	libexec/hyperv \
 	libexec/mail.local \
 	libexec/mknetid \
- 	libexec/mport.check-fake \
+	libexec/mport.check-fake \
 	libexec/mport.check-for-older \
 	libexec/mport.create \
 	libexec/mport.delete \

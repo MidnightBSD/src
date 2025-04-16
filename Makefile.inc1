@@ -633,8 +633,8 @@ PACKAGE=	kernel
 
 BOOTSTRAPPING?=	0
 # Keep these in sync
-MINIMUM_SUPPORTED_OSREL?= 8000
-MINIMUM_SUPPORTED_REL?= 0.8
+MINIMUM_SUPPORTED_OSREL?= 201000
+MINIMUM_SUPPORTED_REL?= 2.1
 
 # Common environment for world related stages
 CROSSENV+=	\
@@ -2077,12 +2077,6 @@ update: .PHONY
 # build-tools or cross-tools.
 #
 
-# ELF Tool Chain libraries are needed for ELF tools and dtrace tools.
-# r296685 fix cross-endian objcopy
-.if ${BOOTSTRAPPING} < 200000
-_elftoolchain_libs= lib/libelf lib/libdwarf
-.endif
-
 # libnv and libl are both requirements for config(8), which is an unconditional
 # bootstrap-tool.
 _config_deps= lib/libnv usr.bin/lex/lib
@@ -2123,51 +2117,9 @@ _gperf=		gnu/usr.bin/gperf
 _vtfontcvt=	usr.bin/vtfontcvt
 .endif
 
-.if ${BOOTSTRAPPING} < 200000
-_libopenbsd=	lib/libopenbsd
-_m4=		usr.bin/m4
-
-${_bt}-usr.bin/m4: ${_bt}-lib/libopenbsd
-${_bt}-usr.bin/lex: ${_bt}-usr.bin/m4
-.endif
-
 # flex 2.6.4 breaks binutils/ld build
-.if ${BOOTSTRAPPING} < 8000 || \
-    (${BOOTSTRAPPING} > 201000 && ${MK_LLD_IS_LD} == "no")
+.if (${BOOTSTRAPPING} > 201000 && ${MK_LLD_IS_LD} == "no")
 _lex=		usr.bin/lex
-.endif
-
-# r245440 mtree -N support added
-# r313404 requires sha384.h for libnetbsd, added to libmd in r292782
-.if ${BOOTSTRAPPING} < 200000
-_nmtree=	lib/libmd \
-		lib/libnetbsd \
-		usr.sbin/nmtree
-
-${_bt}-lib/libnetbsd: ${_bt}-lib/libmd
-${_bt}-usr.sbin/nmtree: ${_bt}-lib/libnetbsd
-.endif
-
-.if ${BOOTSTRAPPING} < 102000
-_cat=		bin/cat
-.endif
-
-# r277259 crunchide: Correct 64-bit section header offset
-# r281674 crunchide: always include both 32- and 64-bit ELF support
-.if ${BOOTSTRAPPING} < 200000
-_crunchide=	usr.sbin/crunch/crunchide
-.endif
-
-# r285986 crunchen: use STRIPBIN rather than STRIP
-# 1100113: Support MK_AUTO_OBJ
-# 1100509: META_MODE fixes
-.if ${BOOTSTRAPPING} < 200000
-_crunchgen=	usr.sbin/crunch/crunchgen
-.endif
-
-# r296926 -P keymap search path, MFC to stable/10 in r298297
-.if ${BOOTSTRAPPING} < 200000
-_kbdcontrol=	usr.sbin/kbdcontrol
 .endif
 
 _yacc=		lib/liby \
@@ -2236,8 +2188,6 @@ bootstrap-tools: .PHONY
     ${_strfile} \
     ${_gperf} \
     ${_dtc} \
-    ${_cat} \
-    ${_kbdcontrol} \
     usr.bin/lorder \
     lib/libopenbsd \
     usr.bin/mandoc \
@@ -2248,8 +2198,6 @@ bootstrap-tools: .PHONY
     usr.bin/xinstall \
     ${_gensnmptree} \
     usr.sbin/config \
-    ${_crunchide} \
-    ${_crunchgen} \
     ${_nmtree} \
     ${_vtfontcvt} \
     ${_localedef}
