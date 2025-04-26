@@ -1,3 +1,4 @@
+#
 # Makefile for building releases and release media.
 #
 # User-driven targets:
@@ -13,17 +14,16 @@
 #  install: Invokes the release-install and vm-install targets
 #  release-install: Copies all release installation media into ${DESTDIR}
 #  vm-install: Copies all virtual machine images into ${DESTDIR}
+#  cloud-install: Copies non-uploaded cloud images into ${DESTDIR}
 #
 # Variables affecting the build process:
 #  WORLDDIR: location of src tree -- must have built world and default kernel
 #            (by default, the directory above this one)
 #  PORTSDIR: location of mports tree to distribute (default: /usr/mports)
-#  DOCDIR:   location of doc tree (default: /usr/doc)
 #  XTRADIR:  xtra-bits-dir argument for <arch>/mkisoimages.sh
 #  NOPKG:    if set, do not distribute third-party packages
 #  NOPORTS:  if set, do not distribute mports tree
 #  NOSRC:    if set, do not distribute source tree
-#  NODOC:    if set, do not generate release documentation
 #  WITH_DVD: if set, generate dvd1.iso
 #  WITH_COMPRESSED_IMAGES: if set, compress installation images with xz(1)
 #		(uncompressed images are not removed)
@@ -36,8 +36,6 @@
 
 WORLDDIR?=	${.CURDIR}/..
 PORTSDIR?=	/usr/mports
-DOCDIR?=	/usr/doc
-RELNOTES_LANG?= en_US.ISO8859-1
 
 .if !defined(TARGET) || empty(TARGET)
 TARGET=		${MACHINE}
@@ -124,7 +122,7 @@ base.txz:
 	    "TARGET_ARCH=${TARGET_ARCH} TARGET=${TARGET} ${.MAKE.JOBS:D-j${.MAKE.JOBS}}" \
 	    -D "${.OBJDIR}/${DISTDIR}/base"
 	etcupdate extract -B -M "TARGET_ARCH=${TARGET_ARCH} TARGET=${TARGET}" \
-	    -s ${WORLDDIR} -d "${.OBJDIR}/${DISTDIR}/base/var/db/etcupdate"
+	    -s ${WORLDDIR} -d "${.OBJDIR}/${DISTDIR}/base/var/db/etcupdate" -L /dev/stdout
 # Package all components
 	cd ${WORLDDIR} && ${IMAKE} packageworld DISTDIR=${.OBJDIR}/${DISTDIR}
 	mv ${DISTDIR}/*.txz .
@@ -147,7 +145,7 @@ mports.txz:
 	cd ${DISTDIR} && tar cLvf - \
 	    --exclude .git --exclude .svn \
 	    --exclude usr/mports/Distfiles --exclude usr/mports/Packages \
-	    --exclude 'usr/mports/INDEX*' --exclude work usr/mports | \
+	    --exclude 'usr/mports/INDEX*' --exclude 'usr/mports/*/*/work' usr/mports | \
 	    ${XZ_CMD} > ${.OBJDIR}/mports.txz
 
 disc1: packagesystem
@@ -267,13 +265,14 @@ real-release:
 	${MAKE} -C ${.CURDIR} ${.MAKEFLAGS} obj
 	${MAKE} -C ${.CURDIR} ${.MAKEFLAGS} ${RELEASE_TARGETS}
 
-install:	release-install vm-install
+install:	release-install vm-install .WAIT cloud-install
 
 release-install:
 .if defined(DESTDIR) && !empty(DESTDIR)
 	mkdir -p ${DESTDIR}
 .endif
 	cp -a ftp ${DESTDIR}/
+.if !empty(IMAGES)
 .for I in ${IMAGES}
 	cp -p ${I} ${DESTDIR}/${OSRELEASE}-${I}
 . if defined(WITH_COMPRESSED_IMAGES) && !empty(WITH_COMPRESSED_IMAGES)
@@ -282,5 +281,7 @@ release-install:
 .endfor
 	cd ${DESTDIR} && sha512 ${OSRELEASE}* > ${DESTDIR}/CHECKSUM.SHA512
 	cd ${DESTDIR} && sha256 ${OSRELEASE}* > ${DESTDIR}/CHECKSUM.SHA256
+.endif
 
+.include "${.CURDIR}/Makefile.inc1"
 .include "${.CURDIR}/Makefile.vm"

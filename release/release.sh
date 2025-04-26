@@ -1,6 +1,7 @@
 #!/bin/sh
 #-
-# Copyright (c) 2013-2018 The FreeBSD Foundation
+# Copyright (c) 2020-2021 Rubicon Communications, LLC (netgate.com)
+# Copyright (c) 2013-2019 The FreeBSD Foundation
 # Copyright (c) 2013 Glen Barber
 # Copyright (c) 2011 Nathan Whitehorn
 # All rights reserved.
@@ -33,11 +34,10 @@
 #  totally clean, fresh trees.
 # Based on release/generate-release.sh written by Nathan Whitehorn
 #
-#
 
 export PATH="/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin"
 
-VERSION=2
+VERSION=3
 
 # Prototypes that can be redefined per-chroot or per-target.
 load_chroot_env() { }
@@ -50,7 +50,7 @@ usage() {
 }
 
 # env_setup(): Set up the default build environment variables, such as the
-# CHROOTDIR, VCSCMD, SVNROOT, etc.  This is called before the release.conf
+# CHROOTDIR, VCSCMD, GITROOT, etc.  This is called before the release.conf
 # file is sourced, if '-c <release.conf>' is specified.
 env_setup() {
 	# The directory within which the release will be built.
@@ -136,7 +136,7 @@ env_check() {
 		WITH_DVD=
 		WITH_COMPRESSED_IMAGES=
 		case ${EMBEDDED_TARGET}:${EMBEDDED_TARGET_ARCH} in
-			arm:arm*|arm64:aarch64)
+			arm:arm*|arm64:aarch64|riscv:riscv64*)
 				chroot_build_release_cmd="chroot_arm_build_release"
 				;;
 			*)
@@ -159,6 +159,7 @@ env_check() {
 	# this file, unless overridden by release.conf.  In most cases, these
 	# will not need to be changed.
 	CONF_FILES="__MAKE_CONF=${MAKE_CONF} SRCCONF=${SRC_CONF}"
+	NOCONF_FILES="__MAKE_CONF=/dev/null SRCCONF=/dev/null"
 	if [ -n "${TARGET}" ] && [ -n "${TARGET_ARCH}" ]; then
 		ARCH_FLAGS="TARGET=${TARGET} TARGET_ARCH=${TARGET_ARCH}"
 	else
@@ -182,9 +183,9 @@ env_check() {
 
 	CHROOT_MAKEENV="${CHROOT_MAKEENV} \
 		MAKEOBJDIRPREFIX=${CHROOTDIR}/tmp/obj"
-	CHROOT_WMAKEFLAGS="${MAKE_FLAGS} ${WORLD_FLAGS} ${CONF_FILES}"
-	CHROOT_IMAKEFLAGS="${WORLD_FLAGS} ${CONF_FILES}"
-	CHROOT_DMAKEFLAGS="${WORLD_FLAGS} ${CONF_FILES}"
+	CHROOT_WMAKEFLAGS="${MAKE_FLAGS} ${WORLD_FLAGS} ${NOCONF_FILES}"
+	CHROOT_IMAKEFLAGS="${WORLD_FLAGS} ${NOCONF_FILES}"
+	CHROOT_DMAKEFLAGS="${WORLD_FLAGS} ${NOCONF_FILES}"
 	RELEASE_WMAKEFLAGS="${MAKE_FLAGS} ${WORLD_FLAGS} ${ARCH_FLAGS} \
 		${CONF_FILES}"
 	RELEASE_KMAKEFLAGS="${MAKE_FLAGS} ${KERNEL_FLAGS} \
@@ -237,7 +238,7 @@ extra_chroot_setup() {
 	[ -e /etc/resolv.conf -a ! -e ${CHROOTDIR}/etc/resolv.conf ] && \
 		cp /etc/resolv.conf ${CHROOTDIR}/etc/resolv.conf
 	# Run ldconfig(8) in the chroot directory so /var/run/ld-elf*.so.hints
-	# is created.  This is needed by ports-mgmt/pkg.
+	# is created. 
 	eval chroot ${CHROOTDIR} /etc/rc.d/ldconfig forcerestart
 
 	# If MAKE_CONF and/or SRC_CONF are set and not character devices
@@ -251,11 +252,11 @@ extra_chroot_setup() {
 		cp ${SRC_CONF} ${CHROOTDIR}/${SRC_CONF}
 	fi
 
-	if [ -z "${NOGIT}" ]; then
-		# Install git from ports or packages if the ports tree is
-		# available and VCSCMD is unset.
-		_gitcmd="$(which git)"
-		if [ -d ${CHROOTDIR}/usr/mports -a -z "${_gitcmd}" ]; then
+	_gitcmd="$(which git)"
+	if [ -z "${NOGIT}" -a -z "${_gitcmd}" ]; then
+		# Install git from ports if the ports tree is available;
+		# otherwise install the pkg.
+		if [ -d ${CHROOTDIR}/usr/mports ]; then
 			# Trick the ports 'run-autotools-fixup' target to do the right
 			# thing.
 			_OSVERSION=$(chroot ${CHROOTDIR} /usr/bin/uname -U)
@@ -334,7 +335,7 @@ chroot_build_release() {
 		fi
 		if [ -z "${VMSIZE}" ]; then
 			VMSIZE="$(eval chroot ${CHROOTDIR} \
-				make -C /usr/src/release -V VMSIZE)"
+				make -C /usr/src/release ${ARCH_FLAGS} -V VMSIZE)"
 		fi
 		RELEASE_RMAKEFLAGS="${RELEASE_RMAKEFLAGS} \
 			VMFORMATS=\"${VMFORMATS}\" VMSIZE=${VMSIZE}"
@@ -361,6 +362,9 @@ efi_boot_name()
 		amd64)
 			echo "bootx64.efi"
 			;;
+		riscv)
+			echo "bootriscv64.efi"
+			;;
 	esac
 }
 
@@ -368,7 +372,7 @@ efi_boot_name()
 chroot_arm_build_release() {
 	load_target_env
 	case ${EMBEDDED_TARGET} in
-		arm|arm64)
+		arm|arm64|riscv)
 			if [ -e "${RELENGDIR}/tools/arm.subr" ]; then
 				. "${RELENGDIR}/tools/arm.subr"
 			fi

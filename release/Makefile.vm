@@ -1,5 +1,4 @@
 #
-# $FreeBSD: stable/11/release/Makefile.vm 356770 2020-01-16 01:13:32Z gjb $
 #
 #
 # Makefile for building virtual machine and cloud provider disk images.
@@ -7,8 +6,12 @@
 
 VMTARGETS=	vm-image
 VMFORMATS?=	vhd vmdk qcow2 raw
-VMSIZE?=	4096M
-SWAPSIZE?=	1G
+.if ${TARGET_ARCH} == riscv64
+VMSIZE?=	6144m
+.else
+VMSIZE?=	5120m
+.endif
+SWAPSIZE?=	1g
 VMBASE?=	vm
 
 VHD_DESC=	Azure, VirtualPC, Hyper-V, Xen disk image
@@ -16,19 +19,27 @@ VMDK_DESC=	VMWare, VirtualBox disk image
 QCOW2_DESC=	Qemu, KVM disk image
 RAW_DESC=	Unformatted raw disk image
 
-CLOUDWARE?=	EC2 \
+CLOUDWARE?=	BASIC-CI \
+		EC2 \
 		GCE \
+		ORACLE \
 		VAGRANT-VIRTUALBOX \
 		VAGRANT-VMWARE
 AZURE_FORMAT=	vhdf
 AZURE_DESC=	Microsoft Azure platform image
 AZURE_DISK=	${OSRELEASE}.${AZURE_FORMAT}
+BASIC-CI_FORMAT=	raw
+BASIC-CI_DESC=		Image for CI
+BASIC-CI_DISK=	${OSRELEASE}.${BASIC-CI_FORMAT}
 EC2_FORMAT=	raw
 EC2_DESC=	Amazon EC2 image
 EC2_DISK=	${OSRELEASE}.${EC2_FORMAT}
 GCE_FORMAT=	raw
 GCE_DESC=	Google Compute Engine image
 GCE_DISK=	disk.${GCE_FORMAT}
+ORACLE_FORMAT=	qcow2
+ORACLE_DESC=	Oracle Cloud Infrastructure image
+ORACLE_DISK=	${OSRELEASE}.${ORACLE_FORMAT}
 OPENSTACK_FORMAT=qcow2
 OPENSTACK_DESC=	OpenStack platform image
 OPENSTACK_DISK=	${OSRELEASE}.${OPENSTACK_FORMAT}
@@ -46,8 +57,6 @@ ${_V}!=	eval $$(awk '/^${_V}=/{print}' ${.CURDIR}/../sys/conf/newvers.sh); echo 
 .endfor
 
 emulator-portinstall:
-.if ${TARGET_ARCH} != ${MACHINE_ARCH}
-.if ( ${TARGET_ARCH} != "i386" ) || ( ${MACHINE_ARCH} != "amd64" )
 .if !exists(/usr/local/bin/qemu-${TARGET_ARCH}-static)
 .if exists(${PORTSDIR}/emulators/qemu-user-static/Makefile)
 	env - PATH=$$PATH make -C ${PORTSDIR}/emulators/qemu-user-static BATCH=1 all install clean
@@ -55,10 +64,15 @@ emulator-portinstall:
 	env ASSUME_ALWAYS_YES=yes mport install emulators/qemu-user-static
 .endif
 .endif
+	touch ${.TARGET}
 
+.if ${TARGET_ARCH} != ${MACHINE_ARCH}
+.if ( ${TARGET_ARCH} != "i386" ) || ( ${MACHINE_ARCH} != "amd64" )
 QEMUSTATIC=/usr/local/bin/qemu-${TARGET_ARCH}-static
+QEMUTGT=emulator-portinstall
 .endif
 .endif
+QEMUTGT?=
 
 .if defined(WITH_CLOUDWARE) && !empty(WITH_CLOUDWARE) && !empty(CLOUDWARE)
 . for _CW in ${CLOUDWARE}
@@ -74,7 +88,8 @@ ${_CW:tu}IMAGE=	${_CW:tl}.${${_CW:tu}_FORMAT}
 ${_CW:tu}CONF?=	${.CURDIR}/tools/${_CW:tl}.conf
 .  endif
 
-cw-${_CW:tl}: emulator-portinstall
+cw-${_CW:tl}: ${QEMUTGT}
+	echo "are we there yet?"
 	mkdir -p ${.OBJDIR}/${.TARGET}
 	env TARGET=${TARGET} TARGET_ARCH=${TARGET_ARCH} SWAPSIZE=${SWAPSIZE} \
 		QEMUSTATIC=${QEMUSTATIC} \
@@ -110,10 +125,11 @@ vm-base:	vm-image
 vm-image:
 .if defined(WITH_VMIMAGES) && !empty(WITH_VMIMAGES)
 . for FORMAT in ${VMFORMATS}
-	mkdir -p ${.OBJDIR}/${.TARGET}
+	mkdir -p ${.OBJDIR}/${.TARGET}-${FORMAT}
 	env TARGET=${TARGET} TARGET_ARCH=${TARGET_ARCH} SWAPSIZE=${SWAPSIZE} \
 		${.CURDIR}/scripts/mk-vmimage.sh \
-		-C ${.CURDIR}/tools/vmimage.subr -d ${.OBJDIR}/${.TARGET} \
+		-C ${.CURDIR}/tools/vmimage.subr \
+		-d ${.OBJDIR}/${.TARGET}-${FORMAT} \
 		-i ${.OBJDIR}/${FORMAT}.img -s ${VMSIZE} -f ${FORMAT} \
 		-S ${WORLDDIR} -o ${.OBJDIR}/${VMBASE}.${FORMAT}
 . endfor
@@ -157,6 +173,26 @@ vm-install:
 		${DESTDIR}/vmimages/CHECKSUM.SHA256
 .endif
 
+cloud-install-BASIC-CI:
+	mkdir -p ${DESTDIR}/ciimages
+	cp -p ${.OBJDIR}/${BASIC-CIIMAGE} \
+		${DESTDIR}/ciimages/${OSRELEASE}-BASIC-CI.raw
+	${XZ_CMD} ${DESTDIR}/ciimages/${OSRELEASE}-BASIC-CI.raw
+	cd ${DESTDIR}/ciimages && sha512 ${OSRELEASE}* > \
+		${DESTDIR}/ciimages/CHECKSUM.SHA512
+	cd ${DESTDIR}/ciimages && sha256 ${OSRELEASE}* > \
+		${DESTDIR}/ciimages/CHECKSUM.SHA256
+
+CLOUD_INSTALL_TGTS=
+.if defined(WITH_CLOUDWARE) && !empty(WITH_CLOUDWARE)
+. for _CW in ${CLOUDWARE}
+.  if target(cloud-install-${_CW})
+CLOUD_INSTALL_TGTS+=	cloud-install-${_CW}
+.  endif
+. endfor
+.endif
+cloud-install:	${CLOUD_INSTALL_TGTS}
+
 vm-release:
 .if defined(WITH_VMIMAGES) && !empty(WITH_VMIMAGES)
 	${MAKE} -C ${.CURDIR} ${.MAKEFLAGS} ${VMTARGETS}
@@ -171,3 +207,4 @@ cloudware-release:
 .include "${.CURDIR}/Makefile.azure"
 .include "${.CURDIR}/Makefile.gce"
 .include "${.CURDIR}/Makefile.vagrant"
+.include "${.CURDIR}/Makefile.inc1"
