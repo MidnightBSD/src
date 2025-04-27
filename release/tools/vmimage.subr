@@ -143,6 +143,11 @@ vm_install_base() {
 		echo '/dev/gpt/swapfs  none    swap    sw      0       0' \
 			>> ${DESTDIR}/etc/fstab
 	fi
+	if [ ${ESP} = "yes" ]; then
+		mkdir -p ${DESTDIR}/boot/efi
+		echo "/dev/${ROOTLABEL}/efiesp  /boot/efi       msdosfs     rw      2       2" \
+			>> ${DESTDIR}/etc/fstab
+	fi
 
 	local hostname
 	hostname="$(echo $(uname -o) | tr '[:upper:]' '[:lower:]')"
@@ -197,9 +202,7 @@ vm_extra_install_packages() {
 	mkdir -p ${DESTDIR}/dev
 	mount -t devfs devfs ${DESTDIR}/dev
 	chroot ${DESTDIR} ${EMULATOR} env ASSUME_ALWAYS_YES=yes \
-		/usr/sbin/pkg bootstrap -y
-	chroot ${DESTDIR} ${EMULATOR} env ASSUME_ALWAYS_YES=yes \
-		/usr/sbin/pkg install -y ${VM_EXTRA_PACKAGES}
+		/usr/sbin/mport install ${VM_EXTRA_PACKAGES}
 	umount_loop ${DESTDIR}/dev
 
 	return 0
@@ -226,9 +229,9 @@ vm_extra_pre_umount() {
 }
 
 vm_extra_pkg_rmcache() {
-	if [ -e ${DESTDIR}/usr/local/sbin/pkg ]; then
+	if [ -e ${DESTDIR}/usr/sbin/mport ]; then
 		chroot ${DESTDIR} ${EMULATOR} env ASSUME_ALWAYS_YES=yes \
-			/usr/local/sbin/pkg clean -y -a
+			/usr/sbin/mport clean
 	fi
 
 	return 0

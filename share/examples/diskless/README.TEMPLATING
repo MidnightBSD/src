@@ -155,7 +155,7 @@ be useful to set up clients and server for diskless boot.
 	/etc/inetd.conf
 	/etc/login.conf
 	/etc/gettytab
-	/etc/ntp.conf
+	/etc/ntpd.conf
 	/etc/exports
 	/root/.k5login		-> /conf/ME/root/.k5login
 
