@@ -48,7 +48,7 @@ cw-ec2-portinstall:
 	env ASSUME_ALWAYS_YES=yes mport install bsdec2-image-upload
 . else
 	env UNAME_r=${UNAME_r} make -C ${PORTSDIR}/net/bsdec2-image-upload \
-	    BATCH=1 WRKDIRPREFIX=/tmp/ports DISTDIR=/tmp/distfiles \
+	    BATCH=1 WRKDIRPREFIX=/tmp/mports DISTDIR=/tmp/distfiles \
 	    all install clean
 . endif
 .endif
