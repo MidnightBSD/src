@@ -35,8 +35,9 @@ WARNS?=	0
 
 #LIBADD+=	l
 
-XCFLAGS.manifest_lexer+= -Wno-missing-variable-declarations \
-        -Wno-unneeded-internal-declaration
-XCFLAGS.manifest_parser+= -Wno-missing-variable-declarations
-
 .include <bsd.prog.mk>
+
+XCFLAGS.cftoken+= -Wno-missing-variable-declarations \
+        -Wno-unneeded-internal-declaration
+XCFLAGS.cfparse+= -Wno-missing-variable-declarations
+CFLAGS+=	${XCFLAGS.${.TARGET:T:R}:U}
