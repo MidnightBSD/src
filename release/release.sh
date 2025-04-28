@@ -254,10 +254,10 @@ extra_chroot_setup() {
 
 	_gitcmd="$(which git)"
 	if [ -z "${NOGIT}" -a -z "${_gitcmd}" ]; then
-		# Install git from ports if the ports tree is available;
-		# otherwise install the pkg.
+		# Install git from mports if the mports tree is available;
+		# otherwise install the package.
 		if [ -d ${CHROOTDIR}/usr/mports ]; then
-			# Trick the ports 'run-autotools-fixup' target to do the right
+			# Trick the mports 'run-autotools-fixup' target to do the right
 			# thing.
 			_OSVERSION=$(chroot ${CHROOTDIR} /usr/bin/uname -U)
 			REVISION=$(chroot ${CHROOTDIR} make -C /usr/src/release -V REVISION)

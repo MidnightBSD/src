@@ -158,7 +158,7 @@ for lang in $selected; do
 	docsets="$docsets $lang-freebsd-doc"
 done
 
-ASSUME_ALWAYS_YES=YES chroot $BSDINSTALL_CHROOT pkg install $docsets
+ASSUME_ALWAYS_YES=YES chroot $BSDINSTALL_CHROOT mport install $docsets
 
 ################################################################################
 # END
