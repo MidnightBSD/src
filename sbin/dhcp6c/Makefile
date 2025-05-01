@@ -33,7 +33,7 @@ MAN=	dhcp6c.8 dhcp6c.conf.5
 
 WARNS?=	0
 
-#LIBADD+=	l
+LIBADD+=	l
 
 .include <bsd.prog.mk>
 
