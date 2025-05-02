@@ -26,6 +26,13 @@ CFLAGS+= -I${.CURDIR} -I${.CURDIR}/../../contrib/wide-dhcpv6 -DPACKAGE_NAME=\"\"
 SRCS=	cfparse.y cftoken.l dhcp6c.c common.c config.c prefixconf.c dhcp6c_ia.c timer.c \
         dhcp6c_script.c if.c base64.c auth.c dhcp6_ctl.c addrconf.c lease.c
 
+YFLAGS= -d
+
+CLEANFILES=     y.tab.c y.tab.h
+
+SRCS+=  y.tab.h
+y.tab.h: cfparse.y
+
 ${SRCS:M*.c}: cfparse.h
 parser.h: cfparse.y
 
@@ -33,7 +40,7 @@ MAN=	dhcp6c.8 dhcp6c.conf.5
 
 WARNS?=	0
 
-LIBADD+=	l
+#LIBADD+=	l
 
 .include <bsd.prog.mk>
 
