@@ -34,7 +34,7 @@ SRCS+=  y.tab.h
 y.tab.h: cfparse.y
 
 ${SRCS:M*.c}: cfparse.h
-parser.h: cfparse.y
+cfparse.h: cfparse.y
 
 MAN=	dhcp6c.8 dhcp6c.conf.5
 
