@@ -18,7 +18,7 @@ DIRDEPS+= \
 	bin/echo \
 	bin/ed \
 	bin/expr \
-	bin/freebsd-version \
+	bin/midnightbsd-version \
 	bin/getfacl \
 	bin/hostname \
 	bin/kenv \
@@ -57,6 +57,7 @@ DIRDEPS+= \
 	sbin/devd \
 	sbin/devfs \
 	sbin/dhclient \
+	sbin/dhcp6c \
 	sbin/dmesg \
 	sbin/dump \
 	sbin/dumpfs \
