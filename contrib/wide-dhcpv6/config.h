@@ -29,6 +29,9 @@
  * SUCH DAMAGE.
  */
 
+#ifndef CONFIG_H
+#define CONFIG_H
+
 /* definitions of tail-queue types */
 TAILQ_HEAD(ia_conflist, ia_conf);
 TAILQ_HEAD(pifc_list, prefix_ifconf);
@@ -329,3 +332,5 @@ extern int get_free_address_from_pool __P((struct pool_conf *,
 struct host_conf *create_dynamic_hostconf __P((struct duid *,
 	struct dhcp6_poolspec *));
 extern char *qstrdup __P((char *));
+
+#endif

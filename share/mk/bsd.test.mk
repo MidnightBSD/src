@@ -31,7 +31,7 @@ ${PACKAGE}FILESDIR=	${TESTSDIR}
 TESTS_SUBDIRS?=
 
 # If defined, indicates that the tests built by the Makefile are not part of
-# the FreeBSD Test Suite.  The implication of this is that the tests won't be
+# the MidnightBSD Test Suite.  The implication of this is that the tests won't be
 # installed under /usr/tests/ and that Kyua won't be able to run them.
 #NOT_FOR_TEST_SUITE=
 

@@ -28,6 +28,9 @@
  * SUCH DAMAGE.
  */
 
+#ifndef COMMON_H
+#define COMMON_H
+
 #ifdef __KAME__
 #define IN6_IFF_INVALID (IN6_IFF_ANYCAST|IN6_IFF_TENTATIVE|\
 		IN6_IFF_DUPLICATED|IN6_IFF_DETACHED)
@@ -186,4 +189,6 @@ extern size_t strlcat __P((char *, const char *, size_t));
 #endif
 #ifndef HAVE_STRLCPY
 extern size_t strlcpy __P((char *, const char *, size_t));
+#endif
+
 #endif

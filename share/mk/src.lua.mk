@@ -1,5 +1,5 @@
 #
-# Lua helper file for FreeBSD /usr/src builds.
+# Lua helper file for MidnightBSD /usr/src builds.
 #
 # This file provides any necessary assistance for consumers of Lua in the base
 # system.
