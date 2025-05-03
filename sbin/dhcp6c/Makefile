@@ -41,7 +41,6 @@ MAN=	dhcp6c.8 dhcp6c.conf.5
 WARNS?=	0
 
 #LIBADD+=	l
-LDFLAGS+= /usr/lib/libl.a
 
 .include <bsd.prog.mk>
 
