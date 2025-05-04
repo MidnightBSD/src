@@ -1,20 +1,17 @@
-# $DragonFly: src/bin/cpdup/Makefile,v 1.7 2008/04/10 22:09:08 dillon Exp $
-
 PROG=	cpdup
-SRCS=	cpdup.c hcproto.c hclink.c misc.c fsmid.c
+SRCS=	cpdup.c hcproto.c hclink.c misc.c
 
-.if !defined(NOPTHREADS) && !defined(BOOTSTRAPPING)
-CFLAGS += -DUSE_PTHREADS=1
-LIBADD+=	pthread
-.endif
-
+.if defined(BOOTSTRAPPING) || defined(RESCUE)
+# For boostrapping buildworld the md5 functionality is not needed
+CFLAGS+=	-DNOMD5
+.else
 .if !defined(NOMD5)
-SRCS+=	md5.c
+SRCS+=		md5.c
+LIBADD+=	crypto md
+.endif
 .endif
 
-WARNS?= 1
-
-LIBADD+=	md
+WARNS?=	1
 
 .include <bsd.prog.mk>
 

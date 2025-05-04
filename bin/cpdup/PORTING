@@ -15,7 +15,7 @@ $DragonFly: src/bin/cpdup/PORTING,v 1.2 2008/04/11 17:33:11 dillon Exp $
     This script should suffice when compiling under linux.  For some reason
     that I cannot fathom, linux defaults to using a 32 bit off_t.  It makes
     no sense at all to me why they would want to do this, BSDs went to
-    a 64 bit default off_t over 15 years ago.  In anycase, fixing it 
+    a 64 bit default off_t over 15 years ago.  In anycase, fixing it
     requires a few -D options.
 
     #!/bin/csh
@@ -23,10 +23,8 @@ $DragonFly: src/bin/cpdup/PORTING,v 1.2 2008/04/11 17:33:11 dillon Exp $
     cd cpdup
     rm -f md5.c
     rm -f *.o
-    cc -D__unused= -D_GNU_SOURCE -D__USE_FILE_OFFSET64 -DNOMD5 \
-	-DUSE_PTHREADS -pthread *.c -c
-    cc -D__unused= -D_GNU_SOURCE -D__USE_FILE_OFFSET64 -DNOMD5 \
-	-DUSE_PTHREADS -pthread *.o -o ~/bin/cpdup
+    cc -D__unused= -D_GNU_SOURCE -D__USE_FILE_OFFSET64 -DNOMD5 *.c -c
+    cc -D__unused= -D_GNU_SOURCE -D__USE_FILE_OFFSET64 -DNOMD5 *.o -o ~/bin/cpdup
 
     BACKUP SCRIPT MODIFICATIONS - you will almost certainly have to adjust
     the do_cleanup script to extract the proper field(s) from the df output.
