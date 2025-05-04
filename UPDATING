@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20250504:
+	cpdup synced with dragonfly current
+
 20250412:
 	add sensors script by Slawomir Wojciech Wojtczak & Trix Farrar
 
