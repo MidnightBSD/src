@@ -33,15 +33,6 @@ LDIRS=	IPv6 \
 	ypldap
 
 
-SE_DIRS+=	BSD_daemon
-SE_BSD_DAEMON= \
-	FreeBSD.pfa \
-	README \
-	beastie.eps \
-	beastie.fig \
-	eps.patch \
-	poster.sh
-
 .if ${MACHINE_CPUARCH} == "amd64"
 .if ${MK_BHYVE} != "no"
 LDIRS+=		bhyve
@@ -51,9 +42,9 @@ PACKAGE_bhyve/vmrun.sh=	bhyve
 .endif
 .endif
 
-SE_DIRS+=	FreeBSD_version
-SE_FREEBSD_VERSION= \
-	FreeBSD_version.c \
+SE_DIRS+=	MidnightBSD_version
+SE_MIDNIGHTBSD_VERSION= \
+	MidnightBSD_version.c \
 	Makefile \
 	README
 
