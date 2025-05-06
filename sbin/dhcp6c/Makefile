@@ -2,8 +2,6 @@
 
 .PATH:	${SRCTOP}/contrib/wide-dhcpv6
 
-#.include <src.opts.mk>
-
 PACKAGE=	runtime
 PROG=	dhcp6c
 CONF=	dhcp6c.conf
@@ -30,18 +28,9 @@ YFLAGS+= -d
 
 CLEANFILES+=     y.tab.c y.tab.h y.output
 
-#y.tab.h: cfparse.y
-
-#${SRCS:M*.c}: cfparse.h
-#cfparse.h: cfparse.y
-#cftoken.c: cftoken.l cfparse.c
-#cftoken.o: y.tab.h
-
 MAN=	dhcp6c.8 dhcp6c.conf.5
 
 WARNS?=	0
-
-#LIBADD+=	l
 
 .include <bsd.prog.mk>
 

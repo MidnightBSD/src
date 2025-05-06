@@ -6,8 +6,8 @@ WARNS=0
 PROG=   dnsextd
 
 SRCS=	mDNSPosix.c mDNSUNP.c mDNSDebug.c GenLinkedList.c DNSDigest.c \
-	DNSCommon.c PlatformCommon.c dnsextd_parser.y dnsextd_lexer.l CryptoAlg.c  \
-	dnsextd.c
+	DNSCommon.c PlatformCommon.c dnsextd_parser.y dnsextd_lexer.l y.tab.h \
+	CryptoAlg.c dnsextd.c
 
 .PATH: ${.CURDIR}/../../contrib/mDNSResponder/mDNSCore
 .PATH: ${.CURDIR}/../../contrib/mDNSResponder/mDNSShared
@@ -31,7 +31,7 @@ CFLAGS+=	-DHAVE_IPV6=1
 YFLAGS+=-v
 CLEANFILES= y.output dnsextd_parser.h
 
-LIBADD+=	l pthread
+LIBADD+=	pthread
 
 .include <bsd.prog.mk>
 
