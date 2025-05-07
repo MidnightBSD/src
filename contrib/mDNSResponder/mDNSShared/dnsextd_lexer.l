@@ -18,7 +18,7 @@
 %{
 #include <string.h>
 #include <stdio.h>
-#include "dnsextd_parser.h"
+#include "y.tab.h"
 
 
 extern YYSTYPE yylval;

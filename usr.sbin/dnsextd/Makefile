@@ -6,7 +6,7 @@ WARNS=0
 PROG=   dnsextd
 
 SRCS=	mDNSPosix.c mDNSUNP.c mDNSDebug.c GenLinkedList.c DNSDigest.c \
-	DNSCommon.c PlatformCommon.c dnsextd_parser.y dnsextd_lexer.l y.tab.h \
+	DNSCommon.c PlatformCommon.c dnsextd_lexer.l dnsextd_parser.y y.tab.h \
 	CryptoAlg.c dnsextd.c
 
 .PATH: ${.CURDIR}/../../contrib/mDNSResponder/mDNSCore
