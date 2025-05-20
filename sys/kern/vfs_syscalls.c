@@ -4312,7 +4312,7 @@ out:
  * semantics.
  */
 int
-getvnode_path(struct thread *td, int fd, cap_rights_t *rightsp,
+getvnode_path(struct thread *td, int fd, const cap_rights_t *rightsp,
     struct file **fpp)
 {
 	struct file *fp;
@@ -4350,7 +4350,8 @@ getvnode_path(struct thread *td, int fd, cap_rights_t *rightsp,
  * A reference on the file entry is held upon returning.
  */
 int
-getvnode(struct thread *td, int fd, cap_rights_t *rightsp, struct file **fpp)
+getvnode(struct thread *td, int fd, const cap_rights_t *rightsp,
+    struct file **fpp)
 {
 	int error;
 
