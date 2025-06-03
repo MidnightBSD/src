@@ -124,7 +124,7 @@ main(int argc, char *argv[]) {
 }
 
 void
-usage() {
+usage(void) {
 	fprintf(stderr, "usage: msearch [-crtz] [-l limit] pattern ...\n");
 	exit(1);
 }
