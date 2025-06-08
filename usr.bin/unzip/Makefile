@@ -16,7 +16,7 @@ SRCS=	bsdunzip.c
 SRCS+=	cmdline.c err.c passphrase.c
 
 CFLAGS+= -DBSDUNZIP_VERSION_STRING=\"${BSDUNZIP_VERSION_STRING}\"
-CFLAGS+= -DPLATFORM_CONFIG_H=\"${_LIBARCHIVECONFDIR}/config_freebsd.h\"
+CFLAGS+= -DPLATFORM_CONFIG_H=\"${_LIBARCHIVECONFDIR}/config_midnightbsd.h\"
 CFLAGS+= -I${_LIBARCHIVEDIR}/unzip -I${_LIBARCHIVEDIR}/libarchive_fe
 
 LIBADD=	archive
