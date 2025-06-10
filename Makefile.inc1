@@ -1302,8 +1302,8 @@ __installcheck_DESTDIR: .PHONY
 #
 CHECK_UIDS=	auditdistd
 CHECK_GIDS=	audit
-CHECK_UIDS+=	ntpd
-CHECK_GIDS+=	ntpd
+CHECK_UIDS+=	_ntp
+CHECK_GIDS+=	_ntp
 CHECK_UIDS+=	proxy
 CHECK_GIDS+=	proxy authpf
 CHECK_UIDS+=	smmsp
