@@ -665,7 +665,7 @@ case "${RERUN}" in
       ${MM_MAKE} DESTDIR=${TEMPROOT} distribution >/dev/null;} ||
     { echo '';
      echo "  *** FATAL ERROR: Cannot 'cd' to ${SOURCEDIR} and install files to";
-      echo "      the temproot environment in ${DESTDIR}";
+      echo "      the temproot environment in ${TEMPROOT}";
       echo '';
       exit 1;}
     ;;

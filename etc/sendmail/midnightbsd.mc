@@ -42,19 +42,18 @@ divert(-1)
 #  /usr/share/sendmail/cf/README or
 #  /usr/src/contrib/sendmail/cf/README
 # 
-#
 #  NOTE: If you enable RunAsUser, make sure that you adjust the permissions
 #  and owner of the SSL certificates and keys in /etc/mail/certs to be usable
 #  by that user.
-#  
+#
+# Last updated: 2024-02-01
 
 divert(0)
-VERSIONID(`$MidnightBSD$')
 OSTYPE(freebsd6)
 DOMAIN(generic)
 
 FEATURE(access_db, `hash -o -T<TMPF> /etc/mail/access')
-FEATURE(blacklist_recipients)
+FEATURE(blocklist_recipients)
 FEATURE(local_lmtp)
 FEATURE(mailertable, `hash -o /etc/mail/mailertable')
 FEATURE(virtusertable, `hash -o /etc/mail/virtusertable')
@@ -73,14 +72,14 @@ dnl NOTE: This can allow sites to use your server as a backup MX without
 dnl       your permission.
 dnl FEATURE(relay_based_on_MX)
 
-dnl DNS based black hole lists
-dnl --------------------------------
-dnl DNS based black hole lists come and go on a regular basis
-dnl so this file will not serve as a database of the available servers.
+dnl DNS based block lists
+dnl ---------------------
+dnl DNS based block lists come and go on a regular basis so this
+dnl file will not serve as a database of the available servers.
 dnl For more information, visit
 dnl http://en.wikipedia.org/wiki/DNSBL
 
-dnl Uncomment to activate your chosen DNS based blacklist
+dnl Uncomment to activate your chosen DNS based block list
 dnl FEATURE(dnsbl, `dnsbl.example.com')
 dnl Alternatively, you can provide your own server and rejection message:
 dnl FEATURE(dnsbl, `dnsbl.example.com', ``"550 Mail from " $&{client_addr} " rejected"'')
