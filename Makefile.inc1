@@ -1029,7 +1029,8 @@ _sanity_check: .PHONY .MAKE
 # replacing generated files.  Handle these cases here in an ad-hoc fashion.
 _cleanobj_fast_depend_hack: .PHONY
 	@echo ">>> Deleting stale dependencies...";
-	sh ${.CURDIR}/tools/build/depend-cleanup.sh ${OBJTOP}
+	MACHINE=${MACHINE} MACHINE_ARCH=${MACHINE_ARCH} \
+	    sh ${.CURDIR}/tools/build/depend-cleanup.sh ${OBJTOP}
 
 _worldtmp: .PHONY
 	@echo
@@ -1084,6 +1085,9 @@ _bootstrap-tools:
 	@echo "--------------------------------------------------------------"
 	@echo ">>> stage 1.2: bootstrap tools"
 	@echo "--------------------------------------------------------------"
+.if ${MK_CLEAN} != "yes"
+	${_+_}cd ${.CURDIR}; ${BMAKE} _NO_INCLUDE_COMPILERMK=t _cleanobj_fast_depend_hack
+.endif
 	${_+_}cd ${.CURDIR}; ${BMAKE} bootstrap-tools
 	mkdir -p ${WORLDTMP}/usr ${WORLDTMP}/lib/casper ${WORLDTMP}/lib/geom \
 	    ${WORLDTMP}/bin
