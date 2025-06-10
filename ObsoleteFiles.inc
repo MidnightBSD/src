@@ -39,7 +39,18 @@
 # for generating a list from a directory
 # find  /usr/lib/perl5/5.36.0 -exec echo {} \; | cut -b 2-150  | xargs printf "OLD_FILES+=%s\n"
 
-+# 20250310: caroot bundle updated
+# 20250610: old gnu binutils
+.if !defined(WITH_PORT_BASE_BINUTILS)
+OLD_FILES+=usr/bin/as
+OLD_FILES+=usr/bin/ld.bfd
+OLD_FILES+=usr/share/man/man1/as.1.gz
+OLD_FILES+=usr/share/man/man1/ld.bfd.1.gz
+OLD_FILES+=usr/share/man/man7/as.7.gz
+OLD_FILES+=usr/share/man/man7/ld.7.gz
+OLD_FILES+=usr/share/man/man7/ldint.7.gz
+OLD_FILES+=usr/share/man/man7/binutils.7.gz
+.endif
+# 20250310: caroot bundle updated
 OLD_FILES+=usr/share/certs/trusted/Entrust_Root_Certification_Authority_-_G4.pem
 OLD_FILES+=usr/share/certs/trusted/SecureSign_RootCA11.pem
 OLD_FILES+=usr/share/certs/trusted/Security_Communication_RootCA3.pem
