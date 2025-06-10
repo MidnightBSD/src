@@ -597,32 +597,6 @@ machtype: defined(vax)					: "vax"
 enddef :
 
 
-newdef	: defined(FreeBSD) 
-comment : FreeBSD
-vendor	: defined(alpha)				: "digital"
-vendor	: defined(arm32) || defined(arm)		: "acorn"
-vendor	: defined(M_intel)				: "intel"
-vendor	: defined(ia64)					: "intel"
-vendor	: defined(mips)					: "mips"
-vendor	: defined(powerpc)				: "motorola"
-vendor	: defined(sparc)				: "sun"
-vendor	: defined(sparc64)				: "sun"
-vendor	: defined(M_amd64)				: "amd"
-hosttype:						: "FreeBSD"
-ostype	:						: "FreeBSD"
-machtype: defined(alpha)				: "alpha"
-machtype: defined(arm32) || defined(APCS_32)		: "arm32"
-machtype: defined(arm)					: "arm"
-machtype: defined(ia64)					: "ia64"
-machtype: defined(M_i386)				: "i386"
-machtype: defined(mips)					: "mips"
-machtype: defined(powerpc)				: "powerpc"
-machtype: defined(sparc)				: "sparc"
-machtype: defined(sparc64)				: "sparc64"
-machtype: defined(M_amd64)				: "x86_64"
-enddef	:
-
-
 newdef	: defined(MidnightBSD)
 comment : MidnightBSD
 vendor	: defined(M_intel)				: "intel"

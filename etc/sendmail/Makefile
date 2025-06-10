@@ -64,9 +64,9 @@ all: ${ALL}
 
 distribution:
 	${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 644 -T "package=sendmail" \
-	    ${.CURDIR}/freebsd.mc freebsd.cf ${DESTDIR}/etc/mail
+	    ${.CURDIR}/midnightbsd.mc midnightbsd.cf ${DESTDIR}/etc/mail
 	${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 444 -T "package=sendmail" \
-	    ${.CURDIR}/freebsd.submit.mc freebsd.submit.cf ${DESTDIR}/etc/mail
+	    ${.CURDIR}/midnightbsd.submit.mc midnightbsd.submit.cf ${DESTDIR}/etc/mail
 	${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 444 -T "package=sendmail" \
 	    ${SMDIR}/helpfile ${DESTDIR}/etc/mail
 .if defined(INSTALL_CF)
@@ -74,7 +74,7 @@ distribution:
 	    ${INSTALL_CF} ${DEST_CF}
 .else
 	${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 644 -T "package=sendmail" \
-	    freebsd.cf ${DEST_CF}
+	    midnightbsd.cf ${DEST_CF}
 .endif
 .if defined(SENDMAIL_ADDITIONAL_CF)
 	${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 644 -T "package=sendmail" \
@@ -86,7 +86,7 @@ distribution:
 	    ${INSTALL_SUBMIT_CF} ${DEST_SUBMIT_CF}
 .else
 	${INSTALL} -o ${BINOWN} -g ${BINGRP} -m 444 -T "package=sendmail" \
-	    freebsd.submit.cf ${DEST_SUBMIT_CF}
+	    midnightbsd.submit.cf ${DEST_SUBMIT_CF}
 .endif
 .endif
 
