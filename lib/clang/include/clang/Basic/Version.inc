@@ -5,4 +5,4 @@
 #define	CLANG_VERSION_MINOR		1
 #define	CLANG_VERSION_PATCHLEVEL	6
 
-#define	CLANG_VENDOR			"FreeBSD "
+#define	CLANG_VENDOR			"MidnightBSD "
