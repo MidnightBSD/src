@@ -39,6 +39,10 @@
 # for generating a list from a directory
 # find  /usr/lib/perl5/5.36.0 -exec echo {} \; | cut -b 2-150  | xargs printf "OLD_FILES+=%s\n"
 
+# 20250610: GEOM_SCHED class and gsched tool removed
+OLD_LIBS+=lib/geom/geom_sched.so
+OLD_FILES+=sbin/gsched
+OLD_FILES+=usr/share/man/man8/gsched.8.gz
 # 20250610: old gnu binutils
 .if !defined(WITH_PORT_BASE_BINUTILS)
 OLD_FILES+=usr/bin/as
@@ -52,6 +56,15 @@ OLD_FILES+=usr/share/man/man7/binutils.7.gz
 .endif
 OLD_FILES+=usr/bin/bdes
 OLD_FILES+=usr/share/man/man1/bdes.1.gz
+# mrouted removed
+OLD_FILES+=usr/sbin/map-mbone
+OLD_FILES+=usr/sbin/mrinfo
+OLD_FILES+=usr/sbin/mrouted
+OLD_FILES+=usr/sbin/mtrace
+OLD_FILES+=usr/share/man/man8/map-mbone.8.gz
+OLD_FILES+=usr/share/man/man8/mrinfo.8.gz
+OLD_FILES+=usr/share/man/man8/mrouted.8.gz
+OLD_FILES+=usr/share/man/man8/mtrace.8.gz
 # gnu grep removed
 OLD_FILES+=usr/bin/bsdgrep
 OLD_FILES+=usr/bin/gnugrep
@@ -59,6 +72,12 @@ OLD_FILES+=usr/share/man/man1/bsdgrep.1.gz
 OLD_FILES+=usr/share/man/man1/gnugrep.1.gz
 OLD_FILES+=usr/bin/elf2aout
 OLD_FILES+=usr/share/man/man1/elf2aout.1.gz
+# remove timed
+OLD_FILES+=etc/rc.d/timed
+OLD_FILES+=usr/sbin/timed
+OLD_FILES+=usr/sbin/timedc
+OLD_FILES+=usr/share/man/man8/timed.8.gz
+OLD_FILES+=usr/share/man/man8/timedc.8.gz
 # mklocale(1) and colldef(1) removed
 OLD_FILES+=usr/bin/mklocale
 OLD_FILES+=usr/share/man/man1/mklocale.1.gz
