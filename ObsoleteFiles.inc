@@ -71,7 +71,7 @@ OLD_FILES+=usr/share/man/man8/fsinfo.8.gz
 OLD_FILES+=usr/share/man/man8/hlfsd.8.gz
 OLD_FILES+=usr/share/man/man8/mk-amd-map.8.gz
 OLD_FILES+=usr/share/man/man8/wire-test.8.gz
-# 20250610: retire cmx, ng_bt3c, wi drivers
+# 20250610: retire cmx, ng_bt3c, wi drivers, ctm to ports
 OLD_FILES+=usr/include/dev/wi/if_wireg.h
 OLD_FILES+=usr/include/dev/wi/if_wavelan_ieee.h
 OLD_FILES+=usr/include/dev/wi/if_wivar.h
@@ -81,6 +81,15 @@ OLD_FILES+=usr/share/man/man4/if_wi.4.gz
 OLD_FILES+=usr/share/man/man4/ng_bt3c.4.gz
 OLD_FILES+=usr/share/man/man4/wi.4.gz
 OLD_FILES+=usr/share/man/man8/bt3cfw.8.gz
+OLD_FILES+=usr/sbin/ctm
+OLD_FILES+=usr/sbin/ctm_dequeue
+OLD_FILES+=usr/sbin/ctm_rmail
+OLD_FILES+=usr/sbin/ctm_smail
+OLD_FILES+=usr/share/man/man1/ctm.1.gz
+OLD_FILES+=usr/share/man/man1/ctm_dequeue.1.gz
+OLD_FILES+=usr/share/man/man1/ctm_rmail.1.gz
+OLD_FILES+=usr/share/man/man1/ctm_smail.1.gz
+OLD_FILES+=usr/share/man/man5/ctm.5.gz
 # 20250310: caroot bundle updated
 OLD_FILES+=usr/share/certs/trusted/Entrust_Root_Certification_Authority_-_G4.pem
 OLD_FILES+=usr/share/certs/trusted/SecureSign_RootCA11.pem
