@@ -71,6 +71,16 @@ OLD_FILES+=usr/share/man/man8/fsinfo.8.gz
 OLD_FILES+=usr/share/man/man8/hlfsd.8.gz
 OLD_FILES+=usr/share/man/man8/mk-amd-map.8.gz
 OLD_FILES+=usr/share/man/man8/wire-test.8.gz
+# 20250610: retire cmx, ng_bt3c, wi drivers
+OLD_FILES+=usr/include/dev/wi/if_wireg.h
+OLD_FILES+=usr/include/dev/wi/if_wavelan_ieee.h
+OLD_FILES+=usr/include/dev/wi/if_wivar.h
+OLD_FILES+=usr/sbin/bt3cfw
+OLD_FILES+=usr/share/man/man4/cmw.4.gz
+OLD_FILES+=usr/share/man/man4/if_wi.4.gz
+OLD_FILES+=usr/share/man/man4/ng_bt3c.4.gz
+OLD_FILES+=usr/share/man/man4/wi.4.gz
+OLD_FILES+=usr/share/man/man8/bt3cfw.8.gz
 # 20250310: caroot bundle updated
 OLD_FILES+=usr/share/certs/trusted/Entrust_Root_Certification_Authority_-_G4.pem
 OLD_FILES+=usr/share/certs/trusted/SecureSign_RootCA11.pem
