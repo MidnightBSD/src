@@ -50,6 +50,21 @@ OLD_FILES+=usr/share/man/man7/ld.7.gz
 OLD_FILES+=usr/share/man/man7/ldint.7.gz
 OLD_FILES+=usr/share/man/man7/binutils.7.gz
 .endif
+OLD_FILES+=usr/bin/bdes
+OLD_FILES+=usr/share/man/man1/bdes.1.gz
+# gnu grep removed
+OLD_FILES+=usr/bin/bsdgrep
+OLD_FILES+=usr/bin/gnugrep
+OLD_FILES+=usr/share/man/man1/bsdgrep.1.gz
+OLD_FILES+=usr/share/man/man1/gnugrep.1.gz
+OLD_FILES+=usr/bin/elf2aout
+OLD_FILES+=usr/share/man/man1/elf2aout.1.gz
+# mklocale(1) and colldef(1) removed
+OLD_FILES+=usr/bin/mklocale
+OLD_FILES+=usr/share/man/man1/mklocale.1.gz
+OLD_FILES+=usr/bin/colldef
+OLD_FILES+=usr/share/man/man1/colldef.1.gz
+# amd removed
 OLD_FILES+=etc/amd.map
 OLD_FILES+=etc/newsyslog.conf.d/amd.conf
 OLD_FILES+=etc/rc.d/amd
