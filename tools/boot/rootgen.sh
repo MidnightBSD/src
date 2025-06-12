@@ -45,8 +45,8 @@ mk_nogeli_gpt_ufs_legacy() {
 EOF
     makefs -t ffs -B little -s 200m ${img}.p2 ${src}
     mkimg -s gpt -b ${src}/boot/pmbr \
-	  -p freebsd-boot:=${src}/boot/gptboot \
-	  -p freebsd-ufs:=${img}.p2 -o ${img}
+	  -p mnbsd-boot:=${src}/boot/gptboot \
+	  -p mnbsd-ufs:=${img}.p2 -o ${img}
     rm -f ${src}/etc/fstab
 }
 
@@ -61,7 +61,7 @@ EOF
     makefs -t ffs -B little -s 200m ${img}.p2 ${src}
     mkimg -s gpt \
 	  -p efi:=${img}.p1 \
-	  -p freebsd-ufs:=${img}.p2 -o ${img}
+	  -p mnbsd-ufs:=${img}.p2 -o ${img}
     rm -f ${src}/etc/fstab
 }
 
@@ -77,8 +77,8 @@ EOF
     # p1 is boot for uefi, p2 is boot for gpt, p3 is /
     mkimg -b ${src}/boot/pmbr -s gpt \
 	  -p efi:=${img}.p1 \
-	  -p freebsd-boot:=${src}/boot/gptboot \
-	  -p freebsd-ufs:=${img}.p3 \
+	  -p mnbsd-boot:=${src}/boot/gptboot \
+	  -p mnbsd-ufs:=${img}.p3 \
 	  -o ${img}
     rm -f ${src}/etc/fstab
 }
@@ -96,8 +96,8 @@ mk_nogeli_gpt_zfs_legacy() {
     dd if=/dev/zero of=${img} count=1 seek=$((200 * 1024 * 1024 / 512))
     md=$(mdconfig -f ${img})
     gpart create -s gpt ${md}
-    gpart add -t freebsd-boot -s 400k -a 4k	${md}	# <= ~540k
-    gpart add -t freebsd-zfs -l root $md
+    gpart add -t mnbsd-boot -s 400k -a 4k	${md}	# <= ~540k
+    gpart add -t mnbsd-zfs -l root $md
     # install-boot will make this bootable
     zpool create -O mountpoint=none -R ${mntpt} ${pool} ${md}p2
     zpool set bootfs=${pool} ${pool}
@@ -136,7 +136,7 @@ mk_nogeli_gpt_zfs_uefi() {
     md=$(mdconfig -f ${img})
     gpart create -s gpt ${md}
     gpart add -t efi -s ${espsize}k -a 4k ${md}
-    gpart add -t freebsd-zfs -l root $md
+    gpart add -t mnbsd-zfs -l root $md
     # install-boot will make this bootable
     zpool create -O mountpoint=none -R ${mntpt} ${pool} ${md}p2
     zpool set bootfs=${pool} ${pool}
@@ -175,8 +175,8 @@ mk_nogeli_gpt_zfs_both() {
     md=$(mdconfig -f ${img})
     gpart create -s gpt ${md}
     gpart add -t efi -s ${espsize}k -a 4k ${md}
-    gpart add -t freebsd-boot -s 400k -a 4k	${md}	# <= ~540k
-    gpart add -t freebsd-zfs -l root $md
+    gpart add -t mnbsd-boot -s 400k -a 4k	${md}	# <= ~540k
+    gpart add -t mnbsd-zfs -l root $md
     # install-boot will make this bootable
     zpool create -O mountpoint=none -R ${mntpt} ${pool} ${md}p3
     zpool set bootfs=${pool} ${pool}
@@ -209,8 +209,8 @@ mk_nogeli_mbr_ufs_legacy() {
 /dev/${dev}s1a	/		ufs	rw	1	1
 EOF
     makefs -t ffs -B little -s 200m ${img}.s1a ${src}
-    mkimg -s bsd -b ${src}/boot/boot -p freebsd-ufs:=${img}.s1a -o ${img}.s1
-    mkimg -a 1 -s mbr -b ${src}/boot/boot0sio -p freebsd:=${img}.s1 -o ${img}
+    mkimg -s bsd -b ${src}/boot/boot -p mnbsd-ufs:=${img}.s1a -o ${img}.s1
+    mkimg -a 1 -s mbr -b ${src}/boot/boot0sio -p midnightbsd:=${img}.s1 -o ${img}
     rm -f ${src}/etc/fstab
 }
 
@@ -223,8 +223,8 @@ mk_nogeli_mbr_ufs_uefi() {
 EOF
     make_esp_file ${img}.s1 ${espsize} ${src}/boot/loader.efi
     makefs -t ffs -B little -s 200m ${img}.s2a ${src}
-    mkimg -s bsd -p freebsd-ufs:=${img}.s2a -o ${img}.s2
-    mkimg -a 1 -s mbr -p efi:=${img}.s1 -p freebsd:=${img}.s2 -o ${img}
+    mkimg -s bsd -p mnbsd-ufs:=${img}.s2a -o ${img}.s2
+    mkimg -a 1 -s mbr -p efi:=${img}.s1 -p midnightbsd:=${img}.s2 -o ${img}
     rm -f ${src}/etc/fstab
 }
 
@@ -237,8 +237,8 @@ mk_nogeli_mbr_ufs_both() {
 EOF
     make_esp_file ${img}.s1 ${espsize} ${src}/boot/loader.efi
     makefs -t ffs -B little -s 200m ${img}.s2a ${src}
-    mkimg -s bsd -b ${src}/boot/boot -p freebsd-ufs:=${img}.s2a -o ${img}.s2
-    mkimg -a 2 -s mbr -b ${src}/boot/mbr -p efi:=${img}.s1 -p freebsd:=${img}.s2 -o ${img}
+    mkimg -s bsd -b ${src}/boot/boot -p mnbsd-ufs:=${img}.s2a -o ${img}.s2
+    mkimg -a 2 -s mbr -b ${src}/boot/mbr -p efi:=${img}.s1 -p midnightbsd:=${img}.s2 -o ${img}
     rm -f ${src}/etc/fstab
 }
 
@@ -255,10 +255,10 @@ mk_nogeli_mbr_zfs_legacy() {
     dd if=/dev/zero of=${img} count=1 seek=$((200 * 1024 * 1024 / 512))
     md=$(mdconfig -f ${img})
     gpart create -s mbr ${md}
-    gpart add -t freebsd ${md}
+    gpart add -t midnightbsd ${md}
     gpart set -a active -i 1 ${md}
     gpart create -s bsd ${md}s1
-    gpart add -t freebsd-zfs ${md}s1
+    gpart add -t mnbsd-zfs ${md}s1
     # install-boot will make this bootable
     zpool create -O mountpoint=none -R ${mntpt} ${pool} ${md}s1a
     zpool set bootfs=${pool} ${pool}
@@ -297,10 +297,10 @@ mk_nogeli_mbr_zfs_uefi() {
     md=$(mdconfig -f ${img})
     gpart create -s mbr ${md}
     gpart add -t efi -s ${espsize}k ${md}
-    gpart add -t freebsd ${md}
+    gpart add -t midnightbsd ${md}
     gpart set -a active -i 2 ${md}
     gpart create -s bsd ${md}s2
-    gpart add -t freebsd-zfs ${md}s2
+    gpart add -t mnbsd-zfs ${md}s2
     # install-boot will make this bootable
     zpool create -O mountpoint=none -R ${mntpt} ${pool} ${md}s2a
     zpool set bootfs=${pool} ${pool}
@@ -339,10 +339,10 @@ mk_nogeli_mbr_zfs_both() {
     md=$(mdconfig -f ${img})
     gpart create -s mbr ${md}
     gpart add -t efi -s  ${espsize}k ${md}
-    gpart add -t freebsd ${md}
+    gpart add -t midnightbsd ${md}
     gpart set -a active -i 2 ${md}
     gpart create -s bsd ${md}s2
-    gpart add -t freebsd-zfs ${md}s2
+    gpart add -t mnbsd-zfs ${md}s2
     # install-boot will make this bootable
     zpool create -O mountpoint=none -R ${mntpt} ${pool} ${md}s2a
     zpool set bootfs=${pool} ${pool}
@@ -379,8 +379,8 @@ mk_geli_gpt_ufs_legacy() {
     dd if=/dev/zero of=${img} count=1 seek=$(( 200 * 1024 * 1024 / 512 ))
     md=$(mdconfig -f ${img})
     gpart create -s gpt ${md}
-    gpart add -t freebsd-boot -s 400k -a 4k	${md}	# <= ~540k
-    gpart add -t freebsd-ufs -l root $md
+    gpart add -t mnbsd-boot -s 400k -a 4k	${md}	# <= ~540k
+    gpart add -t mnbsd-ufs -l root $md
     # install-boot will make this bootable
     echo ${passphrase} | geli init -bg -e AES-XTS -i ${iterations} -J - -l 256 -s 4096 ${md}p2
     echo ${passphrase} | geli attach -j - ${md}p2
@@ -416,7 +416,7 @@ mk_geli_gpt_ufs_uefi() {
     md=$(mdconfig -f ${img})
     gpart create -s gpt ${md}
     gpart add -t efi -s ${espsize}k -a 4k ${md}
-    gpart add -t freebsd-ufs -l root $md
+    gpart add -t mnbsd-ufs -l root $md
     # install-boot will make this bootable
     echo ${passphrase} | geli init -bg -e AES-XTS -i ${iterations} -J - -l 256 -s 4096 ${md}p2
     echo ${passphrase} | geli attach -j - ${md}p2
@@ -452,8 +452,8 @@ mk_geli_gpt_ufs_both() {
     md=$(mdconfig -f ${img})
     gpart create -s gpt ${md}
     gpart add -t efi -s ${espsize}k -a 4k ${md}
-    gpart add -t freebsd-boot -s 400k -a 4k	${md}	# <= ~540k
-    gpart add -t freebsd-ufs -l root $md
+    gpart add -t mnbsd-boot -s 400k -a 4k	${md}	# <= ~540k
+    gpart add -t mnbsd-ufs -l root $md
     # install-boot will make this bootable
     echo ${passphrase} | geli init -bg -e AES-XTS -i ${iterations} -J - -l 256 -s 4096 ${md}p3
     echo ${passphrase} | geli attach -j - ${md}p3
@@ -493,9 +493,9 @@ mk_geli_gpt_zfs_legacy() {
     dd if=/dev/zero of=${img} count=1 seek=$(( 300 * 1024 * 1024 / 512 ))
     md=$(mdconfig -f ${img})
     gpart create -s gpt ${md}
-    gpart add -t freebsd-boot -s 400k -a 4k	${md}	# <= ~540k
-    gpart add -t freebsd-ufs -s 100m ${md}
-    gpart add -t freebsd-zfs -l root $md
+    gpart add -t mnbsd-boot -s 400k -a 4k	${md}	# <= ~540k
+    gpart add -t mnbsd-ufs -s 100m ${md}
+    gpart add -t mnbsd-zfs -l root $md
     # install-boot will make this bootable
     echo ${passphrase} | geli init -bg -e AES-XTS -i ${iterations} -J - -l 256 -s 4096 ${md}p3
     echo ${passphrase} | geli attach -j - ${md}p3
@@ -543,8 +543,8 @@ mk_geli_gpt_zfs_uefi() {
     md=$(mdconfig -f ${img})
     gpart create -s gpt ${md}
     gpart add -t efi -s ${espsize}k -a 4k ${md}
-    gpart add -t freebsd-ufs -s 100m ${md}
-    gpart add -t freebsd-zfs -l root $md
+    gpart add -t mnbsd-ufs -s 100m ${md}
+    gpart add -t mnbsd-zfs -l root $md
     # install-boot will make this bootable
     echo ${passphrase} | geli init -bg -e AES-XTS -i ${iterations} -J - -l 256 -s 4096 ${md}p3
     echo ${passphrase} | geli attach -j - ${md}p3
@@ -588,8 +588,8 @@ mk_geli_gpt_zfs_both() {
     md=$(mdconfig -f ${img})
     gpart create -s gpt ${md}
     gpart add -t efi -s ${espsize}k -a 4k ${md}
-    gpart add -t freebsd-boot -s 400k -a 4k	${md}	# <= ~540k
-    gpart add -t freebsd-zfs -l root $md
+    gpart add -t mnbsd-boot -s 400k -a 4k	${md}	# <= ~540k
+    gpart add -t mnbsd-zfs -l root $md
     # install-boot will make this bootable
     echo ${passphrase} | geli init -bg -e AES-XTS -i ${iterations} -J - -l 256 -s 4096 ${md}p3
     echo ${passphrase} | geli attach -j - ${md}p3
