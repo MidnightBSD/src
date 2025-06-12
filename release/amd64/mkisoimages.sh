@@ -88,7 +88,7 @@ if [ "$bootable" != "" ]; then
 	$MKIMG -s gpt \
 	    --capacity $imgsize \
 	    -b "$BASEBITSDIR/boot/pmbr" \
-	    -p freebsd-boot:="$BASEBITSDIR/boot/isoboot" \
+	    -p mnbsd-boot:="$BASEBITSDIR/boot/isoboot" \
 	    $espparam \
 	    -o hybrid.img
 
