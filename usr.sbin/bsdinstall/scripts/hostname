@@ -50,7 +50,7 @@ f_include $BSDCFG_SHARE/dialog.subr
 #
 # Strings that should be moved to an i18n file and loaded with f_include_lang()
 #
-msg_freebsd_installer="MidnightBSD Installer"
+msg_midnightbsd_installer="MidnightBSD Installer"
 msg_ok="OK"
 msg_please_choose_a_hostname="Please choose a hostname for this machine.\n\nIf you are running on a managed network, please ask\nyour network administrator for an appropriate name."
 msg_set_hostname="Set Hostname"
@@ -94,7 +94,7 @@ dialog_hostname()
 # Initialize
 #
 f_dialog_title "$msg_set_hostname"
-f_dialog_backtitle "$msg_freebsd_installer"
+f_dialog_backtitle "$msg_midnightbsd_installer"
 
 #
 # Get user input

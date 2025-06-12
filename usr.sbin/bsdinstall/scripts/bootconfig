@@ -27,7 +27,7 @@
 #
 
 
-FREEBSD_BOOTLABEL="MidnightBSD"
+MIDNIGHTBSD_BOOTLABEL="MidnightBSD"
 
 BSDCFG_SHARE="/usr/share/bsdconfig"
 . $BSDCFG_SHARE/common.subr || exit 1
@@ -68,7 +68,7 @@ update_uefi_bootentry()
 	# No entries so directly create one and return
 	if [ ${nentries} -eq 0 ]; then
 		f_dprintf "Creating UEFI boot entry"
-		efibootmgr --create --activate --label "$FREEBSD_BOOTLABEL" --loader "${mntpt}/${FREEBSD_BOOTNAME}" > /dev/null
+		efibootmgr --create --activate --label "$MIDNIGHTBSD_BOOTLABEL" --loader "${mntpt}/${MIDNIGHTBSD_BOOTNAME}" > /dev/null
 		return
 	fi
 
@@ -78,13 +78,13 @@ update_uefi_bootentry()
 		for entry in $(efibootmgr | awk '$NF == "MidnightBSD" { sub(/.*Boot/,"", $1); sub(/\*/,"", $1); print $1 }'); do
 			efibootmgr -B -b ${entry}
 		done
-		efibootmgr --create --activate --label "$FREEBSD_BOOTLABEL" --loader "${mntpt}/${FREEBSD_BOOTNAME}" > /dev/null
+		efibootmgr --create --activate --label "$MIDNIGHTBSD_BOOTLABEL" --loader "${mntpt}/${MIDNIGHTBSD_BOOTNAME}" > /dev/null
 		return
 	fi
 
-	FREEBSD_BOOTLABEL=$(dialog_uefi_entryname "${FREEBSD_BOOTLABEL}")
+	MIDNIGHTBSD_BOOTLABEL=$(dialog_uefi_entryname "${MIDNIGHTBSD_BOOTLABEL}")
 	[ $? -eq $DIALOG_CANCEL ] && exit 1
-	efibootmgr --create --activate --label "$FREEBSD_BOOTLABEL" --loader "${mntpt}/${FREEBSD_BOOTNAME}" > /dev/null
+	efibootmgr --create --activate --label "$MIDNIGHTBSD_BOOTLABEL" --loader "${mntpt}/${MIDNIGHTBSD_BOOTNAME}" > /dev/null
 }
 
 f_dialog_title "Boot configuration"
@@ -96,8 +96,8 @@ if [ `uname -m` == powerpc ]; then
 		rootpart=$(awk '{ if($2 == "/") printf("%s:%s\n", $3, $1); }' $PATH_FSTAB)
 		kboot_conf=$BSDINSTALL_CHROOT/boot/etc/kboot.conf
 		mkdir -p $BSDINSTALL_CHROOT/boot/etc/
-		echo default=$FREEBSD_BOOTLABEL > $kboot_conf
-		echo $FREEBSD_BOOTLABEL=\'/kernel/kernel kernelname=/boot/kernel/kernel vfs.root.mountfrom=${rootpart}\' >> $kboot_conf
+		echo default=$MIDNIGHTBSD_BOOTLABEL > $kboot_conf
+		echo $MIDNIGHTBSD_BOOTLABEL=\'/kernel/kernel kernelname=/boot/kernel/kernel vfs.root.mountfrom=${rootpart}\' >> $kboot_conf
 	fi
 fi
 
@@ -113,13 +113,13 @@ if [ -n "$(awk '{if ($2=="/boot/efi") printf("%s\n",$1);}' $PATH_FSTAB)" ]; then
 	esac
 	BOOTDIR="/efi/boot"
 	BOOTNAME="${BOOTDIR}/boot${ARCHBOOTNAME}.efi"
-	FREEBSD_BOOTDIR="/efi/freebsd"
-	FREEBSD_BOOTNAME="${FREEBSD_BOOTDIR}/loader.efi"
+	MIDNIGHTBSD_BOOTDIR="/efi/midnightbsd"
+	MIDNIGHTBSD_BOOTNAME="${MIDNIGHTBSD_BOOTDIR}/loader.efi"
 	mntpt="$BSDINSTALL_CHROOT/boot/efi"
 
 	f_dprintf "Installing loader.efi onto ESP"
-	mkdir -p "${mntpt}/${FREEBSD_BOOTDIR}" "${mntpt}/${BOOTDIR}"
-	cp "$BSDINSTALL_CHROOT/boot/loader.efi" "${mntpt}/${FREEBSD_BOOTNAME}"
+	mkdir -p "${mntpt}/${MIDNIGHTBSD_BOOTDIR}" "${mntpt}/${BOOTDIR}"
+	cp "$BSDINSTALL_CHROOT/boot/loader.efi" "${mntpt}/${MIDNIGHTBSD_BOOTNAME}"
 
 	#
 	# The following shouldn't be necessary. UEFI defines a way to

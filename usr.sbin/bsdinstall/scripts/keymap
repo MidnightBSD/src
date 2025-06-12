@@ -51,7 +51,7 @@ hline_arrows_tab_enter="Press arrows, TAB or ENTER"
 msg_continue_with_keymap="Continue with %s keymap"
 msg_default="default"
 msg_error="Error"
-msg_freebsd_installer="MidnightBSD Installer"
+msg_midnightbsd_installer="MidnightBSD Installer"
 msg_keymap_menu_text="The system console driver for MidnightBSD defaults to standard \"US\"\nkeyboard map. Other keymaps can be chosen below."
 msg_keymap_selection="Keymap Selection"
 msg_ok="OK"
@@ -115,7 +115,7 @@ dialog_keymap_test()
 # Initialize
 #
 f_dialog_title "$msg_keymap_selection"
-f_dialog_backtitle "$msg_freebsd_installer"
+f_dialog_backtitle "$msg_midnightbsd_installer"
 
 #
 # Die immediately if we can't dump the current keyboard map

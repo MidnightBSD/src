@@ -252,7 +252,7 @@ msg_encrypt_disks_help="Use geli(8) to encrypt all data partitions"
 msg_error="Error"
 msg_force_4k_sectors="Force 4K Sectors?"
 msg_force_4k_sectors_help="Align partitions to 4K sector boundries and set vfs.zfs.min_auto_ashift=12"
-msg_freebsd_installer="MidnightBSD Installer"
+msg_midnightbsd_installer="MidnightBSD Installer"
 msg_geli_password="Enter a strong passphrase, used to protect your encryption keys. You will be required to enter this passphrase each time the system is booted"
 msg_geli_setup="Initializing encryption on selected disks,\n this will take several seconds per disk"
 msg_install="Install"
@@ -845,7 +845,7 @@ zfs_create_diskpart()
 		fi
 
 		#
-		# 2. Add small freebsd-boot and/or efi partition
+		# 2. Add small mnbsd-boot and/or efi partition
 		#
 		if [ "$ZFSBOOT_BOOT_TYPE" = "UEFI" -o \
 		     "$ZFSBOOT_BOOT_TYPE" = "BIOS+UEFI" ]
@@ -877,7 +877,7 @@ zfs_create_diskpart()
 			f_eval_catch $funcname gpart \
 			             "$GPART_ADD_ALIGN_LABEL_WITH_SIZE" \
 			             "$align_small" gptboot$index \
-			             freebsd-boot 512k $disk || return $FAILURE
+			             mnbsd-boot 512k $disk || return $FAILURE
 			if [ "$ZFSBOOT_BOOT_TYPE" = "BIOS" ]; then
 				f_eval_catch $funcname gpart \
 				             "$GPART_BOOTCODE_PART" \
@@ -918,7 +918,7 @@ zfs_create_diskpart()
 		if [ "$ZFSBOOT_BOOT_POOL" ]; then
 			f_eval_catch $funcname gpart \
 			             "$GPART_ADD_ALIGN_LABEL_WITH_SIZE" \
-			             "$align_big" boot$index freebsd-zfs \
+			             "$align_big" boot$index mnbsd-zfs \
 			             ${bootsize}b $disk || return $FAILURE
 			# Pedantically nuke any old labels
 			f_eval_catch -d $funcname zpool "$ZPOOL_LABELCLEAR_F" \
@@ -932,12 +932,12 @@ zfs_create_diskpart()
 		fi
 
 		#
-		# 3. Add freebsd-swap partition labeled `swap#'
+		# 3. Add mnbsd-swap partition labeled `swap#'
 		#
 		if [ ${swapsize:-0} -gt 0 ]; then
 			f_eval_catch $funcname gpart \
 			             "$GPART_ADD_ALIGN_LABEL_WITH_SIZE" \
-			             "$align_big" swap$index freebsd-swap \
+			             "$align_big" swap$index mnbsd-swap \
 			             ${swapsize}b $disk || return $FAILURE
 			# Pedantically nuke any old labels on the swap
 			f_eval_catch -d $funcname zpool "$ZPOOL_LABELCLEAR_F" \
@@ -945,10 +945,10 @@ zfs_create_diskpart()
 		fi
 
 		#
-		# 4. Add freebsd-zfs partition labeled `zfs#' for zroot
+		# 4. Add mnbsd-zfs partition labeled `zfs#' for zroot
 		#
 		f_eval_catch $funcname gpart "$GPART_ADD_ALIGN_LABEL" \
-		             "$align_big" zfs$index freebsd-zfs $disk ||
+		             "$align_big" zfs$index mnbsd-zfs $disk ||
 		             return $FAILURE
 		f_eval_catch -d $funcname zpool "$ZPOOL_LABELCLEAR_F" \
 		                /dev/$disk$targetpart
@@ -968,10 +968,10 @@ zfs_create_diskpart()
 		             $disk || return $FAILURE
 
 		#
-		# 2. Add freebsd slice with all available space
+		# 2. Add midnightbsd slice with all available space
 		#
 		f_eval_catch $funcname gpart "$GPART_ADD_ALIGN" \
-		             "$align_small" freebsd $disk || return $FAILURE
+		             "$align_small" midnightbsd $disk || return $FAILURE
 		f_eval_catch $funcname gpart "$GPART_SET_ACTIVE" 1 $disk ||
 		             return $FAILURE
 		# Pedantically nuke any old labels
@@ -981,7 +981,7 @@ zfs_create_diskpart()
 		f_eval_catch -d $funcname gpart "$GPART_DESTROY_F" ${disk}s1
 
 		#
-		# 3. Write BSD scheme to the freebsd slice
+		# 3. Write BSD scheme to the midnightbsd slice
 		#
 		f_eval_catch $funcname gpart "$GPART_CREATE" BSD ${disk}s1 ||
 		             return $FAILURE
@@ -996,7 +996,7 @@ zfs_create_diskpart()
 		ZFSBOOT_BOOT_POOL=1
 		f_eval_catch $funcname gpart \
 		             "$GPART_ADD_ALIGN_INDEX_WITH_SIZE" \
-		             "" 1 freebsd-zfs ${bootsize}b ${disk}s1 ||
+		             "" 1 mnbsd-zfs ${bootsize}b ${disk}s1 ||
 		             return $FAILURE
 		# Pedantically nuke any old labels
 		f_eval_catch -d $funcname zpool "$ZPOOL_LABELCLEAR_F" \
@@ -1009,12 +1009,12 @@ zfs_create_diskpart()
 		fi
 
 		#
-		# 4. Add freebsd-swap partition
+		# 4. Add midnightbsd-swap partition
 		#
 		if [ ${swapsize:-0} -gt 0 ]; then
 			f_eval_catch $funcname gpart \
 			             "$GPART_ADD_ALIGN_INDEX_WITH_SIZE" \
-			             "$align_small" 2 freebsd-swap \
+			             "$align_small" 2 mnbsd-swap \
 			             ${swapsize}b ${disk}s1 || return $FAILURE
 			# Pedantically nuke any old labels on the swap
 			f_eval_catch -d $funcname zpool "$ZPOOL_LABELCLEAR_F" \
@@ -1022,10 +1022,10 @@ zfs_create_diskpart()
 		fi
 
 		#
-		# 5. Add freebsd-zfs partition for zroot
+		# 5. Add mnbsd-zfs partition for zroot
 		#
 		f_eval_catch $funcname gpart "$GPART_ADD_ALIGN_INDEX" \
-		             "$align_small" $mbrindex freebsd-zfs ${disk}s1 ||
+		             "$align_small" $mbrindex mnbsd-zfs ${disk}s1 ||
 		             return $FAILURE
 		f_eval_catch -d $funcname zpool "$ZPOOL_LABELCLEAR_F" \
 		                /dev/$disk$targetpart # Pedantic
@@ -1579,7 +1579,7 @@ dialog_zpool_name()
 # Initialize
 #
 f_dialog_title "$msg_zfs_configuration"
-f_dialog_backtitle "$msg_freebsd_installer"
+f_dialog_backtitle "$msg_midnightbsd_installer"
 
 # User may have specifically requested ZFS-related operations be interactive
 ! f_interactive && f_zfsinteractive && unset $VAR_NONINTERACTIVE
