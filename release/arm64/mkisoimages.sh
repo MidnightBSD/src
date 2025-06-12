@@ -2,7 +2,7 @@
 #
 #
 # This script is used by release/Makefile to build the (optional) ISO images
-# for a FreeBSD release.  It is considered architecture dependent since each
+# for a BSD release.  It is considered architecture dependent since each
 # platform has a slightly unique way of making bootable CDs. This script is
 # also allowed to generate any number of images since that is more of
 # publishing decision than anything else.
@@ -60,7 +60,7 @@ fi
 LABEL=`echo "$1" | tr '[:lower:]' '[:upper:]'`; shift
 NAME="$1"; shift
 
-publisher="The FreeBSD Project.  https://www.FreeBSD.org/"
+publisher="The MidnightBSD Project.  https://www.MidnightBSD.org/"
 echo "/dev/iso9660/$LABEL / cd9660 ro 0 0" > "$BASEBITSDIR/etc/fstab"
 $MAKEFS -t cd9660 $bootable -o rockridge -o label="$LABEL" -o publisher="$publisher" "$NAME" "$@"
 rm -f "$BASEBITSDIR/etc/fstab"
