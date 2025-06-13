@@ -727,7 +727,7 @@ f_device_probe_geom_part()
 	apple-*|linux-*|ms-*|netbsd-*|ntfs|vmware-*)
 		return $FAILURE # No device types for these
 		;;
-	bios-*|ebr|efi|mbr|freebsd-boot|freebsd-swap|midnightbsd-boot|midnightbsd-swap)
+	bios-*|ebr|efi|mbr|freebsd-boot|freebsd-swap|mnbsd-boot|mnbsd-swap)
 		return $FAILURE # Not a source for media
 		;;
 	freebsd-nandfs|freebsd-vinum|freebsd-zfs|mnbsd-nandfs|mnbsd-vinum|mnbsd-zfs)

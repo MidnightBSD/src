@@ -122,7 +122,7 @@ bootpart_type(const char *scheme, const char **mountpoint)
 		return ("fat16");
 	}
 
-	return ("freebsd-boot");
+	return ("mnbsd-boot");
 }
 
 const char *

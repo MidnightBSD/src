@@ -88,7 +88,7 @@ newfs_command(const char *fstype, int use_default)
 
 	fp = open_memstream(&buf, &len);
 
-	if (strcmp(fstype, "freebsd-ufs") == 0) {
+	if (strcmp(fstype, "mnbsd-ufs") == 0) {
 		int i;
 		DIALOG_LISTITEM items[] = {
 			{"UFS1", "UFS Version 1",
@@ -126,7 +126,7 @@ newfs_command(const char *fstype, int use_default)
 			else if (strcmp(items[i].name, "TRIM") == 0)
 				fputs("-t ", fp);
 		}
-	} else if (strcmp(fstype, "freebsd-zfs") == 0) {
+	} else if (strcmp(fstype, "mnbsd-zfs") == 0) {
 		int i;
 		DIALOG_LISTITEM items[] = {
 			{"fletcher4", "checksum algorithm: fletcher4",
@@ -532,8 +532,8 @@ gpart_edit(struct gprovider *pp)
 
 	DIALOG_FORMITEM items[] = {
 		{0, "Type:", 5, 0, 0, FALSE, "", 11, 0, 12, 15, 0,
-		    FALSE, "Filesystem type (e.g. freebsd-ufs, freebsd-zfs, "
-		    "freebsd-swap)", FALSE},
+		    FALSE, "Filesystem type (e.g. mnbsd-ufs, mnbsd-zfs, "
+		    "mnbsd-swap)", FALSE},
 		{0, "Size:", 5, 1, 0, FALSE, "", 11, 1, 12, 0, 0,
 		    FALSE, "Partition size. Append K, M, G for kilobytes, "
 		    "megabytes or gigabytes.", FALSE},
@@ -705,7 +705,7 @@ set_default_part_metadata(const char *name, const char *scheme,
 		}
 
 		if (newfs != NULL && newfs[0] != '\0') {
-			if (strcmp("freebsd-zfs", type) == 0) {
+			if (strcmp("mnbsd-zfs", type) == 0) {
 				zpool_name = strdup((strlen(mountpoint) == 1) ?
 				    "root" : &mountpoint[1]);
 				for (i = 0; zpool_name[i] != 0; i++)
@@ -719,7 +719,7 @@ set_default_part_metadata(const char *name, const char *scheme,
 		}
 	}
 
-	if (strcmp(type, "freebsd-swap") == 0)
+	if (strcmp(type, "mnbsd-swap") == 0)
 		mountpoint = "none";
 	if (strcmp(type, bootpart_type(scheme, &default_bootmount)) == 0) {
 		if (default_bootmount == NULL)
@@ -748,25 +748,25 @@ set_default_part_metadata(const char *name, const char *scheme,
 			free(md->fstab->fs_mntops);
 			free(md->fstab->fs_type);
 		}
-		if (strcmp("freebsd-zfs", type) == 0) {
+		if (strcmp("mnbsd-zfs", type) == 0) {
 			md->fstab->fs_spec = strdup(zpool_name);
 		} else {
 			asprintf(&md->fstab->fs_spec, "/dev/%s", name);
 		}
 		md->fstab->fs_file = strdup(mountpoint);
-		/* Get VFS from text after freebsd-, if possible */
-		if (strncmp("freebsd-", type, 8) == 0)
+		/* Get VFS from text after mnbsd-, if possible */
+		if (strncmp("mnbsd-", type, 6) == 0)
 			md->fstab->fs_vfstype = strdup(&type[8]);
 		else if (strcmp("fat32", type) == 0 || strcmp("efi", type) == 0
 	     	    || strcmp("ms-basic-data", type) == 0)
 			md->fstab->fs_vfstype = strdup("msdosfs");
 		else
 			md->fstab->fs_vfstype = strdup(type); /* Guess */
-		if (strcmp(type, "freebsd-swap") == 0) {
+		if (strcmp(type, "mnbsd-swap") == 0) {
 			md->fstab->fs_type = strdup(FSTAB_SW);
 			md->fstab->fs_freq = 0;
 			md->fstab->fs_passno = 0;
-		} else if (strcmp(type, "freebsd-zfs") == 0) {
+		} else if (strcmp(type, "mnbsd-zfs") == 0) {
 			md->fstab->fs_type = strdup(FSTAB_RW);
 			md->fstab->fs_freq = 0;
 			md->fstab->fs_passno = 0;
@@ -908,7 +908,7 @@ add_boot_partition(struct ggeom *geom, struct gprovider *pp,
 	struct gprovider *ppi;
 	int choice;
 
-	/* Check for existing freebsd-boot partition */
+	/* Check for existing mnbsd-boot partition */
 	LIST_FOREACH(ppi, &geom->lg_provider, lg_provider) {
 		struct partition_metadata *md;
 		const char *bootmount = NULL;
@@ -1003,9 +1003,9 @@ gpart_create(struct gprovider *pp, const char *default_type,
 	unsigned i;
 
 	DIALOG_FORMITEM items[] = {
-		{0, "Type:", 5, 0, 0, FALSE, "freebsd-ufs", 11, 0, 12, 15, 0,
-		    FALSE, "Filesystem type (e.g. freebsd-ufs, freebsd-zfs, "
-		    "freebsd-swap)", FALSE},
+		{0, "Type:", 5, 0, 0, FALSE, "mnbsd-ufs", 11, 0, 12, 15, 0,
+		    FALSE, "Filesystem type (e.g. mnbsd-ufs, mnbsd-zfs, "
+		    "mnbsd-swap)", FALSE},
 		{0, "Size:", 5, 1, 0, FALSE, "", 11, 1, 12, 15, 0,
 		    FALSE, "Partition size. Append K, M, G for kilobytes, "
 		    "megabytes or gigabytes.", FALSE},
@@ -1077,8 +1077,8 @@ gpart_create(struct gprovider *pp, const char *default_type,
 
 	/* Special-case the MBR default type for nested partitions */
 	if (strcmp(scheme, "MBR") == 0) {
-		items[0].text = "freebsd";
-		items[0].help = "Filesystem type (e.g. freebsd, fat32)";
+		items[0].text = "midnightbsd";
+		items[0].help = "Filesystem type (e.g. midnightbsd, fat32)";
 	}
 
 	nitems = scheme_supports_labels(scheme) ? 4 : 3;
@@ -1146,7 +1146,7 @@ addpartform:
 	}
 
 	/* Warn if no mountpoint set */
-	if (strcmp(items[0].text, "freebsd-ufs") == 0 &&
+	if (strcmp(items[0].text, "mnbsd-ufs") == 0 &&
 	    items[2].text[0] != '/') {
 		choice = 0;
 		if (interactive) {
@@ -1167,9 +1167,9 @@ addpartform:
 	 * Error if this scheme needs nested partitions, this is one, and
 	 * a mountpoint was set.
 	 */
-	if (strcmp(items[0].text, "freebsd") == 0 &&
+	if (strcmp(items[0].text, "midnightbsd") == 0 &&
 	    strlen(items[2].text) > 0) {
-		dialog_msgbox("Error", "Partitions of type \"freebsd\" are "
+		dialog_msgbox("Error", "Partitions of type \"midnightbsd\" are "
 		    "nested BSD-type partition schemes and cannot have "
 		    "mountpoints. After creating one, select it and press "
 		    "Create again to add the actual file systems.", 0, 0, TRUE);
@@ -1212,7 +1212,7 @@ addpartform:
 	 * the user to add one.
 	 */
 
-	if ((strcmp(items[0].text, "freebsd") == 0 ||
+	if ((strcmp(items[0].text, "midnightbsd") == 0 ||
 	    strcmp(items[2].text, "/") == 0) && bootpart_size(scheme) > 0) {
 		size_t bytes = add_boot_partition(geom, pp, scheme,
 		    interactive);
@@ -1267,7 +1267,7 @@ addpartform:
 	gctl_free(r);
 
 
-	if (strcmp(items[0].text, "freebsd") == 0)
+	if (strcmp(items[0].text, "midnightbsd") == 0)
 		gpart_partition(newpartname, "BSD");
 	else
 		set_default_part_metadata(newpartname, scheme,

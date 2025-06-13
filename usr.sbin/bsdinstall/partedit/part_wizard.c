@@ -300,7 +300,7 @@ query:
 
 		if (geom_gettree(&submesh) == 0) {
 			gpart_create(provider_for_name(&submesh, disk),
-			    "freebsd", NULL, NULL, &retval,
+			    "midnightbsd", NULL, NULL, &retval,
 			    choice /* Non-interactive for "Entire Disk" */);
 			geom_deletetree(&submesh);
 		}
@@ -381,7 +381,7 @@ wizard_makeparts(struct gmesh *mesh, const char *disk, const char *fstype,
 	if (error != 0)
 		return (error);
 	pp = provider_for_name(&submesh, disk);
-	gpart_create(pp, "freebsd-swap", swapsizestr, NULL, NULL, 0);
+	gpart_create(pp, "mnbsd-swap", swapsizestr, NULL, NULL, 0);
 	geom_deletetree(&submesh);
 
 	return (0);

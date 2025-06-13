@@ -61,7 +61,7 @@ int
 is_fs_bootable(const char *part_type, const char *fs)
 {
 
-	if (strcmp(fs, "freebsd-ufs") == 0)
+	if (strcmp(fs, "mnbsd-ufs") == 0)
 		return (1);
 
 	return (0);

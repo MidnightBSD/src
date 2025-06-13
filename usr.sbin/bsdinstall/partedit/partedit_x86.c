@@ -116,7 +116,7 @@ bootpart_type(const char *scheme, const char **mountpoint)
 		return ("efi");
 	}
 
-	return ("freebsd-boot");
+	return ("mnbsd-boot");
 }
 
 const char *
