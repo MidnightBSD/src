@@ -373,7 +373,7 @@ finalconfig() {
 		"Network" "Networking configuration" \
 		"Services" "Set daemons to run on startup" \
 		"System Hardening" "Set security options" \
-		"Time Zone" "Set system timezone"
+		"Time Zone" "Set system timezone" 2>&1 1>&3)
 	exec 3>&-
 
 	case "$REVISIT" in

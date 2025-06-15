@@ -5,7 +5,7 @@
 .PATH:	${.CURDIR}/../../sys/dev/usb
 
 FILES=	ascii birthtoken bsd-family-tree \
-	eqnchar flowers init.ee \
+	flowers init.ee \
 	iso3166 iso639 latin1 man.template mdoc.template operator pci_vendors \
 	scsi_modes
 

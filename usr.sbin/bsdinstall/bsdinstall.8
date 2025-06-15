@@ -539,7 +539,7 @@ DISTRIBUTIONS="kernel.txz base.txz"
 #!/bin/sh
 sysrc ifconfig_DEFAULT=DHCP
 sysrc sshd_enable=YES
-pkg install puppet
+mport install puppet
 .Ed
 .Pp
 For a scripted installation involving a ZFS pool spanning multiple disks,
@@ -553,11 +553,11 @@ export nonInteractive="YES"
 #!/bin/sh
 echo "ifconfig_DEFAULT=DHCP" >> /etc/rc.conf
 echo "sshd_enable=YES" >> /etc/rc.conf
-pkg install puppet
+mport install puppet
 .Ed
 .Pp
 On
-.Fx
+.Mx
 release media, such a script placed at
 .Pa /etc/installerconfig
 will be run at boot time and the system will be rebooted automatically after

@@ -77,7 +77,7 @@ f_dialog_menu_media_http()
 	local prompt="$msg_please_select_the_site_closest_to_you_or_other"
 	local menu_list="
 		'dist $msg_main_site' 'ftp.midnightbsd.org'
-		'pkg $msg_main_site'  'pkg.midnightbsd.org'
+		'pkg $msg_main_site'  'ftp.midnightbsd.org'
 		'URL'                 '$msg_specify_some_other_http_site'
 	" # END-QUOTE
 	local hline="$msg_select_a_site_thats_close"

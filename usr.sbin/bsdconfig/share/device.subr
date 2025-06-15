@@ -700,7 +700,7 @@ f_device_probe_geom_part()
 			f_media_shutdown_dos "" "$__capacity"
 		return $?
 		;;
-	freebsd|midnightbsd|!0) # Commonly used inappropriately, taste for MidnightBSD
+	midnightbsd|!0) # Commonly used inappropriately, taste for MidnightBSD
 		[ -r "/dev/$__devname" -a ! "$__magic" ] &&
 			__magic=$( file -bs "/dev/$__devname" 2> /dev/null )
 		case "$__magic" in
@@ -715,7 +715,7 @@ f_device_probe_geom_part()
 		esac
 		return $FAILURE
 		;;
-	mnbsd-ufs|freebsd-ufs)
+	mnbsd-ufs)
 		f_dprintf "Found UFS partition named %s" "$__devname"
 		debug= f_device_register "$__var_to_set" \
 			"$__devname" "UFS file system" \
