@@ -187,7 +187,7 @@ main(int argc, char *argv[])
 	gethostname(hostname, sizeof(hostname) - 1);
 	hostname[sizeof(hostname) - 1] = '\0';
 	if (hostname[0] == '\0')
-		snprintf(hostname, sizeof(hostname), "Amnesiac");
+		snprintf(hostname, sizeof(hostname), "RedShirt");
 
 	/*
 	 * Limit running time to deal with broken or dead lines.
