@@ -39,11 +39,12 @@
     db
         entropy         uname=operator gname=operator mode=0700
         ..
-        freebsd-update  mode=0700
-        ..
         hyperv          mode=0700 tags=package=hyperv-tools
         ..
         ipf             mode=0700 tags=package=ipf
+        ..
+        midnightbsd-update  mode=0700
+        ..
         mport
             downloads
             ..
