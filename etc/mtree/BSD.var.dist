@@ -100,8 +100,6 @@
 /set gname=daemon
         lpd
         ..
-        mqueue
-        ..
         opielocks       mode=0700
         ..
         output
