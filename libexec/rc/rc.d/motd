@@ -30,7 +30,7 @@ motd_start()
 		# Create missing template from existing regular motd file, if
 		# one exists.
 		if [ -f "${COMPAT_MOTD}" ]; then
-			sed '1{/^FreeBSD.*/{d;};};' "${COMPAT_MOTD}" > "${TEMPLATE}"
+			sed '1{/^MidnightBSD.*/{d;};};' "${COMPAT_MOTD}" > "${TEMPLATE}"
 			chmod $PERMS "${TEMPLATE}"
 			rm -f "${COMPAT_MOTD}"
 		else
