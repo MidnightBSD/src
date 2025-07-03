@@ -25,7 +25,9 @@
 .\" (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
 .\" THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.Dd September 26, 2015
+.\" $FreeBSD$
+.\"
+.Dd May 14, 2025
 .Dt NC 1
 .Os
 .Sh NAME
@@ -34,7 +36,7 @@
 .Sh SYNOPSIS
 .Nm nc
 .Bk -words
-.Op Fl 46DdEFhklNnrStUuvz
+.Op Fl 46DdEFhklMNnrStUuvz
 .Op Fl e Ar IPsec_policy
 .Op Fl I Ar length
 .Op Fl i Ar interval
@@ -169,6 +171,12 @@ options.
 Additionally, any timeouts specified with the
 .Fl w
 option are ignored.
+.It Fl M
+Collect per-connection TCP statistics using the
+.Xr stats 3
+framework and print them in JSON format to
+.Xr stderr 4
+after the connection is closed.
 .It Fl N
 .Xr shutdown 2
 the network socket after EOF on the input.
@@ -326,8 +334,8 @@ sockets, a destination is required and is the socket path to connect to
 option is given).
 .Pp
 .Ar port
-can be a single integer or a range of ports.
-Ranges are in the form nn-mm.
+can be a specified as a numeric port number, or as a service name.
+Ports may be specified in a range of the form nn-mm.
 In general,
 a destination port must be specified,
 unless the
