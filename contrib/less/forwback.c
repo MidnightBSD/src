@@ -16,6 +16,8 @@
 #include "less.h"
 #include "position.h"
 
+extern int less_is_more;
+
 public lbool squished;
 public int no_back_scroll = 0;
 public int forw_prompt;
@@ -250,8 +252,10 @@ public void forw(int n, POSITION pos, lbool force, lbool only_last, lbool to_new
 			 */
 			pos_clear();
 			force = TRUE;
-			clear();
-			home();
+			if (less_is_more == 0) {
+				clear();
+				home();
+			}
 		}
 
 		if (pos != position(BOTTOM_PLUS_ONE) || empty_screen())
@@ -337,7 +341,8 @@ public void forw(int n, POSITION pos, lbool force, lbool only_last, lbool to_new
 		 * start the display after the beginning of the file,
 		 * and it is not appropriate to squish in that case.
 		 */
-		if (first_time && pos == NULL_POSITION && !top_scroll && 
+		if ((first_time || less_is_more) &&
+		    pos == NULL_POSITION && !top_scroll && 
 		    header_lines == 0 && header_cols == 0 &&
 #if TAGS
 		    tagoption == NULL &&

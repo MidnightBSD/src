@@ -304,8 +304,10 @@ int main(int argc, constant char *argv[])
 	 * act like LESS_IS_MORE is set.
 	 */
 	if (strcmp(last_component(progname), "more") == 0 &&
-			isnullenv(lgetenv("LESS_IS_MORE")))
+			isnullenv(lgetenv("LESS_IS_MORE"))) {
 		less_is_more = 1;
+		scan_option("-fG", FALSE);
+	}
 
 	init_prompt();
 
@@ -314,7 +316,8 @@ int main(int argc, constant char *argv[])
 	if (s != NULL)
 		scan_option(s, TRUE);
 
-#define isoptstring(s)  (((s)[0] == '-' || (s)[0] == '+') && (s)[1] != '\0')
+#define isoptstring(s)  less_is_more ? (((s)[0] == '-') && (s)[1] != '\0') : \
+			(((s)[0] == '-' || (s)[0] == '+') && (s)[1] != '\0')
 	while (argc > 0 && (isoptstring(*argv) || isoptpending()))
 	{
 		s = *argv++;
@@ -334,6 +337,9 @@ int main(int argc, constant char *argv[])
 		nopendopt();
 		quit(QUIT_OK);
 	}
+
+	if (less_is_more)
+		no_init = TRUE;
 
 	get_term();
 	expand_cmd_tables();
@@ -408,7 +414,7 @@ int main(int argc, constant char *argv[])
 		quit(QUIT_OK);
 	}
 
-	if (missing_cap && !know_dumb)
+	if (missing_cap && !know_dumb && !less_is_more)
 		error("WARNING: terminal is not fully functional", NULL_PARG);
 	open_getchr();
 	raw_mode(1);

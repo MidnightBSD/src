@@ -18,7 +18,8 @@
 #if HAVE_POSIX_REGCOMP
 #include <regex.h>
 #ifdef REG_EXTENDED
-#define REGCOMP_FLAG             REG_EXTENDED
+extern int less_is_more;
+#define REGCOMP_FLAG    (less_is_more ? 0 : REG_EXTENDED)
 #else
 #define REGCOMP_FLAG             0
 #endif

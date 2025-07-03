@@ -8,6 +8,7 @@
  * For more information, see the README file.
  */
 
+/* $FreeBSD$ */
 
 /*
  * Routines dealing with signals.
@@ -33,6 +34,8 @@ extern int wscroll;
 extern int quit_on_intr;
 extern long jump_sline_fraction;
 
+extern int less_is_more;
+
 /*
  * Interrupt signal handler.
  */
@@ -56,6 +59,8 @@ static RETSIGTYPE u_interrupt(int type)
 	if (kbhit())
 		getkey();
 #endif
+	if (less_is_more)
+		quit(0);
 #if HILITE_SEARCH
 	set_filter_pattern(NULL, 0);
 #endif

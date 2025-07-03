@@ -37,6 +37,7 @@ extern int hshift;
 extern int bs_mode;
 extern int proc_backspace;
 extern int show_attn;
+extern int less_is_more;
 extern int chopline;
 extern POSITION highest_hilite;
 extern char *every_first_cmd;
@@ -568,14 +569,18 @@ static int mca_search_char(char c)
 
 	switch (c)
 	{
-	case CONTROL('E'): /* ignore END of file */
 	case '*':
+		if (less_is_more)
+			break;
+	case CONTROL('E'): /* ignore END of file */
 		if (mca != A_FILTER)
 			flag = SRCH_PAST_EOF;
 		search_type &= ~SRCH_WRAP;
 		break;
-	case CONTROL('F'): /* FIRST file */
 	case '@':
+		if (less_is_more)
+			break;
+	case CONTROL('F'): /* FIRST file */
 		if (mca != A_FILTER)
 			flag = SRCH_FIRST_FILE;
 		break;
