@@ -1,12 +1,6 @@
 /*-
- * Copyright (c) 2002-2003 Networks Associates Technology, Inc.
- * Copyright (c) 2004-2011 Dag-Erling Smørgrav
+ * Copyright (c) 2023 Dag-Erling Smørgrav
  * All rights reserved.
- *
- * This software was developed for the FreeBSD Project by ThinkSec AS and
- * Network Associates Laboratories, the Security Research Division of
- * Network Associates, Inc.  under DARPA/SPAWAR contract N66001-01-C-8035
- * ("CBOSS"), as part of the DARPA CHATS research program.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,76 +25,81 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- *
- * $Id: pam_end.c 437 2011-09-13 12:00:13Z des $
  */
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
 
+#include <err.h>
+#include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#include <cryb/test.h>
 
 #include <security/pam_appl.h>
+#include <security/openpam.h>
 
 #include "openpam_impl.h"
 
-/*
- * XSSO 4.2.1
- * XSSO 6 page 42
- *
- * Terminate the PAM transaction
- */
+#define T_FUNC(n, d)							\
+	static const char *t_ ## n ## _desc = d;			\
+	static int t_ ## n ## _func(OPENPAM_UNUSED(char **desc),	\
+	    OPENPAM_UNUSED(void *arg))
 
-int
-pam_end(pam_handle_t *pamh,
-	int status)
+#define T(n)								\
+	t_add_test(&t_ ## n ## _func, NULL, "%s", t_ ## n ## _desc)
+
+const char *pam_return_so;
+
+T_FUNC(final_percent, "template ends with %")
 {
-	pam_data_t *dp;
-	int i;
+	char template[] = "test%\0deadbeef";
+	char buf[] = "Squeamish Ossifrage";
+	size_t bufsize = sizeof(buf);
+	int pam_err, ret;
 
-	ENTER();
-	if (pamh == NULL)
-		RETURNC(PAM_SYSTEM_ERR);
-
-	/* clear module data */
-	while ((dp = pamh->module_data) != NULL) {
-		if (dp->cleanup)
-			(dp->cleanup)(pamh, dp->data, status);
-		pamh->module_data = dp->next;
-		FREE(dp->name);
-		FREE(dp);
-	}
-
-	/* clear environment */
-	while (pamh->env_count) {
-		--pamh->env_count;
-		FREE(pamh->env[pamh->env_count]);
-	}
-	FREE(pamh->env);
-
-	/* clear chains */
-	openpam_clear_chains(pamh->chains);
-
-	/* clear items */
-	for (i = 0; i < PAM_NUM_ITEMS; ++i)
-		pam_set_item(pamh, i, NULL);
-
-	FREE(pamh);
-
-	RETURNC(PAM_SUCCESS);
+	pam_err = openpam_subst(NULL, buf, &bufsize, template);
+	ret = (pam_err == PAM_SUCCESS);
+	ret &= t_compare_sz(sizeof("test%"), bufsize);
+	ret &= t_compare_str("test%", buf);
+	return (ret);
 }
 
-/*
- * Error codes:
- *
- *	PAM_SYSTEM_ERR
+
+/***************************************************************************
+ * Boilerplate
  */
 
-/**
- * The =pam_end function terminates a PAM transaction and destroys the
- * corresponding PAM context, releasing all resources allocated to it.
- *
- * The =status argument should be set to the error code returned by the
- * last API call before the call to =pam_end.
- */
+static int
+t_prepare(int argc, char *argv[])
+{
+
+	(void)argc;
+	(void)argv;
+
+	if ((pam_return_so = getenv("PAM_RETURN_SO")) == NULL) {
+		t_printv("define PAM_RETURN_SO before running these tests\n");
+		return (0);
+	}
+
+	openpam_set_feature(OPENPAM_RESTRICT_MODULE_NAME, 0);
+	openpam_set_feature(OPENPAM_VERIFY_MODULE_FILE, 0);
+	openpam_set_feature(OPENPAM_RESTRICT_SERVICE_NAME, 0);
+	openpam_set_feature(OPENPAM_VERIFY_POLICY_FILE, 0);
+	openpam_set_feature(OPENPAM_FALLBACK_TO_OTHER, 0);
+
+	T(final_percent);
+
+	return (0);
+}
+
+int
+main(int argc, char *argv[])
+{
+
+	t_main(t_prepare, NULL, argc, argv);
+}
