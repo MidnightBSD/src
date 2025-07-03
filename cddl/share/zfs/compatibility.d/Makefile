@@ -44,6 +44,10 @@ LINKS= \
 	${FILESDIR}/freebsd-11.3	${FILESDIR}/freebsd-12.2 \
 	${FILESDIR}/freebsd-11.3	${FILESDIR}/freenas-11.3 \
 	${FILESDIR}/freenas-11.0	${FILESDIR}/freenas-11.1 \
+	${FILESDIR}/freebsd-11.3	${FILESDIR}/midnightbsd-2.2 \
+	${FILESDIR}/freebsd-11.3	${FILESDIR}/midnightbsd-3.0 \
+	${FILESDIR}/freebsd-11.3	${FILESDIR}/midnightbsd-3.1 \
+	${FILESDIR}/freebsd-11.3	${FILESDIR}/midnightbsd-3.2 \
 	${FILESDIR}/openzfsonosx-1.9.3	${FILESDIR}/openzfsonosx-1.9.4 \
 	${FILESDIR}/openzfs-2.0-freebsd	${FILESDIR}/truenas-12.0 \
 	${FILESDIR}/zol-0.7		${FILESDIR}/ubuntu-18.04 \
