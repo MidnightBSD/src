@@ -3,6 +3,10 @@ Updating Information for MidnightBSD users.
 20250703:
 	less 678
 
+	unbound 1.23.0
+
+	netcat (freebsd 13-stable version)
+
 20250504:
 	cpdup synced with dragonfly current
 
