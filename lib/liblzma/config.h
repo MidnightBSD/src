@@ -9,7 +9,7 @@
 
 /* Define to 1 if translation of program messages to the user's native
    language is requested. */
-/* FreeBSD - disabled intentionally */
+/* MidnightBSD - disabled intentionally */
 /* #undef ENABLE_NLS */
 
 /* Define to 1 if ARM64 CRC32 instruction is supported. See configure.ac for
@@ -68,9 +68,15 @@
 /* Define to 1 if you have the <cpuid.h> header file. */
 #define HAVE_CPUID_H 1
 
+/* Define to 1 if the 32-bit x86 CRC assembly files are used. */
+/* MidnightBSD - only enabled for i386 */
+#if defined(__MidnightBSD__) && defined(__i386__)
+#define HAVE_CRC_X86_ASM 1
+#endif
+
 /* Define if the GNU dcgettext() function is already present or preinstalled.
    */
-/* FreeBSD - disabled intentionally */
+/* MidnightBSD - disabled intentionally */
 /* #undef HAVE_DCGETTEXT */
 
 /* Define to 1 if any of HAVE_DECODER_foo have been defined. */
@@ -174,15 +180,15 @@
 #define HAVE_GETOPT_LONG 1
 
 /* Define if the GNU gettext() function is already present or preinstalled. */
-/* FreeBSD - disabled intentionally */
+/* MidnightBSD - disabled intentionally */
 /* #undef HAVE_GETTEXT */
 
 /* Define if you have the iconv() function and it works. */
 #define HAVE_ICONV 1
 
 /* Define to 1 if you have the <immintrin.h> header file. */
-/* FreeBSD - only with clang because the base gcc does not support it */
-#if defined(__clang__) && defined(__FreeBSD__) && defined(__amd64__)
+/* MidnightBSD - only with clang because the base gcc does not support it */
+#if defined(__clang__) && defined(__MidnightBSD__) && defined(__amd64__)
 #define HAVE_IMMINTRIN_H 1
 #endif
 
@@ -192,6 +198,9 @@
 /* Define to 1 if Linux Landlock is supported. See configure.ac for details.
    */
 /* #undef HAVE_LINUX_LANDLOCK */
+
+/* Define to 1 if 64-bit LoongArch CRC32 instructions are supported. */
+/* #undef HAVE_LOONGARCH_CRC32 */
 
 /* Define to 1 if .lz (lzip) decompression support is enabled. */
 #define HAVE_LZIP_DECODER 1
@@ -325,7 +334,7 @@
 
 /* Define to 1 if _mm_set_epi64x and _mm_clmulepi64_si128 are usable. See
    configure.ac for details. */
-#if defined(__FreeBSD__) && defined(__amd64__)
+#if defined(__MidnightBSD__) && defined(__amd64__)
 #define HAVE_USABLE_CLMUL 1
 #endif
 
@@ -334,6 +343,9 @@
 
 /* Define to 1 if you have the 'utimes' function. */
 /* #undef HAVE_UTIMES */
+
+/* Define to 1 if you have the 'vasprintf' function. */
+#define HAVE_VASPRINTF 1
 
 /* Define to 1 or 0, depending whether the compiler supports simple visibility
    declarations. */
@@ -352,7 +364,7 @@
 /* #undef HAVE__FUTIME */
 
 /* Define to 1 if _mm_movemask_epi8 is available. */
-#if defined(__FreeBSD__) && defined(__amd64__)
+#if defined(__MidnightBSD__) && defined(__amd64__)
 #define HAVE__MM_MOVEMASK_EPI8 1
 #endif
 
@@ -391,7 +403,7 @@
 #define PACKAGE_NAME "XZ Utils"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "XZ Utils 5.6.3"
+#define PACKAGE_STRING "XZ Utils 5.8.1"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "xz"
@@ -400,7 +412,7 @@
 #define PACKAGE_URL "https://tukaani.org/xz/"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "5.6.3"
+#define PACKAGE_VERSION "5.8.1"
 
 /* Define to necessary symbol if this constant uses a non-standard name on
    your system. */
@@ -436,7 +448,7 @@
 
 /* Define to 1 if the system supports fast unaligned access to 16-bit, 32-bit,
    and 64-bit integers. */
-/* FreeBSD - derive from __NO_STRICT_ALIGNMENT */
+/* MidnightBSD - derive from __NO_STRICT_ALIGNMENT */
 /* #undef TUKLIB_FAST_UNALIGNED_ACCESS */
 
 /* Define to 1 if the amount of physical memory can be detected with
@@ -565,11 +577,11 @@
 
 
 /* Version number of package */
-#define VERSION "5.6.3"
+#define VERSION "5.8.1"
 
 /* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
    significant byte first (like Motorola and SPARC, unlike Intel). */
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 #include <sys/_types.h>
 #if defined(__NO_STRICT_ALIGNMENT)
 #define TUKLIB_FAST_UNALIGNED_ACCESS 1
