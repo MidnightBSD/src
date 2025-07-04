@@ -16,30 +16,90 @@
 # anyone would try a NO_CLEAN build against an object tree from before the
 # related change.  One year should be sufficient.
 
-OBJTOP=$1
-if [ ! -d "$OBJTOP" ]; then
-	echo "usage: $(basename $0) objtop" >&2
+set -e
+set -u
+
+warn()
+{
+	echo "$(basename "$0"):" "$@" >&2
+}
+
+err()
+{
+	warn "$@"
+	exit 1
+}
+
+usage()
+{
+	echo "usage: $(basename $0) [-v] [-n] objtop" >&2
+}
+
+VERBOSE=
+PRETEND=
+while getopts vn o; do
+	case "$o" in
+	v)
+		VERBOSE=1
+		;;
+	n)
+		PRETEND=1
+		;;
+	*)
+		usage
+		exit 1
+		;;
+	esac
+done
+shift $((OPTIND-1))
+
+if [ $# -ne 1 ]; then
+	usage
 	exit 1
 fi
+
+OBJTOP=$1
+shift
+if [ ! -d "$OBJTOP" ]; then
+	err "$OBJTOP: Not a directory"
+fi
+
+if [ -z "${MACHINE+set}" ]; then
+	err "MACHINE not set"
+fi
+
+if [ -z "${MACHINE_ARCH+set}" ]; then
+	err "MACHINE_ARCH not set"
+fi
+
+# XXX: _ALL_libcompats not MFC'd in Makefile.inc1
+ALL_libcompats=32
+
+run()
+{
+	if [ "$VERBOSE" ]; then
+		echo "$@"
+	fi
+	if ! [ "$PRETEND" ]; then
+		"$@"
+	fi
+}
 
 # $1 directory
 # $2 source filename w/o extension
 # $3 source extension
+# $4 optional regex for egrep -w
 clean_dep()
 {
-	if [ -e "$OBJTOP"/$1/.depend.$2.pico ] && \
-	    egrep -qw "$2\.$3" "$OBJTOP"/$1/.depend.$2.pico; then \
-		echo "Removing stale dependencies and objects for $2.$3"; \
-		rm -f \
-		    "$OBJTOP"/$1/.depend.$2.* \
-		    "$OBJTOP"/$1/$2.*o
-	fi
-	if egrep -qw "$2\.$3" "$OBJTOP"/obj-lib32/$1/.depend.$2.*o 2>/dev/null; then
-		echo "Removing 32-bit stale dependencies and objects for $2.$3"
-		rm -f \
-		    "$OBJTOP"/obj-lib32/$1/.depend.$2.* \
-		    "$OBJTOP"/obj-lib32/$1/$2.*o
-	fi
+	for libcompat in "" $ALL_libcompats; do
+		dirprfx=${libcompat:+obj-lib${libcompat}/}
+		if egrep -qw "${4:-$2\.$3}" "$OBJTOP"/$dirprfx$1/.depend.$2.*o 2>/dev/null; then
+			echo "Removing stale ${libcompat:+lib${libcompat} }dependencies and objects for $2.$3"
+			run rm -f \
+			    "$OBJTOP"/$dirprfx$1/.depend.$2.* \
+			    "$OBJTOP"/$dirprfx$1/$2.*o
+		fi
+	done
 }
 
 # Date      Rev      Description
@@ -53,14 +113,17 @@ if [ -e "$OBJTOP"/cddl/lib/libzfs/.depend.libzfs_changelist.o ] && \
     egrep -qw "cddl/contrib/opensolaris/lib/libzfs/common/libzfs_changelist.c" \
     "$OBJTOP"/cddl/lib/libzfs/.depend.libzfs_changelist.o; then
 	echo "Removing old ZFS tree"
-	rm -rf "$OBJTOP"/cddl "$OBJTOP"/obj-lib32/cddl
+	for libcompat in "" $ALL_libcompats; do
+		dirprfx=${libcompat:+obj-lib${libcompat}/}
+		run rm -rf "$OBJTOP"/${dirprfx}cddl
+	done
 fi
 
 # 20200916  WARNS bumped, need bootstrapped crunchgen stubs
 if [ -e "$OBJTOP"/rescue/rescue/rescue.c ] && \
     ! grep -q 'crunched_stub_t' "$OBJTOP"/rescue/rescue/rescue.c; then
 	echo "Removing old rescue(8) tree"
-	rm -rf "$OBJTOP"/rescue/rescue
+	run rm -rf "$OBJTOP"/rescue/rescue
 fi
 
 # 20210105  fda7daf06301   pfctl gained its own version of pf_ruleset.c
@@ -68,13 +131,16 @@ if [ -e "$OBJTOP"/sbin/pfctl/.depend.pf_ruleset.o ] && \
     egrep -qw "sys/netpfil/pf/pf_ruleset.c" \
     "$OBJTOP"/sbin/pfctl/.depend.pf_ruleset.o; then
 	echo "Removing old pf_ruleset dependecy file"
-	rm -rf "$OBJTOP"/sbin/pfctl/.depend.pf_ruleset.o
+	run rm -rf "$OBJTOP"/sbin/pfctl/.depend.pf_ruleset.o
 fi
 
 # 20210108  821aa63a0940   non-widechar version of ncurses removed
 if [ -e "$OBJTOP"/lib/ncurses/ncursesw ]; then
 	echo "Removing stale ncurses objects"
-	rm -rf "$OBJTOP"/lib/ncurses "$OBJTOP"/obj-lib32/lib/ncurses
+	for libcompat in "" $ALL_libcompats; do
+		dirprfx=${libcompat:+obj-lib${libcompat}/}
+		run rm -rf "$OBJTOP"/${dirprfx}lib/ncurses
+	done
 fi
 
 # 20210608  f20893853e8e    move from atomic.S to atomic.c
@@ -86,12 +152,36 @@ clean_dep   lib/libc        pdfork S
 if stat "$OBJTOP"/tests/sys/kqueue/libkqueue/*kqtest* \
     "$OBJTOP"/tests/sys/kqueue/libkqueue/.depend.kqtest* >/dev/null 2>&1; then
 	echo "Removing old kqtest"
-	rm -f "$OBJTOP"/tests/sys/kqueue/libkqueue/.depend.* \
+	run rm -f "$OBJTOP"/tests/sys/kqueue/libkqueue/.depend.* \
 	   "$OBJTOP"/tests/sys/kqueue/libkqueue/*
 fi
 
 # 20230110  bc42155199b5    usr.sbin/zic/zic -> usr.sbin/zic
 if [ -d "$OBJTOP"/usr.sbin/zic/zic ] ; then
 	echo "Removing old zic directory"
-	rm -rf "$OBJTOP"/usr.sbin/zic/zic
+	run rm -rf "$OBJTOP"/usr.sbin/zic/zic
+fi
+
+# 20241018  5deeebd8c6ca   Merge llvm-project release/19.x llvmorg-19.1.2-0-g7ba7d8e2f7b6
+p="$OBJTOP"/lib/clang/libclang/clang/Basic
+f="$p"/arm_mve_builtin_sema.inc
+if [ -e "$f" ]; then
+	if grep -q SemaBuiltinConstantArgRange "$f"; then
+		echo "Removing pre-llvm19 clang-tblgen output"
+		run rm -f "$p"/*.inc
+	fi
+fi
+
+# 20250425  2e47f35be5dc    libllvm, libclang and liblldb became shared libraries
+if [ -f "$OBJTOP"/lib/clang/libllvm/libllvm.a ]; then
+	echo "Removing old static libllvm library"
+        run rm -f "$OBJTOP"/lib/clang/libllvm/libllvm.a
+fi
+if [ -f "$OBJTOP"/lib/clang/libclang/libclang.a ]; then
+	echo "Removing old static libclang library"
+        run rm -f "$OBJTOP"/lib/clang/libclang/libclang.a
+fi
+if [ -f "$OBJTOP"/lib/clang/liblldb/liblldb.a ]; then
+	echo "Removing old static liblldb library"
+        run rm -f "$OBJTOP"/lib/clang/liblldb/liblldb.a
 fi

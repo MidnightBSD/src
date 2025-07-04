@@ -98,14 +98,14 @@ make_esp_device() {
     loadersize=$(stat -f %z "${file}")
     loadersize=$((loadersize / 1024))
 
-    # Check if /EFI/BOOT/BOOTxx.EFI is the FreeBSD boot1.efi
+    # Check if /EFI/BOOT/BOOTxx.EFI is the MidnightBSD boot1.efi
     # If it is, remove it to avoid leaving stale files around
     efibootfile="${mntpt}/EFI/BOOT/${efibootname}.efi"
     if [ -f "${efibootfile}" ]; then
-        isboot1=$(strings "${efibootfile}" | grep "FreeBSD EFI boot block")
+        isboot1=$(strings "${efibootfile}" | grep "MidnightBSD EFI boot block")
 
         if [ -n "${isboot1}" ] && [ "$kbfree" -lt "${loadersize}" ]; then
-            echo "Only ${kbfree}KB space remaining: removing old FreeBSD boot1.efi file /EFI/BOOT/${efibootname}.efi"
+            echo "Only ${kbfree}KB space remaining: removing old MidnightBSD boot1.efi file /EFI/BOOT/${efibootname}.efi"
             rm "${efibootfile}"
             rmdir "${mntpt}/EFI/BOOT"
         else
@@ -142,8 +142,8 @@ make_esp_device() {
         fi
 
         if [ -z "$existingbootentryloaderfile" ]; then
-            echo "Creating UEFI boot entry for FreeBSD"
-            efibootmgr --create --label FreeBSD --loader "${mntpt}/EFI/midnightbsd/loader.efi" > /dev/null
+            echo "Creating UEFI boot entry for MidnightBSD"
+            efibootmgr --create --label MidnightBSD --loader "${mntpt}/EFI/midnightbsd/loader.efi" > /dev/null
             if [ $? -ne 0 ]; then
                 die "Failed to create new boot entry"
             fi
@@ -156,7 +156,7 @@ make_esp_device() {
             echo "Marking UEFI boot entry ${bootentry} active"
             efibootmgr --activate "${bootentry}" > /dev/null
         else
-            echo "Existing UEFI FreeBSD boot entry found: not creating a new one"
+            echo "Existing UEFI MidnightBSD boot entry found: not creating a new one"
         fi
     else
 	# Configure for booting from removable media
