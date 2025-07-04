@@ -7,12 +7,12 @@
 
 /* Bug report URL. */
 #define BUG_REPORT_URL "https://bugreport.midnightbsd.org/"
+
 /* Default to -fPIE and -pie on Linux. */
 #define CLANG_DEFAULT_PIE_ON_LINUX 1
 
 /* Default linker to use. */
 #define CLANG_DEFAULT_LINKER ""
-
 
 /* Default C++ stdlib to use. */
 #define CLANG_DEFAULT_CXX_STDLIB ""
@@ -82,5 +82,8 @@
 
 /* Spawn a new process clang.exe for the CC1 tool invocation, when necessary */
 #define CLANG_SPAWN_CC1 0
+
+/* Whether CIR is built into Clang */
+#define CLANG_ENABLE_CIR 0
 
 #endif
