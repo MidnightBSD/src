@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2013-2015, 2021, 2023 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
@@ -31,8 +31,13 @@
 
 #include "mport.h"
 #include "mport_private.h"
+#include "mport_lua.h"
 
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <sys/sysctl.h>
+#include <spawn.h>
 #include <libgen.h>
 #include <stdlib.h>
 #include <string.h>
@@ -65,6 +70,8 @@ static int create_package_row(mportInstance *, mportPackageMeta *);
 
 static int create_categories(mportInstance *mport, mportPackageMeta *pkg);
 
+static int create_conflicts(mportInstance *mport, mportPackageMeta *pkg);
+
 static int create_depends(mportInstance *mport, mportPackageMeta *pkg);
 
 static int create_sample_file(mportInstance *mport, char *cwd, const char *file);
@@ -76,6 +83,8 @@ static int mark_complete(mportInstance *, mportPackageMeta *);
 static int mport_bundle_read_get_assetlist(mportInstance *mport, mportPackageMeta *pkg, mportAssetList **alist_p, enum phase);
 
 static int copy_metafile(mportInstance *, mportBundleRead *, mportPackageMeta *, char *);
+
+static bool is_linux_module_loaded(void);
 
 /**
  * This is a wrapper for all bundle read install operations
@@ -114,6 +123,15 @@ do_pre_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *
 
 	/* run mtree */
 	if (run_mtree(mport, bundle, pkg) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+
+	/* lua */
+	copy_metafile(mport, bundle, pkg, MPORT_LUA_PRE_INSTALL_FILE);
+	copy_metafile(mport, bundle, pkg, MPORT_LUA_POST_INSTALL_FILE);
+	copy_metafile(mport, bundle, pkg, MPORT_LUA_POST_DEINSTALL_FILE);
+	copy_metafile(mport, bundle, pkg, MPORT_LUA_PRE_DEINSTALL_FILE);
+	mport_lua_script_load(mport, pkg);
+	if (mport_lua_script_run(mport, pkg, MPORT_LUA_PRE_INSTALL) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
 	/* run pkg-install PRE-INSTALL */
@@ -176,8 +194,8 @@ get_file_count(mportInstance *mport, char *pkg_name, int *file_total)
 	char *err;
 
 	if (mport_db_prepare(mport->db, &count,
-	                     "SELECT COUNT(*) FROM stub.assets WHERE (type=%i or type=%i or type=%i or type=%i or type=%i) AND pkg=%Q",
-	                     ASSET_FILE, ASSET_SAMPLE, ASSET_SHELL, ASSET_FILE_OWNER_MODE, ASSET_SAMPLE_OWNER_MODE,
+	                     "SELECT COUNT(*) FROM stub.assets WHERE (type=%i or type=%i or type=%i or type=%i or type=%i or type=%i) AND pkg=%Q",
+	                     ASSET_FILE, ASSET_SAMPLE, ASSET_SHELL, ASSET_FILE_OWNER_MODE, ASSET_SAMPLE_OWNER_MODE, ASSET_INFO, 
 	                     pkg_name) != MPORT_OK) {
 		sqlite3_finalize(count);
 		RETURN_CURRENT_ERROR;
@@ -238,6 +256,19 @@ create_categories(mportInstance *mport, mportPackageMeta *pkg)
 
 	return MPORT_OK;
 }
+
+static int
+create_conflicts(mportInstance *mport, mportPackageMeta *pkg)
+{
+	/* Insert the conflicts into the master table */
+	if (mport_db_do(mport->db,
+	                "INSERT INTO conflicts (pkg, conflict_pkg, conflict_version) SELECT pkg, conflict_pkg, conflict_version FROM stub.conflicts WHERE pkg=%Q",
+	                pkg->name) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+
+	return MPORT_OK;
+}
+
 
 static char **
 parse_sample(char *input)
@@ -439,6 +470,9 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 	if (create_categories(mport, pkg) != MPORT_OK)
 		goto ERROR;
 
+	if (create_conflicts(mport, pkg) != MPORT_OK)
+		goto ERROR;
+
 	/* Insert the assets into the master table. We do this one by one because we want to insert file assets as absolute paths. */
 	if (mport_db_prepare(mport->db, &insert,
 	                     "INSERT INTO assets (pkg, type, data, checksum, owner, grp, mode) values (%Q,?,?,?,?,?,?)",
@@ -526,6 +560,8 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 				/* FALLS THROUGH */
 			case ASSET_SAMPLE:
 				/* FALLS THROUGH */
+			case ASSET_INFO:
+				/* FALLS THROUGH */
 			case ASSET_SAMPLE_OWNER_MODE:
 				if (mport_bundle_read_next_entry(bundle, &entry) != MPORT_OK)
 					goto ERROR;
@@ -567,7 +603,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 						if (e->owner != NULL && e->group != NULL && e->owner[0] != '\0' &&
 						    e->group[0] != '\0') {
 #ifdef DEBUG
-							fprintf(stderr, "owner %s and group %s\n", e->owner, e->group);
+							mport_call_msg_cb(mport, "owner %s and group %s\n", e->owner, e->group);
 #endif
 							if (chown(file, mport_get_uid(e->owner),
 							          mport_get_gid(e->group)) == -1) {
@@ -576,7 +612,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 							}
 						} else if (e->owner != NULL && e->owner[0] != '\0') {
 #ifdef DEBUG
-							fprintf(stderr, "owner %s\n", e->owner);
+							mport_call_msg_cb(mport, "owner %s\n", e->owner);
 #endif
 							if (chown(file, mport_get_uid(e->owner), group) == -1) {
 								SET_ERROR(MPORT_ERR_FATAL, "Unable to change owner");
@@ -584,7 +620,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 							}
 						} else if (e->group != NULL && e->group[0] != '\0') {
 #ifdef DEBUG
-							fprintf(stderr, "group %s\n", e->group);
+							mport_call_msg_cb(mport, "group %s\n", e->group);
 #endif
 							if (chown(file, owner, mport_get_gid(e->group)) == -1) {
 								SET_ERROR(MPORT_ERR_FATAL, "Unable to change owner");
@@ -616,7 +652,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 						if ((e->type == ASSET_SAMPLE_OWNER_MODE || e->type == ASSET_FILE_OWNER_MODE)
 						    && e->mode != NULL && e->mode[0] != '\0') {
 #ifdef DEBUG
-							fprintf(stderr, "sample or file owner mode %s\n", e->mode);
+							mport_call_msg_cb(mport, "sample or file owner mode %s\n", e->mode);
 #endif
 							if ((set = setmode(e->mode)) == NULL) {
 								SET_ERROR(MPORT_ERR_FATAL, "Unable to set mode");
@@ -624,7 +660,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 							}
 						} else {
 #ifdef DEBUG
-							fprintf(stderr, "mode %s\n", e->mode);
+							mport_call_msg_cb(mport, "mode %s\n", e->mode);
 #endif
 							if ((set = setmode(mode)) == NULL) {
 								SET_ERROR(MPORT_ERR_FATAL, "Unable to set mode");
@@ -673,7 +709,7 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 			goto ERROR;
 		}
 		if (e->type == ASSET_FILE || e->type == ASSET_SAMPLE || e->type == ASSET_SHELL ||
-		    e->type == ASSET_FILE_OWNER_MODE || e->type == ASSET_SAMPLE_OWNER_MODE) {
+		    e->type == ASSET_FILE_OWNER_MODE || e->type == ASSET_SAMPLE_OWNER_MODE || e->type == ASSET_INFO) {
 			/* don't put the root in the database! */
 			if (sqlite3_bind_text(insert, 2, filePtr + strlen(mport->root), -1, SQLITE_STATIC) !=
 			    SQLITE_OK) {
@@ -806,10 +842,11 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 	return (MPORT_OK);
 
 	ERROR:
-	sqlite3_finalize(insert);
-	(mport->progress_free_cb)();
-	free(orig_cwd);
-	mport_assetlist_free(alist);
+		sqlite3_finalize(insert);
+		(mport->progress_free_cb)();
+		free(orig_cwd);
+		mport_assetlist_free(alist);
+
 	RETURN_CURRENT_ERROR;
 }
 
@@ -860,6 +897,9 @@ do_post_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta 
 	if (mport_pkg_message_display(mport, pkg) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
+	if (mport_lua_script_run(mport, pkg, MPORT_LUA_POST_INSTALL) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+
 	if (run_pkg_install(mport, bundle, pkg, "POST-INSTALL") != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
@@ -875,6 +915,7 @@ run_postexec(mportInstance *mport, mportPackageMeta *pkg)
 	mportAssetList *alist;
 	mportAssetListEntry *e = NULL;
 	char cwd[FILENAME_MAX];
+	char in[FILENAME_MAX];
 
 	/* Process @postexec steps */
 	if (mport_bundle_read_get_assetlist(mport, pkg, &alist, POSTINSTALL) != MPORT_OK)
@@ -912,6 +953,20 @@ run_postexec(mportInstance *mport, mportPackageMeta *pkg)
 				}
 				break;
 			case ASSET_LDCONFIG_LINUX:
+				if (!is_linux_module_loaded()) {
+					/* load the linux module */
+					mport_call_msg_cb(mport, "Loading Linux kernel module.  To make this permanent, follow instructions in man LINUX(4)");
+#if defined(__amd64__)
+					if (mport_xsystem(mport, "/sbin/kldload linux64") != MPORT_OK) {
+						goto ERROR;
+					}
+#elif defined(__i386__)
+					if (mport_xsystem(mport, "/sbin/kldload linux") != MPORT_OK) {
+                        goto ERROR;
+                    }
+#endif
+				}
+
 				if (e->data == NULL) {
 					if (mport_xsystem(mport, "/compat/linux/sbin/ldconfig") != MPORT_OK) {
 						goto ERROR;
@@ -929,8 +984,15 @@ run_postexec(mportInstance *mport, mportPackageMeta *pkg)
 				}
 				break;
 			case ASSET_INFO:
-				if (mport_file_exists("/usr/local/bin/indexinfo") && 
-					mport_xsystem(mport, "/usr/local/bin/indexinfo %s", e->data == NULL ? pkg->prefix : e->data) != MPORT_OK) {
+				if (e->data != NULL) {
+					strlcpy(in, e->data, sizeof(in));
+				} else {
+					strlcpy(in, "/usr/local/share/info", sizeof(in));
+				}
+				char *abs_path = realpath(in, NULL);
+				char *info_dir = dirname(abs_path);
+				if (info_dir != NULL && mport_file_exists("/usr/local/bin/indexinfo") && 
+					mport_xsystem(mport, "/usr/local/bin/indexinfo %s", info_dir) != MPORT_OK) {
 					goto ERROR;
 				}
 				break;
@@ -964,24 +1026,53 @@ run_postexec(mportInstance *mport, mportPackageMeta *pkg)
 	RETURN_CURRENT_ERROR;
 }
 
+static bool 
+is_linux_module_loaded(void) {
+    size_t len;
+
+    if (sysctlbyname("compat.linux.osrelease", NULL, &len, NULL, 0) == -1) {
+		return false;
+    }
+
+	return true;
+}
+
 
 static int
 run_mtree(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pkg)
 {
 	char file[FILENAME_MAX];
 	int ret;
+	pid_t pid;
 
 	(void) snprintf(file, FILENAME_MAX, "%s/%s/%s-%s/%s", bundle->tmpdir, MPORT_STUB_INFRA_DIR, pkg->name,
-	                pkg->version,
-	                MPORT_MTREE_FILE);
+		pkg->version, MPORT_MTREE_FILE);
+
+	char *const args[] = {MPORT_MTREE_BIN, "-U", "-f", file, "-d", "-e", "-p", pkg->prefix, NULL};
+	char *const envp[] = {NULL};
 
 	if (mport_file_exists(file)) {
-		if ((ret = mport_xsystem(mport, "%s -U -f %s -d -e -p %s >/dev/null", MPORT_MTREE_BIN, file,
-		                         pkg->prefix)) != 0)
+		ret = posix_spawn(&pid, MPORT_MTREE_BIN, NULL, NULL, args, envp);
+
+		if (ret == 0) {
+			int status;
+			if (waitpid(pid, &status, 0) == -1) {
+				RETURN_ERRORX(MPORT_ERR_FATAL, "waitpid failed: %s", strerror(errno));
+			}
+			if (WIFEXITED(status)) {
+                ret = WEXITSTATUS(status);
+                if (ret != 0) {
+                    RETURN_ERRORX(MPORT_ERR_FATAL, "%s returned non-zero: %i", MPORT_MTREE_BIN, ret);
+                }
+            } else {
+                RETURN_ERRORX(MPORT_ERR_FATAL, "%s terminated abnormally", MPORT_MTREE_BIN);
+            }
+		} else {
 			RETURN_ERRORX(MPORT_ERR_FATAL, "%s returned non-zero: %i", MPORT_MTREE_BIN, ret);
+		}
 	}
 
-	return MPORT_OK;
+	return (MPORT_OK);
 }
 
 
@@ -992,16 +1083,15 @@ run_pkg_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta 
 	int ret;
 
 	(void) snprintf(file, FILENAME_MAX, "%s/%s/%s-%s/%s", bundle->tmpdir, MPORT_STUB_INFRA_DIR, pkg->name,
-	                pkg->version,
-	                MPORT_INSTALL_FILE);
+	                pkg->version, MPORT_INSTALL_FILE);
 
 	if (mport_file_exists(file)) {
-		if (chmod(file, 755) != 0)
-			RETURN_ERRORX(MPORT_ERR_FATAL, "chmod(%s, 755): %s", file, strerror(errno));
+		if (chmod(file, 750) != 0)
+			RETURN_ERRORX(MPORT_ERR_FATAL, "chmod(%s, 750): %s", file, strerror(errno));
 
 		if ((ret = mport_xsystem(mport, "PKG_PREFIX=%s %s %s %s", pkg->prefix, file, pkg->name, mode)) != 0)
 			RETURN_ERRORX(MPORT_ERR_FATAL, "%s %s returned non-zero: %i", MPORT_INSTALL_FILE, mode, ret);
 	}
 
-	return MPORT_OK;
+	return (MPORT_OK);
 }

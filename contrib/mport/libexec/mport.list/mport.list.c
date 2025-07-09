@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010, 2011, 2013, 2014 Lucas Holt
  * Copyright (c) 2008 Chris Reinhardt
@@ -124,8 +124,20 @@ main(int argc, char *argv[])
 static void
 usage(void)
 {
-
-	fprintf(stderr, "Usage: mport.list [-q | -v | -u | -c <chroot path>]\n");
-
+	fprintf(stderr, "Usage: mport.list [OPTIONS]\n");
+	fprintf(stderr, "Options:\n");
+    fprintf(stderr, "  -b         Brief output format\n");
+    fprintf(stderr, "  -c <path>  Set chroot path\n");
+    fprintf(stderr, "  -l         List locked packages\n");
+    fprintf(stderr, "  -o         Show package origins\n");
+    fprintf(stderr, "  -p         List prime packages only\n");
+    fprintf(stderr, "  -q         Quiet mode\n");
+    fprintf(stderr, "  -v         Verbose mode\n");
+    fprintf(stderr, "  -u         Show available updates\n");
+    fprintf(stderr, "  -U         Do not use index for update information\n");
+    fprintf(stderr, "\nExamples:\n");
+    fprintf(stderr, "  mport.list -v            # List all packages verbosely\n");
+    fprintf(stderr, "  mport.list -q -u         # Quietly list available updates\n");
+ 
 	exit(2);
 }

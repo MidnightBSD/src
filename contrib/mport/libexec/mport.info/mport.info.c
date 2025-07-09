@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2010, 2022 Lucas Holt
  * Copyright (c) 2008 Chris Reinhardt
@@ -48,9 +48,10 @@ main(int argc, char *argv[]) {
 	bool quiet = false;
 	bool verbose = false;
 	bool origin = false;
+	bool xFlag = false;
 	const char *chroot_path = NULL;
 
-	while ((ch = getopt(argc, argv, "c:oqv")) != -1) {
+	while ((ch = getopt(argc, argv, "c:oqvx")) != -1) {
 		switch (ch) {
 			case 'c':
 				chroot_path = optarg;
@@ -63,6 +64,10 @@ main(int argc, char *argv[]) {
 				break;
 			case 'v':
 				verbose = true;
+				break;
+			case 'x':
+			    xFlag = true;
+				quiet = true;
 				break;
 			case '?':
 			default:
@@ -106,17 +111,24 @@ main(int argc, char *argv[]) {
 		exit(3);
 	}
 
-	if (mport->verbosity != MPORT_VQUIET)
+	if (mport->verbosity != MPORT_VQUIET && origin)
 		printf("The following installed package(s) has %s origin:\n", argv[0]);
 
 	while (*packs != NULL) {
-		if (strcmp(argv[0], (*packs)->origin) == 0) {
-			if (origin) {
+		if (origin && strcmp(argv[0], (*packs)->origin) == 0) {
+			if (xFlag) {
+				printf("%s-%s\n", (*packs)->name, (*packs)->version);
+			} else {
 				printf("%s-%s\t\t%s\n", (*packs)->name, (*packs)->version,
 				       (*packs)->origin);
-			} else {
-				printf("%s-%s\n", (*packs)->name, (*packs)->version);
 			}
+		} else if (strcmp(argv[0], (*packs)->name) == 0) {
+			if (xFlag) {
+				printf("%s-%s\n", (*packs)->name, (*packs)->version);
+			} else {
+                printf("%s-%s\t\t%s\n", (*packs)->name, (*packs)->version,
+                       (*packs)->origin);
+            }
 		}
 
 		packs++;
@@ -130,6 +142,6 @@ main(int argc, char *argv[]) {
 
 static void
 usage(void) {
-	fprintf(stderr, "Usage: mport.info [-o | -q | -v] [-c <chroot directory>] <origin>\n");
+	fprintf(stderr, "Usage: mport.info [-o | -q | -v | -x] [-c <chroot directory>] <origin>\n");
 	exit(2);
 }

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2021 Lucas Holt
  * Copyright (c) 2009 Chris Reinhardt
@@ -44,7 +44,7 @@ static int build_create_extras_depends(mportInstance *, mportPackageMeta *, mpor
 
 int mport_bundle_read_update_pkg(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pkg)
 {
-	char tmpfile2[] = "/tmp/mport.XXXXXXXX";
+	char tmpfile2[] = _PATH_TMP "mport.XXXXXXXX";
 	int fd;
 
 	mport_pkgmeta_logevent(mport, pkg, "Begining update");
@@ -67,8 +67,8 @@ int mport_bundle_read_update_pkg(mportInstance *mport, mportBundleRead *bundle, 
         (mport_bundle_read_install_pkg(mport, bundle, pkg) != MPORT_OK)
 	) 
 	{
-    		if (install_backup_bundle(mport, tmpfile2) == MPORT_OK) {
-			(void)mport_rmtree(tmpfile2);
+    	if (install_backup_bundle(mport, tmpfile2) == MPORT_OK) {
+          (void)mport_rmtree(tmpfile2);
 		} else {
 			mport_call_msg_cb(mport, "Error restoring backup package %s", pkg->name);
 		}

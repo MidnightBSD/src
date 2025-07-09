@@ -1,7 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
- * Copyright (c) 2014 Lucas Holt
+ * Copyright (c) 2014, 2025 Lucas Holt
  * Copyright (c) 2007 Chris Reinhardt
  * All rights reserved.
  *
@@ -38,6 +38,11 @@
 
 #include <mport.h>
 
+#define MPORT_LUA_PRE_INSTALL_FILE "pkg-pre-install.lua"
+#define MPORT_LUA_POST_INSTALL_FILE "pkg-post-install.lua"
+#define MPORT_LUA_PRE_DEINSTALL_FILE "pkg-pre-deinstall.lua"
+#define MPORT_LUA_POST_DEINSTALL_FILE "pkg-post-deinstall.lua"
+
 static void usage(void);
 
 static void check_for_required_args(const mportPackageMeta *, const mportCreateExtras *);
@@ -68,7 +73,7 @@ int main(int argc, char *argv[])
 		errx(EXIT_FAILURE, "%s", mport_err_string());
 	}
 
-	while ((ch = getopt(argc, argv, "C:D:E:M:O:P:S:c:d:e:f:i:j:l:m:n:o:p:r:s:t:v:x:")) != -1) {
+	while ((ch = getopt(argc, argv, "C:D:E:L:M:O:P:S:c:d:e:f:i:j:l:m:n:o:p:r:s:t:v:x:")) != -1) {
 		switch (ch) {
 			case 'o':
 				strlcpy(extra->pkg_filename, optarg, sizeof(extra->pkg_filename));
@@ -143,7 +148,7 @@ int main(int argc, char *argv[])
 				}
 				break;
 			case 'C':
-				mport_parselist(optarg, &(extra->conflicts), &(extra->conflicts_count));
+				mport_parselist_tll(optarg, &(extra->conflicts));
 				break;
 			case 'E':
 				strptime(optarg, "%Y-%m-%d", &expDate);
@@ -154,6 +159,14 @@ int main(int argc, char *argv[])
 					pack->no_provide_shlib = 1;
 				else
 					pack->no_provide_shlib = 0;
+				break;
+			case 'L':
+				if (optarg != NULL) {
+					asprintf(&extra->luapkgpostinstall, "%s/%s", optarg, MPORT_LUA_POST_INSTALL_FILE);
+					asprintf(&extra->luapkgpreinstall, "%s/%s", optarg, MPORT_LUA_PRE_INSTALL_FILE);
+					asprintf(&extra->luapkgpostdeinstall, "%s/%s", optarg, MPORT_LUA_POST_DEINSTALL_FILE);
+					asprintf(&extra->luapkgpredeinstall, "%s/%s", optarg, MPORT_LUA_PRE_DEINSTALL_FILE);
+				}
 				break;
 			case 'i':
 				extra->pkginstall = strdup(optarg);

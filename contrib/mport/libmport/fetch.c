@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011, 2025 Lucas Holt
  * Copyright (c) 2009 Chris Reinhardt
@@ -66,7 +66,7 @@ mport_fetch_index(mportInstance *mport)
 	if (mport_index_get_mirror_list(mport, &mirrors, &mirrorCount) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
-#ifdef DEBUGGING 
+#ifdef DEBUG 
 	fprintf(stderr, "Mirror count is %d\n", mirrorCount);
 #endif
  
@@ -91,9 +91,7 @@ mport_fetch_index(mportInstance *mport)
 				free(hashUrl);
 
 				if (hash == NULL || mport_verify_hash(MPORT_INDEX_FILE_COMPRESSED, hash) == 0) {
-#ifdef DEBUGGING 
-					fprintf(stderr, "Index hash failed verification: %s\n", hash);
-#endif
+					mport_call_msg_cb(mport, "Index hash failed verification: %s\n", hash);
 					free(hash);
 					free(url);
 					continue;
@@ -152,10 +150,8 @@ mport_fetch_bootstrap_index(mportInstance *mport)
 		char *hash = mport_extract_hash_from_file(MPORT_INDEX_FILE_HASH);
 
 		if (hash == NULL || mport_verify_hash(MPORT_INDEX_FILE_COMPRESSED, hash) == 0) {
-#ifdef DEBUGGING 
-			fprintf(stderr, "Index hash failed verification: %s\n", hash);
-#endif 
-        	} else {
+			mport_call_msg_cb(mport, "Bootstrap index hash failed verification: %s\n", hash);
+        } else {
 			mport_decompress_zstd(MPORT_INDEX_FILE_COMPRESSED, mport_index_file_path());
 		}
 		free(hash);
@@ -238,7 +234,7 @@ mport_fetch_cves(mportInstance *mport, char *cpe)
 	int result;
 	char *url;
 
-	char tmpfile2[] = "/tmp/mport.cve.XXXXXXXX";
+	char tmpfile2[] = _PATH_TMP "mport.cve.XXXXXXXX";
 	int fd;
 
 	if ((fd = mkstemp(tmpfile2)) == -1) {
@@ -442,6 +438,13 @@ getfile:
 				if (retryCount < 2)
 					goto getfile;
 			}
+		} else {
+			/* the index might be stale. re-fetch it */
+			mport_call_msg_cb(mport, "The index might be stale. Attempting to refresh it.\n");
+			mport_index_get(mport);
+			retryCount++;
+			if (retryCount < 2)
+				goto getfile;
 		}
 		free(*path);
 		path = NULL;

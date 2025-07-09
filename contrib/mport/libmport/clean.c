@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011, 2023 Lucas Holt
  * All rights reserved.
@@ -194,7 +194,7 @@ mport_clean_tempfiles(mportInstance *mport)
 
 	int deleted = 0;
 	struct dirent *de;
-	DIR *d = opendir("/tmp");
+	DIR *d = opendir(_PATH_TMP);
 	
 	if (d == NULL) {
 		error_code = SET_ERRORX(MPORT_ERR_FATAL, "Couldn't open directory %s: %s", MPORT_INST_INFRA_DIR,
@@ -211,7 +211,7 @@ mport_clean_tempfiles(mportInstance *mport)
 	       		continue;
 
 
-		asprintf(&path, "%s/%s", "/tmp", de->d_name);
+		asprintf(&path, "%s%s", _PATH_TMP, de->d_name);
 		if (path == NULL) {
 			continue;
 		}

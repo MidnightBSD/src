@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  * 
  * Copyright (c) 2013, 2014, 2021, 2024 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
@@ -31,9 +31,13 @@
 #ifndef _MPORT_H_
 #define _MPORT_H_
 
+#ifdef __linux__
+#define _GNU_SOURCE
+#endif
 
-#include <sys/cdefs.h>
+#include <limits.h>
 #include <archive.h>
+#include <paths.h>
 #include <sqlite3.h>
 #include <sys/queue.h>
 #include <stdio.h>
@@ -41,11 +45,17 @@
 #include <sys/param.h>
 #include "tllist.h"
 
+#ifndef MAXLOGNAME
+#define MAXLOGNAME 32
+#endif
+
 typedef void (*mport_msg_cb)(const char *);
 typedef void (*mport_progress_init_cb)(const char *);
 typedef void (*mport_progress_step_cb)(int, int, const char *);
 typedef void (*mport_progress_free_cb)(void);
 typedef int (*mport_confirm_cb)(const char *, const char *, const char *, int);
+
+typedef tll(char *) stringlist_t;
 
 /* Mport Instance (an installed copy of the mport system) */
 #define MPORT_INST_HAVE_INDEX 1
@@ -64,6 +74,7 @@ typedef struct {
   int flags;
   sqlite3 *db;
   char *root;
+  int rootfd; /* Root directory file descriptor */
   char *outputPath; /* Download directory */
   bool noIndex; /* Do not fetch mport index */
   bool offline; /* Installing packages from local files, etc. */
@@ -80,12 +91,19 @@ mportInstance * mport_instance_new(void);
 int mport_instance_init(mportInstance *, const char *, const char *, bool noIndex, mportVerbosity verbosity);
 int mport_instance_free(mportInstance *);
 
+/* Run the callbacks. will display messages, etc */
+int mport_call_msg_cb(mportInstance *, const char *, ...);
+int mport_call_progress_init_cb(mportInstance *, const char *, ...);
+bool mport_call_confirm_cb(mportInstance *mport, const char *msg, const char *yes, const char *no, int def);
+
+/* setup your custom callbacks */
 void mport_set_msg_cb(mportInstance *, mport_msg_cb);
 void mport_set_progress_init_cb(mportInstance *, mport_progress_init_cb);
 void mport_set_progress_step_cb(mportInstance *, mport_progress_step_cb);
 void mport_set_progress_free_cb(mportInstance *, mport_progress_free_cb);
 void mport_set_confirm_cb(mportInstance *, mport_confirm_cb);
 
+/* default cbs for terminal use. For graphical apps, you want to make your own */
 void mport_default_msg_cb(const char *);
 int mport_default_confirm_cb(const char *, const char *, const char *, int);
 void mport_default_progress_init_cb(const char *);
@@ -150,6 +168,8 @@ enum _Type{
 };
 typedef enum _Type mportType;
 
+#define MPORT_NUM_LUA_SCRIPTS 5
+
 /* Package Meta-data structure */
 typedef struct {
     char *name;
@@ -170,10 +190,13 @@ typedef struct {
     int no_provide_shlib;
     char *flavor;
     mportAutomatic automatic;
-	  time_t install_date;
+    time_t install_date;
     mportAction action; // not populated from package table
     mportType type;
     int64_t flatsize;
+    stringlist_t  lua_scripts[MPORT_NUM_LUA_SCRIPTS]; // not populated from package table
+    stringlist_t  conflicts; // not populated from package table
+    // TODO: conflicts should be a structure
 } __attribute__ ((aligned (16)))  mportPackageMeta;
 
 int mport_asset_get_assetlist(mportInstance *, mportPackageMeta *, mportAssetList **);
@@ -270,11 +293,14 @@ typedef struct {
   char sourcedir[FILENAME_MAX];
   char **depends;
   size_t depends_count;
-  char *mtree;
-  char **conflicts;
-  size_t conflicts_count;  
+  char *mtree; 
+  stringlist_t conflicts;
   char *pkginstall;
   char *pkgdeinstall;
+  char *luapkgpreinstall;
+  char *luapkgpredeinstall;
+  char *luapkgpostinstall;
+  char *luapkgpostdeinstall;
   char *pkgmessage;
   bool is_backup;
 } mportCreateExtras;  
@@ -289,6 +315,7 @@ int mport_merge_primative(mportInstance *mport, const char **, const char *);
 
 /* Package installation */
 int mport_install(mportInstance *, const char *, const char *, const char *, mportAutomatic);
+int mport_install_single(mportInstance *mport, const char *pkgname, const char *version, const char *prefix, mportAutomatic automatic);
 int mport_install_primative(mportInstance *, const char *, const char *, mportAutomatic);
 
 /* package updating */
@@ -305,6 +332,7 @@ int mport_autoremove(mportInstance *);
 
 /* package verify */
 int mport_verify_package(mportInstance *, mportPackageMeta *);
+int mport_recompute_checksums(mportInstance *, mportPackageMeta *);
 
 /* version comparing */
 int mport_version_cmp(const char *, const char *);
@@ -337,7 +365,9 @@ int mport_setting_set(mportInstance *, const char *, const char *);
 char ** mport_setting_list(mportInstance *);
 
 /* Utils */
+char * mport_purl_uri(mportPackageMeta *packs);
 void mport_parselist(char *, char ***, size_t *);
+void mport_parselist_tll(char *, stringlist_t *);
 int mport_verify_hash(const char *, const char *);
 int mport_file_exists(const char *);
 char * mport_version(mportInstance *);
@@ -345,6 +375,8 @@ char * mport_version_short(mportInstance *);
 char * mport_get_osrelease(mportInstance *);
 int mport_drop_privileges(void);
 char * mport_string_replace(const char *str, const char *old, const char *new);
+bool mport_is_elf_file(const char *file);
+bool mport_is_statically_linked(const char *file);
 
 /* Locks */
 enum _LockState {

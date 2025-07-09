@@ -1,7 +1,7 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
- * Copyright (c) 2015 Lucas Holt
+ * Copyright (c) 2015, 2025 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
  *
@@ -43,6 +43,7 @@
 
 #include "mport.h"
 #include "mport_private.h"
+#include "mport_lua.h"
 
 static int run_unexec(mportInstance *, mportPackageMeta *, mportAssetListEntryType);
 static int run_unldconfig(mportInstance *, mportPackageMeta *);
@@ -51,6 +52,22 @@ static int run_pkg_deinstall(mportInstance *, mportPackageMeta *, const char *);
 static int delete_pkg_infra(mportInstance *, mportPackageMeta *);
 static int check_for_upwards_depends(mportInstance *, mportPackageMeta *);
 static bool is_safe_to_delete_dir(mportInstance *, mportPackageMeta *, const char *);
+static bool is_system_dir(const char *path);
+
+static const char *system_dirs[] = {
+	"/boot", 
+	_PATH_ETC, "/etc/rc.d", 
+	"/root",
+	_PATH_TMP,
+    "/usr/lib", "/usr/bin", "/usr/sbin", _PATH_MAN, _PATH_LOCALE, _PATH_FIRMWARE,
+    "/usr/share", 
+	"/usr/local", "/usr/local/bin", "/usr/local/sbin",
+	"/usr/local/share", "/usr/local/lib", "/usr/local/libexec",
+    "/usr/local/include", 
+	"/var", "/var/lib", "/var/log", "/var/spool", "/var/empty", 
+	_PATH_VARDB, _PATH_VARRUN, _PATH_VARTMP, _PATH_MAILDIR,
+};
+
 
 MPORT_PUBLIC_API int
 mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
@@ -71,11 +88,13 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 
 	mport_start_stop_service(mport, pack, SERVICE_STOP);
 
+	mport_lua_script_load(mport, pack);
+
 	/* get the file count for the progress meter */
 	if (mport_db_prepare(mport->db, &stmt,
-		"SELECT COUNT(*) FROM assets WHERE (type=%i or type=%i or type=%i or type=%i or type=%i) AND pkg=%Q",
+		"SELECT COUNT(*) FROM assets WHERE (type=%i or type=%i or type=%i or type=%i or type=%i or type=%i) AND pkg=%Q",
 		ASSET_FILE, ASSET_SAMPLE, ASSET_SAMPLE_OWNER_MODE, ASSET_SHELL,
-		ASSET_FILE_OWNER_MODE, pack->name) != MPORT_OK)
+		ASSET_FILE_OWNER_MODE, ASSET_INFO, pack->name) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
 	switch (sqlite3_step(stmt)) {
@@ -104,6 +123,9 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 		RETURN_CURRENT_ERROR;
 
 	if (run_unldconfig(mport, pack) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+
+	if (mport_lua_script_run(mport, pack, MPORT_LUA_PRE_DEINSTALL) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
 	if (run_pkg_deinstall(mport, pack, "DEINSTALL") != MPORT_OK)
@@ -169,6 +191,8 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 		case ASSET_SHELL:
 		/* falls through */
 		case ASSET_SAMPLE:
+			/* falls through */
+		case ASSET_INFO:
 			/* falls through */
 		case ASSET_SAMPLE_OWNER_MODE:
 			(mport->progress_step_cb)(++current, total, file);
@@ -299,6 +323,9 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 		RETURN_CURRENT_ERROR;
 	}
 
+	if (mport_lua_script_run(mport, pack, MPORT_LUA_POST_DEINSTALL) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+
 	if (run_pkg_deinstall(mport, pack, "POST-DEINSTALL") != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
@@ -315,6 +342,9 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 		RETURN_CURRENT_ERROR;
 
 	if (mport_db_do(mport->db, "DELETE FROM categories WHERE pkg=%Q", pack->name) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+
+	if (mport_db_do(mport->db, "DELETE FROM conflicts WHERE pkg=%Q", pack->name) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
 	if (mport_pkg_message_display(mport, pack) != MPORT_OK)
@@ -336,6 +366,15 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 	return (MPORT_OK);
 }
 
+static bool is_system_dir(const char *path) {
+    for (size_t i = 0; i < sizeof(system_dirs) / sizeof(system_dirs[0]); i++) {
+        if (strcmp(path, system_dirs[i]) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool is_safe_to_delete_dir(mportInstance *mport, mportPackageMeta *pack, const char *path) 
 {
 	sqlite3_stmt *stmt;
@@ -354,6 +393,12 @@ bool is_safe_to_delete_dir(mportInstance *mport, mportPackageMeta *pack, const c
 		mport_call_msg_cb(mport, "Skipping removal of package prefix directory: '%s'", path);
 		return false;
 	}
+
+	/* Check if the path is a system directory */
+	if (pack->type == MPORT_TYPE_APP && is_system_dir(path)) {
+		mport_call_msg_cb(mport, "Skipping removal of system directory: '%s'", path);
+		return false;
+	}	
 
 	if (mport_db_prepare(mport->db, &stmt,
 		"SELECT count(*) from assets where pkg!=%Q and type in (%d, %d, %d, %d) and data=%Q",
@@ -449,6 +494,7 @@ run_special_unexec(mportInstance *mport, mportPackageMeta *pkg)
 {
 	int ret;
 	char cwd[FILENAME_MAX];
+	char in[FILENAME_MAX];
 	sqlite3_stmt *assets = NULL;
 	sqlite3 *db;
 	const char *data;
@@ -490,9 +536,15 @@ run_special_unexec(mportInstance *mport, mportPackageMeta *pkg)
 			}
 			break;
 		case ASSET_INFO:
-			if (mport_file_exists("/usr/local/bin/indexinfo") &&
-			    mport_xsystem(mport, "/usr/local/bin/indexinfo %s",
-				data == NULL ? pkg->prefix : data) != MPORT_OK) {
+			if (data != NULL) {
+				strlcpy(in, data, sizeof(in));
+			} else {
+				strlcpy(in, "/usr/local/share/info", sizeof(in));
+			}
+			char *abs_path = realpath(in, NULL);
+			char *info_dir = dirname(abs_path);
+			if (info_dir != NULL && mport_file_exists("/usr/local/bin/indexinfo") &&
+			    mport_xsystem(mport, "/usr/local/bin/indexinfo %s",info_dir) != MPORT_OK) {
 				goto SPECIAL_ERROR;
 			}
 			break;
@@ -628,6 +680,24 @@ delete_pkg_infra(mportInstance *mport, mportPackageMeta *pack)
 	if (mport_file_exists(file) && unlink(file) != 0)
 		mport_call_msg_cb(
 		    mport, "Could not unlink %s: %s", file, strerror(errno));
+
+	/* delete lua files */
+	(void) snprintf(file, FILENAME_MAX, "%s%s/%s-%s/%s", mport->root, MPORT_STUB_INFRA_DIR, pack->name,
+		pack->version, MPORT_LUA_POST_INSTALL_FILE);
+	if (mport_file_exists(file) && unlink(file) != 0)
+		mport_call_msg_cb(mport, "Could not unlink %s: %s", file, strerror(errno));
+	(void) snprintf(file, FILENAME_MAX, "%s%s/%s-%s/%s", mport->root, MPORT_STUB_INFRA_DIR, pack->name,
+		pack->version, MPORT_LUA_PRE_INSTALL_FILE);
+	if (mport_file_exists(file) && unlink(file) != 0)
+		mport_call_msg_cb(mport, "Could not unlink %s: %s", file, strerror(errno));
+	(void) snprintf(file, FILENAME_MAX, "%s%s/%s-%s/%s", mport->root, MPORT_STUB_INFRA_DIR, pack->name,
+		pack->version, MPORT_LUA_POST_DEINSTALL_FILE);
+	if (mport_file_exists(file) && unlink(file) != 0)
+		mport_call_msg_cb(mport, "Could not unlink %s: %s", file, strerror(errno));
+	(void) snprintf(file, FILENAME_MAX, "%s%s/%s-%s/%s", mport->root, MPORT_STUB_INFRA_DIR, pack->name,
+		pack->version, MPORT_LUA_PRE_DEINSTALL_FILE);
+	if (mport_file_exists(file) && unlink(file) != 0)
+		mport_call_msg_cb(mport, "Could not unlink %s: %s", file, strerror(errno));	
 
 	(void)snprintf(dir, FILENAME_MAX, "%s%s/%s-%s", mport->root, MPORT_INST_INFRA_DIR,
 	    pack->name, pack->version);

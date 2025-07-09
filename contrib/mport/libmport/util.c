@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011, 2013, 2015, 2021 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
@@ -31,12 +31,14 @@
 
 #include <sys/types.h>
 #include <sys/sysctl.h>
+#include <ctype.h>
 #include <pwd.h>
 #include <grp.h>
 #include <sha256.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -48,6 +50,9 @@
 #include <poll.h>
 #include <libgen.h>
 #include <unistd.h>
+#include <libelf.h>
+#include <gelf.h>
+
 #include "mport.h"
 #include "mport_private.h"
 
@@ -66,10 +71,15 @@ mport_createextras_new(void)
 	extra->pkg_filename[0] = '\0';
 	extra->sourcedir[0] = '\0';
 	extra->mtree = NULL;
+	
 	extra->pkginstall = NULL;
 	extra->pkgdeinstall = NULL;
+	extra->luapkgpostdeinstall = NULL;
+	extra->luapkgpostinstall = NULL;
+	extra->luapkgpreinstall = NULL;
+	extra->luapkgpredeinstall = NULL;
+
 	extra->pkgmessage = NULL;
-	extra->conflicts = NULL;
 	extra->depends = NULL;
 
 	return extra;
@@ -92,18 +102,14 @@ mport_createextras_free(mportCreateExtras *extra)
 	free(extra->pkgmessage);
 	extra->pkgmessage = NULL;
 
-	if (extra->conflicts_count > 0 && extra->conflicts != NULL) {
-		for (i = 0; i < extra->conflicts_count; i++) {
-			if (extra->conflicts[i] == NULL) {
-				break;
-			}
-			free(extra->conflicts[i]);
-			extra->conflicts[i] = NULL;
-		}
-		
-		free(extra->conflicts);
-		extra->conflicts = NULL;
-	}
+	free(extra->luapkgpostdeinstall);
+	extra->luapkgpostdeinstall = NULL;
+	free(extra->luapkgpostinstall);
+	extra->luapkgpostinstall = NULL;
+	free(extra->luapkgpreinstall);
+	extra->luapkgpreinstall = NULL;
+	free(extra->luapkgpredeinstall);
+	extra->luapkgpredeinstall = NULL;
 
 	if (extra->depends_count > 0 && extra->depends != NULL) {
 		for (i = 0; i < extra->depends_count; i++) {
@@ -117,6 +123,8 @@ mport_createextras_free(mportCreateExtras *extra)
 		free(extra->depends);
 		extra->depends = NULL;
 	}
+
+	tll_free_and_free(extra->conflicts, free);
 
 	free(extra);
 	extra = NULL;
@@ -134,7 +142,7 @@ mport_verify_hash(const char *filename, const char *hash)
 	if (filehash == NULL)
 		return 0;
 
-#ifdef DEBUGGING
+#ifdef DEBUG
 	printf("gen: '%s'\nsql: '%s'\n", filehash, hash);
 #endif
 	if (strncmp(filehash, hash, 64) == 0) {
@@ -319,6 +327,26 @@ mport_copy_file(const char *fromName, const char *toName)
 	return (MPORT_OK);
 }
 
+
+int
+mport_copy_fd(int from_fd, int to_fd)
+{
+    char buf[BUFSIZ];
+    ssize_t size;
+
+    while ((size = read(from_fd, buf, BUFSIZ)) > 0) {
+        if (write(to_fd, buf, size) != size) {
+            RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't write to destination file descriptor: %s", strerror(errno));
+        }
+    }
+
+    if (size < 0) {
+        RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't read from source file descriptor: %s", strerror(errno));
+    }
+
+    return (MPORT_OK);
+}
+
 /*
  * create a directory with mode 755.  Do not fail if the
  * directory exists already.
@@ -401,7 +429,7 @@ mport_shell_register(const char *shell_file)
 		RETURN_ERROR(MPORT_ERR_FATAL, "Shell to register is invalid.");
 
 	FILE *fp;
-	fp = fopen("/etc/shells", "a");
+	fp = fopen(_PATH_SHELLS, "a");
 	if (fp == NULL)
 		RETURN_ERROR(MPORT_ERR_FATAL, "Unable to open shell file.");
 
@@ -418,8 +446,8 @@ mport_shell_unregister(const char *shell_file)
 		RETURN_ERROR(MPORT_ERR_FATAL, "Shell to unregister is invalid.");
 
 	return mport_xsystem(NULL,
-	    "grep -v %s /etc/shells > /etc/shells.bak && mv /etc/shells.bak /etc/shells",
-	    shell_file);
+	    "/usr/bin/grep -v %s %s > %s.bak && mv %s.bak %s",
+	    shell_file, _PATH_SHELLS, _PATH_SHELLS, _PATH_SHELLS, _PATH_SHELLS);
 }
 
 /**
@@ -620,6 +648,43 @@ mport_parselist(char *opt, char ***list, size_t *list_size)
 	free(input);
 	input = NULL;
 }
+
+/*
+ * mport_parselist_tll(input, string_array_pointer)
+ *
+ * hacks input into sub strings by whitespace.  Allocates a chunk or memory
+ * for an array of those strings, and sets the pointer you pass to reference
+ * that memory
+ *
+ * char input[] = "foo bar baz"
+ * stringlist_t list;
+ * size_t list_size;
+ *
+ * mport_parselist(input, &list);
+ * list = {"foo", "bar", "baz"};
+ */
+void
+mport_parselist_tll(char *opt, stringlist_t *list)
+{
+	char *input;
+	char *field;
+
+	if (opt == NULL || list == NULL)
+		return;
+
+	if ((input = strdup(opt)) == NULL) {
+		return;
+	}
+
+	while ((field = strsep(&input, " \t\n")) != NULL) {
+		if (field != NULL && *field != '\0')
+			tll_push_back(*list, strdup(field));
+	}
+
+	free(input);
+	input = NULL;
+}
+
 
 /*
  * mport_run_asset_exec(fmt, cwd, last_file)
@@ -986,6 +1051,29 @@ mport_drop_privileges(void)
 	return (MPORT_OK);
 }
 
+/**
+ * @brief generate PURL URI for a package
+ * Caller must free the returned string.
+ * @param packs mport package metadata
+ * @return PURL URI or NULL
+ */
+MPORT_PUBLIC_API char * 
+mport_purl_uri(mportPackageMeta *packs) 
+{
+	char *purl = NULL;
+
+	// https://github.com/package-url/purl-spec/blob/main/PURL-TYPES.rst
+	//asprintf(&purl, "pkg:mport/midnightbsd/%s@%s?arch=%s&osrel=%s", (*indexEntry)->pkgname, (*packs)->version, MPORT_ARCH, os_release);
+	// the purl format requires registration.  i'm switching to generic and requested above from them.
+		
+	int ret = asprintf(&purl, "pkg:generic/%s@%s?arch=%s&distro=midnightbsd-%s", packs->name, packs->version, MPORT_ARCH, packs->os_release);
+	if (ret == -1) {
+		return NULL;
+	}
+
+	return (purl);
+}
+
 bool
 mport_check_answer_bool(char *ans) 
 {
@@ -1048,5 +1136,186 @@ mport_string_replace(const char *str, const char *old, const char *new)
 	}
 	strcpy(r, p);
 
-	return ret;
+	return (ret);
+}
+
+int
+mport_count_spaces(const char *str)
+{
+	int spaces;
+	const char *p;
+
+	for (spaces = 0, p = str; *p != '\0'; p++) {
+		if (isspace(*p)) {
+			spaces++;
+		}
+	}
+
+	return (spaces);
+}
+
+/* 
+ * A bit like strsep(), except it accounts for "double" and 'single' quotes.
+ * Unlike strsep(), this function returns the next argument string, trimmed of 
+ * whitespace or enclosing quotes, and updates **args to point at the character 
+ * after that. 
+ * 
+ * Sets *args to NULL when it has been processed.
+ * 
+ * Quoted strings run from the first quote mark to the next one of 
+ * the same type or the terminating NULL. Quoted strings can contain the other 
+ * type of quote mark, which loses any special meaning. 
+ * 
+ * There is no escape character.
+ */
+char *
+mport_tokenize(char **args)
+{
+	char *p, *p_start;
+	enum parse_states parse_state = START;
+
+	assert(args != NULL && *args != NULL);
+
+	for (p = p_start = *args; *p != '\0'; p++) {
+		switch (parse_state) {
+		case START:
+			if (!isspace(*p)) {
+				if (*p == '"')
+					parse_state = OPEN_DOUBLE_QUOTES;
+				else if (*p == '\'')
+					parse_state = OPEN_SINGLE_QUOTES;
+				else {
+					parse_state = ORDINARY_TEXT;
+					p_start = p;
+				}
+			} else
+				p_start = p;
+			break;
+		case ORDINARY_TEXT:
+			if (isspace(*p))
+				goto finish;
+			break;
+		case OPEN_SINGLE_QUOTES:
+			p_start = p;
+			if (*p == '\'')
+				goto finish;
+
+			parse_state = IN_SINGLE_QUOTES;
+			break;
+		case IN_SINGLE_QUOTES:
+			if (*p == '\'')
+				goto finish;
+			break;
+		case OPEN_DOUBLE_QUOTES:
+			p_start = p;
+			if (*p == '"')
+				goto finish;
+			parse_state = IN_DOUBLE_QUOTES;
+			break;
+		case IN_DOUBLE_QUOTES:
+			if (*p == '"')
+				goto finish;
+			break;
+		}
+	}
+
+finish:
+	if (*p == '\0')
+		*args = NULL;
+	else {
+		*p = '\0';
+		p++;
+		if (*p == '\0' || parse_state == START)
+			*args = NULL;
+		else
+			*args = p;
+	}
+	return (p_start);
+}
+
+
+#define ELF_MAGIC "\x7F""ELF"
+#define ELF_MAGIC_SIZE 4
+
+MPORT_PUBLIC_API bool 
+mport_is_elf_file(const char *file) 
+{
+    FILE *f = fopen(file, "rb");
+    if (f == NULL) {
+        perror("fopen");
+        return false;
+    }
+
+    char magic[ELF_MAGIC_SIZE];
+    if (fread(magic, 1, ELF_MAGIC_SIZE, f) != ELF_MAGIC_SIZE) {
+        fclose(f);
+        return false;
+    }
+
+    fclose(f);
+
+    // Compare the magic number
+    return (memcmp(magic, ELF_MAGIC, ELF_MAGIC_SIZE) == 0);
+}
+
+MPORT_PUBLIC_API bool 
+mport_is_statically_linked(const char *file) {
+    if (elf_version(EV_CURRENT) == EV_NONE) {
+        fprintf(stderr, "ELF library initialization failed: %s\n", elf_errmsg(-1));
+        return false;
+    }
+
+    int fd = open(file, O_RDONLY);
+    if (fd < 0) {
+        perror("open");
+        return false;
+    }
+
+    Elf *elf = elf_begin(fd, ELF_C_READ, NULL);
+    if (elf == NULL) {
+        fprintf(stderr, "elf_begin failed: %s\n", elf_errmsg(-1));
+        close(fd);
+        return false;
+    }
+
+    // Check if the file is an ELF file
+    if (elf_kind(elf) != ELF_K_ELF) {
+        fprintf(stderr, "%s is not an ELF file\n", file);
+        elf_end(elf);
+        close(fd);
+        return false;
+    }
+
+    // Iterate through the sections to find the .dynamic section
+    size_t shstrndx;
+    if (elf_getshdrstrndx(elf, &shstrndx) != 0) {
+        fprintf(stderr, "elf_getshdrstrndx failed: %s\n", elf_errmsg(-1));
+        elf_end(elf);
+        close(fd);
+        return false;
+    }
+
+    Elf_Scn *scn = NULL;
+    while ((scn = elf_nextscn(elf, scn)) != NULL) {
+        GElf_Shdr shdr;
+        if (gelf_getshdr(scn, &shdr) != &shdr) {
+            fprintf(stderr, "gelf_getshdr failed: %s\n", elf_errmsg(-1));
+            elf_end(elf);
+            close(fd);
+            return false;
+        }
+
+        const char *section_name = elf_strptr(elf, shstrndx, shdr.sh_name);
+        if (section_name != NULL && strcmp(section_name, ".dynamic") == 0) {
+            // Found the .dynamic section, meaning the file is dynamically linked
+            elf_end(elf);
+            close(fd);
+            return false;
+        }
+    }
+
+    // If no .dynamic section is found, the file is statically linked
+    elf_end(elf);
+    close(fd);
+    return true;
 }

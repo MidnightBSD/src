@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2023 Lucas Holt
  * All rights reserved.
@@ -69,7 +69,7 @@ calculateChecksum(unsigned short *buffer, int length)
 }
 
 static long
-getCurrentTime()
+getCurrentTime(void)
 {
 	struct timespec time;
 	clock_gettime(CLOCK_MONOTONIC, &time);

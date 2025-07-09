@@ -1,4 +1,5 @@
-SUBDIR=	libmport \
+SUBDIR=	liblua \
+	libmport \
 	mport \
 	libexec
 

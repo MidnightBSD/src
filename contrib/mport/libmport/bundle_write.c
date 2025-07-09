@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2007,2008,2009 Chris Reinhardt
  * All rights reserved.
@@ -45,6 +45,8 @@
 #include <archive.h>
 #include <archive_entry.h>
 #include <assert.h>
+#include <unistd.h>
+
 #include "mport.h"
 #include "mport_private.h"
 
@@ -89,27 +91,39 @@ mportBundleWrite* mport_bundle_write_new(void)
  * set up a bundle for adding files.  Sets the bundle file to
  * filename.
  */
-int mport_bundle_write_init(mportBundleWrite *bundle, const char *filename)
+int
+mport_bundle_write_init(mportBundleWrite *bundle, const char *filename)
 {
-  if ((bundle->filename = strdup(filename)) == NULL)
-    RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't dup filename");
-   
-  if ((bundle->archive = archive_write_new()) == NULL) 
-    RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't allocate archive struct");
+	char buf[16];
+	long threads = sysconf(_SC_NPROCESSORS_ONLN);
+	if (threads < 1)
+		threads = 1;
+	if (threads > 32)
+		threads = 32;
 
-  if (archive_write_add_filter_xz(bundle->archive) != ARCHIVE_OK)
-    RETURN_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));
+	if ((bundle->filename = strdup(filename)) == NULL)
+		RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't dup filename");
 
-  if (archive_write_set_format_pax(bundle->archive) != ARCHIVE_OK)
-    RETURN_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));
+	if ((bundle->archive = archive_write_new()) == NULL)
+		RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't allocate archive struct");
 
-  bundle->links = NULL; 
+	if (archive_write_add_filter_xz(bundle->archive) != ARCHIVE_OK)
+		RETURN_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));
 
-  if (archive_write_open_filename(bundle->archive, bundle->filename) != ARCHIVE_OK) {
-    RETURN_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive)); 
-  }
-  
-  return MPORT_OK;
+	if (archive_write_set_format_pax(bundle->archive) != ARCHIVE_OK)
+		RETURN_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));
+
+	snprintf(buf, sizeof(buf), "%ld", threads);
+	if (archive_write_set_filter_option(bundle->archive, NULL, "threads", buf) != ARCHIVE_OK)
+		RETURN_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));
+
+	bundle->links = NULL;
+
+	if (archive_write_open_filename(bundle->archive, bundle->filename) != ARCHIVE_OK) {
+		RETURN_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));
+	}
+
+	return MPORT_OK;
 }
 
 /* 
@@ -176,9 +190,11 @@ int mport_bundle_write_add_file(mportBundleWrite *bundle, const char *filename, 
     
     archive_entry_set_symlink(entry, linkdata);
   }
-    
+ 
+  #if defined(__MidnightBSD__) || defined(__FreeBSD__)
   if (st.st_flags != 0) 
     archive_entry_set_fflags(entry, st.st_flags, 0);
+  #endif
     
   archive_entry_copy_stat(entry, &st);
  
