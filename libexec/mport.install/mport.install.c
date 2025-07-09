@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2021 Lucas Holt
  * Copyright (c) 2007 Chris Reinhardt
@@ -29,6 +29,7 @@
 
 #include <sys/cdefs.h>
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <err.h>
@@ -46,10 +47,14 @@ main(int argc, char *argv[])
 	char *prefix = NULL;
 	mportInstance *mport;
 	int error_code = 0;
+	bool automatic = false;
 	const char *chroot_path = NULL;
 
-	while ((ch = getopt(argc, argv, "c:p:")) != -1) {
+	while ((ch = getopt(argc, argv, "Ac:p:")) != -1) {
 		switch (ch) {
+			case 'A':
+				automatic = true;
+				break;
 			case 'c':
 				chroot_path = optarg;
 				break;
@@ -84,7 +89,7 @@ main(int argc, char *argv[])
 
 	for (int i = 0; i < argc; i++) {
 
-		if (mport_install_primative(mport, argv[i], prefix, MPORT_EXPLICIT) != MPORT_OK) {
+		if (mport_install_primative(mport, argv[i], prefix, automatic ? MPORT_AUTOMATIC : MPORT_EXPLICIT) != MPORT_OK) {
 			warnx("install failed: %s", mport_err_string());
 			mport_instance_free(mport);
 			exit(EXIT_FAILURE);
@@ -100,6 +105,18 @@ static
 void usage(void)
 {
 
-	fprintf(stderr, "Usage: mport.install [-p prefix] [-c <chroot path>] pkgfile1 pkgfile2 ...\n");
+	fprintf(stderr, "Usage: mport.install [OPTIONS] pkgfile1 [pkgfile2 ...]\n");
+    fprintf(stderr, "Install one or more package files.\n\n");
+    fprintf(stderr, "Options:\n");
+    fprintf(stderr, "  -A               Mark the installed package(s) as automatically installed\n");
+    fprintf(stderr, "  -p <prefix>      Set the installation prefix\n");
+    fprintf(stderr, "  -c <chroot path> Set a chroot path for installation\n");
+    fprintf(stderr, "\nArguments:\n");
+    fprintf(stderr, "  pkgfile          Path to the package file(s) to install\n");
+    fprintf(stderr, "\nExamples:\n");
+    fprintf(stderr, "  mport.install package.mport\n");
+    fprintf(stderr, "  mport.install -A -p /usr/local package1.mport package2.mport\n");
+    fprintf(stderr, "  mport.install -c /mnt/system package.mport\n");
+  
 	exit(1);
 }

@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2009 Chris Reinhardt
  * All rights reserved.
@@ -32,24 +32,68 @@
 #include <string.h>
 #include <unistd.h>
 
+/**
+ * @brief Installs a package and its dependencies.
+ *
+ * This function initiates the installation process for a specified package,
+ * including handling its dependencies. 
+ * 
+ * Behavior change: 
+ * In mport 2.7.1, mport_install_single does the old behavior of this function. 
+ * Now we handle dependency installation also.
+ *
+ * @param mport     Pointer to the mportInstance.
+ * @param pkgname   Name of the package to install.
+ * @param version   Version of the package to install. Can be NULL for latest version.
+ * @param prefix    Installation prefix. Currently not handled (TODO).
+ * @param automatic Flag indicating if the installation is automatic or user-initiated.
+ *
+ * @return MPORT_OK on success, or an error code on failure.
+ */
 MPORT_PUBLIC_API int
 mport_install(mportInstance *mport, const char *pkgname, const char *version, const char *prefix, mportAutomatic automatic)
+{
+  MPORT_CHECK_FOR_INDEX(mport, "mport_install()");
+
+  // todo: handle prefix
+  return mport_install_depends(mport, pkgname, version, automatic);
+}
+
+/**
+ * @brief Installs a single package from the mport index.
+ *
+ * This function attempts to install a single package specified by its name and version.
+ * It handles package resolution, locating the package file, and verifying its integrity
+ * before installation.
+ *
+ * @param mport     Pointer to the mportInstance.
+ * @param pkgname   Name of the package to install.
+ * @param version   Version of the package to install. Can be NULL for latest version.
+ * @param prefix    Installation prefix. Can be NULL for default location.
+ * @param automatic Flag indicating if the installation is automatic or user-initiated.
+ * 
+ * @since 2.7.1
+ *
+ * @return MPORT_OK on success, or an error code on failure.
+ */
+MPORT_PUBLIC_API int
+mport_install_single(mportInstance *mport, const char *pkgname, const char *version, const char *prefix, mportAutomatic automatic)
 {
   mportIndexEntry **e = NULL;
   char *filename = NULL;
   int ret = MPORT_OK;
   int e_loc = 0;
 
-  MPORT_CHECK_FOR_INDEX(mport, "mport_install()");
-  
+  MPORT_CHECK_FOR_INDEX(mport, "mport_install_single()");
+
   if (mport_index_lookup_pkgname(mport, pkgname, &e) != MPORT_OK) {
-  	RETURN_CURRENT_ERROR;
+      RETURN_CURRENT_ERROR;
   }
 
   /* we don't support installing more than one top-level package at a time.
    * Consider a situation like this:
    *
-   * mport_install(mport, "p5-Class-DBI*");
+   * mport_install_single(mport, "p5-Class-DBI*");
    *
    * Say this matches p5-Class-DBI and p5-Class-DBI-AbstractSearch
    * and say the order from the index puts p5-Class-DBI-AbstractSearch 
@@ -62,7 +106,7 @@ mport_install(mportInstance *mport, const char *pkgname, const char *version, co
    *
    * If a user facing application wants this functionality, it would be
    * easy to piece together with mport_index_lookup_pkgname(), a
-   * check for already installed packages, and mport_install().
+   * check for already installed packages, and mport_install_single().
    */
 
   if (e[1] != NULL) {
@@ -83,8 +127,8 @@ mport_install(mportInstance *mport, const char *pkgname, const char *version, co
       RETURN_ERRORX(MPORT_ERR_FATAL, "Could not resolve '%s' to a single package.", pkgname);
     }
   }
- 
-  asprintf(&filename, "%s/%s", MPORT_FETCH_STAGING_DIR, e[e_loc]->bundlefile);
+
+  asprintf(&filename, "%s/%s", MPORT_LOCAL_PKG_PATH, e[e_loc]->bundlefile);
   if (filename == NULL) {
     mport_index_entry_free_vec(e);
     e = NULL;
@@ -92,36 +136,58 @@ mport_install(mportInstance *mport, const char *pkgname, const char *version, co
   }
 
   if (!mport_file_exists(filename)) {
-    if (mport_fetch_bundle(mport, MPORT_LOCAL_PKG_PATH, e[e_loc]->bundlefile) != MPORT_OK) {
-      free(filename);
-      filename = NULL;
+    free(filename);
+
+    /* fallback to install media location default */
+    asprintf(&filename, "%s/%s", MPORT_INSTALL_MEDIA_DIR, e[e_loc]->bundlefile);
+    if (filename == NULL) {
       mport_index_entry_free_vec(e);
       e = NULL;
-      RETURN_CURRENT_ERROR;
+      RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+    }
+
+    if (!mport_file_exists(filename)) {
+      free(filename);
+      filename = NULL;
+
+      /* neither location works. Download from the internet. */
+        if (mport_fetch_bundle(mport, MPORT_FETCH_STAGING_DIR, e[e_loc]->bundlefile) != MPORT_OK) {
+            free(filename);
+            filename = NULL;
+            mport_index_entry_free_vec(e);
+            e = NULL;
+            RETURN_CURRENT_ERROR;
+        }
+      asprintf(&filename, "%s/%s", MPORT_FETCH_STAGING_DIR, e[e_loc]->bundlefile);
+      if (filename == NULL) {
+        mport_index_entry_free_vec(e);
+        e = NULL;
+        RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+      }
     }
   }
 
   if (mport_verify_hash(filename, e[e_loc]->hash) == 0) {
-  	mport_index_entry_free_vec(e);
+      mport_index_entry_free_vec(e);
 
-  	if (unlink(filename) == 0) {
-	    free(filename);
+      if (unlink(filename) == 0) {
+        free(filename);
       filename = NULL;
-  		RETURN_ERROR(MPORT_ERR_FATAL, "Package failed hash verification and was removed.\n");
-  	} else {
-	    free(filename);
+          RETURN_ERROR(MPORT_ERR_FATAL, "Package failed hash verification and was removed.\n");
+      } else {
+        free(filename);
       filename = NULL;
-  		RETURN_ERROR(MPORT_ERR_FATAL, "Package failed hash verification, but could not be removed.\n");
-  	}
+          RETURN_ERROR(MPORT_ERR_FATAL, "Package failed hash verification, but could not be removed.\n");
+      }
   }
- 
+
   ret = mport_install_primative(mport, filename, prefix, automatic);
 
   free(filename);
   filename = NULL;
   mport_index_entry_free_vec(e);
   e = NULL;
-  
+
   return ret;
 }
 
@@ -146,22 +212,22 @@ mport_install_depends(mportInstance *mport, const char *packageName, const char 
 
 	if (packs == NULL && depends == NULL) {
 		/* Package is not installed and there are no dependencies */
-		if (mport_install(mport, packageName, version, NULL, automatic) != MPORT_OK) {
+		if (mport_install_single(mport, packageName, version, NULL, automatic) != MPORT_OK) {
 			mport_call_msg_cb(mport, "%s", mport_err_string());
 			return mport_err_code();
 		}
 	} else if (packs == NULL) {
 		/* Package is not installed */
-		while (*depends != NULL) {
-			if (mport_install_depends(mport, (*depends)->d_pkgname, (*depends)->d_version, MPORT_AUTOMATIC) != MPORT_OK) {
-     			mport_call_msg_cb(mport, "%s", mport_err_string());
-     			mport_index_depends_free_vec(depends_orig);
+    for (mportDependsEntry **dep = depends; dep && *dep != NULL; dep++) {
+      if (mport_install_depends(mport, (*dep)->d_pkgname, (*dep)->d_version, MPORT_AUTOMATIC) != MPORT_OK) {
+          mport_call_msg_cb(mport, "%s", mport_err_string());
+          mport_index_depends_free_vec(depends_orig);
           depends_orig = NULL;
-				return mport_err_code();
-			}
-			depends++;
-		}
-		if (mport_install(mport, packageName, version, NULL, automatic) != MPORT_OK) {
+          return mport_err_code();
+      }
+    }
+		
+		if (mport_install_single(mport, packageName, version, NULL, automatic) != MPORT_OK) {
 			mport_call_msg_cb(mport, "%s", mport_err_string());
 			mport_index_depends_free_vec(depends_orig);
       depends_orig = NULL;
@@ -184,10 +250,11 @@ mport_install_depends(mportInstance *mport, const char *packageName, const char 
         packs = NULL;
 				return mport_err_code();
 			}
-		}
-
-        // TODO: fix crash on nested calls
-		//mport_pkgmeta_vec_free(packs);
+      mport_pkgmeta_vec_free(packs);
+		} else {
+      mport_call_msg_cb(mport, "The most recent version of %s is already installed.", packageName);
+      mport_pkgmeta_vec_free(packs);
+    }
 	}
 
 	return (MPORT_OK);

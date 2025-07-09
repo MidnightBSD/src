@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2015, 2016, 2018 Lucas Holt
  * All rights reserved.
@@ -141,9 +141,15 @@ mport_info(mportInstance *mport, const char *packageName) {
 
 		if (indexEntry == NULL || *indexEntry == NULL)
 			purl[0] = '\0';
-		else if (packs != NULL && (*indexEntry)->pkgname != NULL && (*packs)->version != NULL)
-			snprintf(purl, sizeof(purl), "pkg:mport/midnightbsd/%s@%s?arch=%s&osrel=%s", (*indexEntry)->pkgname, (*packs)->version, MPORT_ARCH, os_release);
-		else
+		else if (packs != NULL && (*indexEntry)->pkgname != NULL && (*packs)->version != NULL) {
+			char *tmppurl = mport_purl_uri(*packs);
+			if (tmppurl != NULL) {
+				snprintf(purl, sizeof(purl), "%s", tmppurl);
+				free(tmppurl);
+			} else {
+				purl[0] = '\0';
+			}
+		} else
 			purl[0] = '\0';	
 	}
 

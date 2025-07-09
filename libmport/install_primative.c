@@ -1,5 +1,5 @@
 /*-
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2015 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
@@ -108,12 +108,16 @@ MPORT_PUBLIC_API int
 mport_install_primative(mportInstance *mport, const char *filename, const char *prefix, mportAutomatic automatic)
 {
 	mportBundleRead *bundle = NULL;
+	mportPackageMeta **already_installed = NULL;
 	mportPackageMeta **pkgs = NULL;
 	mportPackageMeta *pkg = NULL;
 	int i;
 	bool error = false;
 	char **dependencies = NULL;
 	char **deps = NULL;
+
+	if (mport == NULL)
+		RETURN_ERROR(MPORT_ERR_FATAL, "mport not initialized");
 
 		/* There are two scenarios here.  
 		   1. We are installing online with an index and have already fetched dependencies. 
@@ -134,21 +138,24 @@ mport_install_primative(mportInstance *mport, const char *filename, const char *
 		if (mport_pkgmeta_read_stub(mport, &pkgs) != MPORT_OK)
 			RETURN_CURRENT_ERROR;
 
-		if (mport_check_preconditions(mport, pkg, MPORT_PRECHECK_INSTALLED) != MPORT_OK) {
+		/* if we previously installed it and want to force, allow it.  
+		   In this case, automatic flag from previous install not honored 
+		*/
+		if (mport_check_preconditions(mport, pkgs[0], MPORT_PRECHECK_INSTALLED) != MPORT_OK) {
 			if (mport->force) {
-				mport_delete_primative(mport, pkg, 1);
+				mport_delete_primative(mport, pkgs[0], 1);
 			} else {
 				mport_call_msg_cb(mport, "%s-%s: already installed.", pkg->name, pkg->version);
 				return MPORT_OK;
 			}
 		}
 
-		if (mport_check_preconditions(mport, pkg, MPORT_PRECHECK_CONFLICTS) != MPORT_OK) {
+		if (mport_check_preconditions(mport, pkgs[0], MPORT_PRECHECK_CONFLICTS) != MPORT_OK) {
 			mport_call_msg_cb(mport, "Unable to install %s-%s: %s", pkg->name, pkg->version,
 			                  mport_err_string());
 			return MPORT_ERR_FATAL;
 		}
-		dependencies = get_dependencies(mport, pkg);
+		dependencies = get_dependencies(mport, pkgs[0]);
 
 		// close so we can safely process depdendencies.
 		if (mport_bundle_read_finish(mport, bundle) != MPORT_OK)
@@ -187,6 +194,15 @@ mport_install_primative(mportInstance *mport, const char *filename, const char *
         pkg->automatic = automatic;
 		pkg->install_date = mport_get_time();
 		pkg->action = MPORT_ACTION_INSTALL;
+
+		if (mport_pkgmeta_search_master(mport, &already_installed, "pkg=%Q", pkg->name) == MPORT_OK) {
+			if (already_installed != NULL && already_installed[0] != NULL) {
+				if (mport->force) {
+					pkg->automatic = already_installed[0]->automatic; // honor old flag
+				}
+				mport_pkgmeta_vec_free(already_installed);
+			}
+		}
 
 		if (prefix != NULL) {
 			/* override the default prefix with the given prefix */

@@ -1,5 +1,5 @@
 /*
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2011, 2013, 2015, 2021-2024 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
@@ -31,7 +31,7 @@
 #ifndef _MPORT_PRIV_H_
 #define _MPORT_PRIV_H_
 
-#ifdef DEBUGGING
+#ifdef DEBUG
 #include <err.h>
 #define DIAG(fmt, ...) warnx(fmt, ## __VA_ARGS__);
 #else
@@ -40,25 +40,31 @@
 
 #if defined(__MidnightBSD__)
 #include <osreldate.h>
-#endif
 #include <ohash.h>
+#else
+struct ohash_info {
+
+};
+
+struct ohash {
+
+};
+#endif
 #include <sqlite3.h>
 #include <ucl.h>
 #include <zstd.h>
 
+#include <tllist.h>
+
 #define MPORT_PUBLIC_API 
 
-#define MPORT_MASTER_VERSION 12
+#define MPORT_MASTER_VERSION 13
 #define MPORT_BUNDLE_VERSION 6
 #define MPORT_BUNDLE_VERSION_STR "6"
-#define MPORT_VERSION "2.6.8"
+#define MPORT_VERSION "2.7.2"
 
 #define MPORT_SETTING_MIRROR_REGION "mirror_region"
 #define MPORT_SETTING_TARGET_OS "target_os"
-
-/* callback syntactic sugar */
-void mport_call_msg_cb(mportInstance *, const char *, ...);
-void mport_call_progress_init_cb(mportInstance *, const char *, ...);
 
 /* precondition checking */
 #define MPORT_PRECHECK_INSTALLED   1
@@ -102,6 +108,7 @@ bool mport_starts_with(const char *, const char *);
 char* mport_hash_file(const char *);
 char* mport_extract_hash_from_file(const char *);
 int mport_copy_file(const char *, const char *);
+int mport_copy_fd(int, int);
 uid_t mport_get_uid(const char *);
 gid_t mport_get_gid(const char *);
 char* mport_directory(const char *path);
@@ -120,6 +127,17 @@ int mport_shell_unregister(const char *);
 char * mport_str_remove(const char *str, const char ch);
 time_t mport_get_time(void);
 bool mport_check_answer_bool(char *answer);
+int mport_count_spaces(const char *str);
+char * mport_tokenize(char **args);
+
+enum parse_states {
+	START,
+	ORDINARY_TEXT,
+	OPEN_SINGLE_QUOTES,
+	IN_SINGLE_QUOTES,
+	OPEN_DOUBLE_QUOTES,
+	IN_DOUBLE_QUOTES,
+};
 
 /* Mport Bundle (a file containing packages) */
 typedef struct {
@@ -183,6 +201,10 @@ int mport_set_errx(int , const char *, ...);
 #define MPORT_INSTALL_FILE 	"pkg-install"
 #define MPORT_DEINSTALL_FILE	"pkg-deinstall"
 #define MPORT_MESSAGE_FILE	"pkg-message"
+#define MPORT_LUA_PRE_INSTALL_FILE "pkg-pre-install.lua"
+#define MPORT_LUA_POST_INSTALL_FILE "pkg-post-install.lua"
+#define MPORT_LUA_PRE_DEINSTALL_FILE "pkg-pre-deinstall.lua"
+#define MPORT_LUA_POST_DEINSTALL_FILE "pkg-post-deinstall.lua"
 
 /* Instance files */
 #define MPORT_INST_DIR 		"/var/db/mport"
@@ -196,6 +218,8 @@ int mport_set_errx(int , const char *, ...);
 #define MPORT_INDEX_FILE_HASH       MPORT_INST_DIR "/" MPORT_INDEX_FILE_NAME MPORT_INDEX_COMPRESS_EXT ".sha256"
 #define MPORT_FETCH_STAGING_DIR     MPORT_INST_DIR "/downloads"
 
+#define MPORT_INSTALL_MEDIA_DIR     "/packages"
+#define MPORT_INSTALL_MEDIA_INDEX_FILE  MPORT_INSTALL_MEDIA_DIR "/" MPORT_INDEX_FILE_NAME
 
 #if defined(__i386__)
 #define MPORT_ARCH "i386"
@@ -213,6 +237,8 @@ int mport_set_errx(int , const char *, ...);
 #define MPORT_OSVERSION "3.1"
 #elif __MidnightBSD_version >= 300000
 #define MPORT_OSVERSION "3.0"
+#elif defined(__linux__)
+#define MPORT_OSVERSION "linux"
 #else
 #error "libmport only supports MidnightBSD versions 3.0 and above."
 #endif
@@ -231,6 +257,10 @@ char * mport_fetch_cves(mportInstance *mport, char *cpe);
 int mport_index_get_mirror_list(mportInstance *, char ***, int *);
 char * mport_index_file_path(void);
 
+/* script things */
+int get_socketpair(int *);
+int mport_script_run_child(mportInstance *, int, int *, int, const char*);
+
 #define MPORT_CHECK_FOR_INDEX(mport, func) if (!(mport->flags & MPORT_INST_HAVE_INDEX)) RETURN_ERRORX(MPORT_ERR_FATAL, "Attempt to use %s before loading index.", (func));
 #define MPORT_DAY (3600 * 24)
 #define MPORT_MAX_INDEX_AGE (MPORT_DAY * 7) /* one week */
@@ -240,10 +270,8 @@ char * mport_index_file_path(void);
 
 /* Binaries we use */
 #define MPORT_MTREE_BIN		"/usr/sbin/mtree"
-#define MPORT_SH_BIN		"/bin/sh"
 #define MPORT_CHROOT_BIN	"/usr/sbin/chroot"
 
 #define MPORT_URL_MAX		512
-
 
 #endif /* _MPORT_PRIV_H_ */

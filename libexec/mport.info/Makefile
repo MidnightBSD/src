@@ -1,13 +1,13 @@
 PROG=	mport.info
 
-CFLAGS+=-I${.CURDIR}/../../libmport/ -I/usr/include/private/ucl -I ../../external/tllist/ -I/usr/include/private/zstd 
+CFLAGS+=-I${.CURDIR}/../../libmport/ -I/usr/include/private/ucl -I ${.CURDIR}/../../external/tllist/ -I/usr/include/private/zstd 
 WARNS?= 4
 
 MK_MAN= no
 
 LIBADD= mport pthread
 
-LDFLAGS += -L../libmport -lmport -lpthread
+LDFLAGS += -L ${.CURDIR}/../../libmport -lmport -lpthread
 
 BINDIR=/usr/libexec
 
