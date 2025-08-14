@@ -13,4 +13,6 @@ MK_MAN= no
 
 LIBADD= mport  pthread
 
+CFLAGS+=        -I${SRCTOP}/lib/libmport -I${OBJTOP}/lib/libmport
+
 .include <bsd.prog.mk>
