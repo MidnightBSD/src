@@ -29,6 +29,7 @@
 #include <sys/cdefs.h>
 
 #include <stdio.h>
+#include <stdbool.h>
 #include <termios.h>
 #include <stdlib.h>
 #include <string.h>
@@ -50,16 +51,53 @@ void mport_default_msg_cb(const char *msg)
   (void)printf("%s\n", msg);
 }
 
+bool mport_is_terminal(void) {
+    const char *term = getenv("TERM");
+    const char *magus = getenv("MAGUS");
+    return (magus == NULL && term != NULL && isatty(fileno(stdout)));
+}
+
+bool mport_is_color_terminal(void)
+{
+  const char *term = getenv("TERM");
+  const char *colorterm = getenv("COLORTERM");
+  const char *clicolor = getenv("CLICOLOR");
+
+  if (!mport_is_terminal()) {
+    return false; // Not a terminal or TERM not set
+  }
+
+  // Check if the terminal supports colors
+  bool term_supports_color =
+    strcmp(term, "dumb") != 0 &&
+    strcmp(term, "cons25") != 0;
+
+  bool term_is_256color =
+    strcmp(term, "xterm-256color") == 0 ||
+    strcmp(term, "screen-256color") == 0 ||
+    strcmp(term, "tmux-256color") == 0;
+
+  bool colorterm_support =
+    colorterm != NULL &&
+    (strcmp(colorterm, "truecolor") == 0 ||
+     strcmp(colorterm, "24bit") == 0 ||
+     strcmp(colorterm, "yes") == 0);
+  bool clicolor_support = clicolor != NULL;
+  
+  return colorterm_support || term_supports_color || term_is_256color || clicolor_support;
+}
+
 int mport_default_confirm_cb(const char *msg, const char *yes, const char *no, int def)
 {
   size_t len;
   char *ans;
+  bool color_terminal = mport_is_color_terminal();
   
-  if (getenv("ASSUME_ALWAYS_YES") != NULL) {
+  if (getenv("ASSUME_ALWAYS_YES") != NULL || getenv("MAGUS") != NULL) {
     return (MPORT_OK);
   }
 
-  if( !strncmp( getenv("TERM"), "xterm", 5 ) && isatty(fileno(stdout)) ) {
+  if(color_terminal) {
     (void)fprintf(stderr, "%s%s (Y/N) [%s]:%s ", KCYN, msg, def == 1 ? yes : no, KNRM);
   } else {
     (void)fprintf(stderr, "%s (Y/N) [%s]: ", msg, def == 1 ? yes : no);
@@ -81,7 +119,7 @@ int mport_default_confirm_cb(const char *msg, const char *yes, const char *no, i
     if (*ans == 'N' || *ans == 'n')
       return (-1);
     
-    if( !strncmp( getenv("TERM"), "xterm", 5 ) && isatty(fileno(stdout)) ) {
+    if (color_terminal) {
       (void)fprintf(stderr, "%sPlease enter yes or no:%s ", KRED, KNRM);
     } else {  
       (void)fprintf(stderr, "Please enter yes or no: ");   
@@ -117,7 +155,7 @@ void mport_default_progress_step_cb(int current, int total, const char *msg)
   if (current > total)
     current = total;
 
-  if (!isatty(fileno(stdout)) || getenv("TERM") == NULL || (tcgetattr(STDIN_FILENO, &term) < 0) || (ioctl(STDIN_FILENO, TIOCGWINSZ, &win) < 0) || getenv("MAGUS") != NULL) {
+  if (!mport_is_terminal() || (tcgetattr(STDIN_FILENO, &term) < 0) || (ioctl(STDIN_FILENO, TIOCGWINSZ, &win) < 0)) {
     /* not a terminal or couldn't get terminal width*/
     (void)printf("%s\n", msg);
     return;
@@ -149,7 +187,7 @@ void mport_default_progress_step_cb(int current, int total, const char *msg)
   
   (void)printf(BACK DEL, width);
 //  (void)printf("%s\n", msg);
-  if( !strncmp( getenv("TERM"), "xterm", 5 ) && isatty(fileno(stdout)) ) {
+  if (mport_is_color_terminal()) {
     (void)printf("%s%s %3i/100%%%s", KCYN, bar, (int)(percent * 100), KNRM);
   } else {
     (void)printf("%s %3i/100%%", bar, (int)(percent * 100));
