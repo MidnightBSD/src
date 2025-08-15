@@ -61,7 +61,7 @@ struct ohash {
 #define MPORT_MASTER_VERSION 13
 #define MPORT_BUNDLE_VERSION 6
 #define MPORT_BUNDLE_VERSION_STR "6"
-#define MPORT_VERSION "2.7.2"
+#define MPORT_VERSION "2.7.3"
 
 #define MPORT_SETTING_MIRROR_REGION "mirror_region"
 #define MPORT_SETTING_TARGET_OS "target_os"
@@ -102,6 +102,10 @@ typedef enum {
     SERVICE_STOP
 } service_action_t;
 int mport_start_stop_service(mportInstance *mport, mportPackageMeta *pack, service_action_t action);
+
+/* cbs / color */
+bool mport_is_color_terminal(void);
+bool mport_is_terminal(void);
 
 /* Utils */
 bool mport_starts_with(const char *, const char *);

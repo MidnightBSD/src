@@ -30,9 +30,11 @@
 #include "mport.h"
 #include "mport_private.h"
 #include <stdlib.h>
+#include <dirent.h>
 #include <string.h>
 
 static char ** get_dependencies(mportInstance *mport, mportPackageMeta *pack);
+static char *find_file_with_prefix(const char *dir, const char *prefix);
 
 static char **
 get_dependencies(mportInstance *mport, mportPackageMeta *pkg)
@@ -83,7 +85,11 @@ get_dependencies(mportInstance *mport, mportPackageMeta *pkg)
 		if (ret == SQLITE_ROW) {
 			depend_pkg = sqlite3_column_text(stmt, 0);
 			depend_version = sqlite3_column_text(stmt, 1);
-			asprintf(&dependencies[i], "%s-%s", depend_pkg, depend_version);
+			if (sqlite3_column_type(stmt, 1) == SQLITE_NULL) {
+				asprintf(&dependencies[i], "%s", depend_pkg);
+			} else {
+				asprintf(&dependencies[i], "%s-%s", depend_pkg, depend_version);
+			}
 			i++;
 		} else if (ret == SQLITE_DONE) {
 			/* No more dependencies to check. */
@@ -102,7 +108,31 @@ get_dependencies(mportInstance *mport, mportPackageMeta *pkg)
 	return dependencies;
 }
 
+char *
+find_file_with_prefix(const char *dir, const char *prefix) 
+{
+    DIR *d;
+    struct dirent *dir_entry;
+    char *found_file = NULL;
+    size_t prefix_len = strlen(prefix);
 
+    d = opendir(dir);
+    if (d) {
+        while ((dir_entry = readdir(d)) != NULL) {
+            if (strncmp(dir_entry->d_name, prefix, prefix_len) == 0) {
+                // Found a file with the correct prefix
+                found_file = malloc(strlen(dir) + strlen(dir_entry->d_name) + 2); // +2 for '/' and null terminator
+                if (found_file) {
+                    sprintf(found_file, "%s/%s", dir, dir_entry->d_name);
+                }
+                break;
+            }
+        }
+        closedir(d);
+    }
+
+    return found_file;
+}
 
 MPORT_PUBLIC_API int
 mport_install_primative(mportInstance *mport, const char *filename, const char *prefix, mportAutomatic automatic)
@@ -145,30 +175,44 @@ mport_install_primative(mportInstance *mport, const char *filename, const char *
 			if (mport->force) {
 				mport_delete_primative(mport, pkgs[0], 1);
 			} else {
-				mport_call_msg_cb(mport, "%s-%s: already installed.", pkg->name, pkg->version);
+				mport_call_msg_cb(mport, "%s-%s: already installed.", pkgs[0]->name, pkgs[0]->version);
 				return MPORT_OK;
 			}
 		}
 
 		if (mport_check_preconditions(mport, pkgs[0], MPORT_PRECHECK_CONFLICTS) != MPORT_OK) {
-			mport_call_msg_cb(mport, "Unable to install %s-%s: %s", pkg->name, pkg->version,
+			mport_call_msg_cb(mport, "Unable to install %s-%s: %s", pkgs[0]->name, pkgs[0]->version,
 			                  mport_err_string());
 			return MPORT_ERR_FATAL;
 		}
 		dependencies = get_dependencies(mport, pkgs[0]);
 
-		// close so we can safely process depdendencies.
-		if (mport_bundle_read_finish(mport, bundle) != MPORT_OK)
-			return MPORT_ERR_FATAL;
+		// close so we can safely process depdendencies. ignore errors for this one.
+		mport_bundle_read_finish(mport, bundle);
 
 		deps = dependencies;
 		char *dir = mport_directory(filename);
-		while (deps!= NULL) {
+		while (deps!= NULL && *deps != NULL) {
 			char *dep_filename = NULL; 
 			asprintf(&dep_filename, "%s/%s.mport", dir, *deps);
-			if (dep_filename != NULL && mport_install_primative(mport, dep_filename, prefix, MPORT_AUTOMATIC)!= MPORT_OK) {
-		                mport_call_msg_cb(mport, "Unable to install %s: %s", *deps, mport_err_string());
-                		return MPORT_ERR_FATAL;
+			if (dep_filename == NULL) {
+				deps++;
+				continue;
+			}
+
+			if (!mport_file_exists(dep_filename)) {
+				free(dep_filename);
+				dep_filename = find_file_with_prefix(dir, *deps);
+				if (dep_filename == NULL) {
+	    			mport_call_msg_cb(mport, "Dependency %s not found in %s", *deps, dir);
+	    			deps++;
+		   			continue;
+				}
+			}
+
+			if (mport_install_primative(mport, dep_filename, prefix, MPORT_AUTOMATIC)!= MPORT_OK) {
+				mport_call_msg_cb(mport, "Unable to install %s: %s", *deps, mport_err_string());
+				return MPORT_ERR_FATAL;
 			}
 			free(dep_filename);
 			deps++;

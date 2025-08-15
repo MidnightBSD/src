@@ -218,8 +218,8 @@ main(int argc, char *argv[])
 		mport->noIndex = true;
 		mport->offline = true;
 
-		for (i = 1; i < argc; i++) {
-			tempResultCode = add(mport, argv[i], aflag == 1 ? MPORT_AUTOMATIC : MPORT_EXPLICIT);
+		for (i = 0; i < local_argc; i++) {
+			tempResultCode = add(mport, local_argv[i], aflag == 1 ? MPORT_AUTOMATIC : MPORT_EXPLICIT);
 			if (tempResultCode != 0)
 				resultCode = tempResultCode;
 		}
