@@ -23,13 +23,17 @@ static const _Unwind_State _US_ACTION_MASK            = 3;
 static const _Unwind_State _US_FORCE_UNWIND           = 8;
 
 typedef uint32_t _Unwind_EHT_Header;
-
-struct _Unwind_Control_Block;
-typedef struct _Unwind_Control_Block _Unwind_Control_Block;
-#define _Unwind_Exception _Unwind_Control_Block /* Alias */
+/*
+ * gcc_personality_v0 references 'struct _Unwind_Exception' all over the place.
+ * Nothing in libunwind cares about 'struct _Unwind_Control_Block,' so make it
+ * the alias of struct _Unwind_Exception, instead of the other way around.
+ */
+struct _Unwind_Exception;
+typedef struct _Unwind_Exception _Unwind_Exception;
+typedef struct _Unwind_Exception _Unwind_Control_Block; /* Alias */
 typedef uint8_t _Unwind_Exception_Class[8];
 
-struct _Unwind_Control_Block {
+struct _Unwind_Exception {
   _Unwind_Exception_Class exception_class;
   void (*exception_cleanup)(_Unwind_Reason_Code, _Unwind_Control_Block*);
 

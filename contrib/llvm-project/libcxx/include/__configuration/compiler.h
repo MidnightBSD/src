@@ -32,6 +32,7 @@
 
 // Warn if a compiler version is used that is not supported anymore
 // LLVM RELEASE Update the minimum compiler versions
+#if defined(_LIBCPP_ENABLE_COMPILER_VERSION_CHECKS) // FreeBSD customization
 #  if defined(_LIBCPP_CLANG_VER)
 #    if _LIBCPP_CLANG_VER < 1700
 #      warning "Libc++ only supports Clang 17 and later"
@@ -45,6 +46,7 @@
 #      warning "Libc++ only supports GCC 14 and later"
 #    endif
 #  endif
+#endif // _LIBCPP_ENABLE_COMPILER_VERSION_CHECKS
 
 #endif
 
