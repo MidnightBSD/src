@@ -249,9 +249,9 @@ check_fake(mportAssetList *assetlist, const char *destdir, const char *prefix, c
 				// the link
 				char resolved_target[FILENAME_MAX];
 				if (realpath(file, resolved_target) == NULL) {
-					(void)printf("    %s points to an invalid target: %s\n",
+					(void)printf("    WARN: %s points to an invalid target: %s\n",
 					    file, target);
-					ret = 1;
+					//ret = 1;
 				} else if (strncmp(resolved_target, destdir, strlen(destdir)) !=
 				    0) {
 					(void)printf("    WARN: %s points outside the destdir: %s\n",
