@@ -7,6 +7,10 @@ Updating Information for MidnightBSD users.
 
 	Make quot(8) more strict
 
+        If SRCCONF is unset and a file named src.conf is present at
+        the top of the source tree, it will now be used instead of
+        /etc/src.conf.
+
 20251215:
 	MidnightBSD 4.0 happened on stable/4.0 branch
 
