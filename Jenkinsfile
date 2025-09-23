@@ -64,8 +64,8 @@ pipeline {
                     stage('tests') {
                         steps {
                             echo "Do tests for ${ARCHITECTURE}"
-                            sh 'export KYUA_RESULTS_FILE=${WORKSPACE}/kyua-results.db && kyua test -k tests/Kyuafile'
-                            sh 'kyua report-junit --output junit-results.xml --results-file ${WORKSPACE}/kyua-results.db'
+                            sh "export KYUA_RESULTS_FILE=${WORKSPACE}/kyua-results.db && kyua test -k tests/Kyuafile"
+                            sh "kyua report-junit --output junit-results.xml --results-file ${WORKSPACE}/kyua-results.db"
                         }
                         post {
                             always {
