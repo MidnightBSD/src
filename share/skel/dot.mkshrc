@@ -30,7 +30,7 @@ esac
 
 PS1='#'; (( USER_ID )) && PS1='$'; [[ ${HOSTNAME:=$(ulimit -c 0; hostname -s \
     2>/dev/null)} = *([	 ]|localhost) ]] && HOSTNAME=$(ulimit -c 0; hostname \
-    2>/dev/null); : ${EDITOR:=/usr/bin/vi} ${HOSTNAME:=nil} ${TERM:=vt100}
+    2>/dev/null); : ${EDITOR:=/usr/bin/ee} ${HOSTNAME:=nil} ${TERM:=vt100}
 : ${MKSH:=$(whence -p mksh)}; PS4='[$EPOCHREALTIME] '; PS1=$'\001\r''${|
 	local e=$?
 

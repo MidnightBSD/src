@@ -13,7 +13,7 @@
 # serial line.
 # TERM=xterm; 	export TERM
 
-EDITOR=vi;   	export EDITOR
+EDITOR=ee;   	export EDITOR
 PAGER=less;  	export PAGER
 
 # set ENV to a file invoked each time sh is started for interactive use.
