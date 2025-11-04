@@ -47,7 +47,7 @@ DAEMONS=$( dialog --backtitle "MidnightBSD Installer" \
 	moused	"PS/2 mouse pointer on console" ${moused_enable:-on} \
 	ntpd	"Synchronize system and network time" ${ntpd_enable:-on} \
 	powerd	"Adjust CPU frequency dynamically if supported" \
-		${powerd_enable:-on} \
+		${powerd_enable:-off} \
 	mdnsd	"Multicast DNS" ${mdnsd_enable:-on} \
 	dumpdev "Enable kernel crash dumps to /var/crash" ${dumpdev:-on} \
 2>&1 1>&3 )
