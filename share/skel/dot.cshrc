@@ -17,7 +17,7 @@ alias ll	ls -lAF
 # A righteous umask
 # umask 22
 
-setenv	EDITOR	vi
+setenv	EDITOR	ee
 setenv	PAGER	less
 
 if ($?prompt) then

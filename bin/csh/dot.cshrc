@@ -20,7 +20,7 @@ umask 22
 
 set path = (/sbin /bin /usr/sbin /usr/bin /usr/local/sbin /usr/local/bin $HOME/bin)
 
-setenv	EDITOR	vi
+setenv	EDITOR	ee
 setenv	PAGER	less
 
 if ($?prompt) then
