@@ -39,6 +39,57 @@
 # for generating a list from a directory
 # find  /usr/lib/perl5/5.36.0 -exec echo {} \; | cut -b 2-150  | xargs printf "OLD_FILES+=%s\n"
 
+# 20251105: libc++ import which bumps version from 17 to 18
+OLD_FILES+=usr/include/c++/v1/__pstl/internal/algorithm_fwd.h
+OLD_FILES+=usr/include/c++/v1/__pstl/internal/algorithm_impl.h
+OLD_FILES+=usr/include/c++/v1/__pstl/internal/execution_defs.h
+OLD_FILES+=usr/include/c++/v1/__pstl/internal/execution_impl.h
+OLD_FILES+=usr/include/c++/v1/__pstl/internal/glue_algorithm_defs.h
+OLD_FILES+=usr/include/c++/v1/__pstl/internal/glue_algorithm_impl.h
+OLD_FILES+=usr/include/c++/v1/__pstl/internal/glue_memory_defs.h
+OLD_FILES+=usr/include/c++/v1/__pstl/internal/glue_memory_impl.h
+OLD_FILES+=usr/include/c++/v1/__pstl/internal/glue_numeric_defs.h
+OLD_FILES+=usr/include/c++/v1/__pstl/internal/glue_numeric_impl.h
+OLD_FILES+=usr/include/c++/v1/__pstl/internal/memory_impl.h
+OLD_FILES+=usr/include/c++/v1/__pstl/internal/numeric_fwd.h
+OLD_FILES+=usr/include/c++/v1/__pstl/internal/numeric_impl.h
+OLD_FILES+=usr/include/c++/v1/__pstl/internal/omp/parallel_for.h
+OLD_FILES+=usr/include/c++/v1/__pstl/internal/omp/parallel_for_each.h
+OLD_FILES+=usr/include/c++/v1/__pstl/internal/omp/parallel_invoke.h
+OLD_FILES+=usr/include/c++/v1/__pstl/internal/omp/parallel_merge.h
+OLD_FILES+=usr/include/c++/v1/__pstl/internal/omp/parallel_scan.h
+OLD_FILES+=usr/include/c++/v1/__pstl/internal/omp/parallel_stable_partial_sort.h
+OLD_FILES+=usr/include/c++/v1/__pstl/internal/omp/parallel_stable_sort.h
+OLD_FILES+=usr/include/c++/v1/__pstl/internal/omp/parallel_transform_reduce.h
+OLD_FILES+=usr/include/c++/v1/__pstl/internal/omp/parallel_transform_scan.h
+OLD_FILES+=usr/include/c++/v1/__pstl/internal/omp/util.h
+OLD_DIRS+=usr/include/c++/v1/__pstl/internal/omp
+OLD_FILES+=usr/include/c++/v1/__pstl/internal/parallel_backend.h
+OLD_FILES+=usr/include/c++/v1/__pstl/internal/parallel_backend_omp.h
+OLD_FILES+=usr/include/c++/v1/__pstl/internal/parallel_backend_serial.h
+OLD_FILES+=usr/include/c++/v1/__pstl/internal/parallel_backend_tbb.h
+OLD_FILES+=usr/include/c++/v1/__pstl/internal/parallel_backend_utils.h
+OLD_FILES+=usr/include/c++/v1/__pstl/internal/unseq_backend_simd.h
+OLD_FILES+=usr/include/c++/v1/__pstl/internal/utils.h
+OLD_DIRS+=usr/include/c++/v1/__pstl/internal
+OLD_FILES+=usr/include/c++/v1/__pstl_algorithm
+OLD_FILES+=usr/include/c++/v1/__pstl_memory
+OLD_FILES+=usr/include/c++/v1/__pstl_numeric
+OLD_FILES+=usr/include/c++/v1/__type_traits/predicate_traits.h
+OLD_FILES+=usr/include/c++/v1/__utility/terminate_on_exception.h
+OLD_FILES+=usr/include/c++/v1/experimental/deque
+OLD_FILES+=usr/include/c++/v1/experimental/forward_list
+OLD_FILES+=usr/include/c++/v1/experimental/list
+OLD_FILES+=usr/include/c++/v1/experimental/map
+OLD_FILES+=usr/include/c++/v1/experimental/memory_resource
+OLD_FILES+=usr/include/c++/v1/experimental/regex
+OLD_FILES+=usr/include/c++/v1/experimental/set
+OLD_FILES+=usr/include/c++/v1/experimental/string
+OLD_FILES+=usr/include/c++/v1/experimental/unordered_map
+OLD_FILES+=usr/include/c++/v1/experimental/unordered_set
+OLD_FILES+=usr/include/c++/v1/experimental/vector
+OLD_FILES+=usr/include/c++/v1/limits.h
+OLD_FILES+=usr/include/c++/v1/setjmp.h
 # 20250704: new clang import which bumps version from 18 to 19
 OLD_FILES+=usr/lib/clang/18/include/__clang_cuda_builtin_vars.h
 OLD_FILES+=usr/lib/clang/18/include/__clang_cuda_cmath.h
