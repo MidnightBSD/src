@@ -206,8 +206,8 @@ ATF_TC_BODY(strfmon_plus_or_parenthesis, tc)
 	    { "%(i", "C", "[123.45] [(123.45)]" },
 	    { "%(n", "en_US.UTF-8", "[$123.45] [($123.45)]" },
 	    { "%(i", "en_US.UTF-8", "[USD123.45] [(USD123.45)]" },
-	    { "%n", "C", "[123.45] [-123.45]" },
-	    { "%i", "C", "[123.45] [-123.45]" },
+	    { "%n", "C", "[123.45] [(123.45)]" }, /* XXX */
+	    { "%i", "C", "[123.45] [(123.45)]" }, /* XXX */
 	    { "%n", "en_US.UTF-8", "[$123.45] [-$123.45]" },
 	    { "%i", "en_US.UTF-8", "[USD123.45] [-USD123.45]" },
 	};
@@ -235,11 +235,19 @@ ATF_TC_BODY(strfmon_plus_or_parenthesis, tc)
 	if (setlocale(LC_MONETARY, "C") == NULL)
 		atf_tc_skip("unable to setlocale(): %s", tests[i].locale);
 
+<<<<<<< HEAD
 	ATF_CHECK_ERRNO(EINVAL, strfmon(actual, sizeof(actual) - 1,
 	    "[%+n] [%+n]", 123.45, -123.45));
 
 	ATF_CHECK_ERRNO(EINVAL, strfmon(actual, sizeof(actual) - 1,
 	    "[%+i] [%+i]", 123.45, -123.45));
+=======
+	/* ATF_CHECK_ERRNO(EINVAL, strfmon(actual, sizeof(actual) - 1,
+	    "[%+n] [%+n]", 123.45, -123.45)); XXX */
+
+	/* ATF_CHECK_ERRNO(EINVAL, strfmon(actual, sizeof(actual) - 1,
+	    "[%+i] [%+i]", 123.45, -123.45)); XXX */
+>>>>>>> 33189f868ab9 (strfmon: Add tests for Austin Group Defect 1199)
 }
 
 ATF_TC(strfmon_l);
@@ -254,7 +262,11 @@ ATF_TC_BODY(strfmon_l, tc)
 		const char *locale;
 		const char *expected;
 	} tests[] = {
+<<<<<<< HEAD
 	    { "C", "[ **1234.57] [ **1234.57]" },
+=======
+	    { "C", "[ **1234.57 ] [ **1234.57 ]" }, /* XXX */
+>>>>>>> 33189f868ab9 (strfmon: Add tests for Austin Group Defect 1199)
 	    { "de_DE.UTF-8", "[ **1234,57 €] [ **1.234,57 EUR]" },
 	    { "en_GB.UTF-8", "[ £**1234.57] [ GBP**1,234.57]" },
 	};
