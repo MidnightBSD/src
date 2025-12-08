@@ -39,6 +39,29 @@
 # for generating a list from a directory
 # find  /usr/lib/perl5/5.36.0 -exec echo {} \; | cut -b 2-150  | xargs printf "OLD_FILES+=%s\n"
 
+# 20251208: libc++ import missed removing these
+OLD_FILES+=usr/include/c++/v1/__bsd_locale_defaults.h
+OLD_FILES+=usr/include/c++/v1/__bsd_locale_fallbacks.h
+OLD_FILES+=usr/include/c++/v1/__debug
+OLD_FILES+=usr/include/c++/v1/__errc
+OLD_FILES+=usr/include/c++/v1/__functional/unwrap_ref.h
+OLD_FILES+=usr/include/c++/v1/__mutex_base
+OLD_FILES+=usr/include/c++/v1/__ranges/copyable_box.h
+OLD_FILES+=usr/include/c++/v1/__std_stream
+OLD_FILES+=usr/include/c++/v1/__tuple_dir/apply_cv.h
+OLD_FILES+=usr/include/c++/v1/__tuple_dir/make_tuple_types.h
+OLD_FILES+=usr/include/c++/v1/__tuple_dir/pair_like.h
+OLD_FILES+=usr/include/c++/v1/__tuple_dir/sfinae_helpers.h
+OLD_FILES+=usr/include/c++/v1/__tuple_dir/tuple_element.h
+OLD_FILES+=usr/include/c++/v1/__tuple_dir/tuple_indices.h
+OLD_FILES+=usr/include/c++/v1/__tuple_dir/tuple_like.h
+OLD_FILES+=usr/include/c++/v1/__tuple_dir/tuple_like_ext.h
+OLD_FILES+=usr/include/c++/v1/__tuple_dir/tuple_size.h
+OLD_FILES+=usr/include/c++/v1/__tuple_dir/tuple_types.h
+OLD_DIRS+=usr/include/c++/v1/__tuple_dir
+OLD_FILES+=usr/include/c++/v1/experimental/algorithm
+OLD_FILES+=usr/include/c++/v1/experimental/coroutine
+OLD_FILES+=usr/include/c++/v1/experimental/functional
 # 20251105: libc++ import which bumps version from 17 to 18
 OLD_FILES+=usr/include/c++/v1/__pstl/internal/algorithm_fwd.h
 OLD_FILES+=usr/include/c++/v1/__pstl/internal/algorithm_impl.h
