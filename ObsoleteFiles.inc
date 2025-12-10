@@ -39,6 +39,18 @@
 # for generating a list from a directory
 # find  /usr/lib/perl5/5.36.0 -exec echo {} \; | cut -b 2-150  | xargs printf "OLD_FILES+=%s\n"
 
+# 20251210: remove rcmds
+OLD_FILES+=bin/rcp
+OLD_FILES+=rescue/rcp
+OLD_FILES+=usr/bin/rlogin
+OLD_FILES+=usr/bin/rsh
+OLD_FILES+=usr/libexec/rlogind
+OLD_FILES+=usr/libexec/rshd
+OLD_FILES+=usr/share/man/man1/rcp.1.gz
+OLD_FILES+=usr/share/man/man1/rlogin.1.gz
+OLD_FILES+=usr/share/man/man1/rsh.1.gz
+OLD_FILES+=usr/share/man/man8/rlogind.8.gz
+OLD_FILES+=usr/share/man/man8/rshd.8.gz
 # 20251208: libc++ import missed removing these
 OLD_FILES+=usr/include/c++/v1/__refstring
 OLD_FILES+=usr/include/c++/v1/__undef_min_max
@@ -51,6 +63,9 @@ OLD_FILES+=usr/include/c++/v1/__string
 OLD_FILES+=usr/include/c++/v1/experimental/filesystem
 OLD_FILES+=usr/include/c++/v1/__bits
 OLD_FILES+=usr/include/c++/v1/__tuple
+OLD_FILES+=usr/include/c++/__tuple_03
+OLD_FILES+=usr/include/c++/v1/__tuple_03
+OLD_FILES+=usr/include/c++/v1/tr1/__tuple_03
 OLD_FILES+=usr/include/c++/v1/__utility/transaction.h
 OLD_FILES+=usr/include/c++/v1/__functional_03
 OLD_FILES+=usr/include/c++/v1/__functional_base_03
