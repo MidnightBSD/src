@@ -39,6 +39,43 @@
 # for generating a list from a directory
 # find  /usr/lib/perl5/5.36.0 -exec echo {} \; | cut -b 2-150  | xargs printf "OLD_FILES+=%s\n"
 
+# 20251210: removal of texinfo
+OLD_FILES+=usr/bin/info
+OLD_FILES+=usr/bin/infokey
+OLD_FILES+=usr/bin/install-info
+OLD_FILES+=usr/bin/makeinfo
+OLD_FILES+=usr/bin/texindex
+OLD_FILES+=usr/share/info/am-utils.info.gz
+OLD_FILES+=usr/share/info/as.info.gz
+OLD_FILES+=usr/share/info/binutils.info.gz
+OLD_FILES+=usr/share/info/com_err.info.gz
+OLD_FILES+=usr/share/info/cpp.info.gz
+OLD_FILES+=usr/share/info/cppinternals.info.gz
+OLD_FILES+=usr/share/info/diff.info.gz
+OLD_FILES+=usr/share/info/dir
+OLD_FILES+=usr/share/info/gcc.info.gz
+OLD_FILES+=usr/share/info/gccint.info.gz
+OLD_FILES+=usr/share/info/gdb.info.gz
+OLD_FILES+=usr/share/info/gdbint.info.gz
+OLD_FILES+=usr/share/info/gperf.info.gz
+OLD_FILES+=usr/share/info/grep.info.gz
+OLD_FILES+=usr/share/info/groff.info.gz
+OLD_FILES+=usr/share/info/heimdal.info.gz
+OLD_FILES+=usr/share/info/history.info.gz
+OLD_FILES+=usr/share/info/info-stnd.info.gz
+OLD_FILES+=usr/share/info/info.info.gz
+OLD_FILES+=usr/share/info/ld.info.gz
+OLD_FILES+=usr/share/info/regex.info.gz
+OLD_FILES+=usr/share/info/rluserman.info.gz
+OLD_FILES+=usr/share/info/stabs.info.gz
+OLD_FILES+=usr/share/info/texinfo.info.gz
+OLD_FILES+=usr/share/man/man1/info.1.gz
+OLD_FILES+=usr/share/man/man1/infokey.1.gz
+OLD_FILES+=usr/share/man/man1/install-info.1.gz
+OLD_FILES+=usr/share/man/man1/makeinfo.1.gz
+OLD_FILES+=usr/share/man/man1/texindex.1.gz
+OLD_FILES+=usr/share/man/man5/info.5.gz
+OLD_FILES+=usr/share/man/man5/texinfo.5.gz
 # 20251210: remove rcmds
 OLD_FILES+=bin/rcp
 OLD_FILES+=rescue/rcp
@@ -51,6 +88,14 @@ OLD_FILES+=usr/share/man/man1/rlogin.1.gz
 OLD_FILES+=usr/share/man/man1/rsh.1.gz
 OLD_FILES+=usr/share/man/man8/rlogind.8.gz
 OLD_FILES+=usr/share/man/man8/rshd.8.gz
+OLD_FILES+=sbin/mount_oldnfs
+OLD_FILES+=usr/share/man/man8/mount_oldnfs.8.gz
+OLD_FILES+=sbin/ipftest
+OLD_FILES+=sbin/ipresend
+OLD_FILES+=usr/share/man/man1/ipftest.1.gz
+OLD_FILES+=usr/share/man/man1/ipresend.1.gz
+OLD_FILES+=usr/bin/xnc
+OLD_FILES+=usr/bin/xnedit
 # 20251208: libc++ import missed removing these
 OLD_FILES+=usr/include/c++/v1/__refstring
 OLD_FILES+=usr/include/c++/v1/__undef_min_max
