@@ -40,6 +40,18 @@
 # find  /usr/lib/perl5/5.36.0 -exec echo {} \; | cut -b 2-150  | xargs printf "OLD_FILES+=%s\n"
 
 # 20251208: libc++ import missed removing these
+OLD_FILES+=usr/include/c++/v1/__refstring
+OLD_FILES+=usr/include/c++/v1/__undef_min_max
+OLD_FILES+=usr/include/c++/v1/tr1/__refstring
+OLD_FILES+=usr/include/c++/v1/tr1/__undef_min_max
+OLD_FILES+=usr/include/c++/v1/__functional_base
+OLD_FILES+=usr/include/c++/v1/__libcpp_version
+OLD_FILES+=usr/include/c++/v1/__nullptr
+OLD_FILES+=usr/include/c++/v1/__string
+OLD_FILES+=usr/include/c++/v1/experimental/filesystem
+OLD_FILES+=usr/include/c++/v1/__bits
+OLD_FILES+=usr/include/c++/v1/__tuple
+OLD_FILES+=usr/include/c++/v1/__utility/transaction.h
 OLD_FILES+=usr/include/c++/v1/__functional_03
 OLD_FILES+=usr/include/c++/v1/__functional_base_03
 OLD_FILES+=usr/include/c++/v1/__memory/base.h
