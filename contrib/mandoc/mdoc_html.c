@@ -232,7 +232,7 @@ static const struct mdoc_html_act mdoc_html_acts[MDOC_MAX - MDOC_Dd] = {
 	{mdoc__x_pre, mdoc__x_post}, /* %C */
 	{mdoc_skip_pre, NULL}, /* Es */
 	{mdoc_quote_pre, mdoc_quote_post}, /* En */
-	{mdoc_xx_pre, NULL}, /* Dx */
+	{mdoc_xx_pre, NULL}, /* Mx */
 	{mdoc__x_pre, mdoc__x_post}, /* %Q */
 	{mdoc__x_pre, mdoc__x_post}, /* %U */
 	{NULL, NULL}, /* Ta */

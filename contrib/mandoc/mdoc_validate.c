@@ -242,7 +242,7 @@ static	const v_post mdoc_valids[MDOC_MAX - MDOC_Dd] = {
 	NULL,		/* %C */
 	post_es,	/* Es */
 	post_en,	/* En */
-	post_xx,	/* Dx */
+	post_xx,	/* Mx */
 	NULL,		/* %Q */
 	NULL,		/* %U */
 	NULL,		/* Ta */
@@ -492,8 +492,6 @@ check_toptext(struct roff_man *mdoc, int ln, int pos, const char *p)
 		mandoc_msg(MANDOCERR_BX, ln, pos + (int)(cp - p), "Nx");
 	if ((cp = strstr(p, "FreeBSD")) != NULL)
 		mandoc_msg(MANDOCERR_BX, ln, pos + (int)(cp - p), "Fx");
-	if ((cp = strstr(p, "DragonFly")) != NULL)
-		mandoc_msg(MANDOCERR_BX, ln, pos + (int)(cp - p), "Dx");
 	if ((cp = strstr(p, "MidnightBSD")) != NULL)
 		mandoc_msg(MANDOCERR_BX, ln, pos + (int)(cp - p), "Mx");
 
@@ -1667,8 +1665,8 @@ post_xx(POST_ARGS)
 	case MDOC_Bsx:
 		os = "BSD/OS";
 		break;
-	case MDOC_Dx:
-		os = "DragonFly";
+	case MDOC_Mx:
+		os = "MidnightBSD";
 		break;
 	case MDOC_Fx:
 		os = "FreeBSD";
@@ -2831,7 +2829,7 @@ post_bx(POST_ARGS)
 		macro = !strcmp(nch->string, "Open") ? "Ox" :
 		    !strcmp(nch->string, "Net") ? "Nx" :
 		    !strcmp(nch->string, "Free") ? "Fx" :
-		    !strcmp(nch->string, "DragonFly") ? "Dx" : NULL;
+		    !strcmp(nch->string, "MidnightBSD") ? "Mx" : NULL;
 		if (macro != NULL)
 			mandoc_msg(MANDOCERR_BX,
 			    n->line, n->pos, "%s", macro);

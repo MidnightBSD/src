@@ -226,7 +226,7 @@ static	const struct md_act md_acts[MDOC_MAX - MDOC_Dd] = {
 	{ NULL, NULL, md_post_pc, NULL, NULL }, /* %C */
 	{ NULL, md_pre_skip, NULL, NULL, NULL }, /* Es */
 	{ md_cond_body, md_pre_En, md_post_En, NULL, NULL }, /* En */
-	{ NULL, NULL, NULL, NULL, NULL }, /* Dx */
+	{ NULL, NULL, NULL, NULL, NULL }, /* Mx */
 	{ NULL, NULL, md_post_pc, NULL, NULL }, /* %Q */
 	{ NULL, md_pre_Lk, md_post_pc, NULL, NULL }, /* %U */
 	{ NULL, NULL, NULL, NULL, NULL }, /* Ta */
