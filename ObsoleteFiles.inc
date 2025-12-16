@@ -39,6 +39,8 @@
 # for generating a list from a directory
 # find  /usr/lib/perl5/5.36.0 -exec echo {} \; | cut -b 2-150  | xargs printf "OLD_FILES+=%s\n"
 
+# 20251216: bogus man page
+OLD_FILES+=usr/share/man/man3/quota_statfs.3.gz
 # 20251216: test case renamed
 OLD_FILES+=usr/tests/usr.bin/xargs/regress.n2147483647.out
 # 20251210: removal of texinfo
