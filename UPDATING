@@ -1,5 +1,13 @@
 Updating Information for MidnightBSD users.
 
+20251216:
+	Connect diff3(1) to build
+
+	Make quot(8) more strict
+
+20251215:
+	MidnightBSD 4.0 release
+
 20250929:
 	stable/4.0 branch created. 
 
