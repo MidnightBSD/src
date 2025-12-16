@@ -69,7 +69,6 @@ MLINKS+=quotafile.3 quota_close.3 \
 	quotafile.3 quota_open.3 \
 	quotafile.3 quota_qfname.3 \
 	quotafile.3 quota_read.3 \
-	quotafile.3 quota_statfs.3 \
 	quotafile.3 quota_write_limits.3 \
 	quotafile.3 quota_write_usage.3
 MLINKS+=uucplock.3 uu_lock.3 uucplock.3 uu_lock_txfr.3 \
