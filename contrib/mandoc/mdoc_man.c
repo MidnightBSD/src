@@ -258,7 +258,7 @@ static const struct mdoc_man_act mdoc_man_acts[MDOC_MAX - MDOC_Dd] = {
 	{ NULL, NULL, post_percent, NULL, NULL }, /* %C */
 	{ NULL, pre_skip, NULL, NULL, NULL }, /* Es */
 	{ cond_body, pre_en, post_en, NULL, NULL }, /* En */
-	{ NULL, pre_bk, post_bk, NULL, NULL }, /* Dx */
+	{ NULL, pre_bk, post_bk, NULL, NULL }, /* Mx */
 	{ NULL, NULL, post_percent, NULL, NULL }, /* %Q */
 	{ NULL, NULL, post_percent, NULL, NULL }, /* %U */
 	{ NULL, NULL, NULL, NULL, NULL }, /* Ta */

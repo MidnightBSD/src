@@ -309,7 +309,7 @@ static	const struct mdoc_handler mdoc_handlers[MDOC_MAX - MDOC_Dd] = {
 	{ NULL, 0, 0 },  /* %C */
 	{ NULL, 0, 0 },  /* Es */
 	{ NULL, 0, 0 },  /* En */
-	{ NULL, TYPE_Dx, NODE_NOSRC },  /* Dx */
+	{ NULL, TYPE_Mx, NODE_NOSRC },  /* Mx */
 	{ NULL, 0, 0 },  /* %Q */
 	{ NULL, 0, 0 },  /* %U */
 	{ NULL, 0, 0 },  /* Ta */

@@ -357,7 +357,7 @@ const char *__roff_name[MAN_MAX + 1] = {
 	"Fr",		"Ud",		"Lb",		"Lp",
 	"Lk",		"Mt",		"Brq",		"Bro",
 	"Brc",		"%C",		"Es",		"En",
-	"Dx",		"%Q",		"%U",		"Ta",
+	"Mx",		"%Q",		"%U",		"Ta",
 	"Tg",		NULL,
 	"TH",		"SH",		"SS",		"TP",
 	"TQ",

@@ -57,7 +57,7 @@ const char *const mansearch_keynames[KEY_MAX] = {
 	"Ic",	"Pa",	"Cm",	"Li",	"Em",	"Cd",	"Va",	"Ft",
 	"Tn",	"Er",	"Ev",	"Sy",	"Sh",	"In",	"Ss",	"Ox",
 	"An",	"Mt",	"St",	"Bx",	"At",	"Nx",	"Fx",	"Lk",
-	"Ms",	"Bsx",	"Dx",	"Rs",	"Vt",	"Lb",	"Nm",	"Nd"
+	"Ms",	"Bsx",	"Mx",	"Rs",	"Vt",	"Lb",	"Nm",	"Nd"
 };
 
 
