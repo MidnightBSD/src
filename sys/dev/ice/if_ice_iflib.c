@@ -465,7 +465,7 @@ ice_if_attach_pre(if_ctx_t ctx)
 {
 	struct ice_softc *sc = (struct ice_softc *)iflib_get_softc(ctx);
 	enum ice_fw_modes fw_mode;
-	enum ice_status status;
+	int status;
 	if_softc_ctx_t scctx;
 	struct ice_hw *hw;
 	device_t dev;
@@ -479,6 +479,7 @@ ice_if_attach_pre(if_ctx_t ctx)
 	sc->media = iflib_get_media(ctx);
 	sc->sctx = iflib_get_sctx(ctx);
 	sc->iflib_ctx_lock = iflib_ctx_lock_get(ctx);
+	sc->ifp = iflib_get_ifp(ctx);
 
 	dev = sc->dev = iflib_get_dev(ctx);
 	scctx = sc->scctx = iflib_get_softc_ctx(ctx);
@@ -558,7 +559,7 @@ reinit_hw:
 	 * of the hardware
 	 */
 	err = ice_load_pkg_file(sc);
-	if (err == ICE_SUCCESS) {
+	if (!err) {
 		ice_deinit_hw(hw);
 		goto reinit_hw;
 	}
@@ -716,7 +717,7 @@ static void
 ice_update_link_status(struct ice_softc *sc, bool update_media)
 {
 	struct ice_hw *hw = &sc->hw;
-	enum ice_status status;
+	int status;
 
 	/* Never report link up when in recovery mode */
 	if (ice_test_state(&sc->state, ICE_STATE_RECOVERY_MODE))
@@ -764,7 +765,7 @@ ice_if_attach_post(if_ctx_t ctx)
 {
 	struct ice_softc *sc = (struct ice_softc *)iflib_get_softc(ctx);
 	if_t ifp = iflib_get_ifp(ctx);
-	enum ice_status status;
+	int status;
 	int err;
 
 	ASSERT_CTX_LOCKED(sc);
@@ -779,8 +780,6 @@ ice_if_attach_post(if_ctx_t ctx)
 	 * handler is called, so wait until attach_post to setup the
 	 * isc_max_frame_size.
 	 */
-
-	sc->ifp = ifp;
 	sc->scctx->isc_max_frame_size = ifp->if_mtu +
 		ETHER_HDR_LEN + ETHER_CRC_LEN + ETHER_VLAN_ENCAP_LEN;
 
@@ -833,7 +832,7 @@ ice_if_attach_post(if_ctx_t ctx)
 	 * was previously in DSCP PFC mode.
 	 */
 	status = ice_aq_set_pfc_mode(&sc->hw, ICE_AQC_PFC_VLAN_BASED_PFC, NULL);
-	if (status != ICE_SUCCESS)
+	if (status)
 		device_printf(sc->dev, "Setting pfc mode failed, status %s\n", ice_status_str(status));
 
 	ice_add_device_sysctls(sc);
@@ -942,7 +941,7 @@ ice_if_detach(if_ctx_t ctx)
 {
 	struct ice_softc *sc = (struct ice_softc *)iflib_get_softc(ctx);
 	struct ice_vsi *vsi = &sc->pf_vsi;
-	enum ice_status status;
+	int status;
 	int i;
 
 	ASSERT_CTX_LOCKED(sc);
@@ -1863,7 +1862,7 @@ ice_if_promisc_set(if_ctx_t ctx, int flags)
 	struct ice_softc *sc = (struct ice_softc *)iflib_get_softc(ctx);
 	struct ice_hw *hw = &sc->hw;
 	device_t dev = sc->dev;
-	enum ice_status status;
+	int status;
 	bool promisc_enable = flags & IFF_PROMISC;
 	bool multi_enable = flags & IFF_ALLMULTI;
 	ice_declare_bitmap(promisc_mask, ICE_PROMISC_MAX);
@@ -2149,7 +2148,7 @@ ice_poll_for_media_avail(struct ice_softc *sc)
 		ice_get_link_status(pi, &sc->link_up);
 
 		if (pi->phy.link_info.link_info & ICE_AQ_MEDIA_AVAILABLE) {
-			enum ice_status status;
+			int status;
 
 			/* Re-enable link and re-apply user link settings */
 			if (ice_test_state(&sc->state, ICE_STATE_LINK_ACTIVE_ON_DOWN) ||
@@ -2389,6 +2388,12 @@ ice_if_update_admin_status(if_ctx_t ctx)
 		if (pending > 0)
 			reschedule = true;
 
+		if (ice_is_generic_mac(&sc->hw)) {
+			ice_process_ctrlq(sc, ICE_CTL_Q_SB, &pending);
+			if (pending > 0)
+				reschedule = true;
+		}
+
 		ice_process_ctrlq(sc, ICE_CTL_Q_MAILBOX, &pending);
 		if (pending > 0)
 			reschedule = true;
@@ -2567,7 +2572,7 @@ ice_rebuild(struct ice_softc *sc)
 	struct ice_hw *hw = &sc->hw;
 	device_t dev = sc->dev;
 	enum ice_ddp_state pkg_state;
-	enum ice_status status;
+	int status;
 	int err;
 
 	sc->rebuild_ticks = ticks;
@@ -2605,7 +2610,9 @@ ice_rebuild(struct ice_softc *sc)
 	}
 
 	/* Re-enable FW logging. Keep going even if this fails */
-	status = ice_fwlog_set(hw, &hw->fwlog_cfg);
+	status = ICE_SUCCESS;
+	if (hw->pf_id == 0)
+		status = ice_fwlog_set(hw, &hw->fwlog_cfg);
 	if (!status) {
 		/*
 		 * We should have the most updated cached copy of the
@@ -2729,7 +2736,7 @@ ice_rebuild(struct ice_softc *sc)
 			goto err_deinit_pf_vsi;
 	}
 
-	log(LOG_INFO, "%s: device rebuild successful\n", sc->ifp->if_xname);
+	log(LOG_INFO, "%s: device rebuild successful\n", if_name(sc->ifp));
 
 	/* In order to completely restore device functionality, the iflib core
 	 * needs to be reset. We need to request an iflib reset. Additionally,
@@ -2777,7 +2784,7 @@ static void
 ice_handle_reset_event(struct ice_softc *sc)
 {
 	struct ice_hw *hw = &sc->hw;
-	enum ice_status status;
+	int status;
 	device_t dev = sc->dev;
 
 	/* When a CORER, GLOBR, or EMPR is about to happen, the hardware will
@@ -2832,7 +2839,7 @@ static void
 ice_handle_pf_reset_request(struct ice_softc *sc)
 {
 	struct ice_hw *hw = &sc->hw;
-	enum ice_status status;
+	int status;
 
 	/* Check for PF reset requests */
 	if (!ice_testandclear_state(&sc->state, ICE_STATE_RESET_PFR_REQ))
@@ -2883,11 +2890,26 @@ ice_init_device_features(struct ice_softc *sc)
 	ice_set_bit(ICE_FEATURE_HAS_PBA, sc->feat_cap);
 	ice_set_bit(ICE_FEATURE_DCB, sc->feat_cap);
 	ice_set_bit(ICE_FEATURE_TX_BALANCE, sc->feat_cap);
+	ice_set_bit(ICE_FEATURE_PHY_STATISTICS, sc->feat_cap);
 
+	if (ice_is_e810(hw))
+		ice_set_bit(ICE_FEATURE_PHY_STATISTICS, sc->feat_en);
+
+	/* Set capabilities based on device */
+	switch (hw->device_id) {
+	case ICE_DEV_ID_E825C_BACKPLANE:
+	case ICE_DEV_ID_E825C_QSFP:
+	case ICE_DEV_ID_E825C_SFP:
+		ice_set_bit(ICE_FEATURE_DUAL_NAC, sc->feat_cap);
+		break;
+	default:
+		break;
+	}
 	/* Disable features due to hardware limitations... */
 	if (!hw->func_caps.common_cap.rss_table_size)
 		ice_clear_bit(ICE_FEATURE_RSS, sc->feat_cap);
-	if (!hw->func_caps.common_cap.iwarp || !ice_enable_irdma)
+	if (!hw->func_caps.common_cap.iwarp || !ice_enable_irdma ||
+	    ice_is_e830(hw))
 		ice_clear_bit(ICE_FEATURE_RDMA, sc->feat_cap);
 	if (!hw->func_caps.common_cap.dcb)
 		ice_clear_bit(ICE_FEATURE_DCB, sc->feat_cap);
@@ -2917,6 +2939,12 @@ ice_init_device_features(struct ice_softc *sc)
 	if (hw->dev_caps.supported_sensors & ICE_SENSOR_SUPPORT_E810_INT_TEMP) {
 		ice_set_bit(ICE_FEATURE_TEMP_SENSOR, sc->feat_cap);
 		ice_set_bit(ICE_FEATURE_TEMP_SENSOR, sc->feat_en);
+	}
+
+	if (hw->func_caps.common_cap.next_cluster_id_support ||
+	    hw->dev_caps.common_cap.next_cluster_id_support) {
+		ice_set_bit(ICE_FEATURE_NEXT_CLUSTER_ID, sc->feat_cap);
+		ice_set_bit(ICE_FEATURE_NEXT_CLUSTER_ID, sc->feat_en);
 	}
 }
 
@@ -2964,7 +2992,7 @@ static void
 ice_if_vlan_register(if_ctx_t ctx, u16 vtag)
 {
 	struct ice_softc *sc = (struct ice_softc *)iflib_get_softc(ctx);
-	enum ice_status status;
+	int status;
 
 	ASSERT_CTX_LOCKED(sc);
 
@@ -2994,7 +3022,7 @@ static void
 ice_if_vlan_unregister(if_ctx_t ctx, u16 vtag)
 {
 	struct ice_softc *sc = (struct ice_softc *)iflib_get_softc(ctx);
-	enum ice_status status;
+	int status;
 
 	ASSERT_CTX_LOCKED(sc);
 
