@@ -173,6 +173,7 @@ MAN=	aac.4 \
 	geom_linux_lvm.4 \
 	geom_map.4 \
 	geom_uzip.4 \
+	geom_zero.4 \
 	gif.4 \
 	${_gve.4} \
 	gpio.4 \
@@ -962,6 +963,8 @@ _ccd.4=		ccd.4
 
 .if ${MK_CDDL} != "no"
 _dtrace_provs=	dtrace_audit.4 \
+		dtrace_callout_execute.4 \
+		dtrace_fbt.4 \
 		dtrace_io.4 \
 		dtrace_ip.4 \
 		dtrace_lockstat.4 \
@@ -970,7 +973,8 @@ _dtrace_provs=	dtrace_audit.4 \
 		dtrace_sctp.4 \
 		dtrace_tcp.4 \
 		dtrace_udp.4 \
-		dtrace_udplite.4
+		dtrace_udplite.4 \
+		dtrace_vfs.4
 
 MLINKS+=	dtrace_audit.4 dtaudit.4
 .endif
@@ -1067,6 +1071,7 @@ MAN+=	\
 	uvscom.4 \
 	zyd.4
 
+MLINKS+=geom_zero.4 gzero.4
 MLINKS+=otus.4 if_otus.4
 MLINKS+=rsu.4 if_rsu.4
 MLINKS+=rtwn_usb.4 if_rtwn_usb.4
