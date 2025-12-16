@@ -35,6 +35,7 @@ SUBDIR=	alias \
 	ctlstat \
 	cut \
 	diff \
+	diff3 \
 	dirname \
 	dns-sd \
 	doas \
