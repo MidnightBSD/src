@@ -61,12 +61,12 @@ KERN_DEBUGDIR?=	${DEBUGDIR}
 .MAIN: all
 
 .if !defined(NO_MODULES)
-# Default prefix used for modules installed from ports
+# Default prefix used for modules installed from mports
 LOCALBASE?=	/usr/local
 
 LOCAL_MODULES_DIR?= ${LOCALBASE}/sys/modules
 
-# Default to installing all modules installed by ports unless overridden
+# Default to installing all modules installed by mports unless overridden
 # by the user.
 .if !defined(LOCAL_MODULES) && exists(${LOCAL_MODULES_DIR})
 LOCAL_MODULES!= ls ${LOCAL_MODULES_DIR}
@@ -92,19 +92,19 @@ modules-${target}:
 .endif
 .endfor
 
-# Handle ports (as defined by the user) that build kernel modules
+# Handle mports (as defined by the user) that build kernel modules
 .if !defined(NO_MODULES) && defined(PORTS_MODULES)
 #
-# The ports tree needs some environment variables defined to match the new kernel
+# The mports tree needs some environment variables defined to match the new kernel
 #
-# SRC_BASE is how the ports tree refers to the location of the base source files
+# SRC_BASE is how the mports tree refers to the location of the base source files
 .if !defined(SRC_BASE)
 SRC_BASE=	${SYSDIR:H:tA}
 .endif
-# OSVERSION is used by some ports to determine build options
+# OSVERSION is used by some mports to determine build options
 .if !defined(OSRELDATE)
 # Definition copied from src/Makefile.inc1
-OSRELDATE!=	awk '/^\#define[[:space:]]*__FreeBSD_version/ { print $$3 }' \
+OSRELDATE!=	awk '/^\#define[[:space:]]*__MidnightBSD_version/ { print $$3 }' \
 		    ${MAKEOBJDIRPREFIX}${SRC_BASE}/include/osreldate.h
 .endif
 # Keep the related ports builds in the obj directory so that they are only rebuilt once per kernel build
@@ -133,7 +133,7 @@ all:
 .for __i in ${PORTS_MODULES}
 	@${ECHO} "===> Ports module ${__i} (all)"
 	port=${__i}; flavor=$${port#*@}; port=$${port%@*}; flavor=$${flavor%$${port}}; \
-	cd ${PORTSDIR:U/usr/ports}/$${port}; \
+	cd ${PORTSDIR:U/usr/mports}/$${port}; \
 	${PORTSMODULESENV} ${MAKE} -B $${flavor:+FLAVOR=}$${flavor} \
 	    clean build
 .endfor
@@ -144,7 +144,7 @@ ports-${__target}:
 .for __i in ${PORTS_MODULES}
 	@${ECHO} "===> Ports module ${__i} (${__target})"
 	port=${__i}; flavor=$${port#*@}; port=$${port%@*}; flavor=$${flavor%$${port}}; \
-	cd ${PORTSDIR:U/usr/ports}/$${port}; \
+	cd ${PORTSDIR:U/usr/mports}/$${port}; \
 	${PORTSMODULESENV} ${MAKE} -B $${flavor:+FLAVOR=}$${flavor} \
 	    ${__target:C/(re)?install/deinstall reinstall/}
 .endfor

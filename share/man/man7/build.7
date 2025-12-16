@@ -38,13 +38,13 @@ normally
 .Pa /usr/src ,
 .Pa /usr/doc ,
 and
-.Pa /usr/ports .
+.Pa /usr/mports .
 These directories may be initially empty or non-existent until updated with
 Git
 .Po installed from packages with
-.Xr pkg 7
+.Xr mport 7
 or from
-.Xr ports 7 Pc .
+.Xr mports 7 Pc .
 Directory
 .Pa /usr/src
 contains the
@@ -56,11 +56,11 @@ Directory
 contains the source for the system documentation, excluding the manual
 pages.
 Directory
-.Pa /usr/ports
+.Pa /usr/mports
 contains a tree that provides a consistent interface for building and
 installing third party applications.
 For more information about the ports build process, see
-.Xr ports 7 .
+.Xr mports 7 .
 .Pp
 The
 .Xr make 1
@@ -519,8 +519,8 @@ The file should be a make file which sets variables to request an external
 toolchain such as
 .Va XCC .
 .Pp
-External toolchains are available in ports for both LLVM and GCC/binutils.
-For external toolchains available in ports,
+External toolchains are available in mports for both LLVM and GCC/binutils.
+For external toolchains available in mports,
 .Va CROSS_TOOLCHAIN
 should be set to the name of the package.
 LLVM toolchain packages use the name llvm<major version>.
@@ -613,7 +613,7 @@ the root of the source tree to build as part of the
 .Cm cross-tools
 target.
 .It Va PORTS_MODULES
-A list of ports with kernel modules that should be built and installed
+A list of mports with kernel modules that should be built and installed
 as part of the
 .Cm buildkernel
 and
