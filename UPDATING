@@ -11,6 +11,13 @@ Updating Information for MidnightBSD users.
         the top of the source tree, it will now be used instead of
         /etc/src.conf.
 
+	ipfw - Maliciously crafted packets sent from a remote host may result in a Denial of
+	Service (DoS) if the `tcp-setmss` directive is used and a subsequent rule would
+	allow the traffic to pass.
+
+	rtsold does not validate input and is vulnerable to remote code
+	execution from devices on the same network.
+
 20251215:
 	MidnightBSD 4.0 happened on stable/4.0 branch
 
