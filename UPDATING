@@ -5,6 +5,16 @@ Updating Information for MidnightBSD users.
 
 	Make quot(8) more strict
 
+	Fix two security issues:
+	ipfw - In some cases, the `tcp-setmss` handler may free the packet data and throw an
+	error without halting the rule processing engine.  A subsequent rule can then
+	allow the traffic after the packet data is gone, resulting in a NULL pointer
+	dereference.
+
+	The rtsol(8) and rtsold(8) programs do not validate the domain search list
+	options provided in router advertisement messages; the option body is passed
+	to resolvconf(8) unmodified.
+    
 20251215:
 	MidnightBSD 4.0 release
 
