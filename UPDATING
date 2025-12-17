@@ -1,5 +1,23 @@
 Updating Information for MidnightBSD users.
 
+20251216:
+	3.2.5 RELEASE
+
+	ipfw - Maliciously crafted packets sent from a remote host may result in a Denial of
+	Service (DoS) if the `tcp-setmss` directive is used and a subsequent rule would
+	allow the traffic to pass.
+
+	rtsold does not validate input and is vulnerable to remote code
+	execution from devices on the same network.
+	
+20251017:
+	3.2.4 RELEASE
+
+	Fix a security issue with OpenSSL
+
+	kek_unwrap_key(): Fix incorrect check of unwrapped key size
+	Fixes CVE-2025-9230
+
 20250410:
 	Update caroot certificates.
 
