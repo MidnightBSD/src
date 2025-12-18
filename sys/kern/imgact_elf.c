@@ -2750,7 +2750,7 @@ __elfN(parse_notes)(struct image_params *imgp, Elf_Note *checknote,
 		}
 		if ((const char *)note_end - (const char *)note <
 		    sizeof(Elf_Note)) {
-			uprintf("ELF note to short\n");
+			uprintf("ELF note too short\n");
 			goto retf;
 		}
 		if (note->n_namesz != checknote->n_namesz ||
