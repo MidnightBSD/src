@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20251219:
+	unbound 1.24.1
+
 20251216:
 	Connect diff3(1) to build
 
