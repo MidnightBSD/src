@@ -652,14 +652,14 @@ scrub_normalize(sldns_buffer* pkt, struct msg_parse* msg,
 			 * and are removed later. */
 			if(FLAGS_GET_RCODE(msg->flags) == LDNS_RCODE_NOERROR &&
 				msg->an_rrsets != 0 &&
-				1 /* env->cfg->iter_scrub_promiscuous */) {
+				env->cfg->iter_scrub_promiscuous) {
 				remove_rrset("normalize: removing promiscuous "
 					"RRset:", pkt, msg, prev, &rrset);
 				continue;
 			}
 			/* Also delete promiscuous NS for other RCODEs */
 			if(FLAGS_GET_RCODE(msg->flags) != LDNS_RCODE_NOERROR
-				&& 1 /* env->cfg->iter_scrub_promiscuous */) {
+				&& env->cfg->iter_scrub_promiscuous) {
 				remove_rrset("normalize: removing promiscuous "
 					"RRset:", pkt, msg, prev, &rrset);
 				continue;
@@ -675,7 +675,7 @@ scrub_normalize(sldns_buffer* pkt, struct msg_parse* msg,
 				&& msg->an_rrsets == 0
 				&& !(dname_pkt_compare(pkt, rrset->dname,
 				     zonename) != 0 && !soa_in_auth(msg))
-				&& 1 /* env->cfg->iter_scrub_promiscuous */) {
+				&& env->cfg->iter_scrub_promiscuous) {
 				remove_rrset("normalize: removing promiscuous "
 					"RRset:", pkt, msg, prev, &rrset);
 				continue;
