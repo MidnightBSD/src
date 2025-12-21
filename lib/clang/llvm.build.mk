@@ -125,6 +125,7 @@ LDFLAGS+=	-Wl,-m,elf64lriscv_fbsd
 CXXSTD?=	c++17
 CXXFLAGS+=	-fno-exceptions
 CXXFLAGS+=	-fno-rtti
+CXXFLAGS+=	-fvisibility-inlines-hidden
 .if ${.MAKE.OS} == "MidnightBSD"  || ${.MAKE.OS} == "FreeBSD" || !defined(BOOTSTRAPPING)
 CXXFLAGS.clang+= -stdlib=libc++
 .else
