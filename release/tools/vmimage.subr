@@ -190,7 +190,7 @@ vm_create_disk() {
 	echo
 
 	if [ -z "${NOSWAP}" ]; then
-		SWAPOPT="-p freebsd-swap/swapfs::${SWAPSIZE}"
+		SWAPOPT="-p mnbsd-swap/swapfs::${SWAPSIZE}"
 	fi
 
 	BOOTFILES="$(env TARGET=${TARGET} TARGET_ARCH=${TARGET_ARCH} \
@@ -202,20 +202,20 @@ vm_create_disk() {
 		amd64:amd64 | i386:i386)
 			ESP=yes
 			BOOTPARTS="-b ${BOOTFILES}/i386/pmbr/pmbr \
-				   -p freebsd-boot/bootfs:=${BOOTFILES}/i386/gptboot/gptboot"
-			ROOTFSPART="-p freebsd-ufs/rootfs:=${VMBASE}"
+				   -p mnbsd-boot/bootfs:=${BOOTFILES}/i386/gptboot/gptboot"
+			ROOTFSPART="-p mnbsd-ufs/rootfs:=${VMBASE}"
 			MAKEFSARGS="-B little"
 			;;
 		arm64:aarch64 | riscv:riscv64*)
 			ESP=yes
 			BOOTPARTS=
-			ROOTFSPART="-p freebsd-ufs/rootfs:=${VMBASE}"
+			ROOTFSPART="-p mnbsd-ufs/rootfs:=${VMBASE}"
 			MAKEFSARGS="-B little"
 			;;
 		powerpc:powerpc*)
 			ESP=no
 			BOOTPARTS="-p prepboot:=${BOOTFILES}/powerpc/boot1.chrp/boot1.elf -a 1"
-			ROOTFSPART="-p freebsd:=${VMBASE}"
+			ROOTFSPART="-p midnightbsd:=${VMBASE}"
 			if [ ${TARGET_ARCH} = powerpc64le ]; then
 				MAKEFSARGS="-B little"
 			else
