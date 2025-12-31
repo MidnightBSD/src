@@ -518,6 +518,12 @@ mport_directory(const char *path)
 			// Construct the full path by appending the filename
 			strcat(currentDir, "/");
 			strcat(currentDir, path);
+
+			char *lastSlash = strrchr(currentDir, '/');
+			if (lastSlash != NULL) {
+				*lastSlash = '\0'; // Null-terminate at the last slash to get the directory
+			}
+
 			return strdup(currentDir);
 		}
 	}
