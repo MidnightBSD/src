@@ -294,6 +294,7 @@ create_sample_file(mportInstance *mport, char *cwd, const char *file)
 {
 	char nonSample[FILENAME_MAX * 2];
 	char secondFile[FILENAME_MAX];
+	char *dir;
 
 	if (file[0] != '/')
 		(void) snprintf(nonSample, FILENAME_MAX, "%s%s/%s", mport->root, cwd, file);
@@ -309,6 +310,12 @@ create_sample_file(mportInstance *mport, char *cwd, const char *file)
 			(void) snprintf(secondFile, FILENAME_MAX, "%s%s/%s", mport->root, cwd, fileargv[1]);
 
 		if (!mport_file_exists(secondFile)) {
+			dir = mport_directory(secondFile);
+			if (dir != NULL) {
+				mport_mkdir(dir);
+				free(dir);
+			}
+
 			if (mport_copy_file(fileargv[0], secondFile) != MPORT_OK)
 				RETURN_CURRENT_ERROR;
 		}
@@ -318,6 +325,12 @@ create_sample_file(mportInstance *mport, char *cwd, const char *file)
 		if (sptr != NULL) {
 			sptr[0] = '\0'; /* hack off .sample */
 			if (!mport_file_exists(nonSample)) {
+				dir = mport_directory(nonSample);
+				if (dir != NULL) {
+					mport_mkdir(dir);
+					free(dir);
+				}
+
 				if (mport_copy_file(file, nonSample) != MPORT_OK) {
 					RETURN_CURRENT_ERROR;
 				}

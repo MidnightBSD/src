@@ -206,8 +206,8 @@ mport_index_get(mportInstance *mport)
  */
 MPORT_PUBLIC_API int
 mport_index_check(mportInstance *mport, mportPackageMeta *pack) {
-    mportIndexEntry **indexEntries, **indexEntries_orig;
-    int ret = 0;
+	mportIndexEntry **indexEntries = NULL, **indexEntries_orig = NULL;
+	int ret = 0;
 	bool used_origin = false;
 
     if (mport == NULL) {
@@ -221,8 +221,12 @@ mport_index_check(mportInstance *mport, mportPackageMeta *pack) {
         SET_ERRORX(MPORT_ERR_WARN, "Error Looking up package name %s", pack->name);
     }
 
-	if (indexEntries == NULL) {
+	if (indexEntries_orig == NULL || *indexEntries_orig == NULL) {
 		// not found in the index.  Could be a version upgrade like py38->py39
+		if (indexEntries_orig != NULL) {
+			mport_index_entry_free_vec(indexEntries_orig);
+			indexEntries_orig = NULL;
+		}
 		if (mport_index_lookup_pkgname(mport, pack->origin, &indexEntries_orig) != MPORT_OK) {
 			SET_ERRORX(MPORT_ERR_WARN, "Error Looking up package origin %s", pack->origin);
 			return (0);
@@ -234,7 +238,7 @@ mport_index_check(mportInstance *mport, mportPackageMeta *pack) {
         indexEntries = indexEntries_orig;
         while (*indexEntries != NULL) {
             int osflag = mport_check_preconditions(mport, pack, MPORT_PRECHECK_OS);
-			// if the pacakge was built for an older os, update it.  if the package version is less than the index version, update it.
+			// if the package was built for an older os, update it.  if the package version is less than the index version, update it.
 			// if the origin had to be matched, and the package name does not match the index, update it. (py38->py39)
             if ((*indexEntries)->version != NULL && pack->version != NULL && (mport_version_cmp(pack->version, (*indexEntries)->version) < 0 ||
                                                      (mport_version_cmp(pack->version, (*indexEntries)->version) == 0 && osflag == MPORT_OK) ||
@@ -246,7 +250,6 @@ mport_index_check(mportInstance *mport, mportPackageMeta *pack) {
         }
         mport_index_entry_free_vec(indexEntries_orig);
         indexEntries_orig = NULL;
-        indexEntries = NULL;
     }
 
     return (ret);

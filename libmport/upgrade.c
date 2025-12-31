@@ -163,7 +163,7 @@ mport_upgrade(mportInstance *mport) {
 					return (0);
 				}
 
-				if (ieUpdateMe == NULL) {
+				if (ieUpdateMe == NULL || *ieUpdateMe == NULL) {
 					packs++;
 					continue;
 				}

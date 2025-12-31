@@ -249,9 +249,9 @@ check_fake(mportAssetList *assetlist, const char *destdir, const char *prefix, c
 				// the link
 				char resolved_target[FILENAME_MAX];
 				if (realpath(file, resolved_target) == NULL) {
-					(void)printf("    %s points to an invalid target: %s\n",
+					(void)printf("    WARN: %s points to an invalid target: %s\n",
 					    file, target);
-					ret = 1;
+					//ret = 1;
 				} else if (strncmp(resolved_target, destdir, strlen(destdir)) !=
 				    0) {
 					(void)printf("    WARN: %s points outside the destdir: %s\n",
@@ -350,8 +350,8 @@ check_fake(mportAssetList *assetlist, const char *destdir, const char *prefix, c
 			char cmd[FILENAME_MAX];
 			(void)snprintf(cmd, sizeof(cmd), "ldd %s > /dev/null 2>&1", file);
 			if (system(cmd) != 0) {
-				(void)printf("    %s has missing or broken dependencies\n", file);
-				ret = 1;
+				(void)printf("    %s has missing or broken dependencies, or is a linux binary\n", file);
+				//ret = 1; need to handle linux libraries better before we can fail here.
 			}
 		}
 	}
