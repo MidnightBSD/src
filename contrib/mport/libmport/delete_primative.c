@@ -45,6 +45,25 @@
 #include "mport_private.h"
 #include "mport_lua.h"
 
+static char **
+parse_sample(char *input)
+{
+	char **ap, **argv;
+	argv = calloc(3, sizeof(char *));
+
+	if (argv == NULL)
+		return NULL;
+
+	for (ap = argv; (*ap = strsep(&input, " \t")) != NULL;) {
+		if (**ap != '\0') {
+			if (++ap >= &argv[3])
+				break;
+		}
+	}
+
+	return argv;
+}
+
 static int run_unexec(mportInstance *, mportPackageMeta *, mportAssetListEntryType);
 static int run_unldconfig(mportInstance *, mportPackageMeta *);
 static int run_special_unexec(mportInstance *, mportPackageMeta *);
@@ -226,44 +245,59 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 
 				if (type == ASSET_SAMPLE || type == ASSET_SAMPLE_OWNER_MODE) {
 					char sample_hash[65];
-					char nonSample[FILENAME_MAX];
-					strlcpy(nonSample, file, FILENAME_MAX);
-					char *sptr = strcasestr(nonSample, ".sample");
-					if (sptr != NULL) {
-						sptr[0] = '\0'; /* hack off .sample */
+					char dest_path[FILENAME_MAX];
+					char *data_copy;
+					char **fileargv;
+					bool dest_path_set = false;
 
+					dest_path[0] = '\0';
+					data_copy = strdup(data);
+
+					if (data_copy != NULL) {
+						fileargv = parse_sample(data_copy);
+
+						if (fileargv != NULL) {
+							if (fileargv[1] != NULL) {
+								/* Case 2: @sample src dest */
+								if (fileargv[1][0] == '/')
+									strlcpy(dest_path, fileargv[1], FILENAME_MAX);
+								else
+									(void) snprintf(dest_path, FILENAME_MAX, "%s%s/%s", mport->root, cwd, fileargv[1]);
+								dest_path_set = true;
+							} else if (fileargv[0] != NULL) {
+								/* Case 1: @sample file.sample */
+								char nonSample[FILENAME_MAX];
+								strlcpy(nonSample, file, FILENAME_MAX);
+								
+								char *sptr = strcasestr(nonSample, ".sample");
+								if (sptr != NULL) {
+									sptr[0] = '\0'; /* hack off .sample */
+									strlcpy(dest_path, nonSample, FILENAME_MAX);
+									dest_path_set = true;
+								}
+							}
+							free(fileargv);
+						}
+						free(data_copy);
+					}
+
+					if (dest_path_set && mport_file_exists(dest_path)) {
+						bool hashes_match = false;
 						if (strlen(checksum) < 34) {
-							if (MD5File(nonSample, sample_hash) ==
-							    NULL) {
-								mport_call_msg_cb(mport,
-								    "Could not check file %s, review and remove manually.",
-								    nonSample);
-							} else if (strcmp(sample_hash, hash) == 0) {
-								if (unlink(nonSample) != 0)
-									mport_call_msg_cb(mport,
-									    "Could not unlink %s: %s",
-									    file, strerror(errno));
-							} else {
-								mport_call_msg_cb(mport,
-								    "File does not match sample, remove file %s manually.",
-								    nonSample);
+							if (MD5File(dest_path, sample_hash) != NULL && strcmp(sample_hash, hash) == 0) {
+								hashes_match = true;
 							}
 						} else {
-							if (SHA256_File(nonSample, sample_hash) ==
-							    NULL) {
-								mport_call_msg_cb(mport,
-								    "Could not check file %s, review and remove manually.",
-								    nonSample);
-							} else if (strcmp(sample_hash, hash) == 0) {
-								if (unlink(nonSample) != 0)
-									mport_call_msg_cb(mport,
-									    "Could not unlink %s: %s",
-									    file, strerror(errno));
-							} else {
-								mport_call_msg_cb(mport,
-								    "File does not match sample, remove file %s manually.",
-								    nonSample);
+							if (SHA256_File(dest_path, sample_hash) != NULL && strcmp(sample_hash, hash) == 0) {
+								hashes_match = true;
 							}
+						}
+
+						if (hashes_match) {
+							if (unlink(dest_path) != 0)
+								mport_call_msg_cb(mport, "Could not unlink %s: %s", dest_path, strerror(errno));
+						} else {
+							mport_call_msg_cb(mport, "File does not match sample, remove file %s manually.", dest_path);
 						}
 					}
 				}
