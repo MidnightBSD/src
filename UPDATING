@@ -1,6 +1,11 @@
 Updating Information for MidnightBSD users.
 
+20251231:
+	mport 2.7.4
+
 20251221:
+	MidnightBSD 4.0.1
+
 	update pci vendors list
 
 20251219:
