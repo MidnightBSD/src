@@ -60,6 +60,7 @@ struct ELFtypes {
 static struct ELFtypes elftypes[] = {
 	{ "FreeBSD",	ELFOSABI_FREEBSD },
 	{ "Linux",	ELFOSABI_LINUX },
+	{ "MidnightBSD",	ELFOSABI_FREEBSD },
 	{ "Solaris",	ELFOSABI_SOLARIS },
 	{ "SVR4",	ELFOSABI_SYSV }
 };
