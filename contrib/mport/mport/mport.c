@@ -587,7 +587,7 @@ main(int argc, char *argv[])
 			}
 			local_argc -= optind;
 			local_argv += optind;
-			which(mport, *local_argv, oflag);
+			resultCode = which(mport, *local_argv, oflag);
 		} else {
 			usage();
 		}
