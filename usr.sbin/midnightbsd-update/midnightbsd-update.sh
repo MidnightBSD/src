@@ -3127,7 +3127,7 @@ Kernel updates have been installed.  Please reboot and run
 
 Completing this upgrade requires removing old shared object files.
 Please upgrade or rebuild all installed 3rd party software (e.g.,
-programs installed with pkg or from the ports tree) and then run
+programs installed with mport or from the mports tree) and then run
 '`basename $0` [options] install' again to finish installing updates.
 			EOF
 			rm newfiles
