@@ -343,8 +343,7 @@ amdtemp_probe(device_t dev)
 	default:
 		return (ENXIO);
 	}
-	device_set_descf(dev, "AMD Family %02Xh CPU On-Die Thermal Sensors",
-	    family);
+	device_set_desc(dev, "AMD CPU On-Die Thermal Sensors");
 
 	return (BUS_PROBE_GENERIC);
 }
