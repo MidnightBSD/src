@@ -121,8 +121,9 @@ pbnum(int n)
 void
 pbnumbase(int n, int base, int d)
 {
-	static char digits[36] = "0123456789abcdefghijklmnopqrstuvwxyz";
-	int num;
+	static char digits[36] __nonstring =
+	    "0123456789abcdefghijklmnopqrstuvwxyz";
+	unsigned int num;
 	int printed = 0;
 
 	if (base > 36)
