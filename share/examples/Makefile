@@ -11,7 +11,6 @@ LDIRS=	IPv6 \
 	bootforth \
 	csh \
 	diskless \
-	drivers \
 	etc \
 	find_interface \
 	flua \

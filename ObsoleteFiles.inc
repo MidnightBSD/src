@@ -39,6 +39,10 @@
 # for generating a list from a directory
 # find  /usr/lib/perl5/5.36.0 -exec echo {} \; | cut -b 2-150  | xargs printf "OLD_FILES+=%s\n"
 
+# 20260118: share: Delete bitrotted make_*_driver.sh scripts
+OLD_FILES+=usr/share/examples/drivers/README
+OLD_FILES+=usr/share/examples/drivers/make_device_driver.sh
+OLD_FILES+=usr/share/examples/drivers/make_pseudo_driver.sh
 # 20251216: Remove libnss_tacplus.a (it never should have been installed)
 OLD_FILES+=usr/lib/libnss_tacplus.a
 # 20251216: bogus man page
