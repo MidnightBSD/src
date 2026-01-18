@@ -25,7 +25,7 @@
  */
 
 /*
- * Driver for the AMD Family 15h and 17h CPU System Management Network.
+ * Driver for the AMD Family 15h, 17h, 19h, 1Ah CPU System Management Network.
  */
 
 #include <sys/cdefs.h>
@@ -58,10 +58,15 @@
 #define	PCI_DEVICE_ID_AMD_17H_ROOT		0x1450
 #define	PCI_DEVICE_ID_AMD_17H_M10H_ROOT		0x15d0
 #define	PCI_DEVICE_ID_AMD_17H_M30H_ROOT		0x1480	/* Also M70H, F19H M00H/M20H */
-#define	PCI_DEVICE_ID_AMD_17H_M60H_ROOT		0x1630
+#define	PCI_DEVICE_ID_AMD_17H_M60H_ROOT		0x1630	/* Also F19H M50H */
 #define	PCI_DEVICE_ID_AMD_19H_M10H_ROOT		0x14a4
-#define	PCI_DEVICE_ID_AMD_19H_M60H_ROOT		0x14d8
+#define	PCI_DEVICE_ID_AMD_19H_M40H_ROOT		0x14b5
+#define	PCI_DEVICE_ID_AMD_19H_M60H_ROOT		0x14d8	/* Also F1AH M40H */
 #define	PCI_DEVICE_ID_AMD_19H_M70H_ROOT		0x14e8
+#define	PCI_DEVICE_ID_AMD_1AH_M00H_ROOT		0x153a
+#define	PCI_DEVICE_ID_AMD_1AH_M20H_ROOT		0x1507
+#define	PCI_DEVICE_ID_AMD_1AH_M60H_ROOT		0x1122
+
 
 struct pciid;
 struct amdsmn_softc {
@@ -113,6 +118,12 @@ static const struct pciid {
 	},
 	{
 		.amdsmn_vendorid = CPU_VENDOR_AMD,
+		.amdsmn_deviceid = PCI_DEVICE_ID_AMD_19H_M40H_ROOT,
+		.amdsmn_addr_reg = F17H_SMN_ADDR_REG,
+		.amdsmn_data_reg = F17H_SMN_DATA_REG,
+	},
+	{
+		.amdsmn_vendorid = CPU_VENDOR_AMD,
 		.amdsmn_deviceid = PCI_DEVICE_ID_AMD_19H_M60H_ROOT,
 		.amdsmn_addr_reg = F17H_SMN_ADDR_REG,
 		.amdsmn_data_reg = F17H_SMN_DATA_REG,
@@ -120,6 +131,24 @@ static const struct pciid {
 	{
 		.amdsmn_vendorid = CPU_VENDOR_AMD,
 		.amdsmn_deviceid = PCI_DEVICE_ID_AMD_19H_M70H_ROOT,
+		.amdsmn_addr_reg = F17H_SMN_ADDR_REG,
+		.amdsmn_data_reg = F17H_SMN_DATA_REG,
+	},
+	{
+		.amdsmn_vendorid = CPU_VENDOR_AMD,
+		.amdsmn_deviceid = PCI_DEVICE_ID_AMD_1AH_M00H_ROOT,
+		.amdsmn_addr_reg = F17H_SMN_ADDR_REG,
+		.amdsmn_data_reg = F17H_SMN_DATA_REG,
+	},
+	{
+		.amdsmn_vendorid = CPU_VENDOR_AMD,
+		.amdsmn_deviceid = PCI_DEVICE_ID_AMD_1AH_M20H_ROOT,
+		.amdsmn_addr_reg = F17H_SMN_ADDR_REG,
+		.amdsmn_data_reg = F17H_SMN_DATA_REG,
+	},
+	{
+		.amdsmn_vendorid = CPU_VENDOR_AMD,
+		.amdsmn_deviceid = PCI_DEVICE_ID_AMD_1AH_M60H_ROOT,
 		.amdsmn_addr_reg = F17H_SMN_ADDR_REG,
 		.amdsmn_data_reg = F17H_SMN_DATA_REG,
 	},
@@ -207,6 +236,7 @@ amdsmn_probe(device_t dev)
 	case 0x15:
 	case 0x17:
 	case 0x19:
+	case 0x1a:
 		break;
 	default:
 		return (ENXIO);
