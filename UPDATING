@@ -3,6 +3,8 @@ Updating Information for MidnightBSD users.
 20260118:
 	tzdata 2025c
 
+	mtree updated from netbsd/freebsd
+
 20251231:
 	mport 2.7.4
 
