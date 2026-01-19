@@ -222,6 +222,16 @@ SYSCTL_INT(_hw_apic, OID_AUTO, ds_idle_timeout, CTLFLAG_RWTUN,
 static void lapic_calibrate_initcount(struct lapic *la);
 
 /*
+ * Calculate the max index of the present LVT entry from the value of
+ * the LAPIC version register.
+ */
+static int
+lapic_maxlvt(uint32_t version)
+{
+	return ((version & APIC_VER_MAXLVT) >> MAXLVTSHIFT);
+}
+
+/*
  * Use __nosanitizethread to exempt the LAPIC I/O accessors from KCSan
  * instrumentation.  Otherwise, if x2APIC is not available, use of the global
  * lapic_map will generate a KCSan false positive.  While the mapping is
@@ -729,7 +739,7 @@ native_lapic_dump(const char* str)
 	int i;
 
 	version = lapic_read32(LAPIC_VERSION);
-	maxlvt = (version & APIC_VER_MAXLVT) >> MAXLVTSHIFT;
+	maxlvt = lapic_maxlvt(version);
 	printf("cpu%d %s:\n", PCPU_GET(cpuid), str);
 	printf("     ID: 0x%08x   VER: 0x%08x LDR: 0x%08x DFR: 0x%08x",
 	    lapic_read32(LAPIC_ID), version,
@@ -784,7 +794,7 @@ native_lapic_setup(int boot)
 	la = &lapics[lapic_id()];
 	KASSERT(la->la_present, ("missing APIC structure"));
 	version = lapic_read32(LAPIC_VERSION);
-	maxlvt = (version & APIC_VER_MAXLVT) >> MAXLVTSHIFT;
+	maxlvt = lapic_maxlvt(version);
 
 	/* Initialize the TPR to allow all interrupts. */
 	lapic_set_tpr(0);
@@ -944,7 +954,7 @@ native_lapic_enable_pmc(void)
 #endif
 
 	/* Fail if the PMC LVT is not present. */
-	maxlvt = (lapic_read32(LAPIC_VERSION) & APIC_VER_MAXLVT) >> MAXLVTSHIFT;
+	maxlvt = lapic_maxlvt(lapic_read32(LAPIC_VERSION));
 	if (maxlvt < APIC_LVT_PMC)
 		return (0);
 
@@ -985,7 +995,7 @@ native_lapic_disable_pmc(void)
 #endif
 
 	/* Fail if the PMC LVT is not present. */
-	maxlvt = (lapic_read32(LAPIC_VERSION) & APIC_VER_MAXLVT) >> MAXLVTSHIFT;
+	maxlvt = lapic_maxlvt(lapic_read32(LAPIC_VERSION));
 	if (maxlvt < APIC_LVT_PMC)
 		return;
 
@@ -1853,7 +1863,7 @@ DB_SHOW_COMMAND(lapic, db_show_lapic)
 	v = lapic_read32(LAPIC_VERSION);
 	db_printf("version  = %d.%d\n", (v & APIC_VER_VERSION) >> 4,
 	    v & 0xf);
-	db_printf("max LVT  = %d\n", (v & APIC_VER_MAXLVT) >> MAXLVTSHIFT);
+	db_printf("max LVT  = %d\n", lapic_maxlvt(v));
 	v = lapic_read32(LAPIC_SVR);
 	db_printf("SVR      = %02x (%s)\n", v & APIC_SVR_VECTOR,
 	    v & APIC_SVR_ENABLE ? "enabled" : "disabled");
