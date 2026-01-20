@@ -86,7 +86,7 @@ firstboot_start()
 			echo -e "\r${yellow}Do you wish to install Intel or AMD GPU drivers? (yes or no)${lsuffix}"
 			read drmkmod
 			if [ ${drmkmod} = "yes" ]; then
-				/usr/sbin/mport install drm-fbsd12.0-kmod
+				/usr/sbin/mport install drm-510-kmod
 				echo -e "\r${yellow}Which GPU module do you want to activate? (amd, radeonkms or intel)${lsuffix}"
 				read kmsmodule
 				if [ ${kmsmodule} = "intel" ]; then
