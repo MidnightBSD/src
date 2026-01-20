@@ -381,6 +381,9 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 	if (mport_db_do(mport->db, "DELETE FROM conflicts WHERE pkg=%Q", pack->name) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
+	if (mport_db_do(mport->db, "DELETE FROM annotation WHERE pkg=%Q", pack->name) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+
 	if (mport_pkg_message_display(mport, pack) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 

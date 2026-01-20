@@ -63,6 +63,11 @@ mport_update(mportInstance *mport, const char *packageName) {
 			if (mport_install_depends(mport, (*depends)->d_pkgname, (*depends)->d_version, MPORT_AUTOMATIC) != MPORT_OK) {
 				mport_call_msg_cb(mport, "%s", mport_err_string());
 				mport_index_depends_free_vec(depends);
+				if (mport->ignoreMissing) {
+					mport_call_msg_cb(mport, "Ignoring missing dependency %s-%s\n", (*depends)->d_pkgname, (*depends)->d_version);
+					depends++;
+					continue;
+				}
 				return mport_err_code();
 			}
 			depends++;

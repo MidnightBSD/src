@@ -48,9 +48,13 @@ MPORT_PUBLIC_API int
 mport_index_depends_list(mportInstance *mport, const char *pkgname, const char *version, mportDependsEntry ***entry_vec)
 {
 	int count, i = 0, step;
-	sqlite3_stmt *stmt;
+	sqlite3_stmt *stmt = NULL;
 	int ret = MPORT_OK;
-	mportDependsEntry **e;
+	mportDependsEntry **e = NULL;
+
+	if (pkgname == NULL || version == NULL || entry_vec == NULL) {
+		RETURN_ERROR(MPORT_ERR_FATAL, "Invalid argument(s) passed to mport_index_depends_list()");
+	}
   
 	MPORT_CHECK_FOR_INDEX(mport, "mport_index_depends_list()")
 

@@ -76,10 +76,11 @@ mport_fetch_index(mportInstance *mport)
 	while (mirrorsPtr != NULL) {
 		if (*mirrorsPtr == NULL)
 			break;
-		asprintf(&url, "%s/%s/%s/%s", *mirrorsPtr,  MPORT_ARCH, osrel, MPORT_INDEX_FILE_SOURCE);
-		asprintf(&hashUrl, "%s/%s/%s/%s", *mirrorsPtr,  MPORT_ARCH, osrel, MPORT_INDEX_FILE_SOURCE ".sha256");
-
-		if (url == NULL || hashUrl == NULL) {
+		
+		if (asprintf(&url, "%s/%s/%s/%s", *mirrorsPtr,  MPORT_ARCH, osrel, MPORT_INDEX_FILE_SOURCE) == -1 ||
+		    asprintf(&hashUrl, "%s/%s/%s/%s", *mirrorsPtr,  MPORT_ARCH, osrel, MPORT_INDEX_FILE_SOURCE ".sha256") == -1) {
+			free(url);
+			free(hashUrl);
 			for (int mi = 0; mi < mirrorCount; mi++)
 				free(mirrors[mi]);
 			RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
@@ -141,8 +142,12 @@ mport_fetch_bootstrap_index(mportInstance *mport)
 
 	osrel = mport_get_osrelease(mport);
 
-	asprintf(&url, "%s/%s/%s/%s", MPORT_BOOTSTRAP_INDEX_URL, MPORT_ARCH, osrel, MPORT_INDEX_FILE_SOURCE);
-	asprintf(&hashUrl, "%s/%s/%s/%s", MPORT_BOOTSTRAP_INDEX_URL,  MPORT_ARCH, osrel, MPORT_INDEX_FILE_SOURCE ".sha256");
+	if (asprintf(&url, "%s/%s/%s/%s", MPORT_BOOTSTRAP_INDEX_URL, MPORT_ARCH, osrel, MPORT_INDEX_FILE_SOURCE) == -1 ||
+	    asprintf(&hashUrl, "%s/%s/%s/%s", MPORT_BOOTSTRAP_INDEX_URL,  MPORT_ARCH, osrel, MPORT_INDEX_FILE_SOURCE ".sha256") == -1) {
+		free(url);
+		free(hashUrl);
+		return MPORT_ERR_FATAL;
+	}
 
 	result = fetch(mport, url, MPORT_INDEX_FILE_COMPRESSED);
 	if (result == MPORT_OK && fetch(mport, hashUrl, MPORT_INDEX_FILE_HASH) == MPORT_OK) {
@@ -194,7 +199,10 @@ mport_fetch_bundle(mportInstance *mport, const char *directory, const char *file
 		}
 	}
 		
-	asprintf(&dest, "%s/%s", directory == NULL ? MPORT_FETCH_STAGING_DIR : directory, filename);
+	if (asprintf(&dest, "%s/%s", directory == NULL ? MPORT_FETCH_STAGING_DIR : directory, filename) == -1) {
+		free(osrel);
+		RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory");
+	}
  
 	mirrorsPtr = mirrors;
 	osrel = mport_get_osrelease(mport);
@@ -202,7 +210,11 @@ mport_fetch_bundle(mportInstance *mport, const char *directory, const char *file
 	while (mirrorsPtr != NULL) {
 		if (*mirrorsPtr == NULL)
 			break;
-		asprintf(&url, "%s/%s/%s/%s", *mirrorsPtr,  MPORT_ARCH, osrel, filename);
+		if (asprintf(&url, "%s/%s/%s/%s", *mirrorsPtr,  MPORT_ARCH, osrel, filename) == -1) {
+			free(dest);
+			free(osrel);
+			RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory");
+		}
 
 		if (fetch(mport, url, dest) == MPORT_OK) {
 			free(url);
@@ -241,7 +253,9 @@ mport_fetch_cves(mportInstance *mport, char *cpe)
 		SET_ERRORX(MPORT_ERR_FATAL, "Couldn't make tmp file: %s", strerror(errno));
 	}
   
-	asprintf(&url, "%s/api/cpe/partial-match?includeVersion=true&cpe=%s&startDate=2006-02-28", MPORT_SECURITY_URL, cpe);
+	if (asprintf(&url, "%s/api/cpe/partial-match?includeVersion=true&cpe=%s&startDate=2006-02-28", MPORT_SECURITY_URL, cpe) == -1)
+		return NULL;
+
 	result = fetch_to_file(mport, url, fdopen(fd, "w"), false);
 	free(url);
 
@@ -391,8 +405,7 @@ mport_download(mportInstance *mport, const char *packageName, bool all, bool inc
 		RETURN_CURRENT_ERROR;
 	}
 	
-	asprintf(path, "%s/%s", mport->outputPath, (*indexEntry)->bundlefile);
-	if (path == NULL) {
+	if (asprintf(path, "%s/%s", mport->outputPath, (*indexEntry)->bundlefile) == -1) {
 		mport_index_entry_free_vec(indexEntry);
 		indexEntry = NULL;
 		SET_ERRORX(1, "%s", "Unable to allocate memory for path.");
@@ -464,4 +477,3 @@ getfile:
 
 	return (MPORT_OK);
 }
-
