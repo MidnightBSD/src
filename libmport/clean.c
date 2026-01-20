@@ -79,8 +79,7 @@ mport_clean_oldpackages(mportInstance *mport)
 			continue;
 		}
 
-		asprintf(&path, "%s/%s", MPORT_FETCH_STAGING_DIR, de->d_name);
-		if (path == NULL) {
+		if (asprintf(&path, "%s/%s", MPORT_FETCH_STAGING_DIR, de->d_name) == -1) {
 			if (indexEntry != NULL) {
 				mport_index_entry_free_vec(indexEntry);
 				indexEntry = NULL;
@@ -155,8 +154,7 @@ mport_clean_oldmtree(mportInstance *mport)
 			continue;
 		}
 
-		asprintf(&path, "%s/%s", MPORT_INST_INFRA_DIR, de->d_name);
-		if (path == NULL) {
+		if (asprintf(&path, "%s/%s", MPORT_INST_INFRA_DIR, de->d_name) == -1) {
 			if (packs != NULL) {
 				mport_pkgmeta_vec_free(packs);
 				packs = NULL;
@@ -211,8 +209,7 @@ mport_clean_tempfiles(mportInstance *mport)
 	       		continue;
 
 
-		asprintf(&path, "%s%s", _PATH_TMP, de->d_name);
-		if (path == NULL) {
+		if (asprintf(&path, "%s%s", _PATH_TMP, de->d_name) == -1) {
 			continue;
 		}
 

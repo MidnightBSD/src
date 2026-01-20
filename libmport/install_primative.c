@@ -212,7 +212,8 @@ mport_install_primative(mportInstance *mport, const char *filename, const char *
 
 			if (mport_install_primative(mport, dep_filename, prefix, MPORT_AUTOMATIC)!= MPORT_OK) {
 				mport_call_msg_cb(mport, "Unable to install %s: %s", *deps, mport_err_string());
-				return MPORT_ERR_FATAL;
+				if (!mport->ignoreMissing)
+					return MPORT_ERR_FATAL;
 			}
 			free(dep_filename);
 			deps++;

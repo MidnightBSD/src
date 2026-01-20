@@ -66,14 +66,19 @@ mport_instance_init(mportInstance *mport, const char *root, const char *outputPa
 	mport->verbosity = verbosity;
 	mport->offline = false;
 	mport->force = false;
+    mport->ignoreMissing = false;
 
 	if (root != NULL) {
 		mport->root = strdup(root);
+		if (mport->root == NULL)
+			RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory");
     	if ((mport->rootfd = open(mport->root, O_DIRECTORY|O_RDONLY|O_CLOEXEC)) < 0) {
 			RETURN_ERROR(MPORT_ERR_FATAL, "unable to open root directory");
     	}
 	} else {
 		mport->root = strdup("");
+		if (mport->root == NULL)
+			RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory");
 		if ((mport->rootfd = open("/", O_DIRECTORY|O_RDONLY|O_CLOEXEC)) < 0) {
 			RETURN_ERROR(MPORT_ERR_FATAL, "unable to open root directory");
 		}
@@ -81,8 +86,12 @@ mport_instance_init(mportInstance *mport, const char *root, const char *outputPa
 
 	if (outputPath == NULL) {
 		mport->outputPath = strdup(MPORT_LOCAL_PKG_PATH);
+		if (mport->outputPath == NULL)
+			RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory");
 	} else {
 		mport->outputPath = strdup(outputPath);
+		if (mport->outputPath == NULL)
+			RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory");
 	}
 
 	(void) snprintf(dir, FILENAME_MAX, "%s/%s", mport->root, MPORT_INST_DIR);

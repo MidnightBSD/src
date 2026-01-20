@@ -36,7 +36,7 @@
 MPORT_PUBLIC_API char *
 mport_setting_get(mportInstance *mport, const char *name)
 {
-	sqlite3_stmt *stmt;
+	sqlite3_stmt *stmt = NULL;
 	char *val = NULL;
 
 	if (name == NULL)
@@ -88,7 +88,7 @@ mport_setting_set(mportInstance *mport, const char *name, const char *val)
 MPORT_PUBLIC_API char **
 mport_setting_list(mportInstance *mport)
 {
-	sqlite3_stmt *stmt;
+	sqlite3_stmt *stmt = NULL;
 	int count;
 	char **list = NULL;
 
@@ -97,16 +97,20 @@ mport_setting_list(mportInstance *mport)
 	}	
 
 	list = calloc(count + 1, sizeof(char *));
+	if (list == NULL)
+		return NULL;
 
 	if (mport_db_prepare(mport->db, &stmt, "SELECT name, val FROM settings") != MPORT_OK) {
 		sqlite3_finalize(stmt);
+		free(list);
 		return NULL;
 	}
 
 	for (int i = 0; i < count; i++) {
 		int step = sqlite3_step(stmt);
 		if (step == SQLITE_ROW) {
-			asprintf(&list[i], "%s=%s", sqlite3_column_text(stmt, 0), sqlite3_column_text(stmt, 1));			
+			if (asprintf(&list[i], "%s=%s", sqlite3_column_text(stmt, 0), sqlite3_column_text(stmt, 1)) == -1)
+				list[i] = NULL;
 		} else if (step == SQLITE_DONE) {
 			SET_ERROR(MPORT_ERR_FATAL, "Setting not found.");
 			break;

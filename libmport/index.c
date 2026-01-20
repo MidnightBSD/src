@@ -489,18 +489,22 @@ mport_index_lookup_pkgname(mportInstance *mport, const char *pkgname, mportIndex
 	}
 
 	if (mport_db_count(mport->db, &count, "SELECT count(*) FROM idx.packages  WHERE pkg GLOB %Q", lookup) != MPORT_OK) {
+		free(lookup);
+		lookup = NULL;
 		RETURN_CURRENT_ERROR;
 	}
 
 	e = (mportIndexEntry **) calloc((size_t) count + 1, sizeof(mportIndexEntry *));
 	if (e == NULL) {
 		free(lookup);
+		lookup = NULL;
 		RETURN_ERROR(MPORT_ERR_FATAL, "Could not allocate memory for index entries");
 	}
 	*entry_vec = e;
 
 	if (count == 0) {
 		free(lookup);
+		lookup = NULL;
 		return MPORT_OK;
 	}
 
@@ -540,7 +544,9 @@ mport_index_lookup_pkgname(mportInstance *mport, const char *pkgname, mportIndex
 
 	DONE:
 	free(lookup);
+	lookup = NULL;
 	sqlite3_finalize(stmt);
+
 	return ret;
 }
 
@@ -554,12 +560,12 @@ mport_index_lookup_pkgname(mportInstance *mport, const char *pkgname, mportIndex
 MPORT_PUBLIC_API int
 mport_index_search_term(mportInstance *mport, mportIndexEntry ***entry_vec, char *search_term) {
 
-	sqlite3_stmt *stmt;
+	sqlite3_stmt *stmt = NULL;
 	int ret = MPORT_OK;
 	int len;
 	int i = 0, step;
-	mportIndexEntry **e;
-	char *term;
+	mportIndexEntry **e = NULL;
+	char *term = NULL;
 
 
 	if (mport == NULL) {
@@ -573,6 +579,10 @@ mport_index_search_term(mportInstance *mport, mportIndexEntry ***entry_vec, char
 		term = strdup(search_term);
 	else 
 		asprintf(&term, "*%s*", search_term);
+
+	if (term == NULL) {
+		RETURN_ERROR(MPORT_ERR_FATAL, "Could not allocate memory");
+	}
 
 	if (mport_db_count(mport->db, &len, "SELECT count(*) FROM idx.packages WHERE pkg glob %Q or comment glob %Q", term, term) != MPORT_OK) {
 		free(term);
@@ -588,6 +598,7 @@ mport_index_search_term(mportInstance *mport, mportIndexEntry ***entry_vec, char
 
 	if (len == 0) {
 		free(term);
+		term = NULL;
 		return MPORT_OK;
 	}
 
@@ -596,6 +607,7 @@ mport_index_search_term(mportInstance *mport, mportIndexEntry ***entry_vec, char
 	    MPORT_OK) {
 		sqlite3_finalize(stmt);
 		free(term);
+		term = NULL;
 		RETURN_CURRENT_ERROR;
 	}
 
@@ -628,6 +640,7 @@ mport_index_search_term(mportInstance *mport, mportIndexEntry ***entry_vec, char
 
 	sqlite3_finalize(stmt);
 	free(term);
+	term = NULL;
 
 	return ret;
 }
@@ -836,9 +849,10 @@ mport_moved_lookup(mportInstance *mport, const char *origin, mportIndexMovedEntr
 
 			// TODO: fix
 			char *orig_pkg = NULL;
-			lookup_alias_inverse(mport, origin, &orig_pkg);
-			strlcpy(e[i]->pkgname, orig_pkg, 128); // original package name
-
+			if (lookup_alias_inverse(mport, origin, &orig_pkg) == MPORT_OK && orig_pkg != NULL) {
+				strlcpy(e[i]->pkgname, orig_pkg, 128); // original package name
+				free(orig_pkg);
+			}
 
 			char *moved_pkg = NULL;
 			if (e[i]->moved_to[0] != '\0' && lookup_alias_inverse(mport, e[i]->moved_to, &moved_pkg) != MPORT_OK) {
@@ -846,6 +860,7 @@ mport_moved_lookup(mportInstance *mport, const char *origin, mportIndexMovedEntr
 				goto MOVED_DONE;
 			} else if (moved_pkg != NULL) {
 				strlcpy(e[i]->moved_to_pkgname, moved_pkg, 128);
+				free(moved_pkg);
 			}
 
 			i++;
@@ -882,15 +897,24 @@ populate_row(sqlite3_stmt *stmt, mportIndexEntry *e)
 static int
 lookup_alias_inverse(mportInstance *mport, const char *query, char **result)
 {
-	sqlite3_stmt *stmt;
+	sqlite3_stmt *stmt = NULL;
 	int ret = MPORT_OK;
+	const char *str;
+
+	if (mport == NULL || query == NULL) {
+		RETURN_ERROR(MPORT_ERR_FATAL, "Invalid parameters to lookup_alias_inverse");
+	}
 
 	if (mport_db_prepare(mport->db, &stmt, "SELECT pkg FROM idx.aliases WHERE pkg=%Q", query) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
 	switch (sqlite3_step(stmt)) {
 		case SQLITE_ROW:
-			*result = strdup((const char *) sqlite3_column_text(stmt, 0));
+			str = (const char *) sqlite3_column_text(stmt, 0);
+			if (str != NULL)
+				*result = strdup(str);
+			else
+				*result = NULL;
 			break;
 		case SQLITE_DONE:
 			*result = strdup(query);
@@ -901,6 +925,9 @@ lookup_alias_inverse(mportInstance *mport, const char *query, char **result)
 	}
 
 	sqlite3_finalize(stmt);
+
+	if (ret == MPORT_OK && *result == NULL)
+		ret = SET_ERROR(MPORT_ERR_FATAL, "Out of memory");
 
 	return ret;
 }
@@ -909,8 +936,13 @@ lookup_alias_inverse(mportInstance *mport, const char *query, char **result)
 static int
 lookup_alias(mportInstance *mport, const char *query, char **result)
 {
-	sqlite3_stmt *stmt;
+	sqlite3_stmt *stmt = NULL;
 	int ret = MPORT_OK;
+	const char *str;
+
+	if (mport == NULL || query == NULL) {
+		RETURN_ERROR(MPORT_ERR_FATAL, "Invalid parameters to lookup_alias");
+	}
 
 	// assumes that query is an alias|pkg maps to origin|pkgname e.g. www/py-qt5-webkit|py27-qt5-webkit
 	if (mport_db_prepare(mport->db, &stmt, "SELECT pkg FROM idx.aliases WHERE alias=%Q ORDER BY pkg desc", query) != MPORT_OK)
@@ -918,7 +950,11 @@ lookup_alias(mportInstance *mport, const char *query, char **result)
 
 	switch (sqlite3_step(stmt)) {
 		case SQLITE_ROW:
-			*result = strdup((const char *) sqlite3_column_text(stmt, 0));
+			str = (const char *) sqlite3_column_text(stmt, 0);
+			if (str != NULL)
+				*result = strdup(str);
+			else
+				*result = NULL;
 			break;
 		case SQLITE_DONE:
 			*result = strdup(query);
@@ -929,6 +965,9 @@ lookup_alias(mportInstance *mport, const char *query, char **result)
 	}
 
 	sqlite3_finalize(stmt);
+
+	if (ret == MPORT_OK && *result == NULL)
+		ret = SET_ERROR(MPORT_ERR_FATAL, "Out of memory");
 
 	return ret;
 }

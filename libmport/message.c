@@ -103,15 +103,18 @@ mport_pkg_message_display(mportInstance *mport, mportPackageMeta *pkg)
 }
 
 int
-mport_pkg_message_load(
-    mportInstance *mport, mportPackageMeta *pkg, mportPackageMessage *packageMessage)
+mport_pkg_message_load(mportInstance *mport, mportPackageMeta *pkg, mportPackageMessage *packageMessage)
 {
 	char filename[FILENAME_MAX];
-	char *buf;
+	char *buf = NULL;
 	struct stat st;
-	FILE *file;
-	struct ucl_parser *parser;
-	ucl_object_t *obj;
+	FILE *file = NULL;
+	struct ucl_parser *parser = NULL;
+	ucl_object_t *obj = NULL;
+
+	if (mport == NULL || pkg == NULL || packageMessage == NULL) {
+		RETURN_ERROR(MPORT_ERR_FATAL, "Invalid argument(s) passed to mport_pkg_message_load()");
+	}
 
 	/* Assumes copy_metafile has run on install already */
 	(void)snprintf(filename, FILENAME_MAX, "%s%s/%s-%s/%s", mport->root, MPORT_INST_INFRA_DIR,
@@ -158,6 +161,10 @@ mport_pkg_message_load(
 		packageMessage = mport_pkg_message_from_ucl(mport, obj, packageMessage);
 		ucl_object_unref(obj); */
 		packageMessage->str = strdup(buf);
+		if (packageMessage->str == NULL) {
+			free(buf);
+			RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+		}
 		packageMessage->type = PKG_MESSAGE_ALWAYS;
 		free(buf);
 	}

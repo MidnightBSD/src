@@ -126,7 +126,11 @@ mport_lua_script_run(mportInstance *mport, mportPackageMeta *pkg, mport_lua_scri
 	int ret = MPORT_OK;
 	int pstat;
 	int cur_pipe[2];
-	char *line = NULL;
+
+	if (pkg == NULL) {
+		SET_ERROR(MPORT_ERR_FATAL, "Invalid package passed to mport_lua_script_run()");
+		return (MPORT_ERR_FATAL);
+	}
 
 	if (tll_length(pkg->lua_scripts[type]) == 0)
 		return (MPORT_OK);
@@ -176,17 +180,32 @@ mport_lua_script_run(mportInstance *mport, mportPackageMeta *pkg, mport_lua_scri
 				char *walk, *begin, *line = NULL;
 				int spaces, argc = 0;
 				char **args = NULL;
+				char *args_base = NULL;
 
 				walk = strchr(s->item, '\n');
 				begin = s->item + strlen("-- args: ");
-				line = strndup(begin, walk - begin);
-				spaces = mport_count_spaces(line);
-				args = malloc((spaces + 1)* sizeof(char *));
-				walk = strdup(line);
-				while (walk != NULL) {
-					args[argc++] = mport_tokenize(&walk);
+				if (walk != NULL)
+					line = strndup(begin, walk - begin);
+				else
+					line = strdup(begin);
+
+				if (line != NULL) {
+					spaces = mport_count_spaces(line);
+					args = calloc((spaces + 2), sizeof(char *));
+					if (args != NULL) {
+						args_base = strdup(line);
+						if (args_base != NULL) {
+							walk = args_base;
+							while (walk != NULL) {
+								args[argc++] = mport_tokenize(&walk);
+							}
+							lua_args_table(L, args, argc);
+							free(args_base);
+						}
+						free(args);
+					}
+					free(line);
 				}
-				lua_args_table(L, args, argc);
 			}
 
 			//pkg_debug(3, "Scripts: executing lua\n--- BEGIN ---\n%s\nScripts: --- END ---", s->item);
@@ -216,7 +235,6 @@ mport_lua_script_run(mportInstance *mport, mportPackageMeta *pkg, mport_lua_scri
 
 
 cleanup:
-	free(line);
 
 	return (ret);
 }
@@ -244,7 +262,11 @@ mport_lua_script_from_ucl(mportInstance *mport, mportPackageMeta *pkg, const ucl
 		if (ucl_object_type(cur) != UCL_STRING) {
             RETURN_ERROR(MPORT_ERR_FATAL, "lua scripts should be strings.\n");
 		}
-		tll_push_back(pkg->lua_scripts[type], strdup(ucl_object_tostring(cur)));
+		char *script = strdup(ucl_object_tostring(cur));
+		if (script == NULL) {
+			RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+		}
+		tll_push_back(pkg->lua_scripts[type], script);
 	}
 	return (MPORT_OK);
 }
@@ -264,11 +286,11 @@ int
 mport_lua_script_read_file(mportInstance *mport, mportPackageMeta *pkg, mport_lua_script type, char *luafile)
 {
 	char filename[FILENAME_MAX];
-	char *buf;
+	char *buf = NULL;
 	struct stat st;
-	FILE *file;
-	struct ucl_parser *parser;
-	ucl_object_t *obj;
+	FILE *file = NULL;
+	struct ucl_parser *parser = NULL;
+	ucl_object_t *obj = NULL;
 
 	/* Assumes copy_metafile has run on install already */
 	(void)snprintf(filename, FILENAME_MAX, "%s%s/%s-%s/%s", mport->root, MPORT_INST_INFRA_DIR,

@@ -252,9 +252,7 @@ mport_chdir(mportInstance *mport, const char *dir)
 	if (mport != NULL) {
 		char *finaldir = NULL;
 
-		asprintf(&finaldir, "%s%s", mport->root, dir);
-
-		if (finaldir == NULL)
+		if (asprintf(&finaldir, "%s%s", mport->root, dir) == -1)
 			RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't building root'ed dir");
 
 		if (chdir(finaldir) != 0) {
@@ -503,6 +501,8 @@ mport_directory(const char *path)
 	if (path[0] == '/') {
 		// 'path' is a full path, so we can extract the directory directly
 		char *dir = strdup(path);
+		if (dir == NULL)
+			return NULL;
 		char *lastSlash = strrchr(dir, '/');
 		if (lastSlash != NULL) {
 			*lastSlash = '\0'; // Null-terminate at the last slash to get the directory
@@ -744,7 +744,9 @@ mport_run_asset_exec(mportInstance *mport, const char *fmt, const char *cwd, con
 				max -= l;
 				break;
 			case 'B':
-				lfcpy = malloc(strlen(last_file) * sizeof(char));
+				lfcpy = strdup(last_file);
+				if (lfcpy == NULL)
+					RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory");
 				name = dirname(lfcpy); /* dirname(3) in MidnightBSD 3.0 and higher
 							  modifies the source. */
 				(void)strlcpy(pos, name, max);
@@ -897,6 +899,22 @@ mport_get_osrelease(mportInstance *mport)
 	return version;
 }
 
+char *
+mport_get_osreleasedate(void)
+{
+	int osreleasedate;
+	size_t len = sizeof(osreleasedate);
+	char *date = NULL;
+
+	if (sysctlbyname("kern.osreldate", &osreleasedate, &len, NULL, 0) < 0)
+		return NULL;
+
+	if (asprintf(&date, "%d", osreleasedate) == -1)
+		return NULL;
+
+	return date;
+}
+
 static char *
 mport_get_osrelease_kern(void)
 {
@@ -1002,8 +1020,11 @@ mport_version(mportInstance *mport)
 {
 	char *version = NULL;
 	char *osrel = mport_get_osrelease(mport);
-	asprintf(&version, "mport %s for MidnightBSD %s, Bundle Version %s\n", MPORT_VERSION, osrel,
-	    MPORT_BUNDLE_VERSION_STR);
+	if (asprintf(&version, "mport %s for MidnightBSD %s, Bundle Version %s\n", MPORT_VERSION, osrel,
+	    MPORT_BUNDLE_VERSION_STR) == -1) {
+		free(osrel);
+		return NULL;
+	}
 	free(osrel);
 	osrel = NULL;
 
@@ -1015,7 +1036,10 @@ mport_version_short(mportInstance *mport)
 {
 	char *version = NULL;
 	char *osrel = mport_get_osrelease(mport);
-	asprintf(&version, "%s\n", MPORT_VERSION);
+	if (asprintf(&version, "%s\n", MPORT_VERSION) == -1) {
+		free(osrel);
+		return NULL;
+	}
 	free(osrel);
 	osrel = NULL;
 
@@ -1180,7 +1204,8 @@ mport_tokenize(char **args)
 	char *p, *p_start;
 	enum parse_states parse_state = START;
 
-	assert(args != NULL && *args != NULL);
+	if (args == NULL || *args == NULL)
+		return NULL;
 
 	for (p = p_start = *args; *p != '\0'; p++) {
 		switch (parse_state) {
@@ -1236,6 +1261,10 @@ finish:
 		else
 			*args = p;
 	}
+
+	if (parse_state == START)
+		return NULL;
+
 	return (p_start);
 }
 

@@ -77,7 +77,9 @@ mport_update_primative(mportInstance *mport, const char *filename)
             continue;
         }
 
-        int flag = MPORT_PRECHECK_CONFLICTS|MPORT_PRECHECK_DEPENDS;
+        int flag = MPORT_PRECHECK_CONFLICTS;
+        if (!mport->ignoreMissing)
+            flag = flag | MPORT_PRECHECK_DEPENDS;
         if (!mport->force)
             flag = flag | MPORT_PRECHECK_UPGRADEABLE;
 
