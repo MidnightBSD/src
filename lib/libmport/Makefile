@@ -7,7 +7,7 @@ MPORTDIR= ${SRCTOP}/contrib/mport
 ZSTDDIR=        ${SRCTOP}/sys/contrib/zstd
 
 LIB=	mport
-SRCS=	asset.c color.c bundle_write.c bundle_read.c plist.c create_primative.c db.c \
+SRCS=	annotation.c asset.c color.c bundle_write.c bundle_read.c plist.c create_primative.c db.c \
         util.c error.c \
         info.c install_primative.c instance.c \
 		version_cmp.c check_preconditions.c delete_primative.c \
