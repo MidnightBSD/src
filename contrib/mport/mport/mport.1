@@ -1,4 +1,4 @@
-.\" Copyright (c) 2010, 2011, 2015, 2021, 2022, 2025 Lucas Holt
+.\" Copyright (c) 2010, 2011, 2015, 2021, 2022, 2025, 2026 Lucas Holt
 .\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -23,7 +23,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"
-.Dd March 21, 2025
+.Dd January 17, 2026
 .Dt MPORT 1
 .Os
 .Sh NAME
@@ -43,6 +43,15 @@
 .Cm add
 .Op Fl A
 .Op Ar name
+.Nm
+.Cm annotate
+.Op Fl A
+.Op Fl S
+.Op Fl D
+.Op Fl a
+.Op Fl q
+.Op Ar name
+.Op Ar tag
 .Nm
 .Cm autoremove
 .Nm
@@ -82,6 +91,7 @@
 .Nm
 .Cm install
 .Op Fl A
+.Op Fl M
 .Op Ar name
 .Nm
 .Cm mirror list
@@ -138,6 +148,10 @@ The following commands are supported by
 .It Cm add Ao name Ac
 Installs a local package file and also attempts to install any missing dependencies in the path specified.
 For online installs, use mport install instead.
+.It Fl A, Fl S, Fl D, Fl a, Fl q, Cm annotate Ao name Ac Ao tag Ac
+Add (A), Show (S), or Delete (D) an annotation tag for a package.
+The q flag shows abbreviated output for use in scripts. 
+The a flag allows you to operate on all installed packages.
 .It Cm audit
 Displays vulnerable packages installed on the system. Uses CPE data to match against
 a NVD feed provided by the MidnightBSD project.
@@ -174,10 +188,11 @@ The d flag will allow it to download dependencies as well.
 .It Cm index
 Force a download of the index to refresh it without waiting for the timeout interval. This
 allows the user to get the latest list of packages.
-.It Cm install Fl A Ao name Ac
+.It Cm install Fl A Fl M Ao name Ac
 Fetch and install a package.  
 With the A flag set, marks the installed packages as automatic.  Will be automatically
 removed	if no other packages depend on them.
+With the M flag set, will ignore missing dependencies and attempt to install the package anyway.
 .It Cm mirror list
 Lists all available package mirrors.
 .It Cm mirror select

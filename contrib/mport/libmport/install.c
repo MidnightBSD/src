@@ -168,17 +168,19 @@ mport_install_single(mportInstance *mport, const char *pkgname, const char *vers
   }
 
   if (mport_verify_hash(filename, e[e_loc]->hash) == 0) {
-      mport_index_entry_free_vec(e);
+	  mport_index_entry_free_vec(e);
 
-      if (unlink(filename) == 0) {
-        free(filename);
-      filename = NULL;
-          RETURN_ERROR(MPORT_ERR_FATAL, "Package failed hash verification and was removed.\n");
-      } else {
-        free(filename);
-      filename = NULL;
-          RETURN_ERROR(MPORT_ERR_FATAL, "Package failed hash verification, but could not be removed.\n");
-      }
+	  if (unlink(filename) == 0) {
+		  free(filename);
+		  filename = NULL;
+		  RETURN_ERROR(
+		      MPORT_ERR_FATAL, "Package failed hash verification and was removed.\n");
+	  } else {
+		  free(filename);
+		  filename = NULL;
+		  RETURN_ERROR(MPORT_ERR_FATAL,
+		      "Package failed hash verification, but could not be removed.\n");
+	  }
   }
 
   ret = mport_install_primative(mport, filename, prefix, automatic);
@@ -218,43 +220,48 @@ mport_install_depends(mportInstance *mport, const char *packageName, const char 
 		}
 	} else if (packs == NULL) {
 		/* Package is not installed */
-    for (mportDependsEntry **dep = depends; dep && *dep != NULL; dep++) {
-      if (mport_install_depends(mport, (*dep)->d_pkgname, (*dep)->d_version, MPORT_AUTOMATIC) != MPORT_OK) {
-          mport_call_msg_cb(mport, "%s", mport_err_string());
-          mport_index_depends_free_vec(depends_orig);
-          depends_orig = NULL;
-          return mport_err_code();
-      }
-    }
-		
-		if (mport_install_single(mport, packageName, version, NULL, automatic) != MPORT_OK) {
+		for (mportDependsEntry **dep = depends; dep && *dep != NULL; dep++) {
+			if (mport_install_depends(mport, (*dep)->d_pkgname, (*dep)->d_version, MPORT_AUTOMATIC) != MPORT_OK) {
+				mport_call_msg_cb(mport, "%s", mport_err_string());
+				mport_index_depends_free_vec(depends_orig);
+				depends_orig = NULL;
+				if (mport->ignoreMissing) {
+				    continue;
+				}
+				return mport_err_code();
+			}
+		}
+
+		if (mport_install_single(mport, packageName, version, NULL, automatic) !=
+		    MPORT_OK) {
 			mport_call_msg_cb(mport, "%s", mport_err_string());
 			mport_index_depends_free_vec(depends_orig);
-      depends_orig = NULL;
-      depends = NULL;
+			depends_orig = NULL;
+			depends = NULL;
 			return mport_err_code();
 		}
 		mport_index_depends_free_vec(depends_orig);
-    depends_orig = NULL;
-    depends = NULL;
+		depends_orig = NULL;
+		depends = NULL;
 	} else {
 		/* already installed, double check we are on the latest */
 		mport_index_depends_free_vec(depends_orig);
-    depends_orig = NULL;
-    depends = NULL;
+		depends_orig = NULL;
+		depends = NULL;
 
 		if (mport_check_preconditions(mport, packs[0], MPORT_PRECHECK_UPGRADEABLE) == MPORT_OK) {
 			if (mport_update(mport, packageName) != MPORT_OK) {
 				mport_call_msg_cb(mport, "%s", mport_err_string());
 				mport_pkgmeta_vec_free(packs);
-        packs = NULL;
+				packs = NULL;
 				return mport_err_code();
 			}
-      mport_pkgmeta_vec_free(packs);
+			mport_pkgmeta_vec_free(packs);
 		} else {
-      mport_call_msg_cb(mport, "The most recent version of %s is already installed.", packageName);
-      mport_pkgmeta_vec_free(packs);
-    }
+			mport_call_msg_cb(mport,
+			    "The most recent version of %s is already installed.", packageName);
+			mport_pkgmeta_vec_free(packs);
+		}
 	}
 
 	return (MPORT_OK);

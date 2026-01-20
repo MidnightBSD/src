@@ -1,7 +1,7 @@
 /*-
  * SPDX-License-Identifier: BSD-2-Clause
  *
- * Copyright (c) 2013, 2014, 2018, 2022, 2023 Lucas Holt
+ * Copyright (c) 2013-2026 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
  *
@@ -44,6 +44,9 @@ static int mport_upgrade_master_schema_9to10(sqlite3 *);
 static int mport_upgrade_master_schema_10to11(sqlite3 *);
 static int mport_upgrade_master_schema_11to12(sqlite3 *);
 static int mport_upgrade_master_schema_12to13(sqlite3 *);
+static int mport_upgrade_master_schema_13to14(sqlite3 *);
+
+static int insert_meta_values(sqlite3 *db, char *key, char *value);
 
 /* mport_db_do(sqlite3 *db, const char *sql, ...)
  * 
@@ -201,7 +204,8 @@ mport_attach_stub_db(sqlite3 *db, const char *dir)
 {
 	char *file = NULL;
 
-	asprintf(&file, "%s/%s", dir, MPORT_STUB_DB_FILE);
+	if (asprintf(&file, "%s/%s", dir, MPORT_STUB_DB_FILE) == -1)
+		RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory");
 
 	if (mport_db_do(db, "ATTACH %Q AS stub", file) != MPORT_OK) {
 		/* it might be attached already on error */
@@ -250,20 +254,43 @@ mport_detach_stub_db(sqlite3 *db)
   if (mport_db_do(db, sql) != MPORT_OK) \
     RETURN_CURRENT_ERROR
 
+static int 
+insert_meta_values(sqlite3 *db, char *key, char *value) {
+	char *sql = NULL;
+	asprintf(&sql, "INSERT INTO meta VALUES (\"%s\", \"%s\")", key, value);
+	if (sql != NULL) {
+		RUN_SQL(db, sql);
+		free(sql);
+		sql = NULL;
+		return MPORT_OK;
+	}
+
+	return MPORT_ERR_WARN;
+}
+
 int
 mport_generate_stub_schema(mportInstance *mport, sqlite3 *db)
 {
 	char *ptr = NULL;
-	char *sql = NULL;
+
+	/* create metadata for package, useful for annotations in master db */
+	RUN_SQL(db, "CREATE TABLE meta (field text NOT NULL, value text NOT NULL)");
+	insert_meta_values(db, "bundle_format_version", MPORT_BUNDLE_VERSION_STR);
+	RUN_SQL(db, "INSERT INTO meta VALUES (\"build_timestamp\", datetime('now'))");
 
 	ptr = mport_get_osrelease(mport);
 	if (ptr == NULL)
 		RETURN_ERROR(MPORT_ERR_FATAL, "OS Release could not be determined");
-	asprintf(&sql, "INSERT INTO meta VALUES (\"os_release\", \"%s\")", ptr);
+	insert_meta_values(db, "os_release", ptr);
+	free(ptr);
 
-	RUN_SQL(db, "CREATE TABLE meta (field text NOT NULL, value text NOT NULL)");
-	RUN_SQL(db, "INSERT INTO meta VALUES (\"bundle_format_version\", " MPORT_BUNDLE_VERSION_STR ")");
-	RUN_SQL(db, sql);
+	ptr = mport_get_osreleasedate();
+	if (ptr == NULL)
+		RETURN_ERROR(MPORT_ERR_FATAL, "OS Release Date could not be determined");
+	insert_meta_values(db, "MidnightBSD_version", ptr);
+	free(ptr);
+	ptr = NULL;
+
 	RUN_SQL(db,
 	        "CREATE TABLE assets (pkg text not NULL, type int NOT NULL, data text, checksum text, owner text, grp text, mode text)");
 	RUN_SQL(db,
@@ -296,6 +323,7 @@ mport_upgrade_master_schema(sqlite3 *db, int databaseVersion)
 			mport_upgrade_master_schema_10to11(db);
 			mport_upgrade_master_schema_11to12(db);
 			mport_upgrade_master_schema_12to13(db);
+			mport_upgrade_master_schema_13to14(db);
 			mport_set_database_version(db);
 			break;
 		case 2:
@@ -330,8 +358,11 @@ mport_upgrade_master_schema(sqlite3 *db, int databaseVersion)
 		case 12:
 		    /* falls through */
 			mport_upgrade_master_schema_12to13(db);
-			mport_set_database_version(db);
 		case 13:
+		    /* falls through */
+			mport_upgrade_master_schema_13to14(db);
+			mport_set_database_version(db);
+		case 14:
 			break;
 		default:
 			RETURN_ERROR(MPORT_ERR_FATAL, "Invalid master database version");
@@ -460,6 +491,14 @@ mport_upgrade_master_schema_12to13(sqlite3 *db)
 	return (MPORT_OK);
 }
 
+static int
+mport_upgrade_master_schema_13to14(sqlite3 *db)
+{
+	RUN_SQL(db, "CREATE TABLE IF NOT EXISTS annotation (pkg text NOT NULL, tag TEXT NOT NULL, val TEXT NOT NULL, PRIMARY KEY (pkg, tag))");
+
+	return (MPORT_OK);
+}
+
 int
 mport_generate_master_schema(sqlite3 *db)
 {
@@ -494,6 +533,8 @@ mport_generate_master_schema(sqlite3 *db)
 	RUN_SQL(db, "INSERT OR IGNORE INTO settings VALUES (\"" MPORT_SETTING_HANDLE_RC_SCRIPTS "\", \"yes\")");
 	RUN_SQL(db, "INSERT OR IGNORE INTO settings VALUES (\"" MPORT_SETTING_REPO_AUTOUPDATE "\", \"yes\")");
 
+	RUN_SQL(db, "CREATE TABLE IF NOT EXISTS annotation (pkg text NOT NULL, tag TEXT NOT NULL, val TEXT NOT NULL, PRIMARY KEY (pkg, tag))");
+	
 	mport_set_database_version(db);
 
 	return (MPORT_OK);

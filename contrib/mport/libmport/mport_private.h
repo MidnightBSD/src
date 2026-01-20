@@ -1,7 +1,7 @@
 /*
  * SPDX-License-Identifier: BSD-2-Clause
  *
- * Copyright (c) 2011, 2013, 2015, 2021-2024 Lucas Holt
+ * Copyright (c) 2011, 2013, 2015, 2021-2026 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
  *
@@ -58,10 +58,10 @@ struct ohash {
 
 #define MPORT_PUBLIC_API 
 
-#define MPORT_MASTER_VERSION 13
+#define MPORT_MASTER_VERSION 14
 #define MPORT_BUNDLE_VERSION 6
 #define MPORT_BUNDLE_VERSION_STR "6"
-#define MPORT_VERSION "2.7.3"
+#define MPORT_VERSION "2.7.5"
 
 #define MPORT_SETTING_MIRROR_REGION "mirror_region"
 #define MPORT_SETTING_TARGET_OS "target_os"
@@ -133,6 +133,7 @@ time_t mport_get_time(void);
 bool mport_check_answer_bool(char *answer);
 int mport_count_spaces(const char *str);
 char * mport_tokenize(char **args);
+char * mport_get_osreleasedate(void);
 
 enum parse_states {
 	START,

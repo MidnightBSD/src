@@ -158,7 +158,7 @@ mport_pkgmeta_vec_free(mportPackageMeta **vec)
 int
 mport_pkgmeta_read_stub(mportInstance *mport, mportPackageMeta ***ref)
 {
-	sqlite3_stmt *stmt;
+	sqlite3_stmt *stmt = NULL;
 	sqlite3 *db = mport->db;
 	int len;
 	int ret;

@@ -42,7 +42,7 @@ struct version {
 	int epoch;
 };
 
-static void parse_version(const char *, struct version *);
+static int parse_version(const char *, struct version *);
 static int cmp_versions(char *, char *);
 static int cmp_ints(int, int);
 
@@ -58,8 +58,10 @@ mport_version_cmp(const char *astr, const char *bstr)
 	struct version b;
 	int result;
   
-	parse_version(astr, &a);
-	parse_version(bstr, &b);
+	if (parse_version(astr, &a) != MPORT_OK)
+		return 0;
+	if (parse_version(bstr, &b) != MPORT_OK)
+		return 0;
 
 	/* remember that a.version/b.version are useless after calling
 	   cmp_versions (but astr and bstr are unchanged.) */
@@ -288,11 +290,15 @@ mport_version_require_check(const char *baseline, const char *require)
     return (ret);
 }
 
-static void
+static int
 parse_version(const char *in, struct version *v) 
 {
     char *s = strdup(in);
     char *underscore;
+
+	if (s == NULL)
+		return MPORT_ERR_FATAL;
+
     char *comma;
     // greater than and less than prevent multiversion strings from getting parsed incorrectly
     // so 2.0<1.5 would just be 2.0. Ideally we need to catch this upstream and do the right check.
@@ -327,6 +333,8 @@ parse_version(const char *in, struct version *v)
     }
 
     v->version = s;
+
+	return MPORT_OK;
 }
 
 static int
