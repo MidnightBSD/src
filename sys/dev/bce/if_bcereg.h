@@ -6296,7 +6296,7 @@ struct bce_softc
 	struct mtx		bce_mtx;
 
 	/* Interface info */
-	struct ifnet		*bce_ifp;
+	if_t			bce_ifp;
 
 	/* Parent device handle */
 	device_t		bce_dev;
