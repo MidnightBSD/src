@@ -3,6 +3,8 @@ Updating Information for MidnightBSD users.
 20260121:
 	expat 2.7.3
 
+	sqlite3 3.46.0
+
 20260120:
 	mport 2.7.5
 
