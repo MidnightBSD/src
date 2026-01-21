@@ -364,9 +364,21 @@
    don't. */
 #define HAVE_DECL_HOWMANY 1
 
+/* Define to 1 if you have the declaration of 'htole64', and to 0 if you
+   don't. */
+#define HAVE_DECL_HTOLE64 1
+
 /* Define to 1 if you have the declaration of 'h_errno', and to 0 if you
    don't. */
 #define HAVE_DECL_H_ERRNO 1
+
+/* Define to 1 if you have the declaration of 'le32toh', and to 0 if you
+   don't. */
+#define HAVE_DECL_LE32TOH 1
+
+/* Define to 1 if you have the declaration of 'le64toh', and to 0 if you
+   don't. */
+#define HAVE_DECL_LE64TOH 1
 
 /* Define to 1 if you have the declaration of 'loginfailed', and to 0 if you
    don't. */
@@ -501,7 +513,7 @@
 /* #undef HAVE_EVP_CIPHER_CTX_GET_IV */
 
 /* Define to 1 if you have the 'EVP_CIPHER_CTX_get_updated_iv' function. */
-/* #undef HAVE_EVP_CIPHER_CTX_GET_UPDATED_IV */
+#define HAVE_EVP_CIPHER_CTX_GET_UPDATED_IV 1
 
 /* Define to 1 if you have the 'EVP_CIPHER_CTX_iv' function. */
 #define HAVE_EVP_CIPHER_CTX_IV 1
@@ -1716,6 +1728,9 @@
    EOPNOTSUPP. */
 /* #undef LINK_OPNOTSUPP_ERRNO */
 
+/* Lock all memory to protect sshd against Linux kcompactd */
+/* #undef LINUX_MEMLOCK_ONFAULT */
+
 /* Adjust Linux out-of-memory killer */
 /* #undef LINUX_OOM_ADJUST */
 
@@ -1739,6 +1754,9 @@
 
 /* Set this to your mail directory if you do not have _PATH_MAILDIR */
 /* #undef MAIL_DIRECTORY */
+
+/* Define if your compiler lacks __builtin_popcount */
+/* #undef MISSING_BUILTIN_POPCOUNT */
 
 /* Need setpgrp to for controlling tty */
 /* #undef NEED_SETPGRP */
@@ -1765,7 +1783,7 @@
 #define OPENSSL_HAS_ECC 1
 
 /* libcrypto has ed25519 support */
-/* #undef OPENSSL_HAS_ED25519 */
+#define OPENSSL_HAS_ED25519 1
 
 /* libcrypto has NID_X9_62_prime256v1 */
 #define OPENSSL_HAS_NISTP256 1
@@ -1831,9 +1849,6 @@
 /* no privsep sandboxing */
 /* #undef SANDBOX_NULL */
 
-/* Sandbox using pledge(2) */
-/* #undef SANDBOX_PLEDGE */
-
 /* Sandbox using setrlimit(2) */
 /* #undef SANDBOX_RLIMIT */
 
@@ -1848,9 +1863,6 @@
 
 /* Sandbox using Solaris/Illumos privileges */
 /* #undef SANDBOX_SOLARIS */
-
-/* Sandbox using systrace(4) */
-/* #undef SANDBOX_SYSTRACE */
 
 /* Specify the system call convention in use */
 /* #undef SECCOMP_AUDIT_ARCH */
@@ -1978,6 +1990,9 @@
 
 /* Define if you have Solaris projects */
 /* #undef USE_SOLARIS_PROJECTS */
+
+/* Use libwtmpdb for sshd */
+/* #undef USE_WTMPDB */
 
 /* compiler variable declarations after code */
 #define VARIABLE_DECLARATION_AFTER_CODE 1

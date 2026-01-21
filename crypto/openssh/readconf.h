@@ -170,8 +170,6 @@ typedef struct {
 	char   *hostbased_accepted_algos;
 	char   *pubkey_accepted_algos;
 
-	char   *version_addendum; /* Appended to SSH banner */
-
 	char   *jump_user;
 	char   *jump_host;
 	int	jump_port;

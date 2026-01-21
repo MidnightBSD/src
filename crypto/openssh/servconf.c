@@ -350,7 +350,7 @@ fill_default_server_options(ServerOptions *options)
 	if (options->print_lastlog == -1)
 		options->print_lastlog = 1;
 	if (options->x11_forwarding == -1)
-		options->x11_forwarding = 1;
+		options->x11_forwarding = 0;
 	if (options->x11_display_offset == -1)
 		options->x11_display_offset = 10;
 	if (options->x11_use_localhost == -1)
@@ -591,6 +591,7 @@ typedef enum {
 	sExposeAuthInfo, sRDomain, sPubkeyAuthOptions, sSecurityKeyProvider,
 	sRequiredRSASize, sChannelTimeout, sUnusedConnectionTimeout,
 	sSshdSessionPath, sSshdAuthPath, sRefuseConnection,
+	sUseBlacklist,
 	sDeprecated, sIgnore, sUnsupported
 } ServerOpCodes;
 
@@ -762,12 +763,6 @@ static struct {
 	{ "refuseconnection", sRefuseConnection, SSHCFG_ALL },
 	{ "useblacklist", sUseBlacklist, SSHCFG_GLOBAL },
 	{ "useblocklist", sUseBlacklist, SSHCFG_GLOBAL }, /* alias */
-
-	/* HPN patch - retired in 60c59fad8806 */
-	{ "noneenabled", sUnsupported, SSHCFG_ALL },
-	{ "hpndisabled", sDeprecated, SSHCFG_ALL },
-	{ "hpnbuffersize", sDeprecated, SSHCFG_ALL },
-	{ "tcprcvbufpoll", sDeprecated, SSHCFG_ALL },
 
 	{ NULL, sBadOption, 0 }
 };

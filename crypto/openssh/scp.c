@@ -476,7 +476,7 @@ main(int argc, char **argv)
 	const char *errstr;
 	extern char *optarg;
 	extern int optind;
-	enum scp_mode_e mode = MODE_SCP;
+	enum scp_mode_e mode = MODE_SFTP;
 	char *sftp_direct = NULL;
 	long long llv;
 
