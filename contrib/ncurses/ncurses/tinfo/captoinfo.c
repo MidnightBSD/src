@@ -216,12 +216,15 @@ cvtchar(register const char *sp)
 	}
 	break;
     case '^':
-	c = UChar(*++sp);
-	if (c == '?')
-	    c = 127;
-	else
-	    c &= 0x1f;
 	len = 2;
+	c = UChar(*++sp);
+        if (c == '?') {
+	    c = 127;
+        } else if (c == '\0') {
+            len = 1;
+        } else {
+	    c &= 0x1f;
+	}
 	break;
     default:
 	c = UChar(*sp);
