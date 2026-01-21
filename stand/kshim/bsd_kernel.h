@@ -33,6 +33,9 @@
 #undef __FreeBSD_version
 #define	__FreeBSD_version 1300000
 
+#undef __MidnightBSD_version
+#define __MidnightBSD_version 400000
+
 #include <sys/cdefs.h>
 #include <sys/queue.h>
 #include <sys/errno.h>

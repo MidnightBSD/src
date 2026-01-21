@@ -48,7 +48,7 @@ LC_ALL=C; export LC_ALL
 u=${USER-root} h=${HOSTNAME-`hostname`} t=`date`
 r=`awk -F: ' /^[0-9]\.[0-9]+:/ { print $1; exit }' $1`
 
-bootprog_info="FreeBSD/${3} ${2}, Revision ${r}\\n"
+bootprog_info="MidnightBSD/${3} ${2}, Revision ${r}\\n"
 if [ -n "${include_metadata}" ]; then
 	bootprog_info="$bootprog_info(${t} ${u}@${h})\\n"
 fi
