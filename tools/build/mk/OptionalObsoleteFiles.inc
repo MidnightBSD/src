@@ -2377,9 +2377,6 @@ OLD_FILES+=usr/share/man/man3/gpio_pin_tristate.3.gz
 OLD_FILES+=usr/share/man/man8/gpioctl.8.gz
 .endif
 
-OLD_FILES+=usr/bin/diff3
-OLD_FILES+=usr/share/man/man1/diff3.1.gz
-
 .if ${MK_GSSAPI} == no
 OLD_FILES+=usr/include/gssapi/gssapi.h
 OLD_DIRS+=usr/include/gssapi
