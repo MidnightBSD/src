@@ -105,7 +105,7 @@ main(int argc, char **argv)
 	bool detach, softdep, autounit, newfs;
 	const char *mtpoint, *size_arg, *skel, *unitstr;
 	char *p;
-	int ch, idx, rv;
+	int ch, idx;
 	void *set;
 	unsigned long ul;
 
@@ -344,8 +344,7 @@ main(int argc, char **argv)
 	
 		if (!have_mdtype)
 			mdtype = MD_SWAP;
-		if (softdep)
-			argappend(&newfs_arg, "-U");
+		argappend(&newfs_arg, softdep ? "-U" : "-u");
 		if (mdtype != MD_VNODE && !newfs)
 			errx(1, "-P requires a vnode-backed disk");
 	
@@ -358,13 +357,6 @@ main(int argc, char **argv)
 			do_mdconfig_attach(mdconfig_arg, mdtype);
 		if (newfs)
 			do_newfs(newfs_arg);
-		if (!softdep) {
-			rv = run(NULL, "%s %s /dev/%s%d", _PATH_TUNEFS,
-			    "-n disable", mdname, unit);
-			if (rv)
-				errx(1, "tunefs exited %s %d", run_exitstr(rv),
-				    run_exitnumber(rv));
-		}
 		do_mount_md(mount_arg, mtpoint);
 	}
 
