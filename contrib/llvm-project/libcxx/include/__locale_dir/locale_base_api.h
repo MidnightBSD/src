@@ -27,7 +27,7 @@
 #  include <__locale_dir/locale_base_api/musl.h>
 #elif defined(__APPLE__)
 #  include <xlocale.h>
-#elif defined(__FreeBSD__)
+#elif defined(__FreeBSD__) || defined(__MidnightBSD__)
 #  if __has_feature(modules)
 #    include <stdio.h>
 #    include <stdlib.h>
