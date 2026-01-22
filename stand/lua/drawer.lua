@@ -434,7 +434,7 @@ branddefs = {
 	-- keys are: graphic (table depicting graphic)
 	["mbsd"] = {
 		graphic = mbsd_brand,
-		image = "/boot/images/freebsd-brand-rev.png",
+		image = "/boot/images/midnightbsd-brand.png",
 	},
 	["none"] = {
 		graphic = none,
