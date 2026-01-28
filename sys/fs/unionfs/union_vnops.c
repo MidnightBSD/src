@@ -76,14 +76,30 @@
 	KASSERT(((vp)->v_op == &unionfs_vnodeops), \
 	    ("unionfs: it is not unionfs-vnode"))
 
+static bool
+unionfs_lookup_isroot(struct componentname *cnp, struct vnode *dvp)
+{
+	struct nameidata *ndp;
+
+	if (dvp == NULL)
+		return (false);
+	if ((dvp->v_vflag & VV_ROOT) != 0)
+		return (true);
+	ndp = lookup_nameidata(cnp);
+	if (ndp == NULL)
+		return (false);
+	return (lookup_isroot(ndp, dvp));
+}
+
 static int
 unionfs_lookup(struct vop_cachedlookup_args *ap)
 {
 	int		iswhiteout;
 	int		lockflag;
 	int		error , uerror, lerror;
+	uint64_t	cnflags;
 	u_long		nameiop;
-	u_long		cnflags, cnflagsbk;
+	u_long		cnflagsbk;
 	struct unionfs_node *dunp;
 	struct vnode   *dvp, *udvp, *ldvp, *vp, *uvp, *lvp, *dtmpvp;
 	struct vattr	va;
@@ -123,6 +139,10 @@ unionfs_lookup(struct vop_cachedlookup_args *ap)
 	if (cnflags & ISDOTDOT) {
 		if (LOOKUP != nameiop && udvp == NULLVP)
 			return (EROFS);
+
+		if (unionfs_lookup_isroot(cnp, udvp) ||
+		    unionfs_lookup_isroot(cnp, ldvp))
+			return (ENOENT);
 
 		if (udvp != NULLVP) {
 			dtmpvp = udvp;
