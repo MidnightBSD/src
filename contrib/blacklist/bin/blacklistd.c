@@ -344,10 +344,10 @@ addfd(struct pollfd **pfdp, bl_t **blp, size_t *nfd, size_t *maxfd,
 		exit(EXIT_FAILURE);
 	if (*nfd >= *maxfd) {
 		*maxfd += 10;
-		*blp = realloc(*blp, sizeof(**blp) * *maxfd);
+		*blp = reallocarray(*blp, *maxfd, sizeof(**blp));
 		if (*blp == NULL)
 			err(EXIT_FAILURE, "malloc");
-		*pfdp = realloc(*pfdp, sizeof(**pfdp) * *maxfd);
+		*pfdp = reallocarray(*pfdp, *maxfd, sizeof(**pfdp));
 		if (*pfdp == NULL)
 			err(EXIT_FAILURE, "malloc");
 	}
@@ -371,7 +371,7 @@ uniqueadd(struct conf ***listp, size_t *nlist, size_t *mlist, struct conf *c)
 	}
 	if (*nlist == *mlist) {
 		*mlist += 10;
-		void *p = realloc(*listp, *mlist * sizeof(*list));
+		void *p = reallocarray(*listp, *mlist, sizeof(*list));
 		if (p == NULL)
 			err(EXIT_FAILURE, "Can't allocate for rule list");
 		list = *listp = p;
@@ -456,8 +456,8 @@ main(int argc, char *argv[])
 		case 's':
 			if (nblsock >= maxblsock) {
 				maxblsock += 10;
-				void *p = realloc(blsock,
-				    sizeof(*blsock) * maxblsock);
+				void *p = reallocarray(blsock, maxblsock,
+				    sizeof(*blsock));
 				if (p == NULL)
 				    err(EXIT_FAILURE,
 					"Can't allocate memory for %zu sockets",
@@ -532,14 +532,15 @@ main(int argc, char *argv[])
 	state = state_open(dbfile, flags, 0600);
 	if (state == NULL)
 		state = state_open(dbfile,  flags | O_CREAT, 0600);
-	if (state == NULL)
-		return EXIT_FAILURE;
-
-	if (restore) {
-		if (!flush)
-			rules_flush();
-		rules_restore();
+	else {
+		if (restore) {
+			if (!flush)
+				rules_flush();
+			rules_restore();
+		}
 	}
+	if (state == NULL)
+		exit(EXIT_FAILURE);
 
 	if (!debug) {
 		if (daemon(0, 0) == -1)
@@ -561,7 +562,7 @@ main(int argc, char *argv[])
 			if (errno == EINTR)
 				continue;
 			(*lfun)(LOG_ERR, "poll (%m)");
-			return EXIT_FAILURE;
+			exit(EXIT_FAILURE);
 		case 0:
 			state_sync(state);
 			break;
@@ -577,5 +578,5 @@ main(int argc, char *argv[])
 		update();
 	}
 	state_close(state);
-	return 0;
+	exit(EXIT_SUCCESS);
 }
