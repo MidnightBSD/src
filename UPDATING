@@ -1,5 +1,19 @@
 Updating Information for MidnightBSD users.
 
+20260224:
+	If two sibling jails are restricted to separate filesystem trees, which is to
+	say that neither of the two jail root directories is an ancestor of the other,
+	jailed processes may nonetheless be able to access a shared directory via a
+	nullfs mount, if the administrator has configured one.
+
+	In this case, cooperating processes in the two jails may establish a connection
+	using a unix domain socket and exchange directory descriptors with each other.
+
+	When performing a filesystem name lookup, at each step of the lookup, the
+	kernel checks whether the lookup would descend below the jail root of the
+	current process.  If the jail root directory is not encountered, the lookup
+	continues.
+
 20260121:
 	expat 2.7.3
 

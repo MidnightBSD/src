@@ -72,7 +72,7 @@ struct nameidata {
 	 */
 	const	char *ni_dirp;		/* pathname pointer */
 	enum	uio_seg ni_segflg;	/* location of pathname */
-	cap_rights_t *ni_rightsneeded;	/* rights required to look up vnode */
+	const cap_rights_t *ni_rightsneeded; /* rights needed to look up vnode */
 	/*
 	 * Arguments to lookup.
 	 */
@@ -208,6 +208,7 @@ int	cache_fplookup(struct nameidata *ndp, enum cache_fpl_status *status,
 #define	NIRES_ABS	0x00000001 /* Path was absolute */
 #define	NIRES_STRICTREL	0x00000002 /* Restricted lookup result */
 #define	NIRES_EMPTYPATH	0x00000004 /* EMPTYPATH used */
+#define	NIRES_BENEATH	0x00000008 /* O_RESOLVE_BENEATH is to be inherited */
 
 /*
  * Flags in ni_lcf, valid for the duration of the namei call.
@@ -250,7 +251,7 @@ int	cache_fplookup(struct nameidata *ndp, enum cache_fpl_status *status,
 #define NDINIT_ALL(ndp, op, flags, segflg, namep, dirfd, startdir, rightsp, td)	\
 do {										\
 	struct nameidata *_ndp = (ndp);						\
-	cap_rights_t *_rightsp = (rightsp);					\
+	const cap_rights_t *_rightsp = (rightsp);					\
 	MPASS(_rightsp != NULL);						\
 	NDINIT_PREFILL(_ndp);							\
 	NDINIT_DBG(_ndp);							\
