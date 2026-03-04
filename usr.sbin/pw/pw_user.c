@@ -1225,7 +1225,7 @@ mix_config(struct userconf *cmdcnf, struct userconf *cfg)
 }
 
 static void
-write_birthdate(const char *username, const char *birthdate)
+write_birthdate(uid_t uid, const char *birthdate)
 {
 	int fd;
 	FILE *fp;
@@ -1257,7 +1257,7 @@ write_birthdate(const char *username, const char *birthdate)
 		err(EX_IOERR, "cannot fdopen /etc/age_verification");
 	}
 
-	fprintf(fp, "%s:%s\n", username, birthdate);
+	fprintf(fp, "%ju:%s\n", (uintmax_t)uid, birthdate);
 	fclose(fp);
 }
 
@@ -1594,7 +1594,7 @@ pw_user_add(int argc, char **argv, char *arg1)
 		pw_log(cnf, M_ADD, W_USER, "NIS maps updated");
 
 	if (birthdate != NULL)
-		write_birthdate(pwd->pw_name, birthdate);
+		write_birthdate(pwd->pw_uid, birthdate);
 
 	return (EXIT_SUCCESS);
 }
