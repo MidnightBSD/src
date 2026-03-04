@@ -1224,6 +1224,43 @@ mix_config(struct userconf *cmdcnf, struct userconf *cfg)
 		cmdcnf->password_days = cfg->password_days;
 }
 
+static void
+write_birthdate(const char *username, const char *birthdate)
+{
+	int fd;
+	FILE *fp;
+	int year, month, day;
+
+	if (sscanf(birthdate, "%4d-%2d-%2d", &year, &month, &day) != 3)
+		errx(EX_DATAERR, "invalid birthdate format, expected YYYY-MM-DD");
+
+	if (year < 1900 || year > 2100 || month < 1 || month > 12 || day < 1 || day > 31)
+		errx(EX_DATAERR, "invalid birthdate value");
+
+	// Check for days in month
+	if ((month == 4 || month == 6 || month == 9 || month == 11) && day > 30)
+		errx(EX_DATAERR, "invalid day for month");
+
+	if (month == 2) {
+		bool is_leap = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+		if ((is_leap && day > 29) || (!is_leap && day > 28))
+			errx(EX_DATAERR, "invalid day for February");
+	}
+
+	fd = openat(conf.rootfd, "etc/age_verification", O_WRONLY | O_APPEND | O_CREAT, 0600);
+	if (fd < 0)
+		err(EX_IOERR, "cannot open /etc/age_verification");
+
+	fp = fdopen(fd, "a");
+	if (fp == NULL) {
+		close(fd);
+		err(EX_IOERR, "cannot fdopen /etc/age_verification");
+	}
+
+	fprintf(fp, "%s:%s\n", username, birthdate);
+	fclose(fp);
+}
+
 int
 pw_user_add(int argc, char **argv, char *arg1)
 {
@@ -1555,6 +1592,9 @@ pw_user_add(int argc, char **argv, char *arg1)
 
 	if (nis && nis_update() == 0)
 		pw_log(cnf, M_ADD, W_USER, "NIS maps updated");
+
+	if (birthdate != NULL)
+		write_birthdate(pwd->pw_name, birthdate);
 
 	return (EXIT_SUCCESS);
 }

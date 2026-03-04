@@ -253,6 +253,7 @@ cmdhelp(int mode, int which)
 				"\t-L class       user class\n"
 				"\t-h fd          read password on fd\n"
 				"\t-H fd          read encrypted password on fd\n"
+				"\t-B birthdate   user's date of birth in YYYY-MM-DD format\n"
 				"\t-Y             update NIS maps\n"
 				"\t-N             no update\n"
 				"  Setting defaults:\n"
