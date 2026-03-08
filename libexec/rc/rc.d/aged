@@ -10,22 +10,18 @@
 name="aged"
 rcvar="aged_enable"
 
-# Define the executable and the required directories
 command="/usr/sbin/aged"
 pidfile="/var/run/aged/${name}.pid"
 required_dirs="/var/run/aged /var/db/aged"
 
-# Pre-start checks to ensure environment is ready
 start_precmd="aged_prestart"
 
 aged_prestart()
 {
-    # Ensure the run directory exists with correct permissions
     if [ ! -d "/var/run/aged" ]; then
         install -d -o root -g wheel -m 0755 /var/run/aged
     fi
 
-    # Ensure the database directory exists
     if [ ! -d "/var/db/aged" ]; then
         install -d -o root -g wheel -m 0700 /var/db/aged
     fi
@@ -33,7 +29,6 @@ aged_prestart()
 
 load_rc_config $name
 
-# Default values
 : ${aged_enable:="NO"}
 
 run_rc_command "$1"
