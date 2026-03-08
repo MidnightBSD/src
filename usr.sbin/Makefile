@@ -3,6 +3,8 @@
 .include <src.opts.mk>
 
 SUBDIR=	adduser \
+	agectl \
+	aged \
 	arp \
 	binmiscctl \
 	camdd \

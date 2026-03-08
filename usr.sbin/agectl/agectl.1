@@ -1,0 +1,95 @@
+.\" Copyright (c) 2026 Lucas Holt
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.\"
+.Dd March 8, 2026
+.Dt AGECTL 1
+.Os MidnightBSD
+.Sh NAME
+.Nm agectl
+.Nd control and query the user age daemon
+.Sh SYNOPSIS
+.Nm
+.Op Fl a Ar age | Fl b Ar YYYY-MM-DD
+.Op Ar username
+.Sh DESCRIPTION
+The
+.Nm
+utility communicates with the
+.Xr aged 8
+daemon to retrieve or set age-related information for users. 
+.Pp
+When invoked without arguments,
+.Nm
+queries the daemon for the age range associated with the calling user's 
+effective UID. The daemon verifies the caller's identity using 
+.Xr getpeereid 2 , 
+ensuring users can only access their own data.
+.Pp
+The following options are available:
+.Bl -tag -width indent
+.It Fl a Ar age
+Set the age for the specified
+.Ar username .
+This operation requires root privileges.
+.It Fl b Ar YYYY-MM-DD
+Set the date of birth for the specified
+.Ar username .
+This operation requires root privileges.
+.El
+.Sh EXIT STATUS
+.Ex -std
+.Sh EXAMPLES
+Query the age range for the current user:
+.Pp
+.Dl $ agectl
+.Pp
+Set the age for user "bob" to 32 (as root):
+.Pp
+.Dl # agectl -a 32 bob
+.Pp
+Set the date of birth for user "tom" (as root):
+.Pp
+.Dl # agectl -b 1995-12-22 tom
+.Sh PROTOCOL RESPONSES
+The output of a query is a comma-delimited string representing the 
+following age brackets:
+.Bl -tag -width "16,17XX" -compact
+.It Sy "0,12"
+Under 13 years old.
+.It Sy "13,15"
+13 to 15 years old.
+.It Sy "16,17"
+16 to 17 years old.
+.It Sy "18,-1"
+18 years or older.
+.It Sy "-1,-1"
+User data not found or age undefined.
+.El
+.Sh SEE ALSO
+.Xr aged 8 ,
+.Xr getpeereid 2 ,
+.Xr getpwnam 3
+.Sh AUTHORS
+.An Lucas Holt Aq Mt luke@foolishgames.com

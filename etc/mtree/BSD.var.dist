@@ -37,6 +37,8 @@
     ..
 /set mode=0755
     db
+        aged
+        ..
         entropy         uname=operator gname=operator mode=0700
         ..
         hyperv          mode=0700 tags=package=hyperv-tools
@@ -81,6 +83,8 @@
     preserve
     ..
     run
+        aged
+        ..
         bhyve tags=package=bhyve
         ..
         dhclient tags=package=dhclient

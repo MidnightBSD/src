@@ -12,6 +12,7 @@ CONFS=	DAEMON \
 	SERVERS \
 	addswap \
 	adjkerntz \
+	aged \
 	archdep \
 	bgfsck \
 	${_blacklistd} \
