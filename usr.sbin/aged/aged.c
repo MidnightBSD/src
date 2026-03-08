@@ -50,6 +50,17 @@ main(void)
     uid_t client_uid;
     gid_t client_gid;
 
+    if (daemon(0, 0) == -1) {
+        perror("daemon");
+        exit(1);
+    }
+
+    FILE *fp = fopen("/var/run/aged/aged.pid", "w");
+    if (fp) {
+        fprintf(fp, "%d\n", getpid());
+        fclose(fp);
+    }
+
     mkdir("/var/run/aged", 0755);
     mkdir("/var/db/aged", 0700);
 
