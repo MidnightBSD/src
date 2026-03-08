@@ -4,11 +4,12 @@
 The compilation of software known as MidnightBSD is distributed under
 the following terms:
 
-California residents are not authorized to use MidnightBSD for desktop use
-in the state of California effective January 1, 2027.
-California law https://legiscan.com/CA/text/AB1043/id/3269704
-CA AB1043 requires a complex age verification system implemented
-for operating systems with no exceptions for small open source projects. 
+Residents of any countries, states or territories that require age verification 
+for operating systems, are not authorized to use MidnightBSD. This list currently includes 
+Brazil, effective March 17, 2026, California, effective January 1, 2027, and
+will include Colorado, Illinois and New York provided they pass their currently 
+proposed legislation.  We urge users to write their representatives to get
+these laws repealed or replaced. 
 
 Copyright (C) 2006-2026 The MidnightBSD Project. All rights reserved.
 
