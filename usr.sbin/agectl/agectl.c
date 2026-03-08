@@ -38,82 +38,85 @@
 static void
 usage(const char *progname)
 {
-    fprintf(stderr, "Usage:\n");
-    fprintf(stderr, "  Query: %s\n", progname);
-    fprintf(stderr, "  Set Age (Root): %s -a <age> <username>\n", progname);
-    fprintf(stderr, "  Set DOB (Root): %s -b <YYYY-MM-DD> <username>\n", progname);
-    exit(1);
+	fprintf(stderr, "Usage:\n");
+	fprintf(stderr, "  Query: %s\n", progname);
+	fprintf(stderr, "  Set Age (Root): %s -a <age> <username>\n", progname);
+	fprintf(stderr, "  Set DOB (Root): %s -b <YYYY-MM-DD> <username>\n", progname);
+	exit(1);
 }
 
 int
 main(int argc, char *argv[])
 {
-    int fd;
-    struct sockaddr_un addr;
-    char buf[256] = {0};
-    int ch;
-    char *set_val = NULL;
-    char *target_user = NULL;
-    int mode = 0; /* 0 = query, 1 = set age, 2 = set dob */
+	int fd;
+	struct sockaddr_un addr;
+	char buf[256] = {0};
+	int ch;
+	char *set_val = NULL;
+	char *target_user = NULL;
+	int mode = 0;		/* 0 = query, 1 = set age, 2 = set dob */
 
-    while ((ch = getopt(argc, argv, "a:b:")) != -1) {
-        switch (ch) {
-            case 'a':
-                mode = 1;
-                set_val = optarg;
-                break;
-            case 'b':
-                mode = 2;
-                set_val = optarg;
-                break;
-            default:
-                usage(argv[0]);
-        }
-    }
+	while ((ch = getopt(argc, argv, "a:b:")) != -1) {
+		switch (ch) {
+		case 'a':
+			mode = 1;
+			set_val = optarg;
+			break;
+		case 'b':
+			mode = 2;
+			set_val = optarg;
+			break;
+		default:
+			usage(argv[0]);
+		}
+	}
 
-    if (mode > 0) {
-        if (optind >= argc) usage(argv[0]);
-        target_user = argv[optind];
-    }
+	if (mode > 0) {
+		if (optind >= argc)
+			usage(argv[0]);
+		target_user = argv[optind];
+	}
 
-    if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-        perror("socket");
-        exit(1);
-    }
+	if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+		perror("socket");
+		exit(1);
+	}
 
-    memset(&addr, 0, sizeof(addr));
-    addr.sun_family = AF_UNIX;
-    strncpy(addr.sun_path, SOCKET_PATH, sizeof(addr.sun_path) - 1);
+	memset(&addr, 0, sizeof(addr));
+	addr.sun_family = AF_UNIX;
+	strncpy(addr.sun_path, SOCKET_PATH, sizeof(addr.sun_path) - 1);
 
-    if (connect(fd, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
-        perror("connect (is aged running?)");
-        exit(1);
-    }
+	if (connect(fd, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
+		perror("connect (is aged running?)");
+		exit(1);
+	}
 
-    if (mode == 0) {
-        write(fd, "GET", 3);
-    } else {
-        struct passwd *pw = getpwnam(target_user);
-        if (!pw) {
-            fprintf(stderr, "Unknown user: %s\n", target_user);
-            close(fd);
-            exit(1);
-        }
+	if (mode == 0) {
+		write(fd, "GET", 3);
+	} else {
+		struct passwd *pw = getpwnam(target_user);
 
-        if (mode == 1) {
-            snprintf(buf, sizeof(buf), "SET %d age %s", pw->pw_uid, set_val);
-        } else {
-            snprintf(buf, sizeof(buf), "SET %d dob %s", pw->pw_uid, set_val);
-        }
-        write(fd, buf, strlen(buf));
-    }
+		if (!pw) {
+			fprintf(stderr, "Unknown user: %s\n", target_user);
+			close(fd);
+			exit(1);
+		}
 
-    memset(buf, 0, sizeof(buf));
-    ssize_t n = read(fd, buf, sizeof(buf) - 1);
-    if (n > 0) {
-        printf("%s\n", buf);
-    }
+		if (mode == 1) {
+			snprintf(buf, sizeof(buf), "SET %d age %s", pw->pw_uid, set_val);
+		} else {
+			snprintf(buf, sizeof(buf), "SET %d dob %s", pw->pw_uid, set_val);
+		}
+		write(fd, buf, strlen(buf));
+	}
 
-    close(fd);
-    return 0;
+	memset(buf, 0, sizeof(buf));
+	ssize_t n = read(fd, buf, sizeof(buf) - 1);
+
+	if (n > 0) {
+		printf("%s\n", buf);
+	}
+
+	close(fd);
+	return 0;
 }

@@ -33,151 +33,205 @@
 #include <sys/un.h>
 #include <sys/stat.h>
 #include <sqlite3.h>
+#define _XOPEN_SOURCE
 #include <time.h>
 #include <errno.h>
 
 #define SOCKET_PATH "/var/run/aged/aged.sock"
 #define DB_PATH "/var/db/aged/aged.db"
 
+static int calculate_age(const char *);
 static void get_range(int, char *);
 static void init_db(void);
 
 int
 main(void)
 {
-    int server_fd, client_fd;
-    struct sockaddr_un addr;
-    uid_t client_uid;
-    gid_t client_gid;
+	int server_fd,
+	 client_fd;
+	struct sockaddr_un addr;
+	uid_t client_uid;
+	gid_t client_gid;
 
-    if (daemon(0, 0) == -1) {
-        perror("daemon");
-        exit(1);
-    }
+	if (daemon(0, 0) == -1) {
+		perror("daemon");
+		exit(1);
+	}
 
-    FILE *fp = fopen("/var/run/aged/aged.pid", "w");
-    if (fp) {
-        fprintf(fp, "%d\n", getpid());
-        fclose(fp);
-    }
+	FILE *fp = fopen("/var/run/aged/aged.pid", "w");
 
-    mkdir("/var/run/aged", 0755);
-    mkdir("/var/db/aged", 0700);
+	if (fp) {
+		fprintf(fp, "%d\n", getpid());
+		fclose(fp);
+	}
 
-    init_db();
+	mkdir("/var/run/aged", 0755);
+	mkdir("/var/db/aged", 0700);
 
-    if ((server_fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-        perror("socket error");
-        exit(1);
-    }
+	init_db();
 
-    memset(&addr, 0, sizeof(addr));
-    addr.sun_family = AF_UNIX;
-    strncpy(addr.sun_path, SOCKET_PATH, sizeof(addr.sun_path) - 1);
-    unlink(SOCKET_PATH);
+	if ((server_fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+		perror("socket error");
+		exit(1);
+	}
 
-    if (bind(server_fd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
-        perror("bind error");
-        exit(1);
-    }
+	memset(&addr, 0, sizeof(addr));
+	addr.sun_family = AF_UNIX;
+	strncpy(addr.sun_path, SOCKET_PATH, sizeof(addr.sun_path) - 1);
+	unlink(SOCKET_PATH);
 
-    chmod(SOCKET_PATH, 0666);
+	if (bind(server_fd, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
+		perror("bind error");
+		exit(1);
+	}
 
-    if (listen(server_fd, 5) == -1) {
-        perror("listen error");
-        exit(1);
-    }
+	chmod(SOCKET_PATH, 0666);
 
-    printf("aged daemon started...\n");
+	if (listen(server_fd, 5) == -1) {
+		perror("listen error");
+		exit(1);
+	}
 
-    while (1) {
-        if ((client_fd = accept(server_fd, NULL, NULL)) == -1) {
-            continue;
-        }
+	printf("aged daemon started...\n");
 
-        if (getpeereid(client_fd, &client_uid, &client_gid) == -1) {
-            close(client_fd);
-            continue;
-        }
+	while (1) {
+		if ((client_fd = accept(server_fd, NULL, NULL)) == -1) {
+			continue;
+		}
 
-        char buf[256];
-        int n = read(client_fd, buf, sizeof(buf) - 1);
-        if (n > 0) {
-            buf[n] = '\0';
-            sqlite3 *db;
-            sqlite3_open(DB_PATH, &db);
+		if (getpeereid(client_fd, &client_uid, &client_gid) == -1) {
+			close(client_fd);
+			continue;
+		}
 
-            if (client_uid == 0 && strncmp(buf, "SET", 3) == 0) {
-                int target_uid, val;
-                char type[4]; // "dob" or "age"
-                sscanf(buf, "SET %d %s %d", &target_uid, type, &val);
-                
-                char sql[256];
-                if (strcmp(type, "age") == 0)
-                    snprintf(sql, sizeof(sql), "INSERT OR REPLACE INTO users (uid, age) VALUES (%d, %d);", target_uid, val);
-                else
-                    snprintf(sql, sizeof(sql), "INSERT OR REPLACE INTO users (uid, dob) VALUES (%d, '%d');", target_uid, val);
+		char buf[256];
+		int n = read(client_fd, buf, sizeof(buf) - 1);
 
-                sqlite3_exec(db, sql, 0, 0, NULL);
-                write(client_fd, "OK\n", 3);
-            } else {
-                sqlite3_stmt *res;
-                char sql[128];
-                snprintf(sql, sizeof(sql), "SELECT age FROM users WHERE uid = %d;", client_uid);
-                
-                int age = -1;
-                if (sqlite3_prepare_v2(db, sql, -1, &res, 0) == SQLITE_OK) {
-                    if (sqlite3_step(res) == SQLITE_ROW) {
-                        age = sqlite3_column_int(res, 0);
-                    }
-                    sqlite3_finalize(res);
-                }
+		if (n > 0) {
+			buf[n] = '\0';
+			sqlite3 *db;
 
-                char response[16];
-                get_range(age, response);
-                write(client_fd, response, strlen(response));
-            }
-            sqlite3_close(db);
-        }
-        close(client_fd);
-    }
+			sqlite3_open(DB_PATH, &db);
 
-    return 0;
+			if (client_uid == 0 && strncmp(buf, "SET", 3) == 0) {
+				int target_uid;
+				char type[8],
+				val_str[64];
+
+				//Use % s for the value so we capture the full "YYYY-MM-DD" string
+				if (sscanf(buf, "SET %d %7s %63s", &target_uid, type, val_str) == 3) {
+					int final_age = -1;
+
+					if (strcmp(type, "age") == 0) {
+						final_age = atoi(val_str);
+					} else if (strcmp(type, "dob") == 0) {
+						final_age = calculate_age(val_str);
+					}
+
+					char sql[256];
+
+					snprintf(sql, sizeof(sql),
+						 "INSERT OR REPLACE INTO users (uid, dob, age) VALUES (%d, '%s', %d);",
+						 target_uid, val_str, final_age);
+
+					sqlite3_exec(db, sql, 0, 0, NULL);
+					write(client_fd, "OK\n", 3);
+				}
+			} else {
+				sqlite3_stmt *res;
+				char sql[128];
+
+				snprintf(sql, sizeof(sql), "SELECT age FROM users WHERE uid = %d;", client_uid);
+
+				int age = -1;
+
+				if (sqlite3_prepare_v2(db, sql, -1, &res, 0) == SQLITE_OK) {
+					if (sqlite3_step(res) == SQLITE_ROW) {
+						age = sqlite3_column_int(res, 0);
+					}
+					sqlite3_finalize(res);
+				}
+
+				char response[16];
+
+				get_range(age, response);
+				write(client_fd, response, strlen(response));
+			}
+			sqlite3_close(db);
+		}
+		close(client_fd);
+	}
+
+	return 0;
+}
+
+int
+calculate_age(const char *dob_str)
+{
+	struct tm tm_dob = {0};
+
+	if (strptime(dob_str, "%Y-%m-%d", &tm_dob) == NULL)
+		return -1;
+
+	time_t t = time(NULL);
+	struct tm *tm_now = localtime(&t);
+
+	int age = (tm_now->tm_year + 1900) - (tm_dob.tm_year + 1900);
+
+	if (tm_now->tm_mon < tm_dob.tm_mon ||
+	    (tm_now->tm_mon == tm_dob.tm_mon && tm_now->tm_mday < tm_dob.tm_mday)) {
+		age--;
+	}
+	return age;
 }
 
 void
 init_db(void)
 {
-    sqlite3 *db;
-    char *err_msg = 0;
-    int rc = sqlite3_open(DB_PATH, &db);
+	sqlite3 *db;
+	char *err_msg = 0;
+	int rc = sqlite3_open(DB_PATH, &db);
 
-    if (rc != SQLITE_OK) {
-        fprintf(stderr, "Cannot open database: %s\n", sqlite3_errmsg(db));
-        exit(1);
-    }
+	if (rc != SQLITE_OK) {
+		fprintf(stderr, "Cannot open database: %s\n", sqlite3_errmsg(db));
+		exit(1);
+	}
 
-    const char *sql = "CREATE TABLE IF NOT EXISTS users("
-                "uid INTEGER PRIMARY KEY, "
-                "dob TEXT, "
-                "age INTEGER);";
+	const char *sql = "CREATE TABLE IF NOT EXISTS users("
+	"uid INTEGER PRIMARY KEY, "
+	"dob TEXT, "
+	"age INTEGER);";
 
-    rc = sqlite3_exec(db, sql, 0, 0, &err_msg);
-    if (rc != SQLITE_OK) {
-        fprintf(stderr, "SQL error: %s\n", err_msg);
-        sqlite3_free(err_msg);
-    }
-    sqlite3_close(db);
+	rc = sqlite3_exec(db, sql, 0, 0, &err_msg);
+	if (rc != SQLITE_OK) {
+		fprintf(stderr, "SQL error: %s\n", err_msg);
+		sqlite3_free(err_msg);
+	}
+	sqlite3_close(db);
 }
 
 void
 get_range(int age, char *buffer)
 {
-    if (age < 0) { strcpy(buffer, "-1,-1"); return; }
-    if (age < 13) { strcpy(buffer, "0,12"); return; }
-    if (age >= 13 && age < 16) { strcpy(buffer, "13,15"); return; }
-    if (age >= 16 && age < 18) { strcpy(buffer, "16,17"); return; }
-    if (age >= 18) { strcpy(buffer, "18,-1"); return; }
-    strcpy(buffer, "-1,-1");
+	if (age < 0) {
+		strcpy(buffer, "-1,-1");
+		return;
+	}
+	if (age < 13) {
+		strcpy(buffer, "0,12");
+		return;
+	}
+	if (age >= 13 && age < 16) {
+		strcpy(buffer, "13,15");
+		return;
+	}
+	if (age >= 16 && age < 18) {
+		strcpy(buffer, "16,17");
+		return;
+	}
+	if (age >= 18) {
+		strcpy(buffer, "18,-1");
+		return;
+	}
+	strcpy(buffer, "-1,-1");
 }
-
