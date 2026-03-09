@@ -108,7 +108,7 @@ main(void)
 		exit(1);
 	}
 
-	chmod(SOCKET_PATH, 0666);
+	chmod(SOCKET_PATH, 0666); /* intentional for agectl to work */
 
 	if (listen(server_fd, 5) == -1) {
 		syslog(LOG_ERR, "listen error: %m");
@@ -153,15 +153,34 @@ main(void)
 			buf[n] = '\0';
 			sqlite3 *db;
 
-			sqlite3_open(DB_PATH, &db);
+			int rc = sqlite3_open(DB_PATH, &db);
+			if (rc != SQLITE_OK) {
+				syslog(LOG_ERR, "Cannot open database: %s", sqlite3_errmsg(db));
+				close(client_fd);
+				continue;
+			}
 
-			if (client_uid == 0 && strncmp(buf, "SET", 3) == 0) {
+			if (client_uid == 0 && strncmp(buf, "SET ", 4) == 0) {
+				char *p = buf + 4;
+				char *token;
 				int target_uid;
-				char type[8],
-				val_str[64];
+				char *type;
+				char *val_str;
 
-				//Use % s for the value so we capture the full "YYYY-MM-DD" string
-				if (sscanf(buf, "SET %d %7s %63s", &target_uid, type, val_str) == 3) {
+				token = strsep(&p, " ");
+				if (token == NULL)
+					continue;
+				target_uid = atoi(token);
+
+				type = strsep(&p, " ");
+				if (type == NULL)
+					continue;
+				
+				val_str = strsep(&p, " ");
+				if (val_str == NULL)
+					continue;
+
+				if (target_uid > 0) {
 					int final_age = -1;
 
 					if (strcmp(type, "age") == 0) {
@@ -251,24 +270,24 @@ void
 get_range(int age, char *buffer)
 {
 	if (age < 0) {
-		strcpy(buffer, "-1,-1");
+		snprintf(buffer, 16, "-1,-1");
 		return;
 	}
 	if (age < 13) {
-		strcpy(buffer, "0,12");
+		snprintf(buffer, 16, "0,12");
 		return;
 	}
 	if (age >= 13 && age < 16) {
-		strcpy(buffer, "13,15");
+		snprintf(buffer, 16, "13,15");
 		return;
 	}
 	if (age >= 16 && age < 18) {
-		strcpy(buffer, "16,17");
+		snprintf(buffer, 16, "16,17");
 		return;
 	}
 	if (age >= 18) {
-		strcpy(buffer, "18,-1");
+		snprintf(buffer, 16, "18,-1");
 		return;
 	}
-	strcpy(buffer, "-1,-1");
+	snprintf(buffer, 16, "-1,-1");
 }
