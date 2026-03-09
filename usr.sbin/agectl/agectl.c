@@ -27,6 +27,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <err.h>
+#include <ctype.h>
+#include <errno.h>
+#include <limits.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -34,6 +38,9 @@
 #include <pwd.h>
 
 #define SOCKET_PATH "/var/run/aged/aged.sock"
+
+static int valid_age(const char *);
+static int valid_dob(const char *);
 
 static void
 usage(const char *progname)
@@ -59,10 +66,14 @@ main(int argc, char *argv[])
 	while ((ch = getopt(argc, argv, "a:b:")) != -1) {
 		switch (ch) {
 		case 'a':
+			if (!valid_age(optarg))
+				errx(1, "invalid age '%s'", optarg);
 			mode = 1;
 			set_val = optarg;
 			break;
 		case 'b':
+			if (!valid_dob(optarg))
+				errx(1, "invalid date of birth '%s' (expected YYYY-MM-DD)", optarg);
 			mode = 2;
 			set_val = optarg;
 			break;
@@ -120,3 +131,75 @@ main(int argc, char *argv[])
 	close(fd);
 	return 0;
 }
+
+int
+valid_age(const char *s)
+{
+	char *end;
+	long v;
+
+	if (s == NULL || *s == '\0')
+		return 0;
+
+	errno = 0;
+	v = strtol(s, &end, 10);
+	if (errno != 0 || *end != '\0')
+		return 0;
+	if (v < 2 || v > 125)
+		return 0;
+
+	return 1;
+}
+
+static int
+valid_dob(const char *s)
+{
+	int i;
+	long year, month, day;
+	char buf[5];
+	char *end;
+
+	/* Expect YYYY-MM-DD */
+	if (s == NULL || strlen(s) != 10)
+		return 0;
+
+	for (i = 0; i < 10; i++) {
+		if (i == 4 || i == 7) {
+			if (s[i] != '-')
+				return 0;
+		} else {
+			if (!isdigit((unsigned char)s[i]))
+				return 0;
+		}
+	}
+
+	/* Year */
+	memcpy(buf, s, 4);
+	buf[4] = '\0';
+	year = strtol(buf, &end, 10);
+	if (*end != '\0')
+		return 0;
+
+	/* Month */
+	memcpy(buf, s + 5, 2);
+	buf[2] = '\0';
+	month = strtol(buf, &end, 10);
+	if (*end != '\0')
+		return 0;
+
+	/* Day */
+	memcpy(buf, s + 8, 2);
+	buf[2] = '\0';
+	day = strtol(buf, &end, 10);
+	if (*end != '\0')
+		return 0;
+
+	if (year < 1900 || year > 2100)
+		return 0;
+	if (month < 1 || month > 12)
+		return 0;
+	if (day < 1 || day > 31)
+		return 0;
+
+	return 1;
+}	
