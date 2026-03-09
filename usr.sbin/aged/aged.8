@@ -1,0 +1,106 @@
+.\" Copyright (c) 2026 Lucas Holt
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.\"
+.Dd March 8, 2026
+.Dt AGED 8
+.Os MidnightBSD
+.Sh NAME
+.Nm aged
+.Nd user age and date of birth tracking daemon
+.Sh SYNOPSIS
+.Nm
+.Sh DESCRIPTION
+The
+.Nm
+daemon manages a database of User IDs (UIDs) and their corresponding ages or 
+dates of birth. It provides a secure interface via a Unix Domain Socket 
+to allow applications to query the age range of the currently connected user.
+.Pp
+This is required in some jurisdictions for age verification.  For instance,
+California law CA AB1043.
+.Pp
+The daemon runs as
+.Pa root
+and stores its data in a SQLite3 database located at
+.Pa /var/db/aged/aged.db .
+.Sh SECURITY
+Access control is enforced using the
+.Fn getpeereid
+system call.
+.Bl -bullet
+.It
+Only the
+.Pa root
+user (UID 0) is permitted to write or update records in the database.
+.It
+Non-root users may only query their own age range. Any attempt to query the 
+age of another UID is blocked by the daemon's logic, as it ignores the 
+request payload and retrieves data based solely on the caller's verified UID.
+.El
+.Sh PROTOCOL
+The daemon listens on a Unix Domain Socket at
+.Pa /var/run/aged/aged.sock .
+The socket is created with 666 permissions to allow all system users to 
+initiate a connection.
+.Ss Writing Data (Root Only)
+To store or update a user's information, send a string in the following format:
+.Pp
+.Dl "SET <uid> <type> <value>"
+.Pp
+Where
+.Ar type
+is either
+.Ic age
+or
+.Ic dob .
+.Ss Querying Data (All Users)
+Any data sent to the socket by a non-root user triggers a lookup for that 
+user's specific UID. The daemon returns a comma-delimited string representing 
+the age range:
+.Bl -tag -width "16,17XX" -compact
+.It Sy "0,12"
+Under 13 years of age.
+.It Sy "13,15"
+At least 13 and under 16.
+.It Sy "16,17"
+At least 16 and under 18.
+.It Sy "18,-1"
+18 years of age or older.
+.It Sy "-1,-1"
+Age is undefined or user not found.
+.El
+.Sh FILES
+.Bl -tag -width "/var/run/aged/aged.sockXX" -compact
+.It Pa /var/run/aged/aged.sock
+Unix domain socket for communication.
+.It Pa /var/db/aged/aged.db
+SQLite3 database file.
+.El
+.Sh SEE ALSO
+.Xr getpeereid 2 ,
+.Xr chmod 2 ,
+.Xr sqlite3 1
+.Sh AUTHORS
+.An Lucas Holt Aq Mt luke@foolishgames.com
