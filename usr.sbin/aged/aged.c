@@ -40,6 +40,8 @@
 #include <pwd.h>
 #include <grp.h>
 #include <syslog.h>
+#include <signal.h>
+#include <sys/capsicum.h>
 
 #define SOCKET_PATH "/var/run/aged/aged.sock"
 #define DB_PATH "/var/db/aged/aged.db"
@@ -47,7 +49,10 @@
 
 static int calculate_age(const char *);
 static void get_range(int, char *);
-static void init_db(void);
+static sqlite3 *init_db(void);
+static void handle_signal(int sig);
+
+static volatile sig_atomic_t sig_quit = 0;
 
 int
 main(void)
@@ -59,7 +64,7 @@ main(void)
 	gid_t client_gid;
 	struct passwd *pw;
 
-	openlog("aged", LOG_PID, LOG_DAEMON);
+	openlog("aged", LOG_PID | LOG_NDELAY, LOG_DAEMON);
 
 	if (daemon(0, 0) == -1) {
 		syslog(LOG_ERR, "daemon: %m");
@@ -88,7 +93,7 @@ main(void)
 		exit(1);
 	}
 
-	init_db();
+	sqlite3 *db = init_db();
 
 	lchown(DB_PATH, pw->pw_uid, pw->pw_gid);
 	chmod(DB_PATH, 0600);
@@ -120,14 +125,35 @@ main(void)
 		exit(1);
 	}
 
+	cap_rights_t rights;
+	cap_rights_init(&rights, CAP_ACCEPT, CAP_EVENT, CAP_READ, CAP_WRITE, CAP_GETPEEREID);
+	if (cap_rights_limit(server_fd, &rights) < 0) {
+		syslog(LOG_ERR, "cap_rights_limit: %m");
+		exit(1);
+	}
+
+	if (cap_enter() < 0) {
+		syslog(LOG_ERR, "cap_enter: %m");
+		exit(1);
+	}
+
+	struct pollfd pfd;
+	pfd.fd = server_fd;
+	pfd.events = POLLIN;
+
+
 	struct pollfd pfd;
 	pfd.fd = server_fd;
 	pfd.events = POLLIN;
 
 	syslog(LOG_NOTICE, "aged daemon started");
 
-	while (1) {
-		if (poll(&pfd, 1, -1) <= 0) continue;
+	signal(SIGINT, handle_signal);
+	signal(SIGTERM, handle_signal);
+
+	while (!sig_quit) {
+		if (poll(&pfd, 1, -1) <= 0)
+			continue;
 
 		if ((client_fd = accept(server_fd, NULL, NULL)) == -1) {
 			continue;
@@ -151,14 +177,6 @@ main(void)
 
 		if (n > 0) {
 			buf[n] = '\0';
-			sqlite3 *db;
-
-			int rc = sqlite3_open(DB_PATH, &db);
-			if (rc != SQLITE_OK) {
-				syslog(LOG_ERR, "Cannot open database: %s", sqlite3_errmsg(db));
-				close(client_fd);
-				continue;
-			}
 
 			if (client_uid == 0 && strncmp(buf, "SET ", 4) == 0) {
 				char *p = buf + 4;
@@ -169,7 +187,6 @@ main(void)
 
 				token = strsep(&p, " ");
 				if (token == NULL) {
-					sqlite3_close(db);
 					close(client_fd);
 					continue;
 				}
@@ -177,14 +194,12 @@ main(void)
 
 				type = strsep(&p, " ");
 				if (type == NULL) {
-					sqlite3_close(db);
 					close(client_fd);
 					continue;
 				}
 				
 				val_str = strsep(&p, " ");
 				if (val_str == NULL) {
-					sqlite3_close(db);
 					close(client_fd);
 					continue;
 				}
@@ -201,7 +216,6 @@ main(void)
 					if (final_age < 2 || final_age > 125) {
 						syslog(LOG_WARNING, "Invalid age %d for uid %d", final_age, target_uid);
 						write(client_fd, "ERR\n", 4);
-						sqlite3_close(db);
 						close(client_fd);
 						continue;
 					}
@@ -228,11 +242,11 @@ main(void)
 				get_range(age, response);
 				write(client_fd, response, strlen(response));
 			}
-			sqlite3_close(db);
 		}
 		close(client_fd);
 	}
 
+	syslog(LOG_NOTICE, "aged daemon stopping");
 	closelog();
 	return 0;
 }
@@ -258,7 +272,7 @@ calculate_age(const char *dob_str)
 	return age;
 }
 
-void
+sqlite3 *
 init_db(void)
 {
 	sqlite3 *db;
@@ -270,6 +284,8 @@ init_db(void)
 		exit(1);
 	}
 
+	sqlite3_exec(db, "PRAGMA journal_mode = MEMORY;", 0, 0, 0);
+
 	const char *sql = "CREATE TABLE IF NOT EXISTS users("
 	"uid INTEGER PRIMARY KEY, "
 	"dob TEXT, "
@@ -280,7 +296,8 @@ init_db(void)
 		syslog(LOG_ERR, "SQL error: %s", err_msg);
 		sqlite3_free(err_msg);
 	}
-	sqlite3_close(db);
+
+	return db;
 }
 
 void
@@ -307,4 +324,10 @@ get_range(int age, char *buffer)
 		return;
 	}
 	snprintf(buffer, 16, "-1,-1");
+}
+
+void
+handle_signal(int sig)
+{
+	sig_quit = 1;
 }
