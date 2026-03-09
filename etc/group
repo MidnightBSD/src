@@ -33,6 +33,7 @@ u2f:*:116:
 _ntp:*:123:
 _ypldap:*:160:
 hast:*:845:
+aged:*:866:
 tests:*:977:
 nogroup:*:65533:
 nobody:*:65534:

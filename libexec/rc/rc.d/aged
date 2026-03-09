@@ -1,0 +1,34 @@
+#!/bin/sh
+
+# PROVIDE: aged
+# REQUIRE: DAEMON
+# BEFORE:  LOGIN
+# KEYWORD: shutdown
+
+. /etc/rc.subr
+
+name="aged"
+rcvar="aged_enable"
+
+command="/usr/sbin/aged"
+pidfile="/var/run/aged/${name}.pid"
+required_dirs="/var/run/aged /var/db/aged"
+
+start_precmd="aged_prestart"
+
+aged_prestart()
+{
+    if [ ! -d "/var/run/aged" ]; then
+        install -d -o root -g wheel -m 0755 /var/run/aged
+    fi
+
+    if [ ! -d "/var/db/aged" ]; then
+        install -d -o aged -g aged -m 0700 /var/db/aged
+    fi
+}
+
+load_rc_config $name
+
+: ${aged_enable:="NO"}
+
+run_rc_command "$1"
