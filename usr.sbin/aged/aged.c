@@ -59,12 +59,12 @@ main(void)
 	gid_t client_gid;
 	struct passwd *pw;
 
+	openlog("aged", LOG_PID, LOG_DAEMON);
+
 	if (daemon(0, 0) == -1) {
 		syslog(LOG_ERR, "daemon: %m");
 		exit(1);
 	}
-
-	openlog("aged", LOG_PID, LOG_DAEMON);
 
 	FILE *fp = fopen("/var/run/aged/aged.pid", "w");
 
@@ -115,7 +115,7 @@ main(void)
 		exit(1);
 	}
 
-    if (setgid(pw->pw_gid) != 0 || setuid(pw->pw_uid) != 0) {
+	if (setgid(pw->pw_gid) != 0 || setuid(pw->pw_uid) != 0) {
 		syslog(LOG_ERR, "setgid/setuid failed");
 		exit(1);
 	}
