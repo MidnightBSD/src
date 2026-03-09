@@ -23,7 +23,7 @@ aged_prestart()
     fi
 
     if [ ! -d "/var/db/aged" ]; then
-        install -d -o root -g wheel -m 0700 /var/db/aged
+        install -d -o aged -g aged -m 0700 /var/db/aged
     fi
 }
 

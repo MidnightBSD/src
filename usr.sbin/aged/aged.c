@@ -24,6 +24,7 @@
  * SUCH DAMAGE.
  */
 
+#define _XOPEN_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -33,12 +34,15 @@
 #include <sys/un.h>
 #include <sys/stat.h>
 #include <sqlite3.h>
-#define _XOPEN_SOURCE
 #include <time.h>
+#include <poll.h>
 #include <errno.h>
+#include <pwd.h>
+#include <grp.h>
 
 #define SOCKET_PATH "/var/run/aged/aged.sock"
 #define DB_PATH "/var/db/aged/aged.db"
+#define RUN_USER "aged"
 
 static int calculate_age(const char *);
 static void get_range(int, char *);
@@ -47,11 +51,12 @@ static void init_db(void);
 int
 main(void)
 {
-	int server_fd,
-	 client_fd;
+	int server_fd;
+	int client_fd;
 	struct sockaddr_un addr;
 	uid_t client_uid;
 	gid_t client_gid;
+	struct passwd *pw;
 
 	if (daemon(0, 0) == -1) {
 		perror("daemon");
@@ -65,10 +70,15 @@ main(void)
 		fclose(fp);
 	}
 
+	if ((pw = getpwnam(RUN_USER)) == NULL) exit(1);
+
 	mkdir("/var/run/aged", 0755);
-	mkdir("/var/db/aged", 0700);
+	mkdir("/var/db/aged", 0770);
 
 	init_db();
+
+	lchown(DB_PATH, pw->pw_uid, pw->pw_gid);
+	chmod(DB_PATH, 0600);
 
 	if ((server_fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
 		perror("socket error");
@@ -92,10 +102,26 @@ main(void)
 		exit(1);
 	}
 
+    	if (setgid(pw->pw_gid) != 0 || setuid(pw->pw_uid) != 0) exit(1);
+
+	struct pollfd pfd;
+	pfd.fd = server_fd;
+	pfd.events = POLLIN;
+
 	printf("aged daemon started...\n");
 
 	while (1) {
+		if (poll(&pfd, 1, -1) <= 0) continue;
+
 		if ((client_fd = accept(server_fd, NULL, NULL)) == -1) {
+			continue;
+		}
+
+		struct pollfd cpfd;
+		cpfd.fd = client_fd;
+		cpfd.events = POLLIN;
+		if (poll(&cpfd, 1, 1000) <= 0) {
+			close(client_fd);
 			continue;
 		}
 
@@ -128,29 +154,21 @@ main(void)
 						final_age = calculate_age(val_str);
 					}
 
-					char sql[256];
-
-					snprintf(sql, sizeof(sql),
-						 "INSERT OR REPLACE INTO users (uid, dob, age) VALUES (%d, '%s', %d);",
-						 target_uid, val_str, final_age);
-
-					sqlite3_exec(db, sql, 0, 0, NULL);
+					sqlite3_stmt *stmt;
+					sqlite3_prepare_v2(db, "INSERT OR REPLACE INTO users (uid, dob, age) VALUES (?, ?, ?);", -1, &stmt, 0);
+					sqlite3_bind_int(stmt, 1, target_uid);
+					sqlite3_bind_text(stmt, 2, val_str, -1, SQLITE_STATIC);
+					sqlite3_bind_int(stmt, 3, final_age);
+					sqlite3_step(stmt);
+					sqlite3_finalize(stmt);
 					write(client_fd, "OK\n", 3);
 				}
 			} else {
-				sqlite3_stmt *res;
-				char sql[128];
-
-				snprintf(sql, sizeof(sql), "SELECT age FROM users WHERE uid = %d;", client_uid);
-
-				int age = -1;
-
-				if (sqlite3_prepare_v2(db, sql, -1, &res, 0) == SQLITE_OK) {
-					if (sqlite3_step(res) == SQLITE_ROW) {
-						age = sqlite3_column_int(res, 0);
-					}
-					sqlite3_finalize(res);
-				}
+				sqlite3_stmt *stmt;
+				sqlite3_prepare_v2(db, "SELECT age FROM users WHERE uid = ?;", -1, &stmt, 0);
+				sqlite3_bind_int(stmt, 1, (int)client_uid);
+				int age = (sqlite3_step(stmt) == SQLITE_ROW) ? sqlite3_column_int(stmt, 0) : -1;
+				sqlite3_finalize(stmt);
 
 				char response[16];
 

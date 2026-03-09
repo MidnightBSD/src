@@ -37,7 +37,7 @@
     ..
 /set mode=0755
     db
-        aged
+        aged            uname=aged gname=aged mode=0700
         ..
         entropy         uname=operator gname=operator mode=0700
         ..
@@ -83,7 +83,7 @@
     preserve
     ..
     run
-        aged
+        aged        gname=aged mode=0775
         ..
         bhyve tags=package=bhyve
         ..
