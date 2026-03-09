@@ -189,6 +189,14 @@ main(void)
 						final_age = calculate_age(val_str);
 					}
 
+					if (final_age < 2 || final_age > 125) {
+						syslog(LOG_WARNING, "Invalid age %d for uid %d", final_age, target_uid);
+						write(client_fd, "ERR\n", 4);
+						sqlite3_close(db);
+						close(client_fd);
+						continue;
+					}
+
 					sqlite3_stmt *stmt;
 					sqlite3_prepare_v2(db, "INSERT OR REPLACE INTO users (uid, dob, age) VALUES (?, ?, ?);", -1, &stmt, 0);
 					sqlite3_bind_int(stmt, 1, target_uid);
