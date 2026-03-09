@@ -39,6 +39,7 @@
 #include <errno.h>
 #include <pwd.h>
 #include <grp.h>
+#include <syslog.h>
 
 #define SOCKET_PATH "/var/run/aged/aged.sock"
 #define DB_PATH "/var/db/aged/aged.db"
@@ -59,9 +60,11 @@ main(void)
 	struct passwd *pw;
 
 	if (daemon(0, 0) == -1) {
-		perror("daemon");
+		syslog(LOG_ERR, "daemon: %m");
 		exit(1);
 	}
+
+	openlog("aged", LOG_PID, LOG_DAEMON);
 
 	FILE *fp = fopen("/var/run/aged/aged.pid", "w");
 
@@ -70,15 +73,18 @@ main(void)
 		fclose(fp);
 	}
 
-	if ((pw = getpwnam(RUN_USER)) == NULL) exit(1);
+	if ((pw = getpwnam(RUN_USER)) == NULL) {
+		syslog(LOG_ERR, "getpwnam failed for %s", RUN_USER);
+		exit(1);
+	}
 
 	if (mkdir("/var/run/aged", 0755) == -1 && errno != EEXIST) {
-		perror("mkdir /var/run/aged");
+		syslog(LOG_ERR, "mkdir /var/run/aged: %m");
 		exit(1);
 	}
 
 	if (mkdir("/var/db/aged", 0700) == -1 && errno != EEXIST) {
-		perror("mkdir /var/db/aged");
+		syslog(LOG_ERR, "mkdir /var/db/aged: %m");
 		exit(1);
 	}
 
@@ -88,7 +94,7 @@ main(void)
 	chmod(DB_PATH, 0600);
 
 	if ((server_fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-		perror("socket error");
+		syslog(LOG_ERR, "socket error: %m");
 		exit(1);
 	}
 
@@ -98,24 +104,27 @@ main(void)
 	unlink(SOCKET_PATH);
 
 	if (bind(server_fd, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
-		perror("bind error");
+		syslog(LOG_ERR, "bind error: %m");
 		exit(1);
 	}
 
 	chmod(SOCKET_PATH, 0666);
 
 	if (listen(server_fd, 5) == -1) {
-		perror("listen error");
+		syslog(LOG_ERR, "listen error: %m");
 		exit(1);
 	}
 
-    	if (setgid(pw->pw_gid) != 0 || setuid(pw->pw_uid) != 0) exit(1);
+    if (setgid(pw->pw_gid) != 0 || setuid(pw->pw_uid) != 0) {
+		syslog(LOG_ERR, "setgid/setuid failed");
+		exit(1);
+	}
 
 	struct pollfd pfd;
 	pfd.fd = server_fd;
 	pfd.events = POLLIN;
 
-	printf("aged daemon started...\n");
+	syslog(LOG_NOTICE, "aged daemon started");
 
 	while (1) {
 		if (poll(&pfd, 1, -1) <= 0) continue;
@@ -168,6 +177,7 @@ main(void)
 					sqlite3_bind_int(stmt, 3, final_age);
 					sqlite3_step(stmt);
 					sqlite3_finalize(stmt);
+					syslog(LOG_INFO, "User information updated for uid %d", target_uid);
 					write(client_fd, "OK\n", 3);
 				}
 			} else {
@@ -187,6 +197,7 @@ main(void)
 		close(client_fd);
 	}
 
+	closelog();
 	return 0;
 }
 
@@ -219,7 +230,7 @@ init_db(void)
 	int rc = sqlite3_open(DB_PATH, &db);
 
 	if (rc != SQLITE_OK) {
-		fprintf(stderr, "Cannot open database: %s\n", sqlite3_errmsg(db));
+		syslog(LOG_ERR, "Cannot open database: %s", sqlite3_errmsg(db));
 		exit(1);
 	}
 
@@ -230,7 +241,7 @@ init_db(void)
 
 	rc = sqlite3_exec(db, sql, 0, 0, &err_msg);
 	if (rc != SQLITE_OK) {
-		fprintf(stderr, "SQL error: %s\n", err_msg);
+		syslog(LOG_ERR, "SQL error: %s", err_msg);
 		sqlite3_free(err_msg);
 	}
 	sqlite3_close(db);
