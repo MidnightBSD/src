@@ -168,17 +168,26 @@ main(void)
 				char *val_str;
 
 				token = strsep(&p, " ");
-				if (token == NULL)
+				if (token == NULL) {
+					sqlite3_close(db);
+					close(client_fd);
 					continue;
+				}
 				target_uid = atoi(token);
 
 				type = strsep(&p, " ");
-				if (type == NULL)
+				if (type == NULL) {
+					sqlite3_close(db);
+					close(client_fd);
 					continue;
+				}
 				
 				val_str = strsep(&p, " ");
-				if (val_str == NULL)
+				if (val_str == NULL) {
+					sqlite3_close(db);
+					close(client_fd);
 					continue;
+				}
 
 				if (target_uid > 0) {
 					int final_age = -1;
