@@ -72,8 +72,15 @@ main(void)
 
 	if ((pw = getpwnam(RUN_USER)) == NULL) exit(1);
 
-	mkdir("/var/run/aged", 0755);
-	mkdir("/var/db/aged", 0770);
+	if (mkdir("/var/run/aged", 0755) == -1 && errno != EEXIST) {
+		perror("mkdir /var/run/aged");
+		exit(1);
+	}
+
+	if (mkdir("/var/db/aged", 0700) == -1 && errno != EEXIST) {
+		perror("mkdir /var/db/aged");
+		exit(1);
+	}
 
 	init_db();
 
@@ -193,6 +200,7 @@ calculate_age(const char *dob_str)
 
 	time_t t = time(NULL);
 	struct tm *tm_now = localtime(&t);
+	if (tm_now == NULL) return -1;
 
 	int age = (tm_now->tm_year + 1900) - (tm_dob.tm_year + 1900);
 
