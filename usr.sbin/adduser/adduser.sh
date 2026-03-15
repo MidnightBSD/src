@@ -282,6 +282,13 @@ add_user() {
 			randompass="$_output"
 			info "Password for ($username) is: $randompass"
 		fi
+		if [ -n "$uage" ]; then
+			if ${AGECTLCMD} -a "$uage" "$username" >/dev/null 2>&1; then
+				info "Successfully set age for ($username)."
+			else
+				err "Could not set age for ($username)."
+			fi
+		fi
 	fi
 
 	if [ -n "$disableflag" ]; then
@@ -379,6 +386,23 @@ get_gecos() {
 		_input="$(echo "$fileline" | cut -f7 -d:)"
 	fi
 	ugecos="$_input"
+}
+
+# get_age
+#	Reads age of the user.
+#
+get_age() {
+	local _input=
+
+	[ -n "$configflag" ] && return
+
+	if [ -z "$fflag" ]; then
+		echo -n "Age: "
+		read _input
+		uage="$_input"
+	else
+		uage=""
+	fi
 }
 
 # get_shell
@@ -719,6 +743,7 @@ input_from_file() {
 		*)
 			get_user || continue
 			get_gecos
+			get_age
 			get_uid
 			get_logingroup
 			get_class
@@ -763,6 +788,7 @@ input_interactive() {
 
 	get_user
 	get_gecos
+	get_age
 	get_uid
 
 	# The case where group = user is handled elsewhere, so
@@ -901,6 +927,7 @@ input_interactive() {
 	[ -z "$configflag" ] && printf "%-11s : %s\n" "Password" "$_pass"
 	[ -n "$configflag" ] && printf "%-11s : %s\n" "Pass Type" "$passwdtype"
 	[ -z "$configflag" ] && printf "%-11s : %s\n" "Full Name" "$ugecos"
+	[ -n "$uage" ] && [ -z "$configflag" ] && printf "%-11s : %s\n" "Age" "$uage"
 	[ -z "$configflag" ] && printf "%-11s : %s\n" "Uid" "$uuid"
 	[ "$Zcreate" = "yes" ] && [ -z "$configflag" ] &&
 	    printf "%-11s : %s\n" "ZFS dataset" "${zhome}"
@@ -940,6 +967,7 @@ THISCMD=${0##*/}
 DEFAULTSHELL=/bin/mksh
 ADDUSERCONF="${ADDUSERCONF:-/etc/adduser.conf}"
 PWCMD="${PWCMD:-/usr/sbin/pw}"
+AGECTLCMD="${AGECTLCMD:-/usr/sbin/agectl}"
 MAILCMD="${MAILCMD:-mail}"
 ETCSHELLS="${ETCSHELLS:-/etc/shells}"
 NOHOME="/nonexistent"
@@ -959,6 +987,7 @@ username=
 uuid=
 uidstart=
 ugecos=
+uage=
 ulogingroup=
 uclass=
 uhome=
