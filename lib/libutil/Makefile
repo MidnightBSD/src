@@ -11,7 +11,7 @@ PACKAGE=	runtime
 LIB=	util
 SHLIB_MAJOR= 9
 
-SRCS=	_secure_path.c auth.c expand_number.c flopen.c fparseln.c \
+SRCS=	agev.c _secure_path.c auth.c expand_number.c flopen.c fparseln.c \
 	ftime.c getlocalbase.c gr_util.c \
 	hexdump.c humanize_number.c kinfo_getfile.c \
 	kinfo_getallproc.c kinfo_getproc.c kinfo_getvmmap.c \
@@ -30,7 +30,7 @@ CFLAGS+= -DINET6
 
 CFLAGS+= -I${.CURDIR} -I${SRCTOP}/lib/libc/gen/
 
-MAN+=	expand_number.3 flopen.3 fparseln.3 ftime.3 getlocalbase.3 hexdump.3 \
+MAN+=	agev.3 expand_number.3 flopen.3 fparseln.3 ftime.3 getlocalbase.3 hexdump.3 \
 	humanize_number.3 kinfo_getallproc.3 kinfo_getfile.3 \
 	kinfo_getproc.3 kinfo_getvmmap.3 kinfo_getvmobject.3 kld.3 \
 	login_auth.3 login_cap.3 \
@@ -38,6 +38,9 @@ MAN+=	expand_number.3 flopen.3 fparseln.3 ftime.3 getlocalbase.3 hexdump.3 \
 	property.3 pty.3 quotafile.3 realhostname.3 realhostname_sa.3 \
 	_secure_path.3 trimdomain.3 uucplock.3 pw_util.3
 MAN+=	login.conf.5
+MLINKS+=agev.3 agev_get_age_bracket.3 
+MLINKS+=agev.3 agev_set_age.3 
+MLINKS+=agev.3 agev_set_dob.3
 MLINKS+=flopen.3 flopenat.3
 MLINKS+=kld.3 kld_isloaded.3 kld.3 kld_load.3
 MLINKS+=login_auth.3 auth_cat.3 login_auth.3 auth_checknologin.3
