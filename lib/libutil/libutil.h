@@ -223,6 +223,10 @@ int	quota_write_limits(struct quotafile *_qf, struct dqblk *_dqb, int _id);
 int	quota_write_usage(struct quotafile *_qf, struct dqblk *_dqb, int _id);
 #endif
 
+int *agev_get_age_bracket(const char *username);
+int agev_set_age(const char *username, int age);
+int agev_set_dob(const char *username, const char *dob);
+
 __END_DECLS
 
 /* fparseln(3) */
