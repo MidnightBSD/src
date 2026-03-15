@@ -72,7 +72,10 @@ agev_get_age_bracket(const char *username)
 	}
 
 	snprintf(buf, sizeof(buf), "GET %d", pw->pw_uid);
-	write(fd, buf, strlen(buf));
+	if (write(fd, buf, strlen(buf)) == -1) {
+		close(fd);
+		return NULL;
+	}
 
 	memset(buf, 0, sizeof(buf));
 	ssize_t n = read(fd, buf, sizeof(buf) - 1);
@@ -131,7 +134,10 @@ agev_set_age(const char *username, int age)
 	}
 
 	snprintf(buf, sizeof(buf), "SET %d age %d", pw->pw_uid, age);
-	write(fd, buf, strlen(buf));
+	if (write(fd, buf, strlen(buf)) == -1) {
+		close(fd);
+		return -1;
+	}
 	
 	close(fd);
 	return 0;
@@ -191,7 +197,10 @@ agev_set_dob(const char *username, const char *dob)
 	}
 
 	snprintf(buf, sizeof(buf), "SET %d dob %s", pw->pw_uid, dob);
-	write(fd, buf, strlen(buf));
+	if (write(fd, buf, strlen(buf)) == -1) {
+		close(fd);
+		return -1;
+	}
 	
 	close(fd);
 	return 0;
