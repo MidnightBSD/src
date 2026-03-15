@@ -61,6 +61,11 @@ It may be used interactively
 at the command line to add one user at a time, or it may be directed
 to get the list of new users from a file and operate in batch mode
 without requiring any user interaction.
+When used interactively,
+.Nm
+prompts for various user details, including an optional field for age which
+is set using
+.Xr agectl 8 .
 .Sh RESTRICTIONS
 .Bl -tag -width indent
 .It username
@@ -102,6 +107,11 @@ login name when displayed by other programs.
 The
 .Ql \&:
 character is not allowed.
+.It Age
+When adding a user interactively, an optional age may be provided.
+If given, it will be passed to the
+.Xr agectl 8
+utility to be set for the user.
 .It shell
 Unless the
 .Fl S
@@ -442,6 +452,7 @@ logfile for
 .Xr login.conf 5 ,
 .Xr passwd 5 ,
 .Xr shells 5 ,
+.Xr agectl 8 ,
 .Xr pw 8 ,
 .Xr pwd_mkdb 8 ,
 .Xr rmuser 8 ,
