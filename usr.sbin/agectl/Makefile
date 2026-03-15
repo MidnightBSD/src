@@ -1,5 +1,5 @@
 PROG=   agectl
 SRCS=   agectl.c
-MAN=    agectl.1
+MAN=    agectl.8
 
 .include <bsd.prog.mk>
