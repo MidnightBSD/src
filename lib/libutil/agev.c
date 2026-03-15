@@ -47,6 +47,11 @@ agev_get_age_bracket(const char *username)
 	int *ages = NULL;
 	struct passwd *pw;
 
+	if (username == NULL || username[0] == '\0') {
+		errno = EINVAL;
+		return NULL;
+	}
+
 	pw = getpwnam(username);
 	if (!pw) {
 		errno = EINVAL;
@@ -96,6 +101,11 @@ agev_set_age(const char *username, int age)
 	char buf[256] = {0};
 	struct passwd *pw;
 
+	if (age < 2 || age > 125) {
+		errno = EINVAL;
+		return -1;
+	}
+
 	if (geteuid() != 0) {
 		errno = EPERM;
 		return -1;
@@ -134,6 +144,27 @@ agev_set_dob(const char *username, const char *dob)
 	struct sockaddr_un addr;
 	char buf[256] = {0};
 	struct passwd *pw;
+
+	if (dob == NULL || dob[0] == '\0') {
+		errno = EINVAL;
+		return -1;
+	}
+
+	size_t dob_len = strlen(dob);
+	if (dob_len != 10 ||
+	    !isdigit((unsigned char)dob[0]) ||
+	    !isdigit((unsigned char)dob[1]) ||
+	    !isdigit((unsigned char)dob[2]) ||
+	    !isdigit((unsigned char)dob[3]) ||
+	    dob[4] != '-' ||
+	    !isdigit((unsigned char)dob[5]) ||
+	    !isdigit((unsigned char)dob[6]) ||
+	    dob[7] != '-' ||
+	    !isdigit((unsigned char)dob[8]) ||
+	    !isdigit((unsigned char)dob[9])) {
+		errno = EINVAL;
+		return -1;
+	}
 
 	if (geteuid() != 0) {
 		errno = EPERM;
