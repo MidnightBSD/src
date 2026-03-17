@@ -223,6 +223,10 @@ main(void)
 				int age = (sqlite3_step(stmt) == SQLITE_ROW) ? sqlite3_column_int(stmt, 0) : -1;
 				sqlite3_finalize(stmt);
 
+				if (client_uid == 0 && age == -1) {
+					age = 18; /* assume 18+ for root if undefined. With root, kids could circumvent any protections anyway.  */
+				}
+
 				char response[16];
 
 				get_range(age, response);
