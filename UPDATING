@@ -1,5 +1,14 @@
 Updating Information for MidnightBSD users.
 
+20260318:
+	mport 2.7.6
+
+	aged(8) and agectl added for CA/CO/IL age verification
+
+	adduser modified to use agectl
+
+	libutil added functions for agev_* for age verify in apps.
+
 20260121:
 	expat 2.7.3
 
