@@ -134,6 +134,7 @@ mport_upgrade(mportInstance *mport) {
 			mport_install_single(mport, (*movedEntries)->moved_to_pkgname,  NULL, NULL, (*packs)->automatic);
 #if defined(__MidnightBSD__)
 			ohash_insert(&h, slot, (*packs)->name);
+			slot = ohash_qlookup(&h, (*movedEntries)->moved_to_pkgname);
 			ohash_insert(&h, slot, (*movedEntries)->moved_to_pkgname);
 #endif
 		}
@@ -177,6 +178,9 @@ mport_upgrade(mportInstance *mport) {
 					mport_delete_primative(mport, (*packs), true);
 					// TODO: how to mark this action as an update?
 					mport_install_single(mport, (*ieUpdateMe)->pkgname,  NULL, NULL, (*packs)->automatic);
+					#if defined(__MidnightBSD__)
+					ohash_insert(&h, slot, (*ieUpdateMe)->pkgname);
+					#endif
 					updated++;
 				}
 				free(msg);
