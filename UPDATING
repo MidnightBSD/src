@@ -1,6 +1,13 @@
 Updating Information for MidnightBSD users.
 
+20260318:
+	MidnightBSD 4.0.4
+
+	expat 2.7.5
+
 20260224:
+	MidnightBSD 4.0.3
+
 	If two sibling jails are restricted to separate filesystem trees, which is to
 	say that neither of the two jail root directories is an ancestor of the other,
 	jailed processes may nonetheless be able to access a shared directory via a
