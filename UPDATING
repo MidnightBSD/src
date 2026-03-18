@@ -1,6 +1,8 @@
 Updating Information for MidnightBSD users.
 
 20260318:
+	expat 2.7.5
+
 	mport 2.7.6
 
 	aged(8) and agectl added for CA/CO/IL age verification
