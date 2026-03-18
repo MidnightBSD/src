@@ -10,7 +10,7 @@ SRCS=	asset.c bundle_write.c bundle_read.c plist.c color.c create_primative.c db
     	fetch.c index.c index_depends.c install.c clean.c setting.c  \
    		stats.c update.c upgrade.c verify.c lock.c mkdir.c import_export.c \
    		annotation.c autoremove.c audit.c ping.c message.c service.c list.c \
-		lua.c lua_scripts.c
+		lua.c lua_scripts.c age.c
 INCS=	mport.h
 
 CFLAGS+=	-I${.CURDIR} -I ../external/tllist/ -I ../external/lua/src/ -I/usr/include/private/ucl -I/usr/include/ucl -I/usr/include/private/zstd

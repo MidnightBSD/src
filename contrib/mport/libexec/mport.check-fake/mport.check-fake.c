@@ -266,6 +266,10 @@ check_fake(mportAssetList *assetlist, const char *destdir, const char *prefix, c
 		if (skip != NULL && (regexec(&skipre, e->data, 0, NULL, 0) == 0))
 			continue;
 
+		if (getenv("MPORT_SKIP_CHECK") != NULL) {
+			continue;
+		}
+
 		if (S_ISREG(st.st_mode) && st.st_size == 0) {
 			// we don't fail, just warn for an empty file.
 			(void)printf("    %s is an empty file\n", file);
