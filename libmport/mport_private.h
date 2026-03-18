@@ -61,7 +61,7 @@ struct ohash {
 #define MPORT_MASTER_VERSION 14
 #define MPORT_BUNDLE_VERSION 6
 #define MPORT_BUNDLE_VERSION_STR "6"
-#define MPORT_VERSION "2.7.5"
+#define MPORT_VERSION "2.7.6"
 
 #define MPORT_SETTING_MIRROR_REGION "mirror_region"
 #define MPORT_SETTING_TARGET_OS "target_os"
@@ -106,6 +106,9 @@ int mport_start_stop_service(mportInstance *mport, mportPackageMeta *pack, servi
 /* cbs / color */
 bool mport_is_color_terminal(void);
 bool mport_is_terminal(void);
+
+/* Age verification */
+bool mport_is_age_verified(mportInstance *mport, mportPackageMeta *pack);
 
 /* Utils */
 bool mport_starts_with(const char *, const char *);

@@ -61,6 +61,12 @@ mport_update_primative(mportInstance *mport, const char *filename)
         pkg = pkgs[i];
 		pkg->install_date = mport_get_time();
 
+        if (!mport_is_age_verified(mport, pkg)) {
+			mport_call_msg_cb(mport, "Unable to install %s-%s: package is age restricted and user does not meet the requirements.", pkg->name, pkg->version);
+            mport_set_err(MPORT_OK, NULL);
+            continue;
+		}
+
         /* retain automatic flag from previous install. */
         if (mport_pkgmeta_search_master(mport, &already_installed, "pkg=%Q", pkg->name) == MPORT_OK) {
             if (already_installed != NULL && already_installed[0] != NULL) {

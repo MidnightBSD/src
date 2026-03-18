@@ -606,6 +606,7 @@ mport_parselist(char *opt, char ***list, size_t *list_size)
 {
 	char *input;
 	char *field;
+	char *scan, *scan_ptr;
 
 	if (opt == NULL || list_size == NULL || list == NULL)
 		return;
@@ -615,11 +616,19 @@ mport_parselist(char *opt, char ***list, size_t *list_size)
 		return;
 	}
 
+	if ((scan = strdup(opt)) == NULL) {
+		free(input);
+		*list = NULL;
+		return;
+	}
+	scan_ptr = scan;
+
 	/* first we need to get the length of the dependency list */
-	for (*list_size = 0; (field = strsep(&opt, " \t\n")) != NULL;) {
+	for (*list_size = 0; (field = strsep(&scan_ptr, " \t\n")) != NULL;) {
 		if (field != NULL && *field != '\0')
 			(*list_size)++;
 	}
+	free(scan);
 
 	if (*list_size == 0) {
 		*list = NULL;
@@ -685,6 +694,11 @@ mport_parselist_tll(char *opt, stringlist_t *list)
 	while ((field = strsep(&input, " \t\n")) != NULL) {
 		if (field != NULL && *field != '\0')
 			tll_push_back(*list, strdup(field));
+		if (field != NULL && *field != '\0') {
+			char *s = strdup(field);
+			if (s != NULL)
+				tll_push_back(*list, s);
+		}
 	}
 
 	free(input);
@@ -821,6 +835,13 @@ mport_decompress_zstd(const char *input, const char *output)
     void* const buffOut = malloc(buffOutSize);
     ZSTD_DStream* const dstream = ZSTD_createDStream();
     size_t const initResult = ZSTD_initDStream(dstream);
+
+    if (buffIn == NULL || buffOut == NULL || dstream == NULL) {
+        free(buffIn);
+        free(buffOut);
+        ZSTD_freeDStream(dstream);
+        RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory");
+    }
 
     if (ZSTD_isError(initResult)) {
         free(buffIn);
