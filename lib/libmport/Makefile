@@ -17,7 +17,7 @@ SRCS=	annotation.c asset.c color.c bundle_write.c bundle_read.c plist.c create_p
    		stats.c verify.c lock.c mkdir.c \
 		import_export.c upgrade.c update.c audit.c autoremove.c ping.c message.c \
 		service.c list.c \
-		lua.c lua_scripts.c
+		lua.c lua_scripts.c age.c
 .PATH: ${MPORTDIR}/external/tllist
 INCS=	mport.h tllist.h
 
