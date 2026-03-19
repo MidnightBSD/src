@@ -46,10 +46,7 @@ mport_is_age_verified(mportInstance *mport, mportPackageMeta *pack)
     char *age_str = NULL;
     int age = 0;
 
-    if (mport_annotation_get(mport, pack->origin, "age", &age_str) != MPORT_OK) {
-        mport_call_msg_cb(mport, "Failed to get age annotation for package %s: %s", pack->origin, mport_err_string());
-        return false;
-    }
+    mport_annotation_get(mport, pack->origin, "age", &age_str);
 
     if (age_str == NULL) {
         return true; /* No age annotation means it's appropriate for all ages */
