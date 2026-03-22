@@ -94,5 +94,5 @@ usr.bin		User commands.
 
 usr.sbin	System administration commands.
 
-Contributors please consult the AI_POLICY.md and CODE_OF_CONDUCT.md 
-
+Contributing: We use the DCO for all contributions. Please see DCO.md for details.
+Please consult the AI_POLICY.md and CODE_OF_CONDUCT.md 
