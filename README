@@ -8,7 +8,7 @@ development branch called master. Look at the stable branches.
 
 e.g. 
 cd /usr
-git clone https://github.com/midnightbsd/src.git -b stable/3.2
+git clone https://github.com/midnightbsd/src.git -b stable/4.0
 
 You can change branches
 git checkout master 
@@ -28,7 +28,7 @@ the kernel and the modules (see below).  Please see the top of
 the Makefile in this directory for more information on the
 standard build targets and compile-time flags.
 
-Building a kernel is a somewhat more involved process, documentation
+Building a kernel is a somewhat more involved process, and documentation
 which can be found at:
    http://www.freebsd.org/doc/en_US.ISO8859-1/books/handbook/kernelconfig.html
 And in the config(8) man page.
@@ -93,4 +93,6 @@ tools		Utilities for regression testing and miscellaneous tasks.
 usr.bin		User commands.
 
 usr.sbin	System administration commands.
+
+Contributors please consult the AI_POLICY.md and CODE_OF_CONDUCT.md 
 
