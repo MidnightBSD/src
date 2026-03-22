@@ -1,6 +1,7 @@
 Please include this information, either here or in your commit messages for the
 pull request, as appropriate (or delete the line if there's nothing relevant.
 
+AI-Assisted-by: <Tool Name (e.g., AI-Assisted-by: Claude 3.7)>
 PR:		<If and which Problem Report is related.>
 Reported by:	<If someone else reported the issue.>
 Reviewed by:	<If someone else reviewed your modification.>
