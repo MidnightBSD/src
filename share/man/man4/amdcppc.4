@@ -1,0 +1,310 @@
+.\"
+.\" Copyright (c) 2026 Rob Augustinus
+.\" Copyright (c) 2026 Lucas Holt
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.Dd March 23, 2026
+.Dt AMDCPPC 4
+.Os
+.Sh NAME
+.Nm amdcppc
+.Nd AMD CPPC (Collaborative Processor Performance Control) CPU frequency scaling driver
+.Sh SYNOPSIS
+To compile this driver into the kernel, place the following lines in the
+kernel configuration file:
+.Bd -ragged -offset indent
+.Cd "device amd_cppc"
+.Ed
+.Pp
+Alternatively, to load the driver as a module at boot time, place the
+following line in
+.Xr loader.conf 5 :
+.Bd -ragged -offset indent
+.Li "amdcppc_load=YES"
+.Ed
+.Sh DESCRIPTION
+The
+.Nm
+driver enables fine-grained CPU frequency scaling on AMD Zen 3+ processors
+using the CPPC2 (Collaborative Processor Performance Control) MSR
+(Model-Specific Register) interface.
+This replaces the legacy P-state mechanism
+.Pq Xr hwpstate 4 No or Cool'n'Quiet
+which exposes only a handful of discrete frequency steps.
+.Pp
+.Nm
+allows the CPU to autonomously manage its frequency within bounds set by the
+operating system, guided by an Energy Performance Preference (EPP) hint.
+This enables much lower idle frequencies and smoother scaling than legacy
+P-states, resulting in improved power efficiency and thermal performance.
+.Pp
+The driver operates in two modes:
+.Bl -tag -width "Autonomous Mode"
+.It Autonomous Mode
+The CPU independently selects frequencies between the minimum and maximum
+performance levels set by the OS, based on the EPP preference and workload
+characteristics.
+.It Guided Mode
+The driver requests a specific performance level, which the CPU may honor
+or adjust based on thermal and power constraints.
+.El
+.Sh HARDWARE SUPPORT
+The
+.Nm
+driver requires:
+.Bl -bullet -offset indent
+.It
+An AMD processor of Family 17h (Zen) or newer
+.It
+CPPC support in the CPU (indicated by the CPPC bit in CPUID leaf 0x80000008)
+.It
+BIOS/UEFI support for CPPC (must be enabled in firmware settings)
+.El
+.Pp
+Known supported architectures:
+.Bl -bullet -offset indent
+.It
+AMD Ryzen 3000 series (Zen 3)
+.It
+AMD Ryzen 5000 series (Zen 3)
+.It
+AMD Ryzen 6000 series (Zen 3+)
+.It
+AMD Ryzen 7000 series (Zen 4)
+.It
+Other Family 19h+ processors with CPPC support
+.El
+.Sh LOADER TUNABLES
+The following tunables are available as both
+.Xr loader.conf 5
+variables and
+.Xr sysctl 8
+knobs:
+.Bl -tag -width "hw.cpufreq.resolution"
+.It Va hw.amd_cppc.disabled
+Set this to 1 to disable the driver entirely.
+.It Va debug.amd_cppc_verbose
+Enable verbose debugging output for driver operations.
+Set to 1 to display CPPC initialization, frequency changes, and EPP adjustments
+on the system console.
+.El
+.Sh SYSCTL INTERFACE
+Per-CPU tunables are available via
+.Xr sysctl 8
+under
+.Va dev.cpu.N.freq
+where N is the CPU number:
+.Bl -tag -width "highest_perf"
+.It Va dev.cpu.N.freq_levels
+A read-only list of available frequency/voltage operating points (generated
+from the CPPC performance range).
+.It Va dev.cpu.N.freq
+Get or set the current frequency preference in MHz.
+When set, this becomes the maximum performance cap for that CPU.
+.It Va dev.cpu.N.amd_cppc.epp
+Get or set the Energy Performance Preference (EPP) for the CPU.
+Range: 0 (maximum performance) to 100 (maximum efficiency).
+Default: 50 (balanced).
+Changes take effect immediately if CPPC is enabled.
+.It Va dev.cpu.N.amd_cppc.highest_perf
+Read-only hardware capability: maximum performance level (0-255).
+.It Va dev.cpu.N.amd_cppc.nominal_perf
+Read-only hardware capability: sustained performance level (0-255).
+.It Va dev.cpu.N.amd_cppc.lowest_perf
+Read-only hardware capability: minimum performance level (0-255).
+.El
+.Sh FREQUENCY REPRESENTATION
+The driver exposes frequencies in MHz to the
+.Xr cpufreq 4
+framework using the relationship:
+.Bd -literal -offset indent
+frequency (MHz) = base_frequency × perf_level / nominal_perf
+.Ed
+.Pp
+The base frequency is derived from the Time Stamp Counter (TSC) frequency.
+The driver generates approximately 30 evenly-spaced frequency steps between
+the highest and lowest performance levels.
+.Sh ENERGY PERFORMANCE PREFERENCE (EPP)
+The EPP field guides the CPU's autonomous frequency selection:
+.Bl -tag -width "Value"
+.It Value
+Semantics
+.It 0
+Maximum performance: CPU favors speed over power consumption
+.It 25-50
+Balanced to performance-biased: moderate balance with performance preference
+.It 50
+Balanced: equal weight for performance and efficiency
+.It 75-100
+Balanced to efficiency-biased: moderate balance with efficiency preference
+.It 100
+Maximum efficiency: CPU favors power saving over performance
+.El
+.Pp
+EPP can be adjusted dynamically via
+.Xr sysctl 8
+without driver reload.
+.Sh POWER MANAGEMENT INTEGRATION
+The
+.Nm
+driver integrates with MidnightBSD's
+.Xr cpufreq 4
+framework:
+.Bl -bullet -offset indent
+.It
+Registers available frequency settings during attach
+.It
+Responds to frequency change requests from
+.Xr powerd 8
+and other cpufreq clients
+.It
+Supports suspend/resume: CPPC is disabled during suspend and re-enabled on resume
+.It
+Preserves user EPP and frequency preferences across suspend/resume cycles
+.El
+.Sh DRIVER BEHAVIOR
+.Ss Initialization
+On attach, the driver:
+.Bl -enum -offset indent
+.It
+Checks processor support via CPUID
+.It
+Reads CPPC capabilities from the CAP1 MSR
+.It
+Derives base frequency from the TSC
+.It
+Enables CPPC mode on the target CPU
+.It
+Sets initial defaults: EPP=50 (balanced), max_perf=highest, min_perf=lowest
+.It
+Registers with the cpufreq framework
+.El
+.Ss Frequency Changes
+When a frequency change is requested:
+.Bl -enum -offset indent
+.It
+The driver translates the requested frequency (MHz) to a CPPC performance level
+.It
+Sets the performance cap (max_perf) to the requested level
+.It
+Leaves min_perf and EPP unchanged
+.It
+Writes the CPPC request register via MSR
+.It
+The CPU autonomously scales between min_perf and max_perf
+.El
+.Ss Suspend/Resume
+During suspend:
+.Bl -bullet -offset indent
+.It
+CPPC is disabled on the CPU
+.It
+The request register is zeroed
+.It
+CPPC enable bit is cleared in the firmware
+.El
+.Pp
+During resume:
+.Bl -bullet -offset indent
+.It
+Capabilities are re-read from the CAP1 MSR
+.It
+CPPC is re-enabled on the CPU
+.It
+Previous EPP and frequency preferences are restored
+.El
+.Sh DEBUGGING
+Enable verbose output with:
+.Bd -ragged -offset indent
+.Li "sysctl debug.amd_cppc_verbose=1"
+.Ed
+.Pp
+This will log to the system console:
+.Bl -bullet -offset indent
+.It
+CPPC enable/disable events
+.It
+EPP changes with hardware equivalents
+.It
+Frequency changes with requested and actual performance levels
+.El
+.Pp
+To view kernel logs:
+.Bd -ragged -offset indent
+.Li "dmesg | grep amd_cppc"
+.Ed
+.Sh EXAMPLES
+.Ss Set EPP to maximum efficiency
+.Bd -literal -offset indent
+sysctl dev.cpu.0.amd_cppc.epp=100
+.Ed
+.Ss Set EPP to maximum performance
+.Bd -literal -offset indent
+sysctl dev.cpu.0.amd_cppc.epp=0
+.Ed
+.Ss Lock CPU 0 to 2.5 GHz
+.Bd -literal -offset indent
+sysctl dev.cpu.0.freq=2500
+.Ed
+.Ss View current frequency and capabilities
+.Bd -literal -offset indent
+sysctl dev.cpu.0.freq
+sysctl dev.cpu.0.amd_cppc.highest_perf
+sysctl dev.cpu.0.amd_cppc.nominal_perf
+sysctl dev.cpu.0.amd_cppc.lowest_perf
+.Ed
+.Ss Enable verbose debugging
+.Bd -literal -offset indent
+sysctl debug.amd_cppc_verbose=1
+.Ed
+.Ss View available frequency steps
+.Bd -literal -offset indent
+sysctl dev.cpu.0.freq_levels
+.Ed
+.Sh DIAGNOSTICS
+The driver may report the following errors:
+.Bl -tag -width "invalid CPPC capabilities"
+.It "CPPC not supported"
+The processor does not support CPPC, or it is not enabled in BIOS.
+.It "unable to determine base frequency"
+The TSC frequency could not be determined; frequency scaling will not work.
+.It "invalid CPPC capabilities on CPU N"
+The CAP1 MSR returned invalid or zero values for performance capabilities.
+.It "inconsistent CPPC capabilities on CPU N"
+The performance hierarchy is invalid (e.g., lowest
+.Sh HISTORY
+The
+.Nm
+driver first appeared in
+.Mx 4.1 .
+.Sh AUTHORS
+.An -nosplit
+This driver was written by
+.An "Rob Augustinus" .
+This manual page was written by
+.An lucas Holt Aq Mt luke@foolishgames.com .
+.Sh BUGS
+The driver does not support suspend and resume or being unloaded
+after boot. 
+
