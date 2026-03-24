@@ -40,6 +40,8 @@
 #include <pwd.h>
 #include <grp.h>
 #include <syslog.h>
+#include <sys/wait.h>
+#include <fcntl.h>
 
 #define SOCKET_PATH "/var/run/aged/aged.sock"
 #define DB_PATH "/var/db/aged/aged.db"
@@ -48,6 +50,8 @@
 static int calculate_age(const char *);
 static void get_range(int, char *);
 static void init_db(void);
+static void update_age_groups(const char *, int);
+static int run_pw_command(const char *, const char *, const char *);
 
 int
 main(void)
@@ -213,6 +217,14 @@ main(void)
 					sqlite3_bind_int(stmt, 3, final_age);
 					sqlite3_step(stmt);
 					sqlite3_finalize(stmt);
+
+					struct passwd *pwent = getpwuid(target_uid);
+					if (pwent != NULL) {
+						update_age_groups(pwent->pw_name, final_age);
+					} else {
+						syslog(LOG_ERR, "Could not find username for uid %d for group update", target_uid);
+					}
+
 					syslog(LOG_INFO, "User information updated for uid %d", target_uid);
 					write(client_fd, "OK\n", 3);
 				}
@@ -312,4 +324,83 @@ get_range(int age, char *buffer)
 		return;
 	}
 	snprintf(buffer, 16, "-1,-1");
+}
+
+static int
+run_pw_command(const char *group, const char *user, const char *action)
+{
+	pid_t pid;
+	int status;
+	const char *pw_path = "/usr/sbin/pw";
+	char *const argv[] = {(char *)pw_path, "groupmod", (char *)group, (char *)action, (char *)user, NULL};
+	char *const envp[] = {"PATH=/bin:/usr/bin:/sbin:/usr/sbin", NULL};
+
+	pid = fork();
+	if (pid == -1) {
+		syslog(LOG_ERR, "fork failed: %m");
+		return -1;
+	} else if (pid == 0) {
+		int fd = open("/dev/null", O_WRONLY);
+		if (fd != -1) {
+			dup2(fd, STDOUT_FILENO);
+			dup2(fd, STDERR_FILENO);
+			close(fd);
+		}
+		
+		execve(pw_path, argv, envp);
+		_exit(127);
+	}
+
+	if (waitpid(pid, &status, 0) == -1) {
+		syslog(LOG_ERR, "waitpid failed: %m");
+		return -1;
+	}
+
+	if (WIFEXITED(status)) {
+		return WEXITSTATUS(status);
+	}
+
+	return -1;
+}
+
+static void
+update_age_groups(const char *username, int age)
+{
+	const char *groups[] = {"age4p", "age13p", "age16p", "age18p"};
+	int min_ages[] = {4, 13, 16, 18};
+	int num_groups = sizeof(groups) / sizeof(groups[0]);
+
+	for (int i = 0; i < num_groups; i++) {
+		struct group *grp = getgrnam(groups[i]);
+		if (grp == NULL) {
+			syslog(LOG_WARNING, "Group %s not found.", groups[i]);
+			continue;
+		}
+
+		int in_group = 0;
+		for (int j = 0; grp->gr_mem[j] != NULL; j++) {
+			if (strcmp(grp->gr_mem[j], username) == 0) {
+				in_group = 1;
+				break;
+			}
+		}
+
+		if (age >= min_ages[i]) {
+			if (!in_group) {
+				if (run_pw_command(groups[i], username, "-m") != 0) {
+					syslog(LOG_ERR, "Failed to add user %s to group %s", username, groups[i]);
+				} else {
+					syslog(LOG_INFO, "Added user %s to group %s", username, groups[i]);
+				}
+			}
+		} else {
+			if (in_group) {
+				if (run_pw_command(groups[i], username, "-d") != 0) {
+					syslog(LOG_ERR, "Failed to remove user %s from group %s", username, groups[i]);
+				} else {
+					syslog(LOG_INFO, "Removed user %s from group %s", username, groups[i]);
+				}
+			}
+		}
+	}
 }
