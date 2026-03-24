@@ -199,11 +199,11 @@ amd_cppc_perf_to_mhz(struct amd_cppc_softc *sc, uint8_t perf)
  */
 static uint8_t
 amd_cppc_mhz_to_perf(struct amd_cppc_softc *sc, int mhz){
-	int		perf;
+	uint64_t perf;
 
 	if (sc->base_freq_mhz == 0)
 		return (sc->nominal_perf);
-	perf = (int)((uint64_t) mhz * sc->nominal_perf / sc->base_freq_mhz);
+	perf = ((uint64_t) mhz * sc->nominal_perf / sc->base_freq_mhz);
 	if (perf < sc->lowest_perf)
 		perf = sc->lowest_perf;
 	if (perf > sc->highest_perf)
