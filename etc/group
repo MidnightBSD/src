@@ -33,6 +33,10 @@ u2f:*:116:
 _ntp:*:123:
 _ypldap:*:160:
 hast:*:845:
+age4p:*:856:
+age13p:*:857:
+age16p:*:858:
+age18p:*:859:
 aged:*:866:
 tests:*:977:
 nogroup:*:65533:
