@@ -33,6 +33,7 @@ SUBDIR=	\
 	ale \
 	alq \
 	${_amd_ecc_inject} \
+	${_amdcppc} \
 	${_amdgpio} \
 	${_amdsbwd} \
 	${_amdsmn} \
@@ -801,6 +802,7 @@ _x86bios=	x86bios
 .endif
 
 .if ${MACHINE_CPUARCH} == "amd64"
+_amdcppc=	amdcppc
 _amdgpio=	amdgpio
 _atlantic=	atlantic
 _ccp=		ccp
