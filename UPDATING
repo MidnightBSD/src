@@ -1,5 +1,9 @@
 Updating Information for MidnightBSD users.
 
+20260324:
+	Added experimental amdcppc(4) kernel module that enables AMD CPPC (Collaborative Processor Performance Control) 
+    for fine-grained CPU frequency scaling on Zen 2+ processors.
+
 20260318:
 	expat 2.7.5
 
@@ -9,7 +13,7 @@ Updating Information for MidnightBSD users.
 
 	adduser modified to use agectl
 
-	libutil added functions for agev_* for age verify in apps.
+	libutil added functions for agev_* for age verification in apps.
 
 20260121:
 	expat 2.7.3
