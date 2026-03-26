@@ -36,11 +36,19 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <pwd.h>
+#include <time.h>
+#include <grp.h>
+#include <sys/wait.h>
+#include <fcntl.h>
 
 #define SOCKET_PATH "/var/run/aged/aged.sock"
 
 static int valid_age(const char *);
 static int valid_dob(const char *);
+static int calculate_age(const char *s);
+static void update_age_groups(const char *, int);
+static int run_pw_command(const char *, const char *, const char *);
+
 
 static void
 usage(const char *progname)
@@ -115,8 +123,16 @@ main(int argc, char *argv[])
 
 		if (mode == 1) {
 			snprintf(buf, sizeof(buf), "SET %d age %s", pw->pw_uid, set_val);
+			update_age_groups(target_user, atoi(set_val));
 		} else {
 			snprintf(buf, sizeof(buf), "SET %d dob %s", pw->pw_uid, set_val);
+		
+			int age = calculate_age(set_val);
+			if (age < 0) {
+				fprintf(stderr, "Failed to compute age from dob '%s'\n", set_val);
+			} else {
+				update_age_groups(target_user, age);
+			}
 		}
 		write(fd, buf, strlen(buf));
 	}
@@ -203,3 +219,120 @@ valid_dob(const char *s)
 
 	return 1;
 }	
+
+int
+calculate_age(const char *dob_str)
+{
+	struct tm tm_dob = {0};
+
+	if (strptime(dob_str, "%Y-%m-%d", &tm_dob) == NULL)
+		return -1;
+
+	time_t t = time(NULL);
+	struct tm *tm_now = localtime(&t);
+	if (tm_now == NULL) return -1;
+
+	int age = (tm_now->tm_year + 1900) - (tm_dob.tm_year + 1900);
+
+	if (tm_now->tm_mon < tm_dob.tm_mon ||
+	    (tm_now->tm_mon == tm_dob.tm_mon && tm_now->tm_mday < tm_dob.tm_mday)) {
+		age--;
+	}
+	return age;
+}
+
+static int
+run_pw_command(const char *group, const char *user, const char *action)
+{
+	pid_t pid;
+	int status;
+	const char *pw_path = "/usr/sbin/pw";
+	char *const argv[] = {
+		__DECONST(char *, pw_path),
+		__DECONST(char *, "groupmod"), 
+		__DECONST(char *, group),
+		__DECONST(char *, action), 
+		__DECONST(char *, user),
+		 NULL
+	};
+	char *const envp[] = {
+		__DECONST(char *, "PATH=/bin:/usr/bin:/sbin:/usr/sbin"),
+		 NULL
+	};
+
+	pid = fork();
+	if (pid == -1) {
+		fprintf(stderr, "fork failed: %m");
+		return -1;
+	} else if (pid == 0) {
+		int fd = open("/dev/null", O_WRONLY);
+		if (fd != -1) {
+			dup2(fd, STDOUT_FILENO);
+			dup2(fd, STDERR_FILENO);
+			close(fd);
+		}
+		
+		execve(pw_path, argv, envp);
+		_exit(127);
+	}
+
+	int ret;
+	do {
+		ret = waitpid(pid, &status, 0);
+	} while (ret == -1 && errno == EINTR);
+
+	if (ret == -1) {
+		fprintf(stderr, "waitpid failed: %m");
+		return -1;
+	}
+
+	if (WIFEXITED(status)) {
+		return WEXITSTATUS(status);
+	}
+
+	return -1;
+}
+
+static void
+update_age_groups(const char *username, int age)
+{
+	const char *groups[] = {"age4p", "age13p", "age16p", "age18p"};
+	int min_ages[] = {4, 13, 16, 18};
+	int num_groups = sizeof(groups) / sizeof(groups[0]);
+
+	for (int i = 0; i < num_groups; i++) {
+		struct group *grp = getgrnam(groups[i]);
+		if (grp == NULL) {
+			fprintf(stderr, "Group %s not found.", groups[i]);
+			continue;
+		}
+
+		int in_group = 0;
+		if (grp->gr_mem != NULL) {
+			for (int j = 0; grp->gr_mem[j] != NULL; j++) {
+				if (strcmp(grp->gr_mem[j], username) == 0) {
+					in_group = 1;
+					break;
+				}
+			}
+		}
+
+		if (age >= min_ages[i]) {
+			if (!in_group) {
+				if (run_pw_command(groups[i], username, "-m") != 0) {
+					fprintf(stderr, "Failed to add user %s to group %s", username, groups[i]);
+				} else {
+					fprintf(stderr, "Added user %s to group %s", username, groups[i]);
+				}
+			}
+		} else {
+			if (in_group) {
+				if (run_pw_command(groups[i], username, "-d") != 0) {
+					fprintf(stderr, "Failed to remove user %s from group %s", username, groups[i]);
+				} else {
+					fprintf(stderr, "Removed user %s from group %s", username, groups[i]);
+				}
+			}
+		}
+	}
+}
