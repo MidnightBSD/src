@@ -303,7 +303,7 @@ update_age_groups(const char *username, int age)
 	for (int i = 0; i < num_groups; i++) {
 		struct group *grp = getgrnam(groups[i]);
 		if (grp == NULL) {
-			fprintf(stderr, "Group %s not found.", groups[i]);
+			fprintf(stderr, "Group %s not found.\n", groups[i]);
 			continue;
 		}
 
@@ -320,17 +320,17 @@ update_age_groups(const char *username, int age)
 		if (age >= min_ages[i]) {
 			if (!in_group) {
 				if (run_pw_command(groups[i], username, "-m") != 0) {
-					fprintf(stderr, "Failed to add user %s to group %s", username, groups[i]);
+					fprintf(stderr, "Failed to add user %s to group %s\n", username, groups[i]);
 				} else {
-					fprintf(stderr, "Added user %s to group %s", username, groups[i]);
+					fprintf(stderr, "Added user %s to group %s\n", username, groups[i]);
 				}
 			}
 		} else {
 			if (in_group) {
 				if (run_pw_command(groups[i], username, "-d") != 0) {
-					fprintf(stderr, "Failed to remove user %s from group %s", username, groups[i]);
+					fprintf(stderr, "Failed to remove user %s from group %s\n", username, groups[i]);
 				} else {
-					fprintf(stderr, "Removed user %s from group %s", username, groups[i]);
+					fprintf(stderr, "Removed user %s from group %s\n", username, groups[i]);
 				}
 			}
 		}
