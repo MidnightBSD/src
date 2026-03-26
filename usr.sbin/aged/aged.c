@@ -332,8 +332,18 @@ run_pw_command(const char *group, const char *user, const char *action)
 	pid_t pid;
 	int status;
 	const char *pw_path = "/usr/sbin/pw";
-	char *const argv[] = {(char *)pw_path, "groupmod", (char *)group, (char *)action, (char *)user, NULL};
-	char *const envp[] = {"PATH=/bin:/usr/bin:/sbin:/usr/sbin", NULL};
+	char *const argv[] = {
+		__DECONST(char *, pw_path),
+		__DECONST(char *, "groupmod"), 
+		__DECONST(char *, group),
+		__DECONST(char *, action), 
+		__DECONST(char *, user),
+		 NULL
+	};
+	char *const envp[] = {
+		__DECONST(char *, "PATH=/bin:/usr/bin:/sbin:/usr/sbin"),
+		 NULL
+	};
 
 	pid = fork();
 	if (pid == -1) {
