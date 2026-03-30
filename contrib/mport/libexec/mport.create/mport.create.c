@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
 		errx(EXIT_FAILURE, "%s", mport_err_string());
 	}
 
-	while ((ch = getopt(argc, argv, "C:D:E:L:M:O:P:S:c:d:e:f:i:j:l:m:n:o:p:r:s:t:v:x:")) != -1) {
+	while ((ch = getopt(argc, argv, "A:C:D:E:L:M:O:P:S:c:d:e:f:i:j:l:m:n:o:p:r:s:t:v:x:")) != -1) {
 		switch (ch) {
 			case 'o':
 				strlcpy(extra->pkg_filename, optarg, sizeof(extra->pkg_filename));
@@ -149,6 +149,9 @@ int main(int argc, char *argv[])
 				break;
 			case 'C':
 				mport_parselist_tll(optarg, &(extra->conflicts));
+				break;
+			case 'A':
+				mport_parselist_tll(optarg, &(extra->annotations));
 				break;
 			case 'E':
 				strptime(optarg, "%Y-%m-%d", &expDate);
@@ -250,6 +253,7 @@ static void usage(void)
 	fprintf(stderr, "\t-l <package lang>\n");
 	fprintf(stderr, "\t-D <package depends>\n");
 	fprintf(stderr, "\t-C <package conflicts>\n");
+	fprintf(stderr, "\t-A <package annotations>\n");
 	fprintf(stderr, "\t-d <pkg-descr file>\n");
 	fprintf(stderr, "\t-i <pkg-install script>\n");
 	fprintf(stderr, "\t-j <pkg-deinstall script>\n");
