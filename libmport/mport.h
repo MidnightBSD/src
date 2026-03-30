@@ -296,6 +296,7 @@ typedef struct {
   size_t depends_count;
   char *mtree; 
   stringlist_t conflicts;
+  stringlist_t annotations;
   char *pkginstall;
   char *pkgdeinstall;
   char *luapkgpreinstall;

@@ -61,7 +61,7 @@ struct ohash {
 #define MPORT_MASTER_VERSION 14
 #define MPORT_BUNDLE_VERSION 6
 #define MPORT_BUNDLE_VERSION_STR "6"
-#define MPORT_VERSION "2.7.6"
+#define MPORT_VERSION "2.7.7"
 
 #define MPORT_SETTING_MIRROR_REGION "mirror_region"
 #define MPORT_SETTING_TARGET_OS "target_os"
