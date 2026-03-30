@@ -125,6 +125,7 @@ mport_createextras_free(mportCreateExtras *extra)
 	}
 
 	tll_free_and_free(extra->conflicts, free);
+	tll_free_and_free(extra->annotations, free);
 
 	free(extra);
 	extra = NULL;

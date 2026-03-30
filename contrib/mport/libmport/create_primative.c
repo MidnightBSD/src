@@ -56,6 +56,8 @@ static int insert_conflicts(sqlite3 *, mportPackageMeta *, mportCreateExtras *);
 
 static int insert_categories(sqlite3 *, mportPackageMeta *);
 
+static int insert_annotations(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra);
+
 static int archive_files(mportAssetList *, mportPackageMeta *, mportCreateExtras *, const char *);
 
 static int archive_metafiles(mportBundleWrite *, mportPackageMeta *, mportCreateExtras *);
@@ -340,6 +342,8 @@ insert_meta(mportInstance *mport, sqlite3 *db, mportPackageMeta *pack, mportCrea
 		RETURN_CURRENT_ERROR;
 	if (insert_categories(db, pack) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
+	if (insert_annotations(db, pack, extra) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
 
 	return error_code;
 }
@@ -544,6 +548,64 @@ insert_depends(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra)
 
 	sqlite3_finalize(stmnt);
 
+	return error_code;
+}
+
+
+static int
+insert_annotations(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra)
+{
+	sqlite3_stmt *stmt = NULL;
+	int error_code = MPORT_OK;
+
+	if (tll_length(extra->annotations) == 0)
+		return MPORT_OK;
+
+	if (mport_db_prepare(db, &stmt, "INSERT INTO annotation (pkg, tag, val) VALUES (?,?,?)") != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+
+	tll_foreach(extra->annotations, s) {
+		char *annotation_copy = strdup(s->item);
+		if (annotation_copy == NULL) {
+			error_code = SET_ERROR(MPORT_ERR_FATAL, "Out of memory");
+			break;
+		}
+		char *sep;
+		char *tag;
+		char *val;
+
+		tag = annotation_copy;
+		sep = strchr(tag, ':');
+
+		if (sep == NULL) {
+			free(annotation_copy);
+			error_code = SET_ERRORX(MPORT_ERR_WARN, "malformed annotation (missing ':'): %s", s->item);
+			continue;
+		}
+
+		*sep = '\0';
+		val = sep + 1;
+
+		if (sqlite3_bind_text(stmt, 1, pack->name, -1, SQLITE_STATIC) != SQLITE_OK ||
+		    sqlite3_bind_text(stmt, 2, tag, -1, SQLITE_TRANSIENT) != SQLITE_OK ||
+		    sqlite3_bind_text(stmt, 3, val, -1, SQLITE_TRANSIENT) != SQLITE_OK) {
+			error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+			free(annotation_copy);
+			break;
+		}
+
+		if (sqlite3_step(stmt) != SQLITE_DONE) {
+			error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+			free(annotation_copy);
+			break;
+		}
+
+		sqlite3_clear_bindings(stmt);
+		sqlite3_reset(stmt);
+		free(annotation_copy);
+	}
+
+	sqlite3_finalize(stmt);
 	return error_code;
 }
 
