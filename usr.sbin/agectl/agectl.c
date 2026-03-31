@@ -46,7 +46,7 @@
 static int valid_age(const char *);
 static int valid_dob(const char *);
 static int calculate_age(const char *s);
-static void update_age_groups(const char *, int);
+static int update_age_groups(const char *, int);
 static int run_pw_command(const char *, const char *, const char *);
 
 
@@ -70,6 +70,7 @@ main(int argc, char *argv[])
 	char *set_val = NULL;
 	char *target_user = NULL;
 	int mode = 0;		/* 0 = query, 1 = set age, 2 = set dob */
+	int update_failed = 0;
 
 	while ((ch = getopt(argc, argv, "a:b:")) != -1) {
 		switch (ch) {
@@ -123,15 +124,21 @@ main(int argc, char *argv[])
 
 		if (mode == 1) {
 			snprintf(buf, sizeof(buf), "SET %d age %s", pw->pw_uid, set_val);
-			update_age_groups(target_user, atoi(set_val));
-		} else {
+			if (update_age_groups(target_user, atoi(set_val)) == 1) {
+				update_failed = 1;
+			}
+		} else if (mode == 2) {
 			snprintf(buf, sizeof(buf), "SET %d dob %s", pw->pw_uid, set_val);
 		
 			int age = calculate_age(set_val);
 			if (age < 0) {
 				fprintf(stderr, "Failed to compute age from dob '%s'\n", set_val);
+				close(fd);
+				exit(1);
 			} else {
-				update_age_groups(target_user, age);
+				if (update_age_groups(target_user, age) == 1) {
+					update_failed = 1;
+				}
 			}
 		}
 		write(fd, buf, strlen(buf));
@@ -145,6 +152,10 @@ main(int argc, char *argv[])
 	}
 
 	close(fd);
+
+	if (update_failed)
+		return 1;
+
 	return 0;
 }
 
@@ -293,17 +304,19 @@ run_pw_command(const char *group, const char *user, const char *action)
 	return -1;
 }
 
-static void
+static int
 update_age_groups(const char *username, int age)
 {
 	const char *groups[] = {"age4p", "age13p", "age16p", "age18p"};
 	int min_ages[] = {4, 13, 16, 18};
 	int num_groups = sizeof(groups) / sizeof(groups[0]);
+	int code = 0;
 
 	for (int i = 0; i < num_groups; i++) {
 		struct group *grp = getgrnam(groups[i]);
 		if (grp == NULL) {
 			fprintf(stderr, "Group %s not found.\n", groups[i]);
+			code = 1;
 			continue;
 		}
 
@@ -320,6 +333,7 @@ update_age_groups(const char *username, int age)
 		if (age >= min_ages[i]) {
 			if (!in_group) {
 				if (run_pw_command(groups[i], username, "-m") != 0) {
+					code = 1;
 					fprintf(stderr, "Failed to add user %s to group %s\n", username, groups[i]);
 				} else {
 					fprintf(stderr, "Added user %s to group %s\n", username, groups[i]);
@@ -328,6 +342,7 @@ update_age_groups(const char *username, int age)
 		} else {
 			if (in_group) {
 				if (run_pw_command(groups[i], username, "-d") != 0) {
+					code = 1;
 					fprintf(stderr, "Failed to remove user %s from group %s\n", username, groups[i]);
 				} else {
 					fprintf(stderr, "Removed user %s from group %s\n", username, groups[i]);
@@ -335,4 +350,6 @@ update_age_groups(const char *username, int age)
 			}
 		}
 	}
+
+	return code;
 }
