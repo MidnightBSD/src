@@ -24,27 +24,47 @@ alias m="$PAGER"
 alias ll='ls -laFo'
 alias l='ls -l'
 alias g='egrep -i'
+alias history='fc -l'
  
 # # be paranoid
 # alias cp='cp -ip'
 # alias mv='mv -i'
 # alias rm='rm -i'
 
-# # csh like history on arrow up and down
-bind ^[[A ed-search-prev-history
-bind ^[[B ed-search-next-history
+if [ -n "$KSH_VERSION" ]; then
+	# --- mksh / pdksh logic ---
+	set -o emacs
+	bind '^[[A=search-history-up'
+	bind '^[[B=search-history-down'
+	bind '^[[1;5C=forward-word'
+	bind '^[[1;5D=backward-word'
+	bind '^[[5~=beginning-of-line'
+	bind '^[[6~=end-of-line'
+elif [ -n "$BASH_VERSION" ]; then
+	# --- bash logic ---
+	bind '"\e[A": history-search-backward'
+	bind '"\e[B": history-search-forward'
+	bind '"\e[1;5C": forward-word'
+	bind '"\e[1;5D": backward-word'
+	bind '"\e[5~": beginning-of-line'
+	bind '"\e[6~": end-of-line'
+else
+	# csh like history on arrow up and down
+	bind ^[[A ed-search-prev-history
+	bind ^[[B ed-search-next-history
 
-# # ctrl+arrow allow to jump from words to words
-bind "\\e[1;5C" em-next-word
-bind "\\e[1;5D" ed-prev-word
-alias history='fc -l'
+	# ctrl+arrow allow to jump from words to words
+	bind "\\e[1;5C" em-next-word
+	bind "\\e[1;5D" ed-prev-word
 
-# Fix home/del for mobaxterm
-bind ^[[5~ ed-move-to-beg
-bind ^[[6~ ed-move-to-end
+	# Fix home/del for mobaxterm
+	bind ^[[5~ ed-move-to-beg
+	bind ^[[6~ ed-move-to-end
+fi
 
+# Universal Prompt (standardized)
 # set prompt: ``username@hostname:directory $ '' 
-PS1="\u@\h:\w \\$ "
+PS1="$(whoami)@$(hostname -s): \w \$ "
 
 # search path for cd(1)
 # CDPATH=:$HOME
