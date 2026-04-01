@@ -82,7 +82,7 @@ agev_get_age_bracket(const char *username)
 	ssize_t n = read(fd, buf, sizeof(buf) - 1);
 
 	if (n > 0) {
-		char *p = strchr(buf, '-');
+		char *p = strchr(buf, ',');
 		if (p) {
 			*p = '\0';
 			ages = malloc(sizeof(int) * 2);
