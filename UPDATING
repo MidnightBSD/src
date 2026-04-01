@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20260401:
+	Fixed a bug with the libutil age verification function that caused it to always return a null response.
+
 20260324:
 	Added experimental amdcppc(4) kernel module that enables AMD CPPC (Collaborative Processor Performance Control) 
     for fine-grained CPU frequency scaling on Zen 2+ processors.
