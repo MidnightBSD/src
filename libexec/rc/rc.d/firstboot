@@ -30,9 +30,25 @@ firstboot_start()
 		read mportmirror
 		/usr/sbin/mport config set mirror_region ${mportmirror}
 
+		# age verifcation is required in some locales, so we ask for it here to ensure the best experience for users in those areas.
+		echo "Jurisdictions with required age verification include California, Colorado, Illinois, and Brazil. Parental controls will be enabled for all users and can be configured with the agectl utility."
+		echo "If you do not live in a region with required age verification, you can disable this feature and the associated parental controls."
+		echo -e "\r${red}MidnightBSD does not support ID checks or AI facial scanning for age verification. You may NOT use MidnightBSD in regions requiring it.${lsuffix}"
+		echo -e "\r${yellow}Do you live in a region with required age verification or want parental controls enabled? (yes or no)${lsuffix}"
+		read ageverify
+		if [ "${ageverify}" = "no" ]; then
+			/usr/sbin/sysrc aged_enable=NO
+		else
+			echo "parental will enable parental controls based on age attestion for apps in the MidnightBSD package manger."
+			echo -e "\r${yellow}Specify one of the following regions for age attestion (US-CA, US-CO, US-IL, BR, parental)${lsuffix}"
+			read ageregion
+			/usr/sbin/agectl -r ${ageregion}
+			echo "You may change the setting later with the agectl -r <region> command."
+		fi
+
 		echo -e "\r${yellow}Would you like to report your install via bsdstats? (yes or no)${lsuffix}"
 		read installbstat
-		if [ ${installbstat} = "yes" ]; then
+		if [ "${installbstat}" = "yes" ]; then
 			if [ ! -f /usr/local/etc/rc.d/bsdstats.sh ]; then
 				/sbin/ipfw disable firewall
 				/usr/sbin/mport install bsdstats
