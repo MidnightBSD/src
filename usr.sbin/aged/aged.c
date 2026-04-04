@@ -44,10 +44,15 @@
 #define SOCKET_PATH "/var/run/aged/aged.sock"
 #define DB_PATH "/var/db/aged/aged.db"
 #define RUN_USER "aged"
+#define MAX_REGION_LEN 10
 
 static int calculate_age(const char *);
 static void get_range(int, char *);
 static void init_db(void);
+static int is_valid_region(const char *);
+static void load_region_setting(sqlite3 *);
+
+static char *current_region = NULL;
 
 int
 main(void)
@@ -159,6 +164,8 @@ main(void)
 				close(client_fd);
 				continue;
 			}
+			
+			load_region_setting(db);
 
 			if (client_uid == 0 && strncmp(buf, "SET ", 4) == 0) {
 				char *p = buf + 4;
@@ -216,22 +223,61 @@ main(void)
 					syslog(LOG_INFO, "User information updated for uid %d", target_uid);
 					write(client_fd, "OK\n", 3);
 				}
-			} else {
-				sqlite3_stmt *stmt;
-				sqlite3_prepare_v2(db, "SELECT age FROM users WHERE uid = ?;", -1, &stmt, 0);
-				sqlite3_bind_int(stmt, 1, (int)client_uid);
-				int age = (sqlite3_step(stmt) == SQLITE_ROW) ? sqlite3_column_int(stmt, 0) : -1;
-				sqlite3_finalize(stmt);
+			} else if (client_uid == 0 && strncmp(buf, "REG ", 4) == 0) {
+				char *region = buf + 4;
+				char *newline = strchr(region, '\n');
+				if (newline) *newline = '\0';
 
-				/* user accounts start at 1000 */
-				if (client_uid < 1000 && age == -1) {
-					age = 18; /* assume 18+ for root and service accounts if undefined. With root, kids could circumvent any protections anyway.  */
+				if (is_valid_region(region)) {
+					sqlite3_stmt *stmt;
+					sqlite3_prepare_v2(db, "UPDATE settings SET value = ? WHERE key = 'region';", -1, &stmt, 0);
+					if (strcmp(region, "null") == 0) {
+						sqlite3_bind_null(stmt, 1);
+					} else {
+						sqlite3_bind_text(stmt, 1, region, -1, SQLITE_STATIC);
+					}
+					sqlite3_step(stmt);
+					sqlite3_finalize(stmt);
+					syslog(LOG_INFO, "Region updated to %s", region);
+					write(client_fd, "OK\n", 3);
+				} else {
+					syslog(LOG_WARNING, "Invalid region value: %s", region);
+					write(client_fd, "ERR\n", 4);
+				}
+			} else {
+				int region_allowed = 0;
+				if (current_region != NULL) {
+					/* 
+					These are places that age attenstion is required or will be. 
+					It does not include locales with required ID checks since we don't provide that level of verification.
+					*/
+					if (strcmp(current_region, "US-CA") == 0 ||
+						strcmp(current_region, "US-CO") == 0 ||
+						strcmp(current_region, "US-IL") == 0 ||
+					    strcmp(current_region, "parental") == 0) {
+						region_allowed = 1;
+					}
 				}
 
-				char response[16];
+				if (!region_allowed) {
+					write(client_fd, "-2,-2\n", 6);
+				} else {
+					sqlite3_stmt *stmt;
+					sqlite3_prepare_v2(db, "SELECT age FROM users WHERE uid = ?;", -1, &stmt, 0);
+					sqlite3_bind_int(stmt, 1, (int)client_uid);
+					int age = (sqlite3_step(stmt) == SQLITE_ROW) ? sqlite3_column_int(stmt, 0) : -1;
+					sqlite3_finalize(stmt);
 
-				get_range(age, response);
-				write(client_fd, response, strlen(response));
+					/* user accounts start at 1000 */
+					if (client_uid < 1000 && age == -1) {
+						age = 18; /* assume 18+ for root and service accounts if undefined. With root, kids could circumvent any protections anyway.  */
+					}
+
+					char response[16];
+
+					get_range(age, response);
+					write(client_fd, response, strlen(response));
+				}
 			}
 			sqlite3_close(db);
 		}
@@ -263,6 +309,54 @@ calculate_age(const char *dob_str)
 	return age;
 }
 
+static int
+is_valid_region(const char *region) {
+	/* places that require age verification or will be. Not all can be supported */
+    const char *valid_regions[] = {
+        "US-AL", "US-CA", "US-CO", "US-IL", "BR", "US-NY", "US-MI", "US-WA",
+        "US-LA", "US-UT", "US-TX", "US-FL", "DE", "EU", "UK", "AU",
+        "JP", "null", "parental", NULL
+    };
+
+    if (region == NULL) return 0;
+
+    for (int i = 0; valid_regions[i] != NULL; i++) {
+        if (strncmp(region, valid_regions[i], MAX_REGION_LEN) == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static void
+load_region_setting(sqlite3 *db) 
+{
+    sqlite3_stmt *stmt;
+    const char *sql = "SELECT value FROM settings WHERE key = 'region';";
+    
+    if (current_region) {
+        free(current_region);
+        current_region = NULL;
+    }
+
+    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
+    if (rc != SQLITE_OK) {
+        syslog(LOG_ERR, "Failed to prepare statement: %s", sqlite3_errmsg(db));
+        return;
+    }
+
+    if (sqlite3_step(stmt) == SQLITE_ROW) {
+        const unsigned char *value = sqlite3_column_text(stmt, 0);
+        if (value) {
+            current_region = strdup((const char *)value);
+        }
+    }
+
+    sqlite3_finalize(stmt);
+	stmt = NULL;
+}
+
+
 void
 init_db(void)
 {
@@ -285,7 +379,25 @@ init_db(void)
 		syslog(LOG_ERR, "SQL error: %s", err_msg);
 		sqlite3_free(err_msg);
 	}
+
+	const char *sql_settings = "CREATE TABLE IF NOT EXISTS settings(key TEXT NOT NULL PRIMARY KEY, value TEXT);";
+	rc = sqlite3_exec(db, sql_settings, 0, 0, &err_msg);
+	if (rc != SQLITE_OK) {
+		syslog(LOG_ERR, "SQL error: %s", err_msg);
+		sqlite3_free(err_msg);
+		sqlite3_close(db);
+		exit(1);
+	}
+
+	const char *sql_insert_region = "INSERT OR IGNORE INTO settings (key, value) VALUES ('region', NULL);";
+	rc = sqlite3_exec(db, sql_insert_region, 0, 0, &err_msg);
+	if (rc != SQLITE_OK) {
+		syslog(LOG_ERR, "SQL error: %s", err_msg);
+		sqlite3_free(err_msg);
+	}
+
 	sqlite3_close(db);
+	db = NULL;
 }
 
 void
