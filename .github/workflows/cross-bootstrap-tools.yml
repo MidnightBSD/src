@@ -17,8 +17,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target_arch: [ amd64, aarch64 ]
-        os: [ ubuntu-22.04, ubuntu-24.04, macos-latest ]
+        target_arch: [ amd64 ]
+        os: [ ubuntu-24.04, macos-latest ]
         include:
           # TODO: both Ubuntu and macOS have bmake packages, we should try them instead of bootstrapping our own copy.
           - os: ubuntu-24.04

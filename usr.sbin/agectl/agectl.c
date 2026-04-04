@@ -57,6 +57,7 @@ usage(const char *progname)
 	fprintf(stderr, "  Query: %s\n", progname);
 	fprintf(stderr, "  Set Age (Root): %s -a <age> <username>\n", progname);
 	fprintf(stderr, "  Set DOB (Root): %s -b <YYYY-MM-DD> <username>\n", progname);
+	fprintf(stderr, "  Set Region (Root): %s -r <region>\n", progname);
 	exit(1);
 }
 
@@ -69,10 +70,10 @@ main(int argc, char *argv[])
 	int ch;
 	char *set_val = NULL;
 	char *target_user = NULL;
-	int mode = 0;		/* 0 = query, 1 = set age, 2 = set dob */
+	int mode = 0;		/* 0 = query, 1 = set age, 2 = set dob, 3 = set region */
 	int update_failed = 0;
 
-	while ((ch = getopt(argc, argv, "a:b:")) != -1) {
+	while ((ch = getopt(argc, argv, "a:b:r:")) != -1) {
 		switch (ch) {
 		case 'a':
 			if (!valid_age(optarg))
@@ -86,15 +87,22 @@ main(int argc, char *argv[])
 			mode = 2;
 			set_val = optarg;
 			break;
+		case 'r':
+			mode = 3;
+			set_val = optarg;
+			break;
 		default:
 			usage(argv[0]);
 		}
 	}
 
-	if (mode > 0) {
+	if (mode > 0 && mode < 3) {
 		if (optind >= argc)
 			usage(argv[0]);
 		target_user = argv[optind];
+	} else if (mode == 3) {
+		if (optind < argc)
+			usage(argv[0]);
 	}
 
 	if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
@@ -113,6 +121,9 @@ main(int argc, char *argv[])
 
 	if (mode == 0) {
 		write(fd, "GET", 3);
+	} else if (mode == 3) {
+		snprintf(buf, sizeof(buf), "REG %s", set_val);
+		write(fd, buf, strlen(buf));
 	} else {
 		struct passwd *pw = getpwnam(target_user);
 

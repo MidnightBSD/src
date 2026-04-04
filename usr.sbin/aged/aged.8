@@ -34,8 +34,8 @@
 .Sh DESCRIPTION
 The
 .Nm
-daemon manages a database of User IDs (UIDs) and their corresponding ages or 
-dates of birth. It provides a secure interface via a Unix Domain Socket 
+daemon manages a database of User IDs (UIDs) and their corresponding ages or
+dates of birth. It provides a secure interface via a Unix Domain Socket
 to allow applications to query the age range of the currently connected user.
 .Pp
 This is required in some jurisdictions for age verification.  For instance,
@@ -55,14 +55,14 @@ Only the
 .Pa root
 user (UID 0) is permitted to write or update records in the database.
 .It
-Non-root users may only query their own age range. Any attempt to query the 
-age of another UID is blocked by the daemon's logic, as it ignores the 
+Non-root users may only query their own age range. Any attempt to query the
+age of another UID is blocked by the daemon's logic, as it ignores the
 request payload and retrieves data based solely on the caller's verified UID.
 .El
 .Sh PROTOCOL
 The daemon listens on a Unix Domain Socket at
 .Pa /var/run/aged/aged.sock .
-The socket is created with 666 permissions to allow all system users to 
+The socket is created with 666 permissions to allow all system users to
 initiate a connection.
 .Ss Writing Data (Root Only)
 To store or update a user's information, send a string in the following format:
@@ -75,9 +75,48 @@ is either
 .Ic age
 or
 .Ic dob .
+.Ss Setting Region (Root Only)
+To set the regulatory region, send a string in the following format:
+.Pp
+.Dl "REG <region>"
+.Pp
+Where
+.Ar region
+is one of the following valid values:
+.Sy US-AL ,
+.Sy US-CA ,
+.Sy US-CO ,
+.Sy US-IL ,
+.Sy BR ,
+.Sy US-NY ,
+.Sy US-MI ,
+.Sy US-WA ,
+.Sy US-LA ,
+.Sy US-UT ,
+.Sy US-TX ,
+.Sy US-FL ,
+.Sy DE ,
+.Sy EU ,
+.Sy UK ,
+.Sy AU ,
+.Sy JP ,
+.Sy null ,
+or
+.Sy parental .
+.Pp
+If the region is set to
+.Sy US-CA ,
+.Sy US-CO ,
+.Sy US-IL ,
+.Sy BR ,
+or
+.Sy parental ,
+GET operations will return an age range. Any other value will cause GET
+operations to return
+.Sy -2,-2 .
 .Ss Querying Data (All Users)
-Any data sent to the socket by a non-root user triggers a lookup for that 
-user's specific UID. The daemon returns a comma-delimited string representing 
+Any data sent to the socket by a non-root user triggers a lookup for that
+user's specific UID. The daemon returns a comma-delimited string representing
 the age range:
 .Bl -tag -width "16,17XX" -compact
 .It Sy "0,12"
@@ -90,6 +129,8 @@ At least 16 and under 18.
 18 years of age or older.
 .It Sy "-1,-1"
 Age is undefined or user not found.
+.It Sy "-2,-2"
+Age verification is not permitted in the configured region.
 .El
 .Sh FILES
 .Bl -tag -width "/var/run/aged/aged.sockXX" -compact
