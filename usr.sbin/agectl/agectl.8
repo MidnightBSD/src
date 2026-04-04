@@ -33,18 +33,20 @@
 .Nm
 .Op Fl a Ar age | Fl b Ar YYYY-MM-DD
 .Op Ar username
+.Nm
+.Op Fl r Ar region
 .Sh DESCRIPTION
 The
 .Nm
 utility communicates with the
 .Xr aged 8
-daemon to retrieve or set age-related information for users. 
+daemon to retrieve or set age-related information for users.
 .Pp
 When invoked without arguments,
 .Nm
-queries the daemon for the age range associated with the calling user's 
-effective UID. The daemon verifies the caller's identity using 
-.Xr getpeereid 2 , 
+queries the daemon for the age range associated with the calling user's
+effective UID. The daemon verifies the caller's identity using
+.Xr getpeereid 2 ,
 ensuring users can only access their own data.
 .Pp
 The following options are available:
@@ -57,6 +59,30 @@ This operation requires root privileges.
 Set the date of birth for the specified
 .Ar username .
 This operation requires root privileges.
+.It Fl r Ar region
+Set the regulatory region for age verification. This affects how
+.Xr aged 8
+handles age verification for all users. This operation requires root privileges.
+Valid regions include
+.Sy US-CA ,
+.Sy US-CO ,
+.Sy US-IL ,
+.Sy BR ,
+.Sy US-NY ,
+.Sy US-MI ,
+.Sy US-WA ,
+.Sy US-LA ,
+.Sy US-UT ,
+.Sy US-TX ,
+.Sy US-FL ,
+.Sy DE ,
+.Sy EU ,
+.Sy UK ,
+.Sy AU ,
+.Sy JP ,
+.Sy null ,
+and
+.Sy other .
 .El
 .Sh EXIT STATUS
 .Ex -std
@@ -72,8 +98,12 @@ Set the age for user "bob" to 32 (as root):
 Set the date of birth for user "tom" (as root):
 .Pp
 .Dl # agectl -b 1995-12-22 tom
+.Pp
+Set the region to US-CA (as root):
+.Pp
+.Dl # agectl -r US-CA
 .Sh PROTOCOL RESPONSES
-The output of a query is a comma-delimited string representing the 
+The output of a query is a comma-delimited string representing the
 following age brackets:
 .Bl -tag -width "16,17XX" -compact
 .It Sy "0,12"
@@ -86,6 +116,8 @@ Under 13 years old.
 18 years or older.
 .It Sy "-1,-1"
 User data not found or age undefined.
+.It Sy "-2,-2"
+Age verification is not permitted in the configured region.
 .El
 .Sh SEE ALSO
 .Xr aged 8 ,

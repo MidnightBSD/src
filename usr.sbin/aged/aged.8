@@ -75,6 +75,43 @@ is either
 .Ic age
 or
 .Ic dob .
+.Ss Setting Region (Root Only)
+To set the regulatory region, send a string in the following format:
+.Pp
+.Dl "REG <region>"
+.Pp
+Where
+.Ar region
+is one of the following valid values:
+.Sy US-CA ,
+.Sy US-CO ,
+.Sy US-IL ,
+.Sy BR ,
+.Sy US-NY ,
+.Sy US-MI ,
+.Sy US-WA ,
+.Sy US-LA ,
+.Sy US-UT ,
+.Sy US-TX ,
+.Sy US-FL ,
+.Sy DE ,
+.Sy EU ,
+.Sy UK ,
+.Sy AU ,
+.Sy JP ,
+.Sy null ,
+or
+.Sy other .
+If the region is set to
+.Sy UK ,
+.Sy BR ,
+.Sy US-CA ,
+.Sy US-CO ,
+or
+.Sy US-IL ,
+GET operations will return an age range. Any other value will cause GET
+operations to return
+.Sy -2,-2 .
 .Ss Querying Data (All Users)
 Any data sent to the socket by a non-root user triggers a lookup for that 
 user's specific UID. The daemon returns a comma-delimited string representing 
@@ -90,6 +127,8 @@ At least 16 and under 18.
 18 years of age or older.
 .It Sy "-1,-1"
 Age is undefined or user not found.
+.It Sy "-2,-2"
+Age verification is not permitted in the configured region.
 .El
 .Sh FILES
 .Bl -tag -width "/var/run/aged/aged.sockXX" -compact
