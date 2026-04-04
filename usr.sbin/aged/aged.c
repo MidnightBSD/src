@@ -250,11 +250,13 @@ main(void)
 					/* 
 					These are places that age attenstion is required or will be. 
 					It does not include locales with required ID checks since we don't provide that level of verification.
+					Not legal advice, best effort. 
 					*/
-					if (strcmp(current_region, "US-CA") == 0 ||
-						strcmp(current_region, "US-CO") == 0 ||
-						strcmp(current_region, "US-IL") == 0 ||
-					    strcmp(current_region, "parental") == 0) {
+					if (strncmp(current_region, "US-CA", MAX_REGION_LEN) == 0 ||
+						strncmp(current_region, "US-CO", MAX_REGION_LEN) == 0 ||
+						strncmp(current_region, "US-IL", MAX_REGION_LEN) == 0 ||
+						strncmp(current_region, "BR", MAX_REGION_LEN) == 0 ||  // Doing nothing appears worse in brazil legally so we keep it on.
+					    strncmp(current_region, "parental", MAX_REGION_LEN) == 0) {
 						region_allowed = 1;
 					}
 				}
