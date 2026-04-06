@@ -228,6 +228,8 @@ main(void)
 				char *newline = strchr(region, '\n');
 				if (newline) *newline = '\0';
 
+syslog(LOG_ERR, "age verification region %s\n", region);
+
 				if (is_valid_region(region)) {
 					sqlite3_stmt *stmt;
 					sqlite3_prepare_v2(db, "UPDATE settings SET value = ? WHERE key = 'region';", -1, &stmt, 0);
@@ -241,7 +243,7 @@ main(void)
 					syslog(LOG_INFO, "Region updated to %s", region);
 					write(client_fd, "OK\n", 3);
 				} else {
-					syslog(LOG_WARNING, "Invalid region value: %s", region);
+					syslog(LOG_ERR, "Invalid region value: %s", region);
 					write(client_fd, "ERR\n", 4);
 				}
 			} else {
@@ -252,11 +254,11 @@ main(void)
 					It does not include locales with required ID checks since we don't provide that level of verification.
 					Not legal advice, best effort. 
 					*/
-					if (strncmp(current_region, "US-CA", MAX_REGION_LEN) == 0 ||
-						strncmp(current_region, "US-CO", MAX_REGION_LEN) == 0 ||
-						strncmp(current_region, "US-IL", MAX_REGION_LEN) == 0 ||
-						strncmp(current_region, "BR", MAX_REGION_LEN) == 0 ||  // Doing nothing appears worse in brazil legally so we keep it on.
-					    strncmp(current_region, "parental", MAX_REGION_LEN) == 0) {
+					if (strcmp(current_region, "US-CA") == 0 ||
+						strcmp(current_region, "US-CO") == 0 ||
+						strcmp(current_region, "US-IL") == 0 ||
+						strcmp(current_region, "BR") == 0 ||  // Doing nothing appears worse in brazil legally so we keep it on.
+					    strcmp(current_region, "parental") == 0) {
 						region_allowed = 1;
 					}
 				}
@@ -323,7 +325,7 @@ is_valid_region(const char *region) {
     if (region == NULL) return 0;
 
     for (int i = 0; valid_regions[i] != NULL; i++) {
-        if (strncmp(region, valid_regions[i], MAX_REGION_LEN) == 0) {
+        if (strcmp(region, valid_regions[i]) == 0) {
             return 1;
         }
     }
@@ -391,7 +393,7 @@ init_db(void)
 		exit(1);
 	}
 
-	const char *sql_insert_region = "INSERT OR IGNORE INTO settings (key, value) VALUES ('region', NULL);";
+	const char *sql_insert_region = "INSERT OR IGNORE INTO settings (key, value) VALUES ('region', 'parental');";
 	rc = sqlite3_exec(db, sql_insert_region, 0, 0, &err_msg);
 	if (rc != SQLITE_OK) {
 		syslog(LOG_ERR, "SQL error: %s", err_msg);
