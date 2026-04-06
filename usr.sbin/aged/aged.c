@@ -88,18 +88,19 @@ main(void)
 	}
 	lchown("/var/db/aged", pw->pw_uid, pw->pw_gid);
 
+	if (setgid(pw->pw_gid) != 0 || setuid(pw->pw_uid) != 0) {
+		syslog(LOG_ERR, "setgid/setuid failed");
+		exit(1);
+	}
+
 	FILE *fp = fopen("/var/run/aged/aged.pid", "w");
 
 	if (fp) {
 		fprintf(fp, "%d\n", getpid());
 		fclose(fp);
 	}
-	lchown("/var/run/aged/aged.pid", pw->pw_uid, pw->pw_gid);
 
 	init_db();
-
-	lchown(DB_PATH, pw->pw_uid, pw->pw_gid);
-	chmod(DB_PATH, 0600);
 
 	if ((server_fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
 		syslog(LOG_ERR, "socket error: %m");
@@ -123,11 +124,6 @@ main(void)
 		exit(1);
 	}
 
-	if (setgid(pw->pw_gid) != 0 || setuid(pw->pw_uid) != 0) {
-		syslog(LOG_ERR, "setgid/setuid failed");
-		exit(1);
-	}
-
 	struct pollfd pfd;
 	pfd.fd = server_fd;
 	pfd.events = POLLIN;
@@ -144,7 +140,7 @@ main(void)
 		struct pollfd cpfd;
 		cpfd.fd = client_fd;
 		cpfd.events = POLLIN;
-		if (poll(&cpfd, 1, 1000) <= 0) {
+		if (poll(&cpfd, 1, 100) <= 0) {
 			close(client_fd);
 			continue;
 		}
