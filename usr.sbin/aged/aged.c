@@ -58,15 +58,48 @@ static void cleanup(int);
 
 static char *current_region = NULL;
 static sqlite3 *db = NULL;
+static sqlite3_stmt *stmt_set = NULL;
+static sqlite3_stmt *stmt_reg = NULL;
+static sqlite3_stmt *stmt_get = NULL;
+static sqlite3_stmt *stmt_load_reg = NULL;
 
 static void
 cleanup(int sig __unused)
 {
+	if (stmt_set)
+		sqlite3_finalize(stmt_set);
+	if (stmt_reg)
+		sqlite3_finalize(stmt_reg);
+	if (stmt_get)
+		sqlite3_finalize(stmt_get);
+	if (stmt_load_reg)
+		sqlite3_finalize(stmt_load_reg);
 	if (db)
 		sqlite3_close(db);
+	if (current_region)
+		free(current_region);
+
 	unlink(SOCKET_PATH);
 	unlink("/var/run/aged/aged.pid");
 	exit(0);
+}
+
+static int
+safe_atoi(const char *str, int *val)
+{
+	char *endptr;
+	long lval;
+
+	if (str == NULL || *str == '\0')
+		return -1;
+
+	errno = 0;
+	lval = strtol(str, &endptr, 10);
+	if (errno != 0 || *endptr != '\0' || lval < INT_MIN || lval > INT_MAX)
+		return -1;
+
+	*val = (int)lval;
+	return 0;
 }
 
 int
@@ -130,6 +163,14 @@ main(void)
 	/* Disable journaling to disk to allow Capsicum sandboxing and improve performance */
 	sqlite3_exec(db, "PRAGMA journal_mode=MEMORY;", NULL, NULL, NULL);
 
+	if (sqlite3_prepare_v2(db, "INSERT OR REPLACE INTO users (uid, dob, age) VALUES (?, ?, ?);", -1, &stmt_set, NULL) != SQLITE_OK ||
+	    sqlite3_prepare_v2(db, "UPDATE settings SET value = ? WHERE key = 'region';", -1, &stmt_reg, NULL) != SQLITE_OK ||
+	    sqlite3_prepare_v2(db, "SELECT age FROM users WHERE uid = ?;", -1, &stmt_get, NULL) != SQLITE_OK ||
+	    sqlite3_prepare_v2(db, "SELECT value FROM settings WHERE key = 'region';", -1, &stmt_load_reg, NULL) != SQLITE_OK) {
+		syslog(LOG_ERR, "Failed to prepare SQL statements: %s", sqlite3_errmsg(db));
+		exit(1);
+	}
+
 	load_region_setting(db);
 
 	if ((server_fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
@@ -163,7 +204,7 @@ main(void)
 	pfd.fd = server_fd;
 	pfd.events = POLLIN;
 
-	syslog(LOG_NOTICE, "aged daemon started with sandboxing");
+	syslog(LOG_NOTICE, "aged daemon started");
 
 	while (1) {
 		if (poll(&pfd, 1, -1) <= 0) continue;
@@ -203,18 +244,17 @@ main(void)
 				char *val_str;
 
 				token = strsep(&p, " ");
-				if (token == NULL) {
+				if (token == NULL || safe_atoi(token, &target_uid) != 0) {
 					close(client_fd);
 					continue;
 				}
-				target_uid = atoi(token);
 
 				type = strsep(&p, " ");
 				if (type == NULL) {
 					close(client_fd);
 					continue;
 				}
-				
+
 				val_str = strsep(&p, " ");
 				if (val_str == NULL) {
 					close(client_fd);
@@ -225,7 +265,7 @@ main(void)
 					int final_age = -1;
 
 					if (strcmp(type, "age") == 0) {
-						final_age = atoi(val_str);
+						safe_atoi(val_str, &final_age);
 					} else if (strcmp(type, "dob") == 0) {
 						final_age = calculate_age(val_str);
 					}
@@ -237,32 +277,36 @@ main(void)
 						continue;
 					}
 
-					sqlite3_stmt *stmt;
-					sqlite3_prepare_v2(db, "INSERT OR REPLACE INTO users (uid, dob, age) VALUES (?, ?, ?);", -1, &stmt, 0);
-					sqlite3_bind_int(stmt, 1, target_uid);
-					sqlite3_bind_text(stmt, 2, val_str, -1, SQLITE_STATIC);
-					sqlite3_bind_int(stmt, 3, final_age);
-					sqlite3_step(stmt);
-					sqlite3_finalize(stmt);
-					syslog(LOG_INFO, "User information updated for uid %d", target_uid);
-					write(client_fd, "OK\n", 3);
+					sqlite3_reset(stmt_set);
+					sqlite3_bind_int(stmt_set, 1, target_uid);
+					sqlite3_bind_text(stmt_set, 2, val_str, -1, SQLITE_STATIC);
+					sqlite3_bind_int(stmt_set, 3, final_age);
+					if (sqlite3_step(stmt_set) != SQLITE_DONE) {
+						syslog(LOG_ERR, "Failed to update user: %s", sqlite3_errmsg(db));
+						write(client_fd, "ERR\n", 4);
+					} else {
+						syslog(LOG_INFO, "User information updated for uid %d", target_uid);
+						write(client_fd, "OK\n", 3);
+					}
 				}
 			} else if (client_uid == 0 && strncmp(buf, "REG ", 4) == 0) {
 				char *region = buf + 4;
 
 				if (is_valid_region(region)) {
-					sqlite3_stmt *stmt;
-					sqlite3_prepare_v2(db, "UPDATE settings SET value = ? WHERE key = 'region';", -1, &stmt, 0);
+					sqlite3_reset(stmt_reg);
 					if (strcmp(region, "null") == 0) {
-						sqlite3_bind_null(stmt, 1);
+						sqlite3_bind_null(stmt_reg, 1);
 					} else {
-						sqlite3_bind_text(stmt, 1, region, -1, SQLITE_STATIC);
+						sqlite3_bind_text(stmt_reg, 1, region, -1, SQLITE_STATIC);
 					}
-					sqlite3_step(stmt);
-					sqlite3_finalize(stmt);
-					syslog(LOG_INFO, "Region updated to %s", region);
-					load_region_setting(db);
-					write(client_fd, "OK\n", 3);
+					if (sqlite3_step(stmt_reg) != SQLITE_DONE) {
+						syslog(LOG_ERR, "Failed to update region: %s", sqlite3_errmsg(db));
+						write(client_fd, "ERR\n", 4);
+					} else {
+						syslog(LOG_INFO, "Region updated to %s", region);
+						load_region_setting(db);
+						write(client_fd, "OK\n", 3);
+					}
 				} else {
 					syslog(LOG_ERR, "Invalid region value: %s", region);
 					write(client_fd, "ERR\n", 4);
@@ -287,11 +331,9 @@ main(void)
 				if (!region_allowed) {
 					write(client_fd, "-2,-2\n", 6);
 				} else {
-					sqlite3_stmt *stmt;
-					sqlite3_prepare_v2(db, "SELECT age FROM users WHERE uid = ?;", -1, &stmt, 0);
-					sqlite3_bind_int(stmt, 1, (int)client_uid);
-					int age = (sqlite3_step(stmt) == SQLITE_ROW) ? sqlite3_column_int(stmt, 0) : -1;
-					sqlite3_finalize(stmt);
+					sqlite3_reset(stmt_get);
+					sqlite3_bind_int(stmt_get, 1, (int)client_uid);
+					int age = (sqlite3_step(stmt_get) == SQLITE_ROW) ? sqlite3_column_int(stmt_get, 0) : -1;
 
 					/* user accounts start at 1000 */
 					if (client_uid < 1000 && age == -1) {
@@ -334,50 +376,41 @@ calculate_age(const char *dob_str)
 }
 
 static int
-is_valid_region(const char *region) {
+is_valid_region(const char *region)
+{
 	/* places that require age verification or will be. Not all can be supported */
-    const char *valid_regions[] = {
-        "US-AL", "US-CA", "US-CO", "US-IL", "BR", "US-NY", "US-MI", "US-WA",
-        "US-LA", "US-UT", "US-TX", "US-FL", "DE", "EU", "UK", "AU",
-        "JP", "null", "parental", NULL
-    };
+	const char *valid_regions[] = {
+		"US-AL", "US-CA", "US-CO", "US-IL", "BR", "US-NY", "US-MI", "US-WA",
+		"US-LA", "US-UT", "US-TX", "US-FL", "DE", "EU", "UK", "AU",
+		"JP", "null", "parental", NULL
+	};
 
-    if (region == NULL) return 0;
+	if (region == NULL)
+		return 0;
 
-    for (int i = 0; valid_regions[i] != NULL; i++) {
-        if (strcmp(region, valid_regions[i]) == 0) {
-            return 1;
-        }
-    }
-    return 0;
+	for (int i = 0; valid_regions[i] != NULL; i++) {
+		if (strcmp(region, valid_regions[i]) == 0) {
+			return 1;
+		}
+	}
+	return 0;
 }
 
 static void
-load_region_setting(sqlite3 *db_handle) 
+load_region_setting(sqlite3 *db_handle __unused)
 {
-    sqlite3_stmt *stmt;
-    const char *sql = "SELECT value FROM settings WHERE key = 'region';";
-    
-    if (current_region) {
-        free(current_region);
-        current_region = NULL;
-    }
+	if (current_region) {
+		free(current_region);
+		current_region = NULL;
+	}
 
-    int rc = sqlite3_prepare_v2(db_handle, sql, -1, &stmt, 0);
-    if (rc != SQLITE_OK) {
-        syslog(LOG_ERR, "Failed to prepare statement: %s", sqlite3_errmsg(db_handle));
-        return;
-    }
-
-    if (sqlite3_step(stmt) == SQLITE_ROW) {
-        const unsigned char *value = sqlite3_column_text(stmt, 0);
-        if (value) {
-            current_region = strdup((const char *)value);
-        }
-    }
-
-    sqlite3_finalize(stmt);
-	stmt = NULL;
+	sqlite3_reset(stmt_load_reg);
+	if (sqlite3_step(stmt_load_reg) == SQLITE_ROW) {
+		const unsigned char *value = sqlite3_column_text(stmt_load_reg, 0);
+		if (value) {
+			current_region = strdup((const char *)value);
+		}
+	}
 }
 
 
