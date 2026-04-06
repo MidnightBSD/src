@@ -71,13 +71,6 @@ main(void)
 		exit(1);
 	}
 
-	FILE *fp = fopen("/var/run/aged/aged.pid", "w");
-
-	if (fp) {
-		fprintf(fp, "%d\n", getpid());
-		fclose(fp);
-	}
-
 	if ((pw = getpwnam(RUN_USER)) == NULL) {
 		syslog(LOG_ERR, "getpwnam failed for %s", RUN_USER);
 		exit(1);
@@ -87,11 +80,21 @@ main(void)
 		syslog(LOG_ERR, "mkdir /var/run/aged: %m");
 		exit(1);
 	}
+	lchown("/var/run/aged", pw->pw_uid, pw->pw_gid);
 
 	if (mkdir("/var/db/aged", 0700) == -1 && errno != EEXIST) {
 		syslog(LOG_ERR, "mkdir /var/db/aged: %m");
 		exit(1);
 	}
+	lchown("/var/db/aged", pw->pw_uid, pw->pw_gid);
+
+	FILE *fp = fopen("/var/run/aged/aged.pid", "w");
+
+	if (fp) {
+		fprintf(fp, "%d\n", getpid());
+		fclose(fp);
+	}
+	lchown("/var/run/aged/aged.pid", pw->pw_uid, pw->pw_gid);
 
 	init_db();
 
@@ -156,6 +159,11 @@ main(void)
 
 		if (n > 0) {
 			buf[n] = '\0';
+			char *newline = strchr(buf, '\n');
+			if (newline) *newline = '\0';
+			newline = strchr(buf, '\r');
+			if (newline) *newline = '\0';
+
 			sqlite3 *db;
 
 			int rc = sqlite3_open(DB_PATH, &db);
@@ -225,10 +233,6 @@ main(void)
 				}
 			} else if (client_uid == 0 && strncmp(buf, "REG ", 4) == 0) {
 				char *region = buf + 4;
-				char *newline = strchr(region, '\n');
-				if (newline) *newline = '\0';
-
-syslog(LOG_ERR, "age verification region %s\n", region);
 
 				if (is_valid_region(region)) {
 					sqlite3_stmt *stmt;
@@ -408,24 +412,24 @@ void
 get_range(int age, char *buffer)
 {
 	if (age < 0) {
-		snprintf(buffer, 16, "-1,-1");
+		snprintf(buffer, 16, "-1,-1\n");
 		return;
 	}
 	if (age < 13) {
-		snprintf(buffer, 16, "0,12");
+		snprintf(buffer, 16, "0,12\n");
 		return;
 	}
 	if (age >= 13 && age < 16) {
-		snprintf(buffer, 16, "13,15");
+		snprintf(buffer, 16, "13,15\n");
 		return;
 	}
 	if (age >= 16 && age < 18) {
-		snprintf(buffer, 16, "16,17");
+		snprintf(buffer, 16, "16,17\n");
 		return;
 	}
 	if (age >= 18) {
-		snprintf(buffer, 16, "18,-1");
+		snprintf(buffer, 16, "18,-1\n");
 		return;
 	}
-	snprintf(buffer, 16, "-1,-1");
+	snprintf(buffer, 16, "-1,-1\n");
 }
