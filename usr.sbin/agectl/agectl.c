@@ -76,6 +76,8 @@ main(int argc, char *argv[])
 	int update_failed = 0;
 
 	while ((ch = getopt(argc, argv, "a:b:r:")) != -1) {
+		if (ch != '?' && mode != 0)
+			errx(1, "multiple command modes specified");
 		switch (ch) {
 		case 'a':
 			if (!valid_age(optarg))
