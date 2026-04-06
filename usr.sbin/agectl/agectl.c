@@ -48,6 +48,8 @@ static int valid_dob(const char *);
 static int calculate_age(const char *s);
 static int update_age_groups(const char *, int);
 static int run_pw_command(const char *, const char *, const char *);
+static ssize_t write_all(int, const void *, size_t);
+static ssize_t read_all(int, void *, size_t);
 
 
 static void
@@ -105,6 +107,9 @@ main(int argc, char *argv[])
 			usage(argv[0]);
 	}
 
+	if (mode > 0 && geteuid() != 0)
+		errx(1, "root privileges required for this operation");
+
 	if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
 		perror("socket");
 		exit(1);
@@ -120,12 +125,19 @@ main(int argc, char *argv[])
 	}
 
 	if (mode == 0) {
-		write(fd, "GET", 3);
+		if (write_all(fd, "GET", 3) == -1) {
+			perror("write");
+			exit(1);
+		}
 	} else if (mode == 3) {
 		snprintf(buf, sizeof(buf), "REG %s", set_val);
-		write(fd, buf, strlen(buf));
+		if (write_all(fd, buf, strlen(buf)) == -1) {
+			perror("write");
+			exit(1);
+		}
 	} else {
 		struct passwd *pw = getpwnam(target_user);
+		int age = -1;
 
 		if (!pw) {
 			fprintf(stderr, "Unknown user: %s\n", target_user);
@@ -135,31 +147,47 @@ main(int argc, char *argv[])
 
 		if (mode == 1) {
 			snprintf(buf, sizeof(buf), "SET %d age %s", pw->pw_uid, set_val);
-			if (update_age_groups(target_user, atoi(set_val)) == 1) {
-				update_failed = 1;
-			}
+			age = atoi(set_val);
 		} else if (mode == 2) {
 			snprintf(buf, sizeof(buf), "SET %d dob %s", pw->pw_uid, set_val);
 		
-			int age = calculate_age(set_val);
+			age = calculate_age(set_val);
 			if (age < 0) {
 				fprintf(stderr, "Failed to compute age from dob '%s'\n", set_val);
 				close(fd);
 				exit(1);
-			} else {
-				if (update_age_groups(target_user, age) == 1) {
-					update_failed = 1;
-				}
 			}
 		}
-		write(fd, buf, strlen(buf));
+		if (write_all(fd, buf, strlen(buf)) == -1) {
+			perror("write");
+			exit(1);
+		}
+
+		memset(buf, 0, sizeof(buf));
+		ssize_t n = read_all(fd, buf, sizeof(buf) - 1);
+
+		if (n > 0) {
+			printf("%s\n", buf);
+			if (strncmp(buf, "ERR", 3) != 0) {
+				if (update_age_groups(target_user, age) != 0)
+					update_failed = 1;
+			} else {
+				update_failed = 1;
+			}
+		} else {
+			if (n == -1)
+				perror("read");
+			update_failed = 1;
+		}
 	}
 
-	memset(buf, 0, sizeof(buf));
-	ssize_t n = read(fd, buf, sizeof(buf) - 1);
+	if (mode == 0 || mode == 3) {
+		memset(buf, 0, sizeof(buf));
+		ssize_t n = read_all(fd, buf, sizeof(buf) - 1);
 
-	if (n > 0) {
-		printf("%s\n", buf);
+		if (n > 0) {
+			printf("%s\n", buf);
+		}
 	}
 
 	close(fd);
@@ -168,6 +196,46 @@ main(int argc, char *argv[])
 		return 1;
 
 	return 0;
+}
+
+static ssize_t
+write_all(int fd, const void *buf, size_t n)
+{
+	size_t pos = 0;
+	ssize_t ret;
+
+	while (pos < n) {
+		ret = write(fd, (const char *)buf + pos, n - pos);
+		if (ret == -1) {
+			if (errno == EINTR)
+				continue;
+			return -1;
+		}
+		if (ret == 0)
+			break;
+		pos += ret;
+	}
+	return (ssize_t)pos;
+}
+
+static ssize_t
+read_all(int fd, void *buf, size_t n)
+{
+	size_t pos = 0;
+	ssize_t ret;
+
+	while (pos < n) {
+		ret = read(fd, (char *)buf + pos, n - pos);
+		if (ret == -1) {
+			if (errno == EINTR)
+				continue;
+			return -1;
+		}
+		if (ret == 0)
+			break;
+		pos += ret;
+	}
+	return (ssize_t)pos;
 }
 
 int
