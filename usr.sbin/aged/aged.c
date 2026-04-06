@@ -41,6 +41,9 @@
 #include <grp.h>
 #include <syslog.h>
 
+#include <sys/capsicum.h>
+#include <signal.h>
+
 #define SOCKET_PATH "/var/run/aged/aged.sock"
 #define DB_PATH "/var/db/aged/aged.db"
 #define RUN_USER "aged"
@@ -51,8 +54,20 @@ static void get_range(int, char *);
 static void init_db(void);
 static int is_valid_region(const char *);
 static void load_region_setting(sqlite3 *);
+static void cleanup(int);
 
 static char *current_region = NULL;
+static sqlite3 *db = NULL;
+
+static void
+cleanup(int sig __unused)
+{
+	if (db)
+		sqlite3_close(db);
+	unlink(SOCKET_PATH);
+	unlink("/var/run/aged/aged.pid");
+	exit(0);
+}
 
 int
 main(void)
@@ -64,12 +79,16 @@ main(void)
 	gid_t client_gid;
 	struct passwd *pw;
 
+	umask(0077);
 	openlog("aged", LOG_PID, LOG_DAEMON);
 
 	if (daemon(0, 0) == -1) {
 		syslog(LOG_ERR, "daemon: %m");
 		exit(1);
 	}
+
+	signal(SIGTERM, cleanup);
+	signal(SIGINT, cleanup);
 
 	if ((pw = getpwnam(RUN_USER)) == NULL) {
 		syslog(LOG_ERR, "getpwnam failed for %s", RUN_USER);
@@ -102,6 +121,17 @@ main(void)
 
 	init_db();
 
+	int rc = sqlite3_open(DB_PATH, &db);
+	if (rc != SQLITE_OK) {
+		syslog(LOG_ERR, "Cannot open database: %s", sqlite3_errmsg(db));
+		exit(1);
+	}
+
+	/* Disable journaling to disk to allow Capsicum sandboxing and improve performance */
+	sqlite3_exec(db, "PRAGMA journal_mode=MEMORY;", NULL, NULL, NULL);
+
+	load_region_setting(db);
+
 	if ((server_fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
 		syslog(LOG_ERR, "socket error: %m");
 		exit(1);
@@ -124,11 +154,16 @@ main(void)
 		exit(1);
 	}
 
+	if (cap_enter() < 0) {
+		syslog(LOG_ERR, "cap_enter failed: %m");
+		exit(1);
+	}
+
 	struct pollfd pfd;
 	pfd.fd = server_fd;
 	pfd.events = POLLIN;
 
-	syslog(LOG_NOTICE, "aged daemon started");
+	syslog(LOG_NOTICE, "aged daemon started with sandboxing");
 
 	while (1) {
 		if (poll(&pfd, 1, -1) <= 0) continue;
@@ -160,17 +195,6 @@ main(void)
 			newline = strchr(buf, '\r');
 			if (newline) *newline = '\0';
 
-			sqlite3 *db;
-
-			int rc = sqlite3_open(DB_PATH, &db);
-			if (rc != SQLITE_OK) {
-				syslog(LOG_ERR, "Cannot open database: %s", sqlite3_errmsg(db));
-				close(client_fd);
-				continue;
-			}
-			
-			load_region_setting(db);
-
 			if (client_uid == 0 && strncmp(buf, "SET ", 4) == 0) {
 				char *p = buf + 4;
 				char *token;
@@ -180,7 +204,6 @@ main(void)
 
 				token = strsep(&p, " ");
 				if (token == NULL) {
-					sqlite3_close(db);
 					close(client_fd);
 					continue;
 				}
@@ -188,14 +211,12 @@ main(void)
 
 				type = strsep(&p, " ");
 				if (type == NULL) {
-					sqlite3_close(db);
 					close(client_fd);
 					continue;
 				}
 				
 				val_str = strsep(&p, " ");
 				if (val_str == NULL) {
-					sqlite3_close(db);
 					close(client_fd);
 					continue;
 				}
@@ -212,7 +233,6 @@ main(void)
 					if (final_age < 2 || final_age > 125) {
 						syslog(LOG_WARNING, "Invalid age %d for uid %d", final_age, target_uid);
 						write(client_fd, "ERR\n", 4);
-						sqlite3_close(db);
 						close(client_fd);
 						continue;
 					}
@@ -241,6 +261,7 @@ main(void)
 					sqlite3_step(stmt);
 					sqlite3_finalize(stmt);
 					syslog(LOG_INFO, "Region updated to %s", region);
+					load_region_setting(db);
 					write(client_fd, "OK\n", 3);
 				} else {
 					syslog(LOG_ERR, "Invalid region value: %s", region);
@@ -283,7 +304,6 @@ main(void)
 					write(client_fd, response, strlen(response));
 				}
 			}
-			sqlite3_close(db);
 		}
 		close(client_fd);
 	}
@@ -333,7 +353,7 @@ is_valid_region(const char *region) {
 }
 
 static void
-load_region_setting(sqlite3 *db) 
+load_region_setting(sqlite3 *db_handle) 
 {
     sqlite3_stmt *stmt;
     const char *sql = "SELECT value FROM settings WHERE key = 'region';";
@@ -343,9 +363,9 @@ load_region_setting(sqlite3 *db)
         current_region = NULL;
     }
 
-    int rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
+    int rc = sqlite3_prepare_v2(db_handle, sql, -1, &stmt, 0);
     if (rc != SQLITE_OK) {
-        syslog(LOG_ERR, "Failed to prepare statement: %s", sqlite3_errmsg(db));
+        syslog(LOG_ERR, "Failed to prepare statement: %s", sqlite3_errmsg(db_handle));
         return;
     }
 
@@ -364,12 +384,12 @@ load_region_setting(sqlite3 *db)
 void
 init_db(void)
 {
-	sqlite3 *db;
+	sqlite3 *db_local;
 	char *err_msg = 0;
-	int rc = sqlite3_open(DB_PATH, &db);
+	int rc = sqlite3_open(DB_PATH, &db_local);
 
 	if (rc != SQLITE_OK) {
-		syslog(LOG_ERR, "Cannot open database: %s", sqlite3_errmsg(db));
+		syslog(LOG_ERR, "Cannot open database: %s", sqlite3_errmsg(db_local));
 		exit(1);
 	}
 
@@ -378,30 +398,30 @@ init_db(void)
 	"dob TEXT, "
 	"age INTEGER);";
 
-	rc = sqlite3_exec(db, sql, 0, 0, &err_msg);
+	rc = sqlite3_exec(db_local, sql, 0, 0, &err_msg);
 	if (rc != SQLITE_OK) {
 		syslog(LOG_ERR, "SQL error: %s", err_msg);
 		sqlite3_free(err_msg);
 	}
 
 	const char *sql_settings = "CREATE TABLE IF NOT EXISTS settings(key TEXT NOT NULL PRIMARY KEY, value TEXT);";
-	rc = sqlite3_exec(db, sql_settings, 0, 0, &err_msg);
+	rc = sqlite3_exec(db_local, sql_settings, 0, 0, &err_msg);
 	if (rc != SQLITE_OK) {
 		syslog(LOG_ERR, "SQL error: %s", err_msg);
 		sqlite3_free(err_msg);
-		sqlite3_close(db);
+		sqlite3_close(db_local);
 		exit(1);
 	}
 
 	const char *sql_insert_region = "INSERT OR IGNORE INTO settings (key, value) VALUES ('region', 'parental');";
-	rc = sqlite3_exec(db, sql_insert_region, 0, 0, &err_msg);
+	rc = sqlite3_exec(db_local, sql_insert_region, 0, 0, &err_msg);
 	if (rc != SQLITE_OK) {
 		syslog(LOG_ERR, "SQL error: %s", err_msg);
 		sqlite3_free(err_msg);
 	}
 
-	sqlite3_close(db);
-	db = NULL;
+	sqlite3_close(db_local);
+	db_local = NULL;
 }
 
 void
