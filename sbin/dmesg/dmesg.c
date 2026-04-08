@@ -55,6 +55,7 @@ static const char sccsid[] = "@(#)dmesg.c	8.1 (Berkeley) 6/5/93";
 #include <nlist.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -118,6 +119,8 @@ main(int argc, char *argv[])
 		 */
 		if (sysctlbyname("kern.msgbuf", NULL, &buflen, NULL, 0) == -1)
 			err(1, "sysctl kern.msgbuf");
+		if (buflen > SIZE_MAX / 5)
+			errx(1, "message buffer too large");
 		/* Allocate extra room for growth between the sysctl calls. */
 		buflen += buflen/8;
 		/* Allocate more than sysctl sees, for room to append \n\0. */
@@ -145,6 +148,8 @@ main(int argc, char *argv[])
 		if (cur.msg_magic != MSG_MAGIC)
 			errx(1, "kernel message buffer has different magic "
 			    "number");
+		if (cur.msg_size == 0 || (size_t)cur.msg_size > SIZE_MAX / 5)
+			errx(1, "invalid message buffer size");
 		if ((bp = malloc(cur.msg_size + 2)) == NULL)
 			errx(1, "malloc failed");
 
@@ -180,7 +185,7 @@ main(int argc, char *argv[])
 	ep = &bp[buflen];
 	if (*p == '\0') {
 		/* Strip leading \0's */
-		while (*p == '\0')
+		while (p < ep && *p == '\0')
 			p++;
 	} else if (!all) {
 		/* Skip the first line, since it is probably incomplete. */
