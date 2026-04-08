@@ -45,6 +45,7 @@
 #include <sys/ioctl.h>
 #include <sys/time.h>
 #include <sys/wait.h>
+#include <err.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -61,19 +62,22 @@ main(int ac, char **av)
 	const char *opts = "";
 	int ttyfd;
 	int fd;
+	pid_t pid;
 
 	if (ac == 1)
 		usage();
 
-	if (av[1]) {
-		if (av[1][0] == '-') {
-			opts = av[1];
-			++av;
-		}
+	if (av[1] && av[1][0] == '-') {
+		opts = av[1];
+		++av;
 	}
 
+	if (av[1] == NULL)
+		usage();
 
 	ttyfd = open("/dev/null", O_RDWR);
+	if (ttyfd < 0)
+		err(1, "open(/dev/null)");
 
 	if (strchr(opts, '0') == NULL && ttyfd != 0)
 		dup2(ttyfd, 0);
@@ -91,9 +95,13 @@ main(int ac, char **av)
 		close(fd);
 	} 
 
-	if (fork() == 0) {
+	pid = fork();
+	if (pid < 0)
+		err(1, "fork");
+	if (pid == 0) {
 		setsid();
-		exit(execvp(av[1], av + 1));
+		execvp(av[1], av + 1);
+		err(1, "execvp %s", av[1]);
 	}
 	exit(0);
 }
