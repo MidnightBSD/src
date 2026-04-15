@@ -10,9 +10,11 @@ the contributor remains 100% responsible for the correctness, security, and perf
 
 C / C++ - Restricted - AI often ignores manual memory management or introduces buffer overflows. Every line must be manually audited for malloc/free symmetry and bounds checking.
 
+contrib/mksh - Prohibited.  The author of the shell does not want it indexed or scanned with AI tools.
+
 Assembly - Prohibited - We do not accept AI-generated Assembly. AI lacks the nuanced understanding of specific CPU architectures and side-channel mitigations required for MidnightBSD.
 
-Shell (sh/mksh) - Permitted - High utility for boilerplate, but must be checked for POSIX compliance. Avoid "Bash-isms".
+Shell (sh) - Permitted - High utility for boilerplate, but must be checked for POSIX compliance. Avoid "Bash-isms".
 
 Documentation -  Encouraged - Great for proofreading and formatting, provided technical accuracy is maintained.
 
