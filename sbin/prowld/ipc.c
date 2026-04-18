@@ -583,8 +583,13 @@ ipc_dispatch_message(int fd, const char *json, size_t len)
 		return;
 
 	if (!ucl_parser_add_chunk(parser, (const unsigned char *)json, len)) {
-		prowl_log(LOG_WARNING, "ipc: parse error: %s",
-		    ucl_parser_get_error(parser));
+		/*
+		 * Log at DEBUG only: a misbehaving client can trigger this
+		 * repeatedly, filling syslog.  Cap the error string to avoid
+		 * leaking IPC payload content into the system log.
+		 */
+		prowl_log(LOG_DEBUG, "ipc: parse error from fd %d: %.128s",
+		    fd, ucl_parser_get_error(parser));
 		ucl_parser_free(parser);
 		ipc_send_error(fd, "", "JSON parse error");
 		return;

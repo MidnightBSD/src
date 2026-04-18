@@ -300,6 +300,10 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 			if (value == NULL)
 				value = "";
 
+			/*
+			 * NEVER log env values: they may contain secrets
+			 * (API keys, passwords, tokens).  Log only the key.
+			 */
 			nb = snprintf(envbuf, sizeof(envbuf), "%s=%s",
 			    key, value);
 			if (nb < 0 || (size_t)nb >= sizeof(envbuf)) {
@@ -490,7 +494,12 @@ unit_load_file(const char *path)
 	}
 
 	if (!ucl_parser_add_file(parser, path)) {
-		prowl_log(LOG_ERR, "unit_load_file %s: %s", path,
+		/*
+		 * Log only a bounded prefix of the parser error.  UCL error
+		 * strings can include surrounding token text from the file,
+		 * which may contain secret values from environment= blocks.
+		 */
+		prowl_log(LOG_ERR, "unit_load_file %s: %.128s", path,
 		    ucl_parser_get_error(parser));
 		ucl_parser_free(parser);
 		return (-1);
