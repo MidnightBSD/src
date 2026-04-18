@@ -1455,8 +1455,7 @@ start_window_system(session_t *sp)
 #endif
 	if (sp->se_type) {
 		/* Don't use malloc after fork */
-		strcpy(term, "TERM=");
-		strlcat(term, sp->se_type, sizeof(term));
+		snprintf(term, sizeof(term), "TERM=%s", sp->se_type);
 		env[0] = term;
 		env[1] = NULL;
 	}
@@ -1519,8 +1518,7 @@ start_getty(session_t *sp)
 #endif
 	if (sp->se_type) {
 		/* Don't use malloc after fork */
-		strcpy(term, "TERM=");
-		strlcat(term, sp->se_type, sizeof(term));
+		snprintf(term, sizeof(term), "TERM=%s", sp->se_type);
 		env[0] = term;
 		env[1] = NULL;
 	} else
