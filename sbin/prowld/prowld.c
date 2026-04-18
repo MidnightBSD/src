@@ -60,7 +60,6 @@ volatile bool		 g_reload = false;
 int			 g_current_starts = 0;
 
 static int		 g_ipc_listen_fd = -1;
-static int		 g_pid_fd = -1;
 
 /* Defined in ipc.c, registered there and used here to set up kqueue */
 extern int		 ipc_listen_fd;
