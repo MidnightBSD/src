@@ -200,6 +200,13 @@ rcshim_parse_script(const char *path, const char *scriptname)
 		return (NULL);
 	}
 
+	/* Validate scriptname before embedding in label and paths */
+	if (!label_valid(scriptname)) {
+		prowl_log(LOG_WARNING,
+		    "rcshim: invalid script name '%s', skipping", scriptname);
+		return (NULL);
+	}
+
 	job = job_alloc();
 	if (job == NULL)
 		return (NULL);

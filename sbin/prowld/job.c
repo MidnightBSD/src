@@ -33,6 +33,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -221,5 +222,40 @@ job_all_deps_satisfied(const job_t *job)
 		if (!job_dep_satisfied(job, &job->deps[i]))
 			return (false);
 	}
+	return (true);
+}
+
+/*
+ * Validate a job label or rc_name against the allowed character set:
+ * alphanumerics, dots, hyphens, underscores; no path separators, NUL
+ * bytes, leading dots, or ".." components.
+ *
+ * Used at load time to prevent filesystem path abuse via crafted labels.
+ */
+bool
+label_valid(const char *label)
+{
+	const char *p;
+	size_t len;
+
+	if (label == NULL || *label == '\0')
+		return (false);
+
+	len = strlen(label);
+	if (len >= PROWL_LABEL_MAX)
+		return (false);
+
+	if (label[0] == '.')
+		return (false);
+
+	for (p = label; *p != '\0'; p++) {
+		unsigned char c = (unsigned char)*p;
+		if (!isalnum(c) && c != '.' && c != '-' && c != '_')
+			return (false);
+	}
+
+	if (strstr(label, "..") != NULL)
+		return (false);
+
 	return (true);
 }
