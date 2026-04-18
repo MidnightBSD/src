@@ -211,7 +211,7 @@ notify_socket_path(const job_t *job, char *out, size_t outsz)
 {
 	int n;
 
-	n = snprintf(out, outsz, "%s/%s", PROWLD_NOTIFY_DIR, job->label);
+	n = snprintf(out, outsz, "%s/%s", g_notify_dir, job->label);
 	if (n < 0 || (size_t)n >= outsz || (size_t)n >= 104)
 		return (-1);
 	return (0);

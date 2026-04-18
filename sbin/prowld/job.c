@@ -192,7 +192,7 @@ job_is_masked(const job_t *job)
 	char path[PROWL_PATH_MAX];
 	struct stat sb;
 
-	snprintf(path, sizeof(path), "%s/%s", PROWLD_MASK_DIR, job->label);
+	snprintf(path, sizeof(path), "%s/%s", g_mask_dir, job->label);
 	return (lstat(path, &sb) == 0);
 }
 

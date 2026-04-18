@@ -526,7 +526,7 @@ cmd_mask(int fd, const char *id, const ucl_object_t *req)
 	if (job == NULL)
 		return;
 
-	snprintf(path, sizeof(path), "%s/%s", PROWLD_MASK_DIR, job->label);
+	snprintf(path, sizeof(path), "%s/%s", g_mask_dir, job->label);
 	if (symlink("/dev/null", path) == -1 && errno != EEXIST) {
 		ipc_send_error(fd, id, "mask failed");
 		return;
@@ -547,7 +547,7 @@ cmd_unmask(int fd, const char *id, const ucl_object_t *req)
 	if (job == NULL)
 		return;
 
-	snprintf(path, sizeof(path), "%s/%s", PROWLD_MASK_DIR, job->label);
+	snprintf(path, sizeof(path), "%s/%s", g_mask_dir, job->label);
 	unlink(path);
 
 	if (job->state == JOB_STATE_MASKED)
@@ -819,7 +819,7 @@ ipc_init(void)
 	struct kevent kev;
 	int fd;
 
-	unlink(PROWLD_SOCK_PATH);
+	unlink(g_sock_path);
 
 	fd = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (fd == -1) {
@@ -829,23 +829,23 @@ ipc_init(void)
 
 	memset(&sun, 0, sizeof(sun));
 	sun.sun_family = AF_UNIX;
-	strlcpy(sun.sun_path, PROWLD_SOCK_PATH, sizeof(sun.sun_path));
+	strlcpy(sun.sun_path, g_sock_path, sizeof(sun.sun_path));
 
 	if (bind(fd, (struct sockaddr *)&sun, sizeof(sun)) == -1) {
-		prowl_log(LOG_ERR, "ipc bind %s: %m", PROWLD_SOCK_PATH);
+		prowl_log(LOG_ERR, "ipc bind %s: %m", g_sock_path);
 		close(fd);
 		return (-1);
 	}
 
-	chmod(PROWLD_SOCK_PATH, 0660);
+	chmod(g_sock_path, 0660);
 
 	{
 		struct group *gr = getgrnam("wheel");
 		if (gr != NULL)
 			g_wheel_gid = gr->gr_gid;
-		if (chown(PROWLD_SOCK_PATH, 0, g_wheel_gid) == -1)
+		if (chown(g_sock_path, 0, g_wheel_gid) == -1)
 			prowl_log(LOG_WARNING, "ipc_init: chown %s: %m",
-			    PROWLD_SOCK_PATH);
+			    g_sock_path);
 	}
 
 	if (listen(fd, IPC_MAX_CLIENTS) == -1) {
@@ -863,7 +863,7 @@ ipc_init(void)
 
 	ipc_listen_fd = fd;
 	memset(g_clients, 0, sizeof(g_clients));
-	prowl_log(LOG_INFO, "IPC listening on %s", PROWLD_SOCK_PATH);
+	prowl_log(LOG_INFO, "IPC listening on %s", g_sock_path);
 	return (0);
 }
 
@@ -882,7 +882,7 @@ ipc_shutdown(void)
 		ipc_listen_fd = -1;
 	}
 
-	unlink(PROWLD_SOCK_PATH);
+	unlink(g_sock_path);
 }
 
 void

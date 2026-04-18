@@ -34,6 +34,7 @@
 
 #include <sys/types.h>
 #include <sys/event.h>
+#include <sys/reboot.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/wait.h>
@@ -62,12 +63,43 @@ volatile bool		 g_reload = false;
 int			 g_current_starts = 0;
 
 static int		 g_ipc_listen_fd = -1;
+static bool		 g_is_init = false;	/* running as PID 1 */
+
+/* Runtime path globals — defaults match compile-time macros */
+char	g_run_dir[PROWL_PATH_MAX]      = PROWLD_RUN_DIR;
+char	g_notify_dir[PROWL_PATH_MAX]   = PROWLD_NOTIFY_DIR;
+char	g_sock_path[PROWL_PATH_MAX]    = PROWLD_SOCK_PATH;
+char	g_pid_path[PROWL_PATH_MAX]     = PROWLD_PID_PATH;
+char	g_db_dir[PROWL_PATH_MAX]       = PROWLD_DB_DIR;
+char	g_mask_dir[PROWL_PATH_MAX]     = PROWLD_MASK_DIR;
+char	g_log_dir[PROWL_PATH_MAX]      = PROWLD_LOG_DIR;
+char	g_job_log_dir[PROWL_PATH_MAX]  = PROWLD_JOB_LOG_DIR;
+char	g_generated_dir[PROWL_PATH_MAX] = UNIT_DIR_GENERATED;
 
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: prowld [-d]\n");
+	fprintf(stderr, "usage: prowld [-d] [-s rundir]\n");
 	exit(1);
+}
+
+/*
+ * Rebuild all runtime paths from a single base directory.
+ * Called when -s is given or when auto-detection falls back to /tmp/prowld.
+ */
+static void
+setup_runtime_paths(const char *base)
+{
+	strlcpy(g_run_dir, base, sizeof(g_run_dir));
+	snprintf(g_notify_dir,   sizeof(g_notify_dir),   "%s/notify",     base);
+	snprintf(g_sock_path,    sizeof(g_sock_path),     "%s/prowld.sock",base);
+	snprintf(g_pid_path,     sizeof(g_pid_path),      "%s/prowld.pid", base);
+	snprintf(g_db_dir,       sizeof(g_db_dir),        "%s/db",         base);
+	snprintf(g_mask_dir,     sizeof(g_mask_dir),      "%s/db/masked.d",base);
+	snprintf(g_log_dir,      sizeof(g_log_dir),       "%s/log",        base);
+	snprintf(g_job_log_dir,  sizeof(g_job_log_dir),   "%s/log/jobs",   base);
+	snprintf(g_generated_dir,sizeof(g_generated_dir), "%s/generated.d",base);
+	prowl_log(LOG_INFO, "runtime paths rooted at %s", base);
 }
 
 static void
@@ -76,10 +108,10 @@ write_pidfile(void)
 	FILE *fp;
 	char pidbuf[32];
 
-	fp = fopen(PROWLD_PID_PATH, "w");
+	fp = fopen(g_pid_path, "w");
 	if (fp == NULL) {
 		prowl_log(LOG_WARNING, "cannot write pidfile %s: %m",
-		    PROWLD_PID_PATH);
+		    g_pid_path);
 		return;
 	}
 	snprintf(pidbuf, sizeof(pidbuf), "%d\n", (int)getpid());
@@ -90,31 +122,39 @@ write_pidfile(void)
 static void
 remove_pidfile(void)
 {
-	unlink(PROWLD_PID_PATH);
+	unlink(g_pid_path);
+}
+
+static void
+make_dir(const char *path, mode_t mode)
+{
+	if (mkdir(path, mode) == -1 && errno != EEXIST)
+		prowl_log(LOG_WARNING, "mkdir %s: %m", path);
 }
 
 static void
 ensure_dirs(void)
 {
-	static const struct {
-		const char *path;
-		mode_t	    mode;
-	} dirs[] = {
-		{ PROWLD_RUN_DIR,    0755 },	/* world-searchable for socket */
-		{ PROWLD_NOTIFY_DIR, 0700 },	/* root-only: readiness pipes */
-		{ PROWLD_DB_DIR,     0755 },	/* world-readable for tooling */
-		{ PROWLD_MASK_DIR,   0700 },	/* root-only: mask symlinks */
-		{ PROWLD_LOG_DIR,    0750 },	/* prowld own logs */
-		{ PROWLD_JOB_LOG_DIR, 0750 },	/* per-job log files */
-		{ NULL, 0 }
-	};
-	int i;
-
-	for (i = 0; dirs[i].path != NULL; i++) {
-		if (mkdir(dirs[i].path, dirs[i].mode) == -1 &&
-		    errno != EEXIST)
-			prowl_log(LOG_WARNING, "mkdir %s: %m", dirs[i].path);
+	/*
+	 * Try the primary run directory first.  If it fails (read-only media,
+	 * EROFS, EACCES, or missing parent) fall back to /tmp/prowld so that
+	 * prowld can operate from a tmpfs even when /var is not yet writable.
+	 */
+	if (mkdir(g_run_dir, 0755) == -1 && errno != EEXIST) {
+		prowl_log(LOG_WARNING,
+		    "run dir %s not writable (%m), falling back to /tmp/prowld",
+		    g_run_dir);
+		setup_runtime_paths("/tmp/prowld");
+		if (mkdir(g_run_dir, 0755) == -1 && errno != EEXIST)
+			prowl_log(LOG_WARNING, "mkdir %s: %m", g_run_dir);
 	}
+
+	make_dir(g_notify_dir,    0700);	/* root-only: sd_notify sockets */
+	make_dir(g_db_dir,        0755);	/* world-readable for tooling */
+	make_dir(g_mask_dir,      0700);	/* root-only: mask symlinks */
+	make_dir(g_log_dir,       0750);	/* prowld daemon logs */
+	make_dir(g_job_log_dir,   0750);	/* per-job log files */
+	make_dir(g_generated_dir, 0755);	/* dynamically generated units */
 }
 
 static void
@@ -315,6 +355,7 @@ reload_config(void)
 	unit_load_dir(UNIT_DIR_BASE);
 	unit_load_dir(UNIT_DIR_LOCAL);
 	unit_load_dir(UNIT_DIR_OVERRIDE);
+	unit_load_dir(g_generated_dir);
 	rcshim_scan_dir(RCD_DIR_BASE);
 	rcshim_scan_dir(RCD_DIR_LOCAL);
 	dag_build();
@@ -330,6 +371,7 @@ startup_load(void)
 	unit_load_dir(UNIT_DIR_BASE);
 	unit_load_dir(UNIT_DIR_LOCAL);
 	unit_load_dir(UNIT_DIR_OVERRIDE);
+	unit_load_dir(g_generated_dir);
 
 	prowl_log(LOG_NOTICE, "scanning rc.d directories");
 	rcshim_scan_dir(RCD_DIR_BASE);
@@ -372,7 +414,8 @@ main_loop(void)
 				handle_signal((int)kev->ident);
 				break;
 			case EVFILT_READ:
-				if ((int)kev->ident == g_ipc_listen_fd)
+				if (g_ipc_listen_fd >= 0 &&
+				    (int)kev->ident == g_ipc_listen_fd)
 					ipc_accept();
 				else if (kev->udata != NULL &&
 				    ((uintptr_t)kev->udata & 1UL))
@@ -415,11 +458,15 @@ main(int argc, char *argv[])
 {
 	int ch;
 	bool debug = false;
+	const char *override_dir = NULL;
 
-	while ((ch = getopt(argc, argv, "d")) != -1) {
+	while ((ch = getopt(argc, argv, "ds:")) != -1) {
 		switch (ch) {
 		case 'd':
 			debug = true;
+			break;
+		case 's':
+			override_dir = optarg;
 			break;
 		default:
 			usage();
@@ -433,13 +480,32 @@ main(int argc, char *argv[])
 
 	openlog("prowld", LOG_PID | LOG_NDELAY, LOG_DAEMON);
 
-	if (!debug && daemon(0, 0) == -1)
+	/* Apply explicit runtime directory override before anything else. */
+	if (override_dir != NULL)
+		setup_runtime_paths(override_dir);
+
+	/*
+	 * If we are PID 1 (kernel executed us directly as init), skip
+	 * daemon() — forking would leave an orphaned child and cause the
+	 * kernel to panic when the parent exits.  Force debug/stderr output
+	 * so early boot messages are visible on the console.
+	 */
+	g_is_init = (getpid() == 1);
+	if (g_is_init) {
+		prowl_log(LOG_NOTICE, "running as PID 1 (init)");
+		debug = true;
+	} else if (!debug && daemon(0, 0) == -1) {
 		err(1, "daemon");
+	}
 
 	g_kqueue_fd = kqueue();
 	if (g_kqueue_fd == -1)
 		err(1, "kqueue");
 
+	/*
+	 * ensure_dirs() auto-detects read-only media and falls back to
+	 * /tmp/prowld if the standard run dir is not writable.
+	 */
 	ensure_dirs();
 	write_pidfile();
 	setup_kqueue_signals();
@@ -449,14 +515,16 @@ main(int argc, char *argv[])
 	if (debug)
 		g_config.debug = true;
 
-	if (ipc_init() == -1) {
-		prowl_log(LOG_ERR, "IPC init failed, aborting");
-		remove_pidfile();
-		return (1);
-	}
-
-	/* Store IPC listen fd for the event loop */
-	g_ipc_listen_fd = ipc_listen_fd;
+	/*
+	 * IPC is non-fatal: on read-only or constrained media the socket
+	 * directory may not be available.  prowld still manages services;
+	 * management commands will be unavailable until the socket is up.
+	 */
+	if (ipc_init() == -1)
+		prowl_log(LOG_WARNING,
+		    "IPC socket unavailable; management commands disabled");
+	else
+		g_ipc_listen_fd = ipc_listen_fd;
 
 	startup_load();
 	main_loop();
@@ -467,6 +535,17 @@ main(int argc, char *argv[])
 	ipc_shutdown();
 	remove_pidfile();
 	closelog();
+
+	/*
+	 * If we are PID 1, exiting would panic the kernel.  Trigger a
+	 * system halt instead.  This is the last resort — under normal
+	 * operation g_shutdown is only set by SIGTERM/SIGINT which on a
+	 * real system would come from a shutdown(8) invocation.
+	 */
+	if (g_is_init) {
+		reboot(RB_HALT);
+		/* NOTREACHED */
+	}
 
 	return (0);
 }

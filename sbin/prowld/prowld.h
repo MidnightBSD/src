@@ -285,6 +285,21 @@ extern volatile bool	 g_shutdown;
 extern volatile bool	 g_reload;
 extern int		 g_current_starts;
 
+/*
+ * Runtime path globals.  Defaults match the compile-time macros but may be
+ * overridden by the -s flag or auto-detected fallback on read-only media.
+ * All code must use these globals rather than the macro constants directly.
+ */
+extern char		 g_run_dir[PROWL_PATH_MAX];
+extern char		 g_notify_dir[PROWL_PATH_MAX];
+extern char		 g_sock_path[PROWL_PATH_MAX];
+extern char		 g_pid_path[PROWL_PATH_MAX];
+extern char		 g_db_dir[PROWL_PATH_MAX];
+extern char		 g_mask_dir[PROWL_PATH_MAX];
+extern char		 g_log_dir[PROWL_PATH_MAX];
+extern char		 g_job_log_dir[PROWL_PATH_MAX];
+extern char		 g_generated_dir[PROWL_PATH_MAX];
+
 /* ---- IPC state (defined in ipc.c) ---- */
 extern int		 ipc_listen_fd;
 
