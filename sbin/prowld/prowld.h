@@ -224,6 +224,8 @@ typedef struct job {
 	/* Timer tracking */
 	bool		throttle_timer_active;
 	bool		stop_timer_active;
+	bool		watchdog_timer_active;
+	time_t		watchdog_last_ping;
 
 	TAILQ_ENTRY(job) entries;
 } job_t;
@@ -292,6 +294,9 @@ int	supervisor_signal(job_t *, int);
 void	supervisor_reap(pid_t, int);
 void	supervisor_handle_throttle(job_t *);
 void	supervisor_handle_stop_timeout(job_t *);
+void	supervisor_handle_notify(job_t *);
+void	supervisor_handle_watchdog(job_t *);
+void	supervisor_handle_notify_timeout(job_t *);
 void	supervisor_shutdown_all(void);
 
 /* ---- ipc.c ---- */

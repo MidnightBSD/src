@@ -274,24 +274,32 @@ handle_proc_event(struct kevent *kev)
 
 /*
  * Handle a EVFILT_TIMER event.
- * ident encodes the job pointer; the low bit distinguishes timer types:
- *   low bit 0 → throttle (readiness) timer
- *   low bit 1 → stop-timeout (SIGKILL) timer
+ * Low 2 bits of ident encode the timer type (job pointer is >=8-byte aligned):
+ *   0b00  throttle / readiness timer
+ *   0b01  stop-timeout (SIGKILL) timer
+ *   0b10  watchdog timer (recurring)
+ *   0b11  notify-timeout timer
  */
 static void
 handle_timer_event(struct kevent *kev)
 {
 	uintptr_t ident = kev->ident;
-	job_t *job;
+	uintptr_t kind = ident & 3UL;
+	job_t *job = (job_t *)(ident & ~3UL);
 
-	if (ident & 1UL) {
-		/* Stop timeout timer */
-		job = (job_t *)(ident & ~1UL);
-		supervisor_handle_stop_timeout(job);
-	} else {
-		/* Throttle / readiness timer */
-		job = (job_t *)ident;
+	switch (kind) {
+	case 0:
 		supervisor_handle_throttle(job);
+		break;
+	case 1:
+		supervisor_handle_stop_timeout(job);
+		break;
+	case 2:
+		supervisor_handle_watchdog(job);
+		break;
+	case 3:
+		supervisor_handle_notify_timeout(job);
+		break;
 	}
 }
 
@@ -366,6 +374,14 @@ main_loop(void)
 			case EVFILT_READ:
 				if ((int)kev->ident == g_ipc_listen_fd)
 					ipc_accept();
+				else if (kev->udata != NULL)
+					/*
+					 * Non-NULL udata means this is a notify
+					 * socket registered by supervisor.c with
+					 * the job pointer as udata.
+					 */
+					supervisor_handle_notify(
+					    (job_t *)kev->udata);
 				else
 					ipc_read_client((int)kev->ident);
 				break;

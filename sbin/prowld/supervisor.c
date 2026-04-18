@@ -33,9 +33,11 @@
 
 #include <sys/event.h>
 #include <sys/resource.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <sys/un.h>
 #include <sys/wait.h>
 
 #include <errno.h>
@@ -43,6 +45,7 @@
 #include <grp.h>
 #include <pwd.h>
 #include <signal.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -81,36 +84,211 @@ arm_throttle_timer(job_t *job)
 	if (ms <= 0)
 		ms = DEFAULT_THROTTLE_INT * 1000;
 
-	EV_SET(&kev, (uintptr_t)job, EVFILT_TIMER, EV_ADD | EV_ONESHOT,
-	    NOTE_MSECONDS, ms, (void *)job);
+	EV_SET(&kev, timer_ident(job, TIMER_THROTTLE), EVFILT_TIMER,
+	    EV_ADD | EV_ONESHOT, NOTE_MSECONDS, ms, NULL);
 	if (kevent(g_kqueue_fd, &kev, 1, NULL, 0, NULL) == -1)
 		prowl_log(LOG_WARNING, "kevent throttle timer %s: %m",
 		    job->label);
 	job->throttle_timer_active = true;
 }
 
-/*
- * Register a one-shot timer for the stop (exit_timeout) deadline.
- * Low bit of ident is 1: stop-timeout timer.
- */
 static void
 arm_stop_timer(job_t *job)
 {
 	struct kevent kev;
 	int64_t ms;
-	uintptr_t ident;
 
 	ms = (int64_t)job->exit_timeout * 1000;
 	if (ms <= 0)
 		ms = DEFAULT_EXIT_TIMEOUT * 1000;
 
-	ident = (uintptr_t)job | 1UL;
-	EV_SET(&kev, ident, EVFILT_TIMER, EV_ADD | EV_ONESHOT,
-	    NOTE_MSECONDS, ms, (void *)job);
+	EV_SET(&kev, timer_ident(job, TIMER_STOP), EVFILT_TIMER,
+	    EV_ADD | EV_ONESHOT, NOTE_MSECONDS, ms, NULL);
 	if (kevent(g_kqueue_fd, &kev, 1, NULL, 0, NULL) == -1)
 		prowl_log(LOG_WARNING, "kevent stop timer %s: %m",
 		    job->label);
 	job->stop_timer_active = true;
+}
+
+/*
+ * Timer ident encoding (low 2 bits of job pointer, which is >=8-byte aligned):
+ *   bits == 0b00  throttle / readiness timer
+ *   bits == 0b01  stop-timeout timer
+ *   bits == 0b10  watchdog timer (recurring)
+ *   bits == 0b11  notify-timeout timer
+ */
+#define TIMER_MASK	3UL
+#define TIMER_THROTTLE	0UL
+#define TIMER_STOP	1UL
+#define TIMER_WATCHDOG	2UL
+#define TIMER_NOTIFY_TMO 3UL
+
+static uintptr_t
+timer_ident(const job_t *job, uintptr_t kind)
+{
+	return ((uintptr_t)job | kind);
+}
+
+static job_t *
+timer_job(uintptr_t ident)
+{
+	return ((job_t *)(ident & ~TIMER_MASK));
+}
+
+/*
+ * Arm a one-shot timer to fire after exit_timeout seconds.
+ * Used for notify jobs that must send READY=1 before this deadline.
+ * Timer type: TIMER_NOTIFY_TMO (bits 0b11).
+ */
+static void
+arm_notify_timeout_timer(job_t *job)
+{
+	struct kevent kev;
+	int64_t ms;
+
+	ms = (int64_t)(job->exit_timeout > 0 ?
+	    job->exit_timeout : DEFAULT_EXIT_TIMEOUT) * 1000;
+
+	EV_SET(&kev, timer_ident(job, TIMER_NOTIFY_TMO), EVFILT_TIMER,
+	    EV_ADD | EV_ONESHOT, NOTE_MSECONDS, ms, NULL);
+	if (kevent(g_kqueue_fd, &kev, 1, NULL, 0, NULL) == -1)
+		prowl_log(LOG_WARNING, "kevent notify timeout timer %s: %m",
+		    job->label);
+}
+
+static void
+cancel_notify_timeout_timer(job_t *job)
+{
+	struct kevent kev;
+
+	EV_SET(&kev, timer_ident(job, TIMER_NOTIFY_TMO), EVFILT_TIMER,
+	    EV_DELETE, 0, 0, NULL);
+	kevent(g_kqueue_fd, &kev, 1, NULL, 0, NULL);
+}
+
+/*
+ * Arm a recurring watchdog timer (fires every watchdog_sec seconds).
+ * Timer type: TIMER_WATCHDOG (bits 0b10).
+ */
+static void
+arm_watchdog_timer(job_t *job)
+{
+	struct kevent kev;
+	int64_t ms;
+
+	if (job->watchdog_sec <= 0)
+		return;
+
+	ms = (int64_t)job->watchdog_sec * 1000;
+	EV_SET(&kev, timer_ident(job, TIMER_WATCHDOG), EVFILT_TIMER,
+	    EV_ADD, NOTE_MSECONDS, ms, NULL);
+	if (kevent(g_kqueue_fd, &kev, 1, NULL, 0, NULL) == -1)
+		prowl_log(LOG_WARNING, "kevent watchdog timer %s: %m",
+		    job->label);
+	else
+		job->watchdog_timer_active = true;
+}
+
+static void
+cancel_watchdog_timer(job_t *job)
+{
+	struct kevent kev;
+
+	if (!job->watchdog_timer_active)
+		return;
+	EV_SET(&kev, timer_ident(job, TIMER_WATCHDOG), EVFILT_TIMER,
+	    EV_DELETE, 0, 0, NULL);
+	kevent(g_kqueue_fd, &kev, 1, NULL, 0, NULL);
+	job->watchdog_timer_active = false;
+}
+
+/*
+ * Build the notify socket filesystem path for a job.
+ * sun_path is 104 bytes on BSD; returns -1 if path would truncate.
+ */
+static int
+notify_socket_path(const job_t *job, char *out, size_t outsz)
+{
+	int n;
+
+	n = snprintf(out, outsz, "%s/%s", PROWLD_NOTIFY_DIR, job->label);
+	if (n < 0 || (size_t)n >= outsz || (size_t)n >= 104)
+		return (-1);
+	return (0);
+}
+
+/*
+ * Create, bind, and kqueue-register the notify datagram socket for a job.
+ * Returns the fd, or -1 on failure.  The kev udata is set to the job pointer
+ * so the event loop can dispatch EVFILT_READ events to the right job.
+ */
+static int
+notify_socket_open(job_t *job)
+{
+	struct sockaddr_un sun;
+	struct kevent kev;
+	char path[PROWL_PATH_MAX];
+	int fd;
+
+	if (notify_socket_path(job, path, sizeof(path)) == -1) {
+		prowl_log(LOG_WARNING,
+		    "notify socket path too long for job %s", job->label);
+		return (-1);
+	}
+
+	unlink(path);
+
+	fd = socket(AF_UNIX, SOCK_DGRAM, 0);
+	if (fd == -1) {
+		prowl_log(LOG_WARNING, "notify_socket_open socket: %m");
+		return (-1);
+	}
+
+	memset(&sun, 0, sizeof(sun));
+	sun.sun_family = AF_UNIX;
+	strlcpy(sun.sun_path, path, sizeof(sun.sun_path));
+
+	if (bind(fd, (struct sockaddr *)&sun, sizeof(sun)) == -1) {
+		prowl_log(LOG_WARNING, "notify_socket_open bind %s: %m", path);
+		close(fd);
+		return (-1);
+	}
+
+	chmod(path, 0600);
+
+	/* udata = job pointer so the event loop knows which job to notify */
+	EV_SET(&kev, (uintptr_t)fd, EVFILT_READ, EV_ADD, 0, 0, (void *)job);
+	if (kevent(g_kqueue_fd, &kev, 1, NULL, 0, NULL) == -1) {
+		prowl_log(LOG_WARNING, "notify_socket_open kevent: %m");
+		close(fd);
+		unlink(path);
+		return (-1);
+	}
+
+	return (fd);
+}
+
+/*
+ * Deregister, close, and unlink the notify socket for a job.
+ */
+static void
+notify_socket_close(job_t *job)
+{
+	struct kevent kev;
+	char path[PROWL_PATH_MAX];
+
+	if (job->notify_fd < 0)
+		return;
+
+	EV_SET(&kev, (uintptr_t)job->notify_fd, EVFILT_READ, EV_DELETE,
+	    0, 0, NULL);
+	kevent(g_kqueue_fd, &kev, 1, NULL, 0, NULL);
+
+	if (notify_socket_path(job, path, sizeof(path)) == 0)
+		unlink(path);
+
+	close(job->notify_fd);
+	job->notify_fd = -1;
 }
 
 /*
@@ -232,9 +410,14 @@ drop_privileges(const job_t *job)
 static void
 child_setup_and_exec(job_t *job)
 {
+	/* +4: NOTIFY_SOCKET, WATCHDOG_USEC, WATCHDOG_PID, sentinel NULL */
 	char *argv[PROWL_ARGS_MAX + 2];
-	char *envp[PROWL_ENV_MAX + 1];
-	int i, argc;
+	char *envp[PROWL_ENV_MAX + 4];
+	char notify_env[PROWL_PATH_MAX + 16];
+	char watchdog_usec_env[64];
+	char watchdog_pid_env[64];
+	int i, argc, envc;
+	bool need_execve;
 
 	/* Change working directory */
 	if (job->working_directory[0] != '\0') {
@@ -289,17 +472,43 @@ child_setup_and_exec(job_t *job)
 		_exit(127);
 	}
 
-	/* Native unit */
+	/* Native unit: build argv */
 	argv[0] = job->program;
 	argc = 1;
 	for (i = 0; i < job->argc && argc < PROWL_ARGS_MAX; i++)
 		argv[argc++] = job->arguments[i];
 	argv[argc] = NULL;
 
-	if (job->envc > 0) {
-		for (i = 0; i < job->envc && i < PROWL_ENV_MAX; i++)
-			envp[i] = job->envp[i];
-		envp[i] = NULL;
+	/* Build envp, injecting daemon-protocol vars */
+	envc = 0;
+	need_execve = false;
+
+	for (i = 0; i < job->envc && envc < PROWL_ENV_MAX; i++)
+		envp[envc++] = job->envp[i];
+
+	if (job->notify_type == NOTIFY_NOTIFY) {
+		char npath[PROWL_PATH_MAX];
+		if (notify_socket_path(job, npath, sizeof(npath)) == 0) {
+			snprintf(notify_env, sizeof(notify_env),
+			    "NOTIFY_SOCKET=%s", npath);
+			envp[envc++] = notify_env;
+			need_execve = true;
+		}
+	}
+
+	if (job->watchdog_sec > 0) {
+		snprintf(watchdog_usec_env, sizeof(watchdog_usec_env),
+		    "WATCHDOG_USEC=%lld",
+		    (long long)job->watchdog_sec * 1000000LL);
+		snprintf(watchdog_pid_env, sizeof(watchdog_pid_env),
+		    "WATCHDOG_PID=%d", (int)getpid());
+		envp[envc++] = watchdog_usec_env;
+		envp[envc++] = watchdog_pid_env;
+		need_execve = true;
+	}
+
+	if (envc > 0 || need_execve) {
+		envp[envc] = NULL;
 		execve(job->program, argv, envp);
 	} else {
 		execv(job->program, argv);
@@ -315,6 +524,7 @@ int
 supervisor_start(job_t *job)
 {
 	pid_t pid;
+	bool use_notify;
 
 	if (job->state == JOB_STATE_RUNNING ||
 	    job->state == JOB_STATE_STARTING)
@@ -326,9 +536,26 @@ supervisor_start(job_t *job)
 
 	resolve_job_privileges(job);
 
+	/*
+	 * Create the notify socket before fork so it exists when the child
+	 * execs and reads NOTIFY_SOCKET from its environment.
+	 */
+	use_notify = false;
+	if (job->notify_type == NOTIFY_NOTIFY &&
+	    job->type != JOB_TYPE_RCSHIM) {
+		job->notify_fd = notify_socket_open(job);
+		if (job->notify_fd >= 0)
+			use_notify = true;
+		else
+			prowl_log(LOG_WARNING,
+			    "job %s: notify socket failed, "
+			    "falling back to throttle timer", job->label);
+	}
+
 	pid = fork();
 	if (pid == -1) {
 		prowl_log(LOG_ERR, "fork %s: %m", job->label);
+		notify_socket_close(job);
 		job_set_state(job, JOB_STATE_FAILED);
 		if (g_current_starts > 0)
 			g_current_starts--;
@@ -336,9 +563,12 @@ supervisor_start(job_t *job)
 	}
 
 	if (pid == 0) {
-		/* Child: close kqueue fd before exec */
+		/* Child: close descriptors that must not be inherited */
 		if (g_kqueue_fd >= 0)
 			close(g_kqueue_fd);
+		/* Close the server side of the notify socket in the child */
+		if (job->notify_fd >= 0)
+			close(job->notify_fd);
 		child_setup_and_exec(job);
 		/* NOTREACHED */
 	}
@@ -346,7 +576,20 @@ supervisor_start(job_t *job)
 	/* Parent */
 	job->pid = pid;
 	watch_child(pid, job);
-	arm_throttle_timer(job);
+
+	if (use_notify) {
+		/* Wait for READY=1; use exit_timeout as the deadline */
+		arm_notify_timeout_timer(job);
+	} else {
+		/* Promote to RUNNING after throttle_interval seconds alive */
+		arm_throttle_timer(job);
+	}
+
+	if (job->watchdog_sec > 0) {
+		job->watchdog_last_ping = time(NULL);
+		arm_watchdog_timer(job);
+	}
+
 	prowl_log(LOG_INFO, "job %s started, pid %d", job->label, (int)pid);
 	return (0);
 }
@@ -370,6 +613,7 @@ supervisor_stop(job_t *job, bool force)
 	    force ? "force-stopping" : "stopping",
 	    job->label, (int)job->pid);
 
+	cancel_watchdog_timer(job);
 	job_set_state(job, JOB_STATE_STOPPING);
 
 	if (force) {
@@ -432,6 +676,155 @@ supervisor_handle_stop_timeout(job_t *job)
 }
 
 /*
+ * Called when the notify-timeout timer fires.
+ * The job never sent READY=1 within exit_timeout seconds.
+ * Kill immediately; supervisor_reap will apply keep_alive policy.
+ */
+void
+supervisor_handle_notify_timeout(job_t *job)
+{
+	if (job->state != JOB_STATE_STARTING)
+		return;
+
+	prowl_log(LOG_WARNING,
+	    "job %s (pid %d): no READY=1 within timeout; killing",
+	    job->label, (int)job->pid);
+
+	notify_socket_close(job);
+
+	if (job->pid > 0)
+		kill(job->pid, SIGKILL);
+}
+
+/*
+ * Called when the watchdog timer fires (recurring every watchdog_sec seconds).
+ * If the last keepalive ping was too long ago, treat the service as hung.
+ */
+void
+supervisor_handle_watchdog(job_t *job)
+{
+	time_t now = time(NULL);
+
+	if (job->state != JOB_STATE_RUNNING)
+		return;
+
+	if (now - job->watchdog_last_ping < (time_t)job->watchdog_sec)
+		return;
+
+	prowl_log(LOG_WARNING,
+	    "job %s (pid %d): watchdog timeout; sending SIGTERM",
+	    job->label, (int)job->pid);
+
+	supervisor_stop(job, false);
+}
+
+/*
+ * Called when the notify socket becomes readable.
+ * Reads one datagram, parses KEY=value\n lines, and dispatches them.
+ */
+void
+supervisor_handle_notify(job_t *job)
+{
+	char buf[4096];
+	ssize_t n;
+	char *p, *end, *eq, *nl;
+
+	if (job->notify_fd < 0)
+		return;
+
+	n = recv(job->notify_fd, buf, sizeof(buf) - 1, 0);
+	if (n <= 0)
+		return;
+	buf[n] = '\0';
+
+	p = buf;
+	end = buf + n;
+
+	while (p < end) {
+		nl = memchr(p, '\n', (size_t)(end - p));
+		if (nl != NULL)
+			*nl = '\0';
+
+		eq = strchr(p, '=');
+		if (eq != NULL) {
+			*eq = '\0';
+			const char *key = p;
+			const char *val = eq + 1;
+
+			if (strcmp(key, "READY") == 0 &&
+			    strcmp(val, "1") == 0) {
+				if (job->state == JOB_STATE_STARTING) {
+					cancel_notify_timeout_timer(job);
+					job_set_state(job, JOB_STATE_RUNNING);
+					if (g_current_starts > 0)
+						g_current_starts--;
+					prowl_log(LOG_INFO,
+					    "job %s ready (READY=1)",
+					    job->label);
+					dag_schedule_ready();
+				}
+			} else if (strcmp(key, "STATUS") == 0) {
+				strlcpy(job->status_msg, val,
+				    sizeof(job->status_msg));
+			} else if (strcmp(key, "MAINPID") == 0) {
+				pid_t new_pid = (pid_t)strtol(val, NULL, 10);
+				if (new_pid > 0 && new_pid != job->pid) {
+					struct kevent kev;
+					/* Drop watcher for the old pid */
+					if (job->pid > 0) {
+						EV_SET(&kev,
+						    (uintptr_t)job->pid,
+						    EVFILT_PROC, EV_DELETE,
+						    0, 0, NULL);
+						kevent(g_kqueue_fd, &kev,
+						    1, NULL, 0, NULL);
+					}
+					job->pid = new_pid;
+					watch_child(new_pid, job);
+					prowl_log(LOG_INFO,
+					    "job %s main pid → %d",
+					    job->label, (int)new_pid);
+				}
+			} else if (strcmp(key, "WATCHDOG") == 0 &&
+			    strcmp(val, "1") == 0) {
+				job->watchdog_last_ping = time(NULL);
+			} else if (strcmp(key, "RELOADING") == 0) {
+				prowl_log(LOG_INFO,
+				    "job %s signaled RELOADING", job->label);
+			} else if (strcmp(key, "STOPPING") == 0) {
+				prowl_log(LOG_INFO,
+				    "job %s signaled STOPPING", job->label);
+			} else if (strcmp(key, "ERRNO") == 0) {
+				prowl_log(LOG_WARNING,
+				    "job %s startup errno: %s",
+				    job->label, val);
+			} else if (strcmp(key, "EXTEND_TIMEOUT_USEC") == 0) {
+				/* Extend the notify timeout by the given µs */
+				long long usec = strtoll(val, NULL, 10);
+				if (usec > 0) {
+					struct kevent kev;
+					int64_t ms_extra =
+					    (int64_t)(usec / 1000);
+					cancel_notify_timeout_timer(job);
+					EV_SET(&kev,
+					    timer_ident(job, TIMER_NOTIFY_TMO),
+					    EVFILT_TIMER,
+					    EV_ADD | EV_ONESHOT,
+					    NOTE_MSECONDS, ms_extra, NULL);
+					kevent(g_kqueue_fd, &kev,
+					    1, NULL, 0, NULL);
+				}
+			}
+			/* FDSTORE, unknown keys: silently ignored */
+		}
+
+		if (nl == NULL)
+			break;
+		p = nl + 1;
+	}
+}
+
+/*
  * Determine restart policy from keep_alive settings and exit status.
  */
 static bool
@@ -476,13 +869,17 @@ supervisor_reap(pid_t pid, int status)
 
 	/* Cancel throttle timer if still active */
 	if (job->throttle_timer_active) {
-		EV_SET(&kev, (uintptr_t)job, EVFILT_TIMER, EV_DELETE,
-		    0, 0, NULL);
+		EV_SET(&kev, timer_ident(job, TIMER_THROTTLE), EVFILT_TIMER,
+		    EV_DELETE, 0, 0, NULL);
 		kevent(g_kqueue_fd, &kev, 1, NULL, 0, NULL);
 		job->throttle_timer_active = false;
 		if (g_current_starts > 0)
 			g_current_starts--;
 	}
+
+	cancel_watchdog_timer(job);
+	cancel_notify_timeout_timer(job);
+	notify_socket_close(job);
 
 	if (WIFEXITED(status))
 		prowl_log(LOG_NOTICE, "job %s exited with code %d",
