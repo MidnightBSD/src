@@ -475,7 +475,7 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 		while ((sobj = ucl_object_iterate(obj, &sit, true)) != NULL) {
 			const char *sname;
 			const ucl_object_t *f;
-			prowl_socket_t *s;
+			prowl_socket_t *sock;
 
 			if (job->sockets_count >= PROWL_SOCKETS_MAX) {
 				prowl_log(LOG_WARNING,
@@ -487,61 +487,61 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 				continue;
 
 			sname = ucl_object_key(sobj);
-			s = &job->sockets[job->sockets_count];
+			sock = &job->sockets[job->sockets_count];
 
-			strlcpy(s->name, sname, sizeof(s->name));
+			strlcpy(sock->name, sname, sizeof(sock->name));
 
 			/* Defaults */
-			s->socktype = SOCK_STREAM;
-			s->family   = AF_UNSPEC;
-			s->backlog  = 0;	/* SOMAXCONN */
+			sock->socktype = SOCK_STREAM;
+			sock->family   = AF_UNSPEC;
+			sock->backlog  = 0;	/* SOMAXCONN */
 
 			/* type: "stream" (default), "dgram", "seqpacket" */
 			f = ucl_object_lookup(sobj, "type");
 			if (f != NULL && ucl_object_type(f) == UCL_STRING) {
 				const char *t = ucl_object_tostring(f);
 				if (strcmp(t, "dgram") == 0)
-					s->socktype = SOCK_DGRAM;
+					sock->socktype = SOCK_DGRAM;
 				else if (strcmp(t, "seqpacket") == 0)
-					s->socktype = SOCK_SEQPACKET;
+					sock->socktype = SOCK_SEQPACKET;
 				/* else: stream (default) */
 			}
 
 			/* path → AF_UNIX */
 			f = ucl_object_lookup(sobj, "path");
 			if (f != NULL && ucl_object_type(f) == UCL_STRING) {
-				strlcpy(s->path, ucl_object_tostring(f),
-				    sizeof(s->path));
-				s->family = AF_UNIX;
+				strlcpy(sock->path, ucl_object_tostring(f),
+				    sizeof(sock->path));
+				sock->family = AF_UNIX;
 			}
 
 			/* port → AF_INET or AF_INET6 */
 			f = ucl_object_lookup(sobj, "port");
 			if (f != NULL) {
-				s->port = (int)ucl_object_toint(f);
-				if (s->family == AF_UNSPEC)
-					s->family = AF_INET;
+				sock->port = (int)ucl_object_toint(f);
+				if (sock->family == AF_UNSPEC)
+					sock->family = AF_INET;
 			}
 
 			/* host → refines family */
 			f = ucl_object_lookup(sobj, "host");
 			if (f != NULL && ucl_object_type(f) == UCL_STRING) {
-				strlcpy(s->host, ucl_object_tostring(f),
-				    sizeof(s->host));
+				strlcpy(sock->host, ucl_object_tostring(f),
+				    sizeof(sock->host));
 				/* Auto-detect IPv6 if host contains ':' */
-				if (strchr(s->host, ':') != NULL)
-					s->family = AF_INET6;
-				else if (s->family == AF_UNSPEC)
-					s->family = AF_INET;
+				if (strchr(sock->host, ':') != NULL)
+					sock->family = AF_INET6;
+				else if (sock->family == AF_UNSPEC)
+					sock->family = AF_INET;
 			}
 
 			/* backlog */
 			f = ucl_object_lookup(sobj, "backlog");
 			if (f != NULL)
-				s->backlog = (int)ucl_object_toint(f);
+				sock->backlog = (int)ucl_object_toint(f);
 
 			/* Require a usable address */
-			if (s->family == AF_UNSPEC) {
+			if (sock->family == AF_UNSPEC) {
 				prowl_log(LOG_WARNING,
 				    "unit %s: socket '%s' has no path or port, "
 				    "skipping", path, sname);
