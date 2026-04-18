@@ -49,6 +49,8 @@
 #include <syslog.h>
 #include <unistd.h>
 
+#include <ucl.h>
+
 #include "prowld.h"
 
 /* Global state */
@@ -116,11 +118,92 @@ ensure_dirs(void)
 static void
 load_config(void)
 {
-	g_config.max_concurrent_starts = DEFAULT_MAX_STARTS;
-	g_config.shutdown_timeout = DEFAULT_SHUTDOWN_TMO;
-	g_config.debug = false;
+	struct ucl_parser *parser;
+	const ucl_object_t *root, *obj;
+	struct stat sb;
 
-	/* TODO: parse PROWLD_CONF_PATH with libucl in a future pass */
+	/* Apply defaults first; debug is not reset here — it is set by
+	 * the command-line -d flag in main() and must not be overridden. */
+	g_config.max_concurrent_starts = DEFAULT_MAX_STARTS;
+	g_config.shutdown_timeout      = DEFAULT_SHUTDOWN_TMO;
+
+	if (stat(PROWLD_CONF_PATH, &sb) == -1) {
+		if (errno != ENOENT)
+			prowl_log(LOG_WARNING, "load_config stat %s: %m",
+			    PROWLD_CONF_PATH);
+		return;
+	}
+
+	/* Reject config files not owned by root or world-writable. */
+	if (sb.st_uid != 0) {
+		prowl_log(LOG_WARNING,
+		    "%s: not owned by root, using defaults", PROWLD_CONF_PATH);
+		return;
+	}
+	if (sb.st_mode & S_IWOTH) {
+		prowl_log(LOG_WARNING,
+		    "%s: world-writable, using defaults", PROWLD_CONF_PATH);
+		return;
+	}
+
+	parser = ucl_parser_new(UCL_PARSER_NO_FILEVARS);
+	if (parser == NULL) {
+		prowl_log(LOG_ERR, "load_config: ucl_parser_new failed");
+		return;
+	}
+
+	if (!ucl_parser_add_file(parser, PROWLD_CONF_PATH)) {
+		prowl_log(LOG_ERR, "load_config %s: %.128s",
+		    PROWLD_CONF_PATH, ucl_parser_get_error(parser));
+		ucl_parser_free(parser);
+		return;
+	}
+
+	root = ucl_parser_get_object(parser);
+	ucl_parser_free(parser);
+	if (root == NULL)
+		return;
+
+	/* max_concurrent_starts: integer >= 0, or the string "auto" (= 0). */
+	obj = ucl_object_lookup(root, "max_concurrent_starts");
+	if (obj != NULL) {
+		if (ucl_object_type(obj) == UCL_STRING &&
+		    strcmp(ucl_object_tostring(obj), "auto") == 0) {
+			g_config.max_concurrent_starts = DEFAULT_MAX_STARTS;
+		} else {
+			int64_t v = ucl_object_toint(obj);
+			if (v >= 0)
+				g_config.max_concurrent_starts = (int)v;
+			else
+				prowl_log(LOG_WARNING,
+				    "load_config: max_concurrent_starts must "
+				    "be >= 0, using default");
+		}
+	}
+
+	/* shutdown_timeout: integer > 0 seconds. */
+	obj = ucl_object_lookup(root, "shutdown_timeout");
+	if (obj != NULL) {
+		int64_t v = ucl_object_toint(obj);
+		if (v > 0)
+			g_config.shutdown_timeout = (int)v;
+		else
+			prowl_log(LOG_WARNING,
+			    "load_config: shutdown_timeout must be > 0, "
+			    "using default");
+	}
+
+	/* debug: boolean.  Config can enable debug; -d flag always wins. */
+	obj = ucl_object_lookup(root, "debug");
+	if (obj != NULL && ucl_object_type(obj) == UCL_BOOLEAN &&
+	    ucl_object_toboolean(obj))
+		g_config.debug = true;
+
+	ucl_object_unref(root);
+
+	prowl_log(LOG_INFO,
+	    "config: max_concurrent_starts=%d shutdown_timeout=%d",
+	    g_config.max_concurrent_starts, g_config.shutdown_timeout);
 }
 
 static void
@@ -326,8 +409,6 @@ main(int argc, char *argv[])
 	if (!debug && daemon(0, 0) == -1)
 		err(1, "daemon");
 
-	g_config.debug = debug;
-
 	g_kqueue_fd = kqueue();
 	if (g_kqueue_fd == -1)
 		err(1, "kqueue");
@@ -336,6 +417,10 @@ main(int argc, char *argv[])
 	write_pidfile();
 	setup_kqueue_signals();
 	load_config();
+
+	/* Command-line -d always enables debug regardless of config file. */
+	if (debug)
+		g_config.debug = true;
 
 	if (ipc_init() == -1) {
 		prowl_log(LOG_ERR, "IPC init failed, aborting");

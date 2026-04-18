@@ -2,13 +2,18 @@
 # prowld.conf - prowld(8) daemon configuration
 #
 # This file is parsed by libucl.  UCL, JSON, and simplified YAML are accepted.
+# The file must be owned by root and must not be world-writable.
 #
 
 # Maximum number of simultaneously-starting jobs.
-# "auto" sets the limit to ncpu * 2 (minimum 4).
+# Set to 0 or the string "auto" to use ncpu * 2 (minimum 4).
 max_concurrent_starts = auto
 
 # System-wide budget (in seconds) for orderly shutdown.
 # Services with shutdown_wait=true or KEYWORD: shutdown are given up to this
 # many seconds to exit cleanly before SIGKILL is sent.
 shutdown_timeout = 300
+
+# Enable debug logging to stderr in addition to syslog.
+# The command-line -d flag also enables this and takes precedence.
+# debug = false
