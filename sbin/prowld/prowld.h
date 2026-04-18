@@ -54,6 +54,8 @@
 #define PROWLD_CONF_PATH	"/etc/prowld/prowld.conf"
 #define PROWLD_MASK_DIR		"/var/db/prowld/masked.d"
 #define PROWLD_DB_DIR		"/var/db/prowld"
+#define PROWLD_LOG_DIR		"/var/log/prowld"
+#define PROWLD_JOB_LOG_DIR	"/var/log/prowld/jobs"
 
 /* Unit file directories (searched in order; later overrides earlier) */
 #define UNIT_DIR_BASE		"/etc/prowld/units.d"

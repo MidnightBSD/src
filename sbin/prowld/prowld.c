@@ -104,6 +104,8 @@ ensure_dirs(void)
 		{ PROWLD_NOTIFY_DIR, 0700 },	/* root-only: readiness pipes */
 		{ PROWLD_DB_DIR,     0755 },	/* world-readable for tooling */
 		{ PROWLD_MASK_DIR,   0700 },	/* root-only: mask symlinks */
+		{ PROWLD_LOG_DIR,    0750 },	/* prowld own logs */
+		{ PROWLD_JOB_LOG_DIR, 0750 },	/* per-job log files */
 		{ NULL, 0 }
 	};
 	int i;

@@ -204,10 +204,14 @@ job_to_json(const job_t *job, char *buf, size_t bufsz)
 	char elabel[PROWL_LABEL_MAX * 2 + 1];
 	char edesc[PROWL_DESC_MAX * 2 + 1];
 	char ercname[PROWL_LABEL_MAX * 2 + 1];
+	char estdout[PROWL_PATH_MAX * 2 + 1];
+	char estderr[PROWL_PATH_MAX * 2 + 1];
 
 	json_escape_str(job->label, elabel, sizeof(elabel));
 	json_escape_str(job->description, edesc, sizeof(edesc));
 	json_escape_str(job->rc_name, ercname, sizeof(ercname));
+	json_escape_str(job->stdout_path, estdout, sizeof(estdout));
+	json_escape_str(job->stderr_path, estderr, sizeof(estderr));
 
 	return snprintf(buf, bufsz,
 	    "{"
@@ -218,7 +222,9 @@ job_to_json(const job_t *job, char *buf, size_t bufsz)
 	    "\"pid\":%d,"
 	    "\"rc_name\":\"%s\","
 	    "\"enabled\":%s,"
-	    "\"restart_count\":%d"
+	    "\"restart_count\":%d,"
+	    "\"stdout_path\":\"%s\","
+	    "\"stderr_path\":\"%s\""
 	    "}",
 	    elabel,
 	    edesc,
@@ -227,7 +233,51 @@ job_to_json(const job_t *job, char *buf, size_t bufsz)
 	    (int)job->pid,
 	    ercname,
 	    job->enabled ? "true" : "false",
-	    job->restart_count);
+	    job->restart_count,
+	    estdout,
+	    estderr);
+}
+
+/*
+ * Append a JSON array of dependency names to buf.
+ * Returns the number of bytes written, or -1 on truncation.
+ */
+static int
+append_dep_array(const job_t *job, char *buf, size_t bufsz)
+{
+	size_t used = 0;
+	bool first = true;
+	char ename[PROWL_LABEL_MAX * 2 + 1];
+	int i, n;
+
+	n = snprintf(buf + used, bufsz - used, "[");
+	if (n < 0 || (size_t)n >= bufsz - used)
+		return (-1);
+	used += (size_t)n;
+
+	for (i = 0; i < job->deps_count; i++) {
+		if (!first) {
+			if (used + 1 >= bufsz)
+				return (-1);
+			buf[used++] = ',';
+		}
+		first = false;
+
+		json_escape_str(job->deps[i].name, ename, sizeof(ename));
+		n = snprintf(buf + used, bufsz - used,
+		    "{\"name\":\"%s\",\"hard\":%s}",
+		    ename, job->deps[i].hard ? "true" : "false");
+		if (n < 0 || (size_t)n >= bufsz - used)
+			return (-1);
+		used += (size_t)n;
+	}
+
+	n = snprintf(buf + used, bufsz - used, "]");
+	if (n < 0 || (size_t)n >= bufsz - used)
+		return (-1);
+	used += (size_t)n;
+
+	return ((int)used);
 }
 
 /* ------------------------------------------------------------------ */
@@ -304,7 +354,7 @@ cmd_list(int fd, const char *id, const ucl_object_t *req)
 {
 	job_t *job;
 	char buf[IPC_MSG_MAX];
-	char jbuf[512];
+	char jbuf[4096];
 	size_t used = 0;
 	bool first = true;
 	const ucl_object_t *filt, *sf;
@@ -351,7 +401,7 @@ static void
 cmd_status(int fd, const char *id, const ucl_object_t *req)
 {
 	job_t *job;
-	char jbuf[512];
+	char jbuf[4096];
 
 	job = resolve_target(req, fd, id);
 	if (job == NULL)
@@ -510,7 +560,7 @@ static void
 cmd_show(int fd, const char *id, const ucl_object_t *req)
 {
 	job_t *job;
-	char jbuf[512];
+	char jbuf[4096];
 
 	job = resolve_target(req, fd, id);
 	if (job == NULL)
@@ -518,6 +568,77 @@ cmd_show(int fd, const char *id, const ucl_object_t *req)
 
 	job_to_json(job, jbuf, sizeof(jbuf));
 	ipc_send_ok(fd, id, jbuf);
+}
+
+static void
+cmd_dependencies(int fd, const char *id, const ucl_object_t *req)
+{
+	job_t *job;
+	char depbuf[4096];
+
+	job = resolve_target(req, fd, id);
+	if (job == NULL)
+		return;
+
+	if (append_dep_array(job, depbuf, sizeof(depbuf)) < 0) {
+		ipc_send_error(fd, id, "dependency list too large");
+		return;
+	}
+	ipc_send_ok(fd, id, depbuf);
+}
+
+/*
+ * cmd_graph: emit the full dependency graph as a JSON array of edges.
+ * Each edge: {"from":"<label>","to":"<dep_name>","hard":<bool>}
+ */
+static void
+cmd_graph(int fd, const char *id, const ucl_object_t *req)
+{
+	job_t *job;
+	char buf[IPC_MSG_MAX];
+	char efrom[PROWL_LABEL_MAX * 2 + 1];
+	char eto[PROWL_LABEL_MAX * 2 + 1];
+	size_t used = 0;
+	bool first = true;
+	int i, n;
+
+	(void)req;
+
+	n = snprintf(buf + used, sizeof(buf) - used, "[");
+	if (n < 0 || (size_t)n >= sizeof(buf) - used)
+		goto trunc;
+	used += (size_t)n;
+
+	TAILQ_FOREACH(job, &g_jobs, entries) {
+		json_escape_str(job->label, efrom, sizeof(efrom));
+		for (i = 0; i < job->deps_count; i++) {
+			json_escape_str(job->deps[i].name, eto, sizeof(eto));
+			if (!first) {
+				if (used + 1 >= sizeof(buf))
+					goto trunc;
+				buf[used++] = ',';
+			}
+			first = false;
+			n = snprintf(buf + used, sizeof(buf) - used,
+			    "{\"from\":\"%s\",\"to\":\"%s\",\"hard\":%s}",
+			    efrom, eto,
+			    job->deps[i].hard ? "true" : "false");
+			if (n < 0 || (size_t)n >= sizeof(buf) - used)
+				goto trunc;
+			used += (size_t)n;
+		}
+	}
+
+	n = snprintf(buf + used, sizeof(buf) - used, "]");
+	if (n < 0 || (size_t)n >= sizeof(buf) - used)
+		goto trunc;
+	used += (size_t)n;
+
+	ipc_send_ok(fd, id, buf);
+	return;
+
+trunc:
+	ipc_send_error(fd, id, "graph too large");
 }
 
 static void
@@ -632,7 +753,9 @@ ipc_dispatch_message(int fd, const char *json, size_t len)
 		 */
 		if (strcmp(verb, "list") == 0 ||
 		    strcmp(verb, "status") == 0 ||
-		    strcmp(verb, "show") == 0) {
+		    strcmp(verb, "show") == 0 ||
+		    strcmp(verb, "dependencies") == 0 ||
+		    strcmp(verb, "graph") == 0) {
 			if (!ipc_peer_can_query(client)) {
 				ipc_send_error(fd, id,
 				    "operation not permitted");
@@ -671,6 +794,10 @@ ipc_dispatch_message(int fd, const char *json, size_t len)
 		cmd_unmask(fd, id, root);
 	else if (strcmp(verb, "show") == 0)
 		cmd_show(fd, id, root);
+	else if (strcmp(verb, "dependencies") == 0)
+		cmd_dependencies(fd, id, root);
+	else if (strcmp(verb, "graph") == 0)
+		cmd_graph(fd, id, root);
 	else if (strcmp(verb, "reload-config") == 0)
 		cmd_reload_config(fd, id, root);
 	else if (strcmp(verb, "daemon-reexec") == 0)

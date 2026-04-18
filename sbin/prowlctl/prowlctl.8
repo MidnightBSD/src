@@ -105,7 +105,31 @@ Re-execute
 in place (for in-service upgrades).
 Not yet implemented in Phase 1.
 .It Cm dependencies Ar label
-Show the dependency tree for a job.
+Show the dependency list for a job.
+Each entry identifies the dependency name and whether it is a hard
+.Pq require
+or soft
+.Pq want
+dependency.
+.It Cm graph Op Fl -format Ns = Ns Ar dot
+Emit the full service dependency graph.
+Without options, output is a human-readable edge table.
+With
+.Fl -format Ns = Ns Ar dot ,
+output is Graphviz DOT format suitable for rendering with
+.Xr dot 1 .
+.It Cm logs Ar label Op Fl -follow Op Fl -lines Ns = Ns Ar N
+Display the log file for a job.
+Only available for jobs that write to
+.Pa /var/log/prowld/jobs/<label>.log .
+.Fl -follow
+tails the log continuously (similar to
+.Xr tail 1
+.Fl f ) .
+.Fl -lines Ns = Ns Ar N
+limits output to the last
+.Ar N
+lines (default 50).
 .El
 .Sh EXIT STATUS
 .Bl -tag -width "3" -compact
@@ -146,10 +170,13 @@ Get machine-readable output:
 prowlctl --json status org.midnightbsd.sshd
 .Ed
 .Sh FILES
-.Bl -tag -width "/var/run/prowld/prowld.sock" -compact
+.Bl -tag -width "/var/log/prowld/jobs/<label>.log" -compact
 .It Pa /var/run/prowld/prowld.sock
 .Xr prowld 8
 control socket.
+.It Pa /var/log/prowld/jobs/<label>.log
+Per-job log file, read by
+.Cm logs .
 .El
 .Sh SEE ALSO
 .Xr prowld 8 ,

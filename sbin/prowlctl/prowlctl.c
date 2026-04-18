@@ -42,10 +42,12 @@
 #include <ctype.h>
 #include <err.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 #define PROWLD_SOCK_PATH	"/var/run/prowld/prowld.sock"
@@ -104,6 +106,8 @@ usage(void)
 	    "  reload-config\n"
 	    "  daemon-reexec\n"
 	    "  dependencies <label>\n"
+	    "  graph [--format=dot]\n"
+	    "  logs <label> [--follow] [--lines=N]\n"
 	);
 	exit(1);
 }
@@ -528,6 +532,371 @@ do_simple_target(const char *verb, int argc, char *argv[])
 	return (ret);
 }
 
+/*
+ * Print a JSON array of dependency objects.
+ * Format: [{"name":"<n>","hard":<bool>}, ...]
+ */
+static void
+print_dep_list(const char *json)
+{
+	const char *p = json;
+	char item[512];
+	char name[256];
+	char hard[8];
+	size_t depth = 0;
+	size_t i = 0;
+	bool in_string = false;
+
+	while (*p != '\0') {
+		if (!in_string) {
+			if (*p == '[' || *p == '{') {
+				if (*p == '{' && depth == 1)
+					i = 0;
+				depth++;
+			} else if (*p == ']' || *p == '}') {
+				depth--;
+				if (*p == '}' && depth == 1) {
+					if (i < sizeof(item) - 1) {
+						item[i++] = '}';
+						item[i] = '\0';
+						json_get_str(item, "name",
+						    name, sizeof(name));
+						json_get_str(item, "hard",
+						    hard, sizeof(hard));
+						printf("  %s %s\n",
+						    strcmp(hard, "true") == 0
+						    ? "[require]" : "[want]  ",
+						    name);
+					}
+					i = 0;
+				}
+			} else if (*p == '"')
+				in_string = true;
+			if (depth >= 2 && i < sizeof(item) - 1)
+				item[i++] = *p;
+		} else {
+			if (*p == '"' && (i == 0 || item[i - 1] != '\\'))
+				in_string = false;
+			if (depth >= 2 && i < sizeof(item) - 1)
+				item[i++] = *p;
+		}
+		p++;
+	}
+}
+
+static int
+do_dependencies(int argc, char *argv[])
+{
+	char req[REQ_MAX];
+	char *resp;
+	const char *result;
+	int ret;
+
+	if (argc < 1) {
+		fprintf(stderr, "prowlctl: dependencies requires a label\n");
+		return (EXIT_NOT_FOUND);
+	}
+
+	if (!validate_label_input(argv[0])) {
+		fprintf(stderr, "prowlctl: invalid label '%s'\n", argv[0]);
+		return (EXIT_NOT_FOUND);
+	}
+
+	snprintf(req, sizeof(req),
+	    "{\"verb\":\"dependencies\",\"target\":\"%s\"}", argv[0]);
+
+	if (send_request(g_sock, req) == -1)
+		err(EXIT_NO_DAEMON, "send");
+
+	resp = recv_response(g_sock);
+	ret = check_response(resp);
+	if (ret != EXIT_OK) {
+		free(resp);
+		return (ret);
+	}
+
+	if (g_json) {
+		puts(resp);
+		free(resp);
+		return (EXIT_OK);
+	}
+
+	printf("Dependencies of %s:\n", argv[0]);
+	result = strstr(resp, "\"result\":");
+	if (result != NULL) {
+		result += strlen("\"result\":");
+		print_dep_list(result);
+	}
+
+	free(resp);
+	return (EXIT_OK);
+}
+
+/*
+ * Print the dependency graph edges in DOT format.
+ * Input: JSON array of {"from":"...","to":"...","hard":<bool>}
+ */
+static void
+print_graph_dot(const char *json)
+{
+	const char *p = json;
+	char item[512];
+	char from[256], to[256], hard[8];
+	size_t depth = 0;
+	size_t i = 0;
+	bool in_string = false;
+
+	printf("digraph prowld {\n");
+	printf("  rankdir=LR;\n");
+
+	while (*p != '\0') {
+		if (!in_string) {
+			if (*p == '[' || *p == '{') {
+				if (*p == '{' && depth == 1)
+					i = 0;
+				depth++;
+			} else if (*p == ']' || *p == '}') {
+				depth--;
+				if (*p == '}' && depth == 1) {
+					if (i < sizeof(item) - 1) {
+						item[i++] = '}';
+						item[i] = '\0';
+						json_get_str(item, "from",
+						    from, sizeof(from));
+						json_get_str(item, "to",
+						    to, sizeof(to));
+						json_get_str(item, "hard",
+						    hard, sizeof(hard));
+						printf("  \"%s\" -> \"%s\"",
+						    from, to);
+						if (strcmp(hard, "true") != 0)
+							printf(
+							    " [style=dashed]");
+						printf(";\n");
+					}
+					i = 0;
+				}
+			} else if (*p == '"')
+				in_string = true;
+			if (depth >= 2 && i < sizeof(item) - 1)
+				item[i++] = *p;
+		} else {
+			if (*p == '"' && (i == 0 || item[i - 1] != '\\'))
+				in_string = false;
+			if (depth >= 2 && i < sizeof(item) - 1)
+				item[i++] = *p;
+		}
+		p++;
+	}
+
+	printf("}\n");
+}
+
+/*
+ * Print the dependency graph edges in plain text.
+ */
+static void
+print_graph_text(const char *json)
+{
+	const char *p = json;
+	char item[512];
+	char from[256], to[256], hard[8];
+	size_t depth = 0;
+	size_t i = 0;
+	bool in_string = false;
+
+	printf("%-40s  %-8s  %s\n", "FROM", "TYPE", "TO");
+	printf("%-40s  %-8s  %s\n", "----", "----", "--");
+
+	while (*p != '\0') {
+		if (!in_string) {
+			if (*p == '[' || *p == '{') {
+				if (*p == '{' && depth == 1)
+					i = 0;
+				depth++;
+			} else if (*p == ']' || *p == '}') {
+				depth--;
+				if (*p == '}' && depth == 1) {
+					if (i < sizeof(item) - 1) {
+						item[i++] = '}';
+						item[i] = '\0';
+						json_get_str(item, "from",
+						    from, sizeof(from));
+						json_get_str(item, "to",
+						    to, sizeof(to));
+						json_get_str(item, "hard",
+						    hard, sizeof(hard));
+						printf("%-40s  %-8s  %s\n",
+						    from,
+						    strcmp(hard, "true") == 0
+						    ? "require" : "want",
+						    to);
+					}
+					i = 0;
+				}
+			} else if (*p == '"')
+				in_string = true;
+			if (depth >= 2 && i < sizeof(item) - 1)
+				item[i++] = *p;
+		} else {
+			if (*p == '"' && (i == 0 || item[i - 1] != '\\'))
+				in_string = false;
+			if (depth >= 2 && i < sizeof(item) - 1)
+				item[i++] = *p;
+		}
+		p++;
+	}
+}
+
+static int
+do_graph(int argc, char *argv[])
+{
+	char req[REQ_MAX];
+	char *resp;
+	const char *result;
+	bool dot_format = false;
+	int ret, i;
+
+	for (i = 0; i < argc; i++) {
+		if (strcmp(argv[i], "--format=dot") == 0)
+			dot_format = true;
+	}
+
+	snprintf(req, sizeof(req), "{\"verb\":\"graph\"}");
+
+	if (send_request(g_sock, req) == -1)
+		err(EXIT_NO_DAEMON, "send");
+
+	resp = recv_response(g_sock);
+	ret = check_response(resp);
+	if (ret != EXIT_OK) {
+		free(resp);
+		return (ret);
+	}
+
+	if (g_json) {
+		puts(resp);
+		free(resp);
+		return (EXIT_OK);
+	}
+
+	result = strstr(resp, "\"result\":");
+	if (result != NULL) {
+		result += strlen("\"result\":");
+		if (dot_format)
+			print_graph_dot(result);
+		else
+			print_graph_text(result);
+	}
+
+	free(resp);
+	return (EXIT_OK);
+}
+
+#define LOGS_TAIL_DEFAULT	50
+
+static int
+do_logs(int argc, char *argv[])
+{
+	char label[256];
+	char path[1024];
+	bool follow = false;
+	int lines = LOGS_TAIL_DEFAULT;
+	int i, fd, ret;
+	char buf[4096];
+	ssize_t n;
+	off_t fsize, start;
+	int newlines;
+
+	if (argc < 1) {
+		fprintf(stderr, "prowlctl: logs requires a label\n");
+		return (EXIT_NOT_FOUND);
+	}
+
+	if (!validate_label_input(argv[0])) {
+		fprintf(stderr, "prowlctl: invalid label '%s'\n", argv[0]);
+		return (EXIT_NOT_FOUND);
+	}
+
+	strlcpy(label, argv[0], sizeof(label));
+
+	for (i = 1; i < argc; i++) {
+		if (strcmp(argv[i], "--follow") == 0)
+			follow = true;
+		else if (strncmp(argv[i], "--lines=", 8) == 0) {
+			lines = atoi(argv[i] + 8);
+			if (lines <= 0)
+				lines = LOGS_TAIL_DEFAULT;
+		}
+	}
+
+	snprintf(path, sizeof(path), "/var/log/prowld/jobs/%s.log", label);
+
+	fd = open(path, O_RDONLY);
+	if (fd == -1) {
+		if (errno == ENOENT)
+			fprintf(stderr,
+			    "prowlctl: no log file for '%s'\n", label);
+		else
+			fprintf(stderr, "prowlctl: open %s: %s\n",
+			    path, strerror(errno));
+		return (EXIT_NOT_FOUND);
+	}
+
+	/* Seek to show only the last N lines */
+	fsize = lseek(fd, 0, SEEK_END);
+	if (fsize > 0) {
+		start = fsize;
+		newlines = 0;
+		/* Walk backwards counting newlines */
+		while (start > 0 && newlines <= lines) {
+			off_t chunk = (start > (off_t)sizeof(buf))
+			    ? (off_t)sizeof(buf) : start;
+			start -= chunk;
+			lseek(fd, start, SEEK_SET);
+			n = read(fd, buf, (size_t)chunk);
+			if (n <= 0)
+				break;
+			for (i = (int)n - 1; i >= 0; i--) {
+				if (buf[i] == '\n') {
+					newlines++;
+					if (newlines > lines) {
+						start += (off_t)(i + 1);
+						break;
+					}
+				}
+			}
+			if (newlines > lines)
+				break;
+		}
+		lseek(fd, start, SEEK_SET);
+	}
+
+	/* Emit lines from current position */
+	while ((n = read(fd, buf, sizeof(buf))) > 0)
+		write(STDOUT_FILENO, buf, (size_t)n);
+
+	ret = EXIT_OK;
+
+	if (follow) {
+		/* Simple tail -f: seek to end and poll */
+		lseek(fd, 0, SEEK_END);
+		for (;;) {
+			n = read(fd, buf, sizeof(buf));
+			if (n > 0) {
+				write(STDOUT_FILENO, buf, (size_t)n);
+			} else {
+				/* No data: sleep briefly and retry */
+				struct timespec ts = { 0, 200000000L };
+				nanosleep(&ts, NULL);
+			}
+		}
+	}
+
+	close(fd);
+	return (ret);
+}
+
 static int
 do_no_target(const char *verb)
 {
@@ -616,7 +985,11 @@ main(int argc, char *argv[])
 	else if (strcmp(cmd, "daemon-reexec") == 0)
 		ret = do_no_target("daemon-reexec");
 	else if (strcmp(cmd, "dependencies") == 0)
-		ret = do_status(argc, argv); /* best-effort in Phase 1 */
+		ret = do_dependencies(argc, argv);
+	else if (strcmp(cmd, "graph") == 0)
+		ret = do_graph(argc, argv);
+	else if (strcmp(cmd, "logs") == 0)
+		ret = do_logs(argc, argv);
 	else {
 		fprintf(stderr, "prowlctl: unknown command '%s'\n", cmd);
 		usage();
