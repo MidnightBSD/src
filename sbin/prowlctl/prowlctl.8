@@ -1,0 +1,163 @@
+.\" Copyright (c) 2026 Lucas Holt
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.Dd April 18, 2026
+.Dt PROWLCTL 8
+.Os
+.Sh NAME
+.Nm prowlctl
+.Nd control utility for prowld(8)
+.Sh SYNOPSIS
+.Nm
+.Op Fl -json
+.Ar command
+.Op Ar args
+.Sh DESCRIPTION
+.Nm
+is the command-line interface for
+.Xr prowld 8 .
+It connects to the
+.Xr prowld 8
+control socket and sends commands over the IPC protocol.
+.Pp
+The following global option is available:
+.Bl -tag -width "--json"
+.It Fl -json
+Print raw JSON responses instead of human-readable output.
+Useful for scripts and monitoring tools.
+.El
+.Sh COMMANDS
+.Bl -tag -width "reload-config"
+.It Cm list Op Fl -enabled | Fl -failed | Fl -type Ns = Ns Ar type
+List all known jobs.
+.Fl -enabled
+shows only running jobs,
+.Fl -failed
+shows only failed jobs, and
+.Fl -type Ns = Ns Ar type
+filters by job type
+.Pq daemon , oneshot , timer , rcshim .
+.It Cm status Ar label
+Show detailed status for a single job.
+.It Cm start Ar label
+Start the named job.
+.It Cm stop Ar label
+Stop the named job with
+.Dv SIGTERM .
+.It Cm restart Ar label
+Stop then restart the named job.
+.It Cm reload Ar label
+Send
+.Dv SIGHUP
+to the named job (typically causes config reload).
+.It Cm enable Ar label
+Set
+.Va <rc_name>_enable=YES
+in
+.Pa /etc/rc.conf
+via
+.Xr sysrc 8 .
+Equivalent to running
+.Ql sysrc <rc_name>_enable=YES .
+.It Cm disable Ar label
+Set
+.Va <rc_name>_enable=NO
+in
+.Pa /etc/rc.conf .
+.It Cm mask Ar label
+Prevent a job from starting, even as a dependency.
+Creates a symlink in
+.Pa /var/db/prowld/masked.d/ .
+.It Cm unmask Ar label
+Remove a mask created by
+.Cm mask .
+.It Cm show Ar label
+Dump the effective configuration of a job as a JSON object.
+.It Cm reload-config
+Rescan unit directories and
+.Xr rc.d 8
+directories for new or changed files.
+Running jobs are not affected.
+.It Cm daemon-reexec
+Re-execute
+.Xr prowld 8
+in place (for in-service upgrades).
+Not yet implemented in Phase 1.
+.It Cm dependencies Ar label
+Show the dependency tree for a job.
+.El
+.Sh EXIT STATUS
+.Bl -tag -width "3" -compact
+.It 0
+Success.
+.It 1
+Job not found.
+.It 2
+Job in a failed state.
+.It 3
+Operation not permitted.
+.It 4
+Daemon not responding.
+.El
+.Sh EXAMPLES
+Show all running services:
+.Bd -literal -offset indent
+prowlctl list --enabled
+.Ed
+.Pp
+Start the SSH daemon:
+.Bd -literal -offset indent
+prowlctl start org.midnightbsd.sshd
+.Ed
+.Pp
+Enable a service at boot:
+.Bd -literal -offset indent
+prowlctl enable sshd
+.Ed
+.Pp
+Check status of a service by rc_name:
+.Bd -literal -offset indent
+prowlctl status sshd
+.Ed
+.Pp
+Get machine-readable output:
+.Bd -literal -offset indent
+prowlctl --json status org.midnightbsd.sshd
+.Ed
+.Sh FILES
+.Bl -tag -width "/var/run/prowld/prowld.sock" -compact
+.It Pa /var/run/prowld/prowld.sock
+.Xr prowld 8
+control socket.
+.El
+.Sh SEE ALSO
+.Xr prowld 8 ,
+.Xr rc 8 ,
+.Xr service 8 ,
+.Xr sysrc 8
+.Sh HISTORY
+.Nm
+first appeared in MidnightBSD 4.1.
+.Sh AUTHORS
+Lucas Holt.

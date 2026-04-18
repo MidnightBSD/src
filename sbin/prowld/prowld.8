@@ -1,0 +1,272 @@
+.\" Copyright (c) 2026 Lucas Holt
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.Dd April 18, 2026
+.Dt PROWLD 8
+.Os
+.Sh NAME
+.Nm prowld
+.Nd MidnightBSD service management daemon
+.Sh SYNOPSIS
+.Nm
+.Op Fl d
+.Sh DESCRIPTION
+.Nm
+is a dependency-aware, parallel-execution service manager for MidnightBSD.
+It supersedes the traditional sequential
+.Xr rc 8
+startup model while maintaining full backward compatibility with existing
+.Pa /etc/rc.d
+scripts and the
+.Xr service 8
+command.
+.Pp
+.Nm
+reads unit files from several directories, wraps legacy
+.Xr rc.d 8
+scripts as compatibility shims, builds a dependency graph, and starts
+services in parallel based on dependency ordering.
+.Pp
+The following option is available:
+.Bl -tag -width indent
+.It Fl d
+Debug mode.
+.Nm
+runs in the foreground and writes log messages to standard error in
+addition to
+.Xr syslog 3 .
+.El
+.Sh UNIT FILES
+Unit files are parsed by
+.Xr libucl 3
+and accept UCL, JSON, or simplified YAML syntax.
+Files must have the
+.Pa .unit
+extension.
+.Pp
+Unit file directories are searched in the following order (later overrides
+earlier):
+.Bl -enum -compact
+.It
+.Pa /etc/prowld/units.d/
+.It
+.Pa /usr/local/etc/prowld/units.d/
+.It
+.Pa /etc/prowld/overrides.d/
+.It
+.Pa /var/run/prowld/generated.d/
+.El
+.Pp
+A minimal unit file:
+.Bd -literal -offset indent
+{
+  "label": "org.midnightbsd.sshd",
+  "description": "OpenSSH Daemon",
+  "program": "/usr/sbin/sshd",
+  "arguments": ["-D"],
+  "run_at_load": true,
+  "keep_alive": true
+}
+.Ed
+.Ss Required Fields
+.Bl -tag -width "label"
+.It Va label
+Unique reverse-DNS identifier for the job
+(e.g., \fBorg.midnightbsd.sshd\fR).
+.It Va program
+Path to the executable.
+Required unless
+.Va arguments[0]
+is a full path.
+.El
+.Ss Identity Fields
+.Bl -tag -width "description"
+.It Va description
+Human-readable description string.
+.It Va type
+One of
+.Cm daemon ,
+.Cm oneshot ,
+.Cm timer ,
+.Cm socket .
+Default:
+.Cm daemon .
+.It Va rc_name
+Variable prefix used in
+.Pa rc.conf
+for the
+.Va _enable
+flag.
+Defaults to the last dot-separated component of
+.Va label .
+.El
+.Ss Execution Fields
+.Bl -tag -width "working_directory"
+.It Va arguments
+Array of strings passed as
+.Vt argv .
+.It Va environment
+Object of key/value pairs added to the process environment.
+.It Va working_directory
+Directory to
+.Xr chdir 2
+into before starting the program.
+.It Va root_directory
+Optional
+.Xr chroot 2
+target.
+.It Va user , Va group
+Drop privileges to this user and group before starting.
+.It Va umask
+Octal umask string (e.g.,
+.Dq 0022 ) .
+.El
+.Ss Lifecycle Fields
+.Bl -tag -width "throttle_interval"
+.It Va run_at_load
+If true, start the job automatically when it is loaded and all
+dependencies are satisfied.
+.It Va keep_alive
+Boolean or object controlling restart policy.
+Object keys:
+.Va always ,
+.Va crashed ,
+.Va successful_exit .
+.It Va throttle_interval
+Minimum seconds between restart attempts.
+Default: 10.
+.It Va exit_timeout
+Seconds to wait after
+.Dv SIGTERM
+before sending
+.Dv SIGKILL .
+Default: 20.
+.El
+.Ss Dependency Fields
+.Bl -tag -width "conflicts"
+.It Va requires
+Array of capability names that must be running before this job starts.
+Failure of a required dependency causes this job to fail.
+.It Va wants
+Like
+.Va requires ,
+but failure of the dependency does not fail this job.
+.It Va before
+This job must start before the listed jobs.
+.It Va after
+This job must start after the listed jobs.
+.It Va conflicts
+Jobs that cannot run while this job is running.
+Starting this job stops the listed jobs.
+.It Va provides
+Array of capability names this job satisfies.
+.El
+.Ss I/O Fields
+.Bl -tag -width "standard_error_path"
+.It Va standard_in_path
+Path for standard input.
+Defaults to
+.Pa /dev/null .
+.It Va standard_out_path
+Path for standard output.
+.It Va standard_error_path
+Path for standard error.
+.El
+.Ss Notification Fields
+.Bl -tag -width "notify_type"
+.It Va notify_type
+.Cm none
+(default) or
+.Cm notify
+(sd_notify-compatible).
+.It Va watchdog_sec
+Watchdog interval in seconds.
+0 disables the watchdog.
+.El
+.Sh BACKWARD COMPATIBILITY
+All existing scripts in
+.Pa /etc/rc.d
+and
+.Pa /usr/local/etc/rc.d
+are automatically discovered and wrapped as compatibility shim jobs.
+The
+.Dv REQUIRE ,
+.Dv PROVIDE ,
+.Dv BEFORE ,
+and
+.Dv KEYWORD
+headers are parsed and translated into
+.Nm
+dependency fields.
+.Pp
+Enable state is read from
+.Pa /etc/rc.conf
+using the
+.Va <name>_enable
+variable, exactly as
+.Xr rc.subr 8
+does.
+.Pp
+If a native unit file and an
+.Pa rc.d
+script both claim the same
+.Va provides ,
+the native unit wins and the
+.Pa rc.d
+script is skipped.
+.Sh FILES
+.Bl -tag -width "/var/run/prowld/prowld.sock" -compact
+.It Pa /etc/prowld/prowld.conf
+Daemon configuration file.
+.It Pa /etc/prowld/units.d/
+Base system unit files.
+.It Pa /usr/local/etc/prowld/units.d/
+Ports and packages unit files.
+.It Pa /etc/prowld/overrides.d/
+Local administrator overrides.
+.It Pa /var/run/prowld/prowld.sock
+Control socket (Unix domain, mode 0660, owned root:wheel).
+.It Pa /var/run/prowld/prowld.pid
+PID file.
+.It Pa /var/db/prowld/masked.d/
+Symlinks to
+.Pa /dev/null
+for masked services.
+.It Pa /etc/rc.conf
+Authoritative source for service enable state.
+.El
+.Sh EXIT STATUS
+.Ex -std
+.Sh SEE ALSO
+.Xr prowlctl 8 ,
+.Xr rc 8 ,
+.Xr rc.conf 5 ,
+.Xr rcorder 8 ,
+.Xr service 8 ,
+.Xr sysrc 8
+.Sh HISTORY
+.Nm
+first appeared in MidnightBSD 4.1.
+.Sh AUTHORS
+The MidnightBSD Project.
