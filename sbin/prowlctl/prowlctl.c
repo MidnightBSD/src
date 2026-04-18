@@ -491,7 +491,7 @@ int
 main(int argc, char *argv[])
 {
 	const char *cmd;
-	int ret;
+	int ret = EXIT_OK;
 	int i;
 
 	/* Strip argv[0] */
