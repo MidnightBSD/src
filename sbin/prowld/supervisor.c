@@ -89,11 +89,6 @@ timer_ident(const job_t *job, uintptr_t kind)
 	return ((uintptr_t)job | kind);
 }
 
-static job_t *
-timer_job(uintptr_t ident)
-{
-	return ((job_t *)(ident & ~TIMER_MASK));
-}
 
 /*
  * Register a one-shot timer to fire after throttle_interval seconds.
