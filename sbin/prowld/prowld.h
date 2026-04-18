@@ -61,6 +61,11 @@
 #define UNIT_DIR_OVERRIDE	"/etc/prowld/overrides.d"
 #define UNIT_DIR_GENERATED	"/var/run/prowld/generated.d"
 
+/*
+ * Any persistent state files (e.g., timer state) MUST be written atomically:
+ *   write to <path>.tmp -> fsync -> rename(<path>.tmp, <path>)
+ */
+
 /* rc.d script directories */
 #define RCD_DIR_BASE		"/etc/rc.d"
 #define RCD_DIR_LOCAL		"/usr/local/etc/rc.d"

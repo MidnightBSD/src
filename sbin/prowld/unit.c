@@ -33,6 +33,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include <ctype.h>
 #include <dirent.h>
 #include <errno.h>
 #include <grp.h>
@@ -87,6 +88,25 @@ derive_rc_name(const char *label, char *rc_name, size_t sz)
 		strlcpy(rc_name, last + 1, sz);
 	else
 		strlcpy(rc_name, label, sz);
+}
+
+/*
+ * Validate an environment variable key: must be non-empty, and contain
+ * only alphanumerics and underscores (POSIX convention).
+ */
+static bool
+env_key_valid(const char *key)
+{
+	const char *p;
+
+	if (key == NULL || *key == '\0')
+		return (false);
+	for (p = key; *p != '\0'; p++) {
+		unsigned char c = (unsigned char)*p;
+		if (!isalnum(c) && c != '_')
+			return (false);
+	}
+	return (true);
 }
 
 /*
@@ -192,6 +212,14 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 	/* label */
 	strlcpy(job->label, ucl_object_tostring(obj), sizeof(job->label));
 
+	/* Reject labels that could escape the mask directory path */
+	if (!label_valid(job->label)) {
+		prowl_log(LOG_ERR, "unit %s: invalid label '%s', skipping",
+		    path, job->label);
+		job_free(job);
+		return (NULL);
+	}
+
 	/* Check for duplicate */
 	if (job_find_by_label(job->label) != NULL) {
 		prowl_log(LOG_DEBUG, "unit %s: label %s already loaded, "
@@ -254,12 +282,33 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 		it = NULL;
 		n = 0;
 		while ((val = ucl_object_iterate(obj, &it, true)) != NULL) {
-			char envbuf[512];
+			char envbuf[PROWL_PATH_MAX];
+			const char *key, *value;
+			int nb;
+
 			if (n >= PROWL_ENV_MAX - 1)
 				break;
-			snprintf(envbuf, sizeof(envbuf), "%s=%s",
-			    ucl_object_key(val),
-			    ucl_object_tostring_forced(val));
+
+			key = ucl_object_key(val);
+			if (!env_key_valid(key)) {
+				prowl_log(LOG_WARNING,
+				    "unit %s: invalid env key, skipping", path);
+				continue;
+			}
+
+			value = ucl_object_tostring_forced(val);
+			if (value == NULL)
+				value = "";
+
+			nb = snprintf(envbuf, sizeof(envbuf), "%s=%s",
+			    key, value);
+			if (nb < 0 || (size_t)nb >= sizeof(envbuf)) {
+				prowl_log(LOG_WARNING,
+				    "unit %s: env var '%s' too long, skipping",
+				    path, key);
+				continue;
+			}
+
 			job->envp[n] = strdup(envbuf);
 			if (job->envp[n] == NULL) {
 				prowl_log(LOG_ERR, "strdup: %m");
@@ -414,8 +463,25 @@ unit_load_file(const char *path)
 {
 	struct ucl_parser *parser;
 	ucl_object_t *root;
+	struct stat sb;
 	job_t *job;
 	int ret = 0;
+
+	/* Reject unit files not owned by root or writable by others */
+	if (stat(path, &sb) == -1) {
+		prowl_log(LOG_WARNING, "unit_load_file %s: stat: %m", path);
+		return (-1);
+	}
+	if (sb.st_uid != 0) {
+		prowl_log(LOG_WARNING,
+		    "unit_load_file %s: not owned by root, skipping", path);
+		return (-1);
+	}
+	if (sb.st_mode & S_IWOTH) {
+		prowl_log(LOG_WARNING,
+		    "unit_load_file %s: world-writable, skipping", path);
+		return (-1);
+	}
 
 	parser = ucl_parser_new(UCL_PARSER_NO_FILEVARS);
 	if (parser == NULL) {

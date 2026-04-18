@@ -192,6 +192,8 @@ resolve_job_privileges(job_t *job)
  * Drop privileges in the child process.  Called post-fork, pre-exec.
  * Uses only async-signal-safe syscalls: setgroups, setgid, setuid.
  * Numeric IDs were resolved in the parent by resolve_job_privileges().
+ * Exits the child immediately if any privilege call fails to ensure
+ * the process never continues with unexpected (elevated) privileges.
  */
 static void
 drop_privileges(const job_t *job)
@@ -199,12 +201,27 @@ drop_privileges(const job_t *job)
 	if (!job->run_priv_set)
 		return;
 
-	if (job->run_ngroups > 0)
-		setgroups((size_t)job->run_ngroups, job->run_groups);
-	if (job->run_gid != (gid_t)-1)
-		setgid(job->run_gid);
-	if (job->run_uid != (uid_t)-1)
-		setuid(job->run_uid);
+	if (job->run_ngroups > 0) {
+		if (setgroups((size_t)job->run_ngroups,
+		    job->run_groups) == -1) {
+			syslog(LOG_ERR, "prowld: setgroups failed: %m");
+			_exit(1);
+		}
+	}
+	if (job->run_gid != (gid_t)-1) {
+		if (setgid(job->run_gid) == -1) {
+			syslog(LOG_ERR, "prowld: setgid %d failed: %m",
+			    (int)job->run_gid);
+			_exit(1);
+		}
+	}
+	if (job->run_uid != (uid_t)-1) {
+		if (setuid(job->run_uid) == -1) {
+			syslog(LOG_ERR, "prowld: setuid %d failed: %m",
+			    (int)job->run_uid);
+			_exit(1);
+		}
+	}
 }
 
 /*

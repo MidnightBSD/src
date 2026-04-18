@@ -94,17 +94,22 @@ remove_pidfile(void)
 static void
 ensure_dirs(void)
 {
-	const char *dirs[] = {
-		PROWLD_RUN_DIR,
-		PROWLD_NOTIFY_DIR,
-		PROWLD_DB_DIR,
-		PROWLD_MASK_DIR,
-		NULL
+	static const struct {
+		const char *path;
+		mode_t	    mode;
+	} dirs[] = {
+		{ PROWLD_RUN_DIR,    0755 },	/* world-searchable for socket */
+		{ PROWLD_NOTIFY_DIR, 0700 },	/* root-only: readiness pipes */
+		{ PROWLD_DB_DIR,     0755 },	/* world-readable for tooling */
+		{ PROWLD_MASK_DIR,   0700 },	/* root-only: mask symlinks */
+		{ NULL, 0 }
 	};
+	int i;
 
-	for (int i = 0; dirs[i] != NULL; i++) {
-		if (mkdir(dirs[i], 0755) == -1 && errno != EEXIST)
-			prowl_log(LOG_WARNING, "mkdir %s: %m", dirs[i]);
+	for (i = 0; dirs[i].path != NULL; i++) {
+		if (mkdir(dirs[i].path, dirs[i].mode) == -1 &&
+		    errno != EEXIST)
+			prowl_log(LOG_WARNING, "mkdir %s: %m", dirs[i].path);
 	}
 }
 

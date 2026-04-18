@@ -49,7 +49,7 @@
 #include <unistd.h>
 
 #define PROWLD_SOCK_PATH	"/var/run/prowld/prowld.sock"
-#define MSG_MAX			65536
+#define MSG_MAX			65536	/* must match IPC_MSG_MAX in prowld.h */
 #define REQ_MAX			1024
 
 /* Exit codes per spec §13.3 */
