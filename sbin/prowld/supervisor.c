@@ -71,6 +71,31 @@ watch_child(pid_t pid, job_t *job)
 }
 
 /*
+ * Timer ident encoding (low 2 bits of job pointer, which is >=8-byte aligned):
+ *   bits == 0b00  throttle / readiness timer
+ *   bits == 0b01  stop-timeout timer
+ *   bits == 0b10  watchdog timer (recurring)
+ *   bits == 0b11  notify-timeout timer
+ */
+#define TIMER_MASK	3UL
+#define TIMER_THROTTLE	0UL
+#define TIMER_STOP	1UL
+#define TIMER_WATCHDOG	2UL
+#define TIMER_NOTIFY_TMO 3UL
+
+static uintptr_t
+timer_ident(const job_t *job, uintptr_t kind)
+{
+	return ((uintptr_t)job | kind);
+}
+
+static job_t *
+timer_job(uintptr_t ident)
+{
+	return ((job_t *)(ident & ~TIMER_MASK));
+}
+
+/*
  * Register a one-shot timer to fire after throttle_interval seconds.
  * Low bit of ident is 0: throttle timer.
  */
@@ -108,31 +133,6 @@ arm_stop_timer(job_t *job)
 		prowl_log(LOG_WARNING, "kevent stop timer %s: %m",
 		    job->label);
 	job->stop_timer_active = true;
-}
-
-/*
- * Timer ident encoding (low 2 bits of job pointer, which is >=8-byte aligned):
- *   bits == 0b00  throttle / readiness timer
- *   bits == 0b01  stop-timeout timer
- *   bits == 0b10  watchdog timer (recurring)
- *   bits == 0b11  notify-timeout timer
- */
-#define TIMER_MASK	3UL
-#define TIMER_THROTTLE	0UL
-#define TIMER_STOP	1UL
-#define TIMER_WATCHDOG	2UL
-#define TIMER_NOTIFY_TMO 3UL
-
-static uintptr_t
-timer_ident(const job_t *job, uintptr_t kind)
-{
-	return ((uintptr_t)job | kind);
-}
-
-static job_t *
-timer_job(uintptr_t ident)
-{
-	return ((job_t *)(ident & ~TIMER_MASK));
 }
 
 /*
