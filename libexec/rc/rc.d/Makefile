@@ -84,6 +84,7 @@ CONFS=	DAEMON \
 	powerd \
 	ppp \
 	pppoed \
+	prowld \
 	pwcheck \
 	quota \
 	random \

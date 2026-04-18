@@ -1,0 +1,34 @@
+#!/bin/sh
+#
+# PROVIDE: prowld
+# REQUIRE: FILESYSTEMS NETWORKING
+# BEFORE: SERVERS
+# KEYWORD: shutdown
+
+. /etc/rc.subr
+
+name="prowld"
+desc="MidnightBSD Service Management Daemon"
+rcvar="prowld_enable"
+command="/sbin/${name}"
+pidfile="/var/run/prowld/prowld.pid"
+start_precmd="prowld_precmd"
+extra_commands="reload"
+reload_cmd="prowld_reload"
+
+prowld_precmd()
+{
+	/bin/mkdir -p /var/run/prowld
+	/bin/chmod 755 /var/run/prowld
+	return 0
+}
+
+prowld_reload()
+{
+	if [ -f "${pidfile}" ]; then
+		kill -HUP "$(cat "${pidfile}")"
+	fi
+}
+
+load_rc_config $name
+run_rc_command "$1"
