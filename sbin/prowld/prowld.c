@@ -161,7 +161,8 @@ static void
 load_config(void)
 {
 	struct ucl_parser *parser;
-	const ucl_object_t *root, *obj;
+	ucl_object_t *root;
+	const ucl_object_t *obj;
 	struct stat sb;
 
 	/* Apply defaults first; debug is not reset here — it is set by
