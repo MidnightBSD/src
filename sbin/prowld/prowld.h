@@ -238,6 +238,9 @@ extern volatile bool	 g_shutdown;
 extern volatile bool	 g_reload;
 extern int		 g_current_starts;
 
+/* ---- IPC state (defined in ipc.c) ---- */
+extern int		 ipc_listen_fd;
+
 /* ---- job.c ---- */
 job_t		*job_alloc(void);
 void		 job_free(job_t *);
