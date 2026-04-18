@@ -60,6 +60,11 @@ job_alloc(void)
 	job->notify_fd = -1;
 	job->enabled = true;
 
+	for (int i = 0; i < PROWL_SOCKETS_MAX; i++) {
+		job->sockets[i].fd  = -1;
+		job->sockets[i].job = job;
+	}
+
 	return (job);
 }
 

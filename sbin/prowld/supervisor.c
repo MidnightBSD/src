@@ -410,12 +410,17 @@ drop_privileges(const job_t *job)
 static void
 child_setup_and_exec(job_t *job)
 {
-	/* +4: NOTIFY_SOCKET, WATCHDOG_USEC, WATCHDOG_PID, sentinel NULL */
+	/* +7: NOTIFY_SOCKET, WATCHDOG_USEC, WATCHDOG_PID,
+	 *     LISTEN_FDS, LISTEN_PID, LISTEN_FDNAMES, sentinel NULL */
 	char *argv[PROWL_ARGS_MAX + 2];
-	char *envp[PROWL_ENV_MAX + 4];
+	char *envp[PROWL_ENV_MAX + 7];
 	char notify_env[PROWL_PATH_MAX + 16];
 	char watchdog_usec_env[64];
 	char watchdog_pid_env[64];
+	char listen_fds_env[32];
+	char listen_pid_env[32];
+	/* "LISTEN_FDNAMES=" + 8 names * 63 chars + 7 colons + NUL */
+	char listen_fdnames_env[600];
 	int i, argc, envc;
 	bool need_execve;
 
@@ -504,6 +509,55 @@ child_setup_and_exec(job_t *job)
 		    "WATCHDOG_PID=%d", (int)getpid());
 		envp[envc++] = watchdog_usec_env;
 		envp[envc++] = watchdog_pid_env;
+		need_execve = true;
+	}
+
+	if (job->sockets_count > 0) {
+		int ns = job->sockets_count;
+		int tmpfds[PROWL_SOCKETS_MAX];
+		int j;
+		size_t off;
+
+		/*
+		 * Safely move socket fds to positions 3, 4, 5, ... :
+		 * First dup each to a position above the target range,
+		 * then dup2 each copy to its target position.
+		 */
+		for (j = 0; j < ns; j++) {
+			tmpfds[j] = fcntl(job->sockets[j].fd, F_DUPFD, 3 + ns);
+			if (tmpfds[j] == -1)
+				_exit(1);
+		}
+		for (j = 0; j < ns; j++) {
+			close(job->sockets[j].fd);
+			if (dup2(tmpfds[j], 3 + j) == -1)
+				_exit(1);
+			close(tmpfds[j]);
+			/* Clear FD_CLOEXEC so the daemon inherits the fd */
+			fcntl(3 + j, F_SETFD, 0);
+		}
+
+		/* Build LISTEN_FDNAMES=name0:name1:... */
+		off = strlcpy(listen_fdnames_env, "LISTEN_FDNAMES=",
+		    sizeof(listen_fdnames_env));
+		for (j = 0; j < ns; j++) {
+			if (j > 0 && off < sizeof(listen_fdnames_env) - 1)
+				listen_fdnames_env[off++] = ':';
+			off += strlcpy(listen_fdnames_env + off,
+			    job->sockets[j].name,
+			    sizeof(listen_fdnames_env) - off);
+		}
+
+		snprintf(listen_fds_env, sizeof(listen_fds_env),
+		    "LISTEN_FDS=%d", ns);
+		snprintf(listen_pid_env, sizeof(listen_pid_env),
+		    "LISTEN_PID=%d", (int)getpid());
+
+		if (envc + 3 <= PROWL_ENV_MAX + 6) {
+			envp[envc++] = listen_fds_env;
+			envp[envc++] = listen_pid_env;
+			envp[envc++] = listen_fdnames_env;
+		}
 		need_execve = true;
 	}
 
@@ -624,6 +678,49 @@ supervisor_stop(job_t *job, bool force)
 	}
 
 	return (0);
+}
+
+/*
+ * Fork and exec a socket-activated daemon, passing the bound socket fds
+ * (already in job->sockets[]) as file descriptors 3, 4, 5, ...
+ * Called from socket_handle_activation() on the first incoming connection.
+ */
+void
+supervisor_socket_activate(job_t *job)
+{
+	pid_t pid;
+
+	prowl_log(LOG_NOTICE, "socket-activating %s", job->label);
+	job->started_at = time(NULL);
+	job_set_state(job, JOB_STATE_STARTING);
+
+	resolve_job_privileges(job);
+
+	pid = fork();
+	if (pid == -1) {
+		prowl_log(LOG_ERR, "fork %s (socket activate): %m",
+		    job->label);
+		job_set_state(job, JOB_STATE_FAILED);
+		socket_rearm(job);
+		return;
+	}
+
+	if (pid == 0) {
+		/* Child: close descriptors that must not be inherited */
+		if (g_kqueue_fd >= 0)
+			close(g_kqueue_fd);
+		child_setup_and_exec(job);
+		/* NOTREACHED */
+	}
+
+	/* Parent */
+	job->pid = pid;
+	job->socket_activated = true;
+	job_set_state(job, JOB_STATE_RUNNING);
+	watch_child(pid, job);
+
+	prowl_log(LOG_INFO, "job %s socket-activated, pid %d",
+	    job->label, (int)pid);
 }
 
 int
@@ -899,7 +996,17 @@ supervisor_reap(pid_t pid, int status)
 	/* Normal stop requested */
 	if (job->state == JOB_STATE_STOPPING) {
 		job_set_state(job, JOB_STATE_STOPPED);
-		dag_schedule_ready();
+		if (job->sockets_count > 0 && job->socket_activated)
+			socket_rearm(job);
+		else
+			dag_schedule_ready();
+		return;
+	}
+
+	/* Socket-activated daemon exit: re-arm sockets for next connection */
+	if (job->sockets_count > 0 && job->socket_activated) {
+		job_set_state(job, JOB_STATE_LOADED);
+		socket_rearm(job);
 		return;
 	}
 

@@ -247,7 +247,22 @@ dag_schedule_ready(void)
 		if (conflicted)
 			continue;
 
-		if (supervisor_start(job) == 0)
-			g_current_starts++;
+		if (job->sockets_count > 0) {
+			/*
+			 * Socket-activated job: bind and listen now; the daemon
+			 * is launched only on the first incoming connection.
+			 * Counts as "running" from the scheduler's perspective
+			 * so dependent jobs are not blocked.
+			 */
+			if (socket_bind_all(job) == 0) {
+				job_set_state(job, JOB_STATE_RUNNING);
+				dag_schedule_ready();
+			} else {
+				job_set_state(job, JOB_STATE_FAILED);
+			}
+		} else {
+			if (supervisor_start(job) == 0)
+				g_current_starts++;
+		}
 	}
 }

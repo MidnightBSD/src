@@ -10,6 +10,7 @@ SRCS=		prowld.c \
 		rcshim.c \
 		dag.c \
 		supervisor.c \
+		socket_activation.c \
 		ipc.c
 MAN=		prowld.8
 

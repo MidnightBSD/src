@@ -30,13 +30,16 @@
  * Unit file loading and parsing (UCL/JSON via libucl).
  */
 
+#include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/un.h>
 
 #include <ctype.h>
 #include <dirent.h>
 #include <errno.h>
 #include <grp.h>
+#include <netinet/in.h>
 #include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -453,6 +456,99 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 		if (rl != NULL) {
 			job->rlimits.nproc = (rlim_t)ucl_object_toint(rl);
 			job->rlimits.set_nproc = true;
+		}
+	}
+
+	/*
+	 * sockets: object keyed by name, each value describes one socket.
+	 * Example:
+	 *   "sockets": {
+	 *     "http": { "path": "/var/run/svc.sock", "type": "stream" },
+	 *     "rpc":  { "port": 9000, "host": "127.0.0.1" }
+	 *   }
+	 */
+	obj = ucl_object_lookup(root, "sockets");
+	if (obj != NULL && ucl_object_type(obj) == UCL_OBJECT) {
+		const ucl_object_t *sobj;
+		ucl_object_iter_t sit = NULL;
+
+		while ((sobj = ucl_object_iterate(obj, &sit, true)) != NULL) {
+			const char *sname;
+			const ucl_object_t *f;
+			prowl_socket_t *s;
+
+			if (job->sockets_count >= PROWL_SOCKETS_MAX) {
+				prowl_log(LOG_WARNING,
+				    "unit %s: too many sockets (max %d), "
+				    "ignoring remaining", path, PROWL_SOCKETS_MAX);
+				break;
+			}
+			if (ucl_object_type(sobj) != UCL_OBJECT)
+				continue;
+
+			sname = ucl_object_key(sobj);
+			s = &job->sockets[job->sockets_count];
+
+			strlcpy(s->name, sname, sizeof(s->name));
+
+			/* Defaults */
+			s->socktype = SOCK_STREAM;
+			s->family   = AF_UNSPEC;
+			s->backlog  = 0;	/* SOMAXCONN */
+
+			/* type: "stream" (default), "dgram", "seqpacket" */
+			f = ucl_object_lookup(sobj, "type");
+			if (f != NULL && ucl_object_type(f) == UCL_STRING) {
+				const char *t = ucl_object_tostring(f);
+				if (strcmp(t, "dgram") == 0)
+					s->socktype = SOCK_DGRAM;
+				else if (strcmp(t, "seqpacket") == 0)
+					s->socktype = SOCK_SEQPACKET;
+				/* else: stream (default) */
+			}
+
+			/* path → AF_UNIX */
+			f = ucl_object_lookup(sobj, "path");
+			if (f != NULL && ucl_object_type(f) == UCL_STRING) {
+				strlcpy(s->path, ucl_object_tostring(f),
+				    sizeof(s->path));
+				s->family = AF_UNIX;
+			}
+
+			/* port → AF_INET or AF_INET6 */
+			f = ucl_object_lookup(sobj, "port");
+			if (f != NULL) {
+				s->port = (int)ucl_object_toint(f);
+				if (s->family == AF_UNSPEC)
+					s->family = AF_INET;
+			}
+
+			/* host → refines family */
+			f = ucl_object_lookup(sobj, "host");
+			if (f != NULL && ucl_object_type(f) == UCL_STRING) {
+				strlcpy(s->host, ucl_object_tostring(f),
+				    sizeof(s->host));
+				/* Auto-detect IPv6 if host contains ':' */
+				if (strchr(s->host, ':') != NULL)
+					s->family = AF_INET6;
+				else if (s->family == AF_UNSPEC)
+					s->family = AF_INET;
+			}
+
+			/* backlog */
+			f = ucl_object_lookup(sobj, "backlog");
+			if (f != NULL)
+				s->backlog = (int)ucl_object_toint(f);
+
+			/* Require a usable address */
+			if (s->family == AF_UNSPEC) {
+				prowl_log(LOG_WARNING,
+				    "unit %s: socket '%s' has no path or port, "
+				    "skipping", path, sname);
+				continue;
+			}
+
+			job->sockets_count++;
 		}
 	}
 

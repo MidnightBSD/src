@@ -36,6 +36,13 @@
 #include <stdint.h>
 #include <time.h>
 
+/*
+ * Forward typedefs so prowl_socket_t can reference job_t and vice versa.
+ * The full struct bodies appear later in this file.
+ */
+typedef struct job job_t;
+typedef struct prowl_socket prowl_socket_t;
+
 /* String size limits */
 #define PROWL_LABEL_MAX		256
 #define PROWL_PATH_MAX		1024
@@ -115,6 +122,22 @@ typedef enum {
 	NOTIFY_NOTIFY = 1,
 } notify_type_t;
 
+/* Socket activation */
+#define PROWL_SOCK_NAME_MAX	64
+#define PROWL_SOCKETS_MAX	8
+
+struct prowl_socket {
+	char	name[PROWL_SOCK_NAME_MAX]; /* key from unit file sockets block */
+	char	path[PROWL_PATH_MAX];      /* AF_UNIX socket path */
+	char	host[256];                 /* bind host for inet sockets */
+	int	port;                      /* TCP/UDP port; 0 = AF_UNIX */
+	int	socktype;                  /* SOCK_STREAM or SOCK_DGRAM */
+	int	family;                    /* AF_UNIX, AF_INET, AF_INET6 */
+	int	backlog;                   /* listen backlog (0 = SOMAXCONN) */
+	int	fd;                        /* bound fd; -1 = not yet bound */
+	job_t  *job;                       /* owning job (back-pointer) */
+};
+
 /* Keep-alive policy */
 typedef struct keep_alive {
 	bool	always;			/* always restart */
@@ -136,8 +159,8 @@ typedef struct dep_entry {
 	bool	hard;		/* true = requires, false = wants */
 } dep_entry_t;
 
-/* Job structure */
-typedef struct job {
+/* Job structure (forward-declared as job_t above) */
+struct job {
 	/* Identity */
 	char		label[PROWL_LABEL_MAX];
 	char		description[PROWL_DESC_MAX];
@@ -227,8 +250,13 @@ typedef struct job {
 	bool		watchdog_timer_active;
 	time_t		watchdog_last_ping;
 
+	/* Socket activation */
+	prowl_socket_t	sockets[PROWL_SOCKETS_MAX];
+	int		sockets_count;
+	bool		socket_activated;	/* daemon has been fork+exec'd */
+
 	TAILQ_ENTRY(job) entries;
-} job_t;
+};
 
 TAILQ_HEAD(job_list, job);
 
@@ -297,7 +325,14 @@ void	supervisor_handle_stop_timeout(job_t *);
 void	supervisor_handle_notify(job_t *);
 void	supervisor_handle_watchdog(job_t *);
 void	supervisor_handle_notify_timeout(job_t *);
+void	supervisor_socket_activate(job_t *);
 void	supervisor_shutdown_all(void);
+
+/* ---- socket_activation.c ---- */
+int	socket_bind_all(job_t *);
+void	socket_handle_activation(prowl_socket_t *);
+void	socket_rearm(job_t *);
+void	socket_close_all(job_t *);
 
 /* ---- ipc.c ---- */
 int	ipc_init(void);

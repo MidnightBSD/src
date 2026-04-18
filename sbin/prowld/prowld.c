@@ -374,11 +374,20 @@ main_loop(void)
 			case EVFILT_READ:
 				if ((int)kev->ident == g_ipc_listen_fd)
 					ipc_accept();
+				else if (kev->udata != NULL &&
+				    ((uintptr_t)kev->udata & 1UL))
+					/*
+					 * Bit 0 set: socket activation fd.
+					 * Decode the prowl_socket_t pointer.
+					 */
+					socket_handle_activation(
+					    (prowl_socket_t *)
+					    ((uintptr_t)kev->udata & ~1UL));
 				else if (kev->udata != NULL)
 					/*
-					 * Non-NULL udata means this is a notify
-					 * socket registered by supervisor.c with
-					 * the job pointer as udata.
+					 * Non-NULL, bit 0 clear: notify fd
+					 * registered by supervisor.c with the
+					 * job pointer as udata.
 					 */
 					supervisor_handle_notify(
 					    (job_t *)kev->udata);
