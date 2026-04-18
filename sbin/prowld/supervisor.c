@@ -137,25 +137,74 @@ redirect_fd(int stdfd, const char *path, int flags)
 }
 
 /*
+ * Resolve user/group names to numeric IDs in the parent before fork().
+ * getpwnam/getgrnam/getgrouplist are not async-signal-safe; calling them
+ * here ensures the child only uses the safe setgroups/setgid/setuid calls.
+ */
+static void
+resolve_job_privileges(job_t *job)
+{
+	struct passwd *pw;
+	struct group *gr;
+	int ngroups;
+
+	job->run_priv_set = false;
+	job->run_uid = (uid_t)-1;
+	job->run_gid = (gid_t)-1;
+	job->run_ngroups = 0;
+
+	if (job->user[0] == '\0' && job->group[0] == '\0')
+		return;
+
+	if (job->group[0] != '\0') {
+		gr = getgrnam(job->group);
+		if (gr == NULL) {
+			prowl_log(LOG_WARNING, "job %s: group '%s' not found",
+			    job->label, job->group);
+			return;
+		}
+		job->run_gid = gr->gr_gid;
+	}
+
+	if (job->user[0] != '\0') {
+		pw = getpwnam(job->user);
+		if (pw == NULL) {
+			prowl_log(LOG_WARNING, "job %s: user '%s' not found",
+			    job->label, job->user);
+			return;
+		}
+		job->run_uid = pw->pw_uid;
+		if (job->group[0] == '\0')
+			job->run_gid = pw->pw_gid;
+
+		ngroups = PROWL_GROUPS_MAX;
+		getgrouplist(pw->pw_name, job->run_gid,
+		    job->run_groups, &ngroups);
+		if (ngroups < 1)
+			ngroups = 1;
+		job->run_ngroups = ngroups;
+	}
+
+	job->run_priv_set = true;
+}
+
+/*
  * Drop privileges in the child process.  Called post-fork, pre-exec.
- * Uses only async-signal-safe calls.
+ * Uses only async-signal-safe syscalls: setgroups, setgid, setuid.
+ * Numeric IDs were resolved in the parent by resolve_job_privileges().
  */
 static void
 drop_privileges(const job_t *job)
 {
-	if (job->group[0] != '\0') {
-		struct group *gr = getgrnam(job->group);
-		if (gr != NULL)
-			setgid(gr->gr_gid);
-	}
+	if (!job->run_priv_set)
+		return;
 
-	if (job->user[0] != '\0') {
-		struct passwd *pw = getpwnam(job->user);
-		if (pw != NULL) {
-			initgroups(pw->pw_name, pw->pw_gid);
-			setuid(pw->pw_uid);
-		}
-	}
+	if (job->run_ngroups > 0)
+		setgroups((size_t)job->run_ngroups, job->run_groups);
+	if (job->run_gid != (gid_t)-1)
+		setgid(job->run_gid);
+	if (job->run_uid != (uid_t)-1)
+		setuid(job->run_uid);
 }
 
 /*
@@ -257,6 +306,8 @@ supervisor_start(job_t *job)
 	prowl_log(LOG_NOTICE, "starting %s", job->label);
 	job->started_at = time(NULL);
 	job_set_state(job, JOB_STATE_STARTING);
+
+	resolve_job_privileges(job);
 
 	pid = fork();
 	if (pid == -1) {

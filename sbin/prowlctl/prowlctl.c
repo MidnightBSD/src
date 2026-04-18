@@ -131,6 +131,28 @@ connect_daemon(void)
 }
 
 /*
+ * Send exactly len bytes, retrying on EINTR.
+ */
+static int
+send_all(int fd, const void *buf, size_t len)
+{
+	const char *p = (const char *)buf;
+	ssize_t n;
+
+	while (len > 0) {
+		n = send(fd, p, len, 0);
+		if (n == -1) {
+			if (errno == EINTR)
+				continue;
+			return (-1);
+		}
+		p += n;
+		len -= (size_t)n;
+	}
+	return (0);
+}
+
+/*
  * Send a length-prefixed JSON request.
  */
 static int
@@ -139,9 +161,9 @@ send_request(int fd, const char *json)
 	size_t len = strlen(json);
 	uint32_t nlen = htonl((uint32_t)len);
 
-	if (send(fd, &nlen, 4, 0) != 4)
+	if (send_all(fd, &nlen, 4) == -1)
 		return (-1);
-	if (send(fd, json, len, 0) != (ssize_t)len)
+	if (send_all(fd, json, len) == -1)
 		return (-1);
 
 	return (0);
@@ -228,6 +250,7 @@ check_response(const char *resp)
 {
 	char status[32];
 	char msg[256];
+	bool has_msg;
 
 	if (resp == NULL) {
 		fprintf(stderr, "prowlctl: no response from daemon\n");
@@ -240,14 +263,17 @@ check_response(const char *resp)
 	}
 
 	if (strcmp(status, "ok") != 0) {
-		if (json_get_str(resp, "message", msg, sizeof(msg)) != NULL)
+		has_msg = json_get_str(resp, "message", msg,
+		    sizeof(msg)) != NULL;
+
+		if (has_msg)
 			fprintf(stderr, "prowlctl: %s\n", msg);
 		else
 			fprintf(stderr, "prowlctl: error response\n");
 
-		if (strcmp(msg, "job not found") == 0)
+		if (has_msg && strcmp(msg, "job not found") == 0)
 			return (EXIT_NOT_FOUND);
-		if (strcmp(msg, "operation not permitted") == 0)
+		if (has_msg && strcmp(msg, "operation not permitted") == 0)
 			return (EXIT_NOT_PERMITTED);
 		return (EXIT_FAILED);
 	}

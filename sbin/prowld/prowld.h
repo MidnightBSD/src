@@ -44,6 +44,7 @@
 #define PROWL_DEPS_MAX		32
 #define PROWL_ARGS_MAX		64
 #define PROWL_ENV_MAX		64
+#define PROWL_GROUPS_MAX	32
 
 /* Runtime paths */
 #define PROWLD_SOCK_PATH	"/var/run/prowld/prowld.sock"
@@ -151,6 +152,13 @@ typedef struct job {
 	mode_t		umask_val;
 	bool		umask_set;
 
+	/* Pre-resolved privilege info (set in parent before fork) */
+	uid_t		run_uid;
+	gid_t		run_gid;
+	gid_t		run_groups[PROWL_GROUPS_MAX];
+	int		run_ngroups;
+	bool		run_priv_set;
+
 	/* Lifecycle */
 	bool		run_at_load;
 	keep_alive_t	keep_alive;
@@ -221,6 +229,8 @@ typedef struct ipc_client {
 	char		buf[IPC_MSG_MAX];
 	size_t		buf_used;
 	bool		active;
+	uid_t		peer_uid;	/* from getpeereid(2) at accept time */
+	gid_t		peer_gid;
 } ipc_client_t;
 
 /* Prowld daemon configuration */
@@ -254,6 +264,7 @@ const char	*job_type_str(job_type_t);
 bool		 job_is_masked(const job_t *);
 bool		 job_dep_satisfied(const job_t *, const dep_entry_t *);
 bool		 job_all_deps_satisfied(const job_t *);
+bool		 label_valid(const char *);
 
 /* ---- unit.c ---- */
 int	unit_load_dir(const char *);

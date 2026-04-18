@@ -67,31 +67,112 @@ static gid_t g_wheel_gid = 0;
 static ipc_client_t g_clients[IPC_MAX_CLIENTS];
 
 /* ------------------------------------------------------------------ */
-/* JSON response helpers                                                */
+/* JSON helpers                                                          */
 /* ------------------------------------------------------------------ */
+
+/*
+ * Write src as a JSON-escaped string (no surrounding quotes) into dst.
+ * Handles \, ", \n, \r, \t, and other control chars as \uXXXX.
+ * Returns the byte count written, or -1 on truncation.
+ */
+static int
+json_escape_str(const char *src, char *dst, size_t dstsz)
+{
+	static const char hex[] = "0123456789abcdef";
+	const unsigned char *p = (const unsigned char *)src;
+	size_t i = 0;
+
+	while (*p != '\0') {
+		unsigned char c = *p++;
+
+		if (c == '"' || c == '\\') {
+			if (i + 2 >= dstsz)
+				return (-1);
+			dst[i++] = '\\';
+			dst[i++] = (char)c;
+		} else if (c == '\n') {
+			if (i + 2 >= dstsz)
+				return (-1);
+			dst[i++] = '\\';
+			dst[i++] = 'n';
+		} else if (c == '\r') {
+			if (i + 2 >= dstsz)
+				return (-1);
+			dst[i++] = '\\';
+			dst[i++] = 'r';
+		} else if (c == '\t') {
+			if (i + 2 >= dstsz)
+				return (-1);
+			dst[i++] = '\\';
+			dst[i++] = 't';
+		} else if (c < 0x20) {
+			if (i + 6 >= dstsz)
+				return (-1);
+			dst[i++] = '\\';
+			dst[i++] = 'u';
+			dst[i++] = '0';
+			dst[i++] = '0';
+			dst[i++] = hex[c >> 4];
+			dst[i++] = hex[c & 0xf];
+		} else {
+			if (i + 1 >= dstsz)
+				return (-1);
+			dst[i++] = (char)c;
+		}
+	}
+	dst[i] = '\0';
+	return ((int)i);
+}
+
+/*
+ * Send exactly len bytes, retrying on EINTR.  Returns 0 on success, -1 on error.
+ */
+static int
+ipc_send_all(int fd, const void *buf, size_t len)
+{
+	const char *p = (const char *)buf;
+	ssize_t n;
+
+	while (len > 0) {
+		n = send(fd, p, len, MSG_NOSIGNAL);
+		if (n == -1) {
+			if (errno == EINTR)
+				continue;
+			return (-1);
+		}
+		p += n;
+		len -= (size_t)n;
+	}
+	return (0);
+}
 
 static void
 ipc_send(int fd, const char *json, size_t len)
 {
 	uint32_t nlen = htonl((uint32_t)len);
-	send(fd, &nlen, 4, MSG_NOSIGNAL);
-	send(fd, json, len, MSG_NOSIGNAL);
+
+	if (ipc_send_all(fd, &nlen, 4) == -1 ||
+	    ipc_send_all(fd, json, len) == -1)
+		prowl_log(LOG_DEBUG, "ipc_send fd %d: %m", fd);
 }
 
 static void
 ipc_send_ok(int fd, const char *id, const char *result_json)
 {
 	char buf[IPC_MSG_MAX];
+	char eid[512];
 	int n;
+
+	json_escape_str(id != NULL ? id : "", eid, sizeof(eid));
 
 	if (result_json != NULL)
 		n = snprintf(buf, sizeof(buf),
 		    "{\"id\":\"%s\",\"status\":\"ok\",\"result\":%s}",
-		    id != NULL ? id : "", result_json);
+		    eid, result_json);
 	else
 		n = snprintf(buf, sizeof(buf),
 		    "{\"id\":\"%s\",\"status\":\"ok\"}",
-		    id != NULL ? id : "");
+		    eid);
 
 	if (n > 0 && (size_t)n < sizeof(buf))
 		ipc_send(fd, buf, (size_t)n);
@@ -101,11 +182,14 @@ static void
 ipc_send_error(int fd, const char *id, const char *message)
 {
 	char buf[512];
+	char eid[256];
 	int n;
+
+	json_escape_str(id != NULL ? id : "", eid, sizeof(eid));
 
 	n = snprintf(buf, sizeof(buf),
 	    "{\"id\":\"%s\",\"status\":\"error\",\"message\":\"%s\"}",
-	    id != NULL ? id : "", message);
+	    eid, message);
 	if (n > 0 && (size_t)n < sizeof(buf))
 		ipc_send(fd, buf, (size_t)n);
 }
@@ -117,6 +201,14 @@ ipc_send_error(int fd, const char *id, const char *message)
 static int
 job_to_json(const job_t *job, char *buf, size_t bufsz)
 {
+	char elabel[PROWL_LABEL_MAX * 2 + 1];
+	char edesc[PROWL_DESC_MAX * 2 + 1];
+	char ercname[PROWL_LABEL_MAX * 2 + 1];
+
+	json_escape_str(job->label, elabel, sizeof(elabel));
+	json_escape_str(job->description, edesc, sizeof(edesc));
+	json_escape_str(job->rc_name, ercname, sizeof(ercname));
+
 	return snprintf(buf, bufsz,
 	    "{"
 	    "\"label\":\"%s\","
@@ -128,12 +220,12 @@ job_to_json(const job_t *job, char *buf, size_t bufsz)
 	    "\"enabled\":%s,"
 	    "\"restart_count\":%d"
 	    "}",
-	    job->label,
-	    job->description,
+	    elabel,
+	    edesc,
 	    job_type_str(job->type),
 	    job_state_str(job->state),
 	    (int)job->pid,
-	    job->rc_name,
+	    ercname,
 	    job->enabled ? "true" : "false",
 	    job->restart_count);
 }
