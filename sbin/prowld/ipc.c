@@ -45,6 +45,7 @@
 #include <arpa/inet.h>
 
 #include <errno.h>
+#include <grp.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -58,6 +59,9 @@
 
 /* Exported for prowld.c to register with kqueue */
 int ipc_listen_fd = -1;
+
+/* Cached wheel group GID for IPC authorization */
+static gid_t g_wheel_gid = 0;
 
 /* Per-client state */
 static ipc_client_t g_clients[IPC_MAX_CLIENTS];
@@ -441,6 +445,35 @@ cmd_daemon_reexec(int fd, const char *id, const ucl_object_t *req)
 }
 
 /* ------------------------------------------------------------------ */
+/* IPC authorization helpers                                            */
+/* ------------------------------------------------------------------ */
+
+static ipc_client_t *
+ipc_get_client(int fd)
+{
+	int i;
+
+	for (i = 0; i < IPC_MAX_CLIENTS; i++) {
+		if (g_clients[i].active && g_clients[i].fd == fd)
+			return (&g_clients[i]);
+	}
+	return (NULL);
+}
+
+static bool
+ipc_peer_is_root(const ipc_client_t *client)
+{
+	return (client->peer_uid == 0);
+}
+
+/* Read-only verbs are permitted to root or any wheel-group member. */
+static bool
+ipc_peer_can_query(const ipc_client_t *client)
+{
+	return (client->peer_uid == 0 || client->peer_gid == g_wheel_gid);
+}
+
+/* ------------------------------------------------------------------ */
 /* Message dispatch                                                     */
 /* ------------------------------------------------------------------ */
 
@@ -485,6 +518,38 @@ ipc_dispatch_message(int fd, const char *json, size_t len)
 		ipc_send_error(fd, id, "missing verb");
 		ucl_object_unref(root);
 		return;
+	}
+
+	{
+		ipc_client_t *client = ipc_get_client(fd);
+
+		if (client == NULL) {
+			ipc_send_error(fd, id, "internal error");
+			ucl_object_unref(root);
+			return;
+		}
+
+		/*
+		 * Read-only verbs: wheel group or root.
+		 * All state-changing verbs: root only.
+		 */
+		if (strcmp(verb, "list") == 0 ||
+		    strcmp(verb, "status") == 0 ||
+		    strcmp(verb, "show") == 0) {
+			if (!ipc_peer_can_query(client)) {
+				ipc_send_error(fd, id,
+				    "operation not permitted");
+				ucl_object_unref(root);
+				return;
+			}
+		} else {
+			if (!ipc_peer_is_root(client)) {
+				ipc_send_error(fd, id,
+				    "operation not permitted");
+				ucl_object_unref(root);
+				return;
+			}
+		}
 	}
 
 	if (strcmp(verb, "list") == 0)
@@ -550,6 +615,15 @@ ipc_init(void)
 
 	chmod(PROWLD_SOCK_PATH, 0660);
 
+	{
+		struct group *gr = getgrnam("wheel");
+		if (gr != NULL)
+			g_wheel_gid = gr->gr_gid;
+		if (chown(PROWLD_SOCK_PATH, 0, g_wheel_gid) == -1)
+			prowl_log(LOG_WARNING, "ipc_init: chown %s: %m",
+			    PROWLD_SOCK_PATH);
+	}
+
 	if (listen(fd, IPC_MAX_CLIENTS) == -1) {
 		prowl_log(LOG_ERR, "ipc listen: %m");
 		close(fd);
@@ -611,6 +685,18 @@ ipc_accept(void)
 		prowl_log(LOG_WARNING, "ipc: client limit reached");
 		close(cfd);
 		return;
+	}
+
+	{
+		uid_t puid;
+		gid_t pgid;
+		if (getpeereid(cfd, &puid, &pgid) == -1) {
+			prowl_log(LOG_WARNING, "ipc_accept getpeereid: %m");
+			close(cfd);
+			return;
+		}
+		g_clients[i].peer_uid = puid;
+		g_clients[i].peer_gid = pgid;
 	}
 
 	g_clients[i].fd = cfd;

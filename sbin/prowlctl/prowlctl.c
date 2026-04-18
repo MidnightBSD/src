@@ -39,6 +39,7 @@
 
 #include <arpa/inet.h>
 
+#include <ctype.h>
 #include <err.h>
 #include <errno.h>
 #include <stdio.h>
@@ -60,6 +61,27 @@
 
 static int g_sock = -1;
 static bool g_json = false;	/* --json flag */
+
+/*
+ * Validate a user-supplied label before embedding it in JSON.
+ * Mirrors label_valid() in prowld/job.c to prevent JSON injection.
+ */
+static bool
+validate_label_input(const char *s)
+{
+	const char *p;
+
+	if (s == NULL || *s == '\0' || *s == '.')
+		return (false);
+	for (p = s; *p != '\0'; p++) {
+		unsigned char c = (unsigned char)*p;
+		if (!isalnum(c) && c != '.' && c != '-' && c != '_')
+			return (false);
+	}
+	if (strstr(s, "..") != NULL)
+		return (false);
+	return (true);
+}
 
 static void
 usage(void)
@@ -359,10 +381,16 @@ do_list(int argc, char *argv[])
 	else if (show_failed)
 		snprintf(req, sizeof(req),
 		    "{\"verb\":\"list\",\"filter\":{\"state\":\"failed\"}}");
-	else if (type_filter != NULL)
+	else if (type_filter != NULL) {
+		if (!validate_label_input(type_filter)) {
+			fprintf(stderr, "prowlctl: invalid type filter '%s'\n",
+			    type_filter);
+			return (EXIT_FAILED);
+		}
 		snprintf(req, sizeof(req),
 		    "{\"verb\":\"list\",\"filter\":{\"type\":\"%s\"}}",
 		    type_filter);
+	}
 	else
 		snprintf(req, sizeof(req), "{\"verb\":\"list\"}");
 
@@ -406,6 +434,11 @@ do_status(int argc, char *argv[])
 		return (EXIT_NOT_FOUND);
 	}
 
+	if (!validate_label_input(argv[0])) {
+		fprintf(stderr, "prowlctl: invalid label '%s'\n", argv[0]);
+		return (EXIT_NOT_FOUND);
+	}
+
 	snprintf(req, sizeof(req),
 	    "{\"verb\":\"status\",\"target\":\"%s\"}", argv[0]);
 
@@ -444,6 +477,11 @@ do_simple_target(const char *verb, int argc, char *argv[])
 
 	if (argc < 1) {
 		fprintf(stderr, "prowlctl: %s requires a label\n", verb);
+		return (EXIT_NOT_FOUND);
+	}
+
+	if (!validate_label_input(argv[0])) {
+		fprintf(stderr, "prowlctl: invalid label '%s'\n", argv[0]);
 		return (EXIT_NOT_FOUND);
 	}
 
