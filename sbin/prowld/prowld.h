@@ -267,6 +267,7 @@ void	dag_schedule_ready(void);
 /* ---- supervisor.c ---- */
 int	supervisor_start(job_t *);
 int	supervisor_stop(job_t *, bool);
+int	supervisor_signal(job_t *, int);
 void	supervisor_reap(pid_t, int);
 void	supervisor_handle_throttle(job_t *);
 void	supervisor_handle_stop_timeout(job_t *);
