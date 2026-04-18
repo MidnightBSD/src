@@ -63,6 +63,10 @@
         ..
         portsnap
         ..
+        prowld
+            masked.d    mode=0700
+            ..
+        ..
         zfsd tags=package=zfs
             cases
             ..
@@ -75,6 +79,10 @@
     heimdal         mode=0700
     ..
     log
+        prowld          mode=0750
+            jobs        mode=0750
+            ..
+        ..
     ..
     mail            gname=mail mode=0775
     ..
@@ -90,6 +98,10 @@
         dhclient tags=package=dhclient
         ..
         ppp             gname=network mode=0770 tags=package=ppp
+        ..
+        prowld
+            notify      mode=0700
+            ..
         ..
         wpa_supplicant tags=package=wpa
         ..
