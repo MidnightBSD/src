@@ -89,7 +89,7 @@ jobs:
       run: |
         sudo apt-get update --quiet || true
         sudo apt-get -yq --no-install-suggests --no-install-recommends install \
-          bmake libarchive-dev clang-18 lld-18
+          bmake libarchive-dev libc6-dev clang-18 lld-18
 
     - name: Prepare build environment
       if: matrix.language == 'c-cpp'
