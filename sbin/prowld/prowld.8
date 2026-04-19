@@ -233,10 +233,33 @@ Directory to
 .Xr chdir 2
 into before executing the program.
 .It Va root_directory
-Optional
+Optional filesystem isolation boundary.
+When set,
+.Nm
+calls
 .Xr chroot 2
-target.
-The program path is interpreted relative to the new root.
+into this directory before dropping privileges and executing the program.
+.Xr chdir 2
+to
+.Pa /
+is performed immediately after
+.Xr chroot 2
+to ensure the process cannot access paths outside the new root via a
+lingering working-directory reference.
+.Va working_directory ,
+if also set, is then interpreted relative to the chroot root.
+.Xr chroot 2
+is called as root and must succeed;
+if it fails the service is not started.
+Note that
+.Xr chroot 2
+alone is not a complete security sandbox:
+a service running as root inside the chroot can still escape it.
+Pair
+.Va root_directory
+with
+.Va user
+to drop privileges before the program runs.
 .It Va user , Va group
 Drop privileges to this user and group before
 .Xr execve 2 .
