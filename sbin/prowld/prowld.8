@@ -639,6 +639,30 @@ The
 .Fl s Ar rundir
 flag forces a specific root without triggering auto-detection.
 .Pp
+Both the primary run directory and the
+.Pa /tmp/prowld
+fallback are validated before use.
+When a directory already exists,
+.Nm
+checks that it is a real directory
+.Pq not a symlink ,
+is owned by root
+.Pq uid\ 0 ,
+and has no group or other write bits.
+If the primary directory fails these checks it is treated as unavailable
+and the fallback is attempted.
+If the fallback directory fails the same checks
+.Nm
+logs a
+.Dv LOG_ERR
+message and exits immediately rather than operating under a directory
+that may be attacker-controlled.
+This prevents a local user who pre-creates
+.Pa /tmp/prowld
+from keeping ownership of the directory tree and placing symlinks
+.Pq e.g.\& Pa prowld.pid , Pa prowld.sock
+that would redirect root writes to arbitrary files.
+.Pp
 If the IPC socket cannot be bound,
 .Nm
 logs a warning and continues operating without the management socket.
