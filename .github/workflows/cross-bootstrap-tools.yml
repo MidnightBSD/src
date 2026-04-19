@@ -34,7 +34,7 @@ jobs:
           - target_arch: aarch64
             target: arm64
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: install packages (Ubuntu)
         if: runner.os == 'Linux'
         run: |
@@ -67,7 +67,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build kernel on MidnightBSD
         uses: cross-platform-actions/action@v1.0.0
         with:
