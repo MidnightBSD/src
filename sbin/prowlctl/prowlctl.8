@@ -264,9 +264,11 @@ the socket will be under that directory instead.
 .It "operation not permitted"
 The command requires root privilege.
 Re-run with
-.Xr su 1
+.Xr su 1 ,
+.Xr doas 1 ,
 or
-.Xr sudo 8 .
+.Xr sudo 8
+if installed.
 .It "job not found: \*(Ltlabel\*(Gt"
 No loaded job matches the given label or rc_name.
 Run
@@ -308,12 +310,14 @@ via
 .Xr sysrc 8 .
 .El
 .Sh SEE ALSO
-.Xr sysrc 8 ,
-.Xr service 8 ,
-.Xr rc 8 ,
-.Xr prowld 8 ,
+.Xr doas 1 ,
+.Xr su 1 ,
 .Xr tail 1 ,
-.Xr dot 1
+.Xr dot 1 ,
+.Xr rc 8 ,
+.Xr service 8 ,
+.Xr sysrc 8 ,
+.Xr prowld 8
 .Sh HISTORY
 .Nm
 first appeared in MidnightBSD 4.1.
