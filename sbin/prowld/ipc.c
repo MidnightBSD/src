@@ -837,15 +837,20 @@ ipc_init(void)
 		return (-1);
 	}
 
-	chmod(g_sock_path, 0660);
-
+	/*
+	 * Use fd-based fchmod/fchown rather than path-based chmod/chown.
+	 * Path-based calls have a TOCTOU window between bind(2) and the
+	 * permission update where an attacker could swap the socket node;
+	 * operating on the fd we hold eliminates that race entirely.
+	 */
 	{
 		struct group *gr = getgrnam("wheel");
 		if (gr != NULL)
 			g_wheel_gid = gr->gr_gid;
-		if (chown(g_sock_path, 0, g_wheel_gid) == -1)
-			prowl_log(LOG_WARNING, "ipc_init: chown %s: %m",
-			    g_sock_path);
+		if (fchown(fd, 0, g_wheel_gid) == -1)
+			prowl_log(LOG_WARNING, "ipc_init: fchown: %m");
+		if (fchmod(fd, 0660) == -1)
+			prowl_log(LOG_WARNING, "ipc_init: fchmod: %m");
 	}
 
 	if (listen(fd, IPC_MAX_CLIENTS) == -1) {

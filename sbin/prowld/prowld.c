@@ -105,18 +105,26 @@ setup_runtime_paths(const char *base)
 static void
 write_pidfile(void)
 {
-	FILE *fp;
 	char pidbuf[32];
+	ssize_t n;
+	int fd;
 
-	fp = fopen(g_pid_path, "w");
-	if (fp == NULL) {
+	/*
+	 * O_NOFOLLOW refuses to open a symlink at g_pid_path, preventing a
+	 * pre-placed symlink from redirecting this root write into an
+	 * arbitrary file when the run directory is under /tmp.
+	 */
+	fd = open(g_pid_path,
+	    O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW, 0644);
+	if (fd == -1) {
 		prowl_log(LOG_WARNING, "cannot write pidfile %s: %m",
 		    g_pid_path);
 		return;
 	}
-	snprintf(pidbuf, sizeof(pidbuf), "%d\n", (int)getpid());
-	fputs(pidbuf, fp);
-	fclose(fp);
+	n = snprintf(pidbuf, sizeof(pidbuf), "%d\n", (int)getpid());
+	if (n > 0)
+		(void)write(fd, pidbuf, (size_t)n);
+	close(fd);
 }
 
 static void
@@ -125,36 +133,96 @@ remove_pidfile(void)
 	unlink(g_pid_path);
 }
 
-static void
-make_dir(const char *path, mode_t mode)
+/*
+ * Create path with mode, or verify it is safe if it already exists.
+ *
+ * When mkdir(2) returns EEXIST we use lstat(2) — not stat(2) — so that a
+ * symlink at the target path is treated as an error rather than silently
+ * followed.  The existing entry must be:
+ *   - a real directory (not a symlink, device, etc.)
+ *   - owned by root (uid 0)
+ *   - not writable by group or others
+ *
+ * Without these checks a local user who pre-creates /tmp/prowld keeps
+ * ownership of the tree and can place symlinks (prowld.pid, prowld.sock,
+ * notify/<label>, …) that redirect root writes to arbitrary paths.
+ *
+ * Returns 0 on success, -1 on failure (already logged at LOG_ERR).
+ */
+static int
+secure_mkdir(const char *path, mode_t mode)
 {
-	if (mkdir(path, mode) == -1 && errno != EEXIST)
+	struct stat sb;
+
+	if (mkdir(path, mode) == 0)
+		return (0);		/* freshly created by us (root) */
+
+	if (errno != EEXIST) {
 		prowl_log(LOG_WARNING, "mkdir %s: %m", path);
+		return (-1);
+	}
+
+	/* Pre-existing entry: validate via lstat to detect symlinks */
+	if (lstat(path, &sb) == -1) {
+		prowl_log(LOG_ERR, "secure_mkdir: lstat %s: %m", path);
+		return (-1);
+	}
+	if (!S_ISDIR(sb.st_mode)) {
+		prowl_log(LOG_ERR,
+		    "secure_mkdir: %s exists but is not a directory (mode %04o)",
+		    path, (unsigned)(sb.st_mode & 0xffff));
+		return (-1);
+	}
+	if (sb.st_uid != 0) {
+		prowl_log(LOG_ERR,
+		    "secure_mkdir: %s is owned by uid %u, not root — "
+		    "possible hijack attack; refusing to use this path",
+		    path, (unsigned)sb.st_uid);
+		return (-1);
+	}
+	if (sb.st_mode & (S_IWGRP | S_IWOTH)) {
+		prowl_log(LOG_ERR,
+		    "secure_mkdir: %s has unsafe permissions %04o — "
+		    "refusing to use attacker-writable directory",
+		    path, (unsigned)(sb.st_mode & 0777));
+		return (-1);
+	}
+	return (0);
 }
 
 static void
 ensure_dirs(void)
 {
 	/*
-	 * Try the primary run directory first.  If it fails (read-only media,
-	 * EROFS, EACCES, or missing parent) fall back to /tmp/prowld so that
-	 * prowld can operate from a tmpfs even when /var is not yet writable.
+	 * Try the primary run directory.  If it is unavailable (read-only
+	 * media, EROFS, EACCES) fall back to /tmp/prowld so prowld can
+	 * operate from a tmpfs before /var is mounted.
+	 *
+	 * The fallback is only accepted if it is freshly created by prowld
+	 * (owned by root, no world-write).  A pre-existing /tmp/prowld that
+	 * fails the ownership or permission check is treated as a hijack
+	 * attempt and causes an immediate fatal exit.
 	 */
-	if (mkdir(g_run_dir, 0755) == -1 && errno != EEXIST) {
+	if (secure_mkdir(g_run_dir, 0755) == -1) {
 		prowl_log(LOG_WARNING,
-		    "run dir %s not writable (%m), falling back to /tmp/prowld",
+		    "run dir %s unavailable, falling back to /tmp/prowld",
 		    g_run_dir);
 		setup_runtime_paths("/tmp/prowld");
-		if (mkdir(g_run_dir, 0755) == -1 && errno != EEXIST)
-			prowl_log(LOG_WARNING, "mkdir %s: %m", g_run_dir);
+		if (secure_mkdir(g_run_dir, 0755) == -1) {
+			prowl_log(LOG_ERR,
+			    "cannot safely create or validate run directory "
+			    "%s; refusing to start", g_run_dir);
+			exit(1);
+		}
 	}
 
-	make_dir(g_notify_dir,    0700);	/* root-only: sd_notify sockets */
-	make_dir(g_db_dir,        0755);	/* world-readable for tooling */
-	make_dir(g_mask_dir,      0700);	/* root-only: mask symlinks */
-	make_dir(g_log_dir,       0750);	/* prowld daemon logs */
-	make_dir(g_job_log_dir,   0750);	/* per-job log files */
-	make_dir(g_generated_dir, 0755);	/* dynamically generated units */
+	/* Subdirectories — failures are logged but not fatal */
+	(void)secure_mkdir(g_notify_dir,    0700); /* root-only: sd_notify */
+	(void)secure_mkdir(g_db_dir,        0755); /* world-readable */
+	(void)secure_mkdir(g_mask_dir,      0700); /* root-only: masks */
+	(void)secure_mkdir(g_log_dir,       0750); /* daemon logs */
+	(void)secure_mkdir(g_job_log_dir,   0750); /* per-job logs */
+	(void)secure_mkdir(g_generated_dir, 0755); /* generated units */
 }
 
 static void
