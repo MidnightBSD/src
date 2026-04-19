@@ -1,4 +1,4 @@
-name: Cross-build Kernel
+name: Kernel Builds
 
 on:
   push:
@@ -61,3 +61,28 @@ jobs:
         run: ./tools/build/make.py --debug $EXTRA_BUILD_ARGS TARGET=${{ matrix.target }} TARGET_ARCH=${{ matrix.target_arch }} kernel-toolchain -s -j$NPROC -DWITH_DISK_IMAGE_TOOLS_BOOTSTRAP
       - name: make buildkernel
         run: ./tools/build/make.py --debug $EXTRA_BUILD_ARGS TARGET=${{ matrix.target }} TARGET_ARCH=${{ matrix.target_arch }} KERNCONF=GENERIC NO_MODULES=yes buildkernel -s -j$NPROC $EXTRA_MAKE_ARGS
+
+  midnightbsd-build:
+    name: MidnightBSD amd64 native build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build kernel on MidnightBSD
+        uses: cross-platform-actions/action@v1.0.0
+        with:
+          operating_system: midnightbsd
+          architecture: x86-64
+          version: '4.0.4'
+          shell: sh
+          memory: 8G
+          cpu_count: 4
+          run: |
+            set -eu
+            cd "$GITHUB_WORKSPACE"
+            mkdir -p ../build
+            export MAKEOBJDIRPREFIX="${PWD%/*}/build"
+            NPROC=$(getconf NPROCESSORS_ONLN 2>/dev/null || echo 1)
+            uname -a
+            make -j"$NPROC" kernel-toolchain
+            make -j"$NPROC" KERNCONF=GENERIC NO_MODULES=yes buildkernel
