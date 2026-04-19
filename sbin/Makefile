@@ -52,6 +52,8 @@ SUBDIR=adjkerntz \
 	nfsiod \
 	nos-tun \
 	pfilctl \
+	prowld \
+	prowlctl \
 	rcorder \
 	reboot \
 	recoverdisk \
