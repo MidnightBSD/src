@@ -100,10 +100,25 @@ socket_bind_one(prowl_socket_t *sock)
 		memset(&sin, 0, sizeof(sin));
 		sin.sin_family = AF_INET;
 		sin.sin_port   = htons((uint16_t)sock->port);
-		if (sock->host[0] != '\0')
-			inet_pton(AF_INET, sock->host, &sin.sin_addr);
-		else
+		if (sock->host[0] != '\0') {
+			/*
+			 * inet_pton returns 1 on success, 0 for an invalid
+			 * address string, -1 on error.  Ignoring the return
+			 * value leaves sin.sin_addr as all-zero (INADDR_ANY)
+			 * on a typo, silently binding to all interfaces instead
+			 * of failing — a potentially severe exposure for
+			 * loopback-only services.
+			 */
+			if (inet_pton(AF_INET, sock->host, &sin.sin_addr) != 1) {
+				prowl_log(LOG_ERR,
+				    "socket '%s': invalid IPv4 address '%s'",
+				    sock->name, sock->host);
+				close(fd);
+				return (-1);
+			}
+		} else {
 			sin.sin_addr.s_addr = INADDR_ANY;
+		}
 		sa    = (struct sockaddr *)&sin;
 		salen = sizeof(sin);
 		break;
@@ -112,10 +127,17 @@ socket_bind_one(prowl_socket_t *sock)
 		memset(&sin6, 0, sizeof(sin6));
 		sin6.sin6_family = AF_INET6;
 		sin6.sin6_port   = htons((uint16_t)sock->port);
-		if (sock->host[0] != '\0')
-			inet_pton(AF_INET6, sock->host, &sin6.sin6_addr);
-		else
+		if (sock->host[0] != '\0') {
+			if (inet_pton(AF_INET6, sock->host, &sin6.sin6_addr) != 1) {
+				prowl_log(LOG_ERR,
+				    "socket '%s': invalid IPv6 address '%s'",
+				    sock->name, sock->host);
+				close(fd);
+				return (-1);
+			}
+		} else {
 			sin6.sin6_addr = in6addr_any;
+		}
 		sa    = (struct sockaddr *)&sin6;
 		salen = sizeof(sin6);
 		break;

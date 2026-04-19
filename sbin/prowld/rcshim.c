@@ -281,16 +281,39 @@ rcshim_scan_dir(const char *dirpath)
 
 		snprintf(path, sizeof(path), "%s/%s", dirpath, de->d_name);
 
-		if (stat(path, &sb) == -1)
+		/*
+		 * Use lstat(2) so symlinks are seen as symlinks, not as the
+		 * files they point to.  A symlink is not a regular file and
+		 * will be skipped by the S_ISREG check below.
+		 */
+		if (lstat(path, &sb) == -1)
 			continue;
 
-		/* Skip directories and non-regular files */
+		/* Skip directories, symlinks, and non-regular files */
 		if (!S_ISREG(sb.st_mode))
 			continue;
 
 		/* Only load executable scripts */
 		if ((sb.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) == 0)
 			continue;
+
+		/*
+		 * Apply the same trust checks as unit_load_file(): the script
+		 * must be owned by root and must not be world-writable.
+		 * rc-shims are executed as root, so a non-root-owned or
+		 * world-writable script is an arbitrary-code-execution risk.
+		 */
+		if (sb.st_uid != 0) {
+			prowl_log(LOG_WARNING,
+			    "rcshim: %s not owned by root (uid %u), skipping",
+			    path, (unsigned)sb.st_uid);
+			continue;
+		}
+		if (sb.st_mode & S_IWOTH) {
+			prowl_log(LOG_WARNING,
+			    "rcshim: %s is world-writable, skipping", path);
+			continue;
+		}
 
 		job_t *job = rcshim_parse_script(path, de->d_name);
 		if (job != NULL) {
