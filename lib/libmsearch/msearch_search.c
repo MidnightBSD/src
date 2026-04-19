@@ -37,6 +37,9 @@ __MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_search.c,v 1.5 2011/08/06 23:
 
 #include "msearch_private.h"
 
+static sqlite3_stmt *msearch_search_prepare(sqlite3 *, msearch_query *);
+static int msearch_search_bind(sqlite3_stmt *, msearch_query *);
+
 int
 msearch(msearch_query *query, msearch_result *result) {
 
@@ -53,7 +56,7 @@ msearch(msearch_query *query, msearch_result *result) {
 
 int 
 msearch_search(msearch_query *query, msearch_result *result) {
-	sqlite3_stmt *stmt;
+	sqlite3_stmt *stmt = NULL;
 	int ret;
 	int i = 0;
 	msearch_index *idx;
@@ -63,59 +66,157 @@ msearch_search(msearch_query *query, msearch_result *result) {
 	struct passwd pwd;
 	struct passwd* pwdbuf;
 	uid_t uid = 0;
-	char *params;
 
 	if (query == NULL)
 		return -1;
 
 	idx = msearch_index_open(MSEARCH_DEFAULT_INDEX_FILE);
+	if (idx == NULL)
+		return -1;
 	current = result;
-	params = msearch_query_expand(query);
 
-	if (query->limit < 1)
-		ret = msearch_db_prepare(idx->db, &stmt, "SELECT * FROM files where %s", params);
-	else
-		ret = msearch_db_prepare(idx->db, &stmt, "SELECT * FROM files where %s limit %d", params, query->limit);
+	stmt = msearch_search_prepare(idx->db, query);
+	if (stmt == NULL) {
+		msearch_index_close(idx);
+		return -1;
+	}
 
-	if (ret == 0) {
-		while (1) {
-			ret = sqlite3_step(stmt);
-			if (ret == SQLITE_ROW) {
-				if (i > 0) {
-					current->next = malloc(sizeof(msearch_result));
-					if (current->next == NULL) {
-						i = -1; 
-						break;
-					}
-					current = current->next;
+	ret = msearch_search_bind(stmt, query);
+	if (ret != 0) {
+		sqlite3_finalize(stmt);
+		msearch_index_close(idx);
+		return -1;
+	}
+
+	while (1) {
+		ret = sqlite3_step(stmt);
+		if (ret == SQLITE_ROW) {
+			if (i > 0) {
+				current->next = malloc(sizeof(msearch_result));
+				if (current->next == NULL) {
+					i = -1; 
+					break;
 				}
-				current->filename = NULL;
-				if (lstat(sqlite3_column_text(stmt, 0), &sb) == 0) {
-					if (S_ISREG(sb.st_mode)) {
-						current->filename = strdup(basename((char *)sqlite3_column_text(stmt, 0)));
-					}
-				}
-				current->path = strdup(sqlite3_column_text(stmt, 0));
-				current->size = sqlite3_column_int64(stmt, 1);
-				current->uid = sqlite3_column_int(stmt, 2);
-				if ((getpwuid_r(uid, &pwd, buf, sizeof(buf), &pwdbuf)) == 0 && pwdbuf != NULL) {
-					current->owner = strdup(pwdbuf->pw_name);				
-				} else
-					current->owner = NULL;
-				current->created =  sqlite3_column_int64(stmt, 3);
-				current->modified = sqlite3_column_int64(stmt, 4);
-				current->next = NULL;
-				i++;
-			} else if (ret == SQLITE_DONE) {
-				break;
+				current = current->next;
 			}
+			current->filename = NULL;
+			if (lstat(sqlite3_column_text(stmt, 0), &sb) == 0) {
+				if (S_ISREG(sb.st_mode)) {
+					current->filename = strdup(basename((char *)sqlite3_column_text(stmt, 0)));
+				}
+			}
+			current->path = strdup(sqlite3_column_text(stmt, 0));
+			current->size = sqlite3_column_int64(stmt, 1);
+			current->uid = sqlite3_column_int(stmt, 2);
+			if ((getpwuid_r(uid, &pwd, buf, sizeof(buf), &pwdbuf)) == 0 && pwdbuf != NULL) {
+				current->owner = strdup(pwdbuf->pw_name);				
+			} else
+				current->owner = NULL;
+			current->created =  sqlite3_column_int64(stmt, 3);
+			current->modified = sqlite3_column_int64(stmt, 4);
+			current->next = NULL;
+			i++;
+		} else if (ret == SQLITE_DONE) {
+			break;
+		} else {
+			i = -1;
+			break;
 		}
 	}
 	sqlite3_finalize(stmt);
 	msearch_index_close(idx);
-	free(params);
 
 	return i;
+}
+
+static sqlite3_stmt *
+msearch_search_prepare(sqlite3 *db, msearch_query *query) {
+	sqlite3_stmt *stmt = NULL;
+	char *sql;
+	char *where = NULL;
+	int param_count;
+	int i;
+
+	if (db == NULL || query == NULL || query->term_count < 1)
+		return NULL;
+
+	for (i = 0; i < query->term_count; i++) {
+		char *tmp;
+
+		if (where == NULL) {
+			where = sqlite3_mprintf("path LIKE ?");
+		} else {
+			tmp = sqlite3_mprintf("%s AND path LIKE ?", where);
+			sqlite3_free(where);
+			where = tmp;
+		}
+
+		if (where == NULL)
+			return NULL;
+	}
+
+	if (query->limit > 0) {
+		sql = sqlite3_mprintf("SELECT * FROM files WHERE %s LIMIT ?",
+		    where);
+	} else
+		sql = sqlite3_mprintf("SELECT * FROM files WHERE %s", where);
+
+	sqlite3_free(where);
+	if (sql == NULL)
+		return NULL;
+
+	if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK)
+		stmt = NULL;
+
+	sqlite3_free(sql);
+	if (stmt == NULL)
+		return NULL;
+
+	if (query->limit > 0) {
+		param_count = sqlite3_bind_parameter_count(stmt);
+		if (sqlite3_bind_int(stmt, param_count, query->limit) != SQLITE_OK) {
+			sqlite3_finalize(stmt);
+			return NULL;
+		}
+	}
+
+	return stmt;
+}
+
+static int
+msearch_search_bind(sqlite3_stmt *stmt, msearch_query *query) {
+	char *pattern = NULL;
+	size_t cap = 0;
+	int i;
+	int rc;
+
+	if (stmt == NULL || query == NULL)
+		return 1;
+
+	for (i = 0; i < query->term_count; i++) {
+		size_t needed = strlen(query->terms[i]) + 3;
+		char *tmp;
+
+		if (needed > cap) {
+			tmp = realloc(pattern, needed);
+			if (tmp == NULL) {
+				free(pattern);
+				return 1;
+			}
+			pattern = tmp;
+			cap = needed;
+		}
+
+		snprintf(pattern, cap, "%%%s%%", query->terms[i]);
+		rc = sqlite3_bind_text(stmt, i + 1, pattern, -1, SQLITE_TRANSIENT);
+		if (rc != SQLITE_OK) {
+			free(pattern);
+			return 1;
+		}
+	}
+
+	free(pattern);
+	return 0;
 }
 
 void
