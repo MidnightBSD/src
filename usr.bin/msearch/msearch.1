@@ -24,7 +24,7 @@
 .\"
 .\" $MidnightBSD: src/usr.bin/batt/batt.1,v 1.5 2008/12/09 16:33:34 laffer1 Exp $
 .\"
-.Dd August 6, 2011
+.Dd April 19, 2026
 .Dt MSEARCH 1
 .Os
 .Sh NAME
@@ -38,7 +38,28 @@
 .Sh DESCRIPTION
 The
 .Nm
-command searches for files on the system using an index. The file name or
+command searches for files on the system using an index.
+By default,
+.Nm
+searches indexed pathnames.
+If
+.Fl t
+is specified, indexed file contents are searched instead.
+Multiple
+.Ar pattern
+arguments may be given.
+For pathname searches, all patterns must match the pathname.
+For full text searches, the patterns are passed to the full text matcher as a
+space-separated query.
+The
+.Fl l
+option limits the number of returned results.
+When
+.Fl t
+is used and
+.Fl l
+is not specified, the default limit is 15 results.
+The file path or
 contents of the file are checked depending on the arguments to
 .Nm
 .
@@ -50,9 +71,13 @@ Print the number of matches only.
 .It Fl l Ar number
 Limit output to
 .Ar number
-of file names and exit.
+results and exit.
 .It Fl r
-Print the rank with full text search results. 
+With
+.Fl t ,
+print the result rank before each pathname.
+The rank is written as a floating-point value with two digits after the decimal
+point, followed by a space and the pathname.
 .It Fl t
 Perform a full text search.
 .It Fl z
@@ -60,6 +85,7 @@ Print pathnames separated by an
 .Tn ASCII NUL
 character (character code 0) instead of default NL
 (newline, character code 10).
+.El
 .Sh SEE ALSO
 .Xr find 1 ,
 .Xr locate 1 ,

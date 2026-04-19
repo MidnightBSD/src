@@ -41,15 +41,17 @@ __MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_fulltext.c,v 1.12 2011/08/09 
 #define MAX_INDEX_SIZE 1048576
 #define DEFAULT_RESULT_LIMIT 15
 
+static sqlite3_stmt *msearch_fulltext_prepare(sqlite3 *, msearch_query *, int);
+static char *msearch_fulltext_join_terms(msearch_query *);
+
 int
 msearch_fulltext_search(msearch_query *query, msearch_result *result) {
-        sqlite3_stmt *stmt;
+        sqlite3_stmt *stmt = NULL;
         int ret, limit;
         int i = 0;
         msearch_fulltext *idx;
         msearch_result *current;
         struct stat sb;
-        char *params;
 
 	if (query == NULL)
 		return -1;
@@ -62,61 +64,121 @@ msearch_fulltext_search(msearch_query *query, msearch_result *result) {
 		return -1;
 	
 	current = result;
-	params = msearch_fulltext_query_expand(query);
-	if (params == NULL)
-		return -1;
 
 	if (query->limit < 1)
 		limit = DEFAULT_RESULT_LIMIT;
 	else
 		limit = query->limit;
 
-	ret = msearch_db_prepare(idx->db, &stmt, "SELECT path, msearch_rank(matchinfo(data)) FROM data where %s ORDER BY msearch_rank(matchinfo(data)) DESC limit %d OFFSET 0", 	
-		params, limit);
+	stmt = msearch_fulltext_prepare(idx->db, query, limit);
+	if (stmt == NULL) {
+		msearch_fulltext_close(idx);
+		return -1;
+	}
 
-	if (ret == 0) {
-                while (1) {
-                        ret = sqlite3_step(stmt);
-                        if (ret == SQLITE_ROW) {
-                                if (i > 0) {
-                                        current->next = malloc(sizeof(msearch_result));
-                                        if (current->next == NULL) {
-                                                i = -1;
-                                                break;
-                                        }
-                                        current = current->next;
+        while (1) {
+                ret = sqlite3_step(stmt);
+                if (ret == SQLITE_ROW) {
+                        if (i > 0) {
+                                current->next = malloc(sizeof(msearch_result));
+                                if (current->next == NULL) {
+                                        i = -1;
+                                        break;
                                 }
-				current->path = strdup(sqlite3_column_text(stmt, 0));
-				current->weight = sqlite3_column_double(stmt, 1);
-                                current->filename = NULL;
-                                if (lstat(sqlite3_column_text(stmt, 0), &sb) == 0) {
-                                        if (S_ISREG(sb.st_mode)) {
-                                                current->filename = strdup(basename((char *) sqlite3_column_text(stmt, 0)));
-                                        }
-					current->size = sb.st_size;
-					current->uid = sb.st_uid;
-					current->created =  sb.st_birthtime;
-                                	current->modified = sb.st_mtime;
-					current->owner = NULL;
-                                } else {
-                                	current->size = 0; 
-                                	current->uid = -1;
-                                	current->owner = NULL;
-                                	current->created =  0;
-                                	current->modified = 0;
-				}
-                                current->next = NULL;
-                                i++;
-                        } else if (ret == SQLITE_DONE) {
-                                break;
+                                current = current->next;
                         }
+			current->path = strdup(sqlite3_column_text(stmt, 0));
+			current->weight = sqlite3_column_double(stmt, 1);
+                        current->filename = NULL;
+                        if (lstat(sqlite3_column_text(stmt, 0), &sb) == 0) {
+                                if (S_ISREG(sb.st_mode)) {
+                                        current->filename = strdup(basename((char *) sqlite3_column_text(stmt, 0)));
+                                }
+				current->size = sb.st_size;
+				current->uid = sb.st_uid;
+				current->created =  sb.st_birthtime;
+                        	current->modified = sb.st_mtime;
+				current->owner = NULL;
+                        } else {
+                        	current->size = 0; 
+                        	current->uid = -1;
+                        	current->owner = NULL;
+                        	current->created =  0;
+                        	current->modified = 0;
+			}
+                        current->next = NULL;
+                        i++;
+                } else if (ret == SQLITE_DONE) {
+                        break;
+                } else {
+                        i = -1;
+                        break;
                 }
         }
         sqlite3_finalize(stmt);
         msearch_fulltext_close(idx);
-        free(params);
 
         return i;
+}
+
+static sqlite3_stmt *
+msearch_fulltext_prepare(sqlite3 *db, msearch_query *query, int limit) {
+	sqlite3_stmt *stmt = NULL;
+	char *terms;
+
+	if (db == NULL || query == NULL)
+		return NULL;
+
+	terms = msearch_fulltext_join_terms(query);
+	if (terms == NULL)
+		return NULL;
+
+	if (sqlite3_prepare_v2(db,
+	    "SELECT path, msearch_rank(matchinfo(data)) "
+	    "FROM data WHERE data MATCH ? "
+	    "ORDER BY msearch_rank(matchinfo(data)) DESC LIMIT ? OFFSET 0",
+	    -1, &stmt, NULL) != SQLITE_OK) {
+		free(terms);
+		return NULL;
+	}
+
+	if (sqlite3_bind_text(stmt, 1, terms, -1, SQLITE_TRANSIENT) != SQLITE_OK ||
+	    sqlite3_bind_int(stmt, 2, limit) != SQLITE_OK) {
+		sqlite3_finalize(stmt);
+		free(terms);
+		return NULL;
+	}
+
+	free(terms);
+	return stmt;
+}
+
+static char *
+msearch_fulltext_join_terms(msearch_query *query) {
+	char *terms;
+	size_t terms_len = 1;
+	int i;
+
+	if (query == NULL || query->term_count < 1)
+		return NULL;
+
+	for (i = 0; i < query->term_count; i++) {
+		terms_len += strlen(query->terms[i]);
+		if (i < query->term_count - 1)
+			terms_len++;
+	}
+
+	terms = calloc(terms_len, sizeof(char));
+	if (terms == NULL)
+		return NULL;
+
+	for (i = 0; i < query->term_count; i++) {
+		strlcat(terms, query->terms[i], terms_len);
+		if (i < query->term_count - 1)
+			strlcat(terms, " ", terms_len);
+	}
+
+	return terms;
 }
 
 msearch_fulltext *
@@ -306,4 +368,3 @@ msearch_fulltext_query_expand(msearch_query *restrict query) {
 
 	return result;
 }
-
