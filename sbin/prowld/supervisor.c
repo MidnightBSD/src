@@ -433,7 +433,25 @@ child_setup_and_exec(job_t *job)
 	char listen_fdnames_env[600];
 	int i, argc, envc;
 
-	/* Change working directory */
+	/*
+	 * chroot(2) must be called as root before drop_privileges().
+	 * After chroot we always chdir("/") to ensure the process cannot
+	 * access paths outside the new root via a lingering CWD reference.
+	 * working_directory, if set, is then interpreted relative to the
+	 * chroot.  On failure we _exit so the service never runs with a
+	 * weaker-than-expected containment boundary.
+	 */
+	if (job->root_directory[0] != '\0') {
+		if (chroot(job->root_directory) == -1) {
+			syslog(LOG_ERR,
+			    "prowld: chroot %s failed for job %s: %m",
+			    job->root_directory, job->label);
+			_exit(1);
+		}
+		if (chdir("/") == -1)
+			_exit(1);
+	}
+
 	if (job->working_directory[0] != '\0') {
 		if (chdir(job->working_directory) == -1)
 			_exit(1);
