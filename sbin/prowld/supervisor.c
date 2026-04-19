@@ -398,8 +398,20 @@ drop_privileges(const job_t *job)
 }
 
 /*
+ * Minimal environment given to jobs that do not specify an explicit
+ * environment block.  prowld must never expose its own ambient environment
+ * (LD_PRELOAD, LD_LIBRARY_PATH, proxy credentials, debug vars, etc.) to
+ * managed services; execve(2) is always used so the child env is explicit.
+ */
+static const char *minimal_env[] = {
+	"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+	"HOME=/",
+	NULL
+};
+
+/*
  * Child-side setup after fork().  Configures the execution environment
- * and replaces the process image via execv/execve.
+ * and replaces the process image via execve(2).
  * Must not return; calls _exit on failure.
  */
 static void
@@ -417,7 +429,6 @@ child_setup_and_exec(job_t *job)
 	/* "LISTEN_FDNAMES=" + 8 names * 63 chars + 7 colons + NUL */
 	char listen_fdnames_env[600];
 	int i, argc, envc;
-	bool need_execve;
 
 	/* Change working directory */
 	if (job->working_directory[0] != '\0') {
@@ -463,12 +474,27 @@ child_setup_and_exec(job_t *job)
 		redirect_fd(STDERR_FILENO, job->stderr_path,
 		    O_WRONLY | O_CREAT | O_APPEND);
 
+	/*
+	 * Build envp.  Start from the unit's explicit environment block, or
+	 * fall back to the hardcoded minimal set.  execve(2) is always used so
+	 * prowld's ambient environment is never inherited by child processes.
+	 */
+	envc = 0;
+	if (job->envc > 0) {
+		for (i = 0; i < job->envc && envc < PROWL_ENV_MAX; i++)
+			envp[envc++] = job->envp[i];
+	} else {
+		for (i = 0; minimal_env[i] != NULL && envc < PROWL_ENV_MAX; i++)
+			envp[envc++] = (char *)(uintptr_t)minimal_env[i];
+	}
+
 	if (job->type == JOB_TYPE_RCSHIM) {
 		/* rc-shim invocation: script start */
+		envp[envc] = NULL;
 		argv[0] = job->rcshim_path;
 		argv[1] = (char *)(uintptr_t)"start";
 		argv[2] = NULL;
-		execv(argv[0], argv);
+		execve(argv[0], argv, envp);
 		_exit(127);
 	}
 
@@ -479,20 +505,13 @@ child_setup_and_exec(job_t *job)
 		argv[argc++] = job->arguments[i];
 	argv[argc] = NULL;
 
-	/* Build envp, injecting daemon-protocol vars */
-	envc = 0;
-	need_execve = false;
-
-	for (i = 0; i < job->envc && envc < PROWL_ENV_MAX; i++)
-		envp[envc++] = job->envp[i];
-
+	/* Inject daemon-protocol environment variables */
 	if (job->notify_type == NOTIFY_NOTIFY) {
 		char npath[PROWL_PATH_MAX];
 		if (notify_socket_path(job, npath, sizeof(npath)) == 0) {
 			snprintf(notify_env, sizeof(notify_env),
 			    "NOTIFY_SOCKET=%s", npath);
 			envp[envc++] = notify_env;
-			need_execve = true;
 		}
 	}
 
@@ -504,7 +523,6 @@ child_setup_and_exec(job_t *job)
 		    "WATCHDOG_PID=%d", (int)getpid());
 		envp[envc++] = watchdog_usec_env;
 		envp[envc++] = watchdog_pid_env;
-		need_execve = true;
 	}
 
 	if (job->sockets_count > 0) {
@@ -553,16 +571,10 @@ child_setup_and_exec(job_t *job)
 			envp[envc++] = listen_pid_env;
 			envp[envc++] = listen_fdnames_env;
 		}
-		need_execve = true;
 	}
 
-	if (envc > 0 || need_execve) {
-		envp[envc] = NULL;
-		execve(job->program, argv, envp);
-	} else {
-		execv(job->program, argv);
-	}
-
+	envp[envc] = NULL;
+	execve(job->program, argv, envp);
 	_exit(127);
 }
 
