@@ -31,13 +31,16 @@
  * keep-alive restart, stop with timeout, and orderly shutdown.
  */
 
+#include <sys/param.h>
 #include <sys/event.h>
 #include <sys/resource.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/sysctl.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/un.h>
+#include <sys/user.h>
 #include <sys/wait.h>
 
 #include <errno.h>
@@ -823,6 +826,83 @@ supervisor_handle_watchdog(job_t *job)
 }
 
 /*
+ * Validate a MAINPID= value received on the notify socket.
+ *
+ * Three checks must all pass:
+ *   1. new_pid exists in the kernel process table (sysctl succeeds).
+ *   2. new_pid's effective UID matches the uid the job was configured to
+ *      run as (or 0 when no user was specified, since prowld is root).
+ *   3. new_pid is a descendant of job->pid: walking ki_ppid from new_pid
+ *      must reach job->pid within MAX_PPID_DEPTH steps.
+ *
+ * Without these checks a compromised service could redirect prowld's
+ * future stop/watchdog signals onto arbitrary PIDs.
+ */
+#define MAX_PPID_DEPTH	32
+
+static bool
+mainpid_valid(const job_t *job, pid_t new_pid)
+{
+	struct kinfo_proc kp;
+	int mib[4];
+	size_t len;
+	uid_t expected_uid;
+	pid_t cur;
+	int depth;
+
+	mib[0] = CTL_KERN;
+	mib[1] = KERN_PROC;
+	mib[2] = KERN_PROC_PID;
+	mib[3] = (int)new_pid;
+	len = sizeof(kp);
+
+	/* Check 1: PID must exist. */
+	if (sysctl(mib, 4, &kp, &len, NULL, 0) == -1 || len == 0) {
+		prowl_log(LOG_WARNING,
+		    "job %s: MAINPID=%d rejected: pid does not exist",
+		    job->label, (int)new_pid);
+		return (false);
+	}
+
+	/*
+	 * Check 2: UID must match the job's configured run user.
+	 * If the job has no explicit user, prowld keeps root privileges,
+	 * so the child must also be root.
+	 */
+	expected_uid = (job->run_priv_set && job->run_uid != (uid_t)-1)
+	    ? job->run_uid : 0;
+	if (kp.ki_uid != expected_uid) {
+		prowl_log(LOG_WARNING,
+		    "job %s: MAINPID=%d rejected: uid %u != expected %u",
+		    job->label, (int)new_pid,
+		    (unsigned)kp.ki_uid, (unsigned)expected_uid);
+		return (false);
+	}
+
+	/*
+	 * Check 3: new_pid must be a descendant of the tracked service PID.
+	 * Walk ki_ppid upward; stop at PID 1 or if sysctl fails.
+	 */
+	cur = new_pid;
+	for (depth = 0; depth < MAX_PPID_DEPTH; depth++) {
+		if (cur == job->pid)
+			return (true);
+		if (cur <= 1)
+			break;
+		mib[3] = (int)cur;
+		len = sizeof(kp);
+		if (sysctl(mib, 4, &kp, &len, NULL, 0) == -1 || len == 0)
+			break;
+		cur = kp.ki_ppid;
+	}
+
+	prowl_log(LOG_WARNING,
+	    "job %s: MAINPID=%d rejected: not a descendant of pid %d",
+	    job->label, (int)new_pid, (int)job->pid);
+	return (false);
+}
+
+/*
  * Called when the notify socket becomes readable.
  * Reads one datagram, parses KEY=value\n lines, and dispatches them.
  */
@@ -872,7 +952,8 @@ supervisor_handle_notify(job_t *job)
 				    sizeof(job->status_msg));
 			} else if (strcmp(key, "MAINPID") == 0) {
 				pid_t new_pid = (pid_t)strtol(val, NULL, 10);
-				if (new_pid > 0 && new_pid != job->pid) {
+				if (new_pid > 0 && new_pid != job->pid &&
+				    mainpid_valid(job, new_pid)) {
 					struct kevent kev;
 					/* Drop watcher for the old pid */
 					if (job->pid > 0) {
