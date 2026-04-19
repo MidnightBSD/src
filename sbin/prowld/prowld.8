@@ -617,6 +617,30 @@ the native unit wins and the
 script is skipped.
 This allows incremental migration: shipping a native unit file
 automatically retires the rc.d script without any administrator action.
+.Pp
+.Sy Trust requirements for rc.d scripts .
+Because rc.d scripts are executed as root,
+.Nm
+applies the same ownership and writability checks to scanned scripts as
+it does to native unit files and the configuration file.
+A script is silently skipped and a
+.Dv LOG_WARNING
+message is emitted if any of the following conditions are true:
+.Bl -bullet -compact
+.It
+The directory entry is not a regular file
+.Pq symlinks are rejected .
+.It
+The file is not owned by root
+.Pq uid\ 0 .
+.It
+The file has the world-writable bit set.
+.El
+Scripts that are not executable are also skipped, as before.
+Administrators who install rc.d scripts must ensure that the scripts
+and their parent directories
+.Pq Pa /etc/rc.d , Pa /usr/local/etc/rc.d
+are owned by root and not world-writable.
 .Sh READ-ONLY MEDIA
 .Nm
 is designed to operate correctly on read-only installation media
