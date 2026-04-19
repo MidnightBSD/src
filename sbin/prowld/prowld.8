@@ -519,9 +519,28 @@ Set a human-readable status line shown by
 .Cm status .
 .It Dv MAINPID=pid
 Update the tracked main PID.
-Useful for daemons that double-fork.
-.Nm
-registers a new process watcher for the new PID.
+Useful for daemons that double-fork after sending
+.Dv READY=1 .
+The value is accepted only if all three of the following conditions hold:
+.Bl -enum -compact
+.It
+The candidate PID exists in the kernel process table.
+.It
+Its effective UID matches the user the job was configured to run as
+(or root when no
+.Cm user
+is specified).
+.It
+It is a descendant of the currently tracked service PID,
+verified by walking the parent-PID chain via
+.Xr sysctl 3 .
+.El
+A value that fails any check is rejected and logged at
+.Dv LOG_WARNING ;
+the previously tracked PID is left unchanged.
+This prevents a compromised service from redirecting
+.Nm Ap s
+stop and watchdog signals onto unrelated processes.
 .It Dv WATCHDOG=1
 Reset the watchdog timer.
 .It Dv RELOADING=1
