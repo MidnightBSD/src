@@ -467,6 +467,22 @@ If the address contains a colon,
 .Dv AF_INET6
 is assumed; otherwise
 .Dv AF_INET .
+The value is passed to
+.Xr inet_pton 3
+and must be a valid numeric address for the chosen family
+.Pq e.g.\& Dq 127.0.0.1 or Dq ::1 .
+A malformed value is a hard configuration error:
+.Nm
+logs
+.Dv LOG_ERR ,
+refuses to bind any socket for that job, and places the job in the
+.Cm failed
+state.
+It does not fall back to binding all interfaces.
+This ensures that a typo in a loopback-only address
+.Pq e.g.\& Dq 127.0.0,1
+produces a visible failure rather than silently exposing the service
+on all network interfaces.
 .It Va backlog
 Listen backlog passed to
 .Xr listen 2 .
