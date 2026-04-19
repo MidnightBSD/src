@@ -133,74 +133,89 @@ static sqlite3_stmt *
 msearch_search_prepare(sqlite3 *db, msearch_query *query) {
 	sqlite3_stmt *stmt = NULL;
 	char *sql;
-	size_t sql_len;
-	size_t limit_len = 0;
+	char *where = NULL;
+	int param_count;
 	int i;
 
 	if (db == NULL || query == NULL || query->term_count < 1)
 		return NULL;
 
-	sql_len = sizeof("SELECT * FROM files WHERE ");
 	for (i = 0; i < query->term_count; i++) {
-		sql_len += sizeof("path LIKE ?");
-		if (i < query->term_count - 1)
-			sql_len += sizeof(" AND ");
-	}
-	if (query->limit > 0) {
-		limit_len = sizeof(" LIMIT ");
-		limit_len += 11;
-	}
-	sql_len += limit_len;
+		char *tmp;
 
-	sql = calloc(sql_len, sizeof(char));
+		if (where == NULL) {
+			where = sqlite3_mprintf("path LIKE ?");
+		} else {
+			tmp = sqlite3_mprintf("%s AND path LIKE ?", where);
+			sqlite3_free(where);
+			where = tmp;
+		}
+
+		if (where == NULL)
+			return NULL;
+	}
+
+	if (query->limit > 0) {
+		sql = sqlite3_mprintf("SELECT * FROM files WHERE %s LIMIT ?",
+		    where);
+	} else
+		sql = sqlite3_mprintf("SELECT * FROM files WHERE %s", where);
+
+	sqlite3_free(where);
 	if (sql == NULL)
 		return NULL;
-
-	strlcpy(sql, "SELECT * FROM files WHERE ", sql_len);
-	for (i = 0; i < query->term_count; i++) {
-		strlcat(sql, "path LIKE ?", sql_len);
-		if (i < query->term_count - 1)
-			strlcat(sql, " AND ", sql_len);
-	}
-	if (query->limit > 0) {
-		char limit_buf[12];
-
-		snprintf(limit_buf, sizeof(limit_buf), "%d", query->limit);
-		strlcat(sql, " LIMIT ", sql_len);
-		strlcat(sql, limit_buf, sql_len);
-	}
 
 	if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK)
 		stmt = NULL;
 
-	free(sql);
+	sqlite3_free(sql);
+	if (stmt == NULL)
+		return NULL;
+
+	if (query->limit > 0) {
+		param_count = sqlite3_bind_parameter_count(stmt);
+		if (sqlite3_bind_int(stmt, param_count, query->limit) != SQLITE_OK) {
+			sqlite3_finalize(stmt);
+			return NULL;
+		}
+	}
 
 	return stmt;
 }
 
 static int
 msearch_search_bind(sqlite3_stmt *stmt, msearch_query *query) {
-	char *pattern;
-	size_t pattern_len;
+	char *pattern = NULL;
+	size_t cap = 0;
 	int i;
+	int rc;
 
 	if (stmt == NULL || query == NULL)
 		return 1;
 
 	for (i = 0; i < query->term_count; i++) {
-		pattern_len = strlen(query->terms[i]) + 3;
-		pattern = malloc(pattern_len);
-		if (pattern == NULL)
-			return 1;
+		size_t needed = strlen(query->terms[i]) + 3;
+		char *tmp;
 
-		snprintf(pattern, pattern_len, "%%%s%%", query->terms[i]);
-		if (sqlite3_bind_text(stmt, i + 1, pattern, -1, SQLITE_TRANSIENT) != SQLITE_OK) {
+		if (needed > cap) {
+			tmp = realloc(pattern, needed);
+			if (tmp == NULL) {
+				free(pattern);
+				return 1;
+			}
+			pattern = tmp;
+			cap = needed;
+		}
+
+		snprintf(pattern, cap, "%%%s%%", query->terms[i]);
+		rc = sqlite3_bind_text(stmt, i + 1, pattern, -1, SQLITE_TRANSIENT);
+		if (rc != SQLITE_OK) {
 			free(pattern);
 			return 1;
 		}
-		free(pattern);
 	}
 
+	free(pattern);
 	return 0;
 }
 
