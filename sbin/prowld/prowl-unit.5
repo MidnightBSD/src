@@ -1,0 +1,248 @@
+.\" Copyright (c) 2026 Lucas Holt
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.Dd April 19, 2026
+.Dt PROWL-UNIT 5
+.Os
+.Sh NAME
+.Nm prowl-unit
+.Nd prowld job configuration format
+.Sh DESCRIPTION
+A unit file is a declarative configuration file that defines a job managed by
+.Xr prowld 8 .
+Jobs can be long-running daemons, oneshot tasks, schedule-driven timers,
+or on-demand services triggered by socket activity.
+.Pp
+Unit files are parsed by
+.Xr libucl 3
+and support UCL, JSON, and simplified YAML-like syntax.
+Files must have the
+.Pa .unit
+extension and be located in one of the search directories described in
+.Xr prowld 8 .
+.Sh SCHEMA
+The following fields are recognised at the top level of a unit file:
+.Ss Identity
+.Bl -tag -width "description"
+.It Va label
+.Pq required, string
+Unique reverse-DNS identifier for the job,
+e.g.,
+.Dq org.midnightbsd.sshd .
+Used for dependency resolution and management via
+.Xr prowlctl 8 .
+.It Va description
+.Pq string
+Human-readable description of the service.
+.It Va type
+.Pq string
+One of:
+.Bl -tag -width "oneshot" -compact
+.It Cm daemon
+A long-running process (default).
+.It Cm oneshot
+A task that runs once and is considered complete on successful exit.
+.It Cm timer
+A job activated by a schedule or interval.
+.It Cm socket
+A job activated by incoming socket connections.
+.El
+.It Va rc_name
+.Pq string
+The prefix used for the
+.Va _enable
+variable in
+.Pa /etc/rc.conf .
+Defaults to the last component of
+.Va label .
+.El
+.Ss Execution
+.Bl -tag -width "working_directory"
+.It Va program
+.Pq string
+Absolute path to the executable.
+Required unless
+.Va arguments[0]
+is an absolute path.
+.It Va arguments
+.Pq array of strings
+Argument vector passed to the process.
+The executable name is automatically prepended as
+.Vt argv[0] .
+.It Va environment
+.Pq object
+Key/value pairs set in the child's environment.
+The process does not inherit the environment of
+.Xr prowld 8 .
+.It Va working_directory
+.Pq string
+Directory to
+.Xr chdir 2
+into before execution.
+.It Va root_directory
+.Pq string
+Directory to
+.Xr chroot 2
+into.
+Requires
+.Va user
+to be set for security.
+.It Va user , Va group
+.Pq string
+User and group names to drop privileges to.
+.It Va umask
+.Pq string
+Octal umask (e.g.,
+.Dq 0022 ) .
+.El
+.Ss Lifecycle
+.Bl -tag -width "throttle_interval"
+.It Va run_at_load
+.Pq boolean
+If true, start the job automatically when loaded.
+.It Va keep_alive
+.Pq boolean or object
+Restart policy.
+See
+.Xr prowld 8
+for detailed object keys:
+.Va always ,
+.Va crashed ,
+.Va successful_exit .
+.It Va throttle_interval
+.Pq integer
+Minimum seconds between restart attempts.
+Default: 10.
+.It Va exit_timeout
+.Pq integer
+Seconds to wait after
+.Dv SIGTERM
+before sending
+.Dv SIGKILL .
+Default: 20.
+.It Va shutdown_wait
+.Pq boolean
+Wait for clean exit during system shutdown.
+.El
+.Ss Dependencies
+.Bl -tag -width "requires"
+.It Va requires
+.Pq array of strings
+Capability names that must be running for this job to start.
+.It Va wants
+.Pq array of strings
+Like
+.Va requires
+but failure of the dependency is non-fatal.
+.It Va provides
+.Pq array of strings
+Capabilities this job satisfies (e.g.,
+.Dq network ) .
+.It Va before , Va after
+.Pq array of strings
+Explicit ordering constraints against other job labels.
+.El
+.Ss Scheduling (Timers)
+The
+.Va schedule
+field is an object used by
+.Cm type :
+.Cm timer
+jobs:
+.Bl -tag -width "on_boot_delay"
+.It Va interval
+.Pq integer
+Recurring interval in seconds.
+.It Va on_boot_delay
+.Pq integer
+One-shot delay after the daemon starts.
+.It Va calendar
+.Pq object
+Cron-like triggers.
+Fields:
+.Va minute
+(0-59),
+.Va hour
+(0-23),
+.Va day
+(1-31),
+.Va month
+(1-12),
+.Va weekday
+(0-6, Sunday is 0).
+Fields support integers or the
+.Dq *
+wildcard.
+.El
+.Ss Socket Activation
+The
+.Va sockets
+field is an object mapping logical names to socket descriptions.
+Keys in each description:
+.Va type
+(stream, dgram, seqpacket),
+.Va family
+(inet, inet6, unix),
+.Va path
+(AF_UNIX only),
+.Va port
+(inet only),
+.Va host
+(bind address),
+.Va backlog .
+.Sh EXAMPLES
+A simple periodic cleanup task:
+.Bd -literal -offset indent
+{
+  "label": "org.midnightbsd.cleanup",
+  "type": "timer",
+  "program": "/usr/libexec/mycleanup",
+  "schedule": {
+    "interval": 3600
+  }
+}
+.Ed
+.Pp
+A daemon with dependencies and socket activation:
+.Bd -literal -offset indent
+{
+  "label": "org.midnightbsd.myservice",
+  "description": "My Network Service",
+  "program": "/usr/local/bin/mysrv",
+  "requires": ["network"],
+  "sockets": {
+    "http": { "port": 80, "family": "inet" }
+  }
+}
+.Ed
+.Sh SEE ALSO
+.Xr libucl 3 ,
+.Xr prowld 8 ,
+.Xr prowlctl 8 ,
+.Xr prowl-generator 8
+.Sh HISTORY
+.Nm
+first appeared in MidnightBSD 4.1.
+.Sh AUTHORS
+.An Lucas Holt Aq Mt luke@MidnightBSD.org

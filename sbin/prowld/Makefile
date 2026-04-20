@@ -12,7 +12,7 @@ SRCS=		prowld.c \
 		supervisor.c \
 		socket_activation.c \
 		ipc.c
-MAN=		prowld.8
+MAN=		prowld.8 prowld.conf.5 prowl-unit.5
 
 CFLAGS+=	-I${SRCTOP}/contrib/libucl/include
 LIBADD=		ucl util
