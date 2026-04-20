@@ -60,4 +60,15 @@ jobs:
       - name: make kernel-toolchain
         run: ./tools/build/make.py --debug $EXTRA_BUILD_ARGS TARGET=${{ matrix.target }} TARGET_ARCH=${{ matrix.target_arch }} kernel-toolchain -s -j$NPROC -DWITH_DISK_IMAGE_TOOLS_BOOTSTRAP
       - name: make buildkernel
-        run: ./tools/build/make.py --debug $EXTRA_BUILD_ARGS TARGET=${{ matrix.target }} TARGET_ARCH=${{ matrix.target_arch }} KERNCONF=GENERIC NO_MODULES=yes buildkernel -s -j$NPROC $EXTRA_MAKE_ARGS
+        shell: bash
+        run: |
+          args=(./tools/build/make.py --debug)
+          if [ -n "${EXTRA_BUILD_ARGS:-}" ]; then
+            args+=($EXTRA_BUILD_ARGS)
+          fi
+          args+=(TARGET=${{ matrix.target }} TARGET_ARCH=${{ matrix.target_arch }} KERNCONF=GENERIC NO_MODULES=yes buildkernel -s -j"$NPROC")
+          if [ "${{ runner.os }}" = "Linux" ] && [ "${{ matrix.target_arch }}" = "aarch64" ]; then
+            resource_dir=$(/usr/lib/llvm-18/bin/clang -print-resource-dir)
+            args+=("KERNEL_FLAGS=CFLAGS+=-idirafter ${resource_dir}/include")
+          fi
+          "${args[@]}"
