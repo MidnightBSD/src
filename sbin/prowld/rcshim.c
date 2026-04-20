@@ -251,8 +251,8 @@ rcshim_parse_script(const char *path, const char *scriptname)
 	job->shutdown_wait = keyword_shutdown;
 	(void)keyword_nojail; /* TODO: add nojail condition check */
 
-	/* Enabled state */
-	job->enabled = rcconf_is_enabled(provides_raw[0], true);
+	/* Enabled state: default to false for base system services */
+	job->enabled = rcconf_is_enabled(provides_raw[0], false);
 	job->run_at_load = job->enabled;
 
 	return (job);
@@ -336,17 +336,12 @@ rcshim_scan_dir(const char *dirpath)
 /*
  * Read rc.conf and rc.conf.local for <name>_enable.
  * Returns the value found, or default_val if not set.
- *
- * This is a best-effort simple parser for the common cases:
- *   sshd_enable="YES"
- *   sshd_enable=YES
- *   sshd_enable="NO"
- * It does not handle shell variable expansion or sourcing.
  */
 bool
 rcconf_is_enabled(const char *name, bool default_val)
 {
 	const char *files[] = {
+		"/etc/defaults/rc.conf",
 		RCCONF_PATH,
 		RCCONF_LOCAL_PATH,
 		NULL
@@ -355,7 +350,6 @@ rcconf_is_enabled(const char *name, bool default_val)
 	char line[1024];
 	char varname[PROWL_LABEL_MAX];
 	bool result = default_val;
-	bool found = false;
 
 	snprintf(varname, sizeof(varname), "%s_enable", name);
 
@@ -390,17 +384,15 @@ rcconf_is_enabled(const char *name, bool default_val)
 			    (p[3] == '\0' || p[3] == '"' ||
 			    p[3] == '\'' || isspace((unsigned char)p[3]))) {
 				result = true;
-				found = true;
 			} else if (strncasecmp(p, "NO", 2) == 0 &&
 			    (p[2] == '\0' || p[2] == '"' ||
 			    p[2] == '\'' || isspace((unsigned char)p[2]))) {
 				result = false;
-				found = true;
 			}
 		}
 		fclose(fp);
 	}
 
-	(void)found;
 	return (result);
 }
+
