@@ -1211,7 +1211,7 @@ supervisor_reap(pid_t pid, int status)
 		    "job %s will restart (attempt %d)",
 		    job->label, job->restart_count);
 		job_set_state(job, JOB_STATE_LOADED);
-		dag_schedule_ready();
+		arm_throttle_timer(job);
 	} else {
 		job_set_state(job, JOB_STATE_FAILED);
 		prowl_log(LOG_ERR, "job %s entered failed state",
