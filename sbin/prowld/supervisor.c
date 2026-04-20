@@ -56,9 +56,15 @@
 #include <time.h>
 #include <unistd.h>
 
+#include <ucl.h>
+
 #include "prowld.h"
 
 static bool g_dnssd_available = true;
+
+/* Internal prototypes */
+static void supervisor_mdns_register(job_t *job);
+static void supervisor_mdns_deregister(job_t *job);
 
 void
 supervisor_init(void)
@@ -179,7 +185,13 @@ timer_state_save(void)
 		return;
 	}
 
-	ucl_object_emit_file(root, UCL_EMIT_CONFIG, fp);
+	ucl_object_emit_full(root, UCL_EMIT_CONFIG, NULL, NULL);
+	/* Wait, emit_full returns a string. libucl has no emit_to_file but we can write the string. */
+	unsigned char *res = ucl_object_emit(root, UCL_EMIT_CONFIG);
+	if (res != NULL) {
+		fprintf(fp, "%s", res);
+		free(res);
+	}
 	fflush(fp);
 	fsync(fileno(fp));
 	fclose(fp);
@@ -960,8 +972,6 @@ supervisor_handle_boot_delay(job_t *job)
 	supervisor_start(job);
 }
 
-static bool g_dnssd_available = true;
-
 static void
 supervisor_mdns_register(job_t *job)
 {
@@ -983,7 +993,7 @@ supervisor_mdns_register(job_t *job)
 	}
 
 	/* Substitute %h and %l */
-	char *src = job->mdns.name[0] != '\0' ? job->mdns.name : "%l";
+	const char *src = job->mdns.name[0] != '\0' ? job->mdns.name : "%l";
 	char *dst = name;
 	while (*src && (dst - name < PROWL_LABEL_MAX - 1)) {
 		if (*src == '%' && *(src+1) == 'h') {

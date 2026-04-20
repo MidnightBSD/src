@@ -66,6 +66,9 @@ static gid_t g_wheel_gid = 0;
 /* Per-client state */
 static ipc_client_t g_clients[IPC_MAX_CLIENTS];
 
+/* Internal prototypes */
+static ipc_client_t *ipc_get_client(int fd);
+
 /* ------------------------------------------------------------------ */
 /* JSON helpers                                                          */
 /* ------------------------------------------------------------------ */
@@ -697,7 +700,7 @@ ipc_broadcast_event(const char *label, const char *old_state, const char *new_st
 			}
 			
 			/* Non-blocking send: if it fails, client is too slow */
-			(void)ipc_send_message(g_clients[i].fd, msg);
+			ipc_send(g_clients[i].fd, msg, strlen(msg));
 		}
 	}
 }

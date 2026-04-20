@@ -39,6 +39,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <grp.h>
+#include <libgen.h>
 #include <netinet/in.h>
 #include <pwd.h>
 #include <stdio.h>
@@ -561,7 +562,17 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 	/* resource_limits */
 	obj = ucl_object_lookup(root, "resource_limits");
 	if (obj != NULL && ucl_object_type(obj) == UCL_OBJECT) {
-...
+		const ucl_object_t *rl;
+
+		rl = ucl_object_lookup(obj, "max_open_files");
+		if (rl != NULL) {
+			job->rlimits.nofile = (rlim_t)ucl_object_toint(rl);
+			job->rlimits.set_nofile = true;
+		}
+
+		rl = ucl_object_lookup(obj, "max_processes");
+		if (rl != NULL) {
+			job->rlimits.nproc = (rlim_t)ucl_object_toint(rl);
 			job->rlimits.set_nproc = true;
 		}
 	}

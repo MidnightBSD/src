@@ -496,7 +496,14 @@ startup_load(void)
 	job_t *job;
 
 	prowl_log(LOG_NOTICE, "prowld starting, loading unit files");
-...
+
+	unit_load_dir(UNIT_DIR_BASE);
+	unit_load_dir(UNIT_DIR_LOCAL);
+	unit_load_dir(UNIT_DIR_OVERRIDE);
+	unit_load_dir(g_generated_dir);
+
+	prowl_log(LOG_NOTICE, "scanning rc.d directories");
+	rcshim_scan_dir(RCD_DIR_BASE);
 	rcshim_scan_dir(RCD_DIR_LOCAL);
 
 	dag_build();

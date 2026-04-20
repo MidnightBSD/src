@@ -403,6 +403,7 @@ void	supervisor_reap(pid_t, int);
 void	supervisor_handle_throttle(job_t *);
 void	supervisor_handle_stop_timeout(job_t *);
 void	supervisor_handle_watchdog(job_t *);
+void	supervisor_handle_notify(job_t *);
 void	supervisor_handle_notify_timeout(job_t *);
 void	supervisor_handle_periodic(job_t *);
 void	supervisor_handle_boot_delay(job_t *);
