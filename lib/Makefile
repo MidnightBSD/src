@@ -95,6 +95,7 @@ SUBDIR=	${SUBDIR_BOOTSTRAP} \
 	libstdbuf \
 	libstdthreads \
 	libsysdecode \
+	libsystemd \
 	libtacplus \
 	libthr \
 	libthread_db \
