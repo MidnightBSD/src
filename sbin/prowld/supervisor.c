@@ -74,18 +74,8 @@ watch_child(pid_t pid, job_t *job)
 }
 
 /*
- * Timer ident encoding (low 2 bits of job pointer, which is >=8-byte aligned):
- *   bits == 0b00  throttle / readiness timer
- *   bits == 0b01  stop-timeout timer
- *   bits == 0b10  watchdog timer (recurring)
- *   bits == 0b11  notify-timeout timer
+ * Timer ident encoding (low 2 bits of job pointer, which is >=4-byte aligned).
  */
-#define TIMER_MASK	3UL
-#define TIMER_THROTTLE	0UL
-#define TIMER_STOP	1UL
-#define TIMER_WATCHDOG	2UL
-#define TIMER_NOTIFY_TMO 3UL
-
 static uintptr_t
 timer_ident(const job_t *job, uintptr_t kind)
 {
@@ -136,7 +126,7 @@ arm_stop_timer(job_t *job)
 /*
  * Arm a one-shot timer to fire after exit_timeout seconds.
  * Used for notify jobs that must send READY=1 before this deadline.
- * Timer type: TIMER_NOTIFY_TMO (bits 0b11).
+ * Timer type: NOTIFY_TMO (bits 0b11).
  */
 static void
 arm_notify_timeout_timer(job_t *job)
@@ -147,7 +137,7 @@ arm_notify_timeout_timer(job_t *job)
 	ms = (int64_t)(job->exit_timeout > 0 ?
 	    job->exit_timeout : DEFAULT_EXIT_TIMEOUT) * 1000;
 
-	EV_SET(&kev, timer_ident(job, TIMER_NOTIFY_TMO), EVFILT_TIMER,
+	EV_SET(&kev, timer_ident(job, NOTIFY_TMO), EVFILT_TIMER,
 	    EV_ADD | EV_ONESHOT, NOTE_MSECONDS, ms, NULL);
 	if (kevent(g_kqueue_fd, &kev, 1, NULL, 0, NULL) == -1)
 		prowl_log(LOG_WARNING, "kevent notify timeout timer %s: %m",
@@ -159,7 +149,7 @@ cancel_notify_timeout_timer(job_t *job)
 {
 	struct kevent kev;
 
-	EV_SET(&kev, timer_ident(job, TIMER_NOTIFY_TMO), EVFILT_TIMER,
+	EV_SET(&kev, timer_ident(job, NOTIFY_TMO), EVFILT_TIMER,
 	    EV_DELETE, 0, 0, NULL);
 	kevent(g_kqueue_fd, &kev, 1, NULL, 0, NULL);
 }
@@ -1010,7 +1000,7 @@ supervisor_handle_notify(job_t *job)
 					    (int64_t)(usec / 1000);
 					cancel_notify_timeout_timer(job);
 					EV_SET(&kev,
-					    timer_ident(job, TIMER_NOTIFY_TMO),
+					    timer_ident(job, NOTIFY_TMO),
 					    EVFILT_TIMER,
 					    EV_ADD | EV_ONESHOT,
 					    NOTE_MSECONDS, ms_extra, NULL);

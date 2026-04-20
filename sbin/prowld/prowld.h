@@ -43,6 +43,23 @@
 typedef struct job job_t;
 typedef struct prowl_socket prowl_socket_t;
 
+/*
+ * Timer ident encoding (low 2 bits of job pointer).
+ * Assumes job_t pointers are at least 4-byte aligned.
+ */
+#define TIMER_MASK	3UL
+#define TIMER_THROTTLE	0UL
+#define TIMER_STOP	1UL
+#define TIMER_WATCHDOG	2UL
+#define NOTIFY_TMO	3UL
+
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+#include <assert.h>
+/* Ensure the tagging trick is safe for this architecture */
+static_assert((__alignof__(struct job) & TIMER_MASK) == 0,
+    "struct job alignment insufficient for timer tagging");
+#endif
+
 /* String size limits */
 #define PROWL_LABEL_MAX		256
 #define PROWL_PATH_MAX		1024

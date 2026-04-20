@@ -393,20 +393,20 @@ static void
 handle_timer_event(struct kevent *kev)
 {
 	uintptr_t ident = kev->ident;
-	uintptr_t kind = ident & 3UL;
-	job_t *job = (job_t *)(ident & ~3UL);
+	uintptr_t kind = ident & TIMER_MASK;
+	job_t *job = (job_t *)(ident & ~TIMER_MASK);
 
 	switch (kind) {
-	case 0:
+	case TIMER_THROTTLE:
 		supervisor_handle_throttle(job);
 		break;
-	case 1:
+	case TIMER_STOP:
 		supervisor_handle_stop_timeout(job);
 		break;
-	case 2:
+	case TIMER_WATCHDOG:
 		supervisor_handle_watchdog(job);
 		break;
-	case 3:
+	case NOTIFY_TMO:
 		supervisor_handle_notify_timeout(job);
 		break;
 	}
