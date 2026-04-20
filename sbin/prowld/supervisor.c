@@ -174,7 +174,7 @@ timer_state_save(void)
 	}
 
 	snprintf(tmp_path, sizeof(tmp_path), "%s.tmp", PROWLD_TIMER_STATE_PATH);
-	fd = open(tmp_path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+	fd = open(tmp_path, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW, 0644);
 	if (fd == -1) {
 		prowl_log(LOG_ERR, "timer_state_save open: %m");
 		ucl_object_unref(root);
@@ -188,19 +188,22 @@ timer_state_save(void)
 		return;
 	}
 
-	ucl_object_emit_full(root, UCL_EMIT_CONFIG, NULL, NULL);
-	/* Wait, emit_full returns a string. libucl has no emit_to_file but we can write the string. */
-	unsigned char *res = ucl_object_emit(root, UCL_EMIT_CONFIG);
-	if (res != NULL) {
-		fprintf(fp, "%s", res);
-		free(res);
+	{
+		unsigned char *res = ucl_object_emit(root, UCL_EMIT_CONFIG);
+		if (res != NULL) {
+			fprintf(fp, "%s", res);
+			free(res);
+			fflush(fp);
+			fsync(fileno(fp));
+			fclose(fp);
+			if (rename(tmp_path, PROWLD_TIMER_STATE_PATH) == -1)
+				prowl_log(LOG_ERR, "timer_state_save rename: %m");
+		} else {
+			prowl_log(LOG_ERR, "timer_state_save: ucl_object_emit OOM");
+			fclose(fp);
+			unlink(tmp_path);
+		}
 	}
-	fflush(fp);
-	fsync(fileno(fp));
-	fclose(fp);
-
-	if (rename(tmp_path, PROWLD_TIMER_STATE_PATH) == -1)
-		prowl_log(LOG_ERR, "timer_state_save rename: %m");
 
 	ucl_object_unref(root);
 }
@@ -448,7 +451,7 @@ notify_socket_open(job_t *job)
 		return (-1);
 	}
 
-	chmod(path, 0600);
+	fchmod(fd, 0600);
 
 	/* udata = job pointer so the event loop knows which job to notify */
 	EV_SET(&kev, (uintptr_t)fd, EVFILT_READ, EV_ADD, 0, 0, (void *)job);
@@ -987,8 +990,21 @@ supervisor_mdns_register(job_t *job)
 	int i, argc;
 	pid_t pid;
 
+#define MDNS_MIN_RESTART_SEC	10
 	if (!g_dnssd_available || !job->mdns.register_service || job->mdns_pid > 0)
 		return;
+
+	{
+		time_t now = time(NULL);
+		if (job->mdns_last_register > 0 &&
+		    now - job->mdns_last_register < MDNS_MIN_RESTART_SEC) {
+			prowl_log(LOG_DEBUG,
+			    "mdns %s: rate-limited, skipping re-register",
+			    job->label);
+			return;
+		}
+		job->mdns_last_register = now;
+	}
 
 	if (gethostname(hostname, sizeof(hostname)) == -1)
 		strlcpy(hostname, "midnightbsd", sizeof(hostname));
@@ -1060,7 +1076,7 @@ supervisor_mdns_register(job_t *job)
 			dup2(fd, STDERR_FILENO);
 			close(fd);
 		}
-		execv(args[0], args);
+		execve(args[0], args, (char *const *)(uintptr_t)minimal_env);
 		_exit(127);
 	}
 
@@ -1335,7 +1351,10 @@ supervisor_handle_notify(job_t *job)
 				    job->label, val);
 			} else if (strcmp(key, "EXTEND_TIMEOUT_USEC") == 0) {
 				/* Extend the notify timeout by the given µs */
+#define EXTEND_TIMEOUT_MAX_USEC	(300LL * 1000000LL)
 				long long usec = strtoll(val, NULL, 10);
+				if (usec > EXTEND_TIMEOUT_MAX_USEC)
+					usec = EXTEND_TIMEOUT_MAX_USEC;
 				if (usec > 0) {
 					struct kevent kev;
 					int64_t ms_extra =

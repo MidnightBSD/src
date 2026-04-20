@@ -104,22 +104,56 @@ tokenize_into(const char *line, char dest[][PROWL_LABEL_MAX], int cur, int max)
 	return (n);
 }
 
+/*
+ * Write a JSON-escaped version of src to stdout, surrounded by double quotes.
+ * Handles \, ", and control characters.
+ */
+static void
+print_json_string(const char *src)
+{
+	const unsigned char *p = (const unsigned char *)src;
+
+	putchar('"');
+	while (*p != '\0') {
+		unsigned char c = *p++;
+		if (c == '"' || c == '\\')
+			printf("\\%c", c);
+		else if (c == '\n')
+			printf("\\n");
+		else if (c == '\r')
+			printf("\\r");
+		else if (c == '\t')
+			printf("\\t");
+		else if (c < 0x20)
+			printf("\\u%04x", c);
+		else
+			putchar(c);
+	}
+	putchar('"');
+}
+
 static void
 generate_unit(const unit_info_t *info)
 {
 	printf("{\n");
-	printf("  \"label\": \"%s\",\n", info->label);
-	printf("  \"description\": \"Generated from rc.d script %s\",\n", info->rc_name);
-	printf("  \"program\": \"%s\",\n", info->program);
-	printf("  \"arguments\": [\"start\"],\n");
+	printf("  \"label\": ");
+	print_json_string(info->label);
+	printf(",\n  \"description\": \"Generated from rc.d script ");
+	print_json_string(info->rc_name);
+	printf("\",\n  \"program\": ");
+	print_json_string(info->program);
+	printf(",\n  \"arguments\": [\"start\"],\n");
 	printf("  \"type\": \"oneshot\",\n");
-	printf("  \"rc_name\": \"%s\",\n", info->rc_name);
+	printf("  \"rc_name\": ");
+	print_json_string(info->rc_name);
+	printf(",\n");
 
 	if (info->provides_count > 1) {
 		printf("  \"provides\": [");
 		for (int i = 0; i < info->provides_count; i++) {
-			printf("\"%s\"%s", info->provides[i],
-			    (i == info->provides_count - 1) ? "" : ", ");
+			print_json_string(info->provides[i]);
+			if (i < info->provides_count - 1)
+				printf(", ");
 		}
 		printf("],\n");
 	}
@@ -127,8 +161,9 @@ generate_unit(const unit_info_t *info)
 	if (info->requires_count > 0) {
 		printf("  \"requires\": [");
 		for (int i = 0; i < info->requires_count; i++) {
-			printf("\"%s\"%s", info->requires[i],
-			    (i == info->requires_count - 1) ? "" : ", ");
+			print_json_string(info->requires[i]);
+			if (i < info->requires_count - 1)
+				printf(", ");
 		}
 		printf("],\n");
 	}
@@ -136,8 +171,9 @@ generate_unit(const unit_info_t *info)
 	if (info->before_count > 0) {
 		printf("  \"before\": [");
 		for (int i = 0; i < info->before_count; i++) {
-			printf("\"%s\"%s", info->before[i],
-			    (i == info->before_count - 1) ? "" : ", ");
+			print_json_string(info->before[i]);
+			if (i < info->before_count - 1)
+				printf(", ");
 		}
 		printf("],\n");
 	}

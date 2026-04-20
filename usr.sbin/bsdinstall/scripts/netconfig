@@ -42,7 +42,7 @@ DIALOG_TAGS=""
 
 for IF in `ifconfig -l`; do
 	test "$IF" = "lo0" && continue
-	(ifconfig -g wlan | egrep -wq $IF) && continue
+	(ifconfig -g wlan | egrep -wq "$IF") && continue
 	INTERFACES="$INTERFACES $IF"
 done
 
@@ -58,7 +58,7 @@ is_wireless_if() {
 }
 
 for IF in $INTERFACES; do
-	DESC=`sysctl -n dev.$(echo $IF | sed -E 's/([[:alpha:]]*)([[:digit:]]*)/\1.\2/g').%desc`
+	DESC=`sysctl -n dev.$(echo "$IF" | sed -E 's/([[:alpha:]]*)([[:digit:]]*)/\1.\2/g').%desc`
 	DIALOG_TAGS="$DIALOG_TAGS $IF \"$DESC\""
 done
 
@@ -74,12 +74,12 @@ INTERFACE=`echo $DIALOG_TAGS | xargs dialog --backtitle 'MidnightBSD Installer' 
 if [ $? -eq $DIALOG_CANCEL ]; then exit 1; fi
 exec 3>&-
 
-: > $BSDINSTALL_TMPETC/._rc.conf.net
+: > "$BSDINSTALL_TMPETC/._rc.conf.net"
 
 IFCONFIG_PREFIX=""
 if is_wireless_if $INTERFACE; then
 	NEXT_WLAN_IFACE=wlan0	# XXX
-	echo wlans_$INTERFACE=\"$NEXT_WLAN_IFACE\" >> $BSDINSTALL_TMPETC/._rc.conf.net
+	echo wlans_$INTERFACE=\"$NEXT_WLAN_IFACE\" >> "$BSDINSTALL_TMPETC/._rc.conf.net"
 	IFCONFIG_PREFIX="WPA "
 	if [ ! -z $BSDINSTALL_CONFIGCURRENT ]; then
 		ifconfig $NEXT_WLAN_IFACE create wlandev $INTERFACE
@@ -113,7 +113,7 @@ fi
 # In case wlanconfig left an option and we do not support IPv4 we need to write
 # it out on its own.  We cannot write it out with IPv6 as that suffix.
 if [ ${IPV4_AVAIL} -eq 0 -a -n ${IFCONFIG_PREFIX} ]; then
-	echo ifconfig_${INTERFACE}=\"${IFCONFIG_PREFIX}\" >> $BSDINSTALL_TMPETC/._rc.conf.net
+	echo ifconfig_${INTERFACE}=\"${IFCONFIG_PREFIX}\" >> "$BSDINSTALL_TMPETC/._rc.conf.net"
 fi
 if [ ${IPV6_AVAIL} -eq 1 ]; then
 	dialog --backtitle 'MidnightBSD Installer' --title 'Network Configuration' \
@@ -273,7 +273,7 @@ if [ $RESOLV_CONFIG_SKIP -eq 0 ]; then
 			next;
 		}
 		printf "nameserver %s\n", $1;
-	}' > ${BSDINSTALL_TMPETC}/resolv.conf
+	}' > "${BSDINSTALL_TMPETC}/resolv.conf"
 elif [ $DNS_OVERRIDE -eq 1 ]; then
 	# If we skipped manual entry but picked a provider, generate a basic resolv.conf
 	(
@@ -282,22 +282,22 @@ elif [ $DNS_OVERRIDE -eq 1 ]; then
 		[ -n "${IP6_2}" ] && echo "nameserver ${IP6_2}"
 		[ -n "${IP4_1}" ] && echo "nameserver ${IP4_1}"
 		[ -n "${IP4_2}" ] && echo "nameserver ${IP4_2}"
-	) > ${BSDINSTALL_TMPETC}/resolv.conf
+	) > "${BSDINSTALL_TMPETC}/resolv.conf"
 fi
 
 if [ $DNS_OVERRIDE -eq 1 ]; then
 	# If we have multiple IPs, we need to comma-separate them for dhclient.conf
 	# We'll use the variables from the provider choice
 	SUPERSERVERS="${IP4_1}${IP4_2:+, $IP4_2}"
-	
-	echo "interface \"$INTERFACE\" {" > $BSDINSTALL_TMPETC/dhclient.conf.$INTERFACE
-	echo "	supersede domain-name-servers $SUPERSERVERS;" >> $BSDINSTALL_TMPETC/dhclient.conf.$INTERFACE
-	echo "}" >> $BSDINSTALL_TMPETC/dhclient.conf.$INTERFACE
-	
+
+	echo "interface \"$INTERFACE\" {" > "$BSDINSTALL_TMPETC/dhclient.conf.$INTERFACE"
+	echo "	supersede domain-name-servers $SUPERSERVERS;" >> "$BSDINSTALL_TMPETC/dhclient.conf.$INTERFACE"
+	echo "}" >> "$BSDINSTALL_TMPETC/dhclient.conf.$INTERFACE"
+
 	# Disable the resolv rc script which might try to overwrite resolv.conf from kenv DHCP info
-	echo "resolv_enable=\"NO\"" > $BSDINSTALL_TMPETC/rc.conf.resolv
+	echo "resolv_enable=\"NO\"" > "$BSDINSTALL_TMPETC/rc.conf.resolv"
 else
-	rm -f $BSDINSTALL_TMPETC/dhclient.conf.$INTERFACE
+	rm -f "$BSDINSTALL_TMPETC/dhclient.conf.$INTERFACE"
 fi
 
-mv $BSDINSTALL_TMPETC/._rc.conf.net $BSDINSTALL_TMPETC/rc.conf.net.$INTERFACE
+mv "$BSDINSTALL_TMPETC/._rc.conf.net" "$BSDINSTALL_TMPETC/rc.conf.net.$INTERFACE"

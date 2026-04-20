@@ -93,19 +93,16 @@ if [ -n "$RESTART" ]; then
 	files=`rcorder ${skip} ${local_rc} 2>/dev/null`
 
 	for file in `reverse_list ${files}`; do
-		if grep -q ^rcvar $file; then
-			eval `grep ^name= $file`
-			eval `grep ^rcvar $file`
-			if [ -n "$rcvar" ]; then
-				load_rc_config_var ${name} ${rcvar}
-			fi
+		name=$(sed -n 's/^name=["'"'"']\{0,1\}\([A-Za-z_][A-Za-z0-9_]*\)["'"'"']\{0,1\}[[:space:]]*$/\1/p' "$file" | head -1)
+		rcvar=$(sed -n 's/^rcvar=["'"'"']\{0,1\}\([A-Za-z_][A-Za-z0-9_]*\)["'"'"']\{0,1\}[[:space:]]*$/\1/p' "$file" | head -1)
+		if [ -n "$rcvar" ]; then
+			load_rc_config_var ${name} ${rcvar}
 			checkyesno $rcvar 2>/dev/null && run_rc_script ${file} stop
 		fi
 	done
 	for file in $files; do
-		if grep -q ^rcvar $file; then
-			eval `grep ^name= $file`
-			eval `grep ^rcvar $file`
+		rcvar=$(sed -n 's/^rcvar=["'"'"']\{0,1\}\([A-Za-z_][A-Za-z0-9_]*\)["'"'"']\{0,1\}[[:space:]]*$/\1/p' "$file" | head -1)
+		if [ -n "$rcvar" ]; then
 			checkyesno $rcvar 2>/dev/null && run_rc_script ${file} start
 		fi
 	done
@@ -129,12 +126,10 @@ if [ -n "$ENABLED" ]; then
 		exit 0
 	fi
 	for file in $files; do
-		if grep -q ^rcvar $file; then
-			eval `grep ^name= $file`
-			eval `grep ^rcvar $file`
-			if [ -n "$rcvar" ]; then
-				load_rc_config_var ${name} ${rcvar}
-			fi
+		name=$(sed -n 's/^name=["'"'"']\{0,1\}\([A-Za-z_][A-Za-z0-9_]*\)["'"'"']\{0,1\}[[:space:]]*$/\1/p' "$file" | head -1)
+		rcvar=$(sed -n 's/^rcvar=["'"'"']\{0,1\}\([A-Za-z_][A-Za-z0-9_]*\)["'"'"']\{0,1\}[[:space:]]*$/\1/p' "$file" | head -1)
+		if [ -n "$rcvar" ]; then
+			load_rc_config_var ${name} ${rcvar}
 			checkyesno $rcvar 2>/dev/null && echo $file
 		fi
 	done
@@ -184,7 +179,7 @@ cd /
 for dir in /etc/rc.d $local_startup; do
 	if [ -x "$dir/$script" ]; then
 		[ -n "$VERBOSE" ] && echo "$script is located in $dir"
-		exec env -i -L -/daemon HOME=/ PATH=/sbin:/bin:/usr/sbin:/usr/bin "$dir/$script" "$@"
+		exec env -i HOME=/ PATH=/sbin:/bin:/usr/sbin:/usr/bin "$dir/$script" "$@"
 	fi
 done
 

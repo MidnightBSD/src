@@ -274,6 +274,7 @@ struct job {
 	/* mDNS Discovery */
 	mdns_config_t	mdns;
 	pid_t		mdns_pid;
+	time_t		mdns_last_register;
 
 	/* Shutdown */
 	bool		shutdown_wait;

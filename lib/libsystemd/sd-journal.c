@@ -68,12 +68,15 @@ sd_journal_send(const char *format, ...)
 
 	va_start(ap, format);
 	p = format;
-	while (p) {
+	while (p != NULL) {
 		if (strncmp(p, "MESSAGE=", 8) == 0)
 			msg = p + 8;
-		else if (strncmp(p, "PRIORITY=", 9) == 0)
-			priority = atoi(p + 9);
-		
+		else if (strncmp(p, "PRIORITY=", 9) == 0) {
+			int pri = atoi(p + 9);
+			if (pri >= LOG_EMERG && pri <= LOG_DEBUG)
+				priority = pri;
+		}
+
 		p = va_arg(ap, const char *);
 	}
 	va_end(ap);
@@ -96,8 +99,11 @@ sd_journal_sendv(const struct iovec *iov, int n)
 
 		if (len > 8 && strncmp(p, "MESSAGE=", 8) == 0)
 			msg = p + 8;
-		else if (len > 9 && strncmp(p, "PRIORITY=", 9) == 0)
-			priority = atoi(p + 9);
+		else if (len > 9 && strncmp(p, "PRIORITY=", 9) == 0) {
+			int pri = atoi(p + 9);
+			if (pri >= LOG_EMERG && pri <= LOG_DEBUG)
+				priority = pri;
+		}
 	}
 
 	if (msg)

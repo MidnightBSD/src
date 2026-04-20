@@ -39,10 +39,12 @@
 #include <ctype.h>
 #include <dirent.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
+#include <unistd.h>
 
 #include "prowld.h"
 
@@ -124,10 +126,19 @@ rcshim_parse_script(const char *path, const char *scriptname)
 	bool keyword_nojail = false;
 	bool done_headers = false;
 
-	fp = fopen(path, "r");
-	if (fp == NULL) {
-		prowl_log(LOG_WARNING, "rcshim: cannot open %s: %m", path);
-		return (NULL);
+	{
+		int rfd = open(path, O_RDONLY | O_NOFOLLOW);
+		if (rfd == -1) {
+			prowl_log(LOG_WARNING, "rcshim: cannot open %s: %m",
+			    path);
+			return (NULL);
+		}
+		fp = fdopen(rfd, "r");
+		if (fp == NULL) {
+			prowl_log(LOG_WARNING, "rcshim: fdopen %s: %m", path);
+			close(rfd);
+			return (NULL);
+		}
 	}
 
 	/*

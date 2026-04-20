@@ -104,15 +104,26 @@ sd_listen_fds_with_names(int unset_environment, char ***names)
 			p = s;
 			for (int i = 0; i < n; i++) {
 				tok = strsep(&p, ":");
-				if (tok)
-					l[i] = strdup(tok);
-				else
-					l[i] = strdup("unknown");
+				l[i] = strdup(tok != NULL ? tok : "unknown");
+				if (l[i] == NULL) {
+					while (--i >= 0)
+						free(l[i]);
+					free(l);
+					free(s);
+					return (-ENOMEM);
+				}
 			}
 			free(s);
 		} else {
-			for (int i = 0; i < n; i++)
+			for (int i = 0; i < n; i++) {
 				l[i] = strdup("unknown");
+				if (l[i] == NULL) {
+					while (--i >= 0)
+						free(l[i]);
+					free(l);
+					return (-ENOMEM);
+				}
+			}
 		}
 		*names = l;
 	}
@@ -311,11 +322,12 @@ sd_booted(void)
 {
 	struct stat st;
 
-	/* 
-	 * Systemd checks for /run/systemd/system. 
+	/*
+	 * Systemd checks for /run/systemd/system.
 	 * Prowld checks for its control socket.
+	 * Use lstat(2) so a symlink to a socket does not count.
 	 */
-	if (stat("/var/run/prowld/prowld.sock", &st) == 0 && S_ISSOCK(st.st_mode))
+	if (lstat("/var/run/prowld/prowld.sock", &st) == 0 && S_ISSOCK(st.st_mode))
 		return (1);
 
 	return (0);

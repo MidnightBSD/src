@@ -401,8 +401,11 @@ cmd_list(int fd, const char *id, const ucl_object_t *req)
 		first = false;
 
 		n = job_to_json(job, jbuf, sizeof(jbuf));
-		if (n <= 0 || used + (size_t)n >= sizeof(buf))
+		if (n <= 0 || used + (size_t)n >= sizeof(buf)) {
+			prowl_log(LOG_WARNING,
+			    "cmd_list: response buffer full, list truncated");
 			break;
+		}
 		memcpy(buf + used, jbuf, (size_t)n);
 		used += (size_t)n;
 	}
@@ -509,6 +512,11 @@ cmd_enable(int fd, const char *id, const ucl_object_t *req)
 	if (job == NULL)
 		return;
 
+	if (job->rc_name[0] == '\0') {
+		ipc_send_error(fd, id, "job has no rc_name");
+		return;
+	}
+
 	snprintf(varname, sizeof(varname), "%s_enable", job->rc_name);
 	run_sysrc(varname, "YES");
 	job->enabled = true;
@@ -525,6 +533,11 @@ cmd_disable(int fd, const char *id, const ucl_object_t *req)
 	job = resolve_target(req, fd, id);
 	if (job == NULL)
 		return;
+
+	if (job->rc_name[0] == '\0') {
+		ipc_send_error(fd, id, "job has no rc_name");
+		return;
+	}
 
 	snprintf(varname, sizeof(varname), "%s_enable", job->rc_name);
 	run_sysrc(varname, "NO");
@@ -683,12 +696,18 @@ void
 ipc_broadcast_event(const char *label, const char *old_state, const char *new_state)
 {
 	char msg[1024];
+	char elabel[PROWL_LABEL_MAX * 2 + 1];
+	char eold[128];
+	char enew[128];
 	int i;
 
-	/* Simple event message format */
+	json_escape_str(label != NULL ? label : "", elabel, sizeof(elabel));
+	json_escape_str(old_state != NULL ? old_state : "", eold, sizeof(eold));
+	json_escape_str(new_state != NULL ? new_state : "", enew, sizeof(enew));
+
 	snprintf(msg, sizeof(msg),
 	    "{\"verb\":\"event\",\"label\":\"%s\",\"old_state\":\"%s\",\"new_state\":\"%s\"}",
-	    label, old_state, new_state);
+	    elabel, eold, enew);
 
 	for (i = 0; i < IPC_MAX_CLIENTS; i++) {
 		if (g_clients[i].active && g_clients[i].is_subscriber) {
@@ -1002,7 +1021,11 @@ ipc_accept(void)
 	g_clients[i].active = true;
 
 	EV_SET(&kev, (uintptr_t)cfd, EVFILT_READ, EV_ADD, 0, 0, NULL);
-	kevent(g_kqueue_fd, &kev, 1, NULL, 0, NULL);
+	if (kevent(g_kqueue_fd, &kev, 1, NULL, 0, NULL) == -1) {
+		prowl_log(LOG_WARNING, "ipc_accept kevent: %m");
+		close(cfd);
+		return;
+	}
 }
 
 void
