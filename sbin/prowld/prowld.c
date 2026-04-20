@@ -90,16 +90,49 @@ usage(void)
 static void
 setup_runtime_paths(const char *base)
 {
-	strlcpy(g_run_dir, base, sizeof(g_run_dir));
-	snprintf(g_notify_dir,   sizeof(g_notify_dir),   "%s/notify",     base);
-	snprintf(g_sock_path,    sizeof(g_sock_path),     "%s/prowld.sock",base);
-	snprintf(g_pid_path,     sizeof(g_pid_path),      "%s/prowld.pid", base);
-	snprintf(g_db_dir,       sizeof(g_db_dir),        "%s/db",         base);
-	snprintf(g_mask_dir,     sizeof(g_mask_dir),      "%s/db/masked.d",base);
-	snprintf(g_log_dir,      sizeof(g_log_dir),       "%s/log",        base);
-	snprintf(g_job_log_dir,  sizeof(g_job_log_dir),   "%s/log/jobs",   base);
-	snprintf(g_generated_dir,sizeof(g_generated_dir), "%s/generated.d",base);
+	int n;
+
+	if (strlcpy(g_run_dir, base, sizeof(g_run_dir)) >= sizeof(g_run_dir))
+		goto toolong;
+
+	n = snprintf(g_notify_dir, sizeof(g_notify_dir), "%s/notify", base);
+	if (n < 0 || (size_t)n >= sizeof(g_notify_dir))
+		goto toolong;
+
+	n = snprintf(g_sock_path, sizeof(g_sock_path), "%s/prowld.sock", base);
+	if (n < 0 || (size_t)n >= sizeof(g_sock_path))
+		goto toolong;
+
+	n = snprintf(g_pid_path, sizeof(g_pid_path), "%s/prowld.pid", base);
+	if (n < 0 || (size_t)n >= sizeof(g_pid_path))
+		goto toolong;
+
+	n = snprintf(g_db_dir, sizeof(g_db_dir), "%s/db", base);
+	if (n < 0 || (size_t)n >= sizeof(g_db_dir))
+		goto toolong;
+
+	n = snprintf(g_mask_dir, sizeof(g_mask_dir), "%s/db/masked.d", base);
+	if (n < 0 || (size_t)n >= sizeof(g_mask_dir))
+		goto toolong;
+
+	n = snprintf(g_log_dir, sizeof(g_log_dir), "%s/log", base);
+	if (n < 0 || (size_t)n >= sizeof(g_log_dir))
+		goto toolong;
+
+	n = snprintf(g_job_log_dir, sizeof(g_job_log_dir), "%s/log/jobs", base);
+	if (n < 0 || (size_t)n >= sizeof(g_job_log_dir))
+		goto toolong;
+
+	n = snprintf(g_generated_dir, sizeof(g_generated_dir), "%s/generated.d",
+	    base);
+	if (n < 0 || (size_t)n >= sizeof(g_generated_dir))
+		goto toolong;
+
 	prowl_log(LOG_INFO, "runtime paths rooted at %s", base);
+	return;
+
+toolong:
+	errx(1, "runtime path too long (base: %s)", base);
 }
 
 static void
@@ -122,7 +155,7 @@ write_pidfile(void)
 		return;
 	}
 	n = snprintf(pidbuf, sizeof(pidbuf), "%d\n", (int)getpid());
-	if (n > 0)
+	if (n > 0 && (size_t)n < sizeof(pidbuf))
 		(void)write(fd, pidbuf, (size_t)n);
 	close(fd);
 }
