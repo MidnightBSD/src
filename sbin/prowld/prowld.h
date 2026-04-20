@@ -155,6 +155,24 @@ struct prowl_socket {
 	job_t  *job;                       /* owning job (back-pointer) */
 };
 
+/* Calendar schedule (cron-like) */
+typedef struct calendar_schedule {
+	int	minute;		/* 0-59, or -1 for any */
+	int	hour;		/* 0-23, or -1 for any */
+	int	day;		/* 1-31, or -1 for any */
+	int	month;		/* 1-12, or -1 for any */
+	int	weekday;	/* 0-6 (Sun-Sat), or -1 for any */
+} calendar_schedule_t;
+
+/* Job schedule configuration */
+typedef struct schedule {
+	int			interval;	/* periodic interval in seconds */
+	int			on_boot_delay;	/* delay after boot in seconds */
+	bool			persistent;	/* catch up if missed */
+	calendar_schedule_t	calendar;
+	bool			has_calendar;
+} schedule_t;
+
 /* Keep-alive policy */
 typedef struct keep_alive {
 	bool	always;			/* always restart */
@@ -271,6 +289,9 @@ struct job {
 	prowl_socket_t	sockets[PROWL_SOCKETS_MAX];
 	int		sockets_count;
 	bool		socket_activated;	/* daemon has been fork+exec'd */
+
+	/* Activation triggers */
+	schedule_t	schedule;
 
 	TAILQ_ENTRY(job) entries;
 };

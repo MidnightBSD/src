@@ -188,6 +188,71 @@ parse_deps(const ucl_object_t *arr, job_t *job, bool hard)
 }
 
 /*
+ * Parse a calendar field: integer or "*" (mapped to -1).
+ */
+static int
+parse_calendar_field(const ucl_object_t *obj)
+{
+	if (obj == NULL)
+		return (-1);
+
+	if (ucl_object_type(obj) == UCL_STRING) {
+		const char *s = ucl_object_tostring(obj);
+		if (strcmp(s, "*") == 0)
+			return (-1);
+		return ((int)strtol(s, NULL, 10));
+	}
+
+	return ((int)ucl_object_toint(obj));
+}
+
+/*
+ * Parse schedule block.
+ */
+static void
+parse_schedule(const ucl_object_t *obj, schedule_t *sched)
+{
+	const ucl_object_t *f, *cal;
+
+	memset(sched, 0, sizeof(*sched));
+	sched->calendar.minute = -1;
+	sched->calendar.hour = -1;
+	sched->calendar.day = -1;
+	sched->calendar.month = -1;
+	sched->calendar.weekday = -1;
+
+	if (obj == NULL || ucl_object_type(obj) != UCL_OBJECT)
+		return;
+
+	f = ucl_object_lookup(obj, "interval");
+	if (f != NULL)
+		sched->interval = (int)ucl_object_toint(f);
+
+	f = ucl_object_lookup(obj, "on_boot_delay");
+	if (f != NULL)
+		sched->on_boot_delay = (int)ucl_object_toint(f);
+
+	f = ucl_object_lookup(obj, "persistent");
+	if (f != NULL)
+		sched->persistent = ucl_object_toboolean(f);
+
+	cal = ucl_object_lookup(obj, "calendar");
+	if (cal != NULL && ucl_object_type(cal) == UCL_OBJECT) {
+		sched->has_calendar = true;
+		sched->calendar.minute = parse_calendar_field(
+		    ucl_object_lookup(cal, "minute"));
+		sched->calendar.hour = parse_calendar_field(
+		    ucl_object_lookup(cal, "hour"));
+		sched->calendar.day = parse_calendar_field(
+		    ucl_object_lookup(cal, "day"));
+		sched->calendar.month = parse_calendar_field(
+		    ucl_object_lookup(cal, "month"));
+		sched->calendar.weekday = parse_calendar_field(
+		    ucl_object_lookup(cal, "weekday"));
+	}
+}
+
+/*
  * Parse a single unit file into a new job_t.
  * Returns NULL on error.
  */
@@ -444,20 +509,13 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 	/* resource_limits */
 	obj = ucl_object_lookup(root, "resource_limits");
 	if (obj != NULL && ucl_object_type(obj) == UCL_OBJECT) {
-		const ucl_object_t *rl;
-
-		rl = ucl_object_lookup(obj, "max_open_files");
-		if (rl != NULL) {
-			job->rlimits.nofile = (rlim_t)ucl_object_toint(rl);
-			job->rlimits.set_nofile = true;
-		}
-
-		rl = ucl_object_lookup(obj, "max_processes");
-		if (rl != NULL) {
-			job->rlimits.nproc = (rlim_t)ucl_object_toint(rl);
+...
 			job->rlimits.set_nproc = true;
 		}
 	}
+
+	/* schedule */
+	parse_schedule(ucl_object_lookup(root, "schedule"), &job->schedule);
 
 	/*
 	 * sockets: object keyed by name, each value describes one socket.
