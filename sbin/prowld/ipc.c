@@ -656,6 +656,53 @@ trunc:
 }
 
 static void
+cmd_subscribe(int fd, const char *id, const ucl_object_t *req)
+{
+	ipc_client_t *client = ipc_get_client(fd);
+	const ucl_object_t *filter;
+
+	if (client == NULL)
+		return;
+
+	client->is_subscriber = true;
+	filter = ucl_object_lookup(req, "filter");
+	if (filter != NULL && ucl_object_type(filter) == UCL_OBJECT) {
+		const ucl_object_t *label = ucl_object_lookup(filter, "label");
+		if (label != NULL && ucl_object_type(label) == UCL_STRING)
+			strlcpy(client->event_filter, ucl_object_tostring(label),
+			    sizeof(client->event_filter));
+	}
+
+	ipc_send_ok(fd, id, NULL);
+}
+
+void
+ipc_broadcast_event(const char *label, const char *old_state, const char *new_state)
+{
+	char msg[1024];
+	int i;
+
+	/* Simple event message format */
+	snprintf(msg, sizeof(msg),
+	    "{\"verb\":\"event\",\"label\":\"%s\",\"old_state\":\"%s\",\"new_state\":\"%s\"}",
+	    label, old_state, new_state);
+
+	for (i = 0; i < IPC_MAX_CLIENTS; i++) {
+		if (g_clients[i].active && g_clients[i].is_subscriber) {
+			/* Check filter if set (very basic prefix match for now) */
+			if (g_clients[i].event_filter[0] != '\0') {
+				if (strncmp(label, g_clients[i].event_filter,
+				    strlen(g_clients[i].event_filter)) != 0)
+					continue;
+			}
+			
+			/* Non-blocking send: if it fails, client is too slow */
+			(void)ipc_send_message(g_clients[i].fd, msg);
+		}
+	}
+}
+
+static void
 cmd_reload_config(int fd, const char *id, const ucl_object_t *req)
 {
 	(void)req;
@@ -769,7 +816,9 @@ ipc_dispatch_message(int fd, const char *json, size_t len)
 		    strcmp(verb, "status") == 0 ||
 		    strcmp(verb, "show") == 0 ||
 		    strcmp(verb, "dependencies") == 0 ||
-		    strcmp(verb, "graph") == 0) {
+		    strcmp(verb, "graph") == 0 ||
+		    strcmp(verb, "subscribe") == 0) {
+
 			if (!ipc_peer_can_query(client)) {
 				ipc_send_error(fd, id,
 				    "operation not permitted");
@@ -790,6 +839,8 @@ ipc_dispatch_message(int fd, const char *json, size_t len)
 		cmd_list(fd, id, root);
 	else if (strcmp(verb, "status") == 0)
 		cmd_status(fd, id, root);
+	else if (strcmp(verb, "subscribe") == 0)
+		cmd_subscribe(fd, id, root);
 	else if (strcmp(verb, "start") == 0)
 		cmd_start(fd, id, root);
 	else if (strcmp(verb, "stop") == 0)

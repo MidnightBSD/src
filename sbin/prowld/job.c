@@ -152,6 +152,9 @@ job_set_state(job_t *job, job_state_t state)
 	    job_state_str(job->state),
 	    job_state_str(state));
 
+	ipc_broadcast_event(job->label, job_state_str(job->state),
+	    job_state_str(state));
+
 	job->state = state;
 }
 

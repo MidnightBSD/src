@@ -326,6 +326,10 @@ typedef struct ipc_client {
 	bool		active;
 	uid_t		peer_uid;	/* from getpeereid(2) at accept time */
 	gid_t		peer_gid;
+	
+	/* Subscriptions */
+	bool		is_subscriber;
+	char		event_filter[PROWL_LABEL_MAX];
 } ipc_client_t;
 
 /* Prowld daemon configuration */
@@ -424,6 +428,7 @@ void	ipc_shutdown(void);
 void	ipc_accept(void);
 void	ipc_read_client(int);
 void	ipc_close_client(int);
+void	ipc_broadcast_event(const char *, const char *, const char *);
 
 /* ---- logger ---- */
 void	prowl_log(int, const char *, ...)
