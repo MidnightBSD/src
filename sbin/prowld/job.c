@@ -82,6 +82,9 @@ job_free(job_t *job)
 	for (i = 0; i < job->envc; i++)
 		free(job->envp[i]);
 
+	for (i = 0; i < job->mdns.txt_count; i++)
+		free(job->mdns.txt_record[i]);
+
 	free(job);
 }
 

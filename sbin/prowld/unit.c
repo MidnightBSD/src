@@ -749,50 +749,70 @@ unit_load_file(const char *path)
 	snprintf(dropin_dir, sizeof(dropin_dir), "%s/%s.d", dname, job->label);
 	free(parent);
 
-	DIR *dir = opendir(dropin_dir);
-	if (dir != NULL) {
-		struct dirent *de;
-		prowl_log(LOG_DEBUG, "checking for drop-ins in %s", dropin_dir);
-		
-		/* 
-		 * We need a new parser to merge into the existing object.
-		 * Actually, libucl allows adding multiple files to the same
-		 * parser and then getting a merged object.  Let's re-read
-		 * the whole set if drop-ins exist to ensure correct merge
-		 * semantics.
-		 */
-		ucl_object_unref(root);
-		parser = ucl_parser_new(UCL_PARSER_NO_FILEVARS);
-		ucl_parser_add_file(parser, path);
-
-		while ((de = readdir(dir)) != NULL) {
-			size_t nlen = strlen(de->d_name);
-			if (nlen < 5 || strcmp(de->d_name + nlen - 5, ".unit") != 0)
-				continue;
-			
-			char dpath[PROWL_PATH_MAX];
-			snprintf(dpath, sizeof(dpath), "%s/%s", dropin_dir, de->d_name);
-			
-			if (!ucl_parser_add_file(parser, dpath)) {
-				prowl_log(LOG_WARNING, "drop-in %s error: %.128s",
-				    dpath, ucl_parser_get_error(parser));
-				continue;
-			}
-			prowl_log(LOG_DEBUG, "applied drop-in %s", dpath);
+	struct stat dsb;
+	if (lstat(dropin_dir, &dsb) == 0) {
+		if (!S_ISDIR(dsb.st_mode)) {
+			prowl_log(LOG_WARNING, "drop-in %s is not a directory",
+			    dropin_dir);
+			goto skip_dropins;
 		}
-		closedir(dir);
-		
-		root = ucl_parser_get_object(parser);
-		ucl_parser_free(parser);
-		
-		/* Re-parse the job with merged object */
-		job_t *newjob = unit_parse_obj(root, path);
-		if (newjob) {
-			job_free(job);
-			job = newjob;
+		if (dsb.st_uid != 0) {
+			prowl_log(LOG_WARNING, "drop-in %s not owned by root, skipping",
+			    dropin_dir);
+			goto skip_dropins;
+		}
+		if (dsb.st_mode & S_IWOTH) {
+			prowl_log(LOG_WARNING, "drop-in %s is world-writable, skipping",
+			    dropin_dir);
+			goto skip_dropins;
+		}
+
+		DIR *dir = opendir(dropin_dir);
+		if (dir != NULL) {
+			struct dirent *de;
+			prowl_log(LOG_DEBUG, "checking for drop-ins in %s", dropin_dir);
+			
+			/* 
+			 * We need a new parser to merge into the existing object.
+			 * Actually, libucl allows adding multiple files to the same
+			 * parser and then getting a merged object.  Let's re-read
+			 * the whole set if drop-ins exist to ensure correct merge
+			 * semantics.
+			 */
+			ucl_object_unref(root);
+			parser = ucl_parser_new(UCL_PARSER_NO_FILEVARS);
+			ucl_parser_add_file(parser, path);
+
+			while ((de = readdir(dir)) != NULL) {
+				size_t nlen = strlen(de->d_name);
+				if (nlen < 5 || strcmp(de->d_name + nlen - 5, ".unit") != 0)
+					continue;
+				
+				char dpath[PROWL_PATH_MAX];
+				snprintf(dpath, sizeof(dpath), "%s/%s", dropin_dir, de->d_name);
+				
+				if (!ucl_parser_add_file(parser, dpath)) {
+					prowl_log(LOG_WARNING, "drop-in %s error: %.128s",
+					    dpath, ucl_parser_get_error(parser));
+					continue;
+				}
+				prowl_log(LOG_DEBUG, "applied drop-in %s", dpath);
+			}
+			closedir(dir);
+			
+			root = ucl_parser_get_object(parser);
+			ucl_parser_free(parser);
+			
+			/* Re-parse the job with merged object */
+			job_t *newjob = unit_parse_obj(root, path);
+			if (newjob) {
+				job_free(job);
+				job = newjob;
+			}
 		}
 	}
 
+skip_dropins:
 	ucl_object_unref(root);
 	TAILQ_INSERT_TAIL(&g_jobs, job, entries);
 	prowl_log(LOG_DEBUG, "loaded unit %s from %s", job->label, path);

@@ -61,6 +61,7 @@
 #include "prowld.h"
 
 static bool g_dnssd_available = true;
+static char g_dnssd_path[PROWL_PATH_MAX];
 
 /* Internal prototypes */
 static void supervisor_mdns_register(job_t *job);
@@ -78,10 +79,12 @@ supervisor_init(void)
 
 	for (int i = 0; paths[i] != NULL; i++) {
 		if (access(paths[i], X_OK) == 0) {
+			strlcpy(g_dnssd_path, paths[i], sizeof(g_dnssd_path));
 			found = true;
 			break;
 		}
 	}
+
 
 	if (!found) {
 		g_dnssd_available = false;
@@ -654,6 +657,8 @@ child_setup_and_exec(job_t *job)
 
 	if (job->umask_set)
 		umask(job->umask_val);
+	else
+		umask(0022);
 
 	if (job->nice_val != 0)
 		setpriority(PRIO_PROCESS, 0, job->nice_val);
@@ -1029,7 +1034,7 @@ supervisor_mdns_register(job_t *job)
 	snprintf(portstr, sizeof(portstr), "%d", port);
 
 	argc = 0;
-	args[argc++] = (char *)(uintptr_t)"dns-sd";
+	args[argc++] = g_dnssd_path;
 	args[argc++] = (char *)(uintptr_t)"-R";
 	args[argc++] = name;
 	args[argc++] = job->mdns.type[0] != '\0' ? job->mdns.type : (char *)(uintptr_t)"_http._tcp";
@@ -1055,7 +1060,7 @@ supervisor_mdns_register(job_t *job)
 			dup2(fd, STDERR_FILENO);
 			close(fd);
 		}
-		execvp(args[0], args);
+		execv(args[0], args);
 		_exit(127);
 	}
 
