@@ -81,6 +81,7 @@ static_assert((__alignof__(struct job) & TIMER_MASK) == 0,
 #define PROWLD_CONF_PATH	"/etc/prowld/prowld.conf"
 #define PROWLD_MASK_DIR		"/var/db/prowld/masked.d"
 #define PROWLD_DB_DIR		"/var/db/prowld"
+#define PROWLD_TIMER_STATE_PATH	"/var/db/prowld/timers.state"
 #define PROWLD_LOG_DIR		"/var/log/prowld"
 #define PROWLD_JOB_LOG_DIR	"/var/log/prowld/jobs"
 
@@ -310,6 +311,7 @@ struct job {
 
 	/* Activation triggers */
 	schedule_t	schedule;
+	time_t		last_run;
 
 	TAILQ_ENTRY(job) entries;
 };
@@ -388,6 +390,8 @@ void	dag_schedule_ready(void);
 
 /* ---- supervisor.c ---- */
 void	supervisor_init(void);
+void	timer_state_load(void);
+void	timer_state_save(void);
 int	supervisor_start(job_t *);
 int	supervisor_stop(job_t *, bool);
 int	supervisor_signal(job_t *, int);

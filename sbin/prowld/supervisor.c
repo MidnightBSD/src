@@ -109,6 +109,87 @@ timer_ident(const job_t *job, uintptr_t kind)
 }
 
 
+void
+timer_state_load(void)
+{
+	struct ucl_parser *parser;
+	ucl_object_t *root;
+	const ucl_object_t *obj;
+	job_t *job;
+
+	if (access(PROWLD_TIMER_STATE_PATH, R_OK) != 0)
+		return;
+
+	parser = ucl_parser_new(UCL_PARSER_NO_FILEVARS);
+	if (!ucl_parser_add_file(parser, PROWLD_TIMER_STATE_PATH)) {
+		prowl_log(LOG_WARNING, "timer_state_load: %.128s",
+		    ucl_parser_get_error(parser));
+		ucl_parser_free(parser);
+		return;
+	}
+
+	root = ucl_parser_get_object(parser);
+	ucl_parser_free(parser);
+
+	TAILQ_FOREACH(job, &g_jobs, entries) {
+		obj = ucl_object_lookup(root, job->label);
+		if (obj != NULL && ucl_object_type(obj) == UCL_OBJECT) {
+			const ucl_object_t *lr = ucl_object_lookup(obj, "last_run");
+			if (lr != NULL)
+				job->last_run = (time_t)ucl_object_toint(lr);
+		}
+	}
+
+	ucl_object_unref(root);
+}
+
+void
+timer_state_save(void)
+{
+	ucl_object_t *root, *obj;
+	job_t *job;
+	char tmp_path[PROWL_PATH_MAX];
+	int fd;
+	FILE *fp;
+
+	root = ucl_object_typed_new(UCL_OBJECT);
+
+	TAILQ_FOREACH(job, &g_jobs, entries) {
+		if (job->type != JOB_TYPE_TIMER || job->last_run == 0)
+			continue;
+
+		obj = ucl_object_typed_new(UCL_OBJECT);
+		ucl_object_insert_key(obj, ucl_object_fromint((int64_t)job->last_run),
+		    "last_run", 0, false);
+		ucl_object_insert_key(root, obj, job->label, 0, false);
+	}
+
+	snprintf(tmp_path, sizeof(tmp_path), "%s.tmp", PROWLD_TIMER_STATE_PATH);
+	fd = open(tmp_path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+	if (fd == -1) {
+		prowl_log(LOG_ERR, "timer_state_save open: %m");
+		ucl_object_unref(root);
+		return;
+	}
+
+	fp = fdopen(fd, "w");
+	if (fp == NULL) {
+		close(fd);
+		ucl_object_unref(root);
+		return;
+	}
+
+	ucl_object_emit_file(root, UCL_EMIT_CONFIG, fp);
+	fflush(fp);
+	fsync(fileno(fp));
+	fclose(fp);
+
+	if (rename(tmp_path, PROWLD_TIMER_STATE_PATH) == -1)
+		prowl_log(LOG_ERR, "timer_state_save rename: %m");
+
+	ucl_object_unref(root);
+}
+
 /*
  * Check if a calendar schedule matches the given broken-down time.
  */
@@ -137,6 +218,7 @@ supervisor_handle_calendar_tick(void)
 	job_t *job;
 	time_t now = time(NULL);
 	struct tm tm;
+	bool changed = false;
 
 	localtime_r(&now, &tm);
 
@@ -145,9 +227,14 @@ supervisor_handle_calendar_tick(void)
 		    calendar_match(&job->schedule.calendar, &tm)) {
 			prowl_log(LOG_INFO, "timer %s: calendar match",
 			    job->label);
+			job->last_run = now;
+			changed = true;
 			supervisor_start(job);
 		}
 	}
+
+	if (changed)
+		timer_state_save();
 }
 
 /*
@@ -859,6 +946,8 @@ void
 supervisor_handle_periodic(job_t *job)
 {
 	prowl_log(LOG_INFO, "timer %s: periodic interval reached", job->label);
+	job->last_run = time(NULL);
+	timer_state_save();
 	supervisor_start(job);
 }
 
@@ -866,6 +955,8 @@ void
 supervisor_handle_boot_delay(job_t *job)
 {
 	prowl_log(LOG_INFO, "timer %s: boot delay reached", job->label);
+	job->last_run = time(NULL);
+	timer_state_save();
 	supervisor_start(job);
 }
 
