@@ -54,6 +54,7 @@ SUBDIR=adjkerntz \
 	pfilctl \
 	prowld \
 	prowlctl \
+	prowl-generator \
 	rcorder \
 	reboot \
 	recoverdisk \
