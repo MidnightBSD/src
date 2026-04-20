@@ -29,6 +29,13 @@
 . /etc/rc.subr
 load_rc_config 'XXX'
 
+PROWLCTL=/sbin/prowlctl
+PROWL_SOCK=/var/run/prowld/prowld.sock
+
+prowl_available () {
+	[ -z "${JAIL}" ] && [ -x "${PROWLCTL}" ] && [ -S "${PROWL_SOCK}" ]
+}
+
 usage () {
 	echo ''
 	echo 'Usage:'
@@ -117,6 +124,10 @@ if [ -n "$ENABLED" -o -n "$RCORDER" ]; then
 fi
 
 if [ -n "$ENABLED" ]; then
+	if prowl_available; then
+		${PROWLCTL} list --enabled
+		exit 0
+	fi
 	for file in $files; do
 		if grep -q ^rcvar $file; then
 			eval `grep ^name= $file`
@@ -131,6 +142,10 @@ if [ -n "$ENABLED" ]; then
 fi
 
 if [ -n "$LIST" ]; then
+	if prowl_available; then
+		${PROWLCTL} list
+		exit 0
+	fi
 	for dir in /etc/rc.d $local_startup; do
 		[ -n "$VERBOSE" ] && echo "From ${dir}:"
 		[ -d ${dir} ] && /bin/ls -1 ${dir}
@@ -157,6 +172,12 @@ if [ $# -gt 0 ]; then
 else
 	usage
 	exit 1
+fi
+
+if prowl_available; then
+	if ${PROWLCTL} status "${script}" > /dev/null 2>&1; then
+		exec ${PROWLCTL} "$@" "${script}"
+	fi
 fi
 
 cd /
