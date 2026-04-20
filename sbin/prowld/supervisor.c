@@ -226,7 +226,7 @@ notify_socket_open(job_t *job)
 
 	unlink(path);
 
-	fd = socket(AF_UNIX, SOCK_DGRAM, 0);
+	fd = socket(AF_UNIX, SOCK_DGRAM | SOCK_NONBLOCK, 0);
 	if (fd == -1) {
 		prowl_log(LOG_WARNING, "notify_socket_open socket: %m");
 		return (-1);
@@ -924,8 +924,13 @@ supervisor_handle_notify(job_t *job)
 	if (job->notify_fd < 0)
 		return;
 
-	n = recv(job->notify_fd, buf, sizeof(buf) - 1, 0);
-	if (n <= 0)
+	n = recv(job->notify_fd, buf, sizeof(buf) - 1, MSG_DONTWAIT);
+	if (n == -1) {
+		if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
+			return;
+		return;
+	}
+	if (n == 0)
 		return;
 	buf[n] = '\0';
 

@@ -126,6 +126,7 @@ json_escape_str(const char *src, char *dst, size_t dstsz)
 
 /*
  * Send exactly len bytes, retrying on EINTR.  Returns 0 on success, -1 on error.
+ * Uses MSG_DONTWAIT to avoid blocking the main event loop if the buffer is full.
  */
 static int
 ipc_send_all(int fd, const void *buf, size_t len)
@@ -134,10 +135,23 @@ ipc_send_all(int fd, const void *buf, size_t len)
 	ssize_t n;
 
 	while (len > 0) {
-		n = send(fd, p, len, MSG_NOSIGNAL);
+		n = send(fd, p, len, MSG_NOSIGNAL | MSG_DONTWAIT);
 		if (n == -1) {
 			if (errno == EINTR)
 				continue;
+			if (errno == EAGAIN || errno == EWOULDBLOCK) {
+				/*
+				 * For a production daemon we should buffer the
+				 * outgoing data and wait for EVFILT_WRITE.
+				 * Given prowld's small response sizes we
+				 * log a warning and drop the response to avoid
+				 * stalling the whole service manager.
+				 */
+				prowl_log(LOG_WARNING,
+				    "ipc_send_all: send buffer full, "
+				    "dropping response to fd %d", fd);
+				return (-1);
+			}
 			return (-1);
 		}
 		p += n;
@@ -821,7 +835,7 @@ ipc_init(void)
 
 	unlink(g_sock_path);
 
-	fd = socket(AF_UNIX, SOCK_STREAM, 0);
+	fd = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
 	if (fd == -1) {
 		prowl_log(LOG_ERR, "ipc socket: %m");
 		return (-1);
@@ -898,7 +912,8 @@ ipc_accept(void)
 	struct kevent kev;
 	int cfd, i;
 
-	cfd = accept(ipc_listen_fd, (struct sockaddr *)&sun, &sunlen);
+	cfd = accept4(ipc_listen_fd, (struct sockaddr *)&sun, &sunlen,
+	    SOCK_NONBLOCK);
 	if (cfd == -1) {
 		if (errno != EAGAIN && errno != EWOULDBLOCK)
 			prowl_log(LOG_WARNING, "ipc accept: %m");
@@ -976,9 +991,15 @@ ipc_read_client(int fd)
 	}
 
 	n = recv(fd, client->buf + client->buf_used,
-	    sizeof(client->buf) - client->buf_used, 0);
+	    sizeof(client->buf) - client->buf_used, MSG_DONTWAIT);
 
-	if (n <= 0) {
+	if (n == -1) {
+		if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
+			return;
+		ipc_close_client(fd);
+		return;
+	}
+	if (n == 0) {
 		ipc_close_client(fd);
 		return;
 	}

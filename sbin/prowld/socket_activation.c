@@ -70,7 +70,7 @@ socket_bind_one(prowl_socket_t *sock)
 	socklen_t		salen;
 	int			fd, on;
 
-	fd = socket(sock->family, sock->socktype, 0);
+	fd = socket(sock->family, sock->socktype | SOCK_NONBLOCK, 0);
 	if (fd == -1) {
 		prowl_log(LOG_WARNING, "socket_bind_one socket: %m");
 		return (-1);
