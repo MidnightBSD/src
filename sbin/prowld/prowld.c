@@ -426,6 +426,13 @@ static void
 handle_timer_event(struct kevent *kev)
 {
 	uintptr_t ident = kev->ident;
+
+	/* Global (no job attached) timers */
+	if (ident == TIMER_CALENDAR_TICK) {
+		supervisor_handle_calendar_tick();
+		return;
+	}
+
 	uintptr_t kind = ident & TIMER_MASK;
 	job_t *job = (job_t *)(ident & ~TIMER_MASK);
 
@@ -441,6 +448,12 @@ handle_timer_event(struct kevent *kev)
 		break;
 	case NOTIFY_TMO:
 		supervisor_handle_notify_timeout(job);
+		break;
+	case TIMER_PERIODIC:
+		supervisor_handle_periodic(job);
+		break;
+	case TIMER_BOOT_DELAY:
+		supervisor_handle_boot_delay(job);
 		break;
 	}
 }
@@ -466,20 +479,40 @@ reload_config(void)
 }
 
 static void
+arm_calendar_tick(void)
+{
+	struct kevent kev;
+
+	/* Fire every 60 seconds to check calendar jobs */
+	EV_SET(&kev, TIMER_CALENDAR_TICK, EVFILT_TIMER,
+	    EV_ADD, NOTE_SECONDS, 60, NULL);
+	if (kevent(g_kqueue_fd, &kev, 1, NULL, 0, NULL) == -1)
+		prowl_log(LOG_ERR, "kevent calendar tick: %m");
+}
+
+static void
 startup_load(void)
 {
+	job_t *job;
+
 	prowl_log(LOG_NOTICE, "prowld starting, loading unit files");
-
-	unit_load_dir(UNIT_DIR_BASE);
-	unit_load_dir(UNIT_DIR_LOCAL);
-	unit_load_dir(UNIT_DIR_OVERRIDE);
-	unit_load_dir(g_generated_dir);
-
-	prowl_log(LOG_NOTICE, "scanning rc.d directories");
-	rcshim_scan_dir(RCD_DIR_BASE);
+...
 	rcshim_scan_dir(RCD_DIR_LOCAL);
 
 	dag_build();
+
+	/* Initialize job timers */
+	TAILQ_FOREACH(job, &g_jobs, entries) {
+		if (!job->enabled)
+			continue;
+		if (job->type == JOB_TYPE_TIMER) {
+			if (job->schedule.interval > 0)
+				arm_periodic_timer(job);
+			if (job->schedule.on_boot_delay > 0)
+				arm_boot_delay_timer(job);
+		}
+	}
+	arm_calendar_tick();
 }
 
 static void

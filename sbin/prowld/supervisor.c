@@ -84,6 +84,84 @@ timer_ident(const job_t *job, uintptr_t kind)
 
 
 /*
+ * Check if a calendar schedule matches the given broken-down time.
+ */
+static bool
+calendar_match(const calendar_schedule_t *s, const struct tm *tm)
+{
+	if (s->minute != -1 && s->minute != tm->tm_min)
+		return (false);
+	if (s->hour != -1 && s->hour != tm->tm_hour)
+		return (false);
+	if (s->day != -1 && s->day != tm->tm_mday)
+		return (false);
+	if (s->month != -1 && s->month != tm->tm_mon + 1)
+		return (false);
+	if (s->weekday != -1 && s->weekday != tm->tm_wday)
+		return (false);
+	return (true);
+}
+
+/*
+ * Iterate all jobs and launch any that match the current minute.
+ */
+void
+supervisor_handle_calendar_tick(void)
+{
+	job_t *job;
+	time_t now = time(NULL);
+	struct tm tm;
+
+	localtime_r(&now, &tm);
+
+	TAILQ_FOREACH(job, &g_jobs, entries) {
+		if (job->schedule.has_calendar &&
+		    calendar_match(&job->schedule.calendar, &tm)) {
+			prowl_log(LOG_INFO, "timer %s: calendar match",
+			    job->label);
+			supervisor_start(job);
+		}
+	}
+}
+
+/*
+ * Arm a recurring periodic timer.
+ */
+void
+arm_periodic_timer(job_t *job)
+{
+	struct kevent kev;
+
+	if (job->schedule.interval <= 0)
+		return;
+
+	EV_SET(&kev, timer_ident(job, TIMER_PERIODIC), EVFILT_TIMER,
+	    EV_ADD, NOTE_SECONDS, job->schedule.interval, NULL);
+	if (kevent(g_kqueue_fd, &kev, 1, NULL, 0, NULL) == -1)
+		prowl_log(LOG_WARNING, "kevent periodic timer %s: %m",
+		    job->label);
+}
+
+/*
+ * Arm a one-shot boot delay timer.
+ */
+void
+arm_boot_delay_timer(job_t *job)
+{
+	struct kevent kev;
+
+	if (job->schedule.on_boot_delay <= 0)
+		return;
+
+	EV_SET(&kev, timer_ident(job, TIMER_BOOT_DELAY), EVFILT_TIMER,
+	    EV_ADD | EV_ONESHOT, NOTE_SECONDS, job->schedule.on_boot_delay,
+	    NULL);
+	if (kevent(g_kqueue_fd, &kev, 1, NULL, 0, NULL) == -1)
+		prowl_log(LOG_WARNING, "kevent boot delay timer %s: %m",
+		    job->label);
+}
+
+/*
  * Register a one-shot timer to fire after throttle_interval seconds.
  * Low bit of ident is 0: throttle timer.
  */
@@ -747,6 +825,20 @@ supervisor_signal(job_t *job, int sig)
 	if (job->pid <= 0)
 		return (-1);
 	return (kill(job->pid, sig));
+}
+
+void
+supervisor_handle_periodic(job_t *job)
+{
+	prowl_log(LOG_INFO, "timer %s: periodic interval reached", job->label);
+	supervisor_start(job);
+}
+
+void
+supervisor_handle_boot_delay(job_t *job)
+{
+	prowl_log(LOG_INFO, "timer %s: boot delay reached", job->label);
+	supervisor_start(job);
 }
 
 /*

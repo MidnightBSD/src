@@ -44,14 +44,17 @@ typedef struct job job_t;
 typedef struct prowl_socket prowl_socket_t;
 
 /*
- * Timer ident encoding (low 2 bits of job pointer).
- * Assumes job_t pointers are at least 4-byte aligned.
+ * Timer ident encoding (low 3 bits of job pointer).
+ * Assumes job_t pointers are at least 8-byte aligned.
  */
-#define TIMER_MASK	3UL
+#define TIMER_MASK	7UL
 #define TIMER_THROTTLE	0UL
 #define TIMER_STOP	1UL
 #define TIMER_WATCHDOG	2UL
 #define NOTIFY_TMO	3UL
+#define TIMER_PERIODIC	4UL
+#define TIMER_BOOT_DELAY 5UL
+#define TIMER_CALENDAR_TICK 6UL
 
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
 #include <assert.h>
@@ -375,8 +378,16 @@ int	supervisor_signal(job_t *, int);
 void	supervisor_reap(pid_t, int);
 void	supervisor_handle_throttle(job_t *);
 void	supervisor_handle_stop_timeout(job_t *);
-void	supervisor_handle_notify(job_t *);
 void	supervisor_handle_watchdog(job_t *);
+void	supervisor_handle_notify_timeout(job_t *);
+void	supervisor_handle_periodic(job_t *);
+void	supervisor_handle_boot_delay(job_t *);
+void	supervisor_handle_calendar_tick(void);
+
+/* ---- timer arming ---- */
+void	arm_periodic_timer(job_t *);
+void	arm_boot_delay_timer(job_t *);
+
 void	supervisor_handle_notify_timeout(job_t *);
 void	supervisor_socket_activate(job_t *);
 void	supervisor_shutdown_all(void);
