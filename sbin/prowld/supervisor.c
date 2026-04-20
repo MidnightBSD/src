@@ -58,6 +58,32 @@
 
 #include "prowld.h"
 
+static bool g_dnssd_available = true;
+
+void
+supervisor_init(void)
+{
+	/* 
+	 * Simple check for dns-sd(1).  We assume it's in a standard path.
+	 * If not found, mdns registration is disabled and we log a warning.
+	 */
+	const char *paths[] = { "/usr/bin/dns-sd", "/usr/local/bin/dns-sd", NULL };
+	bool found = false;
+
+	for (int i = 0; paths[i] != NULL; i++) {
+		if (access(paths[i], X_OK) == 0) {
+			found = true;
+			break;
+		}
+	}
+
+	if (!found) {
+		g_dnssd_available = false;
+		prowl_log(LOG_WARNING,
+		    "dns-sd(1) not found in standard paths; mDNS discovery disabled");
+	}
+}
+
 /*
  * Register a EVFILT_PROC watcher for a child PID, associating the job
  * pointer as udata so the event loop can identify which job exited.
@@ -765,6 +791,7 @@ supervisor_stop(job_t *job, bool force)
 
 	cancel_watchdog_timer(job);
 	job_set_state(job, JOB_STATE_STOPPING);
+	supervisor_mdns_deregister(job);
 
 	if (force) {
 		kill(job->pid, SIGKILL);
@@ -813,6 +840,7 @@ supervisor_socket_activate(job_t *job)
 	job->pid = pid;
 	job->socket_activated = true;
 	job_set_state(job, JOB_STATE_RUNNING);
+	supervisor_mdns_register(job);
 	watch_child(pid, job);
 
 	prowl_log(LOG_INFO, "job %s socket-activated, pid %d",
@@ -841,6 +869,114 @@ supervisor_handle_boot_delay(job_t *job)
 	supervisor_start(job);
 }
 
+static bool g_dnssd_available = true;
+
+static void
+supervisor_mdns_register(job_t *job)
+{
+	char hostname[256];
+	char name[PROWL_LABEL_MAX];
+	char portstr[16];
+	char *args[PROWL_ARGS_MAX];
+	int i, argc;
+	pid_t pid;
+
+	if (!g_dnssd_available || !job->mdns.register_service || job->mdns_pid > 0)
+		return;
+
+	if (gethostname(hostname, sizeof(hostname)) == -1)
+		strlcpy(hostname, "midnightbsd", sizeof(hostname));
+	else {
+		char *dot = strchr(hostname, '.');
+		if (dot) *dot = '\0';
+	}
+
+	/* Substitute %h and %l */
+	char *src = job->mdns.name[0] != '\0' ? job->mdns.name : "%l";
+	char *dst = name;
+	while (*src && (dst - name < PROWL_LABEL_MAX - 1)) {
+		if (*src == '%' && *(src+1) == 'h') {
+			size_t len = strlen(hostname);
+			if (dst - name + len < PROWL_LABEL_MAX - 1) {
+				memcpy(dst, hostname, len);
+				dst += len;
+				src += 2;
+			} else break;
+		} else if (*src == '%' && *(src+1) == 'l') {
+			size_t len = strlen(job->label);
+			if (dst - name + len < PROWL_LABEL_MAX - 1) {
+				memcpy(dst, job->label, len);
+				dst += len;
+				src += 2;
+			} else break;
+		} else {
+			*dst++ = *src++;
+		}
+	}
+	*dst = '\0';
+
+	int port = job->mdns.port;
+	if (port <= 0 && job->sockets_count > 0)
+		port = job->sockets[0].port;
+
+	if (port <= 0) {
+		prowl_log(LOG_WARNING, "mdns %s: no port specified and no sockets",
+		    job->label);
+		return;
+	}
+
+	snprintf(portstr, sizeof(portstr), "%d", port);
+
+	argc = 0;
+	args[argc++] = (char *)(uintptr_t)"dns-sd";
+	args[argc++] = (char *)(uintptr_t)"-R";
+	args[argc++] = name;
+	args[argc++] = job->mdns.type[0] != '\0' ? job->mdns.type : (char *)(uintptr_t)"_http._tcp";
+	args[argc++] = job->mdns.domain;
+	args[argc++] = portstr;
+	for (i = 0; i < job->mdns.txt_count && argc < PROWL_ARGS_MAX - 1; i++)
+		args[argc++] = job->mdns.txt_record[i];
+	args[argc] = NULL;
+
+	pid = fork();
+	if (pid == -1) {
+		prowl_log(LOG_ERR, "mdns %s fork: %m", job->label);
+		return;
+	}
+
+	if (pid == 0) {
+		/* Child */
+		if (g_kqueue_fd >= 0) close(g_kqueue_fd);
+		/* Redirect output to null to avoid cluttering logs */
+		int fd = open("/dev/null", O_WRONLY);
+		if (fd >= 0) {
+			dup2(fd, STDOUT_FILENO);
+			dup2(fd, STDERR_FILENO);
+			close(fd);
+		}
+		execvp(args[0], args);
+		_exit(127);
+	}
+
+	/* Parent */
+	job->mdns_pid = pid;
+	watch_child(pid, job);
+	prowl_log(LOG_INFO, "mdns %s registered as '%s' (pid %d)",
+	    job->label, name, (int)pid);
+}
+
+static void
+supervisor_mdns_deregister(job_t *job)
+{
+	if (job->mdns_pid <= 0)
+		return;
+
+	prowl_log(LOG_DEBUG, "mdns %s deregistering (pid %d)",
+	    job->label, (int)job->mdns_pid);
+	kill(job->mdns_pid, SIGTERM);
+	job->mdns_pid = -1;
+}
+
 /*
  * Called when the throttle timer fires.  If the process is still alive,
  * transition it to RUNNING.
@@ -855,6 +991,7 @@ supervisor_handle_throttle(job_t *job)
 
 	if (job->pid > 0 && kill(job->pid, 0) == 0) {
 		job_set_state(job, JOB_STATE_RUNNING);
+		supervisor_mdns_register(job);
 		if (g_current_starts > 0)
 			g_current_starts--;
 		prowl_log(LOG_INFO, "job %s running (pid %d)",
@@ -1045,8 +1182,10 @@ supervisor_handle_notify(job_t *job)
 				if (job->state == JOB_STATE_STARTING) {
 					cancel_notify_timeout_timer(job);
 					job_set_state(job, JOB_STATE_RUNNING);
+					supervisor_mdns_register(job);
 					if (g_current_starts > 0)
 						g_current_starts--;
+
 					prowl_log(LOG_INFO,
 					    "job %s ready (READY=1)",
 					    job->label);
@@ -1144,12 +1283,27 @@ supervisor_reap(pid_t pid, int status)
 	struct kevent kev;
 
 	TAILQ_FOREACH(job, &g_jobs, entries) {
-		if (job->pid == pid)
+		if (job->pid == pid || job->mdns_pid == pid)
 			break;
 	}
 
 	if (job == NULL) {
 		prowl_log(LOG_DEBUG, "reap: unknown pid %d", (int)pid);
+		return;
+	}
+
+	if (pid == job->mdns_pid) {
+		if (WIFEXITED(status))
+			prowl_log(LOG_NOTICE, "mdns %s (pid %d) exited with code %d",
+			    job->label, (int)pid, WEXITSTATUS(status));
+		else if (WIFSIGNALED(status))
+			prowl_log(LOG_NOTICE, "mdns %s (pid %d) killed by signal %d",
+			    job->label, (int)pid, WTERMSIG(status));
+		job->mdns_pid = -1;
+		
+		/* Restart mdns if job is still running */
+		if (job->state == JOB_STATE_RUNNING)
+			supervisor_mdns_register(job);
 		return;
 	}
 

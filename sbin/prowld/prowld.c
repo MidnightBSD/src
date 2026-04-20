@@ -645,6 +645,7 @@ main(int argc, char *argv[])
 	write_pidfile();
 	setup_kqueue_signals();
 	load_config();
+	supervisor_init();
 
 	/* Command-line -d always enables debug regardless of config file. */
 	if (debug)

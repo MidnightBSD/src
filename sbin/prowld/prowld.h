@@ -191,6 +191,17 @@ typedef struct rlimits {
 	rlim_t		nproc;
 } rlimits_t;
 
+/* mDNS discovery configuration */
+typedef struct mdns_config {
+	bool	register_service;
+	char	name[PROWL_LABEL_MAX];
+	char	type[64];
+	int	port;
+	char	domain[64];
+	char   *txt_record[PROWL_ENV_MAX]; /* Reuse PROWL_ENV_MAX for simple KV list */
+	int	txt_count;
+} mdns_config_t;
+
 /* Dependency entry */
 typedef struct dep_entry {
 	char	name[PROWL_LABEL_MAX];
@@ -258,6 +269,10 @@ struct job {
 	notify_type_t	notify_type;
 	int		watchdog_sec;
 	int		notify_fd;
+
+	/* mDNS Discovery */
+	mdns_config_t	mdns;
+	pid_t		mdns_pid;
 
 	/* Shutdown */
 	bool		shutdown_wait;
@@ -372,6 +387,7 @@ int	dag_build(void);
 void	dag_schedule_ready(void);
 
 /* ---- supervisor.c ---- */
+void	supervisor_init(void);
 int	supervisor_start(job_t *);
 int	supervisor_stop(job_t *, bool);
 int	supervisor_signal(job_t *, int);

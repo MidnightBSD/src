@@ -253,6 +253,58 @@ parse_schedule(const ucl_object_t *obj, schedule_t *sched)
 }
 
 /*
+ * Parse mdns block.
+ */
+static void
+parse_mdns(const ucl_object_t *obj, mdns_config_t *mdns)
+{
+	const ucl_object_t *f, *txt, *val;
+	ucl_object_iter_t it;
+	int n;
+
+	memset(mdns, 0, sizeof(*mdns));
+	strlcpy(mdns->domain, "local", sizeof(mdns->domain));
+
+	if (obj == NULL || ucl_object_type(obj) != UCL_OBJECT)
+		return;
+
+	f = ucl_object_lookup(obj, "register");
+	if (f != NULL)
+		mdns->register_service = ucl_object_toboolean(f);
+
+	f = ucl_object_lookup(obj, "name");
+	if (f != NULL && ucl_object_type(f) == UCL_STRING)
+		strlcpy(mdns->name, ucl_object_tostring(f), sizeof(mdns->name));
+
+	f = ucl_object_lookup(obj, "type");
+	if (f != NULL && ucl_object_type(f) == UCL_STRING)
+		strlcpy(mdns->type, ucl_object_tostring(f), sizeof(mdns->type));
+
+	f = ucl_object_lookup(obj, "port");
+	if (f != NULL)
+		mdns->port = (int)ucl_object_toint(f);
+
+	f = ucl_object_lookup(obj, "domain");
+	if (f != NULL && ucl_object_type(f) == UCL_STRING)
+		strlcpy(mdns->domain, ucl_object_tostring(f), sizeof(mdns->domain));
+
+	txt = ucl_object_lookup(obj, "txt_record");
+	if (txt != NULL && ucl_object_type(txt) == UCL_OBJECT) {
+		it = NULL;
+		n = 0;
+		while ((val = ucl_object_iterate(txt, &it, true)) != NULL) {
+			char kvbuf[PROWL_PATH_MAX];
+			if (n >= PROWL_ENV_MAX - 1)
+				break;
+			snprintf(kvbuf, sizeof(kvbuf), "%s=%s",
+			    ucl_object_key(val), ucl_object_tostring_forced(val));
+			mdns->txt_record[n++] = strdup(kvbuf);
+		}
+		mdns->txt_count = n;
+	}
+}
+
+/*
  * Parse a single unit file into a new job_t.
  * Returns NULL on error.
  */
@@ -516,6 +568,9 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 
 	/* schedule */
 	parse_schedule(ucl_object_lookup(root, "schedule"), &job->schedule);
+
+	/* mdns */
+	parse_mdns(ucl_object_lookup(root, "mdns"), &job->mdns);
 
 	/*
 	 * sockets: object keyed by name, each value describes one socket.
