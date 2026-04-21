@@ -33,6 +33,7 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl ku
+.Op Fl j Ar jail
 .Sh DESCRIPTION
 The
 .Nm
@@ -41,6 +42,16 @@ of the installed kernel and / or userland.
 .Pp
 The following options are available:
 .Bl -tag -width Fl
+.It Fl j Ar jail
+Print the version and patch level for the specified jail.
+The
+.Nm
+utility determines the jail root using
+.Xr jls 8 .
+Kernel version queries inspect the kernel under that root, while
+userland version queries execute the jail's installed
+.Nm
+binary.
 .It Fl k
 Print the version and patch level of the installed kernel.
 Unlike
@@ -65,6 +76,9 @@ are specified,
 will print the kernel version first, then the userland version, on
 separate lines.
 If neither is specified, it will print the userland version only.
+The
+.Fl j
+option may be combined with either or both.
 .Sh IMPLEMENTATION NOTES
 The
 .Nm
@@ -110,6 +124,7 @@ env ROOT=/mnt /mnt/bin/midnightbsd-version -ku
 .Sh SEE ALSO
 .Xr uname 1 ,
 .Xr loader.conf 5 ,
+.Xr jls 8 ,
 .Xr midnightbsd-version 8
 .Sh HISTORY
 The
