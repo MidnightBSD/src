@@ -47,6 +47,17 @@ error() {
 }
 
 #
+# Return the root path for a jail.
+#
+jail_root() {
+	jail_path=$(jls -j "$1" -h path 2>/dev/null | awk 'NR == 2 { print }')
+	if [ -z "$jail_path" ] ; then
+		error "unable to determine root for jail '$1'"
+	fi
+	echo "$jail_path"
+}
+
+#
 # Try to get the name of the installed kernel from loader.conf and
 # return the full path.  If loader.conf does not exist or we could not
 # read it, return the path to the default kernel.
@@ -72,6 +83,13 @@ kernel_version() {
 # Print the hardcoded userland version.
 #
 userland_version() {
+	if [ -n "$jail" ] ; then
+		if [ ! -x "$ROOT/bin/$progname" ] ; then
+			error "unable to locate userland version utility in jail '$jail'"
+		fi
+		"$ROOT/bin/$progname" -u
+		return
+	fi
 	echo $USERLAND_VERSION
 }
 
@@ -79,7 +97,7 @@ userland_version() {
 # Print a usage string and exit.
 #
 usage() {
-	echo "usage: $progname [-ku]" >&2
+	echo "usage: $progname [-ku] [-j jail]" >&2
 	exit 1
 }
 
@@ -87,9 +105,15 @@ usage() {
 # Main program.
 #
 main() {
+	opt_k=0
+	opt_u=0
+
 	# parse command-line arguments
-	while getopts "ku" option ; do
+	while getopts "j:ku" option ; do
 		case $option in
+		j)
+			jail=$OPTARG
+			;;
 		k)
 			opt_k=1
 			;;
@@ -104,6 +128,9 @@ main() {
 	if [ $OPTIND -le $# ] ; then
 		usage
 	fi
+	if [ -n "$jail" ] ; then
+		ROOT=$(jail_root "$jail")
+	fi
 
 	# default is -u
 	if [ $((opt_k + opt_u)) -eq 0 ] ; then
@@ -111,12 +138,12 @@ main() {
 	fi
 
 	# print kernel version
-	if [ $opt_k ] ; then
+	if [ $opt_k -ne 0 ] ; then
 		kernel_version
 	fi
 
 	# print userland version
-	if [ $opt_u ] ; then
+	if [ $opt_u -ne 0 ] ; then
 		userland_version
 	fi
 }
