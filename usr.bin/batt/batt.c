@@ -65,6 +65,8 @@ main(int argc, char *argv[])
 	}
 	argc -= optind;
 	argv += optind;
+	if (argc != 0)
+		usage();
 
 	/* if no flags are set, use the most likely */
 	if (lflag == 0 && tflag == 0 && uflag == 0)
@@ -74,6 +76,8 @@ main(int argc, char *argv[])
 		len = sizeof(life);
 		if (sysctlbyname("hw.acpi.battery.life", &life, &len, NULL, 0) < 0)
 			errx(1, "ACPI not loaded or no battery found.");
+		if (len != sizeof(life))
+			errx(1, "unexpected battery life value size");
 		if (cflag)
 			printf("%d ", life);
 		else
@@ -84,19 +88,24 @@ main(int argc, char *argv[])
 		len = sizeof(time);
 		if (sysctlbyname("hw.acpi.battery.time", &time, &len, NULL, 0) < 0)
 			errx(1, "ACPI not loaded or no battery found.");
+		if (len != sizeof(time))
+			errx(1, "unexpected battery time value size");
 		if (cflag)
 			printf("%d ", time);
 		else {
-			if (time < 1)
+			if (time < 1) {
+				len = sizeof(acline);
 				if (sysctlbyname("hw.acpi.acline", &acline, &len, NULL, 0) < 0)
 					errx(1, "AC line status not available");
+				else if (len != sizeof(acline))
+					errx(1, "unexpected AC line status value size");
 				else
 					if (acline == 1) {
 						puts("System plugged in");
 					} else {
 						printf("Battery charging or drained.\n");
 					}
-			else if (time == 1)
+			} else if (time == 1)
 				printf("1 minute remaining\n");
 			else
 				printf("%d minutes remaining\n", time);
@@ -107,6 +116,8 @@ main(int argc, char *argv[])
 		len = sizeof(units);
         	if (sysctlbyname("hw.acpi.battery.units", &units, &len, NULL, 0) < 0)
                 	errx(1, "ACPI not loaded or no battery found.");
+		if (len != sizeof(units))
+			errx(1, "unexpected battery units value size");
 		if (cflag)
 			printf("%d", units);
 		else {
