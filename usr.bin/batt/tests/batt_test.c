@@ -50,6 +50,7 @@ static struct mock_sysctl mocks[8];
 static size_t nmocks;
 
 static void	add_mock(const char *, int, size_t, int);
+static int	batt_main(int, char **);
 static void	free_result(struct run_result *);
 static char	*read_fd(int);
 static void	reset_mocks(void);
@@ -157,8 +158,10 @@ run_batt(size_t argc, const char *const *args)
 
 	argv = calloc(argc + 1, sizeof(*argv));
 	ATF_REQUIRE(argv != NULL);
-	for (i = 0; i < argc; i++)
-		argv[i] = (char *)args[i];
+	for (i = 0; i < argc; i++) {
+		argv[i] = strdup(args[i]);
+		ATF_REQUIRE(argv[i] != NULL);
+	}
 
 	pid = fork();
 	ATF_REQUIRE(pid >= 0);
@@ -176,6 +179,8 @@ run_batt(size_t argc, const char *const *args)
 		_exit(batt_main((int)argc, argv));
 	}
 
+	for (i = 0; i < argc; i++)
+		free(argv[i]);
 	free(argv);
 	close(outpipe[1]);
 	close(errpipe[1]);
