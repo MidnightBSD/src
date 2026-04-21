@@ -62,14 +62,19 @@ pipeline {
                         }
                     }
                     stage('tests') {
+                        environment {
+                            KYUA_RESULTS = "${env.WORKSPACE}/kyua-results-${ARCHITECTURE}.db"
+                            JUNIT_RESULTS = "junit-results-${ARCHITECTURE}.xml"
+                        }
                         steps {
                             echo "Do tests for ${ARCHITECTURE}"
-                            sh "kyua test -k tests/Kyuafile --results-file ${WORKSPACE}/kyua-results.db"
-                            sh "kyua report-junit --output junit-results.xml --results-file ${WORKSPACE}/kyua-results.db"
+                            sh "rm -f ${KYUA_RESULTS} ${JUNIT_RESULTS}"
+                            sh "kyua test -k tests/Kyuafile --results-file ${KYUA_RESULTS}"
+                            sh "kyua report-junit --output ${JUNIT_RESULTS} --results-file ${KYUA_RESULTS}"
                         }
                         post {
                             always {
-                                junit 'junit-results.xml'
+                                junit allowEmptyResults: true, testResults: "${JUNIT_RESULTS}"
                             }
                         }
                     }
