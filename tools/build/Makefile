@@ -231,7 +231,7 @@ MSDOSFSINCS+=	${SRCTOP}/sys/fs/msdosfs/fat.h
 MSDOSFSINCS+=	${SRCTOP}/sys/fs/msdosfs/msdosfsmount.h
 DISKINCS+=	${SRCTOP}/sys/sys/disk/bsd.h
 
-.if ${.MAKE.OS} == "FreeBSD"
+.if ${.MAKE.OS} == "FreeBSD" || ${.MAKE.OS} == "MidnightBSD"
 # Needed to build most of the things below, which include sys/cdefs.h either
 # directly or transitively
 SYSINCS+=	${SRCTOP}/sys/sys/cdefs.h
