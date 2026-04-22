@@ -69,6 +69,6 @@ jobs:
           args+=(TARGET=${{ matrix.target }} TARGET_ARCH=${{ matrix.target_arch }} KERNCONF=GENERIC NO_MODULES=yes buildkernel -s -j"$NPROC")
           if [ "${{ runner.os }}" = "Linux" ] && [ "${{ matrix.target_arch }}" = "aarch64" ]; then
             resource_dir=$(/usr/lib/llvm-18/bin/clang -print-resource-dir)
-            args+=("KERNEL_FLAGS=CFLAGS+=-idirafter ${resource_dir}/include")
+            args+=("KERNEL_FLAGS=CFLAGS+=-idirafter ${PWD}/tools/build/cross-build/include/common CFLAGS+=-idirafter ${resource_dir}/include")
           fi
           "${args[@]}"
