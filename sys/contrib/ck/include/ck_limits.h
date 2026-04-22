@@ -24,7 +24,7 @@
  * SUCH DAMAGE.
  */
 
-#if defined(__linux__) && defined(__KERNEL__)
+#if defined(__linux__) && (defined(__KERNEL__) || defined(_KERNEL))
 #include <linux/kernel.h>
 
 #ifndef UINT8_MAX
@@ -45,4 +45,4 @@
 #include <sys/limits.h>
 #else
 #include <limits.h>
-#endif /* __linux__ && __KERNEL__ */
+#endif /* __linux__ && (__KERNEL__ || _KERNEL) */
