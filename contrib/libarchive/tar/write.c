@@ -58,7 +58,7 @@
 #endif
 
 #include "bsdtar.h"
-#include "err.h"
+#include "lafe_err.h"
 #include "line_reader.h"
 
 #ifndef O_BINARY
@@ -111,7 +111,32 @@ seek_file(int fd, int64_t offset, int whence)
 	return (SetFilePointerEx((HANDLE)_get_osfhandle(fd),
 		distance, NULL, FILE_BEGIN) ? 1 : -1);
 }
-#define	open _open
+
+static int
+_open_wrap_sopen(char const *const path, int const oflag, ...)
+{
+	va_list ap;
+	int r, pmode;
+
+	pmode = 0;
+	if (oflag & _O_CREAT)
+	{
+		va_start(ap, oflag);
+		pmode = va_arg(ap, int);
+		va_end(ap);
+	}
+
+	_sopen_s(&r, path, oflag, _SH_DENYNO, pmode & 0600);
+	if (r < 0)
+	{
+		/* _sopen_s populates errno */
+		return -1;
+	}
+
+	return r;
+}
+
+#define	open _open_wrap_sopen
 #define	close _close
 #define	read _read
 #ifdef lseek
@@ -138,7 +163,7 @@ set_writer_options(struct bsdtar *bsdtar, struct archive *a)
 		 * a format or filters which are not added to
 		 * the archive write object. */
 		memcpy(p, IGNORE_WRONG_MODULE_NAME, module_len);
-		memcpy(p, writer_options, opt_len);
+		memcpy(p + module_len, writer_options, opt_len);
 		r = archive_write_set_options(a, p);
 		free(p);
 		if (r < ARCHIVE_WARN)
@@ -165,13 +190,12 @@ set_reader_options(struct bsdtar *bsdtar, struct archive *a)
 		char *p;
 		/* Set default write options. */
 		if ((p = malloc(module_len + opt_len)) == NULL)
-		if (p == NULL)
 			lafe_errc(1, errno, "Out of memory");
 		/* Prepend magic code to ignore options for
 		 * a format or filters which are not added to
 		 * the archive write object. */
 		memcpy(p, IGNORE_WRONG_MODULE_NAME, module_len);
-		memcpy(p, reader_options, opt_len);
+		memcpy(p + module_len, reader_options, opt_len);
 		r = archive_read_set_options(a, p);
 		free(p);
 		if (r < ARCHIVE_WARN)
