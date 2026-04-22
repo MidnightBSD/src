@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20260422:
+	libarchive 3.8.5
+
 20260401:
 	Fixed a bug with the libutil age verification function that caused it to always return a null response.
 
