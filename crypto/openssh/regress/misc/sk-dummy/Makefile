@@ -1,4 +1,4 @@
-#	$OpenBSD: Makefile,v 1.7 2025/11/06 17:24:28 djm Exp $
+#	$OpenBSD: Makefile,v 1.3 2023/01/15 23:35:10 djm Exp $
 
 .include <bsd.own.mk>
 .include <bsd.obj.mk>
@@ -9,10 +9,9 @@ NOMAN=
 SSHREL=../../../../../usr.bin/ssh
 .PATH: ${.CURDIR}/${SSHREL}
 
-SRCS=sk-dummy.c fatal.c
+SRCS=sk-dummy.c
 # From usr.bin/ssh
-SRCS+=ed25519-openssl.c
-#SRCS+=ed25519.c
+SRCS+=ed25519.c hash.c
 OPENSSL?=	yes
 
 CFLAGS+=	-fPIC
@@ -37,7 +36,6 @@ CDIAGFLAGS+=	-Wimplicit
 CDIAGFLAGS+=	-Winline
 CDIAGFLAGS+=	-Wmissing-declarations
 CDIAGFLAGS+=	-Wmissing-prototypes
-CDIAGFLAGS+=	-Wold-style-definition
 CDIAGFLAGS+=	-Wparentheses
 CDIAGFLAGS+=	-Wpointer-arith
 CDIAGFLAGS+=	-Wreturn-type
@@ -50,6 +48,9 @@ CDIAGFLAGS+=	-Wtrigraphs
 CDIAGFLAGS+=	-Wuninitialized
 CDIAGFLAGS+=	-Wunused
 CDIAGFLAGS+=	-Wno-unused-parameter
+.if ${COMPILER_VERSION:L} != "gcc3"
+CDIAGFLAGS+=	-Wold-style-definition
+.endif
 
 CFLAGS+=-I${.CURDIR}/${SSHREL}
 

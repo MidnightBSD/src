@@ -1,4 +1,4 @@
-#	$OpenBSD: penalty-expire.sh,v 1.3 2025/05/22 04:34:18 bluhm Exp $
+#	$OpenBSD
 #	Placed in the Public Domain.
 
 tid="penalties"

@@ -1,4 +1,4 @@
-/*	$OpenBSD: fuzz.c,v 1.9 2025/06/13 07:23:07 dtucker Exp $	*/
+/*	$OpenBSD: fuzz.c,v 1.8 2015/03/03 20:42:49 djm Exp $	*/
 /*
  * Copyright (c) 2011 Damien Miller <djm@mindrot.org>
  *
@@ -25,7 +25,9 @@
 #include <assert.h>
 #include <ctype.h>
 #include <stdio.h>
-#include <stdint.h>
+#ifdef HAVE_STDINT_H
+# include <stdint.h>
+#endif
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
@@ -148,6 +150,7 @@ fuzz_fmt(struct fuzz *fuzz, char *s, size_t n)
 		return 0;
 	default:
 		return -1;
+		abort();
 	}
 }
 

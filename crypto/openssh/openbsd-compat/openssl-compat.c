@@ -32,8 +32,7 @@
 #include "openssl-compat.h"
 
 /*
- * OpenSSL version numbers: MNNFFPPS: major minor fix patch status.
- * See the OpenSSL_version_num(3ssl) man page.
+ * OpenSSL version numbers: MNNFFPPS: major minor fix patch status
  * Versions >=3 require only major versions to match.
  * For versions <3, we accept compatible fix versions (so we allow 1.0.1
  * to work with 1.0.0). Going backwards is only allowed within a patch series.
@@ -50,10 +49,10 @@ ssh_compatible_openssl(long headerver, long libver)
 		return 1;
 
 	/*
-	 * For versions >= 3.0, only the major must match.
+	 * For versions >= 3.0, only the major and status must match.
 	 */
-	if (headerver >= 0x30000000) {
-		mask = 0xf0000000L; /* major only */
+	if (headerver >= 0x3000000f) {
+		mask = 0xf000000fL; /* major,status */
 		return (headerver & mask) == (libver & mask);
 	}
 
@@ -69,22 +68,31 @@ ssh_compatible_openssl(long headerver, long libver)
 	return 0;
 }
 
-int
+void
 ssh_libcrypto_init(void)
 {
-	uint64_t opts = OPENSSL_INIT_ADD_ALL_CIPHERS |
-	    OPENSSL_INIT_ADD_ALL_DIGESTS;
+#if defined(HAVE_OPENSSL_INIT_CRYPTO) && \
+      defined(OPENSSL_INIT_ADD_ALL_CIPHERS) && \
+      defined(OPENSSL_INIT_ADD_ALL_DIGESTS)
+	OPENSSL_init_crypto(OPENSSL_INIT_ADD_ALL_CIPHERS |
+	    OPENSSL_INIT_ADD_ALL_DIGESTS, NULL);
+#elif defined(HAVE_OPENSSL_ADD_ALL_ALGORITHMS)
+	OpenSSL_add_all_algorithms();
+#endif
 
 #ifdef	USE_OPENSSL_ENGINE
 	/* Enable use of crypto hardware */
 	ENGINE_load_builtin_engines();
 	ENGINE_register_all_complete();
 
-	/* Tell libcrypto config file to pick up engines defined there */
-	opts |= OPENSSL_INIT_LOAD_CONFIG;
+	/* Load the libcrypto config file to pick up engines defined there */
+# if defined(HAVE_OPENSSL_INIT_CRYPTO) && defined(OPENSSL_INIT_LOAD_CONFIG)
+	OPENSSL_init_crypto(OPENSSL_INIT_ADD_ALL_CIPHERS |
+	    OPENSSL_INIT_ADD_ALL_DIGESTS | OPENSSL_INIT_LOAD_CONFIG, NULL);
+# else
+	OPENSSL_config(NULL);
+# endif
 #endif /* USE_OPENSSL_ENGINE */
-
-	return OPENSSL_init_crypto(opts, NULL);
 }
 
 #ifndef HAVE_EVP_DIGESTSIGN

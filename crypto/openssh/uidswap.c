@@ -1,4 +1,4 @@
-/* $OpenBSD: uidswap.c,v 1.43 2026/02/11 17:05:32 dtucker Exp $ */
+/* $OpenBSD: uidswap.c,v 1.42 2019/06/28 13:35:04 deraadt Exp $ */
 /*
  * Author: Tatu Ylonen <ylo@cs.hut.fi>
  * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
@@ -15,13 +15,14 @@
 #include "includes.h"
 
 #include <errno.h>
-#include <grp.h>
 #include <pwd.h>
 #include <string.h>
 #include <unistd.h>
 #include <limits.h>
 #include <stdarg.h>
 #include <stdlib.h>
+
+#include <grp.h>
 
 #include "log.h"
 #include "uidswap.h"
@@ -162,9 +163,9 @@ restore_uid(void)
 	 * as well.
 	 */
 	if (setuid(getuid()) == -1)
-		fatal_f("setuid failed: %s", strerror(errno));
+		fatal("%s: setuid failed: %s", __func__, strerror(errno));
 	if (setgid(getgid()) == -1)
-		fatal_f("setgid failed: %s", strerror(errno));
+		fatal("%s: setgid failed: %s", __func__, strerror(errno));
 #endif /* SAVED_IDS_WORK_WITH_SETEUID */
 
 	if (setgroups(saved_egroupslen, saved_egroups) == -1)
@@ -211,7 +212,7 @@ permanently_set_uid(struct passwd *pw)
 	/* Try restoration of GID if changed (test clearing of saved gid) */
 	if (old_gid != pw->pw_gid && pw->pw_uid != 0 &&
 	    (setgid(old_gid) != -1 || setegid(old_gid) != -1))
-		fatal_f("was able to restore old [e]gid");
+		fatal("%s: was able to restore old [e]gid", __func__);
 #endif
 
 	/* Verify GID drop was successful */
@@ -225,7 +226,7 @@ permanently_set_uid(struct passwd *pw)
 	/* Try restoration of UID if changed (test clearing of saved uid) */
 	if (old_uid != pw->pw_uid &&
 	    (setuid(old_uid) != -1 || seteuid(old_uid) != -1))
-		fatal_f("was able to restore old [e]uid");
+		fatal("%s: was able to restore old [e]uid", __func__);
 #endif
 
 	/* Verify UID drop was successful */

@@ -1,4 +1,4 @@
-#	$OpenBSD: penalty.sh,v 1.7 2025/05/22 04:34:18 bluhm Exp $
+#	$OpenBSD
 #	Placed in the Public Domain.
 
 tid="penalties"

@@ -10,7 +10,9 @@
 
 #include <sys/types.h>
 #include <stdio.h>
-#include <stdint.h>
+#ifdef HAVE_STDINT_H
+# include <stdint.h>
+#endif
 #include <stdlib.h>
 #include <string.h>
 

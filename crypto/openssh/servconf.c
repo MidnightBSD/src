@@ -1,4 +1,4 @@
-/* $OpenBSD: servconf.c,v 1.446 2026/04/02 07:38:14 djm Exp $ */
+/* $OpenBSD: servconf.c,v 1.425 2025/02/25 06:25:30 djm Exp $ */
 /*
  * Copyright (c) 1995 Tatu Ylonen <ylo@cs.hut.fi>, Espoo, Finland
  *                    All rights reserved
@@ -14,20 +14,19 @@
 
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <sys/queue.h>
 #include <sys/stat.h>
 #ifdef __OpenBSD__
 #include <sys/sysctl.h>
 #endif
 
 #include <netinet/in.h>
+#include <netinet/in_systm.h>
 #include <netinet/ip.h>
 #ifdef HAVE_NET_ROUTE_H
 #include <net/route.h>
 #endif
 
 #include <ctype.h>
-#include <glob.h>
 #include <netdb.h>
 #include <pwd.h>
 #include <stdio.h>
@@ -38,8 +37,16 @@
 #include <limits.h>
 #include <stdarg.h>
 #include <errno.h>
+#ifdef HAVE_UTIL_H
 #include <util.h>
+#endif
+#ifdef USE_SYSTEM_GLOB
+# include <glob.h>
+#else
+# include "openbsd-compat/glob.h"
+#endif
 
+#include "openbsd-compat/sys-queue.h"
 #include "xmalloc.h"
 #include "ssh.h"
 #include "log.h"
@@ -132,7 +139,6 @@ initialize_server_options(ServerOptions *options)
 	options->kerberos_get_afs_token = -1;
 	options->gss_authentication=-1;
 	options->gss_cleanup_creds = -1;
-	options->gss_deleg_creds = -1;
 	options->gss_strict_acceptor = -1;
 	options->password_authentication = -1;
 	options->kbd_interactive_authentication = -1;
@@ -169,14 +175,13 @@ initialize_server_options(ServerOptions *options)
 	options->per_source_penalty.max_sources6 = -1;
 	options->per_source_penalty.overflow_mode = -1;
 	options->per_source_penalty.overflow_mode6 = -1;
-	options->per_source_penalty.penalty_crash = -1.0;
-	options->per_source_penalty.penalty_authfail = -1.0;
-	options->per_source_penalty.penalty_invaliduser = -1.0;
-	options->per_source_penalty.penalty_noauth = -1.0;
-	options->per_source_penalty.penalty_grace = -1.0;
-	options->per_source_penalty.penalty_refuseconnection = -1.0;
-	options->per_source_penalty.penalty_max = -1.0;
-	options->per_source_penalty.penalty_min = -1.0;
+	options->per_source_penalty.penalty_crash = -1;
+	options->per_source_penalty.penalty_authfail = -1;
+	options->per_source_penalty.penalty_noauth = -1;
+	options->per_source_penalty.penalty_grace = -1;
+	options->per_source_penalty.penalty_refuseconnection = -1;
+	options->per_source_penalty.penalty_max = -1;
+	options->per_source_penalty.penalty_min = -1;
 	options->max_authtries = -1;
 	options->max_sessions = -1;
 	options->banner = NULL;
@@ -193,8 +198,7 @@ initialize_server_options(ServerOptions *options)
 	options->chroot_directory = NULL;
 	options->authorized_keys_command = NULL;
 	options->authorized_keys_command_user = NULL;
-	options->revoked_keys_files = NULL;
-	options->num_revoked_keys_files = 0;
+	options->revoked_keys_file = NULL;
 	options->sk_provider = NULL;
 	options->trusted_user_ca_keys = NULL;
 	options->authorized_principals_file = NULL;
@@ -315,6 +319,10 @@ fill_default_server_options(ServerOptions *options)
 #endif
 		servconf_add_hostkey(defaultkey, 0, options,
 		    _PATH_HOST_ED25519_KEY_FILE, 0);
+#ifdef WITH_XMSS
+		servconf_add_hostkey(defaultkey, 0, options,
+		    _PATH_HOST_XMSS_KEY_FILE, 0);
+#endif /* WITH_XMSS */
 	}
 	if (options->num_host_key_files == 0)
 		fatal("No host key files found");
@@ -381,8 +389,6 @@ fill_default_server_options(ServerOptions *options)
 		options->gss_authentication = 0;
 	if (options->gss_cleanup_creds == -1)
 		options->gss_cleanup_creds = 1;
-	if (options->gss_deleg_creds == -1)
-		options->gss_deleg_creds = 1;
 	if (options->gss_strict_acceptor == -1)
 		options->gss_strict_acceptor = 1;
 	if (options->password_authentication == -1)
@@ -436,22 +442,20 @@ fill_default_server_options(ServerOptions *options)
 		options->per_source_penalty.overflow_mode = PER_SOURCE_PENALTY_OVERFLOW_PERMISSIVE;
 	if (options->per_source_penalty.overflow_mode6 == -1)
 		options->per_source_penalty.overflow_mode6 = options->per_source_penalty.overflow_mode;
-	if (options->per_source_penalty.penalty_crash < 0.0)
-		options->per_source_penalty.penalty_crash = 90.0;
-	if (options->per_source_penalty.penalty_grace < 0.0)
-		options->per_source_penalty.penalty_grace = 10.0;
-	if (options->per_source_penalty.penalty_authfail < 0.0)
-		options->per_source_penalty.penalty_authfail = 5.0;
-	if (options->per_source_penalty.penalty_invaliduser < 0.0)
-		options->per_source_penalty.penalty_invaliduser = 5.0;
-	if (options->per_source_penalty.penalty_noauth < 0.0)
-		options->per_source_penalty.penalty_noauth = 1.0;
-	if (options->per_source_penalty.penalty_refuseconnection < 0.0)
-		options->per_source_penalty.penalty_refuseconnection = 10.0;
-	if (options->per_source_penalty.penalty_min < 0.0)
-		options->per_source_penalty.penalty_min = 15.0;
-	if (options->per_source_penalty.penalty_max < 0.0)
-		options->per_source_penalty.penalty_max = 600.0;
+	if (options->per_source_penalty.penalty_crash == -1)
+		options->per_source_penalty.penalty_crash = 90;
+	if (options->per_source_penalty.penalty_grace == -1)
+		options->per_source_penalty.penalty_grace = 10;
+	if (options->per_source_penalty.penalty_authfail == -1)
+		options->per_source_penalty.penalty_authfail = 5;
+	if (options->per_source_penalty.penalty_noauth == -1)
+		options->per_source_penalty.penalty_noauth = 1;
+	if (options->per_source_penalty.penalty_refuseconnection == -1)
+		options->per_source_penalty.penalty_refuseconnection = 10;
+	if (options->per_source_penalty.penalty_min == -1)
+		options->per_source_penalty.penalty_min = 15;
+	if (options->per_source_penalty.penalty_max == -1)
+		options->per_source_penalty.penalty_max = 600;
 	if (options->max_authtries == -1)
 		options->max_authtries = DEFAULT_AUTH_FAIL_MAX;
 	if (options->max_sessions == -1)
@@ -475,9 +479,9 @@ fill_default_server_options(ServerOptions *options)
 	if (options->permit_tun == -1)
 		options->permit_tun = SSH_TUNMODE_NO;
 	if (options->ip_qos_interactive == -1)
-		options->ip_qos_interactive = IPTOS_DSCP_EF;
+		options->ip_qos_interactive = IPTOS_DSCP_AF21;
 	if (options->ip_qos_bulk == -1)
-		options->ip_qos_bulk = IPTOS_DSCP_CS0;
+		options->ip_qos_bulk = IPTOS_DSCP_CS1;
 	if (options->version_addendum == NULL)
 		options->version_addendum = xstrdup(SSH_VERSION_MIDNIGHTBSD);
 	if (options->fwd_opts.streamlocal_bind_mask == (mode_t)-1)
@@ -528,6 +532,7 @@ fill_default_server_options(ServerOptions *options)
 	CLEAR_ON_NONE(options->xauth_location);
 	CLEAR_ON_NONE(options->banner);
 	CLEAR_ON_NONE(options->trusted_user_ca_keys);
+	CLEAR_ON_NONE(options->revoked_keys_file);
 	CLEAR_ON_NONE(options->sk_provider);
 	CLEAR_ON_NONE(options->authorized_principals_file);
 	CLEAR_ON_NONE(options->adm_forced_command);
@@ -543,8 +548,6 @@ fill_default_server_options(ServerOptions *options)
 
 	CLEAR_ON_NONE_ARRAY(channel_timeouts, num_channel_timeouts, "none");
 	CLEAR_ON_NONE_ARRAY(auth_methods, num_auth_methods, "any");
-	CLEAR_ON_NONE_ARRAY(revoked_keys_files, num_revoked_keys_files, "none");
-	CLEAR_ON_NONE_ARRAY(authorized_keys_files, num_authkeys_files, "none");
 #undef CLEAR_ON_NONE
 #undef CLEAR_ON_NONE_ARRAY
 }
@@ -573,7 +576,7 @@ typedef enum {
 	sHostKeyAlgorithms, sPerSourceMaxStartups, sPerSourceNetBlockSize,
 	sPerSourcePenalties, sPerSourcePenaltyExemptList,
 	sClientAliveInterval, sClientAliveCountMax, sAuthorizedKeysFile,
-	sGssAuthentication, sGssCleanupCreds, sGssDelegateCreds, sGssStrictAcceptor,
+	sGssAuthentication, sGssCleanupCreds, sGssStrictAcceptor,
 	sAcceptEnv, sSetEnv, sPermitTunnel,
 	sMatch, sPermitOpen, sPermitListen, sForceCommand, sChrootDirectory,
 	sUsePrivilegeSeparation, sAllowAgentForwarding,
@@ -660,12 +663,10 @@ static struct {
 #ifdef GSSAPI
 	{ "gssapiauthentication", sGssAuthentication, SSHCFG_ALL },
 	{ "gssapicleanupcredentials", sGssCleanupCreds, SSHCFG_GLOBAL },
-	{ "gssapidelegatecredentials", sGssDelegateCreds, SSHCFG_GLOBAL },
 	{ "gssapistrictacceptorcheck", sGssStrictAcceptor, SSHCFG_GLOBAL },
 #else
 	{ "gssapiauthentication", sUnsupported, SSHCFG_ALL },
 	{ "gssapicleanupcredentials", sUnsupported, SSHCFG_GLOBAL },
-	{ "gssapidelegatecredentials", sUnsupported, SSHCFG_GLOBAL },
 	{ "gssapistrictacceptorcheck", sUnsupported, SSHCFG_GLOBAL },
 #endif
 	{ "passwordauthentication", sPasswordAuthentication, SSHCFG_ALL },
@@ -1066,12 +1067,12 @@ match_cfg_line(const char *full_line, int *acp, char ***avp,
 	}
 
 	while ((oattrib = argv_next(acp, avp)) != NULL) {
+		attrib = xstrdup(oattrib);
 		/* Terminate on comment */
-		if (*oattrib == '#') {
+		if (*attrib == '#') {
 			argv_consume(acp); /* mark all arguments consumed */
 			break;
 		}
-		attrib = xstrdup(oattrib);
 		arg = NULL;
 		attributes++;
 		/* Criterion "all" has no argument and must appear alone */
@@ -1093,13 +1094,13 @@ match_cfg_line(const char *full_line, int *acp, char ***avp,
 		if (strcasecmp(attrib, "invalid-user") == 0) {
 			if (ci == NULL) {
 				result = 0;
-				goto next;
+				continue;
 			}
 			if (ci->user_invalid == 0)
 				result = 0;
 			else
 				debug("matched invalid-user at line %d", line);
-			goto next;
+			continue;
 		}
 
 		/* Keep this list in sync with below */
@@ -1126,7 +1127,7 @@ match_cfg_line(const char *full_line, int *acp, char ***avp,
 		if (strcasecmp(attrib, "user") == 0) {
 			if (ci == NULL || (ci->test && ci->user == NULL)) {
 				result = 0;
-				goto next;
+				continue;
 			}
 			if (ci->user == NULL)
 				match_test_missing_fatal("User", "user");
@@ -1138,7 +1139,7 @@ match_cfg_line(const char *full_line, int *acp, char ***avp,
 		} else if (strcasecmp(attrib, "group") == 0) {
 			if (ci == NULL || (ci->test && ci->user == NULL)) {
 				result = 0;
-				goto next;
+				continue;
 			}
 			if (ci->user == NULL)
 				match_test_missing_fatal("Group", "user");
@@ -1152,7 +1153,7 @@ match_cfg_line(const char *full_line, int *acp, char ***avp,
 		} else if (strcasecmp(attrib, "host") == 0) {
 			if (ci == NULL || (ci->test && ci->host == NULL)) {
 				result = 0;
-				goto next;
+				continue;
 			}
 			if (ci->host == NULL)
 				match_test_missing_fatal("Host", "host");
@@ -1167,7 +1168,7 @@ match_cfg_line(const char *full_line, int *acp, char ***avp,
 					fatal("Invalid Match address argument "
 					    "'%s' at line %d", arg, line);
 				result = 0;
-				goto next;
+				continue;
 			}
 			if (ci->address == NULL)
 				match_test_missing_fatal("Address", "addr");
@@ -1191,7 +1192,7 @@ match_cfg_line(const char *full_line, int *acp, char ***avp,
 					    "argument '%s' at line %d", arg,
 					    line);
 				result = 0;
-				goto next;
+				continue;
 			}
 			if (ci->laddress == NULL)
 				match_test_missing_fatal("LocalAddress",
@@ -1219,7 +1220,7 @@ match_cfg_line(const char *full_line, int *acp, char ***avp,
 			}
 			if (ci == NULL || (ci->test && ci->lport == -1)) {
 				result = 0;
-				goto next;
+				continue;
 			}
 			if (ci->lport == 0)
 				match_test_missing_fatal("LocalPort", "lport");
@@ -1233,7 +1234,7 @@ match_cfg_line(const char *full_line, int *acp, char ***avp,
 		} else if (strcasecmp(attrib, "rdomain") == 0) {
 			if (ci == NULL || (ci->test && ci->rdomain == NULL)) {
 				result = 0;
-				goto next;
+				continue;
 			}
 			if (ci->rdomain == NULL)
 				match_test_missing_fatal("RDomain", "rdomain");
@@ -1255,7 +1256,6 @@ match_cfg_line(const char *full_line, int *acp, char ***avp,
 			result = -1;
 			goto out;
 		}
- next:
 		free(attrib);
 		attrib = NULL;
 	}
@@ -1295,8 +1295,8 @@ static const struct multistate multistate_addressfamily[] = {
 	{ NULL, -1 }
 };
 static const struct multistate multistate_permitrootlogin[] = {
-	{ "prohibit-password",		PERMIT_NO_PASSWD },
 	{ "without-password",		PERMIT_NO_PASSWD },
+	{ "prohibit-password",		PERMIT_NO_PASSWD },
 	{ "forced-commands-only",	PERMIT_FORCED_ONLY },
 	{ "yes",			PERMIT_YES },
 	{ "no",				PERMIT_NO },
@@ -1332,8 +1332,7 @@ process_server_config_line_depth(ServerOptions *options, char *line,
     struct include_list *includes)
 {
 	char *str, ***chararrayptr, **charptr, *arg, *arg2, *p, *keyword;
-	int cmdline = 0, *intptr, value, value2, value3, n, port, oactive, r;
-	double dvalue, *doubleptr = NULL;
+	int cmdline = 0, *intptr, value, value2, n, port, oactive, r;
 	int ca_only = 0, found = 0;
 	SyslogFacility *log_facility_ptr;
 	LogLevel *log_level_ptr;
@@ -1667,10 +1666,6 @@ process_server_config_line_depth(ServerOptions *options, char *line,
 		intptr = &options->gss_cleanup_creds;
 		goto parse_flag;
 
-	case sGssDelegateCreds:
-		intptr = &options->gss_deleg_creds;
-		goto parse_flag;
-
 	case sGssStrictAcceptor:
 		intptr = &options->gss_strict_acceptor;
 		goto parse_flag;
@@ -1968,8 +1963,8 @@ process_server_config_line_depth(ServerOptions *options, char *line,
 		break;
 
 	case sSubsystem:
-		if ((arg = argv_next(&ac, &av)) == NULL || *arg == '\0' ||
-		   ((arg2 = argv_next(&ac, &av)) == NULL || *arg2 == '\0'))
+		arg = argv_next(&ac, &av);
+		if (!arg || *arg == '\0')
 			fatal("%s line %d: %s missing argument.",
 			    filename, linenum, keyword);
 		if (!*activep) {
@@ -2002,10 +1997,15 @@ process_server_config_line_depth(ServerOptions *options, char *line,
 		    options->num_subsystems + 1,
 		    sizeof(*options->subsystem_args));
 		options->subsystem_name[options->num_subsystems] = xstrdup(arg);
+		arg = argv_next(&ac, &av);
+		if (!arg || *arg == '\0') {
+			fatal("%s line %d: Missing subsystem command.",
+			    filename, linenum);
+		}
 		options->subsystem_command[options->num_subsystems] =
-		    xstrdup(arg2);
+		    xstrdup(arg);
 		/* Collect arguments (separate to executable) */
-		arg = argv_assemble(1, &arg2); /* quote command correctly */
+		arg = argv_assemble(1, &arg); /* quote command correctly */
 		arg2 = argv_assemble(ac, av); /* rest of command */
 		xasprintf(&options->subsystem_args[options->num_subsystems],
 		    "%s%s%s", arg, *arg2 == '\0' ? "" : " ", arg2);
@@ -2020,27 +2020,25 @@ process_server_config_line_depth(ServerOptions *options, char *line,
 		if (!arg || *arg == '\0')
 			fatal("%s line %d: %s missing argument.",
 			    filename, linenum, keyword);
-		/* begin:rate:max */
 		if ((n = sscanf(arg, "%d:%d:%d",
-		    &value, &value2, &value3)) == 3) {
-			if (value > value3 || value2 > 100 || value2 < 1)
+		    &options->max_startups_begin,
+		    &options->max_startups_rate,
+		    &options->max_startups)) == 3) {
+			if (options->max_startups_begin >
+			    options->max_startups ||
+			    options->max_startups_rate > 100 ||
+			    options->max_startups_rate < 1)
 				fatal("%s line %d: Invalid %s spec.",
 				    filename, linenum, keyword);
-		} else if (n == 1) {
-			value3 = value;
-			value2 = -1;
-		} else {
+		} else if (n != 1)
 			fatal("%s line %d: Invalid %s spec.",
 			    filename, linenum, keyword);
-		}
-		if (value <= 0 || value3 <= 0)
+		else
+			options->max_startups = options->max_startups_begin;
+		if (options->max_startups <= 0 ||
+		    options->max_startups_begin <= 0)
 			fatal("%s line %d: Invalid %s spec.",
 			    filename, linenum, keyword);
-		if (*activep && options->max_startups == -1) {
-			options->max_startups_begin = value;
-			options->max_startups_rate = value2;
-			options->max_startups = value3;
-		}
 		break;
 
 	case sPerSourceNetBlockSize:
@@ -2060,10 +2058,9 @@ process_server_config_line_depth(ServerOptions *options, char *line,
 		if (n != 1 && n != 2)
 			fatal("%s line %d: Invalid %s spec.",
 			    filename, linenum, keyword);
-		if (*activep && options->per_source_masklen_ipv4 == -1) {
+		if (*activep) {
 			options->per_source_masklen_ipv4 = value;
-			if (n == 2)
-				options->per_source_masklen_ipv6 = value2;
+			options->per_source_masklen_ipv6 = value2;
 		}
 		break;
 
@@ -2100,13 +2097,10 @@ process_server_config_line_depth(ServerOptions *options, char *line,
 
 	case sPerSourcePenalties:
 		while ((arg = argv_next(&ac, &av)) != NULL) {
-			const char *q = NULL;
-
 			found = 1;
-			intptr = NULL;
-			doubleptr = NULL;
 			value = -1;
 			value2 = 0;
+			p = NULL;
 			/* Allow no/yes only in first position */
 			if (strcasecmp(arg, "no") == 0 ||
 			    (value2 = (strcasecmp(arg, "yes") == 0))) {
@@ -2119,30 +2113,35 @@ process_server_config_line_depth(ServerOptions *options, char *line,
 				    options->per_source_penalty.enabled == -1)
 					options->per_source_penalty.enabled = value2;
 				continue;
-			} else if ((q = strprefix(arg, "crash:", 0)) != NULL) {
-				doubleptr = &options->per_source_penalty.penalty_crash;
-			} else if ((q = strprefix(arg, "authfail:", 0)) != NULL) {
-				doubleptr = &options->per_source_penalty.penalty_authfail;
-			} else if ((q = strprefix(arg, "invaliduser:", 0)) != NULL) {
-				doubleptr = &options->per_source_penalty.penalty_invaliduser;
-			} else if ((q = strprefix(arg, "noauth:", 0)) != NULL) {
-				doubleptr = &options->per_source_penalty.penalty_noauth;
-			} else if ((q = strprefix(arg, "grace-exceeded:", 0)) != NULL) {
-				doubleptr = &options->per_source_penalty.penalty_grace;
-			} else if ((q = strprefix(arg, "refuseconnection:", 0)) != NULL) {
-				doubleptr = &options->per_source_penalty.penalty_refuseconnection;
-			} else if ((q = strprefix(arg, "max:", 0)) != NULL) {
-				doubleptr = &options->per_source_penalty.penalty_max;
-			} else if ((q = strprefix(arg, "min:", 0)) != NULL) {
-				doubleptr = &options->per_source_penalty.penalty_min;
-			} else if ((q = strprefix(arg, "max-sources4:", 0)) != NULL) {
+			} else if (strncmp(arg, "crash:", 6) == 0) {
+				p = arg + 6;
+				intptr = &options->per_source_penalty.penalty_crash;
+			} else if (strncmp(arg, "authfail:", 9) == 0) {
+				p = arg + 9;
+				intptr = &options->per_source_penalty.penalty_authfail;
+			} else if (strncmp(arg, "noauth:", 7) == 0) {
+				p = arg + 7;
+				intptr = &options->per_source_penalty.penalty_noauth;
+			} else if (strncmp(arg, "grace-exceeded:", 15) == 0) {
+				p = arg + 15;
+				intptr = &options->per_source_penalty.penalty_grace;
+			} else if (strncmp(arg, "refuseconnection:", 17) == 0) {
+				p = arg + 17;
+				intptr = &options->per_source_penalty.penalty_refuseconnection;
+			} else if (strncmp(arg, "max:", 4) == 0) {
+				p = arg + 4;
+				intptr = &options->per_source_penalty.penalty_max;
+			} else if (strncmp(arg, "min:", 4) == 0) {
+				p = arg + 4;
+				intptr = &options->per_source_penalty.penalty_min;
+			} else if (strncmp(arg, "max-sources4:", 13) == 0) {
 				intptr = &options->per_source_penalty.max_sources4;
-				if ((errstr = atoi_err(q, &value)) != NULL)
+				if ((errstr = atoi_err(arg+13, &value)) != NULL)
 					fatal("%s line %d: %s value %s.",
 					    filename, linenum, keyword, errstr);
-			} else if ((q = strprefix(arg, "max-sources6:", 0)) != NULL) {
+			} else if (strncmp(arg, "max-sources6:", 13) == 0) {
 				intptr = &options->per_source_penalty.max_sources6;
-				if ((errstr = atoi_err(q, &value)) != NULL)
+				if ((errstr = atoi_err(arg+13, &value)) != NULL)
 					fatal("%s line %d: %s value %s.",
 					    filename, linenum, keyword, errstr);
 			} else if (strcmp(arg, "overflow:deny-all") == 0) {
@@ -2161,24 +2160,15 @@ process_server_config_line_depth(ServerOptions *options, char *line,
 				fatal("%s line %d: unsupported %s keyword %s",
 				    filename, linenum, keyword, arg);
 			}
-
-			if (doubleptr != NULL) {
-				if ((dvalue = convtime_double(q)) < 0) {
-					fatal("%s line %d: invalid %s time value.",
-					    filename, linenum, keyword);
-				}
-				if (*activep && *doubleptr < 0.0) {
-					*doubleptr = dvalue;
-					options->per_source_penalty.enabled = 1;
-				}
-			} else if (intptr != NULL) {
-				if (*activep && *intptr == -1) {
-					*intptr = value;
-					options->per_source_penalty.enabled = 1;
-				}
-			} else {
-				fatal_f("%s line %d: internal error",
-				    filename, linenum);
+			/* If no value was parsed above, assume it's a time */
+			if (value == -1 && (value = convtime(p)) == -1) {
+				fatal("%s line %d: invalid %s time value.",
+				    filename, linenum, keyword);
+			}
+			if (*activep && *intptr == -1) {
+				*intptr = value;
+				/* any option implicitly enables penalties */
+				options->per_source_penalty.enabled = 1;
 			}
 		}
 		if (!found) {
@@ -2206,24 +2196,12 @@ process_server_config_line_depth(ServerOptions *options, char *line,
 	 * AuthorizedKeysFile	/etc/ssh_keys/%u
 	 */
 	case sAuthorizedKeysFile:
-		uintptr = &options->num_authkeys_files;
-		chararrayptr = &options->authorized_keys_files;
- parse_filenames:
-		found = *uintptr == 0;
+		found = options->num_authkeys_files == 0;
 		while ((arg = argv_next(&ac, &av)) != NULL) {
 			if (*arg == '\0') {
 				error("%s line %d: keyword %s empty argument",
 				    filename, linenum, keyword);
 				goto out;
-			}
-			/* Allow "none" only in first position */
-			if (strcasecmp(arg, "none") == 0) {
-				if (nstrs > 0 || ac > 0) {
-					error("%s line %d: keyword %s \"none\" "
-					    "argument must appear alone.",
-					    filename, linenum, keyword);
-					goto out;
-				}
 			}
 			arg2 = tilde_expand_filename(arg, getuid());
 			opt_array_append(filename, linenum, keyword,
@@ -2235,8 +2213,8 @@ process_server_config_line_depth(ServerOptions *options, char *line,
 			    filename, linenum, keyword);
 		}
 		if (found && *activep) {
-			*chararrayptr = strs;
-			*uintptr = nstrs;
+			options->authorized_keys_files = strs;
+			options->num_authkeys_files = nstrs;
 			strs = NULL; /* transferred */
 			nstrs = 0;
 		}
@@ -2527,9 +2505,8 @@ process_server_config_line_depth(ServerOptions *options, char *line,
 		goto parse_filename;
 
 	case sRevokedKeys:
-		uintptr = &options->num_revoked_keys_files;
-		chararrayptr = &options->revoked_keys_files;
-		goto parse_filenames;
+		charptr = &options->revoked_keys_file;
+		goto parse_filename;
 
 	case sSecurityKeyProvider:
 		charptr = &options->sk_provider;
@@ -2554,25 +2531,13 @@ process_server_config_line_depth(ServerOptions *options, char *line,
 		if ((value = parse_ipqos(arg)) == -1)
 			fatal("%s line %d: Bad %s value: %s",
 			    filename, linenum, keyword, arg);
-		if (value == INT_MIN) {
-			debug("%s line %d: Deprecated IPQoS value \"%s\" "
-			    "ignored - using system default instead. Consider"
-			    " using DSCP values.", filename, linenum, arg);
-			value = INT_MAX;
-		}
 		arg = argv_next(&ac, &av);
 		if (arg == NULL)
 			value2 = value;
 		else if ((value2 = parse_ipqos(arg)) == -1)
 			fatal("%s line %d: Bad %s value: %s",
 			    filename, linenum, keyword, arg);
-		if (value2 == INT_MIN) {
-			debug("%s line %d: Deprecated IPQoS value \"%s\" "
-			    "ignored - using system default instead. Consider"
-			    " using DSCP values.", filename, linenum, arg);
-			value2 = INT_MAX;
-		}
-		if (*activep && options->ip_qos_interactive == -1) {
+		if (*activep) {
 			options->ip_qos_interactive = value;
 			options->ip_qos_bulk = value2;
 		}
@@ -3016,10 +2981,10 @@ copy_set_server_options(ServerOptions *dst, ServerOptions *src, int preauth)
 #define M_CP_STROPT(n) do {\
 	if (src->n != NULL && dst->n != src->n) { \
 		free(dst->n); \
-		dst->n = xstrdup(src->n); \
+		dst->n = src->n; \
 	} \
 } while(0)
-#define M_CP_STRARRAYOPT(s, num_s, clobber) do {\
+#define M_CP_STRARRAYOPT(s, num_s) do {\
 	u_int i; \
 	if (src->num_s != 0) { \
 		for (i = 0; i < dst->num_s; i++) \
@@ -3028,8 +2993,7 @@ copy_set_server_options(ServerOptions *dst, ServerOptions *src, int preauth)
 		dst->s = xcalloc(src->num_s, sizeof(*dst->s)); \
 		for (i = 0; i < src->num_s; i++) \
 			dst->s[i] = xstrdup(src->s[i]); \
-		if (clobber) \
-			dst->num_s = src->num_s; \
+		dst->num_s = src->num_s; \
 	} \
 } while(0)
 
@@ -3307,8 +3271,6 @@ dump_config(ServerOptions *o)
 #ifdef GSSAPI
 	dump_cfg_fmtint(sGssAuthentication, o->gss_authentication);
 	dump_cfg_fmtint(sGssCleanupCreds, o->gss_cleanup_creds);
-	dump_cfg_fmtint(sGssDelegateCreds, o->gss_deleg_creds);
-	dump_cfg_fmtint(sGssStrictAcceptor, o->gss_strict_acceptor);
 #endif
 	dump_cfg_fmtint(sPasswordAuthentication, o->password_authentication);
 	dump_cfg_fmtint(sKbdInteractiveAuthentication,
@@ -3347,6 +3309,7 @@ dump_config(ServerOptions *o)
 	dump_cfg_string(sForceCommand, o->adm_forced_command);
 	dump_cfg_string(sChrootDirectory, o->chroot_directory);
 	dump_cfg_string(sTrustedUserCAKeys, o->trusted_user_ca_keys);
+	dump_cfg_string(sRevokedKeys, o->revoked_keys_file);
 	dump_cfg_string(sSecurityKeyProvider, o->sk_provider);
 	dump_cfg_string(sAuthorizedPrincipalsFile,
 	    o->authorized_principals_file);
@@ -3376,8 +3339,6 @@ dump_config(ServerOptions *o)
 	/* string array arguments */
 	dump_cfg_strarray_oneline(sAuthorizedKeysFile, o->num_authkeys_files,
 	    o->authorized_keys_files);
-	dump_cfg_strarray_oneline(sRevokedKeys, o->num_revoked_keys_files,
-	    o->revoked_keys_files);
 	dump_cfg_strarray(sHostKeyFile, o->num_host_key_files,
 	    o->host_key_files);
 	dump_cfg_strarray(sHostCertificate, o->num_host_cert_files,
@@ -3459,15 +3420,13 @@ dump_config(ServerOptions *o)
 	printf("\n");
 
 	if (o->per_source_penalty.enabled) {
-		printf("persourcepenalties crash:%f authfail:%f noauth:%f "
-		    "invaliduser:%f "
-		    "grace-exceeded:%f refuseconnection:%f max:%f min:%f "
+		printf("persourcepenalties crash:%d authfail:%d noauth:%d "
+		    "grace-exceeded:%d refuseconnection:%d max:%d min:%d "
 		    "max-sources4:%d max-sources6:%d "
 		    "overflow:%s overflow6:%s\n",
 		    o->per_source_penalty.penalty_crash,
 		    o->per_source_penalty.penalty_authfail,
 		    o->per_source_penalty.penalty_noauth,
-		    o->per_source_penalty.penalty_invaliduser,
 		    o->per_source_penalty.penalty_grace,
 		    o->per_source_penalty.penalty_refuseconnection,
 		    o->per_source_penalty.penalty_max,

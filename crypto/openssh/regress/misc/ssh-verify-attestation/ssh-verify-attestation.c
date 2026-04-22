@@ -1,4 +1,4 @@
-/* $OpenBSD: ssh-verify-attestation.c,v 1.3 2025/05/12 05:42:02 tb Exp $ */
+/* $OpenBSD: ssh-verify-attestation.c,v 1.2 2024/12/06 10:37:42 djm Exp $ */
 /*
  * Copyright (c) 2022-2024 Damien Miller
  *
@@ -70,7 +70,6 @@
 #include <openssl/bio.h>
 #include <openssl/err.h>
 #include <openssl/pem.h>
-#include "openbsd-compat/openssl-compat.h"
 
 extern char *__progname;
 
@@ -165,8 +164,8 @@ get_pubkey_from_cred_ecdsa(const fido_cred_t *cred, size_t *pubkey_len)
 		error_f("BN_bin2bn failed");
 		goto out;
 	}
-	if (EC_POINT_set_affine_coordinates(g, q, x, y, NULL) != 1) {
-		error_f("EC_POINT_set_affine_coordinates failed");
+	if (EC_POINT_set_affine_coordinates_GFp(g, q, x, y, NULL) != 1) {
+		error_f("EC_POINT_set_affine_coordinates_GFp failed");
 		goto out;
 	}
 	*pubkey_len = EC_POINT_point2oct(g, q,

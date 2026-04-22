@@ -1,4 +1,4 @@
-/* $OpenBSD: sftp-client.c,v 1.185 2026/03/03 09:57:25 dtucker Exp $ */
+/* $OpenBSD: sftp-client.c,v 1.177 2025/03/11 07:48:51 dtucker Exp $ */
 /*
  * Copyright (c) 2001-2004 Damien Miller <djm@openbsd.org>
  *
@@ -23,16 +23,28 @@
 #include "includes.h"
 
 #include <sys/types.h>
-#include <sys/queue.h>
-#include <sys/stat.h>
-#include <sys/time.h>
+#ifdef HAVE_SYS_STATVFS_H
 #include <sys/statvfs.h>
+#endif
+#include "openbsd-compat/sys-queue.h"
+#ifdef HAVE_SYS_STAT_H
+# include <sys/stat.h>
+#endif
+#ifdef HAVE_SYS_TIME_H
+# include <sys/time.h>
+#endif
 #include <sys/uio.h>
 
 #include <dirent.h>
 #include <errno.h>
-#include <fcntl.h>
+#ifdef HAVE_POLL_H
 #include <poll.h>
+#else
+# ifdef HAVE_SYS_POLL_H
+#  include <sys/poll.h>
+# endif
+#endif
+#include <fcntl.h>
 #include <signal.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -94,7 +106,7 @@ struct sftp_conn {
 #define SFTP_EXT_COPY_DATA		0x00000100
 #define SFTP_EXT_GETUSERSGROUPS_BY_ID	0x00000200
 	u_int exts;
-	uint64_t limit_kbps;
+	u_int64_t limit_kbps;
 	struct bwlimit bwlimit_in, bwlimit_out;
 };
 
@@ -102,7 +114,7 @@ struct sftp_conn {
 struct request {
 	u_int id;
 	size_t len;
-	uint64_t offset;
+	u_int64_t offset;
 	TAILQ_ENTRY(request) tq;
 };
 TAILQ_HEAD(requests, request);
@@ -388,7 +400,7 @@ get_decode_statvfs(struct sftp_conn *conn, struct sftp_statvfs *st,
 	struct sshbuf *msg;
 	u_char type;
 	u_int id;
-	uint64_t flag;
+	u_int64_t flag;
 	int r;
 
 	if ((msg = sshbuf_new()) == NULL)
@@ -442,7 +454,7 @@ get_decode_statvfs(struct sftp_conn *conn, struct sftp_statvfs *st,
 
 struct sftp_conn *
 sftp_init(int fd_in, int fd_out, u_int transfer_buflen, u_int num_requests,
-    uint64_t limit_kbps)
+    u_int64_t limit_kbps)
 {
 	u_char type;
 	struct sshbuf *msg;
@@ -569,6 +581,17 @@ sftp_init(int fd_in, int fd_out, u_int transfer_buflen, u_int num_requests,
 			    (unsigned long long)limits.read_length,
 			    ret->upload_buflen, ret->download_buflen);
 		}
+
+		/* Use the server limit to scale down our value only */
+		if (num_requests == 0 && limits.open_handles) {
+			ret->num_requests =
+			    MINIMUM(DEFAULT_NUM_REQUESTS, limits.open_handles);
+			if (ret->num_requests == 0)
+				ret->num_requests = 1;
+			debug3("server handle limit %llu; using %u",
+			    (unsigned long long)limits.open_handles,
+			    ret->num_requests);
+		}
 	}
 
 	/* Some filexfer v.0 servers don't support large packets */
@@ -586,14 +609,6 @@ sftp_init(int fd_in, int fd_out, u_int transfer_buflen, u_int num_requests,
 	}
 
 	return ret;
-}
-
-void
-sftp_free(struct sftp_conn *conn)
-{
-	if (conn == NULL)
-		return;
-	freezero(conn, sizeof(*conn));
 }
 
 u_int
@@ -1123,7 +1138,7 @@ sftp_copy(struct sftp_conn *conn, const char *oldpath, const char *newpath)
 	attr.flags |= SSH2_FILEXFER_ATTR_PERMISSIONS;
 
 	if ((msg = sshbuf_new()) == NULL)
-		fatal_f("sshbuf_new failed");
+		fatal("%s: sshbuf_new failed", __func__);
 
 	attrib_clear(&junk); /* Send empty attributes */
 
@@ -1134,7 +1149,7 @@ sftp_copy(struct sftp_conn *conn, const char *oldpath, const char *newpath)
 	    (r = sshbuf_put_cstring(msg, oldpath)) != 0 ||
 	    (r = sshbuf_put_u32(msg, SSH2_FXF_READ)) != 0 ||
 	    (r = encode_attrib(msg, &junk)) != 0)
-		fatal_fr(r, "buffer error");
+		fatal("%s: buffer error: %s", __func__, ssh_err(r));
 	send_msg(conn, msg);
 	debug3("Sent message SSH2_FXP_OPEN I:%u P:%s", id, oldpath);
 
@@ -1155,7 +1170,7 @@ sftp_copy(struct sftp_conn *conn, const char *oldpath, const char *newpath)
 	    (r = sshbuf_put_u32(msg, SSH2_FXF_WRITE|SSH2_FXF_CREAT|
 	    SSH2_FXF_TRUNC)) != 0 ||
 	    (r = encode_attrib(msg, &attr)) != 0)
-		fatal_fr(r, "buffer error");
+		fatal("%s: buffer error: %s", __func__, ssh_err(r));
 	send_msg(conn, msg);
 	debug3("Sent message SSH2_FXP_OPEN I:%u P:%s", id, newpath);
 
@@ -1179,7 +1194,7 @@ sftp_copy(struct sftp_conn *conn, const char *oldpath, const char *newpath)
 	    (r = sshbuf_put_u64(msg, 0)) != 0 ||
 	    (r = sshbuf_put_string(msg, new_handle, new_handle_len)) != 0 ||
 	    (r = sshbuf_put_u64(msg, 0)) != 0)
-		fatal_fr(r, "buffer error");
+		fatal("%s: buffer error: %s", __func__, ssh_err(r));
 	send_msg(conn, msg);
 	debug3("Sent message copy-data \"%s\" 0 0 -> \"%s\" 0",
 	       oldpath, newpath);
@@ -1504,7 +1519,7 @@ sftp_lsetstat(struct sftp_conn *conn, const char *path, Attrib *a)
 }
 
 static void
-send_read_request(struct sftp_conn *conn, u_int id, uint64_t offset,
+send_read_request(struct sftp_conn *conn, u_int id, u_int64_t offset,
     u_int len, const u_char *handle, u_int handle_len)
 {
 	struct sshbuf *msg;
@@ -1587,7 +1602,7 @@ sftp_download(struct sftp_conn *conn, const char *remote_path,
 	u_char *handle;
 	int local_fd = -1, write_error;
 	int read_error, write_errno, lmodified = 0, reordered = 0, r;
-	uint64_t offset = 0, size, highwater = 0, maxack = 0;
+	u_int64_t offset = 0, size, highwater = 0, maxack = 0;
 	u_int mode, id, buflen, num_req, max_req, status = SSH2_FX_OK;
 	off_t progress_counter;
 	size_t handle_len;
@@ -1648,7 +1663,7 @@ sftp_download(struct sftp_conn *conn, const char *remote_path,
 			error("\"%s\" has negative size", local_path);
 			goto fail;
 		}
-		if ((uint64_t)st.st_size > size) {
+		if ((u_int64_t)st.st_size > size) {
 			error("Unable to resume download of \"%s\": "
 			    "local file is larger than remote", local_path);
  fail:
@@ -2019,14 +2034,14 @@ sftp_upload(struct sftp_conn *conn, const char *local_path,
     int fsync_flag, int inplace_flag)
 {
 	int r, local_fd;
-	u_int openmode, id, status = SSH2_FX_OK, status2, reordered = 0;
+	u_int openmode, id, status = SSH2_FX_OK, reordered = 0;
 	off_t offset, progress_counter;
 	u_char type, *handle, *data;
 	struct sshbuf *msg;
 	struct stat sb;
 	Attrib a, t, c;
-	uint32_t startid, ackid;
-	uint64_t highwater = 0, maxack = 0;
+	u_int32_t startid, ackid;
+	u_int64_t highwater = 0, maxack = 0;
 	struct request *ack = NULL;
 	struct requests acks;
 	size_t handle_len;
@@ -2157,11 +2172,9 @@ sftp_upload(struct sftp_conn *conn, const char *local_path,
 				fatal("Expected SSH2_FXP_STATUS(%d) packet, "
 				    "got %d", SSH2_FXP_STATUS, type);
 
-			if ((r = sshbuf_get_u32(msg, &status2)) != 0)
+			if ((r = sshbuf_get_u32(msg, &status)) != 0)
 				fatal_fr(r, "parse status");
-			debug3("SSH2_FXP_STATUS %u", status2);
-			if (status2 != SSH2_FX_OK)
-				status = status2; /* remember errors */
+			debug3("SSH2_FXP_STATUS %u", status);
 
 			/* Find the request in our queue */
 			if ((ack = request_find(&acks, rid)) == NULL)
@@ -2239,13 +2252,13 @@ upload_dir_internal(struct sftp_conn *conn, const char *src, const char *dst,
     int depth, int preserve_flag, int print_flag, int resume, int fsync_flag,
     int follow_link_flag, int inplace_flag)
 {
-	int created = 0, ret = 0;
+	int ret = 0;
 	DIR *dirp;
 	struct dirent *dp;
 	char *filename, *new_src = NULL, *new_dst = NULL;
 	struct stat sb;
 	Attrib a, dirattrib;
-	uint32_t saved_perm;
+	u_int32_t saved_perm;
 
 	debug2_f("upload local dir \"%s\" to remote \"%s\"", src, dst);
 
@@ -2280,9 +2293,7 @@ upload_dir_internal(struct sftp_conn *conn, const char *src, const char *dst,
 	 */
 	saved_perm = a.perm;
 	a.perm |= (S_IWUSR|S_IXUSR);
-	if (sftp_mkdir(conn, dst, &a, 0) == 0)
-		created = 1;
-	else {
+	if (sftp_mkdir(conn, dst, &a, 0) != 0) {
 		if (sftp_stat(conn, dst, 0, &dirattrib) != 0)
 			return -1;
 		if (!S_ISDIR(dirattrib.perm)) {
@@ -2346,8 +2357,7 @@ upload_dir_internal(struct sftp_conn *conn, const char *src, const char *dst,
 	free(new_dst);
 	free(new_src);
 
-	if (created || preserve_flag)
-		sftp_setstat(conn, dst, &a);
+	sftp_setstat(conn, dst, &a);
 
 	(void) closedir(dirp);
 	return ret;
@@ -2447,7 +2457,7 @@ sftp_crossload(struct sftp_conn *from, struct sftp_conn *to,
 {
 	struct sshbuf *msg;
 	int write_error, read_error, r;
-	uint64_t offset = 0, size;
+	u_int64_t offset = 0, size;
 	u_int id, buflen, num_req, max_req, status = SSH2_FX_OK;
 	u_int num_upload_req;
 	off_t progress_counter;
@@ -2693,7 +2703,7 @@ crossload_dir_internal(struct sftp_conn *from, struct sftp_conn *to,
     int depth, Attrib *dirattrib, int preserve_flag, int print_flag,
     int follow_link_flag)
 {
-	int i, ret = 0, created = 0;
+	int i, ret = 0;
 	SFTP_DIRENT **dir_entries;
 	char *filename, *new_from_path = NULL, *new_to_path = NULL;
 	mode_t mode = 0777;
@@ -2739,9 +2749,7 @@ crossload_dir_internal(struct sftp_conn *from, struct sftp_conn *to,
 	 * the path already existed and is a directory.  Ensure we can
 	 * write to the directory we create for the duration of the transfer.
 	 */
-	if (sftp_mkdir(to, to_path, &curdir, 0) == 0)
-		created = 1;
-	else {
+	if (sftp_mkdir(to, to_path, &curdir, 0) != 0) {
 		if (sftp_stat(to, to_path, 0, &newdir) != 0)
 			return -1;
 		if (!S_ISDIR(newdir.perm)) {
@@ -2803,8 +2811,7 @@ crossload_dir_internal(struct sftp_conn *from, struct sftp_conn *to,
 	free(new_to_path);
 	free(new_from_path);
 
-	if (created || preserve_flag)
-		sftp_setstat(to, to_path, &curdir);
+	sftp_setstat(to, to_path, &curdir);
 
 	sftp_free_dirents(dir_entries);
 

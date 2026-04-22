@@ -1,4 +1,4 @@
-/* 	$OpenBSD: test_parse.c,v 1.3 2025/06/12 10:09:39 dtucker Exp $ */
+/* 	$OpenBSD: test_parse.c,v 1.2 2021/12/14 21:25:27 deraadt Exp $ */
 /*
  * Regress test for misc user/host/URI parsing functions.
  *
@@ -9,7 +9,9 @@
 
 #include <sys/types.h>
 #include <stdio.h>
+#ifdef HAVE_STDINT_H
 #include <stdint.h>
+#endif
 #include <stdlib.h>
 #include <string.h>
 
@@ -27,7 +29,6 @@ test_parse(void)
 	char *user, *host, *path;
 
 	TEST_START("misc_parse_user_host_path");
-	user = host = path = NULL;
 	ASSERT_INT_EQ(parse_user_host_path("someuser@some.host:some/path",
 	    &user, &host, &path), 0);
 	ASSERT_STRING_EQ(user, "someuser");
@@ -37,7 +38,6 @@ test_parse(void)
 	TEST_DONE();
 
 	TEST_START("misc_parse_user_ipv4_path");
-	user = host = path = NULL;
 	ASSERT_INT_EQ(parse_user_host_path("someuser@1.22.33.144:some/path",
 	    &user, &host, &path), 0);
 	ASSERT_STRING_EQ(user, "someuser");
@@ -47,7 +47,6 @@ test_parse(void)
 	TEST_DONE();
 
 	TEST_START("misc_parse_user_[ipv4]_path");
-	user = host = path = NULL;
 	ASSERT_INT_EQ(parse_user_host_path("someuser@[1.22.33.144]:some/path",
 	    &user, &host, &path), 0);
 	ASSERT_STRING_EQ(user, "someuser");
@@ -57,7 +56,6 @@ test_parse(void)
 	TEST_DONE();
 
 	TEST_START("misc_parse_user_[ipv4]_nopath");
-	user = host = path = NULL;
 	ASSERT_INT_EQ(parse_user_host_path("someuser@[1.22.33.144]:",
 	    &user, &host, &path), 0);
 	ASSERT_STRING_EQ(user, "someuser");
@@ -67,7 +65,6 @@ test_parse(void)
 	TEST_DONE();
 
 	TEST_START("misc_parse_user_ipv6_path");
-	user = host = path = NULL;
 	ASSERT_INT_EQ(parse_user_host_path("someuser@[::1]:some/path",
 	    &user, &host, &path), 0);
 	ASSERT_STRING_EQ(user, "someuser");
@@ -77,7 +74,6 @@ test_parse(void)
 	TEST_DONE();
 
 	TEST_START("misc_parse_uri");
-	user = host = path = NULL;
 	ASSERT_INT_EQ(parse_uri("ssh", "ssh://someuser@some.host:22/some/path",
 	    &user, &host, &port, &path), 0);
 	ASSERT_STRING_EQ(user, "someuser");

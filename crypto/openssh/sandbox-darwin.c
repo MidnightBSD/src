@@ -49,7 +49,7 @@ ssh_sandbox_init(struct monitor *monitor)
 	 * Strictly, we don't need to maintain any state here but we need
 	 * to return non-NULL to satisfy the API.
 	 */
-	debug3_f("preparing Darwin sandbox");
+	debug3("%s: preparing Darwin sandbox", __func__);
 	box = xcalloc(1, sizeof(*box));
 	return box;
 }
@@ -60,10 +60,10 @@ ssh_sandbox_child(struct ssh_sandbox *box)
 	char *errmsg;
 	struct rlimit rl_zero;
 
-	debug3_f("starting Darwin sandbox");
+	debug3("%s: starting Darwin sandbox", __func__);
 	if (sandbox_init(kSBXProfilePureComputation, SANDBOX_NAMED,
 	    &errmsg) == -1)
-		fatal_f("sandbox_init: %s", errmsg);
+		fatal("%s: sandbox_init: %s", __func__, errmsg);
 
 	/*
 	 * The kSBXProfilePureComputation still allows sockets, so

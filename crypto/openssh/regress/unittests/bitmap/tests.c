@@ -1,4 +1,4 @@
-/* 	$OpenBSD: tests.c,v 1.3 2025/04/15 04:00:42 djm Exp $ */
+/* 	$OpenBSD: tests.c,v 1.2 2021/12/14 21:25:27 deraadt Exp $ */
 /*
  * Regress test for bitmap.h bitmap API
  *
@@ -9,7 +9,9 @@
 
 #include <sys/types.h>
 #include <stdio.h>
+#ifdef HAVE_STDINT_H
 #include <stdint.h>
+#endif
 #include <stdlib.h>
 #include <string.h>
 
@@ -21,7 +23,7 @@
 
 #include "bitmap.h"
 
-#define DEFAULT_NTESTS 131
+#define NTESTS 131
 
 void
 tests(void)
@@ -30,14 +32,9 @@ tests(void)
 	struct bitmap *b;
 	BIGNUM *bn;
 	size_t len;
-	int i, j, k, n, ntests = DEFAULT_NTESTS;
+	int i, j, k, n;
 	u_char bbuf[1024], bnbuf[1024];
 	int r;
-
-	if (test_is_fast())
-		ntests /= 4;
-	else if (test_is_slow())
-		ntests *= 2;
 
 	TEST_START("bitmap_new");
 	b = bitmap_new();
@@ -47,9 +44,9 @@ tests(void)
 	TEST_DONE();
 
 	TEST_START("bitmap_set_bit / bitmap_test_bit");
-	for (i = -1; i < ntests; i++) {
-		for (j = -1; j < ntests; j++) {
-			for (k = -1; k < ntests; k++) {
+	for (i = -1; i < NTESTS; i++) {
+		for (j = -1; j < NTESTS; j++) {
+			for (k = -1; k < NTESTS; k++) {
 				bitmap_zero(b);
 				BN_clear(bn);
 
@@ -70,7 +67,7 @@ tests(void)
 
 				/* Check perfect match between bitmap and bn */
 				test_subtest_info("match %d/%d/%d", i, j, k);
-				for (n = 0; n < ntests; n++) {
+				for (n = 0; n < NTESTS; n++) {
 					ASSERT_INT_EQ(BN_is_bit_set(bn, n),
 					    bitmap_test_bit(b, n));
 				}
@@ -102,7 +99,7 @@ tests(void)
 				bitmap_zero(b);
 				ASSERT_INT_EQ(bitmap_from_string(b, bnbuf,
 				    len), 0);
-				for (n = 0; n < ntests; n++) {
+				for (n = 0; n < NTESTS; n++) {
 					ASSERT_INT_EQ(BN_is_bit_set(bn, n),
 					    bitmap_test_bit(b, n));
 				}
@@ -110,7 +107,7 @@ tests(void)
 				/* Test clearing bits */
 				test_subtest_info("clear %d/%d/%d",
 				    i, j, k);
-				for (n = 0; n < ntests; n++) {
+				for (n = 0; n < NTESTS; n++) {
 					ASSERT_INT_EQ(bitmap_set_bit(b, n), 0);
 					ASSERT_INT_EQ(BN_set_bit(bn, n), 1);
 				}
@@ -126,7 +123,7 @@ tests(void)
 					bitmap_clear_bit(b, k);
 					BN_clear_bit(bn, k);
 				}
-				for (n = 0; n < ntests; n++) {
+				for (n = 0; n < NTESTS; n++) {
 					ASSERT_INT_EQ(BN_is_bit_set(bn, n),
 					    bitmap_test_bit(b, n));
 				}
@@ -137,10 +134,5 @@ tests(void)
 	BN_free(bn);
 	TEST_DONE();
 #endif
-}
-void
-benchmarks(void)
-{
-	printf("no benchmarks\n");
 }
 

@@ -31,7 +31,11 @@
 #define	_COMPAT_POLL_H_
 
 #include <sys/types.h>
-#include <poll.h>
+#ifdef HAVE_POLL_H
+# include <poll.h>
+#elif HAVE_SYS_POLL_H
+# include <sys/poll.h>
+#endif
 
 #ifndef HAVE_STRUCT_POLLFD_FD
 typedef struct pollfd {
@@ -72,11 +76,7 @@ typedef struct pollfd {
 #endif /* !HAVE_STRUCT_POLLFD_FD */
 
 #ifndef HAVE_NFDS_T
-# ifdef POLL_NFDS_T_ULONG
-typedef unsigned long	nfds_t;
-# else
 typedef unsigned int	nfds_t;
-# endif
 #endif
 
 #ifndef HAVE_POLL

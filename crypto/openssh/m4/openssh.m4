@@ -62,8 +62,7 @@ dnl Check that $CC accepts a flag 'check_flag'. If it is supported append
 dnl 'define_flag' to $CFLAGS. If 'define_flag' is not specified, then append
 dnl 'check_flag'.
 AC_DEFUN([OSSH_CHECK_CFLAG_COMPILE], [{
-  ossh_cache_var=AS_TR_SH([ossh_cv_cflag_$1])
-  AC_CACHE_CHECK([if $CC supports compile flag $1], [$ossh_cache_var], [
+	AC_MSG_CHECKING([if $CC supports compile flag $1])
 	saved_CFLAGS="$CFLAGS"
 	CFLAGS="$CFLAGS $WERROR $1"
 	_define_flag="$2"
@@ -72,23 +71,22 @@ AC_DEFUN([OSSH_CHECK_CFLAG_COMPILE], [{
 		[
 if $ac_cv_path_EGREP -i "unrecognized option|warning.*ignored" conftest.err >/dev/null
 then
-		eval "$ossh_cache_var=no"
+		AC_MSG_RESULT([no])
 		CFLAGS="$saved_CFLAGS"
 else
 		dnl If we are compiling natively, try running the program.
 		AC_RUN_IFELSE([OSSH_COMPILER_FLAG_TEST_PROGRAM],
-			[ eval "$ossh_cache_var=yes"
+			[ AC_MSG_RESULT([yes])
 			  CFLAGS="$saved_CFLAGS $_define_flag" ],
-			[ eval "$ossh_cache_var='no, fails at run time'"
+			[ AC_MSG_RESULT([no, fails at run time])
 			  CFLAGS="$saved_CFLAGS" ],
-			[ eval "$ossh_cache_var=yes"
+			[ AC_MSG_RESULT([yes])
 			  CFLAGS="$saved_CFLAGS $_define_flag" ],
 		)
 fi],
-		[ eval "$ossh_cache_var=no"
+		[ AC_MSG_RESULT([no])
 		  CFLAGS="$saved_CFLAGS" ]
 	)
-  ])
 }])
 
 dnl OSSH_CHECK_CFLAG_LINK(check_flag[, define_flag])
@@ -96,8 +94,7 @@ dnl Check that $CC accepts a flag 'check_flag'. If it is supported append
 dnl 'define_flag' to $CFLAGS. If 'define_flag' is not specified, then append
 dnl 'check_flag'.
 AC_DEFUN([OSSH_CHECK_CFLAG_LINK], [{
-  ossh_cache_var=AS_TR_SH([ossh_cv_cflag_$1])
-  AC_CACHE_CHECK([if $CC supports compile flag $1 and linking succeeds], [$ossh_cache_var], [
+	AC_MSG_CHECKING([if $CC supports compile flag $1 and linking succeeds])
 	saved_CFLAGS="$CFLAGS"
 	CFLAGS="$CFLAGS $WERROR $1"
 	_define_flag="$2"
@@ -106,23 +103,22 @@ AC_DEFUN([OSSH_CHECK_CFLAG_LINK], [{
 		[
 if $ac_cv_path_EGREP -i "unrecognized option|warning.*ignored" conftest.err >/dev/null
 then
-		eval "$ossh_cache_var=no"
+		AC_MSG_RESULT([no])
 		CFLAGS="$saved_CFLAGS"
 else
 		dnl If we are compiling natively, try running the program.
 		AC_RUN_IFELSE([OSSH_COMPILER_FLAG_TEST_PROGRAM],
-			[ eval "$ossh_cache_var=yes"
+			[ AC_MSG_RESULT([yes])
 			  CFLAGS="$saved_CFLAGS $_define_flag" ],
-			[ eval "$ossh_cache_var='no, fails at run time'"
+			[ AC_MSG_RESULT([no, fails at run time])
 			  CFLAGS="$saved_CFLAGS" ],
-			[ eval "$ossh_cache_var=yes"
+			[ AC_MSG_RESULT([yes])
 			  CFLAGS="$saved_CFLAGS $_define_flag" ],
 		)
 fi],
-		[ eval "$ossh_cache_var=no"
+		[ AC_MSG_RESULT([no])
 		  CFLAGS="$saved_CFLAGS" ]
 	)
-  ])
 }])
 
 dnl OSSH_CHECK_LDFLAG_LINK(check_flag[, define_flag])
@@ -130,8 +126,7 @@ dnl Check that $LD accepts a flag 'check_flag'. If it is supported append
 dnl 'define_flag' to $LDFLAGS. If 'define_flag' is not specified, then append
 dnl 'check_flag'.
 AC_DEFUN([OSSH_CHECK_LDFLAG_LINK], [{
-  ossh_cache_var=AS_TR_SH([ossh_cv_ldflag_$1])
-  AC_CACHE_CHECK([if $LD supports link flag $1], [$ossh_cache_var], [
+	AC_MSG_CHECKING([if $LD supports link flag $1])
 	saved_LDFLAGS="$LDFLAGS"
 	LDFLAGS="$LDFLAGS $WERROR $1"
 	_define_flag="$2"
@@ -140,23 +135,22 @@ AC_DEFUN([OSSH_CHECK_LDFLAG_LINK], [{
 		[
 if $ac_cv_path_EGREP -i "unrecognized option|warning.*ignored" conftest.err >/dev/null
 then
-		  eval "$ossh_cache_var=no"
+		  AC_MSG_RESULT([no])
 		  LDFLAGS="$saved_LDFLAGS"
 else
 		  dnl If we are compiling natively, try running the program.
 		  AC_RUN_IFELSE([OSSH_COMPILER_FLAG_TEST_PROGRAM],
-			[ eval "$ossh_cache_var=yes"
+			[ AC_MSG_RESULT([yes])
 			  LDFLAGS="$saved_LDFLAGS $_define_flag" ],
-			[ eval "$ossh_cache_var='no, fails at run time'"
+			[ AC_MSG_RESULT([no, fails at run time])
 			  LDFLAGS="$saved_LDFLAGS" ],
-			[ eval "$ossh_cache_var=yes"
+			[ AC_MSG_RESULT([yes])
 			  LDFLAGS="$saved_LDFLAGS $_define_flag" ]
 		  )
 fi		],
-		[ eval "$ossh_cache_var=no"
+		[ AC_MSG_RESULT([no])
 		  LDFLAGS="$saved_LDFLAGS" ]
 	)
-  ])
 }])
 
 dnl OSSH_CHECK_HEADER_FOR_FIELD(field, header, symbol)

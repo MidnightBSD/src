@@ -65,10 +65,6 @@ struct timeval {
 int utimes(const char *, struct timeval *);
 #endif /* HAVE_UTIMES */
 
-#ifndef HAVE_DIRFD
-int dirfd(void *);
-#endif
-
 #ifndef AT_FDCWD
 # define AT_FDCWD (-2)
 #endif
@@ -79,14 +75,6 @@ int fchmodat(int, const char *, mode_t, int);
 
 #ifndef HAVE_FCHOWNAT
 int fchownat(int, const char *, uid_t, gid_t, int);
-#endif
-
-#ifdef HAVE_FSTATAT
-int fstatat(int, const char *, struct stat *, int);
-#endif
-
-#ifdef HAVE_UNLINKAT
-int unlinkat(int, const char *, int);
 #endif
 
 #ifndef HAVE_TRUNCATE
@@ -156,11 +144,7 @@ int pselect(int, fd_set *, fd_set *, fd_set *, const struct timespec *,
 #endif
 
 #ifndef HAVE_PLEDGE
-int pledge(const char *promises, const char *execpromises);
-#endif
-
-#ifndef HAVE_UNVEIL
-int unveil(const char *, const char *);
+int pledge(const char *promises, const char *paths[]);
 #endif
 
 /* bsd-err.h */
@@ -204,14 +188,6 @@ int flock(int, int);
 
 #ifndef HAVE_LOCALTIME_R
 struct tm *localtime_r(const time_t *, struct tm *);
-#endif
-
-#ifndef HAVE_CLOCK_GETTIME
-typedef int clockid_t;
-#ifndef CLOCK_REALTIME
-# define CLOCK_REALTIME	0
-#endif
-int clock_gettime(clockid_t, struct timespec *);
 #endif
 
 #ifndef HAVE_REALPATH

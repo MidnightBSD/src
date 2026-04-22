@@ -22,12 +22,13 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _ENTROPY_H
-#define _ENTROPY_H
+#ifndef _RANDOMS_H
+#define _RANDOMS_H
 
 struct sshbuf;
 
 void seed_rng(void);
-void reseed_prngs(void);
+void rexec_send_rng_seed(struct sshbuf *);
+void rexec_recv_rng_seed(struct sshbuf *);
 
-#endif /* _ENTROPY_H */
+#endif /* _RANDOMS_H */

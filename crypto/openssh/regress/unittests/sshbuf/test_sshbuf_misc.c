@@ -1,4 +1,4 @@
-/* 	$OpenBSD: test_sshbuf_misc.c,v 1.7 2025/09/15 03:00:22 djm Exp $ */
+/* 	$OpenBSD: test_sshbuf_misc.c,v 1.5 2021/12/14 21:25:27 deraadt Exp $ */
 /*
  * Regress test for sshbuf.h buffer API
  *
@@ -9,7 +9,9 @@
 
 #include <sys/types.h>
 #include <stdio.h>
-#include <stdint.h>
+#ifdef HAVE_STDINT_H
+# include <stdint.h>
+#endif
 #include <stdlib.h>
 #include <string.h>
 
@@ -20,11 +22,11 @@
 
 void sshbuf_misc_tests(void);
 
-static void
-test_sshbuf_dump(void)
+void
+sshbuf_misc_tests(void)
 {
 	struct sshbuf *p1;
-	char tmp[512];
+	char tmp[512], msg[] = "imploring ping silence ping over", *p;
 	FILE *out;
 	size_t sz;
 
@@ -46,13 +48,6 @@ test_sshbuf_dump(void)
 	fclose(out);
 	sshbuf_free(p1);
 	TEST_DONE();
-}
-
-static void
-test_sshbuf_dtob16(void)
-{
-	struct sshbuf *p1;
-	char *p;
 
 	TEST_START("sshbuf_dtob16");
 	p1 = sshbuf_new();
@@ -64,13 +59,6 @@ test_sshbuf_dtob16(void)
 	free(p);
 	sshbuf_free(p1);
 	TEST_DONE();
-}
-
-static void
-test_sshbuf_dtob64_string(void)
-{
-	struct sshbuf *p1;
-	char *p;
 
 	TEST_START("sshbuf_dtob64_string len 1");
 	p1 = sshbuf_new();
@@ -119,12 +107,6 @@ test_sshbuf_dtob64_string(void)
 	free(p);
 	sshbuf_free(p1);
 	TEST_DONE();
-}
-
-static void
-test_sshbuf_b64tod(void)
-{
-	struct sshbuf *p1;
 
 	TEST_START("sshbuf_b64tod len 1");
 	p1 = sshbuf_new();
@@ -152,13 +134,6 @@ test_sshbuf_b64tod(void)
 	ASSERT_U32_EQ(PEEK_U32(sshbuf_ptr(p1)), 0xd00fd00f);
 	sshbuf_free(p1);
 	TEST_DONE();
-}
-
-static void
-test_sshbuf_dup_string(void)
-{
-	struct sshbuf *p1;
-	char *p;
 
 	TEST_START("sshbuf_dup_string");
 	p1 = sshbuf_new();
@@ -188,13 +163,6 @@ test_sshbuf_dup_string(void)
 	ASSERT_PTR_EQ(p, NULL);
 	sshbuf_free(p1);
 	TEST_DONE();
-}
-
-static void
-test_sshbuf_cmp(void)
-{
-	struct sshbuf *p1;
-	char msg[] = "imploring ping silence ping over";
 
 	TEST_START("sshbuf_cmp");
 	p1 = sshbuf_from(msg, sizeof(msg) - 1);
@@ -214,16 +182,7 @@ test_sshbuf_cmp(void)
 	ASSERT_INT_EQ(sshbuf_cmp(p1, 1000, "silence", 7),
 	    SSH_ERR_MESSAGE_INCOMPLETE);
 	ASSERT_INT_EQ(sshbuf_cmp(p1, 0, msg, sizeof(msg) - 1), 0);
-	sshbuf_free(p1);
 	TEST_DONE();
-}
-
-static void
-test_sshbuf_find(void)
-{
-	struct sshbuf *p1;
-	char msg[] = "imploring ping silence ping over";
-	size_t sz;
 
 	TEST_START("sshbuf_find");
 	p1 = sshbuf_from(msg, sizeof(msg) - 1);
@@ -253,174 +212,6 @@ test_sshbuf_find(void)
 	    SSH_ERR_MESSAGE_INCOMPLETE);
 	ASSERT_INT_EQ(sshbuf_find(p1, 0, msg + 1, sizeof(msg) - 2, &sz), 0);
 	ASSERT_SIZE_T_EQ(sz, 1);
-	sshbuf_free(p1);
 	TEST_DONE();
-}
-
-static void
-test_sshbuf_equals(void)
-{
-	struct sshbuf *b1, *b2;
-
-	TEST_START("sshbuf_equals identical");
-	b1 = sshbuf_new();
-	b2 = sshbuf_new();
-	ASSERT_PTR_NE(b1, NULL);
-	ASSERT_PTR_NE(b2, NULL);
-	ASSERT_INT_EQ(sshbuf_put(b1, "hello", 5), 0);
-	ASSERT_INT_EQ(sshbuf_put(b2, "hello", 5), 0);
-	ASSERT_INT_EQ(sshbuf_equals(b1, b2), 0);
-	sshbuf_free(b1);
-	sshbuf_free(b2);
-	TEST_DONE();
-
-	TEST_START("sshbuf_equals different content");
-	b1 = sshbuf_new();
-	b2 = sshbuf_new();
-	ASSERT_PTR_NE(b1, NULL);
-	ASSERT_PTR_NE(b2, NULL);
-	ASSERT_INT_EQ(sshbuf_put(b1, "hello", 5), 0);
-	ASSERT_INT_EQ(sshbuf_put(b2, "world", 5), 0);
-	ASSERT_INT_EQ(sshbuf_equals(b1, b2), SSH_ERR_INVALID_FORMAT);
-	sshbuf_free(b1);
-	sshbuf_free(b2);
-	TEST_DONE();
-
-	TEST_START("sshbuf_equals different length");
-	b1 = sshbuf_new();
-	b2 = sshbuf_new();
-	ASSERT_PTR_NE(b1, NULL);
-	ASSERT_PTR_NE(b2, NULL);
-	ASSERT_INT_EQ(sshbuf_put(b1, "hello", 5), 0);
-	ASSERT_INT_EQ(sshbuf_put(b2, "hell", 4), 0);
-	ASSERT_INT_EQ(sshbuf_equals(b1, b2), SSH_ERR_MESSAGE_INCOMPLETE);
-	sshbuf_free(b1);
-	sshbuf_free(b2);
-	TEST_DONE();
-
-	TEST_START("sshbuf_equals empty buffers");
-	b1 = sshbuf_new();
-	b2 = sshbuf_new();
-	ASSERT_PTR_NE(b1, NULL);
-	ASSERT_PTR_NE(b2, NULL);
-	ASSERT_INT_EQ(sshbuf_equals(b1, b2), 0);
-	sshbuf_free(b1);
-	sshbuf_free(b2);
-	TEST_DONE();
-
-	TEST_START("sshbuf_equals one empty buffer");
-	b1 = sshbuf_new();
-	b2 = sshbuf_new();
-	ASSERT_PTR_NE(b1, NULL);
-	ASSERT_PTR_NE(b2, NULL);
-	ASSERT_INT_EQ(sshbuf_put(b1, "hello", 5), 0);
-	ASSERT_INT_EQ(sshbuf_equals(b1, b2), SSH_ERR_MESSAGE_INCOMPLETE);
-	sshbuf_free(b1);
-	sshbuf_free(b2);
-	TEST_DONE();
-
-	TEST_START("sshbuf_equals buffer to self");
-	b1 = sshbuf_new();
-	ASSERT_PTR_NE(b1, NULL);
-	ASSERT_INT_EQ(sshbuf_put(b1, "hello", 5), 0);
-	ASSERT_INT_EQ(sshbuf_equals(b1, b1), 0);
-	sshbuf_free(b1);
-	TEST_DONE();
-}
-
-static void
-test_sshbuf_dtourlb64(void)
-{
-	struct sshbuf *b, *b64;
-	char *s;
-	/* From RFC4648 */
-	const u_char test_vec1[] = {0x14, 0xfb, 0x9c, 0x03, 0xd9, 0x7e};
-	const u_char test_vec2[] = {0xff, 0xff, 0xff};
-	const u_char test_vec3[] = {0xfb};
-
-	TEST_START("sshbuf_dtourlb64 empty");
-	b = sshbuf_new();
-	b64 = sshbuf_new();
-	ASSERT_PTR_NE(b, NULL);
-	ASSERT_PTR_NE(b64, NULL);
-	ASSERT_INT_EQ(sshbuf_dtourlb64(b, b64, 0), 0);
-	ASSERT_SIZE_T_EQ(sshbuf_len(b64), 0);
-	sshbuf_free(b);
-	sshbuf_free(b64);
-	TEST_DONE();
-
-	TEST_START("sshbuf_dtourlb64 no special chars");
-	b = sshbuf_new();
-	b64 = sshbuf_new();
-	ASSERT_PTR_NE(b, NULL);
-	ASSERT_PTR_NE(b64, NULL);
-	ASSERT_INT_EQ(sshbuf_put(b, "hello", 5), 0);
-	ASSERT_INT_EQ(sshbuf_dtourlb64(b, b64, 0), 0);
-	s = sshbuf_dup_string(b64);
-	ASSERT_PTR_NE(s, NULL);
-	ASSERT_STRING_EQ(s, "aGVsbG8");
-	free(s);
-	sshbuf_free(b);
-	sshbuf_free(b64);
-	TEST_DONE();
-
-	TEST_START("sshbuf_dtourlb64 with '+' char");
-	b = sshbuf_new();
-	b64 = sshbuf_new();
-	ASSERT_PTR_NE(b, NULL);
-	ASSERT_PTR_NE(b64, NULL);
-	ASSERT_INT_EQ(sshbuf_put(b, test_vec1, sizeof(test_vec1)), 0);
-	ASSERT_INT_EQ(sshbuf_dtourlb64(b, b64, 0), 0);
-	s = sshbuf_dup_string(b64);
-	ASSERT_PTR_NE(s, NULL);
-	ASSERT_STRING_EQ(s, "FPucA9l-");
-	free(s);
-	sshbuf_free(b);
-	sshbuf_free(b64);
-	TEST_DONE();
-
-	TEST_START("sshbuf_dtourlb64 with '/' char");
-	b = sshbuf_new();
-	b64 = sshbuf_new();
-	ASSERT_PTR_NE(b, NULL);
-	ASSERT_PTR_NE(b64, NULL);
-	ASSERT_INT_EQ(sshbuf_put(b, test_vec2, sizeof(test_vec2)), 0);
-	ASSERT_INT_EQ(sshbuf_dtourlb64(b, b64, 0), 0);
-	s = sshbuf_dup_string(b64);
-	ASSERT_PTR_NE(s, NULL);
-	ASSERT_STRING_EQ(s, "____");
-	free(s);
-	sshbuf_free(b);
-	sshbuf_free(b64);
-	TEST_DONE();
-
-	TEST_START("sshbuf_dtourlb64 with padding removed");
-	b = sshbuf_new();
-	b64 = sshbuf_new();
-	ASSERT_PTR_NE(b, NULL);
-	ASSERT_PTR_NE(b64, NULL);
-	ASSERT_INT_EQ(sshbuf_put(b, test_vec3, sizeof(test_vec3)), 0);
-	ASSERT_INT_EQ(sshbuf_dtourlb64(b, b64, 0), 0);
-	s = sshbuf_dup_string(b64);
-	ASSERT_PTR_NE(s, NULL);
-	ASSERT_STRING_EQ(s, "-w");
-	free(s);
-	sshbuf_free(b);
-	sshbuf_free(b64);
-	TEST_DONE();
-}
-
-void
-sshbuf_misc_tests(void)
-{
-	test_sshbuf_dump();
-	test_sshbuf_dtob16();
-	test_sshbuf_dtob64_string();
-	test_sshbuf_b64tod();
-	test_sshbuf_dup_string();
-	test_sshbuf_cmp();
-	test_sshbuf_find();
-	test_sshbuf_equals();
-	test_sshbuf_dtourlb64();
 }
 

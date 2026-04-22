@@ -1,4 +1,4 @@
-/* $OpenBSD: auth-options.c,v 1.102 2025/09/15 04:38:00 djm Exp $ */
+/* $OpenBSD: auth-options.c,v 1.101 2023/07/14 07:44:21 dtucker Exp $ */
 /*
  * Copyright (c) 2018 Damien Miller <djm@mindrot.org>
  *
@@ -18,17 +18,20 @@
 #include "includes.h"
 
 #include <sys/types.h>
-#include <sys/queue.h>
 
 #include <stdlib.h>
 #include <netdb.h>
 #include <pwd.h>
 #include <string.h>
 #include <stdio.h>
-#include <stdint.h>
+#ifdef HAVE_STDINT_H
+# include <stdint.h>
+#endif
 #include <stdarg.h>
 #include <ctype.h>
 #include <limits.h>
+
+#include "openbsd-compat/sys-queue.h"
 
 #include "xmalloc.h"
 #include "ssherr.h"
@@ -154,7 +157,6 @@ cert_option_list(struct sshauthopt *opts, struct sshbuf *oblob,
 				if (addr_match_cidr_list(NULL, allowed) == -1) {
 					error("Certificate source-address "
 					    "contents invalid");
-					free(allowed);
 					goto out;
 				}
 				opts->required_from_host_cert = allowed;

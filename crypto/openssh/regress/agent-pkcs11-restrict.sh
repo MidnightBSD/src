@@ -1,11 +1,11 @@
-#	$OpenBSD: agent-pkcs11-restrict.sh,v 1.3 2025/07/26 01:53:31 djm Exp $
+#	$OpenBSD: agent-pkcs11-restrict.sh,v 1.1 2023/12/18 14:49:39 djm Exp $
 #	Placed in the Public Domain.
 
 tid="pkcs11 agent constraint test"
 
 p11_setup || skip "No PKCS#11 library found"
 
-rm -f $OBJ/host_[abcx]* $OBJ/user_[abcx]*
+rm -f $SSH_AUTH_SOCK $OBJ/agent.log $OBJ/host_[abcx]* $OBJ/user_[abcx]*
 rm -f $OBJ/sshd_proxy_host* $OBJ/ssh_output* $OBJ/expect_*
 rm -f $OBJ/ssh_proxy[._]* $OBJ/command $OBJ/authorized_keys_*
 
@@ -16,7 +16,6 @@ for h in a b x ca ; do
 done
 
 # XXX test CA hostcerts too.
-# XXX test ed25519 keys
 
 key_for() {
 	case $h in
@@ -27,7 +26,23 @@ key_for() {
 	export K
 }
 
-start_ssh_agent
+SSH_AUTH_SOCK="$OBJ/agent.sock"
+export SSH_AUTH_SOCK
+rm -f $SSH_AUTH_SOCK
+trace "start agent"
+${SSHAGENT} ${EXTRA_AGENT_ARGS} -d -a $SSH_AUTH_SOCK > $OBJ/agent.log 2>&1 &
+AGENT_PID=$!
+trap "kill $AGENT_PID" EXIT
+for x in 0 1 2 3 4 ; do
+	# Give it a chance to start
+	${SSHADD} -l > /dev/null 2>&1
+	r=$?
+	test $r -eq 1 && break
+	sleep 1
+done
+if [ $r -ne 1 ]; then
+	fatal "ssh-add -l did not fail with exit code 1 (got $r)"
+fi
 
 # XXX a lot of this is a copy of agent-restrict.sh, but I couldn't see a nice
 # way to factor it out -djm
@@ -103,7 +118,7 @@ for h in a b ; do
 	 cat $K) >> $OBJ/authorized_keys_$USER
 done
 
-verbose "unrestricted keys"
+trace "unrestricted keys"
 $SSHADD -qD >/dev/null || fatal "clear agent failed"
 p11_ssh_add -qs ${TEST_SSH_PKCS11} ||
 	fatal "failed to add keys"
@@ -119,7 +134,7 @@ for h in a b ; do
 	cmp $OBJ/expect_$h $OBJ/ssh_output || fatal "unexpected output"
 done
 
-verbose "restricted to different host"
+trace "restricted to different host"
 $SSHADD -qD >/dev/null || fatal "clear agent failed"
 p11_ssh_add -q -h host_x -s ${TEST_SSH_PKCS11} -H $OBJ/known_hosts ||
 	fatal "failed to add keys"
@@ -129,7 +144,7 @@ for h in a b ; do
 	    host_$h true > $OBJ/ssh_output && fatal "test ssh $h succeeded"
 done
 
-verbose "restricted to destination host"
+trace "restricted to destination host"
 $SSHADD -qD >/dev/null || fatal "clear agent failed"
 p11_ssh_add -q -h host_a -h host_b -s ${TEST_SSH_PKCS11} -H $OBJ/known_hosts ||
 	fatal "failed to add keys"
@@ -145,7 +160,7 @@ for h in a b ; do
 	cmp $OBJ/expect_$h $OBJ/ssh_output || fatal "unexpected output"
 done
 
-verbose "restricted multihop"
+trace "restricted multihop"
 $SSHADD -qD >/dev/null || fatal "clear agent failed"
 p11_ssh_add -q -h host_a -h "host_a>host_b" \
     -s ${TEST_SSH_PKCS11} -H $OBJ/known_hosts || fatal "failed to add keys"
