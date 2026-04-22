@@ -108,6 +108,7 @@ IF(ENABLE_TEST)
     test_read_format_7zip_encryption_data.c
     test_read_format_7zip_encryption_header.c
     test_read_format_7zip_encryption_partially.c
+    test_read_format_7zip_issue2765.c
     test_read_format_7zip_malformed.c
     test_read_format_7zip_packinfo_digests.c
     test_read_format_ar.c
@@ -168,6 +169,7 @@ IF(ENABLE_TEST)
     test_read_format_rar5.c
     test_read_format_raw.c
     test_read_format_tar.c
+    test_read_format_tar_V_negative_size.c
     test_read_format_tar_concatenated.c
     test_read_format_tar_empty_filename.c
     test_read_format_tar_empty_with_gnulabel.c
