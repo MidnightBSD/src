@@ -38,6 +38,7 @@
 
 #include "openbsd-compat/sys-tree.h"
 #include "openbsd-compat/sys-queue.h"
+#include "openbsd-compat/openssl-compat.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -601,7 +602,7 @@ main(int ac, char **av)
 		fatal("sshd-auth should not be executed directly");
 
 #ifdef WITH_OPENSSL
-	OpenSSL_add_all_algorithms();
+	ssh_libcrypto_init();
 #endif
 
 	/* If requested, redirect the logs to the specified logfile. */
