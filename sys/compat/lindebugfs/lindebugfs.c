@@ -131,35 +131,42 @@ debugfs_fill(PFS_FILL_ARGS)
 	rc = d->dm_fops->open(&vn, &lf);
 	if (rc < 0) {
 #ifdef INVARIANTS
-		printf("%s:%d open failed with %d\n", __FUNCTION__, __LINE__, rc);
+		printf("%s:%d open failed with %d\n", __func__, __LINE__, rc);
 #endif
 		return (-rc);
 	}
 
 	rc = -ENODEV;
-	if (uio->uio_rw == UIO_READ && d->dm_fops->read) {
-		rc = -ENOMEM;
-		buf = (char *) malloc(sb->s_size, M_DFSINT, M_ZERO | M_NOWAIT);
-		if (buf != NULL) {
-			rc = d->dm_fops->read(&lf, buf, sb->s_size, &off);
-			if (rc > 0)
-				sbuf_bcpy(sb, buf, strlen(buf));
+	switch (uio->uio_rw) {
+	case UIO_READ:
+		if (d->dm_fops->read != NULL) {
+			rc = -ENOMEM;
+			buf = malloc(sb->s_size, M_DFSINT, M_ZERO | M_NOWAIT);
+			if (buf != NULL) {
+				rc = d->dm_fops->read(&lf, buf, sb->s_size,
+				    &off);
+				if (rc > 0)
+					sbuf_bcpy(sb, buf, strlen(buf));
 
-			free(buf, M_DFSINT);
+				free(buf, M_DFSINT);
+			}
 		}
-	} else if (uio->uio_rw == UIO_WRITE && d->dm_fops->write) {
-		sbuf_finish(sb);
-		rc = d->dm_fops->write(&lf, sbuf_data(sb), sbuf_len(sb), &off);
+		break;
+	case UIO_WRITE:
+		if (d->dm_fops->write != NULL) {
+			sbuf_finish(sb);
+			rc = d->dm_fops->write(&lf, sbuf_data(sb), sbuf_len(sb),
+			    &off);
+		}
+		break;
 	}
 
 	if (d->dm_fops->release)
 		d->dm_fops->release(&vn, &lf);
-	else
-		single_release(&vn, &lf);
 
 	if (rc < 0) {
 #ifdef INVARIANTS
-		printf("%s:%d read/write failed with %d\n", __FUNCTION__, __LINE__, rc);
+		printf("%s:%d read/write failed with %d\n", __func__, __LINE__, rc);
 #endif
 		return (-rc);
 	}
