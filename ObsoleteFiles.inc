@@ -39,7 +39,91 @@
 # for generating a list from a directory
 # find  /usr/lib/perl5/5.36.0 -exec echo {} \; | cut -b 2-150  | xargs printf "OLD_FILES+=%s\n"
 
-# 20260118: share: Delete bitrotted make_*_driver.sh scripts
+# 20260430: Regenerate trust store
+OLD_FILES+=usr/share/certs/trusted/Entrust_net_Premium_2048_Secure_Server_CA.pem
+OLD_FILES+=usr/share/certs/trusted/AffirmTrust_Premium.pem
+OLD_FILES+=usr/share/certs/trusted/Starfield_Class_2_CA.pem
+OLD_FILES+=usr/share/certs/trusted/GTS_Root_R2.pem
+OLD_FILES+=usr/share/certs/trusted/GLOBALTRUST_2020.pem
+OLD_FILES+=usr/share/certs/trusted/Secure_Global_CA.pem
+OLD_FILES+=usr/share/certs/trusted/GlobalSign_Root_CA.pem
+OLD_FILES+=usr/share/certs/trusted/CommScope_Public_Trust_RSA_Root-01.pem
+OLD_FILES+=usr/share/certs/trusted/Trustwave_Global_ECC_P384_Certification_Authority.pem
+OLD_FILES+=usr/share/certs/trusted/SwissSign_Gold_CA_-_G2.pem
+OLD_FILES+=usr/share/certs/trusted/Go_Daddy_Class_2_CA.pem
+OLD_FILES+=usr/share/certs/trusted/FIRMAPROFESIONAL_CA_ROOT-A_WEB.pem
+OLD_FILES+=usr/share/certs/trusted/Trustwave_Global_Certification_Authority.pem
+OLD_FILES+=usr/share/certs/trusted/Trustwave_Global_ECC_P256_Certification_Authority.pem
+OLD_FILES+=usr/share/certs/trusted/CommScope_Public_Trust_ECC_Root-01.pem
+OLD_FILES+=usr/share/certs/trusted/Entrust_Root_Certification_Authority_-_EC1.pem
+OLD_FILES+=usr/share/certs/trusted/Certigna.pem
+OLD_FILES+=usr/share/certs/trusted/AffirmTrust_Commercial.pem
+OLD_FILES+=usr/share/certs/trusted/DigiCert_Assured_ID_Root_CA.pem
+OLD_FILES+=usr/share/certs/trusted/Baltimore_CyberTrust_Root.pem
+OLD_FILES+=usr/share/certs/trusted/CommScope_Public_Trust_ECC_Root-02.pem
+OLD_FILES+=usr/share/certs/trusted/Entrust_Root_Certification_Authority.pem
+OLD_FILES+=usr/share/certs/trusted/AffirmTrust_Premium_ECC.pem
+OLD_FILES+=usr/share/certs/trusted/CommScope_Public_Trust_RSA_Root-02.pem
+OLD_FILES+=usr/share/certs/trusted/TeliaSonera_Root_CA_v1.pem
+OLD_FILES+=usr/share/certs/trusted/QuoVadis_Root_CA_2.pem
+OLD_FILES+=usr/share/certs/trusted/COMODO_Certification_Authority.pem
+OLD_FILES+=usr/share/certs/trusted/SecureTrust_CA.pem
+OLD_FILES+=usr/share/certs/trusted/Comodo_AAA_Services_root.pem
+OLD_FILES+=usr/share/certs/trusted/Entrust_Root_Certification_Authority_-_G2.pem
+OLD_FILES+=usr/share/certs/trusted/QuoVadis_Root_CA_3.pem
+OLD_FILES+=usr/share/certs/trusted/DigiCert_High_Assurance_EV_Root_CA.pem
+OLD_FILES+=usr/share/certs/trusted/certSIGN_ROOT_CA.pem
+OLD_FILES+=usr/share/certs/trusted/DigiCert_Global_Root_CA.pem
+OLD_FILES+=usr/share/certs/trusted/AffirmTrust_Networking.pem
+OLD_FILES+=usr/share/certs/trusted/XRamp_Global_CA_Root.pem
+OLD_FILES+=usr/share/certs/blacklisted/Security_Communication_RootCA3.pem
+OLD_FILES+=usr/share/certs/blacklisted/GeoTrust_Primary_Certification_Authority_-_G3.pem
+OLD_FILES+=usr/share/certs/blacklisted/E-Tugra_Global_Root_CA_ECC_v3.pem
+OLD_FILES+=usr/share/certs/blacklisted/Symantec_Class_2_Public_Primary_Certification_Authority_-_G4.pem
+OLD_FILES+=usr/share/certs/blacklisted/EE_Certification_Centre_Root_CA.pem
+OLD_FILES+=usr/share/certs/blacklisted/EC-ACC.pem
+OLD_FILES+=usr/share/certs/blacklisted/Hellenic_Academic_and_Research_Institutions_RootCA_2011.pem
+OLD_FILES+=usr/share/certs/blacklisted/GeoTrust_Universal_CA.pem
+OLD_FILES+=usr/share/certs/blacklisted/Global_Chambersign_Root_-_2008.pem
+OLD_FILES+=usr/share/certs/blacklisted/Camerfirma_Global_Chambersign_Root.pem
+OLD_FILES+=usr/share/certs/blacklisted/Verisign_Class_1_Public_Primary_Certification_Authority_-_G3.pem
+OLD_FILES+=usr/share/certs/blacklisted/Symantec_Class_1_Public_Primary_Certification_Authority_-_G6.pem
+OLD_FILES+=usr/share/certs/blacklisted/GeoTrust_Primary_Certification_Authority_-_G2.pem
+OLD_FILES+=usr/share/certs/blacklisted/TrustCor_RootCert_CA-2.pem
+OLD_FILES+=usr/share/certs/blacklisted/GeoTrust_Universal_CA_2.pem
+OLD_FILES+=usr/share/certs/blacklisted/Network_Solutions_Certificate_Authority.pem
+OLD_FILES+=usr/share/certs/blacklisted/thawte_Primary_Root_CA.pem
+OLD_FILES+=usr/share/certs/blacklisted/E-Tugra_Global_Root_CA_RSA_v3.pem
+OLD_FILES+=usr/share/certs/blacklisted/GeoTrust_Primary_Certification_Authority.pem
+OLD_FILES+=usr/share/certs/blacklisted/Taiwan_GRCA.pem
+OLD_FILES+=usr/share/certs/blacklisted/Verisign_Class_2_Public_Primary_Certification_Authority_-_G3.pem
+OLD_FILES+=usr/share/certs/blacklisted/Symantec_Class_2_Public_Primary_Certification_Authority_-_G6.pem
+OLD_FILES+=usr/share/certs/blacklisted/VeriSign_Class_3_Public_Primary_Certification_Authority_-_G5.pem
+OLD_FILES+=usr/share/certs/blacklisted/SwissSign_Platinum_CA_-_G2.pem
+OLD_FILES+=usr/share/certs/blacklisted/TrustCor_RootCert_CA-1.pem
+OLD_FILES+=usr/share/certs/blacklisted/thawte_Primary_Root_CA_-_G3.pem
+OLD_FILES+=usr/share/certs/blacklisted/Camerfirma_Chambers_of_Commerce_Root.pem
+OLD_FILES+=usr/share/certs/blacklisted/SwissSign_Silver_CA_-_G2.pem
+OLD_FILES+=usr/share/certs/blacklisted/TrustCor_ECA-1.pem
+OLD_FILES+=usr/share/certs/blacklisted/VeriSign_Class_3_Public_Primary_Certification_Authority_-_G4.pem
+OLD_FILES+=usr/share/certs/blacklisted/SecureSign_RootCA11.pem
+OLD_FILES+=usr/share/certs/blacklisted/Chambers_of_Commerce_Root_-_2008.pem
+OLD_FILES+=usr/share/certs/blacklisted/Verisign_Class_3_Public_Primary_Certification_Authority_-_G3.pem
+OLD_FILES+=usr/share/certs/blacklisted/VeriSign_Universal_Root_Certification_Authority.pem
+OLD_FILES+=usr/share/certs/blacklisted/LuxTrust_Global_Root_2.pem
+OLD_FILES+=usr/share/certs/blacklisted/thawte_Primary_Root_CA_-_G2.pem
+OLD_FILES+=usr/share/certs/blacklisted/Symantec_Class_1_Public_Primary_Certification_Authority_-_G4.pem
+
+# 20251006: Remove libnss_tacplus.a (it never should have been installed)
+OLD_FILES+=usr/lib/libnss_tacplus.a
+
+# 20250812: Remove a bogus manlink
+OLD_FILES+=usr/share/man/man3/quota_statfs.3.gz
+
+# 20250805: Test case renamed
+OLD_FILES+=usr/tests/usr.bin/xargs/regress.n2147483647.out
+
+# 20250710: share: Delete bitrotted make_*_driver.sh scripts
 OLD_FILES+=usr/share/examples/drivers/README
 OLD_FILES+=usr/share/examples/drivers/make_device_driver.sh
 OLD_FILES+=usr/share/examples/drivers/make_pseudo_driver.sh
