@@ -226,7 +226,8 @@ static void
 printisodate(struct tm *lt)
 {
 	const struct iso8601_fmt *it;
-	char fmtbuf[32], buf[32], tzbuf[8];
+	char fmtbuf[32], buf[32], tzbuf[8], tzout[8];
+	size_t tzlen;
 
 	fmtbuf[0] = 0;
 	for (it = iso8601_fmts; it <= iso8601_selected; it++)
@@ -235,10 +236,18 @@ printisodate(struct tm *lt)
 	(void)strftime(buf, sizeof(buf), fmtbuf, lt);
 
 	if (iso8601_selected > iso8601_fmts) {
-		(void)strftime(tzbuf, sizeof(tzbuf), "%z", lt);
-		memmove(&tzbuf[4], &tzbuf[3], 3);
-		tzbuf[3] = ':';
-		strlcat(buf, tzbuf, sizeof(buf));
+		tzlen = strftime(tzbuf, sizeof(tzbuf), "%z", lt);
+		if (tzlen == 5 && (tzbuf[0] == '+' || tzbuf[0] == '-')) {
+			/* Convert ±HHMM to ±HH:MM. */
+			tzout[0] = tzbuf[0];
+			tzout[1] = tzbuf[1];
+			tzout[2] = tzbuf[2];
+			tzout[3] = ':';
+			tzout[4] = tzbuf[3];
+			tzout[5] = tzbuf[4];
+			tzout[6] = '\0';
+			strlcat(buf, tzout, sizeof(buf));
+		}
 	}
 
 	printdate(buf);

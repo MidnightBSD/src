@@ -26,6 +26,8 @@
 
 #include <sys/cdefs.h>
 #include <err.h>
+#include <errno.h>
+#include <limits.h>
 #include <time.h>
 #include <string.h>
 #include <stdlib.h>
@@ -417,7 +419,9 @@ vary_apply(const struct vary *v, struct tm *t)
   char which;
   char *arg;
   size_t len;
+  long lval;
   int val;
+  char *endp;
 
   for (; v; v = v->next) {
     type = *v->arg;
@@ -447,8 +451,12 @@ vary_apply(const struct vary *v, struct tm *t)
           return v;
       }
     } else {
-      val = atoi(arg);
       which = arg[len-1];
+      errno = 0;
+      lval = strtol(arg, &endp, 10);
+      if (errno != 0 || endp != arg + len - 1 || lval < 0 || lval > INT_MAX)
+        return v;
+      val = (int)lval;
       
       switch (which) {
         case 'S':
