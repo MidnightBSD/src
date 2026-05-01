@@ -60,6 +60,7 @@ __MBSDID("$MidnightBSD: src/usr.bin/progress/progress.c,v 1.4 2012/12/31 17:14:3
 
 static void broken_pipe(int unused);
 static void usage(void);
+static off_t gzip_uncompressed_size(const char *);
 
 long long
 strsuftoll(const char *desc, const char *val,
@@ -157,26 +158,7 @@ main(int argc, char *argv[])
 
 	/* gzip -l the file if we have the name and -z is given */
 	if (zflag && !lflag && infile != NULL) {
-		FILE *gzipsizepipe;
-		char buf[256], *cp, *cmd;
-
-		/*
-		 * Read second word of last line of gzip -l output. Looks like:
-		 * % gzip -l ../etc.tgz 
-		 *   compressed uncompressed  ratio uncompressed_name
-		 * 	 119737       696320  82.8% ../etc.tar
-		 */
-
-		asprintf(&cmd, "gzip -l %s", infile);
-		if ((gzipsizepipe = popen(cmd, "r")) == NULL)
-			err(1, "reading compressed file length");
-		for (; fgets(buf, 256, gzipsizepipe) != NULL;)
-		    continue;
-		strtoimax(buf, &cp, 10);
-		filesize = strtoimax(cp, NULL, 10);
-		if (pclose(gzipsizepipe) < 0)
-			err(1, "closing compressed file length pipe");
-		free(cmd);
+		filesize = gzip_uncompressed_size(infile);
 	}
 	/* Pipe input through gzip -dc if -z is given */
 	if (zflag) {
@@ -250,6 +232,11 @@ main(int argc, char *argv[])
 	cmdstat = 0;
 	while (pid || gzippid) {
 		deadpid = wait(&ws);
+		if (deadpid == -1 && errno == EINTR)
+			continue;
+		if (deadpid == -1)
+			break;
+
 		/*
 		 * We need to exit with an error if the command (or gzip)
 		 * exited abnormally.
@@ -257,9 +244,6 @@ main(int argc, char *argv[])
 		 * error without sending the signal to ourselves :-(
 		 */
 		ws = WIFSIGNALED(ws) ? WTERMSIG(ws) : WEXITSTATUS(ws);
-
-		if (deadpid != -1 && errno == EINTR)
-			continue;
 		if (deadpid == pid) {
 			pid = 0;
 			cmdstat = ws;
@@ -279,4 +263,75 @@ main(int argc, char *argv[])
 	free(fb_buf);
 
 	exit(cmdstat ? cmdstat : gzipstat);
+}
+
+static off_t
+gzip_uncompressed_size(const char *path)
+{
+	char buf[256];
+	char lastline[256];
+	char *cp, *endp;
+	ssize_t nr;
+	pid_t pid;
+	int status;
+	int pfd[2];
+	off_t uncompressed;
+
+	if (path == NULL)
+		errx(1, "gzip length: missing path");
+	if (pipe(pfd) < 0)
+		err(1, "pipe");
+	pid = fork();
+	if (pid < 0)
+		err(1, "fork");
+	if (pid == 0) {
+		(void)dup2(pfd[1], STDOUT_FILENO);
+		close(pfd[0]);
+		close(pfd[1]);
+		execlp("gzip", "gzip", "-l", "--", path, (char *)NULL);
+		_exit(127);
+	}
+
+	close(pfd[1]);
+	lastline[0] = '\0';
+	/*
+	 * Read all output, keep the last line.
+	 * gzip -l output contains a header; the last line has numbers.
+	 */
+	while ((nr = read(pfd[0], buf, sizeof(buf) - 1)) > 0) {
+		char *line, *nl;
+
+		buf[nr] = '\0';
+		line = buf;
+		while ((nl = strchr(line, '\n')) != NULL) {
+			size_t len = (size_t)(nl - line);
+			if (len >= sizeof(lastline))
+				len = sizeof(lastline) - 1;
+			memcpy(lastline, line, len);
+			lastline[len] = '\0';
+			line = nl + 1;
+		}
+	}
+	close(pfd[0]);
+
+	if (waitpid(pid, &status, 0) < 0)
+		err(1, "waitpid");
+	if (!WIFEXITED(status) || WEXITSTATUS(status) != 0)
+		errx(1, "gzip -l failed for %s", path);
+
+	/*
+	 * Parse: <compressed> <uncompressed> ...
+	 */
+	errno = 0;
+	(void)strtoimax(lastline, &cp, 10);
+	if (errno != 0 || cp == lastline)
+		errx(1, "unexpected gzip -l output for %s", path);
+	while (*cp == ' ' || *cp == '\t')
+		cp++;
+	errno = 0;
+	uncompressed = (off_t)strtoimax(cp, &endp, 10);
+	if (errno != 0 || endp == cp)
+		errx(1, "unexpected gzip -l output for %s", path);
+
+	return uncompressed;
 }
