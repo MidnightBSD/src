@@ -383,7 +383,10 @@ main(int argc, char *argv[])
 	       ttywidth = 79;
         else
 	       ttywidth = ws.ws_col - 1;
-	argwidth = ttywidth - WUSED;
+	if (ttywidth <= WUSED)
+		argwidth = 8;
+	else
+		argwidth = ttywidth - WUSED;
 	if (argwidth < 4)
 		argwidth = 8;
 	for (ep = ehead; ep != NULL; ep = ep->next) {
@@ -583,6 +586,21 @@ ttystat(char *line)
 {
 	static struct stat sb;
 	char ttybuf[MAXPATHLEN];
+	const char *p;
+
+	/*
+	 * ut_line comes from utmpx and should be a tty name (e.g., "ttyv0",
+	 * "pts/3"). Refuse anything containing ".." or extra slashes to
+	 * avoid path traversal when running with elevated privileges.
+	 */
+	if (line == NULL || *line == '\0')
+		return (NULL);
+	if (strstr(line, "..") != NULL)
+		return (NULL);
+	for (p = line; *p != '\0'; p++) {
+		if (*p == '/' && strncmp(line, "pts/", 4) != 0)
+			return (NULL);
+	}
 
 	(void)snprintf(ttybuf, sizeof(ttybuf), "%s%s", _PATH_DEV, line);
 	if (stat(ttybuf, &sb) == 0 && S_ISCHR(sb.st_mode))
