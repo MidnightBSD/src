@@ -75,7 +75,7 @@ static struct wallgroup {
 	gid_t		gid;
 } *grouplist;
 static int nobanner;
-static int mbufsize;
+static size_t mbufsize;
 static char *mbuf;
 
 static int
@@ -282,10 +282,19 @@ makemsg(char *fname)
 
 	if (fstat(fd, &sbuf))
 		err(1, "can't stat temporary file");
-	mbufsize = sbuf.st_size;
-	if (!(mbuf = malloc((u_int)mbufsize)))
+	if (sbuf.st_size < 0)
+		errx(1, "can't stat temporary file");
+	/*
+	 * iov_len is size_t, but ttymsg internally accumulates lengths into
+	 * an ssize_t. Prevent overflow in either direction.
+	 */
+	if ((uintmax_t)sbuf.st_size > SSIZE_MAX)
+		errx(1, "message too large");
+	mbufsize = (size_t)sbuf.st_size;
+	mbuf = malloc(mbufsize);
+	if (mbuf == NULL)
 		err(1, "out of memory");
-	if ((int)fread(mbuf, sizeof(*mbuf), mbufsize, fp) != mbufsize)
+	if (fread(mbuf, 1, mbufsize, fp) != mbufsize)
 		err(1, "can't read temporary file");
 	fclose(fp);
 }
