@@ -59,6 +59,8 @@ static char sccsid[] = "@(#)id.c	8.2 (Berkeley) 2/16/94";
 #include <string.h>
 #include <unistd.h>
 
+static gid_t	*getgroups_alloc(int *);
+static gid_t	*getgrouplist_alloc(const char *, gid_t, int *);
 static void	id_print(struct passwd *);
 static void	pline(struct passwd *);
 static void	pretty(struct passwd *);
@@ -73,6 +75,54 @@ static void	usage(void);
 static struct passwd *who(char *);
 
 static bool isgroups, iswhoami;
+
+static gid_t *
+getgroups_alloc(int *ngroupsp)
+{
+	int ngroups;
+	gid_t *groups;
+
+	ngroups = getgroups(0, NULL);
+	if (ngroups < 0)
+		err(1, "getgroups");
+	if (ngroups == 0) {
+		*ngroupsp = 0;
+		return (NULL);
+	}
+	groups = malloc(sizeof(*groups) * (size_t)ngroups);
+	if (groups == NULL)
+		err(1, "malloc");
+	if (getgroups(ngroups, groups) < 0)
+		err(1, "getgroups");
+	*ngroupsp = ngroups;
+	return (groups);
+}
+
+static gid_t *
+getgrouplist_alloc(const char *name, gid_t basegid, int *ngroupsp)
+{
+	gid_t *groups;
+	int ngroups;
+
+	ngroups = (int)sysconf(_SC_NGROUPS_MAX);
+	if (ngroups < 0)
+		ngroups = 16;
+	ngroups++; /* space for basegid */
+
+	for (;;) {
+		groups = malloc(sizeof(*groups) * (size_t)ngroups);
+		if (groups == NULL)
+			err(1, "malloc");
+		if (getgrouplist(name, basegid, groups, &ngroups) >= 0) {
+			*ngroupsp = ngroups;
+			return (groups);
+		}
+		free(groups);
+		/* ngroups now holds the required size; loop and retry. */
+		if (ngroups <= 0)
+			errx(1, "getgrouplist: invalid group count");
+	}
+}
 
 int
 main(int argc, char *argv[])
@@ -282,7 +332,6 @@ id_print(struct passwd *pw)
 	gid_t gid, egid, lastgid;
 	uid_t uid, euid;
 	int cnt, ngroups;
-	long ngroups_max;
 	gid_t *groups;
 	const char *fmt;
 	bool print_dbinfo;
@@ -297,18 +346,10 @@ id_print(struct passwd *pw)
 		gid = getgid();
 		pw = getpwuid(uid);
 	}
-
-	ngroups_max = sysconf(_SC_NGROUPS_MAX) + 1;
-	if ((groups = malloc(sizeof(gid_t) * ngroups_max)) == NULL)
-		err(1, "malloc");
-
-	if (print_dbinfo) {
-		ngroups = ngroups_max;
-		getgrouplist(pw->pw_name, gid, groups, &ngroups);
-	}
-	else {
-		ngroups = getgroups(ngroups_max, groups);
-	}
+	if (print_dbinfo)
+		groups = getgrouplist_alloc(pw->pw_name, gid, &ngroups);
+	else
+		groups = getgroups_alloc(&ngroups);
 
 	/*
 	 * We always resolve uids and gids where we can to a name, even if we
@@ -397,37 +438,31 @@ static void
 group(struct passwd *pw, bool nflag)
 {
 	struct group *gr;
-	int cnt, id, lastid, ngroups;
-	long ngroups_max;
+	int cnt, ngroups;
+	gid_t gid, lastgid;
 	gid_t *groups;
 	const char *fmt;
 
-	ngroups_max = sysconf(_SC_NGROUPS_MAX) + 1;
-	if ((groups = malloc(sizeof(gid_t) * (ngroups_max))) == NULL)
-		err(1, "malloc");
-
-	if (pw) {
-		ngroups = ngroups_max;
-		(void) getgrouplist(pw->pw_name, pw->pw_gid, groups, &ngroups);
-	} else {
-		ngroups = getgroups(ngroups_max, groups);
-	}
+	if (pw)
+		groups = getgrouplist_alloc(pw->pw_name, pw->pw_gid, &ngroups);
+	else
+		groups = getgroups_alloc(&ngroups);
 	fmt = nflag ? "%s" : "%u";
-	for (lastid = -1, cnt = 0; cnt < ngroups; ++cnt) {
-		if (lastid == (id = groups[cnt]))
+	for (lastgid = -1, cnt = 0; cnt < ngroups; ++cnt) {
+		if (lastgid == (gid = groups[cnt]))
 			continue;
 		if (nflag) {
-			if ((gr = getgrgid(id)))
+			if ((gr = getgrgid(gid)))
 				(void)printf(fmt, gr->gr_name);
 			else
 				(void)printf(*fmt == ' ' ? " %u" : "%u",
-				    id);
+				    gid);
 			fmt = " %s";
 		} else {
-			(void)printf(fmt, id);
+			(void)printf(fmt, gid);
 			fmt = " %u";
 		}
-		lastid = id;
+		lastgid = gid;
 	}
 	(void)printf("\n");
 	free(groups);
