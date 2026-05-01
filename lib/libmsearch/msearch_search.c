@@ -91,6 +91,13 @@ msearch_search(msearch_query *query, msearch_result *result) {
 	while (1) {
 		ret = sqlite3_step(stmt);
 		if (ret == SQLITE_ROW) {
+			const unsigned char *path;
+
+			path = sqlite3_column_text(stmt, 0);
+			if (path == NULL) {
+				i = -1;
+				break;
+			}
 			if (i > 0) {
 				current->next = malloc(sizeof(msearch_result));
 				if (current->next == NULL) {
@@ -100,14 +107,15 @@ msearch_search(msearch_query *query, msearch_result *result) {
 				current = current->next;
 			}
 			current->filename = NULL;
-			if (lstat(sqlite3_column_text(stmt, 0), &sb) == 0) {
+			if (lstat(path, &sb) == 0) {
 				if (S_ISREG(sb.st_mode)) {
-					current->filename = strdup(basename((char *)sqlite3_column_text(stmt, 0)));
+					current->filename = strdup(basename((char *)path));
 				}
 			}
-			current->path = strdup(sqlite3_column_text(stmt, 0));
+			current->path = strdup(path);
 			current->size = sqlite3_column_int64(stmt, 1);
 			current->uid = sqlite3_column_int(stmt, 2);
+			uid = current->uid;
 			if ((getpwuid_r(uid, &pwd, buf, sizeof(buf), &pwdbuf)) == 0 && pwdbuf != NULL) {
 				current->owner = strdup(pwdbuf->pw_name);				
 			} else
