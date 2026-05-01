@@ -30,6 +30,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <err.h>
+#include <errno.h>
+#include <limits.h>
 #include <unistd.h>
 #include <msearch.h>
 
@@ -55,8 +57,18 @@ main(int argc, char *argv[]) {
 				cflag = 1;
 				break;
 			case 'l':
-				limit = (int)strtol(optarg, (char **)NULL, 10);
+			{
+				char *endp;
+				long llimit;
+
+				errno = 0;
+				llimit = strtol(optarg, &endp, 10);
+				if (errno != 0 || endp == optarg || *endp != '\0' ||
+				    llimit < 0 || llimit > INT_MAX)
+					errx(1, "invalid limit: %s", optarg);
+				limit = (int)llimit;
 				break;
+			}
 			case 'r':
 				rflag = 1;
 				break;
@@ -79,7 +91,7 @@ main(int argc, char *argv[]) {
 		err(1, NULL);
 	}
 
-	if ((query = malloc(sizeof(msearch_query))) == NULL) {
+	if ((query = calloc(1, sizeof(*query))) == NULL) {
 		err(1, NULL);
 	}
 
@@ -92,6 +104,8 @@ main(int argc, char *argv[]) {
 	query->limit = limit;
 
 	results = msearch(query, result);
+	if (results < 0)
+		errx(1, "msearch failed");
 
 	if (cflag) {
 		printf("%d\n", results);

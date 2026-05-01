@@ -79,6 +79,13 @@ msearch_fulltext_search(msearch_query *query, msearch_result *result) {
         while (1) {
                 ret = sqlite3_step(stmt);
                 if (ret == SQLITE_ROW) {
+			const unsigned char *path;
+
+			path = sqlite3_column_text(stmt, 0);
+			if (path == NULL) {
+				i = -1;
+				break;
+			}
                         if (i > 0) {
                                 current->next = malloc(sizeof(msearch_result));
                                 if (current->next == NULL) {
@@ -87,12 +94,12 @@ msearch_fulltext_search(msearch_query *query, msearch_result *result) {
                                 }
                                 current = current->next;
                         }
-			current->path = strdup(sqlite3_column_text(stmt, 0));
+			current->path = strdup(path);
 			current->weight = sqlite3_column_double(stmt, 1);
                         current->filename = NULL;
-                        if (lstat(sqlite3_column_text(stmt, 0), &sb) == 0) {
+                        if (lstat(path, &sb) == 0) {
                                 if (S_ISREG(sb.st_mode)) {
-                                        current->filename = strdup(basename((char *) sqlite3_column_text(stmt, 0)));
+                                        current->filename = strdup(basename((char *)path));
                                 }
 				current->size = sb.st_size;
 				current->uid = sb.st_uid;
