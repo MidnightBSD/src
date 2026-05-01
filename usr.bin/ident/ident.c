@@ -183,7 +183,16 @@ scan(FILE *fp, const char *name, bool quiet)
 				 * subversion mode.  No length check is enforced
 				 * because GNU RCS ident(1) does not do it either.
 				 */
-				c = buf[strlen(buf) -2 ];
+				/*
+				 * Expect "... <text> $", so we need at least 2
+				 * characters before the final '$' to check.
+				 */
+				if (sz >= 2) {
+					c = buf[sz - 2];
+				} else {
+					state = INIT;
+					break;
+				}
 				if (c == ' ' || (subversion && c == '#')) {
 					printf("     %s\n", buf);
 					hasid = true;
