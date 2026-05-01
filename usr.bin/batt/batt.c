@@ -78,6 +78,8 @@ main(int argc, char *argv[])
 			errx(1, "ACPI not loaded or no battery found.");
 		if (len != sizeof(life))
 			errx(1, "unexpected battery life value size");
+		if (life < 0 || life > 100)
+			errx(1, "unexpected battery life value");
 		if (cflag)
 			printf("%d ", life);
 		else
@@ -90,6 +92,13 @@ main(int argc, char *argv[])
 			errx(1, "ACPI not loaded or no battery found.");
 		if (len != sizeof(time))
 			errx(1, "unexpected battery time value size");
+		/*
+		 * ACPI reports unknown time as a negative value (commonly -1).
+		 * Treat it like "no estimate available" and fall back to AC line
+		 * status messaging below.
+		 */
+		if (time < -1)
+			errx(1, "unexpected battery time value");
 		if (cflag)
 			printf("%d ", time);
 		else {
@@ -99,12 +108,12 @@ main(int argc, char *argv[])
 					errx(1, "AC line status not available");
 				else if (len != sizeof(acline))
 					errx(1, "unexpected AC line status value size");
-				else
-					if (acline == 1) {
+				else {
+					if (acline == 1)
 						puts("System plugged in");
-					} else {
+					else
 						printf("Battery charging or drained.\n");
-					}
+				}
 			} else if (time == 1)
 				printf("1 minute remaining\n");
 			else
@@ -114,16 +123,18 @@ main(int argc, char *argv[])
 
 	if (uflag) {
 		len = sizeof(units);
-        	if (sysctlbyname("hw.acpi.battery.units", &units, &len, NULL, 0) < 0)
-                	errx(1, "ACPI not loaded or no battery found.");
+		if (sysctlbyname("hw.acpi.battery.units", &units, &len, NULL, 0) < 0)
+			errx(1, "ACPI not loaded or no battery found.");
 		if (len != sizeof(units))
 			errx(1, "unexpected battery units value size");
+		if (units < 0)
+			errx(1, "unexpected battery units value");
 		if (cflag)
 			printf("%d", units);
 		else {
 			if (units == 1)
 				printf("1 battery\n");
-        		else
+			else
 				printf("%d batteries\n", units);
 		}
 	}
