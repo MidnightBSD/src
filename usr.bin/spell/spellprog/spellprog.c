@@ -379,7 +379,7 @@ main(int argc, char **argv)
 			if (ep - word == sizeof(word) - 1) {
 				*ep = '\0';
 				warnx("word too long (%s)", word);
-				while ((ch = getchar()) != '\n')
+				while ((ch = getchar()) != '\n' && ch != EOF)
 					;	/* slurp until EOL */
 			}
 			if (ch == EOF) {
@@ -437,11 +437,15 @@ suffix(char *ep, size_t lev)
 	const struct suftab *t;
 	char *cp;
 	const char *sp;
+	size_t suflen;
 
 	lev += DLEV;
 	getderiv(lev + 1);
 	deriv.buf[lev] = deriv.buf[lev - 1] = 0;
 	for (t = suftab; (sp = t->suf) != NULL; t++) {
+		suflen = strlen(sp);
+		if ((size_t)(ep - word) < suflen)
+			continue;
 		cp = ep;
 		while (*sp) {
 			if (*--cp != *sp++)
@@ -705,6 +709,7 @@ trypref(char *ep, const char *a, size_t lev)
 	char *pp;
 	int val = 0;
 	char space[20];
+	size_t remain;
 
 	getderiv(lev + 2);
 	deriv.buf[lev] = a;
@@ -714,15 +719,22 @@ trypref(char *ep, const char *a, size_t lev)
 	pp = space;
 	deriv.buf[lev + 1] = pp;
 	while ((cp = lookuppref(&bp, ep)) != NULL) {
+		remain = sizeof(space) - (size_t)(pp - space);
+		if (remain < 2)		/* need at least "+\0" */
+			return 0;
 		*pp++ = '+';
-		while ((*pp = *cp++))
-			pp++;
+		remain--;
+		while (*cp != '\0') {
+			if (remain <= 1)	/* keep room for NUL */
+				return 0;
+			*pp++ = *cp++;
+			remain--;
+		}
+		*pp = '\0';
 		if (tryword(bp, ep, lev + 1)) {
 			val = 1;
 			break;
 		}
-		if ( pp - space >= (int)sizeof(space))
-			return 0;
 	}
 	deriv.buf[lev + 1] = deriv.buf[lev + 2] = NULL;
 	return val;
