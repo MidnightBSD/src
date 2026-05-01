@@ -51,6 +51,7 @@ static char sccsid[] = "@(#)id.c	8.2 (Berkeley) 2/16/94";
 #include <err.h>
 #include <errno.h>
 #include <grp.h>
+#include <limits.h>
 #include <pwd.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -89,6 +90,8 @@ getgroups_alloc(int *ngroupsp)
 		*ngroupsp = 0;
 		return (NULL);
 	}
+	if ((size_t)ngroups > SIZE_MAX / sizeof(*groups))
+		errx(1, "getgroups: group count too large");
 	groups = malloc(sizeof(*groups) * (size_t)ngroups);
 	if (groups == NULL)
 		err(1, "malloc");
@@ -103,13 +106,20 @@ getgrouplist_alloc(const char *name, gid_t basegid, int *ngroupsp)
 {
 	gid_t *groups;
 	int ngroups;
+	long ngroups_l;
 
-	ngroups = (int)sysconf(_SC_NGROUPS_MAX);
-	if (ngroups < 0)
+	ngroups_l = sysconf(_SC_NGROUPS_MAX);
+	if (ngroups_l < 0)
 		ngroups = 16;
+	else if (ngroups_l > INT_MAX - 1)
+		ngroups = INT_MAX - 1;
+	else
+		ngroups = (int)ngroups_l;
 	ngroups++; /* space for basegid */
 
 	for (;;) {
+		if ((size_t)ngroups > SIZE_MAX / sizeof(*groups))
+			errx(1, "getgrouplist: group count too large");
 		groups = malloc(sizeof(*groups) * (size_t)ngroups);
 		if (groups == NULL)
 			err(1, "malloc");
@@ -496,7 +506,7 @@ static struct passwd *
 who(char *u)
 {
 	struct passwd *pw;
-	long id;
+	u_long id;
 	char *ep;
 
 	/*
@@ -505,9 +515,11 @@ who(char *u)
 	 */
 	if ((pw = getpwnam(u)))
 		return(pw);
-	id = strtol(u, &ep, 10);
-	if (*u && !*ep && (pw = getpwuid(id)))
-		return(pw);
+	errno = 0;
+	id = strtoul(u, &ep, 10);
+	if (errno == 0 && *u && !*ep && id <= UID_MAX &&
+	    (pw = getpwuid((uid_t)id)))
+		return (pw);
 	errx(1, "%s: no such user", u);
 	/* NOTREACHED */
 }
