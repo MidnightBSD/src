@@ -95,6 +95,9 @@ asa(FILE *f)
 	bool eol = false;
 
 	while ((buf = fgetln(f, &len)) != NULL) {
+		/* Defensive: should not happen, but avoids len-1 underflow. */
+		if (len == 0)
+			continue;
 		/* in all cases but '+', terminate previous line, if any */
 		if (buf[0] != '+' && eol)
 			putchar('\n');
