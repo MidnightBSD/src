@@ -207,7 +207,18 @@ main(int argc, char *argv[])
 	 * use -ww, but is compatible with Linux.
 	 */
 	if ((cols = getenv("COLUMNS")) != NULL && *cols != '\0')
-		termwidth = atoi(cols);
+	{
+		char *endp;
+		long lcols;
+
+		errno = 0;
+		lcols = strtol(cols, &endp, 10);
+		if (errno == 0 && endp != cols && *endp == '\0' &&
+		    lcols >= 0 && lcols <= INT_MAX)
+			termwidth = (int)lcols;
+		else
+			termwidth = UNLIMITED;
+	}
 	else if ((ioctl(STDOUT_FILENO, TIOCGWINSZ, (char *)&ws) == -1 &&
 	     ioctl(STDERR_FILENO, TIOCGWINSZ, (char *)&ws) == -1 &&
 	     ioctl(STDIN_FILENO,  TIOCGWINSZ, (char *)&ws) == -1) ||
@@ -1027,6 +1038,7 @@ descendant_sort(KINFO *ki, int items)
 	int dst, lvl, maxlvl, n, ndst, nsrc, siblings, src;
 	unsigned char *path;
 	KINFO kn;
+	size_t pathsz;
 
 	/*
 	 * First, sort the entries by descendancy, tracking the descendancy
@@ -1094,8 +1106,12 @@ descendant_sort(KINFO *ki, int items)
 	 * Now populate ki_d.prefix (instead of ki_d.level) with the command
 	 * prefix used to show descendancies.
 	 */
-	path = malloc((maxlvl + 7) / 8);
-	memset(path, '\0', (maxlvl + 7) / 8);
+	pathsz = (maxlvl + 7) / 8;
+	path = malloc(pathsz);
+	if (pathsz != 0 && path == NULL)
+		xo_errx(1, "malloc failed");
+	if (pathsz != 0)
+		memset(path, '\0', pathsz);
 	for (src = 0; src < items; src++) {
 		if ((lvl = ki[src].ki_d.level) == 0) {
 			ki[src].ki_d.prefix = NULL;
