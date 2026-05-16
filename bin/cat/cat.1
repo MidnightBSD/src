@@ -39,10 +39,9 @@
 .Nd concatenate and print files
 .Sh SYNOPSIS
 .Nm
-.Op Fl belnstuv
+.Op Fl Abelnstuv
 .Op Ar
 .Sh DESCRIPTION
-The
 .Nm
 utility reads files sequentially, writing them to the standard output.
 The
@@ -70,6 +69,15 @@ domain binding capability available in
 .Pp
 The options are as follows:
 .Bl -tag -width indent
+.It Fl A
+Display non-printing characters (see the
+.Fl v
+option), display a dollar sign
+.Pq Ql \&$
+at the end of each line, and display tab characters as
+.Ql ^I .
+Equivalent to
+.Fl et .
 .It Fl b
 Number the non-blank output lines, starting at 1.
 .It Fl e
@@ -185,7 +193,7 @@ utility is compliant with the
 specification.
 .Pp
 The flags
-.Op Fl belnstv
+.Op Fl Abelnstv
 are extensions to the specification.
 .Sh HISTORY
 A
