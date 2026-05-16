@@ -116,7 +116,7 @@ static int udom_open(const char *path, int flags);
 #ifdef BOOTSTRAP_CAT
 #define SUPPORTED_FLAGS "lu"
 #else
-#define SUPPORTED_FLAGS "belnstuv"
+#define SUPPORTED_FLAGS "Abelnstuv"
 #endif
 
 #ifndef NO_UDOM_SUPPORT
@@ -176,6 +176,9 @@ main(int argc, char *argv[])
 
 	while ((ch = getopt(argc, argv, SUPPORTED_FLAGS)) != -1)
 		switch (ch) {
+		case 'A':
+			eflag = tflag = vflag = 1;
+			break;
 		case 'b':
 			bflag = nflag = 1;	/* -b implies -n */
 			break;
