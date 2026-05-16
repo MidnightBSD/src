@@ -3,6 +3,8 @@ PACKAGE=	tests
 
 NETBSD_ATF_TESTS_SH=		cat_test
 
+ATF_TESTS_SH+=			A_flag_test
+
 ${PACKAGE}FILES+=		d_align.in
 ${PACKAGE}FILES+=		d_align.out
 ${PACKAGE}FILES+=		d_b_output.in
