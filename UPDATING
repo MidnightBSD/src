@@ -3,6 +3,39 @@ Updating Information for MidnightBSD users.
 20260521:
 	ee: add unicode support
 
+	Remove extraneious tab characters in _stdint.h files
+
+	stdint.h macro fixes
+
+	sys: Fix heap disclosure in compat7 kern.proc.filedesc sysctl  (from freebsd)
+
+	shm: Zero struct kinfo_file in sysctl handler  (claude reported to freebsd)
+
+	compat32: Zero struct to avoid stack disclosure
+
+	compat/linux: Avoid waitid() kernel stack disclosure
+
+	net: bandaid for plugging a fw_com leak in fwip_detach()
+
+	caroot: modenize/cleanup and update certificates
+
+	kqueue: Fix a race when adding an fd-based knote to a queue
+
+	midnightbsd-update: fix a bug with cert files
+
+	spellprog: fix OOB reads and EOF slurp hang
+
+	progress: fix gzip -l injection and EINTR wait loop Avoid popen()/shell when running 
+	gzip -l by forking gzip with argv, and handle EINTR correctly in the wait loop.
+
+	wall: harden message buffer sizing
+
+	w: harden tty path handling and width math
+	
+	ident: avoid underflow when validating keyword termination
+
+	asa: guard against zero-length fgetln()
+
 20260520:
 	MidnightBSD 4.0.5
 
