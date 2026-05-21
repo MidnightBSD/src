@@ -6,6 +6,23 @@ Updating Information for MidnightBSD users.
 20260520:
 	MidnightBSD 4.0.5
 
+20260515:
+	rtld: honor FreeBSD no-init notes
+
+	(fixes some third party software running that are freebsd binaries)
+
+20260501:
+	 Fix dhcp lease windows path issues.
+
+20260429:
+	fix for pf sctp issue
+
+	fix a security issue with improper escaping of data from the BOOTP field on dhcp
+
+	Fix a remotely exploitable dhcp client issue
+
+	Fix a heap issue, priv escalation and improve descriptor checks.
+
 20260421:
 	Fix two security issues
 
