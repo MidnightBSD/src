@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users.
 
+20260521:
+	ee: add unicode support
+
+20260520:
+	MidnightBSD 4.0.5
+
 20260421:
 	Fix two security issues
 
