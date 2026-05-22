@@ -4,6 +4,8 @@ Updating Information for MidnightBSD users.
 	libcasper: CVE-2026-39461  select(2) file descriptor set overflow causes stack overflow
 
 	libcap_net: CVE-2026-45254 Incorrect libcap_net limitation list manipulation
+	
+	unbound 1.24.2: CVE-2025-11411
 
 20260521:
 	ee: add unicode support
