@@ -5,6 +5,8 @@ Updating Information for MidnightBSD users.
 
 	libcap_net: CVE-2026-45254 Incorrect libcap_net limitation list manipulation
 
+	unbound 1.24.2: CVE-2025-11411
+
 20260521:
         ee: add unicode support
 
