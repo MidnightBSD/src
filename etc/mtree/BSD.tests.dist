@@ -313,6 +313,8 @@
         ..
         libbe
         ..
+        libbsnmp
+        ..
         libc
             c063
             ..
@@ -381,7 +383,11 @@
             services
                 cap_dns
                 ..
+                cap_fileargs
+                ..
                 cap_grp
+                ..
+                cap_net
                 ..
                 cap_pwd
                 ..
@@ -392,6 +398,8 @@
         libcrypt
         ..
         libdevdctl
+        ..
+        libdiff
         ..
         libexecinfo
         ..
@@ -1093,6 +1101,8 @@
         ..
         procstat
         ..
+        progress
+        ..
         renice
         ..
         rs
@@ -1106,6 +1116,10 @@
         seq
         ..
         soelim
+        ..
+        spell
+            spellprog
+            ..
         ..
         sort
         ..
@@ -1138,6 +1152,8 @@
         unzip
         ..
         vmstat
+        ..
+        w
         ..
         xargs
         ..
