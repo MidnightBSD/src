@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20260522:
+	libcasper: CVE-2026-39461  select(2) file descriptor set overflow causes stack overflow
+
 20260521:
 	ee: add unicode support
 
