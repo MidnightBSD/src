@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20260522:
+	libcasper: CVE-2026-39461  select(2) file descriptor set overflow causes stack overflow
+
 20260521:
         ee: add unicode support
 
@@ -52,7 +55,6 @@ Updating Information for MidnightBSD users.
         Fix a remotely exploitable dhcp client issue
 
         Fix a heap issue, priv escalation and improve descriptor checks.
-
 
 20260422:
 	libarchive 3.8.5
