@@ -23,7 +23,7 @@ ETCMAIL+=Makefile README access.sample virtusertable.sample \
 .endif
 
 # Special top level files for MidnightBSD
-MIDNIGHTBSD=COPYRIGHT
+MIDNIGHTBSD=COPYRIGHT EULA
 
 # Sanitize DESTDIR
 DESTDIR:=	${DESTDIR:C://*:/:g}
