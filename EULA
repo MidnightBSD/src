@@ -1,0 +1,23 @@
+MidnightBSD is not offered in jurisdictions that require operating system 
+distributors or developers to implement mandatory age-verification mechanisms, 
+including but not limited to government-issued identification checks, 
+biometric verification, facial recognition, or comparable 
+identity-verification systems, where the MidnightBSD Project does not 
+provide such functionality.
+
+Except to the extent prohibited by applicable open source licenses 
+governing individual components, individuals located in such jurisdictions 
+are not authorized to download, install, access, use, or distribute compiled 
+MidnightBSD releases unless all applicable legal requirements are independently satisfied.
+
+Nothing in this Agreement limits or restricts any rights granted under applicable
+free or open source software licenses governing individual MidnightBSD components, 
+including rights to access, modify, compile, or redistribute source code as permitted by those licenses.
+
+Certain jurisdictions may instead require age-attestation or parental-control functionality. 
+MidnightBSD may provide optional tools, including aged(8), that users can configure for their 
+own compliance purposes. However, the MidnightBSD Project does not represent or warrant 
+that use of any such tool satisfies the laws or regulations of any jurisdiction.
+
+A current list of unsupported jurisdictions, if any, may be published separately on the
+MidnightBSD website and may change without notice.
