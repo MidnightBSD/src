@@ -26,7 +26,6 @@
  * SUCH DAMAGE.
  */
 
-
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <errno.h>
@@ -39,106 +38,131 @@
 MPORT_PUBLIC_API int
 mport_annotation_get(mportInstance *mport, const char *pkg, const char *tag, char **annotation)
 {
-    sqlite3_stmt *stmt = NULL;
+	sqlite3_stmt *stmt = NULL;
 
-    if (mport_db_prepare(mport->db, &stmt, "SELECT val FROM annotation WHERE pkg=%Q AND tag=%Q", pkg, tag) != MPORT_OK) {
-        sqlite3_finalize(stmt);
-        RETURN_CURRENT_ERROR;
-    }
+	if (mport_db_prepare(mport->db, &stmt, "SELECT val FROM annotation WHERE pkg=%Q AND tag=%Q",
+		pkg, tag) != MPORT_OK) {
+		sqlite3_finalize(stmt);
+		RETURN_CURRENT_ERROR;
+	}
 
-    if (stmt == NULL) {
-        RETURN_ERROR(MPORT_ERR_FATAL, "AnnotationStatement was null");
-    }
+	if (stmt == NULL) {
+		RETURN_ERROR(MPORT_ERR_FATAL, "AnnotationStatement was null");
+	}
 
-    int ret = sqlite3_step(stmt);
+	int ret = sqlite3_step(stmt);
 
-    switch (ret) {
-        case SQLITE_ROW:
-            *annotation = strdup((const char *)sqlite3_column_text(stmt, 0));
-            sqlite3_finalize(stmt);
-            break;
-        case SQLITE_DONE:
-            sqlite3_finalize(stmt);
-            RETURN_ERRORX(MPORT_ERR_FATAL, "No annotation found for package %s with tag %s", pkg, tag);
-        default:
-            sqlite3_finalize(stmt);
-            RETURN_ERRORX(MPORT_ERR_FATAL, "Database error: %s", sqlite3_errmsg(mport->db));
-    }
+	switch (ret) {
+	case SQLITE_ROW: {
+		const unsigned char *value = sqlite3_column_text(stmt, 0);
+		*annotation = (value == NULL) ? NULL : strdup((const char *)value);
+	}
+		sqlite3_finalize(stmt);
+		if (*annotation == NULL)
+			RETURN_ERROR(MPORT_ERR_FATAL, "Malformed annotation row.");
+		break;
+	case SQLITE_DONE:
+		sqlite3_finalize(stmt);
+		RETURN_ERRORX(
+		    MPORT_ERR_FATAL, "No annotation found for package %s with tag %s", pkg, tag);
+	default:
+		sqlite3_finalize(stmt);
+		RETURN_ERRORX(MPORT_ERR_FATAL, "Database error: %s", sqlite3_errmsg(mport->db));
+	}
 
-    return (MPORT_OK);
+	return (MPORT_OK);
 }
 
 MPORT_PUBLIC_API int
 mport_annotation_set(mportInstance *mport, const char *pkg, const char *tag, const char *annotation)
 {
 
-    return mport_db_do(mport->db,
-                         "INSERT OR REPLACE INTO annotation (pkg, tag, val) VALUES (%Q, %Q, %Q)",
-                         pkg, tag, annotation);
+	return mport_db_do(mport->db,
+	    "INSERT OR REPLACE INTO annotation (pkg, tag, val) VALUES (%Q, %Q, %Q)", pkg, tag,
+	    annotation);
 }
 
 MPORT_PUBLIC_API int
 mport_annotation_delete(mportInstance *mport, const char *pkg, const char *tag)
 {
-    return mport_db_do(mport->db,
-                         "DELETE FROM annotation WHERE pkg=%Q AND tag=%Q",
-                         pkg, tag);
+	return mport_db_do(mport->db, "DELETE FROM annotation WHERE pkg=%Q AND tag=%Q", pkg, tag);
 }
 
 MPORT_PUBLIC_API int
 mport_annotation_delete_all(mportInstance *mport, const char *pkg)
 {
-    return mport_db_do(mport->db,
-                         "DELETE FROM annotation WHERE pkg=%Q",
-                         pkg);
+	return mport_db_do(mport->db, "DELETE FROM annotation WHERE pkg=%Q", pkg);
 }
 
 MPORT_PUBLIC_API int
 mport_annotation_list(mportInstance *mport, const char *pkg, char ***tags, int *tag_count)
 {
-    sqlite3_stmt *stmt = NULL;
-    int count = 0;
-    int i = 0;
+	sqlite3_stmt *stmt = NULL;
+	int count = 0;
+	int i = 0;
 
-    if (mport_db_prepare(mport->db, &stmt, "SELECT tag FROM annotation WHERE pkg=%Q", pkg) != MPORT_OK) {
-        sqlite3_finalize(stmt);
-        RETURN_CURRENT_ERROR;
-    }
+	if (mport_db_prepare(mport->db, &stmt, "SELECT tag FROM annotation WHERE pkg=%Q", pkg) !=
+	    MPORT_OK) {
+		sqlite3_finalize(stmt);
+		RETURN_CURRENT_ERROR;
+	}
 
-    if (stmt == NULL) {
-        RETURN_ERROR(MPORT_ERR_FATAL, "AnnotationStatement was null");
-    }
+	if (stmt == NULL) {
+		RETURN_ERROR(MPORT_ERR_FATAL, "AnnotationStatement was null");
+	}
 
-    while (sqlite3_step(stmt) == SQLITE_ROW) {
-        count++;
-    }
+	while (sqlite3_step(stmt) == SQLITE_ROW) {
+		count++;
+	}
 
-    sqlite3_finalize(stmt);
+	sqlite3_finalize(stmt);
 
-    if (count == 0) {
-        *tags = NULL;
-        *tag_count = 0;
-        return MPORT_OK;
-    }
+	if (count == 0) {
+		*tags = NULL;
+		*tag_count = 0;
+		return MPORT_OK;
+	}
 
-    *tags = malloc(count * sizeof(char*));
-    if (*tags == NULL) {
-        RETURN_ERROR(MPORT_ERR_FATAL, "Failed to allocate memory for tags");
-    }
+	*tags = malloc(count * sizeof(char *));
+	if (*tags == NULL) {
+		RETURN_ERROR(MPORT_ERR_FATAL, "Failed to allocate memory for tags");
+	}
 
-    if (mport_db_prepare(mport->db, &stmt, "SELECT tag FROM annotation WHERE pkg=%Q", pkg) != MPORT_OK) {
-        sqlite3_finalize(stmt);
-        free(*tags);
-        RETURN_CURRENT_ERROR;
-    }
+	if (mport_db_prepare(mport->db, &stmt, "SELECT tag FROM annotation WHERE pkg=%Q", pkg) !=
+	    MPORT_OK) {
+		sqlite3_finalize(stmt);
+		free(*tags);
+		RETURN_CURRENT_ERROR;
+	}
 
-    while (sqlite3_step(stmt) == SQLITE_ROW && i < count) {
-        (*tags)[i] = strdup((const char *)sqlite3_column_text(stmt, 0));
-        i++;
-    }
+	while (sqlite3_step(stmt) == SQLITE_ROW && i < count) {
+		const unsigned char *tag = sqlite3_column_text(stmt, 0);
+		if (tag == NULL) {
+			while (i > 0) {
+				i--;
+				free((*tags)[i]);
+			}
+			free(*tags);
+			*tags = NULL;
+			sqlite3_finalize(stmt);
+			RETURN_ERROR(MPORT_ERR_FATAL, "Malformed annotation row.");
+		}
+		(*tags)[i] = strdup((const char *)tag);
+		if ((*tags)[i] == NULL) {
+			while (i > 0) {
+				i--;
+				free((*tags)[i]);
+			}
+			free(*tags);
+			*tags = NULL;
+			sqlite3_finalize(stmt);
+			RETURN_ERROR(MPORT_ERR_FATAL, "Failed to allocate memory for tag.");
+		}
+		i++;
+	}
 
-    sqlite3_finalize(stmt);     
-    *tag_count = count;
+	sqlite3_finalize(stmt);
+	*tag_count = count;
 
-    return MPORT_OK;
+	return MPORT_OK;
 }

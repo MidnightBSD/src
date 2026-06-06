@@ -61,7 +61,7 @@ struct ohash {
 #define MPORT_MASTER_VERSION 14
 #define MPORT_BUNDLE_VERSION 6
 #define MPORT_BUNDLE_VERSION_STR "6"
-#define MPORT_VERSION "2.7.7"
+#define MPORT_VERSION "2.7.9"
 
 #define MPORT_SETTING_MIRROR_REGION "mirror_region"
 #define MPORT_SETTING_TARGET_OS "target_os"
@@ -74,6 +74,7 @@ struct ohash {
 #define MPORT_PRECHECK_OS          16
 #define MPORT_PRECHECK_MOVED       32
 #define MPORT_PRECHECK_DEPRECATED  64
+#define MPORT_PRECHECK_FILE_CONFLICTS 128
 int mport_check_preconditions(mportInstance *, mportPackageMeta *, long);
 
 /* schema */
@@ -126,6 +127,10 @@ int mport_removeflags(const char *, const char *);
 int mport_rmdir(const char *, int);
 int mport_chdir(mportInstance *, const char *);
 int mport_xsystem(mportInstance *, const char *, ...);
+int mport_exec_linux_ldconfig(mportInstance *, const char *);
+int mport_exec_glib_compile_schemas(mportInstance *, const char *);
+int mport_exec_indexinfo(mportInstance *, const char *);
+int mport_exec_kldxref(mportInstance *, const char *);
 int mport_run_asset_exec(mportInstance *, const char *, const char *, const char *);
 void mport_free_vec(void *);
 int mport_decompress_zstd(const char *, const char *);
@@ -137,6 +142,7 @@ bool mport_check_answer_bool(char *answer);
 int mport_count_spaces(const char *str);
 char * mport_tokenize(char **args);
 char * mport_get_osreleasedate(void);
+int mport_index_select_pkgname(mportInstance *, const char *, const char *, mportIndexEntry ***, mportIndexEntry **);
 
 enum parse_states {
 	START,
@@ -274,6 +280,7 @@ int mport_script_run_child(mportInstance *, int, int *, int, const char*);
 #define MPORT_MAX_INDEX_AGE (MPORT_DAY * 7) /* one week */
 #define MPORT_SETTING_INDEX_LAST_CHECKED "index_last_check"
 #define MPORT_SETTING_REPO_AUTOUPDATE "index_autoupdate"
+#define MPORT_SETTING_REPO_AUTOUPDATE_LEGACY "REPO_AUTOUPDATE"
 #define MPORT_SETTING_HANDLE_RC_SCRIPTS "handle_rc_scripts"
 
 /* Binaries we use */

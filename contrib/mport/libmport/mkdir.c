@@ -45,7 +45,6 @@
 #include "mport.h"
 #include "mport_private.h"
 
-
 /*
  * Create directory (like mkdir -p) based on mkdir.c source.
  * WARNING: unlike most mport_ functions this does not use MPORT_ERR_FATAL, etc.
@@ -64,9 +63,9 @@ mport_mkdirp(char *path, mode_t omode)
 	p = path;
 	oumask = 0;
 	retval = 1;
-	if (p[0] == '/')		/* Skip leading '/'. */
+	if (p[0] == '/') /* Skip leading '/'. */
 		++p;
-	for (first = 1, last = 0; !last ; ++p) {
+	for (first = 1, last = 0; !last; ++p) {
 		if (p[0] == '\0')
 			last = 1;
 		else if (p[0] != '/')
@@ -118,7 +117,7 @@ mport_mkdirp(char *path, mode_t omode)
 			}
 		}
 		if (!last)
-		    *p = '/';
+			*p = '/';
 	}
 	if (!first && !last)
 		(void)umask(oumask);

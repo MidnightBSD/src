@@ -35,27 +35,71 @@
 #include "mport_private.h"
 
 #define CMND_MAGIC_COOKIE '@'
-#define STRING_EQ(r, l) (strcmp((r),(l)) == 0)
+#define STRING_EQ(r, l) (strcmp((r), (l)) == 0)
 
 static mportAssetListEntryType parse_command(const char *);
 static int parse_file_owner_mode(mportAssetListEntry *, char *);
+
+struct command_map {
+	const char *name;
+	mportAssetListEntryType type;
+};
+
+static const struct command_map command_map_table[] = {
+	{ "comment", ASSET_COMMENT },
+	{ "preexec", ASSET_PREEXEC },
+	{ "preunexec", ASSET_PREUNEXEC },
+	{ "postexec", ASSET_POSTEXEC },
+	{ "postunexec", ASSET_POSTUNEXEC },
+	{ "exec", ASSET_EXEC },
+	{ "unexec", ASSET_UNEXEC },
+	{ "dir", ASSET_DIR },
+	{ "dirrm", ASSET_DIRRM },
+	{ "dirrmtry", ASSET_DIRRMTRY },
+	{ "cwd", ASSET_CWD },
+	{ "cd", ASSET_CWD },
+	{ "srcdir", ASSET_SRC },
+	{ "mode", ASSET_CHMOD },
+	{ "owner", ASSET_CHOWN },
+	{ "group", ASSET_CHGRP },
+	{ "noinst", ASSET_NOINST },
+	{ "ignore", ASSET_IGNORE },
+	{ "ignore_inst", ASSET_IGNORE_INST },
+	{ "info", ASSET_INFO },
+	{ "name", ASSET_NAME },
+	{ "display", ASSET_DISPLAY },
+	{ "pkgdep", ASSET_PKGDEP },
+	{ "conflicts", ASSET_CONFLICTS },
+	{ "mtree", ASSET_MTREE },
+	{ "option", ASSET_OPTION },
+	{ "sample", ASSET_SAMPLE },
+	{ "shell", ASSET_SHELL },
+	{ "ldconfig-linux", ASSET_LDCONFIG_LINUX },
+	{ "ldconfig", ASSET_LDCONFIG },
+	{ "rmempty", ASSET_RMEMPTY },
+	{ "glib-schemas", ASSET_GLIB_SCHEMAS },
+	{ "kld", ASSET_KLD },
+	{ "desktop-file-utils", ASSET_DESKTOP_FILE_UTILS },
+	{ "touch", ASSET_TOUCH },
+};
 
 /* Do everything needed to set up a new plist.  Always use this to create a plist,
  * don't go off and do it yourself.
  */
 MPORT_PUBLIC_API mportAssetList *
-mport_assetlist_new(void) {
+mport_assetlist_new(void)
+{
 
-    mportAssetList *list = (mportAssetList *) calloc(1, sizeof(mportAssetList));
-    assert(list != NULL);
-    STAILQ_INIT(list);
-    return list;
+	mportAssetList *list = (mportAssetList *)calloc(1, sizeof(mportAssetList));
+	assert(list != NULL);
+	STAILQ_INIT(list);
+	return list;
 }
-
 
 /* free all the entries in the list, and then the list itself. */
 MPORT_PUBLIC_API void
-mport_assetlist_free(mportAssetList *list) {
+mport_assetlist_free(mportAssetList *list)
+{
 	mportAssetListEntry *n = NULL;
 	mportAssetList *list_orig;
 	list_orig = list;
@@ -73,279 +117,192 @@ mport_assetlist_free(mportAssetList *list) {
 
 		STAILQ_REMOVE_HEAD(list, next);
 		free(n);
-        n = NULL;
+		n = NULL;
 	}
 
 	free(list_orig);
-    list_orig = NULL;
+	list_orig = NULL;
 	list = NULL;
 }
 
-
 /**
- * Parses the contents of the given plistfile pointer.  
- * Returns MPORT_OK on success, 
+ * Parses the contents of the given plistfile pointer.
+ * Returns MPORT_OK on success,
  * an error code on failure.
  */
 MPORT_PUBLIC_API int
-mport_parse_plistfile(FILE *fp, mportAssetList *list) {
-    size_t linecap = 0;
-    char *line = NULL;
-    ssize_t read = 0;
-    assert(fp != NULL);
+mport_parse_plistfile(FILE *fp, mportAssetList *list)
+{
+	size_t linecap = 0;
+	char *line = NULL;
+	ssize_t read = 0;
+	int ret = MPORT_OK;
+	assert(fp != NULL);
 
-    while ((read = getline(&line, &linecap, fp)) != -1) {
-        if (line[read - 1] == '\n')
-            line[read - 1] = '\0';
-
-        /* skip blank lines */
-        if (line[0] == '\0' || read == 1)
-            continue;
-
-        mportAssetListEntry *entry = (mportAssetListEntry *) calloc(1, sizeof(mportAssetListEntry));
-
-        if (entry == NULL) {
-            RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
-        }
-
-        char *parse_line = line;
-
-        /* clear out any leading whitespace */
-        while (*parse_line != '\0' && isspace(*parse_line)) {
-            parse_line++;
-        }
-
-        /* line is effectively empty. skip it. */
-        if (*parse_line == '\0') {
-            continue;
-        }
-
-        if (*parse_line == CMND_MAGIC_COOKIE) {
-            parse_line++;
-            char *cmnd = strsep(&parse_line, " \t");
-
-            if (cmnd == NULL) {
-                free(entry);
-                RETURN_ERROR(MPORT_ERR_FATAL, "Malformed plist file.");
-            }
-
-		entry->checksum[0] = '\0'; /* checksum is only used by bundle read install */
-		entry->type = parse_command(cmnd);
-		if (entry->type == ASSET_FILE_OWNER_MODE)
-            if (parse_file_owner_mode(entry, cmnd) != MPORT_OK) {
-                free(entry);
-                RETURN_ERROR(MPORT_ERR_FATAL, "Failed to parse file owner mode");
-            }
-		if (entry->type == ASSET_DIR_OWNER_MODE) {
-            if (parse_file_owner_mode(entry, &cmnd[3]) != MPORT_OK) {
-                free(entry);
-                RETURN_ERROR(MPORT_ERR_FATAL, "Failed to parse dir owner mode");
-            }
+	while ((read = getline(&line, &linecap, fp)) != -1) {
+		if (read > 0 && line[read - 1] == '\n') {
+			line[--read] = '\0';
 		}
-		if (entry->type == ASSET_SAMPLE_OWNER_MODE)
-            if (parse_file_owner_mode(entry, &cmnd[6]) != MPORT_OK) {
-                free(entry);
-                RETURN_ERROR(MPORT_ERR_FATAL, "Failed to parse sample owner mode");
-            }
-        } else {
-            /* command is backed by a file */
-            entry->type = ASSET_FILE;
-        }
 
-        if (parse_line == NULL || *parse_line == '\0') {
-            /* line was just a directive, no data */
-            entry->data = NULL;
-        } else {
-            if (entry->type == ASSET_COMMENT) {
-                if (!strncmp(parse_line, "ORIGIN:", 7)) {
-                    parse_line += 7;
-                    entry->type = ASSET_ORIGIN;
-                } else if (!strncmp(parse_line, "DEPORIGIN:", 10)) {
-                    parse_line += 10;
-                    entry->type = ASSET_DEPORIGIN;
-                }
-            }
+		char *parse_line = line;
 
-            size_t buflen = strlen(parse_line);
-            if (buflen > SIZE_MAX - 1) {
-                // Handle overflow error
-                free(entry);
-                RETURN_ERROR(MPORT_ERR_FATAL, "Buffer too large, potential overflow.");
-            }
+		/* Skip blank/whitespace lines early to avoid allocation */
+		while (*parse_line != '\0' && isspace((unsigned char)*parse_line)) {
+			parse_line++;
+		}
+		if (*parse_line == '\0')
+			continue;
 
-            char *pos = parse_line + buflen - 1;
-            while (pos >= parse_line && isspace(*pos)) {
-                *pos = '\0';
-                pos--;
-            }
+		mportAssetListEntry *entry =
+		    (mportAssetListEntry *)calloc(1, sizeof(mportAssetListEntry));
+		if (entry == NULL) {
+			SET_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+			ret = MPORT_ERR_FATAL;
+			goto cleanup;
+		}
 
-            entry->data = strdup(parse_line);
-            if (entry->data == NULL) {
-                free(entry);
-                RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
-            }
-        }
+		/* reset parse_line because leading whitespace might be significant for
+		 * non-directives */
+		parse_line = line;
 
-        STAILQ_INSERT_TAIL(list, entry, next);
-    }
-    free(line);
+		if (*parse_line == CMND_MAGIC_COOKIE) {
+			parse_line++;
+			/* directive lines skip leading spaces after @ */
+			while (*parse_line != '\0' && isspace((unsigned char)*parse_line)) {
+				parse_line++;
+			}
 
-    return MPORT_OK;
+			char *cmnd = strsep(&parse_line, " \t");
+			if (cmnd == NULL || *cmnd == '\0') {
+				free(entry);
+				SET_ERROR(MPORT_ERR_FATAL, "Malformed plist file.");
+				ret = MPORT_ERR_FATAL;
+				goto cleanup;
+			}
+
+			entry->checksum[0] =
+			    '\0'; /* checksum is only used by bundle read install */
+			entry->type = parse_command(cmnd);
+			if (entry->type == ASSET_FILE_OWNER_MODE) {
+				if (parse_file_owner_mode(entry, cmnd) != MPORT_OK) {
+					free(entry);
+					ret = MPORT_ERR_FATAL;
+					goto cleanup;
+				}
+			} else if (entry->type == ASSET_DIR_OWNER_MODE) {
+				if (parse_file_owner_mode(entry, &cmnd[3]) != MPORT_OK) {
+					free(entry);
+					ret = MPORT_ERR_FATAL;
+					goto cleanup;
+				}
+			} else if (entry->type == ASSET_SAMPLE_OWNER_MODE) {
+				if (parse_file_owner_mode(entry, &cmnd[6]) != MPORT_OK) {
+					free(entry);
+					ret = MPORT_ERR_FATAL;
+					goto cleanup;
+				}
+			}
+
+			/* Skip leading whitespace for directive data */
+			while (parse_line != NULL && *parse_line != '\0' &&
+			    isspace((unsigned char)*parse_line)) {
+				parse_line++;
+			}
+		} else {
+			/* command is backed by a file */
+			entry->type = ASSET_FILE;
+		}
+
+		if (parse_line == NULL || *parse_line == '\0') {
+			/* line was just a directive, no data */
+			entry->data = NULL;
+		} else {
+			if (entry->type == ASSET_COMMENT) {
+				if (!strncmp(parse_line, "ORIGIN:", 7)) {
+					parse_line += 7;
+					entry->type = ASSET_ORIGIN;
+				} else if (!strncmp(parse_line, "DEPORIGIN:", 10)) {
+					parse_line += 10;
+					entry->type = ASSET_DEPORIGIN;
+				}
+			}
+
+			size_t buflen = strlen(parse_line);
+			char *pos = parse_line + buflen - 1;
+			while (pos >= parse_line && isspace((unsigned char)*pos)) {
+				*pos = '\0';
+				pos--;
+			}
+
+			entry->data = strdup(parse_line);
+			if (entry->data == NULL) {
+				free(entry);
+				SET_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+				ret = MPORT_ERR_FATAL;
+				goto cleanup;
+			}
+		}
+
+		STAILQ_INSERT_TAIL(list, entry, next);
+	}
+
+cleanup:
+	free(line);
+	return ret;
 }
 
 /**
  * Parse the file owner, group and mode.
  */
-static int 
-parse_file_owner_mode(mportAssetListEntry *entry, char *cmnd) {
-	char *start = NULL;
-	char *op;
-	char *permissions[3] = {NULL, NULL, NULL};
+static int
+parse_file_owner_mode(mportAssetListEntry *entry, char *cmnd)
+{
+	char *op = cmnd;
+	char *permissions[3] = { NULL, NULL, NULL };
 	char *tok = NULL;
 	int i = 0;
 
-    if (entry == NULL) {
-        RETURN_ERROR(MPORT_ERR_FATAL, "Entry is NULL");
-    }
+	if (entry == NULL || cmnd == NULL) {
+		RETURN_ERROR(MPORT_ERR_FATAL, "Entry or command is NULL");
+	}
 
-    if (cmnd == NULL)
-        RETURN_ERROR(MPORT_ERR_FATAL, "command is missing");
-    op = start = strdup(cmnd);
-    if (op == NULL) {
-        RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
-    }
-
-	while((tok = strsep(&op, "(,)")) != NULL) {
-		if (i == 3)
-			break;
-		permissions[i] = op;
-		i++;
+	while ((tok = strsep(&op, "(,)")) != NULL && i < 3) {
+		if (*tok == '\0')
+			continue;
+		permissions[i++] = tok;
 	}
 
 	if (permissions[0] != NULL) {
-#ifdef DEBUG
-		fprintf(stderr, "owner %s -", permissions[0]);
-#endif
 		strlcpy(entry->owner, permissions[0], MAXLOGNAME);
 	}
 	if (permissions[1] != NULL) {
-#ifdef DEBUG
-		fprintf(stderr, "; group %s -", permissions[1]);
-#endif
 		strlcpy(entry->group, permissions[1], MAXLOGNAME * 2);
 	}
 	if (permissions[2] != NULL) {
-#ifdef DEBUG
-		fprintf(stderr, "; mode %s -", permissions[2]);
-#endif
 		strlcpy(entry->mode, permissions[2], 5);
 	}
-
-	free(start);
 
 	return MPORT_OK;
 }
 
-
-
 static mportAssetListEntryType
-parse_command(const char *s) {
+parse_command(const char *s)
+{
+	if (s == NULL || *s == '\0')
+		return ASSET_INVALID;
 
-    /* This is in a rough frequency order */
-
-    if (STRING_EQ(s, "comment"))
-        return ASSET_COMMENT;
-
-    if (STRING_EQ(s, "preexec"))
-        return ASSET_PREEXEC;
-    if (STRING_EQ(s, "preunexec"))
-        return ASSET_PREUNEXEC;
-    if (STRING_EQ(s, "postexec"))
-        return ASSET_POSTEXEC;
-    if (STRING_EQ(s, "postunexec"))
-        return ASSET_POSTUNEXEC;
-
-    /* EXEC and UNEXEC are deprecated in favor of their pre/post variants */
-    if (STRING_EQ(s, "exec"))
-        return ASSET_EXEC;
-    if (STRING_EQ(s, "unexec"))
-        return ASSET_UNEXEC;
-
-    /* dir is preferred to dirrm and dirrmtry */
-    if (STRING_EQ(s, "dir"))
-        return ASSET_DIR;
-    if (strncmp(s, "dir(", 4) == 0)
-        return ASSET_DIR_OWNER_MODE;
-    if (STRING_EQ(s, "dirrm"))
-        return ASSET_DIRRM;
-    if (STRING_EQ(s, "dirrmtry"))
-        return ASSET_DIRRMTRY;
-    if (STRING_EQ(s, "cwd") || STRING_EQ(s, "cd"))
-        return ASSET_CWD;
-
-    if (STRING_EQ(s, "srcdir"))
-        return ASSET_SRC;
-    if (STRING_EQ(s, "mode"))
-        return ASSET_CHMOD;
-    if (STRING_EQ(s, "owner"))
-        return ASSET_CHOWN;
-    if (STRING_EQ(s, "group"))
-        return ASSET_CHGRP;
-    if (STRING_EQ(s, "noinst"))
-        return ASSET_NOINST;
-    if (STRING_EQ(s, "ignore"))
-        return ASSET_IGNORE;
-    if (STRING_EQ(s, "ignore_inst"))
-        return ASSET_IGNORE_INST;
-    if (STRING_EQ(s, "info"))
-        return ASSET_INFO;
-    if (STRING_EQ(s, "name"))
-        return ASSET_NAME;
-    if (STRING_EQ(s, "display"))
-        return ASSET_DISPLAY;
-    if (STRING_EQ(s, "pkgdep"))
-        return ASSET_PKGDEP;
-    if (STRING_EQ(s, "conflicts"))
-        return ASSET_CONFLICTS;
-    if (STRING_EQ(s, "mtree"))
-        return ASSET_MTREE;
-    if (STRING_EQ(s, "option"))
-        return ASSET_OPTION;
-    if (STRING_EQ(s, "sample"))
-        return ASSET_SAMPLE;
-    if (strncmp(s, "sample(", 7) == 0)
-		return ASSET_SAMPLE_OWNER_MODE;
-    if (STRING_EQ(s, "shell"))
-        return ASSET_SHELL;
-    if (STRING_EQ(s, "ldconfig-linux")) {
-    	return ASSET_LDCONFIG_LINUX;
-    }
-    if (STRING_EQ(s, "ldconfig")) {
-    	return ASSET_LDCONFIG;
-    }
-    if (STRING_EQ(s, "rmempty")) {
-    	return ASSET_RMEMPTY;
-    }
-    if (STRING_EQ(s, "glib-schemas")) {
-        return ASSET_GLIB_SCHEMAS;
-    }
-    if (STRING_EQ(s, "kld")) {
-        return ASSET_KLD;
-    }
-    if (STRING_EQ(s, "desktop-file-utils")) {
-        return ASSET_DESKTOP_FILE_UTILS;
-    }
-    if (STRING_EQ(s, "touch")) {
-        return ASSET_TOUCH;
-    }
-
-    /* special case, starts with ( as in @(root,wheel,0755) */
-    if (s[0] == '(') {
+	/* special/Prefix cases first */
+	if (s[0] == '(')
 		return ASSET_FILE_OWNER_MODE;
-    }
+	if (strncmp(s, "dir(", 4) == 0)
+		return ASSET_DIR_OWNER_MODE;
+	if (strncmp(s, "sample(", 7) == 0)
+		return ASSET_SAMPLE_OWNER_MODE;
 
-    return ASSET_INVALID;
+	for (size_t i = 0; i < sizeof(command_map_table) / sizeof(command_map_table[0]); i++) {
+		if (STRING_EQ(s, command_map_table[i].name))
+			return command_map_table[i].type;
+	}
+
+	return ASSET_INVALID;
 }
-
-
-

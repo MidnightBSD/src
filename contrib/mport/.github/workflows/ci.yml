@@ -1,0 +1,33 @@
+# Copyright 2026 Lucas Holt
+# SPDX-License-Identifier: BSD-2-Clause
+
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  midnightbsd:
+    name: build (MidnightBSD 4.0.4)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: cpa.sh {0}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup VM
+        uses: cross-platform-actions/action@v1.2.0
+        with:
+          operating_system: midnightbsd
+          version: '4.0.4'
+
+      - name: Build on MidnightBSD
+        run: |
+            sudo env ASSUME_ALWAYS_YES=yes mport install atf || true
+            make
+            kyua test -k tests/Kyuafile

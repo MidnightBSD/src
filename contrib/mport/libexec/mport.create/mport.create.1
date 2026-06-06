@@ -1,0 +1,147 @@
+.\"-
+.\" Copyright (c) 2026 Lucas Holt
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.Dd April 19, 2026
+.Dt MPORT.CREATE 1
+.Os
+.Sh NAME
+.Nm mport.create
+.Nd create an mport package bundle from package metadata and a plist
+.Sh SYNOPSIS
+.Nm
+.Fl n Ar name
+.Fl v Ar version
+.Fl o Ar output-file
+.Fl s Ar source-dir
+.Fl p Ar plist-file
+.Fl P Ar prefix
+.Fl O Ar origin
+.Fl t Ar categories
+.Op Fl c Ar comment
+.Op Fl f Ar flavor
+.Op Fl e Ar cpe
+.Op Fl l Ar language
+.Op Fl D Ar depends
+.Op Fl C Ar conflicts
+.Op Fl A Ar annotations
+.Op Fl d Ar pkg-descr
+.Op Fl i Ar pkg-install
+.Op Fl j Ar pkg-deinstall
+.Op Fl m Ar pkg-message
+.Op Fl M Ar mtree
+.Op Fl E Ar expiration-date
+.Op Fl S Ar no-provide-shlib
+.Op Fl L Ar lua-script-dir
+.Op Fl x Ar deprecated-message
+.Sh DESCRIPTION
+.Nm
+creates a
+.Pa .mport
+package bundle using metadata supplied on the command line, a plist file, and
+a source directory containing the packaged files.
+It is primarily a packaging helper used during package build workflows.
+.Pp
+The following arguments are required:
+.Bl -tag -width ".Fl O Ar origin"
+.It Fl n Ar name
+Package name.
+.It Fl v Ar version
+Package version.
+.It Fl o Ar output-file
+Output package filename.
+.It Fl s Ar source-dir
+Directory containing the packaged files, typically the fake destdir.
+.It Fl p Ar plist-file
+Packing list file to parse.
+.It Fl P Ar prefix
+Installation prefix recorded in the package metadata.
+.It Fl O Ar origin
+Package origin, such as
+.Dq editors/vim .
+.It Fl t Ar categories
+Comma-separated category list.
+.El
+.Pp
+The following optional arguments are supported:
+.Bl -tag -width ".Fl x Ar deprecated-message"
+.It Fl c Ar comment
+Short package comment.
+.It Fl f Ar flavor
+Package flavor.
+.It Fl e Ar cpe
+Package CPE identifier.
+.It Fl l Ar language
+Package language metadata.
+.It Fl D Ar depends
+Comma-separated dependency list.
+.It Fl C Ar conflicts
+Comma-separated conflict list.
+.It Fl A Ar annotations
+Comma-separated annotation list.
+.It Fl d Ar pkg-descr
+Path to the package description file.
+.It Fl i Ar pkg-install
+Path to the package install script.
+.It Fl j Ar pkg-deinstall
+Path to the package deinstall script.
+.It Fl m Ar pkg-message
+Path to the package message file.
+.It Fl M Ar mtree
+Path to the mtree file.
+.It Fl E Ar expiration-date
+Expiration date in
+.Dq YYYY-MM-DD
+format.
+.It Fl S Ar no-provide-shlib
+Control whether shared library provides are omitted.
+Truthy values include
+.Dq 1 ,
+.Dq y ,
+and
+.Dq t .
+.It Fl L Ar lua-script-dir
+Directory containing the Lua hook scripts
+.Pa pkg-pre-install.lua ,
+.Pa pkg-post-install.lua ,
+.Pa pkg-pre-deinstall.lua ,
+and
+.Pa pkg-post-deinstall.lua .
+.It Fl x Ar deprecated-message
+Deprecation message to record in the package metadata.
+.El
+.Sh EXAMPLES
+Create a package bundle from a fake destdir:
+.Dl $ mport.create -n hello -v 1.0 -o hello-1.0.mport -s work/stage -p pkg-plist -P /usr/local -O misc/hello -t misc
+.Pp
+Create a package with scripts and package message metadata:
+.Dl $ mport.create -n hello -v 1.0 -o hello-1.0.mport -s work/stage -p pkg-plist -P /usr/local -O misc/hello -t misc -i pkg-install -j pkg-deinstall -m pkg-message
+.Sh SEE ALSO
+.Xr mport 1 ,
+.Xr mport.install 1
+.Sh HISTORY
+The
+.Nm
+utility appeared in
+.Mx 0.3 .

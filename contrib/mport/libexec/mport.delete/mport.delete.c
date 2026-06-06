@@ -38,10 +38,13 @@
 
 static void usage(void);
 
-int main(int argc, char *argv[]) {
+int
+main(int argc, char *argv[])
+{
 	int ch, force;
 	mportInstance *mport;
-	mportPackageMeta **packs;
+	/*@only@*/ mportPackageMeta **packs = NULL;
+	/*@observer@*/ mportPackageMeta **packs_orig = NULL;
 	const char *arg = NULL, *where = NULL;
 	const char *chroot_path = NULL;
 
@@ -52,24 +55,24 @@ int main(int argc, char *argv[]) {
 
 	while ((ch = getopt(argc, argv, "c:fo:n:")) != -1) {
 		switch (ch) {
-			case 'c':
-				chroot_path = optarg;
-				break;
-			case 'f':
-				force = 1;
-				break;
-			case 'o':
-				where = "LOWER(origin)=LOWER(%Q)";
-				arg = optarg;
-				break;
-			case 'n':
-				where = "LOWER(pkg)=LOWER(%Q)";
-				arg = optarg;
-				break;
-			case '?':
-			default:
-				usage();
-				break;
+		case 'c':
+			chroot_path = optarg;
+			break;
+		case 'f':
+			force = 1;
+			break;
+		case 'o':
+			where = "LOWER(origin)=LOWER(%Q)";
+			arg = optarg;
+			break;
+		case 'n':
+			where = "LOWER(pkg)=LOWER(%Q)";
+			arg = optarg;
+			break;
+		case '?':
+		default:
+			usage();
+			break;
 		}
 	}
 
@@ -82,6 +85,9 @@ int main(int argc, char *argv[]) {
 	if (chroot_path != NULL) {
 		if (chroot(chroot_path) == -1) {
 			err(EXIT_FAILURE, "chroot failed");
+		}
+		if (chdir("/") == -1) {
+			err(EXIT_FAILURE, "chdir failed");
 		}
 	}
 
@@ -107,26 +113,28 @@ int main(int argc, char *argv[]) {
 		exit(3);
 	}
 
+	packs_orig = packs;
+
 	while (*packs != NULL) {
 		(*packs)->action = MPORT_ACTION_DELETE;
 		if (mport_delete_primative(mport, *packs, force) != MPORT_OK) {
 			warnx("%s", mport_err_string());
 			mport_instance_free(mport);
-			mport_pkgmeta_vec_free(packs);
+			mport_pkgmeta_vec_free(packs_orig);
 			exit(EXIT_FAILURE);
 		}
 		packs++;
 	}
 
 	mport_instance_free(mport);
-	mport_pkgmeta_vec_free(packs);
+	mport_pkgmeta_vec_free(packs_orig);
 
 	return (0);
 }
 
-
 static void
-usage(void) {
+usage(void)
+{
 	fprintf(stderr, "Usage: mport.delete [-f] [-c <chroot directory>] -n pkgname\n");
 	fprintf(stderr, "Usage: mport.delete [-f] [-c <chroot directory>] -o origin\n");
 	exit(2);

@@ -8,4 +8,6 @@ LIBADD+=	mport util
 
 BINDIR=	/usr/sbin
 
+.include "${.CURDIR}/../mk/sanitize.mk"
+
 .include <bsd.prog.mk>

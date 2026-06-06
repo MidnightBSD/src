@@ -36,16 +36,16 @@
 #include <stdlib.h>
 #include <errno.h>
 
-
 /*
- * Looks up dependencies list via pkgname and version from the index and fills with a vector of depends entries
- * with the result.
+ * Looks up dependencies list via pkgname and version from the index and fills with a vector of
+ * depends entries with the result.
  *
  * The calling code is responsible for freeing the memory allocated.  See
  * mport_index_depends_free_vec()
  */
 MPORT_PUBLIC_API int
-mport_index_depends_list(mportInstance *mport, const char *pkgname, const char *version, mportDependsEntry ***entry_vec)
+mport_index_depends_list(
+    mportInstance *mport, const char *pkgname, const char *version, mportDependsEntry ***entry_vec)
 {
 	int count, i = 0, step;
 	sqlite3_stmt *stmt = NULL;
@@ -53,64 +53,72 @@ mport_index_depends_list(mportInstance *mport, const char *pkgname, const char *
 	mportDependsEntry **e = NULL;
 
 	if (pkgname == NULL || version == NULL || entry_vec == NULL) {
-		RETURN_ERROR(MPORT_ERR_FATAL, "Invalid argument(s) passed to mport_index_depends_list()");
+		RETURN_ERROR(
+		    MPORT_ERR_FATAL, "Invalid argument(s) passed to mport_index_depends_list()");
 	}
-  
+
 	MPORT_CHECK_FOR_INDEX(mport, "mport_index_depends_list()")
 
 	if (mport_db_prepare(mport->db, &stmt,
-	    "SELECT COUNT(*) FROM idx.depends WHERE pkg = %Q and version = %Q",
-	    pkgname, version) != MPORT_OK) {
+		"SELECT COUNT(*) FROM idx.depends WHERE pkg = %Q and version = %Q", pkgname,
+		version) != MPORT_OK) {
 		sqlite3_finalize(stmt);
 		RETURN_CURRENT_ERROR;
 	}
- 
+
 	switch (sqlite3_step(stmt)) {
-		case SQLITE_ROW:
-			count = sqlite3_column_int(stmt, 0);
-			break;
-		case SQLITE_DONE:
-			ret = SET_ERROR(MPORT_ERR_FATAL,
-		    	"No rows returned from a 'SELECT COUNT(*)' query.");
-			goto DONE;
-		default:
-			ret = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-			goto DONE;
+	case SQLITE_ROW:
+		count = sqlite3_column_int(stmt, 0);
+		break;
+	case SQLITE_DONE:
+		ret =
+		    SET_ERROR(MPORT_ERR_FATAL, "No rows returned from a 'SELECT COUNT(*)' query.");
+		goto DONE;
+	default:
+		ret = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+		goto DONE;
 	}
-  
+
 	sqlite3_finalize(stmt);
-  
+
 	e = (mportDependsEntry **)calloc(count + 1, sizeof(mportDependsEntry *));
 	*entry_vec = e;
-  
-	if (count == 0)  {
+
+	if (count == 0) {
 		return (MPORT_OK);
 	}
-  
+
 	if (mport_db_prepare(mport->db, &stmt,
-	    "SELECT pkg, version, d_pkg, d_version FROM idx.depends WHERE pkg= %Q and version=%Q", pkgname, version) != MPORT_OK) {
+		"SELECT pkg, version, d_pkg, d_version FROM idx.depends WHERE pkg= %Q and version=%Q",
+		pkgname, version) != MPORT_OK) {
 		ret = mport_err_code();
 		goto DONE;
 	}
-  
+
 	while (1) {
 		step = sqlite3_step(stmt);
-    
+
 		if (step == SQLITE_ROW) {
-			if ((e[i] = (mportDependsEntry *)calloc(1, sizeof(mportDependsEntry))) == NULL) {
+			if ((e[i] = (mportDependsEntry *)calloc(1, sizeof(mportDependsEntry))) ==
+			    NULL) {
 				ret = MPORT_ERR_FATAL;
 				goto DONE;
 			}
-      
-			e[i]->pkgname    = strdup(sqlite3_column_text(stmt, 0));
-			e[i]->version    = strdup(sqlite3_column_text(stmt, 1));
-			e[i]->d_pkgname  = strdup(sqlite3_column_text(stmt, 2));
-			e[i]->d_version  = strdup(sqlite3_column_text(stmt, 3));
-      
-			if (e[i]->pkgname == NULL ||
-			    e[i]->version == NULL ||
-			    e[i]->d_pkgname == NULL ||
-			    e[i]->d_version == NULL) {
+
+			const unsigned char *pkgname = sqlite3_column_text(stmt, 0);
+			const unsigned char *version = sqlite3_column_text(stmt, 1);
+			const unsigned char *d_pkgname = sqlite3_column_text(stmt, 2);
+			const unsigned char *d_version = sqlite3_column_text(stmt, 3);
+
+			e[i]->pkgname = (pkgname == NULL) ? NULL : strdup((const char *)pkgname);
+			e[i]->version = (version == NULL) ? NULL : strdup((const char *)version);
+			e[i]->d_pkgname =
+			    (d_pkgname == NULL) ? NULL : strdup((const char *)d_pkgname);
+			e[i]->d_version =
+			    (d_version == NULL) ? NULL : strdup((const char *)d_version);
+
+			if (e[i]->pkgname == NULL || e[i]->version == NULL ||
+			    e[i]->d_pkgname == NULL || e[i]->d_version == NULL) {
 				ret = MPORT_ERR_FATAL;
 				goto DONE;
 			}
@@ -120,17 +128,15 @@ mport_index_depends_list(mportInstance *mport, const char *pkgname, const char *
 			e[i] = NULL;
 			goto DONE;
 		} else {
-			ret = SET_ERROR(MPORT_ERR_FATAL,
-			    sqlite3_errmsg(mport->db));
+			ret = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
 			goto DONE;
 		}
 	}
-      
+
 DONE:
 	sqlite3_finalize(stmt);
-	return ret; 
+	return ret;
 }
-
 
 /* free a vector of mportDependsEntry structs */
 MPORT_PUBLIC_API void
@@ -141,7 +147,7 @@ mport_index_depends_free_vec(mportDependsEntry **depends)
 	if (depends == NULL) {
 		return;
 	}
-  
+
 	while (*depends != NULL) {
 		mport_index_depends_free(*depends);
 		depends++;
@@ -152,10 +158,9 @@ mport_index_depends_free_vec(mportDependsEntry **depends)
 	depends = NULL;
 }
 
-
 /* free a mportDependsEntry struct */
 MPORT_PUBLIC_API void
-mport_index_depends_free(mportDependsEntry *e) 
+mport_index_depends_free(mportDependsEntry *e)
 {
 	if (e == NULL) {
 		return;

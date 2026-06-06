@@ -41,10 +41,11 @@
 static void usage(void);
 
 int
-main(int argc, char *argv[]) {
+main(int argc, char *argv[])
+{
 	int ch;
 	mportInstance *mport;
-	mportPackageMeta **packs;
+	/*@only@*/ mportPackageMeta **packs;
 	bool quiet = false;
 	bool verbose = false;
 	bool origin = false;
@@ -53,26 +54,26 @@ main(int argc, char *argv[]) {
 
 	while ((ch = getopt(argc, argv, "c:oqvx")) != -1) {
 		switch (ch) {
-			case 'c':
-				chroot_path = optarg;
-				break;
-			case 'o':
-				origin = true;
-				break;
-			case 'q':
-				quiet = true;
-				break;
-			case 'v':
-				verbose = true;
-				break;
-			case 'x':
-			    xFlag = true;
-				quiet = true;
-				break;
-			case '?':
-			default:
-				usage();
-				break;
+		case 'c':
+			chroot_path = optarg;
+			break;
+		case 'o':
+			origin = true;
+			break;
+		case 'q':
+			quiet = true;
+			break;
+		case 'v':
+			verbose = true;
+			break;
+		case 'x':
+			xFlag = true;
+			quiet = true;
+			break;
+		case '?':
+		default:
+			usage();
+			break;
 		}
 	}
 
@@ -88,11 +89,15 @@ main(int argc, char *argv[]) {
 		if (chroot(chroot_path) == -1) {
 			err(EXIT_FAILURE, "chroot failed");
 		}
+		if (chdir("/") == -1) {
+			err(EXIT_FAILURE, "chdir failed");
+		}
 	}
 
 	mport = mport_instance_new();
 
-	if (mport_instance_init(mport, NULL, NULL, false, mport_verbosity(quiet, verbose, false)) != MPORT_OK) {
+	if (mport_instance_init(mport, NULL, NULL, false, mport_verbosity(quiet, verbose, false)) !=
+	    MPORT_OK) {
 		warnx("%s", mport_err_string());
 		mport_instance_free(mport);
 		exit(EXIT_FAILURE);
@@ -120,15 +125,15 @@ main(int argc, char *argv[]) {
 				printf("%s-%s\n", (*packs)->name, (*packs)->version);
 			} else {
 				printf("%s-%s\t\t%s\n", (*packs)->name, (*packs)->version,
-				       (*packs)->origin);
+				    (*packs)->origin);
 			}
 		} else if (strcmp(argv[0], (*packs)->name) == 0) {
 			if (xFlag) {
 				printf("%s-%s\n", (*packs)->name, (*packs)->version);
 			} else {
-                printf("%s-%s\t\t%s\n", (*packs)->name, (*packs)->version,
-                       (*packs)->origin);
-            }
+				printf("%s-%s\t\t%s\n", (*packs)->name, (*packs)->version,
+				    (*packs)->origin);
+			}
 		}
 
 		packs++;
@@ -139,9 +144,9 @@ main(int argc, char *argv[]) {
 	return 0;
 }
 
-
 static void
-usage(void) {
+usage(void)
+{
 	fprintf(stderr, "Usage: mport.info [-o | -q | -v | -x] [-c <chroot directory>] <origin>\n");
 	exit(2);
 }

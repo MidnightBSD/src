@@ -1,0 +1,147 @@
+#! /usr/libexec/atf-sh
+
+atf_test_case creates_package
+creates_package_head()
+{
+	atf_set "descr" "mport.create creates a package from a staged file and plist"
+}
+creates_package_body()
+{
+	setup_tree
+
+	atf_check \
+		-s exit:0 \
+		-o empty \
+		-e empty \
+		"${MPORT_CREATE}" \
+		-n testpkg \
+		-v 1.0 \
+		-o "${PWD}/testpkg-1.0.mport" \
+		-s "${PWD}/root" \
+		-p "${PWD}/plist" \
+		-P /usr/local \
+		-O misc/testpkg \
+		-t misc \
+		-c "test package"
+
+	atf_check -s exit:0 test -s "${PWD}/testpkg-1.0.mport"
+}
+
+atf_test_case rejects_invalid_expiration_date
+rejects_invalid_expiration_date_head()
+{
+	atf_set "descr" "mport.create rejects invalid -E expiration dates"
+}
+rejects_invalid_expiration_date_body()
+{
+	setup_tree
+
+	atf_check \
+		-s not-exit:0 \
+		-o empty \
+		-e match:"Invalid expiration date" \
+		"${MPORT_CREATE}" \
+		-n testpkg \
+		-v 1.0 \
+		-o "${PWD}/testpkg-1.0.mport" \
+		-s "${PWD}/root" \
+		-p "${PWD}/plist" \
+		-P /usr/local \
+		-O misc/testpkg \
+		-t misc \
+		-c "test package" \
+		-E not-a-date
+}
+
+atf_test_case rejects_long_output_path
+rejects_long_output_path_head()
+{
+	atf_set "descr" "mport.create rejects overlong -o values instead of truncating them"
+}
+rejects_long_output_path_body()
+{
+	setup_tree
+
+	long_name=
+	i=0
+	while [ "${i}" -lt 1200 ]; do
+		long_name="${long_name}x"
+		i=$((i + 1))
+	done
+
+	atf_check \
+		-s not-exit:0 \
+		-o empty \
+		-e match:"package filename is too long" \
+		"${MPORT_CREATE}" \
+		-n testpkg \
+		-v 1.0 \
+		-o "${PWD}/${long_name}.mport" \
+		-s "${PWD}/root" \
+		-p "${PWD}/plist" \
+		-P /usr/local \
+		-O misc/testpkg \
+		-t misc \
+		-c "test package"
+}
+
+atf_test_case rejects_bad_tmpdir
+rejects_bad_tmpdir_head()
+{
+	atf_set "descr" "mport.create fails cleanly when TMPDIR cannot be used"
+}
+rejects_bad_tmpdir_body()
+{
+	setup_tree
+
+	atf_check \
+		-s not-exit:0 \
+		-o empty \
+		-e match:"No such file or directory" \
+		env TMPDIR="${PWD}/missing" "${MPORT_CREATE}" \
+		-n testpkg \
+		-v 1.0 \
+		-o "${PWD}/testpkg-1.0.mport" \
+		-s "${PWD}/root" \
+		-p "${PWD}/plist" \
+		-P /usr/local \
+		-O misc/testpkg \
+		-t misc \
+		-c "test package"
+}
+
+atf_test_case mport_version_runs
+mport_version_runs_head()
+{
+	atf_set "descr" "mport frontend can print its version"
+}
+mport_version_runs_body()
+{
+	atf_check \
+		-s exit:0 \
+		-o empty \
+		-e match:"^[0-9]+\\.[0-9]+\\.[0-9]+" \
+		"${MPORT}" -v
+}
+
+setup_tree()
+{
+	mkdir -p root/usr/local/share/testpkg
+	printf "hello\n" >root/usr/local/share/testpkg/file.txt
+	printf "share/testpkg/file.txt\n" >plist
+}
+
+atf_init_test_cases()
+{
+	srcdir=$(atf_get_srcdir)
+	: "${MPORT_CREATE:=${srcdir}/../libexec/mport.create/mport.create}"
+	: "${MPORT:=${srcdir}/../mport/mport}"
+	: "${LD_LIBRARY_PATH:=${srcdir}/../libmport}"
+	export MPORT_CREATE MPORT LD_LIBRARY_PATH
+
+	atf_add_test_case creates_package
+	atf_add_test_case rejects_invalid_expiration_date
+	atf_add_test_case rejects_long_output_path
+	atf_add_test_case rejects_bad_tmpdir
+	atf_add_test_case mport_version_runs
+}

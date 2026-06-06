@@ -31,37 +31,42 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <err.h>
+#include <locale.h>
 #include <sysexits.h>
 #include <string.h>
 #include <unistd.h>
 #include <getopt.h>
 #include <mport.h>
 
-
 static void usage(void);
 
-int main(int argc, char *argv[]) {
+int
+main(int argc, char *argv[])
+{
 	int ch, i;
 	const char *outfile = NULL;
-	const char **inputfiles;
+	/*@only@*/ char **owned_inputfiles;
+	/*@only@*/ const char **inputfiles;
 	mportInstance *mport;
 	const char *chroot_path = NULL;
+
+	(void)setlocale(LC_ALL, "");
 
 	if (argc == 1)
 		usage();
 
 	while ((ch = getopt(argc, argv, "c:o:")) != -1) {
 		switch (ch) {
-			case 'c':
-				chroot_path = optarg;
-				break;
-			case 'o':
-				outfile = optarg;
-				break;
-			case '?':
-			default:
-				usage();
-				break;
+		case 'c':
+			chroot_path = optarg;
+			break;
+		case 'o':
+			outfile = optarg;
+			break;
+		case '?':
+		default:
+			usage();
+			break;
 		}
 	}
 
@@ -75,37 +80,48 @@ int main(int argc, char *argv[]) {
 		if (chroot(chroot_path) == -1) {
 			err(EXIT_FAILURE, "chroot failed");
 		}
+		if (chdir("/") == -1) {
+			err(EXIT_FAILURE, "chdir failed");
+		}
 	}
 
 	mport = mport_instance_new();
 	if (mport_instance_init(mport, NULL, NULL, false, false) != MPORT_OK) {
 		warnx("%s", mport_err_string());
-		mport_instance_free(mport); 
+		mport_instance_free(mport);
 		exit(EXIT_FAILURE);
 	}
 
-	if ((inputfiles = (const char **) malloc((argc + 1) * sizeof(char **))) == NULL)
+	if ((owned_inputfiles = malloc((argc + 1) * sizeof(*owned_inputfiles))) == NULL)
+		err(EX_OSERR, "Couldn't allocate input array");
+	if ((inputfiles = malloc((argc + 1) * sizeof(*inputfiles))) == NULL)
 		err(EX_OSERR, "Couldn't allocate input array");
 
 	for (i = 0; i < argc; i++) {
-		if ((inputfiles[i] = strdup(argv[i])) == NULL)
+		if ((owned_inputfiles[i] = strdup(argv[i])) == NULL)
 			err(EX_OSERR, "Couldn't allocate input filename");
+		inputfiles[i] = owned_inputfiles[i];
 	}
 
+	owned_inputfiles[i] = NULL;
 	inputfiles[i] = NULL;
 
-	if (mport_merge_primative(mport, (const char **) inputfiles, outfile) != MPORT_OK)
+	if (mport_merge_primative(mport, inputfiles, outfile) != MPORT_OK)
 		errx(EX_SOFTWARE, "Could not merge package files: %s", mport_err_string());
 
-	mport_instance_free(mport); 
+	mport_instance_free(mport);
+	for (i = 0; owned_inputfiles[i] != NULL; i++)
+		free(owned_inputfiles[i]);
+	free(owned_inputfiles);
 	free(inputfiles);
 
 	return 0;
 }
 
-
 static void
-usage(void) {
-	fprintf(stderr, "Usage: mport.merge -c <chroot path> -o <outputfilename> <pkgfile1> <pkgfile2> ...\n");
+usage(void)
+{
+	fprintf(stderr,
+	    "Usage: mport.merge -c <chroot path> -o <outputfilename> <pkgfile1> <pkgfile2> ...\n");
 	exit(2);
 }
