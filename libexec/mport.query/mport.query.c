@@ -37,15 +37,17 @@
 
 #define MAX_WHERE_LEN 1024
 
-static char *build_where(int, char **);
+static /*@only@*/ char *build_where(int, /*@notnull@*/ char **);
 
 static void usage(void);
 
-int main(int argc, char *argv[]) {
+int
+main(int argc, char *argv[])
+{
 	int ch;
 	mportInstance *mport;
-	mportPackageMeta **packs;
-	char *where;
+	/*@only@*/ mportPackageMeta **packs;
+	/*@only@*/ char *where;
 	int quiet = 0;
 	int origin = 0;
 	const char *chroot_path = NULL;
@@ -55,34 +57,41 @@ int main(int argc, char *argv[]) {
 
 	while ((ch = getopt(argc, argv, "c:oq")) != -1) {
 		switch (ch) {
-			case 'c':
-				chroot_path = optarg;
-				break;
-			case 'o':
-				origin = 1;
-				break;
-			case 'q':
-				quiet = 1;
-				break;
-			case '?':
-			default:
-				usage();
-				break;
+		case 'c':
+			chroot_path = optarg;
+			break;
+		case 'o':
+			origin = 1;
+			break;
+		case 'q':
+			quiet = 1;
+			break;
+		case '?':
+		default:
+			usage();
+			break;
 		}
 	}
 
 	argc -= optind;
 	argv += optind;
 
+	if (argc == 0)
+		usage();
+
 	if (chroot_path != NULL) {
 		if (chroot(chroot_path) == -1) {
 			err(EXIT_FAILURE, "chroot failed");
+		}
+		if (chdir("/") == -1) {
+			err(EXIT_FAILURE, "chdir failed");
 		}
 	}
 
 	mport = mport_instance_new();
 
-	if (mport_instance_init(mport, NULL, NULL, false, quiet ? MPORT_VQUIET : MPORT_VNORMAL) != MPORT_OK) {
+	if (mport_instance_init(mport, NULL, NULL, false, quiet ? MPORT_VQUIET : MPORT_VNORMAL) !=
+	    MPORT_OK) {
 		warnx("%s", mport_err_string());
 		mport_instance_free(mport);
 		exit(EXIT_FAILURE);
@@ -111,7 +120,7 @@ int main(int argc, char *argv[]) {
 		} else if (mport->verbosity != MPORT_VQUIET) {
 			if (origin) {
 				printf("%s-%s\t\t%s\n", (*packs)->name, (*packs)->version,
-				       (*packs)->origin);
+				    (*packs)->origin);
 			} else {
 				printf("%s-%s\n", (*packs)->name, (*packs)->version);
 			}
@@ -125,24 +134,33 @@ int main(int argc, char *argv[]) {
 	return 0;
 }
 
-
 static void
-usage(void) {
+usage(void)
+{
 	fprintf(stderr, "Usage: mport.query [-oq] [-c <chroot directory>] <query statement>\n");
 	exit(2);
 }
 
-
-static char *
-build_where(int argc, char **argv) {
+static /*@only@*/ char *
+build_where(int argc, /*@notnull@*/ char **argv)
+/*@requires argc > 0 @*/
+{
 	char *arg, *column, *clause = NULL;
-	char *where = (char *) malloc(sizeof(char) * (MAX_WHERE_LEN));
+	char *where = (char *)malloc(sizeof(char) * (MAX_WHERE_LEN));
 	char op[3];
 	int started = 0, i;
 	size_t cur;
 
+	if (where == NULL)
+		errx(EXIT_FAILURE, "Out of memory");
+
+	/* cppcheck-suppress nullPointerOutOfMemory */
+	where[0] = '\0';
+
 	for (i = 0; i < argc; i++) {
 		column = arg = argv[i];
+		if (arg == NULL)
+			usage();
 
 		if ((cur = strcspn(arg, "=><")) == strlen(arg)) {
 			warnx("No op for arg: %s", arg);
@@ -183,6 +201,8 @@ build_where(int argc, char **argv) {
 		} else {
 			usage();
 		}
+		if (clause == NULL)
+			errx(EXIT_FAILURE, "Out of memory");
 
 		if (started == 0) {
 			strlcpy(where, clause, MAX_WHERE_LEN);
@@ -197,4 +217,3 @@ build_where(int argc, char **argv) {
 
 	return where;
 }
-

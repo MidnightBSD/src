@@ -102,10 +102,14 @@ main(int argc, char *argv[])
 		if (chroot(chroot_path) == -1) {
 			err(EXIT_FAILURE, "chroot failed");
 		}
+		if (chdir("/") == -1) {
+			err(EXIT_FAILURE, "chdir failed");
+		}
 	}
 
 	mport = mport_instance_new();
-	if (mport_instance_init(mport, NULL, NULL, noIndex, mport_verbosity(quiet, verbose, brief)) != MPORT_OK) {
+	if (mport_instance_init(
+		mport, NULL, NULL, noIndex, mport_verbosity(quiet, verbose, brief)) != MPORT_OK) {
 		warnx("%s", mport_err_string());
 		exit(EXIT_FAILURE);
 	}
@@ -126,18 +130,18 @@ usage(void)
 {
 	fprintf(stderr, "Usage: mport.list [OPTIONS]\n");
 	fprintf(stderr, "Options:\n");
-    fprintf(stderr, "  -b         Brief output format\n");
-    fprintf(stderr, "  -c <path>  Set chroot path\n");
-    fprintf(stderr, "  -l         List locked packages\n");
-    fprintf(stderr, "  -o         Show package origins\n");
-    fprintf(stderr, "  -p         List prime packages only\n");
-    fprintf(stderr, "  -q         Quiet mode\n");
-    fprintf(stderr, "  -v         Verbose mode\n");
-    fprintf(stderr, "  -u         Show available updates\n");
-    fprintf(stderr, "  -U         Do not use index for update information\n");
-    fprintf(stderr, "\nExamples:\n");
-    fprintf(stderr, "  mport.list -v            # List all packages verbosely\n");
-    fprintf(stderr, "  mport.list -q -u         # Quietly list available updates\n");
- 
+	fprintf(stderr, "  -b         Brief output format\n");
+	fprintf(stderr, "  -c <path>  Set chroot path\n");
+	fprintf(stderr, "  -l         List locked packages\n");
+	fprintf(stderr, "  -o         Show package origins\n");
+	fprintf(stderr, "  -p         List prime packages only\n");
+	fprintf(stderr, "  -q         Quiet mode\n");
+	fprintf(stderr, "  -v         Verbose mode\n");
+	fprintf(stderr, "  -u         Show available updates\n");
+	fprintf(stderr, "  -U         Do not use index for update information\n");
+	fprintf(stderr, "\nExamples:\n");
+	fprintf(stderr, "  mport.list -v            # List all packages verbosely\n");
+	fprintf(stderr, "  mport.list -q -u         # Quietly list available updates\n");
+
 	exit(2);
 }

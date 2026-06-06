@@ -23,6 +23,8 @@ MK_PROFILE=no
 
 LIBADD=	md archive lzma z elf fetch sqlite3 ucl pthread util zstd
 
-LDFLAGS+=	-lmd -larchive -llzma -lz -lelf -lfetch -lsqlite3 -lpthread -lprivateucl -lutil -lprivatezstd -l:liblua.a -L ${.CURDIR}/../liblua 
+LDFLAGS+=	-lmd -larchive -llzma -lz -lelf -lfetch -lsqlite3 -lpthread -lprivateucl -lutil -lprivatezstd -l:liblua.a -L ${.CURDIR}/../liblua
+
+.include "${.CURDIR}/../mk/sanitize.mk"
 
 .include <bsd.lib.mk>

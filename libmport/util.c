@@ -56,8 +56,11 @@
 #include "mport.h"
 #include "mport_private.h"
 
+extern char **environ;
+
 static char *mport_get_osrelease_userland(void);
 static char *mport_get_osrelease_kern(void);
+static int mport_exec_command(mportInstance *, const char *, char *const[], bool);
 
 /* these two aren't really utilities, but there's no better place to put them */
 MPORT_PUBLIC_API mportCreateExtras *
@@ -71,7 +74,7 @@ mport_createextras_new(void)
 	extra->pkg_filename[0] = '\0';
 	extra->sourcedir[0] = '\0';
 	extra->mtree = NULL;
-	
+
 	extra->pkginstall = NULL;
 	extra->pkgdeinstall = NULL;
 	extra->luapkgpostdeinstall = NULL;
@@ -155,48 +158,46 @@ mport_verify_hash(const char *filename, const char *hash)
 	return 0;
 }
 
-char* 
+char *
 mport_extract_hash_from_file(const char *filename)
 {
 
-    FILE *file = fopen(filename, "r");
-    if (!file) {
-        perror("Failed to open file");
-        return NULL;
-    }
+	FILE *file = fopen(filename, "r");
+	if (!file) {
+		perror("Failed to open file");
+		return NULL;
+	}
 
-    char *hash = calloc(65, sizeof(char)); // SHA256 hash is 64 characters + null terminator
-    if (!hash) {
-        perror("Failed to allocate memory");
-        fclose(file);
-        return NULL;
-    }
+	char *hash = calloc(65, sizeof(char)); // SHA256 hash is 64 characters + null terminator
+	if (!hash) {
+		perror("Failed to allocate memory");
+		fclose(file);
+		return NULL;
+	}
 
-    char buffer[256];
-    if (fgets(buffer, sizeof(buffer), file) == NULL) {
-        perror("Failed to read hash from file");
-        free(hash);
-        fclose(file);
-        return NULL;
-    }
+	char buffer[256];
+	if (fgets(buffer, sizeof(buffer), file) == NULL) {
+		perror("Failed to read hash from file");
+		free(hash);
+		fclose(file);
+		return NULL;
+	}
 
-    fclose(file);
+	fclose(file);
 
-    // Extract the hash from the format "SHA256 (index.db.zst) = <hash>"
-    char *hash_start = strchr(buffer, '=');
-    if (hash_start == NULL) {
-        perror("Invalid hash format");
-        free(hash);
-        return NULL;
-    }
+	// Extract the hash from the format "SHA256 (index.db.zst) = <hash>"
+	char *hash_start = strchr(buffer, '=');
+	if (hash_start == NULL) {
+		perror("Invalid hash format");
+		free(hash);
+		return NULL;
+	}
 
-    hash_start += 2; // Skip the "= " part
-    strlcpy(hash, hash_start, 65);
+	hash_start += 2; // Skip the "= " part
+	strlcpy(hash, hash_start, 65);
 
-    return hash;
+	return hash;
 }
-
-
 
 bool
 mport_starts_with(const char *pre, const char *str)
@@ -272,14 +273,15 @@ mport_chdir(mportInstance *mport, const char *dir)
 	return (MPORT_OK);
 }
 
-static int unlink_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
+static int
+unlink_cb(const char *fpath, const struct stat *sb, int typeflag, struct FTW *ftwbuf)
 {
-    int rv = remove(fpath);
+	int rv = remove(fpath);
 
-    if (rv)
-        perror(fpath);
+	if (rv)
+		perror(fpath);
 
-    return rv;
+	return rv;
 }
 
 /* deletes the entire directory tree at filename.
@@ -290,7 +292,7 @@ mport_rmtree(const char *filename)
 {
 	int ret = nftw(filename, unlink_cb, 64, FTW_DEPTH | FTW_MOUNT | FTW_PHYS | FTW_CHDIR);
 
-	if (ret!= 0)
+	if (ret != 0)
 		RETURN_ERROR(MPORT_ERR_FATAL, "Error removing directory tree");
 	return MPORT_OK;
 }
@@ -326,24 +328,25 @@ mport_copy_file(const char *fromName, const char *toName)
 	return (MPORT_OK);
 }
 
-
 int
 mport_copy_fd(int from_fd, int to_fd)
 {
-    char buf[BUFSIZ];
-    ssize_t size;
+	char buf[BUFSIZ];
+	ssize_t size;
 
-    while ((size = read(from_fd, buf, BUFSIZ)) > 0) {
-        if (write(to_fd, buf, size) != size) {
-            RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't write to destination file descriptor: %s", strerror(errno));
-        }
-    }
+	while ((size = read(from_fd, buf, BUFSIZ)) > 0) {
+		if (write(to_fd, buf, size) != size) {
+			RETURN_ERRORX(MPORT_ERR_FATAL,
+			    "Couldn't write to destination file descriptor: %s", strerror(errno));
+		}
+	}
 
-    if (size < 0) {
-        RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't read from source file descriptor: %s", strerror(errno));
-    }
+	if (size < 0) {
+		RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't read from source file descriptor: %s",
+		    strerror(errno));
+	}
 
-    return (MPORT_OK);
+	return (MPORT_OK);
 }
 
 /*
@@ -376,8 +379,9 @@ mport_rmdir(const char *dir, int ignore_nonempty)
 		if (ignore_nonempty && (errno == ENOTEMPTY || errno == ENOENT)) {
 			return (MPORT_OK);
 		} else {
-			RETURN_ERRORX(
-			    MPORT_ERR_FATAL, "Couldn't rmdir %s: %s. With ZFS, this could indicate a snapshot is blocking removal.", dir, strerror(errno));
+			RETURN_ERRORX(MPORT_ERR_FATAL,
+			    "Couldn't rmdir %s: %s. With ZFS, this could indicate a snapshot is blocking removal.",
+			    dir, strerror(errno));
 		}
 	}
 
@@ -386,25 +390,29 @@ mport_rmdir(const char *dir, int ignore_nonempty)
 
 /**
  * @brief remove all flags from a directory rooted at root
- * 
- * @param root 
- * @param dir 
- * @return int 
+ *
+ * @param root
+ * @param dir
+ * @return int
  */
-int mport_removeflags(const char *root, const char *dir) {
+int
+mport_removeflags(const char *root, const char *dir)
+{
 	struct stat st;
 	int statresult;
-	
+
 	int rootfd = open(root, O_RDONLY | O_DIRECTORY);
 
 	if (mport_starts_with(root, dir)) {
 		statresult = lstat(dir, &st);
 	} else {
 		statresult = fstatat(rootfd, dir, &st, AT_SYMLINK_NOFOLLOW);
-	} 
+	}
 
 	if (statresult != -1) {
-		if (st.st_flags & (UF_IMMUTABLE | UF_APPEND | UF_NOUNLINK | SF_IMMUTABLE | SF_APPEND | SF_NOUNLINK)) {
+		if (st.st_flags &
+		    (UF_IMMUTABLE | UF_APPEND | UF_NOUNLINK | SF_IMMUTABLE | SF_APPEND |
+			SF_NOUNLINK)) {
 			/* Disable all flags*/
 			chflagsat(rootfd, dir, 0, AT_SYMLINK_NOFOLLOW);
 		}
@@ -416,8 +424,8 @@ int mport_removeflags(const char *root, const char *dir) {
 }
 
 /**
- * @brief register a new user shell 
- * 
+ * @brief register a new user shell
+ *
  * @param shell_file path to shell file
  * @return int MPORT_OK on success, MPORT_ERR_FATAL on failure
  */
@@ -444,35 +452,34 @@ mport_shell_unregister(const char *shell_file)
 	if (shell_file == NULL)
 		RETURN_ERROR(MPORT_ERR_FATAL, "Shell to unregister is invalid.");
 
-	return mport_xsystem(NULL,
-	    "/usr/bin/grep -v %s %s > %s.bak && mv %s.bak %s",
-	    shell_file, _PATH_SHELLS, _PATH_SHELLS, _PATH_SHELLS, _PATH_SHELLS);
+	return mport_xsystem(NULL, "/usr/bin/grep -v %s %s > %s.bak && mv %s.bak %s", shell_file,
+	    _PATH_SHELLS, _PATH_SHELLS, _PATH_SHELLS, _PATH_SHELLS);
 }
 
 /**
  * @brief Remove a character from a string
- * 
- * @param str 
- * @param ch 
+ *
+ * @param str
+ * @param ch
  * @return char* (must be freed)
  */
-char * 
+char *
 mport_str_remove(const char *str, const char ch)
 {
 	size_t i;
 	size_t x;
 	size_t len;
 	char *output = NULL;
-	
+
 	if (str == NULL)
 		return NULL;
-	
+
 	len = strlen(str);
-	
+
 	output = calloc(len + 1, sizeof(char));
 	if (output == NULL)
 		return NULL;
-	
+
 	for (i = 0, x = 0; i <= len; i++) {
 		if (str[i] != ch) {
 			output[x] = str[i];
@@ -480,9 +487,9 @@ mport_str_remove(const char *str, const char ch)
 		}
 	}
 	output[len] = '\0';
-	
+
 	return (output);
-} 
+}
 
 /*
  * Quick test to see if a file exists.
@@ -498,6 +505,8 @@ mport_file_exists(const char *file)
 char *
 mport_directory(const char *path)
 {
+	if (path == NULL)
+		return NULL;
 
 	if (path[0] == '/') {
 		// 'path' is a full path, so we can extract the directory directly
@@ -510,22 +519,23 @@ mport_directory(const char *path)
 			return dir;
 		} else {
 			free(dir);
-			dir = NULL;
+			return NULL;
 		}
 	} else {
 		// 'path' is just a filename, so get the current working directory
 		char currentDir[PATH_MAX];
 		if (getcwd(currentDir, sizeof(currentDir)) != NULL) {
-			// Construct the full path by appending the filename
-			strcat(currentDir, "/");
-			strcat(currentDir, path);
+			char *fullPath = NULL;
+			if (asprintf(&fullPath, "%s/%s", currentDir, path) == -1)
+				return NULL;
 
-			char *lastSlash = strrchr(currentDir, '/');
+			char *lastSlash = strrchr(fullPath, '/');
 			if (lastSlash != NULL) {
-				*lastSlash = '\0'; // Null-terminate at the last slash to get the directory
+				*lastSlash =
+				    '\0'; // Null-terminate at the last slash to get the directory
 			}
 
-			return strdup(currentDir);
+			return fullPath;
 		}
 	}
 
@@ -540,6 +550,174 @@ mport_directory(const char *path)
  * If mport is non-NULL and has a root set, your command will run
  * chroot'ed into mport->root.
  */
+int
+mport_exec_linux_ldconfig(mportInstance *mport, const char *prefix)
+{
+	char *path;
+	char *argv[2];
+
+	if (prefix == NULL) {
+		path = strdup("/compat/linux/sbin/ldconfig");
+	} else {
+		if (asprintf(&path, "%s/sbin/ldconfig", prefix) == -1)
+			path = NULL;
+	}
+
+	if (path == NULL)
+		RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't allocate ldconfig path.");
+
+	argv[0] = path;
+	argv[1] = NULL;
+
+	int ret = mport_exec_command(mport, path, argv, false);
+	free(path);
+
+	return ret;
+}
+
+int
+mport_exec_glib_compile_schemas(mportInstance *mport, const char *prefix)
+{
+	char *schema_dir;
+	char *argv[3];
+
+	if (prefix == NULL)
+		RETURN_ERROR(MPORT_ERR_FATAL, "Schema prefix is undefined.");
+
+	if (asprintf(&schema_dir, "%s/share/glib-2.0/schemas", prefix) == -1)
+		RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't allocate schemas path.");
+
+	argv[0] = "/usr/local/bin/glib-compile-schemas";
+	argv[1] = schema_dir;
+	argv[2] = NULL;
+
+	int ret = mport_exec_command(mport, argv[0], argv, true);
+	free(schema_dir);
+
+	return ret;
+}
+
+int
+mport_exec_indexinfo(mportInstance *mport, const char *info_dir)
+{
+	char *argv[3];
+
+	if (info_dir == NULL)
+		RETURN_ERROR(MPORT_ERR_FATAL, "Info directory is undefined.");
+
+	argv[0] = "/usr/local/bin/indexinfo";
+	argv[1] = (char *)info_dir;
+	argv[2] = NULL;
+
+	return mport_exec_command(mport, argv[0], argv, false);
+}
+
+int
+mport_exec_kldxref(mportInstance *mport, const char *file)
+{
+	char *argv[3];
+
+	if (file == NULL)
+		RETURN_ERROR(MPORT_ERR_FATAL, "kldxref path is undefined.");
+
+	argv[0] = "/usr/sbin/kldxref";
+	argv[1] = (char *)file;
+	argv[2] = NULL;
+
+	return mport_exec_command(mport, argv[0], argv, false);
+}
+
+static int
+mport_exec_command(mportInstance *mport, const char *path, char *const argv[], bool quiet)
+{
+	posix_spawn_file_actions_t action;
+	pid_t pid;
+	int error;
+	int pstat;
+	int devnull = -1;
+	size_t argc = 0;
+	char **spawn_argv = NULL;
+	char *const *run_argv = argv;
+	const char *run_path = path;
+
+	while (argv[argc] != NULL)
+		argc++;
+
+	if (mport != NULL && *(mport->root) != '\0') {
+		spawn_argv = calloc(argc + 3, sizeof(char *));
+		if (spawn_argv == NULL)
+			RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't allocate command argv.");
+
+		spawn_argv[0] = MPORT_CHROOT_BIN;
+		spawn_argv[1] = mport->root;
+		for (size_t i = 0; i < argc; i++)
+			spawn_argv[i + 2] = argv[i];
+
+		run_argv = spawn_argv;
+		run_path = MPORT_CHROOT_BIN;
+	}
+
+	if ((error = posix_spawn_file_actions_init(&action)) != 0) {
+		free(spawn_argv);
+		errno = error;
+		RETURN_ERRORX(
+		    MPORT_ERR_FATAL, "Couldn't initialize spawn actions: %s", strerror(errno));
+	}
+
+	if (quiet) {
+		devnull = open("/dev/null", O_WRONLY);
+		if (devnull < 0) {
+			posix_spawn_file_actions_destroy(&action);
+			free(spawn_argv);
+			RETURN_ERRORX(
+			    MPORT_ERR_FATAL, "Couldn't open /dev/null: %s", strerror(errno));
+		}
+
+		if ((error = posix_spawn_file_actions_adddup2(&action, devnull, STDOUT_FILENO)) !=
+			0 ||
+		    (error = posix_spawn_file_actions_adddup2(&action, devnull, STDERR_FILENO)) !=
+			0) {
+			close(devnull);
+			posix_spawn_file_actions_destroy(&action);
+			free(spawn_argv);
+			errno = error;
+			RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't redirect command output: %s",
+			    strerror(errno));
+		}
+	}
+
+	error = posix_spawn(&pid, run_path, &action, NULL, run_argv, environ);
+
+	if (devnull >= 0)
+		close(devnull);
+
+	posix_spawn_file_actions_destroy(&action);
+
+	if (error != 0) {
+		free(spawn_argv);
+		errno = error;
+		RETURN_ERRORX(
+		    MPORT_ERR_FATAL, "Couldn't execute %s: %s", run_path, strerror(errno));
+	}
+
+	while (waitpid(pid, &pstat, 0) == -1) {
+		if (errno != EINTR) {
+			free(spawn_argv);
+			RETURN_ERRORX(MPORT_ERR_FATAL, "waitpid failed: %s", strerror(errno));
+		}
+	}
+
+	free(spawn_argv);
+
+	if (WIFSIGNALED(pstat) && (WTERMSIG(pstat) == SIGINT || WTERMSIG(pstat) == SIGQUIT))
+		RETURN_ERROR(MPORT_ERR_FATAL, "SIGINT or SIGQUIT while running command.");
+
+	if (WIFEXITED(pstat))
+		return MPORT_OK;
+
+	RETURN_ERROR(MPORT_ERR_FATAL, "Error executing command");
+}
+
 int
 mport_xsystem(mportInstance *mport, const char *fmt, ...)
 {
@@ -656,6 +834,8 @@ mport_parselist(char *opt, char ***list, size_t *list_size)
 			continue;
 
 		*vec = strdup(field);
+		if (*vec == NULL)
+			break;
 		loc++;
 		vec++;
 	}
@@ -705,7 +885,6 @@ mport_parselist_tll(char *opt, stringlist_t *list)
 	free(input);
 	input = NULL;
 }
-
 
 /*
  * mport_run_asset_exec(fmt, cwd, last_file)
@@ -808,94 +987,122 @@ mport_run_asset_exec(mportInstance *mport, const char *fmt, const char *cwd, con
 void
 mport_free_vec(void *vec)
 {
-	char *p = NULL;
-
 	if (vec == NULL)
 		return;
 
-	p = (char *)*(char **)vec;
+	char **cur = (char **)vec;
 
-	while (p != NULL) {
-		free(p);
-		p = NULL;
-		p++;
+	while (*cur != NULL) {
+		free(*cur);
+		cur++;
 	}
 
 	free(vec);
 	vec = NULL;
 }
 
-int 
+int
 mport_decompress_zstd(const char *input, const char *output)
 {
-    FILE *f;
-    FILE *fout;
-    size_t const buffInSize = ZSTD_DStreamInSize();
-    size_t const buffOutSize = ZSTD_DStreamOutSize();
-    void* const buffIn = malloc(buffInSize);
-    void* const buffOut = malloc(buffOutSize);
-    ZSTD_DStream* const dstream = ZSTD_createDStream();
-    size_t const initResult = ZSTD_initDStream(dstream);
+	FILE *f;
+	FILE *fout;
+	size_t const buffInSize = ZSTD_DStreamInSize();
+	size_t const buffOutSize = ZSTD_DStreamOutSize();
+	void *const buffIn = malloc(buffInSize);
+	void *const buffOut = malloc(buffOutSize);
+	ZSTD_DStream *const dstream = ZSTD_createDStream();
+	size_t const initResult = ZSTD_initDStream(dstream);
 
-    if (buffIn == NULL || buffOut == NULL || dstream == NULL) {
-        free(buffIn);
-        free(buffOut);
-        ZSTD_freeDStream(dstream);
-        RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory");
-    }
+	if (buffIn == NULL || buffOut == NULL || dstream == NULL) {
+		free(buffIn);
+		free(buffOut);
+		ZSTD_freeDStream(dstream);
+		RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory");
+	}
 
-    if (ZSTD_isError(initResult)) {
-        free(buffIn);
-        free(buffOut);
-        ZSTD_freeDStream(dstream);
-        RETURN_ERROR(MPORT_ERR_FATAL, "Failed to initialize ZSTD decompression stream");
-    }
+	if (ZSTD_isError(initResult)) {
+		free(buffIn);
+		free(buffOut);
+		ZSTD_freeDStream(dstream);
+		RETURN_ERROR(MPORT_ERR_FATAL, "Failed to initialize ZSTD decompression stream");
+	}
 
-    f = fopen(input, "rb");
-    if (!f) {
-        free(buffIn);
-        free(buffOut);
-        ZSTD_freeDStream(dstream);
-        RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't open zstd file for reading");
-    }
+	f = fopen(input, "rb");
+	if (!f) {
+		free(buffIn);
+		free(buffOut);
+		ZSTD_freeDStream(dstream);
+		RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't open zstd file for reading");
+	}
 
-    fout = fopen(output, "wb");
-    if (!fout) {
-        fclose(f);
-        free(buffIn);
-        free(buffOut);
-        ZSTD_freeDStream(dstream);
-        RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't open file for writing");
-    }
+	fout = fopen(output, "wb");
+	if (!fout) {
+		fclose(f);
+		free(buffIn);
+		free(buffOut);
+		ZSTD_freeDStream(dstream);
+		RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't open file for writing");
+	}
 
-    size_t toRead = buffInSize;
-    while (1) {
-        size_t const read = fread(buffIn, 1, toRead, f);
-        if (read == 0) break;
+	const char *outpath = output;
+	size_t toRead = buffInSize;
+	size_t result = 1;
+	while (1) {
+		size_t const read = fread(buffIn, 1, toRead, f);
+		if (read == 0) {
+			if (ferror(f) != 0) {
+				fclose(f);
+				fclose(fout);
+				free(buffIn);
+				free(buffOut);
+				ZSTD_freeDStream(dstream);
+				RETURN_ERROR(MPORT_ERR_FATAL, "Error reading zstd input file");
+			}
+			break;
+		}
 
-        ZSTD_inBuffer input = { buffIn, read, 0 };
-        while (input.pos < input.size) {
-            ZSTD_outBuffer output = { buffOut, buffOutSize, 0 };
-            size_t const result = ZSTD_decompressStream(dstream, &output, &input);
-            if (ZSTD_isError(result)) {
-                fclose(f);
-                fclose(fout);
-                free(buffIn);
-                free(buffOut);
-                ZSTD_freeDStream(dstream);
-                RETURN_ERROR(MPORT_ERR_FATAL, "Error decompressing zstd file");
-            }
-            fwrite(buffOut, 1, output.pos, fout);
-        }
-    }
+		ZSTD_inBuffer input = { buffIn, read, 0 };
+		while (input.pos < input.size) {
+			ZSTD_outBuffer output = { buffOut, buffOutSize, 0 };
+			result = ZSTD_decompressStream(dstream, &output, &input);
+			if (ZSTD_isError(result)) {
+				fclose(f);
+				fclose(fout);
+				free(buffIn);
+				free(buffOut);
+				ZSTD_freeDStream(dstream);
+				RETURN_ERROR(MPORT_ERR_FATAL, "Error decompressing zstd file");
+			}
+			if (output.pos > 0 && fwrite(buffOut, 1, output.pos, fout) != output.pos) {
+				fclose(f);
+				fclose(fout);
+				unlink(outpath);
+				free(buffIn);
+				free(buffOut);
+				ZSTD_freeDStream(dstream);
+				RETURN_ERROR(
+				    MPORT_ERR_FATAL, "Error writing decompressed output file");
+			}
+		}
+	}
 
-    fclose(f);
-    fclose(fout);
-    free(buffIn);
-    free(buffOut);
-    ZSTD_freeDStream(dstream);
+	if (result != 0) {
+		fclose(f);
+		fclose(fout);
+		unlink(outpath);
+		free(buffIn);
+		free(buffOut);
+		ZSTD_freeDStream(dstream);
+		RETURN_ERROR(MPORT_ERR_FATAL, "Incomplete zstd stream");
+	}
 
-    return (MPORT_OK);
+	fclose(f);
+	fclose(fout);
+	free(buffIn);
+	free(buffOut);
+	ZSTD_freeDStream(dstream);
+
+	return (MPORT_OK);
 }
 
 MPORT_PUBLIC_API char *
@@ -1042,8 +1249,8 @@ mport_version(mportInstance *mport)
 {
 	char *version = NULL;
 	char *osrel = mport_get_osrelease(mport);
-	if (asprintf(&version, "mport %s for MidnightBSD %s, Bundle Version %s\n", MPORT_VERSION, osrel,
-	    MPORT_BUNDLE_VERSION_STR) == -1) {
+	if (asprintf(&version, "mport %s for MidnightBSD %s, Bundle Version %s\n", MPORT_VERSION,
+		osrel, MPORT_BUNDLE_VERSION_STR) == -1) {
 		free(osrel);
 		return NULL;
 	}
@@ -1109,16 +1316,19 @@ mport_drop_privileges(void)
  * @param packs mport package metadata
  * @return PURL URI or NULL
  */
-MPORT_PUBLIC_API char * 
-mport_purl_uri(mportPackageMeta *packs) 
+MPORT_PUBLIC_API char *
+mport_purl_uri(mportPackageMeta *packs)
 {
 	char *purl = NULL;
 
 	// https://github.com/package-url/purl-spec/blob/main/PURL-TYPES.rst
-	//asprintf(&purl, "pkg:mport/midnightbsd/%s@%s?arch=%s&osrel=%s", (*indexEntry)->pkgname, (*packs)->version, MPORT_ARCH, os_release);
-	// the purl format requires registration.  i'm switching to generic and requested above from them.
-		
-	int ret = asprintf(&purl, "pkg:generic/%s@%s?arch=%s&distro=midnightbsd-%s", packs->name, packs->version, MPORT_ARCH, packs->os_release);
+	// asprintf(&purl, "pkg:mport/midnightbsd/%s@%s?arch=%s&osrel=%s", (*indexEntry)->pkgname,
+	// (*packs)->version, MPORT_ARCH, os_release);
+	// the purl format requires registration.  i'm switching to generic and requested above from
+	// them.
+
+	int ret = asprintf(&purl, "pkg:generic/%s@%s?arch=%s&distro=midnightbsd-%s", packs->name,
+	    packs->version, MPORT_ARCH, packs->os_release);
 	if (ret == -1) {
 		return NULL;
 	}
@@ -1127,21 +1337,21 @@ mport_purl_uri(mportPackageMeta *packs)
 }
 
 bool
-mport_check_answer_bool(char *ans) 
+mport_check_answer_bool(char *ans)
 {
 	if (ans == NULL)
-	    return (false);
+		return (false);
 
-	if (*ans == 'Y' || *ans == 'y' || *ans == 't' || *ans == 'T' || *ans == '1') 
+	if (*ans == 'Y' || *ans == 'y' || *ans == 't' || *ans == 'T' || *ans == '1')
 		return (true);
-	if (*ans == 'N' || *ans == 'n' || *ans == 'f' || *ans == 'F' || *ans == '0') 
+	if (*ans == 'N' || *ans == 'n' || *ans == 'f' || *ans == 'F' || *ans == '0')
 		return (false);
 
 	return (false);
 }
 
-MPORT_PUBLIC_API mportVerbosity 
-mport_verbosity(bool quiet, bool verbose, bool brief) 
+MPORT_PUBLIC_API mportVerbosity
+mport_verbosity(bool quiet, bool verbose, bool brief)
 {
 
 	/* if both are specified, we need quiet for backward compatibility */
@@ -1154,7 +1364,7 @@ mport_verbosity(bool quiet, bool verbose, bool brief)
 
 	if (verbose)
 		return (MPORT_VVERBOSE);
-		
+
 	return (MPORT_VNORMAL);
 }
 
@@ -1177,7 +1387,7 @@ mport_string_replace(const char *str, const char *old, const char *new)
 
 	ret = malloc(retlen + 1);
 	if (ret == NULL)
-	    return NULL;
+		return NULL;
 
 	for (r = ret, p = str; (q = strstr(p, old)) != NULL; p = q + oldlen) {
 		ptrdiff_t l = q - p;
@@ -1206,18 +1416,18 @@ mport_count_spaces(const char *str)
 	return (spaces);
 }
 
-/* 
+/*
  * A bit like strsep(), except it accounts for "double" and 'single' quotes.
- * Unlike strsep(), this function returns the next argument string, trimmed of 
- * whitespace or enclosing quotes, and updates **args to point at the character 
- * after that. 
- * 
+ * Unlike strsep(), this function returns the next argument string, trimmed of
+ * whitespace or enclosing quotes, and updates **args to point at the character
+ * after that.
+ *
  * Sets *args to NULL when it has been processed.
- * 
- * Quoted strings run from the first quote mark to the next one of 
- * the same type or the terminating NULL. Quoted strings can contain the other 
- * type of quote mark, which loses any special meaning. 
- * 
+ *
+ * Quoted strings run from the first quote mark to the next one of
+ * the same type or the terminating NULL. Quoted strings can contain the other
+ * type of quote mark, which loses any special meaning.
+ *
  * There is no escape character.
  */
 char *
@@ -1290,89 +1500,91 @@ finish:
 	return (p_start);
 }
 
-
-#define ELF_MAGIC "\x7F""ELF"
+#define ELF_MAGIC \
+	"\x7F"    \
+	"ELF"
 #define ELF_MAGIC_SIZE 4
 
-MPORT_PUBLIC_API bool 
-mport_is_elf_file(const char *file) 
+MPORT_PUBLIC_API bool
+mport_is_elf_file(const char *file)
 {
-    FILE *f = fopen(file, "rb");
-    if (f == NULL) {
-        perror("fopen");
-        return false;
-    }
+	FILE *f = fopen(file, "rb");
+	if (f == NULL) {
+		perror("fopen");
+		return false;
+	}
 
-    char magic[ELF_MAGIC_SIZE];
-    if (fread(magic, 1, ELF_MAGIC_SIZE, f) != ELF_MAGIC_SIZE) {
-        fclose(f);
-        return false;
-    }
+	char magic[ELF_MAGIC_SIZE];
+	if (fread(magic, 1, ELF_MAGIC_SIZE, f) != ELF_MAGIC_SIZE) {
+		fclose(f);
+		return false;
+	}
 
-    fclose(f);
+	fclose(f);
 
-    // Compare the magic number
-    return (memcmp(magic, ELF_MAGIC, ELF_MAGIC_SIZE) == 0);
+	// Compare the magic number
+	return (memcmp(magic, ELF_MAGIC, ELF_MAGIC_SIZE) == 0);
 }
 
-MPORT_PUBLIC_API bool 
-mport_is_statically_linked(const char *file) {
-    if (elf_version(EV_CURRENT) == EV_NONE) {
-        fprintf(stderr, "ELF library initialization failed: %s\n", elf_errmsg(-1));
-        return false;
-    }
+MPORT_PUBLIC_API bool
+mport_is_statically_linked(const char *file)
+{
+	if (elf_version(EV_CURRENT) == EV_NONE) {
+		fprintf(stderr, "ELF library initialization failed: %s\n", elf_errmsg(-1));
+		return false;
+	}
 
-    int fd = open(file, O_RDONLY);
-    if (fd < 0) {
-        perror("open");
-        return false;
-    }
+	int fd = open(file, O_RDONLY);
+	if (fd < 0) {
+		perror("open");
+		return false;
+	}
 
-    Elf *elf = elf_begin(fd, ELF_C_READ, NULL);
-    if (elf == NULL) {
-        fprintf(stderr, "elf_begin failed: %s\n", elf_errmsg(-1));
-        close(fd);
-        return false;
-    }
+	Elf *elf = elf_begin(fd, ELF_C_READ, NULL);
+	if (elf == NULL) {
+		fprintf(stderr, "elf_begin failed: %s\n", elf_errmsg(-1));
+		close(fd);
+		return false;
+	}
 
-    // Check if the file is an ELF file
-    if (elf_kind(elf) != ELF_K_ELF) {
-        fprintf(stderr, "%s is not an ELF file\n", file);
-        elf_end(elf);
-        close(fd);
-        return false;
-    }
+	// Check if the file is an ELF file
+	if (elf_kind(elf) != ELF_K_ELF) {
+		fprintf(stderr, "%s is not an ELF file\n", file);
+		elf_end(elf);
+		close(fd);
+		return false;
+	}
 
-    // Iterate through the sections to find the .dynamic section
-    size_t shstrndx;
-    if (elf_getshdrstrndx(elf, &shstrndx) != 0) {
-        fprintf(stderr, "elf_getshdrstrndx failed: %s\n", elf_errmsg(-1));
-        elf_end(elf);
-        close(fd);
-        return false;
-    }
+	// Iterate through the sections to find the .dynamic section
+	size_t shstrndx;
+	if (elf_getshdrstrndx(elf, &shstrndx) != 0) {
+		fprintf(stderr, "elf_getshdrstrndx failed: %s\n", elf_errmsg(-1));
+		elf_end(elf);
+		close(fd);
+		return false;
+	}
 
-    Elf_Scn *scn = NULL;
-    while ((scn = elf_nextscn(elf, scn)) != NULL) {
-        GElf_Shdr shdr;
-        if (gelf_getshdr(scn, &shdr) != &shdr) {
-            fprintf(stderr, "gelf_getshdr failed: %s\n", elf_errmsg(-1));
-            elf_end(elf);
-            close(fd);
-            return false;
-        }
+	Elf_Scn *scn = NULL;
+	while ((scn = elf_nextscn(elf, scn)) != NULL) {
+		GElf_Shdr shdr;
+		if (gelf_getshdr(scn, &shdr) != &shdr) {
+			fprintf(stderr, "gelf_getshdr failed: %s\n", elf_errmsg(-1));
+			elf_end(elf);
+			close(fd);
+			return false;
+		}
 
-        const char *section_name = elf_strptr(elf, shstrndx, shdr.sh_name);
-        if (section_name != NULL && strcmp(section_name, ".dynamic") == 0) {
-            // Found the .dynamic section, meaning the file is dynamically linked
-            elf_end(elf);
-            close(fd);
-            return false;
-        }
-    }
+		const char *section_name = elf_strptr(elf, shstrndx, shdr.sh_name);
+		if (section_name != NULL && strcmp(section_name, ".dynamic") == 0) {
+			// Found the .dynamic section, meaning the file is dynamically linked
+			elf_end(elf);
+			close(fd);
+			return false;
+		}
+	}
 
-    // If no .dynamic section is found, the file is statically linked
-    elf_end(elf);
-    close(fd);
-    return true;
+	// If no .dynamic section is found, the file is statically linked
+	elf_end(elf);
+	close(fd);
+	return true;
 }

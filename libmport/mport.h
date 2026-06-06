@@ -49,11 +49,20 @@
 #define MAXLOGNAME 32
 #endif
 
+typedef struct _IndexEntry mportIndexEntry;
+
 typedef void (*mport_msg_cb)(const char *);
 typedef void (*mport_progress_init_cb)(const char *);
 typedef void (*mport_progress_step_cb)(int, int, const char *);
 typedef void (*mport_progress_free_cb)(void);
+/*
+ * Confirmation callbacks return MPORT_OK when the action is confirmed.
+ * Any non-OK value is treated as a declined or failed confirmation.
+ * Callbacks may set the mport error state to distinguish I/O failures
+ * from an explicit "no" response.
+ */
 typedef int (*mport_confirm_cb)(const char *, const char *, const char *, int);
+typedef int (*mport_select_cb)(const char *, mportIndexEntry **, int);
 
 typedef tll(char *) stringlist_t;
 
@@ -86,6 +95,7 @@ typedef struct {
   mport_progress_step_cb progress_step_cb;
   mport_progress_free_cb progress_free_cb;
   mport_confirm_cb confirm_cb;
+  mport_select_cb select_cb;
 } mportInstance;
 
 mportInstance * mport_instance_new(void);
@@ -96,6 +106,7 @@ int mport_instance_free(mportInstance *);
 int mport_call_msg_cb(mportInstance *, const char *, ...);
 int mport_call_progress_init_cb(mportInstance *, const char *, ...);
 bool mport_call_confirm_cb(mportInstance *mport, const char *msg, const char *yes, const char *no, int def);
+int mport_call_select_cb(mportInstance *mport, const char *msg, mportIndexEntry **choices, int def);
 
 /* setup your custom callbacks */
 void mport_set_msg_cb(mportInstance *, mport_msg_cb);
@@ -103,10 +114,12 @@ void mport_set_progress_init_cb(mportInstance *, mport_progress_init_cb);
 void mport_set_progress_step_cb(mportInstance *, mport_progress_step_cb);
 void mport_set_progress_free_cb(mportInstance *, mport_progress_free_cb);
 void mport_set_confirm_cb(mportInstance *, mport_confirm_cb);
+void mport_set_select_cb(mportInstance *, mport_select_cb);
 
 /* default cbs for terminal use. For graphical apps, you want to make your own */
 void mport_default_msg_cb(const char *);
 int mport_default_confirm_cb(const char *, const char *, const char *, int);
+int mport_default_select_cb(const char *, mportIndexEntry **, int);
 void mport_default_progress_init_cb(const char *);
 void mport_default_progress_step_cb(int, int, const char *);
 void mport_default_progress_free_cb(void);
@@ -214,7 +227,7 @@ int mport_pkgmeta_get_updepends(mportInstance *, mportPackageMeta *, mportPackag
 
 
 /* index */
-typedef struct {
+struct _IndexEntry {
   char *pkgname;
   char *version;
   char *comment;
@@ -222,7 +235,7 @@ typedef struct {
   char *license;
   char *hash;
   mportType type;
-} mportIndexEntry;
+};
 
 typedef struct {
   char port[128];
@@ -335,6 +348,7 @@ int mport_autoremove(mportInstance *);
 /* package verify */
 int mport_verify_package(mportInstance *, mportPackageMeta *);
 int mport_recompute_checksums(mportInstance *, mportPackageMeta *);
+int mport_check_missing_depends(mportInstance *);
 
 /* version comparing */
 int mport_version_cmp(const char *, const char *);

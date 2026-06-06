@@ -43,15 +43,13 @@ extern char **environ;
 
 static int run_service_cmd(mportInstance *mport, const char *rc_script, char *command);
 
-int 
-mport_start_stop_service(mportInstance *mport, mportPackageMeta *pack, service_action_t action) 
+int
+mport_start_stop_service(mportInstance *mport, mportPackageMeta *pack, service_action_t action)
 {
 	sqlite3_stmt *stmt;
-	int ret;
 	char *service;
 	const unsigned char *rc_script;
 	char *handle_rc_script;
-
 
 	// don't turn off services if MPORT_GUI is set.  This can drop someone out of an X session.
 	// TODO: we should handle this with triggers eventually.
@@ -60,25 +58,28 @@ mport_start_stop_service(mportInstance *mport, mportPackageMeta *pack, service_a
 
 	// if handle rc scripts is disabled, we don't need to do anything
 	handle_rc_script = mport_setting_get(mport, MPORT_SETTING_HANDLE_RC_SCRIPTS);
-	if (getenv("HANDLE_RC_SCRIPTS") == NULL && !mport_check_answer_bool(handle_rc_script))
-	    return (MPORT_OK);
-	
+	bool skip =
+	    (getenv("HANDLE_RC_SCRIPTS") == NULL && !mport_check_answer_bool(handle_rc_script));
+	free(handle_rc_script);
+	if (skip)
+		return (MPORT_OK);
+
 	/* stop any services that might exist; this replaces @stopdaemon */
 	if (mport_db_prepare(mport->db, &stmt,
 		"select data from assets where data like '/usr/local/etc/rc.d/%%' and type=%i and pkg=%Q",
 		ASSET_FILE, pack->name) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
-	while (1) {
-		ret = sqlite3_step(stmt);
-		if (ret != SQLITE_ROW) {
-			break;
-		}
-
+	while (sqlite3_step(stmt) == SQLITE_ROW) {
 		rc_script = sqlite3_column_text(stmt, 0);
 		if (rc_script == NULL)
 			continue;
-		service = basename((char *)rc_script);
+
+		char *rc_script_dup = strdup((const char *)rc_script);
+		if (rc_script_dup == NULL)
+			continue;
+
+		service = basename(rc_script_dup);
 
 		if (action == SERVICE_START) {
 			if (run_service_cmd(mport, service, "quietstart") != 0) {
@@ -88,8 +89,11 @@ mport_start_stop_service(mportInstance *mport, mportPackageMeta *pack, service_a
 			if (run_service_cmd(mport, service, "forcestop") != 0) {
 				mport_call_msg_cb(mport, "Unable to stop service %s\n", service);
 			}
-		}	
+		}
+		free(rc_script_dup);
 	}
+
+	sqlite3_finalize(stmt);
 
 	return (MPORT_OK);
 }
@@ -100,7 +104,6 @@ run_service_cmd(mportInstance *mport, const char *rc_script, char *command)
 	int error, pstat;
 	pid_t pid;
 	const char *argv[4];
-	char *service;
 
 	if (rc_script == NULL || command == NULL)
 		return (0);
@@ -110,10 +113,10 @@ run_service_cmd(mportInstance *mport, const char *rc_script, char *command)
 	argv[2] = command;
 	argv[3] = NULL;
 
-	service = basename((char *)rc_script);
-	if ((error = posix_spawn(&pid, "/usr/sbin/service", NULL, NULL, (char **)argv, environ)) != 0) {
+	if ((error = posix_spawn(&pid, "/usr/sbin/service", NULL, NULL, (char **)argv, environ)) !=
+	    0) {
 		errno = error;
-		mport_call_msg_cb(mport, "Unable to %s service %s\n", command, service);
+		mport_call_msg_cb(mport, "Unable to %s service %s\n", command, rc_script);
 		return (-1);
 	}
 

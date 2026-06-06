@@ -35,14 +35,15 @@
 #include <getopt.h>
 #include <mport.h>
 
-
 static void usage(void);
 
-int main(int argc, char *argv[]) {
+int
+main(int argc, char *argv[])
+{
 	int ch, i;
 	mportInstance *mport;
-	mportPackageMeta **packs = NULL;
-	mportPackageMeta **depends = NULL;
+	/*@only@*/ mportPackageMeta **packs = NULL;
+	/*@only@*/ mportPackageMeta **depends = NULL;
 	const char *arg = NULL, *where = NULL;
 	const char *chroot_path = NULL;
 
@@ -51,21 +52,21 @@ int main(int argc, char *argv[]) {
 
 	while ((ch = getopt(argc, argv, "c:o:n:")) != -1) {
 		switch (ch) {
-			case 'c':
-				chroot_path = optarg;
-				break;
-			case 'o':
-				where = "origin=%Q";
-				arg = optarg;
-				break;
-			case 'n':
-				where = "pkg=%Q";
-				arg = optarg;
-				break;
-			case '?':
-			default:
-				usage();
-				break;
+		case 'c':
+			chroot_path = optarg;
+			break;
+		case 'o':
+			where = "origin=%Q";
+			arg = optarg;
+			break;
+		case 'n':
+			where = "pkg=%Q";
+			arg = optarg;
+			break;
+		case '?':
+		default:
+			usage();
+			break;
 		}
 	}
 
@@ -75,6 +76,9 @@ int main(int argc, char *argv[]) {
 	if (chroot_path != NULL) {
 		if (chroot(chroot_path) == -1) {
 			err(EXIT_FAILURE, "chroot failed");
+		}
+		if (chdir("/") == -1) {
+			err(EXIT_FAILURE, "chdir failed");
 		}
 	}
 
@@ -127,25 +131,28 @@ int main(int argc, char *argv[]) {
 		/* no depends, nothing to print. */
 		mport_instance_free(mport);
 		if (packs != NULL)
-			mport_pkgmeta_vec_free(depends);
+			mport_pkgmeta_vec_free(packs);
 		exit(EXIT_SUCCESS);
 	}
 
 	i = 0;
 	while (depends[i] != NULL) {
-		(void) printf("%s\n", depends[i]->origin);
+		(void)printf("%s\n", depends[i]->origin);
 		i++;
 	}
 
 	mport_instance_free(mport);
+	mport_pkgmeta_vec_free(packs);
+	mport_pkgmeta_vec_free(depends);
 
 	return (0);
 }
 
-
 static void
-usage(void) {
-	fprintf(stderr, "Usage: mport.updepends -n pkgname\n"
-	                "       mport.updepends -o origin -c <chroot path>\n");
+usage(void)
+{
+	fprintf(stderr,
+	    "Usage: mport.updepends -n pkgname\n"
+	    "       mport.updepends -o origin -c <chroot path>\n");
 	exit(2);
 }

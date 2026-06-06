@@ -32,39 +32,54 @@
 #include <stdlib.h>
 
 MPORT_PUBLIC_API int
-mport_update(mportInstance *mport, const char *packageName) {
+mport_update(mportInstance *mport, const char *packageName)
+{
 	char *path = NULL;
 	mportDependsEntry **depends = NULL;
 	mportDependsEntry **depends_orig = NULL;
-	mportIndexEntry **indexEntry = NULL;
+	mportIndexEntry **indexEntries = NULL;
+	mportIndexEntry *indexEntry = NULL;
 
 	if (packageName == NULL) {
 		return (MPORT_ERR_WARN);
 	}
 
-	int result = mport_download(mport, packageName, false, false, &path);
-	if (result != MPORT_OK)
-		return result;
+	if (mport_index_select_pkgname(mport, packageName, "Multiple packages match your query.",
+		&indexEntries, &indexEntry) != MPORT_OK)
+		return mport_err_code();
 
-	/* in the event the package is not found in the index, it could be user generated, and we still want to update it if
-	   present */
-	if (mport_index_lookup_pkgname(mport, packageName, &indexEntry) != MPORT_OK ||
-			indexEntry == NULL || *indexEntry == NULL) {
+	int result = mport_download(
+	    mport, indexEntry == NULL ? packageName : indexEntry->pkgname, false, false, &path);
+	if (result != MPORT_OK) {
+		mport_index_entry_free_vec(indexEntries);
+		return result;
+	}
+
+	/* in the event the package is not found in the index, it could be user generated, and we
+	   still want to update it if present */
+	if (indexEntry == NULL) {
 		mport_call_msg_cb(mport, "Package %s not found in the index\n", packageName);
 	} else {
 		/* get the dependency list and start updating/installing missing entries */
-		if (mport_index_depends_list(mport, packageName, (*indexEntry)->version, &depends_orig) != MPORT_OK) {
-			mport_call_msg_cb(mport, "Failed to get dependency list for %s: %s\n", packageName, mport_err_string());
+		if (mport_index_depends_list(mport, indexEntry->pkgname, indexEntry->version,
+			&depends_orig) != MPORT_OK) {
+			mport_call_msg_cb(mport, "Failed to get dependency list for %s: %s\n",
+			    packageName, mport_err_string());
+			mport_index_entry_free_vec(indexEntries);
 			return mport_err_code();
 		}
 
 		depends = depends_orig;
 		while (*depends != NULL) {
-			if (mport_install_depends(mport, (*depends)->d_pkgname, (*depends)->d_version, MPORT_AUTOMATIC) != MPORT_OK) {
+			if (mport_install_depends(mport, (*depends)->d_pkgname,
+				(*depends)->d_version, MPORT_AUTOMATIC) != MPORT_OK) {
 				mport_call_msg_cb(mport, "%s", mport_err_string());
 				mport_index_depends_free_vec(depends);
+				mport_index_entry_free_vec(indexEntries);
 				if (mport->ignoreMissing) {
-					mport_call_msg_cb(mport, "Ignoring missing dependency %s-%s\n", (*depends)->d_pkgname, (*depends)->d_version);
+					mport_call_msg_cb(mport,
+					    "Ignoring missing dependency %s-%s\n",
+					    (*depends)->d_pkgname, (*depends)->d_version);
 					depends++;
 					continue;
 				}
@@ -82,11 +97,13 @@ mport_update(mportInstance *mport, const char *packageName) {
 		mport_call_msg_cb(mport, "%s\n", mport_err_string());
 		free(path);
 		path = NULL;
+		mport_index_entry_free_vec(indexEntries);
 		return mport_err_code();
 	}
 
 	free(path);
 	path = NULL;
+	mport_index_entry_free_vec(indexEntries);
 
 	return (MPORT_OK);
 }

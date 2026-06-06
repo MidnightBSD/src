@@ -113,14 +113,15 @@ mport_audit(mportInstance *mport, const char *packageName, bool dependOn)
 			size_t size;
 			FILE *bufferFp = open_memstream(&pkgAudit, &size);
 			if (bufferFp == NULL) {
-				SET_ERROR(MPORT_ERR_FATAL, "Error allocating memory for audit entries");
+				SET_ERROR(
+				    MPORT_ERR_FATAL, "Error allocating memory for audit entries");
 				free(jsonData);
 				jsonData = NULL;
 
 				unlink(path);
 				free(path);
 				path = NULL;
-				
+
 				mport_pkgmeta_vec_free(packs);
 				packs = NULL;
 
@@ -130,7 +131,8 @@ mport_audit(mportInstance *mport, const char *packageName, bool dependOn)
 			bool first = true;
 			while ((cur = ucl_object_iterate(root, &it, true))) {
 				if (ucl_object_type(cur) != UCL_OBJECT) {
-					SET_ERROR(MPORT_ERR_FATAL, "Expected an object in the array");
+					SET_ERROR(
+					    MPORT_ERR_FATAL, "Expected an object in the array");
 					continue;
 				}
 
@@ -140,16 +142,23 @@ mport_audit(mportInstance *mport, const char *packageName, bool dependOn)
 					ucl_object_iter_t pit = NULL;
 					const ucl_object_t *product;
 
-					for (product = ucl_object_iterate(products, &pit, true); product != NULL; product = ucl_object_iterate(products, &pit, true)) {
-						const ucl_object_t *version = ucl_object_find_key(product, "version");
-						if (version != NULL && ucl_object_type(version) == UCL_STRING) {
-							const char *version_str = ucl_object_tostring(version);
+					for (product = ucl_object_iterate(products, &pit, true);
+					    product != NULL;
+					    product = ucl_object_iterate(products, &pit, true)) {
+						const ucl_object_t *version =
+						    ucl_object_find_key(product, "version");
+						if (version != NULL &&
+						    ucl_object_type(version) == UCL_STRING) {
+							const char *version_str =
+							    ucl_object_tostring(version);
 
 							if (version_str == NULL)
-							    continue;
+								continue;
 
 							// Skip based on the version field
-							if ('*' == version_str[0] || mport_version_cmp((*packs)->version, version_str) <= 0) {
+							if ('*' == version_str[0] ||
+							    mport_version_cmp((*packs)->version,
+								version_str) <= 0) {
 								isVulnerable = true;
 								break;
 							}
@@ -162,7 +171,8 @@ mport_audit(mportInstance *mport, const char *packageName, bool dependOn)
 				}
 
 				if (mport->verbosity == MPORT_VQUIET) {
-					fprintf(bufferFp, "%s-%s\n", (*packs)->name, (*packs)->version);
+					fprintf(
+					    bufferFp, "%s-%s\n", (*packs)->name, (*packs)->version);
 					break;
 				}
 
@@ -176,23 +186,30 @@ mport_audit(mportInstance *mport, const char *packageName, bool dependOn)
 				if (cveId != NULL && ucl_object_type(cveId) == UCL_STRING) {
 					fprintf(bufferFp, "%s\n", ucl_object_tostring(cveId));
 
-					const ucl_object_t *desc = ucl_object_find_key(cur, "description");
+					const ucl_object_t *desc =
+					    ucl_object_find_key(cur, "description");
 					if (desc != NULL && ucl_object_type(desc) == UCL_STRING) {
-						fprintf(bufferFp, "Description: %s\n", ucl_object_tostring(desc));
+						fprintf(bufferFp, "Description: %s\n",
+						    ucl_object_tostring(desc));
 					}
-					const ucl_object_t *severity = ucl_object_find_key(cur, "severity");
-					if (severity != NULL && ucl_object_type(severity) == UCL_STRING) {
-						fprintf(bufferFp, "Severity: %s\n", ucl_object_tostring(severity));
+					const ucl_object_t *severity =
+					    ucl_object_find_key(cur, "severity");
+					if (severity != NULL &&
+					    ucl_object_type(severity) == UCL_STRING) {
+						fprintf(bufferFp, "Severity: %s\n",
+						    ucl_object_tostring(severity));
 					}
 					fprintf(bufferFp, "\n");
 				}
 			}
 
 			if (dependOn) {
-				if (mport_pkgmeta_get_downdepends(mport, (*packs), &depends_orig) == MPORT_OK) {
+				if (mport_pkgmeta_get_downdepends(mport, (*packs), &depends_orig) ==
+				    MPORT_OK) {
 					if (depends_orig != NULL) {
 						depends = depends_orig;
-						fprintf(bufferFp, "Packages that depend on %s:", (*packs)->name);
+						fprintf(bufferFp,
+						    "Packages that depend on %s:", (*packs)->name);
 						while (*depends != NULL) {
 							fprintf(bufferFp, " %s", (*depends)->name);
 							depends++;
@@ -221,51 +238,70 @@ mport_audit(mportInstance *mport, const char *packageName, bool dependOn)
 			mport_pkgmeta_vec_free(packs);
 			packs = NULL;
 		}
-
 	}
 	return pkgAudit;
 }
 
-static char *readJsonFile(char *jsonFile)
+static char *
+readJsonFile(char *jsonFile)
 {
-		FILE *fp;
-		size_t size;
-		char *buffer;
+	FILE *fp;
+	long file_size;
+	size_t size;
+	char *buffer;
 
-		if (jsonFile == NULL) {
-			return (NULL);
-		}
-		
-		// Open the JSON file
-		fp = fopen(jsonFile, "rb");
-		if (!fp) {
-			SET_ERROR(MPORT_ERR_WARN, "could not open file");
-			return NULL;
-		}
-
-		// Get the file size
-		fseek(fp, 0, SEEK_END);
-		size = ftell(fp);
-		fseek(fp, 0, SEEK_SET);
-
-		// Allocate memory for the file contents
-		buffer = (char *)malloc(size);
-		if (!buffer) {
-			SET_ERROR(MPORT_ERR_WARN, "could not allocate memory");
-			fclose(fp);
-			return NULL;
-		}
-
-		// Read the file into the buffer
-		if (fread(buffer, 1, size, fp) != size) {
-			SET_ERROR(MPORT_ERR_WARN, "could not read file");
-			fclose(fp);
-			free(buffer);
-			return NULL;
-		}
-
-		// Close the file
-		fclose(fp);
-
-		return buffer;
+	if (jsonFile == NULL) {
+		return (NULL);
 	}
+
+	// Open the JSON file
+	fp = fopen(jsonFile, "rb");
+	if (!fp) {
+		SET_ERROR(MPORT_ERR_WARN, "could not open file");
+		return NULL;
+	}
+
+	// Get the file size
+	if (fseek(fp, 0, SEEK_END) != 0) {
+		SET_ERROR(MPORT_ERR_WARN, "could not determine file size");
+		fclose(fp);
+		return NULL;
+	}
+
+	file_size = ftell(fp);
+	if (file_size < 0) {
+		SET_ERROR(MPORT_ERR_WARN, "could not determine file size");
+		fclose(fp);
+		return NULL;
+	}
+
+	if (fseek(fp, 0, SEEK_SET) != 0) {
+		SET_ERROR(MPORT_ERR_WARN, "could not rewind file");
+		fclose(fp);
+		return NULL;
+	}
+
+	size = (size_t)file_size;
+
+	// Allocate memory for the file contents
+	buffer = (char *)malloc(size + 1);
+	if (!buffer) {
+		SET_ERROR(MPORT_ERR_WARN, "could not allocate memory");
+		fclose(fp);
+		return NULL;
+	}
+
+	// Read the file into the buffer
+	if (fread(buffer, 1, size, fp) != size) {
+		SET_ERROR(MPORT_ERR_WARN, "could not read file");
+		fclose(fp);
+		free(buffer);
+		return NULL;
+	}
+	buffer[size] = '\0';
+
+	// Close the file
+	fclose(fp);
+
+	return buffer;
+}

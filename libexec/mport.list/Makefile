@@ -1,9 +1,8 @@
 PROG= mport.list
+MAN= mport.list.1
 
 CFLAGS+=	-I${.CURDIR}/../../libmport/ -I ${.CURDIR}/../../external/tllist/ -I/usr/include/private/zstd 
 WARNS?= 	4
-
-MK_MAN= no
 
 LIBADD= mport pthread
 
