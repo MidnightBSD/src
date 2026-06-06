@@ -267,6 +267,44 @@ git push origin stable/X.Y
 
 Repeat for each additional stable branch.
 
+### Step 13 — Update the GitHub wiki
+
+After all merges and pushes are complete, update the vendor branch table on the
+GitHub wiki at https://github.com/MidnightBSD/src/wiki/Vendor-Branches.
+
+Fetch the current wiki page content:
+```bash
+gh api repos/MidnightBSD/src/pages 2>/dev/null || true
+# The wiki is a separate git repo:
+# git clone https://github.com/MidnightBSD/src.wiki.git /tmp/mbsd-wiki
+```
+
+The wiki is maintained as a separate git repository. Clone or update it:
+```bash
+WIKI_DIR=$(mktemp -d)
+git clone https://github.com/MidnightBSD/src.wiki.git "$WIKI_DIR"
+```
+
+Open `$WIKI_DIR/Vendor-Branches.md` and locate the row for `<name>` in the
+table. Update the **current version** column to `<new-version>`.
+
+Show the user the diff:
+```bash
+git -C "$WIKI_DIR" diff
+```
+
+**STOP. Ask the user:**
+> "Ready to commit and push the wiki update for `<name>` to version
+> `<new-version>`. Shall I proceed?"
+
+If approved:
+```bash
+git -C "$WIKI_DIR" add Vendor-Branches.md
+git -C "$WIKI_DIR" commit -m "Update <name> to <new-version>"
+git -C "$WIKI_DIR" push origin master
+rm -rf "$WIKI_DIR"
+```
+
 ---
 
 ## Vendor branch table reference
