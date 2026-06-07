@@ -41,12 +41,13 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/time.h>
+#include <netdb.h>
 
 #include "mport.h"
 #include "mport_private.h"
 
 #define PACKET_SIZE 64
-#define PING_TIMEOUT 2
+#define PING_TIMEOUT_SEC 1
 #define MAX_RETRIES 3
 
 static unsigned short calculateChecksum(unsigned short *buffer, int length);
@@ -73,88 +74,125 @@ getCurrentTime(void)
 {
 	struct timespec time;
 	clock_gettime(CLOCK_MONOTONIC, &time);
-	return (time.tv_sec * 1000 + time.tv_nsec / 1000); // Milliseconds
+	return (time.tv_sec * 1000 + time.tv_nsec / 1000000); // Milliseconds
 }
 
 /**
  * @brief Ping a host to determine the round trip time
- * 
+ *
  * @param hostname IP address or hostname to ping
  * @return long milliseconds
  */
 long
 ping(char *hostname)
 {
-
-	struct sockaddr_in dest_addr;
+	struct addrinfo hints, *res;
+	struct sockaddr_in *dest_addr;
 	struct icmp icmphdr;
-	char packet[PACKET_SIZE];
 	long rtt = 1000;
 	int try = 0;
 	int rtts[MAX_RETRIES];
+	int sockfd = -1;
+	pid_t pid = getpid() & 0xFFFF;
 
-	int sockfd = socket(AF_INET, SOCK_RAW, 1); // Use 1 for ICMP (ICMPv4)
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = 0;
+	hints.ai_protocol = IPPROTO_ICMP;
+
+	if (getaddrinfo(hostname, NULL, &hints, &res) != 0) {
+		return -1;
+	}
+	dest_addr = (struct sockaddr_in *)res->ai_addr;
+
+	sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 	if (sockfd < 0) {
-		perror("socket");
+		freeaddrinfo(res);
 		return -1;
 	}
 
-	dest_addr.sin_family = AF_INET;
-	dest_addr.sin_addr.s_addr = inet_addr(hostname);
+	struct timeval tv;
+	tv.tv_sec = PING_TIMEOUT_SEC;
+	tv.tv_usec = 0;
+	if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)) < 0) {
+		perror("setsockopt");
+		close(sockfd);
+		freeaddrinfo(res);
+		return -1;
+	}
+
+	for (int i = 0; i < MAX_RETRIES; i++)
+		rtts[i] = -1;
 
 	for (; try < MAX_RETRIES; try++) {
-		memset(packet, 0, sizeof(packet));
+		memset(&icmphdr, 0, sizeof(icmphdr));
 		icmphdr.icmp_type = ICMP_ECHO;
 		icmphdr.icmp_code = 0;
-		icmphdr.icmp_id = getpid();
+		icmphdr.icmp_id = pid;
 		icmphdr.icmp_seq = try;
 		icmphdr.icmp_cksum = 0;
 		icmphdr.icmp_cksum = calculateChecksum((unsigned short *)&icmphdr, sizeof(icmphdr));
 
-		if (sendto(sockfd, &icmphdr, sizeof(icmphdr), 0, (struct sockaddr *)&dest_addr,
-			sizeof(dest_addr)) <= 0) {
-			perror("sendto");
-			return -1;
+		if (sendto(sockfd, &icmphdr, sizeof(icmphdr), 0, (struct sockaddr *)dest_addr,
+			sizeof(*dest_addr)) <= 0) {
+			continue;
 		}
 
 		long start_time = getCurrentTime();
 
-		char recv_packet[PACKET_SIZE];
-		socklen_t addr_len = sizeof(dest_addr);
-		if (recvfrom(sockfd, recv_packet, sizeof(recv_packet), 0,
-			(struct sockaddr *)&dest_addr, &addr_len) <= 0) {
-			perror("recvfrom");
-			return -1;
+		char recv_packet[IP_MAXPACKET];
+		struct sockaddr_in from_addr;
+		socklen_t addr_len;
+		ssize_t n;
+
+		for (;;) {
+			addr_len = sizeof(from_addr);
+			n = recvfrom(sockfd, recv_packet, sizeof(recv_packet), 0,
+			    (struct sockaddr *)&from_addr, &addr_len);
+
+			if (n < 0) {
+				if (errno == EINTR)
+					continue;
+				break;
+			}
+			if (n == 0)
+				break;
+
+			struct ip *ip_hdr = (struct ip *)recv_packet;
+			int ip_hdr_len = ip_hdr->ip_hl << 2;
+
+			if (n < ip_hdr_len + (ssize_t)sizeof(struct icmp))
+				continue;
+
+			struct icmp *icmp_reply = (struct icmp *)(recv_packet + ip_hdr_len);
+
+			if (icmp_reply->icmp_type == ICMP_ECHOREPLY && icmp_reply->icmp_id == pid &&
+			    icmp_reply->icmp_seq == try) {
+				long end_time = getCurrentTime();
+				rtt = end_time - start_time;
+				rtts[try] = rtt;
+				break;
+			}
 		}
 
-		long end_time = getCurrentTime();
-
-		struct icmp *icmp_reply = (struct icmp *)(recv_packet + 20); // Skip IP header
-		if (icmp_reply->icmp_type == ICMP_ECHOREPLY) {
-			rtt = end_time - start_time;
-			printf("Received packet from %s, RTT = %ldms\n", hostname, rtt);
-            		rtts[try] = rtt;
-		} else {
-			printf("Received an ICMP packet of type %d\n", icmp_reply->icmp_type);
-            		rtts[try] = -1;
-		}
-
-        sleep(1);
+		if (try < MAX_RETRIES - 1)
+			usleep(100000); // 100ms between retries
 	}
 
 	close(sockfd);
+	freeaddrinfo(res);
 
-	int sum = 0;
+	long sum = 0;
 	int totalValid = 0;
 	for (int i = 0; i < MAX_RETRIES; i++) {
-	    if (rtts[i] != -1) {
+		if (rtts[i] != -1) {
 			sum += rtts[i];
 			totalValid++;
-	    }
+		}
 	}
 
 	if (totalValid == 0) {
-	    return -1;
+		return -1;
 	}
-	return sum / totalValid; // average
+	return sum / totalValid;
 }

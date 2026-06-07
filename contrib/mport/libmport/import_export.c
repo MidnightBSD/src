@@ -38,16 +38,17 @@
 #include <errno.h>
 #include <stddef.h>
 
-MPORT_PUBLIC_API int 
-mport_import(mportInstance *mport,  char  *path)
+MPORT_PUBLIC_API int
+mport_import(mportInstance *mport, char *path)
 {
-	FILE *file;
+	FILE *file = NULL;
+	FILE *input;
 	bool console = false;
 	char name[1024];
 
 	if (path == NULL)
 		console = true;
-	
+
 	if (!console && !mport_file_exists(path)) {
 		RETURN_ERROR(MPORT_ERR_FATAL, "File exists at export path");
 	}
@@ -55,46 +56,46 @@ mport_import(mportInstance *mport,  char  *path)
 	if (!console) {
 		file = fopen(path, "r");
 		if (file == NULL)
-			RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't open import file %s", path, strerror(errno));
+			RETURN_ERRORX(
+			    MPORT_ERR_FATAL, "Couldn't open import file %s", path, strerror(errno));
 	}
 
-	while (!feof(file)) {
-		if (console) {
-			fgets(name, 1024, stdin);
-		} else {
-			fgets(name, 1024, file); 
-		}
-		
-		for (int i = 0; i < 1024; i++) {
-        	if (name[i] == '\n') {
-				name[i] = '\0';
-				break;
-			}
-		}
-		
+	input = console ? stdin : file;
+
+	while (fgets(name, sizeof(name), input) != NULL) {
+		name[strcspn(name, "\n")] = '\0';
+		if (name[0] == '\0')
+			continue;
+
 		mport_call_msg_cb(mport, "Installing %s", name);
-		mport_install(mport, name,  NULL, NULL, MPORT_EXPLICIT);
+		mport_install(mport, name, NULL, NULL, MPORT_EXPLICIT);
+	}
+
+	if (ferror(input)) {
+		if (!console)
+			fclose(file);
+		RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't read import source: %s", strerror(errno));
 	}
 
 	if (!console) {
 		fclose(file);
 	}
-	
+
 	return (MPORT_OK);
 }
 
-MPORT_PUBLIC_API int 
+MPORT_PUBLIC_API int
 mport_export(mportInstance *mport, char *path)
 {
 	mportPackageMeta **packs;
 	mportPackageMeta **packs_orig;
-	
+
 	FILE *file = NULL;
 	bool console = false;
 
 	if (path == NULL)
 		console = true;
-	
+
 	if (!console && mport_file_exists(path)) {
 		RETURN_ERROR(MPORT_ERR_FATAL, "File exists at export path");
 	}
@@ -110,7 +111,8 @@ mport_export(mportInstance *mport, char *path)
 	if (!console) {
 		file = fopen(path, "w");
 		if (file == NULL)
-			RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't open export file %s", path, strerror(errno));
+			RETURN_ERRORX(
+			    MPORT_ERR_FATAL, "Couldn't open export file %s", path, strerror(errno));
 	}
 
 	packs_orig = packs;
@@ -125,8 +127,8 @@ mport_export(mportInstance *mport, char *path)
 	if (!console) {
 		fclose(file);
 	}
-		
+
 	mport_pkgmeta_vec_free(packs_orig);
-		
+
 	return (MPORT_OK);
 }

@@ -26,7 +26,6 @@
  * SUCH DAMAGE.
  */
 
-
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <errno.h>
@@ -37,13 +36,15 @@
 #include "mport_private.h"
 
 MPORT_PUBLIC_API int
-mport_asset_get_package_from_file_path(mportInstance *mport, const char *filePath, mportPackageMeta **pack)
+mport_asset_get_package_from_file_path(
+    mportInstance *mport, const char *filePath, mportPackageMeta **pack)
 {
 	sqlite3_stmt *stmt = NULL;
 	int result = MPORT_OK;
 	char *err;
 
-	if (mport_db_prepare(mport->db, &stmt, "SELECT pkg FROM assets WHERE data=%Q", filePath) != MPORT_OK) {
+	if (mport_db_prepare(mport->db, &stmt, "SELECT pkg FROM assets WHERE data=%Q", filePath) !=
+	    MPORT_OK) {
 		sqlite3_finalize(stmt);
 		RETURN_CURRENT_ERROR;
 	}
@@ -64,7 +65,7 @@ mport_asset_get_package_from_file_path(mportInstance *mport, const char *filePat
 			break;
 
 		if (ret != SQLITE_ROW) {
-			err = (char *) sqlite3_errmsg(mport->db);
+			err = (char *)sqlite3_errmsg(mport->db);
 			result = MPORT_ERR_FATAL;
 			break; // we finalize below
 		}
@@ -72,7 +73,9 @@ mport_asset_get_package_from_file_path(mportInstance *mport, const char *filePat
 		const unsigned char *pkgName = sqlite3_column_text(stmt, 0);
 		if (pkgName != NULL) {
 			mportPackageMeta **packs = NULL;
-			if (mport_pkgmeta_search_master(mport, &packs, "pkg=%Q", pkgName) != MPORT_OK || packs[0] == NULL) {
+			if (mport_pkgmeta_search_master(mport, &packs, "pkg=%Q", pkgName) !=
+				MPORT_OK ||
+			    packs[0] == NULL) {
 				err = "Package does not exist despite having assets";
 				result = MPORT_ERR_FATAL;
 				break; // we finalize below
@@ -104,10 +107,12 @@ mport_asset_get_assetlist(mportInstance *mport, mportPackageMeta *pack, mportAss
 
 	*alist_p = alist;
 
-	// pkg text NOT NULL, type int NOT NULL, data text, checksum text, owner text, grp text, mode text)
+	// pkg text NOT NULL, type int NOT NULL, data text, checksum text, owner text, grp text,
+	// mode text)
 
-	if (mport_db_prepare(mport->db, &stmt, "SELECT type,data,checksum,owner,grp,mode FROM assets WHERE pkg=%Q",
-	                     pack->name) != MPORT_OK) {
+	if (mport_db_prepare(mport->db, &stmt,
+		"SELECT type,data,checksum,owner,grp,mode FROM assets WHERE pkg=%Q",
+		pack->name) != MPORT_OK) {
 		sqlite3_finalize(stmt);
 		RETURN_CURRENT_ERROR;
 	}
@@ -115,7 +120,6 @@ mport_asset_get_assetlist(mportInstance *mport, mportPackageMeta *pack, mportAss
 	if (stmt == NULL) {
 		RETURN_ERROR(MPORT_ERR_FATAL, "Statement was null");
 	}
-
 
 	while (1) {
 		mportAssetListEntry *e = NULL;
@@ -131,12 +135,12 @@ mport_asset_get_assetlist(mportInstance *mport, mportPackageMeta *pack, mportAss
 			break;
 
 		if (ret != SQLITE_ROW) {
-			err = (char *) sqlite3_errmsg(mport->db);
+			err = (char *)sqlite3_errmsg(mport->db);
 			result = MPORT_ERR_FATAL;
 			break; // we finalize below
 		}
 
-		e = (mportAssetListEntry *) calloc(1, sizeof(mportAssetListEntry));
+		e = (mportAssetListEntry *)calloc(1, sizeof(mportAssetListEntry));
 
 		if (e == NULL) {
 			err = "Out of memory";
@@ -144,14 +148,14 @@ mport_asset_get_assetlist(mportInstance *mport, mportPackageMeta *pack, mportAss
 			break; // we finalize below
 		}
 
-		e->type = (mportAssetListEntryType) sqlite3_column_int(stmt, 0);
+		e->type = (mportAssetListEntryType)sqlite3_column_int(stmt, 0);
 		const unsigned char *data = sqlite3_column_text(stmt, 1);
 		const unsigned char *checksum = sqlite3_column_text(stmt, 2);
 		const unsigned char *owner = sqlite3_column_text(stmt, 3);
 		const unsigned char *group = sqlite3_column_text(stmt, 4);
 		const unsigned char *mode = sqlite3_column_text(stmt, 5);
 
-		e->data = (data == NULL) ? NULL : strdup((char *) data);
+		e->data = (data == NULL) ? NULL : strdup((char *)data);
 		if (checksum != NULL)
 			strlcpy(e->checksum, checksum, 65);
 		if (owner != NULL)

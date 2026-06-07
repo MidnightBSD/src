@@ -38,46 +38,47 @@
 #include "mport.h"
 #include "mport_private.h"
 
-bool 
-mport_is_age_verified(mportInstance *mport, mportPackageMeta *pack) 
+bool
+mport_is_age_verified(mportInstance *mport, mportPackageMeta *pack)
 {
 
-#if defined(__MidnightBSD__) && __MidnightBSD_version >= 400004    
-    char *age_str = NULL;
-    int age = 0;
+#if defined(__MidnightBSD__) && __MidnightBSD_version >= 400004
+	char *age_str = NULL;
+	int age = 0;
 
-    mport_annotation_get(mport, pack->origin, "age", &age_str);
+	mport_annotation_get(mport, pack->origin, "age", &age_str);
 
-    if (age_str == NULL) {
-        return true; /* No age annotation means it's appropriate for all ages */
-    }
+	if (age_str == NULL) {
+		return true; /* No age annotation means it's appropriate for all ages */
+	}
 
-    age = atoi(age_str);
-    free(age_str);
+	age = atoi(age_str);
+	free(age_str);
 
-    const char *username = getlogin();
-    if (username == NULL) {
-        mport_call_msg_cb(mport, "Could not determine username to verify age: %s", strerror(errno));
-        return false;
-    }
+	const char *username = getlogin();
+	if (username == NULL) {
+		mport_call_msg_cb(
+		    mport, "Could not determine username to verify age: %s", strerror(errno));
+		return false;
+	}
 
-    int *user_age_bracket = agev_get_age_bracket(username);
-    if (user_age_bracket == NULL) {
-        mport_call_msg_cb(mport, "Could not determine user age bracket.");
-        return false;
-    }
+	int *user_age_bracket = agev_get_age_bracket(username);
+	if (user_age_bracket == NULL) {
+		mport_call_msg_cb(mport, "Could not determine user age bracket.");
+		return false;
+	}
 
-    bool verified = false;
-    if (user_age_bracket[0] >= 18 && user_age_bracket[1] == -1) {
-        verified = true;
-    } else {
-        verified = age <= user_age_bracket[1];
-    }
+	bool verified = false;
+	if (user_age_bracket[0] >= 18 && user_age_bracket[1] == -1) {
+		verified = true;
+	} else {
+		verified = age <= user_age_bracket[1];
+	}
 
-    free(user_age_bracket);
+	free(user_age_bracket);
 
-    return verified;
+	return verified;
 #else
-    return true;
+	return true;
 #endif
 }

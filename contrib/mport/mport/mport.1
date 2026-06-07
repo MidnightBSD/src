@@ -23,227 +23,431 @@
 .\" SUCH DAMAGE.
 .\"
 .\"
-.Dd January 17, 2026
+.Dd April 19, 2026
 .Dt MPORT 1
 .Os
 .Sh NAME
 .Nm mport
-.Nd "mport package manager"
+.Nd package manager for MidnightBSD
 .Sh SYNOPSIS
 .Nm
-.Op Fl v
-.Op Fl c Ao chroot path Ac
+.Op Fl b
+.Op Fl c Ar chroot-path
 .Op Fl f
-.Op Fl o Ao output path Ac
+.Op Fl o Ar output-path
 .Op Fl q
+.Op Fl U
 .Op Fl V
-.Ao command Ac
+.Op Fl v
+.Ar command Op Ar args ...
 .Pp
 .Nm
 .Cm add
 .Op Fl A
-.Op Ar name
+.Ar package-file ...
+.Pp
 .Nm
 .Cm annotate
-.Op Fl A
-.Op Fl S
-.Op Fl D
 .Op Fl a
 .Op Fl q
-.Op Ar name
-.Op Ar tag
+.Fl S
+.Ar package
+.Ar tag
+.Pp
 .Nm
-.Cm autoremove
+.Cm annotate
+.Op Fl a
+.Op Fl q
+.Fl A
+.Ar package
+.Ar tag
+.Ar value
+.Pp
 .Nm
-.Cm clean
-.Nm
-.Cm config get
-.Op Ar setting name
-.Nm
-.Cm config set
-.Op Ar setting name
-.Op Ar setting value
+.Cm annotate
+.Fl D
+.Ar package
+.Ar tag
+.Pp
 .Nm
 .Cm audit
+.Op Fl r
+.Op Ar package
+.Pp
+.Nm
+.Cm autoremove
+.Pp
+.Nm
+.Cm clean
+.Pp
+.Nm
+.Cm config
+.Cm list
+.Pp
+.Nm
+.Cm config
+.Cm get
+.Ar setting
+.Pp
+.Nm
+.Cm config
+.Cm set
+.Ar setting
+.Ar value
+.Pp
 .Nm
 .Cm cpe
-.Op Ar name ...
-.Nm
-.Cm list
-.Nm
-.Cm list updates
-.Nm
-.Cm list prime
-.Nm
-.Cm info
-.Op Ar name
+.Op Ar package ...
+.Pp
 .Nm
 .Cm delete
-.Op Ar name
+.Ar package ...
+.Pp
 .Nm
 .Cm deleteall
+.Pp
 .Nm
 .Cm download
+.Op Fl a
 .Op Fl d
-.Op Ar name
+.Op Ar package ...
+.Pp
+.Nm
+.Cm export
+.Ar file
+.Pp
+.Nm
+.Cm import
+.Ar file
+.Pp
 .Nm
 .Cm index
+.Pp
+.Nm
+.Cm info
+.Ar package
+.Pp
 .Nm
 .Cm install
 .Op Fl A
 .Op Fl M
-.Op Ar name
+.Op Fl y
+.Ar package ...
+.Pp
 .Nm
-.Cm mirror list
+.Cm list
+.Op Cm updates | Cm up | Cm prime
+.Pp
 .Nm
-.Cm mirror select
+.Cm lock
+.Ar package
+.Pp
+.Nm
+.Cm locks
+.Pp
+.Nm
+.Cm mirror
+.Cm list
+.Pp
+.Nm
+.Cm mirror
+.Cm select
+.Pp
 .Nm
 .Cm purl
-.Op Ar name ...
+.Op Ar package ...
+.Pp
 .Nm
 .Cm search
-.Op Ar name ...
+.Ar query ...
+.Pp
 .Nm
 .Cm shell
+.Pp
 .Nm
 .Cm stats
+.Pp
+.Nm
+.Cm unlock
+.Ar package
+.Pp
 .Nm
 .Cm update
-.Op Ar name
+.Ar package ...
+.Pp
 .Nm
 .Cm upgrade
+.Pp
 .Nm
 .Cm verify
-.Op Ar name ...
+.Op Fl r
+.Op Ar package ...
+.Pp
+.Nm
+.Cm version
+.Fl t
+.Ar version1
+.Ar version2
+.Pp
+.Nm
+.Cm which
+.Op Fl q
+.Op Fl o
+.Ar path
 .Sh DESCRIPTION
-The
 .Nm
-command installs or removes mport packages, and displays information on
-installed packages.
+installs, upgrades, removes, and inspects
+.Xr mport 5
+packages.
+It can work with repository packages, local package files, and the local
+package database.
 .Sh OPTIONS
-The following options are supported by
+The following global options are supported by
 .Nm :
-.Bl -tag -width indent
-.It Fl v, Cm --version
-Display the current version of 
-.Nm .
-.It Fl c Ao chroot path Ac , Cm --chroot Ao chroot path Ac
-.Nm
-will chroot in the
-.Ao chroot path Ac
-.It Fl q, Cm --quiet
-Make output less verbose and hide download progress.
-.It Fl V, Cm --verbose
-Make output more verbose.
+.Bl -tag -width ".Fl o Ar output-path"
+.It Fl b, Cm --brief
+Use brief output when supported by the command.
+.It Fl c Ar chroot-path , Cm --chroot Ar chroot-path
+Run inside the specified chroot.
 .It Fl f, Cm --force
-Force the operation.  Supported for install and delete currently.
-.It Fl o Ao output path Ac , Cm --output Ao output path Ac
+Force the operation when supported.
+This currently applies to commands such as
+.Cm install
+and
+.Cm delete .
+.It Fl o Ar output-path , Cm --output Ar output-path
+Write downloaded package files to
+.Ar output-path .
+.It Fl q, Cm --quiet
+Reduce output verbosity and suppress download progress.
+.It Fl U, Cm --no-index
+Skip automatic index updates for this invocation.
+.It Fl V, Cm --verbose
+Increase output verbosity.
+.It Fl v, Cm --version
+Display the current version of
 .Nm
-will download packages into the 
-.Ao output path Ac
+and exit.
+.El
 .Sh COMMANDS
 The following commands are supported by
 .Nm :
-.Bl -tag -width ".Cm install"
-.It Cm add Ao name Ac
-Installs a local package file and also attempts to install any missing dependencies in the path specified.
-For online installs, use mport install instead.
-.It Fl A, Fl S, Fl D, Fl a, Fl q, Cm annotate Ao name Ac Ao tag Ac
-Add (A), Show (S), or Delete (D) an annotation tag for a package.
-The q flag shows abbreviated output for use in scripts. 
-The a flag allows you to operate on all installed packages.
-.It Cm audit
-Displays vulnerable packages installed on the system. Uses CPE data to match against
-a NVD feed provided by the MidnightBSD project.
+.Bl -tag -width ".Cm annotate Fl A Ar package Ar tag Ar value"
+.It Cm add Op Fl A Ar package-file ...
+Install one or more local
+.Pa .mport
+package files.
+If
+.Fl A
+is specified, mark the installed package as automatic.
+For repository installs, use
+.Cm install .
+.It Cm annotate Op Fl a Op Fl q Fl S Ar package Ar tag
+Show the value of an annotation tag for a package.
+With
+.Fl a ,
+show the tag for all installed packages.
+With
+.Fl q ,
+use abbreviated output suitable for scripts.
+.It Cm annotate Op Fl a Op Fl q Fl A Ar package Ar tag Ar value
+Add an annotation tag to a package.
+.It Cm annotate Fl D Ar package Ar tag
+Delete an annotation tag from a package.
+.It Cm audit Op Fl r Op Ar package
+Display vulnerable installed packages using CPE data matched against the
+MidnightBSD security feed.
+With
+.Fl r ,
+also include packages that depend on a vulnerable package.
+If
+.Ar package
+is specified, audit only that package.
 .It Cm autoremove
-Experimental! Removes all packages installed as dependencies that are no longer needed
-as the original package depending on them has been removed.
+Remove packages that were installed automatically and are no longer required
+by any explicitly installed package.
 .It Cm clean
-Clean up old packages not found in the index and perform maintenence on the
-database.
-.It Cm config get Ao name Ac
-Displays the value of a configuration setting
-.It Cm config set Ao name Ac Ao value Ac
-Sets the value of the configuration setting. 
-.It Cm cpe
-List all CPE information for each installed package
-.It Cm cpe Ao name Ac
-List CPE information for a specific package
-.It Cm list
-List all currently installed packages
-.It Cm list updates
-List currently installed packages with updates available
-.It Cm list prime
-List all packages explicitly installed rather than as a dependency
-.It Cm info Ao name Ac
-Print detailed information about a package
-.It Cm delete Ao name Ac
-Delete or uninstall a package
+Remove package files no longer present in the index and perform maintenance on
+the local package database.
+.It Cm config list
+List all available configuration settings.
+.It Cm config get Ar setting
+Display the value of
+.Ar setting .
+.It Cm config set Ar setting Ar value
+Set
+.Ar setting
+to
+.Ar value .
+.It Cm cpe Op Ar package ...
+List Common Platform Enumeration identifiers for installed packages.
+If one or more package names are specified, restrict output to those packages.
+.It Cm delete Ar package ...
+Remove one or more installed packages.
 .It Cm deleteall
-Delete or uninstall all packages on the system.  Useful for major OS upgrades,
-or testing.
-.It Cm download Ao name Ac
-Download a package, but do not install it. Useful for later offline installations.
-The d flag will allow it to download dependencies as well.
+Remove all installed packages.
+This is primarily useful for testing or major operating system upgrades.
+.It Cm download Op Fl a Op Fl d Op Ar package ...
+Download package files without installing them.
+With
+.Fl a ,
+download all available packages.
+With
+.Fl d ,
+also download dependencies.
+.It Cm export Ar file
+Export package metadata or a package list to
+.Ar file .
+.It Cm import Ar file
+Import package metadata or a package list from
+.Ar file .
 .It Cm index
-Force a download of the index to refresh it without waiting for the timeout interval. This
-allows the user to get the latest list of packages.
-.It Cm install Fl A Fl M Ao name Ac
-Fetch and install a package.  
-With the A flag set, marks the installed packages as automatic.  Will be automatically
-removed	if no other packages depend on them.
-With the M flag set, will ignore missing dependencies and attempt to install the package anyway.
-.It Cm mirror list
-Lists all available package mirrors.
-.It Cm mirror select
-Pings various mirrors to attempt to select the closest and sets it as default.
-.It Cm purl
-Lists PURL for each installed package
-.it Cm purl Ao name Ac
-Lists PURL for a specific package
-.It Cm search
-Search package names and descriptions.  Supports globbing queries such as 
-"*php*".
-.It Cm shell
-Starts a sqlite3 client connected to the mport master database.
-.It Cm stats
-List statistics about available and installed packages.
-.It Cm update Ao name Ac
-Fetch and update a specific package
-.It Cm upgrade
-Upgrade all currently installed packages with the latest version
-.It Cm verify Fl r Ao name Ac
-Verify currently installed packages have not had files deleted or modified from the original
-installation.
-The r flag will attempt recompute the checksum of the installed files. This is useful
-if the user modified files and wants to verify the package is still valid. A large number of files
-with invalid checksums may indicate a security issue or corrupted package.
-.Sh SETTINGS
+Refresh the package index immediately instead of waiting for the automatic
+update interval.
+.It Cm info Ar package
+Display detailed information about an installed package or an indexed package.
+.It Cm install Op Fl A Op Fl M Op Fl y Ar package ...
+Fetch and install one or more packages from the configured repository.
+With
+.Fl A ,
+mark the installed packages as automatic.
+With
+.Fl M ,
+ignore missing dependencies and attempt the installation anyway.
+With
+.Fl y ,
+assume yes for confirmation prompts.
+.It Cm list Op Cm updates | Cm up | Cm prime
+Without arguments, list installed packages.
 The
+.Cm updates
+or
+.Cm up
+subcommand lists installed packages with updates available.
+The
+.Cm prime
+subcommand lists packages installed explicitly rather than as dependencies.
+.It Cm lock Ar package
+Prevent a package from being modified by upgrade or delete operations.
+.It Cm locks
+List all locked packages.
+.It Cm mirror list
+List available package mirrors.
+.It Cm mirror select
+Ping known mirrors, select the closest responding mirror, and save it as the
+default.
+.It Cm purl Op Ar package ...
+List Package URL values for installed packages.
+If one or more package names are specified, restrict output to those packages.
+.It Cm search Ar query ...
+Search package names and descriptions.
+Glob patterns such as
+.Dq *php*
+are supported.
+.It Cm shell
+Start a
+.Xr sqlite3 1
+session connected to the
 .Nm
-command has the following settings that modify it's behavior:
-.Dl mirror_region
-Determines which mirror region to use to fetch packages.  Valid values are currently us, us2, us3, uk, jp
-The current list is always available in the mport index file in /var/db/mport/index.db in the mirrors table
+master package database.
+.It Cm stats
+Display statistics about available and installed packages.
+.It Cm unlock Ar package
+Remove a package lock.
+.It Cm update Ar package ...
+Update one or more installed packages.
+Wildcard arguments are supported.
+.It Cm upgrade
+Upgrade all installed packages to the newest available versions.
+.It Cm verify Op Fl r Op Ar package ...
+Verify that installed package files have not been deleted or modified.
+If package names are provided, verify only those packages.
+With
+.Fl r ,
+recompute and store checksums for the named packages.
+This is useful after intentional local modifications.
+.It Cm version Fl t Ar version1 Ar version2
+Compare two version strings and print
+.Ql <
+if
+.Ar version1
+is older,
+.Ql =
+if they are equal, or
+.Ql >
+if
+.Ar version1
+is newer.
+.It Cm which Op Fl q Op Fl o Ar path
+Show which installed package owns
+.Ar path .
+With
+.Fl q ,
+print only the package name and version.
+With
+.Fl o ,
+print the package origin instead.
+.El
+.Sh SETTINGS
+The following configuration settings commonly affect
+.Nm
+behavior:
+.Bl -tag -width ".Cm index_autoupdate"
+.It Cm mirror_region
+Select the mirror region used for downloads.
+Valid values currently include
+.Dq us ,
+.Dq us2 ,
+.Dq us3 ,
+.Dq uk ,
+and
+.Dq jp .
+The current list is stored in the
+.Pa mirrors
+table of
+.Pa /var/db/mport/index.db .
+.It Cm target_os
+Override the operating system version used when fetching and installing
+packages.
+If unset,
+.Nm
+checks
+.Pa /bin/midnightbsd-version
+first and falls back to the running kernel version.
+.It Cm index_last_check
+Timestamp of the last index update check.
+.It Cm index_autoupdate
+Enable or disable automatic index refresh.
+If set to
+.Dq NO
+or
+.Dq FALSE ,
+automatic updates are skipped unless the index is missing.
+This is the persistent equivalent of the global
+.Fl U
+flag.
+.It Cm handle_rc_scripts
+If set to
+.Dq yes
+or
+.Dq true ,
+run rc.d start and stop scripts shipped by packages.
+If set to
+.Dq no
+or
+.Dq false ,
+do not run them.
+.El
 .Pp
-.Dl target_os
-Override the OS version used to fetch packages and install them. If undefined, we try /bin/midnightbsd-version first and
-fall back to the running kernel version.
-.Pp
-.Dl index_last_check
-This is the last time the index file was checked for an update.
-.Pp
-.Dl index_autoupdate
-Determines if the index file will be updated automatically. If set to NO or FALSE, it will be skipped unless
-it is missing entirely. A persistent version of the mport -U flag. 
-.Pp
-.Dl handle_rc_scripts
-When set to yes or true, will start and stop rc.d services included with the package. If set to no or false, will not run rc.d scripts.
+Use
+.Cm mport config list
+to see additional settings supported by the local installation.
 .Sh ENVIRONMENT
 .Bl -tag -width ".Ev FETCH_BIND_ADDRESS"
+.It Ev ASSUME_ALWAYS_YES
+If set to a non-empty value, answer yes to confirmation prompts.
 .It Ev FETCH_BIND_ADDRESS
-Specifies a hostname or IP address to which sockets used for outgoing
-connections will be bound.
+Bind outgoing network connections to the specified hostname or IP address.
 .It Ev FTP_LOGIN
 Default FTP login if none was provided in the URL.
 .It Ev FTP_PASSIVE_MODE
@@ -257,56 +461,60 @@ Default FTP password if the remote server requests one and none was
 provided in the URL.
 .It Ev FTP_PROXY
 URL of the proxy to use for FTP requests.
-The document part is ignored.
-FTP and HTTP proxies are supported; if no scheme is specified, FTP is
-assumed.
-If the proxy is an FTP proxy,
-.It Ev ASSUME_ALWAYS_YES
-If set to a non empty value, will assume any question should be answered
-with a yes.
+If no scheme is specified,
+.Dq ftp
+is assumed.
+.It Ev MPORT_FORCE_HTTP
+If set to a non-empty value, fetch package indexes and package bundles over
+HTTP by rewriting HTTPS download URLs to HTTP.
 .It Ev HANDLE_RC_SCRIPTS
-If set to a non empty value, will start/stop rc.d scripts included in the package.
+If set to a non-empty value, start or stop rc.d scripts included with the
+package.
+.El
 .Sh EXAMPLES
 Search for a package:
 .Dl $ mport search curl
 .Pp
-Install a package:
-.Dl Installing must specify a unique origin
+Install a package from the repository:
+.Dl # mport install curl
 .Pp
-.Dl % mport install curl
+Install a package without refreshing the index:
+.Dl # mport -U install curl
+.Pp
+Install a local package file:
+.Dl # mport add /home/myuser/mypkg.mport
 .Pp
 List installed packages:
 .Dl $ mport list
 .Pp
-Upgrade all installed packages:
-.Dl % mport upgrade
-.Pp
-Upgrade a single package:
-.Dl % mport update gmake
-.Pp
 List packages needing upgrades:
 .Dl $ mport list updates
 .Pp
-List non-automatic packages:
-.Dl $ mport list prime
-.Pp
-Delete an installed package:
-.Dl % mport delete curl
-.Pp
-Remove unneeded dependencies:
-.Dl % mport autoremove
+Show detailed package information:
+.Dl $ mport info gmake
 .Pp
 Determine which package installed a file:
 .Dl $ mport which /usr/local/bin/curl
 .Pp
+Lock a package before a system upgrade:
+.Dl # mport lock curl
+.Pp
+Upgrade all installed packages:
+.Dl # mport upgrade
+.Pp
+Upgrade a single package:
+.Dl # mport update gmake
+.Pp
+Remove unneeded dependencies:
+.Dl # mport autoremove
+.Pp
 Check installed packages for checksum mismatches:
 .Dl # mport verify
-.Pp 
-Install a local package file:
-.Dl $ mport add /home/myuser/mypkg.mport 
 .Pp
-Search for all xfce related packages:
+Search for all XFCE-related packages:
 .Dl $ mport search xfce*
+.Sh SEE ALSO
+.Xr sqlite3 1
 .Sh HISTORY
 The
 .Nm
@@ -315,6 +523,5 @@ command first appeared in
 .Sh AUTHORS
 The
 .Nm
-utility and 
-manual page were written by
-.An Lucas Holt Aq luke@MidnightBSD.org .
+utility and manual page were written by
+.An Lucas Holt Aq Mt luke@MidnightBSD.org .

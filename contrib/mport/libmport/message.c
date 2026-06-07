@@ -76,20 +76,19 @@ mport_pkg_message_display(mportInstance *mport, mportPackageMeta *pkg)
 	}
 
 	/* Limit message display based on version if provided. */
-	if (packageMessage.minimum_version != NULL && 
-		mport_version_cmp(packageMessage.minimum_version, pkg->version) == 1) {
-			free(packageMessage.str);
-			packageMessage.str = NULL;
-			return MPORT_OK;
+	if (packageMessage.minimum_version != NULL &&
+	    mport_version_cmp(packageMessage.minimum_version, pkg->version) == 1) {
+		free(packageMessage.str);
+		packageMessage.str = NULL;
+		return MPORT_OK;
 	}
 
-	if (packageMessage.maximum_version != NULL && 
-		mport_version_cmp(packageMessage.maximum_version, pkg->version) == -1) {
-			free(packageMessage.str);
-			packageMessage.str = NULL;
-			return MPORT_OK;
+	if (packageMessage.maximum_version != NULL &&
+	    mport_version_cmp(packageMessage.maximum_version, pkg->version) == -1) {
+		free(packageMessage.str);
+		packageMessage.str = NULL;
+		return MPORT_OK;
 	}
-
 
 	if (packageMessage.type == expectedType || packageMessage.type == PKG_MESSAGE_ALWAYS) {
 		if (packageMessage.str != NULL && packageMessage.str[0] != '\0')
@@ -103,7 +102,8 @@ mport_pkg_message_display(mportInstance *mport, mportPackageMeta *pkg)
 }
 
 int
-mport_pkg_message_load(mportInstance *mport, mportPackageMeta *pkg, mportPackageMessage *packageMessage)
+mport_pkg_message_load(
+    mportInstance *mport, mportPackageMeta *pkg, mportPackageMessage *packageMessage)
 {
 	char filename[FILENAME_MAX];
 	char *buf = NULL;
@@ -113,7 +113,8 @@ mport_pkg_message_load(mportInstance *mport, mportPackageMeta *pkg, mportPackage
 	ucl_object_t *obj = NULL;
 
 	if (mport == NULL || pkg == NULL || packageMessage == NULL) {
-		RETURN_ERROR(MPORT_ERR_FATAL, "Invalid argument(s) passed to mport_pkg_message_load()");
+		RETURN_ERROR(
+		    MPORT_ERR_FATAL, "Invalid argument(s) passed to mport_pkg_message_load()");
 	}
 
 	/* Assumes copy_metafile has run on install already */

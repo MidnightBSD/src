@@ -38,7 +38,7 @@
 MPORT_PUBLIC_API mportStats *
 mport_stats_new(void)
 {
-	return (mportStats *) calloc(1, sizeof(mportStats));
+	return (mportStats *)calloc(1, sizeof(mportStats));
 }
 
 MPORT_PUBLIC_API int
@@ -51,65 +51,77 @@ mport_stats_free(mportStats *stats)
 MPORT_PUBLIC_API int
 mport_stats(mportInstance *mport, mportStats **stats)
 {
-	sqlite3_stmt *stmt;
+	sqlite3_stmt *stmt = NULL;
 	sqlite3 *db = mport->db;
 	mportStats *s;
 	int result = MPORT_OK;
-	char *err;
+
+	if (stats == NULL)
+		RETURN_ERROR(MPORT_ERR_FATAL, "stats pointer is NULL");
 
 	if ((s = mport_stats_new()) == NULL)
 		RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
 
-	*stats = s;
-
 	if (mport_db_prepare(db, &stmt, "SELECT COUNT(*) FROM packages") != MPORT_OK) {
-		sqlite3_finalize(stmt);
-		RETURN_CURRENT_ERROR;
+		result = mport_err_code();
+		goto cleanup;
 	}
 
 	if (sqlite3_step(stmt) != SQLITE_ROW) {
-		sqlite3_finalize(stmt);
-		err = (char *) sqlite3_errmsg(db);
+		SET_ERRORX(MPORT_ERR_FATAL, "%s", sqlite3_errmsg(db));
 		result = MPORT_ERR_FATAL;
-		SET_ERRORX(result, "%s", err);
-		return result;
+		goto cleanup;
 	}
 
-	s->pkg_installed = (unsigned int) sqlite3_column_int(stmt, 0);
+	s->pkg_installed = (unsigned int)sqlite3_column_int(stmt, 0);
 	sqlite3_finalize(stmt);
-
+	stmt = NULL;
 
 	if (mport_db_prepare(db, &stmt, "SELECT sum(flatsize) FROM packages") != MPORT_OK) {
-		sqlite3_finalize(stmt);
-		RETURN_CURRENT_ERROR;
+		result = mport_err_code();
+		goto cleanup;
 	}
 
 	if (sqlite3_step(stmt) != SQLITE_ROW) {
-		sqlite3_finalize(stmt);
-		err = (char *) sqlite3_errmsg(db);
+		SET_ERRORX(MPORT_ERR_FATAL, "%s", sqlite3_errmsg(db));
 		result = MPORT_ERR_FATAL;
-		SET_ERRORX(result, "%s", err);
-		return result;
+		goto cleanup;
 	}
 
-	s->pkg_installed_size = (unsigned int) sqlite3_column_int(stmt, 0);
+	s->pkg_installed_size = sqlite3_column_int64(stmt, 0);
 	sqlite3_finalize(stmt);
+	stmt = NULL;
 
 	if (mport_db_prepare(db, &stmt, "SELECT COUNT(*) FROM idx.packages") != MPORT_OK) {
+		int errcode = sqlite3_errcode(db);
+		/* If the index is missing or detached, we still want to return what we have for
+		 * local */
+		if (errcode == SQLITE_ERROR &&
+		    strstr(sqlite3_errmsg(db), "no such table") != NULL) {
+			s->pkg_available = 0;
+			sqlite3_finalize(stmt);
+			stmt = NULL;
+		} else {
+			result = MPORT_ERR_FATAL;
+			goto cleanup;
+		}
+	} else {
+		if (sqlite3_step(stmt) != SQLITE_ROW) {
+			s->pkg_available = 0;
+		} else {
+			s->pkg_available = (unsigned int)sqlite3_column_int(stmt, 0);
+		}
 		sqlite3_finalize(stmt);
-		RETURN_CURRENT_ERROR;
+		stmt = NULL;
 	}
 
-	if (sqlite3_step(stmt) != SQLITE_ROW) {
+	*stats = s;
+	return MPORT_OK;
+
+cleanup:
+	if (stmt != NULL)
 		sqlite3_finalize(stmt);
-		err = (char *) sqlite3_errmsg(db);
-		result = MPORT_ERR_FATAL;
-		SET_ERRORX(result, "%s", err);
-		return result;
-	}
-
-	s->pkg_available = (unsigned int) sqlite3_column_int(stmt, 0);
-	sqlite3_finalize(stmt);
-
+	mport_stats_free(s);
+	*stats = NULL;
 	return result;
 }

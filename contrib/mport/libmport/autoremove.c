@@ -32,74 +32,76 @@
 #include "mport_private.h"
 
 MPORT_PUBLIC_API int
-mport_autoremove(mportInstance *mport) 
+mport_autoremove(mportInstance *mport)
 {
-    mportPackageMeta **packs = NULL;
-    mportPackageMeta **packs_start = NULL;
-    mportPackageMeta **depends = NULL;
-    mportPackageMeta **depends_start = NULL;
+	mportPackageMeta **packs = NULL;
+	mportPackageMeta **packs_start = NULL;
+	mportPackageMeta **depends = NULL;
+	mportPackageMeta **depends_start = NULL;
 
-    if (mport_pkgmeta_list(mport, &packs) != MPORT_OK) {
-        RETURN_CURRENT_ERROR;
-    }
+	if (mport_pkgmeta_list(mport, &packs) != MPORT_OK) {
+		RETURN_CURRENT_ERROR;
+	}
 
-    if (packs == NULL)
-        return MPORT_OK;
+	if (packs == NULL)
+		return MPORT_OK;
 
-    packs_start = packs;
-    while (*packs != NULL) {
-        if ((*packs)->automatic == MPORT_EXPLICIT) {
-            packs++;
-            continue;
-        }
+	packs_start = packs;
+	while (*packs != NULL) {
+		if ((*packs)->automatic == MPORT_EXPLICIT) {
+			packs++;
+			continue;
+		}
 
-        if (mport_pkgmeta_get_updepends(mport, *packs, &depends) != MPORT_OK) {
-            mport_call_msg_cb(mport, "Unable to evaluate package %s: %s", (*packs)->name, mport_err_string());
-            packs++;
-            continue;
-        }
+		if (mport_pkgmeta_get_updepends(mport, *packs, &depends) != MPORT_OK) {
+			mport_call_msg_cb(mport, "Unable to evaluate package %s: %s",
+			    (*packs)->name, mport_err_string());
+			packs++;
+			continue;
+		}
 
-        if (depends == NULL) {
-            packs++;
-            continue;
-        }
+		if (depends == NULL) {
+			packs++;
+			continue;
+		}
 
-        depends_start = depends;
-        bool found = false;
-        while (*depends != NULL) {
-            if ((*depends)->automatic == MPORT_EXPLICIT) {
-                found = true;
-                break;
-            }
-            depends++;
-        }
+		depends_start = depends;
+		bool found = false;
+		while (*depends != NULL) {
+			if ((*depends)->automatic == MPORT_EXPLICIT) {
+				found = true;
+				break;
+			}
+			depends++;
+		}
 
-        if (found) {
-            packs++;
-            continue;
-        }
+		if (found) {
+			packs++;
+			continue;
+		}
 
-        depends = depends_start;
-        while ((*depends) != NULL) {
-            mport_call_msg_cb(mport, "Auto-removing %s", (*depends)->name);
-            (*depends)->action = MPORT_ACTION_DELETE;
-            if (mport_delete_primative(mport, *depends, true) != MPORT_OK) {
-                mport_call_msg_cb(mport, "Unable to autoremove %s: %s", (*depends)->name, mport_err_string());
-                continue;
-            }
+		depends = depends_start;
+		while ((*depends) != NULL) {
+			mport_call_msg_cb(mport, "Auto-removing %s", (*depends)->name);
+			(*depends)->action = MPORT_ACTION_DELETE;
+			if (mport_delete_primative(mport, *depends, true) != MPORT_OK) {
+				mport_call_msg_cb(mport, "Unable to autoremove %s: %s",
+				    (*depends)->name, mport_err_string());
+				continue;
+			}
 
-            depends++;
-        }
-        mport_pkgmeta_vec_free(depends_start);
-        depends_start = NULL;
-        depends = NULL;
+			depends++;
+		}
+		mport_pkgmeta_vec_free(depends_start);
+		depends_start = NULL;
+		depends = NULL;
 
-        packs++;
-    }
-    
-    mport_pkgmeta_vec_free(packs_start);
-    packs_start = NULL;
-    packs = NULL;
+		packs++;
+	}
 
-    return MPORT_OK;
+	mport_pkgmeta_vec_free(packs_start);
+	packs_start = NULL;
+	packs = NULL;
+
+	return MPORT_OK;
 }

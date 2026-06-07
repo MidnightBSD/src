@@ -1,0 +1,206 @@
+#! /usr/libexec/atf-sh
+
+atf_test_case version_cmp_orders_versions
+version_cmp_orders_versions_head()
+{
+	atf_set "descr" "mport.version_cmp reports less-than, equality, and greater-than"
+}
+version_cmp_orders_versions_body()
+{
+	atf_check -s exit:0 -o inline:"=\n" -e empty \
+		"${MPORT_VERSION_CMP}" 1.0 1.0
+	atf_check -s exit:0 -o inline:"<\n" -e empty \
+		"${MPORT_VERSION_CMP}" 1.0 1.1
+	atf_check -s exit:0 -o inline:">\n" -e empty \
+		"${MPORT_VERSION_CMP}" 2.0 1.9
+}
+
+atf_test_case version_cmp_requires_two_args
+version_cmp_requires_two_args_head()
+{
+	atf_set "descr" "mport.version_cmp rejects missing operands"
+}
+version_cmp_requires_two_args_body()
+{
+	atf_check -s exit:1 -o empty -e match:"Usage: mport.version_cmp" \
+		"${MPORT_VERSION_CMP}" 1.0
+}
+
+atf_test_case check_fake_succeeds
+check_fake_succeeds_head()
+{
+	atf_set "descr" "mport.check-fake succeeds when staged files match the plist"
+}
+check_fake_succeeds_body()
+{
+	setup_fake_tree
+
+	atf_check -s exit:0 \
+		-o match:"Fake succeeded" \
+		-e empty \
+		"${MPORT_CHECK_FAKE}" \
+		-f "${PWD}/plist" \
+		-d "${PWD}/root" \
+		-p /usr/local
+}
+
+atf_test_case check_fake_reports_missing_file
+check_fake_reports_missing_file_head()
+{
+	atf_set "descr" "mport.check-fake fails when a plist entry is not staged"
+}
+check_fake_reports_missing_file_body()
+{
+	setup_fake_tree
+	rm root/usr/local/share/testpkg/file.txt
+
+	atf_check -s not-exit:0 \
+		-o match:"not installed" \
+		-e empty \
+		"${MPORT_CHECK_FAKE}" \
+		-f "${PWD}/plist" \
+		-d "${PWD}/root" \
+		-p /usr/local
+}
+
+atf_test_case check_fake_requires_options
+check_fake_requires_options_head()
+{
+	atf_set "descr" "mport.check-fake rejects missing required options"
+}
+check_fake_requires_options_body()
+{
+	atf_check -s exit:64 -o empty -e match:"Usage: mport.check-fake" \
+		"${MPORT_CHECK_FAKE}"
+}
+
+atf_test_case frontends_reject_missing_required_args
+frontends_reject_missing_required_args_head()
+{
+	atf_set "descr" "libexec frontends report usage for missing required arguments"
+}
+frontends_reject_missing_required_args_body()
+{
+	atf_check -s exit:2 -o empty -e match:"Usage: mport.check-for-older" \
+		"${MPORT_CHECK_FOR_OLDER}"
+	atf_check -s exit:2 -o empty -e match:"Usage: mport.delete" \
+		"${MPORT_DELETE}"
+	atf_check -s exit:2 -o empty -e match:"Usage: mport.fetch" \
+		"${MPORT_FETCH}"
+	atf_check -s exit:2 -o empty -e match:"Missing origin" \
+		"${MPORT_INFO}"
+	atf_check -s exit:1 -o empty -e match:"Usage: mport.install" \
+		"${MPORT_INSTALL}"
+	atf_check -s exit:2 -o empty -e match:"Usage: mport.merge" \
+		"${MPORT_MERGE}"
+	atf_check -s exit:2 -o empty -e match:"Usage: mport.query" \
+		"${MPORT_QUERY}"
+	atf_check -s exit:2 -o empty -e match:"Usage: mport.updepends" \
+		"${MPORT_UPDEPENDS}"
+}
+
+atf_test_case list_rejects_extra_args
+list_rejects_extra_args_head()
+{
+	atf_set "descr" "mport.list reports usage for too many arguments"
+}
+list_rejects_extra_args_body()
+{
+	atf_check -s exit:2 -o empty -e match:"Usage: mport.list" \
+		"${MPORT_LIST}" one two three
+}
+
+atf_test_case init_reports_bad_chroot
+init_reports_bad_chroot_head()
+{
+	atf_set "descr" "mport.init reports chroot failures cleanly"
+}
+init_reports_bad_chroot_body()
+{
+	atf_check -s not-exit:0 -o empty -e match:"chroot failed" \
+		"${MPORT_INIT}" -c "${PWD}/missing-root"
+}
+
+atf_test_case update_reports_bad_chroot
+update_reports_bad_chroot_head()
+{
+	atf_set "descr" "mport.update reports chroot failures cleanly"
+}
+update_reports_bad_chroot_body()
+{
+	atf_check -s not-exit:0 -o empty -e match:"chroot failed" \
+		"${MPORT_UPDATE}" -c "${PWD}/missing-root" old.mport new.mport
+}
+
+atf_test_case delete_ignores_missing_registered_dir
+delete_ignores_missing_registered_dir_head()
+{
+	atf_set "descr" "mport.delete unregisters a package when registered directories are already missing"
+	atf_set "require.user" "root"
+}
+delete_ignores_missing_registered_dir_body()
+{
+	mkdir -p root/var/db/mport root/usr/local/share/licenses
+
+	sqlite3 root/var/db/mport/master.db \
+		"CREATE TABLE packages (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, prefix text NOT NULL, lang text, options text, status text default 'dirty', comment text, os_release text NOT NULL default '1.0', cpe text, locked int NOT NULL default '0', deprecated text default '', expiration_date int64 NOT NULL default '0', no_provide_shlib int default '0', flavor text default '', automatic int default '0', install_date int64 NOT NULL default '0', type int NOT NULL default '0', flatsize int64 NOT NULL default '0');" \
+		"CREATE UNIQUE INDEX packages_pkg ON packages (pkg);" \
+		"CREATE TABLE depends (pkg text NOT NULL, depend_pkgname text NOT NULL, depend_pkgversion text, depend_port text NOT NULL);" \
+		"CREATE TABLE log (pkg text NOT NULL, version text NOT NULL, date int NOT NULL, msg text NOT NULL);" \
+		"CREATE TABLE assets (pkg text NOT NULL, type int NOT NULL, data text, checksum text, owner text, grp text, mode text);" \
+		"CREATE TABLE categories (pkg text NOT NULL, category text NOT NULL);" \
+		"CREATE TABLE conflicts (pkg text NOT NULL, conflict_pkg text NOT NULL, conflict_version text NOT NULL);" \
+		"CREATE TABLE annotation (pkg text NOT NULL, tag TEXT NOT NULL, val TEXT NOT NULL, PRIMARY KEY (pkg, tag));" \
+		"INSERT INTO packages (pkg, version, origin, prefix, lang, options, status, comment, os_release, cpe, locked, deprecated, expiration_date, no_provide_shlib, flavor, automatic, install_date, type, flatsize) VALUES ('gperf', '3.1', 'devel/gperf', '/usr/local', '', '', 'clean', '', '3.2', '', 0, '', 0, 0, '', 0, 0, 0, 682000);" \
+		"INSERT INTO assets (pkg, type, data, checksum, owner, grp, mode) VALUES ('gperf', 24, '/usr/local/share/licenses/gperf-3.1', NULL, NULL, NULL, NULL);"
+
+	atf_check -s exit:0 -o ignore -e empty \
+		"${MPORT_DELETE}" -c "${PWD}/root" -f -n gperf
+
+	atf_check -s exit:0 -o inline:"0\n" -e empty \
+		sqlite3 root/var/db/mport/master.db \
+		"SELECT count(*) FROM packages WHERE pkg='gperf';"
+}
+
+setup_fake_tree()
+{
+	mkdir -p root/usr/local/share/testpkg
+	printf "hello\n" >root/usr/local/share/testpkg/file.txt
+	printf "share/testpkg/file.txt\n" >plist
+}
+
+atf_init_test_cases()
+{
+	srcdir=$(atf_get_srcdir)
+	: "${LIBEXEC_DIR:=${srcdir}/../libexec}"
+	: "${LD_LIBRARY_PATH:=${srcdir}/../libmport}"
+	export LD_LIBRARY_PATH
+
+	: "${MPORT_CHECK_FAKE:=${LIBEXEC_DIR}/mport.check-fake/mport.check-fake}"
+	: "${MPORT_CHECK_FOR_OLDER:=${LIBEXEC_DIR}/mport.check-for-older/mport.check-for-older}"
+	: "${MPORT_DELETE:=${LIBEXEC_DIR}/mport.delete/mport.delete}"
+	: "${MPORT_FETCH:=${LIBEXEC_DIR}/mport.fetch/mport.fetch}"
+	: "${MPORT_INFO:=${LIBEXEC_DIR}/mport.info/mport.info}"
+	: "${MPORT_INIT:=${LIBEXEC_DIR}/mport.init/mport.init}"
+	: "${MPORT_INSTALL:=${LIBEXEC_DIR}/mport.install/mport.install}"
+	: "${MPORT_LIST:=${LIBEXEC_DIR}/mport.list/mport.list}"
+	: "${MPORT_MERGE:=${LIBEXEC_DIR}/mport.merge/mport.merge}"
+	: "${MPORT_QUERY:=${LIBEXEC_DIR}/mport.query/mport.query}"
+	: "${MPORT_UPDATE:=${LIBEXEC_DIR}/mport.update/mport.update}"
+	: "${MPORT_UPDEPENDS:=${LIBEXEC_DIR}/mport.updepends/mport.updepends}"
+	: "${MPORT_VERSION_CMP:=${LIBEXEC_DIR}/mport.version_cmp/mport.version_cmp}"
+	export MPORT_CHECK_FAKE MPORT_CHECK_FOR_OLDER MPORT_DELETE MPORT_FETCH
+	export MPORT_INFO MPORT_INIT MPORT_INSTALL MPORT_LIST MPORT_MERGE
+	export MPORT_QUERY MPORT_UPDATE MPORT_UPDEPENDS MPORT_VERSION_CMP
+
+	atf_add_test_case version_cmp_orders_versions
+	atf_add_test_case version_cmp_requires_two_args
+	atf_add_test_case check_fake_succeeds
+	atf_add_test_case check_fake_reports_missing_file
+	atf_add_test_case check_fake_requires_options
+	atf_add_test_case frontends_reject_missing_required_args
+	atf_add_test_case list_rejects_extra_args
+	atf_add_test_case init_reports_bad_chroot
+	atf_add_test_case update_reports_bad_chroot
+	atf_add_test_case delete_ignores_missing_registered_dir
+}
