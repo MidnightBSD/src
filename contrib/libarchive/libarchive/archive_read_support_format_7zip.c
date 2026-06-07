@@ -34,6 +34,9 @@
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
 #endif
+#ifdef HAVE_LIMITS_H
+#include <limits.h>
+#endif
 #ifdef HAVE_BZLIB_H
 #include <bzlib.h>
 #endif
@@ -80,7 +83,7 @@
 /*
  * ELF format
  */
-#define ELF_HDR_MIN_LEN 0x34
+#define ELF_HDR_MIN_LEN 0x40 /* sizeof(Elf64_Ehdr) */
 #define ELF_HDR_EI_CLASS_OFFSET 0x04
 #define ELF_HDR_EI_DATA_OFFSET 0x05
 
@@ -744,6 +747,7 @@ find_elf_data_sec(struct archive_read *a)
 	const char *h;
 	char big_endian, format_64;
 	ssize_t bytes, min_addr = SFX_MIN_ADDR;
+	ssize_t request;
 	uint64_t e_shoff, strtab_offset, strtab_size;
 	uint16_t e_shentsize, e_shnum, e_shstrndx;
 	uint16_t (*dec16)(const void *);
@@ -796,7 +800,12 @@ find_elf_data_sec(struct archive_read *a)
 		if (__archive_read_seek(a, e_shoff, SEEK_SET) < 0) {
 			break;
 		}
-		h = __archive_read_ahead(a, (size_t)e_shnum * (size_t)e_shentsize, NULL);
+		if (format_64) {
+		  request = (size_t)e_shnum * (size_t)e_shentsize + 0x28;
+		} else {
+		  request = (size_t)e_shnum * (size_t)e_shentsize + 0x18;
+		}
+		h = __archive_read_ahead(a, request, &bytes);
 		if (h == NULL) {
 			break;
 		}
@@ -811,6 +820,8 @@ find_elf_data_sec(struct archive_read *a)
 			strtab_size = (*dec32)(
 			    h + e_shstrndx * e_shentsize + 0x14);
 		}
+		if (strtab_size < 6 || strtab_size > SIZE_MAX)
+			break;
 
 		/*
 		 * Read the STRTAB section to find the .data offset
@@ -847,13 +858,18 @@ find_elf_data_sec(struct archive_read *a)
 		while (e_shnum > 0) {
 			name_offset = (*dec32)(h + sec_tbl_offset);
 			if (name_offset == data_sym_offset) {
+				uint64_t sel_offset;
+
 				if (format_64) {
-					min_addr = (*dec64)(
+					sel_offset = (*dec64)(
 					    h + sec_tbl_offset + 0x18);
 				} else {
-					min_addr = (*dec32)(
+					sel_offset = (*dec32)(
 					    h + sec_tbl_offset + 0x10);
 				}
+				if (sel_offset > SSIZE_MAX)
+					break;
+				min_addr = (ssize_t)sel_offset;
 				break;
 			}
 			sec_tbl_offset += e_shentsize;
@@ -959,7 +975,7 @@ archive_read_format_7zip_read_header(struct archive_read *a,
 		archive_set_error(&a->archive,
 		    ARCHIVE_ERRNO_FILE_FORMAT,
 		    "Pathname cannot be converted "
-		    "from %s to current locale.",
+		    "from %s to current locale",
 		    archive_string_conversion_charset_name(zip->sconv));
 		ret = ARCHIVE_WARN;
 	}
@@ -1391,7 +1407,8 @@ init_decompression(struct archive_read *a, struct _7zip *zip,
 		 * size to liblzma when using lzma_raw_decoder() liblzma
 		 * could correctly deal with BCJ+LZMA. But unfortunately
 		 * there is no way to do that.
-		 * Discussion about this can be found at XZ Utils forum.
+		 *
+		 * Reference: https://web.archive.org/web/20240405171610/https://www.mail-archive.com/xz-devel@tukaani.org/msg00373.html
 		 */
 		if (coder2 != NULL) {
 			zip->codec2 = coder2->codec;
@@ -1564,7 +1581,7 @@ init_decompression(struct archive_read *a, struct _7zip *zip,
 			    -15 /* Don't check for zlib header */);
 		if (r != Z_OK) {
 			archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
-			    "Couldn't initialize zlib stream.");
+			    "Couldn't initialize zlib stream");
 			return (ARCHIVE_FAILED);
 		}
 		zip->stream_valid = 1;
@@ -1706,7 +1723,7 @@ decompress(struct archive_read *a, struct _7zip *zip,
 			if (bytes < 0) {
 				archive_set_error(&(a->archive),
 				    ARCHIVE_ERRNO_MISC,
-				    "BCJ2 conversion Failed");
+				    "BCJ2 conversion failed");
 				return (ARCHIVE_FAILED);
 			}
 			zip->main_stream_bytes_remaining -=
@@ -1760,7 +1777,7 @@ decompress(struct archive_read *a, struct _7zip *zip,
 		default:
 			archive_set_error(&(a->archive),
 			    ARCHIVE_ERRNO_MISC,
-				"Decompression failed(%d)",
+				"Decompression failed (%d)",
 			    r);
 			return (ARCHIVE_FAILED);
 		}
@@ -1962,7 +1979,7 @@ decompress(struct archive_read *a, struct _7zip *zip,
 		bytes = Bcj2_Decode(zip, bcj2_next_out, bcj2_avail_out);
 		if (bytes < 0) {
 			archive_set_error(&(a->archive),
-			    ARCHIVE_ERRNO_MISC, "BCJ2 conversion Failed");
+			    ARCHIVE_ERRNO_MISC, "BCJ2 conversion failed");
 			return (ARCHIVE_FAILED);
 		}
 		zip->main_stream_bytes_remaining -=

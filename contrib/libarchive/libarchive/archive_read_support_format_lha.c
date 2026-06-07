@@ -613,7 +613,7 @@ archive_read_format_lha_read_header(struct archive_read *a,
 		archive_set_error(&a->archive,
 			ARCHIVE_ERRNO_FILE_FORMAT,
 			"Pathname cannot be converted "
-			"from %s to Unicode.",
+			"from %s to Unicode",
 			archive_string_conversion_charset_name(lha->sconv_dir));
 		err = ARCHIVE_FATAL;
 	} else if (0 != archive_mstring_get_wcs(&a->archive, &conv_buffer, &conv_buffer_p))
@@ -634,7 +634,7 @@ archive_read_format_lha_read_header(struct archive_read *a,
 		archive_set_error(&a->archive,
 			ARCHIVE_ERRNO_FILE_FORMAT,
 			"Pathname cannot be converted "
-			"from %s to Unicode.",
+			"from %s to Unicode",
 			archive_string_conversion_charset_name(lha->sconv_fname));
 		err = ARCHIVE_FATAL;
 	}
@@ -689,7 +689,7 @@ archive_read_format_lha_read_header(struct archive_read *a,
 	 * a pathname and a symlink has '\' character, a directory
 	 * separator in DOS/Windows. So we should convert it to '/'.
 	 */
-	if (p[H_LEVEL_OFFSET] == 0)
+	if (lha->level == 0)
 		lha_replace_path_separator(lha, entry);
 
 	archive_entry_set_mode(entry, lha->mode);
@@ -1100,6 +1100,13 @@ lha_read_file_header_3(struct archive_read *a, struct lha *lha)
 		goto invalid;
 	header_crc = lha_crc16(0, p, H3_FIXED_SIZE);
 	__archive_read_consume(a, H3_FIXED_SIZE);
+
+	/* Reject rediculously large header */
+	if (lha->header_size > 65536) {
+		archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
+		    "LHa header size too large");
+		return (ARCHIVE_FATAL);
+	}
 
 	/* Read extended headers */
 	err = lha_read_file_extended_header(a, lha, &header_crc, 4,
@@ -2374,7 +2381,7 @@ lzh_decode_blocks(struct lzh_stream *strm, int last)
 					lzh_br_consume(&bre, lt_bitlen[c]);
 				}
 				blocks_avail--;
-				if (c > UCHAR_MAX)
+				if ((unsigned int)c > UCHAR_MAX)
 					/* Current block is a match data. */
 					break;
 				/*

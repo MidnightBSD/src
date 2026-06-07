@@ -397,7 +397,7 @@ archive_read_format_cpio_read_header(struct archive_read *a,
 			return (ARCHIVE_FATAL);
 		}
 		archive_set_error(&a->archive, ARCHIVE_ERRNO_FILE_FORMAT,
-		    "Pathname can't be converted from %s to current locale.",
+		    "Pathname can't be converted from %s to current locale",
 		    archive_string_conversion_charset_name(sconv));
 		r = ARCHIVE_WARN;
 	}
@@ -426,7 +426,7 @@ archive_read_format_cpio_read_header(struct archive_read *a,
 			archive_set_error(&a->archive,
 			    ARCHIVE_ERRNO_FILE_FORMAT,
 			    "Linkname can't be converted from %s to "
-			    "current locale.",
+			    "current locale",
 			    archive_string_conversion_charset_name(sconv));
 			r = ARCHIVE_WARN;
 		}
@@ -825,9 +825,9 @@ header_odc(struct archive_read *a, struct cpio *cpio,
 }
 
 /*
- * NOTE: if a filename suffix is ".z", it is the file gziped by afio.
- * it would be nice that we can show uncompressed file size and we can
- * uncompressed file contents automatically, unfortunately we have nothing
+ * NOTE: if a filename suffix is ".z", it is a file gzipped by afio.
+ * it would be nice if we could show uncompressed file size and
+ * uncompress file contents automatically, unfortunately we have nothing
  * to get a uncompressed file size while reading each header. It means
  * we also cannot uncompress file contents under our framework.
  */

@@ -84,6 +84,24 @@
 #if HAVE_MEMBERSHIP_H
 #include <membership.h>
 #endif
+#if !defined(_WIN32) || defined(__CYGWIN__)
+# if HAVE_POSIX_SPAWN
+#  if HAVE_SYS_WAIT_H
+#   include <sys/wait.h>
+#  endif
+#  if HAVE_SPAWN_H
+#   include <spawn.h>
+#  endif
+extern char **environ;
+#  define USE_POSIX_SPAWN 1
+# endif
+#endif
+#if !defined(_WIN32)
+# if HAVE_PWD_H && HAVE_GETEUID && HAVE_GETEGID
+#  include <pwd.h>
+#  define RUN_TEST_UNPRIV 1
+# endif
+#endif
 
 #ifndef nitems
 #define nitems(arr) (sizeof(arr) / sizeof((arr)[0]))
@@ -165,6 +183,14 @@ const char *testprogfile;
 /* Name of exe to use in printf-formatted command strings. */
 /* On Windows, this includes leading/trailing quotes. */
 const char *testprog;
+#endif
+
+#ifdef RUN_TEST_UNPRIV
+/* Unprivileged user to run as */
+const char *tuser = "nobody";
+/* Original and test credentials */
+uid_t ouid, tuid;
+uid_t ogid, tgid;
 #endif
 
 #if defined(_WIN32) && !defined(__CYGWIN__)
@@ -618,6 +644,22 @@ assertion_chmod(const char *file, int line, const char *pathname, int mode)
 	failure_finish(NULL);
 	return (0);
 
+}
+
+/* change file/directory ownership and errors if it fails */
+int
+assertion_chown(const char *file, int line, const char *pathname, int user,
+    int group)
+{
+	assertion_count(file, line);
+#ifdef HAVE_CHOWN
+	if (chown(pathname, (uid_t)user, (gid_t)group) == 0)
+		return (1);
+#endif
+	failure_start(file, line, "chown(\"%s\", %d, %d)", pathname,
+	    user, group);
+	failure_finish(NULL);
+	return (0);
 }
 
 /* Verify two integers are equal. */
@@ -2523,167 +2565,77 @@ static const char *redirectArgs = ">NUL 2>NUL"; /* Win32 cmd.exe */
 #else
 static const char *redirectArgs = ">/dev/null 2>/dev/null"; /* POSIX 'sh' */
 #endif
+
+/*
+ * Can this platform run the specified command?
+ */
+int
+canRunCommand(const char *cmd, int *tested)
+{
+  int value = tested ? *tested : 0;
+  if (!value) {
+    value = systemf("%s %s", cmd, redirectArgs) ? -1 : +1;
+    if (tested)
+      *tested = value;
+  }
+  return (value > 0);
+}
+
+#define CAN_RUN_FUNC(Program, Command) \
+    int can##Program(void) { \
+            static int tested = 0; \
+            return canRunCommand((Command), &tested); \
+    }
+
 /*
  * Can this platform run the bzip2 program?
  */
-int
-canBzip2(void)
-{
-	static int tested = 0, value = 0;
-	if (!tested) {
-		tested = 1;
-		if (systemf("bzip2 --help %s", redirectArgs) == 0)
-			value = 1;
-	}
-	return (value);
-}
+CAN_RUN_FUNC(Bzip2, "bzip2 --help")
 
 /*
  * Can this platform run the grzip program?
  */
-int
-canGrzip(void)
-{
-	static int tested = 0, value = 0;
-	if (!tested) {
-		tested = 1;
-		if (systemf("grzip -V %s", redirectArgs) == 0)
-			value = 1;
-	}
-	return (value);
-}
+CAN_RUN_FUNC(Grzip, "grzip -V")
 
 /*
  * Can this platform run the gzip program?
  */
-int
-canGzip(void)
-{
-	static int tested = 0, value = 0;
-	if (!tested) {
-		tested = 1;
-		if (systemf("gzip --help %s", redirectArgs) == 0)
-			value = 1;
-	}
-	return (value);
-}
+CAN_RUN_FUNC(Gzip, "gzip --help")
 
 /*
  * Can this platform run the lrzip program?
  */
-int
-canRunCommand(const char *cmd)
-{
-  static int tested = 0, value = 0;
-  if (!tested) {
-    tested = 1;
-    if (systemf("%s %s", cmd, redirectArgs) == 0)
-      value = 1;
-  }
-  return (value);
-}
-
-int
-canLrzip(void)
-{
-	static int tested = 0, value = 0;
-	if (!tested) {
-		tested = 1;
-		if (systemf("lrzip -V %s", redirectArgs) == 0)
-			value = 1;
-	}
-	return (value);
-}
+CAN_RUN_FUNC(Lrzip, "lrzip -V")
 
 /*
  * Can this platform run the lz4 program?
  */
-int
-canLz4(void)
-{
-	static int tested = 0, value = 0;
-	if (!tested) {
-		tested = 1;
-		if (systemf("lz4 --help %s", redirectArgs) == 0)
-			value = 1;
-	}
-	return (value);
-}
+CAN_RUN_FUNC(Lz4, "lz4 --help")
 
 /*
  * Can this platform run the zstd program?
  */
-int
-canZstd(void)
-{
-	static int tested = 0, value = 0;
-	if (!tested) {
-		tested = 1;
-		if (systemf("zstd --help %s", redirectArgs) == 0)
-			value = 1;
-	}
-	return (value);
-}
+CAN_RUN_FUNC(Zstd, "zstd --help")
 
 /*
  * Can this platform run the lzip program?
  */
-int
-canLzip(void)
-{
-	static int tested = 0, value = 0;
-	if (!tested) {
-		tested = 1;
-		if (systemf("lzip --help %s", redirectArgs) == 0)
-			value = 1;
-	}
-	return (value);
-}
+CAN_RUN_FUNC(Lzip, "lzip --help")
 
 /*
  * Can this platform run the lzma program?
  */
-int
-canLzma(void)
-{
-	static int tested = 0, value = 0;
-	if (!tested) {
-		tested = 1;
-		if (systemf("lzma --help %s", redirectArgs) == 0)
-			value = 1;
-	}
-	return (value);
-}
+CAN_RUN_FUNC(Lzma, "lzma --help")
 
 /*
  * Can this platform run the lzop program?
  */
-int
-canLzop(void)
-{
-	static int tested = 0, value = 0;
-	if (!tested) {
-		tested = 1;
-		if (systemf("lzop --help %s", redirectArgs) == 0)
-			value = 1;
-	}
-	return (value);
-}
+CAN_RUN_FUNC(Lzop, "lzop --help")
 
 /*
  * Can this platform run the xz program?
  */
-int
-canXz(void)
-{
-	static int tested = 0, value = 0;
-	if (!tested) {
-		tested = 1;
-		if (systemf("xz --help %s", redirectArgs) == 0)
-			value = 1;
-	}
-	return (value);
-}
+CAN_RUN_FUNC(Xz, "xz --help")
 
 /*
  * Can this filesystem handle nodump flags.
@@ -3099,15 +3051,28 @@ int
 systemf(const char *fmt, ...)
 {
 	char buff[8192];
+#if USE_POSIX_SPAWN
+	char *argv[] = { "/bin/sh", "-c", buff, NULL };
+	pid_t pid;
+#endif
 	va_list ap;
 	int r;
 
 	va_start(ap, fmt);
 	vsnprintf(buff, sizeof(buff), fmt, ap);
+	va_end(ap);
 	if (verbosity > VERBOSITY_FULL)
 		logprintf("Cmd: %s\n", buff);
+#if USE_POSIX_SPAWN
+	if ((r = posix_spawn(&pid, *argv, NULL, NULL, argv, environ)) == 0) {
+		while (waitpid(pid, &r, 0) == -1) {
+			if (errno != EINTR)
+				return (-1);
+		}
+	}
+#else
 	r = system(buff);
-	va_end(ap);
+#endif
 	return (r);
 }
 
@@ -3675,8 +3640,11 @@ test_run(int i, const char *tmpdir)
 		exit(1);
 	}
 	testworkdir = workdir;
-	if (!assertMakeDir(testworkdir, 0755)
-	    || !assertChdir(testworkdir)) {
+	if (!assertMakeDir(testworkdir, 0755) ||
+#ifdef RUN_TEST_UNPRIV
+	    (tuser != NULL && !assertChown(testworkdir, tuid, tgid)) ||
+#endif
+	    !assertChdir(testworkdir)) {
 		fprintf(stderr,
 		    "ERROR: Can't chdir to work dir %s\n", testworkdir);
 		exit(1);
@@ -3685,10 +3653,28 @@ test_run(int i, const char *tmpdir)
 	set_c_locale();
 	/* Record the umask before we run the test. */
 	umask(oldumask = umask(0));
+#ifdef RUN_TEST_UNPRIV
+	/*
+	 * Temporarily drop privileges.
+	 */
+	if (tuser != NULL) {
+		(void)setegid(tuid);
+		(void)seteuid(tuid);
+	}
+#endif
 	/*
 	 * Run the actual test.
 	 */
 	(*tests[i].func)();
+#ifdef RUN_TEST_UNPRIV
+	/*
+	 * Restore original credentials.
+	 */
+	if (tuser != NULL) {
+		(void)seteuid(ouid);
+		(void)setegid(ogid);
+	}
+#endif
 	/*
 	 * Clean up and report afterwards.
 	 */
@@ -3746,10 +3732,18 @@ test_run(int i, const char *tmpdir)
  */
 
 static void
-usage(const char *program)
+list_tests(void)
 {
 	static const int limit = nitems(tests);
 	int i;
+
+	for (i = 0; i < limit; i++)
+		printf("  %d: %s\n", i, tests[i].name);
+}
+
+static void
+usage(const char *program)
+{
 
 	printf("Usage: %s [options] <test> <test> ...\n", program);
 	printf("Default is to run all tests.\n");
@@ -3758,6 +3752,8 @@ usage(const char *program)
 	printf("  -d  Dump core after any failure, for debugging.\n");
 	printf("  -k  Keep all temp files.\n");
 	printf("      Default: temp files for successful tests deleted.\n");
+	printf("  -l  List available tests and exit, ignoring all other.\n");
+	printf("      options and arguments.\n");
 #ifdef PROGRAM
 	printf("  -p <path>  Path to executable to be tested.\n");
 	printf("      Default: path taken from " ENVBASE " environment variable.\n");
@@ -3769,8 +3765,7 @@ usage(const char *program)
 	printf("  -u  Keep running specified tests until one fails.\n");
 	printf("  -v  Verbose.\n");
 	printf("Available tests:\n");
-	for (i = 0; i < limit; i++)
-		printf("  %d: %s\n", i, tests[i].name);
+	list_tests();
 	exit(1);
 }
 
@@ -4005,6 +4000,9 @@ main(int argc, char **argv)
 #endif
 	char *pwd, *testprogdir, *tmp2 = NULL, *vlevel = NULL;
 	char tmpdir_timestamp[32];
+#ifdef RUN_TEST_UNPRIV
+	struct passwd *pw;
+#endif
 
 	(void)argc; /* UNUSED */
 
@@ -4144,6 +4142,10 @@ main(int argc, char **argv)
 			case 'k':
 				keep_temp_files = 1;
 				break;
+			case 'l':
+				list_tests();
+				exit(0);
+				break;
 			case 'p':
 #ifdef PROGRAM
 				testprogfile = option_arg;
@@ -4162,6 +4164,11 @@ main(int argc, char **argv)
 			case 's':
 				fail_if_tests_skipped = 1;
 				break;
+#ifdef RUN_TEST_UNPRIV
+			case 'U':
+				tuser = optarg;
+				break;
+#endif
 			case 'u':
 				until_failure++;
 				break;
@@ -4184,6 +4191,9 @@ main(int argc, char **argv)
 	if (testprogfile == NULL)
 	{
 		tmp2_len = strlen(testprogdir) + 1 + strlen(PROGRAM) + 1;
+#if defined(_WIN32) && !defined(__CYGWIN__)
+		tmp2_len += 4;
+#endif
 		if ((tmp2 = malloc(tmp2_len)) == NULL)
 		{
 			fprintf(stderr, "ERROR: Out of memory.");
@@ -4192,6 +4202,9 @@ main(int argc, char **argv)
 		strncpy(tmp2, testprogdir, tmp2_len);
 		strncat(tmp2, "/", tmp2_len);
 		strncat(tmp2, PROGRAM, tmp2_len);
+#if defined(_WIN32) && !defined(__CYGWIN__)
+		strncat(tmp2, ".exe", tmp2_len);
+#endif
 		testprogfile = tmp2;
 	}
 
@@ -4237,6 +4250,28 @@ main(int argc, char **argv)
 		sigemptyset(&sa.sa_mask);
 		sa.sa_flags = 0;
 		sigaction(SIGPIPE, &sa, NULL);
+	}
+#endif
+
+#ifdef RUN_TEST_UNPRIV
+	/*
+	 * Check if we are root, and get user to run as.
+	 */
+	ouid = getuid();
+	ogid = getgid();
+	if (ouid == 0) {
+		if ((pw = getpwnam(tuser)) == NULL) {
+			fprintf(stderr, "ERROR: Unknown user %s\n", tuser);
+			exit(1);
+		}
+		tuid = pw->pw_uid;
+		tgid = pw->pw_gid;
+		printf("Will switch to user %s (uid %d gid %d)\n", tuser,
+		    tuid, tgid);
+	} else {
+		tuser = NULL;
+		tuid = ouid;
+		tgid = ogid;
 	}
 #endif
 

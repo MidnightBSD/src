@@ -55,7 +55,7 @@
 #endif
 
 #include "bsdtar.h"
-#include "err.h"
+#include "lafe_err.h"
 
 #if ARCHIVE_VERSION_NUMBER < 4000000 && !defined(_PATH_DEFTAPE)
 // Libarchive 4.0 and later will NOT define _PATH_DEFTAPE
@@ -182,6 +182,11 @@ main(int argc, char **argv)
 		/* Ignore SIGPIPE signals. */
 		sa.sa_handler = SIG_IGN;
 		sigaction(SIGPIPE, &sa, NULL);
+#endif
+#ifdef SIGCHLD
+		/* Do not ignore SIGCHLD. */
+		sa.sa_handler = SIG_DFL;
+		sigaction(SIGCHLD, &sa, NULL);
 #endif
 	}
 #endif
@@ -520,28 +525,28 @@ main(int argc, char **argv)
 			if (archive_match_include_date(bsdtar->matching,
 			    ARCHIVE_MATCH_CTIME | ARCHIVE_MATCH_NEWER,
 			    bsdtar->argument) != ARCHIVE_OK)
-				lafe_errc(1, 0, "Error : %s",
+				lafe_errc(1, 0, "%s",
 				    archive_error_string(bsdtar->matching));
 			break;
 		case OPTION_NEWER_CTIME_THAN:
 			if (archive_match_include_file_time(bsdtar->matching,
 			    ARCHIVE_MATCH_CTIME | ARCHIVE_MATCH_NEWER,
 			    bsdtar->argument) != ARCHIVE_OK)
-				lafe_errc(1, 0, "Error : %s",
+				lafe_errc(1, 0, "%s",
 				    archive_error_string(bsdtar->matching));
 			break;
 		case OPTION_NEWER_MTIME: /* GNU tar */
 			if (archive_match_include_date(bsdtar->matching,
 			    ARCHIVE_MATCH_MTIME | ARCHIVE_MATCH_NEWER,
 			    bsdtar->argument) != ARCHIVE_OK)
-				lafe_errc(1, 0, "Error : %s",
+				lafe_errc(1, 0, "%s",
 				    archive_error_string(bsdtar->matching));
 			break;
 		case OPTION_NEWER_MTIME_THAN:
 			if (archive_match_include_file_time(bsdtar->matching,
 			    ARCHIVE_MATCH_MTIME | ARCHIVE_MATCH_NEWER,
 			    bsdtar->argument) != ARCHIVE_OK)
-				lafe_errc(1, 0, "Error : %s",
+				lafe_errc(1, 0, "%s",
 				    archive_error_string(bsdtar->matching));
 			break;
 		case OPTION_NODUMP: /* star */
@@ -613,28 +618,28 @@ main(int argc, char **argv)
 			if (archive_match_include_date(bsdtar->matching,
 			    ARCHIVE_MATCH_CTIME | ARCHIVE_MATCH_OLDER,
 			    bsdtar->argument) != ARCHIVE_OK)
-				lafe_errc(1, 0, "Error : %s",
+				lafe_errc(1, 0, "%s",
 				    archive_error_string(bsdtar->matching));
 			break;
 		case OPTION_OLDER_CTIME_THAN:
 			if (archive_match_include_file_time(bsdtar->matching,
 			    ARCHIVE_MATCH_CTIME | ARCHIVE_MATCH_OLDER,
 			    bsdtar->argument) != ARCHIVE_OK)
-				lafe_errc(1, 0, "Error : %s",
+				lafe_errc(1, 0, "%s",
 				    archive_error_string(bsdtar->matching));
 			break;
 		case OPTION_OLDER_MTIME:
 			if (archive_match_include_date(bsdtar->matching,
 			    ARCHIVE_MATCH_MTIME | ARCHIVE_MATCH_OLDER,
 			    bsdtar->argument) != ARCHIVE_OK)
-				lafe_errc(1, 0, "Error : %s",
+				lafe_errc(1, 0, "%s",
 				    archive_error_string(bsdtar->matching));
 			break;
 		case OPTION_OLDER_MTIME_THAN:
 			if (archive_match_include_file_time(bsdtar->matching,
 			    ARCHIVE_MATCH_MTIME | ARCHIVE_MATCH_OLDER,
 			    bsdtar->argument) != ARCHIVE_OK)
-				lafe_errc(1, 0, "Error : %s",
+				lafe_errc(1, 0, "%s",
 				    archive_error_string(bsdtar->matching));
 			break;
 		case OPTION_ONE_FILE_SYSTEM: /* GNU tar */
@@ -814,7 +819,7 @@ main(int argc, char **argv)
 			if (archive_match_exclude_pattern_from_file(
 			    bsdtar->matching, bsdtar->argument, 0)
 			    != ARCHIVE_OK)
-				lafe_errc(1, 0, "Error : %s",
+				lafe_errc(1, 0, "%s",
 				    archive_error_string(bsdtar->matching));
 			break;
 		case 'x': /* SUSv2 */
@@ -1021,7 +1026,7 @@ main(int argc, char **argv)
 
 	if (bsdtar->return_value != 0)
 		lafe_warnc(0,
-		    "Error exit delayed from previous errors.");
+		    "Error exit delayed from previous errors");
 	return (bsdtar->return_value);
 }
 

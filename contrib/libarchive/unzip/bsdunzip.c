@@ -9,7 +9,7 @@
 #include "bsdunzip_platform.h"
 
 #include "la_queue.h"
-#include "la_getline.h"
+#include "lafe_getline.h"
 #ifdef HAVE_SYS_STAT_H
 #include <sys/stat.h>
 #endif
@@ -28,6 +28,9 @@
 #endif
 #ifdef HAVE_LOCALE_H
 #include <locale.h>
+#endif
+#ifdef HAVE_SIGNAL_H
+#include <signal.h>
 #endif
 #ifdef HAVE_STDARG_H
 #include <stdarg.h>
@@ -54,7 +57,7 @@
 
 #include "bsdunzip.h"
 #include "passphrase.h"
-#include "err.h"
+#include "lafe_err.h"
 
 /* command-line options */
 static int		 a_opt;		/* convert EOL */
@@ -651,11 +654,11 @@ recheck:
 #elif HAVE_STRUCT_STAT_ST_MTIME_N
 			    sb.st_mtime > mtime.tv_sec ||
 			    (sb.st_mtime == mtime.tv_sec &&
-			    sb.st_mtime_n => mtime.tv_nsec)
+			    sb.st_mtime_n >= mtime.tv_nsec)
 #elif HAVE_STRUCT_STAT_ST_MTIME_USEC
 			    sb.st_mtime > mtime.tv_sec ||
 			    (sb.st_mtime == mtime.tv_sec &&
-			    sb.st_mtime_usec => mtime.tv_nsec / 1000)
+			    sb.st_mtime_usec >= mtime.tv_nsec / 1000)
 #else
 			    sb.st_mtime > mtime.tv_sec
 #endif
@@ -881,9 +884,9 @@ list(struct archive *a, struct archive_entry *e)
 	mtime = archive_entry_mtime(e);
 	tm = localtime(&mtime);
 	if (*y_str)
-		strftime(buf, sizeof(buf), "%m-%d-%G %R", tm);
+		strftime(buf, sizeof(buf), "%m-%d-%Y %R", tm);
 	else
-		strftime(buf, sizeof(buf), "%m-%d-%g %R", tm);
+		strftime(buf, sizeof(buf), "%m-%d-%y %R", tm);
 
 	pathname = archive_entry_pathname(e);
 	if (!pathname)
@@ -1186,6 +1189,16 @@ main(int argc, char *argv[])
 {
 	const char *zipfile;
 	int nopts;
+
+#if defined(HAVE_SIGACTION) && defined(SIGCHLD)
+	{ /* Do not ignore SIGCHLD. */
+		struct sigaction sa;
+		sa.sa_handler = SIG_DFL;
+		sigemptyset(&sa.sa_mask);
+		sa.sa_flags = 0;
+		sigaction(SIGCHLD, &sa, NULL);
+	}
+#endif
 
 	lafe_setprogname(*argv, "bsdunzip");
 

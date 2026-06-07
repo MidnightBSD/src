@@ -772,7 +772,7 @@ archive_string_append_from_wcs_in_codepage(struct archive_string *as,
 			int r;
 
 			defchar_used = 0;
-			if (to_cp == CP_UTF8 || sc == NULL)
+			if (to_cp == CP_UTF8)
 				dp = NULL;
 			else
 				dp = &defchar_used;
@@ -1713,7 +1713,7 @@ get_sconv_object(struct archive *a, const char *fc, const char *tc, int flag)
 		if (a != NULL) {
 #if HAVE_ICONV
 			archive_set_error(a, ARCHIVE_ERRNO_MISC,
-			    "iconv_open failed : Cannot handle ``%s''",
+			    "iconv_open failed: Cannot handle ``%s''",
 			    (flag & SCONV_TO_CHARSET)?tc:fc);
 #else
 			archive_set_error(a, ARCHIVE_ERRNO_MISC,
@@ -1873,6 +1873,9 @@ archive_string_conversion_free(struct archive *a)
 const char *
 archive_string_conversion_charset_name(struct archive_string_conv *sc)
 {
+	if (sc == NULL) {
+		return "current locale";
+	}
 	if (sc->flag & SCONV_TO_CHARSET)
 		return (sc->to_charset);
 	else
@@ -2015,7 +2018,7 @@ archive_strncat_l(struct archive_string *as, const void *_p, size_t n,
 	/* We must allocate memory even if there is no data for conversion
 	 * or copy. This simulates archive_string_append behavior. */
 	if (length == 0) {
-		int tn = 1;
+		size_t tn = 1;
 		if (sc != NULL && (sc->flag & SCONV_TO_UTF16))
 			tn = 2;
 		if (archive_string_ensure(as, as->length + tn) == NULL)
@@ -2052,6 +2055,26 @@ archive_strncat_l(struct archive_string *as, const void *_p, size_t n,
 	if (r > r2)
 		r = r2;
 	return (r);
+}
+
+struct archive_string *
+archive_string_dirname(struct archive_string *as)
+{
+	/* strip trailing separators */
+	while (as->length > 1 && as->s[as->length - 1] == '/')
+		as->length--;
+	/* strip final component */
+	while (as->length > 0 && as->s[as->length - 1] != '/')
+		as->length--;
+	/* empty path -> cwd */
+	if (as->length == 0)
+		return (archive_strcat(as, "."));
+	/* strip separator(s) */
+	while (as->length > 1 && as->s[as->length - 1] == '/')
+		as->length--;
+	/* terminate */
+	as->s[as->length] = '\0';
+	return (as);
 }
 
 #if HAVE_ICONV
@@ -2752,7 +2775,8 @@ archive_string_append_unicode(struct archive_string *as, const void *_p,
 	char *p, *endp;
 	uint32_t uc;
 	size_t w;
-	int n, ret = 0, ts, tm;
+	size_t ts, tm;
+	int n, ret = 0;
 	int (*parse)(uint32_t *, const char *, size_t);
 	size_t (*unparse)(char *, size_t, uint32_t);
 
@@ -3552,7 +3576,7 @@ win_strncat_from_utf16(struct archive_string *as, const void *_p, size_t bytes,
 
 	if (sc->to_cp == CP_C_LOCALE) {
 		/*
-		 * "C" locale special process.
+		 * "C" locale special processing.
 		 */
 		u16 = _p;
 		ll = 0;
@@ -3669,7 +3693,7 @@ win_strncat_to_utf16(struct archive_string *as16, const void *_p,
 	avail = as16->buffer_length - 2;
 	if (sc->from_cp == CP_C_LOCALE) {
 		/*
-		 * "C" locale special process.
+		 * "C" locale special processing.
 		 */
 		count = 0;
 		while (count < length && *s) {
@@ -4102,7 +4126,12 @@ archive_mstring_get_mbs_l(struct archive *a, struct archive_mstring *aes,
 	 * character-set. */
 	if ((aes->aes_set & AES_SET_MBS) == 0) {
 		const char *pm; /* unused */
-		archive_mstring_get_mbs(a, aes, &pm); /* ignore errors, we'll handle it later */
+		if (archive_mstring_get_mbs(a, aes, &pm) != 0) {
+			/* We have another form, but failed to convert it to
+			 * the native locale.  Transitively, we've failed to
+			 * convert it to the specified character set. */
+			ret = -1;
+		}
 	}
 	/* If we already have an MBS form, use it to be translated to
 	 * specified character-set. */
@@ -4120,6 +4149,8 @@ archive_mstring_get_mbs_l(struct archive *a, struct archive_mstring *aes,
 		if (length != NULL)
 			*length = aes->aes_mbs_in_locale.length;
 	} else {
+		/* Either we have no string in any form,
+		 * or conversion failed and set 'ret != 0'.  */
 		*p = NULL;
 		if (length != NULL)
 			*length = 0;
