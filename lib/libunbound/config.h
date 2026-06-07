@@ -20,7 +20,7 @@
 /* #undef COMPAT_SHA512 */
 
 /* Command line arguments used with configure */
-#define CONFCMDLINE "--prefix= --exec-prefix=/usr --with-conf-file=/var/unbound/unbound.conf --with-run-dir=/var/unbound --with-username=unbound"
+#define CONFCMDLINE "--prefix= --exec-prefix=/usr --with-conf-file=/var/unbound/unbound.conf --with-run-dir=/var/unbound --with-username=unbound --with-ssl=/usr"
 
 /* Pathname to the Unbound configuration file */
 #define CONFIGFILE "/var/unbound/unbound.conf"
@@ -66,6 +66,9 @@
 
 /* Whether the C compiler accepts the "format" attribute */
 #define HAVE_ATTR_FORMAT 1
+
+/* Whether the C compiler accepts the "nonstring" attribute */
+/* #undef HAVE_ATTR_NONSTRING */
 
 /* Whether the C compiler accepts the "noreturn" attribute */
 #define HAVE_ATTR_NORETURN 1
@@ -173,6 +176,10 @@
 /* Define to 1 if you have the declaration of 'SSL_CTX_set_ecdh_auto', and to
    0 if you don't. */
 #define HAVE_DECL_SSL_CTX_SET_ECDH_AUTO 1
+
+/* Define to 1 if you have the declaration of 'SSL_CTX_set_tmp_ecdh', and to 0
+   if you don't. */
+#define HAVE_DECL_SSL_CTX_SET_TMP_ECDH 1
 
 /* Define to 1 if you have the declaration of 'strlcat', and to 0 if you
    don't. */
@@ -478,12 +485,18 @@
    'ngtcp2_crypto_quictls_from_ossl_encryption_level' function. */
 /* #undef HAVE_NGTCP2_CRYPTO_QUICTLS_FROM_OSSL_ENCRYPTION_LEVEL */
 
+/* Define to 1 if you have the 'ngtcp2_crypto_quictls_init' function. */
+/* #undef HAVE_NGTCP2_CRYPTO_QUICTLS_INIT */
+
 /* Define to 1 if the system has the type 'ngtcp2_encryption_level'. */
 /* #undef HAVE_NGTCP2_ENCRYPTION_LEVEL */
 
 /* Define to 1 if you have the <ngtcp2/ngtcp2_crypto_openssl.h> header file.
    */
 /* #undef HAVE_NGTCP2_NGTCP2_CRYPTO_OPENSSL_H */
+
+/* Define to 1 if you have the <ngtcp2/ngtcp2_crypto_ossl.h> header file. */
+/* #undef HAVE_NGTCP2_NGTCP2_CRYPTO_OSSL_H */
 
 /* Define to 1 if you have the <ngtcp2/ngtcp2_crypto_quictls.h> header file.
    */
@@ -552,11 +565,26 @@
 /* Define if you have POSIX threads libraries and header files. */
 #define HAVE_PTHREAD 1
 
+/* Define to 1 if you have the <pthread_np.h> header file. */
+#define HAVE_PTHREAD_NP_H 1
+
 /* Have PTHREAD_PRIO_INHERIT. */
 #define HAVE_PTHREAD_PRIO_INHERIT 1
 
 /* Define to 1 if the system has the type 'pthread_rwlock_t'. */
 #define HAVE_PTHREAD_RWLOCK_T 1
+
+/* Define if pthread_setname_np has the common 2 arguments. */
+#define HAVE_PTHREAD_SETNAME_NP 1
+
+/* Define if pthread_setname_np has only 1 argument. */
+/* #undef HAVE_PTHREAD_SETNAME_NP1 */
+
+/* Define if pthread_setname_np has 3 arguments. */
+/* #undef HAVE_PTHREAD_SETNAME_NP3 */
+
+/* Define if pthread_setname_np exists as pthread_set_name_np instead. */
+#define HAVE_PTHREAD_SET_NAME_NP 1
 
 /* Define to 1 if the system has the type 'pthread_spinlock_t'. */
 #define HAVE_PTHREAD_SPINLOCK_T 1
@@ -646,9 +674,6 @@
    function. */
 /* #undef HAVE_SSL_CTX_SET_TLSEXT_TICKET_KEY_EVP_CB */
 
-/* Define to 1 if you have the 'SSL_CTX_set_tmp_ecdh' function. */
-/* #undef HAVE_SSL_CTX_SET_TMP_ECDH */
-
 /* Define to 1 if you have the 'SSL_get0_alpn_selected' function. */
 #define HAVE_SSL_GET0_ALPN_SELECTED 1
 
@@ -725,6 +750,12 @@
 
 /* Define to 1 if 'sun_len' is a member of 'struct sockaddr_un'. */
 #define HAVE_STRUCT_SOCKADDR_UN_SUN_LEN 1
+
+/* Define to 1 if 'st_mtimensec' is a member of 'struct stat'. */
+#define HAVE_STRUCT_STAT_ST_MTIMENSEC 1
+
+/* Define to 1 if 'st_mtim.tv_nsec' is a member of 'struct stat'. */
+#define HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC 1
 
 /* Define if you have Swig libraries and header files. */
 /* #undef HAVE_SWIG */
@@ -884,7 +915,7 @@
 #define PACKAGE_NAME "unbound"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "unbound 1.24.2"
+#define PACKAGE_STRING "unbound 1.25.1"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "unbound"
@@ -893,7 +924,7 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "1.24.2"
+#define PACKAGE_VERSION "1.25.1"
 
 /* default pidfile location */
 #define PIDFILE "/var/unbound/unbound.pid"
@@ -916,7 +947,7 @@
 #define ROOT_CERT_FILE "/var/unbound/icannbundle.pem"
 
 /* version number for resource files */
-#define RSRC_PACKAGE_VERSION 1,23,1,0
+#define RSRC_PACKAGE_VERSION 1,25,1,0
 
 /* Directory to chdir to */
 #define RUN_DIR "/var/unbound"
@@ -1024,6 +1055,9 @@
 /* Define this to enable client TCP Fast Open. */
 /* #undef USE_MSG_FASTOPEN */
 
+/* Define this to use ngtcp2_crypto_ossl. */
+/* #undef USE_NGTCP2_CRYPTO_OSSL */
+
 /* Define this to enable client TCP Fast Open. */
 /* #undef USE_OSX_MSG_FASTOPEN */
 
@@ -1039,6 +1073,10 @@
 /* Enable extensions on AIX, Interix, z/OS.  */
 #ifndef _ALL_SOURCE
 # define _ALL_SOURCE 1
+#endif
+/* Enable extensions on Cosmopolitan Libc. */
+#ifndef _COSMO_SOURCE
+# define _COSMO_SOURCE 1
 #endif
 /* Enable general extensions on macOS.  */
 #ifndef _DARWIN_C_SOURCE
@@ -1380,6 +1418,17 @@
 #else /* !HAVE_ATTR_UNUSED */
 #  define ATTR_UNUSED(x)  x
 #endif /* !HAVE_ATTR_UNUSED */
+
+
+#if defined(DOXYGEN)
+#  define ATTR_NONSTRING(x)  x
+#elif defined(__cplusplus)
+#  define ATTR_NONSTRING(x)  __attribute__((nonstring)) x
+#elif defined(HAVE_ATTR_NONSTRING)
+#  define ATTR_NONSTRING(x)  __attribute__((nonstring)) x
+#else /* !HAVE_ATTR_NONSTRING */
+#  define ATTR_NONSTRING(x)  x
+#endif /* !HAVE_ATTR_NONSTRING */
 
 
 #ifndef HAVE_FSEEKO
