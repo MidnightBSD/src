@@ -1,5 +1,12 @@
 Updating Information for MidnightBSD users.
 
+20260606:
+	libarchive 3.8.7
+
+	expat 2.8.1
+
+	mport 2.7.9
+
 20260522:
 	libcasper: CVE-2026-39461  select(2) file descriptor set overflow causes stack overflow
 
