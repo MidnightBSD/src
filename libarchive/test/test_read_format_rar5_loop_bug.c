@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2009 Joerg Sonnenberger
+ * Copyright (c) 2026 Tim Kientzle
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -22,35 +22,32 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#include "test.h"
 
-#ifndef LAFE_ERR_H
-#define LAFE_ERR_H
+DEFINE_TEST(test_read_format_rar5_loop_bug)
+{
+  const char *reffile = "test_read_format_rar5_loop_bug.rar";
+  struct archive_entry *ae;
+  struct archive *a;
+  const void *buf;
+  size_t size;
+  la_int64_t offset;
 
-#if defined(__GNUC__) && (__GNUC__ > 2 || \
-						  (__GNUC__ == 2 && __GNUC_MINOR__ >= 5))
-#define __LA_NORETURN __attribute__((__noreturn__))
-#elif defined(_MSC_VER)
-#define __LA_NORETURN __declspec(noreturn)
-#else
-#define __LA_NORETURN
-#endif
+  extract_reference_file(reffile);
+  assert((a = archive_read_new()) != NULL);
+  assertEqualIntA(a, ARCHIVE_OK, archive_read_support_filter_all(a));
+  assertEqualIntA(a, ARCHIVE_OK, archive_read_support_format_all(a));
+  assertEqualIntA(a, ARCHIVE_OK, archive_read_open_filename(a, reffile, 10240));
 
-#if defined(__GNUC__) && (__GNUC__ > 2 || \
-			  (__GNUC__ == 2 && __GNUC_MINOR__ >= 7))
-# ifdef __MINGW_PRINTF_FORMAT
-#  define __LA_PRINTF_FORMAT __MINGW_PRINTF_FORMAT
-# else
-#  define __LA_PRINTF_FORMAT __printf__
-# endif
-# define __LA_PRINTFLIKE(f,a)	__attribute__((__format__(__LA_PRINTF_FORMAT, f, a)))
-#else
-# define __LA_PRINTFLIKE(f,a)
-#endif
+  // This has just one entry
+  assertEqualIntA(a, ARCHIVE_OK, archive_read_next_header(a, &ae));
 
-void	lafe_warnc(int code, const char *fmt, ...) __LA_PRINTFLIKE(2, 3);
-__LA_NORETURN void	lafe_errc(int eval, int code, const char *fmt, ...) __LA_PRINTFLIKE(3, 4);
+  // Read blocks until the end of the entry
+  while (ARCHIVE_OK == archive_read_data_block(a, &buf, &size, &offset)) {
+  }
 
-const char *	lafe_getprogname(void);
-void		lafe_setprogname(const char *name, const char *defaultname);
+  assertEqualIntA(a, ARCHIVE_EOF, archive_read_next_header(a, &ae));
 
-#endif
+  assertEqualIntA(a, ARCHIVE_OK, archive_read_close(a));
+  assertEqualInt(ARCHIVE_OK, archive_free(a));
+}
