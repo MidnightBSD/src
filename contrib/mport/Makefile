@@ -1,6 +1,7 @@
 SUBDIR=	liblua \
 	libmport \
 	mport \
-	libexec
+	libexec \
+	tests
 
 .include <bsd.subdir.mk>

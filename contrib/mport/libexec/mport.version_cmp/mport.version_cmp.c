@@ -31,19 +31,17 @@
 #include <mport.h>
 
 int
-main(int argc, char *argv[]) 
+main(int argc, char *argv[])
 {
-  int result;
-  
-  if (argc != 3) {
-    fprintf(stderr, "Usage: mport.version_cmp <version1> <version2>\n");
-    return 1;
-  }
-  
-  result = mport_version_cmp(argv[1], argv[2]);
-  
-  printf("%c\n", result == 0 ? '=' : result == -1 ? '<' : '>');
-  return 0;
+	int result;
+
+	if (argc != 3) {
+		fprintf(stderr, "Usage: mport.version_cmp <version1> <version2>\n");
+		return 1;
+	}
+
+	result = mport_version_cmp(argv[1], argv[2]);
+
+	printf("%c\n", result == 0 ? '=' : result == -1 ? '<' : '>');
+	return 0;
 }
-
-

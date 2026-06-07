@@ -1,0 +1,82 @@
+#! /usr/libexec/atf-sh
+#
+# Behavioral tests for the mport(8) CLI front end.
+#
+# The pre-dispatch tests need no package registry and run anywhere.  The
+# runtime smoke test exercises the CLI paths that allocate and free package
+# vectors (the ones hardened against invalid/leaked frees); it requires a
+# local registry and is skipped without one.  Build the tree with
+# "make WITH_ASAN=1" to have AddressSanitizer abort on a bad free here.
+
+atf_test_case usage_without_command
+usage_without_command_head()
+{
+	atf_set "descr" "mport with no command prints usage and exits non-zero"
+}
+usage_without_command_body()
+{
+	atf_check -s exit:1 -o ignore -e match:"usage: mport" "${MPORT_BIN}"
+}
+
+atf_test_case rejects_invalid_global_flag
+rejects_invalid_global_flag_head()
+{
+	atf_set "descr" "mport rejects unknown global options"
+}
+rejects_invalid_global_flag_body()
+{
+	atf_check -s not-exit:0 -o ignore -e match:"Invalid argument" \
+		"${MPORT_BIN}" -Z
+}
+
+atf_test_case reports_bad_chroot
+reports_bad_chroot_head()
+{
+	atf_set "descr" "mport reports chroot failures cleanly"
+}
+reports_bad_chroot_body()
+{
+	atf_check -s not-exit:0 -o ignore -e match:"chroot failed" \
+		"${MPORT_BIN}" -c "${PWD}/missing-root" search foo
+}
+
+atf_test_case smoke_vector_paths
+smoke_vector_paths_head()
+{
+	atf_set "descr" "config get and search run cleanly (registry required)"
+}
+smoke_vector_paths_body()
+{
+	if [ ! -f /var/db/mport/master.db ]; then
+		atf_skip "no local package registry at /var/db/mport/master.db"
+	fi
+
+	# configGet(): exercises freeing the strdup'd setting value.
+	atf_check -s exit:0 -o ignore -e not-match:"AddressSanitizer" \
+		"${MPORT_BIN}" config get mirror_region
+
+	# search(): exercises iterating and freeing an index-entry vector, the
+	# same advanced-pointer-free pattern as audit()/deleteAll() but fast.
+	# Result count and exit vary with the local index, so status/output are
+	# ignored; what matters is AddressSanitizer reporting no memory error.
+	atf_check -s ignore -o ignore -e not-match:"AddressSanitizer" \
+		"${MPORT_BIN}" -U search mport
+}
+
+atf_init_test_cases()
+{
+	srcdir=$(atf_get_srcdir)
+	: "${LD_LIBRARY_PATH:=${srcdir}/../libmport}"
+	export LD_LIBRARY_PATH
+	# LeakSanitizer is unsupported on MidnightBSD; keep ASan to memory errors.
+	: "${ASAN_OPTIONS:=detect_leaks=0}"
+	export ASAN_OPTIONS
+
+	: "${MPORT_BIN:=${srcdir}/../mport/mport}"
+	export MPORT_BIN
+
+	atf_add_test_case usage_without_command
+	atf_add_test_case rejects_invalid_global_flag
+	atf_add_test_case reports_bad_chroot
+	atf_add_test_case smoke_vector_paths
+}

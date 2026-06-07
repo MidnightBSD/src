@@ -32,6 +32,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <errno.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -62,12 +63,16 @@ static int archive_files(mportAssetList *, mportPackageMeta *, mportCreateExtras
 
 static int archive_metafiles(mportBundleWrite *, mportPackageMeta *, mportCreateExtras *);
 
-static int archive_assetlistfiles(mportBundleWrite *, mportPackageMeta *, mportCreateExtras *, mportAssetList *);
+static int archive_assetlistfiles(
+    mportBundleWrite *, mportPackageMeta *, mportCreateExtras *, mportAssetList *);
 
 static int clean_up(const char *);
 
+static int checked_snprintf(char *, size_t, const char *, ...);
+
 MPORT_PUBLIC_API int
-mport_create_primative(mportInstance *mport, mportAssetList *assetlist, mportPackageMeta *pack, mportCreateExtras *extra)
+mport_create_primative(mportInstance *mport, mportAssetList *assetlist, mportPackageMeta *pack,
+    mportCreateExtras *extra)
 {
 	int error_code = MPORT_OK;
 	sqlite3 *db = NULL;
@@ -84,7 +89,7 @@ mport_create_primative(mportInstance *mport, mportAssetList *assetlist, mportPac
 
 	if (tmpdir == NULL) {
 		error_code = SET_ERROR(MPORT_ERR_FATAL, strerror(errno));
-		goto CLEANUP;
+		return error_code;
 	}
 
 	if ((error_code = create_stub_db(mport, &db, tmpdir)) != MPORT_OK)
@@ -101,14 +106,14 @@ mport_create_primative(mportInstance *mport, mportAssetList *assetlist, mportPac
 		goto CLEANUP;
 	}
 
-	error_code = archive_files(assetlist, pack, extra, tmpdir); /* cleanup will run next which is the desired action */
+	error_code = archive_files(
+	    assetlist, pack, extra, tmpdir); /* cleanup will run next which is the desired action */
 
-	CLEANUP:
+CLEANUP:
 	clean_up(tmpdir);
 
 	return error_code;
 }
-
 
 static int
 create_stub_db(mportInstance *mport, sqlite3 **db, const char *tmpdir)
@@ -116,7 +121,7 @@ create_stub_db(mportInstance *mport, sqlite3 **db, const char *tmpdir)
 	int error_code = MPORT_OK;
 
 	char file[FILENAME_MAX];
-	(void) snprintf(file, FILENAME_MAX, "%s/%s", tmpdir, MPORT_STUB_DB_FILE);
+	(void)snprintf(file, FILENAME_MAX, "%s/%s", tmpdir, MPORT_STUB_DB_FILE);
 	if (sqlite3_open(file, db) != SQLITE_OK) {
 		sqlite3_close(*db);
 		error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(*db));
@@ -130,11 +135,13 @@ create_stub_db(mportInstance *mport, sqlite3 **db, const char *tmpdir)
 }
 
 static int
-insert_assetlist(sqlite3 *db, mportAssetList *assetlist, mportPackageMeta *pack, mportCreateExtras *extra)
+insert_assetlist(
+    sqlite3 *db, mportAssetList *assetlist, mportPackageMeta *pack, mportCreateExtras *extra)
 {
 	mportAssetListEntry *e = NULL;
 	sqlite3_stmt *stmnt = NULL;
-	char sql[] = "INSERT INTO assets (pkg, type, data, checksum, owner, grp, mode) VALUES (?,?,?,?,?,?,?)";
+	char sql[] =
+	    "INSERT INTO assets (pkg, type, data, checksum, owner, grp, mode) VALUES (?,?,?,?,?,?,?)";
 	char hash[65];
 	char file[FILENAME_MAX];
 	char cwd[FILENAME_MAX];
@@ -146,8 +153,7 @@ insert_assetlist(sqlite3 *db, mportAssetList *assetlist, mportPackageMeta *pack,
 	if (mport_db_prepare(db, &stmnt, sql) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
-	STAILQ_FOREACH(e, assetlist, next)
-	{
+	STAILQ_FOREACH (e, assetlist, next) {
 		if (e->type == ASSET_COMMENT)
 			continue;
 
@@ -185,9 +191,17 @@ insert_assetlist(sqlite3 *db, mportAssetList *assetlist, mportPackageMeta *pack,
 		    e->type == ASSET_INFO) {
 			/* Don't prepend cwd onto absolute file paths (this is useful for update) */
 			if (e->data[0] == '/') {
-				(void) snprintf(file, FILENAME_MAX, "%s%s", extra->sourcedir, e->data);
+				if (checked_snprintf(file, FILENAME_MAX, "%s%s", extra->sourcedir,
+					e->data) != MPORT_OK) {
+					sqlite3_finalize(stmnt);
+					RETURN_CURRENT_ERROR;
+				}
 			} else {
-				(void) snprintf(file, FILENAME_MAX, "%s/%s", cwd, e->data);
+				if (checked_snprintf(file, FILENAME_MAX, "%s/%s", cwd, e->data) !=
+				    MPORT_OK) {
+					sqlite3_finalize(stmnt);
+					RETURN_CURRENT_ERROR;
+				}
 			}
 
 			if (e->type == ASSET_SAMPLE || e->type == ASSET_SAMPLE_OWNER_MODE) {
@@ -207,14 +221,16 @@ insert_assetlist(sqlite3 *db, mportAssetList *assetlist, mportPackageMeta *pack,
 					goto reset;
 				}
 				sqlite3_finalize(stmnt);
-				RETURN_ERRORX(MPORT_ERR_FATAL, "Could not stat %s: %s", file, strerror(errno));
+				RETURN_ERRORX(MPORT_ERR_FATAL, "Could not stat %s: %s", file,
+				    strerror(errno));
 			}
 
 			if (S_ISREG(st.st_mode)) {
 				if (SHA256_File(file, hash) == NULL)
 					RETURN_ERRORX(MPORT_ERR_FATAL, "File not found: %s", file);
 
-				if (sqlite3_bind_text(stmnt, 4, hash, -1, SQLITE_STATIC) != SQLITE_OK)
+				if (sqlite3_bind_text(stmnt, 4, hash, -1, SQLITE_STATIC) !=
+				    SQLITE_OK)
 					RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
 
 				pack->flatsize += st.st_size;
@@ -231,7 +247,7 @@ insert_assetlist(sqlite3 *db, mportAssetList *assetlist, mportPackageMeta *pack,
 			RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
 		}
 
-		reset:
+	reset:
 		sqlite3_clear_bindings(stmnt);
 		sqlite3_reset(stmnt);
 	}
@@ -248,7 +264,8 @@ insert_meta(mportInstance *mport, sqlite3 *db, mportPackageMeta *pack, mportCrea
 
 	sqlite3_stmt *stmnt = NULL;
 	const char *rest = 0;
-	char sql[] = "INSERT INTO packages (pkg, version, origin, lang, prefix, comment, os_release, cpe, deprecated, expiration_date, no_provide_shlib, flavor, type, flatsize) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+	char sql[] =
+	    "INSERT INTO packages (pkg, version, origin, lang, prefix, comment, os_release, cpe, deprecated, expiration_date, no_provide_shlib, flavor, type, flatsize) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 
 	char *os_release = mport_get_osrelease(mport);
 	if (pack->cpe == NULL) {
@@ -348,7 +365,6 @@ insert_meta(mportInstance *mport, sqlite3 *db, mportPackageMeta *pack, mportCrea
 	return error_code;
 }
 
-
 static int
 insert_categories(sqlite3 *db, mportPackageMeta *pkg)
 {
@@ -360,14 +376,16 @@ insert_categories(sqlite3 *db, mportPackageMeta *pkg)
 	if (pkg->categories == NULL)
 		return MPORT_OK;
 
-	if (mport_db_prepare(db, &stmt, "INSERT INTO categories (pkg, category) VALUES (?,?)") != MPORT_OK)
+	if (mport_db_prepare(db, &stmt, "INSERT INTO categories (pkg, category) VALUES (?,?)") !=
+	    MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
 	while (pkg->categories[i] != NULL) {
 		if (sqlite3_bind_text(stmt, 1, pkg->name, -1, SQLITE_STATIC) != SQLITE_OK) {
 			error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
 		}
-		if (sqlite3_bind_text(stmt, 2, pkg->categories[i], -1, SQLITE_STATIC) != SQLITE_OK) {
+		if (sqlite3_bind_text(stmt, 2, pkg->categories[i], -1, SQLITE_STATIC) !=
+		    SQLITE_OK) {
 			error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
 		}
 
@@ -383,19 +401,18 @@ insert_categories(sqlite3 *db, mportPackageMeta *pkg)
 	return error_code;
 }
 
-
-	/* conflict examples:
-	apache-1.4
-	viewvc-1.[12].[0-9]*
-	subversion-1.[0-9].[0-9]*
-	subversion-1.[^9].[0-9]* 
-	p5-Moo-[01]* 
-	p5-Moo-2.00[0-2]*
-	py*-ipython5
-	py311-django[0-9][0-9]
-	p5-HTTP-Server-Simple-PSGI-0.16
-	p5-HTTP-Server-Simple-PSGI
-	*/
+/* conflict examples:
+apache-1.4
+viewvc-1.[12].[0-9]*
+subversion-1.[0-9].[0-9]*
+subversion-1.[^9].[0-9]*
+p5-Moo-[01]*
+p5-Moo-2.00[0-2]*
+py*-ipython5
+py311-django[0-9][0-9]
+p5-HTTP-Server-Simple-PSGI-0.16
+p5-HTTP-Server-Simple-PSGI
+*/
 static int
 insert_conflicts(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra)
 {
@@ -467,7 +484,6 @@ insert_conflicts(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra)
 	return error_code;
 }
 
-
 static int
 insert_depends(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra)
 {
@@ -481,7 +497,7 @@ insert_depends(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra)
 		return MPORT_OK;
 
 	if (mport_db_prepare(db, &stmnt,
-	                     "INSERT INTO depends (pkg, depend_pkgname, depend_pkgversion, depend_port) VALUES (?,?,?,?)") !=
+		"INSERT INTO depends (pkg, depend_pkgname, depend_pkgversion, depend_port) VALUES (?,?,?,?)") !=
 	    MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
@@ -520,7 +536,8 @@ insert_depends(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra)
 		if (pkgversion != NULL) {
 			*pkgversion = '\0';
 			pkgversion++;
-			if (sqlite3_bind_text(stmnt, 3, pkgversion, -1, SQLITE_STATIC) != SQLITE_OK) {
+			if (sqlite3_bind_text(stmnt, 3, pkgversion, -1, SQLITE_STATIC) !=
+			    SQLITE_OK) {
 				error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
 				return error_code;
 			}
@@ -551,7 +568,6 @@ insert_depends(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra)
 	return error_code;
 }
 
-
 static int
 insert_annotations(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra)
 {
@@ -561,10 +577,12 @@ insert_annotations(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra
 	if (tll_length(extra->annotations) == 0)
 		return MPORT_OK;
 
-	if (mport_db_prepare(db, &stmt, "INSERT INTO annotation (pkg, tag, val) VALUES (?,?,?)") != MPORT_OK)
+	if (mport_db_prepare(db, &stmt, "INSERT INTO annotation (pkg, tag, val) VALUES (?,?,?)") !=
+	    MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
-	tll_foreach(extra->annotations, s) {
+	tll_foreach(extra->annotations, s)
+	{
 		char *annotation_copy = strdup(s->item);
 		if (annotation_copy == NULL) {
 			error_code = SET_ERROR(MPORT_ERR_FATAL, "Out of memory");
@@ -579,7 +597,8 @@ insert_annotations(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra
 
 		if (sep == NULL) {
 			free(annotation_copy);
-			error_code = SET_ERRORX(MPORT_ERR_WARN, "malformed annotation (missing ':'): %s", s->item);
+			error_code = SET_ERRORX(
+			    MPORT_ERR_WARN, "malformed annotation (missing ':'): %s", s->item);
 			continue;
 		}
 
@@ -609,9 +628,9 @@ insert_annotations(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra
 	return error_code;
 }
 
-
 static int
-archive_files(mportAssetList *assetlist, mportPackageMeta *pack, mportCreateExtras *extra, const char *tmpdir)
+archive_files(
+    mportAssetList *assetlist, mportPackageMeta *pack, mportCreateExtras *extra, const char *tmpdir)
 {
 	mportBundleWrite *bundle;
 	char filename[FILENAME_MAX];
@@ -622,7 +641,7 @@ archive_files(mportAssetList *assetlist, mportPackageMeta *pack, mportCreateExtr
 		RETURN_CURRENT_ERROR;
 
 	/* First step - +CONTENTS.db ALWAYS GOES FIRST!!! */
-	(void) snprintf(filename, FILENAME_MAX, "%s/%s", tmpdir, MPORT_STUB_DB_FILE);
+	(void)snprintf(filename, FILENAME_MAX, "%s/%s", tmpdir, MPORT_STUB_DB_FILE);
 	if (mport_bundle_write_add_file(bundle, filename, MPORT_STUB_DB_FILE))
 		RETURN_CURRENT_ERROR;
 
@@ -639,60 +658,64 @@ archive_files(mportAssetList *assetlist, mportPackageMeta *pack, mportCreateExtr
 	return MPORT_OK;
 }
 
-
 static int
 archive_metafiles(mportBundleWrite *bundle, mportPackageMeta *pack, mportCreateExtras *extra)
 {
 	char filename[FILENAME_MAX];
 	char dir[FILENAME_MAX];
 
-	(void) snprintf(dir, FILENAME_MAX, "%s/%s-%s", MPORT_STUB_INFRA_DIR, pack->name, pack->version);
+	(void)snprintf(
+	    dir, FILENAME_MAX, "%s/%s-%s", MPORT_STUB_INFRA_DIR, pack->name, pack->version);
 
 	if (extra->mtree != NULL && mport_file_exists(extra->mtree)) {
-		(void) snprintf(filename, FILENAME_MAX, "%s/%s", dir, MPORT_MTREE_FILE);
+		(void)snprintf(filename, FILENAME_MAX, "%s/%s", dir, MPORT_MTREE_FILE);
 		if (mport_bundle_write_add_file(bundle, extra->mtree, filename) != MPORT_OK)
 			RETURN_CURRENT_ERROR;
 	}
 
 	if (extra->pkginstall != NULL && mport_file_exists(extra->pkginstall)) {
-		(void) snprintf(filename, FILENAME_MAX, "%s/%s", dir, MPORT_INSTALL_FILE);
+		(void)snprintf(filename, FILENAME_MAX, "%s/%s", dir, MPORT_INSTALL_FILE);
 		if (mport_bundle_write_add_file(bundle, extra->pkginstall, filename) != MPORT_OK)
 			RETURN_CURRENT_ERROR;
 	}
 
 	if (extra->pkgdeinstall != NULL && mport_file_exists(extra->pkgdeinstall)) {
-		(void) snprintf(filename, FILENAME_MAX, "%s/%s", dir, MPORT_DEINSTALL_FILE);
+		(void)snprintf(filename, FILENAME_MAX, "%s/%s", dir, MPORT_DEINSTALL_FILE);
 		if (mport_bundle_write_add_file(bundle, extra->pkgdeinstall, filename) != MPORT_OK)
 			RETURN_CURRENT_ERROR;
 	}
 
 	if (extra->pkgmessage != NULL && mport_file_exists(extra->pkgmessage)) {
-		(void) snprintf(filename, FILENAME_MAX, "%s/%s", dir, MPORT_MESSAGE_FILE);
+		(void)snprintf(filename, FILENAME_MAX, "%s/%s", dir, MPORT_MESSAGE_FILE);
 		if (mport_bundle_write_add_file(bundle, extra->pkgmessage, filename) != MPORT_OK)
 			RETURN_CURRENT_ERROR;
 	}
 
 	if (extra->luapkgpreinstall != NULL && mport_file_exists(extra->luapkgpreinstall)) {
-		(void) snprintf(filename, FILENAME_MAX, "%s/%s", dir, MPORT_LUA_PRE_INSTALL_FILE);
-		if (mport_bundle_write_add_file(bundle, extra->luapkgpreinstall, filename) != MPORT_OK)
+		(void)snprintf(filename, FILENAME_MAX, "%s/%s", dir, MPORT_LUA_PRE_INSTALL_FILE);
+		if (mport_bundle_write_add_file(bundle, extra->luapkgpreinstall, filename) !=
+		    MPORT_OK)
 			RETURN_CURRENT_ERROR;
 	}
 
 	if (extra->luapkgpostinstall != NULL && mport_file_exists(extra->luapkgpostinstall)) {
-		(void) snprintf(filename, FILENAME_MAX, "%s/%s", dir, MPORT_LUA_POST_INSTALL_FILE);
-		if (mport_bundle_write_add_file(bundle, extra->luapkgpostinstall, filename) != MPORT_OK)
+		(void)snprintf(filename, FILENAME_MAX, "%s/%s", dir, MPORT_LUA_POST_INSTALL_FILE);
+		if (mport_bundle_write_add_file(bundle, extra->luapkgpostinstall, filename) !=
+		    MPORT_OK)
 			RETURN_CURRENT_ERROR;
 	}
 
 	if (extra->luapkgpredeinstall != NULL && mport_file_exists(extra->luapkgpredeinstall)) {
-		(void) snprintf(filename, FILENAME_MAX, "%s/%s", dir, MPORT_LUA_PRE_DEINSTALL_FILE);
-		if (mport_bundle_write_add_file(bundle, extra->luapkgpredeinstall, filename) != MPORT_OK)
+		(void)snprintf(filename, FILENAME_MAX, "%s/%s", dir, MPORT_LUA_PRE_DEINSTALL_FILE);
+		if (mport_bundle_write_add_file(bundle, extra->luapkgpredeinstall, filename) !=
+		    MPORT_OK)
 			RETURN_CURRENT_ERROR;
 	}
 
 	if (extra->luapkgpostdeinstall != NULL && mport_file_exists(extra->luapkgpostdeinstall)) {
-		(void) snprintf(filename, FILENAME_MAX, "%s/%s", dir, MPORT_LUA_POST_DEINSTALL_FILE);
-		if (mport_bundle_write_add_file(bundle, extra->luapkgpostdeinstall, filename) != MPORT_OK)
+		(void)snprintf(filename, FILENAME_MAX, "%s/%s", dir, MPORT_LUA_POST_DEINSTALL_FILE);
+		if (mport_bundle_write_add_file(bundle, extra->luapkgpostdeinstall, filename) !=
+		    MPORT_OK)
 			RETURN_CURRENT_ERROR;
 	}
 
@@ -701,27 +724,31 @@ archive_metafiles(mportBundleWrite *bundle, mportPackageMeta *pack, mportCreateE
 
 static int
 archive_assetlistfiles(mportBundleWrite *bundle, mportPackageMeta *pack, mportCreateExtras *extra,
-                       mportAssetList *assetlist)
+    mportAssetList *assetlist)
 {
 	mportAssetListEntry *e = NULL;
 	char filename[FILENAME_MAX];
 	char *cwd = pack->prefix;
 
-	STAILQ_FOREACH(e, assetlist, next)
-	{
+	STAILQ_FOREACH (e, assetlist, next) {
 		if (e->type == ASSET_CWD)
 			cwd = e->data == NULL ? pack->prefix : e->data;
 
-		if (e->type != ASSET_FILE && e->type != ASSET_SAMPLE && e->type != ASSET_SAMPLE_OWNER_MODE &&
-		    e->type != ASSET_SHELL && e->type != ASSET_FILE_OWNER_MODE && e->type != ASSET_INFO) {
+		if (e->type != ASSET_FILE && e->type != ASSET_SAMPLE &&
+		    e->type != ASSET_SAMPLE_OWNER_MODE && e->type != ASSET_SHELL &&
+		    e->type != ASSET_FILE_OWNER_MODE && e->type != ASSET_INFO) {
 			continue;
 		}
 
 		/* don't prepend the cwd if the path is abs. */
 		if (*(e->data) == '/') {
-			(void) snprintf(filename, FILENAME_MAX, "%s%s", extra->sourcedir, e->data);
+			if (checked_snprintf(filename, FILENAME_MAX, "%s%s", extra->sourcedir,
+				e->data) != MPORT_OK)
+				RETURN_CURRENT_ERROR;
 		} else {
-			(void) snprintf(filename, FILENAME_MAX, "%s/%s/%s", extra->sourcedir, cwd, e->data);
+			if (checked_snprintf(filename, FILENAME_MAX, "%s/%s/%s", extra->sourcedir,
+				cwd, e->data) != MPORT_OK)
+				RETURN_CURRENT_ERROR;
 		}
 
 		if (e->type == ASSET_SAMPLE || e->type == ASSET_SAMPLE_OWNER_MODE) {
@@ -743,11 +770,26 @@ archive_assetlistfiles(mportBundleWrite *bundle, mportPackageMeta *pack, mportCr
 	return MPORT_OK;
 }
 
-
 static int
 clean_up(const char *tmpdir)
 {
+	if (tmpdir == NULL)
+		return MPORT_OK;
 	return mport_rmtree(tmpdir);
 }
 
+static int
+checked_snprintf(char *buf, size_t bufsize, const char *fmt, ...)
+{
+	va_list ap;
+	int len;
 
+	va_start(ap, fmt);
+	len = vsnprintf(buf, bufsize, fmt, ap);
+	va_end(ap);
+
+	if (len < 0 || (size_t)len >= bufsize)
+		RETURN_ERROR(MPORT_ERR_FATAL, "Path is too long");
+
+	return MPORT_OK;
+}

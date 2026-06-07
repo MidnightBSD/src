@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <err.h>
+#include <locale.h>
 #include <string.h>
 #include <unistd.h>
 #include <getopt.h>
@@ -44,27 +45,29 @@ int
 main(int argc, char *argv[])
 {
 	int ch;
-	char *prefix = NULL;
+	/*@null@*/ /*@observer@*/ char *prefix = NULL;
 	mportInstance *mport;
 	int error_code = 0;
 	bool automatic = false;
 	const char *chroot_path = NULL;
 
+	(void)setlocale(LC_ALL, "");
+
 	while ((ch = getopt(argc, argv, "Ac:p:")) != -1) {
 		switch (ch) {
-			case 'A':
-				automatic = true;
-				break;
-			case 'c':
-				chroot_path = optarg;
-				break;
-			case 'p':
-				prefix = optarg;
-				break;
-			case '?':
-			default:
-				usage();
-				break;
+		case 'A':
+			automatic = true;
+			break;
+		case 'c':
+			chroot_path = optarg;
+			break;
+		case 'p':
+			prefix = optarg;
+			break;
+		case '?':
+		default:
+			usage();
+			break;
 		}
 	}
 
@@ -78,6 +81,9 @@ main(int argc, char *argv[])
 		if (chroot(chroot_path) == -1) {
 			err(EXIT_FAILURE, "chroot failed");
 		}
+		if (chdir("/") == -1) {
+			err(EXIT_FAILURE, "chdir failed");
+		}
 	}
 
 	mport = mport_instance_new();
@@ -89,34 +95,35 @@ main(int argc, char *argv[])
 
 	for (int i = 0; i < argc; i++) {
 
-		if (mport_install_primative(mport, argv[i], prefix, automatic ? MPORT_AUTOMATIC : MPORT_EXPLICIT) != MPORT_OK) {
+		if (mport_install_primative(mport, argv[i], prefix,
+			automatic ? MPORT_AUTOMATIC : MPORT_EXPLICIT) != MPORT_OK) {
 			warnx("install failed: %s", mport_err_string());
 			mport_instance_free(mport);
 			exit(EXIT_FAILURE);
 		}
 	}
 
-
 	mport_instance_free(mport);
 	exit(error_code);
 }
 
-static
-void usage(void)
+static void
+usage(void)
 {
 
 	fprintf(stderr, "Usage: mport.install [OPTIONS] pkgfile1 [pkgfile2 ...]\n");
-    fprintf(stderr, "Install one or more package files.\n\n");
-    fprintf(stderr, "Options:\n");
-    fprintf(stderr, "  -A               Mark the installed package(s) as automatically installed\n");
-    fprintf(stderr, "  -p <prefix>      Set the installation prefix\n");
-    fprintf(stderr, "  -c <chroot path> Set a chroot path for installation\n");
-    fprintf(stderr, "\nArguments:\n");
-    fprintf(stderr, "  pkgfile          Path to the package file(s) to install\n");
-    fprintf(stderr, "\nExamples:\n");
-    fprintf(stderr, "  mport.install package.mport\n");
-    fprintf(stderr, "  mport.install -A -p /usr/local package1.mport package2.mport\n");
-    fprintf(stderr, "  mport.install -c /mnt/system package.mport\n");
-  
+	fprintf(stderr, "Install one or more package files.\n\n");
+	fprintf(stderr, "Options:\n");
+	fprintf(stderr,
+	    "  -A               Mark the installed package(s) as automatically installed\n");
+	fprintf(stderr, "  -p <prefix>      Set the installation prefix\n");
+	fprintf(stderr, "  -c <chroot path> Set a chroot path for installation\n");
+	fprintf(stderr, "\nArguments:\n");
+	fprintf(stderr, "  pkgfile          Path to the package file(s) to install\n");
+	fprintf(stderr, "\nExamples:\n");
+	fprintf(stderr, "  mport.install package.mport\n");
+	fprintf(stderr, "  mport.install -A -p /usr/local package1.mport package2.mport\n");
+	fprintf(stderr, "  mport.install -c /mnt/system package.mport\n");
+
 	exit(1);
 }

@@ -31,6 +31,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <err.h>
+#include <locale.h>
 #include <string.h>
 #include <unistd.h>
 #include <getopt.h>
@@ -38,20 +39,24 @@
 
 static void usage(void);
 
-int main(int argc, char *argv[]) {
+int
+main(int argc, char *argv[])
+{
 	int i, ch;
 	mportInstance *mport;
 	const char *chroot_path = NULL;
 
+	(void)setlocale(LC_ALL, "");
+
 	while ((ch = getopt(argc, argv, "c:")) != -1) {
 		switch (ch) {
-			case 'c':
-				chroot_path = optarg;
-				break;
-			case '?':
-			default:
-				usage();
-				break;
+		case 'c':
+			chroot_path = optarg;
+			break;
+		case '?':
+		default:
+			usage();
+			break;
 		}
 	}
 
@@ -67,6 +72,9 @@ int main(int argc, char *argv[]) {
 	if (chroot_path != NULL) {
 		if (chroot(chroot_path) == -1) {
 			err(EXIT_FAILURE, "chroot failed");
+		}
+		if (chdir("/") == -1) {
+			err(EXIT_FAILURE, "chdir failed");
 		}
 	}
 
@@ -92,7 +100,8 @@ int main(int argc, char *argv[]) {
 }
 
 static void
-usage(void) {
+usage(void)
+{
 
 	fprintf(stderr, "Usage: mport.update [-c <chroot directory>] pkgfile1 pkgfile2 ...\n");
 	exit(2);

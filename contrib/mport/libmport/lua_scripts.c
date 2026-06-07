@@ -4,7 +4,7 @@
  * Copyright (c) 2025 Lucas Holt
  * Copyright (c) 2019 Baptiste Daroussin <bapt@FreeBSD.org>
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -14,7 +14,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
  * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
  * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -56,11 +56,12 @@ get_socketpair(int *pipe)
 }
 
 int
-mport_script_run_child(mportInstance *mport, int pid, int *pstat, int inputfd, const char *script_name) 
+mport_script_run_child(
+    mportInstance *mport, int pid, int *pstat, int inputfd, const char *script_name)
 {
 	struct pollfd pfd;
 	bool wait_for_child;
-	char msgbuf[16384+1];
+	char msgbuf[16384 + 1];
 
 	memset(&pfd, 0, sizeof(pfd));
 	pfd.events = POLLIN | POLLERR | POLLHUP;
@@ -75,7 +76,8 @@ mport_script_run_child(mportInstance *mport, int pid, int *pstat, int inputfd, c
 		pid_t p = 0;
 		while (wait_for_child && (p = waitpid(pid, pstat, WNOHANG)) == -1) {
 			if (errno != EINTR) {
-                RETURN_ERRORX(MPORT_ERR_FATAL, "waitpid() failed: %s", strerror(errno));
+				RETURN_ERRORX(
+				    MPORT_ERR_FATAL, "waitpid() failed: %s", strerror(errno));
 			}
 		}
 		if (p > 0) {
@@ -89,7 +91,8 @@ mport_script_run_child(mportInstance *mport, int pid, int *pstat, int inputfd, c
 			int pres;
 			while ((pres = poll(&pfd, 1, wait_for_child ? 1000 : 0)) == -1) {
 				if (errno != EINTR) {
-                    RETURN_ERRORX(MPORT_ERR_FATAL, "poll() failed: %s", strerror(errno));
+					RETURN_ERRORX(
+					    MPORT_ERR_FATAL, "poll() failed: %s", strerror(errno));
 				}
 			}
 			if (pres > 0 && pfd.revents & POLLIN) {
@@ -99,13 +102,14 @@ mport_script_run_child(mportInstance *mport, int pid, int *pstat, int inputfd, c
 						break;
 					}
 					if (errno != EINTR) {
-                        RETURN_ERRORX(MPORT_ERR_FATAL, "read() failed: %s", strerror(errno));
+						RETURN_ERRORX(MPORT_ERR_FATAL, "read() failed: %s",
+						    strerror(errno));
 					}
 				}
 				if (readsize > 0) {
 					msgbuf[readsize] = '\0';
-                    
-                    mport_call_msg_cb(mport, msgbuf);
+
+					mport_call_msg_cb(mport, msgbuf);
 				}
 			}
 		} while (readsize > 0);
@@ -115,7 +119,7 @@ mport_script_run_child(mportInstance *mport, int pid, int *pstat, int inputfd, c
 		if (WEXITSTATUS(*pstat) == 3)
 			exit(0);
 
-        RETURN_ERRORX(MPORT_ERR_FATAL, "%s script failed", script_name);
+		RETURN_ERRORX(MPORT_ERR_FATAL, "%s script failed", script_name);
 	}
 	return (MPORT_OK);
 }
@@ -135,9 +139,10 @@ mport_lua_script_run(mportInstance *mport, mportPackageMeta *pkg, mport_lua_scri
 	if (tll_length(pkg->lua_scripts[type]) == 0)
 		return (MPORT_OK);
 
-	tll_foreach(pkg->lua_scripts[type], s) {
+	tll_foreach(pkg->lua_scripts[type], s)
+	{
 		if (get_socketpair(cur_pipe) == -1) {
-            SET_ERROR(MPORT_ERR_FATAL, "socket pair failed");
+			SET_ERROR(MPORT_ERR_FATAL, "socket pair failed");
 			goto cleanup;
 		}
 		pid_t pid = fork();
@@ -155,8 +160,8 @@ mport_lua_script_run(mportInstance *mport, mportPackageMeta *pkg, mport_lua_scri
 			};
 			close(cur_pipe[0]);
 			lua_State *L = luaL_newstate();
-			luaL_openlibs( L );
-			lua_atpanic(L, (lua_CFunction)stack_dump );
+			luaL_openlibs(L);
+			lua_atpanic(L, (lua_CFunction)stack_dump);
 			lua_pushinteger(L, cur_pipe[1]);
 			lua_setglobal(L, "msgfd");
 			lua_pushlightuserdata(L, pkg);
@@ -169,7 +174,7 @@ mport_lua_script_run(mportInstance *mport, mportPackageMeta *pkg, mport_lua_scri
 			lua_setglobal(L, "pkg_name");
 			lua_pushstring(L, mport->root);
 			lua_setglobal(L, "pkg_rootdir");
-			lua_pushboolean(L, (pkg->action == MPORT_ACTION_UPGRADE? 1 : 0));
+			lua_pushboolean(L, (pkg->action == MPORT_ACTION_UPGRADE ? 1 : 0));
 			lua_setglobal(L, "pkg_upgrade");
 			luaL_newlib(L, pkg_lib);
 			lua_setglobal(L, "pkg");
@@ -197,7 +202,8 @@ mport_lua_script_run(mportInstance *mport, mportPackageMeta *pkg, mport_lua_scri
 						if (args_base != NULL) {
 							walk = args_base;
 							while (walk != NULL) {
-								args[argc++] = mport_tokenize(&walk);
+								args[argc++] =
+								    mport_tokenize(&walk);
 							}
 							lua_args_table(L, args, argc);
 							free(args_base);
@@ -208,9 +214,11 @@ mport_lua_script_run(mportInstance *mport, mportPackageMeta *pkg, mport_lua_scri
 				}
 			}
 
-			//pkg_debug(3, "Scripts: executing lua\n--- BEGIN ---\n%s\nScripts: --- END ---", s->item);
+			// pkg_debug(3, "Scripts: executing lua\n--- BEGIN ---\n%s\nScripts: --- END
+			// ---", s->item);
 			if (luaL_dostring(L, s->item)) {
-                SET_ERRORX(MPORT_ERR_FATAL, "Failed to execute lua script: %s", lua_tostring(L, -1));
+				SET_ERRORX(MPORT_ERR_FATAL, "Failed to execute lua script: %s",
+				    lua_tostring(L, -1));
 				lua_close(L);
 				_exit(1);
 			}
@@ -223,7 +231,7 @@ mport_lua_script_run(mportInstance *mport, mportPackageMeta *pkg, mport_lua_scri
 			lua_close(L);
 			_exit(0);
 		} else if (pid < 0) {
-            SET_ERROR(MPORT_ERR_FATAL, "Cannot fork lua script");
+			SET_ERROR(MPORT_ERR_FATAL, "Cannot fork lua script");
 			ret = MPORT_ERR_FATAL;
 			goto cleanup;
 		}
@@ -232,7 +240,6 @@ mport_lua_script_run(mportInstance *mport, mportPackageMeta *pkg, mport_lua_scri
 
 		ret = mport_script_run_child(mport, pid, &pstat, cur_pipe[0], "lua");
 	}
-
 
 cleanup:
 
@@ -245,22 +252,23 @@ mport_lua_script_to_ucl(stringlist_t *scripts)
 	ucl_object_t *array;
 
 	array = ucl_object_typed_new(UCL_ARRAY);
-	tll_foreach(*scripts, s)
-		ucl_array_append(array, ucl_object_fromstring_common(s->item,
-		    strlen(s->item), UCL_STRING_RAW|UCL_STRING_TRIM));
+	tll_foreach(*scripts, s) ucl_array_append(array,
+	    ucl_object_fromstring_common(
+		s->item, strlen(s->item), UCL_STRING_RAW | UCL_STRING_TRIM));
 
 	return (array);
 }
 
 int
-mport_lua_script_from_ucl(mportInstance *mport, mportPackageMeta *pkg, const ucl_object_t *obj, mport_lua_script type)
+mport_lua_script_from_ucl(
+    mportInstance *mport, mportPackageMeta *pkg, const ucl_object_t *obj, mport_lua_script type)
 {
 	const ucl_object_t *cur;
 	ucl_object_iter_t it = NULL;
 
 	while ((cur = ucl_iterate_object(obj, &it, true))) {
 		if (ucl_object_type(cur) != UCL_STRING) {
-            RETURN_ERROR(MPORT_ERR_FATAL, "lua scripts should be strings.\n");
+			RETURN_ERROR(MPORT_ERR_FATAL, "lua scripts should be strings.\n");
 		}
 		char *script = strdup(ucl_object_tostring(cur));
 		if (script == NULL) {
@@ -276,14 +284,17 @@ mport_lua_script_load(mportInstance *mport, mportPackageMeta *pkg)
 {
 	mport_lua_script_read_file(mport, pkg, MPORT_LUA_PRE_INSTALL, MPORT_LUA_PRE_INSTALL_FILE);
 	mport_lua_script_read_file(mport, pkg, MPORT_LUA_POST_INSTALL, MPORT_LUA_POST_INSTALL_FILE);
-	mport_lua_script_read_file(mport, pkg, MPORT_LUA_PRE_DEINSTALL, MPORT_LUA_PRE_DEINSTALL_FILE);
-	mport_lua_script_read_file(mport, pkg, MPORT_LUA_POST_DEINSTALL, MPORT_LUA_POST_DEINSTALL_FILE);
+	mport_lua_script_read_file(
+	    mport, pkg, MPORT_LUA_PRE_DEINSTALL, MPORT_LUA_PRE_DEINSTALL_FILE);
+	mport_lua_script_read_file(
+	    mport, pkg, MPORT_LUA_POST_DEINSTALL, MPORT_LUA_POST_DEINSTALL_FILE);
 
 	return (MPORT_OK);
 }
 
 int
-mport_lua_script_read_file(mportInstance *mport, mportPackageMeta *pkg, mport_lua_script type, char *luafile)
+mport_lua_script_read_file(
+    mportInstance *mport, mportPackageMeta *pkg, mport_lua_script type, char *luafile)
 {
 	char filename[FILENAME_MAX];
 	char *buf = NULL;
@@ -322,7 +333,7 @@ mport_lua_script_read_file(mportInstance *mport, mportPackageMeta *pkg, mport_lu
 
 		if (ucl_parser_add_chunk(parser, (const unsigned char *)buf, st.st_size)) {
 			obj = ucl_parser_get_object(parser);
-		    int ret = mport_lua_script_from_ucl(mport, pkg, obj, type);
+			int ret = mport_lua_script_from_ucl(mport, pkg, obj, type);
 			ucl_parser_free(parser);
 			free(buf);
 

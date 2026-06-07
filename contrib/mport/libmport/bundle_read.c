@@ -34,6 +34,7 @@
 #include <string.h>
 #include <errno.h>
 #include <archive_entry.h>
+#include <unistd.h>
 
 /*
  * mport_bundle_read_new()
@@ -100,9 +101,10 @@ mport_bundle_read_finish(mportInstance *mport, mportBundleRead *bundle)
 			mport_call_msg_cb(mport, "Unable to close pacakge.");
 			ret = SET_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));
 		}
-		
+
 		if (ret != MPORT_ERR_FATAL && archive_read_free(bundle->archive) != ARCHIVE_OK) {
-			mport_call_msg_cb(mport, "Unable to free memory used by package archive file.");
+			mport_call_msg_cb(
+			    mport, "Unable to free memory used by package archive file.");
 			ret = SET_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));
 		}
 	}
@@ -147,8 +149,12 @@ mport_bundle_read_extract_metafiles(mportBundleRead *bundle, char **dirnamep)
 	char dirtmpl[MAXPATHLEN];
 	char *tmpdir;
 
-	tmpdir = getenv("TMPDIR");
-	if (tmpdir == NULL)
+	/*
+	 * Do not trust TMPDIR when running with elevated privileges or in a
+	 * setuid/setgid context to prevent environment-based attacks.
+	 */
+	tmpdir = (issetugid() || geteuid() == 0) ? NULL : getenv("TMPDIR");
+	if (tmpdir == NULL || *tmpdir == '\0')
 		tmpdir = "/tmp";
 
 	strlcpy(dirtmpl, tmpdir, sizeof(dirtmpl));
@@ -174,12 +180,10 @@ mport_bundle_read_extract_metafiles(mportBundleRead *bundle, char **dirnamep)
 		file = archive_entry_pathname(entry);
 
 		if (*file == '+') {
-			(void)snprintf(
-			    filepath, FILENAME_MAX, "%s/%s", tmpdir, file);
+			(void)snprintf(filepath, FILENAME_MAX, "%s/%s", tmpdir, file);
 			archive_entry_set_pathname(entry, filepath);
 
-			if (mport_bundle_read_extract_next_file(
-				bundle, entry) != MPORT_OK)
+			if (mport_bundle_read_extract_next_file(bundle, entry) != MPORT_OK)
 				RETURN_CURRENT_ERROR;
 		} else {
 			/* entry points to the first real file in the bundle, so
@@ -271,10 +275,10 @@ int
 mport_bundle_read_extract_next_file(mportBundleRead *bundle, struct archive_entry *entry)
 {
 	if (archive_read_extract(bundle->archive, entry,
-		ARCHIVE_EXTRACT_OWNER | ARCHIVE_EXTRACT_PERM |
-		    ARCHIVE_EXTRACT_TIME | ARCHIVE_EXTRACT_ACL |
-		    ARCHIVE_EXTRACT_FFLAGS) != ARCHIVE_OK) {
-		RETURN_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));
+		ARCHIVE_EXTRACT_OWNER | ARCHIVE_EXTRACT_PERM | ARCHIVE_EXTRACT_TIME |
+		    ARCHIVE_EXTRACT_ACL | ARCHIVE_EXTRACT_FFLAGS) != ARCHIVE_OK) {
+		RETURN_ERRORX(MPORT_ERR_FATAL, "%s: %s", archive_error_string(bundle->archive),
+		    entry != NULL ? archive_entry_pathname(entry) : "unknown file");
 	}
 
 	return (MPORT_OK);
@@ -287,8 +291,7 @@ mport_bundle_read_extract_next_file(mportBundleRead *bundle, struct archive_entr
  * db for the instance master database.
  */
 int
-mport_bundle_read_prep_for_install(
-    mportInstance *mport, mportBundleRead *bundle)
+mport_bundle_read_prep_for_install(mportInstance *mport, mportBundleRead *bundle)
 {
 	sqlite3_stmt *stmt;
 	int bundle_version;
@@ -305,8 +308,7 @@ mport_bundle_read_prep_for_install(
 	bundle->stub_attached = 1;
 
 	if (mport_db_prepare(mport->db, &stmt,
-		"SELECT value FROM stub.meta WHERE field='bundle_format_version'") !=
-	    MPORT_OK) {
+		"SELECT value FROM stub.meta WHERE field='bundle_format_version'") != MPORT_OK) {
 		sqlite3_finalize(stmt);
 		RETURN_CURRENT_ERROR;
 	}
@@ -325,8 +327,8 @@ mport_bundle_read_prep_for_install(
 		break;
 	case SQLITE_DONE:
 		sqlite3_finalize(stmt);
-		RETURN_ERRORX(MPORT_ERR_FATAL, "%s: no stub.meta table, or no bundle_format_version field",
-		    bundle->filename);
+		RETURN_ERRORX(MPORT_ERR_FATAL,
+		    "%s: no stub.meta table, or no bundle_format_version field", bundle->filename);
 	default:
 		sqlite3_finalize(stmt);
 		RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));

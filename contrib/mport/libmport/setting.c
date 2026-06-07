@@ -49,9 +49,14 @@ mport_setting_get(mportInstance *mport, const char *name)
 	}
 
 	switch (sqlite3_step(stmt)) {
-	case SQLITE_ROW:
-		val = strdup((const char *)sqlite3_column_text(stmt, 0));
+	case SQLITE_ROW: {
+		const unsigned char *row_val = sqlite3_column_text(stmt, 0);
+		val = (row_val == NULL) ? NULL : strdup((const char *)row_val);
+	}
 		sqlite3_finalize(stmt);
+		if (val == NULL) {
+			SET_ERROR(MPORT_ERR_FATAL, "Malformed setting row.");
+		}
 		break;
 	case SQLITE_DONE:
 		SET_ERROR(MPORT_ERR_FATAL, "Setting not found.");
@@ -91,10 +96,11 @@ mport_setting_list(mportInstance *mport)
 	sqlite3_stmt *stmt = NULL;
 	int count;
 	char **list = NULL;
+	int error = 0;
 
 	if (mport_db_count(mport->db, &count, "SELECT count(*) FROM settings") != MPORT_OK) {
 		return NULL;
-	}	
+	}
 
 	list = calloc(count + 1, sizeof(char *));
 	if (list == NULL)
@@ -109,17 +115,36 @@ mport_setting_list(mportInstance *mport)
 	for (int i = 0; i < count; i++) {
 		int step = sqlite3_step(stmt);
 		if (step == SQLITE_ROW) {
-			if (asprintf(&list[i], "%s=%s", sqlite3_column_text(stmt, 0), sqlite3_column_text(stmt, 1)) == -1)
+			const unsigned char *setting_name = sqlite3_column_text(stmt, 0);
+			const unsigned char *setting_val = sqlite3_column_text(stmt, 1);
+			if (setting_name == NULL || setting_val == NULL) {
+				SET_ERROR(MPORT_ERR_FATAL, "Malformed setting row.");
+				error = 1;
+				break;
+			}
+			if (asprintf(&list[i], "%s=%s", setting_name, setting_val) == -1) {
 				list[i] = NULL;
+				error = 1;
+				break;
+			}
 		} else if (step == SQLITE_DONE) {
 			SET_ERROR(MPORT_ERR_FATAL, "Setting not found.");
+			error = 1;
 			break;
 		} else {
 			SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+			error = 1;
 			break;
 		}
 	}
 	sqlite3_finalize(stmt);
+
+	if (error) {
+		for (int i = 0; i < count; i++)
+			free(list[i]);
+		free(list);
+		return NULL;
+	}
 
 	return list;
 }

@@ -37,7 +37,7 @@
 #include <unistd.h>
 
 MPORT_PUBLIC_API int
-mport_list_print(mportInstance *mport, mportListPrint *print) 
+mport_list_print(mportInstance *mport, mportListPrint *print)
 {
 
 	mportPackageMeta **packs = NULL;
@@ -64,34 +64,44 @@ mport_list_print(mportInstance *mport, mportListPrint *print)
 
 	while (*packs != NULL) {
 		if (print->update) {
-			if (mport_index_lookup_pkgname(mport, (*packs)->name, &indexEntries) != MPORT_OK) {
-				RETURN_ERRORX(MPORT_ERR_FATAL, "Error looking up package name %s: %d %s", (*packs)->name, mport_err_code(), mport_err_string());
+			if (mport_index_lookup_pkgname(mport, (*packs)->name, &indexEntries) !=
+			    MPORT_OK) {
+				RETURN_ERRORX(MPORT_ERR_FATAL,
+				    "Error looking up package name %s: %d %s", (*packs)->name,
+				    mport_err_code(), mport_err_string());
 			}
 
 			if (indexEntries == NULL || *indexEntries == NULL) {
-				if (mport_moved_lookup(mport, (*packs)->origin, &movedEntries) != MPORT_OK) {
-					mport_call_msg_cb(mport,"%-30s %9s     is not part of the package repository.", (*packs)->name, (*packs)->version);
+				if (mport_moved_lookup(mport, (*packs)->origin, &movedEntries) !=
+				    MPORT_OK) {
+					mport_call_msg_cb(mport,
+					    "%-30s %9s     is not part of the package repository.",
+					    (*packs)->name, (*packs)->version);
 					packs++;
 					continue;
 				}
 
 				if (movedEntries != NULL && *movedEntries != NULL) {
-					if ((*movedEntries)->moved_to[0]!= '\0') {
-						mport_call_msg_cb(mport,"%-30s %9s     was moved to %s", (*packs)->name, (*packs)->version, (*movedEntries)->moved_to);
+					if ((*movedEntries)->moved_to[0] != '\0') {
+						mport_call_msg_cb(mport,
+						    "%-30s %9s     was moved to %s", (*packs)->name,
+						    (*packs)->version, (*movedEntries)->moved_to);
 						free(movedEntries);
 						movedEntries = NULL;
 						packs++;
 						continue;
 					}
-	
-					if ((*movedEntries)->date[0]!= '\0') {
-						mport_call_msg_cb(mport,"%-30s %9s     expired on %s", (*packs)->name, (*packs)->version, (*movedEntries)->date);
+
+					if ((*movedEntries)->date[0] != '\0') {
+						mport_call_msg_cb(mport,
+						    "%-30s %9s     expired on %s", (*packs)->name,
+						    (*packs)->version, (*movedEntries)->date);
 						free(movedEntries);
 						movedEntries = NULL;
 						packs++;
 						continue;
 					}
-	
+
 					free(movedEntries);
 					movedEntries = NULL;
 				}
@@ -111,21 +121,30 @@ mport_list_print(mportInstance *mport, mportListPrint *print)
 					continue;
 				}
 			}
-	
-			iestart = indexEntries;		
+
+			iestart = indexEntries;
 			while (indexEntries != NULL && *indexEntries != NULL) {
-				if (((*indexEntries)->version != NULL && mport_version_cmp((*packs)->version, (*indexEntries)->version) < 0) 
-					|| ((*packs)->version != NULL && mport_version_cmp((*packs)->os_release, os_release) < 0)) {
+				if (((*indexEntries)->version != NULL &&
+					mport_version_cmp(
+					    (*packs)->version, (*indexEntries)->version) < 0) ||
+				    ((*packs)->version != NULL &&
+					mport_version_cmp((*packs)->os_release, os_release) < 0)) {
 
 					if (mport->verbosity == MPORT_VVERBOSE) {
-						mport_call_msg_cb(mport,"%-30s %9s (%s)  <  %-9s %-30s", (*packs)->name, (*packs)->version, (*packs)->os_release, (*indexEntries)->version, (*indexEntries)->pkgname);
+						mport_call_msg_cb(mport,
+						    "%-30s %9s (%s)  <  %-9s %-30s", (*packs)->name,
+						    (*packs)->version, (*packs)->os_release,
+						    (*indexEntries)->version,
+						    (*indexEntries)->pkgname);
 					} else {
-						mport_call_msg_cb(mport,"%-30s %9s  <  %-9s", (*packs)->name, (*packs)->version, (*indexEntries)->version);
+						mport_call_msg_cb(mport, "%-30s %9s  <  %-9s",
+						    (*packs)->name, (*packs)->version,
+						    (*indexEntries)->version);
 					}
 				}
 				indexEntries++;
 			}
-				
+
 			mport_index_entry_free_vec(iestart);
 			iestart = NULL;
 			indexEntries = NULL;
@@ -134,22 +153,24 @@ mport_list_print(mportInstance *mport, mportListPrint *print)
 		} else if (mport->verbosity == MPORT_VVERBOSE || print->verbose) {
 			comment = mport_str_remove((*packs)->comment, '\\');
 			snprintf(name_version, 30, "%s-%s", (*packs)->name, (*packs)->version);
-			
-			mport_call_msg_cb(mport,"%-30s\t%6s\t%s", name_version, (*packs)->os_release, comment);
+
+			mport_call_msg_cb(
+			    mport, "%-30s\t%6s\t%s", name_version, (*packs)->os_release, comment);
 			free(comment);
 			comment = NULL;
 		} else if (print->prime && (*packs)->automatic == 0) {
-			mport_call_msg_cb(mport,"%s", (*packs)->name);
+			mport_call_msg_cb(mport, "%s", (*packs)->name);
 		} else if (mport->verbosity == MPORT_VQUIET && !print->origin) {
-			mport_call_msg_cb(mport,"%s", (*packs)->name);
+			mport_call_msg_cb(mport, "%s", (*packs)->name);
 		} else if (mport->verbosity == MPORT_VQUIET && print->origin) {
-			mport_call_msg_cb(mport,"%s", (*packs)->origin);
+			mport_call_msg_cb(mport, "%s", (*packs)->origin);
 		} else if (print->origin) {
-			mport_call_msg_cb(mport,"Information for %s-%s:\n\nOrigin:\n%s\n",
-						  (*packs)->name, (*packs)->version, (*packs)->origin);
+			mport_call_msg_cb(mport, "Information for %s-%s:\n\nOrigin:\n%s\n",
+			    (*packs)->name, (*packs)->version, (*packs)->origin);
 		} else if (print->locks) {
 			if ((*packs)->locked == 1)
-				mport_call_msg_cb(mport,"%s-%s", (*packs)->name, (*packs)->version);
+				mport_call_msg_cb(
+				    mport, "%s-%s", (*packs)->name, (*packs)->version);
 
 		} else {
 			mport_call_msg_cb(mport, "%s-%s", (*packs)->name, (*packs)->version);

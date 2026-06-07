@@ -57,7 +57,7 @@ mport_version_cmp(const char *astr, const char *bstr)
 	struct version a;
 	struct version b;
 	int result;
-  
+
 	if (parse_version(astr, &a) != MPORT_OK)
 		return 0;
 	if (parse_version(bstr, &b) != MPORT_OK)
@@ -79,34 +79,32 @@ mport_version_cmp(const char *astr, const char *bstr)
 	a.version = NULL;
 	free(b.version);
 	b.version = NULL;
-  
+
 	return (result);
 }
-
 
 /* version of mport_version_cmp() that is bound to the sqlite3 database. */
 void
 mport_version_cmp_sqlite(sqlite3_context *context, int argc, sqlite3_value **argv)
 {
-    char *a = NULL;
+	char *a = NULL;
 	char *b = NULL;
 
-    assert(argc == 2);
+	assert(argc == 2);
 
-    a = strdup(sqlite3_value_text(argv[0]));
-    b = strdup(sqlite3_value_text(argv[1]));
+	a = strdup(sqlite3_value_text(argv[0]));
+	b = strdup(sqlite3_value_text(argv[1]));
 
-    assert(a != NULL);
-    assert(b != NULL);
+	assert(a != NULL);
+	assert(b != NULL);
 
-    sqlite3_result_int(context, mport_version_cmp(a, b));
+	sqlite3_result_int(context, mport_version_cmp(a, b));
 
-    free(a);
+	free(a);
 	a = NULL;
-    free(b);
+	free(b);
 	b = NULL;
-}  
-
+}
 
 /* Returns 0 if baseline meets the given requirement, -1 if the requirement
  * was not met, and a value greater than 0 on error.  some examples:
@@ -120,17 +118,17 @@ mport_version_cmp_sqlite(sqlite3_context *context, int argc, sqlite3_value **arg
 int
 mport_version_require_check(const char *baseline, const char *require)
 {
-    int ret = 0;
+	int ret = 0;
 
-    bool multi = false;
-    int greater[2] = {-1,-1} ;
-    int less[2] = {-1,-1};
-    int equal[2] = {-1,-1};
-    size_t version_size = strlen(require);
+	bool multi = false;
+	int greater[2] = { -1, -1 };
+	int less[2] = { -1, -1 };
+	int equal[2] = { -1, -1 };
+	size_t version_size = strlen(require);
 
-    if (version_size < 2) {
-    	return 1; // impossible to validate
-    }
+	if (version_size < 2) {
+		return 1; // impossible to validate
+	}
 
 	for (size_t i = 0; i < version_size; i++) {
 		if (require[i] == '>') {
@@ -155,7 +153,8 @@ mport_version_require_check(const char *baseline, const char *require)
 	}
 
 #ifdef DEBUG
-	printf(" g0 %d g1 %d l0 %d l1 %d eq0 %d\n", greater[0], greater[1], less[0], less[1], equal[0]);
+	printf(" g0 %d g1 %d l0 %d l1 %d eq0 %d\n", greater[0], greater[1], less[0], less[1],
+	    equal[0]);
 #endif
 
 	if (greater[0] == -1 && less[0] == -1 && equal[0] == -1) {
@@ -183,7 +182,8 @@ mport_version_require_check(const char *baseline, const char *require)
 				ret = (mport_version_cmp(baseline, &require[1]) > 0) ? 0 : -1;
 			}
 		} else {
-			RETURN_ERRORX(MPORT_ERR_FATAL, "Malformed version requirement: %s", require);
+			RETURN_ERRORX(
+			    MPORT_ERR_FATAL, "Malformed version requirement: %s", require);
 		}
 	} else {
 		char *s = strdup(require);
@@ -231,14 +231,16 @@ mport_version_require_check(const char *baseline, const char *require)
 			// second one is greater
 			s[greater[1]] = '\0';
 			if (s[greater[1] + 1] == '=') {
-				ret = (mport_version_cmp(baseline, &s[greater[1] + 2]) >= 0) ? 0 : -1;
+				ret =
+				    (mport_version_cmp(baseline, &s[greater[1] + 2]) >= 0) ? 0 : -1;
 				if (ret == -1) {
 					free(s);
 					s = NULL;
 					return (ret);
 				}
 			} else {
-				ret = (mport_version_cmp(baseline, &s[greater[1] + 1]) > 0) ? 0 : -1;
+				ret =
+				    (mport_version_cmp(baseline, &s[greater[1] + 1]) > 0) ? 0 : -1;
 				if (ret == -1) {
 					free(s);
 					s = NULL;
@@ -249,14 +251,16 @@ mport_version_require_check(const char *baseline, const char *require)
 			// second one is greater
 			s[greater[0]] = '\0';
 			if (s[greater[0] + 1] == '=') {
-				ret = (mport_version_cmp(baseline, &s[greater[0] + 2]) >= 0) ? 0 : -1;
+				ret =
+				    (mport_version_cmp(baseline, &s[greater[0] + 2]) >= 0) ? 0 : -1;
 				if (ret == -1) {
 					free(s);
 					s = NULL;
 					return (ret);
 				}
 			} else {
-				ret = (mport_version_cmp(baseline, &s[greater[0] + 1]) > 0) ? 0 : -1;
+				ret =
+				    (mport_version_cmp(baseline, &s[greater[0] + 1]) > 0) ? 0 : -1;
 				if (ret == -1) {
 					free(s);
 					s = NULL;
@@ -287,26 +291,27 @@ mport_version_require_check(const char *baseline, const char *require)
 		s = NULL;
 	}
 
-    return (ret);
+	return (ret);
 }
 
 static int
-parse_version(const char *in, struct version *v) 
+parse_version(const char *in, struct version *v)
 {
-    char *s = strdup(in);
-    char *underscore;
+	char *s = strdup(in);
+	char *underscore;
 
 	if (s == NULL)
 		return MPORT_ERR_FATAL;
 
-    char *comma;
-    // greater than and less than prevent multiversion strings from getting parsed incorrectly
-    // so 2.0<1.5 would just be 2.0. Ideally we need to catch this upstream and do the right check.
-    char *lessthan;
-    char *greaterthan;
+	char *comma;
+	// greater than and less than prevent multiversion strings from getting parsed incorrectly
+	// so 2.0<1.5 would just be 2.0. Ideally we need to catch this upstream and do the right
+	// check.
+	char *lessthan;
+	char *greaterthan;
 
-    underscore = rindex(s, '_');
-    comma = rindex(s, ',');
+	underscore = rindex(s, '_');
+	comma = rindex(s, ',');
 	lessthan = rindex(s, '<');
 	greaterthan = rindex(s, '>');
 
@@ -318,76 +323,76 @@ parse_version(const char *in, struct version *v)
 		*greaterthan = '\0';
 	}
 
-    if (comma == NULL) {
-        v->epoch = 0;
-    } else {
-        *comma = '\0';
-        v->epoch = (int) strtol(comma + 1, NULL, 10);
-    }
+	if (comma == NULL) {
+		v->epoch = 0;
+	} else {
+		*comma = '\0';
+		v->epoch = (int)strtol(comma + 1, NULL, 10);
+	}
 
-    if (underscore == NULL) {
-        v->revision = 0;
-    } else {
-        *underscore = '\0';
-        v->revision = (int) strtol(underscore + 1, NULL, 10);
-    }
+	if (underscore == NULL) {
+		v->revision = 0;
+	} else {
+		*underscore = '\0';
+		v->revision = (int)strtol(underscore + 1, NULL, 10);
+	}
 
-    v->version = s;
+	v->version = s;
 
 	return MPORT_OK;
 }
 
 static int
-cmp_ints(int a, int b) 
+cmp_ints(int a, int b)
 {
 
-    if (a == b)
-        return 0;
-    if (a < b)
-        return -1;
+	if (a == b)
+		return 0;
+	if (a < b)
+		return -1;
 
-    return 1;
+	return 1;
 }
 
 static int
 cmp_versions(char *a, char *b)
 {
-    int a_sub, b_sub, result = 0;
+	int a_sub, b_sub, result = 0;
 
-    while (*a || *b) {
-        if (*a) {
-            while (*a == '.' || *a == '+')
-                a++;
+	while (*a || *b) {
+		if (*a) {
+			while (*a == '.' || *a == '+')
+				a++;
 
-            if (isdigit(*a)) {
-                a_sub = (int) strtol(a, &a, 10);
-            } else {
-                a_sub = (int) *a;
-                a++;
-            }
-        } else {
-            a_sub = 0;
-        }
+			if (isdigit(*a)) {
+				a_sub = (int)strtol(a, &a, 10);
+			} else {
+				a_sub = (int)*a;
+				a++;
+			}
+		} else {
+			a_sub = 0;
+		}
 
-        if (*b) {
-            while (*b == '.' || *b == '+')
-                b++;
+		if (*b) {
+			while (*b == '.' || *b == '+')
+				b++;
 
-            if (isdigit(*b)) {
-                b_sub = (int) strtol(b, &b, 10);
-            } else {
-                b_sub = (int) *b;
-                b++;
-            }
-        } else {
-            b_sub = 0;
-        }
+			if (isdigit(*b)) {
+				b_sub = (int)strtol(b, &b, 10);
+			} else {
+				b_sub = (int)*b;
+				b++;
+			}
+		} else {
+			b_sub = 0;
+		}
 
-        result = cmp_ints(a_sub, b_sub);
+		result = cmp_ints(a_sub, b_sub);
 
-        if (result != 0)
-            break;
-    }
+		if (result != 0)
+			break;
+	}
 
-    return (result);
-}    
+	return (result);
+}

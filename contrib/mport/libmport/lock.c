@@ -43,7 +43,8 @@ mport_lock_lock(mportInstance *mport, mportPackageMeta *pkg)
 		return (MPORT_OK);
 	}
 
-	if (mport_db_do(mport->db, "update packages set locked=1 where pkg=%Q", pkg->name) != MPORT_OK) {
+	if (mport_db_do(mport->db, "update packages set locked=1 where pkg=%Q", pkg->name) !=
+	    MPORT_OK) {
 		RETURN_CURRENT_ERROR;
 	}
 
@@ -54,7 +55,8 @@ MPORT_PUBLIC_API int
 mport_lock_unlock(mportInstance *mport, mportPackageMeta *pkg)
 {
 	if (mport_lock_islocked(pkg) == MPORT_LOCKED) {
-		if (mport_db_do(mport->db, "update packages set locked=0 where pkg=%Q", pkg->name) != MPORT_OK) {
+		if (mport_db_do(mport->db, "update packages set locked=0 where pkg=%Q",
+			pkg->name) != MPORT_OK) {
 			RETURN_CURRENT_ERROR;
 		}
 	}

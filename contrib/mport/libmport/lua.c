@@ -44,68 +44,69 @@
 
 #include "mport_lua.h"
 
-
 #ifndef DEFFILEMODE
-#define DEFFILEMODE (S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH)
+#define DEFFILEMODE (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH)
 #endif
 
 extern char **environ;
 
-int set_attrsat(int fd, const char *path, mode_t perm, uid_t uid, gid_t gid, const struct timespec *ats, const struct timespec *mts);
+int set_attrsat(int fd, const char *path, mode_t perm, uid_t uid, gid_t gid,
+    const struct timespec *ats, const struct timespec *mts);
 int checkflags(const char *mode, int *optr);
 
 lua_CFunction
 stack_dump(lua_State *L)
 {
-    int i;
-    int top = lua_gettop(L);
-    FILE *stream;
-    char *stackstr;
-    size_t size;
+	int i;
+	int top = lua_gettop(L);
+	FILE *stream;
+	char *stackstr;
+	size_t size;
 
-    stream = open_memstream(&stackstr, &size);
-    if (stream == NULL) {
-        perror("open_memstream");
-        return 0;
-    }
+	stream = open_memstream(&stackstr, &size);
+	if (stream == NULL) {
+		perror("open_memstream");
+		return 0;
+	}
 
-    fputs("\nLua Stack\n---------\n"
-          "\tType   Data\n\t-----------\n", stream);
+	fputs("\nLua Stack\n---------\n"
+	      "\tType   Data\n\t-----------\n",
+	    stream);
 
-    for (i = 1; i <= top; i++) {  /* repeat for each level */
-        int t = lua_type(L, i);
-        fprintf(stream, "%i", i);
-        switch (t) {
-        case LUA_TSTRING:  /* strings */
-            fprintf(stream, "\tString: `%s'\n", lua_tostring(L, i));
-            break;
-        case LUA_TBOOLEAN:  /* booleans */
-            fprintf(stream, "\tBoolean: %s", lua_toboolean(L, i) ? "\ttrue\n" : "\tfalse\n");
-            break;
-        case LUA_TNUMBER:  /* numbers */
-            fprintf(stream, "\tNumber: %g\n", lua_tonumber(L, i));
-            break;
-        default:  /* other values */
-            fprintf(stream, "\tOther: %s\n", lua_typename(L, t));
-            break;
-        }
-    }
+	for (i = 1; i <= top; i++) { /* repeat for each level */
+		int t = lua_type(L, i);
+		fprintf(stream, "%i", i);
+		switch (t) {
+		case LUA_TSTRING: /* strings */
+			fprintf(stream, "\tString: `%s'\n", lua_tostring(L, i));
+			break;
+		case LUA_TBOOLEAN: /* booleans */
+			fprintf(stream, "\tBoolean: %s",
+			    lua_toboolean(L, i) ? "\ttrue\n" : "\tfalse\n");
+			break;
+		case LUA_TNUMBER: /* numbers */
+			fprintf(stream, "\tNumber: %g\n", lua_tonumber(L, i));
+			break;
+		default: /* other values */
+			fprintf(stream, "\tOther: %s\n", lua_typename(L, t));
+			break;
+		}
+	}
 
-    fclose(stream);
-    // TODO: better error handling here.
-    fprintf(stderr, "%s\n", stackstr);
-    free(stackstr);
+	fclose(stream);
+	// TODO: better error handling here.
+	fprintf(stderr, "%s\n", stackstr);
+	free(stackstr);
 
-    return (0);
+	return (0);
 }
 
 int
 lua_print_msg(lua_State *L)
 {
 	int n = lua_gettop(L);
-	luaL_argcheck(L, n == 1, n > 1 ? 2 : n,
-	    "pkg.print_msg takes exactly one argument");
-	const char* str = luaL_checkstring(L, 1);
+	luaL_argcheck(L, n == 1, n > 1 ? 2 : n, "pkg.print_msg takes exactly one argument");
+	const char *str = luaL_checkstring(L, 1);
 	lua_getglobal(L, "msgfd");
 	int fd = lua_tointeger(L, -1);
 
@@ -114,18 +115,18 @@ lua_print_msg(lua_State *L)
 	return (0);
 }
 
-
-static const char**
-luaL_checkarraystrings(lua_State *L, int arg) {
+static const char **
+luaL_checkarraystrings(lua_State *L, int arg)
+{
 	const char **ret;
 	lua_Integer n, i;
 	int t;
 	int abs_arg = lua_absindex(L, arg);
 	luaL_checktype(L, abs_arg, LUA_TTABLE);
 	n = lua_rawlen(L, abs_arg);
-	ret = lua_newuserdata(L, (n+1)*sizeof(char*));
-	for (i=0; i<n; i++) {
-		t = lua_rawgeti(L, abs_arg, i+1);
+	ret = lua_newuserdata(L, (n + 1) * sizeof(char *));
+	for (i = 0; i < n; i++) {
+		t = lua_rawgeti(L, abs_arg, i + 1);
 		if (t == LUA_TNIL)
 			break;
 		luaL_argcheck(L, t == LUA_TSTRING, arg, "expected array of strings");
@@ -141,12 +142,11 @@ lua_exec(lua_State *L)
 {
 	int r, pstat;
 	posix_spawn_file_actions_t action;
-	int stdin_pipe[2] = {-1, -1};
+	int stdin_pipe[2] = { -1, -1 };
 	pid_t pid;
 	const char **argv;
 	int n = lua_gettop(L);
-	luaL_argcheck(L, n == 1, n > 1 ? 2 : n,
-	    "pkg.exec takes exactly one argument");
+	luaL_argcheck(L, n == 1, n > 1 ? 2 : n, "pkg.exec takes exactly one argument");
 
 #ifdef HAVE_CAPSICUM
 	unsigned int capmode;
@@ -162,8 +162,7 @@ lua_exec(lua_State *L)
 	posix_spawn_file_actions_addclose(&action, stdin_pipe[1]);
 
 	argv = luaL_checkarraystrings(L, 1);
-	if (0 != (r = posix_spawnp(&pid, argv[0], &action, NULL,
-		(char*const*)argv, environ))) {
+	if (0 != (r = posix_spawnp(&pid, argv[0], &action, NULL, (char *const *)argv, environ))) {
 		lua_pushnil(L);
 		lua_pushstring(L, strerror(r));
 		lua_pushinteger(L, r);
@@ -199,16 +198,15 @@ int
 lua_pkg_copy(lua_State *L)
 {
 	int n = lua_gettop(L);
-	luaL_argcheck(L, n == 2, n > 2 ? 3 : n,
-	    "pkg.copy takes exactly two arguments");
-	const char* src = luaL_checkstring(L, 1);
-	const char* dst = luaL_checkstring(L, 2);
+	luaL_argcheck(L, n == 2, n > 2 ? 3 : n, "pkg.copy takes exactly two arguments");
+	const char *src = luaL_checkstring(L, 1);
+	const char *dst = luaL_checkstring(L, 2);
 	struct stat s1;
 	int fd1, fd2;
 	struct timespec ts[2];
 
 #ifdef HAVE_CHFLAGSAT
-        bool install_as_user = (getenv("INSTALL_AS_USER") != NULL);
+	bool install_as_user = (getenv("INSTALL_AS_USER") != NULL);
 #endif
 
 	lua_getglobal(L, "rootfd");
@@ -258,16 +256,15 @@ lua_pkg_copy(lua_State *L)
 #endif
 #endif
 
-	if (set_attrsat(rootfd, RELATIVE_PATH(dst), s1.st_mode, s1.st_uid,
-	  s1.st_gid, &ts[0], &ts[1]) != MPORT_OK) {
+	if (set_attrsat(rootfd, RELATIVE_PATH(dst), s1.st_mode, s1.st_uid, s1.st_gid, &ts[0],
+		&ts[1]) != MPORT_OK) {
 		lua_pushinteger(L, -1);
 		return (1);
 	}
 
 #ifdef HAVE_CHFLAGSAT
 	if (!install_as_user && s1.st_flags != 0) {
-		if (chflagsat(rootfd, RELATIVE_PATH(dst),
-		    s1.st_flags, AT_SYMLINK_NOFOLLOW) == -1) {
+		if (chflagsat(rootfd, RELATIVE_PATH(dst), s1.st_flags, AT_SYMLINK_NOFOLLOW) == -1) {
 			pkg_fatal_errno("Fail to chflags %s", dst);
 			lua_pushinteger(L, -1);
 			return (1);
@@ -281,10 +278,9 @@ int
 lua_pkg_filecmp(lua_State *L)
 {
 	int n = lua_gettop(L);
-	luaL_argcheck(L, n == 2, n > 2 ? 3 : n,
-	    "pkg.filecmp takes exactly two arguments");
-	const char* file1 = luaL_checkstring(L, 1);
-	const char* file2 = luaL_checkstring(L, 2);
+	luaL_argcheck(L, n == 2, n > 2 ? 3 : n, "pkg.filecmp takes exactly two arguments");
+	const char *file1 = luaL_checkstring(L, 1);
+	const char *file2 = luaL_checkstring(L, 2);
 	char *buf1, *buf2;
 	struct stat s1, s2;
 	int fd1, fd2;
@@ -342,8 +338,7 @@ int
 lua_pkg_symlink(lua_State *L)
 {
 	int n = lua_gettop(L);
-	luaL_argcheck(L, n == 2, n > 2 ? 3 : n,
-	    "pkg.symlink takes exactly two arguments");
+	luaL_argcheck(L, n == 2, n > 2 ? 3 : n, "pkg.symlink takes exactly two arguments");
 	const char *from = luaL_checkstring(L, 1);
 	const char *to = luaL_checkstring(L, 2);
 	lua_getglobal(L, "rootfd");
@@ -357,8 +352,7 @@ int
 lua_prefix_path(lua_State *L)
 {
 	int n = lua_gettop(L);
-	luaL_argcheck(L, n == 1, n > 1 ? 2 : n,
-	    "pkg.prefix_path takes exactly one argument");
+	luaL_argcheck(L, n == 1, n > 1 ? 2 : n, "pkg.prefix_path takes exactly one argument");
 	const char *str = luaL_checkstring(L, 1);
 	lua_getglobal(L, "package");
 	mportPackageMeta *p = lua_touserdata(L, -1);
@@ -382,8 +376,7 @@ int
 lua_stat(lua_State *L)
 {
 	int n = lua_gettop(L);
-	luaL_argcheck(L, n == 1, n > 1 ? 2 : n,
-	    "pkg.stat takes exactly one argument");
+	luaL_argcheck(L, n == 1, n > 1 ? 2 : n, "pkg.stat takes exactly one argument");
 	const char *path = RELATIVE_PATH(luaL_checkstring(L, 1));
 	lua_getglobal(L, "rootfd");
 	int rootfd = lua_tointeger(L, -1);
@@ -437,7 +430,6 @@ lua_args_table(lua_State *L, char **argv, int argc)
 	lua_setglobal(L, "arg");
 }
 
-
 /*
  * this is a copy of lua code to be able to override open
  * merge of newprefile and newfile
@@ -452,7 +444,8 @@ my_iofclose(lua_State *L)
 }
 
 static luaL_Stream *
-newfile(lua_State *L) {
+newfile(lua_State *L)
+{
 	luaL_Stream *p = (luaL_Stream *)lua_newuserdata(L, sizeof(luaL_Stream));
 	p->f = NULL;
 	p->closef = &my_iofclose;
@@ -479,7 +472,8 @@ lua_io_open(lua_State *L)
 }
 
 static int
-lua_os_remove(lua_State *L) {
+lua_os_remove(lua_State *L)
+{
 	const char *filename = RELATIVE_PATH(luaL_checkstring(L, 1));
 	lua_getglobal(L, "rootfd");
 	int rootfd = lua_tointeger(L, -1);
@@ -541,8 +535,7 @@ int
 lua_readdir(lua_State *L)
 {
 	int n = lua_gettop(L);
-	luaL_argcheck(L, n == 1, n > 1 ? 2 : n,
-	    "pkg.readdir takes exactly one argument");
+	luaL_argcheck(L, n == 1, n > 1 ? 2 : n, "pkg.readdir takes exactly one argument");
 	const char *path = luaL_checkstring(L, 1);
 	int fd = -1;
 
@@ -550,7 +543,7 @@ lua_readdir(lua_State *L)
 		lua_getglobal(L, "rootfd");
 		int rootfd = lua_tointeger(L, -1);
 		if (strlen(path) > 1) {
-			fd = openat(rootfd, path +1, O_DIRECTORY);
+			fd = openat(rootfd, path + 1, O_DIRECTORY);
 		} else {
 			fd = dup(rootfd);
 		}
@@ -578,28 +571,26 @@ lua_readdir(lua_State *L)
 }
 
 int
-set_attrsat(int fd, const char *path, mode_t perm, uid_t uid, gid_t gid,
-    const struct timespec *ats, const struct timespec *mts)
+set_attrsat(int fd, const char *path, mode_t perm, uid_t uid, gid_t gid, const struct timespec *ats,
+    const struct timespec *mts)
 {
 	struct stat st;
 	struct timespec times[2];
 
 	times[0] = *ats;
 	times[1] = *mts;
-	if (utimensat(fd, RELATIVE_PATH(path), times,
-	    AT_SYMLINK_NOFOLLOW) == -1 && errno != EOPNOTSUPP){
+	if (utimensat(fd, RELATIVE_PATH(path), times, AT_SYMLINK_NOFOLLOW) == -1 &&
+	    errno != EOPNOTSUPP) {
 		fprintf(stderr, "Fail to set time on %s", path);
 	}
 
 	if (getenv("INSTALL_AS_USER") == NULL) {
-		if (fchownat(fd, RELATIVE_PATH(path), uid, gid,
-				AT_SYMLINK_NOFOLLOW) == -1) {
+		if (fchownat(fd, RELATIVE_PATH(path), uid, gid, AT_SYMLINK_NOFOLLOW) == -1) {
 			if (errno == ENOTSUP) {
 				if (fchownat(fd, RELATIVE_PATH(path), uid, gid, 0) == -1) {
 					fprintf(stderr, "Fail to chown(fallback) %s", path);
 				}
-			}
-			else {
+			} else {
 				fprintf(stderr, "Fail to chown %s", path);
 			}
 		}
@@ -627,8 +618,7 @@ set_attrsat(int fd, const char *path, mode_t perm, uid_t uid, gid_t gid,
 					fprintf(stderr, "Fail to chmod(fallback) %s", path);
 				}
 			}
-		}
-		else {
+		} else {
 			fprintf(stderr, "Fail to chmod %s", path);
 		}
 	}
@@ -649,25 +639,25 @@ checkflags(const char *mode, int *optr)
 
 	switch (*mode++) {
 
-	case 'r':	/* open for reading */
+	case 'r': /* open for reading */
 		ret = 1;
 		m = O_RDONLY;
 		o = 0;
 		break;
 
-	case 'w':	/* open for writing */
+	case 'w': /* open for writing */
 		ret = 1;
 		m = O_WRONLY;
 		o = O_CREAT | O_TRUNC;
 		break;
 
-	case 'a':	/* open for appending */
+	case 'a': /* open for appending */
 		ret = 1;
 		m = O_WRONLY;
 		o = O_CREAT | O_APPEND;
 		break;
 
-	default:	/* illegal mode */
+	default: /* illegal mode */
 		errno = EINVAL;
 		return (0);
 	}
@@ -705,4 +695,3 @@ checkflags(const char *mode, int *optr)
 	*optr = m | o;
 	return (ret);
 }
-

@@ -27,6 +27,7 @@
 *.so.*
 
 *.pico
+*.pieo
 *.depend
 
 # Executables
@@ -62,3 +63,4 @@ mport/mport
 # IDE
 .idea/
 .vscode
+.project
