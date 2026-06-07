@@ -87,8 +87,8 @@ A subagent call blocks the main agent, so main agent + 1 subagent is sequential 
 ## C static analysis (before commit)
 
 - For C/C header changes, run:
-  - `./skills/cppcheck-clang-format-precommit/scripts/precommit_c_sanity.sh`
-  - then `./skills/splint-post-c-sanity/scripts/run_splint_on_staged.sh`
+  - `./.agents/skills/cppcheck-clang-format-precommit/scripts/precommit_c_sanity.sh`
+  - then `./.agents/skills/splint-post-c-sanity/scripts/run_splint_on_staged.sh`
 - Prefer adding Splint annotations in security-sensitive code (untrusted inputs, privileged actions, network fetch/parsing, filesystem paths, archive/bundle parsing, SQL/DB I/O):
   - `/*@null@*/`, `/*@notnull@*/`, `/*@out@*/`, `/*@in@*/`
   - `/*@only@*/`, `/*@owned@*/`, `/*@observer@*/`
