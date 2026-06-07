@@ -5,7 +5,9 @@ EXPAT=		${SRCTOP}/contrib/expat
 LIB=		bsdxml
 SHLIBDIR?=	/lib
 SHLIB_MAJOR=	4
-SRCS=		xmlparse.c xmlrole.c xmltok.c
+SRCS=		xmlparse.c xmlrole.c xmltok.c \
+		random_arc4random.c random_arc4random_buf.c \
+		random_dev_urandom.c random_getrandom.c
 INCS=		bsdxml.h bsdxml_external.h
 MAN=		libbsdxml.3
 
