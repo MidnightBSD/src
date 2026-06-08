@@ -1,5 +1,5 @@
 
-SHLIBDIR=	${LIBDIR}/engines
+SHLIBDIR=	${LIBDIR}/engines-3
 
 LCRYPTO_SRC=	${SRCTOP}/crypto/openssl
 
@@ -17,5 +17,7 @@ CFLAGS+=	-DB_ENDIAN
 CFLAGS+=	-DNDEBUG
 
 .PATH: ${LCRYPTO_SRC}/engines
+
+LIBADD=		crypto
 
 WARNS?=		0
