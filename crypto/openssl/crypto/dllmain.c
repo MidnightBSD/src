@@ -1,7 +1,7 @@
 /*
  * Copyright 2016-2018 The OpenSSL Project Authors. All Rights Reserved.
  *
- * Licensed under the OpenSSL license (the "License").  You may not use
+ * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
  * https://www.openssl.org/source/license.html
@@ -11,14 +11,14 @@
 #include "crypto/cryptlib.h"
 
 #if defined(_WIN32) || defined(__CYGWIN__)
-# ifdef __CYGWIN__
+#ifdef __CYGWIN__
 /* pick DLL_[PROCESS|THREAD]_[ATTACH|DETACH] definitions */
-#  include <windows.h>
+#include <windows.h>
 /*
  * this has side-effect of _WIN32 getting defined, which otherwise is
  * mutually exclusive with __CYGWIN__...
  */
-# endif
+#endif
 
 /*
  * All we really need to do is remove the 'error' state when a thread
@@ -43,4 +43,3 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
     return TRUE;
 }
 #endif
-

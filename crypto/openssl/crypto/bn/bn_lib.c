@@ -1,7 +1,7 @@
 /*
- * Copyright 1995-2023 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1995-2024 The OpenSSL Project Authors. All Rights Reserved.
  *
- * Licensed under the OpenSSL license (the "License").  You may not use
+ * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
  * https://www.openssl.org/source/license.html
@@ -10,12 +10,13 @@
 #include <assert.h>
 #include <limits.h>
 #include "internal/cryptlib.h"
+#include "internal/endian.h"
 #include "bn_local.h"
 #include <openssl/opensslconf.h>
 #include "internal/constant_time.h"
 
 /* This stuff appears to be completely unused, so is deprecated */
-#if OPENSSL_API_COMPAT < 0x00908000L
+#ifndef OPENSSL_NO_DEPRECATED_0_9_8
 /*-
  * For a 32 bit machine
  * 2 -   4 ==  128
@@ -27,7 +28,7 @@
  * 8 - 256 == 8192
  */
 static int bn_limit_bits = 0;
-static int bn_limit_num = 8;    /* (1<<bn_limit_bits) */
+static int bn_limit_num = 8; /* (1<<bn_limit_bits) */
 static int bn_limit_bits_low = 0;
 static int bn_limit_num_low = 8; /* (1<<bn_limit_bits_low) */
 static int bn_limit_bits_high = 0;
@@ -81,8 +82,7 @@ int BN_get_params(int which)
 const BIGNUM *BN_value_one(void)
 {
     static const BN_ULONG data_one = 1L;
-    static const BIGNUM const_one =
-        { (BN_ULONG *)&data_one, 1, 1, 0, BN_FLG_STATIC_DATA };
+    static const BIGNUM const_one = { (BN_ULONG *)&data_one, 1, 1, 0, BN_FLG_STATIC_DATA };
 
     return &const_one;
 }
@@ -92,9 +92,9 @@ const BIGNUM *BN_value_one(void)
  * https://mta.openssl.org/pipermail/openssl-users/2018-August/008465.html
  */
 #if defined(_MSC_VER) && defined(_ARM_) && defined(_WIN32_WCE) \
-    && _MSC_VER>=1400 && _MSC_VER<1501
-# define MS_BROKEN_BN_num_bits_word
-# pragma optimize("", off)
+    && _MSC_VER >= 1400 && _MSC_VER < 1501
+#define MS_BROKEN_BN_num_bits_word
+#pragma optimize("", off)
 #endif
 int BN_num_bits_word(BN_ULONG l)
 {
@@ -141,15 +141,14 @@ int BN_num_bits_word(BN_ULONG l)
     return bits;
 }
 #ifdef MS_BROKEN_BN_num_bits_word
-# pragma optimize("", on)
+#pragma optimize("", on)
 #endif
 
 /*
  * This function still leaks `a->dmax`: it's caller's responsibility to
  * expand the input `a` in advance to a public length.
  */
-static ossl_inline
-int bn_num_bits_consttime(const BIGNUM *a)
+static ossl_inline int bn_num_bits_consttime(const BIGNUM *a)
 {
     int j, ret;
     unsigned int mask, past_i;
@@ -208,7 +207,6 @@ static void bn_free_d(BIGNUM *a, int clear)
         OPENSSL_free(a->d);
 }
 
-
 void BN_clear_free(BIGNUM *a)
 {
     if (a == NULL)
@@ -244,7 +242,7 @@ BIGNUM *BN_new(void)
     BIGNUM *ret;
 
     if ((ret = OPENSSL_zalloc(sizeof(*ret))) == NULL) {
-        BNerr(BN_F_BN_NEW, ERR_R_MALLOC_FAILURE);
+        ERR_raise(ERR_LIB_BN, ERR_R_MALLOC_FAILURE);
         return NULL;
     }
     ret->flags = BN_FLG_MALLOCED;
@@ -252,13 +250,13 @@ BIGNUM *BN_new(void)
     return ret;
 }
 
- BIGNUM *BN_secure_new(void)
- {
-     BIGNUM *ret = BN_new();
-     if (ret != NULL)
-         ret->flags |= BN_FLG_SECURE;
-     return ret;
- }
+BIGNUM *BN_secure_new(void)
+{
+    BIGNUM *ret = BN_new();
+    if (ret != NULL)
+        ret->flags |= BN_FLG_SECURE;
+    return ret;
+}
 
 /* This is used by bn_expand2() */
 /* The caller MUST check that words > b->dmax before calling this */
@@ -267,11 +265,11 @@ static BN_ULONG *bn_expand_internal(const BIGNUM *b, int words)
     BN_ULONG *a = NULL;
 
     if (words > (INT_MAX / (4 * BN_BITS2))) {
-        BNerr(BN_F_BN_EXPAND_INTERNAL, BN_R_BIGNUM_TOO_LONG);
+        ERR_raise(ERR_LIB_BN, BN_R_BIGNUM_TOO_LONG);
         return NULL;
     }
     if (BN_get_flags(b, BN_FLG_STATIC_DATA)) {
-        BNerr(BN_F_BN_EXPAND_INTERNAL, BN_R_EXPAND_ON_STATIC_BIGNUM_DATA);
+        ERR_raise(ERR_LIB_BN, BN_R_EXPAND_ON_STATIC_BIGNUM_DATA);
         return NULL;
     }
     if (BN_get_flags(b, BN_FLG_SECURE))
@@ -279,7 +277,7 @@ static BN_ULONG *bn_expand_internal(const BIGNUM *b, int words)
     else
         a = OPENSSL_zalloc(words * sizeof(*a));
     if (a == NULL) {
-        BNerr(BN_F_BN_EXPAND_INTERNAL, ERR_R_MALLOC_FAILURE);
+        ERR_raise(ERR_LIB_BN, ERR_R_MALLOC_FAILURE);
         return NULL;
     }
 
@@ -355,10 +353,7 @@ BIGNUM *BN_copy(BIGNUM *a, const BIGNUM *b)
     return a;
 }
 
-#define FLAGS_DATA(flags) ((flags) & (BN_FLG_STATIC_DATA \
-                                    | BN_FLG_CONSTTIME   \
-                                    | BN_FLG_SECURE      \
-                                    | BN_FLG_FIXED_TOP))
+#define FLAGS_DATA(flags) ((flags) & (BN_FLG_STATIC_DATA | BN_FLG_CONSTTIME | BN_FLG_SECURE | BN_FLG_FIXED_TOP))
 #define FLAGS_STRUCT(flags) ((flags) & (BN_FLG_MALLOCED))
 
 void BN_swap(BIGNUM *a, BIGNUM *b)
@@ -442,7 +437,7 @@ BIGNUM *BN_bin2bn(const unsigned char *s, int len, BIGNUM *ret)
         return NULL;
     bn_check_top(ret);
     /* Skip leading zero's. */
-    for ( ; len > 0 && *s == 0; s++, len--)
+    for (; len > 0 && *s == 0; s++, len--)
         continue;
     n = len;
     if (n == 0) {
@@ -474,11 +469,11 @@ BIGNUM *BN_bin2bn(const unsigned char *s, int len, BIGNUM *ret)
     return ret;
 }
 
-typedef enum {big, little} endianess_t;
+typedef enum { big,
+    little } endianess_t;
 
 /* ignore negative */
-static
-int bn2binpad(const BIGNUM *a, unsigned char *to, int tolen, endianess_t endianess)
+static int bn2binpad(const BIGNUM *a, unsigned char *to, int tolen, endianess_t endianess)
 {
     int n;
     size_t i, lasti, j, atop, mask;
@@ -492,7 +487,7 @@ int bn2binpad(const BIGNUM *a, unsigned char *to, int tolen, endianess_t endiane
     n = BN_num_bytes(a);
     if (tolen == -1) {
         tolen = n;
-    } else if (tolen < n) {     /* uncommon/unlike case */
+    } else if (tolen < n) { /* uncommon/unlike case */
         BIGNUM temp = *a;
 
         bn_correct_top(&temp);
@@ -504,7 +499,8 @@ int bn2binpad(const BIGNUM *a, unsigned char *to, int tolen, endianess_t endiane
     /* Swipe through whole available data and don't give away padded zero. */
     atop = a->dmax * BN_BYTES;
     if (atop == 0) {
-        OPENSSL_cleanse(to, tolen);
+        if (tolen != 0)
+            memset(to, '\0', tolen);
         return tolen;
     }
 
@@ -553,7 +549,7 @@ BIGNUM *BN_lebin2bn(const unsigned char *s, int len, BIGNUM *ret)
     bn_check_top(ret);
     s += len;
     /* Skip trailing zeroes. */
-    for ( ; len > 0 && s[-1] == 0; s--, len--)
+    for (; len > 0 && s[-1] == 0; s--, len--)
         continue;
     n = len;
     if (n == 0) {
@@ -593,10 +589,44 @@ int BN_bn2lebinpad(const BIGNUM *a, unsigned char *to, int tolen)
     return bn2binpad(a, to, tolen, little);
 }
 
+BIGNUM *BN_native2bn(const unsigned char *s, int len, BIGNUM *ret)
+{
+    DECLARE_IS_ENDIAN;
+
+    if (IS_LITTLE_ENDIAN)
+        return BN_lebin2bn(s, len, ret);
+    return BN_bin2bn(s, len, ret);
+}
+
+int BN_bn2nativepad(const BIGNUM *a, unsigned char *to, int tolen)
+{
+    DECLARE_IS_ENDIAN;
+
+    if (IS_LITTLE_ENDIAN)
+        return BN_bn2lebinpad(a, to, tolen);
+    return BN_bn2binpad(a, to, tolen);
+}
+
 int BN_ucmp(const BIGNUM *a, const BIGNUM *b)
 {
     int i;
     BN_ULONG t1, t2, *ap, *bp;
+
+    ap = a->d;
+    bp = b->d;
+
+    if (BN_get_flags(a, BN_FLG_CONSTTIME)
+        && a->top == b->top) {
+        int res = 0;
+
+        for (i = 0; i < b->top; i++) {
+            res = constant_time_select_int(constant_time_lt_bn(ap[i], bp[i]),
+                -1, res);
+            res = constant_time_select_int(constant_time_lt_bn(bp[i], ap[i]),
+                1, res);
+        }
+        return res;
+    }
 
     bn_check_top(a);
     bn_check_top(b);
@@ -604,8 +634,7 @@ int BN_ucmp(const BIGNUM *a, const BIGNUM *b)
     i = a->top - b->top;
     if (i != 0)
         return i;
-    ap = a->d;
-    bp = b->d;
+
     for (i = a->top - 1; i >= 0; i--) {
         t1 = ap[i];
         t2 = bp[i];
@@ -717,11 +746,10 @@ int BN_is_bit_set(const BIGNUM *a, int n)
     return (int)(((a->d[i]) >> j) & ((BN_ULONG)1));
 }
 
-int BN_mask_bits(BIGNUM *a, int n)
+int ossl_bn_mask_bits_fixed_top(BIGNUM *a, int n)
 {
     int b, w;
 
-    bn_check_top(a);
     if (n < 0)
         return 0;
 
@@ -735,8 +763,19 @@ int BN_mask_bits(BIGNUM *a, int n)
         a->top = w + 1;
         a->d[w] &= ~(BN_MASK2 << b);
     }
-    bn_correct_top(a);
+    a->flags |= BN_FLG_FIXED_TOP;
     return 1;
+}
+
+int BN_mask_bits(BIGNUM *a, int n)
+{
+    int ret;
+
+    bn_check_top(a);
+    ret = ossl_bn_mask_bits_fixed_top(a, n);
+    if (ret)
+        bn_correct_top(a);
+    return ret;
 }
 
 void BN_set_negative(BIGNUM *a, int b)
@@ -785,13 +824,13 @@ int bn_cmp_part_words(const BN_ULONG *a, const BN_ULONG *b, int cl, int dl)
     if (dl < 0) {
         for (i = dl; i < 0; i++) {
             if (b[n - i] != 0)
-                return -1;      /* a < b */
+                return -1; /* a < b */
         }
     }
     if (dl > 0) {
         for (i = dl; i > 0; i--) {
             if (a[n + i] != 0)
-                return 1;       /* a > b */
+                return 1; /* a > b */
         }
     }
     return bn_cmp_words(a, b, cl);
@@ -915,6 +954,22 @@ int BN_is_word(const BIGNUM *a, const BN_ULONG w)
     return BN_abs_is_word(a, w) && (!w || !a->neg);
 }
 
+int ossl_bn_is_word_fixed_top(const BIGNUM *a, BN_ULONG w)
+{
+    int res, i;
+    const BN_ULONG *ap = a->d;
+
+    if (a->neg || a->top == 0)
+        return 0;
+
+    res = constant_time_select_int(constant_time_eq_bn(ap[0], w), 1, 0);
+
+    for (i = 1; i < a->top; i++)
+        res = constant_time_select_int(constant_time_is_zero_bn(ap[i]),
+            res, 0);
+    return res;
+}
+
 int BN_is_odd(const BIGNUM *a)
 {
     return (a->top > 0) && (a->d[0] & 1);
@@ -926,7 +981,7 @@ int BN_is_negative(const BIGNUM *a)
 }
 
 int BN_to_montgomery(BIGNUM *r, const BIGNUM *a, BN_MONT_CTX *mont,
-                     BN_CTX *ctx)
+    BN_CTX *ctx)
 {
     return BN_mod_mul_montgomery(r, a, &(mont->RR), mont, ctx);
 }
@@ -938,8 +993,8 @@ void BN_with_flags(BIGNUM *dest, const BIGNUM *b, int flags)
     dest->dmax = b->dmax;
     dest->neg = b->neg;
     dest->flags = ((dest->flags & BN_FLG_MALLOCED)
-                   | (b->flags & ~BN_FLG_MALLOCED)
-                   | BN_FLG_STATIC_DATA | flags);
+        | (b->flags & ~BN_FLG_MALLOCED)
+        | BN_FLG_STATIC_DATA | flags);
 }
 
 BN_GENCB *BN_GENCB_new(void)
@@ -947,7 +1002,7 @@ BN_GENCB *BN_GENCB_new(void)
     BN_GENCB *ret;
 
     if ((ret = OPENSSL_malloc(sizeof(*ret))) == NULL) {
-        BNerr(BN_F_BN_GENCB_NEW, ERR_R_MALLOC_FAILURE);
+        ERR_raise(ERR_LIB_BN, ERR_R_MALLOC_FAILURE);
         return NULL;
     }
 
@@ -972,8 +1027,8 @@ int BN_get_flags(const BIGNUM *b, int n)
 }
 
 /* Populate a BN_GENCB structure with an "old"-style callback */
-void BN_GENCB_set_old(BN_GENCB *gencb, void (*callback) (int, int, void *),
-                      void *cb_arg)
+void BN_GENCB_set_old(BN_GENCB *gencb, void (*callback)(int, int, void *),
+    void *cb_arg)
 {
     BN_GENCB *tmp_gencb = gencb;
     tmp_gencb->ver = 1;
@@ -982,8 +1037,8 @@ void BN_GENCB_set_old(BN_GENCB *gencb, void (*callback) (int, int, void *),
 }
 
 /* Populate a BN_GENCB structure with a "new"-style callback */
-void BN_GENCB_set(BN_GENCB *gencb, int (*callback) (int, int, BN_GENCB *),
-                  void *cb_arg)
+void BN_GENCB_set(BN_GENCB *gencb, int (*callback)(int, int, BN_GENCB *),
+    void *cb_arg)
 {
     BN_GENCB *tmp_gencb = gencb;
     tmp_gencb->ver = 2;

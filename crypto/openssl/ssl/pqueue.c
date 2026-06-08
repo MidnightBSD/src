@@ -1,7 +1,7 @@
 /*
- * Copyright 2005-2018 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2005-2020 The OpenSSL Project Authors. All Rights Reserved.
  *
- * Licensed under the OpenSSL license (the "License").  You may not use
+ * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
  * https://www.openssl.org/source/license.html
@@ -20,7 +20,7 @@ pitem *pitem_new(unsigned char *prio64be, void *data)
     pitem *item = OPENSSL_malloc(sizeof(*item));
 
     if (item == NULL) {
-        SSLerr(SSL_F_PITEM_NEW, ERR_R_MALLOC_FAILURE);
+        ERR_raise(ERR_LIB_SSL, ERR_R_MALLOC_FAILURE);
         return NULL;
     }
 
@@ -40,7 +40,7 @@ pqueue *pqueue_new(void)
     pqueue *pq = OPENSSL_zalloc(sizeof(*pq));
 
     if (pq == NULL)
-        SSLerr(SSL_F_PQUEUE_NEW, ERR_R_MALLOC_FAILURE);
+        ERR_raise(ERR_LIB_SSL, ERR_R_MALLOC_FAILURE);
 
     return pq;
 }
@@ -60,12 +60,12 @@ pitem *pqueue_insert(pqueue *pq, pitem *item)
     }
 
     for (curr = NULL, next = pq->items;
-         next != NULL; curr = next, next = next->next) {
+        next != NULL; curr = next, next = next->next) {
         /*
          * we can compare 64-bit value in big-endian encoding with memcmp:-)
          */
         int cmp = memcmp(next->priority, item->priority, 8);
-        if (cmp > 0) {          /* next > item */
+        if (cmp > 0) { /* next > item */
             item->next = next;
 
             if (curr == NULL)
@@ -76,7 +76,7 @@ pitem *pqueue_insert(pqueue *pq, pitem *item)
             return item;
         }
 
-        else if (cmp == 0)      /* duplicates not allowed */
+        else if (cmp == 0) /* duplicates not allowed */
             return NULL;
     }
 

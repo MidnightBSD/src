@@ -1,7 +1,7 @@
 /*
- * Copyright 1995-2020 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1995-2021 The OpenSSL Project Authors. All Rights Reserved.
  *
- * Licensed under the OpenSSL license (the "License").  You may not use
+ * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
  * https://www.openssl.org/source/license.html
@@ -15,17 +15,17 @@
 
 #ifndef OPENSSL_NO_SOCK
 
-# include <openssl/bio.h>
+#include <openssl/bio.h>
 
-# ifdef WATT32
+#ifdef WATT32
 /* Watt-32 uses same names */
-#  undef sock_write
-#  undef sock_read
-#  undef sock_puts
-#  define sock_write SockWrite
-#  define sock_read  SockRead
-#  define sock_puts  SockPuts
-# endif
+#undef sock_write
+#undef sock_read
+#undef sock_puts
+#define sock_write SockWrite
+#define sock_read SockRead
+#define sock_puts SockPuts
+#endif
 
 static int sock_write(BIO *h, const char *buf, int num);
 static int sock_read(BIO *h, char *buf, int size);
@@ -38,18 +38,16 @@ int BIO_sock_should_retry(int s);
 static const BIO_METHOD methods_sockp = {
     BIO_TYPE_SOCKET,
     "socket",
-    /* TODO: Convert to new style write function */
     bwrite_conv,
     sock_write,
-    /* TODO: Convert to new style read function */
     bread_conv,
     sock_read,
     sock_puts,
-    NULL,                       /* sock_gets,         */
+    NULL, /* sock_gets,         */
     sock_ctrl,
     sock_new,
     sock_free,
-    NULL,                       /* sock_callback_ctrl */
+    NULL, /* sock_callback_ctrl */
 };
 
 const BIO_METHOD *BIO_s_socket(void)
@@ -65,17 +63,6 @@ BIO *BIO_new_socket(int fd, int close_flag)
     if (ret == NULL)
         return NULL;
     BIO_set_fd(ret, fd, close_flag);
-# ifndef OPENSSL_NO_KTLS
-    {
-        /*
-         * The new socket is created successfully regardless of ktls_enable.
-         * ktls_enable doesn't change any functionality of the socket, except
-         * changing the setsockopt to enable the processing of ktls_start.
-         * Thus, it is not a problem to call it for non-TLS sockets.
-         */
-        ktls_enable(fd);
-    }
-# endif
     return ret;
 }
 
@@ -108,11 +95,11 @@ static int sock_read(BIO *b, char *out, int outl)
 
     if (out != NULL) {
         clear_socket_error();
-# ifndef OPENSSL_NO_KTLS
+#ifndef OPENSSL_NO_KTLS
         if (BIO_get_ktls_recv(b))
             ret = ktls_read_record(b->num, out, outl);
         else
-# endif
+#endif
             ret = readsocket(b->num, out, outl);
         BIO_clear_retry_flags(b);
         if (ret <= 0) {
@@ -130,7 +117,7 @@ static int sock_write(BIO *b, const char *in, int inl)
     int ret = 0;
 
     clear_socket_error();
-# ifndef OPENSSL_NO_KTLS
+#ifndef OPENSSL_NO_KTLS
     if (BIO_should_ktls_ctrl_msg_flag(b)) {
         unsigned char record_type = (intptr_t)b->ptr;
         ret = ktls_send_ctrl_message(b->num, record_type, in, inl);
@@ -139,7 +126,7 @@ static int sock_write(BIO *b, const char *in, int inl)
             BIO_clear_ktls_ctrl_msg_flag(b);
         }
     } else
-# endif
+#endif
         ret = writesocket(b->num, in, inl);
     BIO_clear_retry_flags(b);
     if (ret <= 0) {
@@ -153,9 +140,9 @@ static long sock_ctrl(BIO *b, int cmd, long num, void *ptr)
 {
     long ret = 1;
     int *ip;
-# ifndef OPENSSL_NO_KTLS
+#ifndef OPENSSL_NO_KTLS
     ktls_crypto_info_t *crypto_info;
-# endif
+#endif
 
     switch (cmd) {
     case BIO_C_SET_FD:
@@ -183,7 +170,7 @@ static long sock_ctrl(BIO *b, int cmd, long num, void *ptr)
     case BIO_CTRL_FLUSH:
         ret = 1;
         break;
-# ifndef OPENSSL_NO_KTLS
+#ifndef OPENSSL_NO_KTLS
     case BIO_CTRL_SET_KTLS:
         crypto_info = (ktls_crypto_info_t *)ptr;
         ret = ktls_start(b->num, crypto_info, num);
@@ -191,9 +178,9 @@ static long sock_ctrl(BIO *b, int cmd, long num, void *ptr)
             BIO_set_ktls_flag(b, num);
         break;
     case BIO_CTRL_GET_KTLS_SEND:
-        return BIO_should_ktls_flag(b, 1);
+        return BIO_should_ktls_flag(b, 1) != 0;
     case BIO_CTRL_GET_KTLS_RECV:
-        return BIO_should_ktls_flag(b, 0);
+        return BIO_should_ktls_flag(b, 0) != 0;
     case BIO_CTRL_SET_KTLS_TX_SEND_CTRL_MSG:
         BIO_set_ktls_ctrl_msg_flag(b);
         b->ptr = (void *)num;
@@ -203,9 +190,9 @@ static long sock_ctrl(BIO *b, int cmd, long num, void *ptr)
         BIO_clear_ktls_ctrl_msg_flag(b);
         ret = 0;
         break;
-# endif
+#endif
     case BIO_CTRL_EOF:
-        ret = (b->flags & BIO_FLAGS_IN_EOF) != 0 ? 1 : 0;
+        ret = (b->flags & BIO_FLAGS_IN_EOF) != 0;
         break;
     default:
         ret = 0;
@@ -238,47 +225,47 @@ int BIO_sock_should_retry(int i)
 int BIO_sock_non_fatal_error(int err)
 {
     switch (err) {
-# if defined(OPENSSL_SYS_WINDOWS)
-#  if defined(WSAEWOULDBLOCK)
+#if defined(OPENSSL_SYS_WINDOWS)
+#if defined(WSAEWOULDBLOCK)
     case WSAEWOULDBLOCK:
-#  endif
-# endif
+#endif
+#endif
 
-# ifdef EWOULDBLOCK
-#  ifdef WSAEWOULDBLOCK
-#   if WSAEWOULDBLOCK != EWOULDBLOCK
+#ifdef EWOULDBLOCK
+#ifdef WSAEWOULDBLOCK
+#if WSAEWOULDBLOCK != EWOULDBLOCK
     case EWOULDBLOCK:
-#   endif
-#  else
+#endif
+#else
     case EWOULDBLOCK:
-#  endif
-# endif
+#endif
+#endif
 
-# if defined(ENOTCONN)
+#if defined(ENOTCONN)
     case ENOTCONN:
-# endif
+#endif
 
-# ifdef EINTR
+#ifdef EINTR
     case EINTR:
-# endif
+#endif
 
-# ifdef EAGAIN
-#  if EWOULDBLOCK != EAGAIN
+#ifdef EAGAIN
+#if EWOULDBLOCK != EAGAIN
     case EAGAIN:
-#  endif
-# endif
+#endif
+#endif
 
-# ifdef EPROTO
+#ifdef EPROTO
     case EPROTO:
-# endif
+#endif
 
-# ifdef EINPROGRESS
+#ifdef EINPROGRESS
     case EINPROGRESS:
-# endif
+#endif
 
-# ifdef EALREADY
+#ifdef EALREADY
     case EALREADY:
-# endif
+#endif
         return 1;
     default:
         break;
@@ -286,4 +273,4 @@ int BIO_sock_non_fatal_error(int err)
     return 0;
 }
 
-#endif                          /* #ifndef OPENSSL_NO_SOCK */
+#endif /* #ifndef OPENSSL_NO_SOCK */
