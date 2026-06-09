@@ -1003,7 +1003,7 @@ _udbx_init(e)
 				int flags = DB_RDONLY;
 #   if DB_VERSION_MAJOR > 2
 				int ret;
-#   endif /* DB_VERSION_MAJOR > 2 */
+#   endif
 
 				SM_DB_FLAG_ADD(flags);
 				up->udb_dbp = NULL;

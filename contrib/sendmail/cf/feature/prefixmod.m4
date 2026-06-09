@@ -13,7 +13,7 @@ divert(-1)
 # Arguments:
 # 1: prefix to match; must be one or more tokens
 #    (this is not a "substring" match)
-# 2: flags to set
+# 2: flags to set in {rcpt_flags}
 # NYI: 3: replacement for 1 (empty for now)
 
 ifelse(defn(`_ARG_'), `', `errprint(`Feature "prefixmod" requires argument')',

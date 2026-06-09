@@ -22,20 +22,20 @@ divert(-1)
 #   matches anything@domain
 #    .domain	ok
 #   matches any subdomain, e.g., l@sub.domain and l@sub.dom.domain
-#   On a match, the original address will be used as bcc address unless
+#   On a match, the original address will be used as Bcc address unless
 #   argument 3 is set.
 # 2: Name of host ([mailer:]host)
-# 3: Default bcc address: if set, this will be always used.
+# 3: Default Bcc address: if set, this will be always used.
 #   Only one of 2/3 can be empty.
 #   Note: if Bcc address is used then only one copy will be sent!
 #   (due to duplicate elimination)
 # 4: Map definition for canonicalRcpt map of address rewriting to
-#   apply to the added bcc envelope recipients.
+#   apply to the added Bcc envelope recipients.
 #   The option -T<TMPF> is required to handle temporary map failures.
 #
 # The ruleset must return either
-# - an e-mail address (user@dom.ain) which is then added as "bcc" recipient.
-# - an empty string: do not add a "bcc" recipient, or
+# - an e-mail address (user@dom.ain) which is then added as "Bcc" recipient.
+# - an empty string: do not add a "Bcc" recipient, or
 # - $#error: fail the SMTP transaction (e.g., temporary lookup failure)
 #
 # This feature sets O AddBcc=true

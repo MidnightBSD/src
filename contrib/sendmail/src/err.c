@@ -19,7 +19,7 @@ SM_RCSID("@(#)$Id: err.c,v 8.206 2013-11-22 20:51:55 ca Exp $")
 # include <lber.h>
 # include <ldap.h>			/* for LDAP error codes */
 #endif
-#if _FFR_8BITENVADDR
+#if _FFR_8BITENVADDR || _FFR_CLEAN_REPLY
 # include <sm/sendmail.h>
 #endif
 
@@ -79,6 +79,7 @@ fatal_error(exc)
 
 	errno = ENOMEM;
 	syserr("!%s", buf);
+	/* NOTREACHED */
 }
 
 /*
@@ -719,7 +720,11 @@ putoutmsg(msg, holdmsg, heldmsg)
 	if (!DisConnected &&
 	    (OpMode == MD_SMTP || OpMode == MD_DAEMON || OpMode == MD_ARPAFTP))
 		(void) sm_io_fprintf(OutChannel, SM_TIME_DEFAULT, "%s\r\n",
+#if _FFR_CLEAN_REPLY
+				     str2prt(msg));
+#else
 				     msg);
+#endif
 	else
 		(void) sm_io_fprintf(OutChannel, SM_TIME_DEFAULT, "%s\n",
 				     errtxt);
@@ -946,7 +951,7 @@ skipaddrhost(s, skiphost)
 **		to -- the recipient tag for this message.
 **		num -- default three digit SMTP reply code.
 **		enhsc -- enhanced status code.
-**		en -- the error number to display.
+**		eno -- the error number to display.
 **		fmt -- format of string: See NOTE below.
 **		ap -- arguments for fmt.
 **
@@ -1136,7 +1141,9 @@ const char *
 sm_errstring(errnum)
 	int errnum;
 {
+#if NAMED_BIND
 	char *dnsmsg;
+#endif
 	char *bp;
 	static char buf[MAXLINE];
 #if HASSTRERROR
@@ -1154,7 +1161,9 @@ sm_errstring(errnum)
 	**	These are 4.2/4.3bsd specific; they should be in daemon.c.
 	*/
 
+#if NAMED_BIND
 	dnsmsg = NULL;
+#endif
 	switch (errnum)
 	{
 	  case ETIMEDOUT:
@@ -1282,10 +1291,25 @@ sm_errstring(errnum)
 		return "World readable file";
 	}
 
+#if NAMED_BIND
 	if (dnsmsg != NULL)
 	{
 		bp = buf;
+# if _FFR_DNS_ERR_NAME
+		bp += sm_strlcpy(bp, "DNS: ", sizeof(buf));
+# else
 		bp += sm_strlcpy(bp, "Name server: ", sizeof(buf));
+# endif
+# if _FFR_DNS_ERR_NAME
+		if (DNSErrName != NULL)
+		{
+			(void) sm_strlcpyn(bp, SPACELEFT(buf, bp), 2,
+				shortenstring(DNSErrName, MAXSHORTSTR), ": ");
+			bp += strlen(bp);
+			SM_FREE(DNSErrName);
+		}
+		else
+# endif
 		if (CurHostName != NULL)
 		{
 			(void) sm_strlcpyn(bp, SPACELEFT(buf, bp), 2,
@@ -1295,6 +1319,7 @@ sm_errstring(errnum)
 		(void) sm_strlcpy(bp, dnsmsg, SPACELEFT(buf, bp));
 		return buf;
 	}
+#endif /* NAMED_BIND */
 
 #if LDAPMAP
 	if (errnum >= E_LDAPBASE - E_LDAP_SHIM)

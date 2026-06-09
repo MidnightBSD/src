@@ -23,10 +23,15 @@ SM_RCSID("@(#)$Id: snprintf.c,v 8.45 2013-11-22 20:51:50 ca Exp $")
 **
 **	Parameters:
 **		s -- the string to shorten.
-**		m -- the max length of the string (strlen()).
+**		m -- the max length of the string (strlen()),
+**		     limited to MAXSHORTSTR.
 **
 **	Returns:
 **		Either s or a short version of s.
+**
+**	Side Effects:
+**		The short version of s is a local static buffer.
+**		It must be copied before the function is called again.
 */
 
 char *

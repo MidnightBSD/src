@@ -153,7 +153,7 @@ initmacros(e)
 
 	/* set up external names for some internal macros */
 	MACBINDING("opMode", MID_OPMODE);
-	/*XXX should probably add equivalents for all short macros here XXX*/
+	/* XXX should probably add equivalents for all short macros here XXX */
 }
 
 /*
@@ -765,7 +765,7 @@ wordinclass(str, cl)
 	STAB *s;
 #if _FFR_DYN_CLASS
 	MAP *map;
-	int status;
+	int stat;
 	char *p;
 	char key[MAXLINE];
 
@@ -773,7 +773,7 @@ wordinclass(str, cl)
 	s = stab(p, ST_DYNMAP, ST_FIND);
 	if (NULL == s)
 	{
-#endif
+#endif /* _FFR_DYN_CLASS */
 		s = stab(str, ST_CLASS, ST_FIND);
 		return s != NULL && bitnset(bitidx(cl), s->s_class);
 #if _FFR_DYN_CLASS
@@ -794,20 +794,20 @@ wordinclass(str, cl)
 		sm_strlcat(key, ":", sizeof(key));
 	}
 	sm_strlcat(key, str, sizeof(key));
-	status = EX_OK;
-	p = (map->map_class->map_lookup)(map, key, NULL, &status);
+	stat = EX_OK;
+	p = (map->map_class->map_lookup)(map, key, NULL, &stat);
 	if (NULL != p)
 		return true;
-	if ((EX_OK == status && NULL == p) || EX_NOTFOUND == status)
+	if ((EX_OK == stat && NULL == p) || EX_NOTFOUND == stat)
 		return false;
 
 	sm_syslog(LOG_WARNING, CurEnv->e_id,
-		"dynamic class: A{%s}: map lookup failed: key=%s, status=%d",
-		map->map_mname, key, status);
+		"dynamic class: A{%s}: map lookup failed: key=%s, stat=%d",
+		map->map_mname, key, stat);
 
 	/* Note: this error is shown to the client, so do not "leak" info */
 	usrerr("451 4.3.1 temporary error");
 
 	return false;
-#endif
+#endif /* _FFR_DYN_CLASS */
 }

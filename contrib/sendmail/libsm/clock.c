@@ -522,11 +522,8 @@ sleep(intvl)
 	int was_held;
 	SM_EVENT *ev;
 # if _FFR_SLEEP_USE_SELECT > 0
-	int r;
-#  if _FFR_SLEEP_USE_SELECT > 0
 	struct timeval sm_io_to;
-#  endif
-# endif /* _FFR_SLEEP_USE_SELECT > 0 */
+# endif
 # if SM_CONF_SETITIMER
 	struct timeval now, begin, diff;
 #  if _FFR_SLEEP_USE_SELECT > 0
@@ -605,8 +602,7 @@ sleep(intvl)
 # if _FFR_SLEEP_USE_SELECT > 0
 		if (intvl <= _FFR_SLEEP_USE_SELECT)
 		{
-			r = select(0, NULL, NULL, NULL, &sm_io_to);
-			if (r == 0)
+			if (0 == select(0, NULL, NULL, NULL, &sm_io_to))
 				break;
 		}
 		else

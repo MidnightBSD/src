@@ -80,6 +80,9 @@ static bool	NotFirstDelivery = false;
 #define SRV_BARE_CR_421	0x00040000	/* bare CR - drop connection */
 #define SRV_BARE_LF_SP	0x00080000
 #define SRV_BARE_CR_SP	0x00100000
+#if _FFR_LIMITS
+#define SRV_OFFER_RDM1 	0x00200000
+#endif
 
 static unsigned long	srvfeatures __P((ENVELOPE *, char *, unsigned long));
 
@@ -169,6 +172,15 @@ extern ENVELOPE	BlankEnvelope;
 
 #define SKIP_SPACE(s)	while (SM_ISSPACE(*s))	\
 				(s)++
+
+#define SRVTXT "server "
+/* WARNING: flow through code! */
+#define GET_PHASE	\
+	const char *phase;	\
+	if (strncmp(SRVTXT, SmtpPhase, sizeof(SRVTXT) - 1) == 0)	\
+		phase = SmtpPhase + sizeof(SRVTXT) - 1;	\
+	else	\
+		phase = SmtpPhase
 
 #if USE_EAI
 /*
@@ -367,7 +379,7 @@ addrcpt(rcpt, sendq, e)
 	}
 	SM_END_TRY
 	if (tTd(25, 1))
-		sm_dprintf("addrcpt: rcpt=%s, flags=%#lx\n", rcpt,
+		sm_dprintf("addrcpt: rcpt=%s, flags=%lX\n", rcpt,
 			a != NULL ? a->q_flags : 0);
 	Errors = r;
 	return 1;
@@ -467,7 +479,7 @@ rcptmods(rcpt, e)
 
 		  default:
 			sm_syslog(LOG_INFO, e->e_id,
-				  "rcpt=%s, rcpt_flags=%s, status=unknown",
+				  "rcptmods: rcpt=%s, rcpt_flags=%s, status=unknown",
 				  rcpt->q_paddr, fl);
 			break;
 		}
@@ -875,6 +887,7 @@ do								\
 		macdefine(&e->e_macro, A_PERM, macid("{quarantine}"),	\
 			  e->e_quarmsg);			\
 	}							\
+	ASSIGN_SE_ID(e);						\
 } while (0)
 
 /* sleep to flatten out connection load */
@@ -1025,8 +1038,7 @@ smtp(nullserver, d_flags, e)
 	bool saveQuickAbort;
 	bool saveSuprErrs;
 	time_t tlsstart;
-	int ssl_err, tlsret;
-	int save_errno;
+	int ssl_err;
 	extern int TLSsslidx;
 #endif /* STARTTLS */
 	volatile unsigned long features;
@@ -1047,6 +1059,14 @@ smtp(nullserver, d_flags, e)
 	int n_badrcpts_adj;
 #endif
 	bool gotodoquit = false;
+#if _FFR_SE_TA_ID
+	/* HACK: known size! */
+	char se_id[MAXQFNAME];
+	char ta_id[MAXQFNAME];
+#endif
+#if _FFR_LIMITS
+	char *rcptdomain;
+#endif
 
 	RESET_AUTH_FAIL_LOG_USER;
 	smtp.sm_nrcpts = 0;
@@ -1093,13 +1113,9 @@ smtp(nullserver, d_flags, e)
 
 	maps_reset_chged("server:smtp");
 
-	/*
-	**  Set default features for server.
-	**
-	**  Changing SRV_BARE_LF_421 | SRV_BARE_CR_421 below also
-	**  requires changing srvfeatures() variant code.
-	*/
+	ID2X_ID(e, e_s_se, se_id, true, "smtp");
 
+	/* Set default features for server. */
 	features = ((bitset(PRIV_NOETRN, PrivacyFlags) ||
 		     bitnset(D_NOETRN, d_flags)) ? SRV_NONE : SRV_OFFER_ETRN)
 		| (bitnset(D_AUTHREQ, d_flags) ? SRV_REQ_AUTH : SRV_NONE)
@@ -1126,7 +1142,9 @@ smtp(nullserver, d_flags, e)
 #if USE_EAI
 		| (SMTP_UTF8 ? SRV_OFFER_EAI : 0)
 #endif
+#if !_FFR_NO_STRICT1
 		| SRV_REQ_CRLF | SRV_BARE_LF_421 | SRV_BARE_CR_421
+#endif
 		;
 	if (nullserver == NULL)
 	{
@@ -1552,6 +1570,7 @@ smtp(nullserver, d_flags, e)
 			exit(EX_CONFIG);
 		}
 		Errors = 0;
+		p = NULL;
 		first = true;
 		gothello = false;
 		smtp.sm_gotmail = false;
@@ -1917,7 +1936,12 @@ smtp(nullserver, d_flags, e)
 				/* NULL pointer ok since it's our function */
 				if (LogLevel > 8)
 					sm_syslog(LOG_INFO, NOQID,
+# if _FFR_SE_TA_ID
+						  "AUTH=server, " S_SE_ID "=%s, relay=%s, authid=%.128s, mech=%.16s, bits=%d",
+						  e->e_s_se,
+# else
 						  "AUTH=server, relay=%s, authid=%.128s, mech=%.16s, bits=%d",
+# endif
 						  CurSmtpClient,
 						  shortenstring(user, 128),
 						  auth_type, *ssf);
@@ -2350,7 +2374,7 @@ smtp(nullserver, d_flags, e)
 				SSL_clear(srv_ssl);
 			else if ((srv_ssl = SSL_new(srv_ctx)) == NULL)
 			{
-				message("454 4.3.3 TLS not available: error generating SSL handle");
+				message("454 4.3.3 TLS temporarily not available: error generating SSL handle");
 				tlslogerr(LOG_WARNING, 8, "server");
 				goto tls_done;
 			}
@@ -2362,7 +2386,7 @@ smtp(nullserver, d_flags, e)
 			    != EX_OK)
 			{
 				/* do not offer too much info to client */
-				message("454 4.3.3 TLS currently not available");
+				message("454 4.3.3 TLS temporarily not available");
 				SMTLSFAILED;
 			}
 			r = SSL_set_ex_data(srv_ssl, TLSsslidx, &tlsi_ctx);
@@ -2408,10 +2432,14 @@ smtp(nullserver, d_flags, e)
 
 			tlsstart = curtime();
 
+/* Note: this must not collide with an error code returned from SSL_accept() */
+#define NO_SSL_ACCEPT_YET	(-2)
+			r = NO_SSL_ACCEPT_YET;
 			ssl_err = SSL_ERROR_WANT_READ;
-			save_errno = 0;
 			do
 			{
+				int tlsret;
+
 				tlsret = tls_retry(srv_ssl, rfd, wfd, tlsstart,
 						TimeOuts.to_starttls, ssl_err,
 						"server");
@@ -2419,11 +2447,21 @@ smtp(nullserver, d_flags, e)
 				{
 					if (LogLevel > 5)
 					{
-						unsigned long l;
 						const char *sr;
+						int save_errno;
 
-						l = ERR_peek_error();
-						sr = ERR_reason_error_string(l);
+						save_errno = errno;
+						if (NO_SSL_ACCEPT_YET == r)
+						{
+							sr = "none";
+							ssl_err = -1;
+						}
+						else {
+							unsigned long l;
+
+							l = ERR_peek_error();
+							sr = ERR_reason_error_string(l);
+						}
 
 						sm_syslog(LOG_WARNING, NOQID,
 							  "STARTTLS=server, error: accept failed=%d, reason=%s, SSL_error=%d, errno=%d, retry=%d, relay=%.100s",
@@ -2450,16 +2488,21 @@ smtp(nullserver, d_flags, e)
 				}
 
 				r = SSL_accept(srv_ssl);
-				save_errno = 0;
 				if (r <= 0)
 					ssl_err = SSL_get_error(srv_ssl, r);
+				else
+					ssl_err = -1;
 			} while (r <= 0);
 
 			/* ignore return code for now, it's in {verify} */
 			(void) tls_get_info(srv_ssl, true,
 					    CurSmtpClient,
 					    &BlankEnvelope.e_macro,
-					    bitset(SRV_VRFY_CLT, features));
+					    bitset(SRV_VRFY_CLT, features)
+# if _FFR_SE_TA_ID
+						, e->e_s_se
+# endif
+						);
 
 			/*
 			**  call Stls_client to find out whether
@@ -2590,9 +2633,10 @@ smtp(nullserver, d_flags, e)
 			if (bitset(SRV_BAD_PIPELINE, features) &&
 			    sm_io_getinfo(InChannel, SM_IO_IS_READABLE, NULL) > 0)
 			{
+				GET_PHASE;
 				sm_syslog(LOG_INFO, e->e_id,
 					"rejecting %s from %s [%s] due to traffic before response",
-					SmtpPhase, CurHostName,
+					phase, CurHostName,
 					anynet_ntoa(&RealHostAddr));
 				usrerr("554 5.5.0 SMTP protocol error");
 				nullserver = "Command rejected";
@@ -2649,7 +2693,7 @@ smtp(nullserver, d_flags, e)
 					/* allow trailing whitespace */
 					while (!ok && *++q != '\0' &&
 					       isspace(*q))
-						;
+						continue;
 					if (*q == '\0')
 						ok = true;
 					break;
@@ -2816,6 +2860,19 @@ smtp(nullserver, d_flags, e)
 #if SASL
 			if (sasl_ok && mechlist != NULL && *mechlist != '\0')
 				message("250-AUTH %s", mechlist);
+#endif
+#if _FFR_LIMITS
+			if (bitset(SRV_OFFER_RDM1, features) || MaxRcptPerMsg > 0)
+			{
+				/* ugly - but snprintf() can't "append" */
+				if (MaxRcptPerMsg > 0 && ! bitset(SRV_OFFER_RDM1, features))
+					message("250-LIMITS RCPTMAX=%d", MaxRcptPerMsg);
+				else if (0 == MaxRcptPerMsg && bitset(SRV_OFFER_RDM1, features))
+					message("250-LIMITS RCPTDOMAINMAX=1");
+				else
+					message("250-LIMITS RCPTMAX=%d RCPTDOMAINMAX=1",
+						MaxRcptPerMsg);
+			}
 #endif
 #if STARTTLS
 			if (tls_ok_srv && bitset(SRV_OFFER_TLS, features))
@@ -3109,9 +3166,17 @@ smtp(nullserver, d_flags, e)
 #endif /* MILTER */
 			if (Errors > 0)
 				sm_exc_raisenew_x(&EtypeQuickAbort, 1);
+#if _FFR_SE_TA_ID
+			ID2X_ID(e, e_s_ta, ta_id, false, "smtp");
+			if (tTd(94, 10))
+				sm_dprintf("smtp: " S_SE_ID "=%s, " S_TA_ID "=%s, qid=%s, mail=%s\n", e->e_s_se, e->e_s_ta, e->e_id, e->e_from.q_user);
+#endif
 
 			message("250 2.1.0 Sender ok");
 			smtp.sm_gotmail = true;
+#if _FFR_LIMITS
+			rcptdomain = NULL;
+#endif
 		    }
 		    SM_EXCEPT(exc, "[!F]*")
 		    {
@@ -3139,6 +3204,7 @@ smtp(nullserver, d_flags, e)
 				macid("{rcpt_host}"), NULL);
 			macdefine(&e->e_macro, A_PERM,
 				macid("{rcpt_addr}"), NULL);
+			addr = NULL;
 #if MILTER
 			(void) memset(&addr_st, '\0', sizeof(addr_st));
 			a = NULL;
@@ -3292,6 +3358,27 @@ smtp(nullserver, d_flags, e)
 				sep_args(delimptr, origp, e->e_id, p);
 #endif
 			}
+
+#if _FFR_LIMITS
+			if (bitset(SRV_OFFER_RDM1, features))
+			{
+				char *at, *curdomain;
+
+/* compare deliver.c: move to sendmail.h, also pass at? */
+#define GETDOMAIN(pa)	((NULL == (at = strrchr(pa, '@'))) ? (pa) : at + 1)
+				curdomain = GETDOMAIN(p);
+				if (NULL == rcptdomain)
+				{
+					rcptdomain = sm_rpool_strdup_x(e->e_rpool,
+							curdomain);
+				}
+				else if (0 != sm_strcasecmp(curdomain, rcptdomain))
+				{
+					usrerr("451 4.3.0 only one RCPT domain allowed");
+					goto rcpt_done;
+				}
+			}
+#endif /* _FFR_LIMITS */
 
 			/* put resulting triple from parseaddr() into macros */
 			if (a->q_mailer != NULL)
@@ -3505,7 +3592,7 @@ smtp(nullserver, d_flags, e)
 			    milter_rcpt_added && milter_cmd_done &&
 			    milter_cmd_fail)
 			{
-				(void) removefromlist(addr, &e->e_sendqueue, e);
+				(void) removefromlist(args[0], &e->e_sendqueue, e);
 				milter_cmd_fail = false;
 				if (smtp.sm_e_nrcpts_orig < e->e_nrcpts)
 					e->e_nrcpts = smtp.sm_e_nrcpts_orig;
@@ -3520,6 +3607,7 @@ smtp(nullserver, d_flags, e)
 			if (!smtp_data(&smtp, e,
 					bitset(SRV_BAD_PIPELINE, features)))
 				goto doquit;
+			ASSIGN_SE_ID(e); /* set session id in new envelope */
 			break;
 
 		  case CMDRSET:		/* rset -- reset state */
@@ -4042,9 +4130,10 @@ smtp_data(smtp, e, check_stuffing)
 	if (check_stuffing &&
 	    sm_io_getinfo(InChannel, SM_IO_IS_READABLE, NULL) > 0)
 	{
+		GET_PHASE;
 		sm_syslog(LOG_INFO, e->e_id,
 			"rejecting %s from %s [%s] due to traffic before response",
-			SmtpPhase, CurHostName, anynet_ntoa(&RealHostAddr));
+			phase, CurHostName, anynet_ntoa(&RealHostAddr));
 		usrerr("554 5.5.0 SMTP protocol error");
 		return false;
 	}
@@ -4604,6 +4693,9 @@ smtp_data(smtp, e, check_stuffing)
 #endif /* _FFR_MSG_ACCEPT */
 		/* "else" in #if code above */
 		message("250 2.0.0 %s Message accepted for delivery", id);
+#if _FFR_SE_TA_ID
+		sm_syslog(LOG_DEBUG, id, S_SE_ID "=%s, " S_TA_ID "=%s, qid=%s, status=accepted", e->e_s_se, e->e_s_ta, id);
+#endif
 #if _FFR_PROXY
 	}
 #endif
@@ -5673,7 +5765,9 @@ static struct
 	{ 'I',	SRV_OFFER_EAI	, 0	},
 #endif
 /*	{ 'J',	0	, 0	},	*/
-/*	{ 'K',	0	, 0	},	*/
+#if _FFR_LIMITS
+	{ 'K',	SRV_OFFER_RDM1	, 0	},	/* XXX "better" char? */
+#endif
 	{ 'L',	SRV_REQ_AUTH	, 0	},
 /*	{ 'M',	0	, 0	},	*/
 #if PIPELINING && _FFR_NO_PIPE
@@ -5744,16 +5838,6 @@ srvfeatures(e, clientname, features)
 				break;
 			}
 
-			/*
-			**  Note: the "noflag" code below works ONLY for
-			**  the current situation:
-			**  - _flag itself is set by default
-			**    (drop session if bare CR or LF is found)
-			**  - _flag2 is only "effective" if _flag is not set,
-			**    hence using it turns off _flag.
-			**  If that situation changes, the code must be changed!
-			*/
-
 			if (c == tolower(opt))
 			{
 				unsigned long flag, noflag;
@@ -5766,7 +5850,10 @@ srvfeatures(e, clientname, features)
 					noflag = srv_feat_table[j].srvf_flag;
 				}
 				else if ('\0' == c)
+				{
 					flag = srv_feat_table[j].srvf_flag;
+					noflag = srv_feat_table[j].srvf_flag2;
+				}
 				if (0 != flag)
 				{
 					features |= flag;
@@ -5932,19 +6019,19 @@ help(topic, e)
 **		SASL result
 */
 
-#ifdef __STDC__
+# ifdef __STDC__
 static int
 reset_saslconn(sasl_conn_t **conn, char *hostname,
-# if SASL >= 20000
+#  if SASL >= 20000
 	       char *remoteip, char *localip,
 	       char *auth_id, sasl_ssf_t * ext_ssf)
-# else /* SASL >= 20000 */
+#  else /* SASL >= 20000 */
 	       struct sockaddr_in *saddr_r, struct sockaddr_in *saddr_l,
 	       sasl_external_properties_t * ext_ssf)
-# endif /* SASL >= 20000 */
-#else /* __STDC__ */
-# error "SASL requires __STDC__"
-#endif /* __STDC__ */
+#  endif /* SASL >= 20000 */
+# else /* __STDC__ */
+#  error "SASL requires __STDC__"
+# endif /* __STDC__ */
 {
 	int result;
 

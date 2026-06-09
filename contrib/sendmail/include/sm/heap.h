@@ -58,26 +58,6 @@ extern void *sm_realloc __P((void *, size_t));
 
 # define sm_heap_checkptr(ptr) sm_heap_checkptr_tagged(ptr, __FILE__, __LINE__)
 
-#if 0
-/*
-**  sm_f[mc]alloc are plug in replacements for malloc and calloc
-**  which can be used in a context requiring a function pointer,
-**  and which are compatible with sm_free.  Warning: sm_heap_report
-**  cannot report where storage leaked by sm_f[mc]alloc was allocated.
-*/
-
-/* XXX unused right now */
-
-extern void *
-sm_fmalloc __P((
-	size_t));
-
-extern void *
-sm_fcalloc __P((
-	size_t,
-	size_t));
-#endif /* 0 */
-
 /*
 **  Allocate 'permanent' storage that can be freed but may still be
 **  allocated when the process exits.  sm_heap_report will not complain

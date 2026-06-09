@@ -162,8 +162,13 @@ mci_scan(savemci)
 		if ((mci->mci_lastuse + MciCacheTimeout <= now ||
 		     (mci->mci_mailer != NULL &&
 		      mci->mci_mailer->m_maxdeliveries > 0 &&
-		      mci->mci_deliveries + 1 >= mci->mci_mailer->m_maxdeliveries))&&
-		    mci != savemci)
+		      mci->mci_deliveries + 1 >= mci->mci_mailer->m_maxdeliveries)
+#if _FFR_LIMITS
+		     || (mci->mci_mailmax > 0 &&
+		      mci->mci_deliveries + 1 >= mci->mci_mailmax)
+#endif
+		     )
+		      && mci != savemci)
 		{
 			/* connection idle too long or too many deliveries */
 			bestmci = &MciCache[i];
@@ -255,6 +260,9 @@ mci_uncache(mcislot, doquit)
 	SM_FREE(mci->mci_status);
 	SM_FREE(mci->mci_rstatus);
 	SM_FREE(mci->mci_heloname);
+#if _FFR_LIMITS
+	SM_FREE(mci->mci_rcptdomain);
+#endif
 	mci_clear(mci);
 	if (mci->mci_rpool != NULL)
 	{
@@ -345,7 +353,12 @@ mci_clear(mci)
 	if (bitset(MCIF_TLSACT, mci->mci_flags) && mci->mci_ssl != NULL)
 		SM_SSL_FREE(mci->mci_ssl);
 #endif
-
+#if _FFR_SE_TA_ID
+	mci->mci_c_se = NULL;
+#endif
+#if _FFR_MTA_STS
+	/* MCIF_HASSTS is implicitly cleared: */
+#endif
 	/* which flags to preserve? */
 	mci->mci_flags &= MCIF_CACHED;
 	mactabclear(&mci->mci_macro);
@@ -378,7 +391,10 @@ mci_get(host, m)
 	(void) mci_scan(NULL);
 
 	if (m->m_mno < 0)
+	{
 		syserr("!negative mno %d (%s)", m->m_mno, m->m_name);
+		/* NOTREACHED */
+	}
 
 	s = stab(host, ST_MCI + m->m_mno, ST_ENTER);
 	mci = &s->s_mci;
@@ -616,6 +632,7 @@ struct mcifbits
 };
 static struct mcifbits	MciFlags[] =
 {
+	{ MCIF_IO_ERR,		"MCIF_IO_ERR"	},
 	{ MCIF_OCC_INCR,	"OCC_INCR"	},
 	{ MCIF_CACHED,		"CACHED"	},
 	{ MCIF_ESMTP,		"ESMTP"		},
@@ -644,10 +661,17 @@ static struct mcifbits	MciFlags[] =
 #endif
 	{ MCIF_INLONGLINE,	"INLONGLINE"	},
 	{ MCIF_AUTH2,		"AUTH2"		},
+#if _FFR_SAMEDOMAIN
+	{ MCIF_SAMEDOMAIN_TA,	"SAMEDOMAIN_TA"	},
+	{ MCIF_SAMEDOMAIN_SE,	"SAMEDOMAIN_SE"	},
+#endif
 	{ MCIF_ONLY_EHLO,	"ONLY_EHLO"	},
 	{ MCIF_NOTSTICKY,	"NOTSTICKY"	},
 #if USE_EAI
 	{ MCIF_EAI,		"EAI"		},
+#endif
+#if _FFR_MTA_STS
+	{ MCIF_HASSTS,		"HASSTS"	},
 #endif
 	{ 0,			NULL		}
 };

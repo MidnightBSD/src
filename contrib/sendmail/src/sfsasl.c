@@ -663,13 +663,6 @@ tls_retry(ssl, rfd, wfd, tlsstart, timeout, err, where)
 	return ret;
 }
 
-/* errno to force refill() etc to stop (see IS_IO_ERROR()) */
-# ifdef ETIMEDOUT
-#  define SM_ERR_TIMEOUT	ETIMEDOUT
-# else
-#  define SM_ERR_TIMEOUT	EIO
-# endif
-
 /*
 **  SET_TLS_RD_TMO -- read secured information for the caller
 **
@@ -750,7 +743,7 @@ tls_read(fp, buf, size)
 				ssl_err, "read");
 		if (try > 0)
 			goto retry;
-		errno = SM_ERR_TIMEOUT;
+		errno = ETIMEDOUT;
 		break;
 
 	  case SSL_ERROR_WANT_X509_LOOKUP:
@@ -791,7 +784,7 @@ tls_read(fp, buf, size)
 		int save_errno;
 
 		save_errno = (errno == 0) ? EIO : errno;
-		if (try == 0 && save_errno == SM_ERR_TIMEOUT)
+		if (try == 0 && save_errno == ETIMEDOUT)
 		{
 			if (LogLevel > 7)
 				sm_syslog(LOG_WARNING, NOQID,
@@ -873,7 +866,7 @@ tls_write(fp, buf, size)
 				DATA_PROGRESS_TIMEOUT, ssl_err, "write");
 		if (try > 0)
 			goto retry;
-		errno = SM_ERR_TIMEOUT;
+		errno = ETIMEDOUT;
 		break;
 	  case SSL_ERROR_WANT_X509_LOOKUP:
 		err = "write X BLOCK";
@@ -902,7 +895,7 @@ tls_write(fp, buf, size)
 		int save_errno;
 
 		save_errno = (errno == 0) ? EIO : errno;
-		if (try == 0 && save_errno == SM_ERR_TIMEOUT)
+		if (try == 0 && save_errno == ETIMEDOUT)
 		{
 			if (LogLevel > 7)
 				sm_syslog(LOG_WARNING, NOQID,
