@@ -21,6 +21,7 @@ SRCS+=	token.l trail.c
 MAN=	auditdistd.8 auditdistd.conf.5
 
 LIBADD+=	pthread util crypto ssl
+CFLAGS+=-DOPENSSL_API_COMPAT=0x10100000L
 
 YFLAGS+=-v
 
