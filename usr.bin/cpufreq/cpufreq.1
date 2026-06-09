@@ -33,6 +33,7 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl c Ar cpu
+.Op Fl m
 .Op Fl v
 .Sh DESCRIPTION
 The
@@ -53,6 +54,12 @@ The following options are available:
 .It Fl c Ar cpu
 Report the frequency for
 .Ar cpu .
+.It Fl m
+Print the mean frequency across all CPUs.
+.Fl m
+and
+.Fl c
+are mutually exclusive.
 .It Fl v
 Print out detailed information about available frequencies.
 .El
