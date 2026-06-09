@@ -38,7 +38,7 @@
 static int get_cpu_freq(int);
 static int get_cpu_count(void);
 static void print_freq_levels(int);
-static void usage(void);
+static void usage(FILE *, int);
 
 int
 main(int argc, char *argv[])
@@ -51,7 +51,7 @@ main(int argc, char *argv[])
 	cpu = 0;
 	mflag = 0;
 	vflag = 0;
-	while ((ch = getopt(argc, argv, "ac:mv")) != -1) {
+	while ((ch = getopt(argc, argv, "ac:hmv")) != -1) {
 		switch (ch) {
 		case 'a':
 			aflag = 1;
@@ -62,6 +62,9 @@ main(int argc, char *argv[])
 			if (errstr != NULL)
 				errx(1, "cpu is %s: %s", errstr, optarg);
 			break;
+		case 'h':
+			usage(stdout, 0);
+			/* NOTREACHED */
 		case 'm':
 			mflag = 1;
 			break;
@@ -70,15 +73,15 @@ main(int argc, char *argv[])
 			break;
 		case '?': /* FALLTHROUGH */
 		default:
-			usage();
+			usage(stderr, 1);
 			/* NOTREACHED */
 		}
 	}
 	argc -= optind;
 	if (argc != 0)
-		usage();
+		usage(stderr, 1);
 	if ((aflag && cflag) || (aflag && mflag) || (mflag && cflag))
-		usage();
+		usage(stderr, 1);
 
 	if (aflag) {
 		int i;
@@ -162,9 +165,9 @@ print_freq_levels(int cpu)
 }
 
 static void
-usage(void)
+usage(FILE *stream, int status)
 {
 
-	fprintf(stderr, "usage: cpufreq [-a] [-c cpu] [-m] [-v]\n");
-	exit(1);
+	fprintf(stream, "usage: cpufreq [-a] [-c cpu] [-h] [-m] [-v]\n");
+	exit(status);
 }

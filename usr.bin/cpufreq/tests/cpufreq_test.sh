@@ -112,6 +112,19 @@ invalid_cpu_body()
 	    "${CPUFREQ}" -c bad
 }
 
+atf_test_case help
+help_head()
+{
+	atf_set "descr" "Print usage information"
+}
+help_body()
+{
+
+	atf_check -s exit:0 -e empty \
+	    -o inline:"usage: cpufreq [-a] [-c cpu] [-h] [-m] [-v]\n" \
+	    "${CPUFREQ}" -h
+}
+
 atf_test_case average_conflicts_with_cpu
 average_conflicts_with_cpu_head()
 {
@@ -121,7 +134,7 @@ average_conflicts_with_cpu_body()
 {
 
 	atf_check -s exit:1 -o empty \
-	    -e inline:"usage: cpufreq [-a] [-c cpu] [-m] [-v]\n" \
+	    -e inline:"usage: cpufreq [-a] [-c cpu] [-h] [-m] [-v]\n" \
 	    "${CPUFREQ}" -m -c 0
 }
 
@@ -134,7 +147,7 @@ all_conflicts_with_cpu_body()
 {
 
 	atf_check -s exit:1 -o empty \
-	    -e inline:"usage: cpufreq [-a] [-c cpu] [-m] [-v]\n" \
+	    -e inline:"usage: cpufreq [-a] [-c cpu] [-h] [-m] [-v]\n" \
 	    "${CPUFREQ}" -a -c 0
 }
 
@@ -147,7 +160,7 @@ all_conflicts_with_average_body()
 {
 
 	atf_check -s exit:1 -o empty \
-	    -e inline:"usage: cpufreq [-a] [-c cpu] [-m] [-v]\n" \
+	    -e inline:"usage: cpufreq [-a] [-c cpu] [-h] [-m] [-v]\n" \
 	    "${CPUFREQ}" -a -m
 }
 
@@ -160,7 +173,7 @@ extra_operand_body()
 {
 
 	atf_check -s exit:1 -o empty \
-	    -e inline:"usage: cpufreq [-a] [-c cpu] [-m] [-v]\n" \
+	    -e inline:"usage: cpufreq [-a] [-c cpu] [-h] [-m] [-v]\n" \
 	    "${CPUFREQ}" extra
 }
 
@@ -173,6 +186,7 @@ atf_init_test_cases()
 	atf_add_test_case all_cpus
 	atf_add_test_case verbose_specific_cpu
 	atf_add_test_case invalid_cpu
+	atf_add_test_case help
 	atf_add_test_case average_conflicts_with_cpu
 	atf_add_test_case all_conflicts_with_cpu
 	atf_add_test_case all_conflicts_with_average
