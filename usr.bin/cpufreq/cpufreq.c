@@ -30,6 +30,7 @@
 #include <sys/sysctl.h>
 
 #include <err.h>
+#include <getopt.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,6 +40,11 @@ static int get_cpu_freq(int);
 static int get_cpu_count(void);
 static void print_freq_levels(int);
 static void usage(FILE *, int);
+
+static const struct option longopts[] = { { "all", no_argument, NULL, 'a' },
+	{ "cpu", required_argument, NULL, 'c' },
+	{ "help", no_argument, NULL, 'h' }, { "mean", no_argument, NULL, 'm' },
+	{ "verbose", no_argument, NULL, 'v' }, { NULL, 0, NULL, 0 } };
 
 int
 main(int argc, char *argv[])
@@ -51,7 +57,7 @@ main(int argc, char *argv[])
 	cpu = 0;
 	mflag = 0;
 	vflag = 0;
-	while ((ch = getopt(argc, argv, "ac:hmv")) != -1) {
+	while ((ch = getopt_long(argc, argv, "ac:hmv", longopts, NULL)) != -1) {
 		switch (ch) {
 		case 'a':
 			aflag = 1;
@@ -168,6 +174,8 @@ static void
 usage(FILE *stream, int status)
 {
 
-	fprintf(stream, "usage: cpufreq [-a] [-c cpu] [-h] [-m] [-v]\n");
+	fprintf(stream,
+	    "usage: cpufreq [-a|--all] [-c cpu|--cpu cpu] [-h|--help] "
+	    "[-m|--mean] [-v|--verbose]\n");
 	exit(status);
 }
