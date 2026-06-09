@@ -1,0 +1,25 @@
+Upgrade procedure for file(1) / libmagic
+
+Source: https://astron.com/pub/file/file-VERSION.tar.gz
+        (see https://www.darwinsys.com/file/ for release announcements)
+
+To upgrade to a new version:
+
+1. Download and extract the new tarball to /tmp/file/file-VERSION
+2. Use the vendor-update skill (vendor/file/dist, contrib/file)
+3. Apply local patches after the subtree merge (see below)
+
+Local patches applied on top of upstream:
+
+  - FreeBSD f0ca30b4e500: file: Parse some UFS2 flags
+    Adds recognition of FS_DOSOFTDEP, FS_SUJ, FS_GJOURNAL, FS_ACLS,
+    FS_NFS4ACLS flags in UFS2 superblocks.
+    File: magic/Magdir/filesystems (after "minimum percentage of free
+    blocks" line in the ffsv2 named section)
+    Accepted upstream as 482259e5e952 (will be in file 5.47+).
+
+Notes:
+  - The Xlist (MIDNIGHTBSD-Xlist) excludes test data, Windows build
+    files, and Python bindings not needed on MidnightBSD.
+  - Check FreeBSD's contrib/file/ git log for any new local patches
+    after each upstream import.
