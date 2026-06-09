@@ -1,5 +1,6 @@
-/* $MidnightBSD: src/usr.bin/cpufreq/cpufreq.c,v 1.2 2012/12/30 20:20:10 laffer1 Exp $ */
-/*- 
+/* $MidnightBSD: src/usr.bin/cpufreq/cpufreq.c,v 1.2 2012/12/30 20:20:10 laffer1
+ * Exp $ */
+/*-
  * Copyright (c) 2008, 2011 Lucas Holt
  * All rights reserved.
  *
@@ -28,45 +29,66 @@
 #include <sys/types.h>
 #include <sys/sysctl.h>
 
+#include <err.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <err.h>
 #include <unistd.h>
 
-static void	usage(void);
+static void usage(void);
 
-int 
+int
 main(int argc, char *argv[])
 {
 	int freq;
-	char levels[256];
+	char name[32];
 	size_t len;
-	int ch, vflag;
+	const char *errstr;
+	int ch, cpu, n, vflag;
 
+	cpu = 0;
 	vflag = 0;
-	while ((ch = getopt(argc, argv, "v")) != -1) {
+	while ((ch = getopt(argc, argv, "c:v")) != -1) {
 		switch (ch) {
-			case 'v':
-				vflag = 1;
-				break;
-			case '?': /* FALLTHROUGH */
-			default:
-				usage();
-				/* NOTREACHED */
+		case 'c':
+			cpu = (int)strtonum(optarg, 0, INT_MAX, &errstr);
+			if (errstr != NULL)
+				errx(1, "cpu is %s: %s", errstr, optarg);
+			break;
+		case 'v':
+			vflag = 1;
+			break;
+		case '?': /* FALLTHROUGH */
+		default:
+			usage();
+			/* NOTREACHED */
 		}
 	}
 	argc -= optind;
-	argv += optind;
+	if (argc != 0)
+		usage();
 
 	len = sizeof(freq);
-	if (sysctlbyname("dev.cpu.0.freq", &freq, &len, NULL, 0) < 0)
-		errx(1, "CPU frequency unknown");
-	printf("CPU frequency: %d MHz\n", freq);
+	n = snprintf(name, sizeof(name), "dev.cpu.%d.freq", cpu);
+	if (n < 0 || n >= (int)sizeof(name))
+		errx(1, "CPU sysctl name too long");
+	if (sysctlbyname(name, &freq, &len, NULL, 0) < 0)
+		errx(1, "CPU %d frequency unknown", cpu);
+	printf("CPU %d frequency: %d MHz\n", cpu, freq);
 
 	if (vflag) {
+		char levels[256];
+
 		len = sizeof(levels);
-        	if (sysctlbyname("dev.cpu.0.freq_levels", &levels, &len, NULL, 0) < 0)
-                	errx(1, "Available CPU frequency levels unavailable");
+		n = snprintf(name, sizeof(name), "dev.cpu.%d.freq_levels", cpu);
+		if (n < 0 || n >= (int)sizeof(name))
+			errx(1, "CPU sysctl name too long");
+		if (sysctlbyname(name, levels, &len, NULL, 0) < 0)
+			errx(1, "Available CPU %d frequency levels unavailable",
+			    cpu);
+		if (len >= sizeof(levels))
+			len = sizeof(levels) - 1;
+		levels[len] = '\0';
 		printf("Possible frequencies: %s\n", levels);
 	}
 
@@ -77,6 +99,6 @@ static void
 usage(void)
 {
 
-	fprintf(stderr, "usage: cpufreq [-v]\n");
+	fprintf(stderr, "usage: cpufreq [-c cpu] [-v]\n");
 	exit(1);
 }

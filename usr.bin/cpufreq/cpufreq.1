@@ -24,7 +24,7 @@
 .\"
 .\" $MidnightBSD: src/usr.bin/cpufreq/cpufreq.1,v 1.1 2011/07/09 20:17:25 laffer1 Exp $
 .\"
-.Dd July 9, 2011
+.Dd June 9, 2026
 .Dt CPUFREQ 1
 .Os
 .Sh NAME
@@ -32,13 +32,17 @@
 .Nd "CPU frequency report"
 .Sh SYNOPSIS
 .Nm
+.Op Fl c Ar cpu
 .Op Fl v
 .Sh DESCRIPTION
 The
 .Nm
-command prints the current frequency of the first
-CPU in the system.  Currently, all CPUs run at the same frequency, and
-change if one of the available 
+command prints the current frequency of a CPU in the system.
+If no CPU is specified,
+.Nm
+reports CPU 0.
+Currently, all CPUs run at the same frequency, and change if one of the
+available
 .Xr cpufreq 4
 drivers is configured with
 .Xr powerd 8
@@ -46,8 +50,12 @@ drivers is configured with
 .Pp
 The following options are available:
 .Bl -tag -width indent
+.It Fl c Ar cpu
+Report the frequency for
+.Ar cpu .
 .It Fl v
-Print out detailed information about available frequences.
+Print out detailed information about available frequencies.
+.El
 .Sh SEE ALSO
 .Xr cpufreq 4 ,
 .Xr powerd 8
