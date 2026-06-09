@@ -1,7 +1,7 @@
 /*
- * Copyright 1995-2018 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1995-2020 The OpenSSL Project Authors. All Rights Reserved.
  *
- * Licensed under the OpenSSL license (the "License").  You may not use
+ * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
  * https://www.openssl.org/source/license.html
@@ -19,13 +19,16 @@
 
 int X509v3_get_ext_count(const STACK_OF(X509_EXTENSION) *x)
 {
+    int ret;
+
     if (x == NULL)
         return 0;
-    return sk_X509_EXTENSION_num(x);
+    ret = sk_X509_EXTENSION_num(x);
+    return ret > 0 ? ret : 0;
 }
 
 int X509v3_get_ext_by_NID(const STACK_OF(X509_EXTENSION) *x, int nid,
-                          int lastpos)
+    int lastpos)
 {
     ASN1_OBJECT *obj;
 
@@ -36,7 +39,7 @@ int X509v3_get_ext_by_NID(const STACK_OF(X509_EXTENSION) *x, int nid,
 }
 
 int X509v3_get_ext_by_OBJ(const STACK_OF(X509_EXTENSION) *sk,
-                          const ASN1_OBJECT *obj, int lastpos)
+    const ASN1_OBJECT *obj, int lastpos)
 {
     int n;
     X509_EXTENSION *ex;
@@ -56,7 +59,7 @@ int X509v3_get_ext_by_OBJ(const STACK_OF(X509_EXTENSION) *sk,
 }
 
 int X509v3_get_ext_by_critical(const STACK_OF(X509_EXTENSION) *sk, int crit,
-                               int lastpos)
+    int lastpos)
 {
     int n;
     X509_EXTENSION *ex;
@@ -94,14 +97,14 @@ X509_EXTENSION *X509v3_delete_ext(STACK_OF(X509_EXTENSION) *x, int loc)
 }
 
 STACK_OF(X509_EXTENSION) *X509v3_add_ext(STACK_OF(X509_EXTENSION) **x,
-                                         X509_EXTENSION *ex, int loc)
+    X509_EXTENSION *ex, int loc)
 {
     X509_EXTENSION *new_ex = NULL;
     int n;
     STACK_OF(X509_EXTENSION) *sk = NULL;
 
     if (x == NULL) {
-        X509err(X509_F_X509V3_ADD_EXT, ERR_R_PASSED_NULL_PARAMETER);
+        ERR_raise(ERR_LIB_X509, ERR_R_PASSED_NULL_PARAMETER);
         goto err2;
     }
 
@@ -124,9 +127,9 @@ STACK_OF(X509_EXTENSION) *X509v3_add_ext(STACK_OF(X509_EXTENSION) **x,
     if (*x == NULL)
         *x = sk;
     return sk;
- err:
-    X509err(X509_F_X509V3_ADD_EXT, ERR_R_MALLOC_FAILURE);
- err2:
+err:
+    ERR_raise(ERR_LIB_X509, ERR_R_MALLOC_FAILURE);
+err2:
     X509_EXTENSION_free(new_ex);
     if (x != NULL && *x == NULL)
         sk_X509_EXTENSION_free(sk);
@@ -134,15 +137,15 @@ STACK_OF(X509_EXTENSION) *X509v3_add_ext(STACK_OF(X509_EXTENSION) **x,
 }
 
 X509_EXTENSION *X509_EXTENSION_create_by_NID(X509_EXTENSION **ex, int nid,
-                                             int crit,
-                                             ASN1_OCTET_STRING *data)
+    int crit,
+    ASN1_OCTET_STRING *data)
 {
     ASN1_OBJECT *obj;
     X509_EXTENSION *ret;
 
     obj = OBJ_nid2obj(nid);
     if (obj == NULL) {
-        X509err(X509_F_X509_EXTENSION_CREATE_BY_NID, X509_R_UNKNOWN_NID);
+        ERR_raise(ERR_LIB_X509, X509_R_UNKNOWN_NID);
         return NULL;
     }
     ret = X509_EXTENSION_create_by_OBJ(ex, obj, crit, data);
@@ -152,15 +155,14 @@ X509_EXTENSION *X509_EXTENSION_create_by_NID(X509_EXTENSION **ex, int nid,
 }
 
 X509_EXTENSION *X509_EXTENSION_create_by_OBJ(X509_EXTENSION **ex,
-                                             const ASN1_OBJECT *obj, int crit,
-                                             ASN1_OCTET_STRING *data)
+    const ASN1_OBJECT *obj, int crit,
+    ASN1_OCTET_STRING *data)
 {
     X509_EXTENSION *ret;
 
     if ((ex == NULL) || (*ex == NULL)) {
         if ((ret = X509_EXTENSION_new()) == NULL) {
-            X509err(X509_F_X509_EXTENSION_CREATE_BY_OBJ,
-                    ERR_R_MALLOC_FAILURE);
+            ERR_raise(ERR_LIB_X509, ERR_R_MALLOC_FAILURE);
             return NULL;
         }
     } else
@@ -176,7 +178,7 @@ X509_EXTENSION *X509_EXTENSION_create_by_OBJ(X509_EXTENSION **ex,
     if ((ex != NULL) && (*ex == NULL))
         *ex = ret;
     return ret;
- err:
+err:
     if ((ex == NULL) || (ret != *ex))
         X509_EXTENSION_free(ret);
     return NULL;

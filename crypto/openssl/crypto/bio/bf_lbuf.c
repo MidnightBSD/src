@@ -1,7 +1,7 @@
 /*
- * Copyright 1995-2018 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1995-2026 The OpenSSL Project Authors. All Rights Reserved.
  *
- * Licensed under the OpenSSL license (the "License").  You may not use
+ * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
  * https://www.openssl.org/source/license.html
@@ -23,17 +23,15 @@ static int linebuffer_free(BIO *data);
 static long linebuffer_callback_ctrl(BIO *h, int cmd, BIO_info_cb *fp);
 
 /* A 10k maximum should be enough for most purposes */
-#define DEFAULT_LINEBUFFER_SIZE 1024*10
+#define DEFAULT_LINEBUFFER_SIZE 1024 * 10
 
 /* #define DEBUG */
 
 static const BIO_METHOD methods_linebuffer = {
     BIO_TYPE_LINEBUFFER,
     "linebuffer",
-    /* TODO: Convert to new style write function */
     bwrite_conv,
     linebuffer_write,
-    /* TODO: Convert to new style read function */
     bread_conv,
     linebuffer_read,
     linebuffer_puts,
@@ -50,9 +48,9 @@ const BIO_METHOD *BIO_f_linebuffer(void)
 }
 
 typedef struct bio_linebuffer_ctx_struct {
-    char *obuf;                 /* the output char array */
-    int obuf_size;              /* how big is the output buffer */
-    int obuf_len;               /* how many bytes are in it */
+    char *obuf; /* the output char array */
+    int obuf_size; /* how big is the output buffer */
+    int obuf_len; /* how many bytes are in it */
 } BIO_LINEBUFFER_CTX;
 
 static int linebuffer_new(BIO *bi)
@@ -60,12 +58,12 @@ static int linebuffer_new(BIO *bi)
     BIO_LINEBUFFER_CTX *ctx;
 
     if ((ctx = OPENSSL_malloc(sizeof(*ctx))) == NULL) {
-        BIOerr(BIO_F_LINEBUFFER_NEW, ERR_R_MALLOC_FAILURE);
+        ERR_raise(ERR_LIB_BIO, ERR_R_MALLOC_FAILURE);
         return 0;
     }
     ctx->obuf = OPENSSL_malloc(DEFAULT_LINEBUFFER_SIZE);
     if (ctx->obuf == NULL) {
-        BIOerr(BIO_F_LINEBUFFER_NEW, ERR_R_MALLOC_FAILURE);
+        ERR_raise(ERR_LIB_BIO, ERR_R_MALLOC_FAILURE);
         OPENSSL_free(ctx);
         return 0;
     }
@@ -124,7 +122,8 @@ static int linebuffer_write(BIO *b, const char *in, int inl)
         const char *p;
         char c;
 
-        for (p = in, c = '\0'; p < in + inl && (c = *p) != '\n'; p++) ;
+        for (p = in, c = '\0'; p < in + inl && (c = *p) != '\n'; p++)
+            ;
         if (c == '\n') {
             p++;
             foundnl = 1;
@@ -136,7 +135,7 @@ static int linebuffer_write(BIO *b, const char *in, int inl)
          * concatenate them and write
          */
         while ((foundnl || p - in > ctx->obuf_size - ctx->obuf_len)
-               && ctx->obuf_len > 0) {
+            && ctx->obuf_len > 0) {
             int orig_olen = ctx->obuf_len;
 
             i = ctx->obuf_size - ctx->obuf_len;
@@ -187,8 +186,7 @@ static int linebuffer_write(BIO *b, const char *in, int inl)
             in += i;
             inl -= i;
         }
-    }
-    while (foundnl && inl > 0);
+    } while (foundnl && inl > 0);
     /*
      * We've written as much as we can.  The rest of the input buffer, if
      * any, is text that doesn't end with a NL and therefore we need to try
@@ -252,10 +250,12 @@ static long linebuffer_ctrl(BIO *b, int cmd, long num, void *ptr)
         }
         break;
     case BIO_C_SET_BUFF_SIZE:
+        if (num > INT_MAX)
+            return 0;
         obs = (int)num;
         p = ctx->obuf;
         if ((obs > DEFAULT_LINEBUFFER_SIZE) && (obs != ctx->obuf_size)) {
-            p = OPENSSL_malloc((int)num);
+            p = OPENSSL_malloc((size_t)obs);
             if (p == NULL)
                 goto malloc_error;
         }
@@ -304,7 +304,7 @@ static long linebuffer_ctrl(BIO *b, int cmd, long num, void *ptr)
         break;
     case BIO_CTRL_DUP:
         dbio = (BIO *)ptr;
-        if (!BIO_set_write_buffer_size(dbio, ctx->obuf_size))
+        if (BIO_set_write_buffer_size(dbio, ctx->obuf_size) <= 0)
             ret = 0;
         break;
     default:
@@ -314,23 +314,16 @@ static long linebuffer_ctrl(BIO *b, int cmd, long num, void *ptr)
         break;
     }
     return ret;
- malloc_error:
-    BIOerr(BIO_F_LINEBUFFER_CTRL, ERR_R_MALLOC_FAILURE);
+malloc_error:
+    ERR_raise(ERR_LIB_BIO, ERR_R_MALLOC_FAILURE);
     return 0;
 }
 
 static long linebuffer_callback_ctrl(BIO *b, int cmd, BIO_info_cb *fp)
 {
-    long ret = 1;
-
     if (b->next_bio == NULL)
         return 0;
-    switch (cmd) {
-    default:
-        ret = BIO_callback_ctrl(b->next_bio, cmd, fp);
-        break;
-    }
-    return ret;
+    return BIO_callback_ctrl(b->next_bio, cmd, fp);
 }
 
 static int linebuffer_gets(BIO *b, char *buf, int size)

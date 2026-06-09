@@ -1,7 +1,7 @@
 /*
- * Copyright 2016-2019 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2016-2025 The OpenSSL Project Authors. All Rights Reserved.
  *
- * Licensed under the OpenSSL license (the "License").  You may not use
+ * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
  * https://www.openssl.org/source/license.html
@@ -14,43 +14,67 @@
 #include <openssl/err.h>
 #include <openssl/pem.h>
 #include <openssl/store.h>
-#include <openssl/x509v3.h>      /* s2i_ASN1_INTEGER */
+#include <openssl/x509v3.h> /* s2i_ASN1_INTEGER */
 
 static int process(const char *uri, const UI_METHOD *uimeth, PW_CB_DATA *uidata,
-                   int expected, int criterion, OSSL_STORE_SEARCH *search,
-                   int text, int noout, int recursive, int indent, BIO *out,
-                   const char *prog);
+    int expected, int criterion, OSSL_STORE_SEARCH *search,
+    int text, int noout, int recursive, int indent, BIO *out,
+    const char *prog, OSSL_LIB_CTX *libctx);
 
 typedef enum OPTION_choice {
-    OPT_ERR = -1, OPT_EOF = 0, OPT_HELP, OPT_ENGINE, OPT_OUT, OPT_PASSIN,
-    OPT_NOOUT, OPT_TEXT, OPT_RECURSIVE,
-    OPT_SEARCHFOR_CERTS, OPT_SEARCHFOR_KEYS, OPT_SEARCHFOR_CRLS,
-    OPT_CRITERION_SUBJECT, OPT_CRITERION_ISSUER, OPT_CRITERION_SERIAL,
-    OPT_CRITERION_FINGERPRINT, OPT_CRITERION_ALIAS,
-    OPT_MD
+    OPT_COMMON,
+    OPT_ENGINE,
+    OPT_OUT,
+    OPT_PASSIN,
+    OPT_NOOUT,
+    OPT_TEXT,
+    OPT_RECURSIVE,
+    OPT_SEARCHFOR_CERTS,
+    OPT_SEARCHFOR_KEYS,
+    OPT_SEARCHFOR_CRLS,
+    OPT_CRITERION_SUBJECT,
+    OPT_CRITERION_ISSUER,
+    OPT_CRITERION_SERIAL,
+    OPT_CRITERION_FINGERPRINT,
+    OPT_CRITERION_ALIAS,
+    OPT_MD,
+    OPT_PROV_ENUM
 } OPTION_CHOICE;
 
 const OPTIONS storeutl_options[] = {
-    {OPT_HELP_STR, 1, '-', "Usage: %s [options] uri\nValid options are:\n"},
-    {"help", OPT_HELP, '-', "Display this summary"},
-    {"out", OPT_OUT, '>', "Output file - default stdout"},
-    {"passin", OPT_PASSIN, 's', "Input file pass phrase source"},
-    {"text", OPT_TEXT, '-', "Print a text form of the objects"},
-    {"noout", OPT_NOOUT, '-', "No PEM output, just status"},
-    {"certs", OPT_SEARCHFOR_CERTS, '-', "Search for certificates only"},
-    {"keys", OPT_SEARCHFOR_KEYS, '-', "Search for keys only"},
-    {"crls", OPT_SEARCHFOR_CRLS, '-', "Search for CRLs only"},
-    {"subject", OPT_CRITERION_SUBJECT, 's', "Search by subject"},
-    {"issuer", OPT_CRITERION_ISSUER, 's', "Search by issuer and serial, issuer name"},
-    {"serial", OPT_CRITERION_SERIAL, 's', "Search by issuer and serial, serial number"},
-    {"fingerprint", OPT_CRITERION_FINGERPRINT, 's', "Search by public key fingerprint, given in hex"},
-    {"alias", OPT_CRITERION_ALIAS, 's', "Search by alias"},
-    {"", OPT_MD, '-', "Any supported digest"},
+    { OPT_HELP_STR, 1, '-', "Usage: %s [options] uri\n" },
+
+    OPT_SECTION("General"),
+    { "help", OPT_HELP, '-', "Display this summary" },
+    { "", OPT_MD, '-', "Any supported digest" },
 #ifndef OPENSSL_NO_ENGINE
-    {"engine", OPT_ENGINE, 's', "Use engine, possibly a hardware device"},
+    { "engine", OPT_ENGINE, 's', "Use engine, possibly a hardware device" },
 #endif
-    {"r", OPT_RECURSIVE, '-', "Recurse through names"},
-    {NULL}
+
+    OPT_SECTION("Search"),
+    { "certs", OPT_SEARCHFOR_CERTS, '-', "Search for certificates only" },
+    { "keys", OPT_SEARCHFOR_KEYS, '-', "Search for keys only" },
+    { "crls", OPT_SEARCHFOR_CRLS, '-', "Search for CRLs only" },
+    { "subject", OPT_CRITERION_SUBJECT, 's', "Search by subject" },
+    { "issuer", OPT_CRITERION_ISSUER, 's', "Search by issuer and serial, issuer name" },
+    { "serial", OPT_CRITERION_SERIAL, 's', "Search by issuer and serial, serial number" },
+    { "fingerprint", OPT_CRITERION_FINGERPRINT, 's', "Search by public key fingerprint, given in hex" },
+    { "alias", OPT_CRITERION_ALIAS, 's', "Search by alias" },
+    { "r", OPT_RECURSIVE, '-', "Recurse through names" },
+
+    OPT_SECTION("Input"),
+    { "passin", OPT_PASSIN, 's', "Input file pass phrase source" },
+
+    OPT_SECTION("Output"),
+    { "out", OPT_OUT, '>', "Output file - default stdout" },
+    { "text", OPT_TEXT, '-', "Print a text form of the objects" },
+    { "noout", OPT_NOOUT, '-', "No PEM output, just status" },
+
+    OPT_PROV_OPTIONS,
+
+    OPT_PARAMETERS(),
+    { "uri", 0, 0, "URI of the store object" },
+    { NULL }
 };
 
 int storeutl_main(int argc, char *argv[])
@@ -68,15 +92,16 @@ int storeutl_main(int argc, char *argv[])
     ASN1_INTEGER *serial = NULL;
     unsigned char *fingerprint = NULL;
     size_t fingerprintlen = 0;
-    char *alias = NULL;
+    char *alias = NULL, *digestname = NULL;
     OSSL_STORE_SEARCH *search = NULL;
-    const EVP_MD *digest = NULL;
+    EVP_MD *digest = NULL;
+    OSSL_LIB_CTX *libctx = app_get0_libctx();
 
     while ((o = opt_next()) != OPT_EOF) {
         switch (o) {
         case OPT_EOF:
         case OPT_ERR:
- opthelp:
+        opthelp:
             BIO_printf(bio_err, "%s: Use -help for summary.\n", prog);
             goto end;
         case OPT_HELP:
@@ -103,7 +128,7 @@ int storeutl_main(int argc, char *argv[])
         case OPT_SEARCHFOR_CRLS:
             if (expected != 0) {
                 BIO_printf(bio_err, "%s: only one search type can be given.\n",
-                           prog);
+                    prog);
                 goto end;
             }
             {
@@ -111,9 +136,9 @@ int storeutl_main(int argc, char *argv[])
                     enum OPTION_choice choice;
                     int type;
                 } map[] = {
-                    {OPT_SEARCHFOR_CERTS, OSSL_STORE_INFO_CERT},
-                    {OPT_SEARCHFOR_KEYS, OSSL_STORE_INFO_PKEY},
-                    {OPT_SEARCHFOR_CRLS, OSSL_STORE_INFO_CRL},
+                    { OPT_SEARCHFOR_CERTS, OSSL_STORE_INFO_CERT },
+                    { OPT_SEARCHFOR_KEYS, OSSL_STORE_INFO_PKEY },
+                    { OPT_SEARCHFOR_CRLS, OSSL_STORE_INFO_CRL },
                 };
                 size_t i;
 
@@ -133,73 +158,65 @@ int storeutl_main(int argc, char *argv[])
         case OPT_CRITERION_SUBJECT:
             if (criterion != 0) {
                 BIO_printf(bio_err, "%s: criterion already given.\n",
-                           prog);
+                    prog);
                 goto end;
             }
             criterion = OSSL_STORE_SEARCH_BY_NAME;
             if (subject != NULL) {
                 BIO_printf(bio_err, "%s: subject already given.\n",
-                           prog);
+                    prog);
                 goto end;
             }
-            if ((subject = parse_name(opt_arg(), MBSTRING_UTF8, 1)) == NULL) {
-                BIO_printf(bio_err, "%s: can't parse subject argument.\n",
-                           prog);
+            subject = parse_name(opt_arg(), MBSTRING_UTF8, 1, "subject");
+            if (subject == NULL)
                 goto end;
-            }
             break;
         case OPT_CRITERION_ISSUER:
             if (criterion != 0
-                || (criterion == OSSL_STORE_SEARCH_BY_ISSUER_SERIAL
-                    && issuer != NULL)) {
+                && criterion != OSSL_STORE_SEARCH_BY_ISSUER_SERIAL) {
                 BIO_printf(bio_err, "%s: criterion already given.\n",
-                           prog);
+                    prog);
                 goto end;
             }
             criterion = OSSL_STORE_SEARCH_BY_ISSUER_SERIAL;
             if (issuer != NULL) {
                 BIO_printf(bio_err, "%s: issuer already given.\n",
-                           prog);
+                    prog);
                 goto end;
             }
-            if ((issuer = parse_name(opt_arg(), MBSTRING_UTF8, 1)) == NULL) {
-                BIO_printf(bio_err, "%s: can't parse issuer argument.\n",
-                           prog);
+            issuer = parse_name(opt_arg(), MBSTRING_UTF8, 1, "issuer");
+            if (issuer == NULL)
                 goto end;
-            }
             break;
         case OPT_CRITERION_SERIAL:
             if (criterion != 0
-                || (criterion == OSSL_STORE_SEARCH_BY_ISSUER_SERIAL
-                    && serial != NULL)) {
+                && criterion != OSSL_STORE_SEARCH_BY_ISSUER_SERIAL) {
                 BIO_printf(bio_err, "%s: criterion already given.\n",
-                           prog);
+                    prog);
                 goto end;
             }
             criterion = OSSL_STORE_SEARCH_BY_ISSUER_SERIAL;
             if (serial != NULL) {
                 BIO_printf(bio_err, "%s: serial number already given.\n",
-                           prog);
+                    prog);
                 goto end;
             }
             if ((serial = s2i_ASN1_INTEGER(NULL, opt_arg())) == NULL) {
                 BIO_printf(bio_err, "%s: can't parse serial number argument.\n",
-                           prog);
+                    prog);
                 goto end;
             }
             break;
         case OPT_CRITERION_FINGERPRINT:
-            if (criterion != 0
-                || (criterion == OSSL_STORE_SEARCH_BY_KEY_FINGERPRINT
-                    && fingerprint != NULL)) {
+            if (criterion != 0) {
                 BIO_printf(bio_err, "%s: criterion already given.\n",
-                           prog);
+                    prog);
                 goto end;
             }
             criterion = OSSL_STORE_SEARCH_BY_KEY_FINGERPRINT;
             if (fingerprint != NULL) {
                 BIO_printf(bio_err, "%s: fingerprint already given.\n",
-                           prog);
+                    prog);
                 goto end;
             }
             {
@@ -208,8 +225,8 @@ int storeutl_main(int argc, char *argv[])
                 if ((fingerprint = OPENSSL_hexstr2buf(opt_arg(), &tmplen))
                     == NULL) {
                     BIO_printf(bio_err,
-                               "%s: can't parse fingerprint argument.\n",
-                               prog);
+                        "%s: can't parse fingerprint argument.\n",
+                        prog);
                     goto end;
                 }
                 fingerprintlen = (size_t)tmplen;
@@ -218,18 +235,18 @@ int storeutl_main(int argc, char *argv[])
         case OPT_CRITERION_ALIAS:
             if (criterion != 0) {
                 BIO_printf(bio_err, "%s: criterion already given.\n",
-                           prog);
+                    prog);
                 goto end;
             }
             criterion = OSSL_STORE_SEARCH_BY_ALIAS;
             if (alias != NULL) {
                 BIO_printf(bio_err, "%s: alias already given.\n",
-                           prog);
+                    prog);
                 goto end;
             }
             if ((alias = OPENSSL_strdup(opt_arg())) == NULL) {
                 BIO_printf(bio_err, "%s: can't parse alias argument.\n",
-                           prog);
+                    prog);
                 goto end;
             }
             break;
@@ -237,20 +254,24 @@ int storeutl_main(int argc, char *argv[])
             e = setup_engine(opt_arg(), 0);
             break;
         case OPT_MD:
-            if (!opt_md(opt_unknown(), &digest))
-                goto opthelp;
+            digestname = opt_unknown();
+            break;
+        case OPT_PROV_CASES:
+            if (!opt_provider(o))
+                goto end;
+            break;
         }
     }
+
+    /* One argument, the URI */
     argc = opt_num_rest();
     argv = opt_rest();
+    if (argc != 1)
+        goto opthelp;
 
-    if (argc == 0) {
-        BIO_printf(bio_err, "%s: No URI given, nothing to do...\n", prog);
-        goto opthelp;
-    }
-    if (argc > 1) {
-        BIO_printf(bio_err, "%s: Unknown extra parameters after URI\n", prog);
-        goto opthelp;
+    if (digestname != NULL) {
+        if (!opt_md(digestname, &digest))
+            goto opthelp;
     }
 
     if (criterion != 0) {
@@ -264,8 +285,8 @@ int storeutl_main(int argc, char *argv[])
         case OSSL_STORE_SEARCH_BY_ISSUER_SERIAL:
             if (issuer == NULL || serial == NULL) {
                 BIO_printf(bio_err,
-                           "%s: both -issuer and -serial must be given.\n",
-                           prog);
+                    "%s: both -issuer and -serial must be given.\n",
+                    prog);
                 goto end;
             }
             if ((search = OSSL_STORE_SEARCH_by_issuer_serial(issuer, serial))
@@ -276,8 +297,8 @@ int storeutl_main(int argc, char *argv[])
             break;
         case OSSL_STORE_SEARCH_BY_KEY_FINGERPRINT:
             if ((search = OSSL_STORE_SEARCH_by_key_fingerprint(digest,
-                                                               fingerprint,
-                                                               fingerprintlen))
+                     fingerprint,
+                     fingerprintlen))
                 == NULL) {
                 ERR_print_errors(bio_err);
                 goto end;
@@ -304,10 +325,11 @@ int storeutl_main(int argc, char *argv[])
         goto end;
 
     ret = process(argv[0], get_ui_method(), &pw_cb_data,
-                  expected, criterion, search,
-                  text, noout, recursive, 0, out, prog);
+        expected, criterion, search,
+        text, noout, recursive, 0, out, prog, libctx);
 
- end:
+end:
+    EVP_MD_free(digest);
     OPENSSL_free(fingerprint);
     OPENSSL_free(alias);
     ASN1_INTEGER_free(serial);
@@ -323,25 +345,34 @@ int storeutl_main(int argc, char *argv[])
 static int indent_printf(int indent, BIO *bio, const char *format, ...)
 {
     va_list args;
-    int ret;
+    int ret, vret;
+
+    ret = BIO_printf(bio, "%*s", indent, "");
+    if (ret < 0)
+        return ret;
 
     va_start(args, format);
-
-    ret = BIO_printf(bio, "%*s", indent, "") + BIO_vprintf(bio, format, args);
-
+    vret = BIO_vprintf(bio, format, args);
     va_end(args);
-    return ret;
+
+    if (vret < 0)
+        return vret;
+    if (vret > INT_MAX - ret)
+        return INT_MAX;
+
+    return ret + vret;
 }
 
 static int process(const char *uri, const UI_METHOD *uimeth, PW_CB_DATA *uidata,
-                   int expected, int criterion, OSSL_STORE_SEARCH *search,
-                   int text, int noout, int recursive, int indent, BIO *out,
-                   const char *prog)
+    int expected, int criterion, OSSL_STORE_SEARCH *search,
+    int text, int noout, int recursive, int indent, BIO *out,
+    const char *prog, OSSL_LIB_CTX *libctx)
 {
     OSSL_STORE_CTX *store_ctx = NULL;
     int ret = 1, items = 0;
 
-    if ((store_ctx = OSSL_STORE_open(uri, uimeth, uidata, NULL, NULL))
+    if ((store_ctx = OSSL_STORE_open_ex(uri, libctx, app_get0_propq(), uimeth, uidata,
+             NULL, NULL, NULL))
         == NULL) {
         BIO_printf(bio_err, "Couldn't open file or uri %s\n", uri);
         ERR_print_errors(bio_err);
@@ -358,8 +389,8 @@ static int process(const char *uri, const UI_METHOD *uimeth, PW_CB_DATA *uidata,
     if (criterion != 0) {
         if (!OSSL_STORE_supports_search(store_ctx, criterion)) {
             BIO_printf(bio_err,
-                       "%s: the store scheme doesn't support the given search criteria.\n",
-                       prog);
+                "%s: the store scheme doesn't support the given search criteria.\n",
+                prog);
             goto end2;
         }
 
@@ -375,25 +406,26 @@ static int process(const char *uri, const UI_METHOD *uimeth, PW_CB_DATA *uidata,
     for (;;) {
         OSSL_STORE_INFO *info = OSSL_STORE_load(store_ctx);
         int type = info == NULL ? 0 : OSSL_STORE_INFO_get_type(info);
-        const char *infostr =
-            info == NULL ? NULL : OSSL_STORE_INFO_type_string(type);
+        const char *infostr = info == NULL ? NULL : OSSL_STORE_INFO_type_string(type);
 
         if (info == NULL) {
-            if (OSSL_STORE_eof(store_ctx))
-                break;
-
             if (OSSL_STORE_error(store_ctx)) {
                 if (recursive)
                     ERR_clear_error();
                 else
                     ERR_print_errors(bio_err);
+                if (OSSL_STORE_eof(store_ctx))
+                    break;
                 ret++;
                 continue;
             }
 
+            if (OSSL_STORE_eof(store_ctx))
+                break;
+
             BIO_printf(bio_err,
-                       "ERROR: OSSL_STORE_load() returned NULL without "
-                       "eof or error indications\n");
+                "ERROR: OSSL_STORE_load() returned NULL without "
+                "eof or error indications\n");
             BIO_printf(bio_err, "       This is an error in the loader\n");
             ERR_print_errors(bio_err);
             ret++;
@@ -404,7 +436,7 @@ static int process(const char *uri, const UI_METHOD *uimeth, PW_CB_DATA *uidata,
             const char *name = OSSL_STORE_INFO_get0_NAME(info);
             const char *desc = OSSL_STORE_INFO_get0_NAME_description(info);
             indent_printf(indent, bio_out, "%d: %s: %s\n", items, infostr,
-                          name);
+                name);
             if (desc != NULL)
                 indent_printf(indent, bio_out, "%s\n", desc);
         } else {
@@ -421,25 +453,33 @@ static int process(const char *uri, const UI_METHOD *uimeth, PW_CB_DATA *uidata,
             if (recursive) {
                 const char *suburi = OSSL_STORE_INFO_get0_NAME(info);
                 ret += process(suburi, uimeth, uidata,
-                               expected, criterion, search,
-                               text, noout, recursive, indent + 2, out, prog);
+                    expected, criterion, search,
+                    text, noout, recursive, indent + 2, out, prog,
+                    libctx);
             }
             break;
         case OSSL_STORE_INFO_PARAMS:
             if (text)
                 EVP_PKEY_print_params(out, OSSL_STORE_INFO_get0_PARAMS(info),
-                                      0, NULL);
+                    0, NULL);
             if (!noout)
                 PEM_write_bio_Parameters(out,
-                                         OSSL_STORE_INFO_get0_PARAMS(info));
+                    OSSL_STORE_INFO_get0_PARAMS(info));
+            break;
+        case OSSL_STORE_INFO_PUBKEY:
+            if (text)
+                EVP_PKEY_print_public(out, OSSL_STORE_INFO_get0_PUBKEY(info),
+                    0, NULL);
+            if (!noout)
+                PEM_write_bio_PUBKEY(out, OSSL_STORE_INFO_get0_PUBKEY(info));
             break;
         case OSSL_STORE_INFO_PKEY:
             if (text)
                 EVP_PKEY_print_private(out, OSSL_STORE_INFO_get0_PKEY(info),
-                                       0, NULL);
+                    0, NULL);
             if (!noout)
                 PEM_write_bio_PrivateKey(out, OSSL_STORE_INFO_get0_PKEY(info),
-                                         NULL, NULL, 0, NULL, NULL);
+                    NULL, NULL, 0, NULL, NULL);
             break;
         case OSSL_STORE_INFO_CERT:
             if (text)
@@ -463,7 +503,7 @@ static int process(const char *uri, const UI_METHOD *uimeth, PW_CB_DATA *uidata,
     }
     indent_printf(indent, out, "Total found: %d\n", items);
 
- end2:
+end2:
     if (!OSSL_STORE_close(store_ctx)) {
         ERR_print_errors(bio_err);
         ret++;

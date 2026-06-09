@@ -1,7 +1,7 @@
 /*
- * Copyright 1995-2023 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1995-2024 The OpenSSL Project Authors. All Rights Reserved.
  *
- * Licensed under the OpenSSL license (the "License").  You may not use
+ * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
  * https://www.openssl.org/source/license.html
@@ -25,10 +25,10 @@ DECLARE_OBJ_BSEARCH_CMP_FN(const ASN1_OBJECT *, unsigned int, sn);
 DECLARE_OBJ_BSEARCH_CMP_FN(const ASN1_OBJECT *, unsigned int, ln);
 DECLARE_OBJ_BSEARCH_CMP_FN(const ASN1_OBJECT *, unsigned int, obj);
 
-#define ADDED_DATA      0
-#define ADDED_SNAME     1
-#define ADDED_LNAME     2
-#define ADDED_NID       3
+#define ADDED_DATA 0
+#define ADDED_SNAME 1
+#define ADDED_LNAME 2
+#define ADDED_NID 3
 
 struct added_obj_st {
     int type;
@@ -62,7 +62,7 @@ static unsigned long added_obj_hash(const ADDED_OBJ *ca)
     a = ca->obj;
     switch (ca->type) {
     case ADDED_DATA:
-        ret = a->length << 20L;
+        ret = (unsigned long)a->length << 20UL;
         p = (unsigned char *)a->data;
         for (i = 0; i < a->length; i++)
             ret ^= p[i] << ((i * 3) % 24);
@@ -134,8 +134,7 @@ static int init_added(void)
 static void cleanup1_doall(ADDED_OBJ *a)
 {
     a->obj->nid = 0;
-    a->obj->flags |= ASN1_OBJECT_FLAG_DYNAMIC |
-        ASN1_OBJECT_FLAG_DYNAMIC_STRINGS | ASN1_OBJECT_FLAG_DYNAMIC_DATA;
+    a->obj->flags |= ASN1_OBJECT_FLAG_DYNAMIC | ASN1_OBJECT_FLAG_DYNAMIC_STRINGS | ASN1_OBJECT_FLAG_DYNAMIC_DATA;
 }
 
 static void cleanup2_doall(ADDED_OBJ *a)
@@ -150,7 +149,7 @@ static void cleanup3_doall(ADDED_OBJ *a)
     OPENSSL_free(a);
 }
 
-void obj_cleanup_int(void)
+void ossl_obj_cleanup_int(void)
 {
     if (added == NULL)
         return;
@@ -203,14 +202,12 @@ int OBJ_add_object(const ASN1_OBJECT *obj)
             OPENSSL_free(aop);
         }
     }
-    o->flags &=
-        ~(ASN1_OBJECT_FLAG_DYNAMIC | ASN1_OBJECT_FLAG_DYNAMIC_STRINGS |
-          ASN1_OBJECT_FLAG_DYNAMIC_DATA);
+    o->flags &= ~(ASN1_OBJECT_FLAG_DYNAMIC | ASN1_OBJECT_FLAG_DYNAMIC_STRINGS | ASN1_OBJECT_FLAG_DYNAMIC_DATA);
 
     return o->nid;
- err2:
-    OBJerr(OBJ_F_OBJ_ADD_OBJECT, ERR_R_MALLOC_FAILURE);
- err:
+err2:
+    ERR_raise(ERR_LIB_OBJ, ERR_R_MALLOC_FAILURE);
+err:
     for (i = ADDED_DATA; i <= ADDED_NID; i++)
         OPENSSL_free(ao[i]);
     ASN1_OBJECT_free(o);
@@ -224,25 +221,27 @@ ASN1_OBJECT *OBJ_nid2obj(int n)
 
     if ((n >= 0) && (n < NUM_NID)) {
         if ((n != NID_undef) && (nid_objs[n].nid == NID_undef)) {
-            OBJerr(OBJ_F_OBJ_NID2OBJ, OBJ_R_UNKNOWN_NID);
+            ERR_raise(ERR_LIB_OBJ, OBJ_R_UNKNOWN_NID);
             return NULL;
         }
         return (ASN1_OBJECT *)&(nid_objs[n]);
-    } else if (added == NULL) {
-        OBJerr(OBJ_F_OBJ_NID2OBJ, OBJ_R_UNKNOWN_NID);
-        return NULL;
-    } else {
-        ad.type = ADDED_NID;
-        ad.obj = &ob;
-        ob.nid = n;
-        adp = lh_ADDED_OBJ_retrieve(added, &ad);
-        if (adp != NULL)
-            return adp->obj;
-        else {
-            OBJerr(OBJ_F_OBJ_NID2OBJ, OBJ_R_UNKNOWN_NID);
-            return NULL;
-        }
     }
+
+    /* Make sure we've loaded config before checking for any "added" objects */
+    OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG, NULL);
+
+    if (added == NULL)
+        return NULL;
+
+    ad.type = ADDED_NID;
+    ad.obj = &ob;
+    ob.nid = n;
+    adp = lh_ADDED_OBJ_retrieve(added, &ad);
+    if (adp != NULL)
+        return adp->obj;
+
+    ERR_raise(ERR_LIB_OBJ, OBJ_R_UNKNOWN_NID);
+    return NULL;
 }
 
 const char *OBJ_nid2sn(int n)
@@ -252,24 +251,27 @@ const char *OBJ_nid2sn(int n)
 
     if ((n >= 0) && (n < NUM_NID)) {
         if ((n != NID_undef) && (nid_objs[n].nid == NID_undef)) {
-            OBJerr(OBJ_F_OBJ_NID2SN, OBJ_R_UNKNOWN_NID);
+            ERR_raise(ERR_LIB_OBJ, OBJ_R_UNKNOWN_NID);
             return NULL;
         }
         return nid_objs[n].sn;
-    } else if (added == NULL)
-        return NULL;
-    else {
-        ad.type = ADDED_NID;
-        ad.obj = &ob;
-        ob.nid = n;
-        adp = lh_ADDED_OBJ_retrieve(added, &ad);
-        if (adp != NULL)
-            return adp->obj->sn;
-        else {
-            OBJerr(OBJ_F_OBJ_NID2SN, OBJ_R_UNKNOWN_NID);
-            return NULL;
-        }
     }
+
+    /* Make sure we've loaded config before checking for any "added" objects */
+    OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG, NULL);
+
+    if (added == NULL)
+        return NULL;
+
+    ad.type = ADDED_NID;
+    ad.obj = &ob;
+    ob.nid = n;
+    adp = lh_ADDED_OBJ_retrieve(added, &ad);
+    if (adp != NULL)
+        return adp->obj->sn;
+
+    ERR_raise(ERR_LIB_OBJ, OBJ_R_UNKNOWN_NID);
+    return NULL;
 }
 
 const char *OBJ_nid2ln(int n)
@@ -279,24 +281,27 @@ const char *OBJ_nid2ln(int n)
 
     if ((n >= 0) && (n < NUM_NID)) {
         if ((n != NID_undef) && (nid_objs[n].nid == NID_undef)) {
-            OBJerr(OBJ_F_OBJ_NID2LN, OBJ_R_UNKNOWN_NID);
+            ERR_raise(ERR_LIB_OBJ, OBJ_R_UNKNOWN_NID);
             return NULL;
         }
         return nid_objs[n].ln;
-    } else if (added == NULL)
-        return NULL;
-    else {
-        ad.type = ADDED_NID;
-        ad.obj = &ob;
-        ob.nid = n;
-        adp = lh_ADDED_OBJ_retrieve(added, &ad);
-        if (adp != NULL)
-            return adp->obj->ln;
-        else {
-            OBJerr(OBJ_F_OBJ_NID2LN, OBJ_R_UNKNOWN_NID);
-            return NULL;
-        }
     }
+
+    /* Make sure we've loaded config before checking for any "added" objects */
+    OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG, NULL);
+
+    if (added == NULL)
+        return NULL;
+
+    ad.type = ADDED_NID;
+    ad.obj = &ob;
+    ob.nid = n;
+    adp = lh_ADDED_OBJ_retrieve(added, &ad);
+    if (adp != NULL)
+        return adp->obj->ln;
+
+    ERR_raise(ERR_LIB_OBJ, OBJ_R_UNKNOWN_NID);
+    return NULL;
 }
 
 static int obj_cmp(const ASN1_OBJECT *const *ap, const unsigned int *bp)
@@ -328,6 +333,9 @@ int OBJ_obj2nid(const ASN1_OBJECT *a)
     if (a->length == 0)
         return NID_undef;
 
+    /* Make sure we've loaded config before checking for any "added" objects */
+    OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG, NULL);
+
     if (added != NULL) {
         ad.type = ADDED_DATA;
         ad.obj = (ASN1_OBJECT *)a; /* XXX: ugly but harmless */
@@ -358,9 +366,12 @@ ASN1_OBJECT *OBJ_txt2obj(const char *s, int no_name)
     int i, j;
 
     if (!no_name) {
-        if (((nid = OBJ_sn2nid(s)) != NID_undef) ||
-            ((nid = OBJ_ln2nid(s)) != NID_undef))
+        if (((nid = OBJ_sn2nid(s)) != NID_undef) || ((nid = OBJ_ln2nid(s)) != NID_undef))
             return OBJ_nid2obj(nid);
+        if (!ossl_isdigit(*s)) {
+            ERR_raise(ERR_LIB_OBJ, OBJ_R_UNKNOWN_OBJECT_NAME);
+            return NULL;
+        }
     }
 
     /* Work out size of content octets */
@@ -378,7 +389,7 @@ ASN1_OBJECT *OBJ_txt2obj(const char *s, int no_name)
         return NULL;
 
     if ((buf = OPENSSL_malloc(j)) == NULL) {
-        OBJerr(OBJ_F_OBJ_TXT2OBJ, ERR_R_MALLOC_FAILURE);
+        ERR_raise(ERR_LIB_OBJ, ERR_R_MALLOC_FAILURE);
         return NULL;
     }
 
@@ -542,7 +553,7 @@ int OBJ_obj2txt(char *buf, int buf_len, const ASN1_OBJECT *a, int no_name)
     BN_free(bl);
     return n;
 
- err:
+err:
     BN_free(bl);
     return -1;
 }
@@ -563,6 +574,9 @@ int OBJ_ln2nid(const char *s)
     const ASN1_OBJECT *oo = &o;
     ADDED_OBJ ad, *adp;
     const unsigned int *op;
+
+    /* Make sure we've loaded config before checking for any "added" objects */
+    OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG, NULL);
 
     o.ln = s;
     if (added != NULL) {
@@ -585,6 +599,9 @@ int OBJ_sn2nid(const char *s)
     ADDED_OBJ ad, *adp;
     const unsigned int *op;
 
+    /* Make sure we've loaded config before checking for any "added" objects */
+    OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG, NULL);
+
     o.sn = s;
     if (added != NULL) {
         ad.type = ADDED_SNAME;
@@ -600,57 +617,38 @@ int OBJ_sn2nid(const char *s)
 }
 
 const void *OBJ_bsearch_(const void *key, const void *base, int num, int size,
-                         int (*cmp) (const void *, const void *))
+    int (*cmp)(const void *, const void *))
 {
     return OBJ_bsearch_ex_(key, base, num, size, cmp, 0);
 }
 
-const void *OBJ_bsearch_ex_(const void *key, const void *base_, int num,
-                            int size,
-                            int (*cmp) (const void *, const void *),
-                            int flags)
+const void *OBJ_bsearch_ex_(const void *key, const void *base, int num,
+    int size,
+    int (*cmp)(const void *, const void *),
+    int flags)
 {
-    const char *base = base_;
-    int l, h, i = 0, c = 0;
-    const char *p = NULL;
+    const char *p = ossl_bsearch(key, base, num, size, cmp, flags);
 
-    if (num == 0)
-        return NULL;
-    l = 0;
-    h = num;
-    while (l < h) {
-        i = (l + h) / 2;
-        p = &(base[i * size]);
-        c = (*cmp) (key, p);
-        if (c < 0)
-            h = i;
-        else if (c > 0)
-            l = i + 1;
-        else
-            break;
-    }
 #ifdef CHARSET_EBCDIC
     /*
      * THIS IS A KLUDGE - Because the *_obj is sorted in ASCII order, and I
      * don't have perl (yet), we revert to a *LINEAR* search when the object
      * wasn't found in the binary search.
      */
-    if (c != 0) {
+    if (p == NULL) {
+        const char *base_ = base;
+        int l, h, i = 0, c = 0;
+        char *p1;
+
         for (i = 0; i < num; ++i) {
-            p = &(base[i * size]);
-            c = (*cmp) (key, p);
-            if (c == 0 || (c < 0 && (flags & OBJ_BSEARCH_VALUE_ON_NOMATCH)))
-                return p;
+            p1 = &(base_[i * size]);
+            c = (*cmp)(key, p1);
+            if (c == 0
+                || (c < 0 && (flags & OBJ_BSEARCH_VALUE_ON_NOMATCH)))
+                return p1;
         }
     }
 #endif
-    if (c != 0 && !(flags & OBJ_BSEARCH_VALUE_ON_NOMATCH))
-        p = NULL;
-    else if (c == 0 && (flags & OBJ_BSEARCH_FIRST_VALUE_ON_MATCH)) {
-        while (i > 0 && (*cmp) (key, &(base[(i - 1) * size])) == 0)
-            i--;
-        p = &(base[i * size]);
-    }
     return p;
 }
 
@@ -714,8 +712,8 @@ int OBJ_create(const char *oid, const char *sn, const char *ln)
 
     /* Check to see if short or long name already present */
     if ((sn != NULL && OBJ_sn2nid(sn) != NID_undef)
-            || (ln != NULL && OBJ_ln2nid(ln) != NID_undef)) {
-        OBJerr(OBJ_F_OBJ_CREATE, OBJ_R_OID_EXISTS);
+        || (ln != NULL && OBJ_ln2nid(ln) != NID_undef)) {
+        ERR_raise(ERR_LIB_OBJ, OBJ_R_OID_EXISTS);
         return 0;
     }
 
@@ -726,11 +724,14 @@ int OBJ_create(const char *oid, const char *sn, const char *ln)
 
     /* If NID is not NID_undef then object already exists */
     if (OBJ_obj2nid(tmpoid) != NID_undef) {
-        OBJerr(OBJ_F_OBJ_CREATE, OBJ_R_OID_EXISTS);
+        ERR_raise(ERR_LIB_OBJ, OBJ_R_OID_EXISTS);
         goto err;
     }
 
     tmpoid->nid = OBJ_new_nid(1);
+    if (tmpoid->nid == NID_undef)
+        goto err;
+
     tmpoid->sn = (char *)sn;
     tmpoid->ln = (char *)ln;
 
@@ -739,7 +740,7 @@ int OBJ_create(const char *oid, const char *sn, const char *ln)
     tmpoid->sn = NULL;
     tmpoid->ln = NULL;
 
- err:
+err:
     ASN1_OBJECT_free(tmpoid);
     return ok;
 }
