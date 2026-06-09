@@ -39,6 +39,8 @@
                 ..
                 engines
                 ..
+                engines-3
+                ..
                 flua
                 ..
                 i18n
