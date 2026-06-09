@@ -185,9 +185,9 @@ dane_tlsa_chk(rr, len, host, log)
 	bool log;
 {
 	int alg;
-# if HAVE_SSL_CTX_dane_enable
+#  if HAVE_SSL_CTX_dane_enable
 	int sel, usg;
-# endif
+#  endif
 
 	if (len < 4)
 	{
@@ -200,16 +200,16 @@ dane_tlsa_chk(rr, len, host, log)
 	SM_ASSERT(rr != NULL);
 
 	alg = (int)rr[2];
-# if HAVE_SSL_CTX_dane_enable
+#  if HAVE_SSL_CTX_dane_enable
 	usg = (int)rr[0];
 	sel = (int)rr[1];
 	if (usg >= 2 && usg <= 3 && sel >= 0 && sel <= 1 &&
 	    alg >= 0 && alg <= 2)
 		return alg;
-# else
+#  else
 	if ((int)rr[0] == 3 && (int)rr[1] == 1 && (alg >= 0 && alg <= 2))
 		return alg;
-# endif
+#  endif
 	if (log && LogLevel > 9)
 		sm_syslog(LOG_NOTICE, NOQID,
 			  "TLSA=%s, type=%d-%d-%d:%02x, status=unsupported",

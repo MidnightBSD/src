@@ -133,7 +133,7 @@ sortbysignature(xx, yy)
 	*/
 
 	if (ret == 0)
-		return strcmp(yy->q_user, xx->q_user);
+		return sm_strrevcasecmp(yy->q_user, xx->q_user);
 	else
 		return ret;
 }
@@ -749,14 +749,6 @@ recipient(new, sendq, aliaslevel, e)
 		i = (*sortfn)(new, q);
 		if (i == 0) /* equal */
 		{
-			/*
-			**  sortbysignature() has said that the two have
-			**  equal MX RR's and the same user. Calling sameaddr()
-			**  now checks if the two hosts are as identical as the
-			**  MX RR's are (which might not be the case)
-			**  before saying these are the identical addresses.
-			*/
-
 			if (sameaddr(q, new) &&
 			    (bitset(QRCPTOK, q->q_flags) ||
 			     !bitset(QPRIMARY, q->q_flags)))
@@ -993,6 +985,10 @@ recipient(new, sendq, aliaslevel, e)
 
 		/* warning -- finduser may trash buf */
 		status = finduser(buf, &fuzzy, &user);
+
+		/* hack to avoid bogus logging of an earlier server reply */
+		if (EX_OK != status)
+			e->e_statmsg = NULL;
 		switch (status)
 		{
 		  case EX_TEMPFAIL:
@@ -1701,22 +1697,34 @@ resetuid:
 		{
 # if USESETEUID
 			if (seteuid(0) < 0)
+			{
 				syserr("!seteuid(0) failure (real=%ld, eff=%ld)",
 				       (long) getuid(), (long) geteuid());
+				/* NOTREACHED */
+			}
 # else /* USESETEUID */
 			if (setreuid(-1, 0) < 0)
+			{
 				syserr("!setreuid(-1, 0) failure (real=%ld, eff=%ld)",
 				       (long) getuid(), (long) geteuid());
+				/* NOTREACHED */
+			}
 			if (setreuid(RealUid, 0) < 0)
+			{
 				syserr("!setreuid(%ld, 0) failure (real=%ld, eff=%ld)",
 				       (long) RealUid, (long) getuid(),
 				       (long) geteuid());
+				/* NOTREACHED */
+			}
 # endif /* USESETEUID */
 		}
 		if (setgid(savedgid) < 0)
+		{
 			syserr("!setgid(%ld) failure (real=%ld eff=%ld)",
 			       (long) savedgid, (long) getgid(),
 			       (long) getegid());
+			/* NOTREACHED */
+		}
 	}
 #endif /* HASSETREUID || USESETEUID */
 

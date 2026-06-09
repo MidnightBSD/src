@@ -173,9 +173,9 @@ map_reset_chged(s, unused)
 
 	/* has to be a map */
 	if (ST_MAP != s->s_symtype
-#if _FFR_DYN_CLASS
+# if _FFR_DYN_CLASS
 	   && ST_DYNMAP != s->s_symtype
-#endif
+# endif
 	   )
 		return;
 	map = &s->s_map;
@@ -1129,7 +1129,7 @@ getcanonname(host, hbsize, trymx, pttl)
 #endif /* defined(SUN_EXTENSIONS) && defined(SUN_INIT_DOMAIN) */
 
 	if (tTd(38, 20))
-		sm_dprintf("getcanonname(%s), failed, status=%d\n", host,
+		sm_dprintf("getcanonname(%s), failed, stat=%d\n", host,
 			status);
 
 	if (got_tempfail)
@@ -1651,8 +1651,8 @@ dns_map_lookup(map, name, av, statp)
 	vsize = strlen(vp);
 
 	if (LogLevel > 9)
-		sm_syslog(LOG_INFO, CurEnv->e_id, "dns %.100s => %s",
-			  name, vp);
+		sm_syslog(LOG_INFO, CurEnv->e_id, "map=%s, key=%.100s, val=%s",
+			  map->map_mname, name, vp);
 	if (bitset(MF_MATCHONLY, map->map_mflags))
 		result = map_rewrite(map, name, strlen(name), NULL);
 	else
@@ -2824,7 +2824,7 @@ db_map_close(map)
 # if !LOCK_ON_OPEN
 	if (map->map_lockfd >= 0)
 		(void) close(map->map_lockfd);
-# endif /* !LOCK_ON_OPEN */
+# endif
 
 # if DB_VERSION_MAJOR < 2
 	if (db->close(db) != 0)
@@ -3897,7 +3897,7 @@ nisplus_getcanonname(name, hbsize, statp)
 			*statp = EX_UNAVAILABLE;
 	}
 	if (tTd(38, 20))
-		sm_dprintf("nisplus_getcanonname(%s), failed, status=%d, nsw_stat=%d\n",
+		sm_dprintf("nisplus_getcanonname(%s), failed, stat=%d, nsw_stat=%d\n",
 			   name, result->status, *statp);
 	nis_freeresult(result);
 	return false;
@@ -3921,6 +3921,93 @@ nisplus_default_domain()
 /*
 **  LDAP Modules
 */
+
+
+#if _FFR_LDAP_VERSION_CHECK
+
+/*
+**  LDAPVERSCHK -- check various LDAP versions: run vs compile time
+**
+**	Parameters:
+**		printit -- what to print
+**
+**	Returns:
+**		0: ok
+**		<0: an LDAP call failed
+**		>0: an LDAP version mismatch was found
+*/
+
+int
+ldapverschk(printit)
+	int printit;
+{
+	LDAPAPIInfo api;
+
+	api.ldapai_info_version = LDAP_API_INFO_VERSION;
+
+	if (ldap_get_option(NULL, LDAP_OPT_API_INFO, &api) != LDAP_OPT_SUCCESS)
+	{
+		sm_io_fprintf(smioerr, SM_TIME_DEFAULT, "ldap_get_option(API_INFO) failed\n");
+		return -1;
+	}
+
+# if _FFR_LDAP_VERSION_CHECK > 1
+	if (api.ldapai_info_version != LDAP_API_INFO_VERSION)
+	{
+		sm_io_fprintf(smioerr, SM_TIME_DEFAULT,
+			"LDAP APIInfo version mismatch: library=%d, header=%d\n",
+			api.ldapai_info_version, LDAP_API_INFO_VERSION);
+		return 1;
+	}
+
+	if (api.ldapai_api_version != LDAP_API_VERSION)
+	{
+		sm_io_fprintf(smioerr, SM_TIME_DEFAULT,
+			"LDAP API version mismatch: library=%d, header=%d\n",
+			api.ldapai_api_version, LDAP_API_VERSION);
+		return 2;
+	}
+
+
+	if (api.ldapai_api_version != LDAP_API_VERSION)
+	{
+		sm_io_fprintf(smioerr, SM_TIME_DEFAULT,
+			"LDAP API version mismatch: library=%d, header=%d\n",
+			api.ldapai_api_version, LDAP_API_VERSION);
+		return 3;
+	}
+
+	if (strcmp(api.ldapai_vendor_name, LDAP_VENDOR_NAME) != 0)
+	{
+		sm_io_fprintf(smioerr, SM_TIME_DEFAULT,
+			"LDAP vendor name mismatch: library=%s, header=%s\n",
+			api.ldapai_vendor_name, LDAP_VENDOR_NAME);
+		return 4;
+	}
+# endif /* _FFR_LDAP_VERSION_CHECK > 1 */
+
+	if (api.ldapai_vendor_version != LDAP_VENDOR_VERSION)
+	{
+		sm_io_fprintf(smioerr, SM_TIME_DEFAULT,
+			"LDAP vendor version mismatch: library=%d, header=%d\n",
+			api.ldapai_vendor_version, LDAP_VENDOR_VERSION);
+		return 5;
+	}
+
+	if (printit > 0)
+	{
+		sm_dprintf("       OpenLDAP: compiled %d\n",
+			api.ldapai_vendor_version);
+		sm_dprintf("       OpenLDAP: linked   %d\n",
+			LDAP_VENDOR_VERSION);
+	}
+
+	ldap_memfree(api.ldapai_vendor_name);
+	ber_memvfree((void **)api.ldapai_extensions);
+
+	return 0;
+}
+#endif /* _FFR_LDAP_VERSION_CHECK */
 
 /*
 **  LDAPMAP_DEQUOTE - helper routine for ldapmap_parseargs
@@ -4256,6 +4343,7 @@ ldapmap_lookup(map, name, av, statp)
 	argv[0] = NULL;
 # if USE_EAI
 	largv[0] = NULL;
+	largs = av;
 # endif
 
 	if (lmap->ldap_multi_args)
@@ -4263,7 +4351,6 @@ ldapmap_lookup(map, name, av, statp)
 		SM_REQUIRE(av != NULL);
 		memset(argv, '\0', sizeof(argv));
 # if USE_EAI
-		largs = av;
 		memset(largv, '\0', sizeof(largv));
 
 		/* this is ugly - can we merge it with the next loop? */
@@ -4294,7 +4381,7 @@ ldapmap_lookup(map, name, av, statp)
 
 			if (!bitset(MF_NOFOLDCASE, map->map_mflags))
 /*			    && !bitset(MF_MATCHONLY, map->map_mflags))	*/
-/* see below: av[]/largs onluy used if !MF_MATCHONLY !? */
+/* see below: av[]/largs only used if !MF_MATCHONLY !? */
 			{
 # if USE_EAI
 				if (!allascii)
@@ -8379,11 +8466,11 @@ socket_map_open(map, mode)
 # if NETINET
 		else if (SM_STRCASEEQ(p, "inet"))
 			addr.sa.sa_family = AF_INET;
-# endif /* NETINET */
+# endif
 # if NETINET6
 		else if (SM_STRCASEEQ(p, "inet6"))
 			addr.sa.sa_family = AF_INET6;
-# endif /* NETINET6 */
+# endif
 		else
 		{
 # ifdef EPROTONOSUPPORT
@@ -8607,7 +8694,7 @@ socket_map_open(map, mode)
 # if NETINET6
 			if (hp != NULL)
 				freehostent(hp);
-# endif /* NETINET6 */
+# endif
 			return false;
 		}
 

@@ -30,6 +30,10 @@
 /*
 **  HACK: if openssl can disable TLSv1_3 then "assume" it supports all
 **   related functions!
+**  Note: if defined(SSL_OP_NO_TLSv1_3) && SSL_OP_NO_TLSv1_3 != 0
+**  does not work:
+**  define SSL_OP_NO_TLSv1_3   SSL_OP_BIT(29)
+**  Theoretically it could be checked at runtime.
 */
 # ifdef SSL_OP_NO_TLSv1_3
 #  define MTA_HAVE_TLSv1_3 1
@@ -232,7 +236,11 @@ extern bool	initsrvtls __P((bool));
 extern bool	load_certkey __P((SSL *, bool, char *, char *));
 /* extern bool	load_crlpath __P((SSL_CTX *, bool , char *)); */
 extern void	setclttls __P((bool));
-extern int	tls_get_info __P((SSL *, bool, char *, MACROS_T *, bool));
+extern int	tls_get_info __P((SSL *, bool, char *, MACROS_T *, bool
+#if _FFR_SE_TA_ID
+			, const char *
+#endif
+			));
 extern void	tlslogerr __P((int, int, const char *));
 extern void	tls_set_verify __P((SSL_CTX *, SSL *, bool));
 # if DANE
@@ -279,15 +287,12 @@ int TLS_set_engine __P((const char *, bool));
 #  endif
 # endif
 
-extern int	set_tls_rd_tmo __P((int));
 extern int data2hex __P((unsigned char *, int, unsigned char *, int));
 # if DANE
 extern int pubkey_fp __P((X509 *, const char*, unsigned char **));
 extern dane_tlsa_P dane_get_tlsa __P((dane_vrfy_ctx_P));
 # endif
 
-#else /* STARTTLS */
-# define set_tls_rd_tmo(rd_tmo)	0
 #endif /* STARTTLS */
 #undef EXTERN
 #endif /* ! _TLS_H */

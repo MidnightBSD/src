@@ -104,18 +104,9 @@ newenvelope(e, parent, rpool)
 	e->e_parent = parent;
 	assign_queueid(e);
 	e->e_ctime = curtime();
-#if _FFR_SESSID
-	e->e_sessid = e->e_id;
-#endif
 	if (parent != NULL)
 	{
 		e->e_msgpriority = parent->e_msgsize;
-#if _FFR_SESSID
-		if (parent->e_sessid != NULL)
-			e->e_sessid = sm_rpool_strdup_x(rpool,
-							parent->e_sessid);
-#endif
-
 		if (parent->e_quarmsg == NULL)
 		{
 			e->e_quarmsg = NULL;
@@ -136,7 +127,6 @@ newenvelope(e, parent, rpool)
 		(void) sm_io_flush(CurEnv->e_xfp, SM_TIME_DEFAULT);
 	if (sendmode != DM_NOTSET)
 		set_delivery_mode(sendmode, e);
-
 	return e;
 }
 
@@ -602,6 +592,7 @@ simpledrop:
 				syserr("!dropenvelope(%s): cannot commit data file %s, uid=%ld",
 					e->e_id, queuename(e, DATAFL_LETTER),
 					(long) geteuid());
+				/* NOTREACHED */
 			}
 			for (ee = e->e_sibling; ee != NULL; ee = ee->e_sibling)
 				queueup(ee, QUP_FL_MSYNC);
@@ -762,7 +753,7 @@ initsys(e)
 #ifdef TTYNAME
 	static char ybuf[60];			/* holds tty id */
 	register char *p;
-	extern char *ttyname();
+	extern char *ttyname __P((int));
 #endif /* TTYNAME */
 
 	/*
@@ -813,7 +804,7 @@ initsys(e)
 		{
 			if (strrchr(p, '/') != NULL)
 				p = strrchr(p, '/') + 1;
-			(void) sm_strlcpy(ybuf, sizeof(ybuf), p);
+			(void) sm_strlcpy(ybuf, p, sizeof(ybuf));
 			macdefine(&e->e_macro, A_PERM, 'y', ybuf);
 		}
 	}
@@ -902,7 +893,10 @@ openxscript(e)
 		e->e_xfp = sm_io_open(SmFtStdio, SM_TIME_DEFAULT,
 				      SM_PATH_DEVNULL, SM_IO_RDWR, NULL);
 		if (e->e_xfp == NULL)
+		{
 			syserr("!Can't open %s", SM_PATH_DEVNULL);
+			/* NOTREACHED */
+		}
 	}
 	(void) sm_io_setvbuf(e->e_xfp, SM_TIME_DEFAULT, NULL, SM_IO_LBF, 0);
 	if (tTd(46, 9))

@@ -99,6 +99,7 @@ Sendmail is a trademark of Proofpoint, Inc.
 US Patent Numbers 6865671, 6986037.
 .)f
 .sp 2
+.hw Daemon-Port-Options 
 .pp
 .i Sendmail \u\s-2TM\s0\d
 implements a general purpose internetwork mail routing facility
@@ -907,7 +908,7 @@ do
 		fi
 	fi
 done
-# remove df files with no corresponding qf/hf/Qf files
+# rename df files with no corresponding qf/hf/Qf files
 for dffile in df*
 do
 	qffile=`echo $dffile | sed 's/d/q/'`
@@ -4207,7 +4208,7 @@ and resolving to
 is a reject or quarantine.
 Quarantining is chosen by specifying
 .b quarantine
-in the second part of the mailer triplet:
+in the second part of the mailer triple:
 .(b
 $#error $@ quarantine $: Reason for quarantine
 .)b
@@ -4322,7 +4323,7 @@ function.
 Note:
 while other
 .i check_*
-rulesets are invoked during the SMTP mail receiption stage
+rulesets are invoked during the SMTP mail reception stage
 (i.e., in the SMTP server),
 .i check_compat
 is invoked during the mail delivery stage.
@@ -4422,10 +4423,12 @@ followed by a list of options
 If the return value starts with anything else it is silently ignored.
 Generally upper case characters turn off a feature
 while lower case characters turn it on.
-Options `D'/`M' cause the client to not use DANE/MTA-STS,
-respectively,
-which is useful to interact with MTAs that have broken
-DANE/MTA-STS setups by simply not using it.
+The options are copied into 
+.b ${client_flags}
+thus overriding any existing flags.
+Option `D' causes the client to not use DANE,
+which is useful to interact with MTAs that have a broken
+DANE setup by simply not using it.
 Note:
 The
 .i d
@@ -4532,12 +4535,17 @@ Option 'F' disables SMTP transaction stuffing protection which is
 enabled by default.
 The protection checks for clients which try to send commands
 without waiting for the server HELO/EHLO and DATA response.
-Option 'o' causes the server to accept only
+For an SMTP message,
+the option 'o' causes the server
+to accept only
+CRLF
+as end of line
+and only
 CRLF . CRLF
-as end of an SMTP message as required by the RFCs
-which is also a defense against SMTP smuggling (CVE-2023-51765).
+as end of a message as required by the RFCs.
+The latter is also a defense against SMTP smuggling (CVE-2023-51765).
 Option 'O' allows the server to accept a single dot on a line by itself
-as end of an SMTP message.
+as end of an SMTP message (and LF as end of line).
 Option 'g' instructs the server to fail SMTP messages
 which have a LF without a CR directly before it ("bare LF")
 by dropping the session with a 421 error.
@@ -4583,9 +4591,8 @@ g2	Replace "bare LF" in a message with space
 h	Terminate session after HTTP commands
 L	Do not require AUTH (default)
 l	Require AUTH
-O	Accept a single dot on a line by itself
-	as end of an SMTP message
-o	Require CRLF . CRLF as end of an SMTP message (default)
+O	Do not require CRLF as end of line in an SMTP message
+o	Require CRLF as end of line in an SMTP message (default)
 P	Do not offer PIPELINING
 p	Offer PIPELINING (default)
 S	Do not offer STARTTLS
@@ -4660,6 +4667,12 @@ for possible values.
 This overrides the global
 .i CipherList
 for the session.
+.ip CipherSuites
+Specify cipher suites for STARTTLS TLSv1.3
+(depends on TLS library support).
+This overrides the global
+.i CipherSuites
+for the session.
 .ip CertFile
 File containing a certificate.
 .ip KeyFile
@@ -4698,9 +4711,18 @@ R$* $| 10.$+		$: cipherlist=HIGH
 Notes:
 .pp
 Errors in these features (e.g., unknown keys or invalid values)
-are logged
-and the current session is aborted to avoid using STARTTLS
-with features that should have been changed.
+are logged.
+Additionally,
+to avoid using STARTTLS with features that should have been changed,
+the following happens:
+for 
+.i tls_clt_features
+the session is aborted, i.e., no e-mail is sent,
+and for
+.i tls_srv_features
+a temporary error is returned in reply to the
+.i STARTTLS
+command.
 .pp
 The keys are case-insensitive.
 .pp
@@ -5052,9 +5074,7 @@ The full name of the sender.
 .ip $z
 The home directory of the recipient.
 .ip $_
-The validated sender address.
-See also
-.b ${client_resolve} .
+The validated sender host name (see below for details).
 .ip ${addr_type}
 The type of the address which is currently being rewritten.
 This macro contains up to three characters, the first
@@ -5298,7 +5318,7 @@ For example:
 O SmtpGreetingMessage=$?{if_name}${if_name}$|$j$. MTA
 .)b
 .ip ${if_name_out}
-The name of the interface of an outgoing connection.
+The hostname associated with the interface of an outgoing connection.
 .ip ${load_avg}
 The current load average.
 .ip ${mail_addr}
@@ -5602,7 +5622,7 @@ flags.
 .pp
 The
 .b $_
-is set to a validated sender host name.
+macro is set to a validated sender host name.
 If the sender is running an RFC 1413 compliant IDENT server
 and the receiver has the IDENT protocol turned on,
 it will include the user name on that host.
@@ -6018,7 +6038,7 @@ error messages will be sent as from the MAILER-DAEMON
 macro).
 .ip h
 Upper case should be preserved in host names
-(the $@ portion of the mailer triplet resolved from ruleset 0)
+(the $@ portion of the mailer triple resolved from ruleset 0)
 for this mailer.
 .ip i
 Do User Database rewriting on envelope sender address.
@@ -6167,7 +6187,7 @@ on the end.
 .ip w
 The user must have a valid account on this machine,
 i.e.,
-.i getpwnam
+.i getpwnam (3)
 must succeed.
 If not, the mail is bounced.
 See also the
@@ -6350,7 +6370,7 @@ If the argument vector does not contain $u then
 will speak SMTP (or LMTP if the mailer flag z is specified) to the mailer.
 .pp
 If no Eol field is defined, then the default is "\\r\\n" for
-SMTP mailers and "\\n" of others.
+SMTP mailers and "\\n" for others.
 .pp
 The Sender and Recipient rewriting sets
 may either be a simple ruleset id
@@ -6759,8 +6779,14 @@ List of authentication mechanisms for AUTH (separated by spaces).
 The advertised list of authentication mechanisms will be the
 intersection of this list and the list of available mechanisms as
 determined by the Cyrus SASL library.
-If STARTTLS is active, EXTERNAL will be added to this list.
-In that case, the value of {cert_subject} is used as authentication id.
+If STARTTLS is active,
+EXTERNAL
+will be added to this list.
+In that case, the value of {cert_subject} is used as authentication id
+provided
+.b ${verify}
+is
+.b OK .
 .ip AuthOptions
 List of options for SMTP AUTH consisting of single characters
 with intervening white space or commas.
@@ -6835,6 +6861,12 @@ contains the cert fingerprint.
 Specify cipher list for STARTTLS (does not apply to TLSv1.3).
 See
 .i ciphers (1)
+for possible values.
+.ip CipherSuites
+Specify cipher suites for STARTTLS TLSv1.3
+(depends on TLS library support).
+See
+.i SSL_CTX_set_ciphersuites (3)
 for possible values.
 .ip CheckAliases
 [n]
@@ -7042,7 +7074,7 @@ i	use included precomputed 2048 bit prime (default).
 none	do not use Diffie-Hellman.
 /path/to/file	load prime from file.
 .)b
-This is only required if a ciphersuite containing DSA/DH is used.
+This is only required if a cipher suite containing DSA/DH is used.
 The default is ``i'' which selects a precomputed, fixed 2048 bit prime.
 If ``5'' is selected, then precomputed, fixed primes are used.
 Note: this option should not be used
@@ -7050,7 +7082,7 @@ Note: this option should not be used
 If ``1'' or ``2'' is selected, then prime values are computed during startup.
 Note: this operation can take a significant amount of time on a
 slow machine (several seconds), but it is only done once at startup.
-If ``none'' is selected, then TLS ciphersuites containing DSA/DH
+If ``none'' is selected, then TLS cipher suites containing DSA/DH
 cannot be used.
 If a file name is specified (which must be an absolute path),
 then the primes are read from it.
@@ -7651,7 +7683,7 @@ flag is preferred.
 .ip MailboxDatabase
 Type of lookup to find information about local mailboxes,
 defaults to ``pw'' which uses
-.i getpwnam .
+.i getpwnam (3).
 Other types can be introduced by adding them to the source code,
 see libsm/mbdb.c for details.
 .ip UseMSP
@@ -7667,7 +7699,7 @@ Allow fuzzy matching on the GECOS field.
 If this flag is set,
 and the usual user name lookups fail
 (that is, there is no alias with this name and a
-.i getpwnam
+.i getpwnam (3)
 fails),
 sequentially search the password file
 for a matching entry in the GECOS field.
@@ -7689,7 +7721,7 @@ If the default
 .i sendmail
 may create an almost unlimited number of children
 (depending on the number of transactions and the
-relative execution times of mail receiption and mail delivery).
+relative execution times of mail reception and mail delivery).
 If the limit should be enforced, then a
 .b DeliveryMode
 other than background must be used.
@@ -7854,8 +7886,9 @@ This invites the sender to try again later.
 .ip MaxQueueAge=\fIage\fP
 If this is set to a value greater than zero,
 entries in the queue will be retried during a queue run
-only if the individual retry time has been reached
-which is doubled for each attempt.
+only if the individual retry time has been reached.
+The time for the next retry depends on the time
+passed since the job was last processed.
 The maximum retry time is limited by the specified value.
 .ip MinQueueAge=\fIage\fP
 Don't process any queued jobs
@@ -9988,8 +10021,10 @@ The following flags may be set in the filter description.
 Reject connection if filter unavailable.
 .ip T
 Temporary fail connection if filter unavailable.
+.ip 4
+Drop connection with a 421 error if filter unavailable.
 .pp
-If neither F=R nor F=T is specified, the message is passed through
+If none of these flags is specified, the message is passed through
 .i sendmail
 in case of filter errors as if the failing filters were not present.
 .pp
@@ -11329,8 +11364,6 @@ Experimental support for SMTP MTA Strict Transport Security
 is available when using
 the compile time option _FFR_MTA_STS
 (as well as some others, e.g., _FFR_TLS_ALTNAMES and obviously STARTTLS),
-.\"(which requires in a default setting
-.\"MAP_REGEX, SOCKETMAP, _FFR_TLS_ALTNAMES, and obviously STARTTLS),
 FEATURE(sts)
 (which implicitly sets the cf option StrictTransportSecurity),
 and
@@ -11733,9 +11766,9 @@ subdirectories
 if they are present in the queue directory.
 .pp
 All queue files have the name
-.i ttYMDhmsNNppppp
+.i ttYMDhmsNNpppppp
 where
-.i YMDhmsNNppppp
+.i YMDhmsNNpppppp
 is the
 .i id
 for this message
@@ -11760,8 +11793,8 @@ Encoded minute
 Encoded second
 .ip NN
 Encoded envelope number
-.ip ppppp
-At least five decimal digits of the process ID
+.ip pppppp
+At least six decimal digits of the process ID
 .pp
 All files with the same id collectively define one message.
 Due to the use of memory-buffered files,
@@ -11863,14 +11896,15 @@ It applies only to the following `R' line.
 A recipient address.
 This will normally be completely aliased,
 but is actually realiased when the job is processed.
-There will be one line for each recipient.
-Version 1 qf files
-also include a leading colon-terminated list of flags,
+There will be one line for each recipient,
+which also includes a leading colon-terminated list of flags,
 some of which are
 `S' to return a message on successful final delivery,
 `F' to return a message on failure,
 `D' to return a message if the message is delayed,
 `N' to suppress returning the body,
+`A' to indicate this is an expanded alias,
+`X' to declare that MX lookups were secure (DNSSEC),
 and
 `P' to declare this as a ``primary'' (command line or SMTP-session) address.
 .ip S

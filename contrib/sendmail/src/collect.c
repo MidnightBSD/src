@@ -266,12 +266,12 @@ incbuflen(buflen)
 		return MaxMessageSize;
 }
 
-#if _FFR_TESTS
 /* just for testing/debug output */
 static const char *
 makeprint(c)
 	char c;
 {
+#if _FFR_TESTS
 	static char prt[6];
 
 	prt[1] = '\0';
@@ -290,11 +290,13 @@ makeprint(c)
 	}
 	else
 		snprintf(prt, sizeof(prt), "%o", c);
+#else /* _FFR_TESTS */
+	static char prt[2] = " ";
+
+	prt[0] = c;
+#endif /* _FFR_TESTS */
 	return prt;
 }
-#else /* _FFR_TESTS */
-# define makeprint(c)	"X"
-#endif /* _FFR_TESTS */
 
 /*
 **  COLLECT -- read & parse message header & make temp file.
@@ -927,15 +929,23 @@ readdone:
 	{
 		char *problem;
 		ADDRESS *q;
+		bool log_bare;
 
+		log_bare = false;
 		if (sm_io_eof(fp))
 			problem = "unexpected close";
 		else if (sm_io_error(fp))
 			problem = "I/O error";
-		else if (0 != bare_lf)
+		else if (0 != bare_lf && BARE_LF_421)
+		{
+			log_bare = true;
 			problem = BARE_LF_MSG;
-		else if (0 != bare_cr)
+		}
+		else if (0 != bare_cr && BARE_CR_421)
+		{
+			log_bare = true;
 			problem = BARE_CR_MSG;
+		}
 		else
 			problem = "read timeout";
 
@@ -947,13 +957,13 @@ readdone:
 #define CONN_ERR_WHERE(bare_xy) (BARE_IN_HDR==(bare_xy) ? "header" : \
 	(BARE_IN_BDY==(bare_xy) ? "body" : "header+body"))
 
-#define HAS_BARE_XY (0 != (bare_lf | bare_cr))
+#define HAS_BARE_XY log_bare
 #define CONN_ERR_ARGS LOG_CLT, CONN_LOG_FROM, problem, \
 	HAS_BARE_XY ? ", where=" : "", \
 	HAS_BARE_XY ? CONN_ERR_WHERE(bare_lf|bare_cr) : "", \
 	HAS_BARE_XY ? ", status=tempfail" : ""
 
-		if (LogLevel > 0 && (sm_io_eof(fp) || (0 != (bare_lf | bare_cr))))
+		if (LogLevel > 0 && (sm_io_eof(fp) || log_bare))
 			sm_syslog(LOG_NOTICE, e->e_id,
 				CONN_ERR_TXT, CONN_ERR_ARGS);
 		if (0 != (bare_lf | bare_cr))

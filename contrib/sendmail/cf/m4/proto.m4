@@ -211,7 +211,9 @@ ifdef(`_CERT_REGEX_SUBJECT_', `dnl
 # extract relevant part from cert subject
 KCERTSubject regex _CERT_REGEX_SUBJECT_', `dnl')
 ifdef(`_MTA_STS_', `dnl
+# extract value from servername=value
 Kstsxsni regex -a: -s3 (.*)(servername=)(.*)
+# extract servername=value from policy
 Kstsxsni2 regex -a: -s2 (.*)(servername=.*)
 Kstsxmatch regex -a: -s2 (match=)(.*)
 # flag d: turn off DANE
@@ -2622,7 +2624,7 @@ dnl	the tag only, e.g.:
 ###	<+ TAG>	look up with and w/o tag
 ###	<! TAG>	look up with tag
 dnl	Warning: + and ! should be in OperatorChars (otherwise there must be
-dnl		a blank between them and the tag.
+dnl		a blank between them and the tag.)
 ###	possible values for "mark" are:
 ###		D: recursive host lookup (LookUpDomain)
 dnl		A: recursive address lookup (LookUpAddress) [not yet required]
@@ -2736,6 +2738,9 @@ ifdef(`_ATMPF_', `dnl tempfail?
 R<$* _ATMPF_>$*	$#error $@ 4.3.0 $: _TMPFMSG_(`TT')', `dnl')
 R<NO>$*		$#error $@ 5.7.1 $: "550 do not try TLS with " $&{server_name} " ["$&{server_addr}"]"')
 
+define(`TLS_ERRCODE_P', `554')dnl
+define(`TLS_ERRCODE_T', `454')dnl
+
 ifdef(`_MTA_STS_', `dnl
 STLS_NameInList
 R$* :$&{TLS_Name}: $*	$@ ok
@@ -2745,51 +2750,61 @@ dnl check SAN for STS
 SSTS_SAN
 ifdef(`_STS_SAN', `dnl
 R$*			$: $&{server_name}
+# {server_name} does not have a trailing dot
+# R$+.			$1
 dnl exact match
-R$={cert_altnames}	$@ ok
-# strip only one level (no recursion!)
-R$-.$+			$: $2
-dnl wildcard: *. or just .?
-R *.$={cert_altnames}	$@ ok
-dnl R .$={cert_altnames}	$@ ok
+R$={cert_altnames}	$@ $(macro {sts_status} $@ STS_OK $) OK
+# strip one level up to first dot
+R$~. . $+		.$2
+dnl wildcard: *. not just .
+R.$+			$: *.$1
+R$={cert_altnames}	$@ $(macro {sts_status} $@ STS_OK $) OK
 dnl always temporary error? make it an option (of the feature)?
-R$*			$#error $@ 4.7.0 $: 450 $&{server_name} not listed in SANs', `dnl')
+R$*			$#error $@ 4.7.0 $: 450 STS $&{server_name} not listed in SANs', `dnl
+R$*	$@ $(macro {sts_status} $@ STS_NO_SAN_CHECK $) OK')
 
-dnl input: ${verify}
-dnl output: $# error ... (from TLS_connection)
-dnl  everything else: ok
-SSTS_secure
+dnl extra debugging info for STS related rules
+ifdef(`STSDEBUG', `define(`STS_DEBUG', ` - $1')', `define(`STS_DEBUG', `')')dnl
+######################################################################
+# parameter: RCPT; needs ${rcpt_addr}
+# check STS policy: secure and match? if so, check list
+# returns: ok or $# error
+dnl called from tls_rcpt
+SSTS_check
 R$*		$: $&{rcpt_addr} $| $1
 # no {rcpt_addr}, no STS check
-R $| $*		$@ ok
-dnl canonify to extract domain part?
-R$*@$+ $| $*	$2 $| $3
-R$+. $| $*	$1 $| $2
-R$+ $| $*	$: $(sts $1 $: none $) $| $2
-R$* <TMPF> $| $*	$#error $@ 4.7.0 $: 450 STS lookup temp fail
-dnl check whether connection is "secure"
-dnl always temporary error? make it an option (of the feature)?
-R$* secure $* $| $*	$@ $>"TLS_connection" $3 $| <TEMP+VERIFY:128>
-R$* $| $*	$: $2
-
-dnl check STS policy: secure and match? if so, check list
-SSTS_Check
-R$*		$: $&{rcpt_addr} $| $1
-# no {rcpt_addr}, no STS check
-R $| $*		$@ ok
+R $| $*		$@ $(macro {sts_status} $@ STS_NONE $) OK
 # use the original argument for the test, not {rcpt_addr}
 R$* $| $*	$: $2 $| $2
 dnl canonify to extract domain part?
 R$*@$+ $| $*	$2 $| $3
 R$+. $| $*	$1 $| $2
+dnl begin is STS enabled?
+R$+ $| $*		$: $1 $| $2 $| $> STS_enabled $1
+dnl NO
+R$+ $| $* $| NO		$@ $(macro {sts_status} $@ STS_NO $) OK
+R$+ $| $* $| $*		$: $1 $| $2
+dnl end is STS enabled?
 R$* $| $*	$: $(sts $1 $: none $) $| mark
-R$* <TMPF> $| $*	$#error $@ 4.7.0 $: 450 STS lookup temp fail
-dnl STS check only for "secure"
-dnl do this only if {sts_sni} is set?
+R$* <TMPF> $| $*	$#error $@ 4.7.0 $: 450 STS lookup temp fail`'STS_DEBUG(`STS_check')
+dnl perform STS checks only for "secure".
+dnl also do this only if {sts_sni} is set?
 dnl workspace: result of sts lookup $| mark
+dnl check whether connection is "secure" as requested
+dnl always temporary error? make it an option (of the feature)?
+R$* secure $* $| mark	$: $1 secure $2 $| mark $| $>"TLS_connection" $&{verify} $| <TEMP+VERIFY:128>
+dnl check result of TLS_connection: return error immediately
+dnl put expected error codes into a class?
+R$* secure $* $| mark $| $# error $+ TLS_ERRCODE_T $+	$# error $3 TLS_ERRCODE_T STS $4
+R$* secure $* $| mark $| $# error $+ TLS_ERRCODE_P $+	$# error $3 TLS_ERRCODE_P STS $4
+R$* secure $* $| mark $| $# $+		$# $3
+dnl ignore anything else and restore the previous workspace
+R$* secure $* $| mark $| $*		$: $1 secure $2 $| mark
+dnl done with TLS_connection (note: the rule above and the one below
+dnl can be "merged" into one - but for clarity (/now) they are separate)
 R$* secure $* $| mark	$: $2 $| trmatch
 dnl not "secure": no check
-R$* $| mark	$@ ok
+R$* $| mark	$@ $(macro {sts_status} $@ STS_NO $) OK
 dnl remove servername=hostname, keep match=
 R$* servername=hostname $| trmatch	$: $1 $| trmatch
 dnl extra list of matches, i.e., remove match=
@@ -2804,19 +2819,19 @@ R$* ok		$@ $>STS_SAN
 R$*		$: $1 $| $&{server_name}
 R:$* $| $-.$+	$: $(macro {TLS_Name} $@ .$3 $) $>TLS_NameInList :$1
 R$* ok		$@ $>STS_SAN
-R:$*:		$#error $@ 4.7.0 $: 450 $&{server_name} not found in " "$1', `dnl')
+R:$*:		$#error $@ 4.7.0 $: 450 STS $&{server_name} not found in MX list " "$1', `dnl')
 
 ifdef(`TLS_PERM_ERR', `dnl
 define(`TLS_DSNCODE', `5.7.0')dnl
-define(`TLS_ERRCODE', `554')',`dnl
+define(`TLS_ERRCODE', `TLS_ERRCODE_P')',`dnl
 define(`TLS_DSNCODE', `4.7.0')dnl
-define(`TLS_ERRCODE', `454')')dnl
+define(`TLS_ERRCODE', `TLS_ERRCODE_T')')dnl
 define(`SW_MSG', `TLS handshake failed.')dnl
 define(`DANE_MSG', `DANE check failed.')dnl
 define(`DANE_TEMP_MSG', `DANE check failed temporarily.')dnl
 define(`DANE_NOTLS_MSG', `DANE: missing STARTTLS.')dnl
 define(`PROT_MSG', `STARTTLS failed.')dnl
-define(`CNF_MSG', `STARTTLS temporarily not possible.')dnl
+define(`CNF_MSG', `TLS temporarily not available.')dnl
 
 ######################################################################
 ###  tls_rcpt: is connection with server "good" enough?
@@ -2832,7 +2847,7 @@ R$*			$: $1 $| $>"Local_tls_rcpt" $1
 R$* $| $#$*		$#$2
 R$* $| $*		$: $1', `dnl')
 ifdef(`_MTA_STS_', `dnl
-R$*			$: $1 $| $>"STS_Check" $1
+R$*			$: $1 $| $>"STS_check" $1
 R$* $| $#$*		$#$2
 R$* $| $*		$: $1', `dnl')
 ifdef(`_ACCESS_TABLE_', `dnl
@@ -2904,7 +2919,7 @@ R$* $| $*	$@ $>"TLS_connection" $1')
 ###		${verify}
 ######################################################################
 dnl i.e. has the server been authenticated and is encryption active?
-dnl called from deliver() after STARTTLS command
+dnl called from deliver() after STARTTLS command (should have been) issued
 Stls_server
 ifdef(`_LOCAL_TLS_SERVER_', `dnl
 R$*			$: $1 $| $>"Local_tls_server" $1
@@ -2912,10 +2927,6 @@ R$* $| $#$*		$#$2
 R$* $| $*		$: $1', `dnl')
 ifdef(`_TLS_FAILURES_',`dnl
 R$*		$: $(macro {saved_verify} $@ $1 $) $1')
-ifdef(`_MTA_STS_', `dnl
-R$*			$: $1 $| $>"STS_secure" $1
-R$* $| $#$*		$#$2
-R$* $| $*		$: $1', `dnl')
 ifdef(`_ACCESS_TABLE_', `dnl
 dnl store name of other side
 R$*		$: $(macro {TLS_Name} $@ $&{server_name} $) $1
@@ -2938,8 +2949,7 @@ ifdef(`_ACCESS_TABLE_', `dnl
 ###		Requirement: RHS from access map, may be ? for none.
 dnl	syntax for Requirement:
 dnl	[(PERM|TEMP)+] (VERIFY[:bits]|ENCR:bits) [+extensions]
-dnl	extensions: could be a list of further requirements
-dnl		for now: CN:string	{cn_subject} == string
+dnl	extensions: a list of further requirements separated by '++'
 ######################################################################
 STLS_connection
 ifdef(`_FULL_TLS_CONNECTION_CHECK_', `dnl', `dnl use default error
@@ -2957,8 +2967,8 @@ R$* $| <$*>$*			$: $1 $| <$2>
 dnl workspace: ${verify} $| <ResultOfLookup>
 # create the appropriate error codes
 dnl permanent or temporary error?
-R$* $| <PERM + $={Tls} $*>	$: $1 $| <503:5.7.0> <$2 $3>
-R$* $| <TEMP + $={Tls} $*>	$: $1 $| <403:4.7.0> <$2 $3>
+R$* $| <PERM + $={Tls} $*>	$: $1 $| <TLS_ERRCODE_P:5.7.0> <$2 $3>
+R$* $| <TEMP + $={Tls} $*>	$: $1 $| <TLS_ERRCODE_T:4.7.0> <$2 $3>
 dnl default case depends on TLS_PERM_ERR
 R$* $| <$={Tls} $*>		$: $1 $| <TLS_ERRCODE:TLS_DSNCODE> <$2 $3>
 dnl workspace: ${verify} $| [<SMTP:ESC>] <ResultOfLookup>
@@ -3039,13 +3049,13 @@ R<$-:$+> $+			$@ $>"TLS_req" $3 $| <$1:$2>
 ###		$-: SMTP reply code
 ###		$+: Enhanced Status Code
 dnl  further requirements for this ruleset:
-dnl	name of "other side" is stored is {TLS_name} (client/server_name)
+dnl	name of "other side" is stored in {TLS_Name} (client/server_name)
 dnl
 dnl	right now this is only a logical AND
 dnl	i.e. all requirements must be true
 dnl	how about an OR? CN must be X or CN must be Y or ..
-dnl	use a macro to compute this as a trivial sequential
-dnl	operations (no precedences etc)?
+dnl	use a macro to compute this as a trivial sequential operation
+dnl	(no precedences etc)?
 ######################################################################
 STLS_req
 dnl no additional requirements: ok
@@ -3053,10 +3063,11 @@ R $| $+		$@ OK
 dnl require CN: but no CN specified: use name of other side
 R<CN> $* $| <$+>		$: <CN:$&{TLS_Name}> $1 $| <$2>
 ifdef(`_FFR_TLS_ALTNAMES', `dnl
-R<CN:$={cert_altnames}> $* $| <$+>	$@ $>"TLS_req" $2 $| <$3>
-R<CN:$-.$+> $* $| <$+>			$: <CN:*.$2> $3 $| <$4>
-R<CN:$={cert_altnames}> $* $| <$+>	$@ $>"TLS_req" $3 $| <$3>
-R<CN:$*> $* $| <$+>			$: <CN:$&{TLS_Name}> $2 $| <$3>', `dnl')
+R<CN:$*> $* $| <$+>			$: <INPUT:CN:$1> <CN:$1> $2 $| <$3>
+R<INPUT:CN:$*> <CN:$={cert_altnames}> $* $| <$+>	$@ $>"TLS_req" $3 $| <$4>
+R<INPUT:CN:$*> <CN:$-.$+> $* $| <$+>			$: <INPUT:CN:$1> <CN:*.$3> $4 $| <$5>
+R<INPUT:CN:$*> <CN:$={cert_altnames}> $* $| <$+>	$@ $>"TLS_req" $3 $| <$4>
+R<INPUT:CN:$*> <CN:$*> $* $| <$+>			$: <CN:$1> $3 $| <$4>', `dnl')
 dnl match, check rest
 R<CN:$&{cn_subject}> $* $| <$+>		$@ $>"TLS_req" $1 $| <$2>
 dnl CN does not match
@@ -3075,6 +3086,12 @@ R<CI:$+> $* $| <$-:$+>	$#error $@ $4 $: $3 " Cert Issuer " $&{cert_issuer} " doe
 dnl
 R<CITag:$-> $* $| <$+>	$: <$(access $1:$&{cert_issuer} $: ? $)> $2 $| <$3>
 R<?> $* $| <$-:$+>	$#error $@ $3 $: $2 " Cert Issuer " $&{cert_issuer} " not acceptable"
+ifdef(`_FFR_CSTAG', `dnl
+R<CSTag:$-> $* $| <$+>	$: <$(access $1:$&{cert_subject} $: ? $)> $2 $| <$3>
+R<?> $* $| <$-:$+>	$#error $@ $3 $: $2 " Cert Subject " $&{cert_subject} " not acceptable"', `dnl')
+ifdef(`_FFR_CNTAG', `dnl
+R<CNTag:$-> $* $| <$+>	$: <$(access $1:$&{cn_subject} $: ? $)> $2 $| <$3>
+R<?> $* $| <$-:$+>	$#error $@ $3 $: $2 " CN " $&{cn_subject} " not acceptable"', `dnl')
 R<OK> $* $| <$+>	$@ $>"TLS_req" $1 $| <$2>
 dnl return from recursive call
 ROK			$@ OK
@@ -3096,27 +3113,71 @@ divert(0)
 
 dnl this must also be activated without _TLS_SESSION_FEATURES_
 ifdef(`_MTA_STS_', `dnl
+######################################################################
+dnl parameter: RCPT domain
+dnl output: NO: STS is disabled
+dnl everything else (OK): STS is enabled
+SSTS_enabled
+ifdef(`_ACCESS_TABLE_', `dnl
+R$+	$: $>D <$1> <OK> <! STS> <$1>
+dnl ifdef(`_ATMPF_', `R<$* _ATMPF_> <$*>	$#error $@ 4.3.0 $: 451 STS access map lookup temp fail', `dnl')
+R<NO> <$*>	$@ NO',`dnl')
+R$*		$@ OK
+
+######################################################################
+dnl parameter: ${verify}; needs ${rcpt_addr}
+dnl output: $# error
+dnl  empty: no (valid) policy found
+dnl  if "secure" is in the policy: return "sts=secure; servername=hostname"
+dnl note: there is no need to use regular expressions to "parse" the reply:
+dnl	the content is "static" except for match= which is omitted anyway.
+dnl side effect: stores ${server_name} in ${sts_sni}
+dnl called from tls_clt_features (i.e., session)
 dnl caller preserves workspace
-SSet_SNI
+SSTS_sni
 R$*		$: <$&{rcpt_addr}>
 # no {rcpt_addr}, no STS check
-R<>		$@ ""
+R<>		$@ 
 dnl canonify to extract domain part?
 R<$*@$+>	$2
 R$+.		$1
 R$+		$: $(sts $1 $: none $)
-R$* <TMPF>	$#error $@ 4.7.0 $: 450 STS lookup temp fail
-Rnone		$@ ""
-dnl get servername=sni and store it in {sts_sni}
-dnl stsxsni extracts the value of servername= (sni)
-dnl stsxsni2 extracts servername=sni so it can be returned to the caller
+R$* <TMPF>	$#error $@ 4.7.0 $: 450 STS lookup temp fail`'STS_DEBUG(`STS_sni')
+Rnone		$@ 
+dnl get servername=value
+dnl Note: only servername=hostname (literally!) is used in policies.
+dnl stsxsni extracts the value of servername=value
+dnl stsxsni2 extracts servername=value so it can be returned to the caller
 R$* secure $*	$: $(stsxsni $2 $: : $) $| sts=secure; $(stsxsni2 $2 $: : $)
 dnl store {server_addr} as sni if there was a match
-dnl Note: this implies that only servername=hostname (literally!)
-dnl is only ever returned.
 R$+: $| $+ :	$: $(macro {sts_sni} $@ $&{server_name} $) set $| $2
 R$* $| $*	$@ $2
-R$*		$@ ""
+R$*		$@ 
+
+######################################################################
+dnl parameter: ignored, ${rcpt_addr} is used
+dnl output:
+dnl $# error: map lookup temp fail
+dnl none: no STS policy
+dnl DOMAIN: found STS policy for domain of ${rcpt_addr}
+dnl (return the policy itself if the C code would actually use it)
+Ssts_exists
+R$*		$: <$&{rcpt_addr}>
+# no {rcpt_addr}, no STS check
+R<>		$@ none
+dnl canonify to extract domain part?
+R<$*@$+>	$2
+R$+.		$1
+dnl begin is STS enabled?
+R$+		$: $1 $| $> STS_enabled $1
+dnl maybe change to "disabled" later on? then the C code must be changed too
+R$+ $| NO	$@ none
+R$+ $| $*	$: $1
+dnl end is STS enabled?
+R$+		$: $1 $| $(sts $1 $: none $)
+R$+ $| $* <TMPF>	$#error $@ 4.7.0 $: 450 STS lookup temp fail`'STS_DEBUG(`sts_exists')
+R$+ $| none		$@ none
+R$+ $| $*		$@ $1
 dnl', `dnl')
 
 ifdef(`_TLS_SESSION_FEATURES_', `dnl
@@ -3180,14 +3241,14 @@ dnl host $| ip $| <acc result - might be empty>
 R$* $| $* $| <$*>	$: $1 $| $2 $| <$3> $| $>"STS_disabled" sts
 dnl host $| ip $| <acc result - might be empty> $| STS_disabled result
 dnl disable STS check? return access result
-R$* $| $* $| <$*> $| <>	$@ $3
+R$* $| $* $| <$*> $| <>		$@ $3
 dnl host $| ip $| <acc result - might be empty> $| STS_disabled result
 R$* $| $* $| <$*> $| $*		$: $1 $| $2 $| <$3> $| $>"DANE_disabled" $3
 dnl DANE enabled: return access result; take care of empty return
 R$* $| $* $| <$+> $| <DANE>		$@ $3
 R$* $| $* $| <> $| <DANE>		$@ ""
 dnl host $| ip $| <acc result - might be empty> $| <DANE_disabled result>
-R$* $| $* $| <$*> $| <$*>	$: $1 $| $2 $| <$3> $| $>"Set_SNI" $1
+R$* $| $* $| <$*> $| <$*>	$: $1 $| $2 $| <$3> $| $>"STS_sni" $1
 dnl host $| ip $| <acc result - might be empty> $| sni result
 dnl return sni result if not empty but acc is
 R$* $| $* $| <""> $| $+		$@ $3

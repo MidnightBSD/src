@@ -65,7 +65,6 @@ main(argc, argv)
 	char sfilebuf[MAXPATHLEN];
 	char buf[MAXLINE];
 	struct statistics stats;
-	extern char *ctime();
 	extern char *optarg;
 	extern int optind;
 # define MSOPTS "cC:f:opP"

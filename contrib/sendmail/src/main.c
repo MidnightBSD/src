@@ -226,6 +226,10 @@ main(argc, argv, envp)
 	envp = environ;
 #endif
 
+#if _FFR_DNS_ERR_NAME
+	DNSErrName = NULL;
+#endif
+
 	/* turn off profiling */
 	SM_PROF(0);
 
@@ -388,14 +392,15 @@ main(argc, argv, envp)
 	else if (strcmp(p, "purgestat") == 0)
 		OpMode = MD_PURGESTAT;
 
+/* currently free: a g H j K k l P S u W w Y y Z */
 #if defined(__osf__) || defined(_AIX3)
-# define OPTIONS	"A:B:b:C:cD:d:e:F:f:Gh:IiL:M:mN:nO:o:p:Q:q:R:r:sTtUV:vX:x"
+# define OPTIONS	"A:B:b:C:cD:d:e:F:f:Gh:IiL:M:mN:nO:o:p:Q:q:R:r:sTtUV:vX:xz"
 #endif
 #if defined(sony_news)
-# define OPTIONS	"A:B:b:C:cD:d:E:e:F:f:Gh:IiJ:L:M:mN:nO:o:p:Q:q:R:r:sTtUV:vX:"
+# define OPTIONS	"A:B:b:C:cD:d:E:e:F:f:Gh:IiJ:L:M:mN:nO:o:p:Q:q:R:r:sTtUV:vX:z"
 #endif
 #ifndef OPTIONS
-# define OPTIONS	"A:B:b:C:cD:d:e:F:f:Gh:IiL:M:mN:nO:o:p:Q:q:R:r:sTtUV:vX:"
+# define OPTIONS	"A:B:b:C:cD:d:e:F:f:Gh:IiL:M:mN:nO:o:p:Q:q:R:r:sTtUV:vX:z"
 #endif
 
 	/* Set to 0 to allow -b; need to check optarg before using it! */
@@ -670,12 +675,16 @@ main(argc, argv, envp)
 		sm_dprintf("       OpenSSL: linked   0x%08x\n",
 			   (uint) TLS_version_num());
 	}
-#  if defined(LIBRESSL_VERSION_NUMBER)
+# if defined(LIBRESSL_VERSION_NUMBER)
 	if (tTd(0, 15))
 		sm_dprintf("       LibreSSL: compiled 0x%08x\n",
 			   (uint) LIBRESSL_VERSION_NUMBER);
-#  endif
+# endif
 #endif /* STARTTLS */
+#if _FFR_LDAP_VERSION_CHECK
+	if (tTd(0, 14))
+		(void) ldapverschk(1);
+#endif
 
 	/* clear sendmail's environment */
 	ExternalEnviron = environ;
@@ -1240,6 +1249,11 @@ main(argc, argv, envp)
 				   implemented on Sony NEWS */
 			break;
 #endif /* defined(sony_news) */
+#if _FFR_OPT_FOREGROUND
+		  case 'z':
+			run_in_foreground = true;
+			break;
+#endif
 
 		  default:
 			finis(true, true, EX_USAGE);
@@ -1288,6 +1302,7 @@ main(argc, argv, envp)
 	ConfigFileRead = true;
 #endif
 	vendor_post_defaults(&BlankEnvelope);
+
 
 	/* now we can complain about missing fds */
 	if (MissingFds != 0 && LogLevel > 8)
@@ -2348,8 +2363,11 @@ main(argc, argv, envp)
 		/* check whether AUTH is turned off for the server */
 		if (!chkdaemonmodifiers(D_NOAUTH) &&
 		    (i = sasl_server_init(srvcallbacks, "Sendmail")) != SASL_OK)
-			syserr("!sasl_server_init failed! [%s]",
+		{
+			syserr("!sasl_server_init: failed=%s",
 				sasl_errstring(i, NULL, NULL));
+			/* NOTREACHED */
+		}
 	}
 #endif /* SASL */
 
@@ -2920,6 +2938,10 @@ main(argc, argv, envp)
 	{
 		int savederrors;
 		unsigned long savedflags;
+#if _FFR_SE_TA_ID
+		/* HACK: known size! */
+		char id[MAXQFNAME];
+#endif
 
 		savederrors = Errors;
 		savedflags = MainEnvelope.e_flags & EF_FATALERRS;
@@ -2927,6 +2949,13 @@ main(argc, argv, envp)
 		MainEnvelope.e_flags &= ~EF_FATALERRS;
 		Errors = 0;
 		buffer_errors();
+#if _FFR_SE_TA_ID
+		ID2X_ID(&MainEnvelope, e_s_se, id, true, "main");
+		ID2X_ID(&MainEnvelope, e_s_ta, id, false, "main");
+		if (tTd(94, 10))
+			sm_dprintf("main: " S_TA_ID "=%s, qid=%s, mail=%s\n",
+				MainEnvelope.e_s_ta, MainEnvelope.e_id, MainEnvelope.e_from.q_user);
+#endif
 		collect(InChannel, SMTPMODE_NO, NULL, &MainEnvelope, true);
 
 		/* header checks failed */
@@ -4064,6 +4093,7 @@ fill_fd(fd, where)
 	{
 		syserr("!fill_fd: %s: cannot open %s",
 		       where == NULL ? "startup" : where, SM_PATH_DEVNULL);
+		/* NOTREACHED */
 	}
 	if (fd != i)
 	{
@@ -4090,8 +4120,20 @@ sm_printoptions(options)
 
 	av = options;
 	ll = 7;
+#if _FFR_TESTS
+	if (tTd(0, 16))
+		sm_dprintf("\n");
+#endif
 	while (*av != NULL)
 	{
+#if _FFR_TESTS
+		if (tTd(0, 16))
+		{
+			sm_dprintf("%s\n", *av);
+			++av;
+			continue;
+		}
+#endif
 		if (ll + strlen(*av) > 63)
 		{
 			sm_dprintf("\n");
@@ -4183,6 +4225,9 @@ to8bit(str, mq)
 **		$X dump a macro or class
 **		/X try an activity
 **		X  normal process through rule set X
+**
+**	Returns:
+**		none.
 */
 
 static void
@@ -4729,7 +4774,7 @@ testmodeline(line, e)
 			(void) sm_gethostbyname(p, family);
 		}
 #endif /* NETINET || NETINET6 */
-#if DANE
+#if DANE && NAMED_BIND
 		else if (SM_STRCASEEQ(&line[1], "dnslookup"))
 		{
 			DNS_REPLY_T *r;
@@ -4805,7 +4850,7 @@ testmodeline(line, e)
 		else if (SM_STRCASEEQ(&line[1], "parsesig"))
 			t_parsehostsig(p, NULL);
 # endif /* _FFR_TESTS */
-#endif /* DANE */
+#endif /* DANE && NAMED_BIND */
 		else
 		{
 			(void) sm_io_fprintf(smioout, SM_TIME_DEFAULT,

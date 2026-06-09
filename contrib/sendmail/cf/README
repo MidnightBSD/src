@@ -846,8 +846,9 @@ mailertable	Include a "mailer table" which can be used to override
 			mailer:domain
 		where "mailer" is the internal mailer name, and "domain"
 		is where to send the message.  These maps are not
-		reflected into the message header.  As a special case,
-		the forms:
+		reflected into the message header.  If "mailer:" is not
+		specified confRELAY_MAILER is used.
+		As special cases, the forms:
 			local:user
 		will forward to the indicated user using the local mailer,
 			local:
@@ -3090,8 +3091,8 @@ ${cert_issuer} and ${cert_subject} can be optionally modified by regular
 expressions defined in the m4 variables _CERT_REGEX_ISSUER_ and
 _CERT_REGEX_SUBJECT_, respectively.  To avoid problems with those macros in
 rulesets and map lookups, they are modified as follows: each non-printable
-character and the characters '<', '>', '(', ')', '"', '+', ' ' are replaced
-by their HEX value with a leading '+'.  For example:
+character and the characters '\', '<', '>', '(', ')', '"', '+', ' ' are
+replaced by their HEX value with a leading '+'.  For example:
 
 /C=US/ST=California/O=endmail.org/OU=private/CN=Darth Mail (Cert)/emailAddress=
 darth+cert@endmail.org
@@ -3199,9 +3200,10 @@ If a certain level of encryption is required, then it might also be
 possible that this level is provided by the security layer from a SASL
 algorithm, e.g., DIGEST-MD5.
 
-Furthermore, there can be a list of extensions added.  Such a list
-starts with '+' and the items are separated by '++'.  Allowed
-extensions are:
+Furthermore, a list of other requirements can be added.  Such a
+list starts with '+' and the requirements are separated by '++'.
+Each of the requirements must be fulfilled (logical AND).  Available
+requirements are:
 
 CN:name		name must match ${cn_subject}
 CN		${client_name}/${server_name} must match ${cn_subject}
@@ -3233,12 +3235,13 @@ By default STARTTLS is used whenever possible.  However, there are
 MTAs with STARTTLS interoperability issues.  To be able to send to
 (or receive from) those MTAs several features are available:
 
-1) Various TLS options be be set per IP/domain.
+1) Various TLS options can be set per IP/domain.
 2) STARTTLS can be turned off for specific IP addresses/domains.
 
 About 1): the rulesets tls_srv_features and tls_clt_features can
 be used to return a (semicolon separated) list of TLS related
-options:
++options, including, but not limited to (see doc/op/op.me for the
+complete list including details):
 
 - Options: compare {Server,Client}SSLOptions.
 - CipherList: same as the global option.
@@ -3273,11 +3276,10 @@ access map:
 	Try_TLS:broken.server	NO
 	Srv_Features:my.domain	v
 	Srv_Features:		V
-	Clt_Features:broken.sts	M
 
 will turn off STARTTLS when sending to broken.server (or any host
-in that domain), request a client certificate during the TLS handshake
-only for hosts in my.domain, and disable MTA-STS for broken.sts.
+in that domain) and request a client certificate during the TLS
+handshake only for hosts in my.domain.
 The valid entries on the RHS for Srv_Features and Clt_Features are
 listed in the Sendmail Installation and Operations Guide.
 

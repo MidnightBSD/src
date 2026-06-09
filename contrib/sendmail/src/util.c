@@ -2431,7 +2431,10 @@ cleanstrcpy(t, f, l)
 	(void) denlstring(f, true, true);
 
 	if (l <= 0)
-		syserr("!cleanstrcpy: length == 0");
+	{
+		syserr("!cleanstrcpy: l=%d, status=invalid", l);
+		/* NOTREACHED */
+	}
 
 	l--;
 	while (l > 0 && *f != '\0')
@@ -3049,11 +3052,11 @@ xconnect(inchannel)
 	char pvpbuf[PSBUFSIZE];
 	char *peerhostname;	/* name of SMTP peer or "localhost" */
 	extern ENVELOPE BlankEnvelope;
-#if _FFR_HAPROXY
+# if _FFR_HAPROXY
 	int haproxy = AF_UNSPEC;
-# define HAPROXY "PROXY "
-# define HAPROXYLEN (sizeof(HAPROXY) - 1)
-#endif
+#  define HAPROXY "PROXY "
+#  define HAPROXYLEN (sizeof(HAPROXY) - 1)
+# endif
 
 #define XCONNECT "X-CONNECT "
 #define XCNNCTLEN (sizeof(XCONNECT) - 1)
@@ -3084,12 +3087,12 @@ xconnect(inchannel)
 		return 0;
 	}
 
-#if _FFR_HAPROXY
+# if _FFR_HAPROXY
 	if (pvp != NULL && pvp[0] != NULL && strcasecmp(pvp[0], "haproxy1") == 0)
 	{
 		haproxy = AF_LOCAL;
 	}
-#endif
+# endif
 
 # if _FFR_XCNCT > 1
 	if (pvp != NULL && pvp[0] != NULL &&
@@ -3109,29 +3112,29 @@ xconnect(inchannel)
 	p = sfgets(inp, sizeof(inp), InChannel, TimeOuts.to_nextcommand, "pre");
 	if (tTd(75, 6))
 		sm_syslog(LOG_INFO, NOQID, "x-connect: input=%s", p);
-#if _FFR_HAPROXY
+# if _FFR_HAPROXY
 	if (AF_UNSPEC != haproxy)
 	{
 		if (p == NULL || strncasecmp(p, HAPROXY, HAPROXYLEN) != 0)
 			return -1;
 		p += HAPROXYLEN;
-# define HAPUNKNOWN "UNKNOWN"
-# define HAPUNKNOWNLEN (sizeof(HAPUNKNOWN) - 1)
+#  define HAPUNKNOWN "UNKNOWN"
+#  define HAPUNKNOWNLEN (sizeof(HAPUNKNOWN) - 1)
 		if (strncasecmp(p, HAPUNKNOWN, HAPUNKNOWNLEN) == 0)
 		{
 			/* how to handle this? */
 			sm_syslog(LOG_INFO, NOQID, "haproxy: input=%s, status=ignored", p);
 			return -2;
 		}
-# define HAPTCP4 "TCP4 "
-# define HAPTCP6 "TCP6 "
-# define HAPTCPNLEN (sizeof(HAPTCP4) - 1)
+#  define HAPTCP4 "TCP4 "
+#  define HAPTCP6 "TCP6 "
+#  define HAPTCPNLEN (sizeof(HAPTCP4) - 1)
 		if (strncasecmp(p, HAPTCP4, HAPTCPNLEN) == 0)
 			haproxy = AF_INET;
-# if NETINET6
+#  if NETINET6
 		if (strncasecmp(p, HAPTCP6, HAPTCPNLEN) == 0)
 			haproxy = AF_INET6;
-# endif
+#  endif
 		if (AF_LOCAL != haproxy)
 		{
 			p += HAPTCPNLEN;
@@ -3139,16 +3142,16 @@ xconnect(inchannel)
 		}
 		return -1;
 	}
-#endif
+# endif /* _FFR_HAPROXY */
 	if (p == NULL || strncasecmp(p, XCONNECT, XCNNCTLEN) != 0)
 		return -1;
 	p += XCNNCTLEN;
 	while (SM_ISSPACE(*p))
 		p++;
 
-#if _FFR_HAPROXY
+# if _FFR_HAPROXY
   getip:
-#endif
+# endif
 	/* parameters: IPAddress [Hostname[ M]] */
 	b = p;
 	while (*p != '\0' && isascii(*p) &&
@@ -3176,7 +3179,7 @@ xconnect(inchannel)
 # endif
 	else
 		return -1;
-#if _FFR_HAPROXY
+# if _FFR_HAPROXY
 	if (AF_UNSPEC != haproxy)
 	{
 		/*
@@ -3211,7 +3214,7 @@ xconnect(inchannel)
 		SM_FREE(RealHostName);
 		return D_XCNCT;
 	}
-#endif
+# endif /* _FFR_HAPROXY */
 
 	/* more parameters? */
 	if (delim != ' ')
@@ -3220,7 +3223,7 @@ xconnect(inchannel)
 	for (b = ++p, i = 0;
 	     *p != '\0' && isascii(*p) && (isalnum(*p) || *p == '.' || *p == '-');
 	     p++, i++)
-		;
+		continue;
 	if (i == 0)
 		return D_XCNCT;
 	delim = *p;

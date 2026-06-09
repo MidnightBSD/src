@@ -20,7 +20,7 @@ the latest updates.
 1. Read this README file, especially this introduction, and the DIRECTORY
    PERMISSIONS sections.
 
-2. Read the INSTALL file in this directory.
+2. Read the INSTALL and KNOWNBUGS files in this directory.
 
 3. Read sendmail/README, especially:
    a. the introduction

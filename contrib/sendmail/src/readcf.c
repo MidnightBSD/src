@@ -602,7 +602,7 @@ readcf(cfname, safe, e)
 #if _FFR_CLASS_RM_ENTRY
 					else
 						classrmentry(mid, wd);
-#endif /* _FFR_CLASS_RM_ENTRY */
+#endif
 				}
 				*p = delim;
 			}
@@ -1299,7 +1299,8 @@ dynclass(class, arg)
 	if (NULL != dynmap)
 	{
 		syserr("dynamic class: A{%s}: already defined", mn);
-		goto error;
+		dynmap = NULL; /* avoid accidental "cleanup" of existing map */
+		goto error2;
 	}
 
 	/* skip past tag */
@@ -1307,7 +1308,7 @@ dynclass(class, arg)
 	{
 		/* should not happen */
 		syserr("dynamic class: A{%s}: bogus map specification", mn);
-		goto error;
+		goto error2;
 	}
 
 	/* skip past '@' */
@@ -1317,7 +1318,7 @@ dynclass(class, arg)
 	if ((spec = strchr(maptype, ':')) == NULL)
 	{
 		syserr("dynamic class: A{%s}: missing map class", mn);
-		goto error;
+		goto error2;
 	}
 	*spec++ ='\0';
 
@@ -1327,7 +1328,7 @@ dynclass(class, arg)
 	{
 		syserr("dynamic class: A{%s}: map type %s not available",
 		       mn, maptype);
-		goto error;
+		goto error2;
 	}
 
 	if (tTd(37, 5))
@@ -1365,22 +1366,23 @@ dynclass(class, arg)
 	dynmap->s_dynclass.map_mflags |= MF_VALID;
 	dynmap->s_dynclass.map_tag = newstr(tag);
 
-#if 0
+# if 0
 	/* close map: where to do this? */
 	dynmap->s_dynclass.map_mflags |= MF_CLOSING;
 	dynmap->s_dynclass.map_class->map_close(&map);
 	dynmap->s_dynclass.map_mflags &= ~(MF_OPEN|MF_WRITABLE|MF_CLOSING);
-#endif
+# endif /* 0 */
 	sm_free(mn);
 	return;
 
   error:
-	dynmap->s_dynclass.map_mflags |= MF_OPENBOGUS;
+	if (NULL != dynmap)
+		dynmap->s_dynclass.map_mflags |= MF_OPENBOGUS;
   error2:
 	sm_free(mn);
 	return;
 }
-#endif
+#endif /* _FFR_DYN_CLASS */
 
 #if _FFR_RCPTFLAGS
 /* first character for dynamically created mailers */
@@ -2726,9 +2728,7 @@ get_tls_se_features(e, ssl, tlsi_ctx, srv)
 			char *sn;
 
 			sn = macvalue(macid("{server_name}"), e);
-			if (sn == NULL)
-				STS_SNI = NULL;
-			else
+			if (sn != NULL)
 				STS_SNI = sm_strdup(sn);
 		}
 		else if (sm_strcasecmp(opt, "servername") == 0)
@@ -3206,6 +3206,11 @@ static struct optioninfo
 #if MTA_HAVE_TLSv1_3
 #define O_CIPHERSUITES	0xfa
 	{ "CipherSuites",		O_CIPHERSUITES,	OI_NONE	},
+#endif
+
+#if _FFR_SAMEDOMAIN
+#define O_SAMEDOMAINONLY	0xfb
+	{ "SameDomainOnly",		O_SAMEDOMAINONLY,	OI_NONE	},
 #endif
 
 	{ NULL,				'\0',		OI_NONE	}
@@ -3735,13 +3740,9 @@ setoption(opt, val, safe, sticky, e)
 
 	  case 'Q':		/* queue directory */
 		if (val[0] == '\0')
-		{
 			QueueDir = "mqueue";
-		}
 		else
-		{
 			QueueDir = newstr(val);
-		}
 		if (RealUid != 0 && !safe)
 			Warn_Q_option = true;
 		break;
@@ -4942,9 +4943,25 @@ setoption(opt, val, safe, sticky, e)
 		break;
 #if _FFR_MTA_STS
 	  case O_MTASTS:
-		MTASTS = atobool(val);
+		StrictTransportSecurity = atobool(val);
 		break;
 #endif
+
+#if _FFR_SAMEDOMAIN
+	  case O_SAMEDOMAINONLY:
+		if (N_SameDomainOnly >= MAXSAMEDOMAINONLY)
+		{
+			(void) sm_io_fprintf(smioout, SM_TIME_DEFAULT,
+					     "Warning: too many SameDomainOnly options, max=%d, \"%s\" ignored.\n", MAXSAMEDOMAINONLY, val);
+			break;
+		}
+		if (val[0] != '\0')
+		{
+			SameDomainOnly[N_SameDomainOnly] = newstr(val);
+			++N_SameDomainOnly;
+		}
+		break;
+#endif /* _FFR_SAMEDOMAIN */
 
 	  default:
 		if (tTd(37, 1))
@@ -5036,15 +5053,18 @@ classrmentry(class, str)
 	STAB *s;
 
 	s = stab(str, ST_CLASS, ST_FIND);
-	if (NULL == s /* || ST_CLASS != s->s_symtype */)
+	if (NULL == s)
 	{
 		if (tTd(37, 8))
-			sm_dprintf("classrmentry: entry=%s not in class %s\n", str, macname(class));
+			sm_dprintf("classrmentry: entry=%s not in class %s\n",
+				str, macname(class));
 		return;
 	}
+	SM_ASSERT(ST_CLASS == s->s_symtype);
 	clrbitn(bitidx(class), s->s_class);
 	if (tTd(37, 8))
-		sm_dprintf("classrmentry(%s, %s)=%d\n", macname(class), str, bitnset(bitidx(class), s->s_class));
+		sm_dprintf("classrmentry(%s, %s)=%d\n", macname(class), str,
+			bitnset(bitidx(class), s->s_class));
 }
 #endif /* _FFR_CLASS_RM_ENTRY */
 

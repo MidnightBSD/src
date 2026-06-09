@@ -480,6 +480,7 @@ queueup(e, flags)
 			errno = save_errno;
 			syserr("!queueup: cannot create queue temp file %s, uid=%ld",
 				tf, (long) geteuid());
+			/* NOTREACHED */
 		}
 	}
 
@@ -525,6 +526,7 @@ queueup(e, flags)
 		{
 			syserr("!queueup: cannot commit data file %s, uid=%ld",
 			       queuename(e, DATAFL_LETTER), (long) geteuid());
+			/* NOTREACHED */
 		}
 		if (e->e_dfp != NULL &&
 		    SuperSafe == SAFE_INTERACTIVE && QUP_MSYNC)
@@ -542,6 +544,7 @@ queueup(e, flags)
 				else
 					syserr("!452 Error writing data file %s",
 					       df);
+				/* NOTREACHED */
 			}
 		}
 	}
@@ -565,8 +568,11 @@ queueup(e, flags)
 		if (dfd < 0 || (dfp = sm_io_open(SmFtStdiofd, SM_TIME_DEFAULT,
 						 (void *) &dfd, SM_IO_WRONLY_B,
 						 NULL)) == NULL)
+		{
 			syserr("!queueup: cannot create data temp file %s, uid=%ld",
 				df, (long) geteuid());
+			/* NOTREACHED */
+		}
 		if (fstat(dfd, &stbuf) < 0)
 			e->e_dfino = -1;
 		else
@@ -597,12 +603,16 @@ queueup(e, flags)
 				else
 					syserr("!452 Error writing data file %s",
 					       df);
+				/* NOTREACHED */
 			}
 		}
 
 		if (sm_io_close(dfp, SM_TIME_DEFAULT) < 0)
+		{
 			syserr("!queueup: cannot save data temp file %s, uid=%ld",
 				df, (long) geteuid());
+			/* NOTREACHED */
+		}
 		e->e_putbody = putbody;
 	}
 
@@ -615,10 +625,10 @@ queueup(e, flags)
 	/* output queue version number (must be first!) */
 	(void) sm_io_fprintf(tfp, SM_TIME_DEFAULT, "V%d\n", QF_VERSION);
 
-	/* output creation time */
+	/* output creation time (must be before e_dtime) */
 	(void) sm_io_fprintf(tfp, SM_TIME_DEFAULT, "T%ld\n", (long) e->e_ctime);
 
-	/* output last delivery time */
+	/* output last delivery time (must be before e_ntries) */
 	(void) sm_io_fprintf(tfp, SM_TIME_DEFAULT, "K%ld\n", (long) e->e_dtime);
 
 	/* output number of delivery attempts */
@@ -661,6 +671,12 @@ queueup(e, flags)
 	if (e->e_message != NULL)
 		(void) sm_io_fprintf(tfp, SM_TIME_DEFAULT, "M%s\n",
 				     denlstring(e->e_message, true, false));
+
+#if _FFR_SE_TA_ID
+	if (e->e_s_ta != NULL)
+		(void) sm_io_fprintf(tfp, SM_TIME_DEFAULT, "t%s\n", e->e_s_ta);
+	(void) sm_io_fprintf(tfp, SM_TIME_DEFAULT, "c%u:%u\n", e->e_c_ta_cnt, e->e_c_se_cnt);
+#endif
 
 	/* send various flag bits through */
 	p = buf;
@@ -905,6 +921,7 @@ queueup(e, flags)
 			syserr("!552 Error writing control file %s", tf);
 		else
 			syserr("!452 Error writing control file %s", tf);
+		/* NOTREACHED */
 	}
 
 	if (!newid)
@@ -960,6 +977,7 @@ queueup(e, flags)
 			{
 				syserr("!queueup: cannot fsync queue temp file %s",
 				       tf);
+				/* NOTREACHED */
 			}
 			SYNC_DIR(qf, true);
 		}
@@ -2947,8 +2965,10 @@ gatherq(qgrp, qdir, doall, full, more, pnentries)
 						    MaxQueueAge);
 					age = curtime() - lasttry;
 					if (age < delay)
+					{
 						w->w_tooyoung = true;
-					break;
+						break;
+					}
 				}
 
 				age = curtime() - (time_t) atol(&lbuf[1]);
@@ -4051,8 +4071,7 @@ readqf(e, openonly)
 			sm_dprintf("readqf(%s): sm_io_open failure (%s)\n",
 				qf, sm_errstring(errno));
 		errno = save_errno;
-		if (errno != ENOENT
-		    )
+		if (errno != ENOENT)
 			syserr("readqf: no control file %s", qf);
 		RELEASE_QUEUE;
 		return false;
@@ -4295,6 +4314,17 @@ readqf(e, openonly)
 			ctladdr = setctluser(&bp[1], qfver, e);
 			break;
 
+#if _FFR_SE_TA_ID
+		  case 'c':
+			e->e_c_ta_cnt = strtol(&buf[1], &ep, 10);
+			if (ep != NULL && ':' == *ep)
+			{
+				p = ep + 1;
+				e->e_c_se_cnt = strtol(p, &ep, 10);
+			}
+			break;
+#endif
+
 		  case 'D':		/* data file name */
 			/* obsolete -- ignore */
 			break;
@@ -4385,12 +4415,6 @@ readqf(e, openonly)
 			}
 			break;
 
-		  case 'q':		/* quarantine reason */
-			e->e_quarmsg = sm_rpool_strdup_x(e->e_rpool, &bp[1]);
-			macdefine(&e->e_macro, A_PERM,
-				  macid("{quarantine}"), e->e_quarmsg);
-			break;
-
 		  case 'H':		/* header */
 
 			/*
@@ -4418,32 +4442,46 @@ readqf(e, openonly)
 
 		  case 'N':		/* number of delivery attempts */
 			e->e_ntries = atoi(&buf[1]);
-
-			/* if this has been tried recently, let it be */
-			now = curtime();
-			if (e->e_ntries > 0 && e->e_dtime <= now &&
-			    now < e->e_dtime + MinQueueAge)
 			{
-				char *howlong;
+				bool skip = false;
 
-				howlong = pintvl(now - e->e_dtime, true);
-				if (Verbose)
-					(void) sm_io_fprintf(smioout,
-							     SM_TIME_DEFAULT,
-							     "%s: too young (%s)\n",
-							     e->e_id, howlong);
-				if (tTd(40, 8))
-					sm_dprintf("%s: too young (%s)\n",
-						e->e_id, howlong);
-				if (LogLevel > 19)
-					sm_syslog(LOG_DEBUG, e->e_id,
-						  "too young (%s)",
-						  howlong);
-				e->e_id = NULL;
-				unlockqueue(e);
-				if (bp != buf)
-					sm_free(bp);
-				return false;
+				/* if this has been tried recently, let it be */
+				now = curtime();
+				if (MaxQueueAge > 0)
+				{
+					time_t delay;
+
+					delay = MIN(e->e_dtime - e->e_ctime,
+						MaxQueueAge);
+					skip = now - e->e_dtime < delay;
+				}
+				if (!skip)
+				    skip = now < e->e_dtime + MinQueueAge;
+
+				if (e->e_ntries > 0 && e->e_dtime <= now &&
+				    skip)
+				{
+					char *howlong;
+
+					howlong = pintvl(now - e->e_dtime, true);
+					if (Verbose)
+						(void) sm_io_fprintf(smioout,
+							SM_TIME_DEFAULT,
+							"%s: too young (%s)\n",
+							e->e_id, howlong);
+					if (tTd(40, 8))
+						sm_dprintf("%s: too young (%s)\n",
+							e->e_id, howlong);
+					if (LogLevel > 19)
+						sm_syslog(LOG_DEBUG, e->e_id,
+							  "too young (%s)",
+							  howlong);
+					e->e_id = NULL;
+					unlockqueue(e);
+					if (bp != buf)
+						sm_free(bp);
+					return false;
+				}
 			}
 			macdefine(&e->e_macro, A_TEMP,
 				macid("{ntries}"), &buf[1]);
@@ -4465,6 +4503,12 @@ readqf(e, openonly)
 
 		  case 'P':		/* message priority */
 			e->e_msgpriority = atol(&bp[1]) + WkTimeFact;
+			break;
+
+		  case 'q':		/* quarantine reason */
+			e->e_quarmsg = sm_rpool_strdup_x(e->e_rpool, &bp[1]);
+			macdefine(&e->e_macro, A_PERM,
+				  macid("{quarantine}"), e->e_quarmsg);
 			break;
 
 		  case 'Q':		/* original recipient */
@@ -4564,6 +4608,12 @@ readqf(e, openonly)
 			setsender(sm_rpool_strdup_x(e->e_rpool, &bp[1]),
 				  e, NULL, '\0', true);
 			break;
+
+#if _FFR_SE_TA_ID
+		  case 't':		/* transaction id */
+			e->e_s_ta = sm_rpool_strdup_x(e->e_rpool, &bp[1]);
+			break;
+#endif
 
 		  case 'T':		/* init time */
 			e->e_ctime = atol(&bp[1]);
@@ -5757,6 +5807,8 @@ loseqfile(e, why)
 	if (e == NULL || e->e_id == NULL)
 		return;
 	p = queuename(e, ANYQFL_LETTER);
+
+	/* XXX do not fail silently! -- assert or syserr()? */
 	if (sm_strlcpy(buf, p, sizeof(buf)) >= sizeof(buf))
 		return;
 	if (!bitset(EF_INQUEUE, e->e_flags))
@@ -5772,8 +5824,15 @@ loseqfile(e, why)
 			syserr("cannot rename(%s, %s), uid=%ld",
 			       buf, p, (long) geteuid());
 		else if (LogLevel > 0)
+#if _FFR_SE_TA_ID
+			sm_syslog(LOG_ALERT, e->e_id,
+				  "Losing %s, " S_TA_ID "=%s, %s",
+				  buf, e->e_s_ta, why);
+
+#else
 			sm_syslog(LOG_ALERT, e->e_id,
 				  "Losing %s: %s", buf, why);
+#endif
 	}
 	SM_CLOSE_FP(e->e_dfp);
 	e->e_flags &= ~EF_HAS_DF;
@@ -5852,9 +5911,14 @@ qid_printqueue(qgrp, qdir)
 	char *subdir;
 	static char dir[MAXPATHLEN];
 
-	if (qdir == NOQDIR)
+	if (NOQDIR == qdir)
+	{
+		if (NOQGRP == qgrp)
+			return NULL;
 		return Queue[qgrp]->qg_qdir;
+	}
 
+	SM_REQUIRE(ISVALIDQGRP(qgrp));
 	if (strcmp(Queue[qgrp]->qg_qpaths[qdir].qp_name, ".") == 0)
 		subdir = NULL;
 	else
@@ -6154,7 +6218,7 @@ chkqdir(name, sff)
 **		phash -- pointer to hash value over queue dirs.
 #if SM_CONF_SHM
 **			only used if shared memory is active.
-#endif * SM_CONF_SHM *
+#endif
 **
 **	Returns:
 **		new number of queue directories.
@@ -7251,7 +7315,7 @@ init_shm(qn, owner, hash)
 			/* initialize values in shared memory */
 			NumFileSys = 0;
 			for (i = 0; i < qn; i++)
-				QShm[i].qs_entries = -1;
+				QSHM_ENTRIES(i) = -1;
 # if _FFR_OCC
 			memset(occ, 0, OCC_SIZE);
 # endif
@@ -7282,7 +7346,7 @@ init_shm(qn, owner, hash)
 #if SM_CONF_SHM
 **	Side Effects:
 **		attaches shared memory.
-#endif * SM_CONF_SHM *
+#endif
 */
 
 void
@@ -7990,6 +8054,7 @@ makeworkgroups()
 			syserr("!cannot allocate memory for work queues, need %d bytes",
 			       (int) (sizeof(QUEUEGRP *) *
 				      (WorkGrp[j].wg_numqgrp + 1)));
+			/* NOTREACHED */
 		}
 
 		WorkGrp[j].wg_qgs[WorkGrp[j].wg_numqgrp] = Queue[h];
