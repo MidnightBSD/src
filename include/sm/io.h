@@ -58,6 +58,7 @@
 #define SM_IO_IS_READABLE	6
 #define SM_IO_WHAT_TIMEOUT	7
 #define SM_IO_WHAT_SIZE		8
+#define SM_IO_WHAT_BUF		9
 
 /* info flags (exposed) */
 #define SM_IO_FTYPE_CREATE	1
@@ -153,7 +154,9 @@ extern const char	SmFileMagic[];
 extern SM_FILE_T	SmFtStdio_def;
 extern SM_FILE_T	SmFtStdiofd_def;
 extern SM_FILE_T	SmFtString_def;
+#if 0
 extern SM_FILE_T	SmFtSyslog_def;
+#endif
 extern SM_FILE_T	SmFtRealStdio_def;
 
 #define SMIOIN_FILENO		0
@@ -174,7 +177,9 @@ extern SM_FILE_T	SmFtRealStdio_def;
 #define SmFtStdio	(&SmFtStdio_def)
 #define SmFtStdiofd	(&SmFtStdiofd_def)
 #define SmFtString	(&SmFtString_def)
+#if 0
 #define SmFtSyslog	(&SmFtSyslog_def)
+#endif
 #define SmFtRealStdio	(&SmFtRealStdio_def)
 
 #ifdef __STDC__

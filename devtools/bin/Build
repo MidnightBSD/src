@@ -592,7 +592,7 @@ then
 	fi
 fi
 
-# If we didn't detect an existing obj directory, makeup a new obj name.
+# If we didn't detect an existing obj directory, make up a new obj name.
 if [ -z "$obj" ]
 then
 	abs_obj_dir=${OBJ_ROOT}/obj${prefix}.$os.$rel.$arch$sfx

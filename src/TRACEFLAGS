@@ -20,7 +20,7 @@
 14	headers.c	commaize
 15	daemon.c	getrequests
 16	daemon.c	makeconnection
-17	deliver.c	hostsignature
+17	deliver.c	hostsignature, getmport
 17	domain.c	mxrand
 18	usersmtp.c	reply, smtpmessage, smtpinit, smtpmailfrom, smtpdata
 19	srvrsmtp.c	smtp
@@ -80,7 +80,10 @@
 #if DANE
 66,>99	domain.c	force port=25 for TLSA RR lookups
 #endif
-68	unused
+68	MTA_STS, SAMEDOMAIN, etc
+# if _FFR_TESTS
+68,>100	map open: sleep
+#endif
 #if _FFR_QUEUE_SCHED_DBG
 69	queue.c		scheduling
 #endif
@@ -126,4 +129,4 @@
 #if _FFR_TIMERS
 98	*		timers
 #endif
-99	main.c		avoid backgrounding (no printed output)
+99,>99	main.c		avoid backgrounding (no printed output)

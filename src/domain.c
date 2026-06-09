@@ -22,6 +22,10 @@ SM_RCSID("@(#)$Id: domain.c,v 8.205 2013-11-22 20:51:55 ca Exp $ (without name s
 
 #include <sm/sendmail.h>
 
+#if USE_EAI
+#include <unicode/uidna.h>
+#endif
+
 #if NAMED_BIND
 # include <arpa/inet.h>
 # include "sm_resolve.h"
@@ -31,10 +35,6 @@ SM_RCSID("@(#)$Id: domain.c,v 8.205 2013-11-22 20:51:55 ca Exp $ (without name s
 #   define SM_NEG_TTL 60 /* "negative" TTL */
 #  endif
 # endif
-
-#if USE_EAI
-#include <unicode/uidna.h>
-#endif
 
 
 # ifndef MXHOSTBUFSIZE
@@ -115,17 +115,17 @@ tlsa_rr_cmp(rr1, l1, rr2, l2)
 	int l2;
 {
 /* temporary #if while investigating the implications of the alternative */
-#if FULL_COMPARE
+#  if FULL_COMPARE
 	unsigned char r1, r2;
 	int cmp;
-#endif /* FULL_COMPARE */
+#  endif
 
 	SM_REQUIRE(NULL != rr1);
 	SM_REQUIRE(NULL != rr2);
 	SM_REQUIRE(l1 > 3);
 	SM_REQUIRE(l2 > 3);
 
-#if FULL_COMPARE
+#  if FULL_COMPARE
 	/*
 	**  certificate usage
 	**  3: cert/fp must match
@@ -186,7 +186,7 @@ tlsa_rr_cmp(rr1, l1, rr2, l2)
 	if (0 == cmp)
 		return 0;
 	return 1;
-#else /* FULL_COMPARE */
+#  else /* FULL_COMPARE */
 	/* identical? */
 	if (l1 == l2 && 0 == memcmp(rr1, rr2, l1))
 		return 0;
@@ -200,7 +200,7 @@ tlsa_rr_cmp(rr1, l1, rr2, l2)
 
 	/* default: preserve order */
 	return 1;
-#endif /* FULL_COMPARE */
+#  endif /* FULL_COMPARE */
 }
 
 /*
@@ -520,7 +520,7 @@ gettlsa(host, name, pste, flags, mxttl, port)
 	    0 != (TLSAFLNEW & flags))
 	{
 		if (tTd(8, 2))
-			sm_dprintf("gettlsa: host=%s, flags=%#lx, no ad but Dane=Secure\n",
+			sm_dprintf("gettlsa: host=%s, flags=%lX, no ad but Dane=Secure\n",
 				host, flags);
 		return 0;
 	}
@@ -542,26 +542,26 @@ gettlsa(host, name, pste, flags, mxttl, port)
 	(void) sm_snprintf(key, sizeof(key), "_%u.%s", port, name);
 	ste = stab(key, ST_TLSA_RR, ST_FIND);
 	if (tTd(8, 2))
-		sm_dprintf("gettlsa: host=%s, %s, ste=%p, pste=%p, flags=%#lx, port=%d\n",
+		sm_dprintf("gettlsa: host=%s, %s, ste=%p, pste=%p, flags=%lX, port=%d\n",
 			host, isrname ? "" : name, (void *)ste, (void *)pste,
 			flags, port);
 
 	if (ste != NULL)
 		dane_tlsa = ste->s_tlsa;
 
-#if 0
+#  if 0
 //	/* Do not reload TLSA RRs if the MX RRs were not securely retrieved. */
 //	if (pste != NULL
 //	    && dane_tlsa != NULL && TLSA_IS_FL(dane_tlsa, TLSAFLNOADMX)
 //	    && DANE_SECURE == Dane)
 //		goto end;
-#endif
+#  endif
 	if (ste != NULL)
 	{
 		SM_ASSERT(dane_tlsa != NULL);
 		now = curtime();
 		if (tTd(8, 20))
-			sm_dprintf("gettlsa: host=%s, found-ste=%p, ste_flags=%#lx, expired=%d\n", host, ste, ste->s_tlsa->dane_tlsa_flags, dane_tlsa->dane_tlsa_exp <= now);
+			sm_dprintf("gettlsa: host=%s, found-ste=%p, ste_flags=%lX, expired=%d\n", host, ste, ste->s_tlsa->dane_tlsa_flags, dane_tlsa->dane_tlsa_exp <= now);
 		if (dane_tlsa->dane_tlsa_exp <= now
 		    && 0 == (TLSAFLNOEXP & flags))
 		{
@@ -604,7 +604,7 @@ gettlsa(host, name, pste, flags, mxttl, port)
 		RR_RAW, &err, &herr);
 	if (tTd(8, 2))
 	{
-#if 0
+#  if 0
 /* disabled -- what to do with these two counters? log them "somewhere"? */
 //		if (NULL != dr && tTd(8, 12))
 //		{
@@ -627,7 +627,7 @@ gettlsa(host, name, pste, flags, mxttl, port)
 //			}
 //			sm_dprintf("gettlsa: host=%s, ntlsarrs=%u, usable\%u\n", host, ntlsarrs, usable);
 //		}
-#endif /* 0 */
+#  endif /* 0 */
 		sm_dprintf("gettlsa: host=%s, dr=%p, ad=%d, err=%d, herr=%d\n",
 			host, (void *)dr,
 			dr != NULL ? dr->dns_r_h.ad : -1, err, herr);
@@ -795,38 +795,6 @@ fallbackmxrr(nmx, prefs, mxhosts)
 	return nmx;
 }
 
-# if USE_EAI
-
-/*
-**  HN2ALABEL -- convert hostname in U-label format to A-label format
-**
-**	Parameters:
-**		hostname -- hostname in U-label format
-**
-**	Returns:
-**		hostname in A-label format in a local static buffer.
-**		It must be copied before the function is called again.
-*/
-
-const char *
-hn2alabel(hostname)
-	const char *hostname;
-{
-	UErrorCode error = U_ZERO_ERROR;
-	UIDNAInfo info = UIDNA_INFO_INITIALIZER;
-	UIDNA *idna;
-	static char buf[MAXNAME_I];	/* XXX ??? */
-
-	if (str_is_print(hostname))
-		return hostname;
-	idna = uidna_openUTS46(UIDNA_NONTRANSITIONAL_TO_ASCII, &error);
-	(void) uidna_nameToASCII_UTF8(idna, hostname, strlen(hostname),
-				     buf, sizeof(buf) - 1,
-				     &info, &error);
-	uidna_close(idna);
-	return buf;
-}
-# endif /* USE_EAI */
 
 /*
 **  GETMXRR -- get MX resource records for a domain
@@ -1121,7 +1089,7 @@ getmxrr(host, mxhosts, mxprefs, flags, rcode, pttl, port, pad)
 			if (pad != NULL && *pad)
 				flags |= TLSAFLADMX;
 			if (tTd(8, 20))
-				sm_dprintf("getmxrr: 1: host=%s, mx=%s, flags=%#lx\n", host, bp, flags);
+				sm_dprintf("getmxrr: 1: host=%s, mx=%s, flags=%lX\n", host, bp, flags);
 			nrr = gettlsa(bp, NULL, NULL, flags, ttl, port);
 
 			/* Only check qname if no TLSA RRs were found */
@@ -1129,7 +1097,7 @@ getmxrr(host, mxhosts, mxprefs, flags, rcode, pttl, port, pad)
 			    strcmp(qname, bp))
 			{
 				if (tTd(8, 20))
-					sm_dprintf("getmxrr: 2: host=%s, qname=%s, flags=%#lx\n", host, qname, flags);
+					sm_dprintf("getmxrr: 2: host=%s, qname=%s, flags=%lX\n", host, qname, flags);
 				gettlsa(qname, bp, NULL, flags, ttl, port);
 			/* XXX is this the right ad flag? */
 			}
@@ -1378,7 +1346,7 @@ punt:
 						*pad = ad;
 				}
 				if (TTD(8, 20))
-					sm_dprintf("getmxrr: 3: host=%s, mx=%s, flags=%#lx, ad=%d\n",
+					sm_dprintf("getmxrr: 3: host=%s, mx=%s, flags=%lX, ad=%d\n",
 						host, mxhosts[0], flags, ad);
 				nrr = gettlsa(mxhosts[0], NULL, NULL, flags,
 						cttl, port);
@@ -1394,7 +1362,7 @@ punt:
 					gettlsa(qname, mxhosts[0], NULL, flags,
 						cttl, port);
 					if (tTd(8, 20))
-						sm_dprintf("getmxrr: 4: host=%s, qname=%s, flags=%#lx\n", host, qname, flags);
+						sm_dprintf("getmxrr: 4: host=%s, qname=%s, flags=%lX\n", host, qname, flags);
 				/* XXX is this the right ad flag? */
 				}
 			}
@@ -1644,15 +1612,24 @@ dns_getcanonname(host, hbsize, trymx, statp, pttl)
 	unsigned long old_options = 0;
 # endif
 
+# if _FFR_DNS_ERR_NAME
+	SM_FREE(DNSErrName);
+# endif
 	ttl = 0;
 	gotmx = false;
 	ad = true;
 	if (tTd(8, 2))
 		sm_dprintf("dns_getcanonname(%s, trymx=%d)\n", host, trymx);
 
-	if ((_res.options & RES_INIT) == 0 && res_init() == -1)
+	if (!bitset(RES_INIT, _res.options) && res_init() == -1)
 	{
+		if (LogLevel > 7)
+			sm_syslog(LOG_ERR, NOQID,
+				"res_init()=failed, h_errno=%d", h_errno);
 		*statp = EX_UNAVAILABLE;
+# if _FFR_DNS_ERR_NAME
+		DNSErrName = sm_strdup(host);
+# endif
 		return HOST_NOTFOUND;
 	}
 
@@ -1927,7 +1904,7 @@ nexttype:
 
 				if (loopcnt++ > MAXCNAMEDEPTH)
 				{
-					/*XXX should notify postmaster XXX*/
+					/* XXX should notify postmaster XXX */
 					message("DNS failure: CNAME loop for %s",
 						host);
 					if (CurEnv->e_message == NULL)
@@ -2034,7 +2011,42 @@ nexttype:
 # if DANE
 	_res.options = old_options;
 # endif
+# if _FFR_DNS_ERR_NAME
+	DNSErrName = sm_strdup(host);
+# endif
 	return HOST_NOTFOUND;
 }
 
 #endif /* NAMED_BIND */
+
+#if USE_EAI
+/*
+**  HN2ALABEL -- convert hostname in U-label format to A-label format
+**
+**	Parameters:
+**		hostname -- hostname in U-label format
+**
+**	Returns:
+**		hostname in A-label format in a local static buffer.
+**		It must be copied before the function is called again.
+*/
+
+const char *
+hn2alabel(hostname)
+	const char *hostname;
+{
+	UErrorCode error = U_ZERO_ERROR;
+	UIDNAInfo info = UIDNA_INFO_INITIALIZER;
+	UIDNA *idna;
+	static char buf[MAXNAME_I];	/* XXX ??? */
+
+	if (str_is_print(hostname))
+		return hostname;
+	idna = uidna_openUTS46(UIDNA_NONTRANSITIONAL_TO_ASCII, &error);
+	(void) uidna_nameToASCII_UTF8(idna, hostname, strlen(hostname),
+				     buf, sizeof(buf) - 1,
+				     &info, &error);
+	uidna_close(idna);
+	return buf;
+}
+#endif /* USE_EAI */

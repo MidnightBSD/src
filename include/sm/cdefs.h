@@ -43,13 +43,9 @@
 #   define	__END_DECLS
 #  endif /* defined(__cplusplus) */
 #  if defined(__STDC__) || defined(__cplusplus)
-#   ifndef __P
-#    define	__P(protos)	protos
-#   endif /* __P */
 #   define	__CONCAT(x,y)	x ## y
 #   define	__STRING(x)	#x
 #  else /* defined(__STDC__) || defined(__cplusplus) */
-#   define	__P(protos)	()
 #   define	__CONCAT(x,y)	x/**/y
 #   define	__STRING(x)	"x"
 #   define	const
@@ -57,6 +53,15 @@
 #   define	volatile
 #  endif /* defined(__STDC__) || defined(__cplusplus) */
 # endif /* !SM_CONF_SYS_CDEFS_H */
+
+/* Some platforms don't define __P -- do it for them here: */
+# ifndef __P
+#  ifdef __STDC__
+#   define __P(X) X
+#  else
+#   define __P(X) ()
+#  endif
+# endif /* __P */
 
 /*
 **  Define SM_DEAD, a macro used to declare functions that do not return

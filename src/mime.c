@@ -350,7 +350,7 @@ mime8to7(mci, header, e, boundaries, flags, level)
 			collect(e->e_dfp, SMTPMODE_NO, &hdr, e, false);
 			if (tTd(43, 101))
 				putline("+++after collect", mci);
-			if (!putheader(mci, hdr, e, flags))
+			if (!putheader(mci, hdr, e, flags, NULL))
 				goto writeerr;
 			if (tTd(43, 101))
 				putline("+++after putheader", mci);
@@ -412,7 +412,7 @@ mime8to7(mci, header, e, boundaries, flags, level)
 			collect(e->e_dfp, SMTPMODE_NO, &hdr, e, false);
 			if (tTd(43, 101))
 				putline("+++after collect", mci);
-			if (!putheader(mci, hdr, e, flags))
+			if (!putheader(mci, hdr, e, flags, NULL))
 				goto writeerr;
 			if (tTd(43, 101))
 				putline("+++after putheader", mci);

@@ -1566,9 +1566,9 @@ dns2he(dr, family)
 
 static void dns_addns __P((struct in_addr *, unsigned int));
 static int nsidx = 0;
-#ifndef MAXNS
-# define MAXNS	3
-#endif
+#  ifndef MAXNS
+#   define MAXNS	3
+#  endif
 static void
 dns_addns(ns, port)
 	struct in_addr *ns;
@@ -1637,7 +1637,7 @@ nsportip(p)
 	r = inet_pton(AF_INET, p, &nsip);
 	if (r > 0)
 	{
-		if ((_res.options & RES_INIT) == 0)
+		if (!bitset(RES_INIT, _res.options))
 			(void) res_init();
 		dns_addns(&nsip, port);
 	}

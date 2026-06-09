@@ -13,6 +13,6 @@ divert(0)
 VERSIONID(`$Id: blacklist_recipients.m4,v 8.14 2013-11-22 20:51:11 ca Exp $')
 divert(-1)
 
-errprint(`WARNING: FEATURE(blacklist_recipients) is deprecated; use FEATURE(blocklist_recipients.m4).
+errprint(`WARNING: FEATURE(blacklist_recipients) is deprecated; use FEATURE(blocklist_recipients).
 ')
 FEATURE(`blocklist_recipients')

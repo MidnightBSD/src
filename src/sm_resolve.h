@@ -128,9 +128,6 @@ typedef struct
 	RESOURCE_RECORD_T	*dns_r_head;
 } DNS_REPLY_T;
 
-#define SM_DNS_FL_EDNS0		0x01
-#define SM_DNS_FL_DNSSEC	0x02
-
 /* flags for parse_dns_reply() et.al. */
 #define RR_AS_TEXT	0x01	/* convert some RRs to text, e.g., TLSA */
 #define RR_RAW		0x02	/* return some RRs as "raw" data */

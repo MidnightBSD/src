@@ -1872,6 +1872,9 @@ static struct dflags	DaemonFlags[] =
 	{ "OPTIONAL",		D_OPTIONAL	},
 	{ "DISABLE",		D_DISABLE	},
 	{ "ISSET",		D_ISSET		},
+#if defined(D_NOENVID)
+	{ "NOENVID",		D_NOENVID	},
+#endif
 #if _FFR_XCNCT
 	{ "XCNCT",		D_XCNCT		},
 	{ "XCNCT_M",		D_XCNCT_M	},
@@ -2390,7 +2393,7 @@ makeconnection(host, port, mci, e, enough
 			p = &host[strlen(host) - 1];
 #if DANE
 			if (tTd(16, 40))
-				sm_dprintf("makeconnection: tlsa_flags=%#lx, host=%s\n",
+				sm_dprintf("makeconnection: tlsa_flags=%lX, host=%s\n",
 					tlsa_flags, host);
 			if (DANEMODE(tlsa_flags) == DANE_SECURE
 # if DNSSEC_TEST
@@ -2406,7 +2409,7 @@ makeconnection(host, port, mci, e, enough
 
 				/*
 				**  Check for errors!
-				**  If no ad: turn off TLSA.
+				**  If ad: set TLSAFLADIP (for TLSA)
 				**  permfail: use "normal" method?
 				**  tempfail: delay or use "normal" method?
 				*/
@@ -2580,7 +2583,7 @@ gothostent:
 		if (bitnset(M_SMTPS_CLIENT, mci->mci_mailer->m_flags))
 			port = htons(465);
 		else
-# endif /* _FFR_SMTPS_CLIENT */
+# endif
 			port = htons(25);
 #else /* NO_GETSERVBYNAME */
 		register struct servent *sp;
@@ -2589,7 +2592,7 @@ gothostent:
 		if (bitnset(M_SMTPS_CLIENT, mci->mci_mailer->m_flags))
 			p = "smtps";
 		else
-# endif /* _FFR_SMTPS_CLIENT */
+# endif
 			p = "smtp";
 		sp = getservbyname(p, "tcp");
 
@@ -2602,7 +2605,7 @@ gothostent:
 			if (bitnset(M_SMTPS_CLIENT, mci->mci_mailer->m_flags))
 				port = htons(465);
 			else
-# endif /* _FFR_SMTPS_CLIENT */
+# endif
 				port = htons(25);
 		}
 		else
@@ -2714,6 +2717,12 @@ gothostent:
 #endif /* HASRRESVPORT */
 		/* "else" in #if code above */
 		{
+			switch (ConnectOnlyTo.sa.sa_family) {
+			  case AF_INET:
+			  case AF_INET6:
+				addr.sa.sa_family = ConnectOnlyTo.sa.sa_family;
+				break;
+			}
 			s = socket(addr.sa.sa_family, SOCK_STREAM, 0);
 		}
 		if (s < 0)
@@ -2853,7 +2862,7 @@ gothostent:
 #if NETINET
 			  case AF_INET:
 				addr.sin.sin_addr.s_addr = ConnectOnlyTo.sin.sin_addr.s_addr;
-				addr.sa.sa_family = ConnectOnlyTo.sa.sa_family;
+				addrlen = sizeof(struct sockaddr_in);
 				if (ConnectOnlyTo.sin.sin_port != 0)
 				{
 					port = ConnectOnlyTo.sin.sin_port;
@@ -2867,6 +2876,7 @@ gothostent:
 				memmove(&addr.sin6.sin6_addr,
 					&ConnectOnlyTo.sin6.sin6_addr,
 					IN6ADDRSZ);
+				addrlen = sizeof(struct sockaddr_in6);
 				if (ConnectOnlyTo.sin6.sin6_port != 0)
 				{
 					port = ConnectOnlyTo.sin6.sin6_port;
@@ -2919,7 +2929,7 @@ gothostent:
 
 #if NETINET6
 nextaddr:
-#endif /* NETINET6 */
+#endif
 		if (hp != NULL && hp->h_addr_list[addrno] != NULL &&
 		    (enough == 0 || curtime() < enough))
 		{
@@ -3376,7 +3386,7 @@ restart_daemon()
 	**  Need to allow signals before execve() to make them "harmless".
 	**  However, the default action can be "terminate", so it isn't
 	**  really harmless.  Setting signals to IGN will cause them to be
-	**  ignored in the new process to, so that isn't a good alternative.
+	**  ignored in the new process too, so that isn't a good alternative.
 	*/
 
 	SM_NOOP_SIGNAL(SIGALRM, oalrm);
@@ -3624,7 +3634,7 @@ getauthinfo(fd, may_be_forged)
 	char *ostype = NULL;
 	char **ha;
 	char ibuf[MAXNAME + 1];	/* EAI:ok? it's a hostname from OS */
-	static char hbuf[MAXNAME + MAXAUTHINFO + 11]; /* EAI:ok? (as above)*/
+	static char hbuf[MAXNAME + MAXAUTHINFO + 11]; /* EAI:ok? (as above) */
 
 	*may_be_forged = true;
 	falen = sizeof(RealHostAddr);
@@ -4075,7 +4085,7 @@ noipsr:
 
 #if IP_SRCROUTE
 postipsr:
-#endif /* IP_SRCROUTE */
+#endif
 
 	/* put back the original incoming port */
 	switch (RealHostAddr.sa.sa_family)
@@ -4301,7 +4311,7 @@ host_map_lookup(map, name, av, statp)
 		if ((in_addr.s_addr = inet_addr(&name[1])) != INADDR_NONE)
 			hp = sm_gethostbyaddr((char *)&in_addr,
 					      INADDRSZ, AF_INET);
-#endif /* NETINET */
+#endif
 #if NETINET6
 		if (hp == NULL &&
 		    anynet_pton(AF_INET6, &name[1], &in6_addr) == 1)
@@ -4559,6 +4569,9 @@ anynet_pton(family, src, dst)
 **
 **	Returns:
 **		A printable version of that sockaddr.
+**
+**	Warning:
+**		The string returned might be in a static buffer.
 */
 
 #ifdef USE_SOCK_STREAM
@@ -4657,7 +4670,7 @@ hostnamebyanyaddr(sap)
 # endif
 # if NETINET6
 	struct in6_addr in6_addr;
-# endif /* NETINET6 */
+# endif
 
 # if NAMED_BIND
 	/* shorten name server timeout to avoid higher level timeouts */
@@ -4711,7 +4724,7 @@ hostnamebyanyaddr(sap)
 	if (hp != NULL && hp->h_name[0] != '['
 #  if NETINET6
 	    && inet_pton(AF_INET6, hp->h_name, &in6_addr) != 1
-#  endif /* NETINET6 */
+#  endif
 #  if NETINET
 	    && inet_addr(hp->h_name) == INADDR_NONE
 #  endif
