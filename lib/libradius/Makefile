@@ -72,6 +72,7 @@ WARNS?=		3
 .if ${MK_OPENSSL} != "no"
 LIBADD+=	crypto
 CFLAGS+=	-DWITH_SSL
+CFLAGS+=	-DOPENSSL_API_COMPAT=0x10100000L
 .else
 LIBADD+=	md
 .endif

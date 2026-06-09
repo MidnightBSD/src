@@ -32,6 +32,7 @@ WARNS?=	2
 NO_WTHREAD_SAFETY= true
 
 LIBADD=	ssl crypto pthread
+CFLAGS+=	-DOPENSSL_API_COMPAT=0x10100000L
 
 # Misnamed file in upstream source
 configlexer.l: configlexer.lex

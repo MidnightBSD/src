@@ -2,6 +2,7 @@
 .include <src.opts.mk>
 
 LIBADD=	ssl crypto
+CFLAGS+=	-DOPENSSL_API_COMPAT=0x10100000L
 
 PROG=	dma
 SRCS=	aliases_parse.y \
