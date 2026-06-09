@@ -113,13 +113,13 @@ struct hdrinfo	HdrInfo[] =
 	{ "disposition-notification-to",	H_FROM,		NULL	},
 
 		/* destination fields */
-	{ "to",				H_RCPT | Xflags,	NULL	},
+	{ "to",				H_RCPT|H_0OR1_AL| Xflags,NULL	},
 	{ "resent-to",			H_RCPT|H_RESENT,	NULL	},
-	{ "cc",				H_RCPT,			NULL	},
+	{ "cc",				H_RCPT|H_0OR1_AL,	NULL	},
 	{ "resent-cc",			H_RCPT|H_RESENT,	NULL	},
-	{ "bcc",			H_RCPT|H_BCC,		NULL	},
+	{ "bcc",			H_RCPT|H_0OR1_AL|H_BCC,	NULL	},
 	{ "resent-bcc",			H_RCPT|H_BCC|H_RESENT,	NULL	},
-	{ "apparently-to",		H_RCPT,			NULL	},
+	{ "apparently-to",		H_RCPT|H_0OR1_AL,	NULL	},
 
 		/* message identification and control */
 	{ "message-id",			0,			NULL	},
@@ -3207,7 +3207,7 @@ static char	*DefaultUserShells[] =
 	"/sbin/csh",		/* standard csh */
 	"/bin/csh",
 	"/usr/bin/csh",
-	"/sbin/jsh",		/* classic Bourne shell w/ job control*/
+	"/sbin/jsh",		/* classic Bourne shell w/ job control */
 	"/bin/jsh",
 	"/usr/bin/jsh",
 	"/bin/ksh",		/* Korn shell */
@@ -4075,7 +4075,7 @@ validate_connection(sap, hostname, e)
 #if TCPWRAPPERS
 	char *host;
 	char *addr;
-	extern int hosts_ctl();
+	extern int hosts_ctl __P((char *, char *, char *, char *));
 #endif /* TCPWRAPPERS */
 
 	if (tTd(48, 3))
@@ -4308,6 +4308,8 @@ sm_getipnodebyname(name, family, flags, err)
 	h = gethostbyname2(name, family);
 	if (h == NULL)
 		*err = h_errno;
+	else
+		*err = 0;
 	return h;
 
 # else /* HAS_GETHOSTBYNAME2 */
@@ -5002,7 +5004,7 @@ load_if_names()
 
 		ip_addr[0] = '\0';
 
-		/* extract IP address from the list*/
+		/* extract IP address from the list */
 		switch (af)
 		{
 		  case AF_INET6:
@@ -5192,7 +5194,7 @@ load_if_names()
 
 		ip_addr[0] = '\0';
 
-		/* extract IP address from the list*/
+		/* extract IP address from the list */
 		switch (af)
 		{
 		  case AF_INET:
@@ -5295,7 +5297,7 @@ isloopback(sa)
 #else /* IN_LOOPBACK */
 # define SM_IS_IPV4_LOOP(a) (((ntohl(a) & IN_CLASSA_NET) \
 	     >> IN_CLASSA_NSHIFT) == IN_LOOPBACKNET)
-# endif /* IN_LOOPBACK */
+#endif /* IN_LOOPBACK */
 #if NETINET6
 	if (sa.sa.sa_family == AF_INET6 &&
 	    IN6_IS_ADDR_V4MAPPED(&sa.sin6.sin6_addr) &&
@@ -5532,7 +5534,7 @@ sm_syslog(level, id, fmt, va_alist)
 	newstring = buf;
 #else
 	newstring = str2prt(buf);
-#endif
+#endif /* _FFR_LOGASIS >= 5 */
 	if ((strlen(newstring) + idlen + 1) < SYSLOG_BUFSIZE)
 	{
 #if LOG
@@ -5546,6 +5548,8 @@ sm_syslog(level, id, fmt, va_alist)
 				sm_dprintf("%ld.%06ld %s\n", (long) tv.tv_sec,
 					(long) tv.tv_usec, newstring);
 			}
+			else if (tTd(89, 9))
+				sm_dprintf("%d: %s\n", CurrentPid, newstring);
 			else if (tTd(89, 8))
 				sm_dprintf("%s\n", newstring);
 			else
@@ -5561,13 +5565,15 @@ sm_syslog(level, id, fmt, va_alist)
 				sm_dprintf("%ld.%06ld %s: %s\n", (long) tv.tv_sec,
 					(long) tv.tv_usec, id, newstring);
 			}
+			else if (tTd(89, 9))
+				sm_dprintf("%s: %d: %s\n", id, CurrentPid, newstring);
 			else if (tTd(89, 8))
 				sm_dprintf("%s: %s\n", id, newstring);
 			else
 				syslog(level, "%s: %s", id, newstring);
 		}
 #else /* LOG */
-		/*XXX should do something more sensible */
+		/* XXX should do something more sensible */
 		if (*id == '\0')
 			(void) sm_io_fprintf(smioerr, SM_TIME_DEFAULT, "%s\n",
 					     newstring);
@@ -5860,6 +5866,9 @@ char	*CompileOptions[] =
 #if MAX_TLSA_RR
 	"MAX_TLSA_RR=" SM_XSTR(MAX_TLSA_RR),
 #endif
+#if DNSSEC_TEST
+	"DNSSEC_TEST",
+#endif
 #if NAMED_BIND
 # if DNSMAP
 	"DNSMAP",
@@ -5890,6 +5899,12 @@ char	*CompileOptions[] =
 #endif
 #if LDAP_REFERRALS
 	"LDAP_REFERRALS",
+#endif
+#if SM_CONF_LDAP_INITIALIZE
+	"SM_CONF_LDAP_INITIALIZE",
+#endif
+#if SM_CONF_LDAP_MEMFREE
+	"SM_CONF_LDAP_MEMFREE",
 #endif
 #if LOG
 	"LOG",
@@ -6022,12 +6037,23 @@ char	*CompileOptions[] =
 #endif
 #if STARTTLS
 	"STARTTLS",
+# if MTA_HAVE_TLSv1_3
+	"MTA_HAVE_TLSv1_3",
+# endif
 #endif
 #if SUID_ROOT_FILES_OK
 	"SUID_ROOT_FILES_OK",
 #endif
 #if SYSLOG_BUFSIZE > 1024
 	"SYSLOG_BUFSIZE=" SM_XSTR(SYSLOG_BUFSIZE),
+#endif
+#if SYSLOG_BUFSIZE < 256
+# if USE_EAI
+#  error "USE_EAI requires SYSLOG_BUFSIZE >= 256"
+# endif
+# if _FFR_EIGHT_BIT_ADDR_OK
+#  error "_FFR_EIGHT_BIT_ADDR_OK requires SYSLOG_BUFSIZE >= 256"
+# endif
 #endif
 #if TCPWRAPPERS
 	"TCPWRAPPERS",
@@ -6106,9 +6132,6 @@ char	*OsCompileOptions[] =
 #endif
 #if DEC_OSF_BROKEN_GETPWENT
 	"DEC_OSF_BROKEN_GETPWENT",
-#endif
-#if DNSSEC_TEST
-	"DNSSEC_TEST",
 #endif
 #if FAST_PID_RECYCLE
 	"FAST_PID_RECYCLE",
@@ -6381,12 +6404,21 @@ char	*FFRCompileOptions[] =
 	/* Deal with MTAs that send a reply during the DATA phase. */
 	"_FFR_CATCH_BROKEN_MTAS",
 #endif
+#if _FFR_CERT_CHK
+	/* use X509_check_purpose() */
+	"_FFR_CERT_CHK",
+#endif
 #if _FFR_CHK_QUEUE
 	/* Stricter checks about queue directory permissions. */
 	"_FFR_CHK_QUEUE",
 #endif
 #if _FFR_CLASS_RM_ENTRY
-	/* WIP: remove entries from a class: C-{name}entry */
+	/*
+	**  Remove entries from a class: C-{name}entry
+	**  NOTE: this does not work if entries are added to the class
+	**  after readcf(), e.g., class w being populated by interface names.
+	*/
+
 	"_FFR_CLASS_RM_ENTRY",
 #endif
 #if _FFR_CLIENTCA
@@ -6411,6 +6443,14 @@ char	*FFRCompileOptions[] =
 	/* Don't try to send mail if its size exceeds SIZE= of server. */
 	"_FFR_CLIENT_SIZE",
 #endif
+#if _FFR_DEF_H_EARLY
+	/* Define $h early in deliver() */
+	"_FFR_DEF_H_EARLY",
+#endif
+#if _FFR_DEF_U_EARLY
+	/* Define $u early in deliver() even if there are multiple RCPTs */
+	"_FFR_DEF_U_EARLY",
+#endif
 #if _FFR_DIGUNIX_SAFECHOWN
 	/* Properly set SAFECHOWN (include/sm/conf.h) for Digital UNIX */
 /* Problem noted by Anne Bennett of Concordia University */
@@ -6433,6 +6473,10 @@ char	*FFRCompileOptions[] =
 /* Don Lewis of TDK */
 	"_FFR_DNSMAP_ALIASABLE",
 #endif
+#if _FFR_DNS_ERR_NAME
+	/* show name which caused a DNS lookup error */
+	"_FFR_DNS_ERR_NAME",
+#endif
 #if _FFR_DONTLOCKFILESFORREAD_OPTION
 	/* Enable DontLockFilesForRead option. */
 	"_FFR_DONTLOCKFILESFORREAD_OPTION",
@@ -6449,9 +6493,7 @@ char	*FFRCompileOptions[] =
 	**  is actually checked). This prevented all new lower case options
 	**  from working...
 	**  The documentation doesn't say anything about case (in)sensitivity,
-	**  which means it should be case sensitive by default,
-	**  but it's not a good idea to change this within a patch release,
-	**  so let's delay this to 8.15.
+	**  which means it should be case sensitive by default.
 	*/
 
 	"_FFR_DPO_CS",
@@ -6560,6 +6602,21 @@ char	*FFRCompileOptions[] =
 	/* Local daemon mode (-bl) which only accepts loopback connections */
 	"_FFR_LOCAL_DAEMON",
 #endif
+#if _FFR_LDAP_VERSION
+	/* LDAP_OPT_PROTOCOL_VERSION */
+	"_FFR_LDAP_VERSION=" SM_XSTR(_FFR_LDAP_VERSION),
+#endif
+#if _FFR_LDAP_VERSION_CHECK
+	/* WIP: check various LDAP versions: run vs compile time */
+	"_FFR_LDAP_VERSION_CHECK",
+#endif
+#if _FFR_LIMITS
+	"_FFR_LIMITS",
+#endif
+#if _FFR_LOG_ENVID
+	/* log ENVID in from= (>=2: also to=, >=3: enable D_NOENVID) */
+	"_FFR_LOG_ENVID=" SM_XSTR(_FFR_LOG_ENVID),
+#endif
 #if _FFR_LOG_FAILOVER
 	/* WIP: log reason why trying another host */
 	"_FFR_LOG_FAILOVER",
@@ -6627,8 +6684,8 @@ char	*FFRCompileOptions[] =
 	**  to translate the "local" df format (\n) to SMTP format (\r\n).
 	**  However, putbody() and mime8to7() use different conversion
 	**  algorithms.
-	**  If the input date does not follow the SMTP standard
-	**  (e.g., if it has "naked \r"s), then the output from putbody()
+	**  If the input data does not follow the SMTP standard
+	**  (e.g., if it has "bare \r"s), then the output from putbody()
 	**  and mime8to7() will most likely be different.
 	**  By turning on this FFR milter_body() will try to "imitate"
 	**  mime8to7().
@@ -6677,6 +6734,9 @@ char	*FFRCompileOptions[] =
 # if !_FFR_TLS_ALTNAMES
 #  error "_FFR_MTA_STS requires _FFR_TLS_ALTNAMES"
 # endif
+# if !SOCKETMAP
+#  error "_FFR_MTA_STS requires SOCKETMAP"
+# endif
 	/* MTA STS support */
 	"_FFR_MTA_STS",
 #endif /* _FFR_MTA_STS */
@@ -6686,7 +6746,7 @@ char	*FFRCompileOptions[] =
 	"_FFR_NODELAYDSN_ON_HOLD",
 #endif
 #if _FFR_NO_PIPE
-	/* Disable PIPELINING, delay client if used. */
+	/* Disable PIPELINING via srv_features, delay client if used. */
 	"_FFR_NO_PIPE",
 #endif
 #if _FFR_LDAP_SINGLEDN
@@ -6720,6 +6780,19 @@ char	*FFRCompileOptions[] =
 #  error "_FFR_OCC requires SM_CONF_SHM"
 # endif
 #endif
+#if _FFR_SAMEDOMAIN
+	/*
+	**  "WIP": try to figure out whether a server only accepts
+	**  RCPTs with the same domain in one transaction
+	**  and then act accordingly.
+	*/
+
+	"_FFR_SAMEDOMAIN",
+#endif
+#if _FFR_OPT_FOREGROUND
+	/* -z: run in foreground - without relying on -d99.100 */
+	"_FFR_OPT_FOREGROUND",
+#endif
 #if _FFR_PROXY
 	/* "proxy" (synchronous) delivery mode */
 	"_FFR_PROXY",
@@ -6746,7 +6819,7 @@ char	*FFRCompileOptions[] =
 	"_FFR_QUEUE_SCHED_DBG",
 #endif
 #if _FFR_RCPTFLAGS
-	/* dynamic mailer modifications via {rcpt_flags}*/
+	/* dynamic mailer modifications via {rcpt_flags} */
 	"_FFR_RCPTFLAGS",
 #endif
 #if _FFR_RCPTTHROTDELAY
@@ -6771,7 +6844,11 @@ char	*FFRCompileOptions[] =
 	"_FFR_REPLY_MULTILINE=" SM_XSTR(_FFR_REPLY_MULTILINE),
 #endif
 #if _FFR_RESET_MACRO_GLOBALS
-	/* Allow macro 'j' to be set dynamically via rulesets. */
+	/*
+	**  Changes to macro 'j' affect the hostname reported
+	**  in SMTP responses and DSNs
+	*/
+
 	"_FFR_RESET_MACRO_GLOBALS",
 #endif
 #if _FFR_RHS
@@ -6786,9 +6863,13 @@ char	*FFRCompileOptions[] =
 
 	"_FFR_RUNPQG",
 #endif
-#if _FFR_SESSID
-	/* session id (for logging): WIP, no logging yet!  */
-	"_FFR_SESSID",
+#if _FFR_MF_ONEDOMAIN
+	/* mailer flag O: only the same domain in an outgoing TA */
+	"_FFR_MF_ONEDOMAIN",
+#endif
+#if _FFR_SE_TA_ID
+	/* session and transaction id (for logging): WIP, no logging yet!  */
+	"_FFR_SE_TA_ID",
 #endif
 #if _FFR_SETANYOPT
 	/*
@@ -6885,6 +6966,10 @@ char	*FFRCompileOptions[] =
 
 	"_FFR_USE_GETPWNAM_ERRNO",
 #endif
+#if _FFR_VRFY_STAT
+	/* log error text for verify=FAIL */
+	"_FFR_VRFY_STAT",
+#endif
 #if _FFR_VRFY_TRUSTED_FIRST
 	/*
 	**  Sets X509_V_FLAG_TRUSTED_FIRST if -d88;.101 is used.
@@ -6936,6 +7021,14 @@ char	*FFRCompileOptions[] =
 	/* Do not include input from a client in a reply of the server */
 	"_FFR_NOREFLECT",
 #endif
+#if _FFR_NO_STRICT1
+	/*
+	**  Do not require CRLF as EOL nor drop connection on bare LF or CR
+	**  by default.
+	*/
+
+	"_FFR_NO_STRICT1",
+#endif
 #if _FFR_AUTH_PASSING
 	/* Set the default AUTH= if the sender didn't */
 	"_FFR_AUTH_PASSING",
@@ -6970,6 +7063,7 @@ char	*FFRCompileOptions[] =
 #endif
 #if _FFR_M_ONLY_IPV4
 	/* mailer flag 4: use only IPv4 for delivery attempts */
+	/* Note: this is enabled by default! */
 	"_FFR_M_ONLY_IPV4",
 #endif
 #if _FFR_SMTPS_CLIENT

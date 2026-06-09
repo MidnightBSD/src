@@ -167,7 +167,7 @@ arpadate(ud)
 #endif /* TZ_TYPE == TZ_TZNAME */
 #if TZ_TYPE == TZ_TIMEZONE
 		{
-			extern char *timezone();
+			extern char *timezone __P((int, int));
 
 			tz = timezone(off, lt->tm_isdst);
 		}

@@ -215,10 +215,10 @@ main(argc, argv)
 	extern char *optarg;
 	extern int optind;
 
-
 	/* make sure we have some open file descriptors */
 	for (fd = 10; fd < 30; fd++)
 		(void) close(fd);
+	errno = 0;
 
 	/* use a reasonable umask */
 	(void) umask(0077);
@@ -858,7 +858,7 @@ store(from, inbody)
 			if (line[1] == '\n' ||
 			    (line[1] == '\r' && line[2] == '\n'))
 				goto lmtpdot;
-			memcpy(line, line + 1, line_len);
+			memmove(line, line + 1, line_len);
 			line_len--;
 		}
 
@@ -1631,14 +1631,13 @@ notifybiff(msg)
 void
 usage()
 {
-	ExitVal = EX_USAGE;
 	/* XXX add U to options for USE_EAI */
 #if _FFR_SPOOL_PATH
 	mailerr(NULL, "usage: mail.local [-7] [-B] [-b] [-d] [-l] [-s] [-f from|-r from] [-h filename] [-p path] user ...");
 #else
 	mailerr(NULL, "usage: mail.local [-7] [-B] [-b] [-d] [-l] [-s] [-f from|-r from] [-h filename] user ...");
 #endif
-	sm_exit(ExitVal);
+	sm_exit(EX_USAGE);
 }
 
 void

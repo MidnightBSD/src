@@ -1186,7 +1186,7 @@ milter_open(m, parseonly, e)
 	{
 		int nodelay = 1;
 
-		setsockopt(m->mf_sock, IPPROTO_TCP, TCP_NODELAY,
+		setsockopt(sock, IPPROTO_TCP, TCP_NODELAY,
 			   (char *)&nodelay, sizeof(nodelay));
 	}
 # endif /* MILTER_NO_NAGLE && !defined(TCP_CORK) */
@@ -1530,7 +1530,7 @@ milter_set_macros(name, macros, val, nummac)
 
 		if (nummac >= MAXFILTERMACROS)
 		{
-			syserr("milter_set_option: too many macros in Milter.%s (max %d)",
+			syserr("milter=%s, milter_set_option=too many macros, max=%d",
 			       name, MAXFILTERMACROS);
 			macros[nummac] = NULL;
 			return -1;
@@ -1641,7 +1641,7 @@ milter_set_option(name, val, sticky)
 		    MilterMaxDataSize != MILTER_MDS_1M)
 		{
 			sm_syslog(LOG_WARNING, NOQID,
-				"WARNING: Milter.%s=%lu, allowed are only %d, %d, and %d",
+				"WARNING: milter=%s, MilterMaxDataSize=%lu, allowed=%d and %d and %d",
 				name, (unsigned long) MilterMaxDataSize,
 				MILTER_MDS_64K, MILTER_MDS_256K,
 				MILTER_MDS_1M);
@@ -1876,8 +1876,8 @@ milter_abort_filter(m, e)
 **		none
 */
 
-#if _FFR_TESTS
-# define TST_EO	\
+# if _FFR_TESTS
+#  define TST_EO	\
 	do	\
 	{	\
 		if (tTd(86, 100) &&	\
@@ -1890,9 +1890,9 @@ milter_abort_filter(m, e)
 				v = "at_EOM";	\
 		}	\
 	} while (0)
-#else
-# define TST_EO	((void) 0)
-#endif
+# else
+#  define TST_EO	((void) 0)
+# endif
 
 static void
 milter_send_macros(m, macros, cmd, e)
@@ -4041,8 +4041,7 @@ milter_connect(hostname, addr, e, state)
 
 	if (*state == SMFIR_REPLYCODE)
 	{
-		if (response != NULL &&
-		    *response == '4')
+		if (response != NULL && *response == '4')
 		{
 			if (strncmp(response, "421 ", 4) == 0)
 				*state = SMFIR_SHUTDOWN;

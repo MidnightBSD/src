@@ -436,7 +436,7 @@ savemail(e, sendbody)
 
 			if (!putfromline(&mcibuf, e) ||
 			    !(*e->e_puthdr)(&mcibuf, e->e_header, e,
-					M87F_OUTER) ||
+					M87F_OUTER, NULL) ||
 			    !(*e->e_putbody)(&mcibuf, e, NULL) ||
 			    !putline("\n", &mcibuf) ||
 			    sm_io_flush(fp, SM_TIME_DEFAULT) == SM_IO_EOF ||
@@ -468,7 +468,11 @@ savemail(e, sendbody)
 
 		  case ESM_PANIC:
 			/* leave the locked queue & transcript files around */
+#if _FFR_SE_TA_ID
+			loseqfile(e, "stat=savemail panic, reason=cannot save rejected email anywhere");
+#else
 			loseqfile(e, "savemail panic");
+#endif
 			panic = true;
 			errno = 0;
 			syserr("554 savemail: cannot save rejected email anywhere");
@@ -555,6 +559,11 @@ returntosender(msg, returnq, flags, e)
 	macdefine(&ee->e_macro, A_PERM, 's', "localhost");
 	macdefine(&ee->e_macro, A_PERM, '_', "localhost");
 	clrsessenvelope(ee);
+#if _FFR_SE_TA_ID
+	if (NULL != e->e_s_ta)
+		ee->e_s_ta = sm_rpool_strdup_x(ee->e_rpool, e->e_s_ta);
+	/* e_s_se is not copied because it is not used/logged for delivery */
+#endif
 
 	ee->e_puthdr = putheader;
 	ee->e_putbody = errbody;
@@ -626,8 +635,14 @@ returntosender(msg, returnq, flags, e)
 			p = "postmaster notify";
 		else
 			p = "DSN";
+#if _FFR_SE_TA_ID
+		sm_syslog(LOG_INFO, e->e_id, S_TA_ID "=%s, qid=%s, "S_TA_ID "=%s, dsn_type=%s, stat=%s",
+			  e->e_s_ta, ee->e_id, ee->e_s_ta, p, shortenstring(msg, MAXSHORTSTR));
+
+#else
 		sm_syslog(LOG_INFO, e->e_id, "%s: %s: %s",
 			  ee->e_id, p, shortenstring(msg, MAXSHORTSTR));
+#endif
 	}
 
 	if (SendMIMEErrors)
@@ -1482,7 +1497,7 @@ errbody(mci, e, separator)
 			goto writeerr;
 		save_errno = errno;
 		if (!putheader(mci, e->e_parent->e_header, e->e_parent,
-				M87F_OUTER))
+				M87F_OUTER, NULL))
 			goto writeerr;
 		errno = save_errno;
 		if (sendbody)
@@ -1641,6 +1656,7 @@ xtextify(t, taboo)
 	{
 		/* since nbogus is ssize_t and wrapped, 2 * size_t would wrap */
 		syserr("!xtextify string too long");
+		/* NOTREACHED */
 	}
 	if (nbogus == 0)
 		return t;

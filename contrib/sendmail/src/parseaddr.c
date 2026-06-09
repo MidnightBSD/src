@@ -307,8 +307,8 @@ invalidaddr(addr, delimptr, isrcpt)
 			char saved = *addr;
 
 			*addr = '\0';
-			usrerr("553 5.1.0 Address \"%s\" too long (%d bytes max)",
-			       b, MAXNAME - 1);	/* EAI:ok */
+			usrerr("553 5.1.0 Address too long (%d bytes max)",
+			       MAXNAME - 1);	/* EAI:ok */
 			*addr = saved;
 			result = true;
 			goto delim;
@@ -375,8 +375,8 @@ hasctrlchar(addr, isrcpt, complain)
 			if (complain)
 			{
 				(void) shorten_rfc822_string(b, MAXNAME - 1);	/* EAI:ok */
-				usrerr("553 5.1.0 Address \"%s\" too long (%d bytes max)",
-				       b, MAXNAME - 1);	/* EAI:ok */
+				usrerr("553 5.1.0 Address too long (%d bytes max)",
+				       MAXNAME - 1);	/* EAI:ok */
 				return true;
 			}
 			result = "too long";
@@ -1827,7 +1827,7 @@ callsubr(pvp, reclevel, e)
 **		e -- the current envelope.
 **
 **	Returns:
-**		The result of the lookup.
+**		The result of the lookup (which is statically allocated).
 **		NULL -- if there was no data for the given key.
 */
 
@@ -2495,6 +2495,12 @@ static struct qflags	AddressFlags[] =
 	{ "QQUEUED",		QQUEUED		},
 	{ "QINTREPLY",		QINTREPLY	},
 	{ "QMXSECURE",		QMXSECURE	},
+#if _FFR_MTA_STS
+	{ "QHASSTS",		QHASSTS		},
+#endif
+#if _FFR_SAMEDOMAIN
+	{ "QNOTSAMEDOMAIN",	QNOTSAMEDOMAIN	},
+#endif
 	{ "QTHISPASS",		QTHISPASS	},
 	{ "QRCPTOK",		QRCPTOK		},
 	{ NULL,			0		}

@@ -12,6 +12,16 @@ distribution).
 
 This list is not guaranteed to be complete.
 
+* Compiler warnings regarding function prototypes.
+
+  Recent C compiler versions have deprecated function prototypes
+  accepted in earlier versions, causing compile-time warnings.  Most
+  of these warnings can be silenced using the -W options supported
+  by the compilers (e.g.,  "-Wno-deprecated-non-prototype" or
+  "-Wno-old-style-definition").  See devtools/README for information on
+  adding compiler options (e.g., confCCOPTS).  A future sendmail version
+  will switch to ANSI C which will avoid these warnings.
+
 * Header values which are too long may be truncated.
 
   If a value of a structured header is longer than 256 (MAXNAME)

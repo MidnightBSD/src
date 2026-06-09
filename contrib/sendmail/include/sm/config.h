@@ -26,6 +26,7 @@
 **  SM_CONF_STDBOOL_H is 1 if <stdbool.h> exists
 **
 **  Note, unlike gcc, clang doesn't apply full prototypes to K&R definitions.
+**  XREF: include/libmilter/mfapi.h
 */
 
 # ifndef SM_CONF_STDBOOL_H

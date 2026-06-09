@@ -23,9 +23,9 @@
 
    /* first libmilter version that has MDS support */
 #  define SMFI_VERSION_MDS	0x01000002
-# else /* _FFR_MDS_NEGOTIATE */
+# else
 #  define SMFI_VERSION	0x01000001	/* libmilter version number */
-# endif /* _FFR_MDS_NEGOTIATE */
+# endif
 #endif /* ! SMFI_VERSION */
 
 #define SM_LM_VRS_MAJOR(v)	(((v) & 0x7f000000) >> 24)
@@ -88,6 +88,20 @@ typedef int	sfsistat;
 #  define __P(X) ()
 # endif
 #endif /* __P */
+
+/*
+**  SM_CONF_STDBOOL_H is 1 if <stdbool.h> exists
+**
+**  Note, unlike gcc, clang doesn't apply full prototypes to K&R definitions.
+*/
+
+# ifndef SM_CONF_STDBOOL_H
+#  if !defined(__clang__) && defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
+#   define SM_CONF_STDBOOL_H		1
+#  else
+#   define SM_CONF_STDBOOL_H		0
+#  endif
+# endif /* ! SM_CONF_STDBOOL_H */
 
 #if SM_CONF_STDBOOL_H
 # include <stdbool.h>

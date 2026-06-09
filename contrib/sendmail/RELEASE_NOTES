@@ -6,6 +6,49 @@ of the sendmail configuration files, the date of release, and a
 summary of the changes in that release.
 
 
+8.18.2/8.18.2	2025/12/27
+	Avoid adding a second To: header to DSNs, instead any
+		additional addresses are appended to an existing
+		To: header (this also applies to Cc: and Bcc:).
+	Fix matching of wildcard SANs in the experimental support
+		for SMTP MTA Strict Transport Security (MTA-STS).
+		Problem reported by Dilyan Palauzo.
+	The experimental support for SMTP MTA Strict Transport
+		Security has been significantly rewritten to handle
+		the problems caused by it being tied to the domain
+		of a RCPT address (instead to an SMTP server for
+		all the domains it handles - compare DANE).
+		The most visible change is that an SMTP transaction
+		where the first RCPT has an STS policy will have
+		only RCPTs with the same domain instead of all
+		RCPTs going to the same servers (MX).
+		Accordingly, MTA-STS can be disabled per RCPT domain
+		by adding access map entries of the form
+			STS:domain	NO
+		Successful deliveries to RCPTs which have an STS
+		policy show STS=OK in the to=... stat=Sent log entry.
+		If an STS policy for a RCPT could not be fulfilled
+		then the RCPT is not being sent and an error containing
+		the string "STS" is logged.
+	MaxQueueAge is now observed for all types of QueueSortOrder
+		even those which internally skip some code (including
+		the MaxQueueAge check).
+	On some systems the rejection of a RCPT by a milter could
+		silently be ignored.
+	Increase size for an internal buffer which can contain AUTH
+		data because XOAUTH2 could use very long tokens.
+		Patch from Frank Schmirler.
+	Portability:
+		Add support for Darwin 24 and 25.
+	LIBSM: Fix compilation of vfscanf.c with gcc-15.  Problem
+		reported by Jaroslav Škarvada of RedHat.
+	MAILSTATS: Fix compilation with gcc-15.  Problem reported by
+		Jaroslav Škarvada of RedHat.
+	New Files:
+		cf/feature/same_domain_only.m4
+		devtools/OS/Darwin.24.x
+		devtools/OS/Darwin.25.x
+
 8.18.1/8.18.1	2024/01/31
 	sendmail is now stricter in following the RFCs and rejects
 		some invalid input with respect to line endings
@@ -16,9 +59,10 @@ summary of the changes in that release.
 		the new srv_features option 'F'.  Issue reported by
 		Yepeng Pan and Christian Rossow from CISPA Helmholtz
 		Center for Information Security.
-		- Accept only CRLF . CRLF as end of an SMTP message
-		as required by the RFCs, which can disabled by the
-		new srv_features option 'O'.
+		- In an SMTP message accept only CRLF as end of a line
+		and hence only CRLF . CRLF as end of a message as
+		required by the RFCs, which can be disabled by the new
+		srv_features option 'O'.
 		- Do not accept a CR or LF except in the combination
 		CRLF (as required by the RFCs).  These checks can
 		be disabled by the new srv_features options
@@ -39,7 +83,7 @@ summary of the changes in that release.
 		changed by defining confOPENSSL_CNF in the mc file;
 		using an empty value prevents setting OPENSSL_CONF.
 		Note: referring to a file which does not exist does
-		not cause an an error.
+		not cause an error.
 	Two new values have been added for {verify}:
 		"DANE_TEMP": DANE verification failed temporarily.
 		"DANE_NOTLS": DANE was required but STARTTLS was not
@@ -645,7 +689,7 @@ summary of the changes in that release.
 	Fix a regression introduced in 8.14.6: the wrong list of
 		macros was sent to a milter in the EHLO stage.
 		Problem found by Fabrice Bellet, reported via RedHat
-		(Jaroslav Skarvada).
+		(Jaroslav Škarvada).
 	Fix handling of ORCPT parameter for DSNs: xtext decoding
 		was not performed and a wrong syntax check was applied
 		to the "addr-type" field.  Problem noted by Dan Lukes

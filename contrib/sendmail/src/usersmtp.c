@@ -39,12 +39,12 @@ extern void	sm_sasl_free __P((void *));
 #define ENHSCN_RPOOL(e, d, rpool) \
 	((e) == NULL ? (d) : sm_rpool_strdup_x(rpool, e))
 
-static char	SmtpMsgBuffer[MAXLINE];		/* buffer for commands */
+static char	SmtpMsgBuffer[MAXINPLINE];	/* buffer for commands */
 static char	SmtpReplyBuffer[MAXLINE];	/* buffer for replies */
 static bool	SmtpNeedIntro;		/* need "while talking" in transcript */
 
 /*
-**  SMTPCCLRSE -- clear session related data in envelope
+**  SMTPCLRSE -- clear session related data in envelope
 **
 **	Parameters:
 **		e -- the envelope.
@@ -58,7 +58,7 @@ smtpclrse(e)
 	ENVELOPE *e;
 {
 	SmtpError[0] = '\0';
-	e->e_rcode = 0;
+	e->e_rcode = EX_OK;
 	e->e_renhsc[0] = '\0';
 	e->e_text = NULL;
 #if _FFR_LOG_STAGE
@@ -125,7 +125,7 @@ smtpinit(m, mci, e, onlyhelo)
 		CurHostName = MyHostName;
 	SmtpNeedIntro = true;
 	state = mci->mci_state;
-	e->e_rcode = 0;
+	e->e_rcode = EX_OK;
 	e->e_renhsc[0] = '\0';
 	e->e_text = NULL;
 	maps_reset_chged("client:smtpinit");
@@ -162,11 +162,31 @@ smtpinit(m, mci, e, onlyhelo)
 
 	mci->mci_state = MCIS_OPENING;
 	clrsessenvelope(e);
+#if _FFR_SE_TA_ID
+# define MAXCIDLEN	(MAXQFNAME + 8)
+	if (NULL == mci->mci_c_se)
+	{
+		char c_se_id[MAXCIDLEN];
+
+		(void) sm_snprintf(c_se_id, sizeof(c_se_id),
+			"CS%s%X", e->e_id, e->e_c_se_cnt);
+		mci->mci_c_se = sm_rpool_strdup_x(mci->mci_rpool, c_se_id);
+		++e->e_c_se_cnt;	/* always? */
+		if (tTd(94, 8))
+			sm_dprintf("smtpinit: set: mci_c_se=%s, qid=%s\n",
+				mci->mci_c_se, e->e_id);
+	}
+	SM_ASSERT(NULL != mci->mci_c_se);
+	SM_ASSERT(strlen(mci->mci_c_se) < MAXCIDLEN);
+	e->e_c_se = sm_rpool_strdup_x(e->e_rpool, mci->mci_c_se);
+	if (tTd(94, 8))
+		sm_dprintf("smtpinit: qid=%s, " C_SE_ID "=%s, ct_se_cnt=%u\n",
+			e->e_id, e->e_c_se, e->e_c_se_cnt);
+#endif /* _FFR_SE_TA_ID */
 
 	/*
 	**  Get the greeting message.
-	**	This should appear spontaneously.  Give it five minutes to
-	**	happen.
+	**	This should appear spontaneously.
 	*/
 
 	SmtpPhase = mci->mci_phase = "client greeting";
@@ -508,6 +528,56 @@ helo_options(line, firstline, m, mci, e)
 		mci->mci_flags |= MCIF_PIPELINED;
 	else if (SM_STRCASEEQ(line, "verb"))
 		mci->mci_flags |= MCIF_VERB;
+#if _FFR_LIMITS
+	/* include trailing space? */
+	else if (SM_STRCASEEQ(line, "limits"))
+	{
+		ulong val;
+		bool fail;
+		char *endptr, *subopt;
+
+# define sm_strcaseeqn(s1, s2, len) (0 == strncasecmp(s1, s2, len))
+# define SMTPC_IS_CAPN(str)	(sm_strcaseeqn(line, (str), strlen(str)))
+# define GETCAPVAL(name, field)	\
+	if (SMTPC_IS_CAPN(name))	\
+	{	\
+		line += sizeof(name) - 1;	\
+		errno = 0;	\
+		fail = false; \
+		val = strtoul(line, &endptr, 10);	\
+		if (!((val == ULONG_MAX && errno == ERANGE) ||	\
+		      endptr == line || val > 1000000 || 0 == val))	\
+		{	\
+			mci->field = val;	\
+			line = endptr;	\
+		}	\
+		else	\
+			 fail = true;	\
+	}
+
+		line += sizeof("limits");
+		subopt = line;
+		fail = false;
+		while ('\0' != *line && !fail)
+		{
+			while (SM_ISSPACE(*line))
+				++line;
+			subopt = line;
+			GETCAPVAL("mailmax=", mci_mailmax)
+/* not yet implemented	else GETCAPVAL("rcptmax=", mci_rcptmax) */
+			else GETCAPVAL("rcptdomainmax=", mci_rcptdomainmax)
+			else
+			{
+				/* skip over unknown entries */
+				while ('\0' != *line && !SM_ISSPACE(*line))
+					++line;
+			}
+		}
+		if (fail)
+			sm_syslog(LOG_DEBUG, NOQID,
+				"ehlo=%s, status=bogus", subopt);
+	}
+#endif /* _FFR_LIMITS */
 #if USE_EAI
 	else if (SM_STRCASEEQ(line, "smtputf8"))
 		mci->mci_flags |= MCIF_EAI;
@@ -1715,6 +1785,7 @@ attemptauth(m, mci, e, sai)
 			break;
 #   endif
 		  default:
+			addrsize = 0;	/* just to shut up the compiler */
 			break;
 		}
 		if (iptostring(&CurHostAddr, addrsize,
@@ -2189,6 +2260,9 @@ smtpmailfrom(m, mci, e)
 	if (bitset(MCIF_DSN, mci->mci_flags))
 	{
 		if (e->e_envid != NULL &&
+#if defined(D_NOENVID)
+		    !iscltflgset(e, D_NOENVID) &&
+#endif
 		    SPACELEFT(optbuf, bufp) > strlen(e->e_envid) + 7)
 		{
 			(void) sm_snprintf(bufp, SPACELEFT(optbuf, bufp),
@@ -2294,6 +2368,28 @@ smtpmailfrom(m, mci, e)
 		smtpmessage("MAIL From:<@%s%c%s>%s", m, mci, MyHostName,
 			    *bufp == '@' ? ',' : ':', bufp, optbuf);
 	}
+#if _FFR_SE_TA_ID
+	do {
+		char c_ta_id[MAXCIDLEN];
+		(void) sm_snprintf(c_ta_id, sizeof(c_ta_id),
+			"CT%s%X", e->e_id, e->e_c_ta_cnt);
+		e->e_c_ta = sm_rpool_strdup_x(e->e_rpool, c_ta_id);
+		if (tTd(94, 8))
+			sm_dprintf("smtpmail: set: e_c_ta=%s, qid=%s\n",
+				e->e_c_ta, e->e_id);
+	} while (0);
+	++e->e_c_ta_cnt;	/* always? */
+	if (tTd(94, 8))
+		sm_dprintf("smtpmail: qid=%s, " C_TA_ID "=%s, ct_ta_cnt=%u\n",
+			e->e_id, e->e_c_ta, e->e_c_ta_cnt);
+
+	/* fail if mci_c_se is not set? */
+	if (NULL == e->e_c_se && NULL != mci->mci_c_se)
+		e->e_c_se = sm_rpool_strdup_x(e->e_rpool, mci->mci_c_se);
+	if (tTd(94, 8))
+		sm_dprintf("smtpmail: qid=%s, " C_SE_ID "=%s, ct_se_cnt=%u\n",
+			e->e_id, e->e_c_se, e->e_c_se_cnt);
+#endif /* _FFR_SE_TA_ID */
 	SmtpPhase = mci->mci_phase = "client MAIL";
 	sm_setproctitle(true, e, "%s %s: %s", qid_printname(e),
 			CurHostName, mci->mci_phase);
@@ -2539,8 +2635,6 @@ smtprcpt(to, m, mci, e, ctladdr, xstart)
 /*
 **  SMTPRCPTSTAT -- get recipient status
 **
-**	This is only called during SMTP pipelining
-**
 **	Parameters:
 **		to -- address of recipient.
 **		m -- mailer being sent to.
@@ -2583,6 +2677,52 @@ smtprcptstat(to, m, mci, e)
 		to->q_statmta = mci->mci_host;
 	if (r < 0 || REPLYTYPE(r) == 4)
 	{
+#if _FFR_SAMEDOMAIN
+		if (REPLYTYPE(r) == 4 && NULL != to->q_rstatus)
+		{
+			int i;
+			extern SOCKADDR CurHostAddr;
+
+			for (i = 0; i < N_SameDomainOnly; i++)
+			{
+				if (NULL == strstr(to->q_rstatus, SameDomainOnly[i]))
+					continue;
+				if (TTD(68, 8))
+					sm_dprintf("rcpt=%s, rcpt_status=%s\n",
+						to->q_paddr, to->q_rstatus);
+				if (LogLevel > 8)
+# if _FFR_SE_TA_ID
+					sm_syslog(LOG_DEBUG, e->e_id,
+						"%s%s%s%sto=%s, %s%s%s%s%s%s%s%srelay=%.100s [%.100s], reply=%s",
+						(e->e_c_ta != NULL) ? S_TA_ID : "",
+						(e->e_c_ta != NULL) ? "=" : "",
+						(e->e_c_ta != NULL) ? e->e_c_ta : "",
+						(e->e_c_ta != NULL) ? ", " : "",
+						to->q_paddr,
+						(e->e_c_se != NULL) ? C_SE_ID : "",
+						(e->e_c_se != NULL) ? "=" : "",
+						(e->e_c_se != NULL) ? e->e_c_se : "",
+						(e->e_c_se != NULL) ? ", " : "",
+						(e->e_c_ta != NULL) ? C_TA_ID : "",
+						(e->e_c_ta != NULL) ? "=" : "",
+						(e->e_c_ta != NULL) ? e->e_c_ta : "",
+						(e->e_c_ta != NULL) ? ", " : "",
+						mci->mci_host,
+						anynet_ntoa(&CurHostAddr),
+						to->q_rstatus);
+# else /* _FFR_SE_TA_ID */
+					sm_syslog(LOG_DEBUG, e->e_id,
+						"to=%s, relay=%.100s [%.100s], reply=%s",
+						to->q_paddr, mci->mci_host,
+						anynet_ntoa(&CurHostAddr),
+						to->q_rstatus);
+# endif /* _FFR_SE_TA_ID */
+				mci->mci_flags |= MCIF_SAMEDOMAIN_TA|MCIF_SAMEDOMAIN_SE;
+				to->q_flags |= QNOTSAMEDOMAIN;
+				break;
+			}
+		}
+#endif /* _FFR_SAMEDOMAIN */
 		mci->mci_retryrcpt = true;
 		errno = save_errno;
 		return EX_TEMPFAIL;
@@ -2661,6 +2801,7 @@ smtpdata(m, mci, e, ctladdr, xstart)
 	int xstat;
 	int timeout;
 	char *enhsc;
+	char *where, *hdrname;
 
 	/*
 	**  Check if connection is gone, if so
@@ -2675,6 +2816,8 @@ smtpdata(m, mci, e, ctladdr, xstart)
 	}
 
 	enhsc = NULL;
+	where = NULL;
+	hdrname = NULL;
 
 	/*
 	**  Send the data.
@@ -2699,6 +2842,17 @@ smtpdata(m, mci, e, ctladdr, xstart)
 			r = smtprcptstat(mci->mci_nextaddr, m, mci, e);
 			if (r != EX_OK)
 			{
+# if _FFR_SAMEDOMAIN
+				if (tTd(68, 4))
+					sm_dprintf("pipelining: rcpt=%s, rc=%d, to=%s, MCIF_SAMEDOMAIN_TA=%d,  MCIF_SAMEDOMAIN_SE=%d, QNOTSAMEDOMAIN=%d\n", mci->mci_nextaddr->q_paddr, r, mci->mci_nextaddr->q_paddr, bitset(MCIF_SAMEDOMAIN_TA, mci->mci_flags), bitset(MCIF_SAMEDOMAIN_SE, mci->mci_flags), bitset(QNOTSAMEDOMAIN, mci->mci_nextaddr->q_flags));
+				if (bitset(QNOTSAMEDOMAIN, mci->mci_nextaddr->q_flags))
+				{
+					if (tTd(68, 4))
+						sm_dprintf("pipelining: rcpt=%s, rc=%d, to=%s\n", mci->mci_nextaddr->q_paddr, r, mci->mci_nextaddr->q_paddr);
+				}
+				else
+				{
+# endif /* _FFR_SAMEDOMAIN */
 				markfailure(e, mci->mci_nextaddr, mci, r,
 					    false);
 				giveresponse(r, mci->mci_nextaddr->q_status, m,
@@ -2706,6 +2860,9 @@ smtpdata(m, mci, e, ctladdr, xstart)
 					     mci->mci_nextaddr);
 				if (r == EX_TEMPFAIL)
 					mci->mci_nextaddr->q_state = QS_RETRY;
+# if _FFR_SAMEDOMAIN
+				}
+# endif
 			}
 			mci->mci_nextaddr = mci->mci_nextaddr->q_pchain;
 		}
@@ -2786,8 +2943,11 @@ smtpdata(m, mci, e, ctladdr, xstart)
 		**  Output the actual message.
 		*/
 
-		if (!(*e->e_puthdr)(mci, e->e_header, e, M87F_OUTER))
+		if (!(*e->e_puthdr)(mci, e->e_header, e, M87F_OUTER, &hdrname))
+		{
+			where = "header";
 			goto writeerr;
+		}
 
 		if (tTd(18, 101))
 		{
@@ -2796,7 +2956,10 @@ smtpdata(m, mci, e, ctladdr, xstart)
 		}
 
 		if (!(*e->e_putbody)(mci, e, NULL))
+		{
+			where = "body";
 			goto writeerr;
+		}
 
 		/*
 		**  Cleanup after sending message.
@@ -2840,7 +3003,10 @@ smtpdata(m, mci, e, ctladdr, xstart)
 	if (sm_io_fprintf(mci->mci_out, SM_TIME_DEFAULT, "%s.%s",
 			bitset(MCIF_INLONGLINE, mci->mci_flags) ? m->m_eol : "",
 			m->m_eol) == SM_IO_EOF)
+	{
+		where = "EOM";
 		goto writeerr;
+	}
 	if (TrafficLogFile != NULL)
 		(void) sm_io_fprintf(TrafficLogFile, SM_TIME_DEFAULT,
 				     "%05d >>> .\n", (int) CurrentPid);
@@ -2910,7 +3076,11 @@ smtpdata(m, mci, e, ctladdr, xstart)
 		(void) bfrewind(e->e_dfp);
 
 	errno = mci->mci_errno;
-	syserr("+451 4.4.1 timeout writing message to %s", CurHostName);
+	syserr("+451 4.4.2 timeout writing message to %s, where=%s%s%s",
+		CurHostName, where,
+		NULL == hdrname ? "" : ", header=",
+		NULL == hdrname ? "" : hdrname
+		);
 	smtpquit(m, mci, e);
 	return EX_TEMPFAIL;
 }
@@ -3256,6 +3426,7 @@ reply(m, mci, e, timeout, pfunc, enhstat, rtype, rtext)
 				return -1;
 			}
 			mci->mci_state = MCIS_ERROR;
+			mci->mci_flags |= MCIF_IO_ERR;
 			smtpquit(m, mci, e);
 			errno = mci->mci_errno;
 			return -1;
@@ -3307,6 +3478,7 @@ reply(m, mci, e, timeout, pfunc, enhstat, rtype, rtext)
 			if (tTd(18, 100))
 				(void) pause();
 			mci->mci_state = MCIS_ERROR;
+			mci->mci_flags |= MCIF_IO_ERR;
 			smtpquit(m, mci, e);
 #if XDEBUG
 			{

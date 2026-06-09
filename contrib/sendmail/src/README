@@ -21,7 +21,7 @@ This directory contains the source files for sendmail(TM).
 
 **************************************************************************
 **  IMPORTANT:  Read the appropriate paragraphs in the section on	**
-**  ``Operating System and Compile Quirks''.				**
+**  ``OPERATING SYSTEM AND COMPILE QUIRKS.''.				**
 **************************************************************************
 
 For detailed instructions, please read the document ../doc/op/op.me:
@@ -44,8 +44,7 @@ script:
 This uses the "uname" command to figure out what architecture you are
 on and creates a proper Makefile accordingly.  It also creates a
 subdirectory per object format, so that multiarchitecture support is
-easy.  In general this should be all you need.  IRIX 6.x users should
-read the note below in the OPERATING SYSTEM AND COMPILE QUIRKS section.
+easy.  In general this should be all you need.
 
 If you need to look at other include or library directories, use the
 -I or -L flags on the command line, e.g.,
@@ -181,13 +180,13 @@ Hesiod and LDAP require libraries that may not be installed with your
 system.  These are outside of my ability to provide support.  See the
 "Quirks" section for more information.
 
-The regex map can be used to see if an address matches a certain regular
+A regex map can be used to see if an address matches a certain regular
 expression.  For example, all-numerics local parts are common spam
 addresses, so "^[0-9]+$" would match this.  By using such a map in a
 check_* rule-set, you can block a certain range of addresses that would
 otherwise be considered valid.
 
-The socket map uses a simple request/reply protocol over TCP or
+A socket map uses a simple request/reply protocol over TCP or
 UNIX domain sockets to query an external server. Both requests and
 replies are text based and encoded as netstrings.  The socket map
 uses the same syntax as milters the specify the remote endpoint,
@@ -333,8 +332,6 @@ NEEDPUTENV	Define this if your system needs am emulation of the
 NOFTRUNCATE	Define this if you don't have the ftruncate(2) syscall.
 		If you don't have this system call, there is an unavoidable
 		race condition that occurs when creating alias databases.
-NO_EOH_FIELDS	Define this to disable the special handling of the headers
-		Message: and Text: to denote the end of the message header.
 GIDSET_T	The type of entries in a gidset passed as the second
 		argument to getgroups(2).  Historically this has been an
 		int, so this is the default, but some systems (such as
@@ -608,6 +605,8 @@ MIME7TO8_OLD	If 0 then use an algorithm for MIME 7-bit quoted-printable
 		but the old code works.  If you have an example of improper
 		7 to 8 bit conversion please send it to sendmail-bugs.
 MIME7TO8	If non-zero, include 7 to 8 bit MIME conversions.
+NO_EOH_FIELDS	Define this to disable the special handling of the headers
+		Message: and Text: to denote the end of the message header.
 HES_GETMAILHOST	Define this to 1 if you are using Hesiod with the
 		hes_getmailhost() routine.  This is included with the MIT
 		Hesiod distribution, but not with the DEC Hesiod distribution.
@@ -1722,7 +1721,7 @@ Regular Expressions (MAP_REGEX)
 
 		pattern-compile-error: : Operation not applicable
 
-	Your libc does not include a running version of POSIX-regex.  Use
+	your libc does not include a running version of POSIX-regex.  Use
 	librx or regex.o from the GNU Free Software Foundation,
 	ftp://ftp.gnu.org/pub/gnu/rx-?.?.tar.gz or
 	ftp://ftp.gnu.org/pub/gnu/regex-?.?.tar.gz.

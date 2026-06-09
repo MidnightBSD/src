@@ -12,5 +12,6 @@ divert(-1)
 divert(0)
 define(`confOPENSSL_CNF', dnl
 ifelse(defn(`_ARG_'), `', `/etc/mail/fips.ossl', `_ARG_'))dnl
-ifelse(len(X`'_ARG2_),`1',`',`LOCAL_CONFIG
-EOPENSSL_MODULES=_ARG2_')
+LOCAL_CONFIG
+ifelse(len(X`'_ARG2_),`1',`',`EOPENSSL_MODULES=_ARG2_')
+O FIPSmode=ifelse(len(X`'_ARG3_),`1', `true', `_ARG3_')

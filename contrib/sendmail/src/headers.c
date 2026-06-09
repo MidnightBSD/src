@@ -652,8 +652,41 @@ addheader(field, value, flags, e, space)
 	/* find current place in list -- keep back pointer? */
 	for (hp = hdrlist; (h = *hp) != NULL; hp = &h->h_link)
 	{
-		if (SM_STRCASEEQ(field, h->h_field))
+		size_t ln, lo, lt;
+		char *nv;
+
+		if (!SM_STRCASEEQ(field, h->h_field))
+			continue;
+		if (!bitset(H_0OR1_AL, h->h_flags))
 			break;
+
+		/*
+		**  Does value contain something which might be an address?
+		**  For now: just check that it is not just "white space".
+		*/
+
+		if (NULL == value)
+			return;
+		for (nv = value; '\0' != *nv && SM_ISSPACE(*nv); nv++)
+			continue;
+		if ('\0' == *nv)
+			return;
+
+		/* append address to existing header */
+		ln = strlen(value);
+		lo = strlen(h->h_value);
+		lt = lo + ln + 3;
+		SM_ASSERT(lt > lo);
+		SM_ASSERT(lt > ln);
+		nv = sm_rpool_malloc_x(e->e_rpool, lt);
+		nv[0] = '\0';	/* paranoia */
+
+		/* check the results: ASSERT success? */
+		(void) sm_strlcpy(nv, h->h_value, lt);
+		(void) sm_strlcat(nv, ", ", lt);
+		(void) sm_strlcat(nv, value, lt);
+		h->h_value = nv;
+		return;
 	}
 
 	/* allocate space for new header */
@@ -1136,7 +1169,7 @@ eatheader(e, full, log)
 */
 
 #define XBUFLEN MAXNAME
-#if (SYSLOG_BUFSIZE) >= 256
+#if SYSLOG_BUFSIZE >= 256
 # ifndef MSGIDLOGLEN
 #  define MSGIDLOGLEN 100
 #  define FIRSTLOGLEN 850
@@ -1161,7 +1194,7 @@ eatheader(e, full, log)
 #    define XBUFLEN MSGIDLOGLEN
 #  endif
 # endif
-#endif /* (SYSLOG_BUFSIZE) >= 256 */
+#endif /* SYSLOG_BUFSIZE >= 256 */
 
 void
 logsender(e, msgid)
@@ -1173,10 +1206,12 @@ logsender(e, msgid)
 	register char *p;
 	char hbuf[MAXNAME + 1];	/* EAI:ok; restricted to short size */
 	char sbuf[MAXLINE + 1]; /* EAI:ok; XREF: see also MSGIDLOGLEN */
-#if _FFR_8BITENVADDR
+# if SYSLOG_BUFSIZE >= 256
+#  if _FFR_8BITENVADDR
 	char xbuf[XBUFLEN + 1];	/* EAI:ok */
-#endif
+#  endif
 	char *xstr;
+# endif
 
 	if (bitset(EF_RESPONSE, e->e_flags))
 		name = "[RESPONSE]";
@@ -1200,28 +1235,44 @@ logsender(e, msgid)
 		}
 	}
 
-#if (SYSLOG_BUFSIZE) >= 256
+# if SYSLOG_BUFSIZE >= 256
 	sbp = sbuf;
 	if (NULL != e->e_from.q_paddr)
 	{
 		xstr = e->e_from.q_paddr;
-# if _FFR_8BITENVADDR
+#  if _FFR_8BITENVADDR
 		(void) dequote_internal_chars(e->e_from.q_paddr, xbuf, sizeof(xbuf));
 		xstr = xbuf;
-# endif
+#  endif
 	}
 	else
 		xstr = "<NONE>";
+#  if _FFR_SE_TA_ID
+	if (e->e_s_se != NULL)
+	{
+		(void) sm_snprintf(sbp, SPACELEFT(sbuf, sbp),
+			S_SE_ID "=%s, ", e->e_s_se);
+		sbp += strlen(sbp);
+	}
+
+	/* ta id can be NULL if no TA was started, i.e., MAIL was rejected */
+	if (e->e_s_ta != NULL)
+	{
+		(void) sm_snprintf(sbp, SPACELEFT(sbuf, sbp),
+			S_TA_ID "=%s, ", e->e_s_ta);
+		sbp += strlen(sbp);
+	}
+#  endif /*  _FFR_SE_TA_ID */
 	(void) sm_snprintf(sbp, SPACELEFT(sbuf, sbp),
-		"from=%.200s, size=%ld, class=%d, nrcpts=%d", xstr,
+		"from=%.200s, size=%ld, class=%hd, nrcpts=%d", xstr,
 		PRT_NONNEGL(e->e_msgsize), e->e_class, e->e_nrcpts);
 	sbp += strlen(sbp);
 	if (msgid != NULL)
 	{
-# if _FFR_8BITENVADDR
+#  if _FFR_8BITENVADDR
 		(void) dequote_internal_chars(msgid, xbuf, sizeof(xbuf));
 		msgid = xbuf;
-# endif
+#  endif
 		(void) sm_snprintf(sbp, SPACELEFT(sbuf, sbp),
 				", msgid=%.*s", MSGIDLOGLEN, msgid);
 		sbp += strlen(sbp);
@@ -1246,19 +1297,20 @@ logsender(e, msgid)
 				", daemon=%.20s", p);
 		sbp += strlen(sbp);
 	}
-# if _FFR_LOG_MORE1
+#  if _FFR_LOG_MORE1
 	LOG_MORE(sbuf, sbp);
-#  if SASL
+#   if SASL
 	p = macvalue(macid("{auth_type}"), e);
 	if (SM_IS_EMPTY(p))
 		p = "NONE";
 	(void) sm_snprintf(sbp, SPACELEFT(sbuf, sbp), ", auth=%.20s", p);
 	sbp += strlen(sbp);
-#  endif /* SASL */
-# endif /* _FFR_LOG_MORE1 */
+#   endif /* SASL */
+#  endif /* _FFR_LOG_MORE1 */
+	LOG_ENVID(sbuf, sbp, e);
 	sm_syslog(LOG_INFO, e->e_id, "%.*s, relay=%s", FIRSTLOGLEN, sbuf, name);
 
-#else /* (SYSLOG_BUFSIZE) >= 256 */
+# else /* SYSLOG_BUFSIZE >= 256 */
 
 	sm_syslog(LOG_INFO, e->e_id,
 		  "from=%s",
@@ -1266,18 +1318,12 @@ logsender(e, msgid)
 					    : shortenstring(e->e_from.q_paddr,
 							    83));
 	sm_syslog(LOG_INFO, e->e_id,
-		  "size=%ld, class=%ld, nrcpts=%d",
+		  "size=%ld, class=%hd, nrcpts=%d",
 		  PRT_NONNEGL(e->e_msgsize), e->e_class, e->e_nrcpts);
 	if (msgid != NULL)
-	{
-# if _FFR_8BITENVADDR
-		(void) dequote_internal_chars(msgid, xbuf, sizeof(xbuf));
-		msgid = xbuf;
-# endif
 		sm_syslog(LOG_INFO, e->e_id,
 			  "msgid=%s",
 			  shortenstring(msgid, 83));
-	}
 	sbp = sbuf;
 	*sbp = '\0';
 	if (e->e_bodytype != NULL)
@@ -1295,7 +1341,7 @@ logsender(e, msgid)
 	}
 	sm_syslog(LOG_INFO, e->e_id,
 		  "%.400srelay=%s", sbuf, name);
-#endif /* (SYSLOG_BUFSIZE) >= 256 */
+# endif /* SYSLOG_BUFSIZE >= 256 */
 }
 
 /*
@@ -1748,6 +1794,7 @@ crackaddr(addr, e)
 **		hdr -- the header to put.
 **		e -- envelope to use.
 **		flags -- MIME conversion flags.
+**		hdrname -- in case of an error: which header.
 **
 **	Returns:
 **		true iff header part was written successfully
@@ -1757,11 +1804,12 @@ crackaddr(addr, e)
 */
 
 bool
-putheader(mci, hdr, e, flags)
+putheader(mci, hdr, e, flags, hdrname)
 	register MCI *mci;
 	HDR *hdr;
 	register ENVELOPE *e;
 	int flags;
+	char **hdrname;
 {
 	register HDR *h;
 	char buf[SM_MAX(MAXLINE,BUFSIZ)];
@@ -2013,6 +2061,8 @@ putheader(mci, hdr, e, flags)
 	return true;
 
   writeerr:
+	if (NULL != hdrname && NULL != h)
+		*hdrname = sm_rpool_strdup_x(e->e_rpool, h->h_field);
 	return false;
 }
 
