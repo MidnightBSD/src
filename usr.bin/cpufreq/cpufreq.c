@@ -1,5 +1,6 @@
-/* $MidnightBSD: src/usr.bin/cpufreq/cpufreq.c,v 1.2 2012/12/30 20:20:10 laffer1 Exp $ */
-/*- 
+/* $MidnightBSD: src/usr.bin/cpufreq/cpufreq.c,v 1.2 2012/12/30 20:20:10 laffer1
+ * Exp $ */
+/*-
  * Copyright (c) 2008, 2011 Lucas Holt
  * All rights reserved.
  *
@@ -28,55 +29,153 @@
 #include <sys/types.h>
 #include <sys/sysctl.h>
 
+#include <err.h>
+#include <getopt.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <err.h>
 #include <unistd.h>
 
-static void	usage(void);
+static int get_cpu_freq(int);
+static int get_cpu_count(void);
+static void print_freq_levels(int);
+static void usage(FILE *, int);
 
-int 
+static const struct option longopts[] = { { "all", no_argument, NULL, 'a' },
+	{ "cpu", required_argument, NULL, 'c' },
+	{ "help", no_argument, NULL, 'h' }, { "mean", no_argument, NULL, 'm' },
+	{ "verbose", no_argument, NULL, 'v' }, { NULL, 0, NULL, 0 } };
+
+int
 main(int argc, char *argv[])
 {
-	int freq;
-	char levels[256];
-	size_t len;
-	int ch, vflag;
+	const char *errstr;
+	int aflag, cflag, ch, cpu, mflag, ncpu, vflag;
 
+	aflag = 0;
+	cflag = 0;
+	cpu = 0;
+	mflag = 0;
 	vflag = 0;
-	while ((ch = getopt(argc, argv, "v")) != -1) {
+	while ((ch = getopt_long(argc, argv, "ac:hmv", longopts, NULL)) != -1) {
 		switch (ch) {
-			case 'v':
-				vflag = 1;
-				break;
-			case '?': /* FALLTHROUGH */
-			default:
-				usage();
-				/* NOTREACHED */
+		case 'a':
+			aflag = 1;
+			break;
+		case 'c':
+			cflag = 1;
+			cpu = (int)strtonum(optarg, 0, INT_MAX, &errstr);
+			if (errstr != NULL)
+				errx(1, "cpu is %s: %s", errstr, optarg);
+			break;
+		case 'h':
+			usage(stdout, 0);
+			/* NOTREACHED */
+		case 'm':
+			mflag = 1;
+			break;
+		case 'v':
+			vflag = 1;
+			break;
+		case '?': /* FALLTHROUGH */
+		default:
+			usage(stderr, 1);
+			/* NOTREACHED */
 		}
 	}
 	argc -= optind;
-	argv += optind;
+	if (argc != 0)
+		usage(stderr, 1);
+	if ((aflag && cflag) || (aflag && mflag) || (mflag && cflag))
+		usage(stderr, 1);
 
-	len = sizeof(freq);
-	if (sysctlbyname("dev.cpu.0.freq", &freq, &len, NULL, 0) < 0)
-		errx(1, "CPU frequency unknown");
-	printf("CPU frequency: %d MHz\n", freq);
+	if (aflag) {
+		int i;
 
-	if (vflag) {
-		len = sizeof(levels);
-        	if (sysctlbyname("dev.cpu.0.freq_levels", &levels, &len, NULL, 0) < 0)
-                	errx(1, "Available CPU frequency levels unavailable");
-		printf("Possible frequencies: %s\n", levels);
+		ncpu = get_cpu_count();
+		for (i = 0; i < ncpu; i++)
+			printf("CPU %d frequency: %d MHz\n", i,
+			    get_cpu_freq(i));
+	} else if (mflag) {
+		int i;
+		long long total;
+
+		ncpu = get_cpu_count();
+		total = 0;
+		for (i = 0; i < ncpu; i++)
+			total += get_cpu_freq(i);
+		printf("Average CPU frequency: %lld MHz\n", total / ncpu);
+	} else {
+		int freq;
+
+		freq = get_cpu_freq(cpu);
+		printf("CPU %d frequency: %d MHz\n", cpu, freq);
 	}
+
+	if (vflag)
+		print_freq_levels(cpu);
 
 	return (0);
 }
 
+static int
+get_cpu_count(void)
+{
+	int ncpu;
+	size_t len;
+
+	len = sizeof(ncpu);
+	if (sysctlbyname("hw.ncpu", &ncpu, &len, NULL, 0) < 0)
+		errx(1, "CPU count unknown");
+	if (ncpu <= 0)
+		errx(1, "CPU count invalid");
+
+	return (ncpu);
+}
+
+static int
+get_cpu_freq(int cpu)
+{
+	char name[32];
+	int freq, n;
+	size_t len;
+
+	len = sizeof(freq);
+	n = snprintf(name, sizeof(name), "dev.cpu.%d.freq", cpu);
+	if (n < 0 || n >= (int)sizeof(name))
+		errx(1, "CPU sysctl name too long");
+	if (sysctlbyname(name, &freq, &len, NULL, 0) < 0)
+		errx(1, "CPU %d frequency unknown", cpu);
+
+	return (freq);
+}
+
 static void
-usage(void)
+print_freq_levels(int cpu)
+{
+	char levels[256];
+	char name[32];
+	int n;
+	size_t len;
+
+	len = sizeof(levels);
+	n = snprintf(name, sizeof(name), "dev.cpu.%d.freq_levels", cpu);
+	if (n < 0 || n >= (int)sizeof(name))
+		errx(1, "CPU sysctl name too long");
+	if (sysctlbyname(name, levels, &len, NULL, 0) < 0)
+		errx(1, "Available CPU %d frequency levels unavailable", cpu);
+	if (len >= sizeof(levels))
+		len = sizeof(levels) - 1;
+	levels[len] = '\0';
+	printf("Possible frequencies: %s\n", levels);
+}
+
+static void
+usage(FILE *stream, int status)
 {
 
-	fprintf(stderr, "usage: cpufreq [-v]\n");
-	exit(1);
+	fprintf(stream,
+	    "usage: cpufreq [-a|--all] [-c cpu|--cpu cpu] [-h|--help] "
+	    "[-m|--mean] [-v|--verbose]\n");
+	exit(status);
 }
