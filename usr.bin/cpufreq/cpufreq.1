@@ -32,6 +32,7 @@
 .Nd "CPU frequency report"
 .Sh SYNOPSIS
 .Nm
+.Op Fl a
 .Op Fl c Ar cpu
 .Op Fl m
 .Op Fl v
@@ -51,14 +52,17 @@ drivers is configured with
 .Pp
 The following options are available:
 .Bl -tag -width indent
+.It Fl a
+Print the frequency for each CPU, one CPU per line.
 .It Fl c Ar cpu
 Report the frequency for
 .Ar cpu .
 .It Fl m
 Print the mean frequency across all CPUs.
-.Fl m
+.Fl a ,
+.Fl c ,
 and
-.Fl c
+.Fl m
 are mutually exclusive.
 .It Fl v
 Print out detailed information about available frequencies.

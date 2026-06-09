@@ -36,6 +36,7 @@
 #include <unistd.h>
 
 static int get_cpu_freq(int);
+static int get_cpu_count(void);
 static void print_freq_levels(int);
 static void usage(void);
 
@@ -43,15 +44,18 @@ int
 main(int argc, char *argv[])
 {
 	const char *errstr;
-	int cflag, ch, cpu, mflag, ncpu, vflag;
-	size_t len;
+	int aflag, cflag, ch, cpu, mflag, ncpu, vflag;
 
+	aflag = 0;
 	cflag = 0;
 	cpu = 0;
 	mflag = 0;
 	vflag = 0;
-	while ((ch = getopt(argc, argv, "c:mv")) != -1) {
+	while ((ch = getopt(argc, argv, "ac:mv")) != -1) {
 		switch (ch) {
+		case 'a':
+			aflag = 1;
+			break;
 		case 'c':
 			cflag = 1;
 			cpu = (int)strtonum(optarg, 0, INT_MAX, &errstr);
@@ -73,18 +77,21 @@ main(int argc, char *argv[])
 	argc -= optind;
 	if (argc != 0)
 		usage();
-	if (mflag && cflag)
+	if ((aflag && cflag) || (aflag && mflag) || (mflag && cflag))
 		usage();
 
-	if (mflag) {
+	if (aflag) {
+		int i;
+
+		ncpu = get_cpu_count();
+		for (i = 0; i < ncpu; i++)
+			printf("CPU %d frequency: %d MHz\n", i,
+			    get_cpu_freq(i));
+	} else if (mflag) {
 		int i;
 		long long total;
 
-		len = sizeof(ncpu);
-		if (sysctlbyname("hw.ncpu", &ncpu, &len, NULL, 0) < 0)
-			errx(1, "CPU count unknown");
-		if (ncpu <= 0)
-			errx(1, "CPU count invalid");
+		ncpu = get_cpu_count();
 		total = 0;
 		for (i = 0; i < ncpu; i++)
 			total += get_cpu_freq(i);
@@ -100,6 +107,21 @@ main(int argc, char *argv[])
 		print_freq_levels(cpu);
 
 	return (0);
+}
+
+static int
+get_cpu_count(void)
+{
+	int ncpu;
+	size_t len;
+
+	len = sizeof(ncpu);
+	if (sysctlbyname("hw.ncpu", &ncpu, &len, NULL, 0) < 0)
+		errx(1, "CPU count unknown");
+	if (ncpu <= 0)
+		errx(1, "CPU count invalid");
+
+	return (ncpu);
 }
 
 static int
@@ -143,6 +165,6 @@ static void
 usage(void)
 {
 
-	fprintf(stderr, "usage: cpufreq [-c cpu] [-m] [-v]\n");
+	fprintf(stderr, "usage: cpufreq [-a] [-c cpu] [-m] [-v]\n");
 	exit(1);
 }

@@ -60,6 +60,28 @@ average_cpu_body()
 	    "${CPUFREQ}" -m
 }
 
+atf_test_case all_cpus
+all_cpus_head()
+{
+	atf_set "descr" "Report each CPU frequency"
+}
+all_cpus_body()
+{
+
+	require_cpu_freqs
+	atf_check -s exit:0 -e empty -o save:stdout "${CPUFREQ}" -a
+	lines=$(awk 'END { print NR }' stdout)
+	if [ "${lines}" != "${ncpu}" ]; then
+		atf_fail "expected ${ncpu} CPU lines, got ${lines}"
+	fi
+	cpu=0
+	while [ "${cpu}" -lt "${ncpu}" ]; do
+		atf_check -o match:"^CPU ${cpu} frequency: [0-9]+ MHz$" \
+		    grep "^CPU ${cpu} frequency: " stdout
+		cpu=$((cpu + 1))
+	done
+}
+
 atf_test_case verbose_specific_cpu
 verbose_specific_cpu_head()
 {
@@ -99,8 +121,34 @@ average_conflicts_with_cpu_body()
 {
 
 	atf_check -s exit:1 -o empty \
-	    -e inline:"usage: cpufreq [-c cpu] [-m] [-v]\n" \
+	    -e inline:"usage: cpufreq [-a] [-c cpu] [-m] [-v]\n" \
 	    "${CPUFREQ}" -m -c 0
+}
+
+atf_test_case all_conflicts_with_cpu
+all_conflicts_with_cpu_head()
+{
+	atf_set "descr" "Reject all CPUs and CPU selection together"
+}
+all_conflicts_with_cpu_body()
+{
+
+	atf_check -s exit:1 -o empty \
+	    -e inline:"usage: cpufreq [-a] [-c cpu] [-m] [-v]\n" \
+	    "${CPUFREQ}" -a -c 0
+}
+
+atf_test_case all_conflicts_with_average
+all_conflicts_with_average_head()
+{
+	atf_set "descr" "Reject all CPUs and average together"
+}
+all_conflicts_with_average_body()
+{
+
+	atf_check -s exit:1 -o empty \
+	    -e inline:"usage: cpufreq [-a] [-c cpu] [-m] [-v]\n" \
+	    "${CPUFREQ}" -a -m
 }
 
 atf_test_case extra_operand
@@ -112,7 +160,7 @@ extra_operand_body()
 {
 
 	atf_check -s exit:1 -o empty \
-	    -e inline:"usage: cpufreq [-c cpu] [-m] [-v]\n" \
+	    -e inline:"usage: cpufreq [-a] [-c cpu] [-m] [-v]\n" \
 	    "${CPUFREQ}" extra
 }
 
@@ -122,8 +170,11 @@ atf_init_test_cases()
 	atf_add_test_case default_cpu0
 	atf_add_test_case specific_cpu
 	atf_add_test_case average_cpu
+	atf_add_test_case all_cpus
 	atf_add_test_case verbose_specific_cpu
 	atf_add_test_case invalid_cpu
 	atf_add_test_case average_conflicts_with_cpu
+	atf_add_test_case all_conflicts_with_cpu
+	atf_add_test_case all_conflicts_with_average
 	atf_add_test_case extra_operand
 }
