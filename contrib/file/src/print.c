@@ -32,7 +32,7 @@
 #include "file.h"
 
 #ifndef lint
-FILE_RCSID("@(#)$File: print.c,v 1.92 2022/09/10 13:21:42 christos Exp $")
+FILE_RCSID("@(#)$File: print.c,v 1.106 2024/09/01 13:50:01 christos Exp $")
 #endif  /* lint */
 
 #include <string.h>
@@ -46,13 +46,14 @@ FILE_RCSID("@(#)$File: print.c,v 1.92 2022/09/10 13:21:42 christos Exp $")
 #include "cdf.h"
 
 #ifndef COMPILE_ONLY
-protected void
+file_protected void
 file_mdump(struct magic *m)
 {
 	static const char optyp[] = { FILE_OPS };
 	char tbuf[256];
 
-	(void) fprintf(stderr, "%u: %.*s %u", m->lineno,
+	(void) fprintf(stderr, "%s, %u: %.*s %d", 
+	     m->desc[0] == '\0' ? m->desc + 1 : "*unknown*", m->lineno,
 	    (m->cont_level & 7) + 1, ">>>>>>>>", m->offset);
 
 	if (m->flag & INDIR) {
@@ -62,7 +63,7 @@ file_mdump(struct magic *m)
 		    "*bad in_type*");
 		if (m->in_op & FILE_OPINVERSE)
 			(void) fputc('~', stderr);
-		(void) fprintf(stderr, "%c%u),",
+		(void) fprintf(stderr, "%c%d),",
 		    (CAST(size_t, m->in_op & FILE_OPS_MASK) <
 		    __arraycount(optyp)) ?
 		    optyp[m->in_op & FILE_OPS_MASK] : '?', m->in_offset);
@@ -134,7 +135,7 @@ file_mdump(struct magic *m)
 		case FILE_BESHORT:
 		case FILE_BELONG:
 		case FILE_INDIRECT:
-			(void) fprintf(stderr, "%d", m->value.l);
+			(void) fprintf(stderr, "%d", CAST(int32_t, m->value.l));
 			break;
 		case FILE_BEQUAD:
 		case FILE_LEQUAD:
@@ -241,33 +242,66 @@ file_mdump(struct magic *m)
 }
 #endif
 
+static void __attribute__((__format__(__printf__, 1, 0)))
+file_vmagwarn(const char *f, va_list va)
+{
+	/* cuz we use stdout for most, stderr here */
+	(void) fflush(stdout);
+
+	(void) fprintf(stderr, "Warning: ");
+	(void) vfprintf(stderr, f, va);
+	(void) fputc('\n', stderr);
+}
+
 /*VARARGS*/
-protected void
+file_protected void
+file_magwarn1(const char *f, ...)
+{
+	va_list va;
+
+	va_start(va, f);
+	file_vmagwarn(f, va);
+	va_end(va);
+}
+
+
+/*VARARGS*/
+file_protected void
 file_magwarn(struct magic_set *ms, const char *f, ...)
 {
 	va_list va;
 
-	/* cuz we use stdout for most, stderr here */
-	(void) fflush(stdout);
+	if (++ms->magwarn == ms->magwarn_max) {
+		(void) fprintf(stderr,
+		    "%s, %lu: Maximum number of warnings (%u) exceeded.\n",
+		    ms->file, CAST(unsigned long, ms->line),
+		    ms->magwarn_max);
+		(void) fprintf(stderr,
+		    "%s, %lu: Additional warnings are suppressed.\n",
+		    ms->file, CAST(unsigned long, ms->line));
+	}
+	if (ms->magwarn >= ms->magwarn_max) {
+		return;
+	}
 
 	if (ms->file)
 		(void) fprintf(stderr, "%s, %lu: ", ms->file,
 		    CAST(unsigned long, ms->line));
-	(void) fprintf(stderr, "Warning: ");
+
 	va_start(va, f);
-	(void) vfprintf(stderr, f, va);
+	file_vmagwarn(f, va);
 	va_end(va);
-	(void) fputc('\n', stderr);
 }
 
-protected const char *
+file_protected const char *
 file_fmtvarint(char *buf, size_t blen, const unsigned char *us, int t)
 {
-	snprintf(buf, blen, "%jd", file_varint2uintmax_t(us, t, NULL));
+	snprintf(buf, blen, "%jd", CAST(intmax_t,
+	    file_varint2uintmax_t(us, t, NULL)));
 	return buf;
 }
 
-protected const char *
+file_protected const char *
 file_fmtdatetime(char *buf, size_t bsize, uint64_t v, int flags)
 {
 	char *pp;
@@ -284,7 +318,11 @@ file_fmtdatetime(char *buf, size_t bsize, uint64_t v, int flags)
 		t = CAST(time_t, v);
 	}
 
+	if (t > MAX_CTIME)
+		goto out;
+
 	if (flags & FILE_T_LOCAL) {
+		tzset();
 		tm = localtime_r(&t, &tmz);
 	} else {
 		tm = gmtime_r(&t, &tmz);
@@ -306,7 +344,7 @@ out:
  * https://docs.microsoft.com/en-us/windows/win32/api/winbase/\
  *	nf-winbase-dosdatetimetofiletime?redirectedfrom=MSDN
  */
-protected const char *
+file_protected const char *
 file_fmtdate(char *buf, size_t bsize, uint16_t v)
 {
 	struct tm tm;
@@ -325,7 +363,7 @@ out:
 	return buf;
 }
 
-protected const char *
+file_protected const char *
 file_fmttime(char *buf, size_t bsize, uint16_t v)
 {
 	struct tm tm;
@@ -345,7 +383,7 @@ out:
 
 }
 
-protected const char *
+file_protected const char *
 file_fmtnum(char *buf, size_t blen, const char *us, int base)
 {
 	char *endptr;

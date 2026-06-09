@@ -1,5 +1,5 @@
 #
-# $File: Makefile.am,v 1.182 2022/09/11 21:04:30 christos Exp $
+# $File: Makefile.am,v 1.192 2024/10/02 01:45:32 christos Exp $
 #
 MAGIC_FRAGMENT_BASE = Magdir
 MAGIC_DIR = $(top_srcdir)/magic
@@ -92,8 +92,8 @@ $(MAGIC_FRAGMENT_DIR)/dif \
 $(MAGIC_FRAGMENT_DIR)/diff \
 $(MAGIC_FRAGMENT_DIR)/digital \
 $(MAGIC_FRAGMENT_DIR)/dolby \
-$(MAGIC_FRAGMENT_DIR)/dsf \
 $(MAGIC_FRAGMENT_DIR)/dump \
+$(MAGIC_FRAGMENT_DIR)/dwarfs \
 $(MAGIC_FRAGMENT_DIR)/dyadic \
 $(MAGIC_FRAGMENT_DIR)/ebml \
 $(MAGIC_FRAGMENT_DIR)/edid \
@@ -108,6 +108,7 @@ $(MAGIC_FRAGMENT_DIR)/esri \
 $(MAGIC_FRAGMENT_DIR)/fcs \
 $(MAGIC_FRAGMENT_DIR)/filesystems \
 $(MAGIC_FRAGMENT_DIR)/finger \
+$(MAGIC_FRAGMENT_DIR)/firmware \
 $(MAGIC_FRAGMENT_DIR)/flash \
 $(MAGIC_FRAGMENT_DIR)/flif \
 $(MAGIC_FRAGMENT_DIR)/fonts \
@@ -156,9 +157,11 @@ $(MAGIC_FRAGMENT_DIR)/karma \
 $(MAGIC_FRAGMENT_DIR)/kde \
 $(MAGIC_FRAGMENT_DIR)/keepass \
 $(MAGIC_FRAGMENT_DIR)/kerberos \
+$(MAGIC_FRAGMENT_DIR)/keyman \
 $(MAGIC_FRAGMENT_DIR)/kicad \
 $(MAGIC_FRAGMENT_DIR)/kml \
 $(MAGIC_FRAGMENT_DIR)/lammps \
+$(MAGIC_FRAGMENT_DIR)/lauterbach \
 $(MAGIC_FRAGMENT_DIR)/lecter \
 $(MAGIC_FRAGMENT_DIR)/lex \
 $(MAGIC_FRAGMENT_DIR)/lif \
@@ -227,13 +230,13 @@ $(MAGIC_FRAGMENT_DIR)/os2 \
 $(MAGIC_FRAGMENT_DIR)/os400 \
 $(MAGIC_FRAGMENT_DIR)/os9 \
 $(MAGIC_FRAGMENT_DIR)/osf1 \
+$(MAGIC_FRAGMENT_DIR)/pack \
 $(MAGIC_FRAGMENT_DIR)/palm \
 $(MAGIC_FRAGMENT_DIR)/parix \
 $(MAGIC_FRAGMENT_DIR)/parrot \
 $(MAGIC_FRAGMENT_DIR)/pascal \
 $(MAGIC_FRAGMENT_DIR)/pbf \
 $(MAGIC_FRAGMENT_DIR)/pbm \
-$(MAGIC_FRAGMENT_DIR)/pc88 \
 $(MAGIC_FRAGMENT_DIR)/pc98 \
 $(MAGIC_FRAGMENT_DIR)/pci_ids \
 $(MAGIC_FRAGMENT_DIR)/pcjr \
@@ -245,6 +248,7 @@ $(MAGIC_FRAGMENT_DIR)/pgp \
 $(MAGIC_FRAGMENT_DIR)/pgp-binary-keys \
 $(MAGIC_FRAGMENT_DIR)/pkgadd \
 $(MAGIC_FRAGMENT_DIR)/plan9 \
+$(MAGIC_FRAGMENT_DIR)/playdate \
 $(MAGIC_FRAGMENT_DIR)/plus5 \
 $(MAGIC_FRAGMENT_DIR)/pmem \
 $(MAGIC_FRAGMENT_DIR)/polyml \
@@ -267,6 +271,7 @@ $(MAGIC_FRAGMENT_DIR)/rpmsg \
 $(MAGIC_FRAGMENT_DIR)/rtf \
 $(MAGIC_FRAGMENT_DIR)/rst \
 $(MAGIC_FRAGMENT_DIR)/ruby \
+$(MAGIC_FRAGMENT_DIR)/rust \
 $(MAGIC_FRAGMENT_DIR)/sc \
 $(MAGIC_FRAGMENT_DIR)/sccs \
 $(MAGIC_FRAGMENT_DIR)/scientific \
@@ -294,6 +299,7 @@ $(MAGIC_FRAGMENT_DIR)/ssl \
 $(MAGIC_FRAGMENT_DIR)/statistics \
 $(MAGIC_FRAGMENT_DIR)/subtitle \
 $(MAGIC_FRAGMENT_DIR)/sun \
+$(MAGIC_FRAGMENT_DIR)/svf \
 $(MAGIC_FRAGMENT_DIR)/sylk \
 $(MAGIC_FRAGMENT_DIR)/symbos \
 $(MAGIC_FRAGMENT_DIR)/sysex \
@@ -315,6 +321,7 @@ $(MAGIC_FRAGMENT_DIR)/unknown \
 $(MAGIC_FRAGMENT_DIR)/usd \
 $(MAGIC_FRAGMENT_DIR)/uterus \
 $(MAGIC_FRAGMENT_DIR)/uuencode \
+$(MAGIC_FRAGMENT_DIR)/uxn \
 $(MAGIC_FRAGMENT_DIR)/vacuum-cleaner \
 $(MAGIC_FRAGMENT_DIR)/varied.out \
 $(MAGIC_FRAGMENT_DIR)/varied.script \
