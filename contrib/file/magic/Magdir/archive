@@ -1,5 +1,5 @@
 #------------------------------------------------------------------------------
-# $File: archive,v 1.169 2022/09/12 13:13:28 christos Exp $
+# $File: archive,v 1.207 2024/11/27 15:37:46 christos Exp $
 # archive:  file(1) magic for archive formats (see also "msdos" for self-
 #           extracting compressed archives)
 #
@@ -25,16 +25,49 @@
 >>>>>>155 ubyte&0xDF	=0	
 # space or ascii digit 0 at start of check sum
 >>>>>>>148	ubyte&0xEF	=0x20	
+# check for specific 1st member name that indicates other mime type and file name suffix
+>>>>>>>>0	string		TpmEmuTpms/permall
+# maybe also look for 2nd tar member efi/nvram containing UEFI variables part
+#>>>>>>>>>512	search/0x1800	efi/nvram\0		EFI_PART_FOUND
+>>>>>>>>>0	use	tar-nvram
 # FOR DEBUGGING: 
 #>>>>>>>>0	regex		\^[0-9]{2,4}[.](png|jpg|jpeg|tif|tiff|gif|bmp)	NAME "%s"
 # check for 1st image main name with digits used for sorting
 # and for name extension case insensitive like: PNG JPG JPEG TIF TIFF GIF BMP
 >>>>>>>>0	regex		\^[0-9]{2,4}[.](png|jpg|jpeg|tif|tiff|gif|bmp)
-#foo
 >>>>>>>>>0	use	tar-cbt
-# if 1st member name without digits and without used image suffix then it is a TAR archive
+# check for 1st member name with ovf suffix
+>>>>>>>>0	regex		\^.{1,96}[.](ovf)
+>>>>>>>>>0	use	tar-ova
+# look for relative directory ./var/ or ./lte/ as 1st member name that indicates AVM firmware with other file name suffix
+>>>>>>>>0	ubequad&0xFFffE5eaE8ffFFff	0x2e2f6460602f0000
+>>>>>>>>>0	use	tar-avm
+# maybe look for AVM specific 2nd name entry
+# >>>>>>>>>517	string		/content\0	content~
+# >>>>>>>>>>0	use	tar-avm
+# >>>>>>>>>517	string		/install\0	install~
+# >>>>>>>>>>0	use	tar-avm
+# >>>>>>>>>517	string		/chksum\0	chksum~
+# >>>>>>>>>>0	use	tar-avm
+# >>>>>>>>>517	string		/modfw.nfo\0	modfw~
+# >>>>>>>>>>0	use	tar-avm
+# most (419/429) *.WBM (71/71) *.WBT with user name jcameron of Webmin developer Jamie Cameron in first tar archive member
+>>>>>>>>265	string		jcameron
+>>>>>>>>>0	use	tar-webmin
+# if 1st member name without digits and without used image suffix, without *.ovf,
+# ./var/ , ./lte/ and TpmEmuTpms/ then it is a pure TAR archive or Webmin without jcameron user name
 >>>>>>>>0	default		x
->>>>>>>>>0	use	tar-file
+# few (10/429) *.WBM without user name jcameron in 1st tar member but with WBM module.info name like:
+# apcupsd-0.81-2.wbm csavupdate.wbm cwmail.wbm dac960.wbm etcupdate.wbm logviewer.wbm memcached.wbm rinetd.wbm shoutcast.wbm vacationadmin-webmin-module-1.1.2.wbm
+# few (10/95) *.WBT without user name jcameron in 1st tar member but with WBT theme.info name like:
+# authentic-theme-21.09.5.wbt Mozilla-Modern.wbt virtual-server-theme-2.7.wbt fkn-webmintheme.0.6.0.wbt
+>>>>>>>>>512	search/210965/s	e.info\0
+>>>>>>>>>>0	use	tar-webmin
+# pure TAR
+>>>>>>>>>0	default		x
+>>>>>>>>>>0	use	tar-file
+# Note:	called "TAR - Tape ARchive" by TrID, "Tape Archive Format" by DROID via PUID x-fmt/265
+#	and "Tar archive" by shared MIME-info database from freedesktop.org
 #	minimal check and then display tar archive information which can also be
 #	embedded inside others like Android Backup, Clam AntiVirus database
 0	name		tar-file
@@ -84,7 +117,11 @@
 >>261	default		x		tar archive (unknown ustar)
 !:mime	application/x-ustar
 !:ext	tar/ustar
-# type flag of 1st tar archive member
+# show information for 1st tar archive member
+>0	use	tar-entry
+#	display information of tar archive member (file type, name, permissions, user, group)
+0	name		tar-entry
+# type flag of tar archive member
 #>156	ubyte		x		\b, %c-type
 >156	ubyte		x		
 >>156	ubyte		0		\b, file
@@ -140,7 +177,7 @@
 >>265	string		>\0		\b, user %-.32s
 # group name null terminated
 >>297	string		>\0		\b, group %-.32s
-# device major minor if not zero
+# device major minor if not zero (binary or ASCII)
 >>329	ubequad&0xCFCFCFCFcFcFcFdf	!0
 >>>329	string		x		\b, devmaj %-.7s
 >>337	ubequad&0xCFCFCFCFcFcFcFdf	!0
@@ -155,6 +192,25 @@
 >>508	default		x		
 # padding[255] in old tar sometimes comment field
 >>>257	string		>\0		\b, comment: %-.40s
+# Summary:	VirtualBox NvramFile with UEFI variables packed inside TAR archive
+# URL:		hhttps://www.virtualbox.org/manual/ch08.html#vboxmanage-modifynvram
+# Reference:	http://mark0.net/download/triddefs_xml.7z/defs/n/nvram-virtualbox-tar.trid.xml
+# Note:		called "VirtualBox saved (U)EFI BIOS settings (TAR) by TrID and
+#		verified by 7-Zip `7z l -ttar Mint-21.1.nvram` and
+#		VirtualBox `VBoxManage modifynvram "Mint-21.1" listvars`
+0	name		tar-nvram
+# 
+>0	string		x		VirtualBox NVRAM file
+#!:mime	application/x-gtar
+!:mime	application/x-virtualbox-nvram
+!:ext	nvram
+# first name[100] like: TpmEmuTpms/permall
+>0	use	tar-entry
+# 2nd tar member efi/nvram contains UEFI variables part described by ./virtual
+>512	search/0x1800/s	efi/nvram\0
+>>&0	use	tar-entry
+# 2nd tar member efi/nvram content could be described by ./virtual
+#>>&512	indirect	x
 # Summary:	Comic Book Archive *.CBT with TAR format
 # URL:		https://en.wikipedia.org/wiki/Comic_book_archive
 #		http://fileformats.archiveteam.org/wiki/Comic_Book_Archive
@@ -167,7 +223,101 @@
 !:ext	cbt
 # name[100] probably like: 19.jpg 0001.png 0002.png
 # or maybe like ComicInfo.xml
->0	string		>\0		\b, 1st image %-.60s
+#>0	string		>\0		\b, 1st image %-.60s
+>0	use	tar-entry
+# Summary:	Open Virtualization Format *.OVF with disk images and more packed as TAR archive *.OVA
+# From:		Joerg Jenderek
+# URL:		https://en.wikipedia.org/wiki/Open_Virtualization_Format
+#		http://fileformats.archiveteam.org/wiki/OVF_(Open_Virtualization_Format)
+# Reference:	http://mark0.net/download/triddefs_xml.7z/defs/o/ova.trid.xml
+# Note:		called "Open Virtualization Format package" by TrID
+#		assuming *.ovf comes first
+0	name		tar-ova
+>0	string		x		Open Virtualization Format Archive
+#!:mime	application/x-ustar
+# http://extension.nirsoft.net/ova
+!:mime	application/x-virtualbox-ova
+!:ext	ova
+# assuming name[100] like: DOS-0.9.ovf FreeDOS_1.ovf Win98SE_DE.ovf
+#>0	string		>\0		\b, with %-.60s
+>0	use	tar-entry
+# Summary:	AVM firmware (FRITZ!OS) for the FRITZ!Box (router)
+# From:		Joerg Jenderek
+# URL:		https://en.wikipedia.org/wiki/Fritz!Box
+#		https://www.redteam-pentesting.de/de/advisories/rt-sa-2014-010/-avm-fritz-box-firmware-signature-bypass
+# Reference:	http://mark0.net/download/triddefs_xml.7z/defs/i/image-avm.trid.xml
+# Note:		verified by 7-Zip `7z l -ttar FRITZ.Box_4040-07.57.image`
+0	name		tar-avm
+>0	string		x		AVM FRITZ!Box firmware
+#!:mime	application/x-gtar
+!:mime	application/x-avm-image
+!:ext	image
+# tar member ./var/content starts with line like "Product=Fritz_Box_HW227 (FRITZ!Box 4040)"
+>>1024	search/512	Product=Fritz_Box_
+>>>&0	string		x		%s
+# version string like: 07.57 07.58
+>>>1044	search		Version=	\b, version
+>>>>&0	string		x		%s
+# product phrase too far behind (dozen MB) in many samples like: FRITZ.Box_4040-07.12.image FRITZ.Box_6820v3_LTE-07.57.image
+# so try to look for other characteristic foo
+# >>1024	default		x		OTHER_PATTERN!
+# >>>1023	search		AVM_PATTERN	PATTERNfound
+# first name[100] like: ./var/ ./lte/ 
+>0	use	tar-entry
+# if 1st entry is directory then show 2nd entry
+>156	ubyte		0x35
+# 2nd tar member name like: ./var/content (often ) ./var/install ./var/chksum ./lte/modfw.nfo
+>>512	use	tar-entry
+# Summary:	Webmin Module or Theme
+# From:		Joerg Jenderek
+# URL:		https://en.wikipedia.org/wiki/Webmin
+#		https://webmin.com/docs/development/creating-modules/
+#		https://webmin.com/docs/development/creating-themes/
+# Reference:	http://mark0.net/download/triddefs_xml.7z/defs/w/wbm.trid.xml
+#		http://mark0.net/download/triddefs_xml.7z/defs/w/wbt.trid.xml
+#		http://mark0.net/download/triddefs_xml.7z/defs/w/wbt-gif.trid.xml
+# Note:		called "Webmin Module" "Webmin Theme" by TrID
+#		most verfied by 7-Zip `7z l -ttar *.wbm | grep "\module.info"` and
+#		`7z l -ttar *.wbt | grep "\theme.info"`
+0	name		tar-webmin
+>0	string		x		Webmin
+# Webmin module or theme
+>>512	search/1767941/s /module.info	Module
+!:mime	application/x-webmin-module
+!:ext	wbm
+# According to documentation module.info is mandatory but instead theme.info is found in
+# old-blue-theme.wbm old-blue-theme-1.0.wbm old-mscstyle3.wbm virtual-server-mobile.wbm
+# GRR:  maybe here wrong file name suffix WBM instead of WBT
+>>512	default		x
+>>>512	search/3149333/s /theme.info	Theme
+!:mime	application/x-webmin-theme
+!:ext	wbt
+# next 3 lines should not happen
+>>>512	default		x		Module or Theme
+!:mime	application/x-webmin
+!:ext	wbm/wbt
+# GNU or POSIX tar
+>257	string		=ustar		(
+# 2 space characters followed by a null for GNU variant for most (428/429) WBM samples
+>>261	ubelong		=0x72202000	\bGNU tar)
+#!:mime	application/x-gtar
+# UStar version variant with ASCII "00" as in few (1/429) samples like cwmail.wbm
+>>261	ubelong		0x72003030	\bPOSIX tar)
+#!:mime	application/x-ustar
+#>>>156	ubyte		x		tar archive
+# Apparently first archive member name[100] is directory like: dynbind/ ssh/ virtualmin-powerdns/ virtual-server-mobile/ vnc/
+>>0	use	tar-entry
+# look for characteristic WBM module info name starting with "module.info" for language variant like in: ssh2.wbm
+>>512	search/1767941/s /module.info
+# look for TAR magic of WBM archive module info
+>>>&0	search/257/s	ustar
+# show details for WBM archive member module info
+>>>>&-257 use	tar-entry
+# look for characteristic WBT theme info name with "theme.info" like in: authentic-theme-21.09.5.wbt
+>>512	search/3149333/s /theme.info\0
+# look for TAR magic of WBT archive theme info
+>>>&0	search/257/s	ustar
+>>>>&-257 use	tar-entry
 
 # Incremental snapshot gnu-tar format from:
 # https://www.gnu.org/software/tar/manual/html_node/Snapshot-Files.html
@@ -185,16 +335,88 @@
 # The SVR4 "cpio(4)" hints that there are additional formats, but they
 # are defined as "short"s; I think all the new formats are
 # character-header formats and thus are strings, not numbers.
-0	short		070707		cpio archive
+# URL:		http://fileformats.archiveteam.org/wiki/Cpio
+#		https://en.wikipedia.org/wiki/Cpio
+# Reference:	https://people.freebsd.org/~kientzle/libarchive/man/cpio.5.txt
+# Update:	Joerg Jenderek
+#
+# Reference:    http://mark0.net/download/triddefs_xml.7z/defs/a/ark-cpio-bin.trid.xml
+# Note:		called "CPIO archive (binary)" by TrID, "cpio/Binary LE" by 7-Zip and "CPIO" by DROID via PUID fmt/635
+0	short		070707
+# skip DROID fmt-635-signature-id-960.cpio by looking for pathname of 1st entry
+>26	string		>\0		cpio archive
 !:mime	application/x-cpio
+# https://download.opensuse.org/distribution/leap/15.4/iso/openSUSE-Leap-15.4-NET-x86_64-Media.iso
+# boot/x86_64/loader/bootlogo
+# message.cpi
+!:ext	/cpio/cpi
+>>0	use	cpio-bin
+# Reference:    http://mark0.net/download/triddefs_xml.7z/defs/a/ark-cpio-bin-sw.trid.xml
+# Note:		called "CPIO archive (byte swapped binary)" by TrID and "Cpio/Binary BE" by 7-Zip
 0	short		0143561		byte-swapped cpio archive
 !:mime	application/x-cpio # encoding: swapped
+# https://telparia.com/fileFormatSamples/archive/cpio/skeleton2.cpio
+!:ext	cpio
+>0	use	cpio-bin-be
+# Reference:    http://mark0.net/download/triddefs_xml.7z/defs/a/ark-cpio.trid.xml
+# Note:		called "CPIO archive (portable)" by TrID, "cpio/Portable ASCII" by 7-Zip and "cpio/odc" by GNU cpio
 0	string		070707		ASCII cpio archive (pre-SVR4 or odc)
 !:mime	application/x-cpio
+# https://telparia.com/fileFormatSamples/archive/cpio/ pthreads-1.60B5.osr5src.cpio cinema.cpi VOL.000.008 VOL.000.012
+!:ext	cpio/cpi/008/012
+# Note:		called "CPIO archive (portable)" by TrID, "cpio/New ASCII" by 7-Zip and "cpio/newc" by GNU cpio
 0	string		070701		ASCII cpio archive (SVR4 with no CRC)
 !:mime	application/x-cpio
+# https://telparia.com/fileFormatSamples/archive/cpio/MainActor-2.06.3.cpio
+!:ext	cpio
+# Note:		called "CPIO archive (portable)" by TrID, "cpio/New CRC" by 7-Zip and "cpio/crc" by GNU cpio
 0	string		070702		ASCII cpio archive (SVR4 with CRC)
 !:mime	application/x-cpio
+# http://ftp.gnu.org/gnu/tar/tar-1.27.cpio.gz
+# https://telparia.com/fileFormatSamples/archive/cpio/pcmcia
+!:ext	/cpio
+#	display information of old binary cpio archive
+# Note:	verfied by 7-Zip `7z l -tcpio -slt *.cpio` and
+#	`cpio -ivt --numeric-uid-gid --file=clam.bin-le.cpio`
+0	name	cpio-bin
+# c_dev; device number; WHAT IS THAT?
+>2	uleshort	x		\b; device %u
+# c_ino; truncated inode number; use `ls --inode`
+>4	uleshort	x		\b, inode %u
+# c_mode; mode specifies permissions and file type like: ?622~?rw-r--r-- by `ls -l`
+>6	uleshort	x		\b, mode %o
+# c_uid; numeric user id; use `ls --numeric-uid-gid`
+>8	uleshort	x		\b, uid %u
+# c_gid; numeric group id
+>10	uleshort	x		\b, gid %u
+# c_nlink; links to this file; directories at least 2
+>12	uleshort	>1		\b, %u links
+# c_rdev; device number for block and character entries; zero for all other entries by writers
+# like 0x0440 for /dev/ttyS0
+>14	uleshort	>0		\b, device %#4.4x
+# c_mtime[2]; modification time in seconds since 1 January 1970; most-significant 16 bits first 
+>16	medate		x		\b, modified %s
+# c_filesize[2]; size of pathname; most-significant 16 bits first like: 544
+>22	melong		x		\b, %u bytes
+# c_namesize; bytes in the pathname that follows the header like: 9
+#>20	uleshort	x		\b, namesize %u
+# pathname of entry like: "clam.exe"
+>26	string		x		"%s"
+#	display information of old binary byte swapped cpio archive
+# Note:	verfied by 7-Zip `7z l -tcpio -slt *.cpio` and
+#	`LANGUAGE=C cpio -ivt --numeric-uid-gid --file=clam.bin-be.cpio`
+0	name	cpio-bin-be
+>2	ubeshort	x		\b; device %u
+>4	ubeshort	x		\b, inode %u
+>6	ubeshort	x		\b, mode %o
+>8	ubeshort	x		\b, uid %u
+>10	ubeshort	x		\b, gid %u
+>12	ubeshort	>1		\b, %u links
+>14	ubeshort	>0		\b, device %#4.4x
+>16	bedate		x		\b, modified %s
+>22	ubelong	 	x		\b, %u bytes
+#>20	ubeshort	x		\b, namesize %u
+>26	string		x		"%s"
 
 #
 # Various archive formats used by various versions of the "ar"
@@ -271,7 +493,8 @@
 #>>68	string		x		(format %.3s)
 >68	string		=2.0\n
 # 2nd archive name=control archive name like control.tar.gz or control.tar.xz
->>72	string		>\0		\b, with %.14s
+# or control.tar.zst
+>>72	string		>\0		\b, with %.15s
 # look for 3rd archive name=data archive name like data.tar.{gz,xz,bz2,lzma}
 >>0	search/0x93e4f	data.tar.	\b, data compression
 # the above line only works if FILE_BYTES_MAX in ../../src/file.h is raised
@@ -506,11 +729,12 @@
 >>>>0	use	ttcomp
 0	string	\1\4
 # TODO:
-# skip Commodore PET BASIC 4.0 program *.prg
-# variant ASCII, 1K dictionary (strength=48=50-2). With strength=49 wrong order! WHY?
 # skip shared library (strength=50) handled by ./ibm6000
 !:strength	-2
->0	use	ttcomp
+# skip Commodore PET BASIC programs (Mastermind.prg) with last 3 nil bytes (\0~end of line followed by 0000h line offset)
+#>-4	ubelong		x	LAST_BYTES=%8.8x
+>-4	ubelong&0x00FFffFF	!0
+>>0	use	ttcomp
 #	display information of TTComp archive
 0	name	ttcomp
 # (version 5.25) labeled the entry as "TTComp archive data"
@@ -674,7 +898,7 @@
 >>>>>>>(16.s)			uleshort	x
 >>>>>>>>&16				string	x	\b, %-.8s
 >>>>>>12			uleshort	&0x10	
->>>>>>>(16.s)			uleshort	x
+#>>>>>>>(16.s)			uleshort	x
 >>>>>>>&16				string	x	%-.8s
 >>>>>>>>&1				string	x	\b.%-.3s
 >>>12	uleshort				&0x01
@@ -753,6 +977,88 @@
 !:ext	??$
 >>8	ulelong	>0		\b, original size: %u bytes
 
+# Summary:	lzss compressed/EDI Pack
+# From:		Joerg Jenderek
+# URL:		http://fileformats.archiveteam.org/wiki/EDI_Install_packed_file
+# Note:		called "EDI Install LZS compressed data" by TrID and verified by
+#		command like `deark -l -m edi_pack -d2 BOOK01A.IC$` as "EDI Pack LZSS1"
+0	string					EDILZSS
+>7	string					1
+# look for point character before orginal file name extension
+>>8	search/9/b				.
+# check suffix of possible orginal file anme
+#>>>&0		ubelong				x	SUFFIX=%8.8x
+# samples without valid character after point in original file name field like: FENNEL.LZS PLANTAIN.LZS
+>>>&0		ubyte				<0x20
+>>>>0			use				edi-lzs
+# samples with valid character after point in original file name field
+>>>&0		ubyte				>0x1F
+# check 2nd charcter of suffix
+#>>>>&0			ubyte	x			2ND_SUFFIX=%x
+# sample with one valid character after point followed by \0 in original file name field like: SPELMATE.H$
+>>>>&0			ubyte			=0
+>>>>>0				use			edi-pack
+>>>>&0			ubyte			>0x1F
+# check 3rd charcter of suffix
+#>>>>>&0				ubyte		x	3RD_SUFFIX=%x
+# no sample with 2 valid characters after point followed by \0 in original file name field
+>>>>>&0				ubyte		=0
+>>>>>>0					use		edi-pack
+# samples with valid 3rd character after point in original file name field
+>>>>>&0				ubyte		>0x1F
+# sample with 3 valid character after point followed by \0 in original file name field like: BOOK01A.IC$ CTL3D.DL$
+>>>>>>&0				ubyte	=0
+>>>>>>>0					use	edi-pack
+# sample with 3 valid character after point followed by no \0 in original file name field like: HERBTEXT.LZS
+>>>>>>&0				ubyte	!0
+>>>>>>>0					use	edi-lzs
+# no sample with invalid 3rd character after point in original file name field
+>>>>>&0				default		x
+>>>>>>0					use		edi-lzs
+# sample with invalid 2nd character after point in original file name field like: LACERATE.LZS SPLINTER.LZS
+>>>>&0			default			x
+>>>>>0	use						edi-lzs
+# sample without point character in original file name field like GUNSHOT.LZS
+>>8	default					x
+>>>0		use					edi-lzs
+# Reference:	http://mark0.net/download/triddefs_xml.7z/defs/e/edi-lzss2.trid.xml
+# Note:		called "EDI Install Pro LZSS2 compressed data" by TrID and verified by
+#		command like `deark -l -m edi_pack -d2 4WAY.WA$` as "EDI Pack LZSS2"
+>7	string			2			EDI LZSS2 packed
+#!:mime	application/octet-stream
+!:mime	application/x-edi-pack-lzss
+# the name of a compressed file often ends in character '$' or '_'
+!:ext	??$/??_
+# original filename, NUL-terminated, padded to 13 bytes like: mci.vbx 4way.wav skymap.exe cmdialog.vbx
+>>8		string		x			"%-0.13s"
+# original file size, as a 4-byte integer.
+>>21		ulelong		x			\b, %u bytes
+# compressed data like: ff5249464606ec00 ff4d5aa601010000
+>>>25		ubequad		x			\b, data %#16.16llx...
+0	name		edi-pack
+# Note:		verified by command like `deark -l -d2 SPELMATE.H$` as "EDI Pack LZSS1"
+# original filename, NUL-terminated, padded to 13 bytes like: ctl3d.dll spelmate.h filemenu.rc owl.def index-it.exe
+# but not like \377Aloe.lzs\273 (HERBTEXT.LZS)
+>8	string		x				EDI LZSS packed "%-.13s"
+#!:mime	application/octet-stream
+!:mime	application/x-edi-pack-lzss
+# the name of a compressed file often ends in character '$' or '_'
+!:ext	??$/?$
+# compressed data like: f7000001eff02020 ff4d5aa900020000 ff2f2a207370656c
+>21	ubequad		x				\b, data %#16.16llx...
+# URL:		http://fileformats.archiveteam.org/wiki/EDI_LZSSLib
+# Note:		verified partly by command like `deark -l -m edi_pack -d2 GUNSHOT.LZS` as "EDI LZSSLib"
+0	name		edi-lzs
+# Note:		verified by command like `deark -l -d2 GUNSHOT.LZS` as "EDI LZSSLib"
+# no original filename looks like: \277BM\226.\0 \277BM.n\001 \277BM\226.\0 \277BM.g\001 \377Aloe.lzs\273
+>8	string		x				EDI LZSSLib packed
+#!:mime	application/octet-stream
+!:mime	application/x-edi-pack-lzss
+# The name of a compressed file ends with LZS suffix
+!:ext	lzs
+# compressed data like: bf424df6e10100f3 ff416c6f652e6c7a ff416c6f652e6c7a
+>8	ubequad		x				\b, data %#16.16llx...
+
 # Summary:	CAZIP compressed file
 # From:		Joerg Jenderek
 # URL:		http://fileformats.archiveteam.org/wiki/CAZIP
@@ -784,15 +1090,51 @@
 # ZET
 0	string	OZ\xc3\x9d ZET archive data
 # TSComp
-0	string	\x65\x5d\x13\x8c\x08\x01\x03\x00 TSComp archive data
+# Update:	Joerg Jenderek 2023 Nov 
+# URL:		http://fileformats.archiveteam.org/wiki/TSComp
+# Reference:	http://mark0.net/download/triddefs_xml.7z/defs/t/tscomp.trid.xml
+#		https://entropymine.com/deark/releases/deark-1.6.5.tar.gz
+#		deark-1.6.5/modules/installshld.c 
+# Note:		called "TSComp compressed data" by TrID
+#		verified by command like `deark -m tscomp -l -d2 MAKERRES.DL$`
+#		The "13" might be a version number. The "8c" is a mystery
+0	string	\x65\x5d\x13\x8c\x08\x01\x03\x00 TSComp archive
+#!:mime	application/octet-stream
+!:mime	application/x-tscomp-compressed
+# filename style: 0~old version 1~without wildcard 2~with wildcard
+#>0x08	ubyte		x				\b, filename style %u
+>0x08	ubyte		0				data, filename style 0
+# no example found
+!:ext	??$
+#>0x08	ubyte		1				data, without wildcard
+>0x08	ubyte		1				data
+# for single-file archives, often the last letter of the filename extension is changed to "$"; but also name like: BUILD3.BM!
+!:ext	??$/??!
+>0x08	ubyte		2				data, with wildcard
+# for multi-file archives common extensions seem to be .lib and .cmp, but also names like: SAMPMIF$ OTDATA.$$$ TWOFILES.TSC WIN.PAK 
+!:ext	/lib/cmp/$$$/tsc/pak
+# fnlen; pascal string length; original 1st file name like: CHFORMAT.MML
+>0x1c	pstring		x				\b, %s
+# md->fi->timestamp
+>0x16	lemsdosdate	x				\b, modified %s
+>0x18	lemsdostime	x				%s
+# 1st compressed size: like 180 (SAMPMML$$)
+>0x0E	ulelong		x				\b, compressed size %u
+# de_dbg_indent(c, 1): like: 12h
+#>0x0d	ubyte		x				b, at 0xD %#x
+# like: 0
+#>0x1A	ubeshort	x				\b, at 0x1A %#x
+# 2nd member offset
+#>0x12	ulelong		x				\b, next offset %#x
+>0x12	ulelong		>0
+# original 2nd archive member name like: FORMATS.MML
+>>(0x12.l+15)	pstring	x				\b, %s ...
 # ARQ
 0	string	gW\4\1 ARQ archive data
 # Squash
 3	string	OctSqu Squash archive data
 # Terse
 0	string	\5\1\1\0 Terse archive data
-# PUCrunch
-0	string	\x01\x08\x0b\x08\xef\x00\x9e\x32\x30\x36\x31 PUCrunch archive data
 # UHarc
 0	string	UHA UHarc archive data
 # ABComp
@@ -821,8 +1163,10 @@
 # QFC
 0	string	\x1aFC\x1a QFC archive data
 0	string	\x1aQF\x1a QFC archive data
-# PRO-PACK
-0	string	RNC PRO-PACK archive data
+# PRO-PACK https://www.segaretro.org/Rob_Northen_compression
+0	string	RNC
+>3	byte	1	PRO-PACK archive data (compression 1)
+>3	byte	2	PRO-PACK archive data (compression 2)
 # 777
 0	string	777 777 archive data
 # LZS221
@@ -925,11 +1269,39 @@
 # TPac
 0	string	\4TPAC\3 TPac archive data
 # Ai
+# Update:	Joerg Jenderek
+# URL:		http://fileformats.archiveteam.org/wiki/Ai_Archiver
 0	string	Ai\1\1\0 Ai archive data
+#!:mime	application/octet-stream
+!:mime	application/x-compress-ai
+!:ext	ai
 0	string	Ai\1\0\0 Ai archive data
+#!:mime	application/octet-stream
+!:mime	application/x-compress-ai
+!:ext	ai
 # Ai32
+# Reference:	http://mark0.net/download/triddefs_xml.7z/defs/a/ark-ai.trid.xml
+# Note:		called "Ai Archivator compressed archive" by TrID
 0	string	Ai\2\0 Ai32 archive data
+#!:mime	application/octet-stream
+!:mime	application/x-compress-ai
+!:ext	ai
+# original file name
+>8	pstring/h x	"%s"
+# according to TrID the next 3 bytes are nil
+>5	ubyte	!0	\b, at 5 %#x
+>6	ubyte	!0	\b, at 6 %#x
+>7	ubyte	!0	\b, at 7 %#x
+# the fourth byte with value 0 is probably a flag for "non solid" mode
+#>3	ubyte	=0x00	\b, unsolid mode
 0	string	Ai\2\1 Ai32 archive data
+#!:mime	application/octet-stream
+!:mime	application/x-compress-ai
+!:ext	ai
+# original file name
+>8	pstring/h x	"%s"
+# the fourth byte with value 0x01 is probably a flag for "solid" mode; this is not the default
+>3	ubyte	=0x01	\b, solid mode
 # SBC
 0	string	SBC SBC archive data
 # Ybs
@@ -1175,7 +1547,7 @@
 # This is a really bad format. A file containing HAWAII will match this...
 #0	string		HA		HA archive data,
 #>2	leshort		=1		1 file,
-#>2	leshort		>1		%hu files,
+#>2	leshort		>1		%u files,
 #>4	byte&0x0f	=0		first is type CPY
 #>4	byte&0x0f	=1		first is type ASC
 #>4	byte&0x0f	=2		first is type HSC
@@ -1234,7 +1606,7 @@
 >>>>>>3	regex		\^lh[01]	LHarc 1.x/ARX archive data
 # LHice archiver use ".ICE" as name extension instead usual one ".lzh"
 # FOOBAR archiver use ".foo" as name extension instead usual one
-# "Florain Orjanov's and Olga Bachetska's ARchiver" not found at the moment
+# "Florian Orjanov's and Olga Bachetska's ARchiver" not found at the moment
 >>>>>>>2	string	-lh1		\b 
 !:ext lha/lzh/ice
 >>>>>>3	regex		\^lh[23d]	LHa 2.x? archive data
@@ -1265,7 +1637,7 @@
 #	check and display information of lharc header
 0	name				lharc-header
 # header size 0x4 , 0x1b-0x61
->0	ubyte		x
+#>0	ubyte		x
 # compressed data size != compressed file size
 #>7	ulelong		x		\b, data size %d
 # attribute: 0x2~?? 0x10~symlink|target 0x20~normal
@@ -1389,7 +1761,7 @@
 
 # RAR (Roshal Archive) archive
 0	string		Rar!\x1a\7\0		RAR archive data
-!:mime	application/x-rar
+!:mime	application/vnd.rar
 !:ext	rar/cbr
 # file header
 >(0xc.l+9)	byte	0x74
@@ -1401,13 +1773,13 @@
 >>7		use	rar-archive-header
 
 0	string		Rar!\x1a\7\1\0		RAR archive data, v5
-!:mime	application/x-rar
+!:mime	application/vnd.rar
 !:ext	rar
 
 # Very old RAR archive
 # https://jasonblanks.com/wp-includes/images/papers/KnowyourarchiveRAR.pdf
 0	string		RE\x7e\x5e  RAR archive data (<v1.5)
-!:mime	application/x-rar
+!:mime	application/vnd.rar
 !:ext	rar/cbr
 
 # SQUISH archiver (Greg Roelofs, newt@uchicago.edu)
@@ -1422,13 +1794,87 @@
 !:mime	application/zip
 !:ext zip/cbz
 
-# Zip archives (Greg Roelofs, c/o zip-bugs@wkuvx1.wku.edu)
-0	string		PK\005\006	Zip archive data (empty)
-!:mime application/zip
-!:ext zip/cbz
-!:strength +1
+
 0	string		PK\003\004
 !:strength +1
+# IOS/IPadOS IPA file (Zip archive)
+# Starts with Payload (file name length = 19)
+>26	uleshort	8
+>>30  	string		Payload		IOS/iPadOS IPA file
+>>>&26  search/6000	PK\003\004
+>>>>&34	string		x	containing %s
+!:mime	application/x-ios-app
+!:ext	ipa
+
+# Android APK file (Zip archive)
+# Starts with AndroidManifest.xml (file name length = 19)
+>26	uleshort	19
+>>30	string	AndroidManifest.xml	Android package (APK), with AndroidManifest.xml
+!:mime	application/vnd.android.package-archive
+!:ext	apk
+>>>-22	string	PK\005\006
+>>>>(-6.l-16)	string	APK\x20Sig\x20Block\x2042	\b, with APK Signing Block
+# Starts with META-INF/com/android/build/gradle/app-metadata.properties
+>26	uleshort	57
+>>30	string	META-INF/com/android/build/gradle/
+>>>&0	string	app-metadata.properties	Android package (APK), with gradle app-metadata.properties
+!:mime	application/vnd.android.package-archive
+!:ext	apk
+>>>>-22	string	PK\005\006
+>>>>>(-6.l-16)	string	APK\x20Sig\x20Block\x2042	\b, with APK Signing Block
+# Starts with classes.dex (file name length = 11)
+>26	uleshort	11
+>>30	string	classes.dex	Android package (APK), with classes.dex
+!:mime	application/vnd.android.package-archive
+!:ext	apk
+>>>-22	string	PK\005\006
+>>>>(-6.l-16)	string	APK\x20Sig\x20Block\x2042	\b, with APK Signing Block
+# Starts with META-INF/MANIFEST.MF (file name length = 20)
+# NB: checks for resources.arsc, classes.dex, etc. as well to avoid matching JAR files
+>26	uleshort	20
+>>30	string	META-INF/MANIFEST.MF
+# Contains resources.arsc (near the end, in the central directory)
+>>>-512	search	resources.arsc	Android package (APK), with MANIFEST.MF and resources.arsc
+!:mime	application/vnd.android.package-archive
+!:ext	apk
+>>>>-22	string	PK\005\006
+>>>>>(-6.l-16)	string	APK\x20Sig\x20Block\x2042	\b, with APK Signing Block
+>>>-512	default x
+# Contains classes.dex (near the end, in the central directory)
+>>>>-512	search	classes.dex	Android package (APK), with MANIFEST.MF and classes.dex
+!:mime	application/vnd.android.package-archive
+!:ext	apk
+>>>>>-22	string	PK\005\006
+>>>>>>(-6.l-16)	string	APK\x20Sig\x20Block\x2042	\b, with APK Signing Block
+>>>>-512	default x
+# Contains lib/armeabi (near the end, in the central directory)
+>>>>>-512	search	lib/armeabi	Android package (APK), with MANIFEST.MF and armeabi lib
+!:mime	application/vnd.android.package-archive
+!:ext	apk
+>>>>>>-22	string	PK\005\006
+>>>>>>>(-6.l-16)	string	APK\x20Sig\x20Block\x2042	\b, with APK Signing Block
+>>>>>-512	default x
+# Contains drawables (near the end, in the central directory)
+>>>>>>-512	search	res/drawable	Android package (APK), with MANIFEST.MF and drawables
+!:mime	application/vnd.android.package-archive
+!:ext	apk
+>>>>>>>-22	string	PK\005\006
+>>>>>>>>(-6.l-16)	string	APK\x20Sig\x20Block\x2042	\b, with APK Signing Block
+# It may or may not be an APK file, but it's definitely a Java JAR file
+>>>>>>-512	default x	Java archive data (JAR)
+!:mime	application/java-archive
+!:ext	jar
+# Starts with zipflinger virtual entry (28 + 104 = 132 bytes)
+# See https://github.com/obfusk/apksigcopier/blob/666f5b7/apksigcopier/__init__.py#L230
+>4	string	\x00\x00\x00\x00\x00\x00
+>>&0	string	\x21\x08\x21\x02
+>>>&0	string	\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00
+>>>>&0	string	\x00\x00	Android package (APK), with zipflinger virtual entry
+!:mime	application/vnd.android.package-archive
+!:ext	apk
+>>>>>-22	string	PK\005\006
+>>>>>>(-6.l-16)	string	APK\x20Sig\x20Block\x2042	\b, with APK Signing Block
+
 
 # Specialised zip formats which start with a member named 'mimetype'
 # (stored uncompressed, with no 'extra field') containing the file's MIME type.
@@ -1524,9 +1970,13 @@
 >>>>77	string	-web			HTML Document Template
 !:mime	application/vnd.oasis.opendocument.text-web
 !:ext	oth
->>>>77	string	-master			Master Document
+>>>>77	string	-master
+>>>>>84	byte	!0x2d			Master Document
 !:mime	application/vnd.oasis.opendocument.text-master
 !:ext	odm
+>>>>>84	string	-template		Master Template
+!:mime	application/vnd.oasis.opendocument.text-master-template
+!:ext	otm
 >>>73	string	graphics
 >>>>81	byte	!0x2d			Drawing
 !:mime	application/vnd.oasis.opendocument.graphics
@@ -1569,8 +2019,7 @@
 # Valid for LibreOffice Base 6.0.1.1 at least
 >>>73	string	base 			Database
 # https://bugs.documentfoundation.org/show_bug.cgi?id=45854
-!:mime	application/vnd.oasis.opendocument.database
-#!:mime	application/vnd.oasis.opendocument.base
+!:mime	application/vnd.oasis.opendocument.base
 !:ext	odb
 >>>73	string	image
 >>>>78	byte	!0x2d			Image
@@ -1585,6 +2034,16 @@
 #    From: Ralf Brown <ralf.brown@gmail.com>
 >>50	string	epub+zip	EPUB document
 !:mime application/epub+zip
+
+# From: Hajin Jang <jb6804@naver.com>
+# hwpx (OWPML) document format follows OCF specification.
+# Hangul Word Processor 2010+ supports HWPX format.
+# URL: https://www.hancom.com/etc/hwpDownload.do
+#      https://standard.go.kr/KSCI/standardIntro/getStandardSearchView.do?menuId=503&topMenuId=502&ksNo=KSX6101
+#      https://e-ks.kr/streamdocs/view/sd;streamdocsId=72059197557727331
+>>50	string	hwp+zip     Hancom HWP (Hangul Word Processor) file, HWPX
+!:mime application/x-hwp+zip
+!:ext	hwpx
 
 # From:	Joerg Jenderek
 # URL:	http://en.wikipedia.org/wiki/CorelDRAW
@@ -1639,9 +2098,10 @@
 >>>38		regex	[!-OQ-~]+		Zip data (MIME type "%s"?)
 !:mime	application/zip
 
-# Java Jar files
+# Java Jar files (see also APK files above)
 >(26.s+30)	leshort	0xcafe		Java archive data (JAR)
 !:mime	application/java-archive
+!:ext	jar
 
 # iOS App
 >(26.s+30)	leshort	!0xcafe
@@ -1654,18 +2114,41 @@
 #>30	search/100/b application/epub+zip	EPUB document
 #!:mime application/epub+zip
 
-# Generic zip archives (Greg Roelofs, c/o zip-bugs@wkuvx1.wku.edu)
-#   Next line excludes specialized formats:
+# APK Signing Block
 >(26.s+30)	leshort	!0xcafe
 >>30	search/100/b !application/epub+zip
->>>26    string          !\x8\0\0\0mimetype	Zip archive data
+>>>26    string          !\x8\0\0\0mimetype
+>>>>-22	string	PK\005\006
+>>>>>(-6.l-16)	string	APK\x20Sig\x20Block\x2042	Android package (APK), with APK Signing Block
+!:mime	application/vnd.android.package-archive
+!:ext	apk
+
+# Keyman Compiled Package File (keyman.com)
+# https://help.keyman.com/developer/current-version/reference/file-types/kmp
+# Find start of central directory
+>>>>>(-6.l)	string		PK\001\002
+# Scan central directory for string 'kmp.json', will suffice for a
+# package containing about 150 files
+>>>>>>(-6.l)	search/9000	kmp.json	Keyman Compiled Package File
+!:mime	application/vnd.keyman.kmp+zip
+!:ext kmp
+
+# Generic zip archives (Greg Roelofs, c/o zip-bugs@wkuvx1.wku.edu)
+#   Next line excludes specialized formats:
+>>>>+4	default		x
+>>>>>4	beshort		x			Zip archive data, at least
 !:mime	application/zip
->>>>4	beshort		x			\b, at least
->>>>4	use		zipversion
->>>>4	beshort		x			to extract
->>>>8	beshort		x			\b, compression method=
->>>>8	use		zipcompression
->>>>0x161	string		WINZIP		\b, WinZIP self-extracting
+>>>>>4	use		zipversion
+>>>>>4	beshort		x			to extract
+>>>>>8	beshort		x			\b, compression method=
+>>>>>8	use		zipcompression
+>>>>>0x161	string		WINZIP		\b, WinZIP self-extracting
+
+# Zip archives (Greg Roelofs, c/o zip-bugs@wkuvx1.wku.edu)
+0	string		PK\005\006	Zip archive data (empty)
+!:mime application/zip
+!:ext zip/cbz
+!:strength +1
 
 # StarView Metafile
 # From Pierre Ducroquet <pinaraf@pinaraf.info>
@@ -1674,16 +2157,116 @@
 >8	belong	x	\b, size %d
 
 # Zoo archiver
-20	lelong		0xfdc4a7dc	Zoo archive data
+# Update: Joerg Jenderek
+# URL:		https://en.wikipedia.org/wiki/Zoo_(file_format)
+#		http://fileformats.archiveteam.org/wiki/Zoo
+# Reference:	http://mark0.net/download/triddefs_xml.7z/defs/a/ark-zoo-strict.trid.xml
+#		http://distcache.freebsd.org/ports-distfiles/zoo-2.10pl1.tar.gz/zoo.h 
+# Note:		called "ZOO compressed archive (strict)" by TrID and "ZOO Compressed Archive" by DROID via PUID x-fmt/269 
+#		verified by command like `deark -m zoo -l -d2 WHRCGA.ZOO`
+20	lelong		0xfdc4a7dc
+# skip DROID x-fmt-269-signature-id-621.zoo by looking for valid major version to manipulate archive
+>32	byte		>0		Zoo archive data
 !:mime	application/x-zoo
->4	byte		>48		\b, v%c.
->>6	byte		>47		\b%c
->>>7	byte		>47		\b%c
->32	byte		>0		\b, modify: v%d
->>33	byte		x		\b.%d+
->42	lelong		0xfdc4a7dc	\b,
->>70	byte		>0		extract: v%d
->>>71	byte		x		\b.%d+
+# bak is extension of backup-ed zoo
+!:ext	zoo/bak
+# version in text form like: 1.50 2.00 2.10
+>>4	byte		>48		\b, v%c.
+>>>6	byte		>47		\b%c
+>>>>7	byte		>47		\b%c
+# ZOO files typically start with "ZOO ?.?? Archive.", followed by the bytes 0x1a 0x0 0x0; not used by Zoo and they may be anything
+>>8	string		!\040Archive.\032 \b, at 8
+>>>8	string		x		text "%0.10s"
+# major_ver.minor_ver; minimum version needed to manipulate archive like: 1.0 2.0
+>>32	byte		>0		\b, modify: v%d
+>>>33	byte		x		\b.%d+
+# major_ver.minor_ver; minimum version needed to extract after modify like in old versions
+>>(24.l+28)	ubyte	x		\b, extract: v%u
+>>(24.l+29)	ubyte	x		\b.%u+
+# with zoo 2.00 additional fields have been added in the archive header
+>>32	byte		>1
+# type; type of archive header like: 1 2
+>>>34		ubyte	!1		\b, header type %u
+# acmt_pos; position of archive comment like: 6258 30599 61369 149501
+>>>35		lelong	>0		\b, at %d
+# acmt_len; length of archive comment like: 258
+>>>>39			uleshort x	%u bytes comment
+#>>>>(35.l)		ubequad	x	COMMENT=%16.16llx
+# 1st character of comment maybe is CarriageReturn (0x0d)
+>>>>(35.l) 		ubyte	<040
+# 2nd character of comment maybe is LineFeed (0x0a)
+>>>>>(35.l+1) 		ubyte	<040
+# comment string after CRLF like "Anonymous ftp site garbo.uwasa.fi 128.214.87.1 moderated by"
+>>>>>>(35.l+2)		string	x	%s
+# next character of remaining comment maybe is CarriageReturn (0x0d)
+>>>>>>>&0		ubyte	<040
+>>>>>>>>&0		ubyte	<040
+# 2nd comment part like: Timo Salmi ts@chyde.uwasa.fi      PC directories and uploads\015\012Harri Valkama hv@chyde.uwasa.fi   PC, Mac, Unix files, and upload
+>>>>>>>>>&0		string	>037	%s
+# vdata; archive-level versioning byte like: 1 3
+>>>41		ubyte	!1		\b, vdata %#x
+# zoo_start; pointer to 1st entry header 
+>>24	lelong		x		\b; at %u
+# zoo_minus; zoo_start -1 for consistency checking
+#>>28	lelong		x		\b, zoo_minus %#x
+# zoo_tag; tag for check
+#>>(24.l+0) ulelong	!0xfdc4a7dc	\b, zoo_tag=%8.8x
+# type; type of directory entry like: 1 2
+>>(24.l+4)	ubyte	!2		type=%u
+# packing_method; 0~no packing 1~normal LZW 2~lzh
+>>(24.l+5)	ubyte		x	method=
+>>>(24.l+5)	ubyte		0	\bnot-compressed
+>>>(24.l+5)	ubyte		1	\blzd
+>>>(24.l+5)	ubyte		2	\blzh
+# next; position of next directory entry
+>>(24.l+6)	ulelong		x	\b, next entry at %u
+# offset; position of file data for this entry
+#>>(24.l+10) ulelong		x	\b, data at %u
+# file_crc; CRC-16 of file data
+>>(24.l+18)	uleshort	x	\b, CRC %#4.4x
+# comment; zero if none or points to entry comment like ADD9h (WHRCGA.ZOO)
+>>(24.l+32)	lelong		>0	\b, at %#x
+# cmt_size; if not 0 for none then length of entry comment like: 46
+>>>(24.l+36)	uleshort	>0	%u bytes comment
+# entry comment itself like: "CGA .GL file showing menu input from keyboard"
+>>>>(&-6.l)	string		x	"%s"
+# org_size; original size of file
+>>(24.l+20)	ulelong		x	\b, size %u
+# size_now; compressed size of file
+>>(24.l+24)	ulelong		x	(%u compressed)
+# major_ver.minor_ver; minimum version needed to extract already done
+# deleted; will be 1 if deleted, 0 if not
+>>(24.l+30)	ubyte		=1	\b, deleted
+# struc; file structure if any; WHAT IS THAT?
+>>(24.l+31)	ubyte		!0	\b, structured
+# fname[13]; short/DOS file name like 12345678.012
+>>(24.l+38)	string	x		\b, %0.13s
+# for directory entry type 2 with variable part
+>>(24.l+4)	ubyte	=2
+# var_dir_len; length of variable part of dir entry
+>>>(24.l+51)		uleshort >0
+#>>>(24.l+51)		uleshort >0	\b, variable part length %u
+# namlen; length of long filename
+#>>>>(24.l+56)		ubyte	x	\b, namlen %u
+# dirlen; length of directory name
+#>>>>(24.l+57)		ubyte	x	\b, dirlen %u
+# if file length positive then show long file name
+>>>>(24.l+56)		ubyte	>0
+# lfname[256]; long file name \0-terminated
+>>>>>(24.l+58)		string	x	"%s"
+# if directory length positive then jump before file name field and then jump this addtional length plus 2 (\0-terminator + dirlen field) to following directory name
+>>>>(24.l+57)		ubyte	>0
+>>>>>(24.l+55)		ubyte	x
+# dirname[256]; directory name \0-terminated
+>>>>>>&(&0.b+2)		string	x	in "%s"
+# dir_crc; CRC of directory entry
+#>>>(24.l+54)		uleshort x	\b, entry CRC %#4.4x
+# tz; timezone where file was archived; 7Fh~unknown 4~1.00hoursWestOfUTC 12 16 20~5.00hoursWestOfUTC -107~26.75hoursEastOfUTC -4~1.00hoursEastOfUTC
+>>>(24.l+53)		byte	!0x7f	\b, time zone %d/4
+# date; last mod file date in DOS format
+>>>(24.l+14)		lemsdosdate x	\b, modified %s
+# time; last mod file time in DOS format
+>>>(24.l+16)		lemsdostime x	%s
 
 # Shell archives
 10	string		#\ This\ is\ a\ shell\ archive	shell archive text
@@ -1789,6 +2372,19 @@
 !:mime	application/zip
 !:ext zip/cbz
 
+# Recognize ZIP archives with prepended data by end-of-central-directory record
+# https://en.wikipedia.org/wiki/ZIP_(file_format)#End_of_central_directory_record_(EOCD)
+# by Michal Gorny <mgorny@gentoo.org>
+-2	uleshort	0
+>&-22	string	PK\005\006
+# without #!
+>>0	string	!#!	Zip archive, with extra data prepended
+!:mime	application/zip
+!:ext zip/cbz
+# with #!
+>>0	string/w	#!\ 	a
+>>>&-1	string/T	x	%s script executable (Zip archive)
+
 # ACE archive (from http://www.wotsit.org/download.asp?f=ace)
 # by Stefan `Sec` Zehl <sec@42.org>
 7	string		**ACE**		ACE archive data
@@ -1846,12 +2442,6 @@
 # From: Tilman Sauerbeck <tilman@code-monkey.de>
 0	belong	0x1ee7ff00	EET archive
 !:mime	application/x-eet
-
-# rzip archives
-0	string	RZIP		rzip compressed data
->4	byte	x		- version %d
->5	byte	x		\b.%d
->6	belong	x		(%d bytes)
 
 # From:		Joerg Jenderek
 # URL:		https://help.foxitsoftware.com/kb/install-fzip-file.php
@@ -2033,7 +2623,28 @@
 >3	byte	x	version %d
 
 # LyNX archive
+# Update:	Joerg Jenderek
+# URL:		http://fileformats.archiveteam.org/wiki/Lynx_archive
+# Reference:	http://ist.uwaterloo.ca/~schepers/formats/LNX.TXT
+#		http://mark0.net/download/triddefs_xml.7z/defs/a/ark-lnx.trid.xml
+# Note:		called "Lynx archive" by TrID and "Commodore C64 BASIC program" with "POKE 53280" by ./c64
+# TODO:		merge and unify with Commodore C64 BASIC program
 56	string	USE\040LYNX\040TO\040DISSOLVE\040THIS\040FILE	 LyNX archive
+# display "Lynx archive" (strength=330) before Commodore C64 BASIC program (strength=50) handled by ./c64
+#!:strength +0
+#!:mime	application/octet-stream
+!:mime	application/x-commodore-lnx
+!:ext	lnx
+# afterwards look for BASIC tokenized GOTO (89h) 10, line terminator \0, end of programm tag \0\0 and CarriageReturn
+>86		search/10	\x8910\0\0\0\r	\b,
+# for DEBUGGING
+#>>&0		string		x	STRING="%s"
+# number in ASCII of directory blocks with spaces on both sides like: 1 2 3 5
+>>&0		regex		[0-9]{1,5}	%s directory blocks
+# signature like: "*LYNX XII BY WILL CORLEY" " LYNX IX  BY WILL CORLEY" "*LYNX BY CBMCONVERT 2.0*"
+>>>&2		regex		[^\r]{1,24}	\b, signature "%s"
+# number of files in ASCII surrounded by spaces and delimited by CR like: 2 3 6 13 69 144 (maximum?)
+>>>>&1		regex		[0-9]{1,3}	\b, %s files
 
 # From: Joerg Jenderek
 # URL: https://www.acronis.com/
@@ -2066,6 +2677,7 @@
 # https://gitweb.gentoo.org/proj/portage.git/tree/man/xpak.5
 -4	string	STOP
 >-16	string	XPAKSTOP	Gentoo binary package (XPAK)
+!:mime	application/vnd.gentoo.xpak
 
 # From:		Joerg Jenderek
 # URL:		https://kodi.wiki/view/TexturePacker
@@ -2110,3 +2722,91 @@
 
 # From wof (wof@stachelkaktus.net)
 0	string	Unison\ archive\ format	Unison archive format
+
+# https://ankiweb.net
+30	string	collection.anki2	Anki APKG file
+#!:ext	.apkg
+
+# Synology archive (DiskStation Manager 7.0+)
+# From: Alexandre Iooss <erdnaxe@crans.org>
+# Note: These archives are signed and encrypted.
+0		ulelong&0xFFFFFF00	0xEFBEAD00
+# MessagePack header (fixarray of 5 elements starting with a bin of 32 bytes)
+>8  	ulelong&0x00FFFFFF	0x20C495	Synology archive
+!:ext	spk
+# Extract some properties from MessagePack third item
+>>43	search/0x10000		package=
+>>>&0	string				x			\b, package %s
+>>43	search/0x10000		arch=
+>>>&0	string				x			%s
+>>43	search/0x10000		version=
+>>>&0	string				x			%s
+>>43	search/0x10000		create_time=
+>>>&0	string				x			\b, created on %s
+
+# MonoGame/XNA processed assets archive
+# From: Alexandre Iooss <erdnaxe@crans.org>
+# URL: https://github.com/MonoGame/MonoGame/blob/v3.8.1/MonoGame.Framework/Content/ContentManager.cs
+0	string	XNB
+# XNB must be version 4 or 5
+>4	byte	<6
+>>4	byte	>3
+# Size must be positive
+>>>6	lelong	>0	MonoGame/XNA processed assets
+!:ext	xnb
+>>>>3	string	=w	\b, for Windows
+>>>>3	string	=x	\b, for Xbox360
+>>>>3	string	=i	\b, for iOS
+>>>>3	string	=a	\b, for Android
+>>>>3	string	=d	\b, for DesktopGL
+>>>>3	string	=X	\b, for MacOSX
+>>>>3	string	=W	\b, for WindowsStoreApp
+>>>>3	string	=n	\b, for NativeClient
+>>>>3	string	=M	\b, for WindowsPhone8
+>>>>3	string	=r	\b, for RaspberryPi
+>>>>3	string	=P	\b, for PlayStation4
+>>>>3	string	=5	\b, for PlayStation5
+>>>>3	string	=O	\b, for XboxOne
+>>>>3	string	=S	\b, for Nintendo Switch
+>>>>3	string	=G	\b, for Google Stadia
+>>>>3	string	=b	\b, for WebAssembly and Bridge.NET
+>>>>3	string	=m	\b, for WindowsPhone7.0 (XNA)
+>>>>3	string	=p	\b, for PlayStationMobile
+>>>>3	string	=v	\b, for PSVita
+>>>>3	string	=g	\b, for Windows (OpenGL)
+>>>>3	string	=l	\b, for Linux
+>>>>4	byte	x	\b, version %d
+>>>>5	byte	&0x80	\b, LZX compressed
+>>>>>10	lelong	x	\b, decompressed size: %d bytes
+>>>>5	byte	&0x40	\b, LZ4 compressed
+>>>>>10	lelong	x	\b, decompressed size: %d bytes
+
+# Electron ASAR archive
+# From: Alexandre Iooss <erdnaxe@crans.org>
+# URL: https://github.com/electron/asar
+0		ulelong	4
+# Match JSON header start and end
+>16		string	{"files":{"
+>>(12.l+12)	string }}}}		Electron ASAR archive
+!:ext	asar
+>>>12		ulelong	x		\b, header length: %d bytes
+
+# Wasay ImageIt DataPack
+# From: Alexandre Iooss <erdnaxe@crans.org>
+# URL: https://www.neowin.net/forum/topic/615151-anyone-know-what-program-opens-dsi-and-wsi-files/
+# Note: Used in Acer eRecovery and Lenovo OneKey Recovery (OKR)
+4	string		WSVD
+# bytes 3-4 are the checksum or the first 32 bytes of the file
+>0	uleshort	0x40	Wasay ImageIt DataPack
+>>8	uleshort	x	v%u
+>>10	uleshort	x	\b.%u
+>>16	lestring16/8	x	\b, "%s"
+>>12	uleshort	x	(%u)
+>>32	byte		x	\b, created on %02d
+>>33	byte		x	\b%02d
+>>34	byte		x	\b/%02d
+>>35	byte		x	\b/%02d
+>>36	byte		x	%02d
+>>37	byte		x	\b:%02d
+>>38	byte		x	\b:%02d
+>>56	ulelong		x	\b, size: %u bytes

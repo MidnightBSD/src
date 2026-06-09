@@ -35,7 +35,7 @@
 #include "file.h"
 
 #ifndef lint
-FILE_RCSID("@(#)$File: der.c,v 1.24 2022/07/30 18:08:36 christos Exp $")
+FILE_RCSID("@(#)$File: der.c,v 1.28 2024/11/25 22:31:53 christos Exp $")
 #endif
 #else
 #define SIZE_T_FORMAT "z"
@@ -132,20 +132,20 @@ static const char *der__tag[] = {
 #endif
 
 #ifdef TEST_DER
-static uint8_t
+file_private uint8_t
 getclass(uint8_t c)
 {
 	return c >> 6;
 }
 
-static uint8_t
+file_private uint8_t
 gettype(uint8_t c)
 {
 	return (c >> 5) & 1;
 }
 #endif
 
-static uint32_t
+file_private uint32_t
 gettag(const uint8_t *c, size_t *p, size_t l)
 {
 	uint32_t tag;
@@ -178,7 +178,7 @@ gettag(const uint8_t *c, size_t *p, size_t l)
  * Returns the length, or DER_BAD if the end of the input is reached or the
  * length exceeds the remaining input.
  */
-static uint32_t
+file_private uint32_t
 getlength(const uint8_t *c, size_t *p, size_t l)
 {
 	uint8_t digits, i;
@@ -221,7 +221,7 @@ getlength(const uint8_t *c, size_t *p, size_t l)
 	return CAST(uint32_t, len);
 }
 
-static const char *
+file_private const char *
 der_tag(char *buf, size_t len, uint32_t tag)
 {
 	if (tag < DER_TAG_LAST)
@@ -232,7 +232,7 @@ der_tag(char *buf, size_t len, uint32_t tag)
 }
 
 #ifndef TEST_DER
-static int
+file_private int
 der_data(char *buf, size_t blen, uint32_t tag, const void *q, uint32_t len)
 {
 	uint32_t i;
@@ -260,7 +260,7 @@ der_data(char *buf, size_t blen, uint32_t tag, const void *q, uint32_t len)
 	return len * 2;
 }
 
-int32_t
+file_protected int32_t
 der_offs(struct magic_set *ms, struct magic *m, size_t nbytes)
 {
 	const uint8_t *b = RCAST(const uint8_t *, ms->search.s);
@@ -270,7 +270,7 @@ der_offs(struct magic_set *ms, struct magic *m, size_t nbytes)
 		DPRINTF(("%s: bad tag 1\n", __func__));
 		return -1;
 	}
-	DPRINTF(("%s1: %d %" SIZE_T_FORMAT "u %u\n", __func__, ms->offset,
+	DPRINTF(("%s1: %u %" SIZE_T_FORMAT "u %d\n", __func__, ms->offset,
 	    offs, m->offset));
 
 	uint32_t tlen = getlength(b, &offs, len);
@@ -278,7 +278,7 @@ der_offs(struct magic_set *ms, struct magic *m, size_t nbytes)
 		DPRINTF(("%s: bad tag 2\n", __func__));
 		return -1;
 	}
-	DPRINTF(("%s2: %d %" SIZE_T_FORMAT "u %u\n", __func__, ms->offset,
+	DPRINTF(("%s2: %u %" SIZE_T_FORMAT "u %u\n", __func__, ms->offset,
 	    offs, tlen));
 
 	offs += ms->offset + m->offset;
@@ -286,20 +286,20 @@ der_offs(struct magic_set *ms, struct magic *m, size_t nbytes)
 #ifdef DEBUG_DER
 	size_t i;
 	for (i = 0; i < m->cont_level; i++)
-		printf("cont_level[%" SIZE_T_FORMAT "u] = %u\n", i,
+		printf("cont_level[%" SIZE_T_FORMAT "u] = %d\n", i,
 		    ms->c.li[i].off);
 #endif
 	if (m->cont_level != 0) {
 		if (offs + tlen > nbytes)
 			return -1;
 		ms->c.li[m->cont_level - 1].off = CAST(int, offs + tlen);
-		DPRINTF(("cont_level[%u] = %u\n", m->cont_level - 1,
+		DPRINTF(("cont_level[%u] = %d\n", m->cont_level - 1,
 		    ms->c.li[m->cont_level - 1].off));
 	}
 	return CAST(int32_t, offs);
 }
 
-int
+file_protected int
 der_cmp(struct magic_set *ms, struct magic *m)
 {
 	const uint8_t *b = RCAST(const uint8_t *, ms->search.s);
@@ -316,7 +316,7 @@ der_cmp(struct magic_set *ms, struct magic *m)
 		return -1;
 	}
 
-	DPRINTF(("%s1: %d %" SIZE_T_FORMAT "u %u\n", __func__, ms->offset,
+	DPRINTF(("%s1: %d %" SIZE_T_FORMAT "u %d\n", __func__, ms->offset,
 	    offs, m->offset));
 
 	tlen = getlength(b, &offs, len);
@@ -382,7 +382,7 @@ val:
 #endif
 
 #ifdef TEST_DER
-static void
+file_private void
 printtag(uint32_t tag, const void *q, uint32_t len)
 {
 	const uint8_t *d = q;
@@ -402,7 +402,7 @@ printtag(uint32_t tag, const void *q, uint32_t len)
 	printf("\n");
 }
 
-static void
+file_private void
 printdata(size_t level, const void *v, size_t x, size_t l)
 {
 	const uint8_t *p = v, *ep = p + l;
