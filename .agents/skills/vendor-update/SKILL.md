@@ -222,6 +222,54 @@ If the user indicated in Step 2 that local patches exist:
 
 **STOP. Ask the user if any patch commits are needed before proceeding.**
 
+### Step 10a — Create or update MIDNIGHTBSD-upgrade
+
+Check whether `<prefix>/MIDNIGHTBSD-upgrade` exists. If it does not, create
+it. If it does, review it and update it to reflect the new version and any
+changes to local patches.
+
+The file should document:
+- **Source URL**: where to download the upstream tarball (with `VERSION`
+  as a placeholder for the version string)
+- **Import procedure**: brief notes on how to run the vendor-update skill
+  for this package (vendor branch name, in-tree prefix)
+- **Local patches**: a list of every patch applied on top of upstream,
+  with enough detail to re-apply them after a future update — include the
+  originating commit hash (FreeBSD or upstream), a one-line description,
+  which file(s) are affected, and the insertion point or context needed to
+  re-apply the patch
+- **Notes**: any special considerations for this package (e.g., generated
+  files that must be refreshed, build system quirks, files excluded by Xlist)
+
+Example skeleton:
+```
+Upgrade procedure for <name>
+
+Source: https://example.com/pub/<name>/<name>-VERSION.tar.gz
+
+To upgrade to a new version:
+
+1. Download and extract the new tarball to /tmp/<name>/<name>-VERSION
+2. Use the vendor-update skill (vendor/<branch>, <prefix>)
+3. Apply local patches after the subtree merge (see below)
+
+Local patches applied on top of upstream:
+
+  - <Origin commit>: <short description>
+    <detail about which file and where to apply>
+
+Notes:
+  - <any special notes>
+```
+
+Commit the file as part of the post-merge patch commit, or as a standalone
+commit if there are no other patches:
+
+```bash
+git add <prefix>/MIDNIGHTBSD-upgrade
+git commit -m "<name>: add/update MIDNIGHTBSD-upgrade"
+```
+
 ### Step 11 — Push master
 
 **STOP. Ask the user:**
