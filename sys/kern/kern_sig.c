@@ -1950,6 +1950,12 @@ kern_sigqueue(struct thread *td, pid_t pid, int signum, union sigval *value)
 	if (pid <= 0)
 		return (EINVAL);
 
+	/*
+	 * A process in capability mode can send signals only to itself.
+	 */
+	if (IN_CAPABILITY_MODE(td) && pid != td->td_proc->p_pid)
+		return (ECAPMODE);
+
 	if ((p = pfind_any(pid)) == NULL)
 		return (ESRCH);
 	error = p_cansignal(td, p, signum);
