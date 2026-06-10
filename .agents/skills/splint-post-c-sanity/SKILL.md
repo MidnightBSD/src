@@ -18,7 +18,8 @@ Use this skill after running `cppcheck-clang-format-precommit` when you want an 
 
 ## What it does
 
-- Runs `splint` on staged `*.c` files (headers are pulled in via includes).
+- Runs `splint` on staged non-kernel `*.c` files; files under `sys/` are skipped.
+  Headers are pulled in via includes.
 - Uses a conservative flag set aimed at:
   - memory/ownership issues (`mustfreefresh`, `usereleased`, `freshtrans`, etc.)
   - bounds/null misuse (`boundsread/write`, `nullpass/nullret`)

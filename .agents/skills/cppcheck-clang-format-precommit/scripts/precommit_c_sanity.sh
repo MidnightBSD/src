@@ -1,5 +1,5 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/bin/sh
+set -eu
 
 repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
@@ -20,32 +20,17 @@ pick_clang_format() {
     return 0
   fi
 
-  local candidates=()
-  while IFS= read -r path; do
-    candidates+=("$path")
-  done < <(command -v -a clang-format 2>/dev/null || true)
-
-  if ((${#candidates[@]})); then
-    echo "clang-format"
-    return 0
-  fi
-
-  # Try version-suffixed binaries (clang-formatNN) and pick the highest NN.
-  local best=""
-  local best_ver=-1
-  while IFS= read -r cmd; do
-    local base="${cmd##*/}"
-    if [[ "$base" =~ ^clang-format([0-9]+)$ ]]; then
-      local ver="${BASH_REMATCH[1]}"
-      if (( ver > best_ver )); then
-        best_ver=$ver
-        best="$base"
-      fi
+  n=30
+  while [ "$n" -ge 10 ]; do
+    if command -v "clang-format$n" >/dev/null 2>&1; then
+      echo "clang-format$n"
+      return 0
     fi
-  done < <(compgen -c clang-format | sort -u)
+    n=$((n - 1))
+  done
 
-  if [[ -n "$best" ]] && command -v "$best" >/dev/null 2>&1; then
-    echo "$best"
+  if command -v clang-format >/dev/null 2>&1; then
+    echo "clang-format"
     return 0
   fi
 
@@ -65,31 +50,28 @@ pick_clang_tidy() {
     return 0
   fi
 
-  local best=""
-  local best_ver=-1
-  while IFS= read -r cmd; do
-    local base="${cmd##*/}"
-    if [[ "$base" =~ ^clang-tidy([0-9]+)$ ]]; then
-      local ver="${BASH_REMATCH[1]}"
-      if (( ver > best_ver )); then
-        best_ver=$ver
-        best="$base"
-      fi
+  n=30
+  while [ "$n" -ge 10 ]; do
+    if command -v "clang-tidy$n" >/dev/null 2>&1; then
+      echo "clang-tidy$n"
+      return 0
     fi
-  done < <(compgen -c clang-tidy | sort -u)
-
-  if [[ -n "$best" ]] && command -v "$best" >/dev/null 2>&1; then
-    echo "$best"
-    return 0
-  fi
+    n=$((n - 1))
+  done
 
   die "no clang-tidy found (expected clang-tidy19, clang-tidyNN, or clang-tidy)"
 }
 
 clang_tidy_bin="$(pick_clang_tidy)"
 
-mapfile -t staged_files < <(git diff --cached --name-only --diff-filter=ACMR -- '*.c' '*.h' || true)
-if ((${#staged_files[@]} == 0)); then
+tmp_staged="${TMPDIR:-/tmp}/c-sanity-files.$$.txt"
+tmp_c="${TMPDIR:-/tmp}/c-sanity-c-files.$$.txt"
+tmp_tidy="${TMPDIR:-/tmp}/clang-tidy.$$.txt"
+tmp_cppcheck="${TMPDIR:-/tmp}/cppcheck.$$.txt"
+trap 'rm -f "$tmp_staged" "$tmp_c" "$tmp_tidy" "$tmp_cppcheck"' EXIT
+
+git diff --cached --name-only --diff-filter=ACMR -- '*.c' '*.h' >"$tmp_staged" || true
+if ! [ -s "$tmp_staged" ]; then
   echo "No staged *.c/*.h files; skipping clang-format/clang-tidy/cppcheck."
   exit 0
 fi
@@ -98,45 +80,37 @@ echo "clang-format: $clang_format_bin"
 echo "clang-tidy: $clang_tidy_bin"
 echo "Formatting staged files..."
 
-for f in "${staged_files[@]}"; do
-  [[ -f "$f" ]] || continue
+while IFS= read -r f; do
+  [ -f "$f" ] || continue
   "$clang_format_bin" -i "$f"
-done
+  git add -- "$f"
+done <"$tmp_staged"
 
-git add -- "${staged_files[@]}"
+rg -N '\\.c$' "$tmp_staged" >"$tmp_c" || true
 
-INCLUDE_DIRS=(-I. -Ilibmport -Ilibexec)
-CPPFLAGS=()
-
-tmp_tidy="${TMPDIR:-/tmp}/clang-tidy.$$.txt"
-tmp_cppcheck="${TMPDIR:-/tmp}/cppcheck.$$.txt"
-trap 'rm -f "$tmp_tidy" "$tmp_cppcheck"' EXIT
-
-mapfile -t staged_c_files < <(printf '%s\n' "${staged_files[@]}" | rg -N '\\.c$' || true)
-
-if ((${#staged_c_files[@]})); then
+if [ -s "$tmp_c" ]; then
   TIDY_CHECKS='clang-analyzer-*,bugprone-*,cert-*,security-*,-cert-err34-c'
   echo "Running clang-tidy on staged .c files..."
   : > "$tmp_tidy"
-  for f in "${staged_c_files[@]}"; do
-    [[ -f "$f" ]] || continue
+  while IFS= read -r f; do
+    [ -f "$f" ] || continue
     "$clang_tidy_bin" \
       -checks="$TIDY_CHECKS" \
       -warnings-as-errors='clang-analyzer-*,cert-*,security-*' \
       -quiet \
-      "$f" -- -std=c11 "${INCLUDE_DIRS[@]}" "${CPPFLAGS[@]}" \
+      "$f" -- -std=c11 -I. -Ilibmport -Ilibexec \
       >>"$tmp_tidy" 2>&1 || true
-  done
+  done <"$tmp_c"
 
   tidy_errors="$(rg -n '(^|: )error:' "$tmp_tidy" || true)"
   tidy_warnings="$(rg -n '(^|: )warning:' "$tmp_tidy" || true)"
-  if [[ -n "$tidy_errors" || -n "$tidy_warnings" ]]; then
+  if [ -n "$tidy_errors" ] || [ -n "$tidy_warnings" ]; then
     echo
     echo "clang-tidy findings (errors/warnings):"
-    if [[ -n "$tidy_errors" ]]; then
+    if [ -n "$tidy_errors" ]; then
       echo "$tidy_errors"
     fi
-    if [[ -n "$tidy_warnings" ]]; then
+    if [ -n "$tidy_warnings" ]; then
       echo "$tidy_warnings"
     fi
     echo
@@ -150,28 +124,31 @@ else
 fi
 
 echo "Running cppcheck on staged files..."
-cppcheck \
-  --std=c11 \
-  --enable=warning,style,performance,portability \
-  --inconclusive \
-  --force \
-  --inline-suppr \
-  --suppress=missingIncludeSystem \
-  "${INCLUDE_DIRS[@]}" \
-  "${CPPFLAGS[@]}" \
-  "${staged_files[@]}" \
-  2> "$tmp_cppcheck" || true
+: >"$tmp_cppcheck"
+while IFS= read -r f; do
+  [ -f "$f" ] || continue
+  cppcheck \
+    --std=c11 \
+    --enable=warning,style,performance,portability \
+    --inconclusive \
+    --force \
+    --inline-suppr \
+    --suppress=missingIncludeSystem \
+    -I. -Ilibmport -Ilibexec \
+    "$f" \
+    2>> "$tmp_cppcheck" || true
+done <"$tmp_staged"
 
 errors="$(rg -n ': error:' "$tmp_cppcheck" || true)"
 warnings="$(rg -n ': warning:' "$tmp_cppcheck" || true)"
 
-if [[ -n "$errors" || -n "$warnings" ]]; then
+if [ -n "$errors" ] || [ -n "$warnings" ]; then
   echo
   echo "cppcheck findings (errors/warnings):"
-  if [[ -n "$errors" ]]; then
+  if [ -n "$errors" ]; then
     echo "$errors"
   fi
-  if [[ -n "$warnings" ]]; then
+  if [ -n "$warnings" ]; then
     echo "$warnings"
   fi
   echo
