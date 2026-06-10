@@ -30,6 +30,7 @@
 #include <sys/endian.h>
 #include <sys/event.h>
 #include <sys/ktls.h>
+#include <sys/mman.h>
 #include <sys/socket.h>
 #include <sys/sysctl.h>
 #include <netinet/in.h>
@@ -42,6 +43,7 @@
 #include <poll.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <atf-c.h>
 
 #include <openssl/err.h>
@@ -1874,6 +1876,99 @@ ATF_TC_BODY(ktls_sendto_baddst, tc)
 	ATF_REQUIRE(close(s) == 0);
 }
 
+/*
+ * Verify that the KTLS receive path does not overwrite data belonging
+ * to a file whose payload is transmitted over a loopback connection
+ * via plain sendfile.
+ */
+ATF_TC_WITHOUT_HEAD(ktls_receive_loopback_sendfile);
+ATF_TC_BODY(ktls_receive_loopback_sendfile, tc)
+{
+	struct iovec iov[2];
+	struct msghdr msg;
+	struct sf_hdtr hdtr;
+	struct tls_enable en;
+	char cbuf[CMSG_SPACE(sizeof(struct tls_get_record))];
+	char *ciphertext, *outbuf, *plaintext;
+	uint64_t seqno;
+	off_t sbytes;
+	size_t len, payload_len;
+	ssize_t rv;
+	socklen_t slen;
+	void *p;
+	int mode, pagesize, shm, sockets[2];
+
+	ATF_REQUIRE_KTLS();
+	ATF_REQUIRE((pagesize = getpagesize()) > 0);
+	payload_len = pagesize;
+	seqno = random();
+	build_tls_enable(CRYPTO_AES_NIST_GCM_16, 128 / 8, 0,
+	    TLS_MINOR_VER_TWO, seqno, &en);
+
+	len = tls_header_len(&en) + payload_len + tls_trailer_len(&en);
+	plaintext = alloc_buffer(payload_len);
+	ciphertext = malloc(len);
+	ATF_REQUIRE(encrypt_tls_record(&en, TLS_RLTYPE_APP, seqno, plaintext,
+	    payload_len, ciphertext, len, 0) == len);
+
+	ATF_REQUIRE((shm = shm_open(SHM_ANON, O_RDWR, 0600)) >= 0);
+	ATF_REQUIRE(ftruncate(shm, payload_len) == 0);
+	ATF_REQUIRE((p = mmap(NULL, payload_len, PROT_READ | PROT_WRITE,
+	    MAP_SHARED, shm, 0)) != MAP_FAILED);
+	memcpy(p, ciphertext + tls_header_len(&en), payload_len);
+
+	ATF_REQUIRE_MSG(socketpair_tcp(sockets), "failed to create sockets");
+	ATF_REQUIRE(setsockopt(sockets[0], IPPROTO_TCP, TCP_RXTLS_ENABLE, &en,
+	    sizeof(en)) == 0);
+	slen = sizeof(mode);
+	ATF_REQUIRE(getsockopt(sockets[0], IPPROTO_TCP, TCP_RXTLS_MODE, &mode,
+	    &slen) == 0);
+	ATF_REQUIRE(mode == TCP_TLS_MODE_SW);
+
+	fd_set_blocking(sockets[0]);
+	fd_set_blocking(sockets[1]);
+
+	iov[0].iov_base = ciphertext;
+	iov[0].iov_len = tls_header_len(&en);
+	iov[1].iov_base = ciphertext + tls_header_len(&en) + payload_len;
+	iov[1].iov_len = tls_trailer_len(&en);
+	hdtr.headers = iov;
+	hdtr.hdr_cnt = 1;
+	hdtr.trailers = iov + 1;
+	hdtr.trl_cnt = 1;
+	ATF_REQUIRE(sendfile(shm, sockets[1], 0, payload_len, &hdtr,
+	    &sbytes, 0) == 0);
+	ATF_REQUIRE(sbytes == (off_t)len);
+
+	outbuf = calloc(payload_len, 1);
+
+	memset(&msg, 0, sizeof(msg));
+	msg.msg_control = cbuf;
+	msg.msg_controllen = sizeof(cbuf);
+	iov[0].iov_base = outbuf;
+	iov[0].iov_len = payload_len;
+	msg.msg_iov = iov;
+	msg.msg_iovlen = 1;
+
+	rv = recvmsg(sockets[0], &msg, 0);
+	if (rv >= 0) {
+		ATF_REQUIRE(rv == (ssize_t)payload_len);
+		ATF_REQUIRE(memcmp(outbuf, plaintext, payload_len) == 0);
+	} else
+		ATF_REQUIRE_ERRNO(EBADMSG, true);
+
+	ATF_REQUIRE(memcmp(p, ciphertext + tls_header_len(&en),
+	    payload_len) == 0);
+
+	ATF_REQUIRE(munmap(p, payload_len) == 0);
+	ATF_REQUIRE(close(shm) == 0);
+	close_sockets(sockets);
+	free(outbuf);
+	free(ciphertext);
+	free(plaintext);
+	free_tls_enable(&en);
+}
+
 ATF_TP_ADD_TCS(tp)
 {
 	/* Transmit tests */
@@ -1895,6 +1990,7 @@ ATF_TP_ADD_TCS(tp)
 
 	/* Miscellaneous */
 	ATF_TP_ADD_TC(tp, ktls_sendto_baddst);
+	ATF_TP_ADD_TC(tp, ktls_receive_loopback_sendfile);
 
 	return (atf_no_error());
 }
