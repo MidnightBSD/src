@@ -1888,6 +1888,21 @@ ktls_drop(struct socket *so, int error)
 	NET_EPOCH_EXIT(et);
 }
 
+static bool
+ktls_record_has_shared_mbuf(struct mbuf *m)
+{
+
+	for (; m != NULL; m = m->m_next) {
+		if ((m->m_flags & M_EXTPG) != 0 &&
+		    (m->m_epg_flags & EPG_FLAG_ANON) == 0)
+			return (true);
+		if ((m->m_flags & M_EXT) != 0 &&
+		    m->m_ext.ext_type == EXT_SFBUF)
+			return (true);
+	}
+	return (false);
+}
+
 static void
 ktls_decrypt(struct socket *so)
 {
@@ -1966,7 +1981,11 @@ ktls_decrypt(struct socket *so)
 		SBCHECK(sb);
 		SOCKBUF_UNLOCK(sb);
 
-		error = tls->sw_decrypt(tls, hdr, data, seqno, &trail_len);
+		if (ktls_record_has_shared_mbuf(data))
+			error = EINVAL;
+		else
+			error = tls->sw_decrypt(tls, hdr, data, seqno,
+			    &trail_len);
 		if (error == 0) {
 			if (tls13)
 				error = tls13_find_record_type(tls, data,
