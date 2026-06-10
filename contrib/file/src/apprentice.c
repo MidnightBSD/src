@@ -1148,8 +1148,10 @@ apprentice_sort(const void *a, const void *b)
 				return 0;
 			file_magwarn1("Duplicate magic entry `%s'",
 			    ma->mp->desc);
+#ifndef COMPILE_ONLY
 			file_mdump(ma->mp);
 			file_mdump(mb->mp);
+#endif
 			return 0;
 		}
 		return x > 0 ? -1 : 1;
