@@ -44,7 +44,9 @@ typedef void EditLine;
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <util.h>
+#ifdef HAVE_UTIL_H
+# include <util.h>
+#endif
 
 #include "xmalloc.h"
 #include "log.h"

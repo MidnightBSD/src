@@ -38,7 +38,9 @@
 #include <limits.h>
 #include <stdarg.h>
 #include <errno.h>
-#include <util.h>
+#ifdef HAVE_UTIL_H
+# include <util.h>
+#endif
 
 #include "xmalloc.h"
 #include "ssh.h"

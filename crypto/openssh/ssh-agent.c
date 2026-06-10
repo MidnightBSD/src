@@ -62,7 +62,9 @@
 #include <limits.h>
 #include <time.h>
 #include <unistd.h>
-#include <util.h>
+#ifdef HAVE_UTIL_H
+# include <util.h>
+#endif
 
 #include "xmalloc.h"
 #include "ssh.h"
