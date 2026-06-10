@@ -192,3 +192,30 @@
    in 6.7p1 due to theoretical weaknesses and the availability of
    superior ciphers (including AES-CTR and AES-GCM).  We have re-added
    them for compatibility with third-party clients.
+
+10) Build compatibility changes for 10.3p1 (MidnightBSD-specific)
+
+   The following changes were needed when merging to 10.3p1:
+
+   a) <util.h> guards: OpenSSH 10.3p1 added '#include <util.h>' to several
+      .c files unconditionally. MidnightBSD does not have <util.h>; the
+      fmt_scaled() function is provided by the openbsd-compat layer instead.
+      All such includes must be wrapped in '#ifdef HAVE_UTIL_H / #endif'.
+      Affected files: packet.c, sshkey.c, readconf.c, servconf.c, scp.c,
+      sshpty.c, sftp.c, ssh-agent.c, sftp-common.c.
+
+   b) hash.c removed from secure/lib/libssh/Makefile: In 10.3p1, the
+      crypto_hash_sha512() function was moved to be a static inline in
+      crypto_api.h. The separate hash.c was removed from Makefile.in.
+      Remove it from secure/lib/libssh/Makefile as well to avoid
+      redefinition errors.
+
+   c) openbsd-compat.h: The vendor 10.3p1 import contained a reference to
+      'bsd-sha2.h' which was renamed to 'sha2.h' in earlier versions.
+      Keep 'sha2.h' in openbsd-compat/openbsd-compat.h.
+
+   Notes:
+   - Last imported: 10.3p1 (2026-06-10)
+   - Vendor branch: vendor/openssh
+   - In-tree prefix: crypto/openssh
+   - Import method: git revert of prior revert, followed by conflict resolution
