@@ -11,7 +11,7 @@ Use this skill when you’re about to `git commit` C/C header changes and want a
 
 1. Stage your changes (`git add ...`).
 2. Run the pre-commit script:
-   - `./skills/cppcheck-clang-format-precommit/scripts/precommit_c_sanity.sh`
+   - `./.agents/skills/cppcheck-clang-format-precommit/scripts/precommit_c_sanity.sh`
 3. If it exits non-zero, fix findings and re-run until clean.
 4. Commit.
 

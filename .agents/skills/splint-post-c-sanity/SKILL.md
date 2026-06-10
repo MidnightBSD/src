@@ -11,9 +11,9 @@ Use this skill after running `cppcheck-clang-format-precommit` when you want an 
 
 1. Stage changes (`git add ...`).
 2. Run the C sanity skill first:
-   - `./skills/cppcheck-clang-format-precommit/scripts/precommit_c_sanity.sh`
+   - `./.agents/skills/cppcheck-clang-format-precommit/scripts/precommit_c_sanity.sh`
 3. Then run Splint:
-   - `./skills/splint-post-c-sanity/scripts/run_splint_on_staged.sh`
+   - `./.agents/skills/splint-post-c-sanity/scripts/run_splint_on_staged.sh`
 4. If Splint reports problems, fix and repeat.
 
 ## What it does
@@ -28,4 +28,3 @@ Use this skill after running `cppcheck-clang-format-precommit` when you want an 
 ## Tuning
 
 - Edit `SPLINT_FLAGS` / include dirs inside the script if you need to reduce noise or add `-D...` defines.
-
