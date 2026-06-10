@@ -58,7 +58,9 @@
 #include <poll.h>
 #include <signal.h>
 #include <time.h>
-#include <util.h>
+#ifdef HAVE_UTIL_H
+# include <util.h>
+#endif
 
 /*
  * Explicitly include OpenSSL before zlib as some versions of OpenSSL have
