@@ -9,6 +9,8 @@ Updating Information for MidnightBSD users.
 
 	file 5.46
 
+	sound(4): CVE-2026-45258 CVE-2026-49417 mmap path fixes
+
 20260607:
 	sqlite3 3.53.2
 
