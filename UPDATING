@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20260610:
+	ktls CVE-2026-45257
+
 20260609:
 	sound(4): CVE-2026-45258 CVE-2026-49417 mmap path fixes
 
