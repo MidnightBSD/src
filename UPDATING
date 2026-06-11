@@ -1,6 +1,8 @@
 Updating Information for MidnightBSD users.
 
 20260610:
+	lua 5.4.7: CVE-2021-43519 C stack overflow via lua_resume
+
 	xz 5.8.3: CVE-2026-34743
 
 	ktls: CVE-2026-45257 receive path file overwrite fix
