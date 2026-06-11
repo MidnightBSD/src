@@ -41,8 +41,10 @@ LUAI_FUNC void luaH_setint (lua_State *L, Table *t, lua_Integer key,
 LUAI_FUNC const TValue *luaH_getshortstr (Table *t, TString *key);
 LUAI_FUNC const TValue *luaH_getstr (Table *t, TString *key);
 LUAI_FUNC const TValue *luaH_get (Table *t, const TValue *key);
-LUAI_FUNC TValue *luaH_newkey (lua_State *L, Table *t, const TValue *key);
-LUAI_FUNC TValue *luaH_set (lua_State *L, Table *t, const TValue *key);
+LUAI_FUNC void luaH_set (lua_State *L, Table *t, const TValue *key,
+                                                 TValue *value);
+LUAI_FUNC void luaH_finishset (lua_State *L, Table *t, const TValue *key,
+                                       const TValue *slot, TValue *value);
 LUAI_FUNC Table *luaH_new (lua_State *L);
 LUAI_FUNC void luaH_resize (lua_State *L, Table *t, unsigned int nasize,
                                                     unsigned int nhsize);
@@ -55,7 +57,6 @@ LUAI_FUNC unsigned int luaH_realasize (const Table *t);
 
 #if defined(LUA_DEBUG)
 LUAI_FUNC Node *luaH_mainposition (const Table *t, const TValue *key);
-LUAI_FUNC int luaH_isdummy (const Table *t);
 #endif
 
 

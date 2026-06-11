@@ -777,6 +777,31 @@
 ** Local configuration. You can use this space to add your redefinitions
 ** without modifying the main part of the file.
 */
+/*
+** LUA_IGMARK is a mark to ignore all after it when building the
+** module name (e.g., used to build the luaopen_ function name).
+** Added in Lua 5.4.7.
+*/
+#define LUA_IGMARK		"-"
+
+/*
+** macros to improve jump prediction, used mostly for error handling
+** and debug facilities. Moved to luaconf.h in Lua 5.4.7.
+*/
+#if !defined(luai_likely)
+#if defined(__GNUC__) && !defined(LUA_NOBUILTIN)
+#define luai_likely(x)		(__builtin_expect(((x) != 0), 1))
+#define luai_unlikely(x)	(__builtin_expect(((x) != 0), 0))
+#else
+#define luai_likely(x)		(x)
+#define luai_unlikely(x)	(x)
+#endif
+#endif
+
+#if defined(LUA_CORE) || defined(LUA_LIB)
+#define l_likely(x)	luai_likely(x)
+#define l_unlikely(x)	luai_unlikely(x)
+#endif
 
 
 
