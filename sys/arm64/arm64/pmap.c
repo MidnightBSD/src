@@ -341,6 +341,13 @@ void (*pmap_clean_stage2_tlbi)(void);
 void (*pmap_invalidate_vpipt_icache)(void);
 
 /*
+ * If true, issue TLBI twice with a DSB between them to work around CPU errata
+ * on affected Arm cores (e.g. Cortex-A76, Neoverse-N1, Cortex-X1 families).
+ * Set by cpu_errata.c when an affected CPU is detected.
+ */
+bool pmap_multiple_tlbi = false;
+
+/*
  * A pmap's cookie encodes an ASID and epoch number.  Cookies for reserved
  * ASIDs have a negative epoch number, specifically, INT_MIN.  Cookies for
  * dynamically allocated ASIDs have a non-negative epoch number.
@@ -1358,9 +1365,17 @@ pmap_invalidate_page(pmap_t pmap, vm_offset_t va, bool final_only)
 	r = TLBI_VA(va);
 	if (pmap == kernel_pmap) {
 		pmap_invalidate_kernel(r, final_only);
+		if (pmap_multiple_tlbi) {
+			dsb(ish);
+			pmap_invalidate_kernel(r, final_only);
+		}
 	} else {
 		r |= ASID_TO_OPERAND(COOKIE_TO_ASID(pmap->pm_cookie));
 		pmap_invalidate_user(r, final_only);
+		if (pmap_multiple_tlbi) {
+			dsb(ish);
+			pmap_invalidate_user(r, final_only);
+		}
 	}
 	dsb(ish);
 	isb();
@@ -1384,12 +1399,22 @@ pmap_invalidate_range(pmap_t pmap, vm_offset_t sva, vm_offset_t eva,
 		end = TLBI_VA(eva);
 		for (r = start; r < end; r += TLBI_VA_L3_INCR)
 			pmap_invalidate_kernel(r, final_only);
+		if (pmap_multiple_tlbi) {
+			dsb(ish);
+			for (r = start; r < end; r += TLBI_VA_L3_INCR)
+				pmap_invalidate_kernel(r, final_only);
+		}
 	} else {
 		start = end = ASID_TO_OPERAND(COOKIE_TO_ASID(pmap->pm_cookie));
 		start |= TLBI_VA(sva);
 		end |= TLBI_VA(eva);
 		for (r = start; r < end; r += TLBI_VA_L3_INCR)
 			pmap_invalidate_user(r, final_only);
+		if (pmap_multiple_tlbi) {
+			dsb(ish);
+			for (r = start; r < end; r += TLBI_VA_L3_INCR)
+				pmap_invalidate_user(r, final_only);
+		}
 	}
 	dsb(ish);
 	isb();
@@ -1409,9 +1434,17 @@ pmap_invalidate_all(pmap_t pmap)
 	dsb(ishst);
 	if (pmap == kernel_pmap) {
 		__asm __volatile("tlbi vmalle1is");
+		if (pmap_multiple_tlbi) {
+			dsb(ish);
+			__asm __volatile("tlbi vmalle1is");
+		}
 	} else {
 		r = ASID_TO_OPERAND(COOKIE_TO_ASID(pmap->pm_cookie));
 		__asm __volatile("tlbi aside1is, %0" : : "r" (r));
+		if (pmap_multiple_tlbi) {
+			dsb(ish);
+			__asm __volatile("tlbi aside1is, %0" : : "r" (r));
+		}
 	}
 	dsb(ish);
 	isb();

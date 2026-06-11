@@ -43,6 +43,8 @@
 #include <dev/psci/psci.h>
 #include <dev/psci/smccc.h>
 
+extern bool pmap_multiple_tlbi;
+
 typedef void (cpu_quirk_install)(void);
 struct cpu_quirks {
 	cpu_quirk_install *quirk_install;
@@ -62,6 +64,7 @@ static enum {
 static cpu_quirk_install install_psci_bp_hardening;
 static cpu_quirk_install install_ssbd_workaround;
 static cpu_quirk_install install_thunderx_bcast_tlbi_workaround;
+static cpu_quirk_install install_multiple_tlbi_workaround;
 
 static struct cpu_quirks cpu_quirks[] = {
 	{
@@ -112,6 +115,133 @@ static struct cpu_quirks cpu_quirks[] = {
 		.midr_value =
 		    CPU_ID_RAW(CPU_IMPL_CAVIUM, CPU_PART_THUNDERX_81XX, 0, 0),
 		.quirk_install = install_thunderx_bcast_tlbi_workaround,
+	},
+	/*
+	 * ARM CPU errata: TLBI+DSB ordering may not observe preceding stores.
+	 * Affects: C1-Premium 4193780, C1-Ultra 4193780, Cortex-A76 4193800,
+	 * Cortex-A76AE 4193801, Cortex-A77 4193798, Cortex-A78 4193791,
+	 * Cortex-A78AE 4193793, Cortex-A78C 4193794, Cortex-A710 4193788,
+	 * Cortex-X1 4193791, Cortex-X1C 4193792, Cortex-X2 4193788,
+	 * Cortex-X3 4193786, Cortex-X4 4118414, Cortex-X925 4193781,
+	 * Neoverse-N1 4193800, Neoverse-N2 4193789, Neoverse-V1 4193790,
+	 * Neoverse-V2 4193787, Neoverse-V3 4193784, Neoverse-V3AE 4193784.
+	 * CVE-2025-10263 / FreeBSD-SA-26:31.arm64
+	 */
+	{
+		.midr_mask = CPU_IMPL_MASK | CPU_PART_MASK,
+		.midr_value = CPU_ID_RAW(CPU_IMPL_ARM, CPU_PART_C1_PREMIUM, 0, 0),
+		.quirk_install = install_multiple_tlbi_workaround,
+	},
+	{
+		.midr_mask = CPU_IMPL_MASK | CPU_PART_MASK,
+		.midr_value = CPU_ID_RAW(CPU_IMPL_ARM, CPU_PART_C1_ULTRA, 0, 0),
+		.quirk_install = install_multiple_tlbi_workaround,
+	},
+	{
+		.midr_mask = CPU_IMPL_MASK | CPU_PART_MASK,
+		.midr_value = CPU_ID_RAW(CPU_IMPL_ARM, CPU_PART_CORTEX_A76, 0, 0),
+		.quirk_install = install_multiple_tlbi_workaround,
+	},
+	{
+		.midr_mask = CPU_IMPL_MASK | CPU_PART_MASK,
+		.midr_value =
+		    CPU_ID_RAW(CPU_IMPL_ARM, CPU_PART_CORTEX_A76AE, 0, 0),
+		.quirk_install = install_multiple_tlbi_workaround,
+	},
+	{
+		.midr_mask = CPU_IMPL_MASK | CPU_PART_MASK,
+		.midr_value = CPU_ID_RAW(CPU_IMPL_ARM, CPU_PART_CORTEX_A77, 0, 0),
+		.quirk_install = install_multiple_tlbi_workaround,
+	},
+	{
+		.midr_mask = CPU_IMPL_MASK | CPU_PART_MASK,
+		.midr_value = CPU_ID_RAW(CPU_IMPL_ARM, CPU_PART_CORTEX_A78, 0, 0),
+		.quirk_install = install_multiple_tlbi_workaround,
+	},
+	{
+		.midr_mask = CPU_IMPL_MASK | CPU_PART_MASK,
+		.midr_value =
+		    CPU_ID_RAW(CPU_IMPL_ARM, CPU_PART_CORTEX_A78AE, 0, 0),
+		.quirk_install = install_multiple_tlbi_workaround,
+	},
+	{
+		.midr_mask = CPU_IMPL_MASK | CPU_PART_MASK,
+		.midr_value =
+		    CPU_ID_RAW(CPU_IMPL_ARM, CPU_PART_CORTEX_A78C, 0, 0),
+		.quirk_install = install_multiple_tlbi_workaround,
+	},
+	{
+		.midr_mask = CPU_IMPL_MASK | CPU_PART_MASK,
+		.midr_value =
+		    CPU_ID_RAW(CPU_IMPL_ARM, CPU_PART_CORTEX_A710, 0, 0),
+		.quirk_install = install_multiple_tlbi_workaround,
+	},
+	{
+		.midr_mask = CPU_IMPL_MASK | CPU_PART_MASK,
+		.midr_value = CPU_ID_RAW(CPU_IMPL_ARM, CPU_PART_CORTEX_X1, 0, 0),
+		.quirk_install = install_multiple_tlbi_workaround,
+	},
+	{
+		.midr_mask = CPU_IMPL_MASK | CPU_PART_MASK,
+		.midr_value = CPU_ID_RAW(CPU_IMPL_ARM, CPU_PART_CORTEX_X1C, 0, 0),
+		.quirk_install = install_multiple_tlbi_workaround,
+	},
+	{
+		.midr_mask = CPU_IMPL_MASK | CPU_PART_MASK,
+		.midr_value = CPU_ID_RAW(CPU_IMPL_ARM, CPU_PART_CORTEX_X2, 0, 0),
+		.quirk_install = install_multiple_tlbi_workaround,
+	},
+	{
+		.midr_mask = CPU_IMPL_MASK | CPU_PART_MASK,
+		.midr_value = CPU_ID_RAW(CPU_IMPL_ARM, CPU_PART_CORTEX_X3, 0, 0),
+		.quirk_install = install_multiple_tlbi_workaround,
+	},
+	{
+		.midr_mask = CPU_IMPL_MASK | CPU_PART_MASK,
+		.midr_value = CPU_ID_RAW(CPU_IMPL_ARM, CPU_PART_CORTEX_X4, 0, 0),
+		.quirk_install = install_multiple_tlbi_workaround,
+	},
+	{
+		.midr_mask = CPU_IMPL_MASK | CPU_PART_MASK,
+		.midr_value =
+		    CPU_ID_RAW(CPU_IMPL_ARM, CPU_PART_CORTEX_X925, 0, 0),
+		.quirk_install = install_multiple_tlbi_workaround,
+	},
+	{
+		.midr_mask = CPU_IMPL_MASK | CPU_PART_MASK,
+		.midr_value =
+		    CPU_ID_RAW(CPU_IMPL_ARM, CPU_PART_NEOVERSE_N1, 0, 0),
+		.quirk_install = install_multiple_tlbi_workaround,
+	},
+	{
+		.midr_mask = CPU_IMPL_MASK | CPU_PART_MASK,
+		.midr_value =
+		    CPU_ID_RAW(CPU_IMPL_ARM, CPU_PART_NEOVERSE_N2, 0, 0),
+		.quirk_install = install_multiple_tlbi_workaround,
+	},
+	{
+		.midr_mask = CPU_IMPL_MASK | CPU_PART_MASK,
+		.midr_value =
+		    CPU_ID_RAW(CPU_IMPL_ARM, CPU_PART_NEOVERSE_V1, 0, 0),
+		.quirk_install = install_multiple_tlbi_workaround,
+	},
+	{
+		.midr_mask = CPU_IMPL_MASK | CPU_PART_MASK,
+		.midr_value =
+		    CPU_ID_RAW(CPU_IMPL_ARM, CPU_PART_NEOVERSE_V2, 0, 0),
+		.quirk_install = install_multiple_tlbi_workaround,
+	},
+	{
+		.midr_mask = CPU_IMPL_MASK | CPU_PART_MASK,
+		.midr_value =
+		    CPU_ID_RAW(CPU_IMPL_ARM, CPU_PART_NEOVERSE_V3, 0, 0),
+		.quirk_install = install_multiple_tlbi_workaround,
+	},
+	{
+		.midr_mask = CPU_IMPL_MASK | CPU_PART_MASK,
+		.midr_value =
+		    CPU_ID_RAW(CPU_IMPL_ARM, CPU_PART_NEOVERSE_V3AE, 0, 0),
+		.quirk_install = install_multiple_tlbi_workaround,
 	},
 };
 
@@ -188,6 +318,12 @@ install_thunderx_bcast_tlbi_workaround(void)
 			PCPU_SET(bcast_tlbi_workaround, 1);
 		}
 	}
+}
+
+static void
+install_multiple_tlbi_workaround(void)
+{
+	pmap_multiple_tlbi = true;
 }
 
 static void
