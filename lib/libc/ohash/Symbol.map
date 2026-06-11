@@ -1,10 +1,9 @@
 /*
  */
 
-FBSD_1.0 {
+MNBSD_1.6 {
 	ohash_init;
 	ohash_delete;
-	ohash_lookup_string;
 	ohash_lookup_interval;
 	ohash_lookup_memory;
 	ohash_find;

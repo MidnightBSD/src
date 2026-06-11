@@ -53,6 +53,9 @@ FBSD_1.8 {
 MNBSD_1.5 {
 } FBSD_1.8;
 
+MNBSD_1.6 {
+} MNBSD_1.5;
+
 # This is our private namespace.  Any global interfaces that are
 # strictly for use only by other FreeBSD applications and libraries
 # are listed here.  We use a separate namespace so we can write
@@ -60,4 +63,4 @@ MNBSD_1.5 {
 #
 # Please do NOT increment the version of this namespace.
 FBSDprivate_1.0 {
-} MNBSD_1.5;
+} MNBSD_1.6;
