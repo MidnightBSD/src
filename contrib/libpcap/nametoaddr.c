@@ -697,7 +697,7 @@ __pcap_atodn(const char *s, bpf_u_int32 *addr)
 }
 
 /*
- * Convert 's', which can have the one of the forms:
+ * Convert 's', which can have one of the forms:
  *
  *	"xx:xx:xx:xx:xx:xx"
  *	"xx.xx.xx.xx.xx.xx"
@@ -705,30 +705,229 @@ __pcap_atodn(const char *s, bpf_u_int32 *addr)
  *	"xxxx.xxxx.xxxx"
  *	"xxxxxxxxxxxx"
  *
- * (or various mixes of ':', '.', and '-') into a new
- * ethernet address.  Assumes 's' is well formed.
+ * into a new ethernet address.  Returns NULL if 's' is not well formed.
+ *
+ * CVE-2025-11961: validate input format before allocation to prevent
+ * out-of-bounds read and write (backport from libpcap 1.10.6).
  */
+
+/* Format: "xxxxxxxxxxxx" (12 consecutive hex digits) */
+static u_char
+pcapint_atomac48_xxxxxxxxxxxx(const char *s, uint8_t *addr)
+{
+	if (strlen(s) == 12 &&
+	    PCAP_ISXDIGIT(s[0]) && PCAP_ISXDIGIT(s[1]) &&
+	    PCAP_ISXDIGIT(s[2]) && PCAP_ISXDIGIT(s[3]) &&
+	    PCAP_ISXDIGIT(s[4]) && PCAP_ISXDIGIT(s[5]) &&
+	    PCAP_ISXDIGIT(s[6]) && PCAP_ISXDIGIT(s[7]) &&
+	    PCAP_ISXDIGIT(s[8]) && PCAP_ISXDIGIT(s[9]) &&
+	    PCAP_ISXDIGIT(s[10]) && PCAP_ISXDIGIT(s[11])) {
+		addr[0] = (uint8_t)(xdtoi((u_char)s[0]) << 4 | xdtoi((u_char)s[1]));
+		addr[1] = (uint8_t)(xdtoi((u_char)s[2]) << 4 | xdtoi((u_char)s[3]));
+		addr[2] = (uint8_t)(xdtoi((u_char)s[4]) << 4 | xdtoi((u_char)s[5]));
+		addr[3] = (uint8_t)(xdtoi((u_char)s[6]) << 4 | xdtoi((u_char)s[7]));
+		addr[4] = (uint8_t)(xdtoi((u_char)s[8]) << 4 | xdtoi((u_char)s[9]));
+		addr[5] = (uint8_t)(xdtoi((u_char)s[10]) << 4 | xdtoi((u_char)s[11]));
+		return 1;
+	}
+	return 0;
+}
+
+/* Format: "xxxx.xxxx.xxxx" (dot-separated 4-hex-digit groups) */
+static u_char
+pcapint_atomac48_xxxx_3_times(const char *s, uint8_t *addr)
+{
+	if (strlen(s) == 14 &&
+	    PCAP_ISXDIGIT(s[0]) && PCAP_ISXDIGIT(s[1]) &&
+	    PCAP_ISXDIGIT(s[2]) && PCAP_ISXDIGIT(s[3]) &&
+	    s[4] == '.' &&
+	    PCAP_ISXDIGIT(s[5]) && PCAP_ISXDIGIT(s[6]) &&
+	    PCAP_ISXDIGIT(s[7]) && PCAP_ISXDIGIT(s[8]) &&
+	    s[9] == '.' &&
+	    PCAP_ISXDIGIT(s[10]) && PCAP_ISXDIGIT(s[11]) &&
+	    PCAP_ISXDIGIT(s[12]) && PCAP_ISXDIGIT(s[13])) {
+		addr[0] = (uint8_t)(xdtoi((u_char)s[0]) << 4 | xdtoi((u_char)s[1]));
+		addr[1] = (uint8_t)(xdtoi((u_char)s[2]) << 4 | xdtoi((u_char)s[3]));
+		addr[2] = (uint8_t)(xdtoi((u_char)s[5]) << 4 | xdtoi((u_char)s[6]));
+		addr[3] = (uint8_t)(xdtoi((u_char)s[7]) << 4 | xdtoi((u_char)s[8]));
+		addr[4] = (uint8_t)(xdtoi((u_char)s[10]) << 4 | xdtoi((u_char)s[11]));
+		addr[5] = (uint8_t)(xdtoi((u_char)s[12]) << 4 | xdtoi((u_char)s[13]));
+		return 1;
+	}
+	return 0;
+}
+
+/*
+ * Format: "xx:xx:xx:xx:xx:xx", "xx.xx.xx.xx.xx.xx", "xx-xx-xx-xx-xx-xx"
+ * (1 or 2 hex digits per octet, consistent separator)
+ */
+static u_char
+pcapint_atomac48_x_xx_6_times(const char *s, uint8_t *addr)
+{
+	enum {
+		START,
+		BYTE0_X, BYTE0_XX, BYTE0_SEP_BYTE1,
+		BYTE1_X, BYTE1_XX, BYTE1_SEP_BYTE2,
+		BYTE2_X, BYTE2_XX, BYTE2_SEP_BYTE3,
+		BYTE3_X, BYTE3_XX, BYTE3_SEP_BYTE4,
+		BYTE4_X, BYTE4_XX, BYTE4_SEP_BYTE5,
+		BYTE5_X, BYTE5_XX,
+	} fsm_state = START;
+	uint8_t buf[6];
+	const char *seplist = ":.-";
+	char sep = 0;
+
+	while (*s) {
+		switch (fsm_state) {
+		case START:
+			if (PCAP_ISXDIGIT(*s)) {
+				buf[0] = xdtoi((u_char)*s);
+				fsm_state = BYTE0_X;
+				break;
+			}
+			goto reject;
+		case BYTE0_X:
+			if (strchr(seplist, *s)) {
+				sep = *s;
+				fsm_state = BYTE0_SEP_BYTE1;
+				break;
+			}
+			if (PCAP_ISXDIGIT(*s)) {
+				buf[0] = (uint8_t)(buf[0] << 4 | xdtoi((u_char)*s));
+				fsm_state = BYTE0_XX;
+				break;
+			}
+			goto reject;
+		case BYTE0_XX:
+			if (strchr(seplist, *s)) {
+				sep = *s;
+				fsm_state = BYTE0_SEP_BYTE1;
+				break;
+			}
+			goto reject;
+		case BYTE0_SEP_BYTE1:
+			if (PCAP_ISXDIGIT(*s)) {
+				buf[1] = xdtoi((u_char)*s);
+				fsm_state = BYTE1_X;
+				break;
+			}
+			goto reject;
+		case BYTE1_X:
+			if (*s == sep) { fsm_state = BYTE1_SEP_BYTE2; break; }
+			if (PCAP_ISXDIGIT(*s)) {
+				buf[1] = (uint8_t)(buf[1] << 4 | xdtoi((u_char)*s));
+				fsm_state = BYTE1_XX;
+				break;
+			}
+			goto reject;
+		case BYTE1_XX:
+			if (*s == sep) { fsm_state = BYTE1_SEP_BYTE2; break; }
+			goto reject;
+		case BYTE1_SEP_BYTE2:
+			if (PCAP_ISXDIGIT(*s)) {
+				buf[2] = xdtoi((u_char)*s);
+				fsm_state = BYTE2_X;
+				break;
+			}
+			goto reject;
+		case BYTE2_X:
+			if (*s == sep) { fsm_state = BYTE2_SEP_BYTE3; break; }
+			if (PCAP_ISXDIGIT(*s)) {
+				buf[2] = (uint8_t)(buf[2] << 4 | xdtoi((u_char)*s));
+				fsm_state = BYTE2_XX;
+				break;
+			}
+			goto reject;
+		case BYTE2_XX:
+			if (*s == sep) { fsm_state = BYTE2_SEP_BYTE3; break; }
+			goto reject;
+		case BYTE2_SEP_BYTE3:
+			if (PCAP_ISXDIGIT(*s)) {
+				buf[3] = xdtoi((u_char)*s);
+				fsm_state = BYTE3_X;
+				break;
+			}
+			goto reject;
+		case BYTE3_X:
+			if (*s == sep) { fsm_state = BYTE3_SEP_BYTE4; break; }
+			if (PCAP_ISXDIGIT(*s)) {
+				buf[3] = (uint8_t)(buf[3] << 4 | xdtoi((u_char)*s));
+				fsm_state = BYTE3_XX;
+				break;
+			}
+			goto reject;
+		case BYTE3_XX:
+			if (*s == sep) { fsm_state = BYTE3_SEP_BYTE4; break; }
+			goto reject;
+		case BYTE3_SEP_BYTE4:
+			if (PCAP_ISXDIGIT(*s)) {
+				buf[4] = xdtoi((u_char)*s);
+				fsm_state = BYTE4_X;
+				break;
+			}
+			goto reject;
+		case BYTE4_X:
+			if (*s == sep) { fsm_state = BYTE4_SEP_BYTE5; break; }
+			if (PCAP_ISXDIGIT(*s)) {
+				buf[4] = (uint8_t)(buf[4] << 4 | xdtoi((u_char)*s));
+				fsm_state = BYTE4_XX;
+				break;
+			}
+			goto reject;
+		case BYTE4_XX:
+			if (*s == sep) { fsm_state = BYTE4_SEP_BYTE5; break; }
+			goto reject;
+		case BYTE4_SEP_BYTE5:
+			if (PCAP_ISXDIGIT(*s)) {
+				buf[5] = xdtoi((u_char)*s);
+				fsm_state = BYTE5_X;
+				break;
+			}
+			goto reject;
+		case BYTE5_X:
+			if (PCAP_ISXDIGIT(*s)) {
+				buf[5] = (uint8_t)(buf[5] << 4 | xdtoi((u_char)*s));
+				fsm_state = BYTE5_XX;
+				break;
+			}
+			goto reject;
+		case BYTE5_XX:
+			goto reject;
+		}
+		s++;
+	}
+
+	if (fsm_state == BYTE5_X || fsm_state == BYTE5_XX) {
+		memcpy(addr, buf, sizeof(buf));
+		return 1;
+	}
+
+reject:
+	return 0;
+}
+
+static int
+pcapint_atomac48(const char *s, uint8_t *addr)
+{
+	return s && (
+	    pcapint_atomac48_xxxxxxxxxxxx(s, addr) ||
+	    pcapint_atomac48_xxxx_3_times(s, addr) ||
+	    pcapint_atomac48_x_xx_6_times(s, addr)
+	);
+}
+
 u_char *
 pcap_ether_aton(const char *s)
 {
-	register u_char *ep, *e;
-	register u_char d;
+	uint8_t tmp[6];
+	u_char *e;
 
-	e = ep = (u_char *)malloc(6);
+	if (!pcapint_atomac48(s, tmp))
+		return (NULL);
+	e = (u_char *)malloc(6);
 	if (e == NULL)
 		return (NULL);
-
-	while (*s) {
-		if (*s == ':' || *s == '.' || *s == '-')
-			s += 1;
-		d = xdtoi(*s++);
-		if (PCAP_ISXDIGIT(*s)) {
-			d <<= 4;
-			d |= xdtoi(*s++);
-		}
-		*ep++ = d;
-	}
-
+	memcpy(e, tmp, sizeof(tmp));
 	return (e);
 }
 
