@@ -21,6 +21,7 @@ jobs:
       - uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           review_type: pr_review
           post_as_pr_comments: true
           custom_instructions: |
