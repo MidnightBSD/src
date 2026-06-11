@@ -36,8 +36,6 @@
  * @date 2017.12.11  @author roman.agafonov@aquantia.com
  */
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
-
 #include <sys/types.h>
 #include <sys/systm.h>
 #include <sys/bitstring.h>
