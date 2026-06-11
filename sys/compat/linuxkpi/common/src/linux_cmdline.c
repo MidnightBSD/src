@@ -1,8 +1,5 @@
 /*-
- * Copyright (c) 2020 The FreeBSD Foundation
- *
- * This software was developed by Emmanuel Vadot under sponsorship
- * from the FreeBSD Foundation.
+ * Copyright (c) 2022 Beckhoff Automation GmbH & Co. KG
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,36 +21,43 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
+ *
  */
 
-#ifndef __LINUXKPI_LINUX_DMI_H__
-#define	__LINUXKPI_LINUX_DMI_H__
+#include <sys/param.h>
+#include <sys/systm.h>
 
-#include <sys/types.h>
-#include <linux/errno.h>
-#include <linux/mod_devicetable.h>
+#include <video/cmdline.h>
 
-struct dmi_header {
-	uint8_t		type;
-	uint8_t		length;
-	uint16_t	handle;
-};
-
-int linux_dmi_check_system(const struct dmi_system_id *);
-bool linux_dmi_match(enum dmi_field, const char *);
-const struct dmi_system_id *linux_dmi_first_match(const struct dmi_system_id *);
-const char *linux_dmi_get_system_info(int);
-
-#define	dmi_check_system(sysid)	linux_dmi_check_system(sysid)
-#define	dmi_match(f, str)	linux_dmi_match(f, str)
-#define	dmi_first_match(sysid)	linux_dmi_first_match(sysid)
-#define	dmi_get_system_info(sysid)	linux_dmi_get_system_info(sysid)
-
-static inline int
-dmi_walk(void (*callbackf)(const struct dmi_header *, void *), void *arg)
+const char *
+video_get_options(const char *connector_name)
 {
+	char tunable[64];
+	const char *options;
 
-	return (-ENXIO);
+	/*
+	 * A user may use loader tunables to set a specific mode for the
+	 * console. Tunables are read in the following order:
+	 *     1. kern.vt.fb.modes.$connector_name
+	 *     2. kern.vt.fb.default_mode
+	 *
+	 * Example of a mode specific to the LVDS connector:
+	 *     kern.vt.fb.modes.LVDS="1024x768"
+	 *
+	 * Example of a mode applied to all connectors not having a
+	 * connector-specific mode:
+	 *     kern.vt.fb.default_mode="640x480"
+	 */
+	snprintf(tunable, sizeof(tunable), "kern.vt.fb.modes.%s",
+	    connector_name);
+	if (bootverbose) {
+		printf("[drm] Connector %s: get mode from tunables:\n", connector_name);
+		printf("[drm]  - %s\n", tunable);
+		printf("[drm]  - kern.vt.fb.default_mode\n");
+	}
+	options = kern_getenv(tunable);
+	if (options == NULL)
+		options = kern_getenv("kern.vt.fb.default_mode");
+
+	return (options);
 }
-
-#endif	/* __LINUXKPI_LINUX_DMI_H__ */

@@ -1,8 +1,7 @@
 /*-
- * Copyright (c) 2020 The FreeBSD Foundation
+ * SPDX-License-Identifier: BSD-2-Clause
  *
- * This software was developed by Emmanuel Vadot under sponsorship
- * from the FreeBSD Foundation.
+ * Copyright (c) 2022 Val Packett <val@packett.cool>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -13,10 +12,10 @@
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHORS AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHORS OR CONTRIBUTORS BE LIABLE
  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
  * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -26,34 +25,16 @@
  * SUCH DAMAGE.
  */
 
-#ifndef __LINUXKPI_LINUX_DMI_H__
-#define	__LINUXKPI_LINUX_DMI_H__
+#ifndef	_LINUXKPI_ASM_NEON_H_
+#define	_LINUXKPI_ASM_NEON_H_
 
-#include <sys/types.h>
-#include <linux/errno.h>
-#include <linux/mod_devicetable.h>
+#define	kernel_neon_begin() \
+   lkpi_kernel_fpu_begin()
 
-struct dmi_header {
-	uint8_t		type;
-	uint8_t		length;
-	uint16_t	handle;
-};
+#define	kernel_neon_end() \
+   lkpi_kernel_fpu_end()
 
-int linux_dmi_check_system(const struct dmi_system_id *);
-bool linux_dmi_match(enum dmi_field, const char *);
-const struct dmi_system_id *linux_dmi_first_match(const struct dmi_system_id *);
-const char *linux_dmi_get_system_info(int);
+extern void lkpi_kernel_fpu_begin(void);
+extern void lkpi_kernel_fpu_end(void);
 
-#define	dmi_check_system(sysid)	linux_dmi_check_system(sysid)
-#define	dmi_match(f, str)	linux_dmi_match(f, str)
-#define	dmi_first_match(sysid)	linux_dmi_first_match(sysid)
-#define	dmi_get_system_info(sysid)	linux_dmi_get_system_info(sysid)
-
-static inline int
-dmi_walk(void (*callbackf)(const struct dmi_header *, void *), void *arg)
-{
-
-	return (-ENXIO);
-}
-
-#endif	/* __LINUXKPI_LINUX_DMI_H__ */
+#endif /* _LINUXKPI_ASM_NEON_H_ */

@@ -73,6 +73,10 @@
 #include "backlight_if.h"
 #include "pcib_if.h"
 
+const char *pci_power_names[] = {
+	"UNKNOWN", "D0", "D1", "D2", "D3hot", "D3cold"
+};
+
 /* Undef the linux function macro defined in linux/pci.h */
 #undef pci_get_class
 

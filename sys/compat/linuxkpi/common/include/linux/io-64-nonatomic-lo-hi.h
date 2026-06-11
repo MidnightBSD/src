@@ -1,8 +1,7 @@
 /*-
- * Copyright (c) 2020 The FreeBSD Foundation
+ * SPDX-License-Identifier: BSD-2-Clause
  *
- * This software was developed by Emmanuel Vadot under sponsorship
- * from the FreeBSD Foundation.
+ * Copyright (c) 2022 Felix Palmen
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -16,7 +15,7 @@
  * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
  * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -25,35 +24,42 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+#ifndef	_LINUXKPI_LINUX_IO_64_NONATOMIC_LO_HI_H_
+#define	_LINUXKPI_LINUX_IO_64_NONATOMIC_LO_HI_H_
 
-#ifndef __LINUXKPI_LINUX_DMI_H__
-#define	__LINUXKPI_LINUX_DMI_H__
+#include <linux/io.h>
 
-#include <sys/types.h>
-#include <linux/errno.h>
-#include <linux/mod_devicetable.h>
-
-struct dmi_header {
-	uint8_t		type;
-	uint8_t		length;
-	uint16_t	handle;
-};
-
-int linux_dmi_check_system(const struct dmi_system_id *);
-bool linux_dmi_match(enum dmi_field, const char *);
-const struct dmi_system_id *linux_dmi_first_match(const struct dmi_system_id *);
-const char *linux_dmi_get_system_info(int);
-
-#define	dmi_check_system(sysid)	linux_dmi_check_system(sysid)
-#define	dmi_match(f, str)	linux_dmi_match(f, str)
-#define	dmi_first_match(sysid)	linux_dmi_first_match(sysid)
-#define	dmi_get_system_info(sysid)	linux_dmi_get_system_info(sysid)
-
-static inline int
-dmi_walk(void (*callbackf)(const struct dmi_header *, void *), void *arg)
+static inline uint64_t
+lo_hi_readq(const volatile void *addr)
 {
+	const volatile uint32_t *p = addr;
+	uint32_t l, h;
 
-	return (-ENXIO);
+	__io_br();
+	l = le32toh(__raw_readl(p));
+	h = le32toh(__raw_readl(p + 1));
+	__io_ar();
+
+	return (l + ((uint64_t)h << 32));
 }
 
-#endif	/* __LINUXKPI_LINUX_DMI_H__ */
+static inline void
+lo_hi_writeq(uint64_t v, volatile void *addr)
+{
+	volatile uint32_t *p = addr;
+
+	__io_bw();
+	__raw_writel(htole32(v), p);
+	__raw_writel(htole32(v >> 32), p + 1);
+	__io_aw();
+}
+
+#ifndef readq
+#define readq(addr)	lo_hi_readq(addr)
+#endif
+
+#ifndef writeq
+#define writeq(v, addr)	lo_hi_writeq(v, addr)
+#endif
+
+#endif	/* _LINUXKPI_LINUX_IO_64_NONATOMIC_LO_HI_H_ */

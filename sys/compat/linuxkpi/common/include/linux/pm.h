@@ -40,6 +40,10 @@
 
 struct device;
 
+struct dev_pm_info {
+	atomic_t usage_count;
+};
+
 typedef struct pm_message {
 	int event;
 } pm_message_t;
