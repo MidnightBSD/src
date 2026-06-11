@@ -35,9 +35,17 @@ struct _ohash_record {
 
 /* Don't bother changing the hash table if the change is small enough.  */
 #define MINSIZE (1UL << 4)
+#define MAXSIZE ((UINT_MAX >> 1U) + 1U)
 #define MINDELETED 4
 
 static void ohash_resize(struct ohash *);
+static int ohash_size_mul_overflows(size_t, size_t);
+
+static int
+ohash_size_mul_overflows(size_t n, size_t size)
+{
+	return size != 0 && n > SIZE_MAX / size;
+}
 
 /* This handles the common case of variable length keys, where the
  * key is stored at the end of the record.
@@ -46,14 +54,24 @@ void *
 ohash_create_entry(struct ohash_info *i, const char *start, const char **end)
 {
 	char *p;
+	ptrdiff_t len;
+	size_t key_offset;
+	size_t sz;
 
 	if (!*end)
 		*end = start + strlen(start);
-	p = (i->alloc)(i->key_offset + (*end - start) + 1, i->data);
+	len = *end - start;
+	if (len < 0 || i->key_offset < 0)
+		return NULL;
+	key_offset = (size_t)i->key_offset;
+	if ((size_t)len > SIZE_MAX - key_offset - 1)
+		return NULL;
+	sz = key_offset + (size_t)len + 1;
+	p = (i->alloc)(sz, i->data);
 	if (p) {
 		// NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling)
-		memcpy(p + i->key_offset, start, *end - start);
-		p[i->key_offset + (*end - start)] = '\0';
+		memcpy(p + key_offset, start, (size_t)len);
+		p[key_offset + (size_t)len] = '\0';
 	}
 	return (void *)p;
 }
@@ -79,8 +97,8 @@ ohash_resize(struct ohash *h)
 	unsigned int i, incr;
 
 	if (4 * h->deleted < h->total) {
-		if (h->size >= (UINT_MAX >> 1U))
-			ns = UINT_MAX;
+		if (h->size >= MAXSIZE)
+			ns = MAXSIZE;
 		else
 			ns = h->size << 1U;
 	} else if (3 * h->deleted > 2 * h->total)
@@ -89,6 +107,8 @@ ohash_resize(struct ohash *h)
 		ns = h->size;
 	if (ns < MINSIZE)
 		ns = MINSIZE;
+	if (ohash_size_mul_overflows(ns, sizeof(struct _ohash_record)))
+		return;
 #ifdef STATS_HASH
 	STAT_HASH_EXPAND++;
 	STAT_HASH_SIZE += ns - h->size;
@@ -188,7 +208,10 @@ ohash_next(struct ohash *h, unsigned int *pos)
 void
 ohash_init(struct ohash *h, unsigned int size, struct ohash_info *info)
 {
-	h->size = 1UL << size;
+	if (size >= sizeof(h->size) * CHAR_BIT - 1)
+		h->size = MAXSIZE;
+	else
+		h->size = 1U << size;
 	if (h->size < MINSIZE)
 		h->size = MINSIZE;
 #ifdef STATS_HASH
@@ -201,6 +224,11 @@ ohash_init(struct ohash *h, unsigned int size, struct ohash_info *info)
 	h->info.free = info->free;
 	h->info.alloc = info->alloc;
 	h->info.data = info->data;
+	if (ohash_size_mul_overflows(h->size, sizeof(struct _ohash_record))) {
+		h->t = NULL;
+		h->total = h->deleted = 0;
+		return;
+	}
 	h->t = (h->info.calloc)(h->size, sizeof(struct _ohash_record),
 	    h->info.data);
 	h->total = h->deleted = 0;

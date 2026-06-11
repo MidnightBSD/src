@@ -18,6 +18,7 @@
 
 #include <sys/cdefs.h>
 
+#include <limits.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -47,6 +48,7 @@ struct ohash_compat {
 #define DELETED ((const char *)h)
 #define NONE (h->size)
 #define MINSIZE (1UL << 4)
+#define MAXSIZE ((UINT_MAX >> 1U) + 1U)
 #define MINDELETED 4
 
 void *ohash_create_entry_compat(struct ohash_info_compat *, const char *,
@@ -72,20 +74,39 @@ unsigned int ohash_qlookupi_compat(struct ohash_compat *, const char *,
 unsigned int ohash_qlookup_compat(struct ohash_compat *, const char *);
 
 static void ohash_resize_compat(struct ohash_compat *);
+static size_t ohash_table_size_compat(size_t);
+
+static size_t
+ohash_table_size_compat(size_t size)
+{
+	if (size > SIZE_MAX / sizeof(struct ohash_record_compat))
+		return 0;
+	return sizeof(struct ohash_record_compat) * size;
+}
 
 void *
 ohash_create_entry_compat(struct ohash_info_compat *i, const char *start,
     const char **end)
 {
 	char *p;
+	ptrdiff_t len;
+	size_t key_offset;
+	size_t sz;
 
 	if (!*end)
 		*end = start + strlen(start);
-	p = (i->alloc)(i->key_offset + (*end - start) + 1, i->data);
+	len = *end - start;
+	if (len < 0 || i->key_offset < 0)
+		return NULL;
+	key_offset = (size_t)i->key_offset;
+	if ((size_t)len > SIZE_MAX - key_offset - 1)
+		return NULL;
+	sz = key_offset + (size_t)len + 1;
+	p = (i->alloc)(sz, i->data);
 	if (p) {
 		// NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling)
-		memcpy(p + i->key_offset, start, *end - start);
-		p[i->key_offset + (*end - start)] = '\0';
+		memcpy(p + key_offset, start, (size_t)len);
+		p[key_offset + (size_t)len] = '\0';
 	}
 	return (void *)p;
 }
@@ -93,8 +114,7 @@ ohash_create_entry_compat(struct ohash_info_compat *i, const char *start,
 void
 ohash_delete_compat(struct ohash_compat *h)
 {
-	(h->info.hfree)(h->t, sizeof(struct ohash_record_compat) * h->size,
-	    h->info.data);
+	(h->info.hfree)(h->t, ohash_table_size_compat(h->size), h->info.data);
 #ifndef NDEBUG
 	h->t = NULL;
 #endif
@@ -107,20 +127,24 @@ ohash_resize_compat(struct ohash_compat *h)
 	unsigned int ns, j;
 	unsigned int i, incr;
 
-	if (4 * h->deleted < h->total)
-		ns = h->size << 1;
-	else if (3 * h->deleted > 2 * h->total)
+	if (4 * h->deleted < h->total) {
+		if (h->size >= MAXSIZE)
+			ns = MAXSIZE;
+		else
+			ns = h->size << 1U;
+	} else if (3 * h->deleted > 2 * h->total)
 		ns = h->size >> 1;
 	else
 		ns = h->size;
 	if (ns < MINSIZE)
 		ns = MINSIZE;
+	if (ohash_table_size_compat(ns) == 0)
+		return;
 #ifdef STATS_HASH
 	STAT_HASH_EXPAND++;
 	STAT_HASH_SIZE += ns - h->size;
 #endif
-	n = (h->info.halloc)(sizeof(struct ohash_record_compat) * ns,
-	    h->info.data);
+	n = (h->info.halloc)(ohash_table_size_compat(ns), h->info.data);
 	if (!n)
 		return;
 
@@ -137,8 +161,7 @@ ohash_resize_compat(struct ohash_compat *h)
 			n[i].p = h->t[j].p;
 		}
 	}
-	(h->info.hfree)(h->t, sizeof(struct ohash_record_compat) * h->size,
-	    h->info.data);
+	(h->info.hfree)(h->t, ohash_table_size_compat(h->size), h->info.data);
 	h->t = n;
 	h->size = ns;
 	h->total -= h->deleted;
@@ -216,7 +239,10 @@ void
 ohash_init_compat(struct ohash_compat *h, unsigned int size,
     struct ohash_info_compat *info)
 {
-	h->size = 1UL << size;
+	if (size >= sizeof(h->size) * CHAR_BIT - 1)
+		h->size = MAXSIZE;
+	else
+		h->size = 1U << size;
 	if (h->size < MINSIZE)
 		h->size = MINSIZE;
 #ifdef STATS_HASH
@@ -229,8 +255,13 @@ ohash_init_compat(struct ohash_compat *h, unsigned int size,
 	h->info.hfree = info->hfree;
 	h->info.alloc = info->alloc;
 	h->info.data = info->data;
-	h->t = (h->info.halloc)(sizeof(struct ohash_record_compat) * h->size,
-	    h->info.data);
+	if (ohash_table_size_compat(h->size) == 0) {
+		h->t = NULL;
+		h->size = 0;
+		h->total = h->deleted = 0;
+		return;
+	}
+	h->t = (h->info.halloc)(ohash_table_size_compat(h->size), h->info.data);
 	h->total = h->deleted = 0;
 }
 
