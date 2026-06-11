@@ -16,7 +16,7 @@ MAN=	libmagic.3 magic.5
 SRCS=	apprentice.c apptype.c ascmagic.c buffer.c cdf.c cdf_time.c \
 	compress.c der.c encoding.c fsmagic.c funcs.c is_json.c \
 	is_csv.c \
-	is_tar.c magic.c print.c readcdf.c readelf.c seccomp.c softmagic.c
+	is_simh.c is_tar.c magic.c print.c readcdf.c readelf.c seccomp.c softmagic.c
 INCS=	magic.h
 
 MAGICPATH?=	/usr/share/misc
@@ -58,7 +58,7 @@ magic.mgc: magic
 CLEANFILES+=	mkmagic
 DEPENDOBJS+=	mkmagic
 build-tools: mkmagic
-mkmagic: apprentice.c cdf_time.c encoding.c funcs.c magic.c print.c ${INCS} ${BUILD_TOOLS_META}
+mkmagic: apprentice.c cdf_time.c encoding.c funcs.c is_simh.c magic.c print.c ${INCS} ${BUILD_TOOLS_META}
 	${CC:N${CCACHE_BIN}} ${CFLAGS} -DCOMPILE_ONLY ${LDFLAGS} -o ${.TARGET} \
 	    ${.ALLSRC:N*.h:O:u} ${LDADD}
 
