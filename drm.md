@@ -93,3 +93,37 @@ operational under MidnightBSD make (`bsd.port.options.mk` not found,
 ## Out of scope (follow-on)
 `kldload`, vt/newcons KMS console handoff, interrupts, suspend/resume,
 on-hardware modesetting.
+
+## Result — DONE (build + link verified)
+
+All six modules build and link clean against MidnightBSD (`__FreeBSD_version
+1305500`) on amd64, via `cd /usr/mports/graphics/drm-515-kmod && make build
+SRC_BASE=/usr/src`:
+
+    dmabuf.ko  drm.ko  ttm.ko  amdgpu.ko  i915kms.ko  radeonkms.ko
+
+(All valid `ELF 64-bit LSB relocatable` kmods. Not loaded — out of scope.)
+
+### LinuxKPI changes (src branch `feature/drm-515-kmod-linuxkpi`)
+Additive FreeBSD 14 import (headers + linuxkpi_hdmi/linuxkpi_video modules)
+plus targeted backports, each driven by a real build failure:
+- single-arg `vm_operations_struct.fault`; `kernel.h`→`math64.h`
+- `devm_add_action()/_or_reset()`; `pcie_aspm_enabled()`; INTEL_FAM6 Alder Lake
+- `noinline_for_stack`; `bitmap_to_arr32()`; `acpi_put_table()`
+- move BUILD_BUG → `build_bug.h`; move U*_MAX → `limits.h` (both included from kernel.h)
+- self-contained `dmi.h` errno; import `util_macros.h`, `time64.h`
+- tasklet callback API (`tasklet_setup`, `from_tasklet`, `->callback`) + `ZERO_SIZE_PTR`
+- PCI/device power bits (`dev_pm_info`, `pci_dev.current_state`,
+  `pci_power_name()`, `pci_power_names[]`)
+
+Existing LinuxKPI files were intentionally NOT re-imported wholesale (would
+require backporting the FreeBSD 14 AST/protosw/file base reworks).
+
+### Port (mports branch `feature/drm-515-kmod`)
+`graphics/drm-515-kmod` from drm-510-kmod; two source patches for FreeBSD-14
+assumptions vs MidnightBSD base (`dma_buf_stat` thread arg; i915
+`totalram_pages` gated on `__MidnightBSD_version`).
+
+### Not done (follow-on)
+`kldload` and runtime bring-up (vt/newcons KMS handoff, IRQs, suspend/resume,
+modesetting); powerpc64 `acpi_iicbus` guard; gpu-firmware-kmod packaging.
