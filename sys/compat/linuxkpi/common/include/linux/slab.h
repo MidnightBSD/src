@@ -88,7 +88,8 @@ struct linux_kmem_cache;
 /* drm-kmod 5.4 compat */
 #define kfree_async(ptr)	kfree(ptr);
 
-#define ZERO_OR_NULL_PTR(x)	((x) == NULL)
+#define	ZERO_SIZE_PTR		((void *)16)
+#define ZERO_OR_NULL_PTR(x)	((x) == NULL || (x) == ZERO_SIZE_PTR)
 
 static inline gfp_t
 linux_check_m_flags(gfp_t flags)
