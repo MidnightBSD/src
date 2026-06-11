@@ -194,8 +194,9 @@ DumpHex(const void *data, size_t size)
 	printf("packet at %p\n", data);
 
 	for (i = 0; i < size; ++i) {
-		sprintf(buf, "%02X ", ((const unsigned char *)data)[i]);
-		strcat(line, buf);
+		snprintf(buf, sizeof(buf), "%02X ",
+		    ((const unsigned char *)data)[i]);
+		strlcat(line, buf, sizeof(line));
 		if (((const unsigned char *)data)[i] >= ' ' &&
 		    ((const unsigned char *)data)[i] <= '~') {
 			ascii[i % 16] = ((const unsigned char *)data)[i];
@@ -203,22 +204,22 @@ DumpHex(const void *data, size_t size)
 			ascii[i % 16] = '.';
 		}
 		if ((i + 1) % 8 == 0 || i + 1 == size) {
-			strcat(line, " ");
+			strlcat(line, " ", sizeof(line));
 			if ((i + 1) % 16 == 0) {
-				sprintf(buf, "|  %s \n", ascii);
-				strcat(line, buf);
+				snprintf(buf, sizeof(buf), "|  %s \n", ascii);
+				strlcat(line, buf, sizeof(line));
 				printf("%s", line);
 				line[0] = '\0';
 			} else if (i + 1 == size) {
 				ascii[(i + 1) % 16] = '\0';
 				if ((i + 1) % 16 <= 8) {
-					strcat(line, " ");
+					strlcat(line, " ", sizeof(line));
 				}
 				for (j = (i + 1) % 16; j < 16; ++j) {
-					strcat(line, "   ");
+					strlcat(line, "   ", sizeof(line));
 				}
-				sprintf(buf, "|  %s \n", ascii);
-				strcat(line, buf);
+				snprintf(buf, sizeof(buf), "|  %s \n", ascii);
+				strlcat(line, buf, sizeof(line));
 				printf("%s", line);
 				line[0] = '\0';
 			}

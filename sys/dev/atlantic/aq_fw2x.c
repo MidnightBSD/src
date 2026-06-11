@@ -617,7 +617,7 @@ fw2x_rpc_wait(struct aq_hw *hw, uint32_t *fw_len)
 				   sw.tid == fw.tid),
 		    1000U, 100000U);
 		if (err != EOK)
-			return (EIO);
+			return (err);
 
 		if (fw.len == 0xFFFFU) {
 			err = fw2x_rpc_call(hw, NULL, sw.len);

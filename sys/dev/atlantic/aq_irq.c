@@ -75,14 +75,8 @@ aq_update_hw_stats(aq_dev_t *aq_dev)
 #define AQ_SDELTA_32(_N_)                                 \
 	(aq_dev->accum_stats._N_ += (uint32_t)stats._N_ - \
 		(uint32_t)aq_dev->last_stats._N_)
-#define AQ_SDELTA_64(_N_)                                      \
-	do {                                                   \
-		if (stats._N_ >= aq_dev->last_stats._N_)       \
-			aq_dev->accum_stats._N_ += stats._N_ - \
-			    aq_dev->last_stats._N_;            \
-		else                                           \
-			aq_dev->accum_stats._N_ += stats._N_;  \
-	} while (0)
+#define AQ_SDELTA_64(_N_) \
+	(aq_dev->accum_stats._N_ += stats._N_ - aq_dev->last_stats._N_)
 
 	if (aq_dev->linkup) {
 		if (aq2_b0) {
