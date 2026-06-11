@@ -8,6 +8,7 @@ TESTSRC=	${SRCTOP}/contrib/netbsd-tests/kernel
 
 TESTSDIR=	${TESTSBASE}/sys/kern
 
+ATF_TESTS_C+=	aslr
 ATF_TESTS_C+=	basic_signal
 #ATF_TESTS_C+=	kcov
 ATF_TESTS_C+=	kern_copyin
@@ -63,6 +64,7 @@ PROGS+=		sendfile_helper
 .PATH: ${SRCTOP}/sbin/mount
 SRCS.jail_lookup_root+=			jail_lookup_root.c getmntopts.c
 CFLAGS.jail_lookup_root+=		-I${SRCTOP}/sbin/mount
+LIBADD.aslr+=				util
 LIBADD.jail_lookup_root+=		jail util
 CFLAGS.sys_getrandom+=			-I${SRCTOP}/sys/contrib/zstd/lib
 LIBADD.sys_getrandom+=			zstd
