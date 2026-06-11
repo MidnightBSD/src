@@ -1,6 +1,8 @@
 Updating Information for MidnightBSD users.
 
 20260610:
+	xz 5.8.3: CVE-2026-34743
+
 	ktls: CVE-2026-45257 receive path file overwrite fix
 
 	capsicum: CVE-2026-45259 restrict sigqueue(2) in capability mode
