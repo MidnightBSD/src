@@ -33,6 +33,7 @@
 #define	SNDBUF_F_XRUN		0x00000002
 #define	SNDBUF_F_RUNNING	0x00000004
 #define	SNDBUF_F_MANAGED	0x00000008
+#define	SNDBUF_F_DETACHED	0x00000010
 
 #define SNDBUF_NAMELEN	48
 
@@ -56,6 +57,7 @@ struct snd_dbuf {
 	bus_dma_tag_t dmatag;
 	bus_addr_t buf_addr;
 	int dmaflags;
+	unsigned int refcount;
 	struct selinfo sel;
 	struct pcm_channel *channel;
 	char name[SNDBUF_NAMELEN];
@@ -63,6 +65,8 @@ struct snd_dbuf {
 
 struct snd_dbuf *sndbuf_create(device_t dev, char *drv, char *desc, struct pcm_channel *channel);
 void sndbuf_destroy(struct snd_dbuf *b);
+void sndbuf_ref(struct snd_dbuf *b);
+void sndbuf_rele(struct snd_dbuf *b);
 
 void sndbuf_dump(struct snd_dbuf *b, char *s, u_int32_t what);
 

@@ -1,0 +1,31 @@
+name: Claude Code Review
+
+on:
+  pull_request:
+    branches: [ main, master ]
+    types: [ opened, reopened, synchronize ]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    name: Claude Code Review
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          review_type: pr_review
+          post_as_pr_comments: true
+          custom_instructions: |
+            This is the MidnightBSD operating system source tree.
+            Review for: correctness bugs, malloc/free symmetry, bounds checking,
+            style(9) compliance (8-space tabs, 80-col), and security issues.
+            Flag any assembly or contrib/mksh changes — AI review is prohibited for those.
+            Be concise. Focus on high-confidence issues only.
