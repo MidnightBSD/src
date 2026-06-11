@@ -50,6 +50,7 @@
 #include <linux/typecheck.h>
 #include <linux/jiffies.h>
 #include <linux/log2.h>
+#include <linux/math64.h>
 #include <linux/kconfig.h>
 
 #include <asm/byteorder.h>
