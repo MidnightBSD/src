@@ -36,7 +36,7 @@ int luaS_eqlngstr (TString *a, TString *b) {
   lua_assert(a->tt == LUA_VLNGSTR && b->tt == LUA_VLNGSTR);
   return (a == b) ||  /* same instance or... */
     ((len == b->u.lnglen) &&  /* equal length and ... */
-     (memcmp(getstr(a), getstr(b), len) == 0));  /* equal contents */
+     (memcmp(getlngstr(a), getlngstr(b), len) == 0));  /* equal contents */
 }
 
 
@@ -52,7 +52,7 @@ unsigned int luaS_hashlongstr (TString *ts) {
   lua_assert(ts->tt == LUA_VLNGSTR);
   if (ts->extra == 0) {  /* no hash? */
     size_t len = ts->u.lnglen;
-    ts->hash = luaS_hash(getstr(ts), len, ts->hash);
+    ts->hash = luaS_hash(getlngstr(ts), len, ts->hash);
     ts->extra = 1;  /* now it has its hash */
   }
   return ts->hash;
@@ -89,7 +89,7 @@ void luaS_resize (lua_State *L, int nsize) {
   if (nsize < osize)  /* shrinking table? */
     tablerehash(tb->hash, osize, nsize);  /* depopulate shrinking part */
   newvect = luaM_reallocvector(L, tb->hash, osize, nsize, TString*);
-  if (unlikely(newvect == NULL)) {  /* reallocation failed? */
+  if (l_unlikely(newvect == NULL)) {  /* reallocation failed? */
     if (nsize < osize)  /* was it shrinking table? */
       tablerehash(tb->hash, nsize, osize);  /* restore to original size */
     /* leave table as it was */
@@ -157,6 +157,7 @@ static TString *createstrobj (lua_State *L, size_t l, int tag, unsigned int h) {
 TString *luaS_createlngstrobj (lua_State *L, size_t l) {
   TString *ts = createstrobj(L, l, LUA_VLNGSTR, G(L)->seed);
   ts->u.lnglen = l;
+  ts->shrlen = 0xFF;  /* signals that it is a long string */
   return ts;
 }
 
@@ -172,7 +173,7 @@ void luaS_remove (lua_State *L, TString *ts) {
 
 
 static void growstrtab (lua_State *L, stringtable *tb) {
-  if (unlikely(tb->nuse == MAX_INT)) {  /* too many strings? */
+  if (l_unlikely(tb->nuse == MAX_INT)) {  /* too many strings? */
     luaC_fullgc(L, 1);  /* try to free some... */
     if (tb->nuse == MAX_INT)  /* still too many? */
       luaM_error(L);  /* cannot even create a message... */
@@ -193,7 +194,7 @@ static TString *internshrstr (lua_State *L, const char *str, size_t l) {
   TString **list = &tb->hash[lmod(h, tb->size)];
   lua_assert(str != NULL);  /* otherwise 'memcmp'/'memcpy' are undefined */
   for (ts = *list; ts != NULL; ts = ts->u.hnext) {
-    if (l == ts->shrlen && (memcmp(str, getstr(ts), l * sizeof(char)) == 0)) {
+    if (l == ts->shrlen && (memcmp(str, getshrstr(ts), l * sizeof(char)) == 0)) {
       /* found! */
       if (isdead(g, ts))  /* dead (but not collected yet)? */
         changewhite(ts);  /* resurrect it */
@@ -206,8 +207,8 @@ static TString *internshrstr (lua_State *L, const char *str, size_t l) {
     list = &tb->hash[lmod(h, tb->size)];  /* rehash with new size */
   }
   ts = createstrobj(L, l, LUA_VSHRSTR, h);
-  memcpy(getstr(ts), str, l * sizeof(char));
   ts->shrlen = cast_byte(l);
+  memcpy(getshrstr(ts), str, l * sizeof(char));
   ts->u.hnext = *list;
   *list = ts;
   tb->nuse++;
@@ -223,10 +224,10 @@ TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
     return internshrstr(L, str, l);
   else {
     TString *ts;
-    if (unlikely(l >= (MAX_SIZE - sizeof(TString))/sizeof(char)))
+    if (l_unlikely(l * sizeof(char) >= (MAX_SIZE - sizeof(TString))))
       luaM_toobig(L);
     ts = luaS_createlngstrobj(L, l);
-    memcpy(getstr(ts), str, l * sizeof(char));
+    memcpy(getlngstr(ts), str, l * sizeof(char));
     return ts;
   }
 }
@@ -259,7 +260,7 @@ Udata *luaS_newudata (lua_State *L, size_t s, int nuvalue) {
   Udata *u;
   int i;
   GCObject *o;
-  if (unlikely(s > MAX_SIZE - udatamemoffset(nuvalue)))
+  if (l_unlikely(s > MAX_SIZE - udatamemoffset(nuvalue)))
     luaM_toobig(L);
   o = luaC_newobj(L, LUA_VUSERDATA, sizeudata(nuvalue, s));
   u = gco2u(o);

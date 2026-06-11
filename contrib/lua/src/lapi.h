@@ -12,23 +12,26 @@
 #include "lstate.h"
 
 
-/* Increments 'L->top', checking for stack overflows */
-#define api_incr_top(L)   {L->top++; api_check(L, L->top <= L->ci->top, \
-				"stack overflow");}
+/* Increments 'L->top.p', checking for stack overflows */
+#define api_incr_top(L)	{L->top.p++; \
+			 api_check(L, L->top.p <= L->ci->top.p, \
+					"stack overflow");}
 
 
 /*
 ** If a call returns too many multiple returns, the callee may not have
 ** stack space to accommodate all results. In this case, this macro
-** increases its stack space ('L->ci->top').
+** increases its stack space ('L->ci->top.p').
 */
 #define adjustresults(L,nres) \
-    { if ((nres) <= LUA_MULTRET && L->ci->top < L->top) L->ci->top = L->top; }
+    { if ((nres) <= LUA_MULTRET && L->ci->top.p < L->top.p) \
+	L->ci->top.p = L->top.p; }
 
 
 /* Ensure the stack has at least 'n' elements */
-#define api_checknelems(L,n)	api_check(L, (n) < (L->top - L->ci->func), \
-				  "not enough elements in the stack")
+#define api_checknelems(L,n) \
+	api_check(L, (n) < (L->top.p - L->ci->func.p), \
+			  "not enough elements in the stack")
 
 
 /*
@@ -42,6 +45,8 @@
 
 #define hastocloseCfunc(n)	((n) < LUA_MULTRET)
 
+/* Map [-1, inf) (range of 'nresults') into (-inf, -2] */
 #define codeNresults(n)		(-(n) - 3)
+#define decodeNresults(n)	(-(n) - 3)
 
 #endif
