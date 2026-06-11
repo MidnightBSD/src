@@ -605,6 +605,7 @@ static int luaK_numberK (FuncState *fs, lua_Number r) {
   setfltvalue(&o, r);
   if (!luaV_flttointeger(r, &ik, F2Ieq))  /* not an integral value? */
     return addk(fs, &o, &o);  /* use number itself as key */
+#ifndef LUA_AVOID_FLOAT
   else {  /* must build an alternative key */
     const int nbm = l_floatatt(MANT_DIG);
     const lua_Number q = l_mathop(ldexp)(l_mathop(1.0), -nbm + 1);
@@ -616,6 +617,11 @@ static int luaK_numberK (FuncState *fs, lua_Number r) {
                 l_mathop(fabs)(r) >= l_mathop(1e6));
     return addk(fs, &kv, &o);
   }
+#else  /* MidnightBSD bootloader builds Lua without floats (LUA_FLOAT_INT64);
+       ** every number is an integer, so just use the number itself as the key. */
+  else
+    return addk(fs, &o, &o);
+#endif
 }
 
 

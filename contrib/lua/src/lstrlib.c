@@ -1142,6 +1142,7 @@ static void addquoted (luaL_Buffer *b, const char *s, size_t len) {
 }
 
 
+#ifndef LUA_AVOID_FLOAT
 /*
 ** Serialize a floating-point number in such a way that it can be
 ** scanned back by Lua. Use hexadecimal format for "common" numbers
@@ -1170,6 +1171,7 @@ static int quotefloat (lua_State *L, char *buff, lua_Number n) {
   /* for the fixed representations */
   return l_sprintf(buff, MAX_ITEM, "%s", s);
 }
+#endif
 
 
 static void addliteral (lua_State *L, luaL_Buffer *b, int arg) {
@@ -1183,9 +1185,13 @@ static void addliteral (lua_State *L, luaL_Buffer *b, int arg) {
     case LUA_TNUMBER: {
       char *buff = luaL_prepbuffsize(b, MAX_ITEM);
       int nb;
+#ifndef LUA_AVOID_FLOAT
       if (!lua_isinteger(L, arg))  /* float? */
         nb = quotefloat(L, buff, lua_tonumber(L, arg));
       else {  /* integers */
+#else
+      {
+#endif
         lua_Integer n = lua_tointeger(L, arg);
         const char *format = (n == LUA_MININTEGER)  /* corner case? */
                            ? "0x%" LUA_INTEGER_FRMLEN "x"  /* use hex */
@@ -1319,10 +1325,12 @@ static int str_format (lua_State *L) {
           nb = lua_number2strx(L, buff, maxitem, form,
                                   luaL_checknumber(L, arg));
           break;
+#ifndef LUA_AVOID_FLOAT
         case 'f':
           maxitem = MAX_ITEMF;  /* extra space for '%f' */
           buff = luaL_prepbuffsize(&b, maxitem);
           /* FALLTHROUGH */
+#endif
         case 'e': case 'E': case 'g': case 'G': {
           lua_Number n = luaL_checknumber(L, arg);
           checkformat(L, form, L_FMTFLAGSF, 1);
@@ -1428,9 +1436,13 @@ typedef struct Header {
 typedef enum KOption {
   Kint,		/* signed integers */
   Kuint,	/* unsigned integers */
+#ifndef LUA_AVOID_FLOAT
   Kfloat,	/* single-precision floating-point numbers */
+#endif
   Knumber,	/* Lua "native" floating-point numbers */
+#ifndef LUA_AVOID_FLOAT
   Kdouble,	/* double-precision floating-point numbers */
+#endif
   Kchar,	/* fixed-length strings */
   Kstring,	/* strings with prefixed length */
   Kzstr,	/* zero-terminated strings */
@@ -1500,9 +1512,13 @@ static KOption getoption (Header *h, const char **fmt, int *size) {
     case 'j': *size = sizeof(lua_Integer); return Kint;
     case 'J': *size = sizeof(lua_Integer); return Kuint;
     case 'T': *size = sizeof(size_t); return Kuint;
+#ifndef LUA_AVOID_FLOAT
     case 'f': *size = sizeof(float); return Kfloat;
+#endif
     case 'n': *size = sizeof(lua_Number); return Knumber;
+#ifndef LUA_AVOID_FLOAT
     case 'd': *size = sizeof(double); return Kdouble;
+#endif
     case 'i': *size = getnumlimit(h, fmt, sizeof(int)); return Kint;
     case 'I': *size = getnumlimit(h, fmt, sizeof(int)); return Kuint;
     case 's': *size = getnumlimit(h, fmt, sizeof(size_t)); return Kstring;
@@ -1632,6 +1648,7 @@ static int str_pack (lua_State *L) {
         packint(&b, (lua_Unsigned)n, h.islittle, size, 0);
         break;
       }
+#ifndef LUA_AVOID_FLOAT
       case Kfloat: {  /* C float */
         float f = (float)luaL_checknumber(L, arg);  /* get argument */
         char *buff = luaL_prepbuffsize(&b, sizeof(f));
@@ -1640,6 +1657,7 @@ static int str_pack (lua_State *L) {
         luaL_addsize(&b, size);
         break;
       }
+#endif
       case Knumber: {  /* Lua float */
         lua_Number f = luaL_checknumber(L, arg);  /* get argument */
         char *buff = luaL_prepbuffsize(&b, sizeof(f));
@@ -1648,6 +1666,7 @@ static int str_pack (lua_State *L) {
         luaL_addsize(&b, size);
         break;
       }
+#ifndef LUA_AVOID_FLOAT
       case Kdouble: {  /* C double */
         double f = (double)luaL_checknumber(L, arg);  /* get argument */
         char *buff = luaL_prepbuffsize(&b, sizeof(f));
@@ -1656,6 +1675,7 @@ static int str_pack (lua_State *L) {
         luaL_addsize(&b, size);
         break;
       }
+#endif
       case Kchar: {  /* fixed-size string */
         size_t len;
         const char *s = luaL_checklstring(L, arg, &len);
@@ -1777,24 +1797,28 @@ static int str_unpack (lua_State *L) {
         lua_pushinteger(L, res);
         break;
       }
+#ifndef LUA_AVOID_FLOAT
       case Kfloat: {
         float f;
         copywithendian((char *)&f, data + pos, sizeof(f), h.islittle);
         lua_pushnumber(L, (lua_Number)f);
         break;
       }
+#endif
       case Knumber: {
         lua_Number f;
         copywithendian((char *)&f, data + pos, sizeof(f), h.islittle);
         lua_pushnumber(L, f);
         break;
       }
+#ifndef LUA_AVOID_FLOAT
       case Kdouble: {
         double f;
         copywithendian((char *)&f, data + pos, sizeof(f), h.islittle);
         lua_pushnumber(L, (lua_Number)f);
         break;
       }
+#endif
       case Kchar: {
         lua_pushlstring(L, data + pos, size);
         break;
