@@ -1,6 +1,9 @@
 Updating Information for MidnightBSD users.
 
 20260610:
+	libpcap: CVE-2025-11961 out-of-bounds read/write in
+	pcap_ether_aton via malformed MAC address string
+
 	ncurses: CVE-2025-6141 stack-based buffer overflow in
 	postprocess_termcap via crafted termcap ko capability
 
