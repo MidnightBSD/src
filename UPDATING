@@ -1,6 +1,9 @@
 Updating Information for MidnightBSD users.
 
 20260610:
+	ncurses: CVE-2025-6141 stack-based buffer overflow in
+	postprocess_termcap via crafted termcap ko capability
+
 	lua 5.4.7: CVE-2021-43519 C stack overflow via lua_resume
 
 	xz 5.8.3: CVE-2026-34743
