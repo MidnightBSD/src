@@ -32,37 +32,35 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _AQ_COMMON_H_
-#define _AQ_COMMON_H_
+#ifndef _AQ_STATS_H_
+#define _AQ_STATS_H_
 
 #include <sys/types.h>
 
-#define ETIME ETIMEDOUT
-#define EOK 0
+struct aq_stats_s {
+	uint64_t good_pkts_rcvd;
+	uint64_t ucast_pkts_rcvd;
+	uint64_t mcast_pkts_rcvd;
+	uint64_t bcast_pkts_rcvd;
+	uint64_t pause_frames_rcvd;
+	uint64_t rsc_pkts_rcvd;
+	uint64_t err_pkts_rcvd;
+	uint64_t drop_pkts_dma;
+	uint64_t good_octets_rcvd;
+	uint64_t ucast_octets_rcvd;
+	uint64_t mcast_octets_rcvd;
+	uint64_t bcast_octets_rcvd;
 
-#define BIT(nr) (1UL << (nr))
+	uint64_t good_pkts_txd;
+	uint64_t ucast_pkts_txd;
+	uint64_t mcast_pkts_txd;
+	uint64_t bcast_pkts_txd;
+	uint64_t pause_frames_txd;
+	uint64_t err_pkts_txd;
+	uint64_t good_octets_txd;
+	uint64_t ucast_octets_txd;
+	uint64_t mcast_octets_txd;
+	uint64_t bcast_octets_txd;
+};
 
-#define usec_delay(x) DELAY(x)
-
-#ifndef msec_delay
-#define msec_delay(x) DELAY(x * 1000)
-#define msec_delay_irq(x) DELAY(x * 1000)
-#endif
-
-#define AQ_HW_WAIT_FOR(_B_, _US_, _N_)              \
-	do {                                        \
-		unsigned int i;                     \
-		for (i = _N_; (!(_B_)) && i; --i) { \
-			usec_delay(_US_);           \
-		}                                   \
-		if (!i) {                           \
-			err = ETIME;                \
-		}                                   \
-	} while (0)
-
-#define LOWORD(a) ((uint16_t)(a))
-#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
-
-#define AQ_VER "0.2.0"
-
-#endif // _AQ_COMMON_H_
+#endif /* _AQ_STATS_H_ */

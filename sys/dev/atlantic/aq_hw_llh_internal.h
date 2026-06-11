@@ -43,7 +43,7 @@
  * base address: 0x000003a0
  * parameter: semaphore {s} | stride size 0x4 | range [0, 15]
  */
-#define glb_cpu_sem_adr(semaphore)  (0x000003a0u + (semaphore) * 0x4)
+#define glb_cpu_sem_adr(semaphore) (0x000003a0u + (semaphore) * 0x4)
 /* register address for bitfield rx dma good octet counter lsw [1f:0] */
 #define stats_rx_dma_good_octet_counterlsw__adr 0x00006808
 /* register address for bitfield rx dma good packet counter lsw [1f:0] */
@@ -93,6 +93,21 @@
 
 /* preprocessor definitions for msm tx multicast frames counter register */
 #define mac_msm_tx_mcst_frm_cnt_adr 0x00000110u
+
+/* preprocessor definitions for msm tx broadcast frames counter register */
+#define mac_msm_tx_bcst_frm_cnt_adr 0x00000118u
+
+/* preprocessor definitions for msm tx errors counter register */
+#define mac_msm_tx_errs_cnt_adr 0x00000140u
+
+/* preprocessor definitions for msm tx unicast octets counter register 0 */
+#define mac_msm_tx_ucst_octets_counter0_adr 0x00000150u
+
+/* preprocessor definitions for msm tx multicast octets counter register 1 */
+#define mac_msm_tx_mcst_octets_counter1_adr 0x00000158u
+
+/* preprocessor definitions for msm tx broadcast octets counter register 1 */
+#define mac_msm_tx_bcst_octets_counter1_adr 0x00000160u
 
 /*!  @name Global FW Image Identification 1 Definitions
 *
@@ -170,7 +185,6 @@
 #define glb_nvr_interface1_adr 0x00000100u
 /*@}*/
 
-
 /* rx dca_en bitfield definitions
  * preprocessor definitions for the bitfield "dca_en".
  * port="pif_rdm_dca_en_i"
@@ -189,7 +203,6 @@
 /* default value of bitfield dca_en */
 #define rdm_dca_en_default 0x1
 
-
 /*! @name MAC_PHY MPI register reset disable Bitfield Definitions
 *   Preprocessor definitions for the bitfield "MPI register reset disable".
 *   PORT="pif_mpi_reg_reset_dsbl_i"
@@ -207,7 +220,6 @@
 /*! \brief Default value of bitfield MPI register reset disable */
 #define mpi_tx_reg_res_dis_default 0x1
 /*@}*/
-
 
 /* rx dca_mode[3:0] bitfield definitions
  * preprocessor definitions for the bitfield "dca_mode[3:0]".
@@ -522,83 +534,85 @@
 /* Default value of bitfield imr_link[4:0] */
 #define itrImrLink_DEFAULT 0x0
 
-
 /* INTR imr_mif{M}_en Bitfield Definitions
-*  Preprocessor definitions for the bitfield "imr_mif{M}_en".
-*  Parameter: MIF {M} | bit-level stride | range [0, 3]
-*  PORT="pif_itr_map_mif_en_i[0]"
-*/
+ *  Preprocessor definitions for the bitfield "imr_mif{M}_en".
+ *  Parameter: MIF {M} | bit-level stride | range [0, 3]
+ *  PORT="pif_itr_map_mif_en_i[0]"
+ */
 /* Register address for bitfield imr_mif{M}_en */
-#define itrImrMifMEn_ADR(MIF) \
-	(((MIF) == 0) ? 0x0000218C : \
-	(((MIF) == 1) ? 0x0000218C : \
-	(((MIF) == 2) ? 0x0000218C : \
-	(((MIF) == 3) ? 0x0000218C : \
-	0))))
+#define itrImrMifMEn_ADR(MIF)                        \
+	(((MIF) == 0) ?                              \
+		0x0000218C :                         \
+		(((MIF) == 1) ?                      \
+			0x0000218C :                 \
+			(((MIF) == 2) ? 0x0000218C : \
+					(((MIF) == 3) ? 0x0000218C : 0))))
 /* Bitmask for bitfield imr_mif{M}_en */
-#define itrImrMifMEn_MSK(MIF) \
-	(((MIF) == 0) ? 0x80000000 : \
-	(((MIF) == 1) ? 0x00800000 : \
-	(((MIF) == 2) ? 0x00008000 : \
-	(((MIF) == 3) ? 0x00000080 : \
-	0))))
+#define itrImrMifMEn_MSK(MIF)                        \
+	(((MIF) == 0) ?                              \
+		0x80000000 :                         \
+		(((MIF) == 1) ?                      \
+			0x00800000 :                 \
+			(((MIF) == 2) ? 0x00008000 : \
+					(((MIF) == 3) ? 0x00000080 : 0))))
 /* Inverted bitmask for bitfield imr_mif{M}_en */
-#define itrImrMifMEn_MSKN(MIF) \
-	(((MIF) == 0) ? 0x7FFFFFFF : \
-	(((MIF) == 1) ? 0xFF7FFFFF : \
-	(((MIF) == 2) ? 0xFFFF7FFF : \
-	(((MIF) == 3) ? 0xFFFFFF7F : \
-	0))))
+#define itrImrMifMEn_MSKN(MIF)                       \
+	(((MIF) == 0) ?                              \
+		0x7FFFFFFF :                         \
+		(((MIF) == 1) ?                      \
+			0xFF7FFFFF :                 \
+			(((MIF) == 2) ? 0xFFFF7FFF : \
+					(((MIF) == 3) ? 0xFFFFFF7F : 0))))
 /* Lower bit position of bitfield imr_mif{M}_en */
-#define itrImrMifMEn_SHIFT(MIF) \
-	(((MIF) == 0) ? 31 : \
-	(((MIF) == 1) ? 23 : \
-	(((MIF) == 2) ? 15 : \
-	(((MIF) == 3) ? 7 : \
-	0))))
+#define itrImrMifMEn_SHIFT(MIF)      \
+	(((MIF) == 0) ?              \
+		31 :                 \
+		(((MIF) == 1) ? 23 : \
+				(((MIF) == 2) ? 15 : (((MIF) == 3) ? 7 : 0))))
 /* Width of bitfield imr_mif{M}_en */
 #define itrImrMifMEn_WIDTH 1
 /* Default value of bitfield imr_mif{M}_en */
 #define itrImrMifMEn_DEFAULT 0x0
 
 /* INTR imr_mif{M}[4:0] Bitfield Definitions
-*   Preprocessor definitions for the bitfield "imr_mif{M}[4:0]".
-*   Parameter: MIF {M} | bit-level stride | range [0, 3]
-*   PORT="pif_itr_map_mif0_i[4:0]"
-*/
+ *   Preprocessor definitions for the bitfield "imr_mif{M}[4:0]".
+ *   Parameter: MIF {M} | bit-level stride | range [0, 3]
+ *   PORT="pif_itr_map_mif0_i[4:0]"
+ */
 /* Register address for bitfield imr_mif{M}[4:0] */
-#define itrImrMifM_ADR(MIF) \
-	(((MIF) == 0) ? 0x0000218C : \
-	(((MIF) == 1) ? 0x0000218C : \
-	(((MIF) == 2) ? 0x0000218C : \
-	(((MIF) == 3) ? 0x0000218C : \
-	0))))
+#define itrImrMifM_ADR(MIF)                          \
+	(((MIF) == 0) ?                              \
+		0x0000218C :                         \
+		(((MIF) == 1) ?                      \
+			0x0000218C :                 \
+			(((MIF) == 2) ? 0x0000218C : \
+					(((MIF) == 3) ? 0x0000218C : 0))))
 /* Bitmask for bitfield imr_mif{M}[4:0] */
-#define itrImrMifM_MSK(MIF) \
-	(((MIF) == 0) ? 0x1F000000 : \
-	(((MIF) == 1) ? 0x001F0000 : \
-	(((MIF) == 2) ? 0x00001F00 : \
-	(((MIF) == 3) ? 0x0000001F : \
-	0))))
+#define itrImrMifM_MSK(MIF)                          \
+	(((MIF) == 0) ?                              \
+		0x1F000000 :                         \
+		(((MIF) == 1) ?                      \
+			0x001F0000 :                 \
+			(((MIF) == 2) ? 0x00001F00 : \
+					(((MIF) == 3) ? 0x0000001F : 0))))
 /* Inverted bitmask for bitfield imr_mif{M}[4:0] */
-#define itrImrMifM_MSKN(MIF) \
-	(((MIF) == 0) ? 0xE0FFFFFF : \
-	(((MIF) == 1) ? 0xFFE0FFFF : \
-	(((MIF) == 2) ? 0xFFFFE0FF : \
-	(((MIF) == 3) ? 0xFFFFFFE0 : \
-	0))))
+#define itrImrMifM_MSKN(MIF)                         \
+	(((MIF) == 0) ?                              \
+		0xE0FFFFFF :                         \
+		(((MIF) == 1) ?                      \
+			0xFFE0FFFF :                 \
+			(((MIF) == 2) ? 0xFFFFE0FF : \
+					(((MIF) == 3) ? 0xFFFFFFE0 : 0))))
 /* Lower bit position of bitfield imr_mif{M}[4:0] */
-#define itrImrMifM_SHIFT(MIF) \
-	(((MIF) == 0) ? 24 : \
-	(((MIF) == 1) ? 16 : \
-	(((MIF) == 2) ? 8 : \
-	(((MIF) == 3) ? 0 : \
-	0))))
+#define itrImrMifM_SHIFT(MIF)        \
+	(((MIF) == 0) ?              \
+		24 :                 \
+		(((MIF) == 1) ? 16 : \
+				(((MIF) == 2) ? 8 : (((MIF) == 3) ? 0 : 0))))
 /* Width of bitfield imr_mif{M}[4:0] */
 #define itrImrMifM_WIDTH 5
 /* Default value of bitfield imr_mif{M}[4:0] */
 #define itrImrMifM_DEFAULT 0x0
-
 
 /* Register address for bitfield int_mode[1:0] */
 #define itrIntMode_ADR 0x00002300
@@ -646,7 +660,7 @@
  * parameter: descriptor {d} | stride size 0x20 | range [0, 31]
  */
 #define rx_dma_desc_base_addrlsw_adr(descriptor) \
-(0x00005b00u + (descriptor) * 0x20)
+	(0x00005b00u + (descriptor) * 0x20)
 
 /* rx dma descriptor base address msw definitions
  * preprocessor definitions for rx dma descriptor base address msw
@@ -654,7 +668,7 @@
  * parameter: descriptor {d} | stride size 0x20 | range [0, 31]
  */
 #define rx_dma_desc_base_addrmsw_adr(descriptor) \
-(0x00005b04u + (descriptor) * 0x20)
+	(0x00005b04u + (descriptor) * 0x20)
 
 /* rx dma descriptor status register definitions
  * preprocessor definitions for rx dma descriptor status register
@@ -2687,8 +2701,7 @@
  */
 
 /* Register address for bitfield desc{D}_wrb_thresh[6:0] */
-#define tdm_desc_dwrb_thresh_adr(descriptor) \
-	(0x00007C18 + (descriptor) * 0x40)
+#define tdm_desc_dwrb_thresh_adr(descriptor) (0x00007C18 + (descriptor) * 0x40)
 /* Bitmask for bitfield desc{D}_wrb_thresh[6:0] */
 #define tdm_desc_dwrb_thresh_msk 0x00007F00
 /* Inverted bitmask for bitfield desc{D}_wrb_thresh[6:0] */
@@ -2770,7 +2783,6 @@
 #define tpb_tx_tc_mode_width 1
 /* default value of bitfield tx_tc_mode */
 #define tpb_tx_tc_mode_default 0x0
-
 
 /* tx tx{b}_hi_thresh[c:0] bitfield definitions
  * preprocessor definitions for the bitfield "tx{b}_hi_thresh[c:0]".
@@ -3248,7 +3260,7 @@
 
 /* tx dma descriptor base address msw definitions */
 #define tx_dma_desc_base_addrmsw_adr(descriptor) \
-        (0x00007c04u + (descriptor) * 0x40)
+	(0x00007c04u + (descriptor) * 0x40)
 
 /* tx interrupt moderation control register definitions
  * Preprocessor definitions for TX Interrupt Moderation Control Register
@@ -3275,7 +3287,6 @@
 #define pci_reg_res_dsbl_width 1
 /* default value of bitfield reg_res_dsbl */
 #define pci_reg_res_dsbl_default 0x1
-
 
 /* global microprocessor scratch pad definitions */
 #define glb_cpu_scratch_scp_adr(scratch_scp) (0x00000300u + (scratch_scp) * 0x4)
@@ -3321,13 +3332,13 @@
 /* mif uP mailbox data [1f:0] */
 #define mif_mcp_up_mailbox_data_adr 0x0000020cu
 
-#define HW_ATL_RX_CTRL_ADDR_BEGIN_FL3L4   0x00005380
-#define HW_ATL_RX_SRCA_ADDR_BEGIN_FL3L4   0x000053B0
-#define HW_ATL_RX_DESTA_ADDR_BEGIN_FL3L4  0x000053D0
+#define HW_ATL_RX_CTRL_ADDR_BEGIN_FL3L4 0x00005380
+#define HW_ATL_RX_SRCA_ADDR_BEGIN_FL3L4 0x000053B0
+#define HW_ATL_RX_DESTA_ADDR_BEGIN_FL3L4 0x000053D0
 
-#define HW_ATL_RX_GET_ADDR_CTRL_FL3L4(location)  \
+#define HW_ATL_RX_GET_ADDR_CTRL_FL3L4(location) \
 	(HW_ATL_RX_CTRL_ADDR_BEGIN_FL3L4 + ((location) * 0x4))
-#define HW_ATL_RX_GET_ADDR_SRCA_FL3L4(location)  \
+#define HW_ATL_RX_GET_ADDR_SRCA_FL3L4(location) \
 	(HW_ATL_RX_SRCA_ADDR_BEGIN_FL3L4 + ((location) * 0x4))
 #define HW_ATL_RX_GET_ADDR_DESTA_FL3L4(location) \
 	(HW_ATL_RX_DESTA_ADDR_BEGIN_FL3L4 + ((location) * 0x4))
