@@ -2,7 +2,7 @@ name: Claude Code Review
 
 on:
   pull_request:
-    branches: [ main, master ]
+    branches: [ master ]
     types: [ opened, reopened, synchronize ]
 
 permissions:
