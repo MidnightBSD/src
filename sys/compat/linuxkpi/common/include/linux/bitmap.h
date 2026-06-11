@@ -349,4 +349,25 @@ bitmap_free(const unsigned long *bitmap)
 	kfree(bitmap);
 }
 
+
+static inline void
+bitmap_to_arr32(uint32_t *dst, const unsigned long *src, unsigned int size)
+{
+	const unsigned int end = howmany(size, 32);
+
+#ifdef __LP64__
+	unsigned int i = 0;
+	while (i < end) {
+		dst[i++] = (uint32_t)(*src & UINT_MAX);
+		if (i < end)
+			dst[i++] = (uint32_t)(*src >> 32);
+		src++;
+	}
+#else
+	bitmap_copy((unsigned long *)dst, src, size);
+#endif
+	if ((size % 32) != 0)
+		dst[end - 1] &= (uint32_t)(UINT_MAX >> (32 - (size % 32)));
+}
+
 #endif					/* _LINUXKPI_LINUX_BITMAP_H_ */
