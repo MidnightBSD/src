@@ -1401,6 +1401,12 @@ pcie_bandwidth_available(struct pci_dev *pdev,
 	return (nwidth * PCIE_SPEED2MBS_ENC(nspeed));
 }
 
+static inline bool
+pcie_aspm_enabled(struct pci_dev *pdev)
+{
+	return (false);
+}
+
 static inline struct pci_dev *
 pcie_find_root_port(struct pci_dev *pdev)
 {
