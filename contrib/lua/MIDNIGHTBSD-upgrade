@@ -1,0 +1,64 @@
+Upgrade procedure for Lua
+
+Source: https://www.lua.org/ftp/lua-VERSION.tar.gz
+
+Lua is imported directly into contrib/lua (there is no vendor branch).
+The in-tree copy has three consumers:
+
+  - lib/liblua + libexec/flua   userland; full double-precision floats
+  - stand/liblua                the boot loader; built WITHOUT floats
+                                (-DLUA_FLOAT_TYPE=LUA_FLOAT_INT64, with
+                                 the 'float'/'double' keywords poisoned
+                                 in stand/defs.mk)
+
+To upgrade to a new version:
+
+1. Download and extract lua-VERSION.tar.gz.
+2. Replace contrib/lua/src/*.[ch] and contrib/lua/doc with the upstream
+   files (keep the MidnightBSD files: this file, Makefile, README).
+3. Re-apply the local patches listed below.  A pristine upstream import
+   WILL break the boot loader build.
+4. Refresh lib/liblua/luaconf.h and stand/liblua/luaconf.h for any new
+   luaconf.h additions (e.g. LUA_IGMARK, luai_likely/luai_unlikely).
+5. Build and test the loader (see "Verifying" below).
+
+Local patches applied on top of upstream:
+
+  Boot loader float-free build (LUA_AVOID_FLOAT).  Because the loader
+  builds Lua with LUA_NUMBER == int64_t and poisons the 'float' and
+  'double' keywords, every floating-point code path in the shared
+  sources must be compiled out:
+
+    contrib/lua/src/lcode.c    #ifndef LUA_AVOID_FLOAT guard around the
+                               float-key path in luaK_numberK() (its
+                               l_mathop(ldexp)(l_mathop(1.0), ...) cannot
+                               be expanded by the integer-only l_mathop).
+
+    contrib/lua/src/lstrlib.c  #ifndef LUA_AVOID_FLOAT guards around the
+                               C float/double pack and unpack cases, the
+                               Kfloat/Kdouble enum values and getdetails
+                               cases, quotefloat(), and the '%f' format
+                               path.
+
+  These guards are turned on by stand/liblua/luaconf.h, which in its
+  LUA_FLOAT_INT64 block must:
+    - define  l_floatatt(n)  as  (LUA_FLOAT_INT_HACK_##n)
+      (this is the Lua 5.4 name; do NOT leave it as the obsolete Lua 5.3
+       name l_mathlim, or lcode.c/lstrlib.c/lvm.c will fail to build), and
+    - #define LUA_AVOID_FLOAT
+
+  FreeBSD carries the same guards (they live in a separate
+  luaconf.local.h there); grep their contrib/lua and stand/liblua for
+  LUA_AVOID_FLOAT when refreshing.  Reference fix: MidnightBSD commit
+  071bc40926 (June 2026).
+
+Verifying the loader build:
+
+  make buildenv TARGET=amd64 TARGET_ARCH=amd64 \
+    BUILDENV_SHELL="sh -c 'cd stand/liblua && make'"
+
+  A pristine import fails with errors such as "l_floatatt undeclared",
+  "pasting formed 'lstd_1.0', an invalid preprocessing token", and
+  'float'/'double' keyword-poison hits in lstrlib.c.
+
+Last imported: 5.4.7 (2026-06-10)
