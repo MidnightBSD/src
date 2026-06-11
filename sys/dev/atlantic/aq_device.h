@@ -35,7 +35,12 @@
 #ifndef _AQ_DEVICE_H_
 #define _AQ_DEVICE_H_
 
+#include <sys/mutex.h>
+
 #include "aq_hw.h"
+#include "aq_stats.h"
+
+struct firmware;
 
 enum aq_media_type {
 	AQ_MEDIA_TYPE_UNKNOWN = 0,
@@ -43,108 +48,122 @@ enum aq_media_type {
 	AQ_MEDIA_TYPE_TP,
 };
 
-#define	AQ_LINK_UNKNOWN	0x00000000
-#define	AQ_LINK_100M	0x00000001
-#define	AQ_LINK_1G		0x00000002
-#define	AQ_LINK_2G5		0x00000004
-#define	AQ_LINK_5G		0x00000008
-#define	AQ_LINK_10G		0x00000010
+#define AQ_LINK_UNKNOWN 0x00000000
+#define AQ_LINK_10M 0x00000001
+#define AQ_LINK_100M 0x00000002
+#define AQ_LINK_1G 0x00000004
+#define AQ_LINK_2G5 0x00000008
+#define AQ_LINK_5G 0x00000010
+#define AQ_LINK_10G 0x00000020
 
-#define	AQ_LINK_ALL	(AQ_LINK_100M | AQ_LINK_1G | AQ_LINK_2G5 | AQ_LINK_5G | \
-					 AQ_LINK_10G )
+#define AQ_LINK_ALL \
+	(AQ_LINK_100M | AQ_LINK_1G | AQ_LINK_2G5 | AQ_LINK_5G | AQ_LINK_10G)
 
-struct aq_stats_s {
-    u64 prc;
-    u64 uprc;
-    u64 mprc;
-    u64 bprc;
-    u64 cprc;
-    u64 erpr;
-    u64 dpc;
-    u64 brc;
-    u64 ubrc;
-    u64 mbrc;
-    u64 bbrc;
-
-    u64 ptc;
-    u64 uptc;
-    u64 mptc;
-    u64 bptc;
-    u64 erpt;
-    u64 btc;
-    u64 ubtc;
-    u64 mbtc;
-    u64 bbtc;
-};
+#define AQ_EEE_100M BIT(0)
+#define AQ_EEE_1G BIT(1)
+#define AQ_EEE_2G5 BIT(2)
+#define AQ_EEE_5G BIT(3)
+#define AQ_EEE_10G BIT(4)
+#define AQ_EEE_ALL \
+	(AQ_EEE_100M | AQ_EEE_1G | AQ_EEE_2G5 | AQ_EEE_5G | AQ_EEE_10G)
 
 enum aq_dev_state_e {
-    AQ_DEV_STATE_UNLOAD,
-    AQ_DEV_STATE_PCI_STOP,
-    AQ_DEV_STATE_DOWN,
-    AQ_DEV_STATE_UP,
+	AQ_DEV_STATE_UNLOAD,
+	AQ_DEV_STATE_PCI_STOP,
+	AQ_DEV_STATE_DOWN,
+	AQ_DEV_STATE_UP,
 };
 
 struct aq_rx_filters {
-    unsigned int rule_cnt;
-    struct aq_rx_filter_vlan vlan_filters[AQ_HW_VLAN_MAX_FILTERS];
-    struct aq_rx_filter_l2 etype_filters[AQ_HW_ETYPE_MAX_FILTERS];
+	unsigned int rule_cnt;
+	struct aq_rx_filter_vlan vlan_filters[AQ_HW_VLAN_MAX_FILTERS];
+	struct aq_rx_filter_l2 etype_filters[AQ_HW_ETYPE_MAX_FILTERS];
+	struct aq_rx_filter_l3l4 l3l4_filters[AQ_HW_L3L4_MAX_FILTERS];
 };
 
 struct aq_vlan_tag {
 	SLIST_ENTRY(aq_vlan_tag) next;
-	uint16_t	tag;
+	uint16_t tag;
+};
+
+#define AQ_HOSTBOOT_NAME_LEN 64
+
+struct aq_hostboot_config {
+	bool force;
+	bool provisioning_override;
+	uint32_t provisioning_selector;
+	char fw_image[AQ_HOSTBOOT_NAME_LEN];
 };
 
 struct aq_dev {
-	device_t		dev;
-	if_ctx_t		ctx;
-	if_softc_ctx_t		scctx;
-	if_shared_ctx_t		sctx;
-	struct ifmedia *	media;
+	device_t dev;
+	if_ctx_t ctx;
+	if_softc_ctx_t scctx;
+	if_shared_ctx_t sctx;
+	struct ifmedia *media;
 
-    struct aq_hw          hw;
+	struct aq_hw hw;
+	struct mtx aq2_fw_request_mtx;
 
-	enum aq_media_type	media_type;
-	uint32_t		link_speeds;
-	uint32_t		chip_features;
-	uint32_t		mbox_addr;
-	uint8_t			mac_addr[ETHER_ADDR_LEN];
-	uint64_t		admin_ticks;
-	struct if_irq	irq;
-	int				msix;
+	enum aq_media_type media_type;
+	uint32_t link_speeds;
+	uint32_t chip_features;
+	uint32_t mbox_addr;
+	uint8_t mac_addr[ETHER_ADDR_LEN];
+	bool wol_phy;
+	uint32_t wol_mask;
+	uint32_t downshift;
+	bool media_detect;
+	int loopback_mode;
+	uint64_t admin_ticks;
+	struct if_irq irq;
+	int msix;
 
-	int			mmio_rid;
-	struct resource *	mmio_res;
-	bus_space_tag_t		mmio_tag;
-	bus_space_handle_t	mmio_handle;
-	bus_size_t		mmio_size;
+	int mmio_rid;
+	struct resource *mmio_res;
+	bus_space_tag_t mmio_tag;
+	bus_space_handle_t mmio_handle;
+	bus_size_t mmio_size;
 
-	struct aq_ring    *tx_rings[HW_ATL_B0_RINGS_MAX];
-	struct aq_ring    *rx_rings[HW_ATL_B0_RINGS_MAX];
-	uint32_t          tx_rings_count;
-	uint32_t          rx_rings_count;
-	bool              linkup;
-	int               media_active;
+	struct aq_ring *tx_rings[HW_ATL_B0_RINGS_MAX];
+	struct aq_ring *rx_rings[HW_ATL_B0_RINGS_MAX];
+	uint32_t tx_rings_count;
+	uint32_t rx_rings_count;
+	bool linkup;
+	int media_active;
 
-	struct aq_hw_stats_s  last_stats;
-	struct aq_stats_s     curr_stats;
+	bool last_stats_valid;
+	struct aq_stats_s last_stats;
+	struct aq_stats_s accum_stats;
 
-	bitstr_t               *vlan_tags;
-	int                     mcnt;
+	struct aq_rx_filters rx_filters;
 
-	uint8_t			rss_key[HW_ATL_RSS_HASHKEY_SIZE];
-	uint8_t			rss_table[HW_ATL_RSS_INDIRECTION_TABLE_MAX];
+	struct aq_hostboot_config hostboot_config;
+	char hostboot_fw_image[AQ_HOSTBOOT_NAME_LEN];
+
+	bitstr_t *vlan_tags;
+	int mcnt;
+
+	uint8_t rss_key[HW_ATL_RSS_HASHKEY_SIZE];
+	uint8_t rss_table[HW_ATL_RSS_INDIRECTION_TABLE_MAX];
 };
 
 typedef struct aq_dev aq_dev_t;
+
+static inline bool
+aq_rss_enabled(const struct aq_dev *aq_dev)
+{
+	return (aq_dev != NULL && aq_dev->rx_rings_count > 1);
+}
 
 int aq_update_hw_stats(aq_dev_t *aq_dev);
 void aq_initmedia(aq_dev_t *aq_dev);
 int aq_linkstat_isr(void *arg);
 int aq_isr_rx(void *arg);
-void aq_mediastatus_update(aq_dev_t *aq_dev, u32 link_speed, const struct aq_hw_fc_info *fc_neg);
+void aq_mediastatus_update(aq_dev_t *aq_dev, uint32_t link_speed,
+    const struct aq_hw_fc_info *fc_neg);
 void aq_mediastatus(struct ifnet *ifp, struct ifmediareq *ifmr);
 int aq_mediachange(struct ifnet *ifp);
 void aq_if_update_admin_status(if_ctx_t ctx);
 
-#endif
+#endif // _AQ_DEVICE_H_
