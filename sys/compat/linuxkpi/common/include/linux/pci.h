@@ -220,6 +220,8 @@ typedef int pci_power_t;
 #define PCI_D3hot	PCI_POWERSTATE_D3
 #define PCI_D3cold	4
 
+extern const char *pci_power_names[6];
+
 #define PCI_POWER_ERROR	PCI_POWERSTATE_UNKNOWN
 
 #define	PCI_ERR_ROOT_COMMAND		PCIR_AER_ROOTERR_CMD
@@ -341,6 +343,7 @@ struct pci_dev {
 	struct list_head	links;
 	struct pci_driver	*pdrv;
 	struct pci_bus		*bus;
+	pci_power_t		current_state;
 	uint16_t		device;
 	uint16_t		vendor;
 	uint16_t		subsystem_vendor;
@@ -1399,6 +1402,17 @@ pcie_bandwidth_available(struct pci_dev *pdev,
 		*width = nwidth;
 
 	return (nwidth * PCIE_SPEED2MBS_ENC(nspeed));
+}
+
+static inline const char *
+pci_power_name(pci_power_t state)
+{
+	int pstate = state + 1;
+
+	if (pstate >= 0 && pstate < nitems(pci_power_names))
+		return (pci_power_names[pstate]);
+	else
+		return (pci_power_names[0]);
 }
 
 static inline bool
