@@ -4,121 +4,85 @@
 
 Make `graphics/drm-515-kmod` (FreeBSD's backport of the Linux 5.15 DRM stack:
 `drm.ko`, `i915kms`, `amdgpu`, `radeonkms`, `ttm`) **compile and link** against
-MidnightBSD master. The port officially requires FreeBSD **14.x** and does not
-support 13.x.
+MidnightBSD master. The port officially requires FreeBSD **14.x**.
 
 **Committed scope: build + link only. Do not `kldload`.** Runtime bring-up
 (vt/newcons KMS console handoff, interrupts, suspend/resume, modesetting) is
-follow-on work, out of scope here.
+out of scope.
 
 ## Current state
 
 | Tree | Version | LinuxKPI level |
 |------|---------|----------------|
-| MidnightBSD master (`/usr/src`) | `__MidnightBSD_version 401002`, `__FreeBSD_version 1305500` | ad-hoc fork, ~FreeBSD **13.5-STABLE** with selective forward-ports |
+| MidnightBSD master (`/usr/src`) | `__MidnightBSD_version 401002`, `__FreeBSD_version 1305500` | ad-hoc fork, ~FreeBSD **13.5-STABLE** + selective forward-ports |
 | FreeBSD 14-STABLE (`/home/laffer1/git/freebsd`, `stable/14`) | `__FreeBSD_version 1404501` | reference target |
 
-MidnightBSD's `sys/compat/linuxkpi` is **not** a clean FreeBSD checkout. Its git
-history is a sequence of partial manual imports (FreeBSD 12-stable → 13-stable →
-13.5), including a DRM-motivated `THIS_MODULE` fix — so it already carries some
-14-era symbols (`pci_domain_nr`, `lkpi_pci_get_domain_bus_and_slot`) but lacks a
-coherent 14-level baseline.
+MidnightBSD's `sys/compat/linuxkpi` is a series of ad-hoc partial imports from
+FreeBSD 12 → 13 → 13.5, already partly forward-ported (e.g. `pci_domain_nr`).
 
-## Key finding that reframes the gap
+## Key findings
 
-`dma-buf.h`, `dma-fence.h`, `dma-resv.h` are **absent from both** MidnightBSD and
-FreeBSD 14 base LinuxKPI. They are **shipped by the drm-kmod port itself** (its
-bundled GPLv2 headers). They are therefore **not** base-kernel gaps — an initial
-read that flagged them as "blocking" was wrong. The real gap is the LinuxKPI
-delta between MidnightBSD (~13.5) and FreeBSD 14-STABLE.
+1. **`dma-buf.h` / `dma-fence.h` / `dma-resv.h` are NOT base gaps.** They are
+   absent from *both* MidnightBSD and FreeBSD 14 base LinuxKPI — the drm-kmod
+   **port ships them itself** (bundled GPLv2 headers). Not our problem to add.
 
-The file-level diff below is a **floor**, not the full gap: the port also relies
-on intra-file API additions inside headers MidnightBSD already has.
+2. **A wholesale FreeBSD 14 LinuxKPI import is the WRONG approach.** Empirically
+   verified: overlaying FreeBSD 14's `common/{include,src}` and building fails on
+   **base-kernel API deltas** that recur in nearly every file —
+   - `sched.h` → `td_ast_pending` / `TDA_SCHED` (FreeBSD 14 **AST framework**)
+   - `net.h` → `pr_peeraddr` / `pr_sockaddr` (FreeBSD 14 **protosw refactor**)
+   - `file.h` / `linux_compat.c` → `fget_unlocked`, `fo_stat_t`, const `fileops`
+   - `rbtree.h` (`sys/tree.h` macro arity), `kmem_free(void*)`, `qsort_r`
+   MidnightBSD's base has **none** of these. Wholesale import would require
+   backporting the AST framework, the protosw refactor, and the file/fileops
+   API into MidnightBSD's base kernel — a larger, riskier project than the drm
+   port itself, destabilizing unrelated subsystems.
 
-### Missing headers (`sys/compat/linuxkpi/common/include/linux/`)
+3. **MidnightBSD's existing LinuxKPI already correctly targets its 13.5 base.**
+   The real gap is the *additive* FreeBSD 14 files (new headers + new modules),
+   not re-importing existing files.
 
-`aperture.h`, `iosys-map.h`, `hdmi.h`, `iommu.h`, `irqdomain.h`, `ioport.h`,
-`io-64-nonatomic-lo-hi.h`, `cleanup.h`, `container_of.h`, `build_bug.h`,
-`minmax.h`, `math.h`, `limits.h`, `kstrtox.h`, `string_helpers.h`, `nodemask.h`,
-`dynamic_debug.h`, `of.h`, `agp_backend.h`, `apple-gmux.h`, the `device/`
-subdir, plus the `kunit/` and `xen/` include trees.
+## Approach: hybrid (additive import + targeted backports)
 
-### Missing sources (`sys/compat/linuxkpi/common/src/`)
+Keep MidnightBSD's existing, base-compatible LinuxKPI files. Add only the
+genuinely-new FreeBSD 14 pieces drm needs, and backport individual new symbols
+into existing headers only where they don't drag base-incompatible changes.
 
-`linux_aperture.c`, `linux_cmdline.c`, `linux_hdmi.c`, `linux_kobject.c`,
-`linuxkpi_hdmikmod.c`, `linuxkpi_videokmod.c` (HDMI infoframe + ACPI
-video/backlight modules the DRM drivers link against).
+### Workstream A — LinuxKPI uplift (in `/usr/src`)  — IN PROGRESS
 
-### Intra-file deltas to re-sync to 14-STABLE
+- [x] Import additive FreeBSD 14 headers (`aperture.h`, `iosys-map.h`, `hdmi.h`,
+      `iommu.h`, `irqdomain.h`, `ioport.h`, `io-64-nonatomic-lo-hi.h`,
+      `cleanup.h`, `container_of.h`, `build_bug.h`, `minmax.h`, `math.h`,
+      `limits.h`, `kstrtox.h`, `string_helpers.h`, `nodemask.h`, `of.h`,
+      `agp_backend.h`, `apple-gmux.h`, `device/`, `video/`, dummy `sysfb.h`).
+- [x] Add `linuxkpi_hdmi` and `linuxkpi_video` modules (HDMI infoframe,
+      ACPI-video/backlight, framebuffer aperture) + register in
+      `sys/modules/Makefile`. **Both build clean.**
+- [x] Backport `devm_add_action()/devm_add_action_or_reset()` (needed by
+      `linux_aperture.c`).
+- [ ] Backport further individual symbols as the drm port build demands them
+      (iterative, localized — keep MidnightBSD base semantics, do NOT pull the
+      AST/protosw/file base reworks).
+- Note: `linux_kobject.c` is intentionally NOT imported — FreeBSD 14 split it
+  out of `linux_compat.c`, which MidnightBSD still carries inline (would dup).
 
-`pci.h` / `linux_pci.c` (the port's `extra-patch-linuxkpi-pci`, gated
-`>=1403508`, assumes the 14-era `to_pci_dev(dev->dev)->bus` + `pci_domain_nr`
-shape), `iosys-map.h` (replaces the older `dma-buf-map.h`), `mm.h`, `device.h`,
-`shrinker.h`.
+### Workstream B — Port recognizes MidnightBSD (in `/usr/ports/graphics/`) — TODO
 
-### Already present — no work needed
-
-`sys/dev/vt` (newcons + `hw/fb` `vt_fb` + `hw/efifb`), `sys/dev/drm2/ttm`,
-`sys/dev/acpica`, and the build glue in `sys/conf/kmod.mk`
-(`LINUXKPI_GENSRCS` / `LINUXKPI_INCLUDES` already match FreeBSD 14).
-
-## Plan
-
-Two independent workstreams.
-
-### A. LinuxKPI uplift to FreeBSD 14-STABLE (in `/usr/src`)
-
-**Wholesale vendor import** of FreeBSD 14-STABLE's `sys/compat/linuxkpi` via the
-repo's vendor-import workflow, establishing a clean 14-level baseline, then fix
-base-kernel build breaks. Chosen over cherry-picking the ~28 missing files
-because the port also depends on intra-file API additions, and the existing
-ad-hoc state is harder to reason about than a clean re-baseline.
-
-**Base-kernel dependency reconciliation** (where the real effort/risk is). The
-14-level LinuxKPI calls base facilities that evolved 13.5→14. Iterate until the
-modules link:
-
-1. Build kernel + modules; collect undefined-symbol / signature errors.
-2. For each, grep the FreeBSD 14 implementation for the base call
-   (`vm_page`/pctrie, `bus_dma`, `taskqueue`, `sysctl`, `kobject`/sysfs, fbio)
-   and confirm it exists at the right signature in `/usr/src/sys`.
-3. Backport the minimal base KPI (or shim it) as separate, reviewable commits.
-
-### B. Make the port recognize MidnightBSD (in `/usr/ports/graphics/`)
-
-Patch the port Makefile locally rather than bumping `__FreeBSD_version`
-(version bump = repo-wide blast radius). In
-`/usr/ports/graphics/drm-515-kmod/Makefile` (and the `drm-kmod` meta-port as
-needed):
-
-- Drop/adjust the `OPSYS != FreeBSD` → `IGNORE` guard so MidnightBSD is allowed.
-- Gate the `OSVERSION` / `extra-patch-linuxkpi-pci` branches on a MidnightBSD
-  capability condition (e.g. `__MidnightBSD_version`) instead of `1403508` /
-  `1500065`, so the PCI patch applies given our 14-level `pci.h`.
+Patch `graphics/drm-515-kmod` (and `drm-kmod` meta-port) locally rather than
+bumping `__FreeBSD_version`:
+- Drop the `OPSYS != FreeBSD` → `IGNORE` guard.
+- Gate `OSVERSION` / `extra-patch-linuxkpi-pci` on `__MidnightBSD_version`.
 - Confirm `USES=kmod` finds `SRC_BASE=/usr/src/sys/Makefile`; build
-  `gpu-firmware-kmod` (firmware-only, low risk).
-
-## Critical files
-
-- `/usr/src/sys/compat/linuxkpi/common/{include,src}/` — import target (A)
-- `/usr/src/sys/sys/param.h` — version constants (read; bump only if route B changes)
-- `/usr/src/sys/conf/kmod.mk` — build glue (verify; already 14-aligned)
-- `/home/laffer1/git/freebsd/sys/compat/linuxkpi/` — FreeBSD 14-STABLE source of truth
-- `/usr/ports/graphics/drm-515-kmod/{Makefile,Makefile.version,files/extra-patch-linuxkpi-pci}`
-- `/usr/ports/graphics/drm-kmod/Makefile`, `/usr/ports/graphics/gpu-firmware-kmod/`
+  `gpu-firmware-kmod`.
 
 ## Verification (build-only; do NOT kldload)
 
-1. `cd /usr/src && make buildkernel` — kernel + in-tree LinuxKPI compile clean
-   after import + dependency fixes.
-2. `cd /usr/ports/graphics/drm-515-kmod && make` — port no longer `IGNORE`s and
-   compiles; confirm `work/.../{drm,i915kms,amdgpu,radeonkms,ttm}.ko` produced.
-3. Static link sanity: `nm -u` on the `.ko`s to confirm no unresolved LinuxKPI
-   symbols against the built kernel. **No `kldload`.**
-4. Run the C precommit sanity (cppcheck / clang-format) on base-kernel shim
-   commits.
+1. `cd /usr/src/sys/modules/linuxkpi{,_hdmi,_video} && make` — clean. (done)
+2. `cd /usr/ports/graphics/drm-515-kmod && make` — no `IGNORE`; produces
+   `drm/i915kms/amdgpu/radeonkms/ttm .ko`.
+3. `nm -u` the `.ko`s for unresolved LinuxKPI symbols against the built kernel.
+4. cppcheck/clang-format sanity on any base-compat backport commits.
 
 ## Out of scope (follow-on)
-
-`kldload`, vt/newcons KMS console handoff, interrupt routing, suspend/resume,
+`kldload`, vt/newcons KMS console handoff, interrupts, suspend/resume,
 on-hardware modesetting.
