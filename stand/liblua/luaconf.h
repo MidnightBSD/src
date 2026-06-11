@@ -474,7 +474,7 @@
 
 #define LUA_NUMBER	int64_t
 
-#define l_mathlim(n)		(LUA_FLOAT_INT_HACK_##n)
+#define l_floatatt(n)		(LUA_FLOAT_INT_HACK_##n)
 #define LUA_FLOAT_INT_HACK_MANT_DIG	32
 #define LUA_FLOAT_INT_HACK_MAX_10_EXP	32
 
@@ -484,6 +484,9 @@
 #define LUA_NUMBER_FMT		"%" PRId64
 
 #define l_mathop(x)		(lstd_ ## x)
+
+/* No floating point in the loader; avoid float-only code paths. */
+#define LUA_AVOID_FLOAT
 
 #define lua_str2number(s,p)	strtoll((s), (p), 0)
 
