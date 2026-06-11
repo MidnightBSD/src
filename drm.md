@@ -66,14 +66,21 @@ into existing headers only where they don't drag base-incompatible changes.
 - Note: `linux_kobject.c` is intentionally NOT imported — FreeBSD 14 split it
   out of `linux_compat.c`, which MidnightBSD still carries inline (would dup).
 
-### Workstream B — Port recognizes MidnightBSD (in `/usr/ports/graphics/`) — TODO
+### Workstream B — Create drm-515-kmod in mports (in `/usr/mports`) — TODO
 
-Patch `graphics/drm-515-kmod` (and `drm-kmod` meta-port) locally rather than
-bumping `__FreeBSD_version`:
-- Drop the `OPSYS != FreeBSD` → `IGNORE` guard.
-- Gate `OSVERSION` / `extra-patch-linuxkpi-pci` on `__MidnightBSD_version`.
-- Confirm `USES=kmod` finds `SRC_BASE=/usr/src/sys/Makefile`; build
-  `gpu-firmware-kmod`.
+NOTE: `/usr/ports` here is the upstream **FreeBSD** ports tree and is not
+operational under MidnightBSD make (`bsd.port.options.mk` not found,
+`${OPSYS}` conditionals malformed). MidnightBSD uses **mports** at
+`/usr/mports`, which already ships a MidnightBSD-adapted `graphics/drm-510-kmod`
+(uses `bsd.mport.options.mk`, `IGNORE_MidnightBSD_3.x`, already
+`CONFLICTS_INSTALL` with `drm-515-kmod`) and `gpu-firmware-kmod`.
+
+- Create `graphics/drm-515-kmod` by copying mports `drm-510-kmod` and bumping
+  `Makefile.version` to 5.15.160 / `drm_v5.15.160_6`; refresh `distinfo`,
+  `pkg-plist`, and the `extra-patch-linuxkpi-pci` (gate decided by build).
+- Build via mports against `/usr/src` (our uplifted LinuxKPI); iterate
+  base-compat backports (Workstream A) as drm source demands them.
+- mports is a separate git repo (MidnightBSD/mports) → a second PR.
 
 ## Verification (build-only; do NOT kldload)
 
