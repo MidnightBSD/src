@@ -226,6 +226,9 @@ int hdmi_spd_infoframe_init(struct hdmi_spd_infoframe *frame,
 {
 	size_t len;
 
+	if (frame == NULL || vendor == NULL || product == NULL)
+		return -EINVAL;
+
 	memset(frame, 0, sizeof(*frame));
 
 	frame->type = HDMI_INFOFRAME_TYPE_SPD;
