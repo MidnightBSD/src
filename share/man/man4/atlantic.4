@@ -25,12 +25,12 @@
 .\"
 .\" * Other names and brands may be claimed as the property of others.
 .\"
-.Dd October 4, 2024
+.Dd June 11, 2026
 .Dt ATLANTIC 4
 .Os
 .Sh NAME
-.Nm atlantic 
-.Nd "Aquantia Aqtion multigigabit adapter"
+.Nm atlantic
+.Nd Aquantia and Marvell AQtion multigigabit Ethernet adapter driver
 .Sh SYNOPSIS
 To compile this driver into the kernel,
 place the following lines in your
@@ -45,27 +45,47 @@ module at boot time, place the following line in
 .Bd -literal -offset indent
 if_atlantic_load="YES"
 .Ed
+.Pp
+The
+.Nm
+driver is included in the
+.Dv GENERIC
+kernel on
+.Dv amd64 .
 .Sh DESCRIPTION
 The
 .Nm
-driver is an expermental driver for Aquantia Aqtion NICs written by the company
-for
-.Fx .
-.Pp
+driver supports Aquantia and Marvell AQtion PCI Express multigigabit
+Ethernet adapters, including Atlantic and Atlantic 2 devices.
 .Sh HARDWARE
 The
 .Nm
-driver supports multigigabit adapters at speeds of
-1G, 2.5G, 5G and 10G.
+driver supports adapters at speeds of
+10M, 100M, 1G, 2.5G, 5G, and 10G, depending on the controller.
+.Pp
+Supported controllers include:
+.Pp
+.Bl -bullet -compact
+.It
+Aquantia AQC100, AQC100S, AQC107, AQC107S, AQC108, AQC108S,
+AQC109, AQC109S, AQC111, AQC111S, AQC112, and AQC112S
+.It
+Marvell/Aquantia AQC113, AQC113C, AQC113CA, AQC113CS, AQC114CS,
+AQC115C, and AQC116C
+.El
 .Sh LOADER TUNABLES
 Tunables can be set at the
 .Xr loader 8
 prompt before booting the kernel or stored in
 .Xr loader.conf 5 .
+.Pp
+The driver uses the
+.Xr firmware 9
+framework for adapters that require host-provided firmware.
 .Sh SUPPORT
 For general information and support,
 go to the aQuantia support website at:
-.Pa http://www.marvell.com/ 
+.Pa https://www.marvell.com/
 and
 .Pa https://github.com/Aquantia/aqtion-freebsd .
 .Sh SEE ALSO
@@ -78,9 +98,10 @@ and
 The
 .Nm
 device driver first appeared in
-.Mx 4.0.
+.Mx 4.0 .
 .Sh AUTHORS
 .An -nosplit
 The
 .Nm
-driver was written by Aquantia.
+driver was written by
+.An Aquantia .

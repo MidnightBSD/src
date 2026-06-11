@@ -1306,6 +1306,34 @@ dev/ath/ath_rate/sample/sample.c	optional ath_rate_sample \
 dev/ath/ath_dfs/null/dfs_null.c	optional ath \
 	compile-with "${NORMAL_C} -I$S/dev/ath"
 #
+dev/atlantic/aq_dbg.c			optional atlantic iflib pci \
+	compile-with "${NORMAL_C} -DIFLIB -I$S/dev/atlantic"
+dev/atlantic/aq_fw.c			optional atlantic iflib pci \
+	compile-with "${NORMAL_C} -DIFLIB -I$S/dev/atlantic"
+dev/atlantic/aq_fw1x.c			optional atlantic iflib pci \
+	compile-with "${NORMAL_C} -DIFLIB -I$S/dev/atlantic"
+dev/atlantic/aq_fw2x.c			optional atlantic iflib pci \
+	compile-with "${NORMAL_C} -DIFLIB -I$S/dev/atlantic"
+dev/atlantic/aq_fw_aq2.c		optional atlantic iflib pci \
+	compile-with "${NORMAL_C} -DIFLIB -I$S/dev/atlantic"
+dev/atlantic/aq_hostboot.c		optional atlantic iflib pci \
+	compile-with "${NORMAL_C} -DIFLIB -I$S/dev/atlantic"
+dev/atlantic/aq_hostboot_aq2.c		optional atlantic iflib pci \
+	compile-with "${NORMAL_C} -DIFLIB -I$S/dev/atlantic"
+dev/atlantic/aq_hostboot_legacy.c	optional atlantic iflib pci \
+	compile-with "${NORMAL_C} -DIFLIB -I$S/dev/atlantic"
+dev/atlantic/aq_hw.c			optional atlantic iflib pci \
+	compile-with "${NORMAL_C} -DIFLIB -I$S/dev/atlantic"
+dev/atlantic/aq_hw_llh.c		optional atlantic iflib pci \
+	compile-with "${NORMAL_C} -DIFLIB -I$S/dev/atlantic"
+dev/atlantic/aq_irq.c			optional atlantic iflib pci \
+	compile-with "${NORMAL_C} -DIFLIB -I$S/dev/atlantic"
+dev/atlantic/aq_main.c			optional atlantic iflib pci \
+	compile-with "${NORMAL_C} -DIFLIB -I$S/dev/atlantic"
+dev/atlantic/aq_media.c			optional atlantic iflib pci \
+	compile-with "${NORMAL_C} -DIFLIB -I$S/dev/atlantic"
+dev/atlantic/aq_ring.c			optional atlantic iflib pci \
+	compile-with "${NORMAL_C} -DIFLIB -I$S/dev/atlantic"
 dev/backlight/backlight_if.m		optional backlight | compat_linuxkpi
 dev/backlight/backlight.c		optional backlight | compat_linuxkpi
 dev/bce/if_bce.c			optional bce

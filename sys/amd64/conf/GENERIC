@@ -241,7 +241,7 @@ device		vmx			# VMware VMXNET3 Ethernet
 device		axp			# AMD EPYC integrated NIC
 
 # PCI Ethernet NICs.
-#device		atlantic		# Aquantia aqtion multigigabit NIC
+device		atlantic		# Aquantia/Marvell AQtion multigigabit NIC
 device		bxe			# Broadcom NetXtreme II BCM5771X/BCM578XX 10GbE
 device		le			# AMD Am7900 LANCE and Am79C9xx PCnet
 device		ti			# Alteon Networks Tigon I/II gigabit Ethernet
