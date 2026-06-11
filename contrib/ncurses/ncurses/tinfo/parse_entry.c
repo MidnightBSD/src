@@ -941,6 +941,8 @@ postprocess_termcap(TERMTYPE2 *tp, bool has_base)
 	    bp = tp->Strings[from_ptr->nte_index];
 	    if (VALID_STRING(bp)) {
 		for (dp = buf2; *bp; bp++) {
+		    if ((size_t) (dp - buf2) >= (sizeof(buf2) - sizeof(TERMTYPE2)))
+			break;
 		    if (bp[0] == '$' && bp[1] == '<') {
 			while (*bp && *bp != '>') {
 			    ++bp;
