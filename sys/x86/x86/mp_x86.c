@@ -960,6 +960,127 @@ cpu_topo(void)
 	return (cg_root);
 }
 
+#ifdef SCHED_MIC
+/*
+ * Hybrid-core classification for the SCHED_MIC scheduler.  Each present CPU
+ * probes its own CPUID (it must run on that CPU) to determine its core type
+ * and the size of the last-level (L3) cache it participates in; a SYSINIT run
+ * after the APs are up then derives the per-CPU class in cpu_core_class[].
+ *
+ * Detection reliability:
+ *   Intel P vs E   - architectural (CPUID 0x1a EAX[31:24]).
+ *   Intel LP-E     - heuristic: SoC-tile LP-E cores have no L3, unlike
+ *                    compute-tile E-cores; gated by kern.sched.detect_lpe.
+ *   AMD X3D / Cx   - heuristic: the CCD/CCX with the larger L3 (3D V-Cache,
+ *                    or the full-size cache of classic cores) is preferred;
+ *                    symmetric or single-CCD parts stay all-perf (== ULE).
+ */
+extern int sched_detect_lpe;
+
+static u_int	mic_hybrid[MAXCPU];	/* CPUID 0x1a core type (Intel). */
+static uint64_t	mic_l3size[MAXCPU];	/* L3 bytes this CPU shares. */
+static bool	mic_has_l3[MAXCPU];	/* Whether an L3 was found. */
+
+static uint64_t
+mic_cache_size(const u_int *regs)
+{
+
+	return ((uint64_t)CPUID_CACHE_WAYS(regs[1]) *
+	    CPUID_CACHE_PARTITIONS(regs[1]) * CPUID_CACHE_LINE(regs[1]) *
+	    CPUID_CACHE_SETS(regs[2]));
+}
+
+static void
+mic_probe_cpu(void *arg __unused)
+{
+	u_int regs[4];
+	u_int id;
+	int i, leaf;
+
+	id = PCPU_GET(cpuid);
+	mic_hybrid[id] = 0;
+	mic_l3size[id] = 0;
+	mic_has_l3[id] = false;
+
+	if (cpu_vendor_id == CPU_VENDOR_INTEL && cpu_high >= 0x1a) {
+		cpuid_count(0x1a, 0, regs);
+		mic_hybrid[id] = regs[0] & CPUID_HYBRID_CORE_MASK;
+	}
+
+	/* Deterministic cache enumeration: AMD leaf 0x8000001d, Intel 0x04. */
+	if ((cpu_vendor_id == CPU_VENDOR_AMD ||
+	    cpu_vendor_id == CPU_VENDOR_HYGON) && cpu_exthigh >= 0x8000001d)
+		leaf = 0x8000001d;
+	else if (cpu_vendor_id == CPU_VENDOR_INTEL && cpu_high >= 4)
+		leaf = 0x04;
+	else
+		return;
+
+	for (i = 0; ; i++) {
+		cpuid_count(leaf, i, regs);
+		if (CPUID_CACHE_TYPE(regs[0]) == CPUID_CACHE_TYPE_NULL)
+			break;
+		if (CPUID_CACHE_LEVEL(regs[0]) == 3) {
+			mic_l3size[id] = mic_cache_size(regs);
+			mic_has_l3[id] = true;
+			break;
+		}
+	}
+}
+
+static void
+mic_classify(void *arg __unused)
+{
+	uint64_t maxl3;
+	int i;
+	bool amd, intel, asymmetric;
+
+	if (mp_ncpus <= 1)
+		return;			/* defaults: every CPU is class perf. */
+	amd = cpu_vendor_id == CPU_VENDOR_AMD ||
+	    cpu_vendor_id == CPU_VENDOR_HYGON;
+	intel = cpu_vendor_id == CPU_VENDOR_INTEL;
+	if (!amd && !intel)
+		return;
+
+	/* Each CPU records its own type/cache; we then derive classes. */
+	smp_rendezvous(NULL, mic_probe_cpu, NULL, NULL);
+
+	if (intel) {
+		CPU_FOREACH(i) {
+			if (mic_hybrid[i] == CPUID_HYBRID_LARGE_CORE)
+				cpu_core_class[i] = CPU_CLASS_PERF;
+			else if (mic_hybrid[i] == CPUID_HYBRID_SMALL_CORE)
+				cpu_core_class[i] = (sched_detect_lpe &&
+				    !mic_has_l3[i]) ? CPU_CLASS_LP :
+				    CPU_CLASS_EFF;
+			/* Non-hybrid Intel keeps the default class perf. */
+		}
+		return;
+	}
+
+	/* AMD/Hygon: the die with the largest L3 is preferred (class perf). */
+	maxl3 = 0;
+	CPU_FOREACH(i)
+		if (mic_has_l3[i] && mic_l3size[i] > maxl3)
+			maxl3 = mic_l3size[i];
+	if (maxl3 == 0)
+		return;			/* No L3 info; leave all class perf. */
+	asymmetric = false;
+	CPU_FOREACH(i)
+		if (mic_has_l3[i] && mic_l3size[i] != maxl3) {
+			asymmetric = true;
+			break;
+		}
+	if (!asymmetric)
+		return;			/* Single CCD / symmetric L3 == ULE. */
+	CPU_FOREACH(i)
+		if (!(mic_has_l3[i] && mic_l3size[i] == maxl3))
+			cpu_core_class[i] = CPU_CLASS_EFF;
+}
+SYSINIT(mic_classify, SI_SUB_SMP, SI_ORDER_ANY, mic_classify, NULL);
+#endif /* SCHED_MIC */
+
 static void
 cpu_alloc(void *dummy __unused)
 {

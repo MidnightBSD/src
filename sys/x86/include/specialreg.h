@@ -522,6 +522,29 @@
 #define	CPUID_HYBRID_CORE_MASK	0xff000000
 #define	CPUID_HYBRID_SMALL_CORE	0x20000000
 #define	CPUID_HYBRID_LARGE_CORE	0x40000000
+/*
+ * Native model ID, leaf 0x1a EAX[23:0].  Model-specific; used only as a
+ * heuristic (e.g. to separate LP-E from compute-tile E-cores) and not
+ * architecturally guaranteed across SKUs.
+ */
+#define	CPUID_HYBRID_NATIVE_MODEL_MASK	0x00ffffff
+
+/*
+ * Cache property fields shared by the deterministic cache enumeration
+ * leaves (Intel leaf 0x04 and AMD leaf 0x8000001d, identical layout).
+ * The SCHED_MIC scheduler uses these to compute per-CCD L3 sizes and
+ * distinguish AMD 3D V-Cache dies from compute dies.
+ *   size in bytes = ways * partitions * line_size * sets
+ */
+#define	CPUID_CACHE_TYPE(eax)		((eax) & 0x1f)
+#define	CPUID_CACHE_LEVEL(eax)		(((eax) >> 5) & 0x7)
+#define	CPUID_CACHE_SHARING(eax)	((((eax) >> 14) & 0xfff) + 1)
+#define	CPUID_CACHE_LINE(ebx)		(((ebx) & 0xfff) + 1)
+#define	CPUID_CACHE_PARTITIONS(ebx)	((((ebx) >> 12) & 0x3ff) + 1)
+#define	CPUID_CACHE_WAYS(ebx)		((((ebx) >> 22) & 0x3ff) + 1)
+#define	CPUID_CACHE_SETS(ecx)		((ecx) + 1)
+#define	CPUID_CACHE_TYPE_NULL		0	/* no more caches */
+#define	CPUID_CACHE_TYPE_UNIFIED	3
 
 /* MSR IA32_ARCH_CAP(ABILITIES) bits */
 #define	IA32_ARCH_CAP_RDCL_NO	0x00000001
