@@ -27,14 +27,13 @@
  */
 
 /*
- * This file implements the ULE scheduler.  ULE supports independent CPU
- * run queues and fine grain locking.  It has superior interactive
- * performance under load even on uni-processor systems.
+ * This file implements the MIC scheduler, based on ULE. It supports
+ * Intel and AMD hybrid core CPUs and attempts to optimize performance for them.
  *
  * etymology:
- *   ULE is the last three letters in schedule.  It owes its name to a
- * generic user created for a scheduling system by Paul Mikesell at
- * Isilon Systems and a general lack of creativity on the part of the author.
+ *   MIC is a nickname for Michaelangelo the cat, one of four cats from a litter 
+ *   named after the teenage mutant ninja turtles. MIC likes to party, and this
+ *   scheduler throws a hybrid CPU party.  
  */
 
 #include <sys/cdefs.h>
@@ -3326,7 +3325,7 @@ sysctl_kern_quantum(SYSCTL_HANDLER_ARGS)
 
 SYSCTL_NODE(_kern, OID_AUTO, sched, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
     "Scheduler");
-SYSCTL_STRING(_kern_sched, OID_AUTO, name, CTLFLAG_RD, "ULE", 0,
+SYSCTL_STRING(_kern_sched, OID_AUTO, name, CTLFLAG_RD, "MIC", 0,
     "Scheduler name");
 SYSCTL_PROC(_kern_sched, OID_AUTO, quantum,
     CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE, NULL, 0,
