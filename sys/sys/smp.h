@@ -108,6 +108,19 @@ typedef struct cpu_group *cpu_group_t;
 #define	CG_FLAG_NODE	0x04		/* NUMA node. */
 
 /*
+ * Heterogeneous (hybrid) core priority classes used by the SCHED_MIC
+ * scheduler.  Each logical CPU is assigned a static class; the dynamic
+ * "priority 3" (a busy core's free SMT thread) is computed at placement
+ * time and is therefore never stored.  cpu_core_class[] defaults to all
+ * CPU_CLASS_PERF, so non-hybrid (and non-x86) hardware behaves like ULE.
+ */
+#define	CPU_CLASS_PERF	1		/* P-core / AMD cache (V-Cache) CCD. */
+#define	CPU_CLASS_EFF	2		/* E-core / AMD compute CCD / C-core. */
+/* class 3 is dynamic (busy SMT sibling) and is never stored. */
+#define	CPU_CLASS_LP	4		/* Intel LP-E core (scheduled last). */
+extern uint8_t cpu_core_class[];
+
+/*
  * Convenience routines for building and traversing topologies.
  */
 #ifdef SMP

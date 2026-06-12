@@ -194,7 +194,8 @@ options 	ROOTDEVNAME=\"ufs:da0s2e\"
 #####################################################################
 # Scheduler options:
 #
-# Specifying one of SCHED_4BSD or SCHED_ULE is mandatory.  These options
+# Specifying one of SCHED_4BSD, SCHED_ULE, or SCHED_MIC is mandatory.  These
+# options
 # select which scheduler is compiled in.
 #
 # SCHED_4BSD is the historical, proven, BSD scheduler.  It has a global run
@@ -207,12 +208,21 @@ options 	ROOTDEVNAME=\"ufs:da0s2e\"
 # which leads to better responsiveness even on uniprocessor machines.  This
 # is the default scheduler.
 #
+# SCHED_MIC is SCHED_ULE extended with hybrid-core awareness.  On x86 CPUs with
+# heterogeneous cores it weighs four core priority classes when placing threads:
+# performance cores (Intel P-cores, AMD 3D V-Cache CCD) first, then efficiency
+# cores (Intel E-cores, AMD compute CCD, AMD mobile C-cores), then the second
+# SMT thread of a busy core, then Intel LP-E cores last.  Preference is a soft,
+# tunable bias (see kern.sched.class_weight_*, smt_busy_penalty, prefer_compute).
+# On homogeneous hardware it behaves like SCHED_ULE.
+#
 # SCHED_STATS is a debugging option which keeps some stats in the sysctl
 # tree at 'kern.sched.stats' and is useful for debugging scheduling decisions.
 #
 options 	SCHED_4BSD
 options 	SCHED_STATS
 #options 	SCHED_ULE
+#options 	SCHED_MIC
 
 #####################################################################
 # SMP OPTIONS:
