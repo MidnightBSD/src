@@ -1,0 +1,131 @@
+.\" Copyright (c) 2026 Lucas Holt
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHORS AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHORS OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.Dd June 11, 2026
+.Dt SCHED_MIC 4
+.Os
+.Sh NAME
+.Nm sched_mic
+.Nd hybrid-core-aware scheduler
+.Sh SYNOPSIS
+.Cd "options SCHED_MIC"
+.Sh DESCRIPTION
+The
+.Nm
+scheduler is derived from
+.Xr sched_ule 4
+and retains all of its behavior, adding awareness of heterogeneous
+.Pq Dq hybrid
+CPU cores on x86 systems.
+On processors that mix fast and efficient cores it weighs four core
+priority classes when placing a thread, preferring, in order:
+.Pp
+.Bl -enum -compact -offset indent
+.It
+performance cores
+.Pq Intel P-cores, AMD 3D V-Cache CCD cores ;
+.It
+efficiency cores
+.Pq Intel E-cores, AMD compute-CCD cores, AMD mobile \(dqC\(dq cores ;
+.It
+the second SMT thread of an already busy core; and
+.It
+Intel low-power
+.Pq LP-E
+cores, which are used last.
+.El
+.Pp
+The preference is a soft, tunable bias applied only when selecting a CPU
+for a thread; the long-term load balancer and work stealing remain
+unaware of core class and continue to balance by real load.
+On homogeneous hardware, and on architectures other than x86,
+.Nm
+behaves identically to
+.Xr sched_ule 4 .
+.Pp
+Core class is detected per-CPU at boot.
+Intel performance and efficiency cores are distinguished using the
+CPUID hybrid core-type leaf;
+AMD cache and compute dies are distinguished by comparing per-die
+last-level cache sizes.
+Processors that are not recognized as hybrid, and symmetric or
+single-die parts, are treated entirely as performance cores.
+.Pp
+Because
+.Nm
+is derived from
+.Xr sched_ule 4 ,
+all of that scheduler's
+.Va kern.sched
+sysctls apply.
+The following additional sysctls control hybrid-core placement:
+.Bl -tag -width indent
+.It Va kern.sched.class_weight_eff
+Load penalty added to efficiency-class cores
+.Pq class 2 .
+.It Va kern.sched.class_weight_lp
+Load penalty added to low-power
+.Pq LP-E, class 4
+cores, scheduled last.
+.It Va kern.sched.smt_busy_penalty
+Penalty applied to a free thread whose SMT sibling is busy.
+Setting this to
+.Li 0
+restores the SMT placement behavior of
+.Xr sched_ule 4 .
+.It Va kern.sched.prefer_compute
+For AMD hybrid CCD parts, selects which die is preferred:
+.Li 0
+.Pq the default
+favors the 3D V-Cache die, while
+.Li 1
+favors the compute
+.Pq frequency
+die.
+.It Va kern.sched.detect_lpe
+A boot-time tunable that enables detection of Intel LP-E cores as class 4.
+Setting it to
+.Li 0
+leaves those cores in the efficiency class.
+.It Va kern.sched.core_class
+This read-only sysctl reports the detected class of each CPU as a list of
+.Dq Va cpuid : Ns Va class
+pairs, where class 1 is performance, 2 efficiency, and 4 low-power.
+.El
+.Sh SEE ALSO
+.Xr sched_4bsd 4 ,
+.Xr sched_ule 4 ,
+.Xr sysctl 8
+.Sh HISTORY
+The
+.Nm
+scheduler first appeared in
+.Mx 4.0 .
+.Sh AUTHORS
+The
+.Nm
+scheduler was derived from the
+.Xr sched_ule 4
+scheduler by
+.An Jeff Roberson Aq Mt jeff@FreeBSD.org .
