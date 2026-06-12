@@ -12,6 +12,7 @@ PROG=		sqlite3
 SRCS=		shell.c
 		
 LIBADD+=	sqlite3
+LIBADD+=	m
 # readline
 
 .include <bsd.prog.mk>
