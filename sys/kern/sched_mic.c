@@ -300,7 +300,7 @@ static int __read_mostly trysteal_limit = 2;
  * tunable preference).  The required per-candidate cost ordering is
  *   idle perf (0) < idle eff < busy-sibling perf < idle LP.
  */
-static int __read_mostly sched_class_weight_eff = 64;	/* class 2 penalty. */
+static int __read_mostly sched_class_weight_eff = 160;	/* class 2 penalty. */
 static int __read_mostly sched_class_weight_lp = 512;	/* class 4 penalty. */
 static int __read_mostly sched_smt_busy_penalty = 192;	/* busy-sibling (pri 3). */
 static int __read_mostly sched_prefer_compute = 0;	/* AMD X3D cache<->compute. */

@@ -57,7 +57,7 @@ load = l * 256 + sched_class_cost(cg, c, l);
 
 The cost is, on the 256-points-per-thread scale ULE already uses:
 
-- class 2 (efficiency): `+ kern.sched.class_weight_eff`  (default 64)
+- class 2 (efficiency): `+ kern.sched.class_weight_eff`  (default 160)
 - class 4 (LP-E):       `+ kern.sched.class_weight_lp`   (default 512)
 - free thread whose SMT sibling is busy: `+ kern.sched.smt_busy_penalty` (192)
 
@@ -120,7 +120,7 @@ The CPUID cache-size field macros live in `sys/x86/include/specialreg.h`
 
 | sysctl | default | meaning |
 |---|---|---|
-| `class_weight_eff` | 64 | load penalty for class-2 cores |
+| `class_weight_eff` | 160 | load penalty for class-2 cores |
 | `class_weight_lp` | 512 | load penalty for class-4 (LP-E) cores |
 | `smt_busy_penalty` | 192 | penalty for a free thread whose SMT sibling is busy; `0` restores ULE SMT behavior |
 | `prefer_compute` | 0 | AMD hybrid CCD: `0` favors the cache (V-Cache) die, `1` favors the compute die |
