@@ -1408,7 +1408,7 @@ sched_pickcpu(struct thread *td, int flags)
 	struct td_sched *ts;
 	struct tdq *tdq;
 	cpuset_t *mask;
-	int cpu, pri, r, self, intr;
+	int class_aware, cpu, pri, r, self, intr;
 
 	self = PCPU_GET(cpuid);
 	ts = td_get_sched(td);
@@ -1489,32 +1489,36 @@ llc:
 	mask = &td->td_cpuset->cs_mask;
 	pri = td->td_priority;
 	r = TD_IS_RUNNING(td);
+	class_aware = !r;
 	/*
 	 * Try hard to keep interrupts within found LLC.  Search the LLC for
 	 * the least loaded CPU we can run now.  For NUMA systems it should
 	 * be within target domain, and it also reduces scheduling overhead.
 	 */
 	if (ccg != NULL && intr) {
-		cpu = sched_lowest(ccg, mask, pri, INT_MAX, ts->ts_cpu, r, 1);
+		cpu = sched_lowest(ccg, mask, pri, INT_MAX, ts->ts_cpu, r,
+		    class_aware);
 		if (cpu >= 0)
 			SCHED_STAT_INC(pickcpu_intrbind);
 	} else
 	/* Search the LLC for the least loaded idle CPU we can run now. */
 	if (ccg != NULL) {
 		cpu = sched_lowest(ccg, mask, max(pri, PRI_MAX_TIMESHARE),
-		    INT_MAX, ts->ts_cpu, r, 1);
+		    INT_MAX, ts->ts_cpu, r, class_aware);
 		if (cpu >= 0)
 			SCHED_STAT_INC(pickcpu_affinity);
 	}
 	/* Search globally for the least loaded CPU we can run now. */
 	if (cpu < 0) {
-		cpu = sched_lowest(cpu_top, mask, pri, INT_MAX, ts->ts_cpu, r, 1);
+		cpu = sched_lowest(cpu_top, mask, pri, INT_MAX, ts->ts_cpu, r,
+		    class_aware);
 		if (cpu >= 0)
 			SCHED_STAT_INC(pickcpu_lowest);
 	}
 	/* Search globally for the least loaded CPU. */
 	if (cpu < 0) {
-		cpu = sched_lowest(cpu_top, mask, -1, INT_MAX, ts->ts_cpu, r, 1);
+		cpu = sched_lowest(cpu_top, mask, -1, INT_MAX, ts->ts_cpu, r,
+		    class_aware);
 		if (cpu >= 0)
 			SCHED_STAT_INC(pickcpu_lowest);
 	}
