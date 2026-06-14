@@ -82,15 +82,19 @@ sysctls below.
 
 ### Worked examples
 
-- **Intel 13900K, all idle**: P-cores (cost 0) fill first, then E-cores (64),
+- **Intel 13900K, all idle**: P-cores (cost 0) fill first, then E-cores (160),
   LP-E (512) last.
 - **Intel, all P physical busy (1 thread each)**: a half-busy P SMT group costs
-  `256 + 192`; an idle 4-core E module costs `4 × 64 = 256`, so the next thread
-  takes an **E core before a P SMT sibling** (priority 2 before 3).
+  `256 + 192`; an idle E core costs `160`, so an acceptable E core is cheaper
+  than a P SMT sibling (priority 2 before 3).
 - **AMD 7950X3D, all idle**: the cache CCD (class 1) fills first; the 9th thread
   spills to a compute-CCD **physical** core before any cache-CCD SMT sibling.
   `kern.sched.prefer_compute=1` swaps the classes so the compute/frequency CCD
   is preferred instead.
+- **AMD asymmetric non-X3D, all idle**: the smaller-cache compute/C-core group is
+  preferred by default (`kern.sched.prefer_compute=1`).
+- **Intel power-saving mode**: setting `kern.sched.prefer_compute=1` swaps
+  class 1 and class 2, so E-cores are preferred over P-cores.
 - **Homogeneous box**: detection leaves every CPU class 1, so all cost terms are
   zero except the SMT-sibling penalty; set `kern.sched.smt_busy_penalty=0` for
   byte-identical ULE placement.
@@ -123,7 +127,7 @@ The CPUID cache-size field macros live in `sys/x86/include/specialreg.h`
 | `class_weight_eff` | 160 | load penalty for class-2 cores |
 | `class_weight_lp` | 512 | load penalty for class-4 (LP-E) cores |
 | `smt_busy_penalty` | 192 | penalty for a free thread whose SMT sibling is busy; `0` restores ULE SMT behavior |
-| `prefer_compute` | 0 | AMD hybrid CCD: `0` favors the cache (V-Cache) die, `1` favors the compute die |
+| `prefer_compute` | vendor policy | class preference swap; Intel defaults to `0` for P-cores and `1` favors E-cores, AMD X3D defaults to `0` for the V-Cache die, AMD asymmetric non-X3D defaults to `1` for smaller-cache compute/C-core groups |
 | `detect_lpe` | 1 | (boot tunable) detect LP-E cores as class 4; `0` leaves them class 2 |
 | `core_class` | (read-only) | debug dump of per-CPU class, `cpuid:class` pairs |
 
@@ -179,4 +183,4 @@ need their respective hardware / a booted MIC kernel.
   therefore holds firmly at light/moderate load and softens at saturation. To
   test the opposite tradeoff on real hardware — balancer *reinforces* packing —
   flip that single argument to `1`; which is better is hardware-dependent.
-- `prefer_compute` is global (fine for single-socket consumer X3D parts).
+- `prefer_compute` is global (fine for single-socket consumer X3D and hybrid mobile parts).

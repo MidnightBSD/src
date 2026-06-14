@@ -303,7 +303,7 @@ static int __read_mostly trysteal_limit = 2;
 static int __read_mostly sched_class_weight_eff = 160;	/* class 2 penalty. */
 static int __read_mostly sched_class_weight_lp = 512;	/* class 4 penalty. */
 static int __read_mostly sched_smt_busy_penalty = 192;	/* busy-sibling (pri 3). */
-static int __read_mostly sched_prefer_compute = 0;	/* AMD X3D cache<->compute. */
+int __read_mostly sched_prefer_compute = 0;	/* Swap class 1 and 2 preference. */
 /* Read by machine-dependent classification; enables Intel LP-E detection. */
 int sched_detect_lpe = 1;
 
@@ -3379,7 +3379,7 @@ SYSCTL_INT(_kern_sched, OID_AUTO, smt_busy_penalty, CTLFLAG_RW,
     "Penalty for a free thread whose SMT sibling is busy (0 = ULE behavior)");
 SYSCTL_INT(_kern_sched, OID_AUTO, prefer_compute, CTLFLAG_RW,
     &sched_prefer_compute, 0,
-    "AMD hybrid CCD: 0 = favor cache (V-Cache) die, 1 = favor compute die");
+    "Swap class-1/class-2 preference: Intel 0=P-core 1=E-core; AMD 0=large-cache 1=smaller-cache compute/C-core");
 SYSCTL_INT(_kern_sched, OID_AUTO, detect_lpe, CTLFLAG_RDTUN,
     &sched_detect_lpe, 0,
     "Detect Intel LP-E cores (no L3) as class 4; 0 leaves them class 2");

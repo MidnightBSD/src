@@ -976,10 +976,18 @@ cpu_topo(void)
  *                    symmetric or single-CCD parts stay all-perf (== ULE).
  */
 extern int sched_detect_lpe;
+extern int sched_prefer_compute;
 
 static u_int	mic_hybrid[MAXCPU];	/* CPUID 0x1a core type (Intel). */
 static uint64_t	mic_l3size[MAXCPU];	/* L3 bytes this CPU shares. */
 static bool	mic_has_l3[MAXCPU];	/* Whether an L3 was found. */
+
+static bool
+mic_amd_x3d(void)
+{
+
+	return (strstr(cpu_model, "X3D") != NULL);
+}
 
 static uint64_t
 mic_cache_size(const u_int *regs)
@@ -1074,6 +1082,8 @@ mic_classify(void *arg __unused)
 		}
 	if (!asymmetric)
 		return;			/* Single CCD / symmetric L3 == ULE. */
+	if (!mic_amd_x3d())
+		sched_prefer_compute = 1;
 	CPU_FOREACH(i)
 		if (!(mic_has_l3[i] && mic_l3size[i] == maxl3))
 			cpu_core_class[i] = CPU_CLASS_EFF;
