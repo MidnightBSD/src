@@ -977,6 +977,7 @@ cpu_topo(void)
  */
 extern int sched_detect_lpe;
 extern int sched_prefer_compute;
+extern int sched_prefer_compute_invert;
 
 static u_int	mic_hybrid[MAXCPU];	/* CPUID 0x1a core type (Intel). */
 static uint64_t	mic_l3size[MAXCPU];	/* L3 bytes this CPU shares. */
@@ -1055,6 +1056,8 @@ mic_classify(void *arg __unused)
 	smp_rendezvous(NULL, mic_probe_cpu, NULL, NULL);
 
 	if (intel) {
+		sched_prefer_compute = 1;
+		sched_prefer_compute_invert = 1;
 		CPU_FOREACH(i) {
 			if (mic_hybrid[i] == CPUID_HYBRID_LARGE_CORE)
 				cpu_core_class[i] = CPU_CLASS_PERF;

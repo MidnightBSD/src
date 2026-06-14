@@ -93,8 +93,9 @@ sysctls below.
   is preferred instead.
 - **AMD asymmetric non-X3D, all idle**: the smaller-cache compute/C-core group is
   preferred by default (`kern.sched.prefer_compute=1`).
-- **Intel power-saving mode**: setting `kern.sched.prefer_compute=1` swaps
-  class 1 and class 2, so E-cores are preferred over P-cores.
+- **Intel power-saving mode**: Intel defaults to
+  `kern.sched.prefer_compute=1` for P-core preference.  Setting it to `0`
+  swaps class 1 and class 2, so E-cores are preferred over P-cores.
 - **Homogeneous box**: detection leaves every CPU class 1, so all cost terms are
   zero except the SMT-sibling penalty; set `kern.sched.smt_busy_penalty=0` for
   byte-identical ULE placement.
@@ -127,7 +128,7 @@ The CPUID cache-size field macros live in `sys/x86/include/specialreg.h`
 | `class_weight_eff` | 160 | load penalty for class-2 cores |
 | `class_weight_lp` | 512 | load penalty for class-4 (LP-E) cores |
 | `smt_busy_penalty` | 192 | penalty for a free thread whose SMT sibling is busy; `0` restores ULE SMT behavior |
-| `prefer_compute` | vendor policy | class preference swap; Intel defaults to `0` for P-cores and `1` favors E-cores, AMD X3D defaults to `0` for the V-Cache die, AMD asymmetric non-X3D defaults to `1` for smaller-cache compute/C-core groups |
+| `prefer_compute` | vendor policy | platform compute preference; Intel defaults to `1` for P-cores and `0` favors E-cores, AMD X3D defaults to `0` for the V-Cache die, AMD asymmetric non-X3D defaults to `1` for smaller-cache compute/C-core groups |
 | `detect_lpe` | 1 | (boot tunable) detect LP-E cores as class 4; `0` leaves them class 2 |
 | `core_class` | (read-only) | debug dump of per-CPU class, `cpuid:class` pairs |
 

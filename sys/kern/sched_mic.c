@@ -303,7 +303,12 @@ static int __read_mostly trysteal_limit = 2;
 static int __read_mostly sched_class_weight_eff = 160;	/* class 2 penalty. */
 static int __read_mostly sched_class_weight_lp = 512;	/* class 4 penalty. */
 static int __read_mostly sched_smt_busy_penalty = 192;	/* busy-sibling (pri 3). */
-int __read_mostly sched_prefer_compute = 0;	/* Swap class 1 and 2 preference. */
+int __read_mostly sched_prefer_compute = 0;
+/*
+ * Machine-dependent classification sets this when prefer_compute=1 should
+ * keep class 1 preferred instead of swapping class 1 and class 2.
+ */
+int __read_mostly sched_prefer_compute_invert = 0;
 /* Read by machine-dependent classification; enables Intel LP-E detection. */
 int sched_detect_lpe = 1;
 
@@ -366,7 +371,7 @@ static int tdq_idled(struct tdq *);
 static void tdq_notify(struct tdq *, int lowpri);
 static struct thread *tdq_steal(struct tdq *, int);
 static struct thread *runq_steal(struct runq *, int);
-static int sched_pickcpu(struct thread *, int);
+static int sched_pickcpu(struct thread *, int, int);
 static void sched_balance(void);
 static bool sched_balance_pair(struct tdq *, struct tdq *);
 static inline struct tdq *sched_setcpu(struct thread *, int, int);
@@ -715,7 +720,8 @@ sched_class_cost(const struct cpu_group *cg, int c, int l)
 	int cls, cost;
 
 	cls = cpu_core_class[c];
-	if (sched_prefer_compute) {		/* AMD X3D: cache <-> compute. */
+	if ((sched_prefer_compute != 0) !=
+	    (sched_prefer_compute_invert != 0)) {
 		if (cls == CPU_CLASS_PERF)
 			cls = CPU_CLASS_EFF;
 		else if (cls == CPU_CLASS_EFF)
@@ -741,6 +747,48 @@ sched_class_cost(const struct cpu_group *cg, int c, int l)
 	return (cost);
 }
 
+static struct cpu_group *
+sched_affinity_domain(struct cpu_group *cg)
+{
+	struct cpu_group *domain;
+
+	domain = NULL;
+	for (; cg != NULL; cg = cg->cg_parent) {
+		if (cg->cg_flags & CG_FLAG_THREAD)
+			continue;
+		if (cg->cg_level == CG_SHARE_NONE)
+			break;
+		if (cg->cg_count > 1)
+			domain = cg;
+	}
+	return (domain);
+}
+
+static bool
+sched_better_idle_class(struct thread *td, struct cpu_group *cg, int lastcpu)
+{
+	struct cpu_group *domain;
+	struct tdq *tdq;
+	int c, cost, lastcost;
+
+	domain = sched_affinity_domain(cg);
+	if (domain == NULL)
+		return (false);
+	lastcost = sched_class_cost(TDQ_CPU(lastcpu)->tdq_cg, lastcpu, 0);
+	for (c = domain->cg_first; c <= domain->cg_last; c++) {
+		if (c == lastcpu || !CPU_ISSET(c, &domain->cg_mask) ||
+		    !THREAD_CAN_SCHED(td, c))
+			continue;
+		tdq = TDQ_CPU(c);
+		if (atomic_load_char(&tdq->tdq_lowpri) < PRI_MIN_IDLE)
+			continue;
+		cost = sched_class_cost(tdq->tdq_cg, c, 0);
+		if (cost < lastcost)
+			return (true);
+	}
+	return (false);
+}
+
 /*
  * Search the tree of cpu_groups for the lowest or highest loaded CPU.
  * These routines actually compare the load on all paths through the tree
@@ -754,7 +802,7 @@ cpu_search_lowest(const struct cpu_group *cg, const struct cpu_search *s,
 {
 	struct cpu_search_res lr;
 	struct tdq *tdq;
-	int c, bload, l, load, p, total;
+	int c, bload, class_cost, l, load, p, total;
 
 	total = 0;
 	bload = INT_MAX;
@@ -792,20 +840,24 @@ cpu_search_lowest(const struct cpu_group *cg, const struct cpu_search *s,
 			continue;
 		tdq = TDQ_CPU(c);
 		l = TDQ_LOAD(tdq);
+		p = 0;
 		if (c == s->cs_prefer) {
 			if (__predict_false(s->cs_running))
 				l--;
-			p = 128;
-		} else
-			p = 0;
+		}
 		/*
 		 * Fold the hybrid-core class cost into this candidate's load
 		 * before it is summed into the group total, so the bias steers
 		 * both subtree selection and the final CPU choice.
 		 */
 		load = l * 256;
-		if (s->cs_class)
-			load += sched_class_cost(cg, c, l);
+		class_cost = 0;
+		if (s->cs_class) {
+			class_cost = sched_class_cost(cg, c, l);
+			load += class_cost;
+		}
+		if (c == s->cs_prefer && (!s->cs_class || class_cost == 0))
+			p = 128;
 		total += load - p;
 
 		/*
@@ -930,6 +982,34 @@ sched_highest(const struct cpu_group *cg, cpuset_t *mask, int minload,
 }
 
 static void
+sched_balance_classes(struct cpu_group *cg)
+{
+	struct tdq *tdq;
+	struct thread *td;
+	int c;
+
+	for (c = cg->cg_first; c <= cg->cg_last; c++) {
+		if (!CPU_ISSET(c, &cg->cg_mask))
+			continue;
+		tdq = TDQ_CPU(c);
+		if (TDQ_LOAD(tdq) != 1)
+			continue;
+		TDQ_LOCK(tdq);
+		td = tdq->tdq_curthread;
+		if (td->td_lock == TDQ_LOCKPTR(tdq) &&
+		    (td->td_flags & TDF_IDLETD) == 0 &&
+		    THREAD_CAN_MIGRATE(td) &&
+		    THREAD_CAN_SCHED(td, c) &&
+		    sched_better_idle_class(td, tdq->tdq_cg, c)) {
+			td->td_flags |= TDF_NEEDRESCHED | TDF_PICKCPU;
+			if (c != curcpu)
+				ipi_cpu(c, IPI_AST);
+		}
+		TDQ_UNLOCK(tdq);
+	}
+}
+
+static void
 sched_balance_group(struct cpu_group *cg)
 {
 	struct tdq *tdq;
@@ -1003,6 +1083,7 @@ sched_balance(void)
 	    (sched_random() % balance_interval);
 	tdq = TDQ_SELF();
 	TDQ_UNLOCK(tdq);
+	sched_balance_classes(cpu_top);
 	sched_balance_group(cpu_top);
 	TDQ_LOCK(tdq);
 }
@@ -1402,7 +1483,7 @@ SCHED_STAT_DEFINE(pickcpu_local, "Migrated to current cpu");
 SCHED_STAT_DEFINE(pickcpu_migration, "Selection may have caused migration");
 
 static int
-sched_pickcpu(struct thread *td, int flags)
+sched_pickcpu(struct thread *td, int flags, int class_aware_pick)
 {
 	struct cpu_group *cg, *ccg;
 	struct td_sched *ts;
@@ -1417,7 +1498,7 @@ sched_pickcpu(struct thread *td, int flags)
 	if (smp_started == 0)
 		return (self);
 	/*
-	 * Don't migrate a running thread from sched_switch().
+	 * SRQ_OURSELF means the caller is requeueing the thread locally.
 	 */
 	if ((flags & SRQ_OURSELF) || !THREAD_CAN_MIGRATE(td))
 		return (ts->ts_cpu);
@@ -1458,12 +1539,17 @@ sched_pickcpu(struct thread *td, int flags)
 					break;
 			}
 			if (cpu > cg->cg_last) {
+				if (!sched_better_idle_class(td, cg,
+				    ts->ts_cpu)) {
+					SCHED_STAT_INC(pickcpu_idle_affinity);
+					return (ts->ts_cpu);
+				}
+			}
+		} else {
+			if (!sched_better_idle_class(td, cg, ts->ts_cpu)) {
 				SCHED_STAT_INC(pickcpu_idle_affinity);
 				return (ts->ts_cpu);
 			}
-		} else {
-			SCHED_STAT_INC(pickcpu_idle_affinity);
-			return (ts->ts_cpu);
 		}
 	}
 llc:
@@ -1489,7 +1575,7 @@ llc:
 	mask = &td->td_cpuset->cs_mask;
 	pri = td->td_priority;
 	r = TD_IS_RUNNING(td);
-	class_aware = !r;
+	class_aware = !r || class_aware_pick;
 	/*
 	 * Try hard to keep interrupts within found LLC.  Search the LLC for
 	 * the least loaded CPU we can run now.  For NUMA systems it should
@@ -2265,7 +2351,7 @@ sched_switch(struct thread *td, int flags)
 	int srqflag;
 	int cpuid, preempted;
 #ifdef SMP
-	int pickcpu;
+	int class_pick, pickcpu;
 #endif
 
 	THREAD_LOCK_ASSERT(td, MA_OWNED);
@@ -2276,6 +2362,7 @@ sched_switch(struct thread *td, int flags)
 	sched_pctcpu_update(ts, 1);
 #ifdef SMP
 	pickcpu = (td->td_flags & TDF_PICKCPU) != 0;
+	class_pick = 0;
 	if (pickcpu)
 		ts->ts_rltick = ticks - affinity * MAX_CACHE_LEVELS;
 	else
@@ -2303,9 +2390,13 @@ sched_switch(struct thread *td, int flags)
 		srqflag = SRQ_OURSELF | SRQ_YIELDING |
 		    (preempted ? SRQ_PREEMPTED : 0);
 #ifdef SMP
-		if (THREAD_CAN_MIGRATE(td) && (!THREAD_CAN_SCHED(td, ts->ts_cpu)
-		    || pickcpu))
-			ts->ts_cpu = sched_pickcpu(td, 0);
+		if (THREAD_CAN_MIGRATE(td) && pickcpu &&
+		    THREAD_CAN_SCHED(td, ts->ts_cpu))
+			class_pick = sched_better_idle_class(td,
+			    TDQ_CPU(ts->ts_cpu)->tdq_cg, ts->ts_cpu);
+		if (THREAD_CAN_MIGRATE(td) &&
+		    (!THREAD_CAN_SCHED(td, ts->ts_cpu) || class_pick))
+			ts->ts_cpu = sched_pickcpu(td, 0, class_pick);
 #endif
 		if (ts->ts_cpu == cpuid)
 			tdq_runq_add(tdq, td, srqflag);
@@ -2822,7 +2913,7 @@ sched_add(struct thread *td, int flags)
 	 * Pick the destination cpu and if it isn't ours transfer to the
 	 * target cpu.
 	 */
-	cpu = sched_pickcpu(td, flags);
+	cpu = sched_pickcpu(td, flags, 0);
 	tdq = sched_setcpu(td, cpu, flags);
 	lowpri = tdq_add(tdq, td, flags);
 	if (cpu != PCPU_GET(cpuid))
@@ -3379,7 +3470,7 @@ SYSCTL_INT(_kern_sched, OID_AUTO, smt_busy_penalty, CTLFLAG_RW,
     "Penalty for a free thread whose SMT sibling is busy (0 = ULE behavior)");
 SYSCTL_INT(_kern_sched, OID_AUTO, prefer_compute, CTLFLAG_RW,
     &sched_prefer_compute, 0,
-    "Swap class-1/class-2 preference: Intel 0=P-core 1=E-core; AMD 0=large-cache 1=smaller-cache compute/C-core");
+    "Platform compute preference: Intel 1=P-core 0=E-core; AMD 0=large-cache 1=smaller-cache compute/C-core");
 SYSCTL_INT(_kern_sched, OID_AUTO, detect_lpe, CTLFLAG_RDTUN,
     &sched_detect_lpe, 0,
     "Detect Intel LP-E cores (no L3) as class 4; 0 leaves them class 2");
