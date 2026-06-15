@@ -100,3 +100,6 @@ usr.sbin	System administration commands.
 Contributing:
 We use the DCO for all contributions.  Please see DCO.md for details.
 Please also review AI_POLICY.md and CODE_OF_CONDUCT.md.
+
+Developers should use the git hooks:
+git config --add core.hooksPath .hooks
