@@ -43,22 +43,21 @@
 #include <ohash.h>
 #endif
 
-static void *ecalloc(size_t, void *);
-static void efree(void *, size_t, void *);
+static void *ecalloc(size_t, size_t, void *);
+static void efree(void *, void *);
 
 static void *
-ecalloc(size_t s1, void *data)
+ecalloc(size_t s1, size_t s2, void *data)
 {
 	void *p;
 
-	if (!(p = malloc(s1)))
-		err(1, "malloc");
-	memset(p, 0, s1);
+	if (!(p = calloc(s1, s2)))
+		err(1, "calloc");
 	return p;
 }
 
 static void
-efree(void *p, size_t s1, void *data)
+efree(void *p, void *data)
 {
 	free(p);
 }
