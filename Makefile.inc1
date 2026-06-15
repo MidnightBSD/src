@@ -3168,6 +3168,7 @@ lib/libsqlite3__L: lib/libthr__L lib/msun__L lib/libz__L
 lib/libdns_sd__L: lib/libthr__L
 lib/libnss_mdns__L: lib/dns_sd__L lib/libthr__L
 
+lib/libmagic__L: lib/libz__L
 lib/libucl__L: lib/msun__L
 
 .if ${MK_GSSAPI} != "no"
