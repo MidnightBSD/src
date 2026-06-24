@@ -8,7 +8,7 @@
 
 #include "cpdup.h"
 
-#include <openssl/md5.h>
+#include <md5.h>
 
 typedef struct MD5Node {
     struct MD5Node *md_Next;
@@ -273,7 +273,7 @@ md5_file(const char *filename, char *buf)
 	goto err;
     }
 
-    MD5_Init(&ctx);
+    MD5Init(&ctx);
     size = st.st_size;
     bytes = 0;
     while (size > 0) {
@@ -283,7 +283,7 @@ md5_file(const char *filename, char *buf)
 	     bytes = read(fd, buffer, size);
 	if (bytes < 0)
 	     break;
-	MD5_Update(&ctx, buffer, bytes);
+	MD5Update(&ctx, buffer, bytes);
 	size -= bytes;
     }
 
@@ -297,7 +297,7 @@ err:
     if (!buf)
 	return NULL;
 
-    MD5_Final(digest, &ctx);
+    MD5Final(digest, &ctx);
     for (i = 0; i < MD5_DIGEST_LENGTH; i++) {
 	buf[2*i] = hex[digest[i] >> 4];
 	buf[2*i+1] = hex[digest[i] & 0x0f];
@@ -323,4 +323,3 @@ doMD5File(const char *filename, char *buf, int is_target)
 
     return md5_file(filename, buf);
 }
-
