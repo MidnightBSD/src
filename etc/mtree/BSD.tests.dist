@@ -35,6 +35,8 @@
         ..
         pkill
         ..
+        ps
+        ..
         pwait
         ..
         rm
@@ -913,6 +915,8 @@
         ..
         basename
         ..
+        batt
+        ..
         bmake
             archives
                 fmt_44bsd
@@ -1067,6 +1071,8 @@
         ..
         hexdump
         ..
+        id
+        ..
         ident
         ..
         indent
@@ -1090,6 +1096,8 @@
         mkimg
         ..
         mktemp
+        ..
+        msearch
         ..
         ncal
         ..
