@@ -5,7 +5,7 @@ PROG=	sshd-session
 SRCS=	sshd-session.c auth-rhosts.c auth-passwd.c \
 	audit.c audit-bsm.c audit-linux.c platform.c \
 	sshpty.c sshlogin.c servconf.c serverloop.c \
-	auth.c auth2.c auth2-methods.c auth-options.c session.c \
+	auth.c auth2.c auth2-methods.c auth-options.c session.c misc-agent.c \
 	auth2-chall.c groupaccess.c \
 	auth-bsdauth.c auth2-hostbased.c auth2-kbdint.c \
 	auth2-none.c auth2-passwd.c auth2-pubkey.c auth2-pubkeyfile.c \

@@ -27,85 +27,86 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "includes.h"
-
 #include <sys/types.h>
 #include <sys/ioctl.h>
-#include <sys/wait.h>
-#include <sys/tree.h>
-#include <sys/stat.h>
-#include <sys/socket.h>
-#include <sys/time.h>
 #include <sys/queue.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/time.h>
+#include <sys/tree.h>
+#include <sys/wait.h>
 
 #include <errno.h>
 #include <fcntl.h>
+#include <grp.h>
+#include <limits.h>
 #include <netdb.h>
 #include <paths.h>
 #include <pwd.h>
-#include <grp.h>
 #include <signal.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdarg.h>
 #include <unistd.h>
-#include <limits.h>
+
+#include "includes.h"
 
 #ifdef HAVE_SECUREWARE
 #include <sys/security.h>
+
 #include <prot.h>
 #endif
- 
-#include "xmalloc.h"
-#include "ssh.h"
-#include "ssh2.h"
-#include "sshpty.h"
-#include "packet.h"
-#include "log.h"
-#include "sshbuf.h"
-#include "misc.h"
-#include "match.h"
-#include "servconf.h"
-#include "uidswap.h"
-#include "compat.h"
-#include "cipher.h"
-#include "digest.h"
-#include "sshkey.h"
-#include "kex.h"
-#include "authfile.h"
-#include "pathnames.h"
+
 #include "atomicio.h"
-#include "canohost.h"
-#include "hostfile.h"
 #include "auth.h"
 #include "authfd.h"
-#include "msg.h"
-#include "dispatch.h"
+#include "authfile.h"
+#include "canohost.h"
 #include "channels.h"
-#include "session.h"
+#include "cipher.h"
+#include "compat.h"
+#include "digest.h"
+#include "dispatch.h"
+#include "hostfile.h"
+#include "kex.h"
+#include "log.h"
+#include "match.h"
+#include "misc.h"
 #include "monitor.h"
+#include "msg.h"
+#include "packet.h"
+#include "pathnames.h"
+#include "servconf.h"
+#include "session.h"
+#include "ssh.h"
+#include "ssh2.h"
+#include "sshbuf.h"
+#include "sshkey.h"
+#include "sshpty.h"
+#include "uidswap.h"
+#include "xmalloc.h"
 #ifdef GSSAPI
 #include "ssh-gss.h"
 #endif
-#include "monitor_wrap.h"
 #include "auth-options.h"
-#include "version.h"
-#include "ssherr.h"
+#include "blacklist_client.h"
+#include "dh.h"
+#include "monitor_wrap.h"
 #include "sk-api.h"
 #include "srclimit.h"
-#include "dh.h"
-#include "blacklist_client.h"
+#include "ssherr.h"
+#include "version.h"
 
 /* Re-exec fds */
-#define REEXEC_DEVCRYPTO_RESERVED_FD	(STDERR_FILENO + 1)
-#define REEXEC_CONFIG_PASS_FD		(STDERR_FILENO + 2)
-#define REEXEC_MIN_FREE_FD		(STDERR_FILENO + 3)
+#define REEXEC_DEVCRYPTO_RESERVED_FD (STDERR_FILENO + 1)
+#define REEXEC_CONFIG_PASS_FD (STDERR_FILENO + 2)
+#define REEXEC_MIN_FREE_FD (STDERR_FILENO + 3)
 
 /* Privsep fds */
-#define PRIVSEP_MONITOR_FD		(STDERR_FILENO + 1)
-#define PRIVSEP_LOG_FD			(STDERR_FILENO + 2)
-#define PRIVSEP_MIN_FREE_FD		(STDERR_FILENO + 3)
+#define PRIVSEP_MONITOR_FD (STDERR_FILENO + 1)
+#define PRIVSEP_LOG_FD (STDERR_FILENO + 2)
+#define PRIVSEP_MIN_FREE_FD (STDERR_FILENO + 3)
 
 extern char *__progname;
 
@@ -146,16 +147,16 @@ static int have_agent = 0;
  * not very useful.  Currently, memory locking is not implemented.
  */
 struct {
-	u_int		num_hostkeys;
-	struct sshkey	**host_keys;		/* all private host keys */
-	struct sshkey	**host_pubkeys;		/* all public host keys */
-	struct sshkey	**host_certificates;	/* all public host certificates */
+	u_int num_hostkeys;
+	struct sshkey **host_keys;	   /* all private host keys */
+	struct sshkey **host_pubkeys;	   /* all public host keys */
+	struct sshkey **host_certificates; /* all public host certificates */
 } sensitive_data;
 
 /* record remote hostname or ip */
-u_int utmp_len = HOST_NAME_MAX+1;
+u_int utmp_len = HOST_NAME_MAX + 1;
 
-static int startup_pipe = -1;		/* in child */
+static int startup_pipe = -1; /* in child */
 
 /* variables used for privilege separation */
 struct monitor *pmonitor = NULL;
@@ -253,7 +254,7 @@ demote_sensitive_data(void)
 	for (i = 0; i < options.num_host_key_files; i++) {
 		if (sensitive_data.host_keys[i]) {
 			if ((r = sshkey_from_private(
-			    sensitive_data.host_keys[i], &tmp)) != 0)
+				 sensitive_data.host_keys[i], &tmp)) != 0)
 				fatal_r(r, "could not demote host %s key",
 				    sshkey_type(sensitive_data.host_keys[i]));
 			sshkey_free(sensitive_data.host_keys[i]);
@@ -278,7 +279,7 @@ pack_hostkeys(void)
 		/* public key */
 		if (sensitive_data.host_pubkeys[i] != NULL) {
 			if ((r = sshkey_puts(sensitive_data.host_pubkeys[i],
-			    hostkeys)) != 0)
+				 hostkeys)) != 0)
 				fatal_fr(r, "compose hostkey public");
 		} else {
 			if ((r = sshbuf_put_string(hostkeys, NULL, 0)) != 0)
@@ -287,8 +288,8 @@ pack_hostkeys(void)
 		/* cert */
 		if (sensitive_data.host_certificates[i] != NULL) {
 			if ((r = sshkey_puts(
-			    sensitive_data.host_certificates[i],
-			    hostkeys)) != 0)
+				 sensitive_data.host_certificates[i],
+				 hostkeys)) != 0)
 				fatal_fr(r, "compose host cert");
 		} else {
 			if ((r = sshbuf_put_string(hostkeys, NULL, 0)) != 0)
@@ -348,8 +349,8 @@ privsep_preauth(struct ssh *ssh)
 		    dup2(ssh_packet_get_connection_in(ssh), STDIN_FILENO) == -1)
 			fatal("dup2 stdin failed: %s", strerror(errno));
 		if (ssh_packet_get_connection_out(ssh) != STDOUT_FILENO &&
-		    dup2(ssh_packet_get_connection_out(ssh),
-		    STDOUT_FILENO) == -1)
+		    dup2(ssh_packet_get_connection_out(ssh), STDOUT_FILENO) ==
+			-1)
 			fatal("dup2 stdout failed: %s", strerror(errno));
 		/* leave stderr as-is */
 		log_redirect_stderr_to(NULL); /* dup can clobber log fd */
@@ -364,8 +365,8 @@ privsep_preauth(struct ssh *ssh)
 		saved_argv[0] = options.sshd_auth_path;
 		execv(options.sshd_auth_path, saved_argv);
 
-		fatal_f("exec of %s failed: %s",
-		    options.sshd_auth_path, strerror(errno));
+		fatal_f("exec of %s failed: %s", options.sshd_auth_path,
+		    strerror(errno));
 	}
 }
 
@@ -459,8 +460,7 @@ get_hostkey_by_type(int type, int nid, int need_private, struct ssh *ssh)
 				continue;
 			/* FALLTHROUGH */
 		default:
-			return need_private ?
-			    sensitive_data.host_keys[i] : key;
+			return need_private ? sensitive_data.host_keys[i] : key;
 		}
 	}
 	return NULL;
@@ -503,17 +503,18 @@ get_hostkey_index(struct sshkey *key, int compare, struct ssh *ssh)
 		if (sshkey_is_cert(key)) {
 			if (key == sensitive_data.host_certificates[i] ||
 			    (compare && sensitive_data.host_certificates[i] &&
-			    sshkey_equal(key,
-			    sensitive_data.host_certificates[i])))
+				sshkey_equal(key,
+				    sensitive_data.host_certificates[i])))
 				return (i);
 		} else {
 			if (key == sensitive_data.host_keys[i] ||
 			    (compare && sensitive_data.host_keys[i] &&
-			    sshkey_equal(key, sensitive_data.host_keys[i])))
+				sshkey_equal(key, sensitive_data.host_keys[i])))
 				return (i);
 			if (key == sensitive_data.host_pubkeys[i] ||
 			    (compare && sensitive_data.host_pubkeys[i] &&
-			    sshkey_equal(key, sensitive_data.host_pubkeys[i])))
+				sshkey_equal(key,
+				    sensitive_data.host_pubkeys[i])))
 				return (i);
 		}
 	}
@@ -550,10 +551,13 @@ notify_hostkeys(struct ssh *ssh)
 			 * Start building the request when we find the
 			 * first usable key.
 			 */
-			if ((r = sshpkt_start(ssh, SSH2_MSG_GLOBAL_REQUEST)) != 0 ||
-			    (r = sshpkt_put_cstring(ssh, "hostkeys-00@openssh.com")) != 0 ||
+			if ((r = sshpkt_start(ssh, SSH2_MSG_GLOBAL_REQUEST)) !=
+				0 ||
+			    (r = sshpkt_put_cstring(ssh,
+				 "hostkeys-00@openssh.com")) != 0 ||
 			    (r = sshpkt_put_u8(ssh, 0)) != 0) /* want reply */
-				sshpkt_fatal(ssh, r, "%s: start request", __func__);
+				sshpkt_fatal(ssh, r, "%s: start request",
+				    __func__);
 		}
 		/* Append the key to the request */
 		sshbuf_reset(buf);
@@ -576,10 +580,9 @@ usage(void)
 {
 	fprintf(stderr, "%s, %s\n", SSH_RELEASE, SSH_OPENSSL_VERSION);
 	fprintf(stderr,
-"usage: sshd [-46DdeGiqTtV] [-C connection_spec] [-c host_cert_file]\n"
-"            [-E log_file] [-f config_file] [-g login_grace_time]\n"
-"            [-h host_key_file] [-o option] [-p port] [-u len]\n"
-	);
+	    "usage: sshd [-46DdeGiqTtV] [-C connection_spec] [-c host_cert_file]\n"
+	    "            [-E log_file] [-f config_file] [-g login_grace_time]\n"
+	    "            [-h host_key_file] [-o option] [-p port] [-u len]\n");
 	exit(1);
 }
 
@@ -596,12 +599,12 @@ parse_hostkeys(struct sshbuf *hostkeys)
 	while (sshbuf_len(hostkeys) != 0) {
 		if (num_keys > 2048)
 			fatal_f("too many hostkeys");
-		sensitive_data.host_keys = xrecallocarray(
-		    sensitive_data.host_keys, num_keys, num_keys + 1,
-		    sizeof(*sensitive_data.host_pubkeys));
-		sensitive_data.host_pubkeys = xrecallocarray(
-		    sensitive_data.host_pubkeys, num_keys, num_keys + 1,
-		    sizeof(*sensitive_data.host_pubkeys));
+		sensitive_data.host_keys =
+		    xrecallocarray(sensitive_data.host_keys, num_keys,
+			num_keys + 1, sizeof(*sensitive_data.host_pubkeys));
+		sensitive_data.host_pubkeys =
+		    xrecallocarray(sensitive_data.host_pubkeys, num_keys,
+			num_keys + 1, sizeof(*sensitive_data.host_pubkeys));
 		sensitive_data.host_certificates = xrecallocarray(
 		    sensitive_data.host_certificates, num_keys, num_keys + 1,
 		    sizeof(*sensitive_data.host_certificates));
@@ -615,7 +618,8 @@ parse_hostkeys(struct sshbuf *hostkeys)
 		sensitive_data.host_keys[num_keys] = k;
 		sshbuf_free(kbuf);
 		if (k)
-			debug2_f("privkey %u: %s", num_keys, sshkey_ssh_name(k));
+			debug2_f("privkey %u: %s", num_keys,
+			    sshkey_ssh_name(k));
 		/* public key */
 		k = NULL;
 		if ((r = sshbuf_get_string_direct(hostkeys, &cp, &len)) != 0)
@@ -718,19 +722,19 @@ check_ip_options(struct ssh *ssh)
 	char text[sizeof(opts) * 3 + 1];
 
 	memset(&from, 0, sizeof(from));
-	if (getpeername(sock_in, (struct sockaddr *)&from,
-	    &fromlen) == -1)
+	if (getpeername(sock_in, (struct sockaddr *)&from, &fromlen) == -1)
 		return;
 	if (from.ss_family != AF_INET)
 		return;
 	/* XXX IPv6 options? */
 
-	if (getsockopt(sock_in, IPPROTO_IP, IP_OPTIONS, opts,
-	    &option_size) >= 0 && option_size != 0) {
+	if (getsockopt(sock_in, IPPROTO_IP, IP_OPTIONS, opts, &option_size) >=
+		0 &&
+	    option_size != 0) {
 		text[0] = '\0';
 		for (i = 0; i < option_size; i++)
-			snprintf(text + i*3, sizeof(text) - i*3,
-			    " %2.2x", opts[i]);
+			snprintf(text + i * 3, sizeof(text) - i * 3, " %2.2x",
+			    opts[i]);
 		fatal("Connection from %.100s port %d with IP opts: %.800s",
 		    ssh_remote_ipaddr(ssh), ssh_remote_port(ssh), text);
 	}
@@ -769,8 +773,8 @@ set_process_rdomain(struct ssh *ssh, const char *name)
 	if (errstr != NULL) /* Shouldn't happen */
 		fatal("Invalid routing domain \"%s\": %s", name, errstr);
 	if (rtable != ortable && setrtable(rtable) != 0)
-		fatal("Unable to set routing domain %d: %s",
-		    rtable, strerror(errno));
+		fatal("Unable to set routing domain %d: %s", rtable,
+		    strerror(errno));
 	debug_f("set routing domain %d (was %d)", rtable, ortable);
 #else /* defined(__OpenBSD__) */
 	fatal("Unable to set routing domain: not supported in this platform");
@@ -827,8 +831,8 @@ main(int ac, char **av)
 	initialize_server_options(&options);
 
 	/* Parse command-line arguments. */
-	while ((opt = getopt(ac, av,
-	    "C:E:b:c:f:g:h:k:o:p:u:46DGQRTdeiqrtV")) != -1) {
+	while ((opt = getopt(ac, av, "C:E:b:c:f:g:h:k:o:p:u:46DGQRTdeiqrtV")) !=
+	    -1) {
 		switch (opt) {
 		case '4':
 			options.address_family = AF_INET;
@@ -840,8 +844,8 @@ main(int ac, char **av)
 			config_file_name = optarg;
 			break;
 		case 'c':
-			servconf_add_hostcert("[command-line]", 0,
-			    &options, optarg);
+			servconf_add_hostcert("[command-line]", 0, &options,
+			    optarg);
 			break;
 		case 'd':
 			if (debug_flag == 0) {
@@ -884,13 +888,14 @@ main(int ac, char **av)
 				exit(1);
 			}
 			options.ports[options.num_ports++] = a2port(optarg);
-			if (options.ports[options.num_ports-1] <= 0) {
+			if (options.ports[options.num_ports - 1] <= 0) {
 				fprintf(stderr, "Bad port number.\n");
 				exit(1);
 			}
 			break;
 		case 'g':
-			if ((options.login_grace_time = convtime(optarg)) == -1) {
+			if ((options.login_grace_time = convtime(optarg)) ==
+			    -1) {
 				fprintf(stderr, "Invalid login grace time.\n");
 				exit(1);
 			}
@@ -899,8 +904,8 @@ main(int ac, char **av)
 			/* protocol 1, ignored */
 			break;
 		case 'h':
-			servconf_add_hostkey("[command-line]", 0,
-			    &options, optarg, 1);
+			servconf_add_hostkey("[command-line]", 0, &options,
+			    optarg, 1);
 			break;
 		case 't':
 		case 'T':
@@ -910,12 +915,13 @@ main(int ac, char **av)
 		case 'C':
 			connection_info = server_get_connection_info(ssh, 0, 0);
 			if (parse_server_match_testspec(connection_info,
-			    optarg) == -1)
+				optarg) == -1)
 				exit(1);
 			break;
 		case 'u':
-			utmp_len = (u_int)strtonum(optarg, 0, HOST_NAME_MAX+1+1, NULL);
-			if (utmp_len > HOST_NAME_MAX+1) {
+			utmp_len = (u_int)strtonum(optarg, 0,
+			    HOST_NAME_MAX + 1 + 1, NULL);
+			if (utmp_len > HOST_NAME_MAX + 1) {
 				fprintf(stderr, "Invalid utmp length.\n");
 				exit(1);
 			}
@@ -923,13 +929,13 @@ main(int ac, char **av)
 		case 'o':
 			line = xstrdup(optarg);
 			if (process_server_config_line(&options, line,
-			    "command-line", 0, NULL, NULL, &includes) != 0)
+				"command-line", 0, NULL, NULL, &includes) != 0)
 				exit(1);
 			free(line);
 			break;
 		case 'V':
-			fprintf(stderr, "%s, %s\n",
-			    SSH_RELEASE, SSH_OPENSSL_VERSION);
+			fprintf(stderr, "%s, %s\n", SSH_RELEASE,
+			    SSH_OPENSSL_VERSION);
 			exit(0);
 		default:
 			usage();
@@ -965,9 +971,7 @@ main(int ac, char **av)
 		char *cp, pid_s[32];
 
 		snprintf(pid_s, sizeof(pid_s), "%ld", (unsigned long)getpid());
-		cp = percent_expand(logfile,
-		    "p", pid_s,
-		    "P", "sshd-session",
+		cp = percent_expand(logfile, "p", pid_s, "P", "sshd-session",
 		    (char *)NULL);
 		log_redirect_stderr_to(cp);
 		free(cp);
@@ -978,10 +982,11 @@ main(int ac, char **av)
 	 * key (unless started from inetd)
 	 */
 	log_init(__progname,
-	    options.log_level == SYSLOG_LEVEL_NOT_SET ?
-	    SYSLOG_LEVEL_INFO : options.log_level,
+	    options.log_level == SYSLOG_LEVEL_NOT_SET ? SYSLOG_LEVEL_INFO :
+							options.log_level,
 	    options.log_facility == SYSLOG_FACILITY_NOT_SET ?
-	    SYSLOG_FACILITY_AUTH : options.log_facility,
+		SYSLOG_FACILITY_AUTH :
+		options.log_facility,
 	    log_stderr || !inetd_flag || debug_flag);
 
 	/* Fetch our configuration */
@@ -1030,14 +1035,14 @@ main(int ac, char **av)
 	/* Check that options are sensible */
 	if (options.authorized_keys_command_user == NULL &&
 	    (options.authorized_keys_command != NULL &&
-	    strcasecmp(options.authorized_keys_command, "none") != 0))
+		strcasecmp(options.authorized_keys_command, "none") != 0))
 		fatal("AuthorizedKeysCommand set without "
-		    "AuthorizedKeysCommandUser");
+		      "AuthorizedKeysCommandUser");
 	if (options.authorized_principals_command_user == NULL &&
 	    (options.authorized_principals_command != NULL &&
-	    strcasecmp(options.authorized_principals_command, "none") != 0))
+		strcasecmp(options.authorized_principals_command, "none") != 0))
 		fatal("AuthorizedPrincipalsCommand set without "
-		    "AuthorizedPrincipalsCommandUser");
+		      "AuthorizedPrincipalsCommandUser");
 
 	/*
 	 * Check whether there is any path through configured auth methods.
@@ -1047,13 +1052,13 @@ main(int ac, char **av)
 	 */
 	if (options.num_auth_methods != 0) {
 		for (i = 0; i < options.num_auth_methods; i++) {
-			if (auth2_methods_valid(options.auth_methods[i],
-			    1) == 0)
+			if (auth2_methods_valid(options.auth_methods[i], 1) ==
+			    0)
 				break;
 		}
 		if (i >= options.num_auth_methods)
 			fatal("AuthenticationMethods cannot be satisfied by "
-			    "enabled authentication methods");
+			      "enabled authentication methods");
 	}
 
 #ifdef WITH_OPENSSL
@@ -1063,8 +1068,8 @@ main(int ac, char **av)
 
 	if (options.host_key_agent) {
 		if (strcmp(options.host_key_agent, SSH_AUTHSOCKET_ENV_NAME))
-			setenv(SSH_AUTHSOCKET_ENV_NAME,
-			    options.host_key_agent, 1);
+			setenv(SSH_AUTHSOCKET_ENV_NAME, options.host_key_agent,
+			    1);
 		if ((r = ssh_get_authentication_socket(NULL)) == 0)
 			have_agent = 1;
 		else
@@ -1089,18 +1094,19 @@ main(int ac, char **av)
 
 	/* Ensure that umask disallows at least group and world write */
 	new_umask = umask(0077) | 0022;
-	(void) umask(new_umask);
+	(void)umask(new_umask);
 
 	/* Initialize the log (it is reinitialized below in case we forked). */
 	if (debug_flag)
 		log_stderr = 1;
-	log_init(__progname, options.log_level,
-	    options.log_facility, log_stderr);
+	log_init(__progname, options.log_level, options.log_facility,
+	    log_stderr);
 	for (i = 0; i < options.num_log_verbose; i++)
 		log_verbose_add(options.log_verbose[i]);
 
 	/* Reinitialize the log (because of the fork above). */
-	log_init(__progname, options.log_level, options.log_facility, log_stderr);
+	log_init(__progname, options.log_level, options.log_facility,
+	    log_stderr);
 
 	/*
 	 * Chdir to the root directory so that the current disk can be
@@ -1172,7 +1178,8 @@ main(int ac, char **av)
 
 	/* Set SO_KEEPALIVE if requested. */
 	if (options.tcp_keep_alive && ssh_packet_connection_is_on_socket(ssh) &&
-	    setsockopt(sock_in, SOL_SOCKET, SO_KEEPALIVE, &on, sizeof(on)) == -1)
+	    setsockopt(sock_in, SOL_SOCKET, SO_KEEPALIVE, &on, sizeof(on)) ==
+		-1)
 		error("setsockopt SO_KEEPALIVE: %.100s", strerror(errno));
 
 	if ((remote_port = ssh_remote_port(ssh)) < 0) {
@@ -1200,11 +1207,10 @@ main(int ac, char **av)
 
 	/* Log the connection. */
 	laddr = get_local_ipaddr(sock_in);
-	verbose("Connection from %s port %d on %s port %d%s%s%s",
-	    remote_ip, remote_port, laddr,  ssh_local_port(ssh),
+	verbose("Connection from %s port %d on %s port %d%s%s%s", remote_ip,
+	    remote_port, laddr, ssh_local_port(ssh),
 	    rdomain == NULL ? "" : " rdomain \"",
-	    rdomain == NULL ? "" : rdomain,
-	    rdomain == NULL ? "" : "\"");
+	    rdomain == NULL ? "" : rdomain, rdomain == NULL ? "" : "\"");
 	free(laddr);
 
 	/*
@@ -1222,14 +1228,14 @@ main(int ac, char **av)
 		timerclear(&itv.it_interval);
 		itv.it_value.tv_sec = options.login_grace_time;
 		itv.it_value.tv_sec += ujitter / 1000000;
-		itv.it_value.tv_usec = ujitter % 1000000; 
+		itv.it_value.tv_usec = ujitter % 1000000;
 
 		if (setitimer(ITIMER_REAL, &itv, NULL) == -1)
 			fatal("login grace time setitimer failed");
 	}
 
 	if ((r = kex_exchange_identification(ssh, -1,
-	    options.version_addendum)) != 0) {
+		 options.version_addendum)) != 0) {
 		BLACKLIST_NOTIFY(ssh, BLACKLIST_AUTH_FAIL, "Banner exchange");
 		sshpkt_fatal(ssh, r, "banner exchange");
 	}
@@ -1340,14 +1346,12 @@ sshd_hostkey_sign(struct ssh *ssh, struct sshkey *privkey,
     const u_char *data, size_t dlen, const char *alg)
 {
 	if (privkey) {
-		if (mm_sshkey_sign(ssh, privkey, signature, slenp,
-		    data, dlen, alg, options.sk_provider, NULL,
-		    ssh->compat) < 0)
+		if (mm_sshkey_sign(ssh, privkey, signature, slenp, data, dlen,
+			alg, options.sk_provider, NULL, ssh->compat) < 0)
 			fatal_f("privkey sign failed");
 	} else {
-		if (mm_sshkey_sign(ssh, pubkey, signature, slenp,
-		    data, dlen, alg, options.sk_provider, NULL,
-		    ssh->compat) < 0)
+		if (mm_sshkey_sign(ssh, pubkey, signature, slenp, data, dlen,
+			alg, options.sk_provider, NULL, ssh->compat) < 0)
 			fatal_f("pubkey sign failed");
 	}
 	return 0;
@@ -1359,8 +1363,8 @@ cleanup_exit(int i)
 {
 	if (the_active_state != NULL && the_authctxt != NULL) {
 		do_cleanup(the_active_state, the_authctxt);
-		if (privsep_is_preauth &&
-		    pmonitor != NULL && pmonitor->m_pid > 1) {
+		if (privsep_is_preauth && pmonitor != NULL &&
+		    pmonitor->m_pid > 1) {
 			debug("Killing privsep child %d", pmonitor->m_pid);
 			if (kill(pmonitor->m_pid, SIGKILL) != 0 &&
 			    errno != ESRCH) {
@@ -1375,13 +1379,11 @@ cleanup_exit(int i)
 		audit_event(the_active_state, SSH_CONNECTION_ABANDON);
 #endif
 	/* Override default fatal exit value when auth was attempted */
-	if (i == 255 && auth_attempted) {
+	if (i == 255 && monitor_auth_attempted()) {
 		BLACKLIST_NOTIFY(the_active_state, BLACKLIST_AUTH_FAIL,
 		    "Fatal exit");
 		_exit(EXIT_AUTH_ATTEMPTED);
 	}
-	if (i == 255 && monitor_auth_attempted())
-		_exit(EXIT_AUTH_ATTEMPTED);
 	if (i == 255 && monitor_invalid_user())
 		_exit(EXIT_INVALID_USER);
 	_exit(i);

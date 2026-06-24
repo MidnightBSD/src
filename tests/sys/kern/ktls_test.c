@@ -33,22 +33,23 @@
 #include <sys/mman.h>
 #include <sys/socket.h>
 #include <sys/sysctl.h>
+
 #include <netinet/in.h>
 #include <netinet/tcp.h>
-#include <crypto/cryptodev.h>
+
 #include <assert.h>
+#include <atf-c.h>
+#include <crypto/cryptodev.h>
 #include <err.h>
 #include <fcntl.h>
 #include <netdb.h>
+#include <openssl/core_names.h>
+#include <openssl/err.h>
+#include <openssl/evp.h>
 #include <poll.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <atf-c.h>
-
-#include <openssl/err.h>
-#include <openssl/evp.h>
-#include <openssl/hmac.h>
 
 static void
 require_ktls(void)
@@ -67,7 +68,7 @@ require_ktls(void)
 		atf_tc_skip("Kernel TLS is disabled");
 }
 
-#define	ATF_REQUIRE_KTLS()	require_ktls()
+#define ATF_REQUIRE_KTLS() require_ktls()
 
 static void
 check_tls_mode(const atf_tc_t *tc, int s, int sockopt)
@@ -285,7 +286,7 @@ cbc_decrypt(const EVP_CIPHER *cipher, const char *key, const char *iv,
 		return (false);
 	}
 	if (EVP_CipherInit_ex(ctx, cipher, NULL, (const u_char *)key,
-	    (const u_char *)iv, 0) != 1) {
+		(const u_char *)iv, 0) != 1) {
 		warnx("EVP_CipherInit_ex failed: %s",
 		    ERR_error_string(ERR_get_error(), NULL));
 		EVP_CIPHER_CTX_free(ctx);
@@ -293,7 +294,7 @@ cbc_decrypt(const EVP_CIPHER *cipher, const char *key, const char *iv,
 	}
 	EVP_CIPHER_CTX_set_padding(ctx, 0);
 	if (EVP_CipherUpdate(ctx, (u_char *)output, &outl,
-	    (const u_char *)input, size) != 1) {
+		(const u_char *)input, size) != 1) {
 		warnx("EVP_CipherUpdate failed: %s",
 		    ERR_error_string(ERR_get_error(), NULL));
 		EVP_CIPHER_CTX_free(ctx);
@@ -320,41 +321,61 @@ static bool
 verify_hash(const EVP_MD *md, const void *key, size_t key_len, const void *aad,
     size_t aad_len, const void *buffer, size_t len, const void *digest)
 {
-	HMAC_CTX *ctx;
+	EVP_MAC *mac;
+	EVP_MAC_CTX *ctx;
+	OSSL_PARAM params[2];
+	const char *digest_name;
 	unsigned char digest2[EVP_MAX_MD_SIZE];
-	u_int digest_len;
+	size_t digest_len;
 
-	ctx = HMAC_CTX_new();
+	digest_name = EVP_MD_get0_name(md);
+	params[0] = OSSL_PARAM_construct_utf8_string(OSSL_MAC_PARAM_DIGEST,
+	    __DECONST(char *, digest_name), 0);
+	params[1] = OSSL_PARAM_construct_end();
+
+	mac = EVP_MAC_fetch(NULL, "HMAC", NULL);
+	if (mac == NULL) {
+		warnx("EVP_MAC_fetch failed: %s",
+		    ERR_error_string(ERR_get_error(), NULL));
+		return (false);
+	}
+	ctx = EVP_MAC_CTX_new(mac);
 	if (ctx == NULL) {
-		warnx("HMAC_CTX_new failed: %s",
+		warnx("EVP_MAC_CTX_new failed: %s",
 		    ERR_error_string(ERR_get_error(), NULL));
+		EVP_MAC_free(mac);
 		return (false);
 	}
-	if (HMAC_Init_ex(ctx, key, key_len, md, NULL) != 1) {
-		warnx("HMAC_Init_ex failed: %s",
+	if (EVP_MAC_init(ctx, key, key_len, params) != 1) {
+		warnx("EVP_MAC_init failed: %s",
 		    ERR_error_string(ERR_get_error(), NULL));
-		HMAC_CTX_free(ctx);
+		EVP_MAC_CTX_free(ctx);
+		EVP_MAC_free(mac);
 		return (false);
 	}
-	if (HMAC_Update(ctx, aad, aad_len) != 1) {
-		warnx("HMAC_Update (aad) failed: %s",
+	if (EVP_MAC_update(ctx, aad, aad_len) != 1) {
+		warnx("EVP_MAC_update (aad) failed: %s",
 		    ERR_error_string(ERR_get_error(), NULL));
-		HMAC_CTX_free(ctx);
+		EVP_MAC_CTX_free(ctx);
+		EVP_MAC_free(mac);
 		return (false);
 	}
-	if (HMAC_Update(ctx, buffer, len) != 1) {
-		warnx("HMAC_Update (payload) failed: %s",
+	if (EVP_MAC_update(ctx, buffer, len) != 1) {
+		warnx("EVP_MAC_update (payload) failed: %s",
 		    ERR_error_string(ERR_get_error(), NULL));
-		HMAC_CTX_free(ctx);
+		EVP_MAC_CTX_free(ctx);
+		EVP_MAC_free(mac);
 		return (false);
 	}
-	if (HMAC_Final(ctx, digest2, &digest_len) != 1) {
-		warnx("HMAC_Final failed: %s",
+	if (EVP_MAC_final(ctx, digest2, &digest_len, sizeof(digest2)) != 1) {
+		warnx("EVP_MAC_final failed: %s",
 		    ERR_error_string(ERR_get_error(), NULL));
-		HMAC_CTX_free(ctx);
+		EVP_MAC_CTX_free(ctx);
+		EVP_MAC_free(mac);
 		return (false);
 	}
-	HMAC_CTX_free(ctx);
+	EVP_MAC_CTX_free(ctx);
+	EVP_MAC_free(mac);
 	if (memcmp(digest, digest2, digest_len) != 0) {
 		warnx("HMAC mismatch");
 		return (false);
@@ -377,7 +398,7 @@ aead_encrypt(const EVP_CIPHER *cipher, const char *key, const char *nonce,
 		return (false);
 	}
 	if (EVP_EncryptInit_ex(ctx, cipher, NULL, (const u_char *)key,
-	    (const u_char *)nonce) != 1) {
+		(const u_char *)nonce) != 1) {
 		warnx("EVP_EncryptInit_ex failed: %s",
 		    ERR_error_string(ERR_get_error(), NULL));
 		EVP_CIPHER_CTX_free(ctx);
@@ -386,7 +407,7 @@ aead_encrypt(const EVP_CIPHER *cipher, const char *key, const char *nonce,
 	EVP_CIPHER_CTX_set_padding(ctx, 0);
 	if (aad != NULL) {
 		if (EVP_EncryptUpdate(ctx, NULL, &outl, (const u_char *)aad,
-		    aad_len) != 1) {
+			aad_len) != 1) {
 			warnx("EVP_EncryptUpdate for AAD failed: %s",
 			    ERR_error_string(ERR_get_error(), NULL));
 			EVP_CIPHER_CTX_free(ctx);
@@ -394,7 +415,7 @@ aead_encrypt(const EVP_CIPHER *cipher, const char *key, const char *nonce,
 		}
 	}
 	if (EVP_EncryptUpdate(ctx, (u_char *)output, &outl,
-	    (const u_char *)input, size) != 1) {
+		(const u_char *)input, size) != 1) {
 		warnx("EVP_EncryptUpdate failed: %s",
 		    ERR_error_string(ERR_get_error(), NULL));
 		EVP_CIPHER_CTX_free(ctx);
@@ -440,7 +461,7 @@ aead_decrypt(const EVP_CIPHER *cipher, const char *key, const char *nonce,
 		return (false);
 	}
 	if (EVP_DecryptInit_ex(ctx, cipher, NULL, (const u_char *)key,
-	    (const u_char *)nonce) != 1) {
+		(const u_char *)nonce) != 1) {
 		warnx("EVP_DecryptInit_ex failed: %s",
 		    ERR_error_string(ERR_get_error(), NULL));
 		EVP_CIPHER_CTX_free(ctx);
@@ -449,7 +470,7 @@ aead_decrypt(const EVP_CIPHER *cipher, const char *key, const char *nonce,
 	EVP_CIPHER_CTX_set_padding(ctx, 0);
 	if (aad != NULL) {
 		if (EVP_DecryptUpdate(ctx, NULL, &outl, (const u_char *)aad,
-		    aad_len) != 1) {
+			aad_len) != 1) {
 			warnx("EVP_DecryptUpdate for AAD failed: %s",
 			    ERR_error_string(ERR_get_error(), NULL));
 			EVP_CIPHER_CTX_free(ctx);
@@ -457,7 +478,7 @@ aead_decrypt(const EVP_CIPHER *cipher, const char *key, const char *nonce,
 		}
 	}
 	if (EVP_DecryptUpdate(ctx, (u_char *)output, &outl,
-	    (const u_char *)input, size) != 1) {
+		(const u_char *)input, size) != 1) {
 		warnx("EVP_DecryptUpdate failed: %s",
 		    ERR_error_string(ERR_get_error(), NULL));
 		EVP_CIPHER_CTX_free(ctx);
@@ -465,7 +486,7 @@ aead_decrypt(const EVP_CIPHER *cipher, const char *key, const char *nonce,
 	}
 	total = outl;
 	if (EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_AEAD_SET_TAG, tag_len,
-	    __DECONST(char *, tag)) != 1) {
+		__DECONST(char *, tag)) != 1) {
 		warnx("EVP_CIPHER_CTX_ctrl(EVP_CTRL_AEAD_SET_TAG) failed: %s",
 		    ERR_error_string(ERR_get_error(), NULL));
 		EVP_CIPHER_CTX_free(ctx);
@@ -485,8 +506,8 @@ aead_decrypt(const EVP_CIPHER *cipher, const char *key, const char *nonce,
 }
 
 static void
-build_tls_enable(int cipher_alg, size_t cipher_key_len, int auth_alg,
-    int minor, uint64_t seqno, struct tls_enable *en)
+build_tls_enable(int cipher_alg, size_t cipher_key_len, int auth_alg, int minor,
+    uint64_t seqno, struct tls_enable *en)
 {
 	u_int auth_key_len, iv_len;
 
@@ -741,8 +762,8 @@ decrypt_tls_aes_cbc_mte(struct tls_enable *en, uint64_t seqno, const void *src,
 	 * record for TLS 1.0.
 	 */
 	if (en->tls_vminor == TLS_MINOR_VER_ZERO)
-		memcpy(__DECONST(uint8_t *, en->iv), (const u_char *)src +
-		    (len - AES_BLOCK_LEN), AES_BLOCK_LEN);
+		memcpy(__DECONST(uint8_t *, en->iv),
+		    (const u_char *)src + (len - AES_BLOCK_LEN), AES_BLOCK_LEN);
 
 	/*
 	 * Verify trailing padding and strip.
@@ -855,10 +876,10 @@ decrypt_tls_aead(struct tls_enable *en, uint64_t seqno, const void *src,
 
 	if (en->tls_vminor == TLS_MINOR_VER_TWO) {
 		ATF_REQUIRE(decrypt_tls_12_aead(en, seqno, src, len, dst,
-		    record_type) == payload_len);
+				record_type) == payload_len);
 	} else {
 		ATF_REQUIRE(decrypt_tls_13_aead(en, seqno, src, len, dst,
-		    record_type) == payload_len);
+				record_type) == payload_len);
 	}
 
 	return (payload_len);
@@ -970,10 +991,10 @@ encrypt_tls_aead(struct tls_enable *en, uint8_t record_type, uint64_t seqno,
 	if (en->tls_vminor == TLS_MINOR_VER_TWO) {
 		ATF_REQUIRE(padding == 0);
 		ATF_REQUIRE(encrypt_tls_12_aead(en, record_type, seqno, src,
-		    len, dst) == record_len);
+				len, dst) == record_len);
 	} else
 		ATF_REQUIRE(encrypt_tls_13_aead(en, record_type, seqno, src,
-		    len, dst, padding) == record_len);
+				len, dst, padding) == record_len);
 
 	return (record_len);
 }
@@ -1010,7 +1031,7 @@ test_ktls_transmit_app_data(const atf_tc_t *tc, struct tls_enable *en,
 	ATF_REQUIRE_MSG(open_sockets(tc, sockets), "failed to create sockets");
 
 	ATF_REQUIRE(setsockopt(sockets[1], IPPROTO_TCP, TCP_TXTLS_ENABLE, en,
-	    sizeof(*en)) == 0);
+			sizeof(*en)) == 0);
 	check_tls_mode(tc, sockets[1], TCP_TXTLS_MODE);
 
 	EV_SET(&ev, sockets[0], EVFILT_READ, EV_ADD, 0, 0, NULL);
@@ -1030,13 +1051,12 @@ test_ktls_transmit_app_data(const atf_tc_t *tc, struct tls_enable *en,
 			/* Try to write any remaining data. */
 			rv = write(ev.ident, plaintext + written,
 			    len - written);
-			ATF_REQUIRE_MSG(rv > 0,
-			    "failed to write to socket");
+			ATF_REQUIRE_MSG(rv > 0, "failed to write to socket");
 			written += rv;
 			if (written == len) {
 				ev.flags = EV_DISABLE;
-				ATF_REQUIRE(kevent(kq, &ev, 1, NULL, 0,
-				    NULL) == 0);
+				ATF_REQUIRE(
+				    kevent(kq, &ev, 1, NULL, 0, NULL) == 0);
 			}
 			break;
 
@@ -1052,7 +1072,7 @@ test_ktls_transmit_app_data(const atf_tc_t *tc, struct tls_enable *en,
 			if (outbuf_len < sizeof(struct tls_record_layer)) {
 				rv = read(ev.ident, outbuf + outbuf_len,
 				    sizeof(struct tls_record_layer) -
-				    outbuf_len);
+					outbuf_len);
 				ATF_REQUIRE_MSG(rv > 0,
 				    "failed to read from socket");
 				outbuf_len += rv;
@@ -1147,7 +1167,7 @@ test_ktls_transmit_control(const atf_tc_t *tc, struct tls_enable *en,
 	ATF_REQUIRE_MSG(open_sockets(tc, sockets), "failed to create sockets");
 
 	ATF_REQUIRE(setsockopt(sockets[1], IPPROTO_TCP, TCP_TXTLS_ENABLE, en,
-	    sizeof(*en)) == 0);
+			sizeof(*en)) == 0);
 	check_tls_mode(tc, sockets[1], TCP_TXTLS_MODE);
 
 	fd_set_blocking(sockets[0]);
@@ -1202,7 +1222,7 @@ test_ktls_transmit_empty_fragment(const atf_tc_t *tc, struct tls_enable *en,
 	ATF_REQUIRE_MSG(open_sockets(tc, sockets), "failed to create sockets");
 
 	ATF_REQUIRE(setsockopt(sockets[1], IPPROTO_TCP, TCP_TXTLS_ENABLE, en,
-	    sizeof(*en)) == 0);
+			sizeof(*en)) == 0);
 	check_tls_mode(tc, sockets[1], TCP_TXTLS_MODE);
 
 	fd_set_blocking(sockets[0]);
@@ -1313,7 +1333,7 @@ test_ktls_receive_app_data(const atf_tc_t *tc, struct tls_enable *en,
 	ATF_REQUIRE_MSG(open_sockets(tc, sockets), "failed to create sockets");
 
 	ATF_REQUIRE(setsockopt(sockets[0], IPPROTO_TCP, TCP_RXTLS_ENABLE, en,
-	    sizeof(*en)) == 0);
+			sizeof(*en)) == 0);
 	check_tls_mode(tc, sockets[0], TCP_RXTLS_MODE);
 
 	EV_SET(&ev, sockets[0], EVFILT_READ, EV_ADD, 0, 0, NULL);
@@ -1352,15 +1372,14 @@ test_ktls_receive_app_data(const atf_tc_t *tc, struct tls_enable *en,
 			 */
 			rv = write(ev.ident, outbuf + outbuf_sent,
 			    outbuf_len - outbuf_sent);
-			ATF_REQUIRE_MSG(rv > 0,
-			    "failed to write to socket");
+			ATF_REQUIRE_MSG(rv > 0, "failed to write to socket");
 			outbuf_sent += rv;
 			if (outbuf_sent == outbuf_len) {
 				outbuf_len = 0;
 				if (written == len) {
 					ev.flags = EV_DISABLE;
 					ATF_REQUIRE(kevent(kq, &ev, 1, NULL, 0,
-					    NULL) == 0);
+							NULL) == 0);
 				}
 			}
 			break;
@@ -1389,135 +1408,131 @@ test_ktls_receive_app_data(const atf_tc_t *tc, struct tls_enable *en,
 	ATF_REQUIRE(close(kq) == 0);
 }
 
-#define	TLS_10_TESTS(M)							\
-	M(aes128_cbc_1_0_sha1, CRYPTO_AES_CBC, 128 / 8,			\
-	    CRYPTO_SHA1_HMAC)						\
-	M(aes256_cbc_1_0_sha1, CRYPTO_AES_CBC, 256 / 8,			\
-	    CRYPTO_SHA1_HMAC)
+#define TLS_10_TESTS(M)                                                   \
+	M(aes128_cbc_1_0_sha1, CRYPTO_AES_CBC, 128 / 8, CRYPTO_SHA1_HMAC) \
+	M(aes256_cbc_1_0_sha1, CRYPTO_AES_CBC, 256 / 8, CRYPTO_SHA1_HMAC)
 
-#define	TLS_13_TESTS(M)							\
-	M(aes128_gcm_1_3, CRYPTO_AES_NIST_GCM_16, 128 / 8, 0,		\
-	    TLS_MINOR_VER_THREE)					\
-	M(aes256_gcm_1_3, CRYPTO_AES_NIST_GCM_16, 256 / 8, 0,		\
-	    TLS_MINOR_VER_THREE)					\
-	M(chacha20_poly1305_1_3, CRYPTO_CHACHA20_POLY1305, 256 / 8, 0,	\
+#define TLS_13_TESTS(M)                                                \
+	M(aes128_gcm_1_3, CRYPTO_AES_NIST_GCM_16, 128 / 8, 0,          \
+	    TLS_MINOR_VER_THREE)                                       \
+	M(aes256_gcm_1_3, CRYPTO_AES_NIST_GCM_16, 256 / 8, 0,          \
+	    TLS_MINOR_VER_THREE)                                       \
+	M(chacha20_poly1305_1_3, CRYPTO_CHACHA20_POLY1305, 256 / 8, 0, \
 	    TLS_MINOR_VER_THREE)
 
-#define	AES_CBC_TESTS(M)						\
-	M(aes128_cbc_1_0_sha1, CRYPTO_AES_CBC, 128 / 8,			\
-	    CRYPTO_SHA1_HMAC, TLS_MINOR_VER_ZERO)			\
-	M(aes256_cbc_1_0_sha1, CRYPTO_AES_CBC, 256 / 8,			\
-	    CRYPTO_SHA1_HMAC, TLS_MINOR_VER_ZERO)			\
-	M(aes128_cbc_1_1_sha1, CRYPTO_AES_CBC, 128 / 8,			\
-	    CRYPTO_SHA1_HMAC, TLS_MINOR_VER_ONE)			\
-	M(aes256_cbc_1_1_sha1, CRYPTO_AES_CBC, 256 / 8,			\
-	    CRYPTO_SHA1_HMAC, TLS_MINOR_VER_ONE)			\
-	M(aes128_cbc_1_2_sha1, CRYPTO_AES_CBC, 128 / 8,			\
-	    CRYPTO_SHA1_HMAC, TLS_MINOR_VER_TWO)			\
-	M(aes256_cbc_1_2_sha1, CRYPTO_AES_CBC, 256 / 8,			\
-	    CRYPTO_SHA1_HMAC, TLS_MINOR_VER_TWO)			\
-	M(aes128_cbc_1_2_sha256, CRYPTO_AES_CBC, 128 / 8,		\
-	    CRYPTO_SHA2_256_HMAC, TLS_MINOR_VER_TWO)			\
-	M(aes256_cbc_1_2_sha256, CRYPTO_AES_CBC, 256 / 8,		\
-	    CRYPTO_SHA2_256_HMAC, TLS_MINOR_VER_TWO)			\
-	M(aes128_cbc_1_2_sha384, CRYPTO_AES_CBC, 128 / 8,		\
-	    CRYPTO_SHA2_384_HMAC, TLS_MINOR_VER_TWO)			\
-	M(aes256_cbc_1_2_sha384, CRYPTO_AES_CBC, 256 / 8,		\
-	    CRYPTO_SHA2_384_HMAC, TLS_MINOR_VER_TWO)			\
+#define AES_CBC_TESTS(M)                                                  \
+	M(aes128_cbc_1_0_sha1, CRYPTO_AES_CBC, 128 / 8, CRYPTO_SHA1_HMAC, \
+	    TLS_MINOR_VER_ZERO)                                           \
+	M(aes256_cbc_1_0_sha1, CRYPTO_AES_CBC, 256 / 8, CRYPTO_SHA1_HMAC, \
+	    TLS_MINOR_VER_ZERO)                                           \
+	M(aes128_cbc_1_1_sha1, CRYPTO_AES_CBC, 128 / 8, CRYPTO_SHA1_HMAC, \
+	    TLS_MINOR_VER_ONE)                                            \
+	M(aes256_cbc_1_1_sha1, CRYPTO_AES_CBC, 256 / 8, CRYPTO_SHA1_HMAC, \
+	    TLS_MINOR_VER_ONE)                                            \
+	M(aes128_cbc_1_2_sha1, CRYPTO_AES_CBC, 128 / 8, CRYPTO_SHA1_HMAC, \
+	    TLS_MINOR_VER_TWO)                                            \
+	M(aes256_cbc_1_2_sha1, CRYPTO_AES_CBC, 256 / 8, CRYPTO_SHA1_HMAC, \
+	    TLS_MINOR_VER_TWO)                                            \
+	M(aes128_cbc_1_2_sha256, CRYPTO_AES_CBC, 128 / 8,                 \
+	    CRYPTO_SHA2_256_HMAC, TLS_MINOR_VER_TWO)                      \
+	M(aes256_cbc_1_2_sha256, CRYPTO_AES_CBC, 256 / 8,                 \
+	    CRYPTO_SHA2_256_HMAC, TLS_MINOR_VER_TWO)                      \
+	M(aes128_cbc_1_2_sha384, CRYPTO_AES_CBC, 128 / 8,                 \
+	    CRYPTO_SHA2_384_HMAC, TLS_MINOR_VER_TWO)                      \
+	M(aes256_cbc_1_2_sha384, CRYPTO_AES_CBC, 256 / 8,                 \
+	    CRYPTO_SHA2_384_HMAC, TLS_MINOR_VER_TWO)
 
-#define AES_GCM_TESTS(M)						\
-	M(aes128_gcm_1_2, CRYPTO_AES_NIST_GCM_16, 128 / 8, 0,		\
-	    TLS_MINOR_VER_TWO)						\
-	M(aes256_gcm_1_2, CRYPTO_AES_NIST_GCM_16, 256 / 8, 0,		\
-	    TLS_MINOR_VER_TWO)						\
-	M(aes128_gcm_1_3, CRYPTO_AES_NIST_GCM_16, 128 / 8, 0,		\
-	    TLS_MINOR_VER_THREE)					\
-	M(aes256_gcm_1_3, CRYPTO_AES_NIST_GCM_16, 256 / 8, 0,		\
+#define AES_GCM_TESTS(M)                                      \
+	M(aes128_gcm_1_2, CRYPTO_AES_NIST_GCM_16, 128 / 8, 0, \
+	    TLS_MINOR_VER_TWO)                                \
+	M(aes256_gcm_1_2, CRYPTO_AES_NIST_GCM_16, 256 / 8, 0, \
+	    TLS_MINOR_VER_TWO)                                \
+	M(aes128_gcm_1_3, CRYPTO_AES_NIST_GCM_16, 128 / 8, 0, \
+	    TLS_MINOR_VER_THREE)                              \
+	M(aes256_gcm_1_3, CRYPTO_AES_NIST_GCM_16, 256 / 8, 0, \
 	    TLS_MINOR_VER_THREE)
 
-#define CHACHA20_TESTS(M)						\
-	M(chacha20_poly1305_1_2, CRYPTO_CHACHA20_POLY1305, 256 / 8, 0,	\
-	    TLS_MINOR_VER_TWO)						\
-	M(chacha20_poly1305_1_3, CRYPTO_CHACHA20_POLY1305, 256 / 8, 0,	\
+#define CHACHA20_TESTS(M)                                              \
+	M(chacha20_poly1305_1_2, CRYPTO_CHACHA20_POLY1305, 256 / 8, 0, \
+	    TLS_MINOR_VER_TWO)                                         \
+	M(chacha20_poly1305_1_3, CRYPTO_CHACHA20_POLY1305, 256 / 8, 0, \
 	    TLS_MINOR_VER_THREE)
 
-#define GEN_TRANSMIT_APP_DATA_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, name, len)					\
-ATF_TC_WITHOUT_HEAD(ktls_transmit_##cipher_name##_##name);		\
-ATF_TC_BODY(ktls_transmit_##cipher_name##_##name, tc)			\
-{									\
-	struct tls_enable en;						\
-	uint64_t seqno;							\
-									\
-	ATF_REQUIRE_KTLS();						\
-	seqno = random();						\
-	build_tls_enable(cipher_alg, key_size, auth_alg, minor, seqno,	\
-	    &en);							\
-	test_ktls_transmit_app_data(tc, &en, seqno, len);		\
-	free_tls_enable(&en);						\
-}
+#define GEN_TRANSMIT_APP_DATA_TEST(cipher_name, cipher_alg, key_size,          \
+    auth_alg, minor, name, len)                                                \
+	ATF_TC_WITHOUT_HEAD(ktls_transmit_##cipher_name##_##name);             \
+	ATF_TC_BODY(ktls_transmit_##cipher_name##_##name, tc)                  \
+	{                                                                      \
+		struct tls_enable en;                                          \
+		uint64_t seqno;                                                \
+                                                                               \
+		ATF_REQUIRE_KTLS();                                            \
+		seqno = random();                                              \
+		build_tls_enable(cipher_alg, key_size, auth_alg, minor, seqno, \
+		    &en);                                                      \
+		test_ktls_transmit_app_data(tc, &en, seqno, len);              \
+		free_tls_enable(&en);                                          \
+	}
 
-#define ADD_TRANSMIT_APP_DATA_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, name)					\
+#define ADD_TRANSMIT_APP_DATA_TEST(cipher_name, cipher_alg, key_size, \
+    auth_alg, minor, name)                                            \
 	ATF_TP_ADD_TC(tp, ktls_transmit_##cipher_name##_##name);
 
-#define GEN_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, name, type, len)				\
-ATF_TC_WITHOUT_HEAD(ktls_transmit_##cipher_name##_##name);		\
-ATF_TC_BODY(ktls_transmit_##cipher_name##_##name, tc)			\
-{									\
-	struct tls_enable en;						\
-	uint64_t seqno;							\
-									\
-	ATF_REQUIRE_KTLS();						\
-	seqno = random();						\
-	build_tls_enable(cipher_alg, key_size, auth_alg, minor,	seqno,	\
-	    &en);							\
-	test_ktls_transmit_control(tc, &en, seqno, type, len);		\
-	free_tls_enable(&en);						\
-}
+#define GEN_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+    minor, name, type, len)                                                    \
+	ATF_TC_WITHOUT_HEAD(ktls_transmit_##cipher_name##_##name);             \
+	ATF_TC_BODY(ktls_transmit_##cipher_name##_##name, tc)                  \
+	{                                                                      \
+		struct tls_enable en;                                          \
+		uint64_t seqno;                                                \
+                                                                               \
+		ATF_REQUIRE_KTLS();                                            \
+		seqno = random();                                              \
+		build_tls_enable(cipher_alg, key_size, auth_alg, minor, seqno, \
+		    &en);                                                      \
+		test_ktls_transmit_control(tc, &en, seqno, type, len);         \
+		free_tls_enable(&en);                                          \
+	}
 
-#define ADD_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, name)					\
+#define ADD_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+    minor, name)                                                               \
 	ATF_TP_ADD_TC(tp, ktls_transmit_##cipher_name##_##name);
 
-#define GEN_TRANSMIT_EMPTY_FRAGMENT_TEST(cipher_name, cipher_alg,	\
-	    key_size, auth_alg, minor)					\
-ATF_TC_WITHOUT_HEAD(ktls_transmit_##cipher_name##_empty_fragment);	\
-ATF_TC_BODY(ktls_transmit_##cipher_name##_empty_fragment, tc)		\
-{									\
-	struct tls_enable en;						\
-	uint64_t seqno;							\
-									\
-	ATF_REQUIRE_KTLS();						\
-	seqno = random();						\
-	build_tls_enable(cipher_alg, key_size, auth_alg, minor, seqno,	\
-	    &en);							\
-	test_ktls_transmit_empty_fragment(tc, &en, seqno);		\
-	free_tls_enable(&en);						\
-}
+#define GEN_TRANSMIT_EMPTY_FRAGMENT_TEST(cipher_name, cipher_alg, key_size,    \
+    auth_alg, minor)                                                           \
+	ATF_TC_WITHOUT_HEAD(ktls_transmit_##cipher_name##_empty_fragment);     \
+	ATF_TC_BODY(ktls_transmit_##cipher_name##_empty_fragment, tc)          \
+	{                                                                      \
+		struct tls_enable en;                                          \
+		uint64_t seqno;                                                \
+                                                                               \
+		ATF_REQUIRE_KTLS();                                            \
+		seqno = random();                                              \
+		build_tls_enable(cipher_alg, key_size, auth_alg, minor, seqno, \
+		    &en);                                                      \
+		test_ktls_transmit_empty_fragment(tc, &en, seqno);             \
+		free_tls_enable(&en);                                          \
+	}
 
-#define ADD_TRANSMIT_EMPTY_FRAGMENT_TEST(cipher_name, cipher_alg,	\
-	    key_size, auth_alg, minor)					\
+#define ADD_TRANSMIT_EMPTY_FRAGMENT_TEST(cipher_name, cipher_alg, key_size, \
+    auth_alg, minor)                                                        \
 	ATF_TP_ADD_TC(tp, ktls_transmit_##cipher_name##_empty_fragment);
 
-#define GEN_TRANSMIT_TESTS(cipher_name, cipher_alg, key_size, auth_alg,	\
-	    minor)							\
-	GEN_TRANSMIT_APP_DATA_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, short, 64)					\
-	GEN_TRANSMIT_APP_DATA_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, long, 64 * 1024)				\
-	GEN_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, control, 0x21 /* Alert */, 32)
+#define GEN_TRANSMIT_TESTS(cipher_name, cipher_alg, key_size, auth_alg, minor) \
+	GEN_TRANSMIT_APP_DATA_TEST(cipher_name, cipher_alg, key_size,          \
+	    auth_alg, minor, short, 64)                                        \
+	GEN_TRANSMIT_APP_DATA_TEST(cipher_name, cipher_alg, key_size,          \
+	    auth_alg, minor, long, 64 * 1024)                                  \
+	GEN_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, control, 0x21 /* Alert */, 32)
 
-#define ADD_TRANSMIT_TESTS(cipher_name, cipher_alg, key_size, auth_alg,	\
-	    minor)							\
-	ADD_TRANSMIT_APP_DATA_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, short)					\
-	ADD_TRANSMIT_APP_DATA_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, long)					\
-	ADD_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, control)
+#define ADD_TRANSMIT_TESTS(cipher_name, cipher_alg, key_size, auth_alg, minor) \
+	ADD_TRANSMIT_APP_DATA_TEST(cipher_name, cipher_alg, key_size,          \
+	    auth_alg, minor, short)                                            \
+	ADD_TRANSMIT_APP_DATA_TEST(cipher_name, cipher_alg, key_size,          \
+	    auth_alg, minor, long)                                             \
+	ADD_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, control)
 
 /*
  * For each supported cipher suite, run three transmit tests:
@@ -1535,75 +1550,75 @@ AES_CBC_TESTS(GEN_TRANSMIT_TESTS);
 AES_GCM_TESTS(GEN_TRANSMIT_TESTS);
 CHACHA20_TESTS(GEN_TRANSMIT_TESTS);
 
-#define GEN_TRANSMIT_PADDING_TESTS(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor)						\
-	GEN_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, padding_1, 0x21 /* Alert */, 1)		\
-	GEN_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, padding_2, 0x21 /* Alert */, 2)		\
-	GEN_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, padding_3, 0x21 /* Alert */, 3)		\
-	GEN_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, padding_4, 0x21 /* Alert */, 4)		\
-	GEN_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, padding_5, 0x21 /* Alert */, 5)		\
-	GEN_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, padding_6, 0x21 /* Alert */, 6)		\
-	GEN_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, padding_7, 0x21 /* Alert */, 7)		\
-	GEN_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, padding_8, 0x21 /* Alert */, 8)		\
-	GEN_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, padding_9, 0x21 /* Alert */, 9)		\
-	GEN_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, padding_10, 0x21 /* Alert */, 10)		\
-	GEN_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, padding_11, 0x21 /* Alert */, 11)		\
-	GEN_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, padding_12, 0x21 /* Alert */, 12)		\
-	GEN_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, padding_13, 0x21 /* Alert */, 13)		\
-	GEN_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, padding_14, 0x21 /* Alert */, 14)		\
-	GEN_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, padding_15, 0x21 /* Alert */, 15)		\
-	GEN_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, padding_16, 0x21 /* Alert */, 16)
+#define GEN_TRANSMIT_PADDING_TESTS(cipher_name, cipher_alg, key_size,          \
+    auth_alg, minor)                                                           \
+	GEN_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, padding_1, 0x21 /* Alert */, 1)                             \
+	GEN_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, padding_2, 0x21 /* Alert */, 2)                             \
+	GEN_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, padding_3, 0x21 /* Alert */, 3)                             \
+	GEN_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, padding_4, 0x21 /* Alert */, 4)                             \
+	GEN_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, padding_5, 0x21 /* Alert */, 5)                             \
+	GEN_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, padding_6, 0x21 /* Alert */, 6)                             \
+	GEN_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, padding_7, 0x21 /* Alert */, 7)                             \
+	GEN_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, padding_8, 0x21 /* Alert */, 8)                             \
+	GEN_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, padding_9, 0x21 /* Alert */, 9)                             \
+	GEN_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, padding_10, 0x21 /* Alert */, 10)                           \
+	GEN_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, padding_11, 0x21 /* Alert */, 11)                           \
+	GEN_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, padding_12, 0x21 /* Alert */, 12)                           \
+	GEN_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, padding_13, 0x21 /* Alert */, 13)                           \
+	GEN_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, padding_14, 0x21 /* Alert */, 14)                           \
+	GEN_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, padding_15, 0x21 /* Alert */, 15)                           \
+	GEN_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, padding_16, 0x21 /* Alert */, 16)
 
-#define ADD_TRANSMIT_PADDING_TESTS(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor)						\
-	ADD_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, padding_1)					\
-	ADD_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, padding_2)					\
-	ADD_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, padding_3)					\
-	ADD_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, padding_4)					\
-	ADD_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, padding_5)					\
-	ADD_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, padding_6)					\
-	ADD_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, padding_7)					\
-	ADD_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, padding_8)					\
-	ADD_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, padding_9)					\
-	ADD_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, padding_10)				\
-	ADD_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, padding_11)				\
-	ADD_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, padding_12)				\
-	ADD_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, padding_13)				\
-	ADD_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, padding_14)				\
-	ADD_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, padding_15)				\
-	ADD_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, padding_16)
+#define ADD_TRANSMIT_PADDING_TESTS(cipher_name, cipher_alg, key_size,          \
+    auth_alg, minor)                                                           \
+	ADD_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, padding_1)                                                  \
+	ADD_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, padding_2)                                                  \
+	ADD_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, padding_3)                                                  \
+	ADD_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, padding_4)                                                  \
+	ADD_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, padding_5)                                                  \
+	ADD_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, padding_6)                                                  \
+	ADD_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, padding_7)                                                  \
+	ADD_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, padding_8)                                                  \
+	ADD_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, padding_9)                                                  \
+	ADD_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, padding_10)                                                 \
+	ADD_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, padding_11)                                                 \
+	ADD_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, padding_12)                                                 \
+	ADD_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, padding_13)                                                 \
+	ADD_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, padding_14)                                                 \
+	ADD_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, padding_15)                                                 \
+	ADD_TRANSMIT_CONTROL_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, padding_16)
 
 /*
  * For AES-CBC MTE cipher suites using padding, add tests of messages
@@ -1632,54 +1647,52 @@ test_ktls_invalid_transmit_cipher_suite(const atf_tc_t *tc,
 	ATF_REQUIRE_MSG(open_sockets(tc, sockets), "failed to create sockets");
 
 	ATF_REQUIRE(setsockopt(sockets[1], IPPROTO_TCP, TCP_TXTLS_ENABLE, en,
-	    sizeof(*en)) == -1);
+			sizeof(*en)) == -1);
 	ATF_REQUIRE(errno == EINVAL);
 
 	close_sockets(sockets);
 }
 
-#define GEN_INVALID_TRANSMIT_TEST(name, cipher_alg, key_size, auth_alg,	\
-	    minor)							\
-ATF_TC_WITHOUT_HEAD(ktls_transmit_invalid_##name);			\
-ATF_TC_BODY(ktls_transmit_invalid_##name, tc)				\
-{									\
-	struct tls_enable en;						\
-	uint64_t seqno;							\
-									\
-	ATF_REQUIRE_KTLS();						\
-	seqno = random();						\
-	build_tls_enable(cipher_alg, key_size, auth_alg, minor,	seqno,	\
-	    &en);							\
-	test_ktls_invalid_transmit_cipher_suite(tc, &en);		\
-	free_tls_enable(&en);						\
-}
+#define GEN_INVALID_TRANSMIT_TEST(name, cipher_alg, key_size, auth_alg, minor) \
+	ATF_TC_WITHOUT_HEAD(ktls_transmit_invalid_##name);                     \
+	ATF_TC_BODY(ktls_transmit_invalid_##name, tc)                          \
+	{                                                                      \
+		struct tls_enable en;                                          \
+		uint64_t seqno;                                                \
+                                                                               \
+		ATF_REQUIRE_KTLS();                                            \
+		seqno = random();                                              \
+		build_tls_enable(cipher_alg, key_size, auth_alg, minor, seqno, \
+		    &en);                                                      \
+		test_ktls_invalid_transmit_cipher_suite(tc, &en);              \
+		free_tls_enable(&en);                                          \
+	}
 
-#define ADD_INVALID_TRANSMIT_TEST(name, cipher_alg, key_size, auth_alg, \
-	    minor)							\
+#define ADD_INVALID_TRANSMIT_TEST(name, cipher_alg, key_size, auth_alg, minor) \
 	ATF_TP_ADD_TC(tp, ktls_transmit_invalid_##name);
 
-#define	INVALID_CIPHER_SUITES(M)					\
-	M(aes128_cbc_1_0_sha256, CRYPTO_AES_CBC, 128 / 8,		\
-	    CRYPTO_SHA2_256_HMAC, TLS_MINOR_VER_ZERO)			\
-	M(aes128_cbc_1_0_sha384, CRYPTO_AES_CBC, 128 / 8,		\
-	    CRYPTO_SHA2_384_HMAC, TLS_MINOR_VER_ZERO)			\
-	M(aes128_gcm_1_0, CRYPTO_AES_NIST_GCM_16, 128 / 8, 0,		\
-	    TLS_MINOR_VER_ZERO)						\
-	M(chacha20_poly1305_1_0, CRYPTO_CHACHA20_POLY1305, 256 / 8, 0,	\
-	    TLS_MINOR_VER_ZERO)						\
-	M(aes128_cbc_1_1_sha256, CRYPTO_AES_CBC, 128 / 8,		\
-	    CRYPTO_SHA2_256_HMAC, TLS_MINOR_VER_ONE)			\
-	M(aes128_cbc_1_1_sha384, CRYPTO_AES_CBC, 128 / 8,		\
-	    CRYPTO_SHA2_384_HMAC, TLS_MINOR_VER_ONE)			\
-	M(aes128_gcm_1_1, CRYPTO_AES_NIST_GCM_16, 128 / 8, 0,		\
-	    TLS_MINOR_VER_ONE)						\
-	M(chacha20_poly1305_1_1, CRYPTO_CHACHA20_POLY1305, 256 / 8, 0,	\
-	    TLS_MINOR_VER_ONE)						\
-	M(aes128_cbc_1_3_sha1, CRYPTO_AES_CBC, 128 / 8,			\
-	    CRYPTO_SHA1_HMAC, TLS_MINOR_VER_THREE)			\
-	M(aes128_cbc_1_3_sha256, CRYPTO_AES_CBC, 128 / 8,		\
-	    CRYPTO_SHA2_256_HMAC, TLS_MINOR_VER_THREE)			\
-	M(aes128_cbc_1_3_sha384, CRYPTO_AES_CBC, 128 / 8,		\
+#define INVALID_CIPHER_SUITES(M)                                          \
+	M(aes128_cbc_1_0_sha256, CRYPTO_AES_CBC, 128 / 8,                 \
+	    CRYPTO_SHA2_256_HMAC, TLS_MINOR_VER_ZERO)                     \
+	M(aes128_cbc_1_0_sha384, CRYPTO_AES_CBC, 128 / 8,                 \
+	    CRYPTO_SHA2_384_HMAC, TLS_MINOR_VER_ZERO)                     \
+	M(aes128_gcm_1_0, CRYPTO_AES_NIST_GCM_16, 128 / 8, 0,             \
+	    TLS_MINOR_VER_ZERO)                                           \
+	M(chacha20_poly1305_1_0, CRYPTO_CHACHA20_POLY1305, 256 / 8, 0,    \
+	    TLS_MINOR_VER_ZERO)                                           \
+	M(aes128_cbc_1_1_sha256, CRYPTO_AES_CBC, 128 / 8,                 \
+	    CRYPTO_SHA2_256_HMAC, TLS_MINOR_VER_ONE)                      \
+	M(aes128_cbc_1_1_sha384, CRYPTO_AES_CBC, 128 / 8,                 \
+	    CRYPTO_SHA2_384_HMAC, TLS_MINOR_VER_ONE)                      \
+	M(aes128_gcm_1_1, CRYPTO_AES_NIST_GCM_16, 128 / 8, 0,             \
+	    TLS_MINOR_VER_ONE)                                            \
+	M(chacha20_poly1305_1_1, CRYPTO_CHACHA20_POLY1305, 256 / 8, 0,    \
+	    TLS_MINOR_VER_ONE)                                            \
+	M(aes128_cbc_1_3_sha1, CRYPTO_AES_CBC, 128 / 8, CRYPTO_SHA1_HMAC, \
+	    TLS_MINOR_VER_THREE)                                          \
+	M(aes128_cbc_1_3_sha256, CRYPTO_AES_CBC, 128 / 8,                 \
+	    CRYPTO_SHA2_256_HMAC, TLS_MINOR_VER_THREE)                    \
+	M(aes128_cbc_1_3_sha384, CRYPTO_AES_CBC, 128 / 8,                 \
 	    CRYPTO_SHA2_384_HMAC, TLS_MINOR_VER_THREE)
 
 /*
@@ -1687,39 +1700,37 @@ ATF_TC_BODY(ktls_transmit_invalid_##name, tc)				\
  */
 INVALID_CIPHER_SUITES(GEN_INVALID_TRANSMIT_TEST);
 
-#define GEN_RECEIVE_APP_DATA_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, name, len, padding)			\
-ATF_TC_WITHOUT_HEAD(ktls_receive_##cipher_name##_##name);		\
-ATF_TC_BODY(ktls_receive_##cipher_name##_##name, tc)			\
-{									\
-	struct tls_enable en;						\
-	uint64_t seqno;							\
-									\
-	ATF_REQUIRE_KTLS();						\
-	seqno = random();						\
-	build_tls_enable(cipher_alg, key_size, auth_alg, minor, seqno,	\
-	    &en);							\
-	test_ktls_receive_app_data(tc, &en, seqno, len, padding);	\
-	free_tls_enable(&en);						\
-}
+#define GEN_RECEIVE_APP_DATA_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+    minor, name, len, padding)                                                 \
+	ATF_TC_WITHOUT_HEAD(ktls_receive_##cipher_name##_##name);              \
+	ATF_TC_BODY(ktls_receive_##cipher_name##_##name, tc)                   \
+	{                                                                      \
+		struct tls_enable en;                                          \
+		uint64_t seqno;                                                \
+                                                                               \
+		ATF_REQUIRE_KTLS();                                            \
+		seqno = random();                                              \
+		build_tls_enable(cipher_alg, key_size, auth_alg, minor, seqno, \
+		    &en);                                                      \
+		test_ktls_receive_app_data(tc, &en, seqno, len, padding);      \
+		free_tls_enable(&en);                                          \
+	}
 
-#define ADD_RECEIVE_APP_DATA_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, name)					\
+#define ADD_RECEIVE_APP_DATA_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+    minor, name)                                                               \
 	ATF_TP_ADD_TC(tp, ktls_receive_##cipher_name##_##name);
 
-#define GEN_RECEIVE_TESTS(cipher_name, cipher_alg, key_size, auth_alg,	\
-	    minor)							\
-	GEN_RECEIVE_APP_DATA_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, short, 64, 0)				\
-	GEN_RECEIVE_APP_DATA_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, long, 64 * 1024, 0)
+#define GEN_RECEIVE_TESTS(cipher_name, cipher_alg, key_size, auth_alg, minor)  \
+	GEN_RECEIVE_APP_DATA_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, short, 64, 0)                                               \
+	GEN_RECEIVE_APP_DATA_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, long, 64 * 1024, 0)
 
-#define ADD_RECEIVE_TESTS(cipher_name, cipher_alg, key_size, auth_alg,	\
-	    minor)							\
-	ADD_RECEIVE_APP_DATA_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, short)					\
-	ADD_RECEIVE_APP_DATA_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, long)
+#define ADD_RECEIVE_TESTS(cipher_name, cipher_alg, key_size, auth_alg, minor)  \
+	ADD_RECEIVE_APP_DATA_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, short)                                                      \
+	ADD_RECEIVE_APP_DATA_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, long)
 
 /*
  * For each supported cipher suite, run two receive tests:
@@ -1736,19 +1747,19 @@ ATF_TC_BODY(ktls_receive_##cipher_name##_##name, tc)			\
 AES_GCM_TESTS(GEN_RECEIVE_TESTS);
 CHACHA20_TESTS(GEN_RECEIVE_TESTS);
 
-#define GEN_PADDING_RECEIVE_TESTS(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor)						\
-	GEN_RECEIVE_APP_DATA_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, short_padded, 64, 16)			\
-	GEN_RECEIVE_APP_DATA_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, long_padded, 64 * 1024, 15)
+#define GEN_PADDING_RECEIVE_TESTS(cipher_name, cipher_alg, key_size, auth_alg, \
+    minor)                                                                     \
+	GEN_RECEIVE_APP_DATA_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, short_padded, 64, 16)                                       \
+	GEN_RECEIVE_APP_DATA_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, long_padded, 64 * 1024, 15)
 
-#define ADD_PADDING_RECEIVE_TESTS(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor)						\
-	ADD_RECEIVE_APP_DATA_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, short_padded)				\
-	ADD_RECEIVE_APP_DATA_TEST(cipher_name, cipher_alg, key_size,	\
-	    auth_alg, minor, long_padded)
+#define ADD_PADDING_RECEIVE_TESTS(cipher_name, cipher_alg, key_size, auth_alg, \
+    minor)                                                                     \
+	ADD_RECEIVE_APP_DATA_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, short_padded)                                               \
+	ADD_RECEIVE_APP_DATA_TEST(cipher_name, cipher_alg, key_size, auth_alg, \
+	    minor, long_padded)
 
 /*
  * For TLS 1.3 cipher suites, run two additional receive tests which
@@ -1765,30 +1776,28 @@ test_ktls_invalid_receive_cipher_suite(const atf_tc_t *tc,
 	ATF_REQUIRE_MSG(open_sockets(tc, sockets), "failed to create sockets");
 
 	ATF_REQUIRE(setsockopt(sockets[1], IPPROTO_TCP, TCP_RXTLS_ENABLE, en,
-	    sizeof(*en)) == -1);
+			sizeof(*en)) == -1);
 	ATF_REQUIRE(errno == EINVAL);
 
 	close_sockets(sockets);
 }
 
-#define GEN_INVALID_RECEIVE_TEST(name, cipher_alg, key_size, auth_alg,	\
-	    minor)							\
-ATF_TC_WITHOUT_HEAD(ktls_receive_invalid_##name);			\
-ATF_TC_BODY(ktls_receive_invalid_##name, tc)				\
-{									\
-	struct tls_enable en;						\
-	uint64_t seqno;							\
-									\
-	ATF_REQUIRE_KTLS();						\
-	seqno = random();						\
-	build_tls_enable(cipher_alg, key_size, auth_alg, minor,	seqno,	\
-	    &en);							\
-	test_ktls_invalid_receive_cipher_suite(tc, &en);		\
-	free_tls_enable(&en);						\
-}
+#define GEN_INVALID_RECEIVE_TEST(name, cipher_alg, key_size, auth_alg, minor)  \
+	ATF_TC_WITHOUT_HEAD(ktls_receive_invalid_##name);                      \
+	ATF_TC_BODY(ktls_receive_invalid_##name, tc)                           \
+	{                                                                      \
+		struct tls_enable en;                                          \
+		uint64_t seqno;                                                \
+                                                                               \
+		ATF_REQUIRE_KTLS();                                            \
+		seqno = random();                                              \
+		build_tls_enable(cipher_alg, key_size, auth_alg, minor, seqno, \
+		    &en);                                                      \
+		test_ktls_invalid_receive_cipher_suite(tc, &en);               \
+		free_tls_enable(&en);                                          \
+	}
 
-#define ADD_INVALID_RECEIVE_TEST(name, cipher_alg, key_size, auth_alg,	\
-	    minor)							\
+#define ADD_INVALID_RECEIVE_TEST(name, cipher_alg, key_size, auth_alg, minor) \
 	ATF_TP_ADD_TC(tp, ktls_receive_invalid_##name);
 
 /*
@@ -1805,30 +1814,30 @@ test_ktls_unsupported_receive_cipher_suite(const atf_tc_t *tc,
 	ATF_REQUIRE_MSG(open_sockets(tc, sockets), "failed to create sockets");
 
 	ATF_REQUIRE(setsockopt(sockets[1], IPPROTO_TCP, TCP_RXTLS_ENABLE, en,
-	    sizeof(*en)) == -1);
+			sizeof(*en)) == -1);
 	ATF_REQUIRE(errno == EPROTONOSUPPORT);
 
 	close_sockets(sockets);
 }
 
-#define GEN_UNSUPPORTED_RECEIVE_TEST(name, cipher_alg, key_size,	\
-	    auth_alg, minor)						\
-ATF_TC_WITHOUT_HEAD(ktls_receive_unsupported_##name);			\
-ATF_TC_BODY(ktls_receive_unsupported_##name, tc)			\
-{									\
-	struct tls_enable en;						\
-	uint64_t seqno;							\
-									\
-	ATF_REQUIRE_KTLS();						\
-	seqno = random();						\
-	build_tls_enable(cipher_alg, key_size, auth_alg, minor,	seqno,	\
-	    &en);							\
-	test_ktls_unsupported_receive_cipher_suite(tc, &en);		\
-	free_tls_enable(&en);						\
-}
+#define GEN_UNSUPPORTED_RECEIVE_TEST(name, cipher_alg, key_size, auth_alg,     \
+    minor)                                                                     \
+	ATF_TC_WITHOUT_HEAD(ktls_receive_unsupported_##name);                  \
+	ATF_TC_BODY(ktls_receive_unsupported_##name, tc)                       \
+	{                                                                      \
+		struct tls_enable en;                                          \
+		uint64_t seqno;                                                \
+                                                                               \
+		ATF_REQUIRE_KTLS();                                            \
+		seqno = random();                                              \
+		build_tls_enable(cipher_alg, key_size, auth_alg, minor, seqno, \
+		    &en);                                                      \
+		test_ktls_unsupported_receive_cipher_suite(tc, &en);           \
+		free_tls_enable(&en);                                          \
+	}
 
-#define ADD_UNSUPPORTED_RECEIVE_TEST(name, cipher_alg, key_size,	\
-	    auth_alg, minor)						\
+#define ADD_UNSUPPORTED_RECEIVE_TEST(name, cipher_alg, key_size, auth_alg, \
+    minor)                                                                 \
 	ATF_TP_ADD_TC(tp, ktls_receive_unsupported_##name);
 
 /*
@@ -1858,8 +1867,8 @@ ATF_TC_BODY(ktls_sendto_baddst, tc)
 	build_tls_enable(CRYPTO_AES_NIST_GCM_16, 128 / 8, 0,
 	    TLS_MINOR_VER_THREE, (uint64_t)random(), &en);
 
-	ATF_REQUIRE(setsockopt(s, IPPROTO_TCP, TCP_TXTLS_ENABLE, &en,
-	    sizeof(en)) == 0);
+	ATF_REQUIRE(
+	    setsockopt(s, IPPROTO_TCP, TCP_TXTLS_ENABLE, &en, sizeof(en)) == 0);
 
 	memset(&dst, 0, sizeof(dst));
 	dst.sin_family = AF_INET;
@@ -1902,27 +1911,27 @@ ATF_TC_BODY(ktls_receive_loopback_sendfile, tc)
 	ATF_REQUIRE((pagesize = getpagesize()) > 0);
 	payload_len = pagesize;
 	seqno = random();
-	build_tls_enable(CRYPTO_AES_NIST_GCM_16, 128 / 8, 0,
-	    TLS_MINOR_VER_TWO, seqno, &en);
+	build_tls_enable(CRYPTO_AES_NIST_GCM_16, 128 / 8, 0, TLS_MINOR_VER_TWO,
+	    seqno, &en);
 
 	len = tls_header_len(&en) + payload_len + tls_trailer_len(&en);
 	plaintext = alloc_buffer(payload_len);
 	ciphertext = malloc(len);
 	ATF_REQUIRE(encrypt_tls_record(&en, TLS_RLTYPE_APP, seqno, plaintext,
-	    payload_len, ciphertext, len, 0) == len);
+			payload_len, ciphertext, len, 0) == len);
 
 	ATF_REQUIRE((shm = shm_open(SHM_ANON, O_RDWR, 0600)) >= 0);
 	ATF_REQUIRE(ftruncate(shm, payload_len) == 0);
 	ATF_REQUIRE((p = mmap(NULL, payload_len, PROT_READ | PROT_WRITE,
-	    MAP_SHARED, shm, 0)) != MAP_FAILED);
+			 MAP_SHARED, shm, 0)) != MAP_FAILED);
 	memcpy(p, ciphertext + tls_header_len(&en), payload_len);
 
 	ATF_REQUIRE_MSG(socketpair_tcp(sockets), "failed to create sockets");
 	ATF_REQUIRE(setsockopt(sockets[0], IPPROTO_TCP, TCP_RXTLS_ENABLE, &en,
-	    sizeof(en)) == 0);
+			sizeof(en)) == 0);
 	slen = sizeof(mode);
 	ATF_REQUIRE(getsockopt(sockets[0], IPPROTO_TCP, TCP_RXTLS_MODE, &mode,
-	    &slen) == 0);
+			&slen) == 0);
 	ATF_REQUIRE(mode == TCP_TLS_MODE_SW);
 
 	fd_set_blocking(sockets[0]);
@@ -1936,8 +1945,8 @@ ATF_TC_BODY(ktls_receive_loopback_sendfile, tc)
 	hdtr.hdr_cnt = 1;
 	hdtr.trailers = iov + 1;
 	hdtr.trl_cnt = 1;
-	ATF_REQUIRE(sendfile(shm, sockets[1], 0, payload_len, &hdtr,
-	    &sbytes, 0) == 0);
+	ATF_REQUIRE(
+	    sendfile(shm, sockets[1], 0, payload_len, &hdtr, &sbytes, 0) == 0);
 	ATF_REQUIRE(sbytes == (off_t)len);
 
 	outbuf = calloc(payload_len, 1);
@@ -1957,8 +1966,8 @@ ATF_TC_BODY(ktls_receive_loopback_sendfile, tc)
 	} else
 		ATF_REQUIRE_ERRNO(EBADMSG, true);
 
-	ATF_REQUIRE(memcmp(p, ciphertext + tls_header_len(&en),
-	    payload_len) == 0);
+	ATF_REQUIRE(
+	    memcmp(p, ciphertext + tls_header_len(&en), payload_len) == 0);
 
 	ATF_REQUIRE(munmap(p, payload_len) == 0);
 	ATF_REQUIRE(close(shm) == 0);
