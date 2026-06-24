@@ -127,6 +127,7 @@ OLD_FILES+=usr/tests/usr.bin/xargs/regress.n2147483647.out
 OLD_FILES+=usr/share/examples/drivers/README
 OLD_FILES+=usr/share/examples/drivers/make_device_driver.sh
 OLD_FILES+=usr/share/examples/drivers/make_pseudo_driver.sh
+OLD_DIRS+=usr/share/examples/drivers
 # 20251216: Remove libnss_tacplus.a (it never should have been installed)
 OLD_FILES+=usr/lib/libnss_tacplus.a
 # 20251216: bogus man page

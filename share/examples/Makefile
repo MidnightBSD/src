@@ -70,12 +70,6 @@ SE_DISKLESS= \
 	README.TEMPLATING \
 	clone_root
 
-SE_DIRS+=	drivers
-SE_DRIVERS= \
-	README \
-	make_device_driver.sh \
-	make_pseudo_driver.sh
-
 SE_DIRS+=	etc
 SE_ETC= \
 	README.examples \
