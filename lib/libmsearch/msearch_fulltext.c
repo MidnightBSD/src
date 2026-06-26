@@ -87,7 +87,7 @@ msearch_fulltext_search(msearch_query *query, msearch_result *result) {
 				break;
 			}
                         if (i > 0) {
-                                current->next = malloc(sizeof(msearch_result));
+                                current->next = calloc(1, sizeof(msearch_result));
                                 if (current->next == NULL) {
                                         i = -1;
                                         break;
@@ -297,7 +297,7 @@ msearch_fulltext_index_file(msearch_fulltext *restrict idx, const char *path) {
 	else
 		fprintf(stderr, "null mimetype for %s\n", path);
 #endif
-	if (strcmp("text/plain", mimetype) != 0)
+	if (mimetype == NULL || strcmp("text/plain", mimetype) != 0)
 		return 0;
 
 	fp = fopen(path, "r");

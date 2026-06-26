@@ -209,7 +209,7 @@ msearch_index_exists(msearch_index *restrict idx, const char *file) {
 	if (idx == NULL || file == NULL)
 		return 1;
 
-	if (msearch_db_prepare(idx->db, &stmt, "SELECT * FROM files where path=%s", file) == 0) {
+	if (msearch_db_prepare(idx->db, &stmt, "SELECT * FROM files where path=%Q", file) == 0) {
 		ret = sqlite3_step(stmt);
 		if (ret == SQLITE_ROW) {
 			sqlite3_finalize(stmt);

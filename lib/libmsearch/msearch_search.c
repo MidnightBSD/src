@@ -99,7 +99,7 @@ msearch_search(msearch_query *query, msearch_result *result) {
 				break;
 			}
 			if (i > 0) {
-				current->next = malloc(sizeof(msearch_result));
+				current->next = calloc(1, sizeof(msearch_result));
 				if (current->next == NULL) {
 					i = -1; 
 					break;
