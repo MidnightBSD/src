@@ -40,6 +40,9 @@ __MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_fulltext.c,v 1.12 2011/08/09 
 
 #define MAX_INDEX_SIZE 1048576
 #define DEFAULT_RESULT_LIMIT 15
+#ifndef MSEARCH_EXTENSION_PATH
+#define MSEARCH_EXTENSION_PATH "/usr/lib/libmsearch.so"
+#endif
 
 static sqlite3_stmt *msearch_fulltext_prepare(sqlite3 *, msearch_query *, int);
 static char *msearch_fulltext_join_terms(msearch_query *);
@@ -208,7 +211,7 @@ msearch_fulltext_open(const char *filename) {
 	}
 
 	sqlite3_enable_load_extension(idx->db, 1);
-	msearch_db_do(idx->db, "SELECT load_extension('/usr/lib/libmsearch.so')");
+	msearch_db_do(idx->db, "SELECT load_extension('%s')", MSEARCH_EXTENSION_PATH);
 	sqlite3_enable_load_extension(idx->db, 0);
 
 	return idx;
