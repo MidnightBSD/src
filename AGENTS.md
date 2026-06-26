@@ -94,6 +94,8 @@ A subagent call blocks the main agent, so main agent + 1 subagent is sequential 
   - `/*@only@*/`, `/*@owned@*/`, `/*@observer@*/`
   - `/*@requires ... @*/`, `/*@ensures ... @*/`
 
+- Do not let clang-format or any include-sorter alphabetize `#include` directives in `crypto/openssh/`. Several files (`sshd-session.c`, `auth-rhosts.c`, `loginrec.c`, and other consumers of `auth.h`) must include `"hostfile.h"` before `"auth.h"`: `auth.h` declares `check_key_in_hostfiles()` returning `HostStatus`, a type defined in `hostfile.h`. Sorting the block alphabetically puts `auth.h` first and breaks the build with `error: unknown type name 'HostStatus'`. Preserve the upstream OpenSSH include order.
+
 ## Change Constraints
 
 - Do exactly what was asked. Do not expand scope without clear reason.
