@@ -33,9 +33,9 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "hostfile.h"
 #include "auth.h"
 #include "canohost.h"
-#include "hostfile.h"
 #include "log.h"
 #include "misc.h"
 #include "packet.h"

@@ -143,9 +143,9 @@
 #include <unistd.h>
 
 #include "atomicio.h"
+#include "hostfile.h"
 #include "auth.h"
 #include "canohost.h"
-#include "hostfile.h"
 #include "includes.h"
 #include "log.h"
 #include "loginrec.h"

@@ -59,6 +59,7 @@
 #endif
 
 #include "atomicio.h"
+#include "hostfile.h"
 #include "auth.h"
 #include "authfd.h"
 #include "authfile.h"
@@ -68,7 +69,6 @@
 #include "compat.h"
 #include "digest.h"
 #include "dispatch.h"
-#include "hostfile.h"
 #include "kex.h"
 #include "log.h"
 #include "match.h"
