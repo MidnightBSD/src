@@ -34,6 +34,9 @@ __MBSDID("$MidnightBSD: src/lib/libmsearch/msearch_index.c,v 1.10 2011/10/21 15:
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fts.h>
+#include <limits.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #include "msearch_private.h"
 
@@ -81,17 +84,27 @@ int
 msearch_index_file(msearch_index *restrict idx, const char *file, int /* NOTUSED */ flag) {
 	struct stat st;
 	sqlite3_stmt *stmt;
+	int fd;
 
 	if (idx == NULL || file == NULL)
 		return 5;
 
-	if (lstat(file, &st) != 0)
+	/* Open file first to avoid TOCTOU race condition */
+	fd = open(file, O_RDONLY | O_NOFOLLOW);
+	if (fd < 0)
 		return 1;
+
+	if (fstat(fd, &st) != 0) {
+		close(fd);
+		return 1;
+	}
 
 	if (S_ISREG(st.st_mode)) {
 		if (msearch_index_exists(idx, file) == 0) {
-			if (sqlite3_prepare_v2(idx->db, "INSERT INTO files (path, size, owner, created, modified) VALUES(?,?,?,?,?)", -1, &stmt, 0) != SQLITE_OK)
+			if (sqlite3_prepare_v2(idx->db, "INSERT INTO files (path, size, owner, created, modified) VALUES(?,?,?,?,?)", -1, &stmt, 0) != SQLITE_OK) {
+				close(fd);
 				return 3;
+			}
 
 			sqlite3_bind_text(stmt, 1, file, strlen(file), SQLITE_STATIC);
 			sqlite3_bind_int64(stmt, 2, (sqlite3_int64) st.st_size);
@@ -99,8 +112,10 @@ msearch_index_file(msearch_index *restrict idx, const char *file, int /* NOTUSED
 			sqlite3_bind_int64(stmt, 4, (sqlite3_int64) st.st_birthtime);
 			sqlite3_bind_int64(stmt, 5, (sqlite3_int64) st.st_mtime);
 		} else {
-			if (sqlite3_prepare_v2(idx->db, "UPDATE files set size=?, owner=?, created=?, modified=? where path=?", -1, &stmt, 0) != SQLITE_OK)
+			if (sqlite3_prepare_v2(idx->db, "UPDATE files set size=?, owner=?, created=?, modified=? where path=?", -1, &stmt, 0) != SQLITE_OK) {
+				close(fd);
 				return 3;
+			}
 
 			sqlite3_bind_text(stmt, 5, file, strlen(file), SQLITE_STATIC);
 			sqlite3_bind_int64(stmt, 1, (sqlite3_int64) st.st_size);
@@ -111,27 +126,37 @@ msearch_index_file(msearch_index *restrict idx, const char *file, int /* NOTUSED
 
 		if (sqlite3_step(stmt) != SQLITE_DONE) {
 			sqlite3_finalize(stmt);
+			close(fd);
 			return 4;
 		}
 		sqlite3_finalize(stmt);
+		close(fd);
 	} else {
+		close(fd);
 		return 2;
 	}
+	close(fd);
 	return 0;
 }
 
 static int 
 msearch_index_path_file(const char *file, const struct stat *fst) {
 	sqlite3_stmt *stmt;
+	char real_path[PATH_MAX];
 
 	if (file == NULL || fst == NULL)
 		return 1;
 
-	if (strncmp(file, "/tmp/", 5) == 0 || 
-	    strncmp(file, "/var/", 5) == 0 ||
-	    strncmp(file, "/dev/", 5) == 0 ||
-	    strncmp(file, "/proc/", 6) == 0 ||
-	    strncmp(file, "/usr/obj/", 9) == 0)
+	/* Use realpath to resolve symlinks and prevent path traversal */
+	if (realpath(file, real_path) == NULL)
+		return 1;
+
+	/* Check canonical path against excluded directories */
+	if (strncmp(real_path, "/tmp/", 5) == 0 || 
+	    strncmp(real_path, "/var/", 5) == 0 ||
+	    strncmp(real_path, "/dev/", 5) == 0 ||
+	    strncmp(real_path, "/proc/", 6) == 0 ||
+	    strncmp(real_path, "/usr/obj/", 9) == 0)
 		return 0;
 
 	if (S_ISREG(fst->st_mode)) {
@@ -209,7 +234,9 @@ msearch_index_exists(msearch_index *restrict idx, const char *file) {
 	if (idx == NULL || file == NULL)
 		return 1;
 
-	if (msearch_db_prepare(idx->db, &stmt, "SELECT * FROM files where path=%Q", file) == 0) {
+	/* Use parameterized query to prevent SQL injection */
+	if (msearch_db_prepare(idx->db, &stmt, "SELECT * FROM files WHERE path=?") == 0) {
+		sqlite3_bind_text(stmt, 1, file, -1, SQLITE_STATIC);
 		ret = sqlite3_step(stmt);
 		if (ret == SQLITE_ROW) {
 			sqlite3_finalize(stmt);

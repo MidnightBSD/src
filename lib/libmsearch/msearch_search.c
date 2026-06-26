@@ -202,6 +202,16 @@ msearch_search_bind(sqlite3_stmt *stmt, msearch_query *query) {
 		return 1;
 
 	for (i = 0; i < query->term_count; i++) {
+		/* Check for format specifiers in user input to prevent format string attacks */
+		if (query->terms[i] == NULL) {
+			free(pattern);
+			return 1;
+		}
+		if (strchr(query->terms[i], '%') != NULL) {
+			/* Term contains %, reject or escape it */
+			free(pattern);
+			return 1;
+		}
 		size_t needed = strlen(query->terms[i]) + 3;
 		char *tmp;
 
@@ -215,7 +225,11 @@ msearch_search_bind(sqlite3_stmt *stmt, msearch_query *query) {
 			cap = needed;
 		}
 
-		snprintf(pattern, cap, "%%%s%%", query->terms[i]);
+		/* Use strlcpy to safely copy the term, then add % on both sides */
+		pattern[0] = '%';
+		strlcpy(pattern + 1, query->terms[i], cap - 2);
+		pattern[strlen(pattern)] = '%';
+		pattern[strlen(pattern) + 1] = '\0';
 		rc = sqlite3_bind_text(stmt, i + 1, pattern, -1, SQLITE_TRANSIENT);
 		if (rc != SQLITE_OK) {
 			free(pattern);
