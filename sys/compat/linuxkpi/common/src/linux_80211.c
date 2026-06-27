@@ -1136,6 +1136,7 @@ lkpi_sta_scan_to_auth(struct ieee80211vap *vap, enum ieee80211_state nstate, int
 	struct ieee80211_prep_tx_info prep_tx_info;
 	uint32_t changed;
 	int error;
+	bool synched = false;
 
 	/*
 	 * In here we use vap->iv_bss until lvif->lvif_bss is set.
@@ -1182,6 +1183,8 @@ lkpi_sta_scan_to_auth(struct ieee80211vap *vap, enum ieee80211_state nstate, int
 		    lvif, vap, vap->iv_bss, lvif->lvif_bss,
 		    (lvif->lvif_bss != NULL) ? lvif->lvif_bss->ni : NULL,
 		    lvif->lvif_bss_synched);
+		LKPI_80211_LVIF_UNLOCK(lvif);
+		ieee80211_free_node(ni);	/* Error handling for the local ni. */
 		return (EBUSY);
 	}
 	LKPI_80211_LVIF_UNLOCK(lvif);
@@ -1321,14 +1324,6 @@ lkpi_sta_scan_to_auth(struct ieee80211vap *vap, enum ieee80211_state nstate, int
 	    __func__, ni, ni->ni_drv_data));
 	lsta = ni->ni_drv_data;
 
-	/*
-	 * Make sure in case the sta did not change and we re-add it,
-	 * that we can tx again.
-	 */
-	LKPI_80211_LSTA_TXQ_LOCK(lsta);
-	lsta->txq_ready = true;
-	LKPI_80211_LSTA_TXQ_UNLOCK(lsta);
-
 	LKPI_80211_LVIF_LOCK(lvif);
 	/* Insert the [l]sta into the list of known stations. */
 	TAILQ_INSERT_TAIL(&lvif->lsta_head, lsta, lsta_entry);
@@ -1404,10 +1399,10 @@ lkpi_sta_scan_to_auth(struct ieee80211vap *vap, enum ieee80211_state nstate, int
 	ieee80211_ref_node(lsta->ni);
 	lvif->lvif_bss = lsta;
 	if (lsta->ni == vap->iv_bss) {
-		lvif->lvif_bss_synched = true;
+		lvif->lvif_bss_synched = synched = true;
 	} else {
 		/* Set to un-synched no matter what. */
-		lvif->lvif_bss_synched = false;
+		lvif->lvif_bss_synched = synched = false;
 		/*
 		 * We do not error as someone has to take us down.
 		 * If we are followed by a 2nd, new net80211::join1() going to
@@ -1420,6 +1415,19 @@ lkpi_sta_scan_to_auth(struct ieee80211vap *vap, enum ieee80211_state nstate, int
 		 */
 	}
 	LKPI_80211_LVIF_UNLOCK(lvif);
+
+	/*
+	 * Make sure in case the sta did not change and we re-added it,
+	 * that we can tx again -- but only if the vif/iv_bss are in sync.
+	 * Otherwise leave the queue !ready which prevents the MGMT/AUTH
+	 * frame from being sent on an unallocated per-sta queue, which
+	 * triggers a tx on invalid TXQ (65535) warning in iwlwifi and
+	 * can corrupt firmware/driver state.
+	 */
+	LKPI_80211_LSTA_TXQ_LOCK(lsta);
+	lsta->txq_ready = synched;
+	LKPI_80211_LSTA_TXQ_UNLOCK(lsta);
+
 	goto out_relocked;
 
 out:
