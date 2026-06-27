@@ -1,5 +1,10 @@
 Updating Information for MidnightBSD users.
 
+20260627:
+	ldns 1.9.2: CVE-2026-10846  off-path DNS response spoofing in the
+	stub resolver and drill; responses are now matched to the query by
+	source address/port, transaction ID and question
+
 20260610:
 	libpcap: CVE-2025-11961 out-of-bounds read/write in
 	pcap_ether_aton via malformed MAC address string
