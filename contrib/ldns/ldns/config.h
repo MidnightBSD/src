@@ -364,7 +364,7 @@
 #define PACKAGE_NAME "ldns"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "ldns 1.8.3"
+#define PACKAGE_STRING "ldns 1.9.2"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "libdns"
@@ -373,7 +373,7 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "1.8.3"
+#define PACKAGE_VERSION "1.9.2"
 
 /* Define this to enable RR type AMTRELAY. */
 /* #undef RRTYPE_AMTRELAY */
@@ -381,8 +381,17 @@
 /* Define this to enable RR type AVC. */
 /* #undef RRTYPE_AVC */
 
+/* Define this to enable RR types CLA and IPN. */
+/* #undef RRTYPE_CLA_IPN */
+
 /* Define this to enable RR type DOA. */
 /* #undef RRTYPE_DOA */
+
+/* Define this to enable RR type DSYNC. */
+/* #undef RRTYPE_DSYNC */
+
+/* Define this to enable RR types HHIT and BRID. */
+/* #undef RRTYPE_HHIT_BRID */
 
 /* Define this to enable RR type NINFO. */
 /* #undef RRTYPE_NINFO */
@@ -753,7 +762,7 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 #define close_socket(_s) do { if (_s != SOCK_INVALID) {closesocket(_s); _s = -1;} } while(0)
 #else
 #define SOCK_INVALID -1
-#define close_socket(_s) do { if (_s != SOCK_INVALID) {close(_s); _s = -1;} } while(0)
+#define close_socket(_s) do { if (_s != SOCK_INVALID) {close(_s >= -1 ? _s : -1); _s = -1;} } while(0)
 #endif
 
 #ifdef __cplusplus
