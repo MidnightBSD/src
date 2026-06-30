@@ -1,5 +1,9 @@
 Updating Information for MidnightBSD users.
 
+20260630:
+	arm64: fix freebsd32 setcontext(2) and swapcontext(2) return values.
+	Rebuild and reboot the kernel.
+
 20260627:
 	ldns 1.9.2: CVE-2026-10846  off-path DNS response spoofing in the
 	stub resolver and drill; responses are now matched to the query by
