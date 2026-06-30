@@ -1,4 +1,4 @@
-/* $OpenBSD: sk-usbhid.c,v 1.46 2023/03/28 06:12:38 dtucker Exp $ */
+/* $OpenBSD: sk-usbhid.c,v 1.48 2025/05/12 05:41:20 tb Exp $ */
 /*
  * Copyright (c) 2019 Markus Friedl
  * Copyright (c) 2020 Pedro Martelletto
@@ -20,9 +20,7 @@
 
 #ifdef ENABLE_SK_INTERNAL
 
-#ifdef HAVE_STDINT_H
-# include <stdint.h>
-#endif
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -49,6 +47,7 @@
 #include <openssl/ec.h>
 #include <openssl/ecdsa.h>
 #include <openssl/evp.h>
+#include "openbsd-compat/openssl-compat.h"
 #endif /* WITH_OPENSSL */
 
 #include <fido.h>
@@ -77,10 +76,11 @@
 #define FIDO_CRED_PROT_UV_OPTIONAL_WITH_ID 0
 #endif
 
+# include "misc.h"
+
 #ifndef SK_STANDALONE
 # include "log.h"
 # include "xmalloc.h"
-# include "misc.h"
 /*
  * If building as part of OpenSSH, then rename exported functions.
  * This must be done before including sk-api.h.
@@ -635,8 +635,8 @@ pack_public_key_ecdsa(const fido_cred_t *cred,
 		skdebug(__func__, "BN_bin2bn failed");
 		goto out;
 	}
-	if (EC_POINT_set_affine_coordinates_GFp(g, q, x, y, NULL) != 1) {
-		skdebug(__func__, "EC_POINT_set_affine_coordinates_GFp failed");
+	if (EC_POINT_set_affine_coordinates(g, q, x, y, NULL) != 1) {
+		skdebug(__func__, "EC_POINT_set_affine_coordinates failed");
 		goto out;
 	}
 	response->public_key_len = EC_POINT_point2oct(g, q,
@@ -960,13 +960,15 @@ sk_enroll(uint32_t alg, const uint8_t *challenge, size_t challenge_len,
 			    fido_strerr(r));
 			goto out;
 		}
-	} else {
+	} else if (strcmp(fido_cred_fmt(cred), "none") != 0) {
 		skdebug(__func__, "self-attested credential");
 		if ((r = fido_cred_verify_self(cred)) != FIDO_OK) {
 			skdebug(__func__, "fido_cred_verify_self: %s",
 			    fido_strerr(r));
 			goto out;
 		}
+	} else {
+		skdebug(__func__, "no attestation data");
 	}
 	if ((response = calloc(1, sizeof(*response))) == NULL) {
 		skdebug(__func__, "calloc response failed");

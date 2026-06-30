@@ -18,13 +18,13 @@ top_srcdir=@top_srcdir@
 abs_top_srcdir=@abs_top_srcdir@
 abs_top_builddir=@abs_top_builddir@
 
-DESTDIR=
 VPATH=@srcdir@
 SSH_PROGRAM=@bindir@/ssh
 ASKPASS_PROGRAM=$(libexecdir)/ssh-askpass
 SFTP_SERVER=$(libexecdir)/sftp-server
 SSH_KEYSIGN=$(libexecdir)/ssh-keysign
 SSHD_SESSION=$(libexecdir)/sshd-session
+SSHD_AUTH=$(libexecdir)/sshd-auth
 SSH_PKCS11_HELPER=$(libexecdir)/ssh-pkcs11-helper
 SSH_SK_HELPER=$(libexecdir)/ssh-sk-helper
 PRIVSEP_PATH=@PRIVSEP_PATH@
@@ -32,6 +32,8 @@ SSH_PRIVSEP_USER=@SSH_PRIVSEP_USER@
 STRIP_OPT=@STRIP_OPT@
 TEST_SHELL=@TEST_SHELL@
 BUILDDIR=@abs_top_builddir@
+SK_STANDALONE=@SK_STANDALONE@
+COMPATINCLUDES="$(BUILDDIR)/@COMPATINCLUDES@"
 
 PATHS= -DSSHDIR=\"$(sysconfdir)\" \
 	-D_PATH_SSH_PROGRAM=\"$(SSH_PROGRAM)\" \
@@ -39,6 +41,7 @@ PATHS= -DSSHDIR=\"$(sysconfdir)\" \
 	-D_PATH_SFTP_SERVER=\"$(SFTP_SERVER)\" \
 	-D_PATH_SSH_KEY_SIGN=\"$(SSH_KEYSIGN)\" \
 	-D_PATH_SSHD_SESSION=\"$(SSHD_SESSION)\" \
+	-D_PATH_SSHD_AUTH=\"$(SSHD_AUTH)\" \
 	-D_PATH_SSH_PKCS11_HELPER=\"$(SSH_PKCS11_HELPER)\" \
 	-D_PATH_SSH_SK_HELPER=\"$(SSH_SK_HELPER)\" \
 	-D_PATH_SSH_PIDDIR=\"$(piddir)\" \
@@ -48,7 +51,7 @@ CC=@CC@
 LD=@LD@
 CFLAGS=@CFLAGS@
 CFLAGS_NOPIE=@CFLAGS_NOPIE@
-CPPFLAGS=-I. -I$(srcdir) @CPPFLAGS@ $(PATHS) @DEFS@
+CPPFLAGS=-I. -I$(srcdir) -I$(COMPATINCLUDES) @CPPFLAGS@ $(PATHS) @DEFS@
 PICFLAG=@PICFLAG@
 LIBS=@LIBS@
 CHANNELLIBS=@CHANNELLIBS@
@@ -57,6 +60,7 @@ GSSLIBS=@GSSLIBS@
 SSHDLIBS=@SSHDLIBS@
 LIBEDIT=@LIBEDIT@
 LIBFIDO2=@LIBFIDO2@
+LIBWTMPDB=@LIBWTMPDB@
 AR=@AR@
 AWK=@AWK@
 RANLIB=@RANLIB@
@@ -71,16 +75,7 @@ MKDIR_P=@MKDIR_P@
 
 .SUFFIXES: .lo
 
-TARGETS=ssh$(EXEEXT) sshd$(EXEEXT) sshd-session$(EXEEXT) ssh-add$(EXEEXT) ssh-keygen$(EXEEXT) ssh-keyscan${EXEEXT} ssh-keysign${EXEEXT} ssh-pkcs11-helper$(EXEEXT) ssh-agent$(EXEEXT) scp$(EXEEXT) sftp-server$(EXEEXT) sftp$(EXEEXT) ssh-sk-helper$(EXEEXT)
-
-XMSS_OBJS=\
-	ssh-xmss.o \
-	sshkey-xmss.o \
-	xmss_commons.o \
-	xmss_fast.o \
-	xmss_hash.o \
-	xmss_hash_address.o \
-	xmss_wots.o
+TARGETS=ssh$(EXEEXT) sshd$(EXEEXT) sshd-session$(EXEEXT) sshd-auth$(EXEEXT) ssh-add$(EXEEXT) ssh-keygen$(EXEEXT) ssh-keyscan${EXEEXT} ssh-keysign${EXEEXT} ssh-pkcs11-helper$(EXEEXT) ssh-agent$(EXEEXT) scp$(EXEEXT) sftp-server$(EXEEXT) sftp$(EXEEXT) ssh-sk-helper$(EXEEXT) $(SK_STANDALONE)
 
 LIBOPENSSH_OBJS=\
 	ssh_api.o \
@@ -91,8 +86,7 @@ LIBOPENSSH_OBJS=\
 	sshbuf-misc.o \
 	sshbuf-getput-crypto.o \
 	krl.o \
-	bitmap.o \
-	${XMSS_OBJS}
+	bitmap.o
 
 LIBSSH_OBJS=${LIBOPENSSH_OBJS} \
 	authfd.o authfile.o \
@@ -102,29 +96,31 @@ LIBSSH_OBJS=${LIBOPENSSH_OBJS} \
 	log.o match.o moduli.o nchan.o packet.o \
 	readpass.o ttymodes.o xmalloc.o addr.o addrmatch.o \
 	atomicio.o dispatch.o mac.o misc.o utf8.o \
-	monitor_fdpass.o rijndael.o ssh-dss.o ssh-ecdsa.o ssh-ecdsa-sk.o \
+	monitor_fdpass.o rijndael.o ssh-ecdsa.o ssh-ecdsa-sk.o \
 	ssh-ed25519-sk.o ssh-rsa.o dh.o \
-	msg.o progressmeter.o dns.o entropy.o gss-genr.o umac.o umac128.o \
-	ssh-pkcs11.o smult_curve25519_ref.o \
+	msg.o dns.o entropy.o gss-genr.o umac.o umac128.o \
+	smult_curve25519_ref.o \
 	poly1305.o chacha.o cipher-chachapoly.o cipher-chachapoly-libcrypto.o \
 	ssh-ed25519.o digest-openssl.o digest-libc.o \
-	hmac.o ed25519.o hash.o \
+	hmac.o ed25519.o ed25519-openssl.o \
 	kex.o kex-names.o kexdh.o kexgex.o kexecdh.o kexc25519.o \
 	kexgexc.o kexgexs.o \
 	kexsntrup761x25519.o kexmlkem768x25519.o sntrup761.o kexgen.o \
 	sftp-realpath.o platform-pledge.o platform-tracing.o platform-misc.o \
-	sshbuf-io.o
+	sshbuf-io.o misc-agent.o ssherr-libcrypto.o
+
+P11OBJS= ssh-pkcs11-client.o
 
 SKOBJS=	ssh-sk-client.o
 
 SSHOBJS= ssh.o readconf.o clientloop.o sshtty.o \
-	sshconnect.o sshconnect2.o mux.o $(SKOBJS)
+	sshconnect.o sshconnect2.o mux.o ssh-pkcs11.o $(SKOBJS)
 
 SSHDOBJS=sshd.o \
 	platform-listen.o \
 	servconf.o sshpty.o srclimit.o groupaccess.o auth2-methods.o \
 	dns.o fatal.o compat.o utf8.o authfd.o canohost.o \
-	$(SKOBJS)
+	$(P11OBJS) $(SKOBJS)
 
 SSHD_SESSION_OBJS=sshd-session.o auth-rhosts.o auth-passwd.o \
 	audit.o audit-bsm.o audit-linux.o platform.o \
@@ -137,29 +133,42 @@ SSHD_SESSION_OBJS=sshd-session.o auth-rhosts.o auth-passwd.o \
 	auth2-gss.o gss-serv.o gss-serv-krb5.o \
 	loginrec.o auth-pam.o auth-shadow.o auth-sia.o \
 	sftp-server.o sftp-common.o \
-	sandbox-null.o sandbox-rlimit.o sandbox-systrace.o sandbox-darwin.o \
-	sandbox-seccomp-filter.o sandbox-capsicum.o sandbox-pledge.o \
-	sandbox-solaris.o uidswap.o $(SKOBJS)
+	uidswap.o platform-listen.o $(P11OBJS) $(SKOBJS)
 
-SFTP_CLIENT_OBJS=sftp-common.o sftp-client.o sftp-glob.o
+SSHD_AUTH_OBJS=sshd-auth.o \
+	auth2-methods.o \
+	auth-rhosts.o auth-passwd.o sshpty.o sshlogin.o servconf.o \
+	serverloop.o auth.o auth2.o auth-options.o session.o auth2-chall.o \
+	groupaccess.o auth-bsdauth.o auth2-hostbased.o auth2-kbdint.o \
+	auth2-none.o auth2-passwd.o auth2-pubkey.o auth2-pubkeyfile.o \
+	auth2-gss.o gss-serv.o gss-serv-krb5.o \
+	monitor_wrap.o auth-krb5.o \
+	audit.o audit-bsm.o audit-linux.o platform.o \
+	loginrec.o auth-pam.o auth-shadow.o auth-sia.o \
+	sandbox-null.o sandbox-rlimit.o sandbox-darwin.o \
+	sandbox-seccomp-filter.o sandbox-capsicum.o  sandbox-solaris.o \
+	sftp-server.o sftp-common.o \
+	uidswap.o $(P11OBJS) $(SKOBJS)
+
+SFTP_CLIENT_OBJS=sftp-common.o sftp-client.o sftp-glob.o ssherr-nolibcrypto.o
 
 SCP_OBJS=	scp.o progressmeter.o $(SFTP_CLIENT_OBJS)
 
-SSHADD_OBJS=	ssh-add.o $(SKOBJS)
+SSHADD_OBJS=	ssh-add.o $(P11OBJS) $(SKOBJS)
 
-SSHAGENT_OBJS=	ssh-agent.o ssh-pkcs11-client.o $(SKOBJS)
+SSHAGENT_OBJS=	ssh-agent.o $(P11OBJS) $(SKOBJS)
 
-SSHKEYGEN_OBJS=	ssh-keygen.o sshsig.o $(SKOBJS)
+SSHKEYGEN_OBJS=	ssh-keygen.o sshsig.o ssh-pkcs11.o $(SKOBJS)
 
-SSHKEYSIGN_OBJS=ssh-keysign.o readconf.o uidswap.o $(SKOBJS)
+SSHKEYSIGN_OBJS=ssh-keysign.o readconf.o uidswap.o $(P11OBJS) $(SKOBJS)
 
 P11HELPER_OBJS=	ssh-pkcs11-helper.o ssh-pkcs11.o $(SKOBJS)
 
-SKHELPER_OBJS=	ssh-sk-helper.o ssh-sk.o sk-usbhid.o
+SKHELPER_OBJS=	ssh-sk-helper.o ssh-sk.o sk-usbhid.o ssherr-nolibcrypto.o
 
-SSHKEYSCAN_OBJS=ssh-keyscan.o $(SKOBJS)
+SSHKEYSCAN_OBJS=ssh-keyscan.o $(P11OBJS) $(SKOBJS)
 
-SFTPSERVER_OBJS=sftp-common.o sftp-server.o sftp-server-main.o
+SFTPSERVER_OBJS=sftp-common.o sftp-server.o sftp-server-main.o ssherr-nolibcrypto.o
 
 SFTP_OBJS=	sftp.o sftp-usergroup.o progressmeter.o $(SFTP_CLIENT_OBJS)
 
@@ -178,7 +187,6 @@ PATHSUBS	= \
 	-e 's|/etc/shosts.equiv|$(sysconfdir)/shosts.equiv|g' \
 	-e 's|/etc/ssh/ssh_host_key|$(sysconfdir)/ssh_host_key|g' \
 	-e 's|/etc/ssh/ssh_host_ecdsa_key|$(sysconfdir)/ssh_host_ecdsa_key|g' \
-	-e 's|/etc/ssh/ssh_host_dsa_key|$(sysconfdir)/ssh_host_dsa_key|g' \
 	-e 's|/etc/ssh/ssh_host_rsa_key|$(sysconfdir)/ssh_host_rsa_key|g' \
 	-e 's|/etc/ssh/ssh_host_ed25519_key|$(sysconfdir)/ssh_host_ed25519_key|g' \
 	-e 's|/var/run/sshd.pid|$(piddir)/sshd.pid|g' \
@@ -218,7 +226,10 @@ sshd$(EXEEXT): libssh.a	$(LIBCOMPAT) $(SSHDOBJS)
 	$(LD) -o $@ $(SSHDOBJS) $(LDFLAGS) -lssh -lopenbsd-compat $(SSHDLIBS) $(LIBS) $(CHANNELLIBS)
 
 sshd-session$(EXEEXT): libssh.a	$(LIBCOMPAT) $(SSHD_SESSION_OBJS)
-	$(LD) -o $@ $(SSHD_SESSION_OBJS) $(LDFLAGS) -lssh -lopenbsd-compat $(SSHDLIBS) $(LIBS) $(GSSLIBS) $(K5LIBS) $(CHANNELLIBS)
+	$(LD) -o $@ $(SSHD_SESSION_OBJS) $(LDFLAGS) -lssh -lopenbsd-compat $(SSHDLIBS) $(LIBS) $(GSSLIBS) $(K5LIBS) $(CHANNELLIBS) $(LIBWTMPDB)
+
+sshd-auth$(EXEEXT): libssh.a $(LIBCOMPAT) $(SSHD_AUTH_OBJS)
+	$(LD) -o $@ $(SSHD_AUTH_OBJS) $(LDFLAGS) -lssh -lopenbsd-compat $(SSHDLIBS) $(LIBS) $(GSSLIBS) $(K5LIBS) $(CHANNELLIBS) $(LIBWTMPDB)
 
 scp$(EXEEXT): $(LIBCOMPAT) libssh.a $(SCP_OBJS)
 	$(LD) -o $@ $(SCP_OBJS) $(LDFLAGS) -lssh -lopenbsd-compat $(LIBS)
@@ -254,6 +265,16 @@ sftp$(EXEEXT): $(LIBCOMPAT) libssh.a $(SFTP_OBJS)
 logintest: logintest.o $(LIBCOMPAT) libssh.a loginrec.o
 	$(LD) -o $@ logintest.o $(LDFLAGS) loginrec.o -lopenbsd-compat -lssh $(LIBS)
 
+# compile libssh objects with -fPIC for use in the sk_libfido2 shared library
+LIBSSH_PIC_OBJS=$(LIBSSH_OBJS:.o=.lo)
+libssh-pic.a: $(LIBSSH_PIC_OBJS)
+	$(AR) rv $@ $(LIBSSH_PIC_OBJS)
+	$(RANLIB) $@
+
+$(SK_STANDALONE): $(srcdir)/sk-usbhid.c $(LIBCOMPAT) libssh-pic.a
+	$(CC) -o $@ -shared $(CFLAGS_NOPIE) $(CPPFLAGS) -DSK_STANDALONE $(PICFLAG) $(srcdir)/sk-usbhid.c \
+	libssh-pic.a $(LDFLAGS_NOPIE) -lopenbsd-compat $(LIBS) $(LIBFIDO2) $(CHANNELLIBS)
+
 $(MANPAGES): $(MANPAGES_IN)
 	if test "$(MANTYPE)" = "cat"; then \
 		manpage=$(srcdir)/`echo $@ | sed 's/\.[1-9]\.out$$/\.0/'`; \
@@ -267,7 +288,7 @@ $(MANPAGES): $(MANPAGES_IN)
 		$(FIXPATHSCMD) $${manpage} | $(FIXALGORITHMSCMD) > $@; \
 	fi
 
-$(CONFIGFILES): $(CONFIGFILES_IN)
+$(CONFIGFILES): $(CONFIGFILES_IN) Makefile
 	conffile=`echo $@ | sed 's/.out$$//'`; \
 	$(FIXPATHSCMD) $(srcdir)/$${conffile} > $@
 
@@ -306,7 +327,8 @@ clean:	regressclean
 	rm -f regress/unittests/utf8/test_utf8$(EXEEXT)
 	rm -f regress/misc/sk-dummy/*.o
 	rm -f regress/misc/sk-dummy/*.lo
-	rm -f regress/misc/sk-dummy/sk-dummy.so
+	rm -f regress/misc/ssh-verify-attestation/ssh-verify-attestation$(EXEEXT)
+	rm -f regress/misc/ssh-verify-attestation/*.o
 	(cd openbsd-compat && $(MAKE) clean)
 
 distclean:	regressclean
@@ -314,6 +336,7 @@ distclean:	regressclean
 	rm -f *.out core opensshd.init openssh.xml
 	rm -f Makefile buildpkg.sh config.h config.status
 	rm -f survey.sh openbsd-compat/regress/Makefile *~ 
+	rm -rf openbsd-compat/include
 	rm -rf autom4te.cache
 	rm -f regress/check-perm
 	rm -f regress/mkdtemp
@@ -344,6 +367,8 @@ distclean:	regressclean
 	rm -f regress/misc/sk-dummy/*.o
 	rm -f regress/misc/sk-dummy/*.lo
 	rm -f regress/misc/sk-dummy/sk-dummy.so
+	rm -f regress/misc/ssh-verify-attestation/ssh-verify-attestation$(EXEEXT)
+	rm -f regress/misc/ssh-verify-attestation/*.o
 	(cd openbsd-compat && $(MAKE) distclean)
 	if test -d pkg ; then \
 		rm -fr pkg ; \
@@ -411,6 +436,7 @@ install-files:
 	$(INSTALL) -m 0755 $(STRIP_OPT) ssh-keyscan$(EXEEXT) $(DESTDIR)$(bindir)/ssh-keyscan$(EXEEXT)
 	$(INSTALL) -m 0755 $(STRIP_OPT) sshd$(EXEEXT) $(DESTDIR)$(sbindir)/sshd$(EXEEXT)
 	$(INSTALL) -m 0755 $(STRIP_OPT) sshd-session$(EXEEXT) $(DESTDIR)$(SSHD_SESSION)$(EXEEXT)
+	$(INSTALL) -m 0755 $(STRIP_OPT) sshd-auth$(EXEEXT) $(DESTDIR)$(SSHD_AUTH)$(EXEEXT)
 	$(INSTALL) -m 4711 $(STRIP_OPT) ssh-keysign$(EXEEXT) $(DESTDIR)$(SSH_KEYSIGN)$(EXEEXT)
 	$(INSTALL) -m 0755 $(STRIP_OPT) ssh-pkcs11-helper$(EXEEXT) $(DESTDIR)$(SSH_PKCS11_HELPER)$(EXEEXT)
 	$(INSTALL) -m 0755 $(STRIP_OPT) ssh-sk-helper$(EXEEXT) $(DESTDIR)$(SSH_SK_HELPER)$(EXEEXT)
@@ -461,7 +487,6 @@ host-key: ssh-keygen$(EXEEXT)
 	fi
 
 host-key-force: ssh-keygen$(EXEEXT) ssh$(EXEEXT)
-	./ssh-keygen -t dsa -f $(DESTDIR)$(sysconfdir)/ssh_host_dsa_key -N ""
 	./ssh-keygen -t rsa -f $(DESTDIR)$(sysconfdir)/ssh_host_rsa_key -N ""
 	./ssh-keygen -t ed25519 -f $(DESTDIR)$(sysconfdir)/ssh_host_ed25519_key -N ""
 	if ./ssh -Q key | grep ecdsa >/dev/null ; then \
@@ -519,11 +544,12 @@ regress-prep:
 	$(MKDIR_P) `pwd`/regress/unittests/sshsig
 	$(MKDIR_P) `pwd`/regress/unittests/utf8
 	$(MKDIR_P) `pwd`/regress/misc/sk-dummy
+	$(MKDIR_P) `pwd`/regress/misc/ssh-verify-attestation
 	[ -f `pwd`/regress/Makefile ] || \
 	    ln -s `cd $(srcdir) && pwd`/regress/Makefile `pwd`/regress/Makefile
 
 REGRESSLIBS=libssh.a $(LIBCOMPAT)
-TESTLIBS=$(LIBS) $(CHANNELLIBS)
+TESTLIBS=$(LIBS) $(CHANNELLIBS) @TESTLIBS@
 
 regress/modpipe$(EXEEXT): $(srcdir)/regress/modpipe.c $(REGRESSLIBS)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $(srcdir)/regress/modpipe.c \
@@ -579,7 +605,7 @@ UNITTESTS_TEST_SSHKEY_OBJS=\
 	regress/unittests/sshkey/common.o \
 	regress/unittests/sshkey/test_file.o \
 	regress/unittests/sshkey/test_sshkey.o \
-	$(SKOBJS)
+	$(P11OBJS) $(SKOBJS)
 
 regress/unittests/sshkey/test_sshkey$(EXEEXT): ${UNITTESTS_TEST_SSHKEY_OBJS} \
     regress/unittests/test_helper/libtest_helper.a libssh.a
@@ -590,7 +616,7 @@ regress/unittests/sshkey/test_sshkey$(EXEEXT): ${UNITTESTS_TEST_SSHKEY_OBJS} \
 UNITTESTS_TEST_SSHSIG_OBJS=\
 	sshsig.o \
 	regress/unittests/sshsig/tests.o \
-	$(SKOBJS)
+	$(P11OBJS) $(SKOBJS)
 
 regress/unittests/sshsig/test_sshsig$(EXEEXT): ${UNITTESTS_TEST_SSHSIG_OBJS} \
     regress/unittests/test_helper/libtest_helper.a libssh.a
@@ -610,7 +636,7 @@ regress/unittests/bitmap/test_bitmap$(EXEEXT): ${UNITTESTS_TEST_BITMAP_OBJS} \
 UNITTESTS_TEST_AUTHOPT_OBJS=\
 	regress/unittests/authopt/tests.o \
 	auth-options.o \
-	$(SKOBJS)
+	$(P11OBJS) $(SKOBJS)
 
 regress/unittests/authopt/test_authopt$(EXEEXT): \
     ${UNITTESTS_TEST_AUTHOPT_OBJS} \
@@ -633,7 +659,7 @@ UNITTESTS_TEST_KEX_OBJS=\
 	regress/unittests/kex/tests.o \
 	regress/unittests/kex/test_kex.o \
 	regress/unittests/kex/test_proposal.o \
-	$(SKOBJS)
+	$(P11OBJS) $(SKOBJS)
 
 regress/unittests/kex/test_kex$(EXEEXT): ${UNITTESTS_TEST_KEX_OBJS} \
     regress/unittests/test_helper/libtest_helper.a libssh.a
@@ -644,7 +670,7 @@ regress/unittests/kex/test_kex$(EXEEXT): ${UNITTESTS_TEST_KEX_OBJS} \
 UNITTESTS_TEST_HOSTKEYS_OBJS=\
 	regress/unittests/hostkeys/tests.o \
 	regress/unittests/hostkeys/test_iterate.o \
-	$(SKOBJS)
+	$(P11OBJS) $(SKOBJS)
 
 regress/unittests/hostkeys/test_hostkeys$(EXEEXT): \
     ${UNITTESTS_TEST_HOSTKEYS_OBJS} \
@@ -671,7 +697,9 @@ UNITTESTS_TEST_MISC_OBJS=\
 	regress/unittests/misc/test_argv.o \
 	regress/unittests/misc/test_strdelim.o \
 	regress/unittests/misc/test_hpdelim.o \
-	regress/unittests/misc/test_ptimeout.o
+	regress/unittests/misc/test_ptimeout.o \
+	regress/unittests/misc/test_xextendf.o \
+	regress/unittests/misc/test_misc.o
 
 regress/unittests/misc/test_misc$(EXEEXT): \
     ${UNITTESTS_TEST_MISC_OBJS} \
@@ -694,7 +722,7 @@ regress/unittests/utf8/test_utf8$(EXEEXT): \
 SK_DUMMY_OBJS=\
 	regress/misc/sk-dummy/sk-dummy.lo \
 	regress/misc/sk-dummy/fatal.lo \
-	ed25519.lo hash.lo
+	ed25519.lo ed25519-openssl.lo
 
 SK_DUMMY_LIBRARY=@SK_DUMMY_LIBRARY@
 
@@ -704,6 +732,16 @@ SK_DUMMY_LIBRARY=@SK_DUMMY_LIBRARY@
 regress/misc/sk-dummy/sk-dummy.so: $(SK_DUMMY_OBJS)
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(PICFLAG) -shared -o $@ $(SK_DUMMY_OBJS) \
 	    -L. -Lopenbsd-compat -lopenbsd-compat $(LDFLAGS_NOPIE) $(TESTLIBS)
+
+SSH_VERIFY_ATTESTATION_OBJS=\
+	regress/misc/ssh-verify-attestation/ssh-verify-attestation.o \
+	$(P11OBJS) $(SKOBJS)
+
+ssh-verify-attestation: regress/misc/ssh-verify-attestation/ssh-verify-attestation$(EXEEXT)
+
+regress/misc/ssh-verify-attestation/ssh-verify-attestation$(EXEEXT): $(LIBCOMPAT) libssh.a $(SSH_VERIFY_ATTESTATION_OBJS)
+	$(LD) -o $@ $(SSH_VERIFY_ATTESTATION_OBJS) $(LDFLAGS) -lssh -lopenbsd-compat $(LIBS) $(CHANNELLIBS) $(LIBFIDO2)
+
 
 regress-binaries: regress-prep $(LIBCOMPAT) \
 	regress/modpipe$(EXEEXT) \
@@ -738,6 +776,15 @@ unit: regress-unit-binaries
 		OBJ="$(BUILDDIR)/regress" \
 		$@ && echo $@ tests passed
 
+unit-bench: regress-unit-binaries
+	cd $(srcdir)/regress || exit $$?; \
+	$(MAKE) \
+		.CURDIR="$(abs_top_srcdir)/regress" \
+		.OBJDIR="$(BUILDDIR)/regress" \
+		OBJ="$(BUILDDIR)/regress" $@
+
+TEST_SSH_SSHD="$(BUILDDIR)/sshd"
+
 interop-tests t-exec file-tests extra-tests: regress-prep regress-binaries $(TARGETS)
 	cd $(srcdir)/regress || exit $$?; \
 	EGREP='@EGREP@' \
@@ -752,8 +799,9 @@ interop-tests t-exec file-tests extra-tests: regress-prep regress-binaries $(TAR
 		TEST_MALLOC_OPTIONS="@TEST_MALLOC_OPTIONS@" \
 		TEST_SSH_SCP="$(BUILDDIR)/scp" \
 		TEST_SSH_SSH="$(BUILDDIR)/ssh" \
-		TEST_SSH_SSHD="$(BUILDDIR)/sshd" \
+		TEST_SSH_SSHD="$(TEST_SSH_SSHD)" \
 		TEST_SSH_SSHD_SESSION="$(BUILDDIR)/sshd-session" \
+		TEST_SSH_SSHD_AUTH="$(BUILDDIR)/sshd-auth" \
 		TEST_SSH_SSHAGENT="$(BUILDDIR)/ssh-agent" \
 		TEST_SSH_SSHADD="$(BUILDDIR)/ssh-add" \
 		TEST_SSH_SSHKEYGEN="$(BUILDDIR)/ssh-keygen" \
@@ -771,6 +819,7 @@ interop-tests t-exec file-tests extra-tests: regress-prep regress-binaries $(TAR
 		TEST_SSH_DROPBEARKEY="@DROPBEARKEY@" \
 		TEST_SSH_DROPBEARCONVERT="@DROPBEARCONVERT@" \
 		TEST_SSH_DBCLIENT="@DBCLIENT@" \
+		TEST_SSH_TMUX="@TMUX@" \
 		TEST_SSH_IPV6="@TEST_SSH_IPV6@" \
 		TEST_SSH_UTF8="@TEST_SSH_UTF8@" \
 		TEST_SHELL="$(TEST_SHELL)" \

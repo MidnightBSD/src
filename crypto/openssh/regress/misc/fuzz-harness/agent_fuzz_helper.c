@@ -158,6 +158,7 @@ test_one(const uint8_t* s, size_t slen)
 		    SYSLOG_FACILITY_AUTH, 1);
 		devnull = devnull_or_die();
 		allowed_providers = xstrdup("");
+		websafe_allowlist = xstrdup("*");
 		setenv("DISPLAY", "", 1); /* ban askpass */
 	}
 
@@ -173,11 +174,4 @@ test_one(const uint8_t* s, size_t slen)
 	}
 	cleanup_idtab();
 	cleanup_sockettab();
-}
-
-int
-pkcs11_make_cert(const struct sshkey *priv,
-    const struct sshkey *certpub, struct sshkey **certprivp)
-{
-	return -1; /* XXX */
 }

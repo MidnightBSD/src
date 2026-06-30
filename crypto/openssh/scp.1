@@ -8,9 +8,9 @@
 .\"
 .\" Created: Sun May  7 00:14:37 1995 ylo
 .\"
-.\" $OpenBSD: scp.1,v 1.112 2022/12/16 07:13:22 djm Exp $
+.\" $OpenBSD: scp.1,v 1.115 2025/10/04 21:41:35 naddy Exp $
 .\"
-.Dd $Mdocdate: December 16 2022 $
+.Dd $Mdocdate: October 4 2025 $
 .Dt SCP 1
 .Os
 .Sh NAME
@@ -35,7 +35,7 @@
 copies files between hosts on a network.
 .Pp
 .Nm
-uses the SFTP protocol over a
+uses the SFTP protocol over an
 .Xr ssh 1
 connection for data transfer, and uses the same authentication and provides
 the same security as a login session.
@@ -76,13 +76,16 @@ The options are as follows:
 .Bl -tag -width Ds
 .It Fl 3
 Copies between two remote hosts are transferred through the local host.
-Without this option the data is copied directly between the two remote
-hosts.
-Note that, when using the original SCP protocol (the default), this option
+This mode is the default,
+but see also the
+.Fl R
+option for copying data directly between two remote hosts.
+Note that when using the legacy SCP protocol (via the
+.Fl O
+flag), this option
 selects batch mode for the second host as
 .Nm
 cannot ask for passwords or passphrases for both hosts.
-This mode is the default.
 .It Fl 4
 Forces
 .Nm
@@ -141,13 +144,12 @@ This option is directly passed to
 .It Fl l Ar limit
 Limits the used bandwidth, specified in Kbit/s.
 .It Fl O
-Use the original SCP protocol for file transfers instead of the SFTP protocol.
+Use the legacy SCP protocol for file transfers instead of the SFTP protocol.
 Forcing the use of the SCP protocol may be necessary for servers that do
 not implement SFTP, for backwards-compatibility for particular filename
 wildcard patterns and for expanding paths with a
 .Sq ~
 prefix for older SFTP servers.
-This mode is the default.
 .It Fl o Ar ssh_option
 Can be used to pass options to
 .Nm ssh
@@ -161,67 +163,106 @@ For full details of the options listed below, and their possible values, see
 .Xr ssh_config 5 .
 .Pp
 .Bl -tag -width Ds -offset indent -compact
+.It AddKeysToAgent
 .It AddressFamily
 .It BatchMode
 .It BindAddress
 .It BindInterface
+.It CASignatureAlgorithms
 .It CanonicalDomains
 .It CanonicalizeFallbackLocal
 .It CanonicalizeHostname
 .It CanonicalizeMaxDots
 .It CanonicalizePermittedCNAMEs
-.It CASignatureAlgorithms
 .It CertificateFile
+.It ChannelTimeout
 .It CheckHostIP
 .It Ciphers
+.It ClearAllForwardings
 .It Compression
-.It ConnectionAttempts
 .It ConnectTimeout
+.It ConnectionAttempts
 .It ControlMaster
 .It ControlPath
 .It ControlPersist
-.It GlobalKnownHostsFile
+.It DynamicForward
+.It EnableEscapeCommandline
+.It EnableSSHKeysign
+.It EscapeChar
+.It ExitOnForwardFailure
+.It FingerprintHash
+.It ForkAfterAuthentication
+.It ForwardAgent
+.It ForwardX11
+.It ForwardX11Timeout
+.It ForwardX11Trusted
 .It GSSAPIAuthentication
 .It GSSAPIDelegateCredentials
+.It GatewayPorts
+.It GlobalKnownHostsFile
 .It HashKnownHosts
 .It Host
-.It HostbasedAcceptedAlgorithms
-.It HostbasedAuthentication
 .It HostKeyAlgorithms
 .It HostKeyAlias
+.It HostbasedAcceptedAlgorithms
+.It HostbasedAuthentication
 .It Hostname
+.It IPQoS
 .It IdentitiesOnly
 .It IdentityAgent
 .It IdentityFile
-.It IPQoS
+.It IgnoreUnknown
+.It Include
 .It KbdInteractiveAuthentication
 .It KbdInteractiveDevices
 .It KexAlgorithms
 .It KnownHostsCommand
+.It LocalCommand
+.It LocalForward
 .It LogLevel
+.It LogVerbose
 .It MACs
 .It NoHostAuthenticationForLocalhost
 .It NumberOfPasswordPrompts
-.It PasswordAuthentication
+.It ObscureKeystrokeTiming
 .It PKCS11Provider
+.It PasswordAuthentication
+.It PermitLocalCommand
+.It PermitRemoteOpen
 .It Port
 .It PreferredAuthentications
 .It ProxyCommand
 .It ProxyJump
+.It ProxyUseFdpass
 .It PubkeyAcceptedAlgorithms
 .It PubkeyAuthentication
 .It RekeyLimit
+.It RemoteCommand
+.It RemoteForward
+.It RequestTTY
 .It RequiredRSASize
+.It RevokedHostKeys
+.It SecurityKeyProvider
 .It SendEnv
-.It ServerAliveInterval
 .It ServerAliveCountMax
+.It ServerAliveInterval
+.It SessionType
 .It SetEnv
+.It StdinNull
+.It StreamLocalBindMask
+.It StreamLocalBindUnlink
 .It StrictHostKeyChecking
+.It SyslogFacility
 .It TCPKeepAlive
+.It Tag
+.It Tunnel
+.It TunnelDevice
 .It UpdateHostKeys
 .It User
 .It UserKnownHostsFile
 .It VerifyHostKeyDNS
+.It VisualHostKey
+.It XAuthLocation
 .El
 .It Fl P Ar port
 Specifies the port to connect to on the remote host.
@@ -238,7 +279,9 @@ Quiet mode: disables the progress meter as well as warning and diagnostic
 messages from
 .Xr ssh 1 .
 .It Fl R
-Copies between two remote hosts are performed by connecting to the origin
+Copies between two remote hosts are transferred through the local host
+by default.
+This option instead copies between two remote hosts by connecting to the origin
 host and executing
 .Nm
 there.
@@ -258,8 +301,6 @@ to use for the encrypted connection.
 The program must understand
 .Xr ssh 1
 options.
-.It Fl s
-Use the SFTP protocol for transfers rather than the original scp protocol.
 .It Fl T
 Disable strict filename checking.
 By default when copying files from a remote host to a local directory
@@ -309,12 +350,17 @@ By default a 32KB buffer is used.
 is based on the rcp program in
 .Bx
 source code from the Regents of the University of California.
+.Pp
+Since OpenSSH 9.0,
+.Nm
+has used the SFTP protocol for transfers by default.
 .Sh AUTHORS
 .An Timo Rinne Aq Mt tri@iki.fi
 .An Tatu Ylonen Aq Mt ylo@cs.hut.fi
 .Sh CAVEATS
-The original SCP protocol (used by default) requires execution of the
-remote user's shell to perform
+The legacy SCP protocol (selected by the
+.Fl O
+flag) requires execution of the remote user's shell to perform
 .Xr glob 3
 pattern matching.
 This requires careful quoting of any characters that have special meaning to

@@ -1,4 +1,4 @@
-/* $OpenBSD: auth.c,v 1.162 2024/09/15 01:18:26 djm Exp $ */
+/* $OpenBSD: auth.c,v 1.164 2026/02/11 22:57:16 djm Exp $ */
 /*
  * Copyright (c) 2000 Markus Friedl.  All rights reserved.
  *
@@ -35,9 +35,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <fcntl.h>
-#ifdef HAVE_PATHS_H
-# include <paths.h>
-#endif
+#include <paths.h>
 #include <pwd.h>
 #ifdef HAVE_LOGIN_H
 #include <login.h>
@@ -101,8 +99,8 @@ allowed_user(struct ssh *ssh, struct passwd * pw)
 {
 	struct stat st;
 	const char *hostname = NULL, *ipaddr = NULL;
-	u_int i;
 	int r;
+	u_int i;
 
 	/* Shouldn't be called if pw is NULL, but better safe than sorry... */
 	if (!pw || !pw->pw_name)
@@ -289,7 +287,8 @@ auth_log(struct ssh *ssh, int authenticated, int partial,
 	else {
 		authmsg = authenticated ? "Accepted" : "Failed";
 		if (authenticated)
-			BLACKLIST_NOTIFY(ssh, BLACKLIST_AUTH_OK, "ssh");
+			BLACKLIST_NOTIFY(ssh, BLACKLIST_AUTH_OK,
+			    "Authenticated");
 	}
 
 	if ((extra = format_method_key(authctxt)) == NULL) {
@@ -338,6 +337,7 @@ auth_maxtries_exceeded(struct ssh *ssh)
 {
 	Authctxt *authctxt = (Authctxt *)ssh->authctxt;
 
+	BLACKLIST_NOTIFY(ssh, BLACKLIST_AUTH_FAIL, "Maximum attempts exceeded");
 	error("maximum authentication attempts exceeded for "
 	    "%s%.100s from %.200s port %d ssh2",
 	    authctxt->valid ? "" : "invalid user ",
@@ -498,7 +498,7 @@ getpwnamallow(struct ssh *ssh, const char *user)
 	aix_restoreauthdb();
 #endif
 	if (pw == NULL) {
-		BLACKLIST_NOTIFY(ssh, BLACKLIST_BAD_USER, user);
+		BLACKLIST_NOTIFY(ssh, BLACKLIST_AUTH_FAIL, "Invalid user");
 		logit("Invalid user %.100s from %.100s port %d",
 		    user, ssh_remote_ipaddr(ssh), ssh_remote_port(ssh));
 #ifdef CUSTOM_FAILED_LOGIN
@@ -552,9 +552,10 @@ int
 auth_key_is_revoked(struct sshkey *key)
 {
 	char *fp = NULL;
+	u_int i;
 	int r;
 
-	if (options.revoked_keys_file == NULL)
+	if (options.num_revoked_keys_files == 0)
 		return 0;
 	if ((fp = sshkey_fingerprint(key, options.fingerprint_hash,
 	    SSH_FP_DEFAULT)) == NULL) {
@@ -563,19 +564,22 @@ auth_key_is_revoked(struct sshkey *key)
 		goto out;
 	}
 
-	r = sshkey_check_revoked(key, options.revoked_keys_file);
-	switch (r) {
-	case 0:
-		break; /* not revoked */
-	case SSH_ERR_KEY_REVOKED:
-		error("Authentication key %s %s revoked by file %s",
-		    sshkey_type(key), fp, options.revoked_keys_file);
-		goto out;
-	default:
-		error_r(r, "Error checking authentication key %s %s in "
-		    "revoked keys file %s", sshkey_type(key), fp,
-		    options.revoked_keys_file);
-		goto out;
+	for (i = 0; i < options.num_revoked_keys_files; i++) {
+		r = sshkey_check_revoked(key, options.revoked_keys_files[i]);
+		switch (r) {
+		case 0:
+			break; /* not revoked */
+		case SSH_ERR_KEY_REVOKED:
+			error("Authentication key %s %s revoked by file %s",
+			    sshkey_type(key), fp,
+			    options.revoked_keys_files[i]);
+			goto out;
+		default:
+			error_r(r, "Error checking authentication key %s %s in "
+			    "revoked keys file %s", sshkey_type(key), fp,
+			    options.revoked_keys_files[i]);
+			goto out;
+		}
 	}
 
 	/* Success */
@@ -763,6 +767,7 @@ auth_activate_options(struct ssh *ssh, struct sshauthopt *opts)
 		error("Inconsistent authentication options: %s", emsg);
 		return -1;
 	}
+	sshauthopt_free(old);
 	return 0;
 }
 

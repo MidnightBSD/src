@@ -1,4 +1,4 @@
-/* $OpenBSD: auth2.c,v 1.169 2024/05/17 00:30:23 djm Exp $ */
+/* $OpenBSD: auth2.c,v 1.173 2026/03/03 09:57:25 dtucker Exp $ */
 /*
  * Copyright (c) 2000 Markus Friedl.  All rights reserved.
  *
@@ -52,7 +52,6 @@
 #include "dispatch.h"
 #include "pathnames.h"
 #include "ssherr.h"
-#include "blacklist_client.h"
 #ifdef GSSAPI
 #include "ssh-gss.h"
 #endif
@@ -89,8 +88,8 @@ Authmethod *authmethods[] = {
 
 /* protocol */
 
-static int input_service_request(int, u_int32_t, struct ssh *);
-static int input_userauth_request(int, u_int32_t, struct ssh *);
+static int input_service_request(int, uint32_t, struct ssh *);
+static int input_userauth_request(int, uint32_t, struct ssh *);
 
 /* helper */
 static Authmethod *authmethod_byname(const char *);
@@ -146,7 +145,7 @@ userauth_send_banner(struct ssh *ssh, const char *msg)
 	    (r = sshpkt_put_cstring(ssh, "")) != 0 ||	/* language, unused */
 	    (r = sshpkt_send(ssh)) != 0)
 		fatal_fr(r, "send packet");
-	debug("%s: sent", __func__);
+	debug_f("sent");
 }
 
 static void
@@ -182,7 +181,7 @@ do_authentication2(struct ssh *ssh)
 }
 
 static int
-input_service_request(int type, u_int32_t seq, struct ssh *ssh)
+input_service_request(int type, uint32_t seq, struct ssh *ssh)
 {
 	Authctxt *authctxt = ssh->authctxt;
 	char *service = NULL;
@@ -239,7 +238,7 @@ user_specific_delay(const char *user)
 	/* 0-4.2 ms of delay */
 	delay = (double)PEEK_U32(hash) / 1000 / 1000 / 1000 / 1000;
 	freezero(hash, len);
-	debug3_f("user specific delay %0.3lfms", delay/1000);
+	debug3_f("user specific delay %0.3lfms", delay*1000);
 	return MIN_FAIL_DELAY_SECONDS + delay;
 }
 
@@ -267,7 +266,7 @@ ensure_minimum_time_since(double start, double seconds)
 }
 
 static int
-input_userauth_request(int type, u_int32_t seq, struct ssh *ssh)
+input_userauth_request(int type, uint32_t seq, struct ssh *ssh)
 {
 	Authctxt *authctxt = ssh->authctxt;
 	Authmethod *m = NULL;
@@ -294,6 +293,8 @@ input_userauth_request(int type, u_int32_t seq, struct ssh *ssh)
 		/* setup auth context */
 		authctxt->pw = mm_getpwnamallow(ssh, user);
 		authctxt->user = xstrdup(user);
+		authctxt->service = xstrdup(service);
+		authctxt->style = style ? xstrdup(style) : NULL;
 		if (authctxt->pw && strcmp(service, "ssh-connection")==0) {
 			authctxt->valid = 1;
 			debug2_f("setting up authctxt for %s", user);
@@ -312,8 +313,6 @@ input_userauth_request(int type, u_int32_t seq, struct ssh *ssh)
 		ssh_packet_set_log_preamble(ssh, "%suser %s",
 		    authctxt->valid ? "authenticating " : "invalid ", user);
 		setproctitle("%s [net]", authctxt->valid ? user : "unknown");
-		authctxt->service = xstrdup(service);
-		authctxt->style = style ? xstrdup(style) : NULL;
 		mm_inform_authserv(service, style);
 		userauth_banner(ssh);
 		if ((r = kex_server_update_ext_info(ssh)) != 0)
@@ -443,10 +442,8 @@ userauth_finish(struct ssh *ssh, int authenticated, const char *packet_method,
 	} else {
 		/* Allow initial try of "none" auth without failure penalty */
 		if (!partial && !authctxt->server_caused_failure &&
-		    (authctxt->attempt > 1 || strcmp(method, "none") != 0)) {
+		    (authctxt->attempt > 1 || strcmp(method, "none") != 0))
 			authctxt->failures++;
-			BLACKLIST_NOTIFY(ssh, BLACKLIST_AUTH_FAIL, "ssh");
-		}
 		if (authctxt->failures >= options.max_authtries) {
 #ifdef SSH_AUDIT_EVENTS
 			mm_audit_event(ssh, SSH_LOGIN_EXCEED_MAXTRIES);

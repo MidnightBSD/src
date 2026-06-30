@@ -465,6 +465,10 @@ LDADD_gtest=	-lprivategtest
 LDADD_gmock_main= -lprivategmock_main
 LDADD_gtest_main= -lprivategtest_main
 
+LIBSSHDIR?=	${OBJTOP}/secure/lib/libssh
+LIBSSH=		${LIBSSHDIR}/libprivatessh${PIE_SUFFIX}.a
+LDADD_ssh=	-L${LIBSSHDIR} -lprivatessh
+
 .for _l in ${_PRIVATELIBS}
 LIB${_l:tu}?=	${LIBDESTDIR}${LIBDIR_BASE}/libprivate${_l}.a
 .endfor

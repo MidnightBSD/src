@@ -23,15 +23,15 @@
 #include <openssl/opensslv.h>
 #include <openssl/crypto.h>
 #include <openssl/evp.h>
+#include <openssl/bn.h>
 #include <openssl/rsa.h>
-#include <openssl/dsa.h>
 #ifdef OPENSSL_HAS_ECC
 #include <openssl/ecdsa.h>
 #endif
 #include <openssl/dh.h>
 
 int ssh_compatible_openssl(long, long);
-void ssh_libcrypto_init(void);
+int ssh_libcrypto_init(void);
 
 #if (OPENSSL_VERSION_NUMBER < 0x10100000L)
 # error OpenSSL 1.1.0 or greater is required
@@ -45,9 +45,6 @@ void ssh_libcrypto_init(void);
 #ifndef OPENSSL_RSA_MAX_MODULUS_BITS
 # define OPENSSL_RSA_MAX_MODULUS_BITS	16384
 #endif
-#ifndef OPENSSL_DSA_MAX_MODULUS_BITS
-# define OPENSSL_DSA_MAX_MODULUS_BITS	10000
-#endif
 
 #ifdef LIBRESSL_VERSION_NUMBER
 # if LIBRESSL_VERSION_NUMBER < 0x3010000fL
@@ -55,13 +52,27 @@ void ssh_libcrypto_init(void);
 # endif
 #endif
 
-#ifdef OPENSSL_IS_BORINGSSL
+#if defined(OPENSSL_IS_BORINGSSL) || defined(OPENSSL_IS_AWSLC)
 /*
- * BoringSSL (rightly) got rid of the BN_FLG_CONSTTIME flag, along with
+ * BoringSSL and AWS-LC (rightly) got rid of the BN_FLG_CONSTTIME flag, along with
  * the entire BN_set_flags() interface.
  * https://boringssl.googlesource.com/boringssl/+/0a211dfe9
  */
 # define BN_set_flags(a, b)
+#endif
+
+/* LibreSSL <3.4 has the _GFp variants but not the equivalent modern ones. */
+#ifndef HAVE_EC_POINT_GET_AFFINE_COORDINATES
+# ifdef HAVE_EC_POINT_GET_AFFINE_COORDINATES_GFP
+#  define EC_POINT_get_affine_coordinates(a, b, c, d, e) \
+	(EC_POINT_get_affine_coordinates_GFp(a, b, c, d, e))
+# endif
+#endif
+#ifndef HAVE_EC_POINT_SET_AFFINE_COORDINATES
+# ifdef HAVE_EC_POINT_SET_AFFINE_COORDINATES_GFP
+#  define EC_POINT_set_affine_coordinates(a, b, c, d, e) \
+	(EC_POINT_set_affine_coordinates_GFp(a, b, c, d, e))
+# endif
 #endif
 
 #ifndef HAVE_EVP_CIPHER_CTX_GET_IV
