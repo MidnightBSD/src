@@ -4,6 +4,9 @@ Updating Information for MidnightBSD users.
 	arm64: fix freebsd32 setcontext(2) and swapcontext(2) return values.
 	Rebuild and reboot the kernel.
 
+	vm: CVE-2026-49418 device pager page list use-after-free fix.
+	Rebuild and reboot the kernel.
+
 20260627:
 	ldns 1.9.2: CVE-2026-10846  off-path DNS response spoofing in the
 	stub resolver and drill; responses are now matched to the query by
