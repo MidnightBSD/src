@@ -134,10 +134,10 @@ struct vm_object {
 		/*
 		 * Device pager
 		 *
-		 *	devp_pglist - list of allocated pages
+		 *	spare - reserved for future use
 		 */
 		struct {
-			TAILQ_HEAD(, vm_page) devp_pglist;
+			void *spare[2];
 			const struct cdev_pager_ops *ops;
 			struct cdev *dev;
 		} devp;
