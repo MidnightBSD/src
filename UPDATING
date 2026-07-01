@@ -1,5 +1,10 @@
 Updating Information for MidnightBSD users.
 
+20260701:
+	OpenSSL 3.0.21: CVE-2026-34180 ASN.1 decoder large primitive
+	length over-read fix. Rebuild world and restart applications using
+	libcrypto.
+
 20260630:
 	arm64: fix freebsd32 setcontext(2) and swapcontext(2) return values.
 	Rebuild and reboot the kernel.
