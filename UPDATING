@@ -5,6 +5,10 @@ Updating Information for MidnightBSD users.
 	use-after-free fix. Rebuild world and restart applications using
 	libcrypto.
 
+	openssl: CVE-2026-34180 ASN.1 decoder large primitive length
+	over-read fix. Rebuild world and restart applications using
+	libcrypto.
+
 20260630:
 	arm64: fix freebsd32 setcontext(2) and swapcontext(2) return values.
 	Rebuild and reboot the kernel.
