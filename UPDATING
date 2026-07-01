@@ -11,6 +11,9 @@ Updating Information for MidnightBSD users.
 	UTF-7, VIQR, ZW and ISO-2022 iconv(3) encoding modules. Rebuild
 	world and restart applications that use iconv(3).
 
+	audit: CVE-2026-49426 incorrect audit records for ptrace(PT_SC_REMOTE)
+	syscall requests. Rebuild and reboot the kernel.
+
 20260627:
 	ldns 1.9.2: CVE-2026-10846  off-path DNS response spoofing in the
 	stub resolver and drill; responses are now matched to the query by
