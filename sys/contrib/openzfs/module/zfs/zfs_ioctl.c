@@ -924,6 +924,23 @@ zfs_secpolicy_recv_new(zfs_cmd_t *zc, nvlist_t *innvl, cred_t *cr)
 	return (zfs_secpolicy_recv(zc, innvl, cr));
 }
 
+/*
+ * Policy for dataset set property operations.  Individual properties checked by
+ * zfs_check_settable(), additionally require zfs_secpolicy_recv() when setting
+ * properties as part of a receive.
+ */
+static int
+zfs_secpolicy_setprops(zfs_cmd_t *zc, nvlist_t *innvl, cred_t *cr)
+{
+	boolean_t received = zc->zc_cookie;
+	int error;
+
+	if (received && (error = zfs_secpolicy_recv(zc, innvl, cr)))
+		return (error);
+
+	return (zfs_secpolicy_read(zc, innvl, cr));
+}
+
 int
 zfs_secpolicy_snapshot_perms(const char *name, cred_t *cr)
 {
@@ -5865,21 +5882,27 @@ zfs_ioc_userspace_one(zfs_cmd_t *zc)
  * outputs:
  * zc_nvlist_dst[_size]	data buffer (array of zfs_useracct_t)
  * zc_cookie	zap cursor
+ *
+ * The zc_nvlist_dst output array is limited to 1000 entries.
  */
 static int
 zfs_ioc_userspace_many(zfs_cmd_t *zc)
 {
+	const size_t batch_limit = 1000 * sizeof (zfs_useracct_t);
+	uint64_t bufsize = MIN(zc->zc_nvlist_dst_size, batch_limit);
 	zfsvfs_t *zfsvfs;
-	int bufsize = zc->zc_nvlist_dst_size;
 
-	if (bufsize <= 0)
+	if (bufsize < sizeof (zfs_useracct_t)) {
+		zc->zc_nvlist_dst_size = sizeof (zfs_useracct_t);
 		return (SET_ERROR(ENOMEM));
+	}
 
 	int error = zfsvfs_hold(zc->zc_name, FTAG, &zfsvfs, B_FALSE);
 	if (error != 0)
 		return (error);
 
 	void *buf = vmem_alloc(bufsize, KM_SLEEP);
+	zc->zc_nvlist_dst_size = bufsize;
 
 	error = zfs_userspace_many(zfsvfs, zc->zc_objset_type, &zc->zc_cookie,
 	    buf, &zc->zc_nvlist_dst_size);
@@ -7233,7 +7256,7 @@ zfs_ioctl_init(void)
 	    zfs_ioc_send, zfs_secpolicy_send);
 
 	zfs_ioctl_register_dataset_modify(ZFS_IOC_SET_PROP, zfs_ioc_set_prop,
-	    zfs_secpolicy_none);
+	    zfs_secpolicy_setprops);
 	zfs_ioctl_register_dataset_modify(ZFS_IOC_DESTROY, zfs_ioc_destroy,
 	    zfs_secpolicy_destroy);
 	zfs_ioctl_register_dataset_modify(ZFS_IOC_RENAME, zfs_ioc_rename,
