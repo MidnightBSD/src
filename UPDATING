@@ -14,6 +14,10 @@ Updating Information for MidnightBSD users.
 	audit: CVE-2026-49426 incorrect audit records for ptrace(PT_SC_REMOTE)
 	syscall requests. Rebuild and reboot the kernel.
 
+	posixshm: CVE-2026-49427, CVE-2026-49428 use-after-free in POSIX
+	largepage shared memory objects (sendfile SF_NOCACHE and O_TRUNC
+	paths). Rebuild and reboot the kernel.
+
 20260627:
 	ldns 1.9.2: CVE-2026-10846  off-path DNS response spoofing in the
 	stub resolver and drill; responses are now matched to the query by
