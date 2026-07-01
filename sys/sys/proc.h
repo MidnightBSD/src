@@ -726,6 +726,7 @@ struct proc {
 	LIST_HEAD(, proc) p_orphans;	/* (e) Pointer to list of orphans. */
 
 	TAILQ_HEAD(, kq_timer_cb_data)	p_kqtim_stop;	/* (c) */
+	u_int		p_execblock;	/* (c) Blockers for execve. */
 	struct vnode	*p_textdvp;	/* (b) Dir containing textvp. */
 	char		*p_binname;	/* (b) Binary hardlink name. */
 	void		*p_elf_brandinfo; /* (x) Elf_Brandinfo, NULL for
@@ -844,6 +845,8 @@ struct proc {
 						   sync core registered */
 #define	P2_MEMBAR_GLOBE		0x00400000	/* membar global expedited
 						   registered */
+#define	P2_INEXEC_WAIT		0x80000000	/* Not same as in HEAD.
+						   Waiters for P_INEXEC/p_execblock */
 
 /* Flags protected by proctree_lock, kept in p_treeflags. */
 #define	P_TREE_ORPHANED		0x00000001	/* Reparented, on orphan list */
