@@ -7,6 +7,10 @@ Updating Information for MidnightBSD users.
 	vm: CVE-2026-49418 device pager page list use-after-free fix.
 	Rebuild and reboot the kernel.
 
+	iconv: CVE-2026-58081, CVE-2026-58082 buffer overflows in the HZ,
+	UTF-7, VIQR, ZW and ISO-2022 iconv(3) encoding modules. Rebuild
+	world and restart applications that use iconv(3).
+
 20260627:
 	ldns 1.9.2: CVE-2026-10846  off-path DNS response spoofing in the
 	stub resolver and drill; responses are now matched to the query by
