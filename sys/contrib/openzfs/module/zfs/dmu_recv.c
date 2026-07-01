@@ -2506,9 +2506,13 @@ receive_read_record(dmu_recv_cookie_t *drc)
 	{
 		struct drr_object *drro =
 		    &drc->drc_rrd->header.drr_u.drr_object;
-		uint32_t size = DRR_OBJECT_PAYLOAD_SIZE(drro);
+		uint32_t size;
 		void *buf = NULL;
 		dmu_object_info_t doi;
+
+		size = DRR_OBJECT_PAYLOAD_SIZE(drro);
+		if (size > SPA_MAXBLOCKSIZE)
+			return (SET_ERROR(ERANGE));
 
 		if (size != 0)
 			buf = kmem_zalloc(size, KM_SLEEP);
@@ -2539,7 +2543,11 @@ receive_read_record(dmu_recv_cookie_t *drc)
 	case DRR_WRITE:
 	{
 		struct drr_write *drrw = &drc->drc_rrd->header.drr_u.drr_write;
-		int size = DRR_WRITE_PAYLOAD_SIZE(drrw);
+		uint64_t size = DRR_WRITE_PAYLOAD_SIZE(drrw);
+
+		if (size > SPA_MAXBLOCKSIZE)
+			return (SET_ERROR(ERANGE));
+
 		abd_t *abd = abd_alloc_linear(size, B_FALSE);
 		err = receive_read_payload_and_next_header(drc, size,
 		    abd_to_buf(abd));
@@ -2556,8 +2564,14 @@ receive_read_record(dmu_recv_cookie_t *drc)
 	{
 		struct drr_write_embedded *drrwe =
 		    &drc->drc_rrd->header.drr_u.drr_write_embedded;
-		uint32_t size = P2ROUNDUP(drrwe->drr_psize, 8);
-		void *buf = kmem_zalloc(size, KM_SLEEP);
+		uint32_t size;
+		void *buf;
+
+		size = P2ROUNDUP(drrwe->drr_psize, 8);
+		if (size > SPA_MAXBLOCKSIZE)
+			return (SET_ERROR(ERANGE));
+
+		buf = kmem_zalloc(size, KM_SLEEP);
 
 		err = receive_read_payload_and_next_header(drc, size, buf);
 		if (err != 0) {
@@ -2590,7 +2604,11 @@ receive_read_record(dmu_recv_cookie_t *drc)
 	case DRR_SPILL:
 	{
 		struct drr_spill *drrs = &drc->drc_rrd->header.drr_u.drr_spill;
-		int size = DRR_SPILL_PAYLOAD_SIZE(drrs);
+		uint64_t size = DRR_SPILL_PAYLOAD_SIZE(drrs);
+
+		if (size > SPA_MAXBLOCKSIZE)
+			return (SET_ERROR(ERANGE));
+
 		abd_t *abd = abd_alloc_linear(size, B_FALSE);
 		err = receive_read_payload_and_next_header(drc, size,
 		    abd_to_buf(abd));
