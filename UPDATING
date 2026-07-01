@@ -9,6 +9,10 @@ Updating Information for MidnightBSD users.
 	over-read fix. Rebuild world and restart applications using
 	libcrypto.
 
+	openssl: CVE-2026-7383 ASN1_mbstring_ncopy() Unicode output
+	size overflow fix. Rebuild world and restart applications using
+	libcrypto.
+
 20260630:
 	arm64: fix freebsd32 setcontext(2) and swapcontext(2) return values.
 	Rebuild and reboot the kernel.
