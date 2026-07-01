@@ -26,6 +26,10 @@ Updating Information for MidnightBSD users.
 	the AT_RESOLVE_BENEATH path-containment flag. Rebuild and reboot
 	the kernel.
 
+	libalias: CVE-2026-49420 buffer overflow in the RTSP handler
+	(alias_smedia). Rebuild world and the kernel; restart natd(8)
+	and reboot (or reload alias_smedia.ko) for ipfw(4) NAT.
+
 20260627:
 	ldns 1.9.2: CVE-2026-10846  off-path DNS response spoofing in the
 	stub resolver and drill; responses are now matched to the query by
