@@ -22,6 +22,10 @@ Updating Information for MidnightBSD users.
 	setsockopt(2) handler (tcp_rack.ko). Rebuild and reboot the
 	kernel, or reload tcp_rack.ko.
 
+	unlinkat: CVE-2026-49421 unlinkat(2)/funlinkat(2) silently ignored
+	the AT_RESOLVE_BENEATH path-containment flag. Rebuild and reboot
+	the kernel.
+
 20260627:
 	ldns 1.9.2: CVE-2026-10846  off-path DNS response spoofing in the
 	stub resolver and drill; responses are now matched to the query by
