@@ -150,6 +150,15 @@ IDTVEC(spuriousint)
 	MEXITCOUNT
 	jmp	doreti
 
+/*
+ * Local APIC thermal interrupt handler.
+ */
+	INTR_HANDLER thermalint
+	FAKE_MCOUNT(TF_RIP(%rsp))
+	call	lapic_handle_thermal
+	MEXITCOUNT
+	jmp	doreti
+
 #ifdef XENHVM
 /*
  * Xen event channel upcall interrupt handler.
