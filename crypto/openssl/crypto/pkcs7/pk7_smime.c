@@ -251,6 +251,11 @@ int PKCS7_verify(PKCS7 *p7, STACK_OF(X509) *certs, X509_STORE *store,
         return 0;
     }
 
+    if (sk_X509_ALGOR_num(p7->d.sign->md_algs) <= 0) {
+        PKCS7err(PKCS7_F_PKCS7_VERIFY, PKCS7_R_NO_SIGNATURES_ON_DATA);
+        return 0;
+    }
+
     signers = PKCS7_get0_signers(p7, certs, flags);
     if (!signers)
         return 0;
