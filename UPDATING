@@ -35,6 +35,9 @@ Updating Information for MidnightBSD users.
 	(RECV_NEW heal) and improper SET_PROP privilege check. Rebuild
 	world and the kernel and reboot.
 
+	execve: CVE-2026-49415 local privilege escalation via a procfs
+	debugging permission race. Rebuild and reboot the kernel.
+
 20260627:
 	ldns 1.9.2: CVE-2026-10846  off-path DNS response spoofing in the
 	stub resolver and drill; responses are now matched to the query by
