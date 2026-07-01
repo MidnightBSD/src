@@ -18,6 +18,10 @@ Updating Information for MidnightBSD users.
 	largepage shared memory objects (sendfile SF_NOCACHE and O_TRUNC
 	paths). Rebuild and reboot the kernel.
 
+	tcp: CVE-2026-49422 use-after-free in the RACK TCP stack
+	setsockopt(2) handler (tcp_rack.ko). Rebuild and reboot the
+	kernel, or reload tcp_rack.ko.
+
 20260627:
 	ldns 1.9.2: CVE-2026-10846  off-path DNS response spoofing in the
 	stub resolver and drill; responses are now matched to the query by
