@@ -158,6 +158,13 @@
 .Op Ar package ...
 .Pp
 .Nm
+.Cm query
+.Op Fl aCgix
+.Op Fl e Ar expression
+.Ar format
+.Op Ar pattern ...
+.Pp
+.Nm
 .Cm search
 .Ar query ...
 .Pp
@@ -317,6 +324,11 @@ ignore missing dependencies and attempt the installation anyway.
 With
 .Fl y ,
 assume yes for confirmation prompts.
+If a requested package is not available in the package index and a populated
+.Pa /usr/mports
+tree is present,
+.Nm
+prints guidance for installing a matching port or searching the ports tree.
 .It Cm list Op Cm updates | Cm up | Cm prime
 Without arguments, list installed packages.
 The
@@ -339,6 +351,128 @@ default.
 .It Cm purl Op Ar package ...
 List Package URL values for installed packages.
 If one or more package names are specified, restrict output to those packages.
+.It Cm query Op Fl aCgix Op Fl e Ar expression Ar format Op Ar pattern ...
+Print installed package metadata using a
+.Fx
+.Nm pkg
+.Cm query Ns -style
+format string.
+With no
+.Ar pattern
+arguments, all installed packages are selected.
+With one or more patterns, package names are matched exactly unless a matching
+mode option is specified.
+.Pp
+The following options are supported:
+.Bl -tag -width ".Fl e Ar expression"
+.It Fl a
+Select all installed packages explicitly.
+.It Fl C
+Use case-sensitive matching.
+.It Fl e Ar expression
+Filter matched packages with a scalar expression.
+The expression language supports field truth checks, equality and inequality,
+glob matching with
+.Ql ~ ,
+version comparisons with
+.Ql < ,
+.Ql <= ,
+.Ql > ,
+and
+.Ql >= ,
+and boolean
+.Ql && ,
+.Ql || ,
+and leading
+.Ql ! .
+.It Fl g
+Treat patterns as shell glob patterns.
+.It Fl i
+Use case-insensitive matching.
+.It Fl x
+Treat patterns as extended regular expressions.
+.El
+.Pp
+The
+.Ar format
+string supports percent fields including
+.Ql \&%n
+for package name,
+.Ql \&%v
+for version,
+.Ql \&%o
+for origin,
+.Ql \&%p
+for prefix,
+.Ql \&%m
+for maintainer annotation,
+.Ql \&%c
+for comment,
+.Ql \&%e
+for description,
+.Ql \&%w
+for WWW annotation,
+.Ql \&%a
+for automatic install flag,
+.Ql \&%k
+for locked flag,
+.Ql \&%t
+for install timestamp,
+.Ql \&%s
+or
+.Ql \&%sb
+for flat size in bytes,
+.Ql \&%sh
+or
+.Ql \&%h
+for human-readable flat size,
+.Ql \&%M
+for package message,
+.Ql \&%X
+for index hash,
+.Ql \&%l
+for license metadata,
+.Ql \&%q
+for target architecture, and
+.Ql \&%P
+for package URL.
+.Pp
+List fields are printed comma-separated:
+.Ql \&%A
+annotations,
+.Ql \&%C
+categories,
+.Ql \&%D
+directories,
+.Ql \&%F
+files,
+.Ql \&%L
+licenses,
+.Ql \&%O
+options,
+.Ql \&%d
+dependencies, and
+.Ql \&%r
+reverse dependencies.
+.Ql \&%#X
+prints the count for a supported list field
+.Ql \&%X ,
+and
+.Ql \&%?X
+prints
+.Ql 1
+when the list is present or
+.Ql 0
+when it is empty.
+.Pp
+The
+.Fx
+.Nm pkg
+.Cm query
+.Fl F
+package-file mode is not supported by
+.Nm
+in this version.
 .It Cm search Ar query ...
 Search package names and descriptions.
 Glob patterns such as
@@ -492,6 +626,12 @@ List packages needing upgrades:
 .Pp
 Show detailed package information:
 .Dl $ mport info gmake
+.Pp
+Print installed package names and versions:
+.Dl $ mport query '%n-%v'
+.Pp
+Print the origin and size for installed packages matching a glob:
+.Dl $ mport query -g '%o %sh' 'gma*'
 .Pp
 Determine which package installed a file:
 .Dl $ mport which /usr/local/bin/curl

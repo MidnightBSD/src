@@ -31,7 +31,11 @@ SPLINT_FLAGS=(
   +posixlib -warnposixheaders
   "-D__aligned(x)="
   "-D_Alignof(x)=sizeof(x)"
+  "-D_RuneLocale=void"
   "-D__va_list=void *"
+  "-D__amd64__"
+  "-D__FreeBSD__=10"
+  "-D__MidnightBSD_version=300000"
   +boundsread +boundswrite +likelybounds
   +nullpass +nullret
   +bufferoverflowhigh
@@ -51,6 +55,15 @@ printf 'Running splint on %d staged .c file(s)...\n' "${#staged_c_files[@]}"
 
 for f in "${staged_c_files[@]}"; do
   [[ -f "$f" ]] || continue
+  if grep -Eq '^[[:space:]]*/\* *SPLINT_SKIP_FILE:' "$f"; then
+    reason="$(
+      sed -n 's|^[[:space:]]*/\* *SPLINT_SKIP_FILE: *||p' "$f" |
+        sed 's|[[:space:]]*\*/[[:space:]]*$||' |
+        head -n 1
+    )"
+    echo "Skipping $f: $reason" >&2
+    continue
+  fi
   echo "== $f ==" >>"$tmp_out"
   splint "${SPLINT_FLAGS[@]}" "${INCLUDE_DIRS[@]}" "$f" >>"$tmp_out" 2>&1 || true
 done
@@ -63,6 +76,7 @@ findings="$(
     /^== / { next }
     /^Splint [0-9]/ { next }
     /^Command Line: Setting .* redundant with current value$/ { next }
+    /^Finished checking --- no warnings$/ { next }
     { printf "%d:%s\n", NR, $0 }
   ' "$tmp_out"
 )"
