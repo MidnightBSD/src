@@ -1,0 +1,52 @@
+Upgrade procedure for mport
+
+Source: https://github.com/midnightbsd/mport.git  (branch: main)
+
+mport is MidnightBSD's own package tool, so the "vendor" upstream is the
+MidnightBSD mport repository itself. The vendor branch tracks main directly;
+there is no third-party divergence to reconcile.
+
+To upgrade to a new version:
+
+1. Clone the upstream main branch:
+     git clone https://github.com/midnightbsd/mport.git
+   The version is defined by MPORT_VERSION in libmport/mport_private.h.
+
+2. Use the vendor-update skill:
+     vendor branch : vendor/mport
+     in-tree prefix: contrib/mport
+     tag           : vendor/mport/<version>   (commit msg: "Import mport <version>")
+
+3. rsync the clone (minus .git) into a worktree of vendor/mport, commit, tag,
+   then "git subtree merge -P contrib/mport vendor/mport" onto master and each
+   stable branch.
+
+There is NO Xlist for mport. Upstream is carried into contrib/mport wholesale
+(including any stray upstream artifacts such as replace.patch); prune nothing.
+
+Build-system integration (MidnightBSD-specific, applied on master/stable after
+the subtree merge -- these live OUTSIDE contrib/mport and are the only thing
+that must be refreshed by hand each import):
+
+  - lib/libmport/Makefile SRCS must list every libmport/*.c that mport builds.
+    When upstream adds a new libmport source file, add it to SRCS. Diff the file
+    list against the previous import to find additions, e.g.:
+       diff <(ls contrib/mport/libmport/*.c | xargs -n1 basename | sort) \
+            <(git show vendor/mport/<prev>:libmport/ | ...)
+    2.8.0 added: mtree.c, pkgmeta_sort.c, query.c.
+  - usr.sbin/mport/Makefile and libexec/mport.*/Makefile normally need no change
+    (single-source PROG builds), but re-check if upstream adds files there.
+
+Local patches applied on top of upstream:
+
+  - (none currently) The former MidnightBSD ohash-callback fix in
+    libmport/upgrade.c (src commit 526a71f9af, "fix upgrade.c ohash callback
+    signatures after ohash update") was folded UPSTREAM as of mport 2.8.0,
+    guarded by "#if defined(__MidnightBSD__) && __MidnightBSD_version >= 401002".
+    Do NOT re-apply it; upstream now handles both old and new ohash signatures.
+
+Notes:
+  - Verify builds after each import: lib/libmport, usr.sbin/mport, libexec/mport.*
+  - MPORT_OSVERSION / MPORT_MASTER_VERSION in libmport/mport_private.h are
+    maintained upstream (MidnightBSD's own repo), so they carry through the
+    vendor import unchanged.
