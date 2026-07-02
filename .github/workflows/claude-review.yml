@@ -24,12 +24,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: anthropics/claude-code-action@beta
+      - uses: anthropics/claude-code-action@v1
         with:
+          track_progress: true # Forces tag mode with tracking comments
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           trigger_phrase: "@claude"
-          direct_prompt: |
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
             This is the MidnightBSD operating system source tree.
             Review for: correctness bugs, malloc/free symmetry, bounds checking,
             style(9) compliance (8-space tabs, 80-col), and security issues.
