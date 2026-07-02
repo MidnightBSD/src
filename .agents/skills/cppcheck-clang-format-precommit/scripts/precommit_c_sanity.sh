@@ -65,14 +65,21 @@ pick_clang_tidy() {
 clang_tidy_bin="$(pick_clang_tidy)"
 
 tmp_staged="${TMPDIR:-/tmp}/c-sanity-files.$$.txt"
+tmp_candidates="${TMPDIR:-/tmp}/c-sanity-candidates.$$.txt"
 tmp_c="${TMPDIR:-/tmp}/c-sanity-c-files.$$.txt"
 tmp_tidy="${TMPDIR:-/tmp}/clang-tidy.$$.txt"
 tmp_cppcheck="${TMPDIR:-/tmp}/cppcheck.$$.txt"
-trap 'rm -f "$tmp_staged" "$tmp_c" "$tmp_tidy" "$tmp_cppcheck"' EXIT
+trap 'rm -f "$tmp_staged" "$tmp_candidates" "$tmp_c" "$tmp_tidy" "$tmp_cppcheck"' EXIT
 
-git diff --cached --name-only --diff-filter=ACMR -- '*.c' '*.h' >"$tmp_staged" || true
-if ! [ -s "$tmp_staged" ]; then
+git diff --cached --name-only --diff-filter=ACMR -- '*.c' '*.h' >"$tmp_candidates" || true
+if ! [ -s "$tmp_candidates" ]; then
   echo "No staged *.c/*.h files; skipping clang-format/clang-tidy/cppcheck."
+  exit 0
+fi
+
+grep -Ev '^(contrib|crypto)/' "$tmp_candidates" >"$tmp_staged" || true
+if ! [ -s "$tmp_staged" ]; then
+  echo "Only vendor C/C header files under contrib/ or crypto/ are staged; skipping clang-format/clang-tidy/cppcheck."
   exit 0
 fi
 
