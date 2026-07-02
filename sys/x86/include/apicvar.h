@@ -193,8 +193,6 @@ inthand_t
 extern vm_paddr_t lapic_paddr;
 extern int *apic_cpuids;
 
-typedef void (*lapic_thermal_handle_function)(int, void *);
-
 void	apic_register_enumerator(struct apic_enumerator *enumerator);
 void	*ioapic_create(vm_paddr_t addr, int32_t apic_id, int intbase);
 int	ioapic_disable_pin(void *cookie, u_int pin);
@@ -489,7 +487,10 @@ lapic_set_lvt_triggermode(u_int apic_id, u_int lvt, enum intr_trigger trigger)
 	return (apic_ops.set_lvt_triggermode(apic_id, lvt, trigger));
 }
 
-void	lapic_enable_thermal(lapic_thermal_handle_function thermfunc, void *value);
+/* First argument: 'cpuid' from 'struct pcpu', second: Opaque cookie. */
+typedef void lapic_thermal_handler_t(int, void *);
+
+void	lapic_enable_thermal(lapic_thermal_handler_t *func, void *func_arg);
 void	lapic_disable_thermal(void);
 void	lapic_handle_cmc(void);
 void	lapic_handle_thermal(void);
