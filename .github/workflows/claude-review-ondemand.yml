@@ -28,6 +28,8 @@ jobs:
           trigger_phrase: "/code-review"
           post_as_pr_comments: true
           custom_instructions: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
             This is the MidnightBSD operating system source tree.
             Review for: correctness bugs, malloc/free symmetry, bounds checking,
             style(9) compliance (8-space tabs, 80-col), and security issues.
