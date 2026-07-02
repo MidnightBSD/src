@@ -282,13 +282,17 @@ iichid_cmd_read(struct iichid_softc* sc, void *buf, iichid_size_t maxlen,
 	    { sc->addr, IIC_M_RD, maxlen, buf },
 	};
 	uint16_t actlen;
+	bool reset_acked;
 
 	if (maxlen < 2)
 		return (EINVAL);
 
-	if (!sc->reset_acked)
+	mtx_lock(&sc->mtx);
+	reset_acked = sc->reset_acked;
+	mtx_unlock(&sc->mtx);
+	if (!reset_acked)
 		msgs[0].len = 2;
-	memset(buf, 0xaa, msgs[0].len);
+
 	error = iicbus_transfer(sc->dev, msgs, nitems(msgs));
 	if (error != 0)
 		return (error);
@@ -296,13 +300,15 @@ iichid_cmd_read(struct iichid_softc* sc, void *buf, iichid_size_t maxlen,
 	DPRINTFN(sc, 5, "%*D\n", msgs[0].len, msgs[0].buf, " ");
 
 	actlen = le16dec(buf);
-	if (actlen == 0 && !sc->reset_acked) {
+	if (actlen == 0 && !reset_acked) {
 		mtx_lock(&sc->mtx);
-		sc->reset_acked = true;
-		wakeup(&sc->reset_acked);
+		if (!sc->reset_acked) {
+			sc->reset_acked = true;
+			wakeup(&sc->reset_acked);
+		}
 		mtx_unlock(&sc->mtx);
 	}
-	if (actlen <= 2 || actlen > maxlen)
+	if (actlen <= 2 || actlen > msgs[0].len)
 		actlen = 0;
 	if (actual_len != NULL)
 		*actual_len = actlen;
@@ -600,8 +606,9 @@ iichid_intr(void *context)
 	 * Reading of input reports of I2C devices residing in SLEEP state is
 	 * not allowed and often returns a garbage.  If a HOST needs to
 	 * communicate with the DEVICE it MUST issue a SET POWER command
-	 * (to ON) before any other command. As some hardware requires reads to
-	 * acknowledge interrupts we fetch only length header and discard it.
+	 * (to ON) before any other command.  Read and acknowledge pending
+	 * interrupts, but deliver reports only while the device is open and
+	 * powered on.
 	 */
 	THREAD_SLEEPING_OK();
 	error = iichid_cmd_read(sc, sc->intr_buf, sc->intr_bufsize, &actual);
@@ -857,8 +864,7 @@ iichid_intr_start(device_t dev)
 
 	sc = device_get_softc(dev);
 	DPRINTF(sc, "iichid device open\n");
-	if (!sc->open)
-		iichid_set_power_state(sc, IICHID_PS_ON, IICHID_PS_NULL);
+	iichid_set_power_state(sc, IICHID_PS_ON, IICHID_PS_NULL);
 
 	return (0);
 }
@@ -1224,6 +1230,7 @@ iichid_attach(device_t dev)
 			if (error != 0)
 				device_printf(sc->dev,
 				    "Reset timeout expired\n");
+			sc->reset_acked = true;
 		}
 		mtx_unlock(&sc->mtx);
 	}
