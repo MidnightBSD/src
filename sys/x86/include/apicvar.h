@@ -490,7 +490,7 @@ lapic_set_lvt_triggermode(u_int apic_id, u_int lvt, enum intr_trigger trigger)
 /* First argument: 'cpuid' from 'struct pcpu', second: Opaque cookie. */
 typedef void lapic_thermal_handler_t(int, void *);
 
-void	lapic_enable_thermal(lapic_thermal_handler_t *func, void *func_arg);
+bool	lapic_enable_thermal(lapic_thermal_handler_t *func, void *func_arg);
 void	lapic_disable_thermal(void);
 void	lapic_handle_cmc(void);
 void	lapic_handle_thermal(void);
