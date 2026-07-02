@@ -59,6 +59,7 @@
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/Statepoint.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/TypeFinder.h"
 #include "llvm/IR/TypedPointerType.h"
@@ -4175,6 +4176,48 @@ void AssemblyWriter::printInstructionLine(const Instruction &I) {
 /// printGCRelocateComment - print comment after call to the gc.relocate
 /// intrinsic indicating base and derived pointer names.
 void AssemblyWriter::printGCRelocateComment(const GCRelocateInst &Relocate) {
+  if (Relocate.arg_size() != 3)
+    return;
+
+  if (!isa<ConstantInt>(Relocate.getArgOperand(1)) ||
+      !isa<ConstantInt>(Relocate.getArgOperand(2)))
+    return;
+
+  const Value *Token = Relocate.getArgOperand(0);
+  const Value *Statepoint = nullptr;
+  if (isa<UndefValue>(Token) || isa<ConstantTokenNone>(Token))
+    Statepoint = UndefValue::get(Token->getType());
+  else if (isa<GCStatepointInst>(Token))
+    Statepoint = Token;
+  else if (const auto *LPI = dyn_cast<LandingPadInst>(Token)) {
+    const BasicBlock *InvokeBB = LPI->getParent()->getUniquePredecessor();
+    if (!InvokeBB || !InvokeBB->getTerminator())
+      return;
+    Statepoint = dyn_cast<GCStatepointInst>(InvokeBB->getTerminator());
+    if (!Statepoint)
+      return;
+  } else
+    return;
+
+  if (!isa<UndefValue>(Statepoint)) {
+    const auto *GCInst = dyn_cast<GCStatepointInst>(Statepoint);
+    if (!GCInst)
+      return;
+
+    const unsigned BaseIndex = Relocate.getBasePtrIndex();
+    const unsigned DerivedIndex = Relocate.getDerivedPtrIndex();
+    bool BaseIndexValid, DerivedIndexValid;
+    if (auto Opt = GCInst->getOperandBundle(LLVMContext::OB_gc_live)) {
+      BaseIndexValid = BaseIndex < Opt->Inputs.size();
+      DerivedIndexValid = DerivedIndex < Opt->Inputs.size();
+    } else {
+      BaseIndexValid = BaseIndex < GCInst->arg_size();
+      DerivedIndexValid = DerivedIndex < GCInst->arg_size();
+    }
+    if (!BaseIndexValid || !DerivedIndexValid)
+      return;
+  }
+
   Out << " ; (";
   writeOperand(Relocate.getBasePtr(), false);
   Out << ", ";
