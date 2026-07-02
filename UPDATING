@@ -17,6 +17,9 @@ Updating Information for MidnightBSD users.
 	dereference fix. Rebuild world and restart applications using
 	libcrypto.
 
+	llvm: CVE-2026-13574 gc.relocate malformed index diagnostic crash
+	fix. Rebuild world.
+
 20260630:
 	arm64: fix freebsd32 setcontext(2) and swapcontext(2) return values.
 	Rebuild and reboot the kernel.
