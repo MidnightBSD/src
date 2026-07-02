@@ -1220,6 +1220,9 @@ iichid_attach(device_t dev)
 		pause("iichid", (hz + 999) / 1000);
 		(void)iichid_cmd_read(sc, sc->intr_buf, sc->intr_bufsize,
 		    NULL);
+		mtx_lock(&sc->mtx);
+		sc->reset_acked = true;
+		mtx_unlock(&sc->mtx);
 	} else
 #endif /* IICHID_SAMPLING */
 	{
