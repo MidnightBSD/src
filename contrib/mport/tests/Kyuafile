@@ -6,3 +6,6 @@ atf_test_program{name="mport_create_test", }
 atf_test_program{name="mport_libexec_test", }
 atf_test_program{name="mport_cli_test", }
 atf_test_program{name="mport_fetch_test", }
+atf_test_program{name="mport_osrelease_test", }
+atf_test_program{name="mport_pkgmeta_test", }
+atf_test_program{name="mport_util_test", }

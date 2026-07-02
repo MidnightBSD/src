@@ -1,0 +1,9 @@
+--- tests/mport_util_test.c
++++ tests/mport_util_test.c
+@@ -3,6 +3,7 @@
+
+ #include <atf-c.h>
+ #include <stdio.h>
++#include <ctype.h>
+ #include <stdlib.h>
+ #include <string.h>

@@ -205,6 +205,27 @@ mport_starts_with(const char *pre, const char *str)
 	return strncmp(pre, str, strlen(pre)) == 0;
 }
 
+int
+mport_build_infrastructure_path(mportInstance *mport, mportPackageMeta *pkg, const char *name,
+    bool rooted, char *path, size_t path_size)
+{
+	int len;
+	const char *root;
+
+	if (pkg == NULL || pkg->name == NULL || pkg->version == NULL || name == NULL || path == NULL ||
+	    path_size == 0) {
+		RETURN_ERROR(MPORT_ERR_FATAL, "Invalid infrastructure path arguments.");
+	}
+
+	root = (rooted && mport != NULL && mport->root != NULL) ? mport->root : "";
+	len = snprintf(path, path_size, "%s%s/%s-%s/%s", root, MPORT_INST_INFRA_DIR, pkg->name,
+	    pkg->version, name);
+	if (len < 0 || (size_t)len >= path_size)
+		RETURN_ERROR(MPORT_ERR_FATAL, "Infrastructure path is too long.");
+
+	return (MPORT_OK);
+}
+
 /* mport_hash_file(const char * filename)
  *
  * Return a SHA256 hash of a file.  Must free result
@@ -515,7 +536,13 @@ mport_directory(const char *path)
 			return NULL;
 		char *lastSlash = strrchr(dir, '/');
 		if (lastSlash != NULL) {
-			*lastSlash = '\0'; // Null-terminate at the last slash to get the directory
+			if (lastSlash == dir) {
+				// path is like "/mport" or "/"
+				*(lastSlash + 1) = '\0';
+			} else {
+				*lastSlash =
+				    '\0'; // Null-terminate at the last slash to get the directory
+			}
 			return dir;
 		} else {
 			free(dir);
@@ -1396,7 +1423,7 @@ mport_string_replace(const char *str, const char *old, const char *new)
 		memcpy(r, new, newlen);
 		r += newlen;
 	}
-	strcpy(r, p);
+	strlcpy(r, p, (retlen + 1) - (r - ret));
 
 	return (ret);
 }

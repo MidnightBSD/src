@@ -64,3 +64,6 @@ mport/mport
 .idea/
 .vscode
 .project
+
+# Local agent settings
+.claude/settings.local.json

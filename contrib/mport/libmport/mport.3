@@ -100,6 +100,14 @@
 .Ft int
 .Fn mport_pkgmeta_get_updepends "mportInstance *mport" "mportPackageMeta *pkg" "mportPackageMeta ***vec"
 .Ft int
+.Fn mport_query_installed "mportInstance *mport" "const mportQueryOptions *opts" "mportPackageMeta ***vec"
+.Ft int
+.Fn mport_query_format_package "mportInstance *mport" "mportPackageMeta *pkg" "const char *format" "FILE *fp"
+.Ft int
+.Fn mport_query_print "mportInstance *mport" "mportPackageMeta **vec" "const char *format" "FILE *fp"
+.Ft char *
+.Fn mport_query_pkg_message "mportInstance *mport" "mportPackageMeta *pkg"
+.Ft int
 .Fn mport_index_load "mportInstance *mport"
 .Ft int
 .Fn mport_index_get "mportInstance *mport"
@@ -336,6 +344,10 @@ operate on the repository index.
 .Fn mport_pkgmeta_list_locked ,
 .Fn mport_pkgmeta_get_downdepends ,
 .Fn mport_pkgmeta_get_updepends ,
+.Fn mport_query_installed ,
+.Fn mport_query_format_package ,
+.Fn mport_query_print ,
+.Fn mport_query_pkg_message ,
 .Fn mport_assetlist_new ,
 .Fn mport_parse_plistfile ,
 .Fn mport_asset_get_assetlist ,
@@ -417,11 +429,23 @@ installs a local package bundle from disk and also requires the
 argument.
 .It Fn mport_setting_get ,
 .Fn mport_info ,
+.Fn mport_query_pkg_message ,
 .Fn mport_version ,
 .Fn mport_version_short ,
 and
 .Fn mport_purl_uri
 return heap-allocated strings on success.
+.It Fn mport_query_installed
+allocates a vector of installed package metadata matching the supplied
+.Vt mportQueryOptions .
+The caller must release the vector with
+.Fn mport_pkgmeta_vec_free .
+.It Fn mport_query_format_package
+prints one package using the same query format language used by
+.Cm mport query .
+.It Fn mport_query_print
+prints a vector of packages using the same format language and appends one
+newline for each package.
 .It Fn mport_audit
 returns a heap-allocated report string.
 Depending on verbosity and the requested package, the returned string may be
