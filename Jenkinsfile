@@ -73,8 +73,8 @@ pipeline {
                         }
                         steps {
                             echo "Do installworld for ${ARCHITECTURE}"
-                            sh 'make installworld DESTDIR=${DESTDIR}'
-                            sh 'make distribution DESTDIR=${DESTDIR}'
+                            sh 'make -DNO_ROOT -DDB_FROM_SRC installworld DESTDIR=${DESTDIR}'
+                            sh 'make -DNO_ROOT -DDB_FROM_SRC distribution DESTDIR=${DESTDIR}'
                         }
                     }
                     stage('installkernel') {
@@ -84,7 +84,7 @@ pipeline {
                         }
                         steps {
                             echo "Do installkernel for ${ARCHITECTURE}"
-                            sh 'make installkernel DESTDIR=${DESTDIR}'
+                            sh 'make -DNO_ROOT -DDB_FROM_SRC installkernel DESTDIR=${DESTDIR}'
                         }
                     }
                     stage('tests-install') {
@@ -94,7 +94,7 @@ pipeline {
                         }
                         steps {
                             echo "Do tests-install for ${ARCHITECTURE}"
-                            sh 'make tests-install DESTDIR=${DESTDIR}'
+                            sh 'make -DNO_ROOT -DDB_FROM_SRC tests-install DESTDIR=${DESTDIR}'
                         }
                     }
                     stage('tests') {
