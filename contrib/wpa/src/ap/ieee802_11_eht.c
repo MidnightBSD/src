@@ -1262,6 +1262,7 @@ u16 hostapd_process_ml_assoc_req(struct hostapd_data *hapd,
 		size_t sub_elem_len = *(pos + 1);
 		size_t sta_info_len;
 		u16 control;
+		u8 link_id;
 
 		wpa_printf(MSG_DEBUG, "MLD: sub element len=%zu",
 			   sub_elem_len);
@@ -1302,8 +1303,13 @@ u16 hostapd_process_ml_assoc_req(struct hostapd_data *hapd,
 			goto out;
 		}
 		control = WPA_GET_LE16(pos);
-		link_info = &info->links[control &
-					 EHT_PER_STA_CTRL_LINK_ID_MSK];
+		link_id = control & EHT_PER_STA_CTRL_LINK_ID_MSK;
+		if (link_id >= MAX_NUM_MLD_LINKS) {
+			wpa_printf(MSG_DEBUG,
+				   "MLD: Invalid Link ID in Per-STA Profile subelement");
+			goto out;
+		}
+		link_info = &info->links[link_id];
 		pos += 2;
 		ml_len -= 2;
 		sub_elem_len -= 2;
@@ -1353,8 +1359,7 @@ u16 hostapd_process_ml_assoc_req(struct hostapd_data *hapd,
 		os_memcpy(link_info->peer_addr, pos, ETH_ALEN);
 		wpa_printf(MSG_DEBUG,
 			   "MLD: assoc: link id=%u, addr=" MACSTR,
-			   control & EHT_PER_STA_CTRL_LINK_ID_MSK,
-			   MAC2STR(link_info->peer_addr));
+			   link_id, MAC2STR(link_info->peer_addr));
 
 		pos += ETH_ALEN;
 		ml_len -= ETH_ALEN;
