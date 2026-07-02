@@ -3,6 +3,9 @@ pipeline {
         choice(name: 'ARCHITECTURE_FILTER', choices: ['all', 'amd64', 'i386'], description: 'Run on specific architecture')
     }
     agent none
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '10', artifactNumToKeepStr: '5'))
+    }
     stages {
         stage('Check Branch Name') {
             steps {
@@ -121,6 +124,13 @@ pipeline {
                                 junit allowEmptyResults: true, testResults: "${JUNIT_RESULTS}"
                             }
                         }
+                    }
+                }
+                post {
+                    always {
+                        sh "jail -r jenkins-${ARCHITECTURE}-${env.BUILD_NUMBER} || true"
+                        sh "umount ${env.WORKSPACE}/destdir/${ARCHITECTURE}/dev || true"
+                        sh "rm -rf ${env.WORKSPACE}/destdir/${ARCHITECTURE} ${env.WORKSPACE}/obj"
                     }
                 }
             }
