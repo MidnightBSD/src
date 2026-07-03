@@ -35,7 +35,7 @@ pick_clang_format() {
   local best_ver=-1
   while IFS= read -r cmd; do
     local base="${cmd##*/}"
-    if [[ "$base" =~ ^clang-format([0-9]+)$ ]]; then
+    if [[ "$base" =~ ^clang-format-([0-9]+)$ ]]; then
       local ver="${BASH_REMATCH[1]}"
       if (( ver > best_ver )); then
         best_ver=$ver
@@ -69,7 +69,7 @@ pick_clang_tidy() {
   local best_ver=-1
   while IFS= read -r cmd; do
     local base="${cmd##*/}"
-    if [[ "$base" =~ ^clang-tidy([0-9]+)$ ]]; then
+    if [[ "$base" =~ ^clang-tidy-([0-9]+)$ ]]; then
       local ver="${BASH_REMATCH[1]}"
       if (( ver > best_ver )); then
         best_ver=$ver

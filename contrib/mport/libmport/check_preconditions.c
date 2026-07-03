@@ -138,6 +138,7 @@ check_if_installed(mportInstance *mport, mportPackageMeta *pack)
 	const char *inst_version;
 	const char *os_release;
 	char *system_os_release;
+	int step;
 
 	/* check if the package is already installed */
 	if (mport_db_prepare(mport->db, &stmt,
@@ -149,13 +150,14 @@ check_if_installed(mportInstance *mport, mportPackageMeta *pack)
 	/* it's possible that the default package with a flavor does not have a prefix, but will
 	 * appear that way during dependency calculation.
 	 */
-	int step = sqlite3_step(stmt);
+	step = sqlite3_step(stmt);
 	if (step == SQLITE_DONE) {
 		if (pack->flavor != NULL && !mport_starts_with(pack->flavor, pack->name)) {
 			char *full_name;
 			if (asprintf(&full_name, "%s-%s", pack->flavor, pack->name) == -1)
 				RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory");
 			if (full_name != NULL) {
+				sqlite3_finalize(stmt);
 				if (mport_db_prepare(mport->db, &stmt,
 					"SELECT version, os_release FROM packages WHERE pkg=%Q",
 					full_name) != MPORT_OK) {
