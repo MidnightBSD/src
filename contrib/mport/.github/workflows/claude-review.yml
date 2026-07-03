@@ -1,0 +1,40 @@
+name: Claude Code Review
+
+on:
+  pull_request:
+    branches: ["main"]
+    types: [opened, synchronize, reopened]
+  issue_comment:
+    types: [created]
+
+jobs:
+  claude-review:
+    name: Review
+    if: |
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request != null &&
+       contains(github.event.comment.body, '@claude'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          track_progress: true # Forces tag mode with tracking comments
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          trigger_phrase: "@claude"
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+            You are reviewing a C pull request for mport, the MidnightBSD package manager.
+            Focus on: correctness, memory safety (ownership, null deref, double-free), error propagation,
+            SQL injection via SQLite, path traversal, and consistency with existing patterns.
+            Post inline comments on specific lines where issues are found.
+            Do not comment on style that clang-format would catch; CodeQL handles static analysis separately.

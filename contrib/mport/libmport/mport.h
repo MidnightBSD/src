@@ -1,6 +1,6 @@
 /*-
  * SPDX-License-Identifier: BSD-2-Clause
- * 
+ *
  * Copyright (c) 2013, 2014, 2021, 2024 Lucas Holt
  * Copyright (c) 2007-2009 Chris Reinhardt
  * All rights reserved.
@@ -70,42 +70,39 @@ typedef tll(char *) stringlist_t;
 #define MPORT_INST_HAVE_INDEX 1
 #define MPORT_LOCAL_PKG_PATH "/var/db/mport/downloads"
 
-enum _Verbosity{
-    MPORT_VQUIET,
-    MPORT_VBRIEF,
-    MPORT_VNORMAL,
-    MPORT_VVERBOSE
-};
+enum _Verbosity { MPORT_VQUIET, MPORT_VBRIEF, MPORT_VNORMAL, MPORT_VVERBOSE };
 typedef enum _Verbosity mportVerbosity;
 mportVerbosity mport_verbosity(bool quiet, bool verbose, bool brief);
 
 typedef struct {
-  int flags;
-  sqlite3 *db;
-  char *root;
-  int rootfd; /* Root directory file descriptor */
-  char *outputPath; /* Download directory */
-  bool noIndex; /* Do not fetch mport index */
-  bool offline; /* Installing packages from local files, etc. */
-  mportVerbosity verbosity;
-  bool force;
-  bool ignoreMissing; /* ignore mising dependencies during installation */
-  mport_msg_cb msg_cb;
-  mport_progress_init_cb progress_init_cb;
-  mport_progress_step_cb progress_step_cb;
-  mport_progress_free_cb progress_free_cb;
-  mport_confirm_cb confirm_cb;
-  mport_select_cb select_cb;
+	int flags;
+	sqlite3 *db;
+	char *root;
+	int rootfd; /* Root directory file descriptor */
+	char *outputPath; /* Download directory */
+	bool noIndex; /* Do not fetch mport index */
+	bool offline; /* Installing packages from local files, etc. */
+	mportVerbosity verbosity;
+	bool force;
+	bool ignoreMissing; /* ignore mising dependencies during installation */
+	mport_msg_cb msg_cb;
+	mport_progress_init_cb progress_init_cb;
+	mport_progress_step_cb progress_step_cb;
+	mport_progress_free_cb progress_free_cb;
+	mport_confirm_cb confirm_cb;
+	mport_select_cb select_cb;
 } mportInstance;
 
-mportInstance * mport_instance_new(void);
-int mport_instance_init(mportInstance *, const char *, const char *, bool noIndex, mportVerbosity verbosity);
+mportInstance *mport_instance_new(void);
+int mport_instance_init(
+    mportInstance *, const char *, const char *, bool noIndex, mportVerbosity verbosity);
 int mport_instance_free(mportInstance *);
 
 /* Run the callbacks. will display messages, etc */
 int mport_call_msg_cb(mportInstance *, const char *, ...);
 int mport_call_progress_init_cb(mportInstance *, const char *, ...);
-bool mport_call_confirm_cb(mportInstance *mport, const char *msg, const char *yes, const char *no, int def);
+bool mport_call_confirm_cb(
+    mportInstance *mport, const char *msg, const char *yes, const char *no, int def);
 int mport_call_select_cb(mportInstance *mport, const char *msg, mportIndexEntry **choices, int def);
 
 /* setup your custom callbacks */
@@ -125,17 +122,49 @@ void mport_default_progress_step_cb(int, int, const char *);
 void mport_default_progress_free_cb(void);
 
 enum _AssetListEntryType {
-    ASSET_INVALID, ASSET_FILE, ASSET_CWD, ASSET_CHMOD, ASSET_CHOWN, ASSET_CHGRP,
-    ASSET_COMMENT, ASSET_IGNORE, ASSET_NAME, ASSET_EXEC, ASSET_UNEXEC,
-    ASSET_SRC, ASSET_DISPLY, ASSET_PKGDEP, ASSET_CONFLICTS, ASSET_MTREE,
-    ASSET_DIRRM, ASSET_DIRRMTRY, ASSET_IGNORE_INST, ASSET_OPTION, ASSET_ORIGIN,
-    ASSET_DEPORIGIN, ASSET_NOINST, ASSET_DISPLAY, ASSET_DIR,
-    ASSET_SAMPLE, ASSET_SHELL,
-    ASSET_PREEXEC, ASSET_PREUNEXEC, ASSET_POSTEXEC, ASSET_POSTUNEXEC,
-    ASSET_FILE_OWNER_MODE, ASSET_DIR_OWNER_MODE, 
-    ASSET_SAMPLE_OWNER_MODE, ASSET_LDCONFIG, ASSET_LDCONFIG_LINUX,
-    ASSET_RMEMPTY, ASSET_GLIB_SCHEMAS, ASSET_KLD, ASSET_DESKTOP_FILE_UTILS,
-    ASSET_INFO, ASSET_TOUCH
+	ASSET_INVALID,
+	ASSET_FILE,
+	ASSET_CWD,
+	ASSET_CHMOD,
+	ASSET_CHOWN,
+	ASSET_CHGRP,
+	ASSET_COMMENT,
+	ASSET_IGNORE,
+	ASSET_NAME,
+	ASSET_EXEC,
+	ASSET_UNEXEC,
+	ASSET_SRC,
+	ASSET_DISPLY,
+	ASSET_PKGDEP,
+	ASSET_CONFLICTS,
+	ASSET_MTREE,
+	ASSET_DIRRM,
+	ASSET_DIRRMTRY,
+	ASSET_IGNORE_INST,
+	ASSET_OPTION,
+	ASSET_ORIGIN,
+	ASSET_DEPORIGIN,
+	ASSET_NOINST,
+	ASSET_DISPLAY,
+	ASSET_DIR,
+	ASSET_SAMPLE,
+	ASSET_SHELL,
+	ASSET_PREEXEC,
+	ASSET_PREUNEXEC,
+	ASSET_POSTEXEC,
+	ASSET_POSTUNEXEC,
+	ASSET_FILE_OWNER_MODE,
+	ASSET_DIR_OWNER_MODE,
+	ASSET_SAMPLE_OWNER_MODE,
+	ASSET_LDCONFIG,
+	ASSET_LDCONFIG_LINUX,
+	ASSET_RMEMPTY,
+	ASSET_GLIB_SCHEMAS,
+	ASSET_KLD,
+	ASSET_DESKTOP_FILE_UTILS,
+	ASSET_INFO,
+	ASSET_TOUCH,
+	ASSET_AUTODIR
 };
 
 typedef enum _AssetListEntryType mportAssetListEntryType;
@@ -156,67 +185,63 @@ STAILQ_HEAD(_AssetList, _AssetListEntry);
 typedef struct _AssetList mportAssetList;
 typedef struct _AssetListEntry mportAssetListEntry;
 
-mportAssetList* mport_assetlist_new(void);
+mportAssetList *mport_assetlist_new(void);
 void mport_assetlist_free(mportAssetList *);
 int mport_parse_plistfile(FILE *, mportAssetList *);
 
-enum _Automatic{
-    MPORT_EXPLICIT, /* explicitly installed */
-    MPORT_AUTOMATIC /* Automatically installed dependency */
+enum _Automatic {
+	MPORT_EXPLICIT, /* explicitly installed */
+	MPORT_AUTOMATIC /* Automatically installed dependency */
 };
 typedef enum _Automatic mportAutomatic;
 
-
-enum _Action{
-    MPORT_ACTION_INSTALL,
-    MPORT_ACTION_UPGRADE,
-    MPORT_ACTION_UPDATE,
-    MPORT_ACTION_DELETE,
-    MPORT_ACTION_UNKNOWN
+enum _Action {
+	MPORT_ACTION_INSTALL,
+	MPORT_ACTION_UPGRADE,
+	MPORT_ACTION_UPDATE,
+	MPORT_ACTION_DELETE,
+	MPORT_ACTION_UNKNOWN
 };
 typedef enum _Action mportAction;
 
-enum _Type{
-    MPORT_TYPE_APP, 
-    MPORT_TYPE_SYSTEM
-};
+enum _Type { MPORT_TYPE_APP, MPORT_TYPE_SYSTEM };
 typedef enum _Type mportType;
 
 #define MPORT_NUM_LUA_SCRIPTS 5
 
 /* Package Meta-data structure */
 typedef struct {
-    char *name;
-    char *version;
-    char *lang;
-    char *options;
-    char *comment;
-    char *desc;
-    char *prefix;
-    char *origin;
-    char **categories;
-    size_t categories_count;
-    char *os_release;
-    char *cpe;
-    int locked;
-    char *deprecated;
-    time_t expiration_date;
-    int no_provide_shlib;
-    char *flavor;
-    mportAutomatic automatic;
-    time_t install_date;
-    mportAction action; // not populated from package table
-    mportType type;
-    int64_t flatsize;
-    stringlist_t  lua_scripts[MPORT_NUM_LUA_SCRIPTS]; // not populated from package table
-    stringlist_t  conflicts; // not populated from package table
-    // TODO: conflicts should be a structure
-} __attribute__ ((aligned (16)))  mportPackageMeta;
+	char *name;
+	char *version;
+	char *lang;
+	char *options;
+	char *comment;
+	char *desc;
+	char *prefix;
+	char *origin;
+	char **categories;
+	size_t categories_count;
+	char *os_release;
+	char *cpe;
+	int locked;
+	char *deprecated;
+	time_t expiration_date;
+	int no_provide_shlib;
+	char *flavor;
+	mportAutomatic automatic;
+	time_t install_date;
+	mportAction action; // not populated from package table
+	mportType type;
+	int64_t flatsize;
+	stringlist_t lua_scripts[MPORT_NUM_LUA_SCRIPTS]; // not populated from package table
+	stringlist_t conflicts; // not populated from package table
+	// TODO: conflicts should be a structure
+} __attribute__((aligned(16))) mportPackageMeta;
 
 int mport_asset_get_assetlist(mportInstance *, mportPackageMeta *, mportAssetList **);
 int mport_asset_get_package_from_file_path(mportInstance *, const char *, mportPackageMeta **);
 
-mportPackageMeta * mport_pkgmeta_new(void);
+mportPackageMeta *mport_pkgmeta_new(void);
 void mport_pkgmeta_free(mportPackageMeta *);
 void mport_pkgmeta_vec_free(mportPackageMeta **);
 int mport_pkgmeta_search_master(mportInstance *, mportPackageMeta ***, const char *, ...);
@@ -225,31 +250,50 @@ int mport_pkgmeta_list_locked(mportInstance *mport, mportPackageMeta ***ref);
 int mport_pkgmeta_get_downdepends(mportInstance *, mportPackageMeta *, mportPackageMeta ***);
 int mport_pkgmeta_get_updepends(mportInstance *, mportPackageMeta *, mportPackageMeta ***);
 
+typedef enum {
+	MPORT_QUERY_MATCH_EXACT,
+	MPORT_QUERY_MATCH_GLOB,
+	MPORT_QUERY_MATCH_REGEX
+} mportQueryMatch;
+
+typedef struct {
+	bool all;
+	bool case_sensitive;
+	mportQueryMatch match;
+	const char *expression;
+	char **patterns;
+	int pattern_count;
+} mportQueryOptions;
+
+int mport_query_installed(mportInstance *, const mportQueryOptions *, mportPackageMeta ***);
+int mport_query_format_package(mportInstance *, mportPackageMeta *, const char *, FILE *);
+int mport_query_print(mportInstance *, mportPackageMeta **, const char *, FILE *);
+char *mport_query_pkg_message(mportInstance *, mportPackageMeta *);
 
 /* index */
 struct _IndexEntry {
-  char *pkgname;
-  char *version;
-  char *comment;
-  char *bundlefile;
-  char *license;
-  char *hash;
-  mportType type;
+	char *pkgname;
+	char *version;
+	char *comment;
+	char *bundlefile;
+	char *license;
+	char *hash;
+	mportType type;
 };
 
 typedef struct {
-  char port[128];
-  char moved_to[128];
-  char why[128];
-  char date[32];
+	char port[128];
+	char moved_to[128];
+	char why[128];
+	char date[32];
 
-  char pkgname[128];
-  char moved_to_pkgname[128];
+	char pkgname[128];
+	char moved_to_pkgname[128];
 } mportIndexMovedEntry;
 
 typedef struct {
-  char country[5];
-  char url[256];
+	char country[5];
+	char url[256];
 } mportMirrorEntry;
 
 int mport_index_load(mportInstance *);
@@ -272,10 +316,10 @@ int mport_moved_lookup(mportInstance *, const char *, mportIndexMovedEntry ***);
 /* Index Depends */
 
 typedef struct {
-  char *pkgname;
-  char *version;
-  char *d_pkgname;
-  char *d_version;
+	char *pkgname;
+	char *version;
+	char *d_pkgname;
+	char *d_version;
 } mportDependsEntry;
 
 int mport_index_depends_list(mportInstance *, const char *, const char *, mportDependsEntry ***);
@@ -283,54 +327,56 @@ void mport_index_depends_free_vec(mportDependsEntry **);
 void mport_index_depends_free(mportDependsEntry *);
 
 /* Info */
-char * mport_info(mportInstance *mport, const char *packageName);
+char *mport_info(mportInstance *mport, const char *packageName);
 
 /* Package creation */
 
 typedef enum {
-    PKG_MESSAGE_ALWAYS = 0,
-    PKG_MESSAGE_INSTALL,
-    PKG_MESSAGE_REMOVE,
-    PKG_MESSAGE_UPGRADE,
+	PKG_MESSAGE_ALWAYS = 0,
+	PKG_MESSAGE_INSTALL,
+	PKG_MESSAGE_REMOVE,
+	PKG_MESSAGE_UPGRADE,
 } pkg_message_t;
 
 typedef struct package_message {
-    char			*str;
-    char			*minimum_version;
-    char			*maximum_version;
-    pkg_message_t		 type;
-    struct package_message *next, *prev;
+	char *str;
+	char *minimum_version;
+	char *maximum_version;
+	pkg_message_t type;
+	struct package_message *next, *prev;
 } mportPackageMessage;
 
 typedef struct {
-  char pkg_filename[FILENAME_MAX];
-  char sourcedir[FILENAME_MAX];
-  char **depends;
-  size_t depends_count;
-  char *mtree; 
-  stringlist_t conflicts;
-  stringlist_t annotations;
-  char *pkginstall;
-  char *pkgdeinstall;
-  char *luapkgpreinstall;
-  char *luapkgpredeinstall;
-  char *luapkgpostinstall;
-  char *luapkgpostdeinstall;
-  char *pkgmessage;
-  bool is_backup;
-} mportCreateExtras;  
+	char pkg_filename[FILENAME_MAX];
+	char sourcedir[FILENAME_MAX];
+	char **depends;
+	size_t depends_count;
+	char *mtree;
+	stringlist_t conflicts;
+	stringlist_t annotations;
+	char *pkginstall;
+	char *pkgdeinstall;
+	char *luapkgpreinstall;
+	char *luapkgpredeinstall;
+	char *luapkgpostinstall;
+	char *luapkgpostdeinstall;
+	char *pkgmessage;
+	bool is_backup;
+} mportCreateExtras;
 
-mportCreateExtras * mport_createextras_new(void);
+mportCreateExtras *mport_createextras_new(void);
 void mport_createextras_free(mportCreateExtras *);
 
-int mport_create_primative(mportInstance *, mportAssetList *, mportPackageMeta *, mportCreateExtras *);
+int mport_create_primative(
+    mportInstance *, mportAssetList *, mportPackageMeta *, mportCreateExtras *);
 
 /* Merge primative */
 int mport_merge_primative(mportInstance *mport, const char **, const char *);
 
 /* Package installation */
 int mport_install(mportInstance *, const char *, const char *, const char *, mportAutomatic);
-int mport_install_single(mportInstance *mport, const char *pkgname, const char *version, const char *prefix, mportAutomatic automatic);
+int mport_install_single(mportInstance *mport, const char *pkgname, const char *version,
+    const char *prefix, mportAutomatic automatic);
 int mport_install_primative(mportInstance *, const char *, const char *, mportAutomatic);
 
 /* package updating */
@@ -358,20 +404,20 @@ int mport_fetch_bundle(mportInstance *, const char *, const char *);
 int mport_download(mportInstance *, const char *, bool, bool, char **);
 
 /* Auditing for CVEs */
-char * mport_audit(mportInstance *, const char *, bool);
+char *mport_audit(mportInstance *, const char *, bool);
 
 /* Errors */
 int mport_err_code(void);
-const char * mport_err_string(void);
+const char *mport_err_string(void);
 
-
-#define MPORT_OK			    0
-#define MPORT_ERR_FATAL 		1
-#define MPORT_ERR_WARN			2
+#define MPORT_OK 0
+#define MPORT_ERR_FATAL 1
+#define MPORT_ERR_WARN 2
 
 /* Annotations */
 int mport_annotation_get(mportInstance *mport, const char *pkg, const char *tag, char **annotation);
-int mport_annotation_set(mportInstance *mport, const char *pkg, const char *tag, const char *annotation);
+int mport_annotation_set(
+    mportInstance *mport, const char *pkg, const char *tag, const char *annotation);
 int mport_annotation_delete(mportInstance *mport, const char *pkg, const char *tag);
 int mport_annotation_delete_all(mportInstance *mport, const char *pkg);
 int mport_annotation_list(mportInstance *mport, const char *pkg, char ***tags, int *tag_count);
@@ -383,28 +429,26 @@ int mport_clean_oldmtree(mportInstance *);
 int mport_clean_tempfiles(mportInstance *);
 
 /* Setting */
-char * mport_setting_get(mportInstance *, const char *);
+char *mport_setting_get(mportInstance *, const char *);
 int mport_setting_set(mportInstance *, const char *, const char *);
-char ** mport_setting_list(mportInstance *);
+char **mport_setting_list(mportInstance *);
 
 /* Utils */
-char * mport_purl_uri(mportPackageMeta *packs);
+char *mport_purl_uri(mportPackageMeta *packs);
 void mport_parselist(char *, char ***, size_t *);
 void mport_parselist_tll(char *, stringlist_t *);
 int mport_verify_hash(const char *, const char *);
 int mport_file_exists(const char *);
-char * mport_version(mportInstance *);
-char * mport_version_short(mportInstance *);
-char * mport_get_osrelease(mportInstance *);
+char *mport_version(mportInstance *);
+char *mport_version_short(mportInstance *);
+char *mport_get_osrelease(mportInstance *);
 int mport_drop_privileges(void);
-char * mport_string_replace(const char *str, const char *old, const char *new);
+char *mport_string_replace(const char *str, const char *old, const char *new);
 bool mport_is_elf_file(const char *file);
 bool mport_is_statically_linked(const char *file);
 
 /* Locks */
-enum _LockState {
-	MPORT_UNLOCKED, MPORT_LOCKED
-};
+enum _LockState { MPORT_UNLOCKED, MPORT_LOCKED };
 
 typedef enum _LockState mportLockState;
 
@@ -414,19 +458,19 @@ int mport_lock_islocked(mportPackageMeta *);
 
 /* Statistics */
 typedef struct {
-    unsigned int pkg_installed;
-    unsigned int pkg_available;
-    int64_t pkg_installed_size;
-    /* TODO: int64_t pkg_available_size; */
+	unsigned int pkg_installed;
+	unsigned int pkg_available;
+	int64_t pkg_installed_size;
+	/* TODO: int64_t pkg_available_size; */
 } mportStats;
 
 int mport_stats(mportInstance *, mportStats **);
 int mport_stats_free(mportStats *);
-mportStats * mport_stats_new(void);
+mportStats *mport_stats_new(void);
 
 /* Import/Export */
-int mport_import(mportInstance*,  char *);
-int mport_export(mportInstance*, char *);
+int mport_import(mportInstance *, char *);
+int mport_export(mportInstance *, char *);
 
 /* Ping */
 long ping(char *hostname);
@@ -437,7 +481,7 @@ typedef struct {
 	bool origin;
 	bool update;
 	bool locks;
-  bool prime;
+	bool prime;
 } mportListPrint;
 
 int mport_list_print(mportInstance *, mportListPrint *);

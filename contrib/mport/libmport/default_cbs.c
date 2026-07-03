@@ -35,6 +35,7 @@
 #include <string.h>
 #include <errno.h>
 #include <sys/ioctl.h>
+#include <unistd.h>
 #include "mport.h"
 #include "mport_private.h"
 
@@ -86,6 +87,25 @@ mport_is_color_terminal(void)
 	return colorterm_support || term_supports_color || term_is_256color || clicolor_support;
 }
 
+/*
+ * Print an actionable error and record it when an interactive prompt is needed
+ * but stdin is not a terminal. Shared by the confirm and select callbacks for
+ * the message/error; each caller returns its own appropriate value afterwards
+ * (the confirm callback returns mport_err_code(), while the select callback
+ * must return -1 because its return value is a choice index where any
+ * non-negative value would be a valid selection).
+ */
+static void
+mport_warn_non_tty_prompt(const char *what)
+{
+	(void)fprintf(stderr,
+	    "Cannot prompt for %s: stdin is not a terminal. "
+	    "Re-run with -y or set ASSUME_ALWAYS_YES=1 to proceed.\n",
+	    what);
+	mport_set_errx(MPORT_ERR_FATAL,
+	    "cannot prompt for %s: stdin is not a terminal; use -y or ASSUME_ALWAYS_YES", what);
+}
+
 int
 mport_default_confirm_cb(const char *msg, const char *yes, const char *no, int def)
 {
@@ -95,6 +115,11 @@ mport_default_confirm_cb(const char *msg, const char *yes, const char *no, int d
 
 	if (getenv("ASSUME_ALWAYS_YES") != NULL || getenv("MAGUS") != NULL) {
 		return (MPORT_OK);
+	}
+
+	if (!isatty(fileno(stdin))) {
+		mport_warn_non_tty_prompt("confirmation");
+		return mport_err_code();
 	}
 
 	if (color_terminal) {
@@ -152,6 +177,11 @@ mport_default_select_cb(const char *msg, mportIndexEntry **choices, int def)
 
 	if (getenv("ASSUME_ALWAYS_YES") != NULL || getenv("MAGUS") != NULL) {
 		return def >= 0 ? def : 0;
+	}
+
+	if (!isatty(fileno(stdin))) {
+		mport_warn_non_tty_prompt("a selection");
+		return -1;
 	}
 
 	if (color_terminal) {

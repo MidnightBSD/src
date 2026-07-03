@@ -33,22 +33,18 @@
 
 #ifdef DEBUG
 #include <err.h>
-#define DIAG(fmt, ...) warnx(fmt, ## __VA_ARGS__);
+#define DIAG(fmt, args...) warnx(fmt, ##args);
 #else
-#define DIAG(...) 
+#define DIAG(args...)
 #endif
 
 #if defined(__MidnightBSD__)
 #include <osreldate.h>
 #include <ohash.h>
 #else
-struct ohash_info {
+struct ohash_info { };
 
-};
-
-struct ohash {
-
-};
+struct ohash { };
 #endif
 #include <sqlite3.h>
 #include <ucl.h>
@@ -56,24 +52,24 @@ struct ohash {
 
 #include <tllist.h>
 
-#define MPORT_PUBLIC_API 
+#define MPORT_PUBLIC_API
 
 #define MPORT_MASTER_VERSION 14
 #define MPORT_BUNDLE_VERSION 6
 #define MPORT_BUNDLE_VERSION_STR "6"
-#define MPORT_VERSION "2.7.9"
+#define MPORT_VERSION "2.8.0"
 
 #define MPORT_SETTING_MIRROR_REGION "mirror_region"
 #define MPORT_SETTING_TARGET_OS "target_os"
 
 /* precondition checking */
-#define MPORT_PRECHECK_INSTALLED   1
-#define MPORT_PRECHECK_DEPENDS     2
-#define MPORT_PRECHECK_CONFLICTS   4
+#define MPORT_PRECHECK_INSTALLED 1
+#define MPORT_PRECHECK_DEPENDS 2
+#define MPORT_PRECHECK_CONFLICTS 4
 #define MPORT_PRECHECK_UPGRADEABLE 8
-#define MPORT_PRECHECK_OS          16
-#define MPORT_PRECHECK_MOVED       32
-#define MPORT_PRECHECK_DEPRECATED  64
+#define MPORT_PRECHECK_OS 16
+#define MPORT_PRECHECK_MOVED 32
+#define MPORT_PRECHECK_DEPRECATED 64
 #define MPORT_PRECHECK_FILE_CONFLICTS 128
 int mport_check_preconditions(mportInstance *, mportPackageMeta *, long);
 
@@ -96,12 +92,10 @@ int mport_db_count(sqlite3 *, int *, const char *, ...);
 /* pkgmeta */
 int mport_pkgmeta_read_stub(mportInstance *, mportPackageMeta ***);
 int mport_pkgmeta_logevent(mportInstance *, mportPackageMeta *, const char *);
+mportPackageMeta **mport_pkgmeta_sort_dependencies(mportInstance *, mportPackageMeta **, int, bool);
 
 /* Service */
-typedef enum {
-    SERVICE_START,
-    SERVICE_STOP
-} service_action_t;
+typedef enum { SERVICE_START, SERVICE_STOP } service_action_t;
 int mport_start_stop_service(mportInstance *mport, mportPackageMeta *pack, service_action_t action);
 
 /* cbs / color */
@@ -113,18 +107,21 @@ bool mport_is_age_verified(mportInstance *mport, mportPackageMeta *pack);
 
 /* Utils */
 bool mport_starts_with(const char *, const char *);
-char* mport_hash_file(const char *);
-char* mport_extract_hash_from_file(const char *);
+char *mport_hash_file(const char *);
+char *mport_extract_hash_from_file(const char *);
 int mport_copy_file(const char *, const char *);
 int mport_copy_fd(int, int);
 uid_t mport_get_uid(const char *);
 gid_t mport_get_gid(const char *);
-char* mport_directory(const char *path);
+char *mport_directory(const char *path);
 int mport_rmtree(const char *);
 int mport_mkdir(const char *);
 int mport_mkdirp(char *, mode_t);
 int mport_removeflags(const char *, const char *);
 int mport_rmdir(const char *, int);
+bool mport_is_system_mtree_dir(const char *);
+int mport_build_infrastructure_path(
+    mportInstance *, mportPackageMeta *, const char *, bool, char *, size_t);
 int mport_chdir(mportInstance *, const char *);
 int mport_xsystem(mportInstance *, const char *, ...);
 int mport_exec_linux_ldconfig(mportInstance *, const char *);
@@ -136,13 +133,14 @@ void mport_free_vec(void *);
 int mport_decompress_zstd(const char *, const char *);
 int mport_shell_register(const char *);
 int mport_shell_unregister(const char *);
-char * mport_str_remove(const char *str, const char ch);
+char *mport_str_remove(const char *str, const char ch);
 time_t mport_get_time(void);
 bool mport_check_answer_bool(char *answer);
 int mport_count_spaces(const char *str);
-char * mport_tokenize(char **args);
-char * mport_get_osreleasedate(void);
-int mport_index_select_pkgname(mportInstance *, const char *, const char *, mportIndexEntry ***, mportIndexEntry **);
+char *mport_tokenize(char **args);
+char *mport_get_osreleasedate(void);
+int mport_index_select_pkgname(
+    mportInstance *, const char *, const char *, mportIndexEntry ***, mportIndexEntry **);
 
 enum parse_states {
 	START,
@@ -155,29 +153,26 @@ enum parse_states {
 
 /* Mport Bundle (a file containing packages) */
 typedef struct {
-  struct archive *archive;
-  char *filename;
-  struct links_table *links;
+	struct archive *archive;
+	char *filename;
+	struct links_table *links;
 } mportBundleWrite;
 
-
 typedef struct {
-  struct archive *archive;
-  char *filename;
-  char *tmpdir;
-  struct archive_entry *firstreal;
-  short stub_attached;
+	struct archive *archive;
+	char *filename;
+	char *tmpdir;
+	struct archive_entry *firstreal;
+	short stub_attached;
 } mportBundleRead;
 
-
-mportBundleWrite* mport_bundle_write_new(void);
+mportBundleWrite *mport_bundle_write_new(void);
 int mport_bundle_write_init(mportBundleWrite *, const char *);
 int mport_bundle_write_finish(mportBundleWrite *);
 int mport_bundle_write_add_file(mportBundleWrite *, const char *, const char *);
 int mport_bundle_write_add_entry(mportBundleWrite *, mportBundleRead *, struct archive_entry *);
 
-
-mportBundleRead* mport_bundle_read_new(void);
+mportBundleRead *mport_bundle_read_new(void);
 int mport_bundle_read_init(mportBundleRead *, const char *);
 int mport_bundle_read_finish(mportInstance *, mportBundleRead *);
 int mport_bundle_read_prep_for_install(mportInstance *, mportBundleRead *);
@@ -197,43 +192,49 @@ int mport_version_require_check(const char *, const char *);
 
 int mport_pkg_message_display(mportInstance *, mportPackageMeta *);
 int mport_pkg_message_load(mportInstance *, mportPackageMeta *, mportPackageMessage *);
-mportPackageMessage* mport_pkg_message_from_ucl(mportInstance *, const ucl_object_t *, mportPackageMessage *);
+mportPackageMessage *mport_pkg_message_from_ucl(
+    mportInstance *, const ucl_object_t *, mportPackageMessage *);
 
 #define RETURN_CURRENT_ERROR return mport_err_code()
-#define RETURN_ERROR(code, msg) return mport_set_errx((code), "Error at %s:(%d): %s", __FILE__, __LINE__, (msg))
-#define SET_ERROR(code, msg) mport_set_errx((code), "Error at %s:(%d): %s", __FILE__, __LINE__, (msg))
-#define RETURN_ERRORX(code, fmt, ...) return mport_set_errx((code), "Error at %s:(%d): " fmt, __FILE__, __LINE__, __VA_ARGS__)
-#define SET_ERRORX(code, fmt, ...) mport_set_errx((code), "Error at %s:(%d): " fmt, __FILE__, __LINE__, __VA_ARGS__)
+#define RETURN_ERROR(code, msg) \
+	return mport_set_errx((code), "Error at %s:(%d): %s", __FILE__, __LINE__, (msg))
+#define SET_ERROR(code, msg) \
+	mport_set_errx((code), "Error at %s:(%d): %s", __FILE__, __LINE__, (msg))
+#define RETURN_ERRORX(code, fmt, args...) \
+	return mport_set_errx((code), "Error at %s:(%d): " fmt, __FILE__, __LINE__, ##args)
+#define SET_ERRORX(code, fmt, args...) \
+	mport_set_errx((code), "Error at %s:(%d): " fmt, __FILE__, __LINE__, ##args)
 int mport_set_err(int, const char *);
-int mport_set_errx(int , const char *, ...);
-
+int mport_set_errx(int, const char *, ...);
 
 /* Infrastructure files */
-#define MPORT_STUB_DB_FILE 	"+CONTENTS.db"
-#define MPORT_STUB_INFRA_DIR	"+INFRASTRUCTURE"
-#define MPORT_MTREE_FILE   	"mtree"
-#define MPORT_INSTALL_FILE 	"pkg-install"
-#define MPORT_DEINSTALL_FILE	"pkg-deinstall"
-#define MPORT_MESSAGE_FILE	"pkg-message"
+#define MPORT_STUB_DB_FILE "+CONTENTS.db"
+#define MPORT_STUB_INFRA_DIR "+INFRASTRUCTURE"
+#define MPORT_MTREE_FILE "mtree"
+#define MPORT_INSTALL_FILE "pkg-install"
+#define MPORT_DEINSTALL_FILE "pkg-deinstall"
+#define MPORT_MESSAGE_FILE "pkg-message"
 #define MPORT_LUA_PRE_INSTALL_FILE "pkg-pre-install.lua"
 #define MPORT_LUA_POST_INSTALL_FILE "pkg-post-install.lua"
 #define MPORT_LUA_PRE_DEINSTALL_FILE "pkg-pre-deinstall.lua"
 #define MPORT_LUA_POST_DEINSTALL_FILE "pkg-post-deinstall.lua"
 
 /* Instance files */
-#define MPORT_INST_DIR 		"/var/db/mport"
-#define MPORT_MASTER_DB_FILE        MPORT_INST_DIR "/master.db"
-#define MPORT_INST_INFRA_DIR        MPORT_INST_DIR "/infrastructure"
-#define MPORT_INDEX_COMPRESS_EXT    ".zst"
-#define MPORT_INDEX_FILE_NAME      "index.db"
-#define MPORT_INDEX_FILE_SOURCE     MPORT_INDEX_FILE_NAME MPORT_INDEX_COMPRESS_EXT
-#define MPORT_INDEX_FILE            MPORT_INST_DIR "/" MPORT_INDEX_FILE_NAME
-#define MPORT_INDEX_FILE_COMPRESSED        MPORT_INST_DIR "/" MPORT_INDEX_FILE_NAME MPORT_INDEX_COMPRESS_EXT
-#define MPORT_INDEX_FILE_HASH       MPORT_INST_DIR "/" MPORT_INDEX_FILE_NAME MPORT_INDEX_COMPRESS_EXT ".sha256"
-#define MPORT_FETCH_STAGING_DIR     MPORT_INST_DIR "/downloads"
+#define MPORT_INST_DIR "/var/db/mport"
+#define MPORT_MASTER_DB_FILE MPORT_INST_DIR "/master.db"
+#define MPORT_INST_INFRA_DIR MPORT_INST_DIR "/infrastructure"
+#define MPORT_INDEX_COMPRESS_EXT ".zst"
+#define MPORT_INDEX_FILE_NAME "index.db"
+#define MPORT_INDEX_FILE_SOURCE MPORT_INDEX_FILE_NAME MPORT_INDEX_COMPRESS_EXT
+#define MPORT_INDEX_FILE MPORT_INST_DIR "/" MPORT_INDEX_FILE_NAME
+#define MPORT_INDEX_FILE_COMPRESSED \
+	MPORT_INST_DIR "/" MPORT_INDEX_FILE_NAME MPORT_INDEX_COMPRESS_EXT
+#define MPORT_INDEX_FILE_HASH \
+	MPORT_INST_DIR "/" MPORT_INDEX_FILE_NAME MPORT_INDEX_COMPRESS_EXT ".sha256"
+#define MPORT_FETCH_STAGING_DIR MPORT_INST_DIR "/downloads"
 
-#define MPORT_INSTALL_MEDIA_DIR     "/packages"
-#define MPORT_INSTALL_MEDIA_INDEX_FILE  MPORT_INSTALL_MEDIA_DIR "/" MPORT_INDEX_FILE_NAME
+#define MPORT_INSTALL_MEDIA_DIR "/packages"
+#define MPORT_INSTALL_MEDIA_INDEX_FILE MPORT_INSTALL_MEDIA_DIR "/" MPORT_INDEX_FILE_NAME
 
 #if defined(__i386__)
 #define MPORT_ARCH "i386"
@@ -258,24 +259,26 @@ int mport_set_errx(int , const char *, ...);
 #endif
 
 /* fetch stuff */
-#define MPORT_URL_PATH			MPORT_ARCH "/" MPORT_OSVERSION
-#define MPORT_INDEX_URL_PATH		MPORT_URL_PATH "/" MPORT_INDEX_FILE_NAME MPORT_INDEX_COMPRESS_EXT
-#define MPORT_BOOTSTRAP_INDEX_URL 	"https://index.mport.midnightbsd.org/"
-#define MPORT_SECURITY_URL  "https://sec.midnightbsd.org"
+#define MPORT_URL_PATH MPORT_ARCH "/" MPORT_OSVERSION
+#define MPORT_INDEX_URL_PATH MPORT_URL_PATH "/" MPORT_INDEX_FILE_NAME MPORT_INDEX_COMPRESS_EXT
+#define MPORT_BOOTSTRAP_INDEX_URL "https://index.mport.midnightbsd.org/"
+#define MPORT_SECURITY_URL "https://sec.midnightbsd.org"
 
 int mport_fetch_index(mportInstance *);
 int mport_fetch_bootstrap_index(mportInstance *);
-char * mport_fetch_cves(mportInstance *mport, char *cpe);
+char *mport_fetch_cves(mportInstance *mport, char *cpe);
 
 /* a few index things */
 int mport_index_get_mirror_list(mportInstance *, char ***, int *);
-char * mport_index_file_path(void);
+char *mport_index_file_path(void);
 
 /* script things */
 int get_socketpair(int *);
-int mport_script_run_child(mportInstance *, int, int *, int, const char*);
+int mport_script_run_child(mportInstance *, int, int *, int, const char *);
 
-#define MPORT_CHECK_FOR_INDEX(mport, func) if (!(mport->flags & MPORT_INST_HAVE_INDEX)) RETURN_ERRORX(MPORT_ERR_FATAL, "Attempt to use %s before loading index.", (func));
+#define MPORT_CHECK_FOR_INDEX(mport, func)           \
+	if (!(mport->flags & MPORT_INST_HAVE_INDEX)) \
+		RETURN_ERRORX(MPORT_ERR_FATAL, "Attempt to use %s before loading index.", (func));
 #define MPORT_DAY (3600 * 24)
 #define MPORT_MAX_INDEX_AGE (MPORT_DAY * 7) /* one week */
 #define MPORT_SETTING_INDEX_LAST_CHECKED "index_last_check"
@@ -284,9 +287,9 @@ int mport_script_run_child(mportInstance *, int, int *, int, const char*);
 #define MPORT_SETTING_HANDLE_RC_SCRIPTS "handle_rc_scripts"
 
 /* Binaries we use */
-#define MPORT_MTREE_BIN		"/usr/sbin/mtree"
-#define MPORT_CHROOT_BIN	"/usr/sbin/chroot"
+#define MPORT_MTREE_BIN "/usr/sbin/mtree"
+#define MPORT_CHROOT_BIN "/usr/sbin/chroot"
 
-#define MPORT_URL_MAX		512
+#define MPORT_URL_MAX 512
 
 #endif /* _MPORT_PRIV_H_ */

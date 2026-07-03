@@ -15,3 +15,7 @@ When modifying code that handles untrusted inputs or privileged actions (network
 - **Out params**: annotate pointer parameters as `/*@out@*/` / `/*@in@*/` where appropriate
 - **Pre/post contracts**: use `/*@requires ... @*/` / `/*@ensures ... @*/` for important invariants (e.g., validated path, verified hash)
 - **Intentional exceptions**: use Splint control comments sparingly to document why a warning is safe
+
+## Git commits
+
+- Always append `AI-Assisted-By: <model name>` to git commit messages, where `<model name>` is the LLM model used for the work (e.g., `AI-Assisted-By: Gemini 3.5 Flash`).

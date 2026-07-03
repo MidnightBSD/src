@@ -52,6 +52,7 @@ get_dependencies(mportInstance *mport, mportPackageMeta *pkg)
 	sqlite3_stmt *stmt;
 	int ret, count = 0;
 	char **dependencies;
+	int i = 0;
 
 	if (mport_db_prepare(mport->db, &stmt, "SELECT COUNT(*) FROM stub.depends WHERE pkg=%Q",
 		pkg->name) != MPORT_OK) {
@@ -80,32 +81,21 @@ get_dependencies(mportInstance *mport, mportPackageMeta *pkg)
 		return NULL;
 
 	if (mport_db_prepare(mport->db, &stmt,
-		"SELECT depend_pkgname, depend_pkgversion FROM stub.depends WHERE pkg=%Q",
-		pkg->name) != MPORT_OK) {
+		"SELECT depend_pkgname FROM stub.depends WHERE pkg=%Q", pkg->name) != MPORT_OK) {
 		sqlite3_finalize(stmt);
 		return NULL;
 	}
 
-	int i = 0;
 	while (1) {
-		const char *depend_pkg, *depend_version;
+		const char *depend_pkg;
 
 		ret = sqlite3_step(stmt);
 
 		if (ret == SQLITE_ROW) {
-			depend_pkg = sqlite3_column_text(stmt, 0);
-			depend_version = sqlite3_column_text(stmt, 1);
-			if (sqlite3_column_type(stmt, 1) == SQLITE_NULL) {
-				if (asprintf(&dependencies[i], "%s", depend_pkg) == -1) {
-					sqlite3_finalize(stmt);
-					return NULL;
-				}
-			} else {
-				if (asprintf(&dependencies[i], "%s-%s", depend_pkg,
-					depend_version) == -1) {
-					sqlite3_finalize(stmt);
-					return NULL;
-				}
+			depend_pkg = (const char *)sqlite3_column_text(stmt, 0);
+			if (asprintf(&dependencies[i], "%s", depend_pkg) == -1) {
+				sqlite3_finalize(stmt);
+				return NULL;
 			}
 			i++;
 		} else if (ret == SQLITE_DONE) {
@@ -118,8 +108,10 @@ get_dependencies(mportInstance *mport, mportPackageMeta *pkg)
 			return NULL;
 		}
 
-		if (i == count)
+		if (i == count) {
+			sqlite3_finalize(stmt);
 			break;
+		}
 	}
 
 	return dependencies;
@@ -165,6 +157,7 @@ mport_install_primative(
 	char **dependencies = NULL;
 	char **deps = NULL;
 	char *dir = NULL;
+	long precheck_flags;
 
 	if (mport == NULL)
 		RETURN_ERROR(MPORT_ERR_FATAL, "mport not initialized");
@@ -237,8 +230,14 @@ mport_install_primative(
 			}
 
 			if (!mport_file_exists(dep_filename)) {
+				char *prefix_search = NULL;
 				free(dep_filename);
-				dep_filename = find_file_with_prefix(dir, *deps);
+				if (asprintf(&prefix_search, "%s-", *deps) == -1) {
+					deps++;
+					continue;
+				}
+				dep_filename = find_file_with_prefix(dir, prefix_search);
+				free(prefix_search);
 				if (dep_filename == NULL) {
 					mport_call_msg_cb(
 					    mport, "Dependency %s not found in %s", *deps, dir);
@@ -337,7 +336,7 @@ mport_install_primative(
 			}
 		}
 
-		long precheck_flags =
+		precheck_flags =
 		    MPORT_PRECHECK_INSTALLED | MPORT_PRECHECK_DEPENDS | MPORT_PRECHECK_CONFLICTS;
 		if (!mport->force)
 			precheck_flags |= MPORT_PRECHECK_FILE_CONFLICTS;
