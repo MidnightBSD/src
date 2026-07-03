@@ -7,11 +7,10 @@ CFLAGS+=	-DNOMD5
 .else
 .if !defined(NOMD5)
 SRCS+=		md5.c
-LIBADD+=	crypto md
+LIBADD+=	md
 .endif
 .endif
 
 WARNS?=	1
 
 .include <bsd.prog.mk>
-
