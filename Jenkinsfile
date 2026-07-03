@@ -3,6 +3,9 @@ pipeline {
         choice(name: 'ARCHITECTURE_FILTER', choices: ['all', 'amd64', 'i386'], description: 'Run on specific architecture')
     }
     agent none
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '10', artifactNumToKeepStr: '5'))
+    }
     stages {
         stage('Check Branch Name') {
             steps {
@@ -73,8 +76,8 @@ pipeline {
                         }
                         steps {
                             echo "Do installworld for ${ARCHITECTURE}"
-                            sh 'make installworld DESTDIR=${DESTDIR}'
-                            sh 'make distribution DESTDIR=${DESTDIR}'
+                            sh 'make -DNO_ROOT -DDB_FROM_SRC installworld DESTDIR=${DESTDIR}'
+                            sh 'make -DNO_ROOT -DDB_FROM_SRC distribution DESTDIR=${DESTDIR}'
                         }
                     }
                     stage('installkernel') {
@@ -84,7 +87,7 @@ pipeline {
                         }
                         steps {
                             echo "Do installkernel for ${ARCHITECTURE}"
-                            sh 'make installkernel DESTDIR=${DESTDIR}'
+                            sh 'make -DNO_ROOT -DDB_FROM_SRC installkernel DESTDIR=${DESTDIR}'
                         }
                     }
                     stage('tests-install') {
@@ -94,7 +97,7 @@ pipeline {
                         }
                         steps {
                             echo "Do tests-install for ${ARCHITECTURE}"
-                            sh 'make tests-install DESTDIR=${DESTDIR}'
+                            sh 'make -DNO_ROOT -DDB_FROM_SRC tests-install DESTDIR=${DESTDIR}'
                         }
                     }
                     stage('tests') {
@@ -121,6 +124,13 @@ pipeline {
                                 junit allowEmptyResults: true, testResults: "${JUNIT_RESULTS}"
                             }
                         }
+                    }
+                }
+                post {
+                    always {
+                        sh "jail -r jenkins-${ARCHITECTURE}-${env.BUILD_NUMBER} || true"
+                        sh "umount ${env.WORKSPACE}/destdir/${ARCHITECTURE}/dev || true"
+                        sh "rm -rf ${env.WORKSPACE}/destdir/${ARCHITECTURE} ${env.WORKSPACE}/obj"
                     }
                 }
             }

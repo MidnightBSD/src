@@ -5706,7 +5706,19 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     }
 
     // Verify rest of the relocate arguments.
-    const Value &StatepointCall = *cast<GCRelocateInst>(Call).getStatepoint();
+    const Value *Token = Call.getArgOperand(0);
+    const Value *StatepointCall = nullptr;
+    if (isa<UndefValue>(Token) || isa<ConstantTokenNone>(Token))
+      StatepointCall = UndefValue::get(Token->getType());
+    else if (isa<GCStatepointInst>(Token))
+      StatepointCall = Token;
+    else if (const auto *LPI = dyn_cast<LandingPadInst>(Token)) {
+      const BasicBlock *InvokeBB = LPI->getParent()->getUniquePredecessor();
+      if (InvokeBB && InvokeBB->getTerminator())
+        StatepointCall = dyn_cast<GCStatepointInst>(InvokeBB->getTerminator());
+    }
+    if (!StatepointCall)
+      break;
 
     // Both the base and derived must be piped through the safepoint.
     Value *Base = Call.getArgOperand(1);
@@ -5717,19 +5729,33 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Check(isa<ConstantInt>(Derived),
           "gc.relocate operand #3 must be integer offset", Call);
 
-    const uint64_t BaseIndex = cast<ConstantInt>(Base)->getZExtValue();
-    const uint64_t DerivedIndex = cast<ConstantInt>(Derived)->getZExtValue();
+    const auto *BaseIndexC = dyn_cast<ConstantInt>(Base);
+    const auto *DerivedIndexC = dyn_cast<ConstantInt>(Derived);
+    if (!BaseIndexC || !DerivedIndexC)
+      break;
+
+    const uint64_t BaseIndex = BaseIndexC->getZExtValue();
+    const uint64_t DerivedIndex = DerivedIndexC->getZExtValue();
 
     // Check the bounds
     if (isa<UndefValue>(StatepointCall))
       break;
-    if (auto Opt = cast<GCStatepointInst>(StatepointCall)
-                       .getOperandBundle(LLVMContext::OB_gc_live)) {
-      Check(BaseIndex < Opt->Inputs.size(),
-            "gc.relocate: statepoint base index out of bounds", Call);
-      Check(DerivedIndex < Opt->Inputs.size(),
-            "gc.relocate: statepoint derived index out of bounds", Call);
+    auto &StatepointInst = cast<GCStatepointInst>(*StatepointCall);
+    bool BaseIndexValid, DerivedIndexValid;
+    if (auto Opt =
+            StatepointInst.getOperandBundle(LLVMContext::OB_gc_live)) {
+      BaseIndexValid = BaseIndex < Opt->Inputs.size();
+      DerivedIndexValid = DerivedIndex < Opt->Inputs.size();
+    } else {
+      BaseIndexValid = BaseIndex < StatepointInst.arg_size();
+      DerivedIndexValid = DerivedIndex < StatepointInst.arg_size();
     }
+    Check(BaseIndexValid,
+            "gc.relocate: statepoint base index out of bounds", Call);
+    Check(DerivedIndexValid,
+            "gc.relocate: statepoint derived index out of bounds", Call);
+    if (!BaseIndexValid || !DerivedIndexValid)
+      break;
 
     // Relocated value must be either a pointer type or vector-of-pointer type,
     // but gc_relocate does not need to return the same pointer type as the

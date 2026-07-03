@@ -123,6 +123,10 @@ int	exec_copyin_data_fds(struct thread *, struct image_args *, const void *,
 	size_t, const int *, size_t);
 int	pre_execve(struct thread *td, struct vmspace **oldvmspace);
 void	post_execve(struct thread *td, int error, struct vmspace *oldvmspace);
+bool	execve_block(struct thread *td, struct proc *p);
+void	execve_block_wait(struct thread *td, struct proc *p);
+void	execve_unblock(struct thread *td, struct proc *p);
+void	execve_block_pass(struct thread *td);
 #endif
 
 #endif /* !_SYS_IMGACT_H_ */

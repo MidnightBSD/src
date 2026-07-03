@@ -25,6 +25,7 @@ Use this skill when you’re about to `git commit` C/C header changes and want a
   - `--inconclusive --force`
   - `--std=c11`
 - Fails if `clang-tidy` or `cppcheck` report any `error:` or `warning:` lines (style-only findings do not fail the run).
+- Skips staged C/C header files under `contrib/` and `crypto/` because those directories contain vendor code.
 
 ## Notes
 
