@@ -158,7 +158,9 @@
 #include "ssherr.h"
 #include "misc.h"
 
+#ifdef HAVE_UTIL_H
 # include <util.h>
+#endif
 
 #ifdef USE_WTMPDB
 # include <wtmpdb.h>

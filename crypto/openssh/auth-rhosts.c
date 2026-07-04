@@ -21,7 +21,11 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#ifdef HAVE_NETGROUP_H
 #include <netgroup.h>
+#else
+#include <netdb.h>
+#endif
 #include <pwd.h>
 #include <stdio.h>
 #include <string.h>

@@ -2357,7 +2357,7 @@ main(int ac, char **av)
 			u_flag++;
 			break;
 		case 'U':
-			U_flag++
+			U_flag++;
 			break;
 		default:
 			usage();
