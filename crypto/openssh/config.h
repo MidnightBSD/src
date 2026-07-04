@@ -1831,6 +1831,9 @@
 /* System dirs owned by bin (uid 2) */
 /* #undef PLATFORM_SYS_DIR_UID */
 
+/* need inet in pledge for setsockopt IP_TOS */
+#define PLEDGE_EXTRA_INET /**/
+
 /* Port number of PRNGD/EGD random number socket */
 /* #undef PRNGD_PORT */
 
