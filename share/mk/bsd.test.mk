@@ -100,4 +100,7 @@ beforecheck realcheck aftercheck check: .PHONY
 .ORDER: beforecheck realcheck aftercheck
 check: beforecheck realcheck aftercheck
 
+retests-install: all install .PHONY
+.ORDER: all install
+
 .include <bsd.progs.mk>
