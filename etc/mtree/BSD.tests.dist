@@ -1091,6 +1091,8 @@
         ..
         mktemp
         ..
+        msearch
+        ..
         ncal
         ..
         opensm
