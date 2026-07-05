@@ -35,6 +35,8 @@
         ..
         pkill
         ..
+        ps
+        ..
         pwait
         ..
         rm
