@@ -32,11 +32,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
 #include "opt_inet.h"
 #include "opt_inet6.h"
 #include "opt_rss.h"
 
+#include <sys/cdefs.h>
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bitstring.h>
@@ -412,8 +412,20 @@ aq_rss_prepare(struct aq_dev *softc, uint32_t *rss_hash_cfg)
 		return;
 	}
 
+#ifdef RSS
 	rss_getkey(softc->rss_key);
 	*rss_hash_cfg = rss_gethashconfig();
+#else
+	/*
+	 * Without the kernel RSS framework the NIC still hashes across its
+	 * queues, so generate a random key and enable the standard IPv4/IPv6
+	 * TCP and 2-tuple hash types (matching the RSS subsystem default).
+	 */
+	arc4rand(softc->rss_key, sizeof(softc->rss_key), 0);
+	*rss_hash_cfg = RSS_HASHTYPE_RSS_IPV4 | RSS_HASHTYPE_RSS_TCP_IPV4 |
+	    RSS_HASHTYPE_RSS_IPV6 | RSS_HASHTYPE_RSS_TCP_IPV6 |
+	    RSS_HASHTYPE_RSS_IPV6_EX | RSS_HASHTYPE_RSS_TCP_IPV6_EX;
+#endif
 
 #ifdef RSS
 	if (rss_gethashalgo() == RSS_HASH_TOEPLITZ) {
