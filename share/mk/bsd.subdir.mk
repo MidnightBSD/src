@@ -47,7 +47,7 @@ SUBDIR_TARGETS+= \
 		cleanobj depend distribute files includes installconfig \
 		installdirs \
 		installfiles installincludes print-dir realinstall \
-		maninstall manlint ${_obj} objlink tags \
+		maninstall manlint ${_obj} objlink retests-install tags \
 
 # Described above.
 STANDALONE_SUBDIR_TARGETS+= \
