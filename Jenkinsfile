@@ -112,8 +112,8 @@ pipeline {
                             sh "rm -f ${KYUA_RESULTS} ${JUNIT_RESULTS}"
                             sh "mkdir -p ${DESTDIR}/dev"
                             sh "mount -t devfs devfs ${DESTDIR}/dev"
-                            sh "jail -c name=${JAIL_NAME} path=${DESTDIR} host.hostname=${JAIL_NAME} persist"
-                            sh "jexec ${JAIL_NAME} /usr/bin/kyua test -k /usr/tests/Kyuafile --results-file /kyua-results-${ARCHITECTURE}.db"
+                            sh "sudo jail -c name=${JAIL_NAME} path=${DESTDIR} host.hostname=${JAIL_NAME} persist"
+                            sh "sudo jexec ${JAIL_NAME} /usr/bin/kyua test -k /usr/tests/Kyuafile --results-file /kyua-results-${ARCHITECTURE}.db"
                             sh "cp ${DESTDIR}/kyua-results-${ARCHITECTURE}.db ${KYUA_RESULTS}"
                             sh "kyua report-junit --output ${JUNIT_RESULTS} --results-file ${KYUA_RESULTS}"
                         }
@@ -128,7 +128,7 @@ pipeline {
                 }
                 post {
                     always {
-                        sh "jail -r jenkins-${ARCHITECTURE}-${env.BUILD_NUMBER} || true"
+                        sh "sudo jail -r jenkins-${ARCHITECTURE}-${env.BUILD_NUMBER} || true"
                         sh "umount ${env.WORKSPACE}/destdir/${ARCHITECTURE}/dev || true"
                         sh "rm -rf ${env.WORKSPACE}/destdir/${ARCHITECTURE} ${env.WORKSPACE}/obj"
                     }
