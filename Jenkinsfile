@@ -22,7 +22,7 @@ pipeline {
                 agent {
                     label "${ARCHITECTURE} && bsd"
                 }
-                
+
                 when { anyOf {
                     expression { params.ARCHITECTURE_FILTER == 'all' }
                     expression { params.ARCHITECTURE_FILTER == env.ARCHITECTURE }
@@ -44,7 +44,7 @@ pipeline {
                             sh "mkdir -p ${MAKEOBJDIRPREFIX}"
                             sh "rm -rf ${DESTDIR}"
                             sh "mkdir -p ${DESTDIR}"
-                            sh 'make clean' 
+                            sh 'make clean'
                         }
                     }
                     stage('buildworld') {
@@ -66,7 +66,7 @@ pipeline {
                         }
                         steps {
                             echo "Do buildkernel for ${ARCHITECTURE}"
-                             sh 'make -j5 buildkernel' 
+                             sh 'make -j5 buildkernel'
                         }
                     }
                     stage('installworld') {
@@ -103,24 +103,17 @@ pipeline {
                     stage('tests') {
                         environment {
                             DESTDIR = "${env.WORKSPACE}/destdir/${ARCHITECTURE}"
-                            JAIL_NAME = "jenkins-${ARCHITECTURE}-${env.BUILD_NUMBER}"
                             KYUA_RESULTS = "${env.WORKSPACE}/kyua-results-${ARCHITECTURE}.db"
                             JUNIT_RESULTS = "junit-results-${ARCHITECTURE}.xml"
                         }
                         steps {
                             echo "Do tests for ${ARCHITECTURE}"
                             sh "rm -f ${KYUA_RESULTS} ${JUNIT_RESULTS}"
-                            sh "mkdir -p ${DESTDIR}/dev"
-                            sh "mount -t devfs devfs ${DESTDIR}/dev"
-                            sh "sudo jail -c name=${JAIL_NAME} path=${DESTDIR} host.hostname=${JAIL_NAME} persist"
-                            sh "sudo jexec ${JAIL_NAME} /usr/bin/kyua test -k /usr/tests/Kyuafile --results-file /kyua-results-${ARCHITECTURE}.db"
-                            sh "cp ${DESTDIR}/kyua-results-${ARCHITECTURE}.db ${KYUA_RESULTS}"
+                            sh "kyua test -k ${DESTDIR}/usr/tests/Kyuafile --results-file ${KYUA_RESULTS} || true"
                             sh "kyua report-junit --output ${JUNIT_RESULTS} --results-file ${KYUA_RESULTS}"
                         }
                         post {
                             always {
-                                sh "jail -r ${JAIL_NAME} || true"
-                                sh "umount ${DESTDIR}/dev || true"
                                 junit allowEmptyResults: true, testResults: "${JUNIT_RESULTS}"
                             }
                         }
@@ -128,8 +121,6 @@ pipeline {
                 }
                 post {
                     always {
-                        sh "sudo jail -r jenkins-${ARCHITECTURE}-${env.BUILD_NUMBER} || true"
-                        sh "umount ${env.WORKSPACE}/destdir/${ARCHITECTURE}/dev || true"
                         sh "rm -rf ${env.WORKSPACE}/destdir/${ARCHITECTURE} ${env.WORKSPACE}/obj"
                     }
                 }
