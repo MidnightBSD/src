@@ -39,6 +39,12 @@
 # for generating a list from a directory
 # find  /usr/lib/perl5/5.36.0 -exec echo {} \; | cut -b 2-150  | xargs printf "OLD_FILES+=%s\n"
 
+# 20260705: OpenSSL 1.1.1 to 3.0.x update, remove old shared libraries
+OLD_LIBS+=lib/libcrypto.so.111
+OLD_LIBS+=usr/lib/libssl.so.111
+OLD_LIBS+=usr/lib32/libcrypto.so.111
+OLD_LIBS+=usr/lib32/libssl.so.111
+
 # 20260430: Regenerate trust store
 OLD_FILES+=usr/share/certs/trusted/Entrust_net_Premium_2048_Secure_Server_CA.pem
 OLD_FILES+=usr/share/certs/trusted/AffirmTrust_Premium.pem
