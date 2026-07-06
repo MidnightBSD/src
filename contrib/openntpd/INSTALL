@@ -1,22 +1,20 @@
 1. Prerequisites
 ----------------
 
-You will need an entropy (randomness) source.  If your OS has a /dev/random
-/dev/urandom or /dev/arandom then that is ideal.
-
-If you do not have a real random device, Lutz Jaenicke's PRNGd is recommended.
-http://www.aet.tu-cottbus.de/personen/jaenicke/postfix_tls/prngd.html
-
-Alternatively, EGD should also work (currently untested):
-http://www.lothar.com/tech/crypto/
-
-If you are not using the builtin arc4random code (see
---with-builtin-arc4random below) then OpenSSL 0.9.6 or greater is required:
-http://www.openssl.org/
-
+You will need an entropy (randomness) source.  If your OS has arc4random or
+getentropy then that is ideal. Otherwise, OpenNTPD will use its builtin
+arc4random implementation, which is also part of the LibreSSL project.
 
 2. Building / Installation
 --------------------------
+
+If you have checked this source using Git, follow these initial steps to
+prepare the source tree for building:
+
+ 1. ensure you have the following packages installed:
+      automake, autoconf, git, libtool, bison
+ 2. run './autogen.sh' to prepare the source tree for building
+    or run './dist.sh' to prepare a tarball.
 
 To install OpenNTPD with default options:
 
@@ -56,12 +54,41 @@ are moving the built binaries to another system) then you will need to
 do something like the following (although the exact commands required
 for creating the user and group are system dependant):
 
-# groupadd _ntp
-# useradd -g _ntp -s /sbin/nologin -d /var/empty/ntp -c 'OpenNTP daemon' _ntp
-# mkdir -p /var/empty/ntp
-# chown 0 /var/empty/ntp
-# chgrp 0 /var/empty/ntp
-# chmod 0755 /var/empty/ntp
+On most Linux and BSD systems, something like should work:
+
+ groupadd _ntp
+ useradd -g _ntp -s /sbin/nologin -d /var/empty -c 'OpenNTP daemon' _ntp
+ mkdir -p /var/empty
+ chown 0 /var/empty
+ chgrp 0 /var/empty
+ chmod 0755 /var/empty
+
+/var/empty here is a chroot directory used by ntpd for privilege separation of
+the DNS and NTP processes. This directory should not contain any files, must be
+owned by root, and must not be group or world-writable.
+
+NOTE:
+If you installed a previous OpenNTPD release and created a /var/empty/ntp
+directory, please delete the /var/empty/ntp directory and adjust the _ntp
+user's home directory to point to /var/empty instead.
+
+This is important because, if you have any other daemons that also use
+/var/empty as a home directory, they will all have an empty privilege
+separation directory.
+
+As of OS X 10.10, something like this should work similarly
+(thanks to jasper@ for suggesting)
+
+ dscl . create /Users/_ntp
+ dscl . create /Users/_ntp UserShell /sbin/nologin
+# Prevent user from showing up on the login screen
+ dscl . delete /Users/_ntp AuthenticationAuthority
+# Arbitrarily chosen UID that was free
+ dscl . create /Users/_ntp UniqueID 400
+ dscl . create /Users/_ntp PrimaryGroupID 400
+ dscl . create /Users/_ntp RealName "OpenNTPD user"
+ dseditgroup -o create _ntp
+ dscl . append /Groups/_ntp GroupMembership _ntp
 
 There are a few options to the configure script in addition to the ones
 provided by autoconf itself:
@@ -71,28 +98,19 @@ provided by autoconf itself:
 	is "_ntp".
 
 --with-privsep-path=path
-	Normally ntpd will always use the home directory of the privsep user
-	to chroot to, however use of this option will cause ntpd to always
-	use the specified directory.
+	ntpd will always use the home directory of the privsep user
+	to chroot to, but specifying this parameter will change the
+	post-installation checks and instructions to match the specified path.
 
---with-mantype=man|cat|doc
-	Set man page type.  The default is for configure to automatically
-	detect the supported format.
-
---with-builtin-arc4random
-	Use builtin arc4random rather than OpenSSL's.  By default, OpenSSL
-	will be used if found.
-
---with-ssl-dir=PATH
-	Specify path to OpenSSL installation to use if not using the
-	system's default or the builtin arc4random support.
-
+--with-cacert=[path]
+	Specify the CA certificate location for HTTPS constraint validation.
+	Defaults to /etc/ssl/certs/ca-certificates.crt
 
 If you need to pass special options to the compiler or linker, you
 can specify these as environment variables before running ./configure.
 For example:
 
-CFLAGS="-O -m486" LDFLAGS="-s" LIBS="-lrubbish" LD="/usr/foo/ld" ./configure
+CFLAGS="-O2 " LDFLAGS="-s" ./configure
 
 
 3. Configuration
@@ -103,14 +121,11 @@ whatever you specified as your --sysconfdir (/usr/local/etc by default).
 
 If no configuration file exists, the default one is used.  The default
 configuration file uses a selection of publicly accessible "pool" servers
-(see http://twiki.ntp.org/bin/view/Servers/NTPPoolServers).
+(see http://support.ntp.org/bin/view/Servers/NTPPoolServers)
 
 
 4. Problems?
 ------------
 
 If you experience problems compiling, installing or running OpenNTPD,
-please report the problem to the address in the README file.
-
-
-$Id: INSTALL,v 1.1.1.1 2006-08-20 16:05:47 laffer1 Exp $
+please report the problem to the address in the README.md file.
