@@ -1,16 +1,58 @@
-$MidnightBSD: src/contrib/mksh/MIDNIGHTBSD-upgrade,v 1.2 2009/11/26 15:44:25 laffer1 Exp $
+Upgrade procedure for OpenNTPD (portable)
 
-Directions for updating OpenNTPD
+Vendor branch : vendor/OpenBSD/openntpd   (sources live under dist/)
+In-tree prefix: contrib/openntpd
+Build glue     : usr.sbin/ntpd
 
-1) Obtain the latest sources from OpenBSD FTP
-2) Unpack sources.
-3) Port to MidnightBSD.  (portable version no longer available)
-4) Perform a test import of unpatched sources
- (change version number as needed)
-cvs -q -n import -m "Import OpenNTPD 4.4" src/contrib/openntpd OPENNTPD v4_4
+Source: https://cdn.openbsd.org/pub/OpenBSD/OpenNTPD/openntpd-VERSION.tar.gz
+        (verify against the published SHA256 / SHA256.asc in that directory)
 
-5) if all goes well, 
-cvs import -m "Import OpenNTPD 4.4" src/contrib/openntpd OPENNTPD v4_4
+To upgrade to a new version
+---------------------------
+1. Download and extract the new tarball to /tmp/openntpd-VERSION.
+2. Follow the vendor-update skill (.agents/skills/vendor-update):
+   - Import the pristine tree into dist/ on vendor/OpenBSD/openntpd.
+   - Commit "Vendor import of openntpd VERSION" and tag
+     vendor/OpenBSD/openntpd/VERSION (annotated).
+3. Sync the pristine tree into contrib/openntpd (upstream src/, compat/,
+   include/, m4/ layout is preserved -- do NOT flatten it).
+4. Reconcile usr.sbin/ntpd/Makefile (see notes below).
 
-6) Commit local changes to non vendor branch
-7) update the Makefile and config files as necessary
+Build notes (portable 6.x/7.x layout)
+-------------------------------------
+OpenNTPD portable no longer uses a generated config.h. The autotools build
+passes feature macros (-DHAVE_*) on the command line and selects per-OS compat
+objects. The in-tree bmake build in usr.sbin/ntpd reproduces this by hand:
+
+  * ntpd and ntpctl are the SAME binary; ntpctl is installed as a hardlink and
+    dispatched by argv[0]. usr.sbin/ntpd installs the ntpctl link.
+  * HAVE_SENSORS is false on MidnightBSD (no sys/sensors.h) -> fake-sensors.c.
+  * HAVE_LIBTLS is false (no libtls/LibreSSL in base) -> constraint-disabled.c;
+    the HTTPS-constraint feature is compiled out.
+  * Compat objects pulled from compat/ because base does not provide them:
+    imsg.c, imsg-buffer.c (no imsg in libutil), adjfreq_freebsd.c (no adjfreq;
+    uses ntp_adjtime(2)), recallocarray.c, freezero.c, plus the always-on
+    socket.c, md5.c and progname.c.
+    progname.c is built for get_progname(), but -DHAVE___PROGNAME keeps it from
+    defining its own __progname (base libc has it).
+  * Everything else (asprintf, arc4random(_uniform), closefrom, daemon,
+    clock_get*, explicit_bzero, memmem, reallocarray, setproctitle, setgroups,
+    setre[ug]id, setres[ug]id, strlcat, strlcpy, strtonum, sysconf) is in the
+    MidnightBSD base -> passed as -DHAVE_* so the native path is used.
+  * -lm is linked (isfinite); -Wno-typedef-redefinition silences the only
+    warning the include/ shims produce (u_int*_t re-typedef) so the rest of the
+    tree's -Werror still applies.
+
+Verified: builds clean under -Werror and installs (ntpd + ntpctl hardlink, man
+pages, ntpd.conf) on MidnightBSD 4.0.6/amd64.
+
+When bumping the version, re-check compat/Makefile.am and configure.ac against
+the base system: if MidnightBSD gains imsg in libutil, adjfreq, recallocarray
+or freezero, drop the corresponding compat source and add the matching -DHAVE_*.
+
+Local patches applied on top of upstream
+-----------------------------------------
+None. The historical 3.9-era MidnightBSD patches (HAVE_SENSORS guards, compat
+prototypes) are obsolete -- upstream's portable layer now handles all of them.
+Keep this list empty; if a local patch becomes necessary, record the upstream/
+FreeBSD commit hash, affected file and re-apply context here.
