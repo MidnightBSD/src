@@ -915,6 +915,8 @@
         ..
         basename
         ..
+        batt
+        ..
         bmake
             archives
                 fmt_44bsd
