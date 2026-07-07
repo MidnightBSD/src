@@ -103,3 +103,5 @@ Please also review AI_POLICY.md and CODE_OF_CONDUCT.md.
 
 Developers should use the git hooks:
 git config --add core.hooksPath .hooks
+
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/13525/badge)](https://www.bestpractices.dev/projects/13525)
