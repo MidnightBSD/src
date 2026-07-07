@@ -1,0 +1,105 @@
+# MidnightBSD Source Tree
+
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/13525/badge)](https://www.bestpractices.dev/projects/13525)
+
+This is the top level of the MidnightBSD source directory.
+
+Source code is now hosted on GitHub at:
+<https://github.com/MidnightBSD/src/>
+
+## Getting the Source
+
+Most users want to check out a stable branch rather than use the current
+development branch called `master`. Look at the stable branches. For example:
+
+```sh
+cd /usr
+git clone https://github.com/midnightbsd/src.git -b stable/4.0
+```
+
+You can change branches:
+
+```sh
+git switch master
+```
+
+## Copyright
+
+For copyright information, please see the file [COPYRIGHT](COPYRIGHT) in this
+directory. Additional copyright information also exists for some sources in this
+tree — please see the specific source directories for more information.
+
+## Building
+
+The `Makefile` in this directory supports a number of targets for building
+components (or all) of the MidnightBSD source tree, the most commonly used one
+being `world`, which rebuilds and installs everything in the MidnightBSD system
+from the source tree except the kernel, the kernel modules, and the contents of
+`/etc`. The `buildkernel` and `installkernel` targets build and install the
+kernel and the modules (see below). Please see the top of the `Makefile` in this
+directory for more information on the standard build targets and compile-time
+flags.
+
+## Building a Kernel
+
+Building a kernel is a somewhat more involved process. Documentation can be found
+at:
+
+- <https://www.midnightbsd.org/documentation/>
+- <https://github.com/MidnightBSD/src/wiki>
+
+The MidnightBSD documentation and wiki should be preferred. For additional
+background information, see the [FreeBSD Handbook kernel configuration
+chapter](http://www.freebsd.org/doc/en_US.ISO8859-1/books/handbook/kernelconfig.html)
+and the `config(8)` man page.
+
+> **Note:** If you want to build and install the kernel with the `buildkernel`
+> and `installkernel` targets, you might need to build world first. See the
+> MidnightBSD documentation and wiki above for preferred guidance, and the
+> FreeBSD Handbook for additional background.
+
+The sample kernel configuration files reside in the `sys/<arch>/conf`
+sub-directory (assuming that you've installed the kernel sources), the file named
+`GENERIC` being the one used to build your initial installation kernel. The file
+`NOTES` contains entries and documentation for possible kernel configuration
+options. Some architectures also provide a `LINT` file for compile-only coverage
+and a `MINIMAL` file for reduced configurations. Please review the files available
+for your target architecture under `sys/<arch>/conf`.
+
+## Source Roadmap
+
+| Directory   | Description                                                                                     |
+| ----------- | ----------------------------------------------------------------------------------------------- |
+| `bin`       | System/user commands.                                                                           |
+| `cddl`      | Various commands and libraries under the Common Development and Distribution License.           |
+| `contrib`   | Packages contributed by 3rd parties.                                                            |
+| `crypto`    | Cryptography stuff (see `crypto/README`).                                                        |
+| `etc`       | Template files for `/etc`.                                                                       |
+| `games`     | Amusements.                                                                                      |
+| `gnu`       | Various commands and libraries under the GNU Public License. Please see `gnu/COPYING*` for more. |
+| `include`   | System include files.                                                                           |
+| `kerberos5` | Kerberos5 (Heimdal) package.                                                                     |
+| `lib`       | System libraries.                                                                               |
+| `libexec`   | System daemons.                                                                                  |
+| `nrelease`  | Release building from DragonFly. Used for making live CDs.                                       |
+| `release`   | Release building Makefile & associated tools.                                                    |
+| `rescue`    | Build system for statically linked `/rescue` utilities.                                          |
+| `sbin`      | System commands.                                                                                |
+| `secure`    | Cryptographic libraries and commands.                                                            |
+| `share`     | Shared resources.                                                                               |
+| `sys`       | Kernel sources.                                                                                 |
+| `tools`     | Utilities for regression testing and miscellaneous tasks.                                        |
+| `usr.bin`   | User commands.                                                                                  |
+| `usr.sbin`  | System administration commands.                                                                 |
+
+## Contributing
+
+We use the DCO for all contributions. Please see [DCO.md](DCO.md) for details.
+Please also review [AI_POLICY.md](AI_POLICY.md) and
+[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+
+Developers should use the git hooks:
+
+```sh
+git config --add core.hooksPath .hooks
+```
