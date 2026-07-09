@@ -1,0 +1,124 @@
+." Copyright (c) 2017-2020 Brian Callahan <bcallah@openbsd.org>
+."
+." Permission to use, copy, modify, and distribute this software for any
+." purpose with or without fee is hereby granted, provided that the above
+." copyright notice and this permission notice appear in all copies.
+."
+." THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+." WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+." MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+." ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+." WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+." ACTION OF CONTRACT, NEGLIGENCE OR OTHERWISE) ARISING OUT OF OR IN
+." CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+."
+.Dd March 20, 2020
+.Dt SHUF 1
+.Os
+.Sh NAME
+.Nm shuf
+.Nd randomly permute input lines
+.Sh SYNOPSIS
+.Nm
+.Op Fl hv
+.Op Fl n Ar count
+.Op Fl o Ar outfile
+.Op Fl rz
+.Op Ar file
+.Nm
+.Op Fl hv
+.Fl e
+.Op Fl n Ar count
+.Op Fl o Ar outfile
+.Op Fl rz
+.Op Ar args ...
+.Nm
+.Op Fl hv
+.Fl i Ar lo-hi
+.Op Fl n Ar count
+.Op Fl o Ar outfile
+.Op Fl rz
+.Sh DESCRIPTION
+.Nm
+is a utility that outputs a random permutation of its input lines.
+By default,
+.Nm
+reads from
+.Ar stdin
+and outputs to
+.Ar stdout .
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl e
+Use a space-separated list of command-line
+.Ar args
+as input.
+.Pp
+Cannot be combined with
+.Fl i .
+.It Fl h
+Print usage information and exit.
+.It Fl i Ar lo-hi
+Use the range of unsigned integers from
+.Ar lo
+to
+.Ar hi
+as input.
+.Pp
+Cannot be combined with
+.Fl e .
+.It Fl n Ar count
+Print at most
+.Ar count
+lines.
+.It Fl o Ar outfile
+Write output to
+.Ar outfile
+instead of
+.Ar stdout .
+.It Fl r
+Do not permute.
+Instead, choose lines at random, with replacement.
+When used without
+.Fl n ,
+.Nm
+repeats indefinitely.
+.It Fl v
+Print version information and exit.
+.It Fl z
+Delineate lines with the NUL character instead of the newline character.
+.El
+.Sh EXIT STATUS
+The
+.Nm
+utility exits 0 on success, and >0 if an error occurs.
+.Sh EXAMPLES
+Flip a coin ten times:
+.Pp
+.Dl shuf -e -n 10 -r Heads Tails
+.Pp
+Select five numbers from 10 to 20:
+.Pp
+.Dl shuf -i 10-20 -n 5
+.Pp
+Set a random desktop background image from the user's collection:
+.Pp
+.Dl ls ~/wallpaper | shuf -n 1 | feh --bg-fill
+.Pp
+Read a shuffled version of this manual page:
+.Pp
+.Dl shuf shuf.1 | mandoc -mdoc | less
+.Sh AUTHORS
+.Nm
+was written by
+.An Brian Callahan Aq Mt bcallah@openbsd.org .
+.Sh CAVEATS
+This implementation of
+.Nm
+intentionally omits all long options.
+.Pp
+The maximum range for
+.Ar lo-hi
+is
+.Dv INT_MAX Ns -1.
