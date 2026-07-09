@@ -169,14 +169,14 @@ run_batt(size_t argc, const char *const *args)
 		close(outpipe[0]);
 		close(errpipe[0]);
 		if (dup2(outpipe[1], STDOUT_FILENO) < 0)
-			_exit(127);
+			exit(127);
 		if (dup2(errpipe[1], STDERR_FILENO) < 0)
-			_exit(127);
+			exit(127);
 		close(outpipe[1]);
 		close(errpipe[1]);
 		optind = 1;
 		opterr = 1;
-		_exit(batt_main((int)argc, argv));
+		exit(batt_main((int)argc, argv));
 	}
 
 	for (i = 0; i < argc; i++)
@@ -238,7 +238,7 @@ ATF_TC_BODY(concise_all_flags, tc)
 
 	result = run_batt(2, argv);
 	ATF_CHECK_EQ(result.exit_status, 0);
-	ATF_CHECK_STREQ(result.stdout_data, "75 18 2");
+	ATF_CHECK_STREQ(result.stdout_data, "75 18 2 ");
 	ATF_CHECK_STREQ(result.stderr_data, "");
 	free_result(&result);
 }
