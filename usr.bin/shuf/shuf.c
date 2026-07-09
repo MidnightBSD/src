@@ -211,14 +211,6 @@ main(int argc, char *argv[])
 	int 			iflag = 0, oflag = 0;
 	size_t 		buflen = 0, bufsize = 8192, nbufsize;
 
-#ifdef HAVE_PLEDGE
-	if (pledge("stdio rpath wpath cpath", NULL) == -1)
-		err(1, "pledge");
-#endif
-
-	if (caph_enter() < 0)
-		err(1, "cap_enter");
-
 	while ((ch = getopt(argc, argv, "ehi:n:o:rvz")) != -1) {
 		switch (ch) {
 		case 'e':
@@ -304,12 +296,17 @@ main(int argc, char *argv[])
 		goto out;
 	}
 
+	/* Open input file before entering capability mode */
 	if (argc == 0 || (argv[0][0] == '-' && argv[0][1] == '\0')) {
 		ifile = stdin;
 	} else {
 		if ((ifile = fopen(*argv, "r")) == NULL)
 			err(1, "could not open %s", *argv);
 	}
+
+	/* Enter capability mode after all files are opened */
+	if (caph_enter() < 0)
+		err(1, "cap_enter");
 
 	if ((buf = malloc(bufsize)) == NULL)
 		err(1, "could not create initial shuffle buffer");
