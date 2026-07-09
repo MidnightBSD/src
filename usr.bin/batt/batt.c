@@ -128,7 +128,7 @@ main(int argc, char *argv[])
 		if (units < 0)
 			errx(1, "unexpected battery units value");
 		if (cflag)
-			printf("%d", units);
+			printf("%d ", units);
 		else {
 			if (units == 1)
 				printf("1 battery\n");
