@@ -37,12 +37,10 @@ static void	usage(void);
 int 
 main(int argc, char *argv[])
 {
-	int life, time, units;
-	int acline;
-	size_t len;
-	int ch, cflag, lflag, tflag, uflag;
-
-	cflag = lflag = tflag = uflag = 0;
+	int life = 0, time = 0, units = 0;
+	int acline = 0;
+	size_t len = 0;
+	int ch = 0, cflag = 0, lflag = 0, tflag = 0, uflag = 0;
 	while ((ch = getopt(argc, argv, "cltu")) != -1) {
 		switch (ch) {
 			case 'c':
