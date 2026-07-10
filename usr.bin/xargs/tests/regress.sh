@@ -1,5 +1,5 @@
 
-echo 1..23
+echo 1..25
 
 REGRESSION_START($1)
 
@@ -28,5 +28,7 @@ REGRESSION_TEST_FREEFORM(`parallel2', `echo /var/empty       /var/empty/nodir | 
 REGRESSION_TEST_FREEFORM(`parallel3', `echo /var/empty/nodir /var/empty       | xargs -n1 -P2 test -d; [ $? = 1 ]')
 REGRESSION_TEST_FREEFORM(`parallel4', `echo /var/empty/nodir /var/empty/nodir | xargs -n1 -P2 test -d; [ $? = 1 ]')
 REGRESSION_TEST_FREEFORM(`ntoobig', `seq 42 | xargs -n$((argmax+1)); [ $? = 1 ]')
+REGRESSION_TEST_FREEFORM(`r', `printf "" | xargs -r false; [ $? = 0 ]')
+REGRESSION_TEST_FREEFORM(`no-run-if-empty', `printf "" | xargs --no-run-if-empty false; [ $? = 0 ]')
 
 REGRESSION_END()

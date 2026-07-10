@@ -221,33 +221,14 @@ causes the command to be executed, any other response causes it to be
 skipped.
 No commands are executed if the process is not attached to a terminal.
 .It Fl r , Fl -no-run-if-empty
-Compatibility with GNU
-.Nm .
-The GNU version of
-.Nm
-runs the
+Do not run the
 .Ar utility
-argument at least once, even if
-.Nm
-input is empty, and it supports a
-.Fl r
-option to inhibit this behavior.
-The
-.Fx
-version of
-.Nm
-does not run the
-.Ar utility
-argument on empty input, but it supports the
-.Fl r
-option for command-line compatibility with GNU
+if standard input does not contain any arguments.
+This is the default behavior, but the option is accepted for compatibility
+with GNU
 .Nm ,
-but the
-.Fl r
-option does nothing in the
-.Fx
-version of
-.Nm .
+where it is commonly used as
+.Fl -no-run-if-empty .
 .It Fl R Ar replacements
 Specify the maximum number of arguments that
 .Fl I
