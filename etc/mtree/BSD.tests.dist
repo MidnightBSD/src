@@ -1103,6 +1103,8 @@
         ..
         ncal
         ..
+        numfmt
+        ..
         opensm
         ..
         patch

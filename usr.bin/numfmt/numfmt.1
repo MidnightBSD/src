@@ -1,0 +1,149 @@
+.\"-
+.\" SPDX-License-Identifier: BSD-2-Clause
+.\"
+.\" Copyright (c) 2026 The MidnightBSD Project
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE PROJECT AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE PROJECT OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+.\" SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+.\" CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.Dd July 10, 2026
+.Dt NUMFMT 1
+.Os
+.Sh NAME
+.Nm numfmt
+.Nd convert numbers to or from human-readable form
+.Sh SYNOPSIS
+.Nm
+.Op Fl z
+.Op Fl d Ar char
+.Op Fl f Ar field
+.Op Fl -from Ns = Ns Ar unit
+.Op Fl -to Ns = Ns Ar unit
+.Op Fl -header Ns Op = Ns Ar lines
+.Op Fl -invalid Ns = Ns Ar mode
+.Op Fl -padding Ns = Ns Ar width
+.Op Fl -round Ns = Ns Ar method
+.Op Fl -suffix Ns = Ns Ar suffix
+.Op Ar number ...
+.Sh DESCRIPTION
+The
+.Nm
+utility converts numbers between plain numeric and human-readable forms.
+It provides a BSD-licensed subset of the GNU
+.Nm
+interface commonly used by scripts.
+.Pp
+If
+.Ar number
+operands are specified, each operand is converted and printed on its own line.
+Otherwise,
+.Nm
+reads standard input and converts the selected field on each input line.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl d Ar char , Fl -delimiter Ns = Ns Ar char
+Use
+.Ar char
+as the input field delimiter instead of blank-separated fields.
+.It Fl f Ar field , Fl -field Ns = Ns Ar field
+Convert the numbered input field.
+The first field is field 1.
+.It Fl -format Ns = Ns Ar format
+Use
+.Ar format
+as a
+.Xr printf 3
+format string when no output scaling is requested.
+.It Fl -from Ns = Ns Ar unit
+Scale input numbers from
+.Ar unit .
+Supported values are
+.Cm none ,
+.Cm auto ,
+.Cm si ,
+.Cm iec ,
+and
+.Cm iec-i .
+.It Fl -header Ns Op = Ns Ar lines
+Copy the first
+.Ar lines
+input lines without conversion.
+If
+.Ar lines
+is omitted, one header line is copied.
+.It Fl -invalid Ns = Ns Ar mode
+Control invalid-number handling.
+Supported modes are
+.Cm abort ,
+.Cm fail ,
+.Cm warn ,
+and
+.Cm ignore .
+.It Fl -padding Ns = Ns Ar width
+Pad converted output to
+.Ar width
+columns.
+Positive values right-align and negative values left-align.
+.It Fl -round Ns = Ns Ar method
+Use the specified rounding method.
+Supported methods are
+.Cm nearest ,
+.Cm up ,
+.Cm down ,
+.Cm from-zero ,
+and
+.Cm towards-zero .
+.It Fl -suffix Ns = Ns Ar suffix
+Strip
+.Ar suffix
+from input numbers and append it to scaled output numbers.
+.It Fl -to Ns = Ns Ar unit
+Scale output numbers to
+.Ar unit .
+Supported values are
+.Cm none ,
+.Cm si ,
+.Cm iec ,
+and
+.Cm iec-i .
+Scaled output is formatted with
+.Xr humanize_number 3 .
+.It Fl z , Fl -zero-terminated
+Use NUL instead of newline as the input and output record separator.
+.El
+.Sh EXIT STATUS
+.Ex -std
+.Sh EXAMPLES
+.Dl $ numfmt --to=si 1500
+.Dl 1.5k
+.Pp
+.Dl $ numfmt --from=iec --to=si 1K
+.Dl 1.1k
+.Sh SEE ALSO
+.Xr humanize_number 3
+.Sh CAVEATS
+The
+.Nm
+utility implements the GNU options listed above.
+It is not a complete implementation of every GNU
+.Nm
+extension.

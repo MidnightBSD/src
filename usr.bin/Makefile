@@ -114,6 +114,7 @@ SUBDIR=	alias \
 	nfsstat \
 	nice \
 	nl \
+	numfmt \
 	nohup \
 	opieinfo \
 	opiekey \
