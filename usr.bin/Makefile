@@ -7,6 +7,7 @@ SUBDIR=	alias \
 	asa \
 	asmgraph \
 	awk \
+	base64 \
 	backlight \
 	banner \
 	basename \
