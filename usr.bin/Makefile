@@ -163,6 +163,7 @@ SUBDIR=	alias \
 	su \
 	systat \
 	tabs \
+	tac \
 	tail \
 	tar \
 	tcopy \
