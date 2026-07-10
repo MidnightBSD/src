@@ -53,6 +53,7 @@ static char sccsid[] = "@(#)date.c	8.2 (Berkeley) 4/28/95";
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <syslog.h>
 #include <unistd.h>
 #include <utmpx.h>
@@ -68,6 +69,7 @@ static time_t tval;
 static void badformat(void);
 static void iso8601_usage(const char *);
 static void multipleformats(void);
+static void parsedate(const char *, const char *);
 static void printdate(const char *);
 static void printisodate(struct tm *);
 static void setthetime(const char *, const char *, int);
@@ -90,10 +92,11 @@ int
 main(int argc, char *argv[])
 {
 	int ch, rflag;
-	bool Iflag, jflag, Rflag;
+	bool dflag, Iflag, jflag, Rflag;
 	const char *format;
+	const char *datestr;
+	const char *fmt;
 	char buf[1024];
-	char *fmt;
 	char *tmp;
 	struct vary *v;
 	const struct vary *badv;
@@ -102,12 +105,17 @@ main(int argc, char *argv[])
 	size_t i;
 
 	v = NULL;
+	datestr = NULL;
 	fmt = NULL;
 	(void) setlocale(LC_TIME, "");
 	rflag = 0;
-	Iflag = jflag = Rflag = 0;
-	while ((ch = getopt(argc, argv, "f:I::jnRr:uv:")) != -1)
+	dflag = Iflag = jflag = Rflag = 0;
+	while ((ch = getopt(argc, argv, "d:f:I::jnRr:uv:")) != -1)
 		switch((char)ch) {
+		case 'd':
+			dflag = 1;
+			datestr = optarg;
+			break;
 		case 'f':
 			fmt = optarg;
 			break;
@@ -175,7 +183,11 @@ main(int argc, char *argv[])
 		++argv;
 	}
 
-	if (*argv) {
+	if (dflag) {
+		parsedate(fmt, datestr);
+		if (*argv != NULL)
+			usage();
+	} else if (*argv) {
 		setthetime(fmt, *argv, jflag);
 		++argv;
 	} else if (fmt != NULL)
@@ -211,6 +223,100 @@ main(int argc, char *argv[])
 
 	(void)strftime(buf, sizeof(buf), format, lt);
 	printdate(buf);
+}
+
+struct date_format {
+	const char *fmt;
+	bool date_only;
+	bool minute_only;
+};
+
+static const struct date_format date_formats[] = {
+	{ "%Y-%m-%d %H:%M:%S", false, false },
+	{ "%Y-%m-%d %H:%M", false, true },
+	{ "%Y-%m-%dT%H:%M:%S", false, false },
+	{ "%Y-%m-%dT%H:%M", false, true },
+	{ "%Y-%m-%d", true, false },
+	{ "%m/%d/%Y", true, false },
+	{ "%b %d %Y", true, false },
+	{ "%B %d %Y", true, false },
+};
+
+static void
+parsedate(const char *fmt, const char *p)
+{
+	struct tm tm;
+	char *ep;
+	const char *t;
+	size_t i;
+
+	if (p == NULL || *p == '\0')
+		usage();
+
+	if (*p == '@') {
+		tval = strtoq(p + 1, &ep, 0);
+		if (*ep != '\0')
+			errx(1, "invalid date: %s", p);
+		return;
+	}
+
+	if (strcasecmp(p, "now") == 0 || strcasecmp(p, "today") == 0)
+		return;
+
+	if (strcasecmp(p, "yesterday") == 0 ||
+	    strcasecmp(p, "tomorrow") == 0) {
+		const struct tm *lt;
+
+		lt = localtime(&tval);
+		if (lt == NULL)
+			errx(1, "invalid time");
+		tm = *lt;
+		tm.tm_isdst = -1;
+		tm.tm_mday += strcasecmp(p, "tomorrow") == 0 ? 1 : -1;
+		if ((tval = mktime(&tm)) == -1)
+			errx(1, "nonexistent time");
+		return;
+	}
+
+	if (fmt != NULL) {
+		const struct tm *lt;
+
+		lt = localtime(&tval);
+		if (lt == NULL)
+			errx(1, "invalid time");
+		tm = *lt;
+		tm.tm_isdst = -1;
+		t = strptime(p, fmt, &tm);
+		if (t == NULL || *t != '\0')
+			errx(1, "invalid date: %s", p);
+		if ((tval = mktime(&tm)) == -1)
+			errx(1, "nonexistent time");
+		return;
+	}
+
+	for (i = 0; i < nitems(date_formats); i++) {
+		const struct date_format *df;
+		const struct tm *lt;
+
+		df = &date_formats[i];
+		lt = localtime(&tval);
+		if (lt == NULL)
+			errx(1, "invalid time");
+		tm = *lt;
+		tm.tm_isdst = -1;
+		if (df->date_only)
+			tm.tm_hour = tm.tm_min = tm.tm_sec = 0;
+		else if (df->minute_only)
+			tm.tm_sec = 0;
+		t = strptime(p, df->fmt, &tm);
+		if (t == NULL || *t != '\0')
+			continue;
+		if ((tval = mktime(&tm)) == -1)
+			errx(1, "nonexistent time");
+		return;
+	}
+
+	errx(1, "invalid date: %s", p);
 }
 
 static void
@@ -390,9 +496,9 @@ static void
 usage(void)
 {
 	(void)fprintf(stderr, "%s\n%s\n%s\n",
-	    "usage: date [-jnRu] [-I[date|hours|minutes|seconds]] [-f input_fmt]",
+	    "usage: date [-jnRu] [-d date] [-I[date|hours|minutes|seconds]]",
 	    "            "
-	    "[-r filename|seconds] [-v[+|-]val[y|m|w|d|H|M|S]]",
+	    "[-f input_fmt] [-r filename|seconds] [-v[+|-]val[y|m|w|d|H|M|S]]",
 	    "            "
 	    "[[[[[[cc]yy]mm]dd]HH]MM[.SS] | new_date] [+output_fmt]"
 	    );

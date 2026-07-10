@@ -41,6 +41,7 @@
 .\" Display time.
 .Nm
 .Op Fl nRu
+.Op Fl d Ar date
 .Op Fl I Ns Op Ar FMT
 .Op Fl r Ar filename
 .Op Fl r Ar seconds
@@ -109,6 +110,34 @@ the time may not be changed by more than 1 second.
 .Pp
 The options are as follows:
 .Bl -tag -width Ds
+.It Fl d Ar date
+Display the time described by
+.Ar date
+instead of the current time.
+This option provides compatibility with the GNU
+.Nm
+option of the same name for commonly used forms.
+The
+.Ar date
+argument may be specified as
+.Cm @ Ns Ar seconds
+for seconds since the Epoch, as
+.Cm now ,
+.Cm today ,
+.Cm yesterday ,
+or
+.Cm tomorrow ,
+or as a numeric date and time such as
+.Dq Li 2026-07-10 ,
+.Dq Li 2026-07-10 12:34:56 ,
+or
+.Dq Li 2026-07-10T12:34:56 .
+If
+.Fl f
+is also specified,
+.Ar date
+is parsed using
+.Ar input_fmt .
 .It Fl f Ar input_fmt
 Use
 .Ar input_fmt
@@ -192,7 +221,7 @@ Print the date and time of the last modification of
 .Ar filename .
 .It Fl u
 Display or set the date in
-.Tn UTC
+UTC
 (Coordinated Universal) time.
 .It Xo
 .Fl v
@@ -433,7 +462,7 @@ may be used on one machine to print out the date
 suitable for setting on another.
 .Qq ( Li "+%m%d%H%M%Y.%S"
 for use on
-.Tn Linux . )
+Linux . )
 .Pp
 The command:
 .Pp

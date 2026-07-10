@@ -35,10 +35,55 @@ parse_invalid_format_rejected_body()
 	    env TZ=UTC0 date -j 1970020707 +%s
 }
 
+atf_test_case parse_gnu_epoch
+parse_gnu_epoch_body()
+{
+	atf_check -o "inline:${TEST1}\n" \
+	    env TZ=UTC0 date -d "@${TEST1}" +%s
+}
+
+atf_test_case parse_gnu_datetime
+parse_gnu_datetime_body()
+{
+	atf_check -o "inline:${TEST1}\n" \
+	    env TZ=UTC0 date -d "1970-02-07 07:04:03" +%s
+	atf_check -o "inline:${TEST1}\n" \
+	    env TZ=UTC0 date -d "1970-02-07T07:04:03" +%s
+}
+
+atf_test_case parse_gnu_date_only
+parse_gnu_date_only_body()
+{
+	atf_check -o "inline:3196800\n" \
+	    env TZ=UTC0 date -d "1970-02-07" +%s
+}
+
+atf_test_case parse_gnu_custom_format
+parse_gnu_custom_format_body()
+{
+	atf_check -o "inline:${TEST1}\n" \
+	    env TZ=UTC0 date -f "%Y/%m/%d %H:%M:%S" \
+	    -d "1970/02/07 07:04:03" +%s
+}
+
+atf_test_case parse_gnu_relative
+parse_gnu_relative_body()
+{
+	atf_check -o "inline:$((TEST1 + 86400))\n" \
+	    env TZ=UTC0 date -r ${TEST1} -d tomorrow +%s
+	atf_check -o "inline:$((TEST1 - 86400))\n" \
+	    env TZ=UTC0 date -r ${TEST1} -d yesterday +%s
+}
+
 atf_init_test_cases()
 {
 	atf_add_test_case parse_numeric_with_seconds
 	atf_add_test_case parse_numeric_without_seconds
 	atf_add_test_case parse_extraneous_characters_warn
 	atf_add_test_case parse_invalid_format_rejected
+	atf_add_test_case parse_gnu_epoch
+	atf_add_test_case parse_gnu_datetime
+	atf_add_test_case parse_gnu_date_only
+	atf_add_test_case parse_gnu_custom_format
+	atf_add_test_case parse_gnu_relative
 }
