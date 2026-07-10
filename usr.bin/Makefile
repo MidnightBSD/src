@@ -149,6 +149,7 @@ SUBDIR=	alias \
 	sensors \
 	seq \
 	shar \
+	shuf \
 	showmount \
 	sockstat \
 	soelim \

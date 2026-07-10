@@ -14,7 +14,10 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <sys/capsicum.h>
+
 #include <err.h>
+#include <errno.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,6 +32,9 @@ static int 	eflag, most = -1, rflag, zflag;
 
 static void __dead2 usage(void);
 static void __dead2 version(void);
+static void enter_capability_mode(FILE *);
+static void limit_standard_fd(int, int, int);
+static void limit_rights(int, const cap_rights_t *, const char *, int);
 static void printshuf(char *args[], int ind);
 static void randomshuf(int argn, char *args[]);
 static void shuf(int argn, char *args[]);
@@ -38,6 +44,67 @@ static void shufintegers(int range, int lo);
 /*
  * shuf -- output a random permutation of input lines
  */
+
+static void
+limit_rights(int fd, const cap_rights_t *rights, const char *name,
+    int ignore_ebadf)
+{
+
+	if (caph_rights_limit(fd, rights) < 0) {
+		if (ignore_ebadf && errno == EBADF)
+			return;
+		err(1, "unable to limit rights for %s", name);
+	}
+}
+
+static void
+limit_standard_fd(int fd, int ifd, int ofd)
+{
+	cap_rights_t rights;
+	int needs_fstat;
+
+	cap_rights_init(&rights);
+
+	needs_fstat = 0;
+	if (fd == ifd) {
+		cap_rights_set(&rights, CAP_READ);
+		needs_fstat = 1;
+	}
+	if (fd == ofd || fd == STDERR_FILENO) {
+		cap_rights_set(&rights, CAP_WRITE);
+		needs_fstat = 1;
+	}
+	if (needs_fstat)
+		cap_rights_set(&rights, CAP_FSTAT);
+
+	limit_rights(fd, &rights, "standard descriptor", 1);
+}
+
+static void
+enter_capability_mode(FILE *ifile)
+{
+	cap_rights_t rights_ro, rights_wo;
+	int ifd, ofd;
+
+	ifd = ifile == NULL ? -1 : fileno(ifile);
+	ofd = fileno(ofile);
+
+	cap_rights_init(&rights_ro, CAP_FSTAT, CAP_READ);
+	cap_rights_init(&rights_wo, CAP_FSTAT, CAP_WRITE);
+
+	limit_standard_fd(STDIN_FILENO, ifd, ofd);
+	limit_standard_fd(STDOUT_FILENO, ifd, ofd);
+	limit_standard_fd(STDERR_FILENO, ifd, ofd);
+
+	if (ifd > STDERR_FILENO)
+		limit_rights(ifd, &rights_ro, "input", 0);
+	if (ofd > STDERR_FILENO)
+		limit_rights(ofd, &rights_wo, "output", 0);
+
+	caph_cache_catpages();
+	if (caph_enter() < 0)
+		err(1, "unable to enter capability mode");
+}
 
 static void
 printshuf(char *args[], int ind)
@@ -281,6 +348,7 @@ main(int argc, char *argv[])
 		errx(1, "extra operand '%s'", iflag == 1 ? *argv : *++argv);
 
 	if (eflag) {
+		enter_capability_mode(NULL);
 		if (argc == 0)
 			goto out;
 		delimiter = '\0';
@@ -292,6 +360,7 @@ main(int argc, char *argv[])
 	}
 
 	if (iflag) {
+		enter_capability_mode(NULL);
 		shufintegers(hi - lo + 1, lo);
 		goto out;
 	}
@@ -304,9 +373,7 @@ main(int argc, char *argv[])
 			err(1, "could not open %s", *argv);
 	}
 
-	/* Enter capability mode after all files are opened */
-	if (caph_enter() < 0)
-		err(1, "cap_enter");
+	enter_capability_mode(ifile);
 
 	if ((buf = malloc(bufsize)) == NULL)
 		err(1, "could not create initial shuffle buffer");
