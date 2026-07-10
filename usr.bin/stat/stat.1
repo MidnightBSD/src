@@ -37,7 +37,7 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl FHLnq
-.Op Fl f Ar format | Fl l | r | s | x
+.Op Fl c Ar format | Fl f Ar format | Fl l | r | s | x
 .Op Fl t Ar timefmt
 .Op Ar
 .Nm readlink
@@ -161,6 +161,44 @@ Display information using the specified format.
 See the
 .Sx Formats
 section for a description of valid formats.
+.It Fl c Ar format
+Display information using a subset of the GNU
+.Nm
+format syntax.
+This option is translated internally to the native
+.Fl f
+format syntax.
+The supported conversion specifiers are:
+.Cm \&%a ,
+.Cm \&%A ,
+.Cm \&%b ,
+.Cm \&%B ,
+.Cm \&%d ,
+.Cm \&%D ,
+.Cm \&%F ,
+.Cm \&%g ,
+.Cm \&%G ,
+.Cm \&%h ,
+.Cm \&%i ,
+.Cm \&%n ,
+.Cm \&%N ,
+.Cm \&%o ,
+.Cm \&%s ,
+.Cm \&%u ,
+.Cm \&%U ,
+.Cm \&%x ,
+.Cm \&%X ,
+.Cm \&%y ,
+.Cm \&%Y ,
+.Cm \&%z ,
+and
+.Cm \&%Z .
+The escape sequences
+.Cm \en ,
+.Cm \et ,
+and
+.Cm \e\e
+are also supported.
 .It Fl l
 Display output in
 .Nm ls Fl lT
@@ -183,8 +221,7 @@ This format is
 passed directly to
 .Xr strftime 3 .
 .It Fl x
-Display information in a more verbose way as known from some
-.Tn Linux
+Display information in a more verbose way as known from some Linux
 distributions.
 .El
 .Ss Formats
@@ -474,7 +511,9 @@ which default to
 .Ex -std stat readlink
 .Sh EXAMPLES
 If no options are specified, the default format is
-"%d %i %Sp %l %Su %Sg %r %z \e"%Sa\e" \e"%Sm\e" \e"%Sc\e" \e"%SB\e" %k %b %#Xf %N".
+.Bd -literal -offset indent -compact
+%d %i %Sp %l %Su %Sg %r %z "%Sa" "%Sm" "%Sc" "%SB" %k %b %#Xf %N
+.Ed
 .Bd -literal -offset indent
 \*[Gt] stat /tmp/bar
 0 78852 -rw-r--r-- 1 root wheel 0 0 "Jul  8 10:26:03 2004" "Jul  8 10:26:03 2004" "Jul  8 10:28:13 2004" "Jan  1 09:00:00 1970" 16384 0 0 /tmp/bar

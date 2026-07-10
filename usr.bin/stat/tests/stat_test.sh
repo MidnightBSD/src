@@ -45,6 +45,24 @@ F_flag_body()
 	atf_check -o match:'.* f\|' stat -Fn f
 }
 
+atf_test_case c_flag
+c_flag_head()
+{
+	atf_set	"descr" "Verify GNU-compatible -c format output"
+}
+c_flag_body()
+{
+	atf_check touch a
+	atf_check chmod 0640 a
+
+	expected="$(stat -f '%N|%z|%u|%Su|%g|%Sg|%OLp|%Sp|%i|%l|%m|%HT' a)"
+	atf_check -o inline:"$expected\n" \
+	    stat -c '%n|%s|%u|%U|%g|%G|%a|%A|%i|%h|%Y|%F' a
+
+	expected="$(stat -f 'size=%z\nname=%N\t%%' a)"
+	atf_check -o inline:"$expected\n" stat -c 'size=%s\nname=%n\t%%' a
+}
+
 atf_test_case l_flag
 l_flag_head()
 {
@@ -232,6 +250,7 @@ x_flag_body()
 atf_init_test_cases()
 {
 	atf_add_test_case F_flag
+	atf_add_test_case c_flag
 	#atf_add_test_case H_flag
 	#atf_add_test_case L_flag
 	#atf_add_test_case f_flag
