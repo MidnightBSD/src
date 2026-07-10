@@ -82,6 +82,89 @@ missing_file_body()
 	    tac missing input
 }
 
+atf_test_case separator
+separator_head()
+{
+	atf_set "descr" "reverse records separated by a string"
+}
+separator_body()
+{
+	printf "one:two:three:" >input
+	printf "three:two:one:" >expected
+
+	atf_check -s exit:0 -e empty -o file:expected tac -s : input
+	atf_check -s exit:0 -e empty -o file:expected \
+	    tac --separator=: input
+}
+
+atf_test_case separator_missing_final
+separator_missing_final_head()
+{
+	atf_set "descr" "preserve records without a final custom separator"
+}
+separator_missing_final_body()
+{
+	printf "one:two:three" >input
+	printf "threetwo:one:" >expected
+
+	atf_check -s exit:0 -e empty -o file:expected tac -s : input
+}
+
+atf_test_case before
+before_head()
+{
+	atf_set "descr" "attach separator to the following record"
+}
+before_body()
+{
+	printf "one:two:three:" >input
+	printf "::three:twoone" >expected
+
+	atf_check -s exit:0 -e empty -o file:expected tac -b -s : input
+	atf_check -s exit:0 -e empty -o file:expected \
+	    tac --before --separator=: input
+}
+
+atf_test_case regex_separator
+regex_separator_head()
+{
+	atf_set "descr" "reverse records separated by a basic regular expression"
+}
+regex_separator_body()
+{
+	printf "a12b345c" >input
+	printf "cb345a12" >expected
+
+	atf_check -s exit:0 -e empty -o file:expected \
+	    tac -r -s "[0-9][0-9]*" input
+}
+
+atf_test_case nul_separator
+nul_separator_head()
+{
+	atf_set "descr" "empty separator means NUL"
+}
+nul_separator_body()
+{
+	printf "a\\0b\\0c" >input
+	printf "cb\\0a\\0" >expected
+
+	atf_check -s exit:0 -e empty -o file:expected tac -s "" input
+}
+
+atf_test_case empty_regex_separator
+empty_regex_separator_head()
+{
+	atf_set "descr" "empty regex separators are rejected"
+}
+empty_regex_separator_body()
+{
+	printf "one\ntwo\n" >input
+
+	atf_check -s exit:1 -e match:"separator cannot be empty" -o empty \
+	    tac -r -s "" input
+}
+
 atf_init_test_cases()
 {
 	atf_add_test_case basic
@@ -90,4 +173,10 @@ atf_init_test_cases()
 	atf_add_test_case multiple_files
 	atf_add_test_case empty_file
 	atf_add_test_case missing_file
+	atf_add_test_case separator
+	atf_add_test_case separator_missing_final
+	atf_add_test_case before
+	atf_add_test_case regex_separator
+	atf_add_test_case nul_separator
+	atf_add_test_case empty_regex_separator
 }

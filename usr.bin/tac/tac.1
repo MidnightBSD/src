@@ -32,13 +32,15 @@
 .Nd concatenate and print files in reverse line order
 .Sh SYNOPSIS
 .Nm
+.Op Fl br
+.Op Fl s Ar separator
 .Op Ar file ...
 .Sh DESCRIPTION
 The
 .Nm
 utility reads each
 .Ar file
-operand and writes its lines to the standard output in reverse order.
+operand and writes its records to the standard output in reverse order.
 If no
 .Ar file
 operands are specified, or if a
@@ -47,6 +49,21 @@ operand is a single dash
 .Pq Sq Fl ,
 .Nm
 reads from the standard input.
+.Pp
+Records are separated by newline characters by default.
+The options are as follows:
+.Bl -tag -width indent
+.It Fl b , Fl -before
+Attach the separator to the beginning of the record that it precedes
+instead of to the end of the record that it follows.
+.It Fl r , Fl -regex
+Treat the separator as a basic regular expression.
+.It Fl s Ar separator , Fl -separator Ns = Ns Ar separator
+Use
+.Ar separator
+as the record separator instead of newline.
+An empty separator is treated as a NUL byte.
+.El
 .Pp
 When multiple files are specified, each file is reversed independently
 and files are processed in command-line order.
