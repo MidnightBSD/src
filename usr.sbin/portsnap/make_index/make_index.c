@@ -311,9 +311,19 @@ recurse(PORT * p)
 		p->recursed = 1;
 		break;
 	case 1:
-		/* We're in the middle of recursing this port */
-		errx(1, "Circular dependency loop found: %s"
-		    " depends upon itself.\n", p->pkgname);
+		/*
+		 * We followed a dependency cycle back to a port that is
+		 * still in the middle of being recursed.  This happens
+		 * with flavored bootstrap chains: e.g. devel/glib20's
+		 * "default" and "bootstrap" flavors share a single port
+		 * directory, so a dependency recorded against that
+		 * directory can resolve to either flavor and close a
+		 * loop.  Break the cycle instead of aborting the entire
+		 * INDEX; the direct dependency edge is already recorded,
+		 * and this matches the behaviour of Tools/make_index.
+		 */
+		warnx("Breaking dependency cycle at %s", p->pkgname);
+		return;
 	case 2:
 		/* This port has already been recursed */
 		return;
