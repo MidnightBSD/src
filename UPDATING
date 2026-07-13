@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users.
 
+20260713:
+	pam_xdg(8) is now also enabled in the system PAM policy, so console
+	logins via login(1) get XDG_RUNTIME_DIR.  sshd and su declare their
+	own session stacks and are unaffected.  Run etcupdate/mergemaster
+	after installworld to pick up /etc/pam.d/system.
+
 20260712:
 	pam_xdg(8): new PAM session module providing XDG_RUNTIME_DIR under
 	/var/run/xdg/$USER.  It is enabled as a required session module in
