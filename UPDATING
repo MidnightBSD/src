@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users.
 
+20260722:
+	libarchive 3.8.8: fixes CVE-2026-14164, a double-free in the RAR5
+	reader (archive_read_support_format_rar5.c) that could crash
+	applications parsing a crafted RAR5 archive.  Rebuild world and
+	restart applications that use libarchive.
+
 20260701:
 	openssl: CVE-2026-45447 PKCS#7/S/MIME verification
 	use-after-free fix. Rebuild world and restart applications using
