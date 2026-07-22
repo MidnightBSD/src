@@ -19,6 +19,5 @@ CFLAGS+=	-DNDEBUG
 .PATH: ${LCRYPTO_SRC}/engines
 
 LIBADD=		crypto
-LDFLAGS+=	-L${OBJTOP}/secure/lib/libcrypto
 
 WARNS?=		0
