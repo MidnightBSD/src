@@ -1372,7 +1372,7 @@ free_sconv_object(struct archive_string_conv *sc)
 }
 
 #if defined(_WIN32) && !defined(__CYGWIN__)
-# if defined(WINAPI_FAMILY_PARTITION) && !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+# if !WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
 #  define GetOEMCP() CP_OEMCP
 # endif
 
