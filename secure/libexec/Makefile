@@ -3,7 +3,7 @@
 
 SUBDIR=
 .if ${MK_OPENSSH} != "no"
-SUBDIR+=sftp-server ssh-keysign ssh-pkcs11-helper ssh-sk-helper sshd-session
+SUBDIR+=sftp-server ssh-keysign ssh-pkcs11-helper ssh-sk-helper sshd-auth sshd-session
 .endif
 
 SUBDIR.${MK_TESTS}+= tests
