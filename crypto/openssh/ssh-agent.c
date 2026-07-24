@@ -63,7 +63,7 @@
 #include <time.h>
 #include <unistd.h>
 #ifdef HAVE_UTIL_H
-# include <util.h>
+#include <util.h>
 #endif
 
 #include "xmalloc.h"
@@ -2240,7 +2240,7 @@ static void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: ssh-agent [-c | -s] [-DdTU] [-a bind_address] [-E fingerprint_hash]\n"
+	    "usage: ssh-agent [-c | -s] [-DdTUx] [-a bind_address] [-E fingerprint_hash]\n"
 	    "                 [-O option] [-P allowed_providers] [-t life]\n"
 	    "       ssh-agent [-TU] [-a bind_address] [-E fingerprint_hash] [-O option]\n"
 	    "                 [-P allowed_providers] [-t life] command [arg ...]\n"
@@ -2293,7 +2293,7 @@ main(int ac, char **av)
 	__progname = ssh_get_progname(av[0]);
 	seed_rng();
 
-	while ((ch = getopt(ac, av, "cDdksTuUE:a:O:P:t:")) != -1) {
+	while ((ch = getopt(ac, av, "cDdksTuUxE:a:O:P:t:")) != -1) {
 		switch (ch) {
 		case 'E':
 			fingerprint_hash = ssh_digest_alg_by_name(optarg);
@@ -2358,6 +2358,9 @@ main(int ac, char **av)
 			break;
 		case 'U':
 			U_flag++;
+			break;
+		case 'x':
+			xcount = 0;
 			break;
 		default:
 			usage();

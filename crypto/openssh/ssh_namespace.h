@@ -9,7 +9,6 @@
 #define Blowfish_initstate			Fssh_Blowfish_initstate
 #define Blowfish_stream2word			Fssh_Blowfish_stream2word
 #define Decode					Fssh_Decode
-#define EVP_CIPHER_CTX_get_iv			Fssh_EVP_CIPHER_CTX_get_iv
 #define EVP_CIPHER_CTX_set_iv			Fssh_EVP_CIPHER_CTX_set_iv
 #define Encode					Fssh_Encode
 #define Hide					Fssh_Hide
@@ -225,6 +224,9 @@
 #define crypto_kem_sntrup761_enc		Fssh_crypto_kem_sntrup761_enc
 #define crypto_kem_sntrup761_keypair		Fssh_crypto_kem_sntrup761_keypair
 #define crypto_scalarmult_curve25519		Fssh_crypto_scalarmult_curve25519
+#define crypto_sign_ed25519			Fssh_crypto_sign_ed25519
+#define crypto_sign_ed25519_keypair		Fssh_crypto_sign_ed25519_keypair
+#define crypto_sign_ed25519_open		Fssh_crypto_sign_ed25519_open
 #define daemonized				Fssh_daemonized
 #define dangerous_locale			Fssh_dangerous_locale
 #define default_key_sign			Fssh_default_key_sign
@@ -991,6 +993,9 @@
 #define strvis					Fssh_strvis
 #define strvisx					Fssh_strvisx
 #define subprocess				Fssh_subprocess
+#define sys_tun_infilter			Fssh_sys_tun_infilter
+#define sys_tun_open				Fssh_sys_tun_open
+#define sys_tun_outfilter			Fssh_sys_tun_outfilter
 #define tilde_expand				Fssh_tilde_expand
 #define tilde_expand_filename			Fssh_tilde_expand_filename
 #define timeout_connect				Fssh_timeout_connect

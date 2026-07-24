@@ -1030,8 +1030,6 @@ do_setup_env(struct ssh *ssh, Session *s, const char *shell)
 	/* Normal systems set SHELL by default. */
 	child_set_env(&env, &envsize, "SHELL", shell);
 
-	if (getenv("TZ"))
-		child_set_env(&env, &envsize, "TZ", getenv("TZ"));
 #ifdef HAVE_LOGIN_CAP
 	if (getenv("XDG_RUNTIME_DIR")) {
 		child_set_env(&env, &envsize, "XDG_RUNTIME_DIR",

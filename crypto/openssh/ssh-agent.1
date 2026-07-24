@@ -43,7 +43,7 @@
 .Sh SYNOPSIS
 .Nm ssh-agent
 .Op Fl c | s
-.Op Fl \&DdTU
+.Op Fl \&DdTUx
 .Op Fl a Ar bind_address
 .Op Fl E Ar fingerprint_hash
 .Op Fl O Ar option
@@ -203,6 +203,8 @@ and then exit immediately.
 If this option is given twice,
 .Nm
 will delete stale agent sockets regardless of the host name that created them.
+.It Fl x
+Exit after the last client has disconnected.
 .It Ar command Op Ar arg ...
 If a command (and optional arguments) is given,
 this is executed as a subprocess of the agent.

@@ -15,6 +15,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "includes.h"
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -30,7 +32,6 @@
 #include <unistd.h>
 
 #include "digest.h"
-#include "includes.h"
 #include "log.h"
 #include "misc.h"
 #include "pathnames.h"
@@ -39,8 +40,7 @@
 
 /* stuff shared by agent listeners (ssh-agent and sshd agent forwarding) */
 
-#define SOCKET_HOSTNAME_HASHLEN 10 /* length of hostname hash in socket path \
-				    */
+#define SOCKET_HOSTNAME_HASHLEN 10 /* length of hostname hash in socket path */
 
 /* used for presenting random strings in unix_listener_tmp and hostname_hash */
 static const char presentation_chars[] =
@@ -64,15 +64,15 @@ hostname_hash(size_t len)
 		error_f("gethostname: %s", strerror(errno));
 		return NULL;
 	}
-	if ((r = ssh_digest_memory(SSH_DIGEST_SHA512, hostname,
-		 strlen(hostname), hash, sizeof(hash))) != 0) {
+	if ((r = ssh_digest_memory(SSH_DIGEST_SHA512,
+	    hostname, strlen(hostname), hash, sizeof(hash))) != 0) {
 		error_fr(r, "ssh_digest_memory");
 		return NULL;
 	}
 	memset(p, '\0', sizeof(p));
 	for (i = 0; i < l; i++)
-		p[i] = presentation_chars[hash[i] %
-		    (sizeof(presentation_chars) - 1)];
+		p[i] = presentation_chars[
+		    hash[i] % (sizeof(presentation_chars) - 1)];
 	/* debug3_f("hostname \"%s\" => hash \"%s\"", hostname, p); */
 	p[len] = '\0';
 	return xstrdup(p);
@@ -108,13 +108,13 @@ unix_listener_tmp(char *path, int backlog)
 		sock = -1;
 		/* Randomise path suffix */
 		for (i = xstart; path[i] != '\0'; i++) {
-			path[i] = presentation_chars[arc4random_uniform(
-			    sizeof(presentation_chars) - 1)];
+			path[i] = presentation_chars[
+			    arc4random_uniform(sizeof(presentation_chars)-1)];
 		}
 		debug_f("trying path \"%s\"", path);
 
-		if (strlcpy(sunaddr.sun_path, path, sizeof(sunaddr.sun_path)) >=
-		    sizeof(sunaddr.sun_path)) {
+		if (strlcpy(sunaddr.sun_path, path,
+		    sizeof(sunaddr.sun_path)) >= sizeof(sunaddr.sun_path)) {
 			error_f("path \"%s\" too long for Unix domain socket",
 			    path);
 			break;
@@ -124,11 +124,11 @@ unix_listener_tmp(char *path, int backlog)
 			error_f("socket: %.100s", strerror(errno));
 			break;
 		}
-		if (bind(sock, (struct sockaddr *)&sunaddr, sizeof(sunaddr)) ==
-		    -1) {
+		if (bind(sock, (struct sockaddr *)&sunaddr,
+		    sizeof(sunaddr)) == -1) {
 			if (errno == EADDRINUSE) {
-				error_f("bind \"%s\": %.100s", path,
-				    strerror(errno));
+				error_f("bind \"%s\": %.100s",
+				    path, strerror(errno));
 				close(sock);
 				sock = -1;
 				continue;
@@ -144,8 +144,8 @@ unix_listener_tmp(char *path, int backlog)
 	}
 	umask(prev_mask);
 	if (good) {
-		debug3_f("listening on unix socket \"%s\" as fd=%d", path,
-		    sock);
+		debug3_f("listening on unix socket \"%s\" as fd=%d",
+		    path, sock);
 	} else if (sock != -1) {
 		close(sock);
 		sock = -1;
@@ -184,6 +184,7 @@ agent_prepare_sockdir(const char *homedir)
 	return 0;
 }
 
+
 /* Get a path template for an agent socket in the user's homedir */
 static char *
 agent_socket_template(const char *homedir, const char *tag)
@@ -192,8 +193,8 @@ agent_socket_template(const char *homedir, const char *tag)
 
 	if ((hostnamehash = hostname_hash(SOCKET_HOSTNAME_HASHLEN)) == NULL)
 		return NULL;
-	xasprintf(&ret, "%s/%s/s.%s.%s.XXXXXXXXXX", homedir,
-	    _PATH_SSH_AGENT_SOCKET_DIR, hostnamehash, tag);
+	xasprintf(&ret, "%s/%s/s.%s.%s.XXXXXXXXXX",
+	    homedir, _PATH_SSH_AGENT_SOCKET_DIR, hostnamehash, tag);
 	free(hostnamehash);
 	return ret;
 }
@@ -231,8 +232,8 @@ socket_is_stale(const char *path)
 	/* attempt non-blocking connect on socket */
 	memset(&sunaddr, '\0', sizeof(sunaddr));
 	sunaddr.sun_family = AF_UNIX;
-	if (strlcpy(sunaddr.sun_path, path, sizeof(sunaddr.sun_path)) >=
-	    sizeof(sunaddr.sun_path)) {
+	if (strlcpy(sunaddr.sun_path, path,
+	    sizeof(sunaddr.sun_path)) >= sizeof(sunaddr.sun_path)) {
 		debug_f("path for \"%s\" too long for sockaddr_un", path);
 		return 0;
 	}
@@ -263,10 +264,10 @@ socket_is_stale(const char *path)
 }
 
 #ifndef HAVE_FSTATAT
-#define fstatat(x, y, buf, z) lstat(path, buf)
+# define fstatat(x, y, buf, z) lstat(path, buf)
 #endif
 #ifndef HAVE_UNLINKAT
-#define unlinkat(x, y, z) unlink(path)
+# define unlinkat(x, y, z) unlink(path)
 #endif
 
 void
@@ -313,11 +314,10 @@ agent_cleanup_stale(const char *homedir, int ignore_hosthash)
 		if (dp->d_type != DT_SOCK && dp->d_type != DT_UNKNOWN)
 			continue;
 #endif
-		if (fstatat(dirfd(d), dp->d_name, &sb, AT_SYMLINK_NOFOLLOW) !=
-			0 &&
-		    errno != ENOENT) {
-			error_f("stat \"%s/%s\": %s", dirpath, dp->d_name,
-			    strerror(errno));
+		if (fstatat(dirfd(d), dp->d_name,
+		    &sb, AT_SYMLINK_NOFOLLOW) != 0 && errno != ENOENT) {
+			error_f("stat \"%s/%s\": %s",
+			    dirpath, dp->d_name, strerror(errno));
 			continue;
 		}
 		if (!S_ISSOCK(sb.st_mode))
@@ -330,15 +330,14 @@ agent_cleanup_stale(const char *homedir, int ignore_hosthash)
 		mtimp = &sub;
 #endif
 		if (timespeccmp(mtimp, &now, >)) {
-			debug3_f("Ignoring recent socket \"%s/%s\"", dirpath,
-			    dp->d_name);
+			debug3_f("Ignoring recent socket \"%s/%s\"",
+			    dirpath, dp->d_name);
 			continue;
 		}
 		if (!ignore_hosthash &&
 		    strncmp(dp->d_name, prefix, strlen(prefix)) != 0) {
 			debug3_f("Ignoring socket \"%s/%s\" "
-				 "from different host",
-			    dirpath, dp->d_name);
+			    "from different host", dirpath, dp->d_name);
 			continue;
 		}
 		if (socket_is_stale(path)) {
@@ -346,7 +345,7 @@ agent_cleanup_stale(const char *homedir, int ignore_hosthash)
 			unlinkat(dirfd(d), dp->d_name, 0);
 		}
 	}
-out:
+ out:
 	if (d != NULL)
 		closedir(d);
 	free(path);

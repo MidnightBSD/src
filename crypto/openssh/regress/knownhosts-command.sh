@@ -49,6 +49,6 @@ test "x\$1" = "x$keytype" || die "wrong keytype \$1 (expected $keytype)"
 test "x\$3" = "x$LOGNAME" || die "wrong username \$3 (expected $LOGNAME)"
 grep -- "\$1.*\$2" $OBJ/known_hosts
 _EOF
-	${SSH} -F $OBJ/ssh_proxy -oHostKeyAlgorithms=$keytype x true ||
+	${SSH} -F $OBJ/ssh_proxy -oHostKeyAlgorithms=$algs x true ||
 	    fail "ssh connect failed for keytype $x"
 done
