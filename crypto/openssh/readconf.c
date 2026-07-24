@@ -39,7 +39,7 @@
 #include <stdarg.h>
 #include <unistd.h>
 #ifdef HAVE_UTIL_H
-# include <util.h>
+#include <util.h>
 #endif
 #if defined(HAVE_STRNVIS) && defined(HAVE_VIS_H) && !defined(BROKEN_STRNVIS)
 # include <vis.h>
