@@ -17,6 +17,7 @@ ATF_TESTS_SH+=	if_vlan
 ATF_TESTS_SH+=	if_wg
 
 TESTS_SUBDIRS+=	routing
+TESTS_SUBDIRS+=	wg
 
 # The tests are written to be run in parallel, but doing so leads to random
 # panics.  I think it's because the kernel's list of interfaces isn't properly

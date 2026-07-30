@@ -1,6 +1,13 @@
 Updating Information for MidnightBSD users.
 
 20260730:
+	wg: CVE-2026-58085 missing MAC validation in wg(4) packet decryption.
+	The driver did not check whether the OpenCrypto framework's Poly1305
+	verification succeeded, so it silently accepted transport data packets
+	with an invalid authentication tag.  Rebuild and reboot the kernel, or
+	reload if_wg.ko.
+
+20260730:
 	tzdata 2026c
 
 	Notable changes since 2025c: Moldova has used EU transition times
