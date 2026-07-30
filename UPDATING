@@ -1,5 +1,15 @@
 Updating Information for MidnightBSD users.
 
+20260730:
+	tzdata 2026c
+
+	Notable changes since 2025c: Moldova has used EU transition times
+	since 2022; British Columbia moved to permanent -07 on 2026-03-09;
+	Alberta moved to permanent -06 on 2026-06-18; Morocco and Western
+	Sahara move to permanent +00 on 2026-09-20.  Rebuild and install
+	world, or reinstall share/zoneinfo, then rerun tzsetup(8) if your
+	zone is affected.
+
 20260722:
 	libarchive 3.8.8: fixes CVE-2026-14164, a double-free in the RAR5
 	reader (archive_read_support_format_rar5.c) that could crash
