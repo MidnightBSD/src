@@ -7,52 +7,40 @@ NAME
 SYNOPSIS
        #include <time.h>
 
-       [[deprecated]] char *ctime(time_t const *clock);
-
-       /* Only in POSIX.1-2017 and earlier.  */
-       char *ctime_r(time_t const *clock, char *buf);
-
-       double difftime(time_t time1, time_t time0);
-
-       [[deprecated]] char *asctime(struct tm const *tm);
-
-       /* Only in POSIX.1-2017 and earlier.  */
-       char *asctime_r(struct tm const *restrict tm,
-           char *restrict result);
-
        struct tm *localtime(time_t const *clock);
-
        struct tm *localtime_r(time_t const *restrict clock,
            struct tm *restrict result);
-
        struct tm *localtime_rz(timezone_t restrict zone,
            time_t const *restrict clock,
            struct tm *restrict result);
 
        struct tm *gmtime(time_t const *clock);
-
        struct tm *gmtime_r(time_t const *restrict clock,
            struct tm *restrict result);
 
        time_t mktime(struct tm *tm);
-
        time_t mktime_z(timezone_t restrict zone,
            struct tm *restrict tm);
+
+       double difftime(time_t time1, time_t time0);
+
+       [[deprecated]] char *asctime(struct tm const *tm);
+       [[deprecated]] char *ctime(time_t const *clock);
+
+       /* Only in POSIX.1-2017 and earlier.  */
+       char *ctime_r(time_t const *clock, char *buf);
+       char *asctime_r(struct tm const *restrict tm,
+           char *restrict result);
 
        cc ... -ltz
 
 DESCRIPTION
-       The ctime function converts a long integer, pointed to by clock, and
-       returns a pointer to a string of the form
-                            Thu Nov 24 18:22:48 1986\n\0
-       Years requiring fewer than four characters are padded with leading
-       zeroes.  For years longer than four characters, the string is of the
-       form
-                          Thu Nov 24 18:22:48     81986\n\0
-       with five spaces before the year.  These unusual formats are designed
-       to make it less likely that older software that expects exactly 26
-       bytes of output will mistakenly output misleading values for out-of-
-       range years.
+       The localtime and gmtime functions convert an integer, pointed to by
+       clock, and return pointers to “tm” structures, described below.  If the
+       integer is out of range for conversion, these functions return a null
+       pointer.  The localtime function corrects for the time zone and any
+       time zone adjustments (such as Daylight Saving Time in the United
+       States).  The gmtime function converts to Coordinated Universal Time.
 
        The *clock timestamp represents the time in seconds since 1970-01-01
        00:00:00 Coordinated Universal Time (UTC).  The POSIX standard says
@@ -61,21 +49,6 @@ DESCRIPTION
        therefore represent timestamps that predate the introduction of UTC and
        are some other flavor of Universal Time (UT).  Some implementations
        support leap seconds, in contradiction to POSIX.
-
-       The ctime function is deprecated starting in C23.  Callers can use
-       localtime_r and strftime instead.
-
-       The localtime and gmtime functions return pointers to "tm" structures,
-       described below.  The localtime function corrects for the time zone and
-       any time zone adjustments (such as Daylight Saving Time in the United
-       States).
-
-       The gmtime function converts to Coordinated Universal Time.
-
-       The asctime function converts a time value contained in a "tm"
-       structure to a string, as shown in the above example, and returns a
-       pointer to the string.  This function is deprecated starting in C23.
-       Callers can use strftime instead.
 
        The mktime function converts the broken-down time, expressed as local
        time, in the structure pointed to by tm into a calendar time value with
@@ -104,6 +77,23 @@ DESCRIPTION
        The difftime function returns the difference between two calendar
        times, (time1 - time0), expressed in seconds.
 
+       The asctime function converts a time value contained in a “tm”
+       structure to a pointer to a string of the form
+                            Thu Nov 24 18:22:48 1986\n\0
+       Years requiring fewer than four characters are padded with leading
+       zeroes.  For years longer than four characters, the string is of the
+       form
+                          Thu Nov 24 18:22:48     81986\n\0
+       with five spaces before the year.  This unusual format is designed to
+       make it less likely that older software that expects exactly 26 bytes
+       of output will mistakenly output misleading values for out-of-range
+       years.  This function is deprecated starting in C23.  Callers can use
+       strftime instead.
+
+       The ctime function is equivalent to calling localtime and then calling
+       asctime on the result.  Like asctime, this function is deprecated
+       starting in C23.  Callers can use localtime and strftime instead.
+
        The ctime_r, localtime_r, gmtime_r, and asctime_r functions are like
        their unsuffixed counterparts, except that they accept an additional
        argument specifying where to store the result if successful.  The
@@ -118,18 +108,18 @@ DESCRIPTION
        should not be freed until after all uses (e.g., by calls to strftime)
        of the filled-in tm_zone fields.
 
-       Declarations of all the functions and externals, and the "tm"
+       Declarations of all the functions and externals, and the “tm”
        structure, are in the <time.h> header file.  The structure (of type)
        struct tm includes the following fields:
 
-                int tm_sec;      /* seconds (0-60) */
-                int tm_min;      /* minutes (0-59) */
-                int tm_hour;     /* hours (0-23) */
-                int tm_mday;     /* day of month (1-31) */
-                int tm_mon;      /* month of year (0-11) */
+                int tm_sec;      /* seconds (0–60) */
+                int tm_min;      /* minutes (0–59) */
+                int tm_hour;     /* hours (0–23) */
+                int tm_mday;     /* day of month (1–31) */
+                int tm_mon;      /* month of year (0–11) */
                 int tm_year;     /* year - 1900 */
                 int tm_wday;     /* day of week (Sunday = 0) */
-                int tm_yday;     /* day of year (0-365) */
+                int tm_yday;     /* day of year (0–365) */
                 int tm_isdst;    /* is daylight saving time in effect? */
                 char *tm_zone;   /* time zone abbreviation (optional) */
                 long tm_gmtoff;  /* offset from UT in seconds (optional) */
@@ -154,10 +144,9 @@ DESCRIPTION
        older platforms, as required by POSIX.
 
 FILES
-       /etc/localtime                  local timezone file
-       /usr/share/zoneinfo             timezone directory
-       /usr/share/zoneinfo/posixrules  default DST rules (obsolete)
-       /usr/share/zoneinfo/GMT         for UTC leap seconds
+       /etc/localtime           local timezone file
+       /usr/share/zoneinfo      timezone directory
+       /usr/share/zoneinfo/GMT  for UTC leap seconds
 
        If /usr/share/zoneinfo/GMT is absent, UTC leap seconds are loaded from
        /usr/share/zoneinfo/GMT0 if present.
