@@ -859,7 +859,9 @@ kern_semctl(struct thread *td, int semid, int semnum, int cmd,
 		 * sequence number unless exactly 0x8000 (or a
 		 * multiple thereof) semaphore sets for the same index
 		 * are created and destroyed while we are in malloc!
-		 *
+		 * The sequence number is only 15 bits wide and wraps,
+		 * so it cannot be relied upon alone; re-validate the
+		 * count explicitly before touching the buffer.
 		 */
 		count = semakptr->u.sem_nsems;
 		mtx_unlock(sema_mtxp);
@@ -867,7 +869,10 @@ kern_semctl(struct thread *td, int semid, int semnum, int cmd,
 		mtx_lock(sema_mtxp);
 		if ((error = semvalid(semid, rpr, semakptr)) != 0)
 			goto done2;
-		KASSERT(count == semakptr->u.sem_nsems, ("nsems changed"));
+		if (count != semakptr->u.sem_nsems) {
+			error = EIDRM;
+			goto done2;
+		}
 		if ((error = ipcperm(td, &semakptr->u.sem_perm, IPC_R)))
 			goto done2;
 		for (i = 0; i < semakptr->u.sem_nsems; i++)
@@ -923,7 +928,10 @@ kern_semctl(struct thread *td, int semid, int semnum, int cmd,
 			break;
 		if ((error = semvalid(semid, rpr, semakptr)) != 0)
 			goto done2;
-		KASSERT(count == semakptr->u.sem_nsems, ("nsems changed"));
+		if (count != semakptr->u.sem_nsems) {
+			error = EIDRM;
+			goto done2;
+		}
 		if ((error = ipcperm(td, &semakptr->u.sem_perm, IPC_W)))
 			goto done2;
 		for (i = 0; i < semakptr->u.sem_nsems; i++) {
