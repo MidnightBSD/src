@@ -1,5 +1,19 @@
 Updating Information for MidnightBSD users.
 
+20260801:
+	tzcode 2026c (from 2024b).  zic(8) and the libc time functions are
+	updated; several zic integer overflow fixes are included.  Compiled
+	TZif output is unchanged for 595 of 598 zones; Asia/Ho_Chi_Minh,
+	Asia/Saigon and Asia/Tbilisi are a few bytes smaller but describe
+	identical transitions, and are readable by older binaries.
+
+	One user-visible change: the Factory placeholder zone's abbreviation
+	is now scrubbed of characters that are invalid in a time zone
+	abbreviation, so date(1) reports
+	"Local_time_zone_must_be_set--use_tzsetup" rather than the same text
+	with spaces.  This affects only systems that have not yet run
+	tzsetup(8).  Rebuild and install world.
+
 20260730:
 	wg: CVE-2026-58085 missing MAC validation in wg(4) packet decryption.
 	The driver did not check whether the OpenCrypto framework's Poly1305
