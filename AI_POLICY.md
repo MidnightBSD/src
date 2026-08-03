@@ -35,7 +35,11 @@ To maintain transparency in our git history, please follow these conventions:
 Commit Trailers
 If AI assisted in the creation of a commit, add the following tag to the end of your commit message:
 
-AI-Assisted-by: [Tool Name] (e.g., AI-Assisted-by: Claude 3.7)
+AI-Assisted-by: [Tool Name] (e.g., AI-Assisted-by: Claude Opus 5)
+
+Name the model that actually did the work. The model above is only an example:
+record the one in use at the time of the commit rather than copying a name from
+this file or from an earlier commit.
 
 Pull Request Checklist
 Every PR must check the following:
