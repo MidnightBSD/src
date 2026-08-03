@@ -16,7 +16,11 @@ See `AI_POLICY.md` for the full policy. Key rules:
 - **Shell (sh)**: Permitted, but must be POSIX-compliant. Avoid Bash-isms.
 - **Documentation**: Encouraged.
 
-When AI assists in a commit, add the trailer: `AI-Assisted-by: Claude Sonnet 4.6`
+When AI assists in a commit, add an `AI-Assisted-by:` trailer naming the model
+that actually did the work — for example `AI-Assisted-by: Claude Opus 5`. The
+model name here is only an example: always record the model in use at the time
+of the commit rather than copying a name from this file or from an earlier
+commit.
 
 ## Contribution Requirements
 
