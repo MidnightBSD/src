@@ -5905,6 +5905,13 @@ iflib_device_deregister(if_ctx_t ctx)
 	iflib_unregister_vlan_handlers(ctx);
 
 	iflib_netmap_detach(ifp);
+	/*
+	 * A task that passed its IFC_IN_DETACH check before the flag was set
+	 * can still report a link change.  Drain every private task before
+	 * ether_ifdetach() performs the final if_linktask drain.  Drivers may
+	 * register their own link-related tasks on this taskqueue.
+	 */
+	taskqgroup_drain_all(qgroup_if_config_tqg);
 	ether_ifdetach(ifp);
 
 	CTX_LOCK(ctx);
