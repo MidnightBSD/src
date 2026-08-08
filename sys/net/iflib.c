@@ -173,7 +173,7 @@ struct iflib_ctx {
 	uint32_t ifc_rx_mbuf_sz;
 
 	int ifc_link_state;
-	int ifc_watchdog_events;
+	uint32_t ifc_tx_watchdog_events;
 	struct cdev *ifc_led_dev;
 	struct resource *ifc_msix_mem;
 
@@ -4248,7 +4248,7 @@ _task_fn_admin(void *context)
 		CALLOUT_UNLOCK(txq);
 	}
 	if (do_watchdog) {
-		ctx->ifc_watchdog_events++;
+		ctx->ifc_tx_watchdog_events++;
 		IFDI_WATCHDOG_RESET(ctx);
 	}
 	IFDI_UPDATE_ADMIN_STATUS(ctx);
@@ -7138,6 +7138,9 @@ iflib_add_device_sysctl_pre(if_ctx_t ctx)
 
 	SYSCTL_ADD_CONST_STRING(ctx_list, oid_list, OID_AUTO, "driver_version",
 	    CTLFLAG_RD, ctx->ifc_sctx->isc_driver_version, "driver version");
+	SYSCTL_ADD_U32(ctx_list, oid_list, OID_AUTO,
+	    "tx_watchdog_events", CTLFLAG_RD, &ctx->ifc_tx_watchdog_events, 0,
+	    "TX watchdog resets initiated by iflib");
 
 	SYSCTL_ADD_U16(ctx_list, oid_list, OID_AUTO, "override_ntxqs",
 	    CTLFLAG_RWTUN, &ctx->ifc_sysctl_ntxqs, 0,
