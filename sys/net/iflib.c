@@ -35,6 +35,7 @@
 #include <sys/types.h>
 #include <sys/bus.h>
 #include <sys/eventhandler.h>
+#include <sys/fail.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
@@ -579,6 +580,15 @@ TASKQGROUP_DEFINE(if_config_tqg, 1, 1);
 
 static SYSCTL_NODE(_net, OID_AUTO, iflib, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
     "iflib driver parameters");
+
+static SYSCTL_NODE(_debug_fail_point, OID_AUTO, iflib,
+    CTLFLAG_RW | CTLFLAG_MPSAFE, 0, "iflib fail points");
+
+static char iflib_register_fail_device[32];
+SYSCTL_STRING(_debug_fail_point_iflib, OID_AUTO, register_device,
+    CTLFLAG_RW | CTLFLAG_MPSAFE,
+    iflib_register_fail_device, sizeof(iflib_register_fail_device),
+    "device name eligible for registration fail points");
 
 /*
  * XXX need to ensure that this can't accidentally cause the head to be moved backwards
@@ -5352,6 +5362,30 @@ unref_ctx_core_offset(if_ctx_t ctx)
 	mtx_unlock(&cpu_offset_mtx);
 }
 
+static bool
+iflib_register_fail_device_matches(device_t dev)
+{
+	const char *nameunit;
+
+	nameunit = device_get_nameunit(dev);
+	return (iflib_register_fail_device[0] != '\0' && nameunit != NULL &&
+	    strcmp(nameunit, iflib_register_fail_device) == 0);
+}
+
+#define	IFLIB_REGISTER_FAIL_POINT(_dev, _name, _error, _label) do { \
+	KFAIL_POINT_CODE_COND(_debug_fail_point_iflib, _name, \
+	    iflib_register_fail_device_matches((_dev)), \
+	    FAIL_POINT_NONSLEEPABLE, { \
+		(_error) = RETURN_VALUE; \
+		if ((_error) <= 0) \
+			(_error) = EIO; \
+		device_printf((_dev), \
+		    "injecting iflib registration failure at %s: %d\n", \
+		    #_name, (_error)); \
+		goto _label; \
+	}); \
+} while (0)
+
 int
 iflib_device_register(device_t dev, void *sc, if_shared_ctx_t sctx, if_ctx_t *ctxp)
 {
@@ -5394,11 +5428,15 @@ iflib_device_register(device_t dev, void *sc, if_shared_ctx_t sctx, if_ctx_t *ct
 
 	iflib_reset_qvalues(ctx);
 	CTX_LOCK(ctx);
+	IFLIB_REGISTER_FAIL_POINT(dev, register_before_attach_pre, err,
+	    fail_unlock);
 	if ((err = IFDI_ATTACH_PRE(ctx)) != 0) {
 		device_printf(dev, "IFDI_ATTACH_PRE failed %d\n", err);
 		goto fail_unlock;
 	}
 	attach_pre_succeeded = true;
+	IFLIB_REGISTER_FAIL_POINT(dev, register_after_attach_pre, err,
+	    fail_unlock);
 	_iflib_pre_assert(scctx);
 	ctx->ifc_txrx = *scctx->isc_txrx;
 
@@ -5473,6 +5511,8 @@ iflib_device_register(device_t dev, void *sc, if_shared_ctx_t sctx, if_ctx_t *ct
 	GROUPTASK_INIT(&ctx->ifc_vflr_task, 0, _task_fn_iov, ctx);
 	taskqgroup_attach(qgroup_if_config_tqg, &ctx->ifc_vflr_task, ctx,
 	    NULL, NULL, "vflr");
+	IFLIB_REGISTER_FAIL_POINT(dev, register_after_taskqueue, err,
+	    fail_unlock);
 
 	/* Set up cpu set.  If it fails, use the set of all CPUs. */
 	if (bus_get_cpus(dev, INTR_CPUS, sizeof(ctx->ifc_cpus), &ctx->ifc_cpus) != 0) {
@@ -5502,6 +5542,8 @@ iflib_device_register(device_t dev, void *sc, if_shared_ctx_t sctx, if_ctx_t *ct
 		scctx->isc_intr = IFLIB_INTR_LEGACY;
 		msix = 0;
 	}
+	IFLIB_REGISTER_FAIL_POINT(dev, register_after_interrupts, err,
+	    fail_unlock);
 	/* Get memory for the station queues */
 	if ((err = iflib_queues_alloc(ctx))) {
 		device_printf(dev, "Unable to allocate queue memory\n");
@@ -5516,6 +5558,8 @@ iflib_device_register(device_t dev, void *sc, if_shared_ctx_t sctx, if_ctx_t *ct
 	 * Now that we know how many queues there are, get the core offset.
 	 */
 	ctx->ifc_sysctl_core_offset = get_ctx_core_offset(ctx);
+	IFLIB_REGISTER_FAIL_POINT(dev, register_after_queues, err,
+	    fail_unlock);
 
 	if (msix > 1) {
 		/*
@@ -5581,6 +5625,8 @@ iflib_device_register(device_t dev, void *sc, if_shared_ctx_t sctx, if_ctx_t *ct
 		device_printf(dev, "IFDI_ATTACH_POST failed %d\n", err);
 		goto fail_detach;
 	}
+	IFLIB_REGISTER_FAIL_POINT(dev, register_after_attach_post, err,
+	    fail_detach);
 
 	/*
 	 * Tell the upper layer(s) if IFCAP_VLAN_MTU is supported.
