@@ -233,6 +233,7 @@ struct iflib_ctx {
 	uint8_t  ifc_sysctl_use_logical_cores;
 	uint16_t ifc_sysctl_extra_msix_vectors;
 	bool	 ifc_cpus_are_physical_cores;
+	bool	 ifc_core_offset_ref;
 
 	qidx_t ifc_sysctl_ntxds[8];
 	qidx_t ifc_sysctl_nrxds[8];
@@ -5299,6 +5300,7 @@ get_ctx_core_offset(if_ctx_t ctx)
 			    cores_consumed);
 			MPASS(op->refcount < UINT_MAX);
 			op->refcount++;
+			ctx->ifc_core_offset_ref = true;
 			break;
 		}
 	}
@@ -5315,6 +5317,7 @@ get_ctx_core_offset(if_ctx_t ctx)
 			op->refcount = 1;
 			CPU_COPY(&ctx->ifc_cpus, &op->set);
 			SLIST_INSERT_HEAD(&cpu_offsets, op, entries);
+			ctx->ifc_core_offset_ref = true;
 		}
 	}
 	mtx_unlock(&cpu_offset_mtx);
@@ -5327,6 +5330,13 @@ unref_ctx_core_offset(if_ctx_t ctx)
 {
 	struct cpu_offset *op, *top;
 
+	/*
+	 * A configured core_offset or a failed allocation never acquired a
+	 * reference; releasing one would steal it from another device.
+	 */
+	if (!ctx->ifc_core_offset_ref)
+		return;
+	ctx->ifc_core_offset_ref = false;
 	mtx_lock(&cpu_offset_mtx);
 	SLIST_FOREACH_SAFE(op, &cpu_offsets, entries, top) {
 		if (CPU_CMP(&ctx->ifc_cpus, &op->set) == 0) {
@@ -5350,9 +5360,15 @@ iflib_device_register(device_t dev, void *sc, if_shared_ctx_t sctx, if_ctx_t *ct
 	if_softc_ctx_t scctx;
 	kobjop_desc_t kobj_desc;
 	kobj_method_t *kobj_method;
+	bool attach_pre_succeeded, queues_allocated;
 	int err, msix, rid;
+#ifdef PCI_IOV
+	int iov_error;
+#endif
 	int num_txd, num_rxd;
 
+	attach_pre_succeeded = false;
+	queues_allocated = false;
 	ctx = malloc(sizeof(*ctx), M_IFLIB, M_WAITOK | M_ZERO);
 	ctx->ifc_datapath_state = IFLIB_DP_UNKNOWN;
 	ctx->ifc_pm_state = IFLIB_PM_ACTIVE;
@@ -5382,6 +5398,7 @@ iflib_device_register(device_t dev, void *sc, if_shared_ctx_t sctx, if_ctx_t *ct
 		device_printf(dev, "IFDI_ATTACH_PRE failed %d\n", err);
 		goto fail_unlock;
 	}
+	attach_pre_succeeded = true;
 	_iflib_pre_assert(scctx);
 	ctx->ifc_txrx = *scctx->isc_txrx;
 
@@ -5488,8 +5505,9 @@ iflib_device_register(device_t dev, void *sc, if_shared_ctx_t sctx, if_ctx_t *ct
 	/* Get memory for the station queues */
 	if ((err = iflib_queues_alloc(ctx))) {
 		device_printf(dev, "Unable to allocate queue memory\n");
-		goto fail_intr_free;
+		goto fail_unlock;
 	}
+	queues_allocated = true;
 
 	if ((err = iflib_qset_structures_setup(ctx)))
 		goto fail_queues;
@@ -5596,37 +5614,77 @@ iflib_device_register(device_t dev, void *sc, if_shared_ctx_t sctx, if_ctx_t *ct
 	return (0);
 
 fail_detach:
+	STATE_LOCK(ctx);
+	ctx->ifc_flags |= IFC_IN_DETACH;
+	STATE_UNLOCK(ctx);
 	/*
-	 * ether_ifdetach() and the admin task drain must not run under
-	 * CTX_LOCK: a running _task_fn_admin may need the context lock.
+	 * Tasks may need the context lock and ether_ifdetach() may sleep,
+	 * so neither may run under CTX_LOCK.
 	 */
 	CTX_UNLOCK(ctx);
-	gtaskqueue_drain(ctx->ifc_admin_task.gt_taskqueue,
-	    &ctx->ifc_admin_task.gt_task);
+	taskqgroup_drain_all(qgroup_if_config_tqg);
+#ifdef PCI_IOV
+	/*
+	 * IFDI_ATTACH_POST may have registered an SR-IOV schema.  Match the
+	 * normal deregistration order so a failed attach cannot leave a stale
+	 * /dev/iov node behind.  device_attach() holds Giant throughout this
+	 * path, so an IOV configuration cannot race the detach.
+	 */
+	if (!CTX_IS_VF(ctx)) {
+		iov_error = pci_iov_detach(dev);
+		if (iov_error != 0)
+			device_printf(dev, "Could not detach SR-IOV after "
+			    "attach failure: %d\n", iov_error);
+	}
+#endif
 	ether_ifdetach(ctx->ifc_ifp);
 	CTX_LOCK(ctx);
+	goto fail_cleanup_detaching;
+
 fail_queues:
+fail_unlock:
+	STATE_LOCK(ctx);
+	ctx->ifc_flags |= IFC_IN_DETACH;
+	STATE_UNLOCK(ctx);
+
+fail_cleanup_detaching:
 	/*
-	 * Drain without holding CTX_LOCK so _task_fn_admin can run to
-	 * completion if it needs the context lock.  On fail_detach we already
-	 * drained above; a second drain is a no-op when the queue is empty.
+	 * The pre-attach sysctls contain pointers into ctx.  Remove them on
+	 * every registration failure before iflib_deregister() frees ctx.
+	 */
+	if (ctx->ifc_sysctl_node != NULL) {
+		sysctl_ctx_free(&ctx->ifc_sysctl_ctx);
+		ctx->ifc_sysctl_node = NULL;
+	}
+
+	/*
+	 * Drain without holding the context lock so configuration tasks can
+	 * run to completion.  On fail_detach a second drain also catches
+	 * tasks queued during the first drain.
 	 */
 	CTX_UNLOCK(ctx);
-	gtaskqueue_drain(ctx->ifc_admin_task.gt_taskqueue,
-	    &ctx->ifc_admin_task.gt_task);
+	taskqgroup_drain_all(qgroup_if_config_tqg);
 	CTX_LOCK(ctx);
+
 	iflib_tqg_detach(ctx);
-	iflib_tx_structures_free(ctx);
-	iflib_rx_structures_free(ctx);
-	/* Match iflib_device_deregister: IFDI_DETACH before freeing queues. */
-	IFDI_DETACH(ctx);
-	IFDI_QUEUES_FREE(ctx);
-fail_intr_free:
+	if (queues_allocated) {
+		iflib_tx_structures_free(ctx);
+		iflib_rx_structures_free(ctx);
+	}
+
+	/*
+	 * A successful IFDI_ATTACH_PRE must be matched by IFDI_DETACH, even
+	 * when registration fails before queue allocation.  Match
+	 * iflib_device_deregister by detaching before releasing interrupts.
+	 */
+	if (attach_pre_succeeded) {
+		IFDI_DETACH(ctx);
+		if (queues_allocated)
+			IFDI_QUEUES_FREE(ctx);
+	}
 	iflib_free_intr_mem(ctx);
-fail_unlock:
-	/* The pre-attach sysctls point into ctx; remove them before freeing it. */
-	sysctl_ctx_free(&ctx->ifc_sysctl_ctx);
-	ctx->ifc_sysctl_node = NULL;
+	unref_ctx_core_offset(ctx);
+
 	CTX_UNLOCK(ctx);
 	iflib_deregister(ctx);
 fail_ctx_free:
@@ -5985,6 +6043,9 @@ iflib_tqg_detach(if_ctx_t ctx)
 
 	/* XXX drain any dependent tasks */
 	tqg = qgroup_if_io_tqg;
+	/* Registration can fail before the queue arrays exist. */
+	if (ctx->ifc_txqs == NULL || ctx->ifc_rxqs == NULL)
+		goto config_tasks;
 	for (txq = ctx->ifc_txqs, i = 0; i < NTXQSETS(ctx); i++, txq++) {
 		callout_drain(&txq->ift_timer);
 #ifdef DEV_NETMAP
@@ -5997,6 +6058,7 @@ iflib_tqg_detach(if_ctx_t ctx)
 		if (rxq->ifr_task.gt_uniq != NULL)
 			taskqgroup_detach(tqg, &rxq->ifr_task);
 	}
+config_tasks:
 	tqg = qgroup_if_config_tqg;
 	if (ctx->ifc_admin_task.gt_uniq != NULL)
 		taskqgroup_detach(tqg, &ctx->ifc_admin_task);
