@@ -1,5 +1,16 @@
 Updating Information for MidnightBSD users.
 
+20260811:
+	expat 2.8.3 (from 2.8.2).  Fixes CVE-2026-72522, an out-of-bounds
+	read and resulting infinite loop caused by treating low surrogates
+	the same as high surrogates in the *_toUtf16 functions.  Only builds
+	with 16-bit character support are affected; libbsdxml uses an 8-bit
+	XML_Char and is not exposed to that path.
+
+	Two other fixes do apply here: support for documents 2 GiB and larger
+	is restored (a regression introduced in 2.8.2), and an empty version
+	in the XML declaration is now rejected.  Rebuild and install world.
+
 20260730:
 	wg: CVE-2026-58085 missing MAC validation in wg(4) packet decryption.
 	The driver did not check whether the OpenCrypto framework's Poly1305
