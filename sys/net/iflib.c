@@ -209,10 +209,12 @@ struct iflib_ctx {
 	int ifc_link_state;
 	uint32_t ifc_tx_watchdog_events;
 	struct cdev *ifc_led_dev;
+	int ifc_led_state;
 	struct resource *ifc_msix_mem;
 
 	struct if_irq ifc_legacy_irq;
 	struct grouptask ifc_admin_task;
+	struct grouptask ifc_led_task;
 	struct grouptask ifc_vflr_task;
 	struct iflib_filter_info ifc_filter_info;
 	struct ifmedia	ifc_media;
@@ -4883,14 +4885,38 @@ iflib_vlan_unregister(void *arg, if_t ifp, uint16_t vtag)
 }
 
 static void
-iflib_led_func(void *arg, int onoff)
+_task_fn_led(void *context)
 {
-	if_ctx_t ctx = arg;
+	if_ctx_t ctx = context;
+	bool in_detach;
+	int onoff;
+
+	STATE_LOCK(ctx);
+	in_detach = (ctx->ifc_flags & IFC_IN_DETACH) != 0;
+	onoff = ctx->ifc_led_state;
+	STATE_UNLOCK(ctx);
+	if (in_detach)
+		return;
 
 	CTX_LOCK(ctx);
 	if (ctx->ifc_pm_state == IFLIB_PM_ACTIVE)
 		IFDI_LED_FUNC(ctx, onoff);
 	CTX_UNLOCK(ctx);
+}
+
+static void
+iflib_led_func(void *arg, int onoff)
+{
+	if_ctx_t ctx = arg;
+	bool in_detach;
+
+	/* led(4) may invoke this callback from a non-sleepable callout. */
+	STATE_LOCK(ctx);
+	ctx->ifc_led_state = onoff;
+	in_detach = (ctx->ifc_flags & IFC_IN_DETACH) != 0;
+	STATE_UNLOCK(ctx);
+	if (!in_detach)
+		GROUPTASK_ENQUEUE(&ctx->ifc_led_task);
 }
 
 /*********************************************************************
@@ -5473,6 +5499,9 @@ iflib_device_register(device_t dev, void *sc, if_shared_ctx_t sctx, if_ctx_t *ct
 	/* XXX format name */
 	taskqgroup_attach(qgroup_if_config_tqg, &ctx->ifc_admin_task, ctx,
 	    NULL, NULL, "admin");
+	GROUPTASK_INIT(&ctx->ifc_led_task, 0, _task_fn_led, ctx);
+	taskqgroup_attach(qgroup_if_config_tqg, &ctx->ifc_led_task, ctx,
+	    NULL, NULL, "led");
 	/*
 	 * Initialize the VFLR task alongside the admin task so that every
 	 * interrupt mode can defer VFLR work, not only the MSI-X assignment
@@ -5929,8 +5958,11 @@ iflib_device_deregister(if_ctx_t ctx)
 	CTX_UNLOCK(ctx);
 
 	iflib_rem_pfil(ctx);
-	if (ctx->ifc_led_dev != NULL)
+	if (ctx->ifc_led_dev != NULL) {
 		led_destroy(ctx->ifc_led_dev);
+		gtaskqueue_drain(ctx->ifc_led_task.gt_taskqueue,
+		    &ctx->ifc_led_task.gt_task);
+	}
 
 	iflib_tqg_detach(ctx);
 	iflib_tx_structures_free(ctx);
@@ -5983,6 +6015,8 @@ iflib_tqg_detach(if_ctx_t ctx)
 		taskqgroup_detach(tqg, &ctx->ifc_admin_task);
 	if (ctx->ifc_vflr_task.gt_uniq != NULL)
 		taskqgroup_detach(tqg, &ctx->ifc_vflr_task);
+	if (ctx->ifc_led_task.gt_uniq != NULL)
+		taskqgroup_detach(tqg, &ctx->ifc_led_task);
 }
 
 static void
