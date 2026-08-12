@@ -5477,6 +5477,14 @@ iflib_device_register(device_t dev, void *sc, if_shared_ctx_t sctx, if_ctx_t *ct
 	/* XXX format name */
 	taskqgroup_attach(qgroup_if_config_tqg, &ctx->ifc_admin_task, ctx,
 	    NULL, NULL, "admin");
+	/*
+	 * Initialize the VFLR task alongside the admin task so that every
+	 * interrupt mode can defer VFLR work, not only the MSI-X assignment
+	 * path that used to allocate it.
+	 */
+	GROUPTASK_INIT(&ctx->ifc_vflr_task, 0, _task_fn_iov, ctx);
+	taskqgroup_attach(qgroup_if_config_tqg, &ctx->ifc_vflr_task, ctx,
+	    NULL, NULL, "vflr");
 
 	/* Set up cpu set.  If it fails, use the set of all CPUs. */
 	if (bus_get_cpus(dev, INTR_CPUS, sizeof(ctx->ifc_cpus), &ctx->ifc_cpus) != 0) {
@@ -6931,12 +6939,7 @@ iflib_softirq_alloc_generic(if_ctx_t ctx, if_irq_t irq, iflib_intr_type_t type,
 		NET_GROUPTASK_INIT(gtask, 0, fn, q);
 		break;
 	case IFLIB_INTR_IOV:
-		q = ctx;
-		gtask = &ctx->ifc_vflr_task;
-		tqg = qgroup_if_config_tqg;
-		fn = _task_fn_iov;
-		GROUPTASK_INIT(gtask, 0, fn, q);
-		break;
+		return;
 	default:
 		panic("unknown net intr type");
 	}
