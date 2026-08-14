@@ -3411,13 +3411,12 @@ iflib_parse_header_partial(if_pkt_info_t pi, struct mbuf **mp, uint64_t *pullups
 	*pullups = 0;
 	m = *mp;
 	if (!M_WRITABLE(m)) {
-		if ((m = m_dup(m, M_NOWAIT)) == NULL) {
+		m = m_dup(m, M_NOWAIT);
+		m_freem(*mp);
+		DBG_COUNTER_INC(tx_frees);
+		*mp = m;
+		if (m == NULL)
 			return (ENOMEM);
-		} else {
-			m_freem(*mp);
-			DBG_COUNTER_INC(tx_frees);
-			*mp = m;
-		}
 	}
 
 	/* Fills out pi->ipi_etype */
@@ -3513,13 +3512,12 @@ iflib_parse_header(iflib_txq_t txq, if_pkt_info_t pi, struct mbuf **mp)
 	m = *mp;
 	if ((sctx->isc_flags & IFLIB_NEED_SCRATCH) &&
 	    M_WRITABLE(m) == 0) {
-		if ((m = m_dup(m, M_NOWAIT)) == NULL) {
+		m = m_dup(m, M_NOWAIT);
+		m_freem(*mp);
+		DBG_COUNTER_INC(tx_frees);
+		*mp = m;
+		if (m == NULL)
 			return (ENOMEM);
-		} else {
-			m_freem(*mp);
-			DBG_COUNTER_INC(tx_frees);
-			*mp = m;
-		}
 	}
 
 	/* Fills out pi->ipi_etype */
@@ -3588,8 +3586,7 @@ iflib_parse_header(iflib_txq_t txq, if_pkt_info_t pi, struct mbuf **mp)
 				pi->ipi_tcp_seq = th->th_seq;
 			}
 			if (IS_TSO4(pi)) {
-				if (__predict_false(ip->ip_p != IPPROTO_TCP))
-					return (ENXIO);
+				MPASS(ip->ip_p == IPPROTO_TCP);
 				/*
 				 * TSO always requires hardware checksum offload.
 				 */
@@ -3620,6 +3617,8 @@ iflib_parse_header(iflib_txq_t txq, if_pkt_info_t pi, struct mbuf **mp)
 			txq->ift_pullups++;
 			if (__predict_false((m = m_pullup(m, pi->ipi_ehdrlen + sizeof(struct ip6_hdr))) == NULL))
 				return (ENOMEM);
+			/* reset pointers after pullup */
+			ip6 = (struct ip6_hdr *)(m->m_data + pi->ipi_ehdrlen);
 		}
 		th = (struct tcphdr *)((caddr_t)ip6 + pi->ipi_ip_hlen);
 
@@ -3635,14 +3634,16 @@ iflib_parse_header(iflib_txq_t txq, if_pkt_info_t pi, struct mbuf **mp)
 					txq->ift_pullups++;
 					if (__predict_false((m = m_pullup(m, pi->ipi_ehdrlen + sizeof(struct ip6_hdr) + sizeof(struct tcphdr))) == NULL))
 						return (ENOMEM);
+					/* reset pointers after pullup */
+					ip6 = (struct ip6_hdr *)(m->m_data + pi->ipi_ehdrlen);
+					th = (struct tcphdr *)((caddr_t)ip6 + pi->ipi_ip_hlen);
 				}
 				pi->ipi_tcp_hflags = th->th_flags;
 				pi->ipi_tcp_hlen = th->th_off << 2;
 				pi->ipi_tcp_seq = th->th_seq;
 			}
 			if (IS_TSO6(pi)) {
-				if (__predict_false(ip6->ip6_nxt != IPPROTO_TCP))
-					return (ENXIO);
+				MPASS(ip6->ip6_nxt == IPPROTO_TCP);
 				/*
 				 * TSO always requires hardware checksum offload.
 				 */
@@ -3727,15 +3728,14 @@ iflib_ether_pad(device_t dev, struct mbuf **m_head, uint16_t min_frame_size)
 
 	if (!M_WRITABLE(*m_head)) {
 		new_head = m_dup(*m_head, M_NOWAIT);
+		m_freem(*m_head);
+		*m_head = new_head;
 		if (new_head == NULL) {
-			m_freem(*m_head);
 			device_printf(dev, "cannot pad short frame, m_dup() failed");
 			DBG_COUNTER_INC(encap_pad_mbuf_fail);
 			DBG_COUNTER_INC(tx_frees);
 			return (ENOMEM);
 		}
-		m_freem(*m_head);
-		*m_head = new_head;
 	}
 
 	for (n = min_frame_size - (*m_head)->m_pkthdr.len;
@@ -3745,10 +3745,11 @@ iflib_ether_pad(device_t dev, struct mbuf **m_head, uint16_t min_frame_size)
 
 	if (n > 0) {
 		m_freem(*m_head);
+		*m_head = NULL;
 		device_printf(dev, "cannot pad short frame\n");
 		DBG_COUNTER_INC(encap_pad_mbuf_fail);
 		DBG_COUNTER_INC(tx_frees);
-		return (ENOBUFS);
+		return (ENOMEM);
 	}
 
 	return (0);
@@ -3865,8 +3866,7 @@ defrag:
 			goto retry;
 			break;
 		case ENOMEM:
-			txq->ift_no_tx_dma_setup++;
-			break;
+			/* FALLTHROUGH */
 		default:
 			txq->ift_no_tx_dma_setup++;
 			m_freem(*m_headp);
