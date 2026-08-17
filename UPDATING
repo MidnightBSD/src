@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users.
 
+20260817:
+	netipsec: validate PF_KEY socket address lengths before copying them into
+	fixed-size kernel structures.  This prevents a kernel stack overflow and
+	potential local privilege escalation through a PF_KEY socket.  Rebuild
+	and install the kernel.
+
 20260811:
 	expat 2.8.3 (from 2.8.2).  Fixes CVE-2026-72522, an out-of-bounds
 	read and resulting infinite loop caused by treating low surrogates
