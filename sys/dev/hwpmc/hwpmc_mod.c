@@ -1092,7 +1092,7 @@ pmc_can_attach(struct pmc *pm, struct proc *t)
 	crfree(tc);
 	crfree(oc);
 
-	return !decline_attach;
+	return (decline_attach ? EPERM : 0);
 }
 
 /*
