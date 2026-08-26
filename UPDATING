@@ -1,6 +1,17 @@
 Updating Information for MidnightBSD users.
 
 20260826:
+	ppp: CVE-2026-58095, CVE-2026-58096 and CVE-2026-58097, three memory
+	safety errors in the multilink endpoint discriminator code.
+	mp_Enddisc() sized its hex output buffer as if each byte took one
+	character rather than two, so a peer's endpoint option could overflow
+	a static buffer; LcpDecodeConfig() did not enforce the three byte
+	minimum option length from RFC 1717, so a short option caused an
+	out-of-bounds write; and "set enddisc psn" copied its argument into a
+	fixed size buffer with strcpy().  ppp(8) is installed setuid root.
+	Rebuild and install world, then restart any running ppp(8) instances.
+
+20260826:
 	sound: CVE-2026-58091 use-after-free via the SNDCTL_DSP_SYNCSTART
 	ioctl.  When dsp_oss_syncstart() could not acquire every channel lock
 	in a sync group it slept with the sync group list lock dropped, then
