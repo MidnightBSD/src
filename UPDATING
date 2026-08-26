@@ -1,6 +1,14 @@
 Updating Information for MidnightBSD users.
 
 20260826:
+	posixshm: CVE-2026-58094 TOCTOU race in the FIOSSHMLPGCNF ioctl.  The
+	handler tested whether a largepage shared memory object already had a
+	page size configured without holding the object's rangelock, so two
+	callers could race and leave the object claiming a larger page size
+	than the memory actually populated for it.  The validation now runs
+	under the rangelock.  Rebuild and install the kernel.
+
+20260826:
 	tty: CVE-2026-58093 use-after-free via the TIOCSCTTY ioctl.  The
 	handler drops the tty lock to take proctree_lock and did not
 	revalidate the terminal after relocking, so a terminal being torn
