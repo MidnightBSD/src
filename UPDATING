@@ -1,6 +1,21 @@
 Updating Information for MidnightBSD users.
 
 20260826:
+	OpenSSL: fix CVE-2026-63072 and reduce the exposure to CVE-2026-54874
+	in the 1.1.1 branch.  cms_kek_cipher() sized its output buffer from
+	the cipher's reported output length, but AES-WRAP-PAD unwrap writes
+	and cleanses up to the input length on its integrity-failure paths,
+	giving an 8 byte out-of-bounds heap write; the buffer is now sized for
+	that worst case.  The DTLS record layer also buffered up to 100
+	next-epoch records per connection, which a peer could use to force
+	disproportionate memory use; that queue is now capped at 16.
+
+	OpenSSL 1.1.1 is end of life upstream and these fixes are only
+	published in a premium support release, so both are local backports of
+	the 3.0.22 changes.  Rebuild and install world, then restart all
+	daemons that use the library, or reboot.
+
+20260826:
 	posixshm: CVE-2026-58094 TOCTOU race in the FIOSSHMLPGCNF ioctl.  The
 	handler tested whether a largepage shared memory object already had a
 	page size configured without holding the object's rangelock, so two

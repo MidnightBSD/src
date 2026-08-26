@@ -2056,7 +2056,7 @@ int dtls1_get_record(SSL *s)
         if ((SSL_in_init(s) || ossl_statem_get_in_handshake(s))) {
             if (dtls1_buffer_record (s,
                     &(DTLS_RECORD_LAYER_get_unprocessed_rcds(&s->rlayer)),
-                    rr->seq_num) < 0) {
+                    rr->seq_num, DTLS1_MAX_UNPROCESSED_RECORDS) < 0) {
                 /* SSLfatal() already called */
                 return -1;
             }
@@ -2099,7 +2099,8 @@ int dtls_buffer_listen_record(SSL *s, size_t len, unsigned char *seq, size_t off
     rr->data = s->rlayer.packet + DTLS1_RT_HEADER_LENGTH;
 
     if (dtls1_buffer_record(s, &(s->rlayer.d->processed_rcds),
-                            SSL3_RECORD_get_seq_num(s->rlayer.rrec)) <= 0) {
+                            SSL3_RECORD_get_seq_num(s->rlayer.rrec),
+                            DTLS1_MAX_BUFFERED_RECORDS) <= 0) {
         /* SSLfatal() already called */
         return 0;
     }
