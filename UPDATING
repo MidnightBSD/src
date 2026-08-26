@@ -1,5 +1,13 @@
 Updating Information for MidnightBSD users.
 
+20260826:
+	hwpmc: CVE-2026-58089 hwpmc(4) failed to detach performance counters
+	when a monitored process exec'ed a setuid or setgid binary.  An
+	inverted return value in pmc_can_attach() made the exec-time
+	credential check allow exactly the cases it was meant to deny, so an
+	unprivileged user could keep monitoring a process across a privilege
+	transition.  Rebuild and install the kernel, or reload hwpmc.ko.
+
 20260817:
 	netipsec: validate PF_KEY socket address lengths before copying them into
 	fixed-size kernel structures.  This prevents a kernel stack overflow and
