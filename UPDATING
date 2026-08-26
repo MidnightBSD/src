@@ -1,6 +1,15 @@
 Updating Information for MidnightBSD users.
 
 20260826:
+	tty: CVE-2026-58093 use-after-free via the TIOCSCTTY ioctl.  The
+	handler drops the tty lock to take proctree_lock and did not
+	revalidate the terminal after relocking, so a terminal being torn
+	down concurrently could still be attached to the caller's session.
+	TIOCSPGRP had the same gap.  Both now re-enter through
+	ttydev_enter() and fail with ENXIO if the device is gone.  Rebuild
+	and install the kernel.
+
+20260826:
 	ppp: CVE-2026-58095, CVE-2026-58096 and CVE-2026-58097, three memory
 	safety errors in the multilink endpoint discriminator code.
 	mp_Enddisc() sized its hex output buffer as if each byte took one
