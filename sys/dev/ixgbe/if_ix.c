@@ -152,6 +152,7 @@ static void *ixgbe_register(device_t);
 static int  ixgbe_if_attach_pre(if_ctx_t);
 static int  ixgbe_if_attach_post(if_ctx_t);
 static int  ixgbe_if_detach(if_ctx_t);
+static int  ixgbe_if_power_prepare(if_ctx_t, enum iflib_power_event);
 static int  ixgbe_if_shutdown(if_ctx_t);
 static int  ixgbe_if_suspend(if_ctx_t);
 static int  ixgbe_if_resume(if_ctx_t);
@@ -290,6 +291,7 @@ static device_method_t ixgbe_if_methods[] = {
 	DEVMETHOD(ifdi_attach_pre, ixgbe_if_attach_pre),
 	DEVMETHOD(ifdi_attach_post, ixgbe_if_attach_post),
 	DEVMETHOD(ifdi_detach, ixgbe_if_detach),
+	DEVMETHOD(ifdi_power_prepare, ixgbe_if_power_prepare),
 	DEVMETHOD(ifdi_shutdown, ixgbe_if_shutdown),
 	DEVMETHOD(ifdi_suspend, ixgbe_if_suspend),
 	DEVMETHOD(ifdi_resume, ixgbe_if_resume),
@@ -2992,9 +2994,29 @@ ixgbe_if_detach(if_ctx_t ctx)
 } /* ixgbe_if_detach */
 
 /************************************************************************
+ * ixgbe_if_power_prepare - Establish policy required before a terminal stop
+ *
+ *   X550EM 10GBASE-T must suppress its PHY reset during the stop that
+ *   iflib performs before detach, suspend, or shutdown; the LPLU flow in
+ *   ixgbe_setup_low_power_mode() clears the flag again afterwards.
+ ************************************************************************/
+static int
+ixgbe_if_power_prepare(if_ctx_t ctx, enum iflib_power_event event __unused)
+{
+	struct ixgbe_softc *sc = iflib_get_softc(ctx);
+	struct ixgbe_hw *hw = &sc->hw;
+
+	if (hw->device_id == IXGBE_DEV_ID_X550EM_X_10G_T &&
+	    hw->phy.ops.enter_lplu != NULL)
+		hw->phy.reset_disable = true;
+
+	return (0);
+}
+
+/************************************************************************
  * ixgbe_setup_low_power_mode - LPLU/WoL preparation
  *
- *   Prepare the adapter/port for LPLU and/or WoL
+ *   Prepare the adapter/port for LPLU and/or WoL after a terminal stop
  ************************************************************************/
 static int
 ixgbe_setup_low_power_mode(if_ctx_t ctx)
@@ -3031,17 +3053,16 @@ ixgbe_setup_low_power_mode(if_ctx_t ctx)
 		IXGBE_WRITE_REG(hw, IXGBE_WUC,
 		    IXGBE_WUC_WKEN | IXGBE_WUC_PME_EN);
 
-		/* X550EM baseT adapters need a special LPLU flow */
-		hw->phy.reset_disable = true;
-		ixgbe_if_stop(ctx);
+		/*
+		 * X550EM baseT adapters need a special LPLU flow; iflib has
+		 * already stopped the interface with the PHY reset suppressed
+		 * by ixgbe_if_power_prepare().
+		 */
 		error = hw->phy.ops.enter_lplu(hw);
 		if (error)
 			device_printf(dev, "Error entering LPLU: %d\n",
 			    error);
 		hw->phy.reset_disable = false;
-	} else {
-		/* Just stop for other adapters */
-		ixgbe_if_stop(ctx);
 	}
 
 	return error;
@@ -3089,7 +3110,6 @@ ixgbe_if_resume(if_ctx_t ctx)
 {
 	struct ixgbe_softc *sc = iflib_get_softc(ctx);
 	device_t dev = iflib_get_dev(ctx);
-	struct ifnet *ifp = iflib_get_ifp(ctx);
 	struct ixgbe_hw *hw = &sc->hw;
 	u32 wus;
 
@@ -3103,13 +3123,6 @@ ixgbe_if_resume(if_ctx_t ctx)
 	IXGBE_WRITE_REG(hw, IXGBE_WUS, 0xffffffff);
 	/* And clear WUFC until next low-power transition */
 	IXGBE_WRITE_REG(hw, IXGBE_WUFC, 0);
-
-	/*
-	 * Required after D3->D0 transition;
-	 * will re-advertise all previous advertised speeds
-	 */
-	if (ifp->if_flags & IFF_UP)
-		ixgbe_if_init(ctx);
 
 	return (0);
 } /* ixgbe_if_resume */

@@ -159,6 +159,17 @@ enum iflib_datapath_state {
 	IFLIB_DP_STOPPING,
 };
 
+/*
+ * Power-transition state is separate from datapath ownership.  It gates
+ * configuration callbacks while the device is entering or remains in low
+ * power without making any claim about driver-owned firmware or admin DMA.
+ */
+enum iflib_pm_state {
+	IFLIB_PM_ACTIVE = 0,
+	IFLIB_PM_SUSPENDING,
+	IFLIB_PM_SUSPENDED,
+};
+
 static void iru_init(if_rxd_update_t iru, iflib_rxq_t rxq, uint8_t flid);
 static void iflib_timer(void *arg);
 static void iflib_tqg_detach(if_ctx_t ctx);
@@ -191,6 +202,7 @@ struct iflib_ctx {
 	uint32_t ifc_if_flags;
 	uint32_t ifc_flags;
 	enum iflib_datapath_state ifc_datapath_state;
+	enum iflib_pm_state ifc_pm_state;
 	uint32_t ifc_max_fl_buf_size;
 	uint32_t ifc_rx_mbuf_sz;
 
@@ -2581,6 +2593,9 @@ iflib_init_locked(if_ctx_t ctx)
 	bool init_failed;
 
 	sx_assert(&ctx->ifc_ctx_sx, SA_XLOCKED);
+	/* Configuration changes made during suspend take effect on resume. */
+	if (ctx->ifc_pm_state != IFLIB_PM_ACTIVE)
+		return;
 	KASSERT(ctx->ifc_datapath_state == IFLIB_DP_STOPPED,
 	    ("iflib init from datapath state %d", ctx->ifc_datapath_state));
 	ctx->ifc_datapath_state = IFLIB_DP_STARTING;
@@ -2699,6 +2714,12 @@ iflib_media_status(if_t ifp, struct ifmediareq *ifmr)
 	if_ctx_t ctx = if_getsoftc(ifp);
 
 	CTX_LOCK(ctx);
+	if (ctx->ifc_pm_state != IFLIB_PM_ACTIVE) {
+		ifmr->ifm_status = IFM_AVALID;
+		ifmr->ifm_active = IFM_ETHER | IFM_NONE;
+		CTX_UNLOCK(ctx);
+		return;
+	}
 	IFDI_UPDATE_ADMIN_STATUS(ctx);
 	IFDI_MEDIA_STATUS(ctx, ifmr);
 	CTX_UNLOCK(ctx);
@@ -4317,6 +4338,10 @@ _task_fn_admin(void *context)
 		return;
 
 	CTX_LOCK(ctx);
+	if (ctx->ifc_pm_state != IFLIB_PM_ACTIVE) {
+		CTX_UNLOCK(ctx);
+		return;
+	}
 	if (!do_reset && do_reset_if_up &&
 	    (if_getflags(ctx->ifc_ifp) & IFF_UP) != 0)
 		do_reset = true;
@@ -4355,6 +4380,10 @@ _task_fn_iov(void *context)
 		return;
 
 	CTX_LOCK(ctx);
+	if (ctx->ifc_pm_state != IFLIB_PM_ACTIVE) {
+		CTX_UNLOCK(ctx);
+		return;
+	}
 	IFDI_VFLR_HANDLE(ctx);
 	CTX_UNLOCK(ctx);
 }
@@ -4385,6 +4414,8 @@ iflib_sysctl_int_delay(SYSCTL_HANDLER_ARGS)
 static void
 iflib_if_init_locked(if_ctx_t ctx)
 {
+	if (ctx->ifc_pm_state != IFLIB_PM_ACTIVE)
+		return;
 	if (ctx->ifc_datapath_state != IFLIB_DP_STOPPED)
 		iflib_stop(ctx);
 	iflib_init_locked(ctx);
@@ -4841,7 +4872,8 @@ iflib_led_func(void *arg, int onoff)
 	if_ctx_t ctx = arg;
 
 	CTX_LOCK(ctx);
-	IFDI_LED_FUNC(ctx, onoff);
+	if (ctx->ifc_pm_state == IFLIB_PM_ACTIVE)
+		IFDI_LED_FUNC(ctx, onoff);
 	CTX_UNLOCK(ctx);
 }
 
@@ -5334,6 +5366,7 @@ iflib_device_register(device_t dev, void *sc, if_shared_ctx_t sctx, if_ctx_t *ct
 
 	ctx = malloc(sizeof(*ctx), M_IFLIB, M_WAITOK | M_ZERO);
 	ctx->ifc_datapath_state = IFLIB_DP_UNKNOWN;
+	ctx->ifc_pm_state = IFLIB_PM_ACTIVE;
 
 	if (sc == NULL) {
 		sc = malloc(sctx->isc_driver->size, M_IFLIB, M_WAITOK | M_ZERO);
@@ -5829,6 +5862,7 @@ iflib_device_deregister(if_ctx_t ctx)
 {
 	if_t ifp = ctx->ifc_ifp;
 	device_t dev = ctx->ifc_dev;
+	int error;
 
 	/* Make sure VLANS are not using driver */
 	if (if_vlantrunkinuse(ifp)) {
@@ -5842,9 +5876,23 @@ iflib_device_deregister(if_ctx_t ctx)
 	}
 #endif
 
+	/*
+	 * Establish any ordering required by the terminal stop while the
+	 * interface is still intact.  Once this succeeds, mark the context
+	 * inactive before releasing the lock so configuration tasks cannot
+	 * consume partially applied policy.
+	 */
+	CTX_LOCK(ctx);
+	error = IFDI_POWER_PREPARE(ctx, IFLIB_POWER_DETACH);
+	if (error != 0) {
+		CTX_UNLOCK(ctx);
+		return (error);
+	}
 	STATE_LOCK(ctx);
 	ctx->ifc_flags |= IFC_IN_DETACH;
 	STATE_UNLOCK(ctx);
+	ctx->ifc_pm_state = IFLIB_PM_SUSPENDING;
+	CTX_UNLOCK(ctx);
 
 	/* Unregister VLAN handlers before calling iflib_stop() */
 	iflib_unregister_vlan_handlers(ctx);
@@ -5938,25 +5986,113 @@ iflib_device_detach(device_t dev)
 	return (iflib_device_deregister(ctx));
 }
 
+static int
+iflib_device_resume_locked(if_ctx_t ctx)
+{
+	if_t ifp;
+	int error;
+
+	sx_assert(&ctx->ifc_ctx_sx, SA_XLOCKED);
+	KASSERT(ctx->ifc_datapath_state == IFLIB_DP_STOPPED,
+	    ("iflib resume with active datapath state %d",
+	    ctx->ifc_datapath_state));
+	KASSERT(ctx->ifc_pm_state == IFLIB_PM_SUSPENDING ||
+	    ctx->ifc_pm_state == IFLIB_PM_SUSPENDED,
+	    ("iflib resume from power state %d", ctx->ifc_pm_state));
+
+	ifp = ctx->ifc_ifp;
+	error = IFDI_RESUME(ctx);
+	if (error != 0)
+		return (error);
+	ctx->ifc_pm_state = IFLIB_PM_ACTIVE;
+
+	if ((if_getflags(ifp) & IFF_UP) == 0) {
+		if_setdrvflagbits(ifp, IFF_DRV_OACTIVE, IFF_DRV_RUNNING);
+		return (0);
+	}
+
+	iflib_init_locked(ctx);
+	return (0);
+}
+
 int
 iflib_device_suspend(device_t dev)
 {
 	if_ctx_t ctx = device_get_softc(dev);
+	int error, resume_error;
 
 	CTX_LOCK(ctx);
-	IFDI_SUSPEND(ctx);
+	error = IFDI_POWER_PREPARE(ctx, IFLIB_POWER_SUSPEND);
+	if (error == 0) {
+		iflib_stop(ctx);
+		ctx->ifc_pm_state = IFLIB_PM_SUSPENDING;
+	}
 	CTX_UNLOCK(ctx);
+	if (error != 0)
+		return (error);
 
-	return (bus_generic_suspend(dev));
+	/* Driver configuration tasks must finish before entering low power. */
+	taskqgroup_drain_all(qgroup_if_config_tqg);
+
+	CTX_LOCK(ctx);
+	error = IFDI_SUSPEND(ctx);
+	if (error == 0)
+		ctx->ifc_pm_state = IFLIB_PM_SUSPENDED;
+	else {
+		resume_error = iflib_device_resume_locked(ctx);
+		if (resume_error != 0)
+			device_printf(dev,
+			    "failed to resume after suspend error: %d\n",
+			    resume_error);
+	}
+	CTX_UNLOCK(ctx);
+	if (error != 0)
+		return (error);
+
+	error = bus_generic_suspend(dev);
+	if (error != 0) {
+		CTX_LOCK(ctx);
+		resume_error = iflib_device_resume_locked(ctx);
+		CTX_UNLOCK(ctx);
+		if (resume_error != 0)
+			device_printf(dev,
+			    "failed to resume after child suspend error: %d\n",
+			    resume_error);
+	}
+
+	return (error);
 }
+
 int
 iflib_device_shutdown(device_t dev)
 {
 	if_ctx_t ctx = device_get_softc(dev);
+	int error;
 
 	CTX_LOCK(ctx);
-	IFDI_SHUTDOWN(ctx);
+	error = IFDI_POWER_PREPARE(ctx, IFLIB_POWER_SHUTDOWN);
+	if (error == 0) {
+		iflib_stop(ctx);
+		ctx->ifc_pm_state = IFLIB_PM_SUSPENDING;
+	}
 	CTX_UNLOCK(ctx);
+	if (error != 0)
+		return (error);
+
+	taskqgroup_drain_all(qgroup_if_config_tqg);
+
+	/*
+	 * Unlike suspend, a failed shutdown is not rolled back: the queues
+	 * stay stopped and the power state stays IFLIB_PM_SUSPENDING, since
+	 * nothing resumes the device after a shutdown attempt.
+	 */
+	CTX_LOCK(ctx);
+	error = IFDI_SHUTDOWN(ctx);
+	if (error == 0)
+		ctx->ifc_pm_state = IFLIB_PM_SUSPENDED;
+	CTX_UNLOCK(ctx);
+	if (error != 0)
+		return (error);
 
 	return (bus_generic_suspend(dev));
 }
@@ -5966,15 +6102,20 @@ iflib_device_resume(device_t dev)
 {
 	if_ctx_t ctx = device_get_softc(dev);
 	iflib_txq_t txq = ctx->ifc_txqs;
+	bool running;
+	int error, child_error;
 
 	CTX_LOCK(ctx);
-	IFDI_RESUME(ctx);
-	iflib_if_init_locked(ctx);
+	error = iflib_device_resume_locked(ctx);
+	running = (if_getdrvflags(ctx->ifc_ifp) & IFF_DRV_RUNNING) != 0;
 	CTX_UNLOCK(ctx);
-	for (int i = 0; i < NTXQSETS(ctx); i++, txq++)
-		iflib_txq_check_drain(txq, IFLIB_RESTART_BUDGET);
+	if (running) {
+		for (int i = 0; i < NTXQSETS(ctx); i++, txq++)
+			iflib_txq_check_drain(txq, IFLIB_RESTART_BUDGET);
+	}
 
-	return (bus_generic_resume(dev));
+	child_error = bus_generic_resume(dev);
+	return (error != 0 ? error : child_error);
 }
 
 int
