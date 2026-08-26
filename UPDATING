@@ -1,6 +1,18 @@
 Updating Information for MidnightBSD users.
 
 20260826:
+	OpenSSL 3.0.22 (from 3.0.21).  Fixes CVE-2026-63072 (an 8 byte
+	out-of-bounds heap write in AES-WRAP-PAD unwrap, reachable through CMS
+	key unwrapping), CVE-2026-63076 (NULL dereference in the CMP server
+	and client via a crafted protectionAlg), CVE-2026-63074 (unbounded
+	extraCerts cache growth in the CMP server), CVE-2026-54874 (a DTLS
+	peer can force roughly 1200x memory amplification by buffering
+	next-epoch records) and CVE-2026-75803 (ChaCha20-Poly1305 and AES-OCB
+	decryption skipped tag verification for empty ciphertexts when using
+	EVP_Cipher()).  Rebuild and install world, then restart all daemons
+	that use the library, or reboot.
+
+20260826:
 	posixshm: CVE-2026-58094 TOCTOU race in the FIOSSHMLPGCNF ioctl.  The
 	handler tested whether a largepage shared memory object already had a
 	page size configured without holding the object's rangelock, so two
