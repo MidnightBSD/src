@@ -1,6 +1,15 @@
 Updating Information for MidnightBSD users.
 
 20260826:
+	sound: CVE-2026-58091 use-after-free via the SNDCTL_DSP_SYNCSTART
+	ioctl.  When dsp_oss_syncstart() could not acquire every channel lock
+	in a sync group it slept with the sync group list lock dropped, then
+	resumed walking the group's member list even though the group could
+	have been freed in the meantime.  It now restarts the lookup after
+	sleeping.  Systems with fewer than two sound devices are not affected.
+	Rebuild and install the kernel, or reload sound.ko.
+
+20260826:
 	hwpmc: CVE-2026-58089 hwpmc(4) failed to detach performance counters
 	when a monitored process exec'ed a setuid or setgid binary.  An
 	inverted return value in pmc_can_attach() made the exec-time
