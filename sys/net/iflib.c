@@ -2716,6 +2716,12 @@ static void
 iflib_media_status(if_t ifp, struct ifmediareq *ifmr)
 {
 	if_ctx_t ctx = if_getsoftc(ifp);
+	bool oactive, running;
+
+	STATE_LOCK(ctx);
+	running = (if_getdrvflags(ctx->ifc_ifp) & IFF_DRV_RUNNING);
+	oactive = (if_getdrvflags(ctx->ifc_ifp) & IFF_DRV_OACTIVE);
+	STATE_UNLOCK(ctx);
 
 	CTX_LOCK(ctx);
 	if (ctx->ifc_pm_state != IFLIB_PM_ACTIVE) {
@@ -2724,7 +2730,15 @@ iflib_media_status(if_t ifp, struct ifmediareq *ifmr)
 		CTX_UNLOCK(ctx);
 		return;
 	}
-	IFDI_UPDATE_ADMIN_STATUS(ctx);
+	/*
+	 * There is no need to update the admin status when it is done regularly by
+	 * _task_fn_admin(), so only do it if that's not running. That can be quite
+	 * expensive on some drivers.
+	 */
+	if ((!running && !oactive) &&
+	    !(ctx->ifc_sctx->isc_flags & IFLIB_ADMIN_ALWAYS_RUN)) {
+		IFDI_UPDATE_ADMIN_STATUS(ctx);
+	}
 	IFDI_MEDIA_STATUS(ctx, ifmr);
 	CTX_UNLOCK(ctx);
 }
