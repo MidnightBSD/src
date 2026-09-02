@@ -1,5 +1,21 @@
 Updating Information for MidnightBSD users.
 
+20260901:
+	expat 2.8.4 (from 2.8.3).  Fixes CVE-2026-66046 and CVE-2026-76641
+	(quadratic runtime in attribute "isCdata" lookups, letting moderately
+	sized crafted XML cause a denial of service; default attribute
+	lookups now use a hash table instead of a linear scan) and
+	CVE-2026-76957 (custom encoding callbacks were not protected against
+	parser re-entry).  Note that a layer of compression around the XML
+	can significantly reduce the minimum attack payload size.
+
+	Upstream also fixes CVE-2026-76956, inverted getentropy() return
+	handling.  libbsdxml does not build random_getentropy.c and does not
+	define HAVE_GETENTROPY, so that issue does not affect MidnightBSD.
+
+	Rebuild and install world, then restart all daemons that use the
+	library, or reboot.
+
 20260826:
 	OpenSSL: fix CVE-2026-63072 and reduce the exposure to CVE-2026-54874
 	in the 1.1.1 branch.  cms_kek_cipher() sized its output buffer from
