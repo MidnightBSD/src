@@ -90,6 +90,23 @@ Updating Information for MidnightBSD users.
 	is restored (a regression introduced in 2.8.2), and an empty version
 	in the XML declaration is now rejected.  Rebuild and install world.
 
+20260803:
+	getopt(3) and getopt_long(3): const correctness for C23.
+	strchr() now preserves constness, which breaks code assigning its
+	result to a non-const char*.  Rebuild world and any affected applications.
+
+20260803:
+	elf: fix an out-of-bounds write in core dump segment counting.
+	The ELF core dump code could write past the end of a buffer when
+	concurrent rfork(2) added VM map entries between counting and
+	populating program headers.  Rebuild and install the kernel.
+
+20260802:
+	sysvsem: fix heap out-of-bounds access in semctl(2) GETALL/SETALL.
+	Rapid creation/destruction of semaphore sets at the same index
+	could cause the 15-bit sequence number to wrap, allowing access to
+	a set with a different semaphore count.  Rebuild and install the kernel.
+
 20260801:
 	tzcode 2026c (from 2024b).  zic(8) and the libc time functions are
 	updated; several zic integer overflow fixes are included.  Compiled
