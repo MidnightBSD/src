@@ -100,24 +100,17 @@ pipeline {
                     stage('tests') {
                         environment {
                             DESTDIR = "${env.WORKSPACE}/destdir/${ARCHITECTURE}"
-                            JAIL_NAME = "jenkins-${ARCHITECTURE}-${env.BUILD_NUMBER}"
                             KYUA_RESULTS = "${env.WORKSPACE}/kyua-results-${ARCHITECTURE}.db"
                             JUNIT_RESULTS = "junit-results-${ARCHITECTURE}.xml"
                         }
                         steps {
                             echo "Do tests for ${ARCHITECTURE}"
                             sh "rm -f ${KYUA_RESULTS} ${JUNIT_RESULTS}"
-                            sh "mkdir -p ${DESTDIR}/dev"
-                            sh "mount -t devfs devfs ${DESTDIR}/dev"
-                            sh "jail -c name=${JAIL_NAME} path=${DESTDIR} host.hostname=${JAIL_NAME} persist"
-                            sh "jexec ${JAIL_NAME} /usr/bin/kyua test -k /usr/tests/Kyuafile --results-file /kyua-results-${ARCHITECTURE}.db"
-                            sh "cp ${DESTDIR}/kyua-results-${ARCHITECTURE}.db ${KYUA_RESULTS}"
+                            sh "kyua test -k ${DESTDIR}/usr/tests/Kyuafile --results-file ${KYUA_RESULTS} || true"
                             sh "kyua report-junit --output ${JUNIT_RESULTS} --results-file ${KYUA_RESULTS}"
                         }
                         post {
                             always {
-                                sh "jail -r ${JAIL_NAME} || true"
-                                sh "umount ${DESTDIR}/dev || true"
                                 junit allowEmptyResults: true, testResults: "${JUNIT_RESULTS}"
                             }
                         }
