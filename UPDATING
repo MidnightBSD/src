@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users.
 
+20260903:
+	The OpenBSD-derived bc and dc implementations have been removed.
+	Gavin Howard's bc and dc are now always built.  The WITH_GH_BC and
+	WITHOUT_GH_BC options are no longer accepted; remove either setting
+	from src.conf before building world.
+
 20260901:
 	expat 2.8.4 (from 2.8.3).  Fixes CVE-2026-66046 and CVE-2026-76641
 	(quadratic runtime in attribute "isCdata" lookups, letting moderately
