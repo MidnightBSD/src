@@ -106,12 +106,19 @@ main(int argc, char *argv[])
 					errx(1, "AC line status not available");
 				else if (len != sizeof(acline))
 					errx(1, "unexpected AC line status value size");
-				else {
-					if (acline == 1)
+				else
+					switch (acline) {
+					case 0:
+						puts("System running on battery power");
+						break;
+					case 1:
 						puts("System plugged in");
-					else
-						printf("Battery charging or drained.\n");
-				}
+						break;
+					case -1:
+						errx(1, "AC line status unknown");
+					default:
+						errx(1, "unexpected AC line status value");
+					}
 			} else if (time == 1)
 				printf("1 minute remaining\n");
 			else

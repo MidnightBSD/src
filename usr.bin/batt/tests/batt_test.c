@@ -262,6 +262,66 @@ ATF_TC_BODY(acline_status, tc)
 	free_result(&result);
 }
 
+ATF_TC_WITHOUT_HEAD(battery_power_status);
+ATF_TC_BODY(battery_power_status, tc)
+{
+	const char *const argv[] = { "batt", "-t", NULL };
+	struct run_result result;
+
+	(void)tc;
+
+	reset_mocks();
+	add_mock("hw.acpi.battery.time", 0, sizeof(int), 0);
+	add_mock("hw.acpi.acline", 0, sizeof(int), 0);
+
+	result = run_batt(2, argv);
+	ATF_CHECK_EQ(result.exit_status, 0);
+	ATF_CHECK_STREQ(result.stdout_data,
+	    "System running on battery power\n");
+	ATF_CHECK_STREQ(result.stderr_data, "");
+	free_result(&result);
+}
+
+ATF_TC_WITHOUT_HEAD(unknown_acline_status);
+ATF_TC_BODY(unknown_acline_status, tc)
+{
+	const char *const argv[] = { "batt", "-t", NULL };
+	struct run_result result;
+
+	(void)tc;
+
+	reset_mocks();
+	add_mock("hw.acpi.battery.time", 0, sizeof(int), 0);
+	add_mock("hw.acpi.acline", -1, sizeof(int), 0);
+
+	result = run_batt(2, argv);
+	ATF_CHECK_EQ(result.exit_status, 1);
+	ATF_CHECK_STREQ(result.stdout_data, "");
+	ATF_CHECK(strstr(result.stderr_data,
+	    "AC line status unknown") != NULL);
+	free_result(&result);
+}
+
+ATF_TC_WITHOUT_HEAD(invalid_acline_status);
+ATF_TC_BODY(invalid_acline_status, tc)
+{
+	const char *const argv[] = { "batt", "-t", NULL };
+	struct run_result result;
+
+	(void)tc;
+
+	reset_mocks();
+	add_mock("hw.acpi.battery.time", 0, sizeof(int), 0);
+	add_mock("hw.acpi.acline", 2, sizeof(int), 0);
+
+	result = run_batt(2, argv);
+	ATF_CHECK_EQ(result.exit_status, 1);
+	ATF_CHECK_STREQ(result.stdout_data, "");
+	ATF_CHECK(strstr(result.stderr_data,
+	    "unexpected AC line status value") != NULL);
+	free_result(&result);
+}
+
 ATF_TC_WITHOUT_HEAD(extra_argument);
 ATF_TC_BODY(extra_argument, tc)
 {
@@ -323,6 +383,9 @@ ATF_TP_ADD_TCS(tp)
 	ATF_TP_ADD_TC(tp, default_output);
 	ATF_TP_ADD_TC(tp, concise_all_flags);
 	ATF_TP_ADD_TC(tp, acline_status);
+	ATF_TP_ADD_TC(tp, battery_power_status);
+	ATF_TP_ADD_TC(tp, unknown_acline_status);
+	ATF_TP_ADD_TC(tp, invalid_acline_status);
 	ATF_TP_ADD_TC(tp, extra_argument);
 	ATF_TP_ADD_TC(tp, short_life_sysctl);
 	ATF_TP_ADD_TC(tp, short_acline_sysctl);
