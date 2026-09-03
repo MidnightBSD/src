@@ -178,6 +178,10 @@ if [ ${MACHINE} = riscv ]; then
 	done
 fi
 
+# 20260903 # bc / dc test scripts no longer generated
+dir="${OBJTOP%/}"/usr.bin/gh-bc/tests
+run rm -fv "${dir}"/bc_tests.sh "${dir}"/dc_tests.sh
+
 # 20241018  5deeebd8c6ca   Merge llvm-project release/19.x llvmorg-19.1.2-0-g7ba7d8e2f7b6
 p="$OBJTOP"/lib/clang/libclang/clang/Basic
 f="$p"/arm_mve_builtin_sema.inc

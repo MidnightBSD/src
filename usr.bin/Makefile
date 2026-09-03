@@ -235,12 +235,7 @@ SUBDIR.${MK_GAMES}+=	pom
 SUBDIR.${MK_GAMES}+=	primes
 SUBDIR.${MK_GAMES}+=	random
 SUBDIR.${MK_CXX}+=	dtc
-.if ${MK_GH_BC} == "yes"
 SUBDIR+=		gh-bc
-.else
-SUBDIR.${MK_OPENSSL}+=	bc
-SUBDIR.${MK_OPENSSL}+=	dc
-.endif
 SUBDIR.${MK_HESIOD}+=	hesinfo
 SUBDIR.${MK_ICONV}+=	iconv
 SUBDIR.${MK_ICONV}+=	mkcsmapper

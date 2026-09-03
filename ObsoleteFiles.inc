@@ -39,6 +39,13 @@
 # for generating a list from a directory
 # find  /usr/lib/perl5/5.36.0 -exec echo {} \; | cut -b 2-150  | xargs printf "OLD_FILES+=%s\n"
 
+# 20260903: library and tests of OpenBSD bc and dc
+OLD_FILES+=usr/share/misc/bc.library
+OLD_FILES+=usr/tests/usr.bin/dc/Kyuafile
+OLD_FILES+=usr/tests/usr.bin/dc/bcode
+OLD_FILES+=usr/tests/usr.bin/dc/inout
+OLD_DIRS+=usr/tests/usr.bin/dc
+
 # 20260705: OpenSSL 1.1.1 to 3.0.x update, remove old shared libraries
 OLD_LIBS+=lib/libcrypto.so.111
 OLD_LIBS+=usr/lib/libssl.so.111

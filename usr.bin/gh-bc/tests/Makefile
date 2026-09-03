@@ -18,7 +18,8 @@ FILESfMODE=		0755
 FILESGROUPS+=		FILEStests
 FILEStestsPACKAGE=	${PACKAGE}
 FILEStestsDIR=		${TESTSDIR}/tests
-FILEStests!=		echo ${TEST_DIR}/tests/*.py ${TEST_DIR}/tests/*.sh ${TEST_DIR}/tests/*.txt
+FILEStests!=		echo ${TEST_DIR}/tests/*.py ${TEST_DIR}/tests/*.sed \
+				${TEST_DIR}/tests/*.sh ${TEST_DIR}/tests/*.txt
 FILEStestsMODE=		0755
 
 FILESGROUPS+=		FILESbc
@@ -54,13 +55,5 @@ FILESdc_scripts!=	echo ${TEST_DIR}/tests/dc/scripts/*.*
 FILESdc_scriptsMODE=	0755
 
 PLAIN_TESTS_SH=		bc_tests dc_tests
-
-bc_tests.sh:
-	echo "#!/bin/sh" > ${.TARGET}
-	echo "env LANG=C ${TESTSDIR}/tests/all.sh bc 1 1 0 0 0 bc" >> ${.TARGET}
-
-dc_tests.sh:
-	echo "#!/bin/sh" > ${.TARGET}
-	echo "env LANG=C ${TESTSDIR}/tests/all.sh dc 1 1 0 0 0 dc" >> ${.TARGET}
 
 .include <bsd.test.mk>

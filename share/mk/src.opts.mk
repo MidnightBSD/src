@@ -102,7 +102,6 @@ __DEFAULT_YES_OPTIONS = \
     FP_LIBC \
     FTP \
     GAMES \
-    GH_BC \
     GOOGLETEST \
     GPIO \
     HAST \
