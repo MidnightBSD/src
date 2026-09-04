@@ -263,11 +263,9 @@ __T=${MACHINE_ARCH}
 __LLVM_TARGETS= \
 		aarch64 \
 		arm \
-		mips \
-		powerpc \
 		riscv \
 		x86
-__LLVM_TARGET_FILT=	C/(amd64|i386)/x86/:C/powerpc.*/powerpc/:C/armv[67]/arm/:C/riscv.*/riscv/:C/mips.*/mips/
+__LLVM_TARGET_FILT=	C/(amd64|i386)/x86/:C/armv[67]/arm/:C/riscv.*/riscv/
 .for __llt in ${__LLVM_TARGETS}
 # Default enable the given TARGET's LLVM_TARGET support
 .if ${__T:${__LLVM_TARGET_FILT}} == ${__llt}
@@ -281,17 +279,17 @@ __DEFAULT_DEPENDENT_OPTIONS+=	LLVM_TARGET_${__llt:${__LLVM_TARGET_FILT}:tu}/LLVM
 .endif
 .endfor
 
-__DEFAULT_NO_OPTIONS+=LLVM_TARGET_BPF
+__DEFAULT_NO_OPTIONS+=LLVM_TARGET_BPF LLVM_TARGET_MIPS LLVM_TARGET_POWERPC
 
 .include <bsd.compiler.mk>
 
-.if ${__T} == "aarch64" || ${__T} == "amd64" || ${__T} == "i386" || ${__T:Mpowerpc*}
+.if ${__T} == "aarch64" || ${__T} == "amd64" || ${__T} == "i386"
 __DEFAULT_YES_OPTIONS+=LLDB
 .else
 __DEFAULT_NO_OPTIONS+=LLDB
 .endif
-# LIB32 is supported on amd64, mips64, and powerpc64
-.if (${__T} == "amd64" || ${__T:Mmips64*} || ${__T} == "powerpc64")
+# LIB32 is supported on amd64.
+.if ${__T} == "amd64"
 __DEFAULT_YES_OPTIONS+=LIB32
 .else
 BROKEN_OPTIONS+=LIB32
@@ -300,38 +298,16 @@ BROKEN_OPTIONS+=LIB32
 .if ${__T} != "armv6" && ${__T} != "armv7"
 BROKEN_OPTIONS+=LIBSOFT
 .endif
-.if ${__T:Mmips*}
-# GOOGLETEST cannot currently be compiled on mips due to external circumstances.
-# Notably, the freebsd-gcc port isn't linking in libgcc so we end up trying ot
-# link to a hidden symbol. LLVM would successfully link this in, but some of
-# the mips variants are broken under LLVM until LLVM 10. GOOGLETEST should be
-# marked no longer broken with the switch to LLVM.
-BROKEN_OPTIONS+=GOOGLETEST SSP
-.endif
-# EFI doesn't exist on mips or powerpc.
-.if ${__T:Mmips*} || ${__T:Mpowerpc*}
-BROKEN_OPTIONS+=EFI
-.endif
-# OFW is only for powerpc, exclude others
-.if ${__T:Mpowerpc*} == ""
+# OFW is not supported on any remaining architecture.
 BROKEN_OPTIONS+=LOADER_OFW
-.endif
-# KBOOT is only for powerpc64 (powerpc64le broken) and kinda for amd64
-.if ${__T} != "powerpc64" && ${__T} != "amd64"
+# KBOOT is only supported on amd64.
+.if ${__T} != "amd64"
 BROKEN_OPTIONS+=LOADER_KBOOT
 .endif
-# UBOOT is only for arm, mips, and big-endian powerpc
-.if (${__T:Marm*} == "" && ${__T:Mmips*} == "" && ${__T:Mpowerpc*} == "") || ${__T} == "powerpc64le"
+# UBOOT is only supported on arm.
+.if ${__T:Marm*} == ""
 BROKEN_OPTIONS+=LOADER_UBOOT
 .endif
-# GELI and Lua in loader currently cause boot failures on powerpc.
-# Further debugging is required -- probably they are just broken on big
-# endian systems generically (they jump to null pointers or try to read
-# crazy high addresses, which is typical of endianness problems).
-.if ${__T:Mpowerpc*}
-BROKEN_OPTIONS+=LOADER_GELI LOADER_LUA
-.endif
-
 # Kernel TLS is enabled by default on amd64 and aarch64
 .if ${__T} == "aarch64" || ${__T} == "amd64"
 __DEFAULT_YES_OPTIONS+=OPENSSL_KTLS
@@ -339,12 +315,7 @@ __DEFAULT_YES_OPTIONS+=OPENSSL_KTLS
 __DEFAULT_NO_OPTIONS+=OPENSSL_KTLS
 .endif
 
-.if ${__T:Mmips64*}
-# profiling won't work on MIPS64 because there is only assembly for o32
-BROKEN_OPTIONS+=PROFILE
-.endif
-.if ${__T} != "aarch64" && ${__T} != "amd64" && ${__T} != "i386" && \
-    ${__T} != "powerpc64"
+.if ${__T} != "aarch64" && ${__T} != "amd64" && ${__T} != "i386"
 BROKEN_OPTIONS+=CXGBETOOL
 BROKEN_OPTIONS+=MLX5TOOL
 .endif
@@ -354,14 +325,13 @@ BROKEN_OPTIONS+=MLX5TOOL
 BROKEN_OPTIONS+=HYPERV
 .endif
 
-# NVME is only aarch64, x86 and powerpc64*
-.if ${__T} != "aarch64" && ${__T} != "amd64" && ${__T} != "i386" && \
-    ${__T:Mpowerpc64*} == ""
+# NVME is only supported on aarch64 and x86.
+.if ${__T} != "aarch64" && ${__T} != "amd64" && ${__T} != "i386"
 BROKEN_OPTIONS+=NVME
 .endif
 
 .if ${__T} == "aarch64" || ${__T} == "amd64" || ${__T} == "i386" || \
-    ${__T:Mpowerpc64*} != "" || ${__T:Mriscv64*} != ""
+    ${__T:Mriscv64*} != ""
 __DEFAULT_YES_OPTIONS+=OPENMP
 .else
 __DEFAULT_NO_OPTIONS+=OPENMP

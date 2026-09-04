@@ -43,11 +43,6 @@
 
 #include <libzfs.h>
 #include <libzutil.h>
-/* 
- * Undefine flush, defined by cpufunc.h on sparc64, because it conflicts with
- * C++ flush methods
- */
-#undef   flush
 #undef	__init
 #include <list>
 #include <map>

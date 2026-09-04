@@ -10,8 +10,6 @@ CFLAGS+= -I${SRCTOP}/${RELDIR:H}/libpmcstat
 EVENT_ARCH="arm64"
 .elif ${MACHINE_CPUARCH} == "amd64" || ${MACHINE_CPUARCH} == "i386"
 EVENT_ARCH="x86"
-.elif ${MACHINE_CPUARCH} == "powerpc" && ${MACHINE_ARCH:Mpowerpc64*} != ""
-EVENT_ARCH="powerpc"
 .else
 # This will generate an empty events table
 EVENT_ARCH="none"
@@ -79,8 +77,6 @@ MAN+=	pmc.ivybridge.3
 MAN+=	pmc.ivybridgexeon.3
 MAN+=	pmc.k7.3
 MAN+=	pmc.k8.3
-MAN+=	pmc.mips24k.3
-MAN+=	pmc.octeon.3
 MAN+=	pmc.sandybridge.3
 MAN+=	pmc.sandybridgeuc.3
 MAN+=	pmc.sandybridgexeon.3

@@ -70,7 +70,7 @@ typedef int64_t host_blkcnt_t;
  * Constants for open, fcntl, etc
  *
  * Note: Some of these are arch dependent on Linux, but are the same for
- * powerpc, x86, arm*, and riscv. We should be futureproof, though, since these
+ * x86, arm*, and riscv. We should be futureproof, though, since these
  * are the 'generic' values and only older architectures (no longer supported by
  * FreeBSD) vary.
  *

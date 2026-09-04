@@ -49,8 +49,4 @@ afterinstall:
 	    ${_INSTALLFLAGS} ${SQLITE}/sqlite3.pc ${DESTDIR}/usr/libdata/pkgconfig/sqlite3.pc
 .endif
 
-.if ${MACHINE_ARCH} == "powerpc64le"
-CFLAGS+=	-DSQLITE_BYTEORDER=1234
-.endif
-
 .include <bsd.lib.mk>
