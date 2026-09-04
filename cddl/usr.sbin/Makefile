@@ -33,17 +33,6 @@ _dwatch=	dwatch
 _lockstat=	lockstat
 .endif
 
-.if ${MACHINE_CPUARCH} == "mips"
-_dtrace=	dtrace
-_dwatch=	dwatch
-.endif
-
-.if ${MACHINE_CPUARCH} == "powerpc"
-_dtrace=	dtrace
-_dwatch=	dwatch
-_lockstat=	lockstat
-.endif
-
 SUBDIR_PARALLEL=
 
 .include <bsd.subdir.mk>

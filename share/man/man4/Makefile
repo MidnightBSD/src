@@ -916,15 +916,6 @@ _vmm.4=		vmm.4
 .endif
 .endif
 
-.if ${MACHINE_CPUARCH} == "mips"
-_nvram2env.4=	nvram2env.4
-.endif
-
-.if ${MACHINE_CPUARCH} == "powerpc"
-_nvd.4= 	nvd.4
-_nvme.4=	nvme.4
-.endif
-
 .if ${MACHINE_CPUARCH} == "amd64" || ${MACHINE_CPUARCH} == "i386" || \
 	 ${MACHINE_CPUARCH} == "aarch64"
 _gve.4=		gve.4

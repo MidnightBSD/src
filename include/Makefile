@@ -45,7 +45,7 @@ LDIRS=	geom net net80211 netgraph netinet netinet6 \
 LSUBDIRS=	dev/acpica dev/agp dev/an dev/ciss dev/filemon dev/firewire \
 	dev/hwpmc dev/hyperv \
 	dev/ic dev/iicbus dev/io dev/mfi dev/mmc dev/nvme \
-	dev/ofw dev/pbio dev/pci ${_dev_powermac_nvram} dev/ppbus dev/pwm \
+	dev/ofw dev/pbio dev/pci dev/ppbus dev/pwm \
 	dev/smbus dev/speaker dev/tcp_log dev/veriexec dev/vkbd dev/wg \
 	fs/devfs fs/fdescfs fs/msdosfs fs/nfs fs/nullfs \
 	fs/procfs fs/smbfs fs/udf fs/unionfs \
@@ -288,10 +288,6 @@ INCS+=		iconv.h
 
 .if ${MK_USB} != "no"
 LSUBDIRS+=	dev/usb
-.endif
-
-.if ${MACHINE_CPUARCH} == "powerpc" && ${MACHINE_ARCH} != "powerpcspe"
-_dev_powermac_nvram=	dev/powermac_nvram
 .endif
 
 # Define SHARED to indicate whether you want symbolic links to the system

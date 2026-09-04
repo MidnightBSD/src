@@ -45,12 +45,6 @@ SRCS+=		xray/xray_trampoline_x86_64.S
 SRCS+=		xray/xray_x86_64.cpp
 .endif # amd64
 
-.if ${MACHINE_ARCH} == powerpc64le
-SRCS+=		xray/xray_powerpc64.cpp
-SRCS+=		xray/xray_trampoline_powerpc64.cpp
-SRCS+=		xray/xray_trampoline_powerpc64_asm.S
-.endif # powerpc64le
-
 .PATH:		${CRTSRC}/include/xray
 INCSDIR=	${CLANGDIR}/include/xray
 INCS+=		xray_interface.h

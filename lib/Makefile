@@ -190,8 +190,7 @@ SUBDIR.${MK_STATS}+=	libstats
 # C++ support.  Furthermore, they can only be built for certain architectures.
 .if ${COMPILER_TYPE} == "clang" && ${MK_CXX} != "no" && \
     (${MACHINE_CPUARCH} == "aarch64" || ${MACHINE_CPUARCH} == "amd64" || \
-    ${MACHINE_CPUARCH} == "arm" || ${MACHINE_CPUARCH} == "i386" || \
-    ${MACHINE_CPUARCH} == "powerpc" || ${MACHINE_CPUARCH} == "riscv")
+    ${MACHINE_CPUARCH} == "arm" || ${MACHINE_CPUARCH} == "i386" || ${MACHINE_CPUARCH} == "riscv")
 _libclang_rt=	libclang_rt
 .endif
 
@@ -219,9 +218,7 @@ SUBDIR.${MK_PMC}+=	libipt
 SUBDIR.${MK_BHYVE}+=	libvmmapi
 .endif
 
-.if ${MACHINE_ARCH} != "powerpc"
 SUBDIR.${MK_OPENMP}+=	libomp
-.endif
 .if !defined(COMPAT_32BIT) && ${MK_USB} != "no"
 SUBDIR.${MK_OPENSSH}+=	libcbor libfido2
 .endif

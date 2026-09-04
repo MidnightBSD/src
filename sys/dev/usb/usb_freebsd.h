@@ -63,8 +63,8 @@
 #if (!defined(USB_HOST_ALIGN)) || (USB_HOST_ALIGN <= 0)
 /* Use default value. */
 #undef USB_HOST_ALIGN
-#if defined(__arm__) || defined(__mips__) || defined(__powerpc__)
-#define USB_HOST_ALIGN	32		/* Arm and MIPS need at least this much, if not more */
+#if defined(__arm__)
+#define USB_HOST_ALIGN	32		/* Arm needs at least this much, if not more */
 #else
 #define	USB_HOST_ALIGN    8		/* bytes, must be power of two */
 #endif

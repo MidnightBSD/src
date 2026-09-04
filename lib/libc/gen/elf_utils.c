@@ -51,17 +51,9 @@ __elf_phdr_match_addr(struct dl_phdr_info *phdr_info, void *addr)
 		if (ph->p_type != PT_LOAD)
 			continue;
 
-		/* ELFv1 ABI for powerpc64 passes function descriptor
-		 * pointers around, not function pointers.  The function
-		 * descriptors live in .opd, which is a non-executable segment.
-		 * The PF_X check would therefore make all address checks fail,
-		 * causing a crash in some instances.  Don't skip over
-		 * non-executable segments in the ELFv1 powerpc64 case.
-		 */
-#if !defined(__powerpc64__) || (defined(_CALL_ELF) && _CALL_ELF == 2)
 		if ((ph->p_flags & PF_X) == 0)
 			continue;
-#endif
+
 
 		if (phdr_info->dlpi_addr + ph->p_vaddr <= (uintptr_t)addr &&
 		    (uintptr_t)addr < phdr_info->dlpi_addr +
