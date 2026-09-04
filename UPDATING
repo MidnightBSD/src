@@ -1,5 +1,9 @@
 Updating Information for MidnightBSD users.
 
+20260904:
+	Native MIPS, PowerPC, and sparc64 support has been removed.  Supported
+	architectures are amd64, arm, arm64, i386, and riscv.
+
 20260901:
 	expat 2.8.4 (from 2.8.3).  Fixes CVE-2026-66046 and CVE-2026-76641
 	(quadratic runtime in attribute "isCdata" lookups, letting moderately
