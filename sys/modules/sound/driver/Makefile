@@ -20,8 +20,5 @@ _maestro3=	maestro3
 SUBDIR+=	cmi mss
 .endif
 
-.if ${MACHINE_CPUARCH} == "powerpc"
-SUBDIR+=	ai2s davbus
-.endif
 
 .include <bsd.subdir.mk>

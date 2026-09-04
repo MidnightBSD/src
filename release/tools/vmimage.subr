@@ -15,13 +15,6 @@ trap "cleanup" INT QUIT TRAP ABRT TERM
 # Most platforms use GPT, so put that as default, then special cases
 PARTSCHEME=gpt
 ROOTLABEL="gpt"
-case "${TARGET}:${TARGET_ARCH}" in
-	powerpc:powerpc*)
-		PARTSCHEME=mbr
-		ROOTLABEL="ufs"
-		NOSWAP=yes # Can't label swap partition with MBR, so no swap
-	;;
-esac
 
 err() {
 	printf "${@}\n"
@@ -211,16 +204,6 @@ vm_create_disk() {
 			BOOTPARTS=
 			ROOTFSPART="-p mnbsd-ufs/rootfs:=${VMBASE}"
 			MAKEFSARGS="-B little"
-			;;
-		powerpc:powerpc*)
-			ESP=no
-			BOOTPARTS="-p prepboot:=${BOOTFILES}/powerpc/boot1.chrp/boot1.elf -a 1"
-			ROOTFSPART="-p midnightbsd:=${VMBASE}"
-			if [ ${TARGET_ARCH} = powerpc64le ]; then
-				MAKEFSARGS="-B little"
-			else
-				MAKEFSARGS="-B big"
-			fi
 			;;
 		*)
 			echo "vmimage.subr: unsupported target '${TARGET}:${TARGET_ARCH}'" >&2
