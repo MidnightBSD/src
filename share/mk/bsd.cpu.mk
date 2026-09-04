@@ -13,10 +13,6 @@ MACHINE_CPU = amd64 sse2 sse mmx
 MACHINE_CPU = arm
 . elif ${MACHINE_CPUARCH} == "i386"
 MACHINE_CPU = i486
-. elif ${MACHINE_CPUARCH} == "mips"
-MACHINE_CPU = mips
-. elif ${MACHINE_CPUARCH} == "powerpc"
-MACHINE_CPU = aim
 . elif ${MACHINE_CPUARCH} == "riscv"
 MACHINE_CPU = riscv
 . endif
@@ -79,9 +75,6 @@ CPUTYPE = pentium
 # after /etc/make.conf so it can react to the local value of CPUTYPE
 # defined therein.  Consult:
 #	http://gcc.gnu.org/onlinedocs/gcc/ARM-Options.html
-#	http://gcc.gnu.org/onlinedocs/gcc/RS-6000-and-PowerPC-Options.html
-#	http://gcc.gnu.org/onlinedocs/gcc/MIPS-Options.html
-#	http://gcc.gnu.org/onlinedocs/gcc/SPARC-Options.html
 #	http://gcc.gnu.org/onlinedocs/gcc/i386-and-x86_002d64-Options.html
 
 . if ${MACHINE_CPUARCH} == "i386"
@@ -120,28 +113,6 @@ _CPUCFLAGS = -march=${CPUTYPE}
 #	cortex-a9, cortex-a12, cortex-a15, cortex-a17, cortex-a53, cortex-a57,
 #	cortex-a72, exynos-m1
 _CPUCFLAGS = -mcpu=${CPUTYPE}
-. endif
-. elif ${MACHINE_ARCH} == "powerpc"
-.  if ${CPUTYPE} == "e500"
-_CPUCFLAGS = -Wa,-me500 -msoft-float
-.  else
-_CPUCFLAGS = -mcpu=${CPUTYPE} -mno-powerpc64
-.  endif
-. elif ${MACHINE_ARCH:Mpowerpc64*} != ""
-_CPUCFLAGS = -mcpu=${CPUTYPE}
-. elif ${MACHINE_CPUARCH} == "mips"
-# mips[1234], mips32, mips64, and all later releases need to have mips
-# preserved (releases later than r2 require external toolchain)
-.  if ${CPUTYPE:Mmips32*} != "" || ${CPUTYPE:Mmips64*} != "" || \
-	${CPUTYPE:Mmips[1234]} != ""
-_CPUCFLAGS = -march=${CPUTYPE}
-. else
-# Default -march to the CPUTYPE passed in, with mips stripped off so we
-# accept either mips4kc or 4kc, mostly for historical reasons
-# Typical values for cores:
-#	4kc, 24kc, 34kc, 74kc, 1004kc, octeon, octeon+, octeon2, octeon3,
-#	sb1, xlp, xlr
-_CPUCFLAGS = -march=${CPUTYPE:S/^mips//}
 . endif
 . elif ${MACHINE_CPUARCH} == "aarch64"
 .  if ${CPUTYPE:Marmv*} != ""
@@ -296,60 +267,9 @@ MACHINE_CPU = ssse3 sse3
 MACHINE_CPU = sse3
 .  endif
 MACHINE_CPU += amd64 sse2 sse mmx
-########## Mips
-. elif ${MACHINE_CPUARCH} == "mips"
-MACHINE_CPU = mips
-########## powerpc
-. elif ${MACHINE_ARCH} == "powerpc"
-.  if ${CPUTYPE} == "e500"
-MACHINE_CPU = booke softfp
-.  elif ${CPUTYPE} == "g4"
-MACHINE_CPU = altivec
-.  endif
-. elif ${MACHINE_ARCH} == "powerpc64"
-.  if ${CPUTYPE} == "e5500"
-MACHINE_CPU = booke
-.  elif ${CPUTYPE} == power7
-MACHINE_CPU = altivec vsx
-.  elif ${CPUTYPE} == power8
-MACHINE_CPU = altivec vsx vsx2
-.  elif ${CPUTYPE} == power9
-MACHINE_CPU = altivec vsx vsx2 vsx3
-.  else
-MACHINE_CPU = altivec
-.  endif
-. elif ${MACHINE_ARCH} == "powerpc64le"
-MACHINE_CPU = altivec vsx vsx2
-.  if ${CPUTYPE} == power9
-MACHINE_CPU += vsx3
-.  endif
 ########## riscv
 . elif ${MACHINE_CPUARCH} == "riscv"
 MACHINE_CPU = riscv
-. endif
-.endif
-
-.if ${MACHINE_CPUARCH} == "mips"
-CFLAGS += -G0
-AFLAGS+= -${MIPS_ENDIAN} -mabi=${MIPS_ABI}
-CFLAGS+= -${MIPS_ENDIAN} -mabi=${MIPS_ABI}
-LDFLAGS+= -${MIPS_ENDIAN} -mabi=${MIPS_ABI}
-. if ${MACHINE_ARCH:Mmips*el*} != ""
-MIPS_ENDIAN=	EL
-. else
-MIPS_ENDIAN=	EB
-. endif
-. if ${MACHINE_ARCH:Mmips64*} != ""
-MIPS_ABI?=	64
-. elif ${MACHINE_ARCH:Mmipsn32*} != ""
-MIPS_ABI?=	n32
-. else
-MIPS_ABI?=	32
-. endif
-. if ${MACHINE_ARCH:Mmips*hf}
-CFLAGS += -mhard-float
-. else
-CFLAGS += -msoft-float
 . endif
 .endif
 
@@ -381,15 +301,6 @@ MACHINE_CPU += softfp
 # it was a transition tool from FreeBSD 10 to 11 and is a bit of an odd duck.
 CFLAGS += -mfloat-abi=softfp
 . endif
-.endif
-
-.if ${MACHINE_ARCH} == "powerpc" || ${MACHINE_ARCH} == "powerpcspe"
-LDFLAGS.bfd+= -Wl,--secure-plt
-.endif
-
-.if ${MACHINE_ARCH} == "powerpcspe"
-CFLAGS += -mcpu=8548 -mspe
-CFLAGS.gcc+= -mabi=spe -mfloat-gprs=double -Wa,-me500
 .endif
 
 .if ${MACHINE_CPUARCH} == "riscv"

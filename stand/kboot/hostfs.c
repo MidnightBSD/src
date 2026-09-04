@@ -131,8 +131,7 @@ hostfs_seek(struct open_file *f, off_t offset, int whence)
 	/*
 	 * Assumes Linux host with 'reduced' system call wrappers. Also assume
 	 * host and libstand have same whence encoding (safe since it all comes
-	 * from V7 later ISO-C). Also assumes we have to support powerpc still,
-	 * it's interface is weird for legacy reasons....
+	 * from V7 later ISO-C).
 	 */
 	offl = offset & 0xffffffff;
 	offh = (offset >> 32) & 0xffffffff;

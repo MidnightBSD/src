@@ -143,28 +143,14 @@ TARGET_ABI=	gnueabi
 .endif
 .endif
 MACHINE_ABI?=	unknown
-MACHINE_TRIPLE?=${MACHINE_ARCH:S/amd64/x86_64/:C/[hs]f$//:S/mipsn32/mips64/}-${MACHINE_ABI}-freebsd13.4
+MACHINE_TRIPLE?=${MACHINE_ARCH:S/amd64/x86_64/:C/[hs]f$//}-${MACHINE_ABI}-freebsd13.4
 TARGET_ABI?=	unknown
-TARGET_TRIPLE?=	${TARGET_ARCH:S/amd64/x86_64/:C/[hs]f$//:S/mipsn32/mips64/}-${TARGET_ABI}-freebsd13.4
+TARGET_TRIPLE?=	${TARGET_ARCH:S/amd64/x86_64/:C/[hs]f$//}-${TARGET_ABI}-freebsd13.4
 KNOWN_ARCHES?=	aarch64/arm64 \
 		amd64 \
 		armv6/arm \
 		armv7/arm \
 		i386 \
-		mips \
-		mipsel/mips \
-		mips64el/mips \
-		mipsn32el/mips \
-		mips64/mips \
-		mipsn32/mips \
-		mipshf/mips \
-		mipselhf/mips \
-		mips64elhf/mips \
-		mips64hf/mips \
-		powerpc \
-		powerpc64/powerpc \
-		powerpc64le/powerpc \
-		powerpcspe/powerpc \
 		riscv64/riscv \
 		riscv64sf/riscv
 
@@ -1215,10 +1201,6 @@ _ncpu_cmd=sysctl -n hw.ncpu 2>/dev/null || nproc 2>/dev/null || echo unknown
 buildworld_prologue: .PHONY
 	@echo "--------------------------------------------------------------"
 	@echo ">>> World build started on `LC_ALL=C date`"
-.if ${TARGET:Mmips}
-	@echo "--------------------------------------------------------------"
-	@echo "WARNING: MIPS architecture is gone in MidnightBSD"
-.endif
 	@echo "--------------------------------------------------------------"
 
 buildworld_epilogue: .PHONY
@@ -1228,10 +1210,6 @@ buildworld_epilogue: .PHONY
 	@seconds=$$(($$(date '+%s') - ${_BUILDWORLD_START})); \
 	  echo -n ">>> World built in $$seconds seconds, "; \
 	  echo "ncpu: $$(${_ncpu_cmd})${.MAKE.JOBS:S/^/, make -j/}"
-.if ${TARGET:Mmips}
-	@echo "--------------------------------------------------------------"
-	@echo "WARNING: MIPS architecture is gone in MidnightBSD"
-.endif
 	@echo "--------------------------------------------------------------"
 
 #
@@ -1689,9 +1667,6 @@ NO_KERNELOBJ=		t
 KERNCONF=${KERNFAST}
 .endif
 .endif
-GENERIC_KERNCONF_SUFX_powerpc64=	64
-GENERIC_KERNCONF_SUFX_powerpc64le=	64LE
-GENERIC_KERNCONF_powerpcspe=	MPC85XXSPE
 GENERIC_KERNCONF?=	${GENERIC_KERNCONF_${TARGET_ARCH}:UGENERIC${GENERIC_KERNCONF_SUFX_${TARGET_ARCH}}}
 INSTKERNNAME?=	kernel
 
@@ -2354,9 +2329,6 @@ _bootstrap_tools_links+=m4 lex
 # r296685 fix cross-endian objcopy
 # r310724 fixed PR 215350, a crash in libdwarf with objects built by GCC 6.2.
 # r334881 added libdwarf constants used by ctfconvert.
-# r338478 fixed a crash in objcopy for mips64el objects
-# r339083 libelf: correct mips64el test to use ELF header
-# r348347 Add missing powerpc64 relocation support to libdwarf
 .if ${BOOTSTRAPPING} < 400000
 _elftoolchain_libs= lib/libelf lib/libdwarf lib/libzstd
 ${_bt}-lib/libelf: ${_bt_m4_depend}

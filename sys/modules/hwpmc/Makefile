@@ -30,9 +30,5 @@ SRCS+=	hwpmc_amd.c hwpmc_core.c hwpmc_intel.c
 SRCS+=	hwpmc_tsc.c hwpmc_x86.c hwpmc_uncore.c
 .endif
 
-.if ${MACHINE_CPUARCH} == "powerpc"
-SRCS+=	hwpmc_powerpc.c hwpmc_e500.c hwpmc_mpc7xxx.c hwpmc_ppc970.c \
-	hwpmc_power8.c
-.endif
 
 .include <bsd.kmod.mk>

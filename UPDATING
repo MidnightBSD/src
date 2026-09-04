@@ -1,5 +1,9 @@
 Updating Information for MidnightBSD users.
 
+20260904:
+	Native MIPS, PowerPC, and sparc64 support has been removed.  Supported
+	architectures are amd64, arm, arm64, i386, and riscv.
+
 20260903:
 	The OpenBSD-derived bc and dc implementations have been removed.
 	Gavin Howard's bc and dc are now always built.  The WITH_GH_BC and

@@ -14,8 +14,8 @@ LIBC_SRCTOP?= ${.CURDIR}
 # named MACHINE_CPUARCH, but some ABIs are different enough to require
 # their own libc, so allow a directory named MACHINE_ARCH to override this.
 
-.if exists(${LIBC_SRCTOP}/${MACHINE_ARCH:S/powerpc64le/powerpc64/})
-LIBC_ARCH=${MACHINE_ARCH:S/powerpc64le/powerpc64/}
+.if exists(${LIBC_SRCTOP}/${MACHINE_ARCH})
+LIBC_ARCH=${MACHINE_ARCH}
 .else
 LIBC_ARCH=${MACHINE_CPUARCH}
 .endif
@@ -31,7 +31,7 @@ CFLAGS+=-DNO__SCCSID -DNO__RCSID
 LIB=c
 SHLIB_MAJOR= 7
 .if ${MK_SSP} != "no" && \
-    (${LIBC_ARCH} == "i386" || ${LIBC_ARCH:Mpowerpc*} != "")
+    ${LIBC_ARCH} == "i386"
 SHLIB_LDSCRIPT=libc.ldscript
 .else
 SHLIB_LDSCRIPT=libc_nossp.ldscript
@@ -64,7 +64,7 @@ LDFLAGS+= -nodefaultlibs
 LIBADD+=	compiler_rt
 
 .if ${MK_SSP} != "no" && \
-    (${LIBC_ARCH} == "i386" || ${LIBC_ARCH:Mpowerpc*} != "")
+    ${LIBC_ARCH} == "i386"
 LIBADD+=	ssp_nonshared
 .endif
 
@@ -72,8 +72,8 @@ LIBADD+=	ssp_nonshared
 LIBC_NONSHARED_SRCS=
 
 RTLD_ELF_DIR=${SRCTOP}/libexec/rtld-elf
-.if exists(${RTLD_ELF_DIR}/${MACHINE_ARCH:S/powerpc64le/powerpc64/})
-RTLD_ARCH=	${MACHINE_ARCH:S/powerpc64le/powerpc64/}
+.if exists(${RTLD_ELF_DIR}/${MACHINE_ARCH})
+RTLD_ARCH=	${MACHINE_ARCH}
 .else
 RTLD_ARCH=	${MACHINE_CPUARCH}
 .endif
@@ -108,10 +108,7 @@ NOASM=
 .include "${LIBC_SRCTOP}/posix1e/Makefile.inc"
 .if ${LIBC_ARCH} != "aarch64" && \
     ${LIBC_ARCH} != "amd64" && \
-    ${LIBC_ARCH} != "powerpc64" && \
-    ${LIBC_ARCH} != "riscv" && \
-    ${MACHINE_ARCH:Mmipsn32*} == "" && \
-    ${MACHINE_ARCH:Mmips64*} == ""
+    ${LIBC_ARCH} != "riscv"
 .include "${LIBC_SRCTOP}/quad/Makefile.inc"
 .endif
 .include "${LIBC_SRCTOP}/regex/Makefile.inc"
@@ -128,7 +125,6 @@ NOASM=
 .include "${LIBC_SRCTOP}/xdr/Makefile.inc"
 .if (${LIBC_ARCH} == "arm" && \
 	(${MACHINE_ARCH:Marmv[67]*} == "" || (defined(CPUTYPE) && ${CPUTYPE:M*soft*}))) || \
-    (${LIBC_ARCH} == "mips" && ${MACHINE_ARCH:Mmips*hf} == "") || \
     (${LIBC_ARCH} == "riscv" && ${MACHINE_ARCH:Mriscv*sf} != "")
 .include "${LIBC_SRCTOP}/softfloat/Makefile.inc"
 .endif

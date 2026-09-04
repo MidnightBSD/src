@@ -13,9 +13,6 @@ CFLAGS+=	${OPENZFS_CFLAGS}
 .if ${MACHINE_CPUARCH} == "amd64" ||  ${MACHINE_CPUARCH} == "i386"
 CFLAGS+=	-I${SYSDIR}/cddl/contrib/opensolaris/uts/intel
 .PATH:		${SYSDIR}/cddl/contrib/opensolaris/uts/intel/dtrace
-.elif ${MACHINE_CPUARCH} == "powerpc"
-CFLAGS+=	-I${SYSDIR}/cddl/contrib/opensolaris/uts/powerpc
-.PATH:		${SYSDIR}/cddl/contrib/opensolaris/uts/powerpc/dtrace
 .endif
 
 .PATH:		${SYSDIR}/contrib/openzfs/module/unicode
