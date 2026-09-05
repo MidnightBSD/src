@@ -1,0 +1,202 @@
+#!/bin/sh
+#
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# Install packages from a blessed mport repository on installation media.
+#
+
+: ${BSDINSTALL_CHROOT:=/mnt}
+: ${BSDINSTALL_TMPETC:=/tmp/bsdinstall_etc}
+: ${DIALOG:=dialog}
+
+MEDIA_DIR=/packages
+INDEX=${MEDIA_DIR}/index.db
+INSTALLER_LIST=${MEDIA_DIR}/installer.tsv
+CATALOG=${MEDIA_DIR}/catalog.tsv
+TAB=$(printf '\t')
+
+[ -r "$INDEX" ] && [ -r "$INSTALLER_LIST" ] && [ -r "$CATALOG" ] || exit 0
+
+workdir=$(mktemp -d -t bsdinstall-packages.XXXXXX) || exit 1
+trap 'rm -rf "$workdir"' EXIT HUP INT TERM
+
+valid_package()
+{
+	case "$1" in
+	""|*[!A-Za-z0-9_.,+~:-]*) return 1 ;;
+	*) return 0 ;;
+	esac
+}
+
+valid_bundle()
+{
+	case "$1" in
+	""|*/*|*[!A-Za-z0-9_.,+~:-]*) return 1 ;;
+	*.mport) return 0 ;;
+	*) return 1 ;;
+	esac
+}
+
+copy_index()
+{
+	target_dir=${BSDINSTALL_CHROOT}/var/db/mport
+	mkdir -p "$target_dir" || return 1
+	if [ ! -e "$target_dir/index.db" ]; then
+		install -m 0644 "$INDEX" "$target_dir/index.db" || return 1
+	fi
+}
+
+prepare_resolver()
+{
+	resolver=
+	if [ -s "$BSDINSTALL_TMPETC/resolv.conf" ]; then
+		resolver=$BSDINSTALL_TMPETC/resolv.conf
+	elif [ -s /etc/resolv.conf ]; then
+		resolver=/etc/resolv.conf
+	fi
+	[ -n "$resolver" ] || return 1
+	cp "$resolver" "$BSDINSTALL_CHROOT/etc/resolv.conf"
+}
+
+is_installed()
+{
+	/usr/sbin/mport -c "$BSDINSTALL_CHROOT" info -e "$1" >/dev/null 2>&1
+}
+
+install_package()
+{
+	pkg=$1
+	bundle=$2
+	valid_package "$pkg" || return 1
+	valid_bundle "$bundle" || return 1
+
+	if [ ! -f "$MEDIA_DIR/$bundle" ]; then
+		prepare_resolver || {
+			$DIALOG --backtitle "MidnightBSD Installer" \
+			    --title "Network Required" --msgbox \
+			    "The package $pkg is not on the DVD and no resolver configuration is available." 0 0
+			return 1
+		}
+	fi
+
+	output=${workdir}/mport-output
+	$DIALOG --backtitle "MidnightBSD Installer" --title "Packages" \
+	    --infobox "Installing $pkg and its dependencies..." 0 0
+	if /usr/sbin/mport -U -c "$BSDINSTALL_CHROOT" install -y "$pkg" \
+	    > "$output" 2>&1; then
+		return 0
+	fi
+
+	if [ -n "${debugFile:-}" ]; then
+		cat "$output" >> "${debugFile#+}"
+	fi
+	$DIALOG --backtitle "MidnightBSD Installer" --title "Package Installation Failed" \
+	    --textbox "$output" 20 76
+	return 1
+}
+
+curated_packages()
+{
+	selection=${workdir}/selected
+	set --
+	while IFS="$TAB" read -r pkg version description state; do
+		valid_package "$pkg" || continue
+		if is_installed "$pkg"; then
+			state=on
+			description="$description [installed]"
+		fi
+		set -- "$@" "$pkg" "$version - $description" "$state"
+	done < "$INSTALLER_LIST"
+	[ "$#" -gt 0 ] || return 0
+
+	exec 3>&1
+	choices=$($DIALOG --backtitle "MidnightBSD Installer" --title "Package Selection" \
+	    --separate-output --checklist \
+	    "Select packages to install. Required dependencies are installed automatically." \
+	    0 0 0 "$@" 2>&1 1>&3)
+	result=$?
+	exec 3>&-
+	[ "$result" -eq 0 ] && [ -n "$choices" ] || return 0
+	printf '%s\n' "$choices" > "$selection"
+
+	while IFS= read -r pkg; do
+		bundle=$(awk -F "$TAB" -v name="$pkg" '$1 == name { print $4; exit }' "$CATALOG")
+		install_package "$pkg" "$bundle"
+	done < "$selection"
+}
+
+search_packages()
+{
+	exec 3>&1
+	term=$($DIALOG --backtitle "MidnightBSD Installer" --title "Search Packages" \
+	    --inputbox "Enter text from a package name or description:" 0 0 \
+	    2>&1 1>&3)
+	result=$?
+	exec 3>&-
+	[ "$result" -eq 0 ] && [ -n "$term" ] || return 0
+
+	results=${workdir}/search-results
+	awk -F "$TAB" -v needle="$term" '
+	BEGIN { needle = tolower(needle); count = 0 }
+	index(tolower($1 " " $3), needle) != 0 {
+		print
+		count++
+		if (count == 101)
+			exit
+	}' "$CATALOG" > "$results"
+
+	[ -s "$results" ] || {
+		$DIALOG --backtitle "MidnightBSD Installer" --title "Search Packages" \
+		    --msgbox "No packages matched '$term'." 0 0
+		return 0
+	}
+
+	set --
+	count=0
+	while IFS="$TAB" read -r pkg version description bundle; do
+		count=$((count + 1))
+		[ "$count" -le 100 ] || break
+		valid_package "$pkg" && valid_bundle "$bundle" || continue
+		location=Network
+		[ -f "$MEDIA_DIR/$bundle" ] && location=DVD
+		set -- "$@" "$pkg" "$version - $description [$location]"
+	done < "$results"
+	[ "$#" -gt 0 ] || return 0
+
+	exec 3>&1
+	choice=$($DIALOG --backtitle "MidnightBSD Installer" --title "Search Results" \
+	    --menu "Select a package to install. Refine the search if results were truncated." \
+	    0 0 0 "$@" 2>&1 1>&3)
+	result=$?
+	exec 3>&-
+	[ "$result" -eq 0 ] || return 0
+	bundle=$(awk -F "$TAB" -v name="$choice" '$1 == name { print $4; exit }' "$results")
+	install_package "$choice" "$bundle"
+}
+
+copy_index || {
+	$DIALOG --backtitle "MidnightBSD Installer" --title "Packages" \
+	    --msgbox "Could not install the mport repository index in the new system." 0 0
+	exit 1
+}
+
+while :; do
+	exec 3>&1
+	action=$($DIALOG --backtitle "MidnightBSD Installer" --title "Packages" \
+	    --cancel-label "Done" --menu \
+	    "Install applications from the DVD or search the full MidnightBSD package catalog." \
+	    0 0 0 \
+	    "Curated" "Select packages included on the DVD" \
+	    "Search" "Search DVD and network packages" \
+	    "Done" "Return to the installer" 2>&1 1>&3)
+	result=$?
+	exec 3>&-
+	[ "$result" -eq 0 ] || break
+	case "$action" in
+	Curated) curated_packages ;;
+	Search) search_packages ;;
+	Done) break ;;
+	esac
+done
+
+exit 0

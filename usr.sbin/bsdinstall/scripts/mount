@@ -53,8 +53,8 @@ done
 mkdir $BSDINSTALL_CHROOT/dev 2>/dev/null
 mount -t devfs devfs $BSDINSTALL_CHROOT/dev
 
-# If installing from the DVD, mount packages where they'll be accessible
+# If installing from the DVD, mount packages at mport's media path.
 if [ -d /packages ]; then
-	mkdir -p $BSDINSTALL_CHROOT/dist/packages
-	mount -t nullfs /packages $BSDINSTALL_CHROOT/dist/packages
+	mkdir -p "$BSDINSTALL_CHROOT/packages"
+	mount -t nullfs -o ro /packages "$BSDINSTALL_CHROOT/packages"
 fi
