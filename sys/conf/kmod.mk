@@ -180,7 +180,6 @@ CFLAGS.clang+=	-mno-movt
 CFLAGS.clang+=	-mfpu=none
 CFLAGS+=	-funwind-tables
 .endif
-.endif
 
 .if defined(DEBUG) || defined(DEBUG_FLAGS)
 CTFFLAGS+=	-g

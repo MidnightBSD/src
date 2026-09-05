@@ -19,7 +19,9 @@
 # Variables affecting the build process:
 #  WORLDDIR: location of src tree -- must have built world and default kernel
 #            (by default, the directory above this one)
-#  PORTSDIR: location of ports tree to distribute (default: /usr/ports)
+#  PORTSDIR: location of mports tree to distribute (default: /usr/mports)
+#  MPORT_REPOSITORY: blessed mport package repository to stage on dvd1.iso
+#  DVD_PACKAGE_ROOTS: application packages offered by bsdinstall
 #  XTRADIR:  xtra-bits-dir argument for <arch>/mkisoimages.sh
 #  NOPKG:    if set, do not distribute third-party packages
 #  NOPORTS:  if set, do not distribute ports tree
@@ -36,6 +38,8 @@
 
 WORLDDIR?=	${.CURDIR}/..
 PORTSDIR?=	/usr/mports
+MPORT_REPOSITORY?=	${PORTSDIR}/Packages/${TARGET_ARCH}/All
+DVD_PACKAGE_ROOTS?=	midnightbsd-desktop bash zsh sudo screen tmux nano vim rsync git
 
 .if !defined(TARGET) || empty(TARGET)
 TARGET=		${MACHINE}
@@ -222,7 +226,7 @@ release.iso: disc1.iso
 disc1.iso: disc1
 	sh ${.CURDIR}/${TARGET}/mkisoimages.sh -b ${VOLUME_LABEL}_CD ${.TARGET} disc1 ${XTRADIR}
 
-dvd1.iso: dvd pkg-stage
+dvd1.iso: pkg-stage
 	sh ${.CURDIR}/${TARGET}/mkisoimages.sh -b ${VOLUME_LABEL}_DVD ${.TARGET} dvd ${XTRADIR}
 
 bootonly.iso: bootonly
@@ -240,11 +244,12 @@ packagesystem: base.txz kernel.txz ${EXTRA_PACKAGES}
 	sh ${.CURDIR}/scripts/make-manifest.sh *.txz > MANIFEST
 	touch ${.TARGET}
 
-pkg-stage:
+pkg-stage: dvd
 .if !defined(NOPKG) || empty(NOPKG)
-	env PORTSDIR=${PORTSDIR} REPOS_DIR=${.CURDIR}/pkg_repos/ \
+	env ROOTDIR=${.OBJDIR}/dvd \
+		MPORT_REPOSITORY=${MPORT_REPOSITORY} \
+		DVD_PACKAGE_ROOTS="${DVD_PACKAGE_ROOTS}" \
 		sh ${.CURDIR}/scripts/pkg-stage.sh
-	mkdir -p ${.OBJDIR}/dvd/packages/repos/
 .endif
 	touch ${.TARGET}
 
