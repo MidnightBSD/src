@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2017-2019 Apple Inc. All rights reserved.
+ * Copyright (c) 2017-2019, 2021 Apple Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,7 +20,7 @@
 
 #import <SafariServices/SafariServices.h>
 
-#define SHOW_SERVICETYPE_IF_SEARCH_COUNT	0
+#define SHOW_SERVICETYPE_IF_SEARCH_COUNT    0
 
 const NSString *    _CNInstanceKey_fullName             = @"fullName";
 const NSString *    _CNInstanceKey_name                 = @"name";
@@ -134,19 +134,30 @@ const NSString *    _CNInstanceKey_resolveInstance      = @"resolveInstance";
 
 @end
 
-@implementation NSBrowser( PathArray )
+@interface VerticallyCenteredTextFieldCell : NSTextFieldCell
+@property BOOL drawingInExpansionFrame;
+@end
 
-- (NSArray *)pathArrayToColumn:(NSInteger)column includeSelectedRow:(BOOL)includeSelection
+@implementation VerticallyCenteredTextFieldCell
+
+-(NSRect)drawingRectForBounds:(NSRect)theRect
 {
-	NSMutableArray * pathArray = [NSMutableArray array];
-	if( !includeSelection ) column--;
-	for( NSInteger c = 0 ; c <= column ; c++ )
+	if( self.drawingInExpansionFrame ) return theRect;
+
+	const CGFloat fontHeight = [[[NSLayoutManager alloc] init] defaultLineHeightForFont: self.font];
+	if( fontHeight < NSHeight(theRect) )
 	{
-		NSBrowserCell *cell = [self selectedCellInColumn: c];
-		if( cell ) [pathArray addObject: [cell stringValue]];
+		theRect.origin.y += (NSHeight(theRect) - fontHeight) / 2;
+		theRect.size.height = fontHeight;
 	}
-	
-	return( pathArray );
+	return theRect;
+}
+
+- (void)drawWithExpansionFrame:(NSRect)cellFrame inView:(NSView *)view
+{
+	self.drawingInExpansionFrame = YES;
+	[super drawWithExpansionFrame:cellFrame inView:view];
+	self.drawingInExpansionFrame = NO;
 }
 
 @end
@@ -221,7 +232,7 @@ static void browseReply( DNSServiceRef sdRef, DNSServiceFlags flags, uint32_t in
 	column.resizingMask = (NSTableColumnAutoresizingMask);
 	column.width = frame.size.width / 3;
 	column.minWidth = column.width / 2;
-	NSTextFieldCell * cell = [[NSTextFieldCell alloc] init];
+	VerticallyCenteredTextFieldCell * cell = [[VerticallyCenteredTextFieldCell alloc] init];
 	cell.truncatesLastVisibleLine = YES;
 	column.dataCell = cell;
 	[column.headerCell setStringValue: NSLocalizedString( @"_dnsBrowser.instances.name", nil )];
@@ -269,7 +280,7 @@ static void browseReply( DNSServiceRef sdRef, DNSServiceFlags flags, uint32_t in
     [self contentViewsInit];
 }
 
-- (void) setServiceTypes:(NSArray *)serviceTypes
+- (void)setServiceTypes:(NSArray *)serviceTypes
 {
 	if( ![_serviceTypes isEqualTo: serviceTypes] )
 	{
@@ -277,7 +288,7 @@ static void browseReply( DNSServiceRef sdRef, DNSServiceFlags flags, uint32_t in
 	}
 }
 
-- (NSArray *) serviceTypes
+- (NSArray *)serviceTypes
 {
 	return( _serviceTypes );
 }
@@ -329,7 +340,7 @@ static void browseReply( DNSServiceRef sdRef, DNSServiceFlags flags, uint32_t in
             }
         }
     }
-    
+
 #if DEBUG_DOMAIN_POPUPS
     return( YES );
 #else
@@ -372,13 +383,7 @@ static void browseReply( DNSServiceRef sdRef, DNSServiceFlags flags, uint32_t in
 	}
 }
 
-#if 0
-- (void)tableView:(NSTableView *)tableView didClickTableColumn:(NSTableColumn *)tableColumn
-{
-}
-#endif
-
-- (void) handleBrowseResults
+- (void)handleBrowseResults
 {
     dispatch_async( dispatch_get_main_queue(), ^{
         [self bonjourBrowserServiceBrowseUpdate: self->_instanceA];
@@ -393,17 +398,17 @@ static void browseReply( DNSServiceRef sdRef, DNSServiceFlags flags, uint32_t in
     [self adjustInstancesColumnWidths];
 }
 
-- (void) adjustInstancesColumnWidths
+- (void)adjustInstancesColumnWidths
 {
     self.instanceServiceTypeColumn.hidden = ![self foundInstancesWithMoreThanOneServiceType];
     self.instancePathPopupColumn.hidden = ![self foundInstancesInMoreThanCurrentDomainPath];
     
     if( !self.instanceServiceTypeColumn.hidden || !self.instancePathPopupColumn.hidden )
     {
-        BOOL        sizeChanged = NO;
+        BOOL           sizeChanged = NO;
         CGFloat        maxWidthType = 0;
         CGFloat        maxWidthDomain = 0;
-        BOOL        needRoomForPopup = NO;
+        BOOL           needRoomForPopup = NO;
         NSDictionary * fontAttrType = @{ NSFontAttributeName: ((NSTextFieldCell *)self.instanceServiceTypeColumn.dataCell).font };
         NSDictionary * fontAttrDomain = @{ NSFontAttributeName: ((NSTextFieldCell *)self.instancePathPopupColumn.dataCell).font };
         
@@ -434,7 +439,7 @@ static void browseReply( DNSServiceRef sdRef, DNSServiceFlags flags, uint32_t in
         
         if( !self.instancePathPopupColumn.hidden )
         {
-            maxWidthDomain += (EDGE_GAP * 2) + needRoomForPopup ? POPUP_ARROW : 0;
+            maxWidthDomain += (EDGE_GAP * 2) + (needRoomForPopup ? POPUP_ARROW : 0);
             if( self.instancePathPopupColumn.width != maxWidthDomain )
             {
                 self.instancePathPopupColumn.width = self.instancePathPopupColumn.minWidth = self.instancePathPopupColumn.maxWidth = maxWidthDomain;
@@ -578,7 +583,7 @@ static void resolveReply( DNSServiceRef sdRef,
             const u_char *  valuePtr = TXTRecordGetValuePtr( txtLen, txtRecord, "path", &valueLen );
             urlComponents.path = (__bridge_transfer NSString *)CFStringCreateWithBytes( kCFAllocatorDefault, valuePtr, valueLen, kCFStringEncodingUTF8, false );
         }
-        if( port ) urlComponents.port = [NSNumber numberWithShort: NTOHS( port )];
+        if( port ) urlComponents.port = [NSNumber numberWithUnsignedShort: ntohs( port )];
         record[_CNInstanceKey_resolveUrl] = urlComponents.URL;
     }
 }

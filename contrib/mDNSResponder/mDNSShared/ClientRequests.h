@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2018-2019 Apple Inc. All rights reserved.
+ * Copyright (c) 2018-2022 Apple Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -30,7 +30,7 @@ typedef struct
     mDNSInterfaceID             interfaceID;            // Interface over which to perform query.
     QueryRecordResultHandler    resultHandler;          // Handler for query record operation results.
     void *                      resultContext;          // Context to pass to result handler.
-    mDNSu32                     reqID;                  // 
+    mDNSu32                     reqID;                  // Client request ID.
     int                         searchListIndex;        // Index that indicates the next search domain to try.
 #if MDNSRESPONDER_SUPPORTS(APPLE, UNICAST_DOTLOCAL)
     DNSQuestion *               q2;                     // DNSQuestion for unicast version of a record with a dot-local name.
@@ -42,6 +42,13 @@ typedef struct
 #endif
 #if MDNSRESPONDER_SUPPORTS(APPLE, REACHABILITY_TRIGGER)
     mDNSBool                    answered;               // True if the query was answered.
+#endif
+    mDNSBool                    useAAAAFallback;        // If a AAAA question gets a negative answer, it's restarted as an A.
+#if MDNSRESPONDER_SUPPORTS(APPLE, QUERIER)
+    mDNSu16                     qtype;                  // Original QTYPE.
+    mDNSBool                    useFailover;            // Use DNS service failover if applicable.
+    mDNSBool                    failoverMode;           // Use DNS service failover immediately.
+    mDNSBool                    prohibitEncryptedDNS;   // Prohibit use of encrypted DNS protocols.
 #endif
 
 }   QueryRecordOp;
@@ -61,20 +68,80 @@ typedef struct
 
 }   QueryRecordClientRequest;
 
+typedef struct
+{
+    mDNSu32                 requestID;
+    const char *            hostnameStr;
+    mDNSu32                 interfaceIndex;
+    DNSServiceFlags         flags;
+    mDNSu32                 protocols;
+    mDNSs32                 effectivePID;
+    const mDNSu8 *          effectiveUUID;
+    mDNSu32                 peerUID;
+#if MDNSRESPONDER_SUPPORTS(APPLE, QUERIER)
+    const mDNSu8 *          resolverUUID;
+    mdns_dns_service_id_t   customID;
+    mDNSBool                needEncryption;
+    mDNSBool                useFailover;
+    mDNSBool                failoverMode;
+    mDNSBool                prohibitEncryptedDNS;
+#endif
+#if MDNSRESPONDER_SUPPORTS(APPLE, AUDIT_TOKEN)
+    const audit_token_t *   peerAuditToken;
+    const audit_token_t *   delegatorAuditToken;
+    mDNSBool                isInAppBrowserRequest;
+#endif
+#if MDNSRESPONDER_SUPPORTS(APPLE, LOG_PRIVACY_LEVEL)
+    dnssd_log_privacy_level_t logPrivacyLevel;
+#endif
+
+}   GetAddrInfoClientRequestParams;
+
+typedef struct
+{
+    mDNSu32                 requestID;
+    const char *            qnameStr;
+    mDNSu32                 interfaceIndex;
+    DNSServiceFlags         flags;
+    mDNSu16                 qtype;
+    mDNSu16                 qclass;
+    mDNSs32                 effectivePID;
+    const mDNSu8 *          effectiveUUID;
+    mDNSu32                 peerUID;
+#if MDNSRESPONDER_SUPPORTS(APPLE, QUERIER)
+    const mDNSu8 *          resolverUUID;
+	mdns_dns_service_id_t	customID;
+    mDNSBool                needEncryption;
+    mDNSBool                useFailover;
+    mDNSBool                failoverMode;
+    mDNSBool                prohibitEncryptedDNS;
+#endif
+#if MDNSRESPONDER_SUPPORTS(APPLE, AUDIT_TOKEN)
+    const audit_token_t *   peerAuditToken;
+    const audit_token_t *   delegatorAuditToken;
+    mDNSBool                isInAppBrowserRequest;
+#endif
+    mDNSBool                useAAAAFallback;
+#if MDNSRESPONDER_SUPPORTS(APPLE, LOG_PRIVACY_LEVEL)
+    dnssd_log_privacy_level_t logPrivacyLevel;
+#endif
+
+}   QueryRecordClientRequestParams;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-mDNSexport mStatus GetAddrInfoClientRequestStart(GetAddrInfoClientRequest *inRequest, mDNSu32 inReqID,
-    const char *inHostnameStr, mDNSu32 inInterfaceIndex, DNSServiceFlags inFlags, mDNSu32 inProtocols, mDNSs32 inPID,
-    const mDNSu8 inUUID[UUID_SIZE], mDNSu32 inUID, QueryRecordResultHandler inResultHandler, void *inResultContext);
+mDNSexport void GetAddrInfoClientRequestParamsInit(GetAddrInfoClientRequestParams *inParams);
+mDNSexport mStatus GetAddrInfoClientRequestStart(GetAddrInfoClientRequest *inRequest,
+    const GetAddrInfoClientRequestParams *inParams, QueryRecordResultHandler inResultHandler, void *inResultContext);
 mDNSexport void GetAddrInfoClientRequestStop(GetAddrInfoClientRequest *inRequest);
 mDNSexport const domainname * GetAddrInfoClientRequestGetQName(const GetAddrInfoClientRequest *inRequest);
 mDNSexport mDNSBool GetAddrInfoClientRequestIsMulticast(const GetAddrInfoClientRequest *inRequest);
 
-mDNSexport mStatus QueryRecordClientRequestStart(QueryRecordClientRequest *inRequest, mDNSu32 inReqID,
-    const char *inQNameStr, mDNSu32 inInterfaceIndex, DNSServiceFlags inFlags, mDNSu16 inQType, mDNSu16 inQClass,
-    mDNSs32 inPID, mDNSu8 inUUID[UUID_SIZE], mDNSu32 inUID, QueryRecordResultHandler inResultHandler, void *inResultContext);
+mDNSexport void QueryRecordClientRequestParamsInit(QueryRecordClientRequestParams *inParams);
+mDNSexport mStatus QueryRecordClientRequestStart(QueryRecordClientRequest *inRequest,
+    const QueryRecordClientRequestParams *inParams, QueryRecordResultHandler inResultHandler, void *inResultContext);
 mDNSexport void QueryRecordClientRequestStop(QueryRecordClientRequest *inRequest);
 mDNSexport const domainname * QueryRecordClientRequestGetQName(const QueryRecordClientRequest *inRequest);
 mDNSexport mDNSu16 QueryRecordClientRequestGetType(const QueryRecordClientRequest *inRequest);

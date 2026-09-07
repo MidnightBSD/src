@@ -1,11 +1,11 @@
 #! /bin/bash
 #
-#	Copyright (c) 2017-2019 Apple Inc. All rights reserved.
+#	Copyright (c) 2017-2021 Apple Inc. All rights reserved.
 #
 #	This script is currently for Apple Internal use only.
 #
 
-declare -r version=1.6
+declare -r version=1.9
 declare -r script=${BASH_SOURCE[0]}
 declare -r dnssdutil=${dnssdutil:-dnssdutil}
 
@@ -17,7 +17,8 @@ serviceTypesOfInterest=(
 	_airplay._tcp			# AirPlay
 	_airport._tcp			# AirPort Base Station
 	_companion-link._tcp	# Companion Link
-	_hap._tcp				# HomeKit Accessory Protocol
+	_hap._tcp				# HomeKit Accessory Protocol (TCP)
+	_hap._udp				# HomeKit Accessory Protocol (UDP)
 	_homekit._tcp			# HomeKit
 	_raop._tcp				# Remote Audio Output Protocol
 )
@@ -123,7 +124,21 @@ RunNetStat()
 StartPacketCapture()
 {
 	LogMsg "Starting tcpdump."
-	tcpdump -n -w "${workPath}/tcpdump.pcapng" &> "${workPath}/tcpdump.txt" &
+	
+	# The first tcpdump doesn't filter for any particular protocols because we want to see what else might be going on
+	# on the network. To avoid packet captures that are larger than necessary, a snapshot length of 9256 B is used,
+	# which is 9156 B plus 100 B as a fudge factor. This should be large enough to accommodate the largest mDNS message
+	# sent by mDNSResponder, since mDNS traffic is what we primarily care about.
+	#
+	# The 9156 B value is the sum of the following:
+	#
+	#     8940 B is the maximum mDNS message size used by mDNSResponder not including the mDNS header.
+	#       12 B is the size of an mDNS header.
+	#        8 B is the size of a UDP header.
+	#       40 B is the size of an IPv6 header (IPv6 headers are larger than IPv4 headers).
+	#      156 B is the amount of additional per-frame overhead used by tcpdump on macOS 12.0.
+	
+	tcpdump -n -s 9256 -w "${workPath}/tcpdump.pcapng" &> "${workPath}/tcpdump.txt" &
 	tcpdumpPID=$!
 	tcpdump -i lo0 -n -w "${workPath}/tcpdump-loopback.pcapng" &> "${workPath}/tcpdump-loopback.txt" 'udp port 5353' &
 	tcpdumpLoopbackPID=$!
@@ -244,7 +259,7 @@ RunInterfaceMulticastTests()
 RunMulticastTests()
 {
 	local -r interfaces=( $( ifconfig -l -u ) )
-	local -r skipPrefixes=( ap awdl bridge ipsec llw p2p pdp_ip pktap UDC utun )
+	local -r skipPrefixes=( ap awdl bridge ipsec llw nan p2p pdp_ip pktap UDC utun )
 	local -a pids
 	local ifname
 	local skip
@@ -304,29 +319,23 @@ RunBrowseTest()
 }
 
 #============================================================================================================================
-#	IsMacOS
-#============================================================================================================================
-
-IsMacOS()
-{
-	[[ $( sw_vers -productName ) =~ ^Mac\ OS ]]
-}
-
-#============================================================================================================================
 #	ArchiveLogs
 #============================================================================================================================
 
 ArchiveLogs()
 {
+	local parentDir=''
+	# First, check for the non-macOS sysdiagnose archive path, then check for the macOS sysdiagnose archive path.
+	for dir in '/var/mobile/Library/Logs/CrashReporter' '/var/tmp'; do
+		if [ -w "${dir}" ]; then
+			parentDir="${dir}"
+			break
+		fi
+	done
+	# If a writable path wasn't available, just use /tmp.
+	[ -n "${parentDir}" ] || parentDir='/tmp'
 	local -r workdir=$( basename "${workPath}" )
-	local parentDir
-	if IsMacOS; then
-		parentDir=/var/tmp
-	else
-		parentDir=/var/mobile/Library/Logs/CrashReporter
-	fi
 	local -r archivePath="${parentDir}/${workdir}.tar.gz"
-	
 	LogMsg "Archiving logs."
 	echo "---"
 	tar -C "${tempPath}" -czf "${archivePath}" "${workdir}"
@@ -334,7 +343,7 @@ ArchiveLogs()
 		echo "Created log archive at ${archivePath}"
 		echo "*** Please run sysdiagnose NOW. ***"
 		echo "Attach both the log archive and the sysdiagnose archive to the radar."
-		if IsMacOS; then
+		if command -v open 2>&1 > /dev/null; then
 			open "${parentDir}"
 		fi
 	else
@@ -355,13 +364,13 @@ CreateWorkDirName()
 		suffix+="_${productName}"
 	fi
 	
-	local model
-	if IsMacOS; then
-		model=$( sysctl -n hw.model )
-		model=${model//,/-}
+	local model=''
+	if command -v gestalt_query 2>&1 > /dev/null; then
+		model=$( gestalt_query -undecorated ProductType )
 	else
-		model=$( gestalt_query -undecorated DeviceName )
+		model=$( sysctl -n hw.model )
 	fi
+	model=${model//,/-}
 	if [ -n "${model}" ]; then
 		suffix+="_${model}"
 	fi
@@ -411,13 +420,13 @@ main()
 	
 	[ "${OPTIND}" -gt "$#" ] || ErrQuit "unexpected argument \"${!OPTIND}\"."
 	
-	if IsMacOS; then
-		if [ "${EUID}" -ne 0 ]; then
+	if [ "${EUID}" -ne 0 ]; then
+		if command -v sudo 2>&1 > /dev/null; then
 			echo "Re-launching with sudo"
 			exec sudo "${script}" "$@"
+		else
+			ErrQuit "$( basename "${script}" ) needs to be run as root."
 		fi
-	else
-		[ "${EUID}" -eq 0 ] || ErrQuit "$( basename "${script}" ) needs to be run as root."
 	fi
 	
 	tempPath=$( mktemp -d -q ) || ErrQuit "Failed to make temp directory."

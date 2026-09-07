@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2019 Apple Inc. All rights reserved.
+ * Copyright (c) 2019-2022 Apple Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -17,20 +17,22 @@
 #ifndef __DNSSD_XPC_H__
 #define __DNSSD_XPC_H__
 
+#include "dnssd_private.h"
+
 #include <CoreUtils/CommonServices.h>
 #include <dns_sd.h>
+#include <mdns/xpc.h>
 #include <xpc/xpc.h>
 
 #define DNSSD_MACH_SERVICE_NAME	"com.apple.dnssd.service"
 
 #define DNSSD_COMMAND_GETADDRINFO	"getaddrinfo"
+#define DNSSD_COMMAND_KEEPALIVE		"keepalive"
 #define DNSSD_COMMAND_STOP			"stop"
 
 CU_ASSUME_NONNULL_BEGIN
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+__BEGIN_DECLS
 
 /*!
  *	@brief
@@ -199,6 +201,23 @@ dnssd_xpc_parameters_get_delegate_uuid(xpc_object_t params);
 
 /*!
  *	@brief
+ *		Gets a delegate audit token from a command parameters dictionary.
+ *
+ *	@param params
+ *		Command parameters dictionary.
+ *
+ *	@param audit_token_storage
+ *		Pointer to an audit token to overwrite with parameters dictionary's delegate audit token data.
+ *
+ *	@result
+ *		If the parameters dictionary contains a delegate audit token, this function copies it to
+ *		audit_token_storage and returns audit_token_storage. Otherwise, it returns NULL.
+ */
+audit_token_t * _Nullable
+dnssd_xpc_parameters_get_delegate_audit_token(xpc_object_t params, audit_token_t *audit_token_storage);
+
+/*!
+ *	@brief
  *		Gets flags from a command parameters dictionary.
  *
  *	@param params
@@ -212,6 +231,19 @@ dnssd_xpc_parameters_get_delegate_uuid(xpc_object_t params);
  */
 DNSServiceFlags
 dnssd_xpc_parameters_get_flags(xpc_object_t params, bool * _Nullable out_valid);
+
+/*!
+*	@brief
+*		Gets account id from a command parameters dictionary.
+*
+*	@param params
+*		Command parameters dictionary.
+*
+*	@result
+*		Account, if present, as a const char *. Otherwise, NULL.
+*/
+const char * _Nullable
+dnssd_xpc_parameters_get_account_id(xpc_object_t params);
 
 /*!
  *	@brief
@@ -228,12 +260,25 @@ dnssd_xpc_parameters_get_hostname_object(xpc_object_t params);
 
 /*!
  *	@brief
+ *		Gets the hostname from a command parameters dictionary as a C string.
+ *
+ *	@param params
+ *		The command parameters dictionary.
+ *
+ *	@result
+ *		The hostname, if present, as C string. Otherwise, NULL.
+ */
+const char * _Nullable
+dnssd_xpc_parameters_get_hostname(xpc_object_t params);
+
+/*!
+ *	@brief
  *		Gets interface index from a command parameters dictionary.
  *
  *	@param params
  *		Command parameters dictionary.
  *
- *	@para out_valid
+ *	@param out_valid
  *		If non-NULL, set to true if value is present and of correct type, otherwise, set to false.
  *
  *	@result
@@ -257,6 +302,45 @@ dnssd_xpc_parameters_get_need_authentication_tags(xpc_object_t params);
 
 /*!
  *	@brief
+ *		Gets need encryption boolean value from a command parameters dictionary.
+ *
+ *	@param params
+ *		Command parameters dictionary.
+ *
+ *	@result
+ *		A boolean value.
+ */
+bool
+dnssd_xpc_parameters_get_need_encrypted_query(xpc_object_t params);
+
+/*!
+ *	@brief
+ *		Gets fallback resolver configuration dictionary from a command parameters dictionary.
+ *
+ *	@param params
+ *		Command parameters dictionary.
+ *
+ *	@result
+ *		A dictionary containing resolver configuration to use in the absence of encrypted resolvers, or NULL.
+ */
+xpc_object_t _Nullable
+dnssd_xpc_parameters_get_fallback_config(xpc_object_t params);
+
+/*!
+ *	@brief
+ *		Gets resolver UUID array from a command parameters dictionary.
+ *
+ *	@param params
+ *		Command parameters dictionary.
+ *
+ *	@result
+ *		An array of UUIDs, or NULL.
+ */
+xpc_object_t _Nullable
+dnssd_xpc_parameters_get_resolver_uuid_array(xpc_object_t params);
+
+/*!
+ *	@brief
  *		Gets protocols from a command parameters dictionary.
  *
  *	@param params
@@ -270,6 +354,76 @@ dnssd_xpc_parameters_get_need_authentication_tags(xpc_object_t params);
  */
 DNSServiceProtocol
 dnssd_xpc_parameters_get_protocols(xpc_object_t params, bool * _Nullable out_valid);
+
+/*!
+ *	@brief
+ *		Gets the service scheme from a command parameters dictionary.
+ *
+ *	@param params
+ *		Command parameters dictionary.
+ *
+ *	@result
+ *		A string containing service scheme for the query, or NULL.
+ */
+const char * _Nullable
+dnssd_xpc_parameters_get_service_scheme(xpc_object_t params);
+
+/*!
+ *	@brief
+ *		Gets the truth value of whether DNS service failover should be used from a command parameters dictionary.
+ *
+ *	@param params
+ *		Command parameters dictionary.
+ *
+ *	@result
+ *		True if DNS service failover should be used. Otherwise, false.
+ */
+bool
+dnssd_xpc_parameters_get_use_failover(xpc_object_t params);
+
+/*!
+ *	@brief
+ *		Gets the enum value of whether or not the private level logs and the content of state dump should be redacted,
+ *		from a command parameters dictionary.
+ *
+ *	@param params
+ *		Command parameters dictionary.
+ *
+ *	@result
+ *		The log privacy level.
+ */
+dnssd_log_privacy_level_t
+dnssd_xpc_parameters_get_log_privacy_level(xpc_object_t params);
+
+/*!
+ *	@brief
+ *		Gets the validation data from a command parameters dictionary
+ *
+ *	@param params
+ *		Command parameters dictionary.
+ *
+ *	@param out_length
+ *		Gets set to the length of the validation data.
+ *
+ *	@discussion
+ *		The returned pointer, if non-NULL, is valid until the getaddrinfo result is released.
+ */
+const uint8_t * _Nullable
+dnssd_xpc_parameters_get_validation_data(xpc_object_t params, size_t * _Nullable out_length);
+
+/*!
+ *	@brief
+ *		Determines whether a command parameters dictionary specifies that use of encrypted DNS protocols is
+ *		prohibited for the associated command.
+ *
+ *	@param params
+ *		The command parameters dictionary.
+ *
+ *	@result
+ *		True if use of encrypted DNS protocols is prohibited. Otherwise, false.
+ */
+bool
+dnssd_xpc_parameters_get_prohibit_encrypted_dns(xpc_object_t params);
 
 /*!
  *	@brief
@@ -299,6 +453,19 @@ dnssd_xpc_parameters_set_delegate_uuid(xpc_object_t params, uuid_t _Nonnull uuid
 
 /*!
  *	@brief
+ *		Sets the delegate audit token in a command parameters dictionary.
+ *
+ *	@param params
+ *		Command parameters dictionary.
+ *
+ *	@param audit_token
+ *		The delegate audit token.
+ */
+void
+dnssd_xpc_parameters_set_delegate_audit_token(xpc_object_t params, const audit_token_t *audit_token);
+
+/*!
+ *	@brief
  *		Sets flags in a command parameters dictionary.
  *
  *	@param params
@@ -309,6 +476,19 @@ dnssd_xpc_parameters_set_delegate_uuid(xpc_object_t params, uuid_t _Nonnull uuid
  */
 void
 dnssd_xpc_parameters_set_flags(xpc_object_t params, DNSServiceFlags flags);
+
+/*!
+*	@brief
+*		Sets account id in a command parameters dictionary.
+*
+*	@param params
+*		Command parameters dictionary.
+*
+*	@param account_id
+*		Account id.
+*/
+void
+dnssd_xpc_parameters_set_account_id(xpc_object_t params, const char *account_id);
 
 /*!
  *	@brief
@@ -351,6 +531,50 @@ dnssd_xpc_parameters_set_need_authentication_tags(xpc_object_t params, bool need
 
 /*!
  *	@brief
+ *		Specifies whether or not queries must use encrypted transports to the next DNS server.
+ *
+ *	@param params
+ *		Command parameters dictionary.
+ *
+ *	@param need
+ *		Pass <code>true</code> if encrypted queries are required, otherwise, pass <code>false</code>.
+ *
+ *	@param fallback_config
+ *		If not NULL, specify a custom resolver configuration to use if no encrypted resolver configuation is otherwise
+ *		available.
+ */
+void
+dnssd_xpc_parameters_set_need_encrypted_query(xpc_object_t params, bool need, _Nullable xpc_object_t fallback_config);
+
+/*!
+ *	@brief
+ *		Add a resolver UUID that represents a resolver configuration registered with the system that should
+ *		be applied to this resolution. Multiple UUIDs can be set.
+ *
+ *	@param params
+ *		Command parameters dictionary.
+ *
+ *	@param uuid
+ *		UUID of a resolver configuration registered with the system.
+ */
+void
+dnssd_xpc_parameters_add_resolver_uuid(xpc_object_t params, uuid_t _Nonnull uuid);
+
+/*!
+ *	@brief
+ *		Sets a service scheme in a command parameters dictionary.
+ *
+ *	@param params
+ *		Command parameters dictionary.
+ *
+ *	@param service_scheme
+ *		Service scheme.
+ */
+void
+dnssd_xpc_parameters_set_service_scheme(xpc_object_t params, const char *service_scheme);
+
+/*!
+ *	@brief
  *		Sets protocols in a command parameters dictionary.
  *
  *	@param params
@@ -361,6 +585,66 @@ dnssd_xpc_parameters_set_need_authentication_tags(xpc_object_t params, bool need
  */
 void
 dnssd_xpc_parameters_set_protocols(xpc_object_t params, DNSServiceProtocol protocols);
+
+/*!
+ *	@brief
+ *		Specifies in a command parameters dictionary whether or not DNS service failover should be used if
+ *		necessary and applicable.
+ *
+ *	@param params
+ *		Command parameters dictionary.
+ *
+ *	@param use_failover
+ *		Pass true if DNS service failover should be used, otherwise, pass false.
+ */
+void
+dnssd_xpc_parameters_set_use_failover(xpc_object_t params, bool use_failover);
+
+/*!
+ *	@brief
+ *		Specifies the log privacy level in a command parameters dictionary.
+ *
+ *	@param params
+ *		Command parameters dictionary.
+ *
+ *	@param level
+ *		The log privacy level.
+ */
+void
+dnssd_xpc_parameters_set_log_privacy_level(xpc_object_t params, dnssd_log_privacy_level_t level);
+
+/*!
+ *	@brief
+ *		Sets the validation data in a command parameters dictionary.
+ *
+ *	@param params
+ *		Command parameters dictionary.
+ *
+ *	@param data_ptr
+ *		Pointer to the validation data.
+ *
+ *	@param data_len
+ *		Length of the validation data.
+ */
+void
+dnssd_xpc_parameters_set_validation_data(xpc_object_t params, const uint8_t *data_ptr, size_t data_len);
+
+/*!
+ *	@brief
+ *		Specifies in a command parameters dictionary whether use of encrypted DNS protocols is prohibited for
+ *		the associated command.
+ *
+ *	@param params
+ *		The command parameters dictionary.
+ *
+ *	@param prohibit
+ *		If use of encrypted DNS protocols is prohibited, pass true. Otherwise, pass false.
+ *
+ *	@discussion
+ *		By default, use of encrypted DNS protocols is not prohibited.
+ */
+void
+dnssd_xpc_parameters_set_prohibit_encrypted_dns(xpc_object_t params, bool prohibit);
 
 /*!
  *	@brief
@@ -466,6 +750,19 @@ xpc_object_t _Nullable
 dnssd_xpc_result_get_record_name_object(xpc_object_t result);
 
 /*!
+* @brief
+*      Gets record canonical name from a command result dictionary.
+*
+*  @param result
+*      The command result dictionary.
+*
+*  @result
+*      Record canonical name, if present, as an XPC string object. Otherwise, NULL.
+*/
+xpc_object_t _Nullable
+dnssd_xpc_result_get_record_cname_object(xpc_object_t result);
+
+/*!
  *	@brief
  *		Gets record type from a command result dictionary.
  *
@@ -480,6 +777,116 @@ dnssd_xpc_result_get_record_name_object(xpc_object_t result);
  */
 uint16_t
 dnssd_xpc_result_get_record_type(xpc_object_t result, bool * _Nullable out_valid);
+
+/*!
+ *	@brief
+ *		Gets used record protocol from a command result dictionary.
+ *
+ *	@param result
+ *		The command result dictionary.
+ *
+ *	@param out_valid
+ *		If non-NULL, set to true if value is present and of correct type, otherwise, set to false.
+ *
+ *	@result
+ *		Used record protocol, if present. Otherwise, 0.
+ */
+uint16_t
+dnssd_xpc_result_get_record_protocol(xpc_object_t result, bool * _Nullable out_valid);
+
+/*!
+ *	@brief
+ *		Gets provider name from a command result dictionary.
+ *
+ *	@param result
+ *		The command result dictionary.
+ *
+ *	@result
+ *		Provider name, if present, as an XPC string object. Otherwise, NULL.
+ */
+xpc_object_t _Nullable
+dnssd_xpc_result_get_provider_name_object(xpc_object_t result);
+
+/*!
+ *	@brief
+ *		Gets canonical name updates from a command result dictionary.
+ *
+ *	@param result
+ *		The command result dictionary.
+ *
+ *	@result
+ *		The canonical name update, if present, as an XPC array object. Otherwise, NULL.
+ */
+xpc_object_t _Nullable
+dnssd_xpc_result_get_cname_update(xpc_object_t result);
+
+/*!
+ *	@brief
+ *		Gets the verified tracker hostname in a command result dictionary.
+ *
+ *	@param result
+ *		The command result dictionary.
+ *
+ *	@result
+ *		The tracker hostname, if present, as an XPC string. Otherwise, NULL.
+ *
+ * @discussion
+ *		No tracker hostname means that the result is not associated with a known tracker.
+ */
+mdns_xpc_string_t _Nullable
+dnssd_xpc_result_get_tracker_hostname(xpc_object_t result);
+
+/*!
+ *	@brief
+ *		Gets the tracker owner in a command result dictionary.
+ *
+ *	@param result
+ *		The command result dictionary.
+ *
+ *	@result
+ *		The tracker owner, if present, as an XPC string. Otherwise, NULL.
+ */
+mdns_xpc_string_t _Nullable
+dnssd_xpc_result_get_tracker_owner(xpc_object_t result);
+
+/*!
+ *	@brief
+ *		Gets whether or not the tracker is an approved app domain.
+ *
+ *	@param result
+ *		The command result dictionary.
+ *
+ *	@result
+ *		A boolean indiciating if the domain is approved for the app.
+ */
+bool
+dnssd_xpc_result_get_tracker_is_approved(xpc_object_t result);
+
+/*!
+ *	@brief
+ *		Gets the reason why a result is negative from a command result dictionary.
+ *
+ *	@param result
+ *		The command result dictionary.
+ *
+ *	@result
+ *		The negative reason, if present. Otherwise, dnssd_negative_reason_none.
+ */
+dnssd_negative_reason_t
+dnssd_xpc_result_get_negative_reason(xpc_object_t result);
+
+/*!
+ *	@brief
+ *		Gets validation data from a command result dictionary.
+ *
+ *	@param result
+ *		The command result dictionary.
+ *
+ *	@result
+ *		Validation data, if present, as an XPC data object. Otherwise, NULL.
+ */
+xpc_object_t _Nullable
+dnssd_xpc_result_get_validation_data_object(xpc_object_t result);
 
 /*!
  *	@brief
@@ -579,6 +986,19 @@ void
 dnssd_xpc_result_set_record_name(xpc_object_t result, const char *name);
 
 /*!
+* @brief
+*      Sets record canonical name in a command result dictionary.
+*
+*  @param result
+*      The command result dictionary.
+*
+*  @param cname
+*      Record canonical name.
+*/
+void
+dnssd_xpc_result_set_record_cname(xpc_object_t result, const char *cname);
+
+/*!
  *	@brief
  *		Sets record type in a command result dictionary.
  *
@@ -591,9 +1011,114 @@ dnssd_xpc_result_set_record_name(xpc_object_t result, const char *name);
 void
 dnssd_xpc_result_set_record_type(xpc_object_t result, uint16_t type);
 
-#ifdef __cplusplus
-}
-#endif
+/*!
+ *	@brief
+ *		Sets record protocol in a command result dictionary.
+ *
+ *	@param result
+ *		The command result dictionary.
+ *
+ *	@param protocol
+ *		Record protocol.
+ */
+void
+dnssd_xpc_result_set_record_protocol(xpc_object_t result, uint16_t protocol);
+
+/*!
+ *	@brief
+ *		Sets the DNS provider name in a command result dictionary.
+ *
+ *	@param result
+ *		The command result dictionary.
+ *
+ *	@param provider_name
+ *		DNS provider name.
+ */
+void
+dnssd_xpc_result_set_provider_name(xpc_object_t result, mdns_xpc_string_t provider_name);
+
+/*!
+ *	@brief
+ *		Sets a canonical name update in a command result dictionary.
+ *
+ *	@param result
+ *		The command result dictionary.
+ *
+ *	@param cname_update
+ *		The canonical name update as an array of canonical names as strings.
+ */
+void
+dnssd_xpc_result_set_cname_update(xpc_object_t result, xpc_object_t cname_update);
+
+/*!
+ *	@brief
+ *		Sets the tracker hostname in a command result dictionary.
+ *
+ *	@param result
+ *		The command result dictionary.
+ *
+ *	@param hostname
+ *		The hostname that was verified.
+ */
+void
+dnssd_xpc_result_set_tracker_hostname(xpc_object_t result, mdns_xpc_string_t hostname);
+
+/*!
+ *	@brief
+ *		Sets the tracker owner in a command result dictionary.
+ *
+ *	@param result
+ *		The command result dictionary.
+ *
+ *	@param owner
+ *		The tracker owner.
+ */
+void
+dnssd_xpc_result_set_tracker_owner(xpc_object_t result, mdns_xpc_string_t owner);
+
+/*!
+ *	@brief
+ *		Sets whether or not the tracker is an approved app domain.
+ *
+ *	@param result
+ *		The command result dictionary.
+ *
+ *	@param approved
+ *		A boolean indiciating if the domain is approved for the app.
+ */
+void
+dnssd_xpc_result_set_tracker_is_approved(xpc_object_t result, bool approved);
+
+/*!
+ *	@brief
+ *		Sets the reason why a result is negative in a command result dictionary.
+ *
+ *	@param result
+ *		The command result dictionary.
+ *
+ *	@param reason
+ *		The negative reason.
+ */
+void
+dnssd_xpc_result_set_negative_reason(xpc_object_t result, dnssd_negative_reason_t reason);
+
+/*!
+ *	@brief
+ *		Sets the validation data in a command result dictionary.
+ *
+ *	@param result
+ *		The command result dictionary.
+ *
+ *	@param data_ptr
+ *		Pointer to the validation data.
+ *
+ *	@param data_len
+ *		Length of the validation data.
+ */
+void
+dnssd_xpc_result_set_validation_data(xpc_object_t result, const uint8_t *data_ptr, size_t data_len);
+
+__END_DECLS
 
 CU_ASSUME_NONNULL_END
 

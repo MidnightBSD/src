@@ -14,14 +14,9 @@
  * limitations under the License.
  */
 
-#include "unittest_common.h"
+#import "unittest_common.h"
+#import "mDNSMacOSX.h"
 #import <XCTest/XCTest.h>
-
-struct UDPSocket_struct
-{
-	mDNSIPPort port; // MUST BE FIRST FIELD -- mDNSCoreReceive expects every UDPSocket_struct to begin with mDNSIPPort port
-};
-typedef struct UDPSocket_struct UDPSocket;
 
 // This client request was generated using the following command: "dns-sd -Q 123server.dotbennu.com. A".
 uint8_t query_client_msgbuf[35] = {
@@ -122,8 +117,8 @@ static const mDNSv4Addr dns_response_ipv4 = {{ 10, 100, 0, 1 }};
 {
     mDNS *const m = &mDNSStorage;
     request_state* req = client_request_message;
-    char *msgptr = (char *)query_client_msgbuf;
-    size_t msgsz = sizeof(query_client_msgbuf);
+    const uint8_t *const msgptr = query_client_msgbuf;
+    const uint32_t msgsz = sizeof(query_client_msgbuf);
     mDNSs32 min_size = sizeof(DNSServiceFlags) + sizeof(mDNSu32) + 4;
     DNSQuestion *q;
     mStatus err = mStatus_NoError;
@@ -175,12 +170,8 @@ static const mDNSv4Addr dns_response_ipv4 = {{ 10, 100, 0, 1 }};
     XCTAssertEqual(q->TimeoutQuestion, 0);
     XCTAssertEqual(q->WakeOnResolve, 0);
     XCTAssertEqual(q->UseBackgroundTraffic, 0);
-    XCTAssertEqual(q->ValidationRequired, 0);
-    XCTAssertEqual(q->ValidatingResponse, 0);
     XCTAssertEqual(q->ProxyQuestion, 0);
     XCTAssertNotEqual((void*)q->QuestionCallback, (void*)mDNSNULL);
-    XCTAssertNil((__bridge id)q->DNSSECAuthInfo);
-    XCTAssertNil((__bridge id)(void*)q->DAIFreeCallback);
     XCTAssertEqual(q->AppendSearchDomains, 0);
     XCTAssertNil((__bridge id)q->DuplicateOf);
     
@@ -209,11 +200,11 @@ static const mDNSv4Addr dns_response_ipv4 = {{ 10, 100, 0, 1 }};
     struct reply_state *reply;
     request_state* req = client_request_message;
     DNSQuestion *q = &req->u.queryrecord.op.q;
-    const char *data;
-    const char *end;
+    const uint8_t *data;
+    const uint8_t *end;
     char name[kDNSServiceMaxDomainName];
     uint16_t rrtype, rrclass, rdlen;
-    const char *rdata;
+    const uint8_t *rdata;
     size_t len;
     char domainname_cstr[MAX_ESCAPED_DOMAIN_NAME];
     
@@ -237,7 +228,7 @@ static const mDNSv4Addr dns_response_ipv4 = {{ 10, 100, 0, 1 }};
     XCTAssertNotEqual(reply, (reply_state*)mDNSNULL);
     XCTAssertNil((__bridge id)reply->next);
     
-    data    = (char *)&reply->rhdr[1];
+    data    = (uint8_t *)&reply->rhdr[1];
     end     = data+reply->totallen;
     get_string(&data, data+reply->totallen, name, kDNSServiceMaxDomainName);
     rrtype  = get_uint16(&data, end);
@@ -271,7 +262,7 @@ static const mDNSv4Addr dns_response_ipv4 = {{ 10, 100, 0, 1 }};
     XCTAssertNotEqual(reply->next, (reply_state*)mDNSNULL);
     reply = reply->next;
     
-    data    = (char *)&reply->rhdr[1];
+    data    = (uint8_t *)&reply->rhdr[1];
     end     = data+reply->totallen;
     get_string(&data, data+reply->totallen, name, kDNSServiceMaxDomainName);
     rrtype  = get_uint16(&data, end);
@@ -313,10 +304,11 @@ static const mDNSv4Addr dns_response_ipv4 = {{ 10, 100, 0, 1 }};
     request_state*  req = client_request_message;
     DNSQuestion*    q = &req->u.queryrecord.op.q;
     mDNSu32 CacheUsed =0, notUsed =0;
-    const char *data;    const char *end;
+    const uint8_t *data;
+    const uint8_t *end;
     char name[kDNSServiceMaxDomainName];
     uint16_t rrtype, rrclass, rdlen;
-    const char *rdata;
+    const uint8_t *rdata;
     size_t len;
     
     // The uDNS_SetupDNSConfig reconfigures the resolvers so the A record query is restarted and
@@ -344,7 +336,7 @@ static const mDNSv4Addr dns_response_ipv4 = {{ 10, 100, 0, 1 }};
     XCTAssertNotEqual(reply->next->next, (reply_state*)mDNSNULL);
 
     reply = reply->next->next; // Get to last event to verify remove event
-    data    = (char *)&reply->rhdr[1];
+    data    = (uint8_t *)&reply->rhdr[1];
     end     = data+reply->totallen;
     get_string(&data, data+reply->totallen, name, kDNSServiceMaxDomainName);
     rrtype  = get_uint16(&data, end);

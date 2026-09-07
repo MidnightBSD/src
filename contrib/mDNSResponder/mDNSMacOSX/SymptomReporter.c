@@ -16,6 +16,8 @@
 
 #include "SymptomReporter.h"
 
+#if MDNSRESPONDER_SUPPORTS(APPLE, SYMPTOMS) && !MDNSRESPONDER_SUPPORTS(APPLE, QUERIER)
+#include "mdns_strict.h"
 #include <arpa/inet.h>
 #include <dlfcn.h>
 #include <stddef.h>
@@ -84,7 +86,7 @@ mDNSlocal mStatus SymptomReporterReportDNSReachability(const mDNSAddr *addr, mDN
     struct sockaddr_storage sockAddr;
     size_t sockAddrSize;
 
-    LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_INFO,
+    LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_DEFAULT,
         "SymptomReporterReportDNSReachability: DNS server " PRI_IP_ADDR " is " PUB_S "reachable", addr, isReachable ? "" : "un");
 
     if (addr->type == mDNSAddrType_IPv4)
@@ -175,3 +177,4 @@ mDNSexport mStatus SymptomReporterDNSServerUnreachable(DNSServer *s)
 exit:
     return err;
 }
+#endif // MDNSRESPONDER_SUPPORTS(APPLE, SYMPTOMS)

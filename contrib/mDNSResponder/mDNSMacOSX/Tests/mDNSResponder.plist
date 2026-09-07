@@ -23,7 +23,7 @@
 			<key>RequiresWiFi</key>
 			<false/>
 			<key>Timeout</key>
-			<integer>10</integer>
+			<integer>60</integer>
 			<key>IgnoreOutput</key>
 			<true/>
 			<key>Command</key>
@@ -36,7 +36,7 @@
 			<key>TestName</key>
 			<string>GAIPerf Advanced</string>
 			<key>Description</key>
-			<string>Tests correctness of resolving hostnames via DNS using the GAIPerf Advanced test suite.</string>
+			<string>Tests correctness of resolving hostnames with ordinary DNS using the GAIPerf Advanced test suite.</string>
 			<key>AsRoot</key>
 			<true/>
 			<key>RequiresWiFi</key>
@@ -69,7 +69,271 @@
 			<key>RequiresWiFi</key>
 			<false/>
 			<key>Timeout</key>
-			<integer>10</integer>
+			<integer>60</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/bin/leaks</string>
+				<string>mDNSResponder</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>GAIPerf Advanced (DoT)</string>
+			<key>Description</key>
+			<string>Tests correctness of resolving hostnames with DNS over TLS (DoT) using the GAIPerf Advanced test suite.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>900</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>gaiperf</string>
+				<string>--suite</string>
+				<string>advanced</string>
+				<string>--timeLimit</string>
+				<string>3000</string>
+				<string>--format</string>
+				<string>json</string>
+				<string>--protocol</string>
+				<string>DoT</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNSResponder Leaks</string>
+			<key>Description</key>
+			<string>Checks mDNSResponder for memory leaks.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>60</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/bin/leaks</string>
+				<string>mDNSResponder</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>GAIPerf Advanced (DoH)</string>
+			<key>Description</key>
+			<string>Tests correctness of resolving hostnames with DNS over HTTPS (DoH) using the GAIPerf Advanced test suite.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>900</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>gaiperf</string>
+				<string>--suite</string>
+				<string>advanced</string>
+				<string>--timeLimit</string>
+				<string>3000</string>
+				<string>--format</string>
+				<string>json</string>
+				<string>--protocol</string>
+				<string>DoH</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNSResponder Leaks</string>
+			<key>Description</key>
+			<string>Checks mDNSResponder for memory leaks.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>60</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/bin/leaks</string>
+				<string>mDNSResponder</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>DNS Querying</string>
+			<key>Description</key>
+			<string>Tests mDNSResponder&apos;s DNS querying. Verifies that mDNSResponder doesn&apos;t send more A/AAAA queries than necessary.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>90</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>dnsquery</string>
+				<string>--format</string>
+				<string>json</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNSResponder Leaks</string>
+			<key>Description</key>
+			<string>Checks mDNSResponder for memory leaks.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>60</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/bin/leaks</string>
+				<string>mDNSResponder</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>Fast Querier Recovery</string>
+			<key>Description</key>
+			<string>Tests mDNSResponder&apos;s ability to quickly recover from a transient DNS outage.</string>
+			<key>AsRoot</key>
+			<false/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>60</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>fastrecovery</string>
+				<string>--format</string>
+				<string>json</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNSResponder Leaks</string>
+			<key>Description</key>
+			<string>Checks mDNSResponder for memory leaks.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>60</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/bin/leaks</string>
+				<string>mDNSResponder</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>DNS Server Retry</string>
+			<key>Description</key>
+			<string>Tests whether mDNSResponder retries queries with a different server if a given server is unresponsive. Also tests mDNSResponder&apos;s handling of DNS responses with every possible RCODE.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>900</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>rcodes</string>
+				<string>--format</string>
+				<string>json</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNSResponder Leaks</string>
+			<key>Description</key>
+			<string>Checks mDNSResponder for memory leaks.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>60</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/bin/leaks</string>
+				<string>mDNSResponder</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>Suspicious UDP Reply Defense</string>
+			<key>Description</key>
+			<string>Tests mDNSResponder&apos;s defense mechanism of falling back to TCP when a response with an invalid message ID, but which is otherwise acceptable, is received over UDP.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>90</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>gaiperf</string>
+				<string>--suite</string>
+				<string>basic</string>
+				<string>--timeLimit</string>
+				<string>250</string>
+				<string>--format</string>
+				<string>json</string>
+				<string>--skipPathEval</string>
+				<string>--badUDPMode</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNSResponder Leaks</string>
+			<key>Description</key>
+			<string>Checks mDNSResponder for memory leaks.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>60</integer>
 			<key>IgnoreOutput</key>
 			<true/>
 			<key>Command</key>
@@ -125,7 +389,7 @@
 			<key>RequiresWiFi</key>
 			<false/>
 			<key>Timeout</key>
-			<integer>10</integer>
+			<integer>60</integer>
 			<key>IgnoreOutput</key>
 			<true/>
 			<key>Command</key>
@@ -182,7 +446,7 @@
 			<key>RequiresWiFi</key>
 			<false/>
 			<key>Timeout</key>
-			<integer>10</integer>
+			<integer>60</integer>
 			<key>IgnoreOutput</key>
 			<true/>
 			<key>Command</key>
@@ -238,7 +502,7 @@
 			<key>RequiresWiFi</key>
 			<false/>
 			<key>Timeout</key>
-			<integer>10</integer>
+			<integer>60</integer>
 			<key>IgnoreOutput</key>
 			<true/>
 			<key>Command</key>
@@ -295,7 +559,7 @@
 			<key>RequiresWiFi</key>
 			<false/>
 			<key>Timeout</key>
-			<integer>10</integer>
+			<integer>60</integer>
 			<key>IgnoreOutput</key>
 			<true/>
 			<key>Command</key>
@@ -351,7 +615,7 @@
 			<key>RequiresWiFi</key>
 			<false/>
 			<key>Timeout</key>
-			<integer>10</integer>
+			<integer>60</integer>
 			<key>IgnoreOutput</key>
 			<true/>
 			<key>Command</key>
@@ -408,7 +672,7 @@
 			<key>RequiresWiFi</key>
 			<false/>
 			<key>Timeout</key>
-			<integer>10</integer>
+			<integer>60</integer>
 			<key>IgnoreOutput</key>
 			<true/>
 			<key>Command</key>
@@ -463,7 +727,7 @@
 			<key>RequiresWiFi</key>
 			<false/>
 			<key>Timeout</key>
-			<integer>10</integer>
+			<integer>60</integer>
 			<key>IgnoreOutput</key>
 			<true/>
 			<key>Command</key>
@@ -519,7 +783,7 @@
 			<key>RequiresWiFi</key>
 			<false/>
 			<key>Timeout</key>
-			<integer>10</integer>
+			<integer>60</integer>
 			<key>IgnoreOutput</key>
 			<true/>
 			<key>Command</key>
@@ -574,7 +838,7 @@
 			<key>RequiresWiFi</key>
 			<false/>
 			<key>Timeout</key>
-			<integer>10</integer>
+			<integer>60</integer>
 			<key>IgnoreOutput</key>
 			<true/>
 			<key>Command</key>
@@ -630,7 +894,7 @@
 			<key>RequiresWiFi</key>
 			<false/>
 			<key>Timeout</key>
-			<integer>10</integer>
+			<integer>60</integer>
 			<key>IgnoreOutput</key>
 			<true/>
 			<key>Command</key>
@@ -685,7 +949,7 @@
 			<key>RequiresWiFi</key>
 			<false/>
 			<key>Timeout</key>
-			<integer>10</integer>
+			<integer>60</integer>
 			<key>IgnoreOutput</key>
 			<true/>
 			<key>Command</key>
@@ -741,7 +1005,7 @@
 			<key>RequiresWiFi</key>
 			<false/>
 			<key>Timeout</key>
-			<integer>10</integer>
+			<integer>60</integer>
 			<key>IgnoreOutput</key>
 			<true/>
 			<key>Command</key>
@@ -752,9 +1016,70 @@
 		</dict>
 		<dict>
 			<key>TestName</key>
-			<string>mDNS Discovery w/Packet Drops 10</string>
+			<string>mDNS Discovery w/Packet Drops 10 (IPv4)</string>
 			<key>Description</key>
-			<string>Tests mDNS discovery and resolution of ten service instances with one 100-byte TXT record, two A records, and two AAAA records. The first three responses per service instance are subject to a 0.5 probability of being dropped to test query retries.</string>
+			<string>Tests mDNS discovery and resolution of ten service instances with one 100-byte TXT record, two A records, and two AAAA records over IPv4. The first three responses per service instance are subject to a 0.5 probability of being dropped to test query retries.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>30</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>mdnsdiscovery</string>
+				<string>--interface</string>
+				<string>lo0</string>
+				<string>--instanceCount</string>
+				<string>10</string>
+				<string>--txtSize</string>
+				<string>100</string>
+				<string>--browseTime</string>
+				<string>16</string>
+				<string>--countA</string>
+				<string>2</string>
+				<string>--countAAAA</string>
+				<string>2</string>
+				<string>--ipv4</string>
+				<string>--udrop</string>
+				<string>0.5</string>
+				<string>--mdrop</string>
+				<string>0.5</string>
+				<string>--maxDropCount</string>
+				<string>3</string>
+				<string>--format</string>
+				<string>json</string>
+				<string>--flushCache</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNSResponder Leaks</string>
+			<key>Description</key>
+			<string>Checks mDNSResponder for memory leaks.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>60</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/bin/leaks</string>
+				<string>mDNSResponder</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNS Discovery w/Packet Drops 10 (IPv6)</string>
+			<key>Description</key>
+			<string>Tests mDNS discovery and resolution of ten service instances with one 100-byte TXT record, two A records, and two AAAA records over IPv6. The first three responses per service instance are subject to a 0.5 probability of being dropped to test query retries.</string>
 			<key>AsRoot</key>
 			<true/>
 			<key>RequiresWiFi</key>
@@ -802,7 +1127,7 @@
 			<key>RequiresWiFi</key>
 			<false/>
 			<key>Timeout</key>
-			<integer>10</integer>
+			<integer>60</integer>
 			<key>IgnoreOutput</key>
 			<true/>
 			<key>Command</key>
@@ -813,9 +1138,70 @@
 		</dict>
 		<dict>
 			<key>TestName</key>
-			<string>mDNS Discovery w/Packet Drops 100</string>
+			<string>mDNS Discovery w/Packet Drops 100 (IPv4)</string>
 			<key>Description</key>
-			<string>Tests mDNS discovery and resolution of 100 service instances with one 100-byte TXT record, two A records, and two AAAA records. The first three responses per service instance are subject to a 0.5 probability of being dropped to test query retries.</string>
+			<string>Tests mDNS discovery and resolution of 100 service instances with one 100-byte TXT record, two A records, and two AAAA records over IPv4. The first three responses per service instance are subject to a 0.5 probability of being dropped to test query retries.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>30</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>mdnsdiscovery</string>
+				<string>--interface</string>
+				<string>lo0</string>
+				<string>--instanceCount</string>
+				<string>100</string>
+				<string>--txtSize</string>
+				<string>100</string>
+				<string>--browseTime</string>
+				<string>18</string>
+				<string>--countA</string>
+				<string>2</string>
+				<string>--countAAAA</string>
+				<string>2</string>
+				<string>--ipv4</string>
+				<string>--udrop</string>
+				<string>0.5</string>
+				<string>--mdrop</string>
+				<string>0.5</string>
+				<string>--maxDropCount</string>
+				<string>3</string>
+				<string>--format</string>
+				<string>json</string>
+				<string>--flushCache</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNSResponder Leaks</string>
+			<key>Description</key>
+			<string>Checks mDNSResponder for memory leaks.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>60</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/bin/leaks</string>
+				<string>mDNSResponder</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNS Discovery w/Packet Drops 100 (IPv6)</string>
+			<key>Description</key>
+			<string>Tests mDNS discovery and resolution of 100 service instances with one 100-byte TXT record, two A records, and two AAAA records over IPv6. The first three responses per service instance are subject to a 0.5 probability of being dropped to test query retries.</string>
 			<key>AsRoot</key>
 			<true/>
 			<key>RequiresWiFi</key>
@@ -863,7 +1249,939 @@
 			<key>RequiresWiFi</key>
 			<false/>
 			<key>Timeout</key>
+			<integer>60</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/bin/leaks</string>
+				<string>mDNSResponder</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNS Discovery 1-1-1 (New GAI)</string>
+			<key>Description</key>
+			<string>Tests mDNS discovery and resolution of one service instance with one one-byte TXT record, one A record, and one AAAA record.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
 			<integer>10</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>mdnsdiscovery</string>
+				<string>--interface</string>
+				<string>lo0</string>
+				<string>--instanceCount</string>
+				<string>1</string>
+				<string>--txtSize</string>
+				<string>1</string>
+				<string>--browseTime</string>
+				<string>3</string>
+				<string>--countA</string>
+				<string>1</string>
+				<string>--countAAAA</string>
+				<string>1</string>
+				<string>--ipv4</string>
+				<string>--ipv6</string>
+				<string>--format</string>
+				<string>json</string>
+				<string>--flushCache</string>
+				<string>--useNewGAI</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNSResponder Leaks</string>
+			<key>Description</key>
+			<string>Checks mDNSResponder for memory leaks.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>60</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/bin/leaks</string>
+				<string>mDNSResponder</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNS Discovery 1-1-1 (No Additionals, New GAI)</string>
+			<key>Description</key>
+			<string>Tests mDNS discovery and resolution of one service instance with one one-byte TXT record, one A record, and one AAAA record. Responses from mdnsreplier contain no additional answers.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>10</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>mdnsdiscovery</string>
+				<string>--interface</string>
+				<string>lo0</string>
+				<string>--instanceCount</string>
+				<string>1</string>
+				<string>--txtSize</string>
+				<string>1</string>
+				<string>--browseTime</string>
+				<string>3</string>
+				<string>--countA</string>
+				<string>1</string>
+				<string>--countAAAA</string>
+				<string>1</string>
+				<string>--ipv4</string>
+				<string>--ipv6</string>
+				<string>--format</string>
+				<string>json</string>
+				<string>--noAdditionals</string>
+				<string>--flushCache</string>
+				<string>--useNewGAI</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNSResponder Leaks</string>
+			<key>Description</key>
+			<string>Checks mDNSResponder for memory leaks.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>60</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/bin/leaks</string>
+				<string>mDNSResponder</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNS Discovery 10-100-2 (New GAI)</string>
+			<key>Description</key>
+			<string>Tests mDNS discovery and resolution of ten service instances with one 100-byte TXT record, two A records, and two AAAA records.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>10</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>mdnsdiscovery</string>
+				<string>--interface</string>
+				<string>lo0</string>
+				<string>--instanceCount</string>
+				<string>10</string>
+				<string>--txtSize</string>
+				<string>100</string>
+				<string>--browseTime</string>
+				<string>3</string>
+				<string>--countA</string>
+				<string>2</string>
+				<string>--countAAAA</string>
+				<string>2</string>
+				<string>--ipv4</string>
+				<string>--ipv6</string>
+				<string>--format</string>
+				<string>json</string>
+				<string>--flushCache</string>
+				<string>--useNewGAI</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNSResponder Leaks</string>
+			<key>Description</key>
+			<string>Checks mDNSResponder for memory leaks.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>60</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/bin/leaks</string>
+				<string>mDNSResponder</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNS Discovery 10-100-2 (No Additionals, New GAI)</string>
+			<key>Description</key>
+			<string>Tests mDNS discovery and resolution of ten service instances with one 100-byte TXT record, two A records, and two AAAA records. Responses from mdnsreplier contain no additional answers.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>10</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>mdnsdiscovery</string>
+				<string>--interface</string>
+				<string>lo0</string>
+				<string>--instanceCount</string>
+				<string>10</string>
+				<string>--txtSize</string>
+				<string>100</string>
+				<string>--browseTime</string>
+				<string>3</string>
+				<string>--countA</string>
+				<string>2</string>
+				<string>--countAAAA</string>
+				<string>2</string>
+				<string>--ipv4</string>
+				<string>--ipv6</string>
+				<string>--format</string>
+				<string>json</string>
+				<string>--noAdditionals</string>
+				<string>--flushCache</string>
+				<string>--useNewGAI</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNSResponder Leaks</string>
+			<key>Description</key>
+			<string>Checks mDNSResponder for memory leaks.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>60</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/bin/leaks</string>
+				<string>mDNSResponder</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNS Discovery 100-500-2 (New GAI)</string>
+			<key>Description</key>
+			<string>Tests mDNS discovery and resolution of 100 service instances with one 500-byte TXT record, two A records, and two AAAA records.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>10</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>mdnsdiscovery</string>
+				<string>--interface</string>
+				<string>lo0</string>
+				<string>--instanceCount</string>
+				<string>100</string>
+				<string>--txtSize</string>
+				<string>500</string>
+				<string>--browseTime</string>
+				<string>5</string>
+				<string>--countA</string>
+				<string>2</string>
+				<string>--countAAAA</string>
+				<string>2</string>
+				<string>--ipv4</string>
+				<string>--ipv6</string>
+				<string>--format</string>
+				<string>json</string>
+				<string>--flushCache</string>
+				<string>--useNewGAI</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNSResponder Leaks</string>
+			<key>Description</key>
+			<string>Checks mDNSResponder for memory leaks.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>60</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/bin/leaks</string>
+				<string>mDNSResponder</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNS Discovery 100-500-2 (No Additionals, New GAI)</string>
+			<key>Description</key>
+			<string>Tests mDNS discovery and resolution of 100 service instances with one 500-byte TXT record, two A records, and two AAAA records. Responses from mdnsreplier contain no additional answers.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>10</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>mdnsdiscovery</string>
+				<string>--interface</string>
+				<string>lo0</string>
+				<string>--instanceCount</string>
+				<string>100</string>
+				<string>--txtSize</string>
+				<string>500</string>
+				<string>--browseTime</string>
+				<string>5</string>
+				<string>--countA</string>
+				<string>2</string>
+				<string>--countAAAA</string>
+				<string>2</string>
+				<string>--ipv4</string>
+				<string>--ipv6</string>
+				<string>--noAdditionals</string>
+				<string>--format</string>
+				<string>json</string>
+				<string>--flushCache</string>
+				<string>--useNewGAI</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNSResponder Leaks</string>
+			<key>Description</key>
+			<string>Checks mDNSResponder for memory leaks.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>60</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/bin/leaks</string>
+				<string>mDNSResponder</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNS Discovery 1-1-1 (No Cache Flush, New GAI)</string>
+			<key>Description</key>
+			<string>Tests mDNS discovery and resolution of one service instance with one one-byte TXT record, one A record, and one AAAA record. Cache is not flushed beforehand.</string>
+			<key>AsRoot</key>
+			<false/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>10</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>mdnsdiscovery</string>
+				<string>--interface</string>
+				<string>lo0</string>
+				<string>--instanceCount</string>
+				<string>1</string>
+				<string>--txtSize</string>
+				<string>1</string>
+				<string>--browseTime</string>
+				<string>3</string>
+				<string>--countA</string>
+				<string>1</string>
+				<string>--countAAAA</string>
+				<string>1</string>
+				<string>--ipv4</string>
+				<string>--ipv6</string>
+				<string>--format</string>
+				<string>json</string>
+				<string>--useNewGAI</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNSResponder Leaks</string>
+			<key>Description</key>
+			<string>Checks mDNSResponder for memory leaks.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>60</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/bin/leaks</string>
+				<string>mDNSResponder</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNS Discovery 1-1-1 (No Cache Flush, No Additionals, New GAI)</string>
+			<key>Description</key>
+			<string>Tests mDNS discovery and resolution of one service instance with one one-byte TXT record, one A record, and one AAAA record. Cache is not flushed beforehand. Responses from mdnsreplier contain no additional answers.</string>
+			<key>AsRoot</key>
+			<false/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>10</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>mdnsdiscovery</string>
+				<string>--interface</string>
+				<string>lo0</string>
+				<string>--instanceCount</string>
+				<string>1</string>
+				<string>--txtSize</string>
+				<string>1</string>
+				<string>--browseTime</string>
+				<string>3</string>
+				<string>--countA</string>
+				<string>1</string>
+				<string>--countAAAA</string>
+				<string>1</string>
+				<string>--ipv4</string>
+				<string>--ipv6</string>
+				<string>--format</string>
+				<string>json</string>
+				<string>--noAdditionals</string>
+				<string>--useNewGAI</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNSResponder Leaks</string>
+			<key>Description</key>
+			<string>Checks mDNSResponder for memory leaks.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>60</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/bin/leaks</string>
+				<string>mDNSResponder</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNS Discovery 10-100-2 (No Cache Flush, New GAI)</string>
+			<key>Description</key>
+			<string>Tests mDNS discovery and resolution of ten service instances with one 100-byte TXT record, two A records, and two AAAA records. Cache is not flushed beforehand.</string>
+			<key>AsRoot</key>
+			<false/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>10</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>mdnsdiscovery</string>
+				<string>--interface</string>
+				<string>lo0</string>
+				<string>--instanceCount</string>
+				<string>10</string>
+				<string>--txtSize</string>
+				<string>100</string>
+				<string>--browseTime</string>
+				<string>3</string>
+				<string>--countA</string>
+				<string>2</string>
+				<string>--countAAAA</string>
+				<string>2</string>
+				<string>--ipv4</string>
+				<string>--ipv6</string>
+				<string>--format</string>
+				<string>json</string>
+				<string>--useNewGAI</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNSResponder Leaks</string>
+			<key>Description</key>
+			<string>Checks mDNSResponder for memory leaks.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>60</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/bin/leaks</string>
+				<string>mDNSResponder</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNS Discovery 10-100-2 (No Cache Flush, No Additionals, New GAI)</string>
+			<key>Description</key>
+			<string>Tests mDNS discovery and resolution of ten service instances with one 100-byte TXT record, two A records, and two AAAA records. Cache is not flushed beforehand. Responses from mdnsreplier contain no additional answers.</string>
+			<key>AsRoot</key>
+			<false/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>10</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>mdnsdiscovery</string>
+				<string>--interface</string>
+				<string>lo0</string>
+				<string>--instanceCount</string>
+				<string>10</string>
+				<string>--txtSize</string>
+				<string>100</string>
+				<string>--browseTime</string>
+				<string>3</string>
+				<string>--countA</string>
+				<string>2</string>
+				<string>--countAAAA</string>
+				<string>2</string>
+				<string>--ipv4</string>
+				<string>--ipv6</string>
+				<string>--format</string>
+				<string>json</string>
+				<string>--noAdditionals</string>
+				<string>--useNewGAI</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNSResponder Leaks</string>
+			<key>Description</key>
+			<string>Checks mDNSResponder for memory leaks.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>60</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/bin/leaks</string>
+				<string>mDNSResponder</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNS Discovery 100-500-2 (No Cache Flush, New GAI)</string>
+			<key>Description</key>
+			<string>Tests mDNS discovery and resolution of 100 service instances with one 500-byte TXT record, two A records, and two AAAA records. Cache is not flushed beforehand.</string>
+			<key>AsRoot</key>
+			<false/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>10</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>mdnsdiscovery</string>
+				<string>--interface</string>
+				<string>lo0</string>
+				<string>--instanceCount</string>
+				<string>100</string>
+				<string>--txtSize</string>
+				<string>500</string>
+				<string>--browseTime</string>
+				<string>5</string>
+				<string>--countA</string>
+				<string>2</string>
+				<string>--countAAAA</string>
+				<string>2</string>
+				<string>--ipv4</string>
+				<string>--ipv6</string>
+				<string>--format</string>
+				<string>json</string>
+				<string>--useNewGAI</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNSResponder Leaks</string>
+			<key>Description</key>
+			<string>Checks mDNSResponder for memory leaks.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>60</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/bin/leaks</string>
+				<string>mDNSResponder</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNS Discovery 100-500-2 (No Cache Flush, No Additionals, New GAI)</string>
+			<key>Description</key>
+			<string>Tests mDNS discovery and resolution of 100 service instances with one 500-byte TXT record, two A records, and two AAAA records. Cache is not flushed beforehand. Responses from mdnsreplier contain no additional answers.</string>
+			<key>AsRoot</key>
+			<false/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>10</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>mdnsdiscovery</string>
+				<string>--interface</string>
+				<string>lo0</string>
+				<string>--instanceCount</string>
+				<string>100</string>
+				<string>--txtSize</string>
+				<string>500</string>
+				<string>--browseTime</string>
+				<string>5</string>
+				<string>--countA</string>
+				<string>2</string>
+				<string>--countAAAA</string>
+				<string>2</string>
+				<string>--ipv4</string>
+				<string>--ipv6</string>
+				<string>--noAdditionals</string>
+				<string>--format</string>
+				<string>json</string>
+				<string>--useNewGAI</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNSResponder Leaks</string>
+			<key>Description</key>
+			<string>Checks mDNSResponder for memory leaks.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>60</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/bin/leaks</string>
+				<string>mDNSResponder</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNS Discovery w/Packet Drops 10 (IPv4, New GAI)</string>
+			<key>Description</key>
+			<string>Tests mDNS discovery and resolution of ten service instances with one 100-byte TXT record, two A records, and two AAAA records over IPv4. The first three responses per service instance are subject to a 0.5 probability of being dropped to test query retries.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>30</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>mdnsdiscovery</string>
+				<string>--interface</string>
+				<string>lo0</string>
+				<string>--instanceCount</string>
+				<string>10</string>
+				<string>--txtSize</string>
+				<string>100</string>
+				<string>--browseTime</string>
+				<string>16</string>
+				<string>--countA</string>
+				<string>2</string>
+				<string>--countAAAA</string>
+				<string>2</string>
+				<string>--ipv4</string>
+				<string>--udrop</string>
+				<string>0.5</string>
+				<string>--mdrop</string>
+				<string>0.5</string>
+				<string>--maxDropCount</string>
+				<string>3</string>
+				<string>--format</string>
+				<string>json</string>
+				<string>--flushCache</string>
+				<string>--useNewGAI</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNSResponder Leaks</string>
+			<key>Description</key>
+			<string>Checks mDNSResponder for memory leaks.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>60</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/bin/leaks</string>
+				<string>mDNSResponder</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNS Discovery w/Packet Drops 10 (IPv6, New GAI)</string>
+			<key>Description</key>
+			<string>Tests mDNS discovery and resolution of ten service instances with one 100-byte TXT record, two A records, and two AAAA records over IPv6. The first three responses per service instance are subject to a 0.5 probability of being dropped to test query retries.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>30</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>mdnsdiscovery</string>
+				<string>--interface</string>
+				<string>lo0</string>
+				<string>--instanceCount</string>
+				<string>10</string>
+				<string>--txtSize</string>
+				<string>100</string>
+				<string>--browseTime</string>
+				<string>16</string>
+				<string>--countA</string>
+				<string>2</string>
+				<string>--countAAAA</string>
+				<string>2</string>
+				<string>--ipv6</string>
+				<string>--udrop</string>
+				<string>0.5</string>
+				<string>--mdrop</string>
+				<string>0.5</string>
+				<string>--maxDropCount</string>
+				<string>3</string>
+				<string>--format</string>
+				<string>json</string>
+				<string>--flushCache</string>
+				<string>--useNewGAI</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNSResponder Leaks</string>
+			<key>Description</key>
+			<string>Checks mDNSResponder for memory leaks.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>60</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/bin/leaks</string>
+				<string>mDNSResponder</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNS Discovery w/Packet Drops 100 (IPv4, New GAI)</string>
+			<key>Description</key>
+			<string>Tests mDNS discovery and resolution of 100 service instances with one 100-byte TXT record, two A records, and two AAAA records over IPv4. The first three responses per service instance are subject to a 0.5 probability of being dropped to test query retries.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>30</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>mdnsdiscovery</string>
+				<string>--interface</string>
+				<string>lo0</string>
+				<string>--instanceCount</string>
+				<string>100</string>
+				<string>--txtSize</string>
+				<string>100</string>
+				<string>--browseTime</string>
+				<string>18</string>
+				<string>--countA</string>
+				<string>2</string>
+				<string>--countAAAA</string>
+				<string>2</string>
+				<string>--ipv4</string>
+				<string>--udrop</string>
+				<string>0.5</string>
+				<string>--mdrop</string>
+				<string>0.5</string>
+				<string>--maxDropCount</string>
+				<string>3</string>
+				<string>--format</string>
+				<string>json</string>
+				<string>--flushCache</string>
+				<string>--useNewGAI</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNSResponder Leaks</string>
+			<key>Description</key>
+			<string>Checks mDNSResponder for memory leaks.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>60</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/bin/leaks</string>
+				<string>mDNSResponder</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNS Discovery w/Packet Drops 100 (IPv6, New GAI)</string>
+			<key>Description</key>
+			<string>Tests mDNS discovery and resolution of 100 service instances with one 100-byte TXT record, two A records, and two AAAA records over IPv6. The first three responses per service instance are subject to a 0.5 probability of being dropped to test query retries.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>30</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>mdnsdiscovery</string>
+				<string>--interface</string>
+				<string>lo0</string>
+				<string>--instanceCount</string>
+				<string>100</string>
+				<string>--txtSize</string>
+				<string>100</string>
+				<string>--browseTime</string>
+				<string>18</string>
+				<string>--countA</string>
+				<string>2</string>
+				<string>--countAAAA</string>
+				<string>2</string>
+				<string>--ipv6</string>
+				<string>--udrop</string>
+				<string>0.5</string>
+				<string>--mdrop</string>
+				<string>0.5</string>
+				<string>--maxDropCount</string>
+				<string>3</string>
+				<string>--format</string>
+				<string>json</string>
+				<string>--flushCache</string>
+				<string>--useNewGAI</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNSResponder Leaks</string>
+			<key>Description</key>
+			<string>Checks mDNSResponder for memory leaks.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>60</integer>
 			<key>IgnoreOutput</key>
 			<true/>
 			<key>Command</key>
@@ -906,7 +2224,7 @@
 			<key>RequiresWiFi</key>
 			<false/>
 			<key>Timeout</key>
-			<integer>10</integer>
+			<integer>60</integer>
 			<key>IgnoreOutput</key>
 			<true/>
 			<key>Command</key>
@@ -948,7 +2266,7 @@
 			<key>RequiresWiFi</key>
 			<false/>
 			<key>Timeout</key>
-			<integer>10</integer>
+			<integer>60</integer>
 			<key>IgnoreOutput</key>
 			<true/>
 			<key>Command</key>
@@ -959,15 +2277,56 @@
 		</dict>
 		<dict>
 			<key>TestName</key>
-			<string>Probe Conflicts</string>
+			<string>KeepAlive Record Registration</string>
 			<key>Description</key>
-			<string>Tests various probe conflict scenarios, some of which are expected to result in service instance and record renames.</string>
+			<string>Tests KeepAlive record registrations.</string>
 			<key>AsRoot</key>
 			<false/>
 			<key>RequiresWiFi</key>
 			<false/>
 			<key>Timeout</key>
-			<integer>300</integer>
+			<integer>60</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>keepalive</string>
+				<string>--format</string>
+				<string>json</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNSResponder Leaks</string>
+			<key>Description</key>
+			<string>Checks mDNSResponder for memory leaks.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>60</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/bin/leaks</string>
+				<string>mDNSResponder</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>Probe Conflicts (IPv4)</string>
+			<key>Description</key>
+			<string>Tests various probe conflict scenarios, some of which are expected to result in service instance and record renames. The test service is registered on the loopback interface. The probe conflicts occur over IPv4 via the loopback interface.</string>
+			<key>AsRoot</key>
+			<false/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>400</integer>
 			<key>IgnoreOutput</key>
 			<true/>
 			<key>Command</key>
@@ -977,6 +2336,8 @@
 				<string>probeconflicts</string>
 				<string>--interface</string>
 				<string>lo0</string>
+				<string>--extraWait 2000</string>
+				<string>--ipv4</string>
 				<string>--format</string>
 				<string>json</string>
 			</array>
@@ -991,7 +2352,7 @@
 			<key>RequiresWiFi</key>
 			<false/>
 			<key>Timeout</key>
-			<integer>10</integer>
+			<integer>60</integer>
 			<key>IgnoreOutput</key>
 			<true/>
 			<key>Command</key>
@@ -1002,30 +2363,28 @@
 		</dict>
 		<dict>
 			<key>TestName</key>
-			<string>TCP Fallback</string>
+			<string>Probe Conflicts (IPv6)</string>
 			<key>Description</key>
-			<string>Tests mDNSResponder&apos;s TCP fallback mechanism, which is triggered by UDP responses with invalid message IDs that would otherwise be acceptable.</string>
+			<string>Tests various probe conflict scenarios, some of which are expected to result in service instance and record renames. The test service is registered on the loopback interface. The probe conflicts occur over IPv6 via the loopback interface.</string>
 			<key>AsRoot</key>
-			<true/>
+			<false/>
 			<key>RequiresWiFi</key>
 			<false/>
 			<key>Timeout</key>
-			<integer>90</integer>
+			<integer>400</integer>
 			<key>IgnoreOutput</key>
 			<true/>
 			<key>Command</key>
 			<array>
 				<string>/usr/local/bin/dnssdutil</string>
 				<string>test</string>
-				<string>gaiperf</string>
-				<string>--suite</string>
-				<string>basic</string>
-				<string>--timeLimit</string>
-				<string>250</string>
+				<string>probeconflicts</string>
+				<string>--interface</string>
+				<string>lo0</string>
+				<string>--extraWait 2000</string>
+				<string>--ipv6</string>
 				<string>--format</string>
 				<string>json</string>
-				<string>--skipPathEval</string>
-				<string>--badUDPMode</string>
 			</array>
 		</dict>
 		<dict>
@@ -1038,7 +2397,7 @@
 			<key>RequiresWiFi</key>
 			<false/>
 			<key>Timeout</key>
-			<integer>10</integer>
+			<integer>60</integer>
 			<key>IgnoreOutput</key>
 			<true/>
 			<key>Command</key>
@@ -1049,24 +2408,29 @@
 		</dict>
 		<dict>
 			<key>TestName</key>
-			<string>State Dump</string>
+			<string>Probe Conflicts (Registration On Any Interface, IPv4)</string>
 			<key>Description</key>
-			<string>1.  Tests whether the state dump can be triggered correctly, and whether the file (or stdout&apos;s output) contains the full state information. 2. Checks whether the number of state dump files has an upper limit to avoid wasting disk space.</string>
+			<string>Tests various probe conflict scenarios, some of which are expected to result in service instance and record renames. The test service is registered using the kDNSServiceInterfaceIndexAny interface index. The probe conflicts occur over IPv4 via the loopback interface.</string>
 			<key>AsRoot</key>
-			<true/>
-			<key>RequiresWiFi</key>
-			<true/>
-			<key>Timeout</key>
-			<integer>60</integer>
-			<key>IgnoreOutput</key>
 			<false/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>400</integer>
+			<key>IgnoreOutput</key>
+			<true/>
 			<key>Command</key>
 			<array>
 				<string>/usr/local/bin/dnssdutil</string>
-				<string>browseAll</string>
-				<string>&amp;&amp;</string>
-				<string>/bin/sh</string>
-				<string>/AppleInternal/Tests/mDNSResponder/bats_test_state_dump.sh</string>
+				<string>test</string>
+				<string>probeconflicts</string>
+				<string>--interface</string>
+				<string>lo0</string>
+				<string>--extraWait 2000</string>
+				<string>--ipv4</string>
+				<string>--registerOnAny</string>
+				<string>--format</string>
+				<string>json</string>
 			</array>
 		</dict>
 		<dict>
@@ -1079,7 +2443,7 @@
 			<key>RequiresWiFi</key>
 			<false/>
 			<key>Timeout</key>
-			<integer>10</integer>
+			<integer>60</integer>
 			<key>IgnoreOutput</key>
 			<true/>
 			<key>Command</key>
@@ -1090,21 +2454,29 @@
 		</dict>
 		<dict>
 			<key>TestName</key>
-			<string>DNS Proxy</string>
+			<string>Probe Conflicts (Registration On Any Interface, IPv6)</string>
 			<key>Description</key>
-			<string>1.  Tests the DNS Proxy by doing a DNS UDP query. 2. Tests the DNS proxy by doing a DNS TCP query.</string>
+			<string>Tests various probe conflict scenarios, some of which are expected to result in service instance and record renames. The test service is registered using the kDNSServiceInterfaceIndexAny interface index. The probe conflicts occur over IPv6 via the loopback interface.</string>
 			<key>AsRoot</key>
-			<true/>
-			<key>RequiresWiFi</key>
-			<true/>
-			<key>Timeout</key>
-			<integer>60</integer>
-			<key>IgnoreOutput</key>
 			<false/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>400</integer>
+			<key>IgnoreOutput</key>
+			<true/>
 			<key>Command</key>
 			<array>
-				<string>/bin/sh</string>
-				<string>/AppleInternal/Tests/mDNSResponder/bats_test_proxy.sh</string>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>probeconflicts</string>
+				<string>--interface</string>
+				<string>lo0</string>
+				<string>--extraWait 2000</string>
+				<string>--ipv6</string>
+				<string>--registerOnAny</string>
+				<string>--format</string>
+				<string>json</string>
 			</array>
 		</dict>
 		<dict>
@@ -1117,7 +2489,7 @@
 			<key>RequiresWiFi</key>
 			<false/>
 			<key>Timeout</key>
-			<integer>10</integer>
+			<integer>60</integer>
 			<key>IgnoreOutput</key>
 			<true/>
 			<key>Command</key>
@@ -1161,7 +2533,7 @@
 			<key>RequiresWiFi</key>
 			<false/>
 			<key>Timeout</key>
-			<integer>10</integer>
+			<integer>60</integer>
 			<key>IgnoreOutput</key>
 			<true/>
 			<key>Command</key>
@@ -1172,29 +2544,126 @@
 		</dict>
 		<dict>
 			<key>TestName</key>
-			<string>XCTests</string>
+			<string>DNS Proxy</string>
 			<key>Description</key>
-			<string>mDNSResponder XCTests</string>
-			<key>WorkingDirectory</key>
-			<string>/AppleInternal/XCTests/com.apple.mDNSResponder/</string>
+			<string>Tests mDNSResponder&apos;s DNS proxy by sending it a variety of queries and verifying the responses. The queries are sent via UDP and TCP to the DNS proxy&apos;s IPV4 and IPv6 addresses. The DNS proxy is tested while it runs in different modes. Aside from the mode without a DNS64 prefix, the DNS proxy is tested while it runs with all of the valid DNS64 prefix lengths: 32-bit, 40-bit, 48-bit, 56-bit, 64-bit, and 96-bit. Uses mrc_dns_proxy to start the DNS proxies.</string>
 			<key>AsRoot</key>
-			<false/>
-			<key>RequiresWiFi</key>
 			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
 			<key>Timeout</key>
-			<integer>20</integer>
-			<key>ShowSubtestResults</key>
+			<integer>600</integer>
+			<key>IgnoreOutput</key>
 			<true/>
 			<key>Command</key>
 			<array>
-				<string>BATS_XCTEST_CMD</string>
-				<string>-NSTreatUnknownArgumentsAsOpen</string>
-				<string>NO</string>
-				<string>-ApplePersistenceIgnoreState</string>
-				<string>YES</string>
-				<string>-XCTest</string>
-				<string>Self</string>
-				<string>Tests.xctest</string>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>dnsproxy</string>
+				<string>--format</string>
+				<string>json</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNSResponder Leaks</string>
+			<key>Description</key>
+			<string>Checks mDNSResponder for memory leaks.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>60</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/bin/leaks</string>
+				<string>mDNSResponder</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>DNS Proxy (Legacy SPI)</string>
+			<key>Description</key>
+			<string>Tests mDNSResponder&apos;s DNS proxy by sending it a variety of queries and verifying the responses. The queries are sent via UDP and TCP to the DNS proxy&apos;s IPV4 and IPv6 addresses. The DNS proxy is tested while it runs in different modes. Aside from the mode without a DNS64 prefix, the DNS proxy is tested while it runs with all of the valid DNS64 prefix lengths: 32-bit, 40-bit, 48-bit, 56-bit, 64-bit, and 96-bit. Uses the legacy client SPI to start the DNS proxies, i.e., DNSXEnableProxy() and DNSXEnableProxy64().</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>600</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>dnsproxy</string>
+				<string>--legacy</string>
+				<string>--format</string>
+				<string>json</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNSResponder Leaks</string>
+			<key>Description</key>
+			<string>Checks mDNSResponder for memory leaks.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>60</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/bin/leaks</string>
+				<string>mDNSResponder</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>State Dump</string>
+			<key>Description</key>
+			<string>1.  Tests whether the state dump can be triggered correctly, and whether the file (or stdout&apos;s output) contains the full state information. 2. Checks whether the number of state dump files has an upper limit to avoid wasting disk space.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<true/>
+			<key>Timeout</key>
+			<integer>60</integer>
+			<key>IgnoreOutput</key>
+			<false/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>browseAll</string>
+				<string>&amp;&amp;</string>
+				<string>/bin/sh</string>
+				<string>/AppleInternal/Tests/mDNSResponder/bats_test_state_dump.sh</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNSResponder Leaks</string>
+			<key>Description</key>
+			<string>Checks mDNSResponder for memory leaks.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>60</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/bin/leaks</string>
+				<string>mDNSResponder</string>
 			</array>
 		</dict>
 		<dict>
@@ -1229,7 +2698,688 @@
 			<key>RequiresWiFi</key>
 			<false/>
 			<key>Timeout</key>
+			<integer>60</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/bin/leaks</string>
+				<string>mDNSResponder</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>Multiple Stub Connections</string>
+			<key>Description</key>
+			<string>Verifies any issues with multiple simultanious connections from a client</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>60</integer>
+			<key>IgnoreOutput</key>
+			<false/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>multiconnect</string>
+				<string>--connections</string>
+				<string>100</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNSResponder Leaks</string>
+			<key>Description</key>
+			<string>Checks mDNSResponder for memory leaks.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>60</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/bin/leaks</string>
+				<string>mDNSResponder</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>DNSSEC Test - Basic Validation</string>
+			<key>Description</key>
+			<string>Verifies if mDNSResponder could handle the basic DNSSEC validation</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
 			<integer>10</integer>
+			<key>IgnoreOutput</key>
+			<false/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>dnssec</string>
+				<string>-n</string>
+				<string>&quot;basic validation&quot;</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNSResponder Leaks</string>
+			<key>Description</key>
+			<string>Checks mDNSResponder for memory leaks.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>60</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/bin/leaks</string>
+				<string>mDNSResponder</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>Paragon (Daemon Score Card)</string>
+			<key>Description</key>
+			<string>Gathers performance metrics and performs daemon-related checks after a simple kickstart of mDNSResponder daemon</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>60</integer>
+			<key>IgnoreOutput</key>
+			<false/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/perfcheck</string>
+				<string>daemon</string>
+				<string>-p</string>
+				<string>mDNSResponder</string>
+				<string>--perfdata</string>
+				<string>/tmp/scorecard-mDNSResponder.pdj</string>
+				<string>--xpc-trace</string>
+				<string>-s</string>
+				<string>2</string>
+				<string>-c</string>
+				<string>launchctl</string>
+				<string>kickstart</string>
+				<string>-kp</string>
+				<string>system/com.apple.mDNSResponder.reloaded</string>
+				<string>2&gt;</string>
+				<string>/tmp/perf_mDNSResponder</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>LocalOnlyATimeoutTest</string>
+			<key>Description</key>
+			<string>LocalOnlyATimeoutTest from Tests.xctest</string>
+			<key>AsRoot</key>
+			<false/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>5</integer>
+			<key>IgnoreOutput</key>
+			<false/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>xctest</string>
+				<string>-c</string>
+				<string>LocalOnlyATimeoutTest</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>CNameRecordTest</string>
+			<key>Description</key>
+			<string>CNameRecordTest from Tests.xctest</string>
+			<key>AsRoot</key>
+			<false/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>5</integer>
+			<key>IgnoreOutput</key>
+			<false/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>xctest</string>
+				<string>-c</string>
+				<string>CNameRecordTest</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNSCoreReceiveTest</string>
+			<key>Description</key>
+			<string>mDNSCoreReceiveTest from Tests.xctest</string>
+			<key>AsRoot</key>
+			<false/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>5</integer>
+			<key>IgnoreOutput</key>
+			<false/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>xctest</string>
+				<string>-c</string>
+				<string>mDNSCoreReceiveTest</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>ResourceRecordTest</string>
+			<key>Description</key>
+			<string>ResourceRecordTest from Tests.xctest</string>
+			<key>AsRoot</key>
+			<false/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>5</integer>
+			<key>IgnoreOutput</key>
+			<false/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>xctest</string>
+				<string>-c</string>
+				<string>ResourceRecordTest</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>DNSMessageTest</string>
+			<key>Description</key>
+			<string>DNSMessageTest from Tests.xctest</string>
+			<key>AsRoot</key>
+			<false/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>5</integer>
+			<key>IgnoreOutput</key>
+			<false/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>xctest</string>
+				<string>-c</string>
+				<string>DNSMessageTest</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>HelperFunctionTest</string>
+			<key>Description</key>
+			<string>HelperFunctionTest from Tests.xctest</string>
+			<key>AsRoot</key>
+			<false/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>5</integer>
+			<key>IgnoreOutput</key>
+			<false/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>xctest</string>
+				<string>-c</string>
+				<string>HelperFunctionTest</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>CacheOrderTest</string>
+			<key>Description</key>
+			<string>CacheOrderTest from Tests.xctest</string>
+			<key>AsRoot</key>
+			<false/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>5</integer>
+			<key>IgnoreOutput</key>
+			<false/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>xctest</string>
+				<string>-c</string>
+				<string>CacheOrderTest</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>LocalOnlyWithInterfacesTest</string>
+			<key>Description</key>
+			<string>LocalOnlyWithInterfacesTest from Tests.xctest</string>
+			<key>AsRoot</key>
+			<false/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>5</integer>
+			<key>IgnoreOutput</key>
+			<false/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>xctest</string>
+				<string>-c</string>
+				<string>LocalOnlyWithInterfacesTest</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>PathEvaluationTest</string>
+			<key>Description</key>
+			<string>PathEvaluationTest from Tests.xctest</string>
+			<key>AsRoot</key>
+			<false/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>5</integer>
+			<key>IgnoreOutput</key>
+			<false/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>xctest</string>
+				<string>-c</string>
+				<string>PathEvaluationTest</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>DNSDigestTest</string>
+			<key>Description</key>
+			<string>Test if the HMAC MD5 utilities in DNSDigest.c can generate the correct digest.</string>
+			<key>AsRoot</key>
+			<false/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>5</integer>
+			<key>IgnoreOutput</key>
+			<false/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>xctest</string>
+				<string>-c</string>
+				<string>DNSDigestTest</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>DNSSEC Unit - DNSSECObjTrustAnchorTest</string>
+			<key>Description</key>
+			<string>Test the methods of dnssec_obj_trust_anchor_t.</string>
+			<key>AsRoot</key>
+			<false/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>5</integer>
+			<key>IgnoreOutput</key>
+			<false/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>xctest</string>
+				<string>-c</string>
+				<string>DNSSECObjTrustAnchorTest</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>DNSSEC Unit - DNSSECObjTrustAnchorManagerTest</string>
+			<key>Description</key>
+			<string>Test the methods of dnssec_obj_trust_anchor_manager_t.</string>
+			<key>AsRoot</key>
+			<false/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>5</integer>
+			<key>IgnoreOutput</key>
+			<false/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>xctest</string>
+				<string>-c</string>
+				<string>DNSSECObjTrustAnchorManagerTest</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>DNSSEC Unit - DNSSECObjDomainNameTest</string>
+			<key>Description</key>
+			<string>Test the methods of dnssec_obj_domain_name_t.</string>
+			<key>AsRoot</key>
+			<false/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>5</integer>
+			<key>IgnoreOutput</key>
+			<false/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>xctest</string>
+				<string>-c</string>
+				<string>DNSSECObjDomainNameTest</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>DNSSEC Unit - DNSSECObjRRValidator</string>
+			<key>Description</key>
+			<string>Test the methods of dnssec_obj_rr_validator_t.</string>
+			<key>AsRoot</key>
+			<false/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>5</integer>
+			<key>IgnoreOutput</key>
+			<false/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>xctest</string>
+				<string>-c</string>
+				<string>DNSSECObjRRValidator</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>DNSSEC Unit - DNSSECObjDenialOfExistenceTest</string>
+			<key>Description</key>
+			<string>Test the methods of dnssec_obj_denial_of_existence_t.</string>
+			<key>AsRoot</key>
+			<false/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>5</integer>
+			<key>IgnoreOutput</key>
+			<false/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>xctest</string>
+				<string>-c</string>
+				<string>DNSSECObjDenialOfExistenceTest</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>DNSSEC Unit - DNSSECObjRRTest</string>
+			<key>Description</key>
+			<string>Test the methods of dnssec_obj_rr_t.</string>
+			<key>AsRoot</key>
+			<false/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>5</integer>
+			<key>IgnoreOutput</key>
+			<false/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>xctest</string>
+				<string>-c</string>
+				<string>DNSSECObjRRTest</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>DNSSEC Unit - DNSSECObjRRSOATest</string>
+			<key>Description</key>
+			<string>Test the methods of dnssec_obj_rr_soa_t.</string>
+			<key>AsRoot</key>
+			<false/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>5</integer>
+			<key>IgnoreOutput</key>
+			<false/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>xctest</string>
+				<string>-c</string>
+				<string>DNSSECObjRRSOATest</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>DNSSEC Unit - DNSSECObjRRDSTest</string>
+			<key>Description</key>
+			<string>Test the methods of dnssec_obj_rr_ds_t.</string>
+			<key>AsRoot</key>
+			<false/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>5</integer>
+			<key>IgnoreOutput</key>
+			<false/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>xctest</string>
+				<string>-c</string>
+				<string>DNSSECObjRRDSTest</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>DNSSEC Unit - DNSSECObjRRNSECTest</string>
+			<key>Description</key>
+			<string>Test the methods of dnssec_obj_rr_nsec_t.</string>
+			<key>AsRoot</key>
+			<false/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>5</integer>
+			<key>IgnoreOutput</key>
+			<false/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>xctest</string>
+				<string>-c</string>
+				<string>DNSSECObjRRNSECTest</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>DNSSEC Unit - DNSSECObjRRRRSigTest</string>
+			<key>Description</key>
+			<string>Test the methods of dnssec_obj_rr_rrsig_t</string>
+			<key>AsRoot</key>
+			<false/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>5</integer>
+			<key>IgnoreOutput</key>
+			<false/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>xctest</string>
+				<string>-c</string>
+				<string>DNSSECObjRRRRSigTest</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>DNSSEC Unit - DNSSECObjRRDNSKeyTest</string>
+			<key>Description</key>
+			<string>Test the methods of dnssec_obj_rr_dnskey_t</string>
+			<key>AsRoot</key>
+			<false/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>5</integer>
+			<key>IgnoreOutput</key>
+			<false/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>xctest</string>
+				<string>-c</string>
+				<string>DNSSECObjRRDNSKeyTest</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>DNSSEC Unit - DNSSECObjRRNSEC3Test</string>
+			<key>Description</key>
+			<string>Test the methods of dnssec_obj_rr_nsec3_t</string>
+			<key>AsRoot</key>
+			<false/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>5</integer>
+			<key>IgnoreOutput</key>
+			<false/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>xctest</string>
+				<string>-c</string>
+				<string>DNSSECObjRRNSEC3Test</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>DNSSEC Unit - BaseEncodingTest</string>
+			<key>Description</key>
+			<string>Test base 64 and base 32 HEX encoding.</string>
+			<key>AsRoot</key>
+			<false/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>5</integer>
+			<key>IgnoreOutput</key>
+			<false/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>xctest</string>
+				<string>-c</string>
+				<string>BaseEncodingTest</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNSResponder Leaks</string>
+			<key>Description</key>
+			<string>Checks mDNSResponder for memory leaks.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>60</integer>
+			<key>IgnoreOutput</key>
+			<true/>
+			<key>Command</key>
+			<array>
+				<string>/usr/bin/leaks</string>
+				<string>mDNSResponder</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>DNSSEC Integration - Basic Validation</string>
+			<key>Description</key>
+			<string>Test the DNSSEC validation capability of mDNSResponder when the validation result is Secure, with different number of address records and different DNSKEY algorithms.</string>
+			<key>AsRoot</key>
+			<false/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>5</integer>
+			<key>IgnoreOutput</key>
+			<false/>
+			<key>Command</key>
+			<array>
+				<string>/usr/local/bin/dnssdutil</string>
+				<string>test</string>
+				<string>dnssec</string>
+				<string>--testCaseName</string>
+				<string>&quot;basic validation&quot;</string>
+			</array>
+		</dict>
+		<dict>
+			<key>TestName</key>
+			<string>mDNSResponder Leaks</string>
+			<key>Description</key>
+			<string>Checks mDNSResponder for memory leaks.</string>
+			<key>AsRoot</key>
+			<true/>
+			<key>RequiresWiFi</key>
+			<false/>
+			<key>Timeout</key>
+			<integer>60</integer>
 			<key>IgnoreOutput</key>
 			<true/>
 			<key>Command</key>

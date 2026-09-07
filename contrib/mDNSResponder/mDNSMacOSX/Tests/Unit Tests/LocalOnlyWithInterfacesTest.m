@@ -1,11 +1,11 @@
 /*
- * Copyright (c) 2019 Apple Inc. All rights reserved.
+ * Copyright (c) 2019-2021 Apple Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,30 +14,25 @@
  * limitations under the License.
  */
 
-#include "unittest_common.h"
+#import "unittest_common.h"
+#import "mDNSMacOSX.h"
 #import <XCTest/XCTest.h>
 
-struct UDPSocket_struct
-{
-	mDNSIPPort port; // MUST BE FIRST FIELD -- mDNSCoreReceive expects every UDPSocket_struct to begin with mDNSIPPort port
-};
-typedef struct UDPSocket_struct UDPSocket;
-
 // This client request was generated using the following command: "dns-sd -Q 123server.dotbennu.com. A".
-char test_query_any_msgbuf[35] = {
+const uint8_t test_query_any_msgbuf[35] = {
     0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x31, 0x32, 0x33, 0x73, 0x65, 0x72, 0x76, 0x65,
     0x72, 0x2e, 0x64, 0x6f, 0x74, 0x62, 0x65, 0x6e, 0x6e, 0x75, 0x2e, 0x63, 0x6f, 0x6d, 0x00, 0x00,
     0x01, 0x00, 0x01
 };
 
 // Modified for different scopes
-char test_query_local_msgbuf[35] = {
+const uint8_t test_query_local_msgbuf[35] = {
     0x00, 0x00, 0x10, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0x31, 0x32, 0x33, 0x73, 0x65, 0x72, 0x76, 0x65,
     0x72, 0x2e, 0x64, 0x6f, 0x74, 0x62, 0x65, 0x6e, 0x6e, 0x75, 0x2e, 0x63, 0x6f, 0x6d, 0x00, 0x00,
     0x01, 0x00, 0x01
 };
 
-char test_query_interface_msgbuf[35] = {
+uint8_t test_query_interface_msgbuf[35] = {
     0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x31, 0x32, 0x33, 0x73, 0x65, 0x72, 0x76, 0x65,
     0x72, 0x2e, 0x64, 0x6f, 0x74, 0x62, 0x65, 0x6e, 0x6e, 0x75, 0x2e, 0x63, 0x6f, 0x6d, 0x00, 0x00,
     0x01, 0x00, 0x01
@@ -127,7 +122,7 @@ mDNSlocal mDNSBool _TestCreateEtcHostsEntryWithInterfaceID(const domainname *dom
             rr = rr->next;
         }
     }
-    rr = (AuthRecord *) callocL("etchosts", sizeof(*rr));
+    rr = (AuthRecord *) calloc(1, sizeof(*rr));
     if (rr == NULL) return mDNSfalse;
     mDNS_SetupResourceRecord(rr, NULL, InterfaceID, rrtype, 1, kDNSRecordTypeKnownUnique, AuthRecordLocalOnly, FreeEtcHosts, NULL);
     AssignDomainName(&rr->namestorage, domain);
@@ -245,7 +240,7 @@ mDNSlocal mDNSBool HasReplyWithInterfaceIndex(reply_state * reply, mDNSu32 inter
 
     // Create memory for a socket that is never used or opened.
     local_socket = (UDPSocket *) mDNSPlatformMemAllocateClear(sizeof(*local_socket));
-    
+
     // Create memory for a request that is used to make this unit test's client request.
     client_request_message = calloc(1, sizeof(request_state));
 }
@@ -283,25 +278,43 @@ mDNSlocal mDNSBool HasReplyWithInterfaceIndex(reply_state * reply, mDNSu32 inter
 {
     request_state* req = client_request_message;
 
+    fprintf(stdout, "testLocalOnlyWithInterfacesTestSeries: primary_interfaceID %p\n", (void *)primary_interfaceID);
+
     // Verify Any index returns 2 results.
-    [self _executeClientQueryRequest: req andMsgBuf: test_query_any_msgbuf];
-    XCTAssertEqual(NumReplies(req->replies), 2);
-    XCTAssertTrue(HasReplyWithInterfaceIndex(req->replies, kDNSServiceInterfaceIndexP2P));
-    XCTAssertTrue(HasReplyWithInterfaceIndex(req->replies, kDNSServiceInterfaceIndexLocalOnly));
+ #if !TARGET_OS_WATCH
+    if (primary_interfaceID)
+    {
+        // Path evaluation on watch causes this query to get scoped to en0 (primary_interfaceID) so it's the same as #3
+        [self _executeClientQueryRequest: req andMsgBuf: test_query_any_msgbuf];
+        XCTAssertEqual(NumReplies(req->replies), 2);
+        XCTAssertTrue(HasReplyWithInterfaceIndex(req->replies, kDNSServiceInterfaceIndexP2P));
+        XCTAssertTrue(HasReplyWithInterfaceIndex(req->replies, kDNSServiceInterfaceIndexLocalOnly));
+    }
+    else
+    {
+        fprintf(stdout, "testLocalOnlyWithInterfacesTestSeries: skipping test_query_any_msgbuf test because interface not found\n");
+    }
+#endif
 
     // Verify LocalOnly index returns 3 results.
     [self _executeClientQueryRequest: req andMsgBuf: test_query_local_msgbuf];
     XCTAssertEqual(NumReplies(req->replies), 3);
     XCTAssertTrue(HasReplyWithInterfaceIndex(req->replies, kDNSServiceInterfaceIndexP2P));
     XCTAssertTrue(HasReplyWithInterfaceIndex(req->replies, kDNSServiceInterfaceIndexLocalOnly));
-    XCTAssertTrue(HasReplyWithInterfaceIndex(req->replies, primary_interfaceID));
+    if (primary_interfaceID) XCTAssertTrue(HasReplyWithInterfaceIndex(req->replies, (mDNSu32)primary_interfaceID));
 
-    // Verify en0 index returns 1 result.
-    test_query_interface_msgbuf[7] = primary_interfaceID;
-    [self _executeClientQueryRequest: req andMsgBuf: test_query_interface_msgbuf];
-    XCTAssertEqual(NumReplies(req->replies), 1);
-    XCTAssertTrue(HasReplyWithInterfaceIndex(req->replies, primary_interfaceID));
-
+    if (primary_interfaceID)
+    {
+        // Verify en0 index returns 1 result.
+        test_query_interface_msgbuf[7] = (uint8_t)primary_interfaceID;
+        [self _executeClientQueryRequest: req andMsgBuf: test_query_interface_msgbuf];
+        XCTAssertEqual(NumReplies(req->replies), 1);
+        XCTAssertTrue(HasReplyWithInterfaceIndex(req->replies, (mDNSu32)primary_interfaceID));
+    }
+    else
+    {
+        fprintf(stdout, "testLocalOnlyWithInterfacesTestSeries: skipping primary_interfaceID test because interface not found\n");
+    }
 }
 
 // Simulate a uds client request by setting up a client request and then
@@ -310,11 +323,11 @@ mDNSlocal mDNSBool HasReplyWithInterfaceIndex(reply_state * reply, mDNSu32 inter
 // the client request and query were setup as expected.  This unit test also calls
 // mDNS_execute which determines the cache does not contain the new question's
 // answer.
-- (void)_executeClientQueryRequest: (request_state*)req andMsgBuf: (char*)msgbuf
+- (void)_executeClientQueryRequest: (request_state*)req andMsgBuf: (const uint8_t*)msgbuf
 {
     mDNS *const m = &mDNSStorage;
-    char *msgptr = msgbuf;
-    size_t msgsz = sizeof(test_query_local_msgbuf);
+    const uint8_t *const msgptr = msgbuf;
+    const uint32_t msgsz = sizeof(test_query_local_msgbuf);
     mDNSs32 min_size = sizeof(DNSServiceFlags) + sizeof(mDNSu32) + 4;
     DNSQuestion *q;
     mStatus err = mStatus_NoError;
@@ -374,12 +387,8 @@ mDNSlocal mDNSBool HasReplyWithInterfaceIndex(reply_state * reply, mDNSu32 inter
     XCTAssertEqual(q->TimeoutQuestion, 0);
     XCTAssertEqual(q->WakeOnResolve, 0);
     XCTAssertEqual(q->UseBackgroundTraffic, 0);
-    XCTAssertEqual(q->ValidationRequired, 0);
-    XCTAssertEqual(q->ValidatingResponse, 0);
     XCTAssertEqual(q->ProxyQuestion, 0);
     XCTAssertNotEqual((void*)q->QuestionCallback, (void*)mDNSNULL);
-    XCTAssertNil((__bridge id)q->DNSSECAuthInfo);
-    XCTAssertNil((__bridge id)(void*)q->DAIFreeCallback);
     XCTAssertEqual(q->AppendSearchDomains, 0);
     XCTAssertNil((__bridge id)q->DuplicateOf);
     

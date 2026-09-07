@@ -1,12 +1,12 @@
 /* -*- Mode: C; tab-width: 4; c-file-style: "bsd"; c-basic-offset: 4; fill-column: 108; indent-tabs-mode: nil; -*-
  *
- * Copyright (c) 2002-2018 Apple Inc. All rights reserved.
+ * Copyright (c) 2002-2022 Apple Inc. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -29,7 +29,7 @@ extern "C" {
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include "mDNSEmbeddedAPI.h"        // for domain name structure
-#include "mdns_private.h"           // for mdns_interface_monitor_t struct
+#include <mdns/private.h>           // for mdns_interface_monitor_t struct
 
 #include <net/if.h>
 #include <os/log.h>
@@ -49,6 +49,9 @@ extern "C" {
 #include <Security/SecureTransport.h>
 #include <Security/Security.h>
 #endif /* NO_SECURITYFRAMEWORK */
+
+#define kMDNSResponderIDStr "com.apple.mDNSResponder"
+#define kMDNSResponderID    CFSTR(kMDNSResponderIDStr)
 
 enum mDNSDynamicStoreSetConfigKey
 {
@@ -155,6 +158,7 @@ struct NetworkInterfaceInfoOSX_struct
                                                 // If an interface goes away temporarily and then comes back then
                                                 // AppearanceTime is updated to the time of the most recent appearance.
     mDNSs32 LastSeen;                           // If Exists==0, last time this interface appeared in getifaddrs list
+    uint32_t ift_family;                        // IFRTYPE_FAMILY_XXX
     unsigned int ifa_flags;
     struct in_addr ifa_v4addr;
     mDNSu32 scope_id;                           // interface index / IPv6 scope ID
@@ -163,6 +167,7 @@ struct NetworkInterfaceInfoOSX_struct
     int BPF_fd;                                 // -1 uninitialized; -2 requested BPF; -3 failed
     int BPF_mcfd;                               // Socket for our IPv6 ND group membership
     u_int BPF_len;
+    uint32_t ift_subfamily;                     // The interface's subfamily type from the SIOCGIFTYPE ioctl().
     mDNSBool isAWDL;                            // True if this interface has the IFEF_AWDL flag set.
 #ifdef MDNSRESPONDER_USES_LIB_DISPATCH_AS_PRIMARY_EVENT_LOOP_MECHANISM
     dispatch_source_t BPF_source;
@@ -176,7 +181,9 @@ struct NetworkInterfaceInfoOSX_struct
 struct mDNS_PlatformSupport_struct
 {
     NetworkInterfaceInfoOSX *InterfaceList;
+#if !MDNSRESPONDER_SUPPORTS(APPLE, QUERIER)
     CFMutableArrayRef InterfaceMonitors;
+#endif
     KQSocketSet permanentsockets;
     int num_mcasts;                             // Number of multicasts received during this CPU scheduling period (used for CPU limiting)
     domainlabel userhostlabel;                  // The hostlabel as it was set in System Preferences the last time we looked
@@ -219,9 +226,11 @@ struct mDNS_PlatformSupport_struct
     mDNSu8 v6answers;                  // for A/AAAA from external DNS servers
     mDNSs32 DNSTrigger;                // Time the DNSTrigger was given
     uint64_t LastConfigGeneration;     // DNS configuration generation number
+#if !MDNSRESPONDER_SUPPORTS(APPLE, QUERIER)
     mDNSBool if_interface_changed;     // There are some changes that we do not know from LastConfigGeneration, such as
                                        // if the interface is expensive/constrained or not. Therefore, we need an additional
                                        // field to determine if the interface has changed.
+#endif
     UDPSocket UDPProxy;
     TCPSocket TCPProxyV4;
     TCPSocket TCPProxyV6;
@@ -241,16 +250,15 @@ extern void SetDomainSecrets(mDNS *m);
 extern void mDNSMacOSXNetworkChanged(void);
 extern void mDNSMacOSXSystemBuildNumber(char *HINFO_SWstring);
 extern NetworkInterfaceInfoOSX *IfindexToInterfaceInfoOSX(mDNSInterfaceID ifindex);
-extern void mDNSUpdatePacketFilter(const ResourceRecord *const excludeRecord);
 extern void myKQSocketCallBack(int s1, short filter, void *context, mDNSBool encounteredEOF);
-extern void mDNSDynamicStoreSetConfig(int key, const char *subkey, CFPropertyListRef value);
+extern void mDNSDynamicStoreSetConfig(enum mDNSDynamicStoreSetConfigKey key, const char *subkey, CFPropertyListRef value);
 extern void UpdateDebugState(void);
 
 #ifdef MDNSRESPONDER_USES_LIB_DISPATCH_AS_PRIMARY_EVENT_LOOP_MECHANISM
 extern int KQueueSet(int fd, u_short flags, short filter, KQueueEntry *const entryRef);
 mDNSexport void TriggerEventCompletion(void);
 #else
-extern int KQueueSet(int fd, u_short flags, short filter, const KQueueEntry *const entryRef);
+extern int KQueueSet(int fd, u_short flags, short filter, KQueueEntry *const entryRef);
 #endif
 
 // When events are processed on the non-kqueue thread (i.e. CFRunLoop notifications like Sleep/Wake,
@@ -258,8 +266,6 @@ extern int KQueueSet(int fd, u_short flags, short filter, const KQueueEntry *con
 extern void KQueueLock(void);
 extern void KQueueUnlock(const char* task);
 extern void mDNSPlatformCloseFD(KQueueEntry *kq, int fd);
-extern ssize_t myrecvfrom(const int s, void *const buffer, const size_t max,
-                             struct sockaddr *const from, size_t *const fromlen, mDNSAddr *dstaddr, char *ifname, mDNSu8 *ttl);
 
 extern mDNSBool DictionaryIsEnabled(CFDictionaryRef dict);
 
@@ -286,11 +292,12 @@ struct CompileTimeAssertionChecks_mDNSMacOSX
     // Check our structures are reasonable sizes. Including overly-large buffers, or embedding
     // other overly-large structures instead of having a pointer to them, can inadvertently
     // cause structure sizes (and therefore memory usage) to balloon unreasonably.
-    char sizecheck_NetworkInterfaceInfoOSX[(sizeof(NetworkInterfaceInfoOSX) <=  8488) ? 1 : -1];
+    char sizecheck_NetworkInterfaceInfoOSX[(sizeof(NetworkInterfaceInfoOSX) <=  8704) ? 1 : -1];
     char sizecheck_mDNS_PlatformSupport   [(sizeof(mDNS_PlatformSupport)    <=  1378) ? 1 : -1];
 };
 
 extern mDNSInterfaceID AWDLInterfaceID;
+extern mDNSInterfaceID WiFiAwareInterfaceID;
 void initializeD2DPlugins(mDNS *const m);
 void terminateD2DPlugins(void);
 
