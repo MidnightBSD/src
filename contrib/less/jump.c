@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1984-2025  Mark Nudelman
+ * Copyright (C) 1984-2026  Mark Nudelman
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Less License, as specified in the README file.
@@ -20,6 +20,9 @@ extern lbool squished;
 extern int sc_width, sc_height;
 extern int show_attn;
 extern int top_scroll;
+extern int quit_if_one_screen;
+extern lbool one_screen;
+extern lbool full_screen;
 extern POSITION header_start_pos;
 
 /*
@@ -188,15 +191,15 @@ static void after_header_message(void)
 {
 #if HAVE_TIME
 #define MSG_FREQ 1 /* seconds */
-    static time_type last_msg = (time_type) 0;
-    time_type now = get_time();
-    if (now < last_msg + MSG_FREQ)
-        return;
-    last_msg = now;
+	static time_type last_msg = (time_type) 0;
+	time_type now = get_time();
+	if (now < last_msg + MSG_FREQ)
+		return;
+	last_msg = now;
 #endif
-    bell();
-    /* {{ This message displays before the file text is updated, which is not a good UX. }} */
-    /** error("Cannot display text before header; use --header=- to disable header", NULL_PARG); */
+	lbell();
+	/* {{ This message displays before the file text is updated, which is not a good UX. }} */
+	/** error("Cannot display text before header; use --header=- to disable header", NULL_PARG); */
 }
 
 /*
@@ -210,8 +213,8 @@ public POSITION after_header_pos(POSITION pos)
 {
 	if (header_start_pos != NULL_POSITION && pos < header_start_pos)
 	{
-        after_header_message();
-        pos = header_start_pos;
+		after_header_message();
+		pos = header_start_pos;
 	}
 	return pos;
 }
@@ -235,6 +238,14 @@ public void jump_loc(POSITION pos, int sline)
 	pos = next_unfiltered(pos);
 	sindex = sindex_from_sline(sline);
 
+	if (!full_screen && !(quit_if_one_screen && one_screen))
+	{
+		/* If not full screen, can't rely on scrolling logic below, since
+		 * "scrolling" may just print lines in the unused part of the screen. */
+		pos_clear();
+		lclear();
+	}
+
 	if ((nline = onscreen(pos)) >= 0)
 	{
 		/*
@@ -243,9 +254,9 @@ public void jump_loc(POSITION pos, int sline)
 		 */
 		nline -= sindex;
 		if (nline > 0)
-			forw(nline, position(BOTTOM_PLUS_ONE), TRUE, FALSE, FALSE, 0);
+			forw(nline, position(BOTTOM_PLUS_ONE), TRUE, FALSE, FALSE, FALSE, 0);
 		else
-			back(-nline, position(TOP), TRUE, FALSE, FALSE);
+			back(-nline, position(TOP), TRUE, FALSE, FALSE, FALSE);
 #if HILITE_SEARCH
 		if (show_attn)
 			repaint_hilite(TRUE);
@@ -286,7 +297,7 @@ public void jump_loc(POSITION pos, int sline)
 				 * close enough to the current screen
 				 * that we can just scroll there after all.
 				 */
-				forw(sc_height-sindex+nline-1, bpos, TRUE, FALSE, FALSE, 0);
+				forw(sc_height-sindex+nline-1, bpos, TRUE, FALSE, FALSE, FALSE, 0);
 #if HILITE_SEARCH
 				if (show_attn)
 					repaint_hilite(TRUE);
@@ -308,7 +319,7 @@ public void jump_loc(POSITION pos, int sline)
 		lastmark();
 		squished = FALSE;
 		screen_trashed_num(0);
-		forw(sc_height-1, pos, TRUE, FALSE, FALSE, sindex-nline);
+		forw(sc_height-1, pos, TRUE, FALSE, FALSE, FALSE, sindex-nline);
 	} else
 	{
 		/*
@@ -337,7 +348,7 @@ public void jump_loc(POSITION pos, int sline)
 				 * close enough to the current screen
 				 * that we can just scroll there after all.
 				 */
-				back(nline, tpos, TRUE, FALSE, FALSE);
+				back(nline, tpos, TRUE, FALSE, FALSE, FALSE);
 #if HILITE_SEARCH
 				if (show_attn)
 					repaint_hilite(TRUE);
@@ -347,11 +358,11 @@ public void jump_loc(POSITION pos, int sline)
 		}
 		lastmark();
 		if (!top_scroll)
-			clear();
+			lclear();
 		else
 			home();
 		screen_trashed_num(0);
 		add_back_pos(pos);
-		back(sc_height-1, pos, TRUE, FALSE, FALSE);
+		back(sc_height-1, pos, TRUE, FALSE, FALSE, FALSE);
 	}
 }

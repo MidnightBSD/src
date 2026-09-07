@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1984-2025  Mark Nudelman
+ * Copyright (C) 1984-2026  Mark Nudelman
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Less License, as specified in the README file.
@@ -23,16 +23,17 @@
 extern int erase_char, erase2_char, kill_char;
 extern int sigs;
 extern int quit_if_one_screen;
-extern int one_screen;
+extern lbool one_screen;
 extern int sc_width;
 extern int sc_height;
 extern char *kent;
+extern lbool kent_mapped;
 extern int swindow;
 extern int jump_sline;
 extern lbool quitting;
 extern int wscroll;
 extern int top_scroll;
-extern int ignore_eoi;
+extern lbool ignore_eoi;
 extern int hshift;
 extern int bs_mode;
 extern int proc_backspace;
@@ -48,11 +49,16 @@ extern void *ml_search;
 extern void *ml_examine;
 extern int wheel_lines;
 extern int def_search_type;
+extern int hilite_target;
 extern lbool search_wrapped;
 extern int no_paste;
 extern lbool pasting;
 extern int no_edit_warn;
+extern lbool read_error;
 extern POSITION soft_eof;
+extern POSITION search_incr_start;
+extern char *first_cmd_at_prompt;
+extern lbool prompting;
 #if SHELL_ESCAPE || PIPEC
 extern void *ml_shell;
 #endif
@@ -63,9 +69,9 @@ extern constant char *editproto;
 extern char *osc8_uri;
 #endif
 extern int shift_count;
-extern int forw_prompt;
+extern lbool forw_prompt;
 extern int incr_search;
-extern int full_screen;
+extern lbool full_screen;
 #if MSDOS_COMPILER==WIN32C
 extern int utf_mode;
 extern unsigned less_acp;
@@ -83,6 +89,7 @@ static struct loption *curropt;
 static lbool opt_lower;
 static int optflag;
 static lbool optgetname;
+static POSITION toppos;
 static POSITION bottompos;
 static int save_hshift;
 static int save_bs_mode;
@@ -90,6 +97,8 @@ static int save_proc_backspace;
 static int screen_trashed_value = 0;
 static lbool literal_char = FALSE;
 static lbool ignoring_input = FALSE;
+static struct scrpos search_incr_pos = { NULL_POSITION, 0 };
+static int search_incr_hshift;
 #if HAVE_TIME
 static time_type ignoring_input_time;
 #endif
@@ -149,7 +158,7 @@ static void start_mca(int action, constant char *prompt, void *mlist, int cmdfla
 	set_mlist(mlist, cmdflags);
 }
 
-public int in_mca(void)
+public lbool in_mca(void)
 {
 	return (mca != 0 && mca != A_PREFIX);
 }
@@ -204,11 +213,18 @@ static void mca_search1(void)
 		cmd_putstr("/");
 	else
 		cmd_putstr("?");
-	forw_prompt = 0;
+	forw_prompt = FALSE;
 }
 
 static void mca_search(void)
 {
+	if (incr_search)
+	{
+		/* Remember where the incremental search started. */
+		get_scrpos(&search_incr_pos, TOP);
+		search_incr_start = search_pos(search_type);
+		search_incr_hshift = hshift;
+	}
 	mca_search1();
 	set_mlist(ml_search, 0);
 }
@@ -237,7 +253,7 @@ static void mca_opt_toggle(void)
 		cmd_putstr("!");
 		break;
 	}
-	forw_prompt = 0;
+	forw_prompt = FALSE;
 	set_mlist(NULL, CF_OPTION);
 }
 
@@ -464,7 +480,7 @@ static int mca_opt_nonfirst_char(char c)
 		}
 	} else if (!ambig)
 	{
-		bell();
+		lbell();
 	}
 	return (MCA_MORE);
 }
@@ -563,7 +579,10 @@ static int mca_search_char(char c)
 	 */
 	if (!cmdbuf_empty() || literal_char)
 	{
+		lbool was_literal_char = literal_char;
 		literal_char = FALSE;
+		if (was_literal_char)
+			mca_search1();
 		return (NO_MCA);
 	}
 
@@ -625,6 +644,17 @@ static int mca_search_char(char c)
 		return (MCA_MORE);
 	}
 	return (NO_MCA);
+}
+
+/*
+ * Jump back to the starting position of an incremental search.
+ */
+static void jump_search_incr_pos(void)
+{
+	if (search_incr_pos.pos == NULL_POSITION)
+		return;
+	hshift = search_incr_hshift;
+	jump_loc(search_incr_pos.pos, search_incr_pos.ln);
 }
 
 /*
@@ -747,6 +777,9 @@ static int mca_char(char c)
 			constant char *pattern = get_cmdbuf();
 			if (pattern == NULL)
 				return (MCA_MORE);
+			/* Defer searching if more chars of the pattern are available. */
+			if (ttyin_ready())
+				return (MCA_MORE);
 			/*
 			 * Must save updown_match because mca_search
 			 * reinits it. That breaks history scrolling.
@@ -757,17 +790,21 @@ static int mca_char(char c)
 			if (*pattern == '\0')
 			{
 				/* User has backspaced to an empty pattern. */
-				undo_search(1);
+				undo_search(TRUE);
+				jump_search_incr_pos();
 			} else
 			{
 				if (search(st | SRCH_INCR, pattern, 1) != 0)
+				{
 					/* No match, invalid pattern, etc. */
-					undo_search(1);
+					undo_search(TRUE);
+					jump_search_incr_pos();
+				}
 			}
 			/* Redraw the search prompt and search string. */
 			if (is_screen_trashed() || !full_screen)
 			{
-				clear();
+				lclear();
 				repaint();
 			}
 			mca_search1();
@@ -795,6 +832,7 @@ static void clear_buffers(void)
 #if HILITE_SEARCH
 	clr_hilite();
 #endif
+	set_line_contig_pos(NULL_POSITION);
 }
 
 public void screen_trashed_num(int trashed)
@@ -818,12 +856,6 @@ public int is_screen_trashed(void)
 static void make_display(void)
 {
 	/*
-	 * If not full_screen, we can't rely on scrolling to fill the screen.
-	 * We need to clear and repaint screen before any change.
-	 */
-	if (!full_screen && !(quit_if_one_screen && one_screen))
-		clear();
-	/*
 	 * If nothing is displayed yet, display starting from initial_scrpos.
 	 */
 	if (empty_screen())
@@ -835,9 +867,9 @@ static void make_display(void)
 	} else if (is_screen_trashed() || !full_screen)
 	{
 		int save_top_scroll = top_scroll;
-		int save_ignore_eoi = ignore_eoi;
+		lbool save_ignore_eoi = ignore_eoi;
 		top_scroll = 1;
-		ignore_eoi = 0;
+		ignore_eoi = FALSE;
 		if (is_screen_trashed() == 2)
 		{
 			/* Special case used by ignore_eoi: re-open the input file
@@ -852,11 +884,46 @@ static void make_display(void)
 }
 
 /*
+ * Display any message that needs to be displayed before the prompt.
+ */
+static void prompt_message(void)
+{
+	if (read_error)
+	{
+		error("read error", NULL_PARG);
+		read_error = FALSE;
+	}
+	if (search_wrapped)
+	{
+		if (search_type & SRCH_BACK)
+			error("Search hit top; continuing at bottom", NULL_PARG);
+		else
+			error("Search hit bottom; continuing at top", NULL_PARG);
+		search_wrapped = FALSE;
+	}
+#if OSC8_LINK
+	if (osc8_uri != NULL)
+	{
+		PARG parg;
+		parg.p_string = osc8_uri;
+		error("Link: %s", &parg);
+		free(osc8_uri);
+		osc8_uri = NULL;
+	}
+#endif
+}
+
+/*
  * Display the appropriate prompt.
  */
 static void prompt(void)
 {
 	constant char *p;
+	int attr;
+#if MSDOS_COMPILER==WIN32C
+	WCHAR w[MAX_PATH*2];
+	char  a[MAX_PATH*2];
+#endif
 
 	if (ungot != NULL && !ungot->ug_end_command)
 	{
@@ -871,6 +938,10 @@ static void prompt(void)
 	 * Make sure the screen is displayed.
 	 */
 	make_display();
+
+	if (hilite_target)
+		draw_target_attn(TRUE); /* Redraw target line for --hilite-target. */
+	toppos = position(TOP);
 	bottompos = position(BOTTOM_PLUS_ONE);
 
 	/*
@@ -888,11 +959,18 @@ static void prompt(void)
 	    entire_file_displayed() && !(ch_getflags() & CH_HELPFILE) && 
 	    next_ifile(curr_ifile) == NULL_IFILE)
 		quit(QUIT_OK);
-	quit_if_one_screen = FALSE; /* only get one chance at this */
+	quit_if_one_screen = 0; /* only get one chance at this */
+	if (first_cmd_at_prompt != NULL)
+	{
+		ungetsc(first_cmd_at_prompt);
+		first_cmd_at_prompt = NULL;
+		return;
+	}
 
 #if MSDOS_COMPILER==WIN32C
 	/* 
 	 * In Win32, display the file name in the window title.
+	 * {{ Seems like this should be done in edit_ifile, not on every prompt. }}
 	 */
 	if (!(ch_getflags() & CH_HELPFILE))
 	{
@@ -919,49 +997,43 @@ static void prompt(void)
 	if (!forw_prompt)
 		clear_bot();
 	clear_cmd();
-	forw_prompt = 0;
+	forw_prompt = FALSE;
+	prompt_message();
+	/* We called make_display above, but if prompt_message displayed
+	 * a message longer than the screen width, we may have trashed
+	 * the screen and need to call make_display again. */
+	if (is_screen_trashed())
+		make_display();
 	p = pr_string();
-#if HILITE_SEARCH
-	if (is_filtering())
-		putstr("& ");
-#endif
-	if (search_wrapped)
-	{
-		if (search_type & SRCH_BACK)
-			error("Search hit top; continuing at bottom", NULL_PARG);
-		else
-			error("Search hit bottom; continuing at top", NULL_PARG);
-		search_wrapped = FALSE;
-	}
-#if OSC8_LINK
-	if (osc8_uri != NULL)
-	{
-		PARG parg;
-		parg.p_string = osc8_uri;
-		error("Link: %s", &parg);
-		free(osc8_uri);
-		osc8_uri = NULL;
-	}
-#endif
 	if (p == NULL || *p == '\0')
 	{
-		at_enter(AT_NORMAL|AT_COLOR_PROMPT);
-		putchr(':');
-		at_exit();
+		p = ":";
+		attr = AT_NORMAL|AT_COLOR_PROMPT;
 	} else
 	{
+		attr = AT_STANDOUT|AT_COLOR_PROMPT;
 #if MSDOS_COMPILER==WIN32C
-		WCHAR w[MAX_PATH*2];
-		char  a[MAX_PATH*2];
 		MultiByteToWideChar(less_acp, 0, p, -1, w, countof(w));
 		WideCharToMultiByte(utf_mode ? CP_UTF8 : GetConsoleOutputCP(),
 		                    0, w, -1, a, sizeof(a), NULL, NULL);
 		p = a;
 #endif
-		load_line(p);
-		put_line(FALSE);
 	}
+#if HILITE_SEARCH
+	if (is_filtering())
+	{
+		constant char *amp = "& ";
+		load_line(p, attr, strlen(amp)+1);
+		putstr(amp);
+	} else
+#endif
+	{
+		load_line(p, attr, 1);
+	}
+	put_line(FALSE);
 	clear_eol();
+	resume_screen();
+	prompting = TRUE;
 }
 
 /*
@@ -1099,8 +1171,9 @@ static char getcc_repl(char constant *orig, char constant *repl, char (*gr_getc)
  */
 public char getcc(void)
 {
-	/* Replace kent (keypad Enter) with a newline. */
-	return getcc_repl(kent, "\n", getccu, ungetcc);
+	/* Replace kent (keypad Enter) with a newline.
+	 * However don't do this if kent is mapped to a command via lesskey. */
+	return getcc_repl(kent_mapped ? NULL : kent, "\n", getccu, ungetcc);
 }
 
 /*
@@ -1251,7 +1324,14 @@ static void multi_search(constant char *pattern, int n, int silent)
 	 * Print an error message if we haven't already.
 	 */
 	if (n > 0 && !silent)
-		error("Pattern not found", NULL_PARG);
+	{
+		PARG parg;
+		parg.p_string = prev_pattern_text();
+		if (parg.p_string == NULL) /* {{ can this happen? }} */
+			error("Pattern not found", NULL_PARG);
+		else
+			error("Pattern not found: %s", &parg);
+	}
 
 	if (changed_file)
 	{
@@ -1268,29 +1348,31 @@ static void multi_search(constant char *pattern, int n, int silent)
 /*
  * Forward forever, or until a highlighted line appears.
  */
-static int forw_loop(int until_hilite)
+static int forw_loop(int action)
 {
-	POSITION curr_len;
+	POSITION prev_hilite;
 
 	if (ch_getflags() & CH_HELPFILE)
 		return (A_NOACTION);
 
 	cmd_exec();
 	jump_forw_buffered();
-	curr_len = ch_length();
-	highest_hilite = until_hilite ? curr_len : NULL_POSITION;
-	ignore_eoi = 1;
+	highest_hilite = prev_hilite = 0;
+	ignore_eoi = TRUE;
 	while (!sigs)
 	{
-		if (until_hilite && highest_hilite > curr_len)
+		if (action != A_F_FOREVER && highest_hilite > prev_hilite)
 		{
-			bell();
-			break;
+			lbell();
+			if (action == A_F_UNTIL_HILITE)
+				break;
+			prev_hilite = highest_hilite;
 		}
 		make_display();
 		forward(1, FALSE, FALSE, FALSE);
 	}
-	ignore_eoi = 0;
+	highest_hilite = NULL_POSITION;
+	ignore_eoi = FALSE;
 	ch_set_eof();
 
 	/*
@@ -1298,7 +1380,7 @@ static int forw_loop(int until_hilite)
 	 * a non-abort signal (e.g. window-change).  
 	 */
 	if (sigs && !ABORT_SIGS())
-		return (until_hilite ? A_F_UNTIL_HILITE : A_F_FOREVER);
+		return (action);
 
 	return (A_NOACTION);
 }
@@ -1306,7 +1388,7 @@ static int forw_loop(int until_hilite)
 /*
  * Ignore subsequent (pasted) input chars.
  */
-public void start_ignoring_input()
+public void start_ignoring_input(void)
 {
 	ignoring_input = TRUE;
 #if HAVE_TIME
@@ -1317,7 +1399,7 @@ public void start_ignoring_input()
 /*
  * Stop ignoring input chars.
  */
-public void stop_ignoring_input()
+public void stop_ignoring_input(void)
 {
 	ignoring_input = FALSE;
 	pasting = FALSE;
@@ -1365,7 +1447,6 @@ public void commands(void)
 #endif
 
 	search_type = SRCH_FORW;
-	wscroll = (sc_height + 1) / 2;
 	newaction = A_NOACTION;
 
 	for (;;)
@@ -1402,6 +1483,8 @@ public void commands(void)
 			c = getcc();
 
 	again:
+		if (c == READ_AGAIN)
+			continue;
 		if (sigs)
 			continue;
 
@@ -1471,7 +1554,9 @@ public void commands(void)
 				 * want erase_char/kill_char to be treated
 				 * as line editing characters.
 				 */
-				constant char tbuf[2] = { c, '\0' };
+				char tbuf[2];
+				tbuf[0] = c;
+				tbuf[1] = '\0';
 				action = fcmd_decode(tbuf, &extra);
 			}
 			/*
@@ -1539,12 +1624,13 @@ public void commands(void)
 			if (number <= 0)
 				number = get_swindow();
 			cmd_exec();
+			if (show_attn && toppos != NULL_POSITION && toppos > ch_zero())
+				set_attnpos(toppos-1);
 			backward((int) number, FALSE, TRUE, FALSE);
 			break;
 
 		case A_F_LINE:
 		case A_F_NEWLINE:
-
 			/*
 			 * Forward N (default 1) line.
 			 */
@@ -1564,6 +1650,8 @@ public void commands(void)
 			if (number <= 0)
 				number = 1;
 			cmd_exec();
+			if (show_attn == OPT_ONPLUS && number > 1 && toppos != NULL_POSITION && toppos > ch_zero())
+				set_attnpos(toppos-1);
 			backward((int) number, FALSE, FALSE, action == A_B_NEWLINE && !chopline);
 			break;
 
@@ -1581,6 +1669,29 @@ public void commands(void)
 			 */
 			cmd_exec();
 			backward(wheel_lines, FALSE, FALSE, FALSE);
+			break;
+
+		case A_L_MOUSE:
+			/*
+			 * Left wheel_lines columns.
+			 */
+			cmd_exec();
+			pos_rehead(FALSE);
+			if (wheel_lines > hshift)
+				hshift = 0;
+			else
+				hshift -= wheel_lines;
+			screen_trashed();
+			break;
+
+		case A_R_MOUSE:
+			/*
+			 * Right wheel_lines columns.
+			 */
+			cmd_exec();
+			pos_rehead(FALSE);
+			hshift += wheel_lines;
+			screen_trashed();
 			break;
 
 		case A_FF_LINE:
@@ -1602,6 +1713,8 @@ public void commands(void)
 			if (number <= 0)
 				number = 1;
 			cmd_exec();
+			if (show_attn == OPT_ONPLUS && number > 1 && toppos != NULL_POSITION && toppos > ch_zero())
+				set_attnpos(toppos-1);
 			backward((int) number, TRUE, FALSE, FALSE);
 			break;
 		
@@ -1624,10 +1737,14 @@ public void commands(void)
 			if (number <= 0)
 				number = get_swindow();
 			cmd_exec();
+			if (show_attn == OPT_ONPLUS && toppos != NULL_POSITION && toppos > ch_zero())
+				set_attnpos(toppos-1);
 			backward((int) number, TRUE, FALSE, FALSE);
 			break;
 
 		case A_F_FOREVER:
+		case A_F_FOREVER_BELL:
+		case A_F_UNTIL_HILITE:
 			/*
 			 * Forward forever, ignoring EOF.
 			 */
@@ -1635,11 +1752,7 @@ public void commands(void)
 				error("Warning: command may not work correctly when file is viewed via LESSOPEN", NULL_PARG);
 			if (show_attn)
 				set_attnpos(bottompos);
-			newaction = forw_loop(0);
-			break;
-
-		case A_F_UNTIL_HILITE:
-			newaction = forw_loop(1);
+			newaction = forw_loop(action);
 			break;
 
 		case A_F_SCROLL:
@@ -1663,6 +1776,8 @@ public void commands(void)
 			if (number > 0)
 				wscroll = (int) number;
 			cmd_exec();
+			if (show_attn == OPT_ONPLUS && toppos != NULL_POSITION && toppos > ch_zero())
+				set_attnpos(toppos-1);
 			backward(wscroll, FALSE, FALSE, FALSE);
 			break;
 
@@ -1922,6 +2037,7 @@ public void commands(void)
 			/*
 			 * Clear search string highlighting.
 			 */
+			cmd_exec();
 			undo_search(action == A_CLR_SEARCH);
 			break;
 
@@ -2107,7 +2223,7 @@ public void commands(void)
 			cmd_exec();
 			if (new_ifile == NULL_IFILE)
 			{
-				bell();
+				lbell();
 				break;
 			}
 			if (edit_ifile(new_ifile) != 0)
@@ -2188,9 +2304,11 @@ public void commands(void)
 			}
 			start_mca(A_SETMARK, "set mark: ", NULL, 0);
 			c = getcc();
+			make_display();
+			cmd_exec();
 			if (is_erase_char(c) || is_newline_char(c))
 				break;
-			setmark(c, action == A_SETMARKBOT ? BOTTOM : TOP);
+			setmark(c, action == A_SETMARKBOT ? BOTTOM : TOP, number);
 			repaint();
 			break;
 
@@ -2200,6 +2318,7 @@ public void commands(void)
 			 */
 			start_mca(A_CLRMARK, "clear mark: ", NULL, 0);
 			c = getcc();
+			cmd_exec();
 			if (is_erase_char(c) || is_newline_char(c))
 				break;
 			clrmark(c);
@@ -2215,7 +2334,7 @@ public void commands(void)
 			if (is_erase_char(c) || is_newline_char(c))
 				break;
 			cmd_exec();
-			gomark(c);
+			gomark(c, number);
 			break;
 
 		case A_PIPE:
@@ -2258,9 +2377,10 @@ public void commands(void)
 				number = (shift_count > 0) ? shift_count : sc_width / 2;
 			if (number > hshift)
 				number = hshift;
-			pos_rehead();
+			pos_rehead(FALSE);
 			hshift -= (int) number;
 			screen_trashed();
+			cmd_exec();
 			break;
 
 		case A_RSHIFT:
@@ -2271,27 +2391,30 @@ public void commands(void)
 				shift_count = (int) number;
 			else
 				number = (shift_count > 0) ? shift_count : sc_width / 2;
-			pos_rehead();
+			pos_rehead(FALSE);
 			hshift += (int) number;
 			screen_trashed();
+			cmd_exec();
 			break;
 
 		case A_LLSHIFT:
 			/*
 			 * Shift view left to margin.
 			 */
-			pos_rehead();
+			pos_rehead(FALSE);
 			hshift = 0;
 			screen_trashed();
+			cmd_exec();
 			break;
 
 		case A_RRSHIFT:
 			/*
 			 * Shift view right to view rightmost char on screen.
 			 */
-			pos_rehead();
+			pos_rehead(FALSE);
 			hshift = rrshift();
 			screen_trashed();
+			cmd_exec();
 			break;
 
 		case A_PREFIX:
@@ -2313,7 +2436,7 @@ public void commands(void)
 			break;
 
 		default:
-			bell();
+			lbell();
 			break;
 		}
 	}

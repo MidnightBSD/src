@@ -1,0 +1,34 @@
+Upgrade procedure for less
+
+Source: https://greenwoodsoftware.com/less/less-VERSION.tar.gz
+
+To upgrade to a new version:
+
+1. Download and extract the official less-VERSION.tar.gz release archive.
+2. Import it on vendor/less/dist, retaining the complete upstream release.
+3. Merge it into master with:
+
+       git subtree merge -P contrib/less vendor/less/dist
+
+4. Keep the master-only files and compatibility changes described below.
+
+Local patches applied on top of upstream:
+
+  - 886d52f19ea3e264811d0a93fce22af07fc0e6aa: Apply less is more
+    patches from FreeBSD.  Preserve less-is-more behavior in command.c,
+    forwback.c, main.c, pattern.h, and signal.c.  The patches are applied
+    around command-mode search modifiers, forward-screen handling, option
+    parsing and terminal initialization, POSIX regular expressions, and
+    interrupt handling.
+
+  - 0828cc62cd5d05bba93fb2ea29c35922e7febd9f: Port the less-is-more
+    changes to less 704.  In less.h, retain the HAVE_WCTYPE_H guard and
+    wctype.h include; HAVE_WCTYPE is enabled by usr.bin/less/defines.h.
+
+Notes:
+
+  - master excludes upstream configuration files, non-Unix makefiles,
+    generated manual pages, install helpers, and the lesstest directory.
+    Keep those exclusions after each subtree merge.
+  - Use the Less License included in LICENSE; COPYING is intentionally
+    excluded from the master subtree.

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1984-2025  Mark Nudelman
+ * Copyright (C) 1984-2026  Mark Nudelman
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Less License, as specified in the README file.
@@ -319,15 +319,13 @@ static void xcpy_char(xcpy *xp, char ch)
 
 static void xcpy_filename(xcpy *xp, constant char *str)
 {
-	/* If filename contains spaces, quote it 
-	 * to prevent edit_list from splitting it. */
-	lbool quote = (strchr(str, ' ') != NULL);
-	if (quote)
-		xcpy_char(xp, openquote);
-	for (;  *str != '\0';  str++)
-		xcpy_char(xp, *str);
-	if (quote)
-		xcpy_char(xp, closequote);
+	char *qstr = shell_quote(str);
+	char *s;
+	if (qstr == NULL)
+		return;
+	for (s = qstr;  *s != '\0';  s++)
+		xcpy_char(xp, *s);
+	free(qstr);
 }
 
 static size_t fexpand_copy(constant char *fr, char *to)
@@ -469,22 +467,23 @@ public char * fcomplete(constant char *s)
  * be used later to compare to st_size from stat(2) to see if the file
  * is lying about its size.
  */
-public int bin_file(int f, ssize_t *n)
+public lbool bin_file(int f, ssize_t *n)
 {
 	int bin_count = 0;
 	char data[256];
 	constant char* p;
 	constant char* edata;
+	constant int umax = 4;
 
 	if (!seekable(f))
-		return (0);
+		return FALSE;
 	if (less_lseek(f, (less_off_t)0, SEEK_SET) == BAD_LSEEK)
-		return (0);
+		return FALSE;
 	*n = read(f, data, sizeof(data));
-	if (*n <= 0)
-		return (0);
+	if (*n <= umax)
+		return FALSE;
 	edata = &data[*n];
-	for (p = data;  p < edata;  )
+	for (p = data;  p+umax < edata;  )
 	{
 		if (utf_mode && !is_utf8_well_formed(p, (int) ptr_diff(edata,p)))
 		{
@@ -569,9 +568,10 @@ static FILE * shellcmd(constant char *cmd)
 			fd = popen(cmd, "r");
 		} else
 		{
-			size_t len = strlen(shell) + strlen(esccmd) + 5;
+			constant char *copt = shell_coption();
+			size_t len = strlen(shell) + strlen(esccmd) + strlen(copt) + 3;
 			scmd = (char *) ecalloc(len, sizeof(char));
-			SNPRINTF3(scmd, len, "%s %s %s", shell, shell_coption(), esccmd);
+			SNPRINTF3(scmd, len, "%s %s %s", shell, copt, esccmd);
 			free(esccmd);
 			fd = popen(scmd, "r");
 			free(scmd);
@@ -731,7 +731,11 @@ public char * lglob(constant char *afilename)
 	}
 	lessecho = lgetenv("LESSECHO");
 	if (isnullenv(lessecho))
+#ifdef LIBEXECDIR
+		lessecho = LIBEXECDIR "/lessecho";
+#else
 		lessecho = "lessecho";
+#endif
 	/*
 	 * Invoke lessecho, and read its output (a globbed list of filenames).
 	 */

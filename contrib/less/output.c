@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1984-2025  Mark Nudelman
+ * Copyright (C) 1984-2026  Mark Nudelman
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Less License, as specified in the README file.
@@ -21,17 +21,22 @@
 #endif
 
 public int errmsgs;    /* Count of messages displayed by error() */
-public int need_clr;
-public int final_attr;
-public int at_prompt;
+public lbool prompting = FALSE;
+static lbool need_clr = FALSE;
 
 extern int sigs;
 extern int sc_width;
 extern int so_s_width, so_e_width;
-extern int is_tty;
+extern lbool is_tty;
 extern int oldbot;
 extern int utf_mode;
+extern int status_col;
+extern int status_line;
+extern int hilite_target;
+extern int use_color;
 extern char intr_char;
+extern lbool term_init_ever;
+extern int pr_type;
 
 #if MSDOS_COMPILER==WIN32C || MSDOS_COMPILER==BORLANDC || MSDOS_COMPILER==DJGPPC
 extern int ctldisp;
@@ -49,11 +54,13 @@ extern int vt_enabled;
 /*
  * Display the line which is in the line buffer.
  */
-public void put_line(lbool forw_scroll)
+public void put_line_hilite(lbool forw_scroll, lbool target)
 {
 	int c;
 	size_t i;
 	int a;
+	lbool empty_line = TRUE;
+	constant int target_attr = use_color ? AT_COLOR_TARGET : AT_UNDERLINE;
 
 	if (ABORT_SIGS())
 	{
@@ -64,12 +71,27 @@ public void put_line(lbool forw_scroll)
 		return;
 	}
 
-	final_attr = AT_NORMAL;
-
 	for (i = 0;  (c = gline(i, &a)) != '\0';  i++)
 	{
+		if (target && a == AT_NORMAL)
+		{
+			/* We're highlighting this line as the target line. Highlight
+			 * this char if it's not already highlighted, and either we're
+			 * highlighting the whole line or we're highlighting only the
+			 * status column and this is the status column. */
+			if ((status_col && i == 0) ||
+			    (i >= line_pfx_width() && (status_line || !status_col)))
+				a = target_attr;
+		}
+		if (target && (c == '\n' || c == '\r') && empty_line)
+		{
+			/* Line is empty; add a space to carry the target hilite. */
+			at_switch(target_attr);
+			putchr(' ');
+		}
+		if (!(a & AT_ANSI))
+			empty_line = FALSE;
 		at_switch(a);
-		final_attr = a;
 		if (c == '\b')
 			putbs();
 		else
@@ -81,10 +103,15 @@ public void put_line(lbool forw_scroll)
 		clear_eol();
 }
 
+public void put_line(lbool forw_scroll)
+{
+	put_line_hilite(forw_scroll, FALSE);
+}
+
 /*
  * win_flush has at least one non-critical issue when an escape sequence
  * begins at the last char of the buffer, and possibly more issues.
- * as a temporary measure to reduce likelyhood of encountering end-of-buffer
+ * as a temporary measure to reduce likelihood of encountering end-of-buffer
  * issues till the SGR parser is replaced, OUTBUF_SIZE is 8K on Windows.
  */
 static char obuf[OUTBUF_SIZE];
@@ -435,17 +462,19 @@ public void flush(void)
 #endif
 #endif
 
-	if (write(outfd, obuf, n) != n)
+	if (write(outfd, obuf, n) != (ssize_t) n)
 		screen_trashed();
 }
 
 /*
  * Set the output file descriptor (1=stdout or 2=stderr).
  */
-public void set_output(int fd)
+public void set_output(int fd, lbool no_term_init)
 {
 	flush();
 	outfd = fd;
+	if (no_term_init)
+		term_init_ever = TRUE; /* don't init terminal in putchr */
 }
 
 /*
@@ -455,25 +484,23 @@ public void set_output(int fd)
 public int putchr(int ch)
 {
 	char c = (char) ch;
-#if 0 /* fake UTF-8 output for testing */
-	extern int utf_mode;
-	if (utf_mode)
+
+	/*
+	 * Init the terminal if this is the first byte written to stdout
+	 * (rather than stderr), and the terminal has never been initted.
+	 * If it has previously been initted, it will be reinitted explicitly
+	 * as part of a term_deinit/term_init pair, so we shouldn't do it here.
+	 */
+	if (!term_init_ever && outfd == 1)
+		term_init();
+	if (prompting)
 	{
-		static char ubuf[MAX_UTF_CHAR_LEN];
-		static int ubuf_len = 0;
-		static int ubuf_index = 0;
-		if (ubuf_len == 0)
-		{
-			ubuf_len = utf_len(c);
-			ubuf_index = 0;
-		}
-		ubuf[ubuf_index++] = c;
-		if (ubuf_index < ubuf_len)
-			return c;
-		c = get_wchar(ubuf) & 0xFF;
-		ubuf_len = 0;
+		constant char *epr = end_pr_string();
+		prompting = FALSE;
+		if (epr != NULL)
+			putstr(epr);
 	}
-#endif
+
 	clear_bot_if_needed();
 #if MSDOS_COMPILER
 	if (c == '\n' && is_tty)
@@ -494,7 +521,6 @@ public int putchr(int ch)
 	if (ob >= &obuf[sizeof(obuf)-1])
 		flush();
 	*ob++ = c;
-	at_prompt = 0;
 	return (c);
 }
 
@@ -502,7 +528,7 @@ public void clear_bot_if_needed(void)
 {
 	if (!need_clr)
 		return;
-	need_clr = 0;
+	need_clr = FALSE;
 	clear_bot();
 }
 
@@ -590,7 +616,7 @@ IPRINT_FUNC(iprint_linenum, LINENUM, linenumtoa)
  * {{ This paranoia about the portability of printf dates from experiences
  *    with systems in the 1980s and is of course no longer necessary. }}
  */
-public int less_printf(constant char *fmt, PARG *parg)
+public int less_printf(constant char *fmt, constant PARG *parg)
 {
 	constant char *s;
 	constant char *es;
@@ -664,7 +690,7 @@ public void get_return(void)
 
 #if ONLY_RETURN
 	while ((c = getchr()) != '\n' && c != '\r')
-		bell();
+		lbell();
 #else
 	c = getchr();
 	if (c != '\n' && c != '\r' && c != ' ' && c != READ_INTR)
@@ -676,7 +702,7 @@ public void get_return(void)
  * Output a message in the lower left corner of the screen
  * and wait for carriage return.
  */
-public void error(constant char *fmt, PARG *parg)
+public void error(constant char *fmt, constant PARG *parg)
 {
 	int col = 0;
 	static char return_to_continue[] = "  (press RETURN)";
@@ -722,7 +748,7 @@ public void error(constant char *fmt, PARG *parg)
  * Usually used to warn that we are beginning a potentially
  * time-consuming operation.
  */
-static void ierror_suffix(constant char *fmt, PARG *parg, constant char *suffix1, constant char *suffix2, constant char *suffix3)
+static void ierror_suffix(constant char *fmt, constant PARG *parg, constant char *suffix1, constant char *suffix2, constant char *suffix3)
 {
 	at_exit();
 	clear_bot();
@@ -733,15 +759,15 @@ static void ierror_suffix(constant char *fmt, PARG *parg, constant char *suffix1
 	putstr(suffix3);
 	at_exit();
 	flush();
-	need_clr = 1;
+	need_clr = TRUE;
 }
 
-public void ierror(constant char *fmt, PARG *parg)
+public void ierror(constant char *fmt, constant PARG *parg)
 {
 	ierror_suffix(fmt, parg, "... (interrupt to abort)", "", "");
 }
 
-public void ixerror(constant char *fmt, PARG *parg)
+public void ixerror(constant char *fmt, constant PARG *parg)
 {
 	if (!supports_ctrl_x())
 		ierror(fmt, parg);
@@ -757,7 +783,7 @@ public void ixerror(constant char *fmt, PARG *parg)
  * Output a message in the lower left corner of the screen
  * and return a single-character response.
  */
-public int query(constant char *fmt, PARG *parg)
+public int query(constant char *fmt, constant PARG *parg)
 {
 	int c;
 	int col = 0;
