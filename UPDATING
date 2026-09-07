@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20260907:
+	less 704
+
 20260904:
 	Native MIPS, PowerPC, and sparc64 support has been removed.  Supported
 	architectures are amd64, arm, arm64, i386, and riscv.
