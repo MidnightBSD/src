@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1984-2025  Mark Nudelman
+ * Copyright (C) 1984-2026  Mark Nudelman
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Less License, as specified in the README file.
@@ -56,7 +56,7 @@
                                         char ext[_MAX_EXT];     \
                                         int handle;
 #else
-#if MSDOS_COMPILER==WIN32C && (defined(_MSC_VER) || defined(MINGW))
+#if MSDOS_COMPILER==WIN32C && (defined(_MSC_VER) || defined(__MINGW32__))
 
 #define GLOB_FIRST_NAME(filename,fndp,h) h = _findfirst(filename, fndp)
 #define GLOB_FIRST_FAILED(handle)       ((handle) == -1)
