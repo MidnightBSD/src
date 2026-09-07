@@ -319,7 +319,9 @@ mDNSexport mDNSBool mDNSPosixTCPSocketSetup(int *fd, mDNSAddr_Type addrType, mDN
     const sa_family_t sa_family = (addrType == mDNSAddrType_IPv4) ? AF_INET : AF_INET6;
     int err;
     int sock;
+#if !defined(TARGET_OS_FREEBSD)
     mDNSu32 lowWater = 15384;
+#endif
 
     sock = socket(sa_family, SOCK_STREAM, IPPROTO_TCP);
     if (sock < 3)
@@ -382,14 +384,14 @@ mDNSexport mDNSBool mDNSPosixTCPSocketSetup(int *fd, mDNSAddr_Type addrType, mDN
     if (port)
         port->NotAnInteger = outTcpPort->NotAnInteger;
 
-#ifdef TCP_NOTSENT_LOWAT
+#if !defined(TARGET_OS_FREEBSD) && defined(TCP_NOTSENT_LOWAT)
     err = setsockopt(sock, IPPROTO_TCP, TCP_NOTSENT_LOWAT, &lowWater, sizeof lowWater);
     if (err < 0)
     {
         LogRedact(MDNS_LOG_CATEGORY_DEFAULT, MDNS_LOG_DEFAULT, "mDNSPosixTCPSocketSetup: TCP_NOTSENT_LOWAT failed: " PUB_S, strerror(errno));
         return mDNSfalse;
     }
-#endif // TCP_NOTSENT_LOWAT
+#endif // !TARGET_OS_FREEBSD && TCP_NOTSENT_LOWAT
 
     return mDNStrue;
 }
@@ -412,7 +414,9 @@ mDNSexport TCPSocket *mDNSPosixDoTCPListenCallback(int fd, mDNSAddr_Type address
     int failed;
     char *nbp;
     int i;
+#if !defined(TARGET_OS_FREEBSD)
     mDNSu32 lowWater = 16384;
+#endif
     // When we remember our connection, we remember a name that we can print for logging.   But
     // since we are the listener in this case, we don't /have/ a name for it.   This buffer
     // is used to print the IP address into a human readable string which will serve that purpose
@@ -434,7 +438,7 @@ mDNSexport TCPSocket *mDNSPosixDoTCPListenCallback(int fd, mDNSAddr_Type address
         goto out;
     }
 
-#ifdef TCP_NOTSENT_LOWAT
+#if !defined(TARGET_OS_FREEBSD) && defined(TCP_NOTSENT_LOWAT)
     failed = setsockopt(remoteSock, IPPROTO_TCP, TCP_NOTSENT_LOWAT,
                         &lowWater, sizeof lowWater);
     if (failed < 0)
@@ -443,7 +447,7 @@ mDNSexport TCPSocket *mDNSPosixDoTCPListenCallback(int fd, mDNSAddr_Type address
         LogMsg("mDNSPosixDoTCPListenCallback: TCP_NOTSENT_LOWAT returned %d", errno);
         goto out;
     }
-#endif // TCP_NOTSENT_LOWAT
+#endif // !TARGET_OS_FREEBSD && TCP_NOTSENT_LOWAT
 
     if (address.sa.sa_family == AF_INET6)
     {

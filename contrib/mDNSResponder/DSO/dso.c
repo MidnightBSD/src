@@ -29,6 +29,7 @@
 #include <assert.h>
 
 #include <netdb.h>           // For gethostbyname()
+#include <sys/param.h>       // For MIN
 #include <sys/socket.h>      // For AF_INET, AF_INET6, etc.
 #include <net/if.h>          // For IF_NAMESIZE
 #include <netinet/in.h>      // For INADDR_NONE
@@ -37,6 +38,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>          // For UINT_MAX
 
 #include "DNSCommon.h"
 #include "mDNSEmbeddedAPI.h"
