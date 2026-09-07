@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1984-2025  Mark Nudelman
+ * Copyright (C) 1984-2026  Mark Nudelman
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Less License, as specified in the README file.
@@ -216,7 +216,7 @@ void free();
  * Special types and constants.
  */
 typedef unsigned long LWCHAR;
-#if defined(MINGW) || (defined(_MSC_VER) && _MSC_VER >= 1500)
+#if defined(__MINGW32__) || (defined(_MSC_VER) && _MSC_VER >= 1500)
 typedef long long less_off_t;  /* __int64 */
 typedef struct _stat64 less_stat_t;
 #define less_fstat _fstat64
@@ -264,6 +264,11 @@ typedef off_t           LINENUM;
 #else
 #define OPEN_APPEND     (1)
 #endif
+#endif
+
+/* Use iread() to read tty? */
+#if !MSDOS_COMPILER || MSDOS_COMPILER == DJGPPC
+#define LESS_IREAD_TTY 1
 #endif
 
 /*
@@ -334,6 +339,12 @@ struct wchar_range_table
 {
 	struct wchar_range *table;
 	unsigned int count;
+};
+
+struct csl_bitmap_def
+{
+	constant char *bit_name;
+	int bit_value;
 };
 
 #if HAVE_POLL
@@ -435,10 +446,10 @@ typedef enum osc8_state {
 #define AT_ANSI         (1 << 4)  /* Content-supplied "ANSI" escape sequence */
 #define AT_BINARY       (1 << 5)  /* LESS*BINFMT representation */
 #define AT_HILITE       (1 << 6)  /* Internal highlights (e.g., for search) */
+#define AT_PLACEHOLDER  (1 << 7)  /* Placeholder for half of double-wide char */
 
 #define AT_COLOR_SHIFT    8
-#define AT_NUM_COLORS     16
-#define AT_COLOR          ((AT_NUM_COLORS-1) << AT_COLOR_SHIFT)
+#define AT_COLOR          ((~(unsigned)0) << AT_COLOR_SHIFT)
 #define AT_COLOR_ATTN     (1 << AT_COLOR_SHIFT)
 #define AT_COLOR_BIN      (2 << AT_COLOR_SHIFT)
 #define AT_COLOR_CTRL     (3 << AT_COLOR_SHIFT)
@@ -449,8 +460,12 @@ typedef enum osc8_state {
 #define AT_COLOR_RSCROLL  (8 << AT_COLOR_SHIFT)
 #define AT_COLOR_HEADER   (9 << AT_COLOR_SHIFT)
 #define AT_COLOR_SEARCH   (10 << AT_COLOR_SHIFT)
-#define AT_COLOR_SUBSEARCH(i) ((10+(i)) << AT_COLOR_SHIFT)
-#define NUM_SEARCH_COLORS (AT_NUM_COLORS-10-1)
+#define AT_COLOR_TILDE    (11 << AT_COLOR_SHIFT)
+#define AT_COLOR_TARGET   (12 << AT_COLOR_SHIFT)
+#define AT_COLOR_SS_OFFSET 13  /* largest AT_COLOR_* value + 1 */
+#define NUM_SEARCH_COLORS  5
+#define AT_NUM_COLORS      (AT_COLOR_SS_OFFSET + NUM_SEARCH_COLORS)
+#define AT_COLOR_SUBSEARCH(i) ((AT_COLOR_SS_OFFSET+(i)-1) << AT_COLOR_SHIFT)
 
 typedef enum { CT_NULL, CT_4BIT, CT_6BIT } COLOR_TYPE;
 
@@ -554,6 +569,8 @@ typedef enum {
 #define ESC             CONTROL('[')
 #define ESCS            "\33"
 #define CSI             ((unsigned char)'\233')
+#define VARSEL_15       ((LWCHAR)0xFE0E)  /* VARIATION SELECTOR 15 */
+#define VARSEL_16       ((LWCHAR)0xFE0F)  /* VARIATION SELECTOR 16 */
 
 #if _OSK_MWC32
 #define LSIGNAL(sig,func)       os9_signal(sig,func)
@@ -575,10 +592,11 @@ typedef enum {
 #endif
 #endif
 
-#define S_INTERRUPT     01
-#define S_STOP          02
-#define S_WINCH         04
-#define ABORT_SIGS()    (sigs & (S_INTERRUPT|S_STOP))
+#define S_INTERRUPT     (1<<0)
+#define S_SWINTERRUPT   (1<<1)
+#define S_STOP          (1<<2)
+#define S_WINCH         (1<<3)
+#define ABORT_SIGS()    (sigs & (S_INTERRUPT|S_SWINTERRUPT|S_STOP))
 
 #ifdef EXIT_SUCCESS
 #define QUIT_OK         EXIT_SUCCESS
@@ -623,14 +641,25 @@ typedef enum {
 #endif
 
 /* X11 mouse reporting definitions */
-#define X11MOUSE_BUTTON1    0 /* Left button press */
-#define X11MOUSE_BUTTON2    1 /* Middle button press */
-#define X11MOUSE_BUTTON3    2 /* Right button press */
-#define X11MOUSE_BUTTON_REL 3 /* Button release */
-#define X11MOUSE_DRAG       0x20 /* Drag with button down */
-#define X11MOUSE_WHEEL_UP   0x40 /* Wheel scroll up */
-#define X11MOUSE_WHEEL_DOWN 0x41 /* Wheel scroll down */
-#define X11MOUSE_OFFSET     0x20 /* Added to button & pos bytes to create a char */
+#define X11MOUSE_BUTTON1     0 /* Left button press */
+#define X11MOUSE_BUTTON2     1 /* Middle button press */
+#define X11MOUSE_BUTTON3     2 /* Right button press */
+#define X11MOUSE_BUTTON_REL  3 /* Button release */
+#define X11MOUSE_DRAG        0x20 /* Drag with button down */
+#define X11MOUSE_WHEEL_UP    0x40 /* Wheel scroll up */
+#define X11MOUSE_WHEEL_DOWN  0x41 /* Wheel scroll down */
+#define X11MOUSE_WHEEL_LEFT  0x42 /* Wheel scroll left */
+#define X11MOUSE_WHEEL_RIGHT 0x43 /* Wheel scroll right */
+#define X11MOUSE_OFFSET      0x20 /* Added to button & pos bytes to create a char */
+
+/* Mouse features */
+#define EMOUSE_HSCROLL      (1<<0) /* Horizontal scroll */
+#define EMOUSE_VSCROLL      (1<<1) /* Vertical scroll */
+#define EMOUSE_HDRAG        (1<<2) /* Horizontal drag */
+#define EMOUSE_VDRAG        (1<<3) /* Vertical drag */
+#define EMOUSE_LCLICK       (1<<4) /* Left click */
+#define EMOUSE_RCLICK       (1<<5) /* Right click */
+#define EMOUSE_COUNT        6
 
 /* Security features. */
 #define SF_EDIT             (1<<1)  /* Edit file (v) */
@@ -670,4 +699,13 @@ POSITION lstrtoposc(constant char*, constant char**, int);
 unsigned long lstrtoulc(constant char*, constant char**, int);
 #if MSDOS_COMPILER==WIN32C
 int pclose(FILE*);
+#endif
+#if !HAVE_STRCHR
+char * strchr(char *s, char c);
+#endif
+#if !HAVE_MEMCPY
+void * memcpy(void *dst, constant void *src, size_t len);
+#endif
+#if !HAVE_STRSTR
+char * strstr(constant char *haystack, constant char *needle);
 #endif

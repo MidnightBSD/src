@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1984-2025  Mark Nudelman
+ * Copyright (C) 1984-2026  Mark Nudelman
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Less License, as specified in the README file.
@@ -1047,6 +1047,70 @@ v675  4/3/25    Add ESC-b.
 v676  4/16/25   Fix two OSC 8 display bugs.
 v677  4/27/25   Fix & filtering bug.
 v678  5/1/25    Don't change stty tab setting.
+v679  5/28/25   Fix lesskey parsing bug when env var is prefix of another;
+                fix unexpected exit when using -K.
+v680  6/25/25   Fix hang if a search using ^S modifier matches empty string.
+v681  8/2/25    Fix bug using -g with -J; fix bug when pasting input 
+                with --incsearch; improve performance with long lines;
+                fix performance with & filtering; change search position when
+                using --incsearch; treat some composing chars as binary.
+v682  8/24/25   Add --cmd; fix lesskey bug using #stop; fix lesskey bug
+                using "invalid"; fix some emoji bugs.
+v683  9/4/25    Fix bug if cmd char received during file read.
+v684  9/18/25   Allow mixing of options and filenames on command line;
+                add LESS_TERMCAP_SUSPEND & LESS_TERMCAP_RESUME.
+v685  10/4/25   Make --incsearch return to same column as well as same line;
+                fix some problems reported by valgrind.
+v686  10/30/25  Map keypad keys; make HOME/END scroll horizontally; 
+                retain saved marks even if --save-marks is not specified;
+                fix repaint bug with --form-feed; fix bugs passing negative
+                values to cmd line options.
+v687  11/17/25  Disallow opening OSC8 link via mouse in secure mode;
+                add --autosave; make SIGHUP act like SIGTERM; add ESC-f.
+v688  11/28/25  Add LESSNOCONFIG; defer "ti" until first char received;
+                don't auto-bold line numbers.
+v689  12/27/25  Add prompt seqs %C, %W, %Q, ?Q; don't allow any command to
+                interrupt waiting for data; fix screen resize on Windows;
+                add --without-termlib.
+v690  12/31/25  Cleanup.
+v691  1/10/26   Fix mingw build.
+v692  1/29/26   Fix memory leak in setupterm; clear termio ICRNL|INLCR;
+                fix bug with negative value in -z; fix bug with empty 
+                terminfo caps; make lesstest ignore nl_langinfo;
+                revert HOME/END to g/G; add keys & cmds to lesskey parser.
+v693  2/14/26   Fix binary file with redirected stdout; fix error messages
+                with redirected stdout; fix buffer overrun with malformed
+                lesskey file; fix bad scrolling past EOF; fix command
+                parser bugs; fix -D bug when no color specified; add -DT;
+                make -w/-W hilite on backward movement; show pattern in
+                "not found" message.
+v694  3/24/26   | cmd pipes 1 line if mark is top line; allow numeric arg
+                on m/M cmds; support POSIX char classes with built-in regex;
+                don't retry read after error; fix crash with bad tags file;
+                add --past-eof; add --emouse; fix restore mark if not at top;
+                don't save cleared marks.
+v695  4/3/26    Fix build if tparm doesn't use varargs; fix prompt overflow
+                with & filtering; fix hilite when change -i with & filtering;
+                add --end-prompt; install lessecho in libexecdir; change mark
+                cmds to take file line number not screen line; add numeric
+                arg to ' cmd; add %O and ?o to prompts; fix
+                --show-preproc-error with some shells.
+v696  4/3/26    Doc.
+v697  4/19/26   Fix bug using PCRE2 with more than 5 parentheses; discard
+                pending keys when interrupt with ^X; fix bad display with
+                LESS_LINES.
+v698  4/23/26   Fix bad display after message in narrow terminal; replace
+                LESS_OSC8_xxx with LESS_OSC8_OPEN_xxx; add \kpe to lesskey.
+v699  4/23/26   Add less-osc8-*.bash files to distribution.
+v700  4/30/26   Add \kpe to lesskey; improve less-osc8-* scripts.
+v701  5/13/26   Replace less-osc-*.bash with less-osc8-open.sh; don't init
+                terminal if stdout is not tty; fix bug clicking OSC 8 link
+                in a long line; fix misread chars on Windows; remove %O.
+v702  5/22/26   Doc.
+v703  5/30/26   Fix handling unsafe man options in OSC 8 link; fix unsafe
+                handling of unterminated OSC seq; shell-escape expansion
+                of % and #.
+v704  5/30/26   Fix uninstall target in Makefile.
 */
 
-char version[] = "678";
+char version[] = "704";
