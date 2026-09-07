@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20260907:
+	less 704
+
 20260713:
 	pam_xdg(8) is now also enabled in the system PAM policy, so console
 	logins via login(1) get XDG_RUNTIME_DIR.  sshd and su declare their
