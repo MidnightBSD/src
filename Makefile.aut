@@ -37,7 +37,7 @@ DISTFILES_W = \
 	defines.wn  Makefile.wnm Makefile.wnb Makefile.wng \
 	configure 
 UNICODE_FILES = \
-	compose.uni fmt.uni ubin.uni wide.uni
+	compose.uni fmt.uni omit.uni ubin.uni wide.uni
 DISTFILES = \
 	${SRC} regexp.c regexp.h \
 	COPYING INSTALL LICENSE Makefile.in Makefile.aut NEWS README \
@@ -46,6 +46,7 @@ DISTFILES = \
 	pckeys.h pattern.h position.h xbuf.h \
 	install.sh defines.h.in mkinstalldirs \
 	less.nro less.man lesskey.nro lesskey.man lessecho.nro lessecho.man \
+	less-osc8-open.sh \
 	less.hlp \
 	mkhelp.pl \
 	mkhelp.py \
@@ -118,6 +119,8 @@ fmt.uni: unicode/UnicodeData.txt
 	./mkutable -f2 Cf -- unicode/UnicodeData.txt > $@
 ubin.uni: unicode/UnicodeData.txt
 	./mkutable -f2 Cc Cs Co Zl Zp -- unicode/UnicodeData.txt > $@
+omit.uni: unicode/UnicodeData.txt
+	./mkutable -f2 Xx -- unicode/UnicodeData.txt > $@
 wide.uni: unicode/EastAsianWidth.txt
 	./mkutable -f1 W F -- unicode/EastAsianWidth.txt > $@
 
@@ -139,7 +142,7 @@ unicode/EastAsianWidth.txt:
 distfiles: ${DISTFILES}
 
 echo_distfiles: 
-	@echo $(subst .nro,.nro.VER,${DISTFILES})
+	@echo $(subst .nro,.nro.VER,${DISTFILES}) | sed -e 's/[^ ]*\.lt / /g' -e 's/[^ ]*\.man / /g'
 
 dist: ${DISTFILES}
 	if [ ! -d ${srcdir}/release ]; then mkdir ${srcdir}/release; fi

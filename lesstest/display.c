@@ -1,3 +1,12 @@
+/*
+ * Copyright (C) 1984-2026  Mark Nudelman
+ *
+ * You may distribute under the terms of either the GNU General Public
+ * License or the Less License, as specified in the README file.
+ *
+ * For more information, see the README file.
+ */
+
 #include <termcap.h>
 #include "lesstest.h"
 
@@ -136,7 +145,6 @@ void display_screen_debug(const byte* img, int imglen, int screen_width, int scr
 
 // Print a list of strings.
 void print_strings(const char* title, char* const* strings) {
-	if (1) return; ///
 	fprintf(stderr, "%s:\n", title);
 	char* const* s;
 	for (s = strings; *s != NULL; ++s) {

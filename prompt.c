@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1984-2025  Mark Nudelman
+ * Copyright (C) 1984-2026  Mark Nudelman
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Less License, as specified in the README file.
@@ -24,6 +24,7 @@ extern int pr_type;
 extern lbool new_file;
 extern int linenums;
 extern int hshift;
+extern int sc_width;
 extern int sc_height;
 extern int jump_sline;
 extern int less_is_more;
@@ -31,7 +32,7 @@ extern int header_lines;
 extern int utf_mode;
 extern IFILE curr_ifile;
 #if OSC8_LINK
-extern char *osc8_path;
+extern POSITION osc8_linepos;
 #endif
 #if EDITOR
 extern constant char *editor;
@@ -47,9 +48,9 @@ static constant char s_proto[] =
 static constant char m_proto[] =
   "?n?f%f .?m(%T %i of %m) ..?e(END) ?x- Next\\: %x.:?pB%pB\\%:byte %bB?s/%s...%t";
 static constant char M_proto[] =
-  "?f%f .?n?m(%T %i of %m) ..?ltlines %lt-%lb?L/%L. :byte %bB?s/%s. .?e(END) ?x- Next\\: %x.:?pB%pB\\%..%t";
+  "?f%f .?n?m(%T %i of %m) ..?ltlines %lt-%lb?L/%L. :byte %bB?s/%s. .?e(END) ?x- Next\\: %x.:?pB%pB\\%..?c (column %c).%t";
 static constant char e_proto[] =
-  "?f%f .?m(%T %i of %m) .?ltlines %lt-%lb?L/%L. .byte %bB?s/%s. ?e(END) :?pB%pB\\%..%t";
+  "?f%f .?m(%T %i of %m) .?ltlines %lt-%lb?L/%L. .byte %bB?s/%s. ?e(END) :?pB%pB\\%..?c (column %c).%t";
 static constant char h_proto[] =
   "HELP -- ?eEND -- Press g to see it again:Press RETURN for more., or q when done";
 static constant char w_proto[] =
@@ -58,12 +59,14 @@ static constant char more_proto[] =
   "--More--(?eEND ?x- Next\\: %x.:?pB%pB\\%:byte %bB?s/%s...%t)";
 
 public char *prproto[3];
+public char *eprproto[3];
 public char constant *eqproto = e_proto;
 public char constant *hproto = h_proto;
 public char constant *wproto = w_proto;
 
 static char message[PROMPT_SIZE];
 static char *mp;
+static int longest_line;
 
 /*
  * Initialize the prompt prototype strings.
@@ -73,9 +76,22 @@ public void init_prompt(void)
 	prproto[0] = save(s_proto);
 	prproto[1] = save(less_is_more ? more_proto : m_proto);
 	prproto[2] = save(M_proto);
+	eprproto[0] = eprproto[1] = eprproto[2] = NULL;
 	eqproto = save(e_proto);
 	hproto = save(h_proto);
 	wproto = save(w_proto);
+}
+
+/*
+ * Get width of longest line currently on screen.
+ * Calling longest_line_width() is expensive, so we cache its value here
+ * in case it is called more than once per prompt expansion.
+ */
+static int pr_longest_line(void)
+{
+	if (longest_line < 0)
+		longest_line = longest_line_width();
+	return longest_line;
 }
 
 /*
@@ -227,12 +243,20 @@ static lbool cond(char c, int where)
 #else
 		return (new_file ? TRUE : FALSE);
 #endif
+	case 'O': /* OSC 8 link selected? */
+#if OSC8_LINK
+		return (osc8_linepos != NULL_POSITION);
+#else
+		return FALSE;
+#endif
 	case 'p': /* Percent into file (bytes) known? */
 		return (curr_byte(where) != NULL_POSITION && ch_length() > 0);
 	case 'P': /* Percent into file (lines) known? */
 		return (currline(where) != 0 &&
 				(len = ch_length()) > 0 &&
 				find_linenum(len) != 0);
+	case 'Q': /* Any on-screen line truncated? */
+		return (hshift + sc_width < pr_longest_line());
 	case 's': /* Size of file known? */
 	case 'B':
 		return (ch_length() != NULL_POSITION);
@@ -275,7 +299,10 @@ static void protochar(char c, int where)
 			ap_quest();
 		break;
 	case 'c':
-		ap_int(hshift);
+		ap_int(hshift+1);
+		break;
+	case 'C':
+		ap_int(hshift + sc_width);
 		break;
 	case 'd': /* Current page number */
 		linenum = currline(where);
@@ -349,14 +376,6 @@ static void protochar(char c, int where)
 #endif
 			ap_int(nifile());
 		break; }
-	case 'o': /* path (URI without protocol) of selected OSC8 link */
-#if OSC8_LINK
-		if (osc8_path != NULL)
-			ap_str(osc8_path);
-		else
-#endif
-			ap_quest();
-		break;
 	case 'p': /* Percent into file (bytes) */
 		pos = curr_byte(where);
 		len = ch_length();
@@ -373,6 +392,9 @@ static void protochar(char c, int where)
 			ap_quest();
 		else
 			ap_int(percentage(linenum, last_linenum));
+		break;
+	case 'Q': /* Percent shifted horizontally */
+		ap_int(percentage(hshift + sc_width, pr_longest_line()));
 		break;
 	case 's': /* Size of file */
 	case 'B':
@@ -394,6 +416,9 @@ static void protochar(char c, int where)
 		else
 #endif
 			ap_str("file");
+		break;
+	case 'W': /* Width of longest line on screen */
+		ap_int(pr_longest_line());
 		break;
 	case 'x': /* Name of next file */
 		h = next_ifile(curr_ifile);
@@ -496,10 +521,11 @@ public constant char * pr_expand(constant char *proto)
 	char c;
 	int where;
 
-	mp = message;
-
 	if (*proto == '\0')
 		return ("");
+
+	mp = message;
+	longest_line = -1;
 
 	for (p = proto;  *p != '\0';  p++)
 	{
@@ -570,6 +596,21 @@ public constant char * pr_string(void)
 				hproto : prproto[type]);
 	new_file = FALSE;
 	return (prompt);
+}
+
+/*
+ * Return the end prompt string.
+ */
+public constant char * end_pr_string(void)
+{
+	int type;
+
+	if (ch_getflags() & CH_HELPFILE)
+		return NULL;
+	type = (!less_is_more) ? pr_type : pr_type ? 0 : 1;
+	if (eprproto[type] == NULL)
+		return NULL;
+	return pr_expand(eprproto[type]);
 }
 
 /*

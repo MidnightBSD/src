@@ -696,6 +696,7 @@ ac_subst_files=''
 ac_user_opts='
 enable_option_checking
 enable_largefile
+with_termlib
 with_secure
 with_regex
 with_editor
@@ -1333,7 +1334,8 @@ Optional Features:
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
-  --with-secure           Compile in secure mode
+  --without-termlib       do not require a terminal library
+  --with-secure           compile in secure mode
   --with-regex=LIB        select regular expression library (LIB is one of auto,none,gnu,pcre,pcre2,posix,regcmp,re_comp,regcomp,regcomp-local) [auto]
   --with-editor=PROGRAM   use PROGRAM as the default editor [vi]
 
@@ -2414,7 +2416,6 @@ as_fn_append ac_header_c_list " values.h values_h HAVE_VALUES_H"
 as_fn_append ac_header_c_list " sys/ioctl.h sys_ioctl_h HAVE_SYS_IOCTL_H"
 as_fn_append ac_header_c_list " sys/stream.h sys_stream_h HAVE_SYS_STREAM_H"
 as_fn_append ac_header_c_list " sys/wait.h sys_wait_h HAVE_SYS_WAIT_H"
-as_fn_append ac_header_c_list " wctype.h wctype_h HAVE_WCTYPE_H"
 
 # Auxiliary files required by this configure script.
 ac_aux_files="install-sh"
@@ -3683,7 +3684,6 @@ fi
 
 
 
-
   # Find a good install program.  We prefer a C program (faster),
 # so one script is as good as another.  But avoid the broken or
 # incompatible versions:
@@ -4487,7 +4487,6 @@ fi
 
 
 
-
 # Checks for typedefs, structures, and compiler characteristics.
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking whether stat file-mode macros are broken" >&5
 printf %s "checking whether stat file-mode macros are broken... " >&6; }
@@ -4646,6 +4645,19 @@ fi
 # Checks for terminal libraries
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for working terminal libraries" >&5
 printf %s "checking for working terminal libraries... " >&6; }
+
+
+# Check whether --with-termlib was given.
+if test ${with_termlib+y}
+then :
+  withval=$with_termlib;
+fi
+
+if test "x$with_termlib" = "xno"; then
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: not using a terminal library due to --without-termlib" >&5
+printf "%s\n" "not using a terminal library due to --without-termlib" >&6; }
+else
+
 TERMLIBS=
 include_termcap_h=
 if test "x$ac_cv_header_termcap_h" = xyes; then include_termcap_h="#include <termcap.h>"; elif test "x$ac_cv_header_ncurses_termcap_h" = xyes; then include_termcap_h="#include <ncurses/termcap.h>"; elif test "x$ac_cv_header_ncursesw_termcap_h" = xyes; then include_termcap_h="#include <ncursesw/termcap.h>"; fi
@@ -4954,7 +4966,103 @@ fi
 printf "%s\n" "using $TERMLIBS" >&6; }
 LIBS="$LIBS $TERMLIBS"
 
+# Check for terminfo vs termcap.
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for terminfo" >&5
+printf %s "checking for terminfo... " >&6; }
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+#include <curses.h>
+#include <term.h>
+int
+main (void)
+{
+setupterm("",0,0); tigetflag(""); tigetnum(""); tigetstr("");
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  maybe_have_terminfo=yes
+else case e in #(
+  e) maybe_have_terminfo=no ;;
+esac
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+if test $maybe_have_terminfo = yes; then
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+#include <curses.h>
+#include <term.h>
+int
+main (void)
+{
+tparm("x",0,0);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"
+then :
+  printf "%s\n" "#define HAVE_TPARM2 1" >>confdefs.h
+ have_terminfo=yes
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+#include <curses.h>
+#include <term.h>
+int
+main (void)
+{
+tparm("x",0,0,0,0,0,0,0,0);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"
+then :
+  printf "%s\n" "#define HAVE_TPARM8 1" >>confdefs.h
+ have_terminfo=yes
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+#include <curses.h>
+#include <term.h>
+int
+main (void)
+{
+tparm("x",0,0,0,0,0,0,0,0,0);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"
+then :
+  printf "%s\n" "#define HAVE_TPARM9 1" >>confdefs.h
+ have_terminfo=yes
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
+fi
+if test "$have_terminfo" = yes; then
+  printf "%s\n" "#define HAVE_TERMINFO 1" >>confdefs.h
+ { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; } ; else { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+fi
+
+fi
+
 # Autoheader templates for symbols defined later by AC_DEFINE.
+
+
+
 
 
 
@@ -5653,32 +5761,6 @@ if ac_fn_c_try_link "$LINENO"
 then :
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 printf "%s\n" "yes" >&6; }; printf "%s\n" "#define HAVE_UPPER_LOWER 1" >>confdefs.h
-
-else case e in #(
-  e) { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
-printf "%s\n" "no" >&6; } ;;
-esac
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
-
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for wctype functions" >&5
-printf %s "checking for wctype functions... " >&6; }
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <wctype.h>
-int
-main (void)
-{
-iswlower(0); iswupper(0); towlower(0); towupper(0);
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-printf "%s\n" "yes" >&6; }; printf "%s\n" "#define HAVE_WCTYPE 1" >>confdefs.h
 
 else case e in #(
   e) { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5

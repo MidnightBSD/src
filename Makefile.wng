@@ -7,23 +7,23 @@
 #
 # When cross compiling, add also: SHELL=sh CC=<mingw-cc>
 #
-# The optional command line parameter "REGEX_PACKAGE" is used to specify 
+# The optional command line parameter "REGEX_PACKAGE=..." is used to specify
 # a regular expression package for compilation and linking.  This parameter
-# can assume one of three values.  
+# can assume one of four values:
 #
-# REGEX_PACKAGE == regcomp-local
+# REGEX_PACKAGE == regcomp-local  (default, always available)
 #   This choice selects the regular expression package written by Henry
-#   Spencer.  It is implemented by the repository file "regexp.c".  
+#   Spencer.  It is implemented by the repository file "regexp.c", without
+#   any external dependencies.
 #
-# REGEX_PACKAGE == posix
-#   This choice selects the POSIX implementation and is provided by MingW.  
-#   This is the default choice.  
+# REGEX_PACKAGE == none  (always available)
+#   This choice disables regex, and instead uses smart plain text search
 #
-# REGEX_PACKAGE == gnu
-#   This choice selects the GNU implementation and is provided by MingW.  
+# REGEX_PACKAGE == posix  (might not be available)
+#   This choice selects the POSIX implementation, if provided by MingW.
 #
-# REGEX_PACKAGE == none
-#   This choice disables regex, and instead uses smart plain text search.
+# REGEX_PACKAGE == gnu  (might not be available)
+#   This choice selects the GNU implementation, if provided by MingW.
 #
 # By default, the files help.c and funcs.h are generated using few posix
 # utilities (grep, sed, etc). On Windows, if the tools are missing, add:
@@ -98,6 +98,10 @@ endif
 
 LIBS += -lshell32
 
+CFLAGS += ${XCFLAGS}
+LDFLAGS += ${XLDFLAGS}
+LIBS += ${XLDLIBS}
+
 #### End of system configuration section. ####
 
 # This rule allows us to supply the necessary -D options
@@ -119,12 +123,17 @@ endif
 OBJ = \
 	main.o screen.o brac.o ch.o charset.o cmdbuf.o \
 	command.o cvt.o decode.o edit.o evar.o filename.o forwback.o \
-	help.o ifile.o input.o jump.o lesskey_parse.o line.o linenum.o \
+	help.o ifile.o input.o jump.o line.o linenum.o \
 	lsystem.o mark.o optfunc.o option.o opttbl.o os.o \
 	output.o pattern.o position.o prompt.o search.o signal.o \
 	tags.o ttyin.o version.o xbuf.o
 ifeq  (${REGEX_PACKAGE},regcomp-local)
 OBJ += regexp.o
+endif
+ifneq (${SECURE_COMPILE},1)
+OBJ += lesskey_parse.o
+else
+MINGW_DEFINES += -DSECURE_COMPILE=1
 endif
 
 

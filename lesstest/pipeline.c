@@ -1,3 +1,12 @@
+/*
+ * Copyright (C) 1984-2026  Mark Nudelman
+ *
+ * You may distribute under the terms of either the GNU General Public
+ * License or the Less License, as specified in the README file.
+ *
+ * For more information, see the README file.
+ */
+
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -144,7 +153,10 @@ LessPipeline* create_less_pipeline(char* const* argv, int argc, char* const* env
 	if (verbose) fprintf(stderr, "screen out pipe %d,%d\n", pipeline->screen_out_pipe[RD], pipeline->screen_out_pipe[WR]);
 	pipeline->screen_pid = fork();
 	if (!pipeline->screen_pid) // child: lt_screen
+	{
+		if (verbose) sleep(1); // avoid interleaved startup output
 		become_child_screen(lt_screen, pipeline->screen_width, pipeline->screen_height, pipeline->screen_in_pipe, pipeline->screen_out_pipe);
+	}
 	if (verbose) fprintf(stderr, "screen child %ld\n", (long) pipeline->screen_pid);
 	close(pipeline->screen_out_pipe[WR]); pipeline->screen_out_pipe[WR] = -1;
 	close(pipeline->screen_in_pipe[RD]); pipeline->screen_in_pipe[RD] = -1;

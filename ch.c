@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1984-2025  Mark Nudelman
+ * Copyright (C) 1984-2026  Mark Nudelman
  *
  * You may distribute under the terms of either the GNU General Public
  * License or the Less License, as specified in the README file.
@@ -22,7 +22,8 @@
 
 typedef POSITION BLOCKNUM;
 
-public int ignore_eoi;
+public lbool ignore_eoi = FALSE;
+public lbool read_error = FALSE;
 
 /*
  * Pool of buffers holding the most recently used blocks of the input file.
@@ -283,11 +284,7 @@ static int ch_get(void)
 
 		read_again = FALSE;
 		if (n == READ_INTR)
-		{
-			if (ch_flags & CH_CANSEEK)
-				ch_fsize = pos;
 			return (EOI);
-		}
 		if (n == READ_AGAIN)
 		{
 			read_again = TRUE;
@@ -296,13 +293,14 @@ static int ch_get(void)
 		if (n < 0)
 		{
 #if MSDOS_COMPILER==WIN32C
-			if (errno != EPIPE)
+			if (errno == EPIPE)
+				n = 0;
+			else
 #endif
 			{
-				error("read error", NULL_PARG);
-				clear_eol();
+				read_error = TRUE;
+				return (EOI);
 			}
-			n = 0;
 		}
 
 #if LOGFILE
@@ -887,13 +885,13 @@ public void ch_init(int f, int flags, ssize_t nread)
 	 */
 	ch_fsize = (flags & CH_HELPFILE) ? size_helpdata : filesize(ch_file);
 
-	/*
-	 * This is a kludge to workaround a Linux kernel bug: files in some
-	 * pseudo filesystems like /proc and tracefs have a size of 0 according
-	 * to fstat() but have readable data.
-	 */
 	if (ch_fsize == 0 && nread > 0)
 	{
+		/*
+		 * This is a kludge to workaround a Linux kernel bug: files in some
+		 * pseudo filesystems like /proc and tracefs have a size of 0 according
+		 * to fstat() but have readable data.
+		 */
 		ch_flags |= CH_NOTRUSTSIZE;
 	}
 

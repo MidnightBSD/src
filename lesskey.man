@@ -4,8 +4,9 @@
        lesskey - customize key bindings for less
 
 [1mSYNOPSIS (deprecated)[0m
-       [1mlesskey [-o output] [--] [input][0m
-       [1mlesskey [--output=output] [--] [input][0m
+       [1mlesskey [22m[[1m-o [4m[22moutput[24m] [1m-- [4m[22minput[0m
+       [1mlesskey [22m[[1m--output=[4m[22moutput[24m] [1m-- [4m[22minput[0m
+
        [1mlesskey -V[0m
        [1mlesskey --version[0m
 
@@ -29,7 +30,7 @@
        #command
               Customizes command key bindings.
 
-       #line‐edit
+       #line-edit
               Customizes line‐editing key bindings.
 
        #env   Defines environment variables.
@@ -62,41 +63,68 @@
             \r   RETURN      (0x0D)
             \t   TAB         (0x09)
 
-            \k  followed by a single character represents the char(s) produced
-            when one of these keys is pressed:
-            \kb   BACKSPACE (the BACKSPACE key)
-            \kB   ctrl‐BACKSPACE
-            \kd   DOWN ARROW
-            \kD   PAGE DOWN
-            \ke   END
-            \kh   HOME
-            \ki   INSERT
-            \kl   LEFT ARROW
-            \kL   ctrl‐LEFT ARROW
-            \kr   RIGHT ARROW
-            \kR   ctrl‐RIGHT ARROW
-            \kt   BACKTAB
-            \ku   UP ARROW
-            \kU   PAGE UP
-            \kx   DELETE
-            \kX   ctrl‐DELETE
-            \k1   F1
+       \k  followed  by  one or two characters represents the char(s) produced
+       when one of these keys is pressed:
+            \kb    BACKSPACE (the BACKSPACE key; may be different than \b)
+            \kB    ctrl‐BACKSPACE
+            \kd    DOWN ARROW
+            \kD    PAGE DOWN
+            \ke    END
+            \kE    ctrl‐END
+            \kF    shift‐END
+            \kh    HOME
+            \kH    ctrl‐HOME
+            \kI    shift‐HOME
+            \ki    INSERT
+            \kl    LEFT ARROW
+            \kL    ctrl‐LEFT ARROW
+            \kM    shift‐LEFT ARROW
+            \kr    RIGHT ARROW
+            \kR    ctrl‐RIGHT ARROW
+            \kS    shift‐RIGHT ARROW
+            \kt    BACKTAB
+            \ku    UP ARROW
+            \kU    PAGE UP
+            \kx    DELETE
+            \kX    ctrl‐DELETE
+            \k1    F1
+            \kp1   lower left key on the numeric keypad
+            \kp2   lower center key on the numeric keypad
+            \kp3   lower right key on the numeric keypad
+            \kp4   center left key on the numeric keypad
+            \kp5   center key on the numeric keypad
+            \kp6   center right key on the numeric keypad
+            \kp7   upper left key on the numeric keypad
+            \kp8   upper center key on the numeric keypad
+            \kp9   upper right key on the numeric keypad
+            \kp0   0 on the numeric keypad
+            \kp*   * on the numeric keypad
+            \kp/   / on the numeric keypad
+            \kp-   - on the numeric keypad
+            \kp+   + on the numeric keypad
+            \kp.   . on the numeric keypad
+            \kp,   , on the numeric keypad
+            \kpe   ENTER on the numeric keypad
 
+       A backslash followed by any other character indicates that character is
+       to be taken literally.  Characters which must be preceded by  backslash
+       include caret, space, tab, hash mark and the backslash itself.
 
-            A backslash followed by any other character indicates that charac‐
-            ter is to be taken literally.  Characters which must  be  preceded
-            by  backslash  include  caret, space, tab, hash mark and the back‐
-            slash itself.
+       An action may be followed by an "extra" string.  When such a command is
+       entered while running [1mless[22m, the action is performed, and then the extra
+       string  is  parsed,  just as if it were typed in to [1mless[22m.  This feature
+       can be used in certain cases to extend the functionality of a  command.
+       For  example,  see  the "{" and ":t" commands in the example below.  It
+       can also be used to execute  more  than  one  command  when  a  key  is
+       pressed.   For  example,  if this line were in a lesskey file, pressing
+       the "B" key would first set the "b" mark and then search for the string
+       "next":
 
-            An action may be followed by an "extra" string.  When such a  com‐
-            mand  is  entered while running [1mless[22m, the action is performed, and
-            then the extra string is parsed, just as if it were  typed  in  to
-            [1mless[22m.   This  feature  can  be used in certain cases to extend the
-            functionality of a command.  For example, see  the  "{"  and  ":t"
-            commands  in  the  example  below.  The extra string has a special
-            meaning for the "quit" action: when [1mless [22mquits, the ASCII value of
-            the first character of the extra string is used as its  exit  sta‐
-            tus.
+           B set-mark b/next\n
+
+       The extra string has a special meaning for the "quit" action: when [1mless[0m
+       quits, the ASCII value of the first character of the  extra  string  is
+       used as its exit status.
 
 [1mEXAMPLE[0m
        The following input file describes the set of default command keys used
@@ -104,111 +132,125 @@
        page, under the key sequence which invokes the command.
 
             #command
-            \r         forw‐line
-            \n         forw‐line
-            e          forw‐line
-            j          forw‐line
-            \kd        forw‐line
-            ˆE         forw‐line
-            ˆN         forw‐line
-            k          back‐line
-            y          back‐line
-            ˆY         back‐line
-            ˆK         back‐line
-            ˆP         back‐line
-            J          forw‐line‐force
-            K          back‐line‐force
-            Y          back‐line‐force
-            \ej        forw‐newline
-            \ek        back‐newline
-            d          forw‐scroll
-            ˆD         forw‐scroll
-            u          back‐scroll
-            ˆU         back‐scroll
-            \40        forw‐screen
-            f          forw‐screen
-            ˆF         forw‐screen
-            ˆV         forw‐screen
-            \kD        forw‐screen
-            b          back‐screen
-            ˆB         back‐screen
-            \ev        back‐screen
-            \kU        back‐screen
-            z          forw‐window
-            w          back‐window
-            \e\40      forw‐screen‐force
-            \eb        back‐screen‐force
-            F          forw‐forever
-            \eF        forw‐until‐hilite
-            R          repaint‐flush
+            \r         forw-line
+            \n         forw-line
+            e          forw-line
+            j          forw-line
+            \kd        forw-line
+            ^E         forw-line
+            ^N         forw-line
+            k          back-line
+            y          back-line
+            ^Y         back-line
+            ^K         back-line
+            ^P         back-line
+            \ku        back-line
+            J          forw-line-force
+            K          back-line-force
+            Y          back-line-force
+            d          forw-scroll
+            ^D         forw-scroll
+            u          back-scroll
+            ^U         back-scroll
+            \40        forw-screen
+            f          forw-screen
+            ^F         forw-screen
+            ^V         forw-screen
+            \kD        forw-screen
+            b          back-screen
+            ^B         back-screen
+            \ev        back-screen
+            \kU        back-screen
+            z          forw-window
+            w          back-window
+            \e\40      forw-screen-force
+            \eb        back-screen-force
+            \ej        forw-newline
+            \ek        back-newline
+            F          forw-forever
+            \eF        forw-until-hilite
+            \ef        forw-bell-hilite
+            R          repaint-flush
             r          repaint
-            ˆR         repaint
-            ˆL         repaint
-            \eu        undo‐hilite
-            \eU        clear‐search
-            g          goto‐line
-            \kh        goto‐line
-            <          goto‐line
-            \e<        goto‐line
+            ^R         repaint
+            ^L         repaint
+            \eu        undo-hilite
+            \eU        clear-search
+            g          goto-line
+            \kh        goto-line
+            \kH        goto-line \e{
+            \kI        goto-line \e{
+            \ke        goto-end
+            \kE        goto-end \e}
+            \kF        goto-end \e}
+            <          goto-line
+            \e<        goto-line
             p          percent
             %          percent
-            \e(        left‐scroll
-            \e)        right‐scroll
-            \kl        left‐scroll
-            \kr        right‐scroll
-            \e{        no‐scroll
-            \e}        end‐scroll
-            {          forw‐bracket {}
-            }          back‐bracket {}
-            (          forw‐bracket ()
-            )          back‐bracket ()
-            [          forw‐bracket []
-            ]          back‐bracket []
-            \eˆF       forw‐bracket
-            \eˆB       back‐bracket
-            G          goto‐end
-            \e>        goto‐end
-            >          goto‐end
-            \ke        goto‐end
-            \eG        goto‐end‐buffered
+            \e(        left-scroll
+            \e)        right-scroll
+            \e{        no-scroll
+            \e}        end-scroll
+            \kl        left-scroll
+            \kr        right-scroll
+            \kL        no-scroll
+            \kM        no-scroll
+            \kR        end-scroll
+            \kS        end-scroll
+            {          forw-bracket {}
+            }          back-bracket {}
+            (          forw-bracket ()
+            )          back-bracket ()
+            [          forw-bracket []
+            ]          back-bracket []
+            \e^F       forw-bracket
+            \e^B       back-bracket
+            G          goto-end
+            \e>        goto-end
+            >          goto-end
+            P          goto-pos
+            \eG        goto-end-buffered
             =          status
-            ˆG         status
+            ^G         status
             :f         status
-            /          forw‐search
-            ?          back‐search
-            \e/        forw‐search *
-            \e?        back‐search *
-            n          repeat‐search
-            \en        repeat‐search‐all
-            N          reverse‐search
-            \eN        reverse‐search‐all
-            ˆOˆN       osc8‐forw‐search
-            ˆOn        osc8‐forw‐search
-            ˆOˆP       osc8‐back‐search
-            ˆOp        osc8‐back‐search
-            ˆOˆO       osc8‐open
+            /          forw-search
+            ?          back-search
+            \e/        forw-search *
+            \e?        back-search *
+            n          repeat-search
+            \en        repeat-search-all
+            N          reverse-search
+            \eN        reverse-search-all
             &          filter
-            m          set‐mark
-            M          set‐mark‐bottom
-            \em        clear‐mark
-            ’          goto‐mark
-            ˆXˆX       goto‐mark
+            m          set-mark
+            M          set-mark-bottom
+            \em        clear-mark
+            '          goto-mark
+            ^X^X       goto-mark
             E          examine
             :e         examine
-            ˆXˆV       examine
-            :n         next‐file
-            :p         prev‐file
-            t          next‐tag
-            T          prev‐tag
-            :x         index‐file
-            :d         remove‐file
-            ‐          toggle‐option
-            :t         toggle‐option t
-            s          toggle‐option o
+            ^X^V       examine
+            :n         next-file
+            :p         prev-file
+            ^O^N       osc8-forw-search
+            ^On        osc8-forw-search
+            ^O^P       osc8-back-search
+            ^Op        osc8-back-search
+            ^O^O       osc8-open
+            ^Oo        osc8-open
+            ^O^L       osc8-jump
+            ^Ol        osc8-jump
+            t          next-tag
+            T          prev-tag
+            :x         index-file
+            :d         remove-file
+            -          toggle-option
+            :t         toggle-option t
+            s          toggle-option o
                        ## Use a long option name by starting the
                        ## extra string with ONE dash; eg:
-                       ##   s toggle‐option ‐log‐file\n
-            _          display‐option
+                       ##   s toggle-option -log-file\n
+            _          display-option
             |          pipe
             v          visual
             !          shell
@@ -216,8 +258,24 @@
             +          firstcmd
             \e[M       mouse
             \e[<       mouse6
+            \kp1       goto-end
+            \kp2       forw-line
+            \kp3       forw-screen
+            \kp4       left-scroll
+            \kp6       right-scroll
+            \kp7       goto-line
+            \kp8       back-line
+            \kp9       back-screen
+            \kp0       noaction 0
+            \kp*       noaction *
+            \kp/       noaction /
+            \kp-       noaction -
+            \kp+       noaction +
+            \kp.       noaction .
+            \kp,       noaction ,
             H          help
             h          help
+            \k1        help
             V          version
             0          digit
             1          digit
@@ -234,7 +292,6 @@
             :q         quit
             :Q         quit
             ZZ         quit
-
 
 [1mPRECEDENCE[0m
        Commands specified by [1mlesskey [22mtake precedence  over  the  default  com‐
@@ -258,7 +315,7 @@
 [1mLINE EDITING SECTION[0m
        The line‐editing section begins with the line:
 
-       #line‐edit
+       #line-edit
 
        This  section specifies new key bindings for the line editing commands,
        in a manner similar to the way key bindings for ordinary  commands  are
@@ -269,10 +326,11 @@
        The following input file describes the set of default line‐editing keys
        used by [1mless[22m:
 
-            #line‐edit
-            \t           forw‐complete
-            \17          back‐complete
-            \e\t         back‐complete
+            #line-edit
+            \t           forw-complete
+            \17          back-complete
+            \ekt         back-complete
+            \e\t         back-complete
             ˆL           expand
             ˆV           literal
             ˆA           literal
@@ -280,16 +338,21 @@
             \kr          right
             \eh          left
             \kl          left
-            \eb          word‐left
-            \e\kl        word‐left
-            \ew          word‐right
-            \e\kr        word‐right
+            \eb          word-left
+            \e\kl        word-left
+            \e\kL        word-left
+            \ew          word-right
+            \e\kr        word-right
+            \e\kR        word-right
             \ei          insert
+            \ki          insert
             \ex          delete
             \kx          delete
-            \eX          word‐delete
-            \ekx         word‐delete
-            \e\b         word‐backspace
+            \eX          word-delete
+            \ekx         word-delete
+            \kX          word-delete
+            \e\b         word-backspace
+            \kB          word-backspace
             \e0          home
             \kh          home
             \e$          end
@@ -297,10 +360,23 @@
             \ek          up
             \ku          up
             \ej          down
+            \kd          down
             ˆG           abort
+            \kp1         end
+            \kp2         down
+            \kp4         left
+            \kp6         right
+            \kp7         home
+            \kp8         up
+            \kp0         noaction 0
+            \kp*         noaction *
+            \kp/         noaction /
+            \kp-         noaction -
+            \kp+         noaction +
+            \kp.         noaction .
+            \kp,         noaction ,
             \e[M         mouse
             \e[<         mouse6
-
 
 [1mLESS ENVIRONMENT VARIABLES[0m
        The environment variable section begins with the line
@@ -347,12 +423,12 @@
        running version of [1mless [22m(or [1mlesskey[22m) matches the operator.  This can be
        helpful if a lesskey file is used by different versions of [1mless[22m.
 
-       For  example,  suppose  that  a  new command named ’sideways‐search’ is
+       For  example,  suppose  that  a  new command named ’sideways-search’ is
        added in [1mless [22mversion 777.  Then the following line  would  assign  the
        command  to  the  Q key, but only in versions of [1mless [22mwhich support it.
        The line would be ignored by versions earlier than 777.
 
-            #version >= 777  Q sideways‐search
+            #version >= 777  Q sideways-search
 
        These six operators are supported:
              >    Greater than
@@ -371,7 +447,7 @@
 
             #env
             ## (Note that there must be a space at the end of the next line,
-            ##  to separate the ‐‐color option from the ‐S option.)
+            ##  to separate the --color option from the -S option.)
             LESS = -i -S
             #version >= 595  LESS += --color=Hkc
 
@@ -384,7 +460,7 @@
        represented as \340 in a lesskey file.
 
 [1mCOPYRIGHT[0m
-       Copyright (C) 1984‐2025  Mark Nudelman
+       Copyright (C) 1984‐2026  Mark Nudelman
 
        less is part of the GNU project and is free software.  You  can  redis‐
        tribute  it and/or modify it under the terms of either (1) the GNU Gen‐
@@ -403,6 +479,6 @@
 
 [1mAUTHOR[0m
        Mark Nudelman
-       Report bugs at ⟨https://github.com/gwsw/less/issues⟩.
+       Report bugs at https://github.com/gwsw/less/issues.
 
-                           Version 678: 01 May 2025                 [4mLESSKEY[24m(1)
+less 704                          30 May 2026                       [4mLESSKEY[24m(1)
