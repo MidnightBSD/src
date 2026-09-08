@@ -1,5 +1,15 @@
 Updating Information for MidnightBSD users.
 
+20260908:
+	mport 2.8.1 (from 2.8.0).  Bug fix release: memory leaks, NULL
+	dereferences, heap overflows and use-after-free fixes across libmport
+	and the mport CLI, TOCTOU fixes in file copy and mkdir, package
+	verification through open descriptors, MOVED/deprecation handling in
+	mport update, replacement of packages installed under an older OS
+	release, corrected exit codes for add, lock, unlock and download, and
+	a forced install now re-registers the package and rolls back on
+	failure.
+
 20260901:
 	expat 2.8.4 (from 2.8.3).  Fixes CVE-2026-66046 and CVE-2026-76641
 	(quadratic runtime in attribute "isCdata" lookups, letting moderately
