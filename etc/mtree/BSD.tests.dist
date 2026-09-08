@@ -1141,6 +1141,8 @@
         ..
         tar
         ..
+        time
+        ..
         touch
         ..
         tr
