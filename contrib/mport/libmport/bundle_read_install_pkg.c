@@ -237,7 +237,7 @@ do_pre_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *
 	return MPORT_OK;
 
 ERROR:
-	// TODO: asset list free
+	mport_assetlist_free(alist);
 	RETURN_CURRENT_ERROR;
 }
 
@@ -718,6 +718,8 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 	char file[FILENAME_MAX], cwd[FILENAME_MAX];
 	sqlite3_stmt *insert = NULL;
 	mportAssetList *autodirs = NULL;
+	char *filePtr = NULL, *cwdPtr = NULL;
+	bool in_transaction = false;
 
 	/* sadly, we can't just use abs pathnames, because it will break hardlinks */
 	orig_cwd = getcwd(NULL, 0);
@@ -732,6 +734,12 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 
 	if ((autodirs = mport_assetlist_new()) == NULL)
 		goto ERROR;
+
+	/* Register the package and its assets atomically: a failure anywhere
+	 * below must not leave a packages row without its assets. */
+	if (mport_db_do(mport->db, "BEGIN TRANSACTION") != MPORT_OK)
+		goto ERROR;
+	in_transaction = true;
 
 	if (create_package_row(mport, pkg) != MPORT_OK)
 		goto ERROR;
@@ -759,8 +767,6 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 
 	if (mport_chdir(mport, cwd) != MPORT_OK)
 		goto ERROR;
-
-	mport_db_do(mport->db, "BEGIN TRANSACTION");
 
 	STAILQ_FOREACH (e, alist, next) {
 		switch (e->type) {
@@ -815,6 +821,12 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 		case ASSET_SAMPLE_OWNER_MODE:
 			if (mport_bundle_read_next_entry(bundle, &entry) != MPORT_OK)
 				goto ERROR;
+
+			if (e->data == NULL) {
+				SET_ERROR(
+				    MPORT_ERR_FATAL, "Corrupt bundle: file asset has no path");
+				goto ERROR;
+			}
 
 			if (e->data[0] == '/') {
 				(void)snprintf(file, FILENAME_MAX, "%s", e->data);
@@ -1122,8 +1134,12 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 		}
 
 		/* insert this asset into the master database */
-		char *filePtr = strdup(file);
-		char *cwdPtr = strdup(cwd);
+		filePtr = strdup(file);
+		cwdPtr = strdup(cwd);
+		if (filePtr == NULL || cwdPtr == NULL) {
+			SET_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+			goto ERROR;
+		}
 
 		char dir[FILENAME_MAX];
 		if (sqlite3_bind_int(insert, 1, (int)e->type) != SQLITE_OK) {
@@ -1253,13 +1269,16 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 		sqlite3_reset(insert);
 
 		free(filePtr);
+		filePtr = NULL;
 		free(cwdPtr);
+		cwdPtr = NULL;
 	}
 
 	if (mport_db_do(mport->db, "COMMIT") != MPORT_OK) {
 		SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
 		goto ERROR;
 	}
+	in_transaction = false;
 	sqlite3_finalize(insert);
 
 	mport_pkgmeta_logevent(mport, pkg, "Installed");
@@ -1275,7 +1294,12 @@ ERROR:
 	if (filefd != -1)
 		close(filefd);
 	sqlite3_finalize(insert);
+	/* the ROLLBACK must not clobber the error that got us here */
+	if (in_transaction)
+		(void)sqlite3_exec(mport->db, "ROLLBACK", NULL, NULL, NULL);
 	(mport->progress_free_cb)();
+	free(filePtr);
+	free(cwdPtr);
 	free(orig_cwd);
 	mport_assetlist_free(autodirs);
 	mport_assetlist_free(alist);
@@ -1508,7 +1532,7 @@ do_post_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta 
 static int
 run_postexec(mportInstance *mport, mportPackageMeta *pkg)
 {
-	mportAssetList *alist;
+	mportAssetList *alist = NULL;
 	mportAssetListEntry *e = NULL;
 	char cwd[FILENAME_MAX];
 	char in[FILENAME_MAX];
@@ -1628,7 +1652,7 @@ run_postexec(mportInstance *mport, mportPackageMeta *pkg)
 	return MPORT_OK;
 
 ERROR:
-	// TODO: asset list free
+	mport_assetlist_free(alist);
 	RETURN_CURRENT_ERROR;
 }
 

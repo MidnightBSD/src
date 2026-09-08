@@ -89,14 +89,36 @@ mport_version_cmp_sqlite(sqlite3_context *context, int argc, sqlite3_value **arg
 {
 	char *a = NULL;
 	char *b = NULL;
+	bool anull;
+	bool bnull;
 
 	assert(argc == 2);
+	if (argc != 2) {
+		sqlite3_result_int(context, 0);
+		return;
+	}
 
-	a = strdup(sqlite3_value_text(argv[0]));
-	b = strdup(sqlite3_value_text(argv[1]));
+	/* sqlite3_value_text() returns NULL for SQL NULL columns (e.g. a
+	   nullable version), which would crash strdup(); sort NULLs below any
+	   real version instead. */
+	anull = sqlite3_value_type(argv[0]) == SQLITE_NULL;
+	bnull = sqlite3_value_type(argv[1]) == SQLITE_NULL;
+	if (anull || bnull) {
+		if (anull && bnull)
+			sqlite3_result_int(context, 0);
+		else
+			sqlite3_result_int(context, anull ? -1 : 1);
+		return;
+	}
 
-	assert(a != NULL);
-	assert(b != NULL);
+	a = strdup((const char *)sqlite3_value_text(argv[0]));
+	b = strdup((const char *)sqlite3_value_text(argv[1]));
+	if (a == NULL || b == NULL) {
+		free(a);
+		free(b);
+		sqlite3_result_error_nomem(context);
+		return;
+	}
 
 	sqlite3_result_int(context, mport_version_cmp(a, b));
 

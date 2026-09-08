@@ -152,6 +152,10 @@ mport_fetch_index(mportInstance *mport)
 		}
 		free(url);
 		url = NULL;
+		/* if the index fetch failed above, hashUrl was never freed and
+		   the next iteration would overwrite it. */
+		free(hashUrl);
+		hashUrl = NULL;
 		mirrorsPtr++;
 	}
 
@@ -619,10 +623,13 @@ mport_download(
 	int retryCount = 0;
 
 	if (all) {
-		mportIndexEntry **ie2_orig;
-		mport_index_list(mport, &ie2_orig);
-		mportIndexEntry **ie2 = ie2_orig;
+		mportIndexEntry **ie2_orig = NULL;
+		if (mport_index_list(mport, &ie2_orig) != MPORT_OK)
+			RETURN_CURRENT_ERROR;
+		if (ie2_orig == NULL)
+			return (MPORT_OK);
 
+		mportIndexEntry **ie2 = ie2_orig;
 		while (*ie2 != NULL) {
 			char *dpath;
 			if (mport_download(mport, (*ie2)->pkgname, false, false, &dpath) !=
@@ -670,16 +677,24 @@ mport_download(
 	}
 
 	if (includeDependencies) {
-		mport_index_depends_list(
-		    mport, indexEntry->pkgname, indexEntry->version, &depends_orig);
+		if (mport_index_depends_list(mport, indexEntry->pkgname, indexEntry->version,
+			&depends_orig) != MPORT_OK) {
+			mport_index_entry_free_vec(indexEntries);
+			free(*path);
+			*path = NULL;
+			RETURN_CURRENT_ERROR;
+		}
 		depends = depends_orig;
 
-		while (*depends != NULL) {
+		while (depends != NULL && *depends != NULL) {
 			char *dpath;
 			if (mport_download(mport, (*depends)->d_pkgname, false, includeDependencies,
 				&dpath) != MPORT_OK) {
 				mport_call_msg_cb(mport, "%s", mport_err_string());
 				mport_index_depends_free_vec(depends_orig);
+				mport_index_entry_free_vec(indexEntries);
+				free(*path);
+				*path = NULL;
 				return mport_err_code();
 			}
 			free(dpath);
@@ -695,7 +710,7 @@ getfile:
 			mport_call_msg_cb(mport, "Error fetching package %s, %s", packageName,
 			    mport_err_string());
 			free(*path);
-			path = NULL;
+			*path = NULL;
 			mport_index_entry_free_vec(indexEntries);
 			indexEntries = NULL;
 			indexEntry = NULL;
@@ -722,7 +737,7 @@ getfile:
 				goto getfile;
 		}
 		free(*path);
-		path = NULL;
+		*path = NULL;
 		mport_index_entry_free_vec(indexEntries);
 		indexEntries = NULL;
 		indexEntry = NULL;

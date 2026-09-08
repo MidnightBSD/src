@@ -98,6 +98,9 @@ mport_info(mportInstance *mport, const char *packageName)
 	if (packs != NULL &&
 	    mport_moved_lookup(mport, (*packs)->origin, &movedEntries) != MPORT_OK) {
 		SET_ERROR(MPORT_ERR_FATAL, "The moved lookup failed.");
+		mport_index_moved_entry_free_vec(movedEntries);
+		mport_index_entry_free_vec(indexEntries);
+		mport_pkgmeta_vec_free(packs);
 		return (NULL);
 	}
 
@@ -123,7 +126,7 @@ mport_info(mportInstance *mport, const char *packageName)
 			free(options);
 			free(desc);
 			mport_index_entry_free_vec(indexEntries);
-			free(movedEntries);
+			mport_index_moved_entry_free_vec(movedEntries);
 			SET_ERROR(MPORT_ERR_FATAL, "Out of memory");
 			return (NULL);
 		}
@@ -142,50 +145,36 @@ mport_info(mportInstance *mport, const char *packageName)
 		no_shlib_provided = (*packs)->no_provide_shlib;
 		flavor = (*packs)->flavor;
 		if (flavor == NULL) {
-			flavor = strdup("");
-			if (flavor == NULL) {
-				SET_ERROR(MPORT_ERR_FATAL, "Out of memory");
-				return (NULL);
-			}
+			flavor = "";
 		}
 		deprecated = (*packs)->deprecated;
 		if (deprecated == NULL || deprecated[0] == '\0') {
 			if (movedEntries != NULL && *movedEntries != NULL &&
 			    (*movedEntries)->date[0] != '\0') {
-				deprecated = strdup("yes");
+				deprecated = "yes";
 			} else {
-				deprecated = strdup("no");
-			}
-			if (deprecated == NULL) {
-				SET_ERROR(MPORT_ERR_FATAL, "Out of memory");
-				return (NULL);
+				deprecated = "no";
 			}
 		}
 
 		expirationDate = (*packs)->expiration_date;
 		if (expirationDate == 0 && movedEntries != NULL && *movedEntries != NULL &&
 		    (*movedEntries)->date[0] != '\0') {
-			struct tm expDate;
-			strptime((*movedEntries)->date, "%Y-%m-%d", &expDate);
-			expirationDate = mktime(&expDate);
+			/* zero-init: strptime fills only the date fields, and
+			   mktime reads tm_hour/min/sec/isdst too. */
+			struct tm expDate = { 0 };
+			if (strptime((*movedEntries)->date, "%Y-%m-%d", &expDate) != NULL)
+				expirationDate = mktime(&expDate);
 		}
 		options = (*packs)->options;
 
 		if (options == NULL) {
-			options = strdup("");
-			if (options == NULL) {
-				SET_ERROR(MPORT_ERR_FATAL, "Out of memory");
-				return (NULL);
-			}
+			options = "";
 		}
 
 		desc = (*packs)->desc;
 		if (desc == NULL) {
-			desc = strdup("");
-			if (desc == NULL) {
-				SET_ERROR(MPORT_ERR_FATAL, "Out of memory");
-				return (NULL);
-			}
+			desc = "";
 		}
 
 		automatic = (*packs)->automatic;
@@ -195,8 +184,7 @@ mport_info(mportInstance *mport, const char *packageName)
 
 		if (indexEntry == NULL)
 			purl[0] = '\0';
-		else if (packs != NULL && indexEntry->pkgname != NULL &&
-		    (*packs)->version != NULL) {
+		else if (indexEntry->pkgname != NULL && (*packs)->version != NULL) {
 			char *tmppurl = mport_purl_uri(*packs);
 			if (tmppurl != NULL) {
 				snprintf(purl, sizeof(purl), "%s", tmppurl);
@@ -305,10 +293,10 @@ mport_info(mportInstance *mport, const char *packageName)
 		    options, type == MPORT_TYPE_APP ? "Application" : "System", flatsize_str, desc);
 	}
 
-	if (info_text == NULL) {
+	/* info_text may be NULL here (asprintf OOM); fall through to the shared
+	   cleanup below and return it (NULL) rather than leaking everything. */
+	if (info_text == NULL)
 		SET_ERROR(MPORT_ERR_FATAL, "Out of memory.");
-		return (NULL);
-	}
 
 	if (packs == NULL) {
 		free(status);
@@ -328,7 +316,7 @@ mport_info(mportInstance *mport, const char *packageName)
 	indexEntries = NULL;
 	indexEntry = NULL;
 
-	free(movedEntries);
+	mport_index_moved_entry_free_vec(movedEntries);
 	movedEntries = NULL;
 
 	free(annotations_str);
