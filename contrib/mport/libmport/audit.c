@@ -234,11 +234,12 @@ mport_audit(mportInstance *mport, const char *packageName, bool dependOn)
 			path = NULL;
 
 			ucl_object_unref(root);
-
-			mport_pkgmeta_vec_free(packs);
-			packs = NULL;
 		}
 	}
+
+	mport_pkgmeta_vec_free(packs);
+	packs = NULL;
+
 	return pkgAudit;
 }
 

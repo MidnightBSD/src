@@ -57,6 +57,26 @@ static int extract_stub_db(const char *, const char *);
 static struct table_entry *find_in_table(struct table_entry **, const char *);
 static int insert_into_table(struct table_entry **, const char *, const char *);
 static uint32_t SuperFastHash(const char *);
+static void free_table(struct table_entry **);
+
+static void
+free_table(struct table_entry **table)
+{
+	if (table == NULL)
+		return;
+
+	for (int i = 0; i < TABLE_SIZE; i++) {
+		struct table_entry *node = table[i];
+		while (node != NULL) {
+			struct table_entry *next = node->next;
+			free(node->name);
+			free(node->file);
+			free(node);
+			node = next;
+		}
+	}
+	free(table);
+}
 
 #include <err.h>
 
@@ -77,6 +97,8 @@ mport_merge_primative(mportInstance *mport, const char **filenames, const char *
 	char *dbfile = NULL;
 	char dirtmpl[MAXPATHLEN];
 	char *tmpdir;
+	char *madedir = NULL;
+	int ret = MPORT_OK;
 
 	tmpdir = getenv("TMPDIR");
 	if (tmpdir == NULL)
@@ -91,49 +113,76 @@ mport_merge_primative(mportInstance *mport, const char **filenames, const char *
 
 	DIAG("mport_merge_primative(%p, %s)", filenames, outfile)
 
-	if ((tmpdir = mkdtemp(dirtmpl)) == NULL)
-		RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't make temp directory.");
-	if (asprintf(&dbfile, "%s/%s", tmpdir, "merged.db") == -1)
-		RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't build merge database name.");
+	if ((tmpdir = mkdtemp(dirtmpl)) == NULL) {
+		ret = SET_ERROR(MPORT_ERR_FATAL, "Couldn't make temp directory.");
+		goto DONE;
+	}
+	/* only this created directory is safe to remove later (not $TMPDIR) */
+	madedir = tmpdir;
+	if (asprintf(&dbfile, "%s/%s", tmpdir, "merged.db") == -1) {
+		dbfile = NULL;
+		ret = SET_ERROR(MPORT_ERR_FATAL, "Couldn't build merge database name.");
+		goto DONE;
+	}
 
 	DIAG("Building stub")
 
 	/* this function merges the stub databases into one db. */
-	if (build_stub_db(mport, &db, tmpdir, dbfile, filenames, table) != MPORT_OK)
-		RETURN_CURRENT_ERROR;
+	if (build_stub_db(mport, &db, tmpdir, dbfile, filenames, table) != MPORT_OK) {
+		ret = mport_err_code();
+		goto DONE;
+	}
 
 	DIAG("Stub complete: %s", dbfile)
 
 	/* set up the bundle, and add our new stub database to it. */
-	if ((bundle = mport_bundle_write_new()) == NULL)
-		RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't alloca bundle struct.");
-	if (mport_bundle_write_init(bundle, outfile) != MPORT_OK)
-		RETURN_CURRENT_ERROR;
+	if ((bundle = mport_bundle_write_new()) == NULL) {
+		ret = SET_ERROR(MPORT_ERR_FATAL, "Couldn't alloca bundle struct.");
+		goto DONE;
+	}
+	if (mport_bundle_write_init(bundle, outfile) != MPORT_OK) {
+		ret = mport_err_code();
+		goto DONE;
+	}
 
 	DIAG("Adding %s", dbfile)
 
-	if (mport_bundle_write_add_file(bundle, dbfile, MPORT_STUB_DB_FILE) != MPORT_OK)
-		RETURN_CURRENT_ERROR;
+	if (mport_bundle_write_add_file(bundle, dbfile, MPORT_STUB_DB_FILE) != MPORT_OK) {
+		ret = mport_err_code();
+		goto DONE;
+	}
 
 	DIAG("Adding metafiles")
 	/* add all the meta files in the correct order */
-	if (archive_metafiles(bundle, db, table) != MPORT_OK)
-		RETURN_CURRENT_ERROR;
+	if (archive_metafiles(bundle, db, table) != MPORT_OK) {
+		ret = mport_err_code();
+		goto DONE;
+	}
 
 	DIAG("Adding realfiles")
 	/* add all the other files */
-	if (archive_package_files(bundle, db, table) != MPORT_OK)
-		RETURN_CURRENT_ERROR;
+	if (archive_package_files(bundle, db, table) != MPORT_OK) {
+		ret = mport_err_code();
+		goto DONE;
+	}
 
 	DIAG("Realfiles complete")
 
-	if (mport_bundle_write_finish(bundle) != MPORT_OK)
-		RETURN_CURRENT_ERROR;
+	ret = mport_bundle_write_finish(bundle);
+	bundle = NULL; /* finish frees the bundle on success and failure */
 
-	/* attempt removal of tmpdir, ignore errors. */
-	mport_rmtree(tmpdir);
+DONE:
+	if (bundle != NULL)
+		(void)mport_bundle_write_finish(bundle);
+	if (db != NULL)
+		sqlite3_close(db);
+	free_table(table);
+	free(dbfile);
+	/* attempt removal of the created tmpdir, ignore errors. */
+	if (madedir != NULL)
+		mport_rmtree(madedir);
 
-	return MPORT_OK;
+	return ret;
 }
 
 /* This function goes through each file, and builds up the merged database as
@@ -592,11 +641,14 @@ find_in_table(struct table_entry **table, const char *name)
 static uint32_t
 SuperFastHash(const char *data)
 {
+	if (data == NULL)
+		return 0;
+
 	int len = strlen(data);
 	uint32_t hash = len, tmp;
 	int rem;
 
-	if (len <= 0 || data == NULL)
+	if (len <= 0)
 		return 0;
 
 	rem = len & 3;

@@ -162,7 +162,10 @@ mport_annotation_list(mportInstance *mport, const char *pkg, char ***tags, int *
 	}
 
 	sqlite3_finalize(stmt);
-	*tag_count = count;
+	/* report the number actually populated; if rows were deleted between
+	   the COUNT and this SELECT, i < count and the remaining malloc'd slots
+	   are uninitialized and must not be handed to the caller. */
+	*tag_count = i;
 
 	return MPORT_OK;
 }

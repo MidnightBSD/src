@@ -5,7 +5,12 @@ test_suite("mport")
 atf_test_program{name="mport_create_test", }
 atf_test_program{name="mport_libexec_test", }
 atf_test_program{name="mport_cli_test", }
+atf_test_program{name="mport_db_test", }
 atf_test_program{name="mport_fetch_test", }
+atf_test_program{name="mport_index_test", }
+atf_test_program{name="mport_install_test", }
 atf_test_program{name="mport_osrelease_test", }
 atf_test_program{name="mport_pkgmeta_test", }
+atf_test_program{name="mport_precheck_test", }
 atf_test_program{name="mport_util_test", }
+atf_test_program{name="mport_version_test", }

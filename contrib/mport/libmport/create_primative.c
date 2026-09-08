@@ -123,8 +123,10 @@ create_stub_db(mportInstance *mport, sqlite3 **db, const char *tmpdir)
 	char file[FILENAME_MAX];
 	(void)snprintf(file, FILENAME_MAX, "%s/%s", tmpdir, MPORT_STUB_DB_FILE);
 	if (sqlite3_open(file, db) != SQLITE_OK) {
-		sqlite3_close(*db);
+		/* capture the message before closing; errmsg is invalid afterwards */
 		error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(*db));
+		sqlite3_close(*db);
+		*db = NULL;
 	}
 
 	if (error_code != MPORT_OK)
@@ -153,6 +155,9 @@ insert_assetlist(
 	if (mport_db_prepare(db, &stmnt, sql) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
+	/* STAILQ_FOREACH keeps the iterator non-null in the body; cppcheck can't
+	 * model the macro. */
+	/* cppcheck-suppress-begin nullPointer */
 	STAILQ_FOREACH (e, assetlist, next) {
 		if (e->type == ASSET_COMMENT)
 			continue;
@@ -251,6 +256,7 @@ insert_assetlist(
 		sqlite3_clear_bindings(stmnt);
 		sqlite3_reset(stmnt);
 	}
+	/* cppcheck-suppress-end nullPointer */
 
 	sqlite3_finalize(stmnt);
 
@@ -730,6 +736,9 @@ archive_assetlistfiles(mportBundleWrite *bundle, mportPackageMeta *pack, mportCr
 	char filename[FILENAME_MAX];
 	char *cwd = pack->prefix;
 
+	/* STAILQ_FOREACH keeps the iterator non-null in the body; cppcheck can't
+	 * model the macro. */
+	/* cppcheck-suppress-begin nullPointer */
 	STAILQ_FOREACH (e, assetlist, next) {
 		if (e->type == ASSET_CWD)
 			cwd = e->data == NULL ? pack->prefix : e->data;
@@ -766,6 +775,7 @@ archive_assetlistfiles(mportBundleWrite *bundle, mportPackageMeta *pack, mportCr
 		if (mport_bundle_write_add_file(bundle, filename, e->data) != MPORT_OK)
 			RETURN_CURRENT_ERROR;
 	}
+	/* cppcheck-suppress-end nullPointer */
 
 	return MPORT_OK;
 }

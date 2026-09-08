@@ -70,6 +70,7 @@ diag(const char *fmt, ...)
 #endif
 
 static void usage(void);
+static void truncate_at_whitespace(/*@notnull@*/ char *path);
 static int check_fake(/*@notnull@*/ mportAssetList *, /*@notnull@*/ const char *,
     /*@notnull@*/ const char *,
     /*@null@*/ const char *);
@@ -82,6 +83,26 @@ static int check_missing_from_plist(/*@null@*/ const char *path,
 static void check_for_missing_files(/*@notnull@*/ const char *destdir,
     /*@notnull@*/ const char *prefix,
     /*@notnull@*/ mportAssetList *assetlist);
+
+/*
+ * Sample assets may carry both a source and a destination in a single data
+ * field, separated by whitespace ("@sample source target").  Only the source
+ * names a file that exists in the stage directory, so trim anything from the
+ * first space or tab onwards.  libmport does the same in create_primative.c,
+ * bundle_read_install_pkg.c and check_preconditions.c.
+ */
+static void
+truncate_at_whitespace(char *path)
+{
+	char *sp;
+
+	for (sp = path; *sp != '\0'; sp++) {
+		if (*sp == ' ' || *sp == '\t') {
+			*sp = '\0';
+			break;
+		}
+	}
+}
 
 // Global variables to hold the destdir and assetlist for comparison
 static /*@null@*/ /*@observer@*/ const char *global_destdir;
@@ -255,6 +276,9 @@ check_fake(mportAssetList *assetlist, const char *destdir, const char *prefix, c
 			else
 				(void)snprintf(
 				    file, FILENAME_MAX, "%s%s/%s", destdir, cwd, e->data);
+
+			if (e->type == ASSET_SAMPLE || e->type == ASSET_SAMPLE_OWNER_MODE)
+				truncate_at_whitespace(file);
 		}
 
 		if (e->type == ASSET_DIR) {
@@ -303,6 +327,9 @@ check_fake(mportAssetList *assetlist, const char *destdir, const char *prefix, c
 
 		if (lstat(file, &st) != 0) {
 			(void)snprintf(file, FILENAME_MAX, "%s/%s", cwd, e->data);
+
+			if (e->type == ASSET_SAMPLE || e->type == ASSET_SAMPLE_OWNER_MODE)
+				truncate_at_whitespace(file);
 
 			if (lstat(file, &st) == 0) {
 				(void)printf("		%s installed in %s\n", e->data, cwd);
@@ -523,14 +550,26 @@ is_in_plist(const char *relative_path, const char *prefix)
 			continue; // Skip entries with NULL data
 		}
 
+		/*
+		 * A sample asset's data may be "source target"; only the source is
+		 * staged, so compare against that alone.  Without this, every
+		 * two-argument @sample entry reports its staged file as missing
+		 * from the plist.
+		 */
+		char data[FILENAME_MAX];
+		(void)strlcpy(data, e->data, sizeof(data));
+		if (e->type == ASSET_SAMPLE || e->type == ASSET_SAMPLE_OWNER_MODE) {
+			truncate_at_whitespace(data);
+		}
+
 		// Check for an exact match (absolute path)
-		if (strcmp(e->data, relative_path) == 0) {
+		if (strcmp(data, relative_path) == 0) {
 			return true;
 		}
 
 		// Check for a match relative to the prefix
 		char prefixed_path[FILENAME_MAX];
-		snprintf(prefixed_path, sizeof(prefixed_path), "%s/%s", prefix, e->data);
+		snprintf(prefixed_path, sizeof(prefixed_path), "%s/%s", prefix, data);
 		if (strcmp(prefixed_path, relative_path) == 0) {
 			return true;
 		}
