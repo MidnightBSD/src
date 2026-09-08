@@ -38,6 +38,7 @@
 #include <sha256.h>
 #include <stdlib.h>
 #include <libgen.h>
+#include <fcntl.h>
 #include <syslog.h>
 #include <stdarg.h>
 
@@ -74,6 +75,44 @@ static void warn_ignored_rmdir_error(/*@notnull@*/ mportInstance *, /*@notnull@*
 static bool is_safe_to_delete_dir(mportInstance *, mportPackageMeta *, const char *, const char *);
 static int build_info_dir_path(
     /*@notnull@*/ mportPackageMeta *, /*@null@*/ const char *, /*@out@*/ char *, size_t);
+
+static int
+unlink_if_unchanged(const char *path, const struct stat *expected)
+{
+	char parent[FILENAME_MAX];
+	char *name;
+	int parentfd;
+	struct stat current;
+
+	if (path == NULL || expected == NULL)
+		return -1;
+
+	strlcpy(parent, path, sizeof(parent));
+	name = strrchr(parent, '/');
+	if (name == NULL) {
+		strlcpy(parent, ".", sizeof(parent));
+		name = (char *)path;
+	} else {
+		*name++ = '\0';
+		if (parent[0] == '\0')
+			strlcpy(parent, "/", sizeof(parent));
+	}
+
+	parentfd = open(parent, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+	if (parentfd == -1)
+		return -1;
+
+	if (fstatat(parentfd, name, &current, AT_SYMLINK_NOFOLLOW) != 0 ||
+	    current.st_dev != expected->st_dev || current.st_ino != expected->st_ino) {
+		close(parentfd);
+		errno = EAGAIN;
+		return -1;
+	}
+
+	int ret = unlinkat(parentfd, name, 0);
+	close(parentfd);
+	return ret;
+}
 
 MPORT_PUBLIC_API int
 mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
@@ -190,7 +229,7 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 
 			// remove the file if it is empty
 			if (S_ISREG(st.st_mode) && st.st_size == 0) {
-				if (unlink(file) != 0)
+				if (unlink_if_unchanged(file, &st) != 0)
 					mport_call_msg_cb(mport, "Could not unlink %s: %s", file,
 					    strerror(errno));
 			}
@@ -218,19 +257,19 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 				if (checksum == NULL) {
 					mport_call_msg_cb(mport, "Checksum mismatch: %s", file);
 				} else if (strlen(checksum) < 34) {
+					/* hash is a stack buffer, only written on success;
+					   don't strcmp it if MD5File failed. */
 					if (MD5File(file, hash) == NULL)
 						mport_call_msg_cb(mport, "Can't MD5 %s: %s", file,
 						    strerror(errno));
-
-					if (hash == NULL || strcmp(hash, checksum) != 0)
+					else if (strcmp(hash, checksum) != 0)
 						mport_call_msg_cb(
 						    mport, "Checksum mismatch: %s", file);
 				} else {
 					if (SHA256_File(file, hash) == NULL)
 						mport_call_msg_cb(mport, "Can't SHA256 %s: %s",
 						    file, strerror(errno));
-
-					if (hash == NULL || strcmp(hash, checksum) != 0)
+					else if (strcmp(hash, checksum) != 0)
 						mport_call_msg_cb(
 						    mport, "Checksum mismatch: %s", file);
 				}
@@ -286,13 +325,16 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 
 					if (dest_path_set && mport_file_exists(dest_path)) {
 						bool hashes_match = false;
-						if (strlen(checksum) < 34) {
+						/* checksum may be NULL, and hash is only computed
+						   above when it is not; without it we cannot
+						   verify, so treat the sample as unmatched. */
+						if (checksum != NULL && strlen(checksum) < 34) {
 							if (MD5File(dest_path, sample_hash) !=
 								NULL &&
 							    strcmp(sample_hash, hash) == 0) {
 								hashes_match = true;
 							}
-						} else {
+						} else if (checksum != NULL) {
 							if (SHA256_File(dest_path, sample_hash) !=
 								NULL &&
 							    strcmp(sample_hash, hash) == 0) {
@@ -314,7 +356,7 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 				}
 			}
 
-			if (unlink(file) != 0)
+			if (unlink_if_unchanged(file, &st) != 0)
 				mport_call_msg_cb(
 				    mport, "Could not unlink %s: %s", file, strerror(errno));
 
@@ -501,7 +543,8 @@ build_info_dir_path(
 			RETURN_ERROR(MPORT_ERR_FATAL, "Info asset path is too long.");
 	} else {
 		if (pkg->prefix == NULL)
-			RETURN_ERROR(MPORT_ERR_FATAL, "Package prefix is undefined for info asset.");
+			RETURN_ERROR(
+			    MPORT_ERR_FATAL, "Package prefix is undefined for info asset.");
 		if (snprintf(info_path, sizeof(info_path), "%s/%s", pkg->prefix, data) >=
 		    (int)sizeof(info_path)) {
 			RETURN_ERROR(MPORT_ERR_FATAL, "Info asset path is too long.");
@@ -737,12 +780,12 @@ run_pkg_deinstall(mportInstance *mport, mportPackageMeta *pack, const char *mode
 	char command_file[FILENAME_MAX];
 	int ret;
 
-	if (mport_build_infrastructure_path(mport, pack, MPORT_DEINSTALL_FILE, true, file,
-		sizeof(file)) != MPORT_OK)
+	if (mport_build_infrastructure_path(
+		mport, pack, MPORT_DEINSTALL_FILE, true, file, sizeof(file)) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
-	if (mport_build_infrastructure_path(mport, pack, MPORT_DEINSTALL_FILE, false,
-		command_file, sizeof(command_file)) != MPORT_OK)
+	if (mport_build_infrastructure_path(mport, pack, MPORT_DEINSTALL_FILE, false, command_file,
+		sizeof(command_file)) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
 	if (mport_file_exists(file)) {

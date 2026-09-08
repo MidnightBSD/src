@@ -301,6 +301,8 @@ int mport_index_get(mportInstance *);
 int mport_index_check(mportInstance *, mportPackageMeta *);
 int mport_index_list(mportInstance *, mportIndexEntry ***);
 int mport_index_lookup_pkgname(mportInstance *, const char *, mportIndexEntry ***);
+int mport_index_get_default_version(/*@notnull@*/ mportInstance *,
+    /*@notnull@*/ const char *, /*@out@*/ char **);
 int mport_index_search(mportInstance *, mportIndexEntry ***, const char *, ...);
 int mport_index_search_term(mportInstance *, mportIndexEntry ***, char *);
 void mport_index_entry_free_vec(mportIndexEntry **);

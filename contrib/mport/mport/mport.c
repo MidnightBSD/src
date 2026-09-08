@@ -141,6 +141,11 @@ updateMany(mportInstance *mport, int argc, char **argv)
 
 	if (argc > 1 && strchr(argv[1], '*') != NULL) {
 		char *pkg = mport_string_replace(argv[1], "*", "%");
+		if (pkg == NULL) {
+			warnx("Out of memory");
+			free(results);
+			return (MPORT_ERR_FATAL);
+		}
 		if (mport_pkgmeta_search_master(mport, &results[0], "pkg like %Q", pkg) !=
 		    MPORT_OK) {
 			warnx("%s", mport_err_string());
@@ -322,6 +327,8 @@ main(int argc, char *argv[])
 	}
 
 	mport = mport_instance_new();
+	if (mport == NULL)
+		errx(1, "Out of memory.");
 
 	if (mport_instance_init(mport, NULL, outputPath, noIndex != 0,
 		mport_verbosity(quiet, verbose, brief)) != MPORT_OK) {
@@ -352,6 +359,10 @@ main(int argc, char *argv[])
 
 		if (local_argc > 1) {
 			int ch2;
+#if defined(__MidnightBSD__)
+			optreset = 1;
+#endif
+			optind = 1;
 			while ((ch2 = getopt(local_argc, local_argv, "A")) != -1) {
 				switch (ch2) {
 				case 'A':
@@ -366,6 +377,7 @@ main(int argc, char *argv[])
 		mport->noIndex = true;
 		mport->offline = true;
 
+		resultCode = MPORT_OK;
 		for (i = 0; i < local_argc; i++) {
 			tempResultCode = add(
 			    mport, local_argv[i], aflag == 1 ? MPORT_AUTOMATIC : MPORT_EXPLICIT);
@@ -481,6 +493,7 @@ main(int argc, char *argv[])
 		if (aflag) {
 			resultCode = mport_download(mport, NULL, true, false, &path);
 		} else {
+			resultCode = MPORT_OK;
 			for (i = 0; i < local_argc; i++) {
 				tempResultCode =
 				    mport_download(mport, local_argv[i], false, dflag == 1, &path);
@@ -529,17 +542,16 @@ main(int argc, char *argv[])
 			local_argv += optind;
 		}
 
-		if (local_argc > 1 && Sflag) {
-			int index = quiet == true ? 2 : 0;
-			if (aflag == 0) {
-				resultCode =
-				    annotate_show(mport, local_argv[index], local_argv[index + 1]);
-			} else {
-				resultCode = annotate_list(mport, local_argv[1]);
-			}
-		} else if (local_argc > 1 && Dflag) {
+		int index = quiet == true ? 2 : 0;
+		/* annotate_* require non-NULL args and deref them; only call when
+		   the accessed positions are real (in-bounds, non-NULL) args. */
+		if (Sflag && aflag && local_argc > 1) {
+			resultCode = annotate_list(mport, local_argv[1]);
+		} else if (Sflag && !aflag && local_argc > index + 1) {
+			resultCode = annotate_show(mport, local_argv[index], local_argv[index + 1]);
+		} else if (Dflag && local_argc > 2) {
 			resultCode = annotate_delete(mport, local_argv[1], local_argv[2]);
-		} else if (local_argc > 2 && Aflag) {
+		} else if (Aflag && local_argc > 3) {
 			resultCode =
 			    annotate_add(mport, local_argv[1], local_argv[2], local_argv[3]);
 		} else {
@@ -577,19 +589,27 @@ main(int argc, char *argv[])
 		free(flag);
 		free(buf);
 	} else if (!strcmp(cmd, "import")) {
-		loadIndex(mport);
-		resultCode = mport_import(mport, argv[2]);
+		if (argc > 1) {
+			loadIndex(mport);
+			resultCode = mport_import(mport, argv[1]);
+		} else {
+			usage();
+		}
 	} else if (!strcmp(cmd, "export")) {
-		resultCode = mport_export(mport, argv[2]);
+		if (argc > 1) {
+			resultCode = mport_export(mport, argv[1]);
+		} else {
+			usage();
+		}
 	} else if (!strcmp(cmd, "lock")) {
 		if (argc > 1) {
-			lock(mport, argv[1]);
+			resultCode = lock(mport, argv[1]);
 		} else {
 			usage();
 		}
 	} else if (!strcmp(cmd, "unlock")) {
 		if (argc > 1) {
-			unlock(mport, argv[1]);
+			resultCode = unlock(mport, argv[1]);
 		} else {
 			usage();
 		}
@@ -640,7 +660,9 @@ main(int argc, char *argv[])
 
 		if (eflag) {
 			mportPackageMeta **packs = NULL;
-			if (mport_pkgmeta_search_master(mport, &packs, "LOWER(pkg)=LOWER(%Q)", local_argv[0]) == MPORT_OK && packs != NULL) {
+			if (mport_pkgmeta_search_master(
+				mport, &packs, "LOWER(pkg)=LOWER(%Q)", local_argv[0]) == MPORT_OK &&
+			    packs != NULL) {
 				mport_pkgmeta_vec_free(packs);
 				resultCode = 0;
 			} else {
@@ -711,8 +733,16 @@ main(int argc, char *argv[])
 			}
 			resultCode = MPORT_OK;
 		} else if (!strcmp(argv[1], "get")) {
+			if (argc < 3) {
+				mport_instance_free(mport);
+				usage();
+			}
 			resultCode = configGet(mport, argv[2]);
 		} else if (!strcmp(argv[1], "set")) {
+			if (argc < 4) {
+				mport_instance_free(mport);
+				usage();
+			}
 			resultCode = configSet(mport, argv[2], argv[3]);
 		}
 	} else if (!strcmp(cmd, "mirror")) {
@@ -942,7 +972,7 @@ show_version(/*@null@*/ mportInstance *mport, int count)
 		version = mport_version_short(mport);
 	else
 		version = mport_version(mport);
-	fprintf(stderr, "%s", version);
+	fprintf(stderr, "%s", version != NULL ? version : "");
 	if (mport == NULL)
 		fprintf(stderr, "(Host OS version, not configured)\n\n");
 	free(version);
@@ -987,17 +1017,23 @@ selectMirror(/*@notnull@*/ mportInstance *mport)
 	const char *country = "us";
 
 	while (mirrorEntry != NULL && *mirrorEntry != NULL) {
-		char *p = strchr((*mirrorEntry)->url, '/');
-		if (p != NULL) {
-			*p = '\0';
-			p++;
-			p++;
-		}
-		char *end = strchr(p, '/');
+		const char *url = (*mirrorEntry)->url;
+		/* Extract the host from "scheme://host/path"; tolerate a
+		   missing scheme or path in remote-supplied mirror data. */
+		const char *host = strstr(url, "://");
+		host = (host != NULL) ? host + 3 : url;
+
+		strlcpy(hostname, host, sizeof(hostname));
+		char *end = strchr(hostname, '/');
 		if (end != NULL) {
 			*end = '\0';
 		}
-		strlcpy(hostname, p, sizeof(hostname));
+
+		if (hostname[0] == '\0') {
+			mirrorEntry++;
+			continue;
+		}
+
 		mport_call_msg_cb(mport, "Trying mirror %s %s", (*mirrorEntry)->country, hostname);
 		long rtt = ping(hostname);
 
@@ -1236,6 +1272,8 @@ which(/*@notnull@*/ mportInstance *mport, /*@null@*/ const char *filePath, bool 
 		}
 	}
 
+	mport_pkgmeta_free(pack);
+
 	return (0);
 }
 
@@ -1243,7 +1281,26 @@ static int
 add(/*@notnull@*/ mportInstance *mport, /*@notnull@*/ const char *filename,
     mportAutomatic automatic)
 {
-	return mport_install_primative(mport, filename, NULL, automatic);
+	struct stat sb;
+	int resultCode;
+
+	/* Report bad package files here; the bundle open path below fails
+	   without emitting a message of its own. */
+	if (stat(filename, &sb) != 0) {
+		warn("%s", filename);
+		return (MPORT_ERR_FATAL);
+	}
+
+	if (!S_ISREG(sb.st_mode)) {
+		warnx("%s: not a regular file", filename);
+		return (MPORT_ERR_FATAL);
+	}
+
+	resultCode = mport_install_primative(mport, filename, NULL, automatic);
+	if (resultCode != MPORT_OK)
+		warnx("%s", mport_err_string());
+
+	return (resultCode);
 }
 
 static bool
@@ -1420,7 +1477,18 @@ install(/*@notnull@*/ mportInstance *mport, /*@notnull@*/ const char *packageNam
 			item++;
 			i2++;
 		}
-		while (scanf("%d", &choice) < 1 || choice > item || choice < 0) {
+		int scan_result;
+		while ((scan_result = scanf("%d", &choice)) < 1 || choice >= item || choice < 0) {
+			if (scan_result == EOF) {
+				fprintf(stderr, "\nNo selection made.\n");
+				mport_index_entry_free_vec(ie);
+				exit(4);
+			}
+			/* scanf left the offending input in the buffer; discard the
+			   rest of the line so we don't spin forever. */
+			int ch;
+			while ((ch = getchar()) != '\n' && ch != EOF)
+				;
 			fprintf(stderr, "Please select an entry 0 - %d\n", item - 1);
 		}
 		item = 0;

@@ -146,7 +146,6 @@ mport_pkgmeta_vec_free(mportPackageMeta **vec)
 	}
 
 	free(vec);
-	vec = NULL;
 }
 
 /* mport_pkgmeta_read_stub(mportInstance *mport, mportPackageMeta ***pack)
@@ -231,7 +230,11 @@ mport_pkgmeta_search_master(mportInstance *mport, mportPackageMeta ***ref, const
 	int ret;
 	int len;
 	char *where;
-	sqlite3 *db = mport->db;
+	sqlite3 *db;
+
+	if (mport == NULL)
+		RETURN_ERROR(MPORT_ERR_FATAL, "mport not initialized");
+	db = mport->db;
 
 	va_start(args, fmt);
 	where = sqlite3_vmprintf(fmt, args);
@@ -239,9 +242,6 @@ mport_pkgmeta_search_master(mportInstance *mport, mportPackageMeta ***ref, const
 
 	if (where == NULL)
 		RETURN_ERROR(MPORT_ERR_FATAL, "Could not build where clause");
-
-	if (mport == NULL)
-		RETURN_ERROR(MPORT_ERR_FATAL, "mport not initialized");
 
 	len = mport_pkgmeta_count(mport, WHERE, where);
 
@@ -533,34 +533,57 @@ populate_vec_from_stmt(mportPackageMeta ***ref, int len, sqlite3 *db, sqlite3_st
 {
 	mportPackageMeta **vec = NULL;
 	int done = 0;
-	vec = (mportPackageMeta **)calloc((1 + len), sizeof(mportPackageMeta *));
+	int count = 0;
+
+	if (len < 0)
+		len = 0;
+
+	vec = (mportPackageMeta **)calloc((size_t)(1 + len), sizeof(mportPackageMeta *));
+	if (vec == NULL) {
+		*ref = NULL;
+		RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't allocate package vector.");
+	}
 	*ref = vec;
 
 	while (!done) {
 		switch (sqlite3_step(stmt)) {
 		case SQLITE_ROW:
+			/* len came from a separate COUNT query; if a concurrent
+			   insert produced more rows, stop rather than write past
+			   the allocation. */
+			if (count >= len) {
+				done++;
+				break;
+			}
 			*vec = mport_pkgmeta_new();
 			if (*vec == NULL) {
-				RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't allocate meta.");
+				SET_ERROR(MPORT_ERR_FATAL, "Couldn't allocate meta.");
+				goto error;
 			}
-			if (populate_meta_from_stmt(*vec, db, stmt) != MPORT_OK) {
-				RETURN_CURRENT_ERROR;
-			}
+			if (populate_meta_from_stmt(*vec, db, stmt) != MPORT_OK)
+				goto error;
 			vec++;
+			count++;
 			break;
 		case SQLITE_DONE:
-			/* set the last cell in the array to null */
-			*vec = NULL;
 			done++;
 			break;
 		default:
-			RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-			break; /* not reached */
+			SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+			goto error;
 		}
 	}
 
-	/* not reached */
+	/* set the last cell in the array to null */
+	*vec = NULL;
 	return MPORT_OK;
+
+error:
+	/* free the partial vector so callers that treat the error as
+	   "nothing returned" don't leak it. */
+	mport_pkgmeta_vec_free(*ref);
+	*ref = NULL;
+	return mport_err_code();
 }
 
 static int

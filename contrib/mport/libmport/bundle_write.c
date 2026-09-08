@@ -169,11 +169,15 @@ mport_bundle_write_add_file(mportBundleWrite *bundle, const char *filename, cons
 	}
 
 	entry = archive_entry_new();
+	if (entry == NULL)
+		RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't allocate archive entry");
 	archive_entry_set_pathname(entry, path);
 
 	if (!S_ISDIR(st.st_mode) && (st.st_nlink > 1))
-		if (lookup_hardlink(bundle, entry, &st) != MPORT_OK)
-			RETURN_CURRENT_ERROR;
+		if (lookup_hardlink(bundle, entry, &st) != MPORT_OK) {
+			ret = mport_err_code();
+			goto cleanup;
+		}
 
 	if (S_ISLNK(st.st_mode)) {
 		/* we have us a symlink */
@@ -182,8 +186,10 @@ mport_bundle_write_add_file(mportBundleWrite *bundle, const char *filename, cons
 
 		linklen = readlink(filename, linkdata, PATH_MAX);
 
-		if (linklen < 0)
-			RETURN_ERROR(MPORT_ERR_FATAL, strerror(errno));
+		if (linklen < 0) {
+			ret = SET_ERROR(MPORT_ERR_FATAL, strerror(errno));
+			goto cleanup;
+		}
 
 		linkdata[linklen] = '\0';
 
@@ -203,11 +209,14 @@ mport_bundle_write_add_file(mportBundleWrite *bundle, const char *filename, cons
 	}
 	/* make sure we can open the file before its header is put in the archive */
 	else if ((fd = open(filename, O_RDONLY)) == -1) {
-		RETURN_ERROR(MPORT_ERR_FATAL, strerror(errno));
+		ret = SET_ERROR(MPORT_ERR_FATAL, strerror(errno));
+		goto cleanup;
 	}
 
-	if (archive_write_header(bundle->archive, entry) != ARCHIVE_OK)
-		RETURN_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));
+	if (archive_write_header(bundle->archive, entry) != ARCHIVE_OK) {
+		ret = SET_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));
+		goto cleanup;
+	}
 
 	/* write the data to the archive if there is data to write */
 	if (archive_entry_size(entry) > 0 && fd > -1) {
@@ -222,6 +231,7 @@ mport_bundle_write_add_file(mportBundleWrite *bundle, const char *filename, cons
 		}
 	}
 
+cleanup:
 	archive_entry_free(entry);
 
 	if (fd > -1)
@@ -300,17 +310,21 @@ lookup_hardlink(mportBundleWrite *bundle, struct archive_entry *entry, const str
 
 		if (new_buckets != NULL) {
 			for (i = 0; i < links->nbuckets; i++) {
-				if (links->buckets[i] != NULL) {
-					/* remove old from bucket */
-					node = links->buckets[i];
+				node = links->buckets[i];
+				while (node != NULL) {
+					/* save the rest of the old chain before we
+					   overwrite node->next for the new bucket;
+					   otherwise every non-head node is orphaned. */
+					struct link_node *next_node = node->next;
 
 					hash = (node->dev ^ node->ino) % new_size;
-					if (new_buckets[hash] != NULL)
-						new_buckets[hash]->previous = node;
-
 					node->next = new_buckets[hash];
 					node->previous = NULL;
+					if (new_buckets[hash] != NULL)
+						new_buckets[hash]->previous = node;
 					new_buckets[hash] = node;
+
+					node = next_node;
 				}
 			}
 			free(links->buckets);
@@ -379,21 +393,25 @@ free_linktable(struct links_table *links)
 	size_t i;
 	struct link_node *node;
 
-	if ((links == NULL) || (links->buckets == NULL))
+	if (links == NULL)
 		return;
 
-	for (i = 0; i < links->nbuckets; i++) {
-		while (links->buckets[i] != NULL) {
-			node = links->buckets[i];
-			links->buckets[i] = node->next;
+	if (links->buckets != NULL) {
+		for (i = 0; i < links->nbuckets; i++) {
+			while (links->buckets[i] != NULL) {
+				node = links->buckets[i];
+				links->buckets[i] = node->next;
 
-			if (node->name != NULL)
-				free(node->name);
+				if (node->name != NULL)
+					free(node->name);
 
-			free(node);
+				free(node);
+			}
 		}
+
+		free(links->buckets);
+		links->buckets = NULL;
 	}
 
-	free(links->buckets);
-	links->buckets = NULL;
+	free(links);
 }

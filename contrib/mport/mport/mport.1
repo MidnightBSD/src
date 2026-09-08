@@ -247,6 +247,10 @@ package files.
 If
 .Fl A
 is specified, mark the installed package as automatic.
+If the package is already installed and the local package file contains a newer
+version,
+.Nm
+updates it by removing the installed package and installing the local file.
 For repository installs, use
 .Cm install .
 .It Cm annotate Op Fl a Op Fl q Fl S Ar package Ar tag
@@ -491,6 +495,11 @@ Remove a package lock.
 .It Cm update Ar package ...
 Update one or more installed packages.
 Wildcard arguments are supported.
+When an installed Python, PHP, or version-prefixed Ruby package uses an older
+repository default,
+.Nm
+offers to switch it to the package built for the current default.
+If both versions remain available, the old version may instead be retained.
 .It Cm upgrade
 Upgrade all installed packages to the newest available versions.
 .It Cm verify Op Fl r Op Ar package ...

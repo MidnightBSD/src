@@ -57,7 +57,7 @@ struct ohash { };
 #define MPORT_MASTER_VERSION 14
 #define MPORT_BUNDLE_VERSION 6
 #define MPORT_BUNDLE_VERSION_STR "6"
-#define MPORT_VERSION "2.8.0"
+#define MPORT_VERSION "2.8.1"
 
 #define MPORT_SETTING_MIRROR_REGION "mirror_region"
 #define MPORT_SETTING_TARGET_OS "target_os"
@@ -108,6 +108,7 @@ bool mport_is_age_verified(mportInstance *mport, mportPackageMeta *pack);
 /* Utils */
 bool mport_starts_with(const char *, const char *);
 char *mport_hash_file(const char *);
+int mport_verify_hash_fd(int, /*@notnull@*/ const char *);
 char *mport_extract_hash_from_file(const char *);
 int mport_copy_file(const char *, const char *);
 int mport_copy_fd(int, int);
@@ -141,6 +142,9 @@ char *mport_tokenize(char **args);
 char *mport_get_osreleasedate(void);
 int mport_index_select_pkgname(
     mportInstance *, const char *, const char *, mportIndexEntry ***, mportIndexEntry **);
+int mport_index_resolve_default_pkgname(/*@notnull@*/ mportInstance *,
+    /*@notnull@*/ const char *, /*@out@*/ char **);
+void mport_index_moved_entry_free_vec(mportIndexMovedEntry **);
 
 enum parse_states {
 	START,
@@ -174,6 +178,7 @@ int mport_bundle_write_add_entry(mportBundleWrite *, mportBundleRead *, struct a
 
 mportBundleRead *mport_bundle_read_new(void);
 int mport_bundle_read_init(mportBundleRead *, const char *);
+int mport_bundle_read_init_fd(/*@notnull@*/ mportBundleRead *, int);
 int mport_bundle_read_finish(mportInstance *, mportBundleRead *);
 int mport_bundle_read_prep_for_install(mportInstance *, mportBundleRead *);
 int mport_bundle_read_extract_metafiles(mportBundleRead *, char **);
@@ -184,6 +189,8 @@ int mport_bundle_read_install_pkg(mportInstance *, mportBundleRead *, mportPacka
 int mport_bundle_read_update_pkg(mportInstance *, mportBundleRead *, mportPackageMeta *);
 
 int mport_install_depends(mportInstance *, const char *, const char *, mportAutomatic);
+int mport_install_primative_fd(
+    /*@notnull@*/ mportInstance *, int, /*@null@*/ const char *, mportAutomatic);
 int mport_update_down(mportInstance *, mportPackageMeta *, struct ohash_info *, struct ohash *);
 
 /* version compare functions */
@@ -244,7 +251,11 @@ int mport_set_errx(int, const char *, ...);
 #error "Unable to detect arch!"
 #endif
 
-#if __MidnightBSD_version >= 400000
+#if __MidnightBSD_version >= 402000
+#define MPORT_OSVERSION "4.2"
+#elif __MidnightBSD_version >= 401000
+#define MPORT_OSVERSION "4.1"
+#elif __MidnightBSD_version >= 400000
 #define MPORT_OSVERSION "4.0"
 #elif __MidnightBSD_version >= 302000
 #define MPORT_OSVERSION "3.2"
