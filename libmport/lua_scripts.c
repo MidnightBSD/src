@@ -183,7 +183,7 @@ mport_lua_script_run(mportInstance *mport, mportPackageMeta *pkg, mport_lua_scri
 			/* parse and set arguments of the line is in the comments */
 			if (mport_starts_with("-- args: ", s->item)) {
 				char *walk, *begin, *line = NULL;
-				int spaces, argc = 0;
+				int argc = 0;
 				char **args = NULL;
 				char *args_base = NULL;
 
@@ -195,13 +195,18 @@ mport_lua_script_run(mportInstance *mport, mportPackageMeta *pkg, mport_lua_scri
 					line = strdup(begin);
 
 				if (line != NULL) {
-					spaces = mport_count_spaces(line);
-					args = calloc((spaces + 2), sizeof(char *));
+					/* mport_tokenize consumes at least one char per
+					   token, so the count cannot exceed the input
+					   length. A spaces-based size undercounts adjacent
+					   quoted tokens (e.g. "a""b""c") and overflowed
+					   args; size to the length and cap the loop. */
+					size_t cap = strlen(line) + 2;
+					args = calloc(cap, sizeof(char *));
 					if (args != NULL) {
 						args_base = strdup(line);
 						if (args_base != NULL) {
 							walk = args_base;
-							while (walk != NULL) {
+							while (walk != NULL && (size_t)argc < cap) {
 								args[argc++] =
 								    mport_tokenize(&walk);
 							}
@@ -239,6 +244,8 @@ mport_lua_script_run(mportInstance *mport, mportPackageMeta *pkg, mport_lua_scri
 		close(cur_pipe[1]);
 
 		ret = mport_script_run_child(mport, pid, &pstat, cur_pipe[0], "lua");
+
+		close(cur_pipe[0]);
 	}
 
 cleanup:
@@ -252,6 +259,7 @@ mport_lua_script_to_ucl(stringlist_t *scripts)
 	ucl_object_t *array;
 
 	array = ucl_object_typed_new(UCL_ARRAY);
+	/* cppcheck-suppress unknownMacro ; tll_foreach is a tllist loop macro */
 	tll_foreach(*scripts, s) ucl_array_append(array,
 	    ucl_object_fromstring_common(
 		s->item, strlen(s->item), UCL_STRING_RAW | UCL_STRING_TRIM));
@@ -315,13 +323,19 @@ mport_lua_script_read_file(
 	if ((file = fopen(filename, "re")) == NULL)
 		RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't open %s: %s", filename, strerror(errno));
 
-	if ((buf = (char *)calloc((size_t)(st.st_size + 1), sizeof(char))) == NULL)
+	if ((buf = (char *)calloc((size_t)(st.st_size + 1), sizeof(char))) == NULL) {
+		fclose(file);
 		RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+	}
 
 	if (fread(buf, sizeof(char), (size_t)st.st_size, file) != (size_t)st.st_size) {
 		free(buf);
+		fclose(file);
 		RETURN_ERRORX(MPORT_ERR_FATAL, "Read error: %s", strerror(errno));
 	}
+
+	fclose(file);
+	file = NULL;
 
 	buf[st.st_size] = '\0';
 
@@ -344,6 +358,8 @@ mport_lua_script_read_file(
 
 		ucl_parser_free(parser);
 	}
+
+	free(buf);
 
 	return (MPORT_OK);
 }

@@ -41,37 +41,45 @@ mport_list_print(mportInstance *mport, mportListPrint *print)
 {
 
 	mportPackageMeta **packs = NULL;
+	mportPackageMeta **packs_orig = NULL;
 	mportIndexEntry **indexEntries = NULL;
 	mportIndexEntry **iestart = NULL;
 	mportIndexMovedEntry **movedEntries = NULL;
 	char *comment = NULL;
 	char *os_release = NULL;
 	char name_version[30];
+	int ret = MPORT_OK;
 
-	if (mport_pkgmeta_list(mport, &packs) != MPORT_OK) {
-		mport_pkgmeta_vec_free(packs);
+	if (mport_pkgmeta_list(mport, &packs_orig) != MPORT_OK) {
+		mport_pkgmeta_vec_free(packs_orig);
 		RETURN_CURRENT_ERROR;
 	}
 
-	if (packs == NULL) {
+	if (packs_orig == NULL) {
 		RETURN_ERROR(MPORT_ERR_WARN, "No packages installed matching.");
 	}
 
 	os_release = mport_get_osrelease(mport);
 	if (os_release == NULL) {
-		RETURN_ERROR(MPORT_ERR_WARN, "Unable to determine the OS release.");
+		ret = SET_ERROR(MPORT_ERR_WARN, "Unable to determine the OS release.");
+		goto DONE;
 	}
 
+	packs = packs_orig;
 	while (*packs != NULL) {
 		if (print->update) {
 			if (mport_index_lookup_pkgname(mport, (*packs)->name, &indexEntries) !=
 			    MPORT_OK) {
-				RETURN_ERRORX(MPORT_ERR_FATAL,
+				ret = SET_ERRORX(MPORT_ERR_FATAL,
 				    "Error looking up package name %s: %d %s", (*packs)->name,
 				    mport_err_code(), mport_err_string());
+				goto DONE;
 			}
 
 			if (indexEntries == NULL || *indexEntries == NULL) {
+				mport_index_entry_free_vec(indexEntries);
+				indexEntries = NULL;
+
 				if (mport_moved_lookup(mport, (*packs)->origin, &movedEntries) !=
 				    MPORT_OK) {
 					mport_call_msg_cb(mport,
@@ -86,7 +94,7 @@ mport_list_print(mportInstance *mport, mportListPrint *print)
 						mport_call_msg_cb(mport,
 						    "%-30s %9s     was moved to %s", (*packs)->name,
 						    (*packs)->version, (*movedEntries)->moved_to);
-						free(movedEntries);
+						mport_index_moved_entry_free_vec(movedEntries);
 						movedEntries = NULL;
 						packs++;
 						continue;
@@ -96,24 +104,27 @@ mport_list_print(mportInstance *mport, mportListPrint *print)
 						mport_call_msg_cb(mport,
 						    "%-30s %9s     expired on %s", (*packs)->name,
 						    (*packs)->version, (*movedEntries)->date);
-						free(movedEntries);
+						mport_index_moved_entry_free_vec(movedEntries);
 						movedEntries = NULL;
 						packs++;
 						continue;
 					}
 
-					free(movedEntries);
+					mport_index_moved_entry_free_vec(movedEntries);
 					movedEntries = NULL;
 				}
 
 				if (mport_index_lookup_pkgname(
 					mport, (*packs)->origin, &indexEntries) != MPORT_OK) {
-					RETURN_ERRORX(MPORT_ERR_FATAL,
+					ret = SET_ERRORX(MPORT_ERR_FATAL,
 					    "Error looking up package name %s: %d %s",
 					    (*packs)->name, mport_err_code(), mport_err_string());
+					goto DONE;
 				}
 
 				if (indexEntries == NULL || *indexEntries == NULL) {
+					mport_index_entry_free_vec(indexEntries);
+					indexEntries = NULL;
 					mport_call_msg_cb(mport,
 					    "%-30s %9s     is not part of the package repository.",
 					    (*packs)->name, (*packs)->version);
@@ -180,5 +191,12 @@ mport_list_print(mportInstance *mport, mportListPrint *print)
 
 	(mport->progress_free_cb)();
 
-	return (MPORT_OK);
+DONE:
+	mport_index_entry_free_vec(iestart);
+	mport_index_entry_free_vec(indexEntries);
+	mport_index_moved_entry_free_vec(movedEntries);
+	free(os_release);
+	mport_pkgmeta_vec_free(packs_orig);
+
+	return ret;
 }

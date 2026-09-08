@@ -97,7 +97,8 @@ mport_db_do(sqlite3 *db, const char *fmt, ...)
  *
  * A wrapper for preparing sqlite statements into statement structs.
  * This function returns MPORT_OK on success.  The sqlite3_stmt pointer
- * may be null if this function does not return MPORT_OK.
+ * is set to NULL on every path where this function does not return
+ * MPORT_OK, so callers may safely sqlite3_finalize() it in error handlers.
  */
 int
 mport_db_prepare(sqlite3 *db, sqlite3_stmt **stmt, const char *fmt, ...)
@@ -106,6 +107,8 @@ mport_db_prepare(sqlite3 *db, sqlite3_stmt **stmt, const char *fmt, ...)
 	char *sql = NULL;
 	int result = MPORT_OK;
 	char *err = NULL;
+
+	*stmt = NULL;
 
 	va_start(args, fmt);
 	sql = sqlite3_vmprintf(fmt, args);
@@ -149,6 +152,8 @@ mport_db_count(sqlite3 *db, int *count, const char *fmt, ...)
 	char *err = NULL;
 	int realCount = 0;
 
+	*count = 0;
+
 	va_start(args, fmt);
 	sql = sqlite3_vmprintf(fmt, args);
 	va_end(args);
@@ -178,9 +183,13 @@ mport_db_count(sqlite3 *db, int *count, const char *fmt, ...)
 	if (result != MPORT_OK)
 		return result;
 
+	/* A COUNT(*) query always yields exactly one row; a non-row step
+	   (e.g. SQLITE_BUSY) is an error. Report it rather than returning
+	   MPORT_OK with *count unset, which callers use as an allocation size. */
 	if (sqlite3_step(stmt) != SQLITE_ROW) {
+		SET_ERRORX(MPORT_ERR_FATAL, "sql error counting: %s", sqlite3_errmsg(db));
 		sqlite3_finalize(stmt);
-		return result;
+		return MPORT_ERR_FATAL;
 	}
 
 	realCount = sqlite3_column_int(stmt, 0);

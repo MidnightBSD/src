@@ -46,6 +46,8 @@ static int index_update_last_checked(mportInstance *);
 
 static int lookup_alias(mportInstance *, const char *, char **);
 static int lookup_alias_inverse(mportInstance *, const char *, char **);
+static int compact_default_version(const char *, char *, size_t);
+static int build_default_pkgname(const char *, const char *, const char *, char **);
 
 static int attach_index_db(sqlite3 *db);
 
@@ -216,6 +218,7 @@ MPORT_PUBLIC_API int
 mport_index_check(mportInstance *mport, mportPackageMeta *pack)
 {
 	mportIndexEntry **indexEntries = NULL, **indexEntries_orig = NULL;
+	char *default_pkgname = NULL;
 	int ret = 0;
 	bool used_origin = false;
 
@@ -225,6 +228,15 @@ mport_index_check(mportInstance *mport, mportPackageMeta *pack)
 
 	if (pack == NULL)
 		RETURN_ERROR(MPORT_ERR_FATAL, "pack not defined");
+
+	if (mport_index_resolve_default_pkgname(mport, pack->name, &default_pkgname) != MPORT_OK) {
+		SET_ERRORX(MPORT_ERR_WARN, "Error resolving default package for %s", pack->name);
+		return 0;
+	}
+	if (default_pkgname != NULL) {
+		free(default_pkgname);
+		return 2;
+	}
 
 	if (mport_index_lookup_pkgname(mport, pack->name, &indexEntries_orig) != MPORT_OK) {
 		SET_ERRORX(MPORT_ERR_WARN, "Error Looking up package name %s", pack->name);
@@ -331,35 +343,56 @@ mport_index_get_mirror_list(mportInstance *mport, char ***list_p, int *list_size
 	int ret, i;
 	int len;
 	sqlite3_stmt *stmt;
-	char *mirror_region;
+	char *mirror_region_setting;
+	const char *mirror_region;
 
-	mirror_region = mport_setting_get(mport, MPORT_SETTING_MIRROR_REGION);
-	if (mirror_region == NULL) {
-		mirror_region = "us";
-	}
+	/* mirror_region_setting owns heap memory; mirror_region may instead
+	   point at the "us" literal, so keep them separate for freeing. */
+	mirror_region_setting = mport_setting_get(mport, MPORT_SETTING_MIRROR_REGION);
+	mirror_region = (mirror_region_setting != NULL) ? mirror_region_setting : "us";
 
 	/* XXX the country is hard coded until a configuration system is created */
 	if (mport_db_count(mport->db, &len, "SELECT COUNT(*) FROM idx.mirrors WHERE country=%Q",
 		mirror_region) != MPORT_OK) {
+		free(mirror_region_setting);
 		RETURN_CURRENT_ERROR;
 	}
 
 	*list_size = len;
 	list = calloc((size_t)len + 1, sizeof(char *));
+	if (list == NULL) {
+		free(mirror_region_setting);
+		*list_p = NULL;
+		RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't allocate mirror list.");
+	}
 	*list_p = list;
 	i = 0;
 
 	if (mport_db_prepare(mport->db, &stmt, "SELECT mirror FROM idx.mirrors WHERE country=%Q",
 		mirror_region) != MPORT_OK) {
+		free(mirror_region_setting);
 		sqlite3_finalize(stmt);
 		RETURN_CURRENT_ERROR;
 	}
+
+	free(mirror_region_setting);
+	mirror_region_setting = NULL;
+	mirror_region = NULL;
 
 	while (1) {
 		ret = sqlite3_step(stmt);
 
 		if (ret == SQLITE_ROW) {
-			list[i] = strdup((const char *)sqlite3_column_text(stmt, 0));
+			const char *mirror = (const char *)sqlite3_column_text(stmt, 0);
+
+			/* Skip NULL or empty mirror URLs: they cannot be
+			 * fetched from and would only relocate the crash into
+			 * the URL-parsing consumer.
+			 */
+			if (mirror == NULL || mirror[0] == '\0')
+				continue;
+
+			list[i] = strdup(mirror);
 
 			if (list[i] == NULL) {
 				sqlite3_finalize(stmt);
@@ -369,6 +402,7 @@ mport_index_get_mirror_list(mportInstance *mport, char ***list_p, int *list_size
 			i++;
 		} else if (ret == SQLITE_DONE) {
 			list[i] = NULL;
+			*list_size = i;
 			break;
 		} else {
 			list[i] = NULL;
@@ -459,8 +493,15 @@ mport_index_mirror_list(mportInstance *mport, mportMirrorEntry ***entry_vec)
 				goto DONE;
 			}
 
-			strlcpy(e[i]->country, (const char *)sqlite3_column_text(stmt, 0), 5);
-			strlcpy(e[i]->url, (const char *)sqlite3_column_text(stmt, 1), 256);
+			const unsigned char *country = sqlite3_column_text(stmt, 0);
+			const unsigned char *url = sqlite3_column_text(stmt, 1);
+			/* Downloaded index columns are nullable; calloc left the
+			   fields as empty strings, so only copy non-NULL values. */
+			if (country != NULL)
+				strlcpy(
+				    e[i]->country, (const char *)country, sizeof(e[i]->country));
+			if (url != NULL)
+				strlcpy(e[i]->url, (const char *)url, sizeof(e[i]->url));
 			i++;
 		} else if (ret == SQLITE_DONE) {
 			break;
@@ -566,6 +607,196 @@ DONE:
 	sqlite3_finalize(stmt);
 
 	return ret;
+}
+
+/*
+ * Return an owned copy of a default version stored in the attached index.
+ * Older indexes do not contain default_versions; treat that as an unavailable
+ * optional feature rather than an index error.
+ */
+MPORT_PUBLIC_API int
+mport_index_get_default_version(
+    /*@notnull@*/ mportInstance *mport, /*@notnull@*/ const char *name,
+    /*@out@*/ char **version)
+{
+	sqlite3_stmt *stmt = NULL;
+	const unsigned char *value;
+	int ret = MPORT_OK;
+
+	if (mport == NULL || name == NULL || version == NULL)
+		RETURN_ERROR(MPORT_ERR_FATAL, "Invalid default version lookup arguments");
+
+	*version = NULL;
+	MPORT_CHECK_FOR_INDEX(mport, "mport_index_get_default_version()")
+
+	if (mport_db_prepare(mport->db, &stmt,
+		"SELECT 1 FROM idx.sqlite_master "
+		"WHERE type='table' AND name='default_versions'") != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+
+	if (sqlite3_step(stmt) != SQLITE_ROW) {
+		sqlite3_finalize(stmt);
+		return MPORT_OK;
+	}
+	sqlite3_finalize(stmt);
+	stmt = NULL;
+
+	if (mport_db_prepare(mport->db, &stmt,
+		"SELECT version FROM idx.default_versions WHERE name=%Q", name) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+
+	switch (sqlite3_step(stmt)) {
+	case SQLITE_ROW:
+		value = sqlite3_column_text(stmt, 0);
+		if (value == NULL || (*version = strdup((const char *)value)) == NULL)
+			ret = SET_ERROR(MPORT_ERR_FATAL, "Invalid default version in index");
+		break;
+	case SQLITE_DONE:
+		break;
+	default:
+		ret = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+		break;
+	}
+
+	sqlite3_finalize(stmt);
+	return ret;
+}
+
+/*
+ * Resolve a package whose name embeds an interpreter version to the package
+ * using the current repository default.  The output remains NULL when the
+ * package is not versioned, the index is old, or the derived package is not
+ * present in the index.
+ */
+int
+mport_index_resolve_default_pkgname(
+    /*@notnull@*/ mportInstance *mport, /*@notnull@*/ const char *pkgname,
+    /*@out@*/ char **resolved)
+{
+	mportIndexEntry **entries = NULL;
+	char *candidate = NULL;
+	char *version = NULL;
+	const char *default_name;
+	int ret;
+
+	if (mport == NULL || pkgname == NULL || resolved == NULL)
+		RETURN_ERROR(MPORT_ERR_FATAL, "Invalid default package lookup arguments");
+
+	*resolved = NULL;
+	if ((strncmp(pkgname, "python", 6) == 0 && pkgname[6] >= '0' && pkgname[6] <= '9') ||
+	    (strncmp(pkgname, "py", 2) == 0 && pkgname[2] >= '0' && pkgname[2] <= '9')) {
+		default_name = "python";
+	} else if (strncmp(pkgname, "php", 3) == 0 && pkgname[3] >= '0' && pkgname[3] <= '9') {
+		default_name = "php";
+	} else if (strncmp(pkgname, "ruby", 4) == 0 && pkgname[4] >= '0' && pkgname[4] <= '9') {
+		default_name = "ruby";
+	} else {
+		return MPORT_OK;
+	}
+
+	ret = mport_index_get_default_version(mport, default_name, &version);
+	if (ret != MPORT_OK)
+		return ret;
+	if (version == NULL)
+		return MPORT_OK;
+
+	ret = build_default_pkgname(pkgname, default_name, version, &candidate);
+	free(version);
+	if (ret != MPORT_OK)
+		return ret;
+	if (candidate == NULL)
+		return MPORT_OK;
+	if (strcmp(candidate, pkgname) == 0) {
+		mport_index_entry_free_vec(entries);
+		free(candidate);
+		return MPORT_OK;
+	}
+
+	if (mport_index_lookup_pkgname(mport, candidate, &entries) != MPORT_OK) {
+		free(candidate);
+		return mport_err_code();
+	}
+	if (entries != NULL && entries[0] != NULL) {
+		*resolved = candidate;
+		mport_index_entry_free_vec(entries);
+		return MPORT_OK;
+	}
+	mport_index_entry_free_vec(entries);
+	free(candidate);
+	return MPORT_OK;
+}
+
+static int
+compact_default_version(const char *version, char *compact, size_t compact_size)
+{
+	size_t j = 0;
+
+	if (version == NULL || compact == NULL || compact_size == 0)
+		return MPORT_ERR_FATAL;
+
+	for (size_t i = 0; version[i] != '\0'; i++) {
+		if (version[i] == '.')
+			continue;
+		if (version[i] < '0' || version[i] > '9' || j + 1 >= compact_size)
+			return MPORT_ERR_FATAL;
+		compact[j++] = version[i];
+	}
+	if (j == 0)
+		return MPORT_ERR_FATAL;
+	compact[j] = '\0';
+	return MPORT_OK;
+}
+
+static int
+build_default_pkgname(
+    const char *pkgname, const char *default_name, const char *version, char **candidate)
+{
+	char compact[32];
+	const char *rest;
+	const char *prefix;
+	size_t digits;
+
+	*candidate = NULL;
+	if (compact_default_version(version, compact, sizeof(compact)) != MPORT_OK)
+		return MPORT_OK;
+
+	if (strcmp(default_name, "python") == 0 && strncmp(pkgname, "python", 6) == 0) {
+		prefix = "python";
+		rest = pkgname + 6;
+	} else if (strcmp(default_name, "php") == 0 && strncmp(pkgname, "php", 3) == 0) {
+		prefix = "php";
+		rest = pkgname + 3;
+	} else if (strcmp(default_name, "ruby") == 0 && strncmp(pkgname, "ruby", 4) == 0) {
+		prefix = "ruby";
+		rest = pkgname + 4;
+	} else if (strcmp(default_name, "python") == 0 && strncmp(pkgname, "py", 2) == 0) {
+		prefix = "py";
+		rest = pkgname + 2;
+	} else {
+		return MPORT_OK;
+	}
+
+	for (digits = 0; rest[digits] >= '0' && rest[digits] <= '9'; digits++)
+		;
+	/* The encoded framework versions contain at least major and minor
+	 * digits.  Names such as python3 are compatibility metapackages, not
+	 * packages tied to an old default. */
+	if (digits < 2)
+		return MPORT_OK;
+
+	/* Versioned Python, PHP, and Ruby modules use a '-' after the prefix.
+	 * Interpreter packages use the versioned name with no suffix. */
+	if (rest[digits] != '\0' && rest[digits] != '-')
+		return MPORT_OK;
+
+	if (strcmp(prefix, "ruby") == 0 && rest[digits] == '\0') {
+		*candidate = strdup("ruby");
+	} else if (asprintf(candidate, "%s%s%s", prefix, compact, rest + digits) == -1) {
+		*candidate = NULL;
+		return MPORT_ERR_FATAL;
+	}
+
+	return *candidate == NULL ? MPORT_ERR_FATAL : MPORT_OK;
 }
 
 int
@@ -873,7 +1104,7 @@ mport_moved_lookup(mportInstance *mport, const char *origin, mportIndexMovedEntr
 {
 	int count;
 	int i = 0, step;
-	sqlite3_stmt *stmt;
+	sqlite3_stmt *stmt = NULL;
 	int ret = MPORT_OK;
 	mportIndexMovedEntry **e = NULL;
 
@@ -915,10 +1146,21 @@ mport_moved_lookup(mportInstance *mport, const char *origin, mportIndexMovedEntr
 				goto MOVED_DONE;
 			}
 
-			strlcpy(e[i]->port, sqlite3_column_text(stmt, 0), 128);
-			strlcpy(e[i]->moved_to, sqlite3_column_text(stmt, 1), 128);
-			strlcpy(e[i]->why, sqlite3_column_text(stmt, 2), 128);
-			strlcpy(e[i]->date, sqlite3_column_text(stmt, 3), 32);
+			const unsigned char *port = sqlite3_column_text(stmt, 0);
+			const unsigned char *moved_to = sqlite3_column_text(stmt, 1);
+			const unsigned char *why = sqlite3_column_text(stmt, 2);
+			const unsigned char *date = sqlite3_column_text(stmt, 3);
+			/* Downloaded MOVED columns are nullable; calloc left the
+			   fields as empty strings, so only copy non-NULL values. */
+			if (port != NULL)
+				strlcpy(e[i]->port, (const char *)port, sizeof(e[i]->port));
+			if (moved_to != NULL)
+				strlcpy(
+				    e[i]->moved_to, (const char *)moved_to, sizeof(e[i]->moved_to));
+			if (why != NULL)
+				strlcpy(e[i]->why, (const char *)why, sizeof(e[i]->why));
+			if (date != NULL)
+				strlcpy(e[i]->date, (const char *)date, sizeof(e[i]->date));
 
 			// TODO: fix
 			char *orig_pkg = NULL;
@@ -1097,6 +1339,24 @@ mport_index_entry_free(mportIndexEntry *e)
 	free(e->license);
 	free(e->hash);
 	free(e);
+}
+
+void
+mport_index_moved_entry_free_vec(mportIndexMovedEntry **e)
+{
+	mportIndexMovedEntry **e_orig = e;
+
+	if (e == NULL) {
+		return;
+	}
+
+	while (*e != NULL) {
+		free(*e);
+		e++;
+	}
+
+	free(e_orig);
+	e_orig = NULL;
 }
 
 MPORT_PUBLIC_API void
