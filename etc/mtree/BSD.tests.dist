@@ -1133,6 +1133,8 @@
         ..
         tar
         ..
+        time
+        ..
         touch
         ..
         tr
