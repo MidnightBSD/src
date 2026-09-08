@@ -60,7 +60,10 @@ static char sccsid[] = "@(#)time.c	8.1 (Berkeley) 6/6/93";
 #include <unistd.h>
 
 static int getstathz(void);
+static u_long getticks(struct rusage *);
 static void humantime(FILE *, long, long);
+static void showfmt(FILE *, const char *, struct timespec *,
+    struct timespec *, struct rusage *, int, char **);
 static void showtime(FILE *, struct timespec *, struct timespec *,
     struct rusage *);
 static void siginfo(int);
@@ -81,16 +84,20 @@ main(int argc, char **argv)
 	struct rusage ru;
 	struct timespec after;
 	char *ofn = NULL;
+	const char *fmt = NULL;
 	FILE *out = stderr;
 
 	(void) setlocale(LC_NUMERIC, "");
 	decimal_point = localeconv()->decimal_point[0];
 
 	aflag = hflag = lflag = pflag = 0;
-	while ((ch = getopt(argc, argv, "ahlo:p")) != -1)
+	while ((ch = getopt(argc, argv, "af:hlo:p")) != -1)
 		switch((char)ch) {
 		case 'a':
 			aflag = 1;
+			break;
+		case 'f':
+			fmt = optarg;
 			break;
 		case 'h':
 			hflag = 1;
@@ -150,20 +157,12 @@ main(int argc, char **argv)
 	if ( ! WIFEXITED(status))
 		warnx("command terminated abnormally");
 	exitonsig = WIFSIGNALED(status) ? WTERMSIG(status) : 0;
-	showtime(out, &before_ts, &after, &ru);
+	if (fmt != NULL)
+		showfmt(out, fmt, &before_ts, &after, &ru, status, argv);
+	else
+		showtime(out, &before_ts, &after, &ru);
 	if (lflag) {
-		int hz = getstathz();
-		u_long ticks;
-
-		ticks = hz * (ru.ru_utime.tv_sec + ru.ru_stime.tv_sec) +
-		     hz * (ru.ru_utime.tv_usec + ru.ru_stime.tv_usec) / 1000000;
-
-		/*
-		 * If our round-off on the tick calculation still puts us at 0,
-		 * then always assume at least one tick.
-		 */
-		if (ticks == 0)
-			ticks = 1;
+		u_long ticks = getticks(&ru);
 
 		fprintf(out, "%10ld  %s\n",
 			ru.ru_maxrss, "maximum resident set size");
@@ -216,7 +215,8 @@ static void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: time [-al] [-h | -p] [-o file] utility [argument ...]\n");
+	    "usage: time [-al] [-f format | -h | -p] [-o file] utility "
+	    "[argument ...]\n");
 	exit(1);
 }
 
@@ -236,6 +236,29 @@ getstathz(void)
 	if (sysctl(mib, 2, &clockrate, &size, NULL, 0) == -1)
 		err(1, "sysctl kern.clockrate");
 	return clockrate.stathz;
+}
+
+/*
+ * Return the number of statistics clock ticks the process consumed.
+ * The ru_ixrss, ru_idrss and ru_isrss fields are integrals over ticks,
+ * so dividing them by this yields an average size in kilobytes.
+ */
+static u_long
+getticks(struct rusage *ru)
+{
+	int hz = getstathz();
+	u_long ticks;
+
+	ticks = hz * (ru->ru_utime.tv_sec + ru->ru_stime.tv_sec) +
+	    hz * (ru->ru_utime.tv_usec + ru->ru_stime.tv_usec) / 1000000;
+
+	/*
+	 * If our round-off on the tick calculation still puts us at 0,
+	 * then always assume at least one tick.
+	 */
+	if (ticks == 0)
+		ticks = 1;
+	return (ticks);
 }
 
 static void
@@ -301,6 +324,176 @@ showtime(FILE *out, struct timespec *before, struct timespec *after,
 			(intmax_t)ru->ru_stime.tv_sec, decimal_point,
 			ru->ru_stime.tv_usec/10000);
 	}
+}
+
+/*
+ * Print resource usage according to a user supplied format string.
+ * The escapes follow the ones used by GNU time so that existing scripts
+ * written against it keep working.
+ */
+static void
+showfmt(FILE *out, const char *fmt, struct timespec *before,
+    struct timespec *after, struct rusage *ru, int status, char **argv)
+{
+	struct timespec el;
+	intmax_t cpu_us, wall_us;
+	u_long ticks;
+	long hrs, mins, secs;
+	const char *p;
+	char **ap;
+
+	el.tv_sec = after->tv_sec - before->tv_sec;
+	el.tv_nsec = after->tv_nsec - before->tv_nsec;
+	if (el.tv_nsec < 0) {
+		el.tv_sec--;
+		el.tv_nsec += 1000000000;
+	}
+	ticks = getticks(ru);
+
+	for (p = fmt; *p != '\0'; p++) {
+		if (*p != '%' && *p != '\\') {
+			putc(*p, out);
+			continue;
+		}
+		/* A lone '%' or '\\' at the end of the string is literal. */
+		if (p[1] == '\0') {
+			putc(*p, out);
+			break;
+		}
+		if (*p == '\\') {
+			switch (*++p) {
+			case 'n':
+				putc('\n', out);
+				break;
+			case 't':
+				putc('\t', out);
+				break;
+			case '\\':
+				putc('\\', out);
+				break;
+			default:
+				putc('\\', out);
+				putc(*p, out);
+				break;
+			}
+			continue;
+		}
+		switch (*++p) {
+		case '%':
+			putc('%', out);
+			break;
+		case 'C':	/* command name and arguments */
+			for (ap = argv; *ap != NULL; ap++)
+				fprintf(out, "%s%s", ap == argv ? "" : " ",
+				    *ap);
+			break;
+		case 'D':	/* average unshared data + stack, KB */
+			fprintf(out, "%ld",
+			    ru->ru_idrss / ticks + ru->ru_isrss / ticks);
+			break;
+		case 'E':	/* elapsed, [h:]m:s */
+			secs = el.tv_sec;
+			hrs = secs / 3600;
+			secs %= 3600;
+			mins = secs / 60;
+			secs %= 60;
+			if (hrs != 0)
+				fprintf(out, "%ld:%02ld:%02ld", hrs, mins,
+				    secs);
+			else
+				fprintf(out, "%ld:%02ld%c%02ld", mins, secs,
+				    decimal_point, el.tv_nsec / 10000000);
+			break;
+		case 'F':	/* major page faults */
+			fprintf(out, "%ld", ru->ru_majflt);
+			break;
+		case 'I':	/* block input operations */
+			fprintf(out, "%ld", ru->ru_inblock);
+			break;
+		case 'K':	/* average total memory, KB */
+			fprintf(out, "%ld", ru->ru_idrss / ticks +
+			    ru->ru_isrss / ticks + ru->ru_ixrss / ticks);
+			break;
+		case 'M':	/* maximum resident set size, KB */
+			fprintf(out, "%ld", ru->ru_maxrss);
+			break;
+		case 'O':	/* block output operations */
+			fprintf(out, "%ld", ru->ru_oublock);
+			break;
+		case 'P':	/* CPU percentage */
+			cpu_us = (intmax_t)ru->ru_utime.tv_sec * 1000000 +
+			    ru->ru_utime.tv_usec +
+			    (intmax_t)ru->ru_stime.tv_sec * 1000000 +
+			    ru->ru_stime.tv_usec;
+			wall_us = (intmax_t)el.tv_sec * 1000000 +
+			    el.tv_nsec / 1000;
+			if (wall_us <= 0)
+				fprintf(out, "?%%");
+			else
+				fprintf(out, "%jd%%", cpu_us * 100 / wall_us);
+			break;
+		case 'R':	/* minor page faults */
+			fprintf(out, "%ld", ru->ru_minflt);
+			break;
+		case 'S':	/* system CPU seconds */
+			fprintf(out, "%jd%c%02ld",
+			    (intmax_t)ru->ru_stime.tv_sec, decimal_point,
+			    ru->ru_stime.tv_usec / 10000);
+			break;
+		case 'U':	/* user CPU seconds */
+			fprintf(out, "%jd%c%02ld",
+			    (intmax_t)ru->ru_utime.tv_sec, decimal_point,
+			    ru->ru_utime.tv_usec / 10000);
+			break;
+		case 'W':	/* swaps */
+			fprintf(out, "%ld", ru->ru_nswap);
+			break;
+		case 'X':	/* average shared text, KB */
+			fprintf(out, "%ld", ru->ru_ixrss / ticks);
+			break;
+		case 'Z':	/* page size */
+			fprintf(out, "%d", getpagesize());
+			break;
+		case 'c':	/* involuntary context switches */
+			fprintf(out, "%ld", ru->ru_nivcsw);
+			break;
+		case 'e':	/* elapsed seconds */
+			fprintf(out, "%jd%c%02ld", (intmax_t)el.tv_sec,
+			    decimal_point, el.tv_nsec / 10000000);
+			break;
+		case 'k':	/* signals received */
+			fprintf(out, "%ld", ru->ru_nsignals);
+			break;
+		case 'p':	/* average unshared stack, KB */
+			fprintf(out, "%ld", ru->ru_isrss / ticks);
+			break;
+		case 'r':	/* socket messages received */
+			fprintf(out, "%ld", ru->ru_msgrcv);
+			break;
+		case 's':	/* socket messages sent */
+			fprintf(out, "%ld", ru->ru_msgsnd);
+			break;
+		case 't':	/* average resident set size, KB */
+			fprintf(out, "%ld", ru->ru_idrss / ticks);
+			break;
+		case 'w':	/* voluntary context switches */
+			fprintf(out, "%ld", ru->ru_nvcsw);
+			break;
+		case 'x':	/* exit status */
+			if (WIFSIGNALED(status))
+				fprintf(out, "%d", WTERMSIG(status));
+			else if (WIFSTOPPED(status))
+				fprintf(out, "%d", WSTOPSIG(status));
+			else
+				fprintf(out, "%d", WEXITSTATUS(status));
+			break;
+		default:	/* unknown escape */
+			putc('?', out);
+			putc(*p, out);
+			break;
+		}
+	}
+	putc('\n', out);
 }
 
 static void
