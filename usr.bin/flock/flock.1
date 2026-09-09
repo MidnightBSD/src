@@ -1,0 +1,103 @@
+.\"\t$NetBSD: flock.1,v 1.13 2019/10/04 16:14:05 uwe Exp $
+.\"
+.\" Copyright (c) 2012 The NetBSD Foundation, Inc.
+.\" All rights reserved.
+.\"
+.\" This code is derived from software contributed to The NetBSD Foundation
+.\" by Christos Zoulas.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
+.\" ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+.\" TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+.\" PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE FOUNDATION OR CONTRIBUTORS
+.\" BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+.\" CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+.\" SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+.\" INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+.\" CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+.\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+.\" POSSIBILITY OF SUCH DAMAGE.
+.\"
+.Dd September 9, 2026
+.Dt FLOCK 1
+.Os
+.Sh NAME
+.Nm flock
+.Nd provide locking for shell scripts
+.Sh SYNOPSIS
+.Nm
+.Op Fl dhnosvx
+.Op Fl w Ar timeout
+.Ar file Ns | Ns Ar directory
+.Ar command
+.Op Ar args ...
+.Nm
+.Op Fl dhnosvx
+.Op Fl w Ar timeout
+.Ar file Ns | Ns Ar directory
+.Fl c Ar command
+.Nm
+.Op Fl dhnsuvx
+.Op Fl w Ar timeout
+.Ar number
+.Sh DESCRIPTION
+The
+.Nm
+utility provides
+.Xr flock 2
+access to commands and shell scripts.
+The first two forms lock the specified file or directory while the provided
+command executes.
+If the path does not exist, a file is created with mode 0600.
+.Pp
+The third form locks an open file descriptor supplied by a shell script.
+.Pp
+The options are as follows:
+.Bl -tag -width timeout
+.It Fl c Ar command
+Pass
+.Ar command
+to the shell.
+.It Fl d , Fl Fl debug
+Print debugging information.
+.It Fl h , Fl Fl help
+Print usage information.
+.It Fl n , Fl Fl nb , Fl Fl nonblock
+Fail immediately if the lock cannot be obtained.
+.It Fl o , Fl Fl close
+Close the lock file descriptor before executing the command.
+.It Fl s , Fl Fl shared
+Obtain a shared lock.
+.It Fl u , Fl Fl unlock
+Unlock an existing lock.
+This is valid only for a file descriptor.
+.It Fl v , Fl Fl verbose
+Print an explanation when locking fails.
+.It Fl w Ar timeout , Fl Fl wait Ar timeout , Fl Fl timeout Ar timeout
+Fail if the lock cannot be obtained within the specified, possibly fractional,
+number of seconds.
+A timeout of zero is equivalent to
+.Fl n .
+.It Fl x , Fl Fl exclusive
+Obtain an exclusive lock.
+This is the default.
+.El
+.Sh EXIT STATUS
+.Ex -std
+.Sh SEE ALSO
+.Xr lockf 1 ,
+.Xr flock 2
+.Sh HISTORY
+A
+.Nm
+utility appeared in
+.Nx 6.1 .

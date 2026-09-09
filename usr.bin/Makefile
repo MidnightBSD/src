@@ -50,6 +50,7 @@ SUBDIR=	alias \
 	false \
 	fetch \
 	find \
+	flock \
 	fmt \
 	fold \
 	fstat \
@@ -176,6 +177,7 @@ SUBDIR=	alias \
 	touch \
 	tput \
 	tr \
+	ts \
 	true \
 	truncate \
 	tset \
