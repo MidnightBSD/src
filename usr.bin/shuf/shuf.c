@@ -410,5 +410,5 @@ out:
 	if (oflag)
 		fclose(ofile);
 
-	return 0;
+	return (0);
 }
