@@ -1,6 +1,15 @@
 Updating Information for MidnightBSD users.
 
 20260922:
+	tcsh 6.24.16 (from 6.21.00).  Adds $'...' strings with \x, \u, \U
+	and \c escapes, the :Q modifier, $?<, jobs -Z, CLICOLOR_FORCE and
+	more LS_COLORS keys, and fixes crashes in :q:h and :q:t, history
+	merging and SIGHUP handling while writing history, S-JIS handling,
+	and range globbing where [l-z]* could match foo.  Note that :q no
+	longer preserves empty arguments; use :Q for that.  The Polish
+	message catalog is now installed.  Rebuild and install world.
+
+20260922:
 	expat 2.8.5 (from 2.8.4).  Fixes CVE-2026-93990: a high surrogate
 	not followed by a low surrogate was accepted during UTF-16 decoding,
 	letting malformed UTF-16 pass through the parser into the
