@@ -66,6 +66,7 @@ CATALOGS=	et:et_EE.UTF-8 \
 		greek:el_GR.UTF-8 \
 		italian:it_IT.UTF-8 \
 		ja:ja_JP.UTF-8 \
+		pl:pl_PL.UTF-8 \
 		russian:ru_RU.UTF-8 \
 		spanish:es_ES.UTF-8 \
 		ukrainian:uk_UA.UTF-8
@@ -91,6 +92,7 @@ NLSLINKS_fr_FR.UTF-8 += fr_BE.ISO8859-1 fr_BE.ISO8859-15 \
 NLSLINKS_it_IT.UTF-8 += it_CH.ISO8859-1 it_CH.ISO8859-15 it_IT.ISO8859-1 \
 		it_IT.ISO8859-15
 NLSLINKS_ja_JP.UTF-8 = ja_JP.SJIS ja_JP.eucJP
+NLSLINKS_pl_PL.UTF-8 = pl_PL.ISO8859-2
 NLSLINKS_ru_RU.UTF-8 = ru_RU.CP1251 ru_RU.CP866 ru_RU.ISO8859-5 ru_RU.KOI8-R
 NLSLINKS_uk_UA.UTF-8 = uk_UA.ISO8859-5 uk_UA.KOI8-U
 .else

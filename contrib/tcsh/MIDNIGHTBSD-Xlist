@@ -16,7 +16,6 @@
 */configure.ac
 */cygwin
 */m4
-*/nls/pl
 */push-tcsh-git-mirror
 */tcsh.vcproj
 */tests
