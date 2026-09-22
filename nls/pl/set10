@@ -1,0 +1,7 @@
+$ ma.setp.c
+$set 10 
+1 setpath: nieprawidłowe polecenie '%s'.\n
+2 setpath: za mało argumentów dla polecenia '%s'.\n
+3 setpath: brakuje wartości w ścieżce '%s'\n
+4 setpath: %s nie został znaleziony w %s\n
+5 setpath: %d nie jest prawidłową pozycją w %s\n

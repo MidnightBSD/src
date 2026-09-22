@@ -1,0 +1,9 @@
+$ sh.c
+$set 11 
+1 Uwaga: brak dostępu do tty (%s).\n
+2 Innymi słowy brak zarządzania pracami w tej powłoce.\n
+3 Masz %d wiadomości.\n
+4 Masz %d wiadomości w %s.\n
+5 Masz %spocztę.\n
+6 nową 
+7 Masz %spocztę w %s.\n
