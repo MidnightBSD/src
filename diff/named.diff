@@ -1,0 +1,161 @@
+Index: bin/named/Makefile
+===================================================================
+RCS file: /cvsroot/src/external/mpl/bind/bin/named/Makefile,v
+retrieving revision 1.6
+diff -u -p -u -r1.6 Makefile
+--- bin/named/Makefile	21 Feb 2024 22:50:56 -0000	1.6
++++ bin/named/Makefile	9 Apr 2026 15:53:58 -0000
+@@ -47,5 +47,7 @@ CLEANFILES+= xsl.c
+ 
+ main.o: ${VERSIONFILE}
+ 
++LDADD+=-lblocklist
++DPADD+=${LIBBLOCKLIST}
+ 
+ .include <bsd.prog.mk>
+Index: dist/bin/named/main.c
+===================================================================
+RCS file: /cvsroot/src/external/mpl/bind/dist/bin/named/main.c,v
+retrieving revision 1.22
+diff -u -p -u -r1.22 main.c
+--- dist/bin/named/main.c	8 Apr 2026 00:15:44 -0000	1.22
++++ dist/bin/named/main.c	9 Apr 2026 15:53:59 -0000
+@@ -54,6 +54,8 @@
+ 
+ #include <dlz/dlz_dlopen_driver.h>
+ 
++#include "ns/pfilter.h"
++
+ #ifdef HAVE_GPERFTOOLS_PROFILER
+ #include <gperftools/profiler.h>
+ #endif /* ifdef HAVE_GPERFTOOLS_PROFILER */
+@@ -1554,6 +1556,9 @@ main(int argc, char *argv[]) {
+ 
+ 	parse_command_line(argc, argv);
+ 
++	// Should we have a command line flag?
++	pfilter_enable();
++
+ #ifdef ENABLE_AFL
+ 	if (named_g_fuzz_type != isc_fuzz_none) {
+ 		named_fuzz_setup();
+Index: dist/lib/ns/client.c
+===================================================================
+RCS file: /cvsroot/src/external/mpl/bind/dist/lib/ns/client.c,v
+retrieving revision 1.27
+diff -u -p -u -r1.27 client.c
+--- dist/lib/ns/client.c	8 Apr 2026 00:16:16 -0000	1.27
++++ dist/lib/ns/client.c	9 Apr 2026 15:54:00 -0000
+@@ -66,6 +66,8 @@
+ #include <ns/stats.h>
+ #include <ns/update.h>
+ 
++#include "pfilter.h"
++
+ /***
+  *** Client
+  ***/
+@@ -2703,6 +2705,7 @@ ns_client_checkacl(ns_client_t *client, 
+ 		ns_client_log(client, DNS_LOGCATEGORY_SECURITY,
+ 			      NS_LOGMODULE_CLIENT, log_level, "%s denied",
+ 			      opname);
++		pfilter_notify(result, client, opname);
+ 	}
+ 	return result;
+ }
+Index: dist/lib/ns/xfrout.c
+===================================================================
+RCS file: /cvsroot/src/external/mpl/bind/dist/lib/ns/xfrout.c,v
+retrieving revision 1.16
+diff -u -p -u -r1.16 xfrout.c
+--- dist/lib/ns/xfrout.c	29 Jan 2026 18:37:56 -0000	1.16
++++ dist/lib/ns/xfrout.c	9 Apr 2026 15:54:00 -0000
+@@ -48,6 +48,8 @@
+ #include <ns/stats.h>
+ #include <ns/xfrout.h>
+ 
++#include "pfilter.h"
++
+ /*! \file
+  * \brief
+  * Outgoing AXFR and IXFR.
+@@ -826,6 +828,7 @@ ns_xfr_start(ns_client_t *client, dns_rd
+ 					      ISC_LOG_ERROR,
+ 					      "zone transfer '%s/%s' denied",
+ 					      _buf1, _buf2);
++				pfilter_notify(result, client, "zonexfr");
+ 				goto cleanup;
+ 			}
+ 			if (result != ISC_R_SUCCESS) {
+Index: include/ns/pfilter.h
+===================================================================
+RCS file: /cvsroot/src/external/mpl/bind/include/ns/pfilter.h,v
+retrieving revision 1.1
+diff -u -p -u -r1.1 pfilter.h
+--- include/ns/pfilter.h	26 Jan 2025 16:30:19 -0000	1.1
++++ include/ns/pfilter.h	9 Apr 2026 15:54:00 -0000
+@@ -1,2 +1,3 @@
+ void pfilter_enable(void);
+-void pfilter_notify(isc_result_t, ns_client_t *, const char *);
++struct ns_client;
++void pfilter_notify(isc_result_t, struct ns_client *, const char *);
+Index: include/ns/pfilter.h
+===================================================================
+RCS file: include/ns/pfilter.h
+diff -N include/ns/pfilter.h
+--- /dev/null	1 Jan 1970 00:00:00 -0000
++++ include/ns/pfilter.h	9 Apr 2026 15:54:52 -0000	1.2
+@@ -0,0 +1,3 @@
++void pfilter_enable(void);
++struct ns_client;
++void pfilter_notify(isc_result_t, struct ns_client *, const char *);
+Index: lib/libns/pfilter.c
+===================================================================
+RCS file: lib/libns/pfilter.c
+diff -N lib/libns/pfilter.c
+--- /dev/null	1 Jan 1970 00:00:00 -0000
++++ lib/libns/pfilter.c	26 Jan 2025 16:30:19 -0000	1.1
+@@ -0,0 +1,43 @@
++
++#include <isc/util.h>
++#include <ns/types.h>
++#include <ns/client.h>
++
++#include <blocklist.h>
++
++#include <ns/pfilter.h>
++
++static struct blocklist *blstate;
++static int blenable;
++
++void
++pfilter_enable(void) {
++	blenable = 1;
++}
++
++#define TCP_CLIENT(c)  (((c)->attributes & NS_CLIENTATTR_TCP) != 0)
++
++void
++pfilter_notify(isc_result_t res, ns_client_t *client, const char *msg)
++{
++	int fd;
++
++	if (!blenable)
++		return;
++
++	if (blstate == NULL)
++		blstate = blocklist_open();
++
++	if (blstate == NULL)
++		return;
++
++	if (!TCP_CLIENT(client) && !client->peeraddr_valid)
++		return;
++
++	if ((fd = isc_nmhandle_getfd(client->handle)) == -1)
++		return;
++
++	blocklist_sa_r(blstate, 
++	    res != ISC_R_SUCCESS, fd,
++	    &client->peeraddr.type.sa, client->peeraddr.length, msg);
++}
