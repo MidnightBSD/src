@@ -89,6 +89,7 @@
 #define HAVE_TERM_ENTRY_H 1
 #define HAVE_USE_DEFAULT_COLORS 1
 #define HAVE_USE_EXTENDED_NAMES 1
+#define NCURSES_XNAMES 1
 #define HAVE_USE_SCREEN 1
 #define HAVE_USE_WINDOW 1
 #define HAVE_WRESIZE 1
@@ -108,6 +109,7 @@
 #define GCC_UNUSED __attribute__((unused))
 #define GCC_NORETURN __attribute__((noreturn))
 #define HAVE_NC_ALLOC_H 1
+#define HAVE_CLOCK_GETTIME 1
 #define HAVE_GETTIMEOFDAY 1
 #define STDC_HEADERS 1
 #define HAVE_DIRENT_H 1
@@ -137,8 +139,12 @@
 #define HAVE_GETCWD 1
 #define HAVE_GETEGID 1
 #define HAVE_GETEUID 1
+#define HAVE_GETUID 1
+#define HAVE_FPATHCONF 1
 #define HAVE_GETOPT 1
 #define HAVE_GETTTYNAM 1
+#define HAVE_PATH_TTYS 1
+#define HAVE_CONSISTENT_MB_LEN_MAX 1
 #define HAVE_ISSETUGID 1
 #define HAVE_LOCALECONV 1
 #define HAVE_POLL 1
@@ -192,7 +198,7 @@
 #define HAVE_FORM_H 1
 #define HAVE_LIBFORM 1
 #define NCURSES_PATHSEP ':'
-#define NCURSES_VERSION_STRING "6.2.20200215"
+#define NCURSES_VERSION_STRING "6.6.20251230"
 #define NCURSES_OSPEED_COMPAT 1
 #define HAVE_CURSES_DATA_BOOLNAMES 1
 
@@ -220,6 +226,7 @@
 #define HAVE_MBSRTOWCS 1
 #define HAVE_WCSTOMBS 1
 #define HAVE_MBSTOWCS 1
+#define HAVE_WMEMCHR 1
 #define NEED_WCHAR_H 1
 #define SIZEOF_WCHAR_T 4
 #endif

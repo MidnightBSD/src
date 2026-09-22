@@ -1,6 +1,15 @@
 Updating Information for MidnightBSD users.
 
 20260922:
+	ncurses 6.6 (from 6.2).  Among many bug fixes this closes
+	CVE-2022-29458 and CVE-2023-29491 (memory corruption from a
+	crafted terminal description), and adds tiparm_s(), tiscan_s()
+	and the is_cbreak()/is_echo()/is_nl()/is_raw() query functions.
+	The library ABI is unchanged and libncursesw.so.9 keeps its
+	version, so existing binaries need not be rebuilt.  Rebuild and
+	install world.
+
+20260922:
 	blacklistd has been renamed to blocklistd, following upstream.
 	The library is now libblocklist(3) with blocklist_*() functions,
 	the daemon and control program are blocklistd(8) and
