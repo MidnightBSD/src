@@ -32,7 +32,7 @@
 #include "sh.h"
 
 Char STRlogout[]	= { 'l', 'o', 'g', 'o', 'u', 't', '\0' };
-Char STRautologout[]	= { 'a', 'u', 't', 'o', 'l', 'o', 'g', 'o', 'u', 't', 
+Char STRautologout[]	= { 'a', 'u', 't', 'o', 'l', 'o', 'g', 'o', 'u', 't',
 			    '\0' };
 Char STRdefautologout[] = { '6', '0', '\0' };
 #ifdef convex
@@ -74,7 +74,7 @@ Char STRnetwork[]	= { 'n', 'e', 't', 'w', 'o', 'r', 'k', '\0' };
 Char STRdumb[]		= { 'd', 'u', 'm', 'b', '\0' };
 Char STRHOST[]		= { 'H', 'O', 'S', 'T', '\0' };
 #ifdef REMOTEHOST
-Char STRREMOTEHOST[]	= { 'R', 'E', 'M', 'O', 'T', 'E', 'H', 
+Char STRREMOTEHOST[]	= { 'R', 'E', 'M', 'O', 'T', 'E', 'H',
 			    'O', 'S', 'T', '\0' };
 #endif /* REMOTEHOST */
 Char STRHOSTTYPE[]	= { 'H', 'O', 'S', 'T', 'T', 'Y', 'P', 'E', '\0' };
@@ -113,7 +113,7 @@ Char STRmm[]		= { '-', 'm', '\0' };
 Char STRmr[]		= { '-', 'r', '\0' };
 Char STRmerge[]		= { 'm', 'e', 'r', 'g', 'e', '\0' };
 Char STRlock[]		= { 'l', 'o', 'c', 'k', '\0' };
-Char STRtildothist[]	= { '~', '/', '.', 'h', 'i', 's', 't', 'o', 'r', 
+Char STRtildothist[]	= { '~', '/', '.', 'h', 'i', 's', 't', 'o', 'r',
 			    'y', '\0' };
 
 #ifdef NLS_CATALOGS
@@ -253,10 +253,10 @@ Char STRnormal[]	= { 'n', 'o', 'r', 'm', 'a', 'l', '\0' };
 Char STRsldtlogout[]	= { '/', '.', 'l', 'o', 'g', 'o', 'u', 't', '\0' };
 Char STRjobs[]		= { 'j', 'o', 'b', 's', '\0' };
 Char STRdefprompt[]	= { '%', '#', ' ', '\0' };
-Char STRmquestion[]	= { '%', 'R', '?' | QUOTE, ' ', '\0' };
-Char STRKCORRECT[]	= { 'C', 'O', 'R', 'R', 'E', 'C', 'T', '>', '%', 'R', 
-			    ' ', '(', 'y', '|', 'n', '|', 'e', '|', 'a', ')', 
-			    '?' | QUOTE, ' ', '\0' };
+Char STRmquestion[]	= { '%', 'R', (Char)('?' | QUOTE), ' ', '\0' };
+Char STRKCORRECT[]	= { 'C', 'O', 'R', 'R', 'E', 'C', 'T', '>', '%', 'R',
+			    ' ', '(', 'y', '|', 'n', '|', 'e', '|', 'a', ')',
+			    (Char)('?' | QUOTE), ' ', '\0' };
 Char STRunalias[]	= { 'u', 'n', 'a', 'l', 'i', 'a', 's', '\0' };
 Char STRalias[]		= { 'a', 'l', 'i', 'a', 's', '\0' };
 Char STRprecmd[]	= { 'p', 'r', 'e', 'c', 'm', 'd', '\0' };
@@ -267,6 +267,7 @@ Char STRperiodic[]	= { 'p', 'e', 'r', 'i', 'o', 'd', 'i', 'c', '\0' };
 Char STRtperiod[]	= { 't', 'p', 'e', 'r', 'i', 'o', 'd', '\0' };
 Char STRmf[]		= { '-', 'f', '\0' };
 Char STRml[]		= { '-', 'l', '\0' };
+Char STRmZ[]		= { '-', 'Z', '\0' };
 Char STRslash[]		= { '/', '\0' };
 Char STRdotsl[]		= { '.', '/', '\0' };
 Char STRdotdotsl[]	= { '.', '.', '/', '\0' };
@@ -282,7 +283,7 @@ Char STRsymlinks[]	= { 's', 'y', 'm', 'l', 'i', 'n', 'k', 's', '\0' };
 Char STRignore[]	= { 'i', 'g', 'n', 'o', 'r', 'e', '\0' };
 Char STRchase[]		= { 'c', 'h', 'a', 's', 'e', '\0' };
 Char STRexpand[]	= { 'e', 'x', 'p', 'a', 'n', 'd', '\0' };
-Char STRecho_style[]	= { 'e', 'c', 'h', 'o', '_', 's', 't', 'y', 'l', 'e', 
+Char STRecho_style[]	= { 'e', 'c', 'h', 'o', '_', 's', 't', 'y', 'l', 'e',
 			    '\0' };
 Char STRbsd[]		= { 'b', 's', 'd', '\0' };
 Char STRsysv[]		= { 's', 'y', 's', 'v', '\0' };
@@ -313,7 +314,7 @@ Char STRfakecom1[]	= { '`', ' ', '.', '.', '.', ' ', '`', '\0' };
 Char STRampm[]		= { 'a', 'm', 'p', 'm', '\0' };
 Char STRtime[]		= { 't', 'i', 'm', 'e', '\0' };
 Char STRnotify[]	= { 'n', 'o', 't', 'i', 'f', 'y', '\0' };
-Char STRprintexitvalue[] = { 'p', 'r', 'i', 'n', 't', 'e', 'x', 'i', 't', 'v', 
+Char STRprintexitvalue[] = { 'p', 'r', 'i', 'n', 't', 'e', 'x', 'i', 't', 'v',
 			    'a', 'l', 'u', 'e', '\0' };
 Char STRLparensp[]	= { '(', ' ', '\0' };
 Char STRspRparen[]	= { ' ', ')', '\0' };
@@ -371,7 +372,7 @@ Char STRignoreeof[]	= { 'i', 'g', 'n', 'o', 'r', 'e', 'e', 'o', 'f', '\0' };
 Char STRnoclobber[]	= { 'n', 'o', 'c', 'l', 'o', 'b', 'b', 'e', 'r', '\0' };
 Char STRnotempty[]	= { 'n', 'o', 't', 'e', 'm', 'p', 't', 'y', '\0' };
 Char STRask[]		= { 'a', 's', 'k', '\0' };
-Char STRhelpcommand[]	= { 'h', 'e', 'l', 'p', 'c', 'o', 'm', 'm', 'a', 'n', 
+Char STRhelpcommand[]	= { 'h', 'e', 'l', 'p', 'c', 'o', 'm', 'm', 'a', 'n',
 			    'd', '\0' };
 Char STRfignore[]	= { 'f', 'i', 'g', 'n', 'o', 'r', 'e', '\0' };
 Char STRrecexact[]	= { 'r', 'e', 'c', 'e', 'x', 'a', 'c', 't', '\0' };
@@ -380,7 +381,7 @@ Char STRlistmaxrows[]	= { 'l', 'i', 's', 't', 'm', 'a', 'x', 'r', 'o', 'w',
 Char STRlistmax[]	= { 'l', 'i', 's', 't', 'm', 'a', 'x', '\0' };
 Char STRlistlinks[]	= { 'l', 'i', 's', 't', 'l', 'i', 'n', 'k', 's', '\0' };
 Char STRDING[]		= { 'D', 'I', 'N', 'G', '!', '\0' };
-Char STRQNULL[]		= { '\0' | QUOTE, '\0' };
+Char STRQNULL[]		= { (Char)('\0' | QUOTE), '\0' };
 Char STRcorrect[]	= { 'c', 'o', 'r', 'r', 'e', 'c', 't', '\0' };
 Char STRcmd[]		= { 'c', 'm', 'd', '\0' };
 Char STRall[]		= { 'a', 'l', 'l', '\0' };
@@ -406,9 +407,9 @@ Char STRret[]		= { '\n', '\0' };
 Char STRnobeep[]	= { 'n', 'o', 'b', 'e', 'e', 'p', '\0' };
 Char STRnoding[]	= { 'n', 'o', 'd', 'i', 'n', 'g', '\0' };
 Char STRpadhour[]	= { 'p', 'a', 'd', 'h', 'o', 'u', 'r', '\0' };
-Char STRnoambiguous[]	= { 'n', 'o', 'a', 'm', 'b', 'i', 'g', 'u', 'o', 'u', 
+Char STRnoambiguous[]	= { 'n', 'o', 'a', 'm', 'b', 'i', 'g', 'u', 'o', 'u',
 			    's', '\0' };
-Char STRvisiblebell[]	= { 'v', 'i', 's', 'i', 'b', 'l', 'e', 'b', 'e', 'l', 
+Char STRvisiblebell[]	= { 'v', 'i', 's', 'i', 'b', 'l', 'e', 'b', 'e', 'l',
 			    'l', '\0' };
 Char STRrecognize_only_executables[] = { 'r', 'e', 'c', 'o', 'g', 'n', 'i',
 					 'z', 'e', '_', 'o', 'n', 'l', 'y',
@@ -489,10 +490,13 @@ Char STRmCF[]		= { '-', 'C', 'F', '\0', '\0' };
 Char STRlsmF[]		= { 'l', 's', '-', 'F', '\0' };
 Char STRcolor[]		= { 'c', 'o', 'l', 'o', 'r', '\0' };
 #ifdef BSD_STYLE_COLORLS
+Char STRmmcolormalways[] = { '-', 'G', '\0' };
 Char STRmmcolormauto[]	= { '-', 'G', '\0' };
 #else
+Char STRmmcolormalways[] = { '-', '-', 'c', 'o', 'l', 'o', 'r', '=', 'a', 'l', 'w', 'a', 'y', 's', '\0' };
 Char STRmmcolormauto[]	= { '-', '-', 'c', 'o', 'l', 'o', 'r', '=', 'a', 'u', 't', 'o', '\0' };
 #endif /* BSD_STYLE_COLORLS */
+Char STRCLICOLOR_FORCE[] = { 'C', 'L', 'I', 'C', 'O', 'L', 'O', 'R', '_', 'F', 'O', 'R', 'C', 'E', '\0' };
 Char STRLS_COLORS[]	= { 'L', 'S', '_', 'C', 'O', 'L', 'O', 'R', 'S', '\0' };
 Char STRLSCOLORS[]	= { 'L', 'S', 'C', 'O', 'L', 'O', 'R', 'S', '\0' };
 #endif /* COLOR_LS_F */

@@ -1,5 +1,5 @@
 /*
- * sh.err.c: Error printing routines. 
+ * sh.err.c: Error printing routines.
  */
 /*-
  * Copyright (c) 1980, 1991 The Regents of the University of California.
@@ -43,6 +43,7 @@
 #endif
 
 char   *seterr = NULL;	/* Holds last error if there was one */
+extern int enterhist;
 
 #define ERR_FLAGS	0xf0000000
 #define ERR_NAME	0x10000000
@@ -186,7 +187,8 @@ char   *seterr = NULL;	/* Holds last error if there was one */
 #define ERR_INVALID	133
 #define ERR_BADCOLORVAR	134
 #define ERR_EOF		135
-#define NO_ERRORS	136
+#define ERR_UNAVAILABLE	136
+#define NO_ERRORS	137
 
 static const char *elst[NO_ERRORS] INIT_ZERO_STRUCT;
 
@@ -265,7 +267,7 @@ errinit(void)
     elst[ERR_PIPE] = CSAVS(1, 54, "Can't make pipe");
     elst[ERR_SYSTEM] = CSAVS(1, 55, "%s: %s");
     elst[ERR_STRING] = CSAVS(1, 56, "%s");
-    elst[ERR_JOBS] = CSAVS(1, 57, "Usage: jobs [ -l ]");
+    elst[ERR_JOBS] = CSAVS(1, 57, "Usage: jobs [ -lZ ]");
     elst[ERR_JOBARGS] = CSAVS(1, 58, "Arguments should be jobs or process id's");
     elst[ERR_JOBCUR] = CSAVS(1, 59, "No current job");
     elst[ERR_JOBPREV] = CSAVS(1, 60, "No previous job");
@@ -293,7 +295,7 @@ errinit(void)
     elst[ERR_NOHOME] = CSAVS(1, 78, "No $home variable set");
     elst[ERR_HISTUS] = CSAVS(1, 79,
 	"Usage: history [-%s] [# number of events]");
-    elst[ERR_SPDOLLT] = CSAVS(1, 80, "$, ! or < not allowed with $# or $?");
+    elst[ERR_SPDOLLT] = CSAVS(1, 80, "$ or ! not allowed with $%%, $# or $?");
     elst[ERR_NEWLINE] = CSAVS(1, 81, "Newline in variable name");
     elst[ERR_SPSTAR] = CSAVS(1, 82, "* not allowed with $# or $?");
     elst[ERR_DIGIT] = CSAVS(1, 83, "$?<digit> or $#<digit> not allowed");
@@ -362,8 +364,10 @@ errinit(void)
     elst[ERR_ULIMUS] = CSAVS(1, 134, "Usage: unlimit [-fh] [limits]");
     elst[ERR_READONLY] = CSAVS(1, 135, "$%S is read-only");
     elst[ERR_BADJOB] = CSAVS(1, 136, "No such job (badjob)");
-    elst[ERR_BADCOLORVAR] = CSAVS(1, 137, "Unknown colorls variable '%c%c'");
+    elst[ERR_BADCOLORVAR] = CSAVS(1, 137, "Unknown %s color variable '%c%c'");
     elst[ERR_EOF] = CSAVS(1, 138, "Unexpected end of file");
+    elst[ERR_UNAVAILABLE] = CSAVS(1, 139, "%s: Feature is not available for this platform");
+
 }
 
 /* Cleanup data. */
@@ -572,7 +576,7 @@ fixerror(void)
      */
     btoeof();
 
-    setcopy(STRstatus, STR1, VAR_READWRITE);/*FIXRESET*/
+    setstatus(1);
 #ifdef BSDJOBS
     if (tpgrp > 0)
 	(void) tcsetpgrp(FSHTTY, tpgrp);
@@ -630,6 +634,8 @@ stderror(unsigned int id, ...)
 	 */
 	flush();/*FIXRESET*/
 	haderr = 1;		/* Now to diagnostic output */
+	if (enterhist)
+	    xprintf("Can't load history: ");/*FIXRESET*/
 	if (flags & ERR_NAME)
 	    xprintf("%s: ", bname);/*FIXRESET*/
 	if ((flags & ERR_OLD)) {

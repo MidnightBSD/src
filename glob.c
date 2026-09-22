@@ -100,7 +100,7 @@ static	int	 Lstat		(const char *, struct stat *);
 static	int	 Stat		(const char *, struct stat *sb);
 static 	Char 	*Strchr		(Char *, int);
 #ifdef DEBUG
-static	void	 qprintf	(const Char *);
+static	void	 qprintf	(const char *, const Char *);
 #endif
 
 #define	DOLLAR		'$'
@@ -254,19 +254,20 @@ Strchr(Char *str, int ch)
 
 #ifdef DEBUG
 static void
-qprintf(const Char *s)
+qprintf(const char *pre, const Char *s)
 {
     const Char *p;
 
+    xprintf("%s", pre);
     for (p = s; *p; p++)
-	printf("%c", *p & 0xff);
-    printf("\n");
+	xprintf("%c", *p & 0xff);
+    xprintf("\n%s", pre);
     for (p = s; *p; p++)
-	printf("%c", *p & M_PROTECT ? '"' : ' ');
-    printf("\n");
+	xprintf("%c", *p & M_PROTECT ? '"' : ' ');
+    xprintf("\n%s", pre);
     for (p = s; *p; p++)
-	printf("%c", *p & M_META ? '_' : ' ');
-    printf("\n");
+	xprintf("%c", *p & M_META ? '_' : ' ');
+    xprintf("\n");
 }
 #endif /* DEBUG */
 
@@ -331,7 +332,7 @@ glob(const char *pattern, int flags, int (*errfunc) (const char *, int),
 	while ((c = *patnext++) != EOS) {
 #ifdef WIDE_STRINGS
 	    int len;
-	    
+
 	    len = mblen((const char *)(patnext - 1), MB_LEN_MAX);
 	    if (len == -1)
 		TCSH_IGNORE(mblen(NULL, 0));
@@ -398,7 +399,7 @@ glob(const char *pattern, int flags, int (*errfunc) (const char *, int),
 	     * to avoid exponential behavior
 	     */
 	    if (bufnext == patbuf || bufnext[-1] != M_ALL ||
-	       ((flags & GLOB_STAR) != 0 && 
+	       ((flags & GLOB_STAR) != 0 &&
 		 (bufnext - 1 == patbuf || bufnext[-2] != M_ALL ||
 		 bufnext - 2 == patbuf || bufnext[-3] != M_ALL)))
 		*bufnext++ = M_ALL;
@@ -410,7 +411,7 @@ glob(const char *pattern, int flags, int (*errfunc) (const char *, int),
     }
     *bufnext = EOS;
 #ifdef DEBUG
-    qprintf(patbuf);
+    qprintf("patbuf=", patbuf);
 #endif
 
     if ((err = glob1(patbuf, pglob, no_match)) != 0) {
@@ -419,13 +420,13 @@ glob(const char *pattern, int flags, int (*errfunc) (const char *, int),
     }
 
     /*
-     * If there was no match we are going to append the pattern 
+     * If there was no match we are going to append the pattern
      * if GLOB_NOCHECK was specified or if GLOB_NOMAGIC was specified
      * and the pattern did not contain any magic characters
      * GLOB_NOMAGIC is there just for compatibility with csh.
      */
-    if (pglob->gl_pathc == oldpathc && 
-	((flags & GLOB_NOCHECK) || 
+    if (pglob->gl_pathc == oldpathc &&
+	((flags & GLOB_NOCHECK) ||
 	 ((flags & GLOB_NOMAGIC) && !(pglob->gl_flags & GLOB_MAGCHAR)))) {
 	if (!(flags & GLOB_QUOTE))
 	    globextend(pattern, pglob);
@@ -552,11 +553,12 @@ One_Char_mbtowc(__Char *pwc, const Char *s, size_t n)
 	;
     return one_mbtowc(pwc, buf, n);
 #else
+    (void)n;
     *pwc = *s & CHAR;
     return 1;
 #endif
 }
- 
+
 static int
 glob3(struct strbuf *pathbuf, const Char *pattern, const Char *restpattern,
       const Char *pglobstar, glob_t *pglob, int no_match)
@@ -586,7 +588,7 @@ glob3(struct strbuf *pathbuf, const Char *pattern, const Char *restpattern,
 	    break;
 	}
         pglobstar += width;
-    } 
+    }
 
     if (globstar) {
 	err = pglobstar==pattern && termstar==restpattern ?
@@ -634,7 +636,7 @@ glob3(struct strbuf *pathbuf, const Char *pattern, const Char *restpattern,
 		    continue;
 #endif
 	    if (match(pathbuf->s + orig_len, pattern, termstar,
-		(int)m_not) == no_match) 
+		(int)m_not) == no_match)
 		    continue;
 	    strbuf_append1(pathbuf, SEP);
 	    strbuf_terminate(pathbuf);
@@ -707,7 +709,7 @@ match(const char *name, const Char *pat, const Char *patend, int m_not)
 
     while (pat < patend || *name) {
 	size_t lwk, pwk;
-	__Char wc, wk;
+	__Char wc, wk, wc1;
 
 	c = *pat; /* Only for M_MASK bits */
 	if (*name == EOS)
@@ -742,18 +744,20 @@ match(const char *name, const Char *pat, const Char *patend, int m_not)
 		pat += pwk;
 		pwk = One_Char_mbtowc(&wc, pat, MB_LEN_MAX);
 	    }
+	    wc1 = wc;
 	    while ((*pat & M_MASK) != M_END) {
 		if ((*pat & M_MASK) == M_RNG) {
 		    __Char wc2;
 
 		    pat += pwk;
 		    pwk = One_Char_mbtowc(&wc2, pat, MB_LEN_MAX);
-		    if (globcharcoll(wc, wk, 0) <= 0 &&
+		    if (globcharcoll(wc1, wk, 0) <= 0 &&
 			globcharcoll(wk, wc2, 0) <= 0)
 			ok = 1;
 		} else if (wc == wk)
 		    ok = 1;
 		pat += pwk;
+		wc1 = wc;
 		pwk = One_Char_mbtowc(&wc, pat, MB_LEN_MAX);
 	    }
 	    pat += pwk;

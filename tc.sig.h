@@ -42,7 +42,7 @@
 # include <sys/signal.h>
 #endif /* SYSVREL > 0 */
 
-#if defined(__APPLE__) || defined(SUNOS4) || defined(DGUX) || defined(hp800) || (SYSVREL > 3 && defined(VFORK))
+#if defined(SUNOS4) || defined(DGUX) || defined(hp800) || (SYSVREL > 3 && defined(VFORK))
 # define SAVESIGVEC
 #endif /* SUNOS4 || DGUX || hp800 || SVR4 & VFORK */
 
@@ -51,7 +51,7 @@
 /* here I assume that systems that have bsdjobs implement the
  * the setpgrp call correctly. Otherwise defining this would
  * work, but it would kill the world, because all the setpgrp
- * code is the the part defined when BSDJOBS are defined
+ * code is the part defined when BSDJOBS are defined
  * NOTE: we don't want killpg(a, b) == kill(-getpgrp(a), b)
  * cause process a might be already dead and getpgrp would fail
  */
