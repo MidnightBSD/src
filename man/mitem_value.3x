@@ -1,5 +1,5 @@
 .\"***************************************************************************
-.\" Copyright 2018-2021,2022 Thomas E. Dickey                                *
+.\" Copyright 2018-2023,2024 Thomas E. Dickey                                *
 .\" Copyright 1998-2010,2015 Free Software Foundation, Inc.                  *
 .\"                                                                          *
 .\" Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -27,18 +27,19 @@
 .\" authorization.                                                           *
 .\"***************************************************************************
 .\"
-.\" $Id: mitem_value.3x,v 1.18 2022/02/12 20:02:20 tom Exp $
-.TH mitem_value 3X ""
+.\" $Id: mitem_value.3x,v 1.32 2024/03/16 15:35:01 tom Exp $
+.TH mitem_value 3X 2024-03-16 "ncurses @NCURSES_MAJOR@.@NCURSES_MINOR@" "Library calls"
 .SH NAME
 \fBset_item_value\fP,
-\fBitem_value\fP \- set and get menu item values
+\fBitem_value\fP \-
+set and get menu item values
 .SH SYNOPSIS
-\fB#include <menu.h>\fP
-.sp
-\fBint set_item_value(ITEM *\fIitem\fB, bool \fIvalue\fB);\fR
-.br
-\fBbool item_value(const ITEM *\fIitem\fB);\fR
-.br
+.nf
+\fB#include <menu.h>
+.PP
+\fBint set_item_value(ITEM *\fIitem\fP, bool \fIvalue\fP);
+\fBbool item_value(const ITEM *\fIitem\fP);
+.fi
 .SH DESCRIPTION
 If you turn off the menu option \fBO_ONEVALUE\fP (e.g., with
 \fBset_menu_opts\fP or \fBmenu_opts_off\fP; see \fBmenu_opts\fP(3X)), the menu
@@ -59,11 +60,6 @@ System error occurred (see \fBerrno\fP(3)).
 .TP 5
 .B E_REQUEST_DENIED
 The menu driver could not process the request.
-.SH SEE ALSO
-\fBcurses\fP(3X), \fBmenu\fP(3X).
-.SH NOTES
-The header file \fB<menu.h>\fP automatically includes the header file
-\fB<curses.h>\fP.
 .SH PORTABILITY
 These routines emulate the System V menu library.
 They were not supported on
@@ -71,3 +67,6 @@ Version 7 or BSD versions.
 .SH AUTHORS
 Juergen Pfeifer.
 Manual pages and adaptation for new curses by Eric S. Raymond.
+.SH SEE ALSO
+\fB\%curses\fP(3X),
+\fB\%menu\fP(3X)

@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2018-2021,2022 Thomas E. Dickey                                *
+ * Copyright 2018-2023,2025 Thomas E. Dickey                                *
  * Copyright 1998-2012,2017 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -34,7 +34,7 @@
  ****************************************************************************/
 
 /*
- * $Id: tic.h,v 1.86 2022/09/17 16:01:45 tom Exp $
+ * $Id: tic.h,v 1.91 2025/12/25 21:23:29 tom Exp $
  *	tic.h - Global variables and structures for the terminfo compiler.
  */
 
@@ -47,6 +47,7 @@ extern "C" {
 
 #include <ncurses_cfg.h>
 
+#include <sys/stat.h>
 #include <curses.h>	/* for the _tracef() prototype, ERR/OK, bool defs */
 
 /*
@@ -270,6 +271,7 @@ extern NCURSES_EXPORT(unsigned) _nc_pathlast (const char *);
 extern NCURSES_EXPORT(bool) _nc_is_abs_path (const char *);
 extern NCURSES_EXPORT(bool) _nc_is_dir_path (const char *);
 extern NCURSES_EXPORT(bool) _nc_is_file_path (const char *);
+extern NCURSES_EXPORT(bool) _nc_is_path_found (const char *, struct stat *);
 extern NCURSES_EXPORT(char *) _nc_basename (char *);
 extern NCURSES_EXPORT(char *) _nc_rootname (char *);
 
@@ -313,8 +315,8 @@ extern NCURSES_EXPORT_VAR(bool) _nc_suppress_warnings;
 extern NCURSES_EXPORT_VAR(struct token)	_nc_curr_token;
 
 /* comp_userdefs.c */
-NCURSES_EXPORT(const struct user_table_entry *) _nc_get_userdefs_table (void);
-NCURSES_EXPORT(const HashData *) _nc_get_hash_user (void);
+extern NCURSES_EXPORT(const struct user_table_entry *) _nc_get_userdefs_table (void);
+extern NCURSES_EXPORT(const HashData *) _nc_get_hash_user (void);
 
 /* captoinfo.c: capability conversion */
 extern NCURSES_EXPORT(char *) _nc_captoinfo (const char *, const char *, int const);
@@ -347,6 +349,14 @@ extern NCURSES_EXPORT(const char *) _nc_visbuf2 (int, const char *);
 /* lib_tputs.c */
 extern NCURSES_EXPORT_VAR(int) _nc_nulls_sent;	/* Add one for every null sent */
 
+/* comp_expand.c: expand string into readable form */
+extern NCURSES_EXPORT(char *) _nc_tic_expand (const char *, bool, int);
+
+/* comp_hash.c: name lookup */
+extern NCURSES_EXPORT(struct name_table_entry const *) _nc_find_entry
+	(const char *, const HashValue *);
+extern NCURSES_EXPORT(const HashValue *) _nc_get_hash_table (bool);
+
 /* comp_main.c: compiler main */
 extern const char * _nc_progname;
 
@@ -360,31 +370,6 @@ extern NCURSES_EXPORT(void) _nc_last_db(void);
 extern NCURSES_EXPORT(int) _nc_tic_written (void);
 
 #endif /* NCURSES_INTERNALS */
-
-/*
- * These entrypoints were used by tack before 1.08.
- */
-
-#undef  NCURSES_TACK_1_08
-#ifdef  NCURSES_INTERNALS
-#define NCURSES_TACK_1_08 /* nothing */
-#else
-#define NCURSES_TACK_1_08 GCC_DEPRECATED("upgrade to tack 1.08")
-#endif
-
-/* comp_hash.c: name lookup */
-extern NCURSES_EXPORT(struct name_table_entry const *) _nc_find_entry
-	(const char *, const HashValue *) NCURSES_TACK_1_08;
-extern NCURSES_EXPORT(const HashValue *) _nc_get_hash_table (bool) NCURSES_TACK_1_08;
-
-/* comp_scan.c: lexical analysis */
-extern NCURSES_EXPORT(void) _nc_reset_input (FILE *, char *) NCURSES_TACK_1_08;
-
-/* comp_expand.c: expand string into readable form */
-extern NCURSES_EXPORT(char *) _nc_tic_expand (const char *, bool, int) NCURSES_TACK_1_08;
-
-/* comp_scan.c: decode string from readable form */
-extern NCURSES_EXPORT(int) _nc_trans_string (char *, char *) NCURSES_TACK_1_08;
 
 #endif /* NCURSES_TERM_ENTRY_H_incl */
 

@@ -1,5 +1,5 @@
 .\"***************************************************************************
-.\" Copyright 2018-2021,2022 Thomas E. Dickey                                *
+.\" Copyright 2018-2023,2024 Thomas E. Dickey                                *
 .\" Copyright 1998-2010,2015 Free Software Foundation, Inc.                  *
 .\"                                                                          *
 .\" Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -27,18 +27,19 @@
 .\" authorization.                                                           *
 .\"***************************************************************************
 .\"
-.\" $Id: menu_pattern.3x,v 1.24 2022/02/12 20:02:20 tom Exp $
-.TH menu_pattern 3X ""
+.\" $Id: menu_pattern.3x,v 1.40 2024/12/28 21:26:21 tom Exp $
+.TH menu_pattern 3X 2024-12-28 "ncurses @NCURSES_MAJOR@.@NCURSES_MINOR@" "Library calls"
 .SH NAME
 \fBset_menu_pattern\fP,
-\fBmenu_pattern\fP \- set and get a menu's pattern buffer
+\fBmenu_pattern\fP \-
+set and get a menu's pattern buffer
 .SH SYNOPSIS
-\fB#include <menu.h>\fP
-.sp
-\fBint set_menu_pattern(MENU *\fImenu\fB, const char *\fIpattern\fB);\fR
-.br
-\fBchar *menu_pattern(const MENU *\fImenu\fB);\fR
-.br
+.nf
+\fB#include <menu.h>
+.PP
+\fBint set_menu_pattern(MENU *\fImenu\fP, const char *\fIpattern\fP);
+\fBchar *menu_pattern(const MENU *\fImenu\fP);
+.fi
 .SH DESCRIPTION
 Every menu has an associated pattern match buffer.
 As input events that are
@@ -54,7 +55,10 @@ The function \fBmenu_pattern\fP returns the pattern buffer of the given
 \fImenu\fP.
 .SH RETURN VALUE
 The function \fBmenu_pattern\fP returns a pointer,
-which is \fBNULL\fP if the \fImenu\fP parameter is \fBNULL\fP.
+which is
+.I NULL
+if the \fImenu\fP parameter is
+.IR NULL "."
 Otherwise, it is a pointer to a string which is empty
 if no pattern has been set.
 It does not set \fBerrno\fP.
@@ -78,11 +82,6 @@ Character failed to match.
 .TP 5
 .B E_SYSTEM_ERROR
 System error occurred (see \fBerrno\fP(3)).
-.SH SEE ALSO
-\fBcurses\fP(3X), \fBmenu\fP(3X).
-.SH NOTES
-The header file \fB<menu.h>\fP automatically includes the header file
-\fB<curses.h>\fP.
 .SH PORTABILITY
 These routines emulate the System V menu library.
 They were not supported on
@@ -90,3 +89,6 @@ Version 7 or BSD versions.
 .SH AUTHORS
 Juergen Pfeifer.
 Manual pages and adaptation for new curses by Eric S. Raymond.
+.SH SEE ALSO
+\fB\%curses\fP(3X),
+\fB\%menu\fP(3X)

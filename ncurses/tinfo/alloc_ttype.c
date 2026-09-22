@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2018-2021,2022 Thomas E. Dickey                                *
+ * Copyright 2018-2024,2025 Thomas E. Dickey                                *
  * Copyright 1999-2016,2017 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -43,7 +43,7 @@
 
 #include <tic.h>
 
-MODULE_ID("$Id: alloc_ttype.c,v 1.46 2022/09/17 21:44:35 tom Exp $")
+MODULE_ID("$Id: alloc_ttype.c,v 1.55 2025/02/16 18:31:37 tom Exp $")
 
 #if NCURSES_XNAMES
 /*
@@ -181,7 +181,7 @@ realign_data(TERMTYPE2 *to, char **ext_Names,
  * Returns the first index in ext_Names[] for the given token-type
  */
 static unsigned
-_nc_first_ext_name(TERMTYPE2 *tp, int token_type)
+_nc_first_ext_name(const TERMTYPE2 *tp, int token_type)
 {
     unsigned first;
 
@@ -206,7 +206,7 @@ _nc_first_ext_name(TERMTYPE2 *tp, int token_type)
  * Returns the last index in ext_Names[] for the given token-type
  */
 static unsigned
-_nc_last_ext_name(TERMTYPE2 *tp, int token_type)
+_nc_last_ext_name(const TERMTYPE2 *tp, int token_type)
 {
     unsigned last;
 
@@ -229,15 +229,17 @@ _nc_last_ext_name(TERMTYPE2 *tp, int token_type)
  * Lookup an entry from extended-names, returning -1 if not found
  */
 static int
-_nc_find_ext_name(TERMTYPE2 *tp, char *name, int token_type)
+_nc_find_ext_name(const TERMTYPE2 *tp, const char *name, int token_type)
 {
-    unsigned j;
-    unsigned first = _nc_first_ext_name(tp, token_type);
-    unsigned last = _nc_last_ext_name(tp, token_type);
+    if (name != NULL) {
+	unsigned j;
+	unsigned first = _nc_first_ext_name(tp, token_type);
+	unsigned last = _nc_last_ext_name(tp, token_type);
 
-    for (j = first; j < last; j++) {
-	if (!strcmp(name, tp->ext_Names[j])) {
-	    return (int) j;
+	for (j = first; j < last; j++) {
+	    if (!strcmp(name, tp->ext_Names[j])) {
+		return (int) j;
+	    }
 	}
     }
     return -1;
@@ -248,7 +250,7 @@ _nc_find_ext_name(TERMTYPE2 *tp, char *name, int token_type)
  * (e.g., Booleans[]).
  */
 static int
-_nc_ext_data_index(TERMTYPE2 *tp, int n, int token_type)
+_nc_ext_data_index(const TERMTYPE2 *tp, int n, int token_type)
 {
     switch (token_type) {
     case BOOLEAN:
@@ -271,7 +273,7 @@ _nc_ext_data_index(TERMTYPE2 *tp, int n, int token_type)
  * data.
  */
 static bool
-_nc_del_ext_name(TERMTYPE2 *tp, char *name, int token_type)
+_nc_del_ext_name(TERMTYPE2 *tp, const char *name, int token_type)
 {
     int first;
 
@@ -378,12 +380,15 @@ adjust_cancels(TERMTYPE2 *to, TERMTYPE2 *from)
     int j, k;
 
     DEBUG(3, (T_CALLED("adjust_cancels(%s), from(%s)"),
-	      to ? NonNull(to->term_names) : "?",
-	      from ? NonNull(from->term_names) : "?"));
+	      NonNull(to->term_names),
+	      NonNull(from->term_names)));
     for (j = first; j < last;) {
-	char *name = to->ext_Names[j];
+	char *name;
 	int j_str = to->num_Strings - first - to->ext_Strings;
 
+	if ((j + j_str) > NUM_STRINGS(to))
+	    break;
+	name = to->ext_Names[j];
 	if (to->Strings[j + j_str] == CANCELLED_STRING) {
 	    if (_nc_find_ext_name(from, to->ext_Names[j], BOOLEAN) >= 0) {
 		if (_nc_del_ext_name(to, name, STRING)
@@ -530,9 +535,10 @@ copy_termtype(TERMTYPE2 *dst, const TERMTYPE2 *src, int mode)
     unsigned i;
     int pass;
     char *new_table;
+    size_t new_table_size;
 #if NCURSES_EXT_NUMBERS
-    short *oldptr = 0;
-    int *newptr = 0;
+    short *oldptr = NULL;
+    int *newptr = NULL;
 #endif
 
     DEBUG(2, (T_CALLED("copy_termtype(dst=%p, src=%p, mode=%d)"), (void *)
@@ -550,19 +556,24 @@ copy_termtype(TERMTYPE2 *dst, const TERMTYPE2 *src, int mode)
 	   NUM_STRINGS(dst) * sizeof(dst->Strings[0]));
 
     new_table = NULL;
+    new_table_size = 0;
     for (pass = 0; pass < 2; ++pass) {
 	size_t str_size = 0;
 	if (src->term_names != NULL) {
 	    if (pass) {
 		dst->term_names = new_table + str_size;
-		strcpy(dst->term_names + str_size, src->term_names);
+		_nc_STRCPY(dst->term_names + str_size,
+			   src->term_names,
+			   new_table_size - str_size);
 	    }
 	    str_size += strlen(src->term_names) + 1;
 	}
 	for_each_string(i, src) {
 	    if (VALID_STRING(src->Strings[i])) {
 		if (pass) {
-		    strcpy(new_table + str_size, src->Strings[i]);
+		    _nc_STRCPY(new_table + str_size,
+			       src->Strings[i],
+			       new_table_size - str_size);
 		    dst->Strings[i] = new_table + str_size;
 		}
 		str_size += strlen(src->Strings[i]) + 1;
@@ -574,6 +585,7 @@ copy_termtype(TERMTYPE2 *dst, const TERMTYPE2 *src, int mode)
 	    ++str_size;
 	    if ((new_table = malloc(str_size)) == NULL)
 		_nc_err_abort(MSG_NO_MEMORY);
+	    new_table_size = str_size;
 	}
     }
 
@@ -587,7 +599,7 @@ copy_termtype(TERMTYPE2 *dst, const TERMTYPE2 *src, int mode)
 	TYPE_MALLOC(int, NUM_NUMBERS(dst), newptr);
 	dst->Numbers = newptr;
     }
-    if ((mode == srcINT) && (oldptr != 0)) {
+    if ((mode == srcINT) && (oldptr != NULL)) {
 	DEBUG(2, ("...copy int ->short"));
 	for (i = 0; i < NUM_NUMBERS(dst); ++i) {
 	    if (src->Numbers[i] > MAX_OF_TYPE(short)) {
@@ -596,7 +608,7 @@ copy_termtype(TERMTYPE2 *dst, const TERMTYPE2 *src, int mode)
 		oldptr[i] = (short) src->Numbers[i];
 	    }
 	}
-    } else if ((mode == dstINT) && (newptr != 0)) {
+    } else if ((mode == dstINT) && (newptr != NULL)) {
 	DEBUG(2, ("...copy short ->int"));
 	for (i = 0; i < NUM_NUMBERS(dst); ++i) {
 	    newptr[i] = ((const short *) (src->Numbers))[i];
@@ -626,6 +638,7 @@ copy_termtype(TERMTYPE2 *dst, const TERMTYPE2 *src, int mode)
 	memcpy(dst->ext_Names, src->ext_Names, i * sizeof(char *));
 
 	new_table = NULL;
+	new_table_size = 0;
 	for (pass = 0; pass < 2; ++pass) {
 	    size_t str_size = 0;
 	    char *raw_data = src->ext_str_table;
@@ -634,7 +647,9 @@ copy_termtype(TERMTYPE2 *dst, const TERMTYPE2 *src, int mode)
 		    size_t skip = strlen(raw_data) + 1;
 		    if (skip != 1) {
 			if (pass) {
-			    strcpy(new_table + str_size, raw_data);
+			    _nc_STRCPY(new_table + str_size,
+				       raw_data,
+				       new_table_size - str_size);
 			}
 			str_size += skip;
 			raw_data += skip;
@@ -644,7 +659,9 @@ copy_termtype(TERMTYPE2 *dst, const TERMTYPE2 *src, int mode)
 	    for (i = 0; i < NUM_EXT_NAMES(dst); ++i) {
 		if (VALID_STRING(src->ext_Names[i])) {
 		    if (pass) {
-			strcpy(new_table + str_size, src->ext_Names[i]);
+			_nc_STRCPY(new_table + str_size,
+				   src->ext_Names[i],
+				   new_table_size - str_size);
 			dst->ext_Names[i] = new_table + str_size;
 		    }
 		    str_size += strlen(src->ext_Names[i]) + 1;
@@ -656,18 +673,17 @@ copy_termtype(TERMTYPE2 *dst, const TERMTYPE2 *src, int mode)
 		++str_size;
 		if ((new_table = calloc(str_size, 1)) == NULL)
 		    _nc_err_abort(MSG_NO_MEMORY);
+		new_table_size = str_size;
 	    }
 	}
     } else {
-	dst->ext_Names = 0;
+	dst->ext_Names = NULL;
     }
 #endif
+    (void) new_table_size;
     DEBUG(2, (T_RETURN("")));
 }
 
-/*
- * This entrypoint is used by tack 1.07
- */
 NCURSES_EXPORT(void)
 _nc_copy_termtype(TERMTYPE *dst, const TERMTYPE *src)
 {

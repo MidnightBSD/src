@@ -1,6 +1,5 @@
-'\" t
 .\"***************************************************************************
-.\" Copyright 2018-2021,2022 Thomas E. Dickey                                *
+.\" Copyright 2018-2023,2024 Thomas E. Dickey                                *
 .\" Copyright 1998-2010,2015 Free Software Foundation, Inc.                  *
 .\"                                                                          *
 .\" Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -28,26 +27,25 @@
 .\" authorization.                                                           *
 .\"***************************************************************************
 .\"
-.\" $Id: form_field_new.3x,v 1.27 2022/02/12 20:03:40 tom Exp $
-.TH form_field_new 3X ""
+.\" $Id: form_field_new.3x,v 1.43 2024/12/28 21:26:21 tom Exp $
+.TH form_field_new 3X 2024-12-28 "ncurses @NCURSES_MAJOR@.@NCURSES_MINOR@" "Library calls"
 .SH NAME
 \fBnew_field\fP,
 \fBdup_field\fP,
 \fBlink_field\fP,
-\fBfree_field\fP \- create and destroy form fields
+\fBfree_field\fP \-
+create and destroy form fields
 .SH SYNOPSIS
-\fB#include <form.h>\fP
-.sp
-\fBFIELD *new_field(int \fIheight\fB, int \fIwidth\fB,\fR
+.nf
+\fB#include <form.h>
+.PP
+\fBFIELD *new_field(int \fIheight\fP, int \fIwidth\fP,
                  \fBint \fItoprow\fB, int \fIleftcol\fB,\fR
                  \fBint \fIoffscreen\fB, int \fInbuffers\fB);\fR
-.br
 \fBFIELD *dup_field(FIELD *\fIfield\fB, int \fItoprow\fB, int \fIleftcol\fB);\fR
-.br
 \fBFIELD *link_field(FIELD *\fIfield\fB, int \fItoprow\fB, int \fIleftcol\fB);\fR
-.br
 \fBint free_field(FIELD *\fIfield\fB);\fR
-.br
+.fi
 .SH DESCRIPTION
 The function \fBnew_field\fP allocates a new field and initializes it from the
 parameters given: height, width, row of upper-left corner, column of upper-left
@@ -68,7 +66,8 @@ Attribute data is separate.
 The function \fBfree_field\fP de-allocates storage associated with a field.
 .SH RETURN VALUE
 The functions \fBnew_field\fP, \fBdup_field\fP, \fBlink_field\fP return
-\fBNULL\fP on error.
+.I NULL
+on error.
 They set \fBerrno\fP according to their success:
 .TP 5
 .B E_OK
@@ -90,11 +89,6 @@ Routine detected an incorrect or out-of-range argument.
 .TP 5
 .B E_CONNECTED
 field is connected.
-.SH SEE ALSO
-\fBcurses\fP(3X), \fBform\fP(3X).
-.SH NOTES
-The header file \fB<form.h>\fP automatically includes the header file
-\fB<curses.h>\fP.
 .SH PORTABILITY
 These routines emulate the System V forms library.
 They were not supported on
@@ -106,3 +100,6 @@ not very explicit about what gets copied and what does not.
 .SH AUTHORS
 Juergen Pfeifer.
 Manual pages and adaptation for new curses by Eric S. Raymond.
+.SH SEE ALSO
+\fB\%curses\fP(3X),
+\fB\%form\fP(3X)

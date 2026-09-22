@@ -1,6 +1,5 @@
-'\" t
 .\"***************************************************************************
-.\" Copyright 2018-2021,2022 Thomas E. Dickey                                *
+.\" Copyright 2018-2024,2025 Thomas E. Dickey                                *
 .\" Copyright 1998-2015,2016 Free Software Foundation, Inc.                  *
 .\"                                                                          *
 .\" Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -28,27 +27,37 @@
 .\" authorization.                                                           *
 .\"***************************************************************************
 .\"
-.\" $Id: menu_opts.3x,v 1.21 2022/02/12 20:02:20 tom Exp $
-.TH menu_opts 3X ""
+.\" $Id: menu_opts.3x,v 1.38 2025/01/19 00:51:10 tom Exp $
+.TH menu_opts 3X 2025-01-18 "ncurses @NCURSES_MAJOR@.@NCURSES_MINOR@" "Library calls"
+.ie \n(.g \{\
+.ds `` \(lq
+.ds '' \(rq
+.\}
+.el \{\
+.ie t .ds `` ``
+.el   .ds `` ""
+.ie t .ds '' ''
+.el   .ds '' ""
+.\}
 .SH NAME
 \fBset_menu_opts\fP,
 \fBmenu_opts_on\fP,
 \fBmenu_opts_off\fP,
-\fBmenu_opts\fP \- set and get menu options
+\fBmenu_opts\fP \-
+set and get menu options
 .SH SYNOPSIS
-\fB#include <menu.h>\fP
-.sp
-\fBint set_menu_opts(MENU *\fImenu\fB, Menu_Options \fIopts\fB);\fR
-.br
-\fBMenu_Options menu_opts(const MENU *\fImenu\fB);\fR
-.sp
-\fBint menu_opts_on(MENU *\fImenu\fB, Menu_Options \fIopts\fB);\fR
-.br
-\fBint menu_opts_off(MENU *\fImenu\fB, Menu_Options \fIopts\fB);\fR
-.br
+.nf
+\fB#include <menu.h>
+.PP
+\fBint set_menu_opts(MENU *\fImenu\fP, Menu_Options \fIopts\fP);
+\fBMenu_Options menu_opts(const MENU *\fImenu\fP);
+.PP
+\fBint menu_opts_on(MENU *\fImenu\fP, Menu_Options \fIopts\fP);
+\fBint menu_opts_off(MENU *\fImenu\fP, Menu_Options \fIopts\fP);
+.fi
 .SH DESCRIPTION
-The function \fBset_menu_opts\fP sets all the given menu's option bits (menu
-option bits may be logically-OR'ed together).
+The function \fBset_menu_opts\fP sets all the given menu's option bits
+(menu option bits may be logically \*(``or\*(''-ed together).
 .PP
 The function \fBmenu_opts_on\fP turns on the given option bits, and leaves
 others alone.
@@ -95,11 +104,6 @@ System error occurred (see \fBerrno\fP(3)).
 .TP 5
 .B E_POSTED
 The menu is already posted.
-.SH SEE ALSO
-\fBcurses\fP(3X), \fBmenu\fP(3X).
-.SH NOTES
-The header file \fB<menu.h>\fP automatically includes the header file
-\fB<curses.h>\fP.
 .SH PORTABILITY
 These routines emulate the System V menu library.
 They were not supported on
@@ -107,3 +111,6 @@ Version 7 or BSD versions.
 .SH AUTHORS
 Juergen Pfeifer.
 Manual pages and adaptation for new curses by Eric S. Raymond.
+.SH SEE ALSO
+\fB\%curses\fP(3X),
+\fB\%menu\fP(3X)

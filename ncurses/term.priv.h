@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2021 Thomas E. Dickey                                          *
+ * Copyright 2021-2024,2025 Thomas E. Dickey                                *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -27,13 +27,12 @@
  ****************************************************************************/
 
 /*
- * $Id: term.priv.h,v 1.7 2021/11/20 23:33:33 tom Exp $
+ * $Id: term.priv.h,v 1.14 2025/12/27 12:41:23 tom Exp $
  *
  *	term.priv.h
  *
  *	Header file for terminfo library objects which are private to
  *	the library.
- *
  */
 
 #ifndef _TERM_PRIV_H
@@ -46,11 +45,20 @@ extern "C" {
 
 #include <ncurses_cfg.h>
 
+#ifndef __NCURSES_H
+#include <curses.h>
+#endif
+
 #undef NCURSES_OPAQUE
 #define NCURSES_INTERNALS 1
 #define NCURSES_OPAQUE 0
 
-#include <limits.h>		/* PATH_MAX */
+#if HAVE_LIMITS_H
+# include <limits.h>		/* PATH_MAX, MB_LEN_MAX, etc */
+#elif HAVE_SYS_PARAM_H
+# include <sys/param.h>
+#endif
+
 #include <signal.h>		/* sig_atomic_t */
 #include <time.h>		/* time_t */
 #include <term.h>		/* time_t */
@@ -59,6 +67,28 @@ extern "C" {
 #if USE_REENTRANT
 #include <pthread.h>
 #endif
+#endif
+
+/*
+ * If not properly configured to use the system's limits.h, we get gcc's
+ * fallback for limits.h which sets MB_LEN_MAX to 1, which is never correct.
+ */
+#if !HAVE_CONSISTENT_MB_LEN_MAX
+#undef MB_LEN_MAX
+#endif
+
+#ifndef MB_LEN_MAX
+#define MB_LEN_MAX 16	/* should be >= MB_CUR_MAX, but that may be a function */
+#endif
+
+#ifndef PATH_MAX
+# if defined(_POSIX_PATH_MAX)
+#  define PATH_MAX _POSIX_PATH_MAX
+# elif defined(MAXPATHLEN)
+#  define PATH_MAX MAXPATHLEN
+# else
+#  define PATH_MAX 255	/* the Posix minimum path-size */
+# endif
 #endif
 
 /*
@@ -146,7 +176,7 @@ typedef struct {
 
 #include <term_entry.h>		/* dbdLAST */
 
-#ifdef USE_TERM_DRIVER
+#if USE_TERM_DRIVER
 struct DriverTCB; /* Terminal Control Block forward declaration */
 #endif
 
@@ -198,7 +228,7 @@ typedef struct {
 	int		count_tparm;
 #endif /* HAVE_TSEARCH */
 
-#ifdef USE_TERM_DRIVER
+#if USE_TERM_DRIVER
 	int		(*term_driver)(struct DriverTCB*, const char*, int*);
 #endif
 
@@ -238,7 +268,6 @@ typedef struct {
 
 #ifdef TRACE
 	bool		trace_opened;
-	char		trace_fname[PATH_MAX];
 	int		trace_level;
 	FILE *		trace_fp;
 	int		trace_fd;

@@ -1,6 +1,5 @@
-'\" t
 .\"***************************************************************************
-.\" Copyright 2018-2021,2022 Thomas E. Dickey                                *
+.\" Copyright 2018-2023,2024 Thomas E. Dickey                                *
 .\" Copyright 1998-2006,2010 Free Software Foundation, Inc.                  *
 .\"                                                                          *
 .\" Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -28,23 +27,23 @@
 .\" authorization.                                                           *
 .\"***************************************************************************
 .\"
-.\" $Id: mitem_current.3x,v 1.23 2022/02/12 20:02:20 tom Exp $
-.TH mitem_current 3X ""
+.\" $Id: mitem_current.3x,v 1.39 2024/12/28 21:26:21 tom Exp $
+.TH mitem_current 3X 2024-12-28 "ncurses @NCURSES_MAJOR@.@NCURSES_MINOR@" "Library calls"
 .SH NAME
-\fBmitem_current\fP \- set and get current_menu_item
+\fBmitem_current\fP \-
+set and get current_menu_item
 .SH SYNOPSIS
-\fB#include <menu.h>\fP
-.sp
-\fBint set_current_item(MENU *\fImenu\fB, ITEM *\fIitem\fB);\fR
-.br
-\fBITEM *current_item(const MENU *\fImenu\fB);\fR
-.sp
-\fBint set_top_row(MENU *\fImenu\fB, int \fIrow\fB);\fR
-.br
-\fBint top_row(const MENU *\fImenu\fB);\fR
-.sp
-\fBint item_index(const ITEM *\fIitem\fB);\fR
-.br
+.nf
+\fB#include <menu.h>
+.PP
+\fBint set_current_item(MENU *\fImenu\fP, ITEM *\fIitem\fP);
+\fBITEM *current_item(const MENU *\fImenu\fP);
+.PP
+\fBint set_top_row(MENU *\fImenu\fP, int \fIrow\fP);
+\fBint top_row(const MENU *\fImenu\fP);
+.PP
+\fBint item_index(const ITEM *\fIitem\fP);
+.fi
 .SH DESCRIPTION
 The function \fBset_current_item\fP sets the current item (the item on which
 the menu cursor is positioned).
@@ -62,11 +61,13 @@ row being displayed.
 The function \fBitem_index\fP returns the (zero-origin) index of \fIitem\fP in
 the menu's item pointer list.
 .SH RETURN VALUE
-\fBcurrent_item\fP returns a pointer (which may be \fBNULL\fP).
+\fBcurrent_item\fP returns a pointer (which may be
+.IR NULL ")."
 It does not set \fBerrno\fP.
 .PP
 \fBtop_row\fP and \fBitem_index\fP return \fBERR\fP (the general \fBcurses\fP
-error value) if their \fImenu\fP parameter is \fBNULL\fP.
+error value) if their \fImenu\fP parameter is
+.IR NULL "."
 .PP
 \fBset_current_item\fP and \fBset_top_row\fP return one of the following:
 .TP 5
@@ -84,11 +85,6 @@ No items are connected to the menu.
 .TP 5
 .B E_SYSTEM_ERROR
 System error occurred (see \fBerrno\fP(3)).
-.SH SEE ALSO
-\fBcurses\fP(3X), \fBmenu\fP(3X).
-.SH NOTES
-The header file \fB<menu.h>\fP automatically includes the header file
-\fB<curses.h>\fP.
 .SH PORTABILITY
 These routines emulate the System V menu library.
 They were not supported on
@@ -99,3 +95,6 @@ The SVr4 menu library documentation specifies the \fBtop_row\fP and
 .SH AUTHORS
 Juergen Pfeifer.
 Manual pages and adaptation for new curses by Eric S. Raymond.
+.SH SEE ALSO
+\fB\%curses\fP(3X),
+\fB\%menu\fP(3X)

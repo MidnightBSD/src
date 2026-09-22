@@ -1,7 +1,7 @@
 #! /bin/sh
-# $Id: MKkey_defs.sh,v 1.23 2022/07/16 16:54:02 tom Exp $
+# $Id: MKkey_defs.sh,v 1.25 2025/06/14 14:44:56 tom Exp $
 ##############################################################################
-# Copyright 2019-2020,2022 Thomas E. Dickey                                  #
+# Copyright 2019-2024,2025 Thomas E. Dickey                                  #
 # Copyright 2001-2013,2017 Free Software Foundation, Inc.                    #
 #                                                                            #
 # Permission is hereby granted, free of charge, to any person obtaining a    #
@@ -64,7 +64,7 @@ fi
 
 # add keys that we generate automatically:
 cat >>$data <<EOF
-key_resize	kr1	str	R1	KEY_RESIZE	+	NCURSES_EXT_FUNCS 	Terminal resize event
+key_resize	kr1	str	R1	KEY_RESIZE	+	NCURSES_SIGWINCH 	Terminal resize event
 EOF
 
 THIS=./`basename "$0"`
@@ -110,8 +110,8 @@ function decode(keycode) {
 }
 
 BEGIN	{
-	maxkey='$maxkey';
-	pass='$pass';
+	maxkey='"$maxkey"';
+	pass='"$pass"';
 	key_max=1;
 	bits=1;
 	while (key_max < maxkey) {
@@ -146,7 +146,7 @@ $5 != "-" && $6 != "-" {
 			if (index($7,"NCURSES_") == 1) {
 				ifdef = 1;
 				printf "\n";
-				printf "#ifdef %s\n", $7;
+				printf "#if %s\n", $7;
 			}
 			if ($5 == "KEY_F(0)" ) {
 				printf "#define "

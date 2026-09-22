@@ -1,5 +1,5 @@
 .\"***************************************************************************
-.\" Copyright 2020,2021 Thomas E. Dickey                                     *
+.\" Copyright 2020-2023,2024 Thomas E. Dickey                                *
 .\" Copyright 2010 Free Software Foundation, Inc.                            *
 .\"                                                                          *
 .\" Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -27,73 +27,78 @@
 .\" authorization.                                                           *
 .\"***************************************************************************
 .\"
-.\" $Id: MKncu_config.in,v 1.6 2021/12/25 17:39:16 tom Exp $
-.TH @LIB_NAME@@DFT_ARG_SUFFIX@@cf_cv_abi_version@-config 1 ""
+.\" $Id: MKncu_config.in,v 1.25 2024/05/11 20:39:53 tom Exp $
+.TH @LIB_NAME@@DFT_ARG_SUFFIX@@cf_cv_abi_version@\-config 1 2024-05-11 "ncurses @NCURSES_MAJOR@.@NCURSES_MINOR@" "User commands"
 .SH NAME
-@LIB_NAME@@DFT_ARG_SUFFIX@@cf_cv_abi_version@-config \- helper script for ncurses libraries
+\fB\%@LIB_NAME@@DFT_ARG_SUFFIX@@cf_cv_abi_version@-config\fP \-
+configuration helper for \fI\%ncurses\fP libraries
 .SH SYNOPSIS
 .B @LIB_NAME@@DFT_ARG_SUFFIX@@cf_cv_abi_version@-config
-[\fIoptions\fP]
+.I option
+\&.\|.\|.
+.PP
+.B "@LIB_NAME@@DFT_ARG_SUFFIX@@cf_cv_abi_version@-config \-\-version"
+.PP
+.B "@LIB_NAME@@DFT_ARG_SUFFIX@@cf_cv_abi_version@-config \-\-help"
 .SH DESCRIPTION
-This is a shell script which simplifies configuring applications against
-a particular set of ncurses libraries.
+This program development aid simplifies the process of configuring
+applications against a particular set of \fI\%ncurses\fP libraries.
 .SH OPTIONS
-.TP
+.TP 18 \" "--mouse-version" + 2n + adjustment for PDF
 \fB\-\-prefix\fP
-echos the package\-prefix of ncurses
+reports the package prefix of \fI\%ncurses\fP.
 .TP
 \fB\-\-exec\-prefix\fP
-echos the executable\-prefix of ncurses
+reports the executable prefix of \fI\%ncurses\fP.
 .TP
 \fB\-\-cflags\fP
-echos the C compiler flags needed to compile with ncurses
+reports the C compiler flags needed to compile with \fI\%ncurses\fP.
 .TP
 \fB\-\-libs\fP
-echos the libraries needed to link with ncurses
-.TP
-\fB\-\-version\fP
-echos the release+patchdate version of ncurses
+reports the libraries needed to link with \fI\%ncurses\fP.
 .TP
 \fB\-\-abi\-version\fP
-echos the ABI version of ncurses
+reports the ABI version of \fI\%ncurses\fP.
 .TP
 \fB\-\-mouse\-version\fP
-echos the mouse\-interface version of ncurses
+reports the mouse\-interface version of \fI\%ncurses\fP.
 .TP
 \fB\-\-bindir\fP
-echos the directory containing ncurses programs
+reports the directory containing \fI\%ncurses\fP programs.
 .TP
 \fB\-\-datadir\fP
-echos the directory containing ncurses data
+reports the directory containing \fI\%ncurses\fP data.
 .TP
 \fB\-\-includedir\fP
-echos the directory containing ncurses header files
+reports the directory containing \fI\%ncurses\fP header files.
 .TP
 \fB\-\-libdir\fP
-echos the directory containing ncurses libraries
+reports the directory containing \fI\%ncurses\fP libraries.
 .TP
 \fB\-\-mandir\fP
-echos the directory containing ncurses manpages
+reports the directory containing \fI\%ncurses\fP man pages.
 .TP
 \fB\-\-terminfo\fP
-echos the $TERMINFO terminfo database path, e.g.,
-.RS
-@TERMINFO@
-.RE
+reports the \fI\%TERMINFO\fP \fIterminfo\fP database path,
+for example \fI\%@TERMINFO@\fP.
 .TP
 \fB\-\-terminfo\-dirs\fP
-echos the $TERMINFO_DIRS directory list, e.g.,
-.RS
-@TERMINFO_DIRS@
-.RE
+reports the \fI\%TERMINFO_DIRS\fP supplemental search path for the
+\fIterminfo\fP database,
+for example \fI\%@TERMINFO_DIRS@\fP.
 .TP
 \fB\-\-termpath\fP
-echos the $TERMPATH termcap list, if support for termcap is configured.
-.TP
-\fB\-\-help\fP
-prints this message
-.SH "SEE ALSO"
-\fBcurses\fP(3X)
+reports the \fI\%TERMPATH\fP supplemental search path for the
+\fItermcap\fP database,
+if support for \fItermcap\fP is configured.
 .PP
-This describes \fBncurses\fP
-version @NCURSES_MAJOR@.@NCURSES_MINOR@ (patch @NCURSES_PATCH@).
+The following options cause all others to be ignored.
+.TP 11 .\" "--version" + 2n
+\fB\-\-help\fP
+issues a usage message and exits successfully.
+.TP
+\fB\-\-version\fP
+issues the release and patch date information of \fI\%ncurses\fP and
+exits successfully.
+.SH "SEE ALSO"
+\fB\%curses\fP(3X)

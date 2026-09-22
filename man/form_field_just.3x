@@ -1,6 +1,5 @@
-'\" t
 .\"***************************************************************************
-.\" Copyright 2018-2021,2022 Thomas E. Dickey                                *
+.\" Copyright 2018-2023,2024 Thomas E. Dickey                                *
 .\" Copyright 1998-2010,2015 Free Software Foundation, Inc.                  *
 .\"                                                                          *
 .\" Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -28,22 +27,29 @@
 .\" authorization.                                                           *
 .\"***************************************************************************
 .\"
-.\" $Id: form_field_just.3x,v 1.21 2022/02/12 20:03:40 tom Exp $
-.TH form_field_just 3X ""
-.ie \n(.g .ds `` \(lq
-.el       .ds `` ``
-.ie \n(.g .ds '' \(rq
-.el       .ds '' ''
+.\" $Id: form_field_just.3x,v 1.35 2024/03/16 15:35:01 tom Exp $
+.TH form_field_just 3X 2024-03-16 "ncurses @NCURSES_MAJOR@.@NCURSES_MINOR@" "Library calls"
+.ie \n(.g \{\
+.ds `` \(lq
+.ds '' \(rq
+.\}
+.el \{\
+.ie t .ds `` ``
+.el   .ds `` ""
+.ie t .ds '' ''
+.el   .ds '' ""
+.\}
 .SH NAME
 \fBset_field_just\fP,
-\fBfield_just\fP \- retrieve field characteristics
+\fBfield_just\fP \-
+retrieve field characteristics
 .SH SYNOPSIS
-\fB#include <form.h>\fP
-.sp
-\fBint set_field_just(FIELD *\fIfield\fB, int \fIjustification\fB);\fR
-.br
-\fBint field_just(const FIELD *\fIfield\fB);\fR
-.br
+.nf
+\fB#include <form.h>
+.PP
+\fBint set_field_just(FIELD *\fIfield\fP, int \fIjustification\fP);
+\fBint field_just(const FIELD *\fIfield\fP);
+.fi
 .SH DESCRIPTION
 The function \fBset_field_just\fP sets the justification attribute of
 a field; \fBfield_just\fP returns a field's justification attribute.
@@ -64,12 +70,6 @@ System error occurred (see \fBerrno\fP(3)).
 .TP 5
 .B E_BAD_ARGUMENT
 Routine detected an incorrect or out-of-range argument.
-.SH SEE ALSO
-\fBcurses\fP(3X) and related pages whose names begin \*(``form_\*('' for detailed
-descriptions of the entry points.
-.SH NOTES
-The header file \fB<form.h>\fP automatically includes the header file
-\fB<curses.h>\fP.
 .SH PORTABILITY
 These routines emulate the System V forms library.
 They were not supported on
@@ -77,3 +77,6 @@ Version 7 or BSD versions.
 .SH AUTHORS
 Juergen Pfeifer.
 Manual pages and adaptation for new curses by Eric S. Raymond.
+.SH SEE ALSO
+\fB\%curses\fP(3X) and related pages whose names begin \*(``form_\*(''
+for detailed descriptions of the entry points.

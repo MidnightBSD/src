@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2020,2021 Thomas E. Dickey                                     *
+ * Copyright 2020-2023,2024 Thomas E. Dickey                                *
  * Copyright 1998-2010,2011 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -43,7 +43,7 @@
 
 #include <curses.priv.h>
 
-MODULE_ID("$Id: lib_refresh.c,v 1.47 2021/11/06 22:22:03 tom Exp $")
+MODULE_ID("$Id: lib_refresh.c,v 1.49 2024/09/22 20:17:40 tom Exp $")
 
 NCURSES_EXPORT(int)
 wrefresh(WINDOW *win)
@@ -55,7 +55,7 @@ wrefresh(WINDOW *win)
 
     T((T_CALLED("wrefresh(%p)"), (void *) win));
 
-    if (win == 0) {
+    if (SP_PARM == NULL || win == NULL) {
 	code = ERR;
     } else if (win == CurScreen(SP_PARM)) {
 	CurScreen(SP_PARM)->_clear = TRUE;
@@ -92,7 +92,7 @@ wnoutrefresh(WINDOW *win)
 
     T((T_CALLED("wnoutrefresh(%p)"), (void *) win));
 
-    if (win == NULL)
+    if (SP_PARM == NULL || win == NULL)
 	returnCode(ERR);
 
     /*
@@ -208,7 +208,6 @@ wnoutrefresh(WINDOW *win)
 	    });
 
 	    if_WIDEC({
-		static cchar_t blank = BLANK;
 		int last_dst = begx + ((last_src < win->_maxx)
 				       ? last_src
 				       : win->_maxx);
@@ -254,6 +253,7 @@ wnoutrefresh(WINDOW *win)
 		 */
 		if (fix_left < dst_col || fix_right > last_dst) {
 		    for (j = fix_left; j <= fix_right; ++j) {
+			static cchar_t blank = BLANK;
 			nline->text[j] = blank;
 			CHANGED_CELL(nline, j);
 		    }

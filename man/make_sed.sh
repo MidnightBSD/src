@@ -1,7 +1,7 @@
 #!/bin/sh
-# $Id: make_sed.sh,v 1.16 2022/10/01 13:14:07 tom Exp $
+# $Id: make_sed.sh,v 1.22 2025/11/12 00:52:57 Branden.Robinson Exp $
 ##############################################################################
-# Copyright 2020-2021,2022 Thomas E. Dickey                                  #
+# Copyright 2020-2023,2025 Thomas E. Dickey                                  #
 # Copyright 1998-2005,2017 Free Software Foundation, Inc.                    #
 #                                                                            #
 # Permission is hereby granted, free of charge, to any person obtaining a    #
@@ -31,9 +31,9 @@
 #
 # Author: Thomas E. Dickey 1997
 #
-# Construct a sed-script to perform renaming within man-pages.  Originally
+# Construct a sed script to perform renaming within man pages.  Originally
 # written in much simpler form, this one accounts for the common cases of
-# section-names in man-pages.
+# section names in man pages.
 
 if test $# != 1 ; then
 	echo '? expected a single filename'
@@ -66,18 +66,20 @@ sed	-e 's/^/s\/\\</' \
 	-e 's/$/\//' >$UPPER
 
 {
+echo "# This script was generated from '$1' by man/make_sed.sh."
 echo "# Do the TH lines"
 sed	-e 's/\//\/TH /' \
 	-e 's/	/ /' \
-	-e 's/	/ ""\/TH /' \
+	-e 's/	/ \/TH /' \
 	-e 's/	/ /' \
-	-e 's/\/$/ ""\//' \
+	-e 's/\/$/ \//' \
 	$UPPER
 
 echo "# Do the embedded references"
-sed	-e 's/</<fB/' \
+sed	-e 's/</<fB\\(\\\\%\\)\\?/' \
+	-e 's/\\%</\\%/' \
 	-e 's/	/\\\\fP(/' \
-	-e 's/	/)\/fB/' \
+	-e 's/	/)\/fB\\1/' \
 	-e 's/	/\\\\fP(/' \
 	-e 's/\/$/)\//' \
 	$UPPER

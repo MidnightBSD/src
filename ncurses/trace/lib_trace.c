@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2018-2021,2022 Thomas E. Dickey                                *
+ * Copyright 2018-2023,2024 Thomas E. Dickey                                *
  * Copyright 1998-2016,2017 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -48,7 +48,7 @@
 
 #include <ctype.h>
 
-MODULE_ID("$Id: lib_trace.c,v 1.101 2022/09/17 14:57:02 tom Exp $")
+MODULE_ID("$Id: lib_trace.c,v 1.109 2024/12/07 21:02:00 tom Exp $")
 
 NCURSES_EXPORT_VAR(unsigned) _nc_tracing = 0; /* always define this */
 
@@ -89,17 +89,17 @@ NCURSES_EXPORT_VAR(long) _nc_outchars = 0;
 #define MyFP		_nc_globals.trace_fp
 #define MyFD		_nc_globals.trace_fd
 #define MyInit		_nc_globals.trace_opened
-#define MyPath		_nc_globals.trace_fname
 #define MyLevel		_nc_globals.trace_level
 #define MyNested	_nc_globals.nested_tracef
 #endif /* TRACE */
 
 #if USE_REENTRANT
-#define Locked(statement) { \
+#define Locked(statement) \
+    do { \
 	_nc_lock_global(tst_tracef); \
 	statement; \
 	_nc_unlock_global(tst_tracef); \
-    }
+    } while (0)
 #else
 #define Locked(statement) statement
 #endif
@@ -135,28 +135,21 @@ curses_trace(unsigned tracelevel)
 
     Locked(result = _nc_tracing);
 
-    if ((MyFP == 0) && tracelevel) {
+    if ((MyFP == NULL) && tracelevel) {
 	MyInit = TRUE;
 	if (MyFD >= 0) {
 	    MyFP = fdopen(MyFD, BIN_W);
 	} else {
-	    if (MyPath[0] == '\0') {
-		size_t size = sizeof(MyPath) - 12;
-		if (getcwd(MyPath, size) == 0) {
-		    perror("curses: Can't get working directory");
-		    exit(EXIT_FAILURE);
-		}
-		MyPath[size] = '\0';
-		assert(strlen(MyPath) <= size);
-		_nc_STRCAT(MyPath, "/trace", sizeof(MyPath));
-		if (_nc_is_dir_path(MyPath)) {
-		    _nc_STRCAT(MyPath, ".log", sizeof(MyPath));
-		}
+	    char myFile[80];
+
+	    _nc_STRCPY(myFile, "trace", sizeof(myFile));
+	    if (_nc_is_dir_path(myFile)) {
+		_nc_STRCAT(myFile, ".log", sizeof(myFile));
 	    }
 #define SAFE_MODE (O_CREAT | O_EXCL | O_RDWR)
-	    if (_nc_access(MyPath, W_OK) < 0
-		|| (MyFD = safe_open3(MyPath, SAFE_MODE, 0600)) < 0
-		|| (MyFP = fdopen(MyFD, BIN_W)) == 0) {
+	    if (_nc_access(myFile, W_OK) < 0
+		|| (MyFD = safe_open3(myFile, SAFE_MODE, 0600)) < 0
+		|| (MyFP = fdopen(MyFD, BIN_W)) == NULL) {
 		;		/* EMPTY */
 	    }
 	}
@@ -165,7 +158,7 @@ curses_trace(unsigned tracelevel)
 	 * so that the trace-output gets flushed automatically at the
 	 * end of each line.  This is useful in case the program dies.
 	 */
-	if (MyFP != 0) {
+	if (MyFP != NULL) {
 #if HAVE_SETVBUF		/* ANSI */
 	    (void) setvbuf(MyFP, (char *) 0, _IOLBF, (size_t) 0);
 #elif HAVE_SETBUF /* POSIX */
@@ -195,10 +188,10 @@ curses_trace(unsigned tracelevel)
 	    _tracef("- DEBUG_LEVEL(%u)", tracelevel >> TRACE_SHIFT);
 	}
     } else if (tracelevel == 0) {
-	if (MyFP != 0) {
+	if (MyFP != NULL) {
 	    MyFD = dup(MyFD);	/* allow reopen of same file */
 	    fclose(MyFP);
-	    MyFP = 0;
+	    MyFP = NULL;
 	}
 	Locked(_nc_tracing = tracelevel);
     } else if (_nc_tracing != tracelevel) {
@@ -233,7 +226,7 @@ _nc_va_tracef(const char *fmt, va_list ap)
 
 #ifdef TRACE
     /* verbose-trace in the command-line utilities relies on this */
-    if (fp == 0 && !MyInit && _nc_tracing >= DEBUG_LEVEL(1))
+    if (fp == NULL && !MyInit && _nc_tracing >= DEBUG_LEVEL(1))
 	fp = stderr;
 #endif
 
@@ -253,7 +246,7 @@ _nc_va_tracef(const char *fmt, va_list ap)
 	}
     }
 
-    if (doit != 0 && fp != 0) {
+    if (doit != 0 && fp != NULL) {
 #ifdef USE_PTHREADS
 	/*
 	 * TRACE_ICALLS is "really" needed to show normal use with threaded
@@ -267,11 +260,13 @@ _nc_va_tracef(const char *fmt, va_list ap)
 # if USE_WEAK_SYMBOLS
 	if ((pthread_self))
 # endif
-#ifdef _NC_WINDOWS
-	    fprintf(fp, "%#lx:", (long) (intptr_t) pthread_self().p);
+	    fprintf(fp, "%#" PRIxPTR ":",
+#ifdef _NC_WINDOWS_NATIVE
+		    CASTxPTR(pthread_self().p)
 #else
-	    fprintf(fp, "%#lx:", (long) (intptr_t) pthread_self());
+		    CASTxPTR(pthread_self())
 #endif
+		);
 #endif
 	if (before || after) {
 	    int n;
@@ -300,8 +295,8 @@ _tracef(const char *fmt, ...)
 }
 
 /* Trace 'bool' return-values */
-NCURSES_EXPORT(NCURSES_BOOL)
-_nc_retrace_bool(int code)
+NCURSES_EXPORT(bool)
+_nc_retrace_bool(bool code)
 {
     T((T_RETURN("%s"), code ? "TRUE" : "FALSE"));
     return code;

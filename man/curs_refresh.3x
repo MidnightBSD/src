@@ -1,5 +1,5 @@
 .\"***************************************************************************
-.\" Copyright 2018-2021,2022 Thomas E. Dickey                                *
+.\" Copyright 2018-2024,2025 Thomas E. Dickey                                *
 .\" Copyright 1998-2010,2016 Free Software Foundation, Inc.                  *
 .\"                                                                          *
 .\" Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -27,44 +27,45 @@
 .\" authorization.                                                           *
 .\"***************************************************************************
 .\"
-.\" $Id: curs_refresh.3x,v 1.25 2022/02/12 20:05:11 tom Exp $
-.TH curs_refresh 3X ""
-.ie \n(.g .ds `` \(lq
-.el       .ds `` ``
-.ie \n(.g .ds '' \(rq
-.el       .ds '' ''
+.\" $Id: curs_refresh.3x,v 1.58 2025/01/19 00:51:10 tom Exp $
+.TH curs_refresh 3X 2025-01-18 "ncurses @NCURSES_MAJOR@.@NCURSES_MINOR@" "Library calls"
+.ie \n(.g \{\
+.ds `` \(lq
+.ds '' \(rq
+.\}
+.el \{\
+.ie t .ds `` ``
+.el   .ds `` ""
+.ie t .ds '' ''
+.el   .ds '' ""
+.\}
+.
 .de bP
 .ie n  .IP \(bu 4
 .el    .IP \(bu 2
 ..
-.na
-.hy 0
 .SH NAME
-\fBdoupdate\fP,
-\fBredrawwin\fP,
-\fBrefresh\fP,
-\fBwnoutrefresh\fP,
-\fBwredrawln\fP,
-\fBwrefresh\fP \- refresh \fBcurses\fP windows and lines
-.ad
-.hy
+\fB\%doupdate\fP,
+\fB\%redrawwin\fP,
+\fB\%refresh\fP,
+\fB\%wnoutrefresh\fP,
+\fB\%wredrawln\fP,
+\fB\%wrefresh\fP \-
+refresh \fIcurses\fR windows or lines thereupon
 .SH SYNOPSIS
-\fB#include <curses.h>\fP
-.sp
-\fBint refresh(void);\fP
-.br
-\fBint wrefresh(WINDOW *\fIwin\fB);\fR
-.br
-\fBint wnoutrefresh(WINDOW *\fIwin\fB);\fR
-.br
-\fBint doupdate(void);\fP
-.sp
-\fBint redrawwin(WINDOW *\fIwin\fB);\fR
-.br
-\fBint wredrawln(WINDOW *\fIwin\fB, int \fIbeg_line\fB, int \fInum_lines\fB);\fR
-.br
+.nf
+\fB#include <curses.h>
+.PP
+\fBint refresh(void);
+\fBint wrefresh(WINDOW *\fIwin\fP);
+\fBint wnoutrefresh(WINDOW *\fIwin\fP);
+\fBint doupdate(void);
+.PP
+\fBint redrawwin(WINDOW *\fIwin\fP);
+\fBint wredrawln(WINDOW *\fIwin\fP, int \fIbeg_line\fP, int \fInum_lines\fP);
+.fi
 .SH DESCRIPTION
-.SS refresh/wrefresh
+.SS "refresh, wrefresh"
 The \fBrefresh\fP and \fBwrefresh\fP routines (or \fBwnoutrefresh\fP and
 \fBdoupdate\fP) must be called to get actual output to the terminal,
 as other routines merely manipulate data structures.
@@ -73,20 +74,21 @@ the named window to the \fIphysical screen\fP,
 taking into account what is already there to do optimizations.
 The \fBrefresh\fP routine is the
 same, using \fBstdscr\fP as the default window.
-Unless \fBleaveok\fP has been
+Unless \fBleaveok\fP(3X) has been
 enabled, the physical cursor of the terminal is left at the location of the
 cursor for that window.
-.SS wnoutrefresh/doupdate
-.PP
+.SS "wnoutrefresh, doupdate"
 The \fBwnoutrefresh\fP and \fBdoupdate\fP routines allow multiple updates with
 more efficiency than \fBwrefresh\fP alone.
 In addition to all the window
 structures, \fBcurses\fP keeps two data structures representing the terminal
 screen:
 .bP
-a \fIphysical screen\fP, describing what is actually on the screen, and
+a \fIphysical screen\fP,
+describing what is actually on the screen, and
 .bP
-a \fIvirtual screen\fP, describing what the programmer wants to have on the screen.
+a \fIvirtual screen\fP,
+describing what the programmer wants to have on the screen.
 .PP
 The routine \fBwrefresh\fP works by
 .bP
@@ -120,34 +122,41 @@ order and the overlap region will be modified only when it is explicitly
 changed.
 (But see the section on \fBPORTABILITY\fP below for a warning about
 exploiting this behavior.)
-.SS wredrawln/redrawwin
-.PP
+.SS "wredrawln, redrawwin"
 The \fBwredrawln\fP routine indicates to \fBcurses\fP that some screen lines
 are corrupted and should be thrown away before anything is written over them.
 It touches the indicated lines (marking them changed).
 The routine \fBredrawwin\fP touches the entire window.
 .SH RETURN VALUE
-Routines that return an integer return \fBERR\fP upon failure, and \fBOK\fP
-(SVr4 only specifies "an integer value other than \fBERR\fP") upon successful
-completion.
+These routines return the integer \fBERR\fP upon failure and \fBOK\fP
 .PP
-X/Open does not define any error conditions.
 In this implementation
 .RS 3
 .TP 5
 \fBwnoutrefresh\fP
-returns an error
+returns
+.B ERR
 if the window pointer is null, or
 if the window is really a pad.
 .TP 5
 \fBwredrawln\fP
-returns an error
-if the associated call to \fBtouchln\fP returns an error.
+return
+.B ERR
+if the associated call to \fBtouchln\fP returns
+.BR ERR "."
 .RE
 .SH NOTES
-Note that \fBrefresh\fP and \fBredrawwin\fP may be macros.
+.B \%refresh
+and
+.B \%redrawwin
+may be implemented as macros.
 .SH PORTABILITY
-The XSI Curses standard, Issue 4 describes these functions.
+X/Open Curses Issue\ 4 describes these functions.
+It specifies no error conditions for them.
+.PP
+SVr4 describes a successful return value only as
+\*(``an integer value other than
+.IR ERR \*(''. \" Courier roman in source; SVID 4, vol. 3, p. 527
 .PP
 Whether \fBwnoutrefresh\fP copies to the virtual screen the entire contents
 of a window or just its changed portions has never been well-documented in
@@ -158,6 +167,6 @@ implementations.
 Instead, you can do an explicit \fBtouchwin\fP before the
 \fBwnoutrefresh\fP call to guarantee an entire-contents copy anywhere.
 .SH SEE ALSO
-\fBcurses\fP(3X),
-\fBcurs_outopts\fP(3X)
-\fBcurs_variables\fP(3X).
+\fB\%curses\fP(3X),
+\fB\%curs_outopts\fP(3X),
+\fB\%curs_variables\fP(3X)

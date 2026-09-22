@@ -1,6 +1,5 @@
 /****************************************************************************
- * Copyright 2020,2024 Thomas E. Dickey                                     *
- * Copyright 1998-2005,2009 Free Software Foundation, Inc.                  *
+ * Copyright 2025 Thomas E. Dickey                                          *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -28,40 +27,78 @@
  ****************************************************************************/
 
 /****************************************************************************
- *  Author:  Juergen Pfeifer, 1997                                          *
- *     and:  Thomas E. Dickey 2005                                          *
+ *  Author: Thomas E. Dickey                                                *
  ****************************************************************************/
 
-/*
- *	lib_slkatrof.c
- *	Soft key routines.
- *      Switch off labels attributes
- */
 #include <curses.priv.h>
 
-MODULE_ID("$Id: lib_slkatrof.c,v 1.13 2024/12/07 20:03:37 tom Exp $")
+MODULE_ID("$Id: report_ctype.c,v 1.1 2025/10/25 19:21:11 tom Exp $")
 
-NCURSES_EXPORT(int)
-NCURSES_SP_NAME(slk_attroff) (NCURSES_SP_DCLx const chtype attr)
-{
-    T((T_CALLED("slk_attroff(%p,%s)"), (void *) SP_PARM, _traceattr(attr)));
+#include <ctype.h>
+#include <wctype.h>
+#include <locale.h>
 
-    if (SP_PARM != NULL && SP_PARM->_slk != NULL) {
-	TR(TRACE_ATTRS, ("... current %s", _tracech_t(CHREF(SP_PARM->_slk->attr))));
-	RemAttr(SP_PARM->_slk->attr, attr);
-	if ((attr & A_COLOR) != 0) {
-	    SetPair(SP_PARM->_slk->attr, 0);
-	}
-	TR(TRACE_ATTRS, ("new attribute is %s", _tracech_t(CHREF(SP_PARM->_slk->attr))));
-	returnCode(OK);
-    } else
-	returnCode(ERR);
-}
-
-#if NCURSES_SP_FUNCS
-NCURSES_EXPORT(int)
-slk_attroff(const chtype attr)
-{
-    return NCURSES_SP_NAME(slk_attroff) (CURRENT_SCREEN, attr);
-}
+#if HAVE_LANGINFO_CODESET
+#include <langinfo.h>
 #endif
+
+#define PER_LINE  32
+
+static void
+report(char *locale)
+{
+    int ch;
+    wint_t wch;
+    char *dot;
+    printf("Locale \"%s\"", locale);
+    if (setlocale(LC_CTYPE, locale) != NULL) {
+#if HAVE_LANGINFO_CODESET
+	char *codeset = nl_langinfo(CODESET);
+	if (codeset != NULL) {
+	    printf("\nCodeset \"%s\"", codeset);
+	}
+#endif
+	for (ch = 0; ch < 256; ++ch) {
+	    int code = '?';
+	    wch = ch;
+	    if (isprint(ch) && iswprint(wch))
+		code = '=';
+	    if (!isprint(ch) && iswprint(wch))
+		code = '+';
+	    if (isprint(ch) && !iswprint(wch))
+		code = '-';
+	    if ((ch & (PER_LINE - 1)) == 0)
+		printf("\n%02X: ", ch);
+	    putchar(code);
+	}
+	putchar('\n');
+    } else {
+	fprintf(stderr, "Cannot set locale\n");
+    }
+    if ((dot = strchr(locale, '.')) != NULL) {
+	*dot = '\0';
+	report(locale);
+    }
+}
+
+int
+main(int argc, char *argv[])
+{
+    if (argc > 1) {
+	int n;
+	for (n = 1; n < argc; ++n) {
+	    report(argv[n]);
+	}
+    } else {
+	static char empty[1];
+	char *locale = getenv("LC_CTYPE");
+	if (locale == NULL)
+	    locale = getenv("LC_ALL");
+	if (locale == NULL)
+	    locale = getenv("LANG");
+	if (locale == NULL)
+	    locale = empty;
+	report(locale);
+    }
+    return EXIT_SUCCESS;
+}

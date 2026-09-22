@@ -1,5 +1,5 @@
 /****************************************************************************
-,* Copyright 2020-2021,2022 Thomas E. Dickey                                *
+ * Copyright 2020-2023,2024 Thomas E. Dickey                                *
  * Copyright 1998-2016,2017 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -51,7 +51,7 @@
 #include <ctype.h>
 #include <tic.h>
 
-MODULE_ID("$Id: comp_scan.c,v 1.119 2022/08/07 00:20:26 tom Exp $")
+MODULE_ID("$Id: comp_scan.c,v 1.126 2024/12/07 21:17:54 tom Exp $")
 
 /*
  * Maximum length of string capability we'll accept before raising an error.
@@ -61,7 +61,7 @@ MODULE_ID("$Id: comp_scan.c,v 1.119 2022/08/07 00:20:26 tom Exp $")
 
 #define iswhite(ch)	(ch == ' '  ||  ch == '\t')
 
-NCURSES_EXPORT_VAR (int) _nc_syntax = 0;         /* termcap or terminfo? */
+NCURSES_EXPORT_VAR (int) _nc_syntax = SYN_TERMINFO;  /* termcap or terminfo? */
 NCURSES_EXPORT_VAR (int) _nc_strict_bsd = 1;  /* ncurses extended termcap? */
 NCURSES_EXPORT_VAR (long) _nc_curr_file_pos = 0; /* file offset of current line */
 NCURSES_EXPORT_VAR (long) _nc_comment_start = 0; /* start of comment range before name */
@@ -70,7 +70,7 @@ NCURSES_EXPORT_VAR (long) _nc_start_line = 0;    /* start line of current entry 
 
 NCURSES_EXPORT_VAR (struct token) _nc_curr_token =
 {
-    0, 0, 0
+    NULL, 0, NULL
 };
 
 /*****************************************************************************
@@ -116,12 +116,12 @@ _nc_reset_input(FILE *fp, char *buf)
        (T_CALLED("_nc_reset_input(fp=%p, buf=%p)"), (void *) fp, buf));
 
     pushtype = NO_PUSHBACK;
-    if (pushname != 0)
+    if (pushname != NULL)
 	pushname[0] = '\0';
     yyin = fp;
     bufstart = bufptr = buf;
     _nc_curr_file_pos = 0L;
-    if (fp != 0)
+    if (fp != NULL)
 	_nc_curr_line = 0;
     _nc_curr_col = 0;
 
@@ -197,18 +197,18 @@ next_char(void)
     int the_char;
 
     if (!yyin) {
-	if (result != 0) {
+	if (result != NULL) {
 	    FreeAndNull(result);
 	    FreeAndNull(pushname);
-	    bufptr = 0;
-	    bufstart = 0;
+	    bufptr = NULL;
+	    bufstart = NULL;
 	    allocated = 0;
 	}
 	/*
 	 * An string with an embedded null will truncate the input.  This is
 	 * intentional (we don't read binary files here).
 	 */
-	if (bufptr == 0 || *bufptr == '\0')
+	if (bufptr == NULL || *bufptr == '\0')
 	    return (EOF);
 	if (*bufptr == '\n') {
 	    _nc_curr_line++;
@@ -227,12 +227,12 @@ next_char(void)
 
 	do {
 	    size_t used = 0;
-	    bufstart = 0;
+	    bufstart = NULL;
 	    do {
 		if (used + (LEXBUFSIZ / 4) >= allocated) {
 		    allocated += (allocated + LEXBUFSIZ);
 		    result = typeRealloc(char, allocated, result);
-		    if (result == 0)
+		    if (result == NULL)
 			return (EOF);
 		    if (bufstart)
 			bufstart = result;
@@ -254,7 +254,7 @@ next_char(void)
 		    if (used != 0)
 			_nc_STRCAT(result, "\n", allocated);
 		}
-		if ((bufptr = bufstart) != 0) {
+		if ((bufptr = bufstart) != NULL) {
 		    used = strlen(bufptr);
 		    if (used == 0)
 			return (EOF);
@@ -302,7 +302,7 @@ push_back(int c)
 /* push a character back onto the input stream */
 {
     if (bufptr == bufstart)
-	_nc_syserr_abort("Can't backspace off beginning of line");
+	_nc_syserr_abort("cannot backspace off beginning of line");
     *--bufptr = (char) c;
     _nc_curr_col--;
 }
@@ -311,7 +311,7 @@ static long
 stream_pos(void)
 /* return our current character position in the input stream */
 {
-    return (yyin ? ftell(yyin) : (bufptr ? bufptr - bufstart : 0));
+    return (yyin ? ftell(yyin) : (bufptr ? (long) (bufptr - bufstart) : 0));
 }
 
 static bool
@@ -328,9 +328,11 @@ end_of_stream(void)
 static NCURSES_INLINE int
 eat_escaped_newline(int ch)
 {
-    if (ch == '\\')
-	while ((ch = next_char()) == '\n' || iswhite(ch))
-	    continue;
+    if (ch == '\\') {
+	while ((ch = next_char()) == '\n' || iswhite(ch)) {
+	    /* EMPTY */ ;
+	}
+    }
     return ch;
 }
 
@@ -405,12 +407,12 @@ _nc_get_token(bool silent)
     if (pushtype != NO_PUSHBACK) {
 	int retval = pushtype;
 
-	_nc_set_type(pushname != 0 ? pushname : "");
+	_nc_set_type(pushname != NULL ? pushname : "");
 	DEBUG(3, ("pushed-back token: `%s', class %d",
 		  _nc_curr_token.tk_name, pushtype));
 
 	pushtype = NO_PUSHBACK;
-	if (pushname != 0)
+	if (pushname != NULL)
 	    pushname[0] = '\0';
 
 	/* currtok wasn't altered by _nc_push_token() */
@@ -419,11 +421,11 @@ _nc_get_token(bool silent)
     }
 
     if (end_of_stream()) {
-	yyin = 0;
+	yyin = NULL;
 	(void) next_char();	/* frees its allocated memory */
-	if (tok_buf != 0) {
+	if (tok_buf != NULL) {
 	    if (_nc_curr_token.tk_name == tok_buf)
-		_nc_curr_token.tk_name = 0;
+		_nc_curr_token.tk_name = NULL;
 	}
 	DEBUG(3, (T_RETURN("%d"), EOF));
 	return (EOF);
@@ -434,11 +436,10 @@ _nc_get_token(bool silent)
     while ((ch = next_char()) == '\n' || iswhite(ch)) {
 	if (ch == '\n')
 	    had_newline = TRUE;
-	continue;
     }
 
     ch = eat_escaped_newline(ch);
-    _nc_curr_token.tk_valstring = 0;
+    _nc_curr_token.tk_valstring = NULL;
 
 #ifdef TRACE
     old_line = _nc_curr_line;
@@ -459,8 +460,9 @@ _nc_get_token(bool silent)
 	    dot_flag = TRUE;
 	    DEBUG(8, ("dot-flag set"));
 
-	    while ((ch = next_char()) == '.' || iswhite(ch))
-		continue;
+	    while ((ch = next_char()) == '.' || iswhite(ch)) {
+		/* EMPTY */ ;
+	    }
 	}
 
 	if (ch == EOF) {
@@ -473,7 +475,7 @@ _nc_get_token(bool silent)
 #if NCURSES_EXT_FUNCS
 	    && !(ch == '.' && _nc_disable_period)
 #endif
-	    && ((strchr) (terminfo_punct, (char) ch) == 0)) {
+	    && ((strchr) (terminfo_punct, (char) ch) == NULL)) {
 	    if (!silent)
 		_nc_warning("Illegal character (expected alphanumeric or %s) - '%s'",
 			    terminfo_punct, unctrl(UChar(ch)));
@@ -481,7 +483,7 @@ _nc_get_token(bool silent)
 	    goto start_token;
 	}
 
-	if (tok_buf == 0)
+	if (tok_buf == NULL)
 	    tok_buf = typeMalloc(char, TOK_BUF_SIZE);
 
 #ifdef TRACE
@@ -497,14 +499,14 @@ _nc_get_token(bool silent)
 	    _nc_start_line = _nc_curr_line;
 
 	    _nc_syntax = ERR;
-	    after_name = 0;
-	    after_list = 0;
+	    after_name = NULL;
+	    after_list = NULL;
 	    while ((ch = next_char()) != '\n') {
 		if (ch == EOF) {
 		    _nc_err_abort(MSG_NO_INPUTS);
 		} else if (ch == '|') {
 		    after_list = tok_ptr;
-		    if (after_name == 0)
+		    if (after_name == NULL)
 			after_name = tok_ptr;
 		} else if (ch == ':' && last_char(0) != ',') {
 		    _nc_syntax = SYN_TERMCAP;
@@ -517,7 +519,7 @@ _nc_get_token(bool silent)
 		     * If we did not see a '|', then we found a name with no
 		     * aliases or description.
 		     */
-		    if (after_name == 0)
+		    if (after_name == NULL)
 			break;
 		    /*
 		     * We saw a comma, but are not entirely sure this is
@@ -549,7 +551,7 @@ _nc_get_token(bool silent)
 			    ;
 			}
 			if (islower(UChar(*s))) {
-			    char *name = s;
+			    const char *name = s;
 			    while (isalnum(UChar(*s))) {
 				++s;
 			    }
@@ -601,8 +603,9 @@ _nc_get_token(bool silent)
 		/* throw away trailing /, *$/ */
 		for (--tok_ptr;
 		     iswhite(*tok_ptr) || *tok_ptr == ',';
-		     tok_ptr--)
-		    continue;
+		     tok_ptr--) {
+		    /* EMPTY */ ;
+		}
 		tok_ptr[1] = '\0';
 	    }
 
@@ -611,7 +614,7 @@ _nc_get_token(bool silent)
 	     * for following warning messages.  If there's no '|', then there
 	     * is no description.
 	     */
-	    if (after_name != 0) {
+	    if (after_name != NULL) {
 		ch = *after_name;
 		*after_name = '\0';
 		_nc_set_type(tok_buf);
@@ -622,11 +625,11 @@ _nc_get_token(bool silent)
 	     * Compute the boundary between the aliases and the description
 	     * field for syntax-checking purposes.
 	     */
-	    if (after_list != 0) {
+	    if (after_list != NULL) {
 		if (!silent) {
 		    if (*after_list == '\0' || strchr("|", after_list[1]) != NULL) {
 			_nc_warning("empty longname field");
-		    } else if (strchr(after_list, ' ') == 0) {
+		    } else if (strchr(after_list, ' ') == NULL) {
 			_nc_warning("older tic versions may treat the description field as an alias");
 		    }
 		}
@@ -802,7 +805,7 @@ _nc_get_token(bool silent)
 	type = _nc_get_token(silent);
 
     DEBUG(3, ("token: `%s', class %d",
-	      ((_nc_curr_token.tk_name != 0)
+	      ((_nc_curr_token.tk_name != NULL)
 	       ? _nc_curr_token.tk_name
 	       : "<null>"),
 	      type));
@@ -831,7 +834,7 @@ _nc_get_token(bool silent)
  */
 
 NCURSES_EXPORT(int)
-_nc_trans_string(char *ptr, char *last)
+_nc_trans_string(char *ptr, const char *const last)
 {
     int count = 0;
     int number = 0;
@@ -1020,12 +1023,12 @@ _nc_push_token(int tokclass)
      * _nc_get_token() touches.
      */
     pushtype = tokclass;
-    if (pushname == 0)
+    if (pushname == NULL)
 	pushname = typeMalloc(char, MAX_NAME_SIZE + 1);
     _nc_get_type(pushname);
 
     DEBUG(3, ("pushing token: `%s', class %d",
-	      ((_nc_curr_token.tk_name != 0)
+	      ((_nc_curr_token.tk_name != NULL)
 	       ? _nc_curr_token.tk_name
 	       : "<null>"),
 	      pushtype));
@@ -1050,10 +1053,10 @@ _nc_panic_mode(char ch)
 NCURSES_EXPORT(void)
 _nc_comp_scan_leaks(void)
 {
-    if (pushname != 0) {
+    if (pushname != NULL) {
 	FreeAndNull(pushname);
     }
-    if (tok_buf != 0) {
+    if (tok_buf != NULL) {
 	FreeAndNull(tok_buf);
     }
 }

@@ -1,6 +1,5 @@
-'\" t
 .\"***************************************************************************
-.\" Copyright 2018-2021,2022 Thomas E. Dickey                                *
+.\" Copyright 2018-2023,2024 Thomas E. Dickey                                *
 .\" Copyright 1998-2010,2015 Free Software Foundation, Inc.                  *
 .\"                                                                          *
 .\" Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -28,12 +27,18 @@
 .\" authorization.                                                           *
 .\"***************************************************************************
 .\"
-.\" $Id: menu_attributes.3x,v 1.22 2022/02/12 20:05:11 tom Exp $
-.TH menu_attributes 3X ""
-.ie \n(.g .ds `` \(lq
-.el       .ds `` ``
-.ie \n(.g .ds '' \(rq
-.el       .ds '' ''
+.\" $Id: menu_attributes.3x,v 1.36 2024/03/16 15:35:01 tom Exp $
+.TH menu_attributes 3X 2024-03-16 "ncurses @NCURSES_MAJOR@.@NCURSES_MINOR@" "Library calls"
+.ie \n(.g \{\
+.ds `` \(lq
+.ds '' \(rq
+.\}
+.el \{\
+.ie t .ds `` ``
+.el   .ds `` ""
+.ie t .ds '' ''
+.el   .ds '' ""
+.\}
 .SH NAME
 \fBmenu_back\fP,
 \fBmenu_fore\fP,
@@ -42,26 +47,24 @@
 \fBset_menu_back\fP,
 \fBset_menu_fore\fP,
 \fBset_menu_grey\fP,
-\fBset_menu_pad\fP \- color and attribute control for menus
+\fBset_menu_pad\fP \-
+color and attribute control for menus
 .SH SYNOPSIS
-\fB#include <menu.h>\fP
-.sp
-\fBint set_menu_fore(MENU *\fImenu\fB, chtype \fIattr\fB);\fR
-.br
-\fBchtype menu_fore(const MENU *\fImenu\fB);\fR
-.sp
-\fBint set_menu_back(MENU *\fImenu\fB, chtype \fIattr\fB);\fR
-.br
-\fBchtype menu_back(const MENU *\fImenu\fB);\fR
-.sp
-\fBint set_menu_grey(MENU *\fImenu\fB, chtype \fIattr\fB);\fR
-.br
-\fBchtype menu_grey(const MENU *\fImenu\fB);\fR
-.sp
-\fBint set_menu_pad(MENU *\fImenu\fB, int \fIpad\fB);\fR
-.br
-\fBint menu_pad(const MENU *\fImenu\fB);\fR
-.br
+.nf
+\fB#include <menu.h>
+.PP
+\fBint set_menu_fore(MENU *\fImenu\fP, chtype \fIattr\fP);
+\fBchtype menu_fore(const MENU *\fImenu\fP);
+.PP
+\fBint set_menu_back(MENU *\fImenu\fP, chtype \fIattr\fP);
+\fBchtype menu_back(const MENU *\fImenu\fP);
+.PP
+\fBint set_menu_grey(MENU *\fImenu\fP, chtype \fIattr\fP);
+\fBchtype menu_grey(const MENU *\fImenu\fP);
+.PP
+\fBint set_menu_pad(MENU *\fImenu\fP, int \fIpad\fP);
+\fBint menu_pad(const MENU *\fImenu\fP);
+.fi
 .SH DESCRIPTION
 The function \fBset_menu_fore\fP sets the foreground attribute of
 \fImenu\fP. This is the highlight used for selected menu items.
@@ -98,12 +101,6 @@ System error occurred (see \fBerrno\fP(3)).
 .TP 5
 .B E_BAD_ARGUMENT
 Routine detected an incorrect or out-of-range argument.
-.SH SEE ALSO
-\fBcurses\fP(3X) and related pages whose names begin \*(``menu_\*('' for detailed
-descriptions of the entry points.
-.SH NOTES
-The header file \fB<menu.h>\fP automatically includes the header file
-\fB<curses.h>\fP.
 .SH PORTABILITY
 These routines emulate the System V menu library.
 They were not supported on
@@ -111,3 +108,6 @@ Version 7 or BSD versions.
 .SH AUTHORS
 Juergen Pfeifer.
 Manual pages and adaptation for new curses by Eric S. Raymond.
+.SH SEE ALSO
+\fB\%curses\fP(3X) and related pages whose names begin \*(``menu_\*(''
+for detailed descriptions of the entry points.
