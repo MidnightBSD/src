@@ -1,5 +1,15 @@
 Updating Information for MidnightBSD users.
 
+20260922:
+	expat 2.8.5 (from 2.8.4).  Fixes CVE-2026-93990: a high surrogate
+	not followed by a low surrogate was accepted during UTF-16 decoding,
+	letting malformed UTF-16 pass through the parser into the
+	application, with impact depending on how the application handled
+	it.  Also fixes an out-of-memory related leak on a failed overflow
+	check, and XML declaration versions other than 1.[0-9]+ are now
+	rejected.  Rebuild and install world, then restart all daemons that
+	use the library, or reboot.
+
 20260908:
 	mport 2.8.1 (from 2.8.0).  Bug fix release: memory leaks, NULL
 	dereferences, heap overflows and use-after-free fixes across libmport
