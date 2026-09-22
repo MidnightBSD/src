@@ -18,6 +18,7 @@ NCURSES_PATCH!=	egrep 'NCURSES_PATCH[ 	]*=' ${NCURSES_DIR}/dist.mk | sed -e 's%^
 # From autoconf (!)
 NCURSES_CH_T=		cchar_t
 NCURSES_OK_WCHAR_T=	1
+NCURSES_RGB_COLORS=	0
 NEED_WCHAR_H=		1
 NCURSES_EXT_COLORS=	1
 NCURSES_EXT_FUNCS=	1
@@ -53,7 +54,10 @@ HAVE_TERMIOS_H=		1
 HAVE_TERMIO_H=		0
 HAVE_VSSCANF=		1
 HAVE_STDINT_H=		1
-HEADER_STDBOOL=		1
+HAVE_STDBOOL_H=		1
+HAVE_STDNORETURN_H=	0
+HAVE_SGTTY_H=		0
+ENABLE_SIGWINCH=	1
 # XXX amd64 1L and int
 ONEUL=			1U
 TYPEOF_CHTYPE=		uint32_t
@@ -346,7 +350,8 @@ lib_gen.c: MKlib_gen.sh curses.h ncurses_dll.h
 	    "${AWK}" generated < curses.h >$@
 
 lib_keyname.c: keys.list MKkeyname.awk
-	${AWK} -f ${NCURSES_DIR}/ncurses/base/MKkeyname.awk bigstrings=${USE_BIG_STRINGS} keys.list > lib_keyname.c
+	${AWK} -f ${NCURSES_DIR}/ncurses/base/MKkeyname.awk use_sigwinch=${ENABLE_SIGWINCH} \
+	    bigstrings=${USE_BIG_STRINGS} keys.list > lib_keyname.c
 
 unctrl.c: MKunctrl.awk
 	echo | ${AWK} -f ${NCURSES_DIR}/ncurses/base/MKunctrl.awk bigstrings=${USE_BIG_STRINGS} > unctrl.c
@@ -397,7 +402,7 @@ curses.h: curses.head MKkey_defs.sh Caps Caps-ncurses
 
 # Generated intermediate files
 keys.list: MKkeys_list.sh Caps Caps-ncurses
-	AWK=${AWK} sh ${NCURSES_DIR}/ncurses/tinfo/MKkeys_list.sh \
+	AWK=${AWK} USE_SIGWINCH=${ENABLE_SIGWINCH} sh ${NCURSES_DIR}/ncurses/tinfo/MKkeys_list.sh \
 	    ${NCURSES_DIR}/include/Caps ${NCURSES_DIR}/include/Caps-ncurses | LC_ALL=C sort > keys.list
 
 # Build tools
@@ -419,6 +424,8 @@ MKterm.h.awk: MKterm.h.awk.in
 	    -e "s%@NCURSES_USE_TERMCAP@%1%g" \
 	    -e "/@NCURSES_MAJOR@/s%%${NCURSES_MAJOR}%" \
 	    -e "/@NCURSES_MINOR@/s%%${NCURSES_MINOR}%" \
+	    -e "/@NCURSES_PATCH@/s%%${NCURSES_PATCH}%" \
+	    -e "/@NCURSES_SP_FUNCS@/s%%${NCURSES_SP_FUNCS}%" \
 	    -e "/@NCURSES_CONST@/s%%${NCURSES_CONST}%" \
 	    -e "/@NCURSES_TPARM_VARARGS@/s%%${NCURSES_TPARM_VARARGS}%" \
 	    -e "/@NCURSES_SBOOL@/s%%${NCURSES_SBOOL}%" \
@@ -427,6 +434,7 @@ MKterm.h.awk: MKterm.h.awk.in
 	    -e "/@HAVE_TERMIOS_H@/s%%${HAVE_TERMIOS_H}%" \
 	    -e "/@HAVE_TERMIO_H@/s%%${HAVE_TERMIO_H}%" \
 	    -e "/@HAVE_TCGETATTR@/s%%${HAVE_TCGETATTR}%" \
+	    -e "/@HAVE_SGTTY_H@/s%%${HAVE_SGTTY_H}%" \
 	    -e "s%@cf_cv_enable_reentrant@%${ENABLE_REENTRANT}%g"
 
 termcap.h: termcap.h.in
@@ -445,6 +453,7 @@ curses.head: curses.h.in
 	    -e "/@BROKEN_LINKER@/s%%${BROKEN_LINKER}%" \
 	    -e "/@HAVE_VSSCANF@/s%%${HAVE_VSSCANF}%" \
 	    -e "/@HAVE_STDINT_H@/s%%${HAVE_STDINT_H}%" \
+	    -e "/@HAVE_STDNORETURN_H@/s%%${HAVE_STDNORETURN_H}%" \
 	    -e "/@NCURSES_CH_T@/s%%${NCURSES_CH_T}%" \
 	    -e "/@NCURSES_CONST@/s%%${NCURSES_CONST}%" \
 	    -e "/@NCURSES_EXT_COLORS@/s%%${NCURSES_EXT_COLORS}%" \
@@ -461,6 +470,7 @@ curses.head: curses.h.in
 	    -e "/@NCURSES_OPAQUE_MENU@/s%%${NCURSES_OPAQUE_MENU}%" \
 	    -e "/@NCURSES_OPAQUE_PANEL@/s%%${NCURSES_OPAQUE_PANEL}%" \
 	    -e "/@NCURSES_PATCH@/s%%${NCURSES_PATCH}%" \
+	    -e "/@NCURSES_RGB_COLORS@/s%%${NCURSES_RGB_COLORS}%" \
 	    -e "/@NCURSES_SIZE_T@/s%%${NCURSES_SIZE_T}%" \
 	    -e "/@NCURSES_TPARM_VARARGS@/s%%${NCURSES_TPARM_VARARGS}%" \
 	    -e "/@NCURSES_WATTR_MACROS@/s%%${NCURSES_WATTR_MACROS}%"\
@@ -468,19 +478,21 @@ curses.head: curses.h.in
 	    -e "/@NCURSES_WCHAR_T@/s%%${NCURSES_WCHAR_T}%" \
 	    -e "/@NCURSES_WCWIDTH_GRAPHICS@/s%%${NCURSES_WCWIDTH_GRAPHICS}%g" \
 	    -e "/@NCURSES_WINT_T@/s%%${NCURSES_WINT_T}%" \
+	    -e "/@NCURSES_XNAMES@/s%%${NCURSES_XNAMES}%" \
 	    -e "/@NCURSES_INTEROP_FUNCS@/s%%${NCURSES_INTEROP_FUNCS}%g" \
 	    -e "/@NCURSES_TPARM_ARG@/s%%${NCURSES_TPARM_ARG}%g" \
 	    -e "/@NCURSES_SP_FUNCS@/s%%${NCURSES_SP_FUNCS}%g" \
 	    -e "/@NEED_WCHAR_H@/s%%${NEED_WCHAR_H}%" \
 	    -e "/@USE_CXX_BOOL@/s%%${USE_CXX_BOOL}%" \
+	    -e "/@USE_STDBOOL_H@/s%%${HAVE_STDBOOL_H}%" \
 	    -e "/@GENERATED_EXT_FUNCS@/s%%generated%g" \
 	    -e "s%@NCURSES_CCHARW_MAX@%5%g" \
 	    -e "s%@cf_cv_1UL@%${ONEUL}%g" \
-	    -e "s%@cf_cv_builtin_bool@%${BUILTIN_BOOL}%g" \
+	    -e "s%@USE_BUILTIN_BOOL@%${BUILTIN_BOOL}%g" \
 	    -e "s%@cf_cv_enable_lp64@%${ENABLE_LP64}%g" \
 	    -e "s%@cf_cv_enable_opaque@%${ENABLE_OPAQUE}%g" \
 	    -e "s%@cf_cv_enable_reentrant@%${ENABLE_REENTRANT}%g" \
-	    -e "s%@cf_cv_header_stdbool_h@%${HEADER_STDBOOL}%g" \
+	    -e "s%@cf_cv_enable_sigwinch@%${ENABLE_SIGWINCH}%g" \
 	    -e "s%@cf_cv_type_of_bool@%${TYPE_OF_BOOL}%g" \
 	    -e "s%@cf_cv_typeof_chtype@%${TYPEOF_CHTYPE}%g" \
 	    -e "s%@cf_cv_typeof_mmask_t@%${TYPEOF_MMASK_T}%g" \

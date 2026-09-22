@@ -1,0 +1,56 @@
+ncurses from https://invisible-island.net/archives/ncurses/
+(also mirrored at https://ftp.gnu.org/gnu/ncurses/)
+
+Releases are signed by Thomas E. Dickey, key
+1988 2D92 DDA4 C400 C22C 0D56 CC2A F447 2167 BE03.
+
+The vendor branch is vendor/ncurses/dist, tagged
+vendor/ncurses/dist/X.Y.  It holds pristine upstream sources trimmed with
+MIDNIGHTBSD-Xlist; the local changes (see below) live only on master.
+The 6.3 and 6.4 commits on the vendor branch are untrimmed and were
+never merged; 6.6 is the first import after 6.2 to reach master.
+
+To import a new release:
+
+  1) Fetch ncurses-X.Y.tar.gz and its .asc and verify the signature.
+  2) On a checkout of vendor/ncurses/dist:
+	git rm -rq .
+	tar -X MIDNIGHTBSD-Xlist -xzf ncurses-X.Y.tar.gz
+	cp -Rp ncurses-X.Y/ ./ && rm -rf ncurses-X.Y
+	git add -A && git commit && git tag -a vendor/ncurses/dist/X.Y
+  3) On master:
+	git merge -X subtree=contrib/ncurses vendor/ncurses/dist
+  4) Update the glue in lib/ncurses:
+     - ncurses/ncurses_cfg.h: bump NCURSES_VERSION_STRING and compare
+       against include/ncurses_defs for new or renamed HAVE_* and USE_*
+       macros.  Keep USE_ROOT_ENVIRON, USE_SETUID_ENVIRON and
+       USE_ROOT_ACCESS undefined, and HAVE_GETUID defined: since 6.5 the
+       root/setuid environment checks in tinfo/access.c are compiled out
+       entirely when HAVE_GETUID is missing.
+     - ncurses/Makefile: every @VAR@ in include/curses.h.in,
+       include/MKterm.h.awk.in, termcap.h.in, unctrl.h.in and
+       ncurses_dll.h.in must have a sed rule in the matching target.
+       Check the generated curses.h and term.h for leftover @...@.
+     - Compare the module lists (ncurses/modules etc.) with SRCS.
+     - ncurses/termcap.c is our own termcap reader, used instead of
+       tinfo/read_termcap.c; check it still builds against changed
+       internals (6.6 made _nc_delink_entry static).
+     FreeBSD's lib/ncurses (split into tinfo/ and ncurses/) is a useful
+     reference for Makefile and ncurses_cfg.h changes.
+  5) Build lib/ncurses/{ncurses,form,menu,panel}, compare
+     nm -D --defined-only against the installed libraries (SHLIB_MAJOR
+     stays at 9 while upstream keeps ABI 6), and note the update in
+     UPDATING.
+
+Local changes carried on master relative to the vendor branch:
+
+  ncurses/base/lib_mouse.c     - include <sys/consio.h> for sysmouse
+                                 support on MidnightBSD.
+  ncurses/tinfo/lib_baudrate.c - include <sys/param.h> and use the
+                                 NCURSES_OSPEED_COMPAT speed table on
+                                 MidnightBSD.
+
+The cc also defines __FreeBSD__, so both are belt and braces.  The
+CVE-2021-39537 (captoinfo.c), CVE-2025-6141 (parse_entry.c) and
+infocmp.c initializer-size fixes we used to carry were adopted upstream
+by 6.6.
