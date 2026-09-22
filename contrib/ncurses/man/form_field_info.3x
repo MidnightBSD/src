@@ -1,6 +1,5 @@
-'\" t
 .\"***************************************************************************
-.\" Copyright 2018-2019,2020 Thomas E. Dickey                                *
+.\" Copyright 2018-2023,2024 Thomas E. Dickey                                *
 .\" Copyright 1998-2010,2015 Free Software Foundation, Inc.                  *
 .\"                                                                          *
 .\" Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -28,36 +27,47 @@
 .\" authorization.                                                           *
 .\"***************************************************************************
 .\"
-.\" $Id: form_field_info.3x,v 1.17 2020/02/02 23:34:34 tom Exp $
-.TH form_field_info 3X ""
-.ie \n(.g .ds `` \(lq
-.el       .ds `` ``
-.ie \n(.g .ds '' \(rq
-.el       .ds '' ''
+.\" $Id: form_field_info.3x,v 1.32 2024/03/16 15:35:01 tom Exp $
+.TH form_field_info 3X 2024-03-16 "ncurses @NCURSES_MAJOR@.@NCURSES_MINOR@" "Library calls"
+.ie \n(.g \{\
+.ds `` \(lq
+.ds '' \(rq
+.\}
+.el \{\
+.ie t .ds `` ``
+.el   .ds `` ""
+.ie t .ds '' ''
+.el   .ds '' ""
+.\}
 .SH NAME
 \fBdynamic_field_info\fP,
-\fBfield_info\fR \- retrieve field characteristics
+\fBfield_info\fP \-
+retrieve field characteristics
 .SH SYNOPSIS
-\fB#include <form.h>\fR
-.br
-int field_info(const FIELD *field, int *rows, int *cols,
-              int *frow, int *fcol, int *nrow, int *nbuf);
-.br
-int dynamic_field_info(const FIELD *field, int *rows, int *cols, int *max);
-.br
+.nf
+\fB#include <form.h>
+.PP
+\fBint field_info(const FIELD *\fIfield\fP,
+               \fBint *\fIrows\fB, int *\fIcols\fB,\fR
+               \fBint *\fIfrow\fB, int *\fIfcol\fB,\fR
+               \fBint *\fInrow\fB, int *\fInbuf\fB);\fR
+.PP
+\fBint dynamic_field_info(const FIELD *\fIfield\fB,\fR
+                       \fBint *\fIrows\fB, int *\fIcols\fB, int *\fImax\fB);\fR
+.fi
 .SH DESCRIPTION
-The function \fBfield_info\fR returns the sizes and other attributes passed in
+The function \fBfield_info\fP returns the sizes and other attributes passed in
 to the field at its creation time.
 The attributes are: height, width, row of
 upper-left corner, column of upper-left corner, number off-screen rows, and
 number of working buffers.
 .PP
-The function \fBdynamic_field_info\fR returns the actual size of the field, and
+The function \fBdynamic_field_info\fP returns the actual size of the field, and
 its maximum possible size.
 If the field has no size limit, the location
 addressed by the third argument will be set to 0.
 A field can be made dynamic
-by turning off the \fBO_STATIC\fR option with \fBfield_opts_off\fR.
+by turning off the \fBO_STATIC\fP option with \fBfield_opts_off\fP.
 .SH RETURN VALUE
 These routines return one of the following:
 .TP 5
@@ -65,16 +75,10 @@ These routines return one of the following:
 The routine succeeded.
 .TP 5
 .B E_SYSTEM_ERROR
-System error occurred (see \fBerrno\fR(3)).
+System error occurred (see \fBerrno\fP(3)).
 .TP 5
 .B E_BAD_ARGUMENT
 Routine detected an incorrect or out-of-range argument.
-.SH SEE ALSO
-\fBcurses\fR(3X) and related pages whose names begin \*(``form_\*('' for detailed
-descriptions of the entry points.
-.SH NOTES
-The header file \fB<form.h>\fR automatically includes the header file
-\fB<curses.h>\fR.
 .SH PORTABILITY
 These routines emulate the System V forms library.
 They were not supported on
@@ -86,3 +90,6 @@ Not all implementations allow this, e.g., Solaris 2.7 does not.
 .SH AUTHORS
 Juergen Pfeifer.
 Manual pages and adaptation for new curses by Eric S. Raymond.
+.SH SEE ALSO
+\fB\%curses\fP(3X) and related pages whose names begin \*(``form_\*(''
+for detailed descriptions of the entry points.

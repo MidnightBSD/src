@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2020 Thomas E. Dickey                                          *
+ * Copyright 2020,2023 Thomas E. Dickey                                     *
  * Copyright 2014 Free Software Foundation, Inc.                            *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -32,7 +32,7 @@
  ****************************************************************************/
 
 /*
- * $Id: tparm_type.h,v 1.2 2020/02/02 23:34:34 tom Exp $
+ * $Id: tparm_type.h,v 1.4 2023/04/08 15:41:20 tom Exp $
  *
  * determine expected/actual number of parameters to setup for tparm
  */
@@ -43,11 +43,15 @@
 #include <progs.priv.h>
 
 typedef enum {
-    Numbers = 0
+    Other = -1
+    ,Numbers = 0
+    ,Str
     ,Num_Str
     ,Num_Str_Str
+    ,Str_Str
 } TParams;
 
 extern TParams tparm_type(const char *name);
+extern TParams guess_tparm_type(int nparam, char **p_is_s);
 
 #endif /* TPARM_TYPE_H */

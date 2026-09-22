@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2018,2020 Thomas E. Dickey                                     *
+ * Copyright 2018-2021,2024 Thomas E. Dickey                                *
  * Copyright 2017 Free Software Foundation, Inc.                            *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -34,12 +34,21 @@
 /*
  * Common type definitions and macros for new_pair.c, lib_color.c
  *
- * $Id: new_pair.h,v 1.10 2020/02/02 23:34:34 tom Exp $
+ * $Id: new_pair.h,v 1.16 2024/12/07 17:27:35 tom Exp $
  */
 
 #ifndef NEW_PAIR_H
 #define NEW_PAIR_H 1
 /* *INDENT-OFF* */
+
+#include <ncurses_cfg.h>
+#include <ncurses_dll.h>
+
+#include <sys/types.h>
+
+#undef SCREEN
+#define SCREEN struct screen
+SCREEN;
 
 #define LIMIT_TYPED(n,t) \
 	(t)(((n) > MAX_OF_TYPE(t)) \
@@ -77,8 +86,7 @@
 typedef enum {
     cpKEEP = -1,		/* color pair 0 */
     cpFREE = 0,			/* free for use */
-    cpINIT = 1,			/* init_pair() */
-    cpAUTO = 1			/* alloc_pair() */
+    cpINIT = 1			/* initialized */
 } CPMODE;
 
 typedef struct _color_pairs
@@ -103,12 +111,12 @@ colorpair_t;
  * that the index is within the limits of the table which we allocated.
  */
 #define ValidPair(sp,pair) \
-    ((sp != 0) && (pair >= 0) && (pair < sp->_pair_limit) && sp->_coloron)
+    ((sp != NULL) && (pair >= 0) && (pair < sp->_pair_limit) && sp->_coloron)
 
-#if NCURSES_EXT_COLORS
+#if NCURSES_EXT_FUNCS && NCURSES_EXT_COLORS
 extern NCURSES_EXPORT(void)     _nc_copy_pairs(SCREEN*, colorpair_t*, colorpair_t*, int);
 extern NCURSES_EXPORT(void)     _nc_free_ordered_pairs(SCREEN*);
-extern NCURSES_EXPORT(void)     _nc_reset_color_pair(SCREEN*, int, colorpair_t*);
+extern NCURSES_EXPORT(void)     _nc_reset_color_pair(SCREEN*, int, const colorpair_t*);
 extern NCURSES_EXPORT(void)     _nc_set_color_pair(SCREEN*, int, int);
 #else
 #define _nc_free_ordered_pairs(sp) /* nothing */

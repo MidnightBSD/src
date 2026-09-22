@@ -1,6 +1,6 @@
 #!/bin/sh
 ##############################################################################
-# Copyright 2020 Thomas E. Dickey                                            #
+# Copyright 2020-2021,2025 Thomas E. Dickey                                  #
 # Copyright 1998,2000 Free Software Foundation, Inc.                         #
 #                                                                            #
 # Permission is hereby granted, free of charge, to any person obtaining a    #
@@ -30,7 +30,7 @@
 #
 # Author: Thomas E. Dickey 1996,1997,2000
 #
-# $Id: makellib,v 1.9 2020/02/02 23:34:34 tom Exp $
+# $Id: makellib,v 1.12 2025/06/14 14:44:56 tom Exp $
 # System-dependent wrapper for 'lint' that creates a lint-library via the
 # following method (XXX is the name of the library):
 #	a.  If the file llib-lXXX doesn't exist, create it using the make-rule
@@ -45,14 +45,14 @@
 #	a.  On a few systems, you'll have to manually-edit the llib-lXXX file
 #	    to get a usable lint-library (not all C-preprocessors work well).
 #	b.  The system's lint utility won't recognize -lXXX as a lint-library
-#	    (Use tdlint as a wrapper; it's designed for this).
+#	    (Use tdlint as a wrapper; it is designed for this).
 #
 # Parameters:
 #	$1 = library name
 #	$* = C-preprocessor options
 #
 ARCH=`uname -s`
-if test "x$ARCH" = "xSunOS" ; then
+if [ "$ARCH" = "SunOS" ] ; then
 	case `uname -r` in
 	5.*)	ARCH=Solaris
 		;;
@@ -64,17 +64,17 @@ OPT=""
 LLIB=""
 llib=""
 #
-while test $# != 0
+while [ $# != 0 ]
 do
 	case $1 in
 	-L*)
-		DST="$DST `echo $1|sed -e 's/^-L//'`"
+		DST="$DST `echo "$1"|sed -e 's/^-L//'`"
 		;;
 	-*)
 		OPT="$OPT $1"
 		;;
 	*)
-		if test -z "$LLIB"
+		if [ -z "$LLIB" ]
 		then
 			LLIB=$1
 		else
@@ -85,17 +85,17 @@ do
 	shift
 done
 
-if test -z "$LLIB"
+if [ -z "$LLIB" ]
 then
 	echo '? no library name specified'
 	exit 1
-elif test -z "$llib"
+elif [ -z "$llib" ]
 then
 	llib="llib-l$LLIB"
 fi
 
-if test ! -f $llib ; then
-	if ( make $llib )
+if [ ! -f "$llib" ] ; then
+	if ( make "$llib" )
 	then
 		:
 	else
@@ -103,66 +103,66 @@ if test ! -f $llib ; then
 	fi
 fi
 
-rm -f $llib.ln $llib.c
+rm -f "$llib.ln" "$llib.c"
 TARGET=$LLIB
 
 case "$ARCH" in
 AIX)
 	CREATE="-uvxo$LLIB -Nn4000"
 	TARGET=$llib.c
-	ln $llib $TARGET
+	ln "$llib" "$TARGET"
 	;;
 Solaris)
 	CREATE="-C$llib"
 	TARGET=$llib.c
-	ln $llib $TARGET
+	ln "$llib" "$TARGET"
 	;;
 FreeBSD)
 	CREATE="-g -z -C$LLIB"
 	TARGET=$llib.c
-	ln $llib $TARGET
+	ln "$llib" "$TARGET"
 	;;
 CLIX)
 	CREATE="-DLINTLIBRARY -vxo$LLIB"
 	TARGET=$llib.c
-	ln $llib $TARGET
+	ln "$llib" "$TARGET"
 	;;
 IRIX*)
 	CREATE="-DLINTLIBRARY -vxyo$LLIB"
 	TARGET=$llib.c
-	ln $llib $TARGET
+	ln "$llib" "$TARGET"
 	;;
 UNIX_SV)
 	CREATE="-DLINTLIBRARY -vxyo$LLIB"
 	TARGET=$llib.c
-	ln $llib $TARGET
+	ln "$llib" "$TARGET"
 	;;
 *)
 	echo "Sorry.  I do not know how to build a lint-library for $ARCH"
 	exit 1
 esac
 
-echo OPT    "$OPT"
-echo TARGET "$TARGET"
-echo LIBNAME "$llib"
-if ( lint $CREATE $OPT $TARGET )
+echo "OPT     $OPT"
+echo "TARGET  $TARGET"
+echo "LIBNAME $llib"
+if ( lint "$CREATE" "$OPT" "$TARGET" )
 then
-	if test -f $llib.ln
+	if [ -f "$llib.ln" ]
 	then
 		for p in $HOME/lib $HOME/lib/$ARCH $HOME/lib/$ARCH/lint
 		do
-			if test ! -d $p
+			if [ ! -d "$p" ]
 			then
-				mkdir $p
+				mkdir "$p"
 			fi
 		done
 		for p in $DST
 		do
-			cp $llib.ln $p/
+			cp "$llib.ln" "$p/"
 		done
-		rm -f $llib.ln
+		rm -f "$llib.ln"
 	fi
 fi
-if test "x$TARGET" = "x$llib.c" ; then
-	rm -f $TARGET
+if [ "$TARGET" = "$llib.c" ] ; then
+	rm -f "$TARGET"
 fi

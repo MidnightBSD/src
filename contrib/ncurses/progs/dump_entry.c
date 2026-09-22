@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2018-2019,2020 Thomas E. Dickey                                *
+ * Copyright 2018-2024,2025 Thomas E. Dickey                                *
  * Copyright 1998-2016,2017 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -36,11 +36,11 @@
 #define __INTERNAL_CAPS_VISIBLE
 #include <progs.priv.h>
 
-#include "dump_entry.h"
-#include "termsort.c"		/* this C file is generated */
+#include <dump_entry.h>
+#include <termsort.h>		/* this C file is generated */
 #include <parametrized.h>	/* so is this */
 
-MODULE_ID("$Id: dump_entry.c,v 1.176 2020/02/02 23:34:34 tom Exp $")
+MODULE_ID("$Id: dump_entry.c,v 1.199 2025/02/08 21:53:40 tom Exp $")
 
 #define DISCARD(string) string = ABSENT_STRING
 #define PRINTF (void) printf
@@ -85,7 +85,7 @@ static int indent = 8;
 /* cover various ports and variants of terminfo */
 #define V_ALLCAPS	0	/* all capabilities (SVr4, XSI, ncurses) */
 #define V_SVR1		1	/* SVR1, Ultrix */
-#define V_HPUX		2	/* HP/UX */
+#define V_HPUX		2	/* HP-UX */
 #define V_AIX		3	/* AIX */
 #define V_BSD		4	/* BSD */
 
@@ -107,9 +107,7 @@ static int indent = 8;
 #define StrIndirect(j)  ((sortmode == S_NOSORT) ? (j) : str_indirect[j])
 #endif
 
-static void failed(const char *) GCC_NORETURN;
-
-static void
+static GCC_NORETURN void
 failed(const char *s)
 {
     perror(s);
@@ -123,7 +121,7 @@ strncpy_DYN(DYNBUF * dst, const char *src, size_t need)
     if (want > dst->size) {
 	dst->size += (want + 1024);	/* be generous */
 	dst->text = typeRealloc(char, dst->size, dst->text);
-	if (dst->text == 0)
+	if (dst->text == NULL)
 	    failed("strncpy_DYN");
     }
     _nc_STRNCPY(dst->text + dst->used, src, need + 1);
@@ -134,7 +132,7 @@ strncpy_DYN(DYNBUF * dst, const char *src, size_t need)
 static void
 strcpy_DYN(DYNBUF * dst, const char *src)
 {
-    if (src == 0) {
+    if (src == NULL) {
 	dst->used = 0;
 	strcpy_DYN(dst, "");
     } else {
@@ -146,9 +144,9 @@ strcpy_DYN(DYNBUF * dst, const char *src)
 static void
 free_DYN(DYNBUF * p)
 {
-    if (p->text != 0)
+    if (p->text != NULL)
 	free(p->text);
-    p->text = 0;
+    p->text = NULL;
     p->size = 0;
     p->used = 0;
 }
@@ -172,7 +170,7 @@ nametrans(const char *name)
 {
     const struct name_table_entry *np;
 
-    if ((np = _nc_find_entry(name, _nc_get_hash_table(0))) != 0) {
+    if ((np = _nc_find_entry(name, _nc_get_hash_table(0))) != NULL) {
 	switch (np->nte_type) {
 	case BOOLEAN:
 	    NameTrans(bool_from_termcap, boolcodes);
@@ -188,7 +186,7 @@ nametrans(const char *name)
 	}
     }
 
-    return (0);
+    return (NULL);
 }
 
 void
@@ -214,7 +212,7 @@ dump_init(const char *version,
     did_wrap = (width <= 0);
 
     /* versions */
-    if (version == 0)
+    if (version == NULL)
 	tversion = V_ALLCAPS;
     else if (!strcmp(version, "SVr1") || !strcmp(version, "SVR1")
 	     || !strcmp(version, "Ultrix"))
@@ -433,10 +431,12 @@ static int
 op_length(const char *src, int offset)
 {
     int result = 0;
-    int ch;
+
     if (offset > 0 && src[offset - 1] == '\\') {
 	result = 0;
     } else {
+	int ch;
+
 	result++;		/* for '%' mark */
 	ch = src[offset + result];
 	if (TcOutput()) {
@@ -458,7 +458,7 @@ op_length(const char *src, int offset)
 		}
 		n++;
 	    }
-	} else if (strchr("pPg", ch) != 0) {
+	} else if (strchr("pPg", ch) != NULL) {
 	    result += 2;
 	} else {
 	    result++;		/* ordinary operator */
@@ -477,10 +477,12 @@ static int
 find_split(const char *src, int step, int size)
 {
     int result = size;
-    int n;
+
     if (size > 0) {
 	/* check if that would split a backslash-sequence */
 	int mark = size;
+	int n;
+
 	for (n = size - 1; n > 0; --n) {
 	    int ch = UChar(src[step + n]);
 	    if (ch == '\\') {
@@ -524,15 +526,15 @@ fill_spaces(const char *src)
     const char *fill = "\\s";
     size_t need = strlen(src);
     size_t size = strlen(fill);
-    char *result = 0;
+    char *result = NULL;
     int pass;
-    int s, d;
+    size_t s, d;
     for (pass = 0; pass < 2; ++pass) {
 	for (s = d = 0; src[s] != '\0'; ++s) {
 	    if (src[s] == ' ') {
 		if (pass) {
 		    _nc_STRCPY(&result[d], fill, need + 1 - d);
-		    d += (int) size;
+		    d += size;
 		} else {
 		    need += size;
 		}
@@ -547,8 +549,8 @@ fill_spaces(const char *src)
 	if (pass) {
 	    result[d] = '\0';
 	} else {
-	    result = malloc(need + 1);
-	    if (result == 0)
+	    result = calloc(need + 1, sizeof(char));
+	    if (result == NULL)
 		failed("fill_spaces");
 	}
     }
@@ -585,7 +587,6 @@ wrap_concat(const char *src, int need, unsigned mode)
 	(column + want) > width) {
 	int step = 0;
 	int used = width > WRAPPED ? width : WRAPPED;
-	int size;
 	int base = 0;
 	char *p, align[9];
 	const char *my_t = trailer;
@@ -597,7 +598,7 @@ wrap_concat(const char *src, int need, unsigned mode)
 	if (TcOutput())
 	    trailer = "\\\n\t ";
 
-	if (!TcOutput() && (p = strchr(fill, '=')) != 0) {
+	if (!TcOutput() && (p = strchr(fill, '=')) != NULL) {
 	    base = (int) (p + 1 - fill);
 	    if (base > 8)
 		base = 8;
@@ -611,7 +612,7 @@ wrap_concat(const char *src, int need, unsigned mode)
 	    align[base] = '\0';
 	}
 	/* "pretty" overrides wrapping if it already split the line */
-	if (!pretty || strchr(fill, '\n') == 0) {
+	if (!pretty || strchr(fill, '\n') == NULL) {
 	    int tag = 0;
 
 	    if (TcOutput() && outbuf.used && !wrap_1ST(mode)) {
@@ -619,7 +620,7 @@ wrap_concat(const char *src, int need, unsigned mode)
 	    }
 
 	    while ((column + (need + gaps)) > used) {
-		size = used - tag;
+		int size = used - tag;
 		if (step) {
 		    strcpy_DYN(&outbuf, align);
 		    size -= base;
@@ -724,7 +725,7 @@ indent_DYN(DYNBUF * buffer, int level)
  * given leading text.
  */
 static bool
-leading_DYN(DYNBUF * buffer, const char *leading)
+leading_DYN(const DYNBUF * buffer, const char *leading)
 {
     bool result = FALSE;
     size_t need = strlen(leading);
@@ -747,7 +748,7 @@ leading_DYN(DYNBUF * buffer, const char *leading)
 }
 
 bool
-has_params(const char *src)
+has_params(const char *src, bool formatting)
 {
     bool result = FALSE;
     int len = (int) strlen(src);
@@ -765,7 +766,11 @@ has_params(const char *src)
 	}
     }
     if (!ifthen) {
-	result = ((len > 50) && params);
+	if (formatting) {
+	    result = ((len > 50) && params);
+	} else {
+	    result = params;
+	}
     }
     return result;
 }
@@ -774,7 +779,7 @@ static char *
 fmt_complex(TERMTYPE2 *tterm, const char *capability, char *src, int level)
 {
     bool percent = FALSE;
-    bool params = has_params(src);
+    bool params = has_params(src, TRUE);
 
     while (*src != '\0') {
 	switch (*src) {
@@ -801,7 +806,7 @@ fmt_complex(TERMTYPE2 *tterm, const char *capability, char *src, int level)
 		    strncpy_DYN(&tmpbuf, "%", (size_t) 1);
 		    strncpy_DYN(&tmpbuf, src, (size_t) 1);
 		    src++;
-		    params = has_params(src);
+		    params = has_params(src, TRUE);
 		    if (!params && *src != '\0' && *src != '%') {
 			strncpy_DYN(&tmpbuf, "\n", (size_t) 1);
 			indent_DYN(&tmpbuf, level + 1);
@@ -836,7 +841,7 @@ fmt_complex(TERMTYPE2 *tterm, const char *capability, char *src, int level)
 		    strncpy_DYN(&tmpbuf, src++, (size_t) 1);
 		    if (src[0] == '%'
 			&& src[1] != '\0'
-			&& (strchr("?e;", src[1])) == 0) {
+			&& (strchr("?e;", src[1])) == NULL) {
 			tmpbuf.text[tmpbuf.used++] = '\n';
 			indent_DYN(&tmpbuf, level);
 		    }
@@ -854,7 +859,6 @@ fmt_complex(TERMTYPE2 *tterm, const char *capability, char *src, int level)
 		indent_DYN(&tmpbuf, level + 1);
 		strncpy_DYN(&tmpbuf, "%", (size_t) 1);
 	    }
-	    params = FALSE;
 	    percent = FALSE;
 	    break;
 	case ' ':
@@ -878,12 +882,15 @@ static const char *
 number_format(int value)
 {
     const char *result = "%d";
+
     if ((outform != F_TERMCAP) && (value > 255)) {
 	unsigned long lv = (unsigned long) value;
-	unsigned long mm;
 	int bits = sizeof(unsigned long) * 8;
 	int nn;
+
 	for (nn = 8; nn < bits; ++nn) {
+	    unsigned long mm;
+
 	    mm = 1UL << nn;
 	    if ((mm - 16) <= lv && (mm + 16) > lv) {
 		result = "%#x";
@@ -907,7 +914,6 @@ fmt_entry(TERMTYPE2 *tterm,
 {
     PredIdx i, j;
     char buffer[MAX_TERMINFO_LENGTH + EXTRA_CAP];
-    char *capability;
     NCURSES_CONST char *name;
     int predval, len;
     PredIdx num_bools = 0;
@@ -920,14 +926,14 @@ fmt_entry(TERMTYPE2 *tterm,
 
     len = 12;			/* terminfo file-header */
 
-    if (pred == 0) {
+    if (pred == NULL) {
 	cur_type = tterm;
 	pred = dump_predicate;
     }
 
-    strcpy_DYN(&outbuf, 0);
+    strcpy_DYN(&outbuf, NULL);
     if (content_only) {
-	column = indent;	/* FIXME: workaround to prevent empty lines */
+	column = indent;	/* workaround to prevent empty lines */
     } else {
 	strcpy_DYN(&outbuf, tterm->term_names);
 
@@ -1027,6 +1033,7 @@ fmt_entry(TERMTYPE2 *tterm,
     }
 
     for_each_string(j, tterm) {
+	char *capability;
 	i = StrIndirect(j);
 	name = ExtStrname(tterm, (int) i, str_names);
 	assert(strlen(name) < sizeof(buffer) - EXTRA_CAP);
@@ -1110,10 +1117,10 @@ fmt_entry(TERMTYPE2 *tterm,
 			      ? parametrized[i]
 			      : ((*srccap == 'k')
 				 ? 0
-				 : has_params(srccap)));
-		char *cv = _nc_infotocap(name, srccap, params);
+				 : has_params(srccap, FALSE)));
+		const char *cv = _nc_infotocap(name, srccap, params);
 
-		if (cv == 0) {
+		if (cv == NULL) {
 		    if (outform == F_TCONVERR) {
 			_nc_SPRINTF(buffer, _nc_SLIMIT(sizeof(buffer))
 				    "%s=!!! %s WILL NOT CONVERT !!!",
@@ -1122,10 +1129,11 @@ fmt_entry(TERMTYPE2 *tterm,
 		    } else if (suppress_untranslatable) {
 			continue;
 		    } else {
-			char *s = srccap, *d = buffer;
+			const char *s = srccap;
+			char *d = buffer;
 			int need = 3 + (int) strlen(name);
 			while ((*d = *s++) != 0) {
-			    if ((d - buffer + 1) >= (int) sizeof(buffer)) {
+			    if ((d - buffer + 2) >= (int) sizeof(buffer)) {
 				fprintf(stderr,
 					"%s: value for %s is too long\n",
 					_nc_progname,
@@ -1161,7 +1169,7 @@ fmt_entry(TERMTYPE2 *tterm,
 		char *src = _nc_tic_expand(capability,
 					   outform == F_TERMINFO, numbers);
 
-		strcpy_DYN(&tmpbuf, 0);
+		strcpy_DYN(&tmpbuf, NULL);
 		strcpy_DYN(&tmpbuf, name);
 		strcpy_DYN(&tmpbuf, "=");
 		if (pretty
@@ -1201,9 +1209,10 @@ fmt_entry(TERMTYPE2 *tterm,
     } else if (tversion == V_AIX) {
 	if (VALID_STRING(acs_chars)) {
 	    bool box_ok = TRUE;
-	    const char *acstrans = "lqkxjmwuvtn";
+	    static const char acstrans[] = "lqkxjmwuvtn";
 	    const char *cp;
-	    char *tp, *sp, boxchars[11];
+	    const char *sp;
+	    char *tp, boxchars[sizeof(acstrans)];
 
 	    tp = boxchars;
 	    for (cp = acstrans; *cp; cp++) {
@@ -1215,7 +1224,7 @@ fmt_entry(TERMTYPE2 *tterm,
 		    break;
 		}
 	    }
-	    tp[0] = '\0';
+	    *tp = '\0';
 
 	    if (box_ok) {
 		char *tmp = _nc_tic_expand(boxchars,
@@ -1304,7 +1313,7 @@ fmt_entry(TERMTYPE2 *tterm,
 }
 
 static bool
-kill_string(TERMTYPE2 *tterm, char *cap)
+kill_string(TERMTYPE2 *tterm, const char *const cap)
 {
     unsigned n;
     for (n = 0; n < NUM_STRINGS(tterm); ++n) {
@@ -1317,7 +1326,7 @@ kill_string(TERMTYPE2 *tterm, char *cap)
 }
 
 static char *
-find_string(TERMTYPE2 *tterm, char *name)
+find_string(TERMTYPE2 *tterm, const char *name)
 {
     PredIdx n;
     for (n = 0; n < NUM_STRINGS(tterm); ++n) {
@@ -1342,10 +1351,11 @@ kill_labels(TERMTYPE2 *tterm, int target)
 {
     int n;
     int result = 0;
-    char *cap;
-    char name[10];
+    char name[20];
 
     for (n = 0; n <= 10; ++n) {
+	const char *cap;
+
 	_nc_SPRINTF(name, _nc_SLIMIT(sizeof(name)) "lf%d", n);
 	cap = find_string(tterm, name);
 	if (VALID_STRING(cap)
@@ -1368,10 +1378,11 @@ kill_fkeys(TERMTYPE2 *tterm, int target)
 {
     int n;
     int result = 0;
-    char *cap;
-    char name[10];
+    char name[20];
 
     for (n = 60; n >= 0; --n) {
+	const char *cap;
+
 	_nc_SPRINTF(name, _nc_SLIMIT(sizeof(name)) "kf%d", n);
 	cap = find_string(tterm, name);
 	if (VALID_STRING(cap)
@@ -1389,7 +1400,7 @@ kill_fkeys(TERMTYPE2 *tterm, int target)
  * Check if the given acsc string is a 1-1 mapping, i.e., just-like-vt100.
  * Also, since this is for termcap, we only care about the line-drawing map.
  */
-#define isLine(c) (strchr("lmkjtuvwqxn", c) != 0)
+#define isLine(c) (strchr("lmkjtuvwqxn", c) != NULL)
 
 static bool
 one_one_mapping(const char *mapping)
@@ -1435,7 +1446,7 @@ purged_acs(TERMTYPE2 *tterm)
 }
 
 static void
-encode_b64(char *target, char *source, unsigned state, int *saved)
+encode_b64(char *target, const char *source, unsigned state, int *saved)
 {
     /* RFC-4648 */
     static const char data[] =
@@ -1473,19 +1484,22 @@ dump_entry(TERMTYPE2 *tterm,
 	   PredFunc pred)
 {
     TERMTYPE2 save_tterm;
-    int len, critlen;
+    int critlen;
     const char *legend;
     bool infodump;
 
     if (quickdump) {
 	char bigbuf[65536];
-	unsigned n;
 	unsigned offset = 0;
+
 	separator = "";
 	trailer = "\n";
 	indent = 0;
+
 	if (_nc_write_object(tterm, bigbuf, &offset, sizeof(bigbuf)) == OK) {
 	    char numbuf[80];
+	    unsigned n;
+
 	    if (quickdump & 1) {
 		if (outbuf.used)
 		    wrap_concat1("\n");
@@ -1497,9 +1511,10 @@ dump_entry(TERMTYPE2 *tterm,
 		}
 	    }
 	    if (quickdump & 2) {
-		static char padding[] =
+		static const char padding[] =
 		{0, 0};
 		int value = 0;
+
 		if (outbuf.used)
 		    wrap_concat1("\n");
 		wrap_concat1("b64:");
@@ -1540,6 +1555,7 @@ dump_entry(TERMTYPE2 *tterm,
     save_sgr = set_attributes;
 
     if ((FMT_ENTRY() > critlen)
+	&& TcOutput()
 	&& limited) {
 
 	save_tterm = *tterm;
@@ -1550,7 +1566,7 @@ dump_entry(TERMTYPE2 *tterm,
 	}
 	if (FMT_ENTRY() > critlen) {
 	    /*
-	     * We pick on sgr because it's a nice long string capability that
+	     * We pick on sgr because it is a nice long string capability that
 	     * is really just an optimization hack.  Another good candidate is
 	     * acsc since it is both long and unused by BSD termcap.
 	     */
@@ -1595,6 +1611,7 @@ dump_entry(TERMTYPE2 *tterm,
 	    }
 	    if (!changed || (FMT_ENTRY() > critlen)) {
 		int oldversion = tversion;
+		int len;
 
 		tversion = V_BSD;
 		SHOW_WHY("# (terminfo-only capabilities suppressed to fit entry within %d bytes)\n",
@@ -1637,15 +1654,25 @@ dump_entry(TERMTYPE2 *tterm,
 }
 
 void
-dump_uses(const char *name, bool infodump)
+dump_uses(const char *value, bool infodump)
 /* dump "use=" clauses in the appropriate format */
 {
-    char buffer[MAX_TERMINFO_LENGTH];
+    char buffer[MAX_TERMINFO_LENGTH + EXTRA_CAP];
+    int limit = (VALID_STRING(value) ? (int) strlen(value) : 0);
+    const char *cap = infodump ? "use" : "tc";
 
     if (TcOutput())
 	trim_trailing();
+    if (limit == 0) {
+	_nc_warning("empty \"%s\" field", cap);
+	value = "";
+    } else if (limit > MAX_ALIAS) {
+	_nc_warning("\"%s\" field too long (%d), limit to %d",
+		    cap, limit, MAX_ALIAS);
+	limit = MAX_ALIAS;
+    }
     _nc_SPRINTF(buffer, _nc_SLIMIT(sizeof(buffer))
-		"%s%s", infodump ? "use=" : "tc=", name);
+		"%s=%.*s", cap, limit, value);
     wrap_concat1(buffer);
 }
 
@@ -1668,7 +1695,7 @@ show_entry(void)
 		outbuf.used = (size_t) j;
 	    } else if (!infodump && ch == '\\') {
 		outbuf.used = (size_t) j;
-	    } else if (ch == delim && (j == 0 || outbuf.text[j - 1] != '\\')) {
+	    } else if (ch == delim && (outbuf.text[j - 1] != '\\')) {
 		outbuf.used = (size_t) (j + 1);
 	    } else {
 		break;
@@ -1676,7 +1703,7 @@ show_entry(void)
 	}
 	outbuf.text[outbuf.used] = '\0';
     }
-    if (outbuf.text != 0) {
+    if (outbuf.text != NULL) {
 	(void) fputs(outbuf.text, stdout);
 	putchar('\n');
     }
@@ -1757,9 +1784,8 @@ void
 repair_acsc(TERMTYPE2 *tp)
 {
     if (VALID_STRING(acs_chars)) {
-	size_t n, m;
+	size_t n;
 	char mapped[256];
-	char extra = 0;
 	unsigned source;
 	unsigned target;
 	bool fix_needed = FALSE;
@@ -1774,7 +1800,11 @@ repair_acsc(TERMTYPE2 *tp)
 	    if (acs_chars[n + 1])
 		n++;
 	}
+
 	if (fix_needed) {
+	    size_t m;
+	    char extra = 0;
+
 	    memset(mapped, 0, sizeof(mapped));
 	    for (n = 0; acs_chars[n] != 0; n++) {
 		source = UChar(acs_chars[n]);

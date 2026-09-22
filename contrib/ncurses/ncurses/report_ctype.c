@@ -1,6 +1,5 @@
 /****************************************************************************
- * Copyright 2018,2020 Thomas E. Dickey                                     *
- * Copyright 2008-2014,2017 Free Software Foundation, Inc.                  *
+ * Copyright 2025 Thomas E. Dickey                                          *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -28,55 +27,78 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Author: Juergen Pfeifer, 2008-on                                         * 
+ *  Author: Thomas E. Dickey                                                *
  ****************************************************************************/
 
-/* $Id: ncurses_mingw.h,v 1.6 2020/02/02 23:34:34 tom Exp $ */
+#include <curses.priv.h>
 
-/*
- * This is a placeholder up to now and describes what needs to be implemented
- * to support I/O to external terminals with ncurses on the Windows OS.
- */
+MODULE_ID("$Id: report_ctype.c,v 1.1 2025/10/25 19:21:11 tom Exp $")
 
-#ifdef _WIN32
-#ifndef _NC_MINGWH
-#define _NC_MINGWH
+#include <ctype.h>
+#include <wctype.h>
+#include <locale.h>
 
-#define USE_CONSOLE_DRIVER 1
+#if HAVE_LANGINFO_CODESET
+#include <langinfo.h>
+#endif
 
-#undef  TERMIOS
-#define TERMIOS 1
+#define PER_LINE  32
 
-typedef unsigned char cc_t;
-typedef unsigned int  tcflag_t;
-typedef unsigned int  speed_t;
-typedef unsigned short otcflag_t;
-typedef unsigned char ospeed_t;
-
-#define NCCS 18
-struct termios
+static void
+report(char *locale)
 {
-  tcflag_t	c_iflag;
-  tcflag_t	c_oflag;
-  tcflag_t	c_cflag;
-  tcflag_t	c_lflag;
-  char		c_line;
-  cc_t		c_cc[NCCS];
-  speed_t	c_ispeed;
-  speed_t	c_ospeed;
-};
+    int ch;
+    wint_t wch;
+    char *dot;
+    printf("Locale \"%s\"", locale);
+    if (setlocale(LC_CTYPE, locale) != NULL) {
+#if HAVE_LANGINFO_CODESET
+	char *codeset = nl_langinfo(CODESET);
+	if (codeset != NULL) {
+	    printf("\nCodeset \"%s\"", codeset);
+	}
+#endif
+	for (ch = 0; ch < 256; ++ch) {
+	    int code = '?';
+	    wch = ch;
+	    if (isprint(ch) && iswprint(wch))
+		code = '=';
+	    if (!isprint(ch) && iswprint(wch))
+		code = '+';
+	    if (isprint(ch) && !iswprint(wch))
+		code = '-';
+	    if ((ch & (PER_LINE - 1)) == 0)
+		printf("\n%02X: ", ch);
+	    putchar(code);
+	}
+	putchar('\n');
+    } else {
+	fprintf(stderr, "Cannot set locale\n");
+    }
+    if ((dot = strchr(locale, '.')) != NULL) {
+	*dot = '\0';
+	report(locale);
+    }
+}
 
-extern NCURSES_EXPORT(int)  _nc_mingw_tcsetattr(
-    int fd, 
-    int optional_actions, 
-    const struct termios* arg);
-extern NCURSES_EXPORT(int)  _nc_mingw_tcgetattr(
-    int fd, 
-    struct termios* arg);
-extern NCURSES_EXPORT(int)  _nc_mingw_tcflush(
-    int fd, 
-    int queue);
-extern NCURSES_EXPORT(void) _nc_set_term_driver(void* term);
-
-#endif /* _NC_MINGWH */
-#endif /* _WIN32 */
+int
+main(int argc, char *argv[])
+{
+    if (argc > 1) {
+	int n;
+	for (n = 1; n < argc; ++n) {
+	    report(argv[n]);
+	}
+    } else {
+	static char empty[1];
+	char *locale = getenv("LC_CTYPE");
+	if (locale == NULL)
+	    locale = getenv("LC_ALL");
+	if (locale == NULL)
+	    locale = getenv("LANG");
+	if (locale == NULL)
+	    locale = empty;
+	report(locale);
+    }
+    return EXIT_SUCCESS;
+}

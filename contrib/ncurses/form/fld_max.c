@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2019,2020 Thomas E. Dickey                                     *
+ * Copyright 2019-2020,2021 Thomas E. Dickey                                *
  * Copyright 1998-2012,2013 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -33,19 +33,19 @@
 
 #include "form.priv.h"
 
-MODULE_ID("$Id: fld_max.c,v 1.16 2020/02/02 23:34:34 tom Exp $")
+MODULE_ID("$Id: fld_max.c,v 1.18 2021/06/17 21:26:02 tom Exp $")
 
 /*---------------------------------------------------------------------------
-|   Facility      :  libnform  
+|   Facility      :  libnform
 |   Function      :  int set_max_field(FIELD *field, int maxgrow)
-|   
+|
 |   Description   :  Set the maximum growth for a dynamic field. If maxgrow=0
 |                    the field may grow to any possible size.
 |
 |   Return Values :  E_OK           - success
 |                    E_BAD_ARGUMENT - invalid argument
 +--------------------------------------------------------------------------*/
-NCURSES_EXPORT(int)
+FORM_EXPORT(int)
 set_max_field(FIELD *field, int maxgrow)
 {
   T((T_CALLED("set_max_field(%p,%d)"), (void *)field, maxgrow));

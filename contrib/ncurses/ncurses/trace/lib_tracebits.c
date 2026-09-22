@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2019,2020 Thomas E. Dickey                                     *
+ * Copyright 2019-2024,2025 Thomas E. Dickey                                *
  * Copyright 1998-2012,2015 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -35,14 +35,10 @@
 
 #include <curses.priv.h>
 
-MODULE_ID("$Id: lib_tracebits.c,v 1.28 2020/02/02 23:34:34 tom Exp $")
+MODULE_ID("$Id: lib_tracebits.c,v 1.37 2025/12/23 09:23:38 tom Exp $")
 
 #if HAVE_SYS_TERMIO_H
 #include <sys/termio.h>		/* needed for ISC */
-#endif
-
-#ifdef __EMX__
-#include <io.h>
 #endif
 
 /* may be undefined if we're using termio.h */
@@ -72,15 +68,21 @@ MODULE_ID("$Id: lib_tracebits.c,v 1.28 2020/02/02 23:34:34 tom Exp $")
 
 #ifdef TRACE
 
+#if defined(USE_WIN32CON_DRIVER)
+#define BITNAMELEN 36
+#else
+#define BITNAMELEN 8
+#endif
+
 typedef struct {
-    unsigned int val;
-    const char name[8];
+    unsigned long val;
+    const char name[BITNAMELEN];
 } BITNAMES;
 
 #define TRACE_BUF_SIZE(num) (_nc_globals.tracebuf_ptr[num].size)
 
 static void
-lookup_bits(char *buf, const BITNAMES * table, const char *label, unsigned int val)
+lookup_bits(char *buf, const BITNAMES * table, const char *label, unsigned long val)
 {
     const BITNAMES *sp;
 
@@ -98,7 +100,7 @@ lookup_bits(char *buf, const BITNAMES * table, const char *label, unsigned int v
 }
 
 NCURSES_EXPORT(char *)
-_nc_trace_ttymode(TTY * tty)
+_nc_trace_ttymode(const TTY * tty)
 /* describe the state of the terminal control bits exactly */
 {
     char *buf;
@@ -166,7 +168,7 @@ _nc_trace_ttymode(TTY * tty)
 			8 + sizeof(cflags) +
 			8 + sizeof(lflags) +
 			8);
-    if (buf != 0) {
+    if (buf != NULL) {
 
 	if (tty->c_iflag & ALLIN)
 	    lookup_bits(buf, iflags, "iflags", tty->c_iflag);
@@ -212,6 +214,36 @@ _nc_trace_ttymode(TTY * tty)
 	if (tty->c_lflag & ALLLOCAL)
 	    lookup_bits(buf, lflags, "lflags", tty->c_lflag);
     }
+#elif defined(USE_WIN32CON_DRIVER)
+#define DATA(name)        { name, { #name } }
+    static const BITNAMES dwFlagsOut[] =
+    {
+	DATA(ENABLE_PROCESSED_OUTPUT),
+	DATA(ENABLE_WRAP_AT_EOL_OUTPUT),
+	DATA(ENABLE_VIRTUAL_TERMINAL_PROCESSING),
+	DATA(DISABLE_NEWLINE_AUTO_RETURN),
+	DATA(ENABLE_LVB_GRID_WORLDWIDE)
+    };
+    static const BITNAMES dwFlagsIn[] =
+    {
+	DATA(ENABLE_PROCESSED_INPUT),
+	DATA(ENABLE_LINE_INPUT),
+	DATA(ENABLE_ECHO_INPUT),
+	DATA(ENABLE_MOUSE_INPUT),
+	DATA(ENABLE_INSERT_MODE),
+	DATA(ENABLE_QUICK_EDIT_MODE),
+	DATA(ENABLE_EXTENDED_FLAGS),
+	DATA(ENABLE_AUTO_POSITION),
+	DATA(ENABLE_VIRTUAL_TERMINAL_INPUT)
+    };
+
+    buf = _nc_trace_buf(0,
+			8 + sizeof(dwFlagsOut) +
+			8 + sizeof(dwFlagsIn));
+    if (buf != NULL) {
+	lookup_bits(buf, dwFlagsIn, "dwIn", tty->dwFlagIn);
+	lookup_bits(buf, dwFlagsOut, "dwOut", tty->dwFlagOut);
+    }
 #else
     /* reference: ttcompat(4M) on SunOS 4.1 */
 #ifndef EVENP
@@ -248,7 +280,7 @@ _nc_trace_ttymode(TTY * tty)
 
     buf = _nc_trace_buf(0,
 			8 + sizeof(cflags));
-    if (buf != 0) {
+    if (buf != NULL) {
 	if (tty->sg_flags & ALLCTRL) {
 	    lookup_bits(buf, cflags, "cflags", tty->sg_flags);
 	}
