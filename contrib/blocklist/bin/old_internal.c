@@ -1,4 +1,4 @@
-/*	$NetBSD: internal.h,v 1.1.1.1 2020/06/15 01:52:53 christos Exp $	*/
+/*	$NetBSD: internal.c,v 1.2 2025/02/11 17:48:30 christos Exp $	*/
 
 /*-
  * Copyright (c) 2015 The NetBSD Foundation, Inc.
@@ -28,30 +28,23 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _INTERNAL_H
-#define _INTERNAL_H
-
-#ifndef _PATH_BLCONF
-#define	_PATH_BLCONF	"/etc/blocklistd.conf"
-#endif
-#ifndef _PATH_BLCONTROL
-#define	_PATH_BLCONTROL	"/usr/libexec/blocklistd-helper"
-#endif
-#ifndef _PATH_BLSTATE
-#define	_PATH_BLSTATE	"/var/db/blocklistd.db"
+#ifdef HAVE_CONFIG_H
+#include "config.h"
 #endif
 
-extern struct confset rconf, lconf;
-extern int debug;
-extern const char *rulename;
-extern const char *controlprog;
-extern struct ifaddrs *ifas;
-
-#if !defined(__syslog_attribute__) && !defined(__syslog__)
-#define __syslog__ __printf__
+#ifdef HAVE_SYS_CDEFS_H
+#include <sys/cdefs.h>
 #endif
+__RCSID("$NetBSD: internal.c,v 1.2 2025/02/11 17:48:30 christos Exp $");
 
-extern void (*lfun)(int, const char *, ...)
-    __attribute__((__format__(__syslog__, 2, 3)));
+#include <stdio.h>
+#include <syslog.h>
+#include "conf.h"
+#include "old_internal.h"
 
-#endif /* _INTERNAL_H */
+int debug;
+const char *rulename = "blacklistd";
+const char *controlprog = _PATH_BLCONTROL;
+struct confset lconf, rconf;
+struct ifaddrs *ifas;
+void (*lfun)(int, const char *, ...) = syslog;

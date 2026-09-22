@@ -1,7 +1,7 @@
-/*	$NetBSD: internal.h,v 1.1.1.1 2020/06/15 01:52:53 christos Exp $	*/
+/*	$NetBSD: blocklist.h,v 1.4 2025/02/11 17:42:17 christos Exp $	*/
 
 /*-
- * Copyright (c) 2015 The NetBSD Foundation, Inc.
+ * Copyright (c) 2014 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
  * This code is derived from software contributed to The NetBSD Foundation
@@ -28,30 +28,38 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _INTERNAL_H
-#define _INTERNAL_H
+#ifndef _BLACKLIST_H
+#define _BLACKLIST_H
 
-#ifndef _PATH_BLCONF
-#define	_PATH_BLCONF	"/etc/blocklistd.conf"
-#endif
-#ifndef _PATH_BLCONTROL
-#define	_PATH_BLCONTROL	"/usr/libexec/blocklistd-helper"
-#endif
-#ifndef _PATH_BLSTATE
-#define	_PATH_BLSTATE	"/var/db/blocklistd.db"
+#include <sys/socket.h>
+#include <syslog.h>
+
+#if defined(__cplusplus)
+extern "C" {
 #endif
 
-extern struct confset rconf, lconf;
-extern int debug;
-extern const char *rulename;
-extern const char *controlprog;
-extern struct ifaddrs *ifas;
+struct syslog_data;
+struct blacklist *blacklist_open(void);
+struct blacklist *blacklist_open2(
+    void (*)(int, struct syslog_data *, const char *, va_list));
+void blacklist_close(struct blacklist *);
+int blacklist(int, int, const char *);
+int blacklist_r(struct blacklist *, int, int, const char *);
+int blacklist_sa(int, int, const struct sockaddr *, socklen_t, const char *);
+int blacklist_sa_r(struct blacklist *, int, int,
+    const struct sockaddr *, socklen_t, const char *);
 
-#if !defined(__syslog_attribute__) && !defined(__syslog__)
-#define __syslog__ __printf__
+#if defined(__cplusplus)
+}
 #endif
 
-extern void (*lfun)(int, const char *, ...)
-    __attribute__((__format__(__syslog__, 2, 3)));
+/* action values for user applications */
+#define BLACKLIST_API_ENUM	1
+enum {
+        BLACKLIST_AUTH_OK = 0,
+        BLACKLIST_AUTH_FAIL,
+        BLACKLIST_ABUSIVE_BEHAVIOR,
+        BLACKLIST_BAD_USER
+};
 
-#endif /* _INTERNAL_H */
+#endif /* _BLACKLIST_H */

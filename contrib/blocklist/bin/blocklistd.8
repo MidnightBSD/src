@@ -166,7 +166,7 @@ The following options are available:
 Use
 .Ar controlprog
 to communicate with the packet filter, instead of the default, which is
-.Pa /libexec/blocklistd-helper .
+.Pa /usr/libexec/blocklistd-helper .
 The following arguments are passed to the control program:
 .Bl -tag -width protocol
 .It action
@@ -273,8 +273,8 @@ This signal tells
 to decrease the internal debugging level by 1.
 .El
 .Sh FILES
-.Bl -tag -width /libexec/blocklistd-helper -compact
-.It Pa /libexec/blocklistd-helper
+.Bl -tag -width /usr/libexec/blocklistd-helper -compact
+.It Pa /usr/libexec/blocklistd-helper
 Shell script invoked to interface with the packet filter.
 .It Pa /etc/blocklistd.conf
 Configuration file.
@@ -286,7 +286,9 @@ Socket to receive connection notifications.
 .Sh SEE ALSO
 .Xr blocklistd.conf 5 ,
 .Xr blocklistctl 8 ,
-.Xr npfctl 8 ,
+.Xr ipf 8 ,
+.Xr ipfw 8 ,
+.Xr pfctl 8 ,
 .Xr syslogd 8
 .Sh HISTORY
 .Nm

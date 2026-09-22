@@ -28,16 +28,17 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _INTERNAL_H
-#define _INTERNAL_H
+#ifndef _OLD_INTERNAL_H
+#define _OLD_INTERNAL_H
 
 #ifndef _PATH_BLCONF
-#define	_PATH_BLCONF	"/etc/blocklistd.conf"
+#define	_PATH_BLCONF	"/etc/blacklistd.conf"
 #endif
 #ifndef _PATH_BLCONTROL
-#define	_PATH_BLCONTROL	"/usr/libexec/blocklistd-helper"
+#define	_PATH_BLCONTROL	"/usr/libexec/blacklistd-helper"
 #endif
 #ifndef _PATH_BLSTATE
+/* We want the new name, the old one would be incompatible after 24932b6 */
 #define	_PATH_BLSTATE	"/var/db/blocklistd.db"
 #endif
 
@@ -54,4 +55,4 @@ extern struct ifaddrs *ifas;
 extern void (*lfun)(int, const char *, ...)
     __attribute__((__format__(__syslog__, 2, 3)));
 
-#endif /* _INTERNAL_H */
+#endif /* _OLD_INTERNAL_H */

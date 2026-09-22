@@ -1070,7 +1070,7 @@ confset_match(const struct confset *cs, struct conf *c,
 #ifdef AF_ROUTE
 static int
 conf_route_perm(int fd) {
-#if defined(RTM_IFANNOUNCE) && defined(RT_ROUNDUP)
+#if defined(RTM_IFANNOUNCE) && defined(SA_SIZE)
 	/*
 	 * Send a routing message that is not supported to check for access
 	 * We expect EOPNOTSUPP for having access, since we are sending a
@@ -1089,7 +1089,7 @@ conf_route_perm(int fd) {
 	size_t l;
 
 #define NEXTADDR(s) \
-	l = RT_ROUNDUP(sizeof(*s)); memmove(cp, s, l); cp += l;
+	l = SA_SIZE(sizeof(*s)); memmove(cp, s, l); cp += l;
 	memset(buf, 0, sizeof(buf));
 	rtm->rtm_type = RTM_IFANNOUNCE;
 	rtm->rtm_flags = 0;
