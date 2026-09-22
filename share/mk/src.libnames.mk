@@ -235,8 +235,11 @@ _LIBRARIES=	\
 
 .if ${MK_BLACKLIST} != "no"
 _LIBRARIES+= \
-		blacklist \
-
+		blacklist
+.endif
+.if ${MK_BLOCKLIST} != "no"
+_LIBRARIES+= \
+		blocklist
 .endif
 
 .if ${MK_OFED} != "no"
@@ -284,6 +287,9 @@ _DP_avl=	spl
 _DP_zstd=	pthread
 .if ${MK_BLACKLIST} != "no"
 _DP_blacklist+=	pthread
+.endif
+.if ${MK_BLOCKLIST} != "no"
+_DP_blocklist+=	pthread
 .endif
 _DP_crypto=	pthread
 # See comment by _DP_archive above
@@ -734,6 +740,7 @@ LIBGTESTDIR=	${OBJTOP}/lib/googletest/gtest
 LIBGTEST_MAINDIR=	${OBJTOP}/lib/googletest/gtest_main
 LIBALIASDIR=	${OBJTOP}/lib/libalias/libalias
 LIBBLACKLISTDIR=	${OBJTOP}/lib/libblacklist
+LIBBLOCKLISTDIR=	${OBJTOP}/lib/libblocklist
 LIBBLOCKSRUNTIMEDIR=	${OBJTOP}/lib/libblocksruntime
 LIBMPORTDIR=    ${OBJTOP}/lib/libmport
 LIBMSEARCHDIR=  ${OBJTOP}/lib/libmsearch

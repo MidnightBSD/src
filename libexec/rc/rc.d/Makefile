@@ -16,6 +16,7 @@ CONFS=	DAEMON \
 	archdep \
 	bgfsck \
 	${_blacklistd} \
+	${_blocklistd} \
 	bridge \
 	cfumass \
 	cleanvar \
@@ -181,6 +182,10 @@ CONFS+=		autounmountd
 
 .if ${MK_BLACKLIST} != "no"
 _blacklistd+=	blacklistd
+.endif
+
+.if ${MK_BLOCKLIST} != "no"
+_blocklistd+=	blocklistd
 .endif
 
 .if ${MK_BLUETOOTH} != "no"

@@ -57,8 +57,8 @@ static char sccsid[] = "@(#)fingerd.c	8.1 (Berkeley) 6/4/93";
 #include <stdlib.h>
 #include <string.h>
 #include "pathnames.h"
-#ifdef USE_BLACKLIST
-#include <blacklist.h>
+#ifdef USE_BLOCKLIST
+#include <blocklist.h>
 #endif
 
 void logerr(const char *, ...) __printflike(1, 2) __dead2;
@@ -156,8 +156,8 @@ main(int argc, char *argv[])
 		*ap = strtok(lp, " \t\r\n");
 		if (!*ap) {
 			if (secure && ap == &av[4]) {
-#ifdef USE_BLACKLIST
-				blacklist(1, STDIN_FILENO, "nousername");
+#ifdef USE_BLOCKLIST
+				blocklist(1, STDIN_FILENO, "nousername");
 #endif
 				puts("must provide username\r\n");
 				exit(1);
@@ -165,8 +165,8 @@ main(int argc, char *argv[])
 			break;
 		}
 		if (secure && strchr(*ap, '@')) {
-#ifdef USE_BLACKLIST
-			blacklist(1, STDIN_FILENO, "noforwarding");
+#ifdef USE_BLOCKLIST
+			blocklist(1, STDIN_FILENO, "noforwarding");
 #endif
 			puts("forwarding service denied\r\n");
 			exit(1);
@@ -206,8 +206,8 @@ main(int argc, char *argv[])
 		}
 		dup2(STDOUT_FILENO, STDERR_FILENO);
 
-#ifdef USE_BLACKLIST
-		blacklist(0, STDIN_FILENO, "success");
+#ifdef USE_BLOCKLIST
+		blocklist(0, STDIN_FILENO, "success");
 #endif
 		execv(prog, comp);
 		write(STDERR_FILENO, prog, strlen(prog));

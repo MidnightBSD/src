@@ -1,0 +1,38 @@
+blocklist (formerly blacklist) from https://github.com/zoulasc/blocklist
+
+Vendor branch: vendor/blocklist, tagged vendor/blocklist/YYYYMMDD after
+the upstream commit date.  Upstream has no releases; import HEAD.
+
+To import a new snapshot:
+
+  1) git clone https://github.com/zoulasc/blocklist.git and note the
+     commit hash and date.
+  2) In this repository:
+	git fetch <clone> HEAD
+	c=$(git commit-tree FETCH_HEAD^{tree} -p vendor/blocklist \
+	    -m "Import blocklist YYYY-MM-DD (shorthash)")
+	git branch -f vendor/blocklist $c
+	git tag vendor/blocklist/YYYYMMDD $c
+  3) On master:
+	git merge -X subtree=contrib/blocklist vendor/blocklist
+  4) Re-run sh midnightbsd-changes.sh in contrib/blocklist and check
+     that nothing else changed with
+	git diff vendor/blocklist HEAD:contrib/blocklist
+  5) If source files were added or removed, update lib/libblocklist,
+     usr.sbin/blocklistd and usr.sbin/blocklistctl.
+  6) Build world and test sshd(8) and fingerd(8) integration.
+
+Files that are not upstream:
+
+  bin/blacklistctl.c bin/blacklistd.c bin/old_internal.[ch]
+  include/blacklist.h include/old_bl.h lib/blacklist.c lib/old_bl.c
+  bin/blacklistctl.8 bin/blacklistd.8 bin/blacklistd.conf.5 lib/libblacklist.3
+	Compatibility sources for the old blacklist names, taken from
+	FreeBSD.  They build lib/libblacklist, usr.sbin/blacklistd and
+	usr.sbin/blacklistctl so existing configurations keep working
+	with a warning.
+  port/config.h
+	Wrapper that pulls in port/port.h; upstream generates this with
+	autoconf.
+  midnightbsd-changes.sh MIDNIGHTBSD-upgrade
+	This file and the change script.

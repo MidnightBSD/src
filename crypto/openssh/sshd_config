@@ -105,7 +105,7 @@ AuthorizedKeysFile	.ssh/authorized_keys
 #MaxStartups 10:30:100
 #PermitTunnel no
 #ChrootDirectory none
-#UseBlacklist no
+#UseBlocklist no
 #VersionAddendum MidnightBSD-20250324
 
 # no default banner path

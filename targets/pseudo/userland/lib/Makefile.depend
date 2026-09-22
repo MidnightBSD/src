@@ -254,4 +254,8 @@ DIRDEPS+= \
 DIRDEPS+=	lib/libblacklist
 .endif
 
+.if ${MK_BLOCKLIST_SUPPORT} != "no"
+DIRDEPS+=	lib/libblocklist
+.endif
+
 .include <dirdeps.mk>

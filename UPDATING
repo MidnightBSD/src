@@ -1,6 +1,22 @@
 Updating Information for MidnightBSD users.
 
 20260922:
+	blacklistd has been renamed to blocklistd, following upstream.
+	The library is now libblocklist(3) with blocklist_*() functions,
+	the daemon and control program are blocklistd(8) and
+	blocklistctl(8), the configuration file is /etc/blocklistd.conf,
+	the rc.conf knobs are blocklistd_enable and blocklistd_flags, and
+	the sshd_config option is UseBlocklist.  The build options are
+	WITH[OUT]_BLOCKLIST and WITH[OUT]_BLOCKLIST_SUPPORT.
+
+	The old names keep working for now: libblacklist, blacklistd,
+	blacklistctl, /etc/blacklistd.conf, the blacklistd rc script and
+	the old build options are all still provided, but they warn on
+	use and will be removed in a future release.  Move your
+	configuration to the new names.  Note that the last column of the
+	configuration file, formerly "disable", is now "duration".
+
+20260922:
 	tcsh 6.24.16 (from 6.21.00).  Adds $'...' strings with \x, \u, \U
 	and \c escapes, the :Q modifier, $?<, jobs -Z, CLICOLOR_FORCE and
 	more LS_COLORS keys, and fixes crashes in :q:h and :q:t, history
