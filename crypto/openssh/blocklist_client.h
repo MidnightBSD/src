@@ -31,67 +31,31 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "includes.h"
+#ifndef BLOCKLIST_CLIENT_H
+#define BLOCKLIST_CLIENT_H
 
-#include <ctype.h>
-#include <stdarg.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <syslog.h>
-#include <unistd.h>
+#ifndef BLOCKLIST_API_ENUM
+enum {
+	BLOCKLIST_AUTH_OK = 0,
+	BLOCKLIST_AUTH_FAIL,
+	BLOCKLIST_ABUSIVE_BEHAVIOR,
+	BLOCKLIST_BAD_USER
+};
+#endif
 
-#include "ssh.h"
-#include "packet.h"
-#include "log.h"
-#include "misc.h"
-#include "servconf.h"
-#include <blacklist.h>
-#include "blacklist_client.h"
+#ifdef USE_BLOCKLIST
+void blocklist_init(void);
+void blocklist_notify(struct ssh *, int, const char *);
 
-static struct blacklist *blstate = NULL;
+#define BLOCKLIST_INIT() blocklist_init()
+#define BLOCKLIST_NOTIFY(ssh,x,msg) blocklist_notify(ssh,x,msg)
 
-/* import */
-extern ServerOptions options;
+#else
 
-/* internal definition from bl.h */
-struct blacklist *bl_create(bool, char *, void (*)(int, const char *, va_list));
+#define BLOCKLIST_INIT()
+#define BLOCKLIST_NOTIFY(ssh,x,msg)
 
-/* impedence match vsyslog() to sshd's internal logging levels */
-void
-im_log(int priority, const char *message, va_list args)
-{
-	LogLevel imlevel;
+#endif
 
-	switch (priority) {
-	case LOG_ERR:
-		imlevel = SYSLOG_LEVEL_ERROR;
-		break;
-	case LOG_DEBUG:
-		imlevel = SYSLOG_LEVEL_DEBUG1;
-		break;
-	case LOG_INFO:
-		imlevel = SYSLOG_LEVEL_INFO;
-		break;
-	default:
-		imlevel = SYSLOG_LEVEL_DEBUG2;
-	}
-	do_log2(imlevel, message, args);
-}
 
-void
-blacklist_init(void)
-{
-
-	if (options.use_blacklist)
-		blstate = bl_create(false, NULL, im_log);
-}
-
-void
-blacklist_notify(struct ssh *ssh, int action, const char *msg)
-{
-
-	if (blstate != NULL && ssh_packet_connection_is_on_socket(ssh))
-		(void)blacklist_r(blstate, action,
-		ssh_packet_get_connection_in(ssh), msg);
-}
+#endif /* BLOCKLIST_CLIENT_H */

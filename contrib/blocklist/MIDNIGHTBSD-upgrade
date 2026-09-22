@@ -26,9 +26,13 @@ Files that are not upstream:
 
   bin/blacklistctl.c bin/blacklistd.c bin/old_internal.[ch]
   include/blacklist.h include/old_bl.h lib/blacklist.c lib/old_bl.c
+  bin/blacklistctl.8 bin/blacklistd.8 bin/blacklistd.conf.5 lib/libblacklist.3
 	Compatibility sources for the old blacklist names, taken from
 	FreeBSD.  They build lib/libblacklist, usr.sbin/blacklistd and
 	usr.sbin/blacklistctl so existing configurations keep working
 	with a warning.
+  port/config.h
+	Wrapper that pulls in port/port.h; upstream generates this with
+	autoconf.
   midnightbsd-changes.sh MIDNIGHTBSD-upgrade
 	This file and the change script.

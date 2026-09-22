@@ -1,7 +1,9 @@
-#!/bin/sh -
+#!/bin/sh
 #
-# Copyright (c) 2004  The FreeBSD Project
-# All rights reserved.
+# Copyright (c) 2016 The FreeBSD Foundation
+#
+# This software was developed by Kurt Lidl under sponsorship from the
+# FreeBSD Foundation.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -15,7 +17,7 @@
 # THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
 # ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 # IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-# ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
 # FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
 # DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
 # OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -26,31 +28,16 @@
 #
 #
 
-# If there is a global system configuration file, suck it in.
-#
-if [ -r /etc/defaults/periodic.conf ]
-then
-    . /etc/defaults/periodic.conf
-    source_periodic_confs
-fi
+# PROVIDE: blocklistd
+# REQUIRE: netif ipfilter ipfw pf
 
-. /etc/periodic/security/security.functions
+. /etc/rc.subr
 
-rc=0
+name="blocklistd"
+desc="System blocklist daemon"
+rcvar="blocklistd_enable"
+command="/usr/sbin/${name}"
+required_files="/etc/blocklistd.conf"
 
-if check_yesno_period security_status_pfdenied_enable
-then
-	TMP=`mktemp -t security`
-	for _a in "" $(pfctl -a "blacklistd" -sA 2>/dev/null) $(pfctl -a "blocklistd" -sA 2>/dev/null)
-	do
-		pfctl -a "${_a}" -sr -v -z 2>/dev/null | \
-		nawk '{if (/^block/) {buf=$0; getline; gsub(" +"," ",$0); if ($5 > 0) print buf$0;} }' >> ${TMP}
-	done
-	if [ -s ${TMP} ]; then
-		check_diff new_only pf ${TMP} "${host} pf denied packets:"
-	fi
-	rc=$?
-	rm -f ${TMP}
-fi
-
-exit $rc
+load_rc_config $name
+run_rc_command "$1"

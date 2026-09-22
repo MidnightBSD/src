@@ -61,6 +61,7 @@ __DEFAULT_YES_OPTIONS = \
     AUTOFS \
     BHYVE \
     BLACKLIST \
+    BLOCKLIST \
     BLUETOOTH \
     BOOT \
     BOOTPARAMD \
@@ -231,6 +232,7 @@ __DEFAULT_DEPENDENT_OPTIONS= \
 #
 .for var in \
     BLACKLIST \
+    BLOCKLIST \
     BZIP2 \
     INET \
     INET6 \
@@ -486,6 +488,26 @@ MK_${vv:H}:=	no
 MK_${vv:H}:=	${MK_${vv:T}}
 .endif
 .endfor
+
+#
+# The blacklist knobs are kept as aliases for the blocklist ones
+# during the rename transition.
+#
+.if ${MK_BLACKLIST} == "no"
+MK_BLOCKLIST:=	no
+.endif
+
+.if ${MK_BLACKLIST_SUPPORT} == "no"
+MK_BLOCKLIST_SUPPORT:=	no
+.endif
+
+.if ${MK_BLOCKLIST} == "no"
+MK_BLACKLIST:=	no
+.endif
+
+.if ${MK_BLOCKLIST_SUPPORT} == "no"
+MK_BLACKLIST_SUPPORT:=	no
+.endif
 
 #
 # Set defaults for the MK_*_SUPPORT variables.

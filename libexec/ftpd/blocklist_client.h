@@ -26,28 +26,28 @@
  * SUCH DAMAGE. */
 
 
-#ifndef BLACKLIST_CLIENT_H
-#define BLACKLIST_CLIENT_H
+#ifndef BLOCKLIST_CLIENT_H
+#define BLOCKLIST_CLIENT_H
 
-#ifndef BLACKLIST_API_ENUM
+#ifndef BLOCKLIST_API_ENUM
 enum {
-	BLACKLIST_AUTH_OK = 0,
-	BLACKLIST_AUTH_FAIL
+	BLOCKLIST_AUTH_OK = 0,
+	BLOCKLIST_AUTH_FAIL
 };
 #endif
 
-#ifdef USE_BLACKLIST
-void blacklist_init(void);
-void blacklist_notify(int, int, const char *);
+#ifdef USE_BLOCKLIST
+void blocklist_init(void);
+void blocklist_notify(int, int, const char *);
 
-#define BLACKLIST_INIT() blacklist_init()
-#define BLACKLIST_NOTIFY(x, y, z) blacklist_notify(x, y, z)
+#define BLOCKLIST_INIT() blocklist_init()
+#define BLOCKLIST_NOTIFY(x, y, z) blocklist_notify(x, y, z)
 
 #else
 
-#define BLACKLIST_INIT()
-#define BLACKLIST_NOTIFY(x, y, z)
+#define BLOCKLIST_INIT()
+#define BLOCKLIST_NOTIFY(x, y, z)
 
 #endif
 
-#endif /* BLACKLIST_CLIENT_H */
+#endif /* BLOCKLIST_CLIENT_H */

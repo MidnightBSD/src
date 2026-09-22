@@ -90,7 +90,7 @@
 #include "ssh-gss.h"
 #endif
 #include "auth-options.h"
-#include "blacklist_client.h"
+#include "blocklist_client.h"
 #include "dh.h"
 #include "monitor_wrap.h"
 #include "sk-api.h"
@@ -1155,7 +1155,7 @@ main(int ac, char **av)
 	ssh_signal(SIGCHLD, SIG_DFL);
 	ssh_signal(SIGINT, SIG_DFL);
 
-	BLACKLIST_INIT();
+	BLOCKLIST_INIT();
 
 	/*
 	 * Register our connection.  This turns encryption off because we do
@@ -1374,7 +1374,7 @@ cleanup_exit(int i)
 #endif
 	/* Override default fatal exit value when auth was attempted */
 	if (i == 255 && monitor_auth_attempted()) {
-		BLACKLIST_NOTIFY(the_active_state, BLACKLIST_AUTH_FAIL,
+		BLOCKLIST_NOTIFY(the_active_state, BLOCKLIST_AUTH_FAIL,
 		    "Fatal exit");
 		_exit(EXIT_AUTH_ATTEMPTED);
 	}
