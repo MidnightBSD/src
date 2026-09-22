@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2020 Thomas E. Dickey                                          *
+ * Copyright 2020-2024,2025 Thomas E. Dickey                                *
  * Copyright 2002-2011,2016 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -41,7 +41,7 @@
 #include <curses.priv.h>
 #include <ctype.h>
 
-MODULE_ID("$Id: lib_get_wch.c,v 1.25 2020/02/02 23:34:34 tom Exp $")
+MODULE_ID("$Id: lib_get_wch.c,v 1.28 2025/11/01 20:16:24 tom Exp $")
 
 NCURSES_EXPORT(int)
 wget_wch(WINDOW *win, wint_t *result)
@@ -49,7 +49,6 @@ wget_wch(WINDOW *win, wint_t *result)
     SCREEN *sp;
     int code;
     int value = 0;
-    wchar_t wch;
 #ifndef state_unused
     mbstate_t state;
 #endif
@@ -63,7 +62,7 @@ wget_wch(WINDOW *win, wint_t *result)
     _nc_lock_global(curses);
     sp = _nc_screen_of(win);
 
-    if (sp != 0) {
+    if (sp != NULL) {
 	size_t count = 0;
 
 	for (;;) {
@@ -98,12 +97,13 @@ wget_wch(WINDOW *win, wint_t *result)
 		reset_mbytes(state);
 		status = count_mbytes(buffer, count, state);
 		if (status >= 0) {
+		    wchar_t wch;
 		    reset_mbytes(state);
 		    if (check_mbytes(wch, buffer, count, state) != status) {
 			code = ERR;	/* the two calls should match */
 			safe_ungetch(SP_PARM, value);
 		    }
-		    value = wch;
+		    value = (int) wch;
 		    break;
 		}
 	    }
@@ -112,7 +112,7 @@ wget_wch(WINDOW *win, wint_t *result)
 	code = ERR;
     }
 
-    if (result != 0)
+    if (result != NULL)
 	*result = (wint_t) value;
 
     _nc_unlock_global(curses);

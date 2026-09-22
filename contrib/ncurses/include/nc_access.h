@@ -1,6 +1,5 @@
 /****************************************************************************
- * Copyright 2018-2019,2020 Thomas E. Dickey                                *
- * Copyright 2008-2010,2017 Free Software Foundation, Inc.                  *
+ * Copyright 2021,2023 Thomas E. Dickey                                     *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -27,46 +26,55 @@
  * authorization.                                                           *
  ****************************************************************************/
 
-/****************************************************************************
- * Author: Thomas Dickey, 2008-on                                           *
- ****************************************************************************/
+/* $Id: nc_access.h,v 1.6 2023/05/06 10:54:55 tom Exp $ */
 
-/* $Id: nc_mingw.h,v 1.7 2020/02/02 23:34:34 tom Exp $ */
+#ifndef NC_ACCESS_included
+#define NC_ACCESS_included 1
+/* *INDENT-OFF* */
 
-#ifndef NC_MINGW_H
-#define NC_MINGW_H 1
+#include <ncurses_cfg.h>
+#include <curses.h>
+#include <sys/types.h>
 
-#ifdef _WIN32
-#ifdef WINVER
-#  if WINVER < 0x0501
-#    error WINVER must at least be 0x0501
-#  endif
-#else
-#  define WINVER 0x0501
+#ifdef __cplusplus
+extern "C" {
 #endif
-#include <windows.h>
 
-#undef sleep
-#define sleep(n) Sleep((n) * 1000)
+/*
+ * Turn off the 'use_terminfo_vars()' symbol to limit access to environment
+ * variables when running with privileges.
+ */
+#if defined(USE_ROOT_ENVIRON) && defined(USE_SETUID_ENVIRON)
+#define use_terminfo_vars() 1
+#else
+#define use_terminfo_vars() _nc_env_access()
+#endif
 
-#undef gettimeofday
-#define gettimeofday(tv,tz) _nc_gettimeofday(tv,tz)
+extern NCURSES_EXPORT(int) _nc_env_access (void);
 
-#include <sys/time.h>		/* for struct timeval */
+/*
+ * Turn off this symbol to limit access to files when running setuid.
+ */
+#ifdef USE_ROOT_ACCESS
 
-extern int _nc_gettimeofday(struct timeval *, void *);
+#define safe_fopen(name,mode)       fopen(name,mode)
+#define safe_open2(name,flags)      open(name,flags)
+#define safe_open3(name,flags,mode) open(name,flags,mode)
 
-#undef HAVE_GETTIMEOFDAY
-#define HAVE_GETTIMEOFDAY 1
+#else
 
-#define SIGHUP  1
-#define SIGKILL 9
-#define getlogin() "username"
+#define safe_fopen(name,mode)       _nc_safe_fopen(name,mode)
+#define safe_open2(name,flags)      _nc_safe_open3(name,flags,0)
+#define safe_open3(name,flags,mode) _nc_safe_open3(name,flags,mode)
+extern NCURSES_EXPORT(FILE *)       _nc_safe_fopen (const char *, const char *);
+extern NCURSES_EXPORT(int)          _nc_safe_open3 (const char *, int, mode_t);
 
-#undef wcwidth
-#define wcwidth(ucs) _nc_wcwidth((wchar_t)(ucs))
-extern int _nc_wcwidth(wchar_t);
+#endif
 
-#endif /* _WIN32 */
+#ifdef __cplusplus
+}
+#endif
 
-#endif /* NC_MINGW_H */
+/* *INDENT-ON* */
+
+#endif /* NC_ACCESS_included */

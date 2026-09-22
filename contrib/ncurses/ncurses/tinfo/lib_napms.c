@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2020 Thomas E. Dickey                                          *
+ * Copyright 2020-2024,2025 Thomas E. Dickey                                *
  * Copyright 1998-2014,2017 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -52,14 +52,17 @@
 #endif
 #endif
 
-MODULE_ID("$Id: lib_napms.c,v 1.26 2020/02/02 23:34:34 tom Exp $")
+MODULE_ID("$Id: lib_napms.c,v 1.33 2025/12/27 12:33:34 tom Exp $")
 
 NCURSES_EXPORT(int)
 NCURSES_SP_NAME(napms) (NCURSES_SP_DCLx int ms)
 {
     T((T_CALLED("napms(%d)"), ms));
 
-#ifdef USE_TERM_DRIVER
+    if (ms > MAX_DELAY_MSECS)
+	ms = MAX_DELAY_MSECS;
+
+#if USE_TERM_DRIVER
     CallDriver_1(SP_PARM, td_nap, ms);
 #else /* !USE_TERM_DRIVER */
 #if NCURSES_SP_FUNCS
@@ -75,8 +78,10 @@ NCURSES_SP_NAME(napms) (NCURSES_SP_DCLx int ms)
 	    request = remaining;
 	}
     }
+#elif defined(USE_WIN32CON_DRIVER)
+    Sleep((DWORD) ms);
 #else
-    _nc_timed_wait(0, 0, ms, (int *) 0 EVENTLIST_2nd(0));
+    _nc_timed_wait(NULL, 0, ms, (int *) 0 EVENTLIST_2nd(NULL));
 #endif
 #endif /* !USE_TERM_DRIVER */
 

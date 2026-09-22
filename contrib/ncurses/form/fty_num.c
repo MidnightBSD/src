@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2019,2020 Thomas E. Dickey                                     *
+ * Copyright 2019-2021,2024 Thomas E. Dickey                                *
  * Copyright 1998-2010,2012 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -35,7 +35,7 @@
 
 #include "form.priv.h"
 
-MODULE_ID("$Id: fty_num.c,v 1.32 2020/02/02 23:34:34 tom Exp $")
+MODULE_ID("$Id: fty_num.c,v 1.40 2024/12/21 17:16:09 tom Exp $")
 
 #if HAVE_LOCALE_H
 #include <locale.h>
@@ -83,8 +83,8 @@ thisPARM;
 static void *
 Generic_This_Type(void *arg)
 {
-  thisARG *argn = (thisARG *) 0;
-  thisPARM *args = (thisPARM *) arg;
+  thisARG *argn = (thisARG *)0;
+  const thisPARM *args = (thisPARM *)arg;
 
   if (args)
     {
@@ -139,11 +139,12 @@ static void *
 Copy_This_Type(const void *argp)
 {
   const thisARG *ap = (const thisARG *)argp;
-  thisARG *result = (thisARG *) 0;
+  thisARG *result = (thisARG *)0;
 
   if (argp)
     {
       result = typeMalloc(thisARG, 1);
+
       if (result)
 	{
 	  T((T_CREATE("thisARG %p"), (void *)result));
@@ -186,13 +187,11 @@ Check_This_Field(FIELD *field, const void *argp)
   double high = argn->high;
   int prec = argn->precision;
   unsigned char *bp = (unsigned char *)field_buffer(field, 0);
-  char *s = (char *)bp;
-  double val = 0.0;
-  struct lconv *L = argn->L;
-  char buf[64];
+  const char *s = (char *)bp;
+  const struct lconv *L = argn->L;
   bool result = FALSE;
 
-  while (*bp && *bp == ' ')
+  while (*bp == ' ')
     bp++;
   if (*bp)
     {
@@ -201,14 +200,15 @@ Check_This_Field(FIELD *field, const void *argp)
 #if USE_WIDEC_SUPPORT
       if (*bp)
 	{
-	  bool blank = FALSE;
-	  int state = 0;
 	  int len;
-	  int n;
 	  wchar_t *list = _nc_Widen_String((char *)bp, &len);
 
-	  if (list != 0)
+	  if (list != NULL)
 	    {
+	      bool blank = FALSE;
+	      int state = 0;
+	      int n;
+
 	      result = TRUE;
 	      for (n = 0; n < len; ++n)
 		{
@@ -264,7 +264,8 @@ Check_This_Field(FIELD *field, const void *argp)
 #endif
       if (result)
 	{
-	  val = atof(s);
+	  double val = atof(s);
+
 	  if (low < high)
 	    {
 	      if (val < low || val > high)
@@ -272,8 +273,10 @@ Check_This_Field(FIELD *field, const void *argp)
 	    }
 	  if (result)
 	    {
+	      char buf[MAX_DIGITS * 6];
+
 	      _nc_SPRINTF(buf, _nc_SLIMIT(sizeof(buf))
-			  "%.*f", (prec > 0 ? prec : 0), val);
+			  "%.*f", MaxDigits(prec), val);
 	      set_field_buffer(field, 0, buf);
 	    }
 	}
@@ -324,14 +327,14 @@ static FIELDTYPE typeTHIS =
 #endif
 };
 
-NCURSES_EXPORT_VAR(FIELDTYPE*) TYPE_NUMERIC = &typeTHIS;
+FORM_EXPORT_VAR(FIELDTYPE *) TYPE_NUMERIC = &typeTHIS;
 
 #if NCURSES_INTEROP_FUNCS
 /* The next routines are to simplify the use of ncurses from
-   programming languages with restictions on interop with C level
+   programming languages with restrictions on interop with C level
    constructs (e.g. variable access or va_list + ellipsis constructs)
 */
-NCURSES_EXPORT(FIELDTYPE *)
+FORM_EXPORT(FIELDTYPE *)
 _nc_TYPE_NUMERIC(void)
 {
   return TYPE_NUMERIC;

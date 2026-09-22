@@ -1,7 +1,7 @@
 #! /bin/sh
-# $Id: MKkey_defs.sh,v 1.19 2020/02/02 23:34:34 tom Exp $
+# $Id: MKkey_defs.sh,v 1.25 2025/06/14 14:44:56 tom Exp $
 ##############################################################################
-# Copyright 2019,2020 Thomas E. Dickey                                       #
+# Copyright 2019-2024,2025 Thomas E. Dickey                                  #
 # Copyright 2001-2013,2017 Free Software Foundation, Inc.                    #
 #                                                                            #
 # Permission is hereby granted, free of charge, to any person obtaining a    #
@@ -35,7 +35,7 @@
 #
 # Extract function-key definitions from the Caps file
 #
-: ${AWK-awk}
+: "${AWK-awk}"
 
 test $# = 0 && set Caps
 
@@ -44,7 +44,8 @@ pass1=pass1_$$
 pass2=pass2_$$
 pass3=pass3_$$
 pass4=pass4_$$
-trap 'rm -f $data pass[1234]_$$' EXIT INT QUIT TERM HUP
+trap 'rm -f $data pass[1234]_$$; exit 1' 1 2 3 15
+trap 'rm -f $data pass[1234]_$$' 0
 
 # change repeated tabs (used for readability) to single tabs (needed to make
 # awk see the right field alignment of the corresponding columns):
@@ -63,11 +64,10 @@ fi
 
 # add keys that we generate automatically:
 cat >>$data <<EOF
-key_resize	kr1	str	R1	KEY_RESIZE	+	-----	Terminal resize event
-key_event	kv1	str	V1	KEY_EVENT	+	-----	We were interrupted by an event
+key_resize	kr1	str	R1	KEY_RESIZE	+	NCURSES_SIGWINCH 	Terminal resize event
 EOF
 
-THIS=./`basename $0`
+THIS=./`basename "$0"`
 
 cat <<EOF
 /*
@@ -110,8 +110,8 @@ function decode(keycode) {
 }
 
 BEGIN	{
-	maxkey='$maxkey';
-	pass='$pass';
+	maxkey='"$maxkey"';
+	pass='"$pass"';
 	key_max=1;
 	bits=1;
 	while (key_max < maxkey) {
@@ -142,6 +142,12 @@ $5 != "-" && $6 != "-" {
 			maxkey = thiskey;
 		if (pass == 2 || pass == 3) {
 			showkey=sprintf(octal_fmt, thiskey);
+			ifdef = 0;
+			if (index($7,"NCURSES_") == 1) {
+				ifdef = 1;
+				printf "\n";
+				printf "#if %s\n", $7;
+			}
 			if ($5 == "KEY_F(0)" ) {
 				printf "#define "
 				print_cols("KEY_F0", 16);
@@ -159,6 +165,9 @@ $5 != "-" && $6 != "-" {
 				for (i = 8; i <= NF; i++)
 					printf " %s", $i
 				print " */"
+			}
+			if (ifdef != 0) {
+				printf "#endif\n";
 			}
 		}
 	}

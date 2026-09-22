@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2020 Thomas E. Dickey                                          *
+ * Copyright 2020,2021 Thomas E. Dickey                                     *
  * Copyright 1998-2009,2010 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -33,13 +33,13 @@
  ****************************************************************************/
 
 /* p_show.c
- * Place a panel on top of the stack; may already be in the stack 
+ * Place a panel on top of the stack; may already be in the stack
  */
 #include "panel.priv.h"
 
-MODULE_ID("$Id: p_show.c,v 1.14 2020/02/02 23:34:34 tom Exp $")
+MODULE_ID("$Id: p_show.c,v 1.17 2021/06/17 21:20:30 tom Exp $")
 
-NCURSES_EXPORT(int)
+PANEL_EXPORT(int)
 show_panel(PANEL * pan)
 {
   int err = ERR;
@@ -53,7 +53,7 @@ show_panel(PANEL * pan)
       if (Is_Top(pan))
 	returnCode(OK);
 
-      dBug(("--> show_panel %s", USER_PTR(pan->user)));
+      dBug(("--> show_panel %s", USER_PTR(pan->user, 1)));
 
       HIDE_PANEL(pan, err, OK);
 

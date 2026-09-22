@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2019,2020 Thomas E. Dickey                                     *
+ * Copyright 2019-2021,2025 Thomas E. Dickey                                *
  * Copyright 1998-2013,2017 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -30,7 +30,7 @@
 /****************************************************************************
  *  Author: Thomas E. Dickey                    1996-on                     *
  ****************************************************************************/
-/* $Id: nc_alloc.h,v 1.26 2020/02/02 23:34:34 tom Exp $ */
+/* $Id: nc_alloc.h,v 1.36 2025/03/01 15:02:06 tom Exp $ */
 
 #ifndef NC_ALLOC_included
 #define NC_ALLOC_included 1
@@ -73,27 +73,26 @@ extern "C" {
 #if HAVE_LIBDBMALLOC || HAVE_LIBDMALLOC || NO_LEAKS
 #define HAVE_NC_FREEALL 1
 struct termtype;
-extern NCURSES_EXPORT(void) _nc_free_tinfo(int) GCC_NORETURN GCC_DEPRECATED("use exit_terminfo");
+extern GCC_NORETURN  NCURSES_EXPORT(void) _nc_free_tinfo(int) GCC_DEPRECATED("use exit_terminfo");
 
 #ifdef NCURSES_INTERNALS
-extern NCURSES_EXPORT(void) _nc_free_tic(int) GCC_NORETURN;
-extern NCURSES_EXPORT(void) _nc_free_tparm(void);
-extern NCURSES_EXPORT(void) _nc_leaks_dump_entry(void);
+extern GCC_NORETURN NCURSES_EXPORT(void) _nc_free_tic(int);
+extern void _nc_leaks_dump_entry(void);
 extern NCURSES_EXPORT(void) _nc_leaks_tic(void);
 
 #if NCURSES_SP_FUNCS
-extern NCURSES_EXPORT(void) NCURSES_SP_NAME(_nc_free_and_exit)(SCREEN*, int) GCC_NORETURN;
+extern GCC_NORETURN NCURSES_EXPORT(void) NCURSES_SP_NAME(_nc_free_and_exit)(SCREEN*, int);
 #endif
-extern NCURSES_EXPORT(void) _nc_free_and_exit(int) GCC_NORETURN;
+extern GCC_NORETURN NCURSES_EXPORT(void) _nc_free_and_exit(int);
 
 #else /* !NCURSES_INTERNALS */
-extern NCURSES_EXPORT(void) _nc_free_and_exit(int) GCC_NORETURN GCC_DEPRECATED("use exit_curses");
+extern GCC_NORETURN NCURSES_EXPORT(void) _nc_free_and_exit(int) GCC_DEPRECATED("use exit_curses");
 #endif
 
 #define ExitProgram(code) exit_curses(code)
 
 #else
-extern NCURSES_EXPORT(void) _nc_free_and_exit(int) GCC_NORETURN GCC_DEPRECATED("use exit_curses");
+extern GCC_NORETURN NCURSES_EXPORT(void) _nc_free_and_exit(int) GCC_DEPRECATED("use exit_curses");
 #endif /* NO_LEAKS, etc */
 
 #ifndef HAVE_NC_FREEALL
@@ -118,6 +117,27 @@ extern NCURSES_EXPORT(void) _nc_leaks_tinfo(void);
 #define typeMalloc(type,elts) (type *)malloc((size_t)(elts)*sizeof(type))
 #define typeCalloc(type,elts) (type *)calloc((size_t)(elts),sizeof(type))
 #define typeRealloc(type,elts,ptr) (type *)_nc_doalloc(ptr, (size_t)(elts)*sizeof(type))
+
+/* provide for using VLAs if supported, otherwise assume alloca() */
+
+#ifndef __STDC_VERSION__
+#define __STDC_VERSION__ 0
+#endif
+
+#ifndef __STDC_NO_VLA__
+#define __STDC_NO_VLA__ 1
+#endif
+
+#if __STDC_VERSION__ >= 19901L && (__STDC_VERSION__ < 201000L || !__STDC_NO_VLA__)
+#define MakeArray(name,type,count) type name[count]
+#else
+#if HAVE_ALLOCA_H
+#include <alloca.h>
+#elif HAVE_MALLOC_H
+#include <malloc.h>
+#endif
+#define MakeArray(name,type,count) type *name = (type*) alloca(sizeof(type) * (size_t) (count))
+#endif
 
 #ifdef __cplusplus
 }

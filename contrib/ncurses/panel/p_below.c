@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2020 Thomas E. Dickey                                          *
+ * Copyright 2020,2024 Thomas E. Dickey                                     *
  * Copyright 1998-2010,2012 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -37,11 +37,11 @@
  */
 #include "panel.priv.h"
 
-MODULE_ID("$Id: p_below.c,v 1.10 2020/02/02 23:34:34 tom Exp $")
+MODULE_ID("$Id: p_below.c,v 1.12 2024/12/07 23:05:20 tom Exp $")
 
 #if NCURSES_SP_FUNCS
-NCURSES_EXPORT(PANEL *)
-ceiling_panel(SCREEN * sp)
+PANEL_EXPORT(PANEL *)
+ceiling_panel(SCREEN *sp)
 {
   T((T_CALLED("ceiling_panel(%p)"), (void *)sp));
   if (sp)
@@ -49,20 +49,20 @@ ceiling_panel(SCREEN * sp)
       struct panelhook *ph = NCURSES_SP_NAME(_nc_panelhook) (sp);
 
       /* if top and bottom are equal, we have no or only the pseudo panel */
-      returnPanel(EMPTY_STACK()? (PANEL *) 0 : _nc_top_panel);
+      returnPanel(EMPTY_STACK()? (PANEL *)0 : _nc_top_panel);
     }
   else
     {
-      if (0 == CURRENT_SCREEN)
-	returnPanel(0);
+      if (NULL == CURRENT_SCREEN)
+	returnPanel(NULL);
       else
 	returnPanel(ceiling_panel(CURRENT_SCREEN));
     }
 }
 #endif
 
-NCURSES_EXPORT(PANEL *)
-panel_below(const PANEL * pan)
+PANEL_EXPORT(PANEL *)
+panel_below(const PANEL *pan)
 {
   PANEL *result;
 
@@ -71,7 +71,7 @@ panel_below(const PANEL * pan)
     {
       GetHook(pan);
       /* we must not return the pseudo panel */
-      result = Is_Pseudo(pan->below) ? (PANEL *) 0 : pan->below;
+      result = Is_Pseudo(pan->below) ? (PANEL *)0 : pan->below;
     }
   else
     {
@@ -79,7 +79,7 @@ panel_below(const PANEL * pan)
       result = ceiling_panel(CURRENT_SCREEN);
 #else
       /* if top and bottom are equal, we have no or only the pseudo panel */
-      result = EMPTY_STACK()? (PANEL *) 0 : _nc_top_panel;
+      result = EMPTY_STACK()? (PANEL *)0 : _nc_top_panel;
 #endif
     }
   returnPanel(result);
