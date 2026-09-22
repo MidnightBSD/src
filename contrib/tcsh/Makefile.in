@@ -6,10 +6,106 @@
 # things; Paul Placeway, CIS Dept., Ohio State University
 #
 SHELL=/bin/sh
+ENVCMD=/usr/bin/env
 VERSION=@PACKAGE_VERSION@
 BUILD=tcsh$(EXEEXT)
+EXEEXT=@EXEEXT@
+INSTALL=@INSTALL@
+INSTALL_DATA=@INSTALL_DATA@
+INSTALL_PROGRAM=@INSTALL_PROGRAM@
+MKDIR_P?=$(INSTALL) -d
 VPATH=@srcdir@
 srcdir=@srcdir@
+
+################################################################
+## Default target
+################################################################
+
+all: ${BUILD} catalogs
+
+################################################################
+## Packaging
+################################################################
+
+RELEASE_GROUP=astron
+RELEASE_USER=${USER}
+RELEASE_TAG=@RELEASE_TAG@
+
+.PHONY: Announce
+Announce: ${srcdir}/Announce-${VERSION}
+${srcdir}/Announce-${VERSION}:
+	touch ${@}
+
+RELEASE_ARTIFACTS= \
+	Fixes aclocal.m4 config.h.in configure configure.ac \
+	debian/changelog
+
+.PHONY: release-add add
+release-add add:
+	cd ${srcdir} \
+	&& test -f Announce-${VERSION} \
+	&& git add Announce-${VERSION} \
+	|| true
+	cmp -s dch-template ${srcdir}/debian/changelog \
+	|| cp dch-template ${srcdir}/debian/changelog
+	cd ${srcdir} \
+	&& git add ${RELEASE_ARTIFACTS}
+
+.PHONY: release-diff
+release-diff diff:
+	git diff --staged
+
+.PHONY: release-commit commit
+release-commit commit:
+	git commit -m 'Release ${VERSION}'
+	git tag ${RELEASE_TAG}
+
+.PHONY: release-push push
+release-push push:
+	git push origin
+	git push origin tag ${RELEASE_TAG}
+
+.PHONY: release-archive tar.gz
+release-archive tar.gz: ${srcdir}/tcsh-${VERSION}.tar.gz
+${srcdir}/tcsh-${VERSION}.tar.gz:
+	cd ${srcdir} \
+	&& git archive -o tcsh-${VERSION}.tar.gz \
+	    --prefix=tcsh-${VERSION}/ ${RELEASE_TAG}
+
+.PHONY: head-archive orig.tar.gz
+head-archive orig.tar.gz: ${srcdir}/tcsh_${VERSION}.orig.tar.gz
+${srcdir}/tcsh_${VERSION}.orig.tar.gz:
+	cd ${srcdir} \
+	&& git archive -o tcsh_${VERSION}.orig.tar.gz \
+	    --prefix=tcsh-${VERSION}/ HEAD
+
+.PHONY: release-sign sign
+release-sign sign: ${srcdir}/tcsh-${VERSION}.tar.gz.asc
+${srcdir}/tcsh-${VERSION}.tar.gz.asc: ${srcdir}/tcsh-${VERSION}.tar.gz
+	cd ${srcdir} \
+	&& gpg --armor --detach-sign tcsh-${VERSION}.tar.gz
+
+RELEASE_UPLOAD_FILES= \
+	${srcdir}/Announce-${VERSION} \
+	${srcdir}/FAQ \
+	${srcdir}/Ported \
+	${srcdir}/README.md \
+	${srcdir}/tcsh-${VERSION}.tar.gz \
+	${srcdir}/tcsh-${VERSION}.tar.gz.asc \
+	tcsh.man
+
+RELEASE_UPLOAD_TARGET=rebar.astron.com:/p/astron/ftp/pub/tcsh
+
+.PHONY: release-upload upload
+release-upload upload:
+	rsync -Pv -csgp \
+	    --chmod Fgo-w,a+r \
+	    --numeric-ids \
+	    --groupmap '*:${RELEASE_GROUP}' \
+	    --usermap '*:${RELEASE_USER}' \
+	    --ignore-missing-args \
+	    ${RELEASE_UPLOAD_FILES} \
+	    ${RELEASE_UPLOAD_TARGET}/
 
 ################################################################
 ## CFLAGS.  For various -D things, see config.h
@@ -26,7 +122,6 @@ CPPFLAGS=-I. -I$(srcdir)
 LFLAGS=
 # hpux lint
 #LFLAGS= -Zn10000
-
 
 # This is set by autoconf:
 CFLAGS = @CFLAGS@
@@ -143,7 +238,6 @@ CFLAGS = @CFLAGS@
 #DFLAGS=-D_PATH_TCSHELL='"${DESTBIN}/tcsh"'
 ## The following is set by autoconf.
 DFLAGS = -D_PATH_TCSHELL='"${bindir}/tcsh"' @DFLAGS@ @CPPFLAGS@
-
 
 ################################################################
 ## LDFLAGS.  Define something here if you need to
@@ -296,8 +390,6 @@ LIBES= @LIBS@
 EXTRAFLAGS = @HESDEF@ $(AFSDEF)
 EXTRALIBS = @HESLIB@ $(AFSLIB) @LIBICONV@
 
-
-
 # The difficult choice of a c-compiler...
 # First, you should try your own c-compiler. 
 # Gcc -traditional is also a safe choice. 
@@ -339,6 +431,9 @@ CC = @CC@
 #CC=	cc	-h0,ansi,novector,float0
 #CC=	lcc	-wa 
 CC_FOR_GETHOST = @CC_FOR_GETHOST@
+CFLAGS_FOR_BUILD = @CFLAGS_FOR_BUILD@
+CPPFLAGS_FOR_BUILD = @CPPFLAGS_FOR_BUILD@
+LDFLAGS_FOR_BUILD = @LDFLAGS_FOR_BUILD@
 ED=	ed
 AS=	as
 RM=	rm
@@ -355,7 +450,8 @@ P=
 prefix=@prefix@
 exec_prefix=@exec_prefix@
 bindir=@bindir@
-mandir=@datarootdir@/man
+datarootdir=@datarootdir@
+mandir=@mandir@
 MANSECT=1
 DESTBIN=${DESTDIR}${bindir}
 DESTMAN=${DESTDIR}${mandir}/man${MANSECT}
@@ -365,19 +461,9 @@ DESTMAN=${DESTDIR}${mandir}/man${MANSECT}
 # DESTMAN=${DESTDIR}/usr/share/man/man${MANSECT}
 # Amiga unix (SysVR4)
 # DESTMAN=/usr/catman/1l
-EXEEXT=@EXEEXT@
-FTPAREA=/usr/spool/ftp
 
 BUILD_CATALOGS = @BUILD_CATALOGS@
 
-ASSRCS=	sh.c sh.dir.c sh.dol.c sh.err.c sh.exec.c sh.char.c \
-	sh.exp.c sh.file.c sh.func.c sh.glob.c sh.hist.c sh.init.c \
-	sh.lex.c sh.misc.c sh.parse.c sh.print.c sh.proc.c sh.sem.c \
-	sh.set.c sh.time.c sh.char.h sh.dir.h sh.proc.h sh.h \
-	tw.color.c
-PSSRCS= sh.decls.h glob.c glob.h dotlock.c dotlock.h mi.termios.c mi.wait.h mi.varargs.h ma.setp.c \
-	vms.termcap.c
-SHSRCS= ${ASSRCS} ${PSSRCS}
 SHOBJS=	sh.${SUF} sh.dir.${SUF} sh.dol.${SUF} sh.err.${SUF} sh.exec.${SUF} \
 	sh.char.${SUF} sh.exp.${SUF} sh.file.${SUF} sh.func.${SUF} \
 	sh.glob.${SUF} sh.hist.${SUF} sh.init.${SUF} sh.lex.${SUF} \
@@ -385,49 +471,26 @@ SHOBJS=	sh.${SUF} sh.dir.${SUF} sh.dol.${SUF} sh.err.${SUF} sh.exec.${SUF} \
 	sh.sem.${SUF} sh.set.${SUF} sh.time.${SUF} glob.${SUF} dotlock.${SUF} \
 	mi.termios.${SUF} ma.setp.${SUF} vms.termcap.${SUF}
 
-TWSRCS= tw.decls.h tw.h tw.help.c tw.init.c tw.parse.c tw.spell.c \
-	tw.comp.c tw.color.c
 TWOBJS=	tw.help.${SUF} tw.init.${SUF} tw.parse.${SUF} tw.spell.${SUF} \
 	tw.comp.${SUF} tw.color.${SUF}
 
-EDSRCS= ed.chared.c ed.decls.h ed.defns.c ed.h ed.init.c ed.inputl.c \
-	ed.refresh.c ed.screen.c ed.xmap.c ed.term.c ed.term.h
 EDOBJS=	ed.chared.${SUF} ed.refresh.${SUF} ed.screen.${SUF} ed.init.${SUF} \
 	ed.inputl.${SUF} ed.defns.${SUF} ed.xmap.${SUF} ed.term.${SUF}
 
-TCSRCS= tc.alloc.c tc.bind.c tc.const.c tc.decls.h tc.disc.c \
-	tc.func.c tc.nls.c tc.os.c tc.os.h tc.printf.c tc.prompt.c \
-	tc.sched.c tc.sig.c tc.sig.h tc.str.c sh.types.h tc.vers.c tc.wait.h \
-	tc.who.c tc.h
 TCOBJS=	tc.alloc.${SUF} tc.bind.${SUF} tc.const.${SUF} tc.defs.${SUF} \
 	tc.disc.${SUF} tc.func.${SUF} tc.nls.${SUF} tc.os.${SUF} tc.printf.${SUF} \
 	tc.prompt.${SUF} tc.sched.${SUF} tc.sig.${SUF} tc.str.${SUF} \
 	tc.vers.${SUF} tc.who.${SUF} 
 
-PVSRCS= Makefile.std Makefile.vms Makefile.in Makefile.win32
-AVSRCS= BUILDING Fixes MAKEDIFFS MAKESHAR NewThings README.md FAQ \
-	WishList config_f.h eight-bit.me glob.3 patchlevel.h \
-	pathnames.h tcsh.man Ported src.desc Imakefile imake.config \
-	complete.tcsh vmsreadme.txt termcap.vms snames.h host.defs \
-	gethost.c tcsh.man2html configure.ac configure config.h.in \
-	tests/testsuite.at aclocal.m4
-TESTFILES= tests/aliases.at tests/arguments.at tests/commands.at \
-	tests/expr.at tests/lexical.at tests/mb-eucjp.at \
-	tests/mb-utf8.at tests/noexec.at tests/parenthesis.at tests/syntax.at \
-	tests/subst.at tests/variables.at tests/sh.dol.at
-
-VHSRCS=${PVSRCS} ${AVSRCS}
-
-CONFSRCS=config/* 
-
-ALLSRCS=  ${SHSRCS} ${TWSRCS} ${EDSRCS} ${TCSRCS} ${VHSRCS}
-DISTSRCS= ${PSSRCS} ${TWSRCS} ${EDSRCS} ${TCSRCS} ${AVSRCS} $(TESTFILES)
-
+# tests/*.at except for tests/testsuite.at
+TESTFILES= \
+	tests/aliases.at tests/arguments.at tests/commands.at \
+	tests/expr.at tests/history.at tests/lexical.at tests/ls-F.at \
+	tests/mb-eucjp.at tests/mb-utf8.at tests/noexec.at \
+	tests/parenthesis.at tests/sh.dol.at tests/subst.at \
+	tests/syntax.at tests/variables.at
 
 OBJS= ${SHOBJS} ${TWOBJS} ${EDOBJS} ${TCOBJS}
-
-
-all: ${BUILD} catalogs
 
 tcsh$(EXEEXT):$(P) ${OBJS} 
 	rm -f tcsh$(EXEEXT) core
@@ -445,9 +508,12 @@ pure:$(P) ${OBJS}
 #tcsh.exe: tcsh
 #	emxbind tcsh
 
-gethost:  gethost.c sh.err.h tc.const.h sh.h
+gethost.${SUF}: gethost.c sh.err.h tc.const.h sh.h
+	${CC_FOR_GETHOST} ${CF} ${CPPFLAGS_FOR_BUILD} ${CFLAGS_FOR_BUILD} $(srcdir)/gethost.c
+
+gethost:  gethost.${SUF}
 	rm -f gethost
-	${CC_FOR_GETHOST} -o gethost ${CPPFLAGS} ${CFLAGS} ${LDFLAGS} $(srcdir)/gethost.c
+	${CC_FOR_GETHOST} -o gethost ${CPPFLAGS_FOR_BUILD} ${CFLAGS_FOR_BUILD} ${LDFLAGS_FOR_BUILD} gethost.${SUF}
 
 tc.defs.c:	gethost host.defs
 	@rm -f $@.tmp
@@ -455,9 +521,13 @@ tc.defs.c:	gethost host.defs
 	./gethost $(srcdir)/host.defs >> $@.tmp
 	@if [ -f $@ ] && cmp -s $@.tmp $@; then echo $@ unchanged.; rm -f $@.tmp; else mv -f $@.tmp $@; echo $@ recreated.; fi
 
+tcsh.html: tcsh.man
+	rm -f $@
+	-mandoc -Thtml tcsh.man > $@
+
 tcsh.ps: tcsh.man
 	rm -f tcsh.ps
-	-ptroff -t -man $(srcdir)/tcsh.man > tcsh.ps
+	-ptroff -t -man tcsh.man > tcsh.ps
 
 .c.${SUF}:
 	${CC} ${CF} ${CFLAGS} ${CPPFLAGS} ${DFLAGS} ${EXTRAFLAGS} $<
@@ -531,7 +601,7 @@ tc.const.h: tc.const.c sh.char.h config.h config_f.h sh.types.h sh.err.h
 	${CPP} $(CPPFLAGS) ${DFLAGS} ${EXTRAFLAGS} -D_h_tc_const\
 	    $(srcdir)/tc.const.c | \
 	    sed -n -e 's/^\(Char STR[a-zA-Z0-9_]*\) *\[ *\].*/extern \1[];/p' | \
-	    LC_COLLATE=C sort >> $@.tmp
+	    LC_ALL=C sort >> $@.tmp
 	@echo '#endif /* _h_tc_const */' >> $@.tmp
 	@if [ -f $@ ] && cmp -s $@.tmp $@; then echo $@ unchanged.; rm -f $@.tmp; else mv -f $@.tmp $@; echo $@ recreated.; fi
 
@@ -553,6 +623,8 @@ $(srcdir)/tests/testsuite: $(srcdir)/tests/package.m4 $(srcdir)/tests/testsuite.
 atconfig: config.status
 	$(SHELL) ./config.status ./atconfig
 
+atlocal: config.status $(srcdir)/atlocal.in
+	$(SHELL) ./config.status atlocal
 
 csh.prof: ${OBJS} sh.prof.${SUF} mcrt0.${SUF}
 	rm -f csh.prof
@@ -591,27 +663,20 @@ vgrind:
 	@for i in *.c; do vgrind -t -h "C Shell" $$i >/crp/bill/csh/$$i.t; done
 	@vgrind -t -x -h Index index >/crp/bill/csh/index.t
 
-install-strip: install
-	-strip ${DESTBIN}/tcsh$(EXEEXT)
-
 install: tcsh$(EXEEXT) install.catalogs install.man
-	-mkdir -p ${DESTBIN}
-	-mv -f ${DESTBIN}/tcsh$(EXEEXT)  ${DESTBIN}/tcsh.old
-	cp tcsh$(EXEEXT) ${DESTBIN}/tcsh$(EXEEXT)
-	chmod 755 ${DESTBIN}/tcsh$(EXEEXT)
+	$(MKDIR_P) ${DESTBIN}
+	$(INSTALL_PROGRAM) tcsh$(EXEEXT) ${DESTBIN}/tcsh$(EXEEXT)
 
 install.catalogs:
 	@test "x${BUILD_CATALOGS}" = "xyes" && (cd nls; ${MAKE} install DESTDIR=${DESTDIR}) || exit 0
 
 install.man: tcsh.man
-	-mkdir -p ${DESTMAN}
-	-rm -f ${DESTMAN}/tcsh.${MANSECT}
-	cp $(srcdir)/tcsh.man ${DESTMAN}/tcsh.${MANSECT}
-	chmod 444 ${DESTMAN}/tcsh.${MANSECT}
+	$(MKDIR_P) ${DESTMAN}
+	$(INSTALL_DATA) tcsh.man ${DESTMAN}/tcsh.${MANSECT}
 
 # Amiga Unix
 #install.man: tcsh.man
-#        compress tcsh.man
+#	compress tcsh.man
 #	cp tcsh.man.Z ${DESTMAN}/tcsh.Z
 #	chmod 444 ${DESTMAN}/tcsh.Z
 
@@ -621,109 +686,33 @@ install.man: tcsh.man
 #	nroff -man tcsh.man | compress > ${DESTMAN}/tcsh.${MANSECT}.Z
 #	chmod 444 ${DESTMAN}/tcsh.${MANSECT}.Z
 
+.PHONY: clean
 clean: clean.catalogs
 	${RM} -f a.out strings x.c xs.c tcsh$(EXEEXT) tcsh.a _MAKE_LOG gethost
 	${RM} -f *.${SUF} *.i *.s
 	${RM} -f sh.prof.c ed.defns.h tc.const.h sh.err.h tc.defs.c
 	${RM} -f tcsh.*.m tcsh.*.cat
 
+.PHONY: clean.catalogs
 clean.catalogs:
 	@test "x${BUILD_CATALOGS}" = "xyes" && (cd nls; ${MAKE} clean) || exit 0
 
-veryclean: clean
-	${RM} -f Makefile config.h config_p.h
-	${RM} -f config.status config.cache config.log tcsh.ps
+.PHONY: cleandir distclean veryclean
+cleandir distclean veryclean: clean
+	${RM} -f Makefile config.h config_p.h dch-template nls/Makefile patchlevel.h tcsh.man
+	${RM} -f config.status config.cache config.log tcsh.html tcsh.ps
 	${RM} -f missing
+	${RM} -f atconfig atlocal testsuite.log
+	${RM} -rf testsuite.dir
 	${RM} -rf autom4te.cache
 	${RM} -f *~ #*
-
-distclean: veryclean
-
-cleandir: veryclean
 
 tags:	/tmp
 	${CTAGS} sh*.c
 
-tar.Z:
-	rm -f tcsh-${VERSION}.tar.Z
-	rm -rf tcsh-${VERSION} 
-	-mkdir tcsh-${VERSION} tcsh-${VERSION}/config tcsh-${VERSION}/tests
-	cp ${ALLSRCS} tcsh-${VERSION}
-	cp ${CONFSRCS} tcsh-${VERSION}/config
-	tar cf - nls/Makefile nls/?*/set?* | (cd tcsh-${VERSION}; tar xpf -)
-	tar cvf - tcsh-${VERSION} | compress > tcsh-${VERSION}.tar.Z
-	rm -rf tcsh-${VERSION}
-
-tar.gz:
-	rm -f tcsh-${VERSION}.tar.gz
-	rm -rf tcsh-${VERSION} 
-	-mkdir tcsh-${VERSION} tcsh-${VERSION}/config tcsh-${VERSION}/tests
-	cp ${ALLSRCS} tcsh-${VERSION}
-	cp ${CONFSRCS} tcsh-${VERSION}/config
-	tar cf - nls/Makefile nls/?*/set?* | (cd tcsh-${VERSION}; tar xpf -)
-	tar cvf - tcsh-${VERSION} | gzip > tcsh-${VERSION}.tar.gz
-	rm -rf tcsh-${VERSION}
-
-shar:
-	rm -f tcsh-*.shar
-	rm -rf tcsh-${VERSION} 
-	-mkdir tcsh-${VERSION} tcsh-${VERSION}/config tcsh-${VERSION}/tests
-	cp ${ALLSRCS} tcsh-${VERSION}
-	cp ${CONFSRCS} tcsh-${VERSION}/config
-	tar cf - nls/Makefile nls/?*/set?* | (cd tcsh-${VERSION}; tar xpf -)
-	MAKESHAR -v -n tcsh-${VERSION} tcsh-${VERSION} \
-		 tcsh-${VERSION}/?* tcsh-${VERSION}/config/?* \
-		 tcsh-${VERSION}/?*/set?*
-	rm -rf tcsh-${VERSION}
-
+.PHONY: catalogs
 catalogs:
 	@test "x${BUILD_CATALOGS}" = "xyes" && (cd nls; ${MAKE} catalogs) || exit 0
-
-tcsh-${VERSION}.tar.Z:
-	rm -rf tcsh-${VERSION} 
-	rm -f tcsh-${VERSION}.tar tcsh-${VERSION}.tar.Z DIFFS.[123]
-	-mkdir tcsh-${VERSION} tcsh-${VERSION}/tests
-	./MAKEDIFFS bsd
-	mv DIFFS.1 DIFFS.2 DIFFS.3 tcsh-${VERSION}
-	cp ${DISTSRCS} tcsh-${VERSION}
-	-mkdir tcsh-${VERSION}/config
-	cp ${CONFSRCS} tcsh-${VERSION}/config
-	cp Makefile tcsh-${VERSION}/Makefile.new
-	tar cf - nls/Makefile nls/?*/set?* | (cd tcsh-${VERSION}; tar xpf -)
-	tar cvf - tcsh-${VERSION} | compress > tcsh-${VERSION}.tar.Z
-	rm -rf tcsh-${VERSION}
-
-tcsh.tahoe-${VERSION}.tar.Z:
-	rm -rf tcsh.tahoe-${VERSION} 
-	rm -f tcsh.tahoe-${VERSION}.tar tcsh.tahoe-${VERSION}.tar.Z DIFFS.[123]
-	-mkdir tcsh.tahoe-${VERSION}
-	./MAKEDIFFS tahoe
-	mv DIFFS.1 DIFFS.2 DIFFS.3 tcsh.tahoe-${VERSION}
-	cp ${DISTSRCS} tcsh.tahoe-${VERSION}
-	-mkdir tcsh.tahoe-${VERSION}/config
-	cp ${CONFSRCS} tcsh.tahoe-${VERSION}/config
-	cp Makefile tcsh.tahoe-${VERSION}/Makefile.new
-	tar cf - nls/Makefile nls/?*/set?* | (cd tcsh-${VERSION}; tar xpf -)
-	tar cvf - tcsh.tahoe-${VERSION} | compress > tcsh.tahoe-${VERSION}.tar.Z
-	rm -rf tcsh.tahoe-${VERSION}
-
-tcsh.reno-${VERSION}.tar.Z:
-	rm -rf tcsh.reno-${VERSION} 
-	rm -f tcsh.reno-${VERSION}.tar tcsh.reno-${VERSION}.tar.Z DIFFS.[123]
-	-mkdir tcsh.reno-${VERSION}
-	./MAKEDIFFS reno
-	mv DIFFS.1 DIFFS.2 DIFFS.3 tcsh.reno-${VERSION}
-	cp ${DISTSRCS} tcsh.reno-${VERSION}
-	-mkdir tcsh.reno-${VERSION}/config
-	cp ${CONFSRCS} tcsh.reno-${VERSION}/config
-	cp Makefile tcsh.reno-${VERSION}/Makefile.new
-	tar cf - nls/Makefile nls/?*/set?* | (cd tcsh-${VERSION}; tar xpf -)
-	tar cvf - tcsh.reno-${VERSION} | compress > tcsh.reno-${VERSION}.tar.Z
-	rm -rf tcsh.reno-${VERSION}
-
-ftp: tcsh-${VERSION}.tar.Z tcsh.tahoe-${VERSION}.tar.Z
-	cp tcsh-${VERSION}.tar.Z tcsh.tahoe-${VERSION}.tar.Z ${FTPAREA}
-	cp tcsh.man ${FTPAREA}
 
 autoconfigure: $(srcdir)/configure $(srcdir)/config.h.in
 
@@ -735,8 +724,13 @@ $(srcdir)/stamp-h.in: $(srcdir)/configure.ac
 	cd $(srcdir) && autoheader
 	@echo timestamp > $(srcdir)/stamp-h.in
 
-check: atconfig $(srcdir)/tests/testsuite
-	$(SHELL) $(srcdir)/tests/testsuite
+check test: atconfig atlocal $(srcdir)/tests/testsuite $(BUILD)
+	$(ENVCMD) - \
+		PATH="$(PATH)" \
+		TESTSUITEREGEN="$(TESTSUITEREGEN)" \
+		USER="$(USER)" \
+		LC_ALL=C \
+		$(SHELL) $(srcdir)/tests/testsuite $(TESTSUITEFLAGS)
 
 #
 # Dependencies

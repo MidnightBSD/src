@@ -1,0 +1,6 @@
+$ sh.func.c
+$set 15 
+1 %s: %s: Nie mogę limitować %s%s\n
+2 usuń
+3 ustaw
+4 \040twardy

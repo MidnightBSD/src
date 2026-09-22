@@ -44,14 +44,14 @@
   # echo h<press key bound to dabbrev-expande>
   # echo hello\ world<cursor>
 
-  The same problem occured if spaces were present in a string withing quotation
-  marks. Example:
+  The same problem occurred if spaces were present in a string withing
+  quotation marks. Example:
 
   # echo "hello world"
   hello world
   # echo "h<press key bound to dabbrev-expande>
   # echo "hello<cursor>
-  
+
   The former problem could be solved with minor modifications of c_preword()
   and c_endword(). The latter, however, required a significant rewrite of
   c_preword(), since quoted strings must be parsed from start to end to
@@ -126,7 +126,7 @@ static	void	 c_get_word		(Char **, Char **);
 #endif
 static	Char	*c_preword		(Char *, Char *, int, Char *);
 static	Char	*c_nexword		(Char *, Char *, int);
-static	Char	*c_endword		(Char *, Char *, int, Char *);
+static	Char	*c_endword		(Char *, Char *, Char *, int, Char *);
 static	Char	*c_eword		(Char *, Char *, int);
 static	void	 c_push_kill		(Char *, Char *);
 static	void	 c_save_inputbuf	(void);
@@ -207,9 +207,9 @@ c_delafter(int num)
     }
 #ifdef notdef
     else {
-	/* 
+	/*
 	 * XXX: We don't want to do that. In emacs mode overwrite should be
-	 * sticky. I am not sure how that affects vi mode 
+	 * sticky. I am not sure how that affects vi mode
 	 */
 	inputmode = MODE_INSERT;
     }
@@ -257,7 +257,7 @@ c_preword(Char *p, Char *low, int n, Char *delim)
     Char *new;
 
     while (prev < p) {		/* Skip initial non-word chars */
-      if (!Strchr(delim, *prev) || *(prev-1) == (Char)'\\')
+      if (!Strchr(delim, *prev) || (prev > low && prev[-1] == (Char)'\\'))
 	break;
       prev++;
     }
@@ -266,10 +266,10 @@ c_preword(Char *p, Char *low, int n, Char *delim)
 
     while (new < p) {
       prev = new;
-      new = c_endword(prev-1, p, 1, delim); /* Skip to next non-word char */
+      new = c_endword(prev-1, low, p, 1, delim); /* Skip to next non-word char */
       new++;			/* Step away from end of word */
       while (new <= p) {	/* Skip trailing non-word chars */
-	if (!Strchr(delim, *new) || *(new-1) == (Char)'\\')
+	if (!Strchr(delim, *new) || (new > prev && new[-1] == (Char)'\\'))
 	  break;
 	new++;
       }
@@ -314,12 +314,12 @@ c_prev_word(Char *p, Char *low, int n)
 
     if (!VImode) {
 	while (n--) {
-	    while ((p >= low) && !isword(*p)) 
+	    while ((p >= low) && !isword(*p))
 		p--;
-	    while ((p >= low) && isword(*p)) 
+	    while ((p >= low) && isword(*p))
 		p--;
 	}
-      
+
 	/* cp now points to one character before the word */
 	p++;
 	if (p < low)
@@ -327,7 +327,7 @@ c_prev_word(Char *p, Char *low, int n)
 	/* cp now points where we want it */
 	return(p);
     }
-  
+
     while (n--) {
         int  c_class;
 
@@ -359,9 +359,9 @@ c_next_word(Char *p, Char *high, int n)
 {
     if (!VImode) {
 	while (n--) {
-	    while ((p < high) && !isword(*p)) 
+	    while ((p < high) && !isword(*p))
 		p++;
-	    while ((p < high) && isword(*p)) 
+	    while ((p < high) && isword(*p))
 		p++;
 	}
 	if (p > high)
@@ -399,9 +399,9 @@ static Char *
 c_nexword(Char *p, Char *high, int n)
 {
     while (n--) {
-	while ((p < high) && !Isspace(*p)) 
+	while ((p < high) && !Isspace(*p))
 	    p++;
-	while ((p < high) && Isspace(*p)) 
+	while ((p < high) && Isspace(*p))
 	    p++;
     }
 
@@ -490,6 +490,16 @@ excl_sw:
 	buf = expand_lex(&h->Hlex, 1, INT_MAX);
 	break;
 
+    case '?':
+	h = findev(p + 2, 1);
+	if (h == NULL)
+	    goto excl_err;
+	buf = expand_lex(&h->Hlex, 0, INT_MAX);
+	while (*q)
+	    q++;
+	q--;
+	break;
+
     default:
 	if (been_once) {	/* unknown argument */
 	    /* assume it's a modifier, e.g. !foo:h, and get whole cmd */
@@ -507,7 +517,7 @@ excl_sw:
 	     * Search for a space, tab, or colon.  See if we have a number (as
 	     * in !1234:xyz).  Remember the number.
 	     */
-	    for (i = 0, all_dig = 1; 
+	    for (i = 0, all_dig = 1;
 		 *q != ' ' && *q != '\t' && *q != ':' && q < Cursor; q++) {
 		/*
 		 * PWP: !-4 is a valid history argument too, therefore the test
@@ -739,7 +749,7 @@ c_substitute(void)
      * Start p out one character before the cursor.  Move it backwards looking
      * for white space, the beginning of the line, or a history character.
      */
-    for (p = Cursor - 1; 
+    for (p = Cursor - 1;
 	 p > InputBuf && *p != ' ' && *p != '\t' && *p && *p != HIST; --p)
 	continue;
 
@@ -765,14 +775,14 @@ c_delfini(void)		/* Finish up delete action */
 
     ActionFlag = TCSHOP_NOP;
 
-    if (ActionPos == 0) 
+    if (ActionPos == 0)
 	return;
 
     UndoAction = TCSHOP_INSERT;
 
     if (Cursor > ActionPos) {
 	Size = (int) (Cursor-ActionPos);
-	c_delbefore(Size); 
+	c_delbefore(Size);
 	RefCursor();
     }
     else if (Cursor < ActionPos) {
@@ -788,26 +798,27 @@ c_delfini(void)		/* Finish up delete action */
 }
 
 static Char *
-c_endword(Char *p, Char *high, int n, Char *delim)
+c_endword(Char *p, Char *low, Char *high, int n, Char *delim)
 {
     Char inquote = 0;
     p++;
 
     while (n--) {
         while (p < high) {	/* Skip non-word chars */
-	  if (!Strchr(delim, *p) || *(p-1) == (Char)'\\')
+	  if (!Strchr(delim, *p) || p[-1] == (Char)'\\')
 	    break;
 	  p++;
         }
 	while (p < high) {	/* Skip string */
 	  if ((*p == (Char)'\'' || *p == (Char)'"')) { /* Quotation marks? */
-	    if (inquote || *(p-1) != (Char)'\\') { /* Should it be honored? */
+	    /* Should it be honored? */
+	    if (inquote || (p > low && p[-1] != (Char)'\\')) {
 	      if (inquote == 0) inquote = *p;
 	      else if (inquote == *p) inquote = 0;
 	    }
 	  }
 	  /* Break if unquoted non-word char */
-	  if (!inquote && Strchr(delim, *p) && *(p-1) != (Char)'\\')
+	  if (!inquote && Strchr(delim, *p) && p > low && p[-1] != (Char)'\\')
 	    break;
 	  p++;
 	}
@@ -1016,7 +1027,7 @@ GetHistLine(void)
 	if (LastChar < InputBuf)
 	    LastChar = InputBuf;
     }
-  
+
 #ifdef KSHVI
     if (VImode)
 	Cursor = InputBuf;
@@ -1082,7 +1093,7 @@ e_inc_search(int dir)
 	}
 	done = redo = 0;
 	*LastChar++ = '\n';
-	for (cp = newdir == F_UP_SEARCH_HIST ? STRbck : STRfwd; 
+	for (cp = newdir == F_UP_SEARCH_HIST ? STRbck : STRfwd;
 	     *cp; *LastChar++ = *cp++)
 	    continue;
 	*LastChar++ = pchar;
@@ -1128,7 +1139,7 @@ e_inc_search(int dir)
 	case F_DELPREV:
 	    if (patbuf.len > 1)
 		done++;
-	    else 
+	    else
 		SoundBeep();
 	    break;
 
@@ -1162,7 +1173,7 @@ e_inc_search(int dir)
 			break;
 		    }
 		break;
-	    
+
 	    default:		/* Terminate and execute cmd */
 		endcmd[0] = ch;
 		PushMacro(endcmd);
@@ -1253,7 +1264,7 @@ e_inc_search(int dir)
 	}
 	if (done || ret != CC_NORM)
 	    return(ret);
-	    
+
     }
 
 }
@@ -1359,7 +1370,7 @@ v_search(int dir)
     cleanup_until(&tmpbuf);
     LastCmd = (KEYCMD) dir; /* avoid c_hsetpat */
     Cursor = LastChar = InputBuf;
-    if ((dir == F_UP_SEARCH_HIST ? e_up_search_hist(0) : 
+    if ((dir == F_UP_SEARCH_HIST ? e_up_search_hist(0) :
 				   e_down_search_hist(0)) == CC_ERROR) {
 	Refresh();
 	return(CC_ERROR);
@@ -1472,8 +1483,8 @@ e_insert(Char c)
     else {
 	if (inputmode != MODE_INSERT) {
 	    int i;
-	    for(i = 0; i < Argument; i++) 
-		UndoBuf[UndoSize++] = *(Cursor + i);
+	    for (i = 0; i < Argument; i++)
+		UndoBuf[UndoSize++] = Cursor[i];
 
 	    UndoBuf[UndoSize] = '\0';
 	    c_delafter(Argument);   /* Do NOT use the saving ONE */
@@ -1820,7 +1831,7 @@ c_hmatch(Char *str)
 }
 
 /*
- * c_hsetpat(): Set the history seatch pattern
+ * c_hsetpat(): Set the history search pattern
  */
 static void
 c_hsetpat(void)
@@ -1948,7 +1959,7 @@ e_down_search_hist(Char c)
 #ifdef SDEBUG
 	xprintf("Comparing with \"%S\"\n", hl);
 #endif
-	if ((Strncmp(hl, InputBuf, (size_t) (LastChar - InputBuf)) || 
+	if ((Strncmp(hl, InputBuf, (size_t) (LastChar - InputBuf)) ||
 	     hl[LastChar-InputBuf]) && c_hmatch(hl))
 	    found = h;
 	if (!HistLit)
@@ -2205,7 +2216,7 @@ e_dabbrev_expand(Char c)
 	    continue;
 	} else {
 	    word++;
-	    len = c_endword(ncp-1, cp, 1, STRshwordsep) - ncp + 1;
+	    len = c_endword(ncp-1, InputBuf, cp, 1, STRshwordsep) - ncp + 1;
 	    cp = ncp;
 	}
 	if (len > patbuf.len && Strncmp(cp, patbuf.s, patbuf.len) == 0) {
@@ -2392,14 +2403,14 @@ e_delwordprev(Char c)
  * Changed the names of some of the ^D family of editor functions to
  * correspond to what they actually do and created new e_delnext_list
  * for completeness.
- *   
+ *
  *   Old names:			New names:
- *   
+ *
  *   delete-char		delete-char-or-eof
  *     F_DELNEXT		  F_DELNEXT_EOF
  *     e_delnext		  e_delnext_eof
  *     edelnxt			  edelnxteof
- *   delete-char-or-eof		delete-char			
+ *   delete-char-or-eof		delete-char
  *     F_DELNEXT_EOF		  F_DELNEXT
  *     e_delnext_eof		  e_delnext
  *     edelnxteof		  edelnxt
@@ -2445,13 +2456,13 @@ e_delnext_eof(Char c)
     USE(c);
     if (Cursor == LastChar) {/* if I'm at the end */
 	if (!VImode) {
-	    if (Cursor == InputBuf) {	
+	    if (Cursor == InputBuf) {
 		/* if I'm also at the beginning */
 		so_write(STReof, 4);/* then do a EOF */
 		flush();
 		return(CC_EOF);
 	    }
-	    else 
+	    else
 		return(CC_ERROR);
 	}
 	else {
@@ -2574,8 +2585,8 @@ e_tobeg(Char c)
     Cursor = InputBuf;
 
     if (VImode) {
-       while (Isspace(*Cursor)) /* We want FIRST non space character */
-	Cursor++;
+	while (Isspace(*Cursor)) /* We want FIRST non space character */
+	    Cursor++;
 	if (ActionFlag & TCSHOP_DELETE) {
 	    c_delfini();
 	    return(CC_REFRESH);
@@ -2761,7 +2772,7 @@ e_wordback(Char c)
 
     Cursor = c_prev_word(Cursor, InputBuf, Argument); /* bounds check */
 
-    if (VImode) 
+    if (VImode)
 	if (ActionFlag & TCSHOP_DELETE) {
 	    c_delfini();
 	    return(CC_REFRESH);
@@ -2892,9 +2903,9 @@ v_csearch_back(Char ch, int count, int tflag)
 
     cp = Cursor;
     while (count--) {
-	if (*cp == ch) 
+	if (*cp == ch)
 	    cp--;
-	while (cp > InputBuf && *cp != ch) 
+	while (cp > InputBuf && *cp != ch)
 	    cp--;
     }
 
@@ -2923,9 +2934,9 @@ v_csearch_fwd(Char ch, int count, int tflag)
 
     cp = Cursor;
     while (count--) {
-	if(*cp == ch) 
+	if (*cp == ch)
 	    cp++;
-	while (cp < LastChar && *cp != ch) 
+	while (cp < LastChar && *cp != ch)
 	    cp++;
     }
 
@@ -2955,21 +2966,21 @@ v_action(int c)
     if (ActionFlag == TCSHOP_DELETE) {
 	ActionFlag = TCSHOP_NOP;
 	ActionPos = 0;
-	
+
 	UndoSize = 0;
 	kp = UndoBuf;
 	for (cp = InputBuf; cp < LastChar; cp++) {
 	    *kp++ = *cp;
 	    UndoSize++;
 	}
-		
+
 	UndoAction = TCSHOP_INSERT;
 	UndoPtr  = InputBuf;
 	LastChar = InputBuf;
 	Cursor   = InputBuf;
 	if (c & TCSHOP_INSERT)
 	    c_alternativ_key_map(0);
-	    
+
 	return(CC_REFRESH);
     }
 #ifdef notdef
@@ -3359,7 +3370,7 @@ e_cleardisp(Char c)
 /*ARGSUSED*/
 CCRETVAL
 e_tty_int(Char c)
-{			
+{
     USE(c);
 #if defined(_MINIX) || defined(WINNT_NATIVE)
     /* SAK PATCH: erase all of current line, start again */
@@ -3398,9 +3409,9 @@ e_stuff_char(Char c)
      if (was_raw)
 	 (void) Rawmode();
      return(e_redisp(c));
-#else /* !TIOCSTI */  
+#else /* !TIOCSTI */
      return(CC_ERROR);
-#endif /* !TIOCSTI */  
+#endif /* !TIOCSTI */
 }
 
 /*ARGSUSED*/
@@ -3538,7 +3549,7 @@ e_copyprev(Char c)
 
     oldc = Cursor;
     /* does a bounds check */
-    cp = c_prev_word(Cursor, InputBuf, Argument);	
+    cp = c_prev_word(Cursor, InputBuf, Argument);
 
     c_insert((int)(oldc - cp));
     for (dp = oldc; cp < oldc && dp < LastChar; cp++)
@@ -3567,9 +3578,9 @@ e_load_average(Char c)
 #ifdef TIOCSTAT
     /*
      * Here we pass &c to the ioctl because some os's (NetBSD) expect it
-     * there even if they don't use it. (lukem@netbsd.org)
+     * there even if they don't use it. (Luke Mewburn)
      */
-    if (ioctl(SHIN, TIOCSTAT, (ioctl_t) &c) < 0) 
+    if (ioctl(SHIN, TIOCSTAT, (ioctl_t) &c) < 0)
 #endif
 	xprintf("%s", CGETS(5, 1, "Load average unavailable\n"));
     return(CC_REFRESH);
@@ -3605,7 +3616,7 @@ v_endword(Char c)
 	return(CC_ERROR);
     /* else */
 
-    Cursor = c_endword(Cursor, LastChar, Argument, STRshwspace);
+    Cursor = c_endword(Cursor, InputBuf, LastChar, Argument, STRshwspace);
 
     if (ActionFlag & TCSHOP_DELETE)
     {
@@ -3707,7 +3718,7 @@ v_rchar_fwd(Char c)
     if (srch_char == 0)
 	return CC_ERROR;
 
-    return srch_dir == CHAR_FWD ? v_csearch_fwd(srch_char, Argument, 0) : 
+    return srch_dir == CHAR_FWD ? v_csearch_fwd(srch_char, Argument, 0) :
 			          v_csearch_back(srch_char, Argument, 0);
 }
 
@@ -3719,7 +3730,7 @@ v_rchar_back(Char c)
     if (srch_char == 0)
 	return CC_ERROR;
 
-    return srch_dir == CHAR_BACK ? v_csearch_fwd(srch_char, Argument, 0) : 
+    return srch_dir == CHAR_BACK ? v_csearch_fwd(srch_char, Argument, 0) :
 			           v_csearch_back(srch_char, Argument, 0);
 }
 
@@ -3747,7 +3758,7 @@ v_undo(Char c)
 
 	LastChar -= UndoSize;
 	Cursor   =  UndoPtr;
-	
+
 	UndoAction = TCSHOP_INSERT;
 	break;
 
@@ -3771,7 +3782,7 @@ v_undo(Char c)
 	size = (int)(Cursor-LastChar); /*  NOT NSL independant */
 	if (size < UndoSize)
 	    size = UndoSize;
-	for(loop = 0; loop < size; loop++) {
+	for (loop = 0; loop < size; loop++) {
 	    temp = *kp;
 	    *kp++ = *cp;
 	    *cp++ = temp;
@@ -3816,12 +3827,12 @@ v_rsrch_back(Char c)
 {
     USE(c);
     if (patbuf.len == 0) return(CC_ERROR);
-    return(v_repeat_srch(searchdir == F_UP_SEARCH_HIST ? 
+    return(v_repeat_srch(searchdir == F_UP_SEARCH_HIST ?
 			 F_DOWN_SEARCH_HIST : F_UP_SEARCH_HIST));
 }
 
 #ifndef WINNT_NATIVE
-/* Since ed.defns.h  is generated from ed.defns.c, these empty 
+/* Since ed.defns.h  is generated from ed.defns.c, these empty
    functions will keep the F_NUM_FNS consistent
  */
 CCRETVAL
