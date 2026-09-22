@@ -78,13 +78,54 @@
 #define ismetahash(a)	(ismeta(a) && (a) != '#')
 
 #define SEARCHLIST "HPATH"	/* Env. param for helpfile searchlist */
-#define DEFAULTLIST ":/usr/man/cat1:/usr/man/cat8:/usr/man/cat6:/usr/local/man/cat1:/usr/local/man/cat8:/usr/local/man/cat6"	/* if no HPATH */
+#define DEFAULTLIST ":/usr/share/man/cat1:/usr/share/man/cat8:/usr/share/man/cat6:/usr/local/share/man/cat1:/usr/local/share/man/cat8:/usr/local/share/man/cat6"	/* if no HPATH */
 
 typedef enum {
-    LIST, LIST_ALL, RECOGNIZE, RECOGNIZE_ALL, RECOGNIZE_SCROLL, 
+    LIST, LIST_ALL, RECOGNIZE, RECOGNIZE_ALL, RECOGNIZE_SCROLL,
     PRINT_HELP, SPELL, GLOB, GLOB_EXPAND, VARS_EXPAND, PATH_NORMALIZE,
     COMMAND_NORMALIZE
 } COMMAND;
+
+
+#ifdef COLOR_LS_F
+
+/* COLORVAR: file color variable
+ */
+typedef enum {
+    CV_NONE,		/*  !   unknown type (shouldn't appear) */
+    CV_FILE,		/*   	Regular file, possibly with extension color */
+    CV_DIR,		/*  /	Directory */
+    CV_EXE,		/*  *	Executable file */
+    CV_BLK,		/*  #	Block device */
+    CV_CHR,		/*  %	Character device */
+    CV_FIFO,		/*  |	Named pipe (FIFO) */
+    CV_SOCK,		/*  =	Socket */
+    CV_LNK,		/*  @	Symbolic link */
+    CV_ORPHAN,		/*  &	Orphaned (broken) symbolic link */
+    CV_LNK_DIR,		/*  >	Symbolic link to directory. Color is CV_DIR */
+    CV_HIDDEN,		/*  +	Hidden dir (AIX) */
+    CV_CDF,		/*  +	Context Dependent Files (HP/UX) */
+    CV_NWK,		/*  :	Network Special (HP/UX) */
+    CV_DOOR,		/*  >	Door (Solaris IPC) */
+    CV_SUID,		/*	Setuid file (u+s) */
+    CV_SGID,		/*	Setgid file (g+s) */
+    CV_DIR_TW,		/*	Sticky and other writable dir (+t,o+w) */
+    CV_DIR_OW,		/*	Other writable dir (o+w) but not sticky */
+    CV_DIR_ST,		/*	Sticky dir (+t) but not other writable */
+    CV_HARD,		/*	Reg file extra hard links */
+} COLORVAR;
+
+#endif /* COLOR_LS_F */
+
+
+/* filetype: file color type and ls-F suffix
+ */
+struct filetype {
+    Char	suffix;		/* suffix for ls-F */
+#ifdef COLOR_LS_F
+    COLORVAR 	colorvar;	/* color variable */
+#endif /* COLOR_LS_F */
+};
 
 struct scroll_tab_list {
 	Char *element;
@@ -103,6 +144,7 @@ extern int InsideCompletion;
 extern struct varent completions;
 
 extern int color_context_ls;
+extern int color_force;
 
 #include "tw.decls.h"
 

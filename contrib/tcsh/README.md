@@ -5,7 +5,7 @@
 The Tcsh source code is available on GitHub as a read-only repo
 mirror at:
 
-> http://github.com/tcsh-org/tcsh
+> https://github.com/tcsh-org/tcsh
 
 Instructions for compiling Tcsh can be found in [BUILDING].
 
@@ -19,8 +19,8 @@ the tcsh mailing list:
 > tcsh@astron.com  
 > https://mailman.astron.com/mailman/listinfo/tcsh
 
-[![Build Status][status]][travis]
+[![Coverity Scan][badge]][coverity]
 
 [BUILDING]: BUILDING
-[status]: https://travis-ci.org/tcsh-org/tcsh.svg?branch=master
-[travis]: https://travis-ci.org/tcsh-org/tcsh
+[badge]: https://scan.coverity.com/projects/20307/badge.svg
+[coverity]: https://scan.coverity.com/projects/tcsh-org-tcsh
