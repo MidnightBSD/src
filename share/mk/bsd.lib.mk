@@ -246,7 +246,6 @@ CLEANFILES+=	${SHLIB_LINK}
 
 ${SHLIB_NAME_FULL}: ${SOBJS}
 	@${ECHO} building shared library ${SHLIB_NAME}
-	@rm -f ${SHLIB_NAME} ${SHLIB_LINK}
 .if defined(SHLIB_LINK) && !commands(${SHLIB_LINK:R}.ld) && ${MK_DEBUG_FILES} == "no"
 	# Note: This uses ln instead of ${INSTALL_LIBSYMLINK} since we are in OBJDIR
 	@${LN:Uln} -fs ${SHLIB_NAME} ${SHLIB_LINK}
@@ -258,10 +257,11 @@ ${SHLIB_NAME_FULL}: ${SOBJS}
 .endif
 
 .if ${MK_DEBUG_FILES} != "no"
-CLEANFILES+=	${SHLIB_NAME_FULL} ${SHLIB_NAME}.debug
+CLEANFILES+=	${SHLIB_NAME_FULL} ${SHLIB_NAME}.debug ${SHLIB_NAME}.tmp
 ${SHLIB_NAME}: ${SHLIB_NAME_FULL} ${SHLIB_NAME}.debug
 	${OBJCOPY} --strip-debug --add-gnu-debuglink=${SHLIB_NAME}.debug \
-	    ${SHLIB_NAME_FULL} ${.TARGET}
+	    ${SHLIB_NAME_FULL} ${.TARGET}.tmp
+	mv -f ${.TARGET}.tmp ${.TARGET}
 .if defined(SHLIB_LINK) && !commands(${SHLIB_LINK:R}.ld)
 	# Note: This uses ln instead of ${INSTALL_LIBSYMLINK} since we are in OBJDIR
 	@${LN:Uln} -fs ${SHLIB_NAME} ${SHLIB_LINK}
