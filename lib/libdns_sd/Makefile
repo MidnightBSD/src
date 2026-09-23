@@ -20,7 +20,8 @@ CFLAGS+=	-march=athlon64
 CFLAGS+=	-march=i586
 .endif
 CFLAGS+=	-I${.CURDIR}/../../contrib/mDNSResponder
-CFLAGS+=	-I${.CURDIR}/../../contrib/mDNSResponder/mDNShared
+CFLAGS+=	-I${.CURDIR}/../../contrib/mDNSResponder/mDNSCore
+CFLAGS+=	-I${.CURDIR}/../../contrib/mDNSResponder/mDNSShared
 CFLAGS+=	-DTARGET_OS_FREEBSD
 
 .if ${MK_INET6_SUPPORT} != "no"

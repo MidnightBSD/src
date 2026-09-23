@@ -13,7 +13,11 @@ SRCS=	ProxyResponder.c mDNSPosix.c mDNSUNP.c
 SRCS+=	mDNS.c DNSDigest.c uDNS.c DNSCommon.c
 .PATH: ${.CURDIR}/../../contrib/mDNSResponder/mDNSShared
 SRCS+=	mDNSDebug.c dnssd_ipc.c GenLinkedList.c \
-	PlatformCommon.c CryptoAlg.c
+	PlatformCommon.c
+.PATH: ${.CURDIR}/../../contrib/mDNSResponder/DSO
+SRCS+=	dso.c dso-transport.c dnssd_clientshim.c
+.PATH: ${.CURDIR}/../../contrib/mDNSResponder/mDNSShared/utilities
+SRCS+=	misc_utilities.c
 
 SRCDIRS= ${.CURDIR}/../../contrib/mDNSResponder/mDNSShared \
 	${.CURDIR}/../../contrib/mDNSResponder/mDNSPosix \
@@ -22,6 +26,8 @@ SRCDIRS= ${.CURDIR}/../../contrib/mDNSResponder/mDNSShared \
 CFLAGS+= -I. -I${.CURDIR}/../../contrib/mDNSResponder/mDNSPosix
 CFLAGS+= -I${.CURDIR}/../../contrib/mDNSResponder/mDNSCore
 CFLAGS+= -I${.CURDIR}/../../contrib/mDNSResponder/mDNSShared
+CFLAGS+= -I${.CURDIR}/../../contrib/mDNSResponder/mDNSShared/utilities
+CFLAGS+= -I${.CURDIR}/../../contrib/mDNSResponder/ServiceRegistration
 CFLAGS+= -DTARGET_OS_FREEBSD -DMDNS_VERSIONSTR_NODTS
 CFLAGS+= -DIDLESLEEPCONTROL_DISABLED
 CFLAGS+= -D_REENTRANT -DMDNS_DEBUGMSGS=0

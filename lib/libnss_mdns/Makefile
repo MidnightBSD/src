@@ -24,7 +24,7 @@ CFLAGS+=        -march=i586
 .endif
 CFLAGS+=	-I${SRCTOP}/contrib/mDNSResponder
 CFLAGS+=	-I${SRCTOP}/contrib/mDNSResponder/mDNSPosix
-CFLAGS+=	-I${SRCTOP}/contrib/mDNSResponder/mDNShared
+CFLAGS+=	-I${SRCTOP}/contrib/mDNSResponder/mDNSShared
 CFLAGS+=        -DTARGET_OS_FREEBSD
 
 .if ${MK_INET6_SUPPORT} != "no"
