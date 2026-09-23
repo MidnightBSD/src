@@ -185,7 +185,8 @@ int
 main(int argc, char *argv[])
 {
 	char *end;
-	char *shell_argv[] = { _PATH_BSHELL, "-c", NULL, NULL };
+	char *shell_argv[] = { __DECONST(char *, _PATH_BSHELL),
+	    __DECONST(char *, "-c"), NULL, NULL };
 	char **cmdargv;
 	double timeout;
 	long descriptor;
