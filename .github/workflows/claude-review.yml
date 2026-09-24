@@ -35,6 +35,9 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           trigger_phrase: "@claude"
+          # Read-only git access. Every recent run logged 3-6 denied tool
+          # calls, each a wasted turn; a reviewer needs the diff and history.
+          claude_args: "--allowedTools Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(git blame:*)"
           prompt: |
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}
