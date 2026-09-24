@@ -7,6 +7,11 @@ on:
   issue_comment:
     types: [created]
 
+# A new push to a PR supersedes any review still running on the old head.
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: true
+
 jobs:
   claude-review:
     name: Review
