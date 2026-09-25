@@ -67,6 +67,7 @@
 #include <machine/trap.h>
 
 #include <x86/linux/linux_x86.h>
+#include <amd64/linux/linux_emul_md.h>
 #include <amd64/linux32/linux.h>
 #include <amd64/linux32/linux32_proto.h>
 #include <compat/linux/linux_elf.h>
@@ -610,6 +611,8 @@ linux_exec_setregs(struct thread *td, struct image_params *imgp,
 	x86_clear_dbregs(pcb);
 
 	fpstate_drop(td);
+
+	linux_pkru_exec_init(td);
 
 	/* Do full restore on return so that we can change to a different %cs */
 	set_pcb_flags(pcb, PCB_32BIT | PCB_FULL_IRET);
