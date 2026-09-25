@@ -290,23 +290,24 @@ purge_orphaned_rows(mportInstance *mport, const char *pkg_name)
 		"annotation" };
 	size_t i;
 
-	if (mport_db_do(mport->db, "BEGIN TRANSACTION") != MPORT_OK)
+	if (mport_db_do(mport->db, "BEGIN IMMEDIATE TRANSACTION") != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
 	for (i = 0; i < sizeof(tables) / sizeof(tables[0]); i++) {
 		if (mport_db_do(mport->db, "DELETE FROM %s WHERE pkg=%Q", tables[i], pkg_name) !=
-		    MPORT_OK) {
-			(void)mport_db_do(mport->db, "ROLLBACK");
-			RETURN_CURRENT_ERROR;
-		}
+		    MPORT_OK)
+			goto rollback;
 	}
 
-	if (mport_db_do(mport->db, "COMMIT TRANSACTION") != MPORT_OK) {
-		(void)mport_db_do(mport->db, "ROLLBACK");
-		RETURN_CURRENT_ERROR;
-	}
+	if (mport_db_do(mport->db, "COMMIT TRANSACTION") != MPORT_OK)
+		goto rollback;
 
 	return MPORT_OK;
+
+rollback:
+	/* sqlite3_exec directly so the rollback cannot clobber the error */
+	(void)sqlite3_exec(mport->db, "ROLLBACK", NULL, NULL, NULL);
+	RETURN_CURRENT_ERROR;
 }
 
 static int

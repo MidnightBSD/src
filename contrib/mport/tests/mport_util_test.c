@@ -545,8 +545,81 @@ ATF_TC_BODY(mport_parselist_tll_no_dup, tc)
 	tll_free_and_free(list, free);
 }
 
+static mportAssetListEntry *
+parse_single_plist_line(const char *line, mportAssetList **listp)
+{
+	mportAssetList *list;
+	FILE *fp;
+
+	fp = fmemopen(__DECONST(char *, line), strlen(line), "r");
+	ATF_REQUIRE(fp != NULL);
+	list = mport_assetlist_new();
+	ATF_REQUIRE(list != NULL);
+	ATF_REQUIRE_EQ(MPORT_OK, mport_parse_plistfile(fp, list));
+	(void)fclose(fp);
+	ATF_REQUIRE(STAILQ_FIRST(list) != NULL);
+	*listp = list;
+	return STAILQ_FIRST(list);
+}
+
+ATF_TC(plist_owner_mode_mode_only);
+ATF_TC_HEAD(plist_owner_mode_mode_only, tc)
+{
+	atf_tc_set_md_var(tc, "descr", "@(,,755) sets only the mode");
+}
+ATF_TC_BODY(plist_owner_mode_mode_only, tc)
+{
+	mportAssetList *list;
+	mportAssetListEntry *e;
+
+	(void)tc;
+
+	/* Pre-fix empty fields were skipped, so "755" landed in owner. */
+	e = parse_single_plist_line("@(,,755) bin/npm\n", &list);
+	ATF_REQUIRE_EQ(ASSET_FILE_OWNER_MODE, e->type);
+	ATF_REQUIRE_STREQ("", e->owner);
+	ATF_REQUIRE_STREQ("", e->group);
+	ATF_REQUIRE_STREQ("755", e->mode);
+	ATF_REQUIRE_STREQ("bin/npm", e->data);
+	mport_assetlist_free(list);
+}
+
+ATF_TC(plist_owner_mode_all_fields);
+ATF_TC_HEAD(plist_owner_mode_all_fields, tc)
+{
+	atf_tc_set_md_var(tc, "descr", "@(owner,group,mode) and @dir(,group,) are positional");
+}
+ATF_TC_BODY(plist_owner_mode_all_fields, tc)
+{
+	mportAssetList *list;
+	mportAssetListEntry *e;
+
+	(void)tc;
+
+	e = parse_single_plist_line("@(root,wheel,4555) bin/foo\n", &list);
+	ATF_REQUIRE_STREQ("root", e->owner);
+	ATF_REQUIRE_STREQ("wheel", e->group);
+	ATF_REQUIRE_STREQ("4555", e->mode);
+	mport_assetlist_free(list);
+
+	e = parse_single_plist_line("@dir(,games,) var/games/foo\n", &list);
+	ATF_REQUIRE_EQ(ASSET_DIR_OWNER_MODE, e->type);
+	ATF_REQUIRE_STREQ("", e->owner);
+	ATF_REQUIRE_STREQ("games", e->group);
+	ATF_REQUIRE_STREQ("", e->mode);
+	mport_assetlist_free(list);
+
+	e = parse_single_plist_line("@sample(,,640) etc/foo.conf.sample\n", &list);
+	ATF_REQUIRE_EQ(ASSET_SAMPLE_OWNER_MODE, e->type);
+	ATF_REQUIRE_STREQ("", e->owner);
+	ATF_REQUIRE_STREQ("640", e->mode);
+	mport_assetlist_free(list);
+}
+
 ATF_TP_ADD_TCS(tp)
 {
+	ATF_TP_ADD_TC(tp, plist_owner_mode_mode_only);
+	ATF_TP_ADD_TC(tp, plist_owner_mode_all_fields);
 	ATF_TP_ADD_TC(tp, mport_check_answer_bool_null);
 	ATF_TP_ADD_TC(tp, mport_check_answer_bool_true);
 	ATF_TP_ADD_TC(tp, mport_check_answer_bool_false);
