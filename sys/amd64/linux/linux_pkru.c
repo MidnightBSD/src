@@ -39,7 +39,10 @@ static bool
 linux_pkey_supported(void)
 {
 
-	return ((cpu_stdext_feature2 & CPUID_STDEXT2_OSPKE) != 0);
+	return ((cpu_stdext_feature2 &
+	    (CPUID_STDEXT2_PKU | CPUID_STDEXT2_OSPKE)) ==
+	    (CPUID_STDEXT2_PKU | CPUID_STDEXT2_OSPKE) &&
+	    (xsave_mask & XFEATURE_ENABLED_PKRU) != 0);
 }
 
 /*
