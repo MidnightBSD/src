@@ -24,7 +24,7 @@
  * SUCH DAMAGE.
  */
 
-#if defined(__MidnightBSD__) && defined(_KERNEL)
+#if defined(_KERNEL)	/* any BSD kernel build; compiler may not predefine __MidnightBSD__/__FreeBSD__ */
 #include <sys/types.h>
 #else
 #include <stdbool.h>
