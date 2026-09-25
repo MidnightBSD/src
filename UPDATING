@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20260925:
+	linuxulator: add protection-key syscalls for Chromium V8 sandboxing
+
 20260922:
 	ncurses 6.6 (from 6.2).  Among many bug fixes this closes
 	CVE-2022-29458 and CVE-2023-29491 (memory corruption from a
