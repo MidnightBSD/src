@@ -1,5 +1,13 @@
 Updating Information for MidnightBSD users.
 
+20260925:
+	mport 2.8.2 (from 2.8.1).  Bug fix release: package creation and
+	schema upgrades now run in single transactions and roll back on
+	failure, a failed delete is rolled back and the registry write lock
+	is taken up front, shared-directory checks during delete use one
+	database query, and @(owner,group,mode) plist fields are parsed
+	positionally again.
+
 20260922:
 	ncurses 6.6 (from 6.2).  Among many bug fixes this closes
 	CVE-2022-29458 and CVE-2023-29491 (memory corruption from a
