@@ -736,8 +736,9 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 		goto ERROR;
 
 	/* Register the package and its assets atomically: a failure anywhere
-	 * below must not leave a packages row without its assets. */
-	if (mport_db_do(mport->db, "BEGIN TRANSACTION") != MPORT_OK)
+	 * below must not leave a packages row without its assets. IMMEDIATE
+	 * takes the write lock now rather than at the first insert. */
+	if (mport_db_do(mport->db, "BEGIN IMMEDIATE TRANSACTION") != MPORT_OK)
 		goto ERROR;
 	in_transaction = true;
 
