@@ -853,6 +853,14 @@ BFLAGS+=	-B${WORLDTMP}/usr/bin
     (defined(X_COMPILER_TYPE) && ${X_COMPILER_TYPE} == clang)
 XCFLAGS+=	-target ${TARGET_TRIPLE}
 .endif
+# An external compiler (e.g. upstream clang on Linux/macOS) only knows the
+# freebsd triple, so it predefines __FreeBSD__ but not __MidnightBSD__.  The
+# tree keys on __MidnightBSD__ everywhere, so supply it ourselves with the same
+# value our own clang derives from the triple's OS major version.
+.if defined(X_COMPILER_MIDNIGHTBSD_VERSION) && \
+    ${X_COMPILER_MIDNIGHTBSD_VERSION} == "unknown"
+XCFLAGS+=	-D__MidnightBSD__=${TARGET_TRIPLE:C/.*freebsd([0-9]+).*/\1/}
+.endif
 XCFLAGS+=	--sysroot=${WORLDTMP}
 
 .if !empty(BFLAGS)
