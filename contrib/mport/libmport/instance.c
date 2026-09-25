@@ -118,6 +118,11 @@ mport_instance_init(mportInstance *mport, const char *root, const char *outputPa
 		RETURN_CURRENT_ERROR;
 	}
 
+	/* Wait for another mport process to release the registry instead of
+	 * failing on SQLITE_BUSY; write transactions use BEGIN IMMEDIATE so the
+	 * wait happens before any row changes. */
+	(void)sqlite3_busy_timeout(mport->db, MPORT_DB_BUSY_TIMEOUT_MS);
+
 	if (sqlite3_create_function(mport->db, "mport_version_cmp", 2, SQLITE_ANY, NULL,
 		&mport_version_cmp_sqlite, NULL, NULL) != SQLITE_OK) {
 		SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));

@@ -171,6 +171,7 @@ count_installed(mportInstance *mport, /*@out@*/ char *os_release, size_t os_rele
 ATF_TC_WITH_CLEANUP(install_replaces_previous_os_release);
 ATF_TC_HEAD(install_replaces_previous_os_release, tc)
 {
+	atf_tc_set_md_var(tc, "require.user", "root");
 	atf_tc_set_md_var(
 	    tc, "descr", "installing over a copy registered under an older os_release replaces it");
 }
@@ -220,6 +221,7 @@ ATF_TC_CLEANUP(install_replaces_previous_os_release, tc)
 ATF_TC_WITH_CLEANUP(install_same_os_release_is_rejected);
 ATF_TC_HEAD(install_same_os_release_is_rejected, tc)
 {
+	atf_tc_set_md_var(tc, "require.user", "root");
 	atf_tc_set_md_var(
 	    tc, "descr", "a package installed under the current os_release is left alone");
 }
@@ -304,6 +306,7 @@ orphan_registry_rows(mportInstance *mport)
 ATF_TC_WITH_CLEANUP(force_reinstall_over_orphaned_rows);
 ATF_TC_HEAD(force_reinstall_over_orphaned_rows, tc)
 {
+	atf_tc_set_md_var(tc, "require.user", "root");
 	atf_tc_set_md_var(
 	    tc, "descr", "forced install re-registers a package whose stale rows were left behind");
 }
@@ -360,6 +363,7 @@ ATF_TC_CLEANUP(force_reinstall_over_orphaned_rows, tc)
 ATF_TC_WITH_CLEANUP(failed_install_registers_nothing);
 ATF_TC_HEAD(failed_install_registers_nothing, tc)
 {
+	atf_tc_set_md_var(tc, "require.user", "root");
 	atf_tc_set_md_var(tc, "descr", "a failed install rolls back every registry row it added");
 }
 ATF_TC_BODY(failed_install_registers_nothing, tc)
@@ -404,6 +408,132 @@ ATF_TC_CLEANUP(failed_install_registers_nothing, tc)
 }
 
 /*
+ * A delete that fails partway through unregistering the package must roll
+ * back, leaving the package fully registered and the connection free for the
+ * next package in the same run.
+ */
+ATF_TC_WITH_CLEANUP(failed_delete_rolls_back);
+ATF_TC_HEAD(failed_delete_rolls_back, tc)
+{
+	atf_tc_set_md_var(tc, "require.user", "root");
+	atf_tc_set_md_var(
+	    tc, "descr", "a delete that fails inside its transaction leaves the registry intact");
+}
+ATF_TC_BODY(failed_delete_rolls_back, tc)
+{
+	mportInstance *mport;
+	mportPackageMeta **installed = NULL;
+	const char *pkgfile;
+	int assets;
+
+	(void)tc;
+
+	mport = create_test_instance();
+	pkgfile = create_test_package(mport);
+
+	ATF_REQUIRE_MSG(mport_install_primative(mport, pkgfile, NULL, MPORT_EXPLICIT) == MPORT_OK,
+	    "%s", mport_err_string());
+	assets = count_rows(mport, "assets");
+	ATF_REQUIRE(assets > 0);
+
+	/* annotation is the last table the delete touches, so every other
+	 * table has already been cleared when this fires */
+	ATF_REQUIRE_EQ(MPORT_OK,
+	    mport_db_do(mport->db,
+		"CREATE TRIGGER fail_delete BEFORE DELETE ON annotation BEGIN SELECT RAISE(ABORT, 'forced failure'); END"));
+
+	ATF_REQUIRE_EQ(
+	    MPORT_OK, mport_pkgmeta_search_master(mport, &installed, "pkg=%Q", PKG_NAME));
+	ATF_REQUIRE(installed != NULL && installed[0] != NULL);
+	ATF_REQUIRE(mport_delete_primative(mport, installed[0], 1) != MPORT_OK);
+	ATF_REQUIRE(strstr(mport_err_string(), "forced failure") != NULL);
+
+	/* nothing was unregistered */
+	ATF_REQUIRE_EQ(1, count_installed(mport, NULL, 0));
+	ATF_REQUIRE_EQ(assets, count_rows(mport, "assets"));
+	ATF_REQUIRE(count_rows(mport, "annotation") > 0);
+
+	/* the transaction was rolled back, so the next delete can begin one */
+	ATF_REQUIRE_EQ(MPORT_OK, mport_db_do(mport->db, "DROP TRIGGER fail_delete"));
+	ATF_REQUIRE_MSG(
+	    mport_delete_primative(mport, installed[0], 1) == MPORT_OK, "%s", mport_err_string());
+	ATF_REQUIRE_EQ(0, count_installed(mport, NULL, 0));
+	ATF_REQUIRE_EQ(0, count_rows(mport, "assets"));
+	ATF_REQUIRE_EQ(0, count_rows(mport, "annotation"));
+
+	mport_pkgmeta_vec_free(installed);
+	mport_instance_free(mport);
+}
+ATF_TC_CLEANUP(failed_delete_rolls_back, tc)
+{
+	(void)tc;
+
+	cleanup_test_root();
+}
+
+/*
+ * A schema upgrade that fails part way must leave the registry at the version
+ * it started from with none of the earlier steps applied, and must leave the
+ * connection usable so a retry can succeed.
+ */
+ATF_TC_WITH_CLEANUP(failed_schema_upgrade_rolls_back);
+ATF_TC_HEAD(failed_schema_upgrade_rolls_back, tc)
+{
+	atf_tc_set_md_var(tc, "descr", "a failed schema upgrade rolls back every step");
+}
+ATF_TC_BODY(failed_schema_upgrade_rolls_back, tc)
+{
+	mportInstance *mport;
+	int settings = -1;
+
+	(void)tc;
+
+	mport = create_test_instance();
+	ATF_REQUIRE_EQ(MPORT_MASTER_VERSION, mport_get_database_version(mport->db));
+
+	/* pretend the registry is at schema 11 and lacks the rows step 11to12 adds */
+	ATF_REQUIRE_EQ(MPORT_OK,
+	    mport_db_do(mport->db, "DELETE FROM settings WHERE name IN (%Q, %Q)",
+		MPORT_SETTING_HANDLE_RC_SCRIPTS, MPORT_SETTING_REPO_AUTOUPDATE));
+	ATF_REQUIRE_EQ(MPORT_OK, mport_db_do(mport->db, "PRAGMA user_version=11"));
+	ATF_REQUIRE_EQ(11, mport_get_database_version(mport->db));
+
+	/* step 12to13 creates this table, so its presence makes that step fail
+	 * after 11to12 has already run */
+	ATF_REQUIRE_EQ(MPORT_OK,
+	    mport_db_do(mport->db, "CREATE TABLE temp_settings (rowid int, name text, val text)"));
+
+	ATF_REQUIRE(mport_upgrade_master_schema(mport->db, 11) != MPORT_OK);
+
+	/* version and the rows added by the earlier step are both rolled back */
+	ATF_REQUIRE_EQ(11, mport_get_database_version(mport->db));
+	ATF_REQUIRE_EQ(MPORT_OK,
+	    mport_db_count(mport->db, &settings,
+		"SELECT COUNT(*) FROM settings WHERE name IN (%Q, %Q)",
+		MPORT_SETTING_HANDLE_RC_SCRIPTS, MPORT_SETTING_REPO_AUTOUPDATE));
+	ATF_REQUIRE_EQ(0, settings);
+
+	/* no transaction is left open, so a retry goes through */
+	ATF_REQUIRE_EQ(MPORT_OK, mport_db_do(mport->db, "DROP TABLE temp_settings"));
+	ATF_REQUIRE_MSG(
+	    mport_upgrade_master_schema(mport->db, 11) == MPORT_OK, "%s", mport_err_string());
+	ATF_REQUIRE_EQ(MPORT_MASTER_VERSION, mport_get_database_version(mport->db));
+	ATF_REQUIRE_EQ(MPORT_OK,
+	    mport_db_count(mport->db, &settings,
+		"SELECT COUNT(*) FROM settings WHERE name IN (%Q, %Q)",
+		MPORT_SETTING_HANDLE_RC_SCRIPTS, MPORT_SETTING_REPO_AUTOUPDATE));
+	ATF_REQUIRE_EQ(2, settings);
+
+	mport_instance_free(mport);
+}
+ATF_TC_CLEANUP(failed_schema_upgrade_rolls_back, tc)
+{
+	(void)tc;
+
+	cleanup_test_root();
+}
+
+/*
  * MidnightBSD does not expose arbitrary descriptors through /dev/fd/N.
  * Verify package installation can retain the verified descriptor instead of
  * reopening that unavailable path.
@@ -411,6 +541,7 @@ ATF_TC_CLEANUP(failed_install_registers_nothing, tc)
 ATF_TC_WITH_CLEANUP(install_from_verified_fd);
 ATF_TC_HEAD(install_from_verified_fd, tc)
 {
+	atf_tc_set_md_var(tc, "require.user", "root");
 	atf_tc_set_md_var(tc, "descr", "installs a hash-verified package from its open descriptor");
 }
 ATF_TC_BODY(install_from_verified_fd, tc)
@@ -452,6 +583,8 @@ ATF_TP_ADD_TCS(tp)
 	ATF_TP_ADD_TC(tp, install_from_verified_fd);
 	ATF_TP_ADD_TC(tp, force_reinstall_over_orphaned_rows);
 	ATF_TP_ADD_TC(tp, failed_install_registers_nothing);
+	ATF_TP_ADD_TC(tp, failed_delete_rolls_back);
+	ATF_TP_ADD_TC(tp, failed_schema_upgrade_rolls_back);
 
 	return atf_no_error();
 }

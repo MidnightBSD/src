@@ -301,68 +301,97 @@ mport_generate_stub_schema(mportInstance *mport, sqlite3 *db)
 	return (MPORT_OK);
 }
 
+/* Run one upgrade step; the caller owns the surrounding transaction. */
+#define UPGRADE_STEP(fn)                      \
+	do {                                  \
+		if (fn(db) != MPORT_OK)       \
+			RETURN_CURRENT_ERROR; \
+	} while (0)
+
+static int
+run_master_schema_upgrades(sqlite3 *db, int databaseVersion)
+{
+	switch (databaseVersion) {
+	case 0:
+	case 1:
+		UPGRADE_STEP(mport_upgrade_master_schema_0to2);
+		UPGRADE_STEP(mport_upgrade_master_schema_2to3);
+		UPGRADE_STEP(mport_upgrade_master_schema_4to6);
+		UPGRADE_STEP(mport_upgrade_master_schema_6to7);
+		UPGRADE_STEP(mport_upgrade_master_schema_7to8);
+		UPGRADE_STEP(mport_upgrade_master_schema_8to9);
+		UPGRADE_STEP(mport_upgrade_master_schema_9to10);
+		UPGRADE_STEP(mport_upgrade_master_schema_10to11);
+		UPGRADE_STEP(mport_upgrade_master_schema_11to12);
+		UPGRADE_STEP(mport_upgrade_master_schema_12to13);
+		UPGRADE_STEP(mport_upgrade_master_schema_13to14);
+		break;
+	case 2:
+		UPGRADE_STEP(mport_upgrade_master_schema_2to3);
+		/* falls through */
+	case 3:
+		UPGRADE_STEP(mport_upgrade_master_schema_3to4);
+		/* falls through */
+	case 4:
+		/* falls through */
+	case 5:
+		UPGRADE_STEP(mport_upgrade_master_schema_4to6);
+		/* falls through */
+	case 6:
+		UPGRADE_STEP(mport_upgrade_master_schema_6to7);
+		/* falls through */
+	case 7:
+		UPGRADE_STEP(mport_upgrade_master_schema_7to8);
+		/* falls through */
+	case 8:
+		UPGRADE_STEP(mport_upgrade_master_schema_8to9);
+		/* falls through */
+	case 9:
+		UPGRADE_STEP(mport_upgrade_master_schema_9to10);
+		/* falls through */
+	case 10:
+		UPGRADE_STEP(mport_upgrade_master_schema_10to11);
+		/* falls through */
+	case 11:
+		UPGRADE_STEP(mport_upgrade_master_schema_11to12);
+		/* falls through */
+	case 12:
+		UPGRADE_STEP(mport_upgrade_master_schema_12to13);
+		/* falls through */
+	case 13:
+		UPGRADE_STEP(mport_upgrade_master_schema_13to14);
+		break;
+	default:
+		RETURN_ERROR(MPORT_ERR_FATAL, "Invalid master database version");
+	}
+
+	return (MPORT_OK);
+}
+
+/*
+ * Bring the master database up to MPORT_MASTER_VERSION.
+ *
+ * Every step and the version bump run in one transaction. SQLite DDL is
+ * transactional, so a failure part way (a locked registry, a step that no
+ * longer applies) leaves the schema and user_version exactly as they were
+ * instead of a half-upgraded database that the old version number makes
+ * mport try, and fail, to upgrade again on every start.
+ */
 int
 mport_upgrade_master_schema(sqlite3 *db, int databaseVersion)
 {
 	if (databaseVersion == MPORT_MASTER_VERSION)
 		return MPORT_OK;
 
-	switch (databaseVersion) {
-	case 0:
-	case 1:
-		mport_upgrade_master_schema_0to2(db);
-		mport_upgrade_master_schema_2to3(db);
-		mport_upgrade_master_schema_4to6(db);
-		mport_upgrade_master_schema_6to7(db);
-		mport_upgrade_master_schema_7to8(db);
-		mport_upgrade_master_schema_8to9(db);
-		mport_upgrade_master_schema_9to10(db);
-		mport_upgrade_master_schema_10to11(db);
-		mport_upgrade_master_schema_11to12(db);
-		mport_upgrade_master_schema_12to13(db);
-		mport_upgrade_master_schema_13to14(db);
-		mport_set_database_version(db);
-		break;
-	case 2:
-		mport_upgrade_master_schema_2to3(db);
-		/* falls through */
-	case 3:
-		mport_upgrade_master_schema_3to4(db);
-		/* falls through */
-	case 4:
-		/* falls through */
-	case 5:
-		mport_upgrade_master_schema_4to6(db);
-		/* falls through */
-	case 6:
-		/* falls through */
-		mport_upgrade_master_schema_6to7(db);
-	case 7:
-		/* falls through */
-		mport_upgrade_master_schema_7to8(db);
-	case 8:
-		/* falls through */
-		mport_upgrade_master_schema_8to9(db);
-	case 9:
-		/* falls through */
-		mport_upgrade_master_schema_9to10(db);
-	case 10:
-		/* falls through */
-		mport_upgrade_master_schema_10to11(db);
-	case 11:
-		/* falls through */
-		mport_upgrade_master_schema_11to12(db);
-	case 12:
-		/* falls through */
-		mport_upgrade_master_schema_12to13(db);
-	case 13:
-		/* falls through */
-		mport_upgrade_master_schema_13to14(db);
-		mport_set_database_version(db);
-	case 14:
-		break;
-	default:
-		RETURN_ERROR(MPORT_ERR_FATAL, "Invalid master database version");
+	if (mport_db_do(db, "BEGIN IMMEDIATE TRANSACTION") != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+
+	if (run_master_schema_upgrades(db, databaseVersion) != MPORT_OK ||
+	    mport_set_database_version(db) != MPORT_OK ||
+	    mport_db_do(db, "COMMIT TRANSACTION") != MPORT_OK) {
+		/* sqlite3_exec directly so the rollback cannot clobber the error */
+		(void)sqlite3_exec(db, "ROLLBACK", NULL, NULL, NULL);
+		RETURN_CURRENT_ERROR;
 	}
 
 	return (MPORT_OK);
@@ -482,12 +511,11 @@ mport_upgrade_master_schema_12to13(sqlite3 *db)
 	    "CREATE TABLE IF NOT EXISTS conflicts (pkg text NOT NULL, conflict_pkg text NOT NULL, conflict_version text NOT NULL)");
 	RUN_SQL(db, "CREATE INDEX IF NOT EXISTS conflicts_pkg ON conflicts (pkg, conflict_pkg)");
 	RUN_SQL(db, "DROP INDEX IF EXISTS settings_name");
-	RUN_SQL(db, "BEGIN TRANSACTION;");
+	/* mport_upgrade_master_schema() runs the whole upgrade in one transaction */
 	RUN_SQL(db,
 	    "CREATE TABLE temp_settings AS SELECT MIN(rowid) as rowid, name, val FROM settings GROUP BY name;");
 	RUN_SQL(db, "DELETE FROM settings WHERE rowid NOT IN (SELECT rowid FROM temp_settings);");
 	RUN_SQL(db, "DROP TABLE temp_settings;");
-	RUN_SQL(db, "COMMIT;");
 	RUN_SQL(db, "CREATE UNIQUE INDEX IF NOT EXISTS settings_name_unique ON settings (name)");
 
 	return (MPORT_OK);

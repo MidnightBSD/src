@@ -95,11 +95,22 @@ mport_create_primative(mportInstance *mport, mportAssetList *assetlist, mportPac
 	if ((error_code = create_stub_db(mport, &db, tmpdir)) != MPORT_OK)
 		goto CLEANUP;
 
+	/*
+	 * The stub database is rebuilt from scratch on every run and discarded
+	 * on failure, so batch every insert into one transaction rather than
+	 * paying an autocommit journal sync per asset row.
+	 */
+	if ((error_code = mport_db_do(db, "BEGIN TRANSACTION")) != MPORT_OK)
+		goto DBFAIL;
+
 	if ((error_code = insert_assetlist(db, assetlist, pack, extra)) != MPORT_OK)
-		goto CLEANUP;
+		goto DBFAIL;
 
 	if ((error_code = insert_meta(mport, db, pack, extra)) != MPORT_OK)
-		goto CLEANUP;
+		goto DBFAIL;
+
+	if ((error_code = mport_db_do(db, "COMMIT TRANSACTION")) != MPORT_OK)
+		goto DBFAIL;
 
 	if (sqlite3_close(db) != SQLITE_OK) {
 		error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
@@ -110,6 +121,17 @@ mport_create_primative(mportInstance *mport, mportAssetList *assetlist, mportPac
 	    assetlist, pack, extra, tmpdir); /* cleanup will run next which is the desired action */
 
 CLEANUP:
+	clean_up(tmpdir);
+
+	return error_code;
+
+DBFAIL:
+	/* sqlite3_exec directly so the rollback cannot clobber the error; a no-op if
+	 * the transaction never began or was already committed */
+	(void)sqlite3_exec(db, "ROLLBACK", NULL, NULL, NULL);
+	/* every insert helper finalizes its statement on all paths, so close cannot
+	 * return SQLITE_BUSY here; the file is removed by clean_up either way */
+	(void)sqlite3_close(db);
 	clean_up(tmpdir);
 
 	return error_code;
@@ -133,7 +155,13 @@ create_stub_db(mportInstance *mport, sqlite3 **db, const char *tmpdir)
 		return error_code;
 
 	/* create tables */
-	return mport_generate_stub_schema(mport, *db);
+	error_code = mport_generate_stub_schema(mport, *db);
+	if (error_code != MPORT_OK) {
+		(void)sqlite3_close(*db);
+		*db = NULL;
+	}
+
+	return error_code;
 }
 
 static int
@@ -148,6 +176,7 @@ insert_assetlist(
 	char file[FILENAME_MAX];
 	char cwd[FILENAME_MAX];
 	struct stat st;
+	int error_code = MPORT_OK;
 
 	strlcpy(cwd, extra->sourcedir, FILENAME_MAX);
 	strlcat(cwd, pack->prefix, FILENAME_MAX);
@@ -172,23 +201,29 @@ insert_assetlist(
 		}
 
 		if (sqlite3_bind_text(stmnt, 1, pack->name, -1, SQLITE_STATIC) != SQLITE_OK) {
-			RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+			error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+			goto done;
 		}
 		if (sqlite3_bind_int(stmnt, 2, e->type) != SQLITE_OK) {
-			RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+			error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+			goto done;
 		}
 		if (sqlite3_bind_text(stmnt, 3, e->data, -1, SQLITE_STATIC) != SQLITE_OK) {
-			RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+			error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+			goto done;
 		}
 		// 4 is computed below
 		if (sqlite3_bind_text(stmnt, 5, e->owner, -1, SQLITE_STATIC) != SQLITE_OK) {
-			RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+			error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+			goto done;
 		}
 		if (sqlite3_bind_text(stmnt, 6, e->group, -1, SQLITE_STATIC) != SQLITE_OK) {
-			RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+			error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+			goto done;
 		}
 		if (sqlite3_bind_text(stmnt, 7, e->mode, -1, SQLITE_STATIC) != SQLITE_OK) {
-			RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+			error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+			goto done;
 		}
 
 		if (e->type == ASSET_FILE || e->type == ASSET_SAMPLE || e->type == ASSET_SHELL ||
@@ -198,14 +233,14 @@ insert_assetlist(
 			if (e->data[0] == '/') {
 				if (checked_snprintf(file, FILENAME_MAX, "%s%s", extra->sourcedir,
 					e->data) != MPORT_OK) {
-					sqlite3_finalize(stmnt);
-					RETURN_CURRENT_ERROR;
+					error_code = mport_err_code();
+					goto done;
 				}
 			} else {
 				if (checked_snprintf(file, FILENAME_MAX, "%s/%s", cwd, e->data) !=
 				    MPORT_OK) {
-					sqlite3_finalize(stmnt);
-					RETURN_CURRENT_ERROR;
+					error_code = mport_err_code();
+					goto done;
 				}
 			}
 
@@ -225,18 +260,23 @@ insert_assetlist(
 					e->type = ASSET_COMMENT;
 					goto reset;
 				}
-				sqlite3_finalize(stmnt);
-				RETURN_ERRORX(MPORT_ERR_FATAL, "Could not stat %s: %s", file,
-				    strerror(errno));
+				error_code = SET_ERRORX(MPORT_ERR_FATAL, "Could not stat %s: %s",
+				    file, strerror(errno));
+				goto done;
 			}
 
 			if (S_ISREG(st.st_mode)) {
-				if (SHA256_File(file, hash) == NULL)
-					RETURN_ERRORX(MPORT_ERR_FATAL, "File not found: %s", file);
+				if (SHA256_File(file, hash) == NULL) {
+					error_code =
+					    SET_ERRORX(MPORT_ERR_FATAL, "File not found: %s", file);
+					goto done;
+				}
 
 				if (sqlite3_bind_text(stmnt, 4, hash, -1, SQLITE_STATIC) !=
-				    SQLITE_OK)
-					RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+				    SQLITE_OK) {
+					error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+					goto done;
+				}
 
 				pack->flatsize += st.st_size;
 			} else {
@@ -244,12 +284,14 @@ insert_assetlist(
 			}
 		} else {
 			if (sqlite3_bind_null(stmnt, 4) != SQLITE_OK) {
-				RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+				error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+				goto done;
 			}
 		}
 
 		if (sqlite3_step(stmnt) != SQLITE_DONE) {
-			RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+			error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+			goto done;
 		}
 
 	reset:
@@ -258,9 +300,10 @@ insert_assetlist(
 	}
 	/* cppcheck-suppress-end nullPointer */
 
+done:
 	sqlite3_finalize(stmnt);
 
-	return MPORT_OK;
+	return error_code;
 }
 
 static int
@@ -289,70 +332,70 @@ insert_meta(mportInstance *mport, sqlite3 *db, mportPackageMeta *pack, mportCrea
 
 	if (sqlite3_prepare_v2(db, sql, -1, &stmnt, &rest) != SQLITE_OK) {
 		error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-		return error_code;
+		goto done;
 	}
 	if (sqlite3_bind_text(stmnt, 1, pack->name, -1, SQLITE_STATIC) != SQLITE_OK) {
 		error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-		return error_code;
+		goto done;
 	}
 	if (sqlite3_bind_text(stmnt, 2, pack->version, -1, SQLITE_STATIC) != SQLITE_OK) {
 		error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-		return error_code;
+		goto done;
 	}
 	if (sqlite3_bind_text(stmnt, 3, pack->origin, -1, SQLITE_STATIC) != SQLITE_OK) {
 		error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-		return error_code;
+		goto done;
 	}
 	if (sqlite3_bind_text(stmnt, 4, pack->lang, -1, SQLITE_STATIC) != SQLITE_OK) {
 		error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-		return error_code;
+		goto done;
 	}
 	if (sqlite3_bind_text(stmnt, 5, pack->prefix, -1, SQLITE_STATIC) != SQLITE_OK) {
 		error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-		return error_code;
+		goto done;
 	}
 	if (sqlite3_bind_text(stmnt, 6, pack->comment, -1, SQLITE_STATIC) != SQLITE_OK) {
 		error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-		return error_code;
+		goto done;
 	}
 	if (sqlite3_bind_text(stmnt, 7, os_release, -1, SQLITE_STATIC) != SQLITE_OK) {
-		free(os_release);
 		error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-		return error_code;
+		goto done;
 	}
 	if (sqlite3_bind_text(stmnt, 8, pack->cpe, -1, SQLITE_STATIC) != SQLITE_OK) {
 		error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-		return error_code;
+		goto done;
 	}
 	if (sqlite3_bind_text(stmnt, 9, pack->deprecated, -1, SQLITE_STATIC) != SQLITE_OK) {
 		error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-		return error_code;
+		goto done;
 	}
 	if (sqlite3_bind_int64(stmnt, 10, pack->expiration_date) != SQLITE_OK) {
 		error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-		return error_code;
+		goto done;
 	}
 	if (sqlite3_bind_int(stmnt, 11, pack->no_provide_shlib) != SQLITE_OK) {
 		error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-		return error_code;
+		goto done;
 	}
 	if (sqlite3_bind_text(stmnt, 12, pack->flavor, -1, SQLITE_STATIC) != SQLITE_OK) {
 		error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-		return error_code;
+		goto done;
 	}
 	if (sqlite3_bind_int(stmnt, 13, pack->type) != SQLITE_OK) {
 		error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-		return error_code;
+		goto done;
 	}
 	if (sqlite3_bind_int(stmnt, 14, pack->flatsize) != SQLITE_OK) {
 		error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-		return error_code;
+		goto done;
 	}
 
 	if (sqlite3_step(stmnt) != SQLITE_DONE) {
 		error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
 	}
 
+done:
 	sqlite3_finalize(stmnt);
 	free(os_release);
 
@@ -441,6 +484,7 @@ insert_conflicts(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra)
 
 	/* Compile the regex pattern */
 	if (regcomp(&regex, "^([^-]+[*]?-?[^-]*)-?(.*)$", REG_EXTENDED) != 0) {
+		sqlite3_finalize(stmnt);
 		SET_ERROR(MPORT_ERR_FATAL, "Failed to compile regex");
 		return MPORT_ERR_FATAL;
 	}
@@ -517,7 +561,7 @@ insert_depends(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra)
 		port = strchr(*depend, ':');
 		if (port == NULL) {
 			error_code = SET_ERRORX(MPORT_ERR_FATAL, "Malformed depend: %s", *depend);
-			return error_code;
+			goto done;
 		}
 
 		*port = '\0';
@@ -525,16 +569,16 @@ insert_depends(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra)
 
 		if (*port == 0) {
 			error_code = SET_ERRORX(MPORT_ERR_FATAL, "Malformed depend: %s", *depend);
-			return error_code;
+			goto done;
 		}
 
 		if (sqlite3_bind_text(stmnt, 1, pack->name, -1, SQLITE_STATIC) != SQLITE_OK) {
 			error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-			return error_code;
+			goto done;
 		}
 		if (sqlite3_bind_text(stmnt, 2, *depend, -1, SQLITE_STATIC) != SQLITE_OK) {
 			error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-			return error_code;
+			goto done;
 		}
 
 		pkgversion = index(port, ':');
@@ -545,23 +589,23 @@ insert_depends(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra)
 			if (sqlite3_bind_text(stmnt, 3, pkgversion, -1, SQLITE_STATIC) !=
 			    SQLITE_OK) {
 				error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-				return error_code;
+				goto done;
 			}
 		} else {
 			if (sqlite3_bind_null(stmnt, 3) != SQLITE_OK) {
 				error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-				return error_code;
+				goto done;
 			}
 		}
 
 		if (sqlite3_bind_text(stmnt, 4, port, -1, SQLITE_STATIC) != SQLITE_OK) {
 			error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-			return error_code;
+			goto done;
 		}
 
 		if (sqlite3_step(stmnt) != SQLITE_DONE) {
 			error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
-			return error_code;
+			goto done;
 		}
 
 		sqlite3_clear_bindings(stmnt);
@@ -569,6 +613,7 @@ insert_depends(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra)
 		depend++;
 	}
 
+done:
 	sqlite3_finalize(stmnt);
 
 	return error_code;
