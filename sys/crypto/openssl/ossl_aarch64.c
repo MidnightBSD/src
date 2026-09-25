@@ -34,7 +34,7 @@
 #include <machine/md_var.h>
 
 #include <crypto/openssl/ossl.h>
-#include <crypto/openssl/aarch64/arm_arch.h>
+#include <crypto/openssl/arm_arch.h>
 
 /*
  * Feature bits defined in arm_arch.h
