@@ -57,7 +57,22 @@ struct scsi_host_queue {
 	char *name;
 };
 
-TAILQ_HEAD(,scsi_host_queue) scsi_host_q;
+struct linsysfs_dmi_field {
+	const char *name;
+	const char *kenv;
+};
+
+static const struct linsysfs_dmi_field linsysfs_dmi_fields[] = {
+	{ "sys_vendor", "smbios.system.maker" },
+	{ "product_name", "smbios.system.product" },
+	{ "board_vendor", "smbios.planar.maker" },
+	{ "board_name", "smbios.planar.product" },
+	{ "bios_vendor", "smbios.bios.vendor" },
+	{ "bios_version", "smbios.bios.version" },
+	{ "chassis_vendor", "smbios.chassis.maker" },
+};
+
+TAILQ_HEAD(scsi_host_list, scsi_host_queue) scsi_host_q;
 
 static int host_number = 0;
 
@@ -205,6 +220,44 @@ linsysfs_listnics(struct pfs_node *dir)
 
 	pfs_create_file(lo, "type", &linsysfs_ifnet_type,
 	    NULL, NULL, NULL, PFS_RD);
+}
+
+static int
+linsysfs_dmi_field(PFS_FILL_ARGS)
+{
+	const struct linsysfs_dmi_field *field;
+	char *value;
+
+	field = pn->pn_data;
+	value = kern_getenv(field->kenv);
+	if (value == NULL)
+		return (ENOENT);
+	sbuf_printf(sb, "%s\n", value);
+	freeenv(value);
+	return (0);
+}
+
+static void
+linsysfs_listdmi(struct pfs_node *class)
+{
+	struct pfs_node *dmi, *id, *node;
+	size_t i;
+
+	dmi = pfs_create_dir(class, "dmi", NULL, NULL, NULL, 0);
+	id = pfs_create_dir(dmi, "id", NULL, NULL, NULL, 0);
+	for (i = 0; i < nitems(linsysfs_dmi_fields); i++) {
+		char *value;
+
+		value = kern_getenv(linsysfs_dmi_fields[i].kenv);
+		if (value == NULL)
+			continue;
+		freeenv(value);
+		node = pfs_create_file(id, linsysfs_dmi_fields[i].name,
+		    &linsysfs_dmi_field, NULL, NULL, NULL, PFS_RD);
+		if (node != NULL)
+			node->pn_data = __DECONST(void *,
+			    &linsysfs_dmi_fields[i]);
+	}
 }
 
 /*
@@ -672,6 +725,7 @@ linsysfs_init(PFS_INIT_ARGS)
 
 	linsysfs_listcpus(cpu);
 	linsysfs_listnics(net);
+	linsysfs_listdmi(class);
 
 	/* /sys/kernel */
 	kernel = pfs_create_dir(root, "kernel", NULL, NULL, NULL, 0);

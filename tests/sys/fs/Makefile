@@ -13,6 +13,7 @@ TESTSRC=		${SRCTOP}/contrib/netbsd-tests/fs
 .if ${COMPILER_FEATURES:Mc++14} && ${MK_GOOGLETEST} != "no"
 TESTS_SUBDIRS+=		fusefs
 .endif
+TESTS_SUBDIRS+=		linsysfs
 TESTS_SUBDIRS+=		tmpfs
 
 ${PACKAGE}FILES+=	h_funcs.subr
