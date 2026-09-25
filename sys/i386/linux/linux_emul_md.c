@@ -6,6 +6,7 @@
 
 #include <sys/param.h>
 #include <sys/systm.h>
+#include <sys/imgact.h>
 #include <sys/proc.h>
 
 #include <compat/linux/linux_emul.h>
