@@ -30,4 +30,4 @@ jobs:
         run: |
             sudo env ASSUME_ALWAYS_YES=yes mport install atf || true
             make
-            kyua test -k tests/Kyuafile
+            sudo kyua test -k tests/Kyuafile

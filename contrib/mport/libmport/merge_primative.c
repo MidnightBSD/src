@@ -225,29 +225,29 @@ build_stub_db(mportInstance *mport, sqlite3 **db, const char *tmpdir, const char
 			if (mport_db_do(
 				*db, "CREATE TABLE unsorted AS SELECT * FROM subbundle.packages") !=
 			    MPORT_OK)
-				RETURN_CURRENT_ERROR;
+				goto rollback;
 		} else {
 			if (mport_db_do(
 				*db, "INSERT INTO unsorted SELECT * FROM subbundle.packages") !=
 			    MPORT_OK)
-				RETURN_CURRENT_ERROR;
+				goto rollback;
 		}
 
 		if (mport_db_do(*db, "INSERT INTO assets SELECT * FROM subbundle.assets") !=
 		    MPORT_OK)
-			RETURN_CURRENT_ERROR;
+			goto rollback;
 		if (mport_db_do(*db, "INSERT INTO conflicts SELECT * FROM subbundle.conflicts") !=
 		    MPORT_OK)
-			RETURN_CURRENT_ERROR;
+			goto rollback;
 		if (mport_db_do(*db, "INSERT INTO depends SELECT * FROM subbundle.depends") !=
 		    MPORT_OK)
-			RETURN_CURRENT_ERROR;
+			goto rollback;
 
 		/* build our hashtable (pkgname => metadata) up */
 		if (mport_db_prepare(*db, &stmt, "SELECT pkg FROM subbundle.packages") !=
 		    MPORT_OK) {
 			sqlite3_finalize(stmt);
-			RETURN_CURRENT_ERROR;
+			goto rollback;
 		}
 
 		while (1) {
@@ -257,23 +257,29 @@ build_stub_db(mportInstance *mport, sqlite3 **db, const char *tmpdir, const char
 				name = sqlite3_column_text(stmt, 0);
 				if (insert_into_table(table, name, file) != MPORT_OK) {
 					sqlite3_finalize(stmt);
-					RETURN_CURRENT_ERROR;
+					goto rollback;
 				}
 			} else if (ret == SQLITE_DONE) {
 				break;
 			} else {
 				SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(*db));
 				sqlite3_finalize(stmt);
-				RETURN_CURRENT_ERROR;
+				goto rollback;
 			}
 		}
 
 		sqlite3_finalize(stmt);
 
 		if (mport_db_do(*db, "COMMIT TRANSACTION") != MPORT_OK)
-			RETURN_CURRENT_ERROR;
+			goto rollback;
 		if (mport_db_do(*db, "DETACH subbundle") != MPORT_OK)
 			RETURN_CURRENT_ERROR;
+		continue;
+
+	rollback:
+		/* sqlite3_exec directly so the rollback cannot clobber the error */
+		(void)sqlite3_exec(*db, "ROLLBACK", NULL, NULL, NULL);
+		RETURN_CURRENT_ERROR;
 	}
 
 	/* just have to sort the packages (going from unsorted to packages), no big deal... ;) */

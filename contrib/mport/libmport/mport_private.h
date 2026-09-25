@@ -57,12 +57,15 @@ struct ohash { };
 #define MPORT_MASTER_VERSION 14
 #define MPORT_BUNDLE_VERSION 6
 #define MPORT_BUNDLE_VERSION_STR "6"
-#define MPORT_VERSION "2.8.1"
+#define MPORT_VERSION "2.8.2"
 
 #define MPORT_SETTING_MIRROR_REGION "mirror_region"
 #define MPORT_SETTING_TARGET_OS "target_os"
 
 /* precondition checking */
+/* how long to wait for another process's registry lock, in milliseconds */
+#define MPORT_DB_BUSY_TIMEOUT_MS 10000
+
 #define MPORT_PRECHECK_INSTALLED 1
 #define MPORT_PRECHECK_DEPENDS 2
 #define MPORT_PRECHECK_CONFLICTS 4

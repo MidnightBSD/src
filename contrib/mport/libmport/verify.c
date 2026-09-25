@@ -266,7 +266,7 @@ mport_recompute_checksums(mportInstance *mport, mportPackageMeta *pack)
 		RETURN_CURRENT_ERROR;
 	}
 
-	if (mport_db_do(mport->db, "BEGIN TRANSACTION") != MPORT_OK) {
+	if (mport_db_do(mport->db, "BEGIN IMMEDIATE TRANSACTION") != MPORT_OK) {
 		sqlite3_finalize(stmt);
 		sqlite3_finalize(update_stmt);
 		RETURN_CURRENT_ERROR;
@@ -281,7 +281,7 @@ mport_recompute_checksums(mportInstance *mport, mportPackageMeta *pack)
 		if (ret != SQLITE_ROW) {
 			/* some error occured */
 			SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-			mport_db_do(mport->db, "ROLLBACK");
+			(void)sqlite3_exec(mport->db, "ROLLBACK", NULL, NULL, NULL);
 			sqlite3_finalize(stmt);
 			sqlite3_finalize(update_stmt);
 			RETURN_CURRENT_ERROR;
@@ -376,8 +376,11 @@ mport_recompute_checksums(mportInstance *mport, mportPackageMeta *pack)
 	sqlite3_finalize(stmt);
 	sqlite3_finalize(update_stmt);
 
-	if (mport_db_do(mport->db, "COMMIT") != MPORT_OK)
+	if (mport_db_do(mport->db, "COMMIT") != MPORT_OK) {
+		/* sqlite3_exec directly so the rollback cannot clobber the error */
+		(void)sqlite3_exec(mport->db, "ROLLBACK", NULL, NULL, NULL);
 		RETURN_CURRENT_ERROR;
+	}
 
 	return (MPORT_OK);
 }
