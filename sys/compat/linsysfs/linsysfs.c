@@ -38,9 +38,13 @@
 #include <sys/socket.h>
 #include <sys/bus.h>
 #include <sys/pciio.h>
+#include <sys/vnode.h>
 
 #include <dev/pci/pcivar.h>
 #include <dev/pci/pcireg.h>
+#if defined(__amd64__) || defined(__i386__)
+#include <dev/smbios/smbios.h>
+#endif
 
 #include <net/if.h>
 #include <net/if_var.h>
@@ -259,6 +263,98 @@ linsysfs_listdmi(struct pfs_node *class)
 			    &linsysfs_dmi_fields[i]);
 	}
 }
+
+#if defined(__amd64__) || defined(__i386__)
+static int
+linsysfs_smbios_entry_point_attr(PFS_ATTR_ARGS)
+{
+	const void *data;
+	size_t length;
+	int error;
+
+	error = smbios_get_entry_point(&data, &length);
+	if (error != 0)
+		return (error);
+	vap->va_mode = 0400;
+	vap->va_bytes = vap->va_size = length;
+	return (0);
+}
+
+static int
+linsysfs_smbios_table_attr(PFS_ATTR_ARGS)
+{
+	const void *data;
+	size_t length;
+	int error;
+
+	error = smbios_get_structure_table(&data, &length);
+	if (error != 0)
+		return (error);
+	vap->va_mode = 0400;
+	vap->va_bytes = vap->va_size = length;
+	return (0);
+}
+
+static int
+linsysfs_smbios_read(struct uio *uio, const void *data, size_t length)
+{
+	size_t count, offset;
+
+	if (uio->uio_offset < 0 || uio->uio_resid < 0)
+		return (EINVAL);
+	if ((uintmax_t)uio->uio_offset >= length)
+		return (0);
+	offset = (size_t)uio->uio_offset;
+	count = MIN((size_t)uio->uio_resid, length - offset);
+	return (uiomove(__DECONST(uint8_t *, data) + offset, count, uio));
+}
+
+static int
+linsysfs_smbios_entry_point(PFS_FILL_ARGS)
+{
+	const void *data;
+	size_t length;
+	int error;
+
+	error = smbios_get_entry_point(&data, &length);
+	if (error != 0)
+		return (error);
+	return (linsysfs_smbios_read(uio, data, length));
+}
+
+static int
+linsysfs_smbios_table(PFS_FILL_ARGS)
+{
+	const void *data;
+	size_t length;
+	int error;
+
+	error = smbios_get_structure_table(&data, &length);
+	if (error != 0)
+		return (error);
+	return (linsysfs_smbios_read(uio, data, length));
+}
+
+static void
+linsysfs_listsmbios(struct pfs_node *root)
+{
+	const void *data;
+	struct pfs_node *dmi, *firmware, *tables;
+	size_t length;
+
+	if (smbios_get_entry_point(&data, &length) != 0 || length == 0 ||
+	    smbios_get_structure_table(&data, &length) != 0 || length == 0)
+		return;
+	firmware = pfs_create_dir(root, "firmware", NULL, NULL, NULL, 0);
+	dmi = pfs_create_dir(firmware, "dmi", NULL, NULL, NULL, 0);
+	tables = pfs_create_dir(dmi, "tables", NULL, NULL, NULL, 0);
+	pfs_create_file(tables, "smbios_entry_point",
+	    &linsysfs_smbios_entry_point, &linsysfs_smbios_entry_point_attr,
+	    NULL, NULL, PFS_RD | PFS_RAWRD);
+	pfs_create_file(tables, "DMI", &linsysfs_smbios_table,
+	    &linsysfs_smbios_table_attr, NULL, NULL, PFS_RD | PFS_RAWRD);
+}
+#endif
 
 /*
  * Filler function for proc_name
@@ -726,6 +822,9 @@ linsysfs_init(PFS_INIT_ARGS)
 	linsysfs_listcpus(cpu);
 	linsysfs_listnics(net);
 	linsysfs_listdmi(class);
+#if defined(__amd64__) || defined(__i386__)
+	linsysfs_listsmbios(root);
+#endif
 
 	/* /sys/kernel */
 	kernel = pfs_create_dir(root, "kernel", NULL, NULL, NULL, 0);
@@ -758,4 +857,7 @@ PSEUDOFS(linsysfs, 1, VFCF_JAIL);
 MODULE_DEPEND(linsysfs, linux_common, 1, 1, 1);
 #else
 MODULE_DEPEND(linsysfs, linux, 1, 1, 1);
+#endif
+#if defined(__amd64__) || defined(__i386__)
+MODULE_DEPEND(linsysfs, smbios, 1, 1, 1);
 #endif

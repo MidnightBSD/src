@@ -38,6 +38,7 @@
 #define	SMBIOS_OFF	0
 #define	SMBIOS_LEN	4
 #define	SMBIOS_SIG	"_SM_"
+#define	SMBIOS3_SIG	"_SM3_"
 
 struct smbios_eps {
 	uint8_t		anchor_string[4];		/* '_SM_' */
@@ -56,6 +57,19 @@ struct smbios_eps {
 	uint8_t		BCD_revision;
 } __packed;
 
+struct smbios3_eps {
+	uint8_t		anchor_string[5];
+	uint8_t		checksum;
+	uint8_t		length;
+	uint8_t		major_version;
+	uint8_t		minor_version;
+	uint8_t		doc_revision;
+	uint8_t		entry_point_revision;
+	uint8_t		reserved;
+	uint32_t	structure_table_length;
+	uint64_t	structure_table_address;
+} __packed;
+
 struct smbios_structure_header {
 	uint8_t		type;
 	uint8_t		length;
@@ -63,6 +77,11 @@ struct smbios_structure_header {
 } __packed;
 
 typedef void (*smbios_callback_t)(struct smbios_structure_header *, void *);
+
+#ifdef _KERNEL
+int	smbios_get_entry_point(const void **, size_t *);
+int	smbios_get_structure_table(const void **, size_t *);
+#endif
 
 static inline void
 smbios_walk_table(uint8_t *p, int entries, smbios_callback_t cb, void *arg)
