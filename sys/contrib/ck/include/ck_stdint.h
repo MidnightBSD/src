@@ -27,7 +27,7 @@
 #if defined(__linux__) && (defined(__KERNEL__) || defined(_KERNEL))
 #include <linux/kernel.h>
 #include <linux/types.h>
-#elif defined(__MidnightBSD__) && defined(_KERNEL)
+#elif defined(_KERNEL)	/* any BSD kernel build; compiler may not predefine __MidnightBSD__/__FreeBSD__ */
 #include <sys/stdint.h>
 #else
 #include <stdint.h>
