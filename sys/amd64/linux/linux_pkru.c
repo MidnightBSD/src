@@ -23,6 +23,10 @@
 #include <sys/proc.h>
 #include <sys/sx.h>
 
+#include <vm/vm.h>
+#include <vm/pmap.h>
+#include <vm/vm_map.h>
+
 #include <machine/cpufunc.h>
 #include <machine/fpu.h>
 #include <machine/md_var.h>
@@ -39,10 +43,23 @@ static bool
 linux_pkey_supported(void)
 {
 
-	return ((cpu_stdext_feature2 &
-	    (CPUID_STDEXT2_PKU | CPUID_STDEXT2_OSPKE)) ==
-	    (CPUID_STDEXT2_PKU | CPUID_STDEXT2_OSPKE) &&
+	return (
+	    (cpu_stdext_feature2 & (CPUID_STDEXT2_PKU | CPUID_STDEXT2_OSPKE)) ==
+		(CPUID_STDEXT2_PKU | CPUID_STDEXT2_OSPKE) &&
 	    (xsave_mask & XFEATURE_ENABLED_PKRU) != 0);
+}
+
+static bool
+linux_pkey_range_valid(struct thread *td, uintptr_t addr, size_t len)
+{
+	struct vm_map *map;
+	bool valid;
+
+	map = &td->td_proc->p_vmspace->vm_map;
+	vm_map_lock_read(map);
+	valid = vm_map_check_boundary(map, addr, addr + len);
+	vm_map_unlock_read(map);
+	return (valid);
 }
 
 /*
@@ -216,6 +233,14 @@ linux_pkey_mprotect_machdep(struct thread *td, uintptr_t addr, size_t len,
 		return (EINVAL);
 	}
 	LINUX_PEM_SUNLOCK(pem);
+
+	/*
+	 * Validate the PKRU tagging range before changing the ordinary page
+	 * protections.  amd64_pkru_update() repeats this check while applying
+	 * the tag to synchronize with concurrent map changes.
+	 */
+	if (len != 0 && !linux_pkey_range_valid(td, addr, len))
+		return (EINVAL);
 
 	error = linux_mprotect_common(td, addr, len, prot);
 	if (error != 0 || len == 0)
