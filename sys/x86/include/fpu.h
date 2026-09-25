@@ -213,4 +213,13 @@ struct savefpu_ymm {
  */
 #define	X86_XSTATE_XCR0_OFFSET	464
 
+#ifdef _KERNEL
+bool	xsave_extfeature_supported(uint64_t feature, bool supervisor);
+bool	xsave_extension_supported(uint64_t extension);
+size_t	xsave_area_hdr_offset(void);
+size_t	xsave_area_offset(uint64_t xstate_bv, uint64_t feature, bool compact,
+    bool supervisor);
+size_t	xsave_area_size(uint64_t xstate_bv, bool compact, bool supervisor);
+#endif
+
 #endif /* !_X86_FPU_H_ */

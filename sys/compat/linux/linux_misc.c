@@ -75,6 +75,7 @@
 #include <compat/linux/linux_dtrace.h>
 #include <compat/linux/linux_file.h>
 #include <compat/linux/linux_mib.h>
+#include <compat/linux/linux_mmap.h>
 #include <compat/linux/linux_signal.h>
 #include <compat/linux/linux_time.h>
 #include <compat/linux/linux_util.h>
@@ -346,6 +347,28 @@ linux_msync(struct thread *td, struct linux_msync_args *args)
 
 	return (kern_msync(td, args->addr, args->len,
 	    args->fl & ~LINUX_MS_SYNC));
+}
+
+int
+linux_pkey_mprotect(struct thread *td, struct linux_pkey_mprotect_args *uap)
+{
+
+	return (linux_pkey_mprotect_common(td, uap->start, uap->len,
+	    uap->prot, uap->pkey));
+}
+
+int
+linux_pkey_alloc(struct thread *td, struct linux_pkey_alloc_args *uap)
+{
+
+	return (linux_pkey_alloc_common(td, uap->flags, uap->init_val));
+}
+
+int
+linux_pkey_free(struct thread *td, struct linux_pkey_free_args *uap)
+{
+
+	return (linux_pkey_free_common(td, uap->pkey));
 }
 
 #ifdef LINUX_LEGACY_SYSCALLS

@@ -169,6 +169,32 @@ update_gdt_fsbase(struct thread *td, uint32_t base)
 }
 
 int
+amd64_pkru_update(struct thread *td, uintptr_t addr, size_t len, u_int keyidx,
+    int flags, bool clear)
+{
+	struct vm_map *map;
+	vm_offset_t start, end;
+	int error;
+
+	MPASS(td == curthread);
+	map = &td->td_proc->p_vmspace->vm_map;
+	vm_map_lock_read(map);
+	if (len == 0 || !vm_map_check_boundary(map, addr, addr + len)) {
+		vm_map_unlock_read(map);
+		return (EINVAL);
+	}
+	start = trunc_page(addr);
+	end = round_page(addr + len);
+	if (clear)
+		error = pmap_pkru_clear(PCPU_GET(curpmap), start, end);
+	else
+		error = pmap_pkru_set(PCPU_GET(curpmap), start, end, keyidx,
+		    flags);
+	vm_map_unlock_read(map);
+	return (error);
+}
+
+int
 sysarch(struct thread *td, struct sysarch_args *uap)
 {
 	struct pcb *pcb;

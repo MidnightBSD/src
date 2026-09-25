@@ -123,9 +123,6 @@ DUMMY(mlock2);
 DUMMY(preadv2);
 DUMMY(pwritev2);
 /* Linux 4.8: */
-DUMMY(pkey_mprotect);
-DUMMY(pkey_alloc);
-DUMMY(pkey_free);
 DUMMY(open_tree);
 DUMMY(move_mount);
 DUMMY(fsopen);

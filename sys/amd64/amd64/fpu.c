@@ -191,12 +191,15 @@ SYSCTL_INT(_hw, HW_FLOATINGPT, floatingpoint, CTLFLAG_RD,
 
 int use_xsave;			/* non-static for cpu_switch.S */
 uint64_t xsave_mask;		/* the same */
+static	uint64_t xsave_mask_supervisor;
+static	uint64_t xsave_extensions;
 static	uma_zone_t fpu_save_area_zone;
 static	struct savefpu *fpu_initialstate;
 
 static struct xsave_area_elm_descr {
 	u_int	offset;
 	u_int	size;
+	u_int	flags;
 } *xsave_area_desc;
 
 static void
@@ -349,6 +352,7 @@ fpuinit_bsp1(void)
 		ctx_switch_xsave[3] |= 0x10;
 		restore_wp(old_wp);
 	}
+	xsave_mask_supervisor = ((uint64_t)cp[3] << 32) | cp[2];
 }
 
 /*
@@ -444,7 +448,7 @@ fpuinitstate(void *arg __unused)
 	    XSAVE_AREA_ALIGN - 1, 0);
 	fpu_initialstate = uma_zalloc(fpu_save_area_zone, M_WAITOK | M_ZERO);
 	if (use_xsave) {
-		max_ext_n = flsl(xsave_mask);
+		max_ext_n = flsl(xsave_mask | xsave_mask_supervisor);
 		xsave_area_desc = malloc(max_ext_n * sizeof(struct
 		    xsave_area_elm_descr), M_DEVBUF, M_WAITOK | M_ZERO);
 	}
@@ -477,6 +481,9 @@ fpuinitstate(void *arg __unused)
 	 * Region of an XSAVE Area" for the source of offsets/sizes.
 	 */
 	if (use_xsave) {
+		cpuid_count(0xd, 1, cp);
+		xsave_extensions = cp[0];
+
 		xstate_bv = (uint64_t *)((char *)(fpu_initialstate + 1) +
 		    offsetof(struct xstate_hdr, xstate_bv));
 		*xstate_bv = XFEATURE_ENABLED_X87 | XFEATURE_ENABLED_SSE;
@@ -492,6 +499,7 @@ fpuinitstate(void *arg __unused)
 			cpuid_count(0xd, i, cp);
 			xsave_area_desc[i].offset = cp[1];
 			xsave_area_desc[i].size = cp[0];
+			xsave_area_desc[i].flags = cp[2];
 		}
 	}
 
@@ -1311,4 +1319,90 @@ fpu_save_area_reset(struct savefpu *fsa)
 {
 
 	bcopy(fpu_initialstate, fsa, cpu_max_ext_state_size);
+}
+
+static __inline void
+xsave_extfeature_check(uint64_t feature, bool supervisor)
+{
+	KASSERT((feature & (feature - 1)) == 0,
+	    ("%s: invalid XFEATURE 0x%lx", __func__, feature));
+	KASSERT(flsl(feature) <= flsl(supervisor ? xsave_mask_supervisor :
+	    xsave_mask),
+	    ("%s: unsupported %s XFEATURE 0x%lx", __func__,
+	    supervisor ? "supervisor" : "user", feature));
+}
+
+static __inline void
+xsave_extstate_bv_check(uint64_t xstate_bv, bool supervisor)
+{
+	KASSERT(xstate_bv != 0 && flsl(xstate_bv) <=
+	    flsl(supervisor ? xsave_mask_supervisor : xsave_mask),
+	    ("%s: invalid XSTATE_BV 0x%lx", __func__, xstate_bv));
+}
+
+bool
+xsave_extfeature_supported(uint64_t feature, bool supervisor)
+{
+	uint64_t mask;
+	int idx;
+
+	KASSERT(use_xsave, ("%s: XSAVE not supported", __func__));
+	xsave_extfeature_check(feature, supervisor);
+	mask = supervisor ? xsave_mask_supervisor : xsave_mask;
+	if ((mask & feature) == 0)
+		return (false);
+	idx = flsl(feature) - 1;
+	return (((xsave_area_desc[idx].flags &
+	    CPUID_EXTSTATE_SUPERVISOR) != 0) == supervisor);
+}
+
+bool
+xsave_extension_supported(uint64_t extension)
+{
+	KASSERT(use_xsave, ("%s: XSAVE not supported", __func__));
+	return ((xsave_extensions & extension) != 0);
+}
+
+size_t
+xsave_area_offset(uint64_t xstate_bv, uint64_t feature, bool compact,
+    bool supervisor)
+{
+	struct xsave_area_elm_descr *xep;
+	size_t offs;
+	int i, idx;
+
+	KASSERT(use_xsave, ("%s: XSAVE not supported", __func__));
+	xsave_extstate_bv_check(xstate_bv, supervisor);
+	xsave_extfeature_check(feature, supervisor);
+	idx = flsl(feature) - 1;
+	if (!compact)
+		return (xsave_area_desc[idx].offset);
+	offs = sizeof(struct savefpu) + sizeof(struct xstate_hdr);
+	xstate_bv &= ~(XFEATURE_ENABLED_X87 | XFEATURE_ENABLED_SSE);
+	while ((i = ffs(xstate_bv) - 1) > 0 && i < idx) {
+		xep = &xsave_area_desc[i];
+		if ((xep->flags & CPUID_EXTSTATE_ALIGNED) != 0)
+			offs = roundup2(offs, 64);
+		offs += xep->size;
+		xstate_bv &= ~((uint64_t)1 << i);
+	}
+	return (offs);
+}
+
+size_t
+xsave_area_size(uint64_t xstate_bv, bool compact, bool supervisor)
+{
+	int last_idx;
+
+	KASSERT(use_xsave, ("%s: XSAVE not supported", __func__));
+	xsave_extstate_bv_check(xstate_bv, supervisor);
+	last_idx = flsl(xstate_bv) - 1;
+	return (xsave_area_offset(xstate_bv, (uint64_t)1 << last_idx, compact,
+	    supervisor) + xsave_area_desc[last_idx].size);
+}
+
+size_t
+xsave_area_hdr_offset(void)
+{
+	return (sizeof(struct savefpu));
 }

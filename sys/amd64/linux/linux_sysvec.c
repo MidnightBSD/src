@@ -63,6 +63,7 @@
 
 #include <x86/linux/linux_x86.h>
 #include <amd64/linux/linux.h>
+#include <amd64/linux/linux_emul_md.h>
 #include <amd64/linux/linux_proto.h>
 #include <compat/linux/linux_elf.h>
 #include <compat/linux/linux_emul.h>
@@ -277,6 +278,8 @@ linux_exec_setregs(struct thread *td, struct image_params *imgp,
 	 * clean FP state if it uses the FPU again.
 	 */
 	fpstate_drop(td);
+
+	linux_pkru_exec_init(td);
 }
 
 static int
