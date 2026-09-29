@@ -25,8 +25,6 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.\"     @(#)syslogd.8	8.1 (Berkeley) 6/6/93
-.\"
 .Dd July 2, 2018
 .Dt SYSLOGD 8
 .Os
@@ -271,14 +269,21 @@ The values
 .Ar bsd
 and
 .Ar rfc3164
-are used to generate RFC 3164 log messages.
+are used to generate legacy RFC 3164 log messages.
+The value
+.Ar rfc3164-strict
+is used to generate log messages using the RFC 3164 recommended format,
+where messages sent over the network include the hostname,
+and messages forwarded by a relay exclude the
+.Dq Forwarded from
+field.
 The values
 .Ar syslog
 and
 .Ar rfc5424
 are used to generate RFC 5424 log messages,
 having RFC 3339 timestamps with microsecond precision.
-The default is to generate RFC 3164 log messages.
+The default is to generate legacy RFC 3164 log messages.
 .It Fl o
 Prefix kernel messages with the full kernel boot file as determined by
 .Xr getbootfile 3 .
@@ -398,7 +403,7 @@ The message can contain a priority code,
 which should be a preceding
 decimal number in angle braces,
 for example,
-.Sq Aq 5 .
+.Sq <5> .
 This priority code should map into the priorities defined in the
 include file
 .In sys/syslog.h .

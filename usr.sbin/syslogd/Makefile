@@ -1,5 +1,3 @@
-#	@(#)Makefile	8.1 (Berkeley) 6/6/93
-
 .include <src.opts.mk>
 
 .PATH: ${SRCTOP}/usr.bin/wall
@@ -15,6 +13,13 @@ SYSLOGD_DPACAKGE=	syslogd
 
 LIBADD=	util
 
+.if ${MK_CASPER} != "no"
+SRCS+=	syslogd_cap.c \
+	syslogd_cap_config.c \
+	syslogd_cap_log.c
+CFLAGS+= -DWITH_CASPER
+LIBADD+= cap_net casper nv
+.endif
 .if ${MK_INET_SUPPORT} != "no"
 CFLAGS+= -DINET
 .endif
@@ -32,7 +37,10 @@ FTPPACKAGE=	ftpd
 .endif
 
 .if ${MK_LPR} != "no"
-SYSLOGD_D+=	lpr.conf
+CONFGROUPS+=	LP
+LP+=		lpr.conf
+LPDIR=		/etc/syslog.d
+LPPACKAGE=	lp
 .endif
 
 .if ${MK_PPP} != "no"
