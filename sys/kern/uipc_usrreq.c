@@ -552,6 +552,7 @@ uipc_attach(struct socket *so, int proto, struct thread *td)
 	unp->unp_socket = so;
 	so->so_pcb = unp;
 	refcount_init(&unp->unp_refcount, 1);
+	unp->unp_mode = ACCESSPERMS;
 
 	if ((locked = UNP_LINK_WOWNED()) == false)
 		UNP_LINK_WLOCK();
@@ -594,6 +595,7 @@ uipc_bindat(int fd, struct socket *so, struct sockaddr *nam, struct thread *td)
 	struct mount *mp;
 	cap_rights_t rights;
 	char *buf;
+	mode_t mode;
 
 	if (nam->sa_family != AF_UNIX)
 		return (EAFNOSUPPORT);
@@ -626,6 +628,7 @@ uipc_bindat(int fd, struct socket *so, struct sockaddr *nam, struct thread *td)
 		return (EALREADY);
 	}
 	unp->unp_flags |= UNP_BINDING;
+	mode = unp->unp_mode & ~td->td_proc->p_pd->pd_cmask;
 	UNP_PCB_UNLOCK(unp);
 
 	buf = malloc(namelen + 1, M_TEMP, M_WAITOK);
@@ -659,7 +662,7 @@ restart:
 	}
 	VATTR_NULL(&vattr);
 	vattr.va_type = VSOCK;
-	vattr.va_mode = (ACCESSPERMS & ~td->td_proc->p_pd->pd_cmask);
+	vattr.va_mode = mode;
 #ifdef MAC
 	error = mac_vnode_check_create(td->td_ucred, nd.ni_dvp, &nd.ni_cnd,
 	    &vattr);
@@ -758,6 +761,27 @@ uipc_close(struct socket *so)
 		mtx_unlock(vplock);
 		vrele(vp);
 	}
+}
+
+static int
+uipc_chmod(struct socket *so, mode_t mode, struct ucred *cred __unused,
+    struct thread *td __unused)
+{
+	struct unpcb *unp;
+	int error;
+
+	if ((mode & ~ACCESSPERMS) != 0)
+		return (EINVAL);
+
+	error = 0;
+	unp = sotounpcb(so);
+	UNP_PCB_LOCK(unp);
+	if (unp->unp_vnode != NULL || (unp->unp_flags & UNP_BINDING) != 0)
+		error = EINVAL;
+	else
+		unp->unp_mode = mode;
+	UNP_PCB_UNLOCK(unp);
+	return (error);
 }
 
 static int
@@ -1324,6 +1348,7 @@ static struct pr_usrreqs uipc_usrreqs_dgram = {
 	.pru_sockaddr =		uipc_sockaddr,
 	.pru_soreceive =	soreceive_dgram,
 	.pru_close =		uipc_close,
+	.pru_chmod =		uipc_chmod,
 };
 
 static struct pr_usrreqs uipc_usrreqs_seqpacket = {
@@ -1346,6 +1371,7 @@ static struct pr_usrreqs uipc_usrreqs_seqpacket = {
 	.pru_sockaddr =		uipc_sockaddr,
 	.pru_soreceive =	soreceive_generic,	/* XXX: or...? */
 	.pru_close =		uipc_close,
+	.pru_chmod =		uipc_chmod,
 };
 
 static struct pr_usrreqs uipc_usrreqs_stream = {
@@ -1369,6 +1395,7 @@ static struct pr_usrreqs uipc_usrreqs_stream = {
 	.pru_sockaddr =		uipc_sockaddr,
 	.pru_soreceive =	soreceive_generic,
 	.pru_close =		uipc_close,
+	.pru_chmod =		uipc_chmod,
 };
 
 static int

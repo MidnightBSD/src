@@ -234,6 +234,8 @@ struct pr_usrreqs {
 	int	(*pru_connectat)(int fd, struct socket *so,
 		    struct sockaddr *nam, struct thread *td);
 	int	(*pru_aio_queue)(struct socket *so, struct kaiocb *job);
+	int	(*pru_chmod)(struct socket *so, mode_t mode,
+		    struct ucred *cred, struct thread *td);
 };
 
 /*
