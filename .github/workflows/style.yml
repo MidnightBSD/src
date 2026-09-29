@@ -4,7 +4,7 @@ name: Style Checker
 
 on:
   pull_request: # maybe pull_request_target
-    branches: [ main ]
+    branches: [ master ]
     types: [ opened, reopened, edited, synchronize ]
     paths: [ '**.S', '**.c', '**.cc', '**.cpp', '**.h', '**.hh', '**.hpp' ]
 
@@ -30,7 +30,13 @@ jobs:
         run: |
           sudo apt-get update --quiet || true
           sudo apt-get -yq --no-install-suggests --no-install-recommends install perl
+      # Check the combined diff of the pull request rather than each commit:
+      # paths are then tree-relative (so vendor code is skipped) and line
+      # numbers match the head tree, which is what the annotations need.
+      # --github emits GitHub Actions annotations for each finding and the
+      # script exits non-zero when any ERROR is reported, which fails the job.
       - name: Run checker
         run: |
           sha=$(git rev-parse HEAD~${{ github.event.pull_request.commits }})
-          tools/build/checkstyle9.pl --github ${sha}..${{ github.event.pull_request.head.sha }}
+          git diff ${sha} ${{ github.event.pull_request.head.sha }} |
+              tools/build/checkstyle9.pl --github --patch -
