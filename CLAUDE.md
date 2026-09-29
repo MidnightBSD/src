@@ -90,7 +90,8 @@ Kernel config files live in `sys/<arch>/conf/`:
 
 Run the style checker manually:
 ```sh
-tools/build/checkstyle9.pl --github <base-sha>..<head-sha>
+git diff <base-sha> <head-sha> | tools/build/checkstyle9.pl --github --patch -   # what CI runs
+tools/build/checkstyle9.pl --branch --terse <base-sha>..<head-sha>          # per-commit report
 ```
 
 ## Testing

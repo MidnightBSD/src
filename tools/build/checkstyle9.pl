@@ -32,6 +32,7 @@ my $no_warnings = 0;
 my $summary = 1;
 my $mailback = 0;
 my $summary_file = 0;
+my $github = 0;
 my $root;
 my %debug;
 my $help = 0;
@@ -58,6 +59,12 @@ Options:
   --no-summary               suppress the per-file summary
   --mailback                 only produce a report in case of warnings/errors
   --summary-file             include the filename in summary
+  --github                   emit GitHub Actions workflow-command
+                             annotations (::error, ::warning) instead of
+                             the normal report; implies --color=never
+  --root=PATH                PATH to the top of the source tree
+  --no-tree                  run without a source tree; this is automatic
+                             when no tree is found
   --debug KEY=[0|1]          turn on/off debugging of KEY, where KEY is one of
                              'values', 'possible', 'type', and 'attr' (default
                              is all off)
@@ -72,9 +79,6 @@ EOM
 
 	exit($exitcode);
 }
-
-# Use at your own risk
-print "\n", MAGENTA, "WARNING:", RESET, " This code is highly experimental ... likely isn't a great style(9) match yet\n\n";
 
 # Perl's Getopt::Long allows options to take optional arguments after a space.
 # Prevent --color by itself from consuming other arguments
@@ -98,6 +102,7 @@ GetOptions(
 	'summary!'	=> \$summary,
 	'mailback!'	=> \$mailback,
 	'summary-file!'	=> \$summary_file,
+	'github!'	=> \$github,
 
 	'debug=s'	=> \%debug,
 	'test-only=s'	=> \$tst_only,
@@ -158,6 +163,8 @@ if (!$chk_patch && !$chk_branch && !$file) {
 	die "One of --file, --branch, --patch is required\n";
 }
 
+$color = "never" if ($github);
+
 if ($color =~ /^always$/i) {
 	$color = 1;
 } elsif ($color =~ /^never$/i) {
@@ -166,6 +173,24 @@ if ($color =~ /^always$/i) {
 	$color = (-t STDOUT);
 } else {
 	die "Invalid color mode: $color\n";
+}
+
+# Use at your own risk
+print "\n", ($color ? MAGENTA : ""), "WARNING:", ($color ? RESET : ""),
+    " This code is highly experimental ... likely isn't a great style(9) match yet\n\n";
+
+if ($tree) {
+	if (defined $root) {
+		if (!top_of_kernel_tree($root)) {
+			die "$P: $root: --root does not point at a valid tree\n";
+		}
+	} elsif (top_of_kernel_tree('.')) {
+		$root = '.';
+	} elsif ($0 =~ m@(.*)/tools/build/[^/]*$@ && top_of_kernel_tree($1)) {
+		$root = $1;
+	}
+	# No tree found: skip the checks that need one rather than fail.
+	$tree = 0 if (!defined $root);
 }
 
 my $dbg_values = 0;
@@ -1174,6 +1199,11 @@ sub report {
 		return 0;
 	}
 
+	if ($github) {
+		push(our @report, github_annotation($level, $msg));
+		return 1;
+	}
+
 	my $output = '';
 	$output .= BOLD if $color;
 	$output .= $prefix;
@@ -1189,6 +1219,38 @@ sub report {
 
 	return 1;
 }
+# Format a finding as a GitHub Actions workflow command so that it shows
+# up as an inline annotation on the pull request.  The location comes from
+# the "#N: FILE: path:line:" context line that most checks append to their
+# message; findings without one (e.g. commit log problems) are emitted
+# without a file.
+sub github_annotation {
+	my ($level, $msg) = @_;
+
+	my $cmd = $level eq 'ERROR' ? 'error' : 'warning';
+	my $text = (split('\n', $msg))[0];
+	my $where = '';
+	if ($msg =~ /^#\d+: FILE: (.+?):(\d+):$/m) {
+		$where = "file=" . github_escape($1, 1) . ",line=$2,";
+	}
+	return "::$cmd ${where}title=style(9)::" . github_escape($text, 0) . "\n";
+}
+
+# Escape the characters GitHub gives special meaning to in a workflow
+# command.  Properties additionally need ':' and ',' escaped.
+sub github_escape {
+	my ($s, $property) = @_;
+
+	$s =~ s/%/%25/g;
+	$s =~ s/\r/%0D/g;
+	$s =~ s/\n/%0A/g;
+	if ($property) {
+		$s =~ s/:/%3A/g;
+		$s =~ s/,/%2C/g;
+	}
+	return $s;
+}
+
 sub report_dump {
 	our @report;
 }
@@ -1419,6 +1481,9 @@ sub process {
 
 			next;
 		}
+
+# Third-party code keeps its upstream style, so do not check it.
+		next if (!$file && $realfile =~ m{^(?:contrib|crypto|sys/contrib)/});
 
 		$here .= "FILE: $realfile:$realline:" if ($realcnt != 0);
 
