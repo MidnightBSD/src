@@ -1,6 +1,15 @@
 Updating Information for MidnightBSD users.
 
 20261001:
+	ktls: fix a remote denial of service in receive-side kernel TLS
+	(CVE-2026-101302, FreeBSD-SA-26:67.ktls).  An off-by-one in the
+	search for the TLS 1.3 inner record type let a remote peer panic
+	the kernel with a crafted record whose plaintext is all zeros.
+	Only sockets using software receive-side KTLS are affected;
+	systems with kern.ipc.tls.enable=0 are not.  Rebuild and install
+	the kernel, then reboot.
+
+20261001:
 	jail: fix three FD_RESOLVE_BENEATH bypasses (CVE-2026-101304,
 	CVE-2026-101305, CVE-2026-101306, FreeBSD-SA-26:66.jail).  A
 	directory descriptor passed into a jail over a Unix domain socket
