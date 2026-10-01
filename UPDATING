@@ -1,6 +1,19 @@
 Updating Information for MidnightBSD users.
 
 20261001:
+	jail: fix three FD_RESOLVE_BENEATH bypasses (CVE-2026-101304,
+	CVE-2026-101305, CVE-2026-101306, FreeBSD-SA-26:66.jail).  A
+	directory descriptor passed into a jail over a Unix domain socket
+	carries FD_RESOLVE_BENEATH so lookups cannot leave it, but the flag
+	and capability rights were lost when opening /dev/fd/N on an
+	fdescfs mounted with "nodup", renameat(2) ignored the flag so a
+	directory could be moved and escaped from via fchdir(2), and
+	SCM_RIGHTS dropped the flag when a descriptor was passed, even to
+	the sender itself.  A jailed process that received such a
+	descriptor could escape the jail's filesystem root.  Rebuild and
+	install the kernel, then reboot.
+
+20261001:
 	sysvsem: fix a heap out-of-bounds access in semop(2)
 	(CVE-2026-58098, FreeBSD-SA-26:64.sysvsem).  When semop(2) slept
 	waiting on a semaphore, the check that the set still existed after
