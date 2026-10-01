@@ -1,5 +1,16 @@
 Updating Information for MidnightBSD users.
 
+20261001:
+	sysvsem: fix a heap out-of-bounds access in semop(2)
+	(CVE-2026-58098, FreeBSD-SA-26:64.sysvsem).  When semop(2) slept
+	waiting on a semaphore, the check that the set still existed after
+	waking relied on a 15-bit sequence number that wraps, so a local
+	user who created and destroyed enough sets in the same slot could
+	make the kernel access freed or foreign heap memory, potentially
+	leading to privilege escalation.  The kernel now keeps a 64-bit
+	sequence number per slot.  Rebuild and install the kernel, then
+	reboot.
+
 20260930:
 	tzdata 2026e (from 2026c).  Manitoba moves to permanent -05 on
 	2026-10-31 and the Northwest Territories to permanent -06; the
