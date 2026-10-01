@@ -108,7 +108,7 @@ int semop(struct thread *td, struct semop_args *uap);
 
 static struct sem_undo *semu_alloc(struct thread *td);
 static int semundo_adjust(struct thread *td, struct sem_undo **supptr,
-    int semid, int semseq, int semnum, int adjval);
+    int semid, uint64_t semseq, int semnum, int adjval);
 static void semundo_clear(int semid, int semnum);
 
 static struct mtx	sem_mtx;	/* semaphore global lock */
@@ -116,6 +116,7 @@ static struct mtx sem_undo_mtx;
 static int	semtot = 0;
 static struct semid_kernel *sema;	/* semaphore id pool */
 static struct mtx *sema_mtx;	/* semaphore id pool mutexes*/
+static uint64_t *sema_seq;	/* semaphore id sequence numbers */
 static struct sem *sem;		/* semaphore pool */
 LIST_HEAD(, sem_undo) semu_list;	/* list of active undo structures */
 LIST_HEAD(, sem_undo) semu_free_list;	/* list of free undo structures */
@@ -146,7 +147,7 @@ struct sem_undo {
 		short	un_adjval;	/* adjust on exit values */
 		short	un_num;		/* semaphore # */
 		int	un_id;		/* semid */
-		unsigned short un_seq;
+		uint64_t un_seq;
 	} un_ent[1];			/* undo entries */
 };
 
@@ -282,6 +283,8 @@ seminit(void)
 	    M_WAITOK | M_ZERO);
 	sema_mtx = malloc(sizeof(struct mtx) * seminfo.semmni, M_SEM,
 	    M_WAITOK | M_ZERO);
+	sema_seq = malloc(sizeof(uint64_t) * seminfo.semmni, M_SEM,
+	    M_WAITOK | M_ZERO);
 	seminfo.semusz = SEMUSZ(seminfo.semume);
 	semu = malloc(seminfo.semmnu * seminfo.semusz, M_SEM, M_WAITOK);
 
@@ -367,6 +370,7 @@ semunload(void)
 	for (i = 0; i < seminfo.semmni; i++)
 		mtx_destroy(&sema_mtx[i]);
 	free(sema_mtx, M_SEM);
+	free(sema_seq, M_SEM);
 	mtx_destroy(&sem_mtx);
 	mtx_destroy(&sem_undo_mtx);
 	return (0);
@@ -441,7 +445,7 @@ semu_try_free(struct sem_undo *suptr)
 
 static int
 semundo_adjust(struct thread *td, struct sem_undo **supptr, int semid,
-    int semseq, int semnum, int adjval)
+    uint64_t semseq, int semnum, int adjval)
 {
 	struct proc *p = td->td_proc;
 	struct sem_undo *suptr;
@@ -698,6 +702,7 @@ kern_semctl(struct thread *td, int semid, int semnum, int cmd,
 	struct semid_ds *sbuf;
 	struct semid_kernel *semakptr;
 	struct mtx *sema_mtxp;
+	uint64_t seq;
 	u_short usval, count;
 	int semidx;
 
@@ -855,24 +860,24 @@ kern_semctl(struct thread *td, int semid, int semnum, int cmd,
 		 * the 'count' could change while are blocked in
 		 * malloc() is if this semaphore set were destroyed
 		 * and a new one created with the same index.
-		 * However, semvalid() will catch that due to the
-		 * sequence number unless exactly 0x8000 (or a
-		 * multiple thereof) semaphore sets for the same index
-		 * are created and destroyed while we are in malloc!
-		 * The sequence number is only 15 bits wide and wraps,
-		 * so it cannot be relied upon alone; re-validate the
-		 * count explicitly before touching the buffer.
+		 * The embedded sequence number is only 15 bits wide
+		 * and wraps, so it cannot be relied upon alone; the
+		 * 64-bit pool sequence number is checked instead.
 		 */
 		count = semakptr->u.sem_nsems;
+		seq = sema_seq[semidx];
 		mtx_unlock(sema_mtxp);
 		array = malloc(sizeof(*array) * count, M_TEMP, M_WAITOK);
 		mtx_lock(sema_mtxp);
 		if ((error = semvalid(semid, rpr, semakptr)) != 0)
 			goto done2;
-		if (count != semakptr->u.sem_nsems) {
-			error = EIDRM;
+		if (seq != sema_seq[semidx]) {
+			error = EAGAIN;
 			goto done2;
 		}
+		KASSERT(count == semakptr->u.sem_nsems,
+		    ("sem_nsems changed from %d to %d",
+		    count, semakptr->u.sem_nsems));
 		if ((error = ipcperm(td, &semakptr->u.sem_perm, IPC_R)))
 			goto done2;
 		for (i = 0; i < semakptr->u.sem_nsems; i++)
@@ -920,6 +925,7 @@ kern_semctl(struct thread *td, int semid, int semnum, int cmd,
 		 * and why we require a userland buffer.
 		 */
 		count = semakptr->u.sem_nsems;
+		seq = sema_seq[semidx];
 		mtx_unlock(sema_mtxp);
 		array = malloc(sizeof(*array) * count, M_TEMP, M_WAITOK);
 		error = copyin(arg->array, array, count * sizeof(*array));
@@ -928,8 +934,8 @@ kern_semctl(struct thread *td, int semid, int semnum, int cmd,
 			break;
 		if ((error = semvalid(semid, rpr, semakptr)) != 0)
 			goto done2;
-		if (count != semakptr->u.sem_nsems) {
-			error = EIDRM;
+		if (seq != sema_seq[semidx]) {
+			error = EAGAIN;
 			goto done2;
 		}
 		if ((error = ipcperm(td, &semakptr->u.sem_perm, IPC_W)))
@@ -1066,8 +1072,8 @@ sys_semget(struct thread *td, struct semget_args *uap)
 		sema[semid].u.sem_perm.gid = cred->cr_gid;
 		sema[semid].u.sem_perm.mode = (semflg & 0777) | SEM_ALLOC;
 		sema[semid].cred = crhold(cred);
-		sema[semid].u.sem_perm.seq =
-		    (sema[semid].u.sem_perm.seq + 1) & 0x7fff;
+		sema_seq[semid]++;
+		sema[semid].u.sem_perm.seq = sema_seq[semid] & 0x7fff;
 		sema[semid].u.sem_nsems = nsems;
 		sema[semid].u.sem_otime = 0;
 		sema[semid].u.sem_ctime = time_second;
@@ -1123,10 +1129,10 @@ kern_semop(struct thread *td, int usemid, struct sembuf *usops,
 	struct sem_undo *suptr;
 	struct mtx *sema_mtxp;
 	sbintime_t sbt, precision;
-	size_t i, j, k;
+	uint64_t seq;
+	size_t i, j, k, perms;
 	int error;
-	int do_wakeup, do_undos;
-	unsigned short seq;
+	bool do_wakeup, do_undos;
 
 #ifdef SEM_DEBUG
 	sops = NULL;
@@ -1198,20 +1204,18 @@ kern_semop(struct thread *td, int usemid, struct sembuf *usops,
 		error = EINVAL;
 		goto done2;
 	}
-	seq = semakptr->u.sem_perm.seq;
-	if (seq != IPCID_TO_SEQ(usemid)) {
+	if (semvalid(usemid, rpr, semakptr) != 0) {
 		error = EINVAL;
 		goto done2;
 	}
-	if ((error = sem_prison_cansee(rpr, semakptr)) != 0)
-		goto done2;
+
 	/*
 	 * Initial pass through sops to see what permissions are needed.
 	 * Also perform any checks that don't need repeating on each
 	 * attempt to satisfy the request vector.
 	 */
-	j = 0;		/* permission needed */
-	do_undos = 0;
+	perms = 0;
+	do_undos = false;
 	for (i = 0; i < nsops; i++) {
 		sopptr = &sops[i];
 		if (sopptr->sem_num >= semakptr->u.sem_nsems) {
@@ -1219,16 +1223,16 @@ kern_semop(struct thread *td, int usemid, struct sembuf *usops,
 			goto done2;
 		}
 		if (sopptr->sem_flg & SEM_UNDO && sopptr->sem_op != 0)
-			do_undos = 1;
-		j |= (sopptr->sem_op == 0) ? SEM_R : SEM_A;
+			do_undos = true;
+		perms |= (sopptr->sem_op == 0) ? SEM_R : SEM_A;
 	}
 
-	if ((error = ipcperm(td, &semakptr->u.sem_perm, j))) {
+	if ((error = ipcperm(td, &semakptr->u.sem_perm, perms))) {
 		DPRINTF(("error = %d from ipaccess\n", error));
 		goto done2;
 	}
 #ifdef MAC
-	error = mac_sysvsem_check_semop(td->td_ucred, semakptr, j);
+	error = mac_sysvsem_check_semop(td->td_ucred, semakptr, perms);
 	if (error != 0)
 		goto done2;
 #endif
@@ -1243,8 +1247,9 @@ kern_semop(struct thread *td, int usemid, struct sembuf *usops,
 	 * of requests is atomic (never partially satisfied).
 	 */
 	for (;;) {
-		do_wakeup = 0;
+		do_wakeup = false;
 		error = 0;	/* error return if necessary */
+		seq = sema_seq[semid];
 
 		for (i = 0; i < nsops; i++) {
 			sopptr = &sops[i];
@@ -1266,7 +1271,7 @@ kern_semop(struct thread *td, int usemid, struct sembuf *usops,
 					semptr->semval += sopptr->sem_op;
 					if (semptr->semval == 0 &&
 					    semptr->semzcnt > 0)
-						do_wakeup = 1;
+						do_wakeup = true;
 				}
 			} else if (sopptr->sem_op == 0) {
 				if (semptr->semval != 0) {
@@ -1279,7 +1284,7 @@ kern_semop(struct thread *td, int usemid, struct sembuf *usops,
 				break;
 			} else {
 				if (semptr->semncnt > 0)
-					do_wakeup = 1;
+					do_wakeup = true;
 				semptr->semval += sopptr->sem_op;
 			}
 		}
@@ -1323,11 +1328,12 @@ kern_semop(struct thread *td, int usemid, struct sembuf *usops,
 		/* return code is checked below, after sem[nz]cnt-- */
 
 		/*
-		 * Make sure that the semaphore still exists
+		 * Make sure that the semaphore still exists.  The embedded
+		 * sequence number check isn't sufficient to detect reallocation
+		 * since it's too narrow.
 		 */
-		seq = semakptr->u.sem_perm.seq;
-		if ((semakptr->u.sem_perm.mode & SEM_ALLOC) == 0 ||
-		    seq != IPCID_TO_SEQ(usemid)) {
+		if (semvalid(usemid, rpr, semakptr) != 0 ||
+		    seq != sema_seq[semid]) {
 			error = EIDRM;
 			goto done2;
 		}
@@ -1453,8 +1459,8 @@ semexit_myhook(void *arg, struct proc *p)
 	struct sem_undo *suptr;
 	struct semid_kernel *semakptr;
 	struct mtx *sema_mtxp;
+	uint64_t seq;
 	int semid, semnum, adjval, ix;
-	unsigned short seq;
 
 	/*
 	 * Go through the chain of undo vectors looking for one
@@ -1491,12 +1497,11 @@ semexit_myhook(void *arg, struct proc *p)
 
 			mtx_lock(sema_mtxp);
 			if ((semakptr->u.sem_perm.mode & SEM_ALLOC) == 0 ||
-			    (semakptr->u.sem_perm.seq != seq)) {
+			    sema_seq[semid] != seq ||
+			    semakptr->u.sem_nsems <= semnum) {
 				mtx_unlock(sema_mtxp);
 				continue;
 			}
-			if (semnum >= semakptr->u.sem_nsems)
-				panic("semexit - semnum out of range");
 
 			DPRINTF((
 			    "semexit:  %p id=%d num=%d(adj=%d) ; sem=%d\n",
