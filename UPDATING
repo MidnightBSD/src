@@ -1,6 +1,17 @@
 Updating Information for MidnightBSD users.
 
 20261002:
+	openssl: fix an out-of-bounds read in DTLS retransmission
+	(CVE-2026-84782).  If the DTLS retransmission timer fired while a
+	handshake message write was suspended, the resent message was read
+	from a stale buffer offset and could include heap memory, which was
+	sent to the peer as plaintext, or crash the application.  Only
+	applications using DTLS are affected.  OpenSSL 1.1.1 is out of
+	public upstream support, so this is a local patch to 1.1.1w.
+	Rebuild and install world, then restart all daemons that use the
+	library, or reboot.
+
+20261002:
 	udp6: fix a jail network isolation bypass (CVE-2026-101303,
 	FreeBSD-SA-26:69.udp).  An unconnected IPv6 UDP sendto(2) from a
 	classic (non-VNET) jail did not rewrite a loopback destination to
