@@ -1,5 +1,13 @@
 Updating Information for MidnightBSD users.
 
+20261002:
+	udp6: fix a jail network isolation bypass (CVE-2026-101303,
+	FreeBSD-SA-26:69.udp).  An unconnected IPv6 UDP sendto(2) from a
+	classic (non-VNET) jail did not rewrite a loopback destination to
+	the jail's primary address, so a jailed process could reach
+	services listening on the host's IPv6 loopback address.  Rebuild
+	and install the kernel, then reboot.
+
 20261001:
 	ktls: fix a remote denial of service in receive-side kernel TLS
 	(CVE-2026-101302, FreeBSD-SA-26:67.ktls).  An off-by-one in the
