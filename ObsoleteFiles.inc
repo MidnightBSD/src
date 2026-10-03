@@ -39,6 +39,64 @@
 # for generating a list from a directory
 # find  /usr/lib/perl5/5.36.0 -exec echo {} \; | cut -b 2-150  | xargs printf "OLD_FILES+=%s\n"
 
+# 20261003: OpenSSL 3.0.22 to 3.5.9 update
+OLD_LIBS+=lib/libcrypto.so.30
+OLD_LIBS+=usr/lib/libssl.so.30
+OLD_LIBS+=usr/lib32/libcrypto.so.30
+OLD_LIBS+=usr/lib32/libssl.so.30
+OLD_FILES+=usr/include/openssl/asn1_mac.h
+OLD_FILES+=usr/share/openssl/man/man3/TS_VERIFY_CTX_set_certs.3.gz
+OLD_FILES+=usr/share/openssl/man/man7/crypto.7.gz
+OLD_FILES+=usr/share/openssl/man/man7/migration_guide.7.gz
+OLD_FILES+=usr/share/openssl/man/man7/ssl.7.gz
+# openssl(1) subcommand manual pages now use their upstream openssl-*.1 names
+OLD_FILES+=usr/share/openssl/man/man1/asn1parse.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/ca.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/ciphers.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/cms.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/crl.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/crl2pkcs7.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/dgst.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/dhparam.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/dsa.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/dsaparam.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/ec.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/ecparam.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/enc.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/engine.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/errstr.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/gendsa.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/genpkey.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/genrsa.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/list.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/nseq.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/ocsp.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/passwd.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/pkcs12.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/pkcs7.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/pkcs8.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/pkey.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/pkeyparam.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/pkeyutl.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/prime.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/rand.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/req.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/rsa.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/rsautl.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/s_client.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/s_server.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/s_time.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/sess_id.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/smime.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/speed.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/spkac.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/srp.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/storeutl.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/ts.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/verify.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/version.1.gz
+OLD_FILES+=usr/share/openssl/man/man1/x509.1.gz
+
 # 20260903: library and tests of OpenBSD bc and dc
 OLD_FILES+=usr/share/misc/bc.library
 OLD_FILES+=usr/tests/usr.bin/dc/Kyuafile

@@ -1,5 +1,21 @@
 Updating Information for MidnightBSD users.
 
+20261003:
+	OpenSSL 3.5.9 (from 3.0.22).  OpenSSL 3.0 reached the end of
+	upstream support in September 2026; 3.5 is the current long-term
+	support series, supported until April 2030.  The shared libraries
+	are now libcrypto.so.35 and libssl.so.35; the .so.30 libraries are
+	kept until "make delete-old-libs" so existing binaries and ports
+	keep working, but rebuild ports that link against OpenSSL.  New in
+	3.5 relative to 3.0: QUIC (client and server), the post-quantum
+	ML-KEM, ML-DSA and SLH-DSA algorithms, HPKE, Argon2 and the public
+	thread API; TLS 1.3 clients offer the X25519MLKEM768 hybrid key
+	exchange by default.  Many more 1.x era APIs are deprecated, so
+	expect deprecation warnings when building software that still uses
+	them.  The openssl(1) subcommand manual pages are now installed
+	under their upstream openssl-*(1) names.  Rebuild and install
+	world, then restart all daemons that use the library, or reboot.
+
 20261002:
 	openssl: fix an out-of-bounds read in DTLS retransmission
 	(CVE-2026-84782).  If the DTLS retransmission timer fired while a
