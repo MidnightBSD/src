@@ -64,6 +64,13 @@ This output usually makes sense only if you know OpenSSL internals well.
 The value of this environment variable is a comma-separated list of names,
 with the following available:
 
+=item B<OPENSSL_RUNNING_UNIT_TESTS>
+
+This environment variable is used to flag the fact that unit tests are being run
+(i.e. `make test`).  It is used to detect when the OpenSSL should behave in a special
+manner during unit tests (i.e. when unit tests are being run on fuzzing builds).  It should
+generally not be set by users.
+
 =over 4
 
 =item B<TRACE>
@@ -169,18 +176,39 @@ See L<SSL_CTX_load_verify_locations(3)>.
 
 Additional arguments for the L<tsget(1)> command.
 
-=item B<OPENSSL_ia32cap>, B<OPENSSL_sparcv9cap>, B<OPENSSL_ppccap>, B<OPENSSL_armcap>, B<OPENSSL_s390xcap>
+=item B<OPENSSL_ia32cap>, B<OPENSSL_sparcv9cap>, B<OPENSSL_ppccap>, B<OPENSSL_armcap>, B<OPENSSL_s390xcap>, B<OPENSSL_riscvcap>
 
 OpenSSL supports a number of different algorithm implementations for
 various machines and, by default, it determines which to use based on the
 processor capabilities and run time feature enquiry.  These environment
 variables can be used to exert more control over this selection process.
-See L<OPENSSL_ia32cap(3)>, L<OPENSSL_s390xcap(3)>.
+See L<OPENSSL_armcap(3)>, L<OPENSSL_ia32cap(3)>, L<OPENSSL_ppccap(3)>,
+L<OPENSSL_riscvcap(3)> and L<OPENSSL_s390xcap(3)>.
 
 =item B<NO_PROXY>, B<HTTPS_PROXY>, B<HTTP_PROXY>
 
 Specify a proxy hostname.
 See L<OSSL_HTTP_parse_url(3)>.
+
+=item B<QLOGDIR>
+
+Specifies a QUIC qlog output directory. See L<openssl-qlog(7)>.
+
+=item B<OSSL_QFILTER>
+
+Used to set a QUIC qlog filter specification. See L<openssl-qlog(7)>.
+
+=item B<SSLKEYLOGFILE>
+
+Used to produce the standard format output file for SSL key logging.  Optionally
+set this variable to a filename to log all secrets produced by SSL connections.
+Note, use of the environment variable is predicated on configuring OpenSSL at
+build time with the enable-sslkeylog feature.  The file format standard can be
+found at L<https://datatracker.ietf.org/doc/draft-ietf-tls-keylogfile/>.
+Note: the use of B<SSLKEYLOGFILE> poses an explicit security risk.  By recording
+the exchanged keys during an SSL session, it allows any available party with
+read access to the file to decrypt application traffic sent over that session.
+Use of this feature should be restricted to test and debug environments only.
 
 =back
 

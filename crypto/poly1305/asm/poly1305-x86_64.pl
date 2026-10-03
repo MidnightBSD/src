@@ -236,6 +236,7 @@ $code.=<<___;
 .align	32
 poly1305_blocks:
 .cfi_startproc
+	endbranch
 .Lblocks:
 	shr	\$4,$len
 	jz	.Lno_data		# too short
@@ -310,6 +311,7 @@ $code.=<<___;
 .align	32
 poly1305_emit:
 .cfi_startproc
+	endbranch
 .Lemit:
 	mov	0($ctx),%r8	# load hash value
 	mov	8($ctx),%r9
@@ -531,6 +533,7 @@ __poly1305_init_avx:
 .align	32
 poly1305_blocks_avx:
 .cfi_startproc
+	endbranch
 	mov	20($ctx),%r8d		# is_base2_26
 	cmp	\$128,$len
 	jae	.Lblocks_avx
@@ -1391,6 +1394,7 @@ $code.=<<___;
 .align	32
 poly1305_emit_avx:
 .cfi_startproc
+	endbranch
 	cmpl	\$0,20($ctx)	# is_base2_26?
 	je	.Lemit
 
@@ -1455,6 +1459,7 @@ $code.=<<___;
 .align	32
 poly1305_blocks_avx2:
 .cfi_startproc
+	endbranch
 	mov	20($ctx),%r8d		# is_base2_26
 	cmp	\$128,$len
 	jae	.Lblocks_avx2
@@ -2151,6 +2156,7 @@ $code.=<<___;
 .align	32
 poly1305_blocks_avx512:
 .cfi_startproc
+	endbranch
 .Lblocks_avx512:
 	mov		\$15,%eax
 	kmovw		%eax,%k2
@@ -3785,6 +3791,7 @@ poly1305_emit_base2_44:
 ___
 }	}	}
 $code.=<<___;
+.section .rodata align=64
 .align	64
 .Lconst:
 .Lmask24:
@@ -3816,6 +3823,7 @@ $code.=<<___;
 .Lx_mask42:
 .quad	0x3ffffffffff,0x3ffffffffff,0x3ffffffffff,0x3ffffffffff
 .quad	0x3ffffffffff,0x3ffffffffff,0x3ffffffffff,0x3ffffffffff
+.previous
 ___
 }
 $code.=<<___;

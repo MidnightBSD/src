@@ -24,41 +24,41 @@
  * more than once.
  */
 
-const char *hamlet_1 = "To be, or not to be, that is the question,\n"
-                       "Whether tis nobler in the minde to suffer\n"
-                       "The ſlings and arrowes of outragious fortune,\n"
-                       "Or to take Armes again in a sea of troubles,\n"
-                       "And by opposing, end them, to die to sleep;\n"
-                       "No more, and by a sleep, to say we end\n"
-                       "The heart-ache, and the thousand natural shocks\n"
-                       "That flesh is heir to? tis a consumation\n"
-                       "Devoutly to be wished. To die to sleep,\n"
-                       "To sleepe, perchance to dreame, Aye, there's the rub,\n"
-                       "For in that sleep of death what dreams may come\n"
-                       "When we haue shuffled off this mortal coil\n"
-                       "Must give us pause. There's the respect\n"
-                       "That makes calamity of so long life:\n"
-                       "For who would bear the Ships and Scorns of time,\n"
-                       "The oppressor's wrong, the proud man's Contumely,\n"
-                       "The pangs of dispised love, the Law's delay,\n";
-const char *hamlet_2 = "The insolence of Office, and the spurns\n"
-                       "That patient merit of the'unworthy takes,\n"
-                       "When he himself might his Quietas make\n"
-                       "With a bare bodkin? Who would fardels bear,\n"
-                       "To grunt and sweat under a weary life,\n"
-                       "But that the dread of something after death,\n"
-                       "The undiscovered country, from whose bourn\n"
-                       "No traveller returns, puzzles the will,\n"
-                       "And makes us rather bear those ills we have,\n"
-                       "Then fly to others we know not of?\n"
-                       "Thus conscience does make cowards of us all,\n"
-                       "And thus the native hue of Resolution\n"
-                       "Is sickled o'er with the pale cast of Thought,\n"
-                       "And enterprises of great pith and moment,\n"
-                       "With this regard their currents turn awry,\n"
-                       "And lose the name of Action. Soft you now,\n"
-                       "The fair Ophelia? Nymph in thy Orisons\n"
-                       "Be all my sins remember'd.\n";
+static const char *hamlet_1 = "To be, or not to be, that is the question,\n"
+                              "Whether tis nobler in the minde to suffer\n"
+                              "The ſlings and arrowes of outragious fortune,\n"
+                              "Or to take Armes again in a sea of troubles,\n"
+                              "And by opposing, end them, to die to sleep;\n"
+                              "No more, and by a sleep, to say we end\n"
+                              "The heart-ache, and the thousand natural shocks\n"
+                              "That flesh is heir to? tis a consumation\n"
+                              "Devoutly to be wished. To die to sleep,\n"
+                              "To sleepe, perchance to dreame, Aye, there's the rub,\n"
+                              "For in that sleep of death what dreams may come\n"
+                              "When we haue shuffled off this mortal coil\n"
+                              "Must give us pause. There's the respect\n"
+                              "That makes calamity of so long life:\n"
+                              "For who would bear the Ships and Scorns of time,\n"
+                              "The oppressor's wrong, the proud man's Contumely,\n"
+                              "The pangs of dispised love, the Law's delay,\n";
+static const char *hamlet_2 = "The insolence of Office, and the spurns\n"
+                              "That patient merit of the'unworthy takes,\n"
+                              "When he himself might his Quietas make\n"
+                              "With a bare bodkin? Who would fardels bear,\n"
+                              "To grunt and sweat under a weary life,\n"
+                              "But that the dread of something after death,\n"
+                              "The undiscovered country, from whose bourn\n"
+                              "No traveller returns, puzzles the will,\n"
+                              "And makes us rather bear those ills we have,\n"
+                              "Then fly to others we know not of?\n"
+                              "Thus conscience does make cowards of us all,\n"
+                              "And thus the native hue of Resolution\n"
+                              "Is sickled o'er with the pale cast of Thought,\n"
+                              "And enterprises of great pith and moment,\n"
+                              "With this regard their currents turn awry,\n"
+                              "And lose the name of Action. Soft you now,\n"
+                              "The fair Ophelia? Nymph in thy Orisons\n"
+                              "Be all my sins remember'd.\n";
 
 /* The known value of the SHA3-512 digest of the above soliloqy */
 static const unsigned char known_answer[] = {
@@ -71,16 +71,16 @@ static const unsigned char known_answer[] = {
     0x29, 0x19, 0x9a, 0xfe
 };
 
-int demonstrate_digest(void)
+static int demonstrate_digest(void)
 {
     OSSL_LIB_CTX *library_context;
-    int result = 0;
+    int ret = 0;
     const char *option_properties = NULL;
     EVP_MD *message_digest = NULL;
     EVP_MD_CTX *digest_context = NULL;
-    int digest_length;
+    unsigned int digest_length;
     unsigned char *digest_value = NULL;
-    int j;
+    unsigned int j;
 
     library_context = OSSL_LIB_CTX_new();
     if (library_context == NULL) {
@@ -148,7 +148,7 @@ int demonstrate_digest(void)
     /* Check digest_value against the known answer */
     if ((size_t)digest_length != sizeof(known_answer)) {
         fprintf(stdout, "Digest length(%d) not equal to known answer length(%lu).\n",
-            digest_length, sizeof(known_answer));
+            digest_length, (unsigned long)sizeof(known_answer));
     } else if (memcmp(digest_value, known_answer, digest_length) != 0) {
         for (j = 0; j < sizeof(known_answer); j++) {
             fprintf(stdout, "%02x", known_answer[j]);
@@ -156,11 +156,11 @@ int demonstrate_digest(void)
         fprintf(stdout, "\nDigest does not match known answer\n");
     } else {
         fprintf(stdout, "Digest computed properly.\n");
-        result = 1;
+        ret = 1;
     }
 
 cleanup:
-    if (result != 1)
+    if (ret != 1)
         ERR_print_errors_fp(stderr);
     /* OpenSSL free functions will ignore NULL arguments */
     EVP_MD_CTX_free(digest_context);
@@ -168,10 +168,10 @@ cleanup:
     EVP_MD_free(message_digest);
 
     OSSL_LIB_CTX_free(library_context);
-    return result;
+    return ret;
 }
 
 int main(void)
 {
-    return demonstrate_digest() == 0;
+    return demonstrate_digest() ? EXIT_SUCCESS : EXIT_FAILURE;
 }

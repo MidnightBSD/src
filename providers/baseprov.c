@@ -19,7 +19,7 @@
 #include "prov/providercommon.h"
 #include "prov/implementations.h"
 #include "prov/provider_util.h"
-#include "internal/nelem.h"
+#include "prov/names.h"
 
 /*
  * Forward declarations to ensure that interface functions are correctly
@@ -87,6 +87,14 @@ static const OSSL_ALGORITHM base_store[] = {
 #undef STORE
 };
 
+static const OSSL_ALGORITHM base_rands[] = {
+    { PROV_NAMES_SEED_SRC, "provider=base", ossl_seed_src_functions },
+#ifndef OPENSSL_NO_JITTER
+    { PROV_NAMES_JITTER, "provider=base", ossl_jitter_functions },
+#endif
+    { NULL, NULL, NULL }
+};
+
 static const OSSL_ALGORITHM *base_query(void *provctx, int operation_id,
     int *no_cache)
 {
@@ -98,6 +106,8 @@ static const OSSL_ALGORITHM *base_query(void *provctx, int operation_id,
         return base_decoder;
     case OSSL_OP_STORE:
         return base_store;
+    case OSSL_OP_RAND:
+        return base_rands;
     }
     return NULL;
 }
@@ -115,7 +125,7 @@ static const OSSL_DISPATCH base_dispatch_table[] = {
         (void (*)(void))base_gettable_params },
     { OSSL_FUNC_PROVIDER_GET_PARAMS, (void (*)(void))base_get_params },
     { OSSL_FUNC_PROVIDER_QUERY_OPERATION, (void (*)(void))base_query },
-    { 0, NULL }
+    OSSL_DISPATCH_END
 };
 
 OSSL_provider_init_fn ossl_base_provider_init;
@@ -125,12 +135,16 @@ int ossl_base_provider_init(const OSSL_CORE_HANDLE *handle,
     void **provctx)
 {
     OSSL_FUNC_core_get_libctx_fn *c_get_libctx = NULL;
+    OSSL_FUNC_core_get_params_fn *c_get_params = NULL;
     BIO_METHOD *corebiometh;
 
     if (!ossl_prov_bio_from_dispatch(in))
         return 0;
     for (; in->function_id != 0; in++) {
         switch (in->function_id) {
+        case OSSL_FUNC_CORE_GET_PARAMS:
+            c_get_params = OSSL_FUNC_core_get_params(in);
+            break;
         case OSSL_FUNC_CORE_GET_LIBCTX:
             c_get_libctx = OSSL_FUNC_core_get_libctx(in);
             break;
@@ -161,6 +175,7 @@ int ossl_base_provider_init(const OSSL_CORE_HANDLE *handle,
         (OSSL_LIB_CTX *)c_get_libctx(handle));
     ossl_prov_ctx_set0_handle(*provctx, handle);
     ossl_prov_ctx_set0_core_bio_method(*provctx, corebiometh);
+    ossl_prov_ctx_set0_core_get_params(*provctx, c_get_params);
 
     *out = base_dispatch_table;
 

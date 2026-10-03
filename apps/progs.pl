@@ -1,5 +1,5 @@
 #! /usr/bin/env perl
-# Copyright 1995-2026 The OpenSSL Project Authors. All Rights Reserved.
+# Copyright 1995-2023 The OpenSSL Project Authors. All Rights Reserved.
 #
 # Licensed under the Apache License 2.0 (the "License").  You may not use
 # this file except in compliance with the License.  You can obtain a copy
@@ -191,7 +191,7 @@ EOF
         "camellia-128-cbc", "camellia-128-ecb",
         "camellia-192-cbc", "camellia-192-ecb",
         "camellia-256-cbc", "camellia-256-ecb",
-        "base64", "zlib",
+        "base64", "zlib", "brotli", "zstd",
         "des", "des3", "desx", "idea", "seed", "rc4", "rc4-40",
         "rc2", "bf", "cast", "rc5",
         "des-ecb", "des-ede", "des-ede3",
@@ -208,9 +208,7 @@ EOF
     ) {
         my $str = "    {FT_cipher, \"$cmd\", enc_main, enc_options, NULL},\n";
         (my $algo = $cmd) =~ s/-.*//g;
-        if ($cmd eq "zlib") {
-            print "#ifdef ZLIB\n${str}#endif\n";
-        } elsif (grep { $algo eq $_ } @disablables) {
+        if (grep { $algo eq $_ } @disablables) {
             print "#ifndef OPENSSL_NO_" . uc($algo) . "\n${str}#endif\n";
         } elsif (my $disabler = $cipher_disabler{$algo}) {
             print "#ifndef OPENSSL_NO_" . uc($disabler) . "\n${str}#endif\n";

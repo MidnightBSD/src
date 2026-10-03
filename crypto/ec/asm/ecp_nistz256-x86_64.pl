@@ -93,6 +93,7 @@ $code.=<<___;
 .extern	OPENSSL_ia32cap_P
 
 # The polynomial
+.section .rodata align=4096
 .align 64
 .Lpoly:
 .quad 0xffffffffffffffff, 0x00000000ffffffff, 0x0000000000000000, 0xffffffff00000001
@@ -115,6 +116,7 @@ $code.=<<___;
 .quad 0xf3b9cac2fc632551, 0xbce6faada7179e84, 0xffffffffffffffff, 0xffffffff00000000
 .LordK:
 .quad 0xccd1c8aaee00bc4f
+.previous
 ___
 
 {
@@ -4731,7 +4733,7 @@ close TABLE;
 die "insane number of elements" if ($#arr != 64*16*37-1);
 
 print <<___;
-.text
+.section .rodata align=4096
 .globl	ecp_nistz256_precomputed
 .type	ecp_nistz256_precomputed,\@object
 .align	4096

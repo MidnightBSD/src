@@ -1,5 +1,5 @@
 /*
- * Copyright 1995-2023 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1995-2024 The OpenSSL Project Authors. All Rights Reserved.
  * Copyright (c) 2002, Oracle and/or its affiliates. All rights reserved
  * Copyright 2005 Nokia. All rights reserved.
  *
@@ -9,7 +9,7 @@
  * https://www.openssl.org/source/license.html
  */
 
-#include "e_os.h"
+#include "internal/e_os.h"
 
 /* Or gethostname won't be declared properly on Linux and GNU platforms. */
 #ifndef _BSD_SOURCE
@@ -56,6 +56,7 @@
 #endif
 #include <openssl/provider.h>
 #include "testutil.h"
+#include "testutil/output.h"
 
 /*
  * Or gethostname won't be declared properly
@@ -327,6 +328,18 @@ static int verify_alpn(SSL *client, SSL *server)
 
     OPENSSL_free(alpn_selected);
     alpn_selected = NULL;
+
+    if (client_proto == NULL && client_proto_len != 0) {
+        BIO_printf(bio_stdout,
+            "Inconsistent SSL_get0_alpn_selected() for client!\n");
+        goto err;
+    }
+
+    if (server_proto == NULL && server_proto_len != 0) {
+        BIO_printf(bio_stdout,
+            "Inconsistent SSL_get0_alpn_selected() for server!\n");
+        goto err;
+    }
 
     if (client_proto_len != server_proto_len) {
         BIO_printf(bio_stdout, "ALPN selected protocols differ!\n");
@@ -930,7 +943,8 @@ int main(int argc, char *argv[])
     verbose = 0;
     debug = 0;
 
-    bio_err = BIO_new_fp(stderr, BIO_NOCLOSE | BIO_FP_TEXT);
+    test_open_streams();
+
     bio_stdout = BIO_new_fp(stdout, BIO_NOCLOSE | BIO_FP_TEXT);
 
     s_cctx = SSL_CONF_CTX_new();
@@ -969,7 +983,8 @@ int main(int argc, char *argv[])
         if (strcmp(*argv, "-F") == 0) {
             fprintf(stderr,
                 "not compiled with FIPS support, so exiting without running.\n");
-            EXIT(0);
+            ret = EXIT_SUCCESS;
+            goto end;
         } else if (strcmp(*argv, "-server_auth") == 0)
             server_auth = 1;
         else if (strcmp(*argv, "-client_auth") == 0)
@@ -1020,7 +1035,7 @@ int main(int argc, char *argv[])
             dtls12 = 1;
         } else if (strcmp(*argv, "-dtls") == 0) {
             dtls = 1;
-        } else if (strncmp(*argv, "-num", 4) == 0) {
+        } else if (HAS_PREFIX(*argv, "-num")) {
             if (--argc < 1)
                 goto bad;
             number = atoi(*(++argv));
@@ -1233,7 +1248,7 @@ int main(int argc, char *argv[])
     if (ssl3 + tls1 + tls1_1 + tls1_2 + dtls + dtls1 + dtls12 > 1) {
         fprintf(stderr, "At most one of -ssl3, -tls1, -tls1_1, -tls1_2, -dtls, -dtls1 or -dtls12 should "
                         "be requested.\n");
-        EXIT(1);
+        goto end;
     }
 
 #ifdef OPENSSL_NO_SSL3
@@ -1286,7 +1301,7 @@ int main(int argc, char *argv[])
                         "the test anyway (and\n-d to see what happens), "
                         "or add one of -ssl3, -tls1, -tls1_1, -tls1_2, -dtls, -dtls1, -dtls12, -reuse\n"
                         "to avoid protocol mismatch.\n");
-        EXIT(1);
+        goto end;
     }
 
     if (print_time) {
@@ -1303,17 +1318,15 @@ int main(int argc, char *argv[])
     if (comp == COMP_ZLIB)
         cm = COMP_zlib();
     if (cm != NULL) {
-        if (COMP_get_type(cm) != NID_undef) {
-            if (SSL_COMP_add_compression_method(comp, cm) != 0) {
-                fprintf(stderr, "Failed to add compression method\n");
-                ERR_print_errors_fp(stderr);
-            }
-        } else {
-            fprintf(stderr,
-                "Warning: %s compression not supported\n",
-                comp == COMP_ZLIB ? "zlib" : "unknown");
+        if (SSL_COMP_add_compression_method(comp, cm) != 0) {
+            fprintf(stderr, "Failed to add compression method\n");
             ERR_print_errors_fp(stderr);
         }
+    } else {
+        fprintf(stderr,
+            "Warning: %s compression not supported\n",
+            comp == COMP_ZLIB ? "zlib" : "unknown");
+        ERR_print_errors_fp(stderr);
     }
     ssl_comp_methods = SSL_COMP_get_compression_methods();
     n = sk_SSL_COMP_num(ssl_comp_methods);
@@ -1321,7 +1334,7 @@ int main(int argc, char *argv[])
         int j;
         printf("Available compression methods:");
         for (j = 0; j < n; j++) {
-            SSL_COMP *c = sk_SSL_COMP_value(ssl_comp_methods, j);
+            const SSL_COMP *c = sk_SSL_COMP_value(ssl_comp_methods, j);
             printf("  %s:%d", SSL_COMP_get0_name(c), SSL_COMP_get_id(c));
         }
         printf("\n");
@@ -1894,7 +1907,8 @@ end:
     OSSL_PROVIDER_unload(thisprov);
     OSSL_LIB_CTX_free(libctx);
 
-    BIO_free(bio_err);
+    test_close_streams();
+
     EXIT(ret);
 }
 

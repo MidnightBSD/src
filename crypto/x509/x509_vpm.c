@@ -83,10 +83,8 @@ X509_VERIFY_PARAM *X509_VERIFY_PARAM_new(void)
     X509_VERIFY_PARAM *param;
 
     param = OPENSSL_zalloc(sizeof(*param));
-    if (param == NULL) {
-        ERR_raise(ERR_LIB_X509, ERR_R_MALLOC_FAILURE);
+    if (param == NULL)
         return NULL;
-    }
     param->trust = X509_TRUST_DEFAULT;
     /* param->inh_flags = X509_VP_FLAG_DEFAULT; */
     param->depth = -1;
@@ -296,9 +294,15 @@ int X509_VERIFY_PARAM_set_inh_flags(X509_VERIFY_PARAM *param, uint32_t flags)
     return 1;
 }
 
+/* resets to default (any) purpose if |purpose| == X509_PURPOSE_DEFAULT_ANY */
 int X509_VERIFY_PARAM_set_purpose(X509_VERIFY_PARAM *param, int purpose)
 {
     return X509_PURPOSE_set(&param->purpose, purpose);
+}
+
+int X509_VERIFY_PARAM_get_purpose(const X509_VERIFY_PARAM *param)
+{
+    return param->purpose;
 }
 
 int X509_VERIFY_PARAM_set_trust(X509_VERIFY_PARAM *param, int trust)
@@ -503,6 +507,16 @@ const char *X509_VERIFY_PARAM_get0_name(const X509_VERIFY_PARAM *param)
  */
 
 static const X509_VERIFY_PARAM default_table[] = {
+    { "code_sign", /* Code sign parameters */
+        0, /* check time to use */
+        0, /* inheritance flags */
+        0, /* flags */
+        X509_PURPOSE_CODE_SIGN, /* purpose */
+        X509_TRUST_OBJECT_SIGN, /* trust */
+        -1, /* depth */
+        -1, /* auth_level */
+        NULL, /* policies */
+        vpm_empty_id },
     { "default", /* X509 default parameters */
         0, /* check time to use */
         0, /* inheritance flags */
@@ -623,6 +637,8 @@ const X509_VERIFY_PARAM *X509_VERIFY_PARAM_lookup(const char *name)
 
     pm.name = (char *)name;
     if (param_table != NULL) {
+        /* Ideally, this would be done under a lock */
+        sk_X509_VERIFY_PARAM_sort(param_table);
         idx = sk_X509_VERIFY_PARAM_find(param_table, &pm);
         if (idx >= 0)
             return sk_X509_VERIFY_PARAM_value(param_table, idx);

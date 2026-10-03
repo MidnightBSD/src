@@ -7,6 +7,10 @@
  * https://www.openssl.org/source/license.html
  */
 
+#ifndef OSSL_INTERNAL_DER_H
+#define OSSL_INTERNAL_DER_H
+#pragma once
+
 #include <openssl/bn.h>
 #include "internal/packet.h"
 
@@ -86,3 +90,5 @@ int ossl_DER_w_octet_string_uint32(WPACKET *pkt, int tag, uint32_t value);
  */
 int ossl_DER_w_begin_sequence(WPACKET *pkt, int tag);
 int ossl_DER_w_end_sequence(WPACKET *pkt, int tag);
+
+#endif

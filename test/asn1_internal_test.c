@@ -22,6 +22,7 @@
 #include <openssl/evp.h>
 #include <openssl/pkcs12.h>
 #include <openssl/objects.h>
+#include <openssl/asn1t.h>
 #include "testutil.h"
 #include "internal/nelem.h"
 
@@ -191,6 +192,90 @@ static int test_unicode_range(void)
     return ok;
 }
 
+static int test_invalid_utf8(void)
+{
+    const unsigned char inv_utf8[] = "\xF4\x90\x80\x80";
+    unsigned long val;
+
+    if (!TEST_int_lt(UTF8_getc(inv_utf8, sizeof(inv_utf8), &val), 0))
+        return 0;
+    return 1;
+}
+
+/**********************************************************************
+ *
+ * Tests of object creation
+ *
+ ***/
+
+static int test_obj_create_once(const char *oid, const char *sn, const char *ln)
+{
+    int nid;
+
+    ERR_set_mark();
+
+    nid = OBJ_create(oid, sn, ln);
+
+    if (nid == NID_undef) {
+        unsigned long err = ERR_peek_last_error();
+        int l = ERR_GET_LIB(err);
+        int r = ERR_GET_REASON(err);
+
+        /* If it exists, that's fine, otherwise not */
+        if (l != ERR_LIB_OBJ || r != OBJ_R_OID_EXISTS) {
+            ERR_clear_last_mark();
+            return 0;
+        }
+    }
+    ERR_pop_to_mark();
+    return 1;
+}
+
+static int test_obj_create(void)
+{
+/* Stolen from evp_extra_test.c */
+#define arc "1.3.6.1.4.1.16604.998866."
+#define broken_arc "25."
+#define sn_prefix "custom"
+#define ln_prefix "custom"
+
+    /* Try different combinations of correct object creation */
+    if (!TEST_true(test_obj_create_once(NULL, sn_prefix "1", NULL))
+        || !TEST_int_ne(OBJ_sn2nid(sn_prefix "1"), NID_undef)
+        || !TEST_true(test_obj_create_once(NULL, NULL, ln_prefix "2"))
+        || !TEST_int_ne(OBJ_ln2nid(ln_prefix "2"), NID_undef)
+        || !TEST_true(test_obj_create_once(NULL, sn_prefix "3", ln_prefix "3"))
+        || !TEST_int_ne(OBJ_sn2nid(sn_prefix "3"), NID_undef)
+        || !TEST_int_ne(OBJ_ln2nid(ln_prefix "3"), NID_undef)
+        || !TEST_true(test_obj_create_once(arc "4", NULL, NULL))
+        || !TEST_true(test_obj_create_once(arc "5", sn_prefix "5", NULL))
+        || !TEST_int_ne(OBJ_sn2nid(sn_prefix "5"), NID_undef)
+        || !TEST_true(test_obj_create_once(arc "6", NULL, ln_prefix "6"))
+        || !TEST_int_ne(OBJ_ln2nid(ln_prefix "6"), NID_undef)
+        || !TEST_true(test_obj_create_once(arc "7",
+            sn_prefix "7", ln_prefix "7"))
+        || !TEST_int_ne(OBJ_sn2nid(sn_prefix "7"), NID_undef)
+        || !TEST_int_ne(OBJ_ln2nid(ln_prefix "7"), NID_undef))
+        return 0;
+
+    if (!TEST_false(test_obj_create_once(NULL, NULL, NULL))
+        || !TEST_false(test_obj_create_once(broken_arc "8",
+            sn_prefix "8", ln_prefix "8")))
+        return 0;
+
+    return 1;
+}
+
+static int test_obj_nid_undef(void)
+{
+    if (!TEST_ptr(OBJ_nid2obj(NID_undef))
+        || !TEST_ptr(OBJ_nid2sn(NID_undef))
+        || !TEST_ptr(OBJ_nid2ln(NID_undef)))
+        return 0;
+
+    return 1;
+}
+
 static int test_mbstring_ncopy(void)
 {
     ASN1_STRING *str = NULL;
@@ -223,13 +308,63 @@ static int test_ossl_uni2utf8(void)
     return ok;
 }
 
+static int asn1_dup_test_op_dup_post_count;
+static int asn1_dup_test_op_free_post_count;
+static int asn1_dup_test_cb(int operation, ASN1_VALUE **in, const ASN1_ITEM *it,
+    void *exarg)
+{
+    if (operation == ASN1_OP_DUP_POST) {
+        asn1_dup_test_op_dup_post_count++;
+        return 0;
+    }
+    if (operation == ASN1_OP_FREE_POST)
+        asn1_dup_test_op_free_post_count++;
+    return 1;
+}
+
+typedef struct {
+    ASN1_INTEGER *value;
+} ASN1_DUP_TEST;
+
+ASN1_SEQUENCE_cb(ASN1_DUP_TEST, asn1_dup_test_cb) = {
+    ASN1_SIMPLE(ASN1_DUP_TEST, value, ASN1_INTEGER)
+} static_ASN1_SEQUENCE_END_cb(ASN1_DUP_TEST, ASN1_DUP_TEST)
+
+IMPLEMENT_STATIC_ASN1_ALLOC_FUNCTIONS(ASN1_DUP_TEST)
+
+static int test_asn1_item_dup_failure_frees(void)
+{
+    ASN1_DUP_TEST *src = NULL, *dup = NULL;
+    int ret = 0;
+
+    if (!TEST_ptr(src = ASN1_DUP_TEST_new())
+        || !TEST_true(ASN1_INTEGER_set(src->value, 1)))
+        goto end;
+
+    asn1_dup_test_op_dup_post_count = 0;
+    asn1_dup_test_op_free_post_count = 0;
+    dup = ASN1_item_dup(ASN1_ITEM_rptr(ASN1_DUP_TEST), src);
+
+    ret = TEST_ptr_null(dup)
+        && TEST_int_eq(asn1_dup_test_op_dup_post_count, 1)
+        && TEST_int_eq(asn1_dup_test_op_free_post_count, 1);
+end:
+    ASN1_DUP_TEST_free(src);
+    ASN1_DUP_TEST_free(dup);
+    return ret;
+}
+
 int setup_tests(void)
 {
     ADD_TEST(test_tbl_standard);
     ADD_TEST(test_standard_methods);
     ADD_TEST(test_empty_nonoptional_content);
     ADD_TEST(test_unicode_range);
+    ADD_TEST(test_invalid_utf8);
+    ADD_TEST(test_obj_create);
+    ADD_TEST(test_obj_nid_undef);
     ADD_TEST(test_mbstring_ncopy);
     ADD_TEST(test_ossl_uni2utf8);
+    ADD_TEST(test_asn1_item_dup_failure_frees);
     return 1;
 }
