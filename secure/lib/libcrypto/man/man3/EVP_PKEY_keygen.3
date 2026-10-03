@@ -58,7 +58,7 @@
 .\" ========================================================================
 .\"
 .IX Title "EVP_PKEY_KEYGEN 3ossl"
-.TH EVP_PKEY_KEYGEN 3ossl 2026-04-07 3.0.20 OpenSSL
+.TH EVP_PKEY_KEYGEN 3ossl 2026-09-29 3.5.9 OpenSSL
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -164,8 +164,24 @@ If \fItype\fR is \f(CW\*(C`RSA\*(C'\fR,
 a \fBsize_t\fR parameter must be given to specify the size of the RSA key.
 If \fItype\fR is \f(CW\*(C`EC\*(C'\fR,
 a string parameter must be given to specify the name of the EC curve.
-If \fItype\fR is \f(CW\*(C`X25519\*(C'\fR, \f(CW\*(C`X448\*(C'\fR, \f(CW\*(C`ED25519\*(C'\fR, \f(CW\*(C`ED448\*(C'\fR, or \f(CW\*(C`SM2\*(C'\fR
-no further parameter is needed.
+The list of built\-in curves can be obtained programmatically using
+\&\fBEC_get_builtin_curves\fR\|(3), and their names can be retrieved using
+\&\fBOSSL_EC_curve_nid2name\fR\|(3).
+If \fItype\fR is:
+\&\f(CW\*(C`ED25519\*(C'\fR,
+\&\f(CW\*(C`ED448\*(C'\fR,
+\&\f(CW\*(C`SM2\*(C'\fR,
+\&\f(CW\*(C`X25519\*(C'\fR,
+\&\f(CW\*(C`X448\*(C'\fR,
+\&\f(CW\*(C`ML\-DSA\-44\*(C'\fR,
+\&\f(CW\*(C`ML\-DSA\-65\*(C'\fR,
+\&\f(CW\*(C`ML\-DSA\-87\*(C'\fR,
+\&\f(CW\*(C`ML\-KEM\-512\*(C'\fR,
+\&\f(CW\*(C`ML\-KEM\-768\*(C'\fR, or
+\&\f(CW\*(C`ML\-KEM\-1024\*(C'\fR
+no further parameters are needed. Other key types may be possible if they are
+supplied by the loaded providers. \fBEVP_PKEY_Q_keygen()\fR may be usable with such
+key types as long as they do not require further parameters.
 .SH "RETURN VALUES"
 .IX Header "RETURN VALUES"
 \&\fBEVP_PKEY_keygen_init()\fR, \fBEVP_PKEY_paramgen_init()\fR, \fBEVP_PKEY_keygen()\fR and

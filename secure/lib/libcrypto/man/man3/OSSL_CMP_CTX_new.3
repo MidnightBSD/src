@@ -58,7 +58,7 @@
 .\" ========================================================================
 .\"
 .IX Title "OSSL_CMP_CTX_NEW 3ossl"
-.TH OSSL_CMP_CTX_NEW 3ossl 2026-04-07 3.0.20 OpenSSL
+.TH OSSL_CMP_CTX_NEW 3ossl 2026-09-29 3.5.9 OpenSSL
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -67,6 +67,7 @@
 OSSL_CMP_CTX_new,
 OSSL_CMP_CTX_free,
 OSSL_CMP_CTX_reinit,
+OSSL_CMP_CTX_get0_libctx, OSSL_CMP_CTX_get0_propq,
 OSSL_CMP_CTX_set_option,
 OSSL_CMP_CTX_get_option,
 OSSL_CMP_CTX_set_log_cb,
@@ -86,7 +87,9 @@ OSSL_CMP_CTX_set_transfer_cb_arg,
 OSSL_CMP_CTX_get_transfer_cb_arg,
 OSSL_CMP_CTX_set1_srvCert,
 OSSL_CMP_CTX_set1_expected_sender,
+OSSL_CMP_CTX_set0_trusted,
 OSSL_CMP_CTX_set0_trustedStore,
+OSSL_CMP_CTX_get0_trusted,
 OSSL_CMP_CTX_get0_trustedStore,
 OSSL_CMP_CTX_set1_untrusted,
 OSSL_CMP_CTX_get0_untrusted,
@@ -98,10 +101,12 @@ OSSL_CMP_CTX_set1_secretValue,
 OSSL_CMP_CTX_set1_recipient,
 OSSL_CMP_CTX_push0_geninfo_ITAV,
 OSSL_CMP_CTX_reset_geninfo_ITAVs,
+OSSL_CMP_CTX_get0_geninfo_ITAVs,
 OSSL_CMP_CTX_set1_extraCertsOut,
 OSSL_CMP_CTX_set0_newPkey,
 OSSL_CMP_CTX_get0_newPkey,
 OSSL_CMP_CTX_set1_issuer,
+OSSL_CMP_CTX_set1_serialNumber,
 OSSL_CMP_CTX_set1_subjectName,
 OSSL_CMP_CTX_push1_subjectAltName,
 OSSL_CMP_CTX_set0_reqExtensions,
@@ -118,6 +123,7 @@ OSSL_CMP_CTX_get_certConf_cb_arg,
 OSSL_CMP_CTX_get_status,
 OSSL_CMP_CTX_get0_statusString,
 OSSL_CMP_CTX_get_failInfoCode,
+OSSL_CMP_CTX_get0_validatedSrvCert,
 OSSL_CMP_CTX_get0_newCert,
 OSSL_CMP_CTX_get1_newChain,
 OSSL_CMP_CTX_get1_caPubs,
@@ -133,6 +139,8 @@ OSSL_CMP_CTX_set1_senderNonce
 \& OSSL_CMP_CTX *OSSL_CMP_CTX_new(OSSL_LIB_CTX *libctx, const char *propq);
 \& void OSSL_CMP_CTX_free(OSSL_CMP_CTX *ctx);
 \& int OSSL_CMP_CTX_reinit(OSSL_CMP_CTX *ctx);
+\& OSSL_LIB_CTX *OSSL_CMP_CTX_get0_libctx(const OSSL_CMP_CTX *ctx);
+\& const char *OSSL_CMP_CTX_get0_propq(const OSSL_CMP_CTX *ctx);
 \& int OSSL_CMP_CTX_set_option(OSSL_CMP_CTX *ctx, int opt, int val);
 \& int OSSL_CMP_CTX_get_option(const OSSL_CMP_CTX *ctx, int opt);
 \&
@@ -160,8 +168,10 @@ OSSL_CMP_CTX_set1_senderNonce
 \& /* server authentication: */
 \& int OSSL_CMP_CTX_set1_srvCert(OSSL_CMP_CTX *ctx, X509 *cert);
 \& int OSSL_CMP_CTX_set1_expected_sender(OSSL_CMP_CTX *ctx,
-\&                                      const X509_NAME *name);
+\&                                       const X509_NAME *name);
+\& #define OSSL_CMP_CTX_set0_trusted OSSL_CMP_CTX_set0_trustedStore
 \& int OSSL_CMP_CTX_set0_trustedStore(OSSL_CMP_CTX *ctx, X509_STORE *store);
+\& #define OSSL_CMP_CTX_get0_trusted OSSL_CMP_CTX_get0_trustedStore
 \& X509_STORE *OSSL_CMP_CTX_get0_trustedStore(const OSSL_CMP_CTX *ctx);
 \& int OSSL_CMP_CTX_set1_untrusted(OSSL_CMP_CTX *ctx, STACK_OF(X509) *certs);
 \& STACK_OF(X509) *OSSL_CMP_CTX_get0_untrusted(const OSSL_CMP_CTX *ctx);
@@ -180,6 +190,8 @@ OSSL_CMP_CTX_set1_senderNonce
 \& int OSSL_CMP_CTX_set1_recipient(OSSL_CMP_CTX *ctx, const X509_NAME *name);
 \& int OSSL_CMP_CTX_push0_geninfo_ITAV(OSSL_CMP_CTX *ctx, OSSL_CMP_ITAV *itav);
 \& int OSSL_CMP_CTX_reset_geninfo_ITAVs(OSSL_CMP_CTX *ctx);
+\& STACK_OF(OSSL_CMP_ITAV)
+\&     *OSSL_CMP_CTX_get0_geninfo_ITAVs(const OSSL_CMP_CTX *ctx);
 \& int OSSL_CMP_CTX_set1_extraCertsOut(OSSL_CMP_CTX *ctx,
 \&                                     STACK_OF(X509) *extraCertsOut);
 \&
@@ -187,6 +199,7 @@ OSSL_CMP_CTX_set1_senderNonce
 \& int OSSL_CMP_CTX_set0_newPkey(OSSL_CMP_CTX *ctx, int priv, EVP_PKEY *pkey);
 \& EVP_PKEY *OSSL_CMP_CTX_get0_newPkey(const OSSL_CMP_CTX *ctx, int priv);
 \& int OSSL_CMP_CTX_set1_issuer(OSSL_CMP_CTX *ctx, const X509_NAME *name);
+\& int OSSL_CMP_CTX_set1_serialNumber(OSSL_CMP_CTX *ctx, const ASN1_INTEGER *sn);
 \& int OSSL_CMP_CTX_set1_subjectName(OSSL_CMP_CTX *ctx, const X509_NAME *name);
 \& int OSSL_CMP_CTX_push1_subjectAltName(OSSL_CMP_CTX *ctx,
 \&                                       const GENERAL_NAME *name);
@@ -213,6 +226,7 @@ OSSL_CMP_CTX_set1_senderNonce
 \& OSSL_CMP_PKIFREETEXT *OSSL_CMP_CTX_get0_statusString(const OSSL_CMP_CTX *ctx);
 \& int OSSL_CMP_CTX_get_failInfoCode(const OSSL_CMP_CTX *ctx);
 \&
+\& X509 *OSSL_CMP_CTX_get0_validatedSrvCert(const OSSL_CMP_CTX *ctx);
 \& X509 *OSSL_CMP_CTX_get0_newCert(const OSSL_CMP_CTX *ctx);
 \& STACK_OF(X509) *OSSL_CMP_CTX_get1_newChain(const OSSL_CMP_CTX *ctx);
 \& STACK_OF(X509) *OSSL_CMP_CTX_get1_caPubs(const OSSL_CMP_CTX *ctx);
@@ -247,150 +261,145 @@ from the last executed transaction.
 It also clears any ITAVs that were added by \fBOSSL_CMP_CTX_push0_genm_ITAV()\fR.
 All other field values (i.e., CMP options) are retained for potential reuse.
 .PP
+\&\fBOSSL_CMP_CTX_get0_libctx()\fR returns the \fIlibctx\fR argument that was used
+when constructing \fIctx\fR with \fBOSSL_CMP_CTX_new()\fR, which may be NULL.
+.PP
+\&\fBOSSL_CMP_CTX_get0_propq()\fR returns the \fIpropq\fR argument that was used
+when constructing \fIctx\fR with \fBOSSL_CMP_CTX_new()\fR, which may be NULL.
+.PP
 \&\fBOSSL_CMP_CTX_set_option()\fR sets the given value for the given option
 (e.g., OSSL_CMP_OPT_IMPLICIT_CONFIRM) in the given OSSL_CMP_CTX structure.
 .PP
 The following options can be set:
 .IP \fBOSSL_CMP_OPT_LOG_VERBOSITY\fR 4
 .IX Item "OSSL_CMP_OPT_LOG_VERBOSITY"
-.Vb 3
-\&        The level of severity needed for actually outputting log messages
-\&        due to errors, warnings, general info, debugging, etc.
-\&        Default is OSSL_CMP_LOG_INFO. See also L<OSSL_CMP_log_open(3)>.
-.Ve
+The level of severity needed for actually outputting log messages
+due to errors, warnings, general info, debugging, etc.
+Default is OSSL_CMP_LOG_INFO. See also \fBOSSL_CMP_log_open\fR\|(3).
 .IP \fBOSSL_CMP_OPT_KEEP_ALIVE\fR 4
 .IX Item "OSSL_CMP_OPT_KEEP_ALIVE"
-.Vb 6
-\&        If the given value is 0 then HTTP connections are not kept open
-\&        after receiving a response, which is the default behavior for HTTP 1.0.
-\&        If the value is 1 or 2 then persistent connections are requested.
-\&        If the value is 2 then persistent connections are required,
-\&        i.e., in case the server does not grant them an error occurs.
-\&        The default value is 1: prefer to keep the connection open.
-.Ve
+If the given value is 0 then HTTP connections are not kept open
+after receiving a response, which is the default behavior for HTTP 1.0.
+If the value is 1 or 2 then persistent connections are requested.
+If the value is 2 then persistent connections are required,
+i.e., in case the server does not grant them an error occurs.
+The default value is 1: prefer to keep the connection open.
 .IP \fBOSSL_CMP_OPT_MSG_TIMEOUT\fR 4
 .IX Item "OSSL_CMP_OPT_MSG_TIMEOUT"
-.Vb 4
-\&        Number of seconds a CMP request\-response message round trip
-\&        is allowed to take before a timeout error is returned.
-\&        A value <= 0 means no limitation (waiting indefinitely).
-\&        Default is to use the B<OSSL_CMP_OPT_TOTAL_TIMEOUT> setting.
-.Ve
+Number of seconds a CMP request\-response message round trip
+is allowed to take before a timeout error is returned.
+A value <= 0 means no limitation (waiting indefinitely).
+Default is to use the \fBOSSL_CMP_OPT_TOTAL_TIMEOUT\fR setting.
 .IP \fBOSSL_CMP_OPT_TOTAL_TIMEOUT\fR 4
 .IX Item "OSSL_CMP_OPT_TOTAL_TIMEOUT"
-.Vb 4
-\&        Maximum total number of seconds a transaction may take,
-\&        including polling etc.
-\&        A value <= 0 means no limitation (waiting indefinitely).
-\&        Default is 0.
-.Ve
+Maximum total number of seconds a transaction may take,
+including polling etc.
+A value <= 0 means no limitation (waiting indefinitely).
+Default is 0.
+.IP \fBOSSL_CMP_OPT_USE_TLS\fR 4
+.IX Item "OSSL_CMP_OPT_USE_TLS"
+Use this option to indicate to the HTTP implementation
+whether TLS is going to be used for the connection (resulting in HTTPS).
+The value 1 indicates that TLS is used for client\-side HTTP connections,
+which needs to be implemented via a callback function set by
+\&\fBOSSL_CMP_CTX_set_http_cb()\fR.
+The value 0 indicates that TLS is not used.
+Default is \-1 for backward compatibility: TLS is used by the client side
+if and only if \fBOSSL_CMP_CTX_set_http_cb_arg()\fR sets a non\-NULL \fIarg\fR.
 .IP \fBOSSL_CMP_OPT_VALIDITY_DAYS\fR 4
 .IX Item "OSSL_CMP_OPT_VALIDITY_DAYS"
-.Vb 1
-\&        Number of days new certificates are asked to be valid for.
-.Ve
+Number of days new certificates are asked to be valid for.
 .IP \fBOSSL_CMP_OPT_SUBJECTALTNAME_NODEFAULT\fR 4
 .IX Item "OSSL_CMP_OPT_SUBJECTALTNAME_NODEFAULT"
-.Vb 2
-\&        Do not take default Subject Alternative Names
-\&        from the reference certificate.
-.Ve
+Do not take default Subject Alternative Names
+from the reference certificate.
 .IP \fBOSSL_CMP_OPT_SUBJECTALTNAME_CRITICAL\fR 4
 .IX Item "OSSL_CMP_OPT_SUBJECTALTNAME_CRITICAL"
-.Vb 1
-\&        Demand that the given Subject Alternative Names are flagged as critical.
-.Ve
+Demand that the given Subject Alternative Names are flagged as critical.
 .IP \fBOSSL_CMP_OPT_POLICIES_CRITICAL\fR 4
 .IX Item "OSSL_CMP_OPT_POLICIES_CRITICAL"
-.Vb 1
-\&        Demand that the given policies are flagged as critical.
-.Ve
+Demand that the given policies are flagged as critical.
 .IP \fBOSSL_CMP_OPT_POPO_METHOD\fR 4
 .IX Item "OSSL_CMP_OPT_POPO_METHOD"
-.Vb 1
-\&        Select the proof of possession method to use. Possible values are:
-\&
-\&            OSSL_CRMF_POPO_NONE       \- ProofOfPossession field omitted
-\&            OSSL_CRMF_POPO_RAVERIFIED \- assert that the RA has already
-\&                                        verified the PoPo
-\&            OSSL_CRMF_POPO_SIGNATURE  \- sign a value with private key,
-\&                                        which is the default.
-\&            OSSL_CRMF_POPO_KEYENC     \- decrypt the encrypted certificate
-\&                                        ("indirect method")
-\&
-\&        Note that a signature\-based POPO can only be produced if a private key
-\&        is provided as the newPkey or client\*(Aqs pkey component of the CMP context.
+Select the proof of possession method to use. Possible values are:
+.Sp
+.Vb 8
+\&    OSSL_CRMF_POPO_NONE       \- ProofOfPossession field omitted,
+\&                                which implies central key generation
+\&    OSSL_CRMF_POPO_RAVERIFIED \- assert that the RA has already
+\&                                verified the PoPo
+\&    OSSL_CRMF_POPO_SIGNATURE  \- sign a value with private key,
+\&                                which is the default.
+\&    OSSL_CRMF_POPO_KEYENC     \- decrypt the encrypted certificate
+\&                                ("indirect method")
 .Ve
+.Sp
+Note that a signature\-based POPO can only be produced if a private key
+is provided as the newPkey or client\*(Aqs pkey component of the CMP context.
 .IP \fBOSSL_CMP_OPT_DIGEST_ALGNID\fR 4
 .IX Item "OSSL_CMP_OPT_DIGEST_ALGNID"
-.Vb 3
-\&        The NID of the digest algorithm to be used in RFC 4210\*(Aqs MSG_SIG_ALG
-\&        for signature\-based message protection and Proof\-of\-Possession (POPO).
-\&        Default is SHA256.
-.Ve
-.IP "\fBOSSL_CMP_OPT_OWF_ALGNID\fR The NID of the digest algorithm to be used as one\-way function (OWF) for MAC\-based message protection with password\-based MAC (PBM). See RFC 4210 section 5.1.3.1 for details. Default is SHA256." 4
-.IX Item "OSSL_CMP_OPT_OWF_ALGNID The NID of the digest algorithm to be used as one-way function (OWF) for MAC-based message protection with password-based MAC (PBM). See RFC 4210 section 5.1.3.1 for details. Default is SHA256."
+The NID of the digest algorithm to be used in RFC 9810\*(Aqs MSG_SIG_ALG
+for signature\-based message protection and Proof\-of\-Possession (POPO).
+Default is SHA256.
+.IP "\fBOSSL_CMP_OPT_OWF_ALGNID\fR The NID of the digest algorithm to be used as one\-way function (OWF) for MAC\-based message protection with password\-based MAC (PBM). See RFC 9810 section 5.1.3.1 for details. Default is SHA256." 4
+.IX Item "OSSL_CMP_OPT_OWF_ALGNID The NID of the digest algorithm to be used as one-way function (OWF) for MAC-based message protection with password-based MAC (PBM). See RFC 9810 section 5.1.3.1 for details. Default is SHA256."
 .PD 0
-.IP "\fBOSSL_CMP_OPT_MAC_ALGNID\fR The NID of the MAC algorithm to be used for message protection with PBM. Default is HMAC\-SHA1 as per RFC 4210." 4
-.IX Item "OSSL_CMP_OPT_MAC_ALGNID The NID of the MAC algorithm to be used for message protection with PBM. Default is HMAC-SHA1 as per RFC 4210."
+.IP "\fBOSSL_CMP_OPT_MAC_ALGNID\fR The NID of the MAC algorithm to be used for message protection with PBM. Default is HMAC\-SHA1, for backward compatibility with RFC 4210." 4
+.IX Item "OSSL_CMP_OPT_MAC_ALGNID The NID of the MAC algorithm to be used for message protection with PBM. Default is HMAC-SHA1, for backward compatibility with RFC 4210."
 .IP \fBOSSL_CMP_OPT_REVOCATION_REASON\fR 4
 .IX Item "OSSL_CMP_OPT_REVOCATION_REASON"
 .PD
-.Vb 2
-\&        The reason code to be included in a Revocation Request (RR);
-\&        values: 0..10 (RFC 5210, 5.3.1) or \-1 for none, which is the default.
-.Ve
+The reason code to be included in a Revocation Request (RR);
+values: 0..10 (RFC 5210, 5.3.1) or \-1 for none, which is the default.
 .IP \fBOSSL_CMP_OPT_IMPLICIT_CONFIRM\fR 4
 .IX Item "OSSL_CMP_OPT_IMPLICIT_CONFIRM"
-.Vb 4
-\&        Request server to enable implicit confirm mode, where the client
-\&        does not need to send confirmation upon receiving the
-\&        certificate. If the server does not enable implicit confirmation
-\&        in the return message, then confirmation is sent anyway.
-.Ve
+Request server to enable implicit confirm mode, where the client
+does not need to send confirmation upon receiving the
+certificate. If the server does not enable implicit confirmation
+in the return message, then confirmation is sent anyway.
 .IP \fBOSSL_CMP_OPT_DISABLE_CONFIRM\fR 4
 .IX Item "OSSL_CMP_OPT_DISABLE_CONFIRM"
-.Vb 5
-\&        Do not confirm enrolled certificates, to cope with broken servers
-\&        not supporting implicit confirmation correctly.
-\&B<WARNING:> This setting leads to unspecified behavior and it is meant
-\&exclusively to allow interoperability with server implementations violating
-\&RFC 4210.
-.Ve
+Do not confirm enrolled certificates, to cope with broken servers
+not supporting implicit confirmation correctly.
+\&\fBWARNING:\fR This setting leads to unspecified behavior and it is meant
+exclusively to allow interoperability with server implementations violating
+RFC 9810.
 .IP \fBOSSL_CMP_OPT_UNPROTECTED_SEND\fR 4
 .IX Item "OSSL_CMP_OPT_UNPROTECTED_SEND"
-.Vb 1
-\&        Send request or response messages without CMP\-level protection.
-.Ve
+Send request or response messages without CMP\-level protection.
 .IP \fBOSSL_CMP_OPT_UNPROTECTED_ERRORS\fR 4
 .IX Item "OSSL_CMP_OPT_UNPROTECTED_ERRORS"
-.Vb 7
-\&        Accept unprotected error responses which are either explicitly
-\&        unprotected or where protection verification failed. Applies to regular
-\&        error messages as well as certificate responses (IP/CP/KUP) and
-\&        revocation responses (RP) with rejection.
-\&B<WARNING:> This setting leads to unspecified behavior and it is meant
-\&exclusively to allow interoperability with server implementations violating
-\&RFC 4210.
-.Ve
+Accept unprotected error responses which are either explicitly
+unprotected or where protection verification failed. Applies to regular
+error messages as well as certificate responses (IP/CP/KUP) and
+revocation responses (RP) with rejection.
+\&\fBWARNING:\fR This setting leads to unspecified behavior and it is meant
+exclusively to allow interoperability with server implementations violating
+RFC 9810.
 .IP \fBOSSL_CMP_OPT_IGNORE_KEYUSAGE\fR 4
 .IX Item "OSSL_CMP_OPT_IGNORE_KEYUSAGE"
-.Vb 3
-\&        Ignore key usage restrictions in the signer\*(Aqs certificate when
-\&        validating signature\-based protection in received CMP messages.
-\&        Else, \*(AqdigitalSignature\*(Aq must be allowed by CMP signer certificates.
-.Ve
+Ignore key usage restrictions in the signer\*(Aqs certificate when
+validating signature\-based protection in received CMP messages.
+Else, \*(AqdigitalSignature\*(Aq must be allowed by CMP signer certificates.
 .IP \fBOSSL_CMP_OPT_PERMIT_TA_IN_EXTRACERTS_FOR_IR\fR 4
 .IX Item "OSSL_CMP_OPT_PERMIT_TA_IN_EXTRACERTS_FOR_IR"
-.Vb 3
-\&        Allow retrieving a trust anchor from extraCerts and using that
-\&        to validate the certificate chain of an IP message.
-\&        This is a quirk option added to support 3GPP TS 33.310.
-\&
-\&        Note that using this option is dangerous as the certificate obtained
-\&        this way has not been authenticated (at least not at CMP level).
-\&        Taking it over as a trust anchor implements trust\-on\-first\-use (TOFU).
-.Ve
+Allow retrieving a trust anchor from extraCerts and using that
+to validate the certificate chain of an IP message.
+This is a quirk option added to support 3GPP TS 33.310.
+.Sp
+Note that using this option is dangerous as the certificate obtained
+this way has not been authenticated (at least not at CMP level).
+Taking it over as a trust anchor implements trust\-on\-first\-use (TOFU).
+.IP \fBOSSL_CMP_OPT_NO_CACHE_EXTRACERTS\fR 4
+.IX Item "OSSL_CMP_OPT_NO_CACHE_EXTRACERTS"
+Do not cache certificates received in the extraCerts CMP message field.
+Otherwise they are stored to potentially help validate further messages.
+.Sp
+In any case, after successfully validating an incoming message, its protection
+certificate (if any) is cached for reuse with validation of subsequent messages.
+This is done not only for efficiency but also
+to eliminate the need for the sender to include its certificate and related chain
+in the extraCerts field of subsequent messages of the same transaction.
 .PP
 \&\fBOSSL_CMP_CTX_get_option()\fR reads the current value of the given option
 (e.g., OSSL_CMP_OPT_IMPLICIT_CONFIRM) from the given OSSL_CMP_CTX structure.
@@ -415,10 +424,14 @@ The default is \f(CW\*(C`/\*(C'\fR.
 .PP
 \&\fBOSSL_CMP_CTX_set1_server()\fR sets the given server \fIaddress\fR
 (which may be a hostname or IP address or NULL) in the given \fIctx\fR.
+If \fBOSSL_CMP_CTX_get_transfer_cb_arg()\fR sets a non\-NULL argument,
+this server address information is used for diagnostic output only.
 .PP
 \&\fBOSSL_CMP_CTX_set_serverPort()\fR sets the port of the CMP server to connect to.
 If not used or the \fIport\fR argument is 0
 the default port applies, which is 80 for HTTP and 443 for HTTPS.
+If \fBOSSL_CMP_CTX_get_transfer_cb_arg()\fR sets a non\-NULL argument,
+this server port information is used for diagnostic output only.
 .PP
 \&\fBOSSL_CMP_CTX_set1_proxy()\fR sets the HTTP proxy to be used for connecting to
 the given CMP server unless overruled by any "no_proxy" settings (see below).
@@ -440,26 +453,23 @@ Defaults to the environment variable \f(CW\*(C`no_proxy\*(C'\fR if set, else \f(
 function, which has the prototype
 .PP
 .Vb 1
-\& typedef BIO *(*HTTP_bio_cb_t) (BIO *bio, void *ctx, int connect, int detail);
+\& typedef BIO *(*HTTP_bio_cb_t) (BIO *bio, void *arg, int connect, int detail);
 .Ve
 .PP
-The callback may modify the \fIbio\fR provided by \fBOSSL_CMP_MSG_http_perform\fR\|(3),
-whereby it may make use of a custom defined argument \fIctx\fR
-stored in the OSSL_CMP_CTX by means of \fBOSSL_CMP_CTX_set_http_cb_arg()\fR.
-During connection establishment, just after calling \fBBIO_do_connect_retry()\fR,
-the function is invoked with the \fIconnect\fR argument being 1 and the \fIdetail\fR
-argument being 1 if HTTPS is requested, i.e., SSL/TLS should be enabled. On
-disconnect \fIconnect\fR is 0 and \fIdetail\fR is 1 in case no error occurred, else 0.
-For instance, on connect the function may prepend a TLS BIO to implement HTTPS;
-after disconnect it may do some diagnostic output and/or specific cleanup.
-The function should return NULL to indicate failure.
-After disconnect the modified BIO will be deallocated using \fBBIO_free_all()\fR.
+The callback may modify the \fIbio\fR provided by \fBOSSL_CMP_MSG_http_perform\fR\|(3)
+as described for the \fIbio_update_fn\fR parameter of \fBOSSL_HTTP_open\fR\|(3).
+The callback may make use of a custom defined argument \fIarg\fR,
+as described for the \fIarg\fR parameter of \fBOSSL_HTTP_open\fR\|(3).
+The argument is stored in the OSSL_CMP_CTX using \fBOSSL_CMP_CTX_set_http_cb_arg()\fR.
+See also the \fBOSSL_CMP_OPT_USE_TLS\fR option described above.
 .PP
-\&\fBOSSL_CMP_CTX_set_http_cb_arg()\fR sets an argument, respectively a pointer to
-a structure containing arguments,
+\&\fBOSSL_CMP_CTX_set_http_cb_arg()\fR sets the argument, respectively a pointer to
+a structure containing arguments such as an \fBSSL_CTX\fR structure,
 optionally to be used by the http connect/disconnect callback function.
 \&\fIarg\fR is not consumed, and it must therefore explicitly be freed when not
 needed any more. \fIarg\fR may be NULL to clear the entry.
+If a non\-NULL argument is set, it is an error to use \fBOSSL_CMP_CTX_set1_proxy()\fR
+or \fBOSSL_CMP_CTX_set1_no_proxy()\fR for setting non\-NULL strings.
 .PP
 \&\fBOSSL_CMP_CTX_get_http_cb_arg()\fR gets the argument, respectively the pointer to a
 structure containing arguments, previously set by
@@ -472,8 +482,6 @@ which has the type
 \& typedef OSSL_CMP_MSG *(*OSSL_CMP_transfer_cb_t) (OSSL_CMP_CTX *ctx,
 \&                                                  const OSSL_CMP_MSG *req);
 .Ve
-.PP
-Returns 1 on success, 0 on error.
 .PP
 Default is NULL, which implies the use of \fBOSSL_CMP_MSG_http_perform\fR\|(3).
 The callback should send the CMP request message it obtains via the \fIreq\fR
@@ -493,8 +501,8 @@ to a structure containing arguments, previously set by
 .PP
 \&\fBOSSL_CMP_CTX_set1_srvCert()\fR sets the expected server cert in \fIctx\fR and trusts
 it directly (even if it is expired) when verifying signed response messages.
-This pins the accepted CMP server and
-results in ignoring whatever may be set using \fBOSSL_CMP_CTX_set0_trustedStore()\fR.
+This pins the accepted CMP server
+and results in ignoring whatever may be set using \fBOSSL_CMP_CTX_set0_trusted()\fR.
 Any previously set value is freed.
 The \fIcert\fR argument may be NULL to clear the entry.
 If set, the subject of the certificate is also used
@@ -511,8 +519,9 @@ Note that this gives slightly more freedom than \fBOSSL_CMP_CTX_set1_srvCert()\f
 which pins the server to the holder of a particular certificate, while the
 expected sender name will continue to match after updates of the server cert.
 .PP
-\&\fBOSSL_CMP_CTX_set0_trustedStore()\fR
-sets in the CMP context \fIctx\fR the certificate store of type X509_STORE
+\&\fBOSSL_CMP_CTX_set0_trusted()\fR is an alias of the original
+\&\fBOSSL_CMP_CTX_set0_trustedStore()\fR.
+It sets in the CMP context \fIctx\fR the certificate store of type X509_STORE
 containing trusted certificates, typically of root CAs.
 This is ignored when a certificate is pinned using \fBOSSL_CMP_CTX_set1_srvCert()\fR.
 The store may also hold CRLs and a certificate verification callback function
@@ -520,8 +529,9 @@ used for signature\-based peer authentication.
 Any store entry already set before is freed.
 When given a NULL parameter the entry is cleared.
 .PP
-\&\fBOSSL_CMP_CTX_get0_trustedStore()\fR
-extracts from the CMP context \fIctx\fR the pointer to the currently set
+\&\fBOSSL_CMP_CTX_get0_trusted()\fR is an alias of the original
+\&\fBOSSL_CMP_CTX_get0_trustedStore()\fR.
+It extracts from the CMP context \fIctx\fR the pointer to the currently set
 certificate store containing trust anchors etc., or an empty store if unset.
 .PP
 \&\fBOSSL_CMP_CTX_set1_untrusted()\fR sets up a list of non\-trusted certificates
@@ -529,19 +539,23 @@ of intermediate CAs that may be useful for path construction for the own CMP
 signer certificate, for the own TLS certificate (if any), when verifying peer
 CMP protection certificates, and when verifying newly enrolled certificates.
 The reference counts of those certificates handled successfully are increased.
+This list of untrusted certificates in \fIctx\fR will get augmented by extraCerts
+in received CMP messages unless \fBOSSL_CMP_OPT_NO_CACHE_EXTRACERTS\fR is set.
 .PP
-OSSL_CMP_CTX_get0_untrusted(OSSL_CMP_CTX *ctx) returns a pointer to the
-list of untrusted certs, which may be empty if unset.
+\&\fBOSSL_CMP_CTX_get0_untrusted()\fR returns a pointer to the
+list of untrusted certs in \fIctx\fR, which may be empty if unset.
 .PP
-\&\fBOSSL_CMP_CTX_set1_cert()\fR sets the CMP signer certificate, also called protection
-certificate, related to the private key for signature\-based message protection.
+\&\fBOSSL_CMP_CTX_set1_cert()\fR sets the CMP \fIsigner certificate\fR,
+also called \fIprotection certificate\fR,
+related to the private key used for signature\-based CMP message protection.
 Therefore the public key of this \fIcert\fR must correspond to
 the private key set before or thereafter via \fBOSSL_CMP_CTX_set1_pkey()\fR.
 When using signature\-based protection of CMP request messages
 this CMP signer certificate will be included first in the extraCerts field.
 It serves as fallback reference certificate, see \fBOSSL_CMP_CTX_set1_oldCert()\fR.
 The subject of this \fIcert\fR will be used as the sender field of outgoing
-messages, while the subject of any cert set via \fBOSSL_CMP_CTX_set1_oldCert()\fR
+messages, while the subject of any cert set via \fBOSSL_CMP_CTX_set1_oldCert()\fR,
+the subject of any PKCS#10 CSR set via \fBOSSL_CMP_CTX_set1_p10CSR()\fR,
 and any value set via \fBOSSL_CMP_CTX_set1_subjectName()\fR are used as fallback.
 .PP
 The \fIcert\fR argument may be NULL to clear the entry.
@@ -576,7 +590,7 @@ messages that have MAC\-based protection (protectionAlg = \f(CW\*(C`MSG_MAC_ALG\
 .PP
 \&\fBOSSL_CMP_CTX_set1_referenceValue()\fR sets the given referenceValue \fIref\fR with
 length \fIlen\fR in the given \fIctx\fR or clears it if the \fIref\fR argument is NULL.
-According to RFC 4210 section 5.1.1, if no value for the sender field in
+According to RFC 9810 section 5.1.1, if no value for the sender field in
 CMP message headers can be determined (i.e., no CMP signer certificate
 and no subject DN is set via \fBOSSL_CMP_CTX_set1_subjectName()\fR
 then the sender field will contain the NULL\-DN
@@ -598,11 +612,15 @@ the issuer of the CMP signer certificate,
 as far as any of those is present, else the NULL\-DN as last resort.
 .PP
 \&\fBOSSL_CMP_CTX_push0_geninfo_ITAV()\fR adds \fIitav\fR to the stack in the \fIctx\fR to be
-added to the GeneralInfo field of the CMP PKIMessage header of a request
+added to the generalInfo field of the CMP PKIMessage header of a request
 message sent with this context.
 .PP
 \&\fBOSSL_CMP_CTX_reset_geninfo_ITAVs()\fR
 clears any ITAVs that were added by \fBOSSL_CMP_CTX_push0_geninfo_ITAV()\fR.
+.PP
+\&\fBOSSL_CMP_CTX_get0_geninfo_ITAVs()\fR returns the list of ITAVs set in \fIctx\fR
+for inclusion in the generalInfo field of the CMP PKIMessage header of requests
+or NULL if not set.
 .PP
 \&\fBOSSL_CMP_CTX_set1_extraCertsOut()\fR sets the stack of extraCerts that will be
 sent to remote.
@@ -620,6 +638,9 @@ private component then NULL is returned.
 .PP
 \&\fBOSSL_CMP_CTX_set1_issuer()\fR sets the name of the intended issuer that
 will be set in the CertTemplate, i.e., the X509 name of the CA server.
+.PP
+\&\fBOSSL_CMP_CTX_set1_serialNumber()\fR sets the serial number optionally used to
+select the certificate to be revoked in Revocation Requests (RR).
 .PP
 \&\fBOSSL_CMP_CTX_set1_subjectName()\fR sets the subject DN that will be used in
 the CertTemplate structure when requesting a new cert. For Key Update Requests
@@ -653,17 +674,22 @@ to the X509_EXTENSIONS of the requested certificate template.
 .PP
 \&\fBOSSL_CMP_CTX_set1_oldCert()\fR sets the old certificate to be updated in
 Key Update Requests (KUR) or to be revoked in Revocation Requests (RR).
-It must be given for RR, else it defaults to the CMP signer certificate.
-The \fIreference certificate\fR determined in this way, if any, is also used for
-deriving default subject DN, public key, Subject Alternative Names, and the
-default issuer entry in the requested certificate template of IR/CR/KUR.
+For RR, this is ignored if an issuer name and a serial number are provided using
+\&\fBOSSL_CMP_CTX_set1_issuer()\fR and \fBOSSL_CMP_CTX_set1_serialNumber()\fR, respectively.
+For IR/CR/KUR this sets the \fIreference certificate\fR,
+which otherwise defaults to the CMP signer certificate.
+The \fIreference certificate\fR determined this way, if any, is used for providing
+default public key, subject DN, Subject Alternative Names, and issuer DN entries
+in the requested certificate template of IR/CR/KUR messages.
+.PP
 The subject of the reference certificate is used as the sender field value
 in CMP message headers.
 Its issuer is used as default recipient in CMP message headers.
 .PP
 \&\fBOSSL_CMP_CTX_set1_p10CSR()\fR sets the PKCS#10 CSR to use in P10CR messages.
-If such a CSR is provided, its subject, public key, and extension fields are
-also used as fallback values for the certificate template of IR/CR/KUR messages.
+If such a CSR is provided, its subject and public key fields are also
+used as fallback values for the certificate template of IR/CR/KUR/RR messages,
+and any extensions included are added to the template of IR/CR/KUR messages.
 .PP
 \&\fBOSSL_CMP_CTX_push0_genm_ITAV()\fR adds \fIitav\fR to the stack in the \fIctx\fR which
 will be the body of a General Message sent with this context.
@@ -678,6 +704,8 @@ If the callback argument is NULL the function tries building an approximate
 chain as far as possible using the same untrusted certificates from the \fIctx\fR,
 and if this fails it takes the received extraCerts as fallback.
 The resulting cert chain can be retrieved using \fBOSSL_CMP_CTX_get1_newChain()\fR.
+This chain excludes the leaf certificate, i.e., the newly enrolled certificate.
+Also the trust anchor (the root certificate) is not included.
 .PP
 \&\fBOSSL_CMP_CTX_set_certConf_cb()\fR sets the callback used for evaluating the newly
 enrolled certificate before the library sends, depending on its result,
@@ -738,6 +766,13 @@ This is a bit field and the flags for it are specified in the header file
 The flags start with OSSL_CMP_CTX_FAILINFO, for example:
 OSSL_CMP_CTX_FAILINFO_badAlg. Returns \-1 if the failInfoCode field is unset.
 .PP
+\&\fBOSSL_CMP_CTX_get0_validatedSrvCert()\fR returns
+the successfully validated certificate, if any, that the CMP server used
+in the current transaction for signature\-based response message protection,
+or NULL if the server used MAC\-based protection.
+The value is relevant only at the end of a successful transaction.
+It may be used to check the authorization of the server based on its cert.
+.PP
 \&\fBOSSL_CMP_CTX_get0_newCert()\fR returns the pointer to the newly obtained
 certificate in case it is available, else NULL.
 .PP
@@ -762,19 +797,22 @@ OSSL_CMP_CTX structure.
 the \fIctx\fR. This will be used to validate the recipNonce in incoming messages.
 .SH NOTES
 .IX Header "NOTES"
-CMP is defined in RFC 4210 (and CRMF in RFC 4211).
+CMP is defined in RFC 9810 (and CRMF in RFC 4211).
 .SH "RETURN VALUES"
 .IX Header "RETURN VALUES"
 \&\fBOSSL_CMP_CTX_free()\fR and \fBOSSL_CMP_CTX_print_errors()\fR do not return anything.
 .PP
 \&\fBOSSL_CMP_CTX_new()\fR,
+\&\fBOSSL_CMP_CTX_get0_libctx()\fR, \fBOSSL_CMP_CTX_get0_propq()\fR,
 \&\fBOSSL_CMP_CTX_get_http_cb_arg()\fR,
 \&\fBOSSL_CMP_CTX_get_transfer_cb_arg()\fR,
-\&\fBOSSL_CMP_CTX_get0_trustedStore()\fR,
+\&\fBOSSL_CMP_CTX_get0_trusted()\fR,
 \&\fBOSSL_CMP_CTX_get0_untrusted()\fR,
+\&\fBOSSL_CMP_CTX_get0_geninfo_ITAVs()\fR,
 \&\fBOSSL_CMP_CTX_get0_newPkey()\fR,
 \&\fBOSSL_CMP_CTX_get_certConf_cb_arg()\fR,
 \&\fBOSSL_CMP_CTX_get0_statusString()\fR,
+\&\fBOSSL_CMP_CTX_get0_validatedSrvCert()\fR,
 \&\fBOSSL_CMP_CTX_get0_newCert()\fR,
 \&\fBOSSL_CMP_CTX_get0_newChain()\fR,
 \&\fBOSSL_CMP_CTX_get1_caPubs()\fR, and
@@ -805,7 +843,7 @@ Set up a CMP client context for sending requests and verifying responses:
 \&    OSSL_CMP_CTX_set1_server(cmp_ctx, name_or_address);
 \&    OSSL_CMP_CTX_set1_serverPort(cmp_ctx, port_string);
 \&    OSSL_CMP_CTX_set1_serverPath(cmp_ctx, path_or_alias);
-\&    OSSL_CMP_CTX_set0_trustedStore(cmp_ctx, ts);
+\&    OSSL_CMP_CTX_set0_trusted(cmp_ctx, ts);
 .Ve
 .PP
 Set up symmetric credentials for MAC\-based message protection such as PBM:
@@ -876,15 +914,30 @@ the id\-it\-signKeyPairTypes OID and prints info on the General Response content
 \&\fBOSSL_CMP_exec_IR_ses\fR\|(3), \fBOSSL_CMP_exec_CR_ses\fR\|(3),
 \&\fBOSSL_CMP_exec_KUR_ses\fR\|(3), \fBOSSL_CMP_exec_GENM_ses\fR\|(3),
 \&\fBOSSL_CMP_exec_certreq\fR\|(3), \fBOSSL_CMP_MSG_http_perform\fR\|(3),
-\&\fBERR_print_errors_cb\fR\|(3)
+\&\fBERR_print_errors_cb\fR\|(3), \fBOSSL_HTTP_open\fR\|(3)
 .SH HISTORY
 .IX Header "HISTORY"
 The OpenSSL CMP support was added in OpenSSL 3.0.
 .PP
+\&\fBOSSL_CMP_CTX_get0_trustedStore()\fR was renamed to \fBOSSL_CMP_CTX_get0_trusted()\fR and
+\&\fBOSSL_CMP_CTX_set0_trustedStore()\fR was renamed to \fBOSSL_CMP_CTX_set0_trusted()\fR,
+using macros, while keeping the old names for backward compatibility,
+in OpenSSL 3.2.
+.PP
 \&\fBOSSL_CMP_CTX_reset_geninfo_ITAVs()\fR was added in OpenSSL 3.0.8.
+.PP
+\&\fBOSSL_CMP_CTX_set1_serialNumber()\fR,
+\&\fBOSSL_CMP_CTX_get0_libctx()\fR, \fBOSSL_CMP_CTX_get0_propq()\fR, and
+\&\fBOSSL_CMP_CTX_get0_validatedSrvCert()\fR were added in OpenSSL 3.2.
+.PP
+\&\fBOSSL_CMP_CTX_get0_geninfo_ITAVs()\fR and
+the \fBOSSL_CMP_OPT_NO_CACHE_EXTRACERTS\fR option were added in OpenSSL 3.3.
+.PP
+Support for central key generation, requested via \fBOSSL_CRMF_POPO_NONE\fR,
+was added in OpenSSL 3.5.
 .SH COPYRIGHT
 .IX Header "COPYRIGHT"
-Copyright 2007\-2024 The OpenSSL Project Authors. All Rights Reserved.
+Copyright 2007\-2026 The OpenSSL Project Authors. All Rights Reserved.
 .PP
 Licensed under the Apache License 2.0 (the "License").  You may not use
 this file except in compliance with the License.  You can obtain a copy

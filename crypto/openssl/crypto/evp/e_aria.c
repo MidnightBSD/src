@@ -282,10 +282,8 @@ static int aria_gcm_ctrl(EVP_CIPHER_CTX *c, int type, int arg, void *ptr)
         if ((arg > EVP_MAX_IV_LENGTH) && (arg > gctx->ivlen)) {
             if (gctx->iv != c->iv)
                 OPENSSL_free(gctx->iv);
-            if ((gctx->iv = OPENSSL_malloc(arg)) == NULL) {
-                ERR_raise(ERR_LIB_EVP, ERR_R_MALLOC_FAILURE);
+            if ((gctx->iv = OPENSSL_malloc(arg)) == NULL)
                 return 0;
-            }
         }
         gctx->ivlen = arg;
         return 1;
@@ -385,10 +383,8 @@ static int aria_gcm_ctrl(EVP_CIPHER_CTX *c, int type, int arg, void *ptr)
         if (gctx->iv == c->iv)
             gctx_out->iv = out->iv;
         else {
-            if ((gctx_out->iv = OPENSSL_malloc(gctx->ivlen)) == NULL) {
-                ERR_raise(ERR_LIB_EVP, ERR_R_MALLOC_FAILURE);
+            if ((gctx_out->iv = OPENSSL_malloc(gctx->ivlen)) == NULL)
                 return 0;
-            }
             memcpy(gctx_out->iv, gctx->iv, gctx->ivlen);
         }
         return 1;
@@ -593,7 +589,7 @@ static int aria_ccm_ctrl(EVP_CIPHER_CTX *c, int type, int arg, void *ptr)
 
     case EVP_CTRL_AEAD_SET_IVLEN:
         arg = 15 - arg;
-        /* fall thru */
+        /* fall through */
     case EVP_CTRL_CCM_SET_L:
         if (arg < 2 || arg > 8)
             return 0;
@@ -764,29 +760,29 @@ static int aria_ccm_cipher(EVP_CIPHER_CTX *ctx, unsigned char *out,
     | EVP_CIPH_CUSTOM_COPY | EVP_CIPH_FLAG_AEAD_CIPHER \
     | EVP_CIPH_CUSTOM_IV_LENGTH)
 
-#define BLOCK_CIPHER_aead(nid, keylen, blocksize, ivlen, nmode, mode, MODE, flags) \
-    static const EVP_CIPHER aria_##keylen##_##mode = {                             \
-        nid##_##keylen##_##nmode,                                                  \
-        blocksize, keylen / 8, ivlen,                                              \
-        ARIA_AUTH_FLAGS | EVP_CIPH_##MODE##_MODE,                                  \
-        EVP_ORIG_GLOBAL,                                                           \
-        aria_##mode##_init_key,                                                    \
-        aria_##mode##_cipher,                                                      \
-        aria_##mode##_cleanup,                                                     \
-        sizeof(EVP_ARIA_##MODE##_CTX),                                             \
-        NULL, NULL, aria_##mode##_ctrl, NULL                                       \
-    };                                                                             \
-    const EVP_CIPHER *EVP_aria_##keylen##_##mode(void)                             \
-    {                                                                              \
-        return (EVP_CIPHER *)&aria_##keylen##_##mode;                              \
+#define BLOCK_CIPHER_aead(keylen, mode, MODE)          \
+    static const EVP_CIPHER aria_##keylen##_##mode = { \
+        NID_aria_##keylen##_##mode,                    \
+        1, keylen / 8, 12,                             \
+        ARIA_AUTH_FLAGS | EVP_CIPH_##MODE##_MODE,      \
+        EVP_ORIG_GLOBAL,                               \
+        aria_##mode##_init_key,                        \
+        aria_##mode##_cipher,                          \
+        aria_##mode##_cleanup,                         \
+        sizeof(EVP_ARIA_##MODE##_CTX),                 \
+        NULL, NULL, aria_##mode##_ctrl, NULL           \
+    };                                                 \
+    const EVP_CIPHER *EVP_aria_##keylen##_##mode(void) \
+    {                                                  \
+        return (EVP_CIPHER *)&aria_##keylen##_##mode;  \
     }
 
-BLOCK_CIPHER_aead(NID_aria, 128, 1, 12, gcm, gcm, GCM, 0)
-BLOCK_CIPHER_aead(NID_aria, 192, 1, 12, gcm, gcm, GCM, 0)
-BLOCK_CIPHER_aead(NID_aria, 256, 1, 12, gcm, gcm, GCM, 0)
+BLOCK_CIPHER_aead(128, gcm, GCM)
+BLOCK_CIPHER_aead(192, gcm, GCM)
+BLOCK_CIPHER_aead(256, gcm, GCM)
 
-BLOCK_CIPHER_aead(NID_aria, 128, 1, 12, ccm, ccm, CCM, 0)
-BLOCK_CIPHER_aead(NID_aria, 192, 1, 12, ccm, ccm, CCM, 0)
-BLOCK_CIPHER_aead(NID_aria, 256, 1, 12, ccm, ccm, CCM, 0)
+BLOCK_CIPHER_aead(128, ccm, CCM)
+BLOCK_CIPHER_aead(192, ccm, CCM)
+BLOCK_CIPHER_aead(256, ccm, CCM)
 
 #endif

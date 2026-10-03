@@ -58,7 +58,7 @@
 .\" ========================================================================
 .\"
 .IX Title "OSSL_CMP_ITAV_SET0 3ossl"
-.TH OSSL_CMP_ITAV_SET0 3ossl 2026-04-07 3.0.20 OpenSSL
+.TH OSSL_CMP_ITAV_SET0 3ossl 2026-09-29 3.5.9 OpenSSL
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -68,26 +68,30 @@ OSSL_CMP_ITAV_create,
 OSSL_CMP_ITAV_set0,
 OSSL_CMP_ITAV_get0_type,
 OSSL_CMP_ITAV_get0_value,
-OSSL_CMP_ITAV_push0_stack_item
+OSSL_CMP_ITAV_push0_stack_item,
+OSSL_CMP_ITAV_new0_certProfile,
+OSSL_CMP_ITAV_get0_certProfile
 \&\- OSSL_CMP_ITAV utility functions
 .SH SYNOPSIS
 .IX Header "SYNOPSIS"
-.Vb 6
-\&  #include <openssl/cmp.h>
-\&  OSSL_CMP_ITAV *OSSL_CMP_ITAV_create(ASN1_OBJECT *type, ASN1_TYPE *value);
-\&  void OSSL_CMP_ITAV_set0(OSSL_CMP_ITAV *itav, ASN1_OBJECT *type,
-\&                          ASN1_TYPE *value);
-\&  ASN1_OBJECT *OSSL_CMP_ITAV_get0_type(const OSSL_CMP_ITAV *itav);
-\&  ASN1_TYPE *OSSL_CMP_ITAV_get0_value(const OSSL_CMP_ITAV *itav);
+.Vb 1
+\& #include <openssl/cmp.h>
 \&
-\&  int OSSL_CMP_ITAV_push0_stack_item(STACK_OF(OSSL_CMP_ITAV) **itav_sk_p,
-\&                                     OSSL_CMP_ITAV *itav);
+\& OSSL_CMP_ITAV *OSSL_CMP_ITAV_create(ASN1_OBJECT *type, ASN1_TYPE *value);
+\& void OSSL_CMP_ITAV_set0(OSSL_CMP_ITAV *itav, ASN1_OBJECT *type,
+\&                         ASN1_TYPE *value);
+\& ASN1_OBJECT *OSSL_CMP_ITAV_get0_type(const OSSL_CMP_ITAV *itav);
+\& ASN1_TYPE *OSSL_CMP_ITAV_get0_value(const OSSL_CMP_ITAV *itav);
+\& int OSSL_CMP_ITAV_push0_stack_item(STACK_OF(OSSL_CMP_ITAV) **itav_sk_p,
+\&                                    OSSL_CMP_ITAV *itav);
+\& OSSL_CMP_ITAV
+\& *OSSL_CMP_ITAV_new0_certProfile(STACK_OF(ASN1_UTF8STRING) *certProfile);
+\& int OSSL_CMP_ITAV_get0_certProfile(const OSSL_CMP_ITAV *itav,
+\&                                    STACK_OF(ASN1_UTF8STRING) **out);
 .Ve
 .SH DESCRIPTION
 .IX Header "DESCRIPTION"
-Certificate Management Protocol (CMP, RFC 4210) extension to OpenSSL
-.PP
-ITAV is short for InfoTypeAndValue. This type is defined in RFC 4210
+ITAV is short for InfoTypeAndValue. This type is defined in RFC 9810
 section 5.3.19 and Appendix F. It is used at various places in CMP messages,
 e.g., in the generalInfo PKIHeader field, to hold a key\-value pair.
 .PP
@@ -106,20 +110,36 @@ the \fIitav\fR as generic \fBASN1_TYPE\fR pointer.
 .PP
 \&\fBOSSL_CMP_ITAV_push0_stack_item()\fR pushes \fIitav\fR to the stack pointed to
 by \fI*itav_sk_p\fR. It creates a new stack if \fI*itav_sk_p\fR points to NULL.
+.PP
+\&\fBOSSL_CMP_ITAV_new0_certProfile()\fR creates a new \fBOSSL_CMP_ITAV\fR structure
+of type \fBcertProfile\fR that includes the optionally given list of profile names.
+On success, ownership of the list is with the new \fBOSSL_CMP_ITAV\fR structure.
+.PP
+\&\fBOSSL_CMP_ITAV_get0_certProfile()\fR on success assigns to \fI*out\fR
+an internal pointer to the
+list of certificate profile names contained in the infoValue field of \fIitav\fR.
+The pointer may be NULL if no profile name is included.
+It is an error if the infoType of \fIitav\fR is not \fBcertProfile\fR.
 .SH NOTES
 .IX Header "NOTES"
-CMP is defined in RFC 4210 (and CRMF in RFC 4211).
+CMP is defined in RFC 9810.
+.PP
+OIDs to use as types in \fBOSSL_CMP_ITAV\fR can be found at
+<https://datatracker.ietf.org/doc/html/rfc9480#section\-4.2.2>.
+The respective OpenSSL NIDs, such as \fBNID_id_it_certProfile\fR,
+are defined in the \fI<openssl/obj_mac.h>\fR header file.
 .SH "RETURN VALUES"
 .IX Header "RETURN VALUES"
-\&\fBOSSL_CMP_ITAV_create()\fR returns a pointer to the ITAV structure on success,
-or NULL on error.
+\&\fBOSSL_CMP_ITAV_create()\fR and \fBOSSL_CMP_ITAV_new0_certProfile()\fR
+return a pointer to an ITAV structure on success, or NULL on error.
 .PP
 \&\fBOSSL_CMP_ITAV_set0()\fR does not return a value.
 .PP
 \&\fBOSSL_CMP_ITAV_get0_type()\fR and \fBOSSL_CMP_ITAV_get0_value()\fR
 return the respective pointer or NULL if their input is NULL.
 .PP
-\&\fBOSSL_CMP_ITAV_push0_stack_item()\fR returns 1 on success, 0 on error.
+\&\fBOSSL_CMP_ITAV_push0_stack_item()\fR and \fBOSSL_CMP_ITAV_get0_certProfile()\fR
+return 1 on success, 0 on error.
 .SH EXAMPLES
 .IX Header "EXAMPLES"
 The following code creates and sets a structure representing a generic
@@ -141,10 +161,9 @@ included in the requests\*(Aq PKIHeader\*(Aqs genInfo field.
 \&    OSSL_CMP_ITAV *itav = OSSL_CMP_ITAV_create(type, val);
 \&    if (itav == NULL) ...
 \&
-\&    OSSL_CMP_CTX *ctx = OSSL_CMP_CTX_new();
-\&    if (ctx == NULL || !OSSL_CMP_CTX_geninfo_push0_ITAV(ctx, itav)) {
+\&    if (!OSSL_CMP_CTX_push0_geninfo_ITAV(ctx, itav)) {
 \&        OSSL_CMP_ITAV_free(itav); /* also frees type and val */
-\&        goto err;
+\&        ...
 \&    }
 \&
 \&    ...
@@ -157,6 +176,9 @@ included in the requests\*(Aq PKIHeader\*(Aqs genInfo field.
 .SH HISTORY
 .IX Header "HISTORY"
 The OpenSSL CMP support was added in OpenSSL 3.0.
+.PP
+\&\fBOSSL_CMP_ITAV_new0_certProfile()\fR and \fBOSSL_CMP_ITAV_get0_certProfile()\fR
+were added in OpenSSL 3.3.
 .SH COPYRIGHT
 .IX Header "COPYRIGHT"
 Copyright 2007\-2021 The OpenSSL Project Authors. All Rights Reserved.

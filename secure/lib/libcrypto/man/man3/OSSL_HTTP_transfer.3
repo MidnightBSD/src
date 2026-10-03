@@ -58,7 +58,7 @@
 .\" ========================================================================
 .\"
 .IX Title "OSSL_HTTP_TRANSFER 3ossl"
-.TH OSSL_HTTP_TRANSFER 3ossl 2026-04-07 3.0.20 OpenSSL
+.TH OSSL_HTTP_TRANSFER 3ossl 2026-09-29 3.5.9 OpenSSL
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -124,6 +124,7 @@ for connecting to the given server and the optionally given \fIport\fR,
 defaulting to 80 for HTTP or 443 for HTTPS.
 Then this internal BIO is used for setting up a connection
 and for exchanging one or more request and response.
+.PP
 If \fIbio\fR is given and \fIrbio\fR is NULL then this \fIbio\fR is used instead.
 If both \fIbio\fR and \fIrbio\fR are given (which may be memory BIOs for instance)
 then no explicit connection is set up, but
@@ -131,7 +132,8 @@ then no explicit connection is set up, but
 As soon as the client has flushed \fIbio\fR the server must be ready to provide
 a response or indicate a waiting condition via \fIrbio\fR.
 .PP
-If \fIbio\fR is given, it is an error to provide \fIproxy\fR or \fIno_proxy\fR arguments,
+If \fIbio\fR is given,
+it is an error to provide non\-NULL \fIproxy\fR or \fIno_proxy\fR arguments,
 while \fIserver\fR and \fIport\fR arguments may be given to support diagnostic output.
 If \fIbio\fR is NULL the optional \fIproxy\fR parameter can be used to set an
 HTTP(S) proxy to use (unless overridden by "no_proxy" settings).
@@ -165,8 +167,8 @@ but cannot be used when both \fIbio\fR and \fIrbio\fR are given.
 .Ve
 .PP
 The callback function may modify the BIO provided in the \fIbio\fR argument,
-whereby it may make use of a custom defined argument \fIarg\fR,
-which may for instance point to an \fBSSL_CTX\fR structure.
+whereby it may use an optional custom defined argument \fIarg\fR,
+which can for instance point to an \fBSSL_CTX\fR structure.
 During connection establishment, just after calling \fBBIO_do_connect_retry()\fR, the
 callback function is invoked with the \fIconnect\fR argument being 1 and
 \&\fIdetail\fR being 1 if \fIuse_ssl\fR is nonzero (i.e., HTTPS is requested), else 0.
@@ -174,7 +176,7 @@ On disconnect \fIconnect\fR is 0 and \fIdetail\fR is 1 if no error occurred, els
 For instance, on connect the callback may push an SSL BIO to implement HTTPS;
 after disconnect it may do some diagnostic output and pop and free the SSL BIO.
 .PP
-The callback function must return either the potentially modified BIO \fIbio\fR.
+The callback function must return either the potentially modified BIO \fIbio\fR
 or NULL to indicate failure, in which case it should not modify the BIO.
 .PP
 Here is a simple example that supports TLS connections (but not via a proxy):
@@ -203,6 +205,8 @@ Here is a simple example that supports TLS connections (but not via a proxy):
 .Ve
 .PP
 After disconnect the modified BIO will be deallocated using \fBBIO_free_all()\fR.
+The optional callback function argument \fIarg\fR is not consumed,
+so must be freed by the caller when not needed any more.
 .PP
 The \fIbuf_size\fR parameter specifies the response header maximum line length.
 A value <= 0 means that the \fBOSSL_HTTP_DEFAULT_MAX_LINE_LEN\fR (4KiB) is used.
@@ -220,6 +224,7 @@ pre\-established with a TLS proxy using the HTTP CONNECT method,
 optionally using proxy client credentials \fIproxyuser\fR and \fIproxypass\fR,
 to connect with TLS protection ultimately to \fIserver\fR and \fIport\fR.
 If the \fIport\fR argument is NULL or the empty string it defaults to "443".
+The \fIserver\fR and \fIport\fR arguments must not contain CR or LF characters.
 If the \fItimeout\fR parameter is > 0 this indicates the maximum number of
 seconds the connection setup is allowed to take.
 A value <= 0 enables waiting indefinitely, i.e., no timeout.
@@ -240,24 +245,12 @@ else HTTP POST with the contents of \fIreq\fR and optional \fIcontent_type\fR, w
 the length of the data in \fIreq\fR does not need to be determined in advance: the
 BIO will be read on\-the\-fly while sending the request, which supports streaming.
 The optional list \fIheaders\fR may contain additional custom HTTP header lines.
-If the parameter \fIexpected_content_type\fR
-is not NULL then the client will check that the given content type string
-is included in the HTTP header of the response and return an error if not.
-If the \fIexpect_asn1\fR parameter is nonzero,
-a structure in ASN.1 encoding will be expected as response content.
+The \fIpath\fR, \fIheaders\fR names and values, and \fIcontent_type\fR must not contain
+CR or LF characters.
 The \fImax_resp_len\fR parameter specifies the maximum allowed
 response content length, where the value 0 indicates no limit.
-If the \fItimeout\fR parameter is > 0 this indicates the maximum number of seconds
-the subsequent HTTP transfer (sending the request and receiving a response)
-is allowed to take.
-A value of 0 enables waiting indefinitely, i.e., no timeout.
-A value < 0 indicates that the \fIoverall_timeout\fR parameter value given
-when opening the HTTP transfer will be used instead.
-If \fIkeep_alive\fR is 0 the connection is not kept open
-after receiving a response, which is the default behavior for HTTP 1.0.
-If the value is 1 or 2 then a persistent connection is requested.
-If the value is 2 then a persistent connection is required,
-i.e., an error occurs in case the server does not grant it.
+For the meaning of the \fIexpected_content_type\fR, \fIexpect_asn1\fR, \fItimeout\fR,
+and \fIkeep_alive\fR parameters, see \fBOSSL_HTTP_REQ_CTX_set_expected\fR\|(3).
 .PP
 \&\fBOSSL_HTTP_exchange()\fR exchanges any form of HTTP request and response
 as specified by \fIrctx\fR, which must include both connection and request data,
@@ -268,7 +261,7 @@ is not NULL the latter pointer is used to provide any new location that
 the server may return with HTTP code 301 (MOVED_PERMANENTLY) or 302 (FOUND).
 In this case the function returns NULL and the caller is
 responsible for deallocating the URL with \fBOPENSSL_free\fR\|(3).
-If the response header contains one or more "Content\-Length" header lines and/or
+If the response header contains one or more \f(CW\*(C`Content\-Length\*(C'\fR lines and/or
 an ASN.1\-encoded response is expected, which should include a total length,
 the length indications received are checked for consistency
 and for not exceeding any given maximum response length.
@@ -280,7 +273,8 @@ The caller is responsible for freeing the BIO pointer obtained.
 .PP
 \&\fBOSSL_HTTP_get()\fR uses HTTP GET to obtain data from \fIbio\fR if non\-NULL,
 else from the server contained in the \fIurl\fR, and returns it as a BIO.
-It supports redirection via HTTP status code 301 or 302.  It is meant for
+It supports redirection via HTTP status code 301 or 302.
+Redirection from HTTPS to HTTP is not allowed.  It is meant for
 transfers with a single round trip, so does not support persistent connections.
 If \fIbio\fR is non\-NULL, any host and port components in the \fIurl\fR are not used
 for connecting but the hostname is used, as usual, for the \f(CW\*(C`Host\*(C'\fR header.
@@ -314,6 +308,10 @@ The names of the environment variables used by this implementation:
 \&\f(CW\*(C`http_proxy\*(C'\fR, \f(CW\*(C`HTTP_PROXY\*(C'\fR, \f(CW\*(C`https_proxy\*(C'\fR, \f(CW\*(C`HTTPS_PROXY\*(C'\fR, \f(CW\*(C`no_proxy\*(C'\fR, and
 \&\f(CW\*(C`NO_PROXY\*(C'\fR, have been chosen for maximal compatibility with
 other HTTP client implementations such as wget, curl, and git.
+.PP
+When built with tracing enabled, \fBOSSL_HTTP_transfer()\fR and all functions using it
+may be traced using \fBOSSL_TRACE_CATEGORY_HTTP\fR.
+See also \fBOSSL_trace_enabled\fR\|(3) and \fBopenssl\-env\fR\|(7).
 .SH "RETURN VALUES"
 .IX Header "RETURN VALUES"
 \&\fBOSSL_HTTP_open()\fR returns on success a \fBOSSL_HTTP_REQ_CTX\fR, else NULL.
@@ -334,13 +332,15 @@ The caller is responsible for freeing the BIO pointer obtained.
 .IX Header "SEE ALSO"
 \&\fBOSSL_HTTP_parse_url\fR\|(3), \fBBIO_new_connect\fR\|(3),
 \&\fBASN1_item_i2d_mem_bio\fR\|(3), \fBASN1_item_d2i_bio\fR\|(3),
-\&\fBOSSL_HTTP_is_alive\fR\|(3)
+\&\fBOSSL_HTTP_REQ_CTX_set_expected\fR\|(3),
+\&\fBOSSL_HTTP_is_alive\fR\|(3),
+\&\fBOSSL_trace_enabled\fR\|(3), and \fBopenssl\-env\fR\|(7).
 .SH HISTORY
 .IX Header "HISTORY"
 All the functions described here were added in OpenSSL 3.0.
 .SH COPYRIGHT
 .IX Header "COPYRIGHT"
-Copyright 2019\-2023 The OpenSSL Project Authors. All Rights Reserved.
+Copyright 2019\-2026 The OpenSSL Project Authors. All Rights Reserved.
 .PP
 Licensed under the Apache License 2.0 (the "License").  You may not use
 this file except in compliance with the License.  You can obtain a copy

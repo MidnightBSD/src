@@ -17,7 +17,6 @@ B<openssl> B<ciphers>
 [B<-tls1_1>]
 [B<-tls1_2>]
 [B<-tls1_3>]
-[B<-s>]
 [B<-psk>]
 [B<-srp>]
 [B<-stdname>]
@@ -114,6 +113,10 @@ used. The format is described below.
 
 The cipher list consists of one or more I<cipher strings> separated by colons.
 Commas or spaces are also acceptable separators but colons are normally used.
+
+The cipher string may reference a cipher using its standard name from
+the IANA TLS Cipher Suites Registry
+(L<https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-4>).
 
 The actual cipher string can take several different forms.
 
@@ -438,10 +441,13 @@ B<SSL_IDEA>, B<SSL_AES128>, B<SSL_AES256>, B<SSL_CAMELLIA128>, B<SSL_CAMELLIA256
 
 =head1 CIPHER SUITE NAMES
 
-The following lists give the SSL or TLS cipher suites names from the
-relevant specification and their OpenSSL equivalents. It should be noted,
-that several cipher suite names do not include the authentication used,
-e.g. DES-CBC3-SHA. In these cases, RSA authentication is used.
+The following lists give the standard SSL or TLS cipher suites names from the
+relevant specification and their OpenSSL equivalents. You can use either
+standard names or OpenSSL names in cipher lists, or a mix of both.
+
+It should be noted, that several cipher suite names do not include the
+authentication used, e.g. DES-CBC3-SHA. In these cases, RSA authentication
+is used.
 
 =head2 AES cipher suites for  TLS v1.2
 
@@ -844,6 +850,15 @@ Note: the CBC modes mentioned in this RFC are not supported.
  TLS_AES_128_CCM_SHA256                     TLS_AES_128_CCM_SHA256
  TLS_AES_128_CCM_8_SHA256                   TLS_AES_128_CCM_8_SHA256
 
+=head2 TLS v1.3 integrity-only cipher suites according to RFC 9150
+
+ TLS_SHA256_SHA256          TLS_SHA256_SHA256
+ TLS_SHA384_SHA384          TLS_SHA384_SHA384
+
+Note: these ciphers are purely HMAC based and do not provide any confidentiality
+and thus are disabled by default.
+These ciphers are only available at security level 0.
+
 =head2 "EDH-" aliases to "DHE-" names for backward compatibility
 
 The following names are accepted by older releases:
@@ -900,6 +915,11 @@ The B<-stdname> is only available if OpenSSL is built with tracing enabled
 (B<enable-ssl-trace> argument to Configure) before OpenSSL 1.1.1.
 
 The B<-convert> option was added in OpenSSL 1.1.1.
+
+Support for standard IANA names in cipher lists was added in
+OpenSSL 3.2.0.
+
+The support for TLS v1.3 integrity-only cipher suites was added in OpenSSL 3.4.
 
 =head1 COPYRIGHT
 

@@ -655,7 +655,7 @@ static int asn1_template_noexp_d2i(ASN1_VALUE **val,
         }
 
         if (*val == NULL) {
-            ERR_raise(ERR_LIB_ASN1, ERR_R_MALLOC_FAILURE);
+            ERR_raise(ERR_LIB_ASN1, ERR_R_CRYPTO_LIB);
             goto err;
         }
 
@@ -685,7 +685,7 @@ static int asn1_template_noexp_d2i(ASN1_VALUE **val,
             }
             len -= p - q;
             if (!sk_ASN1_VALUE_push((STACK_OF(ASN1_VALUE) *)*val, skfield)) {
-                ERR_raise(ERR_LIB_ASN1, ERR_R_MALLOC_FAILURE);
+                ERR_raise(ERR_LIB_ASN1, ERR_R_CRYPTO_LIB);
                 ASN1_item_free(skfield, ASN1_ITEM_ptr(tt->item));
                 goto err;
             }
@@ -829,7 +829,7 @@ static int asn1_d2i_ex_primitive(ASN1_VALUE **pval,
         len = buf.length;
         /* Append a final null to string */
         if (!BUF_MEM_grow_clean(&buf, len + 1)) {
-            ERR_raise(ERR_LIB_ASN1, ERR_R_MALLOC_FAILURE);
+            ERR_raise(ERR_LIB_ASN1, ERR_R_BUF_LIB);
             goto err;
         }
         buf.data[len] = 0;
@@ -958,11 +958,19 @@ static int asn1_ex_c2i(ASN1_VALUE **pval, const unsigned char *cont, long len,
             ERR_raise(ERR_LIB_ASN1, ASN1_R_UNIVERSALSTRING_IS_WRONG_LENGTH);
             goto err;
         }
+        if (utype == V_ASN1_GENERALIZEDTIME && (len < 15)) {
+            ERR_raise(ERR_LIB_ASN1, ASN1_R_GENERALIZEDTIME_IS_TOO_SHORT);
+            goto err;
+        }
+        if (utype == V_ASN1_UTCTIME && (len < 13)) {
+            ERR_raise(ERR_LIB_ASN1, ASN1_R_UTCTIME_IS_TOO_SHORT);
+            goto err;
+        }
         /* All based on ASN1_STRING and handled the same */
         if (*pval == NULL) {
             stmp = ASN1_STRING_type_new(utype);
             if (stmp == NULL) {
-                ERR_raise(ERR_LIB_ASN1, ERR_R_MALLOC_FAILURE);
+                ERR_raise(ERR_LIB_ASN1, ERR_R_ASN1_LIB);
                 goto err;
             }
             *pval = (ASN1_VALUE *)stmp;
@@ -972,13 +980,11 @@ static int asn1_ex_c2i(ASN1_VALUE **pval, const unsigned char *cont, long len,
         }
         /* If we've already allocated a buffer use it */
         if (*free_cont) {
-            OPENSSL_free(stmp->data);
-            stmp->data = (unsigned char *)cont; /* UGLY CAST! RL */
-            stmp->length = ilen;
+            ASN1_STRING_set0(stmp, (unsigned char *)cont /* UGLY CAST! */, ilen);
             *free_cont = 0;
         } else {
             if (!ASN1_STRING_set(stmp, cont, ilen)) {
-                ERR_raise(ERR_LIB_ASN1, ERR_R_MALLOC_FAILURE);
+                ERR_raise(ERR_LIB_ASN1, ERR_R_ASN1_LIB);
                 ASN1_STRING_free(stmp);
                 *pval = NULL;
                 goto err;
@@ -1137,7 +1143,7 @@ static int collect_data(BUF_MEM *buf, const unsigned char **p, long plen)
     if (buf) {
         len = buf->length;
         if (!BUF_MEM_grow_clean(buf, len + plen)) {
-            ERR_raise(ERR_LIB_ASN1, ERR_R_MALLOC_FAILURE);
+            ERR_raise(ERR_LIB_ASN1, ERR_R_BUF_LIB);
             return 0;
         }
         memcpy(buf->data + len, *p, plen);

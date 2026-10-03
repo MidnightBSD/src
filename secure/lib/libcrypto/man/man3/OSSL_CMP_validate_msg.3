@@ -58,7 +58,7 @@
 .\" ========================================================================
 .\"
 .IX Title "OSSL_CMP_VALIDATE_MSG 3ossl"
-.TH OSSL_CMP_VALIDATE_MSG 3ossl 2026-04-07 3.0.20 OpenSSL
+.TH OSSL_CMP_VALIDATE_MSG 3ossl 2026-09-29 3.5.9 OpenSSL
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -92,13 +92,15 @@ is preferably the one provided by a call to \fBOSSL_CMP_CTX_set1_srvCert\fR\|(3)
 If no such sender cert has been pinned then candidate sender certificates are
 taken from the list of certificates received in the \fImsg\fR extraCerts, then any
 certificates provided before via \fBOSSL_CMP_CTX_set1_untrusted\fR\|(3), and
-then all trusted certificates provided via \fBOSSL_CMP_CTX_set0_trustedStore\fR\|(3),
-where a candidate is acceptable only if has not expired, its subject DN matches
+then all trusted certificates provided via \fBOSSL_CMP_CTX_set0_trusted\fR\|(3).
+A candidate certificate is acceptable only if it is currently valid
+(or the trust store contains a verification callback that overrides the verdict
+that the certificate is expired or not yet valid), its subject DN matches
 the \fImsg\fR sender DN (as far as present), and its subject key identifier
-is present and matches the senderKID (as far as the latter present).
+is present and matches the senderKID (as far as the latter is present).
 Each acceptable cert is tried in the given order to see if the message
 signature check succeeds and the cert and its path can be verified
-using any trust store set via \fBOSSL_CMP_CTX_set0_trustedStore\fR\|(3).
+using any trust store set via \fBOSSL_CMP_CTX_set0_trusted\fR\|(3).
 .PP
 If the option OSSL_CMP_OPT_PERMIT_TA_IN_EXTRACERTS_FOR_IR was set by calling
 \&\fBOSSL_CMP_CTX_set_option\fR\|(3), for an Initialization Response (IP) message
@@ -119,7 +121,7 @@ path using the given store of trusted certs (possibly including CRLs and a cert
 verification callback) and non\-trusted intermediate certs from the \fIctx\fR.
 .SH NOTES
 .IX Header "NOTES"
-CMP is defined in RFC 4210 (and CRMF in RFC 4211).
+CMP is defined in RFC 9810.
 .SH "RETURN VALUES"
 .IX Header "RETURN VALUES"
 \&\fBOSSL_CMP_validate_msg()\fR and \fBOSSL_CMP_validate_cert_path()\fR
@@ -128,7 +130,7 @@ return 1 on success, 0 on error or validation failed.
 .IX Header "SEE ALSO"
 \&\fBOSSL_CMP_CTX_new\fR\|(3), \fBOSSL_CMP_exec_certreq\fR\|(3),
 \&\fBOSSL_CMP_CTX_set1_secretValue\fR\|(3), \fBOSSL_CMP_CTX_set1_srvCert\fR\|(3),
-\&\fBOSSL_CMP_CTX_set1_untrusted\fR\|(3), \fBOSSL_CMP_CTX_set0_trustedStore\fR\|(3)
+\&\fBOSSL_CMP_CTX_set1_untrusted\fR\|(3), \fBOSSL_CMP_CTX_set0_trusted\fR\|(3)
 .SH HISTORY
 .IX Header "HISTORY"
 The OpenSSL CMP support was added in OpenSSL 3.0.

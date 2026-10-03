@@ -58,7 +58,7 @@
 .\" ========================================================================
 .\"
 .IX Title "OSSL_CRMF_PBMP_NEW 3ossl"
-.TH OSSL_CRMF_PBMP_NEW 3ossl 2026-04-07 3.0.20 OpenSSL
+.TH OSSL_CRMF_PBMP_NEW 3ossl 2026-09-29 3.5.9 OpenSSL
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -104,14 +104,15 @@ for the random number generation (DRBG) and may be NULL for the default.
 .IX Header "NOTES"
 The algorithms for the OWF (one\-way function) and for the MAC (message
 authentication code) may be any with a NID defined in \fI<openssl/objects.h>\fR.
-As specified by RFC 4210, these should include NID_hmac_sha1.
+For backward compatibility with RFC 4210, these should include NID_hmac_sha1.
 .PP
-RFC 4210 recommends that the salt SHOULD be at least 8 bytes (64 bits) long,
+RFC 4210 recommended that the salt SHOULD be at least 8 bytes (64 bits) long,
 where 16 bytes is common.
 .PP
 The iteration count must be at least 100, as stipulated by RFC 4211, and is
 limited to at most 100000 to avoid DoS through manipulated or otherwise
 malformed input.
+See RFC 9045 for currently suggested values.
 .SH "RETURN VALUES"
 .IX Header "RETURN VALUES"
 \&\fBOSSL_CRMF_pbm_new()\fR returns 1 on success, 0 on error.

@@ -26,6 +26,7 @@
 #include "prov/providercommon.h"
 #include "prov/provider_ctx.h"
 #include "prov/macsignature.h"
+#include "fips/fipsindicator.h"
 
 static OSSL_FUNC_keymgmt_new_fn mac_new;
 static OSSL_FUNC_keymgmt_free_fn mac_free;
@@ -72,13 +73,11 @@ MAC_KEY *ossl_mac_key_new(OSSL_LIB_CTX *libctx, int cmac)
     if (mackey == NULL)
         return NULL;
 
-    mackey->lock = CRYPTO_THREAD_lock_new();
-    if (mackey->lock == NULL) {
+    if (!CRYPTO_NEW_REF(&mackey->refcnt, 1)) {
         OPENSSL_free(mackey);
         return NULL;
     }
     mackey->libctx = libctx;
-    mackey->refcnt = 1;
     mackey->cmac = cmac;
 
     return mackey;
@@ -91,14 +90,14 @@ void ossl_mac_key_free(MAC_KEY *mackey)
     if (mackey == NULL)
         return;
 
-    CRYPTO_DOWN_REF(&mackey->refcnt, &ref, mackey->lock);
+    CRYPTO_DOWN_REF(&mackey->refcnt, &ref);
     if (ref > 0)
         return;
 
     OPENSSL_secure_clear_free(mackey->priv_key, mackey->priv_key_len);
     OPENSSL_free(mackey->properties);
     ossl_prov_cipher_reset(&mackey->cipher);
-    CRYPTO_THREAD_lock_free(mackey->lock);
+    CRYPTO_FREE_REF(&mackey->refcnt);
     OPENSSL_free(mackey);
 }
 
@@ -116,7 +115,7 @@ int ossl_mac_key_up_ref(MAC_KEY *mackey)
     if (!ossl_prov_is_running())
         return 0;
 
-    CRYPTO_UP_REF(&mackey->refcnt, &ref, mackey->lock);
+    CRYPTO_UP_REF(&mackey->refcnt, &ref);
     return 1;
 }
 
@@ -192,10 +191,8 @@ static int mac_key_fromdata(MAC_KEY *key, const OSSL_PARAM params[])
         OPENSSL_secure_clear_free(key->priv_key, key->priv_key_len);
         /* allocate at least one byte to distinguish empty key from no key set */
         key->priv_key = OPENSSL_secure_malloc(p->data_size > 0 ? p->data_size : 1);
-        if (key->priv_key == NULL) {
-            ERR_raise(ERR_LIB_PROV, ERR_R_MALLOC_FAILURE);
+        if (key->priv_key == NULL)
             return 0;
-        }
         memcpy(key->priv_key, p->data, p->data_size);
         key->priv_key_len = p->data_size;
     }
@@ -208,10 +205,8 @@ static int mac_key_fromdata(MAC_KEY *key, const OSSL_PARAM params[])
         }
         OPENSSL_free(key->properties);
         key->properties = OPENSSL_strdup(p->data);
-        if (key->properties == NULL) {
-            ERR_raise(ERR_LIB_PROV, ERR_R_MALLOC_FAILURE);
+        if (key->properties == NULL)
             return 0;
-        }
     }
 
     if (key->cmac && !ossl_prov_cipher_load_from_params(&key->cipher, params, key->libctx)) {
@@ -429,10 +424,8 @@ static int mac_gen_set_params(void *genctx, const OSSL_PARAM params[])
             return 0;
         }
         gctx->priv_key = OPENSSL_secure_malloc(p->data_size);
-        if (gctx->priv_key == NULL) {
-            ERR_raise(ERR_LIB_PROV, ERR_R_MALLOC_FAILURE);
+        if (gctx->priv_key == NULL)
             return 0;
-        }
         memcpy(gctx->priv_key, p->data, p->data_size);
         gctx->priv_key_len = p->data_size;
     }
@@ -486,7 +479,7 @@ static void *mac_gen(void *genctx, OSSL_CALLBACK *cb, void *cbarg)
         return NULL;
 
     if ((key = ossl_mac_key_new(gctx->libctx, 0)) == NULL) {
-        ERR_raise(ERR_LIB_PROV, ERR_R_MALLOC_FAILURE);
+        ERR_raise(ERR_LIB_PROV, ERR_R_PROV_LIB);
         return NULL;
     }
 
@@ -551,7 +544,9 @@ const OSSL_DISPATCH ossl_mac_legacy_keymgmt_functions[] = {
         (void (*)(void))mac_gen_settable_params },
     { OSSL_FUNC_KEYMGMT_GEN, (void (*)(void))mac_gen },
     { OSSL_FUNC_KEYMGMT_GEN_CLEANUP, (void (*)(void))mac_gen_cleanup },
-    { 0, NULL }
+    OSSL_FIPS_IND_APPROVED_DISPATCH(OSSL_FUNC_KEYMGMT_GEN_GET_PARAMS,
+        OSSL_FUNC_KEYMGMT_GEN_GETTABLE_PARAMS)
+        OSSL_DISPATCH_END
 };
 
 const OSSL_DISPATCH ossl_cmac_legacy_keymgmt_functions[] = {
@@ -573,5 +568,7 @@ const OSSL_DISPATCH ossl_cmac_legacy_keymgmt_functions[] = {
         (void (*)(void))cmac_gen_settable_params },
     { OSSL_FUNC_KEYMGMT_GEN, (void (*)(void))mac_gen },
     { OSSL_FUNC_KEYMGMT_GEN_CLEANUP, (void (*)(void))mac_gen_cleanup },
-    { 0, NULL }
+    OSSL_FIPS_IND_APPROVED_DISPATCH(OSSL_FUNC_KEYMGMT_GEN_GET_PARAMS,
+        OSSL_FUNC_KEYMGMT_GEN_GETTABLE_PARAMS)
+        OSSL_DISPATCH_END
 };

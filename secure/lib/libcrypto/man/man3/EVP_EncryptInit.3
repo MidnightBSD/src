@@ -58,7 +58,7 @@
 .\" ========================================================================
 .\"
 .IX Title "EVP_ENCRYPTINIT 3ossl"
-.TH EVP_ENCRYPTINIT 3ossl 2026-04-07 3.0.20 OpenSSL
+.TH EVP_ENCRYPTINIT 3ossl 2026-09-29 3.5.9 OpenSSL
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
@@ -70,6 +70,8 @@ EVP_CIPHER_free,
 EVP_CIPHER_CTX_new,
 EVP_CIPHER_CTX_reset,
 EVP_CIPHER_CTX_free,
+EVP_CIPHER_CTX_dup,
+EVP_CIPHER_CTX_copy,
 EVP_EncryptInit_ex,
 EVP_EncryptInit_ex2,
 EVP_EncryptUpdate,
@@ -80,6 +82,7 @@ EVP_DecryptUpdate,
 EVP_DecryptFinal_ex,
 EVP_CipherInit_ex,
 EVP_CipherInit_ex2,
+EVP_CipherInit_SKEY,
 EVP_CipherUpdate,
 EVP_CipherFinal_ex,
 EVP_CIPHER_CTX_set_key_length,
@@ -91,6 +94,11 @@ EVP_DecryptFinal,
 EVP_CipherInit,
 EVP_CipherFinal,
 EVP_Cipher,
+EVP_CIPHER_can_pipeline,
+EVP_CipherPipelineEncryptInit,
+EVP_CipherPipelineDecryptInit,
+EVP_CipherPipelineUpdate,
+EVP_CipherPipelineFinal,
 EVP_get_cipherbyname,
 EVP_get_cipherbynid,
 EVP_get_cipherbyobj,
@@ -167,6 +175,8 @@ EVP_CIPHER_CTX_mode
 \& EVP_CIPHER_CTX *EVP_CIPHER_CTX_new(void);
 \& int EVP_CIPHER_CTX_reset(EVP_CIPHER_CTX *ctx);
 \& void EVP_CIPHER_CTX_free(EVP_CIPHER_CTX *ctx);
+\& EVP_CIPHER_CTX *EVP_CIPHER_CTX_dup(const EVP_CIPHER_CTX *in);
+\& int EVP_CIPHER_CTX_copy(EVP_CIPHER_CTX *out, const EVP_CIPHER_CTX *in);
 \&
 \& int EVP_EncryptInit_ex(EVP_CIPHER_CTX *ctx, const EVP_CIPHER *type,
 \&                        ENGINE *impl, const unsigned char *key, const unsigned char *iv);
@@ -191,6 +201,9 @@ EVP_CIPHER_CTX_mode
 \& int EVP_CipherInit_ex2(EVP_CIPHER_CTX *ctx, const EVP_CIPHER *type,
 \&                        const unsigned char *key, const unsigned char *iv,
 \&                        int enc, const OSSL_PARAM params[]);
+\& int EVP_CipherInit_SKEY(EVP_CIPHER_CTX *ctx, const EVP_CIPHER *cipher,
+\&                         EVP_SKEY *skey, const unsigned char *iv, size_t iv_len,
+\&                         int enc, const OSSL_PARAM params[]);
 \& int EVP_CipherUpdate(EVP_CIPHER_CTX *ctx, unsigned char *out,
 \&                      int *outl, const unsigned char *in, int inl);
 \& int EVP_CipherFinal_ex(EVP_CIPHER_CTX *ctx, unsigned char *outm, int *outl);
@@ -209,6 +222,25 @@ EVP_CIPHER_CTX_mode
 \&
 \& int EVP_Cipher(EVP_CIPHER_CTX *ctx, unsigned char *out,
 \&                const unsigned char *in, unsigned int inl);
+\&
+\& int EVP_CIPHER_can_pipeline(const EVP_CIPHER *cipher, int enc);
+\& int EVP_CipherPipelineEncryptInit(EVP_CIPHER_CTX *ctx,
+\&                                   const EVP_CIPHER *cipher,
+\&                                   const unsigned char *key, size_t keylen,
+\&                                   size_t numpipes,
+\&                                   const unsigned char **iv, size_t ivlen);
+\& int EVP_CipherPipelineDecryptInit(EVP_CIPHER_CTX *ctx,
+\&                                   const EVP_CIPHER *cipher,
+\&                                   const unsigned char *key, size_t keylen,
+\&                                   size_t numpipes,
+\&                                   const unsigned char **iv, size_t ivlen);
+\& int EVP_CipherPipelineUpdate(EVP_CIPHER_CTX *ctx,
+\&                              unsigned char **out, size_t *outl,
+\&                              const size_t *outsize,
+\&                              const unsigned char **in, const size_t *inl);
+\& int EVP_CipherPipelineFinal(EVP_CIPHER_CTX *ctx,
+\&                             unsigned char **outm, size_t *outl,
+\&                             const size_t *outsize);
 \&
 \& int EVP_CIPHER_CTX_set_padding(EVP_CIPHER_CTX *x, int padding);
 \& int EVP_CIPHER_CTX_set_key_length(EVP_CIPHER_CTX *x, int keylen);
@@ -333,6 +365,14 @@ Clears all information from a cipher context and frees any allocated memory
 associated with it, including \fIctx\fR itself. This function should be called
 after all operations using a cipher are complete so sensitive information does
 not remain in memory. If the argument is NULL, nothing is done.
+.IP \fBEVP_CIPHER_CTX_dup()\fR 4
+.IX Item "EVP_CIPHER_CTX_dup()"
+Can be used to duplicate the cipher state from \fIin\fR.  This is useful
+to avoid multiple \fBEVP_CIPHER_fetch()\fR calls or if large amounts of data are to be
+fed which only differ in the last few bytes.
+.IP \fBEVP_CIPHER_CTX_copy()\fR 4
+.IX Item "EVP_CIPHER_CTX_copy()"
+Can be used to copy the cipher state from \fIin\fR to \fIout\fR.
 .IP \fBEVP_CIPHER_CTX_ctrl()\fR 4
 .IX Item "EVP_CIPHER_CTX_ctrl()"
 \&\fIThis is a legacy method.\fR \fBEVP_CIPHER_CTX_set_params()\fR and
@@ -383,8 +423,8 @@ algorithm, whereas \fBEVP_CIPHER_CTX_settable_params()\fR returns the parameters
 can be set in the context\*(Aqs current state.
 .IP \fBEVP_EncryptInit_ex2()\fR 4
 .IX Item "EVP_EncryptInit_ex2()"
-Sets up cipher context \fIctx\fR for encryption with cipher \fItype\fR. \fItype\fR is
-typically supplied by calling \fBEVP_CIPHER_fetch()\fR. \fItype\fR may also be set
+Sets up cipher context \fIctx\fR for encryption with cipher \fItype\fR. \fIctx\fR \fBMUST NOT\fR be NULL.
+\&\fItype\fR is typically supplied by calling \fBEVP_CIPHER_fetch()\fR. \fItype\fR may also be set
 using legacy functions such as \fBEVP_aes_256_cbc()\fR, but this is not recommended
 for new applications. \fIkey\fR is the symmetric key to use and \fIiv\fR is the IV to
 use (if necessary), the actual number of bytes used for the key and IV depends
@@ -407,7 +447,7 @@ Encrypts \fIinl\fR bytes from the buffer \fIin\fR and writes the encrypted versi
 case the encryption will be done in\-place. However, in\-place encryption is
 guaranteed to work only if the encryption context (\fIctx\fR) has processed data in
 multiples of the block size. If the context contains an incomplete data block
-from previous operations, in\-place encryption will fail.
+from previous operations, in\-place encryption will fail. \fIctx\fR \fBMUST NOT\fR be NULL.
 .Sp
 If \fIout\fR and \fIin\fR point to different locations, the two buffers must be
 disjoint, otherwise the operation might fail or the outcome might be undefined.
@@ -418,7 +458,8 @@ encrypted data.
 For most ciphers and modes, the amount of data written can be anything
 from zero bytes to (inl + cipher_block_size \- 1) bytes.
 For wrap cipher modes, the amount of data written can be anything
-from zero bytes to (inl + cipher_block_size) bytes.
+from zero bytes to (inl rounded up to cipher_block_size + cipher_block_size)
+bytes.
 For stream ciphers, the amount of data written can be anything from zero
 bytes to inl bytes.
 Thus, the buffer pointed to by \fIout\fR must contain sufficient room for the
@@ -442,16 +483,17 @@ that is if the total data length is not a multiple of the block size.
 These functions are the corresponding decryption operations.
 \&\fBEVP_DecryptFinal()\fR will return an error code if padding is enabled and the
 final block is not correctly formatted. The parameters and restrictions are
-identical to the encryption operations except that if padding is enabled the
-decrypted data buffer \fIout\fR passed to \fBEVP_DecryptUpdate()\fR should have
-sufficient room for (\fIinl\fR + cipher_block_size) bytes unless the cipher block
-size is 1 in which case \fIinl\fR bytes is sufficient.
+identical to the encryption operations. \fIctx\fR \fBMUST NOT\fR be NULL.
 .IP "\fBEVP_CipherInit_ex2()\fR, \fBEVP_CipherInit_ex()\fR, \fBEVP_CipherUpdate()\fR and \fBEVP_CipherFinal_ex()\fR" 4
 .IX Item "EVP_CipherInit_ex2(), EVP_CipherInit_ex(), EVP_CipherUpdate() and EVP_CipherFinal_ex()"
 These functions can be used for decryption or encryption. The operation
 performed depends on the value of the \fIenc\fR parameter. It should be set to 1
 for encryption, 0 for decryption and \-1 to leave the value unchanged
 (the actual value of \*(Aqenc\*(Aq being supplied in a previous call).
+.IP \fBEVP_CipherInit_SKEY()\fR 4
+.IX Item "EVP_CipherInit_SKEY()"
+This function is similar to \fBEVP_CipherInit_ex2()\fR but accepts a
+symmetric key object of type \fIEVP_SKEY\fR as a key.
 .IP \fBEVP_CIPHER_CTX_reset()\fR 4
 .IX Item "EVP_CIPHER_CTX_reset()"
 Clears all information from a cipher context and free up any allocated memory
@@ -482,6 +524,49 @@ has that flag set, then \fIinl\fR can be any size.
 Due to the constraints of the API contract of this function it shouldn\*(Aqt be used
 in applications, please consider using \fBEVP_CipherUpdate()\fR and
 \&\fBEVP_CipherFinal_ex()\fR instead.
+.IP \fBEVP_CIPHER_can_pipeline()\fR 4
+.IX Item "EVP_CIPHER_can_pipeline()"
+This function checks if a \fBEVP_CIPHER\fR fetched using \fBEVP_CIPHER_fetch()\fR supports
+cipher pipelining. If the cipher supports pipelining, it returns 1, otherwise 0.
+This function will return 0 for non\-fetched ciphers such as \fBEVP_aes_128_gcm()\fR.
+There are currently no built\-in ciphers that support pipelining.
+.Sp
+Cipher pipelining support allows an application to submit multiple chunks of
+data in one set of \fBEVP_CipherUpdate()\fR/EVP_CipherFinal calls, thereby allowing
+the provided implementation to take advantage of parallel computing. This is
+beneficial for hardware accelerators as pipeline amortizes the latency over
+multiple chunks.
+.Sp
+For non\-fetched ciphers, \fBEVP_CipherPipelineEncryptInit()\fR or
+\&\fBEVP_CipherPipelineDecryptInit()\fR may be directly called, which will perform a
+fetch and return an error if a pipeline supported implementation is not found.
+.IP "\fBEVP_CipherPipelineEncryptInit()\fR, \fBEVP_CipherPipelineDecryptInit()\fR, \fBEVP_CipherPipelineUpdate()\fR and \fBEVP_CipherPipelineFinal()\fR" 4
+.IX Item "EVP_CipherPipelineEncryptInit(), EVP_CipherPipelineDecryptInit(), EVP_CipherPipelineUpdate() and EVP_CipherPipelineFinal()"
+These functions can be used to perform multiple encryption or decryption
+operations in parallel. \fBEVP_CIPHER_can_pipeline()\fR may be called to check if the
+cipher supports pipelining. These functions are analogous to
+\&\fBEVP_EncryptInit_ex2()\fR, \fBEVP_DecryptInit_ex2()\fR, \fBEVP_CipherUpdate()\fR and
+\&\fBEVP_CipherFinal()\fR but take an array of pointers for iv, input and output buffers.
+.Sp
+The \fIkey\fR, of length \fIkeylen\fR, is the symmetric key to use. The \fInumpipes\fR
+parameter specifies the number of parallel operations to perform. The
+\&\fInumpipes\fR cannot exceed \fBEVP_MAX_PIPES\fR. The \fIiv\fR parameter is an array of
+buffer pointers, containing IVs. The array size must be equal to \fInumpipes\fR.
+The size of each IV buffer must be equal to \fIivlen\fR. When IV is not provided,
+\&\fIiv\fR must be NULL, rather than an array of NULL pointers. The \fIin\fR
+parameters takes an array of buffer pointers, each pointing to a buffer
+containing the input data. The buffers can be of different sizes. The \fIinl\fR
+parameter is an array of size_t, each specifying the size of the corresponding
+input buffer. The \fIout\fR and \fIoutm\fR parameters are arrays of buffer pointers,
+each pointing to a buffer where the output data will be written. The \fIoutsize\fR
+parameter is an array of size_t, each specifying the size of the corresponding
+output buffer. The \fIoutl\fR parameter is an array of size_t which will be updated
+with the size of the output data written to the corresponding output buffer.
+For size requirement of the output buffers, see the description of \fBEVP_CipherUpdate()\fR.
+.Sp
+The \fBEVP_CipherPipelineUpdate()\fR function can be called multiple times to encrypt
+successive blocks of data. For AAD data, the \fIout\fR, and \fIoutsize\fR parameter
+should be NULL, rather than an array of NULL pointers.
 .IP "\fBEVP_get_cipherbyname()\fR, \fBEVP_get_cipherbynid()\fR and \fBEVP_get_cipherbyobj()\fR" 4
 .IX Item "EVP_get_cipherbyname(), EVP_get_cipherbynid() and EVP_get_cipherbyobj()"
 Returns an \fBEVP_CIPHER\fR structure when passed a cipher name, a cipher \fBNID\fR or
@@ -512,7 +597,9 @@ The cipher objects returned from these functions do not need to be freed with
 .IX Item "EVP_CIPHER_get_nid() and EVP_CIPHER_CTX_get_nid()"
 Return the NID of a cipher when passed an \fBEVP_CIPHER\fR or \fBEVP_CIPHER_CTX\fR
 structure.  The actual NID value is an internal value which may not have a
-corresponding OBJECT IDENTIFIER.
+corresponding OBJECT IDENTIFIER.  NID_undef is returned in the event that the
+nid is unknown or if the cipher has not been properly initialized via a call to
+\&\fBEVP_CipherInit\fR.
 .IP "\fBEVP_CIPHER_CTX_set_flags()\fR, \fBEVP_CIPHER_CTX_clear_flags()\fR and \fBEVP_CIPHER_CTX_test_flags()\fR" 4
 .IX Item "EVP_CIPHER_CTX_set_flags(), EVP_CIPHER_CTX_clear_flags() and EVP_CIPHER_CTX_test_flags()"
 Sets, clears and tests \fIctx\fR flags.  See "FLAGS" below for more information.
@@ -524,11 +611,12 @@ fetched cipher has been assigned to the \fIctx\fR. It is recommended to use
 .IX Item "EVP_CIPHER_CTX_set_padding()"
 Enables or disables padding. This function should be called after the context
 is set up for encryption or decryption with \fBEVP_EncryptInit_ex2()\fR,
-\&\fBEVP_DecryptInit_ex2()\fR or \fBEVP_CipherInit_ex2()\fR. By default encryption operations
-are padded using standard block padding and the padding is checked and removed
-when decrypting. If the \fIpad\fR parameter is zero then no padding is
-performed, the total amount of data encrypted or decrypted must then
-be a multiple of the block size or an error will occur.
+\&\fBEVP_DecryptInit_ex2()\fR, \fBEVP_CipherInit_ex2()\fR, or \fBEVP_CipherInit_SKEY()\fR. By
+default encryption operations are padded using standard block padding and the
+padding is checked and removed when decrypting. If the \fIpad\fR parameter is zero
+then no padding is performed, the total amount of data encrypted or decrypted
+must then be a multiple of the block size or an error will occur. \fIx\fR \fBMUST
+NOT\fR be NULL.
 .IP "\fBEVP_CIPHER_get_key_length()\fR and \fBEVP_CIPHER_CTX_get_key_length()\fR" 4
 .IX Item "EVP_CIPHER_get_key_length() and EVP_CIPHER_CTX_get_key_length()"
 Return the key length of a cipher when passed an \fBEVP_CIPHER\fR or
@@ -544,8 +632,10 @@ length to any value other than the fixed value is an error.
 .IP "\fBEVP_CIPHER_get_iv_length()\fR and \fBEVP_CIPHER_CTX_get_iv_length()\fR" 4
 .IX Item "EVP_CIPHER_get_iv_length() and EVP_CIPHER_CTX_get_iv_length()"
 Return the IV length of a cipher when passed an \fBEVP_CIPHER\fR or
-\&\fBEVP_CIPHER_CTX\fR. It will return zero if the cipher does not use an IV.
-The constant \fBEVP_MAX_IV_LENGTH\fR is the maximum IV length for all ciphers.
+\&\fBEVP_CIPHER_CTX\fR. It will return zero if the cipher does not use an IV, if
+the cipher has not yet been initialized within the \fBEVP_CIPHER_CTX\fR, or if the
+passed cipher is NULL.  The constant \fBEVP_MAX_IV_LENGTH\fR is the maximum IV
+length for all ciphers.
 .IP \fBEVP_CIPHER_CTX_get_tag_length()\fR 4
 .IX Item "EVP_CIPHER_CTX_get_tag_length()"
 Returns the tag length of an AEAD cipher when passed a \fBEVP_CIPHER_CTX\fR. It will
@@ -556,6 +646,10 @@ the tag length has not been set.
 Return the block size of a cipher when passed an \fBEVP_CIPHER\fR or
 \&\fBEVP_CIPHER_CTX\fR structure. The constant \fBEVP_MAX_BLOCK_LENGTH\fR is also the
 maximum block length for all ciphers.
+A value of 0 is returned if, with \fBEVP_CIPHER_get_block_size()\fR, the cipher
+\&\fIe\fR is NULL, or, with \fBEVP_CIPHER_CTX_get_block_size()\fR, the context
+\&\fIctx\fR is NULL or has not been properly initialized with a call to
+\&\fBEVP_CipherInit\fR.
 .IP "\fBEVP_CIPHER_get_type()\fR and \fBEVP_CIPHER_CTX_get_type()\fR" 4
 .IX Item "EVP_CIPHER_get_type() and EVP_CIPHER_CTX_get_type()"
 Return the type of the passed cipher or context. This "type" is the actual NID
@@ -574,6 +668,7 @@ context (see \fBOSSL_LIB_CTX\fR\|(3)) will be considered.
 .IX Item "EVP_CIPHER_get0_name() and EVP_CIPHER_CTX_get0_name()"
 Return the name of the passed cipher or context.  For fetched ciphers with
 multiple names, only one of them is returned. See also \fBEVP_CIPHER_names_do_all()\fR.
+\&\fIcipher\fR \fBMUST NOT\fR be NULL.
 .IP \fBEVP_CIPHER_names_do_all()\fR 4
 .IX Item "EVP_CIPHER_names_do_all()"
 Traverses all names for the \fIcipher\fR, and calls \fIfn\fR with each name and
@@ -590,7 +685,7 @@ Returns an \fBOSSL_PROVIDER\fR pointer to the provider that implements the given
 .IX Item "EVP_CIPHER_CTX_get0_cipher()"
 Returns the \fBEVP_CIPHER\fR structure when passed an \fBEVP_CIPHER_CTX\fR structure.
 \&\fBEVP_CIPHER_CTX_get1_cipher()\fR is the same except the ownership is passed to
-the caller.
+the caller. Both functions return NULL on error.
 .IP "\fBEVP_CIPHER_get_mode()\fR and \fBEVP_CIPHER_CTX_get_mode()\fR" 4
 .IX Item "EVP_CIPHER_get_mode() and EVP_CIPHER_CTX_get_mode()"
 Return the block cipher mode:
@@ -620,7 +715,8 @@ Sets the AlgorithmIdentifier "parameter" based on the passed cipher. This will
 typically include any parameters and an IV. The cipher IV (if any) must be set
 when this call is made. This call should be made before the cipher is actually
 "used" (before any \fBEVP_EncryptUpdate()\fR, \fBEVP_DecryptUpdate()\fR calls for example).
-This function may fail if the cipher does not have any ASN1 support.
+This function may fail if the cipher does not have any ASN1 support, or if an
+uninitialized cipher is passed to it.
 .IP \fBEVP_CIPHER_asn1_to_param()\fR 4
 .IX Item "EVP_CIPHER_asn1_to_param()"
 Sets the cipher parameters based on an ASN1 AlgorithmIdentifier "parameter".
@@ -707,6 +803,11 @@ cached value.
 Gets 1 if the cipher algorithm \fIcipher\fR supports the gettable EVP_CIPHER_CTX
 parameter \fBOSSL_CIPHER_PARAM_RANDOM_KEY\fR. Only DES and 3DES set this to 1,
 all other OpenSSL ciphers return 0.
+.IP """decrypt\-only"" (\fBOSSL_CIPHER_PARAM_DECRYPT_ONLY) <integer\fR" 4
+.IX Item """decrypt-only"" (OSSL_CIPHER_PARAM_DECRYPT_ONLY) <integer"
+Gets 1 if the cipher algorithm \fIcipher\fR implementation supports only
+the decryption operation such as the 3DES ciphers in the fips provider.
+Otherwise gets 0 or the parameter might not be present at all.
 .SS "Gettable and Settable EVP_CIPHER_CTX parameters"
 .IX Subsection "Gettable and Settable EVP_CIPHER_CTX parameters"
 The following \fBOSSL_PARAM\fR\|(3) keys can be used with both \fBEVP_CIPHER_CTX_get_params()\fR
@@ -731,6 +832,12 @@ See also \fBEVP_CIPHER_CTX_get_key_length()\fR and \fBEVP_CIPHER_CTX_set_key_len
 .IX Item """tag"" (OSSL_CIPHER_PARAM_AEAD_TAG) <octet string>"
 Gets or sets the AEAD tag for the associated cipher context \fIctx\fR.
 See "AEAD INTERFACE" in \fBEVP_EncryptInit\fR\|(3).
+.IP """pipeline\-tag"" (\fBOSSL_CIPHER_PARAM_PIPELINE_AEAD_TAG\fR) <octet ptr>" 4
+.IX Item """pipeline-tag"" (OSSL_CIPHER_PARAM_PIPELINE_AEAD_TAG) <octet ptr>"
+Gets or sets the AEAD tag when using cipher pipelining. The pointer must 
+point to an array of buffers, where the aead tag will be read from or written to.
+The array size must be equal to \fInumpipes\fR used in
+\&\fBEVP_CipherPipelineEncryptInit()\fR or \fBEVP_CipherPipelineDecryptInit()\fR.
 .IP """keybits"" (\fBOSSL_CIPHER_PARAM_RC2_KEYBITS\fR) <unsigned integer>" 4
 .IX Item """keybits"" (OSSL_CIPHER_PARAM_RC2_KEYBITS) <unsigned integer>"
 Gets or sets the effective keybits used for a RC2 cipher.
@@ -739,12 +846,21 @@ The length of the "keybits" parameter should not exceed that of a \fBsize_t\fR.
 .IX Item """rounds"" (OSSL_CIPHER_PARAM_ROUNDS) <unsigned integer>"
 Gets or sets the number of rounds to be used for a cipher.
 This is used by the RC5 cipher.
-.IP """alg_id_param"" (\fBOSSL_CIPHER_PARAM_ALGORITHM_ID_PARAMS\fR) <octet string>" 4
-.IX Item """alg_id_param"" (OSSL_CIPHER_PARAM_ALGORITHM_ID_PARAMS) <octet string>"
+.IP """algorithm\-id"" (\fBOSSL_CIPHER_PARAM_ALGORITHM_ID\fR) <octet string>" 4
+.IX Item """algorithm-id"" (OSSL_CIPHER_PARAM_ALGORITHM_ID) <octet string>"
+Used to get the DER encoded AlgorithmIdentifier from the cipher
+implementation.  Functions like \fBEVP_PKEY_CTX_get_algor\fR\|(3) use this
+parameter.
+.IP """algorithm\-id\-params"" (\fBOSSL_CIPHER_PARAM_ALGORITHM_ID_PARAMS\fR) <octet string>" 4
+.IX Item """algorithm-id-params"" (OSSL_CIPHER_PARAM_ALGORITHM_ID_PARAMS) <octet string>"
 Used to pass the DER encoded AlgorithmIdentifier parameter to or from
-the cipher implementation.  Functions like \fBEVP_CIPHER_param_to_asn1\fR\|(3)
-and \fBEVP_CIPHER_asn1_to_param\fR\|(3) use this parameter for any implementation
-that has the flag \fBEVP_CIPH_FLAG_CUSTOM_ASN1\fR set.
+the cipher implementation.
+Functions like \fBEVP_CIPHER_CTX_set_algor_params\fR\|(3) and
+\&\fBEVP_CIPHER_CTX_get_algor_params\fR\|(3) use this parameter.
+.IP """alg_id_params"" (\fBOSSL_CIPHER_PARAM_ALGORITHM_ID_PARAMS_OLD\fR) <octet string>" 4
+.IX Item """alg_id_params"" (OSSL_CIPHER_PARAM_ALGORITHM_ID_PARAMS_OLD) <octet string>"
+An deprecated alias for "algorithm\-id\-params", only used by
+\&\fBEVP_CIPHER_param_to_asn1\fR\|(3) and \fBEVP_CIPHER_asn1_to_param\fR\|(3).
 .IP """cts_mode"" (\fBOSSL_CIPHER_PARAM_CTS_MODE\fR) <UTF8 string>" 4
 .IX Item """cts_mode"" (OSSL_CIPHER_PARAM_CTS_MODE) <UTF8 string>"
 Gets or sets the cipher text stealing mode. For all modes the output size is the
@@ -834,6 +950,28 @@ Gets the result of running the "tls1multi_aad" operation.
 .IP """tls\-mac"" (\fBOSSL_CIPHER_PARAM_TLS_MAC\fR) <octet ptr>" 4
 .IX Item """tls-mac"" (OSSL_CIPHER_PARAM_TLS_MAC) <octet ptr>"
 Used to pass the TLS MAC data.
+.IP """fips\-indicator"" (\fBOSSL_CIPHER_PARAM_FIPS_APPROVED_INDICATOR\fR) <integer>" 4
+.IX Item """fips-indicator"" (OSSL_CIPHER_PARAM_FIPS_APPROVED_INDICATOR) <integer>"
+This option is used by the OpenSSL FIPS provider.
+.Sp
+A getter that returns 1 if the operation is FIPS approved, or 0 otherwise.
+This may be used after calling a cipher final operation such as
+\&\fBEVP_EncryptFinal_ex()\fR. It may return 0 if the "encrypt\-check" option is set to 0.
+For GCM encryption it also returns 0 if the IV was supplied externally instead
+of being generated by the FIPS provider.  The separate "iv\-generated"
+parameter reports the IV source directly, but callers can use
+"fips\-indicator" to determine the overall approval status.  For GCM encryption
+and decryption, tag lengths other than 4, 8, or 12 through 16 bytes also cause
+this indicator to return 0.
+.IP """iv\-generated"" (\fBOSSL_CIPHER_PARAM_AEAD_IV_GENERATED\fR) <unsigned integer>" 4
+.IX Item """iv-generated"" (OSSL_CIPHER_PARAM_AEAD_IV_GENERATED) <unsigned integer>"
+An indicator that returns 1 if an IV was generated internally during encryption,
+or 0 otherwise.
+This may be used by GCM ciphers after calling a cipher final operation such
+as \fBEVP_EncryptFinal_ex()\fR.
+GCM should generate an IV internally if the IV is not specified during a
+cipher initialisation call such as \fBEVP_CipherInit_ex()\fR.
+See FIPS 140\-3 IG C.H for information related to IV requirements.
 .SS "Settable EVP_CIPHER_CTX parameters"
 .IX Subsection "Settable EVP_CIPHER_CTX parameters"
 The following \fBOSSL_PARAM\fR\|(3) keys can be used with \fBEVP_CIPHER_CTX_set_params()\fR:
@@ -929,6 +1067,48 @@ Byte 9\-10: The protocol version
 Byte 11\-12: Input length (Always 0)
 .Sp
 "tls1multi_interleave" must also be set for this operation.
+.IP """xts_standard"" (\fBOSSL_CIPHER_PARAM_XTS_STANDARD\fR) <UTF8 string>" 4
+.IX Item """xts_standard"" (OSSL_CIPHER_PARAM_XTS_STANDARD) <UTF8 string>"
+Sets the XTS standard to use with SM4\-XTS algorithm. XTS mode has two
+implementations, one is standardized in IEEE Std. 1619\-2007 and has
+been widely used (e.g., XTS AES), the other is proposed recently
+(GB/T 17964\-2021 implemented in May 2022) and is currently only used
+in SM4.
+.Sp
+The main difference between them is the multiplication by the
+primitive element α to calculate the tweak values. The IEEE
+Std 1619\-2007 noted that the multiplication "is a left shift of each
+byte by one bit with carry propagating from one byte to the next
+one", which means that in each byte, the leftmost bit is the most
+significant bit. But in GB/T 17964\-2021, the rightmost bit is the
+most significant bit, thus the multiplication becomes a right shift
+of each byte by one bit with carry propagating from one byte to the
+next one.
+.Sp
+Valid values for the mode are:
+.RS 4
+.IP """GB""" 4
+.IX Item """GB"""
+The GB/T 17964\-2021 variant of SM4\-XTS algorithm.
+.IP """IEEE""" 4
+.IX Item """IEEE"""
+The IEEE Std. 1619\-2007 variant of SM4\-XTS algorithm.
+.RE
+.RS 4
+.Sp
+The default value is "GB".
+.RE
+.IP """encrypt\-check"" (\fBOSSL_CIPHER_PARAM_FIPS_ENCRYPT_CHECK\fR) <integer>" 4
+.IX Item """encrypt-check"" (OSSL_CIPHER_PARAM_FIPS_ENCRYPT_CHECK) <integer>"
+This option is used by the OpenSSL FIPS provider.
+.Sp
+If required this parameter should be set early via an cipher encrypt init
+function such as \fBEVP_EncryptInit_ex2()\fR.
+The default value of 1 causes an error when an encryption operation is triggered.
+Setting this to 0 will ignore the error and set the approved "fips\-indicator" to
+0.
+This option breaks FIPS compliance if it causes the approved "fips\-indicator"
+to return 0.
 .SH CONTROLS
 .IX Header "CONTROLS"
 The Mappings from \fBEVP_CIPHER_CTX_ctrl()\fR identifiers to PARAMETERS are listed
@@ -1085,12 +1265,16 @@ flags.
 .SH "RETURN VALUES"
 .IX Header "RETURN VALUES"
 \&\fBEVP_CIPHER_fetch()\fR returns a pointer to a \fBEVP_CIPHER\fR for success
-and \fBNULL\fR for failure.
+and NULL for failure.
 .PP
 \&\fBEVP_CIPHER_up_ref()\fR returns 1 for success or 0 otherwise.
 .PP
 \&\fBEVP_CIPHER_CTX_new()\fR returns a pointer to a newly created
-\&\fBEVP_CIPHER_CTX\fR for success and \fBNULL\fR for failure.
+\&\fBEVP_CIPHER_CTX\fR for success and NULL for failure.
+.PP
+\&\fBEVP_CIPHER_CTX_dup()\fR returns a new EVP_CIPHER_CTX if successful or NULL on failure.
+.PP
+\&\fBEVP_CIPHER_CTX_copy()\fR returns 1 if successful or 0 for failure.
 .PP
 \&\fBEVP_EncryptInit_ex2()\fR, \fBEVP_EncryptUpdate()\fR and \fBEVP_EncryptFinal_ex()\fR
 return 1 for success and 0 for failure.
@@ -1098,14 +1282,26 @@ return 1 for success and 0 for failure.
 \&\fBEVP_DecryptInit_ex2()\fR and \fBEVP_DecryptUpdate()\fR return 1 for success and 0 for failure.
 \&\fBEVP_DecryptFinal_ex()\fR returns 0 if the decrypt failed or 1 for success.
 .PP
-\&\fBEVP_CipherInit_ex2()\fR and \fBEVP_CipherUpdate()\fR return 1 for success and 0 for failure.
-\&\fBEVP_CipherFinal_ex()\fR returns 0 for a decryption failure or 1 for success.
+\&\fBEVP_CipherInit_ex2()\fR, \fBEVP_CipherInit_SKEY()\fR and \fBEVP_CipherUpdate()\fR return 1 for
+success and 0 for failure.
+\&\fBEVP_CipherFinal_ex()\fR returns 0 for an encryption/decryption failure or 1 for
+success.
 .PP
-\&\fBEVP_Cipher()\fR returns 1 on success or 0 on failure, if the flag
-\&\fBEVP_CIPH_FLAG_CUSTOM_CIPHER\fR is not set for the cipher.
-\&\fBEVP_Cipher()\fR returns the number of bytes written to \fIout\fR for encryption / decryption, or
-the number of bytes authenticated in a call specifying AAD for an AEAD cipher, if the flag
-\&\fBEVP_CIPH_FLAG_CUSTOM_CIPHER\fR is set for the cipher.
+\&\fBEVP_Cipher()\fR returns 1 on success and <= 0 on failure, if the flag
+\&\fBEVP_CIPH_FLAG_CUSTOM_CIPHER\fR is not set for the cipher, or if the cipher has
+not been initialized via a call to \fBEVP_CipherInit_ex2\fR.
+\&\fBEVP_Cipher()\fR returns the number of bytes written to \fIout\fR for
+encryption/decryption, or the number of bytes authenticated in a call specifying
+AAD for an AEAD cipher, if the flag \fBEVP_CIPH_FLAG_CUSTOM_CIPHER\fR is set for
+the cipher.
+.PP
+\&\fBEVP_CIPHER_can_pipeline()\fR returns 1 if the cipher can be used in a pipeline, 0 otherwise.
+.PP
+\&\fBEVP_CipherPipelineEncryptInit()\fR and \fBEVP_CipherPipelineDecryptInit()\fR
+return 1 for success and 0 for failure.
+.PP
+\&\fBEVP_CipherPipelineUpdate()\fR and \fBEVP_CipherPipelineFinal()\fR
+return 1 for success and 0 for failure.
 .PP
 \&\fBEVP_CIPHER_CTX_reset()\fR returns 1 for success and 0 for failure.
 .PP
@@ -1115,7 +1311,7 @@ return an \fBEVP_CIPHER\fR structure or NULL on error.
 \&\fBEVP_CIPHER_get_nid()\fR and \fBEVP_CIPHER_CTX_get_nid()\fR return a NID.
 .PP
 \&\fBEVP_CIPHER_get_block_size()\fR and \fBEVP_CIPHER_CTX_get_block_size()\fR return the
-block size.
+block size, or 0 on error.
 .PP
 \&\fBEVP_CIPHER_get_key_length()\fR and \fBEVP_CIPHER_CTX_get_key_length()\fR return the key
 length.
@@ -1123,7 +1319,7 @@ length.
 \&\fBEVP_CIPHER_CTX_set_padding()\fR always returns 1.
 .PP
 \&\fBEVP_CIPHER_get_iv_length()\fR and \fBEVP_CIPHER_CTX_get_iv_length()\fR return the IV
-length or zero if the cipher does not use an IV.
+length, zero if the cipher does not use an IV and a negative value on error.
 .PP
 \&\fBEVP_CIPHER_CTX_get_tag_length()\fR return the tag length or zero if the cipher
 does not use a tag.
@@ -1236,7 +1432,7 @@ few additional requirements and different \fIctrl\fR values.
 .PP
 For CCM mode, the total plaintext or ciphertext length \fBMUST\fR be passed to
 \&\fBEVP_CipherUpdate()\fR, \fBEVP_EncryptUpdate()\fR or \fBEVP_DecryptUpdate()\fR with the output
-and input parameters (\fIin\fR and \fIout\fR) set to \fBNULL\fR and the length passed in
+and input parameters (\fIin\fR and \fIout\fR) set to NULL and the length passed in
 the \fIinl\fR parameter.
 .PP
 The following \fIctrl\fRs are supported in CCM mode.
@@ -1258,12 +1454,14 @@ nonce value. The nonce length is given by \fB15 \- L\fR so it is 7 by default fo
 AES.
 .SS "SIV Mode"
 .IX Subsection "SIV Mode"
+Both the AES\-SIV and AES\-GCM\-SIV ciphers fall under this mode.
+.PP
 For SIV mode ciphers the behaviour of the EVP interface is subtly
 altered and several additional ctrl operations are supported.
 .PP
 To specify any additional authenticated data (AAD) and/or a Nonce, a call to
 \&\fBEVP_CipherUpdate()\fR, \fBEVP_EncryptUpdate()\fR or \fBEVP_DecryptUpdate()\fR should be made
-with the output parameter \fIout\fR set to \fBNULL\fR.
+with the output parameter \fIout\fR set to NULL.
 .PP
 RFC5297 states that the Nonce is the last piece of AAD before the actual
 encrypt/decrypt takes place. The API does not differentiate the Nonce from
@@ -1274,7 +1472,7 @@ indicates if the operation was successful. If it does not indicate success
 the authentication operation has failed and any output data \fBMUST NOT\fR
 be used as it is corrupted.
 .PP
-The API does not store the the SIV (Synthetic Initialization Vector) in
+The API does not store the SIV (Synthetic Initialization Vector) in
 the cipher text. Instead, it is stored as the tag within the EVP_CIPHER_CTX.
 The SIV must be retrieved from the context after encryption, and set into
 the context before decryption.
@@ -1300,7 +1498,7 @@ calls). For SIV mode the taglen must be 16.
 .PP
 SIV mode makes two passes over the input data, thus, only one call to
 \&\fBEVP_CipherUpdate()\fR, \fBEVP_EncryptUpdate()\fR or \fBEVP_DecryptUpdate()\fR should be made
-with \fIout\fR set to a non\-\fBNULL\fR value. A call to \fBEVP_DecryptFinal()\fR or
+with \fIout\fR set to a non\-NULL value. A call to \fBEVP_DecryptFinal()\fR or
 \&\fBEVP_CipherFinal()\fR is not required, but will indicate if the update
 operation succeeded.
 .SS ChaCha20\-Poly1305
@@ -1616,6 +1814,14 @@ The \fBEVP_CIPHER_CTX_encrypting()\fR function was renamed to
 non\-deprecated alias macro.
 .PP
 The \fBEVP_CIPHER_CTX_flags()\fR macro was deprecated in OpenSSL 1.1.0.
+.PP
+\&\fBEVP_CIPHER_CTX_dup()\fR was added in OpenSSL 3.2.
+.PP
+\&\fBEVP_CipherInit_SKEY()\fR was added in OpenSSL 3.5.
+.PP
+Prior to OpenSSL 3.5, passing a NULL \fIctx\fR to
+\&\fBEVP_CIPHER_CTX_get_block_size()\fR would result in a NULL pointer dereference,
+rather than a 0 return value indicating an error.
 .SH COPYRIGHT
 .IX Header "COPYRIGHT"
 Copyright 2000\-2026 The OpenSSL Project Authors. All Rights Reserved.

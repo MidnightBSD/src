@@ -58,13 +58,13 @@
 .\" ========================================================================
 .\"
 .IX Title "SSL_CTX_SET_CLIENT_HELLO_CB 3ossl"
-.TH SSL_CTX_SET_CLIENT_HELLO_CB 3ossl 2026-04-07 3.0.20 OpenSSL
+.TH SSL_CTX_SET_CLIENT_HELLO_CB 3ossl 2026-09-29 3.5.9 OpenSSL
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH NAME
-SSL_CTX_set_client_hello_cb, SSL_client_hello_cb_fn, SSL_client_hello_isv2, SSL_client_hello_get0_legacy_version, SSL_client_hello_get0_random, SSL_client_hello_get0_session_id, SSL_client_hello_get0_ciphers, SSL_client_hello_get0_compression_methods, SSL_client_hello_get1_extensions_present, SSL_client_hello_get0_ext \- callback functions for early server\-side ClientHello processing
+SSL_CTX_set_client_hello_cb, SSL_client_hello_cb_fn, SSL_client_hello_isv2, SSL_client_hello_get0_legacy_version, SSL_client_hello_get0_random, SSL_client_hello_get0_session_id, SSL_client_hello_get0_ciphers, SSL_client_hello_get0_compression_methods, SSL_client_hello_get1_extensions_present, SSL_client_hello_get_extension_order, SSL_client_hello_get0_ext \- callback functions for early server\-side ClientHello processing
 .SH SYNOPSIS
 .IX Header "SYNOPSIS"
 .Vb 10
@@ -80,6 +80,8 @@ SSL_CTX_set_client_hello_cb, SSL_client_hello_cb_fn, SSL_client_hello_isv2, SSL_
 \&                                                  const unsigned char **out);
 \& int SSL_client_hello_get1_extensions_present(SSL *s, int **out,
 \&                                              size_t *outlen);
+\& int SSL_client_hello_get_extension_order(SSL *s, uint16_t *exts,
+\&                                          size_t *num_exts);
 \& int SSL_client_hello_get0_ext(SSL *s, unsigned int type, const unsigned char **out,
 \&                               size_t *outlen);
 .Ve
@@ -132,6 +134,19 @@ success with \fB*out\fR set to NULL and \fB*outlen\fR set to 0.
 Note that \fBSSL_client_hello_get1_extensions_present()\fR returns only recognised
 extensions; therefore, unrecognised (including GREASE) extensions will not
 appear in the output.
+.PP
+\&\fBSSL_client_hello_get_extension_order()\fR is similar to
+\&\fBSSL_client_hello_get1_extensions_present()\fR, without internal memory allocation.
+When called with \fBexts\fR set to NULL, returns the number of extensions
+(e.g., to allocate storage for a subsequent call).  Otherwise, \fB*exts\fR is populated
+with the ExtensionType values in the order that the corresponding extensions
+appeared in the ClientHello.  \fB*num_exts\fR is an input/output parameter, used
+as input to supply the size of storage allocated by the caller, and as output to
+indicate how many ExtensionType values were written.  If the input \fB*num_exts\fR
+is smaller then the number of extensions in question, that is treated as an error.
+A subsequent call with \fBexts\fR set to NULL can retrieve the size of storage needed.
+A ClientHello that contained no extensions is treated as success, with \fB*num_exts\fR
+set to 0.
 .SH NOTES
 .IX Header "NOTES"
 The ClientHello callback provides a vast window of possibilities for application
@@ -173,6 +188,8 @@ should not be assumed to be valid.
 0 otherwise.
 .PP
 \&\fBSSL_client_hello_get1_extensions_present()\fR returns 1 on success and 0 on failure.
+.PP
+\&\fBSSL_client_hello_get_extension_order()\fR returns 1 on success and 0 on failure.
 .SH "SEE ALSO"
 .IX Header "SEE ALSO"
 \&\fBssl\fR\|(7), \fBSSL_CTX_set_tlsext_servername_callback\fR\|(3),
@@ -184,9 +201,11 @@ The SSL ClientHello callback, \fBSSL_client_hello_isv2()\fR,
 \&\fBSSL_client_hello_get0_ciphers()\fR, \fBSSL_client_hello_get0_compression_methods()\fR,
 \&\fBSSL_client_hello_get0_ext()\fR, and \fBSSL_client_hello_get1_extensions_present()\fR
 were added in OpenSSL 1.1.1.
+\&\fBSSL_client_hello_get_extension_order()\fR
+was added in OpenSSL 3.2.0.
 .SH COPYRIGHT
 .IX Header "COPYRIGHT"
-Copyright 2017\-2021 The OpenSSL Project Authors. All Rights Reserved.
+Copyright 2017\-2022 The OpenSSL Project Authors. All Rights Reserved.
 .PP
 Licensed under the Apache License 2.0 (the "License").  You may not use
 this file except in compliance with the License.  You can obtain a copy

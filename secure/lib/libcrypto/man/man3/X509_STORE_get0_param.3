@@ -58,47 +58,57 @@
 .\" ========================================================================
 .\"
 .IX Title "X509_STORE_GET0_PARAM 3ossl"
-.TH X509_STORE_GET0_PARAM 3ossl 2026-04-07 3.0.20 OpenSSL
+.TH X509_STORE_GET0_PARAM 3ossl 2026-09-29 3.5.9 OpenSSL
 .\" For nroff, turn off justification.  Always turn off hyphenation; it makes
 .\" way too many mistakes in technical documents.
 .if n .ad l
 .nh
 .SH NAME
 X509_STORE_get0_param, X509_STORE_set1_param,
-X509_STORE_get0_objects, X509_STORE_get1_all_certs
+X509_STORE_get1_objects, X509_STORE_get0_objects, X509_STORE_get1_all_certs
 \&\- X509_STORE setter and getter functions
 .SH SYNOPSIS
 .IX Header "SYNOPSIS"
 .Vb 1
 \& #include <openssl/x509_vfy.h>
 \&
-\& X509_VERIFY_PARAM *X509_STORE_get0_param(const X509_STORE *ctx);
-\& int X509_STORE_set1_param(X509_STORE *ctx, const X509_VERIFY_PARAM *pm);
-\& STACK_OF(X509_OBJECT) *X509_STORE_get0_objects(const X509_STORE *ctx);
-\& STACK_OF(X509) *X509_STORE_get1_all_certs(X509_STORE *st);
+\& X509_VERIFY_PARAM *X509_STORE_get0_param(const X509_STORE *xs);
+\& int X509_STORE_set1_param(X509_STORE *xs, const X509_VERIFY_PARAM *pm);
+\& STACK_OF(X509_OBJECT) *X509_STORE_get1_objects(X509_STORE *xs);
+\& STACK_OF(X509_OBJECT) *X509_STORE_get0_objects(const X509_STORE *xs);
+\& STACK_OF(X509) *X509_STORE_get1_all_certs(X509_STORE *xs);
 .Ve
 .SH DESCRIPTION
 .IX Header "DESCRIPTION"
-\&\fBX509_STORE_set1_param()\fR sets the verification parameters
-to \fBpm\fR for \fBctx\fR.
+\&\fBX509_STORE_set1_param()\fR sets the verification parameters to \fIpm\fR for \fIxs\fR.
 .PP
 \&\fBX509_STORE_get0_param()\fR retrieves an internal pointer to the verification
-parameters for \fBctx\fR. The returned pointer must not be freed by the
+parameters for \fIxs\fR. The returned pointer must not be freed by the
 calling application
+.PP
+\&\fBX509_STORE_get1_objects()\fR returns a snapshot of all objects in the store\*(Aqs X509
+cache. The cache contains \fBX509\fR and \fBX509_CRL\fR objects. The caller
+is responsible for freeing the returned list,
+using sk_X509_OBJECT_pop_free(sk, X509_OBJECT_free).
 .PP
 \&\fBX509_STORE_get0_objects()\fR retrieves an internal pointer to the store\*(Aqs
 X509 object cache. The cache contains \fBX509\fR and \fBX509_CRL\fR objects. The
-returned pointer must not be freed by the calling application.
+returned pointer must not be freed by the calling application. If the store is
+shared across multiple threads, it is not safe to use the result of this
+function. Use \fBX509_STORE_get1_objects()\fR instead, which avoids this problem.
 .PP
 \&\fBX509_STORE_get1_all_certs()\fR returns a list of all certificates in the store.
 The caller is responsible for freeing the returned list
-with sk_X509_pop_free(sk, X509_free).
+with \fBOSSL_STACK_OF_X509_free()\fR.
 .SH "RETURN VALUES"
 .IX Header "RETURN VALUES"
 \&\fBX509_STORE_get0_param()\fR returns a pointer to an
 \&\fBX509_VERIFY_PARAM\fR structure.
 .PP
 \&\fBX509_STORE_set1_param()\fR returns 1 for success and 0 for failure.
+.PP
+\&\fBX509_STORE_get1_objects()\fR returns a pointer to a stack of the retrieved
+objects on success, else NULL.
 .PP
 \&\fBX509_STORE_get0_objects()\fR returns a pointer to a stack of \fBX509_OBJECT\fR.
 .PP
@@ -113,9 +123,10 @@ certificates on success, else NULL.
 \&\fBX509_STORE_get0_param\fR and \fBX509_STORE_get0_objects\fR were added in
 OpenSSL 1.1.0.
 \&\fBX509_STORE_get1_certs\fR was added in OpenSSL 3.0.
+\&\fBX509_STORE_get1_objects\fR was added in OpenSSL 3.3.
 .SH COPYRIGHT
 .IX Header "COPYRIGHT"
-Copyright 2016\-2020 The OpenSSL Project Authors. All Rights Reserved.
+Copyright 2016\-2024 The OpenSSL Project Authors. All Rights Reserved.
 .PP
 Licensed under the Apache License 2.0 (the "License").  You may not use
 this file except in compliance with the License.  You can obtain a copy

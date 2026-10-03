@@ -12,9 +12,12 @@
 	${LCRYPTO_SRC}/crypto/bn/asm \
 	${LCRYPTO_SRC}/crypto/chacha/asm \
 	${LCRYPTO_SRC}/crypto/ec/asm \
+	${LCRYPTO_SRC}/crypto/md5/asm \
 	${LCRYPTO_SRC}/crypto/modes/asm \
 	${LCRYPTO_SRC}/crypto/poly1305/asm \
-	${LCRYPTO_SRC}/crypto/sha/asm
+	${LCRYPTO_SRC}/crypto/sha/asm \
+	${LCRYPTO_SRC}/crypto/sm3/asm \
+	${LCRYPTO_SRC}/crypto/sm4/asm
 
 PERLPATH=	-I${LCRYPTO_SRC}/crypto/perlasm
 
@@ -22,25 +25,34 @@ PERLPATH=	-I${LCRYPTO_SRC}/crypto/perlasm
 SRCS=	arm64cpuid.pl
 
 # aes
-SRCS+=	aesv8-armx.pl vpaes-armv8.pl
+SRCS+=	aesv8-armx.pl bsaes-armv8.pl vpaes-armv8.pl
 
 # bn
 SRCS+=	armv8-mont.pl
 
 # chacha
-SRCS+=	chacha-armv8.pl
+SRCS+=	chacha-armv8.pl chacha-armv8-sve.pl
 
 # ec
-SRCS+=	ecp_nistz256-armv8.pl
+SRCS+=	ecp_nistz256-armv8.pl ecp_sm2p256-armv8.pl
+
+# md5
+SRCS+=	md5-aarch64.pl
 
 # modes
-SRCS+=	ghashv8-armx.pl aes-gcm-armv8_64.S
+SRCS+=	ghashv8-armx.pl aes-gcm-armv8_64.pl aes-gcm-armv8-unroll8_64.pl
 
 # poly1305
 SRCS+=	poly1305-armv8.pl
 
 # sha
 SRCS+=	keccak1600-armv8.pl sha1-armv8.pl sha512-armv8.pl
+
+# sm3
+SRCS+=	sm3-armv8.pl
+
+# sm4
+SRCS+=	sm4-armv8.pl vpsm4-armv8.pl vpsm4_ex-armv8.pl
 
 ASM=	${SRCS:R:S/$/.S/} sha256-armv8.S
 
@@ -83,11 +95,14 @@ SRCS=	x86_64cpuid.pl
 # aes
 SRCS+=	aes-x86_64.pl \
 	aesni-mb-x86_64.pl aesni-sha1-x86_64.pl aesni-sha256-x86_64.pl \
-	aesni-x86_64.pl bsaes-x86_64.pl vpaes-x86_64.pl
+	aesni-x86_64.pl aesni-xts-avx512.pl bsaes-x86_64.pl vpaes-x86_64.pl
 
 # bn
-SRCS+=	rsaz-avx2.pl rsaz-avx512.pl rsaz-x86_64.pl x86_64-gf2m.pl \
-	x86_64-mont.pl x86_64-mont5.pl
+SRCS+=	rsaz-avx2.pl rsaz-x86_64.pl \
+	rsaz-2k-avx512.pl rsaz-2k-avxifma.pl \
+	rsaz-3k-avx512.pl rsaz-3k-avxifma.pl \
+	rsaz-4k-avx512.pl rsaz-4k-avxifma.pl \
+	x86_64-gf2m.pl x86_64-mont.pl x86_64-mont5.pl
 
 # camellia
 SRCS+=	cmll-x86_64.pl
@@ -102,7 +117,7 @@ SRCS+=	ecp_nistz256-x86_64.pl x25519-x86_64.pl
 SRCS+=	md5-x86_64.pl
 
 # modes
-SRCS+=	aesni-gcm-x86_64.pl ghash-x86_64.pl
+SRCS+=	aes-gcm-avx512.pl aesni-gcm-x86_64.pl ghash-x86_64.pl
 
 # poly1305
 SRCS+=	poly1305-x86_64.pl

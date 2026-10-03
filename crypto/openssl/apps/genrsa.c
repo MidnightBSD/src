@@ -29,8 +29,6 @@
 
 static int verbose = 0;
 
-static int genrsa_cb(EVP_PKEY_CTX *ctx);
-
 typedef enum OPTION_choice {
     OPT_COMMON,
 #ifndef OPENSSL_NO_DEPRECATED_3_0
@@ -43,6 +41,7 @@ typedef enum OPTION_choice {
     OPT_CIPHER,
     OPT_PRIMES,
     OPT_VERBOSE,
+    OPT_QUIET,
     OPT_R_ENUM,
     OPT_PROV_ENUM,
     OPT_TRADITIONAL
@@ -69,6 +68,7 @@ const OPTIONS genrsa_options[] = {
     { "passout", OPT_PASSOUT, 's', "Output file pass phrase source" },
     { "primes", OPT_PRIMES, 'p', "Specify number of primes" },
     { "verbose", OPT_VERBOSE, '-', "Verbose output" },
+    { "quiet", OPT_QUIET, '-', "Terse output" },
     { "traditional", OPT_TRADITIONAL, '-',
         "Use traditional format for private keys" },
     { "", OPT_CIPHER, '-', "Encrypt the output with any supported cipher" },
@@ -100,6 +100,7 @@ int genrsa_main(int argc, char **argv)
     if (bn == NULL || cb == NULL)
         goto end;
 
+    opt_set_unknown_name("cipher");
     prog = opt_init(argc, argv, genrsa_options);
     while ((o = opt_next()) != OPT_EOF) {
         switch (o) {
@@ -146,6 +147,9 @@ int genrsa_main(int argc, char **argv)
         case OPT_VERBOSE:
             verbose = 1;
             break;
+        case OPT_QUIET:
+            verbose = 0;
+            break;
         case OPT_TRADITIONAL:
             traditional = 1;
             break;
@@ -164,8 +168,7 @@ int genrsa_main(int argc, char **argv)
                 "Warning: It is not recommended to use more than %d bit for RSA keys.\n"
                 "         Your key size is %d! Larger key size may behave not as expected.\n",
                 OPENSSL_RSA_MAX_MODULUS_BITS, num);
-    } else if (argc > 0) {
-        BIO_printf(bio_err, "Extra arguments given.\n");
+    } else if (!opt_check_rest_arg(NULL)) {
         goto opthelp;
     }
 
@@ -173,10 +176,8 @@ int genrsa_main(int argc, char **argv)
         goto end;
 
     private = 1;
-    if (ciphername != NULL) {
-        if (!opt_cipher(ciphername, &enc))
-            goto end;
-    }
+    if (!opt_cipher(ciphername, &enc))
+        goto end;
     if (!app_passwd(NULL, passoutarg, NULL, &passout)) {
         BIO_printf(bio_err, "Error getting password\n");
         goto end;
@@ -190,7 +191,8 @@ int genrsa_main(int argc, char **argv)
             app_get0_propq()))
         goto end;
 
-    EVP_PKEY_CTX_set_cb(ctx, genrsa_cb);
+    if (verbose)
+        EVP_PKEY_CTX_set_cb(ctx, progress_cb);
     EVP_PKEY_CTX_set_app_data(ctx, bio_err);
 
     if (EVP_PKEY_CTX_set_rsa_keygen_bits(ctx, num) <= 0) {
@@ -253,26 +255,4 @@ end:
     if (ret != 0)
         ERR_print_errors(bio_err);
     return ret;
-}
-
-static int genrsa_cb(EVP_PKEY_CTX *ctx)
-{
-    char c = '*';
-    BIO *b = EVP_PKEY_CTX_get_app_data(ctx);
-    int p = EVP_PKEY_CTX_get_keygen_info(ctx, 0);
-
-    if (!verbose)
-        return 1;
-
-    if (p == 0)
-        c = '.';
-    if (p == 1)
-        c = '+';
-    if (p == 2)
-        c = '*';
-    if (p == 3)
-        c = '\n';
-    BIO_write(b, &c, 1);
-    (void)BIO_flush(b);
-    return 1;
 }

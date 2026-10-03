@@ -1,5 +1,5 @@
 /*
- * Copyright 2004-2021 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2004-2024 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -22,6 +22,7 @@
 #include <openssl/sha.h>
 #include <openssl/opensslv.h>
 #include "internal/endian.h"
+#include "crypto/sha.h"
 
 int SHA224_Init(SHA256_CTX *c)
 {
@@ -53,6 +54,13 @@ int SHA256_Init(SHA256_CTX *c)
     return 1;
 }
 
+int ossl_sha256_192_init(SHA256_CTX *c)
+{
+    SHA256_Init(c);
+    c->md_len = SHA256_192_DIGEST_LENGTH;
+    return 1;
+}
+
 int SHA224_Update(SHA256_CTX *c, const void *data, size_t len)
 {
     return SHA256_Update(c, data, len);
@@ -77,32 +85,38 @@ int SHA224_Final(unsigned char *md, SHA256_CTX *c)
  * Idea behind separate cases for pre-defined lengths is to let the
  * compiler decide if it's appropriate to unroll small loops.
  */
-#define HASH_MAKE_STRING(c, s)                                  \
-    do {                                                        \
-        unsigned long ll;                                       \
-        unsigned int nn;                                        \
-        switch ((c)->md_len) {                                  \
-        case SHA224_DIGEST_LENGTH:                              \
-            for (nn = 0; nn < SHA224_DIGEST_LENGTH / 4; nn++) { \
-                ll = (c)->h[nn];                                \
-                (void)HOST_l2c(ll, (s));                        \
-            }                                                   \
-            break;                                              \
-        case SHA256_DIGEST_LENGTH:                              \
-            for (nn = 0; nn < SHA256_DIGEST_LENGTH / 4; nn++) { \
-                ll = (c)->h[nn];                                \
-                (void)HOST_l2c(ll, (s));                        \
-            }                                                   \
-            break;                                              \
-        default:                                                \
-            if ((c)->md_len > SHA256_DIGEST_LENGTH)             \
-                return 0;                                       \
-            for (nn = 0; nn < (c)->md_len / 4; nn++) {          \
-                ll = (c)->h[nn];                                \
-                (void)HOST_l2c(ll, (s));                        \
-            }                                                   \
-            break;                                              \
-        }                                                       \
+#define HASH_MAKE_STRING(c, s)                                      \
+    do {                                                            \
+        unsigned long ll;                                           \
+        unsigned int nn;                                            \
+        switch ((c)->md_len) {                                      \
+        case SHA256_192_DIGEST_LENGTH:                              \
+            for (nn = 0; nn < SHA256_192_DIGEST_LENGTH / 4; nn++) { \
+                ll = (c)->h[nn];                                    \
+                (void)HOST_l2c(ll, (s));                            \
+            }                                                       \
+            break;                                                  \
+        case SHA224_DIGEST_LENGTH:                                  \
+            for (nn = 0; nn < SHA224_DIGEST_LENGTH / 4; nn++) {     \
+                ll = (c)->h[nn];                                    \
+                (void)HOST_l2c(ll, (s));                            \
+            }                                                       \
+            break;                                                  \
+        case SHA256_DIGEST_LENGTH:                                  \
+            for (nn = 0; nn < SHA256_DIGEST_LENGTH / 4; nn++) {     \
+                ll = (c)->h[nn];                                    \
+                (void)HOST_l2c(ll, (s));                            \
+            }                                                       \
+            break;                                                  \
+        default:                                                    \
+            if ((c)->md_len > SHA256_DIGEST_LENGTH)                 \
+                return 0;                                           \
+            for (nn = 0; nn < (c)->md_len / 4; nn++) {              \
+                ll = (c)->h[nn];                                    \
+                (void)HOST_l2c(ll, (s));                            \
+            }                                                       \
+            break;                                                  \
+        }                                                           \
     } while (0)
 
 #define HASH_UPDATE SHA256_Update
@@ -111,12 +125,16 @@ int SHA224_Final(unsigned char *md, SHA256_CTX *c)
 #define HASH_BLOCK_DATA_ORDER sha256_block_data_order
 #ifndef SHA256_ASM
 static
-#endif
+#else
+#ifdef INCLUDE_C_SHA256
+void sha256_block_data_order_c(SHA256_CTX *ctx, const void *in, size_t num);
+#endif /* INCLUDE_C_SHA256 */
+#endif /* SHA256_ASM */
     void sha256_block_data_order(SHA256_CTX *ctx, const void *in, size_t num);
 
 #include "crypto/md32_common.h"
 
-#ifndef SHA256_ASM
+#if !defined(SHA256_ASM) || defined(INCLUDE_C_SHA256)
 static const SHA_LONG K256[64] = {
     0x428a2f98UL, 0x71374491UL, 0xb5c0fbcfUL, 0xe9b5dba5UL,
     0x3956c25bUL, 0x59f111f1UL, 0x923f82a4UL, 0xab1c5ed5UL,
@@ -136,18 +154,62 @@ static const SHA_LONG K256[64] = {
     0x90befffaUL, 0xa4506cebUL, 0xbef9a3f7UL, 0xc67178f2UL
 };
 
+#ifndef PEDANTIC
+#if defined(__GNUC__) && __GNUC__ >= 2 && !defined(OPENSSL_NO_ASM) && !defined(OPENSSL_NO_INLINE_ASM)
+#if defined(__riscv_zknh)
+#define Sigma0(x) ({ MD32_REG_T ret;            \
+                        asm ("sha256sum0 %0, %1"    \
+                        : "=r"(ret)                 \
+                        : "r"(x)); ret; })
+#define Sigma1(x) ({ MD32_REG_T ret;            \
+                        asm ("sha256sum1 %0, %1"    \
+                        : "=r"(ret)                 \
+                        : "r"(x)); ret; })
+#define sigma0(x) ({ MD32_REG_T ret;            \
+                        asm ("sha256sig0 %0, %1"    \
+                        : "=r"(ret)                 \
+                        : "r"(x)); ret; })
+#define sigma1(x) ({ MD32_REG_T ret;            \
+                        asm ("sha256sig1 %0, %1"    \
+                        : "=r"(ret)                 \
+                        : "r"(x)); ret; })
+#endif
+#if defined(__riscv_zbt) || defined(__riscv_zpn)
+#define Ch(x, y, z) ({  MD32_REG_T ret;                           \
+                        asm (".insn r4 0x33, 1, 0x3, %0, %2, %1, %3"\
+                        : "=r"(ret)                                 \
+                        : "r"(x), "r"(y), "r"(z)); ret; })
+#define Maj(x, y, z) ({ MD32_REG_T ret;                           \
+                        asm (".insn r4 0x33, 1, 0x3, %0, %2, %1, %3"\
+                        : "=r"(ret)                                 \
+                        : "r"(x^z), "r"(y), "r"(x)); ret; })
+#endif
+#endif
+#endif
+
 /*
  * FIPS specification refers to right rotations, while our ROTATE macro
  * is left one. This is why you might notice that rotation coefficients
  * differ from those observed in FIPS document by 32-N...
  */
+#ifndef Sigma0
 #define Sigma0(x) (ROTATE((x), 30) ^ ROTATE((x), 19) ^ ROTATE((x), 10))
+#endif
+#ifndef Sigma1
 #define Sigma1(x) (ROTATE((x), 26) ^ ROTATE((x), 21) ^ ROTATE((x), 7))
+#endif
+#ifndef sigma0
 #define sigma0(x) (ROTATE((x), 25) ^ ROTATE((x), 14) ^ ((x) >> 3))
+#endif
+#ifndef sigma1
 #define sigma1(x) (ROTATE((x), 15) ^ ROTATE((x), 13) ^ ((x) >> 10))
-
+#endif
+#ifndef Ch
 #define Ch(x, y, z) (((x) & (y)) ^ ((~(x)) & (z)))
+#endif
+#ifndef Maj
 #define Maj(x, y, z) (((x) & (y)) ^ ((x) & (z)) ^ ((y) & (z)))
+#endif
 
 #ifdef OPENSSL_SMALL_FOOTPRINT
 
@@ -235,8 +297,12 @@ static void sha256_block_data_order(SHA256_CTX *ctx, const void *in,
         ROUND_00_15(i, a, b, c, d, e, f, g, h);            \
     } while (0)
 
+#ifdef INCLUDE_C_SHA256
+void sha256_block_data_order_c(SHA256_CTX *ctx, const void *in, size_t num)
+#else
 static void sha256_block_data_order(SHA256_CTX *ctx, const void *in,
     size_t num)
+#endif
 {
     unsigned MD32_REG_T a, b, c, d, e, f, g, h, s0, s1, T1;
     SHA_LONG X[16];

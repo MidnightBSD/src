@@ -243,6 +243,21 @@ end:
     return result;
 }
 
+/* SSL_CTX_set_cipher_list matching with cipher standard name */
+static int test_stdname_cipherlist(void)
+{
+    SETUP_CIPHERLIST_TEST_FIXTURE();
+    if (!TEST_true(SSL_CTX_set_cipher_list(fixture->server, TLS1_RFC_RSA_WITH_AES_128_SHA))
+        || !TEST_true(SSL_CTX_set_cipher_list(fixture->client, TLS1_RFC_RSA_WITH_AES_128_SHA))) {
+        goto end;
+    }
+    result = 1;
+end:
+    tear_down(fixture);
+    fixture = NULL;
+    return result;
+}
+
 /*
  * SSL_CTX_set_ciphersuites() must not crash on empty list elements.
  * CONF_parse_list() signals them with elem=NULL; ciphersuite_cb() must skip
@@ -303,5 +318,6 @@ int setup_tests(void)
 #ifndef OPENSSL_NO_TLS1_3
     ADD_TEST(test_set_ciphersuites_empty_elem);
 #endif
+    ADD_TEST(test_stdname_cipherlist);
     return 1;
 }

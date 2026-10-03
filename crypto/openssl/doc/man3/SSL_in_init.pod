@@ -37,6 +37,8 @@ fully protected application data can be transferred or 0 otherwise.
 Note that in some circumstances (such as when early data is being transferred)
 SSL_in_init(), SSL_in_before() and SSL_is_init_finished() can all return 0.
 
+B<s> B<MUST NOT> be NULL.
+
 SSL_in_connect_init() returns 1 if B<s> is acting as a client and SSL_in_init()
 would return 1, or 0 otherwise.
 
@@ -69,7 +71,7 @@ format. These are:
 
 =item TLS_ST_BEFORE
 
-No handshake messages have yet been been sent or received.
+No handshake messages have yet been sent or received.
 
 =item TLS_ST_OK
 
@@ -100,7 +102,7 @@ L<SSL_read_early_data(3)>
 
 =head1 COPYRIGHT
 
-Copyright 2017-2018 The OpenSSL Project Authors. All Rights Reserved.
+Copyright 2017-2026 The OpenSSL Project Authors. All Rights Reserved.
 
 Licensed under the Apache License 2.0 (the "License").  You may not use
 this file except in compliance with the License.  You can obtain a copy

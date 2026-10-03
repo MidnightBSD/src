@@ -117,8 +117,9 @@ if ( $internal ) {
     die "Cannot mix -internal and -static\n" if $static;
     die "Extra parameters given.\n" if @ARGV;
     @source = ( glob('crypto/*.c'), glob('crypto/*/*.c'),
-                glob('ssl/*.c'), glob('ssl/*/*.c'), glob('providers/*.c'),
-                glob('providers/*/*.c'), glob('providers/*/*/*.c') );
+                glob('ssl/*.c'), glob('ssl/*/*.c'), glob('ssl/*/*/*.c'),
+                glob('providers/*.c'), glob('providers/*/*.c'),
+                glob('providers/*/*/*.c') );
 } else {
     die "-module isn't useful without -internal\n" if scalar keys %modules > 0;
     @source = @ARGV;
@@ -247,7 +248,7 @@ if ( ! $reindex && $statefile ) {
 
 # Scan each C source file and look for reason codes.  This is done by
 # looking for strings that "look like" reason codes: basically anything
-# consisting of all upper case and numerics which _R_ in it and which has
+# consisting of all uppercase and numerics which _R_ in it and which has
 # the name of an error library at the start.  Should there be anything else,
 # such as a type name, we add exceptions here.
 # If a code doesn't exist in list compiled from headers then mark it
@@ -685,7 +686,7 @@ EOF
         my $short = "$i:$rcodes{$i}:";
         my $t = exists $strings{$i} ? "$strings{$i}" : "";
         $t = "\\\n\t" . $t if length($short) + length($t) > 80;
-        print OUT "$short$t\n" if !exists $rextra{$i};
+        print OUT "$short$t\n";
     }
     close(OUT);
     if ( $skippedstate ) {

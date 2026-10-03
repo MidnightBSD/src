@@ -1,3 +1,5 @@
+PACKAGE?=	openssl
+LIB_PACKAGE=
 
 SHLIBDIR=	${LIBDIR}/engines-3
 
@@ -16,8 +18,8 @@ CFLAGS+=	-DB_ENDIAN
 .endif
 CFLAGS+=	-DNDEBUG
 
-.PATH: ${LCRYPTO_SRC}/engines
-
 LIBADD=		crypto
+
+.PATH: ${LCRYPTO_SRC}/engines
 
 WARNS?=		0

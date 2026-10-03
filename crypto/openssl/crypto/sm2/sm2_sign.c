@@ -14,10 +14,10 @@
 #include "crypto/sm2.h"
 #include "crypto/sm2err.h"
 #include "crypto/ec.h" /* ossl_ec_group_do_inverse_ord() */
+#include "crypto/bn.h" /* fixed-top / Montgomery constant-time BN helpers */
 #include "internal/numbers.h"
 #include <openssl/err.h>
 #include <openssl/evp.h>
-#include <openssl/err.h>
 #include <openssl/bn.h>
 #include <string.h>
 
@@ -51,9 +51,13 @@ int ossl_sm2_compute_z_digest(uint8_t *out,
     }
 
     hash = EVP_MD_CTX_new();
+    if (hash == NULL) {
+        ERR_raise(ERR_LIB_SM2, ERR_R_EVP_LIB);
+        goto done;
+    }
     ctx = BN_CTX_new_ex(ossl_ec_key_get_libctx(key));
-    if (hash == NULL || ctx == NULL) {
-        ERR_raise(ERR_LIB_SM2, ERR_R_MALLOC_FAILURE);
+    if (ctx == NULL) {
+        ERR_raise(ERR_LIB_SM2, ERR_R_BN_LIB);
         goto done;
     }
 
@@ -67,7 +71,7 @@ int ossl_sm2_compute_z_digest(uint8_t *out,
     yA = BN_CTX_get(ctx);
 
     if (yA == NULL) {
-        ERR_raise(ERR_LIB_SM2, ERR_R_MALLOC_FAILURE);
+        ERR_raise(ERR_LIB_SM2, ERR_R_BN_LIB);
         goto done;
     }
 
@@ -109,10 +113,8 @@ int ossl_sm2_compute_z_digest(uint8_t *out,
 
     p_bytes = BN_num_bytes(p);
     buf = OPENSSL_zalloc(p_bytes);
-    if (buf == NULL) {
-        ERR_raise(ERR_LIB_SM2, ERR_R_MALLOC_FAILURE);
+    if (buf == NULL)
         goto done;
-    }
 
     if (BN_bn2binpad(a, buf, p_bytes) < 0
         || !EVP_DigestUpdate(hash, buf, p_bytes)
@@ -161,16 +163,18 @@ static BIGNUM *sm2_compute_msg_hash(const EVP_MD *digest,
     OSSL_LIB_CTX *libctx = ossl_ec_key_get_libctx(key);
     const char *propq = ossl_ec_key_get0_propq(key);
 
-    if (md_size < 0) {
+    if (md_size <= 0) {
         ERR_raise(ERR_LIB_SM2, SM2_R_INVALID_DIGEST);
+        goto done;
+    }
+    if (hash == NULL) {
+        ERR_raise(ERR_LIB_SM2, ERR_R_EVP_LIB);
         goto done;
     }
 
     z = OPENSSL_zalloc(md_size);
-    if (hash == NULL || z == NULL) {
-        ERR_raise(ERR_LIB_SM2, ERR_R_MALLOC_FAILURE);
+    if (z == NULL)
         goto done;
-    }
 
     fetched_digest = EVP_MD_fetch(libctx, EVP_MD_get0_name(digest), propq);
     if (fetched_digest == NULL) {
@@ -212,31 +216,39 @@ static ECDSA_SIG *sm2_sig_gen(const EC_KEY *key, const BIGNUM *e)
     EC_POINT *kG = NULL;
     BN_CTX *ctx = NULL;
     BIGNUM *k = NULL;
-    BIGNUM *rk = NULL;
     BIGNUM *r = NULL;
     BIGNUM *s = NULL;
     BIGNUM *x1 = NULL;
     BIGNUM *tmp = NULL;
+    BN_MONT_CTX *mont = EC_GROUP_get_mont_data(group);
     OSSL_LIB_CTX *libctx = ossl_ec_key_get_libctx(key);
 
     if (dA == NULL) {
         ERR_raise(ERR_LIB_SM2, SM2_R_INVALID_PRIVATE_KEY);
         goto done;
     }
+
+    if (mont == NULL) {
+        ERR_raise(ERR_LIB_SM2, ERR_R_EC_LIB);
+        goto done;
+    }
     kG = EC_POINT_new(group);
+    if (kG == NULL) {
+        ERR_raise(ERR_LIB_SM2, ERR_R_EC_LIB);
+        goto done;
+    }
     ctx = BN_CTX_new_ex(libctx);
-    if (kG == NULL || ctx == NULL) {
-        ERR_raise(ERR_LIB_SM2, ERR_R_MALLOC_FAILURE);
+    if (ctx == NULL) {
+        ERR_raise(ERR_LIB_SM2, ERR_R_BN_LIB);
         goto done;
     }
 
     BN_CTX_start(ctx);
     k = BN_CTX_get(ctx);
-    rk = BN_CTX_get(ctx);
     x1 = BN_CTX_get(ctx);
     tmp = BN_CTX_get(ctx);
     if (tmp == NULL) {
-        ERR_raise(ERR_LIB_SM2, ERR_R_MALLOC_FAILURE);
+        ERR_raise(ERR_LIB_SM2, ERR_R_BN_LIB);
         goto done;
     }
 
@@ -248,7 +260,7 @@ static ECDSA_SIG *sm2_sig_gen(const EC_KEY *key, const BIGNUM *e)
     s = BN_new();
 
     if (r == NULL || s == NULL) {
-        ERR_raise(ERR_LIB_SM2, ERR_R_MALLOC_FAILURE);
+        ERR_raise(ERR_LIB_SM2, ERR_R_BN_LIB);
         goto done;
     }
 
@@ -266,6 +278,18 @@ static ECDSA_SIG *sm2_sig_gen(const EC_KEY *key, const BIGNUM *e)
             ERR_raise(ERR_LIB_SM2, ERR_R_INTERNAL_ERROR);
             goto done;
         }
+        /*
+         * Pin the nonce to a fixed, value-independent width and flag it
+         * BN_FLG_CONSTTIME, so its magnitude does not leak through operand
+         * lengths in the scalar copy inside the ladder or in the arithmetic
+         * below.  BN_priv_rand_range_ex() is kept so the nonce value itself
+         * is unchanged; only its representation is pinned.
+         */
+        BN_set_flags(k, BN_FLG_CONSTTIME);
+        if (!bn_set_top_fixed(k, bn_get_top(order))) {
+            ERR_raise(ERR_LIB_SM2, ERR_R_BN_LIB);
+            goto done;
+        }
 
         if (!EC_POINT_mul(group, kG, k, NULL, NULL, ctx)
             || !EC_POINT_get_affine_coordinates(group, kG, x1, NULL,
@@ -275,23 +299,49 @@ static ECDSA_SIG *sm2_sig_gen(const EC_KEY *key, const BIGNUM *e)
             goto done;
         }
 
-        /* try again if r == 0 or r+k == n */
+        /* try again if r == 0 or r + k == n */
         if (BN_is_zero(r))
             continue;
 
-        if (!BN_add(rk, r, k)) {
-            ERR_raise(ERR_LIB_SM2, ERR_R_INTERNAL_ERROR);
+        /*
+         * Since 0 < r < n and 0 < k < n, r + k == n is the same as
+         * k == n - r.  Both operands of the subtraction are public, so
+         * compute it in the open and then compare against the nonce with a
+         * fixed-width constant-time comparison.  A BN_cmp() on r + k would
+         * branch on whether the sum carried into an extra word, which
+         * depends on the value of k.
+         */
+        if (!BN_sub(tmp, order, r)
+            || !bn_set_top_fixed(tmp, bn_get_top(order))) {
+            ERR_raise(ERR_LIB_SM2, ERR_R_BN_LIB);
             goto done;
         }
 
-        if (BN_cmp(rk, order) == 0)
+        if (CRYPTO_memcmp(bn_get_words(k), bn_get_words(tmp),
+                bn_get_top(order) * sizeof(BN_ULONG))
+            == 0)
             continue;
 
+        /*
+         * s = ((1 + dA)^-1 * (k - r * dA)) mod order
+         *
+         * Computed with fixed-top / Montgomery constant-time primitives, so
+         * that the running time does not depend on the secret k or dA (the
+         * generic BN_mod_mul()/BN_sub() used previously reduce via BN_div(),
+         * whose timing is value dependent).  This mirrors the ECDSA path.
+         *
+         * s holds (1 + dA)^-1 throughout; the (k - r * dA) term is built in
+         * tmp.  bn_mul_mont_fixed_top() with one operand in the Montgomery
+         * domain yields the plain product, and the final
+         * BN_mod_mul_montgomery() returns the user-visible, normalised value.
+         */
         if (!BN_add(s, dA, BN_value_one())
             || !ossl_ec_group_do_inverse_ord(group, s, s, ctx)
-            || !BN_mod_mul(tmp, dA, r, order, ctx)
-            || !BN_sub(tmp, k, tmp)
-            || !BN_mod_mul(s, s, tmp, order, ctx)) {
+            || !bn_to_mont_fixed_top(tmp, r, mont, ctx)
+            || !bn_mul_mont_fixed_top(tmp, tmp, dA, mont, ctx)
+            || !bn_mod_sub_fixed_top(tmp, k, tmp, order)
+            || !bn_to_mont_fixed_top(tmp, tmp, mont, ctx)
+            || !BN_mod_mul_montgomery(s, tmp, s, mont, ctx)) {
             ERR_raise(ERR_LIB_SM2, ERR_R_BN_LIB);
             goto done;
         }
@@ -302,7 +352,7 @@ static ECDSA_SIG *sm2_sig_gen(const EC_KEY *key, const BIGNUM *e)
 
         sig = ECDSA_SIG_new();
         if (sig == NULL) {
-            ERR_raise(ERR_LIB_SM2, ERR_R_MALLOC_FAILURE);
+            ERR_raise(ERR_LIB_SM2, ERR_R_ECDSA_LIB);
             goto done;
         }
 
@@ -339,20 +389,20 @@ static int sm2_sig_verify(const EC_KEY *key, const ECDSA_SIG *sig,
 
     ctx = BN_CTX_new_ex(libctx);
     if (ctx == NULL) {
-        ERR_raise(ERR_LIB_SM2, ERR_R_MALLOC_FAILURE);
+        ERR_raise(ERR_LIB_SM2, ERR_R_BN_LIB);
         goto done;
     }
     BN_CTX_start(ctx);
     t = BN_CTX_get(ctx);
     x1 = BN_CTX_get(ctx);
     if (x1 == NULL) {
-        ERR_raise(ERR_LIB_SM2, ERR_R_MALLOC_FAILURE);
+        ERR_raise(ERR_LIB_SM2, ERR_R_BN_LIB);
         goto done;
     }
 
     pt = EC_POINT_new(group);
     if (pt == NULL) {
-        ERR_raise(ERR_LIB_SM2, ERR_R_MALLOC_FAILURE);
+        ERR_raise(ERR_LIB_SM2, ERR_R_EC_LIB);
         goto done;
     }
 
@@ -506,7 +556,7 @@ int ossl_sm2_internal_verify(const unsigned char *dgst, int dgstlen,
 
     s = ECDSA_SIG_new();
     if (s == NULL) {
-        ERR_raise(ERR_LIB_SM2, ERR_R_MALLOC_FAILURE);
+        ERR_raise(ERR_LIB_SM2, ERR_R_ECDSA_LIB);
         goto done;
     }
     if (d2i_ECDSA_SIG(&s, &p, sig_len) == NULL) {

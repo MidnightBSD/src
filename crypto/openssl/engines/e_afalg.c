@@ -355,12 +355,35 @@ static int afalg_fin_cipher_aio(afalg_aio *aio, int sfd, unsigned char *buf,
                         }
                         continue;
                     } else {
+                        char strbuf[32];
+                        /*
+                         * sometimes __s64 is defined as long long int
+                         * but on some archs ( like mips64 or powerpc64 ) it's just long int
+                         *
+                         * to be able to use BIO_snprintf() with %lld without warnings
+                         * copy events[0].res to an long long int variable
+                         *
+                         * because long long int should always be at least 64 bit this should work
+                         */
+                        long long int op_ret = events[0].res;
+
                         /*
                          * Retries exceed for -EBUSY or unrecoverable error
                          * condition for this instance of operation.
                          */
                         ALG_WARN("%s(%d): Crypto Operation failed with code %lld\n",
                             __FILE__, __LINE__, events[0].res);
+                        BIO_snprintf(strbuf, sizeof(strbuf), "%lld", op_ret);
+                        switch (events[0].res) {
+                        case -ENOMEM:
+                            AFALGerr(0, AFALG_R_KERNEL_OP_FAILED);
+                            ERR_add_error_data(3, "-ENOMEM ( code ", strbuf, " )");
+                            break;
+                        default:
+                            AFALGerr(0, AFALG_R_KERNEL_OP_FAILED);
+                            ERR_add_error_data(2, "code ", strbuf);
+                            break;
+                        }
                         return 0;
                     }
                 }
@@ -749,7 +772,7 @@ static int afalg_ciphers(ENGINE *e, const EVP_CIPHER **cipher,
 
     if (cipher == NULL) {
         *nids = afalg_cipher_nids;
-        return (sizeof(afalg_cipher_nids) / sizeof(afalg_cipher_nids[0]));
+        return OSSL_NELEM(afalg_cipher_nids);
     }
 
     switch (nid) {

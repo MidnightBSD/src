@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2021 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2019-2026 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -37,6 +37,21 @@ extern "C" {
             (void (*)(void))ossl_digest_default_gettable_params         \
     }
 
+#ifdef FIPS_MODULE
+#define PROV_DISPATCH_FUNC_DIGEST_GET_CTX_PARAMS                   \
+    { OSSL_FUNC_DIGEST_GETTABLE_CTX_PARAMS,                        \
+        (void (*)(void))ossl_digest_default_gettable_ctx_params }, \
+    {                                                              \
+        OSSL_FUNC_DIGEST_GET_CTX_PARAMS,                           \
+            (void (*)(void))ossl_digest_default_get_ctx_params     \
+    }
+#define PROV_DISPATCH_FUNC_DIGEST_GET_CTX_PARAMS_APPEND \
+    , PROV_DISPATCH_FUNC_DIGEST_GET_CTX_PARAMS
+#else
+#define PROV_DISPATCH_FUNC_DIGEST_GET_CTX_PARAMS
+#define PROV_DISPATCH_FUNC_DIGEST_GET_CTX_PARAMS_APPEND
+#endif
+
 #define PROV_FUNC_DIGEST_FINAL(name, dgstsize, fin)                               \
     static OSSL_FUNC_digest_final_fn name##_internal_final;                       \
     static int name##_internal_final(void *ctx, unsigned char *out, size_t *outl, \
@@ -72,6 +87,12 @@ extern "C" {
             *ret = *in;                                                          \
         return ret;                                                              \
     }                                                                            \
+    static void name##_copyctx(void *voutctx, void *vinctx)                      \
+    {                                                                            \
+        CTX *outctx = (CTX *)voutctx;                                            \
+        CTX *inctx = (CTX *)vinctx;                                              \
+        *outctx = *inctx;                                                        \
+    }                                                                            \
     PROV_FUNC_DIGEST_FINAL(name, dgstsize, fin)                                  \
     PROV_FUNC_DIGEST_GET_PARAM(name, blksize, dgstsize, flags)                   \
     const OSSL_DISPATCH ossl_##name##_functions[] = {                            \
@@ -80,7 +101,9 @@ extern "C" {
         { OSSL_FUNC_DIGEST_FINAL, (void (*)(void))name##_internal_final },       \
         { OSSL_FUNC_DIGEST_FREECTX, (void (*)(void))name##_freectx },            \
         { OSSL_FUNC_DIGEST_DUPCTX, (void (*)(void))name##_dupctx },              \
-        PROV_DISPATCH_FUNC_DIGEST_GET_PARAMS(name)
+        { OSSL_FUNC_DIGEST_COPYCTX, (void (*)(void))name##_copyctx },            \
+        PROV_DISPATCH_FUNC_DIGEST_GET_PARAMS(name)                               \
+            PROV_DISPATCH_FUNC_DIGEST_GET_CTX_PARAMS_APPEND
 
 #define PROV_DISPATCH_FUNC_DIGEST_CONSTRUCT_END \
     {                                           \
@@ -122,6 +145,9 @@ extern "C" {
 const OSSL_PARAM *ossl_digest_default_gettable_params(void *provctx);
 int ossl_digest_default_get_params(OSSL_PARAM params[], size_t blksz,
     size_t paramsz, unsigned long flags);
+const OSSL_PARAM *ossl_digest_default_gettable_ctx_params(void *ctx,
+    void *provctx);
+int ossl_digest_default_get_ctx_params(void *ctx, OSSL_PARAM params[]);
 
 #ifdef __cplusplus
 }

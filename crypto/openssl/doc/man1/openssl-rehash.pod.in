@@ -11,6 +11,8 @@ values
 
 =head1 SYNOPSIS
 
+=for openssl duplicate options
+
 B<openssl>
 B<rehash>
 [B<-h>]
