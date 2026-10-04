@@ -425,7 +425,6 @@ linux_epoll_wait_ts(struct thread *td, int epfd, struct epoll_event *events,
 					NULL};
 	cap_rights_t rights;
 	struct file *epfp;
-	sigset_t omask;
 	int error;
 
 	if (maxevents <= 0 || maxevents > LINUX_MAX_EVENTS)
@@ -441,18 +440,9 @@ linux_epoll_wait_ts(struct thread *td, int epfd, struct epoll_event *events,
 	}
 	if (uset != NULL) {
 		error = kern_sigprocmask(td, SIG_SETMASK, uset,
-		    &omask, 0);
+		    &td->td_oldsigmask, 0);
 		if (error != 0)
 			goto leave;
-		td->td_pflags |= TDP_OLDMASK;
-		/*
-		 * Make sure that ast() is called on return to
-		 * usermode and TDP_OLDMASK is cleared, restoring old
-		 * sigmask.
-		 */
-		thread_lock(td);
-		td->td_flags |= TDF_ASTPENDING;
-		thread_unlock(td);
 	}
 
 	coargs.leventlist = events;
@@ -471,9 +461,25 @@ linux_epoll_wait_ts(struct thread *td, int epfd, struct epoll_event *events,
 	if (error == 0)
 		td->td_retval[0] = coargs.count;
 
-	if (uset != NULL)
-		error = kern_sigprocmask(td, SIG_SETMASK, &omask,
-		    NULL, 0);
+	if (uset != NULL) {
+		/*
+		 * Deliver an interrupting signal with the temporary mask in
+		 * place.  Otherwise restore the old mask before a signal
+		 * can be delivered.
+		 */
+		if (error == EINTR) {
+			td->td_pflags |= TDP_OLDMASK;
+			thread_lock(td);
+			td->td_flags |= TDF_ASTPENDING;
+			thread_unlock(td);
+		} else {
+			int serror __diagused;
+
+			serror = kern_sigprocmask(td, SIG_SETMASK,
+			    &td->td_oldsigmask, NULL, 0);
+			MPASS(serror == 0);
+		}
+	}
 leave:
 	fdrop(epfp, td);
 	return (error);
