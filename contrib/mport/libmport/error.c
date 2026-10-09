@@ -33,7 +33,7 @@
 #include <stdarg.h>
 
 static int mport_err;
-static char err_msg[256];
+static char err_msg[MPORT_ERROR_MESSAGE_MAX];
 
 /* This goes with the error codes in mport.h */
 static char default_error_msg[] = "An error occurred.";

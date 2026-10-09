@@ -29,6 +29,7 @@
 *.pico
 *.pieo
 *.depend
+.depend.*
 
 # Executables
 *.out
@@ -49,6 +50,19 @@ libexec/mport.update/mport.update
 libexec/mport.updepends/mport.updepends
 libexec/mport.version_cmp/mport.version_cmp
 mport/mport
+
+# ATF test programs
+tests/mport_confirm_test
+tests/mport_db_test
+tests/mport_fetch_test
+tests/mport_index_test
+tests/mport_install_test
+tests/mport_shlib_test
+tests/mport_osrelease_test
+tests/mport_pkgmeta_test
+tests/mport_precheck_test
+tests/mport_util_test
+tests/mport_version_test
 
 # Debug files
 *.dSYM/

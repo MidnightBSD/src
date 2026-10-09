@@ -70,12 +70,21 @@ diag(const char *fmt, ...)
 #endif
 
 static void usage(void);
+static void strip_trailing_slashes(/*@notnull@*/ char *path);
 static void truncate_at_whitespace(/*@notnull@*/ char *path);
 static int check_fake(/*@notnull@*/ mportAssetList *, /*@notnull@*/ const char *,
     /*@notnull@*/ const char *,
     /*@null@*/ const char *);
 static int grep_file(/*@notnull@*/ const char *, /*@notnull@*/ const char *);
 static int run_ldd_quiet(/*@notnull@*/ const char *);
+static void normalize_path(/*@notnull@*/ char *path);
+static bool installed_link_target(/*@notnull@*/ const char *destdir,
+    /*@notnull@*/ const char *file, /*@notnull@*/ const char *target, /*@out@*/ char *out,
+    size_t outlen);
+static int check_symlink(/*@notnull@*/ mportAssetList *, /*@notnull@*/ const char *destdir,
+    /*@notnull@*/ const char *prefix, /*@notnull@*/ const char *file);
+static bool assetlist_contains(/*@notnull@*/ mportAssetList *,
+    /*@notnull@*/ const char *relative_path, /*@notnull@*/ const char *prefix);
 static bool is_in_plist(/*@notnull@*/ const char *relative_path, /*@notnull@*/ const char *prefix);
 static int check_missing_from_plist(/*@null@*/ const char *path,
     const struct stat *st __attribute__((unused)), int typeflag,
@@ -83,6 +92,16 @@ static int check_missing_from_plist(/*@null@*/ const char *path,
 static void check_for_missing_files(/*@notnull@*/ const char *destdir,
     /*@notnull@*/ const char *prefix,
     /*@notnull@*/ mportAssetList *assetlist);
+
+/* Drop trailing slashes, leaving a bare "/" alone. */
+static void
+strip_trailing_slashes(char *path)
+{
+	size_t len = strlen(path);
+
+	while (len > 1 && path[len - 1] == '/')
+		path[--len] = '\0';
+}
 
 /*
  * Sample assets may carry both a source and a destination in a single data
@@ -132,6 +151,12 @@ main(int argc, char *argv[])
 			prefix = optarg;
 			break;
 		case 'd':
+			/*
+			 * Paths are built as destdir + "/..." and the symlink check
+			 * compares targets against destdir as a prefix, so a
+			 * trailing slash would leave "/stage//x" unmatched.
+			 */
+			strip_trailing_slashes(optarg);
 			destdir = optarg;
 			break;
 		case 'f':
@@ -267,7 +292,7 @@ check_fake(mportAssetList *assetlist, const char *destdir, const char *prefix, c
 				(void)strlcpy(cwd, e->data, FILENAME_MAX);
 			}
 
-			break;
+			continue;
 		}
 
 		if (e->data != NULL) {
@@ -304,7 +329,7 @@ check_fake(mportAssetList *assetlist, const char *destdir, const char *prefix, c
 				}
 			}
 
-			break;
+			continue;
 		}
 
 		if (e->data != NULL &&
@@ -343,29 +368,8 @@ check_fake(mportAssetList *assetlist, const char *destdir, const char *prefix, c
 
 		// symlink checks.
 		if (S_ISLNK(st.st_mode)) {
-			char target[FILENAME_MAX];
-			ssize_t len = readlink(file, target, sizeof(target) - 1);
-			if (len == -1) {
-				(void)printf("    %s is a broken symlink\n", file);
+			if (check_symlink(assetlist, destdir, prefix, file) != 0)
 				ret = 1;
-			} else {
-				target[len] = '\0';
-				// Resolve the symlink target relative to the directory containing
-				// the link
-				char resolved_target[FILENAME_MAX];
-				if (realpath(file, resolved_target) == NULL) {
-					(void)printf(
-					    "    WARN: %s points to an invalid target: %s\n", file,
-					    target);
-					// ret = 1;
-				} else if (strncmp(resolved_target, destdir, strlen(destdir)) !=
-				    0) {
-					(void)printf(
-					    "    WARN: %s points outside the destdir: %s\n", file,
-					    resolved_target);
-					// ret = 1;
-				}
-			}
 			continue;
 		}
 
@@ -539,12 +543,160 @@ grep_file(const char *filename, const char *destdir)
 	return ret;
 }
 
+/*
+ * Collapse "//", "/./" and "/../" in an absolute path in place.  Purely
+ * lexical: nothing is looked up, and ".." at the root stays at the root.
+ * In particular ".." is applied to the literal preceding component without
+ * following symlinks, so a target like "link/../x" is validated as the
+ * literal path, which may differ from what the kernel resolves once the
+ * link is installed.  Doing better would mean walking both the stage tree
+ * and the live system; a spurious or missed WARN is the only consequence.
+ */
+static void
+normalize_path(char *path)
+{
+	char *out = path;
+	const char *in = path;
+
+	while (*in != '\0') {
+		while (*in == '/')
+			in++;
+		if (*in == '\0')
+			break;
+
+		const char *seg = in;
+		while (*in != '\0' && *in != '/')
+			in++;
+		size_t seglen = (size_t)(in - seg);
+
+		if (seglen == 1 && seg[0] == '.')
+			continue;
+		if (seglen == 2 && seg[0] == '.' && seg[1] == '.') {
+			while (out > path && *(out - 1) != '/')
+				out--;
+			if (out > path)
+				out--;
+			continue;
+		}
+
+		*out++ = '/';
+		memmove(out, seg, seglen);
+		out += seglen;
+	}
+
+	if (out == path)
+		*out++ = '/';
+	*out = '\0';
+}
+
+/*
+ * Compute the absolute path a symlink's target will have once the package
+ * is installed.  file is the staged link (destdir + installed path); a
+ * relative target is taken against the installed directory of the link, not
+ * the stage directory, so ".." runs that climb out of the stage tree land
+ * where they will on the real system.
+ */
+static bool
+installed_link_target(
+    const char *destdir, const char *file, const char *target, char *out, size_t outlen)
+{
+	size_t destlen = strlen(destdir);
+	const char *link_path;
+	int n;
+
+	/* A bare "/" destdir adds no prefix; file is already the installed path. */
+	if (destlen == 1 && destdir[0] == '/')
+		destlen = 0;
+	if (strncmp(file, destdir, destlen) != 0)
+		return false;
+	link_path = file + destlen;
+
+	if (target[0] == '/') {
+		n = snprintf(out, outlen, "%s", target);
+	} else {
+		const char *slash = strrchr(link_path, '/');
+		int dirlen = slash == NULL ? 0 : (int)(slash - link_path);
+		n = snprintf(out, outlen, "%.*s/%s", dirlen, link_path, target);
+	}
+	if (n < 0 || (size_t)n >= outlen)
+		return false;
+
+	normalize_path(out);
+	return true;
+}
+
+/*
+ * Validate one staged symlink against the layout it will have after install.
+ * Returns 1 for a problem that must fail the check, 0 otherwise (warnings
+ * are printed but do not fail).
+ */
+static int
+check_symlink(mportAssetList *assetlist, const char *destdir, const char *prefix, const char *file)
+{
+	char target[FILENAME_MAX];
+	char installed[FILENAME_MAX];
+	char staged[FILENAME_MAX];
+	struct stat st;
+	ssize_t len;
+
+	len = readlink(file, target, sizeof(target) - 1);
+	if (len == -1) {
+		(void)printf("    %s is a broken symlink\n", file);
+		return 1;
+	}
+	target[len] = '\0';
+
+	/*
+	 * A target that names the stage directory only works on the build
+	 * host; once installed it dangles.  This is the one symlink problem
+	 * the fake step can be sure about.
+	 */
+	size_t destlen = strlen(destdir);
+	if (destlen > 1 && strncmp(target, destdir, destlen) == 0 &&
+	    (target[destlen] == '/' || target[destlen] == '\0')) {
+		(void)printf("    %s points into the fake destdir: %s\n", file, target);
+		return 1;
+	}
+
+	if (!installed_link_target(destdir, file, target, installed, sizeof(installed))) {
+		(void)printf("    WARN: %s has an unresolvable target: %s\n", file, target);
+		return 0;
+	}
+
+	/* shipped by this package: staged, or declared (e.g. an absolute @dir) */
+	if (snprintf(staged, sizeof(staged), "%s%s", destdir, installed) < (int)sizeof(staged) &&
+	    lstat(staged, &st) == 0) {
+		diag("%s -> %s is staged", file, installed);
+		return 0;
+	}
+	if (assetlist_contains(assetlist, installed, prefix)) {
+		diag("%s -> %s is in the plist", file, installed);
+		return 0;
+	}
+
+	/* provided by the base system or an installed dependency */
+	if (lstat(installed, &st) == 0) {
+		diag("%s -> %s exists outside the package", file, installed);
+		return 0;
+	}
+
+	(void)printf(
+	    "    WARN: %s points to %s, which is neither staged nor installed\n", file, installed);
+	return 0;
+}
+
 static bool
 is_in_plist(const char *relative_path, const char *prefix)
 {
+	return assetlist_contains(global_assetlist, relative_path, prefix);
+}
+
+static bool
+assetlist_contains(mportAssetList *assetlist, const char *relative_path, const char *prefix)
+{
 	mportAssetListEntry *e;
 
-	STAILQ_FOREACH (e, global_assetlist, next) {
+	STAILQ_FOREACH (e, assetlist, next) {
 		/* cppcheck-suppress uninitvar */
 		if (e->data == NULL) {
 			continue; // Skip entries with NULL data

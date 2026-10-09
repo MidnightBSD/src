@@ -49,14 +49,18 @@ main(int argc, char *argv[])
 	mportInstance *mport;
 	int error_code = 0;
 	bool automatic = false;
+	bool allowOldRelease = false;
 	const char *chroot_path = NULL;
 
 	(void)setlocale(LC_ALL, "");
 
-	while ((ch = getopt(argc, argv, "Ac:p:")) != -1) {
+	while ((ch = getopt(argc, argv, "AOc:p:")) != -1) {
 		switch (ch) {
 		case 'A':
 			automatic = true;
+			break;
+		case 'O':
+			allowOldRelease = true;
 			break;
 		case 'c':
 			chroot_path = optarg;
@@ -86,12 +90,17 @@ main(int argc, char *argv[])
 		}
 	}
 
-	mport = mport_instance_new();
+	if ((mport = mport_instance_new()) == NULL) {
+		warnx("Out of memory");
+		exit(EXIT_FAILURE);
+	}
 
 	if (mport_instance_init(mport, NULL, NULL, false, false) != MPORT_OK) {
 		warnx("Init failed: %s", mport_err_string());
 		return EXIT_FAILURE;
 	}
+	if (allowOldRelease)
+		mport->allowOldRelease = true;
 
 	for (int i = 0; i < argc; i++) {
 
@@ -118,6 +127,7 @@ usage(void)
 	    "  -A               Mark the installed package(s) as automatically installed\n");
 	fprintf(stderr, "  -p <prefix>      Set the installation prefix\n");
 	fprintf(stderr, "  -c <chroot path> Set a chroot path for installation\n");
+	fprintf(stderr, "  -O               Install package files built for another OS release\n");
 	fprintf(stderr, "\nArguments:\n");
 	fprintf(stderr, "  pkgfile          Path to the package file(s) to install\n");
 	fprintf(stderr, "\nExamples:\n");

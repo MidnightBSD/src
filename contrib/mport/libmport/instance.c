@@ -46,11 +46,26 @@
  * @return A pointer to the newly allocated mportInstance structure.
  *         Returns NULL if memory allocation fails.
  */
-MPORT_PUBLIC_API mportInstance *
+/* MPORT_ALLOW_OLD_RELEASE set to a non-empty value, like MPORT_FORCE_HTTP */
+bool
+mport_allow_old_release_env(void)
+{
+	const char *value = getenv(MPORT_ALLOW_OLD_RELEASE_ENV);
+
+	return value != NULL && value[0] != '\0';
+}
+
+MPORT_PUBLIC_API /*@null@*/ mportInstance *
 mport_instance_new(void)
 {
+	mportInstance *mport = calloc(1, sizeof(mportInstance));
 
-	return (mportInstance *)calloc(1, sizeof(mportInstance));
+	/* no root directory is open until mport_instance_init() succeeds;
+	 * calloc's 0 would make mport_instance_free() close stdin */
+	if (mport != NULL)
+		mport->rootfd = -1;
+
+	return mport;
 }
 
 /**
@@ -67,6 +82,10 @@ mport_instance_init(mportInstance *mport, const char *root, const char *outputPa
 	mport->noIndex = noIndex;
 	mport->verbosity = verbosity;
 	mport->offline = false;
+	mport->noDepends = false;
+	/* the environment form exists for jails and scripts that install
+	 * packages built for another release; the CLI flag sets it too */
+	mport->allowOldRelease = mport_allow_old_release_env();
 	mport->force = false;
 	mport->ignoreMissing = false;
 
@@ -122,6 +141,13 @@ mport_instance_init(mportInstance *mport, const char *root, const char *outputPa
 	 * failing on SQLITE_BUSY; write transactions use BEGIN IMMEDIATE so the
 	 * wait happens before any row changes. */
 	(void)sqlite3_busy_timeout(mport->db, MPORT_DB_BUSY_TIMEOUT_MS);
+
+	/* under -c the registry belongs to whoever controls the chroot */
+	if (mport_db_harden(mport->db) != MPORT_OK) {
+		sqlite3_close(mport->db);
+		mport->db = NULL;
+		RETURN_CURRENT_ERROR;
+	}
 
 	if (sqlite3_create_function(mport->db, "mport_version_cmp", 2, SQLITE_ANY, NULL,
 		&mport_version_cmp_sqlite, NULL, NULL) != SQLITE_OK) {
@@ -315,20 +341,25 @@ mport_set_select_cb(mportInstance *mport, mport_select_cb cb)
  * @brief Calls the message callback function with a formatted message.
  *
  * This function formats a message using the provided format string and arguments,
- * then calls the message callback function stored in the mportInstance.
+ * then calls the instance's message callback, or the default callback when
+ * the instance or its callback is NULL.
  *
- * @param mport Pointer to the mportInstance containing the message callback.
+ * @param mport Optional mportInstance containing the message callback.
  * @param fmt Format string for the message.
  * @param ... Variable arguments to be formatted according to fmt.
  *
  * @return MPORT_OK on success, MPORT_ERR_WARN if message formatting fails.
  */
 MPORT_PUBLIC_API int
-mport_call_msg_cb(mportInstance *mport, const char *fmt, ...)
+mport_call_msg_cb(/*@null@*/ mportInstance *mport, /*@notnull@*/ const char *fmt, ...)
 {
 	va_list args;
+	/*@only@*/ char *msg = NULL;
+	mport_msg_cb cb = mport_default_msg_cb;
 
-	char *msg;
+	if (mport != NULL && mport->msg_cb != NULL)
+		cb = mport->msg_cb;
+
 	va_start(args, fmt);
 	(void)vasprintf(&msg, fmt, args);
 	va_end(args);
@@ -336,7 +367,7 @@ mport_call_msg_cb(mportInstance *mport, const char *fmt, ...)
 	if (msg == NULL)
 		RETURN_ERROR(MPORT_ERR_WARN, "Unable to format message");
 
-	(mport->msg_cb)(msg);
+	cb(msg);
 
 	free(msg);
 	msg = NULL;
@@ -437,7 +468,8 @@ mport_instance_free(mportInstance *mport)
 		RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
 	}
 
-	close(mport->rootfd);
+	if (mport->rootfd >= 0)
+		close(mport->rootfd);
 	free(mport->root);
 	mport->root = NULL;
 

@@ -48,6 +48,23 @@ static int mport_upgrade_master_schema_13to14(sqlite3 *);
 
 static int insert_meta_values(sqlite3 *db, char *key, char *value);
 
+/* mport_db_harden(sqlite3 *db)
+ *
+ * Registry, index and bundle databases are not trusted: refuse to run
+ * functions from SQL stored in their schemas (triggers, views) and block
+ * SQL that can corrupt the database file.  Call right after opening a
+ * connection; databases ATTACHed to it later are covered too.
+ */
+int
+mport_db_harden(sqlite3 *db)
+{
+	if (sqlite3_db_config(db, SQLITE_DBCONFIG_TRUSTED_SCHEMA, 0, (int *)NULL) != SQLITE_OK ||
+	    sqlite3_db_config(db, SQLITE_DBCONFIG_DEFENSIVE, 1, (int *)NULL) != SQLITE_OK)
+		RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+
+	return MPORT_OK;
+}
+
 /* mport_db_do(sqlite3 *db, const char *sql, ...)
  *
  * A wrapper for executing a single sql query.  Takes a sqlite3 struct
@@ -275,15 +292,23 @@ mport_generate_stub_schema(mportInstance *mport, sqlite3 *db)
 	insert_meta_values(db, "bundle_format_version", MPORT_BUNDLE_VERSION_STR);
 	RUN_SQL(db, "INSERT INTO meta VALUES (\"build_timestamp\", datetime('now'))");
 
+	/* keep a reason such as an unreadable ABI_FILE rather than replace it */
+	(void)mport_set_err(MPORT_OK, NULL);
 	ptr = mport_get_osrelease(mport);
-	if (ptr == NULL)
+	if (ptr == NULL) {
+		if (mport_err_code() != MPORT_OK)
+			RETURN_CURRENT_ERROR;
 		RETURN_ERROR(MPORT_ERR_FATAL, "OS Release could not be determined");
+	}
 	insert_meta_values(db, "os_release", ptr);
 	free(ptr);
 
 	ptr = mport_get_osreleasedate();
-	if (ptr == NULL)
+	if (ptr == NULL) {
+		if (mport_err_code() != MPORT_OK)
+			RETURN_CURRENT_ERROR;
 		RETURN_ERROR(MPORT_ERR_FATAL, "OS Release Date could not be determined");
+	}
 	insert_meta_values(db, "MidnightBSD_version", ptr);
 	free(ptr);
 	ptr = NULL;
@@ -297,6 +322,8 @@ mport_generate_stub_schema(mportInstance *mport, sqlite3 *db)
 	RUN_SQL(db,
 	    "CREATE TABLE depends (pkg text NOT NULL, depend_pkgname text NOT NULL, depend_pkgversion text, depend_port text NOT NULL)");
 	RUN_SQL(db, "CREATE TABLE categories (pkg text NOT NULL, category text NOT NULL)");
+	RUN_SQL(db, "CREATE TABLE shlibs_provided (pkg text NOT NULL, name text NOT NULL)");
+	RUN_SQL(db, "CREATE TABLE shlibs_required (pkg text NOT NULL, name text NOT NULL)");
 
 	return (MPORT_OK);
 }
@@ -360,6 +387,9 @@ run_master_schema_upgrades(sqlite3 *db, int databaseVersion)
 		/* falls through */
 	case 13:
 		UPGRADE_STEP(mport_upgrade_master_schema_13to14);
+		/* falls through */
+	case 14:
+		UPGRADE_STEP(mport_upgrade_master_schema_14to15);
 		break;
 	default:
 		RETURN_ERROR(MPORT_ERR_FATAL, "Invalid master database version");
@@ -530,6 +560,22 @@ mport_upgrade_master_schema_13to14(sqlite3 *db)
 	return (MPORT_OK);
 }
 
+/* shared libraries each package provides and requires (see shlib.c) */
+int
+mport_upgrade_master_schema_14to15(sqlite3 *db)
+{
+	RUN_SQL(db,
+	    "CREATE TABLE IF NOT EXISTS shlibs_provided (pkg text NOT NULL, name text NOT NULL)");
+	RUN_SQL(db, "CREATE INDEX IF NOT EXISTS shlibs_provided_pkg ON shlibs_provided (pkg)");
+	RUN_SQL(db, "CREATE INDEX IF NOT EXISTS shlibs_provided_name ON shlibs_provided (name)");
+	RUN_SQL(db,
+	    "CREATE TABLE IF NOT EXISTS shlibs_required (pkg text NOT NULL, name text NOT NULL)");
+	RUN_SQL(db, "CREATE INDEX IF NOT EXISTS shlibs_required_pkg ON shlibs_required (pkg)");
+	RUN_SQL(db, "CREATE INDEX IF NOT EXISTS shlibs_required_name ON shlibs_required (name)");
+
+	return (MPORT_OK);
+}
+
 int
 mport_generate_master_schema(sqlite3 *db)
 {
@@ -572,6 +618,14 @@ mport_generate_master_schema(sqlite3 *db)
 
 	RUN_SQL(db,
 	    "CREATE TABLE IF NOT EXISTS annotation (pkg text NOT NULL, tag TEXT NOT NULL, val TEXT NOT NULL, PRIMARY KEY (pkg, tag))");
+	RUN_SQL(db,
+	    "CREATE TABLE IF NOT EXISTS shlibs_provided (pkg text NOT NULL, name text NOT NULL)");
+	RUN_SQL(db, "CREATE INDEX IF NOT EXISTS shlibs_provided_pkg ON shlibs_provided (pkg)");
+	RUN_SQL(db, "CREATE INDEX IF NOT EXISTS shlibs_provided_name ON shlibs_provided (name)");
+	RUN_SQL(db,
+	    "CREATE TABLE IF NOT EXISTS shlibs_required (pkg text NOT NULL, name text NOT NULL)");
+	RUN_SQL(db, "CREATE INDEX IF NOT EXISTS shlibs_required_pkg ON shlibs_required (pkg)");
+	RUN_SQL(db, "CREATE INDEX IF NOT EXISTS shlibs_required_name ON shlibs_required (name)");
 
 	mport_set_database_version(db);
 

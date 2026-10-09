@@ -66,6 +66,31 @@ free_edges(struct pkgmeta_dependency_edge **adj, int package_count)
 }
 /*@end@*/
 
+/* record from -> to once; returns -1 on allocation failure */
+static int
+add_edge(struct pkgmeta_dependency_edge **adj, int *in_degree, int from, int to)
+{
+	const struct pkgmeta_dependency_edge *curr;
+	struct pkgmeta_dependency_edge *new_edge;
+
+	for (curr = adj[from]; curr != NULL; curr = curr->next) {
+		if (curr->to == to)
+			return 0;
+	}
+
+	new_edge = malloc(sizeof(struct pkgmeta_dependency_edge));
+	if (new_edge == NULL) {
+		warnx("Out of memory");
+		return -1;
+	}
+	new_edge->to = to;
+	new_edge->next = adj[from];
+	adj[from] = new_edge;
+	in_degree[to]++;
+
+	return 0;
+}
+
 /* Splint hits an internal constraint bug on this cleanup path. */
 /*@ignore@*/
 mportPackageMeta **
@@ -75,17 +100,14 @@ mport_pkgmeta_sort_dependencies(
 	mportPackageMeta **sorted_packs;
 	mportPackageMeta **result;
 	mportPackageMeta **downdeps;
+	mportPackageMeta **providers;
 	mportPackageMeta **d;
 	struct pkgmeta_dependency_edge **adj;
 	const struct pkgmeta_dependency_edge *curr;
-	struct pkgmeta_dependency_edge *new_edge;
 	int *in_degree;
 	bool *queued;
-	bool duplicate;
 	int i;
 	int j;
-	int from;
-	int to;
 	int sorted_count;
 
 	result = NULL;
@@ -119,36 +141,51 @@ mport_pkgmeta_sort_dependencies(
 					continue;
 				if (strcmp((*d)->name, flat_packs[j]->name) != 0)
 					continue;
-
-				from = reverse_edges ? j : i;
-				to = reverse_edges ? i : j;
-
-				duplicate = false;
-				curr = adj[from];
-				while (curr != NULL) {
-					if (curr->to == to) {
-						duplicate = true;
-						break;
-					}
-					curr = curr->next;
-				}
-
-				if (!duplicate) {
-					new_edge = malloc(sizeof(struct pkgmeta_dependency_edge));
-					if (new_edge == NULL) {
-						warnx("Out of memory");
-						mport_pkgmeta_vec_free(downdeps);
-						goto error;
-					}
-					new_edge->to = to;
-					new_edge->next = adj[from];
-					adj[from] = new_edge;
-					in_degree[to]++;
+				if (add_edge(adj, in_degree, reverse_edges ? j : i,
+					reverse_edges ? i : j) != 0) {
+					mport_pkgmeta_vec_free(downdeps);
+					goto error;
 				}
 				break;
 			}
 		}
 		mport_pkgmeta_vec_free(downdeps);
+	}
+
+	/*
+	 * A package that links against a library another package provides
+	 * depends on that package whether or not the port declared it.  The
+	 * registry records both sides, so order providers like dependencies.
+	 */
+	for (i = 0; i < package_count; i++) {
+		providers = NULL;
+		if (mport_pkgmeta_search_master(mport, &providers,
+			"pkg IN (SELECT DISTINCT p.pkg FROM shlibs_required r "
+			"JOIN shlibs_provided p ON p.name = r.name "
+			"WHERE r.pkg=%Q AND p.pkg != r.pkg)",
+			flat_packs[i]->name) != MPORT_OK) {
+			warnx("Error getting library providers for %s: %s", flat_packs[i]->name,
+			    mport_err_string());
+			goto error;
+		}
+		if (providers == NULL)
+			continue;
+
+		for (d = providers; *d != NULL; d++) {
+			for (j = 0; j < package_count; j++) {
+				if (i == j)
+					continue;
+				if (strcmp((*d)->name, flat_packs[j]->name) != 0)
+					continue;
+				if (add_edge(adj, in_degree, reverse_edges ? j : i,
+					reverse_edges ? i : j) != 0) {
+					mport_pkgmeta_vec_free(providers);
+					goto error;
+				}
+				break;
+			}
+		}
+		mport_pkgmeta_vec_free(providers);
 	}
 
 	sorted_count = 0;
