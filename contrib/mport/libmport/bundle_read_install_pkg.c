@@ -435,6 +435,18 @@ create_dir_asset_fd(
 				goto mkdir_error;
 			}
 			nextfd = openat(fd, start, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+			/*
+			 * A pre-existing intermediate component may be a symlink
+			 * to a directory, e.g. /usr/local/etc/namedb pointing into
+			 * a chroot.  Follow it like mkdir -p does; O_DIRECTORY
+			 * still rejects anything that does not resolve to a
+			 * directory.  The final component stays O_NOFOLLOW so the
+			 * fd-based chown/chmod cannot be redirected through a
+			 * swapped-in link.
+			 */
+			if (nextfd == -1 && !final_component &&
+			    (errno == EMLINK || errno == ELOOP))
+				nextfd = openat(fd, start, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
 			if (nextfd == -1) {
 				*p = save;
 				goto open_error;
@@ -755,6 +767,9 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 		goto ERROR;
 
 	if (create_annotations(mport, pkg) != MPORT_OK)
+		goto ERROR;
+
+	if (mport_shlibs_register(mport, pkg) != MPORT_OK)
 		goto ERROR;
 
 	/* Insert the assets into the master table. We do this one by one because we want to insert

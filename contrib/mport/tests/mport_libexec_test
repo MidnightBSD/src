@@ -13,6 +13,10 @@ version_cmp_orders_versions_body()
 		"${MPORT_VERSION_CMP}" 1.0 1.1
 	atf_check -s exit:0 -o inline:">\n" -e empty \
 		"${MPORT_VERSION_CMP}" 2.0 1.9
+	atf_check -s exit:0 -o inline:"<\n" -e empty \
+		"${MPORT_VERSION_CMP}" 1.0rc1 1.0
+	atf_check -s exit:0 -o inline:">\n" -e empty \
+		"${MPORT_VERSION_CMP}" 1.0a 1.0
 }
 
 atf_test_case version_cmp_requires_two_args
@@ -56,6 +60,141 @@ check_fake_reports_missing_file_body()
 
 	atf_check -s not-exit:0 \
 		-o match:"not installed" \
+		-e empty \
+		"${MPORT_CHECK_FAKE}" \
+		-f "${PWD}/plist" \
+		-d "${PWD}/root" \
+		-p /usr/local
+}
+
+atf_test_case check_fake_continues_after_dir
+check_fake_continues_after_dir_head()
+{
+	atf_set "descr" "mport.check-fake keeps checking entries after a @dir line"
+}
+check_fake_continues_after_dir_body()
+{
+	setup_fake_tree
+	printf "@dir share/testpkg\nshare/testpkg/missing.txt\n" >>plist
+
+	atf_check -s not-exit:0 \
+		-o match:"share/testpkg/missing.txt not installed" \
+		-o match:"Fake failed" \
+		-e empty \
+		"${MPORT_CHECK_FAKE}" \
+		-f "${PWD}/plist" \
+		-d "${PWD}/root" \
+		-p /usr/local
+}
+
+atf_test_case check_fake_accepts_symlinks_resolved_at_install
+check_fake_accepts_symlinks_resolved_at_install_head()
+{
+	atf_set "descr" "mport.check-fake accepts symlinks whose targets exist once installed"
+}
+check_fake_accepts_symlinks_resolved_at_install_body()
+{
+	setup_fake_tree
+	mkdir -p root/usr/local/share/testpkg/rules root/var/lib/xkb
+	printf "base\n" >root/usr/local/share/testpkg/rules/base
+	# relative link to a sibling staged file (meson -Dxorg-rules-symlinks style)
+	ln -s base root/usr/local/share/testpkg/rules/xorg
+	# absolute link to a file this package stages
+	ln -s /usr/local/share/testpkg/rules/base root/usr/local/share/testpkg/absinside
+	# absolute link to a directory this package declares with @dir (issue #106)
+	ln -s /var/lib/xkb root/usr/local/share/testpkg/compiled
+	# relative link that climbs out of the stage tree to a base-system path
+	ln -s ../../../../etc root/usr/local/share/testpkg/escape
+	printf "share/testpkg/rules/base\nshare/testpkg/rules/xorg\n" >>plist
+	printf "share/testpkg/absinside\nshare/testpkg/compiled\nshare/testpkg/escape\n" >>plist
+	printf "@dir /var/lib/xkb\n" >>plist
+
+	atf_check -s exit:0 \
+		-o match:"Fake succeeded" \
+		-o not-match:"WARN" \
+		-e empty \
+		"${MPORT_CHECK_FAKE}" \
+		-f "${PWD}/plist" \
+		-d "${PWD}/root" \
+		-p /usr/local
+}
+
+atf_test_case check_fake_rejects_symlink_into_destdir
+check_fake_rejects_symlink_into_destdir_head()
+{
+	atf_set "descr" "mport.check-fake fails a symlink whose target names the stage directory"
+}
+check_fake_rejects_symlink_into_destdir_body()
+{
+	setup_fake_tree
+	ln -s "${PWD}/root/usr/local/share/testpkg/file.txt" root/usr/local/share/testpkg/leak
+	printf "share/testpkg/leak\n" >>plist
+
+	atf_check -s not-exit:0 \
+		-o match:"leak points into the fake destdir" \
+		-o match:"Fake failed" \
+		-e empty \
+		"${MPORT_CHECK_FAKE}" \
+		-f "${PWD}/plist" \
+		-d "${PWD}/root" \
+		-p /usr/local
+
+	# a trailing slash on -d must not hide the match
+	atf_check -s not-exit:0 \
+		-o match:"leak points into the fake destdir" \
+		-e empty \
+		"${MPORT_CHECK_FAKE}" \
+		-f "${PWD}/plist" \
+		-d "${PWD}/root/" \
+		-p /usr/local
+}
+
+atf_test_case check_fake_cwd_rebases_following_entries
+check_fake_cwd_rebases_following_entries_head()
+{
+	atf_set "descr" "mport.check-fake resolves entries after @cwd against the new directory"
+}
+check_fake_cwd_rebases_following_entries_body()
+{
+	setup_fake_tree
+	mkdir -p root/usr/local/etc
+	printf "hello\n" >root/usr/local/etc/present.conf
+	printf "@cwd /usr/local/etc\npresent.conf\n@cwd\nshare/testpkg/file.txt\n" >>plist
+
+	atf_check -s exit:0 \
+		-o match:"Fake succeeded" \
+		-e empty \
+		"${MPORT_CHECK_FAKE}" \
+		-f "${PWD}/plist" \
+		-d "${PWD}/root" \
+		-p /usr/local
+
+	# An entry that only exists under the old cwd must now be reported.
+	printf "@cwd /usr/local/etc\nshare/testpkg/file.txt\n" >plist
+
+	atf_check -s not-exit:0 \
+		-o match:"share/testpkg/file.txt not installed" \
+		-e empty \
+		"${MPORT_CHECK_FAKE}" \
+		-f "${PWD}/plist" \
+		-d "${PWD}/root" \
+		-p /usr/local
+}
+
+atf_test_case check_fake_warns_on_dangling_symlink
+check_fake_warns_on_dangling_symlink_head()
+{
+	atf_set "descr" "mport.check-fake warns, without failing, about a symlink to nothing"
+}
+check_fake_warns_on_dangling_symlink_body()
+{
+	setup_fake_tree
+	ln -s /nonexistent/mport-check-fake-test root/usr/local/share/testpkg/dangling
+	printf "share/testpkg/dangling\n" >>plist
+
+	atf_check -s exit:0 \
+		-o match:"WARN: .*dangling points to /nonexistent/mport-check-fake-test, which is neither staged nor installed" \
+		-o match:"Fake succeeded" \
 		-e empty \
 		"${MPORT_CHECK_FAKE}" \
 		-f "${PWD}/plist" \
@@ -121,6 +260,19 @@ init_reports_bad_chroot_body()
 		"${MPORT_INIT}" -c "${PWD}/missing-root"
 }
 
+atf_test_case init_rejects_bad_usage
+init_rejects_bad_usage_head()
+{
+	atf_set "descr" "mport.init reports usage for unknown flags and extra arguments"
+}
+init_rejects_bad_usage_body()
+{
+	atf_check -s exit:2 -o empty -e match:"Usage: mport.init" \
+		"${MPORT_INIT}" -x
+	atf_check -s exit:2 -o empty -e match:"Usage: mport.init" \
+		"${MPORT_INIT}" extra
+}
+
 atf_test_case update_reports_bad_chroot
 update_reports_bad_chroot_head()
 {
@@ -140,6 +292,61 @@ delete_ignores_missing_registered_dir_head()
 }
 delete_ignores_missing_registered_dir_body()
 {
+	setup_gperf_registry
+
+	atf_check -s exit:0 -o ignore -e empty \
+		"${MPORT_DELETE}" -c "${PWD}/root" -f -n gperf
+
+	atf_check -s exit:0 -o inline:"0\n" -e empty \
+		sqlite3 root/var/db/mport/master.db \
+		"SELECT count(*) FROM packages WHERE pkg='gperf';"
+}
+
+atf_test_case delete_accepts_registry_row_without_lang
+delete_accepts_registry_row_without_lang_head()
+{
+	atf_set "descr" "mport.delete reads an installed package whose lang is NULL"
+	atf_set "require.user" "root"
+}
+delete_accepts_registry_row_without_lang_body()
+{
+	setup_gperf_registry
+	sqlite3 root/var/db/mport/master.db "UPDATE packages SET lang=NULL WHERE pkg='gperf';"
+
+	atf_check -s exit:0 -o ignore -e empty \
+		"${MPORT_DELETE}" -c "${PWD}/root" -f -n gperf
+
+	atf_check -s exit:0 -o inline:"0\n" -e empty \
+		sqlite3 root/var/db/mport/master.db \
+		"SELECT count(*) FROM packages WHERE pkg='gperf';"
+}
+
+atf_test_case install_accepts_package_without_lang
+install_accepts_package_without_lang_head()
+{
+	atf_set "descr" "mport.install installs a package created without -l"
+	atf_set "require.user" "root"
+}
+install_accepts_package_without_lang_body()
+{
+	setup_fake_tree
+	mkdir -p croot/tmp croot/var/db/mport croot/usr/local
+	atf_check -s exit:0 -o ignore -e ignore \
+		"${MPORT_CREATE}" -n testpkg -v 1.0 -o "${PWD}/croot/tmp/testpkg-1.0.mport" \
+		-s "${PWD}/root" -p "${PWD}/plist" -P /usr/local -O misc/testpkg -t misc \
+		-c "test package"
+
+	atf_check -s exit:0 -o ignore -e empty \
+		"${MPORT_INSTALL}" -O -c "${PWD}/croot" /tmp/testpkg-1.0.mport
+	atf_check -s exit:0 -o inline:"hello\n" cat croot/usr/local/share/testpkg/file.txt
+	atf_check -s exit:0 -o inline:"''\n" -e empty \
+		sqlite3 croot/var/db/mport/master.db \
+		"SELECT quote(lang) FROM packages WHERE pkg='testpkg';"
+}
+
+# a registry with one package, gperf, registered under root/
+setup_gperf_registry()
+{
 	mkdir -p root/var/db/mport root/usr/local/share/licenses
 
 	sqlite3 root/var/db/mport/master.db \
@@ -153,13 +360,271 @@ delete_ignores_missing_registered_dir_body()
 		"CREATE TABLE annotation (pkg text NOT NULL, tag TEXT NOT NULL, val TEXT NOT NULL, PRIMARY KEY (pkg, tag));" \
 		"INSERT INTO packages (pkg, version, origin, prefix, lang, options, status, comment, os_release, cpe, locked, deprecated, expiration_date, no_provide_shlib, flavor, automatic, install_date, type, flatsize) VALUES ('gperf', '3.1', 'devel/gperf', '/usr/local', '', '', 'clean', '', '3.2', '', 0, '', 0, 0, '', 0, 0, 0, 682000);" \
 		"INSERT INTO assets (pkg, type, data, checksum, owner, grp, mode) VALUES ('gperf', 24, '/usr/local/share/licenses/gperf-3.1', NULL, NULL, NULL, NULL);"
+}
 
-	atf_check -s exit:0 -o ignore -e empty \
-		"${MPORT_DELETE}" -c "${PWD}/root" -f -n gperf
+atf_test_case merge_combines_packages
+merge_combines_packages_head()
+{
+	atf_set "descr" "mport.merge orders packages by dependency and keeps owner/mode files"
+	atf_set "require.user" "root"
+}
+merge_combines_packages_body()
+{
+	setup_merge_tree
+	make_merge_pkg pkga share/pkga/f
+	make_merge_pkg pkgb share/pkgb/f -D "pkga:misc/pkga:>=1.0"
+	printf 'share/pkgc/plain\n@(root,wheel,0600) share/pkgc/owned\n' >plist.pkgc
+	make_merge_pkg pkgc ""
 
-	atf_check -s exit:0 -o inline:"0\n" -e empty \
-		sqlite3 root/var/db/mport/master.db \
-		"SELECT count(*) FROM packages WHERE pkg='gperf';"
+	atf_check -s exit:0 -o empty -e empty \
+		env TMPDIR=/tmp "${MPORT_MERGE}" -c "${PWD}/croot" -o /out.mport \
+		/pkgb.mport /pkga.mport /pkgc.mport
+	tar -tf croot/out.mport >listing
+	atf_check -s exit:0 -o inline:"+CONTENTS.db\n" head -n 1 listing
+	atf_check -s exit:0 \
+		-o inline:"share/pkga/f\nshare/pkgb/f\nshare/pkgc/owned\nshare/pkgc/plain\n" \
+		sh -c "tail -n +2 listing | sort"
+	# pkgb depends on pkga, so pkga must be installed (archived) first
+	a=$(grep -n '^share/pkga/f$' listing | cut -d: -f1)
+	b=$(grep -n '^share/pkgb/f$' listing | cut -d: -f1)
+	atf_check -s exit:0 test "${a}" -lt "${b}"
+	# the bundle is built under a temporary name and renamed into place
+	atf_check -s exit:0 -o inline:"out.mport\n" sh -c "ls croot | grep '^out\.mport'"
+}
+
+atf_test_case merge_skips_package_without_files
+merge_skips_package_without_files_head()
+{
+	atf_set "descr" "mport.merge accepts a package with no data files"
+	atf_set "require.user" "root"
+}
+merge_skips_package_without_files_body()
+{
+	setup_merge_tree
+	make_merge_pkg pkga share/pkga/f
+	: >plist.meta
+	make_merge_pkg meta ""
+
+	atf_check -s exit:0 -o empty -e empty \
+		env TMPDIR=/tmp "${MPORT_MERGE}" -c "${PWD}/croot" -o /out.mport /pkga.mport /meta.mport
+	atf_check -s exit:0 -o inline:"+CONTENTS.db\nshare/pkga/f\n" tar -tf croot/out.mport
+}
+
+atf_test_case merge_accepts_merged_bundle
+merge_accepts_merged_bundle_head()
+{
+	atf_set "descr" "mport.merge accepts a merged bundle holding a package without data files"
+	atf_set "require.user" "root"
+}
+merge_accepts_merged_bundle_body()
+{
+	setup_merge_tree
+	make_merge_pkg pkga share/pkga/f
+	: >plist.meta
+	make_merge_pkg meta ""
+	make_merge_pkg pkgb share/pkgb/f
+
+	atf_check -s exit:0 -o empty -e empty \
+		env TMPDIR=/tmp "${MPORT_MERGE}" -c "${PWD}/croot" -o /combo.mport /pkga.mport /meta.mport
+	atf_check -s exit:0 -o empty -e empty \
+		env TMPDIR=/tmp "${MPORT_MERGE}" -c "${PWD}/croot" -o /out.mport /combo.mport /pkgb.mport
+	atf_check -s exit:0 -o inline:"+CONTENTS.db\nshare/pkga/f\nshare/pkgb/f\n" \
+		tar -tf croot/out.mport
+}
+
+atf_test_case merge_skips_identical_bundle
+merge_skips_identical_bundle_head()
+{
+	atf_set "descr" "mport.merge keeps one copy of a bundle given twice or byte-identical"
+	atf_set "require.user" "root"
+}
+merge_skips_identical_bundle_body()
+{
+	setup_merge_tree
+	make_merge_pkg pkga share/pkga/f
+	make_merge_pkg pkgb share/pkgb/f
+	cp croot/pkga.mport croot/again.mport
+
+	atf_check -s exit:0 -o empty -e empty \
+		env TMPDIR=/tmp "${MPORT_MERGE}" -c "${PWD}/croot" -o /out.mport \
+		/pkga.mport /pkgb.mport /pkga.mport /again.mport
+	atf_check -s exit:0 -o inline:"+CONTENTS.db\nshare/pkga/f\nshare/pkgb/f\n" \
+		tar -tf croot/out.mport
+	tar -xf croot/out.mport -C croot +CONTENTS.db
+	atf_check -s exit:0 -o inline:"pkga\npkgb\n" \
+		sqlite3 croot/+CONTENTS.db "SELECT pkg FROM packages ORDER BY pkg;"
+}
+
+# make_differing_copy name: build croot/again.mport, a copy of package
+# <name> whose bundle differs from croot/<name>.mport
+make_differing_copy()
+{
+	make_merge_pkg "$1" "" -D "pkgz:misc/pkgz:>=1.0"
+	mv "croot/$1.mport" croot/again.mport
+	make_merge_pkg "$1" ""
+}
+
+atf_test_case merge_rejects_duplicate_package
+merge_rejects_duplicate_package_head()
+{
+	atf_set "descr" "mport.merge refuses a package in two differing bundles and leaves no output"
+	atf_set "require.user" "root"
+}
+merge_rejects_duplicate_package_body()
+{
+	setup_merge_tree
+	printf 'share/pkga/f\n' >plist.pkga
+	make_differing_copy pkga
+
+	atf_check -s not-exit:0 -o empty -e match:"Package pkga is in both" \
+		env TMPDIR=/tmp "${MPORT_MERGE}" -c "${PWD}/croot" -o /out.mport /pkga.mport /again.mport
+	atf_check -s not-exit:0 test -e croot/out.mport
+}
+
+atf_test_case merge_rejects_truncated_bundle
+merge_rejects_truncated_bundle_head()
+{
+	atf_set "descr" "mport.merge reports a bundle missing data files and removes partial output"
+	atf_set "require.user" "root"
+}
+merge_rejects_truncated_bundle_body()
+{
+	setup_merge_tree
+	make_merge_pkg pkga share/pkga/f
+	printf 'share/pkgc/plain\nshare/pkgc/other\n' >plist.pkgc
+	make_merge_pkg pkgc ""
+	mkdir trunc
+	tar -xf croot/pkgc.mport -C trunc
+	tar -cJf croot/trunc.mport -C trunc +CONTENTS.db share/pkgc/plain
+
+	atf_check -s not-exit:0 -o empty -e match:"archive ends before 'share/pkgc/other'" \
+		env TMPDIR=/tmp "${MPORT_MERGE}" -c "${PWD}/croot" -o /out.mport /pkga.mport /trunc.mport
+	atf_check -s not-exit:0 test -e croot/out.mport
+}
+
+atf_test_case merge_rejects_extra_data_file
+merge_rejects_extra_data_file_head()
+{
+	atf_set "descr" "mport.merge refuses a bundle with a data file that has no asset row"
+	atf_set "require.user" "root"
+}
+merge_rejects_extra_data_file_body()
+{
+	setup_merge_tree
+	make_merge_pkg pkga share/pkga/f
+	make_merge_pkg pkgc share/pkgc/plain
+	mkdir extra
+	tar -xf croot/pkgc.mport -C extra
+	tar -tf croot/pkgc.mport >order
+	printf 'stray\n' >extra/share/pkgc/stray
+	echo share/pkgc/stray >>order
+	tar -cJf croot/extra.mport -C extra -T "${PWD}/order"
+
+	atf_check -s not-exit:0 -o empty \
+		-e match:"Unexpected file 'share/pkgc/stray' in /extra.mport" \
+		env TMPDIR=/tmp "${MPORT_MERGE}" -c "${PWD}/croot" -o /out.mport /pkga.mport /extra.mport
+	atf_check -s not-exit:0 test -e croot/out.mport
+}
+
+atf_test_case merge_rejects_data_file_in_package_without_files
+merge_rejects_data_file_in_package_without_files_head()
+{
+	atf_set "descr" "mport.merge refuses a data file in a bundle whose package has no data files"
+	atf_set "require.user" "root"
+}
+merge_rejects_data_file_in_package_without_files_body()
+{
+	setup_merge_tree
+	make_merge_pkg pkga share/pkga/f
+	: >plist.meta
+	make_merge_pkg meta ""
+	mkdir extra
+	tar -xf croot/meta.mport -C extra
+	tar -tf croot/meta.mport >order
+	mkdir -p extra/share/meta
+	printf 'stray\n' >extra/share/meta/stray
+	echo share/meta/stray >>order
+	tar -cJf croot/extra.mport -C extra -T "${PWD}/order"
+
+	atf_check -s not-exit:0 -o empty \
+		-e match:"Unexpected file 'share/meta/stray' in /extra.mport" \
+		env TMPDIR=/tmp "${MPORT_MERGE}" -c "${PWD}/croot" -o /out.mport /pkga.mport /extra.mport
+	atf_check -s not-exit:0 test -e croot/out.mport
+}
+
+atf_test_case merge_failure_keeps_existing_output
+merge_failure_keeps_existing_output_head()
+{
+	atf_set "descr" "a failed mport.merge leaves an existing output file untouched"
+	atf_set "require.user" "root"
+}
+merge_failure_keeps_existing_output_body()
+{
+	setup_merge_tree
+	printf 'share/pkga/f\n' >plist.pkga
+	make_differing_copy pkga
+	printf 'previous bundle\n' >croot/out.mport
+
+	atf_check -s not-exit:0 -o empty -e match:"Package pkga is in both" \
+		env TMPDIR=/tmp "${MPORT_MERGE}" -c "${PWD}/croot" -o /out.mport \
+		/pkga.mport /again.mport
+	atf_check -s exit:0 -o inline:"previous bundle\n" cat croot/out.mport
+	atf_check -s exit:0 -o inline:"out.mport\n" sh -c "ls croot | grep '^out\.mport'"
+}
+
+atf_test_case merge_rejects_linked_stub
+merge_rejects_linked_stub_head()
+{
+	atf_set "descr" "mport.merge refuses a bundle whose stub database is a link"
+	atf_set "require.user" "root"
+}
+merge_rejects_linked_stub_body()
+{
+	setup_merge_tree
+	make_merge_pkg pkga share/pkga/f
+	mkdir evil
+	ln -s /pkga.mport evil/+CONTENTS.db
+	tar -cf croot/evil.mport -C evil +CONTENTS.db
+
+	atf_check -s not-exit:0 -o empty -e match:"stub database is not a regular file" \
+		env TMPDIR=/tmp "${MPORT_MERGE}" -c "${PWD}/croot" -o /out.mport /evil.mport /pkga.mport
+}
+
+atf_test_case merge_requires_inputs
+merge_requires_inputs_head()
+{
+	atf_set "descr" "mport.merge reports usage when no package files are given"
+}
+merge_requires_inputs_body()
+{
+	atf_check -s exit:2 -o empty -e match:"Usage: mport.merge" \
+		"${MPORT_MERGE}" -o out.mport
+}
+
+setup_merge_tree()
+{
+	mkdir -p croot/tmp croot/var/db/mport stage/usr/local
+}
+
+# make_merge_pkg name file [mport.create args...]: build croot/<name>.mport
+# from stage/; with an empty file, plist.<name> must already exist.
+make_merge_pkg()
+{
+	name=$1
+	file=$2
+	shift 2
+	if [ -n "${file}" ]; then
+		printf '%s\n' "${file}" >"plist.${name}"
+	fi
+	while read -r line; do
+		path=${line#@(*) }
+		mkdir -p "stage/usr/local/$(dirname "${path}")"
+		printf '%s\n' "${name}" >"stage/usr/local/${path}"
+	done <"plist.${name}"
+	atf_check -s exit:0 -o ignore -e ignore \
+		"${MPORT_CREATE}" -n "${name}" -v 1.0 -l en -o "${PWD}/croot/${name}.mport" \
+		-s "${PWD}/stage" -p "${PWD}/plist.${name}" -P /usr/local \
+		-O "misc/${name}" -t misc -c "${name}" "$@"
 }
 
 setup_fake_tree()
@@ -177,6 +642,7 @@ atf_init_test_cases()
 	export LD_LIBRARY_PATH
 
 	: "${MPORT_CHECK_FAKE:=${LIBEXEC_DIR}/mport.check-fake/mport.check-fake}"
+	: "${MPORT_CREATE:=${LIBEXEC_DIR}/mport.create/mport.create}"
 	: "${MPORT_CHECK_FOR_OLDER:=${LIBEXEC_DIR}/mport.check-for-older/mport.check-for-older}"
 	: "${MPORT_DELETE:=${LIBEXEC_DIR}/mport.delete/mport.delete}"
 	: "${MPORT_FETCH:=${LIBEXEC_DIR}/mport.fetch/mport.fetch}"
@@ -189,7 +655,7 @@ atf_init_test_cases()
 	: "${MPORT_UPDATE:=${LIBEXEC_DIR}/mport.update/mport.update}"
 	: "${MPORT_UPDEPENDS:=${LIBEXEC_DIR}/mport.updepends/mport.updepends}"
 	: "${MPORT_VERSION_CMP:=${LIBEXEC_DIR}/mport.version_cmp/mport.version_cmp}"
-	export MPORT_CHECK_FAKE MPORT_CHECK_FOR_OLDER MPORT_DELETE MPORT_FETCH
+	export MPORT_CHECK_FAKE MPORT_CHECK_FOR_OLDER MPORT_CREATE MPORT_DELETE MPORT_FETCH
 	export MPORT_INFO MPORT_INIT MPORT_INSTALL MPORT_LIST MPORT_MERGE
 	export MPORT_QUERY MPORT_UPDATE MPORT_UPDEPENDS MPORT_VERSION_CMP
 
@@ -197,10 +663,29 @@ atf_init_test_cases()
 	atf_add_test_case version_cmp_requires_two_args
 	atf_add_test_case check_fake_succeeds
 	atf_add_test_case check_fake_reports_missing_file
+	atf_add_test_case check_fake_continues_after_dir
+	atf_add_test_case check_fake_cwd_rebases_following_entries
+	atf_add_test_case check_fake_accepts_symlinks_resolved_at_install
+	atf_add_test_case check_fake_rejects_symlink_into_destdir
+	atf_add_test_case check_fake_warns_on_dangling_symlink
 	atf_add_test_case check_fake_requires_options
 	atf_add_test_case frontends_reject_missing_required_args
 	atf_add_test_case list_rejects_extra_args
 	atf_add_test_case init_reports_bad_chroot
+	atf_add_test_case init_rejects_bad_usage
 	atf_add_test_case update_reports_bad_chroot
 	atf_add_test_case delete_ignores_missing_registered_dir
+	atf_add_test_case delete_accepts_registry_row_without_lang
+	atf_add_test_case install_accepts_package_without_lang
+	atf_add_test_case merge_combines_packages
+	atf_add_test_case merge_skips_package_without_files
+	atf_add_test_case merge_accepts_merged_bundle
+	atf_add_test_case merge_skips_identical_bundle
+	atf_add_test_case merge_rejects_duplicate_package
+	atf_add_test_case merge_rejects_truncated_bundle
+	atf_add_test_case merge_rejects_extra_data_file
+	atf_add_test_case merge_rejects_data_file_in_package_without_files
+	atf_add_test_case merge_failure_keeps_existing_output
+	atf_add_test_case merge_rejects_linked_stub
+	atf_add_test_case merge_requires_inputs
 }

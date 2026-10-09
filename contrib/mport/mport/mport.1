@@ -23,7 +23,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"
-.Dd April 19, 2026
+.Dd October 4, 2026
 .Dt MPORT 1
 .Os
 .Sh NAME
@@ -39,11 +39,13 @@
 .Op Fl U
 .Op Fl V
 .Op Fl v
+.Op Cm --allow-old-release
 .Ar command Op Ar args ...
 .Pp
 .Nm
 .Cm add
 .Op Fl A
+.Op Fl l
 .Ar package-file ...
 .Pp
 .Nm
@@ -125,6 +127,9 @@
 .Pp
 .Nm
 .Cm info
+.Op Fl e
+.Op Fl b
+.Op Fl B
 .Ar package
 .Pp
 .Nm
@@ -187,7 +192,15 @@
 .Pp
 .Nm
 .Cm verify
+.Op Fl d
 .Op Fl r
+.Op Ar package ...
+.Pp
+.Nm
+.Cm version
+.Op Fl I | Fl P Ar ports-dir
+.Op Fl l Ar status
+.Op Fl L Ar status
 .Op Ar package ...
 .Pp
 .Nm
@@ -195,6 +208,12 @@
 .Fl t
 .Ar version1
 .Ar version2
+.Pp
+.Nm
+.Cm shlib
+.Op Fl q
+.Op Fl P | Fl R
+.Ar library
 .Pp
 .Nm
 .Cm which
@@ -212,6 +231,28 @@ package database.
 The following global options are supported by
 .Nm :
 .Bl -tag -width ".Fl o Ar output-path"
+.It Cm --allow-old-release
+Install package files that were built for a MidnightBSD release other than
+the target release.
+Package files record the release they were built on, and
+.Cm add ,
+.Cm install
+and
+.Cm update
+refuse one whose release differs from the target, because libraries from
+another release may carry different symbols or shared library versions.
+The target release is the one named by
+.Ev ABI_FILE
+when set, then the
+.Cm target_os
+setting, otherwise the running system.
+Use this option, or set
+.Ev MPORT_ALLOW_OLD_RELEASE ,
+to install such a file anyway, for example software that is no longer
+available for the current release or packages for a jail running an older
+release.
+The option applies to the named package and to any dependencies installed
+with it.
 .It Fl b, Cm --brief
 Use brief output when supported by the command.
 .It Fl c Ar chroot-path , Cm --chroot Ar chroot-path
@@ -219,9 +260,19 @@ Run inside the specified chroot.
 .It Fl f, Cm --force
 Force the operation when supported.
 This currently applies to commands such as
+.Cm add ,
 .Cm install
 and
 .Cm delete .
+For
+.Cm add
+and
+.Cm install ,
+the package named on the command line is reinstalled even when the same
+version is already installed, and registry rows left behind by a failed
+install are cleared first.
+The flag applies only to the named package; its dependencies are never
+reinstalled because of it.
 .It Fl o Ar output-path , Cm --output Ar output-path
 Write downloaded package files to
 .Ar output-path .
@@ -240,7 +291,7 @@ and exit.
 The following commands are supported by
 .Nm :
 .Bl -tag -width ".Cm annotate Fl A Ar package Ar tag Ar value"
-.It Cm add Op Fl A Ar package-file ...
+.It Cm add Oo Fl A Oc Oo Fl l Oc Ar package-file ...
 Install one or more local
 .Pa .mport
 package files.
@@ -251,6 +302,34 @@ If the package is already installed and the local package file contains a newer
 version,
 .Nm
 updates it by removing the installed package and installing the local file.
+.Pp
+Dependencies that are not installed, or are installed for a previous
+release of MidnightBSD, are looked for as package files in the same directory
+and installed first.
+Dependencies that are already installed for the running release are left
+alone, and
+.Fl f
+never applies to them.
+A dependency installed for a previous release is also left alone when it
+provides no shared libraries, since nothing links against it, or when every
+shared library it provides is also provided by a package built for the
+running release, since the run-time linker finds the current copy; see
+.Xr mport.create 1 .
+.Pp
+After the dependency check, a warning names each shared library the package
+needs that no installed package provides and the base system does not ship.
+It is a warning rather than a refusal because packages registered before
+shared libraries were recorded have no provided list.
+With
+.Fl l ,
+only the named package files are installed and no dependency package files
+are looked for; a missing dependency is then an error.
+This matches the behaviour of
+.Xr mport.install 1 ,
+which the ports collection uses to install packages it has just built.
+.Pp
+.Cm add
+was written for installing packages from the install media.
 For repository installs, use
 .Cm install .
 .It Cm annotate Op Fl a Op Fl q Fl S Ar package Ar tag
@@ -315,8 +394,20 @@ Import package metadata or a package list from
 .It Cm index
 Refresh the package index immediately instead of waiting for the automatic
 update interval.
-.It Cm info Ar package
+.It Cm info Oo Fl e Oc Oo Fl b Oc Oo Fl B Oc Ar package
 Display detailed information about an installed package or an indexed package.
+With
+.Fl e ,
+exit with status 0 if the package is installed and 1 otherwise, printing
+nothing.
+With
+.Fl b ,
+list the shared libraries the installed package provides; with
+.Fl B ,
+the shared libraries it requires.
+Both lists are recorded when the package is built; see
+.Xr mport.create 1 .
+A package built before that was recorded has empty lists.
 .It Cm install Op Fl A Op Fl M Op Fl y Ar package ...
 Fetch and install one or more packages from the configured repository.
 With
@@ -502,13 +593,77 @@ offers to switch it to the package built for the current default.
 If both versions remain available, the old version may instead be retained.
 .It Cm upgrade
 Upgrade all installed packages to the newest available versions.
-.It Cm verify Op Fl r Op Ar package ...
+Packages that are still registered for an older MidnightBSD release are
+updated first, lowest-level dependencies before the packages that use them,
+so that nothing is upgraded against libraries from the previous release.
+A package that links against a shared library another package provides is
+ordered after that package whether or not the port declared the dependency.
+A package from an older release for which the repository has no package is
+reported and left in place.
+The remaining packages are then upgraded in dependency order.
+.It Cm verify Oo Fl d Oc Oo Fl r Oc Op Ar package ...
 Verify that installed package files have not been deleted or modified.
 If package names are provided, verify only those packages.
+With
+.Fl d ,
+report installed packages whose recorded dependencies are not installed,
+and recorded shared library requirements that no installed package provides
+and the base system does not ship.
 With
 .Fl r ,
 recompute and store checksums for the named packages.
 This is useful after intentional local modifications.
+.It Cm version Oo Fl I | Fl P Ar ports-dir Oc Oo Fl l Ar status Oc Oo Fl L Ar status Oc Op Ar package ...
+Compare each installed package, or only the named
+.Ar package
+arguments, with the newest version the package index offers and print the
+package name and version followed by a status character:
+.Bl -tag -width indent -compact
+.It Ql <
+the installed version is older
+.It Ql =
+the versions are equal
+.It Ql >
+the installed version is newer
+.It Ql \&?
+nothing to compare with: the package is not in the index or ports tree
+.It Ql \&!
+the comparison failed
+.El
+.Pp
+A package found in the index only by its origin, under another name,
+is reported as
+.Ql < .
+With
+.Fl P ,
+or when
+.Ev PORTSDIR
+is set, compare with the ports tree in
+.Ar ports-dir
+instead of the index, using the version
+.Xr make 1
+computes for
+.Va PKGVERSION
+in the directory named by each package's origin, with its flavor.
+This runs
+.Xr make 1
+once per package, so naming packages is much faster than checking all of
+them on a large tree.
+The index is not loaded or fetched in this mode.
+.Fl I
+compares with the index even when
+.Ev PORTSDIR
+is set.
+.Fl l
+shows only packages with the given status and
+.Fl L
+hides them.
+With
+.Fl q ,
+print only the package names and versions;
+with
+.Fl V ,
+also print the version compared with.
 .It Cm version Fl t Ar version1 Ar version2
 Compare two version strings and print
 .Ql <
@@ -521,6 +676,29 @@ if they are equal, or
 if
 .Ar version1
 is newer.
+.It Cm shlib Oo Fl q Oc Oo Fl P | Fl R Oc Ar library
+Show which installed packages provide
+.Ar library
+and which require it, by the shared library records made when each package
+was built.
+.Ar library
+is a soname such as
+.Dq libfoo.so.1 ,
+optionally with a path, which is ignored, and optionally with the
+.Dq :32
+or
+.Dq :Linux
+suffix used for compatibility objects.
+With
+.Fl P ,
+show only providers; with
+.Fl R ,
+only packages that require it.
+With
+.Fl q ,
+print only package names and versions.
+A library the base system ships is reported as such when nothing provides
+it.
 .It Cm which Op Fl q Op Fl o Ar path
 Show which installed package owns
 .Ar path .
@@ -552,7 +730,9 @@ table of
 .It Cm target_os
 Override the operating system version used when fetching and installing
 packages.
-If unset,
+.Ev ABI_FILE ,
+when set, takes precedence.
+If neither is set,
 .Nm
 checks
 .Pa /bin/midnightbsd-version
@@ -586,9 +766,30 @@ Use
 .Cm mport config list
 to see additional settings supported by the local installation.
 .Sh ENVIRONMENT
-.Bl -tag -width ".Ev FETCH_BIND_ADDRESS"
+.Bl -tag -width ".Ev MPORT_ALLOW_OLD_RELEASE"
+.It Ev ABI_FILE
+Path to a binary built for the target system, such as
+.Pa /bin/sh
+in a cross-build sysroot or a jail.
+When set to a non-empty value, the target release is read from the
+MidnightBSD ABI note in that file instead of from the
+.Cm target_os
+setting or the running system, and is used everywhere the release matters:
+fetching the index and packages, installing, upgrading and creating
+packages.
+A file without a MidnightBSD ABI note, such as a Linux binary, leaves the
+release to
+.Cm target_os
+and the running system.
+A file that cannot be read or is not an ELF object is an error.
 .It Ev ASSUME_ALWAYS_YES
 If set to a non-empty value, answer yes to confirmation prompts.
+.It Ev MPORT_ALLOW_OLD_RELEASE
+If set to a non-empty value, behave as if
+.Cm --allow-old-release
+had been given.
+This is read by the library, so it also applies to
+.Xr mport.install 1 .
 .It Ev FETCH_BIND_ADDRESS
 Bind outgoing network connections to the specified hostname or IP address.
 .It Ev FTP_LOGIN
@@ -613,6 +814,11 @@ HTTP by rewriting HTTPS download URLs to HTTP.
 .It Ev HANDLE_RC_SCRIPTS
 If set to a non-empty value, start or stop rc.d scripts included with the
 package.
+.It Ev PORTSDIR
+Location of a ports tree.
+If set to a non-empty value,
+.Cm version
+compares installed packages with that tree rather than the package index.
 .El
 .Sh EXAMPLES
 Search for a package:

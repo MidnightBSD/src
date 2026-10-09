@@ -88,7 +88,10 @@ main(int argc, char *argv[])
 		}
 	}
 
-	mport = mport_instance_new();
+	if ((mport = mport_instance_new()) == NULL) {
+		warnx("Out of memory");
+		exit(EXIT_FAILURE);
+	}
 
 	if (mport_instance_init(mport, NULL, NULL, false, quiet ? MPORT_VQUIET : MPORT_VNORMAL) !=
 	    MPORT_OK) {

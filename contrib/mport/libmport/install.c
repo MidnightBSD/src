@@ -220,10 +220,47 @@ mport_install_single(mportInstance *mport, const char *pkgname, const char *vers
 	return ret;
 }
 
-/* recursive function */
+static int install_depends_impl(
+    mportInstance *, const char *, const char *, mportAutomatic, bool);
+
+/*
+ * Install packageName and whatever it depends on from the index.
+ *
+ * mport->force applies to packageName only: a forced install exists to repair
+ * the package the user named, and reinstalling every dependency underneath it
+ * replaces working packages that nothing asked to be replaced. Dependencies
+ * that are present and current are left alone, missing or outdated ones go
+ * through the normal install and update paths.
+ */
 int
 mport_install_depends(
     mportInstance *mport, const char *packageName, const char *version, mportAutomatic automatic)
+{
+	return install_depends_impl(mport, packageName, version, automatic, mport->force);
+}
+
+/*
+ * Install a dependency of some other package: always automatic, never forced.
+ */
+int
+mport_install_dependency(mportInstance *mport, const char *packageName, const char *version)
+{
+	bool saved_force = mport->force;
+	int ret;
+
+	/* the primitive underneath reads mport->force too; keep it off for the
+	 * whole dependency subtree */
+	mport->force = false;
+	ret = install_depends_impl(mport, packageName, version, MPORT_AUTOMATIC, false);
+	mport->force = saved_force;
+
+	return ret;
+}
+
+/* recursive function */
+static int
+install_depends_impl(mportInstance *mport, const char *packageName, const char *version,
+    mportAutomatic automatic, bool force)
 {
 	mportPackageMeta **packs = NULL;
 	mportDependsEntry **depends = NULL;
@@ -254,8 +291,8 @@ mport_install_depends(
 	} else if (packs == NULL) {
 		/* Package is not installed */
 		for (mportDependsEntry **dep = depends; dep && *dep != NULL; dep++) {
-			if (mport_install_depends(mport, (*dep)->d_pkgname, (*dep)->d_version,
-				MPORT_AUTOMATIC) != MPORT_OK) {
+			if (mport_install_dependency(mport, (*dep)->d_pkgname, (*dep)->d_version) !=
+			    MPORT_OK) {
 				mport_call_msg_cb(mport, "%s", mport_err_string());
 				if (mport->ignoreMissing) {
 					continue;
@@ -293,7 +330,7 @@ mport_install_depends(
 				return mport_err_code();
 			}
 			mport_pkgmeta_vec_free(packs);
-		} else if (mport->force) {
+		} else if (force) {
 			/* force reinstall of already-installed package, regardless of version */
 			mport_pkgmeta_vec_free(packs);
 			packs = NULL;

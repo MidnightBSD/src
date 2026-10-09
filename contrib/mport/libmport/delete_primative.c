@@ -82,9 +82,24 @@ struct shared_dir_set {
 	size_t count;
 };
 
+/*
+ * The file paths this package registers more than once (a plist that listed
+ * the same file twice), and which of them this delete has already removed, so
+ * the later entry does not report the missing file.
+ */
+struct dup_file_set {
+	/*@only@*/ char **paths; /* sorted with strcmp(), for bsearch() */
+	/*@only@*/ bool *removed;
+	size_t count;
+};
+
 static int build_shared_dir_set(/*@notnull@*/ mportInstance *, /*@notnull@*/ mportPackageMeta *,
     /*@out@*/ /*@notnull@*/ struct shared_dir_set *);
 static void free_shared_dir_set(/*@notnull@*/ struct shared_dir_set *);
+static int build_dup_file_set(/*@notnull@*/ mportInstance *, /*@notnull@*/ mportPackageMeta *,
+    /*@out@*/ /*@notnull@*/ struct dup_file_set *);
+static void free_dup_file_set(/*@notnull@*/ struct dup_file_set *);
+static ssize_t find_dup_file(/*@notnull@*/ const struct dup_file_set *, /*@null@*/ const char *);
 static bool is_safe_to_delete_dir(mportInstance *, mportPackageMeta *,
     /*@notnull@*/ const struct shared_dir_set *, const char *, const char *);
 static int build_info_dir_path(
@@ -138,6 +153,8 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 	struct stat st;
 	char hash[65];
 	struct shared_dir_set shared_dirs;
+	struct dup_file_set dup_files;
+	ssize_t dup_idx;
 
 	if (force == 0) {
 		if (check_for_upwards_depends(mport, pack) != MPORT_OK)
@@ -210,6 +227,12 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 		RETURN_CURRENT_ERROR;
 	}
 
+	if (build_dup_file_set(mport, pack, &dup_files) != MPORT_OK) {
+		sqlite3_finalize(stmt);
+		free_shared_dir_set(&shared_dirs);
+		RETURN_CURRENT_ERROR;
+	}
+
 	cwd = pack->prefix;
 
 	while (1) {
@@ -223,6 +246,7 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 			SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
 			sqlite3_finalize(stmt);
 			free_shared_dir_set(&shared_dirs);
+			free_dup_file_set(&dup_files);
 			RETURN_CURRENT_ERROR;
 		}
 
@@ -272,8 +296,12 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 			/* falls through */
 		case ASSET_SAMPLE_OWNER_MODE:
 			(mport->progress_step_cb)(++current, total, file);
+			dup_idx = find_dup_file(&dup_files, data);
 
 			if (lstat(file, &st) != 0) {
+				/* a duplicate entry for a file removed a moment ago */
+				if (errno == ENOENT && dup_idx >= 0 && dup_files.removed[dup_idx])
+					break; /* next asset */
 				mport_call_msg_cb(
 				    mport, "Can't stat %s: %s", file, strerror(errno));
 				break; /* next asset */
@@ -385,6 +413,8 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 			if (unlink_if_unchanged(file, &st) != 0)
 				mport_call_msg_cb(
 				    mport, "Could not unlink %s: %s", file, strerror(errno));
+			else if (dup_idx >= 0)
+				dup_files.removed[dup_idx] = true;
 
 			if (type == ASSET_SHELL) {
 				if (mport_shell_unregister(file) != MPORT_OK)
@@ -432,6 +462,7 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 
 	sqlite3_finalize(stmt);
 	free_shared_dir_set(&shared_dirs);
+	free_dup_file_set(&dup_files);
 
 	if (run_unexec(mport, pack, ASSET_POSTUNEXEC) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
@@ -477,6 +508,14 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 		goto rollback;
 
 	if (mport_db_do(mport->db, "DELETE FROM annotation WHERE pkg=%Q", pack->name) != MPORT_OK)
+		goto rollback;
+
+	if (mport_db_do(mport->db, "DELETE FROM shlibs_provided WHERE pkg=%Q", pack->name) !=
+	    MPORT_OK)
+		goto rollback;
+
+	if (mport_db_do(mport->db, "DELETE FROM shlibs_required WHERE pkg=%Q", pack->name) !=
+	    MPORT_OK)
 		goto rollback;
 
 	if (mport_db_do(mport->db, "COMMIT TRANSACTION") != MPORT_OK)
@@ -610,6 +649,121 @@ free_shared_dir_set(struct shared_dir_set *set)
 	free(set->paths);
 	set->paths = NULL;
 	set->count = 0;
+}
+
+/*
+ * Collect the file paths pack registers more than once.  Each is reported
+ * missing by every entry after the one that removes it unless remembered.
+ */
+static int
+build_dup_file_set(mportInstance *mport, mportPackageMeta *pack, struct dup_file_set *set)
+{
+	sqlite3_stmt *stmt;
+	const char *data;
+	char **paths = NULL;
+	char **grown;
+	size_t count = 0, capacity = 0;
+	int ret;
+
+	set->paths = NULL;
+	set->removed = NULL;
+	set->count = 0;
+
+	if (mport_db_prepare(mport->db, &stmt,
+		"SELECT data FROM assets WHERE pkg=%Q AND type IN (%d, %d, %d, %d, %d, %d) "
+		"AND data IS NOT NULL GROUP BY data HAVING COUNT(*) > 1",
+		pack->name, ASSET_FILE, ASSET_SAMPLE, ASSET_SAMPLE_OWNER_MODE, ASSET_SHELL,
+		ASSET_FILE_OWNER_MODE, ASSET_INFO) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+
+	while (1) {
+		ret = sqlite3_step(stmt);
+
+		if (ret == SQLITE_DONE)
+			break;
+
+		if (ret != SQLITE_ROW) {
+			SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+			goto error;
+		}
+
+		data = (const char *)sqlite3_column_text(stmt, 0);
+		if (data == NULL)
+			continue;
+
+		if (count == capacity) {
+			capacity = capacity == 0 ? 16 : capacity * 2;
+			grown = reallocarray(paths, capacity, sizeof(*paths));
+			if (grown == NULL) {
+				SET_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+				goto error;
+			}
+			paths = grown;
+		}
+
+		paths[count] = strdup(data);
+		if (paths[count] == NULL) {
+			SET_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+			goto error;
+		}
+		count++;
+	}
+
+	sqlite3_finalize(stmt);
+
+	if (count == 0)
+		return (MPORT_OK);
+
+	set->removed = calloc(count, sizeof(*set->removed));
+	if (set->removed == NULL) {
+		while (count > 0)
+			free(paths[--count]);
+		free(paths);
+		SET_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+		RETURN_CURRENT_ERROR;
+	}
+
+	if (count > 1)
+		qsort(paths, count, sizeof(*paths), cmp_dir_path);
+
+	set->paths = paths;
+	set->count = count;
+
+	return (MPORT_OK);
+
+error:
+	sqlite3_finalize(stmt);
+	while (count > 0)
+		free(paths[--count]);
+	free(paths);
+	RETURN_CURRENT_ERROR;
+}
+
+static void
+free_dup_file_set(struct dup_file_set *set)
+{
+	size_t i;
+
+	for (i = 0; i < set->count; i++)
+		free(set->paths[i]);
+	free(set->paths);
+	free(set->removed);
+	set->paths = NULL;
+	set->removed = NULL;
+	set->count = 0;
+}
+
+/* index of path in set, or -1 when it is not a duplicated file */
+static ssize_t
+find_dup_file(const struct dup_file_set *set, const char *path)
+{
+	char **found;
+
+	if (set->count == 0 || path == NULL)
+		return (-1);
+
+	found = bsearch(&path, set->paths, set->count, sizeof(*set->paths), cmp_dir_path);
+	return (found == NULL ? -1 : (ssize_t)(found - set->paths));
 }
 
 bool

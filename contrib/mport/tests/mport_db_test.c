@@ -130,6 +130,44 @@ ATF_TC_BODY(prepare_nulls_stmt_on_error, tc)
 	sqlite3_close(db);
 }
 
+ATF_TC(do_error_keeps_sqlite_reason);
+ATF_TC_HEAD(do_error_keeps_sqlite_reason, tc)
+{
+	atf_tc_set_md_var(tc, "descr",
+	    "mport_db_do's error string keeps the SQLite reason after a long statement");
+}
+ATF_TC_BODY(do_error_keeps_sqlite_reason, tc)
+{
+	sqlite3 *db = open_db();
+	const char *msg;
+
+	(void)tc;
+
+	/* The packages insert from install, long enough that a 256-byte error
+	 * buffer dropped everything after the column list (issue #110). */
+	ATF_REQUIRE_EQ(MPORT_OK,
+	    mport_db_do(db,
+		"CREATE TABLE packages (pkg text NOT NULL, version text NOT NULL, origin text NOT NULL, prefix text NOT NULL, lang text, options text, comment text, os_release text NOT NULL, cpe text, locked int NOT NULL default '0', deprecated text, expiration_date int64, no_provide_shlib int, flavor text, automatic int, install_date int64, flatsize int64)"));
+	ATF_REQUIRE_EQ(
+	    MPORT_OK, mport_db_do(db, "CREATE UNIQUE INDEX packages_pkg ON packages (pkg)"));
+
+#define PACKAGES_INSERT \
+	"INSERT INTO packages (pkg, version, origin, prefix, lang, options, comment, os_release, cpe, locked, deprecated, expiration_date, no_provide_shlib, flavor, automatic, install_date, flatsize) VALUES (%Q,%Q,%Q,%Q,%Q,%Q,%Q,%Q,%Q,0,%Q,%ld,%d,%Q,%d,%ld,%ld)"
+	ATF_REQUIRE_EQ(MPORT_OK,
+	    mport_db_do(db, PACKAGES_INSERT, "rustls-ffi", "0.12.0", "security/rustls-ffi",
+		"/usr/local", "", "", "", "3.2", "", "", 0L, 0, "", 0, 0L, 0L));
+	ATF_REQUIRE(mport_db_do(db, PACKAGES_INSERT, "rustls-ffi", "0.13.0", "security/rustls-ffi",
+			"/usr/local", "", "", "", "4.0", "", "", 0L, 0, "", 0, 0L, 0L) != MPORT_OK);
+#undef PACKAGES_INSERT
+
+	msg = mport_err_string();
+	ATF_REQUIRE(msg != NULL);
+	ATF_REQUIRE_MSG(strstr(msg, "UNIQUE constraint failed") != NULL,
+	    "SQLite reason missing from error string: %s", msg);
+
+	sqlite3_close(db);
+}
+
 ATF_TP_ADD_TCS(tp)
 {
 	ATF_TP_ADD_TC(tp, count_normal);
@@ -137,6 +175,7 @@ ATF_TP_ADD_TCS(tp)
 	ATF_TP_ADD_TC(tp, count_no_row);
 	ATF_TP_ADD_TC(tp, count_bad_sql);
 	ATF_TP_ADD_TC(tp, prepare_nulls_stmt_on_error);
+	ATF_TP_ADD_TC(tp, do_error_keeps_sqlite_reason);
 
 	return atf_no_error();
 }
