@@ -43,6 +43,7 @@ static /*@null@*/ /*@only@*/ mportPackageMeta **lookup_current_os_installed(
 static int remove_stale_os_release_copy(/*@notnull@*/ mportInstance *,
     /*@notnull@*/ mportPackageMeta *);
 static int purge_orphaned_rows(/*@notnull@*/ mportInstance *, /*@notnull@*/ const char *);
+static int dependency_is_current(/*@notnull@*/ mportInstance *, /*@notnull@*/ const char *);
 
 #define GOTO_CLEANUP_ON_MPORT_ERR(expr)         \
 	do {                                    \
@@ -123,29 +124,65 @@ get_dependencies(mportInstance *mport, mportPackageMeta *pkg)
 	return dependencies;
 }
 
+/*
+ * Find the newest "<prefix><version>.mport" in dir, where prefix is the
+ * package name plus "-".  Package versions never contain "-", so an entry
+ * whose remainder does is another package that happens to share the prefix
+ * (bind- against bind-tools-9.20.29.mport) and is skipped.  Among the rest
+ * the highest version wins rather than whatever readdir returns first.
+ */
 char *
 find_file_with_prefix(const char *dir, const char *prefix)
 {
 	DIR *d;
 	struct dirent *dir_entry;
 	char *found_file = NULL;
+	char *best_version = NULL;
 	size_t prefix_len = strlen(prefix);
+	const char *suffix = ".mport";
+	size_t suffix_len = strlen(suffix);
 
 	d = opendir(dir);
-	if (d) {
-		while ((dir_entry = readdir(d)) != NULL) {
-			if (strncmp(dir_entry->d_name, prefix, prefix_len) == 0) {
-				// Found a file with the correct prefix
-				found_file = malloc(strlen(dir) + strlen(dir_entry->d_name) +
-				    2); // +2 for '/' and null terminator
-				if (found_file) {
-					sprintf(found_file, "%s/%s", dir, dir_entry->d_name);
-				}
-				break;
-			}
+	if (d == NULL)
+		return NULL;
+
+	while ((dir_entry = readdir(d)) != NULL) {
+		const char *name = dir_entry->d_name;
+		size_t name_len = strlen(name);
+		char *version;
+		size_t version_len;
+
+		if (name_len <= prefix_len + suffix_len ||
+		    strncmp(name, prefix, prefix_len) != 0 ||
+		    strcmp(name + name_len - suffix_len, suffix) != 0)
+			continue;
+
+		version_len = name_len - prefix_len - suffix_len;
+		version = strndup(name + prefix_len, version_len);
+		if (version == NULL)
+			continue;
+		if (strchr(version, '-') != NULL) {
+			free(version);
+			continue;
 		}
-		closedir(d);
+
+		if (best_version == NULL || mport_version_cmp(version, best_version) > 0) {
+			char *candidate;
+
+			if (asprintf(&candidate, "%s/%s", dir, name) == -1) {
+				free(version);
+				continue;
+			}
+			free(found_file);
+			free(best_version);
+			found_file = candidate;
+			best_version = version;
+		} else {
+			free(version);
+		}
 	}
+	closedir(d);
+	free(best_version);
 
 	return found_file;
 }
@@ -287,7 +324,7 @@ static int
 purge_orphaned_rows(mportInstance *mport, const char *pkg_name)
 {
 	static const char *const tables[] = { "assets", "depends", "categories", "conflicts",
-		"annotation" };
+		"annotation", "shlibs_provided", "shlibs_required" };
 	size_t i;
 
 	if (mport_db_do(mport->db, "BEGIN IMMEDIATE TRANSACTION") != MPORT_OK)
@@ -310,6 +347,56 @@ rollback:
 	RETURN_CURRENT_ERROR;
 }
 
+/*
+ * Whether a dependency is installed and satisfies check_depends(): clean and
+ * registered under the running OS release, or from another release but
+ * providing no shared library.  Returns 1 if so, 0 if it is missing or needs
+ * replacing, -1 on error.  The lookup mirrors check_depends() so a dependency
+ * recorded with a flavor prefix is found the same way the precheck finds it.
+ */
+static int
+dependency_is_current(mportInstance *mport, const char *depend_pkg)
+{
+	sqlite3_stmt *stmt = NULL;
+	char *system_os_release;
+	const char *os_release;
+	int ret;
+
+	if ((system_os_release = mport_get_osrelease(mport)) == NULL)
+		return -1;
+
+	if (mport_db_prepare(mport->db, &stmt,
+		"SELECT os_release, no_provide_shlib, pkg FROM packages WHERE (pkg=%Q or (flavor is not null and flavor != '' and pkg=substr(%Q, length(flavor) + 2))) AND status='clean'",
+		depend_pkg, depend_pkg) != MPORT_OK) {
+		sqlite3_finalize(stmt);
+		free(system_os_release);
+		return -1;
+	}
+
+	switch (sqlite3_step(stmt)) {
+	case SQLITE_ROW:
+		os_release = (const char *)sqlite3_column_text(stmt, 0);
+		if ((os_release != NULL && strcmp(os_release, system_os_release) == 0) ||
+		    sqlite3_column_int(stmt, 1) != 0)
+			ret = 1;
+		else
+			ret = mport_shlibs_superseded(mport,
+			    (const char *)sqlite3_column_text(stmt, 2), system_os_release);
+		break;
+	case SQLITE_DONE:
+		ret = 0;
+		break;
+	default:
+		SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+		ret = -1;
+		break;
+	}
+
+	sqlite3_finalize(stmt);
+	free(system_os_release);
+	return ret;
+}
+
 static int
 mport_install_primative_impl(
     /*@notnull@*/ mportInstance *mport, /*@null@*/ const char *filename, int fd,
@@ -318,6 +405,7 @@ mport_install_primative_impl(
 	mportBundleRead *bundle = NULL;
 	mportPackageMeta **already_installed = NULL;
 	mportPackageMeta *current_installed = NULL;
+	bool replace_current = false;
 	mportPackageMeta **pkgs = NULL;
 	mportPackageMeta *pkg = NULL;
 	int i;
@@ -368,16 +456,19 @@ mport_install_primative_impl(
 			    mport_version_cmp(current_installed->version, pkgs[0]->version);
 
 			if (mport->force || version_cmp < 0) {
+				/*
+				 * The installed copy is replaced, but not here: it is
+				 * deleted only once the replacement has passed its
+				 * prechecks, so a replacement that cannot go in leaves
+				 * the installed copy alone.  already_installed stays
+				 * alive until then.
+				 */
 				automatic = current_installed->automatic;
+				replace_current = true;
 				if (version_cmp < 0) {
 					mport_call_msg_cb(mport, "Updating %s from %s to %s.",
 					    pkgs[0]->name, current_installed->version,
 					    pkgs[0]->version);
-				}
-				if (mport_delete_primative(mport, current_installed, 1) !=
-				    MPORT_OK) {
-					ret = mport_err_code();
-					goto cleanup;
 				}
 			} else {
 				mport_call_msg_cb(mport, "%s-%s: already installed.", pkgs[0]->name,
@@ -385,9 +476,6 @@ mport_install_primative_impl(
 				ret = MPORT_OK;
 				goto cleanup;
 			}
-
-			mport_pkgmeta_vec_free(already_installed);
-			already_installed = NULL;
 		}
 
 		if (mport_check_preconditions(mport, pkgs[0], MPORT_PRECHECK_CONFLICTS) !=
@@ -411,10 +499,31 @@ mport_install_primative_impl(
 			pkgs = NULL;
 		}
 
-		deps = dependencies;
+		/*
+		 * Pull missing dependencies from package files next to this one.
+		 * Dependencies that are installed and current are left alone, and
+		 * a forced install never forces them: --force repairs the package
+		 * the caller named, not everything underneath it.  mport->noDepends
+		 * (mport add -l) skips the walk entirely, like mport.install(1).
+		 */
+		deps = mport->noDepends ? NULL : dependencies;
 		dir = mport_directory(filename);
 		while (deps != NULL && *deps != NULL) {
 			char *dep_filename = NULL;
+			bool saved_force;
+			int dep_ret;
+			int current;
+
+			current = dependency_is_current(mport, *deps);
+			if (current < 0) {
+				ret = mport_err_code();
+				goto cleanup;
+			}
+			if (current == 1) {
+				deps++;
+				continue;
+			}
+
 			if (asprintf(&dep_filename, "%s/%s.mport", dir, *deps) == -1) {
 				deps++;
 				continue;
@@ -437,8 +546,11 @@ mport_install_primative_impl(
 				}
 			}
 
-			if (mport_install_primative(mport, dep_filename, prefix, MPORT_AUTOMATIC) !=
-			    MPORT_OK) {
+			saved_force = mport->force;
+			mport->force = false;
+			dep_ret = mport_install_primative(mport, dep_filename, prefix, MPORT_AUTOMATIC);
+			mport->force = saved_force;
+			if (dep_ret != MPORT_OK) {
 				mport_call_msg_cb(
 				    mport, "Unable to install %s: %s", *deps, mport_err_string());
 				if (!mport->ignoreMissing) {
@@ -479,15 +591,17 @@ mport_install_primative_impl(
 			break; /* do not keep going if we have an age verification failure! */
 		}
 
-		if (mport_pkgmeta_search_master(mport, &already_installed, "pkg=%Q", pkg->name) ==
+		mportPackageMeta **registered = NULL;
+
+		if (mport_pkgmeta_search_master(mport, &registered, "pkg=%Q", pkg->name) ==
 		    MPORT_OK) {
-			if (already_installed != NULL && already_installed[0] != NULL) {
+			if (registered != NULL && registered[0] != NULL) {
 				if (mport->force) {
 					pkg->automatic =
-					    already_installed[0]->automatic; // honor old flag
+					    registered[0]->automatic; // honor old flag
 				}
-				mport_pkgmeta_vec_free(already_installed);
-				already_installed = NULL;
+				mport_pkgmeta_vec_free(registered);
+				registered = NULL;
 			} else if (mport->force) {
 				/* re-register: clear rows a failed install or delete left
 				 * behind, or the fresh inserts below fail */
@@ -539,6 +653,36 @@ mport_install_primative_impl(
 			}
 		}
 
+		/*
+		 * Verify, then delete, then install.  Everything that can refuse
+		 * the replacement runs while the installed copy (same release or
+		 * stale release) is still registered, so a refusal costs nothing.
+		 * Files the installed copy owns are not conflicts: the file check
+		 * matches on package name, whatever release the copy is from.
+		 */
+		precheck_flags =
+		    MPORT_PRECHECK_BUNDLE_OS | MPORT_PRECHECK_DEPENDS | MPORT_PRECHECK_CONFLICTS;
+		if (!mport->force)
+			precheck_flags |= MPORT_PRECHECK_FILE_CONFLICTS;
+		if (mport_check_preconditions(mport, pkg, precheck_flags) != MPORT_OK) {
+			mport_call_msg_cb(mport, "Unable to install %s-%s: %s", pkg->name,
+			    pkg->version, mport_err_string());
+			ret = MPORT_ERR_FATAL;
+			break;
+		}
+
+		/* declared dependencies are satisfied; say if a library is not */
+		(void)mport_shlibs_warn_missing(mport, pkg);
+
+		if (replace_current && current_installed != NULL &&
+		    strcmp(current_installed->name, pkg->name) == 0) {
+			if (mport_delete_primative(mport, current_installed, 1) != MPORT_OK) {
+				ret = mport_err_code();
+				goto cleanup;
+			}
+			replace_current = false;
+		}
+
 		if (remove_stale_os_release_copy(mport, pkg) != MPORT_OK) {
 			mport_call_msg_cb(mport, "Unable to install %s-%s: %s", pkg->name,
 			    pkg->version, mport_err_string());
@@ -546,11 +690,7 @@ mport_install_primative_impl(
 			break;
 		}
 
-		precheck_flags =
-		    MPORT_PRECHECK_INSTALLED | MPORT_PRECHECK_DEPENDS | MPORT_PRECHECK_CONFLICTS;
-		if (!mport->force)
-			precheck_flags |= MPORT_PRECHECK_FILE_CONFLICTS;
-		if ((mport_check_preconditions(mport, pkg, precheck_flags) != MPORT_OK) ||
+		if ((mport_check_preconditions(mport, pkg, MPORT_PRECHECK_INSTALLED) != MPORT_OK) ||
 		    (mport_bundle_read_install_pkg(mport, bundle, pkg) != MPORT_OK)) {
 			mport_call_msg_cb(mport, "Unable to install %s-%s: %s", pkg->name,
 			    pkg->version, mport_err_string());

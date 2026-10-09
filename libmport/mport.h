@@ -69,6 +69,7 @@ typedef tll(char *) stringlist_t;
 /* Mport Instance (an installed copy of the mport system) */
 #define MPORT_INST_HAVE_INDEX 1
 #define MPORT_LOCAL_PKG_PATH "/var/db/mport/downloads"
+#define MPORT_ALLOW_OLD_RELEASE_ENV "MPORT_ALLOW_OLD_RELEASE"
 
 enum _Verbosity { MPORT_VQUIET, MPORT_VBRIEF, MPORT_VNORMAL, MPORT_VVERBOSE };
 typedef enum _Verbosity mportVerbosity;
@@ -85,6 +86,8 @@ typedef struct {
 	mportVerbosity verbosity;
 	bool force;
 	bool ignoreMissing; /* ignore mising dependencies during installation */
+	bool noDepends; /* do not install dependencies from sibling package files */
+	bool allowOldRelease; /* install package files built for another OS release */
 	mport_msg_cb msg_cb;
 	mport_progress_init_cb progress_init_cb;
 	mport_progress_step_cb progress_step_cb;
@@ -93,13 +96,13 @@ typedef struct {
 	mport_select_cb select_cb;
 } mportInstance;
 
-mportInstance *mport_instance_new(void);
+/*@null@*/ mportInstance *mport_instance_new(void);
 int mport_instance_init(
     mportInstance *, const char *, const char *, bool noIndex, mportVerbosity verbosity);
 int mport_instance_free(mportInstance *);
 
 /* Run the callbacks. will display messages, etc */
-int mport_call_msg_cb(mportInstance *, const char *, ...);
+int mport_call_msg_cb(/*@null@*/ mportInstance *, /*@notnull@*/ const char *, ...);
 int mport_call_progress_init_cb(mportInstance *, const char *, ...);
 bool mport_call_confirm_cb(
     mportInstance *mport, const char *msg, const char *yes, const char *no, int def);
@@ -236,6 +239,8 @@ typedef struct {
 	stringlist_t lua_scripts[MPORT_NUM_LUA_SCRIPTS]; // not populated from package table
 	stringlist_t conflicts; // not populated from package table
 	// TODO: conflicts should be a structure
+	stringlist_t shlibs_provided; // sonames this package installs for others
+	stringlist_t shlibs_required; // sonames its objects need from elsewhere
 } __attribute__((aligned(16))) mportPackageMeta;
 
 int mport_asset_get_assetlist(mportInstance *, mportPackageMeta *, mportAssetList **);
@@ -303,6 +308,10 @@ int mport_index_list(mportInstance *, mportIndexEntry ***);
 int mport_index_lookup_pkgname(mportInstance *, const char *, mportIndexEntry ***);
 int mport_index_get_default_version(/*@notnull@*/ mportInstance *,
     /*@notnull@*/ const char *, /*@out@*/ char **);
+int mport_index_version_get(/*@notnull@*/ mportInstance *, /*@notnull@*/ mportPackageMeta *,
+    /*@out@*/ /*@null@*/ char **, /*@out@*/ /*@null@*/ char **);
+int mport_ports_version_get(/*@notnull@*/ mportInstance *, /*@notnull@*/ const char *,
+    /*@notnull@*/ mportPackageMeta *, /*@out@*/ /*@null@*/ char **);
 int mport_index_search(mportInstance *, mportIndexEntry ***, const char *, ...);
 int mport_index_search_term(mportInstance *, mportIndexEntry ***, char *);
 void mport_index_entry_free_vec(mportIndexEntry **);
@@ -397,6 +406,13 @@ int mport_autoremove(mportInstance *);
 int mport_verify_package(mportInstance *, mportPackageMeta *);
 int mport_recompute_checksums(mportInstance *, mportPackageMeta *);
 int mport_check_missing_depends(mportInstance *);
+
+/* shared library registry (shlib.c) */
+int mport_shlibs_get(mportInstance *, const char *, stringlist_t *, stringlist_t *);
+int mport_shlib_providers(mportInstance *, const char *, mportPackageMeta ***);
+int mport_shlib_requirers(mportInstance *, const char *, mportPackageMeta ***);
+bool mport_shlib_in_base(const char *);
+int mport_check_missing_shlibs(mportInstance *);
 
 /* version comparing */
 int mport_version_cmp(const char *, const char *);

@@ -124,6 +124,19 @@ mport_script_run_child(
 	return (MPORT_OK);
 }
 
+/* push a Lua array of the strings in list */
+static void
+lua_shlib_table(lua_State *L, const stringlist_t *list)
+{
+	int i = 1;
+
+	lua_newtable(L);
+	tll_foreach(*list, it) {
+		lua_pushstring(L, it->item);
+		lua_rawseti(L, -2, i++);
+	}
+}
+
 int
 mport_lua_script_run(mportInstance *mport, mportPackageMeta *pkg, mport_lua_script type)
 {
@@ -138,6 +151,9 @@ mport_lua_script_run(mportInstance *mport, mportPackageMeta *pkg, mport_lua_scri
 
 	if (tll_length(pkg->lua_scripts[type]) == 0)
 		return (MPORT_OK);
+
+	/* best effort: a script sees empty lists if nothing was recorded */
+	(void)mport_shlibs_load(mport, pkg);
 
 	tll_foreach(pkg->lua_scripts[type], s)
 	{
@@ -176,6 +192,12 @@ mport_lua_script_run(mportInstance *mport, mportPackageMeta *pkg, mport_lua_scri
 			lua_setglobal(L, "pkg_rootdir");
 			lua_pushboolean(L, (pkg->action == MPORT_ACTION_UPGRADE ? 1 : 0));
 			lua_setglobal(L, "pkg_upgrade");
+			/* the shared libraries this package provides and requires,
+			 * as arrays of sonames; empty when nothing was recorded */
+			lua_shlib_table(L, &pkg->shlibs_provided);
+			lua_setglobal(L, "pkg_shlibs_provided");
+			lua_shlib_table(L, &pkg->shlibs_required);
+			lua_setglobal(L, "pkg_shlibs_required");
 			luaL_newlib(L, pkg_lib);
 			lua_setglobal(L, "pkg");
 			lua_override_ios(L, true);
@@ -339,12 +361,14 @@ mport_lua_script_read_file(
 
 	buf[st.st_size] = '\0';
 
+	/*
+	 * Two layouts: a UCL array of chunks, ["...", "..."], as a manifest
+	 * carries them, or a plain Lua file that is one chunk.  The array is
+	 * parsed whole; libucl accepts a top-level array and rejects a bare
+	 * string, so the brackets must stay.
+	 */
 	if (buf[0] == '[') {
 		parser = ucl_parser_new(0);
-		// remove leading/trailing array entries
-		buf[0] = ' ';
-		buf[st.st_size - 1] = '\0';
-
 		if (ucl_parser_add_chunk(parser, (const unsigned char *)buf, st.st_size)) {
 			obj = ucl_parser_get_object(parser);
 			int ret = mport_lua_script_from_ucl(mport, pkg, obj, type);
@@ -356,10 +380,15 @@ mport_lua_script_read_file(
 			return ret;
 		}
 
+		SET_ERRORX(MPORT_ERR_FATAL, "Unable to parse %s: %s", filename,
+		    ucl_parser_get_error(parser));
 		ucl_parser_free(parser);
+		free(buf);
+		RETURN_CURRENT_ERROR;
 	}
 
-	free(buf);
+	tll_push_back(pkg->lua_scripts[type], buf);
+	return (MPORT_OK);
 
 	return (MPORT_OK);
 }

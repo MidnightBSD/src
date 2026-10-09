@@ -47,9 +47,22 @@
 
 static void usage(void);
 
+/*
+ * Every subcommand parses its own options with getopt(3) over the argument
+ * vector that remains after the global options.  getopt keeps its position
+ * in optind (and, on BSD, internal state that optreset clears), so it must
+ * be restarted first: after a global option such as -U, optind already
+ * points past the subcommand's arguments and the parse comes up empty.
+ */
+static void reset_getopt(void);
+
 static void show_version(/*@null@*/ mportInstance *, int);
 
 static int loadIndex(/*@notnull@*/ mportInstance *);
+static int version_list(/*@notnull@*/ mportInstance *, /*@null@*/ const char *, char, char, int,
+    /*@notnull@*/ char *const *);
+static int version_print(/*@notnull@*/ mportInstance *, /*@null@*/ const char *,
+    /*@notnull@*/ mportPackageMeta *, char, char);
 
 static /*@only@*/ mportIndexEntry **lookupIndex(
     /*@notnull@*/ mportInstance *, /*@notnull@*/ const char *);
@@ -98,6 +111,8 @@ static int lock(/*@notnull@*/ mportInstance *, /*@notnull@*/ const char *);
 static int unlock(/*@notnull@*/ mportInstance *, /*@notnull@*/ const char *);
 
 static int which(/*@notnull@*/ mportInstance *, /*@null@*/ const char *, bool);
+static int info_shlibs(/*@notnull@*/ mportInstance *, /*@null@*/ const char *, int, int);
+static int shlib(/*@notnull@*/ mportInstance *, /*@null@*/ const char *, bool, bool);
 
 static int audit(/*@notnull@*/ mportInstance *, bool);
 
@@ -258,8 +273,10 @@ main(int argc, char *argv[])
 	bool verbose = false;
 	bool force = false;
 	bool brief = false;
+	bool allowOldRelease = false;
 
 	struct option longopts[] = {
+		{ "allow-old-release", no_argument, NULL, 'O' },
 		{ "no-index", no_argument, NULL, 'U' },
 		{ "verbose", no_argument, NULL, 'V' },
 		{ "brief", no_argument, NULL, 'b' },
@@ -282,6 +299,9 @@ main(int argc, char *argv[])
 
 	while ((ch = getopt_long(argc, argv, "+c:o:bfhqUVv", longopts, NULL)) != -1) {
 		switch (ch) {
+		case 'O':
+			allowOldRelease = true;
+			break;
 		case 'U':
 			noIndex++;
 			break;
@@ -335,6 +355,8 @@ main(int argc, char *argv[])
 		errx(1, "%s", mport_err_string());
 	}
 	mport->force = force;
+	if (allowOldRelease)
+		mport->allowOldRelease = true;
 
 	if (version == 1) {
 		show_version(mport, version);
@@ -359,14 +381,16 @@ main(int argc, char *argv[])
 
 		if (local_argc > 1) {
 			int ch2;
-#if defined(__MidnightBSD__)
-			optreset = 1;
-#endif
-			optind = 1;
-			while ((ch2 = getopt(local_argc, local_argv, "A")) != -1) {
+			reset_getopt();
+			while ((ch2 = getopt(local_argc, local_argv, "Al")) != -1) {
 				switch (ch2) {
 				case 'A':
 					aflag = 1;
+					break;
+				case 'l':
+					/* local only: the named files and nothing else,
+					 * like mport.install(1) */
+					mport->noDepends = true;
 					break;
 				}
 			}
@@ -397,10 +421,7 @@ main(int argc, char *argv[])
 
 		if (local_argc > 1) {
 			int ch2;
-#if defined(__MidnightBSD__)
-			optreset = 1;
-#endif
-			optind = 1;
+			reset_getopt();
 			while ((ch2 = getopt(local_argc, local_argv, "AMry")) != -1) {
 				switch (ch2) {
 				case 'A':
@@ -444,10 +465,7 @@ main(int argc, char *argv[])
 
 		if (local_argc > 1) {
 			int ch2;
-#if defined(__MidnightBSD__)
-			optreset = 1;
-#endif
-			optind = 1;
+			reset_getopt();
 			while ((ch2 = getopt(local_argc, local_argv, "y")) != -1) {
 				switch (ch2) {
 				case 'y':
@@ -473,10 +491,7 @@ main(int argc, char *argv[])
 		int dflag = 0;
 		int ch2;
 
-#if defined(__MidnightBSD__)
-		optreset = 1;
-#endif
-		optind = 1;
+		reset_getopt();
 		while ((ch2 = getopt(argc, argv, "ad")) != -1) {
 			switch (ch2) {
 			case 'a':
@@ -519,6 +534,7 @@ main(int argc, char *argv[])
 
 		if (local_argc > 1) {
 			int ch2;
+			reset_getopt();
 			while ((ch2 = getopt(local_argc, local_argv, "aqADS")) != -1) {
 				switch (ch2) {
 				case 'S':
@@ -563,10 +579,7 @@ main(int argc, char *argv[])
 		int rflag = 0;
 		int ch2;
 
-#if defined(__MidnightBSD__)
-		optreset = 1;
-#endif
-		optind = 1;
+		reset_getopt();
 		while ((ch2 = getopt(argc, argv, "r")) != -1) {
 			switch (ch2) {
 			case 'r':
@@ -639,11 +652,20 @@ main(int argc, char *argv[])
 		int local_argc = argc;
 		char *const *local_argv = argv;
 		int eflag = 0;
+		int bflag = 0;
+		int Bflag = 0;
 
 		if (local_argc > 1) {
 			int ch2;
-			while ((ch2 = getopt(local_argc, local_argv, "e")) != -1) {
+			reset_getopt();
+			while ((ch2 = getopt(local_argc, local_argv, "Bbe")) != -1) {
 				switch (ch2) {
+				case 'B':
+					Bflag = 1;
+					break;
+				case 'b':
+					bflag = 1;
+					break;
 				case 'e':
 					eflag = 1;
 					break;
@@ -668,10 +690,44 @@ main(int argc, char *argv[])
 			} else {
 				resultCode = 1;
 			}
+		} else if (bflag || Bflag) {
+			resultCode = info_shlibs(mport, local_argv[0], bflag, Bflag);
 		} else {
 			loadIndex(mport);
 			resultCode = info(mport, local_argv[0]);
 		}
+	} else if (!strcmp(cmd, "shlib")) {
+		int local_argc = argc;
+		char *const *local_argv = argv;
+		int Pflag = 0;
+		int Rflag = 0;
+
+		if (local_argc > 1) {
+			int ch2;
+			reset_getopt();
+			while ((ch2 = getopt(local_argc, local_argv, "PRq")) != -1) {
+				switch (ch2) {
+				case 'P':
+					Pflag = 1;
+					break;
+				case 'R':
+					Rflag = 1;
+					break;
+				case 'q':
+					mport->verbosity = MPORT_VQUIET;
+					break;
+				}
+			}
+			local_argc -= optind;
+			local_argv += optind;
+		}
+
+		if (local_argc < 1 || (Pflag && Rflag)) {
+			mport_instance_free(mport);
+			usage();
+		}
+
+		resultCode = shlib(mport, local_argv[0], Pflag || !Rflag, Rflag || !Pflag);
 	} else if (!strcmp(cmd, "index")) {
 		resultCode = mport_index_get(mport);
 		if (resultCode != MPORT_OK) {
@@ -791,7 +847,7 @@ main(int argc, char *argv[])
 
 		if (local_argc > 1) {
 			int ch2;
-			optind = 1;
+			reset_getopt();
 			while ((ch2 = getopt(local_argc, local_argv, "dr")) != -1) {
 				switch (ch2) {
 				case 'd':
@@ -816,6 +872,18 @@ main(int argc, char *argv[])
 			} else {
 				printf("%d missing dependenc%s found.\n", nmissing,
 				    nmissing == 1 ? "y" : "ies");
+				resultCode = MPORT_ERR_WARN;
+			}
+
+			int nlibs = mport_check_missing_shlibs(mport);
+			if (nlibs < 0) {
+				warnx("%s", mport_err_string());
+				resultCode = mport_err_code();
+			} else if (nlibs == 0) {
+				printf("All required shared libraries are provided.\n");
+			} else {
+				printf("%d missing shared librar%s found.\n", nlibs,
+				    nlibs == 1 ? "y" : "ies");
 				resultCode = MPORT_ERR_WARN;
 			}
 		}
@@ -843,34 +911,72 @@ main(int argc, char *argv[])
 	} else if (!strcmp(cmd, "version")) {
 		int local_argc = argc;
 		char *const *local_argv = argv;
-		if (local_argc > 1) {
-			int ch2, tflag;
-			tflag = 0;
-			while ((ch2 = getopt(local_argc, local_argv, "t")) != -1) {
-				switch (ch2) {
-				case 't':
-					tflag = 1;
-					break;
-				}
-			}
-			local_argc -= optind;
-			local_argv += optind;
+		const char *portsdir = NULL;
+		const char *env_portsdir;
+		int ch2, tflag = 0, Iflag = 0;
+		char limit = '\0', exclude = '\0';
 
-			if (tflag) {
-				if (local_argv[0] == NULL) {
-					fprintf(stderr, "Usage: mport version -t <v1> <v2>\n");
-					return -2;
+		reset_getopt();
+		while ((ch2 = getopt(local_argc, local_argv, "IL:l:P:t")) != -1) {
+			switch (ch2) {
+			case 'I':
+				Iflag = 1;
+				break;
+			case 'L':
+			case 'l':
+				if (strlen(optarg) != 1 || strchr("<=>?!", optarg[0]) == NULL) {
+					warnx("Invalid status character '%s'", optarg);
+					mport_instance_free(mport);
+					usage();
 				}
-				if (local_argv[1] == NULL) {
-					fprintf(stderr, "Usage: mport version -t <v1> <v2>\n");
-					return -2;
-				}
-				resultCode = mport_version_cmp(local_argv[0], local_argv[1]);
-				printf("%c\n",
-				    resultCode == 0	 ? '=' :
-					resultCode == -1 ? '<' :
-							   '>');
+				if (ch2 == 'l')
+					limit = optarg[0];
+				else
+					exclude = optarg[0];
+				break;
+			case 'P':
+				portsdir = optarg;
+				break;
+			case 't':
+				tflag = 1;
+				break;
+			default:
+				mport_instance_free(mport);
+				usage();
 			}
+		}
+		local_argc -= optind;
+		local_argv += optind;
+
+		if (tflag) {
+			if (local_argv[0] == NULL) {
+				fprintf(stderr, "Usage: mport version -t <v1> <v2>\n");
+				return -2;
+			}
+			if (local_argv[1] == NULL) {
+				fprintf(stderr, "Usage: mport version -t <v1> <v2>\n");
+				return -2;
+			}
+			resultCode = mport_version_cmp(local_argv[0], local_argv[1]);
+			printf("%c\n", resultCode == 0 ? '=' : resultCode == -1 ? '<' : '>');
+		} else {
+			if (Iflag && portsdir != NULL) {
+				warnx("-I and -P are mutually exclusive");
+				mport_instance_free(mport);
+				usage();
+			}
+			if (!Iflag && portsdir == NULL) {
+				env_portsdir = getenv("PORTSDIR");
+				if (env_portsdir != NULL && env_portsdir[0] != '\0')
+					portsdir = env_portsdir;
+			}
+			if (portsdir != NULL && portsdir[0] == '\0') {
+				warnx("Empty ports directory");
+				mport_instance_free(mport);
+				usage();
+			}
+			resultCode =
+			    version_list(mport, portsdir, limit, exclude, local_argc, local_argv);
 		}
 	} else if (!strcmp(cmd, "which")) {
 		int local_argc = argc;
@@ -878,6 +984,7 @@ main(int argc, char *argv[])
 		if (local_argc > 1) {
 			int ch2, oflag;
 			oflag = 0;
+			reset_getopt();
 			while ((ch2 = getopt(local_argc, local_argv, "qo")) != -1) {
 				switch (ch2) {
 				case 'q':
@@ -904,6 +1011,15 @@ main(int argc, char *argv[])
 }
 
 static void
+reset_getopt(void)
+{
+#if defined(__MidnightBSD__)
+	optreset = 1;
+#endif
+	optind = 1;
+}
+
+static void
 usage(void)
 {
 	show_version(NULL, 2);
@@ -919,10 +1035,12 @@ usage(void)
 	    "  -b          Brief output\n\n"
 	    "  -V          Verbose mode\n"
 	    "  -U          No index update\n"
+	    "  --allow-old-release\n"
+	    "              Install package files built for another OS release\n"
 	    "  -v          Show version\n"
 	    "Commands:\n"
 	    "  Package Management:\n"
-	    "    add [-A] <package file>     Install package from file\n"
+	    "    add [-Al] <package file>    Install package from file\n"
 	    "    install [-AMry] <package>     Install package from repository\n"
 	    "    delete <package>            Remove installed package\n"
 	    "    update [package]            Update installed package(s)\n"
@@ -930,14 +1048,15 @@ usage(void)
 	    "    autoremove                  Remove automatically installed packages\n"
 	    "    clean                       Clean package cache\n"
 	    "    verify [-d] [-r] [package]       Verify installed packages\n"
-	    "      -d                            Check for missing dependencies\n"
+	    "      -d                            Check for missing dependencies and shared libraries\n"
 	    "    deleteall                   Remove all installed packages\n\n"
 	    "  Information:\n"
 	    "    search <query>              Search for packages\n"
 	    "    query [-aCgix] [-e expr] <format> [pattern ...]\n"
-	    "    info [-e] <package>         Display package information\n"
+	    "    info [-bBe] <package>       Display package information\n"
 	    "    list [updates|prime]        List installed packages\n"
 	    "    which [-qo] <file>          Find which package provides a file\n"
+	    "    shlib [-q] [-P|-R] <library>  Show which packages provide or require a library\n"
 	    "    stats                       Show package statistics\n\n"
 	    "  Index and Repository:\n"
 	    "    index                       Update package index\n"
@@ -960,6 +1079,8 @@ usage(void)
 	    "    import <file>               Import package list\n"
 	    "    export <file>               Export package list\n"
 	    "    shell                       Open SQLite shell for package database\n"
+	    "    version [-I|-P <dir>] [-l <c>] [-L <c>] [pkg ...]\n"
+	    "                                Compare installed packages with the index or ports\n"
 	    "    version -t <v1> <v2>        Compare two version strings\n");
 	exit(EXIT_FAILURE);
 }
@@ -987,6 +1108,114 @@ loadIndex(/*@notnull@*/ mportInstance *mport)
 	else if (result != MPORT_OK)
 		errx(4, "Unable to load index %s", mport_err_string());
 	return result;
+}
+
+/*
+ * Compare installed packages with the index, or with the ports tree at
+ * portsdir when it is set, printing one status character per package in the
+ * form "version -t" uses, plus "?" when there is nothing to compare with and
+ * "!" when the comparison failed.
+ */
+static int
+version_list(/*@notnull@*/ mportInstance *mport, /*@null@*/ const char *portsdir, char limit,
+    char exclude, int argc, /*@notnull@*/ char *const *argv)
+{
+	mportPackageMeta **packs = NULL;
+	mportPackageMeta **p;
+	int resultCode = MPORT_OK;
+	int tempResultCode;
+	int i;
+
+	/* A ports tree comparison must work on an offline build host. */
+	if (portsdir == NULL)
+		loadIndex(mport);
+
+	if (argc == 0) {
+		if (mport_pkgmeta_list(mport, &packs) != MPORT_OK) {
+			warnx("%s", mport_err_string());
+			mport_pkgmeta_vec_free(packs);
+			return (MPORT_ERR_FATAL);
+		}
+		for (p = packs; p != NULL && *p != NULL; p++) {
+			tempResultCode = version_print(mport, portsdir, *p, limit, exclude);
+			if (tempResultCode != MPORT_OK)
+				resultCode = tempResultCode;
+		}
+		mport_pkgmeta_vec_free(packs);
+		return (resultCode);
+	}
+
+	for (i = 0; i < argc; i++) {
+		packs = lookup_package(mport, argv[i]);
+		if (packs == NULL) {
+			resultCode = MPORT_ERR_WARN;
+			continue;
+		}
+		for (p = packs; *p != NULL; p++) {
+			tempResultCode = version_print(mport, portsdir, *p, limit, exclude);
+			if (tempResultCode != MPORT_OK)
+				resultCode = tempResultCode;
+		}
+		mport_pkgmeta_vec_free(packs);
+	}
+
+	return (resultCode);
+}
+
+static int
+version_print(/*@notnull@*/ mportInstance *mport, /*@null@*/ const char *portsdir,
+    /*@notnull@*/ mportPackageMeta *pack, char limit, char exclude)
+{
+	char *pkgname = NULL;
+	char *remote = NULL;
+	char *namever = NULL;
+	char *detail = NULL;
+	const char *source = portsdir != NULL ? "port" : "index";
+	char status;
+	int cmp;
+	int ret;
+
+	if (portsdir != NULL)
+		ret = mport_ports_version_get(mport, portsdir, pack, &remote);
+	else
+		ret = mport_index_version_get(mport, pack, &pkgname, &remote);
+
+	if (ret != MPORT_OK) {
+		status = '!';
+		ret = asprintf(&detail, "%s", mport_err_string());
+	} else if (remote == NULL) {
+		status = '?';
+		ret = asprintf(&detail, "not in the %s", portsdir != NULL ? "ports tree" : "index");
+	} else if (pkgname != NULL && strcmp(pkgname, pack->name) != 0) {
+		/* only the origin matched: the index carries a replacement */
+		status = '<';
+		ret = asprintf(&detail, "index has %s-%s", pkgname, remote);
+	} else {
+		cmp = mport_version_cmp(pack->version, remote);
+		status = cmp < 0 ? '<' : cmp > 0 ? '>' : '=';
+		ret = asprintf(&detail, "%s has %s", source, remote);
+	}
+	free(pkgname);
+	free(remote);
+
+	if (ret == -1 || asprintf(&namever, "%s-%s", pack->name, pack->version) == -1) {
+		free(detail);
+		warnx("Out of memory.");
+		return (MPORT_ERR_FATAL);
+	}
+
+	if ((limit == '\0' || status == limit) && (exclude == '\0' || status != exclude)) {
+		if (mport->verbosity == MPORT_VQUIET)
+			printf("%s\n", namever);
+		else if (mport->verbosity == MPORT_VVERBOSE)
+			printf("%-40s %c   %s\n", namever, status, detail);
+		else
+			printf("%-40s %c\n", namever, status);
+	}
+
+	free(namever);
+	free(detail);
+	return (status == '!' ? MPORT_ERR_WARN : MPORT_OK);
 }
 
 static mportIndexEntry **
@@ -1106,10 +1335,7 @@ query(/*@notnull@*/ mportInstance *mport, int argc, /*@notnull@*/ char *argv[])
 	opts.case_sensitive = false;
 	opts.match = MPORT_QUERY_MATCH_EXACT;
 
-#if defined(__MidnightBSD__)
-	optreset = 1;
-#endif
-	optind = 1;
+	reset_getopt();
 	while ((ch2 = getopt(argc, argv, "aCe:F:gix")) != -1) {
 		switch (ch2) {
 		case 'a':
@@ -1240,6 +1466,113 @@ info(/*@notnull@*/ mportInstance *mport, /*@null@*/ const char *packageName)
 	free(out);
 
 	return (0);
+}
+
+/* mport info -b / -B: the registered shared library lists of a package */
+static int
+info_shlibs(
+    /*@notnull@*/ mportInstance *mport, /*@null@*/ const char *packageName, int provided,
+    int required)
+{
+	mportPackageMeta **packs = NULL;
+	stringlist_t prov = tll_init();
+	stringlist_t req = tll_init();
+
+	if (packageName == NULL) {
+		warnx("%s", "Specify package name");
+		return (1);
+	}
+
+	if (mport_pkgmeta_search_master(mport, &packs, "pkg=%Q", packageName) != MPORT_OK) {
+		warnx("%s", mport_err_string());
+		return (1);
+	}
+	if (packs == NULL || packs[0] == NULL) {
+		warnx("%s is not installed", packageName);
+		mport_pkgmeta_vec_free(packs);
+		return (1);
+	}
+
+	if (mport_shlibs_get(mport, packs[0]->name, provided ? &prov : NULL,
+		required ? &req : NULL) != MPORT_OK) {
+		warnx("%s", mport_err_string());
+		mport_pkgmeta_vec_free(packs);
+		return (1);
+	}
+
+	mport_drop_privileges();
+
+	if (mport->verbosity != MPORT_VQUIET)
+		printf("%s-%s:\n", packs[0]->name, packs[0]->version);
+	if (provided) {
+		if (mport->verbosity != MPORT_VQUIET)
+			printf("Provided shared libraries:\n");
+		tll_foreach(prov, it)
+			printf("%s%s\n", mport->verbosity != MPORT_VQUIET ? "\t" : "", it->item);
+	}
+	if (required) {
+		if (mport->verbosity != MPORT_VQUIET)
+			printf("Required shared libraries:\n");
+		tll_foreach(req, it)
+			printf("%s%s\n", mport->verbosity != MPORT_VQUIET ? "\t" : "", it->item);
+	}
+
+	tll_free_and_free(prov, free);
+	tll_free_and_free(req, free);
+	mport_pkgmeta_vec_free(packs);
+
+	return (0);
+}
+
+/* mport shlib: who provides or requires a library */
+static int
+shlib(/*@notnull@*/ mportInstance *mport, /*@null@*/ const char *library, bool providers,
+    bool requirers)
+{
+	mportPackageMeta **packs = NULL;
+	int ret = 0;
+
+	if (library == NULL) {
+		warnx("%s", "Specify a library name");
+		return (1);
+	}
+
+	mport_drop_privileges();
+
+	if (providers) {
+		if (mport_shlib_providers(mport, library, &packs) != MPORT_OK) {
+			warnx("%s", mport_err_string());
+			return (1);
+		}
+		if (mport->verbosity != MPORT_VQUIET)
+			printf("%s is provided by:\n", library);
+		for (int i = 0; packs != NULL && packs[i] != NULL; i++)
+			printf("%s%s-%s\n", mport->verbosity != MPORT_VQUIET ? "\t" : "",
+			    packs[i]->name, packs[i]->version);
+		if (packs == NULL && mport->verbosity != MPORT_VQUIET)
+			printf("\t%s\n",
+			    mport_shlib_in_base(library) ? "the base system" : "no installed package");
+		mport_pkgmeta_vec_free(packs);
+		packs = NULL;
+	}
+
+	if (requirers) {
+		if (mport_shlib_requirers(mport, library, &packs) != MPORT_OK) {
+			warnx("%s", mport_err_string());
+			return (1);
+		}
+		if (mport->verbosity != MPORT_VQUIET)
+			printf("%s is required by:\n", library);
+		for (int i = 0; packs != NULL && packs[i] != NULL; i++)
+			printf("%s%s-%s\n", mport->verbosity != MPORT_VQUIET ? "\t" : "",
+			    packs[i]->name, packs[i]->version);
+		if (packs == NULL && mport->verbosity != MPORT_VQUIET)
+			printf("\tno installed package\n");
+		mport_pkgmeta_vec_free(packs);
+		packs = NULL;
+	}
+
+	return (ret);
 }
 
 static int

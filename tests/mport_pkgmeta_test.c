@@ -198,6 +198,64 @@ ATF_TC_CLEANUP(delete_removes_autodirs, tc)
 	cleanup_test_root();
 }
 
+static char delete_messages[4096];
+
+static void
+capture_delete_msg(const char *msg)
+{
+	size_t len = strlen(delete_messages);
+
+	(void)snprintf(delete_messages + len, sizeof(delete_messages) - len, "%s\n", msg);
+}
+
+ATF_TC_WITH_CLEANUP(delete_duplicate_file_asset_is_quiet);
+ATF_TC_HEAD(delete_duplicate_file_asset_is_quiet, tc)
+{
+	atf_tc_set_md_var(tc, "descr",
+	    "delete does not report a file listed twice as missing once it removed it");
+}
+ATF_TC_BODY(delete_duplicate_file_asset_is_quiet, tc)
+{
+	mportInstance *mport;
+	mportPackageMeta *pack;
+
+	(void)tc;
+
+	mport = create_test_instance();
+	mport->msg_cb = capture_delete_msg;
+	create_local_prefix_dirs();
+	create_dir(test_path("/usr/local/share/alpha"));
+	create_file(test_path("/usr/local/share/alpha/alpha"));
+	insert_delete_package(mport, "alpha");
+	/*
+	 * one file registered twice, as an rc.d script a port lists and USE_RC_SUBR
+	 * adds; kept out of etc/rc.d so delete does not run service(8) on the host
+	 */
+	insert_asset(mport, "alpha", ASSET_FILE, "/usr/local/share/alpha/alpha");
+	insert_asset(mport, "alpha", ASSET_FILE_OWNER_MODE, "/usr/local/share/alpha/alpha");
+	/* a file that really is missing must still be reported */
+	insert_asset(mport, "alpha", ASSET_FILE, "/usr/local/share/alpha/missing");
+
+	delete_messages[0] = '\0';
+	pack = create_delete_pack("alpha");
+	ATF_REQUIRE_MSG(
+	    mport_delete_primative(mport, pack, 1) == MPORT_OK, "%s", mport_err_string());
+	ATF_REQUIRE_EQ(-1, access(test_path("/usr/local/share/alpha/alpha"), F_OK));
+	ATF_REQUIRE_MSG(
+	    strstr(delete_messages, "alpha/alpha: No such file") == NULL, "%s", delete_messages);
+	ATF_REQUIRE_MSG(
+	    strstr(delete_messages, "alpha/missing: No such file") != NULL, "%s", delete_messages);
+
+	mport_pkgmeta_free(pack);
+	mport_instance_free(mport);
+}
+ATF_TC_CLEANUP(delete_duplicate_file_asset_is_quiet, tc)
+{
+	(void)tc;
+
+	cleanup_test_root();
+}
+
 ATF_TC_WITH_CLEANUP(delete_keeps_nonempty_autodirs);
 ATF_TC_HEAD(delete_keeps_nonempty_autodirs, tc)
 {
@@ -411,8 +469,7 @@ ATF_TC_CLEANUP(mtree_fallback_protects_system_dirs, tc)
 ATF_TC_WITH_CLEANUP(delete_info_asset_keeps_post_uninstall_working);
 ATF_TC_HEAD(delete_info_asset_keeps_post_uninstall_working, tc)
 {
-	atf_tc_set_md_var(
-	    tc, "descr", "delete handles @info assets after unlinking the info file");
+	atf_tc_set_md_var(tc, "descr", "delete handles @info assets after unlinking the info file");
 }
 ATF_TC_BODY(delete_info_asset_keeps_post_uninstall_working, tc)
 {
@@ -460,17 +517,17 @@ ATF_TC_BODY(rooted_infrastructure_path_uses_instance_root, tc)
 	mport = create_test_instance();
 	pack = create_delete_pack("alpha");
 	ATF_REQUIRE_EQ(0, mkdir(test_path("/var/db/mport/infrastructure/alpha-1.0"), 0755));
-	create_file_with_contents(
-	    test_path("/var/db/mport/infrastructure/alpha-1.0/pkg-deinstall"), "#!/bin/sh\nexit 0\n");
+	create_file_with_contents(test_path("/var/db/mport/infrastructure/alpha-1.0/pkg-deinstall"),
+	    "#!/bin/sh\nexit 0\n");
 
-	ATF_REQUIRE_EQ(
-	    MPORT_OK, mport_build_infrastructure_path(mport, pack, MPORT_DEINSTALL_FILE, true,
-			   path, sizeof(path)));
+	ATF_REQUIRE_EQ(MPORT_OK,
+	    mport_build_infrastructure_path(
+		mport, pack, MPORT_DEINSTALL_FILE, true, path, sizeof(path)));
 	ATF_REQUIRE_STREQ(test_path("/var/db/mport/infrastructure/alpha-1.0/pkg-deinstall"), path);
 	ATF_REQUIRE_EQ(0, access(path, F_OK));
-	ATF_REQUIRE_EQ(
-	    MPORT_OK, mport_build_infrastructure_path(mport, pack, MPORT_DEINSTALL_FILE, false,
-			   path, sizeof(path)));
+	ATF_REQUIRE_EQ(MPORT_OK,
+	    mport_build_infrastructure_path(
+		mport, pack, MPORT_DEINSTALL_FILE, false, path, sizeof(path)));
 	ATF_REQUIRE_STREQ("/var/db/mport/infrastructure/alpha-1.0/pkg-deinstall", path);
 
 	mport_pkgmeta_free(pack);
@@ -569,6 +626,60 @@ ATF_TC_BODY(sort_dependencies_dependency_first, tc)
 	mport_instance_free(mport);
 }
 ATF_TC_CLEANUP(sort_dependencies_dependency_first, tc)
+{
+	(void)tc;
+
+	cleanup_test_root();
+}
+
+/*
+ * x links against libq.so.1, which y installs; no port declared it.  The
+ * registry's shared library records still order y before x.
+ */
+ATF_TC_WITH_CLEANUP(sort_dependencies_follows_library_providers);
+ATF_TC_HEAD(sort_dependencies_follows_library_providers, tc)
+{
+	atf_tc_set_md_var(tc, "require.user", "root");
+	atf_tc_set_md_var(
+	    tc, "descr", "a shared library provider sorts before the package using it");
+}
+ATF_TC_BODY(sort_dependencies_follows_library_providers, tc)
+{
+	mportInstance *mport;
+	mportPackageMeta x = { .name = "x" };
+	mportPackageMeta y = { .name = "y" };
+	mportPackageMeta z = { .name = "z" };
+	mportPackageMeta *flat[] = { &x, &y, &z };
+	mportPackageMeta **sorted;
+
+	(void)tc;
+
+	mport = create_test_instance();
+	insert_package(mport, "x");
+	insert_package(mport, "y");
+	insert_package(mport, "z");
+	ATF_REQUIRE_EQ(MPORT_OK,
+	    mport_db_do(mport->db,
+		"INSERT INTO shlibs_required (pkg, name) VALUES ('x', 'libq.so.1'), ('x', 'libc.so.7')"));
+	ATF_REQUIRE_EQ(MPORT_OK,
+	    mport_db_do(mport->db,
+		"INSERT INTO shlibs_provided (pkg, name) VALUES ('y', 'libq.so.1'), ('z', 'libz.so.6')"));
+
+	/* dependencies first, as upgrade uses it */
+	sorted = mport_pkgmeta_sort_dependencies(mport, flat, 3, true);
+	ATF_REQUIRE(sorted != NULL);
+	require_before(sorted, 3, "y", "x");
+	free(sorted);
+
+	/* dependents first, as delete uses it */
+	sorted = mport_pkgmeta_sort_dependencies(mport, flat, 3, false);
+	ATF_REQUIRE(sorted != NULL);
+	require_before(sorted, 3, "x", "y");
+	free(sorted);
+
+	mport_instance_free(mport);
+}
+ATF_TC_CLEANUP(sort_dependencies_follows_library_providers, tc)
 {
 	(void)tc;
 
@@ -732,8 +843,10 @@ ATF_TP_ADD_TCS(tp)
 {
 	ATF_TP_ADD_TC(tp, sort_dependencies_dependency_first);
 	ATF_TP_ADD_TC(tp, sort_dependencies_dependent_first);
+	ATF_TP_ADD_TC(tp, sort_dependencies_follows_library_providers);
 	ATF_TP_ADD_TC(tp, delete_removes_autodirs);
 	ATF_TP_ADD_TC(tp, delete_keeps_nonempty_autodirs);
+	ATF_TP_ADD_TC(tp, delete_duplicate_file_asset_is_quiet);
 	ATF_TP_ADD_TC(tp, delete_keeps_shared_autodirs);
 	ATF_TP_ADD_TC(tp, delete_explicit_dirrmtry_still_removes);
 	ATF_TP_ADD_TC(tp, mtree_fixture_protects_system_dirs);

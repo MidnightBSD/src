@@ -27,6 +27,70 @@ creates_package_body()
 	atf_check -s exit:0 test -s "${PWD}/testpkg-1.0.mport"
 }
 
+atf_test_case records_abi_file_release
+records_abi_file_release_head()
+{
+	atf_set "descr" "mport.create records the release in ABI_FILE's ABI note"
+	atf_set "require.files" "/bin/sh"
+	atf_set "require.progs" "readelf sqlite3"
+}
+records_abi_file_release_body()
+{
+	setup_tree
+
+	tag=$(readelf -n /bin/sh | awk '/ABI tag:/ { print $3; exit }')
+	[ -n "${tag}" ] || atf_skip "/bin/sh carries no ABI tag"
+	release="$((tag / 100000)).$((tag / 1000 % 100))"
+
+	atf_check \
+		-s exit:0 \
+		-o empty \
+		-e empty \
+		env ABI_FILE=/bin/sh "${MPORT_CREATE}" \
+		-n testpkg \
+		-v 1.0 \
+		-o "${PWD}/testpkg-1.0.mport" \
+		-s "${PWD}/root" \
+		-p "${PWD}/plist" \
+		-P /usr/local \
+		-O misc/testpkg \
+		-t misc \
+		-c "test package"
+
+	atf_check -s exit:0 tar -xf "${PWD}/testpkg-1.0.mport" +CONTENTS.db
+	atf_check -s exit:0 -o inline:"${release}\n" \
+		sqlite3 +CONTENTS.db "SELECT os_release FROM packages"
+	atf_check -s exit:0 -o inline:"${tag}\n" \
+		sqlite3 +CONTENTS.db "SELECT value FROM meta WHERE field='MidnightBSD_version'"
+}
+
+atf_test_case rejects_unreadable_abi_file
+rejects_unreadable_abi_file_head()
+{
+	atf_set "descr" "mport.create fails rather than record the host ABI for a bad ABI_FILE"
+}
+rejects_unreadable_abi_file_body()
+{
+	setup_tree
+
+	atf_check \
+		-s not-exit:0 \
+		-o ignore \
+		-e match:"ABI_FILE" \
+		env ABI_FILE="${PWD}/missing" "${MPORT_CREATE}" \
+		-n testpkg \
+		-v 1.0 \
+		-o "${PWD}/testpkg-1.0.mport" \
+		-s "${PWD}/root" \
+		-p "${PWD}/plist" \
+		-P /usr/local \
+		-O misc/testpkg \
+		-t misc \
+		-c "test package"
+
+	atf_check -s not-exit:0 test -e "${PWD}/testpkg-1.0.mport"
+}
+
 atf_test_case rejects_invalid_expiration_date
 rejects_invalid_expiration_date_head()
 {
@@ -110,6 +174,66 @@ rejects_bad_tmpdir_body()
 		-c "test package"
 }
 
+atf_test_case drops_duplicate_plist_entries
+drops_duplicate_plist_entries_head()
+{
+	atf_set "descr" "mport.create warns about and drops a file listed twice in the plist"
+	atf_set "require.progs" "sqlite3"
+}
+drops_duplicate_plist_entries_body()
+{
+	setup_tree
+	# the same file again, as USE_RC_SUBR adds an rc.d script a port also lists
+	printf "@(root,wheel,0444) share/testpkg/file.txt\n" >>plist
+	printf "/usr/local/share/testpkg/file.txt\n" >>plist
+
+	atf_check \
+		-s exit:0 \
+		-o match:"duplicate plist entry for /usr/local/share/testpkg/file.txt removed" \
+		-e empty \
+		"${MPORT_CREATE}" \
+		-n testpkg \
+		-v 1.0 \
+		-o "${PWD}/testpkg-1.0.mport" \
+		-s "${PWD}/root" \
+		-p "${PWD}/plist" \
+		-P /usr/local \
+		-O misc/testpkg \
+		-t misc \
+		-c "test package"
+
+	atf_check -s exit:0 tar -xf "${PWD}/testpkg-1.0.mport" +CONTENTS.db
+	atf_check -s exit:0 -o inline:"1|share/testpkg/file.txt\n" \
+		sqlite3 +CONTENTS.db "SELECT type, data FROM assets WHERE data LIKE '%file.txt'"
+}
+
+atf_test_case reports_bundle_write_failure
+reports_bundle_write_failure_head()
+{
+	atf_set "descr" "mport.create fails when the bundle cannot be finished (full disk)"
+}
+reports_bundle_write_failure_body()
+{
+	[ -c /dev/full ] || atf_skip "/dev/full is not available"
+
+	setup_tree
+
+	atf_check \
+		-s not-exit:0 \
+		-o empty \
+		-e match:"Couldn't finish writing /dev/full" \
+		"${MPORT_CREATE}" \
+		-n testpkg \
+		-v 1.0 \
+		-o /dev/full \
+		-s "${PWD}/root" \
+		-p "${PWD}/plist" \
+		-P /usr/local \
+		-O misc/testpkg \
+		-t misc \
+		-c "test package"
+}
+
 atf_test_case mport_version_runs
 mport_version_runs_head()
 {
@@ -144,4 +268,8 @@ atf_init_test_cases()
 	atf_add_test_case rejects_long_output_path
 	atf_add_test_case rejects_bad_tmpdir
 	atf_add_test_case mport_version_runs
+	atf_add_test_case records_abi_file_release
+	atf_add_test_case rejects_unreadable_abi_file
+	atf_add_test_case drops_duplicate_plist_entries
+	atf_add_test_case reports_bundle_write_failure
 }

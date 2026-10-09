@@ -85,9 +85,10 @@ main(int argc, char *argv[])
 		}
 	}
 
-	mport = mport_instance_new();
-if (!mport)
-    err(EXIT_FAILURE, "Failed to create mport instance");
+	if ((mport = mport_instance_new()) == NULL) {
+		warnx("Out of memory");
+		exit(EXIT_FAILURE);
+	}
 
 	if (mport_instance_init(mport, NULL, directory, false, false) != MPORT_OK) {
 		warnx("%s", mport_err_string());

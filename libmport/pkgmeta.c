@@ -69,6 +69,11 @@ mport_pkgmeta_new(void)
 	stringlist_t cf = tll_init();
 	pack->conflicts = cf;
 
+	stringlist_t sp = tll_init();
+	pack->shlibs_provided = sp;
+	stringlist_t sr = tll_init();
+	pack->shlibs_required = sr;
+
 	return pack;
 }
 
@@ -129,6 +134,8 @@ mport_pkgmeta_free(mportPackageMeta *pack)
 		tll_free_and_free(pack->lua_scripts[i], free);
 
 	tll_free_and_free(pack->conflicts, free);
+	tll_free_and_free(pack->shlibs_provided, free);
+	tll_free_and_free(pack->shlibs_required, free);
 
 	free(pack);
 }
@@ -612,8 +619,12 @@ populate_meta_from_stmt(mportPackageMeta *pack, sqlite3 *db, sqlite3_stmt *stmt)
 	if ((pack->origin = strdup(tmp)) == NULL)
 		RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
 
-	/* Copy lang to pack->lang */
-	if ((tmp = sqlite3_column_text(stmt, 3)) == NULL)
+	/* Copy lang to pack->lang; the column is nullable and mport.create
+	 * leaves it NULL when no -l is given.  Only an SQL NULL means "no
+	 * language": a NULL from sqlite3_column_text() otherwise is a failure. */
+	if (sqlite3_column_type(stmt, 3) == SQLITE_NULL)
+		tmp = "";
+	else if ((tmp = sqlite3_column_text(stmt, 3)) == NULL)
 		RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
 
 	if ((pack->lang = strdup(tmp)) == NULL)
