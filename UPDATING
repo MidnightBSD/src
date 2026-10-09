@@ -1,5 +1,16 @@
 Updating Information for MidnightBSD users.
 
+20261009:
+	mport 2.8.3 (from 2.8.2).  Packages now record the shared libraries
+	they provide and require, and mport install checks those against
+	the installed system.  Package version comparison follows pkg(8)
+	component ordering with 64-bit numbers, and compound dependency
+	requirements work.  mport version can compare installed packages
+	with the index or a ports tree, ABI_FILE is honoured when creating
+	packages, mport add gains -l, and --force applies only to the named
+	package.  Many fixes in mport.merge, mport.check-fake, bundle
+	reading and SQLite hardening.
+
 20261003:
 	OpenSSL 3.5.9 (from 3.0.22).  OpenSSL 3.0 reached the end of
 	upstream support in September 2026; 3.5 is the current long-term
