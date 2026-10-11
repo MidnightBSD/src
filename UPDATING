@@ -1,5 +1,63 @@
 Updating Information for MidnightBSD users.
 
+20261002:
+	openssl: fix an out-of-bounds read in DTLS retransmission
+	(CVE-2026-84782).  If the DTLS retransmission timer fired while a
+	handshake message write was suspended, the resent message was read
+	from a stale buffer offset and could include heap memory, which was
+	sent to the peer as plaintext, or crash the application.  Only
+	applications using DTLS are affected.  OpenSSL 1.1.1 is out of
+	public upstream support, so this is a local patch to 1.1.1w.
+	Rebuild and install world, then restart all daemons that use the
+	library, or reboot.
+
+20261002:
+	udp6: fix a jail network isolation bypass (CVE-2026-101303,
+	FreeBSD-SA-26:69.udp).  An unconnected IPv6 UDP sendto(2) from a
+	classic (non-VNET) jail did not rewrite a loopback destination to
+	the jail's primary address, so a jailed process could reach
+	services listening on the host's IPv6 loopback address.  Rebuild
+	and install the kernel, then reboot.
+
+20261001:
+	ktls: fix a remote denial of service in receive-side kernel TLS
+	(CVE-2026-101302, FreeBSD-SA-26:67.ktls).  An off-by-one in the
+	search for the TLS 1.3 inner record type let a remote peer panic
+	the kernel with a crafted record whose plaintext is all zeros.
+	Only sockets using software receive-side KTLS are affected;
+	systems with kern.ipc.tls.enable=0 are not.  Rebuild and install
+	the kernel, then reboot.
+
+20261001:
+	jail: fix three FD_RESOLVE_BENEATH bypasses (CVE-2026-101304,
+	CVE-2026-101305, CVE-2026-101306, FreeBSD-SA-26:66.jail).  A
+	directory descriptor passed into a jail over a Unix domain socket
+	carries FD_RESOLVE_BENEATH so lookups cannot leave it, but the flag
+	and capability rights were lost when opening /dev/fd/N on an
+	fdescfs mounted with "nodup", renameat(2) ignored the flag so a
+	directory could be moved and escaped from via fchdir(2), and
+	SCM_RIGHTS dropped the flag when a descriptor was passed, even to
+	the sender itself.  A jailed process that received such a
+	descriptor could escape the jail's filesystem root.  Rebuild and
+	install the kernel, then reboot.
+
+20261001:
+	sysvsem: fix a heap out-of-bounds access in semop(2)
+	(CVE-2026-58098, FreeBSD-SA-26:64.sysvsem).  When semop(2) slept
+	waiting on a semaphore, the check that the set still existed after
+	waking relied on a 15-bit sequence number that wraps, so a local
+	user who created and destroyed enough sets in the same slot could
+	make the kernel access freed or foreign heap memory, potentially
+	leading to privilege escalation.  The kernel now keeps a 64-bit
+	sequence number per slot.  Rebuild and install the kernel, then
+	reboot.
+
+20260930:
+	tzdata 2026e (from 2026c).  Manitoba moves to permanent -05 on
+	2026-10-31 and the Northwest Territories to permanent -06; the
+	EST5EDT/CST6CDT/MST7MDT/PST8PDT names now follow POSIX rules for
+	pre-1966 timestamps.
+
 20260925:
 	mport 2.8.2 (from 2.8.1).  Bug fix release: package creation and
 	schema upgrades now run in single transactions and roll back on
