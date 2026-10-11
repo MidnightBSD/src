@@ -49,9 +49,11 @@ driver provides a interface to I2C Human Interface Devices (HIDs).
 Next parameters are available as
 .Xr sysctl 8
 variables.
-Debug parameter is available as
+The
+.Va hw.iichid.*
+parameters are available as
 .Xr loader 8
-tunable as well.
+tunables as well.
 .Bl -tag -width indent
 .It Va dev.iichid.*.sampling_rate_fast
 Active sampling rate in num/second (for sampling mode).
@@ -59,6 +61,14 @@ Active sampling rate in num/second (for sampling mode).
 Idle sampling rate in num/second (for sampling mode).
 .It Va dev.iichid.*.sampling_hysteresis
 Number of missing samples before enabling of slow mode (for sampling mode).
+.It Va hw.iichid.power_off_on_close
+If set to 1, the device is put into its low power state whenever its last
+consumer closes it and woken up again on the next open.
+The default of 0 keeps the device powered for as long as it is attached and
+only puts it to sleep on system suspend, which matches the behaviour of the
+Linux i2c-hid driver.
+Some devices, for example the touchpad of the Framework Laptop, fall back to
+their legacy mouse mode or stop reporting after a quick sleep/wake cycle.
 .It Va hw.iichid.debug
 Debug output level, where 0 is debugging disabled and larger values increase
 debug message verbosity.
