@@ -258,10 +258,15 @@ hmt_ev_close(struct evdev_dev *evdev)
 static int
 hmt_ev_open(struct evdev_dev *evdev)
 {
-	struct hmt_softc *sc = evdev_get_softc(evdev);
+	/*
+	 * The evdev softc is the hmt device_t (see evdev_set_methods() in
+	 * hmt_attach()), not the driver softc.
+	 */
+	device_t dev = evdev_get_softc(evdev);
+	struct hmt_softc *sc = device_get_softc(dev);
 	int err;
 
-	err = hidbus_intr_start(sc->dev);
+	err = hidbus_intr_start(dev);
 	if (err != 0)
 		return (err);
 
@@ -913,7 +918,11 @@ hmt_set_input_mode(struct hmt_softc *sc, enum hconf_input_mode mode)
 {
 	int err;
 
-	if (sc->hconf == NULL)
+	/*
+	 * May be called from evdev open context without Giant.  hconf is a
+	 * sibling TLC that may have been detached since we looked it up.
+	 */
+	if (sc->hconf == NULL || device_is_attached(sc->hconf) == 0)
 		return (ENXIO);
 
 	/* hconf_set_input_mode can drop the Giant while sleeping */
