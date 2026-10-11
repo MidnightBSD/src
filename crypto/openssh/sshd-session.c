@@ -1228,12 +1228,6 @@ main(int ac, char **av)
 			fatal("login grace time setitimer failed");
 	}
 
-	if ((r = kex_exchange_identification(ssh, -1,
-	    options.version_addendum)) != 0) {
-		BLACKLIST_NOTIFY(ssh, BLACKLIST_AUTH_FAIL, "Banner exchange");
-		sshpkt_fatal(ssh, r, "banner exchange");
-	}
-
 	ssh_packet_set_nonblocking(ssh);
 
 	/* allocate authentication context */

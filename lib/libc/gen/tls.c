@@ -146,7 +146,7 @@ libc_free_aligned(void *ptr)
  *   Note: for Local Exec TLS Model, the offsets from TP (TCB in this case) to
  *   TLS variables are computed by linker, so we cannot overalign TLS section.
  *
- * - MIPS, PowerPC and RISC-V use modified version of variant I,
+ * - RISC-V uses modified version of variant I,
  *   described in [3] where TP points (with bias) to TLS and TCB immediately
  *   precedes TLS without any alignment gap[4]. Only TLS should be aligned.
  *   The TCB[0] points to DTV vector and DTV values are biased by constant

@@ -25,12 +25,12 @@
 # SUCH DAMAGE.
 #
 
-# If we mounted the DVD packages, unmount them
-if [ -d $BSDINSTALL_CHROOT/dist/packages ]; then
-	umount $BSDINSTALL_CHROOT/dist/packages
-	rmdir $BSDINSTALL_CHROOT/dist/packages
-	rmdir $BSDINSTALL_CHROOT/dist
+# If we mounted the DVD packages, unmount them.
+PACKAGE_MOUNT="$BSDINSTALL_CHROOT/packages"
+if mount | awk -v target="$PACKAGE_MOUNT" '$3 == target { found=1 } END { exit !found }'; then
+	umount "$PACKAGE_MOUNT"
 fi
+rmdir "$PACKAGE_MOUNT" 2>/dev/null || true
 
 TMP_FSTAB=${TMPDIR:-"/tmp"}/bsdinstall-tmp-fstab
 

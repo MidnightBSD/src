@@ -30,6 +30,9 @@
 #include "mport_private.h"
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 /**
@@ -83,6 +86,9 @@ mport_install_single(mportInstance *mport, const char *pkgname, const char *vers
 {
 	mportIndexEntry **e = NULL;
 	char *filename = NULL;
+	char error_path[FILENAME_MAX];
+	int bundle_fd = -1;
+	struct stat bundle_st;
 	int ret = MPORT_OK;
 	int e_loc = 0;
 
@@ -156,8 +162,6 @@ mport_install_single(mportInstance *mport, const char *pkgname, const char *vers
 			/* neither location works. Download from the internet. */
 			if (mport_fetch_bundle(
 				mport, MPORT_FETCH_STAGING_DIR, e[e_loc]->bundlefile) != MPORT_OK) {
-				free(filename);
-				filename = NULL;
 				mport_index_entry_free_vec(e);
 				e = NULL;
 				RETURN_CURRENT_ERROR;
@@ -171,24 +175,43 @@ mport_install_single(mportInstance *mport, const char *pkgname, const char *vers
 		}
 	}
 
-	if (mport_verify_hash(filename, e[e_loc]->hash) == 0) {
+	bundle_fd = open(filename, O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
+	if (bundle_fd == -1) {
+		int error = errno;
+		strlcpy(error_path, filename, sizeof(error_path));
 		mport_index_entry_free_vec(e);
-
-		if (unlink(filename) == 0) {
-			free(filename);
-			filename = NULL;
-			RETURN_ERROR(
-			    MPORT_ERR_FATAL, "Package failed hash verification and was removed.\n");
-		} else {
-			free(filename);
-			filename = NULL;
-			RETURN_ERROR(MPORT_ERR_FATAL,
-			    "Package failed hash verification, but could not be removed.\n");
-		}
+		free(filename);
+		RETURN_ERRORX(
+		    MPORT_ERR_FATAL, "Couldn't open package %s: %s", error_path, strerror(error));
 	}
 
-	ret = mport_install_primative(mport, filename, prefix, automatic);
+	if (fstat(bundle_fd, &bundle_st) != 0) {
+		int error = errno;
+		strlcpy(error_path, filename, sizeof(error_path));
+		close(bundle_fd);
+		mport_index_entry_free_vec(e);
+		free(filename);
+		RETURN_ERRORX(
+		    MPORT_ERR_FATAL, "Couldn't stat package %s: %s", error_path, strerror(error));
+	}
+	if (!S_ISREG(bundle_st.st_mode)) {
+		strlcpy(error_path, filename, sizeof(error_path));
+		close(bundle_fd);
+		mport_index_entry_free_vec(e);
+		free(filename);
+		RETURN_ERRORX(MPORT_ERR_FATAL, "Package is not a regular file: %s", error_path);
+	}
 
+	if (!mport_verify_hash_fd(bundle_fd, e[e_loc]->hash)) {
+		close(bundle_fd);
+		mport_index_entry_free_vec(e);
+		free(filename);
+		RETURN_ERROR(MPORT_ERR_FATAL, "Package failed hash verification.\n");
+	}
+
+	ret = mport_install_primative_fd(mport, bundle_fd, prefix, automatic);
+
+	close(bundle_fd);
 	free(filename);
 	filename = NULL;
 	mport_index_entry_free_vec(e);
@@ -197,10 +220,47 @@ mport_install_single(mportInstance *mport, const char *pkgname, const char *vers
 	return ret;
 }
 
-/* recursive function */
+static int install_depends_impl(
+    mportInstance *, const char *, const char *, mportAutomatic, bool);
+
+/*
+ * Install packageName and whatever it depends on from the index.
+ *
+ * mport->force applies to packageName only: a forced install exists to repair
+ * the package the user named, and reinstalling every dependency underneath it
+ * replaces working packages that nothing asked to be replaced. Dependencies
+ * that are present and current are left alone, missing or outdated ones go
+ * through the normal install and update paths.
+ */
 int
 mport_install_depends(
     mportInstance *mport, const char *packageName, const char *version, mportAutomatic automatic)
+{
+	return install_depends_impl(mport, packageName, version, automatic, mport->force);
+}
+
+/*
+ * Install a dependency of some other package: always automatic, never forced.
+ */
+int
+mport_install_dependency(mportInstance *mport, const char *packageName, const char *version)
+{
+	bool saved_force = mport->force;
+	int ret;
+
+	/* the primitive underneath reads mport->force too; keep it off for the
+	 * whole dependency subtree */
+	mport->force = false;
+	ret = install_depends_impl(mport, packageName, version, MPORT_AUTOMATIC, false);
+	mport->force = saved_force;
+
+	return ret;
+}
+
+/* recursive function */
+static int
+install_depends_impl(mportInstance *mport, const char *packageName, const char *version,
+    mportAutomatic automatic, bool force)
 {
 	mportPackageMeta **packs = NULL;
 	mportDependsEntry **depends = NULL;
@@ -210,7 +270,10 @@ mport_install_depends(
 		RETURN_ERROR(MPORT_ERR_WARN, "Dependency name or version is null");
 	}
 
-	mport_index_depends_list(mport, packageName, version, &depends_orig);
+	if (mport_index_depends_list(mport, packageName, version, &depends_orig) != MPORT_OK) {
+		mport_call_msg_cb(mport, "%s", mport_err_string());
+		return mport_err_code();
+	}
 	depends = depends_orig;
 
 	if (mport_pkgmeta_search_master(mport, &packs, "pkg=%Q", packageName) != MPORT_OK) {
@@ -228,14 +291,15 @@ mport_install_depends(
 	} else if (packs == NULL) {
 		/* Package is not installed */
 		for (mportDependsEntry **dep = depends; dep && *dep != NULL; dep++) {
-			if (mport_install_depends(mport, (*dep)->d_pkgname, (*dep)->d_version,
-				MPORT_AUTOMATIC) != MPORT_OK) {
+			if (mport_install_dependency(mport, (*dep)->d_pkgname, (*dep)->d_version) !=
+			    MPORT_OK) {
 				mport_call_msg_cb(mport, "%s", mport_err_string());
-				mport_index_depends_free_vec(depends_orig);
-				depends_orig = NULL;
 				if (mport->ignoreMissing) {
 					continue;
 				}
+				mport_index_depends_free_vec(depends_orig);
+				depends_orig = NULL;
+				depends = NULL;
 				return mport_err_code();
 			}
 		}
@@ -266,7 +330,7 @@ mport_install_depends(
 				return mport_err_code();
 			}
 			mport_pkgmeta_vec_free(packs);
-		} else if (mport->force) {
+		} else if (force) {
 			/* force reinstall of already-installed package, regardless of version */
 			mport_pkgmeta_vec_free(packs);
 			packs = NULL;

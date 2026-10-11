@@ -131,7 +131,6 @@ mport_createextras_free(mportCreateExtras *extra)
 	tll_free_and_free(extra->annotations, free);
 
 	free(extra);
-	extra = NULL;
 }
 
 MPORT_PUBLIC_API int
@@ -156,6 +155,32 @@ mport_verify_hash(const char *filename, const char *hash)
 
 	free(filehash);
 	return 0;
+}
+
+int
+mport_verify_hash_fd(int fd, const char *hash)
+{
+	SHA256_CTX ctx;
+	unsigned char buffer[8192], digest[32];
+	char filehash[65];
+	ssize_t len;
+
+	if (fd < 0 || hash == NULL || lseek(fd, 0, SEEK_SET) == -1)
+		return 0;
+	SHA256_Init(&ctx);
+	while ((len = read(fd, buffer, sizeof(buffer))) != 0) {
+		if (len < 0) {
+			if (errno == EINTR)
+				continue;
+			return 0;
+		}
+		SHA256_Update(&ctx, buffer, (size_t)len);
+	}
+	SHA256_Final(digest, &ctx);
+	for (size_t i = 0; i < sizeof(digest); i++)
+		(void)snprintf(filehash + (i * 2), sizeof(filehash) - (i * 2), "%02x", digest[i]);
+
+	return strncmp(filehash, hash, 64) == 0;
 }
 
 char *
@@ -212,8 +237,8 @@ mport_build_infrastructure_path(mportInstance *mport, mportPackageMeta *pkg, con
 	int len;
 	const char *root;
 
-	if (pkg == NULL || pkg->name == NULL || pkg->version == NULL || name == NULL || path == NULL ||
-	    path_size == 0) {
+	if (pkg == NULL || pkg->name == NULL || pkg->version == NULL || name == NULL ||
+	    path == NULL || path_size == 0) {
 		RETURN_ERROR(MPORT_ERR_FATAL, "Invalid infrastructure path arguments.");
 	}
 
@@ -235,6 +260,31 @@ mport_hash_file(const char *filename)
 {
 
 	return SHA256_File(filename, NULL);
+}
+
+/* mport_same_file_contents(a, b, &same)
+ *
+ * Set same to whether files a and b have the same contents, compared by
+ * SHA256 hash.
+ */
+int
+mport_same_file_contents(/*@notnull@*/ const char *a, /*@notnull@*/ const char *b,
+    /*@out@*/ bool *same)
+{
+	char *ha, *hb;
+
+	if ((ha = mport_hash_file(a)) == NULL)
+		RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't hash %s: %s", a, strerror(errno));
+	if ((hb = mport_hash_file(b)) == NULL) {
+		free(ha);
+		RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't hash %s: %s", b, strerror(errno));
+	}
+
+	*same = strcmp(ha, hb) == 0;
+	free(ha);
+	free(hb);
+
+	return MPORT_OK;
 }
 
 uid_t
@@ -320,33 +370,54 @@ mport_rmtree(const char *filename)
 
 /*
  * Copy file fromname to toname
+ * Uses O_NOFOLLOW to prevent symlink attacks (TOCTOU mitigation)
  */
+/*@requires fromName != NULL && toName != NULL @*/
+/*@ensures result == MPORT_OK || result == MPORT_ERR_FATAL @*/
 int
-mport_copy_file(const char *fromName, const char *toName)
+mport_copy_file(/*@notnull@*/ /*@observer@*/ const char *fromName,
+    /*@notnull@*/ /*@observer@*/ const char *toName)
 {
 	char buf[BUFSIZ];
-	size_t size;
+	ssize_t size;
+	int from_fd = -1;
+	int to_fd = -1;
+	int ret = MPORT_OK;
 
-	FILE *fsrc = fopen(fromName, "re");
-	if (fsrc == NULL)
+	from_fd = open(fromName, O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
+	if (from_fd == -1) {
 		RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't open source file for copying %s: %s",
 		    fromName, strerror(errno));
+	}
 
-	FILE *fdest = fopen(toName, "we");
-	if (fdest == NULL) {
-		fclose(fsrc);
+	to_fd = open(toName, O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW | O_CLOEXEC, 0644);
+	if (to_fd == -1) {
+		close(from_fd);
 		RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't open destination file for copying %s: %s",
 		    toName, strerror(errno));
 	}
 
-	while ((size = fread(buf, 1, BUFSIZ, fsrc)) > 0) {
-		fwrite(buf, 1, size, fdest);
+	while ((size = read(from_fd, buf, BUFSIZ)) > 0) {
+		if (write(to_fd, buf, size) != size) {
+			ret = SET_ERRORX(
+			    MPORT_ERR_FATAL, "Error writing to %s: %s", toName, strerror(errno));
+			goto cleanup;
+		}
 	}
 
-	fclose(fsrc);
-	fclose(fdest);
+	if (size == -1) {
+		ret = SET_ERRORX(
+		    MPORT_ERR_FATAL, "Error reading from %s: %s", fromName, strerror(errno));
+		goto cleanup;
+	}
 
-	return (MPORT_OK);
+cleanup:
+	if (from_fd != -1)
+		close(from_fd);
+	if (to_fd != -1)
+		close(to_fd);
+
+	return (ret);
 }
 
 int
@@ -373,10 +444,25 @@ mport_copy_fd(int from_fd, int to_fd)
 /*
  * create a directory with mode 755.  Do not fail if the
  * directory exists already.
+ * Uses lstat to check for symlinks before mkdir (TOCTOU mitigation)
  */
+/*@requires dir != NULL @*/
+/*@ensures result == MPORT_OK || result == MPORT_ERR_FATAL @*/
 int
-mport_mkdir(const char *dir)
+mport_mkdir(/*@notnull@*/ /*@observer@*/ const char *dir)
 {
+	struct stat sb;
+
+	/* Check if path exists and is a symlink - refuse to follow it */
+	if (lstat(dir, &sb) == 0) {
+		if (S_ISLNK(sb.st_mode)) {
+			RETURN_ERRORX(
+			    MPORT_ERR_FATAL, "Refusing to mkdir %s: path is a symlink", dir);
+		}
+		/* Path exists and is not a symlink - mkdir will fail with EEXIST */
+		return (MPORT_OK);
+	}
+
 	if (mkdir(dir, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH) != 0) {
 		if (errno != EEXIST)
 			RETURN_ERRORX(
@@ -810,7 +896,7 @@ mport_xsystem(mportInstance *mport, const char *fmt, ...)
 void
 mport_parselist(char *opt, char ***list, size_t *list_size)
 {
-	char *input;
+	char *input, *input_ptr;
 	char *field;
 	char *scan, *scan_ptr;
 
@@ -821,6 +907,7 @@ mport_parselist(char *opt, char ***list, size_t *list_size)
 		*list = NULL;
 		return;
 	}
+	input_ptr = input;
 
 	if ((scan = strdup(opt)) == NULL) {
 		free(input);
@@ -853,7 +940,7 @@ mport_parselist(char *opt, char ***list, size_t *list_size)
 	char **vec = *list;
 
 	size_t loc = 0;
-	while ((field = strsep(&input, " \t\n")) != NULL) {
+	while ((field = strsep(&input_ptr, " \t\n")) != NULL) {
 		if (loc == *list_size)
 			break;
 
@@ -889,7 +976,7 @@ mport_parselist(char *opt, char ***list, size_t *list_size)
 void
 mport_parselist_tll(char *opt, stringlist_t *list)
 {
-	char *input;
+	char *input, *input_ptr;
 	char *field;
 
 	if (opt == NULL || list == NULL)
@@ -898,10 +985,9 @@ mport_parselist_tll(char *opt, stringlist_t *list)
 	if ((input = strdup(opt)) == NULL) {
 		return;
 	}
+	input_ptr = input;
 
-	while ((field = strsep(&input, " \t\n")) != NULL) {
-		if (field != NULL && *field != '\0')
-			tll_push_back(*list, strdup(field));
+	while ((field = strsep(&input_ptr, " \t\n")) != NULL) {
 		if (field != NULL && *field != '\0') {
 			char *s = strdup(field);
 			if (s != NULL)
@@ -930,70 +1016,70 @@ int
 mport_run_asset_exec(mportInstance *mport, const char *fmt, const char *cwd, const char *last_file)
 {
 	size_t l;
+	size_t remaining;
 	char *cmnd = NULL;
 	char *pos = NULL;
 	char *name = NULL;
 	char *lfcpy = NULL;
 	int ret;
-	static int max = 0;
-	size_t maxlen = sizeof(max);
+	static int argmax = 0;
+	size_t argmaxlen = sizeof(argmax);
 
-	if (max == 0) {
-		if (sysctlbyname("kern.argmax", &max, &maxlen, NULL, 0) < 0)
+	/* argmax is a cached kern.argmax; it must never be decremented, or a
+	   later call would malloc a stale (eventually negative/huge) size. */
+	if (argmax <= 0) {
+		if (sysctlbyname("kern.argmax", &argmax, &argmaxlen, NULL, 0) < 0 || argmax <= 0)
 			RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't determine maximum argument length");
 	}
 
-	if ((cmnd = malloc(max * sizeof(char))) == NULL)
+	if ((cmnd = malloc((size_t)argmax)) == NULL)
 		RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory");
 	pos = cmnd;
+	remaining = (size_t)argmax; /* bytes left in cmnd, including the final NUL slot */
 
-	while (*fmt && max > 0) {
+	while (*fmt && remaining > 1) {
 		if (*fmt == '%') {
 			fmt++;
 			switch (*fmt) {
 			case 'F':
 				/* last_file is absolute, so we skip the cwd at the begining */
-				(void)strlcpy(pos, last_file + strlen(cwd) + 1, max);
-				l = strlen(last_file + strlen(cwd) + 1);
-				pos += l;
-				max -= l;
+				l = strlcpy(pos, last_file + strlen(cwd) + 1, remaining);
 				break;
 			case 'D':
-				(void)strlcpy(pos, cwd, max);
-				l = strlen(cwd);
-				pos += l;
-				max -= l;
+				l = strlcpy(pos, cwd, remaining);
 				break;
 			case 'B':
 				lfcpy = strdup(last_file);
-				if (lfcpy == NULL)
+				if (lfcpy == NULL) {
+					free(cmnd);
 					RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory");
+				}
 				name = dirname(lfcpy); /* dirname(3) in MidnightBSD 3.0 and higher
 							  modifies the source. */
-				(void)strlcpy(pos, name, max);
-				l = strlen(name);
-				pos += l;
-				max -= l;
+				l = strlcpy(pos, name, remaining);
 				free(lfcpy);
+				lfcpy = NULL;
 				break;
 			case 'f':
 				name = basename((char *)last_file);
-				(void)strlcpy(pos, name, max);
-				l = strlen(name);
-				pos += l;
-				max -= l;
+				l = strlcpy(pos, name, remaining);
 				break;
 			default:
-				*pos = *fmt;
-				max--;
-				pos++;
+				*pos++ = *fmt;
+				remaining--;
+				fmt++;
+				continue;
 			}
+			/* strlcpy returns the length it tried to write; clamp to
+			   what actually fit so pos never advances past cmnd. */
+			if (l >= remaining)
+				l = remaining - 1;
+			pos += l;
+			remaining -= l;
 			fmt++;
 		} else {
-			*pos = *fmt;
-			pos++;
-			fmt++;
-			max--;
+			*pos++ = *fmt++;
+			remaining--;
 		}
 	}
 
@@ -1025,7 +1111,6 @@ mport_free_vec(void *vec)
 	}
 
 	free(vec);
-	vec = NULL;
 }
 
 int
@@ -1136,9 +1221,16 @@ MPORT_PUBLIC_API char *
 mport_get_osrelease(mportInstance *mport)
 {
 	char *version = NULL;
+	const char *abi_file = getenv("ABI_FILE");
 
-	// honor settings first
-	if (mport != NULL) {
+	// a cross build names a target binary; its ABI note wins.  A file
+	// without a MidnightBSD note leaves the release to the next source.
+	if (abi_file != NULL && abi_file[0] != '\0' &&
+	    mport_abi_file_read(abi_file, &version, NULL, NULL) != MPORT_OK)
+		return NULL;
+
+	// then the setting
+	if (version == NULL && mport != NULL) {
 		version = mport_setting_get(mport, MPORT_SETTING_TARGET_OS);
 	}
 
@@ -1161,6 +1253,18 @@ mport_get_osreleasedate(void)
 	int osreleasedate;
 	size_t len = sizeof(osreleasedate);
 	char *date = NULL;
+	const char *abi_file = getenv("ABI_FILE");
+	uint32_t tag;
+
+	if (abi_file != NULL && abi_file[0] != '\0') {
+		if (mport_abi_file_read(abi_file, NULL, &tag, NULL) != MPORT_OK)
+			return NULL;
+		if (tag != 0) {
+			if (asprintf(&date, "%u", tag) == -1)
+				return NULL;
+			return date;
+		}
+	}
 
 	if (sysctlbyname("kern.osreldate", &osreleasedate, &len, NULL, 0) < 0)
 		return NULL;

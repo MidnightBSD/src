@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2020 Thomas E. Dickey                                          *
+ * Copyright 2020,2024 Thomas E. Dickey                                     *
  * Copyright 1998-2010,2012 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -33,7 +33,7 @@
 
 #include "form.priv.h"
 
-MODULE_ID("$Id: fld_dup.c,v 1.15 2020/02/02 23:34:34 tom Exp $")
+MODULE_ID("$Id: fld_dup.c,v 1.19 2024/11/30 21:40:55 tom Exp $")
 
 /*---------------------------------------------------------------------------
 |   Facility      :  libnform
@@ -48,7 +48,7 @@ MODULE_ID("$Id: fld_dup.c,v 1.15 2020/02/02 23:34:34 tom Exp $")
 |
 |   Return Values :  Pointer to the new field or NULL if failure
 +--------------------------------------------------------------------------*/
-NCURSES_EXPORT(FIELD *)
+FORM_EXPORT(FIELD *)
 dup_field(FIELD *field, int frow, int fcol)
 {
   FIELD *New_Field = (FIELD *)0;
@@ -61,8 +61,8 @@ dup_field(FIELD *field, int frow, int fcol)
     {
       T((T_CREATE("field %p"), (void *)New_Field));
       *New_Field = *_nc_Default_Field;
-      New_Field->frow = (short) frow;
-      New_Field->fcol = (short) fcol;
+      New_Field->frow = (short)frow;
+      New_Field->fcol = (short)fcol;
       New_Field->link = New_Field;
       New_Field->rows = field->rows;
       New_Field->cols = field->cols;
@@ -80,13 +80,12 @@ dup_field(FIELD *field, int frow, int fcol)
 
       if (_nc_Copy_Type(New_Field, field))
 	{
-	  size_t i, len;
+	  size_t len;
 
 	  len = Total_Buffer_Size(New_Field);
-	  if ((New_Field->buf = (FIELD_CELL *)malloc(len)))
+	  if ((New_Field->buf = (FIELD_CELL *)malloc(len * 20)) != NULL)
 	    {
-	      for (i = 0; i < len; ++i)
-		New_Field->buf[i] = field->buf[i];
+	      memcpy(New_Field->buf, field->buf, len);
 	      returnField(New_Field);
 	    }
 	}

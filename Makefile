@@ -93,7 +93,7 @@
 #
 # See src/UPDATING `COMMON ITEMS' for more complete information.
 #
-# If TARGET=machine (e.g. powerpc, amd64, ...) is specified you can
+# If TARGET=machine (e.g. amd64, arm64, ...) is specified you can
 # cross build world for other machine types using the buildworld target,
 # and once the world is built you can cross build a kernel using the
 # buildkernel target.
@@ -497,20 +497,12 @@ worlds: .PHONY
 .if make(universe) || make(universe_kernels) || make(tinderbox) || \
     make(targets) || make(universe-toolchain)
 #
-# Don't build rarely used, semi-supported architectures unless requested.
+# Architectures supported by the native build.
 #
-.if defined(EXTRA_TARGETS)
-EXTRA_ARCHES_mips=	mipsel mipshf mipselhf mips64el mips64hf mips64elhf
-EXTRA_ARCHES_mips+=	mipsn32
-# powerpcspe excluded from main list until clang fixed
-EXTRA_ARCHES_powerpc=	powerpcspe powerpc64le
-.endif
-TARGETS?=amd64 arm arm64 i386 mips powerpc riscv
+TARGETS?=amd64 arm arm64 i386 riscv
 _UNIVERSE_TARGETS=	${TARGETS}
 TARGET_ARCHES_arm?=	armv6 armv7
 TARGET_ARCHES_arm64?=	aarch64
-TARGET_ARCHES_mips?=	mips mips64 ${EXTRA_ARCHES_mips}
-TARGET_ARCHES_powerpc?=	powerpc powerpc64 ${EXTRA_ARCHES_powerpc}
 TARGET_ARCHES_riscv?=	riscv64 riscv64sf
 .for target in ${TARGETS}
 TARGET_ARCHES_${target}?= ${target}
@@ -522,9 +514,6 @@ TOOLCHAINS_arm=		armv6-gcc9 armv7-gcc9
 TOOLCHAIN_armv7=	armv7-gcc9
 TOOLCHAINS_arm64=	aarch64-gcc9
 TOOLCHAINS_i386=	i386-gcc9
-TOOLCHAINS_mips=	mips-gcc9
-TOOLCHAINS_powerpc=	powerpc-gcc9 powerpc64-gcc9
-TOOLCHAIN_powerpc64=	powerpc64-gcc9
 TOOLCHAINS_riscv=	riscv64-gcc9
 .endif
 

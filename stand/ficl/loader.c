@@ -1058,10 +1058,6 @@ void ficlCompilePlatform(FICL_SYSTEM *pSys)
 
 #if defined(__i386__)
     ficlSetEnv(pSys, "arch-i386",         FICL_TRUE);
-    ficlSetEnv(pSys, "arch-powerpc",      FICL_FALSE);
-#elif defined(__powerpc__)
-    ficlSetEnv(pSys, "arch-i386",         FICL_FALSE);
-    ficlSetEnv(pSys, "arch-powerpc",      FICL_TRUE);
 #endif
 
     return;

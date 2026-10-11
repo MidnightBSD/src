@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2020 Thomas E. Dickey                                          *
+ * Copyright 2020,2024 Thomas E. Dickey                                     *
  * Copyright 1998-2010,2016 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -33,7 +33,7 @@
 
 #include "form.priv.h"
 
-MODULE_ID("$Id: fld_current.c,v 1.15 2020/02/02 23:34:34 tom Exp $")
+MODULE_ID("$Id: fld_current.c,v 1.17 2024/12/07 23:01:42 tom Exp $")
 
 /*---------------------------------------------------------------------------
 |   Facility      :  libnform
@@ -48,13 +48,13 @@ MODULE_ID("$Id: fld_current.c,v 1.15 2020/02/02 23:34:34 tom Exp $")
 |                    E_INVALID_FIELD   - current field can't be left
 |                    E_SYSTEM_ERROR    - system error
 +--------------------------------------------------------------------------*/
-NCURSES_EXPORT(int)
+FORM_EXPORT(int)
 set_current_field(FORM *form, FIELD *field)
 {
   int err = E_OK;
 
   T((T_CALLED("set_current_field(%p,%p)"), (void *)form, (void *)field));
-  if (form == 0 || field == 0)
+  if (form == NULL || field == NULL)
     {
       RETURN(E_BAD_ARGUMENT);
     }
@@ -113,15 +113,15 @@ set_current_field(FORM *form, FIELD *field)
 |                    E_BAD_ARGUMENT    - invalid form pointer
 |                    E_REQUEST_DENIED  - there is no current field to unfocus
 +--------------------------------------------------------------------------*/
-NCURSES_EXPORT(int)
+FORM_EXPORT(int)
 unfocus_current_field(FORM *const form)
 {
   T((T_CALLED("unfocus_current_field(%p)"), (const void *)form));
-  if (form == 0)
+  if (form == NULL)
     {
       RETURN(E_BAD_ARGUMENT);
     }
-  else if (form->current == 0)
+  else if (form->current == NULL)
     {
       RETURN(E_REQUEST_DENIED);
     }
@@ -137,7 +137,7 @@ unfocus_current_field(FORM *const form)
 |
 |   Return Values :  Pointer to the current field.
 +--------------------------------------------------------------------------*/
-NCURSES_EXPORT(FIELD *)
+FORM_EXPORT(FIELD *)
 current_field(const FORM *form)
 {
   T((T_CALLED("current_field(%p)"), (const void *)form));
@@ -154,11 +154,11 @@ current_field(const FORM *form)
 |   Return Values :  >= 0   : field index
 |                    -1     : fieldpointer invalid or field not connected
 +--------------------------------------------------------------------------*/
-NCURSES_EXPORT(int)
+FORM_EXPORT(int)
 field_index(const FIELD *field)
 {
   T((T_CALLED("field_index(%p)"), (const void *)field));
-  returnCode((field != 0 && field->form != 0) ? (int)field->index : -1);
+  returnCode((field != NULL && field->form != NULL) ? (int)field->index : -1);
 }
 
 /* fld_current.c ends here */

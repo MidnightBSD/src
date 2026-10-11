@@ -51,6 +51,40 @@ reports_bad_chroot_body()
 		"${MPORT_BIN}" -c "${PWD}/missing-root" search foo
 }
 
+atf_test_case global_option_before_subcommand
+global_option_before_subcommand_head()
+{
+	atf_set "descr" "a global option before a subcommand does not eat its arguments"
+}
+global_option_before_subcommand_body()
+{
+	# version parses its own -t after the global loop consumed -U; with a
+	# stale optind the subcommand saw no arguments and printed usage.
+	atf_check -s exit:0 -o inline:"=\n" -e not-match:"usage: mport" \
+		"${MPORT_BIN}" -U version -t 1 1
+	atf_check -s exit:0 -o inline:"=\n" -e not-match:"usage: mport" \
+		"${MPORT_BIN}" -q -U version -t 2.0 2.0
+	# and the same without a global option still works
+	atf_check -s exit:0 -o inline:"=\n" "${MPORT_BIN}" version -t 1 1
+}
+
+atf_test_case global_option_before_info
+global_option_before_info_head()
+{
+	atf_set "descr" "mport -U info <pkg> runs instead of printing usage (registry required)"
+}
+global_option_before_info_body()
+{
+	if [ ! -f /var/db/mport/master.db ]; then
+		atf_skip "no local package registry at /var/db/mport/master.db"
+	fi
+
+	# whatever info says about an unknown package, it must not be the
+	# usage text that a lost package argument produces
+	atf_check -s ignore -o not-match:"usage: mport" -e not-match:"usage: mport" \
+		"${MPORT_BIN}" -U info no-such-package-zzz
+}
+
 atf_test_case smoke_vector_paths
 smoke_vector_paths_head()
 {
@@ -90,5 +124,7 @@ atf_init_test_cases()
 	atf_add_test_case help_flag_prints_usage
 	atf_add_test_case rejects_invalid_global_flag
 	atf_add_test_case reports_bad_chroot
+	atf_add_test_case global_option_before_subcommand
+	atf_add_test_case global_option_before_info
 	atf_add_test_case smoke_vector_paths
 }

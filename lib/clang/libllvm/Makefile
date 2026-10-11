@@ -10,10 +10,6 @@ PACKAGE=	clang
 SHLIB_CXX=	llvm
 SHLIB_MAJOR=	19
 PRIVATELIB=
-.if ${MACHINE} == "powerpc"
-# Work around "relocation R_PPC_GOT16 out of range" errors
-PICFLAG=        -fPIC
-.endif
 CFLAGS+=	-DLLVM_BUILD_LLVM_DYLIB
 .endif
 

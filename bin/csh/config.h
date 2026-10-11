@@ -70,6 +70,9 @@
 /* Define to 1 if you have the `mallinfo' function. */
 /* #undef HAVE_MALLINFO */
 
+/* Define to 1 if you have the `mallinfo2' function. */
+/* #undef HAVE_MALLINFO2 */
+
 /* Define to 1 if mbrtowc and mbstate_t are properly declared. */
 #define HAVE_MBRTOWC 1
 
@@ -100,6 +103,9 @@
 /* Define to 1 if you have the `sbrk' function. */
 /* #undef HAVE_SBRK 1 */
 
+/* Define to 1 if sbrk() works; irrelevant here because SYSMALLOC is set. */
+/* #undef HAVE_WORKING_SBRK */
+
 /* Define to 1 if you have the `setpgid' function. */
 #define HAVE_SETPGID 1
 
@@ -111,6 +117,12 @@
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #define HAVE_STDINT_H 1
+
+/* Define to 1 if you have the `setproctitle' function. */
+#define HAVE_SETPROCTITLE 1
+
+/* Define to 1 if you have the <stdio.h> header file. */
+#define HAVE_STDIO_H 1
 
 /* Define to 1 if you have the <stdlib.h> header file. */
 #define HAVE_STDLIB_H 1

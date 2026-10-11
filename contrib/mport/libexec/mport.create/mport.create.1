@@ -23,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.Dd April 19, 2026
+.Dd October 4, 2026
 .Dt MPORT.CREATE 1
 .Os
 .Sh NAME
@@ -115,12 +115,19 @@ Expiration date in
 .Dq YYYY-MM-DD
 format.
 .It Fl S Ar no-provide-shlib
-Control whether shared library provides are omitted.
+Record that the package provides no shared libraries to other packages,
+even if it ships some, for example a port that bundles private copies.
 Truthy values include
 .Dq 1 ,
 .Dq y ,
 and
 .Dq t .
+Without this option the record follows the shared library scan described
+under
+.Sx SHARED LIBRARIES .
+.Xr mport 1
+uses the record to accept such a package as a dependency even when it was
+built for an earlier MidnightBSD release.
 .It Fl L Ar lua-script-dir
 Directory containing the Lua hook scripts
 .Pa pkg-pre-install.lua ,
@@ -128,9 +135,132 @@ Directory containing the Lua hook scripts
 .Pa pkg-pre-deinstall.lua ,
 and
 .Pa pkg-post-deinstall.lua .
+Each script runs with these globals set:
+.Bl -tag -width ".Va pkg_shlibs_provided" -compact
+.It Va pkg_name
+The package name.
+.It Va pkg_prefix
+The installation prefix.
+.It Va pkg_rootdir
+The root the package is installed under.
+.It Va pkg_upgrade
+True when the package replaces an installed version.
+.It Va pkg_shlibs_provided
+Array of the shared library sonames the package provides; see
+.Sx SHARED LIBRARIES .
+.It Va pkg_shlibs_required
+Array of the sonames it requires from other packages.
+.El
+Both arrays are empty for a package built before shared libraries were
+recorded.
 .It Fl x Ar deprecated-message
 Deprecation message to record in the package metadata.
 .El
+.Sh SHARED LIBRARIES
+Every regular file in the package is read as an ELF object.
+An object carrying a
+.Dv DT_SONAME
+provides that library and every
+.Dv DT_NEEDED
+entry names a library the package requires.
+Only names beginning with
+.Dq lib
+are considered.
+The lists are stored in the package as
+.Cm shlibs_provided
+and
+.Cm shlibs_required ,
+and the package is marked as providing no shared libraries when the
+provided list is empty.
+.Pp
+Objects for another word size or operating system are tracked with a
+suffix, as
+.Xr pkg 8
+does on FreeBSD:
+.Dq libfoo.so.1:32
+for a 32-bit object on a 64-bit target,
+.Dq libfoo.so.1:Linux
+for a Linux object and
+.Dq libfoo.so.1:Linux:32
+for both.
+.Pp
+A library the package requires is dropped from the required list when the
+package itself installs it, under any path, since nothing else is needed to
+satisfy it.
+A symbolic link is read through its target only when the target lies inside
+the staged tree; a link that points outside it, or at nothing, is ignored
+rather than resolved against the build host.
+A package whose shared objects carry no soname, or whose libraries are all
+outside the provide paths, is recorded as providing none.
+.Pp
+The following environment variables shape the lists.
+Each holds a comma separated list, so a pattern cannot itself contain a
+comma, and a regular expression that does not compile stops the package
+from being created.
+The ports collection sets them from
+.Va USE_LDCONFIG ,
+.Va LIB_DIRS ,
+.Va NO_SHLIB_REQUIRES_GLOB
+and
+.Va NO_SHLIBS_REQUIRES_REGEX .
+.Bl -tag -width ".Ev SHLIB_PROVIDE_PATHS_COMPAT_LINUX_32"
+.It Ev SHLIB_PROVIDE_PATHS_NATIVE
+Directories whose native libraries the package provides to others.
+A library installed anywhere else is private to the package: it is left
+out of the provided list but still cancels the package's own requirement
+for it.
+When unset, every library is provided.
+.It Ev SHLIB_PROVIDE_PATHS_COMPAT_32
+The same for 32-bit objects on a 64-bit target.
+.It Ev SHLIB_PROVIDE_PATHS_COMPAT_LINUX
+The same for Linux objects.
+.It Ev SHLIB_PROVIDE_PATHS_COMPAT_LINUX_32
+The same for 32-bit Linux objects.
+.It Ev SHLIB_PROVIDE_IGNORE_GLOB
+.Xr fnmatch 3
+patterns; a provided library matching one is dropped.
+.It Ev SHLIB_PROVIDE_IGNORE_REGEX
+Extended regular expressions with the same effect.
+.It Ev SHLIB_REQUIRE_IGNORE_GLOB
+Patterns; a required library matching one is dropped.
+.It Ev SHLIB_REQUIRE_IGNORE_REGEX
+Extended regular expressions with the same effect.
+.El
+.Pp
+The plist keyword
+.Cm @ldconfig
+and the provided list are expected to agree.
+A warning is printed when the keyword is present but no native shared
+library was found under
+.Ev SHLIB_PROVIDE_PATHS_NATIVE ,
+and when native shared libraries are provided but the plist has no
+.Cm @ldconfig ,
+since the run-time linker will not find them until ldconfig runs.
+Neither stops the package from being created.
+.Sh ENVIRONMENT
+.Bl -tag -width ".Ev ABI_FILE"
+.It Ev ABI_FILE
+Path to a binary built for the target system, for cross builds and jails
+where it differs from the build host.
+The ports collection sets it to
+.Pa ${CROSS_SYSROOT}/bin/sh
+when
+.Va CROSS_SYSROOT
+is set.
+The MidnightBSD ABI note in that file gives the release recorded in the
+package, ahead of the
+.Cm target_os
+setting and the running system, and the file's word size is the target's
+when the shared library scan decides which objects are 32-bit compat
+objects; a 64-bit object in a package for a 32-bit target is not
+scanned.
+A file without a MidnightBSD ABI note sets only the word size.
+A file that cannot be read or is not an ELF object stops the package from
+being created rather than recording the build host's release.
+.El
+.Pp
+The shared library scan also reads the variables listed under
+.Sx SHARED LIBRARIES .
 .Sh EXAMPLES
 Create a package bundle from a fake destdir:
 .Dl $ mport.create -n hello -v 1.0 -o hello-1.0.mport -s work/stage -p pkg-plist -P /usr/local -O misc/hello -t misc

@@ -82,7 +82,7 @@ CPE             : cpe:2.3:a:gnu:make:4.3:::::midnightbsd3:x64:2
 PURL            : pkg:mport/midnightbsd/gmake@4.3_2?arch=amd64&osrel=3.0
 Locked          : no
 Prime           : yes
-Shared library  : no
+Provides shlibs : no
 Deprecated      : no
 Expiration Date : 
 Install Date    : Tue Mar 28 17:51:14 2023

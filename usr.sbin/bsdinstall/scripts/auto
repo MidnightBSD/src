@@ -353,6 +353,9 @@ trap true SIGINT	# This section is optional
 if [ "$NETCONFIG_DONE" != yes ]; then
 	bsdinstall netconfig	# Don't check for errors -- the user may cancel
 fi
+if [ -r /packages/installer.tsv ]; then
+	bsdinstall packages
+fi
 bsdinstall time
 bsdinstall services
 bsdinstall hardening
@@ -362,10 +365,7 @@ dialog --backtitle "MidnightBSD Installer" --title "Add User Accounts" --yesno \
     bsdinstall adduser
 
 finalconfig() {
-	exec 3>&1
-	REVISIT=$(dialog --backtitle "MidnightBSD Installer" \
-	    --title "Final Configuration" --no-cancel --menu \
-	    "Setup of your MidnightBSD system is nearly complete. You can now modify your configuration choices. After this screen, you will have an opportunity to make more complex changes using a shell." 0 0 0 \
+	set -- \
 		"Exit" "Apply configuration and exit installer" \
 		"Add User" "Add a user to the system" \
 		"Root Password" "Change root password" \
@@ -373,7 +373,15 @@ finalconfig() {
 		"Network" "Networking configuration" \
 		"Services" "Set daemons to run on startup" \
 		"System Hardening" "Set security options" \
-		"Time Zone" "Set system timezone" 2>&1 1>&3)
+		"Time Zone" "Set system timezone"
+	if [ -r /packages/installer.tsv ]; then
+		set -- "$@" "Packages" "Install additional applications"
+	fi
+
+	exec 3>&1
+	REVISIT=$(dialog --backtitle "MidnightBSD Installer" \
+	    --title "Final Configuration" --no-cancel --menu \
+	    "Setup of your MidnightBSD system is nearly complete. You can now modify your configuration choices. After this screen, you will have an opportunity to make more complex changes using a shell." 0 0 0 "$@" 2>&1 1>&3)
 	exec 3>&-
 
 	case "$REVISIT" in
@@ -391,6 +399,10 @@ finalconfig() {
 		;;
 	"Network")
 		bsdinstall netconfig
+		finalconfig
+		;;
+	"Packages")
+		bsdinstall packages
 		finalconfig
 		;;
 	"Services")

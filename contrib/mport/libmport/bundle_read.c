@@ -34,6 +34,7 @@
 #include <string.h>
 #include <errno.h>
 #include <archive_entry.h>
+#include <fcntl.h>
 #include <unistd.h>
 
 /*
@@ -45,7 +46,12 @@
 mportBundleRead *
 mport_bundle_read_new(void)
 {
-	return (mportBundleRead *)calloc(1, sizeof(mportBundleRead));
+	mportBundleRead *bundle;
+
+	if ((bundle = (mportBundleRead *)calloc(1, sizeof(mportBundleRead))) != NULL)
+		bundle->archive_fd = -1;
+
+	return (bundle);
 }
 
 /*
@@ -82,6 +88,34 @@ mport_bundle_read_init(mportBundleRead *bundle, const char *filename)
 }
 
 /*
+ * libarchive reads from a close-on-exec duplicate that the bundle owns and
+ * closes in mport_bundle_read_finish(); archive_read_open_fd() never closes
+ * the descriptor it is given.  The caller retains its own descriptor.
+ */
+int
+mport_bundle_read_init_fd(mportBundleRead *bundle, int fd)
+{
+
+	if (bundle == NULL || fd < 0)
+		RETURN_ERROR(MPORT_ERR_FATAL, "Invalid bundle file descriptor");
+	if ((bundle->filename = strdup("(bundle file descriptor)")) == NULL)
+		RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't dup bundle filename");
+	if ((bundle->archive = archive_read_new()) == NULL)
+		RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't initialize archive read");
+	if (archive_read_support_format_tar(bundle->archive) != ARCHIVE_OK ||
+	    archive_read_support_filter_xz(bundle->archive) != ARCHIVE_OK)
+		RETURN_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));
+	if (lseek(fd, 0, SEEK_SET) == -1)
+		RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't rewind bundle file descriptor");
+	if ((bundle->archive_fd = fcntl(fd, F_DUPFD_CLOEXEC, 0)) == -1)
+		RETURN_ERROR(MPORT_ERR_FATAL, "Couldn't duplicate bundle file descriptor");
+	if (archive_read_open_fd(bundle->archive, bundle->archive_fd, 10240) != ARCHIVE_OK)
+		RETURN_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));
+
+	return (MPORT_OK);
+}
+
+/*
  * mport_bundle_read_finish(bundle)
  *
  * close the file connected to the bundle, and free any memory allocated.
@@ -102,11 +136,16 @@ mport_bundle_read_finish(mportInstance *mport, mportBundleRead *bundle)
 			ret = SET_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));
 		}
 
-		if (ret != MPORT_ERR_FATAL && archive_read_free(bundle->archive) != ARCHIVE_OK) {
+		if (archive_read_free(bundle->archive) != ARCHIVE_OK && ret == MPORT_OK) {
 			mport_call_msg_cb(
 			    mport, "Unable to free memory used by package archive file.");
 			ret = SET_ERROR(MPORT_ERR_FATAL, archive_error_string(bundle->archive));
 		}
+	}
+
+	if (bundle->archive_fd >= 0) {
+		(void)close(bundle->archive_fd);
+		bundle->archive_fd = -1;
 	}
 
 	if (bundle->stub_attached && (mport != NULL)) {
@@ -190,29 +229,6 @@ mport_bundle_read_extract_metafiles(mportBundleRead *bundle, char **dirnamep)
 			 * we want to hold on to that until next_entry() is
 			 * called
 			 */
-			bundle->firstreal = entry;
-			break;
-		}
-	}
-
-	return (MPORT_OK);
-}
-
-/*
- * mport_bundle_read_skip_metafiles(bundle)
- *
- * Skip all the metafiles, leaving the bundle ready for reading datafiles.
- */
-int
-mport_bundle_read_skip_metafiles(mportBundleRead *bundle)
-{
-	struct archive_entry *entry;
-
-	while (1) {
-		if (mport_bundle_read_next_entry(bundle, &entry) != MPORT_OK)
-			RETURN_CURRENT_ERROR;
-
-		if (*(archive_entry_pathname(entry)) != '+') {
 			bundle->firstreal = entry;
 			break;
 		}

@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2020 Thomas E. Dickey                                          *
+ * Copyright 2020-2022,2024 Thomas E. Dickey                                *
  * Copyright 1998-2010,2012 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -38,7 +38,7 @@
 
 #include "menu.priv.h"
 
-MODULE_ID("$Id: m_post.c,v 1.32 2020/02/02 23:34:34 tom Exp $")
+MODULE_ID("$Id: m_post.c,v 1.41 2024/07/27 18:08:59 tom Exp $")
 
 /*---------------------------------------------------------------------------
 |   Facility      :  libnmenu
@@ -49,8 +49,8 @@ MODULE_ID("$Id: m_post.c,v 1.32 2020/02/02 23:34:34 tom Exp $")
 |
 |   Return Values :  -
 +--------------------------------------------------------------------------*/
-NCURSES_EXPORT(void)
-_nc_Post_Item(const MENU * menu, const ITEM * item)
+MENU_EXPORT(void)
+_nc_Post_Item(const MENU *menu, const ITEM *item)
 {
   int i;
   chtype ch;
@@ -58,7 +58,6 @@ _nc_Post_Item(const MENU * menu, const ITEM * item)
   int count = 0;
   bool isfore = FALSE, isback = FALSE, isgrey = FALSE;
   int name_len;
-  int desc_len;
 
   assert(menu->win);
 
@@ -68,7 +67,7 @@ _nc_Post_Item(const MENU * menu, const ITEM * item)
      - it is a onevalued menu and it is the current item
      - or it has a selection value
    */
-  wattron(menu->win, (int)menu->back);
+  wattr_on(menu->win, menu->back, NULL);
   if (item->value || (item == menu->curitem))
     {
       if (menu->marklen)
@@ -80,13 +79,13 @@ _nc_Post_Item(const MENU * menu, const ITEM * item)
 	     item. */
 	  if (!(menu->opt & O_ONEVALUE) && item->value && item != menu->curitem)
 	    {
-	      wattron(menu->win, (int)menu->fore);
+	      wattr_on(menu->win, menu->fore, NULL);
 	      isfore = TRUE;
 	    }
 	  waddstr(menu->win, menu->mark);
 	  if (isfore)
 	    {
-	      wattron(menu->win, (int)menu->fore);
+	      wattr_on(menu->win, menu->fore, NULL);
 	      isfore = FALSE;
 	    }
 	}
@@ -94,7 +93,7 @@ _nc_Post_Item(const MENU * menu, const ITEM * item)
   else				/* otherwise we have to wipe out the marker area */
     for (ch = ' ', i = menu->marklen; i > 0; i--)
       waddch(menu->win, ch);
-  wattroff(menu->win, (int)menu->back);
+  wattr_off(menu->win, menu->back, NULL);
   count += menu->marklen;
 
   /* First we have to calculate the attribute depending on selectability
@@ -102,19 +101,19 @@ _nc_Post_Item(const MENU * menu, const ITEM * item)
    */
   if (!(item->opt & O_SELECTABLE))
     {
-      wattron(menu->win, (int)menu->grey);
+      wattr_on(menu->win, menu->grey, NULL);
       isgrey = TRUE;
     }
   else
     {
       if (item->value || item == menu->curitem)
 	{
-	  wattron(menu->win, (int)menu->fore);
+	  wattr_on(menu->win, menu->fore, NULL);
 	  isfore = TRUE;
 	}
       else
 	{
-	  wattron(menu->win, (int)menu->back);
+	  wattr_on(menu->win, menu->back, NULL);
 	  isback = TRUE;
 	}
     }
@@ -132,6 +131,7 @@ _nc_Post_Item(const MENU * menu, const ITEM * item)
     {
       int m = menu->spc_desc / 2;
       int cy = -1, cx = -1;
+      int desc_len;
 
       for (ch = ' ', i = 0; i < menu->spc_desc; i++)
 	{
@@ -159,10 +159,10 @@ _nc_Post_Item(const MENU * menu, const ITEM * item)
 	  assert(cx >= 0 && cy >= 0);
 	  getyx(menu->win, ncy, ncx);
 	  if (isgrey)
-	    wattroff(menu->win, (int)menu->grey);
+	    wattr_off(menu->win, menu->grey, NULL);
 	  else if (isfore)
-	    wattroff(menu->win, (int)menu->fore);
-	  wattron(menu->win, (int)menu->back);
+	    wattr_off(menu->win, menu->fore, NULL);
+	  wattr_on(menu->win, menu->back, NULL);
 	  for (j = 1; j < menu->spc_rows; j++)
 	    {
 	      if ((item_y + j) < getmaxy(menu->win))
@@ -176,17 +176,17 @@ _nc_Post_Item(const MENU * menu, const ITEM * item)
 	    }
 	  wmove(menu->win, ncy, ncx);
 	  if (!isback)
-	    wattroff(menu->win, (int)menu->back);
+	    wattr_off(menu->win, menu->back, NULL);
 	}
     }
 
   /* Remove attributes */
   if (isfore)
-    wattroff(menu->win, (int)menu->fore);
+    wattr_off(menu->win, menu->fore, NULL);
   if (isback)
-    wattroff(menu->win, (int)menu->back);
+    wattr_off(menu->win, menu->back, NULL);
   if (isgrey)
-    wattroff(menu->win, (int)menu->grey);
+    wattr_off(menu->win, menu->grey, NULL);
 }
 
 /*---------------------------------------------------------------------------
@@ -197,13 +197,12 @@ _nc_Post_Item(const MENU * menu, const ITEM * item)
 |
 |   Return Values :  -
 +--------------------------------------------------------------------------*/
-NCURSES_EXPORT(void)
-_nc_Draw_Menu(const MENU * menu)
+MENU_EXPORT(void)
+_nc_Draw_Menu(const MENU *menu)
 {
   ITEM *item = menu->items[0];
-  ITEM *lasthor, *lastvert;
+  const ITEM *lastvert;
   ITEM *hitem;
-  int y = 0;
   chtype s_bkgd;
 
   assert(item && menu->win);
@@ -213,45 +212,52 @@ _nc_Draw_Menu(const MENU * menu)
   werase(menu->win);
   wbkgdset(menu->win, s_bkgd);
 
-  lastvert = (menu->opt & O_NONCYCLIC) ? (ITEM *) 0 : item;
+  lastvert = (menu->opt & O_NONCYCLIC) ? (ITEM *)0 : item;
 
-  do
+  if (item != NULL)
     {
-      wmove(menu->win, y, 0);
-
-      hitem = item;
-      lasthor = (menu->opt & O_NONCYCLIC) ? (ITEM *) 0 : hitem;
+      int y = 0;
 
       do
 	{
-	  _nc_Post_Item(menu, hitem);
+	  const ITEM *lasthor;
 
-	  wattron(menu->win, (int)menu->back);
-	  if (((hitem = hitem->right) != lasthor) && hitem)
+	  wmove(menu->win, y, 0);
+
+	  hitem = item;
+	  lasthor = (menu->opt & O_NONCYCLIC) ? (ITEM *)0 : hitem;
+
+	  do
 	    {
-	      int i, j, cy, cx;
-	      chtype ch = ' ';
+	      _nc_Post_Item(menu, hitem);
 
-	      getyx(menu->win, cy, cx);
-	      for (j = 0; j < menu->spc_rows; j++)
+	      wattr_on(menu->win, menu->back, NULL);
+	      if (((hitem = hitem->right) != lasthor) && hitem)
 		{
-		  wmove(menu->win, cy + j, cx);
-		  for (i = 0; i < menu->spc_cols; i++)
+		  int i, j, cy, cx;
+		  chtype ch = ' ';
+
+		  getyx(menu->win, cy, cx);
+		  for (j = 0; j < menu->spc_rows; j++)
 		    {
-		      waddch(menu->win, ch);
+		      wmove(menu->win, cy + j, cx);
+		      for (i = 0; i < menu->spc_cols; i++)
+			{
+			  waddch(menu->win, ch);
+			}
 		    }
+		  wmove(menu->win, cy, cx + menu->spc_cols);
 		}
-	      wmove(menu->win, cy, cx + menu->spc_cols);
 	    }
+	  while (hitem && (hitem != lasthor));
+	  wattr_off(menu->win, menu->back, NULL);
+
+	  item = item->down;
+	  y += menu->spc_rows;
+
 	}
-      while (hitem && (hitem != lasthor));
-      wattroff(menu->win, (int)menu->back);
-
-      item = item->down;
-      y += menu->spc_rows;
-
+      while (item && (item != lastvert));
     }
-  while (item && (item != lastvert));
 }
 
 /*---------------------------------------------------------------------------
@@ -267,8 +273,8 @@ _nc_Draw_Menu(const MENU * menu)
 |                    E_BAD_STATE         - Menu in userexit routine
 |                    E_POSTED            - Menu already posted
 +--------------------------------------------------------------------------*/
-NCURSES_EXPORT(int)
-post_menu(MENU * menu)
+MENU_EXPORT(int)
+post_menu(MENU *menu)
 {
   T((T_CALLED("post_menu(%p)"), (void *)menu));
 
@@ -283,15 +289,15 @@ post_menu(MENU * menu)
 
   if (menu->items && *(menu->items))
     {
-      int y;
       int h = 1 + menu->spc_rows * (menu->rows - 1);
 
-      WINDOW *win = Get_Menu_Window(menu);
+      const WINDOW *win = Get_Menu_Window(menu);
       int maxy = getmaxy(win);
 
       if ((menu->win = newpad(h, menu->width)))
 	{
-	  y = (maxy >= h) ? h : maxy;
+	  int y = (maxy >= h) ? h : maxy;
+
 	  if (y >= menu->height)
 	    y = menu->height;
 	  if (!(menu->sub = subpad(menu->win, y, menu->width, 0, 0)))
@@ -339,8 +345,8 @@ post_menu(MENU * menu)
 |                    E_BAD_STATE       - menu in userexit routine
 |                    E_NOT_POSTED      - menu is not posted
 +--------------------------------------------------------------------------*/
-NCURSES_EXPORT(int)
-unpost_menu(MENU * menu)
+MENU_EXPORT(int)
+unpost_menu(MENU *menu)
 {
   WINDOW *win;
 

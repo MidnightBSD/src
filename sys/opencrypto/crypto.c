@@ -62,6 +62,7 @@
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/counter.h>
+#include <sys/fail.h>
 #include <sys/kernel.h>
 #include <sys/kthread.h>
 #include <sys/linker.h>
@@ -157,6 +158,9 @@ static	struct mtx crypto_q_mtx;
 
 SYSCTL_NODE(_kern, OID_AUTO, crypto, CTLFLAG_RW, 0,
     "In-kernel cryptography");
+
+static SYSCTL_NODE(_debug_fail_point, OID_AUTO, crypto, CTLFLAG_RW, 0,
+    "OCF fail points");
 
 /*
  * Taskqueue used to dispatch the crypto requests
@@ -1887,6 +1891,18 @@ crypto_done(struct cryptop *crp)
 	KASSERT((crp->crp_flags & CRYPTO_F_DONE) == 0,
 		("crypto_done: op already done, flags 0x%x", crp->crp_flags));
 	crp->crp_flags |= CRYPTO_F_DONE;
+
+	if (crp->crp_etype == 0) {
+		switch (crp->crp_session->csp.csp_mode) {
+		case CSP_MODE_DIGEST:
+		case CSP_MODE_AEAD:
+			if ((crp->crp_op & CRYPTO_OP_VERIFY_DIGEST) != 0)
+				KFAIL_POINT_CODE(_debug_fail_point_crypto,
+				    inject_badmsg, crp->crp_etype = EBADMSG);
+			break;
+		}
+	}
+
 	if (crp->crp_etype != 0)
 		CRYPTOSTAT_INC(cs_errs);
 

@@ -108,6 +108,11 @@ env_setup() {
 	WITH_DVD=
 	WITH_COMPRESSED_IMAGES=
 
+	# A blessed mport repository and optional package-root override used when
+	# constructing dvd1.iso.
+	MPORT_REPOSITORY=
+	DVD_PACKAGE_ROOTS=
+
 	# Set to non-empty value to build virtual machine images as part of
 	# the release.
 	WITH_VMIMAGES=
@@ -194,6 +199,12 @@ env_check() {
 		KERNCONF=\"${KERNEL}\" ${CONF_FILES} ${SRCPORTS} \
 		WITH_DVD=${WITH_DVD} WITH_VMIMAGES=${WITH_VMIMAGES} \
 		WITH_CLOUDWARE=${WITH_CLOUDWARE} XZ_THREADS=${XZ_THREADS}"
+	if [ -n "${MPORT_REPOSITORY}" ]; then
+		RELEASE_RMAKEFLAGS="${RELEASE_RMAKEFLAGS} MPORT_REPOSITORY=${MPORT_REPOSITORY}"
+	fi
+	if [ -n "${DVD_PACKAGE_ROOTS}" ]; then
+		RELEASE_RMAKEFLAGS="${RELEASE_RMAKEFLAGS} DVD_PACKAGE_ROOTS=\"${DVD_PACKAGE_ROOTS}\""
+	fi
 
 	return 0
 } # env_check()
@@ -211,10 +222,10 @@ chroot_setup() {
 		fi
 	fi
 	if [ -z "${NOPORTS}" ] && [ -z "${PORTS_UPDATE_SKIP}" ]; then
-		if [ -d "${CHROOTDIR}/usr/ports/.git" ]; then
-			git -C ${CHROOTDIR}/usr/ports pull -q
+		if [ -d "${CHROOTDIR}/usr/mports/.git" ]; then
+			git -C ${CHROOTDIR}/usr/mports pull -q
 		else
-			${VCSCMD} ${PORT} -b ${PORTBRANCH} ${CHROOTDIR}/usr/ports
+			${VCSCMD} ${PORT} -b ${PORTBRANCH} ${CHROOTDIR}/usr/mports
 		fi
 	fi
 
@@ -238,7 +249,7 @@ extra_chroot_setup() {
 	[ -e /etc/resolv.conf -a ! -e ${CHROOTDIR}/etc/resolv.conf ] && \
 		cp /etc/resolv.conf ${CHROOTDIR}/etc/resolv.conf
 	# Run ldconfig(8) in the chroot directory so /var/run/ld-elf*.so.hints
-	# is created.  This is needed by ports-mgmt/pkg.
+	# is created.  This is needed when building software from mports.
 	eval chroot ${CHROOTDIR} /etc/rc.d/ldconfig forcerestart
 
 	# If MAKE_CONF and/or SRC_CONF are set and not character devices
@@ -254,9 +265,9 @@ extra_chroot_setup() {
 
 	_gitcmd="$(which git)"
 	if [ -z "${NOGIT}" -a -z "${_gitcmd}" ]; then
-		# Install git from ports if the ports tree is available;
-		# otherwise install the pkg.
-		if [ -d ${CHROOTDIR}/usr/ports ]; then
+		# Install git from mports if the mports tree is available;
+		# otherwise install it with mport.
+		if [ -d ${CHROOTDIR}/usr/mports ]; then
 			# Trick the ports 'run-autotools-fixup' target to do the right
 			# thing.
 			_OSVERSION=$(chroot ${CHROOTDIR} /usr/bin/uname -U)
@@ -270,19 +281,19 @@ extra_chroot_setup() {
 			PBUILD_FLAGS="OSVERSION=${_OSVERSION} BATCH=yes"
 			PBUILD_FLAGS="${PBUILD_FLAGS} UNAME_r=${UNAME_r}"
 			PBUILD_FLAGS="${PBUILD_FLAGS} OSREL=${REVISION}"
-			PBUILD_FLAGS="${PBUILD_FLAGS} WRKDIRPREFIX=/tmp/ports"
+			PBUILD_FLAGS="${PBUILD_FLAGS} WRKDIRPREFIX=/tmp/mports"
 			PBUILD_FLAGS="${PBUILD_FLAGS} DISTDIR=/tmp/distfiles"
 			eval chroot ${CHROOTDIR} env OPTIONS_UNSET=\"${GITUNSETOPTS}\" \
 				${PBUILD_FLAGS} \
-				make -C /usr/ports/devel/git FORCE_PKG_REGISTER=1 \
-				WRKDIRPREFIX=/tmp/ports \
+				make -C /usr/mports/devel/git FORCE_PKG_REGISTER=1 \
+				WRKDIRPREFIX=/tmp/mports \
 				DISTDIR=/tmp/distfiles \
 				install clean distclean
 		else
 			eval chroot ${CHROOTDIR} env ASSUME_ALWAYS_YES=yes \
-				pkg install -y devel/git
+				mport install -y git
 			eval chroot ${CHROOTDIR} env ASSUME_ALWAYS_YES=yes \
-				pkg clean -y
+				mport clean
 		fi
 	fi
 
@@ -294,11 +305,11 @@ extra_chroot_setup() {
 		PBUILD_FLAGS="OSVERSION=${_OSVERSION} BATCH=yes"
 		PBUILD_FLAGS="${PBUILD_FLAGS} UNAME_r=${UNAME_r}"
 		PBUILD_FLAGS="${PBUILD_FLAGS} OSREL=${REVISION}"
-		PBUILD_FLAGS="${PBUILD_FLAGS} WRKDIRPREFIX=/tmp/ports"
+		PBUILD_FLAGS="${PBUILD_FLAGS} WRKDIRPREFIX=/tmp/mports"
 		PBUILD_FLAGS="${PBUILD_FLAGS} DISTDIR=/tmp/distfiles"
 		for _PORT in ${EMBEDDEDPORTS}; do
 			eval chroot ${CHROOTDIR} env ${PBUILD_FLAGS} make -C \
-				/usr/ports/${_PORT} \
+				/usr/mports/${_PORT} \
 				FORCE_PKG_REGISTER=1 deinstall install clean distclean
 		done
 	fi

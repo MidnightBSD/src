@@ -249,9 +249,8 @@ done:
 			 * Make a local copy of the terminal capabilities, delinked
 			 * from the list.
 			 */
-			memcpy(tp, &ep->tterm, sizeof(TERMTYPE));
-			_nc_delink_entry(_nc_head, &(ep->tterm));
-			free(ep);
+			*tp = ep->tterm;
+			_nc_free_entry(_nc_head, &(ep->tterm));
 			_nc_free_entries(_nc_head);
 			_nc_head = _nc_tail = NULL;	/* do not reuse! */
 

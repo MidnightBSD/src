@@ -40,7 +40,16 @@ SRCS+=	tc.alloc.c tc.bind.c tc.const.c tc.decls.h tc.disc.c \
 	tc.sched.c tc.sig.c tc.sig.h tc.str.c sh.types.h tc.vers.c tc.wait.h \
 	tc.who.c tc.h
 SRCS+=	dotlock.c dotlock.h
-GENHDRS= ed.defns.h sh.err.h tc.const.h tc.defs.c
+# Version of the upstream tcsh in contrib/tcsh; substituted into the
+# patchlevel.h and manual page templates the way configure would.
+TCSH_VERSION=	6.24.16
+TCSH_DATE=	2025-07-09
+TCSH_ENGLISH_DATE=	July 9, 2025
+TCSH_REV=	${TCSH_VERSION:C/\..*$//}
+TCSH_VERS=	${TCSH_VERSION:C/^[0-9]+\.//:C/\..*$//}
+TCSH_PATCHLEVEL=	${TCSH_VERSION:C/^.*\.//:S/^0//}
+
+GENHDRS= ed.defns.h sh.err.h tc.const.h tc.defs.c patchlevel.h
 SRCS+=	${GENHDRS}
 
 MLINKS= csh.1 tcsh.1
@@ -66,6 +75,7 @@ CATALOGS=	et:et_EE.UTF-8 \
 		greek:el_GR.UTF-8 \
 		italian:it_IT.UTF-8 \
 		ja:ja_JP.UTF-8 \
+		pl:pl_PL.UTF-8 \
 		russian:ru_RU.UTF-8 \
 		spanish:es_ES.UTF-8 \
 		ukrainian:uk_UA.UTF-8
@@ -91,6 +101,7 @@ NLSLINKS_fr_FR.UTF-8 += fr_BE.ISO8859-1 fr_BE.ISO8859-15 \
 NLSLINKS_it_IT.UTF-8 += it_CH.ISO8859-1 it_CH.ISO8859-15 it_IT.ISO8859-1 \
 		it_IT.ISO8859-15
 NLSLINKS_ja_JP.UTF-8 = ja_JP.SJIS ja_JP.eucJP
+NLSLINKS_pl_PL.UTF-8 = pl_PL.ISO8859-2
 NLSLINKS_ru_RU.UTF-8 = ru_RU.CP1251 ru_RU.CP866 ru_RU.ISO8859-5 ru_RU.KOI8-R
 NLSLINKS_uk_UA.UTF-8 = uk_UA.ISO8859-5 uk_UA.KOI8-U
 .else
@@ -112,8 +123,22 @@ NLSSRCDIR_${catalog:C/.*://}= ${TCSHDIR}/nls/${catalog:C/:.*//}
 NLSSRCFILES_${catalog:C/.*://}!= cd ${NLSSRCDIR_${catalog:C/.*://}}; echo charset set[0-9]*
 .endfor
 
-csh.1: tcsh.man
-	cat ${.ALLSRC} > ${.TARGET}
+csh.1: tcsh.man.in
+	sed -e 's|@PACKAGE_VERSION@|${TCSH_VERSION}|g' \
+	    -e 's|@PACKAGE_DATE@|${TCSH_DATE}|g' \
+	    -e 's|@PACKAGE_ENGLISH_DATE@|${TCSH_ENGLISH_DATE}|g' \
+	    -e 's|@PACKAGE_ORIGIN@|Astron|g' \
+	    -e 's|@PACKAGE_MAILLIST@|https://mailman.astron.com/mailman/listinfo/tcsh|g' \
+	    -e 's|@PACKAGE_BUGREPORT@|https://bugs.astron.com/|g' \
+	    ${.ALLSRC} > ${.TARGET}
+
+patchlevel.h: patchlevel.h.in
+	sed -e 's|@PACKAGE_ORIGIN@|Astron|g' \
+	    -e 's|@PACKAGE_REV@|${TCSH_REV}|g' \
+	    -e 's|@PACKAGE_VERS@|${TCSH_VERS}|g' \
+	    -e 's|@PACKAGE_PATCHLEVEL@|${TCSH_PATCHLEVEL}|g' \
+	    -e 's|@PACKAGE_DATE@|${TCSH_DATE}|g' \
+	    ${.ALLSRC} > ${.TARGET}
 
 build-tools: gethost
 

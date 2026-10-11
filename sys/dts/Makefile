@@ -1,4 +1,4 @@
 
-SUBDIR=arm mips powerpc
+SUBDIR=arm
 
 .include <bsd.subdir.mk>

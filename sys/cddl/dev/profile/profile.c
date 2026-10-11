@@ -95,26 +95,7 @@
 #endif
 #endif
 
-#ifdef __mips
-/*
- * This value is bogus just to make module compilable on mips
- */
-#define	PROF_ARTIFICIAL_FRAMES	3
-#endif
-
-#ifdef __powerpc__
-/*
- * This value is bogus just to make module compilable on powerpc
- */
-#define	PROF_ARTIFICIAL_FRAMES	8
-#endif
-
 struct profile_probe_percpu;
-
-#ifdef __mips
-/* bogus */
-#define	PROF_ARTIFICIAL_FRAMES	3
-#endif
 
 #ifdef __arm__
 #define	PROF_ARTIFICIAL_FRAMES	3

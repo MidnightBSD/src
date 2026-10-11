@@ -41,7 +41,9 @@ mport_asset_get_package_from_file_path(
 {
 	sqlite3_stmt *stmt = NULL;
 	int result = MPORT_OK;
-	char *err;
+	char err[256];
+
+	err[0] = '\0';
 
 	if (mport_db_prepare(mport->db, &stmt, "SELECT pkg FROM assets WHERE data=%Q", filePath) !=
 	    MPORT_OK) {
@@ -65,7 +67,8 @@ mport_asset_get_package_from_file_path(
 			break;
 
 		if (ret != SQLITE_ROW) {
-			err = (char *)sqlite3_errmsg(mport->db);
+			/* copy the message now; finalize() below invalidates it */
+			strlcpy(err, sqlite3_errmsg(mport->db), sizeof(err));
 			result = MPORT_ERR_FATAL;
 			break; // we finalize below
 		}
@@ -75,12 +78,16 @@ mport_asset_get_package_from_file_path(
 			mportPackageMeta **packs = NULL;
 			if (mport_pkgmeta_search_master(mport, &packs, "pkg=%Q", pkgName) !=
 				MPORT_OK ||
-			    packs[0] == NULL) {
-				err = "Package does not exist despite having assets";
+			    packs == NULL || packs[0] == NULL) {
+				mport_pkgmeta_vec_free(packs);
+				strlcpy(err, "Package does not exist despite having assets",
+				    sizeof(err));
 				result = MPORT_ERR_FATAL;
 				break; // we finalize below
 			} else {
 				*pack = packs[0];
+				/* free the vector array; *pack keeps packs[0] */
+				free(packs);
 				result = MPORT_OK;
 				break;
 			}
@@ -100,7 +107,9 @@ mport_asset_get_assetlist(mportInstance *mport, mportPackageMeta *pack, mportAss
 	mportAssetList *alist;
 	sqlite3_stmt *stmt = NULL;
 	int result = MPORT_OK;
-	char *err;
+	char err[256];
+
+	err[0] = '\0';
 
 	if ((alist = mport_assetlist_new()) == NULL)
 		RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
@@ -135,7 +144,8 @@ mport_asset_get_assetlist(mportInstance *mport, mportPackageMeta *pack, mportAss
 			break;
 
 		if (ret != SQLITE_ROW) {
-			err = (char *)sqlite3_errmsg(mport->db);
+			/* copy the message now; finalize() below invalidates it */
+			strlcpy(err, sqlite3_errmsg(mport->db), sizeof(err));
 			result = MPORT_ERR_FATAL;
 			break; // we finalize below
 		}
@@ -143,7 +153,7 @@ mport_asset_get_assetlist(mportInstance *mport, mportPackageMeta *pack, mportAss
 		e = (mportAssetListEntry *)calloc(1, sizeof(mportAssetListEntry));
 
 		if (e == NULL) {
-			err = "Out of memory";
+			strlcpy(err, "Out of memory", sizeof(err));
 			result = MPORT_ERR_FATAL;
 			break; // we finalize below
 		}

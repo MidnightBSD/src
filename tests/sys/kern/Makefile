@@ -29,8 +29,7 @@ ATF_TESTS_C+=	sigwait
 ATF_TESTS_C+=	socket_msg_trunc
 ATF_TESTS_C+=	socket_msg_waitall
 TEST_METADATA.sigwait+=	is_exclusive="true"
-.if ${MACHINE_ARCH} != "i386" && ${MACHINE_ARCH:Mpowerpc*} == "" && \
-    ${MACHINE_CPUARCH} != "mips"
+.if ${MACHINE_ARCH} != "i386"
 ATF_TESTS_C+=	subr_physmem_test
 .endif
 PLAIN_TESTS_C+=	subr_unit_test

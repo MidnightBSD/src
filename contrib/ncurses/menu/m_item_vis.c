@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2020 Thomas E. Dickey                                          *
+ * Copyright 2020-2021,2024 Thomas E. Dickey                                *
  * Copyright 1998-2004,2010 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -38,22 +38,22 @@
 
 #include "menu.priv.h"
 
-MODULE_ID("$Id: m_item_vis.c,v 1.17 2020/02/02 23:34:34 tom Exp $")
+MODULE_ID("$Id: m_item_vis.c,v 1.21 2024/07/27 18:14:09 tom Exp $")
 
 /*---------------------------------------------------------------------------
-|   Facility      :  libnmenu  
+|   Facility      :  libnmenu
 |   Function      :  bool item_visible(const ITEM *item)
-|   
+|
 |   Description   :  A item is visible if it currently appears in the
 |                    subwindow of a posted menu.
 |
 |   Return Values :  TRUE  if visible
 |                    FALSE if invisible
 +--------------------------------------------------------------------------*/
-NCURSES_EXPORT(bool)
-item_visible(const ITEM * item)
+MENU_EXPORT(bool)
+item_visible(const ITEM *item)
 {
-  MENU *menu;
+  const MENU *menu;
 
   T((T_CALLED("item_visible(%p)"), (const void *)item));
   if (item &&

@@ -156,25 +156,54 @@ Format changed files with `clang-format -i <file>`.
 
 ## Testing
 
-There is a small ATF/Kyua test suite in `tests/` (not yet comprehensive). It
-drives the built binaries from the build tree — no installed `mport` or
-populated registry is required for most cases. CI also runs via Jenkins
-(`Jenkinsfile`, matrix builds on amd64/i386) and GitHub Actions CodeQL
-(`.github/workflows/c-cpp.yml`). Correctness validation is still largely
-compile-time (strict warnings as errors).
+There is an ATF/Kyua test suite in `tests/` (14 programs, ~170 cases; not yet
+comprehensive — the main `mport(8)` command paths are still thinly covered).
+The root `make` builds it. No installed `mport` or populated registry is
+required for most cases. CI also runs via Jenkins (`Jenkinsfile`, matrix builds
+on amd64/i386) and GitHub Actions CodeQL (`.github/workflows/c-cpp.yml`).
 
 ### Test programs (`tests/`)
 
+Shell programs (installed via `mportFILES`) drive the built binaries:
+
 | File | Covers |
 |------|--------|
-| `mport_create_test` | `mport.create` — package creation, invalid `-E` date, overlong `-o` path |
-| `mport_libexec_test` | `version_cmp`, `check_fake`, frontend missing-arg rejection, `list` extra-args, `init`/`update` bad-chroot |
-| `mport_cli_test` | `mport(8)` front end — usage, invalid global flag, bad chroot; registry-gated runtime smoke test for the package-vector paths |
+| `mport_create_test` | `mport.create` — package creation, bad `-E` date / `-o` path / `TMPDIR`, ABI-file release, duplicate plist entries, bundle write failure |
+| `mport_libexec_test` | `version_cmp`, `check_fake`, frontend arg checks, `init`/`update` bad chroot; `delete`/`install`/`merge` against a scratch tree |
+| `mport_cli_test` | `mport(8)` front end — usage, invalid global flag, bad chroot, global option ordering; registry-gated smoke test for the package-vector paths |
 
-Tests locate binaries relative to `$(atf_get_srcdir)` (e.g. `../libexec/...`,
-`../mport/mport`) and set `LD_LIBRARY_PATH` to `../libmport`, so they run
-against a freshly built tree. Cases that need a local registry call
-`atf_skip` when `/var/db/mport/master.db` is absent.
+C programs (`ATF_TESTS_C` in `tests/Makefile`) link against `libmport` directly:
+
+| File | Covers |
+|------|--------|
+| `mport_confirm_test` | Confirm/select callbacks on non-tty and assume-yes paths |
+| `mport_db_test` | DB count/prepare helpers |
+| `mport_fetch_test` | `force_http` URL rewriting |
+| `mport_index_test` | Index mirror, moved, and version lookups |
+| `mport_install_test` | Install/add/delete flows, OS-release handling, rollback on failure |
+| `mport_osrelease_test` | OS release from settings and ABI file |
+| `mport_pkgmeta_test` | Dependency sort, delete/autodir handling, query output |
+| `mport_precheck_test` | Pre-install file-conflict checks |
+| `mport_shlib_test` | Shared-library scanning, provides/requires tables |
+| `mport_util_test` | `util.c`/`plist.c` helpers |
+| `mport_version_test` | Version comparison |
+
+Shell tests locate binaries relative to `$(atf_get_srcdir)` (e.g.
+`../libexec/...`, `../mport/mport`) and set `LD_LIBRARY_PATH` to `../libmport`,
+so they run against a freshly built tree. Cases that need a local registry call
+`atf_skip` when `/var/db/mport/master.db` is absent. New C programs need an
+`ATF_TESTS_C` entry and `LDFLAGS`/`LDADD` in `tests/Makefile`, plus an entry in
+`tests/Kyuafile`.
+
+### Running a libexec tool against a scratch tree
+
+Cases that run a tool with `-c <dir>` against a scratch tree (see the
+`delete_*`, `install_*`, and `merge_*` cases in `mport_libexec_test`):
+
+- Set `atf_set "require.user" "root"` (chroot needs root).
+- Create `<dir>/var/db/mport` in the tree.
+- For `mport.merge`, also create `<dir>/tmp` and run the tool with
+  `env TMPDIR=/tmp`, because kyua sets `TMPDIR` to a path outside the chroot.
 
 ### Running the tests
 

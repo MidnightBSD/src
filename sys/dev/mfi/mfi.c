@@ -372,9 +372,6 @@ mfi_attach(struct mfi_softc *sc)
 	if (sc == NULL)
 		return EINVAL;
 
-	device_printf(sc->mfi_dev, "LSI MegaRAID SAS driver version: %s\n",
-	    MEGASAS_VERSION);
-
 	mtx_init(&sc->mfi_io_lock, "MFI I/O lock", NULL, MTX_DEF);
 	sx_init(&sc->mfi_config_lock, "MFI config");
 	TAILQ_INIT(&sc->mfi_ld_tqh);
@@ -774,6 +771,10 @@ mfi_attach(struct mfi_softc *sc)
 	    OID_AUTO, "keep_deleted_volumes", CTLFLAG_RW,
 	    &sc->mfi_keep_deleted_volumes, 0,
 	    "Don't detach the mfid device for a busy volume that is deleted");
+	SYSCTL_ADD_STRING(device_get_sysctl_ctx(sc->mfi_dev),
+	    SYSCTL_CHILDREN(device_get_sysctl_tree(sc->mfi_dev)),
+	    OID_AUTO, "driver_version", CTLFLAG_RD, MEGASAS_VERSION,
+	    strlen(MEGASAS_VERSION), "driver version");
 
 	device_add_child(sc->mfi_dev, "mfip", -1);
 	bus_generic_attach(sc->mfi_dev);

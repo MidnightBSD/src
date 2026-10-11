@@ -826,14 +826,6 @@ DIRDEPS.arm64= \
 	usr.sbin/acpi \
 	usr.sbin/ofwdump
 
-DIRDEPS.mips= \
-	sbin/bsdlabel \
-	sbin/fdisk
-
-DIRDEPS.powerpc= \
-	usr.sbin/nvram \
-	usr.sbin/ofwdump
-
 .if ${MK_BLACKLIST_SUPPORT} != "no"
 DIRDEPS+= \
 	usr.sbin/blacklistctl \

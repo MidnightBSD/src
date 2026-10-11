@@ -27,7 +27,7 @@
 .\"
 .\"     @(#)time.1	8.1 (Berkeley) 6/6/93
 .\"
-.Dd July 7, 2020
+.Dd September 8, 2026
 .Dt TIME 1
 .Os
 .Sh NAME
@@ -36,7 +36,7 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl al
-.Op Fl h | Fl p
+.Op Fl f Ar format | Fl h | Fl p
 .Op Fl o Ar file
 .Ar utility Op Ar argument ...
 .Sh DESCRIPTION
@@ -65,6 +65,107 @@ If the
 flag is used, append to the specified file rather than overwriting
 it.
 Otherwise, this option has no effect.
+.It Fl f Ar format
+Print the resource usage using
+.Ar format
+instead of the default output.
+The format string is copied to the output verbatim, with the following
+exceptions:
+a newline is appended,
+the sequences
+.Ql \et ,
+.Ql \en
+and
+.Ql \e\e
+produce a tab, a newline and a backslash respectively,
+and each
+.Ql %
+introduces a conversion described below.
+An unknown conversion is printed as a
+.Ql \&?
+followed by the offending character.
+The conversions are compatible with those of GNU
+.Nm ,
+so scripts written for it can be used unchanged.
+.Pp
+Time:
+.Bl -tag -width indent -compact
+.It Cm \&%E
+Elapsed real time, as
+.Ar minutes:seconds.hundredths ,
+or
+.Ar hours:minutes:seconds
+if the command ran for an hour or more.
+.It Cm \&%e
+Elapsed real time in seconds.
+.It Cm \&%S
+Total CPU seconds spent in kernel mode.
+.It Cm \&%U
+Total CPU seconds spent in user mode.
+.It Cm \&%P
+Percentage of the CPU this job got, computed as
+.Cm ( \&%U No + Cm \&%S ) No / Cm \&%e .
+.El
+.Pp
+Memory (all sizes are in kilobytes):
+.Bl -tag -width indent -compact
+.It Cm \&%M
+Maximum resident set size.
+.It Cm \&%t
+Average resident set size (unshared data).
+.It Cm \&%K
+Average total memory use (data, stack and text).
+.It Cm \&%D
+Average size of the unshared data and stack areas.
+.It Cm \&%p
+Average size of the unshared stack area.
+.It Cm \&%X
+Average size of the shared text area.
+.It Cm \&%Z
+The system page size, in bytes.
+.It Cm \&%F
+Number of major page faults.
+.It Cm \&%R
+Number of minor page faults (page reclaims).
+.It Cm \&%W
+Number of times the process was swapped out.
+.It Cm \&%c
+Number of involuntary context switches.
+.It Cm \&%w
+Number of voluntary context switches.
+.El
+.Pp
+I/O and miscellaneous:
+.Bl -tag -width indent -compact
+.It Cm \&%I
+Number of block input operations.
+.It Cm \&%O
+Number of block output operations.
+.It Cm \&%r
+Number of socket messages received.
+.It Cm \&%s
+Number of socket messages sent.
+.It Cm \&%k
+Number of signals delivered to the process.
+.It Cm \&%C
+The name and arguments of the command being timed.
+.It Cm \&%x
+The exit status of the command, or the number of the signal that
+terminated it.
+.It Cm \&%%
+A literal
+.Ql % .
+.El
+.Pp
+The
+.Fl f
+option takes precedence over
+.Fl h
+and
+.Fl p .
+The
+.Fl l
+output, if requested, follows the formatted line.
 .It Fl h
 Print times in a human friendly format.
 Times are printed in minutes, hours,
@@ -102,7 +203,7 @@ receives a
 (see the status argument for
 .Xr stty 1 )
 signal, the current time the given command is running will be written to the
-standard output.
+standard output in the default format.
 .Sh ENVIRONMENT
 The
 .Ev PATH
@@ -183,6 +284,14 @@ sys 0.00
          0  signals received
          3  voluntary context switches
          0  involuntary context switches
+.Ed
+.Pp
+Print only the elapsed time and the peak memory use of a
+.Xr sort 1
+run, using a custom format:
+.Bd -literal -offset indent
+$ /usr/bin/time -f "%e seconds, %M KB max RSS, exit %x" sort -o /dev/null words
+0.12 seconds, 6740 KB max RSS, exit 0
 .Ed
 .Sh SEE ALSO
 .Xr builtin 1 ,

@@ -525,9 +525,6 @@ _rtld(Elf_Addr *sp, func_ptr_type *exit_proc, Obj_Entry **objp)
     char buf[MAXPATHLEN];
     int argc, fd, i, mib[4], old_osrel, osrel, phnum, rtld_argc;
     size_t sz;
-#ifdef __powerpc__
-    int old_auxv_format = 1;
-#endif
     bool dir_enable, dir_ignore, direct_exec, explicit_fd, search_in_path;
 
     /*
@@ -553,28 +550,8 @@ _rtld(Elf_Addr *sp, func_ptr_type *exit_proc, Obj_Entry **objp)
     for (auxp = aux;  auxp->a_type != AT_NULL;  auxp++) {
 	if (auxp->a_type < AT_COUNT)
 	    aux_info[auxp->a_type] = auxp;
-#ifdef __powerpc__
-	if (auxp->a_type == 23) /* AT_STACKPROT */
-	    old_auxv_format = 0;
-#endif
     }
 
-#ifdef __powerpc__
-    if (old_auxv_format) {
-	/* Remap from old-style auxv numbers. */
-	aux_info[23] = aux_info[21];	/* AT_STACKPROT */
-	aux_info[21] = aux_info[19];	/* AT_PAGESIZESLEN */
-	aux_info[19] = aux_info[17];	/* AT_NCPUS */
-	aux_info[17] = aux_info[15];	/* AT_CANARYLEN */
-	aux_info[15] = aux_info[13];	/* AT_EXECPATH */
-	aux_info[13] = NULL;		/* AT_GID */
-
-	aux_info[20] = aux_info[18];	/* AT_PAGESIZES */
-	aux_info[18] = aux_info[16];	/* AT_OSRELDATE */
-	aux_info[16] = aux_info[14];	/* AT_CANARY */
-	aux_info[14] = NULL;		/* AT_EGID */
-    }
-#endif
 
     /* Initialize and relocate ourselves. */
     assert(aux_info[AT_BASE] != NULL);
@@ -1028,10 +1005,6 @@ rtld_resolve_ifunc(const Obj_Entry *obj, const Elf_Sym *def)
 	return ((void *)target);
 }
 
-/*
- * NB: MIPS uses a private version of this function (_mips_rtld_bind).
- * Changes to this function should be applied there as well.
- */
 Elf_Addr
 _rtld_bind(Obj_Entry *obj, Elf_Size reloff)
 {
@@ -1511,19 +1484,6 @@ digest_dynamic1(Obj_Entry *obj, int early, const Elf_Dyn **dyn_rpath,
 	    obj->fini_array_num = dynp->d_un.d_val / sizeof(Elf_Addr);
 	    break;
 
-	/*
-	 * Don't process DT_DEBUG on MIPS as the dynamic section
-	 * is mapped read-only. DT_MIPS_RLD_MAP is used instead.
-	 */
-
-#ifndef __mips__
-	case DT_DEBUG:
-	    if (!early)
-		dbg("Filling in DT_DEBUG entry");
-	    (__DECONST(Elf_Dyn *, dynp))->d_un.d_ptr = (Elf_Addr)&r_debug;
-	    break;
-#endif
-
 	case DT_FLAGS:
 		if (dynp->d_un.d_val & DF_ORIGIN)
 		    obj->z_origin = true;
@@ -1536,48 +1496,6 @@ digest_dynamic1(Obj_Entry *obj, int early, const Elf_Dyn **dyn_rpath,
 		if (dynp->d_un.d_val & DF_STATIC_TLS)
 		    obj->static_tls = true;
 	    break;
-#ifdef __mips__
-	case DT_MIPS_LOCAL_GOTNO:
-		obj->local_gotno = dynp->d_un.d_val;
-		break;
-
-	case DT_MIPS_SYMTABNO:
-		obj->symtabno = dynp->d_un.d_val;
-		break;
-
-	case DT_MIPS_GOTSYM:
-		obj->gotsym = dynp->d_un.d_val;
-		break;
-
-	case DT_MIPS_RLD_MAP:
-		*((Elf_Addr *)(dynp->d_un.d_ptr)) = (Elf_Addr) &r_debug;
-		break;
-
-	case DT_MIPS_RLD_MAP_REL:
-		// The MIPS_RLD_MAP_REL tag stores the offset to the .rld_map
-		// section relative to the address of the tag itself.
-		*((Elf_Addr *)(__DECONST(char*, dynp) + dynp->d_un.d_val)) =
-		    (Elf_Addr) &r_debug;
-		break;
-
-	case DT_MIPS_PLTGOT:
-		obj->mips_pltgot = (Elf_Addr *)(obj->relocbase +
-		    dynp->d_un.d_ptr);
-		break;
-		
-#endif
-
-#ifdef __powerpc__
-#ifdef __powerpc64__
-	case DT_PPC64_GLINK:
-		obj->glink = (Elf_Addr)(obj->relocbase + dynp->d_un.d_ptr);
-		break;
-#else
-	case DT_PPC_GOT:
-		obj->gotptr = (Elf_Addr *)(obj->relocbase + dynp->d_un.d_ptr);
-		break;
-#endif
-#endif
 
 	case DT_FLAGS_1:
 		if (dynp->d_un.d_val & DF_1_NOOPEN)
@@ -2482,10 +2400,7 @@ init_rtld(caddr_t mapbase, Elf_Auxinfo **aux_info)
     objtmp.dynamic = rtld_dynamic(&objtmp);
     digest_dynamic1(&objtmp, 1, &dyn_rpath, &dyn_soname, &dyn_runpath);
     assert(objtmp.needed == NULL);
-#if !defined(__mips__)
-    /* MIPS has a bogus DT_TEXTREL. */
     assert(!objtmp.textrel);
-#endif
     /*
      * Temporarily put the dynamic linker entry into the object list, so
      * that symbols can be found.
@@ -4871,11 +4786,9 @@ matched_symbol(SymLook *req, const Obj_Entry *obj, Sym_Match_Result *result,
 	case STT_TLS:
 		if (symp->st_shndx != SHN_UNDEF)
 			break;
-#ifndef __mips__
 		else if (((req->flags & SYMLOOK_IN_PLT) == 0) &&
 		    (ELF_ST_TYPE(symp->st_info) == STT_FUNC))
 			break;
-#endif
 		/* fallthrough */
 	default:
 		return (false);

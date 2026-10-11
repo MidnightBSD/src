@@ -220,11 +220,6 @@ create_diskimage_mbr ( ) (
 		fi
 	fi
 
-	# Populate the Powerpc boot image, if needed
-	if [ "${NANO_LAYOUT}" = powerpc64-ibm ]; then
-		dd if=${NANO_WORLDDIR}/boot/boot1.elf of=${NANO_LOG}/_.s1 bs=800k count=1 conv=sync
-	fi
-
 	# Populate the / partition, and place it into a slice with a
 	# bsd label
 	[ -z ${NANO_NOPRIV_BUILD} ] || extra="-F ${NANO_METALOG}"
@@ -299,18 +294,6 @@ create_diskimage_mbr ( ) (
 			-p freebsd-boot:=${NANO_WORLDDIR}/boot/gptboot \
 			-p ${p3}:=${NANO_LOG}/_.p3 \
 			-p ${p4}:=${NANO_LOG}/_.p4 \
-			-o ${out}
-		;;
-	powerpc64-ibm)
-		# A lie to make the boot loader work, it boots the first BSD partition
-		# it finds, regardless of the active flag.
-		s2=fat16b
-		# boot image is on a special partition, ala std-embedded, but that
-		# partition isn't FAT with special files, but a copy of the boot
-		# loader itself.
-		mkimg -a 1 ${fmtarg} -s mbr -p prepboot:=${NANO_LOG}/_.s1 \
-			-p ${s2}:=${NANO_LOG}/_.s2 \
-			-p ${s3}:=${NANO_LOG}/_.s3a \
 			-o ${out}
 		;;
 	esac
@@ -528,29 +511,6 @@ std_i386 ( ) {
 	: ${NANO_BOOT_BSD:=${NANO_WORLDDIR}/boot/boot}
 }
 
-std_mips ( ) {
-	NANO_ENDIAN=big
-}
-
-std_mipsel ( ) {
-}
-
-std_mips64 ( ) {
-	NANO_ENDIAN=big
-}
-
-std_mips64el ( ) {
-}
-
-std_powerpc ( ) {
-	NANO_ENDIAN=big
-}
-
-std_powerpc64 ( ) {
-	NANO_LAYOUT=powerpc64-ibm
-	NANO_ENDIAN=big
-}
-
 #
 # QEMU settings for the standard environments
 #
@@ -602,18 +562,6 @@ std-x86)
 	NANO_SLICE_ALTROOT=s2
 	NANO_ROOT=${NANO_SLICE_ROOT}a
 	NANO_ALTROOT=${NANO_SLICE_ALTROOT}a
-	;;
-powerpc64-ibm)
-	NANO_SLICE_PPCBOOT=s1
-	NANO_SLICE_CFG=s2
-	NANO_SLICE_ROOT=s3
-	NANO_SLICE_ALTROOT=s4
-	NANO_ROOT=${NANO_SLICE_ROOT}a
-	NANO_ALTROOT=${NANO_SLICE_ALTROOT}a
-	;;
-powerpc64-apple)
-	echo Not yet
-	exit 1
 	;;
 std-uefi)
 	NANO_SLICE_UEFI=s1

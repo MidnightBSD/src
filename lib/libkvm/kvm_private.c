@@ -147,15 +147,6 @@ _kvm_is_minidump(kvm_t *kd)
 		return (1);
 	return (0);
 }
-
-/*
- * The powerpc backend has a hack to strip a leading kerneldump
- * header from the core before treating it as an ELF header.
- *
- * We can add that here if we can get a change to libelf to support
- * an initial offset into the file.  Alternatively we could patch
- * savecore to extract cores from a regular file instead.
- */
 int
 _kvm_read_core_phdrs(kvm_t *kd, size_t *phnump, GElf_Phdr **phdrp)
 {

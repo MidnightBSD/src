@@ -129,11 +129,14 @@ mport_pkg_message_load(
 	if ((file = fopen(filename, "re")) == NULL)
 		RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't open %s: %s", filename, strerror(errno));
 
-	if ((buf = (char *)calloc((size_t)(st.st_size + 1), sizeof(char))) == NULL)
+	if ((buf = (char *)calloc((size_t)(st.st_size + 1), sizeof(char))) == NULL) {
+		fclose(file);
 		RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+	}
 
 	if (fread(buf, sizeof(char), (size_t)st.st_size, file) != (size_t)st.st_size) {
 		free(buf);
+		fclose(file);
 		RETURN_ERRORX(MPORT_ERR_FATAL, "Read error: %s", strerror(errno));
 	}
 
@@ -149,6 +152,7 @@ mport_pkg_message_load(
 			obj = ucl_parser_get_object(parser);
 			ucl_parser_free(parser);
 			free(buf);
+			fclose(file);
 
 			packageMessage = mport_pkg_message_from_ucl(mport, obj, packageMessage);
 			ucl_object_unref(obj);
@@ -164,11 +168,13 @@ mport_pkg_message_load(
 		packageMessage->str = strdup(buf);
 		if (packageMessage->str == NULL) {
 			free(buf);
+			fclose(file);
 			RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
 		}
 		packageMessage->type = PKG_MESSAGE_ALWAYS;
 		free(buf);
 	}
+	fclose(file);
 
 	return MPORT_OK;
 }

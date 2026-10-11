@@ -46,6 +46,13 @@ PORTBRANCH="master"
 #NOPORTS=
 #NOSRC=
 #WITH_DVD=
+
+## Set the directory containing index.db and package bundles from one blessed
+## Magus run. The default is /usr/mports/Packages/${TARGET_ARCH}/All.
+#MPORT_REPOSITORY="/usr/mports/Packages/amd64/All"
+
+## Override the top-level application packages offered by bsdinstall.
+#DVD_PACKAGE_ROOTS="midnightbsd-desktop bash zsh sudo screen tmux nano vim rsync git"
 #WITH_COMPRESSED_IMAGES=
 
 ## Set to '1' to disable multi-threaded xz(1) compression.
@@ -77,8 +84,8 @@ PORTBRANCH="master"
 ## the chroot.  This is intended for use when /usr/src already exists.
 #SRC_UPDATE_SKIP=
 
-## Set to a non-empty value skip checkout or update of /usr/ports in
-## the chroot.  This is intended for use when /usr/ports already exists.
+## Set to a non-empty value skip checkout or update of /usr/mports in
+## the chroot.  This is intended for use when /usr/mports already exists.
 #PORTS_UPDATE_SKIP=
 
 ## Set to pass additional flags to make(1) for the build chroot setup, such

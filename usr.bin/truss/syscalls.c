@@ -1004,18 +1004,6 @@ quad_fixup(struct syscall_decode *sc)
 		switch (sc->args[i].type & ARG_MASK) {
 		case Quad:
 		case QuadHex:
-#ifdef __powerpc__
-			/*
-			 * 64-bit arguments on 32-bit powerpc must be
-			 * 64-bit aligned.  If the current offset is
-			 * not aligned, the calling convention inserts
-			 * a 32-bit pad argument that should be skipped.
-			 */
-			if (sc->args[i].offset % 2 == 1) {
-				sc->args[i].offset++;
-				offset++;
-			}
-#endif
 			offset++;
 		default:
 			break;
@@ -1739,18 +1727,11 @@ print_sysctl(FILE *fp, int *oid, size_t len)
 		fprintf(fp, "%s", name);
 }
 
-/*
- * Convert a 32-bit user-space pointer to psaddr_t. Currently, this
- * sign-extends on MIPS and zero-extends on all other architectures.
- */
+/* Convert a 32-bit user-space pointer to psaddr_t. */
 static psaddr_t
 user_ptr32_to_psaddr(int32_t user_pointer)
 {
-#if defined(__mips__)
-	return ((psaddr_t)(intptr_t)user_pointer);
-#else
 	return ((psaddr_t)(uintptr_t)user_pointer);
-#endif
 }
 
 /*

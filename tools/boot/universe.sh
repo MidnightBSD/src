@@ -1,13 +1,7 @@
 #!/bin/sh
 
 #
-# Full list of all arches, but we only build a subset. All different mips add any
-# value, and there's a few others we just don't support.
-#
-#	mips/mipsel mips/mips mips/mips64el mips/mips64 mips/mipsn32 \
-#	mips/mipselhf mips/mipshf mips/mips64elhf mips/mips64hf \
-#	powerpc/powerpc powerpc/powerpc64 powerpc/powerpcspe \
-#	riscv/riscv64 riscv/riscv64sf
+# Supported architectures are amd64, arm, arm64, i386, and riscv.
 #
 # This script is expected to be run in stand (though you could run it anywhere
 # in the tree). It does a full clean build. For stand you can do all the archs in
@@ -78,8 +72,6 @@ for i in \
 	arm/armv7 \
 	arm64/aarch64 \
 	i386/i386 \
-	mips/mips mips/mips64 \
-	powerpc/powerpc powerpc/powerpc64 \
 	; do
     ta=${i##*/}
     dobuild $ta _.boot.${ta}.log ""
@@ -91,8 +83,6 @@ for i in \
 	arm/armv7 \
 	arm64/aarch64 \
 	i386/i386 \
-	mips/mips mips/mips64 \
-	powerpc/powerpc powerpc/powerpc64 \
 	; do
     ta=${i##*/}
     dobuild $ta _.boot.${ta}.lua.log "MK_LOADER_LUA=yes MK_FORTH=no"

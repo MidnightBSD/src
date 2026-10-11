@@ -37,6 +37,8 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <stddef.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 MPORT_PUBLIC_API int
 mport_import(mportInstance *mport, char *path)
@@ -49,15 +51,18 @@ mport_import(mportInstance *mport, char *path)
 	if (path == NULL)
 		console = true;
 
-	if (!console && !mport_file_exists(path)) {
-		RETURN_ERROR(MPORT_ERR_FATAL, "File exists at export path");
-	}
-
 	if (!console) {
-		file = fopen(path, "r");
-		if (file == NULL)
+		int fd = open(path, O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
+		if (fd == -1)
 			RETURN_ERRORX(
 			    MPORT_ERR_FATAL, "Couldn't open import file %s", path, strerror(errno));
+		file = fdopen(fd, "r");
+		if (file == NULL) {
+			int error = errno;
+			close(fd);
+			RETURN_ERRORX(
+			    MPORT_ERR_FATAL, "Couldn't open import file %s", path, strerror(error));
+		}
 	}
 
 	input = console ? stdin : file;
@@ -96,10 +101,6 @@ mport_export(mportInstance *mport, char *path)
 	if (path == NULL)
 		console = true;
 
-	if (!console && mport_file_exists(path)) {
-		RETURN_ERROR(MPORT_ERR_FATAL, "File exists at export path");
-	}
-
 	if (mport_pkgmeta_list(mport, &packs) != MPORT_OK) {
 		RETURN_ERROR(MPORT_ERR_FATAL, "Unable to get package list");
 	}
@@ -109,10 +110,21 @@ mport_export(mportInstance *mport, char *path)
 	}
 
 	if (!console) {
-		file = fopen(path, "w");
-		if (file == NULL)
+		int fd = open(path, O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC | O_NOFOLLOW, 0600);
+		if (fd == -1) {
+			int error = errno;
+			mport_pkgmeta_vec_free(packs);
 			RETURN_ERRORX(
-			    MPORT_ERR_FATAL, "Couldn't open export file %s", path, strerror(errno));
+			    MPORT_ERR_FATAL, "Couldn't open export file %s", path, strerror(error));
+		}
+		file = fdopen(fd, "w");
+		if (file == NULL) {
+			int error = errno;
+			close(fd);
+			mport_pkgmeta_vec_free(packs);
+			RETURN_ERRORX(
+			    MPORT_ERR_FATAL, "Couldn't open export file %s", path, strerror(error));
+		}
 	}
 
 	packs_orig = packs;

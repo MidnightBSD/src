@@ -90,16 +90,6 @@ update_uefi_bootentry()
 f_dialog_title "Boot configuration"
 f_dialog_backtitle "MidnightBSD Installer"
 
-if [ `uname -m` == powerpc ]; then
-	platform=`sysctl -n hw.platform`
-	if [ "$platform" == ps3 -o "$platform" == powernv ]; then
-		rootpart=$(awk '{ if($2 == "/") printf("%s:%s\n", $3, $1); }' $PATH_FSTAB)
-		kboot_conf=$BSDINSTALL_CHROOT/boot/etc/kboot.conf
-		mkdir -p $BSDINSTALL_CHROOT/boot/etc/
-		echo default=$MIDNIGHTBSD_BOOTLABEL > $kboot_conf
-		echo $MIDNIGHTBSD_BOOTLABEL=\'/kernel/kernel kernelname=/boot/kernel/kernel vfs.root.mountfrom=${rootpart}\' >> $kboot_conf
-	fi
-fi
 
 # Update the ESP (EFI System Partition) with the new bootloader if we have an ESP
 if [ -n "$(awk '{if ($2=="/boot/efi") printf("%s\n",$1);}' $PATH_FSTAB)" ]; then

@@ -266,9 +266,14 @@ parse_file_owner_mode(mportAssetListEntry *entry, char *cmnd)
 		RETURN_ERROR(MPORT_ERR_FATAL, "Entry or command is NULL");
 	}
 
-	while ((tok = strsep(&op, "(,)")) != NULL && i < 3) {
-		if (*tok == '\0')
-			continue;
+	/*
+	 * Fields are positional: "(owner,group,mode)". Any of them may be
+	 * empty, e.g. "(,,755)" sets only the mode, so empty tokens must
+	 * still consume their slot.
+	 */
+	if (*op == '(')
+		op++;
+	while ((tok = strsep(&op, ",)")) != NULL && i < 3) {
 		permissions[i++] = tok;
 	}
 

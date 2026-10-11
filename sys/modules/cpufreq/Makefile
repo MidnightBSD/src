@@ -17,9 +17,5 @@ SRCS+=	est.c hwpstate_amd.c p4tcc.c powernow.c hwpstate_intel.c
 SRCS+=	smist.c
 .endif
 
-.if ${MACHINE} == "powerpc"
-.PATH:	${SRCTOP}/sys/powerpc/cpufreq
-SRCS+= dfs.c
-.endif
 
 .include <bsd.kmod.mk>

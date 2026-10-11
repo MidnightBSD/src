@@ -119,14 +119,6 @@ CFLAGS+= -DLOADER_DISK_SUPPORT
 
 # Machine specific flags for all builds here
 
-# Ensure PowerPC64 and PowerPC64LE boot loaders are compiled as 32 bit.
-# PowerPC64LE boot loaders are 32-bit little-endian.
-.if ${MACHINE_ARCH} == "powerpc64"
-CFLAGS+=	-m32 -mcpu=powerpc -mbig-endian
-.elif ${MACHINE_ARCH} == "powerpc64le"
-CFLAGS+=	-m32 -mcpu=powerpc -mlittle-endian
-.endif
-
 # For amd64, there's a bit of mixed bag. Some of the tree (i386, lib*32) is
 # build 32-bit and some 64-bit (lib*, efi). Centralize all the 32-bit magic here
 # and activate it when DO32 is explicitly defined to be 1.
@@ -148,11 +140,6 @@ CFLAGS.clang+=	-mcmodel=medium
 CFLAGS.gcc+=	-mcmodel=medany
 .else
 CFLAGS+=	-msoft-float
-.endif
-
-# -msoft-float seems to be insufficient for powerpcspe
-.if ${MACHINE_ARCH} == "powerpcspe"
-CFLAGS+=	-mno-spe
 .endif
 
 .if ${MACHINE_CPUARCH} == "i386" || (${MACHINE_CPUARCH} == "amd64" && ${DO32:U0} == 1)
@@ -184,10 +171,6 @@ CFLAGS+=	-mno-relax
 # when this test succeeds rather than require dd to be a bootstrap tool.
 DD_NOSTATUS!=(dd status=none count=0 2> /dev/null && echo status=none) || true
 DD=dd ${DD_NOSTATUS}
-
-.if ${MACHINE_CPUARCH} == "mips"
-CFLAGS+=	-G0 -fno-pic -mno-abicalls
-.endif
 
 #
 # Have a sensible default

@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2020 Thomas E. Dickey                                          *
+ * Copyright 2020-2021,2024 Thomas E. Dickey                                *
  * Copyright 1998-2012,2014 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -33,7 +33,7 @@
 
 #include "form.priv.h"
 
-MODULE_ID("$Id: fld_def.c,v 1.42 2020/02/02 23:34:34 tom Exp $")
+MODULE_ID("$Id: fld_def.c,v 1.46 2024/12/07 21:56:21 tom Exp $")
 
 /* this can't be readonly */
 static FIELD default_field =
@@ -66,7 +66,7 @@ static FIELD default_field =
   NCURSES_FIELD_EXTENSION
 };
 
-NCURSES_EXPORT_VAR(FIELD *) _nc_Default_Field = &default_field;
+FORM_EXPORT_VAR(FIELD *) _nc_Default_Field = &default_field;
 
 /*---------------------------------------------------------------------------
 |   Facility      :  libnform
@@ -82,20 +82,19 @@ NCURSES_EXPORT_VAR(FIELD *) _nc_Default_Field = &default_field;
 |   Return Values :  Pointer to argument structure. Maybe NULL.
 |                    In case of an error in *err an error counter is increased.
 +--------------------------------------------------------------------------*/
-NCURSES_EXPORT(TypeArgument *)
+FORM_EXPORT(TypeArgument *)
 _nc_Make_Argument(const FIELDTYPE *typ, va_list *ap, int *err)
 {
   TypeArgument *res = (TypeArgument *)0;
-  TypeArgument *p;
 
-  if (typ != 0 && (typ->status & _HAS_ARGS) != 0)
+  if (typ != NULL && (typ->status & _HAS_ARGS) != 0)
     {
       assert(err != 0 && ap != (va_list *)0);
       if ((typ->status & _LINKED_TYPE) != 0)
 	{
-	  p = typeMalloc(TypeArgument, 1);
+	  TypeArgument *p = typeMalloc(TypeArgument, 1);
 
-	  if (p != 0)
+	  if (p != NULL)
 	    {
 	      p->left = _nc_Make_Argument(typ->left, ap, err);
 	      p->right = _nc_Make_Argument(typ->right, ap, err);
@@ -130,20 +129,19 @@ _nc_Make_Argument(const FIELDTYPE *typ, va_list *ap, int *err)
 |   Return Values :  Pointer to argument structure. Maybe NULL.
 |                    In case of an error in *err an error counter is increased.
 +--------------------------------------------------------------------------*/
-NCURSES_EXPORT(TypeArgument *)
+FORM_EXPORT(TypeArgument *)
 _nc_Copy_Argument(const FIELDTYPE *typ, const TypeArgument *argp, int *err)
 {
   TypeArgument *res = (TypeArgument *)0;
-  TypeArgument *p;
 
-  if (typ != 0 && (typ->status & _HAS_ARGS) != 0)
+  if (typ != NULL && (typ->status & _HAS_ARGS) != 0)
     {
       assert(err != 0 && argp != 0);
       if ((typ->status & _LINKED_TYPE) != 0)
 	{
-	  p = typeMalloc(TypeArgument, 1);
+	  TypeArgument *p = typeMalloc(TypeArgument, 1);
 
-	  if (p != 0)
+	  if (p != NULL)
 	    {
 	      p->left = _nc_Copy_Argument(typ, argp->left, err);
 	      p->right = _nc_Copy_Argument(typ, argp->right, err);
@@ -179,14 +177,14 @@ _nc_Copy_Argument(const FIELDTYPE *typ, const TypeArgument *argp, int *err)
 |
 |   Return Values :  -
 +--------------------------------------------------------------------------*/
-NCURSES_EXPORT(void)
+FORM_EXPORT(void)
 _nc_Free_Argument(const FIELDTYPE *typ, TypeArgument *argp)
 {
-  if (typ != 0 && (typ->status & _HAS_ARGS) != 0)
+  if (typ != NULL && (typ->status & _HAS_ARGS) != 0)
     {
       if ((typ->status & _LINKED_TYPE) != 0)
 	{
-	  if (argp != 0)
+	  if (argp != NULL)
 	    {
 	      _nc_Free_Argument(typ->left, argp->left);
 	      _nc_Free_Argument(typ->right, argp->right);
@@ -212,7 +210,7 @@ _nc_Free_Argument(const FIELDTYPE *typ, TypeArgument *argp)
 |   Return Values :  TRUE       - copy worked
 |                    FALSE      - error occurred
 +--------------------------------------------------------------------------*/
-NCURSES_EXPORT(bool)
+FORM_EXPORT(bool)
 _nc_Copy_Type(FIELD *dst, FIELD const *src)
 {
   int err = 0;
@@ -231,7 +229,7 @@ _nc_Copy_Type(FIELD *dst, FIELD const *src)
     }
   else
     {
-      if (dst->type != 0)
+      if (dst->type != NULL)
 	{
 	  dst->type->ref++;
 	}
@@ -247,11 +245,11 @@ _nc_Copy_Type(FIELD *dst, FIELD const *src)
 |
 |   Return Values :  -
 +--------------------------------------------------------------------------*/
-NCURSES_EXPORT(void)
+FORM_EXPORT(void)
 _nc_Free_Type(FIELD *field)
 {
   assert(field != 0);
-  if (field->type != 0)
+  if (field->type != NULL)
     {
       field->type->ref--;
       _nc_Free_Argument(field->type, (TypeArgument *)(field->arg));
@@ -274,7 +272,7 @@ _nc_Free_Type(FIELD *field)
 |
 |   Return Values :  Pointer to the new field or NULL if failure.
 +--------------------------------------------------------------------------*/
-NCURSES_EXPORT(FIELD *)
+FORM_EXPORT(FIELD *)
 new_field(int rows, int cols, int frow, int fcol, int nrow, int nbuf)
 {
   static const FIELD_CELL blank = BLANK;
@@ -291,7 +289,7 @@ new_field(int rows, int cols, int frow, int fcol, int nrow, int nbuf)
       nrow >= 0 &&
       nbuf >= 0 &&
       ((err = E_SYSTEM_ERROR) != 0) &&	/* trick: this resets the default error */
-      (New_Field = typeMalloc(FIELD, 1)) != 0)
+      (New_Field = typeMalloc(FIELD, 1)) != NULL)
     {
       T((T_CREATE("field %p"), (void *)New_Field));
       *New_Field = default_field;
@@ -315,7 +313,7 @@ new_field(int rows, int cols, int frow, int fcol, int nrow, int nbuf)
 	  size_t len;
 
 	  len = Total_Buffer_Size(New_Field);
-	  if ((New_Field->buf = (FIELD_CELL *)malloc(len)))
+	  if ((New_Field->buf = (FIELD_CELL *)malloc(len)) != NULL)
 	    {
 	      /* Prefill buffers with blanks and insert terminating zeroes
 	         between buffers */
@@ -354,7 +352,7 @@ new_field(int rows, int cols, int frow, int fcol, int nrow, int nbuf)
 |                    E_BAD_ARGUMENT - invalid field pointer
 |                    E_CONNECTED    - field is connected
 +--------------------------------------------------------------------------*/
-NCURSES_EXPORT(int)
+FORM_EXPORT(int)
 free_field(FIELD *field)
 {
   T((T_CALLED("free_field(%p)"), (void *)field));
@@ -362,13 +360,13 @@ free_field(FIELD *field)
     {
       RETURN(E_BAD_ARGUMENT);
     }
-  else if (field->form != 0)
+  else if (field->form != NULL)
     {
       RETURN(E_CONNECTED);
     }
   else if (field == field->link)
     {
-      if (field->buf != 0)
+      if (field->buf != NULL)
 	free(field->buf);
     }
   else
@@ -382,7 +380,7 @@ free_field(FIELD *field)
     }
   _nc_Free_Type(field);
 #if USE_WIDEC_SUPPORT
-  if (field->expanded != 0)
+  if (field->expanded != NULL)
     {
       int n;
 

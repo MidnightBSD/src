@@ -1753,10 +1753,75 @@ CHACHA20_TESTS(GEN_RECEIVE_TESTS);
 	    minor, long_padded)
 
 /*
- * For TLS 1.3 cipher suites, run two additional receive tests which
- * use add padding to each record.
+ * Send a TLS 1.3 record whose plaintext is entirely zero-filled, so
+ * that it has no inner content type.  The kernel must reject it with
+ * EBADMSG rather than reading before the start of the record.
+ */
+static void
+test_ktls13_receive_no_content_type(const atf_tc_t *tc, struct tls_enable *en,
+    uint64_t seqno)
+{
+	char *outbuf, buf[64];
+	size_t outbuf_cap, outbuf_len;
+	ssize_t rv;
+	int sockets[2];
+
+	ATF_REQUIRE(en->tls_vminor == TLS_MINOR_VER_THREE);
+
+	outbuf_cap = tls_header_len(en) + tls_trailer_len(en);
+	outbuf = malloc(outbuf_cap);
+
+	ATF_REQUIRE_MSG(open_sockets(tc, sockets), "failed to create sockets");
+
+	ATF_REQUIRE(setsockopt(sockets[0], IPPROTO_TCP, TCP_RXTLS_ENABLE, en,
+	    sizeof(*en)) == 0);
+	check_tls_mode(tc, sockets[0], TCP_RXTLS_MODE);
+
+	fd_set_blocking(sockets[0]);
+	fd_set_blocking(sockets[1]);
+
+	outbuf_len = encrypt_tls_record(en, 0 /* invalid content type */,
+	    seqno, NULL, 0, outbuf, outbuf_cap, 0);
+
+	rv = write(sockets[1], outbuf, outbuf_len);
+	ATF_REQUIRE((size_t)rv == outbuf_len);
+
+	rv = read(sockets[0], buf, sizeof(buf));
+	ATF_REQUIRE_MSG(rv == -1, "read returned %zd, expected EBADMSG", rv);
+	ATF_REQUIRE_ERRNO(EBADMSG, true);
+
+	free(outbuf);
+
+	close_sockets(sockets);
+}
+
+#define GEN_RECEIVE_NO_CONTENT_TYPE_TEST(cipher_name, cipher_alg, key_size,  \
+    auth_alg, minor)                                                           \
+	ATF_TC_WITHOUT_HEAD(ktls_receive_##cipher_name##_no_content_type);     \
+	ATF_TC_BODY(ktls_receive_##cipher_name##_no_content_type, tc)          \
+	{                                                                      \
+		struct tls_enable en;                                          \
+		uint64_t seqno;                                                \
+                                                                               \
+		ATF_REQUIRE_KTLS();                                            \
+		seqno = random();                                              \
+		build_tls_enable(cipher_alg, key_size, auth_alg, minor, seqno, \
+		    &en);                                                      \
+		test_ktls13_receive_no_content_type(tc, &en, seqno);           \
+		free_tls_enable(&en);                                          \
+	}
+
+#define ADD_RECEIVE_NO_CONTENT_TYPE_TEST(cipher_name, cipher_alg, key_size,  \
+    auth_alg, minor)                                                           \
+	ATF_TP_ADD_TC(tp, ktls_receive_##cipher_name##_no_content_type);
+
+/*
+ * For TLS 1.3 cipher suites, run additional receive tests: two which
+ * add padding to each record, and one that exercises handling of a
+ * payload with no inner content type.
  */
 TLS_13_TESTS(GEN_PADDING_RECEIVE_TESTS);
+TLS_13_TESTS(GEN_RECEIVE_NO_CONTENT_TYPE_TEST);
 
 static void
 test_ktls_invalid_receive_cipher_suite(const atf_tc_t *tc,
@@ -1986,6 +2051,7 @@ ATF_TP_ADD_TCS(tp)
 	AES_GCM_TESTS(ADD_RECEIVE_TESTS);
 	CHACHA20_TESTS(ADD_RECEIVE_TESTS);
 	TLS_13_TESTS(ADD_PADDING_RECEIVE_TESTS);
+	TLS_13_TESTS(ADD_RECEIVE_NO_CONTENT_TYPE_TEST);
 	INVALID_CIPHER_SUITES(ADD_INVALID_RECEIVE_TEST);
 
 	/* Miscellaneous */

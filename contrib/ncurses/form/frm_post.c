@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2020 Thomas E. Dickey                                          *
+ * Copyright 2020,2024 Thomas E. Dickey                                     *
  * Copyright 1998-2010,2012 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -33,7 +33,7 @@
 
 #include "form.priv.h"
 
-MODULE_ID("$Id: frm_post.c,v 1.13 2020/02/02 23:34:34 tom Exp $")
+MODULE_ID("$Id: frm_post.c,v 1.15 2024/07/27 18:35:02 tom Exp $")
 
 /*---------------------------------------------------------------------------
 |   Facility      :  libnform
@@ -48,10 +48,10 @@ MODULE_ID("$Id: frm_post.c,v 1.13 2020/02/02 23:34:34 tom Exp $")
 |                    E_NO_ROOM         - form doesn't fit into subwindow
 |                    E_SYSTEM_ERROR    - system error
 +--------------------------------------------------------------------------*/
-NCURSES_EXPORT(int)
+FORM_EXPORT(int)
 post_form(FORM *form)
 {
-  WINDOW *formwin;
+  const WINDOW *formwin;
   int err;
   int page;
 
@@ -98,7 +98,7 @@ post_form(FORM *form)
 |                    E_NOT_POSTED    - form isn't posted
 |                    E_BAD_STATE     - called from a hook routine
 +--------------------------------------------------------------------------*/
-NCURSES_EXPORT(int)
+FORM_EXPORT(int)
 unpost_form(FORM *form)
 {
   T((T_CALLED("unpost_form(%p)"), (void *)form));

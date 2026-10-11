@@ -147,6 +147,9 @@ donice(Char **v, struct command *c)
 {
     Char *cp;
     int	    nval = 0;
+#if defined(HAVE_SETPRIORITY) && defined(PRIO_PROCESS)
+    int	    oval;
+#endif
 
     USE(c);
     v++, cp = *v++;
@@ -155,6 +158,10 @@ donice(Char **v, struct command *c)
     else if (*v	== 0 &&	any("+-", cp[0]))
 	nval = getn(cp);
 #if defined(HAVE_SETPRIORITY) && defined(PRIO_PROCESS)
+    errno = 0;
+    if ((oval = getpriority(PRIO_PROCESS, 0)) == -1 && errno)
+	stderror(ERR_SYSTEM, "getpriority", strerror(errno));
+    nval += oval;
     if (setpriority(PRIO_PROCESS, 0, nval) == -1 && errno)
 	stderror(ERR_SYSTEM, "setpriority", strerror(errno));
 #else /* !HAVE_SETPRIORITY || !PRIO_PROCESS */
@@ -353,9 +360,9 @@ prusage(struct tms *bs, struct tms *es, clock_t e, clock_t b)
 
     /*
      * the tms stuff is	not very precise, so we	fudge it.
-     * granularity fix:	can't be more than 100%	
+     * granularity fix:	can't be more than 100%
      * this breaks in multi-processor systems...
-     * maybe I should take it out and let people see more then 100% 
+     * maybe I should take it out and let people see more then 100%
      * utilizations.
      */
 #  if 0
@@ -447,7 +454,7 @@ prusage(struct tms *bs, struct tms *es, clock_t e, clock_t b)
 #endif
 		xprintf("%ld", i);
 		break;
- 
+
 #ifdef convex
 	    case 'X':		/* (average) shared text size */
 		memtmp = (t == 0 ? 0LL : IADJUST((long long)r1->ru_ixrss -

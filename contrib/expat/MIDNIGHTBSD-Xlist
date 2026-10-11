@@ -1,22 +1,37 @@
-# $FreeBSD: stable/11/contrib/expat/FREEBSD-Xlist 355604 2019-12-11 06:34:48Z delphij $
-*.MPW
-*.cmake
-*.def
-*.dsp
-*.dsw
-*.m4
-*.pc.in
-*.vcxproj*
-*config.h
+# Files and directories removed from the upstream expat distribution
+# before it is imported into contrib/expat.  Derived from FreeBSD's
+# contrib/expat/FREEBSD-Xlist.
+#
+# Entries are spelled out rather than globbed.  The glob patterns this
+# list used to carry were unsafe or dead:
+#
+#   *.pc.in     matched expat.pc.in, which we ship -- applying the list
+#               literally deleted a file that belongs in the tree
+#   *.cmake     matches lib/libexpat.def.cmake, which we keep, whenever
+#   *config.h   this list is fed to a matcher that descends into
+#               subdirectories (tar -X, find); likewise lib/winconfig.h
+#   *.MPW *.def *.dsp *.dsw *.vcxproj* Configure* CMake* amiga bcb5 vms
+#   expat.sln doc/valid-xhtml10.png
+#               matched nothing as of 2.8.3; upstream dropped them long
+#               ago
+#
+# Deliberately kept despite looking like candidates: expat.pc.in,
+# expat_config.h.in, lib/libexpat.def.cmake and lib/winconfig.h.
+#
+# This list is a description of the trim, not the authority on it.
+# Verify an import by diffing the trimmed file set against the previous
+# vendor tag and requiring them to be identical apart from genuinely new
+# upstream files.
+CMake.README
+CMakeLists.txt
+ConfigureChecks.cmake
+acinclude.m4
+aclocal.m4
 cmake
-CMake*
-Configure*
-amiga
-bcb5
 configure
 conftools
-doc/valid-xhtml10.png
-expat.sln
+expat.pc.cmake
+expat_config.h
+expat_config.h.cmake
 m4
-vms
 win32

@@ -43,6 +43,8 @@ static int check_depends(mportInstance *mport, mportPackageMeta *);
 static int check_if_older_installed(mportInstance *, mportPackageMeta *);
 static int check_if_older_os(mportInstance *, mportPackageMeta *);
 static int check_file_conflicts(mportInstance *, mportPackageMeta *);
+static int asset_owned_by_pkg(mportInstance *, mportPackageMeta *, const char *);
+static int check_bundle_os(mportInstance *, mportPackageMeta *);
 
 /* Run the checks requested by the flags given.
  *
@@ -53,6 +55,8 @@ static int check_file_conflicts(mportInstance *, mportPackageMeta *);
  * Fail if an older version is not installed MPORT_PRECHECK_CONFLICTS  -- Fail if the package has a
  * conflict MPORT_PRECHECK_DEPENDS    -- Fail if the dependencies are not resolved MPORT_PRECHECK_OS
  * -- Fail if the os version of the installed is older
+ *   MPORT_PRECHECK_BUNDLE_OS  -- Fail if the package file was built for another OS release
+ *                                than the target, unless mport->allowOldRelease is set
  *
  * The checks are run in the order listed above.  The first failure
  * encountered is the one reported.
@@ -77,58 +81,90 @@ mport_check_preconditions(mportInstance *mport, mportPackageMeta *pack, long fla
 		RETURN_CURRENT_ERROR;
 	if (flags & MPORT_PRECHECK_OS && check_if_older_os(mport, pack) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
+	if (flags & MPORT_PRECHECK_BUNDLE_OS && check_bundle_os(mport, pack) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
 	if (flags & MPORT_PRECHECK_FILE_CONFLICTS && check_file_conflicts(mport, pack) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
 	return MPORT_OK;
 }
 
+/*
+ * The package file carries the OS release it was built on.  A package from
+ * another release may link against libraries that changed symbols or
+ * versions, so it is refused unless the caller opted in.  Both directions
+ * are refused; the override is named for the common case.
+ */
+static int
+check_bundle_os(mportInstance *mport, mportPackageMeta *pack)
+{
+	char *target;
+	int cmp;
+
+	if (mport->allowOldRelease)
+		return MPORT_OK;
+
+	if (pack->os_release == NULL || pack->os_release[0] == '\0')
+		return MPORT_OK; /* old bundles carry no release; nothing to compare */
+
+	if ((target = mport_get_osrelease(mport)) == NULL)
+		return SET_ERROR(MPORT_ERR_FATAL, "Unable to determine OS release");
+
+	cmp = mport_version_cmp(pack->os_release, target);
+	if (cmp == 0) {
+		free(target);
+		return MPORT_OK;
+	}
+
+	SET_ERRORX(MPORT_ERR_FATAL,
+	    "%s-%s was built for MidnightBSD %s, which is %s than the target release %s; "
+	    "set MPORT_ALLOW_OLD_RELEASE or pass --allow-old-release to install it anyway.",
+	    pack->name, pack->version, pack->os_release, cmp < 0 ? "older" : "newer", target);
+	free(target);
+	RETURN_CURRENT_ERROR;
+}
+
 static int
 check_if_moved(mportInstance *mport, mportPackageMeta *pack)
 {
-	mportIndexMovedEntry **movedEntries;
+	mportIndexMovedEntry **movedEntries = NULL;
+	int ret = MPORT_OK;
 
 	if (mport_moved_lookup(mport, pack->origin, &movedEntries) != MPORT_OK) {
+		mport_index_moved_entry_free_vec(movedEntries);
 		SET_ERROR(MPORT_ERR_FATAL, "The moved lookup failed.");
 		RETURN_CURRENT_ERROR;
 	}
 
-	if (movedEntries == NULL || *movedEntries != NULL) {
-		return MPORT_OK;
-	}
-
-	if ((*movedEntries)->date[0] != '\0')
-		return MPORT_OK; // it expired, not moved
-
-	if ((*movedEntries)->moved_to != NULL && (*movedEntries)->moved_to[0] != '\0') {
+	if (movedEntries != NULL && *movedEntries != NULL && (*movedEntries)->date[0] == '\0' &&
+	    (*movedEntries)->moved_to[0] != '\0') {
 		SET_ERRORX(MPORT_ERR_FATAL, "The package %s has been moved to %s", pack->name,
 		    (*movedEntries)->moved_to);
-		RETURN_CURRENT_ERROR;
+		ret = mport_err_code();
 	}
 
-	return MPORT_OK; // just pass it if it didn't match either scenario
+	mport_index_moved_entry_free_vec(movedEntries);
+	return ret;
 }
 
 static int
 check_if_deprecated(mportInstance *mport, mportPackageMeta *pack)
 {
-	mportIndexMovedEntry **movedEntries;
+	mportIndexMovedEntry **movedEntries = NULL;
+	int ret = MPORT_OK;
 
 	if (mport_moved_lookup(mport, pack->origin, &movedEntries) != MPORT_OK) {
+		mport_index_moved_entry_free_vec(movedEntries);
 		SET_ERROR(MPORT_ERR_FATAL, "The moved lookup failed.");
 		RETURN_CURRENT_ERROR;
 	}
 
-	if (movedEntries == NULL || *movedEntries != NULL) {
-		return MPORT_OK;
-	}
+	if (movedEntries != NULL && *movedEntries != NULL && (*movedEntries)->date[0] != '\0')
+		ret = SET_ERRORX(
+		    MPORT_ERR_FATAL, "%s expires on %s.", pack->name, (*movedEntries)->date);
 
-	if ((*movedEntries)->date[0] != '\0') {
-		SET_ERRORX(MPORT_ERR_FATAL, "%s expires on %s.", pack->name, (*movedEntries)->date);
-		RETURN_CURRENT_ERROR;
-	}
-
-	return MPORT_OK;
+	mport_index_moved_entry_free_vec(movedEntries);
+	return ret;
 }
 
 static int
@@ -180,8 +216,10 @@ check_if_installed(mportInstance *mport, mportPackageMeta *pack)
 		os_release = sqlite3_column_text(stmt, 1);
 		system_os_release = (char *)mport_get_osrelease(mport);
 
-		/* Different os release version should not be considered the same package */
-		if (strcmp(os_release, system_os_release) != 0) {
+		/* Different os release version should not be considered the same package.
+		   A NULL from either source means we cannot confirm a match. */
+		if (os_release == NULL || system_os_release == NULL ||
+		    strcmp(os_release, system_os_release) != 0) {
 			free(system_os_release);
 			break;
 		}
@@ -262,7 +300,7 @@ check_depends(mportInstance *mport, mportPackageMeta *pack)
 	/* package name on dependencies can contain the flavor prefix. native-binutils but there is
 	 * no guarnatee we stored it as native-bintuils in master. check for binutils also. */
 	if (mport_db_prepare(db, &lookup,
-		"SELECT version, os_release, flavor FROM packages WHERE (pkg=? or (flavor is not null and flavor != '' and pkg=substr(?, length(flavor) + 2) )) AND status='clean'") !=
+		"SELECT version, os_release, flavor, no_provide_shlib, pkg FROM packages WHERE (pkg=? or (flavor is not null and flavor != '' and pkg=substr(?, length(flavor) + 2) )) AND status='clean'") !=
 	    MPORT_OK) {
 		sqlite3_finalize(stmt);
 		RETURN_CURRENT_ERROR;
@@ -301,7 +339,22 @@ check_depends(mportInstance *mport, mportPackageMeta *pack)
 				os_release = sqlite3_column_text(lookup, 1);
 				int ok;
 
-				if (strcmp(os_release, system_os_release) != 0) {
+				/*
+				 * A dependency from another release matters because its
+				 * shared libraries may not match what this package was
+				 * linked against.  One that ships no shared library
+				 * (no_provide_shlib, recorded when it was built) cannot
+				 * cause that, and neither can one whose every library is
+				 * also provided by a current-release package, since the
+				 * run-time linker finds the current copy.  Both are
+				 * accepted as installed.
+				 */
+				if ((os_release == NULL || system_os_release == NULL ||
+					strcmp(os_release, system_os_release) != 0) &&
+				    sqlite3_column_int(lookup, 3) == 0 &&
+				    mport_shlibs_superseded(mport,
+					(const char *)sqlite3_column_text(lookup, 4),
+					system_os_release) != 1) {
 					SET_ERRORX(MPORT_ERR_FATAL,
 					    "%s depends on %s version %s.  Version %s for MidnightBSD %s is installed.",
 					    pack->name, depend_pkg,
@@ -320,6 +373,10 @@ check_depends(mportInstance *mport, mportPackageMeta *pack)
 				ok = mport_version_require_check(inst_version, depend_version);
 
 				if (ok > 0) {
+					SET_ERRORX(MPORT_ERR_FATAL,
+					    "%s depends on %s with an invalid version requirement '%s': %s",
+					    pack->name, depend_pkg, depend_version,
+					    mport_err_string());
 					sqlite3_finalize(lookup);
 					sqlite3_finalize(stmt);
 					free(system_os_release);
@@ -451,6 +508,42 @@ check_if_older_os(mportInstance *mport, mportPackageMeta *pkg)
 	return ret;
 }
 
+/*
+ * Return 1 when path is already recorded as an asset of pack in the master
+ * database, 0 when it is not, and -1 on error.  The same package name can be
+ * registered more than once (a copy installed under a different os_release is
+ * treated as a distinct package by check_if_installed()), so a file owned by
+ * pack itself is replaced by this install rather than being a conflict.
+ */
+static int
+asset_owned_by_pkg(mportInstance *mport, mportPackageMeta *pack, const char *path)
+{
+	sqlite3_stmt *stmt = NULL;
+	int ret;
+
+	if (mport_db_prepare(mport->db, &stmt, "SELECT 1 FROM assets WHERE data=%Q AND pkg=%Q",
+		path, pack->name) != MPORT_OK) {
+		sqlite3_finalize(stmt);
+		return -1;
+	}
+
+	switch (sqlite3_step(stmt)) {
+	case SQLITE_ROW:
+		ret = 1;
+		break;
+	case SQLITE_DONE:
+		ret = 0;
+		break;
+	default:
+		SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+		ret = -1;
+		break;
+	}
+
+	sqlite3_finalize(stmt);
+	return ret;
+}
+
 static int
 check_file_conflicts(mportInstance *mport, mportPackageMeta *pack)
 {
@@ -562,6 +655,19 @@ check_file_conflicts(mportInstance *mport, mportPackageMeta *pack)
 			sqlite3_finalize(stmt);
 			RETURN_CURRENT_ERROR;
 		} else if (lret == SQLITE_DONE) {
+			int owned = asset_owned_by_pkg(mport, pack, masterpath);
+
+			if (owned < 0) {
+				sqlite3_finalize(lookup);
+				sqlite3_finalize(stmt);
+				RETURN_CURRENT_ERROR;
+			}
+
+			/* the file belongs to this package already; it is replaced, not
+			 * conflicted */
+			if (owned == 1)
+				continue;
+
 			SET_ERRORX(MPORT_ERR_FATAL,
 			    "%s already exists but is not managed by mport; use -f to overwrite.",
 			    fullpath);

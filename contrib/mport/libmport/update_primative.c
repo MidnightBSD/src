@@ -46,14 +46,20 @@ mport_update_primative(mportInstance *mport, const char *filename)
 	if ((bundle = mport_bundle_read_new()) == NULL)
 		RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
 
-	if (mport_bundle_read_init(bundle, filename) != MPORT_OK)
+	if (mport_bundle_read_init(bundle, filename) != MPORT_OK) {
+		mport_bundle_read_finish(mport, bundle);
 		RETURN_CURRENT_ERROR;
+	}
 
-	if (mport_bundle_read_prep_for_install(mport, bundle) != MPORT_OK)
+	if (mport_bundle_read_prep_for_install(mport, bundle) != MPORT_OK) {
+		mport_bundle_read_finish(mport, bundle);
 		RETURN_CURRENT_ERROR;
+	}
 
-	if (mport_pkgmeta_read_stub(mport, &pkgs) != MPORT_OK)
+	if (mport_pkgmeta_read_stub(mport, &pkgs) != MPORT_OK) {
+		mport_bundle_read_finish(mport, bundle);
 		RETURN_CURRENT_ERROR;
+	}
 
 	packs_start = pkgs;
 	for (int i = 0; *(pkgs + i) != NULL; i++) {
@@ -126,7 +132,7 @@ set_prefix_to_installed(mportInstance *mport, mportPackageMeta *pkg)
 	case SQLITE_ROW:
 		prefix = sqlite3_column_text(stmt, 0);
 
-		if (strcmp(prefix, pkg->prefix) != 0) {
+		if (prefix != NULL && strcmp(prefix, pkg->prefix) != 0) {
 			free(pkg->prefix);
 			if ((pkg->prefix = strdup(prefix)) == NULL) {
 				ret = MPORT_ERR_FATAL;

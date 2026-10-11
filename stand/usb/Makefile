@@ -42,9 +42,6 @@ CFLAGS+=	-fno-pic
 .if ${MACHINE_CPUARCH} == "amd64"
 CFLAGS+=	-m32
 .endif
-.if ${MACHINE_CPUARCH} == "mips"
-CFLAGS+=	-mno-abicalls
-.endif
 
 
 .include "usbcore.mk"

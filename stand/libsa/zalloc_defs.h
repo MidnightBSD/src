@@ -61,7 +61,7 @@
  * least sizeof(struct MemNode); this is asserted in zalloc.c.
  */
 
-#if defined(__arm__) || defined(__mips__) || defined(__powerpc__)
+#if defined(__arm__)
 #define	MALLOCALIGN		64
 #else
 #define	MALLOCALIGN		16

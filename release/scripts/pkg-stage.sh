@@ -1,92 +1,124 @@
 #!/bin/sh
 #
+# SPDX-License-Identifier: BSD-2-Clause
+#
+# Stage a subset of a blessed mport repository on installation media.
 #
 
-set -e
+set -eu
 
-export ASSUME_ALWAYS_YES="YES"
-export PKG_DBDIR="/tmp/pkg"
-export PERMISSIVE="YES"
-export REPO_AUTOUPDATE="NO"
-export ROOTDIR="$PWD/dvd"
-export PKGCMD="/usr/sbin/pkg -d --rootdir ${ROOTDIR}"
-export PORTSDIR="${PORTSDIR:-/usr/ports}"
+ROOTDIR=${ROOTDIR:-"$PWD/dvd"}
+MPORT_REPOSITORY=${MPORT_REPOSITORY:-"/usr/mports/Packages/$(uname -p)/All"}
+DVD_PACKAGE_ROOTS=${DVD_PACKAGE_ROOTS:-"midnightbsd-desktop bash zsh sudo screen tmux nano vim rsync git"}
 
-_DVD_PACKAGES="devel/git@lite
-graphics/drm-kmod
-graphics/drm-510-kmod
-misc/freebsd-doc-all
-net/mpd5
-net/rsync
-ports-mgmt/pkg
-shells/bash
-shells/zsh
-security/sudo
-sysutils/screen
-sysutils/seatd
-sysutils/tmux
-www/firefox
-www/links
-x11/gnome
-x11/kde
-x11/sddm
-x11/xorg
-x11-wm/sway"
+INDEX=${MPORT_REPOSITORY}/index.db
+PACKAGE_DEST=${ROOTDIR}/packages
+TAB=$(printf '\t')
 
-# If NOPORTS is set for the release, do not attempt to build pkg(8).
-if [ ! -f ${PORTSDIR}/Makefile ]; then
-	echo "*** ${PORTSDIR} is missing!    ***"
-	echo "*** Skipping pkg-stage.sh     ***"
-	echo "*** Unset NOPORTS to fix this ***"
-	exit 0
-fi
+fail()
+{
+	echo "pkg-stage: $*" >&2
+	exit 1
+}
 
-if [ ! -x /usr/local/sbin/pkg ]; then
-	/etc/rc.d/ldconfig restart
-	/usr/bin/make -C ${PORTSDIR}/ports-mgmt/pkg install clean
-fi
+validate_atom()
+{
+	case "$1" in
+	""|*[!A-Za-z0-9_.,+~:-]*)
+		fail "unsafe package name or version: $1"
+		;;
+	esac
+}
 
-export PKG_ABI=$(pkg --rootdir ${ROOTDIR} config ABI)
-export PKG_ALTABI=$(pkg --rootdir ${ROOTDIR} config ALTABI 2>/dev/null)
-export PKG_REPODIR="packages/${PKG_ABI}"
+case "$ROOTDIR" in
+""|/)
+	fail "refusing unsafe ROOTDIR: $ROOTDIR"
+	;;
+esac
 
-/bin/mkdir -p ${ROOTDIR}/${PKG_REPODIR}
-if [ ! -z "${PKG_ALTABI}" ]; then
-	ln -s ${PKG_ABI} ${ROOTDIR}/packages/${PKG_ALTABI}
-fi
+[ -r "$INDEX" ] || fail "missing blessed mport index: $INDEX"
+[ -n "$DVD_PACKAGE_ROOTS" ] || fail "DVD_PACKAGE_ROOTS is empty"
+command -v sqlite3 >/dev/null 2>&1 || fail "sqlite3 is required"
+command -v sha256 >/dev/null 2>&1 || fail "sha256 is required"
+duplicate=$(sqlite3 -readonly "$INDEX" \
+    "SELECT pkg FROM packages GROUP BY pkg HAVING count(*) > 1 LIMIT 1;")
+[ -z "$duplicate" ] ||
+	fail "package '$duplicate' has multiple entries in the blessed index"
 
-# Ensure the ports listed in _DVD_PACKAGES exist to sanitize the
-# final list.
-for _P in ${_DVD_PACKAGES}; do
-	if [ -d "${PORTSDIR}/${_P%%@*}" ]; then
-		DVD_PACKAGES="${DVD_PACKAGES} ${_P}"
-	else
-		echo "*** Skipping nonexistent port: ${_P%%@*}"
-	fi
+workdir=$(mktemp -d -t pkg-stage.XXXXXX)
+trap 'rm -rf "$workdir"' EXIT HUP INT TERM
+roots=${workdir}/roots
+closure_raw=${workdir}/closure.raw
+closure=${workdir}/closure
+: > "$roots"
+: > "$closure_raw"
+
+for root in $DVD_PACKAGE_ROOTS; do
+	validate_atom "$root"
+	count=$(sqlite3 -readonly "$INDEX" \
+	    "SELECT count(*) FROM packages WHERE pkg='$root' AND type=0;")
+	[ "$count" -eq 1 ] ||
+		fail "application root '$root' has $count matching index entries"
+
+	row=$(sqlite3 -readonly -noheader -tabs "$INDEX" \
+	    "SELECT pkg, version,
+	    coalesce(nullif(replace(replace(replace(comment, char(9), ' '),
+	    char(10), ' '), char(13), ' '), ''), pkg)
+	    FROM packages WHERE pkg='$root' AND type=0;")
+	state=off
+	[ "$root" = midnightbsd-desktop ] && state=on
+	printf '%s\t%s\n' "$row" "$state" >> "$roots"
+
+	version=$(printf '%s\n' "$row" | awk -F "$TAB" '{ print $2 }')
+	validate_atom "$version"
+	sql="WITH RECURSIVE closure(pkg, version) AS (VALUES('$root', '$version') UNION SELECT d.d_pkg, d.d_version FROM depends AS d JOIN closure AS c ON d.pkg=c.pkg AND d.version=c.version) SELECT pkg, version FROM closure;"
+	sqlite3 -readonly -noheader -tabs "$INDEX" "$sql" >> "$closure_raw"
 done
 
-# Make sure the package list is not empty.
-if [ -z "${DVD_PACKAGES}" ]; then
-	echo "*** The package list is empty."
-	echo "*** Something is very wrong."
-	# Exit '0' so the rest of the build process continues
-	# so other issues (if any) can be addressed as well.
-	exit 0
-fi
+sort -u "$closure_raw" > "$closure"
 
-# Print pkg(8) information to make debugging easier.
-${PKGCMD} -vv
-${PKGCMD} update -f
-${PKGCMD} fetch -o ${PKG_REPODIR} -d ${DVD_PACKAGES}
+rm -rf "$PACKAGE_DEST"
+mkdir -p "$PACKAGE_DEST"
+install -m 0644 "$INDEX" "$PACKAGE_DEST/index.db"
+install -m 0644 "$roots" "$PACKAGE_DEST/installer.tsv"
 
-# Create the 'Latest/pkg.txz' symlink so 'pkg bootstrap' works
-# using the on-disc packages.
-export LATEST_DIR="${ROOTDIR}/${PKG_REPODIR}/Latest"
-mkdir -p ${LATEST_DIR}
-ln -s ../All/$(${PKGCMD} rquery %n-%v pkg).pkg ${LATEST_DIR}/pkg.pkg
-ln -sf pkg.pkg ${LATEST_DIR}/pkg.txz
+sqlite3 -readonly -noheader -tabs "$INDEX" \
+    "SELECT pkg, version,
+    coalesce(nullif(replace(replace(replace(comment, char(9), ' '),
+    char(10), ' '), char(13), ' '), ''), pkg), bundlefile
+    FROM packages WHERE type=0 ORDER BY pkg, version;" \
+    > "$PACKAGE_DEST/catalog.tsv"
+chmod 0644 "$PACKAGE_DEST/catalog.tsv"
 
-${PKGCMD} repo ${PKG_REPODIR}
+while IFS="$TAB" read -r pkg version; do
+	validate_atom "$pkg"
+	validate_atom "$version"
+	count=$(sqlite3 -readonly "$INDEX" \
+	    "SELECT count(*) FROM packages WHERE pkg='$pkg' AND version='$version';")
+	[ "$count" -eq 1 ] ||
+		fail "dependency '$pkg-$version' has $count matching index entries"
 
-# Always exit '0', even if pkg(8) complains about conflicts.
-exit 0
+	row=$(sqlite3 -readonly -noheader -tabs "$INDEX" \
+	    "SELECT bundlefile, hash FROM packages WHERE pkg='$pkg' AND version='$version';")
+	bundle=${row%%"$TAB"*}
+	hash=${row#*"$TAB"}
+	case "$bundle" in
+	""|*/*|*[!A-Za-z0-9_.,+~:-]*)
+		fail "unsafe bundle filename for '$pkg-$version': $bundle"
+		;;
+	*.mport)
+		;;
+	*)
+		fail "unexpected bundle filename for '$pkg-$version': $bundle"
+		;;
+	esac
+
+	source_file=${MPORT_REPOSITORY}/${bundle}
+	[ -f "$source_file" ] || fail "missing bundle: $source_file"
+	actual_hash=$(sha256 -q "$source_file")
+	[ "$actual_hash" = "$hash" ] || fail "hash mismatch for $bundle"
+	install -m 0644 "$source_file" "$PACKAGE_DEST/$bundle"
+done < "$closure"
+
+package_count=$(wc -l < "$closure" | tr -d ' ')
+echo "Staged $package_count packages and the full blessed index in $PACKAGE_DEST"

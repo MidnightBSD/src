@@ -473,8 +473,153 @@ ATF_TC_BODY(mport_directory_relative, tc)
 	free(dir);
 }
 
+ATF_TC(mport_parselist_basic);
+ATF_TC_HEAD(mport_parselist_basic, tc)
+{
+	atf_tc_set_md_var(tc, "descr", "mport_parselist splits a list on whitespace");
+}
+ATF_TC_BODY(mport_parselist_basic, tc)
+{
+	char in[] = "foo bar baz";
+	char **list = NULL;
+	size_t n = 0;
+
+	(void)tc;
+
+	mport_parselist(in, &list, &n);
+	ATF_REQUIRE_EQ((size_t)3, n);
+	ATF_REQUIRE(list != NULL);
+	ATF_REQUIRE_STREQ("foo", list[0]);
+	ATF_REQUIRE_STREQ("bar", list[1]);
+	ATF_REQUIRE_STREQ("baz", list[2]);
+	ATF_REQUIRE(list[3] == NULL);
+
+	for (size_t i = 0; i < n; i++)
+		free(list[i]);
+	free(list);
+}
+
+ATF_TC(mport_parselist_trailing_ws);
+ATF_TC_HEAD(mport_parselist_trailing_ws, tc)
+{
+	atf_tc_set_md_var(
+	    tc, "descr", "mport_parselist handles trailing whitespace without an invalid free");
+}
+ATF_TC_BODY(mport_parselist_trailing_ws, tc)
+{
+	char in[] = "foo bar \t";
+	char **list = NULL;
+	size_t n = 0;
+
+	(void)tc;
+
+	/* Pre-fix this freed a strsep-advanced interior pointer and corrupted
+	   the heap; reaching the asserts proves it no longer does. */
+	mport_parselist(in, &list, &n);
+	ATF_REQUIRE_EQ((size_t)2, n);
+	ATF_REQUIRE(list != NULL);
+	ATF_REQUIRE_STREQ("foo", list[0]);
+	ATF_REQUIRE_STREQ("bar", list[1]);
+
+	for (size_t i = 0; i < n; i++)
+		free(list[i]);
+	free(list);
+}
+
+ATF_TC(mport_parselist_tll_no_dup);
+ATF_TC_HEAD(mport_parselist_tll_no_dup, tc)
+{
+	atf_tc_set_md_var(tc, "descr", "mport_parselist_tll pushes each token exactly once");
+}
+ATF_TC_BODY(mport_parselist_tll_no_dup, tc)
+{
+	char in[] = "foo bar baz";
+	stringlist_t list = tll_init();
+
+	(void)tc;
+
+	/* Pre-fix each token was pushed twice, so this was 6. */
+	mport_parselist_tll(in, &list);
+	ATF_REQUIRE_EQ((size_t)3, tll_length(list));
+
+	tll_free_and_free(list, free);
+}
+
+static mportAssetListEntry *
+parse_single_plist_line(const char *line, mportAssetList **listp)
+{
+	mportAssetList *list;
+	FILE *fp;
+
+	fp = fmemopen(__DECONST(char *, line), strlen(line), "r");
+	ATF_REQUIRE(fp != NULL);
+	list = mport_assetlist_new();
+	ATF_REQUIRE(list != NULL);
+	ATF_REQUIRE_EQ(MPORT_OK, mport_parse_plistfile(fp, list));
+	(void)fclose(fp);
+	ATF_REQUIRE(STAILQ_FIRST(list) != NULL);
+	*listp = list;
+	return STAILQ_FIRST(list);
+}
+
+ATF_TC(plist_owner_mode_mode_only);
+ATF_TC_HEAD(plist_owner_mode_mode_only, tc)
+{
+	atf_tc_set_md_var(tc, "descr", "@(,,755) sets only the mode");
+}
+ATF_TC_BODY(plist_owner_mode_mode_only, tc)
+{
+	mportAssetList *list;
+	mportAssetListEntry *e;
+
+	(void)tc;
+
+	/* Pre-fix empty fields were skipped, so "755" landed in owner. */
+	e = parse_single_plist_line("@(,,755) bin/npm\n", &list);
+	ATF_REQUIRE_EQ(ASSET_FILE_OWNER_MODE, e->type);
+	ATF_REQUIRE_STREQ("", e->owner);
+	ATF_REQUIRE_STREQ("", e->group);
+	ATF_REQUIRE_STREQ("755", e->mode);
+	ATF_REQUIRE_STREQ("bin/npm", e->data);
+	mport_assetlist_free(list);
+}
+
+ATF_TC(plist_owner_mode_all_fields);
+ATF_TC_HEAD(plist_owner_mode_all_fields, tc)
+{
+	atf_tc_set_md_var(tc, "descr", "@(owner,group,mode) and @dir(,group,) are positional");
+}
+ATF_TC_BODY(plist_owner_mode_all_fields, tc)
+{
+	mportAssetList *list;
+	mportAssetListEntry *e;
+
+	(void)tc;
+
+	e = parse_single_plist_line("@(root,wheel,4555) bin/foo\n", &list);
+	ATF_REQUIRE_STREQ("root", e->owner);
+	ATF_REQUIRE_STREQ("wheel", e->group);
+	ATF_REQUIRE_STREQ("4555", e->mode);
+	mport_assetlist_free(list);
+
+	e = parse_single_plist_line("@dir(,games,) var/games/foo\n", &list);
+	ATF_REQUIRE_EQ(ASSET_DIR_OWNER_MODE, e->type);
+	ATF_REQUIRE_STREQ("", e->owner);
+	ATF_REQUIRE_STREQ("games", e->group);
+	ATF_REQUIRE_STREQ("", e->mode);
+	mport_assetlist_free(list);
+
+	e = parse_single_plist_line("@sample(,,640) etc/foo.conf.sample\n", &list);
+	ATF_REQUIRE_EQ(ASSET_SAMPLE_OWNER_MODE, e->type);
+	ATF_REQUIRE_STREQ("", e->owner);
+	ATF_REQUIRE_STREQ("640", e->mode);
+	mport_assetlist_free(list);
+}
+
 ATF_TP_ADD_TCS(tp)
 {
+	ATF_TP_ADD_TC(tp, plist_owner_mode_mode_only);
+	ATF_TP_ADD_TC(tp, plist_owner_mode_all_fields);
 	ATF_TP_ADD_TC(tp, mport_check_answer_bool_null);
 	ATF_TP_ADD_TC(tp, mport_check_answer_bool_true);
 	ATF_TP_ADD_TC(tp, mport_check_answer_bool_false);
@@ -501,6 +646,9 @@ ATF_TP_ADD_TCS(tp)
 	ATF_TP_ADD_TC(tp, mport_directory_null);
 	ATF_TP_ADD_TC(tp, mport_directory_absolute);
 	ATF_TP_ADD_TC(tp, mport_directory_relative);
+	ATF_TP_ADD_TC(tp, mport_parselist_basic);
+	ATF_TP_ADD_TC(tp, mport_parselist_trailing_ws);
+	ATF_TP_ADD_TC(tp, mport_parselist_tll_no_dup);
 
 	return atf_no_error();
 }

@@ -641,7 +641,6 @@ mk_geli_mbr_zfs_both() {
 # iso
 # pxeldr
 # u-boot
-# powerpc
 
 qser="-serial telnet::4444,server -nographic"
 
@@ -744,13 +743,6 @@ make_one_image()
     echo "^^^^^^^^^^^^^^   Created $img   ^^^^^^^^^^^^^^^"
 }
 
-# mips
-# qemu-system-mips -kernel /path/to/rootfs/boot/kernel/kernel -nographic -hda /path/to/disk.img -m 2048
-
-# Powerpc -- doesn't work but maybe it would enough for testing -- needs details
-# powerpc64
-# qemu-system-ppc64 -drive file=/path/to/disk.img,format=raw
-
 # Misc variables
 SRCTOP=$(make -v SRCTOP)
 cd ${SRCTOP}/stand
@@ -836,15 +828,6 @@ for arch in arm aarch64; do
 	fs=ufs
 	bios=efi
 	make_one_image ${arch} ${geli} ${scheme} ${fs} ${bios}
-    done
-done
-
-for arch in powerpc powerpc64; do
-    for scheme in ppc-wtf; do
-	fs=ufs
-	for bios in ofw uboot chrp; do
-	    make_one_image ${arch} ${geli} ${scheme} ${fs} ${bios}
-	done
     done
 done
 

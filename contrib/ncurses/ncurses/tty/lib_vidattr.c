@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2018-2019,2020 Thomas E. Dickey                                *
+ * Copyright 2018-2024,2025 Thomas E. Dickey                                *
  * Copyright 1998-2014,2017 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -70,7 +70,7 @@
 #define CUR SP_TERMTYPE
 #endif
 
-MODULE_ID("$Id: lib_vidattr.c,v 1.76 2020/02/02 23:34:34 tom Exp $")
+MODULE_ID("$Id: lib_vidattr.c,v 1.81 2025/12/27 12:41:23 tom Exp $")
 
 #define doPut(mode) \
 	TPUTS_TRACE(#mode); \
@@ -114,9 +114,9 @@ NCURSES_SP_NAME(vidputs) (NCURSES_SP_DCLx
     attr_t turn_on, turn_off;
     int pair;
     bool reverse = FALSE;
-    bool can_color = (SP_PARM == 0 || SP_PARM->_coloron);
+    bool can_color = (SP_PARM == NULL || SP_PARM->_coloron);
 #if NCURSES_EXT_FUNCS
-    bool fix_pair0 = (SP_PARM != 0 && SP_PARM->_coloron && !SP_PARM->_default_color);
+    bool fix_pair0 = (SP_PARM != NULL && SP_PARM->_coloron && !SP_PARM->_default_color);
 #else
 #define fix_pair0 FALSE
 #endif
@@ -134,7 +134,7 @@ NCURSES_SP_NAME(vidputs) (NCURSES_SP_DCLx
 
     TR(TRACE_ATTRS, ("previous attribute was %s", _traceattr(PreviousAttr)));
 
-    if ((SP_PARM != 0)
+    if ((SP_PARM != NULL)
 	&& (magic_cookie_glitch > 0)) {
 #if USE_XMC_SUPPORT
 	static const chtype table[] =
@@ -249,6 +249,7 @@ NCURSES_SP_NAME(vidputs) (NCURSES_SP_DCLx
 		    TurnOff(A_ITALIC, exit_italics_mode);
 		}
 #endif
+		(void) turn_off;
 	    }
 	    PreviousAttr &= ALL_BUT_COLOR;
 	}
@@ -258,16 +259,16 @@ NCURSES_SP_NAME(vidputs) (NCURSES_SP_DCLx
 	if (turn_on || turn_off) {
 	    TPUTS_TRACE("set_attributes");
 	    NCURSES_SP_NAME(tputs) (NCURSES_SP_ARGx
-				    tparm(set_attributes,
-					  (newmode & A_STANDOUT) != 0,
-					  (newmode & A_UNDERLINE) != 0,
-					  (newmode & A_REVERSE) != 0,
-					  (newmode & A_BLINK) != 0,
-					  (newmode & A_DIM) != 0,
-					  (newmode & A_BOLD) != 0,
-					  (newmode & A_INVIS) != 0,
-					  (newmode & A_PROTECT) != 0,
-					  (newmode & A_ALTCHARSET) != 0),
+				    TIPARM_9(set_attributes,
+					     (newmode & A_STANDOUT) != 0,
+					     (newmode & A_UNDERLINE) != 0,
+					     (newmode & A_REVERSE) != 0,
+					     (newmode & A_BLINK) != 0,
+					     (newmode & A_DIM) != 0,
+					     (newmode & A_BOLD) != 0,
+					     (newmode & A_INVIS) != 0,
+					     (newmode & A_PROTECT) != 0,
+					     (newmode & A_ALTCHARSET) != 0),
 				    1, outc);
 	    PreviousAttr &= ALL_BUT_COLOR;
 	}
@@ -278,6 +279,7 @@ NCURSES_SP_NAME(vidputs) (NCURSES_SP_DCLx
 	    } else if (turn_off & A_ITALIC) {
 		TurnOff(A_ITALIC, exit_italics_mode);
 	    }
+	    (void) turn_off;
 	}
 #endif
 	SetColorsIf((pair != 0) || fix_pair0, PreviousAttr);
@@ -378,7 +380,7 @@ NCURSES_SP_NAME(termattrs) (NCURSES_SP_DCL0)
     T((T_CALLED("termattrs(%p)"), (void *) SP_PARM));
 
     if (HasTerminal(SP_PARM)) {
-#ifdef USE_TERM_DRIVER
+#if USE_TERM_DRIVER
 	attrs = CallDriver(SP_PARM, td_conattr);
 #else /* ! USE_TERM_DRIVER */
 

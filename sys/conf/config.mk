@@ -9,11 +9,10 @@
 .if !defined(KERNBUILDDIR)
 opt_global.h:
 	touch ${.TARGET}
-.if ${MACHINE} != "mips"
 	@echo "#define SMP 1" >> ${.TARGET}
 	@echo "#define MAC 1" >> ${.TARGET}
 	@echo "#define VIMAGE 1" >> ${.TARGET}
-.endif
+
 .if ${MK_BHYVE_SNAPSHOT} != "no"
 opt_bhyve_snapshot.h:
 	@echo "#define BHYVE_SNAPSHOT 1" > ${.TARGET}
@@ -52,7 +51,6 @@ opt_wlan.h:
 	echo "#define IEEE80211_SUPPORT_MESH 1" >> ${.TARGET}
 KERN_OPTS.i386=NEW_PCIB DEV_PCI
 KERN_OPTS.amd64=NEW_PCIB DEV_PCI
-KERN_OPTS.powerpc=NEW_PCIB DEV_PCI
 KERN_OPTS=MROUTING IEEE80211_DEBUG \
 	IEEE80211_SUPPORT_MESH DEV_BPF \
 	${KERN_OPTS.${MACHINE}} ${KERN_OPTS_EXTRA}

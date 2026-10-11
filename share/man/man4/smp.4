@@ -59,7 +59,7 @@ Setting this tunable to 1 will result in the corresponding CPU being
 disabled.
 .Pp
 .Fx
-supports simultaneous multithreading on x86 and powerpc platforms.
+supports simultaneous multithreading on x86 platforms.
 On x86, the logical CPUs can be disabled by setting the
 .Va machdep.hyperthreading_allowed
 tunable to zero.
@@ -116,7 +116,7 @@ tasks on CPUs that are closely grouped together.
 Support for multi-processor systems is present for all Tier-1 and Tier-2
 architectures on
 .Fx .
-Currently, this includes x86, powerpc, mips, arm and arm64.
+Currently, this includes x86, arm, arm64, and riscv.
 Support is enabled using
 .Cd options SMP .
 It is permissible to use the SMP kernel configuration on non-SMP hardware.
@@ -164,9 +164,6 @@ The SMPng Project relied heavily on the support of BSDi, who provided
 reference source code from the fine-grained SMP implementation found
 in
 .Bsx .
-.Pp
-.Fx 5.0
-also introduced support for SMP on the sparc64 architecture.
 .Sh AUTHORS
 .An Steve Passe Aq Mt fsmp@FreeBSD.org
 .Sh CAVEATS

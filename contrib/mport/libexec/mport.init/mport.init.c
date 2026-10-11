@@ -28,12 +28,15 @@
 
 #include <sys/cdefs.h>
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <err.h>
 #include <string.h>
 #include <mport.h>
 #include <unistd.h>
 #include <getopt.h>
+
+static void usage(void);
 
 int
 main(int argc, char *argv[])
@@ -47,11 +50,18 @@ main(int argc, char *argv[])
 		case 'c':
 			chroot_path = optarg;
 			break;
+		case '?':
+		default:
+			usage();
+			break;
 		}
 	}
 
 	argc -= optind;
 	argv += optind;
+
+	if (argc != 0)
+		usage();
 
 	if (chroot_path != NULL) {
 		if (chroot(chroot_path) == -1) {
@@ -62,7 +72,10 @@ main(int argc, char *argv[])
 		}
 	}
 
-	mport = mport_instance_new();
+	if ((mport = mport_instance_new()) == NULL) {
+		warnx("Out of memory");
+		exit(EXIT_FAILURE);
+	}
 
 	if (mport_instance_init(mport, NULL, NULL, false, false) != MPORT_OK) {
 		warnx("%s", mport_err_string());
@@ -73,4 +86,11 @@ main(int argc, char *argv[])
 	mport_instance_free(mport);
 
 	return 0;
+}
+
+static void
+usage(void)
+{
+	fprintf(stderr, "Usage: mport.init [-c <chroot directory>]\n");
+	exit(2);
 }

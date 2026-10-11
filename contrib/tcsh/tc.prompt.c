@@ -38,7 +38,7 @@
  * PWP 4/27/87 -- rearange for tcsh.
  * mrdch@com.tau.edu.il 6/26/89 - added ~, T and .# - rearanged to switch()
  *                 instead of if/elseif
- * Luke Mewburn, <lukem@cs.rmit.edu.au>
+ * Luke Mewburn
  *	6-Sep-91	changed date format
  *	16-Feb-94	rewrote directory prompt code, added $ellipsis
  *	29-Dec-96	added rprompt support
@@ -127,7 +127,7 @@ printprompt(int promptno, const char *str)
 	    cp = ocp;
 	    str = ostr;
 	}
-	else 
+	else
 	    cp = varval(STRprompt);
 	break;
     }
@@ -266,7 +266,7 @@ tprintf(int what, const Char *fmt, const char *str, time_t tim, ptr_t info)
 		    }		/* else do a 24 hour clock */
 
 		    /* "DING!" stuff by Hans also */
-		    if (t->tm_min || print_prompt_did_ding || 
+		    if (t->tm_min || print_prompt_did_ding ||
 			what != FMT_PROMPT || adrof(STRnoding)) {
 			if (t->tm_min)
 			    print_prompt_did_ding = 0;
@@ -306,7 +306,7 @@ tprintf(int what, const Char *fmt, const char *str, time_t tim, ptr_t info)
 #ifndef HAVENOUTMP
 		if (what == FMT_WHO)
 		    cz = who_info(info, 'M');
-		else 
+		else
 #endif /* HAVENOUTMP */
 		    cz = getenv("HOST");
 		/*
@@ -340,7 +340,6 @@ tprintf(int what, const Char *fmt, const char *str, time_t tim, ptr_t info)
 		break;
 	    }
 
-			/* lukem: new directory prompt code */
 	    case '~':
 	    case '/':
 	    case '.':
@@ -379,7 +378,7 @@ tprintf(int what, const Char *fmt, const char *str, time_t tim, ptr_t info)
 			Strbuf_append1(&buf, attributes | *z++);
 			do {
 			    Strbuf_append1(&buf, attributes | *z++);
-			} while(*z != '/');
+			} while (*z != '/');
 		    }
 #endif /* WINNT_NATIVE */
 		    q = z;
@@ -453,7 +452,6 @@ tprintf(int what, const Char *fmt, const char *str, time_t tim, ptr_t info)
 		while (*z)
 		    Strbuf_append1(&buf, attributes | *z++);
 		break;
-			/* lukem: end of new directory prompt code */
 
 	    case 'n':
 #ifndef HAVENOUTMP
@@ -462,7 +460,7 @@ tprintf(int what, const Char *fmt, const char *str, time_t tim, ptr_t info)
 		    tprintf_append_mbs(&buf, cz, attributes);
 		    xfree(cz);
 		}
-		else  
+		else
 #endif /* HAVENOUTMP */
 		{
 		    if ((z = varval(STRuser)) != STRNULL)
@@ -482,7 +480,7 @@ tprintf(int what, const Char *fmt, const char *str, time_t tim, ptr_t info)
 		    tprintf_append_mbs(&buf, cz, attributes);
 		    xfree(cz);
 		}
-		else  
+		else
 #endif /* HAVENOUTMP */
 		{
 		    if ((z = varval(STRtty)) != STRNULL)
@@ -596,7 +594,7 @@ tprintf(int what, const Char *fmt, const char *str, time_t tim, ptr_t info)
 	    }
 	}
 	else if (*cp == '\\' || *cp == '^')
-	    Strbuf_append1(&buf, attributes | parseescape(&cp));
+	    Strbuf_append1(&buf, attributes | parseescape(&cp, TRUE));
 	else if (*cp == HIST) {	/* EGS: handle '!'s in prompts */
 	    if (what == FMT_HISTORY)
 		cz = fmthist('h', info);

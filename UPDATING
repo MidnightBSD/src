@@ -1,7 +1,253 @@
 Updating Information for MidnightBSD users.
 
+20261009:
+	mport 2.8.3 (from 2.8.2).  Packages now record the shared libraries
+	they provide and require, and mport install checks those against
+	the installed system.  Package version comparison follows pkg(8)
+	component ordering with 64-bit numbers, and compound dependency
+	requirements work.  mport version can compare installed packages
+	with the index or a ports tree, ABI_FILE is honoured when creating
+	packages, mport add gains -l, and --force applies only to the named
+	package.  Many fixes in mport.merge, mport.check-fake, bundle
+	reading and SQLite hardening.
+
+20261002:
+	openssl: fix an out-of-bounds read in DTLS retransmission
+	(CVE-2026-84782).  If the DTLS retransmission timer fired while a
+	handshake message write was suspended, the resent message was read
+	from a stale buffer offset and could include heap memory, which was
+	sent to the peer as plaintext, or crash the application.  Only
+	applications using DTLS are affected.  OpenSSL 3.0 is out of public
+	upstream support, so this is a local patch to 3.0.22.  Rebuild and
+	install world, then restart all daemons that use the library, or
+	reboot.
+
+20261002:
+	udp6: fix a jail network isolation bypass (CVE-2026-101303,
+	FreeBSD-SA-26:69.udp).  An unconnected IPv6 UDP sendto(2) from a
+	classic (non-VNET) jail did not rewrite a loopback destination to
+	the jail's primary address, so a jailed process could reach
+	services listening on the host's IPv6 loopback address.  Rebuild
+	and install the kernel, then reboot.
+
+20261001:
+	ktls: fix a remote denial of service in receive-side kernel TLS
+	(CVE-2026-101302, FreeBSD-SA-26:67.ktls).  An off-by-one in the
+	search for the TLS 1.3 inner record type let a remote peer panic
+	the kernel with a crafted record whose plaintext is all zeros.
+	Only sockets using software receive-side KTLS are affected;
+	systems with kern.ipc.tls.enable=0 are not.  Rebuild and install
+	the kernel, then reboot.
+
+20261001:
+	jail: fix three FD_RESOLVE_BENEATH bypasses (CVE-2026-101304,
+	CVE-2026-101305, CVE-2026-101306, FreeBSD-SA-26:66.jail).  A
+	directory descriptor passed into a jail over a Unix domain socket
+	carries FD_RESOLVE_BENEATH so lookups cannot leave it, but the flag
+	and capability rights were lost when opening /dev/fd/N on an
+	fdescfs mounted with "nodup", renameat(2) ignored the flag so a
+	directory could be moved and escaped from via fchdir(2), and
+	SCM_RIGHTS dropped the flag when a descriptor was passed, even to
+	the sender itself.  A jailed process that received such a
+	descriptor could escape the jail's filesystem root.  Rebuild and
+	install the kernel, then reboot.
+
+20261001:
+	sysvsem: fix a heap out-of-bounds access in semop(2)
+	(CVE-2026-58098, FreeBSD-SA-26:64.sysvsem).  When semop(2) slept
+	waiting on a semaphore, the check that the set still existed after
+	waking relied on a 15-bit sequence number that wraps, so a local
+	user who created and destroyed enough sets in the same slot could
+	make the kernel access freed or foreign heap memory, potentially
+	leading to privilege escalation.  The kernel now keeps a 64-bit
+	sequence number per slot.  Rebuild and install the kernel, then
+	reboot.
+
+20260930:
+	tzdata 2026e (from 2026c).  Manitoba moves to permanent -05 on
+	2026-10-31 and the Northwest Territories to permanent -06; the
+	EST5EDT/CST6CDT/MST7MDT/PST8PDT names now follow POSIX rules for
+	pre-1966 timestamps.
+
+20260925:
+	mport 2.8.2 (from 2.8.1).  Bug fix release: package creation and
+	schema upgrades now run in single transactions and roll back on
+	failure, a failed delete is rolled back and the registry write lock
+	is taken up front, shared-directory checks during delete use one
+	database query, and @(owner,group,mode) plist fields are parsed
+	positionally again.
+
+20260922:
+	ncurses 6.6 (from 6.2).  Among many bug fixes this closes
+	CVE-2022-29458 and CVE-2023-29491 (memory corruption from a
+	crafted terminal description), and adds tiparm_s(), tiscan_s()
+	and the is_cbreak()/is_echo()/is_nl()/is_raw() query functions.
+	The library ABI is unchanged and libncursesw.so.9 keeps its
+	version, so existing binaries need not be rebuilt.  Rebuild and
+	install world.
+
+20260922:
+	tcsh 6.24.16 (from 6.21.00).  Adds $'...' strings with \x, \u, \U
+	and \c escapes, the :Q modifier, $?<, jobs -Z, CLICOLOR_FORCE and
+	more LS_COLORS keys, and fixes crashes in :q:h and :q:t, history
+	merging and SIGHUP handling while writing history, S-JIS handling,
+	and range globbing where [l-z]* could match foo.  Note that :q no
+	longer preserves empty arguments; use :Q for that.  The Polish
+	message catalog is now installed.  Rebuild and install world.
+
+20260922:
+	expat 2.8.5 (from 2.8.4).  Fixes CVE-2026-93990: a high surrogate
+	not followed by a low surrogate was accepted during UTF-16 decoding,
+	letting malformed UTF-16 pass through the parser into the
+	application, with impact depending on how the application handled
+	it.  Also fixes an out-of-memory related leak on a failed overflow
+	check, and XML declaration versions other than 1.[0-9]+ are now
+	rejected.  Rebuild and install world, then restart all daemons that
+	use the library, or reboot.
+
+20260908:
+	mport 2.8.1 (from 2.8.0).  Bug fix release: memory leaks, NULL
+	dereferences, heap overflows and use-after-free fixes across libmport
+	and the mport CLI, TOCTOU fixes in file copy and mkdir, package
+	verification through open descriptors, MOVED/deprecation handling in
+	mport update, replacement of packages installed under an older OS
+	release, corrected exit codes for add, lock, unlock and download, and
+	a forced install now re-registers the package and rolls back on
+	failure.
+
 20260907:
 	less 704
+
+20260904:
+	Native MIPS, PowerPC, and sparc64 support has been removed.  Supported
+	architectures are amd64, arm, arm64, i386, and riscv.
+
+20260901:
+	expat 2.8.4 (from 2.8.3).  Fixes CVE-2026-66046 and CVE-2026-76641
+	(quadratic runtime in attribute "isCdata" lookups, letting moderately
+	sized crafted XML cause a denial of service; default attribute
+	lookups now use a hash table instead of a linear scan) and
+	CVE-2026-76957 (custom encoding callbacks were not protected against
+	parser re-entry).  Note that a layer of compression around the XML
+	can significantly reduce the minimum attack payload size.
+
+	Upstream also fixes CVE-2026-76956, inverted getentropy() return
+	handling.  libbsdxml does not build random_getentropy.c and does not
+	define HAVE_GETENTROPY, so that issue does not affect MidnightBSD.
+
+	Rebuild and install world, then restart all daemons that use the
+	library, or reboot.
+
+20260826:
+	OpenSSL 3.0.22 (from 3.0.21).  Fixes CVE-2026-63072 (an 8 byte
+	out-of-bounds heap write in AES-WRAP-PAD unwrap, reachable through CMS
+	key unwrapping), CVE-2026-63076 (NULL dereference in the CMP server
+	and client via a crafted protectionAlg), CVE-2026-63074 (unbounded
+	extraCerts cache growth in the CMP server), CVE-2026-54874 (a DTLS
+	peer can force roughly 1200x memory amplification by buffering
+	next-epoch records) and CVE-2026-75803 (ChaCha20-Poly1305 and AES-OCB
+	decryption skipped tag verification for empty ciphertexts when using
+	EVP_Cipher()).  Rebuild and install world, then restart all daemons
+	that use the library, or reboot.
+
+20260826:
+	posixshm: CVE-2026-58094 TOCTOU race in the FIOSSHMLPGCNF ioctl.  The
+	handler tested whether a largepage shared memory object already had a
+	page size configured without holding the object's rangelock, so two
+	callers could race and leave the object claiming a larger page size
+	than the memory actually populated for it.  The validation now runs
+	under the rangelock.  Rebuild and install the kernel.
+
+20260826:
+	tty: CVE-2026-58093 use-after-free via the TIOCSCTTY ioctl.  The
+	handler drops the tty lock to take proctree_lock and did not
+	revalidate the terminal after relocking, so a terminal being torn
+	down concurrently could still be attached to the caller's session.
+	TIOCSPGRP had the same gap.  Both now re-enter through
+	ttydev_enter() and fail with ENXIO if the device is gone.  Rebuild
+	and install the kernel.
+
+20260826:
+	ppp: CVE-2026-58095, CVE-2026-58096 and CVE-2026-58097, three memory
+	safety errors in the multilink endpoint discriminator code.
+	mp_Enddisc() sized its hex output buffer as if each byte took one
+	character rather than two, so a peer's endpoint option could overflow
+	a static buffer; LcpDecodeConfig() did not enforce the three byte
+	minimum option length from RFC 1717, so a short option caused an
+	out-of-bounds write; and "set enddisc psn" copied its argument into a
+	fixed size buffer with strcpy().  ppp(8) is installed setuid root.
+	Rebuild and install world, then restart any running ppp(8) instances.
+
+20260826:
+	sound: CVE-2026-58091 use-after-free via the SNDCTL_DSP_SYNCSTART
+	ioctl.  When dsp_oss_syncstart() could not acquire every channel lock
+	in a sync group it slept with the sync group list lock dropped, then
+	resumed walking the group's member list even though the group could
+	have been freed in the meantime.  It now restarts the lookup after
+	sleeping.  Systems with fewer than two sound devices are not affected.
+	Rebuild and install the kernel, or reload sound.ko.
+
+20260826:
+	hwpmc: CVE-2026-58089 hwpmc(4) failed to detach performance counters
+	when a monitored process exec'ed a setuid or setgid binary.  An
+	inverted return value in pmc_can_attach() made the exec-time
+	credential check allow exactly the cases it was meant to deny, so an
+	unprivileged user could keep monitoring a process across a privilege
+	transition.  Rebuild and install the kernel, or reload hwpmc.ko.
+
+20260817:
+	netipsec: validate PF_KEY socket address lengths before copying them into
+	fixed-size kernel structures.  This prevents a kernel stack overflow and
+	potential local privilege escalation through a PF_KEY socket.  Rebuild
+	and install the kernel.
+
+20260811:
+	expat 2.8.3 (from 2.8.2).  Fixes CVE-2026-72522, an out-of-bounds
+	read and resulting infinite loop caused by treating low surrogates
+	the same as high surrogates in the *_toUtf16 functions.  Only builds
+	with 16-bit character support are affected; libbsdxml uses an 8-bit
+	XML_Char and is not exposed to that path.
+
+	Two other fixes do apply here: support for documents 2 GiB and larger
+	is restored (a regression introduced in 2.8.2), and an empty version
+	in the XML declaration is now rejected.  Rebuild and install world.
+
+20260801:
+	tzcode 2026c (from 2024b).  zic(8) and the libc time functions are
+	updated; several zic integer overflow fixes are included.  Compiled
+	TZif output is unchanged for 595 of 598 zones; Asia/Ho_Chi_Minh,
+	Asia/Saigon and Asia/Tbilisi are a few bytes smaller but describe
+	identical transitions, and are readable by older binaries.
+
+	One user-visible change: the Factory placeholder zone's abbreviation
+	is now scrubbed of characters that are invalid in a time zone
+	abbreviation, so date(1) reports
+	"Local_time_zone_must_be_set--use_tzsetup" rather than the same text
+	with spaces.  This affects only systems that have not yet run
+	tzsetup(8).  Rebuild and install world.
+
+20260730:
+	wg: CVE-2026-58085 missing MAC validation in wg(4) packet decryption.
+	The driver did not check whether the OpenCrypto framework's Poly1305
+	verification succeeded, so it silently accepted transport data packets
+	with an invalid authentication tag.  Rebuild and reboot the kernel, or
+	reload if_wg.ko.
+
+20260730:
+	tzdata 2026c
+
+	Notable changes since 2025c: Moldova has used EU transition times
+	since 2022; British Columbia moved to permanent -07 on 2026-03-09;
+	Alberta moved to permanent -06 on 2026-06-18; Morocco and Western
+	Sahara move to permanent +00 on 2026-09-20.  Rebuild and install
+	world, or reinstall share/zoneinfo, then rerun tzsetup(8) if your
+	zone is affected.
+
+20260722:
+	libarchive 3.8.8: fixes CVE-2026-14164, a double-free in the RAR5
+	reader (archive_read_support_format_rar5.c) that could crash
+	applications parsing a crafted RAR5 archive.  Rebuild world and
+	restart applications that use libarchive.
 
 20260713:
 	pam_xdg(8) is now also enabled in the system PAM policy, so console

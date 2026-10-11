@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2018-2019,2020 Thomas E. Dickey                                *
+ * Copyright 2018-2024,2025 Thomas E. Dickey                                *
  * Copyright 1998-2015,2016 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -41,9 +41,10 @@
 **
 */
 
+#define NEED_KEY_EVENT
 #include <curses.priv.h>
 
-MODULE_ID("$Id: lib_getch.c,v 1.139 2020/02/02 23:34:34 tom Exp $")
+MODULE_ID("$Id: lib_getch.c,v 1.154 2025/12/27 12:28:45 tom Exp $")
 
 #include <fifo_defs.h>
 
@@ -133,17 +134,6 @@ _nc_use_meta(WINDOW *win)
     return (sp ? sp->_use_meta : 0);
 }
 
-#ifdef USE_TERM_DRIVER
-# ifdef _WIN32
-static HANDLE
-_nc_get_handle(int fd)
-{
-    intptr_t value = _get_osfhandle(fd);
-    return (HANDLE) value;
-}
-# endif
-#endif
-
 /*
  * Check for mouse activity, returning nonzero if we find any.
  */
@@ -152,40 +142,48 @@ check_mouse_activity(SCREEN *sp, int delay EVENTLIST_2nd(_nc_eventlist * evl))
 {
     int rc;
 
-#ifdef USE_TERM_DRIVER
+#if USE_TERM_DRIVER
     TERMINAL_CONTROL_BLOCK *TCB = TCBOf(sp);
     rc = TCBOf(sp)->drv->td_testmouse(TCBOf(sp), delay EVENTLIST_2nd(evl));
-# ifdef _WIN32
+# if USE_NAMED_PIPES || defined(_NC_WINDOWS_NATIVE)
     /* if we emulate terminfo on console, we have to use the console routine */
     if (IsTermInfoOnConsole(sp)) {
-	HANDLE fd = _nc_get_handle(sp->_ifd);
-	rc = _nc_mingw_testmouse(sp, fd, delay EVENTLIST_2nd(evl));
+	rc = _nc_console_testmouse(sp,
+				   _nc_console_handle(sp->_ifd),
+				   delay EVENTLIST_2nd(evl));
     } else
 # endif
 	rc = TCB->drv->td_testmouse(TCB, delay EVENTLIST_2nd(evl));
-#else
-#if USE_SYSMOUSE
+#else /* !USE_TERM_DRIVER */
+# if USE_SYSMOUSE
     if ((sp->_mouse_type == M_SYSMOUSE)
 	&& (sp->_sysmouse_head < sp->_sysmouse_tail)) {
 	rc = TW_MOUSE;
     } else
-#endif
+# endif
     {
+# if USE_NAMED_PIPES
+	rc = _nc_console_testmouse(sp,
+				   _nc_console_handle(sp->_ifd),
+				   delay
+				   EVENTLIST_2nd(evl));
+# else
 	rc = _nc_timed_wait(sp,
 			    TWAIT_MASK,
 			    delay,
 			    (int *) 0
 			    EVENTLIST_2nd(evl));
-#if USE_SYSMOUSE
+# endif
+# if USE_SYSMOUSE
 	if ((sp->_mouse_type == M_SYSMOUSE)
 	    && (sp->_sysmouse_head < sp->_sysmouse_tail)
 	    && (rc == 0)
 	    && (errno == EINTR)) {
 	    rc |= TW_MOUSE;
 	}
-#endif
+# endif
     }
-#endif
+#endif /* USE_TERM_DRIVER */
     return rc;
 }
 
@@ -274,7 +272,7 @@ fifo_push(SCREEN *sp EVENTLIST_2nd(_nc_eventlist * evl))
 	n = 1;
     } else
 #endif
-#ifdef USE_TERM_DRIVER
+#if USE_TERM_DRIVER
 	if ((sp->_mouse_type == M_TERM_DRIVER)
 	    && (sp->_drv_mouse_head < sp->_drv_mouse_tail)) {
 	sp->_mouse_event(sp);
@@ -283,38 +281,44 @@ fifo_push(SCREEN *sp EVENTLIST_2nd(_nc_eventlist * evl))
     } else
 #endif
 #if USE_KLIBC_KBD
-    if (NC_ISATTY(sp->_ifd) && sp->_cbreak) {
-	ch = _read_kbd(0, 1, !sp->_raw);
+    if (NC_ISATTY(sp->_ifd) && IsCbreak(sp)) {
+	ch = _read_kbd(0, 1, !IsRaw(sp));
 	n = (ch == -1) ? -1 : 1;
 	sp->_extended_key = (ch == 0);
     } else
 #endif
     {				/* Can block... */
-#ifdef USE_TERM_DRIVER
+#if USE_TERM_DRIVER
 	int buf;
-#ifdef _WIN32
-	if (NC_ISATTY(sp->_ifd) && IsTermInfoOnConsole(sp) && sp->_cbreak)
-	    n = _nc_mingw_console_read(sp,
-				       _nc_get_handle(sp->_ifd),
-				       &buf);
-	else
-#endif
+# if USE_NAMED_PIPES || defined(_NC_WINDOWS_NATIVE)
+	if (NC_ISATTY(sp->_ifd) && IsTermInfoOnConsole(sp) && IsCbreak(sp)) {
+	    _nc_set_read_thread(TRUE);
+	    n = _nc_console_read(sp,
+				 _nc_console_handle(sp->_ifd),
+				 &buf);
+	    _nc_set_read_thread(FALSE);
+	} else
+# endif	/* USE_NAMED_PIPES */
 	    n = CallDriver_1(sp, td_read, &buf);
 	ch = buf;
-#else
+#else /* !USE_TERM_DRIVER */
+#if USE_NAMED_PIPES
+	int buf;
+#endif
 	unsigned char c2 = 0;
-# if USE_PTHREADS_EINTR
-#  if USE_WEAK_SYMBOLS
-	if ((pthread_self) && (pthread_kill) && (pthread_equal))
-#  endif
-	    _nc_globals.read_thread = pthread_self();
-# endif
+
+	_nc_set_read_thread(TRUE);
+#if USE_NAMED_PIPES
+	n = _nc_console_read(sp,
+			     _nc_console_handle(sp->_ifd),
+			     &buf);
+	c2 = buf;
+#else
 	n = (int) read(sp->_ifd, &c2, (size_t) 1);
-#if USE_PTHREADS_EINTR
-	_nc_globals.read_thread = 0;
 #endif
+	_nc_set_read_thread(FALSE);
 	ch = c2;
-#endif
+#endif /* USE_TERM_DRIVER */
     }
 
     if ((n == -1) || (n == 0)) {
@@ -353,7 +357,17 @@ recur_wrefresh(WINDOW *win)
 {
 #ifdef USE_PTHREADS
     SCREEN *sp = _nc_screen_of(win);
-    if (_nc_use_pthreads && sp != CURRENT_SCREEN) {
+    bool same_sp;
+
+    if (_nc_use_pthreads) {
+	_nc_lock_global(curses);
+	same_sp = (sp == CURRENT_SCREEN);
+	_nc_unlock_global(curses);
+    } else {
+	same_sp = (sp == CURRENT_SCREEN);
+    }
+
+    if (_nc_use_pthreads && !same_sp) {
 	SCREEN *save_SP;
 
 	/* temporarily switch to the window's screen to check/refresh */
@@ -366,7 +380,7 @@ recur_wrefresh(WINDOW *win)
     } else
 #endif
 	if ((is_wintouched(win) || (win->_flags & _HASMOVED))
-	    && !(win->_flags & _ISPAD)) {
+	    && !IS_PAD(win)) {
 	wrefresh(win);
     }
 }
@@ -377,7 +391,7 @@ recur_wgetnstr(WINDOW *win, char *buf)
     SCREEN *sp = _nc_screen_of(win);
     int rc;
 
-    if (sp != 0) {
+    if (sp != NULL) {
 #ifdef USE_PTHREADS
 	if (_nc_use_pthreads && sp != CURRENT_SCREEN) {
 	    SCREEN *save_SP;
@@ -420,7 +434,7 @@ _nc_wgetch(WINDOW *win,
     *result = 0;
 
     sp = _nc_screen_of(win);
-    if (win == 0 || sp == 0) {
+    if (win == NULL || sp == NULL) {
 	returnCode(ERR);
     }
 
@@ -442,8 +456,8 @@ _nc_wgetch(WINDOW *win,
      */
     if (head == -1 &&
 	!sp->_notty &&
-	!sp->_raw &&
-	!sp->_cbreak &&
+	!IsRaw(sp) &&
+	!IsCbreak(sp) &&
 	!sp->_called_wgetch) {
 	char buf[MAXCOLUMNS], *bufp;
 
@@ -476,13 +490,13 @@ _nc_wgetch(WINDOW *win,
 
     recur_wrefresh(win);
 
-    if (win->_notimeout || (win->_delay >= 0) || (sp->_cbreak > 1)) {
+    if ((win->_delay >= 0) || (IsCbreak(sp) > 1)) {
 	if (head == -1) {	/* fifo is empty */
 	    int delay;
 
 	    TR(TRACE_IEVENT, ("timed delay in wgetch()"));
-	    if (sp->_cbreak > 1)
-		delay = (sp->_cbreak - 1) * 100;
+	    if (IsCbreak(sp) > 1)
+		delay = (IsCbreak(sp) - 1) * 100;
 	    else
 		delay = win->_delay;
 
@@ -513,7 +527,7 @@ _nc_wgetch(WINDOW *win,
 	 * This is tricky.  We only want to get special-key
 	 * events one at a time.  But we want to accumulate
 	 * mouse events until either (a) the mouse logic tells
-	 * us it's picked up a complete gesture, or (b)
+	 * us it has picked up a complete gesture, or (b)
 	 * there's a detectable time lapse after one.
 	 *
 	 * Note: if the mouse code starts failing to compose
@@ -601,7 +615,7 @@ _nc_wgetch(WINDOW *win,
      * However, we provide the same visual result as Solaris, moving the
      * cursor to the left.
      */
-    if (sp->_echo && !(win->_flags & _ISPAD)) {
+    if (IsEcho(sp) && !IS_PAD(win)) {
 	chtype backup = (chtype) ((ch == KEY_BACKSPACE) ? '\b' : ch);
 	if (backup < KEY_MIN)
 	    wechochar(win, backup);
@@ -610,7 +624,7 @@ _nc_wgetch(WINDOW *win,
     /*
      * Simulate ICRNL mode
      */
-    if ((ch == '\r') && sp->_nl)
+    if ((ch == '\r') && IsNl(sp))
 	ch = '\n';
 
     /* Strip 8th-bit if so desired.  We do this only for characters that

@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2018,2020 Thomas E. Dickey                                     *
+ * Copyright 2018-2024,2025 Thomas E. Dickey                                *
  * Copyright 1998-2012,2013 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -34,7 +34,7 @@
 #include <curses.priv.h>
 #include <ctype.h>
 
-MODULE_ID("$Id: safe_sprintf.c,v 1.33 2020/02/02 23:34:34 tom Exp $")
+MODULE_ID("$Id: safe_sprintf.c,v 1.39 2025/02/20 01:07:05 tom Exp $")
 
 #if USE_SAFE_SPRINTF
 
@@ -60,12 +60,12 @@ _nc_printf_length(const char *fmt, va_list ap)
     size_t fmt_len;
     char fmt_arg[BUFSIZ];
 
-    if (fmt == 0 || *fmt == '\0')
+    if (fmt == NULL || *fmt == '\0')
 	return 0;
     fmt_len = strlen(fmt) + 1;
-    if ((format = typeMalloc(char, fmt_len)) == 0)
+    if ((format = typeMalloc(char, fmt_len)) == NULL)
 	  return -1;
-    if ((buffer = typeMalloc(char, length)) == 0) {
+    if ((buffer = typeMalloc(char, length)) == NULL) {
 	free(format);
 	return -1;
     }
@@ -114,7 +114,7 @@ _nc_printf_length(const char *fmt, va_list ap)
 				_nc_SLIMIT(sizeof(fmt_arg))
 				"%d", ival);
 		    fmt_len += strlen(fmt_arg);
-		    if ((format = _nc_doalloc(format, fmt_len)) == 0) {
+		    if ((format = _nc_doalloc(format, fmt_len)) == NULL) {
 			free(buffer);
 			return -1;
 		    }
@@ -162,7 +162,7 @@ _nc_printf_length(const char *fmt, va_list ap)
 			if (prec > (int) length) {
 			    length = length + (size_t) prec;
 			    buffer = typeRealloc(char, length, buffer);
-			    if (buffer == 0) {
+			    if (buffer == NULL) {
 				free(format);
 				return -1;
 			    }
@@ -223,9 +223,9 @@ NCURSES_SP_NAME(_nc_printf_string) (NCURSES_SP_DCLx
 				    const char *fmt,
 				    va_list ap)
 {
-    char *result = 0;
+    char *result = NULL;
 
-    if (SP_PARM != 0 && fmt != 0) {
+    if (SP_PARM != NULL && fmt != NULL) {
 #if USE_SAFE_SPRINTF
 	va_list ap2;
 	int len;
@@ -238,7 +238,7 @@ NCURSES_SP_NAME(_nc_printf_string) (NCURSES_SP_DCLx
 	    my_length = (size_t) (2 * (len + 1));
 	    my_buffer = typeRealloc(char, my_length, my_buffer);
 	}
-	if (my_buffer != 0) {
+	if (my_buffer != NULL) {
 	    *my_buffer = '\0';
 	    if (len >= 0) {
 		vsprintf(my_buffer, fmt, ap);
@@ -255,21 +255,36 @@ NCURSES_SP_NAME(_nc_printf_string) (NCURSES_SP_DCLx
 	    if (screen_columns(SP_PARM) > MyCols)
 		MyCols = screen_columns(SP_PARM);
 	    my_length = (size_t) (MyRows * (MyCols + 1)) + 1;
+	    if (my_length < 80)
+		my_length = 80;
 	    my_buffer = typeRealloc(char, my_length, my_buffer);
 	}
 
-	if (my_buffer != 0) {
+	if (my_buffer != NULL) {
 # if HAVE_VSNPRINTF
-	    vsnprintf(my_buffer, my_length, fmt, ap);	/* SUSv2, 1997 */
+	    do {
+		/* SUSv2, 1997 */
+		int used;
+		va_list ap2;
+
+		begin_va_copy(ap2, ap);
+		used = vsnprintf(my_buffer, my_length, fmt, ap2);
+		end_va_copy(ap2);
+		if (used < (int) my_length)
+		    break;
+		my_length = (size_t) ((3 * used) / 2);
+		my_buffer = typeRealloc(char, my_length, my_buffer);
+	    } while (my_buffer != NULL);
 # else
-	    vsprintf(my_buffer, fmt, ap);	/* ISO/ANSI C, 1989 */
+	    /* ISO/ANSI C, 1989 */
+	    vsprintf(my_buffer, fmt, ap);
 # endif
 	    result = my_buffer;
 	}
 #endif
-    } else if (my_buffer != 0) {	/* see _nc_freeall() */
+    } else if (my_buffer != NULL) {	/* see _nc_freeall() */
 	free(my_buffer);
-	my_buffer = 0;
+	my_buffer = NULL;
 	my_length = 0;
     }
     return result;

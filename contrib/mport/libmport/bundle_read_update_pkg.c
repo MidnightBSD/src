@@ -113,15 +113,18 @@ detach_update_stub_for_backup(/*@notnull@*/ mportInstance *mport,
 static int
 make_backup_bundle(mportInstance *mport, mportPackageMeta *pkg, char *tempfile)
 {
-	mportAssetList *alist;
-	mportCreateExtras *extra;
+	mportAssetList *alist = NULL;
+	mportCreateExtras *extra = NULL;
 	int ret;
 
 	if (mport_asset_get_assetlist(mport, pkg, &alist) != MPORT_OK) {
+		mport_assetlist_free(alist);
 		RETURN_CURRENT_ERROR;
 	}
 
 	if (build_create_extras(mport, pkg, tempfile, &extra) != MPORT_OK) {
+		mport_assetlist_free(alist);
+		mport_createextras_free(extra);
 		RETURN_CURRENT_ERROR;
 	}
 
@@ -151,6 +154,10 @@ build_create_extras(
 	mportCreateExtras *extra;
 
 	extra = mport_createextras_new();
+	if (extra == NULL) {
+		*extra_p = NULL;
+		RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+	}
 	*extra_p = extra;
 
 	strlcpy(extra->pkg_filename, tempfile, FILENAME_MAX);
@@ -255,6 +262,11 @@ build_create_extras_depends(mportInstance *mport, mportPackageMeta *pkg, mportCr
 		ret = sqlite3_step(stmt);
 
 		if (ret == SQLITE_ROW) {
+			/* depends was sized from a separate COUNT query; if a
+			   concurrent insert added rows, stop rather than write past
+			   the allocation. */
+			if (i >= count)
+				break;
 			if (asprintf(&entry, "%s:%s:%s", sqlite3_column_text(stmt, 0),
 				sqlite3_column_text(stmt, 2), sqlite3_column_text(stmt, 1)) == -1) {
 				sqlite3_finalize(stmt);

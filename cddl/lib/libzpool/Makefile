@@ -24,11 +24,6 @@ ACFLAGS+=	-Wa,--noexecstack
 ATOMIC_SRCS=	opensolaris_atomic.c
 .endif
 
-.if ${MACHINE_ARCH} == "powerpc" || ${MACHINE_ARCH} == "powerpcspe"
-# Don't waste GOT entries on small data.
-PICFLAG=	-fPIC
-.endif
-
 PACKAGE=	zfs
 LIB=		zpool
 
@@ -266,11 +261,5 @@ CFLAGS.zstd.c+=	-fno-tree-vectorize
 CFLAGS.zstd.c+=	${NO_WBITWISE_INSTEAD_OF_LOGICAL}
 
 .include <bsd.compiler.mk>
-
-.if ${MACHINE_CPUARCH} == "mips" && \
-    ${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} >= 190000
-# Work around MIPS-specific llvm bug in the Shrink Wrapping analysis pass
-CFLAGS.arc.c+=	-mllvm -enable-shrink-wrap-region-split=false
-.endif
 
 .include <bsd.lib.mk>

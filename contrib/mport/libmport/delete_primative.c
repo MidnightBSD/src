@@ -38,6 +38,7 @@
 #include <sha256.h>
 #include <stdlib.h>
 #include <libgen.h>
+#include <fcntl.h>
 #include <syslog.h>
 #include <stdarg.h>
 
@@ -71,9 +72,76 @@ static int run_pkg_deinstall(mportInstance *, mportPackageMeta *, const char *);
 static int delete_pkg_infra(mportInstance *, mportPackageMeta *);
 static int check_for_upwards_depends(mportInstance *, mportPackageMeta *);
 static void warn_ignored_rmdir_error(/*@notnull@*/ mportInstance *, /*@notnull@*/ const char *);
-static bool is_safe_to_delete_dir(mportInstance *, mportPackageMeta *, const char *, const char *);
+
+/*
+ * The set of directory paths this package owns that another installed package
+ * also owns. Built once per delete; see build_shared_dir_set().
+ */
+struct shared_dir_set {
+	/*@only@*/ char **paths; /* sorted with strcmp(), for bsearch() */
+	size_t count;
+};
+
+/*
+ * The file paths this package registers more than once (a plist that listed
+ * the same file twice), and which of them this delete has already removed, so
+ * the later entry does not report the missing file.
+ */
+struct dup_file_set {
+	/*@only@*/ char **paths; /* sorted with strcmp(), for bsearch() */
+	/*@only@*/ bool *removed;
+	size_t count;
+};
+
+static int build_shared_dir_set(/*@notnull@*/ mportInstance *, /*@notnull@*/ mportPackageMeta *,
+    /*@out@*/ /*@notnull@*/ struct shared_dir_set *);
+static void free_shared_dir_set(/*@notnull@*/ struct shared_dir_set *);
+static int build_dup_file_set(/*@notnull@*/ mportInstance *, /*@notnull@*/ mportPackageMeta *,
+    /*@out@*/ /*@notnull@*/ struct dup_file_set *);
+static void free_dup_file_set(/*@notnull@*/ struct dup_file_set *);
+static ssize_t find_dup_file(/*@notnull@*/ const struct dup_file_set *, /*@null@*/ const char *);
+static bool is_safe_to_delete_dir(mportInstance *, mportPackageMeta *,
+    /*@notnull@*/ const struct shared_dir_set *, const char *, const char *);
 static int build_info_dir_path(
     /*@notnull@*/ mportPackageMeta *, /*@null@*/ const char *, /*@out@*/ char *, size_t);
+
+static int
+unlink_if_unchanged(const char *path, const struct stat *expected)
+{
+	char parent[FILENAME_MAX];
+	char *name;
+	int parentfd;
+	struct stat current;
+
+	if (path == NULL || expected == NULL)
+		return -1;
+
+	strlcpy(parent, path, sizeof(parent));
+	name = strrchr(parent, '/');
+	if (name == NULL) {
+		strlcpy(parent, ".", sizeof(parent));
+		name = (char *)path;
+	} else {
+		*name++ = '\0';
+		if (parent[0] == '\0')
+			strlcpy(parent, "/", sizeof(parent));
+	}
+
+	parentfd = open(parent, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+	if (parentfd == -1)
+		return -1;
+
+	if (fstatat(parentfd, name, &current, AT_SYMLINK_NOFOLLOW) != 0 ||
+	    current.st_dev != expected->st_dev || current.st_ino != expected->st_ino) {
+		close(parentfd);
+		errno = EAGAIN;
+		return -1;
+	}
+
+	int ret = unlinkat(parentfd, name, 0);
+	close(parentfd);
+	return ret;
+}
 
 MPORT_PUBLIC_API int
 mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
@@ -84,6 +152,9 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 	const char *data, *checksum, *cwd;
 	struct stat st;
 	char hash[65];
+	struct shared_dir_set shared_dirs;
+	struct dup_file_set dup_files;
+	ssize_t dup_idx;
 
 	if (force == 0) {
 		if (check_for_upwards_depends(mport, pack) != MPORT_OK)
@@ -146,6 +217,22 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 		ASSET_AUTODIR) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
+	/*
+	 * Work out up front which of this package's directories another package
+	 * also owns. Asking that per directory costs a full scan of assets each
+	 * time, which is minutes on a package with a few hundred directories.
+	 */
+	if (build_shared_dir_set(mport, pack, &shared_dirs) != MPORT_OK) {
+		sqlite3_finalize(stmt);
+		RETURN_CURRENT_ERROR;
+	}
+
+	if (build_dup_file_set(mport, pack, &dup_files) != MPORT_OK) {
+		sqlite3_finalize(stmt);
+		free_shared_dir_set(&shared_dirs);
+		RETURN_CURRENT_ERROR;
+	}
+
 	cwd = pack->prefix;
 
 	while (1) {
@@ -158,6 +245,8 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 			/* some error occurred */
 			SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
 			sqlite3_finalize(stmt);
+			free_shared_dir_set(&shared_dirs);
+			free_dup_file_set(&dup_files);
 			RETURN_CURRENT_ERROR;
 		}
 
@@ -190,7 +279,7 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 
 			// remove the file if it is empty
 			if (S_ISREG(st.st_mode) && st.st_size == 0) {
-				if (unlink(file) != 0)
+				if (unlink_if_unchanged(file, &st) != 0)
 					mport_call_msg_cb(mport, "Could not unlink %s: %s", file,
 					    strerror(errno));
 			}
@@ -207,8 +296,12 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 			/* falls through */
 		case ASSET_SAMPLE_OWNER_MODE:
 			(mport->progress_step_cb)(++current, total, file);
+			dup_idx = find_dup_file(&dup_files, data);
 
 			if (lstat(file, &st) != 0) {
+				/* a duplicate entry for a file removed a moment ago */
+				if (errno == ENOENT && dup_idx >= 0 && dup_files.removed[dup_idx])
+					break; /* next asset */
 				mport_call_msg_cb(
 				    mport, "Can't stat %s: %s", file, strerror(errno));
 				break; /* next asset */
@@ -218,19 +311,19 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 				if (checksum == NULL) {
 					mport_call_msg_cb(mport, "Checksum mismatch: %s", file);
 				} else if (strlen(checksum) < 34) {
+					/* hash is a stack buffer, only written on success;
+					   don't strcmp it if MD5File failed. */
 					if (MD5File(file, hash) == NULL)
 						mport_call_msg_cb(mport, "Can't MD5 %s: %s", file,
 						    strerror(errno));
-
-					if (hash == NULL || strcmp(hash, checksum) != 0)
+					else if (strcmp(hash, checksum) != 0)
 						mport_call_msg_cb(
 						    mport, "Checksum mismatch: %s", file);
 				} else {
 					if (SHA256_File(file, hash) == NULL)
 						mport_call_msg_cb(mport, "Can't SHA256 %s: %s",
 						    file, strerror(errno));
-
-					if (hash == NULL || strcmp(hash, checksum) != 0)
+					else if (strcmp(hash, checksum) != 0)
 						mport_call_msg_cb(
 						    mport, "Checksum mismatch: %s", file);
 				}
@@ -286,13 +379,16 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 
 					if (dest_path_set && mport_file_exists(dest_path)) {
 						bool hashes_match = false;
-						if (strlen(checksum) < 34) {
+						/* checksum may be NULL, and hash is only computed
+						   above when it is not; without it we cannot
+						   verify, so treat the sample as unmatched. */
+						if (checksum != NULL && strlen(checksum) < 34) {
 							if (MD5File(dest_path, sample_hash) !=
 								NULL &&
 							    strcmp(sample_hash, hash) == 0) {
 								hashes_match = true;
 							}
-						} else {
+						} else if (checksum != NULL) {
 							if (SHA256_File(dest_path, sample_hash) !=
 								NULL &&
 							    strcmp(sample_hash, hash) == 0) {
@@ -314,9 +410,11 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 				}
 			}
 
-			if (unlink(file) != 0)
+			if (unlink_if_unchanged(file, &st) != 0)
 				mport_call_msg_cb(
 				    mport, "Could not unlink %s: %s", file, strerror(errno));
+			else if (dup_idx >= 0)
+				dup_files.removed[dup_idx] = true;
 
 			if (type == ASSET_SHELL) {
 				if (mport_shell_unregister(file) != MPORT_OK)
@@ -343,7 +441,7 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 		case ASSET_DIRRMTRY:
 		case ASSET_AUTODIR:
 		case ASSET_DIR_OWNER_MODE:
-			if (is_safe_to_delete_dir(mport, pack, file, data)) {
+			if (is_safe_to_delete_dir(mport, pack, &shared_dirs, file, data)) {
 				mport_removeflags(mport->root, file);
 				if (mport_rmdir(file,
 					type == ASSET_DIRRMTRY || type == ASSET_AUTODIR ? 1 : 0) !=
@@ -363,6 +461,8 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 	}
 
 	sqlite3_finalize(stmt);
+	free_shared_dir_set(&shared_dirs);
+	free_dup_file_set(&dup_files);
 
 	if (run_unexec(mport, pack, ASSET_POSTUNEXEC) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
@@ -377,37 +477,57 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 	if (run_pkg_deinstall(mport, pack, "POST-DEINSTALL") != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
-	if (mport_db_do(mport->db, "BEGIN TRANSACTION") != MPORT_OK)
-		RETURN_CURRENT_ERROR;
-
-	if (mport_db_do(mport->db, "DELETE FROM assets WHERE pkg=%Q", pack->name) != MPORT_OK)
-		RETURN_CURRENT_ERROR;
-
-	if (mport_db_do(mport->db, "DELETE FROM depends WHERE pkg=%Q", pack->name) != MPORT_OK)
-		RETURN_CURRENT_ERROR;
-
-	if (mport_db_do(mport->db, "DELETE FROM packages WHERE pkg=%Q", pack->name) != MPORT_OK)
-		RETURN_CURRENT_ERROR;
-
-	if (mport_db_do(mport->db, "DELETE FROM categories WHERE pkg=%Q", pack->name) != MPORT_OK)
-		RETURN_CURRENT_ERROR;
-
-	if (mport_db_do(mport->db, "DELETE FROM conflicts WHERE pkg=%Q", pack->name) != MPORT_OK)
-		RETURN_CURRENT_ERROR;
-
-	if (mport_db_do(mport->db, "DELETE FROM annotation WHERE pkg=%Q", pack->name) != MPORT_OK)
-		RETURN_CURRENT_ERROR;
-
+	/* The message is read from the infra directory, so show it before that
+	 * directory goes away, and keep it out of the transaction. */
 	if (mport_pkg_message_display(mport, pack) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
-	if (delete_pkg_infra(mport, pack) != MPORT_OK)
+	/*
+	 * Unregister the package atomically. IMMEDIATE takes the write lock up
+	 * front so another mport process cannot make a later statement fail
+	 * with SQLITE_BUSY halfway through. Any failure rolls back: a partly
+	 * deleted package left in an open transaction would be committed by
+	 * the next package processed in this run.
+	 */
+	if (mport_db_do(mport->db, "BEGIN IMMEDIATE TRANSACTION") != MPORT_OK)
 		RETURN_CURRENT_ERROR;
+
+	if (mport_db_do(mport->db, "DELETE FROM assets WHERE pkg=%Q", pack->name) != MPORT_OK)
+		goto rollback;
+
+	if (mport_db_do(mport->db, "DELETE FROM depends WHERE pkg=%Q", pack->name) != MPORT_OK)
+		goto rollback;
+
+	if (mport_db_do(mport->db, "DELETE FROM packages WHERE pkg=%Q", pack->name) != MPORT_OK)
+		goto rollback;
+
+	if (mport_db_do(mport->db, "DELETE FROM categories WHERE pkg=%Q", pack->name) != MPORT_OK)
+		goto rollback;
+
+	if (mport_db_do(mport->db, "DELETE FROM conflicts WHERE pkg=%Q", pack->name) != MPORT_OK)
+		goto rollback;
+
+	if (mport_db_do(mport->db, "DELETE FROM annotation WHERE pkg=%Q", pack->name) != MPORT_OK)
+		goto rollback;
+
+	if (mport_db_do(mport->db, "DELETE FROM shlibs_provided WHERE pkg=%Q", pack->name) !=
+	    MPORT_OK)
+		goto rollback;
+
+	if (mport_db_do(mport->db, "DELETE FROM shlibs_required WHERE pkg=%Q", pack->name) !=
+	    MPORT_OK)
+		goto rollback;
 
 	if (mport_db_do(mport->db, "COMMIT TRANSACTION") != MPORT_OK)
-		RETURN_CURRENT_ERROR;
+		goto rollback;
 
 	(mport->progress_step_cb)(++current, total, "DB Updated");
+
+	/* only bookkeeping files remain; the package is already unregistered */
+	if (delete_pkg_infra(mport, pack) != MPORT_OK) {
+		(mport->progress_free_cb)();
+		RETURN_CURRENT_ERROR;
+	}
 
 	(mport->progress_free_cb)();
 
@@ -415,6 +535,12 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 	syslog(LOG_NOTICE, "%s-%s deinstalled", pack->name, pack->version);
 
 	return (MPORT_OK);
+
+rollback:
+	/* sqlite3_exec directly so the rollback cannot clobber the error */
+	(void)sqlite3_exec(mport->db, "ROLLBACK", NULL, NULL, NULL);
+	(mport->progress_free_cb)();
+	RETURN_CURRENT_ERROR;
 }
 
 static void
@@ -427,14 +553,225 @@ warn_ignored_rmdir_error(/*@notnull@*/ mportInstance *mport, /*@notnull@*/ const
 	mport_set_err(MPORT_OK, NULL);
 }
 
-bool
-is_safe_to_delete_dir(
-    mportInstance *mport, mportPackageMeta *pack, const char *path, const char *asset_path)
+static int
+cmp_dir_path(const void *a, const void *b)
+{
+	return strcmp(*(const char *const *)a, *(const char *const *)b);
+}
+
+/*
+ * Collect the directories owned by pack that some other installed package also
+ * owns. That is the only thing is_safe_to_delete_dir() needs from the database,
+ * and one query answers it for every directory in the package.
+ *
+ * The result is bounded by pack's own directory count, not by the size of the
+ * assets table, so it stays small even on a large install.
+ */
+static int
+build_shared_dir_set(mportInstance *mport, mportPackageMeta *pack, struct shared_dir_set *set)
 {
 	sqlite3_stmt *stmt;
-	int count;
+	const char *data;
+	char **paths = NULL;
+	char **grown;
+	size_t count = 0, capacity = 0;
+	int ret;
 
-	if (mport == NULL || pack == NULL || path == NULL || asset_path == NULL) {
+	set->paths = NULL;
+	set->count = 0;
+
+	if (mport_db_prepare(mport->db, &stmt,
+		"SELECT DISTINCT data FROM assets WHERE pkg!=%Q AND type IN (%d, %d, %d, %d, %d) "
+		"AND data IN (SELECT data FROM assets WHERE pkg=%Q AND type IN (%d, %d, %d, %d, %d))",
+		pack->name, ASSET_DIR, ASSET_DIRRM, ASSET_DIRRMTRY, ASSET_DIR_OWNER_MODE,
+		ASSET_AUTODIR, pack->name, ASSET_DIR, ASSET_DIRRM, ASSET_DIRRMTRY,
+		ASSET_DIR_OWNER_MODE, ASSET_AUTODIR) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+
+	while (1) {
+		ret = sqlite3_step(stmt);
+
+		if (ret == SQLITE_DONE)
+			break;
+
+		if (ret != SQLITE_ROW) {
+			SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+			goto error;
+		}
+
+		data = (const char *)sqlite3_column_text(stmt, 0);
+		if (data == NULL)
+			continue;
+
+		if (count == capacity) {
+			capacity = capacity == 0 ? 16 : capacity * 2;
+			grown = reallocarray(paths, capacity, sizeof(*paths));
+			if (grown == NULL) {
+				SET_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+				goto error;
+			}
+			paths = grown;
+		}
+
+		paths[count] = strdup(data);
+		if (paths[count] == NULL) {
+			SET_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+			goto error;
+		}
+		count++;
+	}
+
+	sqlite3_finalize(stmt);
+
+	if (count > 1)
+		qsort(paths, count, sizeof(*paths), cmp_dir_path);
+
+	set->paths = paths;
+	set->count = count;
+
+	return (MPORT_OK);
+
+error:
+	sqlite3_finalize(stmt);
+	while (count > 0)
+		free(paths[--count]);
+	free(paths);
+	RETURN_CURRENT_ERROR;
+}
+
+static void
+free_shared_dir_set(struct shared_dir_set *set)
+{
+	size_t i;
+
+	for (i = 0; i < set->count; i++)
+		free(set->paths[i]);
+	free(set->paths);
+	set->paths = NULL;
+	set->count = 0;
+}
+
+/*
+ * Collect the file paths pack registers more than once.  Each is reported
+ * missing by every entry after the one that removes it unless remembered.
+ */
+static int
+build_dup_file_set(mportInstance *mport, mportPackageMeta *pack, struct dup_file_set *set)
+{
+	sqlite3_stmt *stmt;
+	const char *data;
+	char **paths = NULL;
+	char **grown;
+	size_t count = 0, capacity = 0;
+	int ret;
+
+	set->paths = NULL;
+	set->removed = NULL;
+	set->count = 0;
+
+	if (mport_db_prepare(mport->db, &stmt,
+		"SELECT data FROM assets WHERE pkg=%Q AND type IN (%d, %d, %d, %d, %d, %d) "
+		"AND data IS NOT NULL GROUP BY data HAVING COUNT(*) > 1",
+		pack->name, ASSET_FILE, ASSET_SAMPLE, ASSET_SAMPLE_OWNER_MODE, ASSET_SHELL,
+		ASSET_FILE_OWNER_MODE, ASSET_INFO) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+
+	while (1) {
+		ret = sqlite3_step(stmt);
+
+		if (ret == SQLITE_DONE)
+			break;
+
+		if (ret != SQLITE_ROW) {
+			SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+			goto error;
+		}
+
+		data = (const char *)sqlite3_column_text(stmt, 0);
+		if (data == NULL)
+			continue;
+
+		if (count == capacity) {
+			capacity = capacity == 0 ? 16 : capacity * 2;
+			grown = reallocarray(paths, capacity, sizeof(*paths));
+			if (grown == NULL) {
+				SET_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+				goto error;
+			}
+			paths = grown;
+		}
+
+		paths[count] = strdup(data);
+		if (paths[count] == NULL) {
+			SET_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+			goto error;
+		}
+		count++;
+	}
+
+	sqlite3_finalize(stmt);
+
+	if (count == 0)
+		return (MPORT_OK);
+
+	set->removed = calloc(count, sizeof(*set->removed));
+	if (set->removed == NULL) {
+		while (count > 0)
+			free(paths[--count]);
+		free(paths);
+		SET_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+		RETURN_CURRENT_ERROR;
+	}
+
+	if (count > 1)
+		qsort(paths, count, sizeof(*paths), cmp_dir_path);
+
+	set->paths = paths;
+	set->count = count;
+
+	return (MPORT_OK);
+
+error:
+	sqlite3_finalize(stmt);
+	while (count > 0)
+		free(paths[--count]);
+	free(paths);
+	RETURN_CURRENT_ERROR;
+}
+
+static void
+free_dup_file_set(struct dup_file_set *set)
+{
+	size_t i;
+
+	for (i = 0; i < set->count; i++)
+		free(set->paths[i]);
+	free(set->paths);
+	free(set->removed);
+	set->paths = NULL;
+	set->removed = NULL;
+	set->count = 0;
+}
+
+/* index of path in set, or -1 when it is not a duplicated file */
+static ssize_t
+find_dup_file(const struct dup_file_set *set, const char *path)
+{
+	char **found;
+
+	if (set->count == 0 || path == NULL)
+		return (-1);
+
+	found = bsearch(&path, set->paths, set->count, sizeof(*set->paths), cmp_dir_path);
+	return (found == NULL ? -1 : (ssize_t)(found - set->paths));
+}
+
+bool
+is_safe_to_delete_dir(mportInstance *mport, mportPackageMeta *pack,
+    const struct shared_dir_set *shared_dirs, const char *path, const char *asset_path)
+{
+	if (mport == NULL || pack == NULL || shared_dirs == NULL || path == NULL ||
+	    asset_path == NULL) {
 		return false;
 	}
 
@@ -457,25 +794,11 @@ is_safe_to_delete_dir(
 		return false;
 	}
 
-	if (mport_db_prepare(mport->db, &stmt,
-		"SELECT count(*) from assets where pkg!=%Q and type in (%d, %d, %d, %d, %d) and data=%Q",
-		pack->name, ASSET_DIR, ASSET_DIRRM, ASSET_DIRRMTRY, ASSET_DIR_OWNER_MODE,
-		ASSET_AUTODIR, asset_path) != MPORT_OK) {
-		return false;
-	}
+	if (shared_dirs->count == 0)
+		return true;
 
-	switch (sqlite3_step(stmt)) {
-	case SQLITE_ROW:
-		count = sqlite3_column_int(stmt, 0);
-		break;
-	default:
-		SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
-		sqlite3_finalize(stmt);
-		return false;
-	}
-
-	sqlite3_finalize(stmt);
-	return (count == 0);
+	return (bsearch(&asset_path, shared_dirs->paths, shared_dirs->count,
+		    sizeof(*shared_dirs->paths), cmp_dir_path) == NULL);
 }
 
 static int
@@ -501,7 +824,8 @@ build_info_dir_path(
 			RETURN_ERROR(MPORT_ERR_FATAL, "Info asset path is too long.");
 	} else {
 		if (pkg->prefix == NULL)
-			RETURN_ERROR(MPORT_ERR_FATAL, "Package prefix is undefined for info asset.");
+			RETURN_ERROR(
+			    MPORT_ERR_FATAL, "Package prefix is undefined for info asset.");
 		if (snprintf(info_path, sizeof(info_path), "%s/%s", pkg->prefix, data) >=
 		    (int)sizeof(info_path)) {
 			RETURN_ERROR(MPORT_ERR_FATAL, "Info asset path is too long.");
@@ -737,12 +1061,12 @@ run_pkg_deinstall(mportInstance *mport, mportPackageMeta *pack, const char *mode
 	char command_file[FILENAME_MAX];
 	int ret;
 
-	if (mport_build_infrastructure_path(mport, pack, MPORT_DEINSTALL_FILE, true, file,
-		sizeof(file)) != MPORT_OK)
+	if (mport_build_infrastructure_path(
+		mport, pack, MPORT_DEINSTALL_FILE, true, file, sizeof(file)) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
-	if (mport_build_infrastructure_path(mport, pack, MPORT_DEINSTALL_FILE, false,
-		command_file, sizeof(command_file)) != MPORT_OK)
+	if (mport_build_infrastructure_path(mport, pack, MPORT_DEINSTALL_FILE, false, command_file,
+		sizeof(command_file)) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
 	if (mport_file_exists(file)) {

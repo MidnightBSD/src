@@ -76,6 +76,9 @@ mport_autoremove(mportInstance *mport)
 		}
 
 		if (found) {
+			mport_pkgmeta_vec_free(depends_start);
+			depends_start = NULL;
+			depends = NULL;
 			packs++;
 			continue;
 		}
@@ -87,6 +90,7 @@ mport_autoremove(mportInstance *mport)
 			if (mport_delete_primative(mport, *depends, true) != MPORT_OK) {
 				mport_call_msg_cb(mport, "Unable to autoremove %s: %s",
 				    (*depends)->name, mport_err_string());
+				depends++;
 				continue;
 			}
 

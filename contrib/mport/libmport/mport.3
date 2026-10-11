@@ -118,6 +118,8 @@
 .Ft int
 .Fn mport_index_lookup_pkgname "mportInstance *mport" "const char *pkgname" "mportIndexEntry ***vec"
 .Ft int
+.Fn mport_index_get_default_version "mportInstance *mport" "const char *name" "char **version"
+.Ft int
 .Fn mport_index_search "mportInstance *mport" "mportIndexEntry ***vec" "const char *fmt" "..."
 .Ft int
 .Fn mport_index_search_term "mportInstance *mport" "mportIndexEntry ***vec" "char *term"
@@ -329,6 +331,7 @@ helpers manage library state and user interaction callbacks.
 .Fn mport_index_check ,
 .Fn mport_index_list ,
 .Fn mport_index_lookup_pkgname ,
+.Fn mport_index_get_default_version ,
 .Fn mport_index_search ,
 .Fn mport_index_search_term ,
 .Fn mport_index_depends_list ,
@@ -337,6 +340,21 @@ helpers manage library state and user interaction callbacks.
 and
 .Fn mport_moved_lookup
 operate on the repository index.
+The string returned through
+.Fa version
+by
+.Fn mport_index_get_default_version
+is owned by the caller and must be released with
+.Xr free 3 .
+The supported names are
+.Ql python ,
+.Ql perl5 ,
+.Ql ruby ,
+and
+.Ql php .
+An older index or an unknown name returns
+.Dv MPORT_OK
+with a null version.
 .It Sy Package metadata and assets
 .Fn mport_pkgmeta_new ,
 .Fn mport_pkgmeta_search_master ,

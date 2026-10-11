@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2018,2020 Thomas E. Dickey                                     *
+ * Copyright 2018-2024,2025 Thomas E. Dickey                                *
  * Copyright 2017 Free Software Foundation, Inc.                            *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -31,21 +31,24 @@
  *  Author: Thomas E. Dickey                                                *
  ****************************************************************************/
 
+#define NEW_PAIR_INTERNAL 1
 #include <curses.priv.h>
 
-MODULE_ID("$Id: report_offsets.c,v 1.21 2020/02/02 23:34:34 tom Exp $")
+MODULE_ID("$Id: report_offsets.c,v 1.32 2025/12/27 12:34:03 tom Exp $")
 
 #define show_size(type) \
-	flag = 0; \
+	flag = NULL; \
 	last = 0; \
 	printf("%5lu   " #type "\n", (unsigned long)sizeof(type))
+#define show_name(name) \
+	printf("%5lu   " #name "\n", (unsigned long)(name))
 #define show_offset(type,member) \
 	next = (unsigned long)offsetof(type,member); \
 	if (last > next) \
 		printf("?? incorrect order for " #type "." #member "\n"); \
 	printf("%5lu %c " #type "." #member "\n", next, flag ? *flag : ' '); \
 	last = next; \
-	flag = 0
+	flag = NULL
 
 #if NCURSES_WIDECHAR && NCURSES_EXT_COLORS
 #define show_COLORS(type,member) { flag = "c"; show_offset(type,member); }
@@ -53,7 +56,7 @@ MODULE_ID("$Id: report_offsets.c,v 1.21 2020/02/02 23:34:34 tom Exp $")
 #define show_COLORS(type,member)	/* nothing */
 #endif
 
-#ifdef USE_TERM_DRIVER
+#if USE_TERM_DRIVER
 #define show_DRIVER(type,member) { flag = "d"; show_offset(type,member); }
 #else
 #define show_DRIVER(type,member)	/* nothing */
@@ -65,12 +68,7 @@ MODULE_ID("$Id: report_offsets.c,v 1.21 2020/02/02 23:34:34 tom Exp $")
 #define show_MLEAKS(type,member)	/* nothing */
 #endif
 
-#ifdef USE_TERM_DRIVER
-#define show_NORMAL(type,member)	/* nothing */
-#else
 #define show_NORMAL(type,member) { flag = "n"; show_offset(type,member); }
-#endif
-
 #define show_OPTION(type,member) { flag = "+"; show_offset(type,member); }
 
 #if USE_REENTRANT
@@ -104,10 +102,13 @@ MODULE_ID("$Id: report_offsets.c,v 1.21 2020/02/02 23:34:34 tom Exp $")
 #endif
 
 int
-main(void)
+main(int argc, char *argv[])
 {
-    const char *flag = 0;
+    const char *flag = NULL;
     unsigned long last, next;
+
+    if (argc == 2 && !strcmp(argv[1], "-?"))
+	return EXIT_SUCCESS;
 
     printf("Size/offsets of data structures:\n");
 
@@ -116,9 +117,28 @@ main(void)
 #if USE_WIDEC_SUPPORT
     show_size(cchar_t);
 #endif
+    show_size(color_t);
+    show_size(colorpair_t);
     show_size(mmask_t);
+    show_size(rgb_bits_t);
     show_size(MEVENT);
     show_size(NCURSES_BOOL);
+    show_size(TRIES);
+
+    printf("\n");
+    printf("Sizes of buffers/arrays:\n");
+#if USE_WIDEC_SUPPORT
+    show_name(CCHARW_MAX);
+#endif
+    show_name(EV_MAX);
+    show_name(FIFO_SIZE);
+    show_name(NAMESIZE);
+    show_name(MB_LEN_MAX);
+    show_name(PATH_MAX);
+#ifdef TRACE
+    show_name(TRACECHR_BUF);
+    show_name(TRACEMSE_MAX);
+#endif
 
     printf("\n");
     show_size(SCREEN);
@@ -160,11 +180,15 @@ main(void)
 #if USE_SIZECHANGE
     show_OPTION(SCREEN, _resize);
 #endif
-    show_DRIVER(SCREEN, _windowlist);
+#ifdef USE_SP_WINDOWLIST
+    show_NORMAL(SCREEN, _windowlist);
+#endif
     show_REENTR(SCREEN, _ttytype);
     show_SPFUNC(SCREEN, use_tioctl);
     show_WIDECH(SCREEN, _screen_acs_fix);
+#if NCURSES_EXT_FUNCS && NCURSES_EXT_COLORS
     show_COLORS(SCREEN, _ordered_pairs);
+#endif
     show_TRACES(SCREEN, tracechr_buf);
 
     printf("\n");
@@ -175,6 +199,7 @@ main(void)
     show_offset(TERMINAL, Nttyb);
     show_offset(TERMINAL, _baudrate);
     show_offset(TERMINAL, _termname);
+    show_offset(TERMINAL, tparm_state);
 #if HAVE_INIT_EXTENDED_COLOR
     show_COLORS(TERMINAL, type2);
 #endif
@@ -187,6 +212,15 @@ main(void)
 #endif
 
     printf("\n");
+    show_size(TPARM_STATE);
+    show_offset(TPARM_STATE, stack);
+    show_offset(TPARM_STATE, stack_ptr);
+    show_offset(TPARM_STATE, out_buff);
+    show_offset(TPARM_STATE, fmt_buff);
+    show_offset(TPARM_STATE, static_vars);
+    show_TRACES(TPARM_STATE, tname);
+
+    printf("\n");
     show_size(WINDOW);
     show_WIDECH(WINDOW, _bkgrnd);
     show_COLORS(WINDOW, _color);
@@ -194,8 +228,15 @@ main(void)
     printf("\n");
     show_size(NCURSES_GLOBALS);
     show_offset(NCURSES_GLOBALS, init_signals);
+    show_offset(NCURSES_GLOBALS, tgetent_cache);
+    show_offset(NCURSES_GLOBALS, dbd_vars);
+#if HAVE_TSEARCH
+    show_offset(NCURSES_GLOBALS, cached_tparm);
+#endif
     show_DRIVER(NCURSES_GLOBALS, term_driver);
+#ifndef USE_SP_WINDOWLIST
     show_NORMAL(NCURSES_GLOBALS, _nc_windowlist);
+#endif
 #if USE_HOME_TERMINFO
     show_OPTION(NCURSES_GLOBALS, home_terminfo);
 #endif
@@ -208,14 +249,18 @@ main(void)
 #endif
     show_WIDECH(NCURSES_GLOBALS, key_name);
     show_TRACES(NCURSES_GLOBALS, trace_opened);
+    show_TRACES(NCURSES_GLOBALS, trace_level);
     show_MLEAKS(NCURSES_GLOBALS, leak_checking);
 
     printf("\n");
     show_size(NCURSES_PRESCREEN);
+    show_offset(NCURSES_PRESCREEN, tparm_state);
     show_offset(NCURSES_PRESCREEN, saved_tty);
     show_offset(NCURSES_PRESCREEN, use_tioctl);
     show_offset(NCURSES_PRESCREEN, _outch);
+#ifndef USE_SP_RIPOFF
     show_NORMAL(NCURSES_PRESCREEN, rippedoff);
+#endif
 #if NCURSES_NO_PADDING
     show_OPTION(NCURSES_PRESCREEN, _no_padding);
 #endif
@@ -223,6 +268,9 @@ main(void)
     show_offset(NCURSES_PRESCREEN, real_acs_map);
 #else
     show_REENTR(NCURSES_PRESCREEN, real_acs_map);
+#endif
+#if BROKEN_LINKER || USE_REENTRANT
+    show_TRACES(NCURSES_PRESCREEN, _outchars);
 #endif
 
     return EXIT_SUCCESS;

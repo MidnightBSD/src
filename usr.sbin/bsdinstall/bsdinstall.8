@@ -248,6 +248,16 @@ in the new system to set the root user's password.
 Interactively invokes
 .Xr adduser 8
 in the new system.
+.It Cm packages
+Installs applications into the new system from an mport repository staged in
+.Pa /packages .
+The interface offers a curated list of packages stored on the installation
+media and can search the complete repository index for packages available from
+network mirrors.
+Selected packages are installed with their dependencies, and the media index
+is copied to
+.Pa /var/db/mport/index.db
+when the new system does not already have an index.
 .It Cm time
 Interactively sets the time, date, and time zone of the new system.
 .It Cm services

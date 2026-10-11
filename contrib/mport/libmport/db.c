@@ -48,6 +48,23 @@ static int mport_upgrade_master_schema_13to14(sqlite3 *);
 
 static int insert_meta_values(sqlite3 *db, char *key, char *value);
 
+/* mport_db_harden(sqlite3 *db)
+ *
+ * Registry, index and bundle databases are not trusted: refuse to run
+ * functions from SQL stored in their schemas (triggers, views) and block
+ * SQL that can corrupt the database file.  Call right after opening a
+ * connection; databases ATTACHed to it later are covered too.
+ */
+int
+mport_db_harden(sqlite3 *db)
+{
+	if (sqlite3_db_config(db, SQLITE_DBCONFIG_TRUSTED_SCHEMA, 0, (int *)NULL) != SQLITE_OK ||
+	    sqlite3_db_config(db, SQLITE_DBCONFIG_DEFENSIVE, 1, (int *)NULL) != SQLITE_OK)
+		RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+
+	return MPORT_OK;
+}
+
 /* mport_db_do(sqlite3 *db, const char *sql, ...)
  *
  * A wrapper for executing a single sql query.  Takes a sqlite3 struct
@@ -97,7 +114,8 @@ mport_db_do(sqlite3 *db, const char *fmt, ...)
  *
  * A wrapper for preparing sqlite statements into statement structs.
  * This function returns MPORT_OK on success.  The sqlite3_stmt pointer
- * may be null if this function does not return MPORT_OK.
+ * is set to NULL on every path where this function does not return
+ * MPORT_OK, so callers may safely sqlite3_finalize() it in error handlers.
  */
 int
 mport_db_prepare(sqlite3 *db, sqlite3_stmt **stmt, const char *fmt, ...)
@@ -106,6 +124,8 @@ mport_db_prepare(sqlite3 *db, sqlite3_stmt **stmt, const char *fmt, ...)
 	char *sql = NULL;
 	int result = MPORT_OK;
 	char *err = NULL;
+
+	*stmt = NULL;
 
 	va_start(args, fmt);
 	sql = sqlite3_vmprintf(fmt, args);
@@ -149,6 +169,8 @@ mport_db_count(sqlite3 *db, int *count, const char *fmt, ...)
 	char *err = NULL;
 	int realCount = 0;
 
+	*count = 0;
+
 	va_start(args, fmt);
 	sql = sqlite3_vmprintf(fmt, args);
 	va_end(args);
@@ -178,9 +200,13 @@ mport_db_count(sqlite3 *db, int *count, const char *fmt, ...)
 	if (result != MPORT_OK)
 		return result;
 
+	/* A COUNT(*) query always yields exactly one row; a non-row step
+	   (e.g. SQLITE_BUSY) is an error. Report it rather than returning
+	   MPORT_OK with *count unset, which callers use as an allocation size. */
 	if (sqlite3_step(stmt) != SQLITE_ROW) {
+		SET_ERRORX(MPORT_ERR_FATAL, "sql error counting: %s", sqlite3_errmsg(db));
 		sqlite3_finalize(stmt);
-		return result;
+		return MPORT_ERR_FATAL;
 	}
 
 	realCount = sqlite3_column_int(stmt, 0);
@@ -266,15 +292,23 @@ mport_generate_stub_schema(mportInstance *mport, sqlite3 *db)
 	insert_meta_values(db, "bundle_format_version", MPORT_BUNDLE_VERSION_STR);
 	RUN_SQL(db, "INSERT INTO meta VALUES (\"build_timestamp\", datetime('now'))");
 
+	/* keep a reason such as an unreadable ABI_FILE rather than replace it */
+	(void)mport_set_err(MPORT_OK, NULL);
 	ptr = mport_get_osrelease(mport);
-	if (ptr == NULL)
+	if (ptr == NULL) {
+		if (mport_err_code() != MPORT_OK)
+			RETURN_CURRENT_ERROR;
 		RETURN_ERROR(MPORT_ERR_FATAL, "OS Release could not be determined");
+	}
 	insert_meta_values(db, "os_release", ptr);
 	free(ptr);
 
 	ptr = mport_get_osreleasedate();
-	if (ptr == NULL)
+	if (ptr == NULL) {
+		if (mport_err_code() != MPORT_OK)
+			RETURN_CURRENT_ERROR;
 		RETURN_ERROR(MPORT_ERR_FATAL, "OS Release Date could not be determined");
+	}
 	insert_meta_values(db, "MidnightBSD_version", ptr);
 	free(ptr);
 	ptr = NULL;
@@ -288,72 +322,106 @@ mport_generate_stub_schema(mportInstance *mport, sqlite3 *db)
 	RUN_SQL(db,
 	    "CREATE TABLE depends (pkg text NOT NULL, depend_pkgname text NOT NULL, depend_pkgversion text, depend_port text NOT NULL)");
 	RUN_SQL(db, "CREATE TABLE categories (pkg text NOT NULL, category text NOT NULL)");
+	RUN_SQL(db, "CREATE TABLE shlibs_provided (pkg text NOT NULL, name text NOT NULL)");
+	RUN_SQL(db, "CREATE TABLE shlibs_required (pkg text NOT NULL, name text NOT NULL)");
 
 	return (MPORT_OK);
 }
 
+/* Run one upgrade step; the caller owns the surrounding transaction. */
+#define UPGRADE_STEP(fn)                      \
+	do {                                  \
+		if (fn(db) != MPORT_OK)       \
+			RETURN_CURRENT_ERROR; \
+	} while (0)
+
+static int
+run_master_schema_upgrades(sqlite3 *db, int databaseVersion)
+{
+	switch (databaseVersion) {
+	case 0:
+	case 1:
+		UPGRADE_STEP(mport_upgrade_master_schema_0to2);
+		UPGRADE_STEP(mport_upgrade_master_schema_2to3);
+		UPGRADE_STEP(mport_upgrade_master_schema_4to6);
+		UPGRADE_STEP(mport_upgrade_master_schema_6to7);
+		UPGRADE_STEP(mport_upgrade_master_schema_7to8);
+		UPGRADE_STEP(mport_upgrade_master_schema_8to9);
+		UPGRADE_STEP(mport_upgrade_master_schema_9to10);
+		UPGRADE_STEP(mport_upgrade_master_schema_10to11);
+		UPGRADE_STEP(mport_upgrade_master_schema_11to12);
+		UPGRADE_STEP(mport_upgrade_master_schema_12to13);
+		UPGRADE_STEP(mport_upgrade_master_schema_13to14);
+		break;
+	case 2:
+		UPGRADE_STEP(mport_upgrade_master_schema_2to3);
+		/* falls through */
+	case 3:
+		UPGRADE_STEP(mport_upgrade_master_schema_3to4);
+		/* falls through */
+	case 4:
+		/* falls through */
+	case 5:
+		UPGRADE_STEP(mport_upgrade_master_schema_4to6);
+		/* falls through */
+	case 6:
+		UPGRADE_STEP(mport_upgrade_master_schema_6to7);
+		/* falls through */
+	case 7:
+		UPGRADE_STEP(mport_upgrade_master_schema_7to8);
+		/* falls through */
+	case 8:
+		UPGRADE_STEP(mport_upgrade_master_schema_8to9);
+		/* falls through */
+	case 9:
+		UPGRADE_STEP(mport_upgrade_master_schema_9to10);
+		/* falls through */
+	case 10:
+		UPGRADE_STEP(mport_upgrade_master_schema_10to11);
+		/* falls through */
+	case 11:
+		UPGRADE_STEP(mport_upgrade_master_schema_11to12);
+		/* falls through */
+	case 12:
+		UPGRADE_STEP(mport_upgrade_master_schema_12to13);
+		/* falls through */
+	case 13:
+		UPGRADE_STEP(mport_upgrade_master_schema_13to14);
+		/* falls through */
+	case 14:
+		UPGRADE_STEP(mport_upgrade_master_schema_14to15);
+		break;
+	default:
+		RETURN_ERROR(MPORT_ERR_FATAL, "Invalid master database version");
+	}
+
+	return (MPORT_OK);
+}
+
+/*
+ * Bring the master database up to MPORT_MASTER_VERSION.
+ *
+ * Every step and the version bump run in one transaction. SQLite DDL is
+ * transactional, so a failure part way (a locked registry, a step that no
+ * longer applies) leaves the schema and user_version exactly as they were
+ * instead of a half-upgraded database that the old version number makes
+ * mport try, and fail, to upgrade again on every start.
+ */
 int
 mport_upgrade_master_schema(sqlite3 *db, int databaseVersion)
 {
 	if (databaseVersion == MPORT_MASTER_VERSION)
 		return MPORT_OK;
 
-	switch (databaseVersion) {
-	case 0:
-	case 1:
-		mport_upgrade_master_schema_0to2(db);
-		mport_upgrade_master_schema_2to3(db);
-		mport_upgrade_master_schema_4to6(db);
-		mport_upgrade_master_schema_6to7(db);
-		mport_upgrade_master_schema_7to8(db);
-		mport_upgrade_master_schema_8to9(db);
-		mport_upgrade_master_schema_9to10(db);
-		mport_upgrade_master_schema_10to11(db);
-		mport_upgrade_master_schema_11to12(db);
-		mport_upgrade_master_schema_12to13(db);
-		mport_upgrade_master_schema_13to14(db);
-		mport_set_database_version(db);
-		break;
-	case 2:
-		mport_upgrade_master_schema_2to3(db);
-		/* falls through */
-	case 3:
-		mport_upgrade_master_schema_3to4(db);
-		/* falls through */
-	case 4:
-		/* falls through */
-	case 5:
-		mport_upgrade_master_schema_4to6(db);
-		/* falls through */
-	case 6:
-		/* falls through */
-		mport_upgrade_master_schema_6to7(db);
-	case 7:
-		/* falls through */
-		mport_upgrade_master_schema_7to8(db);
-	case 8:
-		/* falls through */
-		mport_upgrade_master_schema_8to9(db);
-	case 9:
-		/* falls through */
-		mport_upgrade_master_schema_9to10(db);
-	case 10:
-		/* falls through */
-		mport_upgrade_master_schema_10to11(db);
-	case 11:
-		/* falls through */
-		mport_upgrade_master_schema_11to12(db);
-	case 12:
-		/* falls through */
-		mport_upgrade_master_schema_12to13(db);
-	case 13:
-		/* falls through */
-		mport_upgrade_master_schema_13to14(db);
-		mport_set_database_version(db);
-	case 14:
-		break;
-	default:
-		RETURN_ERROR(MPORT_ERR_FATAL, "Invalid master database version");
+	if (mport_db_do(db, "BEGIN IMMEDIATE TRANSACTION") != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+
+	if (run_master_schema_upgrades(db, databaseVersion) != MPORT_OK ||
+	    mport_set_database_version(db) != MPORT_OK ||
+	    mport_db_do(db, "COMMIT TRANSACTION") != MPORT_OK) {
+		/* sqlite3_exec directly so the rollback cannot clobber the error */
+		(void)sqlite3_exec(db, "ROLLBACK", NULL, NULL, NULL);
+		RETURN_CURRENT_ERROR;
 	}
 
 	return (MPORT_OK);
@@ -473,12 +541,11 @@ mport_upgrade_master_schema_12to13(sqlite3 *db)
 	    "CREATE TABLE IF NOT EXISTS conflicts (pkg text NOT NULL, conflict_pkg text NOT NULL, conflict_version text NOT NULL)");
 	RUN_SQL(db, "CREATE INDEX IF NOT EXISTS conflicts_pkg ON conflicts (pkg, conflict_pkg)");
 	RUN_SQL(db, "DROP INDEX IF EXISTS settings_name");
-	RUN_SQL(db, "BEGIN TRANSACTION;");
+	/* mport_upgrade_master_schema() runs the whole upgrade in one transaction */
 	RUN_SQL(db,
 	    "CREATE TABLE temp_settings AS SELECT MIN(rowid) as rowid, name, val FROM settings GROUP BY name;");
 	RUN_SQL(db, "DELETE FROM settings WHERE rowid NOT IN (SELECT rowid FROM temp_settings);");
 	RUN_SQL(db, "DROP TABLE temp_settings;");
-	RUN_SQL(db, "COMMIT;");
 	RUN_SQL(db, "CREATE UNIQUE INDEX IF NOT EXISTS settings_name_unique ON settings (name)");
 
 	return (MPORT_OK);
@@ -489,6 +556,22 @@ mport_upgrade_master_schema_13to14(sqlite3 *db)
 {
 	RUN_SQL(db,
 	    "CREATE TABLE IF NOT EXISTS annotation (pkg text NOT NULL, tag TEXT NOT NULL, val TEXT NOT NULL, PRIMARY KEY (pkg, tag))");
+
+	return (MPORT_OK);
+}
+
+/* shared libraries each package provides and requires (see shlib.c) */
+int
+mport_upgrade_master_schema_14to15(sqlite3 *db)
+{
+	RUN_SQL(db,
+	    "CREATE TABLE IF NOT EXISTS shlibs_provided (pkg text NOT NULL, name text NOT NULL)");
+	RUN_SQL(db, "CREATE INDEX IF NOT EXISTS shlibs_provided_pkg ON shlibs_provided (pkg)");
+	RUN_SQL(db, "CREATE INDEX IF NOT EXISTS shlibs_provided_name ON shlibs_provided (name)");
+	RUN_SQL(db,
+	    "CREATE TABLE IF NOT EXISTS shlibs_required (pkg text NOT NULL, name text NOT NULL)");
+	RUN_SQL(db, "CREATE INDEX IF NOT EXISTS shlibs_required_pkg ON shlibs_required (pkg)");
+	RUN_SQL(db, "CREATE INDEX IF NOT EXISTS shlibs_required_name ON shlibs_required (name)");
 
 	return (MPORT_OK);
 }
@@ -535,6 +618,14 @@ mport_generate_master_schema(sqlite3 *db)
 
 	RUN_SQL(db,
 	    "CREATE TABLE IF NOT EXISTS annotation (pkg text NOT NULL, tag TEXT NOT NULL, val TEXT NOT NULL, PRIMARY KEY (pkg, tag))");
+	RUN_SQL(db,
+	    "CREATE TABLE IF NOT EXISTS shlibs_provided (pkg text NOT NULL, name text NOT NULL)");
+	RUN_SQL(db, "CREATE INDEX IF NOT EXISTS shlibs_provided_pkg ON shlibs_provided (pkg)");
+	RUN_SQL(db, "CREATE INDEX IF NOT EXISTS shlibs_provided_name ON shlibs_provided (name)");
+	RUN_SQL(db,
+	    "CREATE TABLE IF NOT EXISTS shlibs_required (pkg text NOT NULL, name text NOT NULL)");
+	RUN_SQL(db, "CREATE INDEX IF NOT EXISTS shlibs_required_pkg ON shlibs_required (pkg)");
+	RUN_SQL(db, "CREATE INDEX IF NOT EXISTS shlibs_required_name ON shlibs_required (name)");
 
 	mport_set_database_version(db);
 

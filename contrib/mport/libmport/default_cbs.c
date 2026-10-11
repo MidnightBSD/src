@@ -106,6 +106,24 @@ mport_warn_non_tty_prompt(const char *what)
 	    "cannot prompt for %s: stdin is not a terminal; use -y or ASSUME_ALWAYS_YES", what);
 }
 
+/*
+ * fgetln() returns a buffer that is not NUL-terminated; copy a line into a
+ * bounded, terminated buffer, dropping any trailing newline, so it is safe to
+ * pass to string functions.
+ */
+static char *
+copy_line(char *dst, size_t dstsize, const char *src, size_t len)
+{
+	size_t copylen = len < dstsize ? len : dstsize - 1;
+
+	memcpy(dst, src, copylen);
+	while (copylen > 0 && (dst[copylen - 1] == '\n' || dst[copylen - 1] == '\r'))
+		copylen--;
+	dst[copylen] = '\0';
+
+	return dst;
+}
+
 int
 mport_default_confirm_cb(const char *msg, const char *yes, const char *no, int def)
 {
@@ -141,11 +159,14 @@ mport_default_confirm_cb(const char *msg, const char *yes, const char *no, int d
 			return def == 1 ? MPORT_OK : -1;
 		}
 
-		bool answer = mport_check_answer_bool(ans);
+		char linebuf[16];
+		copy_line(linebuf, sizeof(linebuf), ans, len);
+
+		bool answer = mport_check_answer_bool(linebuf);
 
 		if (answer)
 			return (MPORT_OK);
-		if (*ans == 'N' || *ans == 'n')
+		if (linebuf[0] == 'N' || linebuf[0] == 'n')
 			return (-1);
 
 		if (color_terminal) {
@@ -209,14 +230,16 @@ mport_default_select_cb(const char *msg, mportIndexEntry **choices, int def)
 		if (len == 1)
 			return def;
 
+		char linebuf[32];
+		copy_line(linebuf, sizeof(linebuf), ans, len);
+
 		errno = 0;
-		long choice = strtol(ans, &endptr, 10);
-		while (endptr != NULL &&
-		    (*endptr == '\n' || *endptr == '\r' || *endptr == ' ' || *endptr == '\t'))
+		long choice = strtol(linebuf, &endptr, 10);
+		while (endptr != NULL && (*endptr == ' ' || *endptr == '\t'))
 			endptr++;
 
-		if (errno == 0 && endptr != ans && (*endptr == '\0' || *endptr == '\n') &&
-		    choice >= 1 && choice <= count) {
+		if (errno == 0 && endptr != linebuf && *endptr == '\0' && choice >= 1 &&
+		    choice <= count) {
 			return (int)choice - 1;
 		}
 
@@ -274,9 +297,19 @@ mport_default_progress_step_cb(int current, int total, const char *msg)
 		return;
 	}
 
-	percent = (double)current / (double)total;
+	/* guard against total == 0 (NaN percent) and clamp so the memsets
+	   below can't run past the bar_width + 1 allocation. */
+	percent = total > 0 ? (double)current / (double)total : 0.0;
+	if (percent < 0.0)
+		percent = 0.0;
+	else if (percent > 1.0)
+		percent = 1.0;
 
 	bar_on = (int)(percent * (bar_width - 2));
+	if (bar_on < 0)
+		bar_on = 0;
+	else if (bar_on > bar_width - 2)
+		bar_on = bar_width - 2;
 	bar_off = bar_width - 2 - bar_on;
 
 	bar[0] = '[';

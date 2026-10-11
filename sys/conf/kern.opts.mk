@@ -79,14 +79,6 @@ BROKEN_OPTIONS+= CDDL ZFS
 . endif
 .endif
 
-.if ${MACHINE_CPUARCH} == "mips"
-BROKEN_OPTIONS+= CDDL ZFS SSP
-.endif
-
-.if ${MACHINE_CPUARCH} == "powerpc" && ${MACHINE_ARCH} == "powerpc"
-BROKEN_OPTIONS+= ZFS
-.endif
-
 # Things that don't work because the kernel doesn't have the support
 # for them.
 .if ${MACHINE} != "i386" && ${MACHINE} != "amd64"
@@ -98,8 +90,8 @@ BROKEN_OPTIONS+= OFED
 BROKEN_OPTIONS+= KERNEL_RETPOLINE
 .endif
 
-# EFI doesn't exist on mips, powerpc, or riscv.
-.if ${MACHINE:Mmips} || ${MACHINE:Mpowerpc} || ${MACHINE:Mriscv}
+# EFI does not exist on riscv.
+.if ${MACHINE:Mriscv}
 BROKEN_OPTIONS+=EFI
 .endif
 

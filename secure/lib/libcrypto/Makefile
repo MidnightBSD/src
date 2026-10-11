@@ -32,12 +32,6 @@ SRCS+=	x86_64cpuid.S
 SRCS+=	armv4cpuid.S armcap.c
 .elif defined(ASM_i386)
 SRCS+=	x86cpuid.S
-.elif defined(ASM_powerpc)
-SRCS+=	ppccpuid.S ppccap.c
-.elif defined(ASM_powerpc64)
-SRCS+=	ppccpuid.S ppccap.c
-.elif defined(ASM_powerpc64le)
-SRCS+=	ppccpuid.S ppccap.c
 .else
 SRCS+=	mem_clr.c
 .endif
@@ -54,12 +48,6 @@ SRCS+=	aesni-sha256-x86_64.S aesni-x86_64.S bsaes-x86_64.S vpaes-x86_64.S
 SRCS+=	aes_cbc.c aes-armv4.S aesv8-armx.S bsaes-armv7.S
 .elif defined(ASM_i386)
 SRCS+=	aes-586.S aesni-x86.S vpaes-x86.S
-.elif defined(ASM_powerpc)
-SRCS+=	aes_cbc.c aes_core.c aes-ppc.S vpaes-ppc.S aesp8-ppc.S
-.elif defined(ASM_powerpc64)
-SRCS+=	aes_cbc.c aes_core.c aes-ppc.S vpaes-ppc.S aesp8-ppc.S
-.elif defined(ASM_powerpc64le)
-SRCS+=	aes_cbc.c aes_core.c aes-ppc.S vpaes-ppc.S aesp8-ppc.S
 .else
 SRCS+=	aes_cbc.c aes_core.c
 .endif
@@ -109,12 +97,6 @@ SRCS+=	x86_64-gcc.c x86_64-gf2m.S x86_64-mont.S x86_64-mont5.S
 SRCS+=	armv4-gf2m.S armv4-mont.S bn_asm.c
 .elif defined(ASM_i386)
 SRCS+=	bn-586.S co-586.S x86-gf2m.S x86-mont.S
-.elif defined(ASM_powerpc)
-SRCS+=	bn_ppc.c bn-ppc.S ppc-mont.S
-.elif defined(ASM_powerpc64)
-SRCS+=	bn_ppc.c bn-ppc.S ppc-mont.S
-.elif defined(ASM_powerpc64le)
-SRCS+=	bn_ppc.c bn-ppc.S ppc-mont.S
 .else
 SRCS+=	bn_asm.c
 .endif
@@ -149,12 +131,6 @@ SRCS+=	chacha-x86_64.S
 SRCS+=	chacha-armv4.S
 .elif defined(ASM_i386)
 SRCS+=	chacha-x86.S
-.elif defined(ASM_powerpc)
-SRCS+=	chacha_ppc.c chacha-ppc.S
-.elif defined(ASM_powerpc64)
-SRCS+=	chacha_ppc.c chacha-ppc.S
-.elif defined(ASM_powerpc64le)
-SRCS+=	chacha_ppc.c chacha-ppc.S
 .else
 SRCS+=	chacha_enc.c
 .endif
@@ -218,8 +194,7 @@ SRCS+=	ecp_oct.c ecp_smpl.c ecx_backend.c ecx_key.c ecx_meth.c eddsa.c
 SRCS+=	f_generic.c f_impl32.c f_impl64.c scalar.c
 # see OPENSSL_NO_EC_NISTP_64_GCC_128 in configuration.h
 .if ${TARGET_ENDIANNESS} == 1234 && (${MACHINE_CPUARCH} == "amd64" || \
-    ${MACHINE_CPUARCH} == "aarch64" || ${MACHINE_ARCH} == "powerpc64" || \
-    ${MACHINE_ARCH} == "powerpc64le")
+    ${MACHINE_CPUARCH} == "aarch64")
 SRCS+=	ecp_nistp224.c ecp_nistp256.c ecp_nistp521.c ecp_nistputil.c
 .endif
 .if defined(ASM_aarch64)
@@ -230,10 +205,6 @@ SRCS+=	ecp_nistz256-x86_64.S ecp_nistz256.c x25519-x86_64.S
 SRCS+=	ecp_nistz256-armv4.S ecp_nistz256.c
 .elif defined(ASM_i386)
 SRCS+=	ecp_nistz256-x86.S ecp_nistz256.c
-.elif defined(ASM_powerpc64)
-SRCS+=	ecp_nistp521-ppc64.S ecp_nistz256-ppc64.S ecp_nistz256.c ecp_ppc.c x25519-ppc64.S
-.elif defined(ASM_powerpc64le)
-SRCS+=	ecp_nistp521-ppc64.S ecp_nistz256-ppc64.S ecp_nistz256.c ecp_ppc.c x25519-ppc64.S
 .endif
 
 # encode_decode
@@ -304,12 +275,6 @@ SRCS+=	aesni-gcm-x86_64.S ghash-x86_64.S
 SRCS+=	ghash-armv4.S ghashv8-armx.S
 .elif defined(ASM_i386)
 SRCS+=	ghash-x86.S
-.elif defined(ASM_powerpc)
-SRCS+=	ghashp8-ppc.S
-.elif defined(ASM_powerpc64)
-SRCS+=	ghashp8-ppc.S
-.elif defined(ASM_powerpc64le)
-SRCS+=	ghashp8-ppc.S
 .endif
 
 # objects
@@ -342,12 +307,6 @@ SRCS+=	poly1305-x86_64.S
 SRCS+=	poly1305-armv4.S
 .elif defined(ASM_i386)
 SRCS+=	poly1305-x86.S
-.elif defined(ASM_powerpc)
-SRCS+=	poly1305_ppc.c poly1305-ppc.S poly1305-ppcfp.S
-.elif defined(ASM_powerpc64)
-SRCS+=	poly1305_ppc.c poly1305-ppc.S poly1305-ppcfp.S
-.elif defined(ASM_powerpc64le)
-SRCS+=	poly1305_ppc.c poly1305-ppc.S poly1305-ppcfp.S
 .endif
 
 # property
@@ -498,12 +457,6 @@ SRCS+=	sha256-mb-x86_64.S sha256-x86_64.S sha512-x86_64.S
 SRCS+=	keccak1600-armv4.S sha1-armv4-large.S sha256-armv4.S sha512-armv4.S
 .elif defined(ASM_i386)
 SRCS+=	keccak1600.c sha1-586.S sha256-586.S sha512-586.S
-.elif defined(ASM_powerpc)
-SRCS+=	keccak1600.c sha_ppc.c sha1-ppc.S sha256-ppc.S sha512-ppc.S sha256p8-ppc.S sha512p8-ppc.S
-.elif defined(ASM_powerpc64)
-SRCS+=	keccak1600-ppc64.S sha_ppc.c sha1-ppc.S sha256-ppc.S sha512-ppc.S sha256p8-ppc.S sha512p8-ppc.S
-.elif defined(ASM_powerpc64le)
-SRCS+=	keccak1600-ppc64.S sha_ppc.c sha1-ppc.S sha256-ppc.S sha512-ppc.S sha256p8-ppc.S sha512p8-ppc.S
 .else
 SRCS+=	keccak1600.c
 .endif
@@ -611,7 +564,7 @@ buildinf.h: Makefile
 	> ${.TARGET}
 
 buildasm cleanasm:
-.for arch in aarch64 amd64 arm i386 powerpc powerpc64 powerpc64le
+.for arch in aarch64 amd64 arm i386
 	make MK_AUTO_OBJ=no -DWITHOUT_AUTO_ASM -DASM_${arch} \
 	    -f ${.CURDIR}/Makefile.asm -C ${SRCTOP}/sys/crypto/openssl/${arch} \
 	    ${.TARGET:S/build/all/:S/asm$//}

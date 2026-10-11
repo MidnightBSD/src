@@ -33,8 +33,8 @@ MAN?=		rtld.1
 ACFLAGS+=	-DLOCORE
 CFLAGS+=	-Wall -DIN_RTLD -ffreestanding
 CFLAGS+=	-I${SRCTOP}/lib/csu/common
-.if exists(${RTLD_ELF_DIR}/${MACHINE_ARCH:S/powerpc64le/powerpc64/})
-RTLD_ARCH=	${MACHINE_ARCH:S/powerpc64le/powerpc64/}
+.if exists(${RTLD_ELF_DIR}/${MACHINE_ARCH})
+RTLD_ARCH=	${MACHINE_ARCH}
 .else
 RTLD_ARCH=	${MACHINE_CPUARCH}
 .endif

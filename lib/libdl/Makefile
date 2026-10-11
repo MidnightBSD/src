@@ -6,8 +6,8 @@ SHLIB_MAJOR=1
 .PATH:	${SRCTOP}/lib/libc/gen
 CFLAGS+=-I${SRCTOP}/lib/libc/include
 RTLD_ELF_DIR=${SRCTOP}/libexec/rtld-elf
-.if exists(${RTLD_ELF_DIR}/${MACHINE_ARCH:S/powerpc64le/powerpc64/})
-RTLD_ARCH=	${MACHINE_ARCH:S/powerpc64le/powerpc64/}
+.if exists(${RTLD_ELF_DIR}/${MACHINE_ARCH})
+RTLD_ARCH=	${MACHINE_ARCH}
 .else
 RTLD_ARCH=	${MACHINE_CPUARCH}
 .endif

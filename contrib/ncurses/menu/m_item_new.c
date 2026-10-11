@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright 2020 Thomas E. Dickey                                          *
+ * Copyright 2020-2021,2024 Thomas E. Dickey                                *
  * Copyright 1998-2010,2012 Free Software Foundation, Inc.                  *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
@@ -45,12 +45,12 @@
 #endif
 #endif
 
-MODULE_ID("$Id: m_item_new.c,v 1.34 2020/02/02 23:34:34 tom Exp $")
+MODULE_ID("$Id: m_item_new.c,v 1.40 2024/12/07 22:01:57 tom Exp $")
 
 /*---------------------------------------------------------------------------
-|   Facility      :  libnmenu  
+|   Facility      :  libnmenu
 |   Function      :  bool Is_Printable_String(const char *s)
-|   
+|
 |   Description   :  Checks whether or not the string contains only printable
 |                    characters.
 |
@@ -60,22 +60,22 @@ MODULE_ID("$Id: m_item_new.c,v 1.34 2020/02/02 23:34:34 tom Exp $")
 static bool
 Is_Printable_String(const char *s)
 {
-  int result = TRUE;
+  bool result = TRUE;
 
 #if USE_WIDEC_SUPPORT
-  int count = (int)mbstowcs(0, s, 0);
-  wchar_t *temp = 0;
+  int count = (int)mbstowcs(NULL, s, 0);
+  wchar_t *temp = NULL;
 
   assert(s);
 
   if (count > 0
-      && (temp = typeCalloc(wchar_t, (2 + (unsigned)count))) != 0)
+      && (temp = typeCalloc(wchar_t, (2 + (unsigned)count))) != NULL)
     {
       int n;
 
       mbstowcs(temp, s, (unsigned)count);
       for (n = 0; n < count; ++n)
-	if (!iswprint((wint_t) temp[n]))
+	if (!iswprint((wint_t)temp[n]))
 	  {
 	    result = FALSE;
 	    break;
@@ -98,16 +98,16 @@ Is_Printable_String(const char *s)
 }
 
 /*---------------------------------------------------------------------------
-|   Facility      :  libnmenu  
+|   Facility      :  libnmenu
 |   Function      :  ITEM *new_item(char *name, char *description)
-|   
+|
 |   Description   :  Create a new item with name and description. Return
 |                    a pointer to this new item.
 |                    N.B.: an item must(!) have a name.
 |
 |   Return Values :  The item pointer or NULL if creation failed.
 +--------------------------------------------------------------------------*/
-NCURSES_EXPORT(ITEM *)
+MENU_EXPORT(ITEM *)
 new_item(const char *name, const char *description)
 {
   ITEM *item;
@@ -118,14 +118,16 @@ new_item(const char *name, const char *description)
 
   if (!name || (*name == '\0') || !Is_Printable_String(name))
     {
-      item = (ITEM *) 0;
+      item = (ITEM *)0;
       SET_ERROR(E_BAD_ARGUMENT);
     }
   else
     {
       item = typeCalloc(ITEM, 1);
+
       if (item)
 	{
+	  T((T_CREATE("item %p"), (void *)item));
 	  *item = _nc_Default_Item;	/* hope we have struct assignment */
 
 	  item->name.length = (unsigned short)strlen(name);
@@ -150,18 +152,18 @@ new_item(const char *name, const char *description)
 }
 
 /*---------------------------------------------------------------------------
-|   Facility      :  libnmenu  
+|   Facility      :  libnmenu
 |   Function      :  int free_item(ITEM *item)
-|   
-|   Description   :  Free the allocated storage for this item. 
+|
+|   Description   :  Free the allocated storage for this item.
 |                    N.B.: a connected item can't be freed.
 |
 |   Return Values :  E_OK              - success
 |                    E_BAD_ARGUMENT    - invalid value has been passed
-|                    E_CONNECTED       - item is still connected to a menu    
+|                    E_CONNECTED       - item is still connected to a menu
 +--------------------------------------------------------------------------*/
-NCURSES_EXPORT(int)
-free_item(ITEM * item)
+MENU_EXPORT(int)
+free_item(ITEM *item)
 {
   T((T_CALLED("free_item(%p)"), (void *)item));
 
@@ -177,24 +179,24 @@ free_item(ITEM * item)
 }
 
 /*---------------------------------------------------------------------------
-|   Facility      :  libnmenu  
+|   Facility      :  libnmenu
 |   Function      :  int set_menu_mark( MENU *menu, const char *mark )
-|   
+|
 |   Description   :  Set the mark string used to indicate the current
 |                    item (single-valued menu) or the selected items
 |                    (multi-valued menu).
-|                    The mark argument may be NULL, in which case no 
+|                    The mark argument may be NULL, in which case no
 |                    marker is used.
-|                    This might be a little bit tricky, because this may 
-|                    affect the geometry of the menu, which we don't allow 
+|                    This might be a little bit tricky, because this may
+|                    affect the geometry of the menu, which we don't allow
 |                    if it is already posted.
 |
 |   Return Values :  E_OK               - success
 |                    E_BAD_ARGUMENT     - an invalid value has been passed
 |                    E_SYSTEM_ERROR     - no memory to store mark
 +--------------------------------------------------------------------------*/
-NCURSES_EXPORT(int)
-set_menu_mark(MENU * menu, const char *mark)
+MENU_EXPORT(int)
+set_menu_mark(MENU *menu, const char *mark)
 {
   short l;
 
@@ -229,7 +231,7 @@ set_menu_mark(MENU * menu, const char *mark)
 	  else
 	    {
 	      menu->mark = old_mark;
-	      menu->marklen = (short)((old_mark != 0) ? strlen(old_mark) : 0);
+	      menu->marklen = (short)((old_mark != NULL) ? strlen(old_mark) : 0);
 	      RETURN(E_SYSTEM_ERROR);
 	    }
 	}
@@ -258,15 +260,15 @@ set_menu_mark(MENU * menu, const char *mark)
 }
 
 /*---------------------------------------------------------------------------
-|   Facility      :  libnmenu  
+|   Facility      :  libnmenu
 |   Function      :  char *menu_mark(const MENU *menu)
-|   
+|
 |   Description   :  Return a pointer to the marker string
 |
 |   Return Values :  The marker string pointer or NULL if no marker defined
 +--------------------------------------------------------------------------*/
-NCURSES_EXPORT(const char *)
-menu_mark(const MENU * menu)
+MENU_EXPORT(const char *)
+menu_mark(const MENU *menu)
 {
   T((T_CALLED("menu_mark(%p)"), (const void *)menu));
   returnPtr(Normalize_Menu(menu)->mark);

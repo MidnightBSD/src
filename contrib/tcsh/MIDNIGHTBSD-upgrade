@@ -1,13 +1,35 @@
 $MidnightBSD$
 
-Christos Zoulas `tcsh'
-	originals can be found at: ftp://ftp.astron.com/pub/tcsh/
+tcsh from https://astron.com/pub/tcsh/
 
-The stripped down version was created using MIDNIGHTBSD-Xlist during extraction:
+The vendor branch is vendor/tcsh/dist, tagged vendor/tcsh/dist/X.YY.ZZ.
+It holds pristine upstream sources trimmed with MIDNIGHTBSD-Xlist; the
+local changes (see below) live only on master.
 
-	tar -X MIDNIGHTBSD-Xlist -xzvf tcsh-6.18.01.tar.gz
+To import a new release:
 
-Imported by:
+  1) Fetch tcsh-X.YY.ZZ.tar.gz and its .asc and verify the signature.
+  2) On a checkout of vendor/tcsh/dist:
+	tar -X MIDNIGHTBSD-Xlist -xzf tcsh-X.YY.ZZ.tar.gz
+	rsync -a --delete --exclude .git tcsh-X.YY.ZZ/ ./
+	git add -A && git commit && git tag vendor/tcsh/dist/X.YY.ZZ
+  3) On master:
+	git merge -X subtree=contrib/tcsh vendor/tcsh/dist
+  4) Bump TCSH_VERSION, TCSH_DATE and TCSH_ENGLISH_DATE in
+     bin/csh/Makefile; they are substituted into patchlevel.h.in and
+     tcsh.man.in in place of configure.  Compare config.h.in against
+     bin/csh/config.h for new HAVE_* checks, and system/bsd4.4 against
+     bin/csh/config_p.h.
+  5) Build bin/csh and note the update in UPDATING.
 
-	cvs import -m "Import of tcsh-6.18.01" \
-		src/contrib/tcsh ZOULAS tcsh_6_18_01
+Local changes carried on master relative to the vendor branch:
+
+  glob.c     - #ifndef __FreeBSD__ around the case-ordering hack in
+               compare(), so ranges follow LC_COLLATE.
+  host.defs  - the FreeBSD block is removed, because the compiler also
+               defines __FreeBSD__ and gethost would otherwise report
+               FreeBSD; the MidnightBSD block carries the arch list.
+
+Everything else we used to patch (sh.c, sh.err.c, sh.h, sh.hist.c,
+sh.lex.c, tc.const.c, tc.sig.c, tc.sig.h) was adopted upstream by
+6.24.16.
