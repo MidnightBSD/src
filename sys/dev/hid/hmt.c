@@ -193,6 +193,7 @@ struct hmt_softc {
 	bool			prev_touch;
 
 	struct evdev_dev	*evdev;
+	device_t		hconf;
 
 	union evdev_mt_slot	slot_data;
 	uint8_t			caps[howmany(HMT_N_USAGES, 8)];
@@ -226,6 +227,7 @@ struct hmt_softc {
 
 static enum hmt_type hmt_hid_parse(struct hmt_softc *, const void *,
     hid_size_t, uint32_t, uint8_t);
+static device_t hmt_find_hconf(struct hmt_softc *);
 static int hmt_set_input_mode(struct hmt_softc *, enum hconf_input_mode);
 
 static hid_intr_t	hmt_intr;
@@ -256,7 +258,24 @@ hmt_ev_close(struct evdev_dev *evdev)
 static int
 hmt_ev_open(struct evdev_dev *evdev)
 {
-	return (hidbus_intr_start(evdev_get_softc(evdev)));
+	struct hmt_softc *sc = evdev_get_softc(evdev);
+	int err;
+
+	err = hidbus_intr_start(sc->dev);
+	if (err != 0)
+		return (err);
+
+	/*
+	 * Re-send the input mode on open.  Some devices silently drop the
+	 * switch issued at attach time or revert to legacy mouse mode after
+	 * being put to sleep (observed on the Framework Laptop PIXA3854
+	 * touchpad in iichid sampling mode).  The device has just been
+	 * powered on, so repeat it here.
+	 */
+	if (sc->type == HMT_TYPE_TOUCHPAD)
+		(void)hmt_set_input_mode(sc, HCONF_INPUT_MODE_MT_TOUCHPAD);
+
+	return (0);
 }
 
 static int
@@ -361,6 +380,7 @@ hmt_attach(device_t dev)
 
 	/* Switch touchpad in to absolute multitouch mode */
 	if (sc->type == HMT_TYPE_TOUCHPAD) {
+		sc->hconf = hmt_find_hconf(sc);
 		err = hmt_set_input_mode(sc, HCONF_INPUT_MODE_MT_TOUCHPAD);
 		if (err != 0)
 			DPRINTF("Failed to set input mode: %d\n", err);
@@ -859,34 +879,47 @@ hmt_hid_parse(struct hmt_softc *sc, const void *d_ptr, hid_size_t d_len,
 	return (type);
 }
 
-static int
-hmt_set_input_mode(struct hmt_softc *sc, enum hconf_input_mode mode)
+/*
+ * Locate the touchpad's configuration TLC and make sure hconf is attached
+ * to it.  Must be called from attach context with Giant held.
+ */
+static device_t
+hmt_find_hconf(struct hmt_softc *sc)
 {
 	devclass_t hconf_devclass;
 	device_t hconf;
-	int  err;
 
 	GIANT_REQUIRED;
 
-	/* Find touchpad's configuration TLC */
 	hconf = hidbus_find_child(device_get_parent(sc->dev),
 	    HID_USAGE2(HUP_DIGITIZERS, HUD_CONFIG));
 	if (hconf == NULL)
-		return (ENXIO);
+		return (NULL);
 
 	/* Ensure that hconf driver is attached to configuration TLC */
 	if (device_is_alive(hconf) == 0)
 		device_probe_and_attach(hconf);
 	if (device_is_attached(hconf) == 0)
-		return (ENXIO);
+		return (NULL);
 	hconf_devclass = devclass_find("hconf");
 	if (device_get_devclass(hconf) != hconf_devclass)
+		return (NULL);
+
+	return (hconf);
+}
+
+static int
+hmt_set_input_mode(struct hmt_softc *sc, enum hconf_input_mode mode)
+{
+	int err;
+
+	if (sc->hconf == NULL)
 		return (ENXIO);
 
 	/* hconf_set_input_mode can drop the Giant while sleeping */
-	device_busy(hconf);
-	err = hconf_set_input_mode(hconf, mode);
-	device_unbusy(hconf);
+	device_busy(sc->hconf);
+	err = hconf_set_input_mode(sc->hconf, mode);
+	device_unbusy(sc->hconf);
 
 	return (err);
 }
