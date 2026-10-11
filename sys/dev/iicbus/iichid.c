@@ -61,10 +61,24 @@
 
 #include "hid_if.h"
 
+static SYSCTL_NODE(_hw, OID_AUTO, iichid, CTLFLAG_RW, 0, "I2C HID");
+
+/*
+ * Keep the device powered while it is attached and only put it to sleep on
+ * system suspend, as Linux i2c-hid does.  Toggling the I2C-HID power state
+ * on every open/close confuses some devices: the Framework Laptop PIXA3854
+ * touchpad reverts to legacy mouse mode or stops reporting after a quick
+ * sleep/wake cycle.  Set to 1 to restore the previous behaviour of putting
+ * the device to sleep when its last consumer closes it.
+ */
+static int iichid_power_off_on_close = 0;
+SYSCTL_INT(_hw_iichid, OID_AUTO, power_off_on_close, CTLFLAG_RWTUN,
+    &iichid_power_off_on_close, 0,
+    "Put the device to sleep when its last consumer closes it");
+
 #ifdef IICHID_DEBUG
 static int iichid_debug = 0;
 
-static SYSCTL_NODE(_hw, OID_AUTO, iichid, CTLFLAG_RW, 0, "I2C HID");
 SYSCTL_INT(_hw_iichid, OID_AUTO, debug, CTLFLAG_RWTUN,
     &iichid_debug, 1, "Debug level");
 
@@ -662,23 +676,30 @@ iichid_set_power_state(struct iichid_softc *sc,
 		break;
 	}
 
-	power_on = sc->open & !sc->suspend;
+	/*
+	 * The device is powered whenever it is open or, unless
+	 * power_off_on_close is set, whenever the system is not suspended.
+	 * Input reports are only fetched while somebody has it open.
+	 */
+	power_on = (sc->open || !iichid_power_off_on_close) && !sc->suspend;
 
 	if (power_on != sc->power_on) {
 		error = iichid_set_power(sc,
 		    power_on ? I2C_HID_POWER_ON : I2C_HID_POWER_OFF);
 
 		sc->power_on = power_on;
-#ifdef IICHID_SAMPLING
-		if (sc->sampling_rate_slow >= 0 && sc->intr_handler != NULL) {
-			if (power_on) {
-				iichid_setup_callout(sc);
-				iichid_reset_callout(sc);
-			} else
-				iichid_teardown_callout(sc);
-		}
-#endif
 	}
+#ifdef IICHID_SAMPLING
+	if (sc->sampling_rate_slow >= 0 && sc->intr_handler != NULL) {
+		bool poll = sc->open && !sc->suspend;
+
+		if (poll && !sc->callout_setup) {
+			iichid_setup_callout(sc);
+			iichid_reset_callout(sc);
+		} else if (!poll && sc->callout_setup)
+			iichid_teardown_callout(sc);
+	}
+#endif
 
 	iicbus_release_bus(parent, sc->dev);
 
@@ -1203,8 +1224,11 @@ iichid_attach(device_t dev)
 		iichid_detach(dev);
 	}
 done:
-	(void)iichid_set_power(sc, I2C_HID_POWER_OFF);
-	sc->power_on = false;
+	/* Leave the device powered unless the user asked otherwise. */
+	if (error != 0 || iichid_power_off_on_close) {
+		(void)iichid_set_power(sc, I2C_HID_POWER_OFF);
+		sc->power_on = false;
+	}
 	return (error);
 }
 
