@@ -1,6 +1,12 @@
 Updating Information for MidnightBSD users.
 
 20261014:
+	bhyve(8): fix guest-triggerable memory safety bugs in the xhci,
+	hda and fbuf device models (FreeBSD-SA-26:72.bhyve, CVE-2026-101309,
+	CVE-2026-101310, CVE-2026-101311).  Restart any virtual machines
+	that use these devices after installing.
+
+20261014:
 	sound(4): fix a race between buffer resizing and mmap(2) that could
 	let a local user with access to a sound device trigger a kernel
 	use-after-free (FreeBSD-SA-26:71.sound, CVE-2026-101308).  Rebuild
