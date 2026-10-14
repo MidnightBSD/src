@@ -1,6 +1,12 @@
 Updating Information for MidnightBSD users.
 
 20261014:
+	sound(4): fix a race between buffer resizing and mmap(2) that could
+	let a local user with access to a sound device trigger a kernel
+	use-after-free (FreeBSD-SA-26:71.sound, CVE-2026-101308).  Rebuild
+	and install the kernel and reboot.
+
+20261014:
 	hastd(8): fix an assertion failure on empty control messages,
 	uninitialized nvpair padding that could leak heap memory into
 	on-disk metadata and network messages, and a worker hang when
