@@ -1,5 +1,13 @@
 Updating Information for MidnightBSD users.
 
+20261014:
+	hastd(8): fix an assertion failure on empty control messages,
+	uninitialized nvpair padding that could leak heap memory into
+	on-disk metadata and network messages, and a worker hang when
+	the main process hands off an incoming connection
+	(FreeBSD-EN-26:26.hastd).  Restart hastd after installing.
+	Also includes the earlier fix for the nv data size check.
+
 20261002:
 	openssl: fix an out-of-bounds read in DTLS retransmission
 	(CVE-2026-84782).  If the DTLS retransmission timer fired while a
