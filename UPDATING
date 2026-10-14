@@ -1,5 +1,12 @@
 Updating Information for MidnightBSD users.
 
+20261014:
+	hastd(8): fix an assertion failure on empty control messages,
+	uninitialized nvpair padding that could leak heap memory into
+	on-disk metadata and network messages, and a worker hang when
+	the main process hands off an incoming connection
+	(FreeBSD-EN-26:26.hastd).  Restart hastd after installing.
+
 20261009:
 	mport 2.8.3 (from 2.8.2).  Packages now record the shared libraries
 	they provide and require, and mport install checks those against
