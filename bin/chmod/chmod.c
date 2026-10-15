@@ -57,7 +57,7 @@ static char sccsid[] = "@(#)chmod.c	8.8 (Berkeley) 4/1/94";
 
 static volatile sig_atomic_t siginfo;
 
-static void usage(void);
+static void usage(void) __dead2;
 static int may_have_nfs4acl(const FTSENT *ent, int hflag);
 
 static void

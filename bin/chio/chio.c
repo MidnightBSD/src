@@ -58,7 +58,7 @@ static const char copyright[] =
 #include "defs.h"
 #include "pathnames.h"
 
-static	void usage(void);
+static	void usage(void) __dead2;
 static	void cleanup(void);
 static	u_int16_t parse_element_type(char *);
 static	u_int16_t parse_element_unit(char *);
@@ -425,7 +425,7 @@ do_position(const char *cname, int argc, char **argv)
 
 /* ARGSUSED */
 static int
-do_params(const char *cname, int argc, char **argv)
+do_params(const char *cname, int argc, char **argv __unused)
 {
 	struct changer_params data;
 	int picker;
@@ -468,7 +468,7 @@ do_params(const char *cname, int argc, char **argv)
 
 /* ARGSUSED */
 static int
-do_getpicker(const char *cname, int argc, char **argv)
+do_getpicker(const char *cname, int argc, char **argv __unused)
 {
 	int picker;
 
