@@ -1,6 +1,15 @@
 Updating Information for MidnightBSD users.
 
 20261014:
+	pwait(1) gains -r (wait until the target is reaped) and -p, ps(1)
+	gains -D up|down|both and reworked process selection, timeout(1)
+	gains -v and forwards signals to the child, ls(1) -g now omits the
+	owner column, date(1) gains -z and nanosecond output, and cat(1) and
+	dd(1) pick up upstream fixes, all from FreeBSD stable/14.  pwait -r
+	depends on the new kqueue NOTE_REAP event: rebuild and install the
+	kernel and reboot, otherwise -r behaves like a plain pwait.
+
+20261014:
 	bhyve(8): fix guest-triggerable memory safety bugs in the xhci,
 	hda and fbuf device models (FreeBSD-SA-26:72.bhyve, CVE-2026-101309,
 	CVE-2026-101310, CVE-2026-101311).  Restart any virtual machines
