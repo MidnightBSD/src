@@ -57,7 +57,7 @@ static char sccsid[] = "@(#)chflags.c	8.5 (Berkeley) 4/1/94";
 
 static volatile sig_atomic_t siginfo;
 
-static void usage(void);
+static void usage(void) __dead2;
 
 static void
 siginfo_handler(int sig __unused)
