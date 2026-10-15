@@ -70,7 +70,7 @@ int regexp_flags = REG_BASIC;	/* use the "basic" regexp by default*/
 int exitstatus;
 volatile sig_atomic_t showinfo = 0;
 
-static void usage(void);
+static void usage(void) __dead2;
 static void siginfo_handler(int sig __unused);
 
 int
