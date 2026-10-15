@@ -36,7 +36,6 @@
 
 struct trans {
   int64_t val;
-  char *endp;
   const char *str;
 };
 
