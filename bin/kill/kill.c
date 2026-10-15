@@ -61,7 +61,7 @@ static char sccsid[] = "@(#)kill.c	8.4 (Berkeley) 4/28/95";
 static void nosig(const char *);
 static void printsignals(FILE *);
 static int signame_to_signum(const char *);
-static void usage(void);
+static void usage(void) __dead2;
 
 int
 main(int argc, char *argv[])
