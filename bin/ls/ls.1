@@ -246,9 +246,11 @@ but only if
 .Dv stdout
 is a tty and either the
 .Fl G
-flag is specified or the
+flag is specified or one of the environment variables
 .Ev COLORTERM
-environment variable is set and not empty.
+or
+.Ev CLICOLOR
+is set and not empty.
 .Pp
 .Cm never
 will disable color regardless of environment variables.
@@ -300,14 +302,9 @@ and
 .Fl s
 options.
 .It Fl g
-This option has no effect.
-It is only available for compatibility with
-.Bx 4.3 ,
-where it was used to display the group name in the long
+Display the long
 .Pq Fl l
-format output.
-This option is incompatible with
-.St -p1003.1-2008 .
+format output without the file owner's name or number.
 .It Fl h
 When used with the
 .Fl l
@@ -466,9 +463,9 @@ options all override each other; the last one specified determines
 the file time used.
 .Pp
 The
-.Fl S
+.Fl S , t
 and
-.Fl t
+.Fl v
 options override each other; the last one specified determines
 the sort order used.
 .Pp
@@ -688,7 +685,7 @@ The default
 .Dq Li cons25
 console has the proper capabilities,
 but to display the colors in an
-.Xr xterm 1 ,
+.Xr xterm 1 Pq Pa ports/x11/xterm ,
 for example,
 the
 .Ev TERM
@@ -750,7 +747,7 @@ where
 is the foreground color and
 .Ar b
 is the background color.
-When the background color is capitalized, the text will underlined.
+When the background color is capitalized, the text is underlined.
 .Pp
 The color designators are as follows:
 .Pp
@@ -891,7 +888,7 @@ specification.
 .Xr chmod 1 ,
 .Xr getfacl 1 ,
 .Xr sort 1 ,
-.Xr xterm 1 ,
+.Xr xterm 1 Pq Pa ports/x11/xterm ,
 .Xr localeconv 3 ,
 .Xr strcoll 3 ,
 .Xr strftime 3 ,
@@ -934,7 +931,7 @@ command appeared in
 The
 .Fl v
 option was added in
-.Fx 14.0 .
+.Fx 13.2 .
 .Sh BUGS
 To maintain backward compatibility, the relationships between the many
 options are quite complex.
