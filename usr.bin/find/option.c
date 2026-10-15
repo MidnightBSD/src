@@ -38,6 +38,7 @@ static char sccsid[] = "@(#)option.c	8.2 (Berkeley) 4/16/94";
 
 #include <sys/cdefs.h>
 #include <sys/types.h>
+#include <sys/acl.h>
 #include <sys/stat.h>
 
 #include <err.h>
@@ -87,8 +88,8 @@ static OPTION const options[] = {
 #endif
 // -fls
 	{ "-follow",	c_follow,	f_always_true,	0 },
-// -fprint
-// -fprint0
+	{ "-fprint",	c_fprint,	f_fprint,	0 },
+	{ "-fprint0",	c_fprint,	f_fprint0,	0 },
 // -fprintf
 #if HAVE_STRUCT_STATFS_F_FSTYPENAME
 	{ "-fstype",	c_fstype,	f_fstype,	0 },
@@ -152,7 +153,7 @@ static OPTION const options[] = {
 	{ "-perm",	c_perm,		f_perm,		0 },
 	{ "-print",	c_print,	f_print,	0 },
 	{ "-print0",	c_print,	f_print0,	0 },
-// -printf
+	{ "-printf",	c_printf,	f_printf,	0 },
 	{ "-prune",	c_simple,	f_prune,	0 },
 	{ "-quit",	c_simple,	f_quit,		0 },
 	{ "-readable",	c_simple,	f_readable,	0 },
@@ -166,6 +167,8 @@ static OPTION const options[] = {
 	{ "-user",	c_user,		f_user,		0 },
 	{ "-wholename",	c_name,		f_path,		0 },
 	{ "-writable",	c_simple,	f_writable,	0 },
+	{ "-xattr",	c_simple,	f_xattr,	0 },
+	{ "-xattrname",	c_name,		f_xattrname,	0 },
 	{ "-xdev",	c_xdev,		f_always_true,	0 },
 // -xtype
 };
