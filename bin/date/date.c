@@ -48,6 +48,8 @@ static char sccsid[] = "@(#)date.c	8.2 (Berkeley) 4/28/95";
 
 #include <ctype.h>
 #include <err.h>
+#include <errno.h>
+#include <inttypes.h>
 #include <locale.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -64,16 +66,16 @@ static char sccsid[] = "@(#)date.c	8.2 (Berkeley) 4/28/95";
 #define	TM_YEAR_BASE	1900
 #endif
 
-static time_t tval;
-
 static void badformat(void);
-static void iso8601_usage(const char *);
+static void iso8601_usage(const char *) __dead2;
 static void multipleformats(void);
-static void parsedate(const char *, const char *);
 static void printdate(const char *);
-static void printisodate(struct tm *);
-static void setthetime(const char *, const char *, int);
-static void usage(void);
+static void printisodate(struct tm *, long, long);
+static void parsedate(const char *, const char *, struct timespec *);
+static void setthetime(const char *, const char *, int, struct timespec *);
+static size_t strftime_ns(char * __restrict, size_t, const char * __restrict,
+    const struct tm * __restrict, long, long);
+static void usage(void) __dead2;
 
 static const struct iso8601_fmt {
 	const char *refname;
@@ -83,6 +85,7 @@ static const struct iso8601_fmt {
 	{ "hours", "T%H" },
 	{ "minutes", ":%M" },
 	{ "seconds", ":%S" },
+	{ "ns", ",%N" },
 };
 static const struct iso8601_fmt *iso8601_selected;
 
@@ -91,26 +94,27 @@ static const char *rfc2822_format = "%a, %d %b %Y %T %z";
 int
 main(int argc, char *argv[])
 {
+	struct timespec ts = { 0, 0 }, tres = { 0, 1 };
 	int ch, rflag;
 	bool dflag, Iflag, jflag, Rflag;
-	const char *format;
 	const char *datestr;
-	const char *fmt;
+	const char *format;
 	char buf[1024];
-	char *tmp;
+	char *end, *fmt, *outzone = NULL;
 	struct vary *v;
 	const struct vary *badv;
 	struct tm *lt;
 	struct stat sb;
 	size_t i;
+	intmax_t number;
 
 	v = NULL;
-	datestr = NULL;
 	fmt = NULL;
 	(void) setlocale(LC_TIME, "");
 	rflag = 0;
+	datestr = NULL;
 	dflag = Iflag = jflag = Rflag = 0;
-	while ((ch = getopt(argc, argv, "d:f:I::jnRr:uv:")) != -1)
+	while ((ch = getopt(argc, argv, "d:f:I::jnRr:uv:z:")) != -1)
 		switch((char)ch) {
 		case 'd':
 			dflag = 1;
@@ -147,16 +151,22 @@ main(int argc, char *argv[])
 			break;
 		case 'r':		/* user specified seconds */
 			rflag = 1;
-			tval = strtoq(optarg, &tmp, 0);
-			if (*tmp != 0) {
-				if (stat(optarg, &sb) == 0)
-					tval = sb.st_mtim.tv_sec;
-				else
-					usage();
+			number = strtoimax(optarg, &end, 0);
+			if (end > optarg && *end == '\0') {
+				ts.tv_sec = number;
+				ts.tv_nsec = 0;
+			} else if (stat(optarg, &sb) == 0) {
+				ts.tv_sec = sb.st_mtim.tv_sec;
+				ts.tv_nsec = sb.st_mtim.tv_nsec;
+			} else {
+				usage();
 			}
 			break;
 		case 'u':		/* do everything in UTC */
 			(void)setenv("TZ", "UTC0", 1);
+			break;
+		case 'z':
+			outzone = optarg;
 			break;
 		case 'v':
 			v = vary_append(v, optarg);
@@ -167,8 +177,12 @@ main(int argc, char *argv[])
 	argc -= optind;
 	argv += optind;
 
-	if (!rflag && time(&tval) == -1)
-		err(1, "time");
+	if (!rflag) {
+		if (clock_gettime(CLOCK_REALTIME, &ts) == -1)
+			err(1, "clock_gettime");
+		if (clock_getres(CLOCK_REALTIME, &tres) == -1)
+			err(1, "clock_getres");
+	}
 
 	format = "%+";
 
@@ -184,11 +198,11 @@ main(int argc, char *argv[])
 	}
 
 	if (dflag) {
-		parsedate(fmt, datestr);
+		parsedate(fmt, datestr, &ts);
 		if (*argv != NULL)
 			usage();
 	} else if (*argv) {
-		setthetime(fmt, *argv, jflag);
+		setthetime(fmt, *argv, jflag, &ts);
 		++argv;
 	} else if (fmt != NULL)
 		usage();
@@ -199,20 +213,22 @@ main(int argc, char *argv[])
 		format = *argv + 1;
 	}
 
-	lt = localtime(&tval);
+	if (outzone != NULL && setenv("TZ", outzone, 1) != 0)
+		err(1, "setenv(TZ)");
+	lt = localtime(&ts.tv_sec);
 	if (lt == NULL)
 		errx(1, "invalid time");
 	badv = vary_apply(v, lt);
 	if (badv) {
 		fprintf(stderr, "%s: Cannot apply date adjustment\n",
-			badv->arg);
+		    badv->arg);
 		vary_destroy(v);
 		usage();
 	}
 	vary_destroy(v);
 
 	if (Iflag)
-		printisodate(lt);
+		printisodate(lt, ts.tv_nsec, tres.tv_nsec);
 
 	if (format == rfc2822_format)
 		/*
@@ -221,7 +237,9 @@ main(int argc, char *argv[])
 		 */
 		setlocale(LC_TIME, "C");
 
-	(void)strftime(buf, sizeof(buf), format, lt);
+
+	(void)strftime_ns(buf, sizeof(buf), format, lt,
+	    ts.tv_nsec, tres.tv_nsec);
 	printdate(buf);
 }
 
@@ -242,10 +260,14 @@ static const struct date_format date_formats[] = {
 	{ "%B %d %Y", true, false },
 };
 
+/*
+ * Parse a GNU-style -d argument and store the result in ts.
+ */
 static void
-parsedate(const char *fmt, const char *p)
+parsedate(const char *fmt, const char *p, struct timespec *ts)
 {
 	struct tm tm;
+	const struct tm *lt;
 	char *ep;
 	const char *t;
 	size_t i;
@@ -254,8 +276,9 @@ parsedate(const char *fmt, const char *p)
 		usage();
 
 	if (*p == '@') {
-		tval = strtoq(p + 1, &ep, 0);
-		if (*ep != '\0')
+		ts->tv_sec = strtoimax(p + 1, &ep, 0);
+		ts->tv_nsec = 0;
+		if (ep == p + 1 || *ep != '\0')
 			errx(1, "invalid date: %s", p);
 		return;
 	}
@@ -265,23 +288,20 @@ parsedate(const char *fmt, const char *p)
 
 	if (strcasecmp(p, "yesterday") == 0 ||
 	    strcasecmp(p, "tomorrow") == 0) {
-		const struct tm *lt;
-
-		lt = localtime(&tval);
+		lt = localtime(&ts->tv_sec);
 		if (lt == NULL)
 			errx(1, "invalid time");
 		tm = *lt;
 		tm.tm_isdst = -1;
 		tm.tm_mday += strcasecmp(p, "tomorrow") == 0 ? 1 : -1;
-		if ((tval = mktime(&tm)) == -1)
+		if ((ts->tv_sec = mktime(&tm)) == -1)
 			errx(1, "nonexistent time");
+		ts->tv_nsec = 0;
 		return;
 	}
 
 	if (fmt != NULL) {
-		const struct tm *lt;
-
-		lt = localtime(&tval);
+		lt = localtime(&ts->tv_sec);
 		if (lt == NULL)
 			errx(1, "invalid time");
 		tm = *lt;
@@ -289,17 +309,17 @@ parsedate(const char *fmt, const char *p)
 		t = strptime(p, fmt, &tm);
 		if (t == NULL || *t != '\0')
 			errx(1, "invalid date: %s", p);
-		if ((tval = mktime(&tm)) == -1)
+		if ((ts->tv_sec = mktime(&tm)) == -1)
 			errx(1, "nonexistent time");
+		ts->tv_nsec = 0;
 		return;
 	}
 
 	for (i = 0; i < nitems(date_formats); i++) {
 		const struct date_format *df;
-		const struct tm *lt;
 
 		df = &date_formats[i];
-		lt = localtime(&tval);
+		lt = localtime(&ts->tv_sec);
 		if (lt == NULL)
 			errx(1, "invalid time");
 		tm = *lt;
@@ -311,8 +331,9 @@ parsedate(const char *fmt, const char *p)
 		t = strptime(p, df->fmt, &tm);
 		if (t == NULL || *t != '\0')
 			continue;
-		if ((tval = mktime(&tm)) == -1)
+		if ((ts->tv_sec = mktime(&tm)) == -1)
 			errx(1, "nonexistent time");
+		ts->tv_nsec = 0;
 		return;
 	}
 
@@ -329,31 +350,22 @@ printdate(const char *buf)
 }
 
 static void
-printisodate(struct tm *lt)
+printisodate(struct tm *lt, long nsec, long res)
 {
 	const struct iso8601_fmt *it;
-	char fmtbuf[32], buf[32], tzbuf[8], tzout[8];
-	size_t tzlen;
+	char fmtbuf[64], buf[64], tzbuf[8];
 
 	fmtbuf[0] = 0;
 	for (it = iso8601_fmts; it <= iso8601_selected; it++)
 		strlcat(fmtbuf, it->format_string, sizeof(fmtbuf));
 
-	(void)strftime(buf, sizeof(buf), fmtbuf, lt);
+	(void)strftime_ns(buf, sizeof(buf), fmtbuf, lt, nsec, res);
 
 	if (iso8601_selected > iso8601_fmts) {
-		tzlen = strftime(tzbuf, sizeof(tzbuf), "%z", lt);
-		if (tzlen == 5 && (tzbuf[0] == '+' || tzbuf[0] == '-')) {
-			/* Convert ±HHMM to ±HH:MM. */
-			tzout[0] = tzbuf[0];
-			tzout[1] = tzbuf[1];
-			tzout[2] = tzbuf[2];
-			tzout[3] = ':';
-			tzout[4] = tzbuf[3];
-			tzout[5] = tzbuf[4];
-			tzout[6] = '\0';
-			strlcat(buf, tzout, sizeof(buf));
-		}
+		(void)strftime_ns(tzbuf, sizeof(tzbuf), "%z", lt, nsec, res);
+		memmove(&tzbuf[4], &tzbuf[3], 3);
+		tzbuf[3] = ':';
+		strlcat(buf, tzbuf, sizeof(buf));
 	}
 
 	printdate(buf);
@@ -362,15 +374,14 @@ printisodate(struct tm *lt)
 #define	ATOI2(s)	((s) += 2, ((s)[-2] - '0') * 10 + ((s)[-1] - '0'))
 
 static void
-setthetime(const char *fmt, const char *p, int jflag)
+setthetime(const char *fmt, const char *p, int jflag, struct timespec *ts)
 {
 	struct utmpx utx;
 	struct tm *lt;
-	struct timeval tv;
 	const char *dot, *t;
 	int century;
 
-	lt = localtime(&tval);
+	lt = localtime(&ts->tv_sec);
 	if (lt == NULL)
 		errx(1, "invalid time");
 	lt->tm_isdst = -1;		/* divine correct DST */
@@ -451,18 +462,19 @@ setthetime(const char *fmt, const char *p, int jflag)
 	}
 
 	/* convert broken-down time to GMT clock time */
-	if ((tval = mktime(lt)) == -1)
+	lt->tm_yday = -1;
+	ts->tv_sec = mktime(lt);
+	if (lt->tm_yday == -1)
 		errx(1, "nonexistent time");
+	ts->tv_nsec = 0;
 
 	if (!jflag) {
 		utx.ut_type = OLD_TIME;
 		memset(utx.ut_id, 0, sizeof(utx.ut_id));
 		(void)gettimeofday(&utx.ut_tv, NULL);
 		pututxline(&utx);
-		tv.tv_sec = tval;
-		tv.tv_usec = 0;
-		if (settimeofday(&tv, NULL) != 0)
-			err(1, "settimeofday (timeval)");
+		if (clock_settime(CLOCK_REALTIME, ts) != 0)
+			err(1, "clock_settime");
 		utx.ut_type = NEW_TIME;
 		(void)gettimeofday(&utx.ut_tv, NULL);
 		pututxline(&utx);
@@ -471,6 +483,132 @@ setthetime(const char *fmt, const char *p, int jflag)
 			p = "???";
 		syslog(LOG_AUTH | LOG_NOTICE, "date set by %s", p);
 	}
+}
+
+/*
+ * The strftime_ns function is a wrapper around strftime(3), which adds support
+ * for features absent from strftime(3). Currently, the only extra feature is
+ * support for %N, the nanosecond conversion specification.
+ *
+ * The functions scans the format string for the non-standard conversion
+ * specifications and replaces them with the date and time values before
+ * passing the format string to strftime(3). The handling of the non-standard
+ * conversion specifications happens before the call to strftime(3) to handle
+ * cases like "%%N" correctly ("%%N" should yield "%N" instead of nanoseconds).
+ */
+static size_t
+strftime_ns(char * __restrict s, size_t maxsize, const char * __restrict format,
+    const struct tm * __restrict t, long nsec, long res)
+{
+	size_t ret;
+	char *newformat;
+	char *oldformat;
+	const char *prefix;
+	const char *suffix;
+	const char *tok;
+	long number;
+	int i, len, prefixlen, width, zeroes;
+	bool seen_percent, seen_dash, seen_width;
+
+	seen_percent = false;
+	if ((newformat = strdup(format)) == NULL)
+		err(1, "strdup");
+	tok = newformat;
+	for (tok = newformat; *tok != '\0'; tok++) {
+		switch (*tok) {
+		case '%':
+			/*
+			 * If the previous token was a percent sign,
+			 * then there are two percent tokens in a row.
+			 */
+			if (seen_percent) {
+				seen_percent = false;
+			} else {
+				seen_percent = true;
+				seen_dash = seen_width = false;
+				prefixlen = tok - newformat;
+				width = 0;
+			}
+			break;
+		case 'N':
+			if (!seen_percent)
+				break;
+			oldformat = newformat;
+			prefix = oldformat;
+			suffix = tok + 1;
+			/*
+			 * Prepare the number we are about to print.  If
+			 * the requested width is less than 9, we need to
+			 * cut off the least significant digits.  If it is
+			 * more than 9, we will have to append zeroes.
+			 */
+			if (seen_dash) {
+				/*
+				 * Calculate number of singificant digits
+				 * based on res which is the clock's
+				 * resolution in nanoseconds.
+				 */
+				for (width = 9, number = res;
+				     width > 0 && number > 0;
+				     width--, number /= 10)
+					/* nothing */;
+			}
+			number = nsec;
+			zeroes = 0;
+			if (width == 0) {
+				width = 9;
+			} else if (width > 9) {
+				zeroes = width - 9;
+				width = 9;
+			} else {
+				for (i = 0; i < 9 - width; i++)
+					number /= 10;
+			}
+			/*
+			 * Construct a new format string from the prefix
+			 * (i.e., the part of the old format from its
+			 * beginning to the currently handled "%N"
+			 * conversion specification), the nanoseconds, and
+			 * the suffix (i.e., the part of the old format
+			 * from the next token to the end).
+			 */
+			asprintf(&newformat, "%.*s%.*ld%.*d%n%s", prefixlen,
+			    prefix, width, number, zeroes, 0, &len, suffix);
+			if (newformat == NULL)
+				err(1, "asprintf");
+			free(oldformat);
+			tok = newformat + len - 1;
+			seen_percent = false;
+			break;
+		case '-':
+			if (seen_percent) {
+				if (seen_dash || seen_width) {
+					seen_percent = false;
+					break;
+				}
+				seen_dash = true;
+			}
+			break;
+		case '0': case '1': case '2': case '3': case '4':
+		case '5': case '6': case '7': case '8': case '9':
+			if (seen_percent) {
+				if (seen_dash) {
+					seen_percent = false;
+					break;
+				}
+				width = width * 10 + *tok - '0';
+				seen_width = true;
+			}
+			break;
+		default:
+			seen_percent = false;
+			break;
+		}
+	}
+
+	ret = strftime(s, maxsize, newformat, t);
+	free(newformat);
+	return (ret);
 }
 
 static void
@@ -495,10 +633,12 @@ multipleformats(void)
 static void
 usage(void)
 {
-	(void)fprintf(stderr, "%s\n%s\n%s\n",
-	    "usage: date [-jnRu] [-d date] [-I[date|hours|minutes|seconds]]",
+	(void)fprintf(stderr, "%s\n%s\n%s\n%s\n",
+	    "usage: date [-jnRu] [-d date] [-I[date|hours|minutes|seconds|ns]]",
 	    "            "
-	    "[-f input_fmt] [-r filename|seconds] [-v[+|-]val[y|m|w|d|H|M|S]]",
+	    "[-f input_fmt] [-z output_zone] [-r filename|seconds]",
+	    "            "
+	    "[-v[+|-]val[y|m|w|d|H|M|S]]",
 	    "            "
 	    "[[[[[[cc]yy]mm]dd]HH]MM[.SS] | new_date] [+output_fmt]"
 	    );
