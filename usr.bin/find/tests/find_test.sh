@@ -1,5 +1,8 @@
+#-
+# SPDX-License-Identifier: BSD-2-Clause
 #
 # Copyright 2017, Conrad Meyer <cem@FreeBSD.org>.
+# Copyright (c) 2025 Dag-Erling Smørgrav <des@FreeBSD.org>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -64,8 +67,196 @@ find_samefile_link_body()
 	atf_check -s exit:0 -o "inline:test/link2\n" find test -samefile test/link2
 }
 
+atf_test_case find_printf
+find_printf_head()
+{
+	atf_set "descr" "Test the -printf primary"
+}
+find_printf_body()
+{
+	mkdir dir
+	chmod 0755 dir
+	jot -b hello 1024 >dir/file
+	chmod 0644 dir/file
+	ln -s file dir/link
+	chmod -h 0444 dir/link
+	local db=$(stat -f %b dir)
+	local fb=$(stat -f %b dir/file)
+	local lb=$(stat -f %b dir/link)
+
+	# paths
+	atf_check -o inline:"dir\ndir/file\ndir/link\n" \
+	    find -s dir -printf '%p\n'
+	atf_check -o inline:"dir\nfile\nlink\n" \
+	    find -s dir -printf '%f\n'
+	atf_check -o inline:".\ndir\ndir\n" \
+	    find -s dir -printf '%h\n'
+	atf_check -s exit:1 -e match:"unimplemented" -o ignore \
+	    find -s dir -printf '%P\n'
+	atf_check -s exit:1 -e match:"unimplemented" -o ignore \
+	    find -s dir -printf '%H\n'
+
+	# group
+	atf_check -o inline:"$(stat -f %Sg dir dir/file dir/link)\n" \
+	    find -s dir -printf '%g\n'
+	atf_check -o inline:"$(stat -f %g dir dir/file dir/link)\n" \
+	    find -s dir -printf '%G\n'
+
+	# owner
+	atf_check -o inline:"$(stat -f %Su dir dir/file dir/link)\n" \
+	    find -s dir -printf '%u\n'
+	atf_check -o inline:"$(stat -f %u dir dir/file dir/link)\n" \
+	    find -s dir -printf '%U\n'
+
+	# mode
+	atf_check -o inline:"$(stat -f %Lp dir dir/file dir/link)\n" \
+	    find -s dir -printf '%m\n'
+	atf_check -o inline:"$(stat -f %Sp dir dir/file dir/link)\n" \
+	    find -s dir -printf '%M\n'
+
+	# size
+	atf_check -o inline:"$((db/2))\n$((fb/2))\n$((lb/2))\n" \
+	    find -s dir -printf '%k\n'
+	atf_check -o inline:"$db\n$fb\n$lb\n" \
+	    find -s dir -printf '%b\n'
+	atf_check -o inline:"$(stat -f %z dir dir/file dir/link)\n" \
+	    find -s dir -printf '%s\n'
+	# XXX test %S properly
+	atf_check -o ignore \
+	    find -s dir -printf '%S\n'
+	atf_check -o inline:"0\n1\n1\n" \
+	    find -s dir -printf '%d\n'
+
+	# device
+	atf_check -o inline:"$(stat -f %d dir dir/file dir/link)\n" \
+	    find -s dir -printf '%D\n'
+	atf_check -s exit:1 -e match:"unimplemented" -o ignore \
+	    find -s dir -printf '%F\n'
+
+	# link target
+	atf_check -o inline:"\n\nfile\n" \
+	    find -s dir -printf '%l\n'
+
+	# inode
+	atf_check -o inline:"$(stat -f %i dir dir/file dir/link)\n" \
+	    find -s dir -printf '%i\n'
+
+	# nlinks
+	atf_check -o inline:"$(stat -f %l dir dir/file dir/link)\n" \
+	    find -s dir -printf '%n\n'
+
+	# type
+	atf_check -o inline:"d\nf\nl\n" \
+	    find -s dir -printf '%y\n'
+	atf_check -o inline:"d\nf\nf\n" \
+	    find -s dir -printf '%Y\n'
+
+	# access time
+	atf_check -o inline:"$(stat -f %Sa -t '%a %b %e %T %Y' dir dir/file dir/link)\n" \
+	    find -s dir -printf '%a\n'
+	atf_check -o inline:"$(stat -f %Sa -t '%e' dir dir/file dir/link)\n" \
+	    find -s dir -printf '%Ae\n'
+
+	# birth time
+	atf_check -o inline:"$(stat -f %SB -t '%e' dir dir/file dir/link)\n" \
+	    find -s dir -printf '%Be\n'
+
+	# inode change time
+	atf_check -o inline:"$(stat -f %Sc -t '%a %b %e %T %Y' dir dir/file dir/link)\n" \
+	    find -s dir -printf '%c\n'
+	atf_check -o inline:"$(stat -f %Sc -t '%e' dir dir/file dir/link)\n" \
+	    find -s dir -printf '%Ce\n'
+
+	# modification time
+	atf_check -o inline:"$(stat -f %Sm -t '%a %b %e %T %Y' dir dir/file dir/link)\n" \
+	    find -s dir -printf '%t\n'
+	atf_check -o inline:"$(stat -f %Sm -t '%e' dir dir/file dir/link)\n" \
+	    find -s dir -printf '%Te\n'
+}
+
+atf_test_case find_xattr
+find_xattr_head()
+{
+	atf_set "descr" "Test the -xattr primary"
+}
+find_xattr_body()
+{
+	mkdir dir
+	ln -s dir dirlink
+
+	# No xattrs here
+	atf_check find dir -xattr
+	atf_check find dirlink -xattr
+
+	# Set one on the directory and be sure that we also dereference symlinks
+	# as appropriate with -H/-L.
+	if ! setextattr user find_test.attr val dir; then
+		atf_skip "Failed to set xattr (not supported on this fs?)"
+	fi
+
+	atf_check -o match:"dir$" find dir -xattr
+	atf_check -o match:"dirlink$" find -H dirlink -xattr
+	atf_check -o match:"dirlink$" find -L dirlink -xattr
+
+	atf_check -o match:"dir$" -o match:"dirlink" find -sL . -xattr
+	atf_check -o match:"dir$" -o not-match:"dirlink$" find -sH . -xattr
+	atf_check -o match:"dir$" -o not-match:"dirlink$" find -s . -xattr
+}
+
+atf_test_case find_xattrname
+find_xattrname_head()
+{
+	atf_set "descr" "Test the -xattrname primary"
+	atf_set "require.user" "root"
+}
+find_xattrname_body()
+{
+	touch foo bar baz none
+
+	ln -s foo link
+	if ! setextattr user find_test.special1 val foo; then
+		atf_skip "Failed to set xattr (not supported on this fs?)"
+	fi
+
+	atf_check setextattr user find_test.special2 val bar
+	atf_check setextattr user find_test.special2 val baz
+
+	# We want an unqualified 'find_test.special2' search to find all three
+	# of these, while 'user:' and 'system:' filter appropriately.
+	atf_check setextattr system find_test.special2 val foo
+
+	atf_check find . -xattrname 'find_test.special3'
+
+	# Be sure that we get symlink dereferencing right, so that one can use
+	# -H/-L/-P to get the right behavior.
+	atf_check -o match:foo -o not-match:"bar|baz|link|none" \
+	    find . -xattrname 'find_test.special1'
+	atf_check -o match:foo -o match:link \
+	    find -H foo link -xattrname 'find_test.special1'
+	atf_check -o match:foo -o match:link -o not-match:"bar|baz|none" \
+	    find -L . -xattrname 'find_test.special1'
+
+	atf_check -o match:foo -o match:bar -o match:baz \
+	    -o not-match:"none|link" find . -xattrname 'find_test.special2'
+	atf_check -o not-match:"foo|none|link" -o match:bar -o match:baz \
+	    find . -xattrname 'user:find_test.special2'
+	atf_check -o match:foo -o not-match:"bar|baz|none|link" \
+	    find . -xattrname 'system:find_test.special2'
+
+	# Now set an extattr on the link itself and be sure that find(1) can
+	# detect it.  With -L, we shouldn't see anything with a special3 xattr
+	# as symlinks are dereferenced.
+	atf_check setextattr -h user find_test.special3 val link
+	atf_check -o match:link find . -xattrname "find_test.special3"
+	atf_check find -L . -xattrname "find_test.special3"
+	atf_check find -H link -xattrname "find_test.special3"
+}
+
 atf_init_test_cases()
 {
 	atf_add_test_case find_newer_link
 	atf_add_test_case find_samefile_link
+	atf_add_test_case find_printf
+	atf_add_test_case find_xattr
+	atf_add_test_case find_xattrname
 }
