@@ -42,6 +42,7 @@ static const char sccsid[] = "@(#)function.c	8.10 (Berkeley) 5/4/95";
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/acl.h>
+#include <sys/extattr.h>
 #include <sys/wait.h>
 #include <sys/mount.h>
 
@@ -54,6 +55,7 @@ static const char sccsid[] = "@(#)function.c	8.10 (Berkeley) 5/4/95";
 #include <limits.h>
 #include <pwd.h>
 #include <regex.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -61,6 +63,8 @@ static const char sccsid[] = "@(#)function.c	8.10 (Berkeley) 5/4/95";
 #include <ctype.h>
 
 #include "find.h"
+
+static const char * const xattr_ns[] = EXTATTR_NAMESPACE_NAMES;
 
 static PLAN *palloc(OPTION *);
 static long long find_parsenum(PLAN *, const char *, char *, char *);
@@ -871,6 +875,49 @@ c_follow(OPTION *option, char ***argvp __unused)
 	return palloc(option);
 }
 
+/*
+ * -fprint functions --
+ *
+ *	Always true, causes the current pathname to be written to
+ *	specified file followed by a newline
+ */
+int
+f_fprint(PLAN *plan, FTSENT *entry)
+{
+	fprintf(plan->fprint_file, "%s\n", entry->fts_path);
+	return 1;
+}
+
+PLAN *
+c_fprint(OPTION *option, char ***argvp)
+{
+	PLAN *new;
+	char *fn;
+
+	isoutput = 1;
+
+	new = palloc(option);
+	fn = nextarg(option, argvp);
+	new->fprint_file = fopen(fn, "w");
+	if (new->fprint_file == NULL)
+		err(1, "fprint: cannot create %s", fn);
+
+	return (new);
+}
+
+/*
+ * -fprint0 functions --
+ *
+ *	Always true, causes the current pathname to be written to
+ *	specified file followed by a NUL
+ */
+int
+f_fprint0(PLAN *plan, FTSENT *entry)
+{
+	fprintf(plan->fprint_file, "%s%c", entry->fts_path, '\0');
+	return 1;
+}
+
 #if HAVE_STRUCT_STATFS_F_FSTYPENAME
 /*
  * -fstype functions --
@@ -1394,6 +1441,37 @@ f_print0(PLAN *plan __unused, FTSENT *entry)
 /* c_print0 is the same as c_print */
 
 /*
+ * -printf functions --
+ *
+ *	Always true. Causes information as specified in the
+ *	argument to be written to standard output.
+ */
+int
+f_printf(PLAN *plan, FTSENT *entry)
+{
+	do_printf(plan, entry, stdout);
+	return 1;
+}
+
+PLAN *
+c_printf(OPTION *option, char ***argvp)
+{
+	PLAN *new;
+
+	/*
+	 * XXX We could scan the format looking for stat-dependent formats, and
+	 * turn off the nostat bit for trival cases: `%p`/`%f`/`%h`.
+	 */
+	isoutput = 1;
+	ftsoptions &= ~FTS_NOSTAT;
+
+	new = palloc(option);
+	new->c_data = nextarg(option, argvp);
+
+	return (new);
+}
+
+/*
  * -prune functions --
  *
  *	Prune a portion of the hierarchy.
@@ -1681,6 +1759,96 @@ c_user(OPTION *option, char ***argvp)
 
 	new->u_data = uid;
 	return new;
+}
+
+/*
+ * -xattr functions --
+ *
+ *	True if the entry has any extended attribute in any namespace.
+ */
+int
+f_xattr(PLAN *plan __unused, FTSENT *entry)
+{
+	ssize_t asz;
+	bool deref_link;
+
+	deref_link = (ftsoptions & FTS_LOGICAL) != 0;
+	if (entry->fts_level == 0 && (ftsoptions & FTS_COMFOLLOW) != 0)
+		deref_link = true;
+
+	for (size_t ns = 0; ns < nitems(xattr_ns); ns++) {
+		if (ns == EXTATTR_NAMESPACE_EMPTY)
+			continue;
+
+		if (deref_link)
+			asz = extattr_list_file(entry->fts_accpath, ns, NULL, 0);
+		else
+			asz = extattr_list_link(entry->fts_accpath, ns, NULL, 0);
+		if (asz > 0)
+			return 1;
+	}
+
+	return 0;
+}
+
+static bool
+find_has_xattr(const char *path, int ns, const char *aname, bool deref_link)
+{
+	size_t asz;
+
+	if (deref_link)
+		asz = extattr_get_file(path, ns, aname, NULL, 0);
+	else
+		asz = extattr_get_link(path, ns, aname, NULL, 0);
+
+	return asz != (size_t)-1;
+}
+
+/*
+ * -xattrname xattr functions --
+ *
+ *	True if the entry has the given extended attribute xattr.  The xattr
+ *	may be prefixed with "user:" or "system:" to scope the search
+ *	explicitly, otherwise we assume the user namespace is requested.
+ */
+int
+f_xattrname(PLAN *plan, FTSENT *entry)
+{
+	const char *aname;
+	bool deref_link;
+
+	deref_link = (ftsoptions & FTS_LOGICAL) != 0;
+	if (entry->fts_level == 0 && (ftsoptions & FTS_COMFOLLOW) != 0)
+		deref_link = true;
+
+	aname = plan->c_data;
+	for (size_t ns = 0; ns < nitems(xattr_ns); ns++) {
+		const char *name;
+		size_t namelen;
+
+		if (ns == EXTATTR_NAMESPACE_EMPTY)
+			continue;
+
+		name = xattr_ns[ns];
+		namelen = strlen(xattr_ns[ns]);
+		if (strncmp(aname, name, namelen) == 0 &&
+		    aname[namelen] == ':') {
+			aname += namelen + 1;
+			return find_has_xattr(entry->fts_accpath, ns, aname,
+			    deref_link);
+		}
+	}
+
+	for (size_t ns = 0; ns < nitems(xattr_ns); ns++) {
+		if (ns == EXTATTR_NAMESPACE_EMPTY)
+			continue;
+
+		if (find_has_xattr(entry->fts_accpath, ns, aname,
+		    deref_link))
+			return 1;
+	}
+
+	return 0;
 }
 
 /*
