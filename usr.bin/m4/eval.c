@@ -180,7 +180,7 @@ expand_builtin(const char *argv[], int argc, int td)
 		int mindigits = 0;
 		const char *errstr;
 
-		if (argc > 3) {
+		if (argc > 3 && *argv[3] != '\0') {
 			base = strtonum(argv[3], 2, 36, &errstr);
 			if (errstr) {
 				m4errx(1, "eval: base is %s: %s.",
@@ -298,7 +298,7 @@ expand_builtin(const char *argv[], int argc, int td)
 	case PASTETYPE:
 		if (argc > 2)
 			if (!dopaste(argv[2]))
-				err(1, "%s at line %lu: paste(%s)", 
+				err(1, "%s at line %lu: paste(%s)",
 				    CURRENT_NAME, CURRENT_LINE, argv[2]);
 		break;
 
@@ -353,7 +353,7 @@ expand_builtin(const char *argv[], int argc, int td)
 				    errstr, argv[2]);
 			if (n != 0) {
 				dodivert(n);
-				 break;
+				break;
 			}
 		}
 		active = stdout;
@@ -478,7 +478,7 @@ expand_builtin(const char *argv[], int argc, int td)
 
 	case DEFNTYPE:
 		if (argc > 2)
-			for (n = 2; n < argc; n++)
+			for (n = argc - 1; n >= 2; n--)
 				dodefn(argv[n]);
 		break;
 
@@ -900,11 +900,11 @@ dosubstr(const char *argv[], int argc)
  * map every character of s1 that is specified in from
  * into s3 and replace in s. (source s1 remains untouched)
  *
- * This is derived from the a standard implementation of map(s,from,to) 
- * function of ICON language. Within mapvec, we replace every character 
- * of "from" with the corresponding character in "to". 
- * If "to" is shorter than "from", than the corresponding entries are null, 
- * which means that those characters disappear altogether. 
+ * This is derived from the a standard implementation of map(s,from,to)
+ * function of ICON language. Within mapvec, we replace every character
+ * of "from" with the corresponding character in "to".
+ * If "to" is shorter than "from", than the corresponding entries are null,
+ * which means that those characters disappear altogether.
  */
 static void
 map(char *dest, const char *src, const char *from, const char *to)
@@ -994,7 +994,7 @@ handledash(char *buffer, char *end, const char *src)
 		if (src[1] == '-' && src[2]) {
 			unsigned char i;
 			if ((unsigned char)src[0] <= (unsigned char)src[2]) {
-				for (i = (unsigned char)src[0]; 
+				for (i = (unsigned char)src[0];
 				    i <= (unsigned char)src[2]; i++) {
 					*p++ = i;
 					if (p == end) {
@@ -1003,7 +1003,7 @@ handledash(char *buffer, char *end, const char *src)
 					}
 				}
 			} else {
-				for (i = (unsigned char)src[0]; 
+				for (i = (unsigned char)src[0];
 				    i >= (unsigned char)src[2]; i--) {
 					*p++ = i;
 					if (p == end) {
