@@ -1,8 +1,10 @@
-# $NetBSD: dir.mk,v 1.9 2021/01/23 10:48:49 rillig Exp $
+# $NetBSD: dir.mk,v 1.11 2023/12/19 19:33:40 rillig Exp $
 #
 # Tests for dir.c.
 
-.MAKEFLAGS: -m /		# hide /usr/share/mk from the debug log
+# hide /usr/share/mk from the debug log
+.SYSPATH:
+.SYSPATH: /
 
 # Dependency lines may use braces for expansion.
 # See DirExpandCurly for the implementation.
@@ -65,7 +67,7 @@ fetch fetch-post extract extract-post:
 
 # The expansions may have duplicates.
 # When the source of the dependency line is expanded later, each of the
-# expanded words will be the same.
+# expanded words resolves to the same node.
 all: dup-{1,1,1,1,1,1,1}
 
 dup-1:

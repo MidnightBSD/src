@@ -1,14 +1,8 @@
-# $Id: meta.autodep.mk,v 1.55 2021/12/13 08:12:01 sjg Exp $
-
+# $Id: meta.autodep.mk,v 1.71 2025/08/09 22:42:24 sjg Exp $
 #
-#	@(#) Copyright (c) 2010, Simon J. Gerraty
+#	@(#) Copyright (c) 2010-2025, Simon J. Gerraty
 #
-#	This file is provided in the hope that it will
-#	be of use.  There is absolutely NO WARRANTY.
-#	Permission to copy, redistribute or otherwise
-#	use this file is hereby granted provided that
-#	the above copyright notice and this notice are
-#	left intact.
+#	SPDX-License-Identifier: BSD-2-Clause
 #
 #	Please send copies of changes and bug-fixes to:
 #	sjg@crufty.net
@@ -20,20 +14,26 @@ __${_this}__: .NOTMAIN
 
 .-include <local.autodep.mk>
 
+.if ${DEBUG_AUTODEP:Uno:@m@${RELDIR:M$m}@} != ""
+_debug.autodep = 1
+.else
+_debug.autodep = 0
+.endif
+
 PICO?= .pico
 
 .if defined(SRCS)
 .if ${MAKE_VERSION:U0} >= 20211212
-OBJ_EXTENSIONS += ${.SUFFIXES:M*o}
+OBJ_SUFFIXES += ${.SUFFIXES:M*o}
 .else
 # it would be nice to be able to query .SUFFIXES
-OBJ_EXTENSIONS += .o .po .lo ${PICO}
+OBJ_SUFFIXES += .o .po .lo ${PICO}
 .endif
 
 # explicit dependencies help short-circuit .SUFFIX searches
 SRCS_DEP_FILTER+= N*.[hly]
 .for s in ${SRCS:${SRCS_DEP_FILTER:O:u:ts:}}
-.for e in ${OBJ_EXTENSIONS:O:u}
+.for e in ${OBJ_SUFFIXES:O:u}
 .if !target(${s:T:R}$e)
 ${s:T:R}$e: $s
 .endif
@@ -83,9 +83,9 @@ UPDATE_DEPENDFILE = NO
 _bootstrap_dirdeps = yes
 .endif
 _bootstrap_dirdeps ?= no
-UPDATE_DEPENDFILE ?= yes
+UPDATE_DEPENDFILE ?= ${MK_UPDATE_DEPENDFILE:Uyes}
 
-.if ${DEBUG_AUTODEP:Uno:@m@${RELDIR:M$m}@} != ""
+.if ${_debug.autodep}
 .info ${_DEPENDFILE:S,${SRCTOP}/,,} update=${UPDATE_DEPENDFILE}
 .endif
 
@@ -109,7 +109,7 @@ WANT_UPDATE_DEPENDFILE ?= yes
 UPDATE_DEPENDFILE = no
 .endif
 
-.if ${DEBUG_AUTODEP:Uno:@m@${RELDIR:M$m}@} != ""
+.if ${_debug.autodep}
 .info ${_DEPENDFILE:S,${SRCTOP}/,,} update=${UPDATE_DEPENDFILE}
 .endif
 
@@ -137,6 +137,10 @@ FORCE_DPADD += ${_nonlibs:@x@${DPADD:M*/$x}@}
 
 .if !make(gendirdeps)
 .END:	gendirdeps
+.endif
+
+.if ${LOCAL_DEPENDS_GUARD:U} == "no"
+.depend:
 .endif
 
 # if we don't have OBJS, then .depend isn't useful
@@ -174,7 +178,7 @@ DEPEND_SUFFIXES += .c .h .cpp .hpp .cxx .hxx .cc .hh
 .endif
 .depend: .NOMETA $${.MAKE.META.CREATED} ${_this}
 	@echo "Updating $@: ${.OODATE:T:[1..8]}"
-	@egrep -i '^R .*\.(${DEPEND_SUFFIXES:tl:O:u:S,^.,,:ts|})$$' /dev/null ${.MAKE.META.FILES:T:O:u:${META_FILE_FILTER:ts:}:M*o.meta} | \
+	@${EGREP:Uegrep} -i '^R .*\.(${DEPEND_SUFFIXES:tl:O:u:S,^.,,:ts|})$$' /dev/null ${.MAKE.META.FILES:T:O:u:${META_FILE_FILTER:ts:}:M*o.meta} | \
 	sed -e 's, \./, ,${OBJDIR_REFS:O:u:@d@;s, $d/, ,@};/\//d' \
 		-e 's,^\([^/][^/]*\).meta...[0-9]* ,\1: ,' | \
 	sort -u | \
@@ -186,7 +190,7 @@ DEPEND_SUFFIXES += .c .h .cpp .hpp .cxx .hxx .cc .hh
 	@case "${.MAKE.META.FILES:T:M*.po.*}" in \
 	*.po.*) mv $@.${.MAKE.PID} $@;; \
 	*) { cat $@.${.MAKE.PID}; \
-	sed ${OBJ_EXTENSIONS:N.o:N.po:@o@-e 's,\$o:,.o:,'@} \
+	sed ${OBJ_SUFFIXES:N.o:N.po:@o@-e 's,\$o:,.o:,'@} \
 		-e 's,\.o:,.po:,' $@.${.MAKE.PID}; } | sort -u > $@; \
 	rm -f $@.${.MAKE.PID};; \
 	esac
@@ -201,12 +205,13 @@ CAT_DEPEND = /dev/null
 _depend =
 .endif
 
-.if ${DEBUG_AUTODEP:Uno:@m@${RELDIR:M$m}@} != ""
+.if ${_debug.autodep}
 .info ${_DEPENDFILE:S,${SRCTOP}/,,} _depend=${_depend}
 .endif
 
 .if ${UPDATE_DEPENDFILE} == "yes"
-gendirdeps:	${_DEPENDFILE}
+gendirdeps:	beforegendirdeps .WAIT ${_DEPENDFILE}
+beforegendirdeps:
 .endif
 
 .if !target(${_DEPENDFILE})
@@ -246,19 +251,33 @@ _gendirdeps_mutex = ${GENDIRDEPS_MUTEXER} ${GENDIRDEPS_MUTEX:U${_CURDIR}/Makefil
 # but we need to behave as if we did.
 # Avoid adding glob patterns to .MAKE.META.CREATED though.
 .MAKE.META.CREATED += ${META_XTRAS:N*\**:O:u}
+OPTIMIZE_OBJECT_META_FILES ?= no
 
-.if make(gendirdeps)
-META_FILES = *.meta
-.elif ${OPTIMIZE_OBJECT_META_FILES:Uno:tl} == "no"
-META_FILES = ${.MAKE.META.FILES:T:N.depend*:O:u}
-.else
-# if we have 1000's of .o.meta, ${PICO}.meta etc we need only look at one set
-# it is left as an exercise for the reader to work out what this does
-META_FILES = ${.MAKE.META.FILES:T:N.depend*:N*o.meta:O:u} \
-	${.MAKE.META.FILES:T:M*.${.MAKE.META.FILES:M*o.meta:R:E:O:u:[1]}.meta:O:u}
+.if ${OPTIMIZE_OBJECT_META_FILES} == "yes"
+# If we have lots of .o.meta, ${PICO}.meta etc we need only look at one set.
+# If META_FILE_OBJ_FILTER is not already set, we default it to a
+# .SUFFIX which matches the first *o.meta.
+# There is no guarantee it will be just .o or .So etc,
+META_FILE_OBJ_FILTER ?= \
+	${.SUFFIXES:M*o:@o@${"${.MAKE.META.FILES:T:M*$o.meta:[1]}":?M*$o.meta:}@:[1]}
 .endif
 
-.if ${DEBUG_AUTODEP:Uno:@m@${RELDIR:M$m}@} != ""
+# parent may have set META_FILE_OBJ_FILTER
+.if ${OPTIMIZE_OBJECT_META_FILES} == "yes" || !empty(META_FILE_OBJ_FILTER)
+META_FILES = \
+	${.MAKE.META.FILES:N.depend*:N*o.meta} \
+	${.MAKE.META.FILES:${META_FILE_OBJ_FILTER}}
+.else
+META_FILES = ${.MAKE.META.FILES:N.depend*}
+.endif
+# ensure this is not empty (this will sort after any M and N
+# we use S,${_OBJDIR}/,, rather than :T since some makefiles have
+# objects in subdirs
+META_FILE_FILTER += S,${_OBJDIR}/,,:O:u
+# we have to defer evaluation until the target script runs
+GENDIRDEPS_ENV += META_FILES="${META_FILES:${META_FILE_FILTER:O:u:ts:}}}"
+
+.if ${_debug.autodep}
 .info ${_DEPENDFILE:S,${SRCTOP}/,,}: ${_depend} ${.PARSEDIR}/gendirdeps.mk ${META2DEPS} xtras=${META_XTRAS}
 .endif
 
@@ -269,20 +288,29 @@ META_FILES = ${.MAKE.META.FILES:T:N.depend*:N*o.meta:O:u} \
 .if !empty(GENDIRDEPS_FILTER)
 .export GENDIRDEPS_FILTER
 .endif
-# export to avoid blowing command line limit
-META_FILES := ${META_XTRAS:U:O:u} ${META_FILES:U:T:O:u:${META_FILE_FILTER:ts:}}
-.export META_FILES
 .endif
 
+_this_dir := ${_PARSEDIR}
+.if ${MAKE_VERSION} < 20230123
 # we might have .../ in MAKESYSPATH
-_makesyspath:= ${_PARSEDIR}
+_makesyspath := ${MAKESYSPATH:U${_this_dir}}
+.if ${.MAKEFLAGS:M-m} != ""
+_makesyspath := ${.MAKEFLAGS:S,-m ,-m,gW:M-m*:S,-m, ,:ts:}:${_makesyspath}
+.endif
+_makesyspath := ${_makesyspath:C,\.\.\./[^:]*,${_this_dir},}
+GENDIRDEPS_ENV += MAKESYSPATH=${_makesyspath}
+.else
+# add this if not already there
+.SYSPATH: ${_this_dir}
+GENDIRDEPS_ENV += MAKESYSPATH=${.SYSPATH:ts:}
+.endif
+
 ${_DEPENDFILE}: ${_depend} ${.PARSEDIR}/gendirdeps.mk  ${META2DEPS} $${.MAKE.META.CREATED}
 	@echo Checking $@: ${.OODATE:T:[1..8]}
 	@(cd . && ${GENDIRDEPS_ENV} \
 	SKIP_GENDIRDEPS='${SKIP_GENDIRDEPS:O:u}' \
 	DPADD='${FORCE_DPADD:O:u}' ${_gendirdeps_mutex} \
-	MAKESYSPATH=${_makesyspath} \
-	${.MAKE} -f gendirdeps.mk RELDIR=${RELDIR} _DEPENDFILE=${_DEPENDFILE})
+	${.MAKE} -B -f gendirdeps.mk RELDIR=${RELDIR} _DEPENDFILE=${_DEPENDFILE})
 	@test -s $@ && touch $@; :
 .endif
 
@@ -300,8 +328,10 @@ ${_DEPENDFILE}: .PRECIOUS
 CLEANFILES += *.meta filemon.* *.db
 
 # these make it easy to gather some stats
-now_utc = ${%s:L:gmtime}
+now_utc ?= ${%s:L:localtime}
+.if !defined(start_utc)
 start_utc := ${now_utc}
+.endif
 
 meta_stats= meta=${empty(.MAKE.META.FILES):?0:${.MAKE.META.FILES:[#]}} \
 	created=${empty(.MAKE.META.CREATED):?0:${.MAKE.META.CREATED:[#]}}
@@ -325,5 +355,7 @@ _reldir_failed: .NOMETA
 .END: _reldir_finish
 .ERROR: _reldir_failed
 .endif
+
+.-include <ccm.dep.mk>
 
 .endif

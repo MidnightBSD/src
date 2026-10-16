@@ -1,4 +1,4 @@
-# $NetBSD: varmod-indirect.mk,v 1.11 2022/01/15 12:35:18 rillig Exp $
+# $NetBSD: varmod-indirect.mk,v 1.24 2025/03/30 16:43:10 rillig Exp $
 #
 # Tests for indirect variable modifiers, such as in ${VAR:${M_modifiers}}.
 # These can be used for very basic purposes like converting a string to either
@@ -11,11 +11,11 @@
 
 
 # To apply a modifier indirectly via another variable, the whole
-# modifier must be put into a single variable expression.
+# modifier must be put into a single expression.
 # The following expression generates a parse error since its indirect
-# modifier contains more than a sole variable expression.
+# modifier contains more than a sole expression.
 #
-# expect+1: Unknown modifier "${"
+# expect+1: Unknown modifier ":${"
 .if ${value:L:${:US}${:U,value,replacement,}} != "S,value,replacement,}"
 .  warning unexpected
 .endif
@@ -44,15 +44,13 @@
 
 # If an expression for an indirect modifier evaluates to anything else than an
 # empty string and is neither followed by a ':' nor '}', this produces a parse
-# error.  Because of this parse error, this feature cannot be used reasonably
+# error.  Due to this parse error, this construct cannot be used reasonably
 # in practice.
 #
-# expect+2: Unknown modifier "${"
+# expect+2: Unknown modifier ":${"
 #.MAKEFLAGS: -dvc
-.if ${value:L:${:UM*}S,value,replaced,} == "M*S,value,replaced,}"
-.  warning	FIXME: this expression should have resulted in a parse $\
- 		error rather than returning the unparsed portion of the $\
- 		expression.
+.if ${value:L:${:UM*}S,value,replaced,} == "anything"
+.  error
 .else
 .  error
 .endif
@@ -70,20 +68,20 @@
 .endif
 
 
-# The nested variable expression expands to "tu", and this is interpreted as
+# The nested expression expands to "tu", and this is interpreted as
 # a variable modifier for the value "Upper", resulting in "UPPER".
 .if ${Upper:L:${:Utu}} != "UPPER"
 .  error
 .endif
 
-# The nested variable expression expands to "tl", and this is interpreted as
+# The nested expression expands to "tl", and this is interpreted as
 # a variable modifier for the value "Lower", resulting in "lower".
 .if ${Lower:L:${:Utl}} != "lower"
 .  error
 .endif
 
 
-# The nested variable expression is ${1 != 1:?Z:tl}, consisting of the
+# The nested expression is ${1 != 1:?Z:tl}, consisting of the
 # condition "1 != 1", the then-branch "Z" and the else-branch "tl".  Since
 # the condition evaluates to false, the then-branch is ignored (it would
 # have been an unknown modifier anyway) and the ":tl" modifier is applied.
@@ -132,29 +130,36 @@ M_NoPrimes=	${PRIMES:${M_ListToSkip}}
 .MAKEFLAGS: -d0
 
 
-# In contrast to the .if conditions, the .for loop allows undefined variable
+# In contrast to the .if conditions, the .for loop allows undefined
 # expressions.  These expressions expand to empty strings.
 
 # An undefined expression without any modifiers expands to an empty string.
 .for var in before ${UNDEF} after
+# expect+2: before
+# expect+1: after
 .  info ${var}
 .endfor
 
 # An undefined expression with only modifiers that keep the expression
 # undefined expands to an empty string.
 .for var in before ${UNDEF:${:US,a,a,}} after
+# expect+2: before
+# expect+1: after
 .  info ${var}
 .endfor
 
 # Even in an indirect modifier based on an undefined variable, the value of
 # the expression in Var_Parse is a simple empty string.
 .for var in before ${UNDEF:${:U}} after
+# expect+2: before
+# expect+1: after
 .  info ${var}
 .endfor
 
 # An error in an indirect modifier.
+# expect+1: Unknown modifier ":Z"
 .for var in before ${UNDEF:${:UZ}} after
-.  info ${var}
+.  error
 .endfor
 
 
@@ -162,10 +167,10 @@ M_NoPrimes=	${PRIMES:${M_ListToSkip}}
 # a variable assignment using ':='.
 .MAKEFLAGS: -dpv
 
-# The undefined variable expression is kept as-is.
+# The undefined expression is kept as-is.
 _:=	before ${UNDEF} after
 
-# The undefined variable expression is kept as-is.
+# The undefined expression is kept as-is.
 _:=	before ${UNDEF:${:US,a,a,}} after
 
 # XXX: The subexpression ${:U} is fully defined, therefore it is expanded.
@@ -179,8 +184,9 @@ _:=	before ${UNDEF:${:US,a,a,}} after
 _:=	before ${UNDEF:${:U}} after
 
 # XXX: This expands to ${UNDEF:Z}, which will behave differently if the
-# variable '_' is used in a context where the variable expression ${_} is
+# variable '_' is used in a context where the expression ${_} is
 # parsed but not evaluated.
+# expect+1: Unknown modifier ":Z"
 _:=	before ${UNDEF:${:UZ}} after
 
 .MAKEFLAGS: -d0
@@ -190,7 +196,7 @@ _:=	before ${UNDEF:${:UZ}} after
 # When evaluating indirect modifiers, these modifiers may expand to ':tW',
 # which modifies the interpretation of the expression value. This modified
 # interpretation only lasts until the end of the indirect modifier, it does
-# not influence the outer variable expression.
+# not influence the outer expression.
 .if ${1 2 3:L:tW:[#]} != 1		# direct :tW applies to the :[#]
 .  error
 .endif
@@ -202,7 +208,7 @@ _:=	before ${UNDEF:${:UZ}} after
 # When evaluating indirect modifiers, these modifiers may expand to ':ts*',
 # which modifies the interpretation of the expression value. This modified
 # interpretation only lasts until the end of the indirect modifier, it does
-# not influence the outer variable expression.
+# not influence the outer expression.
 #
 # In this first expression, the direct ':ts*' has no effect since ':U' does not
 # treat the expression value as a list of words but as a single word.  It has
@@ -244,4 +250,28 @@ _:=	before ${UNDEF:${:UZ}} after
 .  error
 .endif
 
-all:
+
+# In parse-only mode, the indirect modifiers must not be evaluated.
+#
+# Before var.c 1.1098 from 2024-02-04, the expression for an indirect modifier
+# was partially evaluated (only the variable value, without applying any
+# modifiers) and then interpreted as modifiers to the main expression.
+#
+# The expression ${:UZ} starts with the value "", and in parse-only mode, the
+# modifier ':UZ' does not modify the expression value.  This results in an
+# empty string for the indirect modifiers, generating no warning.
+.if 0 && ${VAR:${:UZ}}
+.endif
+# The expression ${M_invalid} starts with the value "Z", which is an unknown
+# modifier.  Trying to apply this unknown modifier generated a warning.
+M_invalid=	Z
+.if 0 && ${VAR:${M_invalid}}
+.endif
+# The ':S' modifier does not change the expression value in parse-only mode,
+# keeping the "Z", which is then skipped in parse-only mode.
+.if 0 && ${VAR:${M_invalid:S,^,N*,:ts:}}
+.endif
+# The ':@' modifier does not change the expression value in parse-only mode,
+# keeping the "Z", which is then skipped in parse-only mode.
+.if 0 && ${VAR:${M_invalid:@m@N*$m@:ts:}}
+.endif

@@ -1,4 +1,4 @@
-# $NetBSD: opt-file.mk,v 1.14 2021/12/09 20:47:33 rillig Exp $
+# $NetBSD: opt-file.mk,v 1.16 2024/04/01 12:26:02 rillig Exp $
 #
 # Tests for the -f command line option, which adds a makefile to the list of
 # files that are parsed.
@@ -15,7 +15,7 @@ all: file-containing-null-byte
 # possible.
 #
 # In the unlikely case where a file ends in a backslash instead of a newline,
-# that backslash is trimmed.  See ParseGetLine.
+# that backslash is trimmed.  See ReadLowLevelLine.
 #
 # make-2014.01.01.00.00.00 invoked undefined behavior, reading text from
 # outside of the file buffer.
@@ -52,7 +52,7 @@ file-ending-in-backslash-mmap: .PHONY
 
 # Since parse.c 1.511 from 2020-12-22, an assertion in ParseGetLine failed
 # for lines that contained trailing whitespace.  Worked around in parse.c
-# 1.513, properly fixed in parse.c 1.514.
+# 1.513, properly fixed in parse.c 1.514 from 2020-12-22.
 line-with-trailing-whitespace: .PHONY
 	@printf '%s' 'VAR=$@ ' > opt-file-trailing-whitespace
 	@${MAKE} -r -f opt-file-trailing-whitespace -V VAR
@@ -79,7 +79,7 @@ line-with-trailing-whitespace: .PHONY
 #	exit status 0
 #
 #	2008 to 2010:
-#	make: "zero-byte.in" line 1: Zero byte read from file
+#	make: "(stdin)" line 1: Zero byte read from file
 #	make: Fatal errors encountered -- cannot continue
 #
 #	make: stopped in .
@@ -92,14 +92,18 @@ line-with-trailing-whitespace: .PHONY
 #	exit status 2
 #
 #	2014 to 2020-12-06:
-#	make: "zero-byte.in" line 1: warning: Zero byte read from file, skipping rest of line.
+#	make: "(stdin)" line 1: warning: Zero byte read from file, skipping rest of line.
 #	exit status 0
 #
 #	Since 2020-12-07:
-#	make: "zero-byte.in" line 1: Zero byte read from file
+#	make: "(stdin)" line 1: Zero byte read from file
 #	make: Fatal errors encountered -- cannot continue
 #	make: stopped in .
 #	exit status 1
+#
+#	Since 2024-04-01:
+#	make: "(stdin)" line 1: Zero byte read from file
+#	*** Error code 2 (continuing)
 file-containing-null-byte: .PHONY
 	@printf '%s\n' 'VAR=value' 'VAR2=VALUE2' \
 	| tr 'l' '\0' \

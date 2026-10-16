@@ -1,4 +1,4 @@
-# $NetBSD: cond-cmp-numeric-eq.mk,v 1.5 2020/11/08 21:47:59 rillig Exp $
+# $NetBSD: cond-cmp-numeric-eq.mk,v 1.9 2025/06/28 22:39:28 rillig Exp $
 #
 # Tests for numeric comparisons with the == operator in .if conditions.
 
@@ -40,7 +40,7 @@
 .  error
 .endif
 
-# As of 2020-08-23, numeric comparison is implemented as parsing both sides
+# Numeric comparison works by parsing both sides
 # as double, and then performing a normal comparison.  The range of double is
 # typically 16 or 17 significant digits, therefore these two numbers seem to
 # be equal.
@@ -64,6 +64,7 @@
 .endif
 
 # There is no = operator for numbers.
+# expect+1: Malformed conditional "!(12345 = 12345)"
 .if !(12345 = 12345)
 .  error
 .else
@@ -71,11 +72,9 @@
 .endif
 
 # There is no === operator for numbers either.
+# expect+1: Malformed conditional "!(12345 === 12345)"
 .if !(12345 === 12345)
 .  error
 .else
 .  error
 .endif
-
-all:
-	@:;

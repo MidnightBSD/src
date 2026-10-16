@@ -1,4 +1,4 @@
-# $NetBSD: var-op-expand.mk,v 1.16 2021/12/28 10:47:00 rillig Exp $
+# $NetBSD: var-op-expand.mk,v 1.25 2025/06/29 11:27:21 rillig Exp $
 #
 # Tests for the := variable assignment operator, which expands its
 # right-hand side.
@@ -20,9 +20,9 @@ VAR:=			value
 
 # When a ':=' assignment is performed, its right-hand side is evaluated and
 # expanded as far as possible.  Contrary to other situations, '$$' and
-# variable expressions based on undefined variables are preserved though.
+# expressions based on undefined variables are preserved though.
 #
-# Whether a variable expression is undefined or not is determined at the end
+# Whether an expression is undefined or not is determined at the end
 # of evaluating the expression.  The consequence is that ${:Ufallback} expands
 # to "fallback"; initially this expression is undefined since it is based on
 # the variable named "", which is guaranteed to be never defined, but at the
@@ -37,7 +37,7 @@ VAR:=		$$ $$$$ $$$$$$$$
 .endif
 
 
-# reference to a variable containing a literal dollar sign
+# reference to a variable containing literal dollar signs
 REF=		$$ $$$$ $$$$$$$$
 VAR:=		${REF}
 REF=		too late
@@ -49,6 +49,9 @@ REF=		too late
 # reference to an undefined variable
 .undef UNDEF
 VAR:=		<${UNDEF}>
+.if ${VAR} != "<>"
+.  error
+.endif
 UNDEF=		after
 .if ${VAR} != "<after>"
 .  error
@@ -68,6 +71,9 @@ REF=		too late
 # expression with an indirect modifier referring to an undefined variable
 .undef UNDEF
 VAR:=		${:${UNDEF}}
+.if ${VAR} != ""
+.  error
+.endif
 UNDEF=		Uwas undefined
 .if ${VAR} != "was undefined"
 .  error
@@ -99,6 +105,9 @@ UNDEF=		Uwas undefined
 REF2=		<${REF3}>
 REF=		${REF2}
 VAR:=		${REF}
+.if ${VAR} != "<>"
+.  error
+.endif
 REF3=		too late
 .if ${VAR} != "<too late>"
 .  error
@@ -261,21 +270,26 @@ later=	lowercase-value
 .undef later
 INDIRECT:=	${LATER:S,value,replaced,} OK ${LATER:value=sysv}
 indirect:=	${INDIRECT:tl}
-# expect+1: Unknown modifier "s,value,replaced,"
+# expect+1: Unknown modifier ":s,value,replaced,"
 .if ${indirect} != " ok "
 .  error
 .else
-.  warning	XXX Neither branch should be taken.
+.  error
 .endif
 LATER=	uppercase-value
 later=	lowercase-value
-# expect+1: Unknown modifier "s,value,replaced,"
+# expect+1: Unknown modifier ":s,value,replaced,"
 .if ${indirect} != "uppercase-replaced ok uppercase-sysv"
-.  warning	XXX Neither branch should be taken.
+.  error
 .else
 .  error
 .endif
 
 
-all:
-	@:;
+# FIXME: The expression is evaluated twice, for no obvious reason.
+# expect+5: Bad condition
+# expect+4: Unknown modifier ":Z1"
+# expect+3: Unknown modifier ":Z2"
+# expect+2: Unknown modifier ":Z1"
+# expect+1: Unknown modifier ":Z2"
+_:=	${ < 0 :?${:Z1}:${:Z2}}

@@ -1,6 +1,20 @@
-# $NetBSD: varmod-loop.mk,v 1.18 2021/12/05 15:20:13 rillig Exp $
+# $NetBSD: varmod-loop.mk,v 1.26 2024/06/02 15:31:26 rillig Exp $
 #
-# Tests for the :@var@...${var}...@ variable modifier.
+# Tests for the expression modifier ':@var@body@', which replaces each word of
+# the expression with the expanded body, which may contain references to the
+# variable 'var'.  For example, '${1 2 3:L:@word@<${word}>@}' encloses each
+# word in angle quotes, resulting in '<1> <2> <3>'.
+#
+# The variable name can be chosen freely, except that it must not contain a
+# '$'.  For simplicity and readability, variable names should only use the
+# characters 'A-Za-z0-9'.
+#
+# The body may contain subexpressions in the form '${...}' or '$(...)'.  These
+# subexpressions differ from everywhere else in makefiles in that the parser
+# only scans '${...}' for balanced '{' and '}', likewise for '$(...)'.  Any
+# other '$' is left as-is during parsing.  Later, when the body is expanded
+# for each word, each '$$' is interpreted as a single '$', and the remaining
+# '$' are interpreted as expressions, like when evaluating a regular variable.
 
 # Force the test results to be independent of the default value of this
 # setting, which is 'yes' for NetBSD's usr.bin/make but 'no' for the bmake
@@ -17,7 +31,6 @@ varname-overwriting-target:
 	# undefined.  This is something that make doesn't expect, this may
 	# even trigger an assertion failure somewhere.
 	@echo :$@: :${:U1 2 3:@\@@x${@}y@}: :$@:
-
 
 
 # Demonstrate that it is possible to generate dollar signs using the
@@ -39,7 +52,7 @@ mod-loop-dollar:
 #
 # As of 2020-10-18, the :@ modifier is implemented by actually setting a
 # variable in the scope of the expression and deleting it again after the
-# loop.  This is different from the .for loops, which substitute the variable
+# loop.  This is different from the .for loops, which substitute the
 # expression with ${:Uvalue}, leading to different unwanted side effects.
 #
 # To make the behavior more predictable, the :@ modifier should restore the
@@ -69,10 +82,8 @@ mod-loop-dollar:
 8_DOLLARS=	$$$$$$$$
 # This string literal is written with 8 dollars, and this is saved as the
 # variable value.  But as soon as this value is evaluated, it goes through
-# Var_Subst, which replaces each '$$' with a single '$'.  This could be
-# prevented by VARE_EVAL_KEEP_DOLLAR, but that flag is usually removed
-# before expanding subexpressions.  See ApplyModifier_Loop and
-# ParseModifierPart for examples.
+# Var_Subst, which replaces each '$$' with a single '$'.
+# See ApplyModifier_Loop and ParseModifierPart for examples.
 #
 .MAKEFLAGS: -dcp
 USE_8_DOLLARS=	${:U1:@var@${8_DOLLARS}@} ${8_DOLLARS} $$$$$$$$
@@ -82,11 +93,11 @@ USE_8_DOLLARS=	${:U1:@var@${8_DOLLARS}@} ${8_DOLLARS} $$$$$$$$
 #
 SUBST_CONTAINING_LOOP:= ${USE_8_DOLLARS}
 # The ':=' assignment operator evaluates the variable value using the mode
-# VARE_KEEP_DOLLAR_UNDEF, which means that some dollar signs are preserved,
-# but not all.  The dollar signs in the top-level expression and in the
-# indirect ${8_DOLLARS} are preserved.
+# VARE_EVAL_KEEP_DOLLAR_AND_UNDEFINED, which means that some dollar signs are
+# preserved, but not all.  The dollar signs in the top-level expression and in
+# the indirect ${8_DOLLARS} are preserved.
 #
-# The variable modifier :@var@ does not preserve the dollar signs though, no
+# The modifier :@var@ does not preserve the dollar signs though, no
 # matter in which context it is evaluated.  What happens in detail is:
 # First, the modifier part "${8_DOLLARS}" is parsed without expanding it.
 # Next, each word of the value is expanded on its own, and at this moment
@@ -98,7 +109,7 @@ SUBST_CONTAINING_LOOP:= ${USE_8_DOLLARS}
 # The variable SUBST_CONTAINING_LOOP therefore gets assigned the raw value
 # "$$$$ $$$$$$$$ $$$$$$$$".
 #
-# The variable expression in the condition then expands this raw stored value
+# The expression in the condition then expands this raw stored value
 # once, resulting in "$$ $$$$ $$$$".  The effects from VARE_KEEP_DOLLAR no
 # longer take place since they had only been active during the evaluation of
 # the variable assignment.
@@ -185,5 +196,49 @@ CMDLINE=	global		# needed for deleting the environment
 .if ${CMDLINE:Uundefined} != "undefined"
 .  error			# 'CMDLINE' is gone now from all scopes
 .endif
+
+
+# In the loop body text of the ':@' modifier, a literal '$' is written as '$$',
+# not '\$'.  In the following example, each '$$' turns into a single '$',
+# except for '$i', which is replaced with the then-current value '1' of the
+# iteration variable.
+#
+# See parse-var.mk, keyword 'BRACE_GROUP'.
+all: varmod-loop-literal-dollar
+varmod-loop-literal-dollar: .PHONY
+	: ${:U1:@i@ t=$$(( $${t:-0} + $i ))@}
+
+
+# When parsing the loop body, each '\$', '\@' and '\\' is unescaped to '$',
+# '@' and '\', respectively; all other backslashes are retained.
+#
+# In practice, the '$' is not escaped as '\$', as there is a second round of
+# unescaping '$$' to '$' later when the loop body is expanded after setting the
+# iteration variable.
+#
+# After the iteration variable has been set, the loop body is expanded with
+# this unescaping, regardless of whether .MAKE.SAVE_DOLLARS is set or not:
+#	$$			a literal '$'
+#	$x, ${var}, $(var)	a nested expression
+#	any other character	itself
+all: escape-modifier
+escape-modifier: .PHONY
+	# In the first round, '\$ ' is unescaped to '$ ', and since the
+	# variable named ' ' is not defined, the expression '$ ' expands to an
+	# empty string.
+	# expect: :  dollar=end
+	: ${:U1:@i@ dollar=\$ end@}
+
+	# Like in other modifiers, '\ ' is preserved, since ' ' is not one of
+	# the characters that _must_ be escaped.
+	# expect: :  backslash=\ end
+	: ${:U1:@i@ backslash=\ end@}
+
+	# expect: :  dollar=$ at=@ backslash=\ end
+	: ${:U1:@i@ dollar=\$\$ at=\@ backslash=\\ end@}
+	# expect: :  dollar=$$ at=@@ backslash=\\ end
+	: ${:U1:@i@ dollar=\$\$\$\$ at=\@\@ backslash=\\\\ end@}
+	# expect: :  dollar=$$ at=@@ backslash=\\ end
+	: ${:U1:@i@ dollar=$$$$ at=\@\@ backslash=\\\\ end@}
 
 all: .PHONY

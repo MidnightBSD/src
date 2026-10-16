@@ -1,30 +1,33 @@
-# $NetBSD: cmd-errors.mk,v 1.4 2020/12/27 05:11:40 rillig Exp $
+# $NetBSD: cmd-errors.mk,v 1.13 2025/06/28 22:39:28 rillig Exp $
 #
-# Demonstrate how errors in variable expansions affect whether the commands
+# Demonstrate how errors in expressions affect whether the commands
 # are actually executed in compat mode.
 
-all: undefined unclosed-variable unclosed-modifier unknown-modifier end
+all: undefined unclosed-expression unclosed-modifier unknown-modifier end
 
-# Undefined variables are not an error.  They expand to empty strings.
+# Undefined variables in expressions are not an error.  They expand to empty
+# strings.
 undefined:
-	: $@ ${UNDEFINED} eol
+# expect: : undefined--eol
+	: $@-${UNDEFINED}-eol
 
-# XXX: As of 2020-11-01, this command is executed even though it contains
-# parse errors.
-unclosed-variable:
-	: $@ ${UNCLOSED
+unclosed-expression:
+# expect: make: Unclosed variable "UNCLOSED"
+# expect-not: : unclosed-expression-
+	: $@-${UNCLOSED
 
-# XXX: As of 2020-11-01, this command is executed even though it contains
-# parse errors.
 unclosed-modifier:
-	: $@ ${UNCLOSED:
+# expect: make: Unclosed expression, expecting "}"
+# expect-not: : unclosed-modifier-
+	: $@-${UNCLOSED:
 
-# XXX: As of 2020-11-01, this command is executed even though it contains
-# parse errors.
 unknown-modifier:
-	: $@ ${UNKNOWN:Z} eol
+# expect: make: Unknown modifier ":Z"
+# expect-not: : unknown-modifier--eol
+	: $@-${UNKNOWN:Z}-eol
 
 end:
-	: $@ eol
+# expect: : end-eol
+	: $@-eol
 
-# XXX: As of 2020-11-02, despite the parse errors, the exit status is 0.
+# expect: exit status 2

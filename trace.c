@@ -1,4 +1,4 @@
-/*	$NetBSD: trace.c,v 1.31 2022/02/05 00:26:21 rillig Exp $	*/
+/*	$NetBSD: trace.c,v 1.35 2025/05/09 18:42:56 rillig Exp $	*/
 
 /*
  * Copyright (c) 2000 The NetBSD Foundation, Inc.
@@ -48,11 +48,11 @@
 #include "job.h"
 #include "trace.h"
 
-MAKE_RCSID("$NetBSD: trace.c,v 1.31 2022/02/05 00:26:21 rillig Exp $");
+MAKE_RCSID("$NetBSD: trace.c,v 1.35 2025/05/09 18:42:56 rillig Exp $");
 
 static FILE *trfile;
 static pid_t trpid;
-const char *trwd;
+static const char *trwd;
 
 static const char evname[][4] = {
 	"BEG",
@@ -90,7 +90,7 @@ Trace_Log(TrEvent event, Job *job)
 
 	gettimeofday(&rightnow, NULL);
 
-#if __STDC__ >= 199901L
+#if __STDC_VERSION__ >= 199901L
 	fprintf(trfile, "%lld.%06ld %d %s %d %s",
 	    (long long)rightnow.tv_sec, (long)rightnow.tv_usec,
 	    jobTokensRunning,
@@ -102,11 +102,13 @@ Trace_Log(TrEvent event, Job *job)
 	    evname[event], trpid, trwd);
 #endif
 	if (job != NULL) {
+		GNode *gn = Job_Node(job);
+		char *type = GNodeType_ToString(gn->type);
 		char flags[4];
-
 		Job_FlagsToString(job, flags, sizeof flags);
-		fprintf(trfile, " %s %d %s %x", job->node->name,
-		    job->pid, flags, job->node->type);
+		fprintf(trfile, " %s %d %s %s",
+		    gn->name, Job_Pid(job), flags, type);
+		free(type);
 	}
 	fputc('\n', trfile);
 	fflush(trfile);

@@ -17,12 +17,9 @@ false
 FALSE
 do not evaluate or expand :? if discarding
 is set
-year=2016 month=04 day=01
-date=20160401
 Version=123.456.789 == 123456789
 Literal=3.4.5 == 3004005
 We have target specific vars
-MAN= make.1
 save-dollars: 0        = $
 save-dollars: 1        = $$
 save-dollars: 2        = $$
@@ -46,29 +43,39 @@ export-appended: env mk
 parse-dynamic: parse-dynamic parse-dynamic before
 parse-dynamic: parse-dynamic parse-dynamic after
 parse-dynamic: parse-dynamic parse-dynamic after
-varerror-unclosed:begin
+varerror-unclosed-1:begin
 make: Unclosed variable ""
-
+	in command "@echo $("
+	in target "varerror-unclosed-2"
 make: Unclosed variable "UNCLOSED"
-
+	in command "@echo $(UNCLOSED"
+	in target "varerror-unclosed-3"
 make: Unclosed variable "UNCLOSED"
-
+	in command "@echo ${UNCLOSED"
+	in target "varerror-unclosed-4"
 make: Unclosed variable "PATTERN"
-make: Unclosed variable expression, expecting '}' for modifier "M${PATTERN" of variable "UNCLOSED" with value ""
-
+	while evaluating variable "UNCLOSED" with value ""
+	in command "@echo ${UNCLOSED:M${PATTERN"
+	in target "varerror-unclosed-5"
+make: Unclosed expression, expecting "}" for modifier "M${PATTERN"
+	while evaluating variable "UNCLOSED" with value ""
+	in command "@echo ${UNCLOSED:M${PATTERN"
+	in target "varerror-unclosed-5"
 make: Unclosed variable "param"
+	in command "@echo ${UNCLOSED.${param"
+	in target "varerror-unclosed-6"
 make: Unclosed variable "UNCLOSED."
-
+	in command "@echo ${UNCLOSED.${param"
+	in target "varerror-unclosed-6"
 
 make: Unclosed variable "UNCLOSED.1"
-
-make: Unclosed variable "UNCLOSED.2"
-
-make: Unclosed variable "UNCLOSED.3"
-
+	in command "@echo ${UNCLOSED.${:U1}"
+	in target "varerror-unclosed-7"
 make: Unclosed variable "UNCLOSED_ORIG"
-
-varerror-unclosed:end
+	while evaluating variable "UNCLOSED_INDIR_1" with value "${UNCLOSED_ORIG"
+	while evaluating variable "UNCLOSED_INDIR_2" with value "${UNCLOSED_INDIR_1}"
+	in command "@echo ${UNCLOSED_INDIR_2}"
+	in target "varerror-unclosed-8"
 target1-flags: we have: one two
 target2-flags: we have: one two three four
-exit status 0
+exit status 2

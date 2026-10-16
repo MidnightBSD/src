@@ -1,13 +1,8 @@
-# $Id: progs.mk,v 1.16 2020/08/19 17:51:53 sjg Exp $
+# $Id: progs.mk,v 1.20 2025/08/09 22:42:24 sjg Exp $
 #
 #	@(#) Copyright (c) 2006, Simon J. Gerraty
 #
-#	This file is provided in the hope that it will
-#	be of use.  There is absolutely NO WARRANTY.
-#	Permission to copy, redistribute or otherwise
-#	use this file is hereby granted provided that
-#	the above copyright notice and this notice are
-#	left intact.
+#	SPDX-License-Identifier: BSD-2-Clause
 #
 #	Please send copies of changes and bug-fixes to:
 #	sjg@crufty.net
@@ -37,16 +32,26 @@ PROG ?= $t
 # just one of many
 PROG_VARS += \
 	BINDIR \
-	CFLAGS \
-	COPTS \
-	CPPFLAGS \
 	CXXFLAGS \
 	DPADD \
 	DPLIBS \
 	LDADD \
-	LDFLAGS \
 	MAN \
-	SRCS
+
+.ifndef SYS_OS_MK
+# assume we are not using init.mk, otherwise
+# we need to avoid overlap with its
+# QUALIFIED_VAR_LIST which includes these and its
+# VAR_QUALIFIER_LIST includes .TARGET which
+# would match PROG
+PROG_VARS += \
+	CFLAGS \
+	COPTS \
+	CPPFLAGS \
+	LDFLAGS \
+	SRCS \
+
+.endif
 
 .for v in ${PROG_VARS:O:u}
 .if defined(${v}.${PROG}) || defined(${v}_${PROG})
@@ -56,7 +61,7 @@ $v += ${${v}_${PROG}:U${${v}.${PROG}}}
 
 # for meta mode, there can be only one!
 .if ${PROG} == ${UPDATE_DEPENDFILE_PROG:Uno}
-UPDATE_DEPENDFILE ?= yes
+UPDATE_DEPENDFILE ?= ${MK_UPDATE_DEPENDFILE:Uyes}
 .endif
 UPDATE_DEPENDFILE ?= NO
 

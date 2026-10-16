@@ -1,4 +1,4 @@
-#*** Input graph:
+#*** Begin input graph for pass 1 in <curdir>:
 # all, unmade, type OP_DEPENDS|OP_HAS_COMMANDS, flags none
 # made-target, unmade, type OP_DEPENDS, flags none
 # made-target-no-sources, unmade, type OP_DEPENDS, flags none
@@ -16,12 +16,14 @@
 #*** Global Variables:
 .ALLTARGETS      =  all made-target made-target-no-sources made-source unmade-target unmade-sources unmade-silent-source unmade-target-no-sources
 .CURDIR          = <curdir>
-.INCLUDES        = 
-.LIBS            = 
+.INCLUDES        = # (empty)
+.LIBS            = # (empty)
 .MAKE            = <details omitted>
 .MAKE.DEPENDFILE = <details omitted>
 .MAKE.GID        = <details omitted>
+.MAKE.JOBS.C     = <details omitted>
 .MAKE.LEVEL      = <details omitted>
+.MAKE.LEVEL.ENV  = MAKELEVEL
 .MAKE.MAKEFILES  = <details omitted>
 .MAKE.MAKEFILE_PREFERENCE = <details omitted>
 .MAKE.OS         = <details omitted>
@@ -29,18 +31,17 @@
 .MAKE.PPID       = <details omitted>
 .MAKE.UID        = <details omitted>
 .MAKEFLAGS       =  -r -k -d g1
-.MAKEOVERRIDES   = 
+.MAKEOVERRIDES   = # (empty)
 .OBJDIR          = <curdir>
 .PATH            = . <curdir>
-.TARGETS         = 
+.TARGETS         = # (empty)
 .newline         = 
-
+# (ends with space)
 MACHINE          = <details omitted>
 MACHINE_ARCH     = <details omitted>
 MAKE             = <details omitted>
 MFLAGS           =   -r -k -d g1
 #*** Command-line Variables:
-.MAKE.LEVEL.ENV  = MAKELEVEL
 
 #*** Directory Cache:
 # Stats: 0 hits 2 misses 0 near misses 0 losers (0%)
@@ -49,4 +50,5 @@ MFLAGS           =   -r -k -d g1
 
 #*** Suffixes:
 #*** Transformations:
+#*** End input graph for pass 1 in <curdir>:
 exit status 0

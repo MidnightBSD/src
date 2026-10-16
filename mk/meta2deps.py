@@ -36,10 +36,12 @@ We only pay attention to a subset of the information in the
 """
 
 """
-RCSid:
-	$Id: meta2deps.py,v 1.44 2022/01/29 02:42:01 sjg Exp $
+SPDX-License-Identifier: BSD-2-Clause
 
-	Copyright (c) 2011-2020, Simon J. Gerraty
+RCSid:
+	$Id: meta2deps.py,v 1.54 2025/07/24 16:05:48 sjg Exp $
+
+	Copyright (c) 2011-2025, Simon J. Gerraty
 	Copyright (c) 2011-2017, Juniper Networks, Inc.
 	All rights reserved.
 
@@ -74,8 +76,10 @@ import stat
 def resolve(path, cwd, last_dir=None, debug=0, debug_out=sys.stderr):
     """
     Return an absolute path, resolving via cwd or last_dir if needed.
+
+    Cleanup any leading ``./`` and trailing ``/.``
     """
-    if path.endswith('/.'):
+    while path.endswith('/.'):
         path = path[0:-2]
     if len(path) > 0 and path[0] == '/':
         if os.path.exists(path):
@@ -86,7 +90,9 @@ def resolve(path, cwd, last_dir=None, debug=0, debug_out=sys.stderr):
     if path == '.':
         return cwd
     if path.startswith('./'):
-        return cwd + path[1:]
+        while path.startswith('./'):
+            path = path[1:]
+        return cwd + path
     if last_dir == cwd:
         last_dir = None
     for d in [last_dir, cwd]:
@@ -144,6 +150,7 @@ def abspath(path, cwd, last_dir=None, debug=0, debug_out=sys.stderr):
         return None
     if (path.find('/') < 0 or
         path.find('./') > 0 or
+        path.find('/../') > 0 or
         path.endswith('/..')):
         path = cleanpath(path)
     return path
@@ -287,6 +294,7 @@ class MetaFile:
                     if not _objroot in self.objroots:
                         self.objroots.append(_objroot)
 
+            self.sb = conf.get('SB', '')
             # we want the longest match
             self.srctops.sort(reverse=True)
             self.objroots.sort(reverse=True)
@@ -433,7 +441,7 @@ class MetaFile:
         # Bye bye
 
         We go to some effort to avoid processing a dependency more than once.
-        Of the above record types only C,E,F,L,R,V and W are of interest.
+        Of the above record types only C,E,F,L,M,R,V,W and X are of interest.
         """
 
         version = 0                     # unknown
@@ -448,12 +456,17 @@ class MetaFile:
         pid_cwd = {}
         pid_last_dir = {}
         last_pid = 0
+        eof_token = False
 
         self.line = 0
         if self.curdir:
             self.seenit(self.curdir)    # we ignore this
 
-        interesting = 'CEFLRVX'
+        if self.sb and self.name.startswith(self.sb):
+            error_name = self.name.replace(self.sb+'/','')
+        else:
+            error_name = self.name
+        interesting = '#CEFLMRVX'
         for line in f:
             self.line += 1
             # ignore anything we don't care about
@@ -462,6 +475,7 @@ class MetaFile:
             if self.debug > 2:
                 print("input:", line, end=' ', file=self.debug_out)
             w = line.split()
+            wlen = len(w)
 
             if skip:
                 if w[0] == 'V':
@@ -479,6 +493,29 @@ class MetaFile:
                     if self.debug:
                         print("%s: CWD=%s" % (self.name, cwd), file=self.debug_out)
                 continue
+
+            if w[0] == '#':
+                # check the file has not been truncated
+                if line.find('Bye') > 0:
+                    eof_token = True
+                continue
+            else:
+                # before we go further check we have a sane number of args
+                # the Linux filemon module is rather unreliable.
+                if w[0] in 'LM':
+                    elen = 4
+                elif w[0] == 'X':
+                    # at least V4 on Linux does 3 args
+                    if wlen == 3:
+                        elen = 3
+                    else:
+                        elen = 4
+                else:
+                    elen = 3
+                if self.debug > 2:
+                    print('op={} elen={} wlen={} line="{}"'.format(w[0], elen, wlen, line.strip()), file=self.debug_out)
+                if wlen != elen:
+                    raise AssertionError('corrupted filemon data: wrong number of words: expected {} got {} in: {}'.format(elen, wlen, line))
 
             pid = int(w[1])
             if pid != last_pid:
@@ -521,11 +558,11 @@ class MetaFile:
                     print("seen:", w[2], file=self.debug_out)
                 continue
             # file operations
-            if w[0] in 'ML':
+            if w[0] in 'LM':
                 # these are special, tread src as read and
                 # target as write
-                self.parse_path(w[2].strip("'"), cwd, 'R', w)
                 self.parse_path(w[3].strip("'"), cwd, 'W', w)
+                self.parse_path(w[2].strip("'"), cwd, 'R', w)
                 continue
             elif w[0] in 'ERWS':
                 path = w[2]
@@ -535,7 +572,11 @@ class MetaFile:
                     continue
                 self.parse_path(path, cwd, w[0], w)
 
-        assert(version > 0)
+        if version == 0:
+            raise AssertionError('missing filemon data: {}'.format(error_name))
+        if not eof_token:
+            raise AssertionError('truncated filemon data: {}'.format(error_name))
+
         setid_pids = []
         # self.pids should be empty!
         for pid,path in self.pids.items():
@@ -552,7 +593,8 @@ class MetaFile:
             print("ERROR: missing eXit for {} pid {}".format(path, pid))
         for pid in setid_pids:
             del self.pids[pid]
-        assert(len(self.pids) == 0)
+        if len(self.pids) > 0:
+            raise AssertionError('bad filemon data - missing eXits: {}'.format(error_name))
         if not file:
             f.close()
 
@@ -587,9 +629,19 @@ class MetaFile:
                 return
         # we don't want to resolve the last component if it is
         # a symlink
-        path = resolve(path, cwd, self.last_dir, self.debug, self.debug_out)
-        if not path:
-            return
+        npath = resolve(path, cwd, self.last_dir, self.debug, self.debug_out)
+        if not npath:
+            if len(w) > 3 and w[0] in 'ML' and op == 'R' and path.startswith('../'):
+                # we already resolved the target of the M/L
+                # so it makes sense to try and resolve relative to that dir.
+                if os.path.isdir(self.last_path):
+                    dir = self.last_path
+                else:
+                    dir,junk = os.path.split(self.last_path)
+                npath = resolve(path, cwd, dir, self.debug, self.debug_out)
+            if not npath:
+                return
+        path = npath
         dir,base = os.path.split(path)
         if dir in self.seen:
             if self.debug > 2:
@@ -607,6 +659,7 @@ class MetaFile:
             rdir = None
         # now put path back together
         path = '/'.join([dir,base])
+        self.last_path = path
         if self.debug > 1:
             print("raw=%s rdir=%s dir=%s path=%s" % (w[2], rdir, dir, path), file=self.debug_out)
         if op in 'RWS':
@@ -695,6 +748,8 @@ def main(argv, klass=MetaFile, xopts='', xoptf=None):
         'OBJROOTS': [],
         'EXCLUDES': [],
         }
+
+    conf['SB'] = os.getenv('SB', '')
 
     try:
         machine = os.environ['MACHINE']

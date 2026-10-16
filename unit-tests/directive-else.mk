@@ -1,4 +1,4 @@
-# $NetBSD: directive-else.mk,v 1.7 2020/12/14 22:17:11 rillig Exp $
+# $NetBSD: directive-else.mk,v 1.9 2023/11/19 21:47:52 rillig Exp $
 #
 # Tests for the .else directive.
 #
@@ -10,26 +10,31 @@
 
 .if 0
 .  warning must not be reached
-# The .else directive does not take any arguments.
+# expect+1: The .else directive does not take arguments
 .else 123
+# expect+1: ok
 .  info ok
 .endif
 
 .if 1
+# expect+1: ok
 .  info ok
-# The .else directive does not take any arguments.
+# expect+1: The .else directive does not take arguments
 .else 123
 .  warning must not be reached
 .endif
 
 # An .else without a corresponding .if is an error.
+# expect+1: if-less else
 .else
 
 # Accidental extra .else directives are detected too.
 .if 0
 .  warning must not be reached
 .else
+# expect+1: ok
 .  info ok
+# expect+1: warning: extra else
 .else
 .  info After an extra .else, everything is skipped.
 .endif
@@ -40,8 +45,9 @@
 .else # comment
 .endif
 
-# A variable expression does count as an argument, even if it is empty.
+# An expression does count as an argument, even if it is empty.
 .if 0
+# expect+1: The .else directive does not take arguments
 .else ${:U}
 .endif
 
