@@ -144,14 +144,15 @@ main(int argc, char *argv[])
 	char buf[MAXHOSTNAMELEN], fn[MAXHOSTNAMELEN];
 	char *dot;
 
-	(void)setlocale(LC_ALL, "");
-	use_ampm = (*nl_langinfo(T_FMT_AMPM) != '\0');
-	use_comma = (*nl_langinfo(RADIXCHAR) != ',');
-
 	argc = xo_parse_args(argc, argv);
 	if (argc < 0)
 		exit(1);
 
+	if (xo_get_style(NULL) == XO_STYLE_TEXT) {
+		setlocale(LC_ALL, "");
+	}
+	use_ampm = (*nl_langinfo(T_FMT_AMPM) != '\0');
+	use_comma = (*nl_langinfo(RADIXCHAR) != ',');
 	/* Are we w(1) or uptime(1)? */
 	if (strcmp(basename(argv[0]), "uptime") == 0) {
 		wcmd = 0;
@@ -389,6 +390,9 @@ main(int argc, char *argv[])
 		argwidth = ttywidth - WUSED;
 	if (argwidth < 4)
 		argwidth = 8;
+	/* Don't truncate if we're outputting json or XML. */
+	if (xo_get_style(NULL) != XO_STYLE_TEXT)
+		argwidth = ARG_MAX;
 	for (ep = ehead; ep != NULL; ep = ep->next) {
 		if (ep->kp == NULL) {
 			ep->args = strdup("-");
