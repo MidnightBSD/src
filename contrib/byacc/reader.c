@@ -908,7 +908,7 @@ copy_union(void)
     puts_both("#define YYSTYPE_IS_DECLARED 1\n");
 
     fprintf_lineno(text_file, lineno, input_file_name);
-    puts_both("typedef union YYSTYPE");
+    puts_both("typedef union");
 
     depth = 0;
   loop:
