@@ -31,9 +31,8 @@
  *	@(#)extern.h	8.1 (Berkeley) 6/6/93
  */
 
-void	recvfile(int peer, char *port, int fd, char *name, char *mode);
-void	xmitfile(int peer, char *port, int fd, char *name, char *mode);
+int	recvfile(int peer, char *port, int fd, char *name, char *mode);
+int	xmitfile(int peer, char *port, int fd, char *name, char *mode);
 
 extern int	verbose;
 extern int	maxtimeout;
-extern volatile int txrx_error;

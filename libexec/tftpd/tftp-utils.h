@@ -2,7 +2,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2008 Edwin Groothuis. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -11,7 +11,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -25,7 +25,6 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
 /*
  */
 #define	TIMEOUT		5
@@ -63,7 +62,7 @@ extern int	acting_as_client;
 /*
  */
 void	unmappedaddr(struct sockaddr_in6 *sin6);
-ssize_t	get_field(int peer, char *buffer, ssize_t size);
+size_t	get_field(int peer, char *buffer, size_t size);
 
 /*
  * Packet types
@@ -100,7 +99,7 @@ struct debugs {
 };
 extern int	debug;
 extern struct debugs debugs[];
-extern int	packetdroppercentage;
+extern unsigned int packetdroppercentage;
 int	debug_find(char *s);
 int	debug_finds(char *s);
 const char *debug_show(int d);

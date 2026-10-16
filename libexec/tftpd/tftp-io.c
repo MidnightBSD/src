@@ -2,7 +2,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (C) 2008 Edwin Groothuis. All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -11,7 +11,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -26,18 +26,17 @@
  */
 
 #include <sys/cdefs.h>
-#include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 
 #include <netinet/in.h>
-#include <arpa/tftp.h>
 #include <arpa/inet.h>
+#include <arpa/tftp.h>
 
 #include <assert.h>
 #include <errno.h>
-#include <setjmp.h>
-#include <signal.h>
+#include <poll.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -71,17 +70,12 @@ static struct errmsg {
 	{ -1,		NULL }
 };
 
-#define DROPPACKET(s)							\
+#define DROPPACKET(...)							\
 	if (packetdroppercentage != 0 &&				\
-	    random()%100 < packetdroppercentage) {			\
-		tftp_log(LOG_DEBUG, "Artificial packet drop in %s", s);	\
-		return;							\
-	}
-#define DROPPACKETn(s,n)						\
-	if (packetdroppercentage != 0 &&				\
-	    random()%100 < packetdroppercentage) {			\
-		tftp_log(LOG_DEBUG, "Artificial packet drop in %s", s);	\
-		return (n);						\
+	    arc4random() % 100 < packetdroppercentage) {		\
+		tftp_log(LOG_DEBUG, "Artificial packet drop in %s",	\
+		    __func__);						\
+		return __VA_ARGS__;					\
 	}
 
 const char *
@@ -106,7 +100,7 @@ send_packet(int peer, uint16_t block, char *pkt, int size)
 	int t = 1;
 
 	for (i = 0; i < 12 ; i++) {
-		DROPPACKETn("send_packet", 0);
+		DROPPACKET(0);
 
 		if (sendto(peer, pkt, size, 0, (struct sockaddr *)&peer_sock,
 		    peer_sock.ss_len) == size) {
@@ -118,7 +112,7 @@ send_packet(int peer, uint16_t block, char *pkt, int size)
 			return (0);
 		}
 		tftp_log(LOG_ERR,
-		    "%s block %d, attempt %d failed (Error %d: %s)", 
+		    "%s block %d, attempt %d failed (Error %d: %s)",
 		    packettype(ntohs(((struct tftphdr *)(pkt))->th_opcode)),
 		    block, i, errno, strerror(errno));
 		sleep(t);
@@ -143,10 +137,10 @@ send_error(int peer, int error)
 	struct errmsg *pe;
 	char buf[MAXPKTSIZE];
 
-	if (debug&DEBUG_PACKETS)
+	if (debug & DEBUG_PACKETS)
 		tftp_log(LOG_DEBUG, "Sending ERROR %d", error);
 
-	DROPPACKET("send_error");
+	DROPPACKET();
 
 	tp = (struct tftphdr *)buf;
 	tp->th_opcode = htons((u_short)ERROR);
@@ -158,12 +152,10 @@ send_error(int peer, int error)
 		pe->e_msg = strerror(error - 100);
 		tp->th_code = EUNDEF;   /* set 'undef' errorcode */
 	}
-	strcpy(tp->th_msg, pe->e_msg);
-	length = strlen(pe->e_msg);
-	tp->th_msg[length] = '\0';
-	length += 5;
+	snprintf(tp->th_msg, MAXPKTSIZE - 4, "%s%n", pe->e_msg, &length);
+	length += 5; /* header and terminator */
 
-	if (debug&DEBUG_PACKETS)
+	if (debug & DEBUG_PACKETS)
 		tftp_log(LOG_DEBUG, "Sending ERROR %d: %s", error, tp->th_msg);
 
 	if (sendto(peer, buf, length, 0,
@@ -177,35 +169,35 @@ send_error(int peer, int error)
 int
 send_wrq(int peer, char *filename, char *mode)
 {
-	int n;
+	char buf[MAXPKTSIZE];
 	struct tftphdr *tp;
 	char *bp;
-	char buf[MAXPKTSIZE];
-	int size;
+	size_t len;
+	int n, size;
 
-	if (debug&DEBUG_PACKETS)
+	if (debug & DEBUG_PACKETS) {
 		tftp_log(LOG_DEBUG, "Sending WRQ: filename: '%s', mode '%s'",
-			filename, mode
-		);
+			filename, mode);
+	}
 
-	DROPPACKETn("send_wrq", 0);
+	DROPPACKET(0);
 
 	tp = (struct tftphdr *)buf;
 	tp->th_opcode = htons((u_short)WRQ);
 	size = offsetof(struct tftphdr, th_stuff);
 
 	bp = tp->th_stuff;
-	strlcpy(bp, filename, sizeof(buf) - size);
-	bp += strlen(filename);
-	*bp = 0;
-	bp++;
-	size += strlen(filename) + 1;
+	len = strlcpy(bp, filename, sizeof(buf) - size);
+	if (len >= sizeof(buf) - size)
+		goto overflow;
+	bp += len + 1;
+	size += len + 1;
 
-	strlcpy(bp, mode, sizeof(buf) - size);
-	bp += strlen(mode);
-	*bp = 0;
-	bp++;
-	size += strlen(mode) + 1;
+	len = strlcpy(bp, mode, sizeof(buf) - size);
+	if (len >= sizeof(buf) - size)
+		goto overflow;
+	bp += len + 1;
+	size += len + 1;
 
 	if (options_rfc_enabled)
 		size += make_options(peer, bp, sizeof(buf) - size);
@@ -213,10 +205,13 @@ send_wrq(int peer, char *filename, char *mode)
 	n = sendto(peer, buf, size, 0,
 	    (struct sockaddr *)&peer_sock, peer_sock.ss_len);
 	if (n != size) {
-		tftp_log(LOG_ERR, "send_wrq: %s", strerror(errno));
+		tftp_log(LOG_ERR, "%s: %m", __func__);
 		return (1);
 	}
 	return (0);
+overflow:
+	tftp_log(LOG_ERR, "%s: file name too long", __func__);
+	return (1);
 }
 
 /*
@@ -225,48 +220,51 @@ send_wrq(int peer, char *filename, char *mode)
 int
 send_rrq(int peer, char *filename, char *mode)
 {
-	int n;
+	char buf[MAXPKTSIZE];
 	struct tftphdr *tp;
 	char *bp;
-	char buf[MAXPKTSIZE];
-	int size;
+	size_t len;
+	int n, size;
 
-	if (debug&DEBUG_PACKETS)
+	if (debug & DEBUG_PACKETS) {
 		tftp_log(LOG_DEBUG, "Sending RRQ: filename: '%s', mode '%s'",
-			filename, mode
-		);
+		    filename, mode);
+	}
 
-	DROPPACKETn("send_rrq", 0);
+	DROPPACKET(0);
 
 	tp = (struct tftphdr *)buf;
 	tp->th_opcode = htons((u_short)RRQ);
 	size = offsetof(struct tftphdr, th_stuff);
 
 	bp = tp->th_stuff;
-	strlcpy(bp, filename, sizeof(buf) - size);
-	bp += strlen(filename);
-	*bp = 0;
-	bp++;
-	size += strlen(filename) + 1;
+	len = strlcpy(bp, filename, sizeof(buf) - size);
+	if (len >= sizeof(buf) - size)
+		goto overflow;
+	bp += len + 1;
+	size += len + 1;
 
-	strlcpy(bp, mode, sizeof(buf) - size);
-	bp += strlen(mode);
-	*bp = 0;
-	bp++;
-	size += strlen(mode) + 1;
+	len = strlcpy(bp, mode, sizeof(buf) - size);
+	if (len >= sizeof(buf) - size)
+		goto overflow;
+	bp += len + 1;
+	size += len + 1;
 
 	if (options_rfc_enabled) {
-		options[OPT_TSIZE].o_request = strdup("0");
+		options_set_request(OPT_TSIZE, "0");
 		size += make_options(peer, bp, sizeof(buf) - size);
 	}
 
 	n = sendto(peer, buf, size, 0,
 	    (struct sockaddr *)&peer_sock, peer_sock.ss_len);
 	if (n != size) {
-		tftp_log(LOG_ERR, "send_rrq: %d %s", n, strerror(errno));
+		tftp_log(LOG_ERR, "%s: %m", __func__);
 		return (1);
 	}
 	return (0);
+overflow:
+	tftp_log(LOG_ERR, "%s: file name too long", __func__);
+	return (1);
 }
 
 /*
@@ -280,10 +278,10 @@ send_oack(int peer)
 	char *bp;
 	char buf[MAXPKTSIZE];
 
-	if (debug&DEBUG_PACKETS)
+	if (debug & DEBUG_PACKETS)
 		tftp_log(LOG_DEBUG, "Sending OACK");
 
-	DROPPACKETn("send_oack", 0);
+	DROPPACKET(0);
 
 	/*
 	 * Send back an options acknowledgement (only the ones with
@@ -297,8 +295,8 @@ send_oack(int peer)
 		if (options[i].o_reply != NULL) {
 			n = snprintf(bp, size, "%s%c%s", options[i].o_type,
 				     0, options[i].o_reply);
-			bp += n+1;
-			size -= n+1;
+			bp += n + 1;
+			size -= n + 1;
 			if (size < 0) {
 				tftp_log(LOG_ERR, "oack: buffer overflow");
 				exit(1);
@@ -326,13 +324,12 @@ send_ack(int fp, uint16_t block)
 	int size;
 	char buf[MAXPKTSIZE];
 
-	if (debug&DEBUG_PACKETS)
+	if (debug & DEBUG_PACKETS)
 		tftp_log(LOG_DEBUG, "Sending ACK for block %d", block);
 
-	DROPPACKETn("send_ack", 0);
+	DROPPACKET(0);
 
 	tp = (struct tftphdr *)buf;
-	size = sizeof(buf) - 2;
 	tp->th_opcode = htons((u_short)ACK);
 	tp->th_block = htons((u_short)block);
 	size = 4;
@@ -356,11 +353,11 @@ send_data(int peer, uint16_t block, char *data, int size)
 	struct tftphdr *pkt;
 	int n;
 
-	if (debug&DEBUG_PACKETS)
+	if (debug & DEBUG_PACKETS)
 		tftp_log(LOG_DEBUG, "Sending DATA packet %d of %d bytes",
 			block, size);
 
-	DROPPACKETn("send_data", 0);
+	DROPPACKET(0);
 
 	pkt = (struct tftphdr *)buf;
 
@@ -375,41 +372,31 @@ send_data(int peer, uint16_t block, char *data, int size)
 
 /*
  * Receive a packet
+ *
+ * If timeout is negative, no error will be logged on timeout.
  */
-static jmp_buf timeoutbuf;
-
-static void
-timeout(int sig __unused)
-{
-
-	/* tftp_log(LOG_DEBUG, "Timeout\n");	Inside a signal handler... */
-	longjmp(timeoutbuf, 1);
-}
-
 int
 receive_packet(int peer, char *data, int size, struct sockaddr_storage *from,
-    int thistimeout)
+    int timeout)
 {
+	struct pollfd pfd;
 	struct tftphdr *pkt;
 	struct sockaddr_storage from_local;
 	struct sockaddr_storage *pfrom;
 	socklen_t fromlen;
 	int n;
-	static int timed_out;
 
-	if (debug&DEBUG_PACKETS)
+	if (debug & DEBUG_PACKETS)
 		tftp_log(LOG_DEBUG,
 		    "Waiting %d seconds for packet", timeoutpacket);
 
 	pkt = (struct tftphdr *)data;
 
-	signal(SIGALRM, timeout);
-	timed_out = setjmp(timeoutbuf);
-	alarm(thistimeout);
-
-	if (timed_out != 0) {
-		tftp_log(LOG_ERR, "receive_packet: timeout");
-		alarm(0);
+	pfd.fd = peer;
+	pfd.events = POLLIN;
+	if (poll(&pfd, 1, 1000 * (timeout < 0 ? -timeout : timeout)) < 1) {
+		if (timeout > 0)
+			tftp_log(LOG_ERR, "receive_packet: timeout");
 		return (RP_TIMEOUT);
 	}
 
@@ -417,14 +404,7 @@ receive_packet(int peer, char *data, int size, struct sockaddr_storage *from,
 	fromlen = sizeof(*pfrom);
 	n = recvfrom(peer, data, size, 0, (struct sockaddr *)pfrom, &fromlen);
 
-	alarm(0);
-
-	DROPPACKETn("receive_packet", RP_TIMEOUT);
-
-	if (n < 0) {
-		tftp_log(LOG_ERR, "receive_packet: timeout");
-		return (RP_TIMEOUT);
-	}
+	DROPPACKET(RP_TIMEOUT);
 
 	if (n < 0) {
 		/* No idea what could have happened if it isn't a timeout */
@@ -460,7 +440,7 @@ receive_packet(int peer, char *data, int size, struct sockaddr_storage *from,
 		return (RP_ERROR);
 	}
 
-	if (debug&DEBUG_PACKETS)
+	if (debug & DEBUG_PACKETS)
 		tftp_log(LOG_DEBUG, "Received %d bytes in a %s packet",
 			n, packettype(pkt->th_opcode));
 

@@ -66,41 +66,43 @@ static char sccsid[] = "@(#)tftp.c	8.1 (Berkeley) 6/6/93";
 /*
  * Send the requested file.
  */
-void
+int
 xmitfile(int peer, char *port, int fd, char *name, char *mode)
 {
-	struct tftphdr *rp;
-	int n, i;
-	uint16_t block;
-	struct sockaddr_storage serv;	/* valid server port number */
 	char recvbuffer[MAXPKTSIZE];
+	struct sockaddr_storage serv;	/* valid server port number */
 	struct tftp_stats tftp_stats;
+	struct tftphdr *rp;
+	struct servent *se;
+	int n, i, ret = 0;
+	uint16_t block, portn;
 
 	stats_init(&tftp_stats);
 
 	memset(&serv, 0, sizeof(serv));
 	rp = (struct tftphdr *)recvbuffer;
 
-	if (port == NULL) {
-		struct servent *se;
-		se = getservbyname("tftp", "udp");
-		assert(se != NULL);
-		((struct sockaddr_in *)&peer_sock)->sin_port = se->s_port;
-	} else
-		((struct sockaddr_in *)&peer_sock)->sin_port =
-		    htons(atoi(port));
+	if ((se = getservbyname(port ? port : "tftp", "udp")) != NULL)
+		portn = se->s_port;
+	else
+		portn = htons(atoi(port));
+	if (portn == 0) {
+		printf("Invalid port '%s'.\n", port ? port : "tftp");
+		return (-1);
+	}
+	((struct sockaddr_in *)&peer_sock)->sin_port = portn;
 
 	for (i = 0; i < 12; i++) {
 		struct sockaddr_storage from;
 
 		/* Tell the other side what we want to do */
-		if (debug&DEBUG_SIMPLE)
+		if (debug & DEBUG_SIMPLE)
 			printf("Sending %s\n", name);
 
 		n = send_wrq(peer, name, mode);
 		if (n > 0) {
 			printf("Cannot send WRQ packet\n");
-			return;
+			return (-1);
 		}
 
 		/*
@@ -129,11 +131,11 @@ xmitfile(int peer, char *port, int fd, char *name, char *mode)
 	}
 	if (i == 12) {
 		printf("Transfer timed out.\n");
-		return;
+		return (-1);
 	}
 	if (rp->th_opcode == ERROR) {
 		printf("Got ERROR, aborted\n");
-		return;
+		return (-1);
 	}
 
 	/*
@@ -144,7 +146,7 @@ xmitfile(int peer, char *port, int fd, char *name, char *mode)
 		if (!options_rfc_enabled) {
 			printf("Got OACK while options are not enabled!\n");
 			send_error(peer, EBADOP);
-			return;
+			return (-1);
 		}
 
 		parse_options(peer, rp->th_stuff, n + 2);
@@ -152,55 +154,57 @@ xmitfile(int peer, char *port, int fd, char *name, char *mode)
 
 	if (read_init(fd, NULL, mode) < 0) {
 		warn("read_init()");
-		return;
+		return (-1);
 	}
 
 	block = 1;
-	tftp_send(peer, &block, &tftp_stats);
+	if (tftp_send(peer, &block, &tftp_stats) != 0)
+		ret = -1;
 
 	read_close();
 	if (tftp_stats.amount > 0)
 		printstats("Sent", verbose, &tftp_stats);
-
-	txrx_error = 1;
+	return (ret);
 }
 
 /*
  * Receive a file.
  */
-void
+int
 recvfile(int peer, char *port, int fd, char *name, char *mode)
 {
-	struct tftphdr *rp;
-	uint16_t block;
 	char recvbuffer[MAXPKTSIZE];
-	int n, i;
 	struct tftp_stats tftp_stats;
+	struct tftphdr *rp;
+	struct servent *se;
+	int n, i, ret = 0;
+	uint16_t block, portn;
 
 	stats_init(&tftp_stats);
 
 	rp = (struct tftphdr *)recvbuffer;
 
-	if (port == NULL) {
-		struct servent *se;
-		se = getservbyname("tftp", "udp");
-		assert(se != NULL);
-		((struct sockaddr_in *)&peer_sock)->sin_port = se->s_port;
-	} else
-		((struct sockaddr_in *)&peer_sock)->sin_port =
-		    htons(atoi(port));
+	if ((se = getservbyname(port ? port : "tftp", "udp")) != NULL)
+		portn = se->s_port;
+	else
+		portn = htons(atoi(port));
+	if (portn == 0) {
+		printf("Invalid port '%s'.\n", port ? port : "tftp");
+		return (-1);
+	}
+	((struct sockaddr_in *)&peer_sock)->sin_port = portn;
 
 	for (i = 0; i < 12; i++) {
 		struct sockaddr_storage from;
 
 		/* Tell the other side what we want to do */
-		if (debug&DEBUG_SIMPLE)
+		if (debug & DEBUG_SIMPLE)
 			printf("Requesting %s\n", name);
 
 		n = send_rrq(peer, name, mode);
 		if (n > 0) {
 			printf("Cannot send RRQ packet\n");
-			return;
+			return (-1);
 		}
 
 		/*
@@ -229,16 +233,16 @@ recvfile(int peer, char *port, int fd, char *name, char *mode)
 	}
 	if (i == 12) {
 		printf("Transfer timed out.\n");
-		return;
+		return (-1);
 	}
 	if (rp->th_opcode == ERROR) {
 		tftp_log(LOG_ERR, "Error code %d: %s", rp->th_code, rp->th_msg);
-		return;
+		return (-1);
 	}
 
 	if (write_init(fd, NULL, mode) < 0) {
 		warn("write_init");
-		return;
+		return (-1);
 	}
 
 	/*
@@ -249,7 +253,7 @@ recvfile(int peer, char *port, int fd, char *name, char *mode)
 		if (!options_rfc_enabled) {
 			printf("Got OACK while options are not enabled!\n");
 			send_error(peer, EBADOP);
-			return;
+			return (-1);
 		}
 
 		parse_options(peer, rp->th_stuff, n + 2);
@@ -257,16 +261,18 @@ recvfile(int peer, char *port, int fd, char *name, char *mode)
 		n = send_ack(peer, 0);
 		if (n > 0) {
 			printf("Cannot send ACK on OACK.\n");
-			return;
+			return (-1);
 		}
 		block = 0;
-		tftp_receive(peer, &block, &tftp_stats, NULL, 0);
+		if (tftp_receive(peer, &block, &tftp_stats, NULL, 0) != 0)
+			ret = -1;
 	} else {
 		block = 1;
-		tftp_receive(peer, &block, &tftp_stats, rp, n);
+		if (tftp_receive(peer, &block, &tftp_stats, rp, n) != 0)
+			ret = -1;
 	}
 
 	if (tftp_stats.amount > 0)
 		printstats("Received", verbose, &tftp_stats);
-	return;
+	return (ret);
 }
