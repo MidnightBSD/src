@@ -17,18 +17,37 @@ Local patches applied on top of upstream:
   - 886d52f19ea3e264811d0a93fce22af07fc0e6aa: Apply less is more
     patches from FreeBSD.  Preserve less-is-more behavior in command.c,
     forwback.c, main.c, pattern.h, and signal.c.  The patches are applied
-    around command-mode search modifiers, forward-screen handling, option
-    parsing and terminal initialization, POSIX regular expressions, and
-    interrupt handling.
+    around command-mode search modifiers (command.c mca_search_char: '*'
+    and '@' are ignored when less_is_more), forward-screen handling
+    (forwback.c forw(): no need_home and squish on every screen when
+    less_is_more), option parsing and terminal initialization (main.c:
+    "more" implies scan_option("-fG"), isoptstring() rejects '+' options,
+    no_init = TRUE, and the "terminal is not fully functional" warning is
+    suppressed), POSIX basic regular expressions (pattern.h REGCOMP_FLAG
+    is 0 when less_is_more), and interrupt handling (signal.c).
 
   - 0828cc62cd5d05bba93fb2ea29c35922e7febd9f: Port the less-is-more
     changes to less 704.  In less.h, retain the HAVE_WCTYPE_H guard and
     wctype.h include; HAVE_WCTYPE is enabled by usr.bin/less/defines.h.
 
+  - less 710 import: upstream now declares less_is_more itself as
+    "lbool" (main.c, option.c, prompt.c).  The local extern declarations
+    added by the patches above (command.c, forwback.c, pattern.h,
+    signal.c) must use "extern lbool less_is_more;" to match.
+
 Notes:
 
   - master excludes upstream configuration files, non-Unix makefiles,
-    generated manual pages, install helpers, and the lesstest directory.
-    Keep those exclusions after each subtree merge.
+    generated manual pages (*.man), install helpers, and the lesstest
+    directory.  Keep those exclusions after each subtree merge (resolve
+    the modify/delete conflicts with git rm).
   - Use the Less License included in LICENSE; COPYING is intentionally
     excluded from the master subtree.
+  - less 710 removed lesskey.c and the lesskey(1) program; lesskey files
+    are compiled by less itself via lesskey_parse.c.  usr.bin/lesskey was
+    removed and lesskey(5) (lesskey.nro) is now installed from
+    usr.bin/less.  New sources lmsg.c/lmsg.h and the lessmsg* message
+    tables must be kept; lmsg.c is listed in usr.bin/less/Makefile.
+  - usr.bin/less/defines.h is maintained by hand (no configure run);
+    compare it against upstream defines.h.in after each import.  It keeps
+    MidnightBSD's /etc/lesskey and /etc/syslesskey paths and HAVE_WCTYPE.
