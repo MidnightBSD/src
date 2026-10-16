@@ -267,6 +267,10 @@ main(int argc, char *argv[])
 		err(1, "fts_open");
 
 	while (errno = 0, (p = fts_read(fts)) != NULL) {
+		if (info) {
+			info = 0;
+			(void)fprintf(stderr, "\t%s\n", p->fts_path);
+		}
 		switch (p->fts_info) {
 		case FTS_D:			/* Ignore. */
 			if (ignorep(p))
@@ -295,10 +299,6 @@ main(int argc, char *argv[])
 					    p->fts_path);
 				}
 			}
-			if (info) {
-				info = 0;
-				(void)printf("\t%s\n", p->fts_path);
-			}
 			break;
 		case FTS_DC:			/* Ignore. */
 			break;
@@ -320,7 +320,9 @@ main(int argc, char *argv[])
 			    howmany(p->fts_statp->st_size, cblocksize) :
 			    howmany(p->fts_statp->st_blocks, cblocksize);
 
-			if (aflag || p->fts_level == 0) {
+			if ((aflag || p->fts_level == 0) && threshold <=
+			    threshold_sign * howmany(curblocks * cblocksize,
+			    blocksize)) {
 				if (hflag > 0) {
 					prthumanval(curblocks);
 					(void)printf("\t%s\n", p->fts_path);
