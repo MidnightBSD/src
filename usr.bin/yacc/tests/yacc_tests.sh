@@ -13,4 +13,4 @@ mkdir "test"
 cp -Rf "$(dirname "$0")"/* "test"
 cp -p /usr/bin/yacc ./yacc
 
-cd "test" && ./run_test
+cd "test" && sh ./run_test.sh
