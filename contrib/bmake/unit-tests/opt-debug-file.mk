@@ -1,4 +1,4 @@
-# $NetBSD: opt-debug-file.mk,v 1.8 2022/01/11 19:47:34 rillig Exp $
+# $NetBSD: opt-debug-file.mk,v 1.13 2025/08/09 23:09:55 rillig Exp $
 #
 # Tests for the -dF command line option, which redirects the debug log
 # to a file instead of writing it to stderr.
@@ -18,7 +18,7 @@ VAR=	value ${:Uexpanded}
 # Make sure that the debug logging file contains some logging.
 DEBUG_OUTPUT:=	${:!cat opt-debug-file.debuglog!}
 # Grmbl.  Because of the := operator in the above line, the variable
-# value contains ${:Uexpanded}.  This variable expression is expanded
+# value contains ${:Uexpanded}.  This expression is expanded
 # when it is used in the condition below.  Therefore, be careful when storing
 # untrusted input in variables.
 #.MAKEFLAGS: -dc -dFstderr
@@ -27,11 +27,21 @@ DEBUG_OUTPUT:=	${:!cat opt-debug-file.debuglog!}
 .endif
 
 # To get the unexpanded text that was actually written to the debug log
-# file, the content of that log file must not be stored in a variable.
+# file, the content of that log file must not be stored in a variable
+# directly.  Instead, it can be processed in a single expression by a chain
+# of modifiers.
 #
 # XXX: In the :M modifier, a dollar is escaped using '$$', not '\$'.  This
 # escaping scheme unnecessarily differs from all other modifiers.
 .if !${:!cat opt-debug-file.debuglog!:tW:M*VAR = value $${:Uexpanded}*}
+.  error
+.endif
+
+# To get the unexpanded text that was actually written to the debug log
+# file, the content of that log file must not be stored in a variable
+# directly.  Instead, each dollar sign must be escaped first.
+DEBUG_OUTPUT:=	${:!cat opt-debug-file.debuglog!:S,\$,\$\$,g}
+.if ${DEBUG_OUTPUT:M*Uexpanded*} != "\${:Uexpanded}"
 .  error
 .endif
 
@@ -40,10 +50,13 @@ DEBUG_OUTPUT:=	${:!cat opt-debug-file.debuglog!}
 
 # See Parse_Error.
 .MAKEFLAGS: -dFstdout
-.  info This goes to stderr only, once.
+# expect+1: This goes to stdout only, once.
+.  info This goes to stdout only, once.
 .MAKEFLAGS: -dFstderr
+# expect+1: This goes to stderr only, once.
 .  info This goes to stderr only, once.
 .MAKEFLAGS: -dFopt-debug-file.debuglog
+# expect+1: This goes to stderr, and in addition to the debug log.
 .  info This goes to stderr, and in addition to the debug log.
 .MAKEFLAGS: -dFstderr -d0c
 .if ${:!cat opt-debug-file.debuglog!:Maddition:[#]} != 1
@@ -51,15 +64,18 @@ DEBUG_OUTPUT:=	${:!cat opt-debug-file.debuglog!}
 .endif
 
 
-# See ApplyModifier_Subst, which calls Error.
+# See Main_ParseArgLine, which calls Error.
 .MAKEFLAGS: -dFstdout
-: This goes to stderr only, once. ${:U:S
+# expect: make: Unterminated quoted string [make 'This goes to stdout only, once.]
+.MAKEFLAGS: 'This goes to stdout only, once.
 .MAKEFLAGS: -dFstderr
-: This goes to stderr only, once. ${:U:S
+# expect: make: Unterminated quoted string [make 'This goes to stderr only, once.]
+.MAKEFLAGS: 'This goes to stderr only, once.
 .MAKEFLAGS: -dFopt-debug-file.debuglog
-: This goes to stderr, and in addition to the debug log. ${:U:S
+# expect: make: Unterminated quoted string [make 'This goes to stderr, and in addition to the debug log.]
+.MAKEFLAGS: 'This goes to stderr, and in addition to the debug log.
 .MAKEFLAGS: -dFstderr -d0c
-.if ${:!cat opt-debug-file.debuglog!:Mdelimiter:[#]} != 1
+.if ${:!cat opt-debug-file.debuglog!:MUnterminated:[#]} != 1
 .  error
 .endif
 

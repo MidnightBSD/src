@@ -1,4 +1,4 @@
-/*	$NetBSD: str.c,v 1.88 2021/12/15 10:57:01 rillig Exp $	*/
+/*	$NetBSD: str.c,v 1.106 2025/06/28 21:09:43 rillig Exp $	*/
 
 /*
  * Copyright (c) 1988, 1989, 1990, 1993
@@ -71,7 +71,7 @@
 #include "make.h"
 
 /*	"@(#)str.c	5.8 (Berkeley) 6/1/90"	*/
-MAKE_RCSID("$NetBSD: str.c,v 1.88 2021/12/15 10:57:01 rillig Exp $");
+MAKE_RCSID("$NetBSD: str.c,v 1.106 2025/06/28 21:09:43 rillig Exp $");
 
 
 static HashTable interned_strings;
@@ -106,6 +106,10 @@ str_concat3(const char *s1, const char *s2, const char *s3)
 /*
  * Fracture a string into an array of words (as delineated by tabs or spaces)
  * taking quotation marks into account.
+ *
+ * A string that is empty or only contains whitespace nevertheless results in
+ * a single word.  This is unexpected in many places, and the caller needs to
+ * correct for this edge case.
  *
  * If expand is true, quotes are removed and escape sequences such as \r, \t,
  * etc... are expanded. In this case, return NULL on parse errors.
@@ -219,7 +223,7 @@ Substring_Words(const char *str, bool expand)
 				if (word_start == NULL)
 					word_start = word_end;
 				*word_end++ = '\\';
-				/* catch '\' at end of line */
+				/* catch lonely '\' at end of string */
 				if (str_p[1] == '\0')
 					continue;
 				ch = *++str_p;
@@ -293,111 +297,112 @@ Str_Words(const char *str, bool expand)
 }
 
 /*
- * Str_Match -- Test if a string matches a pattern like "*.[ch]".
- * The following special characters are known *?\[] (as in fnmatch(3)).
+ * Test if a string matches a pattern like "*.[ch]". The pattern matching
+ * characters are '*', '?' and '[]', as in fnmatch(3).
  *
- * XXX: this function does not detect or report malformed patterns.
+ * See varmod-match.mk for examples and edge cases.
  */
-bool
+StrMatchResult
 Str_Match(const char *str, const char *pat)
 {
-	for (;;) {
-		/*
-		 * See if we're at the end of both the pattern and the
-		 * string. If so, we succeeded.  If we're at the end of the
-		 * pattern but not at the end of the string, we failed.
-		 */
-		if (*pat == '\0')
-			return *str == '\0';
-		if (*str == '\0' && *pat != '*')
-			return false;
+	StrMatchResult res = { NULL, false };
+	bool asterisk = false;
+	const char *fixed_str = str;
+	const char *fixed_pat = pat;
 
-		/*
-		 * A '*' in the pattern matches any substring.  We handle this
-		 * by calling ourselves for each suffix of the string.
-		 */
-		if (*pat == '*') {
-			pat++;
-			while (*pat == '*')
-				pat++;
-			if (*pat == '\0')
-				return true;
-			while (*str != '\0') {
-				if (Str_Match(str, pat))
-					return true;
-				str++;
-			}
-			return false;
-		}
+match_fixed_length:
+	str = fixed_str;
+	pat = fixed_pat;
+	for (; *pat != '\0' && *pat != '*'; str++, pat++) {
+		if (*str == '\0')
+			return res;
 
-		/* A '?' in the pattern matches any single character. */
-		if (*pat == '?')
-			goto thisCharOK;
+		if (*pat == '?')	/* match any single character */
+			continue;
 
-		/*
-		 * A '[' in the pattern matches a character from a list.
-		 * The '[' is followed by the list of acceptable characters,
-		 * or by ranges (two characters separated by '-'). In these
-		 * character lists, the backslash is an ordinary character.
-		 */
-		if (*pat == '[') {
+		if (*pat == '[') {	/* match a character from a list */
 			bool neg = pat[1] == '^';
 			pat += neg ? 2 : 1;
 
-			for (;;) {
-				if (*pat == ']' || *pat == '\0') {
-					if (neg)
-						break;
-					return false;
-				}
-				/*
-				 * XXX: This naive comparison makes the
-				 * control flow of the pattern parser
-				 * dependent on the actual value of the
-				 * string.  This is unpredictable.  It may be
-				 * though that the code only looks wrong but
-				 * actually all code paths result in the same
-				 * behavior.  This needs further tests.
-				 */
-				if (*pat == *str)
-					break;
-				if (pat[1] == '-') {
-					if (pat[2] == '\0')
-						return neg;
-					if (*pat <= *str && pat[2] >= *str)
-						break;
-					if (*pat >= *str && pat[2] <= *str)
-						break;
-					pat += 2;
-				}
-				pat++;
+		next_char_in_list:
+			if (*pat == '\0')
+				res.error = "Unfinished character list";
+			if (*pat == ']' || *pat == '\0') {
+				if (neg)
+					goto end_of_char_list;
+				goto no_match;
 			}
+			if (*pat == *str)
+				goto end_of_char_list;
+			if (pat[1] == '-' && pat[2] == '\0') {
+				res.error = "Unfinished character range";
+				res.matched = neg;
+				return res;
+			}
+			if (pat[1] == '-') {
+				unsigned char e1 = (unsigned char)pat[0];
+				unsigned char c = (unsigned char)*str;
+				unsigned char e2 = (unsigned char)pat[2];
+				if ((e1 <= c && c <= e2)
+				    || (e2 <= c && c <= e1))
+					goto end_of_char_list;
+				pat += 2;
+			}
+			pat++;
+			goto next_char_in_list;
+
+		end_of_char_list:
 			if (neg && *pat != ']' && *pat != '\0')
-				return false;
+				goto no_match;
 			while (*pat != ']' && *pat != '\0')
 				pat++;
-			if (*pat == '\0')
+			if (*pat == '\0') {
+				res.error = "Unfinished character list";
 				pat--;
-			goto thisCharOK;
+			}
+			continue;
 		}
 
-		/*
-		 * A backslash in the pattern matches the character following
-		 * it exactly.
-		 */
-		if (*pat == '\\') {
+		if (*pat == '\\') {	/* match the next character exactly */
 			pat++;
 			if (*pat == '\0')
-				return false;
+				res.error = "Unfinished backslash at the end";
 		}
-
-		if (*pat != *str)
-			return false;
-
-	thisCharOK:
-		pat++;
-		str++;
+		if (*pat != *str) {
+			if (asterisk && str == fixed_str) {
+				while (*str != '\0' && *str != *pat)
+					str++;
+				fixed_str = str;
+				goto match_fixed_length;
+			}
+			goto no_match;
+		}
 	}
+
+	if (*pat == '*') {
+		asterisk = true;
+		while (*pat == '*')
+			pat++;
+		if (*pat == '\0') {
+			res.matched = true;
+			return res;
+		}
+		fixed_str = str;
+		fixed_pat = pat;
+		goto match_fixed_length;
+	}
+	if (asterisk && *str != '\0') {
+		fixed_str += strlen(str);
+		goto match_fixed_length;
+	}
+	res.matched = *str == '\0';
+	return res;
+
+no_match:
+	if (!asterisk)
+		return res;
+	fixed_str++;
+	goto match_fixed_length;
 }
 
 void
@@ -406,13 +411,13 @@ Str_Intern_Init(void)
 	HashTable_Init(&interned_strings);
 }
 
+#ifdef CLEANUP
 void
 Str_Intern_End(void)
 {
-#ifdef CLEANUP
 	HashTable_Done(&interned_strings);
-#endif
 }
+#endif
 
 /* Return a canonical instance of str, with unlimited lifetime. */
 const char *

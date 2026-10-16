@@ -1,4 +1,4 @@
-/* $NetBSD: lst.c,v 1.105 2021/03/15 16:45:30 rillig Exp $ */
+/* $NetBSD: lst.c,v 1.108 2024/04/27 17:33:46 rillig Exp $ */
 
 /*
  * Copyright (c) 1988, 1989, 1990, 1993
@@ -34,7 +34,7 @@
 
 #include "make.h"
 
-MAKE_RCSID("$NetBSD: lst.c,v 1.105 2021/03/15 16:45:30 rillig Exp $");
+MAKE_RCSID("$NetBSD: lst.c,v 1.108 2024/04/27 17:33:46 rillig Exp $");
 
 static ListNode *
 LstNodeNew(ListNode *prev, ListNode *next, void *datum)
@@ -46,15 +46,6 @@ LstNodeNew(ListNode *prev, ListNode *next, void *datum)
 	ln->datum = datum;
 
 	return ln;
-}
-
-/* Create and initialize a new, empty list. */
-List *
-Lst_New(void)
-{
-	List *list = bmake_malloc(sizeof *list);
-	Lst_Init(list);
-	return list;
 }
 
 void
@@ -69,24 +60,15 @@ Lst_Done(List *list)
 }
 
 void
-Lst_DoneCall(List *list, LstFreeProc freeProc)
+Lst_DoneFree(List *list)
 {
 	ListNode *ln, *next;
 
 	for (ln = list->first; ln != NULL; ln = next) {
 		next = ln->next;
-		freeProc(ln->datum);
+		free(ln->datum);
 		free(ln);
 	}
-}
-
-/* Free a list and all its nodes. The node data are not freed though. */
-void
-Lst_Free(List *list)
-{
-
-	Lst_Done(list);
-	free(list);
 }
 
 /* Insert a new node with the datum before the given node. */
@@ -163,6 +145,8 @@ Lst_Remove(List *list, ListNode *ln)
 		list->first = ln->next;
 	if (list->last == ln)
 		list->last = ln->prev;
+
+	free(ln);
 }
 
 /* Replace the datum in the given node with the new datum. */

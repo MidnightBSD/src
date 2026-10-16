@@ -1,4 +1,4 @@
-/*	$NetBSD: hash.h,v 1.46 2022/01/31 22:58:26 rillig Exp $	*/
+/*	$NetBSD: hash.h,v 1.52 2025/04/22 19:28:50 rillig Exp $	*/
 
 /*
  * Copyright (c) 1988, 1989, 1990 The Regents of the University of California.
@@ -72,7 +72,7 @@
  *	from: @(#)hash.h	8.1 (Berkeley) 6/6/93
  */
 
-/* Hash tables with strings as keys and arbitrary pointers as values. */
+/* Hash tables with string keys and pointer values. */
 
 #ifndef MAKE_HASH_H
 #define MAKE_HASH_H
@@ -82,24 +82,22 @@ typedef struct HashEntry {
 	struct HashEntry *next;	/* Used to link together all the entries
 				 * associated with the same bucket. */
 	void *value;
-	unsigned int key_hash;	/* hash value of the key */
+	unsigned hash;		/* hash value of the key */
 	char key[1];		/* key string, variable length */
 } HashEntry;
 
 /* The hash table containing the entries. */
 typedef struct HashTable {
-	HashEntry **buckets;	/* Pointers to HashEntry, one for each bucket
-				 * in the table. */
-	unsigned int bucketsSize;
-	unsigned int numEntries; /* Number of entries in the table. */
-	unsigned int bucketsMask; /* Used to select the bucket for a hash. */
-	unsigned int maxchain;	/* max length of chain detected */
+	HashEntry **buckets;
+	unsigned bucketsSize;
+	unsigned numEntries;
+	unsigned bucketsMask;	/* Used to select the bucket for a hash. */
 } HashTable;
 
 /* State of an iteration over all entries in a table. */
 typedef struct HashIter {
 	HashTable *table;	/* Table being searched. */
-	unsigned int nextBucket; /* Next bucket to check (after current). */
+	unsigned nextBucket;	/* Next bucket to check (after current). */
 	HashEntry *entry;	/* Next entry to check in current bucket. */
 } HashIter;
 
@@ -109,15 +107,15 @@ typedef struct HashSet {
 } HashSet;
 
 MAKE_INLINE void * MAKE_ATTR_USE
-HashEntry_Get(HashEntry *h)
+HashEntry_Get(HashEntry *he)
 {
-	return h->value;
+	return he->value;
 }
 
 MAKE_INLINE void
-HashEntry_Set(HashEntry *h, void *datum)
+HashEntry_Set(HashEntry *he, void *datum)
 {
-	h->value = datum;
+	he->value = datum;
 }
 
 /* Set things up for iterating over all entries in the hash table. */
@@ -133,15 +131,15 @@ void HashTable_Init(HashTable *);
 void HashTable_Done(HashTable *);
 HashEntry *HashTable_FindEntry(HashTable *, const char *) MAKE_ATTR_USE;
 void *HashTable_FindValue(HashTable *, const char *) MAKE_ATTR_USE;
-unsigned int Hash_Substring(Substring) MAKE_ATTR_USE;
-void *HashTable_FindValueBySubstringHash(HashTable *, Substring, unsigned int)
+unsigned Hash_Substring(Substring) MAKE_ATTR_USE;
+void *HashTable_FindValueBySubstringHash(HashTable *, Substring, unsigned)
     MAKE_ATTR_USE;
 HashEntry *HashTable_CreateEntry(HashTable *, const char *, bool *);
 void HashTable_Set(HashTable *, const char *, void *);
 void HashTable_DeleteEntry(HashTable *, HashEntry *);
-void HashTable_DebugStats(HashTable *, const char *);
+void HashTable_DebugStats(const HashTable *, const char *);
 
-HashEntry *HashIter_Next(HashIter *);
+bool HashIter_Next(HashIter *) MAKE_ATTR_USE;
 
 MAKE_INLINE void
 HashSet_Init(HashSet *set)

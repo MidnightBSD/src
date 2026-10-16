@@ -1,4 +1,4 @@
-# $NetBSD: directive-undef.mk,v 1.10 2021/02/16 18:02:19 rillig Exp $
+# $NetBSD: directive-undef.mk,v 1.17 2025/03/29 19:08:52 rillig Exp $
 #
 # Tests for the .undef directive.
 #
@@ -26,6 +26,7 @@
 # to delete the variable with the empty name, which never exists; see
 # varname-empty.mk.  Since var.c 1.737 from 2020-12-19, .undef complains
 # about a missing argument.
+# expect+1: The .undef directive requires an argument
 .undef
 
 
@@ -43,11 +44,11 @@
 3=		3
 ${:U1 2 3}=	one two three
 VARNAMES=	1 2 3
-.undef ${VARNAMES}		# undefines the variable "1 2 3"
-.if !defined(${:U1 2 3})
+.undef ${VARNAMES}		# undefines the variables "1", "2" and "3"
+.if ${${:U1 2 3}} != "one two three"	# still there
 .  error
 .endif
-.if ${1:U_}${2:U_}${3:U_} != "___"	# these are still defined
+.if ${1:U_}${2:U_}${3:U_} != "___"	# these have been undefined
 .  error
 .endif
 
@@ -83,6 +84,7 @@ ${DOLLAR}=	dollar
 #
 # As of var.c 1.762, this doesn't happen though because the error handling
 # in Var_Parse and Var_Subst is not done properly.
+# expect+1: Unknown modifier ":Z"
 .undef ${VARNAMES:L:Z}
 
 
@@ -99,9 +101,48 @@ UT_EXPORTED=	exported-value
 .  error
 .endif
 .if ${.MAKE.EXPORTED:MUT_EXPORTED}
+# expect+1: warning: UT_EXPORTED is still listed in .MAKE.EXPORTED even though spaceit is not exported anymore.
 .  warning UT_EXPORTED is still listed in .MAKE.EXPORTED even though $\
 	   it is not exported anymore.
 .endif
+
+
+# When an exported variable is undefined, the variable is removed both from
+# the global scope as well as from the environment.
+DIRECT=		direct
+INDIRECT=	in-${DIRECT}
+.export DIRECT INDIRECT
+.if ${DIRECT} != "direct"
+.  error
+.endif
+.if ${INDIRECT} != "in-direct"
+.  error
+.endif
+
+# Deletes the variables from the global scope and also from the environment.
+# This applies to both variables, even though 'INDIRECT' is not actually
+# exported yet since it refers to another variable.
+.undef DIRECT			# Separate '.undef' directives,
+.undef INDIRECT			# for backwards compatibility.
+
+.if ${DIRECT:Uundefined} != "undefined"
+.  error
+.endif
+.if ${INDIRECT:Uundefined} != "undefined"
+.  error
+.endif
+
+
+# Since var.c 1.570 from 2020-10-06 and before var.c 1.1014 from 2022-03-26,
+# make ran into an assertion failure when trying to undefine a variable that
+# was based on an environment variable.
+.if ${ENV_VAR} != "env-value"	# see ./Makefile, ENV.directive-undef
+.  error
+.endif
+ENV_VAR+=	appended	# moves the short-lived variable to the
+				# global scope
+.undef ENV_VAR			# removes the variable from both the global
+				# scope and from the environment
 
 
 all:

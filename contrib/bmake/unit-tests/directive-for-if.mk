@@ -1,4 +1,4 @@
-# $NetBSD: directive-for-if.mk,v 1.1 2021/08/30 17:08:13 rillig Exp $
+# $NetBSD: directive-for-if.mk,v 1.3 2023/11/19 21:47:52 rillig Exp $
 #
 # Test for a .for directive that contains an .if directive.
 #
@@ -45,6 +45,9 @@
 # expanded to their bare textual value.
 .for directive in if ifdef ifndef
 .  ${directive} "1" != "0"
+# expect+3: if-less endif
+# expect+2: if-less endif
+# expect+1: if-less endif
 .  endif
 .endfor
 # In 2021, the above code does not generate an error message, even though the
@@ -68,7 +71,7 @@ _!=	echo "${var}" 1>&2; echo # In 2005, '.info' was not invented yet.
 .endfor
 
 # Before for.c 1.39 from 2008-12-21, a common workaround was to surround the
-# variable expression from the .for loop with '"'.  Such a string literal
+# expression from the .for loop with '"'.  Such a string literal
 # has been allowed since cond.c 1.23 from 2004-04-13.  Between that commit and
 # the one from 2008, the parser would still get confused if the value from the
 # .for loop contained '"', which was effectively a code injection.

@@ -1,4 +1,4 @@
-/*	$NetBSD: lst.h,v 1.102 2021/12/15 12:24:13 rillig Exp $	*/
+/*	$NetBSD: lst.h,v 1.105 2024/04/27 17:33:46 rillig Exp $	*/
 
 /*
  * Copyright (c) 1988, 1989, 1990 The Regents of the University of California.
@@ -103,19 +103,10 @@ struct List {
 	ListNode *last;
 };
 
-/* Free the datum of a node, called before freeing the node itself. */
-typedef void LstFreeProc(void *);
-
-/* Create or destroy a list */
-
-/* Create a new list. */
-List *Lst_New(void) MAKE_ATTR_USE;
-/* Free the list nodes, but not the list itself. */
+/* Free the list nodes. */
 void Lst_Done(List *);
-/* Free the list nodes, freeing the node data using the given function. */
-void Lst_DoneCall(List *, LstFreeProc);
-/* Free the list, leaving the node data unmodified. */
-void Lst_Free(List *);
+/* Free the list nodes, as well as each node's datum. */
+void Lst_DoneFree(List *);
 
 #define LST_INIT { NULL, NULL }
 
@@ -142,9 +133,9 @@ ListNode *Lst_FindDatum(List *, const void *) MAKE_ATTR_USE;
 
 /* Insert a datum before the given node. */
 void Lst_InsertBefore(List *, ListNode *, void *);
-/* Add a datum at the front of the list. */
+/* Add a datum at the head of the list. */
 void Lst_Prepend(List *, void *);
-/* Add a datum at the end of the list. */
+/* Add a datum at the tail of the list. */
 void Lst_Append(List *, void *);
 /* Remove the node from the list. */
 void Lst_Remove(List *, ListNode *);

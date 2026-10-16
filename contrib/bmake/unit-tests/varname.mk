@@ -1,18 +1,17 @@
-# $NetBSD: varname.mk,v 1.9 2022/01/27 10:42:02 rillig Exp $
+# $NetBSD: varname.mk,v 1.18 2025/06/28 22:39:29 rillig Exp $
 #
-# Tests for special variables, such as .MAKE or .PARSEDIR.
-# And for variable names in general.
+# Tests for variable names.
 
 .MAKEFLAGS: -dv
 
-# In variable names, braces are allowed, but they must be balanced.
-# Parentheses and braces may be mixed.
+# In a variable assignment, braces are allowed in the variable name, but they
+# must be balanced.  Parentheses and braces may be mixed.
 VAR{{{}}}=	3 braces
 .if "${VAR{{{}}}}" != "3 braces"
 .  error
 .endif
 
-# In variable expressions, the parser works differently.  It doesn't treat
+# In expressions, the parser works differently.  It doesn't treat
 # braces and parentheses equally, therefore the first closing brace already
 # marks the end of the variable name.
 VARNAME=	VAR(((
@@ -27,11 +26,14 @@ ${VARNAME}=	3 open parentheses
 # This is not a variable assignment since the parentheses and braces are not
 # balanced.  At the end of the line, there are still 3 levels open, which
 # means the variable name is not finished.
+# expect+2: Missing ")" in archive specification
+# expect+1: Error in archive specification: "VAR"
 ${:UVAR(((}=	try1
 # On the left-hand side of a variable assignments, the backslash is not parsed
 # as an escape character, therefore the parentheses still count to the nesting
 # level, which at the end of the line is still 3.  Therefore this is not a
 # variable assignment as well.
+# expect+1: Invalid line "${:UVAR\(\(\(}=	try2", expanded to "VAR\(\(\(=	try2"
 ${:UVAR\(\(\(}=	try2
 # To assign to a variable with an arbitrary name, the variable name has to
 # come from an external source, not the text that is parsed in the assignment
@@ -42,7 +44,7 @@ ${VARNAME}=	try3
 .MAKEFLAGS: -d0
 
 # All variable names of a scope are stored in the same hash table, using a
-# simple hash function.  Ensure that HashEntry_KeyEquals handles collisions
+# simple hash function.  Ensure that HashTable_Find handles collisions
 # correctly and that the correct variable is looked up.  The strings "0x" and
 # "1Y" have the same hash code, as 31 * '0' + 'x' == 31 * '1' + 'Y'.
 V.0x=	0x
@@ -83,4 +85,61 @@ ASDZguv.param=		once
 .  error
 .endif
 
-all:
+
+# Warn about expressions in the style of GNU make, as these would silently
+# expand to an empty string instead.
+#
+# https://pubs.opengroup.org/onlinepubs/9799919799/utilities/make.html says:
+#	a macro name shall not contain an <equals-sign>, <blank>, or control
+#	character.
+#
+GNU_MAKE_IF=	$(if ${HAVE_STRLEN},yes,no)
+# expect+1: warning: Invalid character " " in variable name "if ,yes,no"
+.if ${GNU_MAKE_IF} != ""
+.  error
+.endif
+#
+# This requirement needs to be ignored for expressions with a ":L" or ":?:"
+# modifier, as these modifiers rely on arbitrary characters in the expression
+# name.
+.if ${"left" == "right":?equal:unequal} != "unequal"
+.  error
+.endif
+#
+# In fact, this requirement is ignored for any expression that has a modifier.
+# In this indirect case, though, the expression with the space in the name is
+# a nested expression, so the ":U" modifier doesn't affect the warning.
+# expect+1: warning: Invalid character " " in variable name "if ,yes,no"
+.if ${GNU_MAKE_IF:Ufallback} != ""
+.  error
+.endif
+#
+# A modifier in a nested expression does not affect the warning.
+GNU_MAKE_IF_EXPR=	$(if ${HAVE_STRLEN},${HEADERS:.h=.c},)
+# expect+1: warning: Invalid character " " in variable name "if ,,"
+.if ${GNU_MAKE_IF_EXPR} != ""
+.  error
+.endif
+#
+# When the GNU make expression contains a colon, chances are good that the
+# colon is interpreted as an unknown modifier.
+GNU_MAKE_IF_MODIFIER=	$(if ${HAVE_STRLEN},answer:yes,answer:no)
+# expect+1: Unknown modifier ":yes,answer"
+.if ${GNU_MAKE_IF_MODIFIER} != "no)"
+.  error
+.endif
+#
+# If the variable name contains a non-printable character, the warning
+# contains the numeric character value instead, to prevent control sequences
+# in the output.
+CONTROL_CHARACTER=	${:U a b:ts\t}
+# expect+2: warning: Invalid character "\x09" in variable name "a	b"
+# expect+1: Variable "a	b" is undefined
+.if ${${CONTROL_CHARACTER}} != ""
+.endif
+#
+# For now, only whitespace generates a warning, non-ASCII characters don't.
+UMLAUT=		ÄÖÜ
+# expect+1: Variable "ÄÖÜ" is undefined
+.if ${${UMLAUT}} != ""
+.endif
