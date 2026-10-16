@@ -1,5 +1,10 @@
 Updating Information for MidnightBSD users.
 
+20261016:
+	tftp(1): fix packet buffer overflow on over-long file names in
+	send_rrq()/send_wrq(); tftpd(8) now explicitly sets its gid to
+	nobody after dropping supplemental groups.
+
 20261015:
 	rpcinfo(8): CVE-2026-16277, CVE-2026-16461  stack buffer overflows
 	with data from a malicious rpcbind server (rpcinfo -l / -s).
