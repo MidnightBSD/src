@@ -1,5 +1,13 @@
 Updating Information for MidnightBSD users.
 
+20261016:
+	tftp(1): fix packet buffer overflow on over-long file names in
+	send_rrq()/send_wrq(); tftpd(8) now explicitly sets its gid to
+	nobody after dropping supplemental groups.
+
+	mail(1) no longer traps SIGINT/SIGHUP when used non-interactively
+	and exits with the proper status when hung up during send.
+
 20261015:
 	vmstat(8) output is now formatted through libxo and the -z and -m
 	columns are wider; scripts that parse vmstat text output may need
