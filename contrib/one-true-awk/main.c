@@ -22,7 +22,7 @@ ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 ****************************************************************/
 
-const char	*version = "version 20210215";
+const char	*version = "version 20250116";
 
 #define DEBUG
 #include <stdio.h>
@@ -49,7 +49,11 @@ static size_t	maxpfile;	/* max program filename */
 static size_t	npfile;		/* number of filenames */
 static size_t	curpfile;	/* current filename */
 
+bool	CSV = false;	/* true for csv input */
+
 bool	safe = false;	/* true => "safe" mode */
+
+size_t	awk_mb_cur_max = 1;
 
 static noreturn void fpecatch(int n
 #ifdef SA_SIGINFO
@@ -58,22 +62,42 @@ static noreturn void fpecatch(int n
 )
 {
 #ifdef SA_SIGINFO
-	static const char *emsg[] = {
-		[0] = "Unknown error",
-		[FPE_INTDIV] = "Integer divide by zero",
-		[FPE_INTOVF] = "Integer overflow",
-		[FPE_FLTDIV] = "Floating point divide by zero",
-		[FPE_FLTOVF] = "Floating point overflow",
-		[FPE_FLTUND] = "Floating point underflow",
-		[FPE_FLTRES] = "Floating point inexact result",
-		[FPE_FLTINV] = "Invalid Floating point operation",
-		[FPE_FLTSUB] = "Subscript out of range",
-	};
+	const char *mesg = NULL;
+
+	switch (si->si_code) {
+	case FPE_INTDIV:
+		mesg = "Integer divide by zero";
+		break;
+	case FPE_INTOVF:
+		mesg = "Integer overflow";
+		break;
+	case FPE_FLTDIV:
+		mesg = "Floating point divide by zero";
+		break;
+	case FPE_FLTOVF:
+		mesg = "Floating point overflow";
+		break;
+	case FPE_FLTUND:
+		mesg = "Floating point underflow";
+		break;
+	case FPE_FLTRES:
+		mesg = "Floating point inexact result";
+		break;
+	case FPE_FLTINV:
+		mesg = "Invalid Floating point operation";
+		break;
+	case FPE_FLTSUB:
+		mesg = "Subscript out of range";
+		break;
+	case 0:
+	default:
+		mesg = "Unknown error";
+		break;
+	}
 #endif
 	FATAL("floating point exception"
 #ifdef SA_SIGINFO
-		": %s", (size_t)si->si_code < sizeof(emsg) / sizeof(emsg[0]) &&
-		emsg[si->si_code] ? emsg[si->si_code] : emsg[0]
+		": %s", mesg
 #endif
 	    );
 }
@@ -114,10 +138,11 @@ int main(int argc, char *argv[])
 
 	setlocale(LC_CTYPE, "");
 	setlocale(LC_NUMERIC, "C"); /* for parsing cmdline & prog */
+	awk_mb_cur_max = MB_CUR_MAX;
 	cmdname = argv[0];
 	if (argc == 1) {
 		fprintf(stderr,
-		  "usage: %s [-F fs] [-v var=value] [-f progfile | 'prog'] [file ...]\n",
+		  "usage: %s [-F fs | --csv] [-v var=value] [-f progfile | 'prog'] [file ...]\n",
 		  cmdname);
 		exit(1);
 	}
@@ -149,6 +174,12 @@ int main(int argc, char *argv[])
 			argc--;
 			argv++;
 			break;
+		}
+		if (strcmp(argv[1], "--csv") == 0) {	/* turn on csv input processing */
+			CSV = true;
+			argc--;
+			argv++;
+			continue;
 		}
 		switch (argv[1][1]) {
 		case 's':
@@ -188,6 +219,10 @@ int main(int argc, char *argv[])
 		argc--;
 		argv++;
 	}
+
+	if (CSV && (fs != NULL || lookup("FS", symtab) != NULL))
+		WARNING("danger: don't set FS when --csv is in effect");
+
 	/* argv[1] is now the first argument */
 	if (npfile == 0) {	/* no -f; first argument is program */
 		if (argc <= 1) {
