@@ -1,0 +1,4 @@
+make: /usr/src/contrib/bmake/unit-tests/varmod-to-abs.mk:19: does-not-exist.c
+make: /usr/src/contrib/bmake/unit-tests/varmod-to-abs.mk:21: does-not-exist.c
+cached_realpath: /usr/src/contrib/bmake/unit-tests/varmod-to-abs.mk -> /usr/src/contrib/bmake/unit-tests/varmod-to-abs.mk
+make: /usr/src/contrib/bmake/unit-tests/varmod-to-abs.mk:26: /usr/src/contrib/bmake/unit-tests/varmod-to-abs.mk

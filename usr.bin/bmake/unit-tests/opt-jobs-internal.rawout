@@ -1,0 +1,14 @@
+direct: mode=parallel
+make[2]: error: invalid internal option "-J garbage" in "/usr/src/usr.bin/bmake/unit-tests"
+make[2]: warning: Invalid internal option "-J" in "/usr/src/usr.bin/bmake/unit-tests"; see the manual page
+	in make[2] in directory "/usr/src/usr.bin/bmake/unit-tests"
+direct-open: mode=compat
+make[2]: warning: Invalid internal option "-J" in "/usr/src/usr.bin/bmake/unit-tests"; see the manual page
+	in make[2] in directory "/usr/src/usr.bin/bmake/unit-tests"
+indirect-open: mode=compat
+indirect-expr: mode=parallel
+make[2]: warning: Invalid internal option "-J" in "/usr/src/usr.bin/bmake/unit-tests"; see the manual page
+	in make[2] in directory "/usr/src/usr.bin/bmake/unit-tests"
+indirect-comment: mode=compat
+indirect-silent-comment: mode=parallel
+indirect-expr-empty: mode=parallel

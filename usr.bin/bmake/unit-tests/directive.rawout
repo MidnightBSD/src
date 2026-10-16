@@ -1,0 +1,13 @@
+make: /usr/src/contrib/bmake/unit-tests/directive.mk:10: Unknown directive "indented"
+make: /usr/src/contrib/bmake/unit-tests/directive.mk:12: Unknown directive "indented"
+make: /usr/src/contrib/bmake/unit-tests/directive.mk:14: Unknown directive "indented"
+make: /usr/src/contrib/bmake/unit-tests/directive.mk:19: Unknown directive ""
+Global: .info = # (empty)
+Global: .info = value
+make: /usr/src/contrib/bmake/unit-tests/directive.mk:31: :=	value
+Global: .MAKEFLAGS =  -r -k -d v -d
+Global: .MAKEFLAGS =  -r -k -d v -d 0
+make: /usr/src/contrib/bmake/unit-tests/directive.mk:40: Invalid line "target-without-colon"
+make: /usr/src/contrib/bmake/unit-tests/directive.mk:43: Invalid line "target-without-colon another-target"
+make: Fatal errors encountered -- cannot continue
+make: stopped making ".target" in /usr/src/usr.bin/bmake/unit-tests

@@ -1,0 +1,44 @@
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:13: Unknown directive "dinclud"
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:16: Unknown directive "dincludx"
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:18: .include filename must be delimited by "" or <>
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:21: Unknown directive "erro"
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:23: Unknown directive "errox"
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:28: Unknown directive "expor"
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:31: Unknown directive "exporx"
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:33: Unknown directive "exports"
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:36: Unknown directive "export-en"
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:40: Unknown directive "export-environment"
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:43: Unknown directive "export-litera"
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:46: Unknown directive "export-literax"
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:48: Unknown directive "export-literally"
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:51: Unknown directive "-includ"
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:54: Unknown directive "-includx"
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:56: .include filename must be delimited by "" or <>
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:59: Unknown directive "includ"
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:61: Could not find file
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:63: Unknown directive "includx"
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:65: .include filename must be delimited by "" or <>
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:68: Unknown directive "inf"
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:70: msg
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:72: Unknown directive "infx"
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:74: Unknown directive "infos"
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:77: Unknown directive "sinclud"
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:80: Unknown directive "sincludx"
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:82: .include filename must be delimited by "" or <>
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:85: Unknown directive "unde"
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:88: Unknown directive "undex"
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:90: Unknown directive "undefs"
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:93: Unknown directive "unexpor"
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:96: Unknown directive "unexporx"
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:98: Unknown directive "unexports"
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:101: Unknown directive "unexport-en"
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:104: The directive .unexport-env does not take arguments
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:106: Unknown directive "unexport-enx"
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:108: Unknown directive "unexport-envs"
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:111: Unknown directive "warn"
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:113: Unknown directive "warnin"
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:115: warning: msg
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:117: Unknown directive "warninx"
+make: /usr/src/contrib/bmake/unit-tests/directive-misspellings.mk:119: Unknown directive "warnings"
+make: Fatal errors encountered -- cannot continue
+make: stopped in /usr/src/usr.bin/bmake/unit-tests

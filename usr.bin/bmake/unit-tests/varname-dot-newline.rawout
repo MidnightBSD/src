@@ -1,0 +1,12 @@
+make[1]: /usr/src/contrib/bmake/unit-tests/varname-dot-newline.mk:28: Cannot overwrite ".newline" as it is read-only
+	in make[1] in directory "/usr/src/usr.bin/bmake/unit-tests"
+make[1]: /usr/src/contrib/bmake/unit-tests/varname-dot-newline.mk:30: Cannot append to ".newline" as it is read-only
+	in make[1] in directory "/usr/src/usr.bin/bmake/unit-tests"
+make[1]: /usr/src/contrib/bmake/unit-tests/varname-dot-newline.mk:32: Cannot delete ".newline" as it is read-only
+	in make[1] in directory "/usr/src/usr.bin/bmake/unit-tests"
+make[1]: Fatal errors encountered -- cannot continue
+make[1]: stopped making "try-to-modify" in /usr/src/usr.bin/bmake/unit-tests
+first
+second
+backslash newline: <\
+>

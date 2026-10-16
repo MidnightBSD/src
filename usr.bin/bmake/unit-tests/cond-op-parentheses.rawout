@@ -1,0 +1,6 @@
+make: /usr/src/contrib/bmake/unit-tests/cond-op-parentheses.mk:22: Comparison with ">" requires both operands "3" and "(2" to be numeric
+make: /usr/src/contrib/bmake/unit-tests/cond-op-parentheses.mk:25: Malformed conditional "(3) > 2"
+make: /usr/src/contrib/bmake/unit-tests/cond-op-parentheses.mk:44: Malformed conditional "("
+make: /usr/src/contrib/bmake/unit-tests/cond-op-parentheses.mk:58: Malformed conditional ")"
+make: Fatal errors encountered -- cannot continue
+make: stopped making "all" in /usr/src/usr.bin/bmake/unit-tests

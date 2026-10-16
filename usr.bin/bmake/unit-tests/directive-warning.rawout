@@ -1,0 +1,10 @@
+make: /usr/src/contrib/bmake/unit-tests/directive-warning.mk:10: Unknown directive "warn"
+make: /usr/src/contrib/bmake/unit-tests/directive-warning.mk:12: Unknown directive "warn"
+make: /usr/src/contrib/bmake/unit-tests/directive-warning.mk:14: Unknown directive "warnin"
+make: /usr/src/contrib/bmake/unit-tests/directive-warning.mk:16: Unknown directive "warnin"
+make: /usr/src/contrib/bmake/unit-tests/directive-warning.mk:18: Missing argument for ".warning"
+make: /usr/src/contrib/bmake/unit-tests/directive-warning.mk:20: warning: message
+make: /usr/src/contrib/bmake/unit-tests/directive-warning.mk:22: Unknown directive "warnings"
+make: /usr/src/contrib/bmake/unit-tests/directive-warning.mk:24: Unknown directive "warnings"
+make: Fatal errors encountered -- cannot continue
+make: stopped making "all" in /usr/src/usr.bin/bmake/unit-tests

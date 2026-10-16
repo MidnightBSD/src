@@ -1,0 +1,16 @@
+make: /usr/src/contrib/bmake/unit-tests/include-main.mk:15: main-before-ok
+make: /usr/src/contrib/bmake/unit-tests/include-main.mk:23: main-before-for-ok
+make: /usr/src/contrib/bmake/unit-tests/include-sub.inc:4: sub-before-ok
+make: /usr/src/contrib/bmake/unit-tests/include-sub.inc:14: sub-before-for-ok
+Parsing /usr/src/contrib/bmake/unit-tests/include-subsub.inc:5: .  info subsub-ok
+make: /usr/src/contrib/bmake/unit-tests/include-subsub.inc:5: subsub-ok
+	in .for loop from /usr/src/contrib/bmake/unit-tests/include-sub.inc:31 with i = include
+	in .for loop from /usr/src/contrib/bmake/unit-tests/include-sub.inc:30 with i = nested
+	in .for loop from /usr/src/contrib/bmake/unit-tests/include-sub.inc:29 with i = deeply
+	in /usr/src/contrib/bmake/unit-tests/include-main.mk:29
+Parsing /usr/src/contrib/bmake/unit-tests/include-subsub.inc:6: .MAKEFLAGS: -d0
+ParseDependency(.MAKEFLAGS: -d0)
+make: /usr/src/contrib/bmake/unit-tests/include-sub.inc:38: sub-after-ok
+make: /usr/src/contrib/bmake/unit-tests/include-sub.inc:45: sub-after-for-ok
+make: /usr/src/contrib/bmake/unit-tests/include-main.mk:33: main-after-ok
+make: /usr/src/contrib/bmake/unit-tests/include-main.mk:41: main-after-for-ok

@@ -1,0 +1,10 @@
+DIFF=diff
+DIFF_FLAGS=-u
+EGREP=egrep
+MAKELEVEL=1
+TMPDIR=/tmp/uid0
+UT_DOLLAR=This is $UT_FU
+UT_FOO=foobar is fubar
+UT_FU=fubar
+UT_TEST=export
+UT_ZOO=hoopie

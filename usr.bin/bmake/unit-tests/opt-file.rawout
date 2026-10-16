@@ -1,0 +1,10 @@
+value
+value
+line-with-trailing-whitespace
+make[1]: (stdin):1: Zero byte read from file
+	in make[1] in directory "/usr/src/usr.bin/bmake/unit-tests"
+*** Error code 2 (continuing)
+`all' not remade because of errors.
+
+Stop.
+make: stopped making "all" in /usr/src/usr.bin/bmake/unit-tests

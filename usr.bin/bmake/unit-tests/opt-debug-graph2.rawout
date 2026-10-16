@@ -1,0 +1,97 @@
+: 'Making made-target.'
+false
+*** Error code 1 (continuing)
+false
+*** Error code 1 (continuing)
+`all' not remade because of errors.
+#*** Begin input graph for pass 2 in /usr/src/usr.bin/bmake/unit-tests:
+# made-target, made, type OP_DEPENDS|OP_PHONY|OP_HAS_COMMANDS|OP_DEPS_FOUND|OP_MARK, flags REMAKE|DONE_ALLSRC
+#
+# *** MAIN TARGET ***
+# No unmade children
+# last modified 21:19:36 Oct 15, 2026: made
+# parents: all
+made-target     :
+	(null)
+
+
+# error-target, error when made, type OP_DEPENDS|OP_PHONY|OP_HAS_COMMANDS|OP_DEPS_FOUND|OP_MARK, flags REMAKE|DONE_ALLSRC
+#
+# No unmade children
+# nonexistent (maybe): error when made
+# parents: all
+error-target    :
+	(null)
+
+
+# aborted-target, aborted, type OP_DEPENDS|OP_PHONY|OP_DEPS_FOUND|OP_MARK, flags none
+# aborted-target-dependency, error when made, type OP_DEPENDS|OP_PHONY|OP_HAS_COMMANDS|OP_DEPS_FOUND|OP_MARK, flags REMAKE|DONE_ALLSRC
+#
+# No unmade children
+# nonexistent (maybe): error when made
+# parents: aborted-target
+aborted-target-dependency:
+	(null)
+
+
+# all, aborted, type OP_DEPENDS|OP_DEPS_FOUND, flags CHILDMADE|FORCE
+#
+# 3 unmade children
+# nonexistent (maybe): aborted
+all             : made-target error-target aborted-target
+
+
+# .END, unmade, type OP_SPECIAL, flags none
+
+
+#
+#   Files that are only sources:
+#	.END [.END]
+#*** Global Variables:
+.ALLTARGETS      =  made-target error-target aborted-target aborted-target-dependency all .END
+.CURDIR          = /usr/src/usr.bin/bmake/unit-tests
+.INCLUDES        = # (empty)
+.LIBS            = # (empty)
+.MAKE            = /compat/linux/tmp/claude-0/-compat-linux-usr-src/ed4c6f3b-3c66-41db-88ba-60426fd1abe0/scratchpad/obj/usr/src/amd64.amd64/usr.bin/bmake/make
+.MAKE.DEPENDFILE = .depend
+.MAKE.GID        = 0
+.MAKE.JOBS.C     = yes
+.MAKE.LEVEL      = 0
+.MAKE.LEVEL.ENV  = MAKELEVEL
+.MAKE.MAKEFILES  = /usr/src/contrib/bmake/unit-tests/opt-debug-graph2.mk
+.MAKE.MAKEFILE_PREFERENCE = makefile Makefile
+.MAKE.OS         = MidnightBSD
+.MAKE.PATH_FILEMON = /dev/filemon
+.MAKE.PID        = 45908
+.MAKE.PPID       = 45907
+.MAKE.UID        = 0
+.MAKEFLAGS       =  -r -k -d g2
+.MAKEOVERRIDES   = # (empty)
+.OBJDIR          = /usr/src/usr.bin/bmake/unit-tests
+.PATH            = . /usr/src/usr.bin/bmake/unit-tests
+.SYSPATH         = /usr/src/share/mk /usr/share/mk
+.TARGETS         =  all
+.newline         = 
+# (ends with space)
+MACHINE          = amd64
+MACHINE_ARCH     = amd64
+MAKE             = /compat/linux/tmp/claude-0/-compat-linux-usr-src/ed4c6f3b-3c66-41db-88ba-60426fd1abe0/scratchpad/obj/usr/src/amd64.amd64/usr.bin/bmake/make
+MAKE_VERSION     = 20251111
+MFLAGS           =   -r -k -d g2
+#*** Command-line Variables:
+.SHELL           = /bin/sh
+
+#*** Directory Cache:
+# Stats: 0 hits 4 misses 0 near misses 0 losers (0%)
+#  refs  hits  directory
+#     1     0  /usr/src/usr.bin/bmake/unit-tests
+#     1     0  .
+#     2     0  /usr/src/share/mk
+#     2     0  /usr/share/mk
+
+#*** Suffixes:
+#*** Transformations:
+#*** End input graph for pass 2 in /usr/src/usr.bin/bmake/unit-tests:
+
+Stop.
+make: stopped making "all" in /usr/src/usr.bin/bmake/unit-tests

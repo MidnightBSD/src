@@ -1,0 +1,4 @@
+make: /usr/src/usr.bin/bmake/unit-tests/directive-hyphen-include-error.inc:1: Invalid line "syntax error"
+	in /usr/src/contrib/bmake/unit-tests/directive-hyphen-include.mk:20
+make: Fatal errors encountered -- cannot continue
+make: stopped making "all" in /usr/src/usr.bin/bmake/unit-tests

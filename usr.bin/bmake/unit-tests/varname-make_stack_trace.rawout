@@ -1,0 +1,39 @@
+make[2]: Unknown modifier ":Z"
+	while evaluating "${:Z}" with value ""
+	in command "@echo ${:Z}"
+	in target "provoke-error"
+	in make[2] in directory "/usr/src/usr.bin/bmake/unit-tests"
+*** Error code 2 (continuing)
+
+Stop.
+make[1]: stopped making "disabled-compat" in /usr/src/usr.bin/bmake/unit-tests
+make[2]: Unknown modifier ":Z"
+	while evaluating "${:Z}" with value ""
+	in command "@echo ${:Z}"
+	in target "provoke-error"
+	in make[2] in directory "/usr/src/usr.bin/bmake/unit-tests"
+*** [disabled-parallel] Error code 2
+
+make[1]: stopped making "disabled-parallel" in /usr/src/usr.bin/bmake/unit-tests
+make[2]: Unknown modifier ":Z"
+	while evaluating "${:Z}" with value ""
+	in command "@echo ${:Z}"
+	in target "provoke-error"
+	in make[2] in directory "/usr/src/usr.bin/bmake/unit-tests"
+	in command "/compat/linux/tmp/claude-0/-compat-linux-usr-src/ed4c6f3b-3c66-41db-88ba-60426fd1abe0/scratchpad/obj/usr/src/amd64.amd64/usr.bin/bmake/make -f /usr/src/contrib/bmake/unit-tests/varname-make_stack_trace.mk provoke-error"
+	in target "enabled-compat"
+	in make[1] in directory "/usr/src/usr.bin/bmake/unit-tests"
+*** Error code 2 (continuing)
+
+Stop.
+make[1]: stopped making "enabled-compat" in /usr/src/usr.bin/bmake/unit-tests
+make[2]: Unknown modifier ":Z"
+	while evaluating "${:Z}" with value ""
+	in command "@echo ${:Z}"
+	in target "provoke-error"
+	in make[2] in directory "/usr/src/usr.bin/bmake/unit-tests"
+	in target "enabled-parallel"
+	in make[1] in directory "/usr/src/usr.bin/bmake/unit-tests"
+*** [enabled-parallel] Error code 2
+
+make[1]: stopped making "enabled-parallel" in /usr/src/usr.bin/bmake/unit-tests

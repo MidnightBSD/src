@@ -1,0 +1,4 @@
+make: /usr/src/contrib/bmake/unit-tests/varname-dollar.mk:17: dollar is $.
+make: /usr/src/contrib/bmake/unit-tests/varname-dollar.mk:19: dollar in braces is .
+make: /usr/src/contrib/bmake/unit-tests/varname-dollar.mk:28: dollar is $.
+make: /usr/src/contrib/bmake/unit-tests/varname-dollar.mk:30: dollar in braces is dollar.

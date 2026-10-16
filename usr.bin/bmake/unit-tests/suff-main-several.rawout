@@ -1,0 +1,147 @@
+Parsing /usr/src/contrib/bmake/unit-tests/suff-main-several.mk:8: .1.2 .1.3 .1.4:
+ParseDependency(.1.2 .1.3 .1.4:)
+Setting main node to ".1.2"
+Parsing /usr/src/contrib/bmake/unit-tests/suff-main-several.mk:9: 	: Making ${.TARGET} from ${.IMPSRC}.
+Parsing /usr/src/contrib/bmake/unit-tests/suff-main-several.mk:14: next-main:
+ParseDependency(next-main:)
+Parsing /usr/src/contrib/bmake/unit-tests/suff-main-several.mk:15: 	: Making ${.TARGET}
+Parsing /usr/src/contrib/bmake/unit-tests/suff-main-several.mk:19: .SUFFIXES: .1 .2 .3 .4
+ParseDependency(.SUFFIXES: .1 .2 .3 .4)
+Adding suffix ".1"
+Adding suffix ".2"
+Setting main node from ".1.2" back to null
+defining transformation from `.1' to `.2'
+inserting ".1" (1) at end of list
+inserting ".2" (2) at end of list
+Setting main node to ".1.3"
+Adding suffix ".3"
+Setting main node from ".1.3" back to null
+defining transformation from `.1' to `.3'
+inserting ".1" (1) at end of list
+inserting ".3" (3) at end of list
+Setting main node to ".1.4"
+Adding suffix ".4"
+Setting main node from ".1.4" back to null
+defining transformation from `.1' to `.4'
+inserting ".1" (1) at end of list
+inserting ".4" (4) at end of list
+Setting main node to "next-main"
+Parsing /usr/src/contrib/bmake/unit-tests/suff-main-several.mk:24: .SUFFIXES:
+ParseDependency(.SUFFIXES:)
+Clearing all suffixes
+Parsing /usr/src/contrib/bmake/unit-tests/suff-main-several.mk:32: .SUFFIXES: .4 .3 .2 .1
+ParseDependency(.SUFFIXES: .4 .3 .2 .1)
+Adding suffix ".4"
+Adding suffix ".3"
+Adding suffix ".2"
+Adding suffix ".1"
+Parsing /usr/src/contrib/bmake/unit-tests/suff-main-several.mk:33: .SUFFIXES:
+ParseDependency(.SUFFIXES:)
+Clearing all suffixes
+Parsing /usr/src/contrib/bmake/unit-tests/suff-main-several.mk:34: .SUFFIXES: .1 .2 .3 .4
+ParseDependency(.SUFFIXES: .1 .2 .3 .4)
+Adding suffix ".1"
+Adding suffix ".2"
+Adding suffix ".3"
+Adding suffix ".4"
+Parsing /usr/src/contrib/bmake/unit-tests/suff-main-several.mk:35: .SUFFIXES:
+ParseDependency(.SUFFIXES:)
+Clearing all suffixes
+Parsing /usr/src/contrib/bmake/unit-tests/suff-main-several.mk:36: .SUFFIXES: .4 .3 .2 .1
+ParseDependency(.SUFFIXES: .4 .3 .2 .1)
+Adding suffix ".4"
+Adding suffix ".3"
+Adding suffix ".2"
+Adding suffix ".1"
+Parsing /usr/src/contrib/bmake/unit-tests/suff-main-several.mk:38: suff-main-several.1:
+ParseDependency(suff-main-several.1:)
+Parsing /usr/src/contrib/bmake/unit-tests/suff-main-several.mk:39: 	: Making ${.TARGET} out of nothing.
+Parsing /usr/src/contrib/bmake/unit-tests/suff-main-several.mk:40: next-main: suff-main-several.{2,3,4}
+ParseDependency(next-main: suff-main-several.{2,3,4})
+Target "next-main" depends on "suff-main-several.{2,3,4}"
+# next-main, unmade, type OP_DEPENDS|OP_HAS_COMMANDS, flags none
+# suff-main-several.{2,3,4}, unmade, type none, flags none
+Parsing /usr/src/contrib/bmake/unit-tests/suff-main-several.mk:42: .MAKEFLAGS: -d0 -dg1
+ParseDependency(.MAKEFLAGS: -d0 -dg1)
+#*** Begin input graph for pass 1 in /usr/src/usr.bin/bmake/unit-tests:
+# .1.2, unmade, type OP_TRANSFORM, flags none
+# .1.3, unmade, type OP_TRANSFORM, flags none
+# .1.4, unmade, type OP_TRANSFORM, flags none
+# next-main, unmade, type OP_DEPENDS|OP_HAS_COMMANDS, flags none
+# suff-main-several.1, unmade, type OP_DEPENDS|OP_HAS_COMMANDS, flags none
+# suff-main-several.{2,3,4}, unmade, type none, flags none
+
+
+#
+#   Files that are only sources:
+#	.1.2 [.1.2]
+#	.1.3 [.1.3]
+#	.1.4 [.1.4]
+#	suff-main-several.{2,3,4} [suff-main-several.{2,3,4}]
+#*** Global Variables:
+.ALLTARGETS      =  .1.2 .1.3 .1.4 next-main suff-main-several.1 suff-main-several.{2,3,4}
+.CURDIR          = /usr/src/usr.bin/bmake/unit-tests
+.INCLUDES        = # (empty)
+.LIBS            = # (empty)
+.MAKE            = /compat/linux/tmp/claude-0/-compat-linux-usr-src/ed4c6f3b-3c66-41db-88ba-60426fd1abe0/scratchpad/obj/usr/src/amd64.amd64/usr.bin/bmake/make
+.MAKE.DEPENDFILE = .depend
+.MAKE.GID        = 0
+.MAKE.JOBS.C     = yes
+.MAKE.LEVEL      = 0
+.MAKE.LEVEL.ENV  = MAKELEVEL
+.MAKE.MAKEFILES  = /usr/src/contrib/bmake/unit-tests/suff-main-several.mk
+.MAKE.MAKEFILE_PREFERENCE = makefile Makefile
+.MAKE.OS         = MidnightBSD
+.MAKE.PATH_FILEMON = /dev/filemon
+.MAKE.PID        = 49059
+.MAKE.PPID       = 49058
+.MAKE.UID        = 0
+.MAKEFLAGS       =  -r -k -d mps -d 0 -d g1
+.MAKEOVERRIDES   = # (empty)
+.OBJDIR          = /usr/src/usr.bin/bmake/unit-tests
+.PATH            = . /usr/src/usr.bin/bmake/unit-tests
+.SYSPATH         = /usr/src/share/mk /usr/share/mk
+.TARGETS         = # (empty)
+.newline         = 
+# (ends with space)
+MACHINE          = amd64
+MACHINE_ARCH     = amd64
+MAKE             = /compat/linux/tmp/claude-0/-compat-linux-usr-src/ed4c6f3b-3c66-41db-88ba-60426fd1abe0/scratchpad/obj/usr/src/amd64.amd64/usr.bin/bmake/make
+MAKE_VERSION     = 20251111
+MFLAGS           =   -r -k -d mps -d 0 -d g1
+#*** Command-line Variables:
+
+#*** Directory Cache:
+# Stats: 0 hits 2 misses 0 near misses 0 losers (0%)
+#  refs  hits  directory
+#     1     0  /usr/src/usr.bin/bmake/unit-tests
+#     1     0  .
+#     2     0  /usr/src/share/mk
+#     2     0  /usr/share/mk
+
+#*** Suffixes:
+# ".4" (num 1, ref 1)
+#	To: 
+#	From: 
+#	Search Path: 
+# ".3" (num 2, ref 1)
+#	To: 
+#	From: 
+#	Search Path: 
+# ".2" (num 3, ref 1)
+#	To: 
+#	From: 
+#	Search Path: 
+# ".1" (num 4, ref 1)
+#	To: 
+#	From: 
+#	Search Path: 
+#*** Transformations:
+#*** End input graph for pass 1 in /usr/src/usr.bin/bmake/unit-tests:
+make: don't know how to make suff-main-several.2 (continuing)
+make: don't know how to make suff-main-several.3 (continuing)
+make: don't know how to make suff-main-several.4 (continuing)
+`next-main' not remade because of errors.
+
+Stop.
+make: stopped making "next-main" in /usr/src/usr.bin/bmake/unit-tests

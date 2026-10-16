@@ -1,0 +1,8 @@
+make[1]: /usr/src/contrib/bmake/unit-tests/cond-late.mk:29: Bad condition
+	while evaluating condition " != "no""
+	while evaluating variable "VAR" with value "${${UNDEF} != "no":?:}"
+	in make[1] in directory "/usr/src/usr.bin/bmake/unit-tests"
+make[1]: Fatal errors encountered -- cannot continue
+make[1]: stopped making "do-parse-time" in /usr/src/usr.bin/bmake/unit-tests
+yes
+no

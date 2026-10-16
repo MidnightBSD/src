@@ -1,0 +1,14 @@
+/compat/linux/tmp/claude-0/-compat-linux-usr-src/ed4c6f3b-3c66-41db-88ba-60426fd1abe0/scratchpad/obj/usr/src/amd64.amd64/usr.bin/bmake/make -f /usr/src/contrib/bmake/unit-tests/jobs-error-nested.mk nested
+false
+*** [nested] Error code 1
+
+make[1]: stopped making "nested" in /usr/src/usr.bin/bmake/unit-tests
+make[1]: 1 error
+
+make[1]: stopped making "nested" in /usr/src/usr.bin/bmake/unit-tests
+*** [all] Error code 2
+
+make: stopped making "all" in /usr/src/usr.bin/bmake/unit-tests
+make: 1 error
+
+make: stopped making "all" in /usr/src/usr.bin/bmake/unit-tests

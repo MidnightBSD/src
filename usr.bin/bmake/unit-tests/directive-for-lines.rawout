@@ -1,0 +1,9 @@
+make: /usr/src/contrib/bmake/unit-tests/directive-for-lines.mk:31: This is line 31.
+make: /usr/src/contrib/bmake/unit-tests/directive-for-lines.mk:31: This is line 31.
+make: /usr/src/contrib/bmake/unit-tests/directive-for-lines.mk:38: This is line 38.
+make: /usr/src/contrib/bmake/unit-tests/directive-for-lines.mk:31: This is line 31.
+make: /usr/src/contrib/bmake/unit-tests/directive-for-lines.mk:31: This is line 31.
+make: /usr/src/contrib/bmake/unit-tests/directive-for-lines.mk:38: This is line 38.
+make: no target to make.
+
+make: stopped in /usr/src/usr.bin/bmake/unit-tests

@@ -1,0 +1,5 @@
+make: Graph cycles through suff-self.suff
+`all' not remade because of errors.
+
+Stop.
+make: stopped making "all" in /usr/src/usr.bin/bmake/unit-tests

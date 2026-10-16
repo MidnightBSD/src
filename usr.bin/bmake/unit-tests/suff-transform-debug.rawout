@@ -1,0 +1,68 @@
+#*** Begin input graph for pass 1 in /usr/src/usr.bin/bmake/unit-tests:
+# all, unmade, type OP_DEPENDS, flags none
+
+
+#
+#   Files that are only sources:
+#*** Global Variables:
+.ALLTARGETS      =  all
+.CURDIR          = /usr/src/usr.bin/bmake/unit-tests
+.INCLUDES        = # (empty)
+.LIBS            = # (empty)
+.MAKE            = /compat/linux/tmp/claude-0/-compat-linux-usr-src/ed4c6f3b-3c66-41db-88ba-60426fd1abe0/scratchpad/obj/usr/src/amd64.amd64/usr.bin/bmake/make
+.MAKE.DEPENDFILE = .depend
+.MAKE.GID        = 0
+.MAKE.JOBS.C     = yes
+.MAKE.LEVEL      = 0
+.MAKE.LEVEL.ENV  = MAKELEVEL
+.MAKE.MAKEFILES  = /usr/src/contrib/bmake/unit-tests/suff-transform-debug.mk
+.MAKE.MAKEFILE_PREFERENCE = makefile Makefile
+.MAKE.OS         = MidnightBSD
+.MAKE.PATH_FILEMON = /dev/filemon
+.MAKE.PID        = 49096
+.MAKE.PPID       = 49095
+.MAKE.UID        = 0
+.MAKEFLAGS       =  -r -k -d g1
+.MAKEOVERRIDES   = # (empty)
+.OBJDIR          = /usr/src/usr.bin/bmake/unit-tests
+.PATH            = . /usr/src/usr.bin/bmake/unit-tests
+.SYSPATH         = /usr/src/share/mk /usr/share/mk
+.TARGETS         = # (empty)
+.newline         = 
+# (ends with space)
+MACHINE          = amd64
+MACHINE_ARCH     = amd64
+MAKE             = /compat/linux/tmp/claude-0/-compat-linux-usr-src/ed4c6f3b-3c66-41db-88ba-60426fd1abe0/scratchpad/obj/usr/src/amd64.amd64/usr.bin/bmake/make
+MAKE_VERSION     = 20251111
+MFLAGS           =   -r -k -d g1
+#*** Command-line Variables:
+
+#*** Directory Cache:
+# Stats: 0 hits 2 misses 0 near misses 0 losers (0%)
+#  refs  hits  directory
+#     1     0  /usr/src/usr.bin/bmake/unit-tests
+#     1     0  .
+#     2     0  /usr/src/share/mk
+#     2     0  /usr/share/mk
+
+#*** Suffixes:
+# ".a" (num 1, ref 2)
+#	To: 
+#	From: .cpp 
+#	Search Path: 
+# ".c" (num 2, ref 2)
+#	To: .cpp 
+#	From: 
+#	Search Path: 
+# ".cpp" (num 3, ref 3)
+#	To: .a 
+#	From: .c 
+#	Search Path: 
+#*** Transformations:
+.c.cpp          :
+	: Making ${.TARGET} from impsrc ${.IMPSRC} allsrc ${.ALLSRC}.
+
+.cpp.a          :
+	: Making ${.TARGET} from impsrc ${.IMPSRC} allsrc ${.ALLSRC}.
+
+#*** End input graph for pass 1 in /usr/src/usr.bin/bmake/unit-tests:

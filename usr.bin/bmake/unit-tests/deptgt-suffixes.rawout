@@ -1,0 +1,87 @@
+#*** Begin input graph for pass 1 in /usr/src/usr.bin/bmake/unit-tests:
+# deptgt-suffixes.src-left, unmade, type OP_DEPENDS|OP_HAS_COMMANDS, flags none
+# all, unmade, type OP_DEPENDS, flags none
+# deptgt-suffixes.tgt-right, unmade, type none, flags none
+# deptgt-suffixes.src-right, unmade, type OP_DEPENDS|OP_HAS_COMMANDS, flags none
+# deptgt-suffixes.tgt-left, unmade, type none, flags none
+
+
+#
+#   Files that are only sources:
+#	deptgt-suffixes.tgt-right [deptgt-suffixes.tgt-right]
+#	deptgt-suffixes.tgt-left [deptgt-suffixes.tgt-left]
+#*** Global Variables:
+.ALLTARGETS      =  deptgt-suffixes.src-left all deptgt-suffixes.tgt-right deptgt-suffixes.src-right deptgt-suffixes.tgt-left
+.CURDIR          = /usr/src/usr.bin/bmake/unit-tests
+.INCLUDES        = # (empty)
+.LIBS            = # (empty)
+.MAKE            = /compat/linux/tmp/claude-0/-compat-linux-usr-src/ed4c6f3b-3c66-41db-88ba-60426fd1abe0/scratchpad/obj/usr/src/amd64.amd64/usr.bin/bmake/make
+.MAKE.DEPENDFILE = .depend
+.MAKE.GID        = 0
+.MAKE.JOBS.C     = yes
+.MAKE.LEVEL      = 0
+.MAKE.LEVEL.ENV  = MAKELEVEL
+.MAKE.MAKEFILES  = /usr/src/contrib/bmake/unit-tests/deptgt-suffixes.mk
+.MAKE.MAKEFILE_PREFERENCE = makefile Makefile
+.MAKE.OS         = MidnightBSD
+.MAKE.PATH_FILEMON = /dev/filemon
+.MAKE.PID        = 44713
+.MAKE.PPID       = 44712
+.MAKE.UID        = 0
+.MAKEFLAGS       =  -r -k -d g1
+.MAKEOVERRIDES   = # (empty)
+.OBJDIR          = /usr/src/usr.bin/bmake/unit-tests
+.PATH            = . /usr/src/usr.bin/bmake/unit-tests
+.SYSPATH         = /usr/src/share/mk /usr/share/mk
+.TARGETS         =  all
+.newline         = 
+# (ends with space)
+MACHINE          = amd64
+MACHINE_ARCH     = amd64
+MAKE             = /compat/linux/tmp/claude-0/-compat-linux-usr-src/ed4c6f3b-3c66-41db-88ba-60426fd1abe0/scratchpad/obj/usr/src/amd64.amd64/usr.bin/bmake/make
+MAKE_VERSION     = 20251111
+MFLAGS           =   -r -k -d g1
+#*** Command-line Variables:
+
+#*** Directory Cache:
+# Stats: 0 hits 2 misses 0 near misses 0 losers (0%)
+#  refs  hits  directory
+#     1     0  /usr/src/usr.bin/bmake/unit-tests
+#     2     0  .
+#     2     0  /usr/src/share/mk
+#     2     0  /usr/share/mk
+#     1     0  ..
+
+#*** Suffixes:
+# ".custom-null" (num 1, ref 1) (SUFF_NULL)
+#	To: 
+#	From: 
+#	Search Path: . .. 
+# ".src-left" (num 2, ref 2)
+#	To: .tgt-right 
+#	From: 
+#	Search Path: 
+# ".tgt-right" (num 3, ref 2)
+#	To: 
+#	From: .src-left 
+#	Search Path: 
+# ".tgt-left" (num 4, ref 2)
+#	To: 
+#	From: .src-right 
+#	Search Path: 
+# ".src-right" (num 5, ref 2)
+#	To: .tgt-left 
+#	From: 
+#	Search Path: 
+#*** Transformations:
+.src-left.tgt-right:
+	: Making ${.TARGET} from ${.IMPSRC}.
+
+.src-right.tgt-left:
+	: Making ${.TARGET} from ${.IMPSRC}.
+
+#*** End input graph for pass 1 in /usr/src/usr.bin/bmake/unit-tests:
+: Making deptgt-suffixes.src-left out of nothing.
+: Making deptgt-suffixes.tgt-right from deptgt-suffixes.src-left.
+: Making deptgt-suffixes.src-right out of nothing.
+: Making deptgt-suffixes.tgt-left from deptgt-suffixes.src-right.

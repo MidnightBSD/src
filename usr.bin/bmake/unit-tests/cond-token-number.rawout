@@ -1,0 +1,6 @@
+make: /usr/src/contrib/bmake/unit-tests/cond-token-number.mk:16: Malformed conditional "-0"
+make: /usr/src/contrib/bmake/unit-tests/cond-token-number.mk:27: Malformed conditional "+0"
+make: /usr/src/contrib/bmake/unit-tests/cond-token-number.mk:38: Malformed conditional "!-1"
+make: /usr/src/contrib/bmake/unit-tests/cond-token-number.mk:49: Malformed conditional "!+1"
+make: Fatal errors encountered -- cannot continue
+make: stopped making "all" in /usr/src/usr.bin/bmake/unit-tests

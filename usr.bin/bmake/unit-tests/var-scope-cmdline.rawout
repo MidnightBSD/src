@@ -1,0 +1,3 @@
+make: /usr/src/contrib/bmake/unit-tests/var-scope-cmdline.mk:72: global
+make: /usr/src/contrib/bmake/unit-tests/var-scope-cmdline.mk:82: makeflags
+makeflags

@@ -1,0 +1,3 @@
+make: /usr/src/contrib/bmake/unit-tests/directive-error.mk:14: message
+
+make: stopped in /usr/src/usr.bin/bmake/unit-tests

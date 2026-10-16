@@ -1,0 +1,9 @@
+make: /usr/src/contrib/bmake/unit-tests/varname-dot-makeflags.mk:11: MAKEFLAGS=<undefined>
+make: /usr/src/contrib/bmake/unit-tests/varname-dot-makeflags.mk:13: .MAKEFLAGS=< -r -k>
+make: /usr/src/contrib/bmake/unit-tests/varname-dot-makeflags.mk:15: .MAKEOVERRIDES=<>
+make: /usr/src/contrib/bmake/unit-tests/varname-dot-makeflags.mk:21: MAKEFLAGS=<undefined>
+make: /usr/src/contrib/bmake/unit-tests/varname-dot-makeflags.mk:23: .MAKEFLAGS=< -r -k -D VARNAME -r>
+make: /usr/src/contrib/bmake/unit-tests/varname-dot-makeflags.mk:25: .MAKEOVERRIDES=< VAR>
+runtime: MAKEFLAGS=< -r -k -D VARNAME -r VAR=value>
+runtime: .MAKEFLAGS=< -r -k -D VARNAME -r>
+runtime: .MAKEOVERRIDES=< VAR>

@@ -1,0 +1,4 @@
+make: /usr/src/contrib/bmake/unit-tests/directive-export.mk:36: warning: .export requires an argument.
+make: /usr/src/contrib/bmake/unit-tests/directive-export.mk:60: 00:00:00
+make: /usr/src/contrib/bmake/unit-tests/directive-export.mk:65: 00:00:00
+make: /usr/src/contrib/bmake/unit-tests/directive-export.mk:68: 16:00:00

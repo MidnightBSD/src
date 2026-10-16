@@ -1,0 +1,16 @@
+The = assignment operator
+make[1]: /usr/src/contrib/bmake/unit-tests/cmdline-undefined.mk:41: From the command line: Undefined is .
+make[1]: /usr/src/contrib/bmake/unit-tests/cmdline-undefined.mk:42: From .MAKEFLAGS '=': Undefined is .
+make[1]: /usr/src/contrib/bmake/unit-tests/cmdline-undefined.mk:43: From .MAKEFLAGS ':=': Undefined is .
+make[1]: /usr/src/contrib/bmake/unit-tests/cmdline-undefined.mk:47: From the command line: Undefined is now defined.
+make[1]: /usr/src/contrib/bmake/unit-tests/cmdline-undefined.mk:48: From .MAKEFLAGS '=': Undefined is now defined.
+make[1]: /usr/src/contrib/bmake/unit-tests/cmdline-undefined.mk:49: From .MAKEFLAGS ':=': Undefined is now defined.
+
+The := assignment operator
+make[1]: /usr/src/contrib/bmake/unit-tests/cmdline-undefined.mk:41: From the command line: Undefined is .
+make[1]: /usr/src/contrib/bmake/unit-tests/cmdline-undefined.mk:42: From .MAKEFLAGS '=': Undefined is .
+make[1]: /usr/src/contrib/bmake/unit-tests/cmdline-undefined.mk:43: From .MAKEFLAGS ':=': Undefined is .
+make[1]: /usr/src/contrib/bmake/unit-tests/cmdline-undefined.mk:47: From the command line: Undefined is now defined.
+make[1]: /usr/src/contrib/bmake/unit-tests/cmdline-undefined.mk:48: From .MAKEFLAGS '=': Undefined is now defined.
+make[1]: /usr/src/contrib/bmake/unit-tests/cmdline-undefined.mk:49: From .MAKEFLAGS ':=': Undefined is now defined.
+

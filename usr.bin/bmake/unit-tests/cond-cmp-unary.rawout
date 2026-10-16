@@ -1,0 +1,1 @@
+make: /usr/src/contrib/bmake/unit-tests/cond-cmp-unary.mk:54: This is only reached because of a bug in EvalTruthy.

@@ -1,0 +1,4 @@
+make[1]: /usr/src/usr.bin/bmake/unit-tests/dep-op-missing.tmp:1: Invalid line "target"
+	in make[1] in directory "/usr/src/usr.bin/bmake/unit-tests"
+make[1]: Fatal errors encountered -- cannot continue
+make[1]: stopped in /usr/src/usr.bin/bmake/unit-tests

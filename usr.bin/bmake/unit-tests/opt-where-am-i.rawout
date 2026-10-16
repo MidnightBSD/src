@@ -1,0 +1,5 @@
+make[1]: Entering directory `/'
+make[1]: Entering directory `/usr/obj/'
+make[1]: Leaving directory `/usr/obj/'
+make[1]: Leaving directory `/'
+make: Leaving directory `/usr/src/usr.bin/bmake/unit-tests'

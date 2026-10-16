@@ -1,0 +1,20 @@
+make: /usr/src/contrib/bmake/unit-tests/directive-elif.mk:48: Unknown directive "elsif"
+make: /usr/src/contrib/bmake/unit-tests/directive-elif.mk:54: This branch is taken.
+make: /usr/src/contrib/bmake/unit-tests/directive-elif.mk:62: Unknown directive "elsif"
+make: /usr/src/contrib/bmake/unit-tests/directive-elif.mk:66: This branch is taken.
+make: /usr/src/contrib/bmake/unit-tests/directive-elif.mk:73: This branch is taken.
+make: /usr/src/contrib/bmake/unit-tests/directive-elif.mk:94: Unknown directive "elsif"
+make: /usr/src/contrib/bmake/unit-tests/directive-elif.mk:96: This misspelling is detected.
+make: /usr/src/contrib/bmake/unit-tests/directive-elif.mk:98: This branch is taken because of the .else.
+make: /usr/src/contrib/bmake/unit-tests/directive-elif.mk:117: What happens on misspelling in a skipped branch?
+make: /usr/src/contrib/bmake/unit-tests/directive-elif.mk:128: else
+make: /usr/src/contrib/bmake/unit-tests/directive-elif.mk:132: What happens on misspelling in a taken branch?
+make: /usr/src/contrib/bmake/unit-tests/directive-elif.mk:135: 1-then
+make: /usr/src/contrib/bmake/unit-tests/directive-elif.mk:137: Unknown directive "elsif"
+make: /usr/src/contrib/bmake/unit-tests/directive-elif.mk:139: 1-elsif
+make: /usr/src/contrib/bmake/unit-tests/directive-elif.mk:141: Unknown directive "elsif"
+make: /usr/src/contrib/bmake/unit-tests/directive-elif.mk:143: 2-elsif
+make: /usr/src/contrib/bmake/unit-tests/directive-elif.mk:149: if-less elif
+make: /usr/src/contrib/bmake/unit-tests/directive-elif.mk:154: warning: extra elif
+make: Fatal errors encountered -- cannot continue
+make: stopped making "all" in /usr/src/usr.bin/bmake/unit-tests

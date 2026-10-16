@@ -1,0 +1,25 @@
+/compat/linux/tmp/claude-0/-compat-linux-usr-src/ed4c6f3b-3c66-41db-88ba-60426fd1abe0/scratchpad/obj/usr/src/amd64.amd64/usr.bin/bmake/make -r -f /dev/null -V MAKEFLAGS
+ -r -k -d 0 
+
+/compat/linux/tmp/claude-0/-compat-linux-usr-src/ed4c6f3b-3c66-41db-88ba-60426fd1abe0/scratchpad/obj/usr/src/amd64.amd64/usr.bin/bmake/make -:
+usage: make [-BeikNnqrSstWwX]
+            [-C directory] [-D variable] [-d flags] [-f makefile]
+            [-I directory] [-J private] [-j max_jobs] [-m directory] [-T file]
+            [-V variable] [-v variable] [variable=value] [target ...]
+*** Error code 2 (ignored)
+
+/compat/linux/tmp/claude-0/-compat-linux-usr-src/ed4c6f3b-3c66-41db-88ba-60426fd1abe0/scratchpad/obj/usr/src/amd64.amd64/usr.bin/bmake/make -r -f /dev/null -- -VAR=value -f /dev/null
+make[1]: don't know how to make -f (continuing)
+`/dev/null' is up to date.
+
+Stop.
+make[1]: stopped making "-f /dev/null" in /usr/src/usr.bin/bmake/unit-tests
+*** Error code 1 (ignored)
+
+/compat/linux/tmp/claude-0/-compat-linux-usr-src/ed4c6f3b-3c66-41db-88ba-60426fd1abe0/scratchpad/obj/usr/src/amd64.amd64/usr.bin/bmake/make -?
+usage: make [-BeikNnqrSstWwX]
+            [-C directory] [-D variable] [-d flags] [-f makefile]
+            [-I directory] [-J private] [-j max_jobs] [-m directory] [-T file]
+            [-V variable] [-v variable] [variable=value] [target ...]
+*** Error code 2 (ignored)
+

@@ -1,0 +1,10 @@
+make: /usr/src/contrib/bmake/unit-tests/opt-debug-lint.mk:20: Variable "X" is undefined
+make: /usr/src/contrib/bmake/unit-tests/opt-debug-lint.mk:43: Variable "UNDEF" is undefined
+make: /usr/src/contrib/bmake/unit-tests/opt-debug-lint.mk:65: Missing delimiter ":" after modifier "L"
+	while evaluating variable "value" with value "value"
+make: /usr/src/contrib/bmake/unit-tests/opt-debug-lint.mk:65: Missing delimiter ":" after modifier "P"
+	while evaluating variable "value" with value "value"
+make: /usr/src/contrib/bmake/unit-tests/opt-debug-lint.mk:74: Unknown modifier ":${"
+	while evaluating variable "value" with value ""
+make: Fatal errors encountered -- cannot continue
+make: stopped in /usr/src/usr.bin/bmake/unit-tests

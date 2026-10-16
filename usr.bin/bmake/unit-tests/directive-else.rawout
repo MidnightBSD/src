@@ -1,0 +1,10 @@
+make: /usr/src/contrib/bmake/unit-tests/directive-else.mk:14: The .else directive does not take arguments
+make: /usr/src/contrib/bmake/unit-tests/directive-else.mk:16: ok
+make: /usr/src/contrib/bmake/unit-tests/directive-else.mk:21: ok
+make: /usr/src/contrib/bmake/unit-tests/directive-else.mk:23: The .else directive does not take arguments
+make: /usr/src/contrib/bmake/unit-tests/directive-else.mk:29: if-less else
+make: /usr/src/contrib/bmake/unit-tests/directive-else.mk:36: ok
+make: /usr/src/contrib/bmake/unit-tests/directive-else.mk:38: warning: extra else
+make: /usr/src/contrib/bmake/unit-tests/directive-else.mk:51: The .else directive does not take arguments
+make: Fatal errors encountered -- cannot continue
+make: stopped making "all" in /usr/src/usr.bin/bmake/unit-tests

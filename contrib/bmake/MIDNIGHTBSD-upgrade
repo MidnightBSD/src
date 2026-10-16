@@ -1,0 +1,61 @@
+Upgrade procedure for bmake
+
+Source: https://ftp.netbsd.org/pub/NetBSD/misc/sjg/bmake-VERSION.tar.gz
+        (also http://www.crufty.net/ftp/pub/sjg/bmake-VERSION.tar.gz)
+
+The vendor branch vendor/NetBSD/bmake holds the unpacked upstream tarball at
+the repository root; the in-tree copy lives at contrib/bmake.
+
+To upgrade to a new version:
+
+1. Download and extract bmake-VERSION.tar.gz (it unpacks into bmake/).
+2. Use the vendor-update skill: rsync the tree into a worktree on
+   vendor/NetBSD/bmake, commit "Vendor import of bmake VERSION", tag
+   vendor/NetBSD/bmake/VERSION.
+3. Merge into master with
+
+       git subtree merge -P contrib/bmake vendor/NetBSD/bmake
+
+4. Re-apply the local patches listed below (FreeBSD's contrib/bmake carries
+   the same job.c/make.1/meta2deps.sh patches, so its copies can be used
+   directly when FreeBSD is on the same bmake version).
+5. Refresh usr.bin/bmake from FreeBSD's usr.bin/bmake (Makefile,
+   Makefile.config, Makefile.inc, config.h, unit-tests/Makefile,
+   unit-tests/Makefile.config), keeping the MidnightBSD differences noted
+   below.  config.h is the output of configure on FreeBSD and is valid for
+   MidnightBSD as well.
+6. Build usr.bin/bmake, run "make test" there with the new binary, build a
+   few programs and libraries with it, and finally do a buildworld since
+   make is the bootstrap tool.
+
+Local patches applied on top of upstream:
+
+  - job.c (FreeBSD): .MAKE.ALWAYS_PASS_JOB_QUEUE (pass the job token pipe
+    to all children, not only .MAKE targets; default yes) and
+    MAKE_JOB_ERROR_TOKEN (do not deposit an error token when set to no, so
+    one failing architecture does not abort a tinderbox).  Hunks in
+    JobExec(), Job_Init() and JobTokenAdd().
+  - make.1 (FreeBSD): document .MAKE.ALWAYS_PASS_JOB_QUEUE and cross
+    reference style.Makefile(5).
+  - mk/meta2deps.sh (FreeBSD): example path comments updated.
+  - mk/lib.mk, mk/prog.mk, mk/own.mk: treat TARGET_OSNAME/_HOST_OSNAME
+    "MidnightBSD" like "FreeBSD" (ELF shared library rules, dynamic linker
+    options, CPPFLAGS handling, :NFreeBSD:NNetBSD filters).
+  - unit-tests/export.mk: FILTER_CMD also drops CODEQL_*, LD_PRELOAD and
+    SEMMLE_* so the export test passes under CodeQL tracing.
+  - bmake.cat1: regenerated with
+        mandoc -Tascii -Ios="MidnightBSD X.Y" bmake.1 > bmake.cat1
+    so the header and footer say MidnightBSD.
+
+usr.bin/bmake differences from FreeBSD:
+
+  - Makefile: CLEANDIRS+= FreeBSD MidnightBSD
+  - Makefile.inc: no "MK_host_egacy= no" (MidnightBSD has no host_egacy
+    knob); keeps the MK_SHARED_TOOLCHAIN / NO_SHARED block.
+
+Notes:
+
+  - Upstream removed lst.lib/, nonints.h, sprite.h and strlist.[ch] long
+    ago; they must not be resurrected by a merge.
+  - The in-tree manual page is generated from contrib/bmake/make.1 (see
+    usr.bin/bmake/Makefile, MK_GEN_MAN).

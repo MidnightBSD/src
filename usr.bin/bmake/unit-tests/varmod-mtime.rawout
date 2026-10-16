@@ -1,0 +1,14 @@
+make: /usr/src/contrib/bmake/unit-tests/varmod-mtime.mk:46: Invalid argument "123x" for modifier ":mtime"
+	while evaluating variable "no/such/file" with value "no/such/file"
+make: /usr/src/contrib/bmake/unit-tests/varmod-mtime.mk:68: Cannot determine mtime for "no/such/file1": No such file or directory
+	while evaluating variable "no/such/file1 no/such/file2" with value "no/such/file1 no/such/file2"
+make: /usr/src/contrib/bmake/unit-tests/varmod-mtime.mk:68: Cannot determine mtime for "no/such/file2": No such file or directory
+	while evaluating variable "no/such/file1 no/such/file2" with value "no/such/file1 no/such/file2"
+make: /usr/src/contrib/bmake/unit-tests/varmod-mtime.mk:78: Invalid argument "errorhandler-no" for modifier ":mtime"
+	while evaluating variable "MAKEFILE" with value "/usr/src/contrib/bmake/unit-tests/varmod-mtime.mk"
+make: /usr/src/contrib/bmake/unit-tests/varmod-mtime.mk:86: Invalid argument "warn" for modifier ":mtime"
+	while evaluating variable "MAKEFILE" with value "/usr/src/contrib/bmake/unit-tests/varmod-mtime.mk"
+make: /usr/src/contrib/bmake/unit-tests/varmod-mtime.mk:110: Unknown modifier ":mtim"
+	while evaluating variable "anything" with value "anything"
+make: Fatal errors encountered -- cannot continue
+make: stopped in /usr/src/usr.bin/bmake/unit-tests

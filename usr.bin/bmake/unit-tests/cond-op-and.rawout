@@ -1,0 +1,10 @@
+make: /usr/src/contrib/bmake/unit-tests/cond-op-and.mk:36: Variable "UNDEF" is undefined
+make: /usr/src/contrib/bmake/unit-tests/cond-op-and.mk:41: Variable "UNDEF" is undefined
+make: /usr/src/contrib/bmake/unit-tests/cond-op-and.mk:44: Variable "UNDEF" is undefined
+make: /usr/src/contrib/bmake/unit-tests/cond-op-and.mk:60: Unknown operator "&"
+make: /usr/src/contrib/bmake/unit-tests/cond-op-and.mk:66: Unknown operator "&"
+make: /usr/src/contrib/bmake/unit-tests/cond-op-and.mk:72: Unknown operator "&"
+make: /usr/src/contrib/bmake/unit-tests/cond-op-and.mk:78: Unknown operator "&"
+make: /usr/src/contrib/bmake/unit-tests/cond-op-and.mk:87: Unknown operator "&"
+make: Fatal errors encountered -- cannot continue
+make: stopped in /usr/src/usr.bin/bmake/unit-tests
