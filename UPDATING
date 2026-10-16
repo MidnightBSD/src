@@ -1,6 +1,9 @@
 Updating Information for MidnightBSD users.
 
 20261015:
+	rpcinfo(8): CVE-2026-16277, CVE-2026-16461  stack buffer overflows
+	with data from a malicious rpcbind server (rpcinfo -l / -s).
+
 	nvi 2.2.1-52c07e8
 
 20261014:
