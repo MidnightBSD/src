@@ -39,6 +39,9 @@
 # for generating a list from a directory
 # find  /usr/lib/perl5/5.36.0 -exec echo {} \; | cut -b 2-150  | xargs printf "OLD_FILES+=%s\n"
 
+# 20261015: lesskey(1) removed with less 710, lesskey(5) man page added
+OLD_FILES+=usr/bin/lesskey
+OLD_FILES+=usr/share/man/man1/lesskey.1.gz
 # 20260705: OpenSSL 1.1.1 to 3.0.x update, remove old shared libraries
 OLD_LIBS+=lib/libcrypto.so.111
 OLD_LIBS+=usr/lib/libssl.so.111

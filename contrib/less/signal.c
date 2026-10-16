@@ -34,7 +34,7 @@ extern int wscroll;
 extern int quit_on_intr;
 extern long jump_sline_fraction;
 
-extern int less_is_more;
+extern lbool less_is_more;
 
 /*
  * Interrupt signal handler.

@@ -21,6 +21,8 @@ case "$1" in
 		exec lzma -d -c "$1"	2>/dev/null
 		;;
 	*.zst)
-		exec zstd -d -q -c "$1"	2>/dev/null
+		exec zstd -d -q -c -f "$1"	2>/dev/null
+		;;
+	*)	exec cat "$1"		2>/dev/null
 		;;
 esac

@@ -79,7 +79,6 @@ SUBDIR=	alias \
 	leave \
 	less \
 	lessecho \
-	lesskey \
 	limits \
 	locale \
 	localedef \

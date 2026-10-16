@@ -65,7 +65,7 @@
 #define	TAGS		(!SECURE)
 
 /*
- * USERFILE is 1 if you wish to allow a .less file to specify 
+ * USERFILE is 1 if you wish to allow a .lesskey or .less file to specify 
  * user-defined key bindings.
  */
 #define	USERFILE	(!SECURE)
@@ -89,7 +89,7 @@
 #define	LOGFILE		(!SECURE)
 
 /*
- * OSC8_SEARCH is 1 if you wish to allow the ^O^O and related commands
+ * OSC8_LINK is 1 if you wish to allow the ^O^O and related commands
  * (to open OSC8 hyperlinks).
  */
 #define OSC8_LINK	1
@@ -334,7 +334,7 @@
 #define HAVE_STAT_INO 1
 
 /* Define to 1 if you have the <stdckdint.h> header file. */
-/* #undef HAVE_STDCKDINT_H */
+#define HAVE_STDCKDINT_H 1
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #define HAVE_STDINT_H 1
