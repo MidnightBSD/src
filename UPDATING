@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20261015:
+	nvi 2.2.1-52c07e8
+
 20261014:
 	bhyve(8): fix guest-triggerable memory safety bugs in the xhci,
 	hda and fbuf device models (FreeBSD-SA-26:72.bhyve, CVE-2026-101309,
