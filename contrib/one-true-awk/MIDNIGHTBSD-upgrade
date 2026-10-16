@@ -1,0 +1,60 @@
+Upgrade procedure for one-true-awk
+
+Source: https://github.com/onetrueawk/awk (tag YYYYMMDD, e.g. 20250116)
+        https://github.com/onetrueawk/awk/archive/refs/tags/VERSION.tar.gz
+
+The vendor branch vendor/one-true-awk/dist carries the pristine upstream
+tag at the repository root.  The in-tree copy lives at contrib/one-true-awk.
+
+To upgrade to a new version:
+
+1. Fetch the upstream tag (git clone --branch VERSION, drop .git) or
+   download and extract the tag tarball.
+2. Use the vendor-update skill: rsync the tree into a worktree on
+   vendor/one-true-awk/dist, commit "Vendor import of one-true-awk VERSION",
+   tag vendor/one-true-awk/dist/VERSION.
+3. Merge into master with
+
+       git subtree merge -P contrib/one-true-awk vendor/one-true-awk/dist
+
+   Note: before the 20250116 import the vendor branch had been stale since
+   20121220 while master was updated directly, so that import replaced the
+   subtree wholesale (git merge -s ours --no-commit, git rm -r, git
+   read-tree --prefix=contrib/one-true-awk/).  From 20250116 on the normal
+   subtree merge applies.
+4. Re-apply the local patches below, then compare against FreeBSD's
+   contrib/one-true-awk, which carries the same patch set.
+5. Build usr.bin/awk and run the tests (usr.bin/awk/tests: bugs-fixed and
+   netbsd), then do a buildworld since awk is a build tool.
+
+Local patches applied on top of upstream (all taken from FreeBSD's
+"bsd-features" tracking; FreeBSD commits noted):
+
+  - BSD extension functions (FreeBSD 23f24377b1a9 and earlier, originally
+    Arnold Robbins 2019-10): gensub() from NetBSD; bitwise and(), or(),
+    xor(), compl(), lshift(), rshift() from OpenBSD; systime(), strftime()
+    and mktime().  Touches awk.h (FAND..FMKTIME defines), awkgram.y,
+    lex.c (keywords), maketab.c (GENSUB), parse.c (node5/op5), proto.h,
+    run.c (bltin(), gensub()), awk.1 and ChangeLog.
+  - FreeBSD d4d252c49976 / 770e04e65fbb: keep accepting "0x..." strings as
+    hexadecimal numbers (lib.c is_valid_number()).
+  - FreeBSD 4e52f5db352f: accept -Ft as a synonym for -F '\t' but flag it
+    as deprecated (main.c / lib.c).
+  - FreeBSD 5dbd073b045c (MidnightBSD 825b1f5379): FATAL on printf format
+    strings lacking a conversion specifier (run.c format()).
+  - makefile: drop the commented YACC line (cosmetic, FreeBSD).
+  - bugs-fixed/*.err: expected stderr for the tests that exit with an
+    error (FreeBSD 3fe0a5d2f6e3); used by usr.bin/awk/tests/bugs-fixed.
+    The upstream .ok files for missing-precision, negative-nf and
+    pfile-overflow (which hold stderr text, not stdout) are removed, as is
+    the environment-dependent system-status test (FreeBSD b0f058525b5b),
+    so that the ATF harness in usr.bin/awk/tests/bugs-fixed passes.
+
+Notes:
+
+  - usr.bin/awk/awk.1 is the installed manual page (mdoc); contrib's awk.1
+    is upstream's man(7) page and is not installed.  Keep usr.bin/awk/awk.1
+    in sync with FreeBSD's, which documents the BSD extensions and the
+    deprecated -Ft and hex behaviours.
+  - proctab.c is generated at build time by maketab from awkgram.tab.h.
+  - testdir/ is upstream's REGRESS suite and is not wired into the build.

@@ -21,15 +21,17 @@ CLEANFILES= maketab proctab.c awkgram.tab.h
 awkgram.tab.h: awkgram.h
 	ln -sf ${.ALLSRC:M*.h} ${.TARGET}
 
-proctab.c: maketab
-	${BTOOLSPATH:U.}/maketab awkgram.h > proctab.c
+proctab.c: awkgram.tab.h
+	${BTOOLSPATH:U.}/maketab awkgram.tab.h > proctab.c
 
+.if ${MACHINE} == "host" || ${MK_DIRDEPS_BUILD} == "no"
 DEPENDOBJS+= maketab
 build-tools: maketab
-maketab: awkgram.tab.h maketab.c ${BUILD_TOOLS_META}
+proctab.c: maketab
+maketab: awkgram.tab.h ${BUILD_TOOLS_META}
+.endif
 
-# awk needs some work before we can connect these tests to the build
-#HAS_TESTS=
-#SUBDIR.${MK_TESTS}+= tests
+HAS_TESTS=
+SUBDIR.${MK_TESTS}+= tests
 
 .include <bsd.prog.mk>
