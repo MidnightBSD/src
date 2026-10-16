@@ -22,9 +22,7 @@ ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 ****************************************************************/
 
-#include <sys/cdefs.h>
-
-const char	*version = "version 20121220 (MidnightBSD)";
+const char	*version = "version 20250116";
 
 #define DEBUG
 #include <stdio.h>
@@ -34,7 +32,6 @@ const char	*version = "version 20121220 (MidnightBSD)";
 #include <string.h>
 #include <signal.h>
 #include "awk.h"
-#include "ytab.h"
 
 extern	char	**environ;
 extern	int	nfields;
@@ -45,99 +42,169 @@ char	*cmdname;	/* gets argv[0] for error messages */
 extern	FILE	*yyin;	/* lex input file */
 char	*lexprog;	/* points to program argument if it exists */
 extern	int errorflag;	/* non-zero if any syntax errors; set by yyerror */
-int	compile_time = 2;	/* for error printing: */
-				/* 2 = cmdline, 1 = compile, 0 = running */
+enum compile_states	compile_time = ERROR_PRINTING;
 
-#define	MAX_PFILE	20	/* max number of -f's */
+static char	**pfile;	/* program filenames from -f's */
+static size_t	maxpfile;	/* max program filename */
+static size_t	npfile;		/* number of filenames */
+static size_t	curpfile;	/* current filename */
 
-char	*pfile[MAX_PFILE];	/* program filenames from -f's */
-int	npfile = 0;	/* number of filenames */
-int	curpfile = 0;	/* current filename */
+bool	CSV = false;	/* true for csv input */
 
-int	safe	= 0;	/* 1 => "safe" mode */
+bool	safe = false;	/* true => "safe" mode */
+
+size_t	awk_mb_cur_max = 1;
+
+static noreturn void fpecatch(int n
+#ifdef SA_SIGINFO
+	, siginfo_t *si, void *uc
+#endif
+)
+{
+#ifdef SA_SIGINFO
+	const char *mesg = NULL;
+
+	switch (si->si_code) {
+	case FPE_INTDIV:
+		mesg = "Integer divide by zero";
+		break;
+	case FPE_INTOVF:
+		mesg = "Integer overflow";
+		break;
+	case FPE_FLTDIV:
+		mesg = "Floating point divide by zero";
+		break;
+	case FPE_FLTOVF:
+		mesg = "Floating point overflow";
+		break;
+	case FPE_FLTUND:
+		mesg = "Floating point underflow";
+		break;
+	case FPE_FLTRES:
+		mesg = "Floating point inexact result";
+		break;
+	case FPE_FLTINV:
+		mesg = "Invalid Floating point operation";
+		break;
+	case FPE_FLTSUB:
+		mesg = "Subscript out of range";
+		break;
+	case 0:
+	default:
+		mesg = "Unknown error";
+		break;
+	}
+#endif
+	FATAL("floating point exception"
+#ifdef SA_SIGINFO
+		": %s", mesg
+#endif
+	    );
+}
+
+/* Can this work with recursive calls?  I don't think so.
+void segvcatch(int n)
+{
+	FATAL("segfault.  Do you have an unbounded recursive call?", n);
+}
+*/
+
+static const char *
+setfs(char *p)
+{
+	/* wart: t=>\t */
+	if (p[0] == 't' && p[1] == '\0')
+		return "\t";
+	return p;
+}
+
+static char *
+getarg(int *argc, char ***argv, const char *msg)
+{
+	if ((*argv)[1][2] != '\0') {	/* arg is -fsomething */
+		return &(*argv)[1][2];
+	} else {			/* arg is -f something */
+		(*argc)--; (*argv)++;
+		if (*argc <= 1)
+			FATAL("%s", msg);
+		return (*argv)[1];
+	}
+}
 
 int main(int argc, char *argv[])
 {
 	const char *fs = NULL;
+	char *fn, *vn;
 
 	setlocale(LC_CTYPE, "");
-	setlocale(LC_COLLATE, "");
 	setlocale(LC_NUMERIC, "C"); /* for parsing cmdline & prog */
+	awk_mb_cur_max = MB_CUR_MAX;
 	cmdname = argv[0];
 	if (argc == 1) {
-		fprintf(stderr, 
-		  "usage: %s [-F fs] [-v var=value] [-f progfile | 'prog'] [file ...]\n", 
+		fprintf(stderr,
+		  "usage: %s [-F fs | --csv] [-v var=value] [-f progfile | 'prog'] [file ...]\n",
 		  cmdname);
 		exit(1);
 	}
-	signal(SIGFPE, fpecatch);
+#ifdef SA_SIGINFO
+	{
+		struct sigaction sa;
+		sa.sa_sigaction = fpecatch;
+		sa.sa_flags = SA_SIGINFO;
+		sigemptyset(&sa.sa_mask);
+		(void)sigaction(SIGFPE, &sa, NULL);
+	}
+#else
+	(void)signal(SIGFPE, fpecatch);
+#endif
+	/*signal(SIGSEGV, segvcatch); experiment */
 
+	/* Set and keep track of the random seed */
 	srand_seed = 1;
 	srandom((unsigned long) srand_seed);
 
 	yyin = NULL;
 	symtab = makesymtab(NSYMTAB/NSYMTAB);
 	while (argc > 1 && argv[1][0] == '-' && argv[1][1] != '\0') {
-		if (strcmp(argv[1],"-version") == 0 || strcmp(argv[1],"--version") == 0) {
+		if (strcmp(argv[1], "-version") == 0 || strcmp(argv[1], "--version") == 0) {
 			printf("awk %s\n", version);
-			exit(0);
-			break;
+			return 0;
 		}
-		if (strncmp(argv[1], "--", 2) == 0) {	/* explicit end of args */
+		if (strcmp(argv[1], "--") == 0) {	/* explicit end of args */
 			argc--;
 			argv++;
 			break;
 		}
+		if (strcmp(argv[1], "--csv") == 0) {	/* turn on csv input processing */
+			CSV = true;
+			argc--;
+			argv++;
+			continue;
+		}
 		switch (argv[1][1]) {
 		case 's':
 			if (strcmp(argv[1], "-safe") == 0)
-				safe = 1;
+				safe = true;
 			break;
 		case 'f':	/* next argument is program filename */
-			if (argv[1][2] != 0) {  /* arg is -fsomething */
-				if (npfile >= MAX_PFILE - 1)
-					FATAL("too many -f options"); 
-				pfile[npfile++] = &argv[1][2];
-			} else {		/* arg is -f something */
-				argc--; argv++;
-				if (argc <= 1)
-					FATAL("no program filename");
-				if (npfile >= MAX_PFILE - 1)
-					FATAL("too many -f options"); 
-				pfile[npfile++] = argv[1];
-			}
-			break;
+			fn = getarg(&argc, &argv, "no program filename");
+			if (npfile >= maxpfile) {
+				maxpfile += 20;
+				pfile = (char **) realloc(pfile, maxpfile * sizeof(*pfile));
+				if (pfile == NULL)
+					FATAL("error allocating space for -f options");
+ 			}
+			pfile[npfile++] = fn;
+ 			break;
 		case 'F':	/* set field separator */
-			if (argv[1][2] != 0) {	/* arg is -Fsomething */
-				if (argv[1][2] == 't' && argv[1][3] == 0)	/* wart: t=>\t */
-					fs = "\t";
-				else if (argv[1][2] != 0)
-					fs = &argv[1][2];
-			} else {		/* arg is -F something */
-				argc--; argv++;
-				if (argc > 1 && argv[1][0] == 't' && argv[1][1] == 0)	/* wart: t=>\t */
-					fs = "\t";
-				else if (argc > 1 && argv[1][0] != 0)
-					fs = &argv[1][0];
-			}
-			if (fs == NULL || *fs == '\0')
-				WARNING("field separator FS is empty");
+			fs = setfs(getarg(&argc, &argv, "no field separator"));
 			break;
 		case 'v':	/* -v a=1 to be done NOW.  one -v for each */
-			if (argv[1][2] != 0) {  /* arg is -vsomething */
-				if (isclvar(&argv[1][2]))
-					setclvar(&argv[1][2]);
-				else
-					FATAL("invalid -v option argument: %s", &argv[1][2]);
-			} else {		/* arg is -v something */
-				argc--; argv++;
-				if (argc <= 1)
-					FATAL("no variable name");
-				if (isclvar(argv[1]))
-					setclvar(argv[1]);
-				else
-					FATAL("invalid -v option argument: %s", argv[1]);
-			}
+			vn = getarg(&argc, &argv, "no variable name");
+			if (isclvar(vn))
+				setclvar(vn);
+			else
+				FATAL("invalid -v option argument: %s", vn);
 			break;
 		case 'd':
 			dbg = atoi(&argv[1][2]);
@@ -152,6 +219,10 @@ int main(int argc, char *argv[])
 		argc--;
 		argv++;
 	}
+
+	if (CSV && (fs != NULL || lookup("FS", symtab) != NULL))
+		WARNING("danger: don't set FS when --csv is in effect");
+
 	/* argv[1] is now the first argument */
 	if (npfile == 0) {	/* no -f; first argument is program */
 		if (argc <= 1) {
@@ -159,26 +230,30 @@ int main(int argc, char *argv[])
 				exit(0);
 			FATAL("no program given");
 		}
-		   dprintf( ("program = |%s|\n", argv[1]) );
+		DPRINTF("program = |%s|\n", argv[1]);
 		lexprog = argv[1];
 		argc--;
 		argv++;
 	}
 	recinit(recsize);
 	syminit();
-	compile_time = 1;
+	compile_time = COMPILING;
 	argv[0] = cmdname;	/* put prog name at front of arglist */
-	   dprintf( ("argc=%d, argv[0]=%s\n", argc, argv[0]) );
+	DPRINTF("argc=%d, argv[0]=%s\n", argc, argv[0]);
 	arginit(argc, argv);
 	if (!safe)
 		envinit(environ);
 	yyparse();
+#if 0
+	// Doing this would comply with POSIX, but is not compatible with
+	// other awks and with what most users expect. So comment it out.
 	setlocale(LC_NUMERIC, ""); /* back to whatever it is locally */
+#endif
 	if (fs)
 		*FS = qstring(fs, '\0');
-	   dprintf( ("errorflag=%d\n", errorflag) );
+	DPRINTF("errorflag=%d\n", errorflag);
 	if (errorflag == 0) {
-		compile_time = 0;
+		compile_time = RUNNING;
 		run(winner);
 	} else
 		bracecheck();
@@ -211,7 +286,7 @@ int pgetc(void)		/* get 1 character from awk program */
 char *cursource(void)	/* current source file name */
 {
 	if (npfile > 0)
-		return pfile[curpfile];
+		return pfile[curpfile < npfile ? curpfile : curpfile - 1];
 	else
 		return NULL;
 }
