@@ -1,6 +1,10 @@
 Updating Information for MidnightBSD users.
 
 20261015:
+	vmstat(8) output is now formatted through libxo and the -z and -m
+	columns are wider; scripts that parse vmstat text output may need
+	adjusting.  systat(1) gains an iolat display.
+
 	rpcinfo(8): CVE-2026-16277, CVE-2026-16461  stack buffer overflows
 	with data from a malicious rpcbind server (rpcinfo -l / -s).
 
