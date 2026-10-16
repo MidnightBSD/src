@@ -1,6 +1,12 @@
 Updating Information for MidnightBSD users.
 
 20261015:
+	rpcinfo(8): CVE-2026-16277, CVE-2026-16461  stack buffer overflows
+	with data from a malicious rpcbind server (rpcinfo -l / -s).
+
+	ktrace(1) no longer traces capability failures by default; use
+	-t +f or -t A to include them.
+
 	bmake 20251111
 
 	one-true-awk 20250116: adds --csv, UTF-8 support and the Second
