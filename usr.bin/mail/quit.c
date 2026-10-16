@@ -49,7 +49,7 @@ static char sccsid[] = "@(#)quit.c	8.2 (Berkeley) 4/28/95";
  * The "quit" command.
  */
 int
-quitcmd(void)
+quitcmd(void *arg __unused)
 {
 	/*
 	 * If we are sourcing, then return 1 so execute() can handle it.

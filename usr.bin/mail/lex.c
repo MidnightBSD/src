@@ -205,8 +205,6 @@ commands(void)
 	if (!sourcing) {
 		if (signal(SIGINT, SIG_IGN) != SIG_IGN)
 			(void)signal(SIGINT, intr);
-		if (signal(SIGHUP, SIG_IGN) != SIG_IGN)
-			(void)signal(SIGHUP, hangup);
 		(void)signal(SIGTSTP, stop);
 		(void)signal(SIGTTOU, stop);
 		(void)signal(SIGTTIN, stop);
@@ -574,17 +572,6 @@ stop(int s)
 }
 
 /*
- * Branch here on hangup signal and simulate "exit".
- */
-void
-hangup(int s __unused)
-{
-
-	/* nothing to do? */
-	exit(1);
-}
-
-/*
  * Announce the presence of the current Mail version,
  * give the message count, and print a header listing.
  */
@@ -670,7 +657,7 @@ newfileinfo(int omsgCount)
  */
 
 int
-pversion(int e __unused)
+pversion(void *arg __unused)
 {
 
 	printf("Version %s\n", version);
