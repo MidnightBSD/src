@@ -1,5 +1,19 @@
 Updating Information for MidnightBSD users.
 
+20261015:
+	bmake 20251111
+
+	one-true-awk 20250116: adds --csv, UTF-8 support and the Second
+	Edition awk changes; the BSD extensions (gensub, bitwise functions,
+	systime/strftime, hex strings, -Ft) are retained.
+
+	nvi 2.2.1-52c07e8
+
+	less 710: lesskey(1) has been removed, lesskey files are read
+	directly by less(1); see lesskey(5).  Run "make delete-old".
+
+	byacc 20230201
+
 20261014:
 	pwait(1) gains -r (wait until the target is reaped) and -p, ps(1)
 	gains -D up|down|both and reworked process selection, timeout(1)
