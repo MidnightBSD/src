@@ -449,6 +449,12 @@ FBSD_1.7 {
 	 __cpuset_free;
 };
 
+MNBSD_1.6 {
+	fdscandir;
+	fdscandir_b;
+	scandirat_b;
+};
+
 FBSDprivate_1.0 {
 	/* needed by thread libraries */
 	__thr_jtable;

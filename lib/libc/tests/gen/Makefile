@@ -18,6 +18,8 @@ ATF_TESTS_C+=		posix_spawn_test
 ATF_TESTS_C+=		realpath2_test
 ATF_TESTS_C+=		sigsetops_test
 ATF_TESTS_C+=		wordexp_test
+ATF_TESTS_C+=		scandir_test
+ATF_TESTS_C+=		scandir_blocks_test
 
 # TODO: t_closefrom, t_fmtcheck, t_randomid,
 # TODO: t_siginfo (fixes require further inspection)
@@ -70,6 +72,12 @@ NETBSD_ATF_TESTS_C+=	syslog_test
 NETBSD_ATF_TESTS_C+=	time_test
 NETBSD_ATF_TESTS_C+=	ttyname_test
 NETBSD_ATF_TESTS_C+=	vis_test
+
+# Tests that require blocks support
+.for t in scandir_blocks_test
+CFLAGS.${t}.c+=		-fblocks
+LIBADD.${t}+=		BlocksRuntime
+.endfor
 
 .include "../Makefile.netbsd-tests"
 
