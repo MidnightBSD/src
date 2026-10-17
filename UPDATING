@@ -1,5 +1,17 @@
 Updating Information for MidnightBSD users.
 
+20261017:
+	firstboot now asks which desktop to use when enabling a graphical
+	environment: MidnightBSD Workspace (x11-wm/midnight-wm), Xfce, or
+	GNUstep with Window Maker.  Xfce remains the default.
+	The choice is stored in
+	/usr/local/etc/X11/xinit/xinitrc.d/default-session.sh, which sets
+	DEFAULT_SESSION for the mlogind "default" session and startx.
+	share/skel/dot.xinitrc now accepts the midnight-wm session and
+	falls back to it when Xfce is not installed; existing users can
+	copy /usr/share/skel/dot.xinitrc to ~/.xinitrc, or pick a session
+	with F1 in mlogind.
+
 20261016:
 	tftp(1): fix packet buffer overflow on over-long file names in
 	send_rrq()/send_wrq(); tftpd(8) now explicitly sets its gid to
