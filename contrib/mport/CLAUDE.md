@@ -124,7 +124,7 @@ For review, debugging, or analysis outputs, use: findings with references, concl
 
 ## Project Overview
 
-**mport** is the MidnightBSD package manager, written in C for MidnightBSD 3.0+. It handles package installation, upgrades, deletion, verification, auditing, and dependency resolution. Current version: 2.7.8, DB master schema v14, bundle schema v6.
+**mport** is the MidnightBSD package manager, written in C for MidnightBSD 3.0+. It handles package installation, upgrades, deletion, verification, auditing, and dependency resolution. Current version: 2.8.4, DB master schema v16, bundle schema v6.
 
 ## Build Commands
 
@@ -156,7 +156,7 @@ Format changed files with `clang-format -i <file>`.
 
 ## Testing
 
-There is an ATF/Kyua test suite in `tests/` (14 programs, ~170 cases; not yet
+There is an ATF/Kyua test suite in `tests/` (16 programs, ~190 cases; not yet
 comprehensive — the main `mport(8)` command paths are still thinly covered).
 The root `make` builds it. No installed `mport` or populated registry is
 required for most cases. CI also runs via Jenkins (`Jenkinsfile`, matrix builds
@@ -176,6 +176,7 @@ C programs (`ATF_TESTS_C` in `tests/Makefile`) link against `libmport` directly:
 
 | File | Covers |
 |------|--------|
+| `mport_audit_test` | Audit report formatting and index fix status (fixed / still affected / no newer version) |
 | `mport_confirm_test` | Confirm/select callbacks on non-tty and assume-yes paths |
 | `mport_db_test` | DB count/prepare helpers |
 | `mport_fetch_test` | `force_http` URL rewriting |
@@ -185,6 +186,7 @@ C programs (`ATF_TESTS_C` in `tests/Makefile`) link against `libmport` directly:
 | `mport_pkgmeta_test` | Dependency sort, delete/autodir handling, query output |
 | `mport_precheck_test` | Pre-install file-conflict checks |
 | `mport_shlib_test` | Shared-library scanning, provides/requires tables |
+| `mport_trigger_test` | Trigger loading/validation, path matching, per-transaction and per-package execution, cleanup blocks, `triggers_enable`/`triggers_dir` settings, sandbox |
 | `mport_util_test` | `util.c`/`plist.c` helpers |
 | `mport_version_test` | Version comparison |
 
@@ -251,14 +253,16 @@ Compiled as `libmport.so.2` and `libmport.a`. Contains ~45 C source files implem
 Key source files:
 | File | Role |
 |------|------|
-| `db.c` | All SQLite operations; schema creation/migration (master schema v14) |
+| `db.c` | All SQLite operations; schema creation/migration (master schema v16) |
 | `install_primative.c` | Core install: asset extraction, permissions, checksums |
 | `delete_primative.c` | Package removal; checks reverse dependencies before deletion |
 | `bundle_read_install_pkg.c` | Reads `.mport` bundle format (archive + metadata) |
 | `fetch.c` | Network downloads via libfetch |
 | `index.c` | Remote package index queries and caching |
 | `pkgmeta.c` | Package metadata queries against the local DB |
-| `lua.c` | Lua 5.4 hook execution (pre/post-install scripts) |
+| `lua.c` | Lua 5.4 bindings (`pkg.*` library, rootfd-relative io/os overrides) |
+| `lua_scripts.c` | Per-package Lua scripts shipped in a bundle; shared Lua state setup |
+| `triggers.c` | Package triggers (pkg-triggers(5) format): per-transaction and per-package phase triggers, cleanup blocks, capsicum sandbox |
 | `audit.c` | CVE audit via CPE identifiers |
 | `verify.c` | File checksum verification |
 | `version_cmp.c` | Package version comparison algorithm |
@@ -316,7 +320,8 @@ SQLite database lives at `/var/db/mport/`. Schema versioning is managed in `libm
 2. Downloads `.mport` bundle (libarchive tar + SQLite metadata) via `mport.fetch`
 3. Extracts and validates metadata; checks dependencies and conflicts
 4. Deploys assets via `mport.install` / `install_primative.c`
-5. Runs Lua pre/post-install hooks via `libmport/lua.c`
+5. Runs Lua pre/post-install hooks via `libmport/lua_scripts.c` and per-package phase triggers via `libmport/triggers.c`
 6. Updates master SQLite registry
+7. The front end (or libexec tool) calls `mport_triggers_execute()` once at the end of the run to fire per-transaction triggers for every directory touched
 
 Load @AGENTS.md for skills

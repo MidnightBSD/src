@@ -97,6 +97,12 @@ main(int argc, char *argv[])
 		}
 	}
 
+	if (mport_triggers_execute(mport) != MPORT_OK) {
+		warnx("%s", mport_err_string());
+		mport_instance_free(mport);
+		exit(EXIT_FAILURE);
+	}
+
 	mport_instance_free(mport);
 
 	return (0);

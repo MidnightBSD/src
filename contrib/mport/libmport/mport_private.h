@@ -54,10 +54,10 @@ struct ohash { };
 
 #define MPORT_PUBLIC_API
 
-#define MPORT_MASTER_VERSION 15
+#define MPORT_MASTER_VERSION 16
 #define MPORT_BUNDLE_VERSION 6
 #define MPORT_BUNDLE_VERSION_STR "6"
-#define MPORT_VERSION "2.8.3"
+#define MPORT_VERSION "2.8.4"
 
 #define MPORT_SETTING_MIRROR_REGION "mirror_region"
 #define MPORT_SETTING_TARGET_OS "target_os"
@@ -220,7 +220,9 @@ int mport_shlib_analyse_elf(/*@notnull@*/ const char *, /*@out@*/ char **, /*@ou
 int mport_shlib_analyse_elf_for(int, /*@notnull@*/ const char *, /*@out@*/ char **,
     /*@out@*/ int *, /*@notnull@*/ stringlist_t *);
 int mport_abi_file_read(/*@notnull@*/ const char *, /*@null@*/ /*@out@*/ char **,
-    /*@null@*/ /*@out@*/ uint32_t *, /*@null@*/ /*@out@*/ int *);
+    /*@null@*/ /*@out@*/ uint32_t *, /*@null@*/ /*@out@*/ int *,
+    /*@null@*/ /*@out@*/ const char **);
+/*@null@*/ /*@observer@*/ const char *mport_arch_from_elf_machine(unsigned int);
 #if defined(__LP64__)
 #define MPORT_HOST_ELFCLASS ELFCLASS64
 #else
@@ -318,6 +320,10 @@ int mport_fetch_index(mportInstance *);
 int mport_fetch_bootstrap_index(mportInstance *);
 char *mport_fetch_cves(mportInstance *mport, char *cpe);
 
+/* audit */
+int mport_audit_report(/*@notnull@*/ mportInstance *, /*@notnull@*/ mportPackageMeta *,
+    /*@notnull@*/ const char *, bool, /*@out@*/ /*@null@*/ char **);
+
 /* a few index things */
 int mport_index_get_mirror_list(mportInstance *, char ***, int *);
 char *mport_index_file_path(void);
@@ -335,6 +341,10 @@ int mport_script_run_child(mportInstance *, int, int *, int, const char *);
 #define MPORT_SETTING_REPO_AUTOUPDATE "index_autoupdate"
 #define MPORT_SETTING_REPO_AUTOUPDATE_LEGACY "REPO_AUTOUPDATE"
 #define MPORT_SETTING_HANDLE_RC_SCRIPTS "handle_rc_scripts"
+#define MPORT_SETTING_TRIGGERS_ENABLE "triggers_enable"
+#define MPORT_SETTING_TRIGGERS_DIR "triggers_dir"
+/* whitespace separated; the ports tree installs USES=trigger files into the second */
+#define MPORT_TRIGGERS_DIR_DEFAULT "/usr/share/mport/triggers /usr/local/share/pkg/triggers"
 
 /* Binaries we use */
 #define MPORT_MTREE_BIN "/usr/sbin/mtree"

@@ -190,6 +190,8 @@ do_pre_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *
 	mport_lua_script_load(mport, pkg);
 	if (mport_lua_script_run(mport, pkg, MPORT_LUA_PRE_INSTALL) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
+	if (mport_triggers_execute_perpackage(mport, pkg, MPORT_LUA_PRE_INSTALL) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
 
 	/* run pkg-install PRE-INSTALL */
 	if (run_pkg_install(mport, bundle, pkg, "PRE-INSTALL") != MPORT_OK)
@@ -444,8 +446,7 @@ create_dir_asset_fd(
 			 * fd-based chown/chmod cannot be redirected through a
 			 * swapped-in link.
 			 */
-			if (nextfd == -1 && !final_component &&
-			    (errno == EMLINK || errno == ELOOP))
+			if (nextfd == -1 && !final_component && (errno == EMLINK || errno == ELOOP))
 				nextfd = openat(fd, start, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
 			if (nextfd == -1) {
 				*p = save;
@@ -814,6 +815,12 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 			if (create_dir_asset_fd(mport, cwd, e->data, S_IRWXU | S_IRWXG | S_IRWXO,
 				&dirfd) != MPORT_OK)
 				goto ERROR;
+			if (e->data != NULL && e->data[0] == '/') {
+				mport_triggers_touch_dir(mport, e->data);
+			} else if (e->data != NULL) {
+				(void)snprintf(file, FILENAME_MAX, "%s/%s", cwd, e->data);
+				mport_triggers_touch_dir(mport, file);
+			}
 			if (apply_dir_asset_attrs(dirfd, e, owner, group) != MPORT_OK) {
 				close(dirfd);
 				goto ERROR;
@@ -860,6 +867,13 @@ do_actual_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMet
 						break;
 					}
 				}
+
+			/* the directory gaining this file, without the install root,
+			 * for the per-transaction triggers */
+			if (e->data[0] == '/')
+				mport_triggers_touch_file(mport, file);
+			else
+				mport_triggers_touch_file(mport, file + strlen(mport->root));
 
 			if (entry == NULL) {
 				SET_ERROR(MPORT_ERR_FATAL, "Unexpected EOF with archive file");
@@ -1538,6 +1552,9 @@ do_post_install(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta 
 		RETURN_CURRENT_ERROR;
 
 	if (run_pkg_install(mport, bundle, pkg, "POST-INSTALL") != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+
+	if (mport_triggers_execute_perpackage(mport, pkg, MPORT_LUA_POST_INSTALL) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
 	mport_start_stop_service(mport, pkg, SERVICE_START);

@@ -46,6 +46,7 @@
 
 extern char **environ;
 
+static bool mtree_bin_trusted(mportInstance *, const mportPackageMeta *);
 static void verify_mtree(mportInstance *, mportPackageMeta *);
 
 MPORT_PUBLIC_API int
@@ -156,6 +157,27 @@ mport_verify_package(mportInstance *mport, mportPackageMeta *pack)
 	return (MPORT_OK);
 }
 
+static bool
+mtree_bin_trusted(mportInstance *mport, const mportPackageMeta *pack)
+{
+	struct stat st;
+
+	if (stat(MPORT_MTREE_BIN, &st) == -1) {
+		mport_call_msg_cb(mport, "mtree %s-%s: skipped, %s: %s", pack->name, pack->version,
+		    MPORT_MTREE_BIN, strerror(errno));
+		return (false);
+	}
+
+	if (!S_ISREG(st.st_mode) || st.st_uid != 0 || (st.st_mode & (S_IWGRP | S_IWOTH)) != 0) {
+		mport_call_msg_cb(mport,
+		    "mtree %s-%s: skipped, %s is not a root-owned, non-writable regular file",
+		    pack->name, pack->version, MPORT_MTREE_BIN);
+		return (false);
+	}
+
+	return (true);
+}
+
 static void
 verify_mtree(mportInstance *mport, mportPackageMeta *pack)
 {
@@ -170,6 +192,15 @@ verify_mtree(mportInstance *mport, mportPackageMeta *pack)
 	    MPORT_INST_INFRA_DIR, pack->name, pack->version, MPORT_MTREE_FILE);
 
 	if (!mport_file_exists(mtree_path))
+		return;
+
+	/*
+	 * mport -c <dir> enters the chroot before libmport is initialized, so
+	 * MPORT_MTREE_BIN resolves inside the tree being verified. Never run a
+	 * helper the tree's owner could have supplied: require a root-owned
+	 * regular file that only root can write.
+	 */
+	if (!mtree_bin_trusted(mport, pack))
 		return;
 
 	(void)snprintf(prefix, sizeof(prefix), "%s%s", mport->root, pack->prefix);

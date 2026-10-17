@@ -10,7 +10,8 @@ CFLAGS+=	-I${.CURDIR}/../libmport \
 		-I/usr/include/private/zstd \
 		-I${LOCALBASE}/include
 
-ATF_TESTS_C+=	mport_confirm_test \
+ATF_TESTS_C+=	mport_audit_test \
+		mport_confirm_test \
 		mport_db_test \
 		mport_fetch_test \
 		mport_index_test \
@@ -19,8 +20,15 @@ ATF_TESTS_C+=	mport_confirm_test \
 		mport_osrelease_test \
 		mport_pkgmeta_test \
 		mport_precheck_test \
+		mport_trigger_test \
 		mport_util_test \
 		mport_version_test
+
+LDFLAGS.mport_audit_test+=	-L${.CURDIR}/../libmport \
+				-L${LOCALBASE}/lib \
+				-Wl,-rpath,${.CURDIR}/../libmport \
+				-Wl,-rpath,${LOCALBASE}/lib
+LDADD.mport_audit_test+=	-lmport -latf-c
 
 LDFLAGS.mport_confirm_test+=	-L${.CURDIR}/../libmport \
 				-L${LOCALBASE}/lib \
@@ -75,6 +83,12 @@ LDFLAGS.mport_precheck_test+=	-L${.CURDIR}/../libmport \
 				-Wl,-rpath,${.CURDIR}/../libmport \
 				-Wl,-rpath,${LOCALBASE}/lib
 LDADD.mport_precheck_test+=	-lmport -latf-c
+
+LDFLAGS.mport_trigger_test+=	-L${.CURDIR}/../libmport \
+				-L${LOCALBASE}/lib \
+				-Wl,-rpath,${.CURDIR}/../libmport \
+				-Wl,-rpath,${LOCALBASE}/lib
+LDADD.mport_trigger_test+=	-lmport -latf-c
 
 LDFLAGS.mport_util_test+=	-L${.CURDIR}/../libmport \
 				-L${LOCALBASE}/lib \

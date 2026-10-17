@@ -45,6 +45,7 @@ static int mport_upgrade_master_schema_10to11(sqlite3 *);
 static int mport_upgrade_master_schema_11to12(sqlite3 *);
 static int mport_upgrade_master_schema_12to13(sqlite3 *);
 static int mport_upgrade_master_schema_13to14(sqlite3 *);
+static int mport_upgrade_master_schema_15to16(sqlite3 *);
 
 static int insert_meta_values(sqlite3 *db, char *key, char *value);
 
@@ -390,6 +391,9 @@ run_master_schema_upgrades(sqlite3 *db, int databaseVersion)
 		/* falls through */
 	case 14:
 		UPGRADE_STEP(mport_upgrade_master_schema_14to15);
+		/* falls through */
+	case 15:
+		UPGRADE_STEP(mport_upgrade_master_schema_15to16);
 		break;
 	default:
 		RETURN_ERROR(MPORT_ERR_FATAL, "Invalid master database version");
@@ -576,6 +580,20 @@ mport_upgrade_master_schema_14to15(sqlite3 *db)
 	return (MPORT_OK);
 }
 
+/* trigger settings (see triggers.c) */
+static int
+mport_upgrade_master_schema_15to16(sqlite3 *db)
+{
+	RUN_SQL(db,
+	    "INSERT OR IGNORE INTO settings VALUES (\"" MPORT_SETTING_TRIGGERS_ENABLE
+	    "\", \"yes\")");
+	RUN_SQL(db,
+	    "INSERT OR IGNORE INTO settings VALUES (\"" MPORT_SETTING_TRIGGERS_DIR
+	    "\", \"" MPORT_TRIGGERS_DIR_DEFAULT "\")");
+
+	return (MPORT_OK);
+}
+
 int
 mport_generate_master_schema(sqlite3 *db)
 {
@@ -615,6 +633,12 @@ mport_generate_master_schema(sqlite3 *db)
 	RUN_SQL(db,
 	    "INSERT OR IGNORE INTO settings VALUES (\"" MPORT_SETTING_REPO_AUTOUPDATE
 	    "\", \"yes\")");
+	RUN_SQL(db,
+	    "INSERT OR IGNORE INTO settings VALUES (\"" MPORT_SETTING_TRIGGERS_ENABLE
+	    "\", \"yes\")");
+	RUN_SQL(db,
+	    "INSERT OR IGNORE INTO settings VALUES (\"" MPORT_SETTING_TRIGGERS_DIR
+	    "\", \"" MPORT_TRIGGERS_DIR_DEFAULT "\")");
 
 	RUN_SQL(db,
 	    "CREATE TABLE IF NOT EXISTS annotation (pkg text NOT NULL, tag TEXT NOT NULL, val TEXT NOT NULL, PRIMARY KEY (pkg, tag))");
