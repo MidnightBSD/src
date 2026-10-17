@@ -17,7 +17,8 @@ SRCS=	annotation.c asset.c color.c bundle_write.c bundle_read.c plist.c create_p
    		stats.c verify.c lock.c mkdir.c \
 		import_export.c upgrade.c update.c audit.c autoremove.c ping.c message.c \
 		service.c list.c \
-		lua.c lua_scripts.c age.c mtree.c pkgmeta_sort.c query.c shlib.c ports.c
+		lua.c lua_scripts.c age.c mtree.c pkgmeta_sort.c query.c shlib.c ports.c \
+		triggers.c abi.c
 .PATH: ${MPORTDIR}/external/tllist
 INCS=	mport.h tllist.h
 
@@ -59,6 +60,8 @@ CFLAGS+=	-I${.CURDIR} -I${MPORTDIR}/libmport -I${MPORTDIR}/external/tllist/ -I${
 CFLAGS+=-I${SRCTOP}/contrib/libucl/include
 .PATH:  ${SRCTOP}/contrib/libucl/include
 CFLAGS+= -I${ZSTDDIR}/lib
+# sandboxed Lua scripts and triggers enter capability mode
+CFLAGS+=	-DHAVE_CAPSICUM
 .PATH: ${ZSTDDIR}/lib
 SHLIB_MAJOR=	2
 MAN=	mport.3
