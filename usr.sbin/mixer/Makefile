@@ -1,8 +1,10 @@
 
 .include <src.opts.mk>
 
-PROG=	mixer
-MAN=	mixer.8
+PROG=		mixer
+SRCS=		${PROG}.c
+MAN=		${PROG}.8
+LIBADD=		mixer
 
 HAS_TESTS=
 SUBDIR.${MK_TESTS}+= tests
