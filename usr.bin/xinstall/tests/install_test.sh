@@ -25,11 +25,29 @@
 #
 #
 
+atf_test_case incompatible_opts
+incompatible_opts_body() {
+	printf 'test\n123\r456\r\n789\0z' >testf
+	atf_check -s not-exit:0 -e match:"specified together" \
+	    install -s -d dir1
+	atf_check -s not-exit:0 -e match:"specified together" \
+	    install -s -l s testf copyf
+}
+
 atf_test_case copy_to_empty
 copy_to_empty_body() {
 	printf 'test\n123\r456\r\n789\0z' >testf
 	atf_check -s not-exit:0 -e match:"empty string" \
 	    install testf ""
+}
+
+atf_test_case copy_to_nonexistent_dir
+copy_to_nonexistent_dir_body() {
+	local dir="/nonexistent"
+
+	printf 'test\n123\r456\r\n789\0z' >testf
+	atf_check -s not-exit:0 -e match:$dir": No such file or directory" \
+	    install testf $dir/testf
 }
 
 copy_to_nonexistent_with_opts() {
@@ -503,9 +521,87 @@ set_optional_exec_body()
 	atf_check test ! -x testfile
 }
 
+atf_test_case metalog
+metalog_head() {
+	atf_set "descr" "Test metalog generation"
+}
+metalog_body() {
+	atf_check install -M metalog -D dst -m 0755 -d dst
+	echo ". type=dir mode=0755" >expect
+	atf_check install -M metalog -D dst -m 0705 -d dst/dir
+	echo "./dir type=dir mode=0705" >>expect
+	atf_check -o save:file echo "Hello, world!"
+	atf_check install -M metalog -D dst -m 0604 file dst/dir
+	echo "./dir/file type=file mode=0604 size=14" >>expect
+	atf_check install -M metalog -D dst -lrs dir/file dst/"li nk"
+	echo "./li\040nk type=link mode=0755 link=dir/file" >>expect
+	atf_check mtree -f expect -p dst
+	atf_check -o file:expect cat metalog
+}
+
+atf_test_case digest
+digest_head() {
+	atf_set "descr" "Compute digest while copying"
+}
+digest_body() {
+	atf_check mkdir src dst
+	atf_check -e ignore dd if=/dev/random of=src/file bs=1m count=1
+	for alg in md5 rmd160 sha1 sha256 sha512 ; do
+		rm -f dst/file digest metalog
+		atf_check -o save:digest $alg -q src/file
+		atf_check install -M metalog -D dst -h $alg -m 0644 src/file dst
+		echo -n "./file type=file mode=0644 size=1048576 $alg=" >expect
+		cat digest >>expect
+		atf_check cmp src/file dst/file
+		atf_check -o file:expect cat metalog
+	done
+}
+
+atf_test_case null
+null_head() {
+	atf_set "descr" "Install empty file"
+}
+null_body() {
+	atf_check mkdir dst
+	atf_check -s exit:71 -e not-empty install /dev/null dst
+	atf_check install /dev/null dst/file
+	atf_check test -f dst/file
+	atf_check test ! -s dst/file
+	# what if target already exists?
+	echo "The Magic Words are Squeamish Ossifrage" >dst/file
+	atf_check test -s dst/file
+	atf_check install /dev/null dst/file
+	atf_check test ! -s dst/file
+}
+
+atf_test_case stdin
+stdin_head() {
+	atf_set "descr" "Install stdin"
+}
+stdin_body() {
+	atf_check mkdir dst
+	echo "The Magic Words are Squeamish Ossifrage" >src
+	atf_check -s exit:71 -e not-empty install - dst <src
+	atf_check test ! -e dst/file
+	atf_check install - dst/file <src
+	atf_check cmp -s dst/file src
+	atf_check rm dst/file
+	atf_check -s exit:71 -e not-empty install /dev/stdin dst <src
+	atf_check test ! -e dst/file
+	atf_check install /dev/stdin dst/file <src
+	atf_check cmp -s dst/file src
+	# what if target already exists?
+	atf_check install - dst/file </dev/null
+	atf_check test ! -s dst/file
+	atf_check install /dev/stdin dst/file <src
+	atf_check cmp -s dst/file src
+}
+
 atf_init_test_cases() {
+	atf_add_test_case incompatible_opts
 	atf_add_test_case copy_to_empty
 	atf_add_test_case copy_to_nonexistent
+	atf_add_test_case copy_to_nonexistent_dir
 	atf_add_test_case copy_to_nonexistent_safe
 	atf_add_test_case copy_to_nonexistent_comparing
 	atf_add_test_case copy_to_nonexistent_safe_comparing
@@ -547,4 +643,8 @@ atf_init_test_cases() {
 	atf_add_test_case set_owner_group_mode
 	atf_add_test_case set_owner_group_mode_unpriv
 	atf_add_test_case set_optional_exec
+	atf_add_test_case metalog
+	atf_add_test_case digest
+	atf_add_test_case null
+	atf_add_test_case stdin
 }
