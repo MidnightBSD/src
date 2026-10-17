@@ -1,6 +1,16 @@
 Updating Information for MidnightBSD users.
 
 20261016:
+	mport(1) updated to 2.8.4.  Packages may now ship pkg-triggers(5)-style
+	triggers, read from /usr/share/mport/triggers and
+	/usr/local/share/pkg/triggers, to rebuild shared caches after installs,
+	updates and deletes; trigger and Lua scripts run in a capsicum sandbox
+	unless the script sets sandbox: false.  Disable with "mport config set
+	triggers_enable no".  mport config set gains derived ABI and ALTABI
+	values, mport audit reports whether an index upgrade fixes each CVE,
+	and the security-feed CPE query is now URL-encoded.  libmport gains
+	triggers.c and abi.c, so rebuild lib/libmport before usr.sbin/mport.
+
 	mixer(8) has been rewritten on top of the new libmixer(3).  Volumes
 	are 0.0-1.0 or percentages ("mixer vol=80%"), with per-device
 	.volume/.mute/.recsrc controls; the old "mixer vol 80" integer form
