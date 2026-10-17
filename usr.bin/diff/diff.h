@@ -1,6 +1,8 @@
 /*	$OpenBSD: diff.h,v 1.34 2020/11/01 18:16:08 jcs Exp $	*/
 
 /*-
+ * SPDX-License-Identifier: BSD-3-Clause
+ *
  * Copyright (c) 1991, 1993
  *	The Regents of the University of California.  All rights reserved.
  *
@@ -48,6 +50,7 @@
 #define	D_BRIEF		6	/* Say if the files differ */
 #define	D_GFORMAT	7	/* Diff with defined changed group format */
 #define D_SIDEBYSIDE    8	/* Side by side */
+#define	D_QUIET		9	/* Don't output anything */
 
 #define	D_UNSET		-2
 
@@ -80,6 +83,7 @@
 #define D_STRIPCR		0x400	/* Strip trailing cr */
 #define D_SKIPBLANKLINES	0x800	/* Skip blank lines */
 #define D_MATCHLAST		0x1000	/* Display last line matching provided regex */
+#define D_PAGINATION		0x2000  /* Paginate via pr(1) */
 
 /* Features supported by new algorithms */
 #define D_NEWALGO_FLAGS                (D_FORCEASCII | D_PROTOTYPE | D_IGNOREBLANKS)
@@ -108,21 +112,21 @@ struct excludes {
 	struct excludes *next;
 };
 
-extern bool	lflag, Nflag, Pflag, rflag, sflag, Tflag, cflag;
-extern bool    ignore_file_case, suppress_common, color, noderef, algorithm_set;
-extern int     diff_format, diff_context, diff_algorithm, status;
-extern bool	diff_algorithm_set;
-extern int	tabsize, width;
+extern bool	 lflag, Nflag, Pflag, rflag, sflag, Tflag, cflag;
+extern bool	 ignore_file_case, suppress_common, color, noderef, algorithm_set;
+extern int	 diff_format, diff_context, diff_algorithm, status;
+extern bool	 diff_algorithm_set;
+extern int	 tabsize, width;
 extern char	*start, *ifdefname, *diffargs, *label[2];
 extern char	*ignore_pats, *most_recent_pat;
 extern char	*group_format;
 extern const char	*add_code, *del_code;
-extern struct	stat stb1, stb2;
-extern struct	excludes *excludes_list;
-extern regex_t	ignore_re, most_recent_re;
+extern struct stat stb1, stb2;
+extern struct excludes *excludes_list;
+extern regex_t	 ignore_re, most_recent_re;
 
-int	diffreg(char *, char *, int, int);
-int	diffreg_new(char *, char *, int, int);
-bool	can_libdiff(int);
-void	diffdir(char *, char *, int);
-void	print_status(int, char *, char *, const char *);
+int	 diffreg(char *, char *, int, int);
+int	 diffreg_new(char *, char *, int, int);
+bool	 can_libdiff(int);
+void	 diffdir(char *, char *, int);
+void	 print_status(int, char *, char *, const char *);
