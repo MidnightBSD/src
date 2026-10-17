@@ -315,6 +315,227 @@ ATF_TC_CLEANUP(default_package_resolution, tc)
 	cleanup_test_root();
 }
 
+ATF_TC_WITH_CLEANUP(index_version_lookup);
+ATF_TC_HEAD(index_version_lookup, tc)
+{
+	atf_tc_set_md_var(
+	    tc, "descr", "index version lookup picks the newest entry by name, then by origin");
+}
+ATF_TC_BODY(index_version_lookup, tc)
+{
+	mportInstance *mport;
+	mportPackageMeta *pkg;
+	char *pkgname = NULL;
+	char *version = NULL;
+
+	(void)tc;
+
+	mport = create_indexed_instance();
+	ATF_REQUIRE_EQ(MPORT_OK,
+	    mport_db_do(mport->db,
+		"CREATE TABLE idx.packages "
+		"(pkg text NOT NULL, version text NOT NULL, license text NOT NULL, "
+		"comment text NOT NULL, bundlefile text NOT NULL, hash text NOT NULL, "
+		"type int NOT NULL)"));
+	ATF_REQUIRE_EQ(MPORT_OK,
+	    mport_db_do(mport->db,
+		"INSERT INTO idx.packages VALUES "
+		"('demo', '1.0', 'bsd', 'demo', 'demo-1.0.mport', 'hash', 0), "
+		"('demo', '1.10', 'bsd', 'demo', 'demo-1.10.mport', 'hash', 0), "
+		"('demo', '1.2', 'bsd', 'demo', 'demo-1.2.mport', 'hash', 0), "
+		"('new-demo', '2.0', 'bsd', 'demo', 'new-demo-2.0.mport', 'hash', 0)"));
+	ATF_REQUIRE_EQ(MPORT_OK,
+	    mport_db_do(
+		mport->db, "INSERT INTO idx.aliases VALUES ('devel/old-demo', 'new-demo')"));
+
+	pkg = mport_pkgmeta_new();
+	ATF_REQUIRE(pkg != NULL);
+	pkg->name = strdup("demo");
+	pkg->version = strdup("1.0");
+	pkg->origin = strdup("devel/demo");
+	ATF_REQUIRE(pkg->name != NULL && pkg->version != NULL && pkg->origin != NULL);
+
+	ATF_REQUIRE_EQ(MPORT_OK, mport_index_version_get(mport, pkg, &pkgname, &version));
+	ATF_REQUIRE_STREQ("demo", pkgname);
+	ATF_REQUIRE_STREQ("1.10", version);
+	free(pkgname);
+	free(version);
+	version = NULL;
+
+	/* not under its own name: found through the origin alias */
+	free(pkg->name);
+	free(pkg->origin);
+	pkg->name = strdup("old-demo");
+	pkg->origin = strdup("devel/old-demo");
+	ATF_REQUIRE(pkg->name != NULL && pkg->origin != NULL);
+	ATF_REQUIRE_EQ(MPORT_OK, mport_index_version_get(mport, pkg, &pkgname, &version));
+	ATF_REQUIRE_STREQ("new-demo", pkgname);
+	ATF_REQUIRE_STREQ("2.0", version);
+	free(pkgname);
+	free(version);
+	version = NULL;
+
+	free(pkg->name);
+	free(pkg->origin);
+	pkg->name = strdup("missing");
+	pkg->origin = strdup("devel/missing");
+	ATF_REQUIRE(pkg->name != NULL && pkg->origin != NULL);
+	ATF_REQUIRE_EQ(MPORT_OK, mport_index_version_get(mport, pkg, &pkgname, &version));
+	ATF_REQUIRE(pkgname == NULL);
+	ATF_REQUIRE(version == NULL);
+
+	mport_pkgmeta_free(pkg);
+	mport_instance_free(mport);
+}
+ATF_TC_CLEANUP(index_version_lookup, tc)
+{
+	(void)tc;
+
+	cleanup_test_root();
+}
+
+#define PORTS_ROOT TEST_ROOT "/ports"
+
+static void
+cleanup_ports_tree(void)
+{
+	(void)unlink(PORTS_ROOT "/devel/demo/Makefile");
+	(void)unlink(PORTS_ROOT "/devel/broken/Makefile");
+	(void)unlink(PORTS_ROOT "/devel/empty/Makefile");
+	(void)rmdir(PORTS_ROOT "/devel/demo");
+	(void)rmdir(PORTS_ROOT "/devel/broken");
+	(void)rmdir(PORTS_ROOT "/devel/empty");
+	(void)rmdir(PORTS_ROOT "/devel");
+	(void)rmdir(PORTS_ROOT);
+}
+
+static void
+write_port_makefile(const char *dir, const char *contents)
+{
+	char path[256];
+	FILE *fp;
+	int written, closed;
+
+	ATF_REQUIRE_EQ(0, mkdir(dir, 0755));
+	(void)snprintf(path, sizeof(path), "%s/Makefile", dir);
+	fp = fopen(path, "w");
+	if (fp == NULL) {
+		atf_tc_fail("cannot create %s", path);
+		return;
+	}
+	written = fputs(contents, fp);
+	closed = fclose(fp);
+	ATF_REQUIRE(written >= 0);
+	ATF_REQUIRE_EQ(0, closed);
+}
+
+static int
+ports_version(mportInstance *mport, const char *portsdir, const char *origin, const char *flavor,
+    char **version)
+{
+	mportPackageMeta *pkg;
+	int ret;
+
+	pkg = mport_pkgmeta_new();
+	ATF_REQUIRE(pkg != NULL);
+	pkg->name = strdup("demo");
+	pkg->version = strdup("1.0");
+	pkg->origin = strdup(origin);
+	ATF_REQUIRE(pkg->name != NULL && pkg->version != NULL && pkg->origin != NULL);
+	if (flavor != NULL) {
+		free(pkg->flavor);
+		pkg->flavor = strdup(flavor);
+		ATF_REQUIRE(pkg->flavor != NULL);
+	}
+
+	ret = mport_ports_version_get(mport, portsdir, pkg, version);
+	mport_pkgmeta_free(pkg);
+	return ret;
+}
+
+ATF_TC_WITH_CLEANUP(ports_version_lookup);
+ATF_TC_HEAD(ports_version_lookup, tc)
+{
+	atf_tc_set_md_var(tc, "descr",
+	    "ports version lookup runs make -V PKGVERSION in the origin with its flavor");
+	atf_tc_set_md_var(tc, "require.progs", "/usr/bin/make");
+}
+ATF_TC_BODY(ports_version_lookup, tc)
+{
+	mportInstance *mport;
+	char portsdir[1024];
+	char *version = NULL;
+
+	(void)tc;
+
+	mport = create_indexed_instance();
+	cleanup_ports_tree();
+	ATF_REQUIRE(getcwd(portsdir, sizeof(portsdir)) != NULL);
+	ATF_REQUIRE(strlcat(portsdir, "/" PORTS_ROOT, sizeof(portsdir)) < sizeof(portsdir));
+	ATF_REQUIRE_EQ(0, mkdir(PORTS_ROOT, 0755));
+	ATF_REQUIRE_EQ(0, mkdir(PORTS_ROOT "/devel", 0755));
+	/* PKGVERSION depends on FLAVOR and on PORTSDIR reaching make */
+	write_port_makefile(PORTS_ROOT "/devel/demo",
+	    ".if !defined(PORTSDIR) || !exists(${PORTSDIR}/devel/demo/Makefile)\n"
+	    ".error PORTSDIR not passed\n"
+	    ".endif\n"
+	    ".if defined(FLAVOR) && ${FLAVOR} == \"py312\"\n"
+	    "PKGVERSION=\t1.2.3_1\n"
+	    ".else\n"
+	    "PKGVERSION=\t1.2.3\n"
+	    ".endif\n"
+	    "all:\n");
+	write_port_makefile(PORTS_ROOT "/devel/broken", ".error broken port\n");
+	write_port_makefile(PORTS_ROOT "/devel/empty", "all:\n");
+
+	ATF_REQUIRE_EQ(MPORT_OK, ports_version(mport, portsdir, "devel/demo", NULL, &version));
+	ATF_REQUIRE_STREQ("1.2.3", version);
+	free(version);
+	version = NULL;
+
+	ATF_REQUIRE_EQ(MPORT_OK, ports_version(mport, portsdir, "devel/demo", "py312", &version));
+	ATF_REQUIRE_STREQ("1.2.3_1", version);
+	free(version);
+	version = NULL;
+
+	/* no port directory: nothing to compare with */
+	ATF_REQUIRE_EQ(MPORT_OK, ports_version(mport, portsdir, "devel/missing", NULL, &version));
+	ATF_REQUIRE(version == NULL);
+
+	/* make fails or yields nothing */
+	ATF_REQUIRE_EQ(
+	    MPORT_ERR_WARN, ports_version(mport, portsdir, "devel/broken", NULL, &version));
+	ATF_REQUIRE(version == NULL);
+	ATF_REQUIRE_EQ(
+	    MPORT_ERR_WARN, ports_version(mport, portsdir, "devel/empty", NULL, &version));
+	ATF_REQUIRE(version == NULL);
+
+	/* origins and flavors that could escape the tree or the make command line */
+	ATF_REQUIRE_EQ(MPORT_ERR_WARN, ports_version(mport, portsdir, "", NULL, &version));
+	ATF_REQUIRE_EQ(
+	    MPORT_ERR_WARN, ports_version(mport, portsdir, "/devel/demo", NULL, &version));
+	ATF_REQUIRE_EQ(
+	    MPORT_ERR_WARN, ports_version(mport, portsdir, "../ports/devel/demo", NULL, &version));
+	ATF_REQUIRE_EQ(
+	    MPORT_ERR_WARN, ports_version(mport, portsdir, "devel/../devel/demo", NULL, &version));
+	ATF_REQUIRE_EQ(
+	    MPORT_ERR_WARN, ports_version(mport, portsdir, "devel//demo", NULL, &version));
+	ATF_REQUIRE_EQ(
+	    MPORT_ERR_WARN, ports_version(mport, portsdir, "devel/demo;id", NULL, &version));
+	ATF_REQUIRE_EQ(MPORT_ERR_WARN,
+	    ports_version(mport, portsdir, "devel/demo", "py312 PORTSDIR=/", &version));
+	ATF_REQUIRE(version == NULL);
+
+	mport_instance_free(mport);
+}
+ATF_TC_CLEANUP(ports_version_lookup, tc)
+{
+	(void)tc;
+
+	cleanup_ports_tree();
+	cleanup_test_root();
+}
+
 ATF_TP_ADD_TCS(tp)
 {
 	ATF_TP_ADD_TC(tp, mirror_list_null_columns);
@@ -322,6 +543,8 @@ ATF_TP_ADD_TCS(tp)
 	ATF_TP_ADD_TC(tp, moved_lookup_null_columns);
 	ATF_TP_ADD_TC(tp, default_version_lookup);
 	ATF_TP_ADD_TC(tp, default_package_resolution);
+	ATF_TP_ADD_TC(tp, index_version_lookup);
+	ATF_TP_ADD_TC(tp, ports_version_lookup);
 
 	return atf_no_error();
 }

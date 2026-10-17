@@ -44,7 +44,7 @@ mport_update(mportInstance *mport, const char *packageName)
 	mportIndexEntry *indexEntry = NULL;
 	mportPackageMeta **packs_meta = NULL;
 	/*@null@*/ mportIndexMovedEntry **movedEntries = NULL;
-	char *replacement_path = NULL;
+	/*@null@*/ char *replacement_path = NULL;
 	char *default_pkgname = NULL;
 	char *transition_msg = NULL;
 	mportIndexEntry **old_index_entries = NULL;
@@ -97,12 +97,37 @@ mport_update(mportInstance *mport, const char *packageName)
 					return SET_ERROR(
 					    MPORT_ERR_FATAL, "Downloaded package path is missing");
 				}
+				/* The downloaded path is intentionally not used to install;
+				 * mport_install_single() reopens and verifies the bundle on
+				 * a descriptor. Make sure the new name resolves to exactly
+				 * one index entry before the old package is removed. */
+				free(replacement_path);
+				replacement_path = NULL;
+				ret = mport_index_lookup_pkgname(
+				    mport, (*movedEntries)->moved_to_pkgname, &indexEntries);
+				if (ret != MPORT_OK) {
+					mport_index_moved_entry_free_vec(movedEntries);
+					mport_pkgmeta_vec_free(packs_meta);
+					return ret;
+				}
+				if (indexEntries == NULL || indexEntries[0] == NULL ||
+				    indexEntries[1] != NULL) {
+					if (indexEntries != NULL)
+						mport_index_entry_free_vec(indexEntries);
+					mport_index_moved_entry_free_vec(movedEntries);
+					mport_pkgmeta_vec_free(packs_meta);
+					return SET_ERRORX(MPORT_ERR_FATAL,
+					    "Could not resolve moved package %s to a single package",
+					    (*movedEntries)->moved_to_pkgname);
+				}
+				mport_index_entry_free_vec(indexEntries);
+				indexEntries = NULL;
 				(*packs_meta)->action = MPORT_ACTION_UPGRADE;
 				ret = mport_delete_primative(mport, *packs_meta, 1);
 				if (ret == MPORT_OK)
-					ret = mport_install_primative(
-					    mport, replacement_path, NULL, automatic);
-				free(replacement_path);
+					ret = mport_install_single(mport,
+					    (*movedEntries)->moved_to_pkgname, NULL, NULL,
+					    automatic);
 				mport_index_moved_entry_free_vec(movedEntries);
 				mport_pkgmeta_vec_free(packs_meta);
 				return ret;
@@ -197,8 +222,8 @@ mport_update(mportInstance *mport, const char *packageName)
 
 		depends = depends_orig;
 		while (depends != NULL && *depends != NULL) {
-			if (mport_install_depends(mport, (*depends)->d_pkgname,
-				(*depends)->d_version, MPORT_AUTOMATIC) != MPORT_OK) {
+			if (mport_install_dependency(
+				mport, (*depends)->d_pkgname, (*depends)->d_version) != MPORT_OK) {
 				mport_call_msg_cb(mport, "%s", mport_err_string());
 
 				if (mport->ignoreMissing) {
@@ -272,8 +297,8 @@ migrate_default_package(
 		return ret;
 	}
 	for (depends = depends_orig; depends != NULL && *depends != NULL; depends++) {
-		if (mport_install_depends(mport, (*depends)->d_pkgname, (*depends)->d_version,
-			MPORT_AUTOMATIC) != MPORT_OK) {
+		if (mport_install_dependency(mport, (*depends)->d_pkgname, (*depends)->d_version) !=
+		    MPORT_OK) {
 			ret = mport_err_code();
 			mport_index_depends_free_vec(depends_orig);
 			mport_index_entry_free_vec(entries);

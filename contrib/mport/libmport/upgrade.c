@@ -86,6 +86,29 @@ efree(void *p, size_t s1, void *data)
 	free(p);
 }
 
+/*
+ * Whether an installed package is registered for a release older than the
+ * target.  A copy with no recorded release predates release tracking and is
+ * not treated as stale.
+ */
+bool
+mport_pkgmeta_is_stale_release(mportInstance *mport, const mportPackageMeta *pack)
+{
+	char *target;
+	bool stale;
+
+	if (pack == NULL || pack->os_release == NULL || pack->os_release[0] == '\0')
+		return false;
+
+	if ((target = mport_get_osrelease(mport)) == NULL)
+		return false;
+
+	stale = mport_version_cmp(pack->os_release, target) < 0;
+	free(target);
+
+	return stale;
+}
+
 MPORT_PUBLIC_API int
 mport_upgrade(mportInstance *mport)
 {
@@ -202,7 +225,47 @@ mport_upgrade(mportInstance *mport)
 		goto cleanup;
 	}
 
-	// update packages that haven't moved already, lowest-level dependencies first
+	/*
+	 * Pass 1: packages still registered for an older release, lowest-level
+	 * dependencies first.  Their libraries may carry different symbols or
+	 * shared library versions than the rest of the system expects, so they
+	 * are brought to the current release before any ordinary upgrade runs
+	 * against them.  Anything updated here is skipped by pass 2.
+	 */
+	for (i = 0; i < package_count; i++) {
+		pack = sorted_packs[i];
+		if (!mport_pkgmeta_is_stale_release(mport, pack))
+			continue;
+#if defined(__MidnightBSD__)
+		slot = ohash_qlookup(&h, pack->name);
+		key = ohash_find(&h, slot);
+		if (key != NULL)
+			continue;
+#endif
+		match = mport_index_check(mport, pack);
+		if (match == 2)
+			continue; /* renamed or default-version change: pass 2 asks */
+		if (match != 1) {
+			mport_call_msg_cb(mport,
+			    "No update is available for %s, which was built for MidnightBSD %s\n",
+			    pack->name, pack->os_release);
+			continue;
+		}
+
+		mport_call_msg_cb(mport, "Updating %s (built for MidnightBSD %s)\n", pack->name,
+		    pack->os_release);
+		pack->action = MPORT_ACTION_UPGRADE;
+		if (mport_update(mport, pack->name) != MPORT_OK) {
+			mport_call_msg_cb(mport, "Error updating %s\n", pack->name);
+		} else {
+			updated++;
+#if defined(__MidnightBSD__)
+			ohash_insert(&h, slot, pack->name);
+#endif
+		}
+	}
+
+	// pass 2: update packages that haven't moved already, lowest-level dependencies first
 	for (i = 0; i < package_count; i++) {
 		pack = sorted_packs[i];
 #if defined(__MidnightBSD__)

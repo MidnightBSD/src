@@ -54,10 +54,10 @@ struct ohash { };
 
 #define MPORT_PUBLIC_API
 
-#define MPORT_MASTER_VERSION 14
+#define MPORT_MASTER_VERSION 16
 #define MPORT_BUNDLE_VERSION 6
 #define MPORT_BUNDLE_VERSION_STR "6"
-#define MPORT_VERSION "2.8.2"
+#define MPORT_VERSION "2.8.4"
 
 #define MPORT_SETTING_MIRROR_REGION "mirror_region"
 #define MPORT_SETTING_TARGET_OS "target_os"
@@ -74,6 +74,7 @@ struct ohash { };
 #define MPORT_PRECHECK_MOVED 32
 #define MPORT_PRECHECK_DEPRECATED 64
 #define MPORT_PRECHECK_FILE_CONFLICTS 128
+#define MPORT_PRECHECK_BUNDLE_OS 256
 int mport_check_preconditions(mportInstance *, mportPackageMeta *, long);
 
 /* schema */
@@ -88,6 +89,7 @@ int mport_set_database_version(sqlite3 *);
 /* Various database convenience functions */
 int mport_attach_stub_db(sqlite3 *, const char *);
 int mport_detach_stub_db(sqlite3 *);
+int mport_db_harden(sqlite3 *);
 int mport_db_do(sqlite3 *, const char *, ...);
 int mport_db_prepare(sqlite3 *, sqlite3_stmt **, const char *, ...);
 int mport_db_count(sqlite3 *, int *, const char *, ...);
@@ -111,6 +113,7 @@ bool mport_is_age_verified(mportInstance *mport, mportPackageMeta *pack);
 /* Utils */
 bool mport_starts_with(const char *, const char *);
 char *mport_hash_file(const char *);
+int mport_same_file_contents(const char *, const char *, bool *);
 int mport_verify_hash_fd(int, /*@notnull@*/ const char *);
 char *mport_extract_hash_from_file(const char *);
 int mport_copy_file(const char *, const char *);
@@ -171,6 +174,7 @@ typedef struct {
 	char *tmpdir;
 	struct archive_entry *firstreal;
 	short stub_attached;
+	int archive_fd; /* close-on-exec duplicate handed to libarchive; -1 if none */
 } mportBundleRead;
 
 mportBundleWrite *mport_bundle_write_new(void);
@@ -179,19 +183,52 @@ int mport_bundle_write_finish(mportBundleWrite *);
 int mport_bundle_write_add_file(mportBundleWrite *, const char *, const char *);
 int mport_bundle_write_add_entry(mportBundleWrite *, mportBundleRead *, struct archive_entry *);
 
-mportBundleRead *mport_bundle_read_new(void);
+/*@null@*/ mportBundleRead *mport_bundle_read_new(void);
 int mport_bundle_read_init(mportBundleRead *, const char *);
 int mport_bundle_read_init_fd(/*@notnull@*/ mportBundleRead *, int);
 int mport_bundle_read_finish(mportInstance *, mportBundleRead *);
 int mport_bundle_read_prep_for_install(mportInstance *, mportBundleRead *);
 int mport_bundle_read_extract_metafiles(mportBundleRead *, char **);
-int mport_bundle_read_skip_metafiles(mportBundleRead *);
 int mport_bundle_read_next_entry(mportBundleRead *, struct archive_entry **);
 int mport_bundle_read_extract_next_file(mportBundleRead *, struct archive_entry *);
 int mport_bundle_read_install_pkg(mportInstance *, mportBundleRead *, mportPackageMeta *);
 int mport_bundle_read_update_pkg(mportInstance *, mportBundleRead *, mportPackageMeta *);
 
 int mport_install_depends(mportInstance *, const char *, const char *, mportAutomatic);
+int mport_install_dependency(mportInstance *, const char *, const char *);
+bool mport_allow_old_release_env(void);
+bool mport_pkgmeta_is_stale_release(mportInstance *, const mportPackageMeta *);
+
+/* shared library analysis at package creation (shlib.c) */
+#define MPORT_SHLIB_NATIVE 0
+#define MPORT_SHLIB_COMPAT_32 1
+#define MPORT_SHLIB_LINUX 2
+#define MPORT_SHLIB_NFLAGS 4
+typedef struct mport_shlib_scan mportShlibScan;
+/*@null@*/ /*@only@*/ mportShlibScan *mport_shlib_scan_new(void);
+void mport_shlib_scan_free(/*@null@*/ /*@only@*/ mportShlibScan *);
+int mport_shlib_scan_file(/*@null@*/ mportShlibScan *, /*@notnull@*/ const char *,
+    /*@notnull@*/ const char *);
+int mport_shlib_scan_finish(/*@null@*/ mportShlibScan *, /*@null@*/ mportPackageMeta *);
+int mport_shlibs_register(mportInstance *, mportPackageMeta *);
+int mport_shlibs_superseded(mportInstance *, const char *, const char *);
+int mport_shlibs_warn_missing(mportInstance *, mportPackageMeta *);
+int mport_shlibs_load(mportInstance *, mportPackageMeta *);
+int mport_upgrade_master_schema_14to15(sqlite3 *);
+int mport_shlib_analyse_elf(/*@notnull@*/ const char *, /*@out@*/ char **, /*@out@*/ int *,
+    /*@notnull@*/ stringlist_t *);
+int mport_shlib_analyse_elf_for(int, /*@notnull@*/ const char *, /*@out@*/ char **,
+    /*@out@*/ int *, /*@notnull@*/ stringlist_t *);
+int mport_abi_file_read(/*@notnull@*/ const char *, /*@null@*/ /*@out@*/ char **,
+    /*@null@*/ /*@out@*/ uint32_t *, /*@null@*/ /*@out@*/ int *,
+    /*@null@*/ /*@out@*/ const char **);
+/*@null@*/ /*@observer@*/ const char *mport_arch_from_elf_machine(unsigned int);
+#if defined(__LP64__)
+#define MPORT_HOST_ELFCLASS ELFCLASS64
+#else
+#define MPORT_HOST_ELFCLASS ELFCLASS32
+#endif
+/*@null@*/ /*@only@*/ char *mport_shlib_name_with_flags(/*@notnull@*/ const char *, int);
 int mport_install_primative_fd(
     /*@notnull@*/ mportInstance *, int, /*@null@*/ const char *, mportAutomatic);
 int mport_update_down(mportInstance *, mportPackageMeta *, struct ohash_info *, struct ohash *);
@@ -206,6 +243,7 @@ mportPackageMessage *mport_pkg_message_from_ucl(
     mportInstance *, const ucl_object_t *, mportPackageMessage *);
 
 #define RETURN_CURRENT_ERROR return mport_err_code()
+#define MPORT_ERROR_MESSAGE_MAX 1024
 #define RETURN_ERROR(code, msg) \
 	return mport_set_errx((code), "Error at %s:(%d): %s", __FILE__, __LINE__, (msg))
 #define SET_ERROR(code, msg) \
@@ -282,6 +320,10 @@ int mport_fetch_index(mportInstance *);
 int mport_fetch_bootstrap_index(mportInstance *);
 char *mport_fetch_cves(mportInstance *mport, char *cpe);
 
+/* audit */
+int mport_audit_report(/*@notnull@*/ mportInstance *, /*@notnull@*/ mportPackageMeta *,
+    /*@notnull@*/ const char *, bool, /*@out@*/ /*@null@*/ char **);
+
 /* a few index things */
 int mport_index_get_mirror_list(mportInstance *, char ***, int *);
 char *mport_index_file_path(void);
@@ -299,10 +341,15 @@ int mport_script_run_child(mportInstance *, int, int *, int, const char *);
 #define MPORT_SETTING_REPO_AUTOUPDATE "index_autoupdate"
 #define MPORT_SETTING_REPO_AUTOUPDATE_LEGACY "REPO_AUTOUPDATE"
 #define MPORT_SETTING_HANDLE_RC_SCRIPTS "handle_rc_scripts"
+#define MPORT_SETTING_TRIGGERS_ENABLE "triggers_enable"
+#define MPORT_SETTING_TRIGGERS_DIR "triggers_dir"
+/* whitespace separated; the ports tree installs USES=trigger files into the second */
+#define MPORT_TRIGGERS_DIR_DEFAULT "/usr/share/mport/triggers /usr/local/share/pkg/triggers"
 
 /* Binaries we use */
 #define MPORT_MTREE_BIN "/usr/sbin/mtree"
 #define MPORT_CHROOT_BIN "/usr/sbin/chroot"
+#define MPORT_MAKE_BIN "/usr/bin/make"
 
 #define MPORT_URL_MAX 512
 

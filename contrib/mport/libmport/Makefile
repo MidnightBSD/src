@@ -10,10 +10,14 @@ SRCS=	asset.c bundle_write.c bundle_read.c plist.c color.c create_primative.c db
     	fetch.c index.c index_depends.c install.c clean.c setting.c  \
    		stats.c update.c upgrade.c verify.c lock.c mkdir.c import_export.c \
    		annotation.c autoremove.c audit.c ping.c message.c service.c list.c \
-		query.c lua.c lua_scripts.c age.c mtree.c
+		query.c lua.c lua_scripts.c triggers.c age.c mtree.c shlib.c ports.c abi.c
 INCS=	mport.h
 
 CFLAGS+=	-I${.CURDIR} -I ../external/tllist/ -I ../external/lua/src/ -I/usr/include/private/ucl -I/usr/include/ucl -I/usr/include/private/zstd
+# sandboxed Lua scripts and triggers enter capability mode where available
+.if exists(/usr/include/sys/capsicum.h)
+CFLAGS+=	-DHAVE_CAPSICUM
+.endif
 SHLIB_MAJOR=	2
 MAN=	mport.3
 

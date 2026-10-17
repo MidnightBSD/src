@@ -176,6 +176,20 @@ ATF_TC_BODY(select_magus, tc)
 	(void)unsetenv("MAGUS");
 }
 
+ATF_TC(message_without_instance);
+ATF_TC_HEAD(message_without_instance, tc)
+{
+	atf_tc_set_md_var(tc, "descr", "message callback accepts a NULL or uninitialized instance");
+}
+ATF_TC_BODY(message_without_instance, tc)
+{
+	mportInstance mport = { 0 };
+
+	(void)tc;
+	ATF_REQUIRE_EQ(MPORT_OK, mport_call_msg_cb(NULL, "No instance: %d", 1));
+	ATF_REQUIRE_EQ(MPORT_OK, mport_call_msg_cb(&mport, "No callback: %d", 2));
+}
+
 ATF_TP_ADD_TCS(tp)
 {
 	ATF_TP_ADD_TC(tp, confirm_assume_always_yes);
@@ -186,6 +200,7 @@ ATF_TP_ADD_TCS(tp)
 	ATF_TP_ADD_TC(tp, select_non_tty_aborts);
 	ATF_TP_ADD_TC(tp, select_assume_always_yes);
 	ATF_TP_ADD_TC(tp, select_magus);
+	ATF_TP_ADD_TC(tp, message_without_instance);
 
 	return atf_no_error();
 }

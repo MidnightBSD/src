@@ -47,11 +47,14 @@
 
 static int create_stub_db(mportInstance *, sqlite3 **, const char *);
 
+static int drop_duplicate_assets(mportInstance *, mportAssetList *, mportPackageMeta *);
 static int insert_assetlist(sqlite3 *, mportAssetList *, mportPackageMeta *, mportCreateExtras *);
 
 static int insert_meta(mportInstance *, sqlite3 *, mportPackageMeta *, mportCreateExtras *);
 
 static int insert_depends(sqlite3 *, mportPackageMeta *, mportCreateExtras *);
+static int insert_shlibs(sqlite3 *, mportPackageMeta *);
+static void warn_ldconfig_mismatch(mportInstance *, mportAssetList *, mportPackageMeta *);
 
 static int insert_conflicts(sqlite3 *, mportPackageMeta *, mportCreateExtras *);
 
@@ -79,6 +82,9 @@ mport_create_primative(mportInstance *mport, mportAssetList *assetlist, mportPac
 	char dirtmpl[MAXPATHLEN];
 	char *tmpdir;
 
+	if ((error_code = drop_duplicate_assets(mport, assetlist, pack)) != MPORT_OK)
+		return error_code;
+
 	tmpdir = getenv("TMPDIR");
 	if (tmpdir == NULL)
 		tmpdir = "/tmp";
@@ -105,6 +111,7 @@ mport_create_primative(mportInstance *mport, mportAssetList *assetlist, mportPac
 
 	if ((error_code = insert_assetlist(db, assetlist, pack, extra)) != MPORT_OK)
 		goto DBFAIL;
+	warn_ldconfig_mismatch(mport, assetlist, pack);
 
 	if ((error_code = insert_meta(mport, db, pack, extra)) != MPORT_OK)
 		goto DBFAIL;
@@ -164,6 +171,134 @@ create_stub_db(mportInstance *mport, sqlite3 **db, const char *tmpdir)
 	return error_code;
 }
 
+/* a file asset's install path and its position in the plist */
+struct asset_key {
+	/*@only@*/ char *path;
+	size_t seq;
+	bool dup;
+};
+
+static bool
+is_file_asset(mportAssetListEntryType type)
+{
+	return (type == ASSET_FILE || type == ASSET_SAMPLE || type == ASSET_SHELL ||
+	    type == ASSET_FILE_OWNER_MODE || type == ASSET_SAMPLE_OWNER_MODE || type == ASSET_INFO);
+}
+
+static int
+cmp_asset_key_path(const void *a, const void *b)
+{
+	const struct asset_key *x = a;
+	const struct asset_key *y = b;
+	int c = strcmp(x->path, y->path);
+
+	if (c != 0)
+		return c;
+	return (x->seq > y->seq) - (x->seq < y->seq);
+}
+
+static int
+cmp_asset_key_seq(const void *a, const void *b)
+{
+	const struct asset_key *x = a;
+	const struct asset_key *y = b;
+
+	return (x->seq > y->seq) - (x->seq < y->seq);
+}
+
+/*
+ * A plist that names the same file twice (say, a port listing an rc.d script
+ * that USE_RC_SUBR also adds) archives it twice and registers two assets for
+ * one path, so delete trips over the second after removing the first.  Keep
+ * the first entry for each install path, warn about and drop the rest.
+ */
+static int
+drop_duplicate_assets(mportInstance *mport, mportAssetList *assetlist, mportPackageMeta *pack)
+{
+	mportAssetListEntry *e;
+	mportAssetList kept;
+	struct asset_key *keys = NULL;
+	struct asset_key *grown;
+	const char *cwd = pack->prefix;
+	char path[FILENAME_MAX];
+	size_t count = 0, capacity = 0, i;
+	int error_code = MPORT_OK;
+
+	/* STAILQ_FOREACH keeps the iterator non-null in the body; cppcheck can't
+	 * model the macro. */
+	/* cppcheck-suppress-begin uninitvar */
+	STAILQ_FOREACH (e, assetlist, next) {
+		if (e->type == ASSET_CWD)
+			cwd = e->data == NULL ? pack->prefix : e->data;
+
+		if (!is_file_asset(e->type) || e->data == NULL)
+			continue;
+
+		if (e->data[0] == '/')
+			error_code = checked_snprintf(path, sizeof(path), "%s", e->data);
+		else
+			error_code = checked_snprintf(
+			    path, sizeof(path), "%s/%s", cwd == NULL ? "" : cwd, e->data);
+		if (error_code != MPORT_OK)
+			goto done;
+
+		if (count == capacity) {
+			capacity = capacity == 0 ? 64 : capacity * 2;
+			grown = reallocarray(keys, capacity, sizeof(*keys));
+			if (grown == NULL) {
+				error_code = SET_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+				goto done;
+			}
+			keys = grown;
+		}
+
+		keys[count].path = strdup(path);
+		if (keys[count].path == NULL) {
+			error_code = SET_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+			goto done;
+		}
+		keys[count].seq = count;
+		keys[count].dup = false;
+		count++;
+	}
+	/* cppcheck-suppress-end uninitvar */
+
+	if (count < 2)
+		goto done;
+
+	qsort(keys, count, sizeof(*keys), cmp_asset_key_path);
+	for (i = 1; i < count; i++) {
+		if (strcmp(keys[i].path, keys[i - 1].path) == 0) {
+			keys[i].dup = true;
+			mport_call_msg_cb(mport,
+			    "Warning: %s: duplicate plist entry for %s removed", pack->name,
+			    keys[i].path);
+		}
+	}
+	qsort(keys, count, sizeof(*keys), cmp_asset_key_seq);
+
+	/* rebuild the list without the duplicates, in plist order */
+	STAILQ_INIT(&kept);
+	i = 0;
+	while ((e = STAILQ_FIRST(assetlist)) != NULL) {
+		STAILQ_REMOVE_HEAD(assetlist, next);
+		if (is_file_asset(e->type) && e->data != NULL && keys[i++].dup) {
+			free(e->data);
+			free(e);
+			continue;
+		}
+		STAILQ_INSERT_TAIL(&kept, e, next);
+	}
+	STAILQ_CONCAT(assetlist, &kept);
+
+done:
+	for (i = 0; i < count; i++)
+		free(keys[i].path);
+	free(keys);
+
+	return error_code;
+}
+
 static int
 insert_assetlist(
     sqlite3 *db, mportAssetList *assetlist, mportPackageMeta *pack, mportCreateExtras *extra)
@@ -175,14 +310,21 @@ insert_assetlist(
 	char hash[65];
 	char file[FILENAME_MAX];
 	char cwd[FILENAME_MAX];
+	char installed[FILENAME_MAX];
 	struct stat st;
+	mportShlibScan *scan = NULL;
 	int error_code = MPORT_OK;
 
 	strlcpy(cwd, extra->sourcedir, FILENAME_MAX);
 	strlcat(cwd, pack->prefix, FILENAME_MAX);
 
-	if (mport_db_prepare(db, &stmnt, sql) != MPORT_OK)
+	if ((scan = mport_shlib_scan_new()) == NULL)
 		RETURN_CURRENT_ERROR;
+
+	if (mport_db_prepare(db, &stmnt, sql) != MPORT_OK) {
+		mport_shlib_scan_free(scan);
+		RETURN_CURRENT_ERROR;
+	}
 
 	/* STAILQ_FOREACH keeps the iterator non-null in the body; cppcheck can't
 	 * model the macro. */
@@ -282,6 +424,18 @@ insert_assetlist(
 			} else {
 				sqlite3_bind_null(stmnt, 4);
 			}
+
+			/*
+			 * Where the file lands once installed: the staged path with
+			 * the stage directory removed.  The provide-path filter in
+			 * the scan compares its directory with SHLIB_PROVIDE_PATHS_*.
+			 */
+			(void)strlcpy(
+			    installed, file + strlen(extra->sourcedir), sizeof(installed));
+			if (mport_shlib_scan_file(scan, file, installed) != MPORT_OK) {
+				error_code = mport_err_code();
+				goto done;
+			}
 		} else {
 			if (sqlite3_bind_null(stmnt, 4) != SQLITE_OK) {
 				error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
@@ -298,12 +452,96 @@ insert_assetlist(
 		sqlite3_clear_bindings(stmnt);
 		sqlite3_reset(stmnt);
 	}
+
+	/*
+	 * Settle what the package provides and requires.  no_provide_shlib is
+	 * set when it provides nothing; a value the caller already set
+	 * (mport.create -S, for ports that bundle private libraries) stands.
+	 */
+	error_code = mport_shlib_scan_finish(scan, pack);
 	/* cppcheck-suppress-end nullPointer */
 
 done:
+	mport_shlib_scan_free(scan);
 	sqlite3_finalize(stmnt);
 
 	return error_code;
+}
+
+/*
+ * @ldconfig in the plist and the scan's provided list should agree: the
+ * keyword with nothing provided under SHLIB_PROVIDE_PATHS_NATIVE usually
+ * means the port sets USE_LDCONFIG for a library that went elsewhere, and
+ * native libraries provided without the keyword will not be found by the
+ * run-time linker until ldconfig runs.  Either is a porting mistake worth a
+ * word; neither stops the package.
+ */
+static void
+warn_ldconfig_mismatch(mportInstance *mport, mportAssetList *assetlist, mportPackageMeta *pack)
+{
+	mportAssetListEntry *e;
+	bool has_ldconfig = false;
+	bool provides_native = false;
+	const char *paths = getenv("SHLIB_PROVIDE_PATHS_NATIVE");
+
+	/* STAILQ_FOREACH keeps the iterator non-null in the body; cppcheck can't
+	 * model the macro. */
+	/* cppcheck-suppress-begin uninitvar */
+	STAILQ_FOREACH (e, assetlist, next) {
+		if (e->type == ASSET_LDCONFIG)
+			has_ldconfig = true;
+	}
+	/* cppcheck-suppress-end uninitvar */
+	tll_foreach(pack->shlibs_provided, it)
+	{
+		if (strchr(it->item, ':') == NULL)
+			provides_native = true;
+	}
+
+	if (has_ldconfig && !provides_native && paths != NULL && paths[0] != '\0')
+		mport_call_msg_cb(mport,
+		    "Warning: %s: plist has @ldconfig but no shared library was found under %s",
+		    pack->name, paths);
+	else if (!has_ldconfig && provides_native)
+		mport_call_msg_cb(mport,
+		    "Warning: %s: provides shared libraries but the plist has no @ldconfig (USE_LDCONFIG)",
+		    pack->name);
+}
+
+/* the lists settled by the asset walk, one row per soname */
+static int
+insert_shlibs(sqlite3 *db, mportPackageMeta *pack)
+{
+	static const char *const sql[] = {
+		"INSERT INTO shlibs_provided (pkg, name) VALUES (?,?)",
+		"INSERT INTO shlibs_required (pkg, name) VALUES (?,?)",
+	};
+	stringlist_t *lists[] = { &pack->shlibs_provided, &pack->shlibs_required };
+
+	for (size_t i = 0; i < 2; i++) {
+		sqlite3_stmt *stmnt = NULL;
+
+		if (tll_length(*lists[i]) == 0)
+			continue;
+		if (mport_db_prepare(db, &stmnt, sql[i]) != MPORT_OK)
+			RETURN_CURRENT_ERROR;
+		tll_foreach(*lists[i], it)
+		{
+			if (sqlite3_bind_text(stmnt, 1, pack->name, -1, SQLITE_STATIC) !=
+				SQLITE_OK ||
+			    sqlite3_bind_text(stmnt, 2, it->item, -1, SQLITE_STATIC) != SQLITE_OK ||
+			    sqlite3_step(stmnt) != SQLITE_DONE) {
+				SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
+				sqlite3_finalize(stmnt);
+				RETURN_CURRENT_ERROR;
+			}
+			sqlite3_clear_bindings(stmnt);
+			sqlite3_reset(stmnt);
+		}
+		sqlite3_finalize(stmnt);
+	}
+
+	return MPORT_OK;
 }
 
 static int
@@ -316,7 +554,14 @@ insert_meta(mportInstance *mport, sqlite3 *db, mportPackageMeta *pack, mportCrea
 	char sql[] =
 	    "INSERT INTO packages (pkg, version, origin, lang, prefix, comment, os_release, cpe, deprecated, expiration_date, no_provide_shlib, flavor, type, flatsize) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
 
-	char *os_release = mport_get_osrelease(mport);
+	char *os_release;
+
+	(void)mport_set_err(MPORT_OK, NULL);
+	if ((os_release = mport_get_osrelease(mport)) == NULL) {
+		if (mport_err_code() != MPORT_OK)
+			RETURN_CURRENT_ERROR;
+		RETURN_ERROR(MPORT_ERR_FATAL, "OS Release could not be determined");
+	}
 	if (pack->cpe == NULL) {
 		pack->cpe = malloc(1 * sizeof(char));
 		pack->cpe[0] = '\0';
@@ -403,6 +648,8 @@ done:
 		return error_code;
 
 	if (insert_depends(db, pack, extra) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+	if (insert_shlibs(db, pack) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 	if (insert_conflicts(db, pack, extra) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
@@ -704,7 +951,8 @@ archive_files(
 	if (archive_assetlistfiles(bundle, pack, extra, assetlist) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
-	mport_bundle_write_finish(bundle);
+	if (mport_bundle_write_finish(bundle) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
 
 	return MPORT_OK;
 }

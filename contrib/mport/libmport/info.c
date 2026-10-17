@@ -254,11 +254,11 @@ mport_info(mportInstance *mport, const char *packageName)
 		    "%s-%s\n"
 		    "Name            : %s\nVersion         : %s\nLatest          : %s\nLicenses        : %s\nOrigin          : %s\n"
 		    "Flavor          : %s\nOS              : %s\n"
-		    "CPE             : %s\nPURL            : %s\nLocked          : %s\nPrime           : %s\nShared library  : %s\nDeprecated      : %s\nExpiration Date : %s\nInstall Date    : %s"
+		    "CPE             : %s\nPURL            : %s\nLocked          : %s\nPrime           : %s\nProvides shlibs : %s\nDeprecated      : %s\nExpiration Date : %s\nInstall Date    : %s"
 		    "Comment         : %s\n%sOptions         : %s\nType            : %s\nFlat Size       : %s\nDescription     :\n%s\n",
 		    (*packs)->name, (*packs)->version, (*packs)->name, status, "", "", origin,
 		    flavor, os_release, cpe, purl, locked ? "yes" : "no",
-		    automatic == MPORT_EXPLICIT ? "yes" : "no", no_shlib_provided ? "yes" : "no",
+		    automatic == MPORT_EXPLICIT ? "yes" : "no", no_shlib_provided ? "no" : "yes",
 		    deprecated, expdate_str, insdate_str, "", annotations_str, options,
 		    type == MPORT_TYPE_APP ? "Application" : "System", flatsize_str, desc);
 	} else if (packs != NULL) {
@@ -266,13 +266,13 @@ mport_info(mportInstance *mport, const char *packageName)
 		    "%s-%s\n"
 		    "Name            : %s\nVersion         : %s\nLatest          : %s\nLicenses        : %s\nOrigin          : %s\n"
 		    "Flavor          : %s\nOS              : %s\n"
-		    "CPE             : %s\nPURL            : %s\nLocked          : %s\nPrime           : %s\nShared library  : %s\nDeprecated      : %s\nExpiration Date : %s\nInstall Date    : %s"
+		    "CPE             : %s\nPURL            : %s\nLocked          : %s\nPrime           : %s\nProvides shlibs : %s\nDeprecated      : %s\nExpiration Date : %s\nInstall Date    : %s"
 		    "Comment         : %s\n%sOptions         : %s\nType            : %s\nFlat Size       : %s\nDescription     :\n%s\n",
 		    (*packs)->name, (*packs)->version, (*packs)->name, status,
 		    indexEntry == NULL ? "" : indexEntry->version,
 		    indexEntry == NULL ? "" : indexEntry->license, origin, flavor, os_release, cpe,
 		    purl, locked ? "yes" : "no", automatic == MPORT_EXPLICIT ? "yes" : "no",
-		    no_shlib_provided ? "yes" : "no", deprecated, expdate_str, insdate_str,
+		    no_shlib_provided ? "no" : "yes", deprecated, expdate_str, insdate_str,
 		    indexEntry == NULL ? "" : indexEntry->comment, annotations_str, options,
 		    type == MPORT_TYPE_APP ? "Application" : "System", flatsize_str, desc);
 	} else {
@@ -281,12 +281,12 @@ mport_info(mportInstance *mport, const char *packageName)
 		    "%s-%s\n"
 		    "Name            : %s\nVersion         : %s\nLatest          : %s\nLicenses        : %s\nOrigin          : %s\n"
 		    "Flavor          : %s\nOS              : %s\n"
-		    "CPE             : %s\nPURL            : %s\nLocked          : %s\nPrime           : %s\nShared library  : %s\nDeprecated      : %s\nExpiration Date : %s\nInstall Date    : %s"
+		    "CPE             : %s\nPURL            : %s\nLocked          : %s\nPrime           : %s\nProvides shlibs : %s\nDeprecated      : %s\nExpiration Date : %s\nInstall Date    : %s"
 		    "Comment         : %s\n%sOptions         : %s\nType            : %s\nFlat Size       : %s\nDescription     :\n%s\n",
 		    indexEntry->pkgname, indexEntry->version, indexEntry->pkgname, status,
 		    indexEntry->version, indexEntry->license == NULL ? "" : indexEntry->license,
 		    origin, flavor, os_release, cpe, purl, locked ? "yes" : "no",
-		    automatic == MPORT_EXPLICIT ? "yes" : "no", no_shlib_provided ? "yes" : "no",
+		    automatic == MPORT_EXPLICIT ? "yes" : "no", no_shlib_provided ? "no" : "yes",
 		    deprecated, "", /* expiration date: not installed, always empty */
 		    "\n", /* install date: not installed, always empty */
 		    indexEntry->comment == NULL ? "" : indexEntry->comment, annotations_str,

@@ -11,6 +11,9 @@
 
 #include "../libmport/mport.h"
 
+/* Internal libmport symbols used by the tests. */
+char *mport_fetch_cves(mportInstance *, char *);
+
 /* Splint does not understand ATF's generated test-case wrappers. */
 /*@-boundsread -boundswrite -compdef -compdestroy -dependenttrans -fullinitblock@*/
 /*@-mustfreefresh -noeffect -nullderef -nullpass -nullret -nullstate@*/
@@ -202,11 +205,70 @@ ATF_TC_CLEANUP(force_http_set_rewrites_https, tc)
 	unsetenv("MPORT_FORCE_HTTP");
 }
 
+/* Fetch the CVE feed for cpe and require the request to carry expected. */
+static void
+check_cve_fetch_url(const char *cpe, const char *expected)
+{
+	mportInstance mport;
+	char *buf;
+	char *path;
+
+	init_test_instance(&mport);
+	last_fetch_url[0] = '\0';
+	fetch_call_count = 0;
+	unsetenv("MPORT_FORCE_HTTP");
+
+	buf = strdup(cpe);
+	ATF_REQUIRE(buf != NULL);
+	path = mport_fetch_cves(&mport, buf);
+	free(buf);
+
+	ATF_REQUIRE(path != NULL);
+	ATF_REQUIRE_EQ(1, fetch_call_count);
+	ATF_REQUIRE_STREQ(expected, last_fetch_url);
+
+	(void)unlink(path);
+	free(path);
+}
+
+ATF_TC_WITHOUT_HEAD(cve_url_plain_cpe);
+ATF_TC_BODY(cve_url_plain_cpe, tc)
+{
+	(void)tc;
+
+	check_cve_fetch_url("cpe:2.3:a:apache:http_server:2.4.69:::::midnightbsd4:x64:0",
+	    "https://sec.midnightbsd.org/api/cpe/partial-match?includeVersion=true"
+	    "&cpe=cpe:2.3:a:apache:http_server:2.4.69:::::midnightbsd4:x64:0"
+	    "&startDate=2006-02-28");
+}
+
+ATF_TC_WITHOUT_HEAD(cve_url_encodes_cpe);
+ATF_TC_BODY(cve_url_encodes_cpe, tc)
+{
+	(void)tc;
+
+	/* '+' would otherwise reach the server as a space */
+	check_cve_fetch_url("cpe:2.3:a:apache:xerces-c++:3.3.0:::::midnightbsd4:x64:0",
+	    "https://sec.midnightbsd.org/api/cpe/partial-match?includeVersion=true"
+	    "&cpe=cpe:2.3:a:apache:xerces-c%2B%2B:3.3.0:::::midnightbsd4:x64:0"
+	    "&startDate=2006-02-28");
+	check_cve_fetch_url("cpe:2.3:a:oracle:openjdk:21.0.9+10.1:::::midnightbsd4:x64:2",
+	    "https://sec.midnightbsd.org/api/cpe/partial-match?includeVersion=true"
+	    "&cpe=cpe:2.3:a:oracle:openjdk:21.0.9%2B10.1:::::midnightbsd4:x64:2"
+	    "&startDate=2006-02-28");
+	check_cve_fetch_url("cpe:2.3:a:erlang:erlang/otp:25.3:*:*:*:*:*:*:*&x=1 #\\",
+	    "https://sec.midnightbsd.org/api/cpe/partial-match?includeVersion=true"
+	    "&cpe=cpe:2.3:a:erlang:erlang%2Fotp:25.3:%2A:%2A:%2A:%2A:%2A:%2A:%2A%26x%3D1%20%23%5C"
+	    "&startDate=2006-02-28");
+}
+
 ATF_TP_ADD_TCS(tp)
 {
 	ATF_TP_ADD_TC(tp, force_http_unset_keeps_https);
 	ATF_TP_ADD_TC(tp, force_http_empty_keeps_https);
 	ATF_TP_ADD_TC(tp, force_http_set_rewrites_https);
+	ATF_TP_ADD_TC(tp, cve_url_plain_cpe);
+	ATF_TP_ADD_TC(tp, cve_url_encodes_cpe);
 
 	return atf_no_error();
 }

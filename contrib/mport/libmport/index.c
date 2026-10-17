@@ -663,6 +663,69 @@ mport_index_get_default_version(
 }
 
 /*
+ * Find the newest version the index offers for an installed package, by
+ * package name and then by origin.  Both outputs remain NULL when the index
+ * does not carry the package; otherwise *pkgname is the index entry's name,
+ * which differs from pack->name when only the origin matched.
+ */
+MPORT_PUBLIC_API int
+mport_index_version_get(/*@notnull@*/ mportInstance *mport,
+    /*@notnull@*/ mportPackageMeta *pack, /*@out@*/ /*@null@*/ char **pkgname,
+    /*@out@*/ /*@null@*/ char **version)
+{
+	mportIndexEntry **entries = NULL;
+	mportIndexEntry **e;
+	mportIndexEntry *best = NULL;
+
+	if (mport == NULL || pack == NULL || pkgname == NULL || version == NULL)
+		RETURN_ERROR(MPORT_ERR_FATAL, "Invalid index version lookup arguments");
+
+	*pkgname = NULL;
+	*version = NULL;
+
+	if (pack->name == NULL)
+		RETURN_ERROR(MPORT_ERR_FATAL, "Package name not defined");
+
+	if (mport_index_lookup_pkgname(mport, pack->name, &entries) != MPORT_OK) {
+		mport_index_entry_free_vec(entries);
+		RETURN_CURRENT_ERROR;
+	}
+
+	if ((entries == NULL || *entries == NULL) && pack->origin != NULL &&
+	    pack->origin[0] != '\0') {
+		mport_index_entry_free_vec(entries);
+		entries = NULL;
+		if (mport_index_lookup_pkgname(mport, pack->origin, &entries) != MPORT_OK) {
+			mport_index_entry_free_vec(entries);
+			RETURN_CURRENT_ERROR;
+		}
+	}
+
+	for (e = entries; e != NULL && *e != NULL; e++) {
+		if ((*e)->version == NULL)
+			continue;
+		if (best == NULL || mport_version_cmp(best->version, (*e)->version) < 0)
+			best = *e;
+	}
+
+	if (best != NULL) {
+		*pkgname = strdup(best->pkgname);
+		*version = strdup(best->version);
+		if (*pkgname == NULL || *version == NULL) {
+			free(*pkgname);
+			free(*version);
+			*pkgname = NULL;
+			*version = NULL;
+			mport_index_entry_free_vec(entries);
+			RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+		}
+	}
+
+	mport_index_entry_free_vec(entries);
+	return MPORT_OK;
+}
+
+/*
  * Resolve a package whose name embeds an interpreter version to the package
  * using the current repository default.  The output remains NULL when the
  * package is not versioned, the index is old, or the derived package is not
