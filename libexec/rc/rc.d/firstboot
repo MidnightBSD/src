@@ -55,6 +55,31 @@ install_pkg()
 	return ${rc}
 }
 
+set_default_session()
+{
+	local session
+	local xinitrcd
+
+	session="$1"
+	xinitrcd="/usr/local/etc/X11/xinit/xinitrc.d"
+
+	# ~/.xinitrc sources xinitrc.d after picking its fallback, so this
+	# makes the chosen desktop the "default" session in mlogind and startx.
+	if ! /bin/mkdir -p "${xinitrcd}"; then
+		warn_msg "Could not create ${xinitrcd}."
+		return 1
+	fi
+
+	if ! printf '# Default X session selected by firstboot.\nDEFAULT_SESSION="%s"\n' \
+	    "${session}" > "${xinitrcd}/default-session.sh"; then
+		warn_msg "Could not record the default desktop session."
+		return 1
+	fi
+
+	run_step "Marking the default session script executable" \
+	    /bin/chmod 755 "${xinitrcd}/default-session.sh"
+}
+
 firstboot_start()
 {
 	local lsuffix
@@ -136,14 +161,50 @@ firstboot_start()
 			read installgui
 
 			if [ "${installgui}" = "yes" ]; then
+				echo "Available desktops:"
+				echo "  midnight    - MidnightBSD Workspace"
+				echo "  xfce        - Xfce"
+				echo "  windowmaker - GNUstep and Window Maker"
+				echo "Other installed desktops can be picked at the login screen with F1."
+				echo -e "\r${yellow}Which desktop would you like as the default? (midnight, xfce or windowmaker) [midnight]${lsuffix}"
+				read desktop
+				case "${desktop}" in
+				""|midnight)
+					desktop="midnight"
+					session="midnight-wm"
+					;;
+				xfce)
+					session="startxfce4"
+					;;
+				windowmaker)
+					session="wmaker"
+					;;
+				*)
+					warn_msg "Unknown desktop selection '${desktop}'; using midnight."
+					desktop="midnight"
+					session="midnight-wm"
+					;;
+				esac
+
 				echo -e "\r${red}Installing Graphical User Interface${lsuffix}"
-	#			xfce/mlogind
-					if install_pkg midnightbsd-desktop; then
-						run_step "Enabling mlogind" /usr/sbin/sysrc mlogind_enable=YES
-						run_step "Enabling dbus" /usr/sbin/sysrc dbus_enable=YES
+				# midnightbsd-desktop provides Xorg, mlogind and xfce.
+				if install_pkg midnightbsd-desktop; then
+					run_step "Enabling mlogind" /usr/sbin/sysrc mlogind_enable=YES
+					run_step "Enabling dbus" /usr/sbin/sysrc dbus_enable=YES
+
+					if [ "${desktop}" = "midnight" ]; then
+						install_pkg midnight-wm && \
+						    set_default_session "${session}"
+					elif [ "${desktop}" = "windowmaker" ]; then
+						install_pkg windowmaker && \
+						    install_pkg gnustep && \
+						    set_default_session "${session}"
 					else
-						warn_msg "Graphical desktop installation failed; continuing with the rest of firstboot."
+						set_default_session "${session}"
 					fi
+				else
+					warn_msg "Graphical desktop installation failed; continuing with the rest of firstboot."
+				fi
 
 				echo "The following options will help you install GPU drivers. You may need to perform further x.org configuration to make them work properly"
 
