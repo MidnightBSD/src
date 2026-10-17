@@ -69,6 +69,7 @@ SUBDIR=	${SUBDIR_BOOTSTRAP} \
 	liblua \
 	liblzma \
 	libmemstat \
+	libmixer \
 	libmd \
 	libmport \
 	libmsearch \

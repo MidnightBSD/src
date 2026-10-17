@@ -165,6 +165,7 @@ _LIBRARIES=	\
 		magic \
 		md \
 		memstat \
+		mixer \
 		mj \
 		mp \
 		mport \
