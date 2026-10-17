@@ -15,7 +15,7 @@
 #SEARCHPATHS="/"
 
 # paths unwanted in output
-#PRUNEPATHS="/tmp /usr/tmp /var/tmp /var/db/portsnap /var/db/midnightbsd-update"
+#PRUNEPATHS="/tmp /usr/tmp /var/tmp /var/db/midnightbsd-update"
 
 # directories unwanted in output
 #PRUNEDIRS=".zfs"
