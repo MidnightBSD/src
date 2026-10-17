@@ -53,6 +53,7 @@ static /*@only@*/ char *force_http_url(/*@null@*/ const char *);
 static bool is_valid_bundle_filename(const char *);
 static bool force_http_fetch_enabled(void);
 static bool url_is_https(const char *);
+static /*@null@*/ /*@only@*/ char *url_encode_query_value(/*@notnull@*/ const char *);
 
 static bool
 is_valid_bundle_filename(const char *filename)
@@ -362,12 +363,51 @@ url_is_https(const char *url)
 	return strncasecmp(url, "https://", 8) == 0;
 }
 
+/*
+ * Percent-encode a query string value.  RFC 3986 unreserved characters and the
+ * ':' separating CPE fields are left as they are; anything else, such as the
+ * '+' in xerces-c++ or openjdk version strings, would otherwise be decoded by
+ * the server as a space or another delimiter.
+ */
+static /*@null@*/ /*@only@*/ char *
+url_encode_query_value(/*@notnull@*/ const char *value)
+{
+	static const char hex[] = "0123456789ABCDEF";
+	const unsigned char *c;
+	char *encoded;
+	size_t len = strlen(value);
+	size_t i = 0;
+
+	if (len > (SIZE_MAX - 1) / 3)
+		return (NULL);
+
+	encoded = malloc(len * 3 + 1);
+	if (encoded == NULL)
+		return (NULL);
+
+	for (c = (const unsigned char *)value; *c != '\0'; c++) {
+		if ((*c >= 'A' && *c <= 'Z') || (*c >= 'a' && *c <= 'z') ||
+		    (*c >= '0' && *c <= '9') || *c == '-' || *c == '.' || *c == '_' || *c == '~' ||
+		    *c == ':') {
+			encoded[i++] = (char)*c;
+		} else {
+			encoded[i++] = '%';
+			encoded[i++] = hex[*c >> 4];
+			encoded[i++] = hex[*c & 0x0f];
+		}
+	}
+	encoded[i] = '\0';
+
+	return (encoded);
+}
+
 char *
 mport_fetch_cves(mportInstance *mport, char *cpe)
 {
 	int result;
 	char *path;
 	char *url;
+	char *encodedCpe;
 	FILE *local;
 
 	char tmpfile2[] = _PATH_TMP "mport.cve.XXXXXXXX";
@@ -378,13 +418,22 @@ mport_fetch_cves(mportInstance *mport, char *cpe)
 		return NULL;
 	}
 
+	if (cpe == NULL || (encodedCpe = url_encode_query_value(cpe)) == NULL) {
+		close(fd);
+		unlink(tmpfile2);
+		SET_ERROR(MPORT_ERR_FATAL, "Unable to encode CPE for the security feed");
+		return NULL;
+	}
+
 	if (asprintf(&url,
 		"%s/api/cpe/partial-match?includeVersion=true&cpe=%s&startDate=2006-02-28",
-		MPORT_SECURITY_URL, cpe) == -1) {
+		MPORT_SECURITY_URL, encodedCpe) == -1) {
+		free(encodedCpe);
 		close(fd);
 		unlink(tmpfile2);
 		return NULL;
 	}
+	free(encodedCpe);
 
 	local = fdopen(fd, "w");
 	if (local == NULL) {

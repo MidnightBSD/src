@@ -108,6 +108,51 @@ Lists all CPE info on installed packages
 `mport verify`
 Runs a checksum on all installed files from packages against data from time of installation to see if files have been modified.
 
+### Triggers
+
+Triggers let a package rebuild a shared cache (icon caches, MIME databases,
+GLib schemas and so on) whenever any package adds or removes files under a
+directory it cares about.  The file format is that of FreeBSD's
+pkg-triggers(5): a UCL file with `path`, `path_glob` and/or `path_regexp`
+patterns, a `trigger` block holding a Lua script, and an optional `cleanup`
+block run when the trigger file itself is removed.
+
+```
+path: "/usr/local/share/glib-2.0/schemas"
+cleanup: {
+	type: lua
+	sandbox: false
+	script: <<EOS
+os.remove("/usr/local/share/glib-2.0/schemas/gschemas.compiled")
+EOS
+}
+trigger: {
+	type: lua
+	sandbox: false
+	script: <<EOS
+print("Compiling glib schemas")
+pkg.exec({"/usr/local/bin/glib-compile-schemas", "/usr/local/share/glib-2.0/schemas"})
+EOS
+}
+```
+
+Trigger files are read from the directories named by the `triggers_dir`
+setting, by default `/usr/share/mport/triggers` and
+`/usr/local/share/pkg/triggers` (where `USES=trigger` ports install theirs).
+A file placed directly in one of those directories is a per-transaction
+trigger: it runs once at the end of an `mport` run, after every install,
+update, upgrade or delete, with the matched directories in the Lua `arg`
+table.  A file placed in a `pre_install`, `post_install`, `pre_deinstall` or
+`post_deinstall` subdirectory is a per-package trigger: it is matched against
+that package's own files and directories and runs at that phase with the
+`pkg_name`, `pkg_version` and `pkg_upgrade` globals set; its failure is
+reported but does not fail the package.
+
+Scripts run in a capsicum sandbox unless the block sets `sandbox: false`,
+which is required to use `pkg.exec`.  Triggers can be turned off with
+`mport config set triggers_enable no` and the search path changed with
+`mport config set triggers_dir "<dir> <dir>"`.
+
 ### Known Bugs
 
 Old versions of mport had a bug that would prevent it working over a serial connection such as during a bhyve installation.  A workaround is to ssh into the box to do installs.  This is known

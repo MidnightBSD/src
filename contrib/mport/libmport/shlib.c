@@ -390,13 +390,16 @@ elf_abi_from_notes(Elf *elf, unsigned char encoding, /*@out@*/ int *os,
 /*
  * Read the target ABI from a binary, as ABI_FILE names one for cross builds:
  * *osrelease is the release ("4.1") and *osreldate the raw tag from a
- * MidnightBSD ABI note, or NULL and 0 when the file has none, and *elfclass
- * its word size.  Any output may be NULL.  A file that cannot be read or is
- * not ELF is an error: guessing would record the build host's ABI.
+ * MidnightBSD ABI note, or NULL and 0 when the file has none, *elfclass
+ * its word size, and *arch the package architecture name for its machine
+ * type ("amd64", "i386", "aarch64"), or NULL for one without a port.  Any
+ * output may be NULL.  A file that cannot be read or is not ELF is an error:
+ * guessing would record the build host's ABI.
  */
 int
 mport_abi_file_read(/*@notnull@*/ const char *path, /*@null@*/ /*@out@*/ char **osrelease,
-    /*@null@*/ /*@out@*/ uint32_t *osreldate, /*@null@*/ /*@out@*/ int *elfclass)
+    /*@null@*/ /*@out@*/ uint32_t *osreldate, /*@null@*/ /*@out@*/ int *elfclass,
+    /*@null@*/ /*@out@*/ const char **arch)
 {
 	int fd;
 	Elf *elf;
@@ -412,6 +415,8 @@ mport_abi_file_read(/*@notnull@*/ const char *path, /*@null@*/ /*@out@*/ char **
 		*osreldate = 0;
 	if (elfclass != NULL)
 		*elfclass = ELFCLASSNONE;
+	if (arch != NULL)
+		*arch = NULL;
 
 	if (elf_version(EV_CURRENT) == EV_NONE)
 		RETURN_ERRORX(
@@ -437,6 +442,8 @@ mport_abi_file_read(/*@notnull@*/ const char *path, /*@null@*/ /*@out@*/ char **
 	elf_abi_from_notes(elf, ehdr.e_ident[EI_DATA], &os, &tag);
 	if (elfclass != NULL)
 		*elfclass = ehdr.e_ident[EI_CLASS];
+	if (arch != NULL)
+		*arch = mport_arch_from_elf_machine(ehdr.e_machine);
 	if (osreldate != NULL)
 		*osreldate = tag;
 	if (osrelease != NULL && tag != 0 &&
@@ -626,7 +633,7 @@ mport_shlib_scan_new(void)
 	scan->elfclass = MPORT_HOST_ELFCLASS;
 	abi_file = getenv("ABI_FILE");
 	if (abi_file != NULL && abi_file[0] != '\0' &&
-	    mport_abi_file_read(abi_file, NULL, NULL, &scan->elfclass) != MPORT_OK) {
+	    mport_abi_file_read(abi_file, NULL, NULL, &scan->elfclass, NULL) != MPORT_OK) {
 		mport_shlib_scan_free(scan);
 		return NULL;
 	}

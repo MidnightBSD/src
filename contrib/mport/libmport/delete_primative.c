@@ -208,6 +208,9 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 	if (run_pkg_deinstall(mport, pack, "DEINSTALL") != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
+	if (mport_triggers_execute_perpackage(mport, pack, MPORT_LUA_PRE_DEINSTALL) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+
 	if (mport_db_prepare(mport->db, &stmt,
 		"SELECT type,data,checksum FROM assets WHERE pkg=%Q "
 		"ORDER BY CASE WHEN type IN (%d, %d, %d, %d, %d) THEN 1 ELSE 0 END, "
@@ -410,6 +413,12 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 				}
 			}
 
+			/* record the directory losing this file for the per-transaction
+			 * triggers and, if it is a trigger file, queue its cleanup now
+			 * while it can still be read */
+			mport_triggers_touch_file(mport, file + strlen(mport->root));
+			mport_triggers_check_cleanup(mport, file + strlen(mport->root));
+
 			if (unlink_if_unchanged(file, &st) != 0)
 				mport_call_msg_cb(
 				    mport, "Could not unlink %s: %s", file, strerror(errno));
@@ -441,6 +450,7 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 		case ASSET_DIRRMTRY:
 		case ASSET_AUTODIR:
 		case ASSET_DIR_OWNER_MODE:
+			mport_triggers_touch_dir(mport, file + strlen(mport->root));
 			if (is_safe_to_delete_dir(mport, pack, &shared_dirs, file, data)) {
 				mport_removeflags(mport->root, file);
 				if (mport_rmdir(file,
@@ -475,6 +485,9 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 		RETURN_CURRENT_ERROR;
 
 	if (run_pkg_deinstall(mport, pack, "POST-DEINSTALL") != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+
+	if (mport_triggers_execute_perpackage(mport, pack, MPORT_LUA_POST_DEINSTALL) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
 	/* The message is read from the infra directory, so show it before that

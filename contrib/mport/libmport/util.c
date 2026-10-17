@@ -1226,7 +1226,7 @@ mport_get_osrelease(mportInstance *mport)
 	// a cross build names a target binary; its ABI note wins.  A file
 	// without a MidnightBSD note leaves the release to the next source.
 	if (abi_file != NULL && abi_file[0] != '\0' &&
-	    mport_abi_file_read(abi_file, &version, NULL, NULL) != MPORT_OK)
+	    mport_abi_file_read(abi_file, &version, NULL, NULL, NULL) != MPORT_OK)
 		return NULL;
 
 	// then the setting
@@ -1257,7 +1257,7 @@ mport_get_osreleasedate(void)
 	uint32_t tag;
 
 	if (abi_file != NULL && abi_file[0] != '\0') {
-		if (mport_abi_file_read(abi_file, NULL, &tag, NULL) != MPORT_OK)
+		if (mport_abi_file_read(abi_file, NULL, &tag, NULL, NULL) != MPORT_OK)
 			return NULL;
 		if (tag != 0) {
 			if (asprintf(&date, "%u", tag) == -1)
