@@ -1,6 +1,9 @@
 Updating Information for MidnightBSD users.
 
 20261016:
+	top(1) PRI column is now relative to PUSER, matching ps(1), so
+	timesharing processes show 0 instead of 20 at the base priority.
+
 	man(1) gains -K for full-text searches of all manual pages.
 
 	grep(1) -r no longer follows symbolic links by default (-p is now
