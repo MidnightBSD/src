@@ -22,7 +22,8 @@ To upgrade to a new version:
    stable branch.
 
 There is NO Xlist for mport. Upstream is carried into contrib/mport wholesale
-(including any stray upstream artifacts such as replace.patch); prune nothing.
+(including any stray upstream artifacts); prune nothing.  The stray
+replace.patch that older imports carried was dropped upstream as of 2.8.4.
 
 Build-system integration (MidnightBSD-specific, applied on master/stable after
 the subtree merge -- these live OUTSIDE contrib/mport and are the only thing
@@ -34,12 +35,22 @@ that must be refreshed by hand each import):
        diff <(ls contrib/mport/libmport/*.c | xargs -n1 basename | sort) \
             <(git show vendor/mport/<prev>:libmport/ | ...)
     2.8.0 added: mtree.c, pkgmeta_sort.c, query.c.
+    2.8.3 added: shlib.c, ports.c.
+    2.8.4 added: triggers.c, abi.c.  2.8.4 also builds libmport with
+    -DHAVE_CAPSICUM (upstream libmport/Makefile); lib/libmport/Makefile
+    sets it unconditionally since sys/capsicum.h is always present in base.
   - usr.sbin/mport/Makefile and libexec/mport.*/Makefile normally need no change
     (single-source PROG builds), but re-check if upstream adds files there.
 
 Local patches applied on top of upstream:
 
-  - (none currently) The former MidnightBSD ohash-callback fix in
+  - stable/4.1 ONLY (src commit 6155a43d96, "mport: fix ohash callback guard
+    on stable/4.1"): libmport/upgrade.c raises the ohash-signature guard from
+    __MidnightBSD_version >= 401002 to >= 402000, because stable/4.1 (401003)
+    still ships the old ohash API.  Git carries this through subtree merges
+    automatically unless upstream touches those lines; re-check after each
+    import.  Not applied on master or stable/4.0.
+  - master/stable/4.0: (none) The former MidnightBSD ohash-callback fix in
     libmport/upgrade.c (src commit 526a71f9af, "fix upgrade.c ohash callback
     signatures after ohash update") was folded UPSTREAM as of mport 2.8.0,
     guarded by "#if defined(__MidnightBSD__) && __MidnightBSD_version >= 401002".
