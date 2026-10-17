@@ -1,6 +1,11 @@
 Updating Information for MidnightBSD users.
 
 20261016:
+	sockstat(1) gains -f (FIB), -i (inpcb generation), -b (BBLog
+	state) and UDP-Lite support, and shows the full unix(4) connection
+	graph.  netstat(1) lists UDP-Lite endpoints and its Proto column
+	is wider; scripts parsing netstat -an by column may need adjusting.
+
 	top(1) PRI column is now relative to PUSER, matching ps(1), so
 	timesharing processes show 0 instead of 20 at the base priority.
 
