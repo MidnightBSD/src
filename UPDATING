@@ -1,6 +1,13 @@
 Updating Information for MidnightBSD users.
 
 20261016:
+	mixer(8) has been rewritten on top of the new libmixer(3).  Volumes
+	are 0.0-1.0 or percentages ("mixer vol=80%"), with per-device
+	.volume/.mute/.recsrc controls; the old "mixer vol 80" integer form
+	is rejected.  rc.d/mixer now saves state with -o; mixer state files
+	from the previous format in /var/db will not restore and may be
+	deleted.
+
 	diff(1) detects directory loops under -r, rejects -C 0, accepts -qq
 	to print nothing, and uses the new fdscandir(3), so it requires the
 	matching libc.
