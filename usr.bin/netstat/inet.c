@@ -90,7 +90,7 @@ static void inetprint(const char *, struct in_addr *, int, const char *, int,
     const int);
 #endif
 #ifdef INET6
-static int udp_done, tcp_done, sdp_done;
+static int udp_done, udplite_done, tcp_done, sdp_done;
 #endif /* INET6 */
 
 static int
@@ -106,6 +106,9 @@ pcblist_sysctl(int proto, const char *name, char **bufp)
 		break;
 	case IPPROTO_UDP:
 		mibvar = "net.inet.udp.pcblist";
+		break;
+	case IPPROTO_UDPLITE:
+		mibvar = "net.inet.udplite.pcblist";
 		break;
 	case IPPROTO_DIVERT:
 		mibvar = "net.inet.divert.pcblist";
@@ -232,6 +235,14 @@ protopr(u_long off, const char *name, int af1, int proto)
 			udp_done = 1;
 #endif
 		break;
+	case IPPROTO_UDPLITE:
+#ifdef INET6
+		if (udplite_done != 0)
+			return;
+		else
+			udplite_done = 1;
+#endif
+		break;
 	}
 
 	if (!pcblist_sysctl(proto, name, &buf))
@@ -331,18 +342,18 @@ protopr(u_long off, const char *name, int af1, int proto)
 				    "Proto", "Listen", "Local Address");
 			else if (Tflag)
 				xo_emit((Aflag && !Wflag) ?
-    "{T:/%-5.5s} {T:/%-6.6s} {T:/%-6.6s} {T:/%-6.6s} {T:/%-18.18s} {T:/%s}" :
+    "{T:/%-9.9s} {T:/%-6.6s} {T:/%-6.6s} {T:/%-6.6s} {T:/%-18.18s} {T:/%s}" :
 				    ((!Wflag || af1 == AF_INET) ?
-    "{T:/%-5.5s} {T:/%-6.6s} {T:/%-6.6s} {T:/%-6.6s} {T:/%-22.22s} {T:/%s}" :
-    "{T:/%-5.5s} {T:/%-6.6s} {T:/%-6.6s} {T:/%-6.6s} {T:/%-45.45s} {T:/%s}"),
+    "{T:/%-9.9s} {T:/%-6.6s} {T:/%-6.6s} {T:/%-6.6s} {T:/%-22.22s} {T:/%s}" :
+    "{T:/%-9.9s} {T:/%-6.6s} {T:/%-6.6s} {T:/%-6.6s} {T:/%-45.45s} {T:/%s}"),
 				    "Proto", "Rexmit", "OOORcv", "0-win",
 				    "Local Address", "Foreign Address");
 			else {
 				xo_emit((Aflag && !Wflag) ?
-    "{T:/%-5.5s} {T:/%-6.6s} {T:/%-6.6s} {T:/%-18.18s} {T:/%-18.18s}" :
+    "{T:/%-9.9s} {T:/%-6.6s} {T:/%-6.6s} {T:/%-18.18s} {T:/%-18.18s}" :
 				    ((!Wflag || af1 == AF_INET) ?
-    "{T:/%-5.5s} {T:/%-6.6s} {T:/%-6.6s} {T:/%-22.22s} {T:/%-22.22s}" :
-    "{T:/%-5.5s} {T:/%-6.6s} {T:/%-6.6s} {T:/%-45.45s} {T:/%-45.45s}"),
+    "{T:/%-9.9s} {T:/%-6.6s} {T:/%-6.6s} {T:/%-22.22s} {T:/%-22.22s}" :
+    "{T:/%-9.9s} {T:/%-6.6s} {T:/%-6.6s} {T:/%-45.45s} {T:/%-45.45s}"),
 				    "Proto", "Recv-Q", "Send-Q",
 				    "Local Address", "Foreign Address");
 				if (!xflag && !Rflag)
@@ -404,9 +415,13 @@ protopr(u_long off, const char *name, int af1, int proto)
 		vchar = ((inp->inp_vflag & INP_IPV4) != 0) ?
 		    "4" : "";
 		if (istcp && (tp->t_flags & TF_TOE) != 0)
-			xo_emit("{:protocol/%-3.3s%-2.2s/%s%s} ", "toe", vchar);
-		else
-			xo_emit("{:protocol/%-3.3s%-2.2s/%s%s} ", name, vchar);
+			xo_emit("{:protocol/%-3.3s%-6.6s/%s%s} ", "toe", vchar);
+		else {
+			int l = max (2, 9 - strlen(name));
+
+			xo_emit("{d:protocol/%.7s%-*.*s} ", name, l, l, vchar);
+			xo_emit("{e:protocol/%s%s}", name, vchar);
+		}
 		if (Lflag) {
 			char buf1[33];
 
@@ -533,9 +548,9 @@ protopr(u_long off, const char *name, int af1, int proto)
 		}
 		if (istcp && !Lflag && !xflag && !Tflag && !Rflag) {
 			if (tp->t_state < 0 || tp->t_state >= TCP_NSTATES)
-				xo_emit("{:tcp-state/%-11d}", tp->t_state);
+				xo_emit("{:tcp-state/%-11d/%d}", tp->t_state);
 			else {
-				xo_emit("{:tcp-state/%-11s}",
+				xo_emit("{:tcp-state/%-11s/%s}",
 				    tcpstates[tp->t_state]);
 #if defined(TF_NEEDSYN) && defined(TF_NEEDFIN)
 				/* Show T/TCP `hidden state' */
@@ -552,11 +567,11 @@ protopr(u_long off, const char *name, int af1, int proto)
 		}
 		if (istcp) {
 			if (cflag)
-				xo_emit(" {:stack/%-*.*s}",
+				xo_emit(" {t:stack/%-*.*s}",
 					
 					fnamelen, fnamelen, tp->xt_stack);
 			if (Cflag)
-				xo_emit(" {:cc/%-*.*s}"
+				xo_emit(" {t:cc/%-*.*s}"
 					" {:snd-cwnd/%10lu}"
 					" {:snd-ssthresh/%10lu}"
 					" {:t-maxseg/%5u} {:ecn/%3s}",
@@ -896,7 +911,7 @@ void
 udp_stats(u_long off, const char *name, int af1 __unused, int proto __unused)
 {
 	struct udpstat udpstat;
-	uint64_t delivered;
+	uint64_t delivered, noportbmcast;
 
 #ifdef INET6
 	if (udp_done != 0)
@@ -929,8 +944,11 @@ udp_stats(u_long off, const char *name, int af1 __unused, int proto __unused)
 	    "{N:/with no checksum}\n");
 	p1a(udps_noport, "{:dropped-no-socket/%ju} "
 	    "{N:/dropped due to no socket}\n");
-	p(udps_noportbcast, "{:dropped-broadcast-multicast/%ju} "
-	    "{N:/broadcast\\/multicast datagram%s undelivered}\n");
+	noportbmcast = udpstat.udps_noportmcast + udpstat.udps_noportbcast;
+	if (noportbmcast || sflag <= 1)
+		xo_emit("\t{:dropped-broadcast-multicast/%ju} "
+		    "{N:/broadcast\\/multicast datagram%s undelivered}\n",
+		    (uintmax_t)noportbmcast, plural(noportbmcast));
 	p1a(udps_fullsock, "{:dropped-full-socket-buffer/%ju} "
 	    "{N:/dropped due to full socket buffers}\n");
 	p1a(udpps_pcbhashmiss, "{:not-for-hashed-pcb/%ju} "
@@ -940,11 +958,10 @@ udp_stats(u_long off, const char *name, int af1 __unused, int proto __unused)
 		    udpstat.udps_badlen -
 		    udpstat.udps_badsum -
 		    udpstat.udps_noport -
-		    udpstat.udps_noportbcast -
 		    udpstat.udps_fullsock;
 	if (delivered || sflag <= 1)
 		xo_emit("\t{:delivered-packets/%ju} {N:/delivered}\n",
-		    (uint64_t)delivered);
+		    (uintmax_t)delivered);
 	p(udps_opackets, "{:output-packets/%ju} {N:/datagram%s output}\n");
 	/* the next statistic is cumulative in udps_noportbcast */
 	p(udps_filtermcast, "{:multicast-source-filter-matches/%ju} "

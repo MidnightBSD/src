@@ -96,6 +96,8 @@ static struct protox {
 	  tcp_stats,	NULL,		"tcp",	1,	IPPROTO_TCP },
 	{ N_UDBINFO,	N_UDPSTAT,	1,	protopr,
 	  udp_stats,	NULL,		"udp",	1,	IPPROTO_UDP },
+	{ -1,		-1,		1,	protopr,
+	  NULL,		NULL,		"udplite", 1,	IPPROTO_UDPLITE },
 #ifdef SCTP
 	{ -1,		N_SCTPSTAT,	1,	sctp_protopr,
 	  sctp_stats,	NULL,		"sctp",	1,	IPPROTO_SCTP },
@@ -142,6 +144,8 @@ static struct protox ip6protox[] = {
 	  tcp_stats,	NULL,		"tcp",	1,	IPPROTO_TCP },
 	{ N_UDBINFO,	N_UDPSTAT,	1,	protopr,
 	  udp_stats,	NULL,		"udp",	1,	IPPROTO_UDP },
+	{ -1,		-1,		1,	protopr,
+	  NULL,		NULL,		"udplite", 1,	IPPROTO_UDPLITE },
 	{ N_RIPCBINFO,	N_IP6STAT,	1,	protopr,
 	  ip6_stats,	ip6_ifstats,	"ip6",	1,	IPPROTO_RAW },
 	{ N_RIPCBINFO,	N_ICMP6STAT,	1,	protopr,
@@ -395,8 +399,6 @@ main(int argc, char *argv[])
 			break;
 		case 'q':
 			noutputs = atoi(optarg);
-			if (noutputs != 0)
-				noutputs++;
 			break;
 		case 'r':
 			rflag = 1;

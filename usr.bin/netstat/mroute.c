@@ -39,7 +39,6 @@
  *	@(#)mroute.c	8.2 (Berkeley) 4/28/95
  */
 
-#include <sys/cdefs.h>
 /*
  * Print multicast routing structures and statistics.
  *
@@ -160,7 +159,7 @@ print_bw_meter(struct bw_meter *bw_meter, int *banner_printed)
 	}
 	xo_emit(" {:remaining-time/%s}", s3);
 
-	xo_open_instance("bandwidth-meter");
+	xo_close_instance("bandwidth-meter");
 
 	xo_emit("\n");
 }
@@ -189,9 +188,9 @@ print_mfc(struct mfc *m, int maxvif, int *banner_printed)
 	}
 
 	memcpy(&sin.sin_addr, &m->mfc_origin, sizeof(sin.sin_addr));
-	xo_emit(" {:origin-address/%-15.15s}", routename(sa, numeric_addr));
+	xo_emit(" {t:origin-address/%-*.15s}", 15, routename(sa, numeric_addr));
 	memcpy(&sin.sin_addr, &m->mfc_mcastgrp, sizeof(sin.sin_addr));
-	xo_emit(" {:group-address/%-15.15s}",
+	xo_emit(" {t:group-address/%-15.15s}",
 	    routename(sa, numeric_addr));
 	xo_emit(" {:sent-packets/%9lu}", m->mfc_pkt_cnt);
 	xo_emit("  {:parent/%3d}   ", m->mfc_parent);
@@ -297,12 +296,12 @@ mroutepr()
 
 		xo_open_instance("vif");
 		memcpy(&sin.sin_addr, &v->v_lcl_addr, sizeof(sin.sin_addr));
-		xo_emit(" {:vif/%2u}    {:threshold/%6u}   {:route/%-15.15s}",
+		xo_emit(" {:vif/%2u}    {:threshold/%6u}   {t:route/%-15.15s}",
 					/* opposite math of add_vif() */
 		    vifi, v->v_threshold,
 		    routename(sa, numeric_addr));
 		memcpy(&sin.sin_addr, &v->v_rmt_addr, sizeof(sin.sin_addr));
-		xo_emit(" {:source/%-15.15s}", (v->v_flags & VIFF_TUNNEL) ?
+		xo_emit(" {t:source/%-15.15s}", (v->v_flags & VIFF_TUNNEL) ?
 		    routename(sa, numeric_addr) : "");
 
 		xo_emit(" {:received-packets/%9lu}  {:sent-packets/%9lu}\n",
