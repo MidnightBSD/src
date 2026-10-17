@@ -33,6 +33,12 @@
 # it is better to terminate it.
 ulimit -t 20
 
+# Do not ignore the exit codes of roff tools, as they may indicate a
+# problem with the page being rendered.  Note that this also causes a
+# nonzero exit when the user quits reading before reaching the end, so
+# we need to look out for and deal with that specific case.
+set -o pipefail
+
 # Usage: add_to_manpath path
 # Adds a variable to manpath while ensuring we don't have duplicates.
 # Returns true if we were able to add something. False otherwise.
@@ -316,7 +322,7 @@ man_check_for_so() {
 	# We need to loop to accommodate multiple .so directives.
 	while true
 	do
-		line=$($cattool "$manpage" | head -1)
+		line=$($cattool "$manpage" 2>/dev/null | grep -E -m1 -v '^\.\\"[ ]*|^[ ]*$')
 		case "$line" in
 		.so*)	trim "${line#.so}"
 			decho "$manpage includes $tstr"
@@ -591,8 +597,10 @@ man_parse_opts() {
 	local cmd_arg
 
 	OPTIND=1
-	while getopts 'M:P:S:adfhklm:op:tw' cmd_arg; do
+	while getopts 'K:M:P:S:adfhklm:op:tw' cmd_arg; do
 		case "${cmd_arg}" in
+		K)	Kflag=Kflag
+			REGEXP=$OPTARG ;;
 		M)	MANPATH=$OPTARG ;;
 		P)	MANPAGER=$OPTARG ;;
 		S)	MANSECT=$OPTARG ;;
@@ -614,7 +622,11 @@ man_parse_opts() {
 	shift $(( $OPTIND - 1 ))
 
 	# Check the args for incompatible options.
-	case "${fflag}${kflag}${lflag}${tflag}${wflag}" in
+	case "${Kflag}${fflag}${kflag}${lflag}${tflag}${wflag}" in
+	Kflagfflag*)	echo "Incompatible options: -K and -f"; man_usage ;;
+	Kflag*kflag*)	echo "Incompatible options: -K and -k"; man_usage ;;
+	Kflag*lflag*)	echo "Incompatible options: -K and -l"; man_usage ;;
+	Kflag*tflag)	echo "Incompatible options: -K and -t"; man_usage ;;
 	fflagkflag*)	echo "Incompatible options: -f and -k"; man_usage ;;
 	fflag*lflag*)	echo "Incompatible options: -f and -l"; man_usage ;;
 	fflag*tflag*)	echo "Incompatible options: -f and -t"; man_usage ;;
@@ -741,8 +753,7 @@ man_usage() {
 	echo 'Usage:'
 	echo ' man [-adhlo] [-t | -w] [-M manpath] [-P pager] [-S mansect]'
 	echo '     [-m arch[:machine]] [-p [eprtv]] [mansect] page [...]'
-	echo ' man -f page [...] -- Emulates whatis(1)'
-	echo ' man -k page [...] -- Emulates apropos(1)'
+	echo ' man -K | -f | -k expression [...] -- Search manual pages'
 
 	# When exit'ing with -h, it's not an error.
 	exit ${1:-1}
@@ -998,6 +1009,35 @@ do_apropos() {
 	search_whatis apropos "$@"
 }
 
+# Usage: do_full_search reg_exp
+# Do a full search of the regular expression passed
+# as parameter in all man pages
+do_full_search() {
+	local gflags re
+	re=${1}
+
+	# Build grep(1) flags
+	gflags="-H"
+
+	# wflag implies -l for grep(1)
+	if [ -n "$wflag" ]; then
+		gflags="${gflags} -l"
+	fi
+
+	gflags="${gflags} --label"
+
+	set +f
+	for mpath in $(echo "${MANPATH}" | tr : '[:blank:]'); do
+		for section in $(echo "${MANSECT}" | tr : '[:blank:]'); do
+			for manfile in ${mpath}/man${section}/*.${section}*; do
+				mandoc "${manfile}" 2>/dev/null |
+					grep -E ${gflags} "${manfile}" -e "${re}"
+			done
+		done
+	done
+	set -f
+}
+
 do_man() {
 	local IFS
 
@@ -1017,15 +1057,31 @@ do_man() {
 	unset IFS
 	pages="$*"
 
-        if [ -z "$pages" ]; then
-                echo 'What manual page do you want?' >&2
-                exit 1
-        fi
+	if [ -z "$pages" -a -z "${Kflag}" ]; then
+		echo 'What manual page do you want?' >&2
+		exit 1
+	fi
+
+	if [ ! -z "${Kflag}" ]; then
+		# Short circuit because -K flag does a sufficiently
+		# different thing like not showing the man page at all
+		do_full_search "${REGEXP}"
+	fi
 
 	for page in "$@"; do
 		decho "Searching for \"$page\""
 		man_find_and_display "$page"
 	done
+
+	# The user will very commonly quit reading the page before
+	# reaching the bottom.  Depending on the length of the page
+	# and the pager's buffer size, this may result in a SIGPIPE.
+	# This is normal, so convert that exit code to zero.
+	if [ ${ret:-0} -gt 128 ]; then
+		if [ "$(kill -l "${ret}")" = "PIPE" ]; then
+			ret=0
+		fi
+	fi
 
 	exit ${ret:-0}
 }
