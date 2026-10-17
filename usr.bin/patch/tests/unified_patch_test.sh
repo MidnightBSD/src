@@ -141,6 +141,41 @@ file_removal_body()
 	atf_check -o inline:"y\n" cat foo
 }
 
+atf_test_case namespace
+namespace_head()
+{
+	atf_set "descr" "Test that patch(1) handles files with spaces in the name"
+}
+namespace_body()
+{
+	echo "ABC" > "with spaces.orig"
+	echo "ZYX" > "with spaces"
+
+	atf_check -s not-exit:0 -o save:spaces.diff \
+	    diff -u "with spaces.orig" "with spaces"
+
+	atf_check mv "with spaces.orig" "with spaces"
+	atf_check -o not-empty patch < spaces.diff
+}
+
+atf_test_case plinelen
+plinelen_body()
+{
+	hello="$(jot -b hello -s, 20000 | tee foo.txt)"
+	cp foo.txt bar.txt
+	echo "world" >>bar.txt
+	cat >foo.diff <<EOF
+--- foo.txt.orig
++++ foo.txt
+@@ -1,1 +1,2 @@
+ $hello
++world
+EOF
+	atf_check -o match:"Hunk #1 succeeded" \
+		  patch <foo.diff
+	atf_check -o file:bar.txt cat foo.txt
+}
+
 atf_init_test_cases()
 {
 	atf_add_test_case basic
@@ -148,4 +183,6 @@ atf_init_test_cases()
 	atf_add_test_case file_creation
 	atf_add_test_case file_nodupe
 	atf_add_test_case file_removal
+	atf_add_test_case namespace
+	atf_add_test_case plinelen
 }
