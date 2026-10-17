@@ -2,8 +2,11 @@
 # ~/.xinitrc
 # Executed by startx (run your window manager from here)
 
+# firstboot may override this with a script in xinitrc.d below.
 if [ -f "/usr/local/bin/startxfce4" ]; then
 DEFAULT_SESSION="startxfce4"
+elif [ -f "/usr/local/bin/midnight-wm" ]; then
+DEFAULT_SESSION="midnight-wm"
 else
 DEFAULT_SESSION="wmaker"
 fi
@@ -25,7 +28,7 @@ fi
 
 
 case $1 in
-wmaker|startxfce4|gnome-shell|cinnamon-session|twm|etoile)
+midnight-wm|wmaker|startxfce4|gnome-shell|cinnamon-session|twm|etoile)
 	exec $1
 	;;
 Lumina-DE)

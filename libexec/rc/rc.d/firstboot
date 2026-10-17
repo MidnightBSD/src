@@ -10,6 +10,20 @@ name="firstboot"
 rcvar=
 start_cmd="firstboot_start"
 
+set_default_session()
+{
+	local xinitrcd
+
+	xinitrcd="/usr/local/etc/X11/xinit/xinitrc.d"
+
+	# ~/.xinitrc sources xinitrc.d after picking its fallback, so this
+	# makes the chosen desktop the "default" session in mlogind and startx.
+	/bin/mkdir -p ${xinitrcd}
+	printf '# Default X session selected by firstboot.\nDEFAULT_SESSION="%s"\n' \
+	    "$1" > ${xinitrcd}/default-session.sh
+	/bin/chmod 755 ${xinitrcd}/default-session.sh
+}
+
 firstboot_start()
 {
 	local lsuffix
@@ -69,13 +83,52 @@ firstboot_start()
 		read installgui
 
 		if [ ${installgui} = "yes" ]; then
+			echo "Available desktops:"
+			echo "  xfce        - Xfce"
+			echo "  midnight    - MidnightBSD Workspace"
+			echo "  windowmaker - GNUstep and Window Maker"
+			echo "Other installed desktops can be picked at the login screen with F1."
+			echo -e "\r${yellow}Which desktop would you like as the default? (xfce, midnight or windowmaker) [xfce]${lsuffix}"
+			read desktop
+			case "${desktop}" in
+			midnight)
+				session="midnight-wm"
+				;;
+			windowmaker)
+				session="wmaker"
+				;;
+			""|xfce)
+				desktop="xfce"
+				session="startxfce4"
+				;;
+			*)
+				echo "Unknown desktop selection '${desktop}'; using xfce."
+				desktop="xfce"
+				session="startxfce4"
+				;;
+			esac
+
 			echo -e "\r${red}Installing Graphical User Interface${lsuffix}"
-#			xfce/mlogind
-				/sbin/ipfw disable firewall
-				/usr/sbin/mport install midnightbsd-desktop
-				/sbin/ipfw enable firewall
-				/usr/sbin/sysrc mlogind_enable=YES
-				/usr/sbin/sysrc dbus_enable=YES
+			# midnightbsd-desktop provides Xorg, mlogind and xfce.
+			/sbin/ipfw disable firewall
+			/usr/sbin/mport install midnightbsd-desktop
+			desktopok=$?
+			if [ ${desktopok} -eq 0 ] && [ ${desktop} = "midnight" ]; then
+				/usr/sbin/mport install midnight-wm
+				desktopok=$?
+			elif [ ${desktopok} -eq 0 ] && [ ${desktop} = "windowmaker" ]; then
+				/usr/sbin/mport install windowmaker && \
+				    /usr/sbin/mport install gnustep
+				desktopok=$?
+			fi
+			/sbin/ipfw enable firewall
+			/usr/sbin/sysrc mlogind_enable=YES
+			/usr/sbin/sysrc dbus_enable=YES
+			if [ ${desktopok} -eq 0 ]; then
+				set_default_session ${session}
+			else
+				echo "Desktop installation failed; the login screen will use the default desktop."
+			fi
 
 			echo "The following options will help you install GPU drivers. You may need to perform further x.org configuration to make them work properly"
 
