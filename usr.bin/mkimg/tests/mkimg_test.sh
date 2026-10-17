@@ -54,8 +54,8 @@ makeimage()
     done
     if test -z "$partarg"; then
 	local swap ufs
-	swap="-p freebsd-swap::128K"
-	ufs="-p freebsd-ufs:=$(atf_get_srcdir)/partition_data_4M.bin"
+	swap="-p mnbsd-swap::128K"
+	ufs="-p mnbsd-ufs:=$(atf_get_srcdir)/partition_data_4M.bin"
 	partarg="$ufs $swap"
     fi
 
@@ -86,9 +86,7 @@ mkimg_rebase()
     fi
 
     if test $update = yes; then
-	# Prevent keyword expansion when writing the keyword.
-	(echo -n '# $'; echo -n FreeBSD; echo '$') > $baseline
-	cat $result >> $baseline
+	cat $result > $baseline
     fi
 
     rm $image $result _tmp-*
@@ -107,7 +105,7 @@ mkimg_test()
     case $scheme in
       ebr|mbr)
 	bsd=`makeimage raw bsd $blksz $geom _tmp`
-	partinfo="freebsd:=$bsd"
+	partinfo="midnightbsd:=$bsd"
 	;;
       *)
 	partinfo=""

@@ -24,7 +24,7 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
+#include <sys/param.h>
 #include <sys/errno.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -47,6 +47,9 @@ static mkimg_uuid_t gpt_uuid_mnbsd_swap = GPT_ENT_TYPE_MIDNIGHTBSD_SWAP;
 static mkimg_uuid_t gpt_uuid_mnbsd_ufs = GPT_ENT_TYPE_MIDNIGHTBSD_UFS;
 static mkimg_uuid_t gpt_uuid_mnbsd_vinum = GPT_ENT_TYPE_MIDNIGHTBSD_VINUM;
 static mkimg_uuid_t gpt_uuid_mnbsd_zfs = GPT_ENT_TYPE_MIDNIGHTBSD_ZFS;
+static mkimg_uuid_t gpt_uuid_hifive_bbl = GPT_ENT_TYPE_HIFIVE_BBL;
+static mkimg_uuid_t gpt_uuid_xbootldr = GPT_ENT_TYPE_XBOOTLDR;
+static mkimg_uuid_t gpt_uuid_hifive_fsbl = GPT_ENT_TYPE_HIFIVE_FSBL;
 static mkimg_uuid_t gpt_uuid_mbr = GPT_ENT_TYPE_MBR;
 static mkimg_uuid_t gpt_uuid_ms_basic_data = GPT_ENT_TYPE_MS_BASIC_DATA;
 static mkimg_uuid_t gpt_uuid_prep_boot = GPT_ENT_TYPE_PREP_BOOT;
@@ -63,6 +66,10 @@ static struct mkimg_alias gpt_aliases[] = {
     {	ALIAS_MBR, ALIAS_PTR2TYPE(&gpt_uuid_mbr) },
     {	ALIAS_NTFS, ALIAS_PTR2TYPE(&gpt_uuid_ms_basic_data) },
     {	ALIAS_PPCBOOT, ALIAS_PTR2TYPE(&gpt_uuid_prep_boot) },
+    {	ALIAS_MS_BASIC_DATA, ALIAS_PTR2TYPE(&gpt_uuid_ms_basic_data) },
+    {	ALIAS_HIFIVE_BBL, ALIAS_PTR2TYPE(&gpt_uuid_hifive_bbl) },
+    {	ALIAS_XBOOTLDR, ALIAS_PTR2TYPE(&gpt_uuid_xbootldr) },
+    {	ALIAS_HIFIVE_FSBL, ALIAS_PTR2TYPE(&gpt_uuid_hifive_fsbl) },
     {	ALIAS_NONE, 0 }		/* Keep last! */
 };
 
@@ -127,10 +134,15 @@ crc32(const void *buf, size_t sz)
 static u_int
 gpt_tblsz(void)
 {
-	u_int ents;
+	u_int eps;		/* Entries per Sector */
 
-	ents = secsz / sizeof(struct gpt_ent);
-	return ((nparts + ents - 1) / ents);
+	/*
+	 * Count the number of sectors needed for the GPT Entry Array to store
+	 * the number of partitions defined for this image.  Enforce the 16kB
+	 * minimum space for the GPT Entry Array per UEFI v2.10 Section 5.3.
+	 */
+	eps = secsz / sizeof(struct gpt_ent);
+	return (MAX(howmany(GPT_MIN_RESERVED, secsz), howmany(nparts, eps)));
 }
 
 static lba_t
