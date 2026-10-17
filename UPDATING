@@ -1,6 +1,8 @@
 Updating Information for MidnightBSD users.
 
 20261016:
+	man(1) gains -K for full-text searches of all manual pages.
+
 	grep(1) -r no longer follows symbolic links by default (-p is now
 	the default rather than -S); pass -S to restore the old behaviour.
 	stat(1) gains -h to list file holes; install(1) accepts "-" to
