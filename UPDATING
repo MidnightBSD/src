@@ -1,6 +1,11 @@
 Updating Information for MidnightBSD users.
 
 20261016:
+	mkimg(1) now reserves 16 KB for the GPT Entry Array as required by
+	UEFI 2.10, so partitions in new GPT images start at LBA 34 rather
+	than 3; existing images are unaffected.  mkimg gains -t for
+	reproducible output.
+
 	sockstat(1) gains -f (FIB), -i (inpcb generation), -b (BBLog
 	state) and UDP-Lite support, and shows the full unix(4) connection
 	graph.  netstat(1) lists UDP-Lite endpoints and its Proto column
