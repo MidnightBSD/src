@@ -1,6 +1,7 @@
 #
 # Copyright (c) 2017 Dell EMC
 # All rights reserved.
+# Copyright (c) 2025-2026 Klara, Inc.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -24,6 +25,9 @@
 # SUCH DAMAGE.
 #
 
+: ${CHKPATH:="mnt"}
+: ${NODEV:="#NODEV"}
+
 atf_test_case F_flag
 F_flag_head()
 {
@@ -45,22 +49,75 @@ F_flag_body()
 	atf_check -o match:'.* f\|' stat -Fn f
 }
 
-atf_test_case c_flag
-c_flag_head()
+atf_test_case h_flag cleanup
+h_flag_head()
 {
-	atf_set	"descr" "Verify GNU-compatible -c format output"
+	atf_set "descr" "Verify the output format for -h"
+	atf_set "require.user" "root"
 }
-c_flag_body()
+h_flag_body()
 {
-	atf_check touch a
-	atf_check chmod 0640 a
+	file=$(realpath $0)
+	# POSIX defines a hole as “[a] contiguous region of bytes
+	# within a file, all having the value of zero” and requires
+	# that “all seekable files shall have a virtual hole starting
+	# at the current size of the file” but says “it is up to the
+	# implementation to define when sparse files can be created
+	# and with what granularity for the size of holes”.  It also
+	# defines a sparse file as “[a] file that contains more holes
+	# than just the virtual hole at the end of the file”.  That's
+	# pretty much the extent of its discussion of holes, apart
+	# from the description of SEEK_HOLE and SEEK_DATA in the lseek
+	# manual page.  In other words, there is no portable way to
+	# reliably create a hole in a file on any given file system.
+	#
+	# On FreeBSD, this test is likely to run on either tmpfs, ufs
+	# (ffs2), or zfs.  Of those three, only tmpfs has predictable
+	# semantics and supports all possible configurations (the
+	# minimum hole size on zfs is variable for small files, and
+	# ufs will not allow a file to end in a hole).
+	atf_check mkdir mnt
+	atf_check mount -t tmpfs tmpfs mnt
+	cd mnt
 
-	expected="$(stat -f '%N|%z|%u|%Su|%g|%Sg|%OLp|%Sp|%i|%l|%m|%HT' a)"
-	atf_check -o inline:"$expected\n" \
-	    stat -c '%n|%s|%u|%U|%g|%G|%a|%A|%i|%h|%Y|%F' a
+	# For a directory, prints the minimum hole size, which on
+	# tmpfs is the system page size.
+	ps=$(sysctl -n hw.pagesize)
+	atf_check -o inline:"$((ps)) .\n" stat -h .
+	atf_check -o inline:"$((ps)) ." stat -hn .
 
-	expected="$(stat -f 'size=%z\nname=%N\t%%' a)"
-	atf_check -o inline:"$expected\n" stat -c 'size=%s\nname=%n\t%%' a
+	# For a file, prints a list of holes.  Some file systems don't
+	# like creating small holes, so we create large ones instead.
+	hs=$((16*1024*1024))
+	atf_check truncate -s 0 foo
+	atf_check -o inline:"0 foo" \
+	    stat -hn foo
+	atf_check truncate -s "$((hs))" foo
+	atf_check -o inline:"0-$((hs-1)) foo" \
+	    stat -hn foo
+	atf_check dd status=none if="${file}" of=foo \
+	    oseek="$((hs))" bs=1 count=1
+	atf_check -o inline:"0-$((hs-1)),$((hs+1)) foo" \
+	    stat -hn foo
+	atf_check truncate -s "$((hs*3))" foo
+	atf_check -o inline:"0-$((hs-1)),$((hs+ps))-$((hs*3-1)) foo" \
+	    stat -hn foo
+
+	# Test multiple files.
+	atf_check dd status=none if="${file}" of=bar
+	sz=$(stat -f%z bar)
+	atf_check -o inline:"0-$((hs-1)),$((hs+ps))-$((hs*3-1)) foo\n$((sz)) bar\n" \
+	    stat -h foo bar
+
+	# For a device, fail.
+	atf_check -s exit:1 -e match:"/dev/null: Illegal seek" \
+	    stat -h /dev/null
+}
+h_flag_cleanup()
+{
+	if [ -d mnt ]; then
+		umount mnt || true
+	fi
 }
 
 atf_test_case l_flag
@@ -178,9 +235,9 @@ t_flag_head()
 {
 	atf_set	"descr" "Verify the output format for -t"
 }
-
 t_flag_body()
 {
+	export TZ=UTC
 	atf_check touch foo
 	atf_check touch -d 1970-01-01T00:00:42 foo
 	atf_check -o inline:'42\n' \
@@ -247,11 +304,43 @@ x_flag_body()
 	done
 }
 
+atf_test_case devname cleanup
+devname_head()
+{
+	atf_set	"descr" "Verify that %Sd outputs a device name"
+	atf_set "require.user" "root"
+}
+devname_body()
+{
+	local devname devpath
+
+	atf_check -o save:dev mdconfig -t malloc -s 16M
+	read devname < dev
+	devpath="/dev/$devname"
+	atf_check -o not-empty newfs "$devpath"
+
+	atf_check mkdir "$CHKPATH"
+	atf_check mount "$devpath" "$CHKPATH"
+
+	atf_check -o inline:"$devname\n" stat -f '%Sd' "$CHKPATH"
+	atf_check -o inline:"$devname\n" stat -f '%Sr' "$devpath"
+	atf_check -o inline:"$NODEV\n" stat -f '%Sr' "$CHKPATH"
+}
+devname_cleanup()
+{
+	if [ -d "$CHKPATH" ]; then
+		umount "$CHKPATH" || true
+	fi
+	if [ -f dev ]; then
+		mdconfig -d -u $(cat dev) || true
+	fi
+}
+
 atf_init_test_cases()
 {
 	atf_add_test_case F_flag
-	atf_add_test_case c_flag
 	#atf_add_test_case H_flag
+	atf_add_test_case h_flag
 	#atf_add_test_case L_flag
 	#atf_add_test_case f_flag
 	atf_add_test_case l_flag
@@ -261,4 +350,5 @@ atf_init_test_cases()
 	atf_add_test_case s_flag
 	atf_add_test_case t_flag
 	atf_add_test_case x_flag
+	atf_add_test_case devname
 }
