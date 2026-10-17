@@ -1,6 +1,9 @@
 Updating Information for MidnightBSD users.
 
 20261016:
+	libc gains fdscandir(3), fdscandir_b(3) and scandirat_b(3) in the
+	MNBSD_1.6 symbol namespace.
+
 	mkimg(1) now reserves 16 KB for the GPT Entry Array as required by
 	UEFI 2.10, so partitions in new GPT images start at LBA 34 rather
 	than 3; existing images are unaffected.  mkimg gains -t for
