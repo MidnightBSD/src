@@ -238,6 +238,97 @@ ATF_TC_CLEANUP(abi_file_release_from_note, tc)
 	cleanup_test_root();
 }
 
+#if defined(__amd64__)
+#define HOST_ARCH "amd64"
+#define HOST_LEGACY_ARCH "x86:64"
+#elif defined(__i386__)
+#define HOST_ARCH "i386"
+#define HOST_LEGACY_ARCH "x86:32"
+#endif
+
+ATF_TC_WITH_CLEANUP(abi_strings_from_settings);
+ATF_TC_HEAD(abi_strings_from_settings, tc)
+{
+	atf_tc_set_md_var(tc, "descr",
+	    "mport_get_abi/altabi use the target_os release and the host architecture");
+}
+ATF_TC_BODY(abi_strings_from_settings, tc)
+{
+	mportInstance *mport;
+	char *value;
+
+	mport = create_test_instance();
+	ATF_REQUIRE_EQ(0, unsetenv("ABI_FILE"));
+	ATF_REQUIRE_EQ(MPORT_OK, mport_setting_set(mport, MPORT_SETTING_TARGET_OS, "9.9"));
+
+	value = mport_get_arch();
+	ATF_REQUIRE(value != NULL);
+	ATF_REQUIRE_STREQ(HOST_ARCH, value);
+	free(value);
+
+	value = mport_get_abi(mport);
+	ATF_REQUIRE(value != NULL);
+	ATF_REQUIRE_STREQ("MidnightBSD:9.9:" HOST_ARCH, value);
+	free(value);
+
+	value = mport_get_altabi(mport);
+	ATF_REQUIRE(value != NULL);
+	ATF_REQUIRE_STREQ("midnightbsd:9.9:" HOST_LEGACY_ARCH, value);
+	free(value);
+
+	mport_instance_free(mport);
+}
+ATF_TC_CLEANUP(abi_strings_from_settings, tc)
+{
+	(void)tc;
+
+	cleanup_test_root();
+}
+
+ATF_TC_WITH_CLEANUP(abi_strings_from_abi_file);
+ATF_TC_HEAD(abi_strings_from_abi_file, tc)
+{
+	atf_tc_set_md_var(tc, "descr",
+	    "ABI_FILE supplies the release and architecture of ABI and ALTABI, and a bad one is an error");
+	atf_tc_set_md_var(tc, "require.files", ABI_SOURCE);
+}
+ATF_TC_BODY(abi_strings_from_abi_file, tc)
+{
+	mportInstance *mport;
+	char *value;
+
+	mport = create_test_instance();
+	ATF_REQUIRE_EQ(MPORT_OK, mport_setting_set(mport, MPORT_SETTING_TARGET_OS, "9.9"));
+	write_abi_file(ABI_FILE_PATH, 302005);
+	ATF_REQUIRE_EQ(0, setenv("ABI_FILE", ABI_FILE_PATH, 1));
+
+	/* /bin/sh is a host binary, so the arch is the host's; the release is the note's */
+	value = mport_get_abi(mport);
+	ATF_REQUIRE(value != NULL);
+	ATF_REQUIRE_STREQ("MidnightBSD:3.2:" HOST_ARCH, value);
+	free(value);
+
+	value = mport_get_altabi(mport);
+	ATF_REQUIRE(value != NULL);
+	ATF_REQUIRE_STREQ("midnightbsd:3.2:" HOST_LEGACY_ARCH, value);
+	free(value);
+
+	ATF_REQUIRE_EQ(0, setenv("ABI_FILE", TEST_ROOT "/missing", 1));
+	ATF_REQUIRE(mport_get_arch() == NULL);
+	ATF_REQUIRE(mport_get_abi(mport) == NULL);
+	ATF_REQUIRE(strstr(mport_err_string(), "ABI_FILE") != NULL);
+	ATF_REQUIRE(mport_get_altabi(mport) == NULL);
+
+	ATF_REQUIRE_EQ(0, unsetenv("ABI_FILE"));
+	mport_instance_free(mport);
+}
+ATF_TC_CLEANUP(abi_strings_from_abi_file, tc)
+{
+	(void)tc;
+
+	cleanup_test_root();
+}
+
 ATF_TC_WITH_CLEANUP(abi_file_without_note_falls_through);
 ATF_TC_HEAD(abi_file_without_note_falls_through, tc)
 {
@@ -323,6 +414,8 @@ ATF_TP_ADD_TCS(tp)
 	ATF_TP_ADD_TC(tp, osrelease_null_instance);
 	ATF_TP_ADD_TC(tp, osrelease_settings_null);
 	ATF_TP_ADD_TC(tp, abi_file_release_from_note);
+	ATF_TP_ADD_TC(tp, abi_strings_from_settings);
+	ATF_TP_ADD_TC(tp, abi_strings_from_abi_file);
 	ATF_TP_ADD_TC(tp, abi_file_without_note_falls_through);
 	ATF_TP_ADD_TC(tp, abi_file_unreadable);
 

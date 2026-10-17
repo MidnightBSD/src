@@ -81,7 +81,9 @@ static int cpeGet(/*@notnull@*/ mportInstance *mport, /*@notnull@*/ const char *
 static int purlList(/*@notnull@*/ mportInstance *);
 static int purlGet(/*@notnull@*/ mportInstance *mport, /*@notnull@*/ const char *packageName);
 
+static int configList(/*@notnull@*/ mportInstance *);
 static int configGet(/*@notnull@*/ mportInstance *, /*@notnull@*/ const char *);
+static char *configDerived(/*@notnull@*/ mportInstance *, /*@notnull@*/ const char *);
 
 static int configSet(
     /*@notnull@*/ mportInstance *, /*@notnull@*/ const char *, /*@notnull@*/ const char *);
@@ -774,20 +776,7 @@ main(int argc, char *argv[])
 		}
 
 		if (!strcmp(argv[1], "list")) {
-			char **result = mport_setting_list(mport);
-			char **ptr = result;
-			if (result != NULL) {
-				int c = 0;
-				while (*result != NULL) {
-					printf("%s\n", *result);
-					result++;
-					c++;
-				}
-				for (i = 0; i < c; i++)
-					free(ptr[i]);
-				free(ptr);
-			}
-			resultCode = MPORT_OK;
+			resultCode = configList(mport);
 		} else if (!strcmp(argv[1], "get")) {
 			if (argc < 3) {
 				mport_instance_free(mport);
@@ -1004,6 +993,13 @@ main(int argc, char *argv[])
 	} else {
 		mport_instance_free(mport);
 		usage();
+	}
+
+	/* per-transaction triggers for everything this run installed or removed */
+	if (mport_triggers_execute(mport) != MPORT_OK) {
+		warnx("%s", mport_err_string());
+		if (resultCode == MPORT_OK)
+			resultCode = mport_err_code();
 	}
 
 	mport_instance_free(mport);
@@ -2167,6 +2163,71 @@ static int delete(/*@notnull@*/ mportInstance *mport, /*@notnull@*/ const char *
 	return (MPORT_OK);
 }
 
+/*
+ * Settings pkg also reports but that mport derives from ABI_FILE, target_os
+ * and the host rather than storing: ABI and ALTABI.
+ */
+static const char *const derivedSettings[] = { "ABI", "ALTABI", NULL };
+
+static bool
+isDerivedSetting(/*@notnull@*/ const char *settingName)
+{
+	for (const char *const *name = derivedSettings; *name != NULL; name++) {
+		if (strcmp(settingName, *name) == 0)
+			return true;
+	}
+	return false;
+}
+
+/* The value of a derived setting, or NULL with the library error set. */
+static char *
+configDerived(/*@notnull@*/ mportInstance *mport, /*@notnull@*/ const char *settingName)
+{
+	if (strcmp(settingName, "ABI") == 0)
+		return mport_get_abi(mport);
+	if (strcmp(settingName, "ALTABI") == 0)
+		return mport_get_altabi(mport);
+	return NULL;
+}
+
+/*
+ * The stored settings, then the derived ones.  A derived value that cannot
+ * be computed (a stale ABI_FILE, say) is reported as a warning; the listing
+ * itself still succeeds, as it always has.
+ */
+static int
+configList(/*@notnull@*/ mportInstance *mport)
+{
+	char **result = mport_setting_list(mport);
+	char **ptr = result;
+
+	if (result != NULL) {
+		int c = 0;
+		while (*result != NULL) {
+			printf("%s\n", *result);
+			result++;
+			c++;
+		}
+		for (int i = 0; i < c; i++)
+			free(ptr[i]);
+		free(ptr);
+	}
+
+	for (const char *const *name = derivedSettings; *name != NULL; name++) {
+		char *val = configDerived(mport, *name);
+		if (val == NULL) {
+			warnx("%s: %s", *name, mport_err_string());
+			continue;
+		}
+		printf("%s=%s\n", *name, val);
+		free(val);
+	}
+
+	mport_drop_privileges();
+
+	return (MPORT_OK);
+}
+
 static int
 configGet(/*@notnull@*/ mportInstance *mport, /*@notnull@*/ const char *settingName)
 {
@@ -2175,6 +2236,19 @@ configGet(/*@notnull@*/ mportInstance *mport, /*@notnull@*/ const char *settingN
 	if (settingName == NULL) {
 		warnx("%s", "Specify setting name");
 		return (1);
+	}
+
+	/* derived values print bare, as pkg config does, for scripts */
+	if (isDerivedSetting(settingName)) {
+		val = configDerived(mport, settingName);
+		mport_drop_privileges();
+		if (val == NULL) {
+			warnx("%s", mport_err_string());
+			return (1);
+		}
+		printf("%s\n", val);
+		free(val);
+		return (0);
 	}
 
 	val = mport_setting_get(mport, settingName);
@@ -2197,6 +2271,14 @@ configSet(/*@notnull@*/ mportInstance *mport, /*@notnull@*/ const char *settingN
 {
 	if (settingName == NULL || val == NULL) {
 		warnx("%s", "Specify setting name and value");
+		return (1);
+	}
+
+	if (isDerivedSetting(settingName)) {
+		mport_drop_privileges();
+		warnx("%s is derived from ABI_FILE, the target_os setting and the host; "
+		      "it cannot be set",
+		    settingName);
 		return (1);
 	}
 

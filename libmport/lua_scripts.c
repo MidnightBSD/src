@@ -131,10 +131,62 @@ lua_shlib_table(lua_State *L, const stringlist_t *list)
 	int i = 1;
 
 	lua_newtable(L);
-	tll_foreach(*list, it) {
+	tll_foreach(*list, it)
+	{
 		lua_pushstring(L, it->item);
 		lua_rawseti(L, -2, i++);
 	}
+}
+
+/*
+ * Populate a fresh Lua state the way package scripts and triggers expect:
+ * the pkg library, msgfd for pkg.print_msg, rootfd for the path helpers, the
+ * pkg_* globals when a package is at hand, and the io/os overrides.
+ * pkg.prefixed_path needs a package, so it is only registered with one.
+ */
+void
+mport_lua_state_setup(lua_State *L, mportInstance *mport, /*@null@*/ mportPackageMeta *pkg,
+    int msgfd, bool upgrade, bool sandboxed)
+{
+	static const luaL_Reg pkg_lib[] = {
+		{ "print_msg", lua_print_msg },
+		{ "filecmp", lua_pkg_filecmp },
+		{ "copy", lua_pkg_copy },
+		{ "stat", lua_stat },
+		{ "readdir", lua_readdir },
+		{ "exec", lua_exec },
+		{ "symlink", lua_pkg_symlink },
+		{ NULL, NULL },
+	};
+
+	lua_pushinteger(L, msgfd);
+	lua_setglobal(L, "msgfd");
+	lua_pushinteger(L, mport->rootfd);
+	lua_setglobal(L, "rootfd");
+	lua_pushstring(L, mport->root);
+	lua_setglobal(L, "pkg_rootdir");
+	lua_pushboolean(L, upgrade ? 1 : 0);
+	lua_setglobal(L, "pkg_upgrade");
+
+	luaL_newlib(L, pkg_lib);
+	if (pkg != NULL) {
+		lua_pushcfunction(L, lua_prefix_path);
+		lua_setfield(L, -2, "prefixed_path");
+	}
+	lua_setglobal(L, "pkg");
+
+	if (pkg != NULL) {
+		lua_pushlightuserdata(L, pkg);
+		lua_setglobal(L, "package");
+		lua_pushstring(L, pkg->prefix);
+		lua_setglobal(L, "pkg_prefix");
+		lua_pushstring(L, pkg->name);
+		lua_setglobal(L, "pkg_name");
+		lua_pushstring(L, pkg->version);
+		lua_setglobal(L, "pkg_version");
+	}
+
+	lua_override_ios(L, sandboxed);
 }
 
 int
@@ -161,46 +213,24 @@ mport_lua_script_run(mportInstance *mport, mportPackageMeta *pkg, mport_lua_scri
 			SET_ERROR(MPORT_ERR_FATAL, "socket pair failed");
 			goto cleanup;
 		}
+		/* the script's print() flushes stdout in the child; do not let it
+		 * flush a copy of our own pending output as well */
+		(void)fflush(stdout);
+		(void)fflush(stderr);
 		pid_t pid = fork();
 		if (pid == 0) {
-			static const luaL_Reg pkg_lib[] = {
-				{ "print_msg", lua_print_msg },
-				{ "prefixed_path", lua_prefix_path },
-				{ "filecmp", lua_pkg_filecmp },
-				{ "copy", lua_pkg_copy },
-				{ "stat", lua_stat },
-				{ "readdir", lua_readdir },
-				{ "exec", lua_exec },
-				{ "symlink", lua_pkg_symlink },
-				{ NULL, NULL },
-			};
 			close(cur_pipe[0]);
 			lua_State *L = luaL_newstate();
 			luaL_openlibs(L);
 			lua_atpanic(L, (lua_CFunction)stack_dump);
-			lua_pushinteger(L, cur_pipe[1]);
-			lua_setglobal(L, "msgfd");
-			lua_pushlightuserdata(L, pkg);
-			lua_setglobal(L, "package");
-			lua_pushinteger(L, mport->rootfd);
-			lua_setglobal(L, "rootfd");
-			lua_pushstring(L, pkg->prefix);
-			lua_setglobal(L, "pkg_prefix");
-			lua_pushstring(L, pkg->name);
-			lua_setglobal(L, "pkg_name");
-			lua_pushstring(L, mport->root);
-			lua_setglobal(L, "pkg_rootdir");
-			lua_pushboolean(L, (pkg->action == MPORT_ACTION_UPGRADE ? 1 : 0));
-			lua_setglobal(L, "pkg_upgrade");
+			mport_lua_state_setup(
+			    L, mport, pkg, cur_pipe[1], pkg->action == MPORT_ACTION_UPGRADE, true);
 			/* the shared libraries this package provides and requires,
 			 * as arrays of sonames; empty when nothing was recorded */
 			lua_shlib_table(L, &pkg->shlibs_provided);
 			lua_setglobal(L, "pkg_shlibs_provided");
 			lua_shlib_table(L, &pkg->shlibs_required);
 			lua_setglobal(L, "pkg_shlibs_required");
-			luaL_newlib(L, pkg_lib);
-			lua_setglobal(L, "pkg");
-			lua_override_ios(L, true);
 
 			/* parse and set arguments of the line is in the comments */
 			if (mport_starts_with("-- args: ", s->item)) {

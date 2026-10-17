@@ -36,6 +36,7 @@
 #include <stdarg.h>
 #include "mport.h"
 #include "mport_private.h"
+#include "mport_lua.h"
 
 /**
  * @brief Allocates memory for a new mportInstance structure.
@@ -467,6 +468,8 @@ mport_instance_free(mportInstance *mport)
 	if (sqlite3_close(mport->db) != SQLITE_OK) {
 		RETURN_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
 	}
+
+	mport_triggers_state_free(mport);
 
 	if (mport->rootfd >= 0)
 		close(mport->rootfd);
