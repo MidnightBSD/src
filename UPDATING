@@ -1,6 +1,10 @@
 Updating Information for MidnightBSD users.
 
 20261016:
+	diff(1) detects directory loops under -r, rejects -C 0, accepts -qq
+	to print nothing, and uses the new fdscandir(3), so it requires the
+	matching libc.
+
 	libc gains fdscandir(3), fdscandir_b(3) and scandirat_b(3) in the
 	MNBSD_1.6 symbol namespace.
 
