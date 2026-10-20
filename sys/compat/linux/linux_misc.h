@@ -138,6 +138,32 @@ extern int stclohz;
 #define	LINUX_P_PGID		2
 #define	LINUX_P_PIDFD		3
 
+/* Linux ioprio encoding and selectors. */
+#define	LINUX_IOPRIO_CLASS_SHIFT	13
+#define	LINUX_IOPRIO_CLASS_MASK		0x07
+#define	LINUX_IOPRIO_PRIO_MASK		((1UL << LINUX_IOPRIO_CLASS_SHIFT) - 1)
+#define	LINUX_IOPRIO_PRIO_CLASS(prio)	\
+	(((prio) >> LINUX_IOPRIO_CLASS_SHIFT) & LINUX_IOPRIO_CLASS_MASK)
+#define	LINUX_IOPRIO_PRIO_DATA(prio)	((prio) & LINUX_IOPRIO_PRIO_MASK)
+#define	LINUX_IOPRIO_PRIO(class, data)	\
+	((((class) & LINUX_IOPRIO_CLASS_MASK) << LINUX_IOPRIO_CLASS_SHIFT) | \
+	 ((data) & LINUX_IOPRIO_PRIO_MASK))
+#define	LINUX_IOPRIO_CLASS_NONE	0
+#define	LINUX_IOPRIO_CLASS_RT		1
+#define	LINUX_IOPRIO_CLASS_BE		2
+#define	LINUX_IOPRIO_CLASS_IDLE	3
+#define	LINUX_IOPRIO_MIN		0
+#define	LINUX_IOPRIO_MAX		7
+#define	LINUX_IOPRIO_WHO_PROCESS	1
+#define	LINUX_IOPRIO_WHO_PGRP		2
+#define	LINUX_IOPRIO_WHO_USER		3
+
+/* Linux kcmp types supported by kern_kcmp(). */
+#define	LINUX_KCMP_FILE		0
+#define	LINUX_KCMP_VM			1
+#define	LINUX_KCMP_FILES		2
+#define	LINUX_KCMP_SIGHAND		4
+
 #define	LINUX_RLIMIT_LOCKS	10
 #define	LINUX_RLIMIT_SIGPENDING	11
 #define	LINUX_RLIMIT_MSGQUEUE	12

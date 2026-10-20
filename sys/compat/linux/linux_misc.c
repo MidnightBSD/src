@@ -36,6 +36,7 @@
 #include <sys/imgact.h>
 #include <sys/limits.h>
 #include <sys/lock.h>
+#include <sys/membarrier.h>
 #include <sys/msgbuf.h>
 #include <sys/mutex.h>
 #include <sys/poll.h>
@@ -45,6 +46,7 @@
 #include <sys/reboot.h>
 #include <sys/random.h>
 #include <sys/resourcevar.h>
+#include <sys/rtprio.h>
 #include <sys/sched.h>
 #include <sys/smp.h>
 #include <sys/stat.h>
@@ -53,6 +55,7 @@
 #include <sys/sysent.h>
 #include <sys/sysproto.h>
 #include <sys/time.h>
+#include <sys/unistd.h>
 #include <sys/vmmeter.h>
 #include <sys/vnode.h>
 
@@ -112,6 +115,22 @@ struct l_pselect6arg {
 	l_uintptr_t	ss;
 	l_size_t	ss_len;
 };
+
+#define	LINUX_SCHED_ATTR_SIZE_VER0	48
+struct linux_sched_attr {
+	l_uint		size;
+	l_uint		sched_policy;
+	uint64_t	sched_flags;
+	int32_t		sched_nice;
+	l_uint		sched_priority;
+	uint64_t	sched_runtime;
+	uint64_t	sched_deadline;
+	uint64_t	sched_period;
+	l_uint		sched_util_min;
+	l_uint		sched_util_max;
+};
+_Static_assert(sizeof(struct linux_sched_attr) == 56,
+    "Linux sched_attr size");
 
 static int	linux_utimensat_lts_to_ts(struct l_timespec *,
 			struct timespec *);
@@ -1366,6 +1385,59 @@ linux_sched_getscheduler(struct thread *td,
 		break;
 	}
 	return (error);
+}
+
+int
+linux_sched_getattr(struct thread *td, struct linux_sched_getattr_args *args)
+{
+	struct linux_sched_attr lattr;
+	struct sched_param param;
+	struct thread *tdt;
+	int error, policy;
+
+	if (args->attr == NULL || args->pid < 0 || args->flags != 0 ||
+	    args->size < LINUX_SCHED_ATTR_SIZE_VER0 || args->size > PAGE_SIZE)
+		return (EINVAL);
+
+	bzero(&lattr, sizeof(lattr));
+	tdt = linux_tdfind(td, args->pid, -1);
+	if (tdt == NULL)
+		return (ESRCH);
+
+	error = kern_sched_getscheduler(td, tdt, &policy);
+	if (error == 0)
+		error = kern_sched_getparam(td, tdt, &param);
+	if (error == 0)
+		lattr.sched_nice = tdt->td_proc->p_nice;
+	PROC_UNLOCK(tdt->td_proc);
+	if (error != 0)
+		return (error);
+
+	lattr.size = MIN(args->size, sizeof(lattr));
+	switch (policy) {
+	case SCHED_FIFO:
+		lattr.sched_policy = LINUX_SCHED_FIFO;
+		break;
+	case SCHED_RR:
+		lattr.sched_policy = LINUX_SCHED_RR;
+		break;
+	default:
+		lattr.sched_policy = LINUX_SCHED_OTHER;
+		break;
+	}
+
+	if (linux_map_sched_prio) {
+		if (lattr.sched_policy == LINUX_SCHED_OTHER)
+			lattr.sched_priority = 0;
+		else
+			lattr.sched_priority = (param.sched_priority *
+			    (LINUX_MAX_RT_PRIO - 1) +
+			    (RTP_PRIO_MAX - RTP_PRIO_MIN - 1)) /
+			    (RTP_PRIO_MAX - RTP_PRIO_MIN) + 1;
+	} else
+		lattr.sched_priority = param.sched_priority;
+
+	return (copyout(&lattr, args->attr, lattr.size));
 }
 
 int
@@ -2662,3 +2734,336 @@ linux_execve(struct thread *td, struct linux_execve_args *args)
 	return (error);
 }
 #endif
+
+static void
+linux_up_rtprio_if(struct thread *target, struct rtprio *rtp)
+{
+	struct rtprio current;
+
+	pri_to_rtp(target, &current);
+	if (current.type < rtp->type ||
+	    (current.type == rtp->type && current.prio < rtp->prio)) {
+		rtp->type = current.type;
+		rtp->prio = current.prio;
+	}
+}
+
+/* Map Linux I/O priority to native CPU scheduling priority. */
+#define	LINUX_PRIO_DIVIDER	(RTP_PRIO_MAX / LINUX_IOPRIO_MAX)
+
+static int
+linux_rtprio2ioprio(struct rtprio *rtp)
+{
+	int class, prio;
+
+	switch (RTP_PRIO_BASE(rtp->type)) {
+	case RTP_PRIO_IDLE:
+		class = LINUX_IOPRIO_CLASS_IDLE;
+		prio = LINUX_IOPRIO_MIN;
+		break;
+	case RTP_PRIO_NORMAL:
+		class = LINUX_IOPRIO_CLASS_BE;
+		prio = rtp->prio / LINUX_PRIO_DIVIDER;
+		break;
+	case RTP_PRIO_REALTIME:
+		class = LINUX_IOPRIO_CLASS_RT;
+		prio = rtp->prio / LINUX_PRIO_DIVIDER;
+		break;
+	default:
+		class = LINUX_IOPRIO_CLASS_NONE;
+		prio = LINUX_IOPRIO_MIN;
+		break;
+	}
+	return (LINUX_IOPRIO_PRIO(class, prio));
+}
+
+static int
+linux_ioprio2rtprio(int ioprio, struct rtprio *rtp)
+{
+	switch (LINUX_IOPRIO_PRIO_CLASS(ioprio)) {
+	case LINUX_IOPRIO_CLASS_IDLE:
+		rtp->prio = RTP_PRIO_MIN;
+		rtp->type = RTP_PRIO_IDLE;
+		break;
+	case LINUX_IOPRIO_CLASS_BE:
+		rtp->prio = LINUX_IOPRIO_PRIO_DATA(ioprio) *
+		    LINUX_PRIO_DIVIDER;
+		rtp->type = RTP_PRIO_NORMAL;
+		break;
+	case LINUX_IOPRIO_CLASS_RT:
+		rtp->prio = LINUX_IOPRIO_PRIO_DATA(ioprio) *
+		    LINUX_PRIO_DIVIDER;
+		rtp->type = RTP_PRIO_REALTIME;
+		break;
+	default:
+		return (EINVAL);
+	}
+	return (0);
+}
+
+int
+linux_ioprio_get(struct thread *td, struct linux_ioprio_get_args *args)
+{
+	struct thread *target;
+	struct rtprio rtp;
+	struct pgrp *pg;
+	struct proc *p;
+	int error, found;
+
+	p = NULL;
+	target = NULL;
+	error = 0;
+	found = 0;
+	rtp.type = RTP_PRIO_IDLE;
+	rtp.prio = RTP_PRIO_MAX;
+	switch (args->which) {
+	case LINUX_IOPRIO_WHO_PROCESS:
+		if (args->who == 0) {
+			target = td;
+			p = td->td_proc;
+			PROC_LOCK(p);
+		} else if (args->who > PID_MAX) {
+			target = linux_tdfind(td, args->who, -1);
+			if (target != NULL)
+				p = target->td_proc;
+		} else
+			p = pfind(args->who);
+		if (p == NULL)
+			return (ESRCH);
+		if ((error = p_cansee(td, p)) == 0) {
+			if (target != NULL)
+				pri_to_rtp(target, &rtp);
+			else
+				FOREACH_THREAD_IN_PROC(p, target)
+					linux_up_rtprio_if(target, &rtp);
+			found++;
+		}
+		PROC_UNLOCK(p);
+		break;
+	case LINUX_IOPRIO_WHO_PGRP:
+		sx_slock(&proctree_lock);
+		if (args->who == 0) {
+			pg = td->td_proc->p_pgrp;
+			PGRP_LOCK(pg);
+		} else {
+			pg = pgfind(args->who);
+			if (pg == NULL) {
+				sx_sunlock(&proctree_lock);
+				error = ESRCH;
+				break;
+			}
+		}
+		sx_sunlock(&proctree_lock);
+		LIST_FOREACH(p, &pg->pg_members, p_pglist) {
+			PROC_LOCK(p);
+			if (p->p_state == PRS_NORMAL && p_cansee(td, p) == 0) {
+				FOREACH_THREAD_IN_PROC(p, target) {
+					linux_up_rtprio_if(target, &rtp);
+					found++;
+				}
+			}
+			PROC_UNLOCK(p);
+		}
+		PGRP_UNLOCK(pg);
+		break;
+	case LINUX_IOPRIO_WHO_USER:
+		if (args->who == 0)
+			args->who = td->td_ucred->cr_uid;
+		sx_slock(&allproc_lock);
+		FOREACH_PROC_IN_SYSTEM(p) {
+			PROC_LOCK(p);
+			if (p->p_state == PRS_NORMAL &&
+			    p->p_ucred->cr_uid == args->who &&
+			    p_cansee(td, p) == 0) {
+				FOREACH_THREAD_IN_PROC(p, target) {
+					linux_up_rtprio_if(target, &rtp);
+					found++;
+				}
+			}
+			PROC_UNLOCK(p);
+		}
+		sx_sunlock(&allproc_lock);
+		break;
+	default:
+		error = EINVAL;
+		break;
+	}
+	if (error == 0) {
+		if (found != 0)
+			td->td_retval[0] = linux_rtprio2ioprio(&rtp);
+		else
+			error = ESRCH;
+	}
+	return (error);
+}
+
+int
+linux_ioprio_set(struct thread *td, struct linux_ioprio_set_args *args)
+{
+	struct thread *target;
+	struct rtprio rtp;
+	struct pgrp *pg;
+	struct proc *p;
+	int error;
+
+	error = linux_ioprio2rtprio(args->ioprio, &rtp);
+	if (error != 0)
+		return (error);
+	if (RTP_PRIO_BASE(rtp.type) == RTP_PRIO_REALTIME &&
+	    (error = priv_check(td, PRIV_SCHED_RTPRIO)) != 0)
+		return (error);
+
+	p = NULL;
+	target = NULL;
+	switch (args->which) {
+	case LINUX_IOPRIO_WHO_PROCESS:
+		if (args->who == 0) {
+			target = td;
+			p = td->td_proc;
+			PROC_LOCK(p);
+		} else if (args->who > PID_MAX) {
+			target = linux_tdfind(td, args->who, -1);
+			if (target != NULL)
+				p = target->td_proc;
+		} else
+			p = pfind(args->who);
+		if (p == NULL)
+			return (ESRCH);
+		if ((error = p_cansched(td, p)) == 0) {
+			if (target != NULL)
+				error = rtp_to_pri(&rtp, target);
+			else
+				FOREACH_THREAD_IN_PROC(p, target) {
+					error = rtp_to_pri(&rtp, target);
+					if (error != 0)
+						break;
+				}
+		}
+		PROC_UNLOCK(p);
+		break;
+	case LINUX_IOPRIO_WHO_PGRP:
+		sx_slock(&proctree_lock);
+		if (args->who == 0) {
+			pg = td->td_proc->p_pgrp;
+			PGRP_LOCK(pg);
+		} else {
+			pg = pgfind(args->who);
+			if (pg == NULL) {
+				sx_sunlock(&proctree_lock);
+				error = ESRCH;
+				break;
+			}
+		}
+		sx_sunlock(&proctree_lock);
+		LIST_FOREACH(p, &pg->pg_members, p_pglist) {
+			PROC_LOCK(p);
+			if (p->p_state == PRS_NORMAL &&
+			    p_cansched(td, p) == 0) {
+				FOREACH_THREAD_IN_PROC(p, target) {
+					error = rtp_to_pri(&rtp, target);
+					if (error != 0)
+						break;
+				}
+			}
+			PROC_UNLOCK(p);
+			if (error != 0)
+				break;
+		}
+		PGRP_UNLOCK(pg);
+		break;
+	case LINUX_IOPRIO_WHO_USER:
+		if (args->who == 0)
+			args->who = td->td_ucred->cr_uid;
+		sx_slock(&allproc_lock);
+		FOREACH_PROC_IN_SYSTEM(p) {
+			PROC_LOCK(p);
+			if (p->p_state == PRS_NORMAL &&
+			    p->p_ucred->cr_uid == args->who &&
+			    p_cansched(td, p) == 0) {
+				FOREACH_THREAD_IN_PROC(p, target) {
+					error = rtp_to_pri(&rtp, target);
+					if (error != 0)
+						break;
+				}
+			}
+			PROC_UNLOCK(p);
+			if (error != 0)
+				break;
+		}
+		sx_sunlock(&allproc_lock);
+		break;
+	default:
+		error = EINVAL;
+		break;
+	}
+	return (error);
+}
+
+#undef LINUX_PRIO_DIVIDER
+
+int
+linux_kcmp(struct thread *td, struct linux_kcmp_args *args)
+{
+	int type;
+
+	switch (args->type) {
+	case LINUX_KCMP_FILE:
+		type = KCMP_FILE;
+		break;
+	case LINUX_KCMP_VM:
+		type = KCMP_VM;
+		break;
+	case LINUX_KCMP_FILES:
+		type = KCMP_FILES;
+		break;
+	case LINUX_KCMP_SIGHAND:
+		type = KCMP_SIGHAND;
+		break;
+	default:
+		return (EINVAL);
+	}
+
+	return (kern_kcmp(td, args->pid1, args->pid2, type, args->idx1,
+	    args->idx));
+}
+
+int
+linux_membarrier(struct thread *td, struct linux_membarrier_args *args)
+{
+	/* The supported native commands have the same values as Linux. */
+	if (args->flags != 0)
+		return (EINVAL);
+
+	switch (args->cmd) {
+	case MEMBARRIER_CMD_QUERY:
+	case MEMBARRIER_CMD_GLOBAL:
+	case MEMBARRIER_CMD_GLOBAL_EXPEDITED:
+	case MEMBARRIER_CMD_REGISTER_GLOBAL_EXPEDITED:
+	case MEMBARRIER_CMD_PRIVATE_EXPEDITED:
+	case MEMBARRIER_CMD_REGISTER_PRIVATE_EXPEDITED:
+	case MEMBARRIER_CMD_PRIVATE_EXPEDITED_SYNC_CORE:
+	case MEMBARRIER_CMD_REGISTER_PRIVATE_EXPEDITED_SYNC_CORE:
+		break;
+	default:
+		return (EINVAL);
+	}
+
+	return (kern_membarrier(td, args->cmd, 0, -1));
+}
+
+/* MidnightBSD has no separate filesystem UID or GID. */
+int
+linux_setfsuid(struct thread *td, struct linux_setfsuid_args *args)
+{
+
+	td->td_retval[0] = td->td_ucred->cr_uid;
+	return (0);
+}
+
+int
+linux_setfsgid(struct thread *td, struct linux_setfsgid_args *args)
+{
+
+	td->td_retval[0] = td->td_ucred->cr_gid;
+	return (0);
+}

@@ -57,8 +57,6 @@ UNIMPLEMENTED(query_module);	/* Added in Linux 2.2 removed in 2.6. */
 UNIMPLEMENTED(security);
 UNIMPLEMENTED(vserver);
 
-DUMMY(setfsuid);
-DUMMY(setfsgid);
 DUMMY(vhangup);
 DUMMY(pivot_root);
 DUMMY(adjtimex);
@@ -76,8 +74,6 @@ DUMMY(add_key);
 DUMMY(request_key);
 DUMMY(keyctl);
 /* Linux 2.6.13: */
-DUMMY(ioprio_set);
-DUMMY(ioprio_get);
 DUMMY(inotify_add_watch);
 DUMMY(inotify_rm_watch);
 /* Linux 2.6.16: */
@@ -103,20 +99,15 @@ DUMMY(setns);
 /* Linux 3.2: */
 DUMMY(process_vm_readv);
 DUMMY(process_vm_writev);
-/* Linux 3.5: */
-DUMMY(kcmp);
 /* Linux 3.8: */
 DUMMY(finit_module);
 DUMMY(sched_setattr);
-DUMMY(sched_getattr);
 /* Linux 3.18: */
 DUMMY(bpf);
 /* Linux 3.19: */
 DUMMY(execveat);
 /* Linux 4.2: */
 DUMMY(userfaultfd);
-/* Linux 4.3: */
-DUMMY(membarrier);
 /* Linux 4.4: */
 DUMMY(mlock2);
 /* Linux 4.6: */
