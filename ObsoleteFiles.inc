@@ -39,6 +39,14 @@
 # for generating a list from a directory
 # find  /usr/lib/perl5/5.36.0 -exec echo {} \; | cut -b 2-150  | xargs printf "OLD_FILES+=%s\n"
 
+# 20261020: Regenerate trust store from NSS 3.131.1
+OLD_FILES+=usr/share/certs/trusted/Atos_TrustedRoot_2011.pem
+OLD_FILES+=usr/share/certs/trusted/SecureSign_Root_CA12.pem
+OLD_FILES+=usr/share/certs/trusted/ePKI_Root_Certification_Authority.pem
+OLD_FILES+=usr/share/certs/trusted/emSign_ECC_Root_CA_-_C3.pem
+OLD_FILES+=usr/share/certs/trusted/emSign_ECC_Root_CA_-_G3.pem
+OLD_FILES+=usr/share/certs/trusted/emSign_Root_CA_-_C1.pem
+OLD_FILES+=usr/share/certs/blacklisted/Entrust_Root_Certification_Authority.pem
 # 20260430: Regenerate trust store
 OLD_FILES+=usr/share/certs/trusted/Entrust_net_Premium_2048_Secure_Server_CA.pem
 OLD_FILES+=usr/share/certs/trusted/AffirmTrust_Premium.pem
