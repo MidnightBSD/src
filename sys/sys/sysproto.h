@@ -1868,6 +1868,16 @@ struct kcmp_args {
 	char idx1_l_[PADL_(uintptr_t)]; uintptr_t idx1; char idx1_r_[PADR_(uintptr_t)];
 	char idx2_l_[PADL_(uintptr_t)]; uintptr_t idx2; char idx2_r_[PADR_(uintptr_t)];
 };
+struct inotify_add_watch_at_args {
+	char fd_l_[PADL_(int)]; int fd; char fd_r_[PADR_(int)];
+	char dfd_l_[PADL_(int)]; int dfd; char dfd_r_[PADR_(int)];
+	char path_l_[PADL_(const char *)]; const char * path; char path_r_[PADR_(const char *)];
+	char mask_l_[PADL_(uint32_t)]; uint32_t mask; char mask_r_[PADR_(uint32_t)];
+};
+struct inotify_rm_watch_args {
+	char fd_l_[PADL_(int)]; int fd; char fd_r_[PADR_(int)];
+	char wd_l_[PADL_(int)]; int wd; char wd_r_[PADR_(int)];
+};
 int	nosys(struct thread *, struct nosys_args *);
 void	sys_sys_exit(struct thread *, struct sys_exit_args *);
 int	sys_fork(struct thread *, struct fork_args *);
@@ -2267,6 +2277,8 @@ int	sys_swapoff(struct thread *, struct swapoff_args *);
 int	sys_kqueuex(struct thread *, struct kqueuex_args *);
 int	sys_membarrier(struct thread *, struct membarrier_args *);
 int	sys_kcmp(struct thread *, struct kcmp_args *);
+int	sys_inotify_add_watch_at(struct thread *, struct inotify_add_watch_at_args *);
+int	sys_inotify_rm_watch(struct thread *, struct inotify_rm_watch_args *);
 
 #ifdef COMPAT_43
 
@@ -3216,6 +3228,8 @@ int	freebsd12_closefrom(struct thread *, struct freebsd12_closefrom_args *);
 #define	SYS_AUE_kqueuex	AUE_KQUEUE
 #define	SYS_AUE_membarrier	AUE_NULL
 #define	SYS_AUE_kcmp	AUE_NULL
+#define	SYS_AUE_inotify_add_watch_at	AUE_INOTIFY
+#define	SYS_AUE_inotify_rm_watch	AUE_INOTIFY
 
 #undef PAD_
 #undef PADL_

@@ -71,6 +71,8 @@ __read_mostly cap_rights_t cap_futimes_rights;
 __read_mostly cap_rights_t cap_getpeername_rights;
 __read_mostly cap_rights_t cap_getsockopt_rights;
 __read_mostly cap_rights_t cap_getsockname_rights;
+__read_mostly cap_rights_t cap_inotify_add_rights;
+__read_mostly cap_rights_t cap_inotify_rm_rights;
 __read_mostly cap_rights_t cap_ioctl_rights;
 __read_mostly cap_rights_t cap_listen_rights;
 __read_mostly cap_rights_t cap_linkat_source_rights;
@@ -120,6 +122,8 @@ cap_rights_sysinit(void *arg)
 	cap_rights_init_one(&cap_getpeername_rights, CAP_GETPEERNAME);
 	cap_rights_init_one(&cap_getsockname_rights, CAP_GETSOCKNAME);
 	cap_rights_init_one(&cap_getsockopt_rights, CAP_GETSOCKOPT);
+	cap_rights_init_one(&cap_inotify_add_rights, CAP_INOTIFY_ADD);
+	cap_rights_init_one(&cap_inotify_rm_rights, CAP_INOTIFY_RM);
 	cap_rights_init_one(&cap_ioctl_rights, CAP_IOCTL);
 	cap_rights_init_one(&cap_linkat_source_rights, CAP_LINKAT_SOURCE);
 	cap_rights_init_one(&cap_linkat_target_rights, CAP_LINKAT_TARGET);

@@ -44,6 +44,7 @@
 #include <sys/counter.h>
 #include <sys/filedesc.h>
 #include <sys/fnv_hash.h>
+#include <sys/inotify.h>
 #include <sys/kernel.h>
 #include <sys/ktr.h>
 #include <sys/lock.h>
@@ -2541,6 +2542,9 @@ cache_enter_time(struct vnode *dvp, struct vnode *vp, struct componentname *cnp,
 	}
 
 	if (vp != NULL) {
+		/* Keep children of watched directories on the event path. */
+		if (__predict_false((vn_irflag_read(dvp) & VIRF_INOTIFY) != 0))
+			vn_irflag_set_cond(vp, VIRF_INOTIFY_PARENT);
 		if (flag != NCF_ISDOTDOT) {
 			/*
 			 * For this case, the cache entry maps both the
@@ -3004,6 +3008,46 @@ cache_vop_rmdir(struct vnode *dvp, struct vnode *vp)
 	ASSERT_VOP_IN_SEQC(dvp);
 	ASSERT_VOP_IN_SEQC(vp);
 	cache_purge(vp);
+}
+
+void
+cache_vop_inotify(struct vnode *vp, int event, uint32_t cookie)
+{
+	struct mtx *vlp;
+	struct namecache *ncp;
+	int isdir;
+	bool logged, self;
+
+	isdir = vp->v_type == VDIR ? IN_ISDIR : 0;
+	self = (vn_irflag_read(vp) & VIRF_INOTIFY) != 0 &&
+	    (vp->v_type != VDIR || (event & ~_IN_DIR_EVENTS) != 0);
+	if (self) {
+		int selfevent;
+
+		if (event == _IN_ATTRIB_LINKCOUNT)
+			selfevent = IN_ATTRIB;
+		else
+			selfevent = event;
+		inotify_log(vp, NULL, 0, selfevent | isdir, cookie);
+	}
+	if ((event & IN_ALL_EVENTS) == 0)
+		return;
+
+	logged = false;
+	vlp = VP2VNODELOCK(vp);
+	mtx_lock(vlp);
+	TAILQ_FOREACH(ncp, &vp->v_cache_dst, nc_dst) {
+		if ((ncp->nc_flag & NCF_ISDOTDOT) != 0)
+			continue;
+		if ((vn_irflag_read(ncp->nc_dvp) & VIRF_INOTIFY) != 0) {
+			inotify_log(ncp->nc_dvp, ncp->nc_name, ncp->nc_nlen,
+			    event | isdir, cookie);
+			logged = true;
+		}
+	}
+	if (!logged && (vn_irflag_read(vp) & VIRF_INOTIFY_PARENT) != 0)
+		vn_irflag_unset(vp, VIRF_INOTIFY_PARENT);
+	mtx_unlock(vlp);
 }
 
 #ifdef INVARIANTS

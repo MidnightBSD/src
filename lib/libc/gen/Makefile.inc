@@ -49,6 +49,7 @@ SRCS+=	__getosreldate.c \
 	errlst.c \
 	errno.c \
 	eventfd.c \
+	inotify.c \
 	exec.c \
 	exect.c \
 	fdevname.c \

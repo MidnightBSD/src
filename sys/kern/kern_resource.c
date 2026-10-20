@@ -1458,6 +1458,12 @@ uifree(struct uidinfo *uip)
 	if (uip->ui_proccnt != 0)
 		printf("freeing uidinfo: uid = %d, proccnt = %ld\n",
 		    uip->ui_uid, uip->ui_proccnt);
+	if (uip->ui_inotifycnt != 0)
+		printf("freeing uidinfo: uid = %d, inotifycnt = %ld\n",
+		    uip->ui_uid, uip->ui_inotifycnt);
+	if (uip->ui_inotifywatchcnt != 0)
+		printf("freeing uidinfo: uid = %d, inotifywatchcnt = %ld\n",
+		    uip->ui_uid, uip->ui_inotifywatchcnt);
 	if (uip->ui_vmsize != 0)
 		printf("freeing uidinfo: uid = %d, swapuse = %lld\n",
 		    uip->ui_uid, (unsigned long long)uip->ui_vmsize);
@@ -1557,4 +1563,19 @@ chgumtxcnt(struct uidinfo *uip, int diff, rlim_t max)
 {
 
 	return (chglimit(uip, &uip->ui_umtxcnt, diff, max, "umtxcnt"));
+}
+
+int
+chginotifycnt(struct uidinfo *uip, int diff, rlim_t max)
+{
+
+	return (chglimit(uip, &uip->ui_inotifycnt, diff, max, "inotifycnt"));
+}
+
+int
+chginotifywatchcnt(struct uidinfo *uip, int diff, rlim_t max)
+{
+
+	return (chglimit(uip, &uip->ui_inotifywatchcnt, diff, max,
+	    "inotifywatchcnt"));
 }

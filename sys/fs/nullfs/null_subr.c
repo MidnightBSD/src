@@ -273,6 +273,10 @@ null_nodeget(mp, lowervp, vpp)
 			MPASS(vp->v_object != NULL);
 		}
 	}
+	if ((vn_irflag_read(lowervp) & VIRF_INOTIFY) != 0)
+		vn_irflag_set_cond(vp, VIRF_INOTIFY);
+	if ((vn_irflag_read(lowervp) & VIRF_INOTIFY_PARENT) != 0)
+		vn_irflag_set_cond(vp, VIRF_INOTIFY_PARENT);
 
 	/*
 	 * Atomically insert our new node into the hash or vget existing 

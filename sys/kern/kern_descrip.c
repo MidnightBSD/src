@@ -5153,6 +5153,8 @@ file_type_to_name(short type)
 		return ("eventfd");
 	case DTYPE_LINUXTFD:
 		return ("ltimer");
+	case DTYPE_INOTIFY:
+		return ("inotify");
 	default:
 		return ("unkn");
 	}

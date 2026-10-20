@@ -1185,5 +1185,8 @@
 587	AUE_NULL	UNIMPL  timerfd_settime
 588	AUE_NULL	NOPROTO { int kcmp(pid_t pid1, pid_t pid2, int type, \
 				    u_int idx1, u_int idx2); }
+589	AUE_INOTIFY	NOPROTO|CAPENABLED { int inotify_add_watch_at(int fd, int dfd, \
+				    const char *path, uint32_t mask); }
+590	AUE_INOTIFY	NOPROTO|CAPENABLED { int inotify_rm_watch(int fd, int wd); }
 
 ; vim: syntax=off
