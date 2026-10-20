@@ -33,11 +33,13 @@
 #include <sys/fcntl.h>
 #include <sys/file.h>
 #include <sys/filedesc.h>
+#include <sys/inotify.h>
 #include <sys/lock.h>
 #include <sys/mman.h>
 #include <sys/selinfo.h>
 #include <sys/pipe.h>
 #include <sys/proc.h>
+#include <sys/specialfd.h>
 #include <sys/stat.h>
 #include <sys/sx.h>
 #include <sys/syscallsubr.h>
@@ -2104,4 +2106,83 @@ linux_close_range(struct thread *td, struct linux_close_range_args *args)
 	if ((args->flags & LINUX_CLOSE_RANGE_CLOEXEC) != 0)
 		flags |= CLOSE_RANGE_CLOEXEC;
 	return (kern_close_range(td, flags, args->first, args->last));
+}
+
+static int
+inotify_init_common(struct thread *td, int flags)
+{
+	struct specialfd_inotify si;
+
+	if ((flags & ~(LINUX_IN_CLOEXEC | LINUX_IN_NONBLOCK)) != 0)
+		return (EINVAL);
+
+	si.flags = 0;
+	if ((flags & LINUX_IN_CLOEXEC) != 0)
+		si.flags |= IN_CLOEXEC;
+	if ((flags & LINUX_IN_NONBLOCK) != 0)
+		si.flags |= IN_NONBLOCK;
+	return (kern_specialfd(td, SPECIALFD_INOTIFY, &si));
+}
+
+#if defined(__i386__) || defined(__amd64__)
+int
+linux_inotify_init(struct thread *td, struct linux_inotify_init_args *args)
+{
+	return (inotify_init_common(td, 0));
+}
+#endif
+
+int
+linux_inotify_init1(struct thread *td, struct linux_inotify_init1_args *args)
+{
+	return (inotify_init_common(td, args->flags));
+}
+
+/* Native inotify records use Linux-compatible event values and layout. */
+_Static_assert(LINUX_IN_ACCESS == IN_ACCESS, "IN_ACCESS mismatch");
+_Static_assert(LINUX_IN_MODIFY == IN_MODIFY, "IN_MODIFY mismatch");
+_Static_assert(LINUX_IN_ATTRIB == IN_ATTRIB, "IN_ATTRIB mismatch");
+_Static_assert(LINUX_IN_CLOSE_WRITE == IN_CLOSE_WRITE,
+    "IN_CLOSE_WRITE mismatch");
+_Static_assert(LINUX_IN_CLOSE_NOWRITE == IN_CLOSE_NOWRITE,
+    "IN_CLOSE_NOWRITE mismatch");
+_Static_assert(LINUX_IN_OPEN == IN_OPEN, "IN_OPEN mismatch");
+_Static_assert(LINUX_IN_MOVED_FROM == IN_MOVED_FROM, "IN_MOVED_FROM mismatch");
+_Static_assert(LINUX_IN_MOVED_TO == IN_MOVED_TO, "IN_MOVED_TO mismatch");
+_Static_assert(LINUX_IN_CREATE == IN_CREATE, "IN_CREATE mismatch");
+_Static_assert(LINUX_IN_DELETE == IN_DELETE, "IN_DELETE mismatch");
+_Static_assert(LINUX_IN_DELETE_SELF == IN_DELETE_SELF,
+    "IN_DELETE_SELF mismatch");
+_Static_assert(LINUX_IN_MOVE_SELF == IN_MOVE_SELF, "IN_MOVE_SELF mismatch");
+_Static_assert(LINUX_IN_UNMOUNT == IN_UNMOUNT, "IN_UNMOUNT mismatch");
+_Static_assert(LINUX_IN_Q_OVERFLOW == IN_Q_OVERFLOW, "IN_Q_OVERFLOW mismatch");
+_Static_assert(LINUX_IN_IGNORED == IN_IGNORED, "IN_IGNORED mismatch");
+_Static_assert(LINUX_IN_ISDIR == IN_ISDIR, "IN_ISDIR mismatch");
+_Static_assert(LINUX_IN_ONLYDIR == IN_ONLYDIR, "IN_ONLYDIR mismatch");
+_Static_assert(LINUX_IN_DONT_FOLLOW == IN_DONT_FOLLOW,
+    "IN_DONT_FOLLOW mismatch");
+_Static_assert(LINUX_IN_MASK_CREATE == IN_MASK_CREATE,
+    "IN_MASK_CREATE mismatch");
+_Static_assert(LINUX_IN_MASK_ADD == IN_MASK_ADD, "IN_MASK_ADD mismatch");
+_Static_assert(LINUX_IN_ONESHOT == IN_ONESHOT, "IN_ONESHOT mismatch");
+_Static_assert(LINUX_IN_EXCL_UNLINK == IN_EXCL_UNLINK,
+    "IN_EXCL_UNLINK mismatch");
+_Static_assert(sizeof(struct inotify_event) == 16,
+    "inotify event header layout mismatch");
+
+int
+linux_inotify_add_watch(struct thread *td,
+    struct linux_inotify_add_watch_args *args)
+{
+	if ((args->mask & ~(LINUX_IN_ALL_EVENTS | LINUX_IN_ALL_FLAGS)) != 0)
+		return (EINVAL);
+	return (kern_inotify_add_watch(td, args->fd, AT_FDCWD, args->pathname,
+	    args->mask));
+}
+
+int
+linux_inotify_rm_watch(struct thread *td,
+    struct linux_inotify_rm_watch_args *args)
+{
+	return (kern_inotify_rm_watch(td, args->fd, args->wd));
 }
