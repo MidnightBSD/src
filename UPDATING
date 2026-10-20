@@ -1,5 +1,15 @@
 Updating Information for MidnightBSD users.
 
+20261020:
+	The base trust store in /usr/share/certs has been regenerated from
+	NSS 3.131.1.  Mozilla removed trust in emSign Root CA - C1 and
+	emSign ECC Root CA - C3, and in emSign ECC Root CA - G3 after a
+	security incident affecting intermediate certificates.  G3 is now
+	blacklisted so that an outdated security/ca_root_nss cannot
+	reintroduce it.  After installworld, run "make delete-old" to
+	remove the old certificate files and "certctl rehash" to update
+	/etc/ssl/certs.  Also update security/ca_root_nss to 3.131.1.
+
 20261017:
 	firstboot now asks which desktop to use when enabling a graphical
 	environment: MidnightBSD Workspace (x11-wm/midnight-wm), Xfce, or
