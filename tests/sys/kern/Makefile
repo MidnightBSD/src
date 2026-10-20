@@ -13,6 +13,7 @@ ATF_TESTS_C+=	basic_signal
 #ATF_TESTS_C+=	kcov
 ATF_TESTS_C+=	kern_copyin
 ATF_TESTS_C+=	kern_descrip_test
+ATF_TESTS_C+=	inotify_event_test
 ATF_TESTS_C+=	fdgrowtable_test
 ATF_TESTS_C+=	jail_lookup_root
 ATF_TESTS_C+=	kill_zombie
@@ -64,6 +65,7 @@ PROGS+=		sendfile_helper
 .PATH: ${SRCTOP}/sbin/mount
 SRCS.jail_lookup_root+=			jail_lookup_root.c getmntopts.c
 CFLAGS.jail_lookup_root+=		-I${SRCTOP}/sbin/mount
+CFLAGS.inotify_event_test+=		-I${SRCTOP}/sys
 LIBADD.aslr+=				util
 LIBADD.jail_lookup_root+=		jail util
 CFLAGS.sys_getrandom+=			-I${SRCTOP}/sys/contrib/zstd/lib

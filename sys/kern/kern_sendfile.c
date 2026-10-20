@@ -33,6 +33,7 @@
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/capsicum.h>
+#include <sys/inotify.h>
 #include <sys/kernel.h>
 #include <sys/lock.h>
 #include <sys/ktls.h>
@@ -1227,6 +1228,8 @@ out:
 	 */
 	if (error == 0) {
 		td->td_retval[0] = 0;
+		if (sbytes > 0 && vp != NULL)
+			INOTIFY(vp, IN_ACCESS);
 	}
 	if (sent != NULL) {
 		(*sent) = sbytes;

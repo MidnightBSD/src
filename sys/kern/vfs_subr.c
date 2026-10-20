@@ -59,6 +59,7 @@
 #include <sys/extattr.h>
 #include <sys/file.h>
 #include <sys/fcntl.h>
+#include <sys/inotify.h>
 #include <sys/jail.h>
 #include <sys/kdb.h>
 #include <sys/kernel.h>
@@ -6063,6 +6064,28 @@ vop_need_inactive_debugpost(void *ap, int rc)
 #endif
 
 void
+vop_allocate_post(void *ap, int rc)
+{
+	struct vop_allocate_args *a;
+
+	a = ap;
+	if (rc == 0)
+		INOTIFY(a->a_vp, IN_MODIFY);
+}
+
+void
+vop_copy_file_range_post(void *ap, int rc)
+{
+	struct vop_copy_file_range_args *a;
+
+	a = ap;
+	if (rc == 0) {
+		INOTIFY(a->a_invp, IN_ACCESS);
+		INOTIFY(a->a_outvp, IN_MODIFY);
+	}
+}
+
+void
 vop_create_pre(void *ap)
 {
 	struct vop_create_args *a;
@@ -6082,8 +6105,10 @@ vop_create_post(void *ap, int rc)
 	a = ap;
 	dvp = a->a_dvp;
 	vn_seqc_write_end(dvp);
-	if (!rc)
+	if (!rc) {
 		VFS_KNOTE_LOCKED(dvp, NOTE_WRITE);
+		INOTIFY_NAME(*a->a_vpp, dvp, a->a_cnp, IN_CREATE);
+	}
 }
 
 void
@@ -6128,8 +6153,10 @@ vop_deleteextattr_post(void *ap, int rc)
 	a = ap;
 	vp = a->a_vp;
 	vn_seqc_write_end(vp);
-	if (!rc)
+	if (!rc) {
 		VFS_KNOTE_LOCKED(a->a_vp, NOTE_ATTRIB);
+		INOTIFY(vp, IN_ATTRIB);
+	}
 }
 
 void
@@ -6159,6 +6186,8 @@ vop_link_post(void *ap, int rc)
 	if (!rc) {
 		VFS_KNOTE_LOCKED(vp, NOTE_LINK);
 		VFS_KNOTE_LOCKED(tdvp, NOTE_WRITE);
+		INOTIFY_NAME(vp, tdvp, a->a_cnp, _IN_ATTRIB_LINKCOUNT);
+		INOTIFY_NAME(vp, tdvp, a->a_cnp, IN_CREATE);
 	}
 }
 
@@ -6182,8 +6211,10 @@ vop_mkdir_post(void *ap, int rc)
 	a = ap;
 	dvp = a->a_dvp;
 	vn_seqc_write_end(dvp);
-	if (!rc)
+	if (!rc) {
 		VFS_KNOTE_LOCKED(dvp, NOTE_WRITE | NOTE_LINK);
+		INOTIFY_NAME(*a->a_vpp, dvp, a->a_cnp, IN_CREATE);
+	}
 }
 
 #ifdef DEBUG_VFS_LOCKS
@@ -6218,8 +6249,10 @@ vop_mknod_post(void *ap, int rc)
 	a = ap;
 	dvp = a->a_dvp;
 	vn_seqc_write_end(dvp);
-	if (!rc)
+	if (!rc) {
 		VFS_KNOTE_LOCKED(dvp, NOTE_WRITE);
+		INOTIFY_NAME(*a->a_vpp, dvp, a->a_cnp, IN_CREATE);
+	}
 }
 
 void
@@ -6231,8 +6264,10 @@ vop_reclaim_post(void *ap, int rc)
 	a = ap;
 	vp = a->a_vp;
 	ASSERT_VOP_IN_SEQC(vp);
-	if (!rc)
+	if (!rc) {
 		VFS_KNOTE_LOCKED(vp, NOTE_REVOKE);
+		INOTIFY_REVOKE(vp);
+	}
 }
 
 void
@@ -6262,6 +6297,8 @@ vop_remove_post(void *ap, int rc)
 	if (!rc) {
 		VFS_KNOTE_LOCKED(dvp, NOTE_WRITE);
 		VFS_KNOTE_LOCKED(vp, NOTE_DELETE);
+		INOTIFY_NAME(vp, dvp, a->a_cnp, _IN_ATTRIB_LINKCOUNT);
+		INOTIFY_NAME(vp, dvp, a->a_cnp, IN_DELETE);
 	}
 }
 
@@ -6293,6 +6330,8 @@ vop_rename_post(void *ap, int rc)
 		VFS_KNOTE_UNLOCKED(a->a_fvp, NOTE_RENAME);
 		if (a->a_tvp)
 			VFS_KNOTE_UNLOCKED(a->a_tvp, NOTE_DELETE);
+		INOTIFY_MOVE(a->a_fvp, a->a_fdvp, a->a_fcnp, a->a_tvp,
+		    a->a_tdvp, a->a_tcnp);
 	}
 	if (a->a_tdvp != a->a_fdvp)
 		vdrop(a->a_fdvp);
@@ -6331,6 +6370,7 @@ vop_rmdir_post(void *ap, int rc)
 		vp->v_vflag |= VV_UNLINKED;
 		VFS_KNOTE_LOCKED(dvp, NOTE_WRITE | NOTE_LINK);
 		VFS_KNOTE_LOCKED(vp, NOTE_DELETE);
+		INOTIFY_NAME(vp, dvp, a->a_cnp, IN_DELETE);
 	}
 }
 
@@ -6354,8 +6394,10 @@ vop_setattr_post(void *ap, int rc)
 	a = ap;
 	vp = a->a_vp;
 	vn_seqc_write_end(vp);
-	if (!rc)
+	if (!rc) {
 		VFS_KNOTE_LOCKED(vp, NOTE_ATTRIB);
+		INOTIFY(vp, IN_ATTRIB);
+	}
 }
 
 void
@@ -6400,8 +6442,10 @@ vop_setextattr_post(void *ap, int rc)
 	a = ap;
 	vp = a->a_vp;
 	vn_seqc_write_end(vp);
-	if (!rc)
+	if (!rc) {
 		VFS_KNOTE_LOCKED(vp, NOTE_ATTRIB);
+		INOTIFY(vp, IN_ATTRIB);
+	}
 }
 
 void
@@ -6424,8 +6468,10 @@ vop_symlink_post(void *ap, int rc)
 	a = ap;
 	dvp = a->a_dvp;
 	vn_seqc_write_end(dvp);
-	if (!rc)
+	if (!rc) {
 		VFS_KNOTE_LOCKED(dvp, NOTE_WRITE);
+		INOTIFY_NAME(*a->a_vpp, dvp, a->a_cnp, IN_CREATE);
+	}
 }
 
 void
@@ -6433,8 +6479,10 @@ vop_open_post(void *ap, int rc)
 {
 	struct vop_open_args *a = ap;
 
-	if (!rc)
+	if (!rc) {
 		VFS_KNOTE_LOCKED(a->a_vp, NOTE_OPEN);
+		INOTIFY(a->a_vp, IN_OPEN);
+	}
 }
 
 void
@@ -6446,6 +6494,8 @@ vop_close_post(void *ap, int rc)
 	    !VN_IS_DOOMED(a->a_vp))) {
 		VFS_KNOTE_LOCKED(a->a_vp, (a->a_fflag & FWRITE) != 0 ?
 		    NOTE_CLOSE_WRITE : NOTE_CLOSE);
+		INOTIFY(a->a_vp, (a->a_fflag & FWRITE) != 0 ?
+		    IN_CLOSE_WRITE : IN_CLOSE_NOWRITE);
 	}
 }
 
@@ -6454,8 +6504,10 @@ vop_read_post(void *ap, int rc)
 {
 	struct vop_read_args *a = ap;
 
-	if (!rc)
+	if (!rc) {
 		VFS_KNOTE_LOCKED(a->a_vp, NOTE_READ);
+		INOTIFY(a->a_vp, IN_ACCESS);
+	}
 }
 
 void
@@ -6472,8 +6524,10 @@ vop_readdir_post(void *ap, int rc)
 {
 	struct vop_readdir_args *a = ap;
 
-	if (!rc)
+	if (!rc) {
 		VFS_KNOTE_LOCKED(a->a_vp, NOTE_READ);
+		INOTIFY(a->a_vp, IN_ACCESS);
+	}
 }
 
 static struct knlist fs_knlist;

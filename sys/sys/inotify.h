@@ -130,7 +130,10 @@ extern __uint32_t inotify_rename_cookie;
 	    (vn_irflag_read(vp) & VIRF_INOTIFY) != 0)) {		\
 		__uint32_t cookie;					\
 									\
-		cookie = atomic_fetchadd_32(&inotify_rename_cookie, 1);	\
+		do {						\
+			cookie = atomic_fetchadd_32(			\
+			    &inotify_rename_cookie, 1) + 1;		\
+		} while (cookie == 0);				\
 		VOP_INOTIFY((vp), (fdvp), (fcnp), IN_MOVED_FROM, cookie); \
 		VOP_INOTIFY((vp), (tdvp), (tcnp), IN_MOVED_TO, cookie);	\
 	}								\
