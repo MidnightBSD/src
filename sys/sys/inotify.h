@@ -80,6 +80,8 @@ struct inotify_event {
 	((namelen) == 0 ? 0 : __align_up((namelen) + 1, _IN_ALIGN))
 
 #ifdef _KERNEL
+#include <sys/uio.h>
+
 struct componentname;
 struct file;
 struct inotify_softc;
@@ -91,7 +93,7 @@ void	inotify_log(struct vnode *, const char *, size_t, int, __uint32_t);
 
 int	kern_inotify_rm_watch(struct thread *, int, uint32_t);
 int	kern_inotify_add_watch(struct thread *, int, int, const char *,
-	    uint32_t);
+	    enum uio_seg, uint32_t);
 
 void	vn_inotify(struct vnode *, struct vnode *, struct componentname *, int,
 	    uint32_t);
