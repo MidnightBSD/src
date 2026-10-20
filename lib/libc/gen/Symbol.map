@@ -449,6 +449,12 @@ FBSD_1.7 {
 	 __cpuset_free;
 };
 
+FBSD_1.8 {
+	inotify_add_watch;
+	inotify_init;
+	inotify_init1;
+};
+
 MNBSD_1.6 {
 	fdscandir;
 	fdscandir_b;

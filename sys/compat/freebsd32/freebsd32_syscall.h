@@ -509,4 +509,6 @@
 #define	FREEBSD32_SYS_freebsd32_aio_readv	579
 #define	FREEBSD32_SYS_sched_getcpu	581
 #define	FREEBSD32_SYS_kcmp	588
-#define	FREEBSD32_SYS_MAXSYSCALL	589
+#define	FREEBSD32_SYS_inotify_add_watch_at	589
+#define	FREEBSD32_SYS_inotify_rm_watch	590
+#define	FREEBSD32_SYS_MAXSYSCALL	591

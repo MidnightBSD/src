@@ -70,6 +70,7 @@ struct nameidata;
 #define	DTYPE_PROCDESC	12	/* process descriptor */
 #define	DTYPE_EVENTFD	13	/* eventfd */
 #define	DTYPE_LINUXTFD	14	/* emulation timerfd type */
+#define	DTYPE_INOTIFY	15	/* inotify descriptor */
 
 #ifdef _KERNEL
 

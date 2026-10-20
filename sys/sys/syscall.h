@@ -521,4 +521,6 @@
 #define	SYS_kqueuex	583
 #define	SYS_membarrier	584
 #define	SYS_kcmp	588
-#define	SYS_MAXSYSCALL	589
+#define	SYS_inotify_add_watch_at	589
+#define	SYS_inotify_rm_watch	590
+#define	SYS_MAXSYSCALL	591

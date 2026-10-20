@@ -624,4 +624,6 @@ const char *freebsd32_syscallnames[] = {
 	"#586",			/* 586 = timerfd_gettime */
 	"#587",			/* 587 = timerfd_settime */
 	"kcmp",			/* 588 = kcmp */
+	"inotify_add_watch_at",			/* 589 = inotify_add_watch_at */
+	"inotify_rm_watch",			/* 590 = inotify_rm_watch */
 };

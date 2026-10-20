@@ -426,4 +426,6 @@ MIASM =  \
 	swapoff.o \
 	kqueuex.o \
 	membarrier.o \
-	kcmp.o
+	kcmp.o \
+	inotify_add_watch_at.o \
+	inotify_rm_watch.o
