@@ -937,7 +937,7 @@ fget_inotify(struct thread *td, int fd, const cap_rights_t *needrightsp,
 
 int
 kern_inotify_add_watch(struct thread *td, int fd, int dfd, const char *path,
-    uint32_t mask)
+    enum uio_seg segflg, uint32_t mask)
 {
 	struct nameidata nd;
 	struct file *fp;
@@ -964,7 +964,7 @@ kern_inotify_add_watch(struct thread *td, int fd, int dfd, const char *path,
 
 	NDINIT_AT(&nd, LOOKUP,
 	    ((mask & IN_DONT_FOLLOW) ? NOFOLLOW : FOLLOW) | LOCKLEAF |
-	    LOCKSHARED | AUDITVNODE1, UIO_USERSPACE, path, dfd, td);
+	    LOCKSHARED | AUDITVNODE1, segflg, path, dfd, td);
 	error = namei(&nd);
 	if (error != 0)
 		goto out;
@@ -1017,7 +1017,7 @@ sys_inotify_add_watch_at(struct thread *td,
     struct inotify_add_watch_at_args *uap)
 {
 	return (kern_inotify_add_watch(td, uap->fd, uap->dfd, uap->path,
-	    uap->mask));
+	    UIO_USERSPACE, uap->mask));
 }
 
 int

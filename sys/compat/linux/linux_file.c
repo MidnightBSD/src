@@ -2174,10 +2174,19 @@ int
 linux_inotify_add_watch(struct thread *td,
     struct linux_inotify_add_watch_args *args)
 {
+	char *path;
+	int error;
+
 	if ((args->mask & ~(LINUX_IN_ALL_EVENTS | LINUX_IN_ALL_FLAGS)) != 0)
 		return (EINVAL);
-	return (kern_inotify_add_watch(td, args->fd, AT_FDCWD, args->pathname,
-	    args->mask));
+	if (!LUSECONVPATH(td))
+		return (kern_inotify_add_watch(td, args->fd, AT_FDCWD,
+		    args->pathname, UIO_USERSPACE, args->mask));
+	LCONVPATHEXIST(args->pathname, &path);
+	error = kern_inotify_add_watch(td, args->fd, AT_FDCWD, path,
+	    UIO_SYSSPACE, args->mask);
+	LFREEPATH(path);
+	return (error);
 }
 
 int
