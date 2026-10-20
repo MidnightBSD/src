@@ -43,17 +43,11 @@ struct sysent linux_sysent[] = {
 	{ .sy_narg = AS(linux_dup3_args), .sy_call = (sy_call_t *)linux_dup3, .sy_auevent = AUE_NULL, .sy_flags = 0, .sy_thrcnt = SY_THR_STATIC },	/* 24 = linux_dup3 */
 	{ .sy_narg = AS(linux_fcntl_args), .sy_call = (sy_call_t *)linux_fcntl, .sy_auevent = AUE_FCNTL, .sy_flags = 0, .sy_thrcnt = SY_THR_STATIC },	/* 25 = linux_fcntl */
 	{ .sy_narg = AS(linux_inotify_init1_args), .sy_call = (sy_call_t *)linux_inotify_init1, .sy_auevent = AUE_NULL, .sy_flags = 0, .sy_thrcnt = SY_THR_STATIC },	/* 26 = linux_inotify_init1 */
-	{ .sy_narg = 0, .sy_call = (sy_call_t *)linux_inotify_add_watch, .sy_auevent = AUE_NULL, .sy_flags = 0, .sy_thrcnt = SY_THR_STATIC },	/* 27 = linux_inotify_add_watch */
-	{ .sy_narg = 0, .sy_call = (sy_call_t *)linux_inotify_rm_watch, .sy_auevent = AUE_NULL, .sy_flags = 0, .sy_thrcnt = SY_THR_STATIC },	/* 28 = linux_inotify_rm_watch */
+	{ .sy_narg = AS(linux_inotify_add_watch_args), .sy_call = (sy_call_t *)linux_inotify_add_watch, .sy_auevent = AUE_NULL, .sy_flags = 0, .sy_thrcnt = SY_THR_STATIC },	/* 27 = linux_inotify_add_watch */
+	{ .sy_narg = AS(linux_inotify_rm_watch_args), .sy_call = (sy_call_t *)linux_inotify_rm_watch, .sy_auevent = AUE_NULL, .sy_flags = 0, .sy_thrcnt = SY_THR_STATIC },	/* 28 = linux_inotify_rm_watch */
 	{ .sy_narg = AS(linux_ioctl_args), .sy_call = (sy_call_t *)linux_ioctl, .sy_auevent = AUE_IOCTL, .sy_flags = 0, .sy_thrcnt = SY_THR_STATIC },	/* 29 = linux_ioctl */
-	{ .sy_narg = AS(linux_ioprio_set_args),
-	  .sy_call = (sy_call_t *)linux_ioprio_set,
-	  .sy_auevent = AUE_SETPRIORITY, .sy_flags = 0,
-	  .sy_thrcnt = SY_THR_STATIC },	/* 30 = linux_ioprio_set */
-	{ .sy_narg = AS(linux_ioprio_get_args),
-	  .sy_call = (sy_call_t *)linux_ioprio_get,
-	  .sy_auevent = AUE_GETPRIORITY, .sy_flags = 0,
-	  .sy_thrcnt = SY_THR_STATIC },	/* 31 = linux_ioprio_get */
+	{ .sy_narg = AS(linux_ioprio_set_args), .sy_call = (sy_call_t *)linux_ioprio_set, .sy_auevent = AUE_SETPRIORITY, .sy_flags = 0, .sy_thrcnt = SY_THR_STATIC },	/* 30 = linux_ioprio_set */
+	{ .sy_narg = AS(linux_ioprio_get_args), .sy_call = (sy_call_t *)linux_ioprio_get, .sy_auevent = AUE_GETPRIORITY, .sy_flags = 0, .sy_thrcnt = SY_THR_STATIC },	/* 31 = linux_ioprio_get */
 	{ .sy_narg = AS(flock_args), .sy_call = (sy_call_t *)sys_flock, .sy_auevent = AUE_FLOCK, .sy_flags = 0, .sy_thrcnt = SY_THR_STATIC },	/* 32 = flock */
 	{ .sy_narg = AS(linux_mknodat_args), .sy_call = (sy_call_t *)linux_mknodat, .sy_auevent = AUE_MKNODAT, .sy_flags = 0, .sy_thrcnt = SY_THR_STATIC },	/* 33 = linux_mknodat */
 	{ .sy_narg = AS(linux_mkdirat_args), .sy_call = (sy_call_t *)linux_mkdirat, .sy_auevent = AUE_MKDIRAT, .sy_flags = 0, .sy_thrcnt = SY_THR_STATIC },	/* 34 = linux_mkdirat */
