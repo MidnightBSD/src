@@ -26,15 +26,23 @@ if [ -d /usr/local/etc/X11/xinit/xinitrc.d ]; then
   unset f
 fi
 
+# A display manager may already have registered this login with ConsoleKit.
+# For a plain startx session, register it before starting the desktop.
+start_session() {
+  if [ -z "${XDG_SESSION_COOKIE:-}" ] && command -v ck-launch-session >/dev/null 2>&1; then
+    exec ck-launch-session "$@"
+  fi
+  exec "$@"
+}
 
 case $1 in
 midnight-wm|wmaker|startxfce4|gnome-shell|cinnamon-session|twm|etoile)
-	exec $1
+	start_session "$1"
 	;;
 Lumina-DE)
-	exec start-lumina-desktop
+	start_session start-lumina-desktop
 	;;
 *)
-	exec $DEFAULT_SESSION
+	start_session "$DEFAULT_SESSION"
 	;;
 esac
