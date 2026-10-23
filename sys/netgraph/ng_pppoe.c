@@ -1453,10 +1453,13 @@ ng_pppoe_rcvdata(hook_p hook, item_p item)
 				m_adj(m, 2);
 		}
 
-		if (V_ng_pppoe_lcp_pcp && m->m_pkthdr.len >= 2 &&
-		    m->m_len >= 2 && (m = m_pullup(m, 2)) &&
-		    mtod(m, uint16_t *)[0] == htons(PROT_LCP))
-			EVL_APPLY_PRI(m, (uint8_t)(V_ng_pppoe_lcp_pcp & 0x7));
+		if (V_ng_pppoe_lcp_pcp && m->m_pkthdr.len >= 2) {
+			if (m->m_len < 2 && !(m = m_pullup(m, 2)))
+				LEAVE(ENOBUFS);
+			if (mtod(m, uint16_t *)[0] == htons(PROT_LCP))
+				EVL_APPLY_PRI(m,
+				    (uint8_t)(V_ng_pppoe_lcp_pcp & 0x7));
+		}
 
 		/*
 		 * Bang in a pre-made header, and set the length up
