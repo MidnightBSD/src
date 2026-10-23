@@ -467,12 +467,14 @@ linux_cancel_delayed_work(struct delayed_work *dwork)
 }
 
 /*
- * This function cancels the given work structure in a synchronous
- * fashion. It returns true if the work was successfully
- * cancelled. Else the work was already cancelled.
+ * Cancel and drain delayed work, reporting cancelled pending work through
+ * cancelled and the taskqueue pending count through pending.
+ *
+ * Return true if the caller needs to re-check the state after draining.
  */
 static bool
-linux_cancel_delayed_work_sync_int(struct delayed_work *dwork)
+linux_cancel_delayed_work_sync_int(struct delayed_work *dwork, u_int *pending,
+    bool *cancelled)
 {
 	static const uint8_t states[WORK_ST_MAX] __aligned(8) = {
 		[WORK_ST_IDLE] = WORK_ST_IDLE,		/* NOP */
@@ -483,31 +485,41 @@ linux_cancel_delayed_work_sync_int(struct delayed_work *dwork)
 	};
 	struct taskqueue *tq;
 	int ret, state;
-	bool cancelled;
+	bool stopped;
 
 	WITNESS_WARN(WARN_GIANTOK | WARN_SLEEPOK, NULL,
 	    "linux_cancel_delayed_work_sync() might sleep");
 	mtx_lock(&dwork->timer.mtx);
 
 	state = linux_update_state(&dwork->work.state, states);
+	/*
+	 * A taskqueue worker can have dequeued the task without linux_work_fn()
+	 * having claimed the callback yet.  In that case taskqueue_cancel()
+	 * reports EBUSY with no pending tasks, but our transition to IDLE still
+	 * prevents the callback.  Account for this using the state consumed by
+	 * the atomic transition, not just the native queue's pending count.
+	 * WORK_ST_EXEC, in contrast, means the callback was already claimed.
+	 */
+	*cancelled = (state == WORK_ST_TIMER || state == WORK_ST_TASK ||
+	    state == WORK_ST_CANCEL);
 	switch (state) {
 	case WORK_ST_IDLE:
 		mtx_unlock(&dwork->timer.mtx);
 		return (false);
 	case WORK_ST_TIMER:
 	case WORK_ST_CANCEL:
-		cancelled = (callout_stop(&dwork->timer.callout) == 1);
+		stopped = (callout_stop(&dwork->timer.callout) == 1);
 
 		tq = dwork->work.work_queue->taskqueue;
-		ret = taskqueue_cancel(tq, &dwork->work.work_task, NULL);
+		ret = taskqueue_cancel(tq, &dwork->work.work_task, pending);
 		mtx_unlock(&dwork->timer.mtx);
 
 		callout_drain(&dwork->timer.callout);
 		taskqueue_drain(tq, &dwork->work.work_task);
-		return (cancelled || (ret != 0));
+		return (stopped || (ret != 0));
 	default:
 		tq = dwork->work.work_queue->taskqueue;
-		ret = taskqueue_cancel(tq, &dwork->work.work_task, NULL);
+		ret = taskqueue_cancel(tq, &dwork->work.work_task, pending);
 		mtx_unlock(&dwork->timer.mtx);
 		if (ret != 0)
 			taskqueue_drain(tq, &dwork->work.work_task);
@@ -518,11 +530,19 @@ linux_cancel_delayed_work_sync_int(struct delayed_work *dwork)
 bool
 linux_cancel_delayed_work_sync(struct delayed_work *dwork)
 {
-	bool res;
+	u_int pending;
+	bool cancelled;
+	bool res = false;
+	bool ret;
 
-	res = false;
-	while (linux_cancel_delayed_work_sync_int(dwork))
-		res = true;
+	do {
+		pending = 0;
+		cancelled = false;
+		ret = linux_cancel_delayed_work_sync_int(dwork, &pending,
+		    &cancelled);
+		res = res || cancelled || pending != 0;
+	} while (ret);
+
 	return (res);
 }
 
