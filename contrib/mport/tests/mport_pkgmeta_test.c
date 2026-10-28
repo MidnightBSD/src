@@ -839,6 +839,58 @@ ATF_TC_CLEANUP(query_filters_patterns_and_expressions, tc)
 	cleanup_test_root();
 }
 
+/*
+ * A registry read replaces the empty cpe and flavor strings that
+ * mport_pkgmeta_new() allocates: the stored values come back, and an SQL NULL
+ * still gives an empty string rather than a NULL pointer.  The replaced
+ * strings used to leak on every search; valgrind shows that, this checks the
+ * values.
+ */
+ATF_TC_WITH_CLEANUP(search_master_reads_cpe_and_flavor);
+ATF_TC_HEAD(search_master_reads_cpe_and_flavor, tc)
+{
+	atf_tc_set_md_var(tc, "descr", "searching the registry fills cpe and flavor, never NULL");
+}
+ATF_TC_BODY(search_master_reads_cpe_and_flavor, tc)
+{
+	mportInstance *mport;
+	mportPackageMeta **packs = NULL;
+
+	(void)tc;
+
+	mport = create_test_instance();
+	insert_package(mport, "alpha");
+	ATF_REQUIRE_EQ(MPORT_OK,
+	    mport_db_do(mport->db,
+		"INSERT INTO packages (pkg, version, origin, prefix, lang, cpe, flavor) VALUES "
+		"('beta', '1.0', 'devel/beta', '/usr/local', '', "
+		"'cpe:2.3:a:example:beta:1.0:::::midnightbsd4:x64', 'py311')"));
+
+	ATF_REQUIRE_EQ(MPORT_OK, mport_pkgmeta_search_master(mport, &packs, "1=1 ORDER BY pkg"));
+	ATF_REQUIRE(packs != NULL);
+	ATF_REQUIRE(packs[0] != NULL && packs[1] != NULL);
+	ATF_REQUIRE(packs[2] == NULL);
+
+	ATF_REQUIRE_STREQ("alpha", packs[0]->name);
+	ATF_REQUIRE(packs[0]->cpe != NULL);
+	ATF_REQUIRE_STREQ("", packs[0]->cpe);
+	ATF_REQUIRE(packs[0]->flavor != NULL);
+	ATF_REQUIRE_STREQ("", packs[0]->flavor);
+
+	ATF_REQUIRE_STREQ("beta", packs[1]->name);
+	ATF_REQUIRE_STREQ("cpe:2.3:a:example:beta:1.0:::::midnightbsd4:x64", packs[1]->cpe);
+	ATF_REQUIRE_STREQ("py311", packs[1]->flavor);
+
+	mport_pkgmeta_vec_free(packs);
+	mport_instance_free(mport);
+}
+ATF_TC_CLEANUP(search_master_reads_cpe_and_flavor, tc)
+{
+	(void)tc;
+
+	cleanup_test_root();
+}
+
 ATF_TP_ADD_TCS(tp)
 {
 	ATF_TP_ADD_TC(tp, sort_dependencies_dependency_first);
@@ -855,6 +907,7 @@ ATF_TP_ADD_TCS(tp)
 	ATF_TP_ADD_TC(tp, rooted_infrastructure_path_uses_instance_root);
 	ATF_TP_ADD_TC(tp, query_formats_installed_metadata);
 	ATF_TP_ADD_TC(tp, query_filters_patterns_and_expressions);
+	ATF_TP_ADD_TC(tp, search_master_reads_cpe_and_flavor);
 
 	return atf_no_error();
 }

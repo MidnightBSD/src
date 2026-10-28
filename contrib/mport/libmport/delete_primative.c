@@ -491,8 +491,11 @@ mport_delete_primative(mportInstance *mport, mportPackageMeta *pack, int force)
 		RETURN_CURRENT_ERROR;
 
 	/* The message is read from the infra directory, so show it before that
-	 * directory goes away, and keep it out of the transaction. */
-	if (mport_pkg_message_display(mport, pack) != MPORT_OK)
+	 * directory goes away, and keep it out of the transaction.  When the
+	 * delete is half of an update, the package that replaces this one shows
+	 * its upgrade messages instead. */
+	if (pack->action != MPORT_ACTION_UPDATE && pack->action != MPORT_ACTION_UPGRADE &&
+	    mport_pkg_message_display(mport, pack, PKG_MESSAGE_REMOVE, NULL) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
 	/*

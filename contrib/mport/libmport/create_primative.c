@@ -60,7 +60,7 @@ static int insert_conflicts(sqlite3 *, mportPackageMeta *, mportCreateExtras *);
 
 static int insert_categories(sqlite3 *, mportPackageMeta *);
 
-static int insert_annotations(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra);
+static int insert_annotations(sqlite3 *db, mportCreateExtras *extra);
 
 static int archive_files(mportAssetList *, mportPackageMeta *, mportCreateExtras *, const char *);
 
@@ -655,7 +655,7 @@ done:
 		RETURN_CURRENT_ERROR;
 	if (insert_categories(db, pack) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
-	if (insert_annotations(db, pack, extra) != MPORT_OK)
+	if (insert_annotations(db, extra) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
 	return error_code;
@@ -866,8 +866,13 @@ done:
 	return error_code;
 }
 
+/*
+ * Annotations travel in the stub's meta table, which has no pkg column and
+ * no annotation table of its own; create_annotations() in
+ * bundle_read_install_pkg.c registers every meta row under the package name.
+ */
 static int
-insert_annotations(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra)
+insert_annotations(sqlite3 *db, mportCreateExtras *extra)
 {
 	sqlite3_stmt *stmt = NULL;
 	int error_code = MPORT_OK;
@@ -875,8 +880,7 @@ insert_annotations(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra
 	if (tll_length(extra->annotations) == 0)
 		return MPORT_OK;
 
-	if (mport_db_prepare(db, &stmt, "INSERT INTO annotation (pkg, tag, val) VALUES (?,?,?)") !=
-	    MPORT_OK)
+	if (mport_db_prepare(db, &stmt, "INSERT INTO meta (field, value) VALUES (?,?)") != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
 	tll_foreach(extra->annotations, s)
@@ -903,9 +907,8 @@ insert_annotations(sqlite3 *db, mportPackageMeta *pack, mportCreateExtras *extra
 		*sep = '\0';
 		val = sep + 1;
 
-		if (sqlite3_bind_text(stmt, 1, pack->name, -1, SQLITE_STATIC) != SQLITE_OK ||
-		    sqlite3_bind_text(stmt, 2, tag, -1, SQLITE_TRANSIENT) != SQLITE_OK ||
-		    sqlite3_bind_text(stmt, 3, val, -1, SQLITE_TRANSIENT) != SQLITE_OK) {
+		if (sqlite3_bind_text(stmt, 1, tag, -1, SQLITE_TRANSIENT) != SQLITE_OK ||
+		    sqlite3_bind_text(stmt, 2, val, -1, SQLITE_TRANSIENT) != SQLITE_OK) {
 			error_code = SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(db));
 			free(annotation_copy);
 			break;

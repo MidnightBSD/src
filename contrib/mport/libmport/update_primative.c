@@ -42,6 +42,7 @@ mport_update_primative(mportInstance *mport, const char *filename)
 	mportPackageMeta *pkg = NULL;
 	mportPackageMeta **packs_start = NULL;
 	mportPackageMeta **already_installed = NULL;
+	int ret = MPORT_OK;
 
 	if ((bundle = mport_bundle_read_new()) == NULL)
 		RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
@@ -103,7 +104,9 @@ mport_update_primative(mportInstance *mport, const char *filename)
 		    (mport_bundle_read_update_pkg(mport, bundle, pkg) != MPORT_OK)) {
 			mport_call_msg_cb(mport, "Unable to update %s-%s: %s", pkg->name,
 			    pkg->version, mport_err_string());
-			mport_set_err(MPORT_OK, NULL);
+			/* keep the error for the caller and stop, as install does */
+			ret = MPORT_ERR_FATAL;
+			break;
 		}
 	}
 
@@ -112,7 +115,7 @@ mport_update_primative(mportInstance *mport, const char *filename)
 	if (mport_bundle_read_finish(mport, bundle) != MPORT_OK)
 		RETURN_CURRENT_ERROR;
 
-	return MPORT_OK;
+	return ret;
 }
 
 static int

@@ -15,7 +15,9 @@ ATF_TESTS_C+=	mport_audit_test \
 		mport_db_test \
 		mport_fetch_test \
 		mport_index_test \
+		mport_instance_test \
 		mport_install_test \
+		mport_message_test \
 		mport_shlib_test \
 		mport_osrelease_test \
 		mport_pkgmeta_test \
@@ -66,11 +68,23 @@ LDFLAGS.mport_pkgmeta_test+=	-L${.CURDIR}/../libmport \
 				-Wl,-rpath,${LOCALBASE}/lib
 LDADD.mport_pkgmeta_test+=	-lmport -latf-c
 
+LDFLAGS.mport_instance_test+=	-L${.CURDIR}/../libmport \
+				-L${LOCALBASE}/lib \
+				-Wl,-rpath,${.CURDIR}/../libmport \
+				-Wl,-rpath,${LOCALBASE}/lib
+LDADD.mport_instance_test+=	-lmport -latf-c
+
 LDFLAGS.mport_install_test+=	-L${.CURDIR}/../libmport \
 				-L${LOCALBASE}/lib \
 				-Wl,-rpath,${.CURDIR}/../libmport \
 				-Wl,-rpath,${LOCALBASE}/lib
 LDADD.mport_install_test+=	-lmport -latf-c
+
+LDFLAGS.mport_message_test+=	-L${.CURDIR}/../libmport \
+				-L${LOCALBASE}/lib \
+				-Wl,-rpath,${.CURDIR}/../libmport \
+				-Wl,-rpath,${LOCALBASE}/lib
+LDADD.mport_message_test+=	-lmport -latf-c
 
 LDFLAGS.mport_shlib_test+=	-L${.CURDIR}/../libmport \
 				-L${LOCALBASE}/lib \
