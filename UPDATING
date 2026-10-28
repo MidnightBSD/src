@@ -1,5 +1,20 @@
 Updating Information for MidnightBSD users.
 
+20261028:
+	mport(1) updated to 2.8.5.  Users who cannot write the package
+	database can now run the inspection commands (search, query, info,
+	list, stats), while commands that change packages, the index or
+	settings are refused with a message asking to run mport as root.
+	Package annotations, including age restrictions (age:<years>), now
+	work.  When aged_enable is set, an age-restricted install is refused
+	if aged(8) cannot be reached or the user's age is unset (set it with
+	agectl(8)); without a login session (cron, rc scripts), or with aged
+	disabled and not running, the check is skipped with a warning.  Every
+	pkg-message entry is now shown, honouring pkg(8)-style upgrade version
+	ranges.  "mport which" exits 1 when no package owns the file, failed
+	updates now return an error, and mport.update accepts a single
+	package file.
+
 20261020:
 	The base trust store in /usr/share/certs has been regenerated from
 	NSS 3.131.1.  Mozilla removed trust in emSign Root CA - C1 and
