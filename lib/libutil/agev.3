@@ -22,7 +22,7 @@
 ." OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 ." SUCH DAMAGE.
 ."
-.Dd March 8, 2026
+.Dd October 28, 2026
 .Dt AGEV 3
 .Os
 .Sh NAME
@@ -43,7 +43,11 @@
 .Sh DESCRIPTION
 The
 .Fn agev_get_age_bracket
-function returns the age bracket for a user as an array of two integers.
+function returns the age bracket for a user as an array of two integers,
+as reported by
+.Xr aged 8 .
+The root user may look up any user; other callers may only look up
+themselves, and get NULL for anyone else.
 The
 .Fn agev_set_age
 function sets the age for a user. This function may only be called by the root user.
@@ -74,7 +78,8 @@ The caller is not the root user.
 The specified user does not exist.
 .El
 .Sh SEE ALSO
-.Xr agectl 8
+.Xr agectl 8 ,
+.Xr aged 8
 .Sh HISTORY
 The
 .Fn get_age_bracket ,
