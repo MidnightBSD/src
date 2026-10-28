@@ -98,12 +98,15 @@ typedef struct {
 	mport_confirm_cb confirm_cb;
 	mport_select_cb select_cb;
 	struct _mportTriggerState *triggers; /* directories touched and cleanups queued this run */
+	bool readOnly; /* registry opened read-only: queries work, changes are refused */
 } mportInstance;
 
 /*@null@*/ mportInstance *mport_instance_new(void);
 int mport_instance_init(
     mportInstance *, const char *, const char *, bool noIndex, mportVerbosity verbosity);
 int mport_instance_free(mportInstance *);
+/* MPORT_OK unless the registry was opened read-only; see readOnly */
+int mport_require_writable(mportInstance *);
 
 /* Run the callbacks. will display messages, etc */
 int mport_call_msg_cb(/*@null@*/ mportInstance *, /*@notnull@*/ const char *, ...);

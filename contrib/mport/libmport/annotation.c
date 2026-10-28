@@ -73,6 +73,48 @@ mport_annotation_get(mportInstance *mport, const char *pkg, const char *tag, cha
 	return (MPORT_OK);
 }
 
+/*
+ * mport_stub_annotation_get(mport, tag, annotation)
+ *
+ * Look up an annotation of the bundle whose stub database is attached, i.e.
+ * of a package that is being installed and is not registered yet.  Sets
+ * *annotation to a copy of the value, or to NULL when the bundle has none.
+ */
+int
+mport_stub_annotation_get(
+    mportInstance *mport, const char *tag, /*@out@*/ /*@null@*/ char **annotation)
+{
+	sqlite3_stmt *stmt = NULL;
+	const unsigned char *value;
+	int ret;
+
+	*annotation = NULL;
+
+	if (mport_db_prepare(mport->db, &stmt, "SELECT value FROM stub.meta WHERE field=%Q", tag) !=
+	    MPORT_OK) {
+		sqlite3_finalize(stmt);
+		RETURN_CURRENT_ERROR;
+	}
+
+	if (stmt == NULL)
+		RETURN_ERROR(MPORT_ERR_FATAL, "Stub annotation statement was null");
+
+	ret = sqlite3_step(stmt);
+	if (ret == SQLITE_ROW) {
+		value = sqlite3_column_text(stmt, 0);
+		if (value != NULL && (*annotation = strdup((const char *)value)) == NULL) {
+			sqlite3_finalize(stmt);
+			RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+		}
+	} else if (ret != SQLITE_DONE) {
+		sqlite3_finalize(stmt);
+		RETURN_ERRORX(MPORT_ERR_FATAL, "Database error: %s", sqlite3_errmsg(mport->db));
+	}
+
+	sqlite3_finalize(stmt);
+	return (MPORT_OK);
+}
+
 MPORT_PUBLIC_API int
 mport_annotation_set(mportInstance *mport, const char *pkg, const char *tag, const char *annotation)
 {

@@ -182,6 +182,7 @@ C programs (`ATF_TESTS_C` in `tests/Makefile`) link against `libmport` directly:
 | `mport_fetch_test` | `force_http` URL rewriting |
 | `mport_index_test` | Index mirror, moved, and version lookups |
 | `mport_install_test` | Install/add/delete flows, OS-release handling, rollback on failure |
+| `mport_message_test` | pkg-message parsing (plain text, UCL arrays) and per-action / upgrade version-range display |
 | `mport_osrelease_test` | OS release from settings and ABI file |
 | `mport_pkgmeta_test` | Dependency sort, delete/autodir handling, query output |
 | `mport_precheck_test` | Pre-install file-conflict checks |

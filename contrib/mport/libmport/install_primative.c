@@ -691,7 +691,7 @@ mport_install_primative_impl(
 		}
 
 		if ((mport_check_preconditions(mport, pkg, MPORT_PRECHECK_INSTALLED) != MPORT_OK) ||
-		    (mport_bundle_read_install_pkg(mport, bundle, pkg) != MPORT_OK)) {
+		    (mport_bundle_read_install_pkg(mport, bundle, pkg, NULL) != MPORT_OK)) {
 			mport_call_msg_cb(mport, "Unable to install %s-%s: %s", pkg->name,
 			    pkg->version, mport_err_string());
 			ret = MPORT_ERR_FATAL;

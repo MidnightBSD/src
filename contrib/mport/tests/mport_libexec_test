@@ -234,6 +234,8 @@ frontends_reject_missing_required_args_body()
 		"${MPORT_MERGE}"
 	atf_check -s exit:2 -o empty -e match:"Usage: mport.query" \
 		"${MPORT_QUERY}"
+	atf_check -s exit:2 -o empty -e match:"Usage: mport.update" \
+		"${MPORT_UPDATE}"
 	atf_check -s exit:2 -o empty -e match:"Usage: mport.updepends" \
 		"${MPORT_UPDEPENDS}"
 }
@@ -281,7 +283,39 @@ update_reports_bad_chroot_head()
 update_reports_bad_chroot_body()
 {
 	atf_check -s not-exit:0 -o empty -e match:"chroot failed" \
-		"${MPORT_UPDATE}" -c "${PWD}/missing-root" old.mport new.mport
+		"${MPORT_UPDATE}" -c "${PWD}/missing-root" new.mport
+}
+
+atf_test_case update_replaces_installed_package
+update_replaces_installed_package_head()
+{
+	atf_set "descr" "mport.update upgrades an installed package from a single package file"
+	atf_set "require.user" "root"
+}
+update_replaces_installed_package_body()
+{
+	setup_fake_tree
+	mkdir -p croot/tmp croot/var/db/mport croot/usr/local
+	atf_check -s exit:0 -o ignore -e ignore \
+		"${MPORT_CREATE}" -n testpkg -v 1.0 -o "${PWD}/croot/tmp/testpkg-1.0.mport" \
+		-s "${PWD}/root" -p "${PWD}/plist" -P /usr/local -O misc/testpkg -t misc \
+		-c "test package"
+	printf "hello again\n" >root/usr/local/share/testpkg/file.txt
+	atf_check -s exit:0 -o ignore -e ignore \
+		"${MPORT_CREATE}" -n testpkg -v 1.1 -o "${PWD}/croot/tmp/testpkg-1.1.mport" \
+		-s "${PWD}/root" -p "${PWD}/plist" -P /usr/local -O misc/testpkg -t misc \
+		-c "test package"
+
+	atf_check -s exit:0 -o ignore -e empty \
+		"${MPORT_INSTALL}" -O -c "${PWD}/croot" /tmp/testpkg-1.0.mport
+	# kyua's TMPDIR does not exist inside the chroot, and update's
+	# create step uses TMPDIR for its backup package
+	atf_check -s exit:0 -o ignore -e ignore \
+		env TMPDIR=/tmp "${MPORT_UPDATE}" -c "${PWD}/croot" /tmp/testpkg-1.1.mport
+	atf_check -s exit:0 -o inline:"hello again\n" cat croot/usr/local/share/testpkg/file.txt
+	atf_check -s exit:0 -o inline:"1.1\n" -e empty \
+		sqlite3 croot/var/db/mport/master.db \
+		"SELECT version FROM packages WHERE pkg='testpkg';"
 }
 
 atf_test_case delete_ignores_missing_registered_dir
@@ -674,6 +708,7 @@ atf_init_test_cases()
 	atf_add_test_case init_reports_bad_chroot
 	atf_add_test_case init_rejects_bad_usage
 	atf_add_test_case update_reports_bad_chroot
+	atf_add_test_case update_replaces_installed_package
 	atf_add_test_case delete_ignores_missing_registered_dir
 	atf_add_test_case delete_accepts_registry_row_without_lang
 	atf_add_test_case install_accepts_package_without_lang

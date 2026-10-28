@@ -134,6 +134,7 @@ report_cpe(mportInstance *mport, const char *cpe, const char *feed)
 	char *out = NULL;
 
 	if (cpe != NULL) {
+		free(pkg->cpe);
 		pkg->cpe = strdup(cpe);
 		ATF_REQUIRE(pkg->cpe != NULL);
 	}

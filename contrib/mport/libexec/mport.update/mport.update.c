@@ -63,11 +63,8 @@ main(int argc, char *argv[])
 	argc -= optind;
 	argv += optind;
 
-	if (argc == 1)
+	if (argc == 0)
 		usage();
-
-	argv++;
-	argc--;
 
 	if (chroot_path != NULL) {
 		if (chroot(chroot_path) == -1) {
