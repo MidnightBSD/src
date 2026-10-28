@@ -312,7 +312,32 @@ main(void)
 					write(client_fd, "ERR\n", 4);
 				}
 			} else {
+				/*
+				 * "GET <uid>" names the user to look up.
+				 * root may ask about anyone, as it can SET
+				 * anyone's age (e.g. mport(1) checking the
+				 * user who ran sudo); others only about
+				 * themselves.  Any other request is
+				 * answered for the caller.
+				 */
+				uid_t query_uid = client_uid;
 				int region_allowed = 0;
+
+				if (strncmp(buf, "GET ", 4) == 0) {
+					int target_uid;
+
+					if (safe_atoi(buf + 4,
+					    &target_uid) != 0 ||
+					    target_uid < 0 ||
+					    (client_uid != 0 &&
+					    (uid_t)target_uid != client_uid)) {
+						write(client_fd, "ERR\n", 4);
+						close(client_fd);
+						continue;
+					}
+					query_uid = (uid_t)target_uid;
+				}
+
 				if (current_region != NULL) {
 					/* 
 					These are places that age attenstion is required or will be. 
@@ -332,11 +357,12 @@ main(void)
 					write(client_fd, "-2,-2\n", 6);
 				} else {
 					sqlite3_reset(stmt_get);
-					sqlite3_bind_int(stmt_get, 1, (int)client_uid);
+					sqlite3_bind_int(stmt_get, 1,
+					    (int)query_uid);
 					int age = (sqlite3_step(stmt_get) == SQLITE_ROW) ? sqlite3_column_int(stmt_get, 0) : -1;
 
 					/* user accounts start at 1000 */
-					if (client_uid < 1000 && age == -1) {
+					if (query_uid < 1000 && age == -1) {
 						age = 18; /* assume 18+ for root and service accounts if undefined. With root, kids could circumvent any protections anyway.  */
 					}
 
