@@ -117,6 +117,7 @@ main(int argc, char *argv[])
 			break;
 		case 'f':
 			if (optarg != NULL) {
+				free(pack->flavor);
 				pack->flavor = strdup(optarg);
 				if (pack->flavor == NULL)
 					errx(EXIT_FAILURE, "Out of memory");
@@ -124,6 +125,7 @@ main(int argc, char *argv[])
 			break;
 		case 'e':
 			if (optarg != NULL) {
+				free(pack->cpe);
 				pack->cpe = strdup(optarg);
 				if (pack->cpe == NULL)
 					errx(EXIT_FAILURE, "Out of memory");

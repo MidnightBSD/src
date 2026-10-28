@@ -23,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.Dd October 4, 2026
+.Dd October 27, 2026
 .Dt MPORT.CREATE 1
 .Os
 .Sh NAME
@@ -99,7 +99,11 @@ Comma-separated dependency list.
 .It Fl C Ar conflicts
 Comma-separated conflict list.
 .It Fl A Ar annotations
-Comma-separated annotation list.
+Whitespace-separated list of annotations, each written as
+.Ar tag : Ns Ar value ,
+for example
+.Ql age:18 .
+They are registered for the package when it is installed.
 .It Fl d Ar pkg-descr
 Path to the package description file.
 .It Fl i Ar pkg-install

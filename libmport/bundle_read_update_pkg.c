@@ -36,6 +36,8 @@
 #include <errno.h>
 #include <stdlib.h>
 
+static int installed_version(/*@notnull@*/ mportInstance *, /*@notnull@*/ mportPackageMeta *,
+    /*@out@*/ char **);
 static int make_backup_bundle(mportInstance *, mportPackageMeta *, char *);
 static int install_backup_bundle(mportInstance *, char *);
 static int detach_update_stub_for_backup(
@@ -48,11 +50,17 @@ int
 mport_bundle_read_update_pkg(mportInstance *mport, mportBundleRead *bundle, mportPackageMeta *pkg)
 {
 	char tmpfile2[] = _PATH_TMP "mport.XXXXXXXX";
+	char *prev_version = NULL;
 	int fd;
 
 	mport_pkgmeta_logevent(mport, pkg, "Begining update");
 
+	/* the installed version, for the new package's upgrade messages */
+	if (installed_version(mport, pkg, &prev_version) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+
 	if ((fd = mkstemp(tmpfile2)) == -1) {
+		free(prev_version);
 		RETURN_ERRORX(MPORT_ERR_FATAL, "Couldn't make tmp file: %s", strerror(errno));
 	}
 
@@ -61,6 +69,7 @@ mport_bundle_read_update_pkg(mportInstance *mport, mportBundleRead *bundle, mpor
 	if (make_backup_bundle(mport, pkg, tmpfile2) != MPORT_OK) {
 		// attempt to clear the temp file
 		(void)mport_rmtree(tmpfile2);
+		free(prev_version);
 		RETURN_CURRENT_ERROR;
 	}
 
@@ -69,10 +78,12 @@ mport_bundle_read_update_pkg(mportInstance *mport, mportBundleRead *bundle, mpor
 		int err = mport_err_code();
 
 		(void)mport_rmtree(tmpfile2);
+		free(prev_version);
 		return (err);
 	}
 
-	if (mport_bundle_read_install_pkg(mport, bundle, pkg) != MPORT_OK) {
+	if (mport_bundle_read_install_pkg(mport, bundle, pkg, prev_version) != MPORT_OK) {
+		free(prev_version);
 		if (detach_update_stub_for_backup(mport, bundle) != MPORT_OK) {
 			int err = mport_err_code();
 
@@ -89,8 +100,36 @@ mport_bundle_read_update_pkg(mportInstance *mport, mportBundleRead *bundle, mpor
 		RETURN_CURRENT_ERROR;
 	}
 
+	free(prev_version);
+
 	/* if we can't delete the tmpfile, just move on. */
 	(void)mport_rmtree(tmpfile2);
+
+	return (MPORT_OK);
+}
+
+/*
+ * Copy the registered version of pkg into *version_p, or set it to NULL when
+ * pkg is not installed.
+ */
+static int
+installed_version(/*@notnull@*/ mportInstance *mport, /*@notnull@*/ mportPackageMeta *pkg,
+    /*@out@*/ char **version_p)
+{
+	mportPackageMeta **installed = NULL;
+
+	*version_p = NULL;
+
+	if (mport_pkgmeta_search_master(mport, &installed, "pkg=%Q", pkg->name) != MPORT_OK)
+		RETURN_CURRENT_ERROR;
+
+	if (installed != NULL && installed[0] != NULL && installed[0]->version != NULL &&
+	    (*version_p = strdup(installed[0]->version)) == NULL) {
+		mport_pkgmeta_vec_free(installed);
+		RETURN_ERROR(MPORT_ERR_FATAL, "Out of memory.");
+	}
+
+	mport_pkgmeta_vec_free(installed);
 
 	return (MPORT_OK);
 }

@@ -199,24 +199,41 @@ mport_query_format_package(
 MPORT_PUBLIC_API char *
 mport_query_pkg_message(mportInstance *mport, mportPackageMeta *pkg)
 {
-	mportPackageMessage packageMessage;
+	mportPackageMessage *messages = NULL;
+	mportPackageMessage *msg;
+	char *out = NULL;
+	char *joined;
+	bool failed = false;
 
 	if (mport == NULL || pkg == NULL)
 		return NULL;
 
-	memset(&packageMessage, 0, sizeof(packageMessage));
-	packageMessage.type = PKG_MESSAGE_ALWAYS;
-
-	if (mport_pkg_message_load(mport, pkg, &packageMessage) != MPORT_OK)
+	if (mport_pkg_message_load(mport, pkg, &messages) != MPORT_OK)
 		return NULL;
 
-	free(packageMessage.minimum_version);
-	free(packageMessage.maximum_version);
+	/* every entry, whatever action it is for, one after another */
+	for (msg = messages; msg != NULL; msg = msg->next) {
+		if (out == NULL)
+			joined = xstrdup(msg->str);
+		else if (asprintf(&joined, "%s\n%s", out, msg->str == NULL ? "" : msg->str) == -1)
+			joined = NULL;
+		free(out);
+		out = joined;
+		if (out == NULL) {
+			failed = true;
+			break;
+		}
+	}
 
-	if (packageMessage.str == NULL)
+	mport_pkg_message_free(messages);
+
+	if (failed)
+		return NULL;
+
+	if (out == NULL)
 		return xstrdup("");
 
-	return packageMessage.str;
+	return out;
 }
 
 static bool
