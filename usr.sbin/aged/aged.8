@@ -23,7 +23,7 @@
 .\" SUCH DAMAGE.
 .\"
 .\"
-.Dd March 8, 2026
+.Dd October 28, 2026
 .Dt AGED 8
 .Os MidnightBSD
 .Sh NAME
@@ -41,8 +41,11 @@ to allow applications to query the age range of the currently connected user.
 This is required in some jurisdictions for age verification.  For instance,
 California law CA AB1043.
 .Pp
-The daemon runs as
-.Pa root
+The daemon is started by
+.Pa root ,
+runs as the
+.Pa aged
+user once its directories are set up,
 and stores its data in a SQLite3 database located at
 .Pa /var/db/aged/aged.db .
 .Sh SECURITY
@@ -55,9 +58,19 @@ Only the
 .Pa root
 user (UID 0) is permitted to write or update records in the database.
 .It
-Non-root users may only query their own age range. Any attempt to query the
-age of another UID is blocked by the daemon's logic, as it ignores the
-request payload and retrieves data based solely on the caller's verified UID.
+Non-root users may only query their own age range.
+A request that names another UID is refused, and any other request is
+answered for the caller's verified UID.
+.It
+The
+.Pa root
+user may query the age range of any UID, as it may also set it.
+This lets a privileged program such as
+.Xr mport 1 ,
+run through
+.Xr sudo 8 ,
+check the user who ran it rather than
+.Pa root .
 .El
 .Sh PROTOCOL
 The daemon listens on a Unix Domain Socket at
@@ -115,9 +128,21 @@ GET operations will return an age range. Any other value will cause GET
 operations to return
 .Sy -2,-2 .
 .Ss Querying Data (All Users)
-Any data sent to the socket by a non-root user triggers a lookup for that
-user's specific UID. The daemon returns a comma-delimited string representing
-the age range:
+To query the age range of a user, send a string in the following format:
+.Pp
+.Dl "GET <uid>"
+.Pp
+The
+.Pa root
+user may name any UID.
+Other users may only name their own; naming another UID, or a
+.Ar uid
+that is not a non-negative number, returns
+.Sy ERR .
+Any other data sent to the socket triggers a lookup for the caller's own UID.
+If no age is recorded for a UID below 1000 (root and service accounts), it is
+treated as 18.
+The daemon returns a comma-delimited string representing the age range:
 .Bl -tag -width "16,17XX" -compact
 .It Sy "0,12"
 Under 13 years of age.
