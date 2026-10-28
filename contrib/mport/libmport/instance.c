@@ -34,9 +34,13 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <unistd.h>
 #include "mport.h"
 #include "mport_private.h"
 #include "mport_lua.h"
+
+static bool registry_is_read_only(/*@notnull@*/ /*@observer@*/ const char *);
+static int open_registry_read_only(mportInstance *, /*@notnull@*/ /*@observer@*/ const char *);
 
 /**
  * @brief Allocates memory for a new mportInstance structure.
@@ -130,7 +134,21 @@ mport_instance_init(mportInstance *mport, const char *root, const char *outputPa
 
 	/* dir is a file here, just trying to save memory */
 	(void)snprintf(dir, FILENAME_MAX, "%s/%s", mport->root, MPORT_MASTER_DB_FILE);
-	if (sqlite3_open(dir, &(mport->db)) != 0) {
+
+	/* An unprivileged reader (search, query, stats) gets a registry it
+	 * cannot write.  Opening it read-write and letting SQLite fall back to
+	 * read-only breaks in WAL mode whenever root has not left a readable
+	 * -shm behind: the user_version read fails, init mistakes the registry
+	 * for a new one and the schema upgrade's write transaction then fails.
+	 * Ask for a read-only connection explicitly instead; SQLite serves
+	 * that from the main file alone, so no side files are needed.  WAL
+	 * writers also need to create -wal/-shm, so an unwritable directory is
+	 * read-only too. */
+	mport->readOnly = registry_is_read_only(dir);
+	if (mport->readOnly) {
+		if (open_registry_read_only(mport, dir) != MPORT_OK)
+			RETURN_CURRENT_ERROR;
+	} else if (sqlite3_open(dir, &(mport->db)) != 0) {
 		/* capture the message before closing; errmsg is invalid afterwards */
 		SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
 		sqlite3_close(mport->db);
@@ -167,6 +185,32 @@ mport_instance_init(mportInstance *mport, const char *root, const char *outputPa
 	mport->select_cb = &mport_default_select_cb;
 
 	int db_version = mport_get_database_version(mport->db);
+	if (mport->readOnly) {
+		/* Never try to create or upgrade a registry we cannot write; say
+		 * what a privileged run would do instead of failing deep inside
+		 * a write transaction. */
+		if (db_version < 0) {
+			SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+			sqlite3_close(mport->db);
+			mport->db = NULL;
+			RETURN_CURRENT_ERROR;
+		}
+		if (db_version < 1) {
+			sqlite3_close(mport->db);
+			mport->db = NULL;
+			RETURN_ERRORX(MPORT_ERR_FATAL,
+			    "Package registry %s is read-only and has no schema; run mport as root to create it",
+			    dir);
+		}
+		if (db_version != MPORT_MASTER_VERSION) {
+			sqlite3_close(mport->db);
+			mport->db = NULL;
+			RETURN_ERRORX(MPORT_ERR_FATAL,
+			    "Package registry %s is read-only and uses schema version %d; run mport as root to upgrade it to version %d",
+			    dir, db_version, MPORT_MASTER_VERSION);
+		}
+		return (MPORT_OK);
+	}
 	if (db_version < 1) {
 		/* new, create tables */
 		mport_generate_master_schema(mport->db);
@@ -176,6 +220,145 @@ mport_instance_init(mportInstance *mport, const char *root, const char *outputPa
 	mport_db_do(mport->db, "PRAGMA journal_mode=WAL");
 
 	return mport_upgrade_master_schema(mport->db, db_version);
+}
+
+/*
+ * Commands and callers that would change the registry, the index or the
+ * package files check this first, so a read-only registry refuses them
+ * with one clear message instead of failing inside a write transaction.
+ */
+MPORT_PUBLIC_API int
+mport_require_writable(mportInstance *mport)
+{
+	if (mport == NULL)
+		RETURN_ERROR(MPORT_ERR_FATAL, "mport not initialized");
+	if (mport->readOnly)
+		RETURN_ERROR(MPORT_ERR_FATAL,
+		    "The package registry is read-only for this user; run mport as root to install, remove or update packages or change settings");
+
+	return (MPORT_OK);
+}
+
+/*
+ * Open the registry for queries only.  A plain read-only connection keeps
+ * SQLite's locking, so prefer it; it reads a WAL-mode registry only while
+ * readable -wal/-shm files exist or can be created.  /var/db/mport belongs
+ * to root, so after root's last connection checkpoints and removes them an
+ * unprivileged reader cannot even read user_version.  Fall back to SQLite's
+ * immutable mode then: no locks and no side files, reading the main file
+ * as it is.  A concurrent privileged change can make such a read fail or
+ * return a stale row, which is acceptable for a query that could not run
+ * at all otherwise.
+ */
+static int
+open_registry_read_only(mportInstance *mport, /*@notnull@*/ /*@observer@*/ const char *file)
+{
+	char *uri;
+	int probe;
+
+	if (sqlite3_open_v2(file, &(mport->db), SQLITE_OPEN_READONLY, NULL) != SQLITE_OK) {
+		SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+		sqlite3_close(mport->db);
+		mport->db = NULL;
+		RETURN_CURRENT_ERROR;
+	}
+
+	probe = mport_get_database_version(mport->db);
+	if (probe >= 0)
+		return (MPORT_OK);
+
+	sqlite3_close(mport->db);
+	mport->db = NULL;
+
+	uri = mport_registry_immutable_uri(file);
+	if (uri == NULL)
+		RETURN_ERROR(MPORT_ERR_FATAL, "Could not allocate memory");
+
+	if (sqlite3_open_v2(uri, &(mport->db), SQLITE_OPEN_READONLY | SQLITE_OPEN_URI, NULL) !=
+	    SQLITE_OK) {
+		SET_ERROR(MPORT_ERR_FATAL, sqlite3_errmsg(mport->db));
+		free(uri);
+		sqlite3_close(mport->db);
+		mport->db = NULL;
+		RETURN_CURRENT_ERROR;
+	}
+	free(uri);
+
+	return (MPORT_OK);
+}
+
+/*
+ * file:<path>?immutable=1 with the path percent-encoded the way SQLite URI
+ * filenames require, so '?', '#' and '%' in a chroot path stay literal.
+ * The registry path is built as root + "/var/db/mport/master.db", so with
+ * no root it starts with "//"; "file://var/..." would make SQLite read
+ * "var" as a URI authority and reject it, so collapse leading slashes to
+ * one.  The caller frees the result with free().
+ */
+/*@null@*/ /*@only@*/
+char *
+mport_registry_immutable_uri(/*@notnull@*/ /*@observer@*/ const char *file)
+{
+	static const char hex[] = "0123456789ABCDEF";
+	const char *prefix = "file:";
+	const char *suffix = "?immutable=1";
+	size_t length = strlen(prefix) + strlen(suffix) + 1;
+	const char *in;
+	char *uri;
+	char *out;
+
+	while (file[0] == '/' && file[1] == '/')
+		file++;
+
+	for (in = file; *in != '\0'; in++)
+		length += (*in == '?' || *in == '#' || *in == '%') ? 3 : 1;
+
+	uri = malloc(length);
+	if (uri == NULL)
+		return (NULL);
+
+	out = stpcpy(uri, prefix);
+	for (in = file; *in != '\0'; in++) {
+		if (*in == '?' || *in == '#' || *in == '%') {
+			*out++ = '%';
+			*out++ = hex[((unsigned char)*in) >> 4];
+			*out++ = hex[((unsigned char)*in) & 0x0f];
+		} else {
+			*out++ = *in;
+		}
+	}
+	(void)strcpy(out, suffix);
+
+	return (uri);
+}
+
+/*
+ * A registry file that exists but cannot be written by this process, or
+ * that sits in a directory where WAL side files cannot be created, can
+ * only be queried.  A missing file is not read-only: a privileged first run
+ * creates it, and an unprivileged one fails at open with a clear message.
+ */
+static bool
+registry_is_read_only(/*@notnull@*/ /*@observer@*/ const char *file)
+{
+	char directory[FILENAME_MAX];
+	char *slash;
+
+	if (access(file, F_OK) != 0)
+		return (false);
+	if (access(file, W_OK) != 0)
+		return (true);
+
+	(void)strlcpy(directory, file, sizeof(directory));
+	slash = strrchr(directory, '/');
+	if (slash == NULL)
+		return (false);
+	if (slash == directory)
+		slash[1] = '\0';
+	else
+		*slash = '\0';
+
+	return (access(directory, W_OK) != 0);
 }
 
 /**

@@ -168,6 +168,38 @@ verify_skips_untrusted_chroot_mtree_body()
 	atf_check -s exit:0 test -e root/tmp/mtree-ran
 }
 
+atf_test_case which_exit_status
+which_exit_status_head()
+{
+	atf_set "descr" "mport which exits 0 for an owned path and 1, quietly with -q, for one no package owns"
+	atf_set "require.user" "root"
+	atf_set "require.progs" "sqlite3"
+}
+which_exit_status_body()
+{
+	setup_gperf_chroot
+	sqlite3 root/var/db/mport/master.db \
+		"INSERT INTO assets (pkg, type, data, checksum, owner, grp, mode) VALUES ('gperf', 1, '/usr/local/bin/gperf', NULL, NULL, NULL, NULL);"
+
+	# owned: every output form, exit 0
+	atf_check -s exit:0 -o inline:"gperf-3.1\n" -e empty \
+		"${MPORT_BIN}" -c "${PWD}/root" which -q /usr/local/bin/gperf
+	atf_check -s exit:0 -o inline:"devel/gperf\n" -e empty \
+		"${MPORT_BIN}" -c "${PWD}/root" which -qo /usr/local/bin/gperf
+	atf_check -s exit:0 \
+		-o inline:"/usr/local/bin/gperf was installed by package gperf-3.1\n" -e empty \
+		"${MPORT_BIN}" -c "${PWD}/root" which /usr/local/bin/gperf
+
+	# not owned: exit 1, nothing printed with -q so scripts can test the status
+	atf_check -s exit:1 -o empty -e empty \
+		"${MPORT_BIN}" -c "${PWD}/root" which -q /usr/local/bin/no-such-file
+	atf_check -s exit:1 -o empty -e empty \
+		"${MPORT_BIN}" -c "${PWD}/root" which -qo /usr/local/bin/no-such-file
+	atf_check -s exit:1 \
+		-o inline:"/usr/local/bin/no-such-file was not found in the database\n" -e empty \
+		"${MPORT_BIN}" -c "${PWD}/root" which /usr/local/bin/no-such-file
+}
+
 # a chroot under root/ registering one package, gperf, with an mtree spec
 setup_gperf_chroot()
 {
@@ -208,4 +240,5 @@ atf_init_test_cases()
 	atf_add_test_case smoke_vector_paths
 	atf_add_test_case config_abi_derived
 	atf_add_test_case verify_skips_untrusted_chroot_mtree
+	atf_add_test_case which_exit_status
 }

@@ -42,6 +42,8 @@
 .Ft int
 .Fn mport_instance_free "mportInstance *mport"
 .Ft int
+.Fn mport_require_writable "mportInstance *mport"
+.Ft int
 .Fn mport_call_msg_cb "mportInstance *mport" "const char *fmt" "..."
 .Ft int
 .Fn mport_call_progress_init_cb "mportInstance *mport" "const char *fmt" "..."
@@ -282,6 +284,30 @@ or
 When all work is complete, release library resources with
 .Fn mport_instance_free .
 .Pp
+When the package registry exists but the calling process cannot write it or
+its directory, for example an unprivileged user querying
+.Pa /var/db/mport/master.db ,
+.Fn mport_instance_init
+opens the registry read-only and sets
+.Va readOnly
+in the instance.
+Queries work as usual; functions that change the registry fail.
+.Fn mport_require_writable
+returns
+.Dv MPORT_OK
+for a writable registry and an error naming the privileged action needed
+for a read-only one, so callers can refuse a change before starting it.
+A write-ahead-log registry whose
+.Pa -wal
+and
+.Pa -shm
+files are absent and cannot be created is opened in SQLite's immutable mode,
+without locking; a package change made by a privileged process at the same
+time can then make a query fail or read a stale row.
+A read-only registry whose schema is older than this library expects is
+reported as an error naming the required privileged upgrade instead of
+being upgraded in place.
+.Pp
 Most functions return one of the following status codes defined in
 .In mport.h :
 .Bl -tag -width ".Dv MPORT_ERR_FATAL"
@@ -313,6 +339,7 @@ when they are available.
 .Fn mport_instance_new ,
 .Fn mport_instance_init ,
 .Fn mport_instance_free ,
+.Fn mport_require_writable ,
 .Fn mport_verbosity ,
 .Fn mport_set_msg_cb ,
 .Fn mport_set_progress_init_cb ,

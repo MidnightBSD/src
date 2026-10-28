@@ -2,8 +2,12 @@
 #include <sys/stat.h>
 
 #include <atf-c.h>
+#include <dlfcn.h>
 #include <fcntl.h>
+#include <libutil.h>
 #include <limits.h>
+#include <spawn.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,6 +32,95 @@
 #define PKG_DIR_ABS PKG_PREFIX "/" PKG_DIR_REL
 
 static char test_root[PATH_MAX];
+
+/* A "tag:value" annotation that create_package_message() adds when set. */
+static const char *pkg_annotation;
+
+/*
+ * The install-time age check asks getlogin(2) and agev_get_age_bracket(3)
+ * for the installing user's age.  These definitions interpose on libc and
+ * libutil so a case can supply an age bracket without a login session or a
+ * running aged(8).  While age_lookup is false there is no login session, and
+ * while aged_down is true agev_get_age_bracket(3) fails as it does when
+ * aged(8) cannot be reached; libmport skips the check in both cases.
+ */
+static bool age_lookup;
+static bool aged_down;
+static int age_bracket[2];
+
+/*
+ * Fill freed memory so a use after free shows up as a wrong value instead of
+ * reading back the old contents.
+ */
+const char *malloc_conf = "junk:true";
+
+char *
+getlogin(void)
+{
+	static char login[] = "mport-test";
+
+	return age_lookup ? login : NULL;
+}
+
+int *
+agev_get_age_bracket(const char *username)
+{
+	int *ages;
+
+	(void)username;
+	if (!age_lookup || aged_down)
+		return NULL;
+	ages = malloc(sizeof(age_bracket));
+	if (ages != NULL)
+		memcpy(ages, age_bracket, sizeof(age_bracket));
+
+	return ages;
+}
+
+/*
+ * What "sysrc -qn aged_enable" prints, or NULL while aged_enable is unset.
+ * posix_spawn() below runs echo (or false) in place of sysrc(8), so a case
+ * does not depend on the host's rc.conf.
+ */
+static const char *aged_enable;
+
+int
+posix_spawn(pid_t *restrict pid, const char *restrict path,
+    const posix_spawn_file_actions_t *file_actions, const posix_spawnattr_t *restrict attrp,
+    char *const argv[], char *const envp[])
+{
+	static int (*real_spawn)(pid_t *restrict, const char *restrict,
+	    const posix_spawn_file_actions_t *, const posix_spawnattr_t *restrict, char *const[],
+	    char *const[]);
+
+	if (real_spawn == NULL)
+		real_spawn = (int (*)(pid_t *restrict, const char *restrict,
+		    const posix_spawn_file_actions_t *, const posix_spawnattr_t *restrict,
+		    char *const[], char *const[]))dlsym(RTLD_NEXT, "posix_spawn");
+
+	if (strcmp(path, MPORT_SYSRC_BIN) == 0) {
+		char *echo_argv[] = { "echo", (char *)aged_enable, NULL };
+		char *false_argv[] = { "false", NULL };
+
+		if (aged_enable == NULL)
+			return real_spawn(
+			    pid, "/usr/bin/false", file_actions, attrp, false_argv, envp);
+		return real_spawn(pid, "/bin/echo", file_actions, attrp, echo_argv, envp);
+	}
+
+	return real_spawn(pid, path, file_actions, attrp, argv, envp);
+}
+
+/* Messages (pkg-message entries, warnings) a test package shows */
+static char shown_messages[4096];
+
+static void
+capture_message(const char *msg)
+{
+	size_t len = strlen(shown_messages);
+
+	(void)snprintf(shown_messages + len, sizeof(shown_messages) - len, "%s|", msg);
+}
 
 static const char *
 test_path(const char *suffix)
@@ -97,6 +190,8 @@ create_test_instance(void)
  */
 static const char *create_package_version(
     mportInstance *, const char *, const char *, const char *);
+static const char *create_package_message(
+    mportInstance *, const char *, const char *, const char *, const char *);
 
 static const char *
 create_package(mportInstance *mport, const char *name, const char *depend)
@@ -107,6 +202,14 @@ create_package(mportInstance *mport, const char *name, const char *depend)
 static const char *
 create_package_version(
     mportInstance *mport, const char *name, const char *version, const char *depend)
+{
+	return create_package_message(mport, name, version, depend, NULL);
+}
+
+/* As create_package_version(), with `message`, if not NULL, as its pkg-message. */
+static const char *
+create_package_message(mportInstance *mport, const char *name, const char *version,
+    const char *depend, const char *message)
 {
 	mportAssetList *assetlist;
 	mportPackageMeta *pack;
@@ -167,6 +270,18 @@ create_package_version(
 		extra->depends[0] = strdup(buf);
 		ATF_REQUIRE(extra->depends[0] != NULL);
 		extra->depends_count = 1;
+	}
+	if (message != NULL) {
+		(void)snprintf(buf, sizeof(buf), "%s/pkg-message-%s-%s", test_root, name, version);
+		write_file(buf, message);
+		extra->pkgmessage = strdup(buf);
+		ATF_REQUIRE(extra->pkgmessage != NULL);
+	}
+	if (pkg_annotation != NULL) {
+		char *annotation = strdup(pkg_annotation);
+
+		ATF_REQUIRE(annotation != NULL);
+		tll_push_back(extra->annotations, annotation);
 	}
 
 	ATF_REQUIRE_MSG(mport_create_primative(mport, assetlist, pack, extra) == MPORT_OK, "%s",
@@ -487,6 +602,482 @@ ATF_TC_CLEANUP(failed_install_registers_nothing, tc)
 {
 	(void)tc;
 
+	cleanup_test_root();
+}
+
+/*
+ * An age annotation that is not a plain non-negative integer fails the
+ * install with an error that names the annotation.  The annotation used to
+ * be freed before the error message was formatted from it.
+ */
+ATF_TC_WITH_CLEANUP(invalid_age_annotation_is_reported);
+ATF_TC_HEAD(invalid_age_annotation_is_reported, tc)
+{
+	atf_tc_set_md_var(tc, "require.user", "root");
+	atf_tc_set_md_var(
+	    tc, "descr", "an invalid age annotation fails the install and is named in the error");
+}
+ATF_TC_BODY(invalid_age_annotation_is_reported, tc)
+{
+	mportInstance *mport;
+	const char *pkgfile;
+	int ret;
+
+	(void)tc;
+
+	mport = create_test_instance();
+	pkg_annotation = "age:18x";
+	pkgfile = create_test_package(mport);
+	pkg_annotation = NULL;
+
+	age_bracket[0] = 30;
+	age_bracket[1] = -1;
+	age_lookup = true;
+	ret = mport_install_primative(mport, pkgfile, NULL, MPORT_EXPLICIT);
+	age_lookup = false;
+
+	ATF_REQUIRE(ret != MPORT_OK);
+	ATF_REQUIRE_MSG(strstr(mport_err_string(),
+			    "Invalid age annotation '18x' for package " PKG_NAME) != NULL,
+	    "%s", mport_err_string());
+	ATF_REQUIRE_EQ(0, count_installed(mport, NULL, 0));
+
+	mport_instance_free(mport);
+}
+ATF_TC_CLEANUP(invalid_age_annotation_is_reported, tc)
+{
+	(void)tc;
+
+	age_lookup = false;
+	cleanup_test_root();
+}
+
+/*
+ * Annotations given to mport.create (-A tag:value) travel in the bundle and
+ * are registered under the package name, so an age-restricted package
+ * installs for an adult and records its "age" annotation.
+ */
+ATF_TC_WITH_CLEANUP(bundle_annotations_are_registered);
+ATF_TC_HEAD(bundle_annotations_are_registered, tc)
+{
+	atf_tc_set_md_var(tc, "require.user", "root");
+	atf_tc_set_md_var(
+	    tc, "descr", "annotations in a bundle are registered for the installed package");
+}
+ATF_TC_BODY(bundle_annotations_are_registered, tc)
+{
+	mportInstance *mport;
+	const char *pkgfile;
+	char *age = NULL;
+
+	(void)tc;
+
+	mport = create_test_instance();
+	pkg_annotation = "age:18";
+	pkgfile = create_test_package(mport);
+	pkg_annotation = NULL;
+
+	age_bracket[0] = 30;
+	age_bracket[1] = -1;
+	age_lookup = true;
+	ATF_REQUIRE_MSG(mport_install_primative(mport, pkgfile, NULL, MPORT_EXPLICIT) == MPORT_OK,
+	    "%s", mport_err_string());
+	age_lookup = false;
+
+	ATF_REQUIRE_EQ(1, count_installed(mport, NULL, 0));
+	ATF_REQUIRE_EQ(MPORT_OK, mport_annotation_get(mport, PKG_NAME, "age", &age));
+	ATF_REQUIRE_STREQ("18", age);
+	free(age);
+
+	mport_instance_free(mport);
+}
+ATF_TC_CLEANUP(bundle_annotations_are_registered, tc)
+{
+	(void)tc;
+
+	age_lookup = false;
+	pkg_annotation = NULL;
+	cleanup_test_root();
+}
+
+/*
+ * The age check has to read the restriction from the bundle being
+ * installed: the registry only holds it once the package is installed.
+ */
+ATF_TC_WITH_CLEANUP(underage_install_is_refused);
+ATF_TC_HEAD(underage_install_is_refused, tc)
+{
+	atf_tc_set_md_var(tc, "require.user", "root");
+	atf_tc_set_md_var(
+	    tc, "descr", "a package whose age annotation exceeds the user's age is not installed");
+}
+ATF_TC_BODY(underage_install_is_refused, tc)
+{
+	mportInstance *mport;
+	const char *pkgfile;
+	int ret;
+
+	(void)tc;
+
+	mport = create_test_instance();
+	pkg_annotation = "age:18";
+	pkgfile = create_test_package(mport);
+	pkg_annotation = NULL;
+
+	age_bracket[0] = 13;
+	age_bracket[1] = 15;
+	age_lookup = true;
+	ret = mport_install_primative(mport, pkgfile, NULL, MPORT_EXPLICIT);
+	age_lookup = false;
+
+	ATF_REQUIRE(ret != MPORT_OK);
+	ATF_REQUIRE_EQ(0, count_installed(mport, NULL, 0));
+	ATF_REQUIRE_EQ(-1, access(test_path(PKG_FILE_ABS), F_OK));
+
+	mport_instance_free(mport);
+}
+ATF_TC_CLEANUP(underage_install_is_refused, tc)
+{
+	(void)tc;
+
+	age_lookup = false;
+	pkg_annotation = NULL;
+	cleanup_test_root();
+}
+
+/*
+ * Install a package annotated "age:<required>" with the user in the
+ * agev_get_age_bracket(3) bracket { low, high } and return the result.
+ */
+static int
+install_with_age_bracket(mportInstance *mport, const char *annotation, int low, int high)
+{
+	const char *pkgfile;
+	int ret;
+
+	pkg_annotation = annotation;
+	pkgfile = create_test_package(mport);
+	pkg_annotation = NULL;
+
+	age_bracket[0] = low;
+	age_bracket[1] = high;
+	age_lookup = true;
+	ret = mport_install_primative(mport, pkgfile, NULL, MPORT_EXPLICIT);
+	age_lookup = false;
+
+	return ret;
+}
+
+/*
+ * A requirement within the user's bracket is met: a 13 to 15 year old can
+ * install a package for 15 and up.  The install step used to compare the
+ * requirement with the bottom of the bracket and refuse it.
+ */
+ATF_TC_WITH_CLEANUP(age_within_bracket_is_installed);
+ATF_TC_HEAD(age_within_bracket_is_installed, tc)
+{
+	atf_tc_set_md_var(tc, "require.user", "root");
+	atf_tc_set_md_var(
+	    tc, "descr", "a package whose age annotation is within the user's bracket installs");
+}
+ATF_TC_BODY(age_within_bracket_is_installed, tc)
+{
+	mportInstance *mport;
+
+	(void)tc;
+
+	mport = create_test_instance();
+	ATF_REQUIRE_MSG(install_with_age_bracket(mport, "age:15", 13, 15) == MPORT_OK, "%s",
+	    mport_err_string());
+	ATF_REQUIRE_EQ(1, count_installed(mport, NULL, 0));
+
+	mport_instance_free(mport);
+}
+ATF_TC_CLEANUP(age_within_bracket_is_installed, tc)
+{
+	(void)tc;
+
+	age_lookup = false;
+	pkg_annotation = NULL;
+	cleanup_test_root();
+}
+
+/*
+ * The adult bracket (18,-1) is 18 or older and is never refused, even for a
+ * package annotated above 18.
+ */
+ATF_TC_WITH_CLEANUP(adult_install_is_never_refused);
+ATF_TC_HEAD(adult_install_is_never_refused, tc)
+{
+	atf_tc_set_md_var(tc, "require.user", "root");
+	atf_tc_set_md_var(tc, "descr", "an adult can install a package with any age annotation");
+}
+ATF_TC_BODY(adult_install_is_never_refused, tc)
+{
+	mportInstance *mport;
+
+	(void)tc;
+
+	mport = create_test_instance();
+	ATF_REQUIRE_MSG(install_with_age_bracket(mport, "age:21", 18, -1) == MPORT_OK, "%s",
+	    mport_err_string());
+	ATF_REQUIRE_EQ(1, count_installed(mport, NULL, 0));
+
+	mport_instance_free(mport);
+}
+ATF_TC_CLEANUP(adult_install_is_never_refused, tc)
+{
+	(void)tc;
+
+	age_lookup = false;
+	pkg_annotation = NULL;
+	cleanup_test_root();
+}
+
+/*
+ * aged(8) answers -2,-2 when its region (e.g. US-MI) does not require age
+ * checks; any package installs.
+ */
+ATF_TC_WITH_CLEANUP(age_not_required_by_region_installs);
+ATF_TC_HEAD(age_not_required_by_region_installs, tc)
+{
+	atf_tc_set_md_var(tc, "require.user", "root");
+	atf_tc_set_md_var(tc, "descr",
+	    "an age-restricted package installs where aged's region requires no age checks");
+}
+ATF_TC_BODY(age_not_required_by_region_installs, tc)
+{
+	mportInstance *mport;
+
+	(void)tc;
+
+	mport = create_test_instance();
+	ATF_REQUIRE_MSG(install_with_age_bracket(mport, "age:18", -2, -2) == MPORT_OK, "%s",
+	    mport_err_string());
+	ATF_REQUIRE_EQ(1, count_installed(mport, NULL, 0));
+
+	mport_instance_free(mport);
+}
+ATF_TC_CLEANUP(age_not_required_by_region_installs, tc)
+{
+	(void)tc;
+
+	age_lookup = false;
+	pkg_annotation = NULL;
+	cleanup_test_root();
+}
+
+/*
+ * With no login session (cron, rc scripts) there is no user to check, so an
+ * age-restricted package installs.
+ */
+ATF_TC_WITH_CLEANUP(age_check_without_login_installs);
+ATF_TC_HEAD(age_check_without_login_installs, tc)
+{
+	atf_tc_set_md_var(tc, "require.user", "root");
+	atf_tc_set_md_var(
+	    tc, "descr", "an age-restricted package installs when there is no login session");
+}
+ATF_TC_BODY(age_check_without_login_installs, tc)
+{
+	mportInstance *mport;
+	const char *pkgfile;
+
+	(void)tc;
+
+	mport = create_test_instance();
+	pkg_annotation = "age:18";
+	pkgfile = create_test_package(mport);
+	pkg_annotation = NULL;
+
+	age_lookup = false;
+	mport->msg_cb = capture_message;
+	shown_messages[0] = '\0';
+	ATF_REQUIRE_MSG(mport_install_primative(mport, pkgfile, NULL, MPORT_EXPLICIT) == MPORT_OK,
+	    "%s", mport_err_string());
+	ATF_REQUIRE_EQ(1, count_installed(mport, NULL, 0));
+	ATF_REQUIRE_MSG(strstr(shown_messages, "could not determine the user name") != NULL &&
+		strstr(shown_messages, "skipping the age check") != NULL,
+	    "%s", shown_messages);
+
+	mport_instance_free(mport);
+}
+ATF_TC_CLEANUP(age_check_without_login_installs, tc)
+{
+	(void)tc;
+
+	pkg_annotation = NULL;
+	cleanup_test_root();
+}
+
+/*
+ * When aged(8) cannot be reached the user's age is not known, so an
+ * age-restricted package installs.
+ */
+ATF_TC_WITH_CLEANUP(age_check_without_aged_installs);
+ATF_TC_HEAD(age_check_without_aged_installs, tc)
+{
+	atf_tc_set_md_var(tc, "require.user", "root");
+	atf_tc_set_md_var(
+	    tc, "descr", "an age-restricted package installs when aged cannot be reached");
+}
+ATF_TC_BODY(age_check_without_aged_installs, tc)
+{
+	mportInstance *mport;
+	int ret;
+
+	(void)tc;
+
+	mport = create_test_instance();
+	mport->msg_cb = capture_message;
+	shown_messages[0] = '\0';
+	aged_down = true;
+	ret = install_with_age_bracket(mport, "age:18", 13, 15);
+	aged_down = false;
+
+	ATF_REQUIRE_MSG(ret == MPORT_OK, "%s", mport_err_string());
+	ATF_REQUIRE_EQ(1, count_installed(mport, NULL, 0));
+	ATF_REQUIRE_MSG(
+	    strstr(shown_messages,
+		"could not determine the age bracket of mport-test, skipping the age check") !=
+		NULL,
+	    "%s", shown_messages);
+
+	mport_instance_free(mport);
+}
+ATF_TC_CLEANUP(age_check_without_aged_installs, tc)
+{
+	(void)tc;
+
+	age_lookup = false;
+	aged_down = false;
+	pkg_annotation = NULL;
+	cleanup_test_root();
+}
+
+/*
+ * Where aged_enable is set, aged not answering must not skip the check: the
+ * install is refused and the user is told to check on aged.
+ */
+ATF_TC_WITH_CLEANUP(age_check_with_aged_enabled_but_down_is_refused);
+ATF_TC_HEAD(age_check_with_aged_enabled_but_down_is_refused, tc)
+{
+	atf_tc_set_md_var(tc, "require.user", "root");
+	atf_tc_set_md_var(tc, "descr",
+	    "an age-restricted package is refused when aged is enabled but not answering");
+}
+ATF_TC_BODY(age_check_with_aged_enabled_but_down_is_refused, tc)
+{
+	mportInstance *mport;
+	int ret;
+
+	(void)tc;
+
+	mport = create_test_instance();
+	mport->msg_cb = capture_message;
+	shown_messages[0] = '\0';
+	aged_enable = "Yes";
+	aged_down = true;
+	ret = install_with_age_bracket(mport, "age:13", 18, -1);
+	aged_down = false;
+	aged_enable = NULL;
+
+	ATF_REQUIRE(ret != MPORT_OK);
+	ATF_REQUIRE_EQ(0, count_installed(mport, NULL, 0));
+	ATF_REQUIRE_MSG(strstr(shown_messages,
+			    "aged is enabled but the age bracket of mport-test "
+			    "could not be read") != NULL,
+	    "%s", shown_messages);
+
+	mport_instance_free(mport);
+}
+ATF_TC_CLEANUP(age_check_with_aged_enabled_but_down_is_refused, tc)
+{
+	(void)tc;
+
+	age_lookup = false;
+	aged_down = false;
+	aged_enable = NULL;
+	pkg_annotation = NULL;
+	cleanup_test_root();
+}
+
+/*
+ * aged_enable=NO is the same as unset: aged not answering skips the check.
+ */
+ATF_TC_WITH_CLEANUP(age_check_with_aged_disabled_installs);
+ATF_TC_HEAD(age_check_with_aged_disabled_installs, tc)
+{
+	atf_tc_set_md_var(tc, "require.user", "root");
+	atf_tc_set_md_var(tc, "descr", "an age-restricted package installs when aged_enable is NO");
+}
+ATF_TC_BODY(age_check_with_aged_disabled_installs, tc)
+{
+	mportInstance *mport;
+	int ret;
+
+	(void)tc;
+
+	mport = create_test_instance();
+	aged_enable = "NO";
+	aged_down = true;
+	ret = install_with_age_bracket(mport, "age:18", 13, 15);
+	aged_down = false;
+	aged_enable = NULL;
+
+	ATF_REQUIRE_MSG(ret == MPORT_OK, "%s", mport_err_string());
+	ATF_REQUIRE_EQ(1, count_installed(mport, NULL, 0));
+
+	mport_instance_free(mport);
+}
+ATF_TC_CLEANUP(age_check_with_aged_disabled_installs, tc)
+{
+	(void)tc;
+
+	age_lookup = false;
+	aged_down = false;
+	aged_enable = NULL;
+	pkg_annotation = NULL;
+	cleanup_test_root();
+}
+
+/*
+ * A user whose age aged does not know (-1,-1) is refused and told how to set
+ * it with agectl(8).
+ */
+ATF_TC_WITH_CLEANUP(unset_age_is_refused_with_agectl_hint);
+ATF_TC_HEAD(unset_age_is_refused_with_agectl_hint, tc)
+{
+	atf_tc_set_md_var(tc, "require.user", "root");
+	atf_tc_set_md_var(tc, "descr",
+	    "an age-restricted package is refused for a user with no age set, naming agectl");
+}
+ATF_TC_BODY(unset_age_is_refused_with_agectl_hint, tc)
+{
+	mportInstance *mport;
+	int ret;
+
+	(void)tc;
+
+	mport = create_test_instance();
+	mport->msg_cb = capture_message;
+	shown_messages[0] = '\0';
+	ret = install_with_age_bracket(mport, "age:13", -1, -1);
+
+	ATF_REQUIRE(ret != MPORT_OK);
+	ATF_REQUIRE_EQ(0, count_installed(mport, NULL, 0));
+	ATF_REQUIRE_MSG(strstr(shown_messages, "the age of mport-test is not set") != NULL &&
+		strstr(shown_messages, "agectl -a <age> mport-test") != NULL,
+	    "%s", shown_messages);
+
+	mport_instance_free(mport);
+}
+ATF_TC_CLEANUP(unset_age_is_refused_with_agectl_hint, tc)
+{
+	(void)tc;
+
+	age_lookup = false;
+	pkg_annotation = NULL;
 	cleanup_test_root();
 }
 
@@ -1524,6 +2115,200 @@ ATF_TC_CLEANUP(fd_install_releases_duplicate_descriptor, tc)
 	cleanup_test_root();
 }
 
+/*
+ * An update that fails its preconditions must be reported to the caller,
+ * not only through the message callback, and must leave the installed
+ * copy alone.
+ */
+ATF_TC_WITH_CLEANUP(failed_update_returns_error);
+ATF_TC_HEAD(failed_update_returns_error, tc)
+{
+	atf_tc_set_md_var(tc, "require.user", "root");
+	atf_tc_set_md_var(
+	    tc, "descr", "mport_update_primative returns an error when an update fails");
+}
+ATF_TC_BODY(failed_update_returns_error, tc)
+{
+	mportInstance *mport;
+	const char *oldfile;
+	const char *newfile;
+
+	(void)tc;
+
+	mport = create_test_instance();
+	oldfile = create_package_version(mport, PKG_NAME, "1.0", NULL);
+	newfile = create_package_version(mport, PKG_NAME, "2.0", NULL);
+
+	ATF_REQUIRE_MSG(mport_install_primative(mport, newfile, NULL, MPORT_EXPLICIT) == MPORT_OK,
+	    "%s", mport_err_string());
+	ATF_REQUIRE_STREQ("2.0", installed_version(mport, PKG_NAME));
+
+	/* 2.0 is installed, so the 1.0 bundle is not an upgrade */
+	ATF_REQUIRE(mport_update_primative(mport, oldfile) != MPORT_OK);
+	ATF_REQUIRE(mport_err_string() != NULL && mport_err_string()[0] != '\0');
+	ATF_REQUIRE_STREQ("2.0", installed_version(mport, PKG_NAME));
+
+	mport_instance_free(mport);
+}
+ATF_TC_CLEANUP(failed_update_returns_error, tc)
+{
+	(void)tc;
+
+	cleanup_test_root();
+}
+
+ATF_TC_WITH_CLEANUP(update_upgrades_installed_package);
+ATF_TC_HEAD(update_upgrades_installed_package, tc)
+{
+	atf_tc_set_md_var(tc, "require.user", "root");
+	atf_tc_set_md_var(tc, "descr", "mport_update_primative upgrades an older installed copy");
+}
+ATF_TC_BODY(update_upgrades_installed_package, tc)
+{
+	mportInstance *mport;
+	const char *oldfile;
+	const char *newfile;
+
+	(void)tc;
+
+	mport = create_test_instance();
+	oldfile = create_package_version(mport, PKG_NAME, "1.0", NULL);
+	newfile = create_package_version(mport, PKG_NAME, "2.0", NULL);
+
+	ATF_REQUIRE_MSG(mport_install_primative(mport, oldfile, NULL, MPORT_EXPLICIT) == MPORT_OK,
+	    "%s", mport_err_string());
+	ATF_REQUIRE_MSG(
+	    mport_update_primative(mport, newfile) == MPORT_OK, "%s", mport_err_string());
+	ATF_REQUIRE_STREQ("2.0", installed_version(mport, PKG_NAME));
+	ATF_REQUIRE_EQ(1, count_installed(mport, NULL, 0));
+	ATF_REQUIRE_EQ(0, access(test_path(PKG_FILE_ABS), F_OK));
+
+	mport_instance_free(mport);
+}
+ATF_TC_CLEANUP(update_upgrades_installed_package, tc)
+{
+	(void)tc;
+
+	cleanup_test_root();
+}
+
+/* A locked package is skipped on purpose; that is not a failure. */
+ATF_TC_WITH_CLEANUP(update_skips_locked_package);
+ATF_TC_HEAD(update_skips_locked_package, tc)
+{
+	atf_tc_set_md_var(tc, "require.user", "root");
+	atf_tc_set_md_var(tc, "descr", "mport_update_primative leaves a locked package alone");
+}
+ATF_TC_BODY(update_skips_locked_package, tc)
+{
+	mportInstance *mport;
+	mportPackageMeta **found = NULL;
+	const char *oldfile;
+	const char *newfile;
+
+	(void)tc;
+
+	mport = create_test_instance();
+	oldfile = create_package_version(mport, PKG_NAME, "1.0", NULL);
+	newfile = create_package_version(mport, PKG_NAME, "2.0", NULL);
+
+	ATF_REQUIRE_MSG(mport_install_primative(mport, oldfile, NULL, MPORT_EXPLICIT) == MPORT_OK,
+	    "%s", mport_err_string());
+	ATF_REQUIRE_EQ(MPORT_OK, mport_pkgmeta_search_master(mport, &found, "pkg=%Q", PKG_NAME));
+	ATF_REQUIRE(found != NULL && found[0] != NULL);
+	ATF_REQUIRE_EQ(MPORT_OK, mport_lock_lock(mport, found[0]));
+	mport_pkgmeta_vec_free(found);
+
+	ATF_REQUIRE_MSG(
+	    mport_update_primative(mport, newfile) == MPORT_OK, "%s", mport_err_string());
+	ATF_REQUIRE_STREQ("1.0", installed_version(mport, PKG_NAME));
+
+	mport_instance_free(mport);
+}
+ATF_TC_CLEANUP(update_skips_locked_package, tc)
+{
+	(void)tc;
+
+	cleanup_test_root();
+}
+
+/*
+ * An update shows the new package's upgrade entries whose version range
+ * matches the version it replaces, and none of its install or remove
+ * entries; a delete shows only the remove entries.
+ */
+ATF_TC_WITH_CLEANUP(update_shows_upgrade_messages_for_replaced_version);
+ATF_TC_HEAD(update_shows_upgrade_messages_for_replaced_version, tc)
+{
+	atf_tc_set_md_var(tc, "require.user", "root");
+	atf_tc_set_md_var(
+	    tc, "descr", "install, update and delete show the pkg-message entries for that action");
+}
+ATF_TC_BODY(update_shows_upgrade_messages_for_replaced_version, tc)
+{
+	mportInstance *mport;
+	mportPackageMeta **found = NULL;
+	const char *oldfile;
+	const char *newfile;
+	static const char new_message[] = "[\n"
+					  "{ type: install, message: \"install-2.0\" }\n"
+					  "{ type: upgrade, message: \"upgrade-any\" }\n"
+					  "{ type: upgrade, maximum_version: \"1.5\",\n"
+					  "  message: \"upgrade-from-before-1.5\" }\n"
+					  "{ type: upgrade, maximum_version: \"0.5\",\n"
+					  "  message: \"upgrade-from-before-0.5\" }\n"
+					  "{ type: upgrade, minimum_version: \"1.0\",\n"
+					  "  message: \"upgrade-from-after-1.0\" }\n"
+					  "{ type: remove, message: \"remove-2.0\" }\n"
+					  "]\n";
+
+	(void)tc;
+
+	mport = create_test_instance();
+	mport->msg_cb = capture_message;
+	oldfile = create_package_message(mport, PKG_NAME, "1.0", NULL,
+	    "[\n{ type: install, message: \"install-1.0\" }\n"
+	    "{ type: remove, message: \"remove-1.0\" }\n]\n");
+	newfile = create_package_message(mport, PKG_NAME, "2.0", NULL, new_message);
+
+	shown_messages[0] = '\0';
+	ATF_REQUIRE_MSG(mport_install_primative(mport, oldfile, NULL, MPORT_EXPLICIT) == MPORT_OK,
+	    "%s", mport_err_string());
+	ATF_REQUIRE(strstr(shown_messages, "install-1.0|") != NULL);
+	ATF_REQUIRE(strstr(shown_messages, "remove-1.0") == NULL);
+
+	shown_messages[0] = '\0';
+	ATF_REQUIRE_MSG(
+	    mport_update_primative(mport, newfile) == MPORT_OK, "%s", mport_err_string());
+	ATF_REQUIRE_STREQ("2.0", installed_version(mport, PKG_NAME));
+	ATF_REQUIRE_MSG(strstr(shown_messages, "upgrade-any|upgrade-from-before-1.5|") != NULL,
+	    "%s", shown_messages);
+	ATF_REQUIRE_MSG(
+	    strstr(shown_messages, "upgrade-from-before-0.5") == NULL, "%s", shown_messages);
+	ATF_REQUIRE_MSG(
+	    strstr(shown_messages, "upgrade-from-after-1.0") == NULL, "%s", shown_messages);
+	ATF_REQUIRE_MSG(strstr(shown_messages, "install-") == NULL, "%s", shown_messages);
+	ATF_REQUIRE_MSG(strstr(shown_messages, "remove-") == NULL, "%s", shown_messages);
+
+	shown_messages[0] = '\0';
+	ATF_REQUIRE_EQ(MPORT_OK, mport_pkgmeta_search_master(mport, &found, "pkg=%Q", PKG_NAME));
+	ATF_REQUIRE(found != NULL && found[0] != NULL);
+	ATF_REQUIRE_MSG(
+	    mport_delete_primative(mport, found[0], 1) == MPORT_OK, "%s", mport_err_string());
+	mport_pkgmeta_vec_free(found);
+	ATF_REQUIRE_MSG(strstr(shown_messages, "remove-2.0|") != NULL, "%s", shown_messages);
+	ATF_REQUIRE_MSG(strstr(shown_messages, "install-") == NULL, "%s", shown_messages);
+	ATF_REQUIRE_MSG(strstr(shown_messages, "upgrade-") == NULL, "%s", shown_messages);
+
+	mport_instance_free(mport);
+}
+ATF_TC_CLEANUP(update_shows_upgrade_messages_for_replaced_version, tc)
+{
+	(void)tc;
+
+	cleanup_test_root();
+}
+
 ATF_TP_ADD_TCS(tp)
 {
 	ATF_TP_ADD_TC(tp, install_replaces_previous_os_release);
@@ -1532,6 +2317,17 @@ ATF_TP_ADD_TCS(tp)
 	ATF_TP_ADD_TC(tp, fd_install_releases_duplicate_descriptor);
 	ATF_TP_ADD_TC(tp, force_reinstall_over_orphaned_rows);
 	ATF_TP_ADD_TC(tp, failed_install_registers_nothing);
+	ATF_TP_ADD_TC(tp, invalid_age_annotation_is_reported);
+	ATF_TP_ADD_TC(tp, bundle_annotations_are_registered);
+	ATF_TP_ADD_TC(tp, underage_install_is_refused);
+	ATF_TP_ADD_TC(tp, age_within_bracket_is_installed);
+	ATF_TP_ADD_TC(tp, adult_install_is_never_refused);
+	ATF_TP_ADD_TC(tp, age_not_required_by_region_installs);
+	ATF_TP_ADD_TC(tp, age_check_without_login_installs);
+	ATF_TP_ADD_TC(tp, age_check_without_aged_installs);
+	ATF_TP_ADD_TC(tp, age_check_with_aged_enabled_but_down_is_refused);
+	ATF_TP_ADD_TC(tp, age_check_with_aged_disabled_installs);
+	ATF_TP_ADD_TC(tp, unset_age_is_refused_with_agectl_hint);
 	ATF_TP_ADD_TC(tp, dir_asset_through_symlinked_parent);
 	ATF_TP_ADD_TC(tp, add_installs_missing_dependency_from_sibling);
 	ATF_TP_ADD_TC(tp, forced_add_leaves_installed_dependency_alone);
@@ -1547,6 +2343,10 @@ ATF_TP_ADD_TCS(tp)
 	ATF_TP_ADD_TC(tp, old_release_dependency_with_superseded_libraries_is_accepted);
 	ATF_TP_ADD_TC(tp, failed_delete_rolls_back);
 	ATF_TP_ADD_TC(tp, failed_schema_upgrade_rolls_back);
+	ATF_TP_ADD_TC(tp, failed_update_returns_error);
+	ATF_TP_ADD_TC(tp, update_upgrades_installed_package);
+	ATF_TP_ADD_TC(tp, update_skips_locked_package);
+	ATF_TP_ADD_TC(tp, update_shows_upgrade_messages_for_replaced_version);
 
 	return atf_no_error();
 }

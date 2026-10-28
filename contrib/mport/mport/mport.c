@@ -371,6 +371,20 @@ main(int argc, char *argv[])
 	if (cmd == NULL)
 		usage();
 
+	/* Commands that change the registry, the index or the package files
+	 * would fail inside a write transaction on a registry this user cannot
+	 * write; refuse them up front with one clear message.  annotate,
+	 * config, mirror and verify check their modifying forms below. */
+	static const char *const write_commands[] = { "add", "install", "delete", "update",
+		"upgrade", "autoremove", "deleteall", "clean", "index", "import", "lock",
+		"unlock" };
+	for (size_t w = 0; w < sizeof(write_commands) / sizeof(write_commands[0]); w++) {
+		if (!strcmp(cmd, write_commands[w]) && mport_require_writable(mport) != MPORT_OK) {
+			mport_instance_free(mport);
+			errx(1, "%s", mport_err_string());
+		}
+	}
+
 	if (!strcmp(cmd, "add")) {
 		if (argc == 1) {
 			mport_instance_free(mport);
@@ -563,7 +577,10 @@ main(int argc, char *argv[])
 		int index = quiet == true ? 2 : 0;
 		/* annotate_* require non-NULL args and deref them; only call when
 		   the accessed positions are real (in-bounds, non-NULL) args. */
-		if (Sflag && aflag && local_argc > 1) {
+		if ((Aflag || Dflag) && mport_require_writable(mport) != MPORT_OK) {
+			warnx("%s", mport_err_string());
+			resultCode = mport_err_code();
+		} else if (Sflag && aflag && local_argc > 1) {
 			resultCode = annotate_list(mport, local_argv[1]);
 		} else if (Sflag && !aflag && local_argc > index + 1) {
 			resultCode = annotate_show(mport, local_argv[index], local_argv[index + 1]);
@@ -788,7 +805,12 @@ main(int argc, char *argv[])
 				mport_instance_free(mport);
 				usage();
 			}
-			resultCode = configSet(mport, argv[2], argv[3]);
+			if (mport_require_writable(mport) != MPORT_OK) {
+				warnx("%s", mport_err_string());
+				resultCode = mport_err_code();
+			} else {
+				resultCode = configSet(mport, argv[2], argv[3]);
+			}
 		}
 	} else if (!strcmp(cmd, "mirror")) {
 		if (argc < 2) {
@@ -801,8 +823,13 @@ main(int argc, char *argv[])
 			printf("mport set config mirror_region <country>\n\n");
 			resultCode = mport_index_print_mirror_list(mport);
 		} else if (!strcmp(argv[1], "select")) {
-			loadIndex(mport);
-			resultCode = selectMirror(mport);
+			if (mport_require_writable(mport) != MPORT_OK) {
+				warnx("%s", mport_err_string());
+				resultCode = mport_err_code();
+			} else {
+				loadIndex(mport);
+				resultCode = selectMirror(mport);
+			}
 		}
 	} else if (!strcmp(cmd, "cpe")) {
 		if (argc == 1) {
@@ -877,7 +904,10 @@ main(int argc, char *argv[])
 			}
 		}
 
-		if (rflag) {
+		if (rflag && mport_require_writable(mport) != MPORT_OK) {
+			warnx("%s", mport_err_string());
+			resultCode = mport_err_code();
+		} else if (rflag) {
 			for (i = 0; i < local_argc; i++) {
 				mportPackageMeta **packs = lookup_package(mport, local_argv[i]);
 				if (packs == NULL) {
@@ -1504,13 +1534,13 @@ info_shlibs(
 		if (mport->verbosity != MPORT_VQUIET)
 			printf("Provided shared libraries:\n");
 		tll_foreach(prov, it)
-			printf("%s%s\n", mport->verbosity != MPORT_VQUIET ? "\t" : "", it->item);
+		    printf("%s%s\n", mport->verbosity != MPORT_VQUIET ? "\t" : "", it->item);
 	}
 	if (required) {
 		if (mport->verbosity != MPORT_VQUIET)
 			printf("Required shared libraries:\n");
 		tll_foreach(req, it)
-			printf("%s%s\n", mport->verbosity != MPORT_VQUIET ? "\t" : "", it->item);
+		    printf("%s%s\n", mport->verbosity != MPORT_VQUIET ? "\t" : "", it->item);
 	}
 
 	tll_free_and_free(prov, free);
@@ -1547,7 +1577,8 @@ shlib(/*@notnull@*/ mportInstance *mport, /*@null@*/ const char *library, bool p
 			    packs[i]->name, packs[i]->version);
 		if (packs == NULL && mport->verbosity != MPORT_VQUIET)
 			printf("\t%s\n",
-			    mport_shlib_in_base(library) ? "the base system" : "no installed package");
+			    mport_shlib_in_base(library) ? "the base system" :
+							   "no installed package");
 		mport_pkgmeta_vec_free(packs);
 		packs = NULL;
 	}
@@ -1574,7 +1605,8 @@ shlib(/*@notnull@*/ mportInstance *mport, /*@null@*/ const char *library, bool p
 static int
 which(/*@notnull@*/ mportInstance *mport, /*@null@*/ const char *filePath, bool origin)
 {
-	mportPackageMeta *pack = NULL;
+	/*@null@*/ /*@only@*/ mportPackageMeta *pack = NULL;
+	int rc = 0;
 
 	if (filePath == NULL) {
 		warnx("%s", "Specify file path");
@@ -1599,11 +1631,16 @@ which(/*@notnull@*/ mportInstance *mport, /*@null@*/ const char *filePath, bool 
 			printf("%s was installed by package %s-%s\n", filePath, pack->name,
 			    pack->version);
 		}
+	} else {
+		/* no installed package owns it; fail so scripts can tell, as pkg-which(8) */
+		if (mport->verbosity != MPORT_VQUIET)
+			printf("%s was not found in the database\n", filePath);
+		rc = 1;
 	}
 
 	mport_pkgmeta_free(pack);
 
-	return (0);
+	return (rc);
 }
 
 static int

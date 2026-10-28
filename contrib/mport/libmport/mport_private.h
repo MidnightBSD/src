@@ -57,7 +57,7 @@ struct ohash { };
 #define MPORT_MASTER_VERSION 16
 #define MPORT_BUNDLE_VERSION 6
 #define MPORT_BUNDLE_VERSION_STR "6"
-#define MPORT_VERSION "2.8.4"
+#define MPORT_VERSION "2.8.5"
 
 #define MPORT_SETTING_MIRROR_REGION "mirror_region"
 #define MPORT_SETTING_TARGET_OS "target_os"
@@ -84,6 +84,8 @@ int mport_upgrade_master_schema(sqlite3 *, int);
 
 /* instance */
 int mport_get_database_version(sqlite3 *);
+/* file:<path>?immutable=1 for a registry that can only be read; free with free() */
+/*@null@*/ /*@only@*/ char *mport_registry_immutable_uri(/*@notnull@*/ /*@observer@*/ const char *);
 int mport_set_database_version(sqlite3 *);
 
 /* Various database convenience functions */
@@ -109,6 +111,10 @@ bool mport_is_terminal(void);
 
 /* Age verification */
 bool mport_is_age_verified(mportInstance *mport, mportPackageMeta *pack);
+bool mport_age_bracket_allows(/*@notnull@*/ const int *bracket, int required_age)
+    /*@requires maxRead(bracket) >= 1@*/;
+int mport_stub_annotation_get(
+    mportInstance *mport, const char *tag, /*@out@*/ /*@null@*/ char **annotation);
 
 /* Utils */
 bool mport_starts_with(const char *, const char *);
@@ -191,7 +197,8 @@ int mport_bundle_read_prep_for_install(mportInstance *, mportBundleRead *);
 int mport_bundle_read_extract_metafiles(mportBundleRead *, char **);
 int mport_bundle_read_next_entry(mportBundleRead *, struct archive_entry **);
 int mport_bundle_read_extract_next_file(mportBundleRead *, struct archive_entry *);
-int mport_bundle_read_install_pkg(mportInstance *, mportBundleRead *, mportPackageMeta *);
+int mport_bundle_read_install_pkg(
+    mportInstance *, mportBundleRead *, mportPackageMeta *, /*@null@*/ const char *);
 int mport_bundle_read_update_pkg(mportInstance *, mportBundleRead *, mportPackageMeta *);
 
 int mport_install_depends(mportInstance *, const char *, const char *, mportAutomatic);
@@ -237,10 +244,12 @@ int mport_update_down(mportInstance *, mportPackageMeta *, struct ohash_info *, 
 void mport_version_cmp_sqlite(sqlite3_context *, int, sqlite3_value **);
 int mport_version_require_check(const char *, const char *);
 
-int mport_pkg_message_display(mportInstance *, mportPackageMeta *);
-int mport_pkg_message_load(mportInstance *, mportPackageMeta *, mportPackageMessage *);
-mportPackageMessage *mport_pkg_message_from_ucl(
-    mportInstance *, const ucl_object_t *, mportPackageMessage *);
+int mport_pkg_message_display(
+    mportInstance *, mportPackageMeta *, pkg_message_t, /*@null@*/ const char *);
+int mport_pkg_message_load(mportInstance *, mportPackageMeta *, /*@out@*/ mportPackageMessage **);
+int mport_pkg_message_from_ucl(
+    mportInstance *, /*@null@*/ const ucl_object_t *, mportPackageMessage **);
+void mport_pkg_message_free(/*@null@*/ /*@only@*/ mportPackageMessage *);
 
 #define RETURN_CURRENT_ERROR return mport_err_code()
 #define MPORT_ERROR_MESSAGE_MAX 1024
@@ -350,6 +359,7 @@ int mport_script_run_child(mportInstance *, int, int *, int, const char *);
 #define MPORT_MTREE_BIN "/usr/sbin/mtree"
 #define MPORT_CHROOT_BIN "/usr/sbin/chroot"
 #define MPORT_MAKE_BIN "/usr/bin/make"
+#define MPORT_SYSRC_BIN "/usr/sbin/sysrc"
 
 #define MPORT_URL_MAX 512
 
