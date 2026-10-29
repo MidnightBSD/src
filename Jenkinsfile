@@ -19,14 +19,20 @@ pipeline {
         }
         stage('BuildAndTest') {
             matrix {
+                options {
+                    lock(resource: "midnightbsd-src-${ARCHITECTURE}")
+                }
                 agent {
                     label "${ARCHITECTURE} && bsd"
                 }
 
-                when { anyOf {
-                    expression { params.ARCHITECTURE_FILTER == 'all' }
-                    expression { params.ARCHITECTURE_FILTER == env.ARCHITECTURE }
-                } }
+                when {
+                    beforeOptions true
+                    anyOf {
+                        expression { params.ARCHITECTURE_FILTER == 'all' }
+                        expression { params.ARCHITECTURE_FILTER == env.ARCHITECTURE }
+                    }
+                }
                 axes {
                     axis {
                         name 'ARCHITECTURE'
