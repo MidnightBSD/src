@@ -115,7 +115,14 @@ pipeline {
                         steps {
                             echo "Do tests for ${ARCHITECTURE}"
                             sh "rm -f ${KYUA_RESULTS} ${JUNIT_RESULTS}"
-                            sh "kyua test -k ${DESTDIR}/usr/tests/Kyuafile --results-file ${KYUA_RESULTS} || true"
+                            // A test stuck in the kernel (D state) ignores
+                            // kyua's SIGKILL and wedges kyua forever, so bound
+                            // the run and still report whatever finished.
+                            catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+                                timeout(time: 4, unit: 'HOURS') {
+                                    sh "kyua test -k ${DESTDIR}/usr/tests/Kyuafile --results-file ${KYUA_RESULTS} || true"
+                                }
+                            }
                             sh "kyua report-junit --output ${JUNIT_RESULTS} --results-file ${KYUA_RESULTS}"
                         }
                         post {
