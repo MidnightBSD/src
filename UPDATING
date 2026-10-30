@@ -1,5 +1,59 @@
 Updating Information for MidnightBSD users.
 
+20261030:
+	iflib(4) and igc(4) received the FreeBSD TX queue hang fixes from
+	August 2026.  The iflib TX watchdog, dead since 2020, works again:
+	a transmit queue that stays frozen under demand is asked whether
+	completions are pending and is reset only if the hardware has
+	nothing to report; a missed completion interrupt now just kicks
+	the queue task.  net.iflib.tx_watchdog_periods tunes the check (0
+	disables it) and dev.<driver>.<unit>.iflib.tx_watchdog_events
+	replaces the per-driver watchdog_timeouts sysctl in em(4), igb(4),
+	igc(4) and ix(4).  iflib also tracks the queue datapath lifecycle so
+	MTU, capability, VLAN and media changes no longer bring up an
+	administratively down interface, and a driver may now fail its init
+	method and leave the interface stopped.  igc(4) additionally
+	disables PCIe L1.2 on I225/I226 to avoid RX stalls, applies the I225
+	v1 IPG erratum workaround, fixes TXDCTL/RXDCTL threshold
+	programming, defers sysctl-driven reinit to the admin task, samples
+	its adaptive interrupt moderation counters coherently (including
+	the 2025 igc_neweitr() fixes), and corrects several statistics.
+	iflib also owns the datapath across suspend, shutdown and detach:
+	it stops the queues and drains its configuration tasks before the
+	driver's suspend or shutdown callback and initializes the datapath
+	exactly once on resume when the interface is up.  The new optional
+	ifdi_power_prepare method lets a driver establish policy before
+	that stop; em(4), igb(4), ixl(4), ix(4) and atlantic(4) no longer
+	initialize the interface from their resume or media-change
+	callbacks.  Media changes are rejected while suspended, the VFLR
+	task is always initialized, iflib_encap() no longer leaks or
+	double-frees mbufs on m_dup/m_pullup failure, and RS-deferral
+	accounting uses the descriptors the driver actually consumed.
+	iflib now creates led(4) devices for drivers with an ifdi_led_func
+	method, and igc(4) exposes its identification LED at
+	/dev/led/igc*, recovers from fatal internal memory errors (ICR.FER),
+	reports corrected ECC errors, counts EEE low power idle events, and
+	gained VLAN hardware filtering.  Its Wake-on-LAN filters are now
+	rebuilt on every suspend and advertised only when the PCI function
+	can signal PME# from D3hot; the pci(9) helpers pci_has_pm(),
+	pci_has_pme(), pci_enable_pme() and pci_clear_pme() were added for
+	this, together with PCI_POWERSTATE_D3_HOT/D3_COLD.  iflib no longer
+	holds the global ifnet lock across driver registration, drains its
+	configuration tasks before ether_ifdetach(), lets isc_rxd_pkt_get()
+	report hardware RX timestamps through the new if_rxd_info
+	iri_rcv_tstmp/iri_flags fields (if_rxd_info changed size: rebuild
+	all iflib(4) driver modules together with the kernel), and offers
+	iflib_device_iov_init_restart()/uninit_restart() for drivers whose
+	PF queue layout changes with SR-IOV (usable while the interface is
+	down).  Registration failures now unwind completely: the pre-attach
+	sysctls live in an iflib-owned sysctl context that is removed before
+	queue memory is freed (fixes a use-after-free from "sysctl -a" during
+	driver unload), IFDI_DETACH always follows a successful attach_pre,
+	the core-offset reference is released only when one was taken, and
+	debug.fail_point.iflib.* fail(9) points with
+	debug.iflib.register_fail_device / admin_task_fail_device selectors
+	exercise each unwind path.
+
 20261028:
 	mport(1) updated to 2.8.5.  Users who cannot write the package
 	database can now run the inspection commands (search, query, info,
