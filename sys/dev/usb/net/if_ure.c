@@ -1013,6 +1013,7 @@ ure_attach_post_sub(struct usb_ether *ue)
 	if_sethwassist(ifp, CSUM_IP|CSUM_IP_UDP|CSUM_IP_TCP);
 #ifdef INET6
 	if_setcapabilitiesbit(ifp, IFCAP_HWCSUM_IPV6, 0);
+	if_sethwassistbits(ifp, CSUM_IP6_UDP | CSUM_IP6_TCP, 0);
 #endif
 	if_setcapenable(ifp, if_getcapabilities(ifp));
 
@@ -1461,6 +1462,7 @@ ure_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		if ((mask & IFCAP_TXCSUM) != 0 &&
 		    (ifp->if_capabilities & IFCAP_TXCSUM) != 0) {
 			ifp->if_capenable ^= IFCAP_TXCSUM;
+			ifp->if_hwassist ^= CSUM_IP | CSUM_IP_UDP | CSUM_IP_TCP;
 		}
 		if ((mask & IFCAP_RXCSUM) != 0 &&
 		    (ifp->if_capabilities & IFCAP_RXCSUM) != 0) {
@@ -1469,6 +1471,7 @@ ure_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		if ((mask & IFCAP_TXCSUM_IPV6) != 0 &&
 		    (ifp->if_capabilities & IFCAP_TXCSUM_IPV6) != 0) {
 			ifp->if_capenable ^= IFCAP_TXCSUM_IPV6;
+			ifp->if_hwassist ^= CSUM_IP6_UDP | CSUM_IP6_TCP;
 		}
 		if ((mask & IFCAP_RXCSUM_IPV6) != 0 &&
 		    (ifp->if_capabilities & IFCAP_RXCSUM_IPV6) != 0) {
