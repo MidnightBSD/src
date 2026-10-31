@@ -544,7 +544,6 @@ struct e1000_softc {
 	unsigned long		dropped_pkts;
 	unsigned long		link_irq;
 	unsigned long		rx_overruns;
-	unsigned long		watchdog_events;
 
 	struct e1000_hw_stats	stats;
 	u16			vf_ifp;

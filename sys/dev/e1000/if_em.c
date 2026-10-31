@@ -416,7 +416,6 @@ static int	em_if_mtu_set(if_ctx_t, uint32_t);
 static void	em_if_timer(if_ctx_t, uint16_t);
 static void	em_if_vlan_register(if_ctx_t, u16);
 static void	em_if_vlan_unregister(if_ctx_t, u16);
-static void	em_if_watchdog_reset(if_ctx_t);
 static bool	em_if_needs_restart(if_ctx_t, enum iflib_restart_event);
 
 static void	em_identify_hardware(if_ctx_t);
@@ -573,7 +572,6 @@ static device_method_t em_if_methods[] = {
 	DEVMETHOD(ifdi_mtu_set, em_if_mtu_set),
 	DEVMETHOD(ifdi_promisc_set, em_if_set_promisc),
 	DEVMETHOD(ifdi_timer, em_if_timer),
-	DEVMETHOD(ifdi_watchdog_reset, em_if_watchdog_reset),
 	DEVMETHOD(ifdi_vlan_register, em_if_vlan_register),
 	DEVMETHOD(ifdi_vlan_unregister, em_if_vlan_unregister),
 	DEVMETHOD(ifdi_get_counter, em_if_get_counter),
@@ -611,7 +609,6 @@ static device_method_t igb_if_methods[] = {
 	DEVMETHOD(ifdi_mtu_set, em_if_mtu_set),
 	DEVMETHOD(ifdi_promisc_set, em_if_set_promisc),
 	DEVMETHOD(ifdi_timer, em_if_timer),
-	DEVMETHOD(ifdi_watchdog_reset, em_if_watchdog_reset),
 	DEVMETHOD(ifdi_vlan_register, em_if_vlan_register),
 	DEVMETHOD(ifdi_vlan_unregister, em_if_vlan_unregister),
 	DEVMETHOD(ifdi_get_counter, em_if_get_counter),
@@ -1460,8 +1457,6 @@ em_if_resume(if_ctx_t ctx)
 
 	if (sc->hw.mac.type == e1000_pch2lan)
 		e1000_resume_workarounds_pchlan(&sc->hw);
-	em_if_init(ctx);
-	em_init_manageability(sc);
 
 	return(0);
 }
@@ -2067,8 +2062,6 @@ em_if_media_change(if_ctx_t ctx)
 		device_printf(sc->dev, "Unsupported media type\n");
 	}
 
-	em_if_init(ctx);
-
 	return (0);
 }
 
@@ -2307,18 +2300,6 @@ em_if_update_admin_status(if_ctx_t ctx)
 
 	if (hw->mac.type < em_mac_min)
 		lem_smartspeed(sc);
-}
-
-static void
-em_if_watchdog_reset(if_ctx_t ctx)
-{
-	struct e1000_softc *sc = iflib_get_softc(ctx);
-
-	/*
-	 * Just count the event; iflib(4) will already trigger a
-	 * sufficient reset of the controller.
-	 */
-	sc->watchdog_events++;
 }
 
 /*********************************************************************
@@ -4783,8 +4764,7 @@ em_if_get_counter(if_ctx_t ctx, ift_counter cnt)
 		    sc->stats.ruc + sc->stats.roc +
 		    sc->stats.mpc + sc->stats.cexterr);
 	case IFCOUNTER_OERRORS:
-		return (sc->stats.ecol + sc->stats.latecol +
-		    sc->watchdog_events);
+		return (sc->stats.ecol + sc->stats.latecol);
 	default:
 		return (if_get_counter_default(ifp, cnt));
 	}
@@ -4903,9 +4883,6 @@ em_add_hw_stats(struct e1000_softc *sc)
 	SYSCTL_ADD_ULONG(ctx, child, OID_AUTO, "rx_overruns",
 	    CTLFLAG_RD, &sc->rx_overruns,
 	    "RX overruns");
-	SYSCTL_ADD_ULONG(ctx, child, OID_AUTO, "watchdog_timeouts",
-	    CTLFLAG_RD, &sc->watchdog_events,
-	    "Watchdog timeouts");
 	SYSCTL_ADD_PROC(ctx, child, OID_AUTO, "device_control",
 	    CTLTYPE_UINT | CTLFLAG_RD,
 	    sc, E1000_CTRL, em_sysctl_reg_handler, "IU",
@@ -5483,6 +5460,16 @@ em_set_flowcntl(SYSCTL_HANDLER_ARGS)
 	return (error);
 }
 
+static void
+em_sysctl_request_reinit(struct e1000_softc *sc)
+{
+	if ((if_getflags(iflib_get_ifp(sc->ctx)) & IFF_UP) == 0)
+		return;
+
+	iflib_request_reset(sc->ctx);
+	iflib_admin_intr_deferred(sc->ctx);
+}
+
 /*
  * Manage DMA Coalesce:
  * Control values:
@@ -5528,7 +5515,7 @@ igb_sysctl_dmac(SYSCTL_HANDLER_ARGS)
 			return (EINVAL);
 	}
 	/* Reinit the interface */
-	em_if_init(sc->ctx);
+	em_sysctl_request_reinit(sc);
 	return (error);
 }
 
@@ -5554,7 +5541,7 @@ em_sysctl_eee(SYSCTL_HANDLER_ARGS)
 		sc->hw.dev_spec.ich8lan.eee_disable = (value != 0);
 	else
 		sc->hw.dev_spec._82575.eee_disable = (value != 0);
-	em_if_init(sc->ctx);
+	em_sysctl_request_reinit(sc);
 
 	return (0);
 }
