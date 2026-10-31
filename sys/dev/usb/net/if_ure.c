@@ -999,7 +999,7 @@ ure_attach_post_sub(struct usb_ether *ue)
 	ifp->if_start = uether_start;
 	ifp->if_ioctl = ure_ioctl;
 	ifp->if_init = uether_init;
-	IFQ_SET_MAXLEN(&ifp->if_snd, ifqmaxlen);
+	IFQ_SET_MAXLEN(&ifp->if_snd, 512);
 	/*
 	 * Try to keep two transfers full at a time.
 	 * ~(TRANSFER_SIZE / 80 bytes/pkt * 2 buffers in flight)
@@ -1013,6 +1013,7 @@ ure_attach_post_sub(struct usb_ether *ue)
 	if_sethwassist(ifp, CSUM_IP|CSUM_IP_UDP|CSUM_IP_TCP);
 #ifdef INET6
 	if_setcapabilitiesbit(ifp, IFCAP_HWCSUM_IPV6, 0);
+	if_sethwassistbits(ifp, CSUM_IP6_UDP | CSUM_IP6_TCP, 0);
 #endif
 	if_setcapenable(ifp, if_getcapabilities(ifp));
 
@@ -1461,6 +1462,7 @@ ure_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		if ((mask & IFCAP_TXCSUM) != 0 &&
 		    (ifp->if_capabilities & IFCAP_TXCSUM) != 0) {
 			ifp->if_capenable ^= IFCAP_TXCSUM;
+			ifp->if_hwassist ^= CSUM_IP | CSUM_IP_UDP | CSUM_IP_TCP;
 		}
 		if ((mask & IFCAP_RXCSUM) != 0 &&
 		    (ifp->if_capabilities & IFCAP_RXCSUM) != 0) {
@@ -1469,6 +1471,7 @@ ure_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		if ((mask & IFCAP_TXCSUM_IPV6) != 0 &&
 		    (ifp->if_capabilities & IFCAP_TXCSUM_IPV6) != 0) {
 			ifp->if_capenable ^= IFCAP_TXCSUM_IPV6;
+			ifp->if_hwassist ^= CSUM_IP6_UDP | CSUM_IP6_TCP;
 		}
 		if ((mask & IFCAP_RXCSUM_IPV6) != 0 &&
 		    (ifp->if_capabilities & IFCAP_RXCSUM_IPV6) != 0) {
@@ -1481,6 +1484,7 @@ ure_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		URE_UNLOCK(sc);
 		if (reinit > 0)
 			uether_init(ue);
+		if_vlancap(ifp);
 		break;
 
 	case SIOCSIFMTU:
