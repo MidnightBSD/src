@@ -727,7 +727,6 @@ aq_if_shutdown(if_ctx_t ctx)
 
 	AQ_DBG_ENTER();
 
-	aq_if_stop(ctx);
 #ifdef IFCAP_WOL_MAGIC
 	softc->hw.wol_flags = (if_getcapenable(ifp) & IFCAP_WOL_MAGIC) ?
 	    AQ_WOL_MAGIC :
@@ -755,7 +754,6 @@ aq_if_suspend(if_ctx_t ctx)
 
 	AQ_DBG_ENTER();
 
-	aq_if_stop(ctx);
 #ifdef IFCAP_WOL_MAGIC
 	softc->hw.wol_flags = (if_getcapenable(ifp) & IFCAP_WOL_MAGIC) ?
 	    AQ_WOL_MAGIC :
@@ -779,8 +777,6 @@ static int
 aq_if_resume(if_ctx_t ctx)
 {
 	AQ_DBG_ENTER();
-
-	aq_if_init(ctx);
 
 	AQ_DBG_EXIT(0);
 	return (0);

@@ -512,6 +512,10 @@ pci_is_vga_memory_range(rman_res_t start, rman_res_t end)
 #define	PCI_POWERSTATE_D1	1
 #define	PCI_POWERSTATE_D2	2
 #define	PCI_POWERSTATE_D3	3
+#define	PCI_POWERSTATE_D3_HOT	PCI_POWERSTATE_D3
+#define	PCI_POWERSTATE_D3_COLD	4
+#define	PCI_POWERSTATE_MAX	PCI_POWERSTATE_D3_COLD
+#define	PCI_POWERSTATE_COUNT	5
 #define	PCI_POWERSTATE_UNKNOWN	-1
 
 static __inline int
@@ -682,6 +686,10 @@ void	pci_restore_state(device_t dev);
 void	pci_save_state(device_t dev);
 int	pci_set_max_read_req(device_t dev, int size);
 int	pci_power_reset(device_t dev);
+void	pci_clear_pme(device_t dev);
+void	pci_enable_pme(device_t dev);
+bool	pci_has_pm(device_t dev);
+bool	pci_has_pme(device_t dev, int state);
 uint32_t pcie_read_config(device_t dev, int reg, int width);
 void	pcie_write_config(device_t dev, int reg, uint32_t value, int width);
 uint32_t pcie_adjust_config(device_t dev, int reg, uint32_t mask,

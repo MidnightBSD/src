@@ -2915,6 +2915,65 @@ pci_get_powerstate_method(device_t dev, device_t child)
 	return (result);
 }
 
+/* Clear any active PME# and disable PME# generation. */
+void
+pci_clear_pme(device_t dev)
+{
+	struct pci_devinfo *dinfo = device_get_ivars(dev);
+	pcicfgregs *cfg = &dinfo->cfg;
+	uint16_t status;
+
+	if (cfg->pp.pp_cap != 0) {
+		status = pci_read_config(dev, dinfo->cfg.pp.pp_status, 2);
+		status &= ~PCIM_PSTAT_PMEENABLE;
+		status |= PCIM_PSTAT_PME;
+		pci_write_config(dev, dinfo->cfg.pp.pp_status, status, 2);
+	}
+}
+
+/* Clear any active PME# and enable PME# generation. */
+void
+pci_enable_pme(device_t dev)
+{
+	struct pci_devinfo *dinfo = device_get_ivars(dev);
+	pcicfgregs *cfg = &dinfo->cfg;
+	uint16_t status;
+
+	if (cfg->pp.pp_cap != 0) {
+		status = pci_read_config(dev, dinfo->cfg.pp.pp_status, 2);
+		status |= PCIM_PSTAT_PME | PCIM_PSTAT_PMEENABLE;
+		pci_write_config(dev, dinfo->cfg.pp.pp_status, status, 2);
+	}
+}
+
+bool
+pci_has_pm(device_t dev)
+{
+	struct pci_devinfo *dinfo = device_get_ivars(dev);
+	pcicfgregs *cfg = &dinfo->cfg;
+
+	return (cfg->pp.pp_cap != 0);
+}
+
+bool
+pci_has_pme(device_t dev, int state)
+{
+	static const uint16_t pme_mask[PCI_POWERSTATE_COUNT] = {
+		[PCI_POWERSTATE_D0] = PCIM_PCAP_D0PME,
+		[PCI_POWERSTATE_D1] = PCIM_PCAP_D1PME,
+		[PCI_POWERSTATE_D2] = PCIM_PCAP_D2PME,
+		[PCI_POWERSTATE_D3_HOT] = PCIM_PCAP_D3PME_HOT,
+		[PCI_POWERSTATE_D3_COLD] = PCIM_PCAP_D3PME_COLD,
+	};
+	struct pci_devinfo *dinfo = device_get_ivars(dev);
+	pcicfgregs *cfg = &dinfo->cfg;
+
+	if (state < PCI_POWERSTATE_D0 || state > PCI_POWERSTATE_MAX)
+		return (false);
+	return (cfg->pp.pp_cap != 0 &&
+	    (cfg->pp.pp_cap & pme_mask[state]) != 0);
+}
+
 /*
  * Some convenience functions for PCI device drivers.
  */
@@ -4457,6 +4516,7 @@ pci_add_child(device_t bus, struct pci_devinfo *dinfo)
 	resource_list_init(&dinfo->resources);
 	pci_cfg_save(dev, dinfo, 0);
 	pci_cfg_restore(dev, dinfo);
+	pci_clear_pme(dev);
 	pci_print_verbose(dinfo);
 	pci_add_resources(bus, dev, 0, 0);
 	if (pci_enable_mps_tune)
@@ -4649,6 +4709,7 @@ pci_resume_child(device_t dev, device_t child)
 
 	dinfo = device_get_ivars(child);
 	pci_cfg_restore(child, dinfo);
+	pci_clear_pme(child);
 	if (!device_is_attached(child))
 		pci_cfg_save(child, dinfo, 1);
 

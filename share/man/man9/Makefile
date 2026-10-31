@@ -1268,12 +1268,14 @@ MLINKS+=iflibdd.9 ifdi_attach_pre.9 \
 	iflibdd.9 ifdi_media_change.9 \
 	iflibdd.9 ifdi_mtu_set.9 \
 	iflibdd.9 ifdi_multi_set.9 \
+	iflibdd.9 ifdi_power_prepare.9 \
 	iflibdd.9 ifdi_promisc_set.9 \
 	iflibdd.9 ifdi_queues_alloc.9 \
 	iflibdd.9 ifdi_queues_free.9 \
 	iflibdd.9 ifdi_queue_intr_enable.9 \
 	iflibdd.9 ifdi_resume.9 \
 	iflibdd.9 ifdi_rxq_setup.9 \
+	iflibdd.9 ifdi_shutdown.9 \
 	iflibdd.9 ifdi_stop.9 \
 	iflibdd.9 ifdi_suspend.9 \
 	iflibdd.9 ifdi_sysctl_int_delay.9 \
@@ -1297,8 +1299,11 @@ MLINKS+=iflibdi.9 iflib_add_int_delay_sysctl.9 \
 	iflibdi.9 iflib_led_create.9 \
 	iflibdi.9 iflib_irq_alloc.9 \
 	iflibdi.9 iflib_irq_alloc_generic.9 \
+	iflibdi.9 iflib_init_failed.9 \
 	iflibdi.9 iflib_link_intr_deferred.9 \
 	iflibdi.9 iflib_link_state_change.9 \
+	iflibdi.9 iflib_request_reset.9 \
+	iflibdi.9 iflib_request_reset_if_up.9 \
 	iflibdi.9 iflib_rx_intr_deferred.9 \
 	iflibdi.9 iflib_tx_intr_deferred.9
 MLINKS+=iflibtxrx.9 isc_rxd_available.9 \
@@ -1748,10 +1753,12 @@ MLINKS+=PCBGROUP.9 in_pcbgroup_byhash.9 \
 	PCBGROUP.9 in6_pcbgroup_byhash.9
 MLINKS+=pci.9 pci_alloc_msi.9 \
 	pci.9 pci_alloc_msix.9 \
+	pci.9 pci_clear_pme.9 \
 	pci.9 pci_disable_busmaster.9 \
 	pci.9 pci_disable_io.9 \
 	pci.9 pci_enable_busmaster.9 \
 	pci.9 pci_enable_io.9 \
+	pci.9 pci_enable_pme.9 \
 	pci.9 pci_find_bsf.9 \
 	pci.9 pci_find_cap.9 \
 	pci.9 pci_find_dbsf.9 \
@@ -1764,6 +1771,8 @@ MLINKS+=pci.9 pci_alloc_msi.9 \
 	pci.9 pci_get_powerstate.9 \
 	pci.9 pci_get_vpd_ident.9 \
 	pci.9 pci_get_vpd_readonly.9 \
+	pci.9 pci_has_pm.9 \
+	pci.9 pci_has_pme.9 \
 	pci.9 pci_iov_attach.9 \
 	pci.9 pci_iov_attach_name.9 \
 	pci.9 pci_iov_detach.9 \
