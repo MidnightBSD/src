@@ -1484,6 +1484,7 @@ ure_ioctl(struct ifnet *ifp, u_long cmd, caddr_t data)
 		URE_UNLOCK(sc);
 		if (reinit > 0)
 			uether_init(ue);
+		if_vlancap(ifp);
 		break;
 
 	case SIOCSIFMTU:
