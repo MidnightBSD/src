@@ -999,7 +999,7 @@ ure_attach_post_sub(struct usb_ether *ue)
 	ifp->if_start = uether_start;
 	ifp->if_ioctl = ure_ioctl;
 	ifp->if_init = uether_init;
-	IFQ_SET_MAXLEN(&ifp->if_snd, ifqmaxlen);
+	IFQ_SET_MAXLEN(&ifp->if_snd, 512);
 	/*
 	 * Try to keep two transfers full at a time.
 	 * ~(TRANSFER_SIZE / 80 bytes/pkt * 2 buffers in flight)
