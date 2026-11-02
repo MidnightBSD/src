@@ -37,6 +37,7 @@
 #include <time.h>
 #include <poll.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <pwd.h>
 #include <grp.h>
 #include <syslog.h>
@@ -54,7 +55,8 @@ static void get_range(int, char *);
 static void init_db(void);
 static int is_valid_region(const char *);
 static void load_region_setting(sqlite3 *);
-static void cleanup(int);
+static void cleanup(void);
+static void request_shutdown(int);
 
 static char *current_region = NULL;
 static sqlite3 *db = NULL;
@@ -62,9 +64,17 @@ static sqlite3_stmt *stmt_set = NULL;
 static sqlite3_stmt *stmt_reg = NULL;
 static sqlite3_stmt *stmt_get = NULL;
 static sqlite3_stmt *stmt_load_reg = NULL;
+static int run_dir_fd = -1;
+static volatile sig_atomic_t stop_requested;
 
 static void
-cleanup(int sig __unused)
+request_shutdown(int sig __unused)
+{
+	stop_requested = 1;
+}
+
+static void
+cleanup(void)
 {
 	if (stmt_set)
 		sqlite3_finalize(stmt_set);
@@ -79,9 +89,16 @@ cleanup(int sig __unused)
 	if (current_region)
 		free(current_region);
 
-	unlink(SOCKET_PATH);
-	unlink("/var/run/aged/aged.pid");
-	exit(0);
+	if (run_dir_fd >= 0) {
+		if (unlinkat(run_dir_fd, "aged.sock", 0) == -1 &&
+		    errno != ENOENT)
+			syslog(LOG_ERR, "unlink aged.sock: %m");
+		if (unlinkat(run_dir_fd, "aged.pid", 0) == -1 &&
+		    errno != ENOENT)
+			syslog(LOG_ERR, "unlink aged.pid: %m");
+		close(run_dir_fd);
+		run_dir_fd = -1;
+	}
 }
 
 static int
@@ -111,6 +128,10 @@ main(void)
 	uid_t client_uid;
 	gid_t client_gid;
 	struct passwd *pw;
+	struct sigaction sa;
+	sigset_t stop_signals, wait_mask;
+	cap_rights_t rights;
+	int status = 0;
 
 	umask(0077);
 	openlog("aged", LOG_PID, LOG_DAEMON);
@@ -120,8 +141,24 @@ main(void)
 		exit(1);
 	}
 
-	signal(SIGTERM, cleanup);
-	signal(SIGINT, cleanup);
+	/* Deliver stop signals only during the atomic signal-aware wait. */
+	sigemptyset(&stop_signals);
+	sigaddset(&stop_signals, SIGTERM);
+	sigaddset(&stop_signals, SIGINT);
+	if (sigprocmask(SIG_BLOCK, &stop_signals, &wait_mask) == -1) {
+		syslog(LOG_ERR, "sigprocmask: %m");
+		exit(1);
+	}
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_handler = request_shutdown;
+	sa.sa_mask = stop_signals;
+	if (sigaction(SIGTERM, &sa, NULL) == -1 ||
+	    sigaction(SIGINT, &sa, NULL) == -1) {
+		syslog(LOG_ERR, "sigaction: %m");
+		exit(1);
+	}
+	sigdelset(&wait_mask, SIGTERM);
+	sigdelset(&wait_mask, SIGINT);
 
 	if ((pw = getpwnam(RUN_USER)) == NULL) {
 		syslog(LOG_ERR, "getpwnam failed for %s", RUN_USER);
@@ -142,6 +179,20 @@ main(void)
 
 	if (setgid(pw->pw_gid) != 0 || setuid(pw->pw_uid) != 0) {
 		syslog(LOG_ERR, "setgid/setuid failed");
+		exit(1);
+	}
+
+	/* Retain only the directory authority needed for sandboxed cleanup. */
+	run_dir_fd = open("/var/run/aged",
+	    O_RDONLY | O_DIRECTORY | O_CLOEXEC | O_NOFOLLOW);
+	if (run_dir_fd == -1) {
+		syslog(LOG_ERR, "open /var/run/aged: %m");
+		exit(1);
+	}
+	cap_rights_init(&rights, CAP_UNLINKAT);
+	if (cap_rights_limit(run_dir_fd, &rights) == -1) {
+		syslog(LOG_ERR, "cap_rights_limit run directory: %m");
+		close(run_dir_fd);
 		exit(1);
 	}
 
@@ -206,8 +257,16 @@ main(void)
 
 	syslog(LOG_NOTICE, "aged daemon started");
 
-	while (1) {
-		if (poll(&pfd, 1, -1) <= 0) continue;
+	while (!stop_requested) {
+		if (ppoll(&pfd, 1, NULL, &wait_mask) == -1) {
+			if (errno == EINTR)
+				continue;
+			syslog(LOG_ERR, "ppoll: %m");
+			status = 1;
+			break;
+		}
+		if (stop_requested)
+			break;
 
 		if ((client_fd = accept(server_fd, NULL, NULL)) == -1) {
 			continue;
@@ -376,8 +435,10 @@ main(void)
 		close(client_fd);
 	}
 
+	close(server_fd);
+	cleanup();
 	closelog();
-	return 0;
+	return (status);
 }
 
 int
