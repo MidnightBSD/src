@@ -57,6 +57,7 @@ static int is_valid_region(const char *);
 static void load_region_setting(sqlite3 *);
 static void cleanup(void);
 static void request_shutdown(int);
+static int shutdown_requested(void);
 
 static char *current_region = NULL;
 static sqlite3 *db = NULL;
@@ -71,6 +72,20 @@ static void
 request_shutdown(int sig __unused)
 {
 	stop_requested = 1;
+}
+
+static int
+shutdown_requested(void)
+{
+	sigset_t pending;
+
+	if (stop_requested)
+		return (1);
+	/* A ready ppoll() can return without delivering a pending signal. */
+	if (sigpending(&pending) == -1)
+		return (-1);
+	return (sigismember(&pending, SIGTERM) == 1 ||
+	    sigismember(&pending, SIGINT) == 1);
 }
 
 static void
@@ -132,9 +147,10 @@ main(void)
 	sigset_t stop_signals, wait_mask;
 	cap_rights_t rights;
 	int status = 0;
+	int stopping;
 
 	umask(0077);
-	openlog("aged", LOG_PID, LOG_DAEMON);
+	openlog("aged", LOG_PID | LOG_NDELAY, LOG_DAEMON);
 
 	if (daemon(0, 0) == -1) {
 		syslog(LOG_ERR, "daemon: %m");
@@ -257,7 +273,15 @@ main(void)
 
 	syslog(LOG_NOTICE, "aged daemon started");
 
-	while (!stop_requested) {
+	for (;;) {
+		stopping = shutdown_requested();
+		if (stopping != 0) {
+			if (stopping == -1) {
+				syslog(LOG_ERR, "sigpending: %m");
+				status = 1;
+			}
+			break;
+		}
 		if (ppoll(&pfd, 1, NULL, &wait_mask) == -1) {
 			if (errno == EINTR)
 				continue;
