@@ -1,0 +1,103 @@
+.\" SPDX-License-Identifier: BSD-2-Clause
+.Dd November 1, 2026
+.Dt NSS_DNSSD 8
+.Os
+.Sh NAME
+.Nm nss_dnssd
+.Nd host name lookups through the mDNSResponder DNS cache
+.Sh DESCRIPTION
+The
+.Nm
+NSS module sends unicast DNS address and reverse lookups to
+.Xr mDNSResponderPosix 8
+through
+.Fn DNSServiceQueryRecord .
+The daemon shares cached answers between processes.
+The module does not maintain a separate cache.
+It implements
+.Xr getaddrinfo 3 ,
+.Xr gethostbyname2 3 ,
+and
+.Xr gethostbyaddr 3 ,
+including IPv4 and IPv6 addresses.
+.Pp
+To opt in, add
+.Ql dnssd
+before
+.Ql dns
+in the hosts database entry in
+.Pa /etc/nsswitch.conf :
+.Bd -literal -offset indent
+hosts: files dnssd [NOTFOUND=return] dns
+.Ed
+.Pp
+The
+.Ql NOTFOUND=return
+action makes negative answers from the daemon terminal.
+Unavailable and temporary failures continue to
+.Ql dns .
+Keep
+.Ql dns
+as a fallback for daemon failures and unsupported lookups.
+The default system configuration is not changed by installing this module.
+The daemon must be running before lookups can use its cache.
+.Pp
+The module reads the search list and
+.Cm ndots
+setting from
+.Xr resolv.conf 5
+and submits absolute query names to the daemon.
+Names under
+.Ql .local
+are left to other NSS sources, including the existing
+.Ql mdns
+source when configured.
+If a search candidate is under
+.Ql .local ,
+the entire lookup is deferred to preserve search order.
+The
+.Ql dnssd
+source does not replace the multicast
+.Ql mdns
+source.
+.Pp
+A and AAAA requests run concurrently, with independent completion states.
+A completed address family can succeed even if the other family fails.
+The polling loop uses a five second deadline per search candidate.
+The DNS-SD client library performs its own synchronous request setup;
+that setup can take longer than the reply deadline when the daemon stalls.
+A daemon sending incomplete IPC messages can also extend processing
+beyond that deadline.
+.Sh LIMITATIONS
+The current POSIX daemon reads IPv4 upstream nameserver addresses only.
+This does not prevent resolving AAAA records through those servers.
+Resolver configuration reloads can retain previously configured servers;
+restart the daemon after changing upstream DNS servers.
+The daemon does not implement every libc resolver option.
+.Pp
+The DNS-SD API reports both nonexistent names and missing record types as
+.Dv kDNSServiceErr_NoSuchRecord .
+The module returns
+.Dv NS_NOTFOUND
+for both cases.
+.Pp
+For security, privileged processes defer to other sources if
+.Ev DNSSD_UDS_PATH
+is set, since the DNS-SD client library otherwise uses that variable to
+select the daemon socket.
+.Sh FILES
+.Bl -tag -width /var/run/mDNSResponder
+.It Pa /etc/nsswitch.conf
+NSS source configuration.
+.It Pa /etc/resolv.conf
+Resolver search policy and daemon upstream server configuration.
+.It Pa /var/run/mDNSResponder
+Default daemon IPC socket.
+.El
+.Sh SEE ALSO
+.Xr getaddrinfo 3 ,
+.Xr gethostbyaddr 3 ,
+.Xr gethostbyname2 3 ,
+.Xr nsswitch.conf 5 ,
+.Xr resolv.conf 5 ,
+.Xr mDNSResponderPosix 8

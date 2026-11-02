@@ -176,6 +176,7 @@ _LIBRARIES=	\
 		netmap \
 		netpgp \
 		ngatm \
+		nss_dnssd \
 		nss_mdns \
 		nv \
 		nvpair \
@@ -455,6 +456,7 @@ _DP_msearch=	sqlite3 magic z
 _DP_mport=	md archive lzma z elf fetch sqlite3 ucl pthread util zstd
 _DP_mj=         bz2 crypto z
 _DP_dns_sd=	pthread
+_DP_nss_dnssd=	dns_sd
 _DP_nss_mdns=	pthread dns_sd
 
 # Define special cases
@@ -756,6 +758,7 @@ LIBCAP_SYSLOGDIR=	${OBJTOP}/lib/libcasper/services/cap_syslog
 LIBCBORDIR=	${OBJTOP}/lib/libcbor
 LIBBSDXMLDIR=	${OBJTOP}/lib/libexpat
 LIBDNS_SDDIR=	${OBJTOP}/lib/libdns_sd
+LIBNSS_DNSSDDIR=	${OBJTOP}/lib/libnss_dnssd
 LIBNSS_MDNSDDIR=	${OBJTOP}/lib/libnss_mdns
 LIBFIDO2DIR=	${OBJTOP}/lib/libfido2
 LIBKVMDIR=	${OBJTOP}/lib/libkvm
