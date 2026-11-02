@@ -200,7 +200,7 @@ libusb_hotplug_scan(void *arg)
 			timeout = (int)((next_scan.tv_sec - now.tv_sec) * 1000 +
 			    (next_scan.tv_nsec - now.tv_nsec) / 1000000);
 		rescan = libusb_hotplug_wait(&pfd, timeout);
-		if (timeout == 0)
+		if (!timed || timeout == 0)
 			rescan = 1;
 
 		HOTPLUG_LOCK(ctx);
