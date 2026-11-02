@@ -3,6 +3,8 @@
 # Makefile for the MidnightBSD specific LibUSB 2.0
 #
 
+.include <src.opts.mk>
+
 LIB=		usb
 SHLIB_MAJOR=	3
 SHLIB_MINOR=	0
@@ -34,6 +36,9 @@ SRCS+=		libusb10_hotplug.c
 SRCS+=		libusb10_io.c
 
 PCFILES=	libusb-0.1.pc libusb-1.0.pc libusb-2.0.pc
+
+HAS_TESTS=
+SUBDIR.${MK_TESTS}+= tests
 
 #
 # Cross platform support
