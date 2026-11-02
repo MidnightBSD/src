@@ -40,6 +40,8 @@
 #include <sys/queue.h>
 #include <sys/endian.h>
 #endif
+#include <sys/socket.h>
+#include <sys/un.h>
 
 #define	libusb_device_handle libusb20_device
 
@@ -48,6 +50,65 @@
 #include "libusb20_int.h"
 #include "libusb.h"
 #include "libusb10.h"
+
+static int
+libusb_hotplug_connect(void)
+{
+	struct sockaddr_un addr;
+	int fd;
+
+	fd = socket(PF_LOCAL, SOCK_SEQPACKET | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
+	if (fd < 0)
+		return (-1);
+
+	memset(&addr, 0, sizeof(addr));
+	addr.sun_family = AF_UNIX;
+	strlcpy(addr.sun_path, "/var/run/devd.seqpacket.pipe",
+	    sizeof(addr.sun_path));
+	if (connect(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+		close(fd);
+		return (-1);
+	}
+	return (fd);
+}
+
+/* Return non-zero when the device list needs to be reconciled. */
+static int
+libusb_hotplug_wait(struct pollfd *pfd, int timeout)
+{
+	static const char prefix[] = "!system=USB subsystem=DEVICE ";
+	char buf[1024];
+	ssize_t len;
+	int ret;
+
+	ret = poll(pfd, 1, timeout);
+	if (ret == 0)
+		return (1);
+	if (ret < 0) {
+		if (errno == EINTR)
+			return (0);
+		goto disconnected;
+	}
+	if (pfd->revents & (POLLERR | POLLHUP | POLLNVAL))
+		goto disconnected;
+	if (!(pfd->revents & POLLIN))
+		return (0);
+
+	/* devd sends packet records, without a terminating NUL byte. */
+	len = recv(pfd->fd, buf, sizeof(buf), MSG_DONTWAIT);
+	if (len < 0 && (errno == EAGAIN || errno == EINTR))
+		return (0);
+	if (len <= 0)
+		goto disconnected;
+	return (len >= (ssize_t)(sizeof(prefix) - 1) &&
+	    memcmp(buf, prefix, sizeof(prefix) - 1) == 0);
+
+disconnected:
+	if (pfd->fd >= 0)
+		close(pfd->fd);
+	pfd->fd = -1;
+	return (1);
+}
 
 static int
 libusb_hotplug_equal(libusb_device *_adev, libusb_device *_bdev)
@@ -112,16 +173,49 @@ libusb_hotplug_scan(void *arg)
 	libusb_device *temp;
 	libusb_device *adev;
 	libusb_device *bdev;
+	struct pollfd pfd;
+	struct timespec next_scan, now;
+	int timeout, rescan, timed;
 	unsigned do_loop = 1;
 
+	/* Subscribe before the first scan, so changes during it are queued. */
+	pfd.fd = libusb_hotplug_connect();
+	pfd.events = POLLIN;
+	timed = clock_gettime(CLOCK_MONOTONIC, &next_scan) == 0;
+
 	while (do_loop) {
-		usleep(4000000);
+		timeout = 4000;
+		if (timed)
+			timed = clock_gettime(CLOCK_MONOTONIC, &now) == 0;
+		if (!timed) {
+			/* Polling avoids starvation if the clock fails. */
+			if (pfd.fd >= 0)
+				close(pfd.fd);
+			pfd.fd = -1;
+		} else if (now.tv_sec > next_scan.tv_sec ||
+		    (now.tv_sec == next_scan.tv_sec &&
+		    now.tv_nsec >= next_scan.tv_nsec))
+			timeout = 0;
+		else
+			timeout = (int)((next_scan.tv_sec - now.tv_sec) * 1000 +
+			    (next_scan.tv_nsec - now.tv_nsec) / 1000000);
+		rescan = libusb_hotplug_wait(&pfd, timeout);
+		if (timeout == 0)
+			rescan = 1;
 
 		HOTPLUG_LOCK(ctx);
 
 		TAILQ_INIT(&hotplug_devs);
 
 		if (ctx->hotplug_handler != NO_THREAD) {
+			if (!rescan) {
+				HOTPLUG_UNLOCK(ctx);
+				continue;
+			}
+			/* Events can be lost or precede device removal. */
+			timed = clock_gettime(CLOCK_MONOTONIC, &next_scan) == 0;
+			if (timed)
+				next_scan.tv_sec += 4;
 			if (libusb_hotplug_enumerate(ctx, &hotplug_devs) < 0) {
 				HOTPLUG_UNLOCK(ctx);
 				continue;
@@ -175,6 +269,8 @@ libusb_hotplug_scan(void *arg)
 			libusb_unref_device(adev);
 		}
 	}
+	if (pfd.fd >= 0)
+		close(pfd.fd);
 	return (NULL);
 }
 
