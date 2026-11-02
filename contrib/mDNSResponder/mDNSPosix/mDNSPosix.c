@@ -1062,9 +1062,12 @@ mDNSlocal void ClearInterfaceList(mDNS *const m)
 
 mDNSlocal int SetupIPv6Socket(int fd)
 {
-    int err;
+    int err = 0;
 
-    #if defined(IPV6_PKTINFO)
+    #if defined(IPV6_RECVPKTINFO)
+    err = setsockopt(fd, IPPROTO_IPV6, IPV6_RECVPKTINFO, &kOn, sizeof(kOn));
+    if (err < 0) { err = errno; perror("setsockopt - IPV6_RECVPKTINFO"); }
+    #elif defined(IPV6_PKTINFO)
     err = setsockopt(fd, IPPROTO_IPV6, IPV6_2292_PKTINFO, &kOn, sizeof(kOn));
     if (err < 0) { err = errno; perror("setsockopt - IPV6_PKTINFO"); }
     #else
@@ -1224,11 +1227,16 @@ mDNSlocal int SetupSocket(struct sockaddr *intfAddr, mDNSIPPort port, int interf
         if (err == 0) {
             err = SetupIPv6Socket(*sktPtr);
         }
-    #if defined(IPV6_HOPLIMIT)
+    #if defined(IPV6_RECVHOPLIMIT) || defined(IPV6_HOPLIMIT)
         if (err == 0)
         {
+        #if defined(IPV6_RECVHOPLIMIT)
+            err = setsockopt(*sktPtr, IPPROTO_IPV6, IPV6_RECVHOPLIMIT, &kOn, sizeof(kOn));
+            if (err < 0) { err = errno; perror("setsockopt - IPV6_RECVHOPLIMIT"); }
+        #else
             err = setsockopt(*sktPtr, IPPROTO_IPV6, IPV6_2292_HOPLIMIT, &kOn, sizeof(kOn));
             if (err < 0) { err = errno; perror("setsockopt - IPV6_HOPLIMIT"); }
+        #endif
         }
     #endif
 
