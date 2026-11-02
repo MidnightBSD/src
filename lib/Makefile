@@ -111,6 +111,7 @@ SUBDIR=	${SUBDIR_BOOTSTRAP} \
 	liby \
 	libz \
 	libzstd \
+	libnss_dnssd \
 	libnss_mdns \
 	ncurses \
 	nss_tacplus
@@ -153,6 +154,7 @@ SUBDIR_DEPEND_libpcap= ofed
 .endif
 SUBDIR_DEPEND_nss_tacplus= libtacplus
 SUBDIR_DEPEND_libdns_sd=	libthr
+SUBDIR_DEPEND_libnss_dnssd=	libdns_sd
 SUBDIR_DEPEND_libnss_mdns=	libthr libdns_sd
 
 .if !defined(COMPAT_32BIT)

@@ -1,0 +1,22 @@
+The backend_test ATF cases use socketpair-backed DNS-SD mocks. They do not
+need a running daemon or change the host resolver configuration.
+
+The optional ipc_test helper exercises real libc NSS module loading and the
+installed libdns_sd client against a private IPC server. Run it as root,
+passing the absolute path to the built nss_dnssd.so.1. For example, from the
+source root after building lib/libnss_dnssd:
+
+    dnssd_objdir=$(bmake -C lib/libnss_dnssd -V .OBJDIR)
+    env -i PATH=/bin:/usr/bin:/usr/local/bin LC_ALL=C \
+        "$dnssd_objdir/tests/ipc_test" "$dnssd_objdir/nss_dnssd.so.1"
+
+It creates a temporary chroot with private resolver configuration and copies
+of the runtime libraries. A temporary UDP responder on 127.0.0.1:53 supplies
+controlled fallback answers. It sends no external DNS queries and does not
+start mdnsd or alter the live resolver configuration. It tests positive and
+negative IPC replies, malformed-reply fallback, unavailable-daemon fallback,
+and files-source precedence. The helper skips if it cannot use the private
+loopback DNS address because that port is already occupied.
+
+These tests do not validate the real daemon's upstream selection, cache TTL
+expiry, negative caching, or configuration reload behavior.
