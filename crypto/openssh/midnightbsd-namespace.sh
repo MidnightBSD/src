@@ -9,7 +9,7 @@
 
 set -e
 
-eval "unset $(env | sed -nE 's/^(LC_[A-Z]+)=.*$/\1/p')"
+unset $(env | sed -nE 's/^(LC_[A-Z]+)=.*$/\1/p')
 export LANG=C
 
 error() {
