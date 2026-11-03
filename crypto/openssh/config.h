@@ -5,7 +5,7 @@
 /* #undef AC_APPLE_UNIVERSAL_BUILD */
 
 /* Define if you have a getaddrinfo that fails for the all-zeros IPv6 address
- */
+   */
 /* #undef AIX_GETNAMEINFO_HACK */
 
 /* Define if your AIX loginfailed() function takes 4 arguments (AIX >= 5.2) */
@@ -42,7 +42,7 @@
 /* #undef BROKEN_INET_NTOA */
 
 /* Define if your struct dirent expects you to allocate extra space for d_name
- */
+   */
 /* #undef BROKEN_ONE_BYTE_DIRENT_D_NAME */
 
 /* System poll(2) implementation is broken */
@@ -50,10 +50,6 @@
 
 /* Can't do comparisons on readv */
 /* #undef BROKEN_READV_COMPARISON */
-
-/* NetBSD read function is sometimes redirected, breaking atomicio comparisons
-   against it */
-/* #undef BROKEN_READ_COMPARISON */
 
 /* Needed for NeXT */
 /* #undef BROKEN_SAVED_UIDS */
@@ -340,7 +336,7 @@
 /* #undef HAVE_DECL_AUTHENTICATE */
 
 /* Define to 1 if you have the declaration of 'bzero', and to 0 if you don't.
- */
+   */
 #define HAVE_DECL_BZERO 1
 
 /* Define to 1 if you have the declaration of 'ftruncate', and to 0 if you
@@ -367,6 +363,10 @@
    don't. */
 #define HAVE_DECL_HOWMANY 1
 
+/* Define to 1 if you have the declaration of 'htobe32', and to 0 if you
+   don't. */
+#define HAVE_DECL_HTOBE32 1
+
 /* Define to 1 if you have the declaration of 'htole64', and to 0 if you
    don't. */
 #define HAVE_DECL_HTOLE64 1
@@ -378,6 +378,10 @@
 /* Define to 1 if you have the declaration of 'INFINITY', and to 0 if you
    don't. */
 #define HAVE_DECL_INFINITY 1
+
+/* Define to 1 if you have the declaration of 'kSBXProfilePureComputation',
+   and to 0 if you don't. */
+/* #undef HAVE_DECL_KSBXPROFILEPURECOMPUTATION */
 
 /* Define to 1 if you have the declaration of 'le32toh', and to 0 if you
    don't. */
@@ -404,7 +408,7 @@
 #define HAVE_DECL_MAXSYMLINKS 1
 
 /* Define to 1 if you have the declaration of 'memmem', and to 0 if you don't.
- */
+   */
 #define HAVE_DECL_MEMMEM 1
 
 /* Define to 1 if you have the declaration of 'NFDBITS', and to 0 if you
@@ -415,14 +419,6 @@
    don't. */
 #define HAVE_DECL_OFFSETOF 1
 
-/* Define to 1 if you have the declaration of 'OPENSSL_IS_BORINGSSL', and to 0
-   if you don't. */
-/* #undef HAVE_DECL_OPENSSL_IS_BORINGSSL */
-
-/* Define to 1 if you have the declaration of 'OPENSSL_NO_DSA', and to 0 if
-   you don't. */
-/* #undef HAVE_DECL_OPENSSL_NO_DSA */
-
 /* Define to 1 if you have the declaration of 'O_NONBLOCK', and to 0 if you
    don't. */
 #define HAVE_DECL_O_NONBLOCK 1
@@ -432,7 +428,7 @@
 /* #undef HAVE_DECL_PASSWDEXPIRED */
 
 /* Define to 1 if you have the declaration of 'readv', and to 0 if you don't.
- */
+   */
 #define HAVE_DECL_READV 1
 
 /* Define to 1 if you have the declaration of 'setauthdb', and to 0 if you
@@ -448,7 +444,7 @@
 #define HAVE_DECL_UINT32_MAX 1
 
 /* Define to 1 if you have the declaration of 'writev', and to 0 if you don't.
- */
+   */
 #define HAVE_DECL_WRITEV 1
 
 /* Define to 1 if you have the declaration of '_getlong', and to 0 if you
@@ -491,14 +487,14 @@
 #define HAVE_EC_POINT_GET_AFFINE_COORDINATES 1
 
 /* Define to 1 if you have the 'EC_POINT_get_affine_coordinates_GFp' function.
- */
+   */
 #define HAVE_EC_POINT_GET_AFFINE_COORDINATES_GFP 1
 
 /* Define to 1 if you have the 'EC_POINT_set_affine_coordinates' function. */
 #define HAVE_EC_POINT_SET_AFFINE_COORDINATES 1
 
 /* Define to 1 if you have the 'EC_POINT_set_affine_coordinates_GFp' function.
- */
+   */
 #define HAVE_EC_POINT_SET_AFFINE_COORDINATES_GFP 1
 
 /* Define to 1 if you have the <elf.h> header file. */
@@ -535,7 +531,7 @@
 /* #undef HAVE_EVP_CIPHER_CTX_GET_IV */
 
 /* Define to 1 if you have the 'EVP_CIPHER_CTX_get_updated_iv' function. */
-/* #undef HAVE_EVP_CIPHER_CTX_GET_UPDATED_IV */
+#define HAVE_EVP_CIPHER_CTX_GET_UPDATED_IV 1
 
 /* Define to 1 if you have the 'EVP_CIPHER_CTX_iv' function. */
 #define HAVE_EVP_CIPHER_CTX_IV 1
@@ -695,6 +691,9 @@
 
 /* Define to 1 if you have the 'getentropy' function. */
 #define HAVE_GETENTROPY 1
+
+/* Define to 1 if you have the 'getexecpath' function. */
+/* #undef HAVE_GETEXECPATH */
 
 /* Define to 1 if you have the 'getgrouplist' function. */
 #define HAVE_GETGROUPLIST 1
@@ -1058,11 +1057,20 @@
    pam_strerror */
 /* #undef HAVE_OLD_PAM */
 
+/* Define to 1 if you have the 'openat' function. */
+#define HAVE_OPENAT 1
+
 /* Define to 1 if you have the 'openlog_r' function. */
 /* #undef HAVE_OPENLOG_R */
 
 /* Define to 1 if you have the 'openpty' function. */
 #define HAVE_OPENPTY 1
+
+/* Define to 1 if you have the <openssl/configuration.h> header file. */
+#define HAVE_OPENSSL_CONFIGURATION_H 1
+
+/* Define to 1 if you have the <openssl/opensslconf.h> header file. */
+#define HAVE_OPENSSL_OPENSSLCONF_H 1
 
 /* Define to 1 if you have the 'OpenSSL_version' function. */
 #define HAVE_OPENSSL_VERSION 1
@@ -1819,23 +1827,8 @@
 /* Define if EVP_DigestUpdate returns void */
 /* #undef OPENSSL_EVP_DIGESTUPDATE_VOID */
 
-/* OpenSSL has ECC */
-#define OPENSSL_HAS_ECC 1
-
 /* libcrypto has ed25519 support */
-/* #undef OPENSSL_HAS_ED25519 */
-
-/* libcrypto has NID_X9_62_prime256v1 */
-#define OPENSSL_HAS_NISTP256 1
-
-/* libcrypto has NID_secp384r1 */
-#define OPENSSL_HAS_NISTP384 1
-
-/* libcrypto has NID_secp521r1 */
-#define OPENSSL_HAS_NISTP521 1
-
-/* libcrypto is missing AES 192 and 256 bit functions */
-/* #undef OPENSSL_LOBOTOMISED_AES */
+#define OPENSSL_HAS_ED25519 1
 
 /* Define if you want the OpenSSL internally seeded PRNG only */
 #define OPENSSL_PRNG_ONLY 1
@@ -2000,6 +1993,9 @@
 /* Define this if you want to use libkafs' AFS support */
 /* #undef USE_AFS */
 
+/* Enable brainpool */
+#define USE_BRAINPOOLP256R1 1
+
 /* Use BSM audit module */
 /* #undef USE_BSM_AUDIT */
 
@@ -2045,9 +2041,6 @@
 /* Define if you want to enable AIX4's authenticate function */
 /* #undef WITH_AIXAUTHENTICATE */
 
-/* DSA keys explicitly enabled */
-/* #undef WITH_DSA */
-
 /* Define if you have/want arrays (cluster-wide session management, not C
    arrays) */
 /* #undef WITH_IRIX_ARRAY */
@@ -2073,13 +2066,13 @@
 /* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
    significant byte first (like Motorola and SPARC, unlike Intel). */
 #if defined AC_APPLE_UNIVERSAL_BUILD
-#if defined __BIG_ENDIAN__
-#define WORDS_BIGENDIAN 1
-#endif
+# if defined __BIG_ENDIAN__
+#  define WORDS_BIGENDIAN 1
+# endif
 #else
-#ifndef WORDS_BIGENDIAN
+# ifndef WORDS_BIGENDIAN
 /* #  undef WORDS_BIGENDIAN */
-#endif
+# endif
 #endif
 
 /* Define if xauth is found in your path */

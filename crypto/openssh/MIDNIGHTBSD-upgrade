@@ -1,113 +1,80 @@
 	    MidnightBSD maintainer's guide to OpenSSH-portable
 	    ==============================================
 
-    These instructions assume you have a clone of the MidnightBSD git repo
-    main branch in src/midnightbsd/main, and will store vendor trees under
-    src/midnightbsd/vendor/.  In addition, this assumes there is a "midnightbsd"
-    origin pointing to github.com/midnightbsd/src.git.
+    Use separate worktrees for vendor/openssh and master.  Keep unrelated
+    checkout changes out of the import.  Read the repository contribution
+    policy and obtain approval before commits, merges, tags and pushes.
 
-00) Make sure your mail spool has plenty of free space.  It'll fill up
-    pretty fast once you're done with this checklist.
+01) Download the OpenSSH-portable release tarball and detached signature:
 
-01) Download the latest OpenSSH-portable tarball and signature from
-    OpenBSD (https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/).
+    https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-10.6p1.tar.gz
+    https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-10.6p1.tar.gz.asc
 
-02) Verify the signature:
+    Verify the release signing key against the upstream release announcement
+    before trusting it, then verify both the signature and tarball:
 
-    $ gpg --verify openssh-X.YpZ.tar.gz.asc
+    $ gpg --verify openssh-10.6p1.tar.gz.asc openssh-10.6p1.tar.gz
 
-03) Unpack the tarball in a suitable directory:
+02) Unpack the verified archive outside the source worktrees.  Import the
+    complete tarball into vendor/openssh, preserving the worktree's .git
+    file.  Review added and deleted files before staging.  The vendor branch
+    contains unmodified upstream sources, including generated configure,
+    config.h.in, rendered *.0 manual pages and upstream .github files.
 
-    $ tar xf openssh-X.YpZ.tar.gz
+03) Commit the vendor import and create the annotated release tag:
 
-04) Copy to a vendor branch:
+    vendor/openssh/10.6p1
 
-    $ cd src/midnightbsd/main
-    $ git worktree add ../vendor/openssh midnightbsd/vendor/openssh
-    $ cd ../vendor/openssh
-    $ rsync --archive --delete --exclude=.git /path/to/openssh-X.YpZ/ ./
+    Include the required DCO sign-off and AI assistance trailer when
+    applicable.  Push only after approval.
 
-05) Take care of added / deleted files:
+04) Merge vendor/openssh into the isolated master worktree, using the
+    crypto/openssh subtree.  Preserve MidnightBSD's native build files and
+    patches listed below.  The master copy intentionally omits .github/,
+    generated configure, config.h.in and rendered *.0 manual pages; keep
+    these out of the master import while retaining them on the vendor branch.
 
-    $ git add -A
+05) Resolve conflicts and compare the result with the vendor tag.  Review
+    every retained local difference, including version.h, configuration
+    templates, manual pages, login policy, TCP wrappers and blocklist support.
+    Bump SSH_VERSION_MIDNIGHTBSD and the documented VersionAddendum defaults.
 
-06) Commit:
-
-    $ git commit -m "Vendor import of OpenSSH X.YpZ"
-
-07) Tag:
-
-    $ git tag -a -m "Tag OpenSSH X.YpZ" vendor/openssh/X.YpZ
-
-    At this point the vendor branch can be pushed to the MidnightBSD repo via:
-
-    $ git push midnightbsd vendor/openssh
-
-    (It could also be pushed later on, along with the merge to main, but
-    pushing now allows others to collaborate.)
-
-08) Check out head and run the pre-merge script, which strips our RCS
-    tags from files that have them:
-
-    $ cd src/midnightbsd/main/crypto/openssh
-    $ sh midnightbsd-pre-merge.sh
-
-09) Merge from the vendor branch:
-
-    $ git subtree merge -P crypto/openssh vendor/openssh
-
-    A number of files have been deleted from MidnightBSD's copy of ssh,
-    including rendered man pages (which have a .0 extension).  When
-    git prompts for these deleted files during the merge, choose 'd'
-    (leaving them deleted).
-
-0A) Resolve conflicts.  Remember to bump the version addendum in
-    version.h, and update the default value in ssh{,d}_config and
-    ssh{,d}_config.5.
-
-0B) Diff against the vendor branch:
-
-    $ git diff --diff-filter=M vendor/openssh/X.YpZ HEAD:crypto/openssh
-
-    Files that have modifications relative to the vendor code, and
-    only those files, must have the svn:keywords property set to
-    MidnightBSD=%H and be listed in the 'keywords' file created by the
-    pre-merge script.
-
-0C) Run the post-merge script, which re-adds RCS tags to files that
-    need them:
-
-    $ sh midnightbsd-post-merge.sh
-
-    These tags are not used with git, but we will leave them in place as
-    long as svn-based MidnightBSD 11.x and 12.x are supported.
-
-0D) Run the configure script:
+06) Regenerate the native configuration from the merged sources:
 
     $ sh midnightbsd-configure.sh
 
-0E) Review changes to config.h very carefully.
+    This recreates configure and config.h.in temporarily with autotools,
+    generates config.h, and separates Kerberos and security-key definitions
+    into krb5_config.h and sk_config.h.  Review the generated differences;
+    do not add the temporary configure files or configure/build artifacts
+    to master.  Do not define LIBWRAP in config.h: secure/ssh.mk selects
+    TCP wrappers through MK_TCP_WRAPPERS.
 
-    Note that libwrap should not be defined in config.h; as of
-    r311585 (233932cc2a60) it is conditional on MK_TCP_WRAPPERS.
+07) Compare the vendor Makefile.in source lists with secure/ Makefiles.
+    Update native library and program source lists for additions, removals
+    and code moved between them.  See the 10.6p1 notes below.
 
-0F) If source files have been added or removed, update the appropriate
-    makefiles to reflect changes in the vendor's Makefile.in.
-
-10) Update ssh_namespace.h:
+08) Regenerate the libssh symbol namespace:
 
     $ sh midnightbsd-namespace.sh
 
-11) Build and install world, reboot, test.  Pay particular attention
-    to pam_ssh(8), which gropes inside libssh and will break if
-    something significant changes or if ssh_namespace.h is out of
-    whack.
+    The script builds libssh without namespace mappings, extracts symbols,
+    then rebuilds and checks that every library text symbol is prefixed.
+    Use an isolated object directory when validating a temporary worktree.
+    Link all consumer checks to that new libssh rather than the installed
+    archive.  Pay particular attention to pam_ssh(8), which uses libssh
+    internals and depends on complete ssh_namespace.h mappings.
 
-12) Check for references to obsolete configuration options
-    (e.g., ChallengeResponseAuthentication in sshd_config) which
-    may exist in release/ scripts.
+09) Build the native library, programs and helpers.  Check client/server
+    configuration parsing and defaults, key generation, agent operations
+    and an isolated client/server session.  Include GSSAPI coverage when
+    validating GSSAPI authentication fixes.  Full-world and runtime testing
+    should be recorded separately from component builds.
 
-13) Commit, and hunker down for the inevitable storm of complaints.
+0A) Check release/ and other consumers for obsolete options, update
+    MIDNIGHTBSD-upgrade, and add a separate UPDATING entry for security or
+    user-visible upgrade requirements.  Review the final diff and validation
+    results before the master merge is committed and published.
 
 
 
@@ -136,7 +103,8 @@
       - X11Forwarding defaults to "no".
       - PasswordAuthentication defaults to "no".
       - VersionAddendum defaults to "MidnightBSD-YYYYMMDD".
-      - PrivilegeSeparation defaults to "sandbox".
+      - Privilege separation and sandboxing follow the mandatory upstream
+        implementation; the old UsePrivilegeSeparation option is obsolete.
       - UseDNS defaults to "yes".
 
 2) Modified client-side defaults
@@ -144,7 +112,8 @@
    We've modified some configuration defaults in ssh:
 
       - CheckHostIP defaults to "no".
-      - VerifyHostKeyDNS defaults to "yes" if built with LDNS.
+      - VerifyHostKeyDNS defaults to "no"; LDNS support remains available
+        when built with MK_LDNS.
       - VersionAddendum defaults to "MidnightBSD-YYYYMMDD".
 
 3) Canonic host names
@@ -193,29 +162,47 @@
    superior ciphers (including AES-CTR and AES-GCM).  We have re-added
    them for compatibility with third-party clients.
 
-10) Build compatibility changes for 10.3p1 (MidnightBSD-specific)
+10) Native build compatibility
 
-   The following changes were needed when merging to 10.3p1:
+   MidnightBSD has no <util.h>.  Preserve HAVE_UTIL_H guards around these
+   includes; fmt_scaled() is supplied by openbsd-compat.  Keep "hostfile.h"
+   before "auth.h" wherever auth.h uses HostStatus.  Do not alphabetize
+   upstream include blocks.
 
-   a) <util.h> guards: OpenSSH 10.3p1 added '#include <util.h>' to several
-      .c files unconditionally. MidnightBSD does not have <util.h>; the
-      fmt_scaled() function is provided by the openbsd-compat layer instead.
-      All such includes must be wrapped in '#ifdef HAVE_UTIL_H / #endif'.
-      Affected files: packet.c, sshkey.c, readconf.c, servconf.c, scp.c,
-      sshpty.c, sftp.c, ssh-agent.c, sftp-common.c.
+   Upstream now supplies ed25519.c and misc-agent.c.  Use the upstream
+   implementations instead of restoring old local versions.  hash.c has
+   been absent from upstream's library list since 10.3p1; do not restore it.
+   Keep the native openbsd-compat header naming consistent with the imported
+   source files.
 
-   b) hash.c removed from secure/lib/libssh/Makefile: In 10.3p1, the
-      crypto_hash_sha512() function was moved to be a static inline in
-      crypto_api.h. The separate hash.c was removed from Makefile.in.
-      Remove it from secure/lib/libssh/Makefile as well to avoid
-      redefinition errors.
+11) OpenSSH 10.6p1 integration
 
-   c) openbsd-compat.h: The vendor 10.3p1 import contained a reference to
-      'bsd-sha2.h' which was renamed to 'sha2.h' in earlier versions.
-      Keep 'sha2.h' in openbsd-compat/openbsd-compat.h.
+   a) Server options now use SSHD_CONFIG_ENTRIES macro tables in servconf.h
+      for structure declarations, defaults, parsing and serialization.
+      Preserve local defaults there: UsePAM=yes, PermitRootLogin=no,
+      PasswordAuthentication=no and UseDNS=yes.  Keep their configuration
+      comments and manual pages consistent.  Adding local fields only to
+      old manual fill/copy code is insufficient.
+
+   b) Register UseBlocklist in the option table, with its existing global
+      scope and default of no, and retain UseBlacklist as its compatibility
+      alias.  Keep the blocklist_client.h calls and conditional native
+      blocklist linkage in the authentication/session programs.
+
+   c) Remove deleted ssh-dss.c from secure/lib/libssh/Makefile.  Add
+      libcrux-mlkem-mldsa.c, ssh-mldsa-eddsa.c, kexmlkem768ecdh.c and
+      ssherr-libcrypto.c.  Move misc-agent.c into libssh and remove its
+      duplicate executable source entries.  Import the upstream libcrux
+      headers and review the generated ML-KEM/ML-DSA configuration defines.
+
+   d) Regenerate ssh_namespace.h after these source-list and configuration
+      changes so that the new cryptographic, agent and error helpers are
+      namespaced as well.
 
    Notes:
-   - Last imported: 10.3p1 (2026-06-10)
+   - Last imported: 10.6p1 (2026-11-02)
    - Vendor branch: vendor/openssh
+   - Vendor tag: vendor/openssh/10.6p1
    - In-tree prefix: crypto/openssh
-   - Import method: git revert of prior revert, followed by conflict resolution
+   - Vendor contents: complete upstream portable release tarball
+   - Master exclusions: .github/, configure, config.h.in, *.0

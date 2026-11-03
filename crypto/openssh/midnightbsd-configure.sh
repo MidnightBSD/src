@@ -21,8 +21,8 @@ cd $openssh
 (cd $openssh && libtoolize --copy && autoheader && autoconf)
 
 # Ensure we use the correct toolchain and clean our environment
-export CC=$(echo ".include <bsd.lib.mk>" | make -f /dev/stdin -VCC)
-export CPP=$(echo ".include <bsd.lib.mk>" | make -f /dev/stdin -VCPP)
+export CC=$(echo ".include <bsd.lib.mk>" | make -f - -VCC)
+export CPP=$(echo ".include <bsd.lib.mk>" | make -f - -VCPP)
 unset CFLAGS CPPFLAGS LDFLAGS LD_LIBRARY_PATH LIBS
 export PATH=/bin:/sbin:/usr/bin:/usr/sbin
 
@@ -48,10 +48,8 @@ sh configure $configure_args --without-kerberos5 --without-security-key-builtin
 
 # Extract the difference
 diff -u config.h.kerberos5 config.h |
-	sed -n '/^-#define/s/^-//p' |
-	grep -Ff /dev/stdin config.h.kerberos5 > krb5_config.h
+	sed -n '/^-#define/s/^-//p' > krb5_config.h
 
 # Extract the difference - SK
 diff -u config.h.sk-builtin config.h |
-    sed -n '/^-#define/s/^-//p' |
-    grep -Ff /dev/stdin config.h.sk-builtin > sk_config.h
+    sed -n '/^-#define/s/^-//p' > sk_config.h
