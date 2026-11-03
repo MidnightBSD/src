@@ -1,102 +1,44 @@
-$MidnightBSD$
+Upgrade procedure for Expat
 
-eXpat from www.libexpat.org
+Source:
+  https://github.com/libexpat/libexpat/releases/download/R_VERSION/expat-VERSION.tar.xz
+  Replace R_VERSION with the underscore-separated release tag (e.g. R_2_10_0)
+  and VERSION with the dotted version (e.g. 2.10.0).
 
-v2.0.1:
+To upgrade:
 
-This directory contains the virgin sources for the import of the
-expat XML processing library, trimmed of the bits realted to other
-platforms (the trimmed contents are listed below).
+1. Download the release archive and verify its published digest/signature.
+2. Import the extracted sources into vendor/expat/dist in a separate worktree.
+   Remove the paths listed in MIDNIGHTBSD-Xlist before staging.  Compare the
+   trimmed file set with the previous import and review new/removed files.
+   Keep all imported files otherwise identical to upstream.
+3. Tag the import vendor/expat/dist/VERSION, then use
+   git subtree merge -P contrib/expat vendor/expat/dist on each target branch.
+4. Review lib/libexpat/Makefile for upstream source-list and header changes.
+   Update the version strings in lib/libexpat/expat_config.h and review new
+   configure macros.  Keep the native library name and ABI version.
+5. Build lib/libexpat and test a consumer against the generated bsdxml.h.
+   Run the upstream regression suite from the untrimmed release sources.
+6. Record security fixes in a separate UPDATING commit and update the version
+   table at https://github.com/MidnightBSD/src/wiki/Vendor-Branches.
 
-Imported via:
-  1) Upacking sources
-  2) cd expat-2.0.1, remove the listed files below
-  3) cvs import -ko src/contrib/expat EXPAT v2_0_1
+Local patches:
 
-The following files/directories were removed from the distribution:
-amiga/
-amiga/Makefile
-amiga/README.txt
-amiga/expat.xml
-amiga/expat_lib.c
-amiga/expat_vectors.c
-amiga/include
-amiga/include/inline4
-amiga/include/inline4/expat.h
-amiga/include/interfaces
-amiga/include/interfaces/expat.h
-amiga/include/libraries
-amiga/include/libraries/expat.h
-amiga/include/proto
-amiga/include/proto/expat.h
-amiga/launch.c
-amiga/stdlib.c
-bcb5/
-bcb5/README.txt
-bcb5/all_projects.bpg
-bcb5/elements.bpf
-bcb5/elements.bpr
-bcb5/elements.mak
-bcb5/expat.bpf
-bcb5/expat.bpr
-bcb5/expat.mak
-bcb5/expat_static.bpf
-bcb5/expat_static.bpr
-bcb5/expat_static.mak
-bcb5/expatw.bpf
-bcb5/expatw.bpr
-bcb5/expatw.mak
-bcb5/expatw_static.bpf
-bcb5/expatw_static.bpr
-bcb5/expatw_static.mak
-bcb5/libexpat_mtd.def
-bcb5/libexpatw_mtd.def
-bcb5/makefile.mak
-bcb5/outline.bpf
-bcb5/outline.bpr
-bcb5/outline.mak
-bcb5/setup.bat
-bcb5/xmlwf.bpf
-bcb5/xmlwf.bpr
-bcb5/xmlwf.mak
-conftools/
-conftools/PrintPath
-conftools/ac_c_bigendian_cross.m4
-conftools/config.guess
-conftools/config.sub
-conftools/expat.m4
-conftools/get-version.sh
-conftools/install-sh
-conftools/libtool.m4
-conftools/ltmain.sh
-conftools/mkinstalldirs
-examples/elements.dsp
-examples/outline.dsp
-expat.dsw
-lib/Makefile.MPW
-lib/amigaconfig.h
-lib/expat.dsp
-lib/expat_static.dsp
-lib/expatw.dsp
-lib/expatw_static.dsp
-lib/libexpat.def
-lib/libexpatw.def
-lib/macconfig.h
-vms/
-vms/README.vms
-vms/descrip.mms
-vms/expat_config.h
-win32/
-win32/MANIFEST.txt
-win32/README.txt
-win32/expat.iss
-xmlwf/xmlwf.dsp
+  None in the imported sources as of Expat 2.10.0.  MIDNIGHTBSD-Xlist and
+  this file are downstream metadata and must not enter the vendor branch.
 
-Import by:
+Native integration outside the imported subtree:
 
-	Extract expat
-	Remove files listed above
-	cvs import -m "Virgin import (trimmed) of eXpat version 2.0.1" \
-		src/contrib/expat EXPAT v2_0_1
+  lib/libexpat/Makefile builds libbsdxml (SHLIB_MAJOR=4), generates bsdxml.h
+  by replacing Expat_INCLUDED with _BSD_XML_H_ and expat_external.h with
+  bsdxml_external.h, and adjusts the COPYING reference.  Since Expat 2.9.0,
+  xcs.c must be compiled separately; upstream no longer includes xcsinc.c.
 
+  lib/libexpat/expat_config.h provides the native configuration, including
+  machine/endian.h and platform entropy sources.  XML_ATTR_INFO and
+  XML_MIN_SIZE were disabled here before upstream removed those features.
 
+Notes:
+
+  MIDNIGHTBSD-Xlist omits CMake/configure support and non-native platform
+  files.  Use an untrimmed archive for upstream build-system tests.

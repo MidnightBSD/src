@@ -5,7 +5,7 @@ EXPAT=		${SRCTOP}/contrib/expat
 LIB=		bsdxml
 SHLIBDIR?=	/lib
 SHLIB_MAJOR=	4
-SRCS=		xmlparse.c xmlrole.c xmltok.c \
+SRCS=		xmlparse.c xmlrole.c xmltok.c xcs.c \
 		random_arc4random.c random_arc4random_buf.c \
 		random_dev_urandom.c random_getrandom.c
 INCS=		bsdxml.h bsdxml_external.h
@@ -23,7 +23,7 @@ WARNS?=		2
 # We also want to point it at the new bsdxml_external.h rather than the
 # old expat_external.h file.
 bsdxml.h: expat.h
-	sed -e 's/XmlParse_INCLUDED/_BSD_XML_H_/' \
+	sed -e 's/Expat_INCLUDED/_BSD_XML_H_/' \
 	    -e 's/COPYING/src\/contrib\/expat\/COPYING/' \
 	    -e 's/expat_external/bsdxml_external/' ${.ALLSRC} \
 		> ${.TARGET}
