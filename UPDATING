@@ -1,5 +1,10 @@
 Updating Information for MidnightBSD users.
 
+20261102:
+	expat 2.10.0: CVE-2026-113351, CVE-2026-115506,
+	CVE-2026-117610 and CVE-2026-118370.  Also includes the 2.9.0
+	fixes for CVE-2026-77214 and CVE-2026-102633.
+
 20261028:
 	mport(1) updated to 2.8.5.  Users who cannot write the package
 	database can now run the inspection commands (search, query, info,
