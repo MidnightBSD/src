@@ -1,12 +1,12 @@
-/* This file is included from other .c files!
-                            __  __            _
+/* Tests related to the XCS (XML character string) functionality
+__  __            _
                          ___\ \/ /_ __   __ _| |_
                         / _ \\  /| '_ \ / _` | __|
                        |  __//  \| |_) | (_| | |_
                         \___/_/\_\ .__/ \__,_|\__|
                                  |_| XML parser
 
-   Copyright (c) 2022-2026 Sebastian Pipping <sebastian@pipping.org>
+   Copyright (c) 2026 Sebastian Pipping <sebastian@pipping.org>
    Licensed under the MIT license:
 
    Permission is  hereby granted,  free of charge,  to any  person obtaining
@@ -31,24 +31,11 @@
    SPDX-License-Identifier: MIT
 */
 
-#if defined(XML_UNICODE) && defined(XML_UNICODE_WCHAR_T)
-#  include <wchar.h>
-#endif
+#ifndef XML_XCS_TESTS_H
+#define XML_XCS_TESTS_H
 
-static size_t
-xcslen(const XML_Char *s) {
-#ifdef XML_UNICODE
-#  ifdef XML_UNICODE_WCHAR_T
-  return wcslen(s);
-#  else
-  // XML_Char is unsigned short
-  size_t len = 0;
-  while (s[len]) {
-    len++;
-  }
-  return len;
-#  endif
-#else
-  return strlen(s);
-#endif
-}
+#include "minicheck.h"
+
+extern void make_xcs_test_case(Suite *s);
+
+#endif /* XML_XCS_TESTS_H */
