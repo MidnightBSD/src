@@ -35,7 +35,7 @@
 /* getline is not what we expect */
 /* #undef BROKEN_GETLINE */
 
-/* MidnightBSD glob does not do what we need */
+/* Do not use system glob */
 #define BROKEN_GLOB 1
 
 /* Define if you system's inet_ntoa is busted (e.g. Irix gcc issue) */
@@ -50,10 +50,6 @@
 
 /* Can't do comparisons on readv */
 /* #undef BROKEN_READV_COMPARISON */
-
-/* NetBSD read function is sometimes redirected, breaking atomicio comparisons
-   against it */
-/* #undef BROKEN_READ_COMPARISON */
 
 /* Needed for NeXT */
 /* #undef BROKEN_SAVED_UIDS */
@@ -218,7 +214,7 @@
 #define HAVE_ATTRIBUTE__NONNULL__ 1
 
 /* compiler supports nonstring attribute */
-#define HAVE_ATTRIBUTE__NONSTRING__ 1
+/* #undef HAVE_ATTRIBUTE__NONSTRING__ */
 
 /* OpenBSD's gcc has sentinel */
 /* #undef HAVE_ATTRIBUTE__SENTINEL__ */
@@ -367,6 +363,10 @@
    don't. */
 #define HAVE_DECL_HOWMANY 1
 
+/* Define to 1 if you have the declaration of 'htobe32', and to 0 if you
+   don't. */
+#define HAVE_DECL_HTOBE32 1
+
 /* Define to 1 if you have the declaration of 'htole64', and to 0 if you
    don't. */
 #define HAVE_DECL_HTOLE64 1
@@ -378,6 +378,10 @@
 /* Define to 1 if you have the declaration of 'INFINITY', and to 0 if you
    don't. */
 #define HAVE_DECL_INFINITY 1
+
+/* Define to 1 if you have the declaration of 'kSBXProfilePureComputation',
+   and to 0 if you don't. */
+/* #undef HAVE_DECL_KSBXPROFILEPURECOMPUTATION */
 
 /* Define to 1 if you have the declaration of 'le32toh', and to 0 if you
    don't. */
@@ -476,11 +480,22 @@
 /* Define to 1 if you have the 'dlopen' function. */
 #define HAVE_DLOPEN 1
 
-/* Define to 1 if you have the 'DSA_generate_parameters_ex' function. */
-#define HAVE_DSA_GENERATE_PARAMETERS_EX 1
-
 /* Define to 1 if you have the 'EC_KEY_METHOD_new' function. */
 #define HAVE_EC_KEY_METHOD_NEW 1
+
+/* Define to 1 if you have the 'EC_POINT_get_affine_coordinates' function. */
+#define HAVE_EC_POINT_GET_AFFINE_COORDINATES 1
+
+/* Define to 1 if you have the 'EC_POINT_get_affine_coordinates_GFp' function.
+   */
+#define HAVE_EC_POINT_GET_AFFINE_COORDINATES_GFP 1
+
+/* Define to 1 if you have the 'EC_POINT_set_affine_coordinates' function. */
+#define HAVE_EC_POINT_SET_AFFINE_COORDINATES 1
+
+/* Define to 1 if you have the 'EC_POINT_set_affine_coordinates_GFp' function.
+   */
+#define HAVE_EC_POINT_SET_AFFINE_COORDINATES_GFP 1
 
 /* Define to 1 if you have the <elf.h> header file. */
 #define HAVE_ELF_H 1
@@ -676,6 +691,9 @@
 
 /* Define to 1 if you have the 'getentropy' function. */
 #define HAVE_GETENTROPY 1
+
+/* Define to 1 if you have the 'getexecpath' function. */
+/* #undef HAVE_GETEXECPATH */
 
 /* Define to 1 if you have the 'getgrouplist' function. */
 #define HAVE_GETGROUPLIST 1
@@ -1039,14 +1057,20 @@
    pam_strerror */
 /* #undef HAVE_OLD_PAM */
 
+/* Define to 1 if you have the 'openat' function. */
+#define HAVE_OPENAT 1
+
 /* Define to 1 if you have the 'openlog_r' function. */
 /* #undef HAVE_OPENLOG_R */
 
 /* Define to 1 if you have the 'openpty' function. */
 #define HAVE_OPENPTY 1
 
-/* as a macro */
-#define HAVE_OPENSSL_ADD_ALL_ALGORITHMS 1
+/* Define to 1 if you have the <openssl/configuration.h> header file. */
+/* #undef HAVE_OPENSSL_CONFIGURATION_H */
+
+/* Define to 1 if you have the <openssl/opensslconf.h> header file. */
+#define HAVE_OPENSSL_OPENSSLCONF_H 1
 
 /* Define to 1 if you have the 'OpenSSL_version' function. */
 #define HAVE_OPENSSL_VERSION 1
@@ -1803,23 +1827,8 @@
 /* Define if EVP_DigestUpdate returns void */
 /* #undef OPENSSL_EVP_DIGESTUPDATE_VOID */
 
-/* OpenSSL has ECC */
-#define OPENSSL_HAS_ECC 1
-
 /* libcrypto has ed25519 support */
 #define OPENSSL_HAS_ED25519 1
-
-/* libcrypto has NID_X9_62_prime256v1 */
-#define OPENSSL_HAS_NISTP256 1
-
-/* libcrypto has NID_secp384r1 */
-#define OPENSSL_HAS_NISTP384 1
-
-/* libcrypto has NID_secp521r1 */
-#define OPENSSL_HAS_NISTP521 1
-
-/* libcrypto is missing AES 192 and 256 bit functions */
-/* #undef OPENSSL_LOBOTOMISED_AES */
 
 /* Define if you want the OpenSSL internally seeded PRNG only */
 #define OPENSSL_PRNG_ONLY 1
@@ -1947,7 +1956,7 @@
 /* Use tunnel device compatibility to OpenBSD */
 #define SSH_TUN_COMPAT_AF 1
 
-/* Open tunnel devices the MidnightBSD way */
+/* Open tunnel devices the FreeBSD way */
 #define SSH_TUN_FREEBSD 1
 
 /* Open tunnel devices the Linux tun/tap way */
@@ -1987,6 +1996,9 @@
 
 /* Define this if you want to use libkafs' AFS support */
 /* #undef USE_AFS */
+
+/* Enable brainpool */
+#define USE_BRAINPOOLP256R1 1
 
 /* Use BSM audit module */
 /* #undef USE_BSM_AUDIT */
@@ -2032,9 +2044,6 @@
 
 /* Define if you want to enable AIX4's authenticate function */
 /* #undef WITH_AIXAUTHENTICATE */
-
-/* Define if to enable DSA keys. */
-#define WITH_DSA 1
 
 /* Define if you have/want arrays (cluster-wide session management, not C
    arrays) */
