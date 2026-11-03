@@ -1,6 +1,10 @@
 Updating Information for MidnightBSD users.
 
 20261102:
+	OpenSSH 10.6p1, including the GSSAPI authentication fixes for
+	CVE-2026-106553.  SSH compression is less effective after the
+	compression side-channel mitigation.
+
 	expat 2.10.0: CVE-2026-113351, CVE-2026-115506,
 	CVE-2026-117610 and CVE-2026-118370.  Also includes the 2.9.0
 	fixes for CVE-2026-77214 and CVE-2026-102633.
