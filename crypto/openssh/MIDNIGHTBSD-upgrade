@@ -7,13 +7,13 @@
 
 01) Download the OpenSSH-portable release tarball and detached signature:
 
-    https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-10.6p1.tar.gz
-    https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-10.6p1.tar.gz.asc
+    https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-10.6p2.tar.gz
+    https://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-10.6p2.tar.gz.asc
 
     Verify the release signing key against the upstream release announcement
     before trusting it, then verify both the signature and tarball:
 
-    $ gpg --verify openssh-10.6p1.tar.gz.asc openssh-10.6p1.tar.gz
+    $ gpg --verify openssh-10.6p2.tar.gz.asc openssh-10.6p2.tar.gz
 
 02) Unpack the verified archive outside the source worktrees.  Import the
     complete tarball into vendor/openssh, preserving the worktree's .git
@@ -23,7 +23,7 @@
 
 03) Commit the vendor import and create the annotated release tag:
 
-    vendor/openssh/10.6p1
+    vendor/openssh/10.6p2
 
     Include the required DCO sign-off and AI assistance trailer when
     applicable.  Push only after approval.
@@ -199,10 +199,19 @@
       changes so that the new cryptographic, agent and error helpers are
       namespaced as well.
 
+12) OpenSSH 10.6p2 integration
+
+   Security and bug-fix release; configure.ac and Makefile.in are
+   unchanged from 10.6p1, so config.h, krb5_config.h, sk_config.h,
+   the secure/ source lists and ssh_namespace.h were not regenerated.
+   shadow_pw() now returns an allocated copy that callers must free.
+   ssh-mldsa44-ed25519 is added to the default CA signature
+   algorithms; it depends on USE_MLDSA (defines.h), not on OpenSSL.
+
    Notes:
-   - Last imported: 10.6p1 (2026-11-02)
+   - Last imported: 10.6p2 (2026-11-05)
    - Vendor branch: vendor/openssh
-   - Vendor tag: vendor/openssh/10.6p1
+   - Vendor tag: vendor/openssh/10.6p2
    - In-tree prefix: crypto/openssh
    - Vendor contents: complete upstream portable release tarball
    - Master exclusions: .github/, configure, config.h.in, *.0
