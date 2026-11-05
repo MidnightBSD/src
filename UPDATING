@@ -1,5 +1,10 @@
 Updating Information for MidnightBSD users.
 
+20261105:
+	OpenSSH 10.6p2: fixes an sshd(8) password authentication bypass
+	reported against Linux builds without PAM, and accepts the
+	ssh-mldsa44-ed25519 CA signature algorithm by default.
+
 20261102:
 	OpenSSH 10.6p1, including the GSSAPI authentication fixes for
 	CVE-2026-106553.  SSH compression is less effective after the
