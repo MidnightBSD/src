@@ -914,7 +914,7 @@ get_if_description(const char *name)
 	pcapint_strlcpy(ifrdesc.ifr_name, name, sizeof ifrdesc.ifr_name);
 	s = socket(AF_INET, SOCK_DGRAM, 0);
 	if (s >= 0) {
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		/*
 		 * On FreeBSD, if the buffer isn't big enough for the
 		 * description, the ioctl succeeds, but the description
@@ -943,7 +943,7 @@ get_if_description(const char *name)
 			} else
 				break;
 		}
-#else /* __FreeBSD__ */
+#else /* __MidnightBSD__ */
 		/*
 		 * The only other OS that currently supports
 		 * SIOCGIFDESCR is OpenBSD, and it has no way
@@ -960,7 +960,7 @@ get_if_description(const char *name)
 				description = NULL;
 			}
 		}
-#endif /* __FreeBSD__ */
+#endif /* __MidnightBSD__ */
 		close(s);
 		if (description != NULL && description[0] == '\0') {
 			/*
@@ -971,7 +971,7 @@ get_if_description(const char *name)
 		}
 	}
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	/*
 	 * For FreeBSD, if we didn't get a description, and this is
 	 * a device with a name of the form usbusN, label it as a USB

@@ -31,6 +31,17 @@ changed to MidnightBSD):
     BPF definitions (FreeBSD 6d1c946e9168).
   - pcap/pcap.h: remote capture is disabled.
 
+Local patches applied on top of upstream (MidnightBSD):
+
+  - pcap/dlt.h, pcap-bpf.c, pcap-netmap.c, pcap.c, pflog.h: test
+    __MidnightBSD__ instead of __FreeBSD__.  Our compilers define
+    both, so this changes no code, but it keeps pcap/dlt.h testing the
+    same macro as sys/net/dlt.h.
+
 Notes:
+  - sys/net/dlt.h keeps FreeBSD's _NET_DLT_H_ include guard, so a
+    program that includes both dlt.h headers processes both.  That is
+    safe only while both test __MidnightBSD__ and agree on the DLT_
+    values (DLT_PFSYNC 121, DLT_SLIP_BSDOS 13, DLT_PPP_BSDOS 14).
   - The CVE-2025-11961 backport to nametoaddr.c (1d2d357a0e) was
     replaced by the upstream fix in 1.10.6.
