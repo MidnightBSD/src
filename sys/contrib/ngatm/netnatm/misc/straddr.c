@@ -131,7 +131,7 @@ uni_nsap2e164(char *e164, const u_char *nsap, int check)
 void
 uni_prefix2str(char *out, const u_char *in, u_int len, int dotit)
 {
-	static char hex[16] = "0123456789abcdef";
+	static char hex[16] __nonstring = "0123456789abcdef";
 	static int fmt[3][6] = {
 		{ 1, 2, 10, 6, 1, 0 },
 		{ 1, 2, 10, 6, 1, 0 },

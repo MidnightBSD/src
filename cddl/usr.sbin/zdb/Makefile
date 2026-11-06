@@ -30,4 +30,12 @@ CFLAGS.gcc+= -fms-extensions
 # it without debugging.
 CFLAGS+=	-g -DDEBUG=1 -DZFS_DEBUG=1
 
+.include <bsd.compiler.mk>
+
+# dump_l2arc_header() declares l2arc_dev_hdr_phys_t locals, which have
+# const members, without an initializer.
+.if ${COMPILER_TYPE} == "clang" && ${COMPILER_VERSION} >= 210000
+CWARNFLAGS+=	-Wno-default-const-init-field-unsafe
+.endif
+
 .include <bsd.prog.mk>
