@@ -58,7 +58,7 @@
 #include "archive_rb.h"
 #include "archive_write_private.h"
 
-#if defined(_WIN32) && !defined(__CYGWIN__)
+#if defined(_WIN32) && !defined(__CYGWIN__) || defined(__wasi__)
 #define getuid()			0
 #define getgid()			0
 #endif
@@ -1059,8 +1059,7 @@ archive_write_set_format_iso9660(struct archive *_a)
 	    ARCHIVE_STATE_NEW, "archive_write_set_format_iso9660");
 
 	/* If another format was already registered, unregister it. */
-	if (a->format_free != NULL)
-		(a->format_free)(a);
+	(void)__archive_write_unregister_format(a);
 
 	iso9660 = calloc(1, sizeof(*iso9660));
 	if (iso9660 == NULL) {
@@ -1240,16 +1239,16 @@ get_num_opt(struct archive_write *a, int *num, int high, int low,
 			    "option ``%s''", high, key);
 			return (ARCHIVE_FATAL);
 		}
-		if (data < low) {
-			archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
-			    "Invalid value(under %d) for "
-			    "option ``%s''", low, key);
-			return (ARCHIVE_FATAL);
-		}
 		p++;
 	}
 	if (neg)
 		data *= -1;
+	if (data < low) {
+		archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
+		    "Invalid value(under %d) for "
+		    "option ``%s''", low, key);
+		return (ARCHIVE_FATAL);
+	}
 	*num = data;
 
 	return (ARCHIVE_OK);
@@ -1427,8 +1426,8 @@ iso9660_options(struct archive_write *a, const char *key, const char *value)
 		break;
 	case 'i':
 		if (strcmp(key, "iso-level") == 0) {
-			if (value != NULL && value[1] == '\0' &&
-			    (value[0] >= '1' && value[0] <= '4')) {
+			if (value != NULL && value[0] >= '1' &&
+			    value[0] <= '4' && value[1] == '\0') {
 				iso9660->opt.iso_level = value[0]-'0';
 				return (ARCHIVE_OK);
 			}
@@ -1529,12 +1528,10 @@ invalid_value:
 static int
 iso9660_write_header(struct archive_write *a, struct archive_entry *entry)
 {
-	struct iso9660 *iso9660;
+	struct iso9660 *iso9660 = a->format_data;
 	struct isofile *file;
 	struct isoent *isoent;
 	int r, ret = ARCHIVE_OK;
-
-	iso9660 = a->format_data;
 
 	iso9660->cur_file = NULL;
 	iso9660->bytes_remaining = 0;
@@ -1677,7 +1674,7 @@ wb_write_to_temp(struct archive_write *a, const void *buff, size_t s)
 	 * order to reduce a extra memory copy.
 	 */
 	if (wb_remaining(a) == wb_buffmax() && s > (1024 * 16)) {
-		struct iso9660 *iso9660 = (struct iso9660 *)a->format_data;
+		struct iso9660 *iso9660 = a->format_data;
 		xs = s % LOGICAL_BLOCK_SIZE;
 		iso9660->wbuff_offset += s - xs;
 		if (write_to_temp(a, buff, s - xs) != ARCHIVE_OK)
@@ -1859,10 +1856,8 @@ iso9660_finish_entry(struct archive_write *a)
 static int
 iso9660_close(struct archive_write *a)
 {
-	struct iso9660 *iso9660;
+	struct iso9660 *iso9660 = a->format_data;
 	int ret, blocks;
-
-	iso9660 = a->format_data;
 
 	/*
 	 * Write remaining data out to the temporary file.
@@ -2121,10 +2116,8 @@ iso9660_close(struct archive_write *a)
 static int
 iso9660_free(struct archive_write *a)
 {
-	struct iso9660 *iso9660;
+	struct iso9660 *iso9660 = a->format_data;
 	int i, ret;
-
-	iso9660 = a->format_data;
 
 	/* Close the temporary file. */
 	if (iso9660->temp_fd >= 0)
@@ -2532,7 +2525,9 @@ get_tmfromtime(struct tm *tm, time_t *t)
 #if HAVE_LOCALTIME_S
 	localtime_s(tm, t);
 #elif HAVE_LOCALTIME_R
+# ifdef HAVE_TZSET
 	tzset();
+# endif
 	localtime_r(t, tm);
 #else
 	memcpy(tm, localtime(t), sizeof(*tm));
@@ -2893,52 +2888,39 @@ set_directory_record_rr(unsigned char *bp, int dr_len,
 		 *    +----+----+----+----+----+----+----+----+
 		 *    <----------------- len ----------------->
 		 */
-		size_t nmlen = file->basename.length;
+		size_t reclen, nmlen = file->basename.length;
 		const char *nm = file->basename.s;
 		size_t nmmax;
 
-		if (extra_space(&ctl) < 6)
-			bp = extra_next_record(&ctl, 6);
-		if (bp != NULL) {
-			bp[1] = 'N';
-			bp[2] = 'M';
-			bp[4] = 1;	    /* version	*/
-		}
-		nmmax = extra_space(&ctl);
-		if (nmmax > 0xff)
-			nmmax = 0xff;
-		while (nmlen + 5 > nmmax) {
-			length = (int)nmmax;
-			if (bp != NULL) {
-				bp[3] = length;
-				bp[5] = 0x01;/* Alternate Name continues
-					       * in next "NM" field */
-				memcpy(bp+6, nm, length - 5);
-				bp += length;
-			}
-			nmlen -= length - 5;
-			nm += length - 5;
-			extra_tell_used_size(&ctl, length);
-			if (extra_space(&ctl) < 6) {
+		while (nmlen) {
+			/* We need at least six bytes (five header, one content) */
+			if (extra_space(&ctl) < 6)
 				bp = extra_next_record(&ctl, 6);
-				nmmax = extra_space(&ctl);
-				if (nmmax > 0xff)
-					nmmax = 0xff;
+			reclen = extra_space(&ctl);
+			if (reclen > 0xff)
+				reclen = 0xff; /* We can only fit 255 bytes in each NM record */
+			nmmax = reclen - 5; /* Record length is guaranteed to be >= 6 */
+			if (nmmax > nmlen) {
+				/* ... but the name is shorter. */
+				nmmax = nmlen;
+				reclen = nmmax + 5;
 			}
+
 			if (bp != NULL) {
+				/* Fill out the new record */
 				bp[1] = 'N';
 				bp[2] = 'M';
-				bp[4] = 1;    /* version */
+				bp[3] = reclen;  /* record length */
+				bp[4] = 1;       /* version */
+				bp[5] = (nmlen > nmmax) ? 0x01 : 0x00; /* continues in next NM record */
+				memcpy(bp + 6, nm, nmmax);
+				bp += reclen;
 			}
+
+			nmlen -= nmmax;
+			nm += nmmax;
+			extra_tell_used_size(&ctl, reclen);
 		}
-		length = 5 + (int)nmlen;
-		if (bp != NULL) {
-			bp[3] = length;
-			bp[5] = 0;
-			memcpy(bp+6, nm, nmlen);
-			bp += length;
-		}
-		extra_tell_used_size(&ctl, length);
 	}
 
 	/* Write "PX" System Use Entry. */
@@ -3619,7 +3601,7 @@ get_dir_rec_size(struct iso9660 *iso9660, struct isoent *isoent,
 static inline unsigned char *
 wb_buffptr(struct archive_write *a)
 {
-	struct iso9660 *iso9660 = (struct iso9660 *)a->format_data;
+	struct iso9660 *iso9660 = a->format_data;
 
 	return (&(iso9660->wbuff[sizeof(iso9660->wbuff)
 		- iso9660->wbuff_remaining]));
@@ -3628,7 +3610,7 @@ wb_buffptr(struct archive_write *a)
 static int
 wb_write_out(struct archive_write *a)
 {
-	struct iso9660 *iso9660 = (struct iso9660 *)a->format_data;
+	struct iso9660 *iso9660 = a->format_data;
 	size_t wsize, nw;
 	int r;
 
@@ -3653,7 +3635,7 @@ wb_write_out(struct archive_write *a)
 static int
 wb_consume(struct archive_write *a, size_t size)
 {
-	struct iso9660 *iso9660 = (struct iso9660 *)a->format_data;
+	struct iso9660 *iso9660 = a->format_data;
 
 	if (size > iso9660->wbuff_remaining ||
 	    iso9660->wbuff_remaining == 0) {
@@ -3674,7 +3656,7 @@ wb_consume(struct archive_write *a, size_t size)
 static int
 wb_set_offset(struct archive_write *a, int64_t off)
 {
-	struct iso9660 *iso9660 = (struct iso9660 *)a->format_data;
+	struct iso9660 *iso9660 = a->format_data;
 	int64_t used, ext_bytes;
 
 	if (iso9660->wbuff_type != WB_TO_TEMP) {
@@ -3841,7 +3823,7 @@ set_file_identifier(unsigned char *bp, int from, int to, enum vdc vdc,
 static int
 write_VD(struct archive_write *a, struct vdd *vdd)
 {
-	struct iso9660 *iso9660;
+	struct iso9660 *iso9660 = a->format_data;
 	unsigned char *bp;
 	uint16_t volume_set_size = 1;
 	char identifier[256];
@@ -3850,7 +3832,6 @@ write_VD(struct archive_write *a, struct vdd *vdd)
 	unsigned char vd_ver, fst_ver;
 	int r;
 
-	iso9660 = a->format_data;
 	switch (vdd->vdd_type) {
 	case VDD_JOLIET:
 		vdt = VDT_SUPPLEMENTARY;
@@ -3988,10 +3969,9 @@ write_VD(struct archive_write *a, struct vdd *vdd)
 static int
 write_VD_boot_record(struct archive_write *a)
 {
-	struct iso9660 *iso9660;
+	struct iso9660 *iso9660 = a->format_data;
 	unsigned char *bp;
 
-	iso9660 = a->format_data;
 	bp = wb_buffptr(a) -1;
 	/* Volume Descriptor Type */
 	set_VD_bp(bp, VDT_BOOT_RECORD, 1);
@@ -4059,7 +4039,7 @@ set_option_info(struct archive_string *info, int *opt, const char *key,
 static int
 write_information_block(struct archive_write *a)
 {
-	struct iso9660 *iso9660;
+	struct iso9660 *iso9660 = a->format_data;
 	char buf[128];
 	const char *v;
 	int opt, r;
@@ -4067,7 +4047,6 @@ write_information_block(struct archive_write *a)
 	size_t info_size = LOGICAL_BLOCK_SIZE *
 			       NON_ISO_FILE_SYSTEM_INFORMATION_BLOCK;
 
-	iso9660 = (struct iso9660 *)a->format_data;
 	if (info_size > wb_remaining(a)) {
 		r = wb_write_out(a);
 		if (r != ARCHIVE_OK)
@@ -4717,13 +4696,11 @@ cleanup_backslash_2(wchar_t *p)
 static int
 isofile_gen_utility_names(struct archive_write *a, struct isofile *file)
 {
-	struct iso9660 *iso9660;
+	struct iso9660 *iso9660 = a->format_data;
 	const char *pathname;
 	char *p, *dirname, *slash;
 	size_t len;
 	int ret = ARCHIVE_OK;
-
-	iso9660 = a->format_data;
 
 	archive_string_empty(&(file->parentdir));
 	archive_string_empty(&(file->basename));
@@ -5476,8 +5453,8 @@ isoent_setup_file_location(struct iso9660 *iso9660, int location)
 		size = fd_boot_image_size(iso9660->el_torito.media_type);
 		if (size == 0)
 			size = (size_t)archive_entry_size(isoent->file->entry);
-		block = ((int)size + LOGICAL_BLOCK_SIZE -1)
-		    >> LOGICAL_BLOCK_BITS;
+		block = (int)((size >> LOGICAL_BLOCK_BITS)
+		    + ((size & (LOGICAL_BLOCK_SIZE - 1)) != 0));
 		location += block;
 		iso9660->total_file_block += block;
 		isoent->file->content.blocks = block;
@@ -5563,6 +5540,7 @@ get_path_component(char *name, size_t n, const char *fn)
 static int
 isoent_tree(struct archive_write *a, struct isoent **isoentpp)
 {
+	struct iso9660 *iso9660 = a->format_data;
 #if defined(_WIN32) && !defined(__CYGWIN__)
 	char name[_MAX_FNAME];/* Included null terminator size. */
 #elif defined(NAME_MAX) && NAME_MAX >= 255
@@ -5570,7 +5548,6 @@ isoent_tree(struct archive_write *a, struct isoent **isoentpp)
 #else
 	char name[256];
 #endif
-	struct iso9660 *iso9660 = a->format_data;
 	struct isoent *dent, *isoent, *np;
 	struct isofile *f1, *f2;
 	const char *fn, *p;
@@ -5998,7 +5975,7 @@ static int
 isoent_gen_iso9660_identifier(struct archive_write *a, struct isoent *isoent,
     struct idr *idr)
 {
-	struct iso9660 *iso9660;
+	struct iso9660 *iso9660 = a->format_data;
 	struct isoent *np;
 	char *p;
 	int l, r;
@@ -6014,9 +5991,8 @@ isoent_gen_iso9660_identifier(struct archive_write *a, struct isoent *isoent,
 	const int null_size = 1;
 
 	if (isoent->children.cnt == 0)
-		return (0);
+		return (ARCHIVE_OK);
 
-	iso9660 = a->format_data;
 	char_map = idr->char_map;
 	if (iso9660->opt.iso_level <= 3) {
 		allow_ldots = 0;
@@ -6258,7 +6234,7 @@ static int
 isoent_gen_joliet_identifier(struct archive_write *a, struct isoent *isoent,
     struct idr *idr)
 {
-	struct iso9660 *iso9660;
+	struct iso9660 *iso9660 = a->format_data;
 	struct isoent *np;
 	unsigned char *p;
 	size_t l;
@@ -6271,9 +6247,8 @@ isoent_gen_joliet_identifier(struct archive_write *a, struct isoent *isoent,
 	const int null_size = 2;
 
 	if (isoent->children.cnt == 0)
-		return (0);
+		return (ARCHIVE_OK);
 
-	iso9660 = a->format_data;
 	if (iso9660->opt.joliet == OPT_JOLIET_LONGNAME)
 		ffmax = 206;
 	else
@@ -6801,17 +6776,24 @@ isoent_rr_move(struct archive_write *a)
 	/* If "rr_moved" directory is already existing,
 	 * we have to use it. */
 	rr_moved = isoent_find_child(rootent, "rr_moved");
-	if (rr_moved != NULL &&
-	    rr_moved != rootent->children.first) {
-		/*
-		 * It's necessary that rr_move is the first entry
-		 * of the root.
-		 */
-		/* Remove "rr_moved" entry from children chain. */
-		isoent_remove_child(rootent, rr_moved);
+	if (rr_moved != NULL) {
+		if (!rr_moved->dir) {
+			archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
+			    "Unable to relocate directories into rr_moved:"
+			    " the existing entry is not a directory");
+			return (ARCHIVE_FATAL);
+		}
+		if (rr_moved != rootent->children.first) {
+			/*
+			 * It's necessary that rr_move is the first entry
+			 * of the root.
+			 */
+			/* Remove "rr_moved" entry from children chain. */
+			isoent_remove_child(rootent, rr_moved);
 
-		/* Add "rr_moved" entry into the head of children chain. */
-		isoent_add_child_head(rootent, rr_moved);
+			/* Add "rr_moved" entry to the head of children chain. */
+			isoent_add_child_head(rootent, rr_moved);
+		}
 	}
 
 	/*
@@ -7522,8 +7504,9 @@ zisofs_init(struct archive_write *a,  struct isofile *file)
 		(uint32_t)archive_entry_size(file->entry);
 
 	/* Calculate a size of Block Pointers of zisofs. */
-	_ceil = (file->zisofs.uncompressed_size + ZF_BLOCK_SIZE -1)
-		>> file->zisofs.log2_bs;
+	_ceil = (size_t)(((uint64_t)file->zisofs.uncompressed_size +
+		    (ZF_BLOCK_SIZE - 1))
+		>> file->zisofs.log2_bs);
 	iso9660->zisofs.block_pointers_cnt = (int)_ceil + 1;
 	iso9660->zisofs.block_pointers_idx = 0;
 

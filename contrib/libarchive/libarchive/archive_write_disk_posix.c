@@ -29,6 +29,8 @@
 
 #if !defined(_WIN32) || defined(__CYGWIN__)
 
+#include "archive_umask_private.h"
+
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
@@ -300,7 +302,7 @@ struct archive_write_disk {
 	uint32_t		 compressed_rsrc_position;
 	uint32_t		 compressed_rsrc_position_v;
 	/* Buffer for uncompressed data. */
-	char			*uncompressed_buffer;
+	unsigned char		*uncompressed_buffer;
 	size_t			 block_remaining_bytes;
 	size_t			 file_remaining_bytes;
 #ifdef HAVE_ZLIB_H
@@ -646,7 +648,7 @@ _archive_write_disk_header(struct archive *_a, struct archive_entry *entry)
 	 * user edits their umask during the extraction for some
 	 * reason.
 	 */
-	umask(a->user_umask = umask(0));
+	a->user_umask = __archive_get_umask();
 
 	/* Figure out what we need to do for this entry. */
 	a->todo = TODO_MODE_BASE;
@@ -995,8 +997,11 @@ write_data_block(struct archive_write_disk *a, const char *buff, size_t size)
 	}
 
 	/* If this write would run beyond the file size, truncate it. */
-	if (a->filesize >= 0 && (int64_t)(a->offset + size) > a->filesize)
-		start_size = size = (size_t)(a->filesize - a->offset);
+	if (a->filesize >= 0 && a->filesize - a->offset < (int64_t)size) {
+		int64_t diff = a->filesize - a->offset;
+
+		start_size = size = diff < 0 ? 0 : (size_t)diff;
+	}
 
 	/* Write the data. */
 	while (size > 0) {
@@ -1254,7 +1259,7 @@ static int
 hfs_decompress(struct archive_write_disk *a)
 {
 	uint32_t *block_info;
-	unsigned int block_count;
+	uint32_t block_count;
 	uint32_t data_pos, data_size;
 	ssize_t r;
 	ssize_t bytes_written, bytes_to_write;
@@ -1277,10 +1282,10 @@ hfs_decompress(struct archive_write_disk *a)
 			bytes_to_write = data_size -1;
 			b = a->compressed_buffer + 1;
 		} else {
-			uLong dest_len = MAX_DECMPFS_BLOCK_SIZE;
+			size_t dest_len = MAX_DECMPFS_BLOCK_SIZE;
 			int zr;
 
-			zr = uncompress((Bytef *)a->uncompressed_buffer,
+			zr = uncompress(a->uncompressed_buffer,
 			    &dest_len, a->compressed_buffer, data_size);
 			if (zr != Z_OK) {
 				archive_set_error(&a->archive,
@@ -1289,7 +1294,7 @@ hfs_decompress(struct archive_write_disk *a)
 				return (ARCHIVE_WARN);
 			}
 			bytes_to_write = dest_len;
-			b = (unsigned char *)a->uncompressed_buffer;
+			b = a->uncompressed_buffer;
 		}
 		do {
 			bytes_written = write(a->fd, b, bytes_to_write);
@@ -1472,8 +1477,7 @@ hfs_write_decmpfs_block(struct archive_write_disk *a, const char *buff,
 
 	if (a->decmpfs_block_count == (unsigned)-1) {
 		void *new_block;
-		size_t new_size;
-		unsigned int block_count;
+		size_t block_count, new_size;
 
 		if (a->decmpfs_header_p == NULL) {
 			new_block = malloc(MAX_DECMPFS_XATTR_SIZE
@@ -1493,13 +1497,20 @@ hfs_write_decmpfs_block(struct archive_write_disk *a, const char *buff,
 		archive_le64enc(&a->decmpfs_header_p[DECMPFS_UNCOMPRESSED_SIZE],
 		    a->filesize);
 
-		/* Calculate a block count of the file. */
-		block_count =
-		    (a->filesize + MAX_DECMPFS_BLOCK_SIZE -1) /
-			MAX_DECMPFS_BLOCK_SIZE;
+		/*
+		 * Calculate block count for the file.
+		 */
+		block_count = (a->filesize + MAX_DECMPFS_BLOCK_SIZE - 1) /
+		    MAX_DECMPFS_BLOCK_SIZE;
+		if (block_count > (SIZE_MAX - RSRC_H_SIZE - 4 - RSRC_F_SIZE) /
+		    (sizeof(uint32_t) * 2) || block_count > UINT32_MAX) {
+			archive_set_error(&a->archive, EFBIG, "File too big");
+			return (ARCHIVE_FATAL);
+		}
+
 		/*
 		 * Allocate buffer for resource fork.
-		 * Set up related pointers;
+		 * Set up related pointers.
 		 */
 		new_size =
 		    RSRC_H_SIZE + /* header */
@@ -1540,7 +1551,7 @@ hfs_write_decmpfs_block(struct archive_write_disk *a, const char *buff,
 		a->decmpfs_block_info =
 		    (uint32_t *)(a->resource_fork + RSRC_H_SIZE);
 		/* Set the block count to the resource fork. */
-		archive_le32enc(a->decmpfs_block_info++, block_count);
+		archive_le32enc(a->decmpfs_block_info++, (uint32_t)block_count);
 		/* Get the position where we are going to set compressed
 		 * data. */
 		a->compressed_rsrc_position =
@@ -1570,7 +1581,7 @@ hfs_write_decmpfs_block(struct archive_write_disk *a, const char *buff,
 		memcpy(a->uncompressed_buffer +
 		    MAX_DECMPFS_BLOCK_SIZE - a->block_remaining_bytes,
 		    buff, bytes_to_write);
-		buffer_to_write = a->uncompressed_buffer;
+		buffer_to_write = (const char *)a->uncompressed_buffer;
 	}
 	a->block_remaining_bytes -= bytes_to_write;
 	a->file_remaining_bytes -= bytes_to_write;
@@ -1606,8 +1617,11 @@ hfs_write_data_block(struct archive_write_disk *a, const char *buff,
 	}
 
 	/* If this write would run beyond the file size, truncate it. */
-	if (a->filesize >= 0 && (int64_t)(a->offset + size) > a->filesize)
-		start_size = size = (size_t)(a->filesize - a->offset);
+	if (a->filesize >= 0 && a->filesize - a->offset < (int64_t)size) {
+		int64_t diff = a->filesize - a->offset;
+
+		start_size = size = diff < 0 ? 0 : (size_t)diff;
+	}
 
 	/* Write the data. */
 	while (size > 0) {
@@ -2008,8 +2022,8 @@ archive_write_disk_new(void)
 	a->archive.state = ARCHIVE_STATE_HEADER;
 	a->archive.vtable = &archive_write_disk_vtable;
 	a->start_time = time(NULL);
-	/* Query and restore the umask. */
-	umask(a->user_umask = umask(0));
+	/* Query the umask. */
+	a->user_umask = __archive_get_umask();
 #ifdef HAVE_GETEUID
 	a->user_uid = geteuid();
 #endif /* HAVE_GETEUID */
@@ -2369,7 +2383,7 @@ create_filesystem_object(struct archive_write_disk *a)
 #endif
 			if (r != 0)
 				r = errno;
-			else if ((st.st_mode & AE_IFMT) == AE_IFREG) {
+			else if (S_ISREG(st.st_mode)) {
 				a->fd = open(a->name, O_WRONLY | O_TRUNC |
 				    O_BINARY | O_CLOEXEC | O_NOFOLLOW);
 				__archive_ensure_cloexec_flag(a->fd);
@@ -4344,7 +4358,7 @@ copy_metadata(struct archive_write_disk *a, const char *metadata,
 		 * with at least a writing mode(O_RDWR or O_WRONLY). it
 		 * makes the data fork uncompressed.
 		 */
-		dffd = open(datafork, 0);
+		dffd = open(datafork, O_SYMLINK);
 		if (dffd == -1) {
 			archive_set_error(&a->archive, errno,
 			    "Failed to open the data fork for metadata");
@@ -4446,14 +4460,16 @@ fixup_appledouble(struct archive_write_disk *a, const char *pathname)
 	 */
 	archive_strncpy(&datafork, pathname, p - pathname);
 	archive_strcat(&datafork, p + 2);
-	if (
 #ifdef HAVE_LSTAT
-		lstat(datafork.s, &st) == -1 ||
+	if (lstat(datafork.s, &st) == -1)
+		goto skip_appledouble;
 #else
-		la_stat(datafork.s, &st) == -1 ||
+	if (la_stat(datafork.s, &st) == -1)
+		goto skip_appledouble;
 #endif
-	    (((st.st_mode & AE_IFMT) != AE_IFREG) &&
-		((st.st_mode & AE_IFMT) != AE_IFDIR)))
+	if (!S_ISREG(st.st_mode) &&
+	    !S_ISDIR(st.st_mode) &&
+	    !S_ISLNK(st.st_mode))
 		goto skip_appledouble;
 
 	/*

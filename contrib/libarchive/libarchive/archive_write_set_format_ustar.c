@@ -172,8 +172,7 @@ archive_write_set_format_ustar(struct archive *_a)
 	    ARCHIVE_STATE_NEW, "archive_write_set_format_ustar");
 
 	/* If someone else was already registered, unregister them. */
-	if (a->format_free != NULL)
-		(a->format_free)(a);
+	(void)__archive_write_unregister_format(a);
 
 	/* Basic internal sanity test. */
 	if (sizeof(template_header) != 512) {
@@ -206,41 +205,19 @@ static int
 archive_write_ustar_options(struct archive_write *a, const char *key,
     const char *val)
 {
-	struct ustar *ustar = (struct ustar *)a->format_data;
-	int ret = ARCHIVE_FAILED;
-
-	if (strcmp(key, "hdrcharset")  == 0) {
-		if (val == NULL || val[0] == 0)
-			archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
-			    "%s: hdrcharset option needs a character-set name",
-			    a->format_name);
-		else {
-			ustar->opt_sconv = archive_string_conversion_to_charset(
-			    &a->archive, val, 0);
-			if (ustar->opt_sconv != NULL)
-				ret = ARCHIVE_OK;
-			else
-				ret = ARCHIVE_FATAL;
-		}
-		return (ret);
-	}
-
-	/* Note: The "warn" return is just to inform the options
-	 * supervisor that we didn't handle it.  It will generate
-	 * a suitable error if no one used this option. */
-	return (ARCHIVE_WARN);
+	struct ustar *ustar = a->format_data;
+	return (__archive_write_option_header_charset(a, key, val,
+	    &ustar->opt_sconv));
 }
 
 static int
 archive_write_ustar_header(struct archive_write *a, struct archive_entry *entry)
 {
+	struct ustar *ustar = a->format_data;
 	char buff[512];
 	int ret, ret2;
-	struct ustar *ustar;
 	struct archive_entry *entry_main;
 	struct archive_string_conv *sconv;
-
-	ustar = (struct ustar *)a->format_data;
 
 	/* Setup default string conversion. */
 	if (ustar->opt_sconv == NULL) {
@@ -736,9 +713,8 @@ archive_write_ustar_close(struct archive_write *a)
 static int
 archive_write_ustar_free(struct archive_write *a)
 {
-	struct ustar *ustar;
+	struct ustar *ustar = a->format_data;
 
-	ustar = (struct ustar *)a->format_data;
 	free(ustar);
 	a->format_data = NULL;
 	return (ARCHIVE_OK);
@@ -747,12 +723,11 @@ archive_write_ustar_free(struct archive_write *a)
 static int
 archive_write_ustar_finish_entry(struct archive_write *a)
 {
-	struct ustar *ustar;
+	struct ustar *ustar = a->format_data;
 	int ret;
 
-	ustar = (struct ustar *)a->format_data;
 	ret = __archive_write_nulls(a,
-	    (size_t)(ustar->entry_bytes_remaining + ustar->entry_padding));
+	    ustar->entry_bytes_remaining + ustar->entry_padding);
 	ustar->entry_bytes_remaining = ustar->entry_padding = 0;
 	return (ret);
 }
@@ -760,10 +735,9 @@ archive_write_ustar_finish_entry(struct archive_write *a)
 static ssize_t
 archive_write_ustar_data(struct archive_write *a, const void *buff, size_t s)
 {
-	struct ustar *ustar;
+	struct ustar *ustar = a->format_data;
 	int ret;
 
-	ustar = (struct ustar *)a->format_data;
 	if (s > ustar->entry_bytes_remaining)
 		s = (size_t)ustar->entry_bytes_remaining;
 	ret = __archive_write_output(a, buff, s);

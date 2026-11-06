@@ -33,9 +33,6 @@
 
 DEFINE_TEST(test_write_disk_secure744)
 {
-#if defined(_WIN32) && !defined(__CYGWIN__)
-	skipping("archive_write_disk security checks not supported on Windows");
-#else
 	struct archive *a;
 	struct archive_entry *ae;
 	size_t buff_size = 8192;
@@ -45,6 +42,12 @@ DEFINE_TEST(test_write_disk_secure744)
 	int t;
 
 	assert(buff != NULL);
+
+	if (!canSymlink()) {
+		free(buff);
+		skipping("Can't test symlinks on this filesystem");
+		return;
+	}
 
 	/* Start with a known umask. */
 	assertUmask(UMASK);
@@ -70,8 +73,16 @@ DEFINE_TEST(test_write_disk_secure744)
 		archive_entry_copy_pathname(ae, buff);
 		archive_entry_set_mode(ae, S_IFREG | 0777);
 		archive_entry_copy_symlink(ae, testworkdir);
-		assertEqualIntA(a, ARCHIVE_OK, archive_write_header(a, ae));
+		archive_entry_set_symlink_type(ae, AE_SYMLINK_TYPE_DIRECTORY);
+		t = archive_write_header(a, ae);
 		archive_entry_free(ae);
+		if (t == ARCHIVE_FAILED && archive_errno(a) == ENAMETOOLONG) {
+			/* Longer paths cannot be tested on this system. */
+			skipping("Cannot create symlinks with longer pathnames");
+			break;
+		}
+		if (!assertEqualIntA(a, ARCHIVE_OK, t))
+			break;
 
 		*p++ = '/';
 		snprintf(p, buff_size - (p - buff), "target%d", n);
@@ -90,5 +101,4 @@ DEFINE_TEST(test_write_disk_secure744)
 	}
 	archive_free(a);
 	free(buff);
-#endif
 }
