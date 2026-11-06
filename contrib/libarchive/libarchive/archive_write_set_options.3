@@ -197,7 +197,7 @@ Use
 as compression method.
 Supported values are
 .Dq bzip2 ,
-.Dq gzipi ,
+.Dq gzip ,
 .Dq lzo
 .Pq ultra fast ,
 and
@@ -419,7 +419,7 @@ If enabled, the Primary Volume Descriptor may contain lowercase ASCII characters
 If disabled, characters will be converted to uppercase ASCII.
 Default: disabled.
 .It Cm allow-sharp-tilde
-If enabled, sharp and tilde characters will be permitted in filenames, in violation if the ISO9660 specification.
+If enabled, sharp and tilde characters will be permitted in filenames, in violation of the ISO9660 specification.
 If disabled, such characters will be converted to underscore characters.
 Default: disabled.
 .It Cm allow-vernum
@@ -555,6 +555,20 @@ used when translating file names.
 .El
 .It Format pax
 .Bl -tag -compact -width indent
+.It Cm align
+Pad the extended header of each regular file so that the file data that
+follows begins on a multiple of the given number of bytes within the
+uncompressed archive stream.
+The value must be a power of two and a multiple of 512.
+Because the alignment is applied to the uncompressed stream, it is
+independent of any compression filter: the decompressed archive is
+aligned regardless of whether the archive is compressed.
+This allows tools to share file contents out of an
+uncompressed archive (or an uncompressed copy of one) using
+reflinks or
+.Xr copy_file_range 2 ,
+at the cost of some extra padding.
+Files shorter than the alignment are not padded.
 .It Cm hdrcharset
 The value is used as a character set name that will be
 used when translating file, group and user names.
@@ -608,9 +622,11 @@ as file checksum method.
 Supported values are
 .Dq none ,
 .Dq md5 ,
-and
 .Dq sha1
-.Pq default .
+.Pq default ,
+.Dq sha256 ,
+and
+.Dq sha512 .
 .It Cm compression Ns = Ns Ar type
 Use
 .Ar type
@@ -623,7 +639,7 @@ Supported values are
 .Dq lzma
 and
 .Dq xz .
-.It Cm compression_level
+.It Cm compression-level
 The value is a decimal integer from 1 to 9 specifying the compression level.
 .It Cm toc-checksum Ns = Ns Ar type
 Use
@@ -631,10 +647,12 @@ Use
 as table of contents checksum method.
 Supported values are
 .Dq none ,
-.Dq md5
-and
+.Dq md5 ,
 .Dq sha1
-.Pq default .
+.Pq default ,
+.Dq sha256 ,
+and
+.Dq sha512 .
 .El
 .It Format zip
 .Bl -tag -compact -width indent
@@ -662,7 +680,7 @@ other values will enable
 .Dq lzma ,
 or
 .Dq zstd
-compression (in order of priority, depending on what libraries 
+compression (in order of priority, depending on what libraries
 are linked) with the given level.
 .It Cm threads
 The value is interpreted as a decimal integer specifying the
@@ -733,7 +751,7 @@ compressor should use the maximum compression level.
 a = archive_write_new();
 archive_write_add_filter_gzip(a);
 archive_write_set_format_iso9660(a);
-archive_write_set_options(a, "boot=kernel.img,compression=9");
+archive_write_set_options(a, "boot=kernel.img,gzip:compression-level=9");
 archive_write_open_filename(a, filename, blocksize);
 .Ed
 .\"

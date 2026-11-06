@@ -173,9 +173,7 @@ struct links_entry {
         char                    *name;
 };
 
-#define	CPIO_MAGIC   0x13141516
 struct cpio {
-	int			  magic;
 	int			(*read_header)(struct archive_read *, struct cpio *,
 				     struct archive_entry *, size_t *, size_t *);
 	struct links_entry	 *links_head;
@@ -234,10 +232,9 @@ archive_read_support_format_cpio(struct archive *_a)
 
 	cpio = calloc(1, sizeof(*cpio));
 	if (cpio == NULL) {
-		archive_set_error(&a->archive, ENOMEM, "Can't allocate cpio data");
+		archive_set_error(_a, ENOMEM, "Can't allocate cpio data");
 		return (ARCHIVE_FATAL);
 	}
-	cpio->magic = CPIO_MAGIC;
 
 	r = __archive_read_register_format(a,
 	    cpio,
@@ -254,26 +251,24 @@ archive_read_support_format_cpio(struct archive *_a)
 
 	if (r != ARCHIVE_OK)
 		free(cpio);
-	return (ARCHIVE_OK);
+	return (r);
 }
 
 
 static int
 archive_read_format_cpio_bid(struct archive_read *a, int best_bid)
 {
-	const unsigned char *p;
-	struct cpio *cpio;
+	struct cpio *cpio = a->format->data;
+	const void *h;
 	int bid;
 
 	(void)best_bid; /* UNUSED */
 
-	cpio = (struct cpio *)(a->format->data);
-
-	if ((p = __archive_read_ahead(a, 6, NULL)) == NULL)
+	if ((h = __archive_read_ahead(a, 6, NULL)) == NULL)
 		return (-1);
 
 	bid = 0;
-	if (memcmp(p, "070707", 6) == 0) {
+	if (memcmp(h, "070707", 6) == 0) {
 		/* ASCII cpio archive (odc, POSIX.1) */
 		cpio->read_header = header_odc;
 		bid += 48;
@@ -281,7 +276,7 @@ archive_read_format_cpio_bid(struct archive_read *a, int best_bid)
 		 * XXX TODO:  More verification; Could check that only octal
 		 * digits appear in appropriate header locations. XXX
 		 */
-	} else if (memcmp(p, "070727", 6) == 0) {
+	} else if (memcmp(h, "070727", 6) == 0) {
 		/* afio large ASCII cpio archive */
 		cpio->read_header = header_odc;
 		bid += 48;
@@ -289,7 +284,7 @@ archive_read_format_cpio_bid(struct archive_read *a, int best_bid)
 		 * XXX TODO:  More verification; Could check that almost hex
 		 * digits appear in appropriate header locations. XXX
 		 */
-	} else if (memcmp(p, "070701", 6) == 0) {
+	} else if (memcmp(h, "070701", 6) == 0) {
 		/* ASCII cpio archive (SVR4 without CRC) */
 		cpio->read_header = header_newc;
 		bid += 48;
@@ -297,7 +292,7 @@ archive_read_format_cpio_bid(struct archive_read *a, int best_bid)
 		 * XXX TODO:  More verification; Could check that only hex
 		 * digits appear in appropriate header locations. XXX
 		 */
-	} else if (memcmp(p, "070702", 6) == 0) {
+	} else if (memcmp(h, "070702", 6) == 0) {
 		/* ASCII cpio archive (SVR4 with CRC) */
 		/* XXX TODO: Flag that we should check the CRC. XXX */
 		cpio->read_header = header_newc;
@@ -306,12 +301,12 @@ archive_read_format_cpio_bid(struct archive_read *a, int best_bid)
 		 * XXX TODO:  More verification; Could check that only hex
 		 * digits appear in appropriate header locations. XXX
 		 */
-	} else if (archive_be16dec(p) == 070707) {
+	} else if (archive_be16dec(h) == 070707) {
 		/* big-endian binary cpio archives */
 		cpio->read_header = header_bin_be;
 		bid += 16;
 		/* Is more verification possible here? */
-	} else if (archive_le16dec(p) == 070707) {
+	} else if (archive_le16dec(h) == 070707) {
 		/* little-endian binary cpio archives */
 		cpio->read_header = header_bin_le;
 		bid += 16;
@@ -326,10 +321,9 @@ static int
 archive_read_format_cpio_options(struct archive_read *a,
     const char *key, const char *val)
 {
-	struct cpio *cpio;
+	struct cpio *cpio = a->format->data;
 	int ret = ARCHIVE_FAILED;
 
-	cpio = (struct cpio *)(a->format->data);
 	if (strcmp(key, "compat-2x")  == 0) {
 		/* Handle filenames as libarchive 2.x */
 		cpio->init_default_conversion = (val != NULL)?1:0;
@@ -364,14 +358,14 @@ static int
 archive_read_format_cpio_read_header(struct archive_read *a,
     struct archive_entry *entry)
 {
-	struct cpio *cpio;
+	struct cpio *cpio = a->format->data;
 	const void *h, *hl;
 	struct archive_string_conv *sconv;
 	size_t namelength;
 	size_t name_pad;
+	int is_trailer;
 	int r;
 
-	cpio = (struct cpio *)(a->format->data);
 	sconv = cpio->opt_sconv;
 	if (sconv == NULL) {
 		if (!cpio->init_default_conversion) {
@@ -411,6 +405,9 @@ archive_read_format_cpio_read_header(struct archive_read *a,
 		    archive_string_conversion_charset_name(sconv));
 		r = ARCHIVE_WARN;
 	}
+	/* Save this before consuming the name buffer below. */
+	is_trailer = (namelength == 11 &&
+	    memcmp((const char *)h, "TRAILER!!!", 10) == 0);
 	cpio->entry_offset = 0;
 
 	__archive_read_consume(a, namelength);
@@ -451,8 +448,7 @@ archive_read_format_cpio_read_header(struct archive_read *a,
 	 * header.  XXX */
 
 	/* Compare name to "TRAILER!!!" to test for end-of-archive. */
-	if (namelength == 11 && strncmp((const char *)h, "TRAILER!!!",
-	    10) == 0) {
+	if (is_trailer) {
 		/* TODO: Store file location of start of block. */
 		archive_clear_error(&a->archive);
 		return (ARCHIVE_EOF);
@@ -470,10 +466,8 @@ static int
 archive_read_format_cpio_read_data(struct archive_read *a,
     const void **buff, size_t *size, int64_t *offset)
 {
+	struct cpio *cpio = a->format->data;
 	ssize_t bytes_read;
-	struct cpio *cpio;
-
-	cpio = (struct cpio *)(a->format->data);
 
 	if (cpio->entry_bytes_unconsumed) {
 		__archive_read_consume(a, cpio->entry_bytes_unconsumed);
@@ -508,7 +502,7 @@ archive_read_format_cpio_read_data(struct archive_read *a,
 static int
 archive_read_format_cpio_skip(struct archive_read *a)
 {
-	struct cpio *cpio = (struct cpio *)(a->format->data);
+	struct cpio *cpio = a->format->data;
 	int64_t to_skip = cpio->entry_bytes_remaining + cpio->entry_padding +
 		cpio->entry_bytes_unconsumed;
 
@@ -545,7 +539,8 @@ find_newc_header(struct archive_read *a)
 {
 	const void *h;
 	const char *p, *q;
-	size_t skip, skipped = 0;
+	int64_t skip;
+	uintmax_t skipped = 0;
 	ssize_t bytes;
 
 	for (;;) {
@@ -577,13 +572,17 @@ find_newc_header(struct archive_read *a)
 					if (skipped > 0) {
 						archive_set_error(&a->archive,
 						    0,
-						    "Skipped %d bytes before "
+						    "Skipped %ju bytes before "
 						    "finding valid header",
-						    (int)skipped);
+						    skipped);
 						return (ARCHIVE_WARN);
 					}
 					return (ARCHIVE_OK);
 				}
+				p += 2;
+				break;
+			case '7':
+				/* A header may start two bytes on. */
 				p += 2;
 				break;
 			case '0':
@@ -1000,9 +999,8 @@ header_bin_be(struct archive_read *a, struct cpio *cpio,
 static int
 archive_read_format_cpio_cleanup(struct archive_read *a)
 {
-	struct cpio *cpio;
+	struct cpio *cpio = a->format->data;
 
-	cpio = (struct cpio *)(a->format->data);
         /* Free inode->name map */
         while (cpio->links_head != NULL) {
                 struct links_entry *lp = cpio->links_head->next;
@@ -1012,7 +1010,7 @@ archive_read_format_cpio_cleanup(struct archive_read *a)
                 cpio->links_head = lp;
         }
 	free(cpio);
-	(a->format->data) = NULL;
+	a->format->data = NULL;
 	return (ARCHIVE_OK);
 }
 
