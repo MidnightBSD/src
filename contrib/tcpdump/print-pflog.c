@@ -47,7 +47,7 @@ static const struct tok pf_reasons[] = {
 	{ PFRES_MAXSTATES,	"12(state-limit)" },
 	{ PFRES_SRCLIMIT,	"13(src-limit)" },
 	{ PFRES_SYNPROXY,	"14(synproxy)" },
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 	{ PFRES_MAPFAILED,	"15(map-failed)" },
 #elif defined(__NetBSD__)
 	{ PFRES_STATELOCKED,	"15(state-locked)" },
@@ -72,7 +72,7 @@ static const struct tok pf_actions[] = {
 	{ PF_RDR,		"rdr" },
 	{ PF_NORDR,		"nordr" },
 	{ PF_SYNPROXY_DROP,	"synproxy-drop" },
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 	{ PF_DEFER,		"defer" },
 	{ PF_MATCH,		"match" },
 #elif defined(__OpenBSD__)
