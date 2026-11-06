@@ -40,7 +40,7 @@
 #include "pcap-int.h"
 #include "pcap-netmap.h"
 
-#ifndef __FreeBSD__
+#ifndef __MidnightBSD__
   /*
    * On FreeBSD we use IFF_PPROMISC which is in ifr_flagshigh.
    * Remap to IFF_PROMISC on other platforms.
@@ -48,7 +48,7 @@
    * XXX - DragonFly BSD?
    */
   #define IFF_PPROMISC	IFF_PROMISC
-#endif /* __FreeBSD__ */
+#endif /* __MidnightBSD__ */
 
 struct pcap_netmap {
 	struct nm_desc *d;	/* pointer returned by nm_open() */
@@ -154,7 +154,7 @@ pcap_netmap_ioctl(pcap_t *p, u_long what, uint32_t *if_flags)
 		 * So we mask out the upper 16 bits.
 		 */
 		ifr.ifr_flags = *if_flags & 0xffff;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		/*
 		 * In FreeBSD, we need to set the high-order flags,
 		 * as we're using IFF_PPROMISC, which is in those bits.
@@ -162,7 +162,7 @@ pcap_netmap_ioctl(pcap_t *p, u_long what, uint32_t *if_flags)
 		 * XXX - DragonFly BSD?
 		 */
 		ifr.ifr_flagshigh = *if_flags >> 16;
-#endif /* __FreeBSD__ */
+#endif /* __MidnightBSD__ */
 		break;
 	}
 	error = ioctl(fd, what, &ifr);
@@ -180,7 +180,7 @@ pcap_netmap_ioctl(pcap_t *p, u_long what, uint32_t *if_flags)
 			 * sign-extended value.
 			 */
 			*if_flags = ifr.ifr_flags & 0xffff;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 			/*
 			 * In FreeBSD, we need to return the
 			 * high-order flags, as we're using
@@ -189,7 +189,7 @@ pcap_netmap_ioctl(pcap_t *p, u_long what, uint32_t *if_flags)
 			 * XXX - DragonFly BSD?
 			 */
 			*if_flags |= (ifr.ifr_flagshigh << 16);
-#endif /* __FreeBSD__ */
+#endif /* __MidnightBSD__ */
 		}
 	}
 #ifdef __linux__
