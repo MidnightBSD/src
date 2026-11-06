@@ -22,6 +22,9 @@ Updating Information for MidnightBSD users.
 	use-after-free bugs and integer overflows when reading malformed
 	archives.  No CVE numbers have been assigned.
 
+	libpcap 1.10.6 and tcpdump 4.99.6.  The libpcap fix for
+	CVE-2025-11961 was already backported.
+
 20261105:
 	OpenSSH 10.6p2: fixes an sshd(8) password authentication bypass
 	reported against Linux builds without PAM, and accepts the
