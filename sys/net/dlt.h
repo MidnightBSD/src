@@ -34,8 +34,8 @@
  *      @(#)bpf.h       7.1 (Berkeley) 5/7/91
  */
 
-#ifndef lib_pcap_dlt_h
-#define lib_pcap_dlt_h
+#ifndef _NET_DLT_H_
+#define _NET_DLT_H_
 
 /*
  * Link-layer header type codes.
@@ -1688,4 +1688,4 @@
 #endif
 #define DLT_HIGH_MATCHING_MAX	303	/* highest value in the "matching" range */
 
-#endif /* !lib_pcap_dlt_h */
+#endif /* !_NET_DLT_H_ */

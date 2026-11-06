@@ -69,7 +69,7 @@
 #define PFRES_MAXSTATES	12
 #define PFRES_SRCLIMIT	13
 #define PFRES_SYNPROXY	14
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 #define PFRES_MAPFAILED	15
 #elif defined(__NetBSD__)
 #define PFRES_STATELOCKED 15
@@ -94,7 +94,7 @@
 #define PF_RDR			8
 #define PF_NORDR		9
 #define PF_SYNPROXY_DROP	10
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 #define PF_DEFER		11
 #elif defined(__OpenBSD__)
 #define PF_DEFER		11
@@ -145,7 +145,7 @@ struct pfloghdr {
 #else
 	uint8_t		pad[3];
 #endif
-#if defined(__FreeBSD__)
+#if defined(__MidnightBSD__)
 	uint32_t	ridentifier;
 	uint8_t		reserve;
 	uint8_t		pad2[3];
