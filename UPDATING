@@ -14,6 +14,9 @@ Updating Information for MidnightBSD users.
 	a line containing only "go" or "/", and shows column headers in
 	columnar modes even when a query returns no rows.
 
+	sqlite3(1) now supports .archive and .session and has command-line
+	editing and history through libedit.
+
 20261102:
 	OpenSSH 10.6p1, including the GSSAPI authentication fixes for
 	CVE-2026-106553.  SSH compression is less effective after the
