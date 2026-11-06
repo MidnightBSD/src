@@ -1,14 +1,45 @@
-sqlite 3.8.6 - A simple, high-performance, self-contained, public domain,
-SQL database.
+Upgrade procedure for sqlite3
 
-Originals can be found at http://www.sqlite.org/
+Source:	https://sqlite.org/YEAR/sqlite-autoconf-XYYZZPP.tar.gz
+	(3.54.1 is sqlite-autoconf-3540100.tar.gz)
+Checksum: sqlite.org publishes a SHA3-256 hash for each download on
+	https://sqlite.org/download.html and for sqlite3.c on
+	https://sqlite.org/changes.html; there is no signature.
 
-1) Download the amalgamation release
+Vendor branch:	vendor/sqlite3/dist
+Vendor tag:	vendor/sqlite3/dist/VERSION
+In-tree prefix:	contrib/sqlite3
+Last imported:	3.54.1
 
-2) Unpack with the xlist:
-	tar xf sqlite-amalgamation-3.6.23.tar.gz -X MIDNIGHTBSD-Xlist
-	We also deleted the tea directory
+To upgrade to a new version:
 
-3) Imported with:
+1. Download the autoconf tarball into an empty directory, check its
+   SHA3-256, and extract it with --no-same-owner.
+2. Use the vendor-update skill (vendor/sqlite3/dist, contrib/sqlite3).
+   Copy everything except tea/, keeping MIDNIGHTBSD-Xlist and
+   MIDNIGHTBSD-upgrade on the vendor branch.
+3. Subtree merge into master.  Makefile.msc, Replace.cs and
+   sqlite3.rc are deleted on master; keep them deleted.
+4. Update Version: in sqlite3.pc.
+5. Check the release notes (https://sqlite.org/changes.html) for
+   removed or renamed compile-time options and grep sqlite3.c for each
+   option in lib/libsqlite3/Makefile.
+6. Build lib/libsqlite3, usr.bin/sqlite3 and the consumers (lib/libmport,
+   usr.sbin/mport, usr.sbin/aged, lib/libmsearch, usr.bin/msearch,
+   usr.bin/kyua), then add an UPDATING entry.
 
-	cvs import -m "import sqlite 3.7.17 (trimmed)" src/contrib/sqlite3 SQLite v3_7_17
+MidnightBSD differences from FreeBSD:
+
+  - libsqlite3 is a public library (libsqlite3.so.1, headers in
+    /usr/include, sqlite3.pc in /usr/libdata/pkgconfig), not FreeBSD's
+    PRIVATELIB, because mport and other base and third-party software
+    link against it.
+  - lib/libsqlite3/Makefile enables RTREE, FTS3, FTS4, FTS5, JSON1 (a
+    no-op since 3.38), GEOPOLY, MATH_FUNCTIONS, SESSION, PREUPDATE_HOOK
+    and COLUMN_METADATA, and links with -lz -lm -lpthread.  New options
+    may be added; do not remove any.
+  - usr.bin/sqlite3 builds the CLI from shell.c without readline.
+
+Local patches applied on top of upstream:
+
+  - sqlite3.pc: generated from sqlite3.pc.in with the values above.
