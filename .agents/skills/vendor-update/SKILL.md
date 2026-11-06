@@ -106,8 +106,16 @@ Tell the user:
 
 Suggested command (adapt as needed):
 ```bash
-rsync -av --delete --exclude='.git' /path/to/new-upstream-sources/ "$WORKTREE/"
+rsync -av --no-o --no-g --delete --exclude='.git' /path/to/new-upstream-sources/ "$WORKTREE/"
 ```
+
+`--no-o --no-g` keeps the tarball's owner from being copied onto the
+worktree, which would make git refuse it as "dubious ownership".
+
+When the upstream source is a git clone, export the release tag with
+`git --work-tree=DIR checkout <tag> -- .` rather than `git archive`:
+`git archive` silently drops files marked `export-ignore` in upstream's
+`.gitattributes`.
 
 Wait for the user to confirm they have copied the sources.
 
@@ -135,10 +143,30 @@ Show the user which files were removed.
 
 ```bash
 cd "$WORKTREE"
-git add -A
+git add -A -f
 git status
 git diff --stat HEAD
 ```
+
+**Always use `-f`.** Upstream trees often ship a `.gitignore`, and plain
+`git add -A` honours it, silently leaving out real source files (libarchive's
+`*.cmake` and `Makefile` rules dropped `CTestConfig.cmake` and two example
+Makefiles from every import before 3.8.11).
+
+Then check that nothing was lost. Compare the staged file list with the
+upstream source, minus anything the Xlist pruned:
+
+```bash
+cd "$WORKTREE"
+git ls-files | sort > /tmp/staged.txt
+(cd /path/to/new-upstream-sources && find . -type f ! -path './.git/*' | \
+    sed 's|^\./||' | sort) > /tmp/upstream.txt
+comm -13 /tmp/staged.txt /tmp/upstream.txt   # in upstream, not staged
+```
+
+Every file listed must be one the Xlist prunes. If upstream is a git
+clone with no pruning, `git write-tree` in the worktree should equal
+`git rev-parse <tag>^{tree}` in the clone.
 
 Show the user the diff summary.
 
@@ -406,3 +434,6 @@ Key entries from the wiki (may not be exhaustive — always verify with
 - **Use `git subtree merge -P <prefix>`** — not `git merge` — so that the subtree history is preserved correctly.
 - **All pushes, commits, and merges require explicit user approval** before execution.
 - **Do not rebase or amend commits on vendor branches** — they are shared history.
+- **Stage vendor imports with `git add -A -f`** and verify the staged tree against upstream (Step 6); upstream `.gitignore` files otherwise drop real files.
+- **Never squash a vendor merge.** If the update goes through a pull request, it must be merged with "Create a merge commit", never "Squash and merge" or "Rebase and merge". Say so in the PR description. Squashing turns the merge into a single-parent commit, so the vendor commit is no longer an ancestor of the branch. The next `git subtree merge` then picks an old import as the merge base and reports large numbers of false conflicts (libarchive 3.8.8, PR #451). Before pushing, check that `git merge-base --is-ancestor <vendor-commit> <branch>` succeeds.
+- **If an earlier import was squashed**, do the next merge as a three-way merge with an explicit base: build commits whose `<prefix>` is replaced by the previous and new vendor trees, then run `git merge-tree --write-tree --merge-base=<old> <branch> <new>` and record the result as a merge with the vendor commit as second parent.
