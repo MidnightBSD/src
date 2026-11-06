@@ -1,0 +1,155 @@
+	    MidnightBSD maintainer's guide to llvm-project
+	    ==============================================
+
+Source:	https://github.com/llvm/llvm-project/releases/download/llvmorg-VERSION/llvm-project-VERSION.src.tar.xz
+	https://github.com/llvm/llvm-project/releases/download/llvmorg-VERSION/llvm-project-VERSION.src.tar.xz.sig
+Keys:	https://releases.llvm.org/release-keys.asc
+
+Vendor branch:	vendor/llvm/dist
+Vendor tag:	vendor/llvm/dist/VERSION
+In-tree prefix:	contrib/llvm-project
+Last imported:	21.1.8 (2026-11-05), llvmorg-21.1.8-0-g2078da43e25a
+
+MidnightBSD tracks FreeBSD's import of llvm-project.  FreeBSD's
+stable branch carries the same upstream release plus FreeBSD patches and
+the matching build glue, so the cheapest upgrade path is to start from
+FreeBSD's tree and re-apply the MidnightBSD-only changes listed below.
+
+01) Download the tarball and signature, import release-keys.asc into a
+    scratch GNUPGHOME and verify:
+
+    $ gpg --verify llvm-project-VERSION.src.tar.xz.sig \
+	  llvm-project-VERSION.src.tar.xz
+
+02) Extract with --no-same-owner and prune the paths in MIDNIGHTBSD-Xlist
+    (a copy of FreeBSD's FREEBSD-Xlist; plain paths, directories end in
+    "/").  The pruned tree should be identical to FreeBSD's
+    vendor/llvm-project/llvmorg-VERSION tag; compare tree hashes.
+
+03) Commit the pruned tree on vendor/llvm/dist and tag it.
+
+04) Build the master tree as:
+    - contrib/llvm-project from the FreeBSD stable branch that carries
+      VERSION (not FreeBSD's vendor tag, which lacks FreeBSD patches);
+    - minus FREEBSD-Xlist and compiler-rt/lib/builtins/sparc64;
+    - minus FreeBSD patches that depend on FreeBSD-only base changes
+      (see "Not taken from FreeBSD" below);
+    - plus the MidnightBSD-only changes below.
+    Apply FreeBSD's build-glue diff for the same MFC (lib/clang,
+    lib/libc++, lib/libclang_rt, lib/libomp, usr.bin/clang, etc/mtree,
+    ObsoleteFiles.inc, tools/build/mk/OptionalObsoleteFiles.inc,
+    share/mk/bsd.sys.mk) with 3-way fallback, keeping MidnightBSD's
+    platform choices.  Do not take FreeBSD's sys/sys/param.h bump.
+
+05) Record the result with a subtree merge of the vendor commit into
+    master (git merge -Xsubtree=contrib/llvm-project), with the tree
+    replaced by the result of step 04.
+
+06) buildworld and buildkernel with the new compiler before pushing.
+    Probe the built compiler with "cc -dM -E - </dev/null" for
+    __MidnightBSD__, __MidnightBSD_cc_version, __FreeBSD__ (13) and
+    __FreeBSD_cc_version.
+
+07) Bump MIDNIGHTBSD_CC_VERSION (lib/clang/midnightbsd_cc_version.h)
+    and LLD_MIDNIGHTBSD_VERSION (lib/clang/include/lld/Common/
+    Version.inc) to the same new value, and __MidnightBSD_version in
+    sys/sys/param.h so mports can detect the new compiler.  LLVM 21.1.8
+    used 400004 and 402002.
+
+08) Add a separate UPDATING entry and update the wiki vendor table.
+
+
+	  MidnightBSD changes to llvm-project
+	  ===================================
+
+0) Compiler identity (keep on every import)
+
+   - lib/clang/midnightbsd_cc_version.h defines MIDNIGHTBSD_CC_VERSION.
+     Makefile.inc1 compares it with the host compiler's
+     __MidnightBSD_cc_version to decide whether to bootstrap clang.
+     lib/clang/libclang/Makefile force-includes it for Basic/Targets.cpp.
+     FreeBSD's freebsd_cc_version.h is not used.
+   - clang/lib/Basic/Targets/OSTargets.h: FreeBSDTargetInfo uses
+     MIDNIGHTBSD_CC_VERSION and defines __MidnightBSD__,
+     __MidnightBSD_cc_version, __FreeBSD__ (fixed at 13 for
+     compatibility) and __FreeBSD_cc_version.
+   - lib/clang/include: CLANG_VENDOR "MidnightBSD ", BUG_REPORT_URL
+     bugreport.midnightbsd.org, LLD_MIDNIGHTBSD_VERSION in the lld version
+     string, HAVE_MALLCTL keyed on __MidnightBSD__.
+
+1) Target triple
+
+   - llvm/include/llvm/TargetParser/Triple.h: Triple::MidnightBSD is
+     appended as the last OSType (update LastOSType) and
+     isOSMidnightBSD() is added.
+   - llvm/lib/TargetParser/Triple.cpp: "midnightbsd" in getOSTypeName()
+     and parseOS().
+   - llvm/include/llvm/MC/MCELFObjectWriter.h: MidnightBSD uses
+     ELFOSABI_FREEBSD.
+   - lib/clang/llvm.build.mk still builds a freebsd13.4 default triple.
+
+2) Format strings
+
+   - "midnightbsd_kprintf" is accepted as an alias of freebsd_kprintf in
+     clang/lib/Sema/SemaChecking.cpp and SemaDeclAttr.cpp.
+
+3) __MidnightBSD__ platform checks
+
+   Because clang also defines __FreeBSD__, most of these only matter when
+   building with a compiler that does not; keep them for consistency.
+   The ones marked (*) replace __FreeBSD__ rather than extending it and
+   change behaviour on FreeBSD hosts.
+
+   compiler-rt: builtins/atomic.c, fuzzer/FuzzerPlatform.h,
+     profile/InstrProfilingPlatformLinux.c, InstrProfilingPlatformOther.c,
+     InstrProfilingPort.h, sanitizer_common/sanitizer_platform.h,
+     ubsan/ubsan_platform.h
+   libcxx: include/__config (arc4random, C99 long double math, wctype
+     mask, thread-safety analysis (*)), __configuration/abi.h (*),
+     __locale, __locale_dir/locale_base_api.h,
+     __locale_dir/get_c_locale.h (was <locale> before LLVM 21),
+     stdlib.h, src/atomic.cpp (64-bit umtx path (*)), src/locale.cpp
+   lldb: Host/HostInfo.h, Host/SocketAddress.h, Host/common/Host.cpp,
+     Host/posix/HostThreadPosix.cpp, Platform/FreeBSD/PlatformFreeBSD.cpp,
+     tools/lldb-server/lldb-gdbserver.cpp
+   llvm: Support/Unix/Memory.inc, Path.inc (also __MidnightBSD_version
+     >= 400000 instead of __FreeBSD_version for elf_aux_info),
+     Process.inc, Signals.inc
+   openmp: runtime/src/kmp_platform.h, thirdparty/ittnotify (3 files)
+
+4) gc.relocate crash fix (a63ffa9045)
+
+   llvm/lib/IR/AsmWriter.cpp and Verifier.cpp guard against malformed
+   gc.relocate operands instead of crashing.  Still needed with 21.1.8.
+
+5) Housekeeping
+
+   - compiler-rt/lib/builtins/sparc64 removed (#500).
+   - clang/include/clang/AST/DeclTemplate.h, clang/include/clang/Format/
+     Format.h, clang/lib/AST/DeclTemplate.cpp, clang/lib/Sema/
+     SemaConcept.cpp are mode 644 (executable in FreeBSD's tree).
+   - Build glue: no powerpc workarounds in lib/clang, lib/libclang_rt;
+     ncursesw instead of tinfow; MidnightBSD in the .MAKE.OS checks;
+     MK_CLANG_IS_CC and MK_SHARED_TOOLCHAIN handling in usr.bin/clang.
+
+
+	  Not taken from FreeBSD
+	  ======================
+
+   - compiler-rt sanitizer_internal_defs.h: FreeBSD enables
+     .preinit_array after their rtld change ef758b59a44e, which releases
+     rtld_bind_lock around .preinit_array calls.  MidnightBSD's rtld still
+     calls them with the lock held, so this stays disabled.
+   - FreeBSD's post-MFC LoongArch target switch in lib/clang.
+   - sys/sys/param.h __FreeBSD_version bump.
+
+
+	  Dropped with LLVM 21
+	  ====================
+
+   - __MidnightBSD_kernel__ and the misspelled __MidnightBSD_kerenl__
+     tests in Path.inc and Signals.inc; neither macro is ever defined.
+   - FreeBSD 19 patches that MidnightBSD never carried (libcxx
+     deprecation-warning suppressions, _LIBCPP_COMPILER_GCC guards,
+     lldb Host.cpp and RegisterContextFreeBSD_x86_64.cpp rewrites,
+     SelectionDAG ABI-check guards) come in again from FreeBSD's tree.

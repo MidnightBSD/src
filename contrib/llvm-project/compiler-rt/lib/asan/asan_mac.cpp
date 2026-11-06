@@ -55,6 +55,9 @@ uptr FindDynamicShadowStart() {
                           GetMmapGranularity());
 }
 
+// Not used.
+void TryReExecWithoutASLR() {}
+
 // No-op. Mac does not support static linkage anyway.
 void AsanCheckDynamicRTPrereqs() {}
 
@@ -173,7 +176,7 @@ void asan_dispatch_call_block_and_release(void *block) {
   asan_register_worker_thread(context->parent_tid, &stack);
   // Call the original dispatcher for the block.
   context->func(context->block);
-  asan_free(context, &stack, FROM_MALLOC);
+  asan_free(context, &stack);
 }
 
 }  // namespace __asan
