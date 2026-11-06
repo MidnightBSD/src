@@ -149,8 +149,7 @@ archive_write_set_format_v7tar(struct archive *_a)
 	    ARCHIVE_STATE_NEW, "archive_write_set_format_v7tar");
 
 	/* If someone else was already registered, unregister them. */
-	if (a->format_free != NULL)
-		(a->format_free)(a);
+	(void)__archive_write_unregister_format(a);
 
 	/* Basic internal sanity test. */
 	if (sizeof(template_header) != 512) {
@@ -183,41 +182,19 @@ static int
 archive_write_v7tar_options(struct archive_write *a, const char *key,
     const char *val)
 {
-	struct v7tar *v7tar = (struct v7tar *)a->format_data;
-	int ret = ARCHIVE_FAILED;
-
-	if (strcmp(key, "hdrcharset")  == 0) {
-		if (val == NULL || val[0] == 0)
-			archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
-			    "%s: hdrcharset option needs a character-set name",
-			    a->format_name);
-		else {
-			v7tar->opt_sconv = archive_string_conversion_to_charset(
-			    &a->archive, val, 0);
-			if (v7tar->opt_sconv != NULL)
-				ret = ARCHIVE_OK;
-			else
-				ret = ARCHIVE_FATAL;
-		}
-		return (ret);
-	}
-
-	/* Note: The "warn" return is just to inform the options
-	 * supervisor that we didn't handle it.  It will generate
-	 * a suitable error if no one used this option. */
-	return (ARCHIVE_WARN);
+	struct v7tar *v7tar = a->format_data;
+	return (__archive_write_option_header_charset(a, key, val,
+	    &v7tar->opt_sconv));
 }
 
 static int
 archive_write_v7tar_header(struct archive_write *a, struct archive_entry *entry)
 {
+	struct v7tar *v7tar = a->format_data;
 	char buff[512];
 	int ret, ret2;
-	struct v7tar *v7tar;
 	struct archive_entry *entry_main;
 	struct archive_string_conv *sconv;
-
-	v7tar = (struct v7tar *)a->format_data;
 
 	/* Setup default string conversion. */
 	if (v7tar->opt_sconv == NULL) {
@@ -616,9 +593,8 @@ archive_write_v7tar_close(struct archive_write *a)
 static int
 archive_write_v7tar_free(struct archive_write *a)
 {
-	struct v7tar *v7tar;
+	struct v7tar *v7tar = a->format_data;
 
-	v7tar = (struct v7tar *)a->format_data;
 	free(v7tar);
 	a->format_data = NULL;
 	return (ARCHIVE_OK);
@@ -627,12 +603,11 @@ archive_write_v7tar_free(struct archive_write *a)
 static int
 archive_write_v7tar_finish_entry(struct archive_write *a)
 {
-	struct v7tar *v7tar;
+	struct v7tar *v7tar = a->format_data;
 	int ret;
 
-	v7tar = (struct v7tar *)a->format_data;
 	ret = __archive_write_nulls(a,
-	    (size_t)(v7tar->entry_bytes_remaining + v7tar->entry_padding));
+	    v7tar->entry_bytes_remaining + v7tar->entry_padding);
 	v7tar->entry_bytes_remaining = v7tar->entry_padding = 0;
 	return (ret);
 }
@@ -640,10 +615,9 @@ archive_write_v7tar_finish_entry(struct archive_write *a)
 static ssize_t
 archive_write_v7tar_data(struct archive_write *a, const void *buff, size_t s)
 {
-	struct v7tar *v7tar;
+	struct v7tar *v7tar = a->format_data;
 	int ret;
 
-	v7tar = (struct v7tar *)a->format_data;
 	if (s > v7tar->entry_bytes_remaining)
 		s = (size_t)v7tar->entry_bytes_remaining;
 	ret = __archive_write_output(a, buff, s);
