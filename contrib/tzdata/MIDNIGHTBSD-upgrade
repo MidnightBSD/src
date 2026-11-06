@@ -1,0 +1,28 @@
+Upgrade procedure for tzdata
+
+Source:	https://data.iana.org/time-zones/releases/tzdataVERSION.tar.gz
+	https://data.iana.org/time-zones/releases/tzdataVERSION.tar.gz.asc
+Key:	Paul Eggert <eggert@cs.ucla.edu>
+	7E37 92A9 D8AC F7D6 33BC  1588 ED97 E90E 62AA 7E34
+
+Vendor branch:	vendor/tzdata/dist
+Vendor tag:	vendor/tzdata/dist/tzdataVERSION (e.g. tzdata2026f)
+In-tree prefix:	contrib/tzdata
+Last imported:	2026f
+
+To upgrade to a new version:
+
+1. Download the tarball and signature into an empty directory and
+   verify with gpg.  Extract with --no-same-owner.
+2. Use the vendor-update skill (vendor/tzdata/dist, contrib/tzdata).
+   Nothing is pruned; the vendor branch is the whole tarball.
+3. Subtree merge into master, build share/zoneinfo, and check a zone
+   that changed with "zdump -v -c YEAR,YEAR ZONE".
+4. Import tzcode of the same release when there is one (see
+   contrib/tzcode) and add an UPDATING entry.
+
+Local patches applied on top of upstream:
+
+  - factory: the Factory zone abbreviation is
+    "Local time zone must be set--use tzsetup" instead of "-00", as in
+    FreeBSD, so an unconfigured system says what to do.
