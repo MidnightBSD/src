@@ -414,6 +414,7 @@ Key entries from the wiki (may not be exhaustive — always verify with
 | openzfs | `vendor/openzfs` | `sys/contrib/openzfs` | sys/contrib prefix |
 | sendmail | `vendor/sendmail/dist` | `contrib/sendmail` | |
 | sqlite3 | `vendor/sqlite3/dist` | `contrib/sqlite3` | |
+| tcpdump | `vendor/tcpdump` | `contrib/tcpdump` | full tarball on vendor branch; prune in contrib only |
 | tcsh | `vendor/tcsh/dist` | `contrib/tcsh` | |
 | tzcode | `vendor/tzcode/dist` | `contrib/tzcode` | |
 | tzdata | `vendor/tzdata/dist` | `contrib/tzdata` | |
