@@ -28,6 +28,8 @@ TESTS_SRCS=	\
 	test_0.c				\
 	test_basic.c				\
 	test_copy.c				\
+	test_copy_data_warning.c		\
+	test_crlf_mtree.c			\
 	test_empty_mtree.c			\
 	test_extract_tar_bz2.c			\
 	test_extract_tar_grz.c			\
@@ -39,6 +41,7 @@ TESTS_SRCS=	\
 	test_extract_tar_lzo.c			\
 	test_extract_tar_xz.c			\
 	test_extract_tar_zstd.c			\
+	test_edit_pathname_hardlink.c		\
 	test_format_newc.c			\
 	test_help.c				\
 	test_leading_slash.c			\
@@ -70,6 +73,7 @@ TESTS_SRCS=	\
 	test_option_lz4.c			\
 	test_option_lzma.c			\
 	test_option_lzop.c			\
+	test_option_mode.c			\
 	test_option_mtime.c			\
 	test_option_n.c				\
 	test_option_newer_than.c		\
@@ -80,6 +84,7 @@ TESTS_SRCS=	\
 	test_option_r.c				\
 	test_option_s.c				\
 	test_option_safe_writes.c		\
+	test_option_stdout_size_exceeds_declared.c	\
 	test_option_uid_uname.c			\
 	test_option_uuencode.c			\
 	test_option_xattrs.c			\
@@ -100,6 +105,7 @@ SRCS.bsdtar_test=	\
 .PATH: ${_LIBARCHIVEDIR}/test_utils
 SRCS.bsdtar_test+=	test_main.c		\
 			test_utils.c
+${PACKAGE}FILES+=	test_copy_data_warning.lzh.uu
 
 LIBADD.bsdtar_test=	archive
 
@@ -122,10 +128,13 @@ ${PACKAGE}FILES+=	test_extract.tar.lzo.uu
 ${PACKAGE}FILES+=	test_extract.tar.xz.uu
 ${PACKAGE}FILES+=	test_extract.tar.zst.uu
 ${PACKAGE}FILES+=	test_leading_slash.tar.uu
+${PACKAGE}FILES+=	test_edit_pathname_hardlink.tar.Z.uu
 ${PACKAGE}FILES+=	test_list_item.tar.uu
 ${PACKAGE}FILES+=	test_option_keep_newer_files.tar.Z.uu
 ${PACKAGE}FILES+=	test_option_passphrase.zip.uu
 ${PACKAGE}FILES+=	test_option_s.tar.Z.uu
+${PACKAGE}FILES+=	test_option_stdout_size_exceeds_declared_deflate.zip.uu
+${PACKAGE}FILES+=	test_option_stdout_size_exceeds_declared_stored.zip.uu
 ${PACKAGE}FILES+=	test_patterns_2.tar.uu
 ${PACKAGE}FILES+=	test_patterns_3.tar.uu
 ${PACKAGE}FILES+=	test_patterns_4.tar.uu

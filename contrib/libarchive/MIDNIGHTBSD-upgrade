@@ -1,12 +1,75 @@
-libarchive
+Upgrade procedure for libarchive
 
-The source code is pulled with git:
+Source: https://github.com/libarchive/libarchive (signed tags vVERSION;
+	releases are tagged by Martin Matuska,
+	659C84C0E23EA1FA97E0B58CC040B508D63D2B36)
 
-	git clone git://github.com/libarchive/libarchive.git
+The vendor branch (vendor/libarchive/dist) carries the complete upstream
+tree at the release tag, including .github/ and other files that
+.gitignore would hide.  Pruning happens only in contrib/libarchive.
 
-For the contrib directory files and directories were pruned by:
-	
-sh -c 'for F in `cat MIDNIGHTBSD-Xlist | grep -v MidnightBSD`; do rm -rf ./$F ; done'
+To upgrade to a new version:
 
-To make local changes to libarchive, simply patch and commit to the trunk
-branch (aka HEAD).  Never make local changes on the vendor branch.
+1. Check out the tag and verify its signature:
+	git clone https://github.com/libarchive/libarchive.git
+	git -C libarchive tag -v vVERSION
+   Export the tree with "git --work-tree=DIR checkout vVERSION -- ."
+   rather than "git archive", which drops export-ignore'd files.
+2. Use the vendor-update skill (vendor/libarchive/dist,
+   contrib/libarchive, tag vendor/libarchive/dist/VERSION).  Stage with
+   "git add -A -f" so files matched by upstream's .gitignore are kept,
+   and check that the staged tree equals the upstream tag's tree.
+3. Merge.  libarchive 3.8.8 reached master as a squash merge (PR #451),
+   so its vendor commit is not an ancestor of master and a plain
+   "git merge -Xsubtree" uses 3.8.7 as the base.  Once a real merge of
+   3.8.11 or later is on the branch this no longer matters.
+4. Resolve:
+   - Files that upstream changed but that are pruned in-tree show up as
+     modify/delete conflicts; git rm them.
+   - New upstream files in pruned areas (CI, CMake, build/, contrib/,
+     examples/, Windows resources and ports) are added by the merge;
+     git rm them as well.  See MIDNIGHTBSD-Xlist.
+5. Update the build glue:
+   - lib/libarchive/Makefile, usr.bin/{tar,cpio,bsdcat,unzip}/Makefile:
+     new sources.
+   - lib/libarchive/config_midnightbsd.h: new HAVE_* macros.  Compare
+     with FreeBSD's lib/libarchive/config_freebsd.h, and only define
+     functions MidnightBSD has (memset_explicit is missing, for
+     example).
+   - lib/libarchive/tests/Makefile and usr.bin/*/tests/Makefile list
+     every test source and .uu file; add the new ones.  FreeBSD's test
+     Makefiles are a good reference.
+6. Build lib/libarchive, the four programs and their tests, and run the
+   test programs (libarchive_test -r contrib/libarchive/libarchive/test,
+   bsdtar_test -p bsdtar -r contrib/libarchive/tar/test, and so on).
+   test_write_disk fails when run as root; run it as an unprivileged
+   user.
+
+Local patches applied on top of upstream:
+
+  - test_utils/test_common.h: include config_midnightbsd.h when building
+    on MidnightBSD (only used without PLATFORM_CONFIG_H).
+  - libarchive/test/test_write_format_pax_align.c: rename the ALIGN
+    macro to PAX_ALIGN; ALIGN clashes with <machine/param.h>
+    (FreeBSD 47f89e7907e2).
+  - libarchive/archive_write_disk_posix.c: ssize_t for the
+    extattr_set_*() result in set_xattrs().
+  - libarchive/archive_write_set_format_7zip.c: "unsigned int" for a
+    bit-field.
+  - libarchive/test/test_extattr_freebsd.c: ssize_t for the extattr
+    call results.
+  - libarchive/archive_entry.c, archive_read_support_filter_compress.c:
+    BSD license clause renumbered (3 instead of 4).
+  - libarchive/test/test_read_format_gtar_sparse_skip_entry.c: FreeBSD
+    backport guard.
+  - libarchive/test/main.c: an old copy of the test harness, left over
+    from before 3.7.7.  It is not built (the tests use
+    test_utils/test_main.c) and could be removed.
+  - Small differences in test_read_format_mtree.mtree.uu,
+    test_read_format_zip.zip.uu, test_read_format_lha_oversize_header.c
+    and libarchive_fe/line_reader.h ($FreeBSD$ lines).
+
+  Dropped in 3.8.11: the archive_string.c change that made the
+  FreeBSD-only iconvctl(ICONV_SET_ILSEQ_INVALID) block apply to
+  MidnightBSD.  Upstream removed that block because libarchive now
+  handles POSIX iconv semantics (upstream PR #3531).

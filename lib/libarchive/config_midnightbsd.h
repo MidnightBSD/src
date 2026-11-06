@@ -96,6 +96,7 @@
 #define HAVE_EFTYPE 1
 #define HAVE_EILSEQ 1
 #define HAVE_ERRNO_H 1
+#define HAVE_EXPLICIT_BZERO 1
 #define HAVE_FCHDIR 1
 #define HAVE_FCHFLAGS 1
 #define HAVE_FCHMOD 1
@@ -122,6 +123,7 @@
 #define HAVE_GETPID 1
 #define HAVE_GETPWNAM_R 1
 #define HAVE_GETPWUID_R 1
+#define HAVE_GETTIMEOFDAY 1
 #define HAVE_GETVFSBYNAME 1
 #define HAVE_GMTIME_R 1
 #define HAVE_GRP_H 1
@@ -228,6 +230,7 @@
 #define HAVE_WCSCPY 1
 #define HAVE_WCSLEN 1
 #define HAVE_WCTOMB 1
+#define HAVE_WAITPID 1
 #define HAVE_WCTYPE_H 1
 #define HAVE_WMEMCMP 1
 #define HAVE_WMEMCPY 1
