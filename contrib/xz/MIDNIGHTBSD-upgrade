@@ -1,30 +1,35 @@
-$MidnightBSD$
+Upgrade procedure for xz
 
-xz utils is a file compression package with high compression ratios. It
-compresses 15% smaller than bzip2.
+XZ Utils is a general-purpose data compression package with a high
+compression ratio, built around the LZMA2 algorithm.
 
-website:
-http://tukaani.org/xz/
+Website: https://tukaani.org/xz/
+Source:  https://github.com/tukaani-project/xz/releases/download/vVERSION/xz-VERSION.tar.gz
+	 (check the .sig next to it; signing key
+	 3690C240CE51B4670D30AD1C38EE757D69184620, Lasse Collin)
 
-Steps to update xz
+To upgrade to a new version:
 
-5.0.4 was imported from xz tarball using the Xlist
+1. Download, verify and extract the tarball to /tmp/xz/xz-VERSION.
+2. Use the vendor-update skill (vendor/xz/dist, contrib/xz, tag
+   vendor/xz/dist/VERSION).  Prune the files in MIDNIGHTBSD-Xlist from
+   the extracted tree before staging; the vendor branch is trimmed.
+3. After the subtree merge, update PACKAGE_STRING, PACKAGE_VERSION and
+   VERSION in lib/liblzma/config.h.  Compare config.h.in in the
+   tarball with lib/liblzma/config.h and add any new macros.
+   FreeBSD's lib/liblzma/config.h is a useful reference.
+4. Check lib/liblzma/Makefile and usr.bin/xz/Makefile against new or
+   removed sources.
+5. Build lib/liblzma, usr.bin/xz, usr.bin/xzdec and usr.bin/lzmainfo.
 
-tar -xzvf xz-5.0.4.tbz2 -X/path/to/MidnightBSD-Xlist
-cvs -n -q import src/contrib/xz TUKAANI v5_0_4
-...
+Local changes on top of upstream:
 
-Old versions were taken fro git as follows:
+  - src/common/w32_application.manifest,
+    src/common/w32_application.manifest.comments.txt and
+    src/liblzma/check/sha256.c are on the vendor branch but removed
+    in-tree (since xz 5.6.3).  liblzma uses libmd's SHA-256 instead of
+    the bundled one (see lib/liblzma/Makefile).  If a merge brings them
+    back, git rm them again.
 
-1. Pull from git repository
-git clone git://ctrl.tukaani.org/xz.git xz
-
-2. Generate changelog with
-git log > ChangeLog
-
-3. Remove useless files
-sh -c 'for F in `cat MIDNIGHTBSD-Xlist | grep -v MidnightBSD`; do rm -rf ./$F ; done'
-
-4. Import with something like
-
-cvs import src/contrib/xz TUKAANI V4_999_9
+Notes:
+  - ChangeLog is the one shipped in the tarball.
