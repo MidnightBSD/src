@@ -68,15 +68,14 @@
 #include "archive_entry.h"
 #include "archive_entry_locale.h"
 #include "archive_hmac_private.h"
+#include "archive_integer.h"
 #include "archive_private.h"
 #include "archive_random_private.h"
 #include "archive_time_private.h"
 #include "archive_write_private.h"
 #include "archive_write_set_format_private.h"
 
-#ifndef HAVE_ZLIB_H
-#include "archive_crc32.h"
-#endif
+
 
 #define ZIP_ENTRY_FLAG_ENCRYPTED	(1 << 0)
 #define ZIP_ENTRY_FLAG_LZMA_EOPM	(1 << 1)
@@ -154,7 +153,6 @@ struct zip {
 	enum compression entry_compression;
 	enum encryption  entry_encryption;
 	int entry_flags;
-	int experiments;
 	struct trad_enc_ctx tctx;
 	char tctx_valid;
 	unsigned char trad_chkdat;
@@ -235,7 +233,6 @@ static int archive_write_zip_header(struct archive_write *,
 	      struct archive_entry *);
 static int archive_write_zip_options(struct archive_write *,
 	      const char *, const char *);
-static size_t path_length(struct archive_entry *);
 static int write_path(struct archive_entry *, struct archive_write *);
 static void copy_path(struct archive_entry *, unsigned char *);
 static struct archive_string_conv *get_sconv(struct archive_write *, struct zip *);
@@ -323,7 +320,7 @@ cd_alloc(struct zip *zip, size_t length)
 static unsigned long
 real_crc32(unsigned long crc, const void *buff, size_t len)
 {
-	return crc32(crc, buff, (unsigned int)len);
+	return __archive_crc32(crc, buff, (unsigned int)len);
 }
 
 static unsigned long
@@ -438,8 +435,11 @@ archive_write_zip_options(struct archive_write *a, const char *key,
 		char *endptr;
 		unsigned long v;
 
-		if (val == NULL)
+		if (val == NULL) {
+			archive_set_error(&(a->archive), ARCHIVE_ERRNO_MISC,
+			    "Option 'threads' requires an argument");
 			return (ARCHIVE_FAILED);
+		}
 		errno = 0;
 		v = strtoul(val, &endptr, 10);
 		if (errno != 0 || *endptr != '\0' || v > SHRT_MAX) {
@@ -518,23 +518,6 @@ archive_write_zip_options(struct archive_write *a, const char *key,
 			zip->crc32func = fake_crc32;
 		}
 		return (ARCHIVE_OK);
-	} else if (strcmp(key, "hdrcharset")  == 0) {
-		/*
-		 * Set the character set used in translating filenames.
-		 */
-		if (val == NULL || val[0] == 0) {
-			archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
-			    "%s: hdrcharset option needs a character-set name",
-			    a->format_name);
-		} else {
-			zip->opt_sconv = archive_string_conversion_to_charset(
-			    &a->archive, val, 0);
-			if (zip->opt_sconv != NULL)
-				ret = ARCHIVE_OK;
-			else
-				ret = ARCHIVE_FATAL;
-		}
-		return (ret);
 	} else if (strcmp(key, "zip64") == 0) {
 		/*
 		 * Bias decisions about Zip64: force them to be
@@ -555,7 +538,8 @@ archive_write_zip_options(struct archive_write *a, const char *key,
 	/* Note: The "warn" return is just to inform the options
 	 * supervisor that we didn't handle it.  It will generate
 	 * a suitable error if no one used this option. */
-	return (ARCHIVE_WARN);
+	return (__archive_write_option_header_charset(a, key, val,
+	    &zip->opt_sconv));
 }
 
 int
@@ -730,8 +714,7 @@ archive_write_set_format_zip(struct archive *_a)
 	    ARCHIVE_STATE_NEW, "archive_write_set_format_zip");
 
 	/* If another format was already registered, unregister it. */
-	if (a->format_free != NULL)
-		(a->format_free)(a);
+	(void)__archive_write_unregister_format(a);
 
 	zip = calloc(1, sizeof(*zip));
 	if (zip == NULL) {
@@ -791,9 +774,9 @@ is_all_ascii(const char *p)
 static int
 archive_write_zip_header(struct archive_write *a, struct archive_entry *entry)
 {
+	struct zip *zip = a->format_data;
 	unsigned char local_header[32];
 	unsigned char local_extra[144];
-	struct zip *zip = a->format_data;
 	unsigned char *e;
 	unsigned char *cd_extra;
 	size_t filename_length;
@@ -959,8 +942,6 @@ archive_write_zip_header(struct archive_write *a, struct archive_entry *entry)
 #endif
 		}
 	}
-	filename_length = path_length(zip->entry);
-
 	/* Reject empty or overlong pathnames */
 	path = archive_entry_pathname(zip->entry);
 	if (path == NULL || path[0] == '\0') {
@@ -968,6 +949,10 @@ archive_write_zip_header(struct archive_write *a, struct archive_entry *entry)
 		    "ZIP format requires a non-empty pathname");
 		return (ARCHIVE_FAILED);
 	}
+	filename_length = strlen(path);
+	/* Include the trailing slash added to directories. */
+	if (type == AE_IFDIR && path[filename_length - 1] != '/')
+		filename_length++;
 	if (filename_length > 0xffff) {
 		archive_set_error(&a->archive, ENAMETOOLONG,
 		    "Pathname too long for ZIP format");
@@ -1066,8 +1051,13 @@ archive_write_zip_header(struct archive_write *a, struct archive_entry *entry)
 			default:
 				break;
 			}
-			if (zip->entry_compression == COMPRESSION_STORE)
-				zip->entry_compressed_size += additional_size;
+			if (zip->entry_compression == COMPRESSION_STORE &&
+			    archive_ckd_add_i64(&zip->entry_compressed_size,
+				zip->entry_compressed_size, additional_size)) {
+				archive_set_error(&a->archive, ARCHIVE_ERRNO_MISC,
+				    "File size too large for encrypted ZIP entry");
+				return (ARCHIVE_FAILED);
+			}
 		}
 
 		/*
@@ -1081,7 +1071,7 @@ archive_write_zip_header(struct archive_write *a, struct archive_entry *entry)
 		 *    (compression might make file larger)
 		 */
 		if ((zip->flags & ZIP_FLAG_FORCE_ZIP64)
-		    || (zip->entry_uncompressed_size + additional_size > ZIP_4GB_MAX)
+		    || (zip->entry_uncompressed_size > ZIP_4GB_MAX - additional_size)
 		    || (zip->entry_uncompressed_size > ZIP_4GB_MAX_UNCOMPRESSED
 			&& zip->entry_compression != COMPRESSION_STORE)) {
 			MIN_VERSION_NEEDED(45);
@@ -1166,7 +1156,7 @@ archive_write_zip_header(struct archive_write *a, struct archive_entry *entry)
 	else
 		archive_le16enc(local_header + 8, zip->entry_compression);
 	archive_le32enc(local_header + 10,
-		unix_to_dos(archive_entry_mtime(zip->entry)));
+		__archive_unix_to_dos(archive_entry_mtime(zip->entry)));
 	if ((zip->entry_flags & ZIP_ENTRY_FLAG_LENGTH_AT_END) == 0) {
 		archive_le32enc(local_header + 14, zip->entry_crc32);
 		archive_le32enc(local_header + 18, (uint32_t)zip->entry_compressed_size);
@@ -1197,7 +1187,7 @@ archive_write_zip_header(struct archive_write *a, struct archive_entry *entry)
 	else
 		archive_le16enc(zip->file_header + 10, zip->entry_compression);
 	archive_le32enc(zip->file_header + 12,
-		unix_to_dos(archive_entry_mtime(zip->entry)));
+		__archive_unix_to_dos(archive_entry_mtime(zip->entry)));
 	archive_le16enc(zip->file_header + 28, (uint16_t)filename_length);
 	/* Following Info-Zip, store mode in the "external attributes" field. */
 	archive_le32enc(zip->file_header + 38,
@@ -1515,8 +1505,8 @@ archive_write_zip_header(struct archive_write *a, struct archive_entry *entry)
 static ssize_t
 archive_write_zip_data(struct archive_write *a, const void *buff, size_t s)
 {
-	int ret;
 	struct zip *zip = a->format_data;
+	int ret;
 
 	if ((int64_t)s > zip->entry_uncompressed_limit)
 		s = (size_t)zip->entry_uncompressed_limit;
@@ -2184,9 +2174,9 @@ archive_write_zip_finish_entry(struct archive_write *a)
 static int
 archive_write_zip_close(struct archive_write *a)
 {
+	struct zip *zip = a->format_data;
 	uint8_t buff[64];
 	int64_t offset_start, offset_end;
-	struct zip *zip = a->format_data;
 	struct cd_segment *segment;
 	int ret;
 
@@ -2256,10 +2246,9 @@ archive_write_zip_close(struct archive_write *a)
 static int
 archive_write_zip_free(struct archive_write *a)
 {
-	struct zip *zip;
+	struct zip *zip = a->format_data;
 	struct cd_segment *segment;
 
-	zip = a->format_data;
 	while (zip->central_directory != NULL) {
 		segment = zip->central_directory;
 		zip->central_directory = segment->next;
@@ -2277,24 +2266,6 @@ archive_write_zip_free(struct archive_write *a)
 	free(zip);
 	a->format_data = NULL;
 	return (ARCHIVE_OK);
-}
-
-static size_t
-path_length(struct archive_entry *entry)
-{
-	mode_t type;
-	const char *path;
-	size_t len;
-
-	type = archive_entry_filetype(entry);
-	path = archive_entry_pathname(entry);
-
-	if (path == NULL)
-		return (0);
-	len = strlen(path);
-	if (type == AE_IFDIR && (path[0] == '\0' || path[len - 1] != '/'))
-		++len; /* Space for the trailing / */
-	return len;
 }
 
 static int
@@ -2368,7 +2339,7 @@ static void
 trad_enc_update_keys(struct trad_enc_ctx *ctx, uint8_t c)
 {
 	uint8_t t;
-#define CRC32(c, b) (crc32(c ^ 0xffffffffUL, &b, 1) ^ 0xffffffffUL)
+#define CRC32(c, b) (__archive_crc32(c ^ 0xffffffffUL, &b, 1) ^ 0xffffffffUL)
 
 	ctx->keys[0] = CRC32(ctx->keys[0], c);
 	ctx->keys[1] = (ctx->keys[1] + (ctx->keys[0] & 0xff)) * 134775813L + 1;

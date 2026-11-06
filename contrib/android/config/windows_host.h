@@ -118,6 +118,9 @@
 /* SHA512 via ARCHIVE_CRYPTO_SHA512_WIN supported. */
 #define ARCHIVE_CRYPTO_SHA512_WIN 1
 
+/* Use Windows CNG (Crypto Next Generation) */
+#define ARCHIVE_CRYPTO_WIN 1
+
 /* Define to 1 if you have the `acl_create_entry' function. */
 /* #undef HAVE_ACL_CREATE_ENTRY */
 
@@ -553,9 +556,6 @@
 
 /* Define to 1 if you have the `memmove' function. */
 #define HAVE_MEMMOVE 1
-
-/* Define to 1 if you have the <memory.h> header file. */
-#define HAVE_MEMORY_H 1
 
 /* Define to 1 if you have the `memset' function. */
 #define HAVE_MEMSET 1

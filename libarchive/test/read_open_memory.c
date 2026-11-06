@@ -86,6 +86,7 @@ read_open_memory_internal(struct archive *a, const void *buff,
     size_t size, size_t read_size, int level)
 {
 	struct read_memory_data *mine = NULL;
+	int r;
 
 	switch (level) {
 	case 3:
@@ -112,7 +113,12 @@ read_open_memory_internal(struct archive *a, const void *buff,
 
 		archive_read_set_read_callback(a, memory_read);
 		archive_read_set_close_callback(a, memory_read_close);
-		archive_read_set_callback_data(a, mine);
+		r = archive_read_set_callback_data(a, mine);
+		if (r < 0)
+			return (r);
+		__LA_FALLTHROUGH;
+	default:
+		break;
 	}
 	return archive_read_open1(a);
 }
@@ -182,27 +188,27 @@ static int64_t
 memory_read_seek(struct archive *a, void *client_data, int64_t offset, int whence)
 {
 	struct read_memory_data *mine = (struct read_memory_data *)client_data;
+	const unsigned char *p;
 
 	(void)a; /* UNUSED */
 	switch (whence) {
 	case SEEK_SET:
-		mine->p = mine->start + offset;
+		p = mine->start + offset;
 		break;
 	case SEEK_END:
-		mine->p = mine->end + offset;
+		p = mine->end + offset;
 		break;
 	case SEEK_CUR:
-		mine->p += offset;
+		p = mine->p + offset;
 		break;
-	}
-	if (mine->p < mine->start) {
-		mine->p = mine->start;
+	default:
 		return ARCHIVE_FAILED;
 	}
-	if (mine->p > mine->end) {
-		mine->p = mine->end;
+	if (p < mine->start)
 		return ARCHIVE_FAILED;
-	}
+	if (p > mine->end)
+		return ARCHIVE_FAILED;
+	mine->p = p;
 	return (mine->p - mine->start);
 }
 

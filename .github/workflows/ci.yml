@@ -6,18 +6,78 @@ permissions:
   contents: read
 
 jobs:
+  Alpine:
+    name: Alpine (${{ matrix.bs }}, ${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - { arch: x86_64, bs: autotools, image: alpine:3.24 }
+        - { arch: x86_64, bs: cmake, image: alpine:3.24 }
+        - { arch: i386, bs: autotools, image: i386/alpine:3.24 }
+        - { arch: i386, bs: cmake, image: i386/alpine:3.24 }
+    container:
+      image: ${{ matrix.image }}
+    steps:
+    - name: Install dependencies
+      run: |
+        apk add --no-cache \
+          autoconf automake build-base ca-certificates cmake git libtool \
+          lzop perl pkgconf tar xz \
+          acl-dev bzip2-dev libxml2-dev lz4-dev \
+          openssl-dev xz-dev zlib-dev zstd-dev
+    # Plain git instead of the checkout action: the runner executes
+    # actions with its own 64-bit node, which cannot run inside a
+    # 32-bit container.
+    - name: Check out
+      run: |
+        git config --global --add safe.directory "$GITHUB_WORKSPACE"
+        git init -q
+        git remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
+        git fetch -q --depth 1 origin "$GITHUB_SHA"
+        git checkout -q FETCH_HEAD
+    - name: Autogen
+      run: ./build/ci/build.sh -a autogen
+      env:
+        BS: ${{ matrix.bs }}
+    - name: Configure
+      run: ./build/ci/build.sh -a configure
+      env:
+        BS: ${{ matrix.bs }}
+    - name: Build
+      run: ./build/ci/build.sh -a build
+      env:
+        BS: ${{ matrix.bs }}
+        MAKE_ARGS: -j4
+    - name: Test
+      run: ./build/ci/build.sh -a test
+      env:
+        BS: ${{ matrix.bs }}
+        CTEST_OUTPUT_ON_FAILURE: ON
+    - name: Install
+      run: ./build/ci/build.sh -a install
+      env:
+        BS: ${{ matrix.bs }}
+    # Build the artifact without uploading it: upload-artifact also
+    # requires a JavaScript runtime unavailable in the i386 container.
+    - name: Artifact
+      run: ./build/ci/build.sh -a artifact
+      env:
+        BS: ${{ matrix.bs }}
+
   FreeBSD:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         bs: [autotools, cmake]
     steps:
-    - name: Build and test on a FreeBSD 15 firecracker VM
-      uses: acj/freebsd-firecracker-action@ff79eb955fd19c697a708a02834995e47a6e58ed # v0.10.0
+    - name: Build and test on a FreeBSD 15.1 firecracker VM
+      uses: acj/freebsd-firecracker-action@ba4f70408ef1d979acdd7bd36fc4b27e06fe5abe # v0.12.0
       with:
         run-in-vm: |
           chflags -R noschg / && \
-          fetch -o - https://download.freebsd.org/releases/amd64/15.0-RELEASE/base.txz | bsdtar -x -C / -f - && \
+          fetch -o - https://download.freebsd.org/releases/amd64/15.1-RELEASE/base.txz | bsdtar -x -C / -f - && \
           pkg bootstrap -y && \
           cd firecracker-freebsd && \
           env BS=${{ matrix.bs }} ./build/ci/github_actions/freebsd.sh prepare && \
@@ -33,7 +93,7 @@ jobs:
       matrix:
         bs: [autotools, cmake]
     steps:
-    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
     - name: Install dependencies
       run: ./build/ci/github_actions/install-macos-dependencies.sh
     - name: Autogen
@@ -68,7 +128,7 @@ jobs:
       run: ./build/ci/build.sh -a artifact
       env:
         BS: ${{ matrix.bs }}
-    - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+    - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: libarchive-macos-${{ matrix.bs }}-${{ github.sha }}
         path: libarchive.tar.xz
@@ -80,7 +140,7 @@ jobs:
         bs: [autotools, cmake]
         crypto: [mbedtls, nettle, openssl]
     steps:
-    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
     - name: Update apt cache
       run: sudo apt-get update
     - name: Install dependencies
@@ -94,6 +154,7 @@ jobs:
       env:
         BS: ${{ matrix.bs }}
         CRYPTO: ${{ matrix.crypto }}
+        DEBUG: 1
     - name: Build
       run: ./build/ci/build.sh -a build
       env:
@@ -114,14 +175,14 @@ jobs:
       run: ./build/ci/build.sh -a artifact
       env:
         BS: ${{ matrix.bs }}
-    - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+    - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: libarchive-ubuntu-${{ matrix.bs }}-${{ matrix.crypto }}-${{ github.sha }}
         path: libarchive.tar.xz
   Ubuntu-distcheck:
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
     - name: Update package definitions
       run: sudo apt-get update
     - name: Install dependencies
@@ -133,10 +194,11 @@ jobs:
     - name: Distcheck
       run: ./build/ci/build.sh -a distcheck
       env:
+        CTEST_OUTPUT_ON_FAILURE: ON
         SKIP_OPEN_FD_ERR_TEST: 1
     - name: Dist-Artifact
       run: ./build/ci/build.sh -a dist-artifact
-    - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+    - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: libarchive-${{ github.sha }}
         path: libarchive-dist.tar
@@ -146,9 +208,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        be: [mingw-gcc, cygwin-gcc, msvc]
+        be: [cygwin-gcc, msvc]
+        include:
+          - { be: mingw, msystem: mingw64 }
+          - { be: mingw, msystem: ucrt64 }
+          - { be: mingw, msystem: clang64 }
+    env:
+      MSYSTEM: ${{ matrix.msystem }}
     steps:
-    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
     - name: Install Cygwin
       uses: cygwin/cygwin-install-action@3f0a3f9f988f7e96b8c18098ae05eaec175f5b52 # v6
       if:  ${{ matrix.be=='cygwin-gcc' }}
@@ -161,21 +229,23 @@ jobs:
           liblz4-devel libiconv-devel libxml2-devel
           libzstd-devel libssl-devel
     - name: Install MinGW (msys2)
-      uses: msys2/setup-msys2@66cd2cce69caa17b53920067426061ca1de3a884 # v2.32.0
-      if:  ${{ matrix.be=='mingw-gcc' }}
+      uses: msys2/setup-msys2@ec48f7c5447b3140e2b088413ae3a55687bccb6e # v2.33.0
+      if:  ${{ matrix.be=='mingw' }}
       with:
         location: "D:\\"
-        install: |-
-          mingw-w64-x86_64-gcc
-          mingw-w64-x86_64-autotools
-          mingw-w64-x86_64-binutils
-          mingw-w64-x86_64-pkgconf
-          mingw-w64-x86_64-cmake
-          mingw-w64-x86_64-make
-          mingw-w64-x86_64-zlib
-          mingw-w64-x86_64-bzip2
-          mingw-w64-x86_64-xz
-          mingw-w64-x86_64-zstd
+        suppress-deprecation-warnings: msystem-mingw64
+        msystem: ${{ matrix.msystem }}
+        pacboy: |-
+          gcc:p
+          autotools:p
+          binutils:p
+          pkgconf:p
+          cmake:p
+          make:p
+          zlib:p
+          bzip2:p
+          xz:p
+          zstd:p
     - name: Configure
       run: ./build/ci/github_actions/ci.cmd configure
       shell: cmd
@@ -202,7 +272,9 @@ jobs:
       shell: cmd
       env:
         BE: ${{ matrix.be }}
-    - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+    - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
-        name: libarchive-windows-${{ matrix.be }}-${{ github.sha }}
+        # for msvc and cygwin, libarchive-windows-backend-arch
+        # for mingw, libarchive-windows-mingw-msystem-arch
+        name: libarchive-windows-${{ matrix.be }}${{ matrix.be=='mingw' && format('-{0}', matrix.msystem) || '' }}-${{ github.sha }}
         path: ${{ matrix.be=='cygwin-gcc' && 'libarchive.tar.xz' || 'libarchive.zip' }}

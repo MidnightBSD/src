@@ -15,9 +15,14 @@ IF(ENABLE_UNZIP AND ENABLE_TEST)
     test_glob.c
     test_not_exist.c
     test_singlefile.c
+    test_stdin.c
+    test_symlink.c
+    test_symlink_dotdot.c
     test_C.c
     test_p.c
+    test_prompt.c
     test_d.c
+    test_f.c
     test_j.c
     test_L.c
     test_n.c
@@ -25,7 +30,9 @@ IF(ENABLE_UNZIP AND ENABLE_TEST)
     test_q.c
     test_t.c
     test_t_bad.c
+    test_u.c
     test_version.c
+    test_windows_paths.c
     test_x.c
     test_Z1.c
     test_P_encryption.c
