@@ -10,14 +10,18 @@ INTERNALLIB=
 .PATH:	${WPA_DISTDIR}/src/crypto
 
 .if ${MK_OPENSSL} != "no"
-SRCS=	crypto_openssl.c \
+SRCS=	aes-siv.c \
+	crypto_openssl.c \
 	random.c \
 	sha1-prf.c \
+	sha256-kdf.c \
 	sha256-prf.c \
 	sha256-tlsprf.c \
 	sha384-prf.c \
 	sha384-tlsprf.c \
 	sha512.c
+# aes-siv.c needs aes_ctr_encrypt()
+NEED_AES_CTR=y
 .else
 SRCS=	crypto_internal.c \
 	random.c
@@ -40,7 +44,6 @@ SRCS+=  aes-unwrap.c aes-wrap.c \
         aes-internal.c \
         aes-internal-dec.c \
         aes-internal-enc.c
-.else
 .endif
 
 .if defined(NEED_AES_CBC)
