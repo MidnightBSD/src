@@ -1,0 +1,36 @@
+Upgrade procedure for libpcap
+
+Source: https://www.tcpdump.org/release/libpcap-VERSION.tar.xz
+	(check libpcap-VERSION.tar.xz.sig, signed by The Tcpdump Group,
+	1F166A5742ABB9E0249A8D30E089DEF1D9C15D0D;
+	https://www.tcpdump.org/release/signing-key.asc)
+
+The vendor branch (vendor/libpcap) carries the complete release
+tarball, and nothing is pruned in contrib/libpcap.
+
+To upgrade to a new version:
+
+1. Download and verify the tarball and extract it into a new directory.
+2. Use the vendor-update skill (vendor/libpcap, contrib/libpcap, tag
+   vendor/libpcap/VERSION).  Stage with "git add -A -f".
+3. Merge and re-apply the local patches below if they conflict.
+4. Update lib/libpcap/Makefile and lib/libpcap/config.h.  FreeBSD's
+   copies are a good reference; ours are otherwise identical to
+   FreeBSD's.
+5. Copy the new pcap/dlt.h to sys/net/dlt.h, changing FreeBSD to
+   MidnightBSD throughout ("sed s/FreeBSD/MidnightBSD/g" on FreeBSD's
+   sys/net/dlt.h reproduces ours exactly).  libpcap needs the new DLT_
+   values, and both headers are included by programs using pcap.
+6. Build lib/libpcap and usr.sbin/tcpdump (update tcpdump afterwards
+   if it has a new release too).
+
+Local patches applied on top of upstream (from FreeBSD, with FreeBSD
+changed to MidnightBSD):
+
+  - pcap/bpf.h: use the system <net/bpf.h> instead of libpcap's own
+    BPF definitions (FreeBSD 6d1c946e9168).
+  - pcap/pcap.h: remote capture is disabled.
+
+Notes:
+  - The CVE-2025-11961 backport to nametoaddr.c (1d2d357a0e) was
+    replaced by the upstream fix in 1.10.6.
