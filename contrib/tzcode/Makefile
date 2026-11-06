@@ -129,6 +129,9 @@ TIME_T_ALTERNATIVES_TAIL = int_least32_t.ck uint_least32_t.ck \
 
 # What kind of TZif data files to generate.  (TZif is the binary time
 # zone data format that zic generates; see Internet RFC 9636.)
+# Although TZif files with leap second info are rarely used and the last
+# leap second was in 2016, they are still supported for compatibility
+# with historical timestamps generated via TZif files with leap seconds.
 # If you want only POSIX time, with time values interpreted as
 # seconds since the epoch (not counting leap seconds), use
 #	REDO=		posix_only
@@ -151,14 +154,17 @@ TIME_T_ALTERNATIVES_TAIL = int_least32_t.ck uint_least32_t.ck \
 REDO=		posix_only
 
 # Whether to put an "Expires" line in the leapseconds file.
-# Use EXPIRES_LINE=1 to put the line in, 0 to omit it.
-# The EXPIRES_LINE value matters only if REDO's value contains "right".
+# Use EXPIRES_LINE=1 to put the "Expires" line in, 0 to omit it.
+# This variable is obsolescent and should be removed in a future release.
+# It defaults to 0 because the circa 2020 effort to support it
+# became obsolete after the 2026 decision to discontinue leap seconds.
+# The EXPIRES_LINE value does not affect the contents of TZif files;
+# it affects only the leapseconds file itself, so it matters only if
+# the leapseconds file is used directly by third-party software.
 # If you change EXPIRES_LINE, remove the leapseconds file before running "make".
 # zic's support for the Expires line was introduced in tzdb 2020a,
-# and was modified in tzdb 2021b to generate version 4 TZif files.
-# EXPIRES_LINE defaults to 0 for now so that the leapseconds file
-# can be given to pre-2020a zic implementations and so that TZif files
-# built by newer zic implementations can be read by pre-2021b libraries.
+# was modified in tzdb 2021b to generate version 4 TZif files,
+# and was removed after tzdb 2026e was released.
 EXPIRES_LINE=	0
 
 # To install data in text form that has all the information of the TZif data,
@@ -172,9 +178,9 @@ EXPIRES_LINE=	0
 
 TZDATA_TEXT=	leapseconds tzdata.zi
 
-# For backward-compatibility links for old zone names, use
+# For backward-compatibility links and zones for old names, use
 #	BACKWARD=	backward
-# To omit these links, use
+# To omit these links and zones, use
 #	BACKWARD=
 
 BACKWARD=	backward
@@ -317,6 +323,8 @@ LDLIBS=
 #	    It also costs CPU time and memory.
 #  -Dtime_tz=\"T\" to use T as the time_t type, rather than the system time_t
 #	This is intended for internal use only; it mangles external names.
+#  -DMIN_TRANSITION_GAP=N to reject TZif files containing transitions
+#	separated by fewer than N seconds.  See localtime.c.
 #  -DTZ_CHANGE_INTERVAL=N if functions depending on TZ should check
 #	no more often than every N seconds for TZif file changes.
 #	If N is negative (the default), no such checking is done.
@@ -574,7 +582,7 @@ SAFE_CHAR=	'[]'$(SAFE_CHARSET)'-]'
 # These non-alphabetic, non-ASCII printable characters are
 # used in commentary or in generated *.txt files
 # and are not likely to cause confusion.
-UNUSUAL_OK_CHARSET= §«°±»½¾×–‘’“”•→−≤★⟨⟩⯪
+UNUSUAL_OK_CHARSET= §«°±»½¾¿×–‘’“”•→−≤★⟨⟩⯪
 
 # Put this in a bracket expression to match spaces.
 s = [:space:]
@@ -922,7 +930,7 @@ check_mild: check_web check_zishrink \
 UTF8_LOCALE_MISSING = \
   { test ! '$(UTF8_LOCALE)' \
     || ! printf 'A\304\200B\n' \
-         | LC_ALL='$(UTF8_LOCALE)' grep -q '^A.B$$' >/dev/null 2>&1 \
+         | LC_ALL='$(UTF8_LOCALE)' grep -q '^A[[:alpha:]]B$$' >/dev/null 2>&1 \
     || { export LC_ALL='$(UTF8_LOCALE)'; false; }; }
 
 character-set.ck: $(ENCHILADA)
@@ -1006,11 +1014,11 @@ now.ck: checknow.awk date tzdata.zi zdump zic zone1970.tab zonenow.tab
 		now=$(CHECK_NOW_TIMESTAMP) && \
 		  future=$$(($(CHECK_NOW_FUTURE_SECS) + $$now)) && \
 		  ./zdump -i -t $$now,$$future \
-		     $$(find "$$PWD/$@d"/????*/ -type f) \
+		     $$(find "$$PWD/$@d"/????*/ -type f -o -type l) \
 		     >$@d/zdump-now.tab && \
 		  ./zdump -i -t 0,$$future \
 		     $$(find "$$PWD/$@d" -name Etc -prune \
-			  -o -type f ! -name '*.tab' -print) \
+			  -o \( -type f -o -type l \) ! -name '*.tab' -print) \
 		     >$@d/zdump-1970.tab && \
 		$(AWK) \
 		  -v now=$$now \
@@ -1018,7 +1026,12 @@ now.ck: checknow.awk date tzdata.zi zdump zic zone1970.tab zonenow.tab
 		  -v zdump_table=$@d/zdump-now.tab \
 		  -f checknow.awk zonenow.tab
 		$(AWK) \
-		  'BEGIN {print "-\t-\tUTC"} /^Zone/ {print "-\t-\t" $$2}' \
+		  'BEGIN { \
+		     SysVzone["EST5EDT"] = 1; SysVzone["CST6CDT"] = 1; \
+		     SysVzone["MST7MDT"] = 1; SysVzone["PST8PDT"] = 1; \
+		     print "-\t-\tUTC" \
+		   } \
+		   $$1 == "Zone" && !SysVzone[$$2] {print "-\t-\t" $$2}' \
 		  $(PRIMARY_YDATA) backward factory | \
 		 $(AWK) \
 		   -v zdump_table=$@d/zdump-1970.tab \
