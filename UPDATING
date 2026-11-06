@@ -16,6 +16,8 @@ Updating Information for MidnightBSD users.
 	are reinitialized after a memory allocation failure
 	(GHSA-5qpq-xqfv-j9pg, CVE pending).
 
+	file 5.48
+
 20261105:
 	OpenSSH 10.6p2: fixes an sshd(8) password authentication bypass
 	reported against Linux builds without PAM, and accepts the
