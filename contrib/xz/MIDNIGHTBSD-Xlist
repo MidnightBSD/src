@@ -5,6 +5,7 @@
 .git
 .gitignore
 ABOUT-NLS
+CMakeLists.txt
 COPYING.GPLv2
 COPYING.GPLv3
 COPYING.LGPLv2.1
@@ -18,12 +19,14 @@ PACKAGERS
 aclocal.m4
 autogen.sh
 build-aux/
+cmake/
 config.h.in
 configure
 configure.ac
 debug/
 doc/
 dos/
+doxygen/
 extra/
 lib/
 m4/
