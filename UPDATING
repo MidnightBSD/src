@@ -18,6 +18,10 @@ Updating Information for MidnightBSD users.
 
 	file 5.48
 
+	libarchive 3.8.11: fixes many out-of-bounds reads and writes,
+	use-after-free bugs and integer overflows when reading malformed
+	archives.  No CVE numbers have been assigned.
+
 20261105:
 	OpenSSH 10.6p2: fixes an sshd(8) password authentication bypass
 	reported against Linux builds without PAM, and accepts the
