@@ -18,6 +18,7 @@ SRCS=	bsdtar.c	\
 
 .PATH: ${_LIBARCHIVEDIR}/libarchive_fe
 SRCS+=	lafe_err.c		\
+	lafe_setmode.c	\
 	line_reader.c	\
 	passphrase.c
 

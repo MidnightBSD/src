@@ -6,7 +6,7 @@ LIBADD=	z bz2 lzma bsdxml zstd
 CFLAGS+=	-DHAVE_BZLIB_H=1 -DHAVE_LIBLZMA=1 -DHAVE_LZMA_H=1 \
 		-DHAVE_ZSTD_H=1 -DHAVE_LIBZSTD=1 -DHAVE_ZSTD_compressStream=1 \
 		-DHAVE_SYSCONF=1
-CFLAGS+=	-DPLATFORM_CONFIG_H=\"${.CURDIR}/config_midnightbsd.h\"
+CFLAGS+=	-DPLATFORM_CONFIG_H=\"${SRCTOP}/lib/libarchive/config_midnightbsd.h\"
 
 .if ${MK_OPENSSL} != "no"
 CFLAGS+=	-DWITH_OPENSSL
