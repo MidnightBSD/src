@@ -1,0 +1,47 @@
+Upgrade procedure for tcpdump
+
+Source: https://www.tcpdump.org/release/tcpdump-VERSION.tar.xz
+	(check tcpdump-VERSION.tar.xz.sig, signed by The Tcpdump Group,
+	1F166A5742ABB9E0249A8D30E089DEF1D9C15D0D;
+	https://www.tcpdump.org/release/signing-key.asc)
+
+The vendor branch (vendor/tcpdump) carries the complete release
+tarball.  Pruning happens only in contrib/tcpdump; see MIDNIGHTBSD-Xlist.
+
+To upgrade to a new version:
+
+1. Download and verify the tarball and extract it into a new directory.
+2. Use the vendor-update skill (vendor/tcpdump, contrib/tcpdump, tag
+   vendor/tcpdump/VERSION).  Stage with "git add -A -f".
+3. Merge.  Files we prune but upstream changed show up as modify/delete
+   conflicts, and new files under tests/ are added by the merge; remove
+   them (see MIDNIGHTBSD-Xlist).
+4. Update usr.sbin/tcpdump/tcpdump/Makefile (SRCS) and
+   usr.sbin/tcpdump/tcpdump/config.h (PACKAGE_STRING, PACKAGE_VERSION
+   and any new macros).  FreeBSD's copies of both files are a good
+   reference; ours are otherwise identical to FreeBSD's.
+5. tcpdump depends on libpcap; update libpcap first when both change.
+6. Build usr.sbin/tcpdump and run upstream's test suite from the
+   release tarball (tests/TESTrun) against the new binary.
+
+Local patches applied on top of upstream (all from FreeBSD):
+
+  - print-pfsync.c: FreeBSD's pfsync printer, which is not part of
+    upstream tcpdump.  Our copy is adapted to MidnightBSD's pf headers
+    (a single struct pfsync_state rather than FreeBSD's versioned
+    pfsync_state_1301/1400 structures), so do not replace it with
+    FreeBSD's newer copy without porting it.
+  - netdissect.h, print-ip-demux.c, print.c: hook up the pfsync
+    printer (FreeBSD 1ad8d2ee1f7d, f88698a4ebc6).
+  - print-pflog.c: print the rule's uid (in host byte order) and
+    ridentifier (FreeBSD 9110e31e1df7).
+  - ipproto.c: pfsync protocol entry.
+  - tcpdump.c: request the casper "ADDR2NAME" DNS type instead of
+    "ADDR", and do not enter the Capsicum sandbox when -E (ESP secret)
+    is given.
+  - configure.in: an obsolete file left over from older imports; it is
+    not used.
+
+Notes:
+  - Compare contrib/tcpdump with FreeBSD's contrib/tcpdump after each
+    update; apart from print-pfsync.c and doc/ they should match.
