@@ -1,6 +1,6 @@
 ## README for file(1) Command and the libmagic(3) library ##
 
-    @(#) $File: README.md,v 1.4 2021/10/21 01:51:31 christos Exp $
+    @(#) $File: README.md,v 1.7 2026/06/07 23:44:12 christos Exp $
 
 - Bug Tracker: <https://bugs.astron.com/>
 - Build Status: <https://travis-ci.org/file/file>
@@ -64,7 +64,8 @@ are in reasonable circulation. Send your magic numbers,
 in magic(5) format please, to the maintainer, Christos Zoulas.
 
 COPYING - read this first.
-* `README` - read this second (you are currently reading this file).
+* `ChangeLog` - log of important changes
+* `README.md` - read this second (you are currently reading this file).
 * `INSTALL` - read on how to install
 * `src/apprentice.c` - parses /etc/magic to learn magic
 * `src/apptype.c` - used for OS/2 specific application type magic
@@ -91,7 +92,9 @@ COPYING - read this first.
 * `src/gmtime_r.c` - replacement for OS's that don't have it.
 * `src/is_csv.c` - knows about Comma Separated Value file format (RFC 4180).
 * `src/is_json.c` - knows about JavaScript Object Notation format (RFC 8259).
+* `src/is_simh.c` - knows about SIMH tape file format.
 * `src/is_tar.c, tar.h` - knows about Tape ARchive format (courtesy John Gilmore).
+* `src/landlock.c` - linux landlock protection
 * `src/localtime_r.c` - replacement for OS's that don't have it.
 * `src/magic.h.in` - source file for magic.h
 * `src/mygetopt.h` - replacement for OS's that don't have it.
@@ -102,7 +105,10 @@ COPYING - read this first.
 * `src/readcdf.c` - CDF wrapper.
 * `src/readelf.[ch]` - Stand-alone elf parsing code.
 * `src/softmagic.c` - 2nd set of tests, based on /etc/magic
+* `src/swap.h` - byte swapping
+* `src/swap.c` - byte swapping
 * `src/mygetopt.h` - replacement for OS's that don't have it.
+* `src/seccomp.c` - linux seccomp protection
 * `src/strcasestr.c` - replacement for OS's that don't have it.
 * `src/strlcat.c` - replacement for OS's that don't have it.
 * `src/strlcpy.c` - replacement for OS's that don't have it.
