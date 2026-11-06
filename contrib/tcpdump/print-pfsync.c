@@ -112,7 +112,7 @@ struct pfsync_actions actions[] = {
 	{ "clear all", sizeof(struct pfsync_clr),	pfsync_print_clr },
 	{ "insert", sizeof(struct pfsync_state),	pfsync_print_state },
 	{ "insert ack", sizeof(struct pfsync_ins_ack),	pfsync_print_ins_ack },
-	{ "update", sizeof(struct pfsync_ins_ack),	pfsync_print_state },
+	{ "update", sizeof(struct pfsync_state),	pfsync_print_state },
 	{ "update compressed", sizeof(struct pfsync_upd_c),
 							pfsync_print_upd_c },
 	{ "request uncompressed", sizeof(struct pfsync_upd_req),
@@ -124,7 +124,7 @@ struct pfsync_actions actions[] = {
 	{ "frag delete", 0,				NULL },
 	{ "bulk update status", sizeof(struct pfsync_bus),
 							pfsync_print_bus },
-	{ "tdb", 0,					pfsync_print_tdb },
+	{ "tdb", sizeof(struct pfsync_tdb),		pfsync_print_tdb },
 	{ "eof", 0,					NULL },
 };
 
