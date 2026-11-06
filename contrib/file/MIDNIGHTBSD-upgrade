@@ -1,25 +1,35 @@
 Upgrade procedure for file(1) / libmagic
 
 Source: https://astron.com/pub/file/file-VERSION.tar.gz
-        (see https://www.darwinsys.com/file/ for release announcements)
+        (see https://www.darwinsys.com/file/ for release announcements;
+        check the .asc next to it, signed by Christos Zoulas,
+        BE04995BA8F90ED0C0C176C471112AB16CB33B3A)
 
 To upgrade to a new version:
 
-1. Download and extract the new tarball to /tmp/file/file-VERSION
-2. Use the vendor-update skill (vendor/file/dist, contrib/file)
-3. Apply local patches after the subtree merge (see below)
+1. Download, verify and extract the new tarball to /tmp/file/file-VERSION
+2. Use the vendor-update skill (vendor/file/dist, contrib/file, tag
+   vendor/file/dist/VERSION).  The vendor branch carries the full
+   tarball; nothing is pruned.
+3. Update lib/libmagic/config.h: bump PACKAGE_STRING, PACKAGE_VERSION
+   and VERSION, and add any new macros from config.h.in.  FreeBSD's
+   lib/libmagic/config.h is a good reference; the only intended
+   difference is HAVE_BYTESWAP_H, which we probe with __has_include
+   because mkmagic is built with the host's headers.
+4. Check lib/libmagic/Makefile for new source files (SRCS and the
+   mkmagic rule).  New magic/Magdir files are picked up by a glob.
+5. Build lib/libmagic and usr.bin/file, and run the file tests
+   (usr.bin/file/tests, which uses contrib/file/tests).
 
 Local patches applied on top of upstream:
 
-  - FreeBSD f0ca30b4e500: file: Parse some UFS2 flags
-    Adds recognition of FS_DOSOFTDEP, FS_SUJ, FS_GJOURNAL, FS_ACLS,
-    FS_NFS4ACLS flags in UFS2 superblocks.
-    File: magic/Magdir/filesystems (after "minimum percentage of free
-    blocks" line in the ffsv2 named section)
-    Accepted upstream as 482259e5e952 (will be in file 5.47+).
+  None as of file 5.48.  The FreeBSD UFS2 flags patch (f0ca30b4e500)
+  and the apprentice.c byte-swap fix (faa5141b9be4) are upstream now,
+  and the old gpkg-1-zst.result tweak is no longer needed.
 
 Notes:
-  - The Xlist (MIDNIGHTBSD-Xlist) excludes test data, Windows build
-    files, and Python bindings not needed on MidnightBSD.
   - Check FreeBSD's contrib/file/ git log for any new local patches
     after each upstream import.
+  - If a result file in contrib/file/tests lacks a trailing newline,
+    the test fails; FreeBSD normalizes them in
+    usr.bin/file/tests/Makefile.  file 5.48 has none.
