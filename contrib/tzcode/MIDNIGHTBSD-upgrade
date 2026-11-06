@@ -1,0 +1,54 @@
+Upgrade procedure for tzcode
+
+Source:	https://data.iana.org/time-zones/releases/tzcodeVERSION.tar.gz
+	https://data.iana.org/time-zones/releases/tzcodeVERSION.tar.gz.asc
+Key:	Paul Eggert <eggert@cs.ucla.edu>
+	7E37 92A9 D8AC F7D6 33BC  1588 ED97 E90E 62AA 7E34
+
+Vendor branch:	vendor/tzcode/dist
+Vendor tag:	vendor/tzcode/dist/VERSION (e.g. vendor/tzcode/dist/2026f)
+In-tree prefix:	contrib/tzcode
+Last imported:	2026f
+
+To upgrade to a new version:
+
+1. Download the tarball and signature into an empty directory and
+   verify with gpg.  Extract with --no-same-owner.
+2. Use the vendor-update skill (vendor/tzcode/dist, contrib/tzcode).
+   Nothing is pruned; the vendor branch is the whole tarball.
+3. Subtree merge into master and resolve conflicts against the local
+   patches below.  FreeBSD's stable branch usually carries the same
+   release and is a useful reference for conflict resolutions and for
+   the mdoc versions of the manual pages.
+4. Update TZVERSION in version.h.
+5. Build lib/libc, usr.sbin/zic, usr.sbin/zdump and share/zoneinfo.
+   lib/libc/stdtime/strftime.c is a separate copy that uses private.h
+   macros and may need adjusting when they change.
+6. Import tzdata of the same release (see contrib/tzdata) and add an
+   UPDATING entry.
+
+Local patches applied on top of upstream:
+
+  - tzconfig.h, tzdir.h, version.h: generated configuration that the
+    upstream Makefile would normally produce.  Bump TZVERSION in
+    version.h on every import.
+  - localtime.c: freebsd13_tzsetwall() symbol-versioned compat shim for
+    the removed tzsetwall(3), at the end of the tzset() section.
+  - localtime.c: in tzloadbody(), the ".." component check spells the
+    constant as "O_RESOLVE_BENEATH != 0" to avoid clang's
+    -Wconstant-logical-operand; upstream writes O_RESOLVE_BENEATH.
+  - zic.c (from FreeBSD): progname is always "zic"; remove an existing
+    output file before writing so hard links are broken; sign and
+    size_t cleanups for -Wsign-compare.
+  - zdump.c (from FreeBSD): size_t/int casts for -Wsign-compare and an
+    unused-parameter fix in tzfree().
+  - time2posix.3, tzfile.5, zdump.8 and zic.8 are FreeBSD's mdoc
+    conversions; carry upstream text changes into them by hand (or take
+    FreeBSD's updated copies).  The other manual pages are upstream's.
+  - The preformatted *.txt manual pages are deleted.
+
+Dropped with 2026f:
+
+  - localtime.c: FreeBSD's "tzloadflags &= ~TZLOAD_FROMENV;" for a
+    NULL name.  Upstream now caches the TZDEFAULT file and rereads it
+    only when it changes; FreeBSD dropped the line as well.
