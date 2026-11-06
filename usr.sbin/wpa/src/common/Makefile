@@ -20,6 +20,10 @@ SRCS=	cli.c \
 	wpa_common.c \
 	wpa_ctrl.c
 
+.if ${MK_OPENSSL} != "no"
+SRCS+=	sae.c
+.endif
+
 CFLAGS+=-DCONFIG_SAE \
 	-DCONFIG_SUITE \
 	-DCONFIG_SUITEB
