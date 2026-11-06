@@ -30,7 +30,11 @@ Local patches applied on top of upstream (from FreeBSD unless noted):
     upstream tcpdump.  Our copy is adapted to MidnightBSD's pf headers
     (a single struct pfsync_state rather than FreeBSD's versioned
     pfsync_state_1301/1400 structures), so do not replace it with
-    FreeBSD's newer copy without porting it.
+    FreeBSD's newer copy without porting it.  MidnightBSD fix: the
+    "update" and "tdb" entries in actions[] use sizeof(struct
+    pfsync_state) and sizeof(struct pfsync_tdb); the old sizes let the
+    printers read past the captured data.  FreeBSD's copy still has 0
+    for "tdb".
   - pflog.h, print-pflog.c, tcpdump.c, parsenfsfh.c (MidnightBSD):
     test __MidnightBSD__ instead of __FreeBSD__.  Our compilers define
     both, so this changes no code.
