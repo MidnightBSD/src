@@ -695,6 +695,11 @@ int radius_msg_verify_das_req(struct radius_msg *msg, const u8 *secret,
 		return 0;
 	}
 
+	if (attr->length != sizeof(*attr) + MD5_MAC_LEN) {
+		wpa_printf(MSG_WARNING, "Invalid Message-Authenticator length");
+		return 1;
+	}
+
 	os_memcpy(orig, attr + 1, MD5_MAC_LEN);
 	os_memset(attr + 1, 0, MD5_MAC_LEN);
 	os_memcpy(orig_authenticator, msg->hdr->authenticator,
@@ -990,6 +995,11 @@ int radius_msg_verify_msg_auth(struct radius_msg *msg, const u8 *secret,
 
 	if (attr == NULL) {
 		wpa_printf(MSG_INFO, "No Message-Authenticator attribute found");
+		return 1;
+	}
+
+	if (attr->length != sizeof(*attr) + MD5_MAC_LEN) {
+		wpa_printf(MSG_INFO, "Invalid Message-Authenticator length");
 		return 1;
 	}
 
