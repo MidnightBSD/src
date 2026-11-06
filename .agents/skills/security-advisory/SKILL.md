@@ -151,7 +151,7 @@ Use the bundled script, which finds the next number, works around the API
 quirks and publishes in one go:
 
 ```sh
-python3 .claude/skills/security-advisory/scripts/publish_advisory.py \
+python3 .agents/skills/security-advisory/scripts/publish_advisory.py \
     --title "Heap out-of-bounds access in semop(2)" \
     --cve CVE-2026-58098 \
     --cvss "CVSS:3.1/AV:L/AC:H/PR:L/UI:N/S:U/C:H/I:H/A:H" \
