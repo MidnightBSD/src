@@ -263,7 +263,6 @@ static void	check_for_signal(void);
 static void	dolink(const char *, const char *, bool);
 static int	getfields(char *, char **, int);
 static zic_t	getsave(char *, bool *);
-static void	inexpires(char **, int);
 static void	infile(int, char const *);
 static void	inleap(char ** fields, int nfields);
 static void	inlink(char ** fields, int nfields);
@@ -408,7 +407,7 @@ enum {
   LP_ROLL,
   LEAP_FIELDS,
 
-  /* Expires lines are like Leap lines, except without CORR and ROLL fields.  */
+  /* Expires lines were like Leap lines, but without CORR and ROLL fields.  */
   EXPIRES_FIELDS = LP_TIME + 1
 };
 
@@ -526,10 +525,6 @@ static struct lookup const	leap_types[] = {
 static const int	len_months[2][MONSPERYEAR] = {
 	{ 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 },
 	{ 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 }
-};
-
-static const int	len_years[2] = {
-	DAYSPERNYEAR, DAYSPERLYEAR
 };
 
 static struct attype {
@@ -783,6 +778,7 @@ arg2num(char const *arg, int base, unsigned long maxval, char const *msgid)
 
 #ifndef HAVE_SETMODE
 # if (defined __FreeBSD__ || defined __NetBSD__ || defined __OpenBSD__ \
+      || defined __DragonFly__ \
       || (defined __APPLE__ && defined __MACH__))
 #  define HAVE_SETMODE 1
 # else
@@ -1158,9 +1154,6 @@ static zic_t hi_time = MAXVAL(zic_t, TIME_T_BITS_IN_FILE);
    or lo_time, whichever is greater.  */
 static zic_t redundant_time = MINVAL(zic_t, TIME_T_BITS_IN_FILE);
 
-/* The time specified by an Expires line, or negative if no such line.  */
-static zic_t leapexpires = -1;
-
 /* Set the time range of the output to TIMERANGE.
    Return true if successful.  */
 static bool
@@ -1467,6 +1460,12 @@ namecheck(const char *name)
 	register char const *component = name;
 	for (cp = name; *cp; cp++) {
 		unsigned char c = *cp;
+#if defined _WIN32 || defined __CYGWIN__
+		if (c == ':' || c == '\\') {
+		  error(N_("file name '%s' contains '%c'"), name, c);
+		  return false;
+		}
+#endif
 		if (noise && !strchr(benign, c)) {
 			warning((strchr(printable_and_not_benign, c)
 				 ? N_("file name '%s' contains byte '%c'")
@@ -1781,8 +1780,20 @@ dolink(char const *target, char const *linkname, bool staysymlink)
 	      break;
 	    }
 	    link_errno = errno;
+	    /* When hard links are not supported, some MS-Windows file system
+	       drivers fail with EINVAL, contrary to the intent of
+	       MS-FSA 42.0 (2025) section 2.1.5.15.7.  */
+	    if (link_errno == EINVAL)
+	      link_errno = ENOTSUP;
 	  }
 #endif
+	  /* On platforms like AIX, the Linux kernel, macOS, and Solaris,
+	     link/linkat can fail with ENOSYS or EPERM if the file system
+	     does not support hard links, or if other problems occur.
+	     It is too much trouble to suss out the other problems.  */
+	  if (link_errno == ENOSYS || link_errno == EPERM)
+	    link_errno = ENOTSUP;
+
 	  if (link_errno == EXDEV || link_errno == ENOTSUP)
 	    break;
 
@@ -1849,7 +1860,8 @@ dolink(char const *target, char const *linkname, bool staysymlink)
 		      strerror(link_errno));
 	    else if (symlink_errno < 0)
 	      warning(N_("copy used because symbolic link not obvious"));
-	    else if (symlink_errno != ENOTSUP)
+	    else if (symlink_errno != ENOSYS && symlink_errno != ENOTSUP
+		     && symlink_errno != EPERM)
 	      warning(N_("copy used because symbolic link failed: %s"),
 		      strerror(symlink_errno));
 	  }
@@ -2045,7 +2057,7 @@ infile(int fnum, char const *name)
 					wantcont = false;
 					break;
 				case LC_EXPIRES:
-					inexpires(fields, nfields);
+					warning(N_("Expires line ignored"));
 					wantcont = false;
 					break;
 				default: unreachable();
@@ -2305,65 +2317,40 @@ inzsub(char **fields, int nfields, bool iscont)
 }
 
 static zic_t
-getleapdatetime(char **fields, bool expire_line)
+getleapdatetime(char **fields)
 {
-	register const char *		cp;
 	register const struct lookup *	lp;
-	register zic_t			i, j;
 	zic_t				year;
-	int				month, day;
-	zic_t				dayoff, tod;
 	zic_t				t;
 	char xs;
+	struct rule r;
 
-	dayoff = 0;
-	cp = fields[LP_YEAR];
-	if (sscanf(cp, "%"SCNdZIC"%c", &year, &xs) != 1) {
+	if (sscanf(fields[LP_YEAR], "%"SCNdZIC"%c", &year, &xs) != 1) {
 		/*
 		** Leapin' Lizards!
 		*/
 		error(N_("invalid leaping year"));
 		return -1;
 	}
-	if (!expire_line) {
-	    if (!leapseen || leapmaxyear < year)
+	if (!leapseen || leapmaxyear < year)
 		leapmaxyear = year;
-	    if (!leapseen || leapminyear > year)
+	if (!leapseen || leapminyear > year)
 		leapminyear = year;
-	    leapseen = true;
-	}
-	j = EPOCH_YEAR;
-	while (j != year) {
-		if (year > j) {
-			i = len_years[isleap(j)];
-			++j;
-		} else {
-			--j;
-			i = -len_years[isleap(j)];
-		}
-		dayoff = oadd(dayoff, i);
-	}
+	leapseen = true;
 	if ((lp = byword(fields[LP_MONTH], mon_names)) == NULL) {
 		error(N_("invalid month name"));
 		return -1;
 	}
-	month = lp->l_value;
-	j = TM_JANUARY;
-	while (j != month) {
-		i = len_months[isleap(year)][j];
-		dayoff = oadd(dayoff, i);
-		++j;
-	}
-	cp = fields[LP_DAY];
-	if (sscanf(cp, "%d%c", &day, &xs) != 1 ||
-		day <= 0 || day > len_months[isleap(year)][month]) {
+	r.r_month = lp->l_value;
+	if (! (sscanf(fields[LP_DAY], "%d%c", &r.r_dayofmonth, &xs) == 1
+	       && 0 < r.r_dayofmonth
+	       && r.r_dayofmonth <= len_months[isleap(year)][r.r_month])) {
 			error(N_("invalid day of month"));
 			return -1;
 	}
-	dayoff = oadd(dayoff, day - 1);
-	t = omul(dayoff, SECSPERDAY);
-	tod = gethms(fields[LP_TIME], N_("invalid time of day"));
-	t = tadd(t, tod);
+	r.r_dycode = DC_DOM;
+	r.r_tod = gethms(fields[LP_TIME], N_("invalid time of day"));
+	t = rpytime(&r, year);
 	if (t < 0)
 	  error(N_("leap second precedes Epoch"));
 	return t;
@@ -2375,7 +2362,7 @@ inleap(char **fields, int nfields)
   if (nfields != LEAP_FIELDS)
     error(N_("wrong number of fields on Leap line"));
   else {
-    zic_t t = getleapdatetime(fields, false);
+    zic_t t = getleapdatetime(fields);
     if (0 <= t) {
       struct lookup const *lp = byword(fields[LP_ROLL], leap_types);
       if (!lp)
@@ -2396,17 +2383,6 @@ inleap(char **fields, int nfields)
 }
 
 static void
-inexpires(char **fields, int nfields)
-{
-  if (nfields != EXPIRES_FIELDS)
-    error(N_("wrong number of fields on Expires line"));
-  else if (0 <= leapexpires)
-    error(N_("multiple Expires lines"));
-  else
-    leapexpires = getleapdatetime(fields, true);
-}
-
-static void
 inlink(char **fields, int nfields)
 {
 	struct link	l;
@@ -2419,6 +2395,8 @@ inlink(char **fields, int nfields)
 		error(N_("blank TARGET field on Link line"));
 		return;
 	}
+	if (! namecheck(fields[LF_TARGET]))
+	  return;
 	if (! namecheck(fields[LF_LINKNAME]))
 	  return;
 	l.l_filenum = filenum;
@@ -2622,7 +2600,6 @@ struct timerange {
   int defaulttype;
   ptrdiff_t base, count;
   ptrdiff_t leapbase, leapcount;
-  bool leapexpiry;
 };
 
 static struct timerange
@@ -2660,9 +2637,6 @@ limitrange(struct timerange r, zic_t lo, zic_t hi,
     while (0 < r.leapcount && hi + 1 < leap[r.leapbase + r.leapcount - 1].trans)
       r.leapcount--;
   }
-
-  /* Determine whether to append an expiration to the leap second table.  */
-  r.leapexpiry = 0 <= leapexpires && leapexpires - 1 <= hi;
 
   return r;
 }
@@ -2779,20 +2753,12 @@ writezone(const char *const name, const char *const string, char version,
 			     ats, types);
 	range32 = limitrange(range64, ZIC32_MIN, ZIC32_MAX, ats, types);
 
-	/* TZif version 4 is needed if a no-op transition is appended to
-	   indicate the expiration of the leap second table, or if the first
+	/* TZif version 4 is needed if the first
 	   leap second transition is not to a +1 or -1 correction.  */
 	for (pass = 1; pass <= 2; pass++) {
 	  struct timerange const *r = pass == 1 ? &range32 : &range64;
 	  if (pass == 1 && !want_bloat())
 	    continue;
-	  if (r->leapexpiry) {
-	    if (noise)
-	      warning(N_("%s: pre-2021b clients may mishandle"
-			 " leap second expiry"),
-		      name);
-	    version = '4';
-	  }
 	  if (0 < r->leapcount
 	      && leap[r->leapbase].corr != 1 && leap[r->leapbase].corr != -1) {
 	    if (noise)
@@ -2812,7 +2778,7 @@ writezone(const char *const name, const char *const string, char version,
 		register ptrdiff_t thisleapi, thisleapcnt, thisleaplim;
 		struct tzhead tzh;
 		int pretranstype = -1, thisdefaulttype;
-		bool locut, hicut, thisleapexpiry;
+		bool locut, hicut;
 		zic_t lo, thismin, thismax;
 		int old0;
 		char		omittype[TZ_MAX_TYPES];
@@ -2830,7 +2796,6 @@ writezone(const char *const name, const char *const string, char version,
 			toomanytimes = thistimecnt >> 31 >> 1 != 0;
 			thisleapi = range32.leapbase;
 			thisleapcnt = range32.leapcount;
-			thisleapexpiry = range32.leapexpiry;
 			thismin = ZIC32_MIN;
 			thismax = ZIC32_MAX;
 		} else {
@@ -2840,7 +2805,6 @@ writezone(const char *const name, const char *const string, char version,
 			toomanytimes = thistimecnt >> 31 >> 31 >> 2 != 0;
 			thisleapi = range64.leapbase;
 			thisleapcnt = range64.leapcount;
-			thisleapexpiry = range64.leapexpiry;
 			thismin = min_time;
 			thismax = max_time;
 		}
@@ -2976,7 +2940,7 @@ writezone(const char *const name, const char *const string, char version,
 						  &chars[desigidx[i]]);
 
 		if (pass == 1 && !want_bloat()) {
-		  hicut = thisleapexpiry = false;
+		  hicut = false;
 		  pretranstype = -1;
 		  thistimecnt = thisleapcnt = 0;
 		  thistypecnt = thischarcnt = 1;
@@ -2987,7 +2951,7 @@ writezone(const char *const name, const char *const string, char version,
 		tzh.tzh_version[0] = version;
 		convert(utcnt, tzh.tzh_ttisutcnt);
 		convert(stdcnt, tzh.tzh_ttisstdcnt);
-		convert(thisleapcnt + thisleapexpiry, tzh.tzh_leapcnt);
+		convert(thisleapcnt, tzh.tzh_leapcnt);
 		convert((0 <= pretranstype) + thistimecnt + hicut,
 			tzh.tzh_timecnt);
 		convert(thistypecnt, tzh.tzh_typecnt);
@@ -3070,15 +3034,6 @@ writezone(const char *const name, const char *const string, char version,
 			} else	todo = leap[i].trans;
 			puttzcodepass(todo, fp, pass);
 			puttzcode(leap[i].corr, fp);
-		}
-		if (thisleapexpiry) {
-		  /* Append a no-op leap correction indicating when the leap
-		     second table expires.  Although this does not conform to
-		     Internet RFC 9636, most clients seem to accept this and
-		     the plan is to amend the RFC to allow this in version 4
-		     TZif files.  */
-		  puttzcodepass(leapexpires, fp, pass);
-		  puttzcode(thisleaplim ? leap[thisleaplim - 1].corr : 0, fp);
 		}
 		if (stdcnt != 0)
 		  for (i = old0; i < typecnt; i++)
@@ -3552,10 +3507,13 @@ outzone(const struct zone *zpfirst, ptrdiff_t zonecount)
 			} else
 				defaulttype = type;
 		} else {
-		  zic_t year;
-		  for (year = min_year; year <= max_year; ++year) {
+		  zic_t year, next_year;
+		  bool try_next_year = true;
+		  for (year = min_year; try_next_year; year = next_year) {
 			if (useuntil && year > zp->z_untilrule.r_hiyear)
 				break;
+			try_next_year = false;
+			next_year = max_year;
 			/*
 			** Mark which rules to do in the current year.
 			** For those to do, calculate rpytime(rp, year);
@@ -3567,6 +3525,17 @@ outzone(const struct zone *zpfirst, ptrdiff_t zonecount)
 				struct rule *rp = &zp->z_rules[j];
 				eats(zp->z_filenum, zp->z_linenum,
 				     rp->r_filenum, rp->r_linenum);
+
+				/* Keep track of the earliest year after YEAR
+				   in which some rule <= J applies.  */
+				if (year < rp->r_hiyear) {
+				  zic_t next = max(year + 1, rp->r_loyear);
+				  if (next <= next_year) {
+				    next_year = next;
+				    try_next_year = true;
+				  }
+				}
+
 				rp->r_todo = year >= rp->r_loyear &&
 						year <= rp->r_hiyear;
 				if (rp->r_todo) {
@@ -3874,14 +3843,6 @@ adjleap(void)
 		leap[i].trans = tadd(prevtrans, last);
 		last = leap[i].corr += last;
 	}
-
-	if (0 <= leapexpires) {
-	  leapexpires = oadd(leapexpires, last);
-	  if (! (leapcnt == 0 || (leap[leapcnt - 1].trans < leapexpires))) {
-	    error(N_("last Leap time does not precede Expires time"));
-	    exit(EXIT_FAILURE);
-	  }
-	}
 }
 
 /* Is A a space character in the C locale?  */
@@ -4147,7 +4108,7 @@ rpytime(const struct rule *rp, zic_t wantedy)
 	wantedy = y + (yrem + 2 * YEARSPERREPEAT) % YEARSPERREPEAT;
 
 	while (wantedy != y) {
-		i = len_years[isleap(y)];
+		i = year_days(y);
 		dayoff = oadd(dayoff, i);
 		y++;
 	}
