@@ -148,9 +148,9 @@ The Regents of the University of California.  All rights reserved.\n";
 #endif /* HAVE_CAP_NG_H */
 #endif /* HAVE_LIBCAP_NG */
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 #include <sys/sysctl.h>
-#endif /* __FreeBSD__ */
+#endif /* __MidnightBSD__ */
 
 #include "netdissect.h"
 #include "interface.h"
@@ -1436,7 +1436,7 @@ open_interface(const char *device, netdissect_options *ndo, char *ebuf)
 			error("%s: %s\n(%s)", device,
 			    pcap_statustostr(status), cp);
 #endif
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 		else if (status == PCAP_ERROR_RFMON_NOTSUP &&
 		    strncmp(device, "wlan", 4) == 0) {
 			char parent[8], newdev[8];

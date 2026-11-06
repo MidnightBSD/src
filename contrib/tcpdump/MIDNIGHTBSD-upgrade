@@ -24,13 +24,16 @@ To upgrade to a new version:
 6. Build usr.sbin/tcpdump and run upstream's test suite from the
    release tarball (tests/TESTrun) against the new binary.
 
-Local patches applied on top of upstream (all from FreeBSD):
+Local patches applied on top of upstream (from FreeBSD unless noted):
 
   - print-pfsync.c: FreeBSD's pfsync printer, which is not part of
     upstream tcpdump.  Our copy is adapted to MidnightBSD's pf headers
     (a single struct pfsync_state rather than FreeBSD's versioned
     pfsync_state_1301/1400 structures), so do not replace it with
     FreeBSD's newer copy without porting it.
+  - pflog.h, print-pflog.c, tcpdump.c, parsenfsfh.c (MidnightBSD):
+    test __MidnightBSD__ instead of __FreeBSD__.  Our compilers define
+    both, so this changes no code.
   - netdissect.h, print-ip-demux.c, print.c: hook up the pfsync
     printer (FreeBSD 1ad8d2ee1f7d, f88698a4ebc6).
   - print-pflog.c: print the rule's uid (in host byte order) and
@@ -44,4 +47,5 @@ Local patches applied on top of upstream (all from FreeBSD):
 
 Notes:
   - Compare contrib/tcpdump with FreeBSD's contrib/tcpdump after each
-    update; apart from print-pfsync.c and doc/ they should match.
+    update; apart from print-pfsync.c, doc/ and the __MidnightBSD__
+    tests they should match.
