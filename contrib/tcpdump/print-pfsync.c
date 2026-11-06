@@ -63,22 +63,14 @@ pfsync_if_print(netdissect_options *ndo, const struct pcap_pkthdr *h,
 {
 	u_int caplen = h->caplen;
 
-	ts_print(ndo, &h->ts);
-
 	if (caplen < PFSYNC_HDRLEN) {
 		ND_PRINT("[|pfsync]");
-		goto out;
+		return;
 	}
 
 	pfsync_print(ndo, (struct pfsync_header *)p,
 	    p + sizeof(struct pfsync_header),
 	    caplen - sizeof(struct pfsync_header));
-out:
-	if (ndo->ndo_xflag) {
-		hex_print(ndo, "\n\t", p, caplen);
-	}
-	fn_print_char(ndo, '\n');
-	return;
 }
 
 void
