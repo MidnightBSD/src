@@ -38,6 +38,11 @@ To upgrade to a new version:
 
 Local changes carried in contrib/wpa on top of upstream:
 
+  - src/radius/radius.c (upstream aa02cfa569477f67f3915c8b9a83d1a7ca93693d,
+    w1.fi 2026-5): radius_msg_verify_das_req() and
+    radius_msg_verify_msg_auth() reject a Message-Authenticator
+    attribute whose length is not sizeof(*attr) + MD5_MAC_LEN.  Drop
+    this when importing hostapd 2.12.1 or later.
   - src/drivers/driver_bsd.c (FreeBSD): net80211 changes.
     * bsd_get_iface_flags() is replaced by bsd_ctrl_iface(priv, enable),
       which also sets or clears IFF_UP; it is called from
