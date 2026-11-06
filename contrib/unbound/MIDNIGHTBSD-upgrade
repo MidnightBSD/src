@@ -1,0 +1,101 @@
+Upgrade procedure for unbound
+
+Source: https://nlnetlabs.nl/downloads/unbound/unbound-VERSION.tar.gz
+	(check the .sha256 and the .asc signature next to it)
+
+To upgrade to a new version:
+
+1. Download and extract the new tarball to /tmp/unbound/unbound-VERSION
+2. Use the vendor-update skill (vendor/unbound/dist, contrib/unbound,
+   tag vendor/unbound/dist/VERSION).  The vendor branch carries the full
+   tarball; nothing is pruned there.
+3. Resolve the merge:
+   - pythonmod/, testcode/, winrc/, libunbound/python/ and most of
+     testdata/ are not carried in contrib/unbound.  Files the new
+     release changes there show up as "deleted by us" conflicts; git rm
+     them.  Files that are new upstream are added by the merge.
+   - configure and config.h.in: take the upstream copies.  They are not
+     used by the build.
+4. Update lib/libunbound/config.h (see below).
+5. Regenerate the documentation (see below).
+6. Check lib/libunbound/Makefile and usr.sbin/unbound/*/Makefile against
+   the new source list (midnightbsd-sources.pl can help), and compare
+   with FreeBSD's import of the same version.
+7. Build lib/libunbound and usr.sbin/unbound on every supported branch.
+   The stable branches use an older clang and older OpenSSL.
+
+lib/libunbound/config.h:
+
+  config.h is maintained by hand and is the same on all supported
+  branches.  When a release adds new macros, add them in autoheader
+  order (compare with the new config.h.in or FreeBSD's config.h) and
+  update PACKAGE_STRING, PACKAGE_VERSION and RSRC_PACKAGE_VERSION.
+  Deliberate local choices:
+  - It targets the OpenSSL 1.1.1 API, so one file serves branches
+    with OpenSSL 1.1.1, 3.0 and 3.5: no HAVE_OPENSSL_CORE_NAMES_H,
+    HAVE_OPENSSL_PARAM_BUILD_H, HAVE_EVP_MAC_CTX_SET_PARAMS or
+    HAVE_SSL_GET1_PEER_CERTIFICATE; HAVE_FIPS_MODE is defined.  Only
+    enable an OpenSSL function if it exists on every branch.
+  - CONFCMDLINE includes --with-ssl=/usr.
+  - HAVE_ATTR_NONSTRING is decided at compile time with
+    __has_attribute(__nonstring__), because clang 19 lacks the
+    attribute and clang 21 warns without it.
+  midnightbsd-configure.sh runs configure against the base system and
+  can be used to produce a reference config.h.
+
+Generated documentation:
+
+  doc/*.[1358] and doc/example.conf are generated from the .in
+  templates.  They merge without conflicts but keep the old text, so
+  regenerate them after every import:
+
+	cd contrib/unbound/doc
+	for f in example.conf libunbound.3 unbound-anchor.8 \
+	    unbound-checkconf.8 unbound-control.8 unbound-host.1 \
+	    unbound.8 unbound.conf.5; do
+		sed -e 's,@DNSTAP_SOCKET_PATH@,,g' \
+		    -e 's,@UNBOUND_CHROOT_DIR@,/var/unbound,g' \
+		    -e 's,@UNBOUND_PIDFILE@,/var/unbound/unbound.pid,g' \
+		    -e 's,@UNBOUND_ROOTCERT_FILE@,/var/unbound/icannbundle.pem,g' \
+		    -e 's,@UNBOUND_ROOTKEY_FILE@,/var/unbound/root.key,g' \
+		    -e 's,@UNBOUND_RUN_DIR@,/var/unbound,g' \
+		    -e 's,@UNBOUND_SHARE_DIR@,/var/unbound,g' \
+		    -e 's,@UNBOUND_USERNAME@,unbound,g' \
+		    -e 's,@ub_conf_file@,/var/unbound/unbound.conf,g' \
+		    -e 's,@ub_conf_dir@,/var/unbound,g' $f.in > $f
+	done
+
+  Check that no @VARIABLE@ is left and that new templates have not
+  added variables.  dnstap/dnstap_config.h, dnscrypt/dnscrypt_config.h
+  and smallapp/unbound-control-setup.sh are also generated; regenerate
+  them by hand if their .in templates change.
+
+Local patches applied on top of upstream (the same as FreeBSD's):
+
+  - Usage strings name the local-unbound-* programs:
+    smallapp/unbound-anchor.c, smallapp/unbound-checkconf.c,
+    smallapp/unbound-control.c (usage()).
+  - smallapp/unbound-anchor.c: const cleanup around BIO_new_mem_buf().
+  - util/configlexer.lex: include config.h and "configparser.h" and
+    use the ub_c_ names (ub_c_text, ub_c_error, ...) instead of yy*.
+  - util/config_file.c: include "configparser.h" instead of
+    "util/configparser.h" (the parser is generated in the object
+    directory).
+  - util/configyyrename.h: drop the yylhs ... yyrule renames (carried
+    from FreeBSD; the base system yacc generates these tables as
+    static).
+  - util/edns.c: an "#if 0" block around #include "edns.h", carried
+    from FreeBSD.
+  - Generated files carried in-tree: dnscrypt/dnscrypt_config.h,
+    dnstap/dnstap_config.h, smallapp/unbound-control-setup.sh.
+  - smallapp/unbound-control-setup.sh.in is mode 755 in-tree (644
+    upstream); content is unchanged.
+  - midnightbsd-configure.sh and midnightbsd-sources.pl are local.
+
+  These have merged cleanly so far.  If one conflicts, resolve only the
+  conflicting hunk; do not take the whole file from upstream.
+
+Notes:
+  - usr.sbin/unbound/config.h is not used (lib/libunbound comes first in
+    the include path).
+  - usr.sbin/unbound/Makefile.inc sets MK_WERROR=no.
