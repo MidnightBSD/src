@@ -1,0 +1,101 @@
+Upgrade procedure for wpa_supplicant and hostapd (contrib/wpa)
+
+Sources:
+  https://w1.fi/releases/wpa_supplicant-VERSION.tar.gz
+  https://w1.fi/releases/hostapd-VERSION.tar.gz
+  (plus the matching .tar.gz.asc signatures)
+
+Both tarballs are signed by Jouni Malinen <j@w1.fi>, key fingerprint
+EC4A A0A9 91A5 F246 4582  D52D 2B6E F432 EFC8 95FA.  Verify both
+signatures before importing.
+
+Vendor branch:	vendor/wpa/dist (not pruned, no Xlist)
+Tag:		vendor/wpa/dist/VERSION
+In-tree prefix:	contrib/wpa
+Build glue:	usr.sbin/wpa
+
+To upgrade to a new version:
+
+1. Download and verify both tarballs into an empty directory.
+2. Extract the wpa_supplicant tarball, then extract the hostapd tarball
+   over it (tar -C <dir> --strip-components=1).  The files the two
+   tarballs share (COPYING, README, src/ and so on) were identical in
+   2.11 and 2.12; check this with cmp before overlaying and note any
+   difference in the vendor commit message.
+3. Use the vendor-update skill (vendor/wpa/dist, contrib/wpa).  Stage
+   the import with "git add -A -f": upstream ships .gitignore files
+   that otherwise drop the docbook manual pages, vs2005 project
+   directories, binder/fi and hostapd/logwatch/hostapd.  Commit it as
+   "Vendor import of wpa + hostapd VERSION" on top of the previous
+   vendor commit and tag it.
+4. Merge it into contrib/wpa with "git subtree merge -P contrib/wpa"
+   (a real merge commit, never a squash) and resolve conflicts by
+   keeping the local patches below.
+5. Update the SRCS lists and CFLAGS in usr.sbin/wpa for added and
+   removed upstream sources.  FreeBSD's usr.sbin/wpa is the closest
+   reference.
+6. Build usr.sbin/wpa and run "wpa_supplicant -v" and "hostapd -v".
+
+Local changes carried in contrib/wpa on top of upstream:
+
+  - src/drivers/driver_bsd.c (FreeBSD): net80211 changes.
+    * bsd_get_iface_flags() is replaced by bsd_ctrl_iface(priv, enable),
+      which also sets or clears IFF_UP; it is called from
+      bsd_set_ieee8021x(), bsd_init() and wpa_driver_bsd_init() (mark
+      down during setup), bsd_deinit() and wpa_driver_bsd_deinit()
+      (mark down), and wpa_driver_bsd_associate() and
+      wpa_driver_bsd_scan() (mark up).
+    * RTM_IFINFO handling in bsd_wireless_event_receive() also looks
+      at IFF_RUNNING.
+    * wpa_driver_bsd_set_rsn_wpa_ie() is added; associate() looks up
+      the RSN IE, else the WPA vendor IE, and programs it with that.
+    * IBSS uses IFM_IEEE80211_ADHOC; get80211opmode() reports
+      IEEE80211_M_IBSS.
+    * wpa_driver_bsd_capa() always advertises WEP40/WEP104/TKIP/CCMP
+      under __FreeBSD__ because net80211 does software crypto.
+    * bsd_global_init() opens the ioctl socket with PF_LOCAL (FreeBSD
+      6aeec6a74197) instead of upstream's PF_INET with a PF_INET6
+      fallback.
+  - src/l2_packet/l2_packet_freebsd.c (FreeBSD): include <net/bpf.h>
+    when __FreeBSD_version is defined, and use pcap_next_ex() so a
+    vanished device terminates the event loop.
+  - src/ap/hostapd.c (FreeBSD): in setup_interface2(), an
+    "#ifdef __FreeBSD" block (no trailing underscores, so currently
+    never compiled) that skips hostapd_get_hw_features().
+  - src/common/dhcp.h (FreeBSD): map Linux struct iphdr field names to
+    struct ip under __FreeBSD__.
+  - src/utils/os_unix.c (FreeBSD): os_fdatasync() is not built on
+    __DragonFly__.
+  - src/wps/wps_upnp.c (FreeBSD): get_netif_info() uses eth_get() on
+    __DragonFly__ as well.
+  - src/drivers/driver_ndis.c (FreeBSD): printf format fixes and
+    dup_binstr() replaced by os_malloc()/os_memcpy() in
+    wpa_driver_ndis_get_names().  Not built.
+  - wpa_supplicant/ctrl_iface_unix.c (FreeBSD): in
+    wpas_ctrl_iface_open_sock(), raise SO_SNDBUF to CTRL_IFACE_MAX_LEN
+    under __FreeBSD__.
+  - wpa_supplicant/main.c (FreeBSD): usage() lists "bsd,wired"
+    drivers and uses "-Dbsd" in the example.
+  - wpa_supplicant/wpa_cli.c (FreeBSD): wpa_cli_action_process() runs
+    the action script for WPA_EVENT_TEMP_DISABLED.
+  - wpa_supplicant/wpa_supplicant.c (FreeBSD): the
+    CONFIG_DRIVER_NDIS driver_ndis_init_ops() call is removed from
+    wpa_supplicant_init().
+  - Files kept from older releases, not built: src/ap/iapp.[ch],
+    wpa_supplicant/blacklist.[ch].
+  - Files removed locally: wpa_supplicant/wpa_gui-qt4/,
+    wpa_supplicant/win_if_list.c, wpa_supplicant/win_example.reg and
+    src/eap_peer/.gitignore.
+  - wpa_supplicant/vs2005/{wpa_supplicant.sln,win_if_list/*.vcproj,
+    wpasvc/*.vcproj} have LF instead of CRLF line endings.
+
+Local patches dropped at 2.12:
+
+  - src/ap/ieee802_11_eht.c: link ID bounds check in
+    hostapd_process_ml_assoc_req() (ec3614ffcc).  Fixed upstream in
+    2.12 (w1.fi 2026-1, CVE-2026-58374).
+
+Notes:
+  - usr.sbin/wpa/ndis_events and the Packet32/ntddndis files in
+    usr.sbin/wpa/wpa_supplicant are MidnightBSD/FreeBSD-only.
+  - Security advisories: https://w1.fi/security/
