@@ -1210,8 +1210,11 @@ partition, so a
 partition is not booted on BIOS-based computers.
 The UEFI
 .Xr boot1.efi 8
-applies the preference first among the partitions on the disk it was
-loaded from, then among those on all other disks.
+applies the preference across all disks: it tries
+.Cm freebsd-ufs
+and
+.Cm freebsd-zfs
+partitions only after the other partitions on every disk.
 .Pp
 The APM scheme also does not support embedding bootstrap code.
 Instead, the 800 KBytes bootstrap code image
