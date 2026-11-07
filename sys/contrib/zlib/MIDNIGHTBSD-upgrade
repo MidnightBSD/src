@@ -1,0 +1,111 @@
+Upgrade procedure for zlib
+
+Source: https://zlib.net/zlib-VERSION.tar.gz
+	(older releases: https://zlib.net/fossils/zlib-VERSION.tar.gz)
+	Check zlib-VERSION.tar.gz.asc, signed by Mark Adler,
+	5ED46A6721D365587791E2AA783FCD8E58BCAFBA.  The .asc files are also
+	attached to the GitHub releases at
+	https://github.com/madler/zlib/releases/download/vVERSION/
+	(zlib.net/fossils has no .asc files).
+
+The vendor branch (vendor/zlib) carries the complete release tarball.
+Pruning happens only in sys/contrib/zlib; see MIDNIGHTBSD-Xlist.  The
+tarballs since 1.3.2 contain two empty directories under test/, which
+git cannot store.
+
+sys/contrib/zlib is used by lib/libz, by the kernel (sys/conf/files,
+sys/modules/zlib) and by the boot loader (stand/libsa and the
+-I${SRCTOP}/sys/contrib/zlib users in stand/).
+
+To upgrade to a new version:
+
+1. Download and verify the tarball and extract it into a new directory.
+2. Use the vendor-update skill (vendor/zlib, sys/contrib/zlib, tag
+   vendor/zlib/VERSION).  Stage with "git add -A -f".
+3. Merge.  Files we prune but upstream changed show up as modify/delete
+   conflicts, and new upstream files (CMake, Bazel and so on) are added
+   by the merge; remove everything MIDNIGHTBSD-Xlist matches and extend
+   the Xlist for new files we do not want.
+4. Re-check the local patches listed below, especially zconf.h.
+5. lib/libz: add new exported functions to Symbol.map under a new
+   ZLIB_<version> node (compare zlib.map and the ZEXTERN declarations
+   in zlib.h) and add the node to Versions.def; update the version in
+   zlib.pc.  SHLIB_MAJOR stays 6 as long as no symbol is removed.
+   FreeBSD's lib/libz is a good reference.
+6. Build lib/libz, the kernel (or sys/modules/zlib) and stand/, and run
+   upstream's test/example.c and test/minigzip.c against the new libz.
+
+Branch policy: stable/4.0 stays on zlib 1.3.x to keep the change for
+ports small; security fixes from newer releases are backported there
+as separate commits.  master and stable/4.1 follow upstream releases.
+
+Local patches applied on top of upstream (from FreeBSD unless noted):
+
+  - zconf.h, top of file: under __FreeBSD__ (which our compilers also
+    define), define Z_SOLO for _KERNEL, and for Z_SOLO include
+    <sys/types.h> and define Z_U8/Z_U4 as __uint64_t/__uint32_t.
+  - zconf.h, Z_PREFIX list: the compress*/uncompress* and
+    zcalloc/zcfree prefix blocks test
+    "!defined(Z_SOLO) && !defined(_KERNEL)" instead of
+    "#ifndef Z_SOLO".
+  - zconf.h: "#if HAVE_UNISTD_H-0" is replaced by
+    "#if 0    /* was set to #if 0 by ./configure */", so <zlib.h>
+    never defines Z_HAVE_UNISTD_H and does not include <unistd.h> in
+    consumers.  FreeBSD's 1.3.2 import instead defines HAVE_UNISTD_H
+    and HAVE_STDARG_H to 1 (0 and a NULL definition in the kernel) at
+    the top of zconf.h; MidnightBSD keeps the old behaviour so that
+    consumers see the same preprocessor environment as with 1.3.1.
+  - zconf.h (MidnightBSD): "#if HAVE_STDARG_H-0" is replaced by
+    1.3.1's "#ifdef HAVE_STDARG_H".  Upstream's form makes <zlib.h>
+    fail with -Wundef -Werror (bxe(4) and any such port) unless
+    HAVE_STDARG_H is defined, and FreeBSD's way around it (defining
+    HAVE_UNISTD_H and HAVE_STDARG_H in zconf.h) would leak those
+    autoconf-style macros into every consumer.
+  - zconf.h, after the SEEK_SET block: "This is hard-configured for
+    FreeBSD": include <sys/types.h> for Z_SOLO, define z_off_t as
+    off_t, and default _FILE_OFFSET_BITS to 64.  This makes z_off_t
+    64 bits on every architecture and keeps the gz*64 names out of the
+    ABI, whatever upstream's default for z_off_t is (long long in
+    1.3.2, long again in 1.4).
+  - zlib.h: the utility functions (compress, uncompress, ...) are
+    declared for "!defined(Z_SOLO) || defined(_KERNEL)" and the gzip
+    file functions keep "#ifndef Z_SOLO" (the #endif/#ifndef pair is
+    inserted before the "gzip file access functions" comment).
+  - zlib.h: a crc32_combine_gen64() prototype before the "various
+    hacks, don't look :)" section.
+  - zutil.h: the zcalloc()/zcfree() prototypes are declared for
+    "!defined(Z_SOLO) || defined(_KERNEL)".
+  - deflate.c, infback.c, inflate.c: in deflateInit2_(),
+    inflateBackInit_() and inflateInit2_() the default zalloc/zfree
+    are used for "!(defined(Z_SOLO) && !defined(_KERNEL))", so the
+    kernel gets zcalloc/zcfree from sys/dev/zlib/zcalloc.c.
+  - deflate.c: "#if !defined(MIN)" around the MIN() macro before
+    deflate_stored().
+  - deflate.h: LIT_MEM is defined.
+  - gzlib.c: #include "zutil.h" and <unistd.h> after "gzguts.h";
+    gzread.c, gzwrite.c: #include <unistd.h> after "gzguts.h".
+  - contrib/gcc_gvmat64/gvmat64.S: kept as a copy of the 1.3.1 file
+    with CRs stripped.  It is not built.  Upstream converted it to LF
+    and changed it in 1.3.2, so the merge conflicts; the file is
+    assembly and was left untouched.  FreeBSD dropped contrib/
+    entirely in its 1.3.2 import.
+
+Security fixes backported from zlib 1.4 to stable/4.0 (upstream commits
+in https://github.com/madler/zlib; they are part of 1.4, so drop them
+from this list when stable/4.0 moves to a release that has them):
+
+  - gzwrite.c: df84af25dc19 (CVE-2026-85091, non-blocking gzwrite()
+    overflow), bbc2ccf3d0de and 7235b0a58122 (return after a stalled
+    non-blocking write in gzprintf()/gzvprintf()), e9415f70eb6a
+    (initialise the input buffer before a gzseek() zero fill).
+  - inflate.c: 2fd31f00740e (invalid window size kept for
+    inflateGetDictionary()), 8179479c6274 (window size after
+    inflateSync()), e7bb9788e0f0 (inflatePrime() and the fast path).
+  - infback.c: 09a1572aa624 (distance too far back in inflateBack()).
+  - deflate.c: 12d7b9098091 (deflatePrime() pending space),
+    1e4178b27f45 with 2022b9de9825 (deflateResetKeep() mid-stream),
+    without the "s->gzhead = Z_NULL;" line that 1.4 added in 767c4c9.
+  - gzlib.c: 2ec717a141cb (FD_CLOEXEC in gzdopen()).
+  - compress.c, uncompr.c: efcc5b7d8154 (Z_NULL instead of NULL), not a
+    security fix but needed to build them in the kernel; part of the
+    1.3.2 merge commit.
