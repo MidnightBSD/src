@@ -1,28 +1,7 @@
-/*-
- * SPDX-License-Identifier: BSD-2-Clause
- *
+/*
  * Copyright (c) 2017 Kyle J. Kneitinger <kyle@kneit.in>
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
+ * SPDX-License-Identifier: BSD-2-Clause
  */
 
 #include <sys/cdefs.h>
@@ -246,7 +225,7 @@ be_dependent_clone_cb(zfs_handle_t *zfs_hdl, void *data)
 {
 	int err;
 	bool found;
-	char *name;
+	const char *name;
 	struct nvlist *nvl;
 	struct nvpair *nvp;
 	struct be_destroy_data *bdd;
@@ -670,8 +649,20 @@ be_deep_clone_prop(int prop, void *cb)
 
 	dccb = cb;
 	/* Skip some properties we don't want to touch */
-	if (prop == ZFS_PROP_CANMOUNT)
+	switch (prop) {
+		/*
+		 * libzfs insists on these being naturally inherited in the
+		 * cloning process.
+		 */
+	case ZFS_PROP_KEYFORMAT:
+	case ZFS_PROP_KEYLOCATION:
+	case ZFS_PROP_ENCRYPTION:
+	case ZFS_PROP_PBKDF2_ITERS:
+
+		/* FALLTHROUGH */
+	case ZFS_PROP_CANMOUNT:		/* Forced by libbe */
 		return (ZPROP_CONT);
+	}
 
 	/* Don't copy readonly properties */
 	if (zfs_prop_readonly(prop))
@@ -1264,14 +1255,38 @@ be_deactivate(libbe_handle_t *lbh, const char *ds, bool temporary)
 	return (0);
 }
 
+static int
+be_zfs_promote_cb(zfs_handle_t *zhp, void *data)
+{
+	char origin[BE_MAXPATHLEN];
+	bool *found_origin = (bool *)data;
+	int err;
+
+	if (zfs_prop_get(zhp, ZFS_PROP_ORIGIN, origin, sizeof(origin),
+	    NULL, NULL, 0, true) == 0) {
+		*found_origin = true;
+		err = zfs_promote(zhp);
+		if (err)
+			return (err);
+	}
+
+	return (zfs_iter_filesystems(zhp, be_zfs_promote_cb, data));
+}
+
+static int
+be_zfs_promote(zfs_handle_t *zhp, bool *found_origin)
+{
+	*found_origin = false;
+	return (be_zfs_promote_cb(zhp, (void *)found_origin));
+}
+
 int
 be_activate(libbe_handle_t *lbh, const char *bootenv, bool temporary)
 {
 	char be_path[BE_MAXPATHLEN];
-	nvlist_t *dsprops;
-	char *origin;
 	zfs_handle_t *zhp;
 	int err;
+	bool found_origin;
 
 	be_root_concat(lbh, bootenv, be_path);
 
@@ -1292,27 +1307,35 @@ be_activate(libbe_handle_t *lbh, const char *bootenv, bool temporary)
 		if (err)
 			return (-1);
 
-		zhp = zfs_open(lbh->lzh, be_path, ZFS_TYPE_FILESYSTEM);
-		if (zhp == NULL)
-			return (-1);
+		for (;;) {
+			zhp = zfs_open(lbh->lzh, be_path, ZFS_TYPE_FILESYSTEM);
+			if (zhp == NULL)
+				return (-1);
 
-		if (be_prop_list_alloc(&dsprops) != 0)
-			return (-1);
+			err = be_zfs_promote(zhp, &found_origin);
 
-		if (be_get_dataset_props(lbh, be_path, dsprops) != 0) {
-			nvlist_free(dsprops);
-			return (-1);
+			zfs_close(zhp);
+			if (!found_origin)
+				break;
+			if (err)
+				return (err);
 		}
-
-		if (nvlist_lookup_string(dsprops, "origin", &origin) == 0)
-			err = zfs_promote(zhp);
-		nvlist_free(dsprops);
-
-		zfs_close(zhp);
 
 		if (err)
 			return (-1);
 	}
+
+	return (BE_ERR_SUCCESS);
+}
+
+int
+be_log_history(libbe_handle_t *lbh, const char *message)
+{
+	int err;
+
+	err = zpool_log_history(lbh->lzh, message);
+	if (err)
+		return (set_error(lbh, BE_ERR_UNKNOWN));
 
 	return (BE_ERR_SUCCESS);
 }
