@@ -1,0 +1,137 @@
+Upgrade procedure for OpenZFS
+
+Source: https://github.com/openzfs/zfs, release tag zfs-VERSION
+	(for example zfs-2.2.11).  The matching release tarball is
+	https://github.com/openzfs/zfs/releases/download/zfs-VERSION/zfs-VERSION.tar.gz
+	with a detached signature (zfs-VERSION.tar.gz.asc).  Both the
+	tarball and the annotated git tag are signed by Tony Hutter,
+	key 4F3BA9AB6D1F8D683DC2DFB56AD860EED4598027.  Check both with
+	"gpg --verify" and "git verify-tag zfs-VERSION".
+
+Only the "current LTS" series in upstream RELEASES.md is a candidate for
+MidnightBSD.  Upstream release notes list the supported FreeBSD versions;
+our kernel is roughly FreeBSD stable/13 (__FreeBSD_version 1305500), so
+check __FreeBSD_version gates and newer FreeBSD KPIs before upgrading.
+
+The vendor branch (vendor/openzfs) carries the upstream git tag tree,
+not the release tarball (the tarball adds autotools output and
+dereferences symlinks).  Tags are vendor/openzfs/VERSION.  The import is
+merged into sys/contrib/openzfs with git subtree (prefix
+sys/contrib/openzfs).  Nothing is pruned: there is no MIDNIGHTBSD-Xlist.
+
+To upgrade to a new version:
+
+1. Fetch the tag into a scratch bare repository
+   (git fetch https://github.com/openzfs/zfs tag zfs-VERSION) and verify
+   the tag signature.  Download and verify the tarball as well and check
+   that every file the tarball shares with the tag tree is identical
+   (symlinks in git are regular files in the tarball).
+2. Create a worktree of vendor/openzfs, remove all tracked files, and
+   extract "git archive zfs-VERSION" into it.  Stage with
+   "git add -A -f" so that files matched by upstream .gitignore files
+   (for example tests/zfs-tests/tests/functional/rsend/fs.tar.gz and
+   etc/modules-load.d/zfs.conf) are included.  The scripts/zfs-images
+   submodule gitlink is not imported (git archive does not export it).
+   Compare "git ls-tree -r" of the commit with the upstream tag; the
+   only difference must be the scripts/zfs-images gitlink.  Commit as
+   "Vendor import of openzfs VERSION" and tag vendor/openzfs/VERSION.
+3. git subtree merge -P sys/contrib/openzfs vendor/openzfs on master.
+   Resolve conflicts against the local patch list below.  Afterwards
+   diff sys/contrib/openzfs against the vendor tree and review every
+   remaining difference: rename detection and backported fixes have
+   produced silent bad merges before (a duplicated
+   zfs_secpolicy_setprops() in module/zfs/zfs_ioctl.c and a duplicated
+   cached-symlink free block in module/os/freebsd/zfs/zfs_znode_os.c
+   during the 2.2.11 update).
+4. Compare with FreeBSD's sys/contrib/openzfs on the stable branch that
+   uses the same OpenZFS series, and carry FreeBSD-only fixes that do
+   not depend on FreeBSD KPIs our kernel lacks.
+5. Update the build glue outside this directory: sys/modules/zfs
+   (Makefile, zfs_config.h, zfs_gitrev.h, static_ccompile.h),
+   cddl/lib and cddl/{s,usr.}bin/z*, sys/conf/files, and the loader
+   (stand/libsa/zfs, stand/defs.mk, stand/loader.mk and friends).
+   Other consumers of the OpenZFS headers: lib/libbe, sbin/bectl,
+   lib/libprocstat/zfs, lib/libproc, sbin/zfsbootcfg, usr.sbin/fstyp.
+6. Build zfs.ko with -Werror on amd64 and i386, build world and the
+   loader, and test on a scratch pool (kyua tests under /usr/tests and
+   the upstream zfs-tests suite) before touching a boot pool.
+
+Local patches applied on top of upstream (OpenZFS 2.2.11):
+
+  - .gitmodules: removed, since the scripts/zfs-images submodule is
+    not imported (MidnightBSD 757360b8fa).
+  - include/os/freebsd/spl/sys/time.h: TIMESPEC_OVERFLOW() treats only
+    i386 as having a 32-bit time_t, not powerpc (upstream bfb276e55c76
+    by Jessica Clarke, via FreeBSD; MidnightBSD 1a56bf7003).
+  - include/os/freebsd/spl/sys/vnode.h: vn_flush_cached_data() uses
+    vnode_pager_clean_sync()/vnode_pager_clean_async() (FreeBSD
+    64e869e9b93c; MidnightBSD 757360b8fa).
+  - lib/libspl/include/sys/types32.h: struct timeval32 removed
+    (upstream 88433e640ddb by Jessica Clarke, via FreeBSD; MidnightBSD
+    8e2eb38b61).
+  - module/icp/asm-x86_64/modes/aesni-gcm-x86_64.S and ghash-x86_64.S:
+    emit .note.GNU-stack for all ELF targets, not just Linux (FreeBSD
+    0e80562f15e3; MidnightBSD 0c4a039478).
+  - module/nvpair/nvpair.c, nvs_xdr_nvp_op(): the parentheses around
+    "(value_sz = i_get_value_size(...)) < 0" are fixed.  Upstream 2.2.11
+    assigns the result of the comparison to value_sz, which defeats the
+    following buflen check.  Fixed upstream in 2.4.  (MidnightBSD
+    8401a6b685, SA-26:40 port.)
+  - module/os/freebsd/spl/spl_taskq.c, taskq_tsd_set(): no
+    fpu_kern_thread() on i386 (FreeBSD; MidnightBSD 757360b8fa).
+  - module/os/freebsd/zfs/vdev_file.c: vdev_file_open() takes the
+    cred_t argument added to vdev_open_func_t in 2.2.11 and passes it
+    to zfs_file_open().  Upstream 2.2.11 only updated Linux and does
+    not build on FreeBSD.  (MidnightBSD, 2.2.11 update.)
+  - module/os/freebsd/zfs/zfs_ctldir.c, zfsctl_root_readdir(): set
+    *eofp at end of directory (FreeBSD bbb515decc5c).
+  - module/os/freebsd/zfs/zfs_vnops_os.c: zfs_readdir() sets *eofp to
+    0 or 1 only (FreeBSD d5cd41f2f1cf); zfs_getattr() sets va_rdev to 0
+    for files that are not devices (FreeBSD c2b39a756fe7; MidnightBSD
+    757360b8fa); the out_locked label in zfs_freebsd_copy_file_range()
+    is defined only with MAC (FreeBSD 4fe752ccb3f8).
+  - module/os/freebsd/zfs/zfs_znode_os.c, zfs_rezget(): use
+    vn_pages_remove_valid() from __FreeBSD_version 1300522 as FreeBSD
+    stable/13 does (FreeBSD 0c5f290ed909; MidnightBSD 757360b8fa).
+  - module/zfs/dbuf.c, dbuf_unoverride(): ASSERT(ptr == NULL) instead
+    of ASSERT0() on a pointer (FreeBSD 2165931f74f5).
+  - module/zfs/lz4_zfs.c: on FreeBSD, allocate the LZ4 compression
+    context with kmem_alloc() (malloc zones) instead of a kmem cache
+    (FreeBSD; MidnightBSD 757360b8fa, moved from lz4.c to lz4_zfs.c in
+    the 2.2.11 update).  Identical to FreeBSD stable/14.
+  - module/zstd/zfs_zstd.c: zstd_mempool_deinit() returns early if no
+    buffers were allocated (FreeBSD; MidnightBSD 757360b8fa); the
+    compression code is left out under IN_LIBSA for the loader
+    (FreeBSD).
+  - include/os/freebsd/spl/sys/simd_aarch64.h (no-op kfpu macros under
+    _STANDALONE) and module/icp/algs/blake3/blake3_impl.c (OMIT_SIMD):
+    needed to build blake3 into the loader as FreeBSD stable/14 does
+    (FreeBSD).
+  - include/os/freebsd/spl/sys/simd_arm.h: kfpu_allowed() is 0 on
+    32-bit arm, since kfpu_begin()/kfpu_end() are no-ops there (FreeBSD
+    d6e24901349d).
+  - cmd/zdb/zdb.c (FreeBSD b5ce60dffd5d) and cmd/zfs/zfs_main.c
+    (FreeBSD stable/14): printf format fixes.
+
+Earlier local commits that upstream 2.2.11 already contains (dropped in
+the 2.2.11 update): 89bd591a67 (gcc 14 warnings), 1427a9bea8 (raw send
+key mapping leak), c01dd1b0bf (__deprecated in compiler.h; the file now
+includes the LinuxKPI compiler.h), 887260d429 (clang 21), the rest of
+8401a6b685 (SA-26:40 / CVE-2026-49429, CVE-2026-49430, CVE-2026-49431)
+and the rest of 757360b8fa, except .github/workflows/zfs-tests.yml,
+which upstream removed and which was dropped as stale CI.
+
+Notes:
+
+  - Upgrade the loader before userland.  OpenZFS 2.2 adds pool
+    features that the loader must be able to read: org.openzfs:blake3
+    and com.klarasystems:vdev_zaps_v2.  vdev_zaps_v2 becomes active by
+    itself as soon as it is enabled (zpool create or zpool upgrade with
+    the new userland), so a boot pool can become unbootable with an old
+    loader.  Also new in 2.2: head_errlog, block_cloning, zilsaxattr.
+  - Block cloning: vfs.zfs.bclone_enabled (zfs_bclone_enabled) is 0
+    in 2.2.11, as in FreeBSD stable/14, so copy_file_range(2) does not
+    clone blocks unless it is turned on.  OpenZFS 2.4 changes the
+    default to 1; decide again on the next major update.
+  - zfs.ko built from 2.2.11 gets a -Wunneeded-internal-declaration
+    warning in module/zfs/arc.c (arc_buf_is_shared) without INVARIANTS.
