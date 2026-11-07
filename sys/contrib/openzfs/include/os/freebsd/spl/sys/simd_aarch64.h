@@ -50,8 +50,15 @@
 #include <machine/md_var.h>
 #include <machine/pcb.h>
 
+#ifdef _STANDALONE
+
+#define	kfpu_allowed()		0
+#define	kfpu_begin()		do {} while (0)
+#define	kfpu_end()		do {} while (0)
+
+#else
+
 #define	kfpu_allowed()		1
-#define	kfpu_initialize(tsk)	do {} while (0)
 #define	kfpu_begin() do {						\
 	if (__predict_false(!is_fpu_kern_thread(0)))			\
 		fpu_kern_enter(curthread, NULL, FPU_KERN_NOCTX);	\
@@ -61,6 +68,10 @@
 	if (__predict_false(curthread->td_pcb->pcb_fpflags & PCB_FP_NOSAVE)) \
 		fpu_kern_leave(curthread, NULL);			\
 } while (0)
+
+#endif
+
+#define	kfpu_initialize(tsk)	do {} while (0)
 #define	kfpu_init()		(0)
 #define	kfpu_fini()		do {} while (0)
 
