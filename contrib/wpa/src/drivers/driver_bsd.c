@@ -40,7 +40,7 @@
 #include <net80211/ieee80211_ioctl.h>
 #include <net80211/ieee80211_crypto.h>
 #endif /* __DragonFly__ || __GLIBC__ */
-#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
+#if defined(__MidnightBSD__) || defined(__FreeBSD_kernel__)
 #include <net80211/ieee80211_freebsd.h>
 #endif
 #if __NetBSD__
@@ -1450,7 +1450,7 @@ wpa_driver_bsd_add_scan_entry(struct wpa_scan_results *res,
 	result->qual = sr->isr_rssi;
 	result->noise = sr->isr_noise;
 
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	/*
 	 * the rssi value reported by the kernel is in 0.5dB steps relative to
 	 * the reported noise floor. see ieee80211_node.h for details.
@@ -1480,7 +1480,7 @@ wpa_driver_bsd_add_scan_entry(struct wpa_scan_results *res,
 	*pos++ = 1;
 	*pos++ = sr->isr_erp;
 
-#if defined(__DragonFly__) || defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
+#if defined(__DragonFly__) || defined(__MidnightBSD__) || defined(__FreeBSD_kernel__)
 	os_memcpy(pos, (u8 *)(sr + 1) + sr->isr_ssid_len + sr->isr_meshid_len,
 		  sr->isr_ie_len);
 #else
@@ -1562,7 +1562,7 @@ static int wpa_driver_bsd_capa(struct bsd_driver_data *drv)
 	if (devcaps.dc_drivercaps & IEEE80211_C_WPA2)
 		drv->capa.key_mgmt = WPA_DRIVER_CAPA_KEY_MGMT_WPA2 |
 			WPA_DRIVER_CAPA_KEY_MGMT_WPA2_PSK;
-#ifdef __FreeBSD__
+#ifdef __MidnightBSD__
 	drv->capa.enc |= WPA_DRIVER_CAPA_ENC_WEP40 |
 	    WPA_DRIVER_CAPA_ENC_WEP104 |
 	    WPA_DRIVER_CAPA_ENC_TKIP |
