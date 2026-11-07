@@ -50,6 +50,7 @@ typedef struct dev_info
 	void *devdata;
 	uint64_t partoff;
 	int preferred;
+	int fallback;
 	struct dev_info *next;
 } dev_info_t;
 
