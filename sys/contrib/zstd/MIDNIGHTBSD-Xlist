@@ -1,0 +1,21 @@
+# Files and directories of the zstd release tarball that are carried
+# neither on the vendor/zstd branch nor in sys/contrib/zstd.
+#
+# Each line is a path relative to the top directory of the tarball
+# (zstd-VERSION/).  A directory entry removes the whole directory.
+# "*/NAME" removes every file called NAME, in any directory.
+# Lines starting with # and empty lines are ignored.
+#
+# See MIDNIGHTBSD-upgrade for how to apply this list.
+*/.gitignore
+.circleci
+.cirrus.yml
+.github
+.travis.yml
+CODE_OF_CONDUCT.md
+Package.swift
+build
+contrib
+lib/dll
+programs/windres
+tests

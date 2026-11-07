@@ -1,0 +1,114 @@
+Upgrade procedure for zstd
+
+Source: https://github.com/facebook/zstd/releases/download/vVERSION/zstd-VERSION.tar.gz
+	Check zstd-VERSION.tar.gz.sha256 and zstd-VERSION.tar.gz.sig.  The
+	releases are signed by the "Zstandard Release Signing Key
+	<signing@zstd.net>",
+	4EF4AC63455FC9F4545D9B7DEF8FE99528B52FFD.  Arch Linux lists the
+	same key in validpgpkeys of its zstd PKGBUILD, and Debian ships it
+	as debian/upstream/signing-key.asc of the libzstd package.
+
+The vendor branch (vendor/zstd) carries the release tarball pruned with
+MIDNIGHTBSD-Xlist; sys/contrib/zstd carries the same files plus the
+kernel glue in lib/freebsd and these two MIDNIGHTBSD-* files.  The
+"Import 1.5.2" commit on vendor/zstd is not a clean 1.5.2: it still
+holds unmodified 1.3.4 files in contrib/ and tests/ (and NEWS and
+circle.yml) that were never in sys/contrib/zstd.  The 1.5.7 import
+removed them.
+
+sys/contrib/zstd is used by lib/libzstd (libprivatezstd), usr.bin/zstd,
+the kernel (sys/conf/files, sys/conf/files.riscv, sys/conf/kern.pre.mk,
+sys/kern/subr_compressor.c, sys/geom/uzip and
+sys/modules/geom/geom_uzip), and for the zstd.h header by lib/libmport,
+libexec/mport.*, usr.sbin/mport, lib/clang/libllvm and
+tests/sys/kern.  lib/libarchive, usr.bin/gzip, usr.bin/mkuzip and
+sbin/savecore link libprivatezstd.  OpenZFS has its own copy of zstd in
+sys/contrib/openzfs; it is not related to this one.
+
+To upgrade to a new version:
+
+1. Download and verify the tarball and extract it into a new, empty
+   directory.
+2. Prune it with MIDNIGHTBSD-Xlist, from the top of the extracted tree:
+
+	grep -v -e '^#' -e '^$' .../MIDNIGHTBSD-Xlist |
+	while IFS= read -r p; do
+		case $p in
+		'*/'*)	find . -name "${p#\*/}" -exec rm -f {} + ;;
+		*)	rm -rf "./$p" ;;
+		esac
+	done
+
+   Look for new top-level files and directories that we do not want
+   and add them to the Xlist.
+3. Use the vendor-update skill (vendor/zstd, sys/contrib/zstd, tag
+   vendor/zstd/VERSION).  Stage with "git add -A -f" (upstream ships
+   .gitignore files) and check that the staged tree equals the pruned
+   tarball, including the exec bits of programs/zstdgrep and
+   programs/zstdless.
+4. Merge.  For the 1.5.7 import the merge base was the pruned 1.5.2
+   tarball rather than the vendor/zstd 1.5.2 commit (see above); from
+   1.5.7 on, the previous vendor/zstd commit is a correct base.
+5. Re-check the local patches below and update the build glue:
+   - lib/libzstd/Makefile and sys/conf/files: new lib/*/*.c files
+     (compare "ls lib/*/*.c" of the old and new release).
+   - usr.bin/zstd/Makefile: new programs/*.c files.
+   - Symbols that zstd(1) needs from libprivatezstd but that are not
+     part of the public API: the library is built with
+     -fvisibility=hidden, so check the link of usr.bin/zstd.
+6. Build lib/libzstd, usr.bin/zstd, lib/libarchive, usr.bin/tar,
+   usr.bin/gzip, usr.bin/mkuzip, sbin/savecore, lib/libmport and the
+   kernel (GENERIC; at least the zstdio objects and geom_uzip).  Build
+   upstream's tests/fuzzer and tests/zstreamtest by hand against the
+   new lib sources and run them briefly.
+
+Branch policy: master and stable/4.1 follow upstream releases.
+stable/4.0 stays on zstd 1.5.2.
+
+Local patches applied on top of upstream:
+
+  - lib/freebsd/ (from FreeBSD): kernel glue, not part of upstream.
+    stddef.h, stdint.h, stdio.h, string.h and limits.h are stubs so that
+    zstd's <...> includes resolve to kernel headers when
+    -I$S/contrib/zstd/lib/freebsd comes first (ZSTD_C in kern.pre.mk);
+    stdlib.h maps malloc/calloc/free to malloc(9) with M_ZSTD;
+    zstd_kfreebsd.h pulls in the kernel definitions and, since 1.5.7,
+    renames zstd_preSplit.c's static abs64() to ZSTD_abs64 so that it
+    does not clash with abs64() from <sys/libkern.h> (FreeBSD
+    c0d9a07101a1); zstd_kmalloc.c
+    defines M_ZSTD and builds lib/common/debug.c; zstd_kfreebsd.c
+    provides __bswap, __ctz and __clz libgcc helpers for riscv (also
+    used by lib/libzstd on riscv).  MidnightBSD removed the $FreeBSD$
+    tags.  FreeBSD also has lib/freebsd/assert.h (c6eb7f3fbffd); we do
+    not need it, because nothing includes <assert.h> in our kernel
+    build (only with DEBUGLEVEL >= 1).
+
+  No upstream file is modified.  Patches dropped with 1.5.7:
+
+  - FreeBSD 98689d0ffb0a: ZSTDLIB_API / visibility("default") on
+    XXH64() in lib/common/xxhash.h, ZSTD_cycleLog() in
+    lib/compress/zstd_compress_internal.h and
+    ZDICT_trainFromBuffer_unsafe_legacy() in lib/dictBuilder/zdict.c,
+    "needed by dll-linked CLI zstd(1)".  zstd(1) 1.5.7 inlines XXH64()
+    and has its own ZSTD_cycleLog(), and the zdict.c function is
+    static.  zstd(1) now needs the POOL_*() functions instead, which
+    lib/libzstd/Makefile exports with CFLAGS.pool.c, as FreeBSD does.
+  - MidnightBSD: __MidnightBSD__ instead of __FreeBSD__ in the
+    PLATFORM_POSIX_VERSION test of programs/platform.h.  Upstream
+    removed the BSD line; our compilers define __FreeBSD__ as well, so
+    the other __FreeBSD__ tests in programs/util.c work unchanged.
+
+Build notes:
+
+  - lib/libzstd: -DZSTD_DISABLE_ASM (FreeBSD 4101bcfa18c0).  libzstd is
+    a bootstrap library (_elftoolchain_libs in Makefile.inc1), and when
+    it is built with the host compiler on Linux or macOS upstream would
+    enable lib/decompress/huf_decompress_amd64.S, which we never build.
+  - Kernel: ZSTD_C in sys/conf/kern.pre.mk adds -DZSTD_NO_TRACE.
+    zstd 1.5.7 declares its tracing hooks as weak symbols on aarch64 and
+    riscv as well as x86; in a static kernel the call goes through an
+    unresolved PLT/GOT slot and the kernel resets during boot (FreeBSD
+    de2ea5423cc6, later reverted there after the arm64 ldscript fix
+    1dddb580f950, which we do not have).
+  - Kernel: lib/compress/zstd_preSplit.c is new in 1.5.7 and listed in
+    sys/conf/files.
