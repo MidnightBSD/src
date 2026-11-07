@@ -1,11 +1,12 @@
-/*	$NetBSD: tnftp.h,v 1.35 2013/05/05 13:17:05 lukem Exp $	*/
+/*	$NetBSD: tnftp.h,v 1.44 2026/02/10 19:41:22 lukem Exp $	*/
+
+#ifndef TNFTP_H
+#define TNFTP_H 1
 
 #define	FTP_PRODUCT	PACKAGE_NAME
 #define	FTP_VERSION	PACKAGE_VERSION
 
 #include "tnftp_config.h"
-
-#include <sys/uio.h>
 
 #include <assert.h>
 #include <stdio.h>
@@ -71,6 +72,9 @@
 # if defined(HAVE_NDIR_H)
 #  include <ndir.h>
 # endif
+#endif
+#if defined(HAVE_SYS_UIO_H)
+# include <sys/uio.h>
 #endif
 
 #if defined(HAVE_SYS_IOCTL_H)
@@ -166,7 +170,7 @@ struct pollfd {
 # include <err.h>
 #endif
 
-#if defined(USE_GLOB_H)	/* not set by configure; used by other build systems */
+#if defined(USE_GLOB_H)
 # include <glob.h>
 #else
 # include "ftpglob.h"
@@ -224,6 +228,19 @@ typedef unsigned int socklen_t;
 
 #if defined(USE_INET6)
 # define INET6
+#endif
+
+#if defined(HAVE_ARPA_NAMESER_H)
+# include <arpa/nameser.h>
+#endif
+#if !defined(NS_INADDRSZ)
+# define NS_INADDRSZ	4
+#endif
+#if !defined(NS_IN6ADDRSZ)
+# define NS_IN6ADDRSZ	16
+#endif
+#if !defined(NS_INT16SZ)
+# define NS_INT16SZ	2
 #endif
 
 #if !HAVE_DECL_AI_NUMERICHOST
@@ -441,6 +458,10 @@ char   *strsep(char **stringp, const char *delim);
 int utimes(const char *, const struct timeval *);
 #endif
 
+#if !defined(HAVE_VASPRINTF)
+int vasprintf(char **, const char *, va_list);
+#endif
+
 #if !defined(HAVE_MEMMOVE)
 # define memmove(a,b,c)	bcopy((b),(a),(c))
 	/* XXX: add others #defines for borken systems? */
@@ -503,14 +524,35 @@ int utimes(const char *, const struct timeval *);
 #define getipnodebyname	Rgetipnodebyname
 #endif /* defined(USE_SOCKS) */
 
+/*
+ * Compatibility for NetBSD <assert.h>
+ */
+#ifdef _DIAGASSERT
+#undef _DIAGASSERT
+#endif
+#define _DIAGASSERT(a)
 
 /*
- * Compatibility for stuff in NetBSD <sys/cdefs.h>
+ * Compatibility for NetBSD <sys/cdefs.h>
  */
+#ifdef __dead
 #undef __dead
+#endif
 #define __dead
+
+#ifdef __unused
+#undef __unused
+#endif
+#define __unused
 
 #ifdef __UNCONST
 #undef __UNCONST
 #endif
-#define __UNCONST(a)   ((void *)(unsigned long)(const void *)(a))
+#define __UNCONST(a)	((void *)(unsigned long)(const void *)(a))
+
+#ifdef __UNVOLATILE
+#undef __UNVOLATILE
+#endif
+#define __UNVOLATILE(a)	((void *)(unsigned long)(volatile void *)(a))
+
+#endif /* TNFTP_H */

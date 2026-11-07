@@ -1,5 +1,8 @@
-/* $NetBSD: inet_pton.c,v 1.9 2007/07/23 11:45:52 lukem Exp $ */
-/* from	NetBSD: inet_pton.c,v 1.3 2006/09/26 05:59:18 lukem Exp */
+/* $NetBSD: inet_pton.c,v 1.10 2026/02/10 18:02:20 lukem Exp $ */
+
+/* from:	NetBSD: inet_pton.c,v 1.8 2012/03/13 21:13:38 christos Exp */
+/* upstream:	lib/libc/inet/inet_pton.c */
+/* see also:	othersrc/libexec/tnftpd/libnetbsd/inet_pton.c */
 
 /*
  * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
@@ -20,20 +23,39 @@
 
 #include "tnftp.h"
 
-#if defined(HAVE_ARPA_NAMESER_H)
-# include <arpa/nameser.h>
+#if 0
+#include <sys/cdefs.h>
+#if defined(LIBC_SCCS) && !defined(lint)
+#if 0
+static const char rcsid[] = "Id: inet_pton.c,v 1.5 2005/07/28 06:51:47 marka Exp";
+#else
+__RCSID("$NetBSD: inet_pton.c,v 1.10 2026/02/10 18:02:20 lukem Exp $");
 #endif
-#if !defined(NS_INADDRSZ)
-# define NS_INADDRSZ	4
+#endif /* LIBC_SCCS and not lint */
+
+#include "port_before.h"
+
+#include "namespace.h"
+#include <sys/param.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <arpa/nameser.h>
+#include <stddef.h>
+#include <string.h>
+#include <assert.h>
+#include <ctype.h>
+#include <errno.h>
+
+#include "port_after.h"
+
+#ifdef __weak_alias
+__weak_alias(inet_pton,_inet_pton)
 #endif
-#if !defined(NS_IN6ADDRSZ)
-# define NS_IN6ADDRSZ	16
-#endif
-#if !defined(NS_INT16SZ)
-# define NS_INT16SZ	2
 #endif
 
-/*
+/*%
  * WARNING: Don't even consider trying to compile this on a system where
  * sizeof(int) < 4.  sizeof(int) > 4 is fine; all the world's not a VAX.
  */
@@ -57,6 +79,9 @@ static int	inet_pton6(const char *src, unsigned char *dst);
 int
 inet_pton(int af, const char *src, void *dst)
 {
+
+	_DIAGASSERT(src != NULL);
+	_DIAGASSERT(dst != NULL);
 
 	switch (af) {
 	case AF_INET:
@@ -88,10 +113,13 @@ inet_pton4(const char *src, unsigned char *dst, int pton)
 {
 	uint32_t val;
 	unsigned int digit, base;
-	int n;
+	ptrdiff_t n;
 	unsigned char c;
 	unsigned int parts[4];
-	register unsigned int *pp = parts;
+	unsigned int *pp = parts;
+
+	_DIAGASSERT(src != NULL);
+	_DIAGASSERT(dst != NULL);
 
 	c = *src;
 	for (;;) {
@@ -211,8 +239,11 @@ inet_pton6(const char *src, unsigned char *dst)
 			  xdigits_u[] = "0123456789ABCDEF";
 	unsigned char tmp[NS_IN6ADDRSZ], *tp, *endp, *colonp;
 	const char *xdigits, *curtok;
-	int ch, saw_xdigit;
+	int ch, seen_xdigits;
 	unsigned int val;
+
+	_DIAGASSERT(src != NULL);
+	_DIAGASSERT(dst != NULL);
 
 	memset((tp = tmp), '\0', NS_IN6ADDRSZ);
 	endp = tp + NS_IN6ADDRSZ;
@@ -222,7 +253,7 @@ inet_pton6(const char *src, unsigned char *dst)
 		if (*++src != ':')
 			return (0);
 	curtok = src;
-	saw_xdigit = 0;
+	seen_xdigits = 0;
 	val = 0;
 	while ((ch = *src++) != '\0') {
 		const char *pch;
@@ -231,15 +262,14 @@ inet_pton6(const char *src, unsigned char *dst)
 			pch = strchr((xdigits = xdigits_u), ch);
 		if (pch != NULL) {
 			val <<= 4;
-			val |= (pch - xdigits);
-			if (val > 0xffff)
+			val |= (int)(pch - xdigits);
+			if (++seen_xdigits > 4)
 				return (0);
-			saw_xdigit = 1;
 			continue;
 		}
 		if (ch == ':') {
 			curtok = src;
-			if (!saw_xdigit) {
+			if (!seen_xdigits) {
 				if (colonp)
 					return (0);
 				colonp = tp;
@@ -250,19 +280,19 @@ inet_pton6(const char *src, unsigned char *dst)
 				return (0);
 			*tp++ = (unsigned char) (val >> 8) & 0xff;
 			*tp++ = (unsigned char) val & 0xff;
-			saw_xdigit = 0;
+			seen_xdigits = 0;
 			val = 0;
 			continue;
 		}
 		if (ch == '.' && ((tp + NS_INADDRSZ) <= endp) &&
 		    inet_pton4(curtok, tp, 1) > 0) {
 			tp += NS_INADDRSZ;
-			saw_xdigit = 0;
-			break;	/* '\0' was seen by inet_pton4(). */
+			seen_xdigits = 0;
+			break;	/*%< '\\0' was seen by inet_pton4(). */
 		}
 		return (0);
 	}
-	if (saw_xdigit) {
+	if (seen_xdigits) {
 		if (tp + NS_INT16SZ > endp)
 			return (0);
 		*tp++ = (unsigned char) (val >> 8) & 0xff;
@@ -273,7 +303,7 @@ inet_pton6(const char *src, unsigned char *dst)
 		 * Since some memmove()'s erroneously fail to handle
 		 * overlapping regions, we'll do the shift by hand.
 		 */
-		const int n = tp - colonp;
+		const ptrdiff_t n = tp - colonp;
 		int i;
 
 		if (tp == endp)
@@ -290,3 +320,5 @@ inet_pton6(const char *src, unsigned char *dst)
 	return (1);
 }
 #endif /* INET6 */
+
+/*! \file */

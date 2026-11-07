@@ -1,4 +1,4 @@
-/*	$NetBSD: snprintf.c,v 1.6 2007/07/22 05:19:02 lukem Exp $	*/
+/* $NetBSD: snprintf.c,v 1.7 2020/07/05 10:08:59 lukem Exp $ */
 
 /*
  * Copyright Patrick Powell 1995
@@ -500,7 +500,7 @@ abs_val(LDOUBLE value)
 }
 
 static LDOUBLE
-pow10(int exp)
+sn_pow10(int exp)
 {
 	LDOUBLE	result = 1;
 
@@ -513,7 +513,7 @@ pow10(int exp)
 }
 
 static long
-round(LDOUBLE value)
+sn_round(LDOUBLE value)
 {
 	long	intpart;
 
@@ -569,11 +569,11 @@ fmtfp(char *buffer, size_t *currlen, size_t maxlen, LDOUBLE fvalue,
 
 	/* We "cheat" by converting the fractional part to integer by
 	 * multiplying by a factor of 10 */
-	fracpart = round((pow10(max)) * (ufvalue - intpart));
+	fracpart = sn_round((sn_pow10(max)) * (ufvalue - intpart));
 
-	if (fracpart >= pow10(max)) {
+	if (fracpart >= sn_pow10(max)) {
 		intpart++;
-		fracpart -= pow10(max);
+		fracpart -= sn_pow10(max);
 	}
 #ifdef DEBUG_SNPRINTF
 	printf("fmtfp: %g %d.%d min=%d max=%d\n",

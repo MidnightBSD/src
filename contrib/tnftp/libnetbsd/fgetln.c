@@ -1,77 +1,101 @@
-/*	$NetBSD: fgetln.c,v 1.4 2008/04/29 08:13:38 martin Exp $	*/
+/*	$NetBSD: fgetln.c,v 1.5 2026/02/10 17:39:45 lukem Exp $	*/
 
-/*-
- * Copyright (c) 1998 The NetBSD Foundation, Inc.
- * All rights reserved.
+/* from:	NetBSD: fgetln.c,v 1.12 2015/10/09 14:42:40 christos Exp */
+/* upstream:	tools/compat/fgetln.c */
+
+/*
+ * Copyright (c) 2015 Joerg Jung <jung@openbsd.org>
  *
- * This code is derived from software contributed to The NetBSD Foundation
- * by Christos Zoulas.
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
- * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE FOUNDATION OR CONTRIBUTORS
- * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * portable fgetln() version
  */
 
 #include "tnftp.h"
 
+#if 0
+#ifdef HAVE_NBTOOL_CONFIG_H
+#include "nbtool_config.h"
+#endif
+#endif
+
+#if !HAVE_FGETLN
+
+#if 0
+#include <stdlib.h>
+#ifndef HAVE_NBTOOL_CONFIG_H
+/* These headers are required, but included from nbtool_config.h */
+#include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
+#endif
+#endif
+
 char *
-fgetln(fp, len)
-	FILE *fp;
-	size_t *len;
+fgetln(FILE *fp, size_t *len)
 {
 	static char *buf = NULL;
-	static size_t bufsiz = 0;
-	char *ptr;
+	static size_t bufsz = 0;
+	size_t r = 0;
+	char *p;
+	int c, e;
 
-
-	if (buf == NULL) {
-		bufsiz = BUFSIZ;
-		if ((buf = malloc(bufsiz)) == NULL)
-			return NULL;
-	}
-
-	if (fgets(buf, bufsiz, fp) == NULL)
+	if (!fp || !len) {
+		errno = EINVAL;
 		return NULL;
-
-	*len = 0;
-	while ((ptr = strchr(&buf[*len], '\n')) == NULL) {
-		size_t nbufsiz = bufsiz + BUFSIZ;
-		char *nbuf = realloc(buf, nbufsiz);
-
-		if (nbuf == NULL) {
-			int oerrno = errno;
-			free(buf);
-			errno = oerrno;
-			buf = NULL;
-			return NULL;
-		} else
-			buf = nbuf;
-
-		*len = bufsiz;
-		if (fgets(&buf[bufsiz], BUFSIZ, fp) == NULL)
-			return buf;
-
-		bufsiz = nbufsiz;
 	}
-
-	*len = (ptr - buf) + 1;
-	return buf;
+	if (!buf) {
+		if (!(buf = calloc(1, BUFSIZ)))
+			return NULL;
+		bufsz = BUFSIZ;
+	}
+	while ((c = getc(fp)) != EOF) {
+		buf[r++] = c;
+		if (r == bufsz) {
+			/*
+			 * Original uses reallocarray() but we don't have it
+			 * in tools.
+			 */
+			if (!(p = realloc(buf, 2 * bufsz))) {
+				e = errno;
+				free(buf);
+				errno = e;
+				buf = NULL, bufsz = 0;
+				return NULL;
+			}
+			buf = p, bufsz = 2 * bufsz;
+		}
+		if (c == '\n')
+			break;
+	}
+	return (*len = r) ? buf : NULL;
 }
+#endif
 
+
+#ifdef TEST
+int
+main(int argc, char *argv[])
+{
+	char *p;
+	size_t len;
+
+	while ((p = fgetln(stdin, &len)) != NULL) {
+		(void)printf("%zu %s", len, p);
+		free(p);
+	}
+	return 0;
+}
+#endif

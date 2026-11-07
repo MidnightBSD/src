@@ -1,5 +1,5 @@
-/*	$NetBSD: complete.c,v 1.10 2009/05/20 12:53:47 lukem Exp $	*/
-/*	from	NetBSD: complete.c,v 1.46 2009/04/12 10:18:52 lukem Exp	*/
+/*	$NetBSD: complete.c,v 1.12 2026/02/08 07:11:12 lukem Exp $	*/
+/*	from	NetBSD: complete.c,v 1.48 2024/09/25 16:53:58 christos Exp	*/
 
 /*-
  * Copyright (c) 1997-2009 The NetBSD Foundation, Inc.
@@ -36,7 +36,7 @@
 
 #include <sys/cdefs.h>
 #ifndef lint
-__RCSID(" NetBSD: complete.c,v 1.46 2009/04/12 10:18:52 lukem Exp  ");
+__RCSID(" NetBSD: complete.c,v 1.48 2024/09/25 16:53:58 christos Exp  ");
 #endif /* not lint */
 
 /*
@@ -106,11 +106,10 @@ complete_ambiguous(char *word, int list, StringList *words)
 	}
 
 	if (!list) {
-		matchlen = 0;
 		lastmatch = words->sl_str[0];
 		matchlen = strlen(lastmatch);
 		for (i = 1 ; i < words->sl_cur ; i++) {
-			for (j = wordlen ; j < strlen(words->sl_str[i]); j++)
+			for (j = wordlen; j < strlen(words->sl_str[i]); j++)
 				if (lastmatch[j] != words->sl_str[i][j])
 					break;
 			if (j < matchlen)
@@ -357,7 +356,7 @@ complete_remote(char *word, int list)
  * Generic complete routine
  */
 unsigned char
-complete(EditLine *cel, int ch)
+complete(EditLine *cel, int ch __unused)
 {
 	static char word[FTPBUFLEN];
 	static size_t lastc_argc, lastc_argo;
