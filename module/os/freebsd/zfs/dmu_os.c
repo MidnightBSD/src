@@ -25,9 +25,6 @@
  *
  */
 
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
-
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/dmu.h>
@@ -63,39 +60,7 @@ __FBSDID("$FreeBSD$");
 #define	IDX_TO_OFF(idx) (((vm_ooffset_t)(idx)) << PAGE_SHIFT)
 #endif
 
-#if  __FreeBSD_version < 1300051
-#define	VM_ALLOC_BUSY_FLAGS VM_ALLOC_NOBUSY
-#else
 #define	VM_ALLOC_BUSY_FLAGS  VM_ALLOC_SBUSY | VM_ALLOC_IGN_SBUSY
-#endif
-
-
-#if __FreeBSD_version < 1300072
-#define	dmu_page_lock(m)	vm_page_lock(m)
-#define	dmu_page_unlock(m)	vm_page_unlock(m)
-#else
-#define	dmu_page_lock(m)
-#define	dmu_page_unlock(m)
-#endif
-
-static int
-dmu_buf_hold_array(objset_t *os, uint64_t object, uint64_t offset,
-    uint64_t length, int read, void *tag, int *numbufsp, dmu_buf_t ***dbpp)
-{
-	dnode_t *dn;
-	int err;
-
-	err = dnode_hold(os, object, FTAG, &dn);
-	if (err)
-		return (err);
-
-	err = dmu_buf_hold_array_by_dnode(dn, offset, length, read, tag,
-	    numbufsp, dbpp, DMU_READ_PREFETCH);
-
-	dnode_rele(dn, FTAG);
-
-	return (err);
-}
 
 int
 dmu_write_pages(objset_t *os, uint64_t object, uint64_t offset, uint64_t size,
@@ -129,7 +94,7 @@ dmu_write_pages(objset_t *os, uint64_t object, uint64_t offset, uint64_t size,
 		ASSERT(i == 0 || i == numbufs-1 || tocpy == db->db_size);
 
 		if (tocpy == db->db_size)
-			dmu_buf_will_fill(db, tx);
+			dmu_buf_will_fill(db, tx, B_FALSE);
 		else
 			dmu_buf_will_dirty(db, tx);
 
@@ -138,14 +103,14 @@ dmu_write_pages(objset_t *os, uint64_t object, uint64_t offset, uint64_t size,
 			    db->db_offset + bufoff);
 			thiscpy = MIN(PAGESIZE, tocpy - copied);
 			va = zfs_map_page(*ma, &sf);
-			bcopy(va, (char *)db->db_data + bufoff, thiscpy);
+			memcpy((char *)db->db_data + bufoff, va, thiscpy);
 			zfs_unmap_page(sf);
 			ma += 1;
 			bufoff += PAGESIZE;
 		}
 
 		if (tocpy == db->db_size)
-			dmu_buf_fill_done(db, tx);
+			dmu_buf_fill_done(db, tx, B_FALSE);
 
 		offset += tocpy;
 		size -= tocpy;
@@ -189,7 +154,6 @@ dmu_read_pages(objset_t *os, uint64_t object, vm_page_t *ma, int count,
 #endif
 
 	vmobj = ma[0]->object;
-	zfs_vmobject_wlock_12(vmobj);
 
 	db = dbp[0];
 	for (i = 0; i < *rbehind; i++) {
@@ -199,7 +163,7 @@ dmu_read_pages(objset_t *os, uint64_t object, vm_page_t *ma, int count,
 			break;
 		if (!vm_page_none_valid(m)) {
 			ASSERT3U(m->valid, ==, VM_PAGE_BITS_ALL);
-			vm_page_do_sunbusy(m);
+			vm_page_sunbusy(m);
 			break;
 		}
 		ASSERT3U(m->dirty, ==, 0);
@@ -208,16 +172,14 @@ dmu_read_pages(objset_t *os, uint64_t object, vm_page_t *ma, int count,
 		ASSERT3U(db->db_size, >, PAGE_SIZE);
 		bufoff = IDX_TO_OFF(m->pindex) % db->db_size;
 		va = zfs_map_page(m, &sf);
-		bcopy((char *)db->db_data + bufoff, va, PAGESIZE);
+		memcpy(va, (char *)db->db_data + bufoff, PAGESIZE);
 		zfs_unmap_page(sf);
 		vm_page_valid(m);
-		dmu_page_lock(m);
 		if ((m->busy_lock & VPB_BIT_WAITERS) != 0)
 			vm_page_activate(m);
 		else
 			vm_page_deactivate(m);
-		dmu_page_unlock(m);
-		vm_page_do_sunbusy(m);
+		vm_page_sunbusy(m);
 	}
 	*rbehind = i;
 
@@ -250,7 +212,7 @@ dmu_read_pages(objset_t *os, uint64_t object, vm_page_t *ma, int count,
 		tocpy = MIN(db->db_size - bufoff, PAGESIZE - pgoff);
 		ASSERT3S(tocpy, >=, 0);
 		if (m != bogus_page)
-			bcopy((char *)db->db_data + bufoff, va + pgoff, tocpy);
+			memcpy(va + pgoff, (char *)db->db_data + bufoff, tocpy);
 
 		pgoff += tocpy;
 		ASSERT3S(pgoff, >=, 0);
@@ -306,7 +268,7 @@ dmu_read_pages(objset_t *os, uint64_t object, vm_page_t *ma, int count,
 #endif
 	if (pgoff != 0) {
 		ASSERT3P(m, !=, bogus_page);
-		bzero(va + pgoff, PAGESIZE - pgoff);
+		memset(va + pgoff, 0, PAGESIZE - pgoff);
 		zfs_unmap_page(sf);
 		vm_page_valid(m);
 	}
@@ -318,7 +280,7 @@ dmu_read_pages(objset_t *os, uint64_t object, vm_page_t *ma, int count,
 			break;
 		if (!vm_page_none_valid(m)) {
 			ASSERT3U(m->valid, ==, VM_PAGE_BITS_ALL);
-			vm_page_do_sunbusy(m);
+			vm_page_sunbusy(m);
 			break;
 		}
 		ASSERT3U(m->dirty, ==, 0);
@@ -328,24 +290,21 @@ dmu_read_pages(objset_t *os, uint64_t object, vm_page_t *ma, int count,
 		bufoff = IDX_TO_OFF(m->pindex) % db->db_size;
 		tocpy = MIN(db->db_size - bufoff, PAGESIZE);
 		va = zfs_map_page(m, &sf);
-		bcopy((char *)db->db_data + bufoff, va, tocpy);
+		memcpy(va, (char *)db->db_data + bufoff, tocpy);
 		if (tocpy < PAGESIZE) {
 			ASSERT3S(i, ==, *rahead - 1);
 			ASSERT3U((db->db_size & PAGE_MASK), !=, 0);
-			bzero(va + tocpy, PAGESIZE - tocpy);
+			memset(va + tocpy, 0, PAGESIZE - tocpy);
 		}
 		zfs_unmap_page(sf);
 		vm_page_valid(m);
-		dmu_page_lock(m);
 		if ((m->busy_lock & VPB_BIT_WAITERS) != 0)
 			vm_page_activate(m);
 		else
 			vm_page_deactivate(m);
-		dmu_page_unlock(m);
-		vm_page_do_sunbusy(m);
+		vm_page_sunbusy(m);
 	}
 	*rahead = i;
-	zfs_vmobject_wunlock_12(vmobj);
 
 	dmu_buf_rele_array(dbp, numbufs, FTAG);
 	return (0);

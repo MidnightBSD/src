@@ -7,7 +7,7 @@
 # You may not use this file except in compliance with the License.
 #
 # You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
-# or http://www.opensolaris.org/os/licensing.
+# or https://opensource.org/licenses/CDDL-1.0.
 # See the License for the specific language governing permissions
 # and limitations under the License.
 #
@@ -57,11 +57,14 @@ do
 	((i+=1))
 done
 
+typeset -r uint64_max="18446744073709551615"
+
 typeset zfs_props=("type" used available creation volsize referenced \
     compressratio mounted origin recordsize quota reservation mountpoint \
     sharenfs checksum compression atime devices exec readonly setuid \
     snapdir aclinherit canmount primarycache secondarycache version \
-    usedbychildren usedbydataset usedbyrefreservation usedbysnapshots)
+    usedbychildren usedbydataset usedbyrefreservation usedbysnapshots \
+    filesystem_limit snapshot_limit filesystem_count snapshot_count)
 if is_freebsd; then
 	typeset zfs_props_os=(jailed aclmode)
 else
@@ -99,12 +102,21 @@ function check_return_value
 		found=0
 
 		while read line; do
-			typeset item
-			item=$(echo $line | awk '{print $2}' 2>&1)
+			typeset item value _
 
+			read -r _ item _ <<<"$line"
 			if [[ $item == $p ]]; then
 				((found += 1))
 				cols=$(echo $line | awk '{print NF}')
+			fi
+
+			read -r _ _ value _ <<<"$line"
+			if [[ $value == $uint64_max ]]; then
+				log_fail "'zfs get $opt $props $dst' return " \
+				    "UINT64_MAX constant."
+			fi
+
+			if ((found > 0)); then
 				break
 			fi
 		done < $TESTDIR/$TESTFILE0
@@ -141,12 +153,7 @@ typeset -i i=0
 while ((i < ${#dataset[@]})); do
 	for opt in "${options[@]}"; do
 		for prop in ${all_props[@]}; do
-			eval "zfs get $opt $prop ${dataset[i]} > \
-			    $TESTDIR/$TESTFILE0"
-			ret=$?
-			if [[ $ret != 0 ]]; then
-				log_fail "zfs get returned: $ret"
-			fi
+			log_must eval "zfs get $opt $prop ${dataset[i]} > $TESTDIR/$TESTFILE0"
 			check_return_value ${dataset[i]} "$prop" "$opt"
 		done
 	done
@@ -157,12 +164,7 @@ i=0
 while ((i < ${#bookmark[@]})); do
 	for opt in "${options[@]}"; do
 		for prop in ${bookmark_props[@]}; do
-			eval "zfs get $opt $prop ${bookmark[i]} > \
-			    $TESTDIR/$TESTFILE0"
-			ret=$?
-			if [[ $ret != 0 ]]; then
-				log_fail "zfs get returned: $ret"
-			fi
+			log_must eval "zfs get $opt $prop ${bookmark[i]} > $TESTDIR/$TESTFILE0"
 			check_return_value ${bookmark[i]} "$prop" "$opt"
 		done
 	done

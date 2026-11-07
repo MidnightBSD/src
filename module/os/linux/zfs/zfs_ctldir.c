@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -110,7 +110,7 @@ static krwlock_t zfs_snapshot_lock;
  * Control Directory Tunables (.zfs)
  */
 int zfs_expire_snapshot = ZFSCTL_EXPIRE_SNAPSHOT;
-int zfs_admin_snapshot = 0;
+static int zfs_admin_snapshot = 0;
 
 typedef struct {
 	char		*se_name;	/* full snapshot name */
@@ -162,7 +162,7 @@ zfsctl_snapshot_free(zfs_snapentry_t *se)
 	zfs_refcount_destroy(&se->se_refcount);
 	kmem_strfree(se->se_name);
 	kmem_strfree(se->se_path);
-	rw_destroy(se->se_taskqid_lock);
+	rw_destroy(&se->se_taskqid_lock);
 
 	kmem_free(se, sizeof (zfs_snapentry_t));
 }
@@ -478,17 +478,19 @@ zfsctl_is_snapdir(struct inode *ip)
  */
 static struct inode *
 zfsctl_inode_alloc(zfsvfs_t *zfsvfs, uint64_t id,
-    const struct file_operations *fops, const struct inode_operations *ops)
+    const struct file_operations *fops, const struct inode_operations *ops,
+    uint64_t creation)
 {
-	inode_timespec_t now;
 	struct inode *ip;
 	znode_t *zp;
+	inode_timespec_t now = {.tv_sec = creation};
 
 	ip = new_inode(zfsvfs->z_sb);
 	if (ip == NULL)
 		return (NULL);
 
-	now = current_time(ip);
+	if (!creation)
+		now = current_time(ip);
 	zp = ITOZ(ip);
 	ASSERT3P(zp->z_dirlocks, ==, NULL);
 	ASSERT3P(zp->z_acl_cached, ==, NULL);
@@ -498,9 +500,6 @@ zfsctl_inode_alloc(zfsvfs_t *zfsvfs, uint64_t id,
 	zp->z_atime_dirty = B_FALSE;
 	zp->z_zn_prefetch = B_FALSE;
 	zp->z_is_sa = B_FALSE;
-#if !defined(HAVE_FILEMAP_RANGE_HAS_PAGE)
-	zp->z_is_mapped = B_FALSE;
-#endif
 	zp->z_is_ctldir = B_TRUE;
 	zp->z_sa_hdl = NULL;
 	zp->z_blksz = 0;
@@ -535,7 +534,6 @@ zfsctl_inode_alloc(zfsvfs_t *zfsvfs, uint64_t id,
 
 	mutex_enter(&zfsvfs->z_znodes_lock);
 	list_insert_tail(&zfsvfs->z_all_znodes, zp);
-	zfsvfs->z_nr_znodes++;
 	membar_producer();
 	mutex_exit(&zfsvfs->z_znodes_lock);
 
@@ -552,14 +550,28 @@ zfsctl_inode_lookup(zfsvfs_t *zfsvfs, uint64_t id,
     const struct file_operations *fops, const struct inode_operations *ops)
 {
 	struct inode *ip = NULL;
+	uint64_t creation = 0;
+	dsl_dataset_t *snap_ds;
+	dsl_pool_t *pool;
 
 	while (ip == NULL) {
 		ip = ilookup(zfsvfs->z_sb, (unsigned long)id);
 		if (ip)
 			break;
 
+		if (id <= ZFSCTL_INO_SNAPDIRS && !creation) {
+			pool = dmu_objset_pool(zfsvfs->z_os);
+			dsl_pool_config_enter(pool, FTAG);
+			if (!dsl_dataset_hold_obj(pool,
+			    ZFSCTL_INO_SNAPDIRS - id, FTAG, &snap_ds)) {
+				creation = dsl_get_creation(snap_ds);
+				dsl_dataset_rele(snap_ds, FTAG);
+			}
+			dsl_pool_config_exit(pool, FTAG);
+		}
+
 		/* May fail due to concurrent zfsctl_inode_alloc() */
-		ip = zfsctl_inode_alloc(zfsvfs, id, fops, ops);
+		ip = zfsctl_inode_alloc(zfsvfs, id, fops, ops, creation);
 	}
 
 	return (ip);
@@ -581,7 +593,7 @@ zfsctl_create(zfsvfs_t *zfsvfs)
 	ASSERT(zfsvfs->z_ctldir == NULL);
 
 	zfsvfs->z_ctldir = zfsctl_inode_alloc(zfsvfs, ZFSCTL_INO_ROOT,
-	    &zpl_fops_root, &zpl_ops_root);
+	    &zpl_fops_root, &zpl_ops_root, 0);
 	if (zfsvfs->z_ctldir == NULL)
 		return (SET_ERROR(ENOENT));
 
@@ -687,17 +699,19 @@ zfsctl_fid(struct inode *ip, fid_t *fidp)
 	uint64_t	object = zp->z_id;
 	zfid_short_t	*zfid;
 	int		i;
+	int		error;
 
-	ZFS_ENTER(zfsvfs);
+	if ((error = zfs_enter(zfsvfs, FTAG)) != 0)
+		return (error);
 
 	if (zfsctl_is_snapdir(ip)) {
-		ZFS_EXIT(zfsvfs);
+		zfs_exit(zfsvfs, FTAG);
 		return (zfsctl_snapdir_fid(ip, fidp));
 	}
 
 	if (fidp->fid_len < SHORT_FID_LEN) {
 		fidp->fid_len = SHORT_FID_LEN;
-		ZFS_EXIT(zfsvfs);
+		zfs_exit(zfsvfs, FTAG);
 		return (SET_ERROR(ENOSPC));
 	}
 
@@ -712,7 +726,7 @@ zfsctl_fid(struct inode *ip, fid_t *fidp)
 	for (i = 0; i < sizeof (zfid->zf_gen); i++)
 		zfid->zf_gen[i] = 0;
 
-	ZFS_EXIT(zfsvfs);
+	zfs_exit(zfsvfs, FTAG);
 	return (0);
 }
 
@@ -752,9 +766,6 @@ zfsctl_snapshot_path_objset(zfsvfs_t *zfsvfs, uint64_t objsetid,
 	uint64_t id, pos = 0;
 	int error = 0;
 
-	if (zfsvfs->z_vfs->vfs_mntpoint == NULL)
-		return (SET_ERROR(ENOENT));
-
 	cookie = spl_fstrans_mark();
 	snapname = kmem_alloc(ZFS_MAX_DATASET_NAME_LEN, KM_SLEEP);
 
@@ -771,8 +782,14 @@ zfsctl_snapshot_path_objset(zfsvfs_t *zfsvfs, uint64_t objsetid,
 			break;
 	}
 
-	snprintf(full_path, path_len, "%s/.zfs/snapshot/%s",
-	    zfsvfs->z_vfs->vfs_mntpoint, snapname);
+	mutex_enter(&zfsvfs->z_vfs->vfs_mntpt_lock);
+	if (zfsvfs->z_vfs->vfs_mntpoint != NULL) {
+		snprintf(full_path, path_len, "%s/.zfs/snapshot/%s",
+		    zfsvfs->z_vfs->vfs_mntpoint, snapname);
+	} else
+		error = SET_ERROR(ENOENT);
+	mutex_exit(&zfsvfs->z_vfs->vfs_mntpt_lock);
+
 out:
 	kmem_free(snapname, ZFS_MAX_DATASET_NAME_LEN);
 	spl_fstrans_unmark(cookie);
@@ -790,7 +807,8 @@ zfsctl_root_lookup(struct inode *dip, const char *name, struct inode **ipp,
 	zfsvfs_t *zfsvfs = ITOZSB(dip);
 	int error = 0;
 
-	ZFS_ENTER(zfsvfs);
+	if ((error = zfs_enter(zfsvfs, FTAG)) != 0)
+		return (error);
 
 	if (strcmp(name, "..") == 0) {
 		*ipp = dip->i_sb->s_root->d_inode;
@@ -807,7 +825,7 @@ zfsctl_root_lookup(struct inode *dip, const char *name, struct inode **ipp,
 	if (*ipp == NULL)
 		error = SET_ERROR(ENOENT);
 
-	ZFS_EXIT(zfsvfs);
+	zfs_exit(zfsvfs, FTAG);
 
 	return (error);
 }
@@ -824,11 +842,12 @@ zfsctl_snapdir_lookup(struct inode *dip, const char *name, struct inode **ipp,
 	uint64_t id;
 	int error;
 
-	ZFS_ENTER(zfsvfs);
+	if ((error = zfs_enter(zfsvfs, FTAG)) != 0)
+		return (error);
 
 	error = dmu_snapshot_lookup(zfsvfs->z_os, name, &id);
 	if (error) {
-		ZFS_EXIT(zfsvfs);
+		zfs_exit(zfsvfs, FTAG);
 		return (error);
 	}
 
@@ -837,7 +856,7 @@ zfsctl_snapdir_lookup(struct inode *dip, const char *name, struct inode **ipp,
 	if (*ipp == NULL)
 		error = SET_ERROR(ENOENT);
 
-	ZFS_EXIT(zfsvfs);
+	zfs_exit(zfsvfs, FTAG);
 
 	return (error);
 }
@@ -858,7 +877,8 @@ zfsctl_snapdir_rename(struct inode *sdip, const char *snm,
 	if (!zfs_admin_snapshot)
 		return (SET_ERROR(EACCES));
 
-	ZFS_ENTER(zfsvfs);
+	if ((error = zfs_enter(zfsvfs, FTAG)) != 0)
+		return (error);
 
 	to = kmem_alloc(ZFS_MAX_DATASET_NAME_LEN, KM_SLEEP);
 	from = kmem_alloc(ZFS_MAX_DATASET_NAME_LEN, KM_SLEEP);
@@ -916,7 +936,7 @@ out:
 	kmem_free(real, ZFS_MAX_DATASET_NAME_LEN);
 	kmem_free(fsname, ZFS_MAX_DATASET_NAME_LEN);
 
-	ZFS_EXIT(zfsvfs);
+	zfs_exit(zfsvfs, FTAG);
 
 	return (error);
 }
@@ -936,7 +956,8 @@ zfsctl_snapdir_remove(struct inode *dip, const char *name, cred_t *cr,
 	if (!zfs_admin_snapshot)
 		return (SET_ERROR(EACCES));
 
-	ZFS_ENTER(zfsvfs);
+	if ((error = zfs_enter(zfsvfs, FTAG)) != 0)
+		return (error);
 
 	snapname = kmem_alloc(ZFS_MAX_DATASET_NAME_LEN, KM_SLEEP);
 	real = kmem_alloc(ZFS_MAX_DATASET_NAME_LEN, KM_SLEEP);
@@ -965,7 +986,7 @@ out:
 	kmem_free(snapname, ZFS_MAX_DATASET_NAME_LEN);
 	kmem_free(real, ZFS_MAX_DATASET_NAME_LEN);
 
-	ZFS_EXIT(zfsvfs);
+	zfs_exit(zfsvfs, FTAG);
 
 	return (error);
 }
@@ -1026,6 +1047,66 @@ exportfs_flush(void)
 	char *envp[] = { NULL };
 
 	(void) call_usermodehelper(argv[0], argv, envp, UMH_WAIT_PROC);
+}
+
+/*
+ * Returns the path in char format for given struct path. Uses
+ * d_path exported by kernel to convert struct path to char
+ * format. Returns the correct path for mountpoints and chroot
+ * environments.
+ *
+ * If chroot environment has directories that are mounted with
+ * --bind or --rbind flag, d_path returns the complete path inside
+ * chroot environment but does not return the absolute path, i.e.
+ * the path to chroot environment is missing.
+ */
+static int
+get_root_path(struct path *path, char *buff, int len)
+{
+	char *path_buffer, *path_ptr;
+	int error = 0;
+
+	path_get(path);
+	path_buffer = kmem_zalloc(len, KM_SLEEP);
+	path_ptr = d_path(path, path_buffer, len);
+	if (IS_ERR(path_ptr))
+		error = SET_ERROR(-PTR_ERR(path_ptr));
+	else
+		strcpy(buff, path_ptr);
+
+	kmem_free(path_buffer, len);
+	path_put(path);
+	return (error);
+}
+
+/*
+ * Returns if the current process root is chrooted or not. Linux
+ * kernel exposes the task_struct for current process and init.
+ * Since init process root points to actual root filesystem when
+ * Linux runtime is reached, we can compare the current process
+ * root with init process root to determine if root of the current
+ * process is different from init, which can reliably determine if
+ * current process is in chroot context or not.
+ */
+static int
+is_current_chrooted(void)
+{
+	struct task_struct *curr = current, *global = &init_task;
+	struct path cr_root, gl_root;
+
+	task_lock(curr);
+	get_fs_root(curr->fs, &cr_root);
+	task_unlock(curr);
+
+	task_lock(global);
+	get_fs_root(global->fs, &gl_root);
+	task_unlock(global);
+
+	int chrooted = !path_equal(&cr_root, &gl_root);
+	path_put(&gl_root);
+	path_put(&cr_root);
+
+	return (chrooted);
 }
 
 /*
@@ -1090,7 +1171,8 @@ zfsctl_snapshot_mount(struct path *path, int flags)
 		return (SET_ERROR(EISDIR));
 
 	zfsvfs = ITOZSB(ip);
-	ZFS_ENTER(zfsvfs);
+	if ((error = zfs_enter(zfsvfs, FTAG)) != 0)
+		return (error);
 
 	full_name = kmem_zalloc(ZFS_MAX_DATASET_NAME_LEN, KM_SLEEP);
 	full_path = kmem_zalloc(MAXPATHLEN, KM_SLEEP);
@@ -1100,14 +1182,50 @@ zfsctl_snapshot_mount(struct path *path, int flags)
 	if (error)
 		goto error;
 
+	if (is_current_chrooted() == 0) {
+		/*
+		 * Current process is not in chroot context
+		 */
+
+		char *m = kmem_zalloc(MAXPATHLEN, KM_SLEEP);
+		struct path mnt_path;
+		mnt_path.mnt = path->mnt;
+		mnt_path.dentry = path->mnt->mnt_root;
+
+		/*
+		 * Get path to current mountpoint
+		 */
+		error = get_root_path(&mnt_path, m, MAXPATHLEN);
+		if (error != 0) {
+			kmem_free(m, MAXPATHLEN);
+			goto error;
+		}
+		mutex_enter(&zfsvfs->z_vfs->vfs_mntpt_lock);
+		if (zfsvfs->z_vfs->vfs_mntpoint != NULL) {
+			/*
+			 * If current mnountpoint and vfs_mntpoint are not same,
+			 * store current mountpoint in vfs_mntpoint.
+			 */
+			if (strcmp(zfsvfs->z_vfs->vfs_mntpoint, m) != 0) {
+				kmem_strfree(zfsvfs->z_vfs->vfs_mntpoint);
+				zfsvfs->z_vfs->vfs_mntpoint = kmem_strdup(m);
+			}
+		} else
+			zfsvfs->z_vfs->vfs_mntpoint = kmem_strdup(m);
+		mutex_exit(&zfsvfs->z_vfs->vfs_mntpt_lock);
+		kmem_free(m, MAXPATHLEN);
+	}
+
 	/*
 	 * Construct a mount point path from sb of the ctldir inode and dirent
 	 * name, instead of from d_path(), so that chroot'd process doesn't fail
 	 * on mount.zfs(8).
 	 */
+	mutex_enter(&zfsvfs->z_vfs->vfs_mntpt_lock);
 	snprintf(full_path, MAXPATHLEN, "%s/.zfs/snapshot/%s",
 	    zfsvfs->z_vfs->vfs_mntpoint ? zfsvfs->z_vfs->vfs_mntpoint : "",
 	    dname(dentry));
+	mutex_exit(&zfsvfs->z_vfs->vfs_mntpt_lock);
 
 	/*
 	 * Multiple concurrent automounts of a snapshot are never allowed.
@@ -1178,7 +1296,7 @@ error:
 	kmem_free(full_name, ZFS_MAX_DATASET_NAME_LEN);
 	kmem_free(full_path, MAXPATHLEN);
 
-	ZFS_EXIT(zfsvfs);
+	zfs_exit(zfsvfs, FTAG);
 
 	return (error);
 }
@@ -1242,10 +1360,11 @@ zfsctl_shares_lookup(struct inode *dip, char *name, struct inode **ipp,
 	znode_t *dzp;
 	int error;
 
-	ZFS_ENTER(zfsvfs);
+	if ((error = zfs_enter(zfsvfs, FTAG)) != 0)
+		return (error);
 
 	if (zfsvfs->z_shares_dir == 0) {
-		ZFS_EXIT(zfsvfs);
+		zfs_exit(zfsvfs, FTAG);
 		return (SET_ERROR(ENOTSUP));
 	}
 
@@ -1254,7 +1373,7 @@ zfsctl_shares_lookup(struct inode *dip, char *name, struct inode **ipp,
 		zrele(dzp);
 	}
 
-	ZFS_EXIT(zfsvfs);
+	zfs_exit(zfsvfs, FTAG);
 
 	return (error);
 }

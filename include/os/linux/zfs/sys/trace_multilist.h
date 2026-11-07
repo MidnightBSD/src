@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -63,12 +63,10 @@ DECLARE_EVENT_CLASS(zfs_multilist_insert_remove_class,
 );
 /* END CSTYLED */
 
-/* BEGIN CSTYLED */
 #define	DEFINE_MULTILIST_INSERT_REMOVE_EVENT(name) \
 DEFINE_EVENT(zfs_multilist_insert_remove_class, name, \
-	TP_PROTO(multilist_t *ml, unsigned int sublist_idx, void *obj), \
-	TP_ARGS(ml, sublist_idx, obj))
-/* END CSTYLED */
+    TP_PROTO(multilist_t *ml, unsigned int sublist_idx, void *obj), \
+    TP_ARGS(ml, sublist_idx, obj))
 DEFINE_MULTILIST_INSERT_REMOVE_EVENT(zfs_multilist__insert);
 DEFINE_MULTILIST_INSERT_REMOVE_EVENT(zfs_multilist__remove);
 

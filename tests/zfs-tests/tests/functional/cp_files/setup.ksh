@@ -7,7 +7,7 @@
 # You may not use this file except in compliance with the License.
 #
 # You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
-# or http://www.opensolaris.org/os/licensing.
+# or https://opensource.org/licenses/CDDL-1.0.
 # See the License for the specific language governing permissions
 # and limitations under the License.
 #
@@ -32,4 +32,10 @@
 . $STF_SUITE/include/libtest.shlib
 
 DISK=${DISKS%% *}
+
+if tunable_exists BCLONE_ENABLED ; then
+	log_must save_tunable BCLONE_ENABLED
+	log_must set_tunable32 BCLONE_ENABLED 1
+fi
+
 default_setup $DISK

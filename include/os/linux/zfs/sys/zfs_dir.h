@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -52,6 +52,7 @@ extern "C" {
 extern int zfs_dirent_lock(zfs_dirlock_t **, znode_t *, char *, znode_t **,
     int, int *, pathname_t *);
 extern void zfs_dirent_unlock(zfs_dirlock_t *);
+extern int zfs_drop_nlink(znode_t *, dmu_tx_t *, boolean_t *);
 extern int zfs_link_create(zfs_dirlock_t *, znode_t *, dmu_tx_t *, int);
 extern int zfs_link_destroy(zfs_dirlock_t *, znode_t *, dmu_tx_t *, int,
     boolean_t *);

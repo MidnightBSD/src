@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -139,7 +139,7 @@ uint64_t zap_create_flags_dnsize(objset_t *os, int normflags,
 uint64_t zap_create_hold(objset_t *os, int normflags, zap_flags_t flags,
     dmu_object_type_t ot, int leaf_blockshift, int indirect_blockshift,
     dmu_object_type_t bonustype, int bonuslen, int dnodesize,
-    dnode_t **allocated_dnode, void *tag, dmu_tx_t *tx);
+    dnode_t **allocated_dnode, const void *tag, dmu_tx_t *tx);
 
 uint64_t zap_create_link(objset_t *os, dmu_object_type_t ot,
     uint64_t parent_obj, const char *name, dmu_tx_t *tx);
@@ -253,6 +253,9 @@ int zap_add_by_dnode(dnode_t *dn, const char *key,
 int zap_add_uint64(objset_t *ds, uint64_t zapobj, const uint64_t *key,
     int key_numints, int integer_size, uint64_t num_integers,
     const void *val, dmu_tx_t *tx);
+int zap_add_uint64_by_dnode(dnode_t *dn, const uint64_t *key,
+    int key_numints, int integer_size, uint64_t num_integers,
+    const void *val, dmu_tx_t *tx);
 
 /*
  * Set the attribute with the given name to the given value.  If an
@@ -265,6 +268,9 @@ int zap_add_uint64(objset_t *ds, uint64_t zapobj, const uint64_t *key,
 int zap_update(objset_t *ds, uint64_t zapobj, const char *name,
     int integer_size, uint64_t num_integers, const void *val, dmu_tx_t *tx);
 int zap_update_uint64(objset_t *os, uint64_t zapobj, const uint64_t *key,
+    int key_numints,
+    int integer_size, uint64_t num_integers, const void *val, dmu_tx_t *tx);
+int zap_update_uint64_by_dnode(dnode_t *dn, const uint64_t *key,
     int key_numints,
     int integer_size, uint64_t num_integers, const void *val, dmu_tx_t *tx);
 
@@ -291,6 +297,8 @@ int zap_remove_norm(objset_t *ds, uint64_t zapobj, const char *name,
     matchtype_t mt, dmu_tx_t *tx);
 int zap_remove_by_dnode(dnode_t *dn, const char *name, dmu_tx_t *tx);
 int zap_remove_uint64(objset_t *os, uint64_t zapobj, const uint64_t *key,
+    int key_numints, dmu_tx_t *tx);
+int zap_remove_uint64_by_dnode(dnode_t *dn, const uint64_t *key,
     int key_numints, dmu_tx_t *tx);
 
 /*

@@ -7,7 +7,7 @@
 # You may not use this file except in compliance with the License.
 #
 # You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
-# or http://www.opensolaris.org/os/licensing.
+# or https://opensource.org/licenses/CDDL-1.0.
 # See the License for the specific language governing permissions
 # and limitations under the License.
 #
@@ -117,5 +117,18 @@ log_must zfs set snapdev=visible $TESTPOOL
 verify_inherited 'snapdev' 'hidden' $SUBZVOL $VOLFS
 blockdev_missing $SUBSNAPDEV
 blockdev_exists $SNAPDEV
+log_must zfs destroy $SNAP
+
+# 4. Verify "rename" is correctly reflected when "snapdev=visible"
+# 4.1 First create a snapshot and verify the device is present
+log_must zfs snapshot $SNAP
+log_must zfs set snapdev=visible $ZVOL
+blockdev_exists $SNAPDEV
+# 4.2 rename the snapshot and verify the devices are updated
+log_must zfs rename $SNAP $SNAP-new
+blockdev_missing $SNAPDEV
+blockdev_exists $SNAPDEV-new
+# 4.3 cleanup
+log_must zfs destroy $SNAP-new
 
 log_pass "ZFS volume property 'snapdev' works as expected"

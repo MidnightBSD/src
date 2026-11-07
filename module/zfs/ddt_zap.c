@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -31,8 +31,8 @@
 #include <sys/zap.h>
 #include <sys/dmu_tx.h>
 
-int ddt_zap_leaf_blockshift = 12;
-int ddt_zap_indirect_blockshift = 12;
+static unsigned int ddt_zap_default_bs = 15;
+static unsigned int ddt_zap_default_ibs = 15;
 
 static int
 ddt_zap_create(objset_t *os, uint64_t *objectp, dmu_tx_t *tx, boolean_t prehash)
@@ -43,7 +43,7 @@ ddt_zap_create(objset_t *os, uint64_t *objectp, dmu_tx_t *tx, boolean_t prehash)
 		flags |= ZAP_FLAG_PRE_HASHED_KEY;
 
 	*objectp = zap_create_flags(os, 0, flags, DMU_OT_DDT_ZAP,
-	    ddt_zap_leaf_blockshift, ddt_zap_indirect_blockshift,
+	    ddt_zap_default_bs, ddt_zap_default_ibs,
 	    DMU_OT_NONE, 0, tx);
 
 	return (*objectp == 0 ? SET_ERROR(ENOTSUP) : 0);
@@ -166,3 +166,10 @@ const ddt_ops_t ddt_zap_ops = {
 	ddt_zap_walk,
 	ddt_zap_count,
 };
+
+/* BEGIN CSTYLED */
+ZFS_MODULE_PARAM(zfs_dedup, , ddt_zap_default_bs, UINT, ZMOD_RW,
+	"DDT ZAP leaf blockshift");
+ZFS_MODULE_PARAM(zfs_dedup, , ddt_zap_default_ibs, UINT, ZMOD_RW,
+	"DDT ZAP indirect blockshift");
+/* END CSTYLED */

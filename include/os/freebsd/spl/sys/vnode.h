@@ -56,6 +56,7 @@ enum symfollow { NO_FOLLOW = NOFOLLOW };
 #ifndef IN_BASE
 #include_next <sys/vnode.h>
 #endif
+#include <sys/ccompat.h>
 #include <sys/mount.h>
 #include <sys/cred.h>
 #include <sys/fcntl.h>
@@ -90,14 +91,11 @@ vn_is_readonly(vnode_t *vp)
 	((vp)->v_object != NULL && \
 	(vp)->v_object->resident_page_count > 0)
 
+#ifndef IN_BASE
 static __inline void
 vn_flush_cached_data(vnode_t *vp, boolean_t sync)
 {
-#if __FreeBSD_version > 1300054
 	if (vm_object_mightbedirty(vp->v_object)) {
-#else
-	if (vp->v_object->flags & OBJ_MIGHTBEDIRTY) {
-#endif
 		int flags = sync ? OBJPC_SYNC : 0;
 		vn_lock(vp, LK_SHARED | LK_RETRY);
 		zfs_vmobject_wlock(vp->v_object);
@@ -106,10 +104,10 @@ vn_flush_cached_data(vnode_t *vp, boolean_t sync)
 		VOP_UNLOCK(vp);
 	}
 }
+#endif
 
 #define	vn_exists(vp)		do { } while (0)
 #define	vn_invalid(vp)		do { } while (0)
-#define	vn_renamepath(tdvp, svp, tnm, lentnm)	do { } while (0)
 #define	vn_free(vp)		do { } while (0)
 #define	vn_matchops(vp, vops)	((vp)->v_op == &(vops))
 
@@ -140,22 +138,16 @@ vn_flush_cached_data(vnode_t *vp, boolean_t sync)
 #define	va_blksize	va_blocksize
 
 #define	MAXOFFSET_T	OFF_MAX
-#define	EXCL		0
 
-#define	FCREAT		O_CREAT
-#define	FTRUNC		O_TRUNC
-#define	FEXCL		O_EXCL
-#ifndef FDSYNC
-#define	FDSYNC		FFSYNC
-#endif
-#define	FRSYNC		FFSYNC
-#define	FSYNC		FFSYNC
-#define	FOFFMAX		0x00
 #define	FIGNORECASE	0x00
 
 /*
  * Attributes of interest to the caller of setattr or getattr.
  */
+
+#undef AT_UID
+#undef AT_GID
+
 #define	AT_MODE		0x00002
 #define	AT_UID		0x00004
 #define	AT_GID		0x00008
@@ -216,15 +208,6 @@ vattr_init_mask(vattr_t *vap)
 #endif
 
 #define		RLIM64_INFINITY 0
-
-static __inline int
-vn_rename(char *from, char *to, enum uio_seg seg)
-{
-
-	ASSERT(seg == UIO_SYSSPACE);
-
-	return (kern_renameat(curthread, AT_FDCWD, from, AT_FDCWD, to, seg));
-}
 
 #include <sys/vfs.h>
 

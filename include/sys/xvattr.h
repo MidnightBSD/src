@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -40,7 +40,7 @@
 #define	_SYS_XVATTR_H
 
 #include <sys/vnode.h>
-#include <sys/strings.h>
+#include <sys/string.h>
 
 #define	AV_SCANSTAMP_SZ	32		/* length of anti-virus scanstamp */
 
@@ -282,7 +282,7 @@ typedef struct xvattr {
 static inline void
 xva_init(xvattr_t *xvap)
 {
-	bzero(xvap, sizeof (xvattr_t));
+	memset(xvap, 0, sizeof (xvattr_t));
 	xvap->xva_mapsize = XVA_MAPSIZE;
 	xvap->xva_magic = XVA_MAGIC;
 	xvap->xva_vattr.va_mask = ATTR_XVATTR;

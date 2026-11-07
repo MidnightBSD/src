@@ -7,7 +7,7 @@
  * with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -33,6 +33,7 @@
 
 #if !defined(_ASM)
 #include <sys/_stdarg.h>
+#include <sys/atomic.h>
 #endif
 
 #ifdef	__cplusplus
@@ -49,36 +50,61 @@ extern "C" {
 
 #ifndef _ASM
 
-/*PRINTFLIKE2*/
 extern void cmn_err(int, const char *, ...)
-    __KPRINTFLIKE(2);
+    __attribute__((format(__printf__, 2, 3)));
 
 extern void vzcmn_err(zoneid_t, int, const char *, __va_list)
-    __KVPRINTFLIKE(3);
+    __attribute__((format(__printf__, 3, 0)));
 
 extern void vcmn_err(int, const char *, __va_list)
-    __KVPRINTFLIKE(2);
+    __attribute__((format(__printf__, 2, 0)));
 
-/*PRINTFLIKE3*/
 extern void zcmn_err(zoneid_t, int, const char *, ...)
-    __KPRINTFLIKE(3);
+    __attribute__((format(__printf__, 3, 4)));
 
 extern void vzprintf(zoneid_t, const char *, __va_list)
-    __KVPRINTFLIKE(2);
+    __attribute__((format(__printf__, 2, 0)));
 
-/*PRINTFLIKE2*/
 extern void zprintf(zoneid_t, const char *, ...)
-    __KPRINTFLIKE(2);
+    __attribute__((format(__printf__, 2, 3)));
 
 extern void vuprintf(const char *, __va_list)
-    __KVPRINTFLIKE(1);
+    __attribute__((format(__printf__, 1, 0)));
 
-/*PRINTFLIKE1*/
 extern void panic(const char *, ...)
-    __KPRINTFLIKE(1) __NORETURN;
+    __attribute__((format(__printf__, 1, 2), __noreturn__));
 
-extern void vpanic(const char *, __va_list)
-    __KVPRINTFLIKE(1) __NORETURN;
+#define	cmn_err_once(ce, ...)				\
+do {							\
+	static volatile uint32_t printed = 0;		\
+	if (atomic_cas_32(&printed, 0, 1) == 0) {	\
+		cmn_err(ce, __VA_ARGS__);		\
+	}						\
+} while (0)
+
+#define	vcmn_err_once(ce, fmt, ap)			\
+do {							\
+	static volatile uint32_t printed = 0;		\
+	if (atomic_cas_32(&printed, 0, 1) == 0) {	\
+		vcmn_err(ce, fmt, ap);			\
+	}						\
+} while (0)
+
+#define	zcmn_err_once(zone, ce, ...)			\
+do {							\
+	static volatile uint32_t printed = 0;		\
+	if (atomic_cas_32(&printed, 0, 1) == 0) {	\
+		zcmn_err(zone, ce, __VA_ARGS__);	\
+	}						\
+} while (0)
+
+#define	vzcmn_err_once(zone, ce, fmt, ap)		\
+do {							\
+	static volatile uint32_t printed = 0;		\
+	if (atomic_cas_32(&printed, 0, 1) == 0) {	\
+		vzcmn_err(zone, ce, fmt, ap);		\
+	}						\
+} while (0)
 
 #endif /* !_ASM */
 

@@ -30,17 +30,14 @@ function within_percent
 	typeset percent=$3
 
 	# Set $a or $b to $2 such that a >= b
-	[[ '1' = $(echo "if ($2 > $a) 1 else 0" | bc) ]] && a=$2 || b=$2
+	[ 1 -eq $(echo "$2 > $a" | bc) ] && a=$2 || b=$2
 
 	# Prevent division by 0
 	[[ $a =~ [1-9] ]] || return 1
 
 	typeset p=$(echo "scale=2; $b * 100 / $a" | bc)
 	log_note "Comparing $a and $b given $percent% (calculated: $p%)"
-	[[ '1' = $(echo "scale=2; if ($p >= $percent) 1 else 0" | bc) ]] && \
-	    return 0
-
-	return 1
+	[ 1 -eq $(echo "scale=2; $p >= $percent" | bc) ]
 }
 
 #
@@ -61,9 +58,7 @@ function within_tolerance #value #target #tolerance
 
 	typeset diff=$((abs(val - target)))
 	log_note "Checking if $val is within +/-$tol of $target (diff: $diff)"
-	((diff <= tol)) && return 0
-
-	return 1
+	((diff <= tol))
 }
 
 #
@@ -123,22 +118,26 @@ function verify_ne # <a> <b> <type>
 
 # A simple function to get a random number between two bounds (inclusive)
 #
-# Probably not the most efficient for large ranges, but it's okay.
-#
-# Note since we're using $RANDOM, 32767 is the largest number we
+# Note since we're using $RANDOM, $min+32767 is the largest number we
 # can accept as the upper bound.
 #
 # $1 lower bound
 # $2 upper bound
+# [$3 how many]
 function random_int_between
 {
 	typeset -i min=$1
 	typeset -i max=$2
-	typeset -i rand=0
+	typeset -i count
+	typeset -i i
 
-	while [[ $rand -lt $min ]] ; do
-		rand=$(( $RANDOM % $max + 1))
+	if [[ -z "$3" ]]; then
+		count=1
+	else
+		count=$3
+	fi
+
+	for (( i = 0; i < $count; i++ )); do
+		echo $(( (RANDOM % (max - min + 1)) + min ))
 	done
-
-	echo $rand
 }

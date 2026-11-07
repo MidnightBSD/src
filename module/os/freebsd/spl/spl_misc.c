@@ -24,9 +24,6 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
-
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/jail.h>
@@ -40,26 +37,21 @@ __FBSDID("$FreeBSD$");
 #include <sys/zfs_context.h>
 
 static struct opensolaris_utsname hw_utsname = {
+	.sysname = ostype,
+	.nodename = prison0.pr_hostname,
+	.release = osrelease,
 	.machine = MACHINE
 };
-
-#ifndef KERNEL_STATIC
-char hw_serial[11] = "0";
 
 utsname_t *
 utsname(void)
 {
 	return (&hw_utsname);
 }
-#endif
 
 static void
 opensolaris_utsname_init(void *arg)
 {
-
-	hw_utsname.sysname = ostype;
-	hw_utsname.nodename = prison0.pr_hostname;
-	hw_utsname.release = osrelease;
 	snprintf(hw_utsname.version, sizeof (hw_utsname.version),
 	    "%d", osreldate);
 }
@@ -98,7 +90,7 @@ ddi_copyout(const void *from, void *to, size_t len, int flags)
 	return (copyout(from, to, len));
 }
 
-int
+void
 spl_panic(const char *file, const char *func, int line, const char *fmt, ...)
 {
 	va_list ap;
@@ -108,6 +100,15 @@ spl_panic(const char *file, const char *func, int line, const char *fmt, ...)
 	va_end(ap);
 }
 
+/*
+ * Check if the current thread is a memory reclaim thread.
+ * Returns true if curproc is pageproc (FreeBSD's page daemon).
+ */
+int
+current_is_reclaim_thread(void)
+{
+	return (curproc == pageproc);
+}
 
 SYSINIT(opensolaris_utsname_init, SI_SUB_TUNABLES, SI_ORDER_ANY,
     opensolaris_utsname_init, NULL);

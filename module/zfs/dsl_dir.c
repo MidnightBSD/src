@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -26,6 +26,8 @@
  * Copyright (c) 2014 Spectra Logic Corporation, All rights reserved.
  * Copyright (c) 2016 Actifio, Inc. All rights reserved.
  * Copyright (c) 2018, loli10K <ezomori.nozomu@gmail.com>. All rights reserved.
+ * Copyright (c) 2023 Hewlett Packard Enterprise Development LP.
+ * Copyright (c) 2025, Rob Norris <robn@despairlabs.com>
  */
 
 #include <sys/dmu.h>
@@ -52,6 +54,15 @@
 #include <sys/zthr.h>
 #include "zfs_namecheck.h"
 #include "zfs_prop.h"
+
+/*
+ * This controls if we verify the ZVOL quota or not.
+ * Currently, quotas are not implemented for ZVOLs.
+ * The quota size is the size of the ZVOL.
+ * The size of the volume already implies the ZVOL size quota.
+ * The quota mechanism can introduce a significant performance drop.
+ */
+static int zvol_enforce_quotas = B_TRUE;
 
 /*
  * Filesystem and Snapshot Limits
@@ -160,7 +171,7 @@ dsl_dir_evict_async(void *dbu)
 
 int
 dsl_dir_hold_obj(dsl_pool_t *dp, uint64_t ddobj,
-    const char *tail, void *tag, dsl_dir_t **ddp)
+    const char *tail, const void *tag, dsl_dir_t **ddp)
 {
 	dmu_buf_t *dbuf;
 	dsl_dir_t *dd;
@@ -206,8 +217,6 @@ dsl_dir_hold_obj(dsl_pool_t *dp, uint64_t ddobj,
 				goto errout;
 			}
 		}
-
-		dsl_dir_snap_cmtime_update(dd);
 
 		if (dsl_dir_phys(dd)->dd_parent_obj) {
 			err = dsl_dir_hold_obj(dp,
@@ -270,6 +279,16 @@ dsl_dir_hold_obj(dsl_pool_t *dp, uint64_t ddobj,
 			}
 		}
 
+		if (dsl_dir_is_zapified(dd)) {
+			inode_timespec_t t = {0};
+			(void) zap_lookup(dp->dp_meta_objset, ddobj,
+			    DD_FIELD_SNAPSHOTS_CHANGED,
+			    sizeof (uint64_t),
+			    sizeof (inode_timespec_t) / sizeof (uint64_t),
+			    &t);
+			dd->dd_snap_cmtime = t;
+		}
+
 		dmu_buf_init_user(&dd->dd_dbu, NULL, dsl_dir_evict_async,
 		    &dd->dd_dbuf);
 		winner = dmu_buf_set_user_ie(dbuf, &dd->dd_dbu);
@@ -320,7 +339,7 @@ errout:
 }
 
 void
-dsl_dir_rele(dsl_dir_t *dd, void *tag)
+dsl_dir_rele(dsl_dir_t *dd, const void *tag)
 {
 	dprintf_dd(dd, "%s\n", "");
 	spa_close(dd->dd_pool->dp_spa, tag);
@@ -335,7 +354,7 @@ dsl_dir_rele(dsl_dir_t *dd, void *tag)
  * the spa.
  */
 void
-dsl_dir_async_rele(dsl_dir_t *dd, void *tag)
+dsl_dir_async_rele(dsl_dir_t *dd, const void *tag)
 {
 	dprintf_dd(dd, "%s\n", "");
 	spa_async_close(dd->dd_pool->dp_spa, tag);
@@ -394,7 +413,7 @@ dsl_dir_namelen(dsl_dir_t *dd)
 static int
 getcomponent(const char *path, char *component, const char **nextp)
 {
-	char *p;
+	const char *p;
 
 	if ((path == NULL) || (path[0] == '\0'))
 		return (SET_ERROR(ENOENT));
@@ -420,8 +439,7 @@ getcomponent(const char *path, char *component, const char **nextp)
 	} else if (p[0] == '/') {
 		if (p - path >= ZFS_MAX_DATASET_NAME_LEN)
 			return (SET_ERROR(ENAMETOOLONG));
-		(void) strncpy(component, path, p - path);
-		component[p - path] = '\0';
+		(void) strlcpy(component, path, p - path + 1);
 		p++;
 	} else if (p[0] == '@') {
 		/*
@@ -432,8 +450,7 @@ getcomponent(const char *path, char *component, const char **nextp)
 			return (SET_ERROR(EINVAL));
 		if (p - path >= ZFS_MAX_DATASET_NAME_LEN)
 			return (SET_ERROR(ENAMETOOLONG));
-		(void) strncpy(component, path, p - path);
-		component[p - path] = '\0';
+		(void) strlcpy(component, path, p - path + 1);
 	} else {
 		panic("invalid p=%p", (void *)p);
 	}
@@ -449,7 +466,7 @@ getcomponent(const char *path, char *component, const char **nextp)
  * (*tail)[0] == '@' means that the last component is a snapshot.
  */
 int
-dsl_dir_hold(dsl_pool_t *dp, const char *name, void *tag,
+dsl_dir_hold(dsl_pool_t *dp, const char *name, const void *tag,
     dsl_dir_t **ddp, const char **tailp)
 {
 	char *buf;
@@ -739,7 +756,7 @@ typedef enum {
 
 static enforce_res_t
 dsl_enforce_ds_ss_limits(dsl_dir_t *dd, zfs_prop_t prop,
-    cred_t *cr, proc_t *proc)
+    cred_t *cr)
 {
 	enforce_res_t enforce = ENFORCE_ALWAYS;
 	uint64_t obj;
@@ -754,16 +771,8 @@ dsl_enforce_ds_ss_limits(dsl_dir_t *dd, zfs_prop_t prop,
 	if (crgetzoneid(cr) != GLOBAL_ZONEID)
 		return (ENFORCE_ALWAYS);
 
-	/*
-	 * We are checking the saved credentials of the user process, which is
-	 * not the current process.  Note that we can't use secpolicy_zfs(),
-	 * because it only works if the cred is that of the current process (on
-	 * Linux).
-	 */
-	if (secpolicy_zfs_proc(cr, proc) == 0)
+	if (secpolicy_zfs(cr) == 0)
 		return (ENFORCE_NEVER);
-#else
-	(void) proc;
 #endif
 
 	if ((obj = dsl_dir_phys(dd)->dd_head_dataset_obj) == 0)
@@ -797,11 +806,11 @@ dsl_enforce_ds_ss_limits(dsl_dir_t *dd, zfs_prop_t prop,
  */
 int
 dsl_fs_ss_limit_check(dsl_dir_t *dd, uint64_t delta, zfs_prop_t prop,
-    dsl_dir_t *ancestor, cred_t *cr, proc_t *proc)
+    dsl_dir_t *ancestor, cred_t *cr)
 {
 	objset_t *os = dd->dd_pool->dp_meta_objset;
 	uint64_t limit, count;
-	char *count_prop;
+	const char *count_prop;
 	enforce_res_t enforce;
 	int err = 0;
 
@@ -829,7 +838,7 @@ dsl_fs_ss_limit_check(dsl_dir_t *dd, uint64_t delta, zfs_prop_t prop,
 	 * are allowed to change the limit on the current dataset, but there
 	 * is another limit in the tree above.
 	 */
-	enforce = dsl_enforce_ds_ss_limits(dd, prop, cr, proc);
+	enforce = dsl_enforce_ds_ss_limits(dd, prop, cr);
 	if (enforce == ENFORCE_NEVER)
 		return (0);
 
@@ -873,7 +882,7 @@ dsl_fs_ss_limit_check(dsl_dir_t *dd, uint64_t delta, zfs_prop_t prop,
 
 	if (dd->dd_parent != NULL)
 		err = dsl_fs_ss_limit_check(dd->dd_parent, delta, prop,
-		    ancestor, cr, proc);
+		    ancestor, cr);
 
 	return (err);
 }
@@ -1171,10 +1180,9 @@ dsl_dir_space_towrite(dsl_dir_t *dd)
 
 	ASSERT(MUTEX_HELD(&dd->dd_lock));
 
-	for (int i = 0; i < TXG_SIZE; i++) {
+	for (int i = 0; i < TXG_SIZE; i++)
 		space += dd->dd_space_towrite[i & TXG_MASK];
-		ASSERT3U(dd->dd_space_towrite[i & TXG_MASK], >=, 0);
-	}
+
 	return (space);
 }
 
@@ -1305,7 +1313,9 @@ top_of_function:
 	 * If this transaction will result in a net free of space,
 	 * we want to let it through.
 	 */
-	if (ignorequota || netfree || dsl_dir_phys(dd)->dd_quota == 0)
+	if (ignorequota || netfree || dsl_dir_phys(dd)->dd_quota == 0 ||
+	    (tx->tx_objset && dmu_objset_type(tx->tx_objset) == DMU_OST_ZVOL &&
+	    zvol_enforce_quotas == B_FALSE))
 		quota = UINT64_MAX;
 	else
 		quota = dsl_dir_phys(dd)->dd_quota;
@@ -1342,30 +1352,23 @@ top_of_function:
 		ext_quota = 0;
 
 	if (used_on_disk >= quota) {
+		if (retval == ENOSPC && (used_on_disk - quota) <
+		    dsl_pool_deferred_space(dd->dd_pool)) {
+			retval = SET_ERROR(ERESTART);
+		}
 		/* Quota exceeded */
 		mutex_exit(&dd->dd_lock);
 		DMU_TX_STAT_BUMP(dmu_tx_quota);
 		return (retval);
 	} else if (used_on_disk + est_inflight >= quota + ext_quota) {
-		if (est_inflight > 0 || used_on_disk < quota) {
-			retval = SET_ERROR(ERESTART);
-		} else {
-			ASSERT3U(used_on_disk, >=, quota);
-
-			if (retval == ENOSPC && (used_on_disk - quota) <
-			    dsl_pool_deferred_space(dd->dd_pool)) {
-				retval = SET_ERROR(ERESTART);
-			}
-		}
-
 		dprintf_dd(dd, "failing: used=%lluK inflight = %lluK "
-		    "quota=%lluK tr=%lluK err=%d\n",
+		    "quota=%lluK tr=%lluK\n",
 		    (u_longlong_t)used_on_disk>>10,
 		    (u_longlong_t)est_inflight>>10,
-		    (u_longlong_t)quota>>10, (u_longlong_t)asize>>10, retval);
+		    (u_longlong_t)quota>>10, (u_longlong_t)asize>>10);
 		mutex_exit(&dd->dd_lock);
 		DMU_TX_STAT_BUMP(dmu_tx_quota);
-		return (retval);
+		return (SET_ERROR(ERESTART));
 	}
 
 	/* We need to up our estimated delta before dropping dd_lock */
@@ -1393,10 +1396,9 @@ top_of_function:
 		ignorequota = (dsl_dir_phys(dd)->dd_head_dataset_obj == 0);
 		first = B_FALSE;
 		goto top_of_function;
-
-	} else {
-		return (0);
 	}
+
+	return (0);
 }
 
 /*
@@ -1475,7 +1477,7 @@ dsl_dir_tempreserve_clear(void *tr_cookie, dmu_tx_t *tx)
 	if (tr_cookie == NULL)
 		return;
 
-	while ((tr = list_head(tr_list)) != NULL) {
+	while ((tr = list_remove_head(tr_list)) != NULL) {
 		if (tr->tr_ds) {
 			mutex_enter(&tr->tr_ds->dd_lock);
 			ASSERT3U(tr->tr_ds->dd_tempreserved[txgidx], >=,
@@ -1485,7 +1487,6 @@ dsl_dir_tempreserve_clear(void *tr_cookie, dmu_tx_t *tx)
 		} else {
 			arc_tempreserve_clear(tr->tr_size);
 		}
-		list_remove(tr_list, tr);
 		kmem_free(tr, sizeof (struct tempreserve));
 	}
 
@@ -1904,7 +1905,6 @@ typedef struct dsl_dir_rename_arg {
 	const char *ddra_oldname;
 	const char *ddra_newname;
 	cred_t *ddra_cred;
-	proc_t *ddra_proc;
 } dsl_dir_rename_arg_t;
 
 typedef struct dsl_valid_rename_arg {
@@ -2083,8 +2083,7 @@ dsl_dir_rename_check(void *arg, dmu_tx_t *tx)
 		}
 
 		error = dsl_dir_transfer_possible(dd->dd_parent,
-		    newparent, fs_cnt, ss_cnt, myspace,
-		    ddra->ddra_cred, ddra->ddra_proc);
+		    newparent, fs_cnt, ss_cnt, myspace, ddra->ddra_cred);
 		if (error != 0) {
 			dsl_dir_rele(newparent, FTAG);
 			dsl_dir_rele(dd, FTAG);
@@ -2109,6 +2108,8 @@ dsl_dir_rename_sync(void *arg, dmu_tx_t *tx)
 	VERIFY0(dsl_dir_hold(dp, ddra->ddra_oldname, FTAG, &dd, NULL));
 	VERIFY0(dsl_dir_hold(dp, ddra->ddra_newname, FTAG, &newparent,
 	    &mynewname));
+
+	ASSERT3P(mynewname, !=, NULL);
 
 	/* Log this before we change the name. */
 	spa_history_log_internal_dd(dd, "rename", tx,
@@ -2199,22 +2200,27 @@ dsl_dir_rename_sync(void *arg, dmu_tx_t *tx)
 int
 dsl_dir_rename(const char *oldname, const char *newname)
 {
+	cred_t *cr = CRED();
+	crhold(cr);
+
 	dsl_dir_rename_arg_t ddra;
 
 	ddra.ddra_oldname = oldname;
 	ddra.ddra_newname = newname;
-	ddra.ddra_cred = CRED();
-	ddra.ddra_proc = curproc;
+	ddra.ddra_cred = cr;
 
-	return (dsl_sync_task(oldname,
+	int err = dsl_sync_task(oldname,
 	    dsl_dir_rename_check, dsl_dir_rename_sync, &ddra,
-	    3, ZFS_SPACE_CHECK_RESERVED));
+	    3, ZFS_SPACE_CHECK_RESERVED);
+
+	crfree(cr);
+	return (err);
 }
 
 int
 dsl_dir_transfer_possible(dsl_dir_t *sdd, dsl_dir_t *tdd,
     uint64_t fs_cnt, uint64_t ss_cnt, uint64_t space,
-    cred_t *cr, proc_t *proc)
+    cred_t *cr)
 {
 	dsl_dir_t *ancestor;
 	int64_t adelta;
@@ -2228,11 +2234,11 @@ dsl_dir_transfer_possible(dsl_dir_t *sdd, dsl_dir_t *tdd,
 		return (SET_ERROR(ENOSPC));
 
 	err = dsl_fs_ss_limit_check(tdd, fs_cnt, ZFS_PROP_FILESYSTEM_LIMIT,
-	    ancestor, cr, proc);
+	    ancestor, cr);
 	if (err != 0)
 		return (err);
 	err = dsl_fs_ss_limit_check(tdd, ss_cnt, ZFS_PROP_SNAPSHOT_LIMIT,
-	    ancestor, cr, proc);
+	    ancestor, cr);
 	if (err != 0)
 		return (err);
 
@@ -2252,13 +2258,25 @@ dsl_dir_snap_cmtime(dsl_dir_t *dd)
 }
 
 void
-dsl_dir_snap_cmtime_update(dsl_dir_t *dd)
+dsl_dir_snap_cmtime_update(dsl_dir_t *dd, dmu_tx_t *tx)
 {
+	dsl_pool_t *dp = dmu_tx_pool(tx);
 	inode_timespec_t t;
-
 	gethrestime(&t);
+
 	mutex_enter(&dd->dd_lock);
 	dd->dd_snap_cmtime = t;
+	if (spa_feature_is_enabled(dp->dp_spa,
+	    SPA_FEATURE_EXTENSIBLE_DATASET)) {
+		objset_t *mos = dd->dd_pool->dp_meta_objset;
+		uint64_t ddobj = dd->dd_object;
+		dsl_dir_zapify(dd, tx);
+		VERIFY0(zap_update(mos, ddobj,
+		    DD_FIELD_SNAPSHOTS_CHANGED,
+		    sizeof (uint64_t),
+		    sizeof (inode_timespec_t) / sizeof (uint64_t),
+		    &t, tx));
+	}
 	mutex_exit(&dd->dd_lock);
 }
 
@@ -2465,3 +2483,7 @@ dsl_dir_cancel_waiters(dsl_dir_t *dd)
 EXPORT_SYMBOL(dsl_dir_set_quota);
 EXPORT_SYMBOL(dsl_dir_set_reservation);
 #endif
+
+/* CSTYLED */
+ZFS_MODULE_PARAM(zfs, , zvol_enforce_quotas, INT, ZMOD_RW,
+	"Enable strict ZVOL quota enforcment");

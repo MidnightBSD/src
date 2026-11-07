@@ -33,6 +33,7 @@
 #include <sys/thread.h>
 #include <sys/rwlock.h>
 #include <sys/wait.h>
+#include <sys/kstat.h>
 
 #define	TASKQ_NAMELEN		31
 
@@ -98,17 +99,18 @@ typedef struct taskq {
 	struct list_head	tq_prio_list;	/* priority taskq_ent_t's */
 	struct list_head	tq_delay_list;	/* delayed taskq_ent_t's */
 	struct list_head	tq_taskqs;	/* all taskq_t's */
-	spl_wait_queue_head_t	tq_work_waitq;	/* new work waitq */
-	spl_wait_queue_head_t	tq_wait_waitq;	/* wait waitq */
+	wait_queue_head_t	tq_work_waitq;	/* new work waitq */
+	wait_queue_head_t	tq_wait_waitq;	/* wait waitq */
 	tq_lock_role_t		tq_lock_class;	/* class when taking tq_lock */
 	/* list node for the cpu hotplug callback */
 	struct hlist_node	tq_hp_cb_node;
 	boolean_t		tq_hp_support;
+	unsigned long		lastspawnstop;	/* when to purge dynamic */
 } taskq_t;
 
 typedef struct taskq_ent {
 	spinlock_t		tqent_lock;
-	spl_wait_queue_head_t	tqent_waitq;
+	wait_queue_head_t	tqent_waitq;
 	struct timer_list	tqent_timer;
 	struct list_head	tqent_list;
 	taskqid_t		tqent_id;
@@ -160,7 +162,8 @@ extern taskq_t *taskq_of_curthread(void);
 #define	taskq_create_proc(name, nthreads, pri, min, max, proc, flags) \
     taskq_create(name, nthreads, pri, min, max, flags)
 #define	taskq_create_sysdc(name, nthreads, min, max, proc, dc, flags) \
-    taskq_create(name, nthreads, maxclsyspri, min, max, flags)
+	((void) sizeof (dc), \
+	    taskq_create(name, nthreads, maxclsyspri, min, max, flags))
 
 int spl_taskq_init(void);
 void spl_taskq_fini(void);

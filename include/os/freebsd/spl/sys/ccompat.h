@@ -1,5 +1,5 @@
 /*
- * SPDX-License-Identifier: BSD-2-Clause-FreeBSD
+ * SPDX-License-Identifier: BSD-2-Clause
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,48 +28,6 @@
 #ifndef	_SYS_CCOMPAT_H
 #define	_SYS_CCOMPAT_H
 
-#if  __FreeBSD_version < 1300051
-#define	vm_page_valid(m) (m)->valid = VM_PAGE_BITS_ALL
-#define	vm_page_do_sunbusy(m)
-#define	vm_page_none_valid(m) ((m)->valid == 0)
-#else
-#define	vm_page_do_sunbusy(m) vm_page_sunbusy(m)
-#endif
-
-#if  __FreeBSD_version < 1300074
-#define	VOP_UNLOCK1(x)	VOP_UNLOCK(x, 0)
-#else
-#define	VOP_UNLOCK1(x)	VOP_UNLOCK(x)
-#endif
-
-#if  __FreeBSD_version < 1300064
-#define	VN_IS_DOOMED(vp)	((vp)->v_iflag & VI_DOOMED)
-#endif
-
-#if  __FreeBSD_version < 1300068
-#define	VFS_VOP_VECTOR_REGISTER(x)
-#endif
-
-#if  __FreeBSD_version >= 1300076
-#define	getnewvnode_reserve_()	getnewvnode_reserve()
-#else
-#define	getnewvnode_reserve_()	getnewvnode_reserve(1)
-#endif
-
-#if  __FreeBSD_version < 1300102
-#define	ASSERT_VOP_IN_SEQC(zp)
-#define	MNTK_FPLOOKUP 0
-#define	vn_seqc_write_begin(vp)
-#define	vn_seqc_write_end(vp)
-
-#ifndef VFS_SMR_DECLARE
-#define	VFS_SMR_DECLARE
-#endif
-#ifndef VFS_SMR_ZONE_SET
-#define	VFS_SMR_ZONE_SET(zone)
-#endif
-#endif
-
 struct hlist_node {
 	struct hlist_node *next, **pprev;
 };
@@ -82,18 +40,17 @@ typedef struct {
 	volatile int counter;
 } atomic_t;
 
-	/* BEGIN CSTYLED */
 #define	hlist_for_each(p, head)                                      \
 	for (p = (head)->first; p; p = (p)->next)
 
 #define	hlist_entry(ptr, type, field)   container_of(ptr, type, field)
 
 #define	container_of(ptr, type, member)                         \
+/* CSTYLED */                                                   \
 ({                                                              \
-        const __typeof(((type *)0)->member) *__p = (ptr);       \
-        (type *)((uintptr_t)__p - offsetof(type, member));      \
+	const __typeof(((type *)0)->member) *__p = (ptr);       \
+	(type *)((uintptr_t)__p - offsetof(type, member));      \
 })
-	/* END CSTYLED */
 
 static inline void
 hlist_add_head(struct hlist_node *n, struct hlist_head *h)
@@ -113,15 +70,6 @@ hlist_del(struct hlist_node *n)
 		n->next->pprev = n->pprev;
 }
 	/* BEGIN CSTYLED */
-#define	READ_ONCE(x) ({			\
-	__typeof(x) __var = ({		\
-		barrier();		\
-		ACCESS_ONCE(x);		\
-	});				\
-	barrier();			\
-	__var;				\
-})
-
 #define	HLIST_HEAD_INIT { }
 #define	HLIST_HEAD(name) struct hlist_head name = HLIST_HEAD_INIT
 #define	INIT_HLIST_HEAD(head) (head)->first = NULL

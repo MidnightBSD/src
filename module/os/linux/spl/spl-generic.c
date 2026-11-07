@@ -23,6 +23,7 @@
  *  Solaris Porting Layer (SPL) Generic Implementation.
  */
 
+#include <sys/isa_defs.h>
 #include <sys/sysmacros.h>
 #include <sys/systeminfo.h>
 #include <sys/vmsystm.h>
@@ -42,32 +43,29 @@
 #include <linux/ctype.h>
 #include <sys/disp.h>
 #include <sys/random.h>
-#include <sys/strings.h>
+#include <sys/string.h>
 #include <linux/kmod.h>
-#include "zfs_gitrev.h"
 #include <linux/mod_compat.h>
 #include <sys/cred.h>
 #include <sys/vnode.h>
 #include <sys/misc.h>
+#include <linux/mod_compat.h>
 
-char spl_gitrev[64] = ZFS_META_GITREV;
-
-/* BEGIN CSTYLED */
 unsigned long spl_hostid = 0;
 EXPORT_SYMBOL(spl_hostid);
-/* BEGIN CSTYLED */
+
+/* CSTYLED */
 module_param(spl_hostid, ulong, 0644);
 MODULE_PARM_DESC(spl_hostid, "The system hostid.");
-/* END CSTYLED */
 
 proc_t p0;
 EXPORT_SYMBOL(p0);
 
 /*
- * Xorshift Pseudo Random Number Generator based on work by Sebastiano Vigna
+ * xoshiro256++ 1.0 PRNG by David Blackman and Sebastiano Vigna
  *
- * "Further scramblings of Marsaglia's xorshift generators"
- * http://vigna.di.unimi.it/ftp/papers/xorshiftplus.pdf
+ * "Scrambled Linear Pseudorandom Number Generators∗"
+ * https://vigna.di.unimi.it/ftp/papers/ScrambledLinear.pdf
  *
  * random_get_pseudo_bytes() is an API function on Illumos whose sole purpose
  * is to provide bytes containing random numbers. It is mapped to /dev/urandom
@@ -79,66 +77,85 @@ EXPORT_SYMBOL(p0);
  * free of atomic instructions.
  *
  * A consequence of using a fast PRNG is that using random_get_pseudo_bytes()
- * to generate words larger than 128 bits will paradoxically be limited to
- * `2^128 - 1` possibilities. This is because we have a sequence of `2^128 - 1`
- * 128-bit words and selecting the first will implicitly select the second. If
+ * to generate words larger than 256 bits will paradoxically be limited to
+ * `2^256 - 1` possibilities. This is because we have a sequence of `2^256 - 1`
+ * 256-bit words and selecting the first will implicitly select the second. If
  * a caller finds this behavior undesirable, random_get_bytes() should be used
  * instead.
  *
  * XXX: Linux interrupt handlers that trigger within the critical section
- * formed by `s[1] = xp[1];` and `xp[0] = s[0];` and call this function will
+ * formed by `s[3] = xp[3];` and `xp[0] = s[0];` and call this function will
  * see the same numbers. Nothing in the code currently calls this in an
  * interrupt handler, so this is considered to be okay. If that becomes a
  * problem, we could create a set of per-cpu variables for interrupt handlers
  * and use them when in_interrupt() from linux/preempt_mask.h evaluates to
  * true.
  */
-void __percpu *spl_pseudo_entropy;
+static void __percpu *spl_pseudo_entropy;
 
 /*
- * spl_rand_next()/spl_rand_jump() are copied from the following CC-0 licensed
- * file:
+ * rotl()/spl_rand_next()/spl_rand_jump() are copied from the following CC-0
+ * licensed file:
  *
- * http://xorshift.di.unimi.it/xorshift128plus.c
+ * https://prng.di.unimi.it/xoshiro256plusplus.c
  */
+
+static inline uint64_t rotl(const uint64_t x, int k)
+{
+	return ((x << k) | (x >> (64 - k)));
+}
 
 static inline uint64_t
 spl_rand_next(uint64_t *s)
 {
-	uint64_t s1 = s[0];
-	const uint64_t s0 = s[1];
-	s[0] = s0;
-	s1 ^= s1 << 23; // a
-	s[1] = s1 ^ s0 ^ (s1 >> 18) ^ (s0 >> 5); // b, c
-	return (s[1] + s0);
+	const uint64_t result = rotl(s[0] + s[3], 23) + s[0];
+
+	const uint64_t t = s[1] << 17;
+
+	s[2] ^= s[0];
+	s[3] ^= s[1];
+	s[1] ^= s[2];
+	s[0] ^= s[3];
+
+	s[2] ^= t;
+
+	s[3] = rotl(s[3], 45);
+
+	return (result);
 }
 
 static inline void
 spl_rand_jump(uint64_t *s)
 {
-	static const uint64_t JUMP[] =
-	    { 0x8a5cd789635d2dff, 0x121fd2155c472f96 };
+	static const uint64_t JUMP[] = { 0x180ec6d33cfd0aba,
+	    0xd5a61266f0c9392c, 0xa9582618e03fc9aa, 0x39abdc4529b1661c };
 
 	uint64_t s0 = 0;
 	uint64_t s1 = 0;
+	uint64_t s2 = 0;
+	uint64_t s3 = 0;
 	int i, b;
 	for (i = 0; i < sizeof (JUMP) / sizeof (*JUMP); i++)
 		for (b = 0; b < 64; b++) {
 			if (JUMP[i] & 1ULL << b) {
 				s0 ^= s[0];
 				s1 ^= s[1];
+				s2 ^= s[2];
+				s3 ^= s[3];
 			}
 			(void) spl_rand_next(s);
 		}
 
 	s[0] = s0;
 	s[1] = s1;
+	s[2] = s2;
+	s[3] = s3;
 }
 
 int
 random_get_pseudo_bytes(uint8_t *ptr, size_t len)
 {
-	uint64_t *xp, s[2];
+	uint64_t *xp, s[4];
 
 	ASSERT(ptr);
 
@@ -146,6 +163,8 @@ random_get_pseudo_bytes(uint8_t *ptr, size_t len)
 
 	s[0] = xp[0];
 	s[1] = xp[1];
+	s[2] = xp[2];
+	s[3] = xp[3];
 
 	while (len) {
 		union {
@@ -157,12 +176,22 @@ random_get_pseudo_bytes(uint8_t *ptr, size_t len)
 		len -= i;
 		entropy.ui64 = spl_rand_next(s);
 
+		/*
+		 * xoshiro256++ has low entropy lower bytes, so we copy the
+		 * higher order bytes first.
+		 */
 		while (i--)
+#ifdef _ZFS_BIG_ENDIAN
 			*ptr++ = entropy.byte[i];
+#else
+			*ptr++ = entropy.byte[7 - i];
+#endif
 	}
 
 	xp[0] = s[0];
 	xp[1] = s[1];
+	xp[2] = s[2];
+	xp[3] = s[3];
 
 	put_cpu_ptr(spl_pseudo_entropy);
 
@@ -274,11 +303,10 @@ __udivdi3(uint64_t u, uint64_t v)
 }
 EXPORT_SYMBOL(__udivdi3);
 
-/* BEGIN CSTYLED */
 #ifndef abs64
+/* CSTYLED */
 #define	abs64(x)	({ uint64_t t = (x) >> 63; ((x) ^ t) - t; })
 #endif
-/* END CSTYLED */
 
 /*
  * Implementation of 64-bit signed division for 32-bit machines.
@@ -390,11 +418,9 @@ __aeabi_uldivmod(uint64_t u, uint64_t v)
 		register uint32_t r2 asm("r2") = (mod & 0xFFFFFFFF);
 		register uint32_t r3 asm("r3") = (mod >> 32);
 
-		/* BEGIN CSTYLED */
 		asm volatile(""
-		    : "+r"(r0), "+r"(r1), "+r"(r2),"+r"(r3)  /* output */
-		    : "r"(r0), "r"(r1), "r"(r2), "r"(r3));   /* input */
-		/* END CSTYLED */
+		    : "+r"(r0), "+r"(r1), "+r"(r2), "+r"(r3)  /* output */
+		    : "r"(r0), "r"(r1), "r"(r2), "r"(r3));    /* input */
 
 		return; /* r0; */
 	}
@@ -415,11 +441,9 @@ __aeabi_ldivmod(int64_t u, int64_t v)
 		register uint32_t r2 asm("r2") = (mod & 0xFFFFFFFF);
 		register uint32_t r3 asm("r3") = (mod >> 32);
 
-		/* BEGIN CSTYLED */
 		asm volatile(""
-		    : "+r"(r0), "+r"(r1), "+r"(r2),"+r"(r3)  /* output */
-		    : "r"(r0), "r"(r1), "r"(r2), "r"(r3));   /* input */
-		/* END CSTYLED */
+		    : "+r"(r0), "+r"(r1), "+r"(r2), "+r"(r3)  /* output */
+		    : "r"(r0), "r"(r1), "r"(r2), "r"(r3));    /* input */
 
 		return; /* r0; */
 	}
@@ -439,21 +463,32 @@ EXPORT_SYMBOL(__aeabi_ldivmod);
  * functions against their Solaris counterparts.  It is possible that I
  * may have misinterpreted the man page or the man page is incorrect.
  */
-int ddi_strtoul(const char *, char **, int, unsigned long *);
 int ddi_strtol(const char *, char **, int, long *);
 int ddi_strtoull(const char *, char **, int, unsigned long long *);
 int ddi_strtoll(const char *, char **, int, long long *);
 
-#define	define_ddi_strtoux(type, valtype)				\
-int ddi_strtou##type(const char *str, char **endptr,			\
+#define	define_ddi_strtox(type, valtype)				\
+int ddi_strto##type(const char *str, char **endptr,			\
     int base, valtype *result)						\
 {									\
 	valtype last_value, value = 0;					\
 	char *ptr = (char *)str;					\
-	int flag = 1, digit;						\
+	int digit, minus = 0;						\
+									\
+	while (strchr(" \t\n\r\f", *ptr))				\
+		++ptr;							\
 									\
 	if (strlen(ptr) == 0)						\
 		return (EINVAL);					\
+									\
+	switch (*ptr) {							\
+	case '-':							\
+		minus = 1;						\
+		zfs_fallthrough;					\
+	case '+':							\
+		++ptr;							\
+		break;							\
+	}								\
 									\
 	/* Auto-detect base based on prefix */				\
 	if (!base) {							\
@@ -461,7 +496,7 @@ int ddi_strtou##type(const char *str, char **endptr,			\
 			if (tolower(str[1]) == 'x' && isxdigit(str[2])) { \
 				base = 16; /* hex */			\
 				ptr += 2;				\
-			} else if (str[1] >= '0' && str[1] < 8) {	\
+			} else if (str[1] >= '0' && str[1] < '8') {	\
 				base = 8; /* octal */			\
 				ptr += 1;				\
 			} else {					\
@@ -488,46 +523,21 @@ int ddi_strtou##type(const char *str, char **endptr,			\
 		if (last_value > value) /* Overflow */			\
 			return (ERANGE);				\
 									\
-		flag = 1;						\
 		ptr++;							\
 	}								\
 									\
-	if (flag)							\
-		*result = value;					\
+	*result = minus ? -value : value;				\
 									\
 	if (endptr)							\
-		*endptr = (char *)(flag ? ptr : str);			\
+		*endptr = ptr;						\
 									\
 	return (0);							\
 }									\
 
-#define	define_ddi_strtox(type, valtype)				\
-int ddi_strto##type(const char *str, char **endptr,			\
-    int base, valtype *result)						\
-{									\
-	int rc;								\
-									\
-	if (*str == '-') {						\
-		rc = ddi_strtou##type(str + 1, endptr, base, result);	\
-		if (!rc) {						\
-			if (*endptr == str + 1)				\
-				*endptr = (char *)str;			\
-			else						\
-				*result = -*result;			\
-		}							\
-	} else {							\
-		rc = ddi_strtou##type(str, endptr, base, result);	\
-	}								\
-									\
-	return (rc);							\
-}
-
-define_ddi_strtoux(l, unsigned long)
 define_ddi_strtox(l, long)
-define_ddi_strtoux(ll, unsigned long long)
+define_ddi_strtox(ull, unsigned long long)
 define_ddi_strtox(ll, long long)
 
-EXPORT_SYMBOL(ddi_strtoul);
 EXPORT_SYMBOL(ddi_strtol);
 EXPORT_SYMBOL(ddi_strtoll);
 EXPORT_SYMBOL(ddi_strtoull);
@@ -544,6 +554,29 @@ ddi_copyin(const void *from, void *to, size_t len, int flags)
 	return (copyin(from, to, len));
 }
 EXPORT_SYMBOL(ddi_copyin);
+
+#define	define_spl_param(type, fmt)					\
+int									\
+spl_param_get_##type(char *buf, zfs_kernel_param_t *kp)			\
+{									\
+	return (scnprintf(buf, PAGE_SIZE, fmt "\n",			\
+	    *(type *)kp->arg));						\
+}									\
+int									\
+spl_param_set_##type(const char *buf, zfs_kernel_param_t *kp)		\
+{									\
+	return (kstrto##type(buf, 0, (type *)kp->arg));			\
+}									\
+const struct kernel_param_ops spl_param_ops_##type = {			\
+	.set = spl_param_set_##type,					\
+	.get = spl_param_get_##type,					\
+};									\
+EXPORT_SYMBOL(spl_param_get_##type);					\
+EXPORT_SYMBOL(spl_param_set_##type);					\
+EXPORT_SYMBOL(spl_param_ops_##type);
+
+define_spl_param(s64, "%lld")
+define_spl_param(u64, "%llu")
 
 /*
  * Post a uevent to userspace whenever a new vdev adds to the pool. It is
@@ -590,26 +623,6 @@ ddi_copyout(const void *from, void *to, size_t len, int flags)
 }
 EXPORT_SYMBOL(ddi_copyout);
 
-static ssize_t
-spl_kernel_read(struct file *file, void *buf, size_t count, loff_t *pos)
-{
-#if defined(HAVE_KERNEL_READ_PPOS)
-	return (kernel_read(file, buf, count, pos));
-#else
-	mm_segment_t saved_fs;
-	ssize_t ret;
-
-	saved_fs = get_fs();
-	set_fs(KERNEL_DS);
-
-	ret = vfs_read(file, (void __user *)buf, count, pos);
-
-	set_fs(saved_fs);
-
-	return (ret);
-#endif
-}
-
 static int
 spl_getattr(struct file *filp, struct kstat *stat)
 {
@@ -618,16 +631,8 @@ spl_getattr(struct file *filp, struct kstat *stat)
 	ASSERT(filp);
 	ASSERT(stat);
 
-#if defined(HAVE_4ARGS_VFS_GETATTR)
 	rc = vfs_getattr(&filp->f_path, stat, STATX_BASIC_STATS,
 	    AT_STATX_SYNC_AS_STAT);
-#elif defined(HAVE_2ARGS_VFS_GETATTR)
-	rc = vfs_getattr(&filp->f_path, stat);
-#elif defined(HAVE_3ARGS_VFS_GETATTR)
-	rc = vfs_getattr(filp->f_path.mnt, filp->f_dentry, stat);
-#else
-#error "No available vfs_getattr()"
-#endif
 	if (rc)
 		return (-rc);
 
@@ -669,7 +674,7 @@ spl_getattr(struct file *filp, struct kstat *stat)
  *
  */
 
-char *spl_hostid_path = HW_HOSTID_PATH;
+static char *spl_hostid_path = HW_HOSTID_PATH;
 module_param(spl_hostid_path, charp, 0444);
 MODULE_PARM_DESC(spl_hostid_path, "The system hostid file (/etc/hostid)");
 
@@ -705,7 +710,7 @@ hostid_read(uint32_t *hostid)
 	 * Read directly into the variable like eglibc does.
 	 * Short reads are okay; native behavior is preserved.
 	 */
-	error = spl_kernel_read(filp, &value, sizeof (value), &off);
+	error = kernel_read(filp, &value, sizeof (value), &off);
 	if (error < 0) {
 		filp_close(filp, 0);
 		return (EIO);
@@ -765,28 +770,33 @@ spl_kvmem_init(void)
  * initialize each of the per-cpu seeds so that the sequences generated on each
  * CPU are guaranteed to never overlap in practice.
  */
-static void __init
+static int __init
 spl_random_init(void)
 {
-	uint64_t s[2];
+	uint64_t s[4];
 	int i = 0;
 
-	spl_pseudo_entropy = __alloc_percpu(2 * sizeof (uint64_t),
+	spl_pseudo_entropy = __alloc_percpu(4 * sizeof (uint64_t),
 	    sizeof (uint64_t));
+
+	if (!spl_pseudo_entropy)
+		return (-ENOMEM);
 
 	get_random_bytes(s, sizeof (s));
 
-	if (s[0] == 0 && s[1] == 0) {
+	if (s[0] == 0 && s[1] == 0 && s[2] == 0 && s[3] == 0) {
 		if (jiffies != 0) {
 			s[0] = jiffies;
 			s[1] = ~0 - jiffies;
+			s[2] = ~jiffies;
+			s[3] = jiffies - ~0;
 		} else {
-			(void) memcpy(s, "improbable seed", sizeof (s));
+			(void) memcpy(s, "improbable seed", 16);
 		}
 		printk("SPL: get_random_bytes() returned 0 "
 		    "when generating random seed. Setting initial seed to "
-		    "0x%016llx%016llx.\n", cpu_to_be64(s[0]),
-		    cpu_to_be64(s[1]));
+		    "0x%016llx%016llx%016llx%016llx.\n", cpu_to_be64(s[0]),
+		    cpu_to_be64(s[1]), cpu_to_be64(s[2]), cpu_to_be64(s[3]));
 	}
 
 	for_each_possible_cpu(i) {
@@ -796,7 +806,11 @@ spl_random_init(void)
 
 		wordp[0] = s[0];
 		wordp[1] = s[1];
+		wordp[2] = s[2];
+		wordp[3] = s[3];
 	}
+
+	return (0);
 }
 
 static void
@@ -817,8 +831,8 @@ spl_init(void)
 {
 	int rc = 0;
 
-	bzero(&p0, sizeof (proc_t));
-	spl_random_init();
+	if ((rc = spl_random_init()))
+		goto out0;
 
 	if ((rc = spl_kvmem_init()))
 		goto out1;
@@ -841,8 +855,13 @@ spl_init(void)
 	if ((rc = spl_zlib_init()))
 		goto out7;
 
+	if ((rc = spl_zone_init()))
+		goto out8;
+
 	return (rc);
 
+out8:
+	spl_zlib_fini();
 out7:
 	spl_kstat_fini();
 out6:
@@ -856,12 +875,15 @@ out3:
 out2:
 	spl_kvmem_fini();
 out1:
+	spl_random_fini();
+out0:
 	return (rc);
 }
 
 static void __exit
 spl_fini(void)
 {
+	spl_zone_fini();
 	spl_zlib_fini();
 	spl_kstat_fini();
 	spl_proc_fini();
@@ -875,7 +897,7 @@ spl_fini(void)
 module_init(spl_init);
 module_exit(spl_fini);
 
-ZFS_MODULE_DESCRIPTION("Solaris Porting Layer");
-ZFS_MODULE_AUTHOR(ZFS_META_AUTHOR);
-ZFS_MODULE_LICENSE("GPL");
-ZFS_MODULE_VERSION(ZFS_META_VERSION "-" ZFS_META_RELEASE);
+MODULE_DESCRIPTION("Solaris Porting Layer");
+MODULE_AUTHOR(ZFS_META_AUTHOR);
+MODULE_LICENSE("GPL");
+MODULE_VERSION(ZFS_META_VERSION "-" ZFS_META_RELEASE);

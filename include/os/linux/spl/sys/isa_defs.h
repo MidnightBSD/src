@@ -47,9 +47,6 @@
 #endif
 #endif
 
-#define	_ALIGNMENT_REQUIRED	1
-
-
 /* i386 arch specific defines */
 #elif defined(__i386) || defined(__i386__)
 
@@ -64,8 +61,6 @@
 #if !defined(_ILP32)
 #define	_ILP32
 #endif
-
-#define	_ALIGNMENT_REQUIRED	0
 
 /* powerpc (ppc64) arch specific defines */
 #elif defined(__powerpc) || defined(__powerpc__) || defined(__powerpc64__)
@@ -88,14 +83,8 @@
 #endif
 #endif
 
-/*
- * Illumos doesn't define _ALIGNMENT_REQUIRED for PPC, so default to 1
- * out of paranoia.
- */
-#define	_ALIGNMENT_REQUIRED	1
-
 /* arm arch specific defines */
-#elif defined(__arm) || defined(__arm__) || defined(__aarch64__)
+#elif defined(__arm) || defined(__arm__)
 
 #if !defined(__arm)
 #define	__arm
@@ -105,27 +94,28 @@
 #define	__arm__
 #endif
 
-#if defined(__aarch64__)
-#if !defined(_LP64)
-#define	_LP64
-#endif
-#else
 #if !defined(_ILP32)
 #define	_ILP32
 #endif
-#endif
 
-#if defined(__ARMEL__) || defined(__AARCH64EL__)
+#if defined(__ARMEL__)
 #define	_ZFS_LITTLE_ENDIAN
 #else
 #define	_ZFS_BIG_ENDIAN
 #endif
 
-/*
- * Illumos doesn't define _ALIGNMENT_REQUIRED for ARM, so default to 1
- * out of paranoia.
- */
-#define	_ALIGNMENT_REQUIRED	1
+/* aarch64 arch specific defines */
+#elif defined(__aarch64__)
+
+#if !defined(_LP64)
+#define	_LP64
+#endif
+
+#if defined(__AARCH64EL__)
+#define	_ZFS_LITTLE_ENDIAN
+#else
+#define	_ZFS_BIG_ENDIAN
+#endif
 
 /* sparc arch specific defines */
 #elif defined(__sparc) || defined(__sparc__)
@@ -150,7 +140,6 @@
 
 #define	_ZFS_BIG_ENDIAN
 #define	_SUNOS_VTOC_16
-#define	_ALIGNMENT_REQUIRED	1
 
 /* s390 arch specific defines */
 #elif defined(__s390__)
@@ -165,12 +154,6 @@
 #endif
 
 #define	_ZFS_BIG_ENDIAN
-
-/*
- * Illumos doesn't define _ALIGNMENT_REQUIRED for s390, so default to 1
- * out of paranoia.
- */
-#define	_ALIGNMENT_REQUIRED	1
 
 /* MIPS arch specific defines */
 #elif defined(__mips__)
@@ -190,17 +173,15 @@
 #define	_SUNOS_VTOC_16
 
 /*
- * Illumos doesn't define _ALIGNMENT_REQUIRED for MIPS, so default to 1
- * out of paranoia.
- */
-#define	_ALIGNMENT_REQUIRED	1
-
-/*
  * RISC-V arch specific defines
  * only RV64G (including atomic) LP64 is supported yet
  */
-#elif defined(__riscv) && defined(_LP64) && _LP64 && \
+#elif defined(__riscv) && defined(__riscv_xlen) && __riscv_xlen == 64 && \
 	defined(__riscv_atomic) && __riscv_atomic
+
+#if !defined(_LP64)
+#define	_LP64 1
+#endif
 
 #ifndef	__riscv__
 #define	__riscv__
@@ -214,12 +195,26 @@
 
 #define	_SUNOS_VTOC_16
 
+/*
+ * LoongArch arch specific defines
+ * only LoongArch64 is supported yet
+ */
+#elif defined(__loongarch__) && defined(__loongarch_lp64)
+
+#if !defined(_LP64)
+#define	_LP64
+#endif
+
+#define	_ZFS_LITTLE_ENDIAN
+#define	_SUNOS_VTOC_16
+
+/* not all LoongArch cores support unaligned accesses in hardware */
 #define	_ALIGNMENT_REQUIRED	1
 
 #else
 /*
  * Currently supported:
- * x86_64, x32, i386, arm, powerpc, s390, sparc, mips, and RV64G
+ * x86_64, x32, i386, arm, powerpc, s390, sparc, mips, RV64G, and LoongArch64
  */
 #error "Unsupported ISA type"
 #endif

@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -57,11 +57,12 @@ extern int zfs_dbgmsg_enable;
 #define	ZFS_DEBUG_TRIM			(1 << 11)
 #define	ZFS_DEBUG_LOG_SPACEMAP		(1 << 12)
 #define	ZFS_DEBUG_METASLAB_ALLOC	(1 << 13)
+#define	ZFS_DEBUG_BRT			(1 << 14)
 
 extern void __set_error(const char *file, const char *func, int line, int err);
 extern void __zfs_dbgmsg(char *buf);
 extern void __dprintf(boolean_t dprint, const char *file, const char *func,
-    int line, const char *fmt, ...)  __attribute__((format(printf, 5, 6)));
+    int line, const char *fmt, ...)  __attribute__((format(__printf__, 5, 6)));
 
 /*
  * Some general principles for using zfs_dbgmsg():
@@ -102,7 +103,7 @@ extern void zfs_dbgmsg_fini(void);
 
 #ifndef _KERNEL
 extern int dprintf_find_string(const char *string);
-extern void zfs_dbgmsg_print(const char *tag);
+extern void zfs_dbgmsg_print(int fd, const char *tag);
 #endif
 
 #ifdef	__cplusplus

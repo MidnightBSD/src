@@ -45,13 +45,13 @@
 
 #include <sys/simd.h>
 #include <sys/spa_checksum.h>
-#include <sys/strings.h>
+#include <sys/string.h>
 #include <zfs_fletcher.h>
 
 static void
 fletcher_4_aarch64_neon_init(fletcher_4_ctx_t *ctx)
 {
-	bzero(ctx->aarch64_neon, 4 * sizeof (zfs_fletcher_aarch64_neon_t));
+	memset(ctx->aarch64_neon, 0, 4 * sizeof (zfs_fletcher_aarch64_neon_t));
 }
 
 static void
@@ -144,17 +144,13 @@ unsigned char TMP2 __attribute__((vector_size(16)));
 unsigned char SRC __attribute__((vector_size(16)));
 #endif
 
-	kfpu_begin();
-
 	NEON_INIT_LOOP();
 
-	for (; ip < ipend; ip += 2) {
+	do {
 		NEON_MAIN_LOOP(NEON_DONT_REVERSE);
-	}
+	} while ((ip += 2) < ipend);
 
 	NEON_FINI_LOOP();
-
-	kfpu_end();
 }
 
 static void
@@ -183,17 +179,13 @@ unsigned char TMP2 __attribute__((vector_size(16)));
 unsigned char SRC __attribute__((vector_size(16)));
 #endif
 
-	kfpu_begin();
-
 	NEON_INIT_LOOP();
 
-	for (; ip < ipend; ip += 2) {
+	do {
 		NEON_MAIN_LOOP(NEON_DO_REVERSE);
-	}
+	} while ((ip += 2) < ipend);
 
 	NEON_FINI_LOOP();
-
-	kfpu_end();
 }
 
 static boolean_t fletcher_4_aarch64_neon_valid(void)
@@ -209,6 +201,7 @@ const fletcher_4_ops_t fletcher_4_aarch64_neon_ops = {
 	.compute_byteswap = fletcher_4_aarch64_neon_byteswap,
 	.fini_byteswap = fletcher_4_aarch64_neon_fini,
 	.valid = fletcher_4_aarch64_neon_valid,
+	.uses_fpu = B_TRUE,
 	.name = "aarch64_neon"
 };
 

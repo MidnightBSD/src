@@ -7,7 +7,7 @@
 # You may not use this file except in compliance with the License.
 #
 # You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
-# or http://www.opensolaris.org/os/licensing.
+# or https://opensource.org/licenses/CDDL-1.0.
 # See the License for the specific language governing permissions
 # and limitations under the License.
 #
@@ -75,7 +75,9 @@ log_must poolexists $TESTPOOL1
 
 unset NOINUSE_CHECK
 log_mustnot zpool add -f $TESTPOOL $DISK1
+log_mustnot zpool add --allow-in-use $TESTPOOL $DISK1
 log_mustnot zpool add -f $TESTPOOL $mnttab_dev
+log_mustnot zpool add --allow-in-use $TESTPOOL $mnttab_dev
 if is_linux; then
        log_mustnot zpool add $TESTPOOL $vfstab_dev
 else

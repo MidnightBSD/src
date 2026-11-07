@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -92,7 +92,7 @@
  * will be loaded into memory and shouldn't take up an inordinate amount of
  * space. We settled on ~500000 entries, corresponding to roughly 128M.
  */
-unsigned long zfs_livelist_max_entries = 500000;
+uint64_t zfs_livelist_max_entries = 500000;
 
 /*
  * We can approximate how much of a performance gain a livelist will give us
@@ -173,8 +173,8 @@ dsl_deadlist_load_tree(dsl_deadlist_t *dl)
 		 * in parallel.  Then open them all in a second pass.
 		 */
 		dle->dle_bpobj.bpo_object = za.za_first_integer;
-		dmu_prefetch(dl->dl_os, dle->dle_bpobj.bpo_object,
-		    0, 0, 0, ZIO_PRIORITY_SYNC_READ);
+		dmu_prefetch_dnode(dl->dl_os, dle->dle_bpobj.bpo_object,
+		    ZIO_PRIORITY_SYNC_READ);
 
 		avl_add(&dl->dl_tree, dle);
 	}
@@ -235,8 +235,8 @@ dsl_deadlist_load_cache(dsl_deadlist_t *dl)
 		 * in parallel.  Then open them all in a second pass.
 		 */
 		dlce->dlce_bpobj = za.za_first_integer;
-		dmu_prefetch(dl->dl_os, dlce->dlce_bpobj,
-		    0, 0, 0, ZIO_PRIORITY_SYNC_READ);
+		dmu_prefetch_dnode(dl->dl_os, dlce->dlce_bpobj,
+		    ZIO_PRIORITY_SYNC_READ);
 		avl_add(&dl->dl_cache, dlce);
 	}
 	VERIFY3U(error, ==, ENOENT);
@@ -554,6 +554,7 @@ dsl_deadlist_remove_key(dsl_deadlist_t *dl, uint64_t mintxg, dmu_tx_t *tx)
 	dle = avl_find(&dl->dl_tree, &dle_tofind, NULL);
 	ASSERT3P(dle, !=, NULL);
 	dle_prev = AVL_PREV(&dl->dl_tree, dle);
+	ASSERT3P(dle_prev, !=, NULL);
 
 	dle_enqueue_subobj(dl, dle_prev, dle->dle_bpobj.bpo_object, tx);
 
@@ -891,9 +892,9 @@ dsl_deadlist_merge(dsl_deadlist_t *dl, uint64_t obj, dmu_tx_t *tx)
 	for (zap_cursor_init(&zc, dl->dl_os, obj);
 	    (error = zap_cursor_retrieve(&zc, za)) == 0;
 	    zap_cursor_advance(&zc)) {
-		uint64_t mintxg = zfs_strtonum(za->za_name, NULL);
-		dsl_deadlist_insert_bpobj(dl, za->za_first_integer, mintxg, tx);
-		VERIFY0(zap_remove_int(dl->dl_os, obj, mintxg, tx));
+		dsl_deadlist_insert_bpobj(dl, za->za_first_integer,
+		    zfs_strtonum(za->za_name, NULL), tx);
+		VERIFY0(zap_remove(dl->dl_os, obj, za->za_name, tx));
 		if (perror == 0) {
 			dsl_deadlist_prefetch_bpobj(dl, pza->za_first_integer,
 			    zfs_strtonum(pza->za_name, NULL));
@@ -908,7 +909,7 @@ dsl_deadlist_merge(dsl_deadlist_t *dl, uint64_t obj, dmu_tx_t *tx)
 	VERIFY0(dmu_bonus_hold(dl->dl_os, obj, FTAG, &bonus));
 	dlp = bonus->db_data;
 	dmu_buf_will_dirty(bonus, tx);
-	bzero(dlp, sizeof (*dlp));
+	memset(dlp, 0, sizeof (*dlp));
 	dmu_buf_rele(bonus, FTAG);
 	mutex_exit(&dl->dl_lock);
 
@@ -999,8 +1000,6 @@ livelist_compare(const void *larg, const void *rarg)
 	/* if vdevs are equal, sort by offsets. */
 	uint64_t l_dva0_offset = DVA_GET_OFFSET(&l->blk_dva[0]);
 	uint64_t r_dva0_offset = DVA_GET_OFFSET(&r->blk_dva[0]);
-	if (l_dva0_offset == r_dva0_offset)
-		ASSERT3U(l->blk_birth, ==, r->blk_birth);
 	return (TREE_CMP(l_dva0_offset, r_dva0_offset));
 }
 
@@ -1015,9 +1014,9 @@ struct livelist_iter_arg {
  * and used to match up ALLOC/FREE pairs. ALLOC'd blkptrs without a
  * corresponding FREE are stored in the supplied bplist.
  *
- * Note that multiple FREE and ALLOC entries for the same blkptr may
- * be encountered when dedup is involved. For this reason we keep a
- * refcount for all the FREE entries of each blkptr and ensure that
+ * Note that multiple FREE and ALLOC entries for the same blkptr may be
+ * encountered when dedup or block cloning is involved.  For this reason we
+ * keep a refcount for all the FREE entries of each blkptr and ensure that
  * each of those FREE entries has a corresponding ALLOC preceding it.
  */
 static int
@@ -1036,6 +1035,13 @@ dsl_livelist_iterate(void *arg, const blkptr_t *bp, boolean_t bp_freed,
 	livelist_entry_t node;
 	node.le_bp = *bp;
 	livelist_entry_t *found = avl_find(avl, &node, NULL);
+	if (found) {
+		ASSERT3U(BP_GET_PSIZE(bp), ==, BP_GET_PSIZE(&found->le_bp));
+		ASSERT3U(BP_GET_CHECKSUM(bp), ==,
+		    BP_GET_CHECKSUM(&found->le_bp));
+		ASSERT3U(BP_PHYSICAL_BIRTH(bp), ==,
+		    BP_PHYSICAL_BIRTH(&found->le_bp));
+	}
 	if (bp_freed) {
 		if (found == NULL) {
 			/* first free entry for this blkptr */
@@ -1045,10 +1051,10 @@ dsl_livelist_iterate(void *arg, const blkptr_t *bp, boolean_t bp_freed,
 			e->le_refcnt = 1;
 			avl_add(avl, e);
 		} else {
-			/* dedup block free */
-			ASSERT(BP_GET_DEDUP(bp));
-			ASSERT3U(BP_GET_CHECKSUM(bp), ==,
-			    BP_GET_CHECKSUM(&found->le_bp));
+			/*
+			 * Deduped or cloned block free.  We could assert D bit
+			 * for dedup, but there is no such one for cloning.
+			 */
 			ASSERT3U(found->le_refcnt + 1, >, found->le_refcnt);
 			found->le_refcnt++;
 		}
@@ -1064,14 +1070,6 @@ dsl_livelist_iterate(void *arg, const blkptr_t *bp, boolean_t bp_freed,
 				/* all tracked free pairs have been matched */
 				avl_remove(avl, found);
 				kmem_free(found, sizeof (livelist_entry_t));
-			} else {
-				/*
-				 * This is definitely a deduped blkptr so
-				 * let's validate it.
-				 */
-				ASSERT(BP_GET_DEDUP(bp));
-				ASSERT3U(BP_GET_CHECKSUM(bp), ==,
-				    BP_GET_CHECKSUM(&found->le_bp));
 			}
 		}
 	}
@@ -1108,10 +1106,8 @@ dsl_process_sub_livelist(bpobj_t *bpobj, bplist_t *to_free, zthr_t *t,
 	return (err);
 }
 
-/* BEGIN CSTYLED */
-ZFS_MODULE_PARAM(zfs_livelist, zfs_livelist_, max_entries, ULONG, ZMOD_RW,
+ZFS_MODULE_PARAM(zfs_livelist, zfs_livelist_, max_entries, U64, ZMOD_RW,
 	"Size to start the next sub-livelist in a livelist");
 
 ZFS_MODULE_PARAM(zfs_livelist, zfs_livelist_, min_percent_shared, INT, ZMOD_RW,
 	"Threshold at which livelist is disabled");
-/* END CSTYLED */

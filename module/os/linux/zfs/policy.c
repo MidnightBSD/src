@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -23,7 +23,11 @@
  * Copyright (c) 2003, 2010, Oracle and/or its affiliates. All rights reserved.
  * Copyright 2013, Joyent, Inc. All rights reserved.
  * Copyright (C) 2016 Lawrence Livermore National Security, LLC.
- *
+ * Copyright (c) 2025, Rob Norris <robn@despairlabs.com>
+ * Copyright (c) 2026, TrueNAS.
+ */
+
+/*
  * For Linux the vast majority of this enforcement is already handled via
  * the standard Linux VFS permission checks.  However certain administrative
  * commands which bypass the standard mechanisms may need to make use of
@@ -34,34 +38,38 @@
 #include <linux/security.h>
 #include <linux/vfs_compat.h>
 
-/*
- * The passed credentials cannot be directly verified because Linux only
- * provides and interface to check the *current* process credentials.  In
- * order to handle this the capable() test is only run when the passed
- * credentials match the current process credentials or the kcred.  In
- * all other cases this function must fail and return the passed err.
- */
 static int
 priv_policy_ns(const cred_t *cr, int capability, int err,
     struct user_namespace *ns)
 {
-	if (cr != CRED() && (cr != kcred))
-		return (err);
+	/*
+	 * The passed credentials cannot be directly verified because Linux
+	 * only provides an interface to check the *current* process
+	 * credentials.  In order to handle this we check if the passed in
+	 * creds match the current process credentials or the kcred.  If not,
+	 * we swap the passed credentials into the current task, perform the
+	 * check, and then revert it before returning.
+	 */
+	const cred_t *old =
+	    (cr != CRED() && cr != kcred) ? override_creds(cr) : NULL;
 
 #if defined(CONFIG_USER_NS)
-	if (!(ns ? ns_capable(ns, capability) : capable(capability)))
+	if (ns ? ns_capable(ns, capability) : capable(capability))
 #else
-	if (!capable(capability))
+	if (capable(capability))
 #endif
-		return (err);
+		err = 0;
 
-	return (0);
+	if (old)
+		revert_creds(old);
+
+	return (err);
 }
 
 static int
 priv_policy(const cred_t *cr, int capability, int err)
 {
-	return (priv_policy_ns(cr, capability, err, NULL));
+	return (priv_policy_ns(cr, capability, err, cr->user_ns));
 }
 
 static int
@@ -81,21 +89,14 @@ priv_policy_user(const cred_t *cr, int capability, int err)
 }
 
 /*
- * Checks for operations that are either client-only or are used by
- * both clients and servers.
- */
-int
-secpolicy_nfs(const cred_t *cr)
-{
-	return (priv_policy(cr, CAP_SYS_ADMIN, EPERM));
-}
-
-/*
  * Catch all system configuration.
  */
 int
 secpolicy_sys_config(const cred_t *cr, boolean_t checkonly)
 {
+	/* pools can only be manipulated from the global zone */
+	if (crgetzoneid(cr) != GLOBAL_ZONEID)
+		return (EACCES);
 	return (priv_policy(cr, CAP_SYS_ADMIN, EPERM));
 }
 
@@ -214,8 +215,10 @@ secpolicy_vnode_setid_retain(struct znode *zp __maybe_unused, const cred_t *cr,
  * Determine that subject can set the file setgid flag.
  */
 int
-secpolicy_vnode_setids_setgids(const cred_t *cr, gid_t gid)
+secpolicy_vnode_setids_setgids(const cred_t *cr, gid_t gid, zidmap_t *mnt_ns,
+    struct user_namespace *fs_ns)
 {
+	gid = zfs_gid_to_vfsgid(mnt_ns, fs_ns, gid);
 #if defined(CONFIG_USER_NS)
 	if (!kgid_has_mapping(cr->user_ns, SGID_TO_KGID(gid)))
 		return (EPERM);
@@ -233,6 +236,9 @@ secpolicy_vnode_setids_setgids(const cred_t *cr, gid_t gid)
 int
 secpolicy_zinject(const cred_t *cr)
 {
+	/* zinject is only in the global zone */
+	if (crgetzoneid(cr) != GLOBAL_ZONEID)
+		return (EACCES);
 	return (priv_policy(cr, CAP_SYS_ADMIN, EACCES));
 }
 
@@ -243,29 +249,15 @@ secpolicy_zinject(const cred_t *cr)
 int
 secpolicy_zfs(const cred_t *cr)
 {
+	/*
+	 * Note that CAP_SYS_ADMIN is effectively "root"-like privileges in
+	 * the given user namespace. Those happen to include mount control
+	 * (matching PRIV_SYS_MOUNT on illumos). There is not a narrower
+	 * permission available. It's important that callers do narrower
+	 * permission checks (eg zone checks) along with this call.
+	 *   -- robn, 2026-08-14
+	 */
 	return (priv_policy(cr, CAP_SYS_ADMIN, EACCES));
-}
-
-/*
- * Equivalent to secpolicy_zfs(), but works even if the cred_t is not that of
- * the current process.  Takes both cred_t and proc_t so that this can work
- * easily on all platforms.
- *
- * The has_capability() function was first exported in the 4.10 Linux kernel
- * then backported to some LTS kernels.  Prior to this change there was no
- * mechanism to perform this check therefore EACCES is returned when the
- * functionality is not present in the kernel.
- */
-int
-secpolicy_zfs_proc(const cred_t *cr, proc_t *proc)
-{
-#if defined(HAVE_HAS_CAPABILITY)
-	if (!has_capability(proc, CAP_SYS_ADMIN))
-		return (EACCES);
-	return (0);
-#else
-	return (EACCES);
-#endif
 }
 
 void
@@ -284,8 +276,11 @@ secpolicy_setid_clear(vattr_t *vap, cred_t *cr)
  * Determine that subject can set the file setid flags.
  */
 static int
-secpolicy_vnode_setid_modify(const cred_t *cr, uid_t owner)
+secpolicy_vnode_setid_modify(const cred_t *cr, uid_t owner, zidmap_t *mnt_ns,
+    struct user_namespace *fs_ns)
 {
+	owner = zfs_uid_to_vfsuid(mnt_ns, fs_ns, owner);
+
 	if (crgetuid(cr) == owner)
 		return (0);
 
@@ -310,13 +305,14 @@ secpolicy_vnode_stky_modify(const cred_t *cr)
 
 int
 secpolicy_setid_setsticky_clear(struct inode *ip, vattr_t *vap,
-    const vattr_t *ovap, cred_t *cr)
+    const vattr_t *ovap, cred_t *cr, zidmap_t *mnt_ns,
+    struct user_namespace *fs_ns)
 {
 	int error;
 
 	if ((vap->va_mode & S_ISUID) != 0 &&
 	    (error = secpolicy_vnode_setid_modify(cr,
-	    ovap->va_uid)) != 0) {
+	    ovap->va_uid, mnt_ns, fs_ns)) != 0) {
 		return (error);
 	}
 
@@ -334,7 +330,8 @@ secpolicy_setid_setsticky_clear(struct inode *ip, vattr_t *vap,
 	 * group-id bit.
 	 */
 	if ((vap->va_mode & S_ISGID) != 0 &&
-	    secpolicy_vnode_setids_setgids(cr, ovap->va_gid) != 0) {
+	    secpolicy_vnode_setids_setgids(cr, ovap->va_gid,
+	    mnt_ns, fs_ns) != 0) {
 		vap->va_mode &= ~S_ISGID;
 	}
 

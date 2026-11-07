@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -56,12 +56,12 @@ extern "C" {
 #define	HDR_SET_LSIZE(hdr, x) do { \
 	ASSERT(IS_P2ALIGNED(x, 1U << SPA_MINBLOCKSHIFT)); \
 	(hdr)->b_lsize = ((x) >> SPA_MINBLOCKSHIFT); \
-_NOTE(CONSTCOND) } while (0)
+} while (0)
 
 #define	HDR_SET_PSIZE(hdr, x) do { \
 	ASSERT(IS_P2ALIGNED((x), 1U << SPA_MINBLOCKSHIFT)); \
 	(hdr)->b_psize = ((x) >> SPA_MINBLOCKSHIFT); \
-_NOTE(CONSTCOND) } while (0)
+} while (0)
 
 #define	HDR_GET_LSIZE(hdr)	((hdr)->b_lsize << SPA_MINBLOCKSHIFT)
 #define	HDR_GET_PSIZE(hdr)	((hdr)->b_psize << SPA_MINBLOCKSHIFT)
@@ -81,10 +81,10 @@ typedef struct arc_prune arc_prune_t;
 typedef void arc_read_done_func_t(zio_t *zio, const zbookmark_phys_t *zb,
     const blkptr_t *bp, arc_buf_t *buf, void *priv);
 typedef void arc_write_done_func_t(zio_t *zio, arc_buf_t *buf, void *priv);
-typedef void arc_prune_func_t(int64_t bytes, void *priv);
+typedef void arc_prune_func_t(uint64_t bytes, void *priv);
 
 /* Shared module parameters */
-extern int zfs_arc_average_blocksize;
+extern uint_t zfs_arc_average_blocksize;
 extern int l2arc_exclude_special;
 
 /* generic arc_done_func_t's which you can use */
@@ -115,7 +115,7 @@ typedef enum arc_flags
 	ARC_FLAG_PREFETCH		= 1 << 2,	/* I/O is a prefetch */
 	ARC_FLAG_CACHED			= 1 << 3,	/* I/O was in cache */
 	ARC_FLAG_L2CACHE		= 1 << 4,	/* cache in L2ARC */
-	ARC_FLAG_PREDICTIVE_PREFETCH	= 1 << 5,	/* I/O from zfetch */
+	ARC_FLAG_UNCACHED		= 1 << 5,	/* evict after use */
 	ARC_FLAG_PRESCIENT_PREFETCH	= 1 << 6,	/* long min lifespan */
 
 	/*
@@ -195,13 +195,11 @@ typedef enum arc_buf_flags {
 struct arc_buf {
 	arc_buf_hdr_t		*b_hdr;
 	arc_buf_t		*b_next;
-	kmutex_t		b_evict_lock;
 	void			*b_data;
 	arc_buf_flags_t		b_flags;
 };
 
 typedef enum arc_buf_contents {
-	ARC_BUFC_INVALID,			/* invalid type */
 	ARC_BUFC_DATA,				/* buffer contains data */
 	ARC_BUFC_METADATA,			/* buffer contains metadata */
 	ARC_BUFC_NUMTYPES
@@ -229,6 +227,7 @@ typedef enum arc_state_type {
 	ARC_STATE_MFU,
 	ARC_STATE_MFU_GHOST,
 	ARC_STATE_L2C_ONLY,
+	ARC_STATE_UNCACHED,
 	ARC_STATE_NUMTYPES
 } arc_state_type_t;
 
@@ -264,12 +263,12 @@ int arc_untransform(arc_buf_t *buf, spa_t *spa, const zbookmark_phys_t *zb,
 void arc_convert_to_raw(arc_buf_t *buf, uint64_t dsobj, boolean_t byteorder,
     dmu_object_type_t ot, const uint8_t *salt, const uint8_t *iv,
     const uint8_t *mac);
-arc_buf_t *arc_alloc_buf(spa_t *spa, void *tag, arc_buf_contents_t type,
+arc_buf_t *arc_alloc_buf(spa_t *spa, const void *tag, arc_buf_contents_t type,
     int32_t size);
-arc_buf_t *arc_alloc_compressed_buf(spa_t *spa, void *tag,
+arc_buf_t *arc_alloc_compressed_buf(spa_t *spa, const void *tag,
     uint64_t psize, uint64_t lsize, enum zio_compress compression_type,
     uint8_t complevel);
-arc_buf_t *arc_alloc_raw_buf(spa_t *spa, void *tag, uint64_t dsobj,
+arc_buf_t *arc_alloc_raw_buf(spa_t *spa, const void *tag, uint64_t dsobj,
     boolean_t byteorder, const uint8_t *salt, const uint8_t *iv,
     const uint8_t *mac, dmu_object_type_t ot, uint64_t psize, uint64_t lsize,
     enum zio_compress compression_type, uint8_t complevel);
@@ -281,31 +280,32 @@ arc_buf_t *arc_loan_raw_buf(spa_t *spa, uint64_t dsobj, boolean_t byteorder,
     const uint8_t *salt, const uint8_t *iv, const uint8_t *mac,
     dmu_object_type_t ot, uint64_t psize, uint64_t lsize,
     enum zio_compress compression_type, uint8_t complevel);
-void arc_return_buf(arc_buf_t *buf, void *tag);
-void arc_loan_inuse_buf(arc_buf_t *buf, void *tag);
-void arc_buf_destroy(arc_buf_t *buf, void *tag);
+void arc_return_buf(arc_buf_t *buf, const void *tag);
+void arc_loan_inuse_buf(arc_buf_t *buf, const void *tag);
+void arc_buf_destroy(arc_buf_t *buf, const void *tag);
 void arc_buf_info(arc_buf_t *buf, arc_buf_info_t *abi, int state_index);
 uint64_t arc_buf_size(arc_buf_t *buf);
 uint64_t arc_buf_lsize(arc_buf_t *buf);
 void arc_buf_access(arc_buf_t *buf);
-void arc_release(arc_buf_t *buf, void *tag);
+void arc_release(arc_buf_t *buf, const void *tag);
 int arc_released(arc_buf_t *buf);
 void arc_buf_sigsegv(int sig, siginfo_t *si, void *unused);
 void arc_buf_freeze(arc_buf_t *buf);
 void arc_buf_thaw(arc_buf_t *buf);
 #ifdef ZFS_DEBUG
 int arc_referenced(arc_buf_t *buf);
+#else
+#define	arc_referenced(buf) ((void) sizeof (buf), 0)
 #endif
 
 int arc_read(zio_t *pio, spa_t *spa, const blkptr_t *bp,
     arc_read_done_func_t *done, void *priv, zio_priority_t priority,
     int flags, arc_flags_t *arc_flags, const zbookmark_phys_t *zb);
-zio_t *arc_write(zio_t *pio, spa_t *spa, uint64_t txg,
-    blkptr_t *bp, arc_buf_t *buf, boolean_t l2arc, const zio_prop_t *zp,
+zio_t *arc_write(zio_t *pio, spa_t *spa, uint64_t txg, blkptr_t *bp,
+    arc_buf_t *buf, boolean_t uncached, boolean_t l2arc, const zio_prop_t *zp,
     arc_write_done_func_t *ready, arc_write_done_func_t *child_ready,
-    arc_write_done_func_t *physdone, arc_write_done_func_t *done,
-    void *priv, zio_priority_t priority, int zio_flags,
-    const zbookmark_phys_t *zb);
+    arc_write_done_func_t *done, void *priv, zio_priority_t priority,
+    int zio_flags, const zbookmark_phys_t *zb);
 
 arc_prune_t *arc_add_prune_callback(arc_prune_func_t *func, void *priv);
 void arc_remove_prune_callback(arc_prune_t *p);

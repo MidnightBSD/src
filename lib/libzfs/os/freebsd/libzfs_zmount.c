@@ -28,9 +28,6 @@
  * This file implements Solaris compatible zmount() function.
  */
 
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
-
 #include <sys/param.h>
 #include <sys/mount.h>
 #include <sys/uio.h>
@@ -43,7 +40,7 @@ __FBSDID("$FreeBSD$");
 #include <sys/errno.h>
 #include <libzfs.h>
 
-#include "libzfs_impl.h"
+#include "../../libzfs_impl.h"
 
 static void
 build_iovec(struct iovec **iov, int *iovlen, const char *name, void *val,
@@ -73,34 +70,30 @@ build_iovec(struct iovec **iov, int *iovlen, const char *name, void *val,
 	*iovlen = ++i;
 }
 
-static int
-do_mount_(const char *spec, const char *dir, int mflag, char *fstype,
-    char *dataptr, int datalen, char *optptr, int optlen)
+int
+do_mount(zfs_handle_t *zhp, const char *mntpt, const char *opts, int flags)
 {
 	struct iovec *iov;
 	char *optstr, *p, *tofree;
 	int iovlen, rv;
+	const char *spec = zfs_get_name(zhp);
 
 	assert(spec != NULL);
-	assert(dir != NULL);
-	assert(fstype != NULL);
-	assert(strcmp(fstype, MNTTYPE_ZFS) == 0);
-	assert(dataptr == NULL);
-	assert(datalen == 0);
-	assert(optptr != NULL);
-	assert(optlen > 0);
+	assert(mntpt != NULL);
+	assert(opts != NULL);
 
-	tofree = optstr = strdup(optptr);
+	tofree = optstr = strdup(opts);
 	assert(optstr != NULL);
 
 	iov = NULL;
 	iovlen = 0;
 	if (strstr(optstr, MNTOPT_REMOUNT) != NULL)
 		build_iovec(&iov, &iovlen, "update", NULL, 0);
-	if (mflag & MS_RDONLY)
+	if (flags & MS_RDONLY)
 		build_iovec(&iov, &iovlen, "ro", NULL, 0);
-	build_iovec(&iov, &iovlen, "fstype", fstype, (size_t)-1);
-	build_iovec(&iov, &iovlen, "fspath", __DECONST(char *, dir),
+	build_iovec(&iov, &iovlen, "fstype", __DECONST(char *, MNTTYPE_ZFS),
+	    (size_t)-1);
+	build_iovec(&iov, &iovlen, "fspath", __DECONST(char *, mntpt),
 	    (size_t)-1);
 	build_iovec(&iov, &iovlen, "from", __DECONST(char *, spec), (size_t)-1);
 	while ((p = strsep(&optstr, ",/")) != NULL)
@@ -110,19 +103,13 @@ do_mount_(const char *spec, const char *dir, int mflag, char *fstype,
 	if (rv < 0)
 		return (errno);
 	return (rv);
+
 }
 
 int
-do_mount(zfs_handle_t *zhp, const char *mntpt, char *opts, int flags)
+do_unmount(zfs_handle_t *zhp, const char *mntpt, int flags)
 {
-
-	return (do_mount_(zfs_get_name(zhp), mntpt, flags, MNTTYPE_ZFS, NULL, 0,
-	    opts, sizeof (mntpt)));
-}
-
-int
-do_unmount(const char *mntpt, int flags)
-{
+	(void) zhp;
 	if (unmount(mntpt, flags) < 0)
 		return (errno);
 	return (0);
@@ -132,4 +119,18 @@ int
 zfs_mount_delegation_check(void)
 {
 	return (0);
+}
+
+/* Called from the tail end of zpool_disable_datasets() */
+void
+zpool_disable_datasets_os(zpool_handle_t *zhp, boolean_t force)
+{
+	(void) zhp, (void) force;
+}
+
+/* Called from the tail end of zfs_unmount() */
+void
+zpool_disable_volume_os(const char *name)
+{
+	(void) name;
 }

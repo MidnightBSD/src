@@ -27,9 +27,6 @@
  * Portions of this file are derived from sys/geom/eli/g_eli_hmac.c
  */
 
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
-
 #include <sys/types.h>
 #include <sys/errno.h>
 
@@ -39,8 +36,6 @@ __FBSDID("$FreeBSD$");
 #include <sys/sysctl.h>
 #include <opencrypto/cryptodev.h>
 #include <opencrypto/xform.h>
-#else
-#include <strings.h>
 #endif
 
 #include <sys/zio_crypt.h>
@@ -69,11 +64,11 @@ crypto_mac_init(struct hmac_ctx *ctx, const crypto_key_t *c_key)
 	/*
 	 * This code is based on the similar code in geom/eli/g_eli_hmac.c
 	 */
-	explicit_bzero(key, sizeof (key));
+	memset(key, 0, sizeof (key));
 	if (c_key->ck_length  == 0)
 		/* do nothing */;
 	else if (cl_bytes <= SHA512_HMAC_BLOCK_SIZE)
-		bcopy(c_key->ck_data, key, cl_bytes);
+		memcpy(key, c_key->ck_data, cl_bytes);
 	else {
 		/*
 		 * If key is longer than 128 bytes reset it to
@@ -89,16 +84,16 @@ crypto_mac_init(struct hmac_ctx *ctx, const crypto_key_t *c_key)
 		k_ipad[i] = key[i] ^ 0x36;
 		k_opad[i] = key[i] ^ 0x5c;
 	}
-	explicit_bzero(key, sizeof (key));
+	memset(key, 0, sizeof (key));
 
 	/* Start inner SHA512. */
 	SHA512_Init(&ctx->innerctx);
 	SHA512_Update(&ctx->innerctx, k_ipad, sizeof (k_ipad));
-	explicit_bzero(k_ipad, sizeof (k_ipad));
+	memset(k_ipad, 0, sizeof (k_ipad));
 	/* Start outer SHA512. */
 	SHA512_Init(&ctx->outerctx);
 	SHA512_Update(&ctx->outerctx, k_opad, sizeof (k_opad));
-	explicit_bzero(k_opad, sizeof (k_opad));
+	memset(k_opad, 0, sizeof (k_opad));
 }
 
 void
@@ -119,12 +114,12 @@ crypto_mac_final(struct hmac_ctx *ctx, void *md, size_t mdsize)
 	SHA512_Update(&ctx->outerctx, digest, sizeof (digest));
 	SHA512_Final(digest, &ctx->outerctx);
 
-	explicit_bzero(ctx, sizeof (*ctx));
+	memset(ctx, 0, sizeof (*ctx));
 	/* mdsize == 0 means "Give me the whole hash!" */
 	if (mdsize == 0)
 		mdsize = SHA512_DIGEST_LENGTH;
-	bcopy(digest, md, mdsize);
-	explicit_bzero(digest, sizeof (digest));
+	memcpy(md, digest, mdsize);
+	memset(digest, 0, sizeof (digest));
 }
 
 void
@@ -163,7 +158,7 @@ freebsd_crypt_freesession(freebsd_crypt_session_t *sess)
 {
 	mtx_destroy(&sess->fs_lock);
 	crypto_freesession(sess->fs_sid);
-	explicit_bzero(sess, sizeof (*sess));
+	memset(sess, 0, sizeof (*sess));
 }
 
 static int
@@ -202,20 +197,13 @@ zfs_crypto_dispatch(freebsd_crypt_session_t *session, struct cryptop *crp)
 		crp->crp_etype = 0;
 		crp->crp_flags &= ~CRYPTO_F_DONE;
 		session->fs_done = false;
-#if __FreeBSD_version < 1300087
-		/*
-		 * Session ID changed, so we should record that,
-		 * and try again
-		 */
-		session->fs_sid = crp->crp_session;
-#endif
 	}
 	return (error);
 }
 static void
 freebsd_crypt_uio_debug_log(boolean_t encrypt,
     freebsd_crypt_session_t *input_sessionp,
-    struct zio_crypt_info *c_info,
+    const struct zio_crypt_info *c_info,
     zfs_uio_t *data_uio,
     crypto_key_t *key,
     uint8_t *ivbuf,
@@ -227,12 +215,12 @@ freebsd_crypt_uio_debug_log(boolean_t encrypt,
 	uint8_t *p = NULL;
 	size_t total = 0;
 
-	printf("%s(%s, %p, { %s, %d, %d, %s }, %p, { %d, %p, %u }, "
+	printf("%s(%s, %p, { %s, %d, %d, %s }, %p, { %p, %u }, "
 	    "%p, %u, %u)\n",
 	    __FUNCTION__, encrypt ? "encrypt" : "decrypt", input_sessionp,
 	    c_info->ci_algname, c_info->ci_crypt_type,
 	    (unsigned int)c_info->ci_keylen, c_info->ci_name,
-	    data_uio, key->ck_format, key->ck_data,
+	    data_uio, key->ck_data,
 	    (unsigned int)key->ck_length,
 	    ivbuf, (unsigned int)datalen, (unsigned int)auth_len);
 	printf("\tkey = { ");
@@ -255,20 +243,19 @@ freebsd_crypt_uio_debug_log(boolean_t encrypt,
  * happen every time the key changes (including when
  * it's first loaded).
  */
-#if __FreeBSD_version >= 1300087
 int
 freebsd_crypt_newsession(freebsd_crypt_session_t *sessp,
-    struct zio_crypt_info *c_info, crypto_key_t *key)
+    const struct zio_crypt_info *c_info, crypto_key_t *key)
 {
-	struct crypto_session_params csp;
+	struct crypto_session_params csp = {0};
 	int error = 0;
 
 #ifdef FCRYPTO_DEBUG
-	printf("%s(%p, { %s, %d, %d, %s }, { %d, %p, %u })\n",
+	printf("%s(%p, { %s, %d, %d, %s }, { %p, %u })\n",
 	    __FUNCTION__, sessp,
 	    c_info->ci_algname, c_info->ci_crypt_type,
 	    (unsigned int)c_info->ci_keylen, c_info->ci_name,
-	    key->ck_format, key->ck_data, (unsigned int)key->ck_length);
+	    key->ck_data, (unsigned int)key->ck_length);
 	printf("\tkey = { ");
 	for (int i = 0; i < key->ck_length / 8; i++) {
 		uint8_t *b = (uint8_t *)key->ck_data;
@@ -276,7 +263,6 @@ freebsd_crypt_newsession(freebsd_crypt_session_t *sessp,
 	}
 	printf("}\n");
 #endif
-	bzero(&csp, sizeof (csp));
 	csp.csp_mode = CSP_MODE_AEAD;
 	csp.csp_cipher_key = key->ck_data;
 	csp.csp_cipher_klen = key->ck_length / 8;
@@ -339,7 +325,7 @@ bad:
 int
 freebsd_crypt_uio(boolean_t encrypt,
     freebsd_crypt_session_t *input_sessionp,
-    struct zio_crypt_info *c_info,
+    const struct zio_crypt_info *c_info,
     zfs_uio_t *data_uio,
     crypto_key_t *key,
     uint8_t *ivbuf,
@@ -381,7 +367,7 @@ freebsd_crypt_uio(boolean_t encrypt,
 	crp->crp_payload_length = datalen;
 	crp->crp_digest_start = auth_len + datalen;
 
-	bcopy(ivbuf, crp->crp_iv, ZIO_DATA_IV_LEN);
+	memcpy(crp->crp_iv, ivbuf, ZIO_DATA_IV_LEN);
 	error = zfs_crypto_dispatch(session, crp);
 	crypto_freereq(crp);
 out:
@@ -395,247 +381,3 @@ out:
 	}
 	return (error);
 }
-
-#else
-int
-freebsd_crypt_newsession(freebsd_crypt_session_t *sessp,
-    struct zio_crypt_info *c_info, crypto_key_t *key)
-{
-	struct cryptoini cria, crie, *crip;
-	struct enc_xform *xform;
-	struct auth_hash *xauth;
-	int error = 0;
-	crypto_session_t sid;
-
-#ifdef FCRYPTO_DEBUG
-	printf("%s(%p, { %s, %d, %d, %s }, { %d, %p, %u })\n",
-	    __FUNCTION__, sessp,
-	    c_info->ci_algname, c_info->ci_crypt_type,
-	    (unsigned int)c_info->ci_keylen, c_info->ci_name,
-	    key->ck_format, key->ck_data, (unsigned int)key->ck_length);
-	printf("\tkey = { ");
-	for (int i = 0; i < key->ck_length / 8; i++) {
-		uint8_t *b = (uint8_t *)key->ck_data;
-		printf("%02x ", b[i]);
-	}
-	printf("}\n");
-#endif
-	switch (c_info->ci_crypt_type) {
-	case ZC_TYPE_GCM:
-		xform = &enc_xform_aes_nist_gcm;
-		switch (key->ck_length/8) {
-		case AES_128_GMAC_KEY_LEN:
-			xauth = &auth_hash_nist_gmac_aes_128;
-			break;
-		case AES_192_GMAC_KEY_LEN:
-			xauth = &auth_hash_nist_gmac_aes_192;
-			break;
-		case AES_256_GMAC_KEY_LEN:
-			xauth = &auth_hash_nist_gmac_aes_256;
-			break;
-		default:
-			error = EINVAL;
-			goto bad;
-		}
-		break;
-	case ZC_TYPE_CCM:
-		xform = &enc_xform_ccm;
-		switch (key->ck_length/8) {
-		case AES_128_CBC_MAC_KEY_LEN:
-			xauth = &auth_hash_ccm_cbc_mac_128;
-			break;
-		case AES_192_CBC_MAC_KEY_LEN:
-			xauth = &auth_hash_ccm_cbc_mac_192;
-			break;
-		case AES_256_CBC_MAC_KEY_LEN:
-			xauth = &auth_hash_ccm_cbc_mac_256;
-			break;
-		default:
-			error = EINVAL;
-			goto bad;
-			break;
-		}
-		break;
-	default:
-		error = ENOTSUP;
-		goto bad;
-	}
-#ifdef FCRYPTO_DEBUG
-	printf("%s(%d): Using crypt %s (key length %u [%u bytes]), "
-	    "auth %s (key length %d)\n",
-	    __FUNCTION__, __LINE__,
-	    xform->name, (unsigned int)key->ck_length,
-	    (unsigned int)key->ck_length/8,
-	    xauth->name, xauth->keysize);
-#endif
-
-	bzero(&crie, sizeof (crie));
-	bzero(&cria, sizeof (cria));
-
-	crie.cri_alg = xform->type;
-	crie.cri_key = key->ck_data;
-	crie.cri_klen = key->ck_length;
-
-	cria.cri_alg = xauth->type;
-	cria.cri_key = key->ck_data;
-	cria.cri_klen = key->ck_length;
-
-	cria.cri_next = &crie;
-	crie.cri_next = NULL;
-	crip = &cria;
-	// Everything else is bzero'd
-
-	error = crypto_newsession(&sid, crip,
-	    CRYPTOCAP_F_HARDWARE | CRYPTOCAP_F_SOFTWARE);
-	if (error != 0) {
-		printf("%s(%d):  crypto_newsession failed with %d\n",
-		    __FUNCTION__, __LINE__, error);
-		goto bad;
-	}
-	sessp->fs_sid = sid;
-	mtx_init(&sessp->fs_lock, "FreeBSD Cryptographic Session Lock",
-	    NULL, MTX_DEF);
-	crypt_sessions++;
-bad:
-	return (error);
-}
-
-/*
- * The meat of encryption/decryption.
- * If sessp is NULL, then it will create a
- * temporary cryptographic session, and release
- * it when done.
- */
-int
-freebsd_crypt_uio(boolean_t encrypt,
-    freebsd_crypt_session_t *input_sessionp,
-    struct zio_crypt_info *c_info,
-    zfs_uio_t *data_uio,
-    crypto_key_t *key,
-    uint8_t *ivbuf,
-    size_t datalen,
-    size_t auth_len)
-{
-	struct cryptop *crp;
-	struct cryptodesc *enc_desc, *auth_desc;
-	struct enc_xform *xform;
-	struct auth_hash *xauth;
-	freebsd_crypt_session_t *session = NULL;
-	int error;
-
-	freebsd_crypt_uio_debug_log(encrypt, input_sessionp, c_info, data_uio,
-	    key, ivbuf, datalen, auth_len);
-	switch (c_info->ci_crypt_type) {
-	case ZC_TYPE_GCM:
-		xform = &enc_xform_aes_nist_gcm;
-		switch (key->ck_length/8) {
-		case AES_128_GMAC_KEY_LEN:
-			xauth = &auth_hash_nist_gmac_aes_128;
-			break;
-		case AES_192_GMAC_KEY_LEN:
-			xauth = &auth_hash_nist_gmac_aes_192;
-			break;
-		case AES_256_GMAC_KEY_LEN:
-			xauth = &auth_hash_nist_gmac_aes_256;
-			break;
-		default:
-			error = EINVAL;
-			goto bad;
-		}
-		break;
-	case ZC_TYPE_CCM:
-		xform = &enc_xform_ccm;
-		switch (key->ck_length/8) {
-		case AES_128_CBC_MAC_KEY_LEN:
-			xauth = &auth_hash_ccm_cbc_mac_128;
-			break;
-		case AES_192_CBC_MAC_KEY_LEN:
-			xauth = &auth_hash_ccm_cbc_mac_192;
-			break;
-		case AES_256_CBC_MAC_KEY_LEN:
-			xauth = &auth_hash_ccm_cbc_mac_256;
-			break;
-		default:
-			error = EINVAL;
-			goto bad;
-			break;
-		}
-		break;
-	default:
-		error = ENOTSUP;
-		goto bad;
-	}
-
-#ifdef FCRYPTO_DEBUG
-	printf("%s(%d): Using crypt %s (key length %u [%u bytes]), "
-	    "auth %s (key length %d)\n",
-	    __FUNCTION__, __LINE__,
-	    xform->name, (unsigned int)key->ck_length,
-	    (unsigned int)key->ck_length/8,
-	    xauth->name, xauth->keysize);
-#endif
-
-	if (input_sessionp == NULL) {
-		session = kmem_zalloc(sizeof (*session), KM_SLEEP);
-		error = freebsd_crypt_newsession(session, c_info, key);
-		if (error)
-			goto out;
-	} else
-		session = input_sessionp;
-
-	crp = crypto_getreq(2);
-	if (crp == NULL) {
-		error = ENOMEM;
-		goto bad;
-	}
-
-	auth_desc = crp->crp_desc;
-	enc_desc = auth_desc->crd_next;
-
-	crp->crp_session = session->fs_sid;
-	crp->crp_ilen = auth_len + datalen;
-	crp->crp_buf = (void*)GET_UIO_STRUCT(data_uio);
-	crp->crp_flags = CRYPTO_F_IOV | CRYPTO_F_CBIFSYNC;
-
-	auth_desc->crd_skip = 0;
-	auth_desc->crd_len = auth_len;
-	auth_desc->crd_inject = auth_len + datalen;
-	auth_desc->crd_alg = xauth->type;
-#ifdef FCRYPTO_DEBUG
-	printf("%s: auth: skip = %u, len = %u, inject = %u\n",
-	    __FUNCTION__, auth_desc->crd_skip, auth_desc->crd_len,
-	    auth_desc->crd_inject);
-#endif
-
-	enc_desc->crd_skip = auth_len;
-	enc_desc->crd_len = datalen;
-	enc_desc->crd_inject = auth_len;
-	enc_desc->crd_alg = xform->type;
-	enc_desc->crd_flags = CRD_F_IV_EXPLICIT | CRD_F_IV_PRESENT;
-	bcopy(ivbuf, enc_desc->crd_iv, ZIO_DATA_IV_LEN);
-	enc_desc->crd_next = NULL;
-
-#ifdef FCRYPTO_DEBUG
-	printf("%s: enc: skip = %u, len = %u, inject = %u\n",
-	    __FUNCTION__, enc_desc->crd_skip, enc_desc->crd_len,
-	    enc_desc->crd_inject);
-#endif
-
-	if (encrypt)
-		enc_desc->crd_flags |= CRD_F_ENCRYPT;
-
-	error = zfs_crypto_dispatch(session, crp);
-	crypto_freereq(crp);
-out:
-	if (input_sessionp == NULL) {
-		freebsd_crypt_freesession(session);
-		kmem_free(session, sizeof (*session));
-	}
-bad:
-#ifdef FCRYPTO_DEBUG
-	if (error)
-		printf("%s: returning error %d\n", __FUNCTION__, error);
-#endif
-	return (error);
-}
-#endif

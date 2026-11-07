@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -23,6 +23,7 @@
  * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
  * Copyright (c) 2012, 2020 by Delphix. All rights reserved.
  * Copyright (c) 2016 Gvozden Nešković. All rights reserved.
+ * Copyright (c) 2026, Wasabi Technologies, Inc.
  */
 
 #include <sys/zfs_context.h>
@@ -174,6 +175,114 @@ const zio_vsd_ops_t vdev_raidz_vsd_ops = {
 	.vsd_free = vdev_raidz_map_free_vsd,
 };
 
+static void
+vdev_raidz_map_alloc_write(zio_t *zio, raidz_map_t *rm, uint64_t ashift)
+{
+	int c;
+	int nwrapped = 0;
+	uint64_t off = 0;
+	raidz_row_t *rr = rm->rm_row[0];
+
+	ASSERT3U(zio->io_type, ==, ZIO_TYPE_WRITE);
+	ASSERT3U(rm->rm_nrows, ==, 1);
+
+	/*
+	 * Pad any parity columns with additional space to account for skip
+	 * sectors.
+	 */
+	if (rm->rm_skipstart < rr->rr_firstdatacol) {
+		ASSERT0(rm->rm_skipstart);
+		nwrapped = rm->rm_nskip;
+	} else if (rr->rr_scols < (rm->rm_skipstart + rm->rm_nskip)) {
+		nwrapped =
+		    (rm->rm_skipstart + rm->rm_nskip) % rr->rr_scols;
+	}
+
+	/*
+	 * Optional single skip sectors (rc_size == 0) will be handled in
+	 * vdev_raidz_io_start_write().
+	 */
+	int skipped = rr->rr_scols - rr->rr_cols;
+
+	/* Allocate buffers for the parity columns */
+	for (c = 0; c < rr->rr_firstdatacol; c++) {
+		raidz_col_t *rc = &rr->rr_col[c];
+
+		/*
+		 * Parity columns will pad out a linear ABD to account for
+		 * the skip sector. A linear ABD is used here because
+		 * parity calculations use the ABD buffer directly to calculate
+		 * parity. This avoids doing a memcpy back to the ABD after the
+		 * parity has been calculated. By issuing the parity column
+		 * with the skip sector we can reduce contention on the child
+		 * VDEV queue locks (vq_lock).
+		 */
+		if (c < nwrapped) {
+			rc->rc_abd = abd_alloc_linear(
+			    rc->rc_size + (1ULL << ashift), B_FALSE);
+			abd_zero_off(rc->rc_abd, rc->rc_size, 1ULL << ashift);
+			skipped++;
+		} else {
+			rc->rc_abd = abd_alloc_linear(rc->rc_size, B_FALSE);
+		}
+	}
+
+	for (off = 0; c < rr->rr_cols; c++) {
+		raidz_col_t *rc = &rr->rr_col[c];
+		abd_t *abd = abd_get_offset_struct(&rc->rc_abdstruct,
+		    zio->io_abd, off, rc->rc_size);
+
+		/*
+		 * Generate I/O for skip sectors to improve aggregation
+		 * continuity. We will use gang ABD's to reduce contention
+		 * on the child VDEV queue locks (vq_lock) by issuing
+		 * a single I/O that contains the data and skip sector.
+		 *
+		 * It is important to make sure that rc_size is not updated
+		 * even though we are adding a skip sector to the ABD. When
+		 * calculating the parity in vdev_raidz_generate_parity_row()
+		 * the rc_size is used to iterate through the ABD's. We can
+		 * not have zero'd out skip sectors used for calculating
+		 * parity for raidz, because those same sectors are not used
+		 * during reconstruction.
+		 */
+		if (c >= rm->rm_skipstart && skipped < rm->rm_nskip) {
+			rc->rc_abd = abd_alloc_gang();
+			abd_gang_add(rc->rc_abd, abd, B_TRUE);
+			abd_gang_add(rc->rc_abd,
+			    abd_get_zeros(1ULL << ashift), B_TRUE);
+			skipped++;
+		} else {
+			rc->rc_abd = abd;
+		}
+		off += rc->rc_size;
+	}
+
+	ASSERT3U(off, ==, zio->io_size);
+	ASSERT3S(skipped, ==, rm->rm_nskip);
+}
+
+static void
+vdev_raidz_map_alloc_read(zio_t *zio, raidz_map_t *rm)
+{
+	int c;
+	raidz_row_t *rr = rm->rm_row[0];
+
+	ASSERT3U(rm->rm_nrows, ==, 1);
+
+	/* Allocate buffers for the parity columns */
+	for (c = 0; c < rr->rr_firstdatacol; c++)
+		rr->rr_col[c].rc_abd =
+		    abd_alloc_linear(rr->rr_col[c].rc_size, B_FALSE);
+
+	for (uint64_t off = 0; c < rr->rr_cols; c++) {
+		raidz_col_t *rc = &rr->rr_col[c];
+		rc->rc_abd = abd_get_offset_struct(&rc->rc_abdstruct,
+		    zio->io_abd, off, rc->rc_size);
+		off += rc->rc_size;
+	}
+}
+
 /*
  * Divides the IO evenly across all child vdevs; usually, dcols is
  * the number of children in the target vdev.
@@ -287,17 +396,6 @@ vdev_raidz_map_alloc(zio_t *zio, uint64_t ashift, uint64_t dcols,
 	rm->rm_nskip = roundup(tot, nparity + 1) - tot;
 	rm->rm_skipstart = bc;
 
-	for (c = 0; c < rr->rr_firstdatacol; c++)
-		rr->rr_col[c].rc_abd =
-		    abd_alloc_linear(rr->rr_col[c].rc_size, B_FALSE);
-
-	for (uint64_t off = 0; c < acols; c++) {
-		raidz_col_t *rc = &rr->rr_col[c];
-		rc->rc_abd = abd_get_offset_struct(&rc->rc_abdstruct,
-		    zio->io_abd, off, rc->rc_size);
-		off += rc->rc_size;
-	}
-
 	/*
 	 * If all data stored spans all columns, there's a danger that parity
 	 * will always be on the same device and, since parity isn't read
@@ -331,6 +429,12 @@ vdev_raidz_map_alloc(zio_t *zio, uint64_t ashift, uint64_t dcols,
 
 		if (rm->rm_skipstart == 0)
 			rm->rm_skipstart = 1;
+	}
+
+	if (zio->io_type == ZIO_TYPE_WRITE) {
+		vdev_raidz_map_alloc_write(zio, rm, ashift);
+	} else {
+		vdev_raidz_map_alloc_read(zio, rm);
 	}
 
 	/* init RAIDZ parity ops */
@@ -823,7 +927,6 @@ vdev_raidz_reconstruct_pq(raidz_row_t *rr, int *tgts, int ntgts)
 	rr->rr_col[VDEV_RAIDZ_Q].rc_abd = qdata;
 }
 
-/* BEGIN CSTYLED */
 /*
  * In the general case of reconstruction, we must solve the system of linear
  * equations defined by the coefficients used to generate parity as well as
@@ -975,7 +1078,6 @@ vdev_raidz_reconstruct_pq(raidz_row_t *rr, int *tgts, int ntgts)
  * that reason, we only build the coefficients in the rows that correspond to
  * targeted columns.
  */
-/* END CSTYLED */
 
 static void
 vdev_raidz_matrix_init(raidz_row_t *rr, int n, int nmap, int *map,
@@ -1182,8 +1284,9 @@ vdev_raidz_matrix_reconstruct(raidz_row_t *rr, int n, int nmissing,
 static void
 vdev_raidz_reconstruct_general(raidz_row_t *rr, int *tgts, int ntgts)
 {
-	int n, i, c, t, tt;
-	int nmissing_rows;
+	int i, c, t, tt;
+	unsigned int n;
+	unsigned int nmissing_rows;
 	int missing_rows[VDEV_RAIDZ_MAXPARITY];
 	int parity_map[VDEV_RAIDZ_MAXPARITY];
 	uint8_t *p, *pp;
@@ -1396,7 +1499,7 @@ vdev_raidz_reconstruct_row(raidz_map_t *rm, raidz_row_t *rr,
 
 static int
 vdev_raidz_open(vdev_t *vd, uint64_t *asize, uint64_t *max_asize,
-    uint64_t *logical_ashift, uint64_t *physical_ashift)
+    uint64_t *logical_ashift, uint64_t *physical_ashift, cred_t *cr)
 {
 	vdev_raidz_t *vdrz = vd->vdev_tsd;
 	uint64_t nparity = vdrz->vd_nparity;
@@ -1412,7 +1515,7 @@ vdev_raidz_open(vdev_t *vd, uint64_t *asize, uint64_t *max_asize,
 		return (SET_ERROR(EINVAL));
 	}
 
-	vdev_open_children(vd);
+	vdev_open_children(vd, cr);
 
 	for (c = 0; c < vd->vdev_children; c++) {
 		vdev_t *cvd = vd->vdev_child[c];
@@ -1488,6 +1591,7 @@ vdev_raidz_child_done(zio_t *zio)
 {
 	raidz_col_t *rc = zio->io_private;
 
+	ASSERT3P(rc->rc_abd, !=, NULL);
 	rc->rc_error = zio->io_error;
 	rc->rc_tried = 1;
 	rc->rc_skipped = 0;
@@ -1531,40 +1635,34 @@ vdev_raidz_io_start_write(zio_t *zio, raidz_row_t *rr, uint64_t ashift)
 {
 	vdev_t *vd = zio->io_vd;
 	raidz_map_t *rm = zio->io_vsd;
-	int c, i;
 
 	vdev_raidz_generate_parity_row(rm, rr);
 
-	for (int c = 0; c < rr->rr_cols; c++) {
+	for (int c = 0; c < rr->rr_scols; c++) {
 		raidz_col_t *rc = &rr->rr_col[c];
-		if (rc->rc_size == 0)
-			continue;
+		vdev_t *cvd = vd->vdev_child[rc->rc_devidx];
 
 		/* Verify physical to logical translation */
 		vdev_raidz_io_verify(vd, rr, c);
 
-		zio_nowait(zio_vdev_child_io(zio, NULL,
-		    vd->vdev_child[rc->rc_devidx], rc->rc_offset,
-		    rc->rc_abd, rc->rc_size, zio->io_type, zio->io_priority,
-		    0, vdev_raidz_child_done, rc));
-	}
-
-	/*
-	 * Generate optional I/Os for skip sectors to improve aggregation
-	 * contiguity.
-	 */
-	for (c = rm->rm_skipstart, i = 0; i < rm->rm_nskip; c++, i++) {
-		ASSERT(c <= rr->rr_scols);
-		if (c == rr->rr_scols)
-			c = 0;
-
-		raidz_col_t *rc = &rr->rr_col[c];
-		vdev_t *cvd = vd->vdev_child[rc->rc_devidx];
-
-		zio_nowait(zio_vdev_child_io(zio, NULL, cvd,
-		    rc->rc_offset + rc->rc_size, NULL, 1ULL << ashift,
-		    zio->io_type, zio->io_priority,
-		    ZIO_FLAG_NODATA | ZIO_FLAG_OPTIONAL, NULL, NULL));
+		if (rc->rc_size > 0) {
+			ASSERT3P(rc->rc_abd, !=, NULL);
+			zio_nowait(zio_vdev_child_io(zio, NULL, cvd,
+			    rc->rc_offset, rc->rc_abd,
+			    abd_get_size(rc->rc_abd), zio->io_type,
+			    zio->io_priority, 0, vdev_raidz_child_done, rc));
+		} else {
+			/*
+			 * Generate optional write for skip sector to improve
+			 * aggregation contiguity.
+			 */
+			ASSERT3P(rc->rc_abd, ==, NULL);
+			zio_nowait(zio_vdev_child_io(zio, NULL, cvd,
+			    rc->rc_offset, NULL, 1ULL << ashift,
+			    zio->io_type, zio->io_priority,
+			    ZIO_FLAG_NODATA | ZIO_FLAG_OPTIONAL, NULL,
+			    NULL));
+		}
 	}
 }
 
@@ -1673,12 +1771,12 @@ vdev_raidz_checksum_error(zio_t *zio, raidz_col_t *rc, abd_t *bad_data)
 		zbc.zbc_has_cksum = 0;
 		zbc.zbc_injected = rm->rm_ecksuminjected;
 
-		(void) zfs_ereport_post_checksum(zio->io_spa, vd,
-		    &zio->io_bookmark, zio, rc->rc_offset, rc->rc_size,
-		    rc->rc_abd, bad_data, &zbc);
 		mutex_enter(&vd->vdev_stat_lock);
 		vd->vdev_stat.vs_checksum_errors++;
 		mutex_exit(&vd->vdev_stat_lock);
+		(void) zfs_ereport_post_checksum(zio->io_spa, vd,
+		    &zio->io_bookmark, zio, rc->rc_offset, rc->rc_size,
+		    rc->rc_abd, bad_data, &zbc);
 	}
 }
 
@@ -1689,10 +1787,8 @@ vdev_raidz_checksum_error(zio_t *zio, raidz_col_t *rc, abd_t *bad_data)
 static int
 raidz_checksum_verify(zio_t *zio)
 {
-	zio_bad_cksum_t zbc;
+	zio_bad_cksum_t zbc = {0};
 	raidz_map_t *rm = zio->io_vsd;
-
-	bzero(&zbc, sizeof (zio_bad_cksum_t));
 
 	int ret = zio_checksum_error(zio, &zbc);
 	if (ret != 0 && zbc.zbc_injected != 0)
@@ -1781,6 +1877,7 @@ vdev_raidz_io_done_verified(zio_t *zio, raidz_row_t *rr)
 	int parity_errors = 0;
 	int parity_untried = 0;
 	int data_errors = 0;
+	zio_flag_t add_flags = 0;
 
 	ASSERT3U(zio->io_type, ==, ZIO_TYPE_READ);
 
@@ -1811,10 +1908,30 @@ vdev_raidz_io_done_verified(zio_t *zio, raidz_row_t *rr)
 	 * Note that we also regenerate parity when resilvering so we
 	 * can write it out to failed devices later.
 	 */
-	if (parity_errors + parity_untried <
-	    rr->rr_firstdatacol - data_errors ||
-	    (zio->io_flags & ZIO_FLAG_RESILVER)) {
+	boolean_t parity_verify = (parity_errors + parity_untried) <
+	    (rr->rr_firstdatacol - data_errors);
+	if (parity_verify || (zio->io_flags & ZIO_FLAG_RESILVER)) {
 		int n = raidz_parity_verify(zio, rr);
+		/*
+		 * In, Reed-Solomon encoding, if we have ndata+1 columns and
+		 * the parity doesn't match, it means the data integrity is
+		 * compromised. We shouldn't try to repair anything in this
+		 * case.
+		 */
+		if (parity_verify && n > 0 &&
+		    zio->io_priority == ZIO_PRIORITY_REBUILD)
+			return;
+		/*
+		 * If we have only ndata columns, the data integrity will
+		 * be checked by the checksums normally, but not in case
+		 * of rebuild when we don't have checksums. In this case,
+		 * we add ZIO_FLAG_SPECULATIVE and try to not spread
+		 * unverified data. For example, when the target vdev happens
+		 * to be the mirroring spare vdev, we would repair only that
+		 * child in it which is being rebuilt.
+		 */
+		if (!parity_verify && zio->io_priority == ZIO_PRIORITY_REBUILD)
+			add_flags |= ZIO_FLAG_SPECULATIVE;
 		unexpected_errors += n;
 	}
 
@@ -1835,13 +1952,27 @@ vdev_raidz_io_done_verified(zio_t *zio, raidz_row_t *rr)
 				continue;
 			}
 
+			/*
+			 * When the target vdev is draid spare, we should clear
+			 * ZIO_FLAG_SPECULATIVE. First, if that draid spare maps
+			 * to another spare having an online/degraded disk, that
+			 * disk must be repaired also. Otherwise, the scrub will
+			 * detect a lot of cksum errors later. Second, since it
+			 * is draid spare, there is no harm in updating its
+			 * content on any vdev it maps to because the space is
+			 * reserved as a spare anyway.
+			 */
+			zio_flag_t aflags = add_flags;
+			if (rc->rc_tgt_is_dspare)
+				aflags &= ~ZIO_FLAG_SPECULATIVE;
+
 			zio_nowait(zio_vdev_child_io(zio, NULL, cvd,
 			    rc->rc_offset, rc->rc_abd, rc->rc_size,
 			    ZIO_TYPE_WRITE,
 			    zio->io_priority == ZIO_PRIORITY_REBUILD ?
 			    ZIO_PRIORITY_REBUILD : ZIO_PRIORITY_ASYNC_WRITE,
 			    ZIO_FLAG_IO_REPAIR | (unexpected_errors ?
-			    ZIO_FLAG_SELF_HEAL : 0), NULL, NULL));
+			    ZIO_FLAG_SELF_HEAL : 0) | aflags, NULL, NULL));
 		}
 	}
 }
@@ -2286,12 +2417,12 @@ vdev_raidz_io_done_unrecoverable(zio_t *zio)
 			zbc.zbc_has_cksum = 0;
 			zbc.zbc_injected = rm->rm_ecksuminjected;
 
-			(void) zfs_ereport_start_checksum(zio->io_spa,
-			    cvd, &zio->io_bookmark, zio, rc->rc_offset,
-			    rc->rc_size, &zbc);
 			mutex_enter(&cvd->vdev_stat_lock);
 			cvd->vdev_stat.vs_checksum_errors++;
 			mutex_exit(&cvd->vdev_stat_lock);
+			(void) zfs_ereport_start_checksum(zio->io_spa,
+			    cvd, &zio->io_bookmark, zio, rc->rc_offset,
+			    rc->rc_size, &zbc);
 		}
 	}
 }

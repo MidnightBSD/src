@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -30,7 +30,7 @@ param_set_multihost_interval(const char *val, zfs_kernel_param_t *kp)
 {
 	int ret;
 
-	ret = param_set_ulong(val, kp);
+	ret = spl_param_set_u64(val, kp);
 	if (ret < 0)
 		return (ret);
 

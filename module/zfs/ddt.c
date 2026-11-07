@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -22,6 +22,7 @@
 /*
  * Copyright (c) 2009, 2010, Oracle and/or its affiliates. All rights reserved.
  * Copyright (c) 2012, 2016 by Delphix. All rights reserved.
+ * Copyright (c) 2022 by Pawel Jakub Dawidek
  */
 
 #include <sys/zfs_context.h>
@@ -46,11 +47,11 @@ static kmem_cache_t *ddt_entry_cache;
  */
 int zfs_dedup_prefetch = 0;
 
-static const ddt_ops_t *ddt_ops[DDT_TYPES] = {
+static const ddt_ops_t *const ddt_ops[DDT_TYPES] = {
 	&ddt_zap_ops,
 };
 
-static const char *ddt_class_name[DDT_CLASSES] = {
+static const char *const ddt_class_name[DDT_CLASSES] = {
 	"ditto",
 	"duplicate",
 	"unique",
@@ -99,7 +100,7 @@ ddt_object_destroy(ddt_t *ddt, enum ddt_type type, enum ddt_class class,
 	VERIFY(zap_remove(os, DMU_POOL_DIRECTORY_OBJECT, name, tx) == 0);
 	VERIFY(zap_remove(os, spa->spa_ddt_stat_object, name, tx) == 0);
 	VERIFY(ddt_ops[type]->ddt_op_destroy(os, *objectp, tx) == 0);
-	bzero(&ddt->ddt_object_stats[type][class], sizeof (ddt_object_t));
+	memset(&ddt->ddt_object_stats[type][class], 0, sizeof (ddt_object_t));
 
 	*objectp = 0;
 }
@@ -322,7 +323,7 @@ ddt_phys_fill(ddt_phys_t *ddp, const blkptr_t *bp)
 void
 ddt_phys_clear(ddt_phys_t *ddp)
 {
-	bzero(ddp, sizeof (*ddp));
+	memset(ddp, 0, sizeof (*ddp));
 }
 
 void
@@ -390,7 +391,7 @@ ddt_stat_generate(ddt_t *ddt, ddt_entry_t *dde, ddt_stat_t *dds)
 	uint64_t lsize = DDK_GET_LSIZE(ddk);
 	uint64_t psize = DDK_GET_PSIZE(ddk);
 
-	bzero(dds, sizeof (*dds));
+	memset(dds, 0, sizeof (*dds));
 
 	for (int p = 0; p < DDT_PHYS_TYPES; p++, ddp++) {
 		uint64_t dsize = 0;
@@ -423,8 +424,8 @@ ddt_stat_add(ddt_stat_t *dst, const ddt_stat_t *src, uint64_t neg)
 
 	ASSERT(neg == 0 || neg == -1ULL);	/* add or subtract */
 
-	while (d < d_end)
-		*d++ += (*s++ ^ neg) - neg;
+	for (int i = 0; i < d_end - d; i++)
+		d[i] += (s[i] ^ neg) - neg;
 }
 
 static void
@@ -437,7 +438,8 @@ ddt_stat_update(ddt_t *ddt, ddt_entry_t *dde, uint64_t neg)
 	ddt_stat_generate(ddt, dde, &dds);
 
 	bucket = highbit64(dds.dds_ref_blocks) - 1;
-	ASSERT(bucket >= 0);
+	if (unlikely(bucket >= 0))	/* if() needed for GCC bounds check */
+		ASSERT(bucket >= 0);
 
 	ddh = &ddt->ddt_histogram[dde->dde_type][dde->dde_class];
 
@@ -454,7 +456,7 @@ ddt_histogram_add(ddt_histogram_t *dst, const ddt_histogram_t *src)
 void
 ddt_histogram_stat(ddt_stat_t *dds, const ddt_histogram_t *ddh)
 {
-	bzero(dds, sizeof (*dds));
+	memset(dds, 0, sizeof (*dds));
 
 	for (int h = 0; h < 64; h++)
 		ddt_stat_add(dds, &ddh->ddh_stat[h], 0);
@@ -532,7 +534,7 @@ ddt_get_dedup_dspace(spa_t *spa)
 	if (spa->spa_dedup_dspace != ~0ULL)
 		return (spa->spa_dedup_dspace);
 
-	bzero(&dds_total, sizeof (ddt_stat_t));
+	memset(&dds_total, 0, sizeof (ddt_stat_t));
 
 	/* Calculate and cache the stats */
 	ddt_get_dedup_stats(spa, &dds_total);
@@ -566,11 +568,10 @@ ddt_compress(void *src, uchar_t *dst, size_t s_len, size_t d_len)
 
 	if (c_len == s_len) {
 		cpfunc = ZIO_COMPRESS_OFF;
-		bcopy(src, dst, s_len);
+		memcpy(dst, src, s_len);
 	}
 
 	*version = cpfunc;
-	/* CONSTCOND */
 	if (ZFS_HOST_BYTEORDER)
 		*version |= DDT_COMPRESS_BYTEORDER_MASK;
 
@@ -587,7 +588,7 @@ ddt_decompress(uchar_t *src, void *dst, size_t s_len, size_t d_len)
 	if (ci->ci_decompress != NULL)
 		(void) ci->ci_decompress(src, dst, s_len, d_len, ci->ci_level);
 	else
-		bcopy(src, dst, d_len);
+		memcpy(dst, src, d_len);
 
 	if (((version & DDT_COMPRESS_BYTEORDER_MASK) != 0) !=
 	    (ZFS_HOST_BYTEORDER != 0))
@@ -634,7 +635,7 @@ ddt_alloc(const ddt_key_t *ddk)
 	ddt_entry_t *dde;
 
 	dde = kmem_cache_alloc(ddt_entry_cache, KM_SLEEP);
-	bzero(dde, sizeof (ddt_entry_t));
+	memset(dde, 0, sizeof (ddt_entry_t));
 	cv_init(&dde->dde_cv, NULL, CV_DEFAULT, NULL);
 
 	dde->dde_key = *ddk;
@@ -786,7 +787,7 @@ ddt_table_alloc(spa_t *spa, enum zio_checksum c)
 	ddt_t *ddt;
 
 	ddt = kmem_cache_alloc(ddt_cache, KM_SLEEP);
-	bzero(ddt, sizeof (ddt_t));
+	memset(ddt, 0, sizeof (ddt_t));
 
 	mutex_init(&ddt->ddt_lock, NULL, MUTEX_DEFAULT, NULL);
 	avl_create(&ddt->ddt_tree, ddt_entry_compare,
@@ -848,7 +849,7 @@ ddt_load(spa_t *spa)
 		/*
 		 * Seed the cached histograms.
 		 */
-		bcopy(ddt->ddt_histogram, &ddt->ddt_histogram_cache,
+		memcpy(&ddt->ddt_histogram_cache, ddt->ddt_histogram,
 		    sizeof (ddt->ddt_histogram));
 		spa->spa_dedup_dspace = ~0ULL;
 	}
@@ -920,7 +921,7 @@ ddt_repair_start(ddt_t *ddt, const blkptr_t *bp)
 		}
 	}
 
-	bzero(dde->dde_phys, sizeof (dde->dde_phys));
+	memset(dde->dde_phys, 0, sizeof (dde->dde_phys));
 
 	return (dde);
 }
@@ -965,7 +966,7 @@ ddt_repair_entry(ddt_t *ddt, ddt_entry_t *dde, ddt_entry_t *rdde, zio_t *rio)
 	for (int p = 0; p < DDT_PHYS_TYPES; p++, ddp++, rddp++) {
 		if (ddp->ddp_phys_birth == 0 ||
 		    ddp->ddp_phys_birth != rddp->ddp_phys_birth ||
-		    bcmp(ddp->ddp_dva, rddp->ddp_dva, sizeof (ddp->ddp_dva)))
+		    memcmp(ddp->ddp_dva, rddp->ddp_dva, sizeof (ddp->ddp_dva)))
 			continue;
 		ddt_bp_create(ddt->ddt_checksum, ddk, ddp, &blk);
 		zio_nowait(zio_rewrite(zio, zio->io_spa, 0, &blk,
@@ -1109,7 +1110,7 @@ ddt_sync_table(ddt_t *ddt, dmu_tx_t *tx, uint64_t txg)
 		}
 	}
 
-	bcopy(ddt->ddt_histogram, &ddt->ddt_histogram_cache,
+	memcpy(&ddt->ddt_histogram_cache, ddt->ddt_histogram,
 	    sizeof (ddt->ddt_histogram));
 	spa->spa_dedup_dspace = ~0ULL;
 }
@@ -1181,7 +1182,68 @@ ddt_walk(spa_t *spa, ddt_bookmark_t *ddb, ddt_entry_t *dde)
 	return (SET_ERROR(ENOENT));
 }
 
-/* BEGIN CSTYLED */
+/*
+ * This function is used by Block Cloning (brt.c) to increase reference
+ * counter for the DDT entry if the block is already in DDT.
+ *
+ * Return false if the block, despite having the D bit set, is not present
+ * in the DDT. Currently this is not possible but might be in the future.
+ * See the comment below.
+ */
+boolean_t
+ddt_addref(spa_t *spa, const blkptr_t *bp)
+{
+	ddt_t *ddt;
+	ddt_entry_t *dde;
+	boolean_t result;
+
+	spa_config_enter(spa, SCL_ZIO, FTAG, RW_READER);
+	ddt = ddt_select(spa, bp);
+	ddt_enter(ddt);
+
+	dde = ddt_lookup(ddt, bp, B_TRUE);
+	ASSERT(dde != NULL);
+
+	if (dde->dde_type < DDT_TYPES) {
+		ddt_phys_t *ddp;
+
+		ASSERT3S(dde->dde_class, <, DDT_CLASSES);
+
+		ddp = &dde->dde_phys[BP_GET_NDVAS(bp)];
+
+		/*
+		 * This entry already existed (dde_type is real), so it must
+		 * have refcnt >0 at the start of this txg. We are called from
+		 * brt_pending_apply(), before frees are issued, so the refcnt
+		 * can't be lowered yet. Therefore, it must be >0. We assert
+		 * this because if the order of BRT and DDT interactions were
+		 * ever to change and the refcnt was ever zero here, then
+		 * likely further action is required to fill out the DDT entry,
+		 * and this is a place that is likely to be missed in testing.
+		 */
+		ASSERT3U(ddp->ddp_refcnt, >, 0);
+
+		ddt_phys_addref(ddp);
+		result = B_TRUE;
+	} else {
+		/*
+		 * At the time of implementating this if the block has the
+		 * DEDUP flag set it must exist in the DEDUP table, but
+		 * there are many advocates that want ability to remove
+		 * entries from DDT with refcnt=1. If this will happen,
+		 * we may have a block with the DEDUP set, but which doesn't
+		 * have a corresponding entry in the DDT. Be ready.
+		 */
+		ASSERT3S(dde->dde_class, ==, DDT_CLASSES);
+		ddt_remove(ddt, dde);
+		result = B_FALSE;
+	}
+
+	ddt_exit(ddt);
+	spa_config_exit(spa, SCL_ZIO, FTAG);
+
+	return (result);
+}
+
 ZFS_MODULE_PARAM(zfs_dedup, zfs_dedup_, prefetch, INT, ZMOD_RW,
 	"Enable prefetching dedup-ed blks");
-/* END CSTYLED */

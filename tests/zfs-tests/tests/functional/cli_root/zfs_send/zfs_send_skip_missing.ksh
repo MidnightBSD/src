@@ -7,7 +7,7 @@
 # You may not use this file except in compliance with the License.
 #
 # You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
-# or http://www.opensolaris.org/os/licensing.
+# or https://opensource.org/licenses/CDDL-1.0.
 # See the License for the specific language governing permissions
 # and limitations under the License.
 #
@@ -49,7 +49,6 @@ function cleanup
 	datasetexists $PARENT && destroy_dataset $PARENT -rf
 
 	[[ -e $WARNF ]] && log_must rm -f $WARNF
-	rm -f $TEST_BASE_DIR/devnull
 }
 
 log_assert "Verify 'zfs send -Rs' works as expected."
@@ -66,12 +65,12 @@ log_note "Verify 'zfs send -R' fails to generate replication stream"\
 log_must zfs create $PARENT
 log_must zfs create $CHILD
 log_must zfs snapshot $SNAP
-log_mustnot eval "zfs send -R $SNAP >$TEST_BASE_DIR/devnull"
+log_mustnot eval "zfs send -R $SNAP > /dev/null"
 
 log_note "Verify 'zfs send -Rs' warns about missing snapshots, "\
 	 "but still succeeds"
 
-log_must eval "zfs send -Rs $SNAP 2> $WARNF >$TEST_BASE_DIR/devnull"
+log_must eval "zfs send -Rs $SNAP 2> $WARNF > /dev/null"
 log_must eval "[[ -s $WARNF ]]"
 
 log_pass "Verify 'zfs send -Rs' works as expected."

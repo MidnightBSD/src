@@ -45,9 +45,7 @@ function scan_scsi_hosts
 				log_must eval "echo '- - -' > $host/scan"
 			done
 		else
-			log_must eval \
-			    "echo /sys/class/scsi_host/host$hostnum/scan" \
-			    > /dev/null
+			log_note "/sys/class/scsi_host/host$hostnum/scan"
 			log_must eval \
 			    "echo '- - -' > /sys/class/scsi_host/host$hostnum/scan"
 		fi
@@ -176,13 +174,11 @@ function is_mpath_device #disk
 	[[ -z $disk ]] && log_fail "No argument for disk given."
 
 	if is_linux; then
-		lsblk $DEV_MPATHDIR/$disk -o TYPE 2>/dev/null | \
-		   grep -q mpath
-		if (($? == 0)); then
+		if lsblk $DEV_MPATHDIR/$disk -o TYPE 2>/dev/null | \
+		   grep -q mpath; then
 			readlink $DEV_MPATHDIR/$disk > /dev/null 2>&1
-			return $?
 		else
-			return $?
+			false
 		fi
 	elif is_freebsd; then
 		is_disk_device $DEV_MPATHDIR/$disk
@@ -218,13 +214,11 @@ function set_slice_prefix
 
 	if is_linux; then
 		while (( i < $DISK_ARRAY_NUM )); do
-			disk="$(echo $DISKS | nawk '{print $(i + 1)}')"
-			if ( is_mpath_device $disk ) && [[ -z $(echo $disk | awk 'substr($1,18,1)\
-			     ~ /^[[:digit:]]+$/') ]] || ( is_real_device $disk ); then
+			disk="$(echo $DISKS | awk '{print $(i + 1)}')"
+			if is_mpath_device $disk && ! echo $disk | awk 'substr($1,18,1) ~ /^[[:digit:]]+$/ {exit 1}' || is_real_device $disk; then
 				export SLICE_PREFIX=""
 				return 0
-			elif ( is_mpath_device $disk || is_loop_device \
-			    $disk ); then
+			elif is_mpath_device $disk || is_loop_device $disk; then
 				export SLICE_PREFIX="p"
 				return 0
 			else
@@ -250,7 +244,7 @@ function set_device_dir
 
 	if is_linux; then
 		while (( i < $DISK_ARRAY_NUM )); do
-			disk="$(echo $DISKS | nawk '{print $(i + 1)}')"
+			disk="$(echo $DISKS | awk '{print $(i + 1)}')"
 			if is_mpath_device $disk; then
 				export DEV_DSKDIR=$DEV_MPATHDIR
 				return 0
@@ -291,20 +285,15 @@ function get_device_dir #device
 function get_persistent_disk_name #device
 {
 	typeset device=$1
-	typeset dev_id
 
 	if is_linux; then
 		if is_real_device $device; then
-			dev_id="$(udevadm info -q all -n $DEV_DSKDIR/$device \
-			    | grep -E "disk/by-id" | nawk '{print $2; exit}' \
-			    | nawk -F / '{print $3}')"
-			echo $dev_id
+			udevadm info -q all -n $DEV_DSKDIR/$device \
+			    | awk '/disk\/by-id/ {print $2; exit}' | cut -d/ -f3
 		elif is_mpath_device $device; then
-			dev_id="$(udevadm info -q all -n $DEV_DSKDIR/$device \
-			    | grep -E "disk/by-id/dm-uuid" \
-			    | nawk '{print $2; exit}' \
-			    | nawk -F / '{print $3}')"
-			echo $dev_id
+			udevadm info -q all -n $DEV_DSKDIR/$device \
+			    | awk '/disk\/by-id\/dm-uuid/ {print $2; exit}' \
+			    | cut -d/ -f3
 		else
 			echo $device
 		fi
@@ -331,28 +320,22 @@ function on_off_disk # disk state{online,offline} host
 
 	if is_linux; then
 		if [[ $state == "offline" ]] && ( is_mpath_device $disk ); then
-			dm_name="$(readlink $DEV_DSKDIR/$disk \
-			    | nawk -F / '{print $2}')"
-			dep="$(ls /sys/block/${dm_name}/slaves \
-			    | nawk '{print $1}')"
+			dm_name="$(readlink $DEV_DSKDIR/$disk | cut -d/ -f2)"
+			dep="$(ls /sys/block/${dm_name}/slaves | awk '{print $1}')"
 			while [[ -n $dep ]]; do
 				#check if disk is online
-				lsscsi | grep -qF $dep
-				if (($? == 0)); then
+				if lsscsi | grep -qF $dep; then
 					dep_dir="/sys/block/${dm_name}"
 					dep_dir+="/slaves/${dep}/device"
 					ss="${dep_dir}/state"
 					sd="${dep_dir}/delete"
 					log_must eval "echo 'offline' > ${ss}"
 					log_must eval "echo '1' > ${sd}"
-					lsscsi | grep -qF $dep
-						if (($? == 0)); then
-							log_fail "Offlining" \
-							    "$disk failed"
-						fi
+					if lsscsi | grep -qF $dep; then
+						log_fail "Offlining $disk failed"
+					fi
 				fi
-				dep="$(ls /sys/block/$dm_name/slaves \
-				    2>/dev/null | nawk '{print $1}')"
+				dep="$(ls /sys/block/$dm_name/slaves 2>/dev/null | awk '{print $1}')"
 			done
 		elif [[ $state == "offline" ]] && ( is_real_device $disk ); then
 			#check if disk is online
@@ -372,12 +355,9 @@ function on_off_disk # disk state{online,offline} host
 			scan_scsi_hosts $host
 			block_device_wait
 			if is_mpath_device $disk; then
-				dm_name="$(readlink $DEV_DSKDIR/$disk \
-				    | nawk -F / '{print $2}')"
-				dep="$(ls /sys/block/$dm_name/slaves \
-				    | nawk '{print $1}')"
-				lsscsi | grep -qF $dep
-				if (($? != 0)); then
+				dm_name="$(readlink $DEV_DSKDIR/$disk | cut -d/ -f2)"
+				dep="$(ls /sys/block/$dm_name/slaves | awk '{print $1}')"
+				if lsscsi | grep -qF $dep; then
 					log_fail "Onlining $disk failed"
 				fi
 			elif is_real_device $disk; then
@@ -454,11 +434,8 @@ function load_scsi_debug # dev_size_mb add_host num_tgts max_luns blksz
 	esac
 
 	if is_linux; then
-		modprobe -n scsi_debug
-		if (($? != 0)); then
-			log_unsupported "Platform does not have scsi_debug"
-			    "module"
-		fi
+		modprobe -n scsi_debug ||
+			log_unsupported "Platform does not have scsi_debug module"
 		if lsmod | grep -q scsi_debug; then
 			log_fail "scsi_debug module already installed"
 		else
@@ -488,7 +465,7 @@ function unload_scsi_debug
 function get_debug_device
 {
 	for i in {1..10} ; do
-		val=$(lsscsi | nawk '/scsi_debug/ {print $6; exit}' | cut -d / -f3)
+		val=$(lsscsi | awk '/scsi_debug/ {print $6; exit}' | cut -d/ -f3)
 
 		# lsscsi can take time to settle
 		if [ "$val" != "-" ] ; then
@@ -508,11 +485,11 @@ function get_pool_devices #testpool #devdir
 	typeset devdir=$2
 	typeset out=""
 
-	if is_linux || is_freebsd; then
-		out=$(zpool status -P $testpool |grep ${devdir} | awk '{print $1}')
-		out=$(echo $out | sed -e "s|${devdir}/||g" | tr '\n' ' ')
-	fi
-	echo $out
+	case "$UNAME" in
+	Linux|FreeBSD)
+		zpool status -P $testpool | awk -v d="$devdir" '$1 ~ d {sub(d "/", ""); printf("%s ", $1)}'
+		;;
+	esac
 }
 
 #
@@ -579,27 +556,15 @@ function list_file_blocks # input_file
 	# 512B blocks for ease of use with dd.
 	#
 	typeset level vdev path offset length
-	if awk -n '' 2>/dev/null; then
-		# gawk needs -n to decode hex
-		AWK='awk -n'
-	else
-		AWK='awk'
-	fi
-	log_must zpool sync -f
-	zdb -dddddd $ds $objnum | $AWK -v pad=$((4<<20)) -v bs=512 '
+	sync_all_pools true
+	zdb -dddddd $ds $objnum | awk '
 	    /^$/ { looking = 0 }
 	    looking {
 	        level = $2
 	        field = 3
 	        while (split($field, dva, ":") == 3) {
-	            # top level vdev id
-	            vdev = int(dva[1])
-	            # offset + 4M label/boot pad in 512B blocks
-	            offset = (int("0x"dva[2]) + pad) / bs
-		    # length in 512B blocks
-		    len = int("0x"dva[3]) / bs
 
-	            print level, vdev, offset, len
+	            print level, int(dva[1]), "0x"dva[2], "0x"dva[3]
 
 	            ++field
 	        }
@@ -608,7 +573,8 @@ function list_file_blocks # input_file
 	' | \
 	while read level vdev offset length; do
 		for path in ${VDEV_MAP[$vdev][@]}; do
-			echo "$level $path $offset $length"
+			echo "$level $path $(( ($offset + (4<<20)) / 512 ))" \
+			    "$(( $length / 512 ))"
 		done
 	done 2>/dev/null
 }
@@ -641,4 +607,17 @@ function corrupt_blocks_at_level # input_file corrupt_level
 
 	# This is necessary for pools made of loop devices.
 	sync
+}
+
+function corrupt_label_checksum # label_number vdev_path
+{
+	typeset label_size=$((256*1024))
+	typeset vdev_size=$(stat_size ${2})
+	typeset -a offsets=("$((128*1024 - 32))" \
+	    "$(($label_size + (128*1024 - 32)))" \
+	    "$(($vdev_size - $label_size - (128*1024 + 32)))" \
+	    "$(($vdev_size - (128*1024 + 32)))")
+
+	dd if=/dev/urandom of=${2} seek=${offsets[$1]} bs=1 count=32 \
+	    conv=notrunc
 }

@@ -7,7 +7,7 @@
 # You may not use this file except in compliance with the License.
 #
 # You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
-# or http://www.opensolaris.org/os/licensing.
+# or https://opensource.org/licenses/CDDL-1.0.
 # See the License for the specific language governing permissions
 # and limitations under the License.
 #
@@ -57,8 +57,8 @@ set -A args "create" "add" "destroy" "import fakepool" \
     "add raidz1 fakepool" "add raidz2 fakepool" \
     "setvprop" "blah blah" "-%" "--?" "-*" "-=" \
     "-a" "-f" "-g" "-j" "-n" "-o" "-p" "-p /tmp" \
-    "-t" "-w" "-z" "-E" "-H" "-I" "-J" "-K" \
-    "-Q" "-R" "-T" "-W"
+    "-t" "-w" "-z" "-E" "-H" "-I" "-J" \
+    "-Q" "-R" "-W"
 
 log_assert "Execute zdb using invalid parameters."
 

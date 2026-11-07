@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -81,14 +81,14 @@
 #include <scsi/sg.h>
 #include <sys/efi_partition.h>
 #include <sys/stat.h>
-#include <sys/vtoc.h>
 #include <sys/mntent.h>
 #include <uuid/uuid.h>
 #include <blkid/blkid.h>
 
 typedef struct vdev_disk_db_entry
 {
-	char id[24];
+	/* 24 byte name + 1 byte NULL terminator to make GCC happy */
+	char id[25];
 	int sector_size;
 } vdev_disk_db_entry_t;
 
@@ -409,6 +409,13 @@ check_device(const char *path, boolean_t force,
 void
 after_zpool_upgrade(zpool_handle_t *zhp)
 {
+	(void) zhp;
+}
+
+int
+check_file(const char *file, boolean_t force, boolean_t isspare)
+{
+	return (check_file_generic(file, force, isspare));
 }
 
 /*
@@ -432,7 +439,7 @@ static char *zpool_sysfs_gets(char *path)
 		return (NULL);
 	}
 
-	buf = calloc(sizeof (*buf), statbuf.st_size + 1);
+	buf = calloc(statbuf.st_size + 1, sizeof (*buf));
 	if (buf == NULL) {
 		close(fd);
 		return (NULL);
@@ -452,7 +459,7 @@ static char *zpool_sysfs_gets(char *path)
 	}
 
 	/* Remove trailing newline */
-	if (buf[count - 1] == '\n')
+	if (count > 0 && buf[count - 1] == '\n')
 		buf[count - 1] = 0;
 
 	close(fd);
@@ -521,7 +528,7 @@ static int zpool_power_parse_value(char *str)
 static char *
 zpool_power_sysfs_path(zpool_handle_t *zhp, char *vdev)
 {
-	char *enc_sysfs_dir = NULL;
+	const char *enc_sysfs_dir = NULL;
 	char *path = NULL;
 	nvlist_t *vdev_nv = zpool_find_vdev(zhp, vdev, NULL, NULL, NULL);
 

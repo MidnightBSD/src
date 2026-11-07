@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -79,6 +79,7 @@ typedef struct vdev_rebuild {
 	uint64_t	vr_pass_start_time;
 	uint64_t	vr_pass_bytes_scanned;
 	uint64_t	vr_pass_bytes_issued;
+	uint64_t	vr_pass_bytes_skipped;
 
 	/* On-disk state updated by vdev_rebuild_zap_update_sync() */
 	vdev_rebuild_phys_t vr_rebuild_phys;
@@ -88,6 +89,7 @@ boolean_t vdev_rebuild_active(vdev_t *);
 
 int vdev_rebuild_load(vdev_t *);
 void vdev_rebuild(vdev_t *);
+void vdev_rebuild_txgs(vdev_t *, uint64_t *, uint64_t *);
 void vdev_rebuild_stop_wait(vdev_t *);
 void vdev_rebuild_stop_all(spa_t *);
 void vdev_rebuild_restart(spa_t *);

@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -27,28 +27,16 @@
 #include <linux/linkage.h>
 #endif
 
-#ifndef RET
-#define	RET	ret
-#endif
-
-#undef ENTRY
-#define	ENTRY(x) \
-	.text; \
-	.align	8; \
-	.globl	x; \
-	.type	x, @function; \
-x:
-
-#define	SET_SIZE(x) \
-	.size	x, [.-x]
-
 /*
  * Setjmp and longjmp implement non-local gotos using state vectors
  * type label_t.
  */
 #ifdef __x86_64__
 
-	ENTRY(setjmp)
+#define _ASM
+#include <sys/asm_linkage.h>
+
+ENTRY_ALIGN(setjmp, 8)
 	movq	%rsp, 0(%rdi)
 	movq	%rbp, 8(%rdi)
 	movq	%rbx, 16(%rdi)
@@ -62,7 +50,7 @@ x:
 	RET
 	SET_SIZE(setjmp)
 
-	ENTRY(longjmp)
+ENTRY_ALIGN(longjmp, 8)
 	movq	0(%rdi), %rsp
 	movq	8(%rdi), %rbp
 	movq	16(%rdi), %rbx

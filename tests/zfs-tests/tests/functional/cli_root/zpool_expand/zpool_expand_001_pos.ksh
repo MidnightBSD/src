@@ -7,7 +7,7 @@
 # You may not use this file except in compliance with the License.
 #
 # You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
-# or http://www.opensolaris.org/os/licensing.
+# or https://opensource.org/licenses/CDDL-1.0.
 # See the License for the specific language governing permissions
 # and limitations under the License.
 #
@@ -104,7 +104,7 @@ log_onexit cleanup
 
 log_assert "zpool can be autoexpanded after set autoexpand=on on vdev expansion"
 
-for type in " " mirror raidz; do
+for type in " " mirror raidz draid:1s; do
 	log_note "Setting up loopback, scsi_debug, and file vdevs"
 	log_must truncate -s $org_size $FILE_LO
 	DEV1=$(losetup -f)

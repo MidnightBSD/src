@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -210,16 +210,22 @@ dmu_tx_check_ioerr(zio_t *zio, dnode_t *dn, int level, uint64_t blkid)
 	dmu_buf_impl_t *db;
 
 	rw_enter(&dn->dn_struct_rwlock, RW_READER);
-	db = dbuf_hold_level(dn, level, blkid, FTAG);
+	err = dbuf_hold_impl(dn, level, blkid, TRUE, FALSE, FTAG, &db);
 	rw_exit(&dn->dn_struct_rwlock);
-	if (db == NULL)
-		return (SET_ERROR(EIO));
-	err = dbuf_read(db, zio, DB_RF_CANFAIL | DB_RF_NOPREFETCH);
+	if (err == ENOENT)
+		return (0);
+	if (err != 0)
+		return (err);
+	/*
+	 * PARTIAL_FIRST allows caching for uncacheable blocks.  It will
+	 * be cleared after dmu_buf_will_dirty() call dbuf_read() again.
+	 */
+	err = dbuf_read(db, zio, DB_RF_CANFAIL | DB_RF_NOPREFETCH |
+	    (level == 0 ? DB_RF_PARTIAL_FIRST : 0));
 	dbuf_rele(db, FTAG);
 	return (err);
 }
 
-/* ARGSUSED */
 static void
 dmu_tx_count_write(dmu_tx_hold_t *txh, uint64_t off, uint64_t len)
 {
@@ -428,7 +434,7 @@ dmu_tx_mark_netfree(dmu_tx_t *tx)
 }
 
 static void
-dmu_tx_hold_free_impl(dmu_tx_hold_t *txh, uint64_t off, uint64_t len)
+dmu_tx_count_free(dmu_tx_hold_t *txh, uint64_t off, uint64_t len)
 {
 	dmu_tx_t *tx = txh->txh_tx;
 	dnode_t *dn = txh->txh_dnode;
@@ -436,14 +442,10 @@ dmu_tx_hold_free_impl(dmu_tx_hold_t *txh, uint64_t off, uint64_t len)
 
 	ASSERT(tx->tx_txg == 0);
 
-	dmu_tx_count_dnode(txh);
-
 	if (off >= (dn->dn_maxblkid + 1) * dn->dn_datablksz)
 		return;
 	if (len == DMU_OBJECT_END)
 		len = (dn->dn_maxblkid + 1) * dn->dn_datablksz - off;
-
-	dmu_tx_count_dnode(txh);
 
 	/*
 	 * For i/o error checking, we read the first and last level-0
@@ -524,8 +526,10 @@ dmu_tx_hold_free(dmu_tx_t *tx, uint64_t object, uint64_t off, uint64_t len)
 
 	txh = dmu_tx_hold_object_impl(tx, tx->tx_objset,
 	    object, THT_FREE, off, len);
-	if (txh != NULL)
-		(void) dmu_tx_hold_free_impl(txh, off, len);
+	if (txh != NULL) {
+		dmu_tx_count_dnode(txh);
+		dmu_tx_count_free(txh, off, len);
+	}
 }
 
 void
@@ -534,8 +538,35 @@ dmu_tx_hold_free_by_dnode(dmu_tx_t *tx, dnode_t *dn, uint64_t off, uint64_t len)
 	dmu_tx_hold_t *txh;
 
 	txh = dmu_tx_hold_dnode_impl(tx, dn, THT_FREE, off, len);
-	if (txh != NULL)
-		(void) dmu_tx_hold_free_impl(txh, off, len);
+	if (txh != NULL) {
+		dmu_tx_count_dnode(txh);
+		dmu_tx_count_free(txh, off, len);
+	}
+}
+
+static void
+dmu_tx_count_clone(dmu_tx_hold_t *txh, uint64_t off, uint64_t len)
+{
+
+	/*
+	 * Reuse dmu_tx_count_free(), it does exactly what we need for clone.
+	 */
+	dmu_tx_count_free(txh, off, len);
+}
+
+void
+dmu_tx_hold_clone_by_dnode(dmu_tx_t *tx, dnode_t *dn, uint64_t off, int len)
+{
+	dmu_tx_hold_t *txh;
+
+	ASSERT0(tx->tx_txg);
+	ASSERT(len == 0 || UINT64_MAX - off >= len - 1);
+
+	txh = dmu_tx_hold_dnode_impl(tx, dn, THT_CLONE, off, len);
+	if (txh != NULL) {
+		dmu_tx_count_dnode(txh);
+		dmu_tx_count_clone(txh, off, len);
+	}
 }
 
 static void
@@ -544,6 +575,7 @@ dmu_tx_hold_zap_impl(dmu_tx_hold_t *txh, const char *name)
 	dmu_tx_t *tx = txh->txh_tx;
 	dnode_t *dn = txh->txh_dnode;
 	int err;
+	extern int zap_micro_max_size;
 
 	ASSERT(tx->tx_txg == 0);
 
@@ -559,7 +591,7 @@ dmu_tx_hold_zap_impl(dmu_tx_hold_t *txh, const char *name)
 	 *    - 2 grown ptrtbl blocks
 	 */
 	(void) zfs_refcount_add_many(&txh->txh_space_towrite,
-	    MZAP_MAX_BLKSZ, FTAG);
+	    zap_micro_max_size, FTAG);
 
 	if (dn == NULL)
 		return;
@@ -765,6 +797,10 @@ dmu_tx_dirty_buf(dmu_tx_t *tx, dmu_buf_impl_t *db)
 			case THT_NEWOBJECT:
 				match_object = TRUE;
 				break;
+			case THT_CLONE:
+				if (blkid >= beginblk && blkid <= endblk)
+					match_offset = TRUE;
+				break;
 			default:
 				cmn_err(CE_PANIC, "bad txh_type %d",
 				    txh->txh_type);
@@ -786,8 +822,7 @@ dmu_tx_dirty_buf(dmu_tx_t *tx, dmu_buf_impl_t *db)
  * If we can't do 10 iops, something is wrong.  Let us go ahead
  * and hit zfs_dirty_data_max.
  */
-hrtime_t zfs_delay_max_ns = 100 * MICROSEC; /* 100 milliseconds */
-int zfs_delay_resolution_ns = 100 * 1000; /* 100 microseconds */
+static const hrtime_t zfs_delay_max_ns = 100 * MICROSEC; /* 100 milliseconds */
 
 /*
  * We delay transactions when we've determined that the backend storage
@@ -1363,8 +1398,7 @@ dmu_tx_do_callbacks(list_t *cb_list, int error)
 {
 	dmu_tx_callback_t *dcb;
 
-	while ((dcb = list_tail(cb_list)) != NULL) {
-		list_remove(cb_list, dcb);
+	while ((dcb = list_remove_tail(cb_list)) != NULL) {
 		dcb->dcb_func(dcb->dcb_data, error);
 		kmem_free(dcb, sizeof (dmu_tx_callback_t));
 	}
@@ -1486,11 +1520,8 @@ dmu_tx_hold_sa(dmu_tx_t *tx, sa_handle_t *hdl, boolean_t may_grow)
 		ASSERT(tx->tx_txg == 0);
 		dmu_tx_hold_spill(tx, object);
 	} else {
-		dnode_t *dn;
-
 		DB_DNODE_ENTER(db);
-		dn = DB_DNODE(db);
-		if (dn->dn_have_spill) {
+		if (DB_DNODE(db)->dn_have_spill) {
 			ASSERT(tx->tx_txg == 0);
 			dmu_tx_hold_spill(tx, object);
 		}

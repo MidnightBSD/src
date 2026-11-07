@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -57,14 +57,13 @@ struct dsl_scan;
 struct dsl_crypto_params;
 struct dsl_deadlist;
 
-extern unsigned long zfs_dirty_data_max;
-extern unsigned long zfs_dirty_data_max_max;
-extern unsigned long zfs_wrlog_data_max;
-extern int zfs_dirty_data_sync_percent;
-extern int zfs_dirty_data_max_percent;
-extern int zfs_dirty_data_max_max_percent;
-extern int zfs_delay_min_dirty_percent;
-extern unsigned long zfs_delay_scale;
+extern uint64_t zfs_dirty_data_max;
+extern uint64_t zfs_dirty_data_max_max;
+extern uint64_t zfs_wrlog_data_max;
+extern uint_t zfs_dirty_data_max_percent;
+extern uint_t zfs_dirty_data_max_max_percent;
+extern uint_t zfs_delay_min_dirty_percent;
+extern uint64_t zfs_delay_scale;
 
 /* These macros are for indexing into the zfs_all_blkstats_t. */
 #define	DMU_OT_DEFERRED	DMU_OT_NONE
@@ -178,9 +177,9 @@ void dsl_pool_mos_diduse_space(dsl_pool_t *dp,
 void dsl_pool_ckpoint_diduse_space(dsl_pool_t *dp,
     int64_t used, int64_t comp, int64_t uncomp);
 boolean_t dsl_pool_need_dirty_delay(dsl_pool_t *dp);
-void dsl_pool_config_enter(dsl_pool_t *dp, void *tag);
-void dsl_pool_config_enter_prio(dsl_pool_t *dp, void *tag);
-void dsl_pool_config_exit(dsl_pool_t *dp, void *tag);
+void dsl_pool_config_enter(dsl_pool_t *dp, const void *tag);
+void dsl_pool_config_enter_prio(dsl_pool_t *dp, const void *tag);
+void dsl_pool_config_exit(dsl_pool_t *dp, const void *tag);
 boolean_t dsl_pool_config_held(dsl_pool_t *dp);
 boolean_t dsl_pool_config_held_writer(dsl_pool_t *dp);
 
@@ -193,8 +192,8 @@ int dsl_pool_user_release(dsl_pool_t *dp, uint64_t dsobj,
     const char *tag, dmu_tx_t *tx);
 void dsl_pool_clean_tmp_userrefs(dsl_pool_t *dp);
 int dsl_pool_open_special_dir(dsl_pool_t *dp, const char *name, dsl_dir_t **);
-int dsl_pool_hold(const char *name, void *tag, dsl_pool_t **dp);
-void dsl_pool_rele(dsl_pool_t *dp, void *tag);
+int dsl_pool_hold(const char *name, const void *tag, dsl_pool_t **dp);
+void dsl_pool_rele(dsl_pool_t *dp, const void *tag);
 
 void dsl_pool_create_obsolete_bpobj(dsl_pool_t *dp, dmu_tx_t *tx);
 void dsl_pool_destroy_obsolete_bpobj(dsl_pool_t *dp, dmu_tx_t *tx);

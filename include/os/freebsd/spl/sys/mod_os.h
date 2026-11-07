@@ -31,22 +31,13 @@
 
 #include <sys/sysctl.h>
 
-#define	ZFS_MODULE_DESCRIPTION(s)
-#define	ZFS_MODULE_AUTHOR(s)
-#define	ZFS_MODULE_LICENSE(s)
-#define	ZFS_MODULE_VERSION(s)
-
-#define	EXPORT_SYMBOL(x)
-#define	module_param(a, b, c)
-#define	MODULE_PARM_DESC(a, b)
-
 #define	ZMOD_RW CTLFLAG_RWTUN
 #define	ZMOD_RD CTLFLAG_RDTUN
 
-/* BEGIN CSTYLED */
 #define	ZFS_MODULE_PARAM(scope_prefix, name_prefix, name, type, perm, desc) \
     SYSCTL_DECL(_vfs_ ## scope_prefix); \
-    SYSCTL_##type(_vfs_ ## scope_prefix, OID_AUTO, name, perm, &name_prefix ## name, 0, desc)
+    SYSCTL_##type(_vfs_ ## scope_prefix, OID_AUTO, name, perm, \
+	&name_prefix ## name, 0, desc)
 
 #define	ZFS_MODULE_PARAM_ARGS	SYSCTL_HANDLER_ARGS
 
@@ -54,43 +45,51 @@
     SYSCTL_DECL(parent); \
     SYSCTL_PROC(parent, OID_AUTO, name, CTLFLAG_MPSAFE | perm | args, desc)
 
-#define	ZFS_MODULE_PARAM_CALL(scope_prefix, name_prefix, name, func, _, perm, desc) \
-    ZFS_MODULE_PARAM_CALL_IMPL(_vfs_ ## scope_prefix, name, perm, func ## _args(name_prefix ## name), desc)
+#define	ZFS_MODULE_PARAM_CALL( \
+    scope_prefix, name_prefix, name, func, _, perm, desc) \
+	ZFS_MODULE_PARAM_CALL_IMPL(_vfs_ ## scope_prefix, name, perm, \
+	    func ## _args(name_prefix ## name), desc)
 
 #define	ZFS_MODULE_VIRTUAL_PARAM_CALL ZFS_MODULE_PARAM_CALL
 
-#define	param_set_arc_long_args(var) \
-    CTLTYPE_ULONG, &var, 0, param_set_arc_long, "LU"
-
-#define	param_set_arc_min_args(var) \
-    CTLTYPE_ULONG, &var, 0, param_set_arc_min, "LU"
-
-#define	param_set_arc_max_args(var) \
-    CTLTYPE_ULONG, &var, 0, param_set_arc_max, "LU"
+#define	param_set_arc_u64_args(var) \
+    CTLTYPE_U64, &var, 0, param_set_arc_u64, "QU"
 
 #define	param_set_arc_int_args(var) \
     CTLTYPE_INT, &var, 0, param_set_arc_int, "I"
+
+#define	param_set_arc_min_args(var) \
+    CTLTYPE_U64, NULL, 0, param_set_arc_min, "QU"
+
+#define	param_set_arc_max_args(var) \
+    CTLTYPE_U64, NULL, 0, param_set_arc_max, "QU"
+
+#define	param_set_arc_free_target_args(var) \
+    CTLTYPE_UINT, NULL, 0, param_set_arc_free_target, "IU"
+
+#define	param_set_arc_no_grow_shift_args(var) \
+    CTLTYPE_INT, NULL, 0, param_set_arc_no_grow_shift, "I"
 
 #define	param_set_deadman_failmode_args(var) \
     CTLTYPE_STRING, NULL, 0, param_set_deadman_failmode, "A"
 
 #define	param_set_deadman_synctime_args(var) \
-    CTLTYPE_ULONG, NULL, 0, param_set_deadman_synctime, "LU"
+    CTLTYPE_U64, NULL, 0, param_set_deadman_synctime, "QU"
 
 #define	param_set_deadman_ziotime_args(var) \
-    CTLTYPE_ULONG, NULL, 0, param_set_deadman_ziotime, "LU"
+    CTLTYPE_U64, NULL, 0, param_set_deadman_ziotime, "QU"
 
 #define	param_set_multihost_interval_args(var) \
-    CTLTYPE_ULONG, &var, 0, param_set_multihost_interval, "LU"
+    CTLTYPE_U64, NULL, 0, param_set_multihost_interval, "QU"
 
 #define	param_set_slop_shift_args(var) \
-    CTLTYPE_INT, &var, 0, param_set_slop_shift, "I"
+    CTLTYPE_INT, NULL, 0, param_set_slop_shift, "I"
 
 #define	param_set_min_auto_ashift_args(var) \
-    CTLTYPE_U64, &var, 0, param_set_min_auto_ashift, "QU"
+    CTLTYPE_UINT, NULL, 0, param_set_min_auto_ashift, "IU"
 
 #define	param_set_max_auto_ashift_args(var) \
-    CTLTYPE_U64, &var, 0, param_set_max_auto_ashift, "QU"
+    CTLTYPE_UINT, NULL, 0, param_set_max_auto_ashift, "IU"
 
 #define	spa_taskq_read_param_set_args(var) \
     CTLTYPE_STRING, NULL, 0, spa_taskq_read_param, "A"
@@ -101,30 +100,38 @@
 #define	fletcher_4_param_set_args(var) \
     CTLTYPE_STRING, NULL, 0, fletcher_4_param, "A"
 
+#define	blake3_param_set_args(var) \
+    CTLTYPE_STRING, NULL, 0, blake3_param, "A"
+
+#define	sha256_param_set_args(var) \
+    CTLTYPE_STRING, NULL, 0, sha256_param, "A"
+
+#define	sha512_param_set_args(var) \
+    CTLTYPE_STRING, NULL, 0, sha512_param, "A"
+
 #include <sys/kernel.h>
-#define	module_init(fn)							\
+#define	module_init(fn) \
 static void \
 wrap_ ## fn(void *dummy __unused) \
-{								 \
-	fn();						 \
-}																		\
+{ \
+	fn(); \
+} \
 SYSINIT(zfs_ ## fn, SI_SUB_LAST, SI_ORDER_FIRST, wrap_ ## fn, NULL)
 
-#define	module_init_early(fn)							\
+#define	module_init_early(fn) \
 static void \
 wrap_ ## fn(void *dummy __unused) \
-{								 \
-	fn();						 \
-}																		\
+{ \
+	fn(); \
+} \
 SYSINIT(zfs_ ## fn, SI_SUB_INT_CONFIG_HOOKS, SI_ORDER_FIRST, wrap_ ## fn, NULL)
 
-#define	module_exit(fn) 							\
+#define	module_exit(fn) \
 static void \
 wrap_ ## fn(void *dummy __unused) \
-{								 \
-	fn();						 \
-}																		\
+{ \
+	fn(); \
+} \
 SYSUNINIT(zfs_ ## fn, SI_SUB_LAST, SI_ORDER_FIRST, wrap_ ## fn, NULL)
-/* END CSTYLED */
 
 #endif /* SPL_MOD_H */

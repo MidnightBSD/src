@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -144,6 +144,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <strings.h>
 #include <unistd.h>
 
@@ -159,7 +160,7 @@
 libzfs_handle_t *g_zfs;
 int zfs_fd;
 
-static const char *errtable[TYPE_INVAL] = {
+static const char *const errtable[TYPE_INVAL] = {
 	"data",
 	"dnode",
 	"mos",
@@ -497,11 +498,11 @@ print_all_handlers(void)
 	return (count + total);
 }
 
-/* ARGSUSED */
 static int
 cancel_one_handler(int id, const char *pool, zinject_record_t *record,
     void *data)
 {
+	(void) pool, (void) record, (void) data;
 	zfs_cmd_t zc = {"\0"};
 
 	zc.zc_guid = (uint64_t)id;
@@ -1082,6 +1083,22 @@ main(int argc, char **argv)
 			libzfs_fini(g_zfs);
 			return (1);
 		}
+
+		if (record.zi_nlanes) {
+			switch (io_type) {
+			case ZIO_TYPE_READ:
+			case ZIO_TYPE_WRITE:
+			case ZIO_TYPES:
+				break;
+			default:
+				(void) fprintf(stderr, "I/O type for a delay "
+				    "must be 'read' or 'write'\n");
+				usage();
+				libzfs_fini(g_zfs);
+				return (1);
+			}
+		}
+
 		if (!error)
 			error = ENXIO;
 

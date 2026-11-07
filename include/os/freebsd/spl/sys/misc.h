@@ -45,16 +45,19 @@
 #define	F_SEEK_HOLE	FIOSEEKHOLE
 
 struct opensolaris_utsname {
-	char	*sysname;
-	char	*nodename;
-	char	*release;
-	char	version[32];
-	char	*machine;
+	const char	*sysname;
+	const char	*nodename;
+	const char	*release;
+	char		version[32];
+	const char	*machine;
 };
-
-extern char hw_serial[11];
 
 #define	task_io_account_read(n)
 #define	task_io_account_write(n)
+
+/*
+ * Check if the current thread is a memory reclaim thread.
+ */
+extern int current_is_reclaim_thread(void);
 
 #endif	/* _OPENSOLARIS_SYS_MISC_H_ */

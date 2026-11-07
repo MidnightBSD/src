@@ -7,7 +7,7 @@
  * with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -76,8 +76,12 @@ fstat64_blk(int fd, struct stat64 *st)
 /*
  * Only Intel-based Macs have a separate stat64; Arm-based Macs are like
  * FreeBSD and have a full 64-bit stat from the start.
+ *
+ * On Linux, musl libc is full 64-bit too and has deprecated its own version
+ * of these defines since version 1.2.4.
  */
-#if defined(__APPLE__) && !(defined(__i386__) || defined(__x86_64__))
+#if (defined(__APPLE__) && !(defined(__i386__) || defined(__x86_64__))) || \
+	(defined(__linux__) && !defined(__GLIBC__))
 #define	stat64	stat
 #define	fstat64	fstat
 #endif

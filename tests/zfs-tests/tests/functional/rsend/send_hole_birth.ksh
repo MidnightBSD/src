@@ -7,7 +7,7 @@
 # You may not use this file except in compliance with the License.
 #
 # You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
-# or http://www.opensolaris.org/os/licensing.
+# or https://opensource.org/licenses/CDDL-1.0.
 # See the License for the specific language governing permissions
 # and limitations under the License.
 #
@@ -65,7 +65,7 @@ function send_and_verify
 	    ">$BACKDIR/pool-snap1-snap2"
 	log_must eval "zfs receive $recvfs < $BACKDIR/pool-snap1-snap2"
 
-	log_must cmp_md5s /$sendfs/file1 /$recvfs/file1
+	log_must cmp_xxh128 /$sendfs/file1 /$recvfs/file1
 }
 
 # By default sending hole_birth times is disabled.  This functionality needs

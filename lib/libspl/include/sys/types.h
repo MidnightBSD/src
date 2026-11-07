@@ -7,7 +7,7 @@
  * with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -37,40 +37,15 @@
 #include <sys/feature_tests.h>
 #include_next <sys/types.h>
 #include <sys/types32.h>
-#include <sys/va_list.h>
+#include <stdarg.h>
 #include <sys/stdtypes.h>
 
 #ifndef HAVE_INTTYPES
 #include <inttypes.h>
 #endif /* HAVE_INTTYPES */
 
-typedef int		zoneid_t;
+typedef uint_t		zoneid_t;
 typedef int		projid_t;
-
-/*
- * Definitions remaining from previous partial support for 64-bit file
- * offsets.  This partial support for devices greater than 2gb requires
- * compiler support for long long.
- */
-#ifdef _LONG_LONG_LTOH
-typedef union {
-	offset_t _f;    /* Full 64 bit offset value */
-	struct {
-		int32_t _l; /* lower 32 bits of offset value */
-		int32_t _u; /* upper 32 bits of offset value */
-	} _p;
-} lloff_t;
-#endif
-
-#ifdef _LONG_LONG_HTOL
-typedef union {
-	offset_t _f;    /* Full 64 bit offset value */
-	struct {
-		int32_t _u; /* upper 32 bits of offset value */
-		int32_t _l; /* lower 32 bits of offset value */
-	} _p;
-} lloff_t;
-#endif
 
 #include <sys/param.h> /* for NBBY */
 

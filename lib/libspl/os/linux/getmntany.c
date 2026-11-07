@@ -7,7 +7,7 @@
  * with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -38,10 +38,11 @@
 #include <sys/sysmacros.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <libzutil.h>
 
 #define	BUFSIZE	(MNT_LINE_MAX + 2)
 
-__thread char buf[BUFSIZE];
+static __thread char buf[BUFSIZE];
 
 #define	DIFF(xx)	( \
 	    (mrefp->xx != NULL) && \
@@ -83,13 +84,21 @@ _sol_getmntent(FILE *fp, struct mnttab *mgetp)
 }
 
 static int
-getextmntent_impl(FILE *fp, struct extmnttab *mp, int len)
+getextmntent_impl(FILE *fp, struct extmnttab *mp, uint64_t *mnt_id)
 {
 	int ret;
 	struct stat64 st;
 
+	*mnt_id = 0;
 	ret = _sol_getmntent(fp, (struct mnttab *)mp);
 	if (ret == 0) {
+#ifdef HAVE_STATX_MNT_ID
+		struct statx stx;
+		if (statx(AT_FDCWD, mp->mnt_mountp,
+		    AT_STATX_SYNC_AS_STAT | AT_SYMLINK_NOFOLLOW,
+		    STATX_MNT_ID, &stx) == 0 && (stx.stx_mask & STATX_MNT_ID))
+			*mnt_id = stx.stx_mnt_id;
+#endif
 		if (stat64(mp->mnt_mountp, &st) != 0) {
 			mp->mnt_major = 0;
 			mp->mnt_minor = 0;
@@ -108,6 +117,12 @@ getextmntent(const char *path, struct extmnttab *entry, struct stat64 *statbuf)
 	struct stat64 st;
 	FILE *fp;
 	int match;
+	boolean_t have_mnt_id = B_FALSE;
+	uint64_t target_mnt_id = 0;
+	uint64_t entry_mnt_id;
+#ifdef HAVE_STATX_MNT_ID
+	struct statx stx;
+#endif
 
 	if (strlen(path) >= MAXPATHLEN) {
 		(void) fprintf(stderr, "invalid object; pathname too long\n");
@@ -122,16 +137,19 @@ getextmntent(const char *path, struct extmnttab *entry, struct stat64 *statbuf)
 	 */
 	if (stat64(path, statbuf) != 0) {
 		(void) fprintf(stderr, "cannot open '%s': %s\n",
-		    path, strerror(errno));
+		    path, zfs_strerror(errno));
 		return (-1);
 	}
 
-
-#ifdef HAVE_SETMNTENT
-	if ((fp = setmntent(MNTTAB, "re")) == NULL) {
-#else
-	if ((fp = fopen(MNTTAB, "re")) == NULL) {
+#ifdef HAVE_STATX_MNT_ID
+	if (statx(AT_FDCWD, path, AT_STATX_SYNC_AS_STAT | AT_SYMLINK_NOFOLLOW,
+	    STATX_MNT_ID, &stx) == 0 && (stx.stx_mask & STATX_MNT_ID)) {
+		have_mnt_id = B_TRUE;
+		target_mnt_id = stx.stx_mnt_id;
+	}
 #endif
+
+	if ((fp = fopen(MNTTAB, "re")) == NULL) {
 		(void) fprintf(stderr, "cannot open %s\n", MNTTAB);
 		return (-1);
 	}
@@ -141,12 +159,15 @@ getextmntent(const char *path, struct extmnttab *entry, struct stat64 *statbuf)
 	 */
 
 	match = 0;
-	while (getextmntent_impl(fp, entry, sizeof (*entry)) == 0) {
-		if (makedev(entry->mnt_major, entry->mnt_minor) ==
-		    statbuf->st_dev) {
-			match = 1;
-			break;
+	while (getextmntent_impl(fp, entry, &entry_mnt_id) == 0) {
+		if (have_mnt_id) {
+			match = (entry_mnt_id == target_mnt_id);
+		} else {
+			match = makedev(entry->mnt_major, entry->mnt_minor) ==
+			    statbuf->st_dev;
 		}
+		if (match)
+			break;
 	}
 	(void) fclose(fp);
 

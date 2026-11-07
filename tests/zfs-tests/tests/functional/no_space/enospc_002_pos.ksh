@@ -56,14 +56,14 @@ for i in $(seq 100); do
 	(( $ret != $ENOSPC )) && \
 	    log_fail "file.$i returned: $ret rather than ENOSPC."
 
-	log_must zpool sync -f
+	sync_all_pools true
 done
 
 log_mustnot_expect space zfs create $TESTPOOL/$TESTFS/subfs
 log_mustnot_expect space zfs clone $TESTPOOL/$TESTFS@snap $TESTPOOL/clone
 
-log_must zfs send $TESTPOOL/$TESTFS@snap > $TEST_BASE_DIR/stream.$$
-log_mustnot_expect space zfs receive $TESTPOOL/$TESTFS/recvd < $TEST_BASE_DIR/stream.$$
+log_must eval "zfs send $TESTPOOL/$TESTFS@snap > $TEST_BASE_DIR/stream.$$"
+log_mustnot_expect space eval "zfs receive $TESTPOOL/$TESTFS/recvd < $TEST_BASE_DIR/stream.$$"
 log_must rm $TEST_BASE_DIR/stream.$$
 
 log_must zfs rename $TESTPOOL/$TESTFS@snap $TESTPOOL/$TESTFS@snap_newname

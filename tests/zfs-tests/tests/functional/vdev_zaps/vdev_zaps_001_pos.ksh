@@ -21,7 +21,7 @@
 #
 # Strategy:
 # 1. Create a pool with one disk.
-# 2. Verify that the disk has a top and leaf ZAP in its config and the MOS.
+# 2. Verify that the disk has a root, top and leaf ZAP in its config and the MOS.
 #
 
 . $STF_SUITE/include/libtest.shlib
@@ -33,8 +33,9 @@ DISK=${DISKS%% *}
 
 log_must zpool create -f $TESTPOOL $DISK
 conf="$TESTDIR/vz001"
-log_must zdb -PC $TESTPOOL > $conf
+log_must eval "zdb -PC $TESTPOOL > $conf"
 
+assert_root_zap $TESTPOOL "$conf"
 assert_top_zap $TESTPOOL $DISK "$conf"
 assert_leaf_zap $TESTPOOL $DISK "$conf"
 assert_has_sentinel "$conf"

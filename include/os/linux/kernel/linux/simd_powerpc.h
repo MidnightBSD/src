@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -21,6 +21,7 @@
 /*
  * Copyright (C) 2019 Romain Dolbeau
  *           <romain.dolbeau@european-processor-initiative.eu>
+ * Copyright (C) 2022 Tino Reichardt <milky-zfs@mcmilk.de>
  */
 
 /*
@@ -41,14 +42,13 @@
  * all relevant feature test functions should be called.
  *
  * Supported features:
- *	zfs_altivec_available()
+ *   zfs_altivec_available()
+ *   zfs_vsx_available()
+ *   zfs_isa207_available()
  */
 
 #ifndef _LINUX_SIMD_POWERPC_H
 #define	_LINUX_SIMD_POWERPC_H
-
-/* only for __powerpc__ */
-#if defined(__powerpc__)
 
 #include <linux/preempt.h>
 #include <linux/export.h>
@@ -57,22 +57,56 @@
 #include <sys/types.h>
 #include <linux/version.h>
 
-#define	kfpu_allowed()		1
-#define	kfpu_begin()					\
-	{						\
-		preempt_disable();			\
-		enable_kernel_altivec();		\
-	}
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 7, 0)
+#include <asm/cpufeature.h>
+#else
+#include <asm/cputable.h>
+#endif
+
+#define	kfpu_allowed()			1
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 5, 0)
+#ifdef	CONFIG_ALTIVEC
+#define	ENABLE_KERNEL_ALTIVEC	enable_kernel_altivec();
+#define	DISABLE_KERNEL_ALTIVEC	disable_kernel_altivec();
+#else
+#define	ENABLE_KERNEL_ALTIVEC
+#define	DISABLE_KERNEL_ALTIVEC
+#endif
+#ifdef	CONFIG_VSX
+#define	ENABLE_KERNEL_VSX	enable_kernel_vsx();
+#define	DISABLE_KERNEL_VSX	disable_kernel_vsx();
+#else
+#define	ENABLE_KERNEL_VSX
+#define	DISABLE_KERNEL_VSX
+#endif
+#ifdef	CONFIG_SPE
+#define	ENABLE_KERNEL_SPE	enable_kernel_spe();
+#define	DISABLE_KERNEL_SPE	disable_kernel_spe();
+#else
+#define	ENABLE_KERNEL_SPE
+#define	DISABLE_KERNEL_SPE
+#endif
+#define	kfpu_begin()				\
+	{					\
+		preempt_disable();		\
+		ENABLE_KERNEL_ALTIVEC		\
+		ENABLE_KERNEL_VSX		\
+		ENABLE_KERNEL_SPE		\
+	}
 #define	kfpu_end()				\
 	{					\
-		disable_kernel_altivec();	\
+		DISABLE_KERNEL_SPE		\
+		DISABLE_KERNEL_VSX		\
+		DISABLE_KERNEL_ALTIVEC		\
 		preempt_enable();		\
 	}
 #else
-/* seems that before 4.5 no-one bothered disabling ... */
+/* seems that before 4.5 no-one bothered */
+#define	kfpu_begin()
 #define	kfpu_end()		preempt_enable()
-#endif
+#endif	/* Linux version >= 4.5 */
+
 #define	kfpu_init()		0
 #define	kfpu_fini()		((void) 0)
 
@@ -93,28 +127,25 @@
 static inline boolean_t
 zfs_altivec_available(void)
 {
-	boolean_t res;
-	/* suggested by macallan at netbsd dot org */
-#if defined(__powerpc64__)
-	u64 msr;
-#else
-	u32 msr;
-#endif
-	kfpu_begin();
-	__asm volatile("mfmsr %0" : "=r"(msr));
-	/*
-	 * 64 bits -> need to check bit 38
-	 * Power ISA Version 3.0B
-	 * p944
-	 * 32 bits -> Need to check bit 6
-	 * AltiVec Technology Programming Environments Manual
-	 * p49 (2-9)
-	 * They are the same, as ppc counts 'backward' ...
-	 */
-	res = (msr & 0x2000000) != 0;
-	kfpu_end();
-	return (res);
+	return (cpu_has_feature(CPU_FTR_ALTIVEC));
 }
-#endif /* defined(__powerpc) */
+
+/*
+ * Check if VSX is available
+ */
+static inline boolean_t
+zfs_vsx_available(void)
+{
+	return (cpu_has_feature(CPU_FTR_VSX));
+}
+
+/*
+ * Check if POWER ISA 2.07 is available (SHA2)
+ */
+static inline boolean_t
+zfs_isa207_available(void)
+{
+	return (cpu_has_feature(CPU_FTR_ARCH_207S));
+}
 
 #endif /* _LINUX_SIMD_POWERPC_H */

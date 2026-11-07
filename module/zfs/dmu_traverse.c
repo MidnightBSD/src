@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -39,9 +39,9 @@
 #include <sys/callb.h>
 #include <sys/zfeature.h>
 
-int32_t zfs_pd_bytes_max = 50 * 1024 * 1024;	/* 50MB */
-int32_t send_holes_without_birth_time = 1;
-int32_t zfs_traverse_indirect_prefetch_limit = 32;
+static int32_t zfs_pd_bytes_max = 50 * 1024 * 1024;	/* 50MB */
+static int32_t send_holes_without_birth_time = 1;
+static uint_t zfs_traverse_indirect_prefetch_limit = 32;
 
 typedef struct prefetch_data {
 	kmutex_t pd_mtx;
@@ -111,6 +111,7 @@ traverse_zil_record(zilog_t *zilog, const lr_t *lrc, void *arg,
 		if (claim_txg == 0 || bp->blk_birth < claim_txg)
 			return (0);
 
+		ASSERT3U(BP_GET_LSIZE(bp), !=, 0);
 		SET_BOOKMARK(&zb, td->td_objset, lr->lr_foid,
 		    ZB_ZIL_LEVEL, lr->lr_offset / BP_GET_LSIZE(bp));
 
@@ -153,10 +154,10 @@ typedef enum resume_skip {
  * Otherwise returns RESUME_SKIP_NONE.
  */
 static resume_skip_t
-resume_skip_check(traverse_data_t *td, const dnode_phys_t *dnp,
+resume_skip_check(const traverse_data_t *td, const dnode_phys_t *dnp,
     const zbookmark_phys_t *zb)
 {
-	if (td->td_resume != NULL && !ZB_IS_ZERO(td->td_resume)) {
+	if (td->td_resume != NULL) {
 		/*
 		 * If we already visited this bp & everything below,
 		 * don't bother doing it again.
@@ -164,12 +165,7 @@ resume_skip_check(traverse_data_t *td, const dnode_phys_t *dnp,
 		if (zbookmark_subtree_completed(dnp, zb, td->td_resume))
 			return (RESUME_SKIP_ALL);
 
-		/*
-		 * If we found the block we're trying to resume from, zero
-		 * the bookmark out to indicate that we have resumed.
-		 */
-		if (bcmp(zb, td->td_resume, sizeof (*zb)) == 0) {
-			bzero(td->td_resume, sizeof (*zb));
+		if (memcmp(zb, td->td_resume, sizeof (*zb)) == 0) {
 			if (td->td_flags & TRAVERSE_POST)
 				return (RESUME_SKIP_CHILDREN);
 		}
@@ -181,20 +177,20 @@ resume_skip_check(traverse_data_t *td, const dnode_phys_t *dnp,
  * Returns B_TRUE, if prefetch read is issued, otherwise B_FALSE.
  */
 static boolean_t
-traverse_prefetch_metadata(traverse_data_t *td,
+traverse_prefetch_metadata(traverse_data_t *td, const dnode_phys_t *dnp,
     const blkptr_t *bp, const zbookmark_phys_t *zb)
 {
-	arc_flags_t flags = ARC_FLAG_NOWAIT | ARC_FLAG_PREFETCH;
+	arc_flags_t flags = ARC_FLAG_NOWAIT | ARC_FLAG_PREFETCH |
+	    ARC_FLAG_PRESCIENT_PREFETCH;
 	int zio_flags = ZIO_FLAG_CANFAIL | ZIO_FLAG_SPECULATIVE;
 
 	if (!(td->td_flags & TRAVERSE_PREFETCH_METADATA))
 		return (B_FALSE);
 	/*
-	 * If we are in the process of resuming, don't prefetch, because
-	 * some children will not be needed (and in fact may have already
-	 * been freed).
+	 * If this bp is before the resume point, it may have already been
+	 * freed.
 	 */
-	if (td->td_resume != NULL && !ZB_IS_ZERO(td->td_resume))
+	if (resume_skip_check(td, dnp, zb) != RESUME_SKIP_NONE)
 		return (B_FALSE);
 	if (BP_IS_HOLE(bp) || bp->blk_birth <= td->td_min_txg)
 		return (B_FALSE);
@@ -342,7 +338,7 @@ traverse_visitbp(traverse_data_t *td, const dnode_phys_t *dnp,
 					SET_BOOKMARK(czb, zb->zb_objset,
 					    zb->zb_object, zb->zb_level - 1,
 					    zb->zb_blkid * epb + pidx);
-					if (traverse_prefetch_metadata(td,
+					if (traverse_prefetch_metadata(td, dnp,
 					    &((blkptr_t *)buf->b_data)[pidx],
 					    czb) == B_TRUE) {
 						prefetched++;
@@ -504,12 +500,12 @@ prefetch_dnode_metadata(traverse_data_t *td, const dnode_phys_t *dnp,
 
 	for (j = 0; j < dnp->dn_nblkptr; j++) {
 		SET_BOOKMARK(&czb, objset, object, dnp->dn_nlevels - 1, j);
-		traverse_prefetch_metadata(td, &dnp->dn_blkptr[j], &czb);
+		traverse_prefetch_metadata(td, dnp, &dnp->dn_blkptr[j], &czb);
 	}
 
 	if (dnp->dn_flags & DNODE_FLAG_SPILL_BLKPTR) {
 		SET_BOOKMARK(&czb, objset, object, 0, DMU_SPILL_BLKID);
-		traverse_prefetch_metadata(td, DN_SPILL_BLKPTR(dnp), &czb);
+		traverse_prefetch_metadata(td, dnp, DN_SPILL_BLKPTR(dnp), &czb);
 	}
 }
 
@@ -670,7 +666,7 @@ traverse_impl(spa_t *spa, dsl_dataset_t *ds, uint64_t objset, blkptr_t *rootbp,
 
 	/* See comment on ZIL traversal in dsl_scan_visitds. */
 	if (ds != NULL && !ds->ds_is_snapshot && !BP_IS_HOLE(rootbp)) {
-		enum zio_flag zio_flags = ZIO_FLAG_CANFAIL;
+		zio_flag_t zio_flags = ZIO_FLAG_CANFAIL;
 		uint32_t flags = ARC_FLAG_WAIT;
 		objset_phys_t *osp;
 		arc_buf_t *buf;
@@ -809,11 +805,10 @@ traverse_pool(spa_t *spa, uint64_t txg_start, int flags,
 EXPORT_SYMBOL(traverse_dataset);
 EXPORT_SYMBOL(traverse_pool);
 
-/* BEGIN CSTYLED */
 ZFS_MODULE_PARAM(zfs, zfs_, pd_bytes_max, INT, ZMOD_RW,
 	"Max number of bytes to prefetch");
 
-ZFS_MODULE_PARAM(zfs, zfs_, traverse_indirect_prefetch_limit, INT, ZMOD_RW,
+ZFS_MODULE_PARAM(zfs, zfs_, traverse_indirect_prefetch_limit, UINT, ZMOD_RW,
 	"Traverse prefetch number of blocks pointed by indirect block");
 
 #if defined(_KERNEL)
@@ -822,6 +817,6 @@ MODULE_PARM_DESC(ignore_hole_birth,
 	"Alias for send_holes_without_birth_time");
 #endif
 
+/* CSTYLED */
 ZFS_MODULE_PARAM(zfs, , send_holes_without_birth_time, INT, ZMOD_RW,
 	"Ignore hole_birth txg for zfs send");
-/* END CSTYLED */

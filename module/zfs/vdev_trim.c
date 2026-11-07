@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -97,12 +97,12 @@
 /*
  * Maximum size of TRIM I/O, ranges will be chunked in to 128MiB lengths.
  */
-unsigned int zfs_trim_extent_bytes_max = 128 * 1024 * 1024;
+static unsigned int zfs_trim_extent_bytes_max = 128 * 1024 * 1024;
 
 /*
  * Minimum size of TRIM I/O, extents smaller than 32Kib will be skipped.
  */
-unsigned int zfs_trim_extent_bytes_min = 32 * 1024;
+static unsigned int zfs_trim_extent_bytes_min = 32 * 1024;
 
 /*
  * Skip uninitialized metaslabs during the TRIM process.  This option is
@@ -119,7 +119,7 @@ unsigned int zfs_trim_metaslab_skip = 0;
  * concurrent TRIM I/Os issued to the device is controlled by the
  * zfs_vdev_trim_min_active and zfs_vdev_trim_max_active module options.
  */
-unsigned int zfs_trim_queue_limit = 10;
+static unsigned int zfs_trim_queue_limit = 10;
 
 /*
  * The minimum number of transaction groups between automatic trims of a
@@ -135,7 +135,7 @@ unsigned int zfs_trim_queue_limit = 10;
  * has the opposite effect.  The default value of 32 was determined though
  * testing to be a reasonable compromise.
  */
-unsigned int zfs_trim_txg_batch = 32;
+static unsigned int zfs_trim_txg_batch = 32;
 
 /*
  * The trim_args are a control structure which describe how a leaf vdev
@@ -181,6 +181,26 @@ vdev_autotrim_should_stop(vdev_t *tvd)
 	return (tvd->vdev_autotrim_exit_wanted ||
 	    !vdev_writeable(tvd) || tvd->vdev_removing ||
 	    spa_get_autotrim(tvd->vdev_spa) == SPA_AUTOTRIM_OFF);
+}
+
+/*
+ * Wait for given number of kicks, return true if the wait is aborted due to
+ * vdev_autotrim_exit_wanted.
+ */
+static boolean_t
+vdev_autotrim_wait_kick(vdev_t *vd, int num_of_kick)
+{
+	mutex_enter(&vd->vdev_autotrim_lock);
+	for (int i = 0; i < num_of_kick; i++) {
+		if (vd->vdev_autotrim_exit_wanted)
+			break;
+		cv_wait_idle(&vd->vdev_autotrim_kick_cv,
+		    &vd->vdev_autotrim_lock);
+	}
+	boolean_t exit_wanted = vd->vdev_autotrim_exit_wanted;
+	mutex_exit(&vd->vdev_autotrim_lock);
+
+	return (exit_wanted);
 }
 
 /*
@@ -849,7 +869,7 @@ vdev_trim_range_add(void *arg, uint64_t start, uint64_t size)
  * by its ms_allocatable.  While a metaslab is undergoing trimming it is
  * not eligible for new allocations.
  */
-static void
+static __attribute__((noreturn)) void
 vdev_trim_thread(void *arg)
 {
 	vdev_t *vd = arg;
@@ -1185,7 +1205,7 @@ vdev_trim_range_verify(void *arg, uint64_t start, uint64_t size)
  * N.B. This behavior is different from a manual TRIM where a thread
  * is created for each leaf vdev, instead of each top-level vdev.
  */
-static void
+static __attribute__((noreturn)) void
 vdev_autotrim_thread(void *arg)
 {
 	vdev_t *vd = arg;
@@ -1200,7 +1220,6 @@ vdev_autotrim_thread(void *arg)
 
 	while (!vdev_autotrim_should_stop(vd)) {
 		int txgs_per_trim = MAX(zfs_trim_txg_batch, 1);
-		boolean_t issued_trim = B_FALSE;
 		uint64_t extent_bytes_max = zfs_trim_extent_bytes_max;
 		uint64_t extent_bytes_min = zfs_trim_extent_bytes_min;
 
@@ -1234,6 +1253,8 @@ vdev_autotrim_thread(void *arg)
 		    i += txgs_per_trim) {
 			metaslab_t *msp = vd->vdev_ms[i];
 			range_tree_t *trim_tree;
+			boolean_t issued_trim = B_FALSE;
+			boolean_t wait_aborted = B_FALSE;
 
 			spa_config_exit(spa, SCL_CONFIG, FTAG);
 			metaslab_disable(msp);
@@ -1384,7 +1405,18 @@ vdev_autotrim_thread(void *arg)
 			range_tree_vacate(trim_tree, NULL, NULL);
 			range_tree_destroy(trim_tree);
 
-			metaslab_enable(msp, issued_trim, B_FALSE);
+			/*
+			 * Wait for couples of kicks, to ensure the trim io is
+			 * synced. If the wait is aborted due to
+			 * vdev_autotrim_exit_wanted, we need to signal
+			 * metaslab_enable() to wait for sync.
+			 */
+			if (issued_trim) {
+				wait_aborted = vdev_autotrim_wait_kick(vd,
+				    TXG_CONCURRENT_STATES + TXG_DEFER_SIZE);
+			}
+
+			metaslab_enable(msp, wait_aborted, B_FALSE);
 			spa_config_enter(spa, SCL_CONFIG, FTAG, RW_READER);
 
 			for (uint64_t c = 0; c < children; c++) {
@@ -1398,17 +1430,14 @@ vdev_autotrim_thread(void *arg)
 			}
 
 			kmem_free(tap, sizeof (trim_args_t) * children);
+
+			if (vdev_autotrim_should_stop(vd))
+				break;
 		}
 
 		spa_config_exit(spa, SCL_CONFIG, FTAG);
 
-		/*
-		 * After completing the group of metaslabs wait for the next
-		 * open txg.  This is done to make sure that a minimum of
-		 * zfs_trim_txg_batch txgs will occur before these metaslabs
-		 * are trimmed again.
-		 */
-		txg_wait_open(spa_get_dsl(spa), 0, issued_trim);
+		vdev_autotrim_wait_kick(vd, 1);
 
 		shift++;
 		spa_config_enter(spa, SCL_CONFIG, FTAG, RW_READER);
@@ -1486,16 +1515,32 @@ vdev_autotrim_stop_wait(vdev_t *tvd)
 	mutex_enter(&tvd->vdev_autotrim_lock);
 	if (tvd->vdev_autotrim_thread != NULL) {
 		tvd->vdev_autotrim_exit_wanted = B_TRUE;
-
-		while (tvd->vdev_autotrim_thread != NULL) {
-			cv_wait(&tvd->vdev_autotrim_cv,
-			    &tvd->vdev_autotrim_lock);
-		}
+		cv_broadcast(&tvd->vdev_autotrim_kick_cv);
+		cv_wait(&tvd->vdev_autotrim_cv,
+		    &tvd->vdev_autotrim_lock);
 
 		ASSERT3P(tvd->vdev_autotrim_thread, ==, NULL);
 		tvd->vdev_autotrim_exit_wanted = B_FALSE;
 	}
 	mutex_exit(&tvd->vdev_autotrim_lock);
+}
+
+void
+vdev_autotrim_kick(spa_t *spa)
+{
+	ASSERT(spa_config_held(spa, SCL_CONFIG, RW_READER));
+
+	vdev_t *root_vd = spa->spa_root_vdev;
+	vdev_t *tvd;
+
+	for (uint64_t i = 0; i < root_vd->vdev_children; i++) {
+		tvd = root_vd->vdev_child[i];
+
+		mutex_enter(&tvd->vdev_autotrim_lock);
+		if (tvd->vdev_autotrim_thread != NULL)
+			cv_broadcast(&tvd->vdev_autotrim_kick_cv);
+		mutex_exit(&tvd->vdev_autotrim_lock);
+	}
 }
 
 /*
@@ -1523,13 +1568,13 @@ vdev_autotrim_restart(spa_t *spa)
 		vdev_autotrim(spa);
 }
 
-static void
+static __attribute__((noreturn)) void
 vdev_trim_l2arc_thread(void *arg)
 {
 	vdev_t		*vd = arg;
 	spa_t		*spa = vd->vdev_spa;
 	l2arc_dev_t	*dev = l2arc_vdev_get(vd);
-	trim_args_t	ta;
+	trim_args_t	ta = {0};
 	range_seg64_t 	physical_rs;
 
 	ASSERT(vdev_is_concrete(vd));
@@ -1540,7 +1585,6 @@ vdev_trim_l2arc_thread(void *arg)
 	vd->vdev_trim_partial = 0;
 	vd->vdev_trim_secure = 0;
 
-	bzero(&ta, sizeof (ta));
 	ta.trim_vdev = vd;
 	ta.trim_tree = range_tree_create(NULL, RANGE_SEG64, NULL, 0, 0);
 	ta.trim_type = TRIM_TYPE_MANUAL;
@@ -1600,7 +1644,7 @@ vdev_trim_l2arc_thread(void *arg)
 	 */
 	spa_config_enter(vd->vdev_spa, SCL_L2ARC, vd,
 	    RW_READER);
-	bzero(dev->l2ad_dev_hdr, dev->l2ad_dev_hdr_asize);
+	memset(dev->l2ad_dev_hdr, 0, dev->l2ad_dev_hdr_asize);
 	l2arc_dev_hdr_update(dev);
 	spa_config_exit(vd->vdev_spa, SCL_L2ARC, vd);
 
@@ -1664,9 +1708,9 @@ vdev_trim_l2arc(spa_t *spa)
 int
 vdev_trim_simple(vdev_t *vd, uint64_t start, uint64_t size)
 {
-	trim_args_t		ta;
-	range_seg64_t 		physical_rs;
-	int			error;
+	trim_args_t ta = {0};
+	range_seg64_t physical_rs;
+	int error;
 	physical_rs.rs_start = start;
 	physical_rs.rs_end = start + size;
 
@@ -1675,7 +1719,6 @@ vdev_trim_simple(vdev_t *vd, uint64_t start, uint64_t size)
 	ASSERT(!vd->vdev_detached);
 	ASSERT(!vd->vdev_top->vdev_removing);
 
-	bzero(&ta, sizeof (ta));
 	ta.trim_vdev = vd;
 	ta.trim_tree = range_tree_create(NULL, RANGE_SEG64, NULL, 0, 0);
 	ta.trim_type = TRIM_TYPE_SIMPLE;
@@ -1718,19 +1761,17 @@ EXPORT_SYMBOL(vdev_autotrim_restart);
 EXPORT_SYMBOL(vdev_trim_l2arc);
 EXPORT_SYMBOL(vdev_trim_simple);
 
-/* BEGIN CSTYLED */
 ZFS_MODULE_PARAM(zfs_trim, zfs_trim_, extent_bytes_max, UINT, ZMOD_RW,
-    "Max size of TRIM commands, larger will be split");
+	"Max size of TRIM commands, larger will be split");
 
 ZFS_MODULE_PARAM(zfs_trim, zfs_trim_, extent_bytes_min, UINT, ZMOD_RW,
-    "Min size of TRIM commands, smaller will be skipped");
+	"Min size of TRIM commands, smaller will be skipped");
 
 ZFS_MODULE_PARAM(zfs_trim, zfs_trim_, metaslab_skip, UINT, ZMOD_RW,
-    "Skip metaslabs which have never been initialized");
+	"Skip metaslabs which have never been initialized");
 
 ZFS_MODULE_PARAM(zfs_trim, zfs_trim_, txg_batch, UINT, ZMOD_RW,
-    "Min number of txgs to aggregate frees before issuing TRIM");
+	"Min number of txgs to aggregate frees before issuing TRIM");
 
 ZFS_MODULE_PARAM(zfs_trim, zfs_trim_, queue_limit, UINT, ZMOD_RW,
-    "Max queued TRIMs outstanding per leaf vdev");
-/* END CSTYLED */
+	"Max queued TRIMs outstanding per leaf vdev");

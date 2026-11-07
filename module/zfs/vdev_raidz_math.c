@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -22,6 +22,7 @@
  * Copyright (C) 2016 Gvozden Nešković. All rights reserved.
  */
 
+#include <sys/simd.h>
 #include <sys/zfs_context.h>
 #include <sys/types.h>
 #include <sys/zio.h>
@@ -29,7 +30,6 @@
 #include <sys/zfs_debug.h>
 #include <sys/vdev_raidz.h>
 #include <sys/vdev_raidz_impl.h>
-#include <sys/simd.h>
 
 /* Opaque implementation with NULL methods to represent original methods */
 static const raidz_impl_ops_t vdev_raidz_original_impl = {
@@ -43,7 +43,7 @@ static raidz_impl_ops_t vdev_raidz_fastest_impl = {
 };
 
 /* All compiled in implementations */
-const raidz_impl_ops_t *raidz_all_maths[] = {
+static const raidz_impl_ops_t *const raidz_all_maths[] = {
 	&vdev_raidz_original_impl,
 	&vdev_raidz_scalar_impl,
 #if defined(__x86_64) && defined(HAVE_SSE2)	/* only x86_64 for now */
@@ -165,8 +165,8 @@ vdev_raidz_math_generate(raidz_map_t *rm, raidz_row_t *rr)
 			break;
 		default:
 			gen_parity = NULL;
-			cmn_err(CE_PANIC, "invalid RAID-Z configuration %d",
-			    raidz_parity(rm));
+			cmn_err(CE_PANIC, "invalid RAID-Z configuration %llu",
+			    (u_longlong_t)raidz_parity(rm));
 			break;
 	}
 
@@ -257,8 +257,8 @@ vdev_raidz_math_reconstruct(raidz_map_t *rm, raidz_row_t *rr,
 		rec_fn = reconstruct_fun_pqr_sel(rm, parity_valid, nbaddata);
 		break;
 	default:
-		cmn_err(CE_PANIC, "invalid RAID-Z configuration %d",
-		    raidz_parity(rm));
+		cmn_err(CE_PANIC, "invalid RAID-Z configuration %llu",
+		    (u_longlong_t)raidz_parity(rm));
 		break;
 	}
 
@@ -268,10 +268,10 @@ vdev_raidz_math_reconstruct(raidz_map_t *rm, raidz_row_t *rr,
 		return (rec_fn(rr, dt));
 }
 
-const char *raidz_gen_name[] = {
+const char *const raidz_gen_name[] = {
 	"gen_p", "gen_pq", "gen_pqr"
 };
-const char *raidz_rec_name[] = {
+const char *const raidz_rec_name[] = {
 	"rec_p", "rec_q", "rec_r",
 	"rec_pq", "rec_pr", "rec_qr", "rec_pqr"
 };
@@ -283,22 +283,19 @@ const char *raidz_rec_name[] = {
 static int
 raidz_math_kstat_headers(char *buf, size_t size)
 {
-	int i;
-	ssize_t off;
-
 	ASSERT3U(size, >=, RAIDZ_KSTAT_LINE_LEN);
 
-	off = snprintf(buf, size, "%-17s", "implementation");
+	ssize_t off = kmem_scnprintf(buf, size, "%-17s", "implementation");
 
-	for (i = 0; i < ARRAY_SIZE(raidz_gen_name); i++)
-		off += snprintf(buf + off, size - off, "%-16s",
+	for (int i = 0; i < ARRAY_SIZE(raidz_gen_name); i++)
+		off += kmem_scnprintf(buf + off, size - off, "%-16s",
 		    raidz_gen_name[i]);
 
-	for (i = 0; i < ARRAY_SIZE(raidz_rec_name); i++)
-		off += snprintf(buf + off, size - off, "%-16s",
+	for (int i = 0; i < ARRAY_SIZE(raidz_rec_name); i++)
+		off += kmem_scnprintf(buf + off, size - off, "%-16s",
 		    raidz_rec_name[i]);
 
-	(void) snprintf(buf + off, size - off, "\n");
+	(void) kmem_scnprintf(buf + off, size - off, "\n");
 
 	return (0);
 }
@@ -314,34 +311,35 @@ raidz_math_kstat_data(char *buf, size_t size, void *data)
 	ASSERT3U(size, >=, RAIDZ_KSTAT_LINE_LEN);
 
 	if (cstat == fstat) {
-		off += snprintf(buf + off, size - off, "%-17s", "fastest");
+		off += kmem_scnprintf(buf + off, size - off, "%-17s",
+		    "fastest");
 
 		for (i = 0; i < ARRAY_SIZE(raidz_gen_name); i++) {
 			int id = fstat->gen[i];
-			off += snprintf(buf + off, size - off, "%-16s",
+			off += kmem_scnprintf(buf + off, size - off, "%-16s",
 			    raidz_supp_impl[id]->name);
 		}
 		for (i = 0; i < ARRAY_SIZE(raidz_rec_name); i++) {
 			int id = fstat->rec[i];
-			off += snprintf(buf + off, size - off, "%-16s",
+			off += kmem_scnprintf(buf + off, size - off, "%-16s",
 			    raidz_supp_impl[id]->name);
 		}
 	} else {
 		ptrdiff_t id = cstat - raidz_impl_kstats;
 
-		off += snprintf(buf + off, size - off, "%-17s",
+		off += kmem_scnprintf(buf + off, size - off, "%-17s",
 		    raidz_supp_impl[id]->name);
 
 		for (i = 0; i < ARRAY_SIZE(raidz_gen_name); i++)
-			off += snprintf(buf + off, size - off, "%-16llu",
+			off += kmem_scnprintf(buf + off, size - off, "%-16llu",
 			    (u_longlong_t)cstat->gen[i]);
 
 		for (i = 0; i < ARRAY_SIZE(raidz_rec_name); i++)
-			off += snprintf(buf + off, size - off, "%-16llu",
+			off += kmem_scnprintf(buf + off, size - off, "%-16llu",
 			    (u_longlong_t)cstat->rec[i]);
 	}
 
-	(void) snprintf(buf + off, size - off, "\n");
+	(void) kmem_scnprintf(buf + off, size - off, "\n");
 
 	return (0);
 }
@@ -566,7 +564,7 @@ vdev_raidz_math_fini(void)
 }
 
 static const struct {
-	char *name;
+	const char *name;
 	uint32_t sel;
 } math_impl_opts[] = {
 		{ "cycle",	IMPL_CYCLE },
@@ -655,13 +653,15 @@ zfs_vdev_raidz_impl_get(char *buffer, zfs_kernel_param_t *kp)
 	/* list mandatory options */
 	for (i = 0; i < ARRAY_SIZE(math_impl_opts) - 2; i++) {
 		fmt = (impl == math_impl_opts[i].sel) ? "[%s] " : "%s ";
-		cnt += sprintf(buffer + cnt, fmt, math_impl_opts[i].name);
+		cnt += kmem_scnprintf(buffer + cnt, PAGE_SIZE - cnt, fmt,
+		    math_impl_opts[i].name);
 	}
 
 	/* list all supported implementations */
 	for (i = 0; i < raidz_supp_impl_cnt; i++) {
 		fmt = (i == impl) ? "[%s] " : "%s ";
-		cnt += sprintf(buffer + cnt, fmt, raidz_supp_impl[i]->name);
+		cnt += kmem_scnprintf(buffer + cnt, PAGE_SIZE - cnt, fmt,
+		    raidz_supp_impl[i]->name);
 	}
 
 	return (cnt);

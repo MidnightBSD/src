@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -31,19 +31,13 @@
 #define	dname(dentry)	((char *)((dentry)->d_name.name))
 #define	dlen(dentry)	((int)((dentry)->d_name.len))
 
-#ifndef HAVE_D_MAKE_ROOT
-#define	d_make_root(inode)	d_alloc_root(inode)
-#endif /* HAVE_D_MAKE_ROOT */
-
-#ifdef HAVE_DENTRY_D_U_ALIASES
 #define	d_alias			d_u.d_alias
-#endif
 
 /*
  * Starting from Linux 5.13, flush_dcache_page() becomes an inline function
  * and under some configurations, may indirectly referencing GPL-only
- * cpu_feature_keys on powerpc. Override this function when it is detected
- * being GPL-only.
+ * symbols, e.g., cpu_feature_keys on powerpc and PageHuge on riscv.
+ * Override this function when it is detected being GPL-only.
  */
 #if defined __powerpc__ && defined HAVE_FLUSH_DCACHE_PAGE_GPL_ONLY
 #include <linux/simd_powerpc.h>
@@ -53,32 +47,17 @@
 			clear_bit(PG_dcache_clean, &(page)->flags);	\
 	} while (0)
 #endif
-
 /*
- * 2.6.30 API change,
- * The const keyword was added to the 'struct dentry_operations' in
- * the dentry structure.  To handle this we define an appropriate
- * dentry_operations_t typedef which can be used.
+ * For riscv implementation, the use of PageHuge can be safely removed.
+ * Because it handles pages allocated by HugeTLB, while flush_dcache_page
+ * in zfs module is only called on kernel pages.
  */
-typedef const struct dentry_operations	dentry_operations_t;
-
-/*
- * 2.6.38 API addition,
- * Added d_clear_d_op() helper function which clears some flags and the
- * registered dentry->d_op table.  This is required because d_set_d_op()
- * issues a warning when the dentry operations table is already set.
- * For the .zfs control directory to work properly we must be able to
- * override the default operations table and register custom .d_automount
- * and .d_revalidate callbacks.
- */
-static inline void
-d_clear_d_op(struct dentry *dentry)
-{
-	dentry->d_op = NULL;
-	dentry->d_flags &= ~(
-	    DCACHE_OP_HASH | DCACHE_OP_COMPARE |
-	    DCACHE_OP_REVALIDATE | DCACHE_OP_DELETE);
-}
+#if defined __riscv && defined HAVE_FLUSH_DCACHE_PAGE_GPL_ONLY
+#define	flush_dcache_page(page)	do {					\
+		if (test_bit(PG_dcache_clean, &(page)->flags))		\
+			clear_bit(PG_dcache_clean, &(page)->flags);	\
+	} while (0)
+#endif
 
 /*
  * Walk and invalidate all dentry aliases of an inode

@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -24,6 +24,7 @@
  * Copyright (c) 2011, 2020 by Delphix. All rights reserved.
  * Copyright (c) 2017, Intel Corporation.
  * Copyright (c) 2019, Datto Inc. All rights reserved.
+ * Copyright (c) 2026, TrueNAS.
  */
 
 #ifndef _SYS_VDEV_H
@@ -52,11 +53,13 @@ extern int zfs_nocacheflush;
 
 typedef boolean_t vdev_open_children_func_t(vdev_t *vd);
 
-extern void vdev_dbgmsg(vdev_t *vd, const char *fmt, ...);
+extern void vdev_dbgmsg(vdev_t *vd, const char *fmt, ...)
+    __attribute__((format(__printf__, 2, 3)));
 extern void vdev_dbgmsg_print_tree(vdev_t *, int);
-extern int vdev_open(vdev_t *);
-extern void vdev_open_children(vdev_t *);
-extern void vdev_open_children_subset(vdev_t *, vdev_open_children_func_t *);
+extern int vdev_open(vdev_t *, cred_t *);
+extern void vdev_open_children(vdev_t *, cred_t *);
+extern void vdev_open_children_subset(vdev_t *, cred_t *,
+    vdev_open_children_func_t *);
 extern int vdev_validate(vdev_t *);
 extern int vdev_copy_path_strict(vdev_t *, vdev_t *);
 extern void vdev_copy_path_relaxed(vdev_t *, vdev_t *);
@@ -103,7 +106,7 @@ extern void vdev_metaslab_fini(vdev_t *vd);
 extern void vdev_metaslab_set_size(vdev_t *);
 extern void vdev_expand(vdev_t *vd, uint64_t txg);
 extern void vdev_split(vdev_t *vd);
-extern void vdev_deadman(vdev_t *vd, char *tag);
+extern void vdev_deadman(vdev_t *vd, const char *tag);
 
 typedef void vdev_xlate_func_t(void *arg, range_seg64_t *physical_rs);
 
@@ -157,20 +160,15 @@ extern boolean_t vdev_allocatable(vdev_t *vd);
 extern boolean_t vdev_accessible(vdev_t *vd, zio_t *zio);
 extern boolean_t vdev_is_spacemap_addressable(vdev_t *vd);
 
-extern void vdev_cache_init(vdev_t *vd);
-extern void vdev_cache_fini(vdev_t *vd);
-extern boolean_t vdev_cache_read(zio_t *zio);
-extern void vdev_cache_write(zio_t *zio);
-extern void vdev_cache_purge(vdev_t *vd);
-
 extern void vdev_queue_init(vdev_t *vd);
 extern void vdev_queue_fini(vdev_t *vd);
 extern zio_t *vdev_queue_io(zio_t *zio);
 extern void vdev_queue_io_done(zio_t *zio);
 extern void vdev_queue_change_io_priority(zio_t *zio, zio_priority_t priority);
 
-extern int vdev_queue_length(vdev_t *vd);
+extern uint32_t vdev_queue_length(vdev_t *vd);
 extern uint64_t vdev_queue_last_offset(vdev_t *vd);
+extern uint64_t vdev_queue_class_length(vdev_t *vq, zio_priority_t p);
 
 extern void vdev_config_dirty(vdev_t *vd);
 extern void vdev_config_clean(vdev_t *vd);
@@ -185,9 +183,8 @@ extern boolean_t vdev_clear_resilver_deferred(vdev_t *vd, dmu_tx_t *tx);
 typedef enum vdev_config_flag {
 	VDEV_CONFIG_SPARE = 1 << 0,
 	VDEV_CONFIG_L2CACHE = 1 << 1,
-	VDEV_CONFIG_REMOVING = 1 << 2,
-	VDEV_CONFIG_MOS = 1 << 3,
-	VDEV_CONFIG_MISSING = 1 << 4
+	VDEV_CONFIG_MOS = 1 << 2,
+	VDEV_CONFIG_MISSING = 1 << 3
 } vdev_config_flag_t;
 
 extern void vdev_post_kobj_evt(vdev_t *vd);
@@ -209,6 +206,7 @@ extern void vdev_label_write(zio_t *zio, vdev_t *vd, int l, abd_t *buf, uint64_t
     offset, uint64_t size, zio_done_func_t *done, void *priv, int flags);
 extern int vdev_label_read_bootenv(vdev_t *, nvlist_t *);
 extern int vdev_label_write_bootenv(vdev_t *, nvlist_t *);
+extern int vdev_check_boot_reserve(spa_t *, vdev_t *);
 
 typedef enum {
 	VDEV_LABEL_CREATE,	/* create/add a new device */
@@ -220,6 +218,9 @@ typedef enum {
 } vdev_labeltype_t;
 
 extern int vdev_label_init(vdev_t *vd, uint64_t txg, vdev_labeltype_t reason);
+
+extern int vdev_prop_set(vdev_t *vd, nvlist_t *innvl, nvlist_t *outnvl);
+extern int vdev_prop_get(vdev_t *vd, nvlist_t *nvprops, nvlist_t *outnvl);
 
 #ifdef	__cplusplus
 }

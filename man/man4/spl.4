@@ -2,7 +2,7 @@
 .\" The contents of this file are subject to the terms of the Common Development
 .\" and Distribution License (the "License").  You may not use this file except
 .\" in compliance with the License. You can obtain a copy of the license at
-.\" usr/src/OPENSOLARIS.LICENSE or http://www.opensolaris.org/os/licensing.
+.\" usr/src/OPENSOLARIS.LICENSE or https://opensource.org/licenses/CDDL-1.0.
 .\"
 .\" See the License for the specific language governing permissions and
 .\" limitations under the License. When distributing Covered Code, include this
@@ -30,14 +30,6 @@ This task queue is responsible for allocating new slabs
 for use by the kmem caches.
 For the majority of systems and workloads only a small number of threads are
 required.
-.
-.It Sy spl_kmem_cache_reclaim Ns = Ns Sy 0 Pq uint
-When this is set it prevents Linux from being able to rapidly reclaim all the
-memory held by the kmem caches.
-This may be useful in circumstances where it's preferable that Linux
-reclaim memory from some other subsystem first.
-Setting this will increase the likelihood out of memory events on a memory
-constrained system.
 .
 .It Sy spl_kmem_cache_obj_per_slab Ns = Ns Sy 8 Pq uint
 The preferred number of objects per slab in the cache.
@@ -177,7 +169,8 @@ This is used to control
 how quickly taskqs ramp up the number of threads processing the queue.
 Because Linux thread creation and destruction are relatively inexpensive a
 small default value has been selected.
-This means that normally threads will be created aggressively which is desirable.
+This means that normally threads will be created aggressively which is
+desirable.
 Increasing this value will
 result in a slower thread creation rate which may be preferable for some
 configurations.
@@ -192,4 +185,9 @@ The proc file will walk the lists with lock held,
 reading it could cause a lock-up if the list grow too large
 without limiting the output.
 "(truncated)" will be shown if the list is larger than the limit.
+.
+.It Sy spl_taskq_thread_timeout_ms Ns = Ns Sy 5000 Pq uint
+Minimum idle threads exit interval for dynamic taskqs.
+Smaller values allow idle threads exit more often and potentially be
+respawned again on demand, causing more churn.
 .El

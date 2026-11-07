@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -84,7 +84,7 @@ typedef struct livelist_condense_entry {
 	boolean_t cancelled;
 } livelist_condense_entry_t;
 
-extern unsigned long zfs_livelist_max_entries;
+extern uint64_t zfs_livelist_max_entries;
 extern int zfs_livelist_min_percent_shared;
 
 typedef int deadlist_iter_t(void *args, dsl_deadlist_entry_t *dle);

@@ -45,6 +45,7 @@ typedef enum kmc_bit {
 	KMC_BIT_TOTAL		= 18,	/* Proc handler helper bit */
 	KMC_BIT_ALLOC		= 19,	/* Proc handler helper bit */
 	KMC_BIT_MAX		= 20,	/* Proc handler helper bit */
+	KMC_BIT_RECLAIMABLE	= 21,	/* Can be freed by shrinker */
 } kmc_bit_t;
 
 /* kmem move callback return values */
@@ -66,11 +67,7 @@ typedef enum kmem_cbrc {
 #define	KMC_TOTAL		(1 << KMC_BIT_TOTAL)
 #define	KMC_ALLOC		(1 << KMC_BIT_ALLOC)
 #define	KMC_MAX			(1 << KMC_BIT_MAX)
-
-#define	KMC_REAP_CHUNK		INT_MAX
-#define	KMC_DEFAULT_SEEKS	1
-
-#define	KMC_RECLAIM_ONCE	0x1	/* Force a single shrinker pass */
+#define	KMC_RECLAIMABLE		(1 << KMC_BIT_RECLAIMABLE)
 
 extern struct list_head spl_kmem_cache_list;
 extern struct rw_semaphore spl_kmem_cache_sem;
@@ -97,9 +94,6 @@ extern struct rw_semaphore spl_kmem_cache_sem;
 #else
 #define	SPL_MAX_KMEM_ORDER_NR_PAGES	(KMALLOC_MAX_SIZE >> PAGE_SHIFT)
 #endif
-
-#define	POINTER_IS_VALID(p)		0	/* Unimplemented */
-#define	POINTER_INVALIDATE(pp)			/* Unimplemented */
 
 typedef int (*spl_kmem_ctor_t)(void *, void *, int);
 typedef void (*spl_kmem_dtor_t)(void *, void *);
@@ -166,7 +160,7 @@ typedef struct spl_kmem_cache {
 	struct list_head	skc_partial_list;  /* Partially alloc'ed */
 	struct rb_root		skc_emergency_tree; /* Min sized objects */
 	spinlock_t		skc_lock;	/* Cache lock */
-	spl_wait_queue_head_t	skc_waitq;	/* Allocation waiters */
+	wait_queue_head_t	skc_waitq;	/* Allocation waiters */
 	uint64_t		skc_slab_fail;	/* Slab alloc failures */
 	uint64_t		skc_slab_create;  /* Slab creates */
 	uint64_t		skc_slab_destroy; /* Slab destroys */
@@ -183,7 +177,7 @@ typedef struct spl_kmem_cache {
 } spl_kmem_cache_t;
 #define	kmem_cache_t		spl_kmem_cache_t
 
-extern spl_kmem_cache_t *spl_kmem_cache_create(char *name, size_t size,
+extern spl_kmem_cache_t *spl_kmem_cache_create(const char *name, size_t size,
     size_t align, spl_kmem_ctor_t ctor, spl_kmem_dtor_t dtor,
     void *reclaim, void *priv, void *vmp, int flags);
 extern void spl_kmem_cache_set_move(spl_kmem_cache_t *,
@@ -197,6 +191,17 @@ extern void spl_kmem_reap(void);
 extern uint64_t spl_kmem_cache_inuse(kmem_cache_t *cache);
 extern uint64_t spl_kmem_cache_entry_size(kmem_cache_t *cache);
 
+#ifndef	SPL_KMEM_CACHE_IMPLEMENTING
+/*
+ * Macros for the kmem_cache_* API expected by ZFS and SPL clients. We don't
+ * define them inside spl-kmem-cache.c, as that uses the kernel's incompatible
+ * kmem_cache_* facilities to implement ours.
+ */
+
+/* Avoid conflicts with kernel names that might be implemented as macros. */
+#undef	kmem_cache_alloc
+#undef	kmem_cache_create
+
 #define	kmem_cache_create(name, size, align, ctor, dtor, rclm, priv, vmp, fl) \
     spl_kmem_cache_create(name, size, align, ctor, dtor, rclm, priv, vmp, fl)
 #define	kmem_cache_set_move(skc, move)	spl_kmem_cache_set_move(skc, move)
@@ -205,6 +210,7 @@ extern uint64_t spl_kmem_cache_entry_size(kmem_cache_t *cache);
 #define	kmem_cache_free(skc, obj)	spl_kmem_cache_free(skc, obj)
 #define	kmem_cache_reap_now(skc)	spl_kmem_cache_reap_now(skc)
 #define	kmem_reap()			spl_kmem_reap()
+#endif
 
 /*
  * The following functions are only available for internal use.

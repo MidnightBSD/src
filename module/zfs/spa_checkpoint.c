@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -158,7 +158,7 @@
  * amount of checkpointed data that has been freed within them while
  * the pool had a checkpoint.
  */
-unsigned long zfs_spa_discard_memory_limit = 16 * 1024 * 1024;
+static uint64_t zfs_spa_discard_memory_limit = 16 * 1024 * 1024;
 
 int
 spa_checkpoint_get_stats(spa_t *spa, pool_checkpoint_stat_t *pcs)
@@ -166,7 +166,7 @@ spa_checkpoint_get_stats(spa_t *spa, pool_checkpoint_stat_t *pcs)
 	if (!spa_feature_is_active(spa, SPA_FEATURE_POOL_CHECKPOINT))
 		return (SET_ERROR(ZFS_ERR_NO_CHECKPOINT));
 
-	bzero(pcs, sizeof (pool_checkpoint_stat_t));
+	memset(pcs, 0, sizeof (pool_checkpoint_stat_t));
 
 	int error = zap_contains(spa_meta_objset(spa),
 	    DMU_POOL_DIRECTORY_OBJECT, DMU_POOL_ZPOOL_CHECKPOINT);
@@ -347,7 +347,7 @@ spa_checkpoint_discard_thread_sync(void *arg, dmu_tx_t *tx)
 		if (error != 0) {
 			zfs_panic_recover("zfs: error %lld was returned "
 			    "while incrementally destroying the checkpoint "
-			    "space map of vdev %u\n",
+			    "space map of vdev %llu\n",
 			    (longlong_t)error, vd->vdev_id);
 		}
 		ASSERT0(words_after);
@@ -631,7 +631,7 @@ EXPORT_SYMBOL(spa_checkpoint_discard_thread);
 EXPORT_SYMBOL(spa_checkpoint_discard_thread_check);
 
 /* BEGIN CSTYLED */
-ZFS_MODULE_PARAM(zfs_spa, zfs_spa_, discard_memory_limit, ULONG, ZMOD_RW,
+ZFS_MODULE_PARAM(zfs_spa, zfs_spa_, discard_memory_limit, U64, ZMOD_RW,
 	"Limit for memory used in prefetching the checkpoint space map done "
 	"on each vdev while discarding the checkpoint");
 /* END CSTYLED */

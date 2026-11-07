@@ -22,6 +22,9 @@
  *
  *  Solaris Porting Layer (SPL) Proc Implementation.
  */
+/*
+ * Copyright (c) 2024, Rob Norris <robn@despairlabs.com>
+ */
 
 #include <sys/systeminfo.h>
 #include <sys/kstat.h>
@@ -35,11 +38,18 @@
 #include <linux/seq_file.h>
 #include <linux/uaccess.h>
 #include <linux/version.h>
+#include "zfs_gitrev.h"
 
 #if defined(CONSTIFY_PLUGIN) && LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0)
 typedef struct ctl_table __no_const spl_ctl_table;
 #else
 typedef struct ctl_table spl_ctl_table;
+#endif
+
+#ifdef HAVE_PROC_HANDLER_CTL_TABLE_CONST
+#define	CONST_CTL_TABLE		const struct ctl_table
+#else
+#define	CONST_CTL_TABLE		struct ctl_table
 #endif
 
 static unsigned long table_min = 0;
@@ -59,7 +69,7 @@ struct proc_dir_entry *proc_spl_kstat = NULL;
 
 #ifdef DEBUG_KMEM
 static int
-proc_domemused(struct ctl_table *table, int write,
+proc_domemused(CONST_CTL_TABLE *table, int write,
     void __user *buffer, size_t *lenp, loff_t *ppos)
 {
 	int rc = 0;
@@ -87,7 +97,7 @@ proc_domemused(struct ctl_table *table, int write,
 #endif /* DEBUG_KMEM */
 
 static int
-proc_doslab(struct ctl_table *table, int write,
+proc_doslab(CONST_CTL_TABLE *table, int write,
     void __user *buffer, size_t *lenp, loff_t *ppos)
 {
 	int rc = 0;
@@ -134,7 +144,7 @@ proc_doslab(struct ctl_table *table, int write,
 }
 
 static int
-proc_dohostid(struct ctl_table *table, int write,
+proc_dohostid(CONST_CTL_TABLE *table, int write,
     void __user *buffer, size_t *lenp, loff_t *ppos)
 {
 	char *end, str[32];
@@ -183,18 +193,17 @@ taskq_seq_show_headers(struct seq_file *f)
 #define	LHEAD_ACTIVE	4
 #define	LHEAD_SIZE	5
 
-/* BEGIN CSTYLED */
 static unsigned int spl_max_show_tasks = 512;
+/* CSTYLED */
 module_param(spl_max_show_tasks, uint, 0644);
 MODULE_PARM_DESC(spl_max_show_tasks, "Max number of tasks shown in taskq proc");
-/* END CSTYLED */
 
 static int
 taskq_seq_show_impl(struct seq_file *f, void *p, boolean_t allflag)
 {
 	taskq_t *tq = p;
 	taskq_thread_t *tqt = NULL;
-	spl_wait_queue_entry_t *wq;
+	wait_queue_entry_t *wq;
 	struct task_struct *tsk;
 	taskq_ent_t *tqe;
 	char name[100];
@@ -211,11 +220,7 @@ taskq_seq_show_impl(struct seq_file *f, void *p, boolean_t allflag)
 	lheads[LHEAD_PEND] = &tq->tq_pend_list;
 	lheads[LHEAD_PRIO] = &tq->tq_prio_list;
 	lheads[LHEAD_DELAY] = &tq->tq_delay_list;
-#ifdef HAVE_WAIT_QUEUE_HEAD_ENTRY
 	lheads[LHEAD_WAIT] = &tq->tq_wait_waitq.head;
-#else
-	lheads[LHEAD_WAIT] = &tq->tq_wait_waitq.task_list;
-#endif
 	lheads[LHEAD_ACTIVE] = &tq->tq_active_list;
 
 	for (i = 0; i < LHEAD_SIZE; ++i) {
@@ -275,13 +280,8 @@ taskq_seq_show_impl(struct seq_file *f, void *p, boolean_t allflag)
 				}
 				/* show the wait waitq list */
 				if (i == LHEAD_WAIT) {
-#ifdef HAVE_WAIT_QUEUE_HEAD_ENTRY
 					wq = list_entry(lh,
-					    spl_wait_queue_entry_t, entry);
-#else
-					wq = list_entry(lh,
-					    spl_wait_queue_entry_t, task_list);
-#endif
+					    wait_queue_entry_t, entry);
 					if (j == 0)
 						seq_printf(f, "\t%s:",
 						    list_names[i]);
@@ -465,7 +465,7 @@ slab_seq_stop(struct seq_file *f, void *v)
 	up_read(&spl_kmem_cache_sem);
 }
 
-static struct seq_operations slab_seq_ops = {
+static const struct seq_operations slab_seq_ops = {
 	.show  = slab_seq_show,
 	.start = slab_seq_start,
 	.next  = slab_seq_next,
@@ -498,14 +498,14 @@ taskq_seq_stop(struct seq_file *f, void *v)
 	up_read(&tq_list_sem);
 }
 
-static struct seq_operations taskq_all_seq_ops = {
+static const struct seq_operations taskq_all_seq_ops = {
 	.show	= taskq_all_seq_show,
 	.start	= taskq_seq_start,
 	.next	= taskq_seq_next,
 	.stop	= taskq_seq_stop,
 };
 
-static struct seq_operations taskq_seq_ops = {
+static const struct seq_operations taskq_seq_ops = {
 	.show	= taskq_seq_show,
 	.start	= taskq_seq_start,
 	.next	= taskq_seq_next,
@@ -616,8 +616,8 @@ static struct ctl_table spl_table[] = {
 	 */
 	{
 		.procname	= "gitrev",
-		.data		= spl_gitrev,
-		.maxlen		= sizeof (spl_gitrev),
+		.data		= (char *)ZFS_META_GITREV,
+		.maxlen		= sizeof (ZFS_META_GITREV),
 		.mode		= 0444,
 		.proc_handler	= &proc_dostring,
 	},
@@ -688,6 +688,37 @@ static void spl_proc_cleanup(void)
 	}
 }
 
+#ifndef HAVE_REGISTER_SYSCTL_TABLE
+
+/*
+ * Traditionally, struct ctl_table arrays have been terminated by an "empty"
+ * sentinel element (specifically, one with .procname == NULL).
+ *
+ * Linux 6.6 began migrating away from this, adding register_sysctl_sz() so
+ * that callers could provide the size directly, and redefining
+ * register_sysctl() to just call register_sysctl_sz() with the array size. It
+ * retained support for the terminating element so that existing callers would
+ * continue to work.
+ *
+ * Linux 6.11 removed support for the terminating element, instead interpreting
+ * it as a real malformed element, and rejecting it.
+ *
+ * In order to continue support older kernels, we retain the terminating
+ * sentinel element for our sysctl tables, but instead detect availability of
+ * register_sysctl_sz(). If it exists, we pass it the array size -1, stopping
+ * the kernel from trying to process the terminator. For pre-6.6 kernels that
+ * don't have register_sysctl_sz(), we just use register_sysctl(), which can
+ * handle the terminating element as it always has.
+ */
+#ifdef HAVE_REGISTER_SYSCTL_SZ
+#define	spl_proc_register_sysctl(p, t)	\
+	register_sysctl_sz(p, t, ARRAY_SIZE(t)-1)
+#else
+#define	spl_proc_register_sysctl(p, t)	\
+	register_sysctl(p, t)
+#endif
+#endif
+
 int
 spl_proc_init(void)
 {
@@ -698,16 +729,17 @@ spl_proc_init(void)
 	if (spl_header == NULL)
 		return (-EUNATCH);
 #else
-	spl_header = register_sysctl("kernel/spl", spl_table);
+	spl_header = spl_proc_register_sysctl("kernel/spl", spl_table);
 	if (spl_header == NULL)
 		return (-EUNATCH);
 
-	spl_kmem = register_sysctl("kernel/spl/kmem", spl_kmem_table);
+	spl_kmem = spl_proc_register_sysctl("kernel/spl/kmem", spl_kmem_table);
 	if (spl_kmem == NULL) {
 		rc = -EUNATCH;
 		goto out;
 	}
-	spl_kstat = register_sysctl("kernel/spl/kstat", spl_kstat_table);
+	spl_kstat = spl_proc_register_sysctl("kernel/spl/kstat",
+	    spl_kstat_table);
 	if (spl_kstat == NULL) {
 		rc = -EUNATCH;
 		goto out;

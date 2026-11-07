@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -34,7 +34,7 @@
 #include <libnvpair.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <strings.h>
+#include <string.h>
 #include <unistd.h>
 #include <stddef.h>
 
@@ -54,12 +54,12 @@
  */
 #define	DUMP_GROUPING	4
 
-uint64_t total_stream_len = 0;
-FILE *send_stream = 0;
-boolean_t do_byteswap = B_FALSE;
-boolean_t do_cksum = B_TRUE;
+static uint64_t total_stream_len = 0;
+static FILE *send_stream = 0;
+static boolean_t do_byteswap = B_FALSE;
+static boolean_t do_cksum = B_TRUE;
 
-static void *
+void *
 safe_malloc(size_t size)
 {
 	void *rv = malloc(size);

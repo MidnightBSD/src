@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -60,7 +60,7 @@ typedef struct bpobj {
 	kmutex_t	bpo_lock;
 	objset_t	*bpo_os;
 	uint64_t	bpo_object;
-	int		bpo_epb;
+	uint32_t	bpo_epb;
 	uint8_t		bpo_havecomp;
 	uint8_t		bpo_havesubobj;
 	uint8_t		bpo_havefreed;

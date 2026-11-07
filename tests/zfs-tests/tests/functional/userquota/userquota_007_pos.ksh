@@ -7,7 +7,7 @@
 # You may not use this file except in compliance with the License.
 #
 # You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
-# or http://www.opensolaris.org/os/licensing.
+# or https://opensource.org/licenses/CDDL-1.0.
 # See the License for the specific language governing permissions
 # and limitations under the License.
 #
@@ -63,7 +63,7 @@ log_must zfs get groupquota@$QGROUP $QFS
 log_note "write some data to the $QFS"
 mkmount_writable $QFS
 log_must user_run $QUSER1 mkfile 100m $QFILE
-sync
+sync_all_pools
 
 log_note "set user|group quota at a smaller size than it current usage"
 log_must zfs set userquota@$QUSER1=90m $QFS

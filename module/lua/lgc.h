@@ -1,4 +1,3 @@
-/* BEGIN CSTYLED */
 /*
 ** $Id: lgc.h,v 2.58.1.1 2013/04/12 18:48:47 roberto Exp $
 ** Garbage Collector
@@ -121,7 +120,7 @@
 
 
 #define luaC_condGC(L,c) \
-	{if (G(L)->GCdebt > 0) {c;}; condchangemem(L);}
+	{if (G(L)->GCdebt > 0) {c;} condchangemem(L);}
 #define luaC_checkGC(L)		luaC_condGC(L, luaC_step(L);)
 
 
@@ -156,4 +155,3 @@ LUAI_FUNC void luaC_checkupvalcolor (global_State *g, UpVal *uv);
 LUAI_FUNC void luaC_changemode (lua_State *L, int mode);
 
 #endif
-/* END CSTYLED */

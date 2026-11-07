@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -59,6 +59,7 @@ unsigned long
 get_system_hostid(void)
 {
 	unsigned long hostid = get_spl_hostid();
+	uint32_t system_hostid;
 
 	/*
 	 * We do not use gethostid(3) because it can return a bogus ID,
@@ -69,8 +70,11 @@ get_system_hostid(void)
 	if (hostid == 0) {
 		int fd = open("/etc/hostid", O_RDONLY | O_CLOEXEC);
 		if (fd >= 0) {
-			if (read(fd, &hostid, 4) < 0)
+			if (read(fd, &system_hostid, sizeof (system_hostid))
+			    != sizeof (system_hostid))
 				hostid = 0;
+			else
+				hostid = system_hostid;
 			(void) close(fd);
 		}
 	}

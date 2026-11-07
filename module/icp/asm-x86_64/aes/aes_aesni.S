@@ -154,26 +154,26 @@
 
 #include <sys/types.h>
 
-/* ARGSUSED */
 void
 aes_encrypt_intel(const uint32_t rk[], int Nr, const uint32_t pt[4],
     uint32_t ct[4]) {
+	(void) rk, (void) Nr, (void) pt, (void) ct;
 }
-/* ARGSUSED */
 void
 aes_decrypt_intel(const uint32_t rk[], int Nr, const uint32_t ct[4],
     uint32_t pt[4]) {
+	(void) rk, (void) Nr, (void) ct, (void) pt;
 }
-/* ARGSUSED */
 int
 rijndael_key_setup_enc_intel(uint32_t rk[], const uint32_t cipherKey[],
     uint64_t keyBits) {
+	(void) rk, (void) cipherKey, (void) keyBits;
 	return (0);
 }
-/* ARGSUSED */
 int
 rijndael_key_setup_dec_intel(uint32_t rk[], const uint32_t cipherKey[],
    uint64_t keyBits) {
+	(void) rk, (void) cipherKey, (void) keyBits;
 	return (0);
 }
 
@@ -378,7 +378,7 @@ rijndael_key_setup_enc_intel_local:
 	FRAME_END
 	RET
 
-.align 4
+.balign 4
 .Lenc_key192:
 	cmp	$192, %KEYSIZE32
 	jnz	.Lenc_key128
@@ -415,7 +415,7 @@ rijndael_key_setup_enc_intel_local:
 	FRAME_END
 	RET
 
-.align 4
+.balign 4
 .Lenc_key128:
 	cmp $128, %KEYSIZE32
 	jnz .Lenc_key_invalid_key_bits
@@ -522,7 +522,7 @@ FRAME_BEGIN
 	add	%AESKEY, %ROUNDS64
 	mov	%ROUNDS64, %ENDAESKEY
 
-.align 4
+.balign 4
 .Ldec_key_reorder_loop:
 	movups	(%AESKEY), %xmm0
 	movups	(%ROUNDS64), %xmm1
@@ -533,7 +533,7 @@ FRAME_BEGIN
 	cmp	%AESKEY, %ROUNDS64
 	ja	.Ldec_key_reorder_loop
 
-.align 4
+.balign 4
 .Ldec_key_inv_loop:
 	movups	(%rcx), %xmm0
 	// Convert an encryption round key to a form usable for decryption
@@ -622,7 +622,7 @@ ENTRY_NP(aes_encrypt_intel)
 	movups	-0x50(%KEYP), %KEY
 	aesenc	%KEY, %STATE
 
-.align 4
+.balign 4
 .Lenc192:
 	// AES 192 and 256
 	movups	-0x40(%KEYP), %KEY
@@ -630,7 +630,7 @@ ENTRY_NP(aes_encrypt_intel)
 	movups	-0x30(%KEYP), %KEY
 	aesenc	%KEY, %STATE
 
-.align 4
+.balign 4
 .Lenc128:
 	// AES 128, 192, and 256
 	movups	-0x20(%KEYP), %KEY
@@ -705,7 +705,7 @@ ENTRY_NP(aes_decrypt_intel)
 	movups	-0x50(%KEYP), %KEY
 	aesdec	%KEY, %STATE
 
-.align 4
+.balign 4
 .Ldec192:
 	// AES 192 and 256
 	movups	-0x40(%KEYP), %KEY
@@ -713,7 +713,7 @@ ENTRY_NP(aes_decrypt_intel)
 	movups	-0x30(%KEYP), %KEY
 	aesdec	%KEY, %STATE
 
-.align 4
+.balign 4
 .Ldec128:
 	// AES 128, 192, and 256
 	movups	-0x20(%KEYP), %KEY

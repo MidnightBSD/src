@@ -7,7 +7,7 @@
 # You may not use this file except in compliance with the License.
 #
 # You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
-# or http://www.opensolaris.org/os/licensing.
+# or https://opensource.org/licenses/CDDL-1.0.
 # See the License for the specific language governing permissions
 # and limitations under the License.
 #
@@ -115,7 +115,7 @@ for nparity in 1 2 3; do
 	raid=draid${nparity}:${nparity}s
 	dir=$TEST_BASE_DIR
 
-	log_must zpool create -f -o cachefile=none $TESTPOOL $raid ${disks[@]}
+	log_must zpool create -O compression=off -f -o cachefile=none $TESTPOOL $raid ${disks[@]}
 	log_must zfs set primarycache=metadata $TESTPOOL
 
 	log_must zfs create $TESTPOOL/fs

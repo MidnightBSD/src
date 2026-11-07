@@ -11,7 +11,7 @@
 # AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
 # OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
-# shellcheck disable=SC2086,SC2250
+# shellcheck disable=SC2086
 
 trap 'rm -f "$stdout_file" "$stderr_file" "$result_file"' EXIT
 
@@ -27,7 +27,7 @@ fi
 
 IFS="
 "
-files="$(find "$@" -type f -name '*[1-9]*')" || exit 1
+files="$(find "$@" -type f -name '*[1-9]*' -not -name '.*')" || exit 1
 
 add_excl="$(awk '
     /^.\\" lint-ok:/ {

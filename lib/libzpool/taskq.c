@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -134,9 +134,10 @@ taskq_dispatch(taskq_t *tq, task_func_t func, void *arg, uint_t tqflags)
 }
 
 taskqid_t
-taskq_dispatch_delay(taskq_t *tq,  task_func_t func, void *arg, uint_t tqflags,
+taskq_dispatch_delay(taskq_t *tq, task_func_t func, void *arg, uint_t tqflags,
     clock_t expire_time)
 {
+	(void) tq, (void) func, (void) arg, (void) tqflags, (void) expire_time;
 	return (0);
 }
 
@@ -199,16 +200,18 @@ taskq_wait(taskq_t *tq)
 void
 taskq_wait_id(taskq_t *tq, taskqid_t id)
 {
+	(void) id;
 	taskq_wait(tq);
 }
 
 void
 taskq_wait_outstanding(taskq_t *tq, taskqid_t id)
 {
+	(void) id;
 	taskq_wait(tq);
 }
 
-static void
+static __attribute__((noreturn)) void
 taskq_thread(void *arg)
 {
 	taskq_t *tq = arg;
@@ -247,11 +250,11 @@ taskq_thread(void *arg)
 	thread_exit();
 }
 
-/*ARGSUSED*/
 taskq_t *
 taskq_create(const char *name, int nthreads, pri_t pri,
     int minalloc, int maxalloc, uint_t flags)
 {
+	(void) pri;
 	taskq_t *tq = kmem_zalloc(sizeof (taskq_t), KM_SLEEP);
 	int t;
 
@@ -273,7 +276,7 @@ taskq_create(const char *name, int nthreads, pri_t pri,
 	cv_init(&tq->tq_dispatch_cv, NULL, CV_DEFAULT, NULL);
 	cv_init(&tq->tq_wait_cv, NULL, CV_DEFAULT, NULL);
 	cv_init(&tq->tq_maxalloc_cv, NULL, CV_DEFAULT, NULL);
-	(void) strncpy(tq->tq_name, name, TASKQ_NAMELEN);
+	(void) strlcpy(tq->tq_name, name, sizeof (tq->tq_name));
 	tq->tq_flags = flags | TASKQ_ACTIVE;
 	tq->tq_active = nthreads;
 	tq->tq_nthreads = nthreads;
@@ -316,7 +319,9 @@ taskq_destroy(taskq_t *tq)
 	tq->tq_minalloc = 0;
 	while (tq->tq_nalloc != 0) {
 		ASSERT(tq->tq_freelist != NULL);
-		task_free(tq, task_alloc(tq, KM_SLEEP));
+		taskq_ent_t *tqent_nexttq = tq->tq_freelist->tqent_next;
+		task_free(tq, tq->tq_freelist);
+		tq->tq_freelist = tqent_nexttq;
 	}
 
 	mutex_exit(&tq->tq_lock);
@@ -356,6 +361,7 @@ taskq_of_curthread(void)
 int
 taskq_cancel_id(taskq_t *tq, taskqid_t id)
 {
+	(void) tq, (void) id;
 	return (ENOENT);
 }
 

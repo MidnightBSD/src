@@ -7,7 +7,7 @@
 # You may not use this file except in compliance with the License.
 #
 # You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
-# or http://www.opensolaris.org/os/licensing.
+# or https://opensource.org/licenses/CDDL-1.0.
 # See the License for the specific language governing permissions
 # and limitations under the License.
 #
@@ -61,7 +61,7 @@ log_must zfs snapshot $snap2
 
 typeset -i i=0
 while (( i < ${#args[*]} )); do
-	log_must eval "zfs send -i ${args[i]} >$TEST_BASE_DIR/devnull"
+	log_must eval "zfs send -i ${args[i]} > /dev/null"
 
 	(( i += 1 ))
 done

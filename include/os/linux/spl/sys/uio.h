@@ -69,8 +69,12 @@ typedef struct zfs_uio {
 	uint16_t	uio_fmode;
 	uint16_t	uio_extflg;
 	ssize_t		uio_resid;
+
 	size_t		uio_skip;
+
+	struct request	*rq;
 } zfs_uio_t;
+
 
 #define	zfs_uio_segflg(u)		(u)->uio_segflg
 #define	zfs_uio_offset(u)		(u)->uio_loffset
@@ -91,7 +95,7 @@ zfs_uio_setoffset(zfs_uio_t *uio, offset_t off)
 }
 
 static inline void
-zfs_uio_advance(zfs_uio_t *uio, size_t size)
+zfs_uio_advance(zfs_uio_t *uio, ssize_t size)
 {
 	uio->uio_resid -= size;
 	uio->uio_loffset += size;
@@ -116,23 +120,38 @@ zfs_uio_iovec_init(zfs_uio_t *uio, const struct iovec *iov,
 }
 
 static inline void
-zfs_uio_bvec_init(zfs_uio_t *uio, struct bio *bio)
+zfs_uio_bvec_init(zfs_uio_t *uio, struct bio *bio, struct request *rq)
 {
-	uio->uio_bvec = &bio->bi_io_vec[BIO_BI_IDX(bio)];
-	uio->uio_iovcnt = bio->bi_vcnt - BIO_BI_IDX(bio);
-	uio->uio_loffset = BIO_BI_SECTOR(bio) << 9;
+	/* Either bio or rq will be set, but not both */
+	ASSERT3P(uio, !=, bio);
+
+	if (bio) {
+		uio->uio_iovcnt = bio->bi_vcnt - BIO_BI_IDX(bio);
+		uio->uio_bvec = &bio->bi_io_vec[BIO_BI_IDX(bio)];
+	} else {
+		uio->uio_bvec = NULL;
+		uio->uio_iovcnt = 0;
+	}
+
+	uio->uio_loffset = io_offset(bio, rq);
 	uio->uio_segflg = UIO_BVEC;
 	uio->uio_fault_disable = B_FALSE;
 	uio->uio_fmode = 0;
 	uio->uio_extflg = 0;
-	uio->uio_resid = BIO_BI_SIZE(bio);
-	uio->uio_skip = BIO_BI_SKIP(bio);
+	uio->uio_resid = io_size(bio, rq);
+	if (bio) {
+		uio->uio_skip = BIO_BI_SKIP(bio);
+	} else {
+		uio->uio_skip = 0;
+	}
+
+	uio->rq = rq;
 }
 
 #if defined(HAVE_VFS_IOV_ITER)
 static inline void
 zfs_uio_iov_iter_init(zfs_uio_t *uio, struct iov_iter *iter, offset_t offset,
-    ssize_t resid, size_t skip)
+    ssize_t resid)
 {
 	uio->uio_iter = iter;
 	uio->uio_iovcnt = iter->nr_segs;
@@ -142,7 +161,7 @@ zfs_uio_iov_iter_init(zfs_uio_t *uio, struct iov_iter *iter, offset_t offset,
 	uio->uio_fmode = 0;
 	uio->uio_extflg = 0;
 	uio->uio_resid = resid;
-	uio->uio_skip = skip;
+	uio->uio_skip = 0;
 }
 #endif
 
