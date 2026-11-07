@@ -1,0 +1,136 @@
+Upgrade procedure for device-tree
+
+Source: the Linux kernel's device-tree files as split out by the
+	devicetree-rebasing repository,
+	https://git.kernel.org/pub/scm/linux/kernel/git/devicetree/devicetree-rebasing.git
+	Tag vX.Y-dts matches Linux vX.Y.  The tags are annotated and
+	PGP-signed.  v5.10-dts is tag object
+	72ed6ce5083e6cef04a7e4f55352b21213db550e on commit
+	11cb57a76a466a3277dc71518d980a97cc501609, tree
+	289209d0d151c2638f692b172b7e5aa9b76f6a7a.
+
+Current version: Linux 5.10 (vendor/device-tree/5.10).
+
+Fetch only the tag you need into a scratch repository, never into the
+src repository:
+
+	git init --bare dt.git
+	git -C dt.git fetch --depth 1 \
+	    https://git.kernel.org/pub/scm/linux/kernel/git/devicetree/devicetree-rebasing.git \
+	    tag vX.Y-dts
+
+To verify the tag, check its signature (git verify-tag, with the
+signer's key) and compare its tree with an independent copy.  FreeBSD
+imports the same tags with the same layout on its vendor/device-tree
+branch, reachable from the second parent of its "Update DTS files from
+Linux vX.Y" merges (FreeBSD's 5.10 vendor import is e7ffa3b5ce04).  The
+tree of our vendor commit must equal the tree of FreeBSD's vendor
+commit for the same version.
+
+Layout and pruning
+------------------
+
+The vendor branch (vendor/device-tree) holds the contents of the
+devicetree-rebasing tag at the top level (Bindings/, include/, src/,
+scripts/, COPYING, Makefile, README).  It is merged into
+sys/contrib/device-tree.  The 5.9 import was taken from FreeBSD, and
+the convention it uses is kept:
+
+  - Each import is laid over the previous vendor tree.  Files that
+    upstream deleted are NOT removed.  The stale files build up over
+    time; with 5.10 there are 224 of them, mostly old .txt bindings and
+    a few .dts/.dtsi files (for example
+    src/arm64/rockchip/rk3399-rock-pi-4.dts, which upstream split into
+    rk3399-rock-pi-4a/4b/4c.dts in 5.10 but sys/modules/dtb/rockchip
+    still builds).
+  - The top-level .gitignore is not imported.  Bindings/.gitignore is.
+  - scripts/filter.sh is kept at the version carried over from the 5.9
+    import.  It is the newer copy from devicetree-rebasing master and
+    differs from the tag only by the FILTER_BRANCH_SQUELCH_WARNING
+    line.  Nothing in our build uses scripts/.
+
+With this convention the vendor tree equals FreeBSD's vendor tree for
+the same version, which is the cross-check above.  If we ever switch to
+pristine trees (applying upstream deletions), do it in a vendor commit
+of its own, and first check that sys/modules/dtb does not build any of
+the deleted files.
+
+To upgrade to a new version:
+
+1. Fetch and verify the tag as described above.
+2. Build the new vendor tree: extract the previous vendor commit into
+   an empty directory, extract the new tag over it, delete the
+   top-level .gitignore and restore scripts/filter.sh from the previous
+   vendor commit.  Stage it with a temporary index on top of the
+   previous vendor commit:
+
+	GIT_INDEX_FILE=/tmp/idx git read-tree vendor/device-tree
+	GIT_INDEX_FILE=/tmp/idx git --work-tree=<dir> add -A -f .
+	GIT_INDEX_FILE=/tmp/idx git write-tree
+
+   (-f matters: the tag contains files that our .gitignore would
+   otherwise skip).  Check that the only differences from the tag
+   (git diff --name-status vX.Y-dts <tree>) are the carried stale
+   files (A), .gitignore (D) and scripts/filter.sh (M), with no mode
+   changes, and compare the tree with FreeBSD's vendor commit.
+   Commit it on vendor/device-tree as "Import device-tree from linux
+   X.Y" and tag it vendor/device-tree/X.Y ("linux device tree X.Y").
+3. Merge it into sys/contrib/device-tree with a real merge whose second
+   parent is the vendor commit (message "Merge commit '<sha>'").  The
+   local patches below are the usual conflicts.  FreeBSD's merge of
+   the same version is a good reference: after resolving, compare
+   sys/contrib/device-tree with FreeBSD's tree at its merge.
+4. Update freebsd,dts-version in sys/dts/freebsd-compatible.dts.  The
+   arm and arm64 kernels compile it in as LINUX_DTS_VERSION
+   (sys/conf/Makefile.arm, Makefile.arm64) and warn at boot if the
+   DTB's version differs.
+5. Check sys/modules/dtb/*/Makefile against src/ (renamed or split
+   boards) and look at FreeBSD's driver changes made for the same
+   import.
+6. Build arm (armv7), arm64 and riscv GENERIC with their dtb modules
+   (MODULES_EXTRA in the GENERIC configs) before and after the update,
+   and compare the decompiled DTBs (dtc -I dtb -O dts) for compatible
+   strings, clock/reset indices and properties that our drivers use.
+   The dt-bindings headers included by drivers in sys/arm, sys/arm64,
+   sys/riscv and sys/dev must not renumber existing constants.
+
+Branch policy
+-------------
+
+Only the arm, arm64 and riscv kernels use these files.  Keep the
+device-tree version in step with the arm/arm64/riscv drivers, which
+come from FreeBSD.  FreeBSD stable/13 ships Linux 5.9.  FreeBSD main
+merged 5.10 on 2021-03-23, after stable/13 had branched, and kept it
+until it merged 5.11 to 5.13 on 2021-07-01.  5.10 is therefore one step
+ahead of our FreeBSD 13-based drivers.  FreeBSD made no driver changes
+for 5.10 apart from the dts-version bump (1240fba44d74).  Going to 5.11
+or later, and especially to 6.x, requires porting the matching FreeBSD
+14 driver changes first.  Upgrade master and stable/4.1 together;
+stable/4.0 stays on 5.9.
+
+Local patches
+-------------
+
+These are applied on top of upstream and are kept by the merge (both
+come from FreeBSD and were added here in 7f8df441d2, "add fixes"):
+
+  - src/arm/am33xx-l4.dtsi, include/dt-bindings/pinctrl/omap.h:
+    FreeBSD 78abc9e2e6ed reverts upstream commit 27c90e5e48d0, which
+    set #pinctrl-cells = <2> on am33xx_pinmux and changed the
+    AM33XX_PADCONF() macro to emit two cells.  Per the pinctrl-single
+    binding, two cells are only valid with pinctrl-single,bits, not
+    with pinctrl-single,pins; with the revert the BeagleBone Black
+    boots further.  We keep #pinctrl-cells = <1> and
+    AM33XX_PADCONF(pa, dir, mux) emitting one cell ((dir) | (mux)).
+    Linux 5.10 also made AM33XX_IOPAD() append a second "(0)" cell;
+    that is reverted too (AM33XX_IOPAD(pa, val) emits (val) only).
+    FreeBSD resolved its 5.10 merge the same way.
+  - src/arm/am33xx-l4.dtsi: FreeBSD 19775aa7bc35 re-applies FreeBSD
+    f81b2b9a8abd ("dts: patch the am33xx dts for upcoming clock
+    support"), which adds clocks = <&timerN_fck> and
+    clock-names = "fck" to the timer3 to timer7 nodes.
+
+Compare sys/contrib/device-tree with the vendor tag to see the local
+diff:
+
+	git diff vendor/device-tree/X.Y HEAD:sys/contrib/device-tree
