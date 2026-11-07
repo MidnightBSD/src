@@ -28,8 +28,11 @@ sys/opencrypto/xform_chacha20_poly1305.c and
 sys/opencrypto/xform_poly1305.c.  The kernel glue in
 sys/crypto/libsodium provides stub libc headers, randombytes_buf()
 (arc4random_buf) and sodium_memzero()/sodium_is_zero().  No assembly
-from libsodium is built, and none of the configure HAVE_* macros is
-defined, so only the portable reference code is compiled.
+from libsodium is built, and of the configure HAVE_* macros only
+HAVE_GCC_MEMORY_FENCES is defined (for the two AEAD files, so that
+ACQUIRE_FENCE orders decryption after the tag check), so only the
+portable reference code is compiled.  All libsodium files are built
+with -DCONFIGURED=1, which private/common.h requires.
 
 To upgrade to a new version:
 
