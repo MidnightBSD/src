@@ -26,17 +26,20 @@ To upgrade to a new version:
 
 Local patches applied on top of upstream:
 
-  None.  1.0.20260223 is carried unmodified.
-
-  FreeBSD carries one patch, e95cf8b04b47 "wg: ipc: add allowed-ip flags
-  support for FreeBSD" (ipc-freebsd.h, in the allowed-ips loop of
-  kernel_set_device: replace the "TODO: implement me" -EOPNOTSUPP block
-  with nvlist_add_number(nvl_aips[j], "flags", aip->flags)).  It is NOT
-  applied here because sys/dev/wg in this tree does not implement the
-  per-allowed-ip "flags" nvlist key (WGALLOWEDIP_REMOVE_ME).  Applying it
-  would make "wg set ... allowed-ips -ip" silently add the address instead
-  of removing it.  Apply it when sys/dev/wg gains that support (FreeBSD
-  commits 684dd4e8c008 and related).
+  1. ipc-freebsd.h: allowed-ip flags support.  From FreeBSD stable/14
+     e95cf8b04b47 (main f6d9e22982a1) "wg: ipc: add allowed-ip flags
+     support for FreeBSD".  In the allowed-ips loop of kernel_set_device,
+     the "TODO: implement me" -EOPNOTSUPP block is replaced with
+     nvlist_add_number(nvl_aips[j], "flags", aip->flags), so that
+     "wg set ... allowed-ips -ip" sends WGALLOWEDIP_REMOVE_ME to the
+     kernel.  The diff is carried exactly as FreeBSD ships it (its commit
+     message mentions a flag mapping function that the diff does not
+     contain).  It requires the kernel side in sys/dev/wg (per-allowed-ip
+     "flags" nvlist key, FreeBSD 684dd4e8c008 and its prerequisites
+     1cacf672e3ee and d0b6c358e748).  On a kernel without that support
+     the "flags" key is ignored and a removal silently becomes an add,
+     so update the kernel and world together.  Keep this patch until
+     upstream wireguard-tools carries it; check on every upgrade.
 
 Notes:
   - ipc.c selects ipc-freebsd.h with defined(__FreeBSD__); our compilers
