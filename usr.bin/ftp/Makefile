@@ -16,6 +16,11 @@ PROG=	ftp
 SRCS=	cmds.c cmdtab.c complete.c domacro.c fetch.c ftp.c main.c \
 	progressbar.c ruserpass.c util.c
 
+# ssl.c holds the fetch_*() connection I/O that fetch.c always uses.
+# It is built without WITH_SSL, so https:// is not supported and
+# ftp(1) does not link against libssl or libcrypto.
+SRCS+=	ssl.c
+
 .if ${MK_INET6_SUPPORT} != "no"
 CFLAGS+= -DINET6
 .endif
