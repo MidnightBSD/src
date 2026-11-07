@@ -1,5 +1,8 @@
-/* $NetBSD: inet_ntop.c,v 1.10 2007/07/23 11:45:51 lukem Exp $ */
-/* from	NetBSD: inet_ntop.c,v 1.3 2006/05/10 21:53:15 mrg Exp */
+/* $NetBSD: inet_ntop.c,v 1.11 2026/02/10 17:56:34 lukem Exp $ */
+
+/* from:	NetBSD: inet_ntop.c,v 1.12 2018/03/02 06:31:53 lukem Exp */
+/* upstream:	lib/libc/inet/inet_ntop.c */
+/* see also:	othersrc/libexec/tnftpd/libnetbsd/inet_ntop.c */
 
 /*
  * Copyright (c) 2004 by Internet Systems Consortium, Inc. ("ISC")
@@ -20,20 +23,41 @@
 
 #include "tnftp.h"
 
-#if defined(HAVE_ARPA_NAMESER_H)
-# include <arpa/nameser.h>
+#if 0
+#include <sys/cdefs.h>
+#if defined(LIBC_SCCS) && !defined(lint)
+#if 0
+static const char rcsid[] = "Id: inet_ntop.c,v 1.5 2005/11/03 22:59:52 marka Exp";
+#else
+__RCSID("$NetBSD: inet_ntop.c,v 1.11 2026/02/10 17:56:34 lukem Exp $");
 #endif
-#if !defined(NS_INADDRSZ)
-# define NS_INADDRSZ	4
+#endif /* LIBC_SCCS and not lint */
+
+#include "port_before.h"
+
+#include "namespace.h"
+#include <sys/param.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <arpa/nameser.h>
+
+#include <assert.h>
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "port_after.h"
+
+#ifdef __weak_alias
+__weak_alias(inet_ntop,_inet_ntop)
 #endif
-#if !defined(NS_IN6ADDRSZ)
-# define NS_IN6ADDRSZ	16
-#endif
-#if !defined(NS_INT16SZ)
-# define NS_INT16SZ	2
 #endif
 
-/*
+/*%
  * WARNING: Don't even consider trying to compile this on a system where
  * sizeof(int) < 4.  sizeof(int) > 4 is fine; all the world's not a VAX.
  */
@@ -55,16 +79,19 @@ const char *
 inet_ntop(int af, const void *src, char *dst, socklen_t size)
 {
 
+	_DIAGASSERT(src != NULL);
+	_DIAGASSERT(dst != NULL);
+
 	switch (af) {
 	case AF_INET:
-		return (inet_ntop4(src, dst, size));
+		return inet_ntop4(src, dst, size);
 #ifdef INET6
 	case AF_INET6:
-		return (inet_ntop6(src, dst, size));
+		return inet_ntop6(src, dst, size);
 #endif /* INET6 */
 	default:
 		errno = EAFNOSUPPORT;
-		return (NULL);
+		return NULL;
 	}
 	/* NOTREACHED */
 }
@@ -86,14 +113,17 @@ inet_ntop4(const unsigned char *src, char *dst, socklen_t size)
 	char tmp[sizeof "255.255.255.255"];
 	int l;
 
+	_DIAGASSERT(src != NULL);
+	_DIAGASSERT(dst != NULL);
+
 	l = snprintf(tmp, sizeof(tmp), "%u.%u.%u.%u",
 	    src[0], src[1], src[2], src[3]);
 	if (l <= 0 || (socklen_t) l >= size) {
 		errno = ENOSPC;
-		return (NULL);
+		return NULL;
 	}
 	strlcpy(dst, tmp, size);
-	return (dst);
+	return dst;
 }
 
 #ifdef INET6
@@ -120,6 +150,9 @@ inet_ntop6(const unsigned char *src, char *dst, socklen_t size)
 	int i;
 	int advance;
 
+	_DIAGASSERT(src != NULL);
+	_DIAGASSERT(dst != NULL);
+
 	/*
 	 * Preprocess:
 	 *	Copy the input (bytewise) array into a wordwise array.
@@ -129,9 +162,9 @@ inet_ntop6(const unsigned char *src, char *dst, socklen_t size)
 	for (i = 0; i < NS_IN6ADDRSZ; i++)
 		words[i / 2] |= (src[i] << ((1 - (i % 2)) << 3));
 	best.base = -1;
+	best.len = 0;
 	cur.base = -1;
-	best.len = -1;	/* XXX gcc */
-	cur.len = -1;	/* XXX gcc */
+	cur.len = 0;
 	for (i = 0; i < (NS_IN6ADDRSZ / NS_INT16SZ); i++) {
 		if (words[i] == 0) {
 			if (cur.base == -1)
@@ -169,7 +202,7 @@ inet_ntop6(const unsigned char *src, char *dst, socklen_t size)
 		/* Are we following an initial run of 0x00s or any real hex? */
 		if (i != 0) {
 			if (tp + 1 >= ep)
-				return (NULL);
+				goto out;
 			*tp++ = ':';
 		}
 		/* Is this address an encapsulated IPv4? */
@@ -177,35 +210,38 @@ inet_ntop6(const unsigned char *src, char *dst, socklen_t size)
 		    (best.len == 6 ||
 		    (best.len == 7 && words[7] != 0x0001) ||
 		    (best.len == 5 && words[5] == 0xffff))) {
-			if (!inet_ntop4(src+12, tp, (socklen_t)(ep - tp)))
-				return (NULL);
+			if (!inet_ntop4(src + 12, tp, (socklen_t)(ep - tp)))
+				goto out;
 			tp += strlen(tp);
 			break;
 		}
 		advance = snprintf(tp, (size_t)(ep - tp), "%x", words[i]);
 		if (advance <= 0 || advance >= ep - tp)
-			return (NULL);
+			goto out;
 		tp += advance;
 	}
 	/* Was it a trailing run of 0x00's? */
 	if (best.base != -1 && (best.base + best.len) == 
 	    (NS_IN6ADDRSZ / NS_INT16SZ)) {
 		if (tp + 1 >= ep)
-			return (NULL);
+			goto out;
 		*tp++ = ':';
 	}
 	if (tp + 1 >= ep)
-		return (NULL);
+		goto out;
 	*tp++ = '\0';
 
 	/*
 	 * Check for overflow, copy, and we're done.
 	 */
-	if ((size_t)(tp - tmp) > size) {
-		errno = ENOSPC;
-		return (NULL);
-	}
+	if ((size_t)(tp - tmp) > size)
+		goto out;
 	strlcpy(dst, tmp, size);
-	return (dst);
+	return dst;
+out:
+	errno = ENOSPC;
+	return NULL;
 }
 #endif /* INET6 */
+
+/*! \file */

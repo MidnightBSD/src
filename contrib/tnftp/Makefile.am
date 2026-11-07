@@ -1,10 +1,10 @@
-## $NetBSD: Makefile.am,v 1.3 2013/05/05 13:06:37 lukem Exp $
+## $NetBSD: Makefile.am,v 1.4 2020/07/05 09:37:53 lukem Exp $
 
 ACLOCAL_AMFLAGS = -I buildaux
 
 SUBDIRS = libnetbsd
 
-if USE_LIBEDIT
+if WITH_LOCAL_LIBEDIT
 SUBDIRS += libedit
 endif
 
