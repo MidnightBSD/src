@@ -1,0 +1,29 @@
+Upgrade procedure for spleen
+
+Source: https://github.com/fcambus/spleen/releases/download/VERSION/spleen-VERSION.tar.gz
+
+The release page publishes only the tarball (GitHub reports its sha256
+digest); there is no signify signature.  Record the sha256 when importing.
+
+To upgrade to a new version:
+
+1. Download and extract the tarball to /tmp/spleen/spleen-VERSION
+2. Use the vendor-update skill (vendor/spleen, contrib/spleen).  Only the
+   files already tracked on the vendor branch are imported: the six
+   spleen-*.bdf fonts plus AUTHORS, ChangeLog, LICENSE and README.md.
+   The other formats in the tarball (pcf, otf, psfu, woff, ...) and the
+   tests, blocks, cp437 and dos directories are not imported.  There is
+   no Xlist; the pruning is simply "copy only the tracked files".
+3. Check share/vt/fonts: the Makefile converts each spleen-WxH.bdf with
+   vtfontcvt, and INDEX.fonts lists the resulting .fnt files.  Add entries
+   if upstream adds a new size.
+4. Keep the files identical to FreeBSD's contrib/spleen when possible.
+
+Local patches applied on top of upstream:
+
+  None.
+
+Notes:
+  - Imported versions: 2.1.0, 2.2.0.
+  - Build check: make -C share/vt/fonts, then compare glyph counts with
+    vtfontcvt -v for each size.
