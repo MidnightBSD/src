@@ -125,6 +125,7 @@ static const char *features_for_read[] = {
 	"org.illumos:skein",
 	"org.zfsonlinux:large_dnode",
 	"com.joyent:multi_vdev_crash_dump",
+	"com.klarasystems:vdev_zaps_v2",
 	"com.delphix:spacemap_histogram",
 	"com.delphix:zpool_checkpoint",
 	"com.delphix:spacemap_v2",
