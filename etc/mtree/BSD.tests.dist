@@ -1069,6 +1069,8 @@
         ..
         find
         ..
+        flock
+        ..
         fold
         ..
         getconf
