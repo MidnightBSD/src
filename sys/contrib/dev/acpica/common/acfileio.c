@@ -6,146 +6,8 @@
 
 /******************************************************************************
  *
- * 1. Copyright Notice
- *
- * Some or all of this work - Copyright (c) 1999 - 2020, Intel Corp.
- * All rights reserved.
- *
- * 2. License
- *
- * 2.1. This is your license from Intel Corp. under its intellectual property
- * rights. You may have additional license terms from the party that provided
- * you this software, covering your right to use that party's intellectual
- * property rights.
- *
- * 2.2. Intel grants, free of charge, to any person ("Licensee") obtaining a
- * copy of the source code appearing in this file ("Covered Code") an
- * irrevocable, perpetual, worldwide license under Intel's copyrights in the
- * base code distributed originally by Intel ("Original Intel Code") to copy,
- * make derivatives, distribute, use and display any portion of the Covered
- * Code in any form, with the right to sublicense such rights; and
- *
- * 2.3. Intel grants Licensee a non-exclusive and non-transferable patent
- * license (with the right to sublicense), under only those claims of Intel
- * patents that are infringed by the Original Intel Code, to make, use, sell,
- * offer to sell, and import the Covered Code and derivative works thereof
- * solely to the minimum extent necessary to exercise the above copyright
- * license, and in no event shall the patent license extend to any additions
- * to or modifications of the Original Intel Code. No other license or right
- * is granted directly or by implication, estoppel or otherwise;
- *
- * The above copyright and patent license is granted only if the following
- * conditions are met:
- *
- * 3. Conditions
- *
- * 3.1. Redistribution of Source with Rights to Further Distribute Source.
- * Redistribution of source code of any substantial portion of the Covered
- * Code or modification with rights to further distribute source must include
- * the above Copyright Notice, the above License, this list of Conditions,
- * and the following Disclaimer and Export Compliance provision. In addition,
- * Licensee must cause all Covered Code to which Licensee contributes to
- * contain a file documenting the changes Licensee made to create that Covered
- * Code and the date of any change. Licensee must include in that file the
- * documentation of any changes made by any predecessor Licensee. Licensee
- * must include a prominent statement that the modification is derived,
- * directly or indirectly, from Original Intel Code.
- *
- * 3.2. Redistribution of Source with no Rights to Further Distribute Source.
- * Redistribution of source code of any substantial portion of the Covered
- * Code or modification without rights to further distribute source must
- * include the following Disclaimer and Export Compliance provision in the
- * documentation and/or other materials provided with distribution. In
- * addition, Licensee may not authorize further sublicense of source of any
- * portion of the Covered Code, and must include terms to the effect that the
- * license from Licensee to its licensee is limited to the intellectual
- * property embodied in the software Licensee provides to its licensee, and
- * not to intellectual property embodied in modifications its licensee may
- * make.
- *
- * 3.3. Redistribution of Executable. Redistribution in executable form of any
- * substantial portion of the Covered Code or modification must reproduce the
- * above Copyright Notice, and the following Disclaimer and Export Compliance
- * provision in the documentation and/or other materials provided with the
- * distribution.
- *
- * 3.4. Intel retains all right, title, and interest in and to the Original
- * Intel Code.
- *
- * 3.5. Neither the name Intel nor any other trademark owned or controlled by
- * Intel shall be used in advertising or otherwise to promote the sale, use or
- * other dealings in products derived from or relating to the Covered Code
- * without prior written authorization from Intel.
- *
- * 4. Disclaimer and Export Compliance
- *
- * 4.1. INTEL MAKES NO WARRANTY OF ANY KIND REGARDING ANY SOFTWARE PROVIDED
- * HERE. ANY SOFTWARE ORIGINATING FROM INTEL OR DERIVED FROM INTEL SOFTWARE
- * IS PROVIDED "AS IS," AND INTEL WILL NOT PROVIDE ANY SUPPORT, ASSISTANCE,
- * INSTALLATION, TRAINING OR OTHER SERVICES. INTEL WILL NOT PROVIDE ANY
- * UPDATES, ENHANCEMENTS OR EXTENSIONS. INTEL SPECIFICALLY DISCLAIMS ANY
- * IMPLIED WARRANTIES OF MERCHANTABILITY, NONINFRINGEMENT AND FITNESS FOR A
- * PARTICULAR PURPOSE.
- *
- * 4.2. IN NO EVENT SHALL INTEL HAVE ANY LIABILITY TO LICENSEE, ITS LICENSEES
- * OR ANY OTHER THIRD PARTY, FOR ANY LOST PROFITS, LOST DATA, LOSS OF USE OR
- * COSTS OF PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES, OR FOR ANY INDIRECT,
- * SPECIAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF THIS AGREEMENT, UNDER ANY
- * CAUSE OF ACTION OR THEORY OF LIABILITY, AND IRRESPECTIVE OF WHETHER INTEL
- * HAS ADVANCE NOTICE OF THE POSSIBILITY OF SUCH DAMAGES. THESE LIMITATIONS
- * SHALL APPLY NOTWITHSTANDING THE FAILURE OF THE ESSENTIAL PURPOSE OF ANY
- * LIMITED REMEDY.
- *
- * 4.3. Licensee shall not export, either directly or indirectly, any of this
- * software or system incorporating such software without first obtaining any
- * required license or other approval from the U. S. Department of Commerce or
- * any other agency or department of the United States Government. In the
- * event Licensee exports any such software from the United States or
- * re-exports any such software from a foreign destination, Licensee shall
- * ensure that the distribution and export/re-export of the software is in
- * compliance with all laws, regulations, orders, or other restrictions of the
- * U.S. Export Administration Regulations. Licensee agrees that neither it nor
- * any of its subsidiaries will export/re-export any technical data, process,
- * software, or service, directly or indirectly, to any country for which the
- * United States government or any agency thereof requires an export license,
- * other governmental approval, or letter of assurance, without first obtaining
- * such license, approval or letter.
- *
- *****************************************************************************
- *
- * Alternatively, you may choose to be licensed under the terms of the
- * following license:
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions, and the following disclaimer,
- *    without modification.
- * 2. Redistributions in binary form must reproduce at minimum a disclaimer
- *    substantially similar to the "NO WARRANTY" disclaimer below
- *    ("Disclaimer") and any redistribution must be conditioned upon
- *    including a substantially similar Disclaimer requirement for further
- *    binary redistribution.
- * 3. Neither the names of the above-listed copyright holders nor the names
- *    of any contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * Alternatively, you may choose to be licensed under the terms of the
- * GNU General Public License ("GPL") version 2 as published by the Free
- * Software Foundation.
+ * Copyright (c) 1999 - 2026, Intel Corp.
+ * SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0-only
  *
  *****************************************************************************/
 
@@ -387,16 +249,36 @@ AcGetOneTableFromFile (
     ACPI_TABLE_HEADER       TableHeader;
     ACPI_TABLE_HEADER       *Table;
     INT32                   Count;
-    long                    TableOffset;
-
+    UINT32                  TableLength;
+    UINT32                  HeaderLength;
+    long                    TableOffset = 0;
 
     *ReturnTable = NULL;
 
     /* Get the table header to examine signature and length */
+    /*
+     * Special handling for the CDAT table (both the Length field
+     * and the Checksum field are not in the standard positions).
+     * (The table header is non-standard).
+     */
+    if (AcpiGbl_CDAT)
+    {
+        HeaderLength = sizeof (ACPI_TABLE_CDAT);
+    }
+    else
+    {
+        HeaderLength = sizeof (ACPI_TABLE_HEADER);
+    }
+
+    Status = AcValidateTableHeader (File, TableOffset);
+    if (ACPI_FAILURE (Status))
+    {
+        return (Status);
+    }
 
     TableOffset = ftell (File);
-    Count = fread (&TableHeader, 1, sizeof (ACPI_TABLE_HEADER), File);
-    if (Count != sizeof (ACPI_TABLE_HEADER))
+    Count = fread (&TableHeader, 1, HeaderLength, File);
+    if (Count != (INT32) HeaderLength)
     {
         return (AE_CTRL_TERMINATE);
     }
@@ -404,12 +286,6 @@ AcGetOneTableFromFile (
     if (GetOnlyAmlTables)
     {
         /* Validate the table signature/header (limited ASCII chars) */
-
-        Status = AcValidateTableHeader (File, TableOffset);
-        if (ACPI_FAILURE (Status))
-        {
-            return (Status);
-        }
 
         /*
          * Table must be an AML table (DSDT/SSDT).
@@ -425,9 +301,31 @@ AcGetOneTableFromFile (
         }
     }
 
+    /*
+     * Special handling for the CDAT table (both the Length field
+     * and the Checksum field are not in the standard positions).
+     */
+    if (AcpiGbl_CDAT)
+    {
+        TableLength = ACPI_CAST_PTR (ACPI_TABLE_CDAT, &TableHeader)->Length;
+    }
+    else
+    {
+        TableLength = TableHeader.Length;
+    }
+
+    /* Table length must be at least large enough to hold the header */
+
+    if (TableLength < HeaderLength)
+    {
+        fprintf (stderr, "Table length too small for header: 0x%.2X\n",
+            TableLength);
+        return (AE_BAD_HEADER);
+    }
+
     /* Allocate a buffer for the entire table */
 
-    Table = AcpiOsAllocate ((ACPI_SIZE) TableHeader.Length);
+    Table = AcpiOsAllocate ((ACPI_SIZE) TableLength);
     if (!Table)
     {
         return (AE_NO_MEMORY);
@@ -436,22 +334,31 @@ AcGetOneTableFromFile (
     /* Read the entire ACPI table, including header */
 
     fseek (File, TableOffset, SEEK_SET);
-
-    Count = fread (Table, 1, TableHeader.Length, File);
+    Count = fread (Table, 1, TableLength, File);
 
     /*
      * Checks for data table headers happen later in the execution. Only verify
      * for Aml tables at this point in the code.
      */
-    if (GetOnlyAmlTables && Count != (INT32) TableHeader.Length)
+    if (GetOnlyAmlTables && Count != (INT32) TableLength)
     {
         Status = AE_ERROR;
         goto ErrorExit;
     }
 
-    /* Validate the checksum (just issue a warning) */
+    /*
+     * Validate the checksum (just issue a warning if incorrect).
+     * Note: CDAT is special cased here because the table does
+     * not have the checksum field in the standard position.
+     */
+    if (AcpiGbl_CDAT)
+    {
+        Status = AcpiUtVerifyCdatChecksum ((ACPI_TABLE_CDAT *) Table, TableLength);
+    } else
+    {
+        Status = AcpiUtVerifyChecksum (Table, TableLength);
+    }
 
-    Status = AcpiTbVerifyChecksum (Table, TableHeader.Length);
     if (ACPI_FAILURE (Status))
     {
         Status = AcCheckTextModeCorruption (Table);
@@ -540,6 +447,8 @@ AcValidateTableHeader (
     long                    TableOffset)
 {
     ACPI_TABLE_HEADER       TableHeader;
+    ACPI_TABLE_CDAT         *CdatTableHeader = ACPI_CAST_PTR (ACPI_TABLE_CDAT, &TableHeader);
+    UINT32                  HeaderLength;
     ACPI_SIZE               Actual;
     long                    OriginalOffset;
     UINT32                  FileSize;
@@ -548,41 +457,94 @@ AcValidateTableHeader (
 
     ACPI_FUNCTION_TRACE (AcValidateTableHeader);
 
+    /* Determine the type of table header */
+
+    if (AcpiGbl_CDAT)
+    {
+        HeaderLength = sizeof (ACPI_TABLE_CDAT);
+    }
+    else
+    {
+        HeaderLength = sizeof (ACPI_TABLE_HEADER);
+    }
 
     /* Read a potential table header */
 
     OriginalOffset = ftell (File);
-    fseek (File, TableOffset, SEEK_SET);
-
-    Actual = fread (&TableHeader, 1, sizeof (ACPI_TABLE_HEADER), File);
-    fseek (File, OriginalOffset, SEEK_SET);
-
-    if (Actual < sizeof (ACPI_TABLE_HEADER))
+    if (fseek (File, TableOffset, SEEK_SET))
     {
+        fprintf (stderr, "SEEK error\n");
+    }
+    Actual = fread (&TableHeader, 1, HeaderLength, File);
+    if (fseek (File, OriginalOffset, SEEK_SET))
+    {
+        fprintf (stderr, "SEEK error\n");
+    }
+
+    if (Actual < HeaderLength)
+    {
+        fprintf (stderr,
+            "Could not read entire table header: Actual %u, Requested %u\n",
+            (UINT32) Actual, HeaderLength);
         return (AE_ERROR);
     }
 
     /* Validate the signature (limited ASCII chars) */
 
-    if (!AcpiUtValidNameseg (TableHeader.Signature))
+    if (!AcpiGbl_CDAT && !AcpiUtValidNameseg (TableHeader.Signature))
     {
+        /*
+         * The "-ds cdat" option was not used, and the signature is not valid.
+         *
+         * For CDAT we are assuming that there should be at least one non-ASCII
+         * byte in the (normally) 4-character Signature field (at least the
+         * high-order byte should be zero). Otherwise, this is OK.
+         */
+        fprintf (stderr,
+            "\nTable appears to be a CDAT table, which has no signature.\n"
+            "If this is in fact a CDAT table, use the -ds option on the\n"
+            "command line to specify the table type (signature):\n"
+            "\"iasl -d -ds CDAT <file>\" or \"iasl -ds CDAT -T CDAT\"\n\n");
+
         return (AE_BAD_SIGNATURE);
     }
 
     /* Validate table length against bytes remaining in the file */
 
     FileSize = CmGetFileSize (File);
-    if (TableHeader.Length > (UINT32) (FileSize - TableOffset))
+    if (!AcpiGbl_CDAT)
     {
-        fprintf (stderr, "Table [%4.4s] is too long for file - "
+        /* Standard ACPI table header */
+
+        if (TableHeader.Length > (UINT32) (FileSize - TableOffset))
+        {
+            fprintf (stderr, "Table [%4.4s] is too long for file - "
+                "needs: 0x%.2X, remaining in file: 0x%.2X\n",
+                TableHeader.Signature, TableHeader.Length,
+                (UINT32) (FileSize - TableOffset));
+            return (AE_BAD_HEADER);
+        }
+    }
+    else if (CdatTableHeader->Length > (UINT32) (FileSize - TableOffset))
+    {
+        /* Special header for CDAT table */
+
+        fprintf (stderr, "Table [CDAT] is too long for file - "
             "needs: 0x%.2X, remaining in file: 0x%.2X\n",
-            TableHeader.Signature, TableHeader.Length,
+            CdatTableHeader->Length,
             (UINT32) (FileSize - TableOffset));
         return (AE_BAD_HEADER);
     }
 
+    /* For CDAT table, there are no ASCII fields in the header, we are done */
+
+    if (AcpiGbl_CDAT)
+    {
+        return (AE_OK);
+    }
+
     /*
-     * These fields must be ASCII: OemId, OemTableId, AslCompilerId.
+     * These standard fields must be ASCII: OemId, OemTableId, AslCompilerId.
      * We allow a NULL terminator in OemId and OemTableId.
      */
     for (i = 0; i < ACPI_NAMESEG_SIZE; i++)

@@ -6,146 +6,8 @@
 
 /******************************************************************************
  *
- * 1. Copyright Notice
- *
- * Some or all of this work - Copyright (c) 1999 - 2020, Intel Corp.
- * All rights reserved.
- *
- * 2. License
- *
- * 2.1. This is your license from Intel Corp. under its intellectual property
- * rights. You may have additional license terms from the party that provided
- * you this software, covering your right to use that party's intellectual
- * property rights.
- *
- * 2.2. Intel grants, free of charge, to any person ("Licensee") obtaining a
- * copy of the source code appearing in this file ("Covered Code") an
- * irrevocable, perpetual, worldwide license under Intel's copyrights in the
- * base code distributed originally by Intel ("Original Intel Code") to copy,
- * make derivatives, distribute, use and display any portion of the Covered
- * Code in any form, with the right to sublicense such rights; and
- *
- * 2.3. Intel grants Licensee a non-exclusive and non-transferable patent
- * license (with the right to sublicense), under only those claims of Intel
- * patents that are infringed by the Original Intel Code, to make, use, sell,
- * offer to sell, and import the Covered Code and derivative works thereof
- * solely to the minimum extent necessary to exercise the above copyright
- * license, and in no event shall the patent license extend to any additions
- * to or modifications of the Original Intel Code. No other license or right
- * is granted directly or by implication, estoppel or otherwise;
- *
- * The above copyright and patent license is granted only if the following
- * conditions are met:
- *
- * 3. Conditions
- *
- * 3.1. Redistribution of Source with Rights to Further Distribute Source.
- * Redistribution of source code of any substantial portion of the Covered
- * Code or modification with rights to further distribute source must include
- * the above Copyright Notice, the above License, this list of Conditions,
- * and the following Disclaimer and Export Compliance provision. In addition,
- * Licensee must cause all Covered Code to which Licensee contributes to
- * contain a file documenting the changes Licensee made to create that Covered
- * Code and the date of any change. Licensee must include in that file the
- * documentation of any changes made by any predecessor Licensee. Licensee
- * must include a prominent statement that the modification is derived,
- * directly or indirectly, from Original Intel Code.
- *
- * 3.2. Redistribution of Source with no Rights to Further Distribute Source.
- * Redistribution of source code of any substantial portion of the Covered
- * Code or modification without rights to further distribute source must
- * include the following Disclaimer and Export Compliance provision in the
- * documentation and/or other materials provided with distribution. In
- * addition, Licensee may not authorize further sublicense of source of any
- * portion of the Covered Code, and must include terms to the effect that the
- * license from Licensee to its licensee is limited to the intellectual
- * property embodied in the software Licensee provides to its licensee, and
- * not to intellectual property embodied in modifications its licensee may
- * make.
- *
- * 3.3. Redistribution of Executable. Redistribution in executable form of any
- * substantial portion of the Covered Code or modification must reproduce the
- * above Copyright Notice, and the following Disclaimer and Export Compliance
- * provision in the documentation and/or other materials provided with the
- * distribution.
- *
- * 3.4. Intel retains all right, title, and interest in and to the Original
- * Intel Code.
- *
- * 3.5. Neither the name Intel nor any other trademark owned or controlled by
- * Intel shall be used in advertising or otherwise to promote the sale, use or
- * other dealings in products derived from or relating to the Covered Code
- * without prior written authorization from Intel.
- *
- * 4. Disclaimer and Export Compliance
- *
- * 4.1. INTEL MAKES NO WARRANTY OF ANY KIND REGARDING ANY SOFTWARE PROVIDED
- * HERE. ANY SOFTWARE ORIGINATING FROM INTEL OR DERIVED FROM INTEL SOFTWARE
- * IS PROVIDED "AS IS," AND INTEL WILL NOT PROVIDE ANY SUPPORT, ASSISTANCE,
- * INSTALLATION, TRAINING OR OTHER SERVICES. INTEL WILL NOT PROVIDE ANY
- * UPDATES, ENHANCEMENTS OR EXTENSIONS. INTEL SPECIFICALLY DISCLAIMS ANY
- * IMPLIED WARRANTIES OF MERCHANTABILITY, NONINFRINGEMENT AND FITNESS FOR A
- * PARTICULAR PURPOSE.
- *
- * 4.2. IN NO EVENT SHALL INTEL HAVE ANY LIABILITY TO LICENSEE, ITS LICENSEES
- * OR ANY OTHER THIRD PARTY, FOR ANY LOST PROFITS, LOST DATA, LOSS OF USE OR
- * COSTS OF PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES, OR FOR ANY INDIRECT,
- * SPECIAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF THIS AGREEMENT, UNDER ANY
- * CAUSE OF ACTION OR THEORY OF LIABILITY, AND IRRESPECTIVE OF WHETHER INTEL
- * HAS ADVANCE NOTICE OF THE POSSIBILITY OF SUCH DAMAGES. THESE LIMITATIONS
- * SHALL APPLY NOTWITHSTANDING THE FAILURE OF THE ESSENTIAL PURPOSE OF ANY
- * LIMITED REMEDY.
- *
- * 4.3. Licensee shall not export, either directly or indirectly, any of this
- * software or system incorporating such software without first obtaining any
- * required license or other approval from the U. S. Department of Commerce or
- * any other agency or department of the United States Government. In the
- * event Licensee exports any such software from the United States or
- * re-exports any such software from a foreign destination, Licensee shall
- * ensure that the distribution and export/re-export of the software is in
- * compliance with all laws, regulations, orders, or other restrictions of the
- * U.S. Export Administration Regulations. Licensee agrees that neither it nor
- * any of its subsidiaries will export/re-export any technical data, process,
- * software, or service, directly or indirectly, to any country for which the
- * United States government or any agency thereof requires an export license,
- * other governmental approval, or letter of assurance, without first obtaining
- * such license, approval or letter.
- *
- *****************************************************************************
- *
- * Alternatively, you may choose to be licensed under the terms of the
- * following license:
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions, and the following disclaimer,
- *    without modification.
- * 2. Redistributions in binary form must reproduce at minimum a disclaimer
- *    substantially similar to the "NO WARRANTY" disclaimer below
- *    ("Disclaimer") and any redistribution must be conditioned upon
- *    including a substantially similar Disclaimer requirement for further
- *    binary redistribution.
- * 3. Neither the names of the above-listed copyright holders nor the names
- *    of any contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * Alternatively, you may choose to be licensed under the terms of the
- * GNU General Public License ("GPL") version 2 as published by the Free
- * Software Foundation.
+ * Copyright (c) 1999 - 2026, Intel Corp.
+ * SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0-only
  *
  *****************************************************************************/
 
@@ -243,14 +105,28 @@ AcpiTbInitTableDescriptor (
 {
 
     /*
-     * Initialize the table descriptor. Set the pointer to NULL, since the
-     * table is not fully mapped at this time.
+     * Initialize the table descriptor. Set the pointer to NULL for external
+     * tables, since the table is not fully mapped at this time.
      */
     memset (TableDesc, 0, sizeof (ACPI_TABLE_DESC));
     TableDesc->Address = Address;
     TableDesc->Length = Table->Length;
     TableDesc->Flags = Flags;
     ACPI_MOVE_32_TO_32 (TableDesc->Signature.Ascii, Table->Signature);
+
+    switch (TableDesc->Flags & ACPI_TABLE_ORIGIN_MASK)
+    {
+    case ACPI_TABLE_ORIGIN_INTERNAL_VIRTUAL:
+    case ACPI_TABLE_ORIGIN_EXTERNAL_VIRTUAL:
+
+        TableDesc->Pointer = Table;
+        break;
+
+    case ACPI_TABLE_ORIGIN_INTERNAL_PHYSICAL:
+    default:
+
+        break;
+    }
 }
 
 
@@ -290,8 +166,7 @@ AcpiTbAcquireTable (
     case ACPI_TABLE_ORIGIN_INTERNAL_VIRTUAL:
     case ACPI_TABLE_ORIGIN_EXTERNAL_VIRTUAL:
 
-        Table = ACPI_CAST_PTR (ACPI_TABLE_HEADER,
-            ACPI_PHYSADDR_TO_PTR (TableDesc->Address));
+        Table = TableDesc->Pointer;
         break;
 
     default:
@@ -359,6 +234,8 @@ AcpiTbReleaseTable (
  * PARAMETERS:  TableDesc           - Table descriptor to be acquired
  *              Address             - Address of the table
  *              Flags               - Allocation flags of the table
+ *              Table               - Pointer to the table (required for virtual
+ *                                    origins, optional for physical)
  *
  * RETURN:      Status
  *
@@ -373,9 +250,10 @@ ACPI_STATUS
 AcpiTbAcquireTempTable (
     ACPI_TABLE_DESC         *TableDesc,
     ACPI_PHYSICAL_ADDRESS   Address,
-    UINT8                   Flags)
+    UINT8                   Flags,
+    ACPI_TABLE_HEADER       *Table)
 {
-    ACPI_TABLE_HEADER       *TableHeader;
+    BOOLEAN                 MappedTable = FALSE;
 
 
     switch (Flags & ACPI_TABLE_ORIGIN_MASK)
@@ -384,37 +262,43 @@ AcpiTbAcquireTempTable (
 
         /* Get the length of the full table from the header */
 
-        TableHeader = AcpiOsMapMemory (Address, sizeof (ACPI_TABLE_HEADER));
-        if (!TableHeader)
+        if (!Table)
         {
-            return (AE_NO_MEMORY);
+            Table = AcpiOsMapMemory (Address, sizeof (ACPI_TABLE_HEADER));
+            if (!Table)
+            {
+                return (AE_NO_MEMORY);
+            }
+
+            MappedTable = TRUE;
         }
 
-        AcpiTbInitTableDescriptor (TableDesc, Address, Flags, TableHeader);
-        AcpiOsUnmapMemory (TableHeader, sizeof (ACPI_TABLE_HEADER));
-        return (AE_OK);
+        break;
 
     case ACPI_TABLE_ORIGIN_INTERNAL_VIRTUAL:
     case ACPI_TABLE_ORIGIN_EXTERNAL_VIRTUAL:
 
-        TableHeader = ACPI_CAST_PTR (ACPI_TABLE_HEADER,
-            ACPI_PHYSADDR_TO_PTR (Address));
-        if (!TableHeader)
+        if (!Table)
         {
-            return (AE_NO_MEMORY);
+            return (AE_BAD_PARAMETER);
         }
 
-        AcpiTbInitTableDescriptor (TableDesc, Address, Flags, TableHeader);
-        return (AE_OK);
+        break;
 
     default:
 
-        break;
+        /* Table is not valid yet */
+
+        return (AE_NO_MEMORY);
     }
 
-    /* Table is not valid yet */
+    AcpiTbInitTableDescriptor (TableDesc, Address, Flags, Table);
+    if (MappedTable)
+    {
+        AcpiOsUnmapMemory (Table, sizeof (ACPI_TABLE_HEADER));
+    }
 
-    return (AE_NO_MEMORY);
+    return (AE_OK);
 }
 
 
@@ -513,7 +397,20 @@ AcpiTbInvalidateTable (
 
     AcpiTbReleaseTable (TableDesc->Pointer, TableDesc->Length,
         TableDesc->Flags);
-    TableDesc->Pointer = NULL;
+
+    switch (TableDesc->Flags & ACPI_TABLE_ORIGIN_MASK)
+    {
+    case ACPI_TABLE_ORIGIN_INTERNAL_PHYSICAL:
+
+        TableDesc->Pointer = NULL;
+        break;
+
+    case ACPI_TABLE_ORIGIN_INTERNAL_VIRTUAL:
+    case ACPI_TABLE_ORIGIN_EXTERNAL_VIRTUAL:
+    default:
+
+        break;
+    }
 
     return_VOID;
 }
@@ -689,7 +586,7 @@ AcpiTbVerifyTempTable (
     {
         /* Verify the checksum */
 
-        Status = AcpiTbVerifyChecksum (TableDesc->Pointer, TableDesc->Length);
+        Status = AcpiUtVerifyChecksum (TableDesc->Pointer, TableDesc->Length);
         if (ACPI_FAILURE (Status))
         {
             ACPI_EXCEPTION ((AE_INFO, AE_NO_MEMORY,
@@ -1219,6 +1116,9 @@ AcpiTbLoadTable (
  *
  * PARAMETERS:  Address                 - Physical address of the table
  *              Flags                   - Allocation flags of the table
+ *              Table                   - Pointer to the table (required for
+ *                                        virtual origins, optional for
+ *                                        physical)
  *              Override                - Whether override should be performed
  *              TableIndex              - Where table index is returned
  *
@@ -1232,6 +1132,7 @@ ACPI_STATUS
 AcpiTbInstallAndLoadTable (
     ACPI_PHYSICAL_ADDRESS   Address,
     UINT8                   Flags,
+    ACPI_TABLE_HEADER       *Table,
     BOOLEAN                 Override,
     UINT32                  *TableIndex)
 {
@@ -1244,7 +1145,7 @@ AcpiTbInstallAndLoadTable (
 
     /* Install the table and load it into the namespace */
 
-    Status = AcpiTbInstallStandardTable (Address, Flags, TRUE,
+    Status = AcpiTbInstallStandardTable (Address, Flags, Table, TRUE,
         Override, &i);
     if (ACPI_FAILURE (Status))
     {
@@ -1252,6 +1153,13 @@ AcpiTbInstallAndLoadTable (
     }
 
     Status = AcpiTbLoadTable (i, AcpiGbl_RootNode);
+    if (ACPI_FAILURE (Status))
+    {
+        /* Table was installed but not loaded, uninstall to clean up */
+
+        AcpiTbUninstallTable (&AcpiGbl_RootTableList.Tables[i]);
+        goto Exit;
+    }
 
 Exit:
     *TableIndex = i;
@@ -1277,6 +1185,8 @@ AcpiTbUnloadTable (
 {
     ACPI_STATUS             Status = AE_OK;
     ACPI_TABLE_HEADER       *Table;
+    ACPI_OWNER_ID           OwnerId;
+    ACPI_CPU_FLAGS          Flags;
 
 
     ACPI_FUNCTION_TRACE (TbUnloadTable);
@@ -1297,9 +1207,59 @@ AcpiTbUnloadTable (
         AcpiTbNotifyTable (ACPI_TABLE_EVENT_UNLOAD, Table);
     }
 
+#if (!ACPI_REDUCED_HARDWARE)
+    /*
+     * Clear GPE dispatch for methods owned by the table being unloaded.
+     * If any matching GPE is currently dispatching, AE_ABORT_METHOD is
+     * returned and the unload cannot proceed.
+     */
+    Status = AcpiEvClearGpeDispatchByOwner (
+        AcpiGbl_RootTableList.Tables[TableIndex].OwnerId);
+    if (ACPI_FAILURE (Status))
+    {
+        return_ACPI_STATUS (Status);
+    }
+#endif /* !ACPI_REDUCED_HARDWARE */
+
+    /*
+     * Gate notify dispatch for this table's OwnerId so no new notifies
+     * are queued against namespace nodes that are about to be freed.
+     * If any notify dispatch is in-flight, abort the unload — the caller
+     * must retry after the dispatch completes.
+     */
+    OwnerId = AcpiGbl_RootTableList.Tables[TableIndex].OwnerId;
+    if (OwnerId > 0 && OwnerId < ACPI_NOTIFY_COUNT_MAX_OWNER)
+    {
+        Flags = AcpiOsAcquireLock (AcpiGbl_NotifyLock);
+        AcpiGbl_NotifyUnloading[OwnerId] = TRUE;
+
+        if (AcpiGbl_NotifyExecuteCount[OwnerId] > 0)
+        {
+            AcpiGbl_NotifyUnloading[OwnerId] = FALSE;
+            AcpiOsReleaseLock (AcpiGbl_NotifyLock, Flags);
+            return_ACPI_STATUS (AE_ABORT_METHOD);
+        }
+
+        AcpiOsReleaseLock (AcpiGbl_NotifyLock, Flags);
+    }
+
     /* Delete the portion of the namespace owned by this table */
 
     Status = AcpiTbDeleteNamespaceByOwner (TableIndex);
+
+    /*
+     * Clear the unloading gate. If namespace deletion failed the table
+     * remains loaded so notifies must be allowed again. If it succeeded
+     * the OwnerId is about to be released and may be reused — clear
+     * the gate before release to avoid a stale flag on the new owner.
+     */
+    if (OwnerId > 0 && OwnerId < ACPI_NOTIFY_COUNT_MAX_OWNER)
+    {
+        Flags = AcpiOsAcquireLock (AcpiGbl_NotifyLock);
+        AcpiGbl_NotifyUnloading[OwnerId] = FALSE;
+        AcpiOsReleaseLock (AcpiGbl_NotifyLock, Flags);
+    }
+
     if (ACPI_FAILURE (Status))
     {
         return_ACPI_STATUS (Status);

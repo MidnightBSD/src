@@ -6,146 +6,8 @@
 
 /******************************************************************************
  *
- * 1. Copyright Notice
- *
- * Some or all of this work - Copyright (c) 1999 - 2020, Intel Corp.
- * All rights reserved.
- *
- * 2. License
- *
- * 2.1. This is your license from Intel Corp. under its intellectual property
- * rights. You may have additional license terms from the party that provided
- * you this software, covering your right to use that party's intellectual
- * property rights.
- *
- * 2.2. Intel grants, free of charge, to any person ("Licensee") obtaining a
- * copy of the source code appearing in this file ("Covered Code") an
- * irrevocable, perpetual, worldwide license under Intel's copyrights in the
- * base code distributed originally by Intel ("Original Intel Code") to copy,
- * make derivatives, distribute, use and display any portion of the Covered
- * Code in any form, with the right to sublicense such rights; and
- *
- * 2.3. Intel grants Licensee a non-exclusive and non-transferable patent
- * license (with the right to sublicense), under only those claims of Intel
- * patents that are infringed by the Original Intel Code, to make, use, sell,
- * offer to sell, and import the Covered Code and derivative works thereof
- * solely to the minimum extent necessary to exercise the above copyright
- * license, and in no event shall the patent license extend to any additions
- * to or modifications of the Original Intel Code. No other license or right
- * is granted directly or by implication, estoppel or otherwise;
- *
- * The above copyright and patent license is granted only if the following
- * conditions are met:
- *
- * 3. Conditions
- *
- * 3.1. Redistribution of Source with Rights to Further Distribute Source.
- * Redistribution of source code of any substantial portion of the Covered
- * Code or modification with rights to further distribute source must include
- * the above Copyright Notice, the above License, this list of Conditions,
- * and the following Disclaimer and Export Compliance provision. In addition,
- * Licensee must cause all Covered Code to which Licensee contributes to
- * contain a file documenting the changes Licensee made to create that Covered
- * Code and the date of any change. Licensee must include in that file the
- * documentation of any changes made by any predecessor Licensee. Licensee
- * must include a prominent statement that the modification is derived,
- * directly or indirectly, from Original Intel Code.
- *
- * 3.2. Redistribution of Source with no Rights to Further Distribute Source.
- * Redistribution of source code of any substantial portion of the Covered
- * Code or modification without rights to further distribute source must
- * include the following Disclaimer and Export Compliance provision in the
- * documentation and/or other materials provided with distribution. In
- * addition, Licensee may not authorize further sublicense of source of any
- * portion of the Covered Code, and must include terms to the effect that the
- * license from Licensee to its licensee is limited to the intellectual
- * property embodied in the software Licensee provides to its licensee, and
- * not to intellectual property embodied in modifications its licensee may
- * make.
- *
- * 3.3. Redistribution of Executable. Redistribution in executable form of any
- * substantial portion of the Covered Code or modification must reproduce the
- * above Copyright Notice, and the following Disclaimer and Export Compliance
- * provision in the documentation and/or other materials provided with the
- * distribution.
- *
- * 3.4. Intel retains all right, title, and interest in and to the Original
- * Intel Code.
- *
- * 3.5. Neither the name Intel nor any other trademark owned or controlled by
- * Intel shall be used in advertising or otherwise to promote the sale, use or
- * other dealings in products derived from or relating to the Covered Code
- * without prior written authorization from Intel.
- *
- * 4. Disclaimer and Export Compliance
- *
- * 4.1. INTEL MAKES NO WARRANTY OF ANY KIND REGARDING ANY SOFTWARE PROVIDED
- * HERE. ANY SOFTWARE ORIGINATING FROM INTEL OR DERIVED FROM INTEL SOFTWARE
- * IS PROVIDED "AS IS," AND INTEL WILL NOT PROVIDE ANY SUPPORT, ASSISTANCE,
- * INSTALLATION, TRAINING OR OTHER SERVICES. INTEL WILL NOT PROVIDE ANY
- * UPDATES, ENHANCEMENTS OR EXTENSIONS. INTEL SPECIFICALLY DISCLAIMS ANY
- * IMPLIED WARRANTIES OF MERCHANTABILITY, NONINFRINGEMENT AND FITNESS FOR A
- * PARTICULAR PURPOSE.
- *
- * 4.2. IN NO EVENT SHALL INTEL HAVE ANY LIABILITY TO LICENSEE, ITS LICENSEES
- * OR ANY OTHER THIRD PARTY, FOR ANY LOST PROFITS, LOST DATA, LOSS OF USE OR
- * COSTS OF PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES, OR FOR ANY INDIRECT,
- * SPECIAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF THIS AGREEMENT, UNDER ANY
- * CAUSE OF ACTION OR THEORY OF LIABILITY, AND IRRESPECTIVE OF WHETHER INTEL
- * HAS ADVANCE NOTICE OF THE POSSIBILITY OF SUCH DAMAGES. THESE LIMITATIONS
- * SHALL APPLY NOTWITHSTANDING THE FAILURE OF THE ESSENTIAL PURPOSE OF ANY
- * LIMITED REMEDY.
- *
- * 4.3. Licensee shall not export, either directly or indirectly, any of this
- * software or system incorporating such software without first obtaining any
- * required license or other approval from the U. S. Department of Commerce or
- * any other agency or department of the United States Government. In the
- * event Licensee exports any such software from the United States or
- * re-exports any such software from a foreign destination, Licensee shall
- * ensure that the distribution and export/re-export of the software is in
- * compliance with all laws, regulations, orders, or other restrictions of the
- * U.S. Export Administration Regulations. Licensee agrees that neither it nor
- * any of its subsidiaries will export/re-export any technical data, process,
- * software, or service, directly or indirectly, to any country for which the
- * United States government or any agency thereof requires an export license,
- * other governmental approval, or letter of assurance, without first obtaining
- * such license, approval or letter.
- *
- *****************************************************************************
- *
- * Alternatively, you may choose to be licensed under the terms of the
- * following license:
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions, and the following disclaimer,
- *    without modification.
- * 2. Redistributions in binary form must reproduce at minimum a disclaimer
- *    substantially similar to the "NO WARRANTY" disclaimer below
- *    ("Disclaimer") and any redistribution must be conditioned upon
- *    including a substantially similar Disclaimer requirement for further
- *    binary redistribution.
- * 3. Neither the names of the above-listed copyright holders nor the names
- *    of any contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * Alternatively, you may choose to be licensed under the terms of the
- * GNU General Public License ("GPL") version 2 as published by the Free
- * Software Foundation.
+ * Copyright (c) 1999 - 2026, Intel Corp.
+ * SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0-only
  *
  *****************************************************************************/
 
@@ -177,7 +39,7 @@
 #define ACPI_SIG_TCPA           "TCPA"      /* Trusted Computing Platform Alliance table */
 #define ACPI_SIG_TPM2           "TPM2"      /* Trusted Platform Module 2.0 H/W interface table */
 #define ACPI_SIG_UEFI           "UEFI"      /* Uefi Boot Optimization Table */
-#define ACPI_SIG_VRTC           "VRTC"      /* Virtual Real Time Clock Table */
+#define ACPI_SIG_VIOT           "VIOT"      /* Virtual I/O Translation Table */
 #define ACPI_SIG_WAET           "WAET"      /* Windows ACPI Emulated devices Table */
 #define ACPI_SIG_WDAT           "WDAT"      /* Watchdog Action Table */
 #define ACPI_SIG_WDDT           "WDDT"      /* Watchdog Timer Description Table */
@@ -243,10 +105,10 @@ typedef struct acpi_table_slit
 /*******************************************************************************
  *
  * SPCR - Serial Port Console Redirection table
- *        Version 2
+ *        Version 4
  *
  * Conforms to "Serial Port Console Redirection Table",
- * Version 1.03, August 10, 2015
+ * Version 1.10, Jan 5, 2023
  *
  ******************************************************************************/
 
@@ -264,7 +126,7 @@ typedef struct acpi_table_spcr
     UINT8                   StopBits;
     UINT8                   FlowControl;
     UINT8                   TerminalType;
-    UINT8                   Reserved1;
+    UINT8                   Language;
     UINT16                  PciDeviceId;
     UINT16                  PciVendorId;
     UINT8                   PciBus;
@@ -272,7 +134,11 @@ typedef struct acpi_table_spcr
     UINT8                   PciFunction;
     UINT32                  PciFlags;
     UINT8                   PciSegment;
-    UINT32                  Reserved2;
+    UINT32                  UartClkFreq;
+    UINT32                  PreciseBaudrate;
+    UINT16                  NameSpaceStringLength;
+    UINT16                  NameSpaceStringOffset;
+    char                    NameSpaceString[];
 
 } ACPI_TABLE_SPCR;
 
@@ -352,7 +218,9 @@ enum AcpiSratType
     ACPI_SRAT_TYPE_GICC_AFFINITY        = 3,
     ACPI_SRAT_TYPE_GIC_ITS_AFFINITY     = 4, /* ACPI 6.2 */
     ACPI_SRAT_TYPE_GENERIC_AFFINITY     = 5, /* ACPI 6.3 */
-    ACPI_SRAT_TYPE_RESERVED             = 6  /* 5 and greater are reserved */
+    ACPI_SRAT_TYPE_GENERIC_PORT_AFFINITY = 6, /* ACPI 6.4 */
+    ACPI_SRAT_TYPE_RINTC_AFFINITY        = 7, /* ACPI 6.6 */
+    ACPI_SRAT_TYPE_RESERVED              = 8  /* 8 and greater are reserved */
 };
 
 /*
@@ -398,6 +266,7 @@ typedef struct acpi_srat_mem_affinity
 #define ACPI_SRAT_MEM_ENABLED       (1)         /* 00: Use affinity structure */
 #define ACPI_SRAT_MEM_HOT_PLUGGABLE (1<<1)      /* 01: Memory region is hot pluggable */
 #define ACPI_SRAT_MEM_NON_VOLATILE  (1<<2)      /* 02: Memory region is non-volatile */
+#define ACPI_SRAT_MEM_SPEC_PURPOSE  (1<<3)      /* 03: Memory is intended for specific-purpose usage */
 
 
 /* 2: Processor Local X2_APIC Affinity (ACPI 4.0) */
@@ -436,7 +305,7 @@ typedef struct acpi_srat_gicc_affinity
 #define ACPI_SRAT_GICC_ENABLED     (1)         /* 00: Use affinity structure */
 
 
-/* 4: GCC ITS Affinity (ACPI 6.2) */
+/* 4: GIC ITS Affinity (ACPI 6.2) */
 
 typedef struct acpi_srat_gic_its_affinity
 {
@@ -447,8 +316,13 @@ typedef struct acpi_srat_gic_its_affinity
 
 } ACPI_SRAT_GIC_ITS_AFFINITY;
 
+/*
+ * Common structure for SRAT subtable types:
+ * 5: ACPI_SRAT_TYPE_GENERIC_AFFINITY
+ * 6: ACPI_SRAT_TYPE_GENERIC_PORT_AFFINITY
+ */
 
-/* 5: Generic Initiator Affinity Structure (ACPI 6.3) */
+#define ACPI_SRAT_DEVICE_HANDLE_SIZE	16
 
 typedef struct acpi_srat_generic_affinity
 {
@@ -456,7 +330,7 @@ typedef struct acpi_srat_generic_affinity
     UINT8                   Reserved;
     UINT8                   DeviceHandleType;
     UINT32                  ProximityDomain;
-    UINT8                   DeviceHandle[16];
+    UINT8                   DeviceHandle[ACPI_SRAT_DEVICE_HANDLE_SIZE];
     UINT32                  Flags;
     UINT32                  Reserved1;
 
@@ -464,7 +338,25 @@ typedef struct acpi_srat_generic_affinity
 
 /* Flags for ACPI_SRAT_GENERIC_AFFINITY */
 
-#define ACPI_SRAT_GENERIC_AFFINITY_ENABLED (1) /* 00: Use affinity structure */
+#define ACPI_SRAT_GENERIC_AFFINITY_ENABLED     (1)      /* 00: Use affinity structure */
+#define ACPI_SRAT_ARCHITECTURAL_TRANSACTIONS   (1<<1)   /* ACPI 6.4 */
+
+/* 7: RINTC Affinity Structure(ACPI 6.6) */
+
+typedef struct acpi_srat_rintc_affinity
+{
+    ACPI_SUBTABLE_HEADER    Header;
+    UINT16                  Reserved;
+    UINT32                  ProximityDomain;
+    UINT32                  AcpiProcessorUid;
+    UINT32                  Flags;
+    UINT32                  ClockDomain;
+
+} ACPI_SRAT_RINTC_AFFINITY;
+
+/* Flags for ACPI_SRAT_RINTC_AFFINITY */
+
+#define ACPI_SRAT_RINTC_ENABLED     (1)         /* 00: Use affinity structure */
 
 /*******************************************************************************
  *
@@ -626,6 +518,8 @@ typedef struct acpi_table_tpm2
 #define ACPI_TPM2_RESERVED10                        10
 #define ACPI_TPM2_COMMAND_BUFFER_WITH_ARM_SMC       11  /* V1.2 Rev 8 */
 #define ACPI_TPM2_RESERVED                          12
+#define ACPI_TPM2_COMMAND_BUFFER_WITH_PLUTON        13
+#define ACPI_TPM2_CRB_WITH_ARM_FFA                  15
 
 
 /* Optional trailer appears after any StartMethod subtables */
@@ -685,29 +579,82 @@ typedef struct acpi_table_uefi
 
 /*******************************************************************************
  *
- * VRTC - Virtual Real Time Clock Table
+ * VIOT - Virtual I/O Translation Table
  *        Version 1
- *
- * Conforms to "Simple Firmware Interface Specification",
- * Draft 0.8.2, Oct 19, 2010
- * NOTE: The ACPI VRTC is equivalent to The SFI MRTC table.
  *
  ******************************************************************************/
 
-typedef struct acpi_table_vrtc
+typedef struct acpi_table_viot
 {
     ACPI_TABLE_HEADER       Header;             /* Common ACPI table header */
+    UINT16                  NodeCount;
+    UINT16                  NodeOffset;
+    UINT8                   Reserved[8];
 
-} ACPI_TABLE_VRTC;
+} ACPI_TABLE_VIOT;
 
-/* VRTC entry */
+/* VIOT subtable header */
 
-typedef struct acpi_vrtc_entry
+typedef struct acpi_viot_header
 {
-    ACPI_GENERIC_ADDRESS    PhysicalAddress;
-    UINT32                  Irq;
+    UINT8                   Type;
+    UINT8                   Reserved;
+    UINT16                  Length;
 
-} ACPI_VRTC_ENTRY;
+} ACPI_VIOT_HEADER;
+
+/* Values for Type field above */
+
+enum AcpiViotNodeType
+{
+    ACPI_VIOT_NODE_PCI_RANGE            = 0x01,
+    ACPI_VIOT_NODE_MMIO                 = 0x02,
+    ACPI_VIOT_NODE_VIRTIO_IOMMU_PCI     = 0x03,
+    ACPI_VIOT_NODE_VIRTIO_IOMMU_MMIO    = 0x04,
+    ACPI_VIOT_RESERVED                  = 0x05
+};
+
+/* VIOT subtables */
+
+typedef struct acpi_viot_pci_range
+{
+    ACPI_VIOT_HEADER        Header;
+    UINT32                  EndpointStart;
+    UINT16                  SegmentStart;
+    UINT16                  SegmentEnd;
+    UINT16                  BdfStart;
+    UINT16                  BdfEnd;
+    UINT16                  OutputNode;
+    UINT8                   Reserved[6];
+
+} ACPI_VIOT_PCI_RANGE;
+
+typedef struct acpi_viot_mmio
+{
+    ACPI_VIOT_HEADER        Header;
+    UINT32                  Endpoint;
+    UINT64                  BaseAddress;
+    UINT16                  OutputNode;
+    UINT8                   Reserved[6];
+
+} ACPI_VIOT_MMIO;
+
+typedef struct acpi_viot_virtio_iommu_pci
+{
+    ACPI_VIOT_HEADER        Header;
+    UINT16                  Segment;
+    UINT16                  Bdf;
+    UINT8                   Reserved[8];
+
+} ACPI_VIOT_VIRTIO_IOMMU_PCI;
+
+typedef struct acpi_viot_virtio_iommu_mmio
+{
+    ACPI_VIOT_HEADER        Header;
+    UINT8                   Reserved[4];
+    UINT64                  BaseAddress;
+
+} ACPI_VIOT_VIRTIO_IOMMU_MMIO;
 
 
 /*******************************************************************************
@@ -900,6 +847,12 @@ typedef struct acpi_table_wpbt
     UINT16                  ArgumentsLength;
 
 } ACPI_TABLE_WPBT;
+
+typedef struct acpi_wpbt_unicode
+{
+    UINT16                  *UnicodeString;
+
+} ACPI_WPBT_UNICODE;
 
 
 /*******************************************************************************

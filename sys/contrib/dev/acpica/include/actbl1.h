@@ -6,146 +6,8 @@
 
 /******************************************************************************
  *
- * 1. Copyright Notice
- *
- * Some or all of this work - Copyright (c) 1999 - 2020, Intel Corp.
- * All rights reserved.
- *
- * 2. License
- *
- * 2.1. This is your license from Intel Corp. under its intellectual property
- * rights. You may have additional license terms from the party that provided
- * you this software, covering your right to use that party's intellectual
- * property rights.
- *
- * 2.2. Intel grants, free of charge, to any person ("Licensee") obtaining a
- * copy of the source code appearing in this file ("Covered Code") an
- * irrevocable, perpetual, worldwide license under Intel's copyrights in the
- * base code distributed originally by Intel ("Original Intel Code") to copy,
- * make derivatives, distribute, use and display any portion of the Covered
- * Code in any form, with the right to sublicense such rights; and
- *
- * 2.3. Intel grants Licensee a non-exclusive and non-transferable patent
- * license (with the right to sublicense), under only those claims of Intel
- * patents that are infringed by the Original Intel Code, to make, use, sell,
- * offer to sell, and import the Covered Code and derivative works thereof
- * solely to the minimum extent necessary to exercise the above copyright
- * license, and in no event shall the patent license extend to any additions
- * to or modifications of the Original Intel Code. No other license or right
- * is granted directly or by implication, estoppel or otherwise;
- *
- * The above copyright and patent license is granted only if the following
- * conditions are met:
- *
- * 3. Conditions
- *
- * 3.1. Redistribution of Source with Rights to Further Distribute Source.
- * Redistribution of source code of any substantial portion of the Covered
- * Code or modification with rights to further distribute source must include
- * the above Copyright Notice, the above License, this list of Conditions,
- * and the following Disclaimer and Export Compliance provision. In addition,
- * Licensee must cause all Covered Code to which Licensee contributes to
- * contain a file documenting the changes Licensee made to create that Covered
- * Code and the date of any change. Licensee must include in that file the
- * documentation of any changes made by any predecessor Licensee. Licensee
- * must include a prominent statement that the modification is derived,
- * directly or indirectly, from Original Intel Code.
- *
- * 3.2. Redistribution of Source with no Rights to Further Distribute Source.
- * Redistribution of source code of any substantial portion of the Covered
- * Code or modification without rights to further distribute source must
- * include the following Disclaimer and Export Compliance provision in the
- * documentation and/or other materials provided with distribution. In
- * addition, Licensee may not authorize further sublicense of source of any
- * portion of the Covered Code, and must include terms to the effect that the
- * license from Licensee to its licensee is limited to the intellectual
- * property embodied in the software Licensee provides to its licensee, and
- * not to intellectual property embodied in modifications its licensee may
- * make.
- *
- * 3.3. Redistribution of Executable. Redistribution in executable form of any
- * substantial portion of the Covered Code or modification must reproduce the
- * above Copyright Notice, and the following Disclaimer and Export Compliance
- * provision in the documentation and/or other materials provided with the
- * distribution.
- *
- * 3.4. Intel retains all right, title, and interest in and to the Original
- * Intel Code.
- *
- * 3.5. Neither the name Intel nor any other trademark owned or controlled by
- * Intel shall be used in advertising or otherwise to promote the sale, use or
- * other dealings in products derived from or relating to the Covered Code
- * without prior written authorization from Intel.
- *
- * 4. Disclaimer and Export Compliance
- *
- * 4.1. INTEL MAKES NO WARRANTY OF ANY KIND REGARDING ANY SOFTWARE PROVIDED
- * HERE. ANY SOFTWARE ORIGINATING FROM INTEL OR DERIVED FROM INTEL SOFTWARE
- * IS PROVIDED "AS IS," AND INTEL WILL NOT PROVIDE ANY SUPPORT, ASSISTANCE,
- * INSTALLATION, TRAINING OR OTHER SERVICES. INTEL WILL NOT PROVIDE ANY
- * UPDATES, ENHANCEMENTS OR EXTENSIONS. INTEL SPECIFICALLY DISCLAIMS ANY
- * IMPLIED WARRANTIES OF MERCHANTABILITY, NONINFRINGEMENT AND FITNESS FOR A
- * PARTICULAR PURPOSE.
- *
- * 4.2. IN NO EVENT SHALL INTEL HAVE ANY LIABILITY TO LICENSEE, ITS LICENSEES
- * OR ANY OTHER THIRD PARTY, FOR ANY LOST PROFITS, LOST DATA, LOSS OF USE OR
- * COSTS OF PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES, OR FOR ANY INDIRECT,
- * SPECIAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF THIS AGREEMENT, UNDER ANY
- * CAUSE OF ACTION OR THEORY OF LIABILITY, AND IRRESPECTIVE OF WHETHER INTEL
- * HAS ADVANCE NOTICE OF THE POSSIBILITY OF SUCH DAMAGES. THESE LIMITATIONS
- * SHALL APPLY NOTWITHSTANDING THE FAILURE OF THE ESSENTIAL PURPOSE OF ANY
- * LIMITED REMEDY.
- *
- * 4.3. Licensee shall not export, either directly or indirectly, any of this
- * software or system incorporating such software without first obtaining any
- * required license or other approval from the U. S. Department of Commerce or
- * any other agency or department of the United States Government. In the
- * event Licensee exports any such software from the United States or
- * re-exports any such software from a foreign destination, Licensee shall
- * ensure that the distribution and export/re-export of the software is in
- * compliance with all laws, regulations, orders, or other restrictions of the
- * U.S. Export Administration Regulations. Licensee agrees that neither it nor
- * any of its subsidiaries will export/re-export any technical data, process,
- * software, or service, directly or indirectly, to any country for which the
- * United States government or any agency thereof requires an export license,
- * other governmental approval, or letter of assurance, without first obtaining
- * such license, approval or letter.
- *
- *****************************************************************************
- *
- * Alternatively, you may choose to be licensed under the terms of the
- * following license:
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions, and the following disclaimer,
- *    without modification.
- * 2. Redistributions in binary form must reproduce at minimum a disclaimer
- *    substantially similar to the "NO WARRANTY" disclaimer below
- *    ("Disclaimer") and any redistribution must be conditioned upon
- *    including a substantially similar Disclaimer requirement for further
- *    binary redistribution.
- * 3. Neither the names of the above-listed copyright holders nor the names
- *    of any contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * Alternatively, you may choose to be licensed under the terms of the
- * GNU General Public License ("GPL") version 2 as published by the Free
- * Software Foundation.
+ * Copyright (c) 1999 - 2026, Intel Corp.
+ * SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0-only
  *
  *****************************************************************************/
 
@@ -168,16 +30,20 @@
  * file. Useful because they make it more difficult to inadvertently type in
  * the wrong signature.
  */
+#define ACPI_SIG_AEST           "AEST"      /* Arm Error Source Table */
 #define ACPI_SIG_ASF            "ASF!"      /* Alert Standard Format table */
+#define ACPI_SIG_ASPT           "ASPT"      /* AMD Secure Processor Table */
 #define ACPI_SIG_BERT           "BERT"      /* Boot Error Record Table */
 #define ACPI_SIG_BGRT           "BGRT"      /* Boot Graphics Resource Table */
 #define ACPI_SIG_BOOT           "BOOT"      /* Simple Boot Flag Table */
+#define ACPI_SIG_CEDT           "CEDT"      /* CXL Early Discovery Table */
 #define ACPI_SIG_CPEP           "CPEP"      /* Corrected Platform Error Polling table */
 #define ACPI_SIG_CSRT           "CSRT"      /* Core System Resource Table */
 #define ACPI_SIG_DBG2           "DBG2"      /* Debug Port table type 2 */
 #define ACPI_SIG_DBGP           "DBGP"      /* Debug Port table */
 #define ACPI_SIG_DMAR           "DMAR"      /* DMA Remapping table */
 #define ACPI_SIG_DRTM           "DRTM"      /* Dynamic Root of Trust for Measurement table */
+#define ACPI_SIG_DTPR           "DTPR"      /* DMA TXT Protection Ranges table */
 #define ACPI_SIG_ECDT           "ECDT"      /* Embedded Controller Boot Resources Table */
 #define ACPI_SIG_EINJ           "EINJ"      /* Error Injection table */
 #define ACPI_SIG_ERST           "ERST"      /* Error Record Serialization Table */
@@ -187,6 +53,7 @@
 #define ACPI_SIG_HMAT           "HMAT"      /* Heterogeneous Memory Attributes Table */
 #define ACPI_SIG_HPET           "HPET"      /* High Precision Event Timer table */
 #define ACPI_SIG_IBFT           "IBFT"      /* iSCSI Boot Firmware Table */
+#define ACPI_SIG_MSCT           "MSCT"      /* Maximum System Characteristics Table*/
 
 #define ACPI_SIG_S3PT           "S3PT"      /* S3 Performance (sub)Table */
 #define ACPI_SIG_PCCS           "PCC"       /* PCC Shared Memory Region */
@@ -254,6 +121,16 @@ typedef struct acpi_whea_header
     UINT64                  Mask;               /* Bitmask required for this register instruction */
 
 } ACPI_WHEA_HEADER;
+
+
+/* Larger subtable header (when Length can exceed 255) */
+
+typedef struct acpi_subtbl_hdr_16
+{
+    UINT16                  Type;
+    UINT16                  Length;
+
+} ACPI_SUBTBL_HDR_16;
 
 
 /*******************************************************************************
@@ -395,6 +272,86 @@ typedef struct acpi_asf_address
 
 } ACPI_ASF_ADDRESS;
 
+/*******************************************************************************
+ *
+ * ASPT - AMD Secure Processor Table (Signature "ASPT")
+ *        Revision 0x1
+ *
+ * Conforms to AMD Socket SP5/SP6 Platform ASPT Rev1 Specification,
+ * 12 September 2022
+ *
+ ******************************************************************************/
+
+typedef struct acpi_table_aspt
+{
+    ACPI_TABLE_HEADER       Header;             /* Common ACPI table header */
+    UINT32                  NumEntries;
+
+} ACPI_TABLE_ASPT;
+
+
+/* ASPT subtable header */
+
+typedef struct acpi_aspt_header
+{
+    UINT16                  Type;
+    UINT16                  Length;
+
+} ACPI_ASPT_HEADER;
+
+
+/* Values for Type field above */
+
+enum AcpiAsptType
+{
+    ACPI_ASPT_TYPE_GLOBAL_REGS      = 0,
+    ACPI_ASPT_TYPE_SEV_MBOX_REGS    = 1,
+    ACPI_ASPT_TYPE_ACPI_MBOX_REGS   = 2,
+    ACPI_ASPT_TYPE_UNKNOWN          = 3,
+};
+
+/*
+ * ASPT subtables
+ */
+
+/* 0: ASPT Global Registers */
+
+typedef struct acpi_aspt_global_regs
+{
+    ACPI_ASPT_HEADER        Header;
+    UINT32                  Reserved;
+    UINT64                  FeatureRegAddr;
+    UINT64                  IrqEnRegAddr;
+    UINT64                  IrqStRegAddr;
+
+} ACPI_ASPT_GLOBAL_REGS;
+
+
+/* 1: ASPT SEV Mailbox Registers */
+
+typedef struct acpi_aspt_sev_mbox_regs
+{
+    ACPI_ASPT_HEADER        Header;
+    UINT8                   MboxIrqId;
+    UINT8                   Reserved[3];
+    UINT64                  CmdRespRegAddr;
+    UINT64                  CmdBufLoRegAddr;
+    UINT64                  CmdBufHiRegAddr;
+
+} ACPI_ASPT_SEV_MBOX_REGS;
+
+
+/* 2: ASPT ACPI Mailbox Registers */
+
+typedef struct acpi_aspt_acpi_mbox_regs
+{
+    ACPI_ASPT_HEADER        Header;
+    UINT32                  Reserved1;
+    UINT64                  CmdRespRegAddr;
+    UINT64                  Reserved2[2];
+
+} ACPI_ASPT_ACPI_MBOX_REGS;
+
 
 /*******************************************************************************
  *
@@ -491,6 +448,289 @@ typedef struct acpi_table_boot
 
 } ACPI_TABLE_BOOT;
 
+
+/*******************************************************************************
+ *
+ * CDAT - Coherent Device Attribute Table
+ *        Version 1
+ *
+ * Conforms to the "Coherent Device Attribute Table (CDAT) Specification
+ " (Revision 1.01, October 2020.)
+ *
+ ******************************************************************************/
+
+typedef struct acpi_table_cdat
+{
+    UINT32                  Length;                             /* Length of table in bytes, including this header */
+    UINT8                   Revision;                           /* ACPI Specification minor version number */
+    UINT8                   Checksum;                           /* To make sum of entire table == 0 */
+    UINT8                   Reserved[6];
+    UINT32                  Sequence;                           /* Used to detect runtime CDAT table changes */
+
+} ACPI_TABLE_CDAT;
+
+
+/* CDAT common subtable header */
+
+typedef struct acpi_cdat_header
+{
+    UINT8                   Type;
+    UINT8                   Reserved;
+    UINT16                  Length;
+
+} ACPI_CDAT_HEADER;
+
+/* Values for Type field above */
+
+enum AcpiCdatType
+{
+    ACPI_CDAT_TYPE_DSMAS                = 0,
+    ACPI_CDAT_TYPE_DSLBIS               = 1,
+    ACPI_CDAT_TYPE_DSMSCIS              = 2,
+    ACPI_CDAT_TYPE_DSIS                 = 3,
+    ACPI_CDAT_TYPE_DSEMTS               = 4,
+    ACPI_CDAT_TYPE_SSLBIS               = 5,
+    ACPI_CDAT_TYPE_RESERVED             = 6   /* 6 through 0xFF are reserved */
+};
+
+
+/* Subtable 0: Device Scoped Memory Affinity Structure (DSMAS) */
+
+typedef struct acpi_cdat_dsmas
+{
+    UINT8                   DsmadHandle;
+    UINT8                   Flags;
+    UINT16                  Reserved;
+    UINT64                  DpaBaseAddress;
+    UINT64                  DpaLength;
+
+} ACPI_CDAT_DSMAS;
+
+/* Flags for subtable above */
+
+#define ACPI_CDAT_DSMAS_NON_VOLATILE        (1 << 2)
+#define ACPI_CDAT_DSMAS_SHAREABLE           (1 << 3)
+#define ACPI_CDAT_DSMAS_READ_ONLY           (1 << 6)
+
+
+/* Subtable 1: Device scoped Latency and Bandwidth Information Structure (DSLBIS) */
+
+typedef struct acpi_cdat_dslbis
+{
+    UINT8                   Handle;
+    UINT8                   Flags; /* If Handle matches a DSMAS handle, the definition of this field matches
+                                    * Flags field in HMAT System Locality Latency */
+    UINT8                   DataType;
+    UINT8                   Reserved;
+    UINT64                  EntryBaseUnit;
+    UINT16                  Entry[3];
+    UINT16                  Reserved2;
+
+} ACPI_CDAT_DSLBIS;
+
+
+/* Subtable 2: Device Scoped Memory Side Cache Information Structure (DSMSCIS) */
+
+typedef struct acpi_cdat_dsmscis
+{
+    UINT8                   DsmasHandle;
+    UINT8                   Reserved[3];
+    UINT64                  SideCacheSize;
+    UINT32                  CacheAttributes;
+
+} ACPI_CDAT_DSMSCIS;
+
+
+/* Subtable 3: Device Scoped Initiator Structure (DSIS) */
+
+typedef struct acpi_cdat_dsis
+{
+    UINT8                   Flags;
+    UINT8                   Handle;
+    UINT16                  Reserved;
+
+} ACPI_CDAT_DSIS;
+
+/* Flags for above subtable */
+
+#define ACPI_CDAT_DSIS_MEM_ATTACHED         (1 << 0)
+
+
+/* Subtable 4: Device Scoped EFI Memory Type Structure (DSEMTS) */
+
+typedef struct acpi_cdat_dsemts
+{
+    UINT8                   DsmasHandle;
+    UINT8                   MemoryType;
+    UINT16                  Reserved;
+    UINT64                  DpaOffset;
+    UINT64                  RangeLength;
+
+} ACPI_CDAT_DSEMTS;
+
+
+/* Subtable 5: Switch Scoped Latency and Bandwidth Information Structure (SSLBIS) */
+
+typedef struct acpi_cdat_sslbis
+{
+    UINT8                   DataType;
+    UINT8                   Reserved[3];
+    UINT64                  EntryBaseUnit;
+
+} ACPI_CDAT_SSLBIS;
+
+
+/* Sub-subtable for above, SslbeEntries field */
+
+typedef struct acpi_cdat_sslbe
+{
+    UINT16                  PortxId;
+    UINT16                  PortyId;
+    UINT16                  LatencyOrBandwidth;
+    UINT16                  Reserved;
+
+} ACPI_CDAT_SSLBE;
+
+#define ACPI_CDAT_SSLBIS_US_PORT	0x0100
+#define ACPI_CDAT_SSLBIS_ANY_PORT	0xffff
+
+/*******************************************************************************
+ *
+ * CEDT - CXL Early Discovery Table
+ *        Version 1
+ *
+ * Conforms to the "CXL Early Discovery Table" (CXL 2.0, October 2020)
+ *
+ ******************************************************************************/
+
+typedef struct acpi_table_cedt
+{
+    ACPI_TABLE_HEADER       Header;             /* Common ACPI table header */
+
+} ACPI_TABLE_CEDT;
+
+/* CEDT subtable header (Performance Record Structure) */
+
+typedef struct acpi_cedt_header
+{
+    UINT8                   Type;
+    UINT8                   Reserved;
+    UINT16                  Length;
+
+} ACPI_CEDT_HEADER;
+
+/* Values for Type field above */
+
+enum AcpiCedtType
+{
+    ACPI_CEDT_TYPE_CHBS                 = 0,
+    ACPI_CEDT_TYPE_CFMWS                = 1,
+    ACPI_CEDT_TYPE_CXIMS                = 2,
+    ACPI_CEDT_TYPE_RDPAS                = 3,
+    ACPI_CEDT_TYPE_RESERVED             = 4,
+};
+
+/* Values for version field above */
+
+#define ACPI_CEDT_CHBS_VERSION_CXL11    (0)
+#define ACPI_CEDT_CHBS_VERSION_CXL20    (1)
+
+/* Values for length field above */
+
+#define ACPI_CEDT_CHBS_LENGTH_CXL11     (0x2000)
+#define ACPI_CEDT_CHBS_LENGTH_CXL20     (0x10000)
+
+/*
+ * CEDT subtables
+ */
+
+/* 0: CXL Host Bridge Structure */
+
+typedef struct acpi_cedt_chbs
+{
+    ACPI_CEDT_HEADER        Header;
+    UINT32                  Uid;
+    UINT32                  CxlVersion;
+    UINT32                  Reserved;
+    UINT64                  Base;
+    UINT64                  Length;
+
+} ACPI_CEDT_CHBS;
+
+
+/* 1: CXL Fixed Memory Window Structure */
+
+typedef struct acpi_cedt_cfmws
+{
+    ACPI_CEDT_HEADER        Header;
+    UINT32                  Reserved1;
+    UINT64                  BaseHpa;
+    UINT64                  WindowSize;
+    UINT8                   InterleaveWays;
+    UINT8                   InterleaveArithmetic;
+    UINT16                  Reserved2;
+    UINT32                  Granularity;
+    UINT16                  Restrictions;
+    UINT16                  QtgId;
+    UINT32                  InterleaveTargets[];
+
+} ACPI_CEDT_CFMWS;
+
+typedef struct acpi_cedt_cfmws_target_element
+{
+    UINT32                  InterleaveTarget;
+
+} ACPI_CEDT_CFMWS_TARGET_ELEMENT;
+
+/* Values for Interleave Arithmetic field above */
+
+#define ACPI_CEDT_CFMWS_ARITHMETIC_MODULO   (0)
+#define ACPI_CEDT_CFMWS_ARITHMETIC_XOR      (1)
+
+/* Values for Restrictions field above */
+
+#define ACPI_CEDT_CFMWS_RESTRICT_DEVMEM     (1)
+#define ACPI_CEDT_CFMWS_RESTRICT_HOSTONLYMEM (1<<1)
+#define ACPI_CEDT_CFMWS_RESTRICT_VOLATILE   (1<<2)
+#define ACPI_CEDT_CFMWS_RESTRICT_PMEM       (1<<3)
+#define ACPI_CEDT_CFMWS_RESTRICT_FIXED      (1<<4)
+#define ACPI_CEDT_CFMWS_RESTRICT_BI         (1<<5)
+
+/* 2: CXL XOR Interleave Math Structure */
+
+typedef struct acpi_cedt_cxims {
+    ACPI_CEDT_HEADER        Header;
+    UINT16                  Reserved1;
+    UINT8                   Hbig;
+    UINT8                   NrXormaps;
+    UINT64                  XormapList[];
+} ACPI_CEDT_CXIMS;
+
+typedef struct acpi_cedt_cxims_target_element
+{
+    UINT64                   Xormap;
+
+} ACPI_CEDT_CXIMS_TARGET_ELEMENT;
+
+
+/* 3: CXL RCEC Downstream Port Association Structure */
+
+typedef struct acpi_cedt_rdpas {
+    ACPI_CEDT_HEADER        Header;
+    UINT16                  Segment;
+    UINT16                  Bdf;
+    UINT64                  Address;
+    UINT8                   Protocol;
+    UINT8                   Reserved[3];
+} ACPI_CEDT_RDPAS;
+
+/* Masks for bdf field above */
+#define ACPI_CEDT_RDPAS_BUS_MASK            0xff00
+#define ACPI_CEDT_RDPAS_DEVICE_MASK         0x00f8
+#define ACPI_CEDT_RDPAS_FUNCTION_MASK       0x0007
+
+#define ACPI_CEDT_RDPAS_PROTOCOL_IO        (0)
+#define ACPI_CEDT_RDPAS_PROTOCOL_CACHEMEM  (1)
 
 /*******************************************************************************
  *
@@ -607,7 +847,7 @@ typedef struct acpi_csrt_descriptor
  * DBG2 - Debug Port Table 2
  *        Version 0 (Both main table and subtables)
  *
- * Conforms to "Microsoft Debug Port Table 2 (DBG2)", December 10, 2015
+ * Conforms to "Microsoft Debug Port Table 2 (DBG2)", September 21, 2020
  *
  ******************************************************************************/
 
@@ -664,11 +904,25 @@ typedef struct acpi_dbg2_device
 
 #define ACPI_DBG2_16550_COMPATIBLE  0x0000
 #define ACPI_DBG2_16550_SUBSET      0x0001
+#define ACPI_DBG2_MAX311XE_SPI      0x0002
 #define ACPI_DBG2_ARM_PL011         0x0003
+#define ACPI_DBG2_MSM8X60           0x0004
+#define ACPI_DBG2_16550_NVIDIA      0x0005
+#define ACPI_DBG2_TI_OMAP           0x0006
+#define ACPI_DBG2_APM88XXXX         0x0008
+#define ACPI_DBG2_MSM8974           0x0009
+#define ACPI_DBG2_SAM5250           0x000A
+#define ACPI_DBG2_INTEL_USIF        0x000B
+#define ACPI_DBG2_IMX6              0x000C
 #define ACPI_DBG2_ARM_SBSA_32BIT    0x000D
 #define ACPI_DBG2_ARM_SBSA_GENERIC  0x000E
 #define ACPI_DBG2_ARM_DCC           0x000F
 #define ACPI_DBG2_BCM2835           0x0010
+#define ACPI_DBG2_SDM845_1_8432MHZ  0x0011
+#define ACPI_DBG2_16550_WITH_GAS    0x0012
+#define ACPI_DBG2_SDM845_7_372MHZ   0x0013
+#define ACPI_DBG2_INTEL_LPSS        0x0014
+#define ACPI_DBG2_RISCV_SBI_CON     0x0015
 
 #define ACPI_DBG2_1394_STANDARD     0x0000
 
@@ -739,7 +993,9 @@ enum AcpiDmarType
     ACPI_DMAR_TYPE_ROOT_ATS             = 2,
     ACPI_DMAR_TYPE_HARDWARE_AFFINITY    = 3,
     ACPI_DMAR_TYPE_NAMESPACE            = 4,
-    ACPI_DMAR_TYPE_RESERVED             = 5     /* 5 and greater are reserved */
+    ACPI_DMAR_TYPE_SATC                 = 5,
+    ACPI_DMAR_TYPE_SIDP                 = 6,
+    ACPI_DMAR_TYPE_RESERVED             = 7     /* 7 and greater are reserved */
 };
 
 
@@ -749,7 +1005,8 @@ typedef struct acpi_dmar_device_scope
 {
     UINT8                   EntryType;
     UINT8                   Length;
-    UINT16                  Reserved;
+    UINT8                   Flags;
+    UINT8                   Reserved;
     UINT8                   EnumerationId;
     UINT8                   Bus;
 
@@ -786,7 +1043,7 @@ typedef struct acpi_dmar_hardware_unit
 {
     ACPI_DMAR_HEADER        Header;
     UINT8                   Flags;
-    UINT8                   Reserved;
+    UINT8                   Size;
     UINT16                  Segment;
     UINT64                  Address;            /* Register Base Address */
 
@@ -849,9 +1106,35 @@ typedef struct acpi_dmar_andd
     ACPI_DMAR_HEADER        Header;
     UINT8                   Reserved[3];
     UINT8                   DeviceNumber;
-    char                    DeviceName[1];
+    union {
+        char                  __pad;
+        ACPI_FLEX_ARRAY(char, DeviceName);
+    };
 
 } ACPI_DMAR_ANDD;
+
+
+/* 5: SoC Integrated Address Translation Cache (SATC)  */
+
+typedef struct acpi_dmar_satc
+{
+    ACPI_DMAR_HEADER        Header;
+    UINT8                   Flags;
+    UINT8                   Reserved;
+    UINT16                  Segment;
+
+} ACPI_DMAR_SATC;
+
+
+/* 6: SoC Integrated Device Property Reporting Structure */
+
+typedef struct acpi_dmar_sidp
+{
+    ACPI_DMAR_HEADER        Header;
+    UINT16                  Reserved;
+    UINT16                  Segment;
+
+} ACPI_DMAR_SIDP;
 
 
 /*******************************************************************************
@@ -890,7 +1173,7 @@ typedef struct acpi_table_drtm
 typedef struct acpi_drtm_vtable_list
 {
     UINT32                  ValidatedTableCount;
-    UINT64                  ValidatedTables[1];
+    UINT64                  ValidatedTables[];
 
 } ACPI_DRTM_VTABLE_LIST;
 
@@ -909,7 +1192,7 @@ typedef struct acpi_drtm_resource
 typedef struct acpi_drtm_resource_list
 {
     UINT32                  ResourceCount;
-    ACPI_DRTM_RESOURCE      Resources[1];
+    ACPI_DRTM_RESOURCE      Resources[];
 
 } ACPI_DRTM_RESOURCE_LIST;
 
@@ -921,6 +1204,291 @@ typedef struct acpi_drtm_dps_id
     UINT8                   DpsId[16];
 
 } ACPI_DRTM_DPS_ID;
+
+
+/*******************************************************************************
+ *
+ * DTPR - DMA TXT Protection Ranges Table
+ *        Version 1
+ *
+ * Conforms to "Intel® Trusted Execution Technology (Intel® TXT) DMA Protection
+ *              Ranges",
+ * Revision 0.73, August 2021
+ *
+ ******************************************************************************/
+
+typedef struct acpi_table_dtpr {
+    ACPI_TABLE_HEADER header;
+    UINT32 Flags; /* 36 */
+    UINT32 InsCnt;
+
+} ACPI_TABLE_DTPR;
+
+typedef struct acpi_tpr_array {
+    UINT64 Base;
+
+} ACPI_TPR_ARRAY;
+
+typedef struct acpi_tpr_instance {
+    UINT32 Flags;
+    UINT32 TprCnt;
+
+} ACPI_TPR_INSTANCE;
+
+typedef struct acpi_tpr_aux_sr {
+    UINT32 SrlCnt;
+
+} ACPI_TPR_AUX_SR;
+
+
+/*
+ * TPRn_BASE (ACPI_TPRN_BASE_REG)
+ *
+ * Specifies the start address of TPRn region. TPR region address and size must
+ * be with 1MB resolution. These bits are compared with the result of the
+ * TPRn_LIMIT[63:20], which is applied to the incoming address, to
+ * determine if an access fall within the TPRn defined region.
+ *
+ * Minimal TPRn_Base resolution is 1MB. Applied to the incoming address, to
+ * determine if an access fall within the TPRn defined region. Width is
+ * determined by a bus width which can be obtained via CPUID
+ * function 0x80000008.
+ */
+
+typedef UINT64 ACPI_TPRN_BASE_REG;
+
+
+/* TPRn_BASE Register Bit Masks */
+
+/* Bit 3 - RW: access: 1 == RO, 0 == RW register (for TPR must be RW) */
+#define ACPI_TPRN_BASE_RW_SHIFT        3
+
+
+#define ACPI_TPRN_BASE_RW_MASK         ((UINT64) 1 << ACPI_TPRN_BASE_RW_SHIFT)
+
+
+/*
+ * Bit 4 - Enable: 0 – TPRn address range enabled;
+ *                 1 – TPRn address range disabled.
+ */
+#define ACPI_TPRN_BASE_ENABLE_SHIFT    4
+
+
+#define ACPI_TPRN_BASE_ENABLE_MASK     ((UINT64) 1 << ACPI_TPRN_BASE_ENABLE_SHIFT)
+
+
+/* Bits 63:20 - TprBaseRw */
+#define ACPI_TPRN_BASE_ADDR_SHIFT      20
+
+
+#define ACPI_TPRN_BASE_ADDR_MASK       ((UINT64) 0xFFFFFFFFFFF << \
+                                        ACPI_TPRN_BASE_ADDR_SHIFT)
+
+
+/* TPRn_BASE Register Bit Handlers*/
+
+/*
+ * GET_TPRN_BASE_RW:
+ *
+ * Read RW bit from TPRn Base Register - bit 3.
+ *
+ * Input:
+ * - reg (represents TPRn Base Register (ACPI_TPRN_BASE_REG))
+ *
+ * Output:
+ *
+ * Returns RW bit value (UINT64).
+ */
+#define GET_TPRN_BASE_RW(reg)     (((UINT64) reg & ACPI_TPRN_BASE_RW_MASK) >>  \
+                                     ACPI_TPRN_BASE_RW_SHIFT)
+
+
+/*
+ * GET_TPRN_BASE_ENABLE:
+ *
+ * Read Enable bit from TPRn Base Register - bit 4.
+ *
+ * Input:
+ * - reg (represents TPRn Base Register (ACPI_TPRN_BASE_REG))
+ *
+ * Output:
+ *
+ * Returns Enable bit value (UINT64).
+ */
+#define GET_TPRN_BASE_ENABLE(reg) (((UINT64) reg & ACPI_TPRN_BASE_ENABLE_MASK) \
+                                   >> ACPI_TPRN_BASE_ENABLE_SHIFT)
+
+
+/*
+ * GET_TPRN_BASE_ADDR:
+ *
+ * Read TPRn Base Register address from bits 63:20.
+ *
+ * Input:
+ * - reg (represents TPRn Base Register (ACPI_TPRN_BASE_REG))
+ *
+ * Output:
+ *
+ * Returns TPRn Base Register address (UINT64).
+ */
+#define GET_TPRN_BASE_ADDR(reg)   (((UINT64) reg & ACPI_TPRN_BASE_ADDR_MASK)   \
+                                   >> ACPI_TPRN_BASE_ADDR_SHIFT)
+
+
+/*
+ * SET_TPRN_BASE_RW:
+ *
+ * Set RW bit in TPRn Base Register - bit 3.
+ *
+ * Input:
+ * - reg (represents TPRn Base Register (ACPI_TPRN_BASE_REG))
+ * - val (represents RW value to be set (UINT64))
+ */
+#define SET_TPRN_BASE_RW(reg, val) ACPI_REGISTER_INSERT_VALUE(reg,     \
+                                        ACPI_TPRN_BASE_RW_SHIFT,       \
+                                        ACPI_TPRN_BASE_RW_MASK, val);
+
+
+/*
+ * SET_TPRN_BASE_ENABLE:
+ *
+ * Set Enable bit in TPRn Base Register - bit 4.
+ *
+ * Input:
+ * - reg (represents TPRn Base Register (ACPI_TPRN_BASE_REG))
+ * - val (represents Enable value to be set (UINT64))
+ */
+#define SET_TPRN_BASE_ENABLE(reg, val) ACPI_REGISTER_INSERT_VALUE(reg, \
+                                        ACPI_TPRN_BASE_ENABLE_SHIFT,   \
+                                        ACPI_TPRN_BASE_ENABLE_MASK, val);
+
+
+/*
+ * SET_TPRN_BASE_ADDR:
+ *
+ * Set TPRn Base Register address - bits 63:20
+ *
+ * Input
+ * - reg (represents TPRn Base Register (ACPI_TPRN_BASE_REG))
+ * - val (represents address value to be set (UINT64))
+ */
+#define SET_TPRN_BASE_ADDR(reg, val) ACPI_REGISTER_INSERT_VALUE(reg,   \
+                                        ACPI_TPRN_BASE_ADDR_SHIFT,     \
+                                        ACPI_TPRN_BASE_ADDR_MASK, val);
+
+
+/*
+ * TPRn_LIMIT
+ *
+ * This register defines an isolated region of memory that can be enabled
+ * to prohibit certain system agents from accessing memory. When an agent
+ * sends a request upstream, whether snooped or not, a TPR prevents that
+ * transaction from changing the state of memory.
+ *
+ * Minimal TPRn_Limit resolution is 1MB. Width is determined by a bus width.
+ */
+
+typedef UINT64 ACPI_TPRN_LIMIT_REG;
+
+
+/* TPRn_LIMIT Register Bit Masks */
+
+
+/* Bit 3 - RW: access: 1 == RO, 0 == RW register (for TPR must be RW) */
+#define ACPI_TPRN_LIMIT_RW_SHIFT   3
+
+
+#define ACPI_TPRN_LIMIT_RW_MASK    ((UINT64) 1 << ACPI_TPRN_LIMIT_RW_SHIFT)
+
+
+/* Bits 63:20 - TprLimitRw */
+#define ACPI_TPRN_LIMIT_ADDR_SHIFT 20
+
+
+#define ACPI_TPRN_LIMIT_ADDR_MASK  ((UINT64) 0xFFFFFFFFFFF << \
+                                   ACPI_TPRN_LIMIT_ADDR_SHIFT)
+
+
+/* TPRn_LIMIT Register Bit Handlers*/
+
+/*
+ * GET_TPRN_LIMIT_RW:
+ *
+ * Read RW bit from TPRn Limit Register - bit 3.
+ *
+ * Input:
+ * - reg (represents TPRn Limit Register (ACPI_TPRN_LIMIT_REG))
+ *
+ * Output:
+ *
+ * Returns RW bit value (UINT64).
+ */
+#define GET_TPRN_LIMIT_RW(reg)    (((UINT64) reg & ACPI_TPRN_LIMIT_RW_MASK)    \
+                                   >> ACPI_TPRN_LIMIT_RW_SHIFT)
+
+
+/*
+ * GET_TPRN_LIMIT_ADDR:
+ *
+ * Read TPRn Limit Register address from bits 63:20.
+ *
+ * Input:
+ * - reg (represents TPRn Limit Register (ACPI_TPRN_LIMIT_REG))
+ *
+ * Output:
+ *
+ * Returns TPRn Limit Register address (UINT64).
+ */
+#define GET_TPRN_LIMIT_ADDR(reg)  (((UINT64) reg & ACPI_TPRN_LIMIT_ADDR_MASK)  \
+                                   >> ACPI_TPRN_LIMIT_ADDR_SHIFT)
+
+
+/*
+ * SET_TPRN_LIMIT_RW:
+ *
+ * Set RW bit in TPRn Limit Register - bit 3.
+ *
+ * Input:
+ * - reg (represents TPRn Limit Register (ACPI_TPRN_LIMIT_REG))
+ * - val (represents RW value to be set (UINT64))
+ */
+#define SET_TPRN_LIMIT_RW(reg, val) ACPI_REGISTER_INSERT_VALUE(reg,            \
+                                        ACPI_TPRN_LIMIT_RW_SHIFT,              \
+                                        ACPI_TPRN_LIMIT_RW_MASK, val);
+
+
+/*
+ * SET_TPRN_LIMIT_ADDR:
+ *
+ * Set TPRn Limit Register address - bits 63:20.
+ *
+ * Input:
+ * - reg (represents TPRn Limit Register (ACPI_TPRN_LIMIT_REG))
+ * - val (represents address value to be set (UINT64))
+ */
+#define SET_TPRN_LIMIT_ADDR(reg, val) ACPI_REGISTER_INSERT_VALUE(reg,          \
+                                        ACPI_TPRN_LIMIT_ADDR_SHIFT,            \
+                                        ACPI_TPRN_LIMIT_ADDR_MASK, val);
+
+
+/*
+ * SERIALIZE_REQUEST
+ *
+ * This register is used to request serialization of non-coherent DMA
+ * transactions. OS shall  issue it before changing of TPR settings
+ * (base / size).
+ */
+
+typedef struct acpi_tpr_serialize_request {
+    UINT64 SrRegister;
+    /*
+     * BIT 1 - Status of serialization request (RO)
+     *         0 == register idle, 1 == serialization in progress
+     * BIT 2 - Control field to initiate serialization (RW)
+     *         0 == normal, 1 == initialize serialization
+     * (self-clear to allow multiple serialization requests)
+     */
+} ACPI_TPR_SERIALIZE_REQUEST;
 
 
 /*******************************************************************************
@@ -937,7 +1505,7 @@ typedef struct acpi_table_ecdt
     ACPI_GENERIC_ADDRESS    Data;               /* Address of EC data register */
     UINT32                  Uid;                /* Unique ID - must be same as the EC _UID method */
     UINT8                   Gpe;                /* The GPE for the EC */
-    UINT8                   Id[1];              /* Full namepath of the EC in the ACPI namespace */
+    UINT8                   Id[];               /* Full namepath of the EC in the ACPI namespace */
 
 } ACPI_TABLE_ECDT;
 
@@ -976,17 +1544,18 @@ typedef struct acpi_einj_entry
 
 enum AcpiEinjActions
 {
-    ACPI_EINJ_BEGIN_OPERATION               = 0,
-    ACPI_EINJ_GET_TRIGGER_TABLE             = 1,
-    ACPI_EINJ_SET_ERROR_TYPE                = 2,
-    ACPI_EINJ_GET_ERROR_TYPE                = 3,
-    ACPI_EINJ_END_OPERATION                 = 4,
-    ACPI_EINJ_EXECUTE_OPERATION             = 5,
-    ACPI_EINJ_CHECK_BUSY_STATUS             = 6,
-    ACPI_EINJ_GET_COMMAND_STATUS            = 7,
-    ACPI_EINJ_SET_ERROR_TYPE_WITH_ADDRESS   = 8,
-    ACPI_EINJ_GET_EXECUTE_TIMINGS           = 9,
-    ACPI_EINJ_ACTION_RESERVED               = 10,    /* 10 and greater are reserved */
+    ACPI_EINJ_BEGIN_OPERATION               = 0x0,
+    ACPI_EINJ_GET_TRIGGER_TABLE             = 0x1,
+    ACPI_EINJ_SET_ERROR_TYPE                = 0x2,
+    ACPI_EINJ_GET_ERROR_TYPE                = 0x3,
+    ACPI_EINJ_END_OPERATION                 = 0x4,
+    ACPI_EINJ_EXECUTE_OPERATION             = 0x5,
+    ACPI_EINJ_CHECK_BUSY_STATUS             = 0x6,
+    ACPI_EINJ_GET_COMMAND_STATUS            = 0x7,
+    ACPI_EINJ_SET_ERROR_TYPE_WITH_ADDRESS   = 0x8,
+    ACPI_EINJ_GET_EXECUTE_TIMINGS           = 0x9,
+    ACPI_EINJV2_GET_ERROR_TYPE              = 0x11,
+    ACPI_EINJ_ACTION_RESERVED               = 0x12,   /* 0x12 and greater are reserved */
     ACPI_EINJ_TRIGGER_ERROR                 = 0xFF   /* Except for this value */
 };
 
@@ -1063,7 +1632,20 @@ enum AcpiEinjCommandStatus
 #define ACPI_EINJ_PLATFORM_CORRECTABLE      (1<<9)
 #define ACPI_EINJ_PLATFORM_UNCORRECTABLE    (1<<10)
 #define ACPI_EINJ_PLATFORM_FATAL            (1<<11)
+#define ACPI_EINJ_CXL_CACHE_CORRECTABLE     (1<<12)
+#define ACPI_EINJ_CXL_CACHE_UNCORRECTABLE   (1<<13)
+#define ACPI_EINJ_CXL_CACHE_FATAL           (1<<14)
+#define ACPI_EINJ_CXL_MEM_CORRECTABLE       (1<<15)
+#define ACPI_EINJ_CXL_MEM_UNCORRECTABLE     (1<<16)
+#define ACPI_EINJ_CXL_MEM_FATAL             (1<<17)
 #define ACPI_EINJ_VENDOR_DEFINED            (1<<31)
+
+
+/* EINJV2 error types from EINJV2_GET_ERROR_TYPE (ACPI 6.6) */
+
+#define ACPI_EINJV2_PROCESSOR               (1)
+#define ACPI_EINJV2_MEMORY                  (1<<1)
+#define ACPI_EINJV2_PCIE                    (1<<2)
 
 
 /*******************************************************************************
@@ -1542,7 +2124,8 @@ enum AcpiHestNotifyTypes
     ACPI_HEST_NOTIFY_SEI                = 9,    /* ACPI 6.1 */
     ACPI_HEST_NOTIFY_GSIV               = 10,   /* ACPI 6.1 */
     ACPI_HEST_NOTIFY_SOFTWARE_DELEGATED = 11,   /* ACPI 6.2 */
-    ACPI_HEST_NOTIFY_RESERVED           = 12    /* 12 and greater are reserved */
+    ACPI_HEST_NOTIFY_SSE                = 12,   /* RISC-V SSE */
+    ACPI_HEST_NOTIFY_RESERVED           = 13    /* 13 and greater are reserved */
 };
 
 /* Values for ConfigWriteEnable bitfield above */
@@ -1829,7 +2412,8 @@ typedef struct acpi_hmat_locality
     ACPI_HMAT_STRUCTURE     Header;
     UINT8                   Flags;
     UINT8                   DataType;
-    UINT16                  Reserved1;
+    UINT8                   MinTransferSize;
+    UINT8                   Reserved1;
     UINT32                  NumberOfInitiatorPDs;
     UINT32                  NumberOfTargetPDs;
     UINT32                  Reserved2;
@@ -1839,14 +2423,17 @@ typedef struct acpi_hmat_locality
 
 /* Masks for Flags field above */
 
-#define ACPI_HMAT_MEMORY_HIERARCHY  (0x0F)
+#define ACPI_HMAT_MEMORY_HIERARCHY  (0x0F)      /* Bits 0-3 */
 
-/* Values for Memory Hierarchy flag */
+/* Values for Memory Hierarchy flags */
 
 #define ACPI_HMAT_MEMORY            0
 #define ACPI_HMAT_1ST_LEVEL_CACHE   1
 #define ACPI_HMAT_2ND_LEVEL_CACHE   2
 #define ACPI_HMAT_3RD_LEVEL_CACHE   3
+#define ACPI_HMAT_MINIMUM_XFER_SIZE 0x10        /* Bit 4: ACPI 6.4 */
+#define ACPI_HMAT_NON_SEQUENTIAL_XFERS 0x20     /* Bit 5: ACPI 6.4 */
+
 
 /* Values for DataType field above */
 
@@ -1867,7 +2454,7 @@ typedef struct acpi_hmat_cache
     UINT32                  Reserved1;
     UINT64                  CacheSize;
     UINT32                  CacheAttributes;
-    UINT16                  Reserved2;
+    UINT16                  AddressMode;
     UINT16                  NumberOfSMBIOSHandles;
 
 } ACPI_HMAT_CACHE;
@@ -1879,6 +2466,9 @@ typedef struct acpi_hmat_cache
 #define ACPI_HMAT_CACHE_ASSOCIATIVITY   (0x00000F00)
 #define ACPI_HMAT_WRITE_POLICY          (0x0000F000)
 #define ACPI_HMAT_CACHE_LINE_SIZE       (0xFFFF0000)
+
+#define ACPI_HMAT_CACHE_MODE_UNKNOWN            (0)
+#define ACPI_HMAT_CACHE_MODE_EXTENDED_LINEAR    (1)
 
 /* Values for cache associativity flag */
 
@@ -2039,7 +2629,6 @@ typedef struct acpi_ibft_target
     UINT16                  ReverseChapSecretOffset;
 
 } ACPI_IBFT_TARGET;
-
 
 /* Reset to default packing */
 

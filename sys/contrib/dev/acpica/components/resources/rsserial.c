@@ -6,146 +6,8 @@
 
 /******************************************************************************
  *
- * 1. Copyright Notice
- *
- * Some or all of this work - Copyright (c) 1999 - 2020, Intel Corp.
- * All rights reserved.
- *
- * 2. License
- *
- * 2.1. This is your license from Intel Corp. under its intellectual property
- * rights. You may have additional license terms from the party that provided
- * you this software, covering your right to use that party's intellectual
- * property rights.
- *
- * 2.2. Intel grants, free of charge, to any person ("Licensee") obtaining a
- * copy of the source code appearing in this file ("Covered Code") an
- * irrevocable, perpetual, worldwide license under Intel's copyrights in the
- * base code distributed originally by Intel ("Original Intel Code") to copy,
- * make derivatives, distribute, use and display any portion of the Covered
- * Code in any form, with the right to sublicense such rights; and
- *
- * 2.3. Intel grants Licensee a non-exclusive and non-transferable patent
- * license (with the right to sublicense), under only those claims of Intel
- * patents that are infringed by the Original Intel Code, to make, use, sell,
- * offer to sell, and import the Covered Code and derivative works thereof
- * solely to the minimum extent necessary to exercise the above copyright
- * license, and in no event shall the patent license extend to any additions
- * to or modifications of the Original Intel Code. No other license or right
- * is granted directly or by implication, estoppel or otherwise;
- *
- * The above copyright and patent license is granted only if the following
- * conditions are met:
- *
- * 3. Conditions
- *
- * 3.1. Redistribution of Source with Rights to Further Distribute Source.
- * Redistribution of source code of any substantial portion of the Covered
- * Code or modification with rights to further distribute source must include
- * the above Copyright Notice, the above License, this list of Conditions,
- * and the following Disclaimer and Export Compliance provision. In addition,
- * Licensee must cause all Covered Code to which Licensee contributes to
- * contain a file documenting the changes Licensee made to create that Covered
- * Code and the date of any change. Licensee must include in that file the
- * documentation of any changes made by any predecessor Licensee. Licensee
- * must include a prominent statement that the modification is derived,
- * directly or indirectly, from Original Intel Code.
- *
- * 3.2. Redistribution of Source with no Rights to Further Distribute Source.
- * Redistribution of source code of any substantial portion of the Covered
- * Code or modification without rights to further distribute source must
- * include the following Disclaimer and Export Compliance provision in the
- * documentation and/or other materials provided with distribution. In
- * addition, Licensee may not authorize further sublicense of source of any
- * portion of the Covered Code, and must include terms to the effect that the
- * license from Licensee to its licensee is limited to the intellectual
- * property embodied in the software Licensee provides to its licensee, and
- * not to intellectual property embodied in modifications its licensee may
- * make.
- *
- * 3.3. Redistribution of Executable. Redistribution in executable form of any
- * substantial portion of the Covered Code or modification must reproduce the
- * above Copyright Notice, and the following Disclaimer and Export Compliance
- * provision in the documentation and/or other materials provided with the
- * distribution.
- *
- * 3.4. Intel retains all right, title, and interest in and to the Original
- * Intel Code.
- *
- * 3.5. Neither the name Intel nor any other trademark owned or controlled by
- * Intel shall be used in advertising or otherwise to promote the sale, use or
- * other dealings in products derived from or relating to the Covered Code
- * without prior written authorization from Intel.
- *
- * 4. Disclaimer and Export Compliance
- *
- * 4.1. INTEL MAKES NO WARRANTY OF ANY KIND REGARDING ANY SOFTWARE PROVIDED
- * HERE. ANY SOFTWARE ORIGINATING FROM INTEL OR DERIVED FROM INTEL SOFTWARE
- * IS PROVIDED "AS IS," AND INTEL WILL NOT PROVIDE ANY SUPPORT, ASSISTANCE,
- * INSTALLATION, TRAINING OR OTHER SERVICES. INTEL WILL NOT PROVIDE ANY
- * UPDATES, ENHANCEMENTS OR EXTENSIONS. INTEL SPECIFICALLY DISCLAIMS ANY
- * IMPLIED WARRANTIES OF MERCHANTABILITY, NONINFRINGEMENT AND FITNESS FOR A
- * PARTICULAR PURPOSE.
- *
- * 4.2. IN NO EVENT SHALL INTEL HAVE ANY LIABILITY TO LICENSEE, ITS LICENSEES
- * OR ANY OTHER THIRD PARTY, FOR ANY LOST PROFITS, LOST DATA, LOSS OF USE OR
- * COSTS OF PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES, OR FOR ANY INDIRECT,
- * SPECIAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF THIS AGREEMENT, UNDER ANY
- * CAUSE OF ACTION OR THEORY OF LIABILITY, AND IRRESPECTIVE OF WHETHER INTEL
- * HAS ADVANCE NOTICE OF THE POSSIBILITY OF SUCH DAMAGES. THESE LIMITATIONS
- * SHALL APPLY NOTWITHSTANDING THE FAILURE OF THE ESSENTIAL PURPOSE OF ANY
- * LIMITED REMEDY.
- *
- * 4.3. Licensee shall not export, either directly or indirectly, any of this
- * software or system incorporating such software without first obtaining any
- * required license or other approval from the U. S. Department of Commerce or
- * any other agency or department of the United States Government. In the
- * event Licensee exports any such software from the United States or
- * re-exports any such software from a foreign destination, Licensee shall
- * ensure that the distribution and export/re-export of the software is in
- * compliance with all laws, regulations, orders, or other restrictions of the
- * U.S. Export Administration Regulations. Licensee agrees that neither it nor
- * any of its subsidiaries will export/re-export any technical data, process,
- * software, or service, directly or indirectly, to any country for which the
- * United States government or any agency thereof requires an export license,
- * other governmental approval, or letter of assurance, without first obtaining
- * such license, approval or letter.
- *
- *****************************************************************************
- *
- * Alternatively, you may choose to be licensed under the terms of the
- * following license:
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions, and the following disclaimer,
- *    without modification.
- * 2. Redistributions in binary form must reproduce at minimum a disclaimer
- *    substantially similar to the "NO WARRANTY" disclaimer below
- *    ("Disclaimer") and any redistribution must be conditioned upon
- *    including a substantially similar Disclaimer requirement for further
- *    binary redistribution.
- * 3. Neither the names of the above-listed copyright holders nor the names
- *    of any contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * Alternatively, you may choose to be licensed under the terms of the
- * GNU General Public License ("GPL") version 2 as published by the Free
- * Software Foundation.
+ * Copyright (c) 1999 - 2026, Intel Corp.
+ * SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0-only
  *
  *****************************************************************************/
 
@@ -256,6 +118,50 @@ ACPI_RSCONVERT_INFO     AcpiRsConvertGpio[18] =
 
 /*******************************************************************************
  *
+ * AcpiRsConvertClockInput
+ *
+ ******************************************************************************/
+
+ACPI_RSCONVERT_INFO     AcpiRsConvertClockInput[8] =
+{
+    {ACPI_RSC_INITGET,  ACPI_RESOURCE_TYPE_CLOCK_INPUT,
+                        ACPI_RS_SIZE (ACPI_RESOURCE_CLOCK_INPUT),
+                        ACPI_RSC_TABLE_SIZE (AcpiRsConvertClockInput)},
+
+    {ACPI_RSC_INITSET,  ACPI_RESOURCE_NAME_CLOCK_INPUT,
+                        sizeof (AML_RESOURCE_CLOCK_INPUT),
+                        0},
+
+    {ACPI_RSC_MOVE8,    ACPI_RS_OFFSET (Data.ClockInput.RevisionId),
+                        AML_OFFSET (ClockInput.RevisionId),
+                        1},
+
+    {ACPI_RSC_1BITFLAG, ACPI_RS_OFFSET (Data.ClockInput.Mode),
+                        AML_OFFSET (ClockInput.Flags),
+                        0},
+
+    {ACPI_RSC_2BITFLAG, ACPI_RS_OFFSET (Data.ClockInput.Scale),
+                        AML_OFFSET (ClockInput.Flags),
+                        1},
+
+    {ACPI_RSC_MOVE16,   ACPI_RS_OFFSET (Data.ClockInput.FrequencyDivisor),
+                        AML_OFFSET (ClockInput.FrequencyDivisor),
+                        2},
+
+    {ACPI_RSC_MOVE32,   ACPI_RS_OFFSET (Data.ClockInput.FrequencyNumerator),
+                        AML_OFFSET (ClockInput.FrequencyNumerator),
+                        4},
+
+    /* Resource Source */
+    {ACPI_RSC_SOURCE,    ACPI_RS_OFFSET (Data.ClockInput.ResourceSource),
+                        0,
+                        sizeof(AML_RESOURCE_CLOCK_INPUT)},
+
+};
+
+
+/*******************************************************************************
+ *
  * AcpiRsConvertPinfunction
  *
  ******************************************************************************/
@@ -329,11 +235,81 @@ ACPI_RSCONVERT_INFO     AcpiRsConvertPinFunction[13] =
 
 /*******************************************************************************
  *
+ * AcpiRsConvertCsi2SerialBus
+ *
+ ******************************************************************************/
+
+ACPI_RSCONVERT_INFO     AcpiRsConvertCsi2SerialBus[14] =
+{
+    {ACPI_RSC_INITGET,  ACPI_RESOURCE_TYPE_SERIAL_BUS,
+                        ACPI_RS_SIZE (ACPI_RESOURCE_CSI2_SERIALBUS),
+                        ACPI_RSC_TABLE_SIZE (AcpiRsConvertCsi2SerialBus)},
+
+    {ACPI_RSC_INITSET,  ACPI_RESOURCE_NAME_SERIAL_BUS,
+                        sizeof (AML_RESOURCE_CSI2_SERIALBUS),
+                        0},
+
+    {ACPI_RSC_MOVE8,    ACPI_RS_OFFSET (Data.CommonSerialBus.RevisionId),
+                        AML_OFFSET (CommonSerialBus.RevisionId),
+                        1},
+
+    {ACPI_RSC_MOVE8,    ACPI_RS_OFFSET (Data.Csi2SerialBus.Type),
+                        AML_OFFSET (Csi2SerialBus.Type),
+                        1},
+
+    {ACPI_RSC_1BITFLAG, ACPI_RS_OFFSET (Data.Csi2SerialBus.ProducerConsumer),
+                        AML_OFFSET (Csi2SerialBus.Flags),
+                        1},
+
+    {ACPI_RSC_1BITFLAG, ACPI_RS_OFFSET (Data.Csi2SerialBus.SlaveMode),
+                        AML_OFFSET (Csi2SerialBus.Flags),
+                        0},
+
+    {ACPI_RSC_2BITFLAG, ACPI_RS_OFFSET (Data.Csi2SerialBus.PhyType),
+                        AML_OFFSET (Csi2SerialBus.TypeSpecificFlags),
+                        0},
+
+    {ACPI_RSC_6BITFLAG, ACPI_RS_OFFSET (Data.Csi2SerialBus.LocalPortInstance),
+                        AML_OFFSET (Csi2SerialBus.TypeSpecificFlags),
+                        2},
+
+    {ACPI_RSC_MOVE8,    ACPI_RS_OFFSET (Data.Csi2SerialBus.TypeRevisionId),
+                        AML_OFFSET (Csi2SerialBus.TypeRevisionId),
+                        1},
+
+    /* Vendor data */
+
+    {ACPI_RSC_COUNT_SERIAL_VEN, ACPI_RS_OFFSET (Data.Csi2SerialBus.VendorLength),
+                        AML_OFFSET (Csi2SerialBus.TypeDataLength),
+                        AML_RESOURCE_CSI2_MIN_DATA_LEN},
+
+    {ACPI_RSC_MOVE_SERIAL_VEN,  ACPI_RS_OFFSET (Data.Csi2SerialBus.VendorData),
+                        0,
+                        sizeof (AML_RESOURCE_CSI2_SERIALBUS)},
+
+    /* Resource Source */
+
+    {ACPI_RSC_MOVE8,    ACPI_RS_OFFSET (Data.Csi2SerialBus.ResourceSource.Index),
+                        AML_OFFSET (Csi2SerialBus.ResSourceIndex),
+                        1},
+
+    {ACPI_RSC_COUNT_SERIAL_RES, ACPI_RS_OFFSET (Data.Csi2SerialBus.ResourceSource.StringLength),
+                        AML_OFFSET (Csi2SerialBus.TypeDataLength),
+                        sizeof (AML_RESOURCE_CSI2_SERIALBUS)},
+
+    {ACPI_RSC_MOVE_SERIAL_RES,  ACPI_RS_OFFSET (Data.Csi2SerialBus.ResourceSource.StringPtr),
+                        AML_OFFSET (Csi2SerialBus.TypeDataLength),
+                        sizeof (AML_RESOURCE_CSI2_SERIALBUS)},
+};
+
+
+/*******************************************************************************
+ *
  * AcpiRsConvertI2cSerialBus
  *
  ******************************************************************************/
 
-ACPI_RSCONVERT_INFO     AcpiRsConvertI2cSerialBus[17] =
+ACPI_RSCONVERT_INFO     AcpiRsConvertI2cSerialBus[18] =
 {
     {ACPI_RSC_INITGET,  ACPI_RESOURCE_TYPE_SERIAL_BUS,
                         ACPI_RS_SIZE (ACPI_RESOURCE_I2C_SERIALBUS),
@@ -400,6 +376,11 @@ ACPI_RSCONVERT_INFO     AcpiRsConvertI2cSerialBus[17] =
     {ACPI_RSC_1BITFLAG, ACPI_RS_OFFSET (Data.I2cSerialBus.AccessMode),
                         AML_OFFSET (I2cSerialBus.TypeSpecificFlags),
                         0},
+
+    /* Read LVR from Type Specific Flags, bits[15:8] */
+    {ACPI_RSC_MOVE8,    ACPI_RS_OFFSET (Data.I2cSerialBus.Lvr),
+                        AML_OFFSET (I2cSerialBus.TypeSpecificFlags) + 1,
+                        1},
 
     {ACPI_RSC_MOVE32,   ACPI_RS_OFFSET (Data.I2cSerialBus.ConnectionSpeed),
                         AML_OFFSET (I2cSerialBus.ConnectionSpeed),
