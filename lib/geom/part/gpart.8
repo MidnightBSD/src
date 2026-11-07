@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.Dd September 2, 2024
+.Dd November 7, 2026
 .Dt GPART 8
 .Os
 .Sh NAME
@@ -1189,6 +1189,28 @@ partitions, trying to detect ZFS pools.
 After all pools are detected,
 .Pa /boot/loader
 is started from the first one found set as bootable.
+.Pp
+The boot loader prefers partitions of type
+.Cm mnbsd-boot ,
+.Cm mnbsd-ufs
+and
+.Cm mnbsd-zfs
+over the corresponding
+.Cm freebsd-ufs
+and
+.Cm freebsd-zfs
+types, which are recognized as a fallback on GPT disks.
+The preference applies within a single disk.
+The BIOS protective MBR
+.Pa /boot/pmbr
+only loads bootstrap code from an
+.Cm mnbsd-boot
+partition, so a
+.Cm freebsd-boot
+partition is not booted on BIOS-based computers.
+The UEFI
+.Xr boot1.efi 8
+selects by file system contents and does not distinguish the types.
 .Pp
 The APM scheme also does not support embedding bootstrap code.
 Instead, the 800 KBytes bootstrap code image

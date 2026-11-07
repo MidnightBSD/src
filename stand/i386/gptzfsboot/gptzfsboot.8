@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.Dd September 15, 2014
+.Dd November 7, 2026
 .Dt GPTZFSBOOT 8
 .Os
 .Sh NAME
@@ -57,9 +57,18 @@ After a disk is probed and
 determines that the whole disk is not a ZFS pool member, the
 individual partitions are probed in their partition table order.
 Currently GPT and MBR partition schemes are supported.
-With the GPT scheme, only partitions of type
+With the GPT scheme, partitions of type
 .Cm mnbsd-zfs
-are probed.
+are probed first, followed by partitions of type
+.Cm freebsd-zfs ,
+so pools on
+.Cm mnbsd-zfs
+partitions are preferred.
+The code itself must still be installed in an
+.Cm mnbsd-boot
+partition, as the protective MBR does not load a
+.Cm freebsd-boot
+partition.
 The first pool seen during probing is used as a default boot pool.
 .Pp
 The filesystem specified by the
