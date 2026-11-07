@@ -47,6 +47,9 @@ Updating Information for MidnightBSD users.
 	an address other than the server's, and exits non-zero when an
 	HTTP transfer is shorter than expected.
 
+	libsodium 1.0.22 (kernel only: ChaCha20-Poly1305, XChaCha20-Poly1305,
+	Poly1305 and X25519 for opencrypto(9) and wg(4))
+
 20261105:
 	OpenSSH 10.6p2: fixes an sshd(8) password authentication bypass
 	reported against Linux builds without PAM, and accepts the
