@@ -19,6 +19,10 @@ Updating Information for MidnightBSD users.
 	Rebuild ports that link against them before running
 	"make delete-old-libs".  librt moved from /usr/lib to /lib.
 
+	wireguard-tools 1.0.20260223
+
+	spleen 2.2.0
+
 20261106:
 	unbound 1.26.2: CVE-2026-14586 CVE-2026-32665 CVE-2026-35501
 	CVE-2026-40691 CVE-2026-41637 CVE-2026-42955 CVE-2026-44621
