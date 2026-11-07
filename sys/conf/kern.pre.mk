@@ -219,10 +219,12 @@ NORMAL_FWO= ${CC:N${CCACHE_BIN}} -c ${ASM_CFLAGS} ${WERROR} -o ${.TARGET} \
 	-DFIRMW_SYMBOL="${.ALLSRC:M*.fw:C/[-.\/]/_/g}"
 
 # for ZSTD in the kernel (include zstd/lib/freebsd before other CFLAGS)
+# ZSTD_NO_TRACE: zstd 1.5.7 declares its tracing hooks as weak symbols on
+# aarch64 and riscv too; they cannot be resolved in the kernel.
 ZSTD_C= ${CC} -c -DZSTD_HEAPMODE=1 -I$S/contrib/zstd/lib/freebsd ${CFLAGS} \
 	-I$S/contrib/zstd/lib -I$S/contrib/zstd/lib/common ${WERROR} \
 	-Wno-missing-prototypes ${PROF} -U__BMI__ \
-	-DZSTD_NO_INTRINSICS \
+	-DZSTD_NO_INTRINSICS -DZSTD_NO_TRACE \
 	${.IMPSRC}
 # https://github.com/facebook/zstd/commit/812e8f2a [zstd 1.4.1]
 # "Note that [GCC] autovectorization still does not do a good job on the
