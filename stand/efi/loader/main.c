@@ -55,6 +55,7 @@
 #include <uuid.h>
 
 #include <bootstrap.h>
+#include <part.h>
 #include <smbios.h>
 
 #include "efizfs.h"
@@ -293,6 +294,78 @@ probe_md_currdev(void)
 	return (rv);
 }
 #endif
+
+struct ptbl_args {
+	int	fd;
+	u_int	secsz;
+};
+
+static int
+ptbl_read(void *arg, void *buf, size_t blocks, uint64_t offset)
+{
+	struct ptbl_args *pa;
+	size_t len;
+
+	pa = (struct ptbl_args *)arg;
+	len = blocks * pa->secsz;
+	if (lseek(pa->fd, offset * pa->secsz, SEEK_SET) == -1 ||
+	    read(pa->fd, buf, len) != (ssize_t)len)
+		return (EIO);
+	return (0);
+}
+
+/*
+ * Open the partition table of disk dp so that partition types can be
+ * looked up.  Returns NULL if it cannot be read.
+ */
+static struct ptable *
+ptbl_open(pdinfo_t *dp, struct ptbl_args *pa)
+{
+	char devname[SPECNAMELEN + 1];
+	struct ptable *table;
+	uint64_t mediasz;
+
+	if (dp->pd_devsw != &efipart_hddev)
+		return (NULL);
+	snprintf(devname, sizeof(devname), "%s%d:", efipart_hddev.dv_name,
+	    dp->pd_unit);
+	pa->fd = open(devname, O_RDONLY);
+	if (pa->fd == -1)
+		return (NULL);
+	table = NULL;
+	if (ioctl(pa->fd, DIOCGSECTORSIZE, &pa->secsz) == 0 &&
+	    ioctl(pa->fd, DIOCGMEDIASIZE, &mediasz) == 0 && pa->secsz != 0)
+		table = ptable_open(pa, mediasz / pa->secsz, pa->secsz,
+		    ptbl_read);
+	if (table == NULL)
+		close(pa->fd);
+	return (table);
+}
+
+static void
+ptbl_close(struct ptable *table, struct ptbl_args *pa)
+{
+
+	if (table == NULL)
+		return;
+	ptable_close(table);
+	close(pa->fd);
+}
+
+/*
+ * FreeBSD UFS and ZFS partitions are only tried as currdev after all
+ * other partitions, so that MidnightBSD partitions are preferred.
+ */
+static bool
+is_fallback_part(struct ptable *table, pdinfo_t *pp)
+{
+	struct ptable_entry part;
+
+	if (table == NULL || ptable_getpart(table, &part, pp->pd_unit) != 0)
+		return (false);
+	return (part.type == PART_FREEBSD_UFS ||
+	    part.type == PART_FREEBSD_ZFS);
+}
 
 static bool
 try_as_currdev(pdinfo_t *hd, pdinfo_t *pp)
@@ -596,24 +669,38 @@ find_currdev(bool do_bootmgr, bool is_last,
 			return (0);
 		if (dp->pd_parent != NULL) {
 			pdinfo_t *espdp = dp;
+			struct ptable *table;
+			struct ptbl_args pa;
+			int pass;
+
 			dp = dp->pd_parent;
-			STAILQ_FOREACH(pp, &dp->pd_part, pd_link) {
-				/* Already tried the ESP */
-				if (espdp == pp)
-					continue;
-				/*
-				 * Roll up the ZFS special case
-				 * for those partitions that have
-				 * zpools on them.
-				 */
-				text = efi_devpath_name(pp->pd_devpath);
-				if (text != NULL) {
-					printf("Trying: %S\n", text);
-					efi_free_devpath_name(text);
+			table = ptbl_open(dp, &pa);
+			/* Pass 0: preferred partitions, pass 1: fallback. */
+			for (pass = 0; pass < 2; pass++) {
+				STAILQ_FOREACH(pp, &dp->pd_part, pd_link) {
+					/* Already tried the ESP */
+					if (espdp == pp)
+						continue;
+					if (is_fallback_part(table, pp) !=
+					    (pass == 1))
+						continue;
+					/*
+					 * Roll up the ZFS special case
+					 * for those partitions that have
+					 * zpools on them.
+					 */
+					text = efi_devpath_name(pp->pd_devpath);
+					if (text != NULL) {
+						printf("Trying: %S\n", text);
+						efi_free_devpath_name(text);
+					}
+					if (try_as_currdev(dp, pp)) {
+						ptbl_close(table, &pa);
+						return (0);
+					}
 				}
-				if (try_as_currdev(dp, pp))
-					return (0);
 			}
+			ptbl_close(table, &pa);
 		}
 	}
 
