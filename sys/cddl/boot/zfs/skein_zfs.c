@@ -36,6 +36,13 @@ zio_checksum_skein_native(const void *buf, uint64_t size,
 	Skein_512_Ctxt_t	ctx;
 
 	ASSERT(ctx_template != NULL);
+
+	/* No template, tmpl_init failed to allocate: return a zero sum. */
+	if (ctx_template == NULL) {
+		bzero(zcp, sizeof (*zcp));
+		return;
+	}
+
 	bcopy(ctx_template, &ctx, sizeof (ctx));
 	(void) Skein_512_Update(&ctx, buf, size);
 	(void) Skein_512_Final(&ctx, (uint8_t *)zcp);
@@ -70,6 +77,8 @@ zio_checksum_skein_tmpl_init(const zio_cksum_salt_t *salt)
 	Skein_512_Ctxt_t	*ctx;
 
 	ctx = malloc(sizeof (*ctx));
+	if (ctx == NULL)
+		return (NULL);
 	bzero(ctx, sizeof (*ctx));
 	(void) Skein_512_InitExt(ctx, sizeof (zio_cksum_t) * 8, 0,
 	    salt->zcs_bytes, sizeof (salt->zcs_bytes));
