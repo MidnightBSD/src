@@ -9,12 +9,13 @@ README-cmake.md
 amiga
 configure
 contrib/CMakeLists.txt
+contrib/README.contrib
 contrib/ada
 contrib/blast
 contrib/crc32vx
 contrib/delphi
 contrib/dotzlib
-contrib/gcc_gvmat64/CMakeLists.txt
+contrib/gcc_gvmat64
 contrib/infback9
 contrib/iostream
 contrib/iostream2

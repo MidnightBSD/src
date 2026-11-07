@@ -84,8 +84,3 @@ Local patches applied on top of upstream (from FreeBSD unless noted):
   - deflate.h: LIT_MEM is defined.
   - gzlib.c: #include "zutil.h" and <unistd.h> after "gzguts.h";
     gzread.c, gzwrite.c: #include <unistd.h> after "gzguts.h".
-  - contrib/gcc_gvmat64/gvmat64.S: kept as a copy of the 1.3.1 file
-    with CRs stripped.  It is not built.  Upstream converted it to LF
-    and changed it in 1.3.2, so the merge conflicts; the file is
-    assembly and was left untouched.  FreeBSD dropped contrib/
-    entirely in its 1.3.2 import.
