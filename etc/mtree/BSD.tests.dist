@@ -918,6 +918,10 @@
         asa
         ..
         awk
+            bugs-fixed
+            ..
+            netbsd
+            ..
         ..
         base64
         ..
