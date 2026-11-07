@@ -6,146 +6,8 @@
 
 /******************************************************************************
  *
- * 1. Copyright Notice
- *
- * Some or all of this work - Copyright (c) 1999 - 2020, Intel Corp.
- * All rights reserved.
- *
- * 2. License
- *
- * 2.1. This is your license from Intel Corp. under its intellectual property
- * rights. You may have additional license terms from the party that provided
- * you this software, covering your right to use that party's intellectual
- * property rights.
- *
- * 2.2. Intel grants, free of charge, to any person ("Licensee") obtaining a
- * copy of the source code appearing in this file ("Covered Code") an
- * irrevocable, perpetual, worldwide license under Intel's copyrights in the
- * base code distributed originally by Intel ("Original Intel Code") to copy,
- * make derivatives, distribute, use and display any portion of the Covered
- * Code in any form, with the right to sublicense such rights; and
- *
- * 2.3. Intel grants Licensee a non-exclusive and non-transferable patent
- * license (with the right to sublicense), under only those claims of Intel
- * patents that are infringed by the Original Intel Code, to make, use, sell,
- * offer to sell, and import the Covered Code and derivative works thereof
- * solely to the minimum extent necessary to exercise the above copyright
- * license, and in no event shall the patent license extend to any additions
- * to or modifications of the Original Intel Code. No other license or right
- * is granted directly or by implication, estoppel or otherwise;
- *
- * The above copyright and patent license is granted only if the following
- * conditions are met:
- *
- * 3. Conditions
- *
- * 3.1. Redistribution of Source with Rights to Further Distribute Source.
- * Redistribution of source code of any substantial portion of the Covered
- * Code or modification with rights to further distribute source must include
- * the above Copyright Notice, the above License, this list of Conditions,
- * and the following Disclaimer and Export Compliance provision. In addition,
- * Licensee must cause all Covered Code to which Licensee contributes to
- * contain a file documenting the changes Licensee made to create that Covered
- * Code and the date of any change. Licensee must include in that file the
- * documentation of any changes made by any predecessor Licensee. Licensee
- * must include a prominent statement that the modification is derived,
- * directly or indirectly, from Original Intel Code.
- *
- * 3.2. Redistribution of Source with no Rights to Further Distribute Source.
- * Redistribution of source code of any substantial portion of the Covered
- * Code or modification without rights to further distribute source must
- * include the following Disclaimer and Export Compliance provision in the
- * documentation and/or other materials provided with distribution. In
- * addition, Licensee may not authorize further sublicense of source of any
- * portion of the Covered Code, and must include terms to the effect that the
- * license from Licensee to its licensee is limited to the intellectual
- * property embodied in the software Licensee provides to its licensee, and
- * not to intellectual property embodied in modifications its licensee may
- * make.
- *
- * 3.3. Redistribution of Executable. Redistribution in executable form of any
- * substantial portion of the Covered Code or modification must reproduce the
- * above Copyright Notice, and the following Disclaimer and Export Compliance
- * provision in the documentation and/or other materials provided with the
- * distribution.
- *
- * 3.4. Intel retains all right, title, and interest in and to the Original
- * Intel Code.
- *
- * 3.5. Neither the name Intel nor any other trademark owned or controlled by
- * Intel shall be used in advertising or otherwise to promote the sale, use or
- * other dealings in products derived from or relating to the Covered Code
- * without prior written authorization from Intel.
- *
- * 4. Disclaimer and Export Compliance
- *
- * 4.1. INTEL MAKES NO WARRANTY OF ANY KIND REGARDING ANY SOFTWARE PROVIDED
- * HERE. ANY SOFTWARE ORIGINATING FROM INTEL OR DERIVED FROM INTEL SOFTWARE
- * IS PROVIDED "AS IS," AND INTEL WILL NOT PROVIDE ANY SUPPORT, ASSISTANCE,
- * INSTALLATION, TRAINING OR OTHER SERVICES. INTEL WILL NOT PROVIDE ANY
- * UPDATES, ENHANCEMENTS OR EXTENSIONS. INTEL SPECIFICALLY DISCLAIMS ANY
- * IMPLIED WARRANTIES OF MERCHANTABILITY, NONINFRINGEMENT AND FITNESS FOR A
- * PARTICULAR PURPOSE.
- *
- * 4.2. IN NO EVENT SHALL INTEL HAVE ANY LIABILITY TO LICENSEE, ITS LICENSEES
- * OR ANY OTHER THIRD PARTY, FOR ANY LOST PROFITS, LOST DATA, LOSS OF USE OR
- * COSTS OF PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES, OR FOR ANY INDIRECT,
- * SPECIAL OR CONSEQUENTIAL DAMAGES ARISING OUT OF THIS AGREEMENT, UNDER ANY
- * CAUSE OF ACTION OR THEORY OF LIABILITY, AND IRRESPECTIVE OF WHETHER INTEL
- * HAS ADVANCE NOTICE OF THE POSSIBILITY OF SUCH DAMAGES. THESE LIMITATIONS
- * SHALL APPLY NOTWITHSTANDING THE FAILURE OF THE ESSENTIAL PURPOSE OF ANY
- * LIMITED REMEDY.
- *
- * 4.3. Licensee shall not export, either directly or indirectly, any of this
- * software or system incorporating such software without first obtaining any
- * required license or other approval from the U. S. Department of Commerce or
- * any other agency or department of the United States Government. In the
- * event Licensee exports any such software from the United States or
- * re-exports any such software from a foreign destination, Licensee shall
- * ensure that the distribution and export/re-export of the software is in
- * compliance with all laws, regulations, orders, or other restrictions of the
- * U.S. Export Administration Regulations. Licensee agrees that neither it nor
- * any of its subsidiaries will export/re-export any technical data, process,
- * software, or service, directly or indirectly, to any country for which the
- * United States government or any agency thereof requires an export license,
- * other governmental approval, or letter of assurance, without first obtaining
- * such license, approval or letter.
- *
- *****************************************************************************
- *
- * Alternatively, you may choose to be licensed under the terms of the
- * following license:
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions, and the following disclaimer,
- *    without modification.
- * 2. Redistributions in binary form must reproduce at minimum a disclaimer
- *    substantially similar to the "NO WARRANTY" disclaimer below
- *    ("Disclaimer") and any redistribution must be conditioned upon
- *    including a substantially similar Disclaimer requirement for further
- *    binary redistribution.
- * 3. Neither the names of the above-listed copyright holders nor the names
- *    of any contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * Alternatively, you may choose to be licensed under the terms of the
- * GNU General Public License ("GPL") version 2 as published by the Free
- * Software Foundation.
+ * Copyright (c) 1999 - 2026, Intel Corp.
+ * SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0-only
  *
  *****************************************************************************/
 
@@ -177,7 +39,8 @@ AcpiDmDumpSlic (
     ACPI_TABLE_HEADER       *Table)
 {
 
-    (void) AcpiDmDumpTable (Table->Length, sizeof (ACPI_TABLE_HEADER), Table,
+    (void) AcpiDmDumpTable (Table->Length, sizeof (ACPI_TABLE_HEADER),
+        (void *) ((UINT8 *)Table + sizeof (*Table)),
         Table->Length - sizeof (*Table), AcpiDmTableInfoSlic);
 }
 
@@ -338,6 +201,16 @@ AcpiDmDumpSrat (
             InfoTable = AcpiDmTableInfoSrat5;
             break;
 
+        case ACPI_SRAT_TYPE_GENERIC_PORT_AFFINITY:
+
+            InfoTable = AcpiDmTableInfoSrat6;
+            break;
+
+        case ACPI_SRAT_TYPE_RINTC_AFFINITY:
+
+            InfoTable = AcpiDmTableInfoSrat7;
+            break;
+
         default:
             AcpiOsPrintf ("\n**** Unknown SRAT subtable type 0x%X\n",
                 Subtable->Type);
@@ -416,6 +289,132 @@ AcpiDmDumpStao (
         /* Point to next namepath */
 
         Offset += StringLength;
+    }
+}
+
+
+/*******************************************************************************
+ *
+ * FUNCTION:    AcpiDmDumpSvkl
+ *
+ * PARAMETERS:  Table               - A SVKL table
+ *
+ * RETURN:      None
+ *
+ * DESCRIPTION: Format the contents of a SVKL. This is a variable-length
+ *              table that contains an open-ended number of key subtables at
+ *              the end of the header.
+ *
+ * NOTES: SVKL is essentially a flat table, with a small main table and
+ *          a variable number of a single type of subtable.
+ *
+ ******************************************************************************/
+
+void
+AcpiDmDumpSvkl (
+    ACPI_TABLE_HEADER       *Table)
+{
+    ACPI_STATUS             Status;
+    UINT32                  Length = Table->Length;
+    UINT32                  Offset = sizeof (ACPI_TABLE_SVKL);
+    ACPI_SVKL_KEY           *Subtable;
+
+
+    /* Main table */
+
+    Status = AcpiDmDumpTable (Length, 0, Table, 0, AcpiDmTableInfoSvkl);
+    if (ACPI_FAILURE (Status))
+    {
+        return;
+    }
+
+    /* The rest of the table consists of subtables (single type) */
+
+    Subtable = ACPI_ADD_PTR (ACPI_SVKL_KEY, Table, Offset);
+    while (Offset < Table->Length)
+    {
+        /* Dump the subtable */
+
+        AcpiOsPrintf ("\n");
+        Status = AcpiDmDumpTable (Table->Length, Offset, Subtable,
+            sizeof (ACPI_SVKL_KEY), AcpiDmTableInfoSvkl0);
+        if (ACPI_FAILURE (Status))
+        {
+            return;
+        }
+
+        /* Point to next subtable */
+
+        Offset += sizeof (ACPI_SVKL_KEY);
+        Subtable = ACPI_ADD_PTR (ACPI_SVKL_KEY, Subtable,
+            sizeof (ACPI_SVKL_KEY));
+    }
+}
+
+
+/*******************************************************************************
+ *
+ * FUNCTION:    AcpiDmDumpSwft
+ *
+ * PARAMETERS:  Table               - A SWFT table
+ *
+ * RETURN:      None
+ *
+ * DESCRIPTION: Format the contents of a SWFT. This is a variable-length
+ *              table that contains an open-ended number of SoundWire files
+ *              after the end of the header.
+ *
+ ******************************************************************************/
+
+void
+AcpiDmDumpSwft (
+    ACPI_TABLE_HEADER       *Table)
+{
+    ACPI_STATUS             Status;
+    UINT32                  Length = Table->Length;
+    UINT32                  Offset = sizeof (ACPI_TABLE_SWFT);
+    ACPI_SWFT_FILE          *SubtableHdr;
+    ACPI_SWFT_FILE          *SubtableData;
+
+
+    /* Main table */
+
+    Status = AcpiDmDumpTable (Length, 0, Table, 0, AcpiDmTableInfoSwft);
+    if (ACPI_FAILURE (Status))
+    {
+        return;
+    }
+
+    /* The rest of the table consists of subtables (single type) */
+
+    while (Offset < Table->Length)
+    {
+        SubtableHdr = ACPI_ADD_PTR (ACPI_SWFT_FILE, Table, Offset);
+
+        /* Dump the subtable */
+
+        AcpiOsPrintf ("\n");
+        Status = AcpiDmDumpTable (Table->Length, Offset, SubtableHdr,
+            sizeof (ACPI_SWFT_FILE), AcpiDmTableInfoSwftFileHdr);
+        if (ACPI_FAILURE (Status))
+        {
+            return;
+        }
+
+        Offset += sizeof(ACPI_SWFT_FILE);
+
+        SubtableData = ACPI_ADD_PTR (ACPI_SWFT_FILE, Table, Offset);
+
+        Status = AcpiDmDumpTable (Table->Length, Offset, SubtableData,
+            SubtableHdr->FileLength - sizeof(ACPI_SWFT_FILE), AcpiDmTableInfoSwftFileData);
+        if (ACPI_FAILURE (Status))
+        {
+            return;
+        }
+
+        /* Point to next subtable */
+
+        Offset += SubtableHdr->FileLength - sizeof(ACPI_SWFT_FILE);
     }
 }
 
@@ -502,6 +501,7 @@ AcpiDmDumpTcpa (
  * DESCRIPTION: Format the contents of a TPM2.
  *
  ******************************************************************************/
+
 static void
 AcpiDmDumpTpm2Rev3 (
     ACPI_TABLE_HEADER       *Table)
@@ -603,43 +603,55 @@ AcpiDmDumpTpm2 (
 
 /*******************************************************************************
  *
- * FUNCTION:    AcpiDmDumpVrtc
+ * FUNCTION:    AcpiDmDumpUbrt
  *
- * PARAMETERS:  Table               - A VRTC table
+ * PARAMETERS:  Table               - A UBRT table
  *
  * RETURN:      None
  *
- * DESCRIPTION: Format the contents of a VRTC
+ * DESCRIPTION: Format the contents of a UBRT
  *
  ******************************************************************************/
 
 void
-AcpiDmDumpVrtc (
+AcpiDmDumpUbrt (
     ACPI_TABLE_HEADER       *Table)
 {
     ACPI_STATUS             Status;
-    UINT32                  Offset = sizeof (ACPI_TABLE_VRTC);
-    ACPI_VRTC_ENTRY         *Subtable;
+    UINT32                  Offset = sizeof (ACPI_TABLE_UBRT);
+    ACPI_UBRT_SUBTABLE      *Subtable;
+    ACPI_TABLE_UBRT         *Ubrt;
+    UINT32                  Count;
+    UINT32                  i;
 
 
     /* Main table */
 
-    Status = AcpiDmDumpTable (Table->Length, 0, Table, 0, AcpiDmTableInfoVrtc);
+    Status = AcpiDmDumpTable (Table->Length, 0, Table, 0, AcpiDmTableInfoUbrt);
     if (ACPI_FAILURE (Status))
     {
         return;
     }
 
+    Ubrt = ACPI_CAST_PTR (ACPI_TABLE_UBRT, Table);
+    Count = Ubrt->Count;
+
     /* Subtables */
 
-    Subtable = ACPI_ADD_PTR (ACPI_VRTC_ENTRY, Table, Offset);
-    while (Offset < Table->Length)
+    Subtable = ACPI_ADD_PTR (ACPI_UBRT_SUBTABLE, Table, Offset);
+
+    for (i = 0; i < Count; i++)
     {
-        /* Common subtable header */
+        if (Offset + sizeof (ACPI_UBRT_SUBTABLE) > Table->Length)
+        {
+            AcpiOsPrintf ("\n*** Warning: UBRT sub-table %u exceeds table length\n", i);
+            return;
+        }
 
         AcpiOsPrintf ("\n");
+
         Status = AcpiDmDumpTable (Table->Length, Offset, Subtable,
-            sizeof (ACPI_VRTC_ENTRY), AcpiDmTableInfoVrtc0);
+            sizeof (ACPI_UBRT_SUBTABLE), AcpiDmTableInfoUbrtSubtable);
         if (ACPI_FAILURE (Status))
         {
             return;
@@ -647,9 +659,109 @@ AcpiDmDumpVrtc (
 
         /* Point to next subtable */
 
-        Offset += sizeof (ACPI_VRTC_ENTRY);
-        Subtable = ACPI_ADD_PTR (ACPI_VRTC_ENTRY, Subtable,
-            sizeof (ACPI_VRTC_ENTRY));
+        Offset += sizeof (ACPI_UBRT_SUBTABLE);
+        Subtable = ACPI_ADD_PTR (ACPI_UBRT_SUBTABLE, Subtable,
+            sizeof (ACPI_UBRT_SUBTABLE));
+    }
+}
+
+
+/*******************************************************************************
+ *
+ * FUNCTION:    AcpiDmDumpViot
+ *
+ * PARAMETERS:  Table               - A VIOT table
+ *
+ * RETURN:      None
+ *
+ * DESCRIPTION: Format the contents of a VIOT
+ *
+ ******************************************************************************/
+
+void
+AcpiDmDumpViot (
+    ACPI_TABLE_HEADER       *Table)
+{
+    ACPI_STATUS             Status;
+    ACPI_TABLE_VIOT         *Viot;
+    ACPI_VIOT_HEADER        *ViotHeader;
+    UINT16                  Length;
+    UINT32                  Offset;
+    ACPI_DMTABLE_INFO       *InfoTable;
+
+    /* Main table */
+
+    Status = AcpiDmDumpTable (Table->Length, 0, Table, 0, AcpiDmTableInfoViot);
+    if (ACPI_FAILURE (Status))
+    {
+        return;
+    }
+
+    Viot = ACPI_CAST_PTR (ACPI_TABLE_VIOT, Table);
+
+    Offset = Viot->NodeOffset;
+    while (Offset < Table->Length)
+    {
+        /* Common subtable header */
+        ViotHeader = ACPI_ADD_PTR (ACPI_VIOT_HEADER, Table, Offset);
+        AcpiOsPrintf ("\n");
+
+        Length = sizeof (ACPI_VIOT_HEADER);
+        Status = AcpiDmDumpTable (Table->Length, Offset, ViotHeader, Length,
+            AcpiDmTableInfoViotHeader);
+        if (ACPI_FAILURE (Status))
+        {
+            return;
+        }
+
+        Length = ViotHeader->Length;
+        switch (ViotHeader->Type)
+        {
+        case ACPI_VIOT_NODE_PCI_RANGE:
+
+            InfoTable = AcpiDmTableInfoViot1;
+            break;
+
+        case ACPI_VIOT_NODE_MMIO:
+
+            InfoTable = AcpiDmTableInfoViot2;
+            break;
+
+        case ACPI_VIOT_NODE_VIRTIO_IOMMU_PCI:
+
+            InfoTable = AcpiDmTableInfoViot3;
+            break;
+
+        case ACPI_VIOT_NODE_VIRTIO_IOMMU_MMIO:
+
+            InfoTable = AcpiDmTableInfoViot4;
+            break;
+
+        default:
+
+            AcpiOsPrintf ("\n*** Unknown VIOT node type 0x%X\n",
+                ViotHeader->Type);
+
+            /* Attempt to continue */
+
+            if (!Length)
+            {
+                AcpiOsPrintf ("Invalid zero length VIOT node\n");
+                return;
+            }
+            goto NextSubtable;
+        }
+
+        AcpiOsPrintf ("\n");
+        Status = AcpiDmDumpTable (Table->Length, Offset, ViotHeader, Length,
+            InfoTable);
+        if (ACPI_FAILURE (Status))
+        {
+            return;
+        }
+
+NextSubtable:
+        Offset += Length;
     }
 }
 
@@ -726,13 +838,12 @@ AcpiDmDumpWpbt (
 {
     ACPI_STATUS             Status;
     ACPI_TABLE_WPBT         *Subtable;
-    UINT32                  Length = Table->Length;
     UINT16                  ArgumentsLength;
 
 
     /* Dump the main table */
 
-    Status = AcpiDmDumpTable (Length, 0, Table, 0, AcpiDmTableInfoWpbt);
+    Status = AcpiDmDumpTable (Table->Length, 0, Table, 0, AcpiDmTableInfoWpbt);
     if (ACPI_FAILURE (Status))
     {
         return;
@@ -743,8 +854,11 @@ AcpiDmDumpWpbt (
     Subtable = ACPI_CAST_PTR (ACPI_TABLE_WPBT, Table);
     ArgumentsLength = Subtable->ArgumentsLength;
 
-    /* Dump the arguments buffer */
+    /* Dump the arguments buffer if present */
 
-    (void) AcpiDmDumpTable (Table->Length, 0, Table, ArgumentsLength,
-        AcpiDmTableInfoWpbt0);
+    if (ArgumentsLength)
+    {
+        (void) AcpiDmDumpTable (Table->Length, 0, Table, ArgumentsLength,
+            AcpiDmTableInfoWpbt0);
+    }
 }
