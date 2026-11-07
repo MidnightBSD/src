@@ -57,10 +57,13 @@ Local changes carried in contrib/wpa on top of upstream:
     * IBSS uses IFM_IEEE80211_ADHOC; get80211opmode() reports
       IEEE80211_M_IBSS.
     * wpa_driver_bsd_capa() always advertises WEP40/WEP104/TKIP/CCMP
-      under __FreeBSD__ because net80211 does software crypto.
+      under __MidnightBSD__ because net80211 does software crypto.
     * bsd_global_init() opens the ioctl socket with PF_LOCAL (FreeBSD
       6aeec6a74197) instead of upstream's PF_INET with a PF_INET6
       fallback.
+    * (MidnightBSD) All four __FreeBSD__ tests in the file, three of
+      them upstream's, use __MidnightBSD__ instead.  Our compilers
+      define both, so this changes no code.
   - src/l2_packet/l2_packet_freebsd.c (FreeBSD): include <net/bpf.h>
     when __FreeBSD_version is defined, and use pcap_next_ex() so a
     vanished device terminates the event loop.
