@@ -51,16 +51,16 @@ decode_decimal(const char *str, unsigned long *v)
         }
         c -= '0';
         if (acc > (ULONG_MAX / 10)) {
-            return NULL;
+            return NULL; /* LCOV_EXCL_LINE */
         }
         acc *= 10;
         if ((unsigned long) c > (ULONG_MAX - acc)) {
-            return NULL;
+            return NULL; /* LCOV_EXCL_LINE */
         }
         acc += (unsigned long) c;
     }
     if (str == orig || (*orig == '0' && str != (orig + 1))) {
-        return NULL;
+        return NULL; /* LCOV_EXCL_LINE */
     }
     *v = acc;
     return str;
@@ -83,7 +83,7 @@ decode_decimal(const char *str, unsigned long *v)
  * output length must be in the allowed ranges defined in argon2.h.
  *
  * The ctx struct must contain buffers large enough to hold the salt and pwd
- * when it is fed into decode_string.
+ * when it is fed into argon2_decode_string.
  */
 
 /*
@@ -91,7 +91,7 @@ decode_decimal(const char *str, unsigned long *v)
  * Returned value is ARGON2_OK on success.
  */
 int
-decode_string(argon2_context *ctx, const char *str, argon2_type type)
+argon2_decode_string(argon2_context *ctx, const char *str, argon2_type type)
 {
 /* Prefix checking */
 #define CC(prefix)                               \
@@ -165,7 +165,7 @@ decode_string(argon2_context *ctx, const char *str, argon2_type type)
     } else if (type == Argon2_i) {
         CC("$argon2i");
     } else {
-        return ARGON2_INCORRECT_TYPE;
+        return ARGON2_INCORRECT_TYPE; /* LCOV_EXCL_LINE */
     }
     CC("$v=");
     DECIMAL_U32(version);
@@ -175,17 +175,17 @@ decode_string(argon2_context *ctx, const char *str, argon2_type type)
     CC("$m=");
     DECIMAL_U32(ctx->m_cost);
     if (ctx->m_cost > UINT32_MAX) {
-        return ARGON2_INCORRECT_TYPE;
+        return ARGON2_INCORRECT_TYPE; /* LCOV_EXCL_LINE */
     }
     CC(",t=");
     DECIMAL_U32(ctx->t_cost);
     if (ctx->t_cost > UINT32_MAX) {
-        return ARGON2_INCORRECT_TYPE;
+        return ARGON2_INCORRECT_TYPE; /* LCOV_EXCL_LINE */
     }
     CC(",p=");
     DECIMAL_U32(ctx->lanes);
     if (ctx->lanes > UINT32_MAX) {
-        return ARGON2_INCORRECT_TYPE;
+        return ARGON2_INCORRECT_TYPE; /* LCOV_EXCL_LINE */
     }
     ctx->threads = ctx->lanes;
 
@@ -193,7 +193,7 @@ decode_string(argon2_context *ctx, const char *str, argon2_type type)
     BIN(ctx->salt, maxsaltlen, ctx->saltlen);
     CC("$");
     BIN(ctx->out, maxoutlen, ctx->outlen);
-    validation_result = validate_inputs(ctx);
+    validation_result = argon2_validate_inputs(ctx);
     if (validation_result != ARGON2_OK) {
         return validation_result;
     }
@@ -238,7 +238,8 @@ u32_to_string(char *str, uint32_t x)
  * On success, ARGON2_OK is returned.
  */
 int
-encode_string(char *dst, size_t dst_len, argon2_context *ctx, argon2_type type)
+argon2_encode_string(char *dst, size_t dst_len, argon2_context *ctx,
+                     argon2_type type)
 {
 #define SS(str)                          \
     do {                                 \
@@ -278,11 +279,11 @@ encode_string(char *dst, size_t dst_len, argon2_context *ctx, argon2_type type)
     case Argon2_i:
         SS("$argon2i$v="); break;
     default:
-        return ARGON2_ENCODING_FAIL;
+        return ARGON2_ENCODING_FAIL; /* LCOV_EXCL_LINE */
     }
-    validation_result = validate_inputs(ctx);
+    validation_result = argon2_validate_inputs(ctx);
     if (validation_result != ARGON2_OK) {
-        return validation_result;
+        return validation_result; /* LCOV_EXCL_LINE */
     }
     SX(ARGON2_VERSION_NUMBER);
     SS("$m=");

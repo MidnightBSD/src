@@ -7,6 +7,7 @@
 #include "crypto_sign_ed25519.h"
 #include "crypto_verify_32.h"
 #include "sign_ed25519_ref10.h"
+#include "private/common.h"
 #include "private/ed25519_ref10.h"
 #include "utils.h"
 
@@ -23,6 +24,7 @@ _crypto_sign_ed25519_verify_detached(const unsigned char *sig,
     ge25519_p3               A;
     ge25519_p2               R;
 
+    ACQUIRE_FENCE;
 #ifdef ED25519_COMPAT
     if (sig[63] & 224) {
         return -1;
@@ -75,14 +77,17 @@ crypto_sign_ed25519_open(unsigned char *m, unsigned long long *mlen_p,
     }
     mlen = smlen - 64;
     if (crypto_sign_ed25519_verify_detached(sm, sm + 64, mlen, pk) != 0) {
-        memset(m, 0, mlen);
+        if (m != NULL) {
+            memset(m, 0, mlen);
+        }
         goto badsig;
     }
     if (mlen_p != NULL) {
         *mlen_p = mlen;
     }
-    memmove(m, sm + 64, mlen);
-
+    if (m != NULL) {
+        memmove(m, sm + 64, mlen);
+    }
     return 0;
 
 badsig:

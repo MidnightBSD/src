@@ -140,8 +140,8 @@ crypto_pwhash_argon2id(unsigned char *const out, unsigned long long outlen,
 {
     memset(out, 0, outlen);
     if (outlen > crypto_pwhash_argon2id_BYTES_MAX) {
-        errno = EFBIG;
-        return -1;
+        errno = EFBIG; /* LCOV_EXCL_LINE */
+        return -1;     /* LCOV_EXCL_LINE */
     }
     if (outlen < crypto_pwhash_argon2id_BYTES_MIN) {
         errno = EINVAL;
@@ -158,6 +158,10 @@ crypto_pwhash_argon2id(unsigned char *const out, unsigned long long outlen,
         memlimit < crypto_pwhash_argon2id_MEMLIMIT_MIN) {
         errno = EINVAL;
         return -1;
+    }
+    if ((const void *) out == (const void *) passwd) {
+        errno = EINVAL; /* LCOV_EXCL_LINE */
+        return -1;      /* LCOV_EXCL_LINE */
     }
     switch (alg) {
     case crypto_pwhash_argon2id_ALG_ARGON2ID13:
@@ -206,15 +210,15 @@ crypto_pwhash_argon2id_str(char out[crypto_pwhash_argon2id_STRBYTES],
 }
 
 int
-crypto_pwhash_argon2id_str_verify(const char str[crypto_pwhash_argon2id_STRBYTES],
-                                  const char *const  passwd,
+crypto_pwhash_argon2id_str_verify(const char * str,
+                                  const char * const passwd,
                                   unsigned long long passwdlen)
 {
     int verify_ret;
 
     if (passwdlen > crypto_pwhash_argon2id_PASSWD_MAX) {
-        errno = EFBIG;
-        return -1;
+        errno = EFBIG; /* LCOV_EXCL_LINE */
+        return -1;     /* LCOV_EXCL_LINE */
     }
     /* LCOV_EXCL_START */
     if (passwdlen < crypto_pwhash_argon2id_PASSWD_MIN) {

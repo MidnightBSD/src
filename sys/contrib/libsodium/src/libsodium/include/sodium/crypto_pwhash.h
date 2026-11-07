@@ -105,7 +105,7 @@ int crypto_pwhash(unsigned char * const out, unsigned long long outlen,
                   const char * const passwd, unsigned long long passwdlen,
                   const unsigned char * const salt,
                   unsigned long long opslimit, size_t memlimit, int alg)
-            __attribute__ ((warn_unused_result));
+            __attribute__ ((warn_unused_result)) __attribute__ ((nonnull));
 
 /*
  * The output string already includes all the required parameters, including
@@ -116,26 +116,26 @@ SODIUM_EXPORT
 int crypto_pwhash_str(char out[crypto_pwhash_STRBYTES],
                       const char * const passwd, unsigned long long passwdlen,
                       unsigned long long opslimit, size_t memlimit)
-            __attribute__ ((warn_unused_result));
+            __attribute__ ((warn_unused_result)) __attribute__ ((nonnull));
 
 SODIUM_EXPORT
 int crypto_pwhash_str_alg(char out[crypto_pwhash_STRBYTES],
                           const char * const passwd, unsigned long long passwdlen,
                           unsigned long long opslimit, size_t memlimit, int alg)
-            __attribute__ ((warn_unused_result));
+            __attribute__ ((warn_unused_result)) __attribute__ ((nonnull));
 
 SODIUM_EXPORT
-int crypto_pwhash_str_verify(const char str[crypto_pwhash_STRBYTES],
+int crypto_pwhash_str_verify(const char *str,
                              const char * const passwd,
                              unsigned long long passwdlen)
-            __attribute__ ((warn_unused_result));
+            __attribute__ ((warn_unused_result)) __attribute__ ((nonnull));
 
 SODIUM_EXPORT
-int crypto_pwhash_str_needs_rehash(const char str[crypto_pwhash_STRBYTES],
+int crypto_pwhash_str_needs_rehash(const char *str,
                                    unsigned long long opslimit, size_t memlimit)
-            __attribute__ ((warn_unused_result));
+            __attribute__ ((warn_unused_result)) __attribute__ ((nonnull));
 
-#define crypto_pwhash_PRIMITIVE "argon2i"
+#define crypto_pwhash_PRIMITIVE "argon2id,argon2i"
 SODIUM_EXPORT
 const char *crypto_pwhash_primitive(void)
             __attribute__ ((warn_unused_result));

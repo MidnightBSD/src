@@ -23,20 +23,6 @@
 #include "crypto_generichash_blake2b.h"
 #include "export.h"
 
-#define blake2b_init_param crypto_generichash_blake2b__init_param
-#define blake2b_init crypto_generichash_blake2b__init
-#define blake2b_init_salt_personal \
-    crypto_generichash_blake2b__init_salt_personal
-#define blake2b_init_key crypto_generichash_blake2b__init_key
-#define blake2b_init_key_salt_personal \
-    crypto_generichash_blake2b__init_key_salt_personal
-#define blake2b_update crypto_generichash_blake2b__update
-#define blake2b_final crypto_generichash_blake2b__final
-#define blake2b crypto_generichash_blake2b__blake2b
-#define blake2b_salt_personal crypto_generichash_blake2b__blake2b_salt_personal
-#define blake2b_pick_best_implementation \
-    crypto_generichash_blake2b__pick_best_implementation
-
 enum blake2b_constant {
     BLAKE2B_BLOCKBYTES    = 128,
     BLAKE2B_OUTBYTES      = 64,
@@ -45,10 +31,12 @@ enum blake2b_constant {
     BLAKE2B_PERSONALBYTES = 16
 };
 
-#if defined(__IBMC__) || defined(__SUNPRO_C) || defined(__SUNPRO_CC)
-#pragma pack(1)
+#ifdef __IBMC__
+# pragma pack(1)
+#elif defined(__SUNPRO_C) || defined(__SUNPRO_CC)
+# pragma pack(1)
 #else
-#pragma pack(push, 1)
+# pragma pack(push, 1)
 #endif
 
 typedef struct blake2b_param_ {
@@ -65,12 +53,21 @@ typedef struct blake2b_param_ {
     uint8_t personal[BLAKE2B_PERSONALBYTES]; /* 64 */
 } blake2b_param;
 
-typedef crypto_generichash_blake2b_state blake2b_state;
+typedef struct blake2b_state {
+    uint64_t h[8];
+    uint64_t t[2];
+    uint64_t f[2];
+    uint8_t  buf[2 * 128];
+    size_t   buflen;
+    uint8_t  last_node;
+} blake2b_state;
 
-#if defined(__IBMC__) || defined(__SUNPRO_C) || defined(__SUNPRO_CC)
-#pragma pack()
+#ifdef __IBMC__
+# pragma pack(pop)
+#elif defined(__SUNPRO_C) || defined(__SUNPRO_CC)
+# pragma pack()
 #else
-#pragma pack(pop)
+# pragma pack(pop)
 #endif
 
 /* Streaming API */
