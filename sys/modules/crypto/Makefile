@@ -12,8 +12,8 @@ LIBSODIUM=${SRCTOP}/sys/contrib/libsodium/src/libsodium
 .PATH:	${SRCTOP}/sys/crypto/blake2
 .PATH:	${SRCTOP}/sys/crypto/chacha20
 .PATH:	${SRCTOP}/sys/contrib/libb2
-.PATH:	${LIBSODIUM}/crypto_aead/chacha20poly1305/sodium
-.PATH:	${LIBSODIUM}/crypto_aead/xchacha20poly1305/sodium
+.PATH:	${LIBSODIUM}/crypto_aead/chacha20poly1305
+.PATH:	${LIBSODIUM}/crypto_aead/xchacha20poly1305
 .PATH:	${LIBSODIUM}/crypto_core/ed25519/ref10
 .PATH:	${LIBSODIUM}/crypto_core/hchacha20
 .PATH:	${LIBSODIUM}/crypto_onetimeauth/poly1305
@@ -22,7 +22,7 @@ LIBSODIUM=${SRCTOP}/sys/contrib/libsodium/src/libsodium
 .PATH:	${LIBSODIUM}/crypto_scalarmult/curve25519/ref10
 .PATH:	${LIBSODIUM}/crypto_stream/chacha20
 .PATH:	${LIBSODIUM}/crypto_stream/chacha20/ref
-.PATH:	${LIBSODIUM}/crypto_verify/sodium
+.PATH:	${LIBSODIUM}/crypto_verify
 .PATH:	${SRCTOP}/sys/crypto/libsodium
 
 KMOD	= crypto
@@ -69,29 +69,29 @@ CFLAGS.xform_chacha20_poly1305.c+= -I${LIBSODIUM_INC} -I${LIBSODIUM_COMPAT}
 SRCS	+= xform_poly1305.c
 CFLAGS.xform_poly1305.c		+= -I${LIBSODIUM_INC} -I${LIBSODIUM_COMPAT}
 SRCS	+= aead_chacha20poly1305.c
-CFLAGS.aead_chacha20poly1305.c	+= -I${LIBSODIUM_INC}/sodium -I${LIBSODIUM_COMPAT}
+CFLAGS.aead_chacha20poly1305.c	+= -I${LIBSODIUM_INC}/sodium -I${LIBSODIUM_COMPAT} -DCONFIGURED=1
 SRCS	+= aead_xchacha20poly1305.c
-CFLAGS.aead_xchacha20poly1305.c	+= -I${LIBSODIUM_INC}/sodium -I${LIBSODIUM_COMPAT}
+CFLAGS.aead_xchacha20poly1305.c	+= -I${LIBSODIUM_INC}/sodium -I${LIBSODIUM_COMPAT} -DCONFIGURED=1
 SRCS	+= ed25519_ref10.c
-CFLAGS.ed25519_ref10.c		+= -I${LIBSODIUM_INC}/sodium -I${LIBSODIUM_COMPAT}
+CFLAGS.ed25519_ref10.c		+= -I${LIBSODIUM_INC}/sodium -I${LIBSODIUM_COMPAT} -DCONFIGURED=1
 CWARNFLAGS.ed25519_ref10.c	+= -Wno-unused-function
 SRCS	+= core_hchacha20.c
-CFLAGS.core_hchacha20.c		+= -I${LIBSODIUM_INC}/sodium -I${LIBSODIUM_COMPAT}
+CFLAGS.core_hchacha20.c		+= -I${LIBSODIUM_INC}/sodium -I${LIBSODIUM_COMPAT} -DCONFIGURED=1
 SRCS	+= onetimeauth_poly1305.c
-CFLAGS.onetimeauth_poly1305.c	+= -I${LIBSODIUM_INC}/sodium -I${LIBSODIUM_COMPAT}
+CFLAGS.onetimeauth_poly1305.c	+= -I${LIBSODIUM_INC}/sodium -I${LIBSODIUM_COMPAT} -DCONFIGURED=1
 SRCS	+= poly1305_donna.c
-CFLAGS.poly1305_donna.c		+= -I${LIBSODIUM_INC}/sodium -I${LIBSODIUM_COMPAT}
+CFLAGS.poly1305_donna.c		+= -I${LIBSODIUM_INC}/sodium -I${LIBSODIUM_COMPAT} -DCONFIGURED=1
 SRCS	+= stream_chacha20.c
-CFLAGS.stream_chacha20.c	+= -I${LIBSODIUM_INC}/sodium -I${LIBSODIUM_COMPAT}
+CFLAGS.stream_chacha20.c	+= -I${LIBSODIUM_INC}/sodium -I${LIBSODIUM_COMPAT} -DCONFIGURED=1
 SRCS	+= chacha20_ref.c
-CFLAGS.chacha20_ref.c		+= -I${LIBSODIUM_INC}/sodium -I${LIBSODIUM_COMPAT}
+CFLAGS.chacha20_ref.c		+= -I${LIBSODIUM_INC}/sodium -I${LIBSODIUM_COMPAT} -DCONFIGURED=1
 SRCS	+= scalarmult_curve25519.c
-CFLAGS.scalarmult_curve25519.c	+= -I${LIBSODIUM_INC}/sodium -I${LIBSODIUM_COMPAT}
+CFLAGS.scalarmult_curve25519.c	+= -I${LIBSODIUM_INC}/sodium -I${LIBSODIUM_COMPAT} -DCONFIGURED=1
 SRCS	+= x25519_ref10.c
-CFLAGS.x25519_ref10.c		+= -I${LIBSODIUM_INC}/sodium -I${LIBSODIUM_COMPAT}
+CFLAGS.x25519_ref10.c		+= -I${LIBSODIUM_INC}/sodium -I${LIBSODIUM_COMPAT} -DCONFIGURED=1
 CWARNFLAGS.x25519_ref10.c	+= -Wno-unused-function
 SRCS	+= verify.c
-CFLAGS.verify.c			+= -I${LIBSODIUM_INC}/sodium -I${LIBSODIUM_COMPAT}
+CFLAGS.verify.c			+= -I${LIBSODIUM_INC}/sodium -I${LIBSODIUM_COMPAT} -DCONFIGURED=1
 SRCS	+= randombytes.c
 CFLAGS.randombytes.c		+= -I${LIBSODIUM_INC} -I${LIBSODIUM_COMPAT}
 SRCS	+= utils.c

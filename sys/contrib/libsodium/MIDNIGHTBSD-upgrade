@@ -1,0 +1,58 @@
+Upgrade procedure for libsodium
+
+Source: https://download.libsodium.org/libsodium/releases/libsodium-VERSION.tar.gz
+	Check libsodium-VERSION.tar.gz.minisig with minisign and Frank
+	Denis's key RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3
+	(published on https://doc.libsodium.org/installation and in the
+	minisign README).  Releases that are no longer supported move to
+	releases/old/ and later releases/old/unsupported/.
+
+The vendor branch (vendor/libsodium) carries the complete release
+tarball.  Pruning happens only in sys/contrib/libsodium; see
+MIDNIGHTBSD-Xlist (autotools output only).
+
+History: sys/contrib/libsodium came from FreeBSD, which imported
+upstream git commit 461ac93b260b (1.0.16-97-g461ac93b, August 2018)
+rather than a release.  The vendor branch therefore has, after the
+initial snapshot commit 3a5064fed8, a commit with that exact upstream
+tree ("Vendor import of libsodium 1.0.16-97-g461ac93b") and then the
+1.0.22 release tarball.
+
+sys/contrib/libsodium is used only by the kernel: sys/conf/files and
+sys/modules/crypto build a small set of C files from it (ChaCha20,
+XChaCha20/HChaCha20, Poly1305 (donna), the ChaCha20-Poly1305 AEADs,
+X25519 (ref10), ed25519_ref10 field arithmetic and crypto_verify).
+The consumers are sys/crypto/chacha20_poly1305.c,
+sys/crypto/curve25519.c (both used by wg(4)),
+sys/opencrypto/xform_chacha20_poly1305.c and
+sys/opencrypto/xform_poly1305.c.  The kernel glue in
+sys/crypto/libsodium provides stub libc headers, randombytes_buf()
+(arc4random_buf) and sodium_memzero()/sodium_is_zero().  No assembly
+from libsodium is built, and none of the configure HAVE_* macros is
+defined, so only the portable reference code is compiled.
+
+To upgrade to a new version:
+
+1. Download and verify the tarball and extract it into a new directory.
+2. Use the vendor-update skill (vendor/libsodium, sys/contrib/libsodium,
+   tag vendor/libsodium/VERSION).  Stage with "git add -A -f" and check
+   that the committed tree is identical to the tarball.
+3. Merge.  Remove everything MIDNIGHTBSD-Xlist matches and extend the
+   Xlist if needed.  Re-check the local patches listed below.
+4. Check whether any file listed in sys/conf/files or
+   sys/modules/crypto/Makefile moved, and whether the compiled files
+   need new symbols (compare "nm -u" of crypto.ko before and after)
+   or new headers in sys/crypto/libsodium.
+5. Build the kernel and sys/modules/crypto, and build and run the
+   upstream tests for the primitives above in userland (compile
+   test/default/<name>.c against the new sources without the HAVE_*
+   macros and compare with <name>.exp).
+
+Local patches applied on top of upstream (from FreeBSD bbb7a2c7c329):
+
+  - src/libsodium/include/sodium/core.h: the sodium_misuse()
+    prototype is wrapped in "#ifndef _KERNEL".
+  - src/libsodium/include/sodium/export.h, before the final #endif:
+    under _KERNEL, include <sys/param.h> and <sys/libkern.h> and
+    define sodium_misuse() as a static inline function that calls
+    panic("bad value passed to sodium").
