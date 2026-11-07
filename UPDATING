@@ -43,6 +43,10 @@ Updating Information for MidnightBSD users.
 	zstd 1.5.7: CVE-2022-4899 (buffer overrun in zstd(1) with an empty
 	--output-dir-flat or --output-dir-mirror argument).
 
+	tnftp 20260211: ftp(1) now rejects PASV and LPSV replies that name
+	an address other than the server's, and exits non-zero when an
+	HTTP transfer is shorter than expected.
+
 20261105:
 	OpenSSH 10.6p2: fixes an sshd(8) password authentication bypass
 	reported against Linux builds without PAM, and accepts the
