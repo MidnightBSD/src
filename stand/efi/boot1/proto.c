@@ -297,13 +297,13 @@ choice_protocol(EFI_HANDLE *handles, UINTN nhandles, EFI_DEVICE_PATH *imgpath)
 	}
 
 	/*
-	 * Try partitions on the disk we were loaded from first, then the
-	 * others. In each group, FreeBSD partitions are tried last.
+	 * Try non-FreeBSD partitions on all disks before any FreeBSD
+	 * partition. In each group, the disk we were loaded from goes first.
 	 */
 	status = EFI_NOT_FOUND;
 	for (pass = 0; pass < 4 && status != EFI_SUCCESS; pass++)
 		status = load_loader(&mod, &dev, &loaderbuf, &loadersize,
-		    pass < 2, pass % 2);
+		    pass % 2 == 0, pass / 2);
 	if (status != EFI_SUCCESS) {
 		printf("Failed to load '%s'\n", PATH_LOADER_EFI);
 		return;
