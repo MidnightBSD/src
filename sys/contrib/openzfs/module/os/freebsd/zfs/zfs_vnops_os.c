@@ -1601,7 +1601,7 @@ zfs_readdir(vnode_t *vp, zfs_uio_t *uio, cred_t *cr, int *eofp,
 	/*
 	 * Quit if directory has been removed (posix)
 	 */
-	if ((*eofp = zp->z_unlinked) != 0) {
+	if ((*eofp = (zp->z_unlinked != 0)) != 0) {
 		zfs_exit(zfsvfs, FTAG);
 		return (0);
 	}
@@ -6116,7 +6116,9 @@ zfs_freebsd_copy_file_range(struct vop_copy_file_range_args *ap)
 	    error == EOPNOTSUPP)
 		goto bad_locked_fallback;
 	*ap->a_lenp = (size_t)len;
+#ifdef MAC
 out_locked:
+#endif
 	if (invp != outvp)
 		VOP_UNLOCK(invp);
 	VOP_UNLOCK(outvp);
