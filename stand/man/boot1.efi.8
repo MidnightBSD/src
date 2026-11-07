@@ -75,14 +75,19 @@ device over all other choices.
 It will fall back to partitions on other devices if none are found.
 .El
 .Pp
-Selection is based on the contents of the file system, not on the GPT
-partition type, so
-.Nm
-does not distinguish between
+On GPT disks,
+.Cm freebsd-ufs
+and
+.Cm freebsd-zfs
+partitions are tried after the other partitions, so
 .Cm mnbsd-ufs
 and
-.Cm freebsd-ufs
-partitions.
+.Cm mnbsd-zfs
+partitions are preferred.
+This applies first among the partitions on the boot device, then among
+those on all other devices.
+Partitions whose type cannot be determined, such as those on MBR
+disks, are tried in the usual order.
 .Pp
 A partition is considered bootable if it can load
 .Pa /boot/loader.efi
