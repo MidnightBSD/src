@@ -3,6 +3,22 @@ Updating Information for MidnightBSD users.
 20261107:
 	device-tree files updated to Linux 5.10 (arm, arm64 and riscv kernels only)
 
+	OpenZFS 2.2.11.  The boot loader now reads the new pool features
+	org.openzfs:blake3 and com.klarasystems:vdev_zaps_v2.  Install the
+	new world and kernel, then update the boot blocks (gptzfsboot via
+	"gpart bootcode" and loader.efi on the EFI system partition) BEFORE
+	running "zpool upgrade" on a boot pool.  vdev_zaps_v2 becomes active
+	on the next import after an upgrade, and older loaders cannot boot
+	such a pool.  Once upgraded, a pool can no longer be imported by
+	MidnightBSD 4.1 or earlier.  Use "zpool create -o
+	compatibility=midnightbsd-4.1" for pools that must stay readable
+	there.  Block cloning stays disabled (vfs.zfs.bclone_enabled=0).
+
+	The OpenZFS shared libraries were bumped (libzfs.so.5,
+	libzfsbootenv.so.2, libicp.so.4, libnvpair.so.3 and others).
+	Rebuild ports that link against them before running
+	"make delete-old-libs".  librt moved from /usr/lib to /lib.
+
 20261106:
 	unbound 1.26.2: CVE-2026-14586 CVE-2026-32665 CVE-2026-35501
 	CVE-2026-40691 CVE-2026-41637 CVE-2026-42955 CVE-2026-44621
