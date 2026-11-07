@@ -52,6 +52,9 @@ LINKS= \
 	${FILESDIR}/freebsd-11.3	${FILESDIR}/midnightbsd-3.0 \
 	${FILESDIR}/freebsd-11.3	${FILESDIR}/midnightbsd-3.1 \
 	${FILESDIR}/freebsd-11.3	${FILESDIR}/midnightbsd-3.2 \
+	${FILESDIR}/openzfs-2.1-freebsd	${FILESDIR}/midnightbsd-4.0 \
+	${FILESDIR}/openzfs-2.1-freebsd	${FILESDIR}/midnightbsd-4.1 \
+	${FILESDIR}/openzfs-2.2		${FILESDIR}/midnightbsd-4.2 \
 	${FILESDIR}/grub2-2.12		${FILESDIR}/grub2 \
 	${FILESDIR}/openzfsonosx-1.9.3	${FILESDIR}/openzfsonosx-1.9.4 \
 	${FILESDIR}/openzfs-2.0-freebsd	${FILESDIR}/truenas-12.0 \
