@@ -3,13 +3,21 @@
 #include <sys/types.h>
 
 #include <limits.h>
-#include <signal.h>
+#ifdef HAVE_CATCHABLE_SEGV
+# include <signal.h>
+#endif
+#ifndef _WIN32
+# include <unistd.h>
+#endif
 
 #define TEST_NAME "sodium_utils3"
 #include "cmptest.h"
 
 #ifdef __SANITIZE_ADDRESS__
 # warning The sodium_utils3 test is expected to fail with address sanitizer
+#endif
+#ifdef __SANITIZE_THREAD__
+# warning The sodium_utils3 test is expected to fail with thread sanitizer
 #endif
 
 __attribute__((noreturn)) static void
@@ -19,16 +27,21 @@ segv_handler(int sig)
 
     printf("Intentional segfault / bus error caught\n");
     printf("OK\n");
-#ifdef SIGSEGV
+#ifdef SIG_DFL
+# ifdef SIGPROT
+    signal(SIGPROT, SIG_DFL);
+# endif
+# ifdef SIGSEGV
     signal(SIGSEGV, SIG_DFL);
-#endif
-#ifdef SIGBUS
+# endif
+# ifdef SIGBUS
     signal(SIGBUS, SIG_DFL);
-#endif
-#ifdef SIGABRT
+# endif
+# ifdef SIGABRT
     signal(SIGABRT, SIG_DFL);
+# endif
 #endif
-    exit(0);
+    _exit(0);
 }
 
 int
@@ -37,14 +50,23 @@ main(void)
     void * buf;
     size_t size;
 
-#ifdef SIGSEGV
+#ifdef BENCHMARKS
+    return 0;
+#endif
+
+#ifdef SIG_DFL
+# ifdef SIGPROT
+    signal(SIGPROT, segv_handler);
+# endif
+# ifdef SIGSEGV
     signal(SIGSEGV, segv_handler);
-#endif
-#ifdef SIGBUS
+# endif
+# ifdef SIGBUS
     signal(SIGBUS, segv_handler);
-#endif
-#ifdef SIGABRT
+# endif
+# ifdef SIGABRT
     signal(SIGABRT, segv_handler);
+# endif
 #endif
     size = 1U + randombytes_uniform(100000U);
     buf  = sodium_malloc(size);
@@ -56,7 +78,7 @@ main(void)
     sodium_mprotect_readwrite(buf);
 #endif
 
-#if defined(HAVE_CATCHABLE_SEGV) && !defined(__EMSCRIPTEN__) && !defined(__SANITIZE_ADDRESS__)
+#if defined(HAVE_CATCHABLE_SEGV) && !defined(__EMSCRIPTEN__) && !defined(__SANITIZE_ADDRESS__) && !defined(__SANITIZE_THREAD__)
     sodium_memzero(((unsigned char *) buf) - 8, 8U);
     sodium_mprotect_readonly(buf);
     sodium_free(buf);

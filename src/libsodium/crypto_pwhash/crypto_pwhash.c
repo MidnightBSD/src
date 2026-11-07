@@ -166,12 +166,13 @@ crypto_pwhash_str_alg(char out[crypto_pwhash_STRBYTES],
         return crypto_pwhash_argon2id_str(out, passwd, passwdlen,
                                           opslimit, memlimit);
     }
-    sodium_misuse();
+    sodium_misuse(); /* LCOV_EXCL_LINE */
     /* NOTREACHED */
+    return -1; /* LCOV_EXCL_LINE */
 }
 
 int
-crypto_pwhash_str_verify(const char str[crypto_pwhash_STRBYTES],
+crypto_pwhash_str_verify(const char * str,
                          const char * const passwd,
                          unsigned long long passwdlen)
 {
@@ -189,7 +190,7 @@ crypto_pwhash_str_verify(const char str[crypto_pwhash_STRBYTES],
 }
 
 int
-crypto_pwhash_str_needs_rehash(const char str[crypto_pwhash_STRBYTES],
+crypto_pwhash_str_needs_rehash(const char * str,
                                unsigned long long opslimit, size_t memlimit)
 {
     if (strncmp(str, crypto_pwhash_argon2id_STRPREFIX,

@@ -6,16 +6,18 @@
 #include "crypto_verify_16.h"
 #include "poly1305_sse2.h"
 #include "private/common.h"
-#include "private/sse2_64_32.h"
 #include "utils.h"
 
 #if defined(HAVE_TI_MODE) && defined(HAVE_EMMINTRIN_H)
 
-# ifdef __GNUC__
+# ifdef __clang__
+#  pragma clang attribute push(__attribute__((target("sse2"))), apply_to = function)
+# elif defined(__GNUC__)
 #  pragma GCC target("sse2")
 # endif
 
 # include <emmintrin.h>
+# include "private/sse2_64_32.h"
 
 typedef __m128i xmmi;
 
@@ -41,14 +43,14 @@ typedef struct poly1305_state_internal_t {
     union {
         uint64_t h[3];
         uint32_t hh[10];
-    } H;                                            /*  40 bytes  */
-    uint32_t           R[5];                        /*  20 bytes  */
-    uint32_t           R2[5];                       /*  20 bytes  */
-    uint32_t           R4[5];                       /*  20 bytes  */
-    uint64_t           pad[2];                      /*  16 bytes  */
-    uint64_t           flags;                       /*   8 bytes  */
-    unsigned long long leftover;                    /* 8 bytes */
-    unsigned char      buffer[poly1305_block_size]; /* 32 bytes */
+    } H;                                            /*  40 bytes */
+    uint32_t           R[5];                        /*  20 bytes */
+    uint32_t           R2[5];                       /*  20 bytes */
+    uint32_t           R4[5];                       /*  20 bytes */
+    uint64_t           pad[2];                      /*  16 bytes */
+    uint64_t           flags;                       /*   8 bytes */
+    unsigned long long leftover;                    /*   8 bytes */
+    unsigned char      buffer[poly1305_block_size]; /*  32 bytes */
 } poly1305_state_internal_t;                        /* 164 bytes total */
 
 /*
@@ -191,6 +193,8 @@ poly1305_init_ext(poly1305_state_internal_t *st, const unsigned char key[32],
     st->flags    = 0;
     st->leftover = 0U;
 }
+
+static volatile uint64_t optblocker_u64;
 
 static POLY1305_NOINLINE void
 poly1305_blocks(poly1305_state_internal_t *st, const unsigned char *m,
@@ -743,7 +747,7 @@ poly1305_blocks(poly1305_state_internal_t *st, const unsigned char *m,
         g1 &= 0xfffffffffff;
         g2 = h2 + c - ((uint64_t) 1 << 42);
 
-        c  = (g2 >> 63) - 1;
+        c  = (((g2 >> 61) ^ optblocker_u64) >> 2) - 1;
         nc = ~c;
         h0 = (h0 & nc) | (g0 & c);
         h1 = (h1 & nc) | (g1 & c);
@@ -945,5 +949,9 @@ struct crypto_onetimeauth_poly1305_implementation
             crypto_onetimeauth_poly1305_sse2_update,
         SODIUM_C99(.onetimeauth_final =) crypto_onetimeauth_poly1305_sse2_final
     };
+
+#ifdef __clang__
+# pragma clang attribute pop
+#endif
 
 #endif
