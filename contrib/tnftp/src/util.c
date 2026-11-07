@@ -1,8 +1,8 @@
-/*	$NetBSD: util.c,v 1.23 2013/05/05 11:51:43 lukem Exp $	*/
-/*	from	NetBSD: util.c,v 1.158 2013/02/19 23:29:15 dsl Exp	*/
+/*	$NetBSD: util.c,v 1.28 2026/02/08 07:11:12 lukem Exp $	*/
+/*	from	NetBSD: util.c,v 1.171 2026/02/07 03:11:20 lukem Exp	*/
 
 /*-
- * Copyright (c) 1997-2009 The NetBSD Foundation, Inc.
+ * Copyright (c) 1997-2026 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
  * This code is derived from software contributed to The NetBSD Foundation
@@ -69,7 +69,7 @@
 
 #include <sys/cdefs.h>
 #ifndef lint
-__RCSID(" NetBSD: util.c,v 1.158 2013/02/19 23:29:15 dsl Exp  ");
+__RCSID(" NetBSD: util.c,v 1.171 2026/02/07 03:11:20 lukem Exp  ");
 #endif /* not lint */
 
 /*
@@ -178,7 +178,7 @@ parse_feat(const char *fline)
 			 * work-around broken ProFTPd servers that can't
 			 * even obey RFC 2389.
 			 */
-	while (*fline && isspace((int)*fline))
+	while (*fline && isspace((unsigned char)*fline))
 		fline++;
 
 	if (strcasecmp(fline, "MDTM") == 0)
@@ -209,14 +209,14 @@ getremoteinfo(void)
 			/* determine remote system type */
 	if (command("SYST") == COMPLETE) {
 		if (overbose) {
-			int os_len = strcspn(reply_string + 4, " \r\n\t");
+			off_t os_len = strcspn(reply_string + 4, " \r\n\t");
 			if (os_len > 1 && reply_string[4 + os_len - 1] == '.')
 				os_len--;
 			fprintf(ttyout, "Remote system type is %.*s.\n",
-			    os_len, reply_string + 4);
+			    (int)os_len, reply_string + 4);
 		}
 		/*
-		 * Decide whether we should default to bninary.
+		 * Decide whether we should default to binary.
 		 * Traditionally checked for "215 UNIX Type: L8", but
 		 * some printers report "Linux" ! so be more forgiving.
 		 * In reality we probably almost never want text any more.
@@ -318,7 +318,7 @@ cleanuppeer(void)
  * Top-level signal handler for interrupted commands.
  */
 void
-intr(int signo)
+intr(int signo __unused)
 {
 
 	sigint_raised = 1;
@@ -331,9 +331,10 @@ intr(int signo)
 /*
  * Signal handler for lost connections; cleanup various elements of
  * the connection state, and call cleanuppeer() to finish it off.
+ * This function is not signal safe, so exit if called by a signal.
  */
 void
-lostpeer(int dummy)
+lostpeer(int signo)
 {
 	int oerrno = errno;
 
@@ -363,6 +364,9 @@ lostpeer(int dummy)
 	proxflag = 0;
 	pswitch(0);
 	cleanuppeer();
+	if (signo) {
+		errx(1, "lostpeer due to signal %d", signo);
+	}
 	errno = oerrno;
 }
 
@@ -485,7 +489,8 @@ ftp_login(const char *host, const char *luser, const char *lpass)
 		}
 	}
 	updatelocalcwd();
-	updateremotecwd();
+	remotecwd[0] = '\0';
+	remcwdvalid = 0;
 
  cleanup_ftp_login:
 	FREEPTR(fuser);
@@ -622,7 +627,7 @@ remglob(char *argv[], int doswitch, const char **errbuf)
  * return value. Can't control multiple values being expanded from the
  * expression, we return only the first.
  * Returns NULL on error, or a pointer to a buffer containing the filename
- * that's the caller's responsiblity to free(3) when finished with.
+ * that's the caller's responsibility to free(3) when finished with.
  */
 char *
 globulize(const char *pattern)
@@ -733,7 +738,7 @@ remotemodtime(const char *file, int noisy)
 			*frac++ = '\0';
 		if (strlen(timestr) == 15 && strncmp(timestr, "191", 3) == 0) {
 			/*
-			 * XXX:	Workaround for lame ftpd's that return
+			 * XXX:	Workaround for buggy ftp servers that return
 			 *	`19100' instead of `2000'
 			 */
 			fprintf(ttyout,
@@ -803,7 +808,7 @@ const char *
 parse_rfc2616time(struct tm *parsed, const char *httpdate)
 {
 	const char *t;
-#if 0
+#if defined(HAVE_SETLOCALE)
 	const char *curlocale;
 
 	/* The representation of %a depends on the current locale. */
@@ -818,7 +823,7 @@ parse_rfc2616time(struct tm *parsed, const char *httpdate)
 	    (t = strptime(httpdate, "%a, %b %d %H:%M:%S %Y", parsed))) {
 		;			/* do nothing */
 	}
-#if 0
+#if defined(HAVE_SETLOCALE)
 	(void)setlocale(LC_TIME, curlocale);
 #endif
 	return t;
@@ -846,6 +851,7 @@ updateremotecwd(void)
 	size_t	 i;
 	char	*cp;
 
+	remcwdvalid = 1;	/* whether it works or not, we are done */
 	overbose = verbose;
 	ocode = code;
 	if (ftp_debug == 0)
@@ -954,7 +960,7 @@ list_vertical(StringList *sl)
  * Update the global ttywidth value, using TIOCGWINSZ.
  */
 void
-setttywidth(int a)
+setttywidth(int a __unused)
 {
 	struct winsize winsize;
 	int oerrno = errno;
@@ -1077,7 +1083,7 @@ strsuftoi(const char *arg)
 	if (val < 0 || val > INT_MAX)
 		return (-1);
 
-	return (val);
+	return (int)(val);
 }
 
 /*
@@ -1086,40 +1092,18 @@ strsuftoi(const char *arg)
 void
 setupsockbufsize(int sock)
 {
-	socklen_t slen;
 
-	if (0 == rcvbuf_size) {
-		slen = sizeof(rcvbuf_size);
-		if (getsockopt(sock, SOL_SOCKET, SO_RCVBUF,
-		    (void *)&rcvbuf_size, &slen) == -1)
-			err(1, "Unable to determine rcvbuf size");
-		if (rcvbuf_size <= 0)
-			rcvbuf_size = 8 * 1024;
-		if (rcvbuf_size > 8 * 1024 * 1024)
-			rcvbuf_size = 8 * 1024 * 1024;
-		DPRINTF("setupsockbufsize: rcvbuf_size determined as %d\n",
-		    rcvbuf_size);
-	}
-	if (0 == sndbuf_size) {
-		slen = sizeof(sndbuf_size);
-		if (getsockopt(sock, SOL_SOCKET, SO_SNDBUF,
-		    (void *)&sndbuf_size, &slen) == -1)
-			err(1, "Unable to determine sndbuf size");
-		if (sndbuf_size <= 0)
-			sndbuf_size = 8 * 1024;
-		if (sndbuf_size > 8 * 1024 * 1024)
-			sndbuf_size = 8 * 1024 * 1024;
-		DPRINTF("setupsockbufsize: sndbuf_size determined as %d\n",
-		    sndbuf_size);
+	if (sndbuf_size > 0) {
+		if (setsockopt(sock, SOL_SOCKET, SO_SNDBUF,
+		    (void *)&sndbuf_size, sizeof(sndbuf_size)) == -1)
+			warn("Unable to set sndbuf size %d", sndbuf_size);
 	}
 
-	if (setsockopt(sock, SOL_SOCKET, SO_SNDBUF,
-	    (void *)&sndbuf_size, sizeof(sndbuf_size)) == -1)
-		warn("Unable to set sndbuf size %d", sndbuf_size);
-
-	if (setsockopt(sock, SOL_SOCKET, SO_RCVBUF,
-	    (void *)&rcvbuf_size, sizeof(rcvbuf_size)) == -1)
-		warn("Unable to set rcvbuf size %d", rcvbuf_size);
+	if (rcvbuf_size > 0) {
+		if (setsockopt(sock, SOL_SOCKET, SO_RCVBUF,
+		    (void *)&rcvbuf_size, sizeof(rcvbuf_size)) == -1)
+			warn("Unable to set rcvbuf size %d", rcvbuf_size);
+	}
 }
 
 /*
@@ -1185,6 +1169,8 @@ formatbuf(char *buf, size_t len, const char *src)
 		case '/':
 		case '.':
 		case 'c':
+			if (connected && !remcwdvalid)
+				updateremotecwd();
 			p2 = connected ? remotecwd : "";
 			updirs = pdirs = 0;
 
@@ -1310,6 +1296,10 @@ isipv6addr(const char *addr)
  *	-1	error occurred
  *	-2	EOF encountered
  *	-3	line was too long
+ *
+ * TODO: handle EINTR? fgets() might fail with EINTR and not handle partial
+ * line reads. However, this function is either used with stdin or local
+ * files, so not fixing at this time.
  */
 int
 get_line(FILE *stream, char *buf, size_t buflen, const char **errormsg)
@@ -1317,7 +1307,7 @@ get_line(FILE *stream, char *buf, size_t buflen, const char **errormsg)
 	int	rv, ch;
 	size_t	len;
 
-	if (fgets(buf, buflen, stream) == NULL) {
+	if (fgets(buf, (int)buflen, stream) == NULL) {
 		if (feof(stream)) {	/* EOF */
 			rv = -2;
 			if (errormsg)
@@ -1343,7 +1333,7 @@ get_line(FILE *stream, char *buf, size_t buflen, const char **errormsg)
 	}
 	if (errormsg)
 		*errormsg = NULL;
-	return len;
+	return (int)len;
 }
 
 /*
@@ -1434,7 +1424,8 @@ ftp_connect(int sock, const struct sockaddr *name, socklen_t namelen, int pe)
 			if (quit_time > 0) {	/* determine timeout */
 				(void)gettimeofday(&now, NULL);
 				timersub(&endtime, &now, &td);
-				timeout = td.tv_sec * 1000 + td.tv_usec/1000;
+				timeout = (int)(td.tv_sec * 1000
+				    + td.tv_usec / 1000);
 				if (timeout < 0)
 					timeout = 0;
 			} else {
@@ -1442,8 +1433,8 @@ ftp_connect(int sock, const struct sockaddr *name, socklen_t namelen, int pe)
 			}
 			pfd[0].revents = 0;
 			rv = ftp_poll(pfd, 1, timeout);
-						/* loop until poll ! EINTR */
-		} while (rv == -1 && errno == EINTR);
+					/* loop until poll !EINTR && !EAGAIN */
+		} while (rv == -1 && (errno == EINTR || errno == EAGAIN));
 
 		if (rv == 0) {			/* poll (connect) timed out */
 			errno = ETIMEDOUT;
@@ -1557,6 +1548,79 @@ ftp_poll(struct pollfd *fds, int nfds, int timeout)
 }
 
 /*
+ * Internal version of getc(3) that retries EINTR/EAGAIN errors,
+ * and if fin_errno != NULL, sets fin_errno to errno on other conditions.
+ */
+int
+ftp_getc(FILE * fin, int * fin_errno)
+{
+	int res;
+
+	while ((res = getc(fin)) == EOF) {
+		if (feof(fin))
+			break;		/* return EOF */
+		if (ferror(fin)) {
+			if ((errno == EINTR) || (errno == EAGAIN)) {
+					/* retry on EINTR or EAGAIN */
+				clearerr(fin);
+				continue;
+			}
+			if (fin_errno != NULL)
+				*fin_errno = errno;
+		}
+		break;			/* return all other errors */
+	}
+	return res;
+}
+
+/*
+ * Internal version of putc(3) that retries EINTR/EAGAIN errors,
+ * and if fout_errno != NULL, sets fout_errno to errno on other conditions.
+ */
+int
+ftp_putc(int c, FILE * fout, int * fout_errno)
+{
+	int res;
+
+	while ((res = putc(c, fout)) == EOF) {
+		if (feof(fout))
+			break;		/* return EOF */
+		if (ferror(fout)) {
+			if ((errno == EINTR) || (errno == EAGAIN)) {
+					/* retry on EINTR or EAGAIN */
+				clearerr(fout);
+				continue;
+			}
+			if (fout_errno != NULL)
+				*fout_errno = errno;
+		}
+		break;			/* return all other errors */
+	}
+	return res;
+}
+
+/*
+ * Evaluate a "boolean" string, accept only "1" as true and "0" as false
+ * Anything else returns the default value.
+ * Warn about an invalid value that isn't empty.
+ */
+int
+ftp_truthy(const char *name, const char *str, int defvalue)
+{
+
+	if (strcmp(str, "1") == 0)
+		return 1;
+	else if (strcmp(str, "0") == 0)
+		return 0;
+
+	if (*str)
+		warn("Option %s must be boolean (1 or 0)\n", name);
+
+	return defvalue;
+}
+
+#ifndef SMALL
+/*
  * malloc() with inbuilt error checking
  */
 void *
@@ -1610,3 +1674,4 @@ ftp_strdup(const char *str)
 		err(1, "Unable to allocate memory for string copy");
 	return (s);
 }
+#endif

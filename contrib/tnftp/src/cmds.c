@@ -1,8 +1,8 @@
-/*	$NetBSD: cmds.c,v 1.18 2013/05/05 11:17:30 lukem Exp $	*/
-/*	from	NetBSD: cmds.c,v 1.135 2012/12/22 16:57:09 christos Exp	*/
+/*	$NetBSD: cmds.c,v 1.21 2026/02/08 07:11:12 lukem Exp $	*/
+/*	from	NetBSD: cmds.c,v 1.145 2026/02/07 03:11:20 lukem Exp	*/
 
 /*-
- * Copyright (c) 1996-2009 The NetBSD Foundation, Inc.
+ * Copyright (c) 1996-2026 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
  * This code is derived from software contributed to The NetBSD Foundation
@@ -101,7 +101,7 @@
 #if 0
 static char sccsid[] = "@(#)cmds.c	8.6 (Berkeley) 10/9/94";
 #else
-__RCSID(" NetBSD: cmds.c,v 1.135 2012/12/22 16:57:09 christos Exp  ");
+__RCSID(" NetBSD: cmds.c,v 1.145 2026/02/07 03:11:20 lukem Exp  ");
 #endif
 #endif /* not lint */
 
@@ -154,10 +154,10 @@ __dead static void	mintr(int);
 static void	mabort(const char *);
 static void	set_type(const char *);
 
-static const char *doprocess(char *, size_t, const char *, int, int, int);
-static const char *domap(char *, size_t, const char *);
-static const char *docase(char *, size_t, const char *);
-static const char *dotrans(char *, size_t, const char *);
+static char *doprocess(char *, size_t, char *, int, int, int);
+static char *domap(char *, size_t, const char *);
+static char *docase(char *, size_t, const char *);
+static char *dotrans(char *, size_t, const char *);
 
 /*
  * Confirm if "cmd" is to be performed upon "file".
@@ -179,7 +179,7 @@ confirm(const char *cmd, const char *file)
 		promptleft = cmd;
 		promptright = file;
 	}
-	while (1) {
+	for (;;) {
 		fprintf(ttyout, "%s %s [anpqy?]? ", promptleft, promptright);
 		(void)fflush(ttyout);
 		if (get_line(stdin, cline, sizeof(cline), &errormsg) < 0) {
@@ -414,7 +414,7 @@ put(int argc, char *argv[])
 	const char *cmd;
 	int loc = 0;
 	char *locfile;
-	const char *remfile;
+	char *remfile;
 
 	if (argc == 2) {
 		argc++;
@@ -444,8 +444,8 @@ put(int argc, char *argv[])
 	free(locfile);
 }
 
-static const char *
-doprocess(char *dst, size_t dlen, const char *src,
+static char *
+doprocess(char *dst, size_t dlen, char *src,
     int casef, int transf, int mapf)
 {
 	if (casef)
@@ -583,8 +583,7 @@ int
 getit(int argc, char *argv[], int restartit, const char *gmode)
 {
 	int	loc, rval;
-	char	*remfile, *olocfile;
-	const char *locfile;
+	char	*remfile, *olocfile, *locfile;
 	char	buf[MAXPATHLEN];
 
 	loc = rval = 0;
@@ -691,8 +690,7 @@ mget(int argc, char *argv[])
 {
 	sigfunc oldintr;
 	int ointer;
-	char *cp;
-	const char *tp;
+	char *cp, *tp;
 	int volatile restartit;
 
 	if (argc == 0 ||
@@ -1138,7 +1136,7 @@ setdebug(int argc, char *argv[])
 		options |= SO_DEBUG;
 	else
 		options &= ~SO_DEBUG;
-	fprintf(ttyout, "Debugging %s (ftp_debug=%d).\n", onoff(ftp_debug), ftp_debug);
+	fprintf(ttyout, "Debugging %s (debug=%d).\n", onoff(ftp_debug), ftp_debug);
 	code = ftp_debug > 0;
 }
 
@@ -1165,7 +1163,8 @@ cd(int argc, char *argv[])
 	}
 	if (r == COMPLETE) {
 		dirchange = 1;
-		updateremotecwd();
+		remotecwd[0] = '\0';
+		remcwdvalid = 0;
 	}
 }
 
@@ -1296,13 +1295,11 @@ void
 ls(int argc, char *argv[])
 {
 	const char *cmd;
-	char *remdir, *locbuf;
-	const char *locfile;
+	char *remdir, *locbuf, *locfile;
 	int pagecmd, mlsdcmd;
 
 	remdir = NULL;
 	locbuf = NULL;
-	locfile = "-";
 	pagecmd = mlsdcmd = 0;
 			/*
 			 * the only commands that start with `p' are
@@ -1332,6 +1329,8 @@ ls(int argc, char *argv[])
 		remdir = argv[1];
 	if (argc > 2)
 		locfile = argv[2];
+	else
+		locfile = locbuf = ftp_strdup("-");
 	if (argc > 3 || ((pagecmd | mlsdcmd) && argc > 2)) {
  usage:
 		if (pagecmd || mlsdcmd)
@@ -1351,11 +1350,12 @@ ls(int argc, char *argv[])
 		if (EMPTYSTRING(p))
 			p = DEFAULTPAGER;
 		len = strlen(p) + 2;
+		free(locbuf);
 		locbuf = ftp_malloc(len);
 		locbuf[0] = '|';
 		(void)strlcpy(locbuf + 1, p, len - 1);
 		locfile = locbuf;
-	} else if ((strcmp(locfile, "-") != 0) && *locfile != '|') {
+	} else if (locfile != locbuf) { 
 		if ((locbuf = globulize(locfile)) == NULL ||
 		    !confirm("output to local-file:", locbuf)) {
 			code = -1;
@@ -1551,9 +1551,9 @@ pwd(int argc, char *argv[])
 		UPRINTF("usage: %s\n", argv[0]);
 		return;
 	}
-	if (! remotecwd[0])
+	if (!remcwdvalid || remotecwd[0] == '\0')
 		updateremotecwd();
-	if (! remotecwd[0])
+	if (remotecwd[0] == '\0')
 		fprintf(ttyout, "Unable to determine remote directory\n");
 	else {
 		fprintf(ttyout, "Remote directory: %s\n", remotecwd);
@@ -1782,6 +1782,18 @@ quit(int argc, char *argv[])
 	exit(0);
 }
 
+void __dead
+justquit(void)
+{
+
+	quit(0, NULL);
+	/*
+	 * quit is not __dead, but for our invocation it never will return,
+	 * but some compilers are not smart enough to find this out.
+	 */
+	exit(0);
+}
+
 /*
  * Terminate session, but don't exit.
  * May be called with 0, NULL.
@@ -1824,10 +1836,10 @@ account(int argc, char *argv[])
 	memset(ap, 0, strlen(ap));
 }
 
-sigjmp_buf abortprox;
+static sigjmp_buf abortprox;
 
 void
-proxabort(int notused)
+proxabort(int notused __unused)
 {
 
 	sigint_raised = 1;
@@ -1849,7 +1861,7 @@ void
 doproxy(int argc, char *argv[])
 {
 	struct cmd *c;
-	int cmdpos;
+	size_t cmdpos;
 	sigfunc oldintr;
 	char cmdbuf[MAX_C_NAME];
 
@@ -1914,7 +1926,7 @@ setcase(int argc, char *argv[])
  * convert the given name to lower case if it's all upper case, into
  * a static buffer which is returned to the caller
  */
-static const char *
+static char *
 docase(char *dst, size_t dlen, const char *src)
 {
 	size_t i;
@@ -1967,30 +1979,35 @@ setntrans(int argc, char *argv[])
 	(void)strlcpy(ntout, argv[2], sizeof(ntout));
 }
 
-static const char *
+#define ADDC(x) 					\
+	do { 						\
+		*cp2++ = x; 				\
+		if (cp2 - dst >= (ptrdiff_t)(dlen - 1))	\
+			goto out;			\
+	} while (0)
+
+static char *
 dotrans(char *dst, size_t dlen, const char *src)
 {
 	const char *cp1;
 	char *cp2 = dst;
 	size_t i, ostop;
 
-	for (ostop = 0; *(ntout + ostop) && ostop < 16; ostop++)
+	for (ostop = 0; ntout[ostop] && ostop < sizeof(ntout); ostop++)
 		continue;
 	for (cp1 = src; *cp1; cp1++) {
 		int found = 0;
-		for (i = 0; *(ntin + i) && i < 16; i++) {
-			if (*cp1 == *(ntin + i)) {
+		for (i = 0; i < sizeof(ntin) && ntin[i]; i++) {
+			if (*cp1 == ntin[i]) {
 				found++;
 				if (i < ostop) {
-					*cp2++ = *(ntout + i);
-					if (cp2 - dst >= (ptrdiff_t)(dlen - 1))
-						goto out;
+					ADDC(ntout[i]);
 				}
 				break;
 			}
 		}
 		if (!found) {
-			*cp2++ = *cp1;
+			ADDC(*cp1);
 		}
 	}
 out:
@@ -2031,7 +2048,7 @@ setnmap(int argc, char *argv[])
 	(void)strlcpy(mapout, cp, MAXPATHLEN);
 }
 
-static const char *
+static char *
 domap(char *dst, size_t dlen, const char *src)
 {
 	const char *cp1 = src;
@@ -2087,7 +2104,7 @@ domap(char *dst, size_t dlen, const char *src)
 		switch (*cp1) {
 			case '\\':
 				if (*(cp1 + 1)) {
-					*cp2++ = *++cp1;
+					ADDC(*++cp1);
 				}
 				break;
 			case '[':
@@ -2098,7 +2115,7 @@ LOOP:
 						const char *cp3 = src;
 
 						while (*cp3) {
-							*cp2++ = *cp3++;
+							ADDC(*cp3++);
 						}
 						match = 1;
 					}
@@ -2106,7 +2123,7 @@ LOOP:
 						const char *cp3 = tp[toknum];
 
 						while (cp3 != te[toknum]) {
-							*cp2++ = *cp3++;
+							ADDC(*cp3++);
 						}
 						match = 1;
 					}
@@ -2123,7 +2140,7 @@ LOOP:
 							   const char *cp3 = src;
 
 							   while (*cp3) {
-								*cp2++ = *cp3++;
+								ADDC(*cp3++);
 							   }
 							}
 							else if (toks[toknum =
@@ -2132,19 +2149,16 @@ LOOP:
 
 							   while (cp3 !=
 								  te[toknum]) {
-								*cp2++ = *cp3++;
+								ADDC(*cp3++);
 							   }
 							}
 						}
 						else if (*cp1) {
-							*cp2++ = *cp1++;
+							ADDC(*cp1++);
 						}
 					}
 					if (!*cp1) {
-						fputs(
-						"nmap: unbalanced brackets.\n",
-						    ttyout);
-						return (src);
+						goto unbalanced;
 					}
 					match = 1;
 					cp1--;
@@ -2156,10 +2170,7 @@ LOOP:
 					      }
 					}
 					if (!*cp1) {
-						fputs(
-						"nmap: unbalanced brackets.\n",
-						    ttyout);
-						return (src);
+						goto unbalanced;
 					}
 					break;
 				}
@@ -2179,27 +2190,34 @@ LOOP:
 						const char *cp3 = src;
 
 						while (*cp3) {
-							*cp2++ = *cp3++;
+							ADDC(*cp3++);
 						}
 					}
 					else if (toks[toknum = *cp1 - '1']) {
 						const char *cp3 = tp[toknum];
 
 						while (cp3 != te[toknum]) {
-							*cp2++ = *cp3++;
+							ADDC(*cp3++);
 						}
 					}
 					break;
 				}
-				/* intentional drop through */
+				/* FALLTHROUGH */
 			default:
-				*cp2++ = *cp1;
+				ADDC(*cp1);
 				break;
 		}
 		cp1++;
 	}
+out:
 	*cp2 = '\0';
-	return *dst ? dst : src;
+	if (!*dst)
+		strlcpy(dst, src, dlen);
+	return dst;
+unbalanced:
+	fputs("nmap: unbalanced brackets.\n", ttyout);
+	*dst = '\0';
+	goto out;
 }
 
 void
@@ -2366,7 +2384,8 @@ cdup(int argc, char *argv[])
 	}
 	if (r == COMPLETE) {
 		dirchange = 1;
-		updateremotecwd();
+		remotecwd[0] = '\0';
+		remcwdvalid = 0;
 	}
 }
 
@@ -2476,11 +2495,11 @@ macdef(int argc, char *argv[])
 		}
 		tmp++;
 	}
-	while (1) {
+	for (;;) {
 		while ((c = getchar()) != '\n' && c != EOF)
 			/* LOOP */;
 		if (c == EOF || getchar() == '\n') {
-			fputs("Macro not defined - 4K buffer exceeded.\n",
+			fputs("Macro not defined - 4 KiB buffer exceeded.\n",
 			    ttyout);
 			code = -1;
 			return;
@@ -2598,7 +2617,8 @@ lpage(int argc, char *argv[])
 void
 page(int argc, char *argv[])
 {
-	int ohash, orestart_point, overbose;
+	int ohash, overbose;
+	off_t orestart_point;
 	size_t len;
 	const char *p;
 	char *pager;
@@ -2620,7 +2640,8 @@ page(int argc, char *argv[])
 	ohash = hash;
 	orestart_point = restart_point;
 	overbose = verbose;
-	hash = restart_point = verbose = 0;
+	hash = verbose = 0;
+	restart_point = 0;
 	recvrequest("RETR", pager, argv[1], "r+", 1, 0);
 	hash = ohash;
 	restart_point = orestart_point;
@@ -2653,11 +2674,6 @@ setxferbuf(int argc, char *argv[])
 
 	if ((size = strsuftoi(argv[1])) == -1)
 		goto usage;
-
-	if (size == 0) {
-		fprintf(ttyout, "%s: size must be positive.\n", argv[0]);
-		goto usage;
-	}
 
 	if (dir & RATE_PUT)
 		sndbuf_size = size;

@@ -1,8 +1,8 @@
-/*	$NetBSD: cmdtab.c,v 1.12 2013/05/05 11:17:30 lukem Exp $	*/
-/*	from	NetBSD: cmdtab.c,v 1.52 2012/12/22 16:57:09 christos Exp	*/
+/*	$NetBSD: cmdtab.c,v 1.14 2026/02/08 07:11:12 lukem Exp $	*/
+/*	from	NetBSD: cmdtab.c,v 1.54 2025/10/28 08:21:07 lukem Exp	*/
 
 /*-
- * Copyright (c) 1996-2009 The NetBSD Foundation, Inc.
+ * Copyright (c) 1996-2025 The NetBSD Foundation, Inc.
  * All rights reserved.
  *
  * This code is derived from software contributed to The NetBSD Foundation
@@ -68,7 +68,7 @@
 #if 0
 static char sccsid[] = "@(#)cmdtab.c	8.4 (Berkeley) 10/9/94";
 #else
-__RCSID(" NetBSD: cmdtab.c,v 1.52 2012/12/22 16:57:09 christos Exp  ");
+__RCSID(" NetBSD: cmdtab.c,v 1.54 2025/10/28 08:21:07 lukem Exp  ");
 #endif
 #endif /* not lint */
 
@@ -208,6 +208,7 @@ struct cmd cmdtab[] = {
 	{ "cdup",	H(cduphelp),	0, 1, 1, CMPL0		cdup },
 	{ "chmod",	H(chmodhelp),	0, 1, 1, CMPL(nr)	do_chmod },
 	{ "close",	H(disconhelp),	0, 1, 1, CMPL0		disconnect },
+	{ "connect",	H(connecthelp),	0, 0, 1, CMPL0		setpeer },
 	{ "cr",		H(crhelp),	0, 0, 0, CMPL0		setcr },
 	{ "debug",	H(debughelp),	0, 0, 0, CMPL0		setdebug },
 	{ "delete",	H(deletehelp),	0, 1, 1, CMPL(r)	delete },
@@ -303,13 +304,14 @@ struct cmd cmdtab[] = {
 };
 
 struct option optiontab[] = {
-	{ "anonpass",	NULL },
-	{ "ftp_proxy",	NULL },
-	{ "http_proxy",	NULL },
-	{ "https_proxy",NULL },
-	{ "no_proxy",	NULL },
-	{ "pager",	NULL },
-	{ "prompt",	NULL },
-	{ "rprompt",	NULL },
-	{ NULL,		NULL },
+	{ "anonpass",	   NULL },
+	{ "ftp_proxy",	   NULL },
+	{ "http_proxy",	   NULL },
+	{ "https_proxy",   NULL },
+	{ "no_proxy",	   NULL },
+	{ "pager",	   NULL },
+	{ "prompt",	   NULL },
+	{ "rprompt",	   NULL },
+	{ "sslnoverify"   ,NULL },
+	{ NULL,		   NULL },
 };
