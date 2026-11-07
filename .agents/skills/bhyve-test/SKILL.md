@@ -55,9 +55,16 @@ env MAKEOBJDIRPREFIX=/tmp/llvm21-obj make -j16 buildkernel KERNCONF=GENERIC
 
 ## 2. Disk image
 
-Use a sparse file on an md(4) device. **Partition types must be `mnbsd-*`**:
-the MidnightBSD loader (`stand/common/part.c`) shows `freebsd-*` partitions
-as "Unknown" and will not find the root.
+Use a sparse file on an md(4) device. **Use `mnbsd-*` partition types** (all
+examples below do). The loader built from this tree (`stand/common/part.c`,
+`stand/libsa/zfs/zfs.c`, `stand/libsa/gpt.c`) also recognizes `freebsd-ufs`
+and `freebsd-zfs` on GPT disks as a fallback, and prefers `mnbsd-*` when a
+disk has both. Loaders older than that change (for example the host's
+`/boot/userboot.so` on older systems) show `freebsd-*` partitions as
+"Unknown" and will not find the root, so they require `mnbsd-*`. For BIOS
+boot, `pmbr` only loads an `mnbsd-boot` partition; a `freebsd-boot`
+partition is not booted. `boot1.efi` selects by file system contents and
+does not care about the type.
 
 ```sh
 truncate -s 12G "${V}/disk.img"
