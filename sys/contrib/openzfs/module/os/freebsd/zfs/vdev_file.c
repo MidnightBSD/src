@@ -86,7 +86,7 @@ vdev_file_open_mode(spa_mode_t spa_mode)
 
 static int
 vdev_file_open(vdev_t *vd, uint64_t *psize, uint64_t *max_psize,
-    uint64_t *logical_ashift, uint64_t *physical_ashift)
+    uint64_t *logical_ashift, uint64_t *physical_ashift, cred_t *cr)
 {
 	vdev_file_t *vf;
 	zfs_file_t *fp;
@@ -141,7 +141,7 @@ vdev_file_open(vdev_t *vd, uint64_t *psize, uint64_t *max_psize,
 	ASSERT(vd->vdev_path[0] == '/');
 
 	error = zfs_file_open(vd->vdev_path,
-	    vdev_file_open_mode(spa_mode(vd->vdev_spa)), 0, &fp);
+	    vdev_file_open_mode(spa_mode(vd->vdev_spa)), 0, cr, &fp);
 	if (error) {
 		vd->vdev_stat.vs_aux = VDEV_AUX_OPEN_FAILED;
 		return (error);
