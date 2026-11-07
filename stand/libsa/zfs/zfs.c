@@ -709,6 +709,7 @@ struct zfs_probe_args {
 	const char	*devname;
 	uint64_t	*pool_guid;
 	u_int		secsz;
+	bool		fbsd;	/* probe FreeBSD partitions only */
 };
 
 static int
@@ -744,12 +745,19 @@ zfs_probe_partition(void *arg, const char *partname,
 	char devname[32];
 	int ret;
 
-	/* Probe only freebsd-zfs and freebsd partitions */
-	if (part->type != PART_MIDNIGHTBSD &&
+	ppa = (struct zfs_probe_args *)arg;
+
+	/*
+	 * Probe only mnbsd-zfs and midnightbsd partitions, or freebsd-zfs
+	 * partitions in the fallback pass.
+	 */
+	if (ppa->fbsd) {
+		if (part->type != PART_FREEBSD_ZFS)
+			return (0);
+	} else if (part->type != PART_MIDNIGHTBSD &&
 	    part->type != PART_MIDNIGHTBSD_ZFS)
 		return (0);
 
-	ppa = (struct zfs_probe_args *)arg;
 	strncpy(devname, ppa->devname, strlen(ppa->devname) - 1);
 	devname[strlen(ppa->devname) - 1] = '\0';
 	snprintf(devname, sizeof(devname), "%s%s:", devname, partname);
@@ -764,6 +772,7 @@ zfs_probe_partition(void *arg, const char *partname,
 		pa.devname = devname;
 		pa.pool_guid = ppa->pool_guid;
 		pa.secsz = ppa->secsz;
+		pa.fbsd = false;
 		table = ptable_open(&pa, part->end - part->start + 1,
 		    ppa->secsz, zfs_diskread);
 		if (table != NULL) {
@@ -1527,6 +1536,14 @@ zfs_probe_dev(const char *devname, uint64_t *pool_guid, bool parts_too)
 		table = ptable_open(&pa, mediasz / pa.secsz, pa.secsz,
 		    zfs_diskread);
 		if (table != NULL) {
+			/*
+			 * Probe MidnightBSD partitions first so that their
+			 * pools are found (and preferred as the boot pool)
+			 * before pools on FreeBSD partitions.
+			 */
+			pa.fbsd = false;
+			ptable_iterate(table, &pa, zfs_probe_partition);
+			pa.fbsd = true;
 			ptable_iterate(table, &pa, zfs_probe_partition);
 			ptable_close(table);
 		}
