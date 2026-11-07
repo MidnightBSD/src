@@ -1,5 +1,8 @@
 Updating Information for MidnightBSD users.
 
+20261107:
+	device-tree files updated to Linux 5.10 (arm, arm64 and riscv kernels only)
+
 20261106:
 	unbound 1.26.2: CVE-2026-14586 CVE-2026-32665 CVE-2026-35501
 	CVE-2026-40691 CVE-2026-41637 CVE-2026-42955 CVE-2026-44621
