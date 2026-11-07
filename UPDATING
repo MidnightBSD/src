@@ -28,6 +28,11 @@ Updating Information for MidnightBSD users.
 	tcpdump: fix out-of-bounds reads when printing pfsync "update" and
 	"tdb" records
 
+	wpa_supplicant and hostapd 2.12: CVE-2026-58374 CVE-2026-78807
+	(w1.fi security advisories 2026-1 through 2026-4).  Also fixes
+	the hostapd RADIUS Message-Authenticator length check (w1.fi
+	2026-5).
+
 20261105:
 	OpenSSH 10.6p2: fixes an sshd(8) password authentication bypass
 	reported against Linux builds without PAM, and accepts the
