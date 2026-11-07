@@ -40,6 +40,10 @@ Updating Information for MidnightBSD users.
 	The non-blocking I/O support new in 1.3.2 comes with the fixes for
 	CVE-2026-85091 and a related gzprintf() overflow.
 
+	tnftp 20260211: ftp(1) now rejects PASV and LPSV replies that name
+	an address other than the server's, and exits non-zero when an
+	HTTP transfer is shorter than expected.
+
 20261105:
 	OpenSSH 10.6p2: fixes an sshd(8) password authentication bypass
 	reported against Linux builds without PAM, and accepts the
