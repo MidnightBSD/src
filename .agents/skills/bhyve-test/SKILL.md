@@ -63,8 +63,9 @@ disk has both. Loaders older than that change (for example the host's
 `/boot/userboot.so` on older systems) show `freebsd-*` partitions as
 "Unknown" and will not find the root, so they require `mnbsd-*`. For BIOS
 boot, `pmbr` only loads an `mnbsd-boot` partition; a `freebsd-boot`
-partition is not booted. `boot1.efi` selects by file system contents and
-does not care about the type.
+partition is not booted. `boot1.efi` from this tree also prefers `mnbsd-*`
+over `freebsd-ufs`/`freebsd-zfs`; older ones boot the first partition with
+`/boot/loader.efi`, whatever its type.
 
 ```sh
 truncate -s 12G "${V}/disk.img"

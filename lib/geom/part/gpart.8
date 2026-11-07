@@ -1210,7 +1210,8 @@ partition, so a
 partition is not booted on BIOS-based computers.
 The UEFI
 .Xr boot1.efi 8
-selects by file system contents and does not distinguish the types.
+applies the preference first among the partitions on the disk it was
+loaded from, then among those on all other disks.
 .Pp
 The APM scheme also does not support embedding bootstrap code.
 Instead, the 800 KBytes bootstrap code image
