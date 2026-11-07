@@ -1,29 +1,16 @@
-/* tnftp_config.h.  Generated from tnftp_config.h.in by configure.  */
-/* tnftp_config.h.in.  Generated from configure.ac by autoheader.  */
+/*
+ * tnftp_config.h.  Maintained by hand for MidnightBSD from
+ * tnftp_config.h.in; see contrib/tnftp/MIDNIGHTBSD-upgrade.
+ */
 
 /* Define to 1 if the `closedir' function returns void instead of `int'. */
 /* #undef CLOSEDIR_VOID */
-
-/* Define to one of `_getb67', `GETB67', `getb67' for Cray-2 and Cray-YMP
-   systems. This function is required for `alloca.c' support on those systems.
-   */
-/* #undef CRAY_STACKSEG_END */
-
-/* Define to 1 if using `alloca.c'. */
-/* #undef C_ALLOCA */
 
 /* Define to 1 if the `getpgrp' function requires zero arguments. */
 #define GETPGRP_VOID 1
 
 /* Define to 1 if `TIOCGWINSZ' requires <sys/ioctl.h>. */
 /* #undef GWINSZ_IN_SYS_IOCTL */
-
-/* Define to 1 if you have `alloca', as a function or macro. */
-#define HAVE_ALLOCA 1
-
-/* Define to 1 if you have <alloca.h> and it should be used (not on Ultrix).
-   */
-/* #undef HAVE_ALLOCA_H */
 
 /* Define to 1 if you have the <arpa/ftp.h> header file. */
 #define HAVE_ARPA_FTP_H 1
@@ -160,6 +147,9 @@
 /* Define to 1 if you have the <limits.h> header file. */
 #define HAVE_LIMITS_H 1
 
+/* Define to 1 if you have the <locale.h> header file. */
+#define HAVE_LOCALE_H 1
+
 /* Define to 1 if the system has the type `long double'. */
 #define HAVE_LONG_DOUBLE 1
 
@@ -199,6 +189,9 @@
 /* Define to 1 if you have the <netinet/ip.h> header file. */
 #define HAVE_NETINET_IP_H 1
 
+/* Define to 1 if you have the <netinet/tcp.h> header file. */
+#define HAVE_NETINET_TCP_H 1
+
 /* Define to 1 if you have the <paths.h> header file. */
 #define HAVE_PATHS_H 1
 
@@ -208,11 +201,11 @@
 /* Define to 1 if you have the <poll.h> header file. */
 #define HAVE_POLL_H 1
 
-/* Define if `long long' is supported and *printf() supports %lld or %qd to
+/* Define if 'long long' is supported and *printf() supports %lld or %qd to
    print them. */
 #define HAVE_PRINTF_LONG_LONG 1
 
-/* Define if *printf() uses %qd to print `long long' (otherwise uses %lld). */
+/* Define if *printf() uses %qd to print 'long long' (otherwise uses %lld). */
 /* #undef HAVE_PRINTF_QD */
 
 /* Define to 1 if you have the <pwd.h> header file. */
@@ -330,7 +323,7 @@
 /* Define to 1 if the system has the type `struct addrinfo'. */
 #define HAVE_STRUCT_ADDRINFO 1
 
-/* Define to 1 if `struct dirent' is a member of `d_namlen'. */
+/* Define to 1 if `d_namlen' is a member of `struct dirent'. */
 #define HAVE_STRUCT_DIRENT_D_NAMLEN 1
 
 /* Define to 1 if the system has the type `struct pollfd'. */
@@ -339,10 +332,10 @@
 /* Define to 1 if the system has the type `struct sockaddr_in6'. */
 #define HAVE_STRUCT_SOCKADDR_IN6 1
 
-/* Define to 1 if `struct sockaddr_in' is a member of `sin_len'. */
+/* Define to 1 if `sin_len' is a member of `struct sockaddr_in'. */
 #define HAVE_STRUCT_SOCKADDR_IN_SIN_LEN 1
 
-/* Define to 1 if `struct sockaddr' is a member of `sa_len'. */
+/* Define to 1 if `sa_len' is a member of `struct sockaddr'. */
 #define HAVE_STRUCT_SOCKADDR_SA_LEN 1
 
 /* Define to 1 if you have the `strunvis' function. */
@@ -383,6 +376,9 @@
 /* Define to 1 if you have the <sys/types.h> header file. */
 #define HAVE_SYS_TYPES_H 1
 
+/* Define to 1 if you have the <sys/uio.h> header file. */
+#define HAVE_SYS_UIO_H 1
+
 /* Define to 1 if you have the <sys/wait.h> header file. */
 #define HAVE_SYS_WAIT_H 1
 
@@ -398,6 +394,9 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #define HAVE_UNISTD_H 1
 
+/* Define to 1 if the system has the type `unsigned long long int'. */
+#define HAVE_UNSIGNED_LONG_LONG_INT 1
+
 /* Define to 1 if you have the `usleep' function. */
 #define HAVE_USLEEP 1
 
@@ -409,6 +408,12 @@
 
 /* Define to 1 if you have the <utime.h> header file. */
 #define HAVE_UTIME_H 1
+
+/* Define to 1 if you have the `vasprintf' function. */
+#define HAVE_VASPRINTF 1
+
+/* Define to 1 if the 'va_copy' function is supported. */
+#define HAVE_VA_COPY 1
 
 /* Define to 1 if you have the `vfork' function. */
 #define HAVE_VFORK 1
@@ -425,6 +430,15 @@
 /* Define to 1 if `vfork' works. */
 #define HAVE_WORKING_VFORK 1
 
+/* Define to 1 if the '__builtin_va_copy' function is supported. */
+#define HAVE___BUILTIN_VA_COPY 1
+
+/* Define to the sub-directory where libtool stores uninstalled libraries. */
+/* #undef LT_OBJDIR */
+
+/* Define if disabling command-line editing and completion. */
+/* #undef NO_EDITCOMPLETE */
+
 /* Name of package */
 #define PACKAGE "tnftp"
 
@@ -435,7 +449,7 @@
 #define PACKAGE_NAME "tnftp"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "tnftp 20100108"
+#define PACKAGE_STRING "tnftp 20260211"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "tnftp"
@@ -444,18 +458,7 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "20100108"
-
-/* Define as the return type of signal handlers (`int' or `void'). */
-#define RETSIGTYPE void
-
-/* If using the C implementation of alloca, define if you know the
-   direction of stack growth for your system; otherwise it will be
-   automatically deduced at runtime.
-	STACK_DIRECTION > 0 => grows toward higher addresses
-	STACK_DIRECTION < 0 => grows toward lower addresses
-	STACK_DIRECTION = 0 => direction of growth unknown */
-/* #undef STACK_DIRECTION */
+#define PACKAGE_VERSION "20260211"
 
 /* Define to 1 if the `S_IS*' macros in <sys/stat.h> do not work properly. */
 /* #undef STAT_MACROS_BROKEN */
@@ -469,11 +472,47 @@
 /* Define to 1 if your <sys/time.h> declares `struct tm'. */
 /* #undef TM_IN_SYS_TIME */
 
+/* Define if using system <glob.h> instead of local glob. */
+#define USE_GLOB_H 1
+
+/* Define if using IPv6 support. */
+/* #undef USE_INET6 */
+
 /* Define if using (Dante) SOCKS5 proxy. */
 /* #undef USE_SOCKS */
 
+/* Enable extensions on AIX 3, Interix.  */
+#ifndef _ALL_SOURCE
+/* # undef _ALL_SOURCE */
+#endif
+/* Enable GNU extensions on systems that have them.  */
+#ifndef _GNU_SOURCE
+/* # undef _GNU_SOURCE */
+#endif
+/* Enable threading extensions on Solaris.  */
+#ifndef _POSIX_PTHREAD_SEMANTICS
+/* # undef _POSIX_PTHREAD_SEMANTICS */
+#endif
+/* Enable extensions on HP NonStop.  */
+#ifndef _TANDEM_SOURCE
+/* # undef _TANDEM_SOURCE */
+#endif
+/* Enable general extensions on Solaris.  */
+#ifndef __EXTENSIONS__
+/* # undef __EXTENSIONS__ */
+#endif
+
+
 /* Version number of package */
-#define VERSION "20100108"
+#define VERSION "20260211"
+
+/* Define if enabling SSL support. */
+/* #undef WITH_SSL */
+
+/* Enable large inode numbers on Mac OS X 10.5.  */
+#ifndef _DARWIN_USE_64_BIT_INODE
+# define _DARWIN_USE_64_BIT_INODE 1
+#endif
 
 /* Number of bits in a file offset, on hosts where this is settable. */
 /* #undef _FILE_OFFSET_BITS */
@@ -483,6 +522,16 @@
 
 /* Define for large files, on AIX-style hosts. */
 /* #undef _LARGE_FILES */
+
+/* Define to 1 if on MINIX. */
+/* #undef _MINIX */
+
+/* Define to 2 if the system does not provide POSIX.1 features except with
+   this defined. */
+/* #undef _POSIX_1_SOURCE */
+
+/* Define to 1 if you need to in order for `stat' and other things to work. */
+/* #undef _POSIX_SOURCE */
 
 /* Define for Solaris 2.5.1 so the uint32_t typedef from <sys/synch.h>,
    <pthread.h>, or <semaphore.h> is not used. If the typedef were allowed, the
@@ -505,9 +554,7 @@
 /* Define as `fork' if `vfork' does not work. */
 /* #undef vfork */
 
-
-/* Define if using IPv6 support. */
-/* Commented out so this can be selected fromt he Makefile -gavin */
-/* #define USE_INET6 1 */
-
-#define USE_GLOB_H 1
+/*
+ * USE_INET6 is left undefined: usr.bin/ftp/Makefile adds -DINET6 unless
+ * WITHOUT_INET6_SUPPORT is set.
+ */

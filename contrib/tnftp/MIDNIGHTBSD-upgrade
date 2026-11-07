@@ -1,0 +1,94 @@
+Upgrade procedure for tnftp (ftp(1))
+
+Source:		https://ftp.netbsd.org/pub/NetBSD/misc/tnftp/tnftp-VERSION.tar.gz
+Signature:	https://ftp.netbsd.org/pub/NetBSD/misc/tnftp/tnftp-VERSION.tar.gz.asc
+Signing key:	Luke Mewburn <lukem@NetBSD.org>
+		DSA 1024, 2A8E 22ED B07B 5414 548D  8507 A418 6D9A 7F33 2472
+		(also listed in Debian's debian/upstream/signing-key.asc
+		and Arch Linux's tnftp PKGBUILD validpgpkeys; pkgsrc
+		net/tnftp/distinfo carries the SHA512 of each release)
+
+Vendor branch:	vendor/NetBSD/tnftp	(tags vendor/NetBSD/tnftp/VERSION)
+In-tree prefix:	contrib/tnftp
+Build glue:	usr.bin/ftp (Makefile, tnftp_config.h)
+
+The vendor branch holds the complete, unmodified release tarball at its
+root, including the exec bits of the files upstream ships executable.
+Nothing is pruned, so there is no MIDNIGHTBSD-Xlist.  (Before 20260211
+the branch used an svn-style layout with dist/, 20141031/ and 20100108/
+directories; the 20260211 import replaced that with the plain tarball.)
+
+To upgrade to a new version:
+
+1. Download the tarball and its .asc into an empty directory and verify
+   the signature with the key above.  Compare the SHA512 with pkgsrc.
+2. Use the vendor-update skill: stage the extracted tarball with
+   "git add -A -f" (temporary index or worktree), check that the staged
+   tree matches the tarball including exec bits, and commit it on
+   vendor/NetBSD/tnftp as "Vendor import of tnftp VERSION".
+3. Merge the vendor commit into contrib/tnftp on master and the stable
+   branches as a real merge ("Merge commit '<sha>'"), never squashed.
+4. Update usr.bin/ftp/tnftp_config.h (see below) and usr.bin/ftp/Makefile
+   if upstream's src/Makefile.am source list changed.
+
+tnftp_config.h:
+
+  usr.bin/ftp/tnftp_config.h is maintained by hand; configure is not run.
+  For each new release, diff the old and new tnftp_config.h.in and carry
+  the changes over: bump PACKAGE_STRING, PACKAGE_VERSION and VERSION,
+  remove entries that are gone, and define each new HAVE_* only after
+  checking that our headers and libc provide it.  Then check that every
+  HAVE_*, USE_* and WITH_* macro referenced by tnftp.h and the src/ files
+  that are built is either defined or really absent on MidnightBSD.
+
+  Notes on the current settings:
+  - HAVE_LOCALE_H must stay defined.  src/main.c and src/util.c get
+    <locale.h> only through tnftp.h.  It was lost when tnftp_config.h
+    was replaced with FreeBSD's 20100108 copy in 2022, and setlocale()
+    was then disabled with "#if 0" in main.c and util.c to get the build
+    going again; 20260211 dropped those changes and restored the define.
+  - USE_INET6 is left undefined; the Makefile adds -DINET6 unless
+    WITHOUT_INET6_SUPPORT is set.
+  - USE_GLOB_H is defined: our <glob.h> has GLOB_BRACE, GLOB_NOCHECK and
+    GLOB_TILDE, which is what configure tests for.
+  - The AC_USE_SYSTEM_EXTENSIONS macros (_GNU_SOURCE, _ALL_SOURCE, ...)
+    and _POSIX_SOURCE/_POSIX_1_SOURCE/_MINIX are left undefined so that
+    the default BSD namespace is used.
+  - WITH_SSL is left undefined (see below).
+
+SSL / https:
+
+  ftp(1) is built without WITH_SSL and is not linked against libssl or
+  libcrypto, so https:// URLs are not supported; fetch(1) handles them.
+  Unlike 20141031, src/ssl.c in 20260211 also holds the plain fetch_*()
+  connection I/O used by src/fetch.c for every http:// transfer, so
+  ssl.c is in SRCS but compiled without WITH_SSL: all OpenSSL code in
+  it is behind "#ifdef WITH_SSL".  Check after each update that the
+  binary has no SSL_* references (nm) and no libssl/libcrypto (ldd).
+
+Libraries:
+
+  ftp(1) uses the base system libedit (LIBADD=edit).  The bundled
+  contrib/tnftp/libedit and contrib/tnftp/libnetbsd are not built.
+
+Local patches applied on top of upstream:
+
+  None as of 20260211.  contrib/tnftp is identical to the vendor tree
+  apart from this file.
+
+  Patches dropped in the 20260211 update:
+  - src/ftp.c abort_remote(): "unsigned char buf[BUFSIZ]" (local commit
+    43de880bd2) is upstream now.
+  - tnftp.h: unconditional "#include <sys/uio.h>" (local commit
+    c1aa790823); upstream now includes it under HAVE_SYS_UIO_H.
+  - src/main.c, src/util.c: "#if 0" around setlocale() (local commits
+    81454a505b and b89d4b69c5), see HAVE_LOCALE_H above.
+
+  FreeBSD patches that were never carried here and are not needed:
+  - FreeBSD 43092b7d087d (SO_SNDBUF/SO_RCVBUF breaking TCP buffer
+    autosizing): since 20260211 the socket buffer sizes default to 0
+    ("autoscale") and tnftp only calls setsockopt() for them once a size
+    is set (-x, the sndbuf/rcvbuf commands, or internally after a
+    file:// URL), so autosizing is kept by default.
+  - FreeBSD 47cc9ee1b1d4 (default pager "less"): we keep upstream's
+    "more".
