@@ -26,12 +26,7 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
-
 #include <sys/param.h>
-#include <sys/ck.h>
-#include <sys/epoch.h>
 #include <sys/kernel.h>
 #include <sys/kmem.h>
 #include <sys/lock.h>
@@ -47,25 +42,23 @@ __FBSDID("$FreeBSD$");
 
 #include <vm/uma.h>
 
-#if __FreeBSD_version < 1201522
-#define	taskqueue_start_threads_in_proc(tqp, count, pri, proc, name, ...) \
-    taskqueue_start_threads(tqp, count, pri, name, __VA_ARGS__)
-#endif
-
 static uint_t taskq_tsd;
 static uma_zone_t taskq_zone;
 
+/*
+ * Global system-wide dynamic task queue available for all consumers. This
+ * taskq is not intended for long-running tasks; instead, a dedicated taskq
+ * should be created.
+ */
 taskq_t *system_taskq = NULL;
 taskq_t *system_delay_taskq = NULL;
 taskq_t *dynamic_taskq = NULL;
 
 proc_t *system_proc;
 
-extern int uma_align_cache;
-
 static MALLOC_DEFINE(M_TASKQ, "taskq", "taskq structures");
 
-static CK_LIST_HEAD(tqenthashhead, taskq_ent) *tqenthashtbl;
+static LIST_HEAD(tqenthashhead, taskq_ent) *tqenthashtbl;
 static unsigned long tqenthash;
 static unsigned long tqenthashlock;
 static struct sx *tqenthashtbl_lock;
@@ -75,8 +68,8 @@ static taskqid_t tqidnext;
 #define	TQIDHASH(tqid) (&tqenthashtbl[(tqid) & tqenthash])
 #define	TQIDHASHLOCK(tqid) (&tqenthashtbl_lock[((tqid) & tqenthashlock)])
 
+#define	NORMAL_TASK 0
 #define	TIMEOUT_TASK 1
-#define	NORMAL_TASK 2
 
 static void
 system_taskq_init(void *arg)
@@ -116,7 +109,7 @@ system_taskq_fini(void *arg)
 	for (i = 0; i < tqenthashlock + 1; i++)
 		sx_destroy(&tqenthashtbl_lock[i]);
 	for (i = 0; i < tqenthash + 1; i++)
-		VERIFY(CK_LIST_EMPTY(&tqenthashtbl[i]));
+		VERIFY(LIST_EMPTY(&tqenthashtbl[i]));
 	free(tqenthashtbl_lock, M_TASKQ);
 	free(tqenthashtbl, M_TASKQ);
 }
@@ -157,27 +150,27 @@ taskq_lookup(taskqid_t tqid)
 {
 	taskq_ent_t *ent = NULL;
 
-	sx_xlock(TQIDHASHLOCK(tqid));
-	CK_LIST_FOREACH(ent, TQIDHASH(tqid), tqent_hash) {
+	if (tqid == 0)
+		return (NULL);
+	sx_slock(TQIDHASHLOCK(tqid));
+	LIST_FOREACH(ent, TQIDHASH(tqid), tqent_hash) {
 		if (ent->tqent_id == tqid)
 			break;
 	}
 	if (ent != NULL)
 		refcount_acquire(&ent->tqent_rc);
-	sx_xunlock(TQIDHASHLOCK(tqid));
+	sx_sunlock(TQIDHASHLOCK(tqid));
 	return (ent);
 }
 
 static taskqid_t
 taskq_insert(taskq_ent_t *ent)
 {
-	taskqid_t tqid;
+	taskqid_t tqid = __taskq_genid();
 
-	tqid = __taskq_genid();
 	ent->tqent_id = tqid;
-	ent->tqent_registered = B_TRUE;
 	sx_xlock(TQIDHASHLOCK(tqid));
-	CK_LIST_INSERT_HEAD(TQIDHASH(tqid), ent, tqent_hash);
+	LIST_INSERT_HEAD(TQIDHASH(tqid), ent, tqent_hash);
 	sx_xunlock(TQIDHASHLOCK(tqid));
 	return (tqid);
 }
@@ -187,13 +180,14 @@ taskq_remove(taskq_ent_t *ent)
 {
 	taskqid_t tqid = ent->tqent_id;
 
-	if (!ent->tqent_registered)
+	if (tqid == 0)
 		return;
-
 	sx_xlock(TQIDHASHLOCK(tqid));
-	CK_LIST_REMOVE(ent, tqent_hash);
+	if (ent->tqent_id != 0) {
+		LIST_REMOVE(ent, tqent_hash);
+		ent->tqent_id = 0;
+	}
 	sx_xunlock(TQIDHASHLOCK(tqid));
-	ent->tqent_registered = B_FALSE;
 }
 
 static void
@@ -280,21 +274,22 @@ taskq_cancel_id(taskq_t *tq, taskqid_t tid)
 	int rc;
 	taskq_ent_t *ent;
 
-	if (tid == 0)
-		return (0);
-
 	if ((ent = taskq_lookup(tid)) == NULL)
-		return (0);
+		return (ENOENT);
 
-	ent->tqent_cancelled = B_TRUE;
-	if (ent->tqent_type == TIMEOUT_TASK) {
+	if (ent->tqent_type == NORMAL_TASK) {
+		rc = taskqueue_cancel(tq->tq_queue, &ent->tqent_task, &pend);
+		if (rc == EBUSY)
+			taskqueue_drain(tq->tq_queue, &ent->tqent_task);
+	} else {
 		rc = taskqueue_cancel_timeout(tq->tq_queue,
 		    &ent->tqent_timeout_task, &pend);
-	} else
-		rc = taskqueue_cancel(tq->tq_queue, &ent->tqent_task, &pend);
-	if (rc == EBUSY) {
-		taskqueue_drain(tq->tq_queue, &ent->tqent_task);
-	} else if (pend) {
+		if (rc == EBUSY) {
+			taskqueue_drain_timeout(tq->tq_queue,
+			    &ent->tqent_timeout_task);
+		}
+	}
+	if (pend) {
 		/*
 		 * Tasks normally free themselves when run, but here the task
 		 * was cancelled so it did not free itself.
@@ -303,16 +298,17 @@ taskq_cancel_id(taskq_t *tq, taskqid_t tid)
 	}
 	/* Free the extra reference we added with taskq_lookup. */
 	taskq_free(ent);
-	return (rc);
+	return (pend ? 0 : ENOENT);
 }
 
 static void
-taskq_run(void *arg, int pending __unused)
+taskq_run(void *arg, int pending)
 {
 	taskq_ent_t *task = arg;
 
-	if (!task->tqent_cancelled)
-		task->tqent_func(task->tqent_arg);
+	if (pending == 0)
+		return;
+	task->tqent_func(task->tqent_arg);
 	taskq_free(task);
 }
 
@@ -340,7 +336,6 @@ taskq_dispatch_delay(taskq_t *tq, task_func_t func, void *arg,
 	task->tqent_func = func;
 	task->tqent_arg = arg;
 	task->tqent_type = TIMEOUT_TASK;
-	task->tqent_cancelled = B_FALSE;
 	refcount_init(&task->tqent_rc, 1);
 	tqid = taskq_insert(task);
 	TIMEOUT_TASK_INIT(tq->tq_queue, &task->tqent_timeout_task, 0,
@@ -374,7 +369,6 @@ taskq_dispatch(taskq_t *tq, task_func_t func, void *arg, uint_t flags)
 	refcount_init(&task->tqent_rc, 1);
 	task->tqent_func = func;
 	task->tqent_arg = arg;
-	task->tqent_cancelled = B_FALSE;
 	task->tqent_type = NORMAL_TASK;
 	tqid = taskq_insert(task);
 	TASK_INIT(&task->tqent_task, prio, taskq_run, task);
@@ -383,10 +377,12 @@ taskq_dispatch(taskq_t *tq, task_func_t func, void *arg, uint_t flags)
 }
 
 static void
-taskq_run_ent(void *arg, int pending __unused)
+taskq_run_ent(void *arg, int pending)
 {
 	taskq_ent_t *task = arg;
 
+	if (pending == 0)
+		return;
 	task->tqent_func(task->tqent_arg);
 }
 
@@ -401,8 +397,6 @@ taskq_dispatch_ent(taskq_t *tq, task_func_t func, void *arg, uint32_t flags,
 	 * can go at the front of the queue.
 	 */
 	prio = !!(flags & TQ_FRONT);
-	task->tqent_cancelled = B_FALSE;
-	task->tqent_registered = B_FALSE;
 	task->tqent_id = 0;
 	task->tqent_func = func;
 	task->tqent_arg = arg;
@@ -422,12 +416,13 @@ taskq_wait_id(taskq_t *tq, taskqid_t tid)
 {
 	taskq_ent_t *ent;
 
-	if (tid == 0)
-		return;
 	if ((ent = taskq_lookup(tid)) == NULL)
 		return;
 
-	taskqueue_drain(tq->tq_queue, &ent->tqent_task);
+	if (ent->tqent_type == NORMAL_TASK)
+		taskqueue_drain(tq->tq_queue, &ent->tqent_task);
+	else
+		taskqueue_drain_timeout(tq->tq_queue, &ent->tqent_timeout_task);
 	taskq_free(ent);
 }
 

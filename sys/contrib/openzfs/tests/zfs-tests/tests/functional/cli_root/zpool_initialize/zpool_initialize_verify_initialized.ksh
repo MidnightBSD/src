@@ -7,7 +7,7 @@
 # You may not use this file except in compliance with the License.
 #
 # You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
-# or http://www.opensolaris.org/os/licensing.
+# or https://opensource.org/licenses/CDDL-1.0.
 # See the License for the specific language governing permissions
 # and limitations under the License.
 #
@@ -65,10 +65,7 @@ log_must zpool export $TESTPOOL
 metaslabs=0
 bs=512
 zdb -p $TESTDIR -Pme $TESTPOOL | awk '/metaslab[ ]+[0-9]+/ { print $4, $8 }' |
-while read -r offset_size; do
-	typeset offset=$(echo $offset_size | cut -d ' ' -f1)
-	typeset size=$(echo $offset_size | cut -d ' ' -f2)
-
+while read -r offset size; do
 	log_note "offset: '$offset'"
 	log_note "size: '$size'"
 

@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -40,8 +40,8 @@
 
 static taskq_t *vdev_file_taskq;
 
-unsigned long vdev_file_logical_ashift = SPA_MINBLOCKSHIFT;
-unsigned long vdev_file_physical_ashift = SPA_MINBLOCKSHIFT;
+static uint_t vdev_file_logical_ashift = SPA_MINBLOCKSHIFT;
+static uint_t vdev_file_physical_ashift = SPA_MINBLOCKSHIFT;
 
 void
 vdev_file_init(void)
@@ -267,16 +267,9 @@ vdev_file_io_start(zio_t *zio)
 		zio_execute(zio);
 		return;
 	} else if (zio->io_type == ZIO_TYPE_TRIM) {
-#ifdef notyet
-		int mode = 0;
-
 		ASSERT3U(zio->io_size, !=, 0);
-
-		/* XXX FreeBSD has no fallocate routine in file ops */
-		zio->io_error = zfs_file_fallocate(vf->vf_file,
-		    mode, zio->io_offset, zio->io_size);
-#endif
-		zio->io_error = SET_ERROR(ENOTSUP);
+		zio->io_error = zfs_file_deallocate(vf->vf_file,
+		    zio->io_offset, zio->io_size);
 		zio_execute(zio);
 		return;
 	}
@@ -350,7 +343,7 @@ vdev_ops_t vdev_disk_ops = {
 
 #endif
 
-ZFS_MODULE_PARAM(zfs_vdev_file, vdev_file_, logical_ashift, ULONG, ZMOD_RW,
+ZFS_MODULE_PARAM(zfs_vdev_file, vdev_file_, logical_ashift, UINT, ZMOD_RW,
 	"Logical ashift for file-based devices");
-ZFS_MODULE_PARAM(zfs_vdev_file, vdev_file_, physical_ashift, ULONG, ZMOD_RW,
+ZFS_MODULE_PARAM(zfs_vdev_file, vdev_file_, physical_ashift, UINT, ZMOD_RW,
 	"Physical ashift for file-based devices");

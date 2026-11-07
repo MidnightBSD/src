@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -24,13 +24,20 @@
 
 #ifndef	_SYS_FS_ZFS_VNOPS_H
 #define	_SYS_FS_ZFS_VNOPS_H
+
 #include <sys/zfs_vnops_os.h>
+
+extern int zfs_bclone_enabled;
 
 extern int zfs_fsync(znode_t *, int, cred_t *);
 extern int zfs_read(znode_t *, zfs_uio_t *, int, cred_t *);
 extern int zfs_write(znode_t *, zfs_uio_t *, int, cred_t *);
 extern int zfs_holey(znode_t *, ulong_t, loff_t *);
 extern int zfs_access(znode_t *, int, int, cred_t *);
+extern int zfs_clone_range(znode_t *, uint64_t *, znode_t *, uint64_t *,
+    uint64_t *, cred_t *);
+extern int zfs_clone_range_replay(znode_t *, uint64_t, uint64_t, uint64_t,
+    const blkptr_t *, size_t);
 
 extern int zfs_getsecattr(znode_t *, vsecattr_t *, int, cred_t *);
 extern int zfs_setsecattr(znode_t *, vsecattr_t *, int, cred_t *);

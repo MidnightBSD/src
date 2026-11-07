@@ -7,7 +7,7 @@
 # You may not use this file except in compliance with the License.
 #
 # You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
-# or http://www.opensolaris.org/os/licensing.
+# or https://opensource.org/licenses/CDDL-1.0.
 # See the License for the specific language governing permissions
 # and limitations under the License.
 #
@@ -51,7 +51,8 @@ set -A arguments "$TESTPOOL $TESTPOOL" "$TESTPOOL rubbish" "-v $TESTPOOL" \
 		"nosuchproperty $TESTPOOL" "--$TESTPOOL" "all all" \
 		"type $TESTPOOL" "usage: $TESTPOOL" "bootfs $TESTPOOL@" \
 		"bootfs,bootfs $TESTPOOL" "name $TESTPOOL" "t%d%s" \
-		"bootfs,delegation $TESTPOOL" "delegation $TESTPOOL@"
+		"bootfs,delegation $TESTPOOL" "delegation $TESTPOOL@" \
+		"-o name=getsubopt allocated $TESTPOOL"
 
 for arg in $arguments
 do

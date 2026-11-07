@@ -1,4 +1,3 @@
-/* BEGIN CSTYLED */
 /*
 ** $Id: lstring.c,v 2.26.1.1 2013/04/12 18:48:47 roberto Exp $
 ** String table (keeps all strings handled by Lua)
@@ -104,7 +103,7 @@ static TString *createstrobj (lua_State *L, const char *str, size_t l,
   ts->tsv.len = l;
   ts->tsv.hash = h;
   ts->tsv.extra = 0;
-  sbuf = (char *)(TString *)(ts + 1);
+  sbuf = ts->contents;
   memcpy(sbuf, str, l*sizeof(char));
   sbuf[l] = '\0';  /* ending 0 */
   return ts;
@@ -183,4 +182,3 @@ Udata *luaS_newudata (lua_State *L, size_t s, Table *e) {
   u->uv.env = e;
   return u;
 }
-/* END CSTYLED */

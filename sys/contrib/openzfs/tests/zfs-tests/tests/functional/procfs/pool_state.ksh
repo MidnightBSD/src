@@ -7,7 +7,7 @@
 # You may not use this file except in compliance with the License.
 #
 # You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
-# or http://www.opensolaris.org/os/licensing.
+# or https://opensource.org/licenses/CDDL-1.0.
 # See the License for the specific language governing permissions
 # and limitations under the License.
 #
@@ -106,7 +106,7 @@ log_assert "Testing /proc/spl/kstat/zfs/<pool>/state kstat"
 check_all $TESTPOOL "ONLINE"
 
 # Fault one of the disks, and check that pool is degraded
-DISK1=$(echo "$DISKS" | awk '{print $2}')
+read -r DISK1 _ <<<"$DISKS"
 log_must zpool offline -tf $TESTPOOL $DISK1
 check_all $TESTPOOL "DEGRADED"
 log_must zpool online $TESTPOOL $DISK1
@@ -141,7 +141,11 @@ remove_disk $SDISK
 # background since the command will hang when the pool gets suspended.  The
 # command will resume and exit after we restore the missing disk later on.
 zpool scrub $TESTPOOL2 &
-sleep 3		# Give the scrub some time to run before we check if it fails
+# Once we trigger the zpool scrub, all zpool/zfs command gets stuck for 180 seconds.
+# Post 180 seconds zpool/zfs commands gets start executing however few more seconds(10s)
+# it take to update the status.
+# hence sleeping for 200 seconds so that we get the correct status.
+sleep 200		# Give the scrub some time to run before we check if it fails
 
 log_must check_all $TESTPOOL2 "SUSPENDED"
 

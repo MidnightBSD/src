@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -21,6 +21,7 @@
 /*
  * Copyright (c) 2018 Intel Corporation.
  * Copyright (c) 2020 by Lawrence Livermore National Security, LLC.
+ * Copyright (c) 2026, Wasabi Technologies, Inc.
  */
 
 #include <sys/zfs_context.h>
@@ -1023,6 +1024,8 @@ vdev_draid_map_alloc_row(zio_t *zio, raidz_row_t **rrp, uint64_t io_offset,
 	/* The total number of data and parity sectors for this I/O. */
 	uint64_t tot = psize + (vdc->vdc_nparity * (q + (r == 0 ? 0 : 1)));
 
+	ASSERT3U(vdc->vdc_nparity, >, 0);
+
 	raidz_row_t *rr;
 	rr = kmem_alloc(offsetof(raidz_row_t, rr_col[groupwidth]), KM_SLEEP);
 	rr->rr_cols = groupwidth;
@@ -1170,7 +1173,7 @@ vdev_draid_get_astart(vdev_t *vd, const uint64_t start)
 /*
  * Allocatable space for dRAID is (children - nspares) * sizeof(smallest child)
  * rounded down to the last full slice.  So each child must provide at least
- * 1 / (children - nspares) of its asize.
+ * 1 / (children - nspares) of its asize rounded up to VDEV_DRAID_ROWHEIGHT.
  */
 static uint64_t
 vdev_draid_min_asize(vdev_t *vd)
@@ -1180,7 +1183,9 @@ vdev_draid_min_asize(vdev_t *vd)
 	ASSERT3P(vd->vdev_ops, ==, &vdev_draid_ops);
 
 	return (VDEV_DRAID_REFLOW_RESERVE +
-	    (vd->vdev_min_asize + vdc->vdc_ndisks - 1) / (vdc->vdc_ndisks));
+	    ((vd->vdev_min_asize + vdc->vdc_ndisks - 1) / (vdc->vdc_ndisks) +
+	    VDEV_DRAID_ROWHEIGHT - 1) / VDEV_DRAID_ROWHEIGHT *
+	    VDEV_DRAID_ROWHEIGHT);
 }
 
 /*
@@ -1198,7 +1203,7 @@ vdev_draid_min_alloc(vdev_t *vd)
 }
 
 /*
- * Returns true if the txg range does not exist on any leaf vdev.
+ * Returns false if the txg range exists on any leaf vdev, true otherwise.
  *
  * A dRAID spare does not fit into the DTL model. While it has child vdevs
  * there is no redundancy among them, and the effective child vdev is
@@ -1256,8 +1261,7 @@ vdev_draid_missing(vdev_t *vd, uint64_t physical_offset, uint64_t txg,
 		if (vd == NULL)
 			return (B_TRUE);
 
-		return (vdev_draid_missing(vd, physical_offset,
-		    txg, size));
+		return (vdev_draid_missing(vd, physical_offset, txg, size));
 	}
 
 	return (vdev_dtl_contains(vd, DTL_MISSING, txg, size));
@@ -1461,13 +1465,6 @@ vdev_draid_group_missing(vdev_t *vd, uint64_t offset, uint64_t txg,
 		/* Transaction group is known to be partially replicated. */
 		if (vdev_draid_partial(cvd, physical_offset, txg, size))
 			return (B_TRUE);
-
-		/*
-		 * Always check groups with active distributed spares
-		 * because any vdev failure in the pool will affect them.
-		 */
-		if (vdev_draid_find_spare(cvd) != NULL)
-			return (B_TRUE);
 	}
 
 	return (B_FALSE);
@@ -1537,7 +1534,7 @@ vdev_draid_open_children(vdev_t *vd)
  */
 static int
 vdev_draid_open(vdev_t *vd, uint64_t *asize, uint64_t *max_asize,
-    uint64_t *logical_ashift, uint64_t *physical_ashift)
+    uint64_t *logical_ashift, uint64_t *physical_ashift, cred_t *cr)
 {
 	vdev_draid_config_t *vdc =  vd->vdev_tsd;
 	uint64_t nparity = vdc->vdc_nparity;
@@ -1554,8 +1551,8 @@ vdev_draid_open(vdev_t *vd, uint64_t *asize, uint64_t *max_asize,
 	 * ordering is important to ensure the distributed spares calculate
 	 * the correct psize in the event that the dRAID vdevs were expanded.
 	 */
-	vdev_open_children_subset(vd, vdev_draid_open_children);
-	vdev_open_children_subset(vd, vdev_draid_open_spares);
+	vdev_open_children_subset(vd, cr, vdev_draid_open_children);
+	vdev_open_children_subset(vd, cr, vdev_draid_open_spares);
 
 	/* Verify enough of the children are available to continue. */
 	for (int c = 0; c < vd->vdev_children; c++) {
@@ -1731,7 +1728,7 @@ vdev_draid_spare_create(nvlist_t *nvroot, vdev_t *vd, uint64_t *ndraidp,
 		uint64_t nparity = vdc->vdc_nparity;
 
 		for (uint64_t spare_id = 0; spare_id < nspares; spare_id++) {
-			bzero(path, sizeof (path));
+			memset(path, 0, sizeof (path));
 			(void) snprintf(path, sizeof (path) - 1,
 			    "%s%llu-%llu-%llu", VDEV_TYPE_DRAID,
 			    (u_longlong_t)nparity,
@@ -1760,7 +1757,7 @@ vdev_draid_spare_create(nvlist_t *nvroot, vdev_t *vd, uint64_t *ndraidp,
 	if (n > 0) {
 		(void) nvlist_remove_all(nvroot, ZPOOL_CONFIG_SPARES);
 		fnvlist_add_nvlist_array(nvroot, ZPOOL_CONFIG_SPARES,
-		    new_spares, n);
+		    (const nvlist_t **)new_spares, n);
 	}
 
 	for (int i = 0; i < n; i++)
@@ -1923,12 +1920,34 @@ vdev_draid_io_start_read(zio_t *zio, raidz_row_t *rr)
 		}
 
 		if (vdev_draid_missing(cvd, rc->rc_offset, zio->io_txg, 1)) {
+			vdev_t *svd;
+
 			if (c >= rr->rr_firstdatacol)
 				rr->rr_missingdata++;
 			else
 				rr->rr_missingparity++;
 			rc->rc_error = SET_ERROR(ESTALE);
 			rc->rc_skipped = 1;
+
+			/*
+			 * If this child has draid spare attached, and that
+			 * spare by rc_offset maps to another spare, the repair
+			 * would go to that spare, and we want all mirrored
+			 * children on it to be updated with the repaired data,
+			 * even when we cannot vouch for it during rebuilds
+			 * (which don't have checksums). Otherwise, we will have
+			 * a lot of checksum errors on that spares during scrub.
+			 * The worst thing that can happen in this case is that
+			 * we will update the reserved spare column on some
+			 * device with unverified data, which is harmless.
+			 */
+			if ((svd = vdev_draid_find_spare(cvd)) != NULL) {
+				svd = vdev_draid_spare_get_child(svd,
+				    rc->rc_offset);
+				if (svd && (svd->vdev_ops == &vdev_spare_ops ||
+				    svd->vdev_ops == &vdev_replacing_ops))
+					rc->rc_tgt_is_dspare = 1;
+			}
 			continue;
 		}
 
@@ -1946,34 +1965,15 @@ vdev_draid_io_start_read(zio_t *zio, raidz_row_t *rr)
 			vdev_t *svd;
 
 			/*
-			 * Sequential rebuilds need to always consider the data
-			 * on the child being rebuilt to be stale.  This is
-			 * important when all columns are available to aid
-			 * known reconstruction in identifing which columns
-			 * contain incorrect data.
-			 *
-			 * Furthermore, all repairs need to be constrained to
-			 * the devices being rebuilt because without a checksum
-			 * we cannot verify the data is actually correct and
-			 * performing an incorrect repair could result in
-			 * locking in damage and making the data unrecoverable.
+			 * Repairs need to be constrained to the devices being
+			 * rebuilt since without a checksum we cannot verify the
+			 * data is actually correct and performing an incorrect
+			 * repair could result in locking in the damage and
+			 * making the data unrecoverable.
 			 */
-			if (zio->io_priority == ZIO_PRIORITY_REBUILD) {
-				if (vdev_draid_rebuilding(cvd)) {
-					if (c >= rr->rr_firstdatacol)
-						rr->rr_missingdata++;
-					else
-						rr->rr_missingparity++;
-					rc->rc_error = SET_ERROR(ESTALE);
-					rc->rc_skipped = 1;
-					rc->rc_allow_repair = 1;
-					continue;
-				} else {
-					rc->rc_allow_repair = 0;
-				}
-			} else {
-				rc->rc_allow_repair = 1;
-			}
+			if (zio->io_priority == ZIO_PRIORITY_REBUILD &&
+			    !vdev_draid_rebuilding(cvd))
+				rc->rc_allow_repair = 0;
 
 			/*
 			 * If this child is a distributed spare then the
@@ -2449,8 +2449,9 @@ vdev_draid_spare_close(vdev_t *vd)
  */
 static int
 vdev_draid_spare_open(vdev_t *vd, uint64_t *psize, uint64_t *max_psize,
-    uint64_t *logical_ashift, uint64_t *physical_ashift)
+    uint64_t *logical_ashift, uint64_t *physical_ashift, cred_t *cr)
 {
+	(void) cr;
 	vdev_draid_spare_t *vds = vd->vdev_tsd;
 	vdev_t *rvd = vd->vdev_spa->spa_root_vdev;
 	uint64_t asize, max_asize;
@@ -2718,7 +2719,7 @@ vdev_draid_spare_lookup(spa_t *spa, nvlist_t *nv, uint64_t *top_guidp,
 		return (SET_ERROR(ENOENT));
 	}
 
-	char *spare_name;
+	const char *spare_name;
 	error = nvlist_lookup_string(nv, ZPOOL_CONFIG_PATH, &spare_name);
 	if (error != 0)
 		return (SET_ERROR(EINVAL));
@@ -2726,7 +2727,7 @@ vdev_draid_spare_lookup(spa_t *spa, nvlist_t *nv, uint64_t *top_guidp,
 	for (int i = 0; i < nspares; i++) {
 		nvlist_t *spare = spares[i];
 		uint64_t top_guid, spare_id;
-		char *type, *path;
+		const char *type, *path;
 
 		/* Skip non-distributed spares */
 		error = nvlist_lookup_string(spare, ZPOOL_CONFIG_TYPE, &type);

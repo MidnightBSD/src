@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -82,13 +82,13 @@ fnvlist_pack(nvlist_t *nvl, size_t *sizep)
 	return (packed);
 }
 
-/*ARGSUSED*/
 void
 fnvlist_pack_free(char *pack, size_t size)
 {
 #ifdef _KERNEL
 	kmem_free(pack, size);
 #else
+	(void) size;
 	free(pack);
 #endif
 }
@@ -102,7 +102,7 @@ fnvlist_unpack(char *buf, size_t buflen)
 }
 
 nvlist_t *
-fnvlist_dup(nvlist_t *nvl)
+fnvlist_dup(const nvlist_t *nvl)
 {
 	nvlist_t *rv;
 	VERIFY0(nvlist_dup(nvl, &rv, KM_SLEEP));
@@ -213,78 +213,84 @@ fnvlist_add_nvpair(nvlist_t *nvl, nvpair_t *pair)
 
 void
 fnvlist_add_boolean_array(nvlist_t *nvl, const char *name,
-    boolean_t *val, uint_t n)
+    const boolean_t *val, uint_t n)
 {
 	VERIFY0(nvlist_add_boolean_array(nvl, name, val, n));
 }
 
 void
-fnvlist_add_byte_array(nvlist_t *nvl, const char *name, uchar_t *val, uint_t n)
+fnvlist_add_byte_array(nvlist_t *nvl, const char *name, const uchar_t *val,
+    uint_t n)
 {
 	VERIFY0(nvlist_add_byte_array(nvl, name, val, n));
 }
 
 void
-fnvlist_add_int8_array(nvlist_t *nvl, const char *name, int8_t *val, uint_t n)
+fnvlist_add_int8_array(nvlist_t *nvl, const char *name, const int8_t *val,
+    uint_t n)
 {
 	VERIFY0(nvlist_add_int8_array(nvl, name, val, n));
 }
 
 void
-fnvlist_add_uint8_array(nvlist_t *nvl, const char *name, uint8_t *val, uint_t n)
+fnvlist_add_uint8_array(nvlist_t *nvl, const char *name, const uint8_t *val,
+    uint_t n)
 {
 	VERIFY0(nvlist_add_uint8_array(nvl, name, val, n));
 }
 
 void
-fnvlist_add_int16_array(nvlist_t *nvl, const char *name, int16_t *val, uint_t n)
+fnvlist_add_int16_array(nvlist_t *nvl, const char *name, const int16_t *val,
+    uint_t n)
 {
 	VERIFY0(nvlist_add_int16_array(nvl, name, val, n));
 }
 
 void
 fnvlist_add_uint16_array(nvlist_t *nvl, const char *name,
-    uint16_t *val, uint_t n)
+    const uint16_t *val, uint_t n)
 {
 	VERIFY0(nvlist_add_uint16_array(nvl, name, val, n));
 }
 
 void
-fnvlist_add_int32_array(nvlist_t *nvl, const char *name, int32_t *val, uint_t n)
+fnvlist_add_int32_array(nvlist_t *nvl, const char *name, const int32_t *val,
+    uint_t n)
 {
 	VERIFY0(nvlist_add_int32_array(nvl, name, val, n));
 }
 
 void
 fnvlist_add_uint32_array(nvlist_t *nvl, const char *name,
-    uint32_t *val, uint_t n)
+    const uint32_t *val, uint_t n)
 {
 	VERIFY0(nvlist_add_uint32_array(nvl, name, val, n));
 }
 
 void
-fnvlist_add_int64_array(nvlist_t *nvl, const char *name, int64_t *val, uint_t n)
+fnvlist_add_int64_array(nvlist_t *nvl, const char *name, const int64_t *val,
+    uint_t n)
 {
 	VERIFY0(nvlist_add_int64_array(nvl, name, val, n));
 }
 
 void
 fnvlist_add_uint64_array(nvlist_t *nvl, const char *name,
-    uint64_t *val, uint_t n)
+    const uint64_t *val, uint_t n)
 {
 	VERIFY0(nvlist_add_uint64_array(nvl, name, val, n));
 }
 
 void
 fnvlist_add_string_array(nvlist_t *nvl, const char *name,
-    char * const *val, uint_t n)
+    const char * const *val, uint_t n)
 {
 	VERIFY0(nvlist_add_string_array(nvl, name, val, n));
 }
 
 void
 fnvlist_add_nvlist_array(nvlist_t *nvl, const char *name,
-    nvlist_t **val, uint_t n)
+    const nvlist_t * const *val, uint_t n)
 {
 	VERIFY0(nvlist_add_nvlist_array(nvl, name, val, n));
 }
@@ -311,13 +317,13 @@ fnvlist_lookup_nvpair(nvlist_t *nvl, const char *name)
 
 /* returns B_TRUE if the entry exists */
 boolean_t
-fnvlist_lookup_boolean(nvlist_t *nvl, const char *name)
+fnvlist_lookup_boolean(const nvlist_t *nvl, const char *name)
 {
 	return (nvlist_lookup_boolean(nvl, name) == 0);
 }
 
 boolean_t
-fnvlist_lookup_boolean_value(nvlist_t *nvl, const char *name)
+fnvlist_lookup_boolean_value(const nvlist_t *nvl, const char *name)
 {
 	boolean_t rv;
 	VERIFY0(nvlist_lookup_boolean_value(nvl, name, &rv));
@@ -325,7 +331,7 @@ fnvlist_lookup_boolean_value(nvlist_t *nvl, const char *name)
 }
 
 uchar_t
-fnvlist_lookup_byte(nvlist_t *nvl, const char *name)
+fnvlist_lookup_byte(const nvlist_t *nvl, const char *name)
 {
 	uchar_t rv;
 	VERIFY0(nvlist_lookup_byte(nvl, name, &rv));
@@ -333,7 +339,7 @@ fnvlist_lookup_byte(nvlist_t *nvl, const char *name)
 }
 
 int8_t
-fnvlist_lookup_int8(nvlist_t *nvl, const char *name)
+fnvlist_lookup_int8(const nvlist_t *nvl, const char *name)
 {
 	int8_t rv;
 	VERIFY0(nvlist_lookup_int8(nvl, name, &rv));
@@ -341,7 +347,7 @@ fnvlist_lookup_int8(nvlist_t *nvl, const char *name)
 }
 
 int16_t
-fnvlist_lookup_int16(nvlist_t *nvl, const char *name)
+fnvlist_lookup_int16(const nvlist_t *nvl, const char *name)
 {
 	int16_t rv;
 	VERIFY0(nvlist_lookup_int16(nvl, name, &rv));
@@ -349,7 +355,7 @@ fnvlist_lookup_int16(nvlist_t *nvl, const char *name)
 }
 
 int32_t
-fnvlist_lookup_int32(nvlist_t *nvl, const char *name)
+fnvlist_lookup_int32(const nvlist_t *nvl, const char *name)
 {
 	int32_t rv;
 	VERIFY0(nvlist_lookup_int32(nvl, name, &rv));
@@ -357,7 +363,7 @@ fnvlist_lookup_int32(nvlist_t *nvl, const char *name)
 }
 
 int64_t
-fnvlist_lookup_int64(nvlist_t *nvl, const char *name)
+fnvlist_lookup_int64(const nvlist_t *nvl, const char *name)
 {
 	int64_t rv;
 	VERIFY0(nvlist_lookup_int64(nvl, name, &rv));
@@ -365,7 +371,7 @@ fnvlist_lookup_int64(nvlist_t *nvl, const char *name)
 }
 
 uint8_t
-fnvlist_lookup_uint8(nvlist_t *nvl, const char *name)
+fnvlist_lookup_uint8(const nvlist_t *nvl, const char *name)
 {
 	uint8_t rv;
 	VERIFY0(nvlist_lookup_uint8(nvl, name, &rv));
@@ -373,7 +379,7 @@ fnvlist_lookup_uint8(nvlist_t *nvl, const char *name)
 }
 
 uint16_t
-fnvlist_lookup_uint16(nvlist_t *nvl, const char *name)
+fnvlist_lookup_uint16(const nvlist_t *nvl, const char *name)
 {
 	uint16_t rv;
 	VERIFY0(nvlist_lookup_uint16(nvl, name, &rv));
@@ -381,7 +387,7 @@ fnvlist_lookup_uint16(nvlist_t *nvl, const char *name)
 }
 
 uint32_t
-fnvlist_lookup_uint32(nvlist_t *nvl, const char *name)
+fnvlist_lookup_uint32(const nvlist_t *nvl, const char *name)
 {
 	uint32_t rv;
 	VERIFY0(nvlist_lookup_uint32(nvl, name, &rv));
@@ -389,17 +395,17 @@ fnvlist_lookup_uint32(nvlist_t *nvl, const char *name)
 }
 
 uint64_t
-fnvlist_lookup_uint64(nvlist_t *nvl, const char *name)
+fnvlist_lookup_uint64(const nvlist_t *nvl, const char *name)
 {
 	uint64_t rv;
 	VERIFY0(nvlist_lookup_uint64(nvl, name, &rv));
 	return (rv);
 }
 
-char *
-fnvlist_lookup_string(nvlist_t *nvl, const char *name)
+const char *
+fnvlist_lookup_string(const nvlist_t *nvl, const char *name)
 {
-	char *rv;
+	const char *rv;
 	VERIFY0(nvlist_lookup_string(nvl, name, &rv));
 	return (rv);
 }
@@ -492,7 +498,7 @@ fnvlist_lookup_uint64_array(nvlist_t *nvl, const char *name, uint_t *n)
 }
 
 boolean_t
-fnvpair_value_boolean_value(nvpair_t *nvp)
+fnvpair_value_boolean_value(const nvpair_t *nvp)
 {
 	boolean_t rv;
 	VERIFY0(nvpair_value_boolean_value(nvp, &rv));
@@ -500,7 +506,7 @@ fnvpair_value_boolean_value(nvpair_t *nvp)
 }
 
 uchar_t
-fnvpair_value_byte(nvpair_t *nvp)
+fnvpair_value_byte(const nvpair_t *nvp)
 {
 	uchar_t rv;
 	VERIFY0(nvpair_value_byte(nvp, &rv));
@@ -508,7 +514,7 @@ fnvpair_value_byte(nvpair_t *nvp)
 }
 
 int8_t
-fnvpair_value_int8(nvpair_t *nvp)
+fnvpair_value_int8(const nvpair_t *nvp)
 {
 	int8_t rv;
 	VERIFY0(nvpair_value_int8(nvp, &rv));
@@ -516,7 +522,7 @@ fnvpair_value_int8(nvpair_t *nvp)
 }
 
 int16_t
-fnvpair_value_int16(nvpair_t *nvp)
+fnvpair_value_int16(const nvpair_t *nvp)
 {
 	int16_t rv;
 	VERIFY0(nvpair_value_int16(nvp, &rv));
@@ -524,7 +530,7 @@ fnvpair_value_int16(nvpair_t *nvp)
 }
 
 int32_t
-fnvpair_value_int32(nvpair_t *nvp)
+fnvpair_value_int32(const nvpair_t *nvp)
 {
 	int32_t rv;
 	VERIFY0(nvpair_value_int32(nvp, &rv));
@@ -532,7 +538,7 @@ fnvpair_value_int32(nvpair_t *nvp)
 }
 
 int64_t
-fnvpair_value_int64(nvpair_t *nvp)
+fnvpair_value_int64(const nvpair_t *nvp)
 {
 	int64_t rv;
 	VERIFY0(nvpair_value_int64(nvp, &rv));
@@ -540,7 +546,7 @@ fnvpair_value_int64(nvpair_t *nvp)
 }
 
 uint8_t
-fnvpair_value_uint8(nvpair_t *nvp)
+fnvpair_value_uint8(const nvpair_t *nvp)
 {
 	uint8_t rv;
 	VERIFY0(nvpair_value_uint8(nvp, &rv));
@@ -548,7 +554,7 @@ fnvpair_value_uint8(nvpair_t *nvp)
 }
 
 uint16_t
-fnvpair_value_uint16(nvpair_t *nvp)
+fnvpair_value_uint16(const nvpair_t *nvp)
 {
 	uint16_t rv;
 	VERIFY0(nvpair_value_uint16(nvp, &rv));
@@ -556,7 +562,7 @@ fnvpair_value_uint16(nvpair_t *nvp)
 }
 
 uint32_t
-fnvpair_value_uint32(nvpair_t *nvp)
+fnvpair_value_uint32(const nvpair_t *nvp)
 {
 	uint32_t rv;
 	VERIFY0(nvpair_value_uint32(nvp, &rv));
@@ -564,17 +570,17 @@ fnvpair_value_uint32(nvpair_t *nvp)
 }
 
 uint64_t
-fnvpair_value_uint64(nvpair_t *nvp)
+fnvpair_value_uint64(const nvpair_t *nvp)
 {
 	uint64_t rv;
 	VERIFY0(nvpair_value_uint64(nvp, &rv));
 	return (rv);
 }
 
-char *
-fnvpair_value_string(nvpair_t *nvp)
+const char *
+fnvpair_value_string(const nvpair_t *nvp)
 {
-	char *rv;
+	const char *rv;
 	VERIFY0(nvpair_value_string(nvp, &rv));
 	return (rv);
 }

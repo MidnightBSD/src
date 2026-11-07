@@ -7,7 +7,7 @@
 # You may not use this file except in compliance with the License.
 #
 # You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
-# or http://www.opensolaris.org/os/licensing.
+# or https://opensource.org/licenses/CDDL-1.0.
 # See the License for the specific language governing permissions
 # and limitations under the License.
 #
@@ -61,7 +61,7 @@ log_assert "Verify scrub, scrub -p, and scrub -s show the right status."
 # Create 1G of additional data
 mntpnt=$(get_prop mountpoint $TESTPOOL/$TESTFS)
 log_must file_write -b 1048576 -c 1024 -o create -d 0 -f $mntpnt/biggerfile
-log_must sync
+sync_all_pools
 
 log_must set_tunable32 SCAN_SUSPEND_PROGRESS 1
 log_must zpool scrub $TESTPOOL

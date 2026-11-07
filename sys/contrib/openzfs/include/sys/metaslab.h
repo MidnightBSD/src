@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -43,7 +43,7 @@ typedef struct metaslab_ops {
 } metaslab_ops_t;
 
 
-extern metaslab_ops_t *zfs_metaslab_ops;
+extern const metaslab_ops_t zfs_metaslab_ops;
 
 int metaslab_init(metaslab_group_t *, uint64_t, uint64_t, uint64_t,
     metaslab_t **);
@@ -80,7 +80,6 @@ uint64_t metaslab_largest_allocatable(metaslab_t *);
 #define	METASLAB_ASYNC_ALLOC		0x8
 #define	METASLAB_DONT_THROTTLE		0x10
 #define	METASLAB_MUST_RESERVE		0x20
-#define	METASLAB_FASTWRITE		0x40
 #define	METASLAB_ZIL			0x80
 
 int metaslab_alloc(spa_t *, metaslab_class_t *, uint64_t,
@@ -96,15 +95,13 @@ void metaslab_unalloc_dva(spa_t *, const dva_t *, uint64_t);
 int metaslab_claim(spa_t *, const blkptr_t *, uint64_t);
 int metaslab_claim_impl(vdev_t *, uint64_t, uint64_t, uint64_t);
 void metaslab_check_free(spa_t *, const blkptr_t *);
-void metaslab_fastwrite_mark(spa_t *, const blkptr_t *);
-void metaslab_fastwrite_unmark(spa_t *, const blkptr_t *);
 
 void metaslab_stat_init(void);
 void metaslab_stat_fini(void);
 void metaslab_trace_init(zio_alloc_list_t *);
 void metaslab_trace_fini(zio_alloc_list_t *);
 
-metaslab_class_t *metaslab_class_create(spa_t *, metaslab_ops_t *);
+metaslab_class_t *metaslab_class_create(spa_t *, const metaslab_ops_t *);
 void metaslab_class_destroy(metaslab_class_t *);
 int metaslab_class_validate(metaslab_class_t *);
 void metaslab_class_histogram_verify(metaslab_class_t *);
@@ -115,12 +112,12 @@ boolean_t metaslab_class_throttle_reserve(metaslab_class_t *, int, int,
 void metaslab_class_throttle_unreserve(metaslab_class_t *, int, int, zio_t *);
 void metaslab_class_evict_old(metaslab_class_t *, uint64_t);
 uint64_t metaslab_class_get_alloc(metaslab_class_t *);
+uint64_t metaslab_class_get_dalloc(metaslab_class_t *);
 uint64_t metaslab_class_get_space(metaslab_class_t *);
 uint64_t metaslab_class_get_dspace(metaslab_class_t *);
 uint64_t metaslab_class_get_deferred(metaslab_class_t *);
 
-void metaslab_space_update(vdev_t *, metaslab_class_t *,
-    int64_t, int64_t, int64_t);
+void metaslab_space_update(metaslab_group_t *, int64_t, int64_t, int64_t);
 
 metaslab_group_t *metaslab_group_create(metaslab_class_t *, vdev_t *, int);
 void metaslab_group_destroy(metaslab_group_t *);
@@ -131,9 +128,9 @@ uint64_t metaslab_group_get_space(metaslab_group_t *);
 void metaslab_group_histogram_verify(metaslab_group_t *);
 uint64_t metaslab_group_fragmentation(metaslab_group_t *);
 void metaslab_group_histogram_remove(metaslab_group_t *, metaslab_t *);
-void metaslab_group_alloc_decrement(spa_t *, uint64_t, void *, int, int,
+void metaslab_group_alloc_decrement(spa_t *, uint64_t, const void *, int, int,
     boolean_t);
-void metaslab_group_alloc_verify(spa_t *, const blkptr_t *, void *, int);
+void metaslab_group_alloc_verify(spa_t *, const blkptr_t *, const void *, int);
 void metaslab_recalculate_weight_and_sort(metaslab_t *);
 void metaslab_disable(metaslab_t *);
 void metaslab_enable(metaslab_t *, boolean_t, boolean_t);

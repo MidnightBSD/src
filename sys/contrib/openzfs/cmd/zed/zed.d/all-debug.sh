@@ -1,4 +1,5 @@
 #!/bin/sh
+# shellcheck disable=SC2154
 #
 # Log all environment variables to ZED_DEBUG_LOG.
 #
@@ -14,7 +15,7 @@ zed_exit_if_ignoring_this_event
 
 zed_lock "${ZED_DEBUG_LOG}"
 {
-	printenv | sort
+	env | sort
 	echo
 } 1>&"${ZED_FLOCK_FD}"
 zed_unlock "${ZED_DEBUG_LOG}"

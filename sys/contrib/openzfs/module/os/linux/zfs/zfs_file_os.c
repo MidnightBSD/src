@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -40,7 +40,8 @@
  * Returns 0 on success underlying error on failure.
  */
 int
-zfs_file_open(const char *path, int flags, int mode, zfs_file_t **fpp)
+zfs_file_open(const char *path, int flags, int mode, cred_t *cr,
+    zfs_file_t **fpp)
 {
 	struct file *filp;
 	int saved_umask;
@@ -51,7 +52,9 @@ zfs_file_open(const char *path, int flags, int mode, zfs_file_t **fpp)
 	if (flags & O_CREAT)
 		saved_umask = xchg(&current->fs->umask, 0);
 
+	const cred_t *oldcr = override_creds(cr);
 	filp = filp_open(path, flags, mode);
+	revert_creds(oldcr);
 
 	if (flags & O_CREAT)
 		(void) xchg(&current->fs->umask, saved_umask);
@@ -67,26 +70,6 @@ void
 zfs_file_close(zfs_file_t *fp)
 {
 	filp_close(fp, 0);
-}
-
-static ssize_t
-zfs_file_write_impl(zfs_file_t *fp, const void *buf, size_t count, loff_t *off)
-{
-#if defined(HAVE_KERNEL_WRITE_PPOS)
-	return (kernel_write(fp, buf, count, off));
-#else
-	mm_segment_t saved_fs;
-	ssize_t rc;
-
-	saved_fs = get_fs();
-	set_fs(KERNEL_DS);
-
-	rc = vfs_write(fp, (__force const char __user __user *)buf, count, off);
-
-	set_fs(saved_fs);
-
-	return (rc);
-#endif
 }
 
 /*
@@ -106,7 +89,7 @@ zfs_file_write(zfs_file_t *fp, const void *buf, size_t count, ssize_t *resid)
 	loff_t off = fp->f_pos;
 	ssize_t rc;
 
-	rc = zfs_file_write_impl(fp, buf, count, &off);
+	rc = kernel_write(fp, buf, count, &off);
 	if (rc < 0)
 		return (-rc);
 
@@ -138,7 +121,7 @@ zfs_file_pwrite(zfs_file_t *fp, const void *buf, size_t count, loff_t off,
 {
 	ssize_t rc;
 
-	rc  = zfs_file_write_impl(fp, buf, count, &off);
+	rc  = kernel_write(fp, buf, count, &off);
 	if (rc < 0)
 		return (-rc);
 
@@ -149,25 +132,6 @@ zfs_file_pwrite(zfs_file_t *fp, const void *buf, size_t count, loff_t off,
 	}
 
 	return (0);
-}
-
-static ssize_t
-zfs_file_read_impl(zfs_file_t *fp, void *buf, size_t count, loff_t *off)
-{
-#if defined(HAVE_KERNEL_READ_PPOS)
-	return (kernel_read(fp, buf, count, off));
-#else
-	mm_segment_t saved_fs;
-	ssize_t rc;
-
-	saved_fs = get_fs();
-	set_fs(KERNEL_DS);
-
-	rc = vfs_read(fp, (void __user *)buf, count, off);
-	set_fs(saved_fs);
-
-	return (rc);
-#endif
 }
 
 /*
@@ -187,7 +151,7 @@ zfs_file_read(zfs_file_t *fp, void *buf, size_t count, ssize_t *resid)
 	loff_t off = fp->f_pos;
 	ssize_t rc;
 
-	rc = zfs_file_read_impl(fp, buf, count, &off);
+	rc = kernel_read(fp, buf, count, &off);
 	if (rc < 0)
 		return (-rc);
 
@@ -219,7 +183,7 @@ zfs_file_pread(zfs_file_t *fp, void *buf, size_t count, loff_t off,
 {
 	ssize_t rc;
 
-	rc = zfs_file_read_impl(fp, buf, count, &off);
+	rc = kernel_read(fp, buf, count, &off);
 	if (rc < 0)
 		return (-rc);
 
@@ -246,7 +210,7 @@ zfs_file_seek(zfs_file_t *fp, loff_t *offp, int whence)
 {
 	loff_t rc;
 
-	if (*offp < 0 || *offp > MAXOFFSET_T)
+	if (*offp < 0)
 		return (EINVAL);
 
 	rc = vfs_llseek(fp, *offp, whence);
@@ -274,16 +238,8 @@ zfs_file_getattr(zfs_file_t *filp, zfs_file_attr_t *zfattr)
 	struct kstat stat;
 	int rc;
 
-#if defined(HAVE_4ARGS_VFS_GETATTR)
 	rc = vfs_getattr(&filp->f_path, &stat, STATX_BASIC_STATS,
 	    AT_STATX_SYNC_AS_STAT);
-#elif defined(HAVE_2ARGS_VFS_GETATTR)
-	rc = vfs_getattr(&filp->f_path, &stat);
-#elif defined(HAVE_3ARGS_VFS_GETATTR)
-	rc = vfs_getattr(filp->f_path.mnt, filp->f_dentry, &stat);
-#else
-#error "No available vfs_getattr()"
-#endif
 	if (rc)
 		return (-rc);
 
@@ -328,17 +284,14 @@ zfs_file_fsync(zfs_file_t *filp, int flags)
 }
 
 /*
- * fallocate - allocate or free space on disk
+ * deallocate - zero and/or deallocate file storage
  *
  * fp - file pointer
- * mode (non-standard options for hole punching etc)
- * offset - offset to start allocating or freeing from
- * len - length to free / allocate
- *
- * OPTIONAL
+ * offset - offset to start zeroing or deallocating
+ * len - length to zero or deallocate
  */
 int
-zfs_file_fallocate(zfs_file_t *fp, int mode, loff_t offset, loff_t len)
+zfs_file_deallocate(zfs_file_t *fp, loff_t offset, loff_t len)
 {
 	/*
 	 * May enter XFS which generates a warning when PF_FSTRANS is set.
@@ -354,12 +307,16 @@ zfs_file_fallocate(zfs_file_t *fp, int mode, loff_t offset, loff_t len)
 	 */
 	int error = EOPNOTSUPP;
 	if (fp->f_op->fallocate)
-		error = fp->f_op->fallocate(fp, mode, offset, len);
+		error = -fp->f_op->fallocate(fp,
+		    FALLOC_FL_PUNCH_HOLE | FALLOC_FL_KEEP_SIZE, offset, len);
 
 	if (fstrans)
 		current->flags |= __SPL_PF_FSTRANS;
 
-	return (error);
+	if (error)
+		return (SET_ERROR(error));
+
+	return (0);
 }
 
 /*

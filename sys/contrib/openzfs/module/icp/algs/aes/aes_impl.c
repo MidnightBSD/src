@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -47,7 +47,7 @@ aes_init_keysched(const uint8_t *cipherKey, uint_t keyBits, void *keysched)
 	union {
 		uint64_t	ka64[4];
 		uint32_t	ka32[8];
-		} keyarr;
+	} keyarr;
 
 	switch (keyBits) {
 	case 128:
@@ -81,7 +81,7 @@ aes_init_keysched(const uint8_t *cipherKey, uint_t keyBits, void *keysched)
 				keyarr.ka64[i] = *((uint64_t *)&cipherKey[j]);
 			}
 		} else {
-			bcopy(cipherKey, keyarr.ka32, keysize);
+			memcpy(keyarr.ka32, cipherKey, keysize);
 		}
 	} else {
 		/* byte swap */
@@ -132,7 +132,7 @@ aes_encrypt_block(const void *ks, const uint8_t *pt, uint8_t *ct)
 			buffer[2] = htonl(*(uint32_t *)(void *)&pt[8]);
 			buffer[3] = htonl(*(uint32_t *)(void *)&pt[12]);
 		} else
-			bcopy(pt, &buffer, AES_BLOCK_LEN);
+			memcpy(&buffer, pt, AES_BLOCK_LEN);
 
 		ops->encrypt(&ksch->encr_ks.ks32[0], ksch->nr, buffer, buffer);
 
@@ -143,7 +143,7 @@ aes_encrypt_block(const void *ks, const uint8_t *pt, uint8_t *ct)
 			*(uint32_t *)(void *)&ct[8] = htonl(buffer[2]);
 			*(uint32_t *)(void *)&ct[12] = htonl(buffer[3]);
 		} else
-			bcopy(&buffer, ct, AES_BLOCK_LEN);
+			memcpy(ct, &buffer, AES_BLOCK_LEN);
 	}
 	return (CRYPTO_SUCCESS);
 }
@@ -179,7 +179,7 @@ aes_decrypt_block(const void *ks, const uint8_t *ct, uint8_t *pt)
 			buffer[2] = htonl(*(uint32_t *)(void *)&ct[8]);
 			buffer[3] = htonl(*(uint32_t *)(void *)&ct[12]);
 		} else
-			bcopy(ct, &buffer, AES_BLOCK_LEN);
+			memcpy(&buffer, ct, AES_BLOCK_LEN);
 
 		ops->decrypt(&ksch->decr_ks.ks32[0], ksch->nr, buffer, buffer);
 
@@ -190,7 +190,7 @@ aes_decrypt_block(const void *ks, const uint8_t *ct, uint8_t *pt)
 			*(uint32_t *)(void *)&pt[8] = htonl(buffer[2]);
 			*(uint32_t *)(void *)&pt[12] = htonl(buffer[3]);
 		} else
-			bcopy(&buffer, pt, AES_BLOCK_LEN);
+			memcpy(pt, &buffer, AES_BLOCK_LEN);
 	}
 	return (CRYPTO_SUCCESS);
 }
@@ -206,13 +206,12 @@ aes_decrypt_block(const void *ks, const uint8_t *ct, uint8_t *pt)
  * size		Size of key schedule allocated, in bytes
  * kmflag	Flag passed to kmem_alloc(9F); ignored in userland.
  */
-/* ARGSUSED */
 void *
 aes_alloc_keysched(size_t *size, int kmflag)
 {
 	aes_key_t *keysched;
 
-	keysched = (aes_key_t *)kmem_alloc(sizeof (aes_key_t), kmflag);
+	keysched = kmem_alloc(sizeof (aes_key_t), kmflag);
 	if (keysched != NULL) {
 		*size = sizeof (aes_key_t);
 		return (keysched);
@@ -226,7 +225,7 @@ static aes_impl_ops_t aes_fastest_impl = {
 };
 
 /* All compiled in implementations */
-const aes_impl_ops_t *aes_all_impl[] = {
+static const aes_impl_ops_t *aes_all_impl[] = {
 	&aes_generic_impl,
 #if defined(__x86_64)
 	&aes_x86_64_impl,
@@ -338,7 +337,7 @@ aes_impl_init(void)
 }
 
 static const struct {
-	char *name;
+	const char *name;
 	uint32_t sel;
 } aes_impl_opts[] = {
 		{ "cycle",	IMPL_CYCLE },
@@ -425,13 +424,15 @@ icp_aes_impl_get(char *buffer, zfs_kernel_param_t *kp)
 	/* list mandatory options */
 	for (i = 0; i < ARRAY_SIZE(aes_impl_opts); i++) {
 		fmt = (impl == aes_impl_opts[i].sel) ? "[%s] " : "%s ";
-		cnt += sprintf(buffer + cnt, fmt, aes_impl_opts[i].name);
+		cnt += kmem_scnprintf(buffer + cnt, PAGE_SIZE - cnt, fmt,
+		    aes_impl_opts[i].name);
 	}
 
 	/* list all supported implementations */
 	for (i = 0; i < aes_supp_impl_cnt; i++) {
 		fmt = (i == impl) ? "[%s] " : "%s ";
-		cnt += sprintf(buffer + cnt, fmt, aes_supp_impl[i]->name);
+		cnt += kmem_scnprintf(buffer + cnt, PAGE_SIZE - cnt, fmt,
+		    aes_supp_impl[i]->name);
 	}
 
 	return (cnt);

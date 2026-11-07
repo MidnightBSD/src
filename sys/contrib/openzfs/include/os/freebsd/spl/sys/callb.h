@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -132,7 +132,7 @@ typedef struct callb_cpr {
 #define	CALLB_CPR_INIT(cp, lockp, func, name)	{			\
 		strlcpy(curthread->td_name, (name),			\
 		    sizeof (curthread->td_name));			\
-		bzero((caddr_t)(cp), sizeof (callb_cpr_t));		\
+		memset(cp, 0, sizeof (callb_cpr_t));		\
 		(cp)->cc_lockp = lockp;					\
 		(cp)->cc_id = callb_add(func, (void *)(cp),		\
 			CB_CL_CPR_DAEMON, name);			\

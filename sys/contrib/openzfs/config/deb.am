@@ -1,14 +1,17 @@
-PHONY += deb-kmod deb-dkms deb-utils deb deb-local
+PHONY += deb-kmod deb-dkms deb-utils deb deb-local native-deb-local \
+	native-deb-utils native-deb-kmod native-deb
 
-deb-local:
+native-deb-local:
 	@(if test "${HAVE_DPKGBUILD}" = "no"; then \
 		echo -e "\n" \
 	"*** Required util ${DPKGBUILD} missing.  Please install the\n" \
 	"*** package for your distribution which provides ${DPKGBUILD},\n" \
 	"*** re-run configure, and try again.\n"; \
 		exit 1; \
-	fi; \
-	if test "${HAVE_ALIEN}" = "no"; then \
+	fi)
+
+deb-local: native-deb-local
+	@(if test "${HAVE_ALIEN}" = "no"; then \
 		echo -e "\n" \
 	"*** Required util ${ALIEN} missing.  Please install the\n" \
 	"*** package for your distribution which provides ${ALIEN},\n" \
@@ -61,7 +64,8 @@ deb-utils: deb-local rpm-utils-initramfs
 	pkg7=$${name}-test-$${version}.$${arch}.rpm; \
 	pkg8=$${name}-dracut-$${version}.noarch.rpm; \
 	pkg9=$${name}-initramfs-$${version}.$${arch}.rpm; \
-	pkg10=`ls python*-pyzfs-$${version}* | tail -1`; \
+	pkg10=`ls python3-pyzfs-$${version}.noarch.rpm 2>/dev/null`; \
+	pkg11=`ls pam_zfs_key-$${version}.$${arch}.rpm 2>/dev/null`; \
 ## Arguments need to be passed to dh_shlibdeps. Alien provides no mechanism
 ## to do this, so we install a shim onto the path which calls the real
 ## dh_shlibdeps with the required arguments.
@@ -77,10 +81,29 @@ deb-utils: deb-local rpm-utils-initramfs
 	env "PATH=$${path_prepend}:$${PATH}" \
 	fakeroot $(ALIEN) --bump=0 --scripts --to-deb --target=$$debarch \
 	    $$pkg1 $$pkg2 $$pkg3 $$pkg4 $$pkg5 $$pkg6 $$pkg7 \
-	    $$pkg8 $$pkg9 $$pkg10 || exit 1; \
+	    $$pkg8 $$pkg9 $$pkg10 $$pkg11 || exit 1; \
 	$(RM) $${path_prepend}/dh_shlibdeps; \
 	rmdir $${path_prepend}; \
 	$(RM) $$pkg1 $$pkg2 $$pkg3 $$pkg4 $$pkg5 $$pkg6 $$pkg7 \
-	    $$pkg8 $$pkg9 $$pkg10;
+	    $$pkg8 $$pkg9 $$pkg10 $$pkg11;
 
 deb: deb-kmod deb-dkms deb-utils
+
+debian:
+	cp -r contrib/debian debian; chmod +x debian/rules;
+
+native-deb-utils: native-deb-local debian
+	while [ -f debian/deb-build.lock ]; do sleep 1; done; \
+	echo "native-deb-utils" > debian/deb-build.lock; \
+	cp contrib/debian/control debian/control; \
+	$(DPKGBUILD) -b -rfakeroot -us -uc; \
+	$(RM) -f debian/deb-build.lock
+
+native-deb-kmod: native-deb-local debian
+	while [ -f debian/deb-build.lock ]; do sleep 1; done; \
+	echo "native-deb-kmod" > debian/deb-build.lock; \
+	sh scripts/make_gitrev.sh; \
+	fakeroot debian/rules override_dh_binary-modules; \
+	$(RM) -f debian/deb-build.lock
+
+native-deb: native-deb-utils native-deb-kmod

@@ -18,6 +18,8 @@
 . $STF_SUITE/include/libtest.shlib
 . $STF_SUITE/tests/perf/perf.shlib
 
+command -v fio > /dev/null || log_unsupported "fio missing"
+
 function cleanup
 {
 	# kill fio and iostat
@@ -44,9 +46,10 @@ recreate_perf_pool
 export TOTAL_SIZE=$(($(get_prop avail $PERFPOOL) * 3 / 2))
 
 # Variables specific to this test for use by fio.
-export PERF_NTHREADS=${PERF_NTHREADS:-'1 4 16 64'}
+export PERF_NTHREADS=${PERF_NTHREADS:-'1 16 64'}
 export PERF_NTHREADS_PER_FS=${PERF_NTHREADS_PER_FS:-'0 1'}
 export PERF_IOSIZES=${PERF_IOSIZES:-'8k'}
+export PERF_SYNC_TYPES=${PERF_SYNC_TYPES:-'1'}
 
 # Until the performance tests over NFS can deal with multiple file systems,
 # force the use of only one file system when testing over NFS.

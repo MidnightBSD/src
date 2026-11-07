@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -20,8 +20,7 @@
  */
 /*
  * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
- * Copyright (c) 2011 Pawel Jakub Dawidek <pawel@dawidek.net>.
- * All rights reserved.
+ * Copyright (c) 2011 Pawel Jakub Dawidek
  * Copyright (c) 2012, 2015, 2018 by Delphix. All rights reserved.
  * Copyright (c) 2014 Integros [integros.com]
  * Copyright 2016 Nexenta Systems, Inc. All rights reserved.
@@ -86,10 +85,14 @@ zpl_get_file_info(dmu_object_type_t bonustype, const void *data,
 		sa.sa_layout_info = BSWAP_16(sa.sa_layout_info);
 		swap = B_TRUE;
 	}
-	VERIFY3U(sa.sa_magic, ==, SA_MAGIC);
+
+	if (unlikely(sa.sa_magic != SA_MAGIC))
+		return (SET_ERROR(EINVAL));
 
 	int hdrsize = sa_hdrsize(&sa);
-	VERIFY3U(hdrsize, >=, sizeof (sa_hdr_phys_t));
+
+	if (unlikely(hdrsize < sizeof (sa_hdr_phys_t)))
+		return (SET_ERROR(EINVAL));
 
 	uintptr_t data_after_hdr = (uintptr_t)data + hdrsize;
 	zoi->zfi_user = *((uint64_t *)(data_after_hdr + SA_UID_OFFSET));

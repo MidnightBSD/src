@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -135,12 +135,10 @@ DECLARE_EVENT_CLASS(zfs_ace_class,
 );
 /* END CSTYLED */
 
-/* BEGIN CSTYLED */
 #define	DEFINE_ACE_EVENT(name) \
 DEFINE_EVENT(zfs_ace_class, name, \
-	TP_PROTO(znode_t *zn, zfs_ace_hdr_t *ace, uint32_t mask_matched), \
-	TP_ARGS(zn, ace, mask_matched))
-/* END CSTYLED */
+    TP_PROTO(znode_t *zn, zfs_ace_hdr_t *ace, uint32_t mask_matched), \
+    TP_ARGS(zn, ace, mask_matched))
 DEFINE_ACE_EVENT(zfs_zfs__ace__denies);
 DEFINE_ACE_EVENT(zfs_zfs__ace__allows);
 

@@ -25,9 +25,6 @@
  *
  */
 
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
-
 #include <sys/types.h>
 #include <sys/errno.h>
 #include <sys/nvpair.h>
@@ -38,10 +35,6 @@ __FBSDID("$FreeBSD$");
 #include <vm/vm_pageout.h>
 
 #include <sys/zfs_ioctl_impl.h>
-
-#if __FreeBSD_version < 1201517
-#define	vm_page_max_user_wired	vm_page_max_wired
-#endif
 
 int
 zfs_vfs_ref(zfsvfs_t **zfvp)
@@ -99,7 +92,7 @@ zfs_ioc_nextboot(const char *unused, nvlist_t *innvl, nvlist_t *outnvl)
 	char name[MAXNAMELEN];
 	spa_t *spa;
 	vdev_t *vd;
-	char *command;
+	const char *command;
 	uint64_t pool_guid;
 	uint64_t vdev_guid;
 	int error;

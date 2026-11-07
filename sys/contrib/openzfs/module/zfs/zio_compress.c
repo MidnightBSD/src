@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -44,7 +44,7 @@
  * If nonzero, every 1/X decompression attempts will fail, simulating
  * an undetected memory error.
  */
-unsigned long zio_decompress_fail_fraction = 0;
+static unsigned long zio_decompress_fail_fraction = 0;
 
 /*
  * Compression vectors.
@@ -66,7 +66,7 @@ zio_compress_info_t zio_compress_table[ZIO_COMPRESS_FUNCTIONS] = {
 	{"gzip-9",	9,	gzip_compress,	gzip_decompress, NULL},
 	{"zle",		64,	zle_compress,	zle_decompress, NULL},
 	{"lz4",		0,	lz4_compress_zfs, lz4_decompress_zfs, NULL},
-	{"zstd",	ZIO_ZSTD_LEVEL_DEFAULT,	zfs_zstd_compress,
+	{"zstd",	ZIO_ZSTD_LEVEL_DEFAULT,	zfs_zstd_compress_wrap,
 	    zfs_zstd_decompress, zfs_zstd_decompress_level},
 };
 
@@ -125,7 +125,7 @@ zio_compress_zeroed_cb(void *data, size_t len, void *private)
 }
 
 size_t
-zio_compress_data(enum zio_compress c, abd_t *src, void *dst, size_t s_len,
+zio_compress_data(enum zio_compress c, abd_t *src, void **dst, size_t s_len,
     uint8_t level)
 {
 	size_t c_len, d_len;
@@ -163,9 +163,12 @@ zio_compress_data(enum zio_compress c, abd_t *src, void *dst, size_t s_len,
 		ASSERT3U(complevel, !=, ZIO_COMPLEVEL_INHERIT);
 	}
 
+	if (*dst == NULL)
+		*dst = zio_buf_alloc(s_len);
+
 	/* No compression algorithms can read from ABDs directly */
 	void *tmp = abd_borrow_buf_copy(src, s_len);
-	c_len = ci->ci_compress(tmp, dst, s_len, d_len, complevel);
+	c_len = ci->ci_compress(tmp, *dst, s_len, d_len, complevel);
 	abd_return_buf(src, tmp, s_len);
 
 	if (c_len > d_len)

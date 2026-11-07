@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -44,17 +44,10 @@ typedef const struct kernel_param zfs_kernel_param_t;
 #define	ZMOD_RW 0644
 #define	ZMOD_RD 0444
 
-/* BEGIN CSTYLED */
-#define	INT int
-#define	UINT uint
-#define	ULONG ulong
-#define	LONG long
-#define	STRING charp
-/* END CSTYLED */
-
 enum scope_prefix_types {
 	zfs,
 	zfs_arc,
+	zfs_brt,
 	zfs_condense,
 	zfs_dbuf,
 	zfs_dbuf_cache,
@@ -75,7 +68,7 @@ enum scope_prefix_types {
 	zfs_trim,
 	zfs_txg,
 	zfs_vdev,
-	zfs_vdev_cache,
+	zfs_vdev_disk,
 	zfs_vdev_file,
 	zfs_vdev_mirror,
 	zfs_vnops,
@@ -83,6 +76,50 @@ enum scope_prefix_types {
 	zfs_zio,
 	zfs_zil
 };
+
+/*
+ * While we define our own s64/u64 types, there is no reason to reimplement the
+ * existing Linux kernel types, so we use the preprocessor to remap our
+ * "custom" implementations to the kernel ones. This is done because the CPP
+ * does not allow us to write conditional definitions. The fourth definition
+ * exists because the CPP will not allow us to replace things like INT with int
+ * before string concatenation.
+ */
+
+#define	spl_param_set_int param_set_int
+#define	spl_param_get_int param_get_int
+#define	spl_param_ops_int param_ops_int
+#define	spl_param_ops_INT param_ops_int
+
+#define	spl_param_set_long param_set_long
+#define	spl_param_get_long param_get_long
+#define	spl_param_ops_long param_ops_long
+#define	spl_param_ops_LONG param_ops_long
+
+#define	spl_param_set_uint param_set_uint
+#define	spl_param_get_uint param_get_uint
+#define	spl_param_ops_uint param_ops_uint
+#define	spl_param_ops_UINT param_ops_uint
+
+#define	spl_param_set_ulong param_set_ulong
+#define	spl_param_get_ulong param_get_ulong
+#define	spl_param_ops_ulong param_ops_ulong
+#define	spl_param_ops_ULONG param_ops_ulong
+
+#define	spl_param_set_charp param_set_charp
+#define	spl_param_get_charp param_get_charp
+#define	spl_param_ops_charp param_ops_charp
+#define	spl_param_ops_STRING param_ops_charp
+
+int spl_param_set_s64(const char *val, zfs_kernel_param_t *kp);
+extern int spl_param_get_s64(char *buffer, zfs_kernel_param_t *kp);
+extern const struct kernel_param_ops spl_param_ops_s64;
+#define	spl_param_ops_S64 spl_param_ops_s64
+
+extern int spl_param_set_u64(const char *val, zfs_kernel_param_t *kp);
+extern int spl_param_get_u64(char *buffer, zfs_kernel_param_t *kp);
+extern const struct kernel_param_ops spl_param_ops_u64;
+#define	spl_param_ops_U64 spl_param_ops_u64
 
 /*
  * Declare a module parameter / sysctl node
@@ -112,12 +149,13 @@ enum scope_prefix_types {
  * on Linux:
  *   dmu_prefetch_max
  */
-/* BEGIN CSTYLED */
 #define	ZFS_MODULE_PARAM(scope_prefix, name_prefix, name, type, perm, desc) \
-	CTASSERT_GLOBAL((sizeof (scope_prefix) == sizeof (enum scope_prefix_types))); \
-	module_param(name_prefix ## name, type, perm); \
+	_Static_assert( \
+	    sizeof (scope_prefix) == sizeof (enum scope_prefix_types), \
+	    "" #scope_prefix " size mismatch with enum scope_prefix_types"); \
+	module_param_cb(name_prefix ## name, &spl_param_ops_ ## type, \
+	    &name_prefix ## name, perm); \
 	MODULE_PARM_DESC(name_prefix ## name, desc)
-/* END CSTYLED */
 
 /*
  * Declare a module parameter / sysctl node
@@ -141,31 +179,27 @@ enum scope_prefix_types {
  * on Linux:
  *   spa_slop_shift
  */
-/* BEGIN CSTYLED */
-#define	ZFS_MODULE_PARAM_CALL(scope_prefix, name_prefix, name, setfunc, getfunc, perm, desc) \
-	CTASSERT_GLOBAL((sizeof (scope_prefix) == sizeof (enum scope_prefix_types))); \
-	module_param_call(name_prefix ## name, setfunc, getfunc, &name_prefix ## name, perm); \
+#define	ZFS_MODULE_PARAM_CALL( \
+    scope_prefix, name_prefix, name, setfunc, getfunc, perm, desc) \
+	_Static_assert( \
+	    sizeof (scope_prefix) == sizeof (enum scope_prefix_types), \
+	    "" #scope_prefix " size mismatch with enum scope_prefix_types"); \
+	module_param_call(name_prefix ## name, setfunc, getfunc, \
+	    &name_prefix ## name, perm); \
 	MODULE_PARM_DESC(name_prefix ## name, desc)
-/* END CSTYLED */
 
 /*
  * As above, but there is no variable with the name name_prefix ## name,
  * so NULL is passed to module_param_call instead.
  */
-/* BEGIN CSTYLED */
-#define	ZFS_MODULE_VIRTUAL_PARAM_CALL(scope_prefix, name_prefix, name, setfunc, getfunc, perm, desc) \
-	CTASSERT_GLOBAL((sizeof (scope_prefix) == sizeof (enum scope_prefix_types))); \
+#define	ZFS_MODULE_VIRTUAL_PARAM_CALL( \
+    scope_prefix, name_prefix, name, setfunc, getfunc, perm, desc) \
+	_Static_assert( \
+	    sizeof (scope_prefix) == sizeof (enum scope_prefix_types), \
+	    "" #scope_prefix " size mismatch with enum scope_prefix_types"); \
 	module_param_call(name_prefix ## name, setfunc, getfunc, NULL, perm); \
 	MODULE_PARM_DESC(name_prefix ## name, desc)
-/* END CSTYLED */
 
 #define	ZFS_MODULE_PARAM_ARGS	const char *buf, zfs_kernel_param_t *kp
-
-#define	ZFS_MODULE_DESCRIPTION(s) MODULE_DESCRIPTION(s)
-#define	ZFS_MODULE_AUTHOR(s) MODULE_AUTHOR(s)
-#define	ZFS_MODULE_LICENSE(s) MODULE_LICENSE(s)
-#define	ZFS_MODULE_VERSION(s) MODULE_VERSION(s)
-
-#define	module_init_early(fn) module_init(fn)
 
 #endif	/* _MOD_COMPAT_H */

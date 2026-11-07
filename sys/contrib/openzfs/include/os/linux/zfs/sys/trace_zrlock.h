@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -70,12 +70,12 @@ DECLARE_EVENT_CLASS(zfs_zrlock_class,
 	    __entry->refcount, __entry->n)
 #endif
 );
-/* END_CSTYLED */
+/* END CSTYLED */
 
 #define	DEFINE_ZRLOCK_EVENT(name) \
 DEFINE_EVENT(zfs_zrlock_class, name, \
-	TP_PROTO(zrlock_t *zrl, kthread_t *owner, uint32_t n), \
-	TP_ARGS(zrl, owner, n))
+    TP_PROTO(zrlock_t *zrl, kthread_t *owner, uint32_t n), \
+    TP_ARGS(zrl, owner, n))
 DEFINE_ZRLOCK_EVENT(zfs_zrlock__reentry);
 
 #endif /* _TRACE_ZRLOCK_H */

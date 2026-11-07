@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -61,7 +61,7 @@ typedef struct fuid_domain {
 	uint64_t	f_idx;
 } fuid_domain_t;
 
-static char *nulldomain = "";
+static const char *const nulldomain = "";
 
 /*
  * Compare two indexes.
@@ -133,7 +133,7 @@ zfs_fuid_table_load(objset_t *os, uint64_t fuid_obj, avl_tree_t *idx_tree,
 
 		for (i = 0; i != count; i++) {
 			fuid_domain_t *domnode;
-			char *domain;
+			const char *domain;
 			uint64_t idx;
 
 			VERIFY(nvlist_lookup_string(fuidnvp[i], FUID_DOMAIN,
@@ -171,7 +171,7 @@ zfs_fuid_table_destroy(avl_tree_t *idx_tree, avl_tree_t *domain_tree)
 	avl_destroy(idx_tree);
 }
 
-char *
+const char *
 zfs_fuid_idx_domain(avl_tree_t *idx_tree, uint32_t idx)
 {
 	fuid_domain_t searchnode, *findnode;
@@ -258,8 +258,8 @@ zfs_fuid_sync(zfsvfs_t *zfsvfs, dmu_tx_t *tx)
 		VERIFY(nvlist_add_string(fuids[i], FUID_DOMAIN,
 		    domnode->f_ksid->kd_name) == 0);
 	}
-	VERIFY(nvlist_add_nvlist_array(nvp, FUID_NVP_ARRAY,
-	    fuids, numnodes) == 0);
+	fnvlist_add_nvlist_array(nvp, FUID_NVP_ARRAY,
+	    (const nvlist_t * const *)fuids, numnodes);
 	for (i = 0; i != numnodes; i++)
 		nvlist_free(fuids[i]);
 	kmem_free(fuids, numnodes * sizeof (void *));
@@ -290,9 +290,9 @@ zfs_fuid_sync(zfsvfs_t *zfsvfs, dmu_tx_t *tx)
  * necessary for the caller or another thread to detect the dirty table
  * and sync out the changes.
  */
-int
+static int
 zfs_fuid_find_by_domain(zfsvfs_t *zfsvfs, const char *domain,
-    char **retdomain, boolean_t addok)
+    const char **retdomain, boolean_t addok)
 {
 	fuid_domain_t searchnode, *findnode;
 	avl_index_t loc;
@@ -358,7 +358,7 @@ retry:
 const char *
 zfs_fuid_find_by_idx(zfsvfs_t *zfsvfs, uint32_t idx)
 {
-	char *domain;
+	const char *domain;
 
 	if (idx == 0 || !zfsvfs->z_use_fuids)
 		return (NULL);
@@ -518,8 +518,7 @@ zfs_fuid_create_cred(zfsvfs_t *zfsvfs, zfs_fuid_type_t type,
 	uint64_t	idx;
 	ksid_t		*ksid;
 	uint32_t	rid;
-	char		*kdomain;
-	const char	*domain;
+	const char	*kdomain, *domain;
 	uid_t		id;
 
 	VERIFY(type == ZFS_OWNER || type == ZFS_GROUP);
@@ -574,8 +573,7 @@ zfs_fuid_create(zfsvfs_t *zfsvfs, uint64_t id, cred_t *cr,
     zfs_fuid_type_t type, zfs_fuid_info_t **fuidpp)
 {
 #ifdef HAVE_KSID
-	const char *domain;
-	char *kdomain;
+	const char *domain, *kdomain;
 	uint32_t fuid_idx = FUID_INDEX(id);
 	uint32_t rid = 0;
 	idmap_stat status;
@@ -624,7 +622,7 @@ zfs_fuid_create(zfsvfs_t *zfsvfs, uint64_t id, cred_t *cr,
 			rid = FUID_RID(fuidp->z_fuid_group);
 			idx = FUID_INDEX(fuidp->z_fuid_group);
 			break;
-		};
+		}
 		domain = fuidp->z_domain_table[idx - 1];
 	} else {
 		if (type == ZFS_OWNER || type == ZFS_ACE_USER)
@@ -701,19 +699,15 @@ zfs_fuid_info_free(zfs_fuid_info_t *fuidp)
 	zfs_fuid_t *zfuid;
 	zfs_fuid_domain_t *zdomain;
 
-	while ((zfuid = list_head(&fuidp->z_fuids)) != NULL) {
-		list_remove(&fuidp->z_fuids, zfuid);
+	while ((zfuid = list_remove_head(&fuidp->z_fuids)) != NULL)
 		kmem_free(zfuid, sizeof (zfs_fuid_t));
-	}
 
 	if (fuidp->z_domain_table != NULL)
 		kmem_free(fuidp->z_domain_table,
 		    (sizeof (char *)) * fuidp->z_domain_cnt);
 
-	while ((zdomain = list_head(&fuidp->z_domains)) != NULL) {
-		list_remove(&fuidp->z_domains, zdomain);
+	while ((zdomain = list_remove_head(&fuidp->z_domains)) != NULL)
 		kmem_free(zdomain, sizeof (zfs_fuid_domain_t));
-	}
 
 	kmem_free(fuidp, sizeof (zfs_fuid_info_t));
 }

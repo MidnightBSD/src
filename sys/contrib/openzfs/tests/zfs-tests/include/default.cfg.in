@@ -8,7 +8,7 @@
 # You may not use this file except in compliance with the License.
 #
 # You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
-# or http://www.opensolaris.org/os/licensing.
+# or https://opensource.org/licenses/CDDL-1.0.
 # See the License for the specific language governing permissions
 # and limitations under the License.
 #
@@ -155,8 +155,23 @@ done
 
 export MAX_PARTITIONS=8
 
-case $(uname -o) in
-GNU/Linux)
+if [ "@ASAN_ENABLED@" = "yes" ]; then
+	export ASAN_OPTIONS=abort_on_error=true:halt_on_error=true:allocator_may_return_null=true:disable_coredump=false:detect_stack_use_after_return=true:detect_odr_violation=1
+
+	# TODO
+	# disable memory leaks detection
+	# there are quite many of them and they are not as
+	# destructive to CLI programs as they are to daemons
+	export ASAN_OPTIONS="$ASAN_OPTIONS:detect_leaks=false"
+fi
+
+if [ "@UBSAN_ENABLED@" = "yes" ]; then
+	export UBSAN_OPTIONS=abort_on_error=true:halt_on_error=true:print_stacktrace=true
+fi
+
+
+case $(uname) in
+Linux)
 	unpack_opts="--sparse -xf"
 	pack_opts="--sparse -cf"
 	verbose=" -v"
@@ -194,7 +209,7 @@ FreeBSD)
 	NEWFS_DEFAULT_FS="ufs"
 	SLICE_PREFIX="p"
 	;;
-illumos)
+*)
 	export AUTO_SNAP=$(svcs -a | \
 	    awk '/auto-snapshot/ && /online/ { print $3 }')
 	# finally, if we're running in a local zone

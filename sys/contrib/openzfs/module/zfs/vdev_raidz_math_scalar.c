@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -142,7 +142,7 @@ static const struct {
 		a.b[6] = mul_lt[a.b[6]];				\
 		a.b[5] = mul_lt[a.b[5]];				\
 		a.b[4] = mul_lt[a.b[4]];				\
-		fallthrough;						\
+		zfs_fallthrough;					\
 	case 4:								\
 		a.b[3] = mul_lt[a.b[3]];				\
 		a.b[2] = mul_lt[a.b[2]];				\

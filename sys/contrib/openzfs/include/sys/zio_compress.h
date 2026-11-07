@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -145,7 +145,7 @@ typedef int zio_decompress_abd_func_t(abd_t *src, void *dst,
  * Information about each compression function.
  */
 typedef const struct zio_compress_info {
-	char				*ci_name;
+	const char			*ci_name;
 	int				ci_level;
 	zio_compress_func_t		*ci_compress;
 	zio_decompress_func_t		*ci_decompress;
@@ -183,7 +183,7 @@ extern int lz4_decompress_zfs(void *src, void *dst, size_t s_len, size_t d_len,
 /*
  * Compress and decompress data if necessary.
  */
-extern size_t zio_compress_data(enum zio_compress c, abd_t *src, void *dst,
+extern size_t zio_compress_data(enum zio_compress c, abd_t *src, void **dst,
     size_t s_len, uint8_t level);
 extern int zio_decompress_data(enum zio_compress c, abd_t *src, void *dst,
     size_t s_len, size_t d_len, uint8_t *level);

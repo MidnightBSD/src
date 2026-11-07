@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -25,8 +25,8 @@
  * Copyright (c) 2014 Spectra Logic Corporation, All rights reserved.
  * Copyright 2013 Saso Kiselkov. All rights reserved.
  * Copyright (c) 2016 Actifio, Inc. All rights reserved.
- * Copyright (c) 2017 Datto Inc.
  * Copyright (c) 2017, Intel Corporation.
+ * Copyright (c) 2019 Datto Inc.
  */
 
 #ifndef _SYS_SPA_IMPL_H
@@ -66,6 +66,7 @@ typedef struct spa_error_entry {
 	zbookmark_phys_t	se_bookmark;
 	char			*se_name;
 	avl_node_t		se_avl;
+	zbookmark_err_phys_t	se_zep;		/* not accounted in avl_find */
 } spa_error_entry_t;
 
 typedef struct spa_history_phys {
@@ -215,7 +216,7 @@ struct spa {
 	nvlist_t	*spa_config_splitting;	/* config for splitting */
 	nvlist_t	*spa_load_info;		/* info and errors from load */
 	uint64_t	spa_config_txg;		/* txg of last config change */
-	int		spa_sync_pass;		/* iterate-to-convergence */
+	uint32_t	spa_sync_pass;		/* iterate-to-convergence */
 	pool_state_t	spa_state;		/* pool state */
 	int		spa_inject_ref;		/* injection references */
 	uint8_t		spa_sync_on;		/* sync threads are running */
@@ -249,6 +250,8 @@ struct spa {
 	uint64_t	spa_min_ashift;		/* of vdevs in normal class */
 	uint64_t	spa_max_ashift;		/* of vdevs in normal class */
 	uint64_t	spa_min_alloc;		/* of vdevs in normal class */
+	uint64_t	spa_max_alloc;		/* of vdevs in normal class */
+	uint64_t	spa_gcd_alloc;		/* of vdevs in normal class */
 	uint64_t	spa_config_guid;	/* config pool guid */
 	uint64_t	spa_load_guid;		/* spa_load initialized guid */
 	uint64_t	spa_last_synced_guid;	/* last synced guid */
@@ -264,6 +267,7 @@ struct spa {
 
 	spa_aux_vdev_t	spa_spares;		/* hot spares */
 	spa_aux_vdev_t	spa_l2cache;		/* L2ARC cache devices */
+	boolean_t	spa_aux_sync_uber;	/* need to sync aux uber */
 	nvlist_t	*spa_label_features;	/* Features for reading MOS */
 	uint64_t	spa_config_object;	/* MOS object for pool config */
 	uint64_t	spa_config_generation;	/* config generation number */
@@ -294,6 +298,10 @@ struct spa {
 	uint64_t	spa_scan_pass_exam;	/* examined bytes per pass */
 	uint64_t	spa_scan_pass_issued;	/* issued bytes per pass */
 
+	/* error scrub pause time in milliseconds */
+	uint64_t	spa_scan_pass_errorscrub_pause;
+	/* total error scrub paused time in milliseconds */
+	uint64_t	spa_scan_pass_errorscrub_spent_paused;
 	/*
 	 * We are in the middle of a resilver, and another resilver
 	 * is needed once this one completes. This is set iff any
@@ -308,6 +316,7 @@ struct spa {
 	uint64_t	spa_missing_tvds;	/* unopenable tvds on load */
 	uint64_t	spa_missing_tvds_allowed; /* allow loading spa? */
 
+	uint64_t	spa_nonallocating_dspace;
 	spa_removing_phys_t spa_removing_phys;
 	spa_vdev_removal_t *spa_vdev_removal;
 
@@ -348,6 +357,7 @@ struct spa {
 	kmutex_t	spa_errlist_lock;	/* error list/ereport lock */
 	avl_tree_t	spa_errlist_last;	/* last error list */
 	avl_tree_t	spa_errlist_scrub;	/* scrub error list */
+	avl_tree_t	spa_errlist_healed;	/* list of healed blocks */
 	uint64_t	spa_deflate;		/* should we deflate? */
 	uint64_t	spa_history;		/* history object */
 	kmutex_t	spa_history_lock;	/* history lock */
@@ -378,6 +388,7 @@ struct spa {
 	uint64_t	spa_dedup_dspace;	/* Cache get_dedup_dspace() */
 	uint64_t	spa_dedup_checksum;	/* default dedup checksum */
 	uint64_t	spa_dspace;		/* dspace in normal class */
+	struct brt	*spa_brt;		/* in-core BRT */
 	kmutex_t	spa_vdev_top_lock;	/* dueling offline/remove */
 	kmutex_t	spa_proc_lock;		/* protects spa_proc* */
 	kcondvar_t	spa_proc_cv;		/* spa_proc_state transitions */
@@ -414,7 +425,9 @@ struct spa {
 
 	hrtime_t	spa_ccw_fail_time;	/* Conf cache write fail time */
 	taskq_t		*spa_zvol_taskq;	/* Taskq for minor management */
+	taskq_t		*spa_metaslab_taskq;	/* Taskq for metaslab preload */
 	taskq_t		*spa_prefetch_taskq;	/* Taskq for prefetch threads */
+	taskq_t		*spa_upgrade_taskq;	/* Taskq for upgrade jobs */
 	uint64_t	spa_multihost;		/* multihost aware (mmp) */
 	mmp_thread_t	spa_mmp;		/* multihost mmp thread */
 	list_t		spa_leaf_list;		/* list of leaf vdevs */
@@ -438,13 +451,11 @@ struct spa {
 	 */
 	spa_config_lock_t spa_config_lock[SCL_LOCKS]; /* config changes */
 	zfs_refcount_t	spa_refcount;		/* number of opens */
-
-	taskq_t		*spa_upgrade_taskq;	/* taskq for upgrade jobs */
 };
 
 extern char *spa_config_path;
-extern char *zfs_deadman_failmode;
-extern int spa_slop_shift;
+extern const char *zfs_deadman_failmode;
+extern uint_t spa_slop_shift;
 extern void spa_taskq_dispatch_ent(spa_t *spa, zio_type_t t, zio_taskq_type_t q,
     task_func_t *func, void *arg, uint_t flags, taskq_ent_t *ent);
 extern void spa_taskq_dispatch_sync(spa_t *, zio_type_t t, zio_taskq_type_t q,

@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -69,6 +69,7 @@ typedef struct vfs {
 	boolean_t	vfs_do_relatime;
 	boolean_t	vfs_nbmand;
 	boolean_t	vfs_do_nbmand;
+	kmutex_t	vfs_mntpt_lock;
 } vfs_t;
 
 typedef struct zfs_mnt {
@@ -105,7 +106,6 @@ struct zfsvfs {
 	rrmlock_t	z_teardown_lock;
 	krwlock_t	z_teardown_inactive_lock;
 	list_t		z_all_znodes;	/* all znodes in the fs */
-	uint64_t	z_nr_znodes;	/* number of znodes in the fs */
 	unsigned long	z_rollback_time; /* last online rollback time */
 	unsigned long	z_snap_defer_time; /* last snapshot unmount deferral */
 	kmutex_t	z_znodes_lock;	/* lock for z_all_znodes */
@@ -113,7 +113,6 @@ struct zfsvfs {
 	struct inode	*z_ctldir;	/* .zfs directory inode */
 	boolean_t	z_show_ctldir;	/* expose .zfs in the root dir */
 	boolean_t	z_issnap;	/* true if this is a snapshot */
-	boolean_t	z_vscan;	/* virus scan on/off */
 	boolean_t	z_use_fuids;	/* version allows fuids */
 	boolean_t	z_replay;	/* set during ZIL replay */
 	boolean_t	z_use_sa;	/* version allow system attributes */
@@ -143,9 +142,6 @@ struct zfsvfs {
 
 #define	ZFS_TEARDOWN_DESTROY(zfsvfs)		\
 	rrm_destroy(&(zfsvfs)->z_teardown_lock)
-
-#define	ZFS_TEARDOWN_TRY_ENTER_READ(zfsvfs)	\
-	rw_tryenter(&(zfsvfs)->z_teardown_lock, RW_READER)
 
 #define	ZFS_TEARDOWN_ENTER_READ(zfsvfs, tag)	\
 	rrm_enter_read(&(zfsvfs)->z_teardown_lock, tag);

@@ -11,6 +11,7 @@
 
 #
 # Copyright (c) 2016 by Delphix. All rights reserved.
+# Copyright (c) 2023 by Klara, Inc.
 #
 
 . $STF_SUITE/include/libtest.shlib
@@ -22,7 +23,7 @@
 function cleanup
 {
 	# clear any remaining zinjections
-	log_must zinject -c all > /dev/null
+	log_must eval "zinject -c all > /dev/null"
 
 	destroy_pool $TESTPOOL1
 
@@ -64,17 +65,13 @@ function write_some_data
 	typeset files10mb=${2:-10}
 
 	typeset ds="$pool/fillerds"
-	zfs create $ds
-	[[ $? -ne 0 ]] && return 1
+	zfs create $ds || return 1
 
 	# Create 100 MB of data
 	typeset file="/$ds/fillerfile"
 	for i in {1..$files10mb}; do
-		dd if=/dev/urandom of=$file.$i bs=128k count=80
-		[[ $? -ne 0 ]] && return 1
+		dd if=/dev/urandom of=$file.$i bs=128k count=80 || return 1
 	done
-
-	return 0
 }
 
 #
@@ -82,29 +79,29 @@ function write_some_data
 # Checksum all the files and store digests in a file.
 #
 # newdata: overwrite existing files if false.
-# md5file: file where to store md5 digests
+# hashfile: file where to store xxh128 digests
 # datasetname: base name for datasets
 #
 function _generate_data_common
 {
 	typeset pool=$1
 	typeset newdata=$2
-	typeset md5file=$3
+	typeset hashfile=$3
 	typeset datasetname=$4
 
 	typeset -i datasets=3
 	typeset -i files=5
 	typeset -i blocks=10
 
-	[[ -n $md5file ]] && rm -f $md5file
+	[[ -n $hashfile ]] && rm -f $hashfile
 	for i in {1..$datasets}; do
 		( $newdata ) && log_must zfs create "$pool/$datasetname$i"
 		for j in {1..$files}; do
 			typeset file="/$pool/$datasetname$i/file$j"
 			dd if=/dev/urandom of=$file bs=128k count=$blocks > /dev/null
-			if [[ -n $md5file ]]; then
-				typeset cksum=$(md5digest $file)
-				echo $cksum $file >> $md5file
+			if [[ -n $hashfile ]]; then
+				typeset cksum=$(xxh128digest $file)
+				echo $cksum $file >> $hashfile
 			fi
 		done
 		( $newdata ) && sync_pool "$pool"
@@ -116,40 +113,39 @@ function _generate_data_common
 function generate_data
 {
 	typeset pool=$1
-	typeset md5file="$2"
+	typeset hashfile="$2"
 	typeset datasetname=${3:-ds}
 
-	_generate_data_common $pool true "$md5file" $datasetname
+	_generate_data_common $pool true "$hashfile" $datasetname
 }
 
 function overwrite_data
 {
 	typeset pool=$1
-	typeset md5file="$2"
+	typeset hashfile="$2"
 	typeset datasetname=${3:-ds}
 
-	_generate_data_common $1 false "$md5file" $datasetname
+	_generate_data_common $1 false "$hashfile" $datasetname
 }
 
 #
-# Verify md5sums of every file in md5sum file $1.
+# Verify hashsums of every file in hashsum file $1.
 #
-function verify_data_md5sums
+function verify_data_hashsums
 {
-	typeset md5file=$1
+	typeset hashfile=$1
 
-	if [[ ! -f $md5file ]]; then
-		log_note "md5 sums file '$md5file' doesn't exist"
+	if [[ ! -f $hashfile ]]; then
+		log_note "md5 sums file '$hashfile' doesn't exist"
 		return 1
 	fi
 
-	cat $md5file | \
-	while read digest file; do
-		typeset digest1=$(md5digest $file)
+	while read -r digest file; do
+		typeset digest1=$(xxh128digest $file)
 		if [[ "$digest1" != "$digest" ]]; then
 			return 1
 		fi
-	done
+	done < $hashfile
 
 	return 0
 }
@@ -181,20 +177,20 @@ function _translate_vdev
 	#
 	typeset keywords="mirror replacing raidz1 raidz2 raidz3 indirect draid1 draid2 draid3"
 	for word in $keywords; do
-		echo $vdev | grep -qE \
-		    "^${word}-[0-9]+\$|^${word}:[0-9]+d:[0-9]c:[0-9]+s-[0-9]+\$"
-		if [[ $? -eq 0 ]]; then
+		if echo $vdev |
+		    grep -qE  "^${word}-[0-9]+\$|^${word}:[0-9]+d:[0-9]c:[0-9]+s-[0-9]+\$"
+		then
 			vdev=$word
 			break
 		fi
 	done
 
-	[[ $vdev == "logs" ]] && echo "log" && return 0
-	[[ $vdev == "raidz1" ]] && echo "raidz" && return 0
-	[[ $vdev == "draid1" ]] && echo "draid" && return 0
-
-	echo $vdev
-	return 0
+	case "$vdev" in
+		logs) echo "log" ;;
+		raidz1) echo "raidz" ;;
+		draid1) echo "draid" ;;
+		*) echo $vdev ;;
+	esac
 }
 
 #
@@ -217,9 +213,8 @@ function check_pool_config
 	typeset expected=$2
 
 	typeset status
-	status=$(zpool status $poolname 2>&1)
-	if [[ $? -ne 0 ]]; then
-		if ( $logfailure ); then
+	if ! status=$(zpool status $poolname 2>&1); then
+		if $logfailure; then
 			log_note "zpool status $poolname failed: $status"
 		fi
 		return 1
@@ -227,8 +222,7 @@ function check_pool_config
 
 	typeset actual=""
 	typeset began=false
-	printf "$status\n" | while read line; do
-		typeset vdev=$(echo "$line" | awk '{printf $1}')
+	while read -r vdev _; do
 		if ( ! $began ) && [[ $vdev == NAME ]]; then
 			began=true
 			continue
@@ -240,12 +234,12 @@ function check_pool_config
 			vdev=$(_translate_vdev $vdev)
 			actual="$actual $vdev"
 		fi
-	done
+	done <<<"$status"
 
 	expected="$poolname $expected"
 
 	if [[ "$actual" != "$expected" ]]; then
-		if ( $logfailure ); then
+		if $logfailure; then
 			log_note "expected pool vdevs:"
 			log_note "> '$expected'"
 			log_note "actual pool vdevs:"
@@ -272,13 +266,11 @@ function wait_for_pool_config
 	timeout=$(( $timeout + $(date +%s) ))
 
 	while  (( $(date +%s) < $timeout )); do
-		check_pool_config -q $poolname "$expectedconfig"
-		[[ $? -eq 0 ]] && return 0
+		check_pool_config -q $poolname "$expectedconfig" && return 0
 		sleep 3
 	done
 
 	check_pool_config $poolname "$expectedconfig"
-	return $?
 }
 
 #
@@ -287,16 +279,14 @@ function wait_for_pool_config
 function check_pool_healthy
 {
 	typeset pool=$1
-
 	typeset status
-	status=$(zpool status $pool 2>&1)
-	if [[ $? -ne 0 ]]; then
+
+	if ! status=$(zpool status $pool 2>&1); then
 		log_note "zpool status $pool failed: $status"
 		return 1
 	fi
 
-	status=$(echo "$status" | grep "$pool" | grep -v "pool:" | \
-	    awk '{print $2}')
+	status=$(echo "$status" | awk -v p="$pool" '!/pool:/ && $0 ~ p {print $2}')
 
 	if [[ $status != "ONLINE" ]]; then
 		log_note "Invalid zpool status for '$pool': '$status'" \
@@ -314,9 +304,7 @@ function pool_is_replacing
 {
 	typeset pool=$1
 
-	zpool status $pool | grep "replacing" | grep "ONLINE" > /dev/null
-
-	return $?
+	zpool status $pool | grep "replacing" | grep -q "ONLINE"
 }
 
 function set_vdev_validate_skip

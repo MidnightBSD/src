@@ -7,7 +7,7 @@
  * with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -77,7 +77,7 @@ extern int fmd_serd_eng_fired(fmd_serd_eng_t *);
 extern int fmd_serd_eng_empty(fmd_serd_eng_t *);
 
 extern void fmd_serd_eng_reset(fmd_serd_eng_t *);
-extern void fmd_serd_eng_gc(fmd_serd_eng_t *);
+extern void fmd_serd_eng_gc(fmd_serd_eng_t *, void *);
 
 #ifdef	__cplusplus
 }

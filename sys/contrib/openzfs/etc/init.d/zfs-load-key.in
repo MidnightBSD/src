@@ -1,4 +1,5 @@
 #!@DEFAULT_INIT_SHELL@
+# shellcheck disable=SC2154
 #
 # zfs-load-key  This script will load/unload the zfs filesystems keys.
 #
@@ -103,7 +104,7 @@ do_stop()
 
 # ----------------------------------------------------
 
-if [ ! -e /sbin/openrc-run ]
+if @IS_SYSV_RC@
 then
 	case "$1" in
 		start)

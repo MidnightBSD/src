@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -27,6 +27,7 @@
 #include <sys/zio_checksum.h>
 #include <sys/zfs_context.h>
 #include <sys/arc.h>
+#include <sys/arc_os.h>
 #include <sys/zfs_refcount.h>
 #include <sys/vdev.h>
 #include <sys/vdev_trim.h>
@@ -67,33 +68,12 @@ SYSINIT(arc_free_target_init, SI_SUB_KTHREAD_PAGE, SI_ORDER_ANY,
  * We don't have a tunable for arc_free_target due to the dependency on
  * pagedaemon initialisation.
  */
-static int
-sysctl_vfs_zfs_arc_free_target(SYSCTL_HANDLER_ARGS)
-{
-	uint_t val;
-	int err;
-
-	val = zfs_arc_free_target;
-	err = sysctl_handle_int(oidp, &val, 0, req);
-	if (err != 0 || req->newptr == NULL)
-		return (err);
-
-	if (val < minfree)
-		return (EINVAL);
-	if (val > vm_cnt.v_page_count)
-		return (EINVAL);
-
-	zfs_arc_free_target = val;
-
-	return (0);
-}
-SYSCTL_DECL(_vfs_zfs);
-/* BEGIN CSTYLED */
-SYSCTL_PROC(_vfs_zfs, OID_AUTO, arc_free_target,
-    CTLTYPE_UINT | CTLFLAG_MPSAFE | CTLFLAG_RW, 0, sizeof (uint_t),
-    sysctl_vfs_zfs_arc_free_target, "IU",
-    "Desired number of free pages below which ARC triggers reclaim");
-/* END CSTYLED */
+ZFS_MODULE_PARAM_CALL(zfs_arc, zfs_arc_, free_target,
+    param_set_arc_free_target, 0, CTLFLAG_RW,
+	"Desired number of free pages below which ARC triggers reclaim");
+ZFS_MODULE_PARAM_CALL(zfs_arc, zfs_arc_, no_grow_shift,
+    param_set_arc_no_grow_shift, 0, ZMOD_RW,
+	"log2(fraction of ARC which must be free to allow growing)");
 
 int64_t
 arc_available_memory(void)
@@ -169,26 +149,29 @@ static eventhandler_tag arc_event_lowmem = NULL;
 static void
 arc_lowmem(void *arg __unused, int howto __unused)
 {
-	int64_t free_memory, to_free;
+	int64_t can_free, free_memory, to_free;
 
 	arc_no_grow = B_TRUE;
 	arc_warm = B_TRUE;
 	arc_growtime = gethrtime() + SEC2NSEC(arc_grow_retry);
+
 	free_memory = arc_available_memory();
-	int64_t can_free = arc_c - arc_c_min;
-	if (can_free <= 0)
-		return;
-	to_free = (can_free >> arc_shrink_shift) - MIN(free_memory, 0);
+	can_free = arc_c - arc_c_min;
+	to_free = (MAX(can_free, 0) >> arc_shrink_shift) - MIN(free_memory, 0);
 	DTRACE_PROBE2(arc__needfree, int64_t, free_memory, int64_t, to_free);
-	arc_reduce_target_size(to_free);
+	to_free = arc_reduce_target_size(to_free);
 
 	/*
 	 * It is unsafe to block here in arbitrary threads, because we can come
 	 * here from ARC itself and may hold ARC locks and thus risk a deadlock
 	 * with ARC reclaim thread.
 	 */
-	if (curproc == pageproc)
-		arc_wait_for_eviction(to_free, B_FALSE);
+	if (curproc == pageproc) {
+		arc_wait_for_eviction(to_free, B_FALSE, B_FALSE);
+		ARCSTAT_BUMP(arcstat_memory_indirect_count);
+	} else {
+		ARCSTAT_BUMP(arcstat_memory_direct_count);
+	}
 }
 
 void

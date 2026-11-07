@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -36,6 +36,7 @@ extern "C" {
 
 #include <sys/zfs_context.h>
 #include <sys/crypto/common.h>
+#include <sys/asm_linkage.h>
 
 /* Similar to sysmacros.h IS_P2ALIGNED, but checks two pointers: */
 #define	IS_P2ALIGNED2(v, w, a) \
@@ -83,14 +84,7 @@ extern "C" {
 
 /* AES key size definitions */
 #define	AES_MINBITS		128
-#define	AES_MINBYTES		((AES_MINBITS) >> 3)
 #define	AES_MAXBITS		256
-#define	AES_MAXBYTES		((AES_MAXBITS) >> 3)
-
-#define	AES_MIN_KEY_BYTES	((AES_MINBITS) >> 3)
-#define	AES_MAX_KEY_BYTES	((AES_MAXBITS) >> 3)
-#define	AES_192_KEY_BYTES	24
-#define	AES_IV_LEN		16
 
 /* AES key schedule may be implemented with 32- or 64-bit elements: */
 #define	AES_32BIT_KS		32
@@ -197,13 +191,13 @@ extern const aes_impl_ops_t aes_generic_impl;
 extern const aes_impl_ops_t aes_x86_64_impl;
 
 /* These functions are used to execute amd64 instructions for AMD or Intel: */
-extern int rijndael_key_setup_enc_amd64(uint32_t rk[],
+extern ASMABI int rijndael_key_setup_enc_amd64(uint32_t rk[],
 	const uint32_t cipherKey[], int keyBits);
-extern int rijndael_key_setup_dec_amd64(uint32_t rk[],
+extern ASMABI int rijndael_key_setup_dec_amd64(uint32_t rk[],
 	const uint32_t cipherKey[], int keyBits);
-extern void aes_encrypt_amd64(const uint32_t rk[], int Nr,
+extern ASMABI void aes_encrypt_amd64(const uint32_t rk[], int Nr,
 	const uint32_t pt[4], uint32_t ct[4]);
-extern void aes_decrypt_amd64(const uint32_t rk[], int Nr,
+extern ASMABI void aes_decrypt_amd64(const uint32_t rk[], int Nr,
 	const uint32_t ct[4], uint32_t pt[4]);
 #endif
 #if defined(__x86_64) && defined(HAVE_AES)

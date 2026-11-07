@@ -7,7 +7,7 @@
 # You may not use this file except in compliance with the License.
 #
 # You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
-# or http://www.opensolaris.org/os/licensing.
+# or https://opensource.org/licenses/CDDL-1.0.
 # See the License for the specific language governing permissions
 # and limitations under the License.
 #
@@ -87,7 +87,7 @@ log_must zfs snapshot $inc_snap
 log_must eval "zfs send -i $init_snap $inc_snap > $inc_bkup"
 log_must touch /$TESTDIR/bar
 
-sync
+sync_all_pools
 
 set -A badargs \
     "" "nonexistent-snap" "blah@blah" "-d" "-d nonexistent-dataset" \

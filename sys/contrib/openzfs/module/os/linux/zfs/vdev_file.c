@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -21,6 +21,7 @@
 /*
  * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
  * Copyright (c) 2011, 2020 by Delphix. All rights reserved.
+ * Copyright (c) 2026, TrueNAS.
  */
 
 #include <sys/zfs_context.h>
@@ -33,11 +34,13 @@
 #include <sys/fs/zfs.h>
 #include <sys/fm/fs/zfs.h>
 #include <sys/abd.h>
-#include <sys/fcntl.h>
 #include <sys/vnode.h>
 #include <sys/zfs_file.h>
 #ifdef _KERNEL
 #include <linux/falloc.h>
+#include <sys/fcntl.h>
+#else
+#include <fcntl.h>
 #endif
 /*
  * Virtual device vector for files.
@@ -53,8 +56,8 @@ static taskq_t *vdev_file_taskq;
  * impact the vdev_ashift setting which can only be set at vdev creation
  * time.
  */
-unsigned long vdev_file_logical_ashift = SPA_MINBLOCKSHIFT;
-unsigned long vdev_file_physical_ashift = SPA_MINBLOCKSHIFT;
+static uint_t vdev_file_logical_ashift = SPA_MINBLOCKSHIFT;
+static uint_t vdev_file_physical_ashift = SPA_MINBLOCKSHIFT;
 
 static void
 vdev_file_hold(vdev_t *vd)
@@ -86,7 +89,7 @@ vdev_file_open_mode(spa_mode_t spa_mode)
 
 static int
 vdev_file_open(vdev_t *vd, uint64_t *psize, uint64_t *max_psize,
-    uint64_t *logical_ashift, uint64_t *physical_ashift)
+    uint64_t *logical_ashift, uint64_t *physical_ashift, cred_t *cr)
 {
 	vdev_file_t *vf;
 	zfs_file_t *fp;
@@ -140,7 +143,8 @@ vdev_file_open(vdev_t *vd, uint64_t *psize, uint64_t *max_psize,
 	ASSERT(vd->vdev_path != NULL && vd->vdev_path[0] == '/');
 
 	error = zfs_file_open(vd->vdev_path,
-	    vdev_file_open_mode(spa_mode(vd->vdev_spa)), 0, &fp);
+	    vdev_file_open_mode(spa_mode(vd->vdev_spa)), 0, cr, &fp);
+
 	if (error) {
 		vd->vdev_stat.vs_aux = VDEV_AUX_OPEN_FAILED;
 		return (error);
@@ -280,14 +284,9 @@ vdev_file_io_start(zio_t *zio)
 		zio_execute(zio);
 		return;
 	} else if (zio->io_type == ZIO_TYPE_TRIM) {
-		int mode = 0;
-
 		ASSERT3U(zio->io_size, !=, 0);
-#ifdef __linux__
-		mode = FALLOC_FL_PUNCH_HOLE | FALLOC_FL_KEEP_SIZE;
-#endif
-		zio->io_error = zfs_file_fallocate(vf->vf_file,
-		    mode, zio->io_offset, zio->io_size);
+		zio->io_error = zfs_file_deallocate(vf->vf_file,
+		    zio->io_offset, zio->io_size);
 		zio_execute(zio);
 		return;
 	}
@@ -376,7 +375,7 @@ vdev_ops_t vdev_disk_ops = {
 
 #endif
 
-ZFS_MODULE_PARAM(zfs_vdev_file, vdev_file_, logical_ashift, ULONG, ZMOD_RW,
+ZFS_MODULE_PARAM(zfs_vdev_file, vdev_file_, logical_ashift, UINT, ZMOD_RW,
 	"Logical ashift for file-based devices");
-ZFS_MODULE_PARAM(zfs_vdev_file, vdev_file_, physical_ashift, ULONG, ZMOD_RW,
+ZFS_MODULE_PARAM(zfs_vdev_file, vdev_file_, physical_ashift, UINT, ZMOD_RW,
 	"Physical ashift for file-based devices");

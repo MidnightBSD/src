@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -247,6 +247,8 @@ extern void ddt_sync(spa_t *spa, uint64_t txg);
 extern int ddt_walk(spa_t *spa, ddt_bookmark_t *ddb, ddt_entry_t *dde);
 extern int ddt_object_update(ddt_t *ddt, enum ddt_type type,
     enum ddt_class clazz, ddt_entry_t *dde, dmu_tx_t *tx);
+
+extern boolean_t ddt_addref(spa_t *spa, const blkptr_t *bp);
 
 extern const ddt_ops_t ddt_zap_ops;
 

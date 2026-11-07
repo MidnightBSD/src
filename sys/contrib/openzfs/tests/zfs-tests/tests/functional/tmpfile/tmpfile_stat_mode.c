@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -28,6 +28,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <err.h>
 
 /* backward compat in case it's not defined */
 #ifndef O_TMPFILE
@@ -36,81 +37,68 @@
 
 /*
  * DESCRIPTION:
- *	Verify stat(2) for O_TMPFILE file considers umask.
+ *	Verify fstat(2) for O_TMPFILE file considers umask.
  *
  * STRATEGY:
  *	1. open(2) with O_TMPFILE.
  *	2. linkat(2).
- *	3. fstat(2)/stat(2) and verify .st_mode value.
+ *	3. fstat(2) and verify .st_mode value.
  */
 
 static void
 test_stat_mode(mode_t mask)
 {
-	struct stat st, fst;
+	struct stat fst;
 	int i, fd;
 	char spath[1024], dpath[1024];
-	char *penv[] = {"TESTDIR", "TESTFILE0"};
+	const char *penv[] = {"TESTDIR", "TESTFILE0"};
 	mode_t masked = 0777 & ~mask;
 	mode_t mode;
 
 	/*
 	 * Get the environment variable values.
 	 */
-	for (i = 0; i < sizeof (penv) / sizeof (char *); i++) {
-		if ((penv[i] = getenv(penv[i])) == NULL) {
-			fprintf(stderr, "getenv(penv[%d])\n", i);
-			exit(1);
-		}
-	}
+	for (i = 0; i < ARRAY_SIZE(penv); i++)
+		if ((penv[i] = getenv(penv[i])) == NULL)
+			errx(1, "getenv(penv[%d])", i);
 
 	umask(mask);
 	fd = open(penv[0], O_RDWR|O_TMPFILE, 0777);
-	if (fd == -1) {
-		perror("open");
-		exit(2);
-	}
+	if (fd == -1)
+		err(2, "open(%s)", penv[0]);
 
-	if (fstat(fd, &fst) == -1) {
-		perror("fstat");
-		close(fd);
-		exit(3);
-	}
+	if (fstat(fd, &fst) == -1)
+		err(3, "fstat(%s)", penv[0]);
 
 	snprintf(spath, sizeof (spath), "/proc/self/fd/%d", fd);
 	snprintf(dpath, sizeof (dpath), "%s/%s", penv[0], penv[1]);
 
 	unlink(dpath);
-	if (linkat(AT_FDCWD, spath, AT_FDCWD, dpath, AT_SYMLINK_FOLLOW) == -1) {
-		perror("linkat");
-		close(fd);
-		exit(4);
-	}
+	if (linkat(AT_FDCWD, spath, AT_FDCWD, dpath, AT_SYMLINK_FOLLOW) == -1)
+		err(4, "linkat");
 	close(fd);
 
-	if (stat(dpath, &st) == -1) {
-		perror("stat");
-		exit(5);
-	}
-	unlink(dpath);
-
-	/* Verify fstat(2) result */
+	/* Verify fstat(2) result at old path */
 	mode = fst.st_mode & 0777;
-	if (mode != masked) {
-		fprintf(stderr, "fstat(2) %o != %o\n", mode, masked);
-		exit(6);
-	}
+	if (mode != masked)
+		errx(5, "fstat(2) %o != %o\n", mode, masked);
 
-	/* Verify stat(2) result */
-	mode = st.st_mode & 0777;
-	if (mode != masked) {
-		fprintf(stderr, "stat(2) %o != %o\n", mode, masked);
-		exit(7);
-	}
+	fd = open(dpath, O_RDWR);
+	if (fd == -1)
+		err(6, "open(%s)", dpath);
+
+	if (fstat(fd, &fst) == -1)
+		err(7, "fstat(%s)", dpath);
+
+	/* Verify fstat(2) result at new path */
+	mode = fst.st_mode & 0777;
+	if (mode != masked)
+		errx(8, "fstat(2) %o != %o\n", mode, masked);
+	close(fd);
 }
 
 int
-main(int argc, char *argv[])
+main(void)
 {
 	fprintf(stdout, "Verify stat(2) for O_TMPFILE file considers umask.\n");
 

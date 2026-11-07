@@ -49,11 +49,17 @@ MALLOC_DECLARE(M_SOLARIS);
 #define	KM_NOSLEEP		M_NOWAIT
 #define	KM_NORMALPRI		0
 #define	KMC_NODEBUG		UMA_ZONE_NODUMP
+#define	KMC_RECLAIMABLE		0x0
 
 typedef struct vmem vmem_t;
 
-extern char	*kmem_asprintf(const char *, ...);
-extern char *kmem_vasprintf(const char *fmt, va_list ap);
+extern char	*kmem_asprintf(const char *, ...)
+    __attribute__((format(__printf__, 1, 2)));
+extern char *kmem_vasprintf(const char *fmt, va_list ap)
+    __attribute__((format(__printf__, 1, 0)));
+
+extern int kmem_scnprintf(char *restrict str, size_t size,
+    const char *restrict fmt, ...);
 
 typedef struct kmem_cache {
 	char		kc_name[32];
@@ -70,13 +76,15 @@ typedef struct kmem_cache {
 extern uint64_t spl_kmem_cache_inuse(kmem_cache_t *cache);
 extern uint64_t spl_kmem_cache_entry_size(kmem_cache_t *cache);
 
+__attribute__((malloc, alloc_size(1)))
 void *zfs_kmem_alloc(size_t size, int kmflags);
 void zfs_kmem_free(void *buf, size_t size);
 uint64_t kmem_size(void);
-kmem_cache_t *kmem_cache_create(char *name, size_t bufsize, size_t align,
+kmem_cache_t *kmem_cache_create(const char *name, size_t bufsize, size_t align,
     int (*constructor)(void *, void *, int), void (*destructor)(void *, void *),
     void (*reclaim)(void *) __unused, void *private, vmem_t *vmp, int cflags);
 void kmem_cache_destroy(kmem_cache_t *cache);
+__attribute__((malloc))
 void *kmem_cache_alloc(kmem_cache_t *cache, int flags);
 void kmem_cache_free(kmem_cache_t *cache, void *buf);
 boolean_t kmem_cache_reap_active(void);

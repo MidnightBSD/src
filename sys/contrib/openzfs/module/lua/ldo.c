@@ -1,4 +1,3 @@
-/* BEGIN CSTYLED */
 /*
 ** $Id: ldo.c,v 2.108.1.3 2013/11/08 18:22:50 roberto Exp $
 ** Stack and Call structure of Lua
@@ -10,6 +9,7 @@
 #define LUA_CORE
 
 #include <sys/lua/lua.h>
+#include <sys/asm_linkage.h>
 
 #include "lapi.h"
 #include "ldebug.h"
@@ -26,7 +26,6 @@
 #include "ltm.h"
 #include "lvm.h"
 #include "lzio.h"
-
 
 
 /* Return the number of bytes available on the stack. */
@@ -85,14 +84,16 @@ static intptr_t stack_remaining(void) {
 #define JMP_BUF_CNT	18
 #elif defined(__riscv)
 #define JMP_BUF_CNT     64
+#elif defined(__loongarch_lp64)
+#define JMP_BUF_CNT     64
 #else
 #define	JMP_BUF_CNT	1
 #endif
 
 typedef	struct _label_t { long long unsigned val[JMP_BUF_CNT]; } label_t;
 
-int setjmp(label_t *) __attribute__ ((__nothrow__));
-extern void longjmp(label_t *) __attribute__((__noreturn__));
+int ASMABI setjmp(label_t *) __attribute__ ((__nothrow__));
+extern __attribute__((noreturn)) void ASMABI longjmp(label_t *);
 
 #define LUAI_THROW(L,c)		longjmp(&(c)->b)
 #define LUAI_TRY(L,c,a)		if (setjmp(&(c)->b) == 0) { a }
@@ -455,7 +456,7 @@ int luaD_poscall (lua_State *L, StkId firstResult) {
   }
   res = ci->func;  /* res == final position of 1st result */
   wanted = ci->nresults;
-  L->ci = ci = ci->previous;  /* back to caller */
+  L->ci = ci->previous;  /* back to caller */
   /* move results to correct place */
   for (i = wanted; i != 0 && firstResult < L->top; i--)
     setobjs2s(L, res++, firstResult++);
@@ -759,4 +760,3 @@ int luaD_protectedparser (lua_State *L, ZIO *z, const char *name,
   L->nny--;
   return status;
 }
-/* END CSTYLED */

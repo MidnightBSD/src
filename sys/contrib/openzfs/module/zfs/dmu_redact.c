@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -40,13 +40,14 @@
  * This controls the number of entries in the buffer the redaction_list_update
  * synctask uses to buffer writes to the redaction list.
  */
-int redact_sync_bufsize = 1024;
+static const int redact_sync_bufsize = 1024;
 
 /*
  * Controls how often to update the redaction list when creating a redaction
  * list.
  */
-uint64_t redaction_list_update_interval_ns = 1000 * 1000 * 1000ULL; /* NS */
+static const uint64_t redaction_list_update_interval_ns =
+    1000 * 1000 * 1000ULL; /* 1s */
 
 /*
  * This tunable controls the length of the queues that zfs redact worker threads
@@ -56,7 +57,7 @@ uint64_t redaction_list_update_interval_ns = 1000 * 1000 * 1000ULL; /* NS */
  * available IO resources, or the queues are consuming too much memory, this
  * variable may need to be decreased.
  */
-int zfs_redact_queue_length = 1024 * 1024;
+static const int zfs_redact_queue_length = 1024 * 1024;
 
 /*
  * These tunables control the fill fraction of the queues by zfs redact. The
@@ -65,7 +66,7 @@ int zfs_redact_queue_length = 1024 * 1024;
  * should be tuned down.  If the queues empty before the signalled thread can
  * catch up, then these should be tuned up.
  */
-uint64_t zfs_redact_queue_ff = 20;
+static const uint64_t zfs_redact_queue_ff = 20;
 
 struct redact_record {
 	bqueue_node_t		ln;
@@ -350,7 +351,7 @@ redact_cb(spa_t *spa, zilog_t *zilog, const blkptr_t *bp,
 	return (0);
 }
 
-static void
+static __attribute__((noreturn)) void
 redact_traverse_thread(void *arg)
 {
 	struct redact_thread_arg *rt_arg = arg;
@@ -745,10 +746,8 @@ perform_thread_merge(bqueue_t *q, uint32_t num_threads,
 		bqueue_enqueue(q, record, sizeof (*record));
 		return (0);
 	}
-	if (num_threads > 0) {
-		redact_nodes = kmem_zalloc(num_threads *
-		    sizeof (*redact_nodes), KM_SLEEP);
-	}
+	redact_nodes = kmem_zalloc(num_threads *
+	    sizeof (*redact_nodes), KM_SLEEP);
 
 	avl_create(&start_tree, redact_node_compare_start,
 	    sizeof (struct redact_node),
@@ -836,7 +835,7 @@ struct redact_merge_thread_arg {
 	int error_code;
 };
 
-static void
+static __attribute__((noreturn)) void
 redact_merge_thread(void *arg)
 {
 	struct redact_merge_thread_arg *rmta = arg;
@@ -854,7 +853,7 @@ redact_merge_thread(void *arg)
  * object number.
  */
 static int
-hold_next_object(objset_t *os, struct redact_record *rec, void *tag,
+hold_next_object(objset_t *os, struct redact_record *rec, const void *tag,
     uint64_t *object, dnode_t **dn)
 {
 	int err = 0;
@@ -913,7 +912,7 @@ perform_redaction(objset_t *os, redaction_list_t *rl,
 			object = prev_obj;
 		}
 		while (err == 0 && object <= rec->end_object) {
-			if (issig(JUSTLOOKING) && issig(FORREAL)) {
+			if (issig()) {
 				err = EINTR;
 				break;
 			}

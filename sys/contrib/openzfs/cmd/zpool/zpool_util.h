@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -40,6 +40,7 @@ extern "C" {
  * Basic utility functions
  */
 void *safe_malloc(size_t);
+void *safe_realloc(void *, size_t);
 void zpool_no_memory(void);
 uint_t num_logs(nvlist_t *nv);
 uint64_t array64_max(uint64_t array[], unsigned int len);
@@ -64,7 +65,7 @@ nvlist_t *split_mirror_vdev(zpool_handle_t *zhp, char *newname,
 /*
  * Pool list functions
  */
-int for_each_pool(int, char **, boolean_t unavail, zprop_list_t **,
+int for_each_pool(int, char **, boolean_t unavail, zprop_list_t **, zfs_type_t,
     boolean_t, zpool_iter_f, void *);
 
 /* Vdev list functions */
@@ -72,7 +73,8 @@ int for_each_vdev(zpool_handle_t *zhp, pool_vdev_iter_f func, void *data);
 
 typedef struct zpool_list zpool_list_t;
 
-zpool_list_t *pool_list_get(int, char **, zprop_list_t **, boolean_t, int *);
+zpool_list_t *pool_list_get(int, char **, zprop_list_t **, zfs_type_t,
+    boolean_t, int *);
 void pool_list_update(zpool_list_t *);
 int pool_list_iter(zpool_list_t *, int unavail, zpool_iter_f, void *);
 void pool_list_free(zpool_list_t *);
@@ -131,9 +133,10 @@ int vdev_run_cmd_simple(char *path, char *cmd);
 int check_device(const char *path, boolean_t force,
     boolean_t isspare, boolean_t iswholedisk);
 boolean_t check_sector_size_database(char *path, int *sector_size);
-void vdev_error(const char *fmt, ...);
+void vdev_error(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 int check_file(const char *file, boolean_t force, boolean_t isspare);
 void after_zpool_upgrade(zpool_handle_t *zhp);
+int check_file_generic(const char *file, boolean_t force, boolean_t isspare);
 
 int zpool_power(zpool_handle_t *zhp, char *vdev, boolean_t turn_on);
 int zpool_power_current_state(zpool_handle_t *zhp, char *vdev);

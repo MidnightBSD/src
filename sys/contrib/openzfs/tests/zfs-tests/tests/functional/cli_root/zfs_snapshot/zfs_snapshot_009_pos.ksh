@@ -84,20 +84,17 @@ while (( i < ${#invalid_args[*]} )); do
 	((i = i + 1))
 done
 log_note "verify multiple snapshot transaction group"
-txg_group=$(zdb -Pd $TESTPOOL | grep snap | awk '{print $7}')
+txg_group=$(zdb -Pd $TESTPOOL | awk '/snap/ {print $7}')
 for i in 1 2 3; do
-	txg_tag=$(echo "$txg_group" | nawk -v j=$i 'FNR == j {print}')
+	txg_tag=$(echo "$txg_group" | awk -v j=$i 'FNR == j {print}')
 	[[ $txg_tag != $(echo "$txg_group" | \
-	    nawk -v j=$i 'FNR == j {print}') ]] \
+	    awk -v j=$i 'FNR == j {print}') ]] \
 	    && log_fail "snapshots belong to different transaction groups"
 done
 log_note "verify snapshot contents"
 for ds in $datasets; do
-	diff -q -r /$ds /$ds/.zfs/snapshot/snap > /dev/null 2>&1
-	if [[ $? -eq 1 ]]; then
-		log_fail "snapshot contents are different from" \
-		    "the filesystem"
-	fi
+	[ -d "/$ds/.zfs/snapshot/snap" ] && \
+		log_must directory_diff /$ds /$ds/.zfs/snapshot/snap
 done
 
 # We subtract 3 + 7 + 7 + 1 = 18 for three slashes (/), strlen("TESTFSA") == 7,
@@ -123,7 +120,7 @@ for x in {1..$ITERATIONS}; do
 	for y in {1..$NUM_SNAPS}; do
 		log_must zfs snapshot $TESTPOOL/$MYTEST@$y
 	done;
-	n=$(ls -1 /$TESTPOOL/$MYTEST/.zfs/snapshot | wc -l)
+	n=$(ls /$TESTPOOL/$MYTEST/.zfs/snapshot | wc -l)
 	verify_eq $n $NUM_SNAPS "count"
 	zfs destroy -r $TESTPOOL/$MYTEST;
 done;

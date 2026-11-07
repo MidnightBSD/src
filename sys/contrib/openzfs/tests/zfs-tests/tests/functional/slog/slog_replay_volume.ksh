@@ -7,7 +7,7 @@
 # You may not use this file except in compliance with the License.
 #
 # You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
-# or http://www.opensolaris.org/os/licensing.
+# or https://opensource.org/licenses/CDDL-1.0.
 # See the License for the specific language governing permissions
 # and limitations under the License.
 #
@@ -102,7 +102,7 @@ else
 	log_must mount $VOLUME $MNTPNT
 	FSTYPE=$NEWFS_DEFAULT_FS
 fi
-log_must zpool sync
+sync_all_pools
 
 #
 # 2. Freeze TESTVOL
@@ -140,7 +140,7 @@ fi
 #
 # 4. Generate checksums for all ext4 files.
 #
-typeset checksum=$(cat $MNTPNT/* | sha256digest)
+typeset checksum=$(cat $MNTPNT/* | xxh128digest)
 
 #
 # 5. Unmount filesystem and export the pool
@@ -172,7 +172,7 @@ log_note "Verify current block usage:"
 log_must zdb -bcv $TESTPOOL
 
 log_note "Verify checksums"
-typeset checksum1=$(cat $MNTPNT/* | sha256digest)
+typeset checksum1=$(cat $MNTPNT/* | xxh128digest)
 [[ "$checksum1" == "$checksum" ]] || \
     log_fail "checksum mismatch ($checksum1 != $checksum)"
 

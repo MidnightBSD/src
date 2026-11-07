@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -33,7 +33,6 @@
 #include <sys/resource.h>
 #include <sys/vfs.h>
 #include <sys/vnode.h>
-#include <sys/extdirent.h>
 #include <sys/file.h>
 #include <sys/kmem.h>
 #include <sys/uio.h>
@@ -427,6 +426,7 @@ zfs_rmnode(znode_t *zp)
 	zfsvfs_t	*zfsvfs = zp->z_zfsvfs;
 	objset_t	*os = zfsvfs->z_os;
 	dmu_tx_t	*tx;
+	uint64_t	z_id = zp->z_id;
 	uint64_t	acl_obj;
 	uint64_t	xattr_obj;
 	uint64_t	count;
@@ -446,8 +446,10 @@ zfs_rmnode(znode_t *zp)
 			 * Not enough space to delete some xattrs.
 			 * Leave it in the unlinked set.
 			 */
+			ZFS_OBJ_HOLD_ENTER(zfsvfs, z_id);
 			zfs_znode_dmu_fini(zp);
 			zfs_znode_free(zp);
+			ZFS_OBJ_HOLD_EXIT(zfsvfs, z_id);
 			return;
 		}
 	} else {
@@ -465,8 +467,10 @@ zfs_rmnode(znode_t *zp)
 			 * Not enough space or we were interrupted by unmount.
 			 * Leave the file in the unlinked set.
 			 */
+			ZFS_OBJ_HOLD_ENTER(zfsvfs, z_id);
 			zfs_znode_dmu_fini(zp);
 			zfs_znode_free(zp);
+			ZFS_OBJ_HOLD_EXIT(zfsvfs, z_id);
 			return;
 		}
 	}
@@ -502,8 +506,10 @@ zfs_rmnode(znode_t *zp)
 		 * which point we'll call zfs_unlinked_drain() to process it).
 		 */
 		dmu_tx_abort(tx);
+		ZFS_OBJ_HOLD_ENTER(zfsvfs, z_id);
 		zfs_znode_dmu_fini(zp);
 		zfs_znode_free(zp);
+		ZFS_OBJ_HOLD_EXIT(zfsvfs, z_id);
 		return;
 	}
 
@@ -537,6 +543,7 @@ zfs_rmnode(znode_t *zp)
 	dataset_kstats_update_nunlinked_kstat(&zfsvfs->z_kstat, 1);
 
 	zfs_znode_delete(zp, tx);
+	zfs_znode_free(zp);
 
 	dmu_tx_commit(tx);
 
@@ -810,14 +817,14 @@ zfs_make_xattrdir(znode_t *zp, vattr_t *vap, znode_t **xvpp, cred_t *cr)
 	*xvpp = NULL;
 
 	if ((error = zfs_acl_ids_create(zp, IS_XATTR, vap, cr, NULL,
-	    &acl_ids)) != 0)
+	    &acl_ids, NULL)) != 0)
 		return (error);
 	if (zfs_acl_ids_overquota(zfsvfs, &acl_ids, 0)) {
 		zfs_acl_ids_free(&acl_ids);
 		return (SET_ERROR(EDQUOT));
 	}
 
-	getnewvnode_reserve_();
+	getnewvnode_reserve();
 
 	tx = dmu_tx_create(zfsvfs->z_os);
 	dmu_tx_hold_sa_create(tx, acl_ids.z_aclp->z_acl_bytes +
@@ -919,7 +926,7 @@ top:
 		goto top;
 	}
 	if (error == 0)
-		VOP_UNLOCK1(ZTOV(*xzpp));
+		VOP_UNLOCK(ZTOV(*xzpp));
 
 	return (error);
 }
@@ -956,7 +963,7 @@ zfs_sticky_remove_access(znode_t *zdp, znode_t *zp, cred_t *cr)
 
 	if ((uid = crgetuid(cr)) == downer || uid == fowner ||
 	    (ZTOV(zp)->v_type == VREG &&
-	    zfs_zaccess(zp, ACE_WRITE_DATA, 0, B_FALSE, cr) == 0))
+	    zfs_zaccess(zp, ACE_WRITE_DATA, 0, B_FALSE, cr, NULL) == 0))
 		return (0);
 	else
 		return (secpolicy_vnode_remove(ZTOV(zp), cr));

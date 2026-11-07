@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -256,6 +256,9 @@ vdev_config_generate_stats(vdev_t *vd, nvlist_t *nv)
 	fnvlist_add_uint64(nvx, ZPOOL_CONFIG_VDEV_TRIM_ACTIVE_QUEUE,
 	    vsx->vsx_active_queue[ZIO_PRIORITY_TRIM]);
 
+	fnvlist_add_uint64(nvx, ZPOOL_CONFIG_VDEV_REBUILD_ACTIVE_QUEUE,
+	    vsx->vsx_active_queue[ZIO_PRIORITY_REBUILD]);
+
 	/* ZIOs pending */
 	fnvlist_add_uint64(nvx, ZPOOL_CONFIG_VDEV_SYNC_R_PEND_QUEUE,
 	    vsx->vsx_pend_queue[ZIO_PRIORITY_SYNC_READ]);
@@ -274,6 +277,9 @@ vdev_config_generate_stats(vdev_t *vd, nvlist_t *nv)
 
 	fnvlist_add_uint64(nvx, ZPOOL_CONFIG_VDEV_TRIM_PEND_QUEUE,
 	    vsx->vsx_pend_queue[ZIO_PRIORITY_TRIM]);
+
+	fnvlist_add_uint64(nvx, ZPOOL_CONFIG_VDEV_REBUILD_PEND_QUEUE,
+	    vsx->vsx_pend_queue[ZIO_PRIORITY_REBUILD]);
 
 	/* Histograms */
 	fnvlist_add_uint64_array(nvx, ZPOOL_CONFIG_VDEV_TOT_R_LAT_HISTO,
@@ -316,6 +322,10 @@ vdev_config_generate_stats(vdev_t *vd, nvlist_t *nv)
 	    vsx->vsx_queue_histo[ZIO_PRIORITY_TRIM],
 	    ARRAY_SIZE(vsx->vsx_queue_histo[ZIO_PRIORITY_TRIM]));
 
+	fnvlist_add_uint64_array(nvx, ZPOOL_CONFIG_VDEV_REBUILD_LAT_HISTO,
+	    vsx->vsx_queue_histo[ZIO_PRIORITY_REBUILD],
+	    ARRAY_SIZE(vsx->vsx_queue_histo[ZIO_PRIORITY_REBUILD]));
+
 	/* Request sizes */
 	fnvlist_add_uint64_array(nvx, ZPOOL_CONFIG_VDEV_SYNC_IND_R_HISTO,
 	    vsx->vsx_ind_histo[ZIO_PRIORITY_SYNC_READ],
@@ -341,6 +351,10 @@ vdev_config_generate_stats(vdev_t *vd, nvlist_t *nv)
 	    vsx->vsx_ind_histo[ZIO_PRIORITY_TRIM],
 	    ARRAY_SIZE(vsx->vsx_ind_histo[ZIO_PRIORITY_TRIM]));
 
+	fnvlist_add_uint64_array(nvx, ZPOOL_CONFIG_VDEV_IND_REBUILD_HISTO,
+	    vsx->vsx_ind_histo[ZIO_PRIORITY_REBUILD],
+	    ARRAY_SIZE(vsx->vsx_ind_histo[ZIO_PRIORITY_REBUILD]));
+
 	fnvlist_add_uint64_array(nvx, ZPOOL_CONFIG_VDEV_SYNC_AGG_R_HISTO,
 	    vsx->vsx_agg_histo[ZIO_PRIORITY_SYNC_READ],
 	    ARRAY_SIZE(vsx->vsx_agg_histo[ZIO_PRIORITY_SYNC_READ]));
@@ -364,6 +378,10 @@ vdev_config_generate_stats(vdev_t *vd, nvlist_t *nv)
 	fnvlist_add_uint64_array(nvx, ZPOOL_CONFIG_VDEV_AGG_TRIM_HISTO,
 	    vsx->vsx_agg_histo[ZIO_PRIORITY_TRIM],
 	    ARRAY_SIZE(vsx->vsx_agg_histo[ZIO_PRIORITY_TRIM]));
+
+	fnvlist_add_uint64_array(nvx, ZPOOL_CONFIG_VDEV_AGG_REBUILD_HISTO,
+	    vsx->vsx_agg_histo[ZIO_PRIORITY_REBUILD],
+	    ARRAY_SIZE(vsx->vsx_agg_histo[ZIO_PRIORITY_REBUILD]));
 
 	/* IO delays */
 	fnvlist_add_uint64(nvx, ZPOOL_CONFIG_VDEV_SLOW_IOS, vs->vs_slow_ios);
@@ -480,8 +498,19 @@ vdev_config_generate(spa_t *spa, vdev_t *vd, boolean_t getstats,
 		fnvlist_add_uint64(nv, ZPOOL_CONFIG_ASHIFT, vd->vdev_ashift);
 		fnvlist_add_uint64(nv, ZPOOL_CONFIG_ASIZE,
 		    vd->vdev_asize);
+		fnvlist_add_uint64(nv, ZPOOL_CONFIG_MIN_ALLOC,
+		    vdev_get_min_alloc(vd));
 		fnvlist_add_uint64(nv, ZPOOL_CONFIG_IS_LOG, vd->vdev_islog);
-		if (vd->vdev_removing) {
+		if (vd->vdev_noalloc) {
+			fnvlist_add_uint64(nv, ZPOOL_CONFIG_NONALLOCATING,
+			    vd->vdev_noalloc);
+		}
+
+		/*
+		 * Slog devices are removed synchronously so don't
+		 * persist the vdev_removing flag to the label.
+		 */
+		if (vd->vdev_removing && !vd->vdev_islog) {
 			fnvlist_add_uint64(nv, ZPOOL_CONFIG_REMOVING,
 			    vd->vdev_removing);
 		}
@@ -547,6 +576,12 @@ vdev_config_generate(spa_t *spa, vdev_t *vd, boolean_t getstats,
 			ASSERT(vd == vd->vdev_top);
 			fnvlist_add_uint64(nv, ZPOOL_CONFIG_VDEV_TOP_ZAP,
 			    vd->vdev_top_zap);
+		}
+
+		if (vd->vdev_ops == &vdev_root_ops && vd->vdev_root_zap != 0 &&
+		    spa_feature_is_active(vd->vdev_spa, SPA_FEATURE_AVZ_V2)) {
+			fnvlist_add_uint64(nv, ZPOOL_CONFIG_VDEV_ROOT_ZAP,
+			    vd->vdev_root_zap);
 		}
 
 		if (vd->vdev_resilver_deferred) {
@@ -625,35 +660,22 @@ vdev_config_generate(spa_t *spa, vdev_t *vd, boolean_t getstats,
 
 	if (!vd->vdev_ops->vdev_op_leaf) {
 		nvlist_t **child;
-		int c, idx;
+		uint64_t c;
 
 		ASSERT(!vd->vdev_ishole);
 
 		child = kmem_alloc(vd->vdev_children * sizeof (nvlist_t *),
 		    KM_SLEEP);
 
-		for (c = 0, idx = 0; c < vd->vdev_children; c++) {
-			vdev_t *cvd = vd->vdev_child[c];
-
-			/*
-			 * If we're generating an nvlist of removing
-			 * vdevs then skip over any device which is
-			 * not being removed.
-			 */
-			if ((flags & VDEV_CONFIG_REMOVING) &&
-			    !cvd->vdev_removing)
-				continue;
-
-			child[idx++] = vdev_config_generate(spa, cvd,
+		for (c = 0; c < vd->vdev_children; c++) {
+			child[c] = vdev_config_generate(spa, vd->vdev_child[c],
 			    getstats, flags);
 		}
 
-		if (idx) {
-			fnvlist_add_nvlist_array(nv, ZPOOL_CONFIG_CHILDREN,
-			    child, idx);
-		}
+		fnvlist_add_nvlist_array(nv, ZPOOL_CONFIG_CHILDREN,
+		    (const nvlist_t * const *)child, vd->vdev_children);
 
-		for (c = 0; c < idx; c++)
+		for (c = 0; c < vd->vdev_children; c++)
 			nvlist_free(child[c]);
 
 		kmem_free(child, vd->vdev_children * sizeof (nvlist_t *));
@@ -918,7 +940,7 @@ vdev_inuse(vdev_t *vd, uint64_t crtxg, vdev_labeltype_t reason,
 	/*
 	 * Check to see if this is a spare device.  We do an explicit check for
 	 * spa_has_spare() here because it may be on our pending list of spares
-	 * to add.  We also check if it is an l2cache device.
+	 * to add.
 	 */
 	if (spa_spare_exists(device_guid, &spare_pool, NULL) ||
 	    spa_has_spare(spa, device_guid)) {
@@ -927,7 +949,6 @@ vdev_inuse(vdev_t *vd, uint64_t crtxg, vdev_labeltype_t reason,
 
 		switch (reason) {
 		case VDEV_LABEL_CREATE:
-		case VDEV_LABEL_L2CACHE:
 			return (B_TRUE);
 
 		case VDEV_LABEL_REPLACE:
@@ -944,8 +965,24 @@ vdev_inuse(vdev_t *vd, uint64_t crtxg, vdev_labeltype_t reason,
 	/*
 	 * Check to see if this is an l2cache device.
 	 */
-	if (spa_l2cache_exists(device_guid, NULL))
-		return (B_TRUE);
+	if (spa_l2cache_exists(device_guid, NULL) ||
+	    spa_has_l2cache(spa, device_guid)) {
+		if (l2cache_guid)
+			*l2cache_guid = device_guid;
+
+		switch (reason) {
+		case VDEV_LABEL_CREATE:
+			return (B_TRUE);
+
+		case VDEV_LABEL_REPLACE:
+			return (!spa_has_l2cache(spa, device_guid));
+
+		case VDEV_LABEL_L2CACHE:
+			return (spa_has_l2cache(spa, device_guid));
+		default:
+			break;
+		}
+	}
 
 	/*
 	 * We can't rely on a pool's state if it's been imported
@@ -988,6 +1025,10 @@ vdev_label_init(vdev_t *vd, uint64_t crtxg, vdev_labeltype_t reason)
 	int error;
 	uint64_t spare_guid = 0, l2cache_guid = 0;
 	int flags = ZIO_FLAG_CONFIG_WRITER | ZIO_FLAG_CANFAIL;
+	boolean_t reason_spare = (reason == VDEV_LABEL_SPARE || (reason ==
+	    VDEV_LABEL_REMOVE && vd->vdev_isspare));
+	boolean_t reason_l2cache = (reason == VDEV_LABEL_L2CACHE || (reason ==
+	    VDEV_LABEL_REMOVE && vd->vdev_isl2cache));
 
 	ASSERT(spa_config_held(spa, SCL_ALL, RW_WRITER) == SCL_ALL);
 
@@ -1073,34 +1114,20 @@ vdev_label_init(vdev_t *vd, uint64_t crtxg, vdev_labeltype_t reason)
 	 * really part of an active pool just yet.  The labels will
 	 * be written again with a meaningful txg by spa_sync().
 	 */
-	if (reason == VDEV_LABEL_SPARE ||
-	    (reason == VDEV_LABEL_REMOVE && vd->vdev_isspare)) {
+	if (reason_spare || reason_l2cache) {
 		/*
-		 * For inactive hot spares, we generate a special label that
-		 * identifies as a mutually shared hot spare.  We write the
-		 * label if we are adding a hot spare, or if we are removing an
-		 * active hot spare (in which case we want to revert the
-		 * labels).
+		 * For inactive hot spares and level 2 ARC devices, we generate
+		 * a special label that identifies as a mutually shared hot
+		 * spare or l2cache device. We write the label in case of
+		 * addition or removal of hot spare or l2cache vdev (in which
+		 * case we want to revert the labels).
 		 */
 		VERIFY(nvlist_alloc(&label, NV_UNIQUE_NAME, KM_SLEEP) == 0);
 
 		VERIFY(nvlist_add_uint64(label, ZPOOL_CONFIG_VERSION,
 		    spa_version(spa)) == 0);
 		VERIFY(nvlist_add_uint64(label, ZPOOL_CONFIG_POOL_STATE,
-		    POOL_STATE_SPARE) == 0);
-		VERIFY(nvlist_add_uint64(label, ZPOOL_CONFIG_GUID,
-		    vd->vdev_guid) == 0);
-	} else if (reason == VDEV_LABEL_L2CACHE ||
-	    (reason == VDEV_LABEL_REMOVE && vd->vdev_isl2cache)) {
-		/*
-		 * For level 2 ARC devices, add a special label.
-		 */
-		VERIFY(nvlist_alloc(&label, NV_UNIQUE_NAME, KM_SLEEP) == 0);
-
-		VERIFY(nvlist_add_uint64(label, ZPOOL_CONFIG_VERSION,
-		    spa_version(spa)) == 0);
-		VERIFY(nvlist_add_uint64(label, ZPOOL_CONFIG_POOL_STATE,
-		    POOL_STATE_L2CACHE) == 0);
+		    reason_spare ? POOL_STATE_SPARE : POOL_STATE_L2CACHE) == 0);
 		VERIFY(nvlist_add_uint64(label, ZPOOL_CONFIG_GUID,
 		    vd->vdev_guid) == 0);
 
@@ -1111,8 +1138,34 @@ vdev_label_init(vdev_t *vd, uint64_t crtxg, vdev_labeltype_t reason)
 		 * spa->spa_l2cache->sav_config (populated in
 		 * spa_ld_open_aux_vdevs()).
 		 */
-		VERIFY(nvlist_add_uint64(label, ZPOOL_CONFIG_ASHIFT,
-		    vd->vdev_ashift) == 0);
+		if (reason_l2cache) {
+			VERIFY(nvlist_add_uint64(label, ZPOOL_CONFIG_ASHIFT,
+			    vd->vdev_ashift) == 0);
+		}
+
+		/*
+		 * Add path information to help find it during pool import
+		 */
+		if (vd->vdev_path != NULL) {
+			VERIFY(nvlist_add_string(label, ZPOOL_CONFIG_PATH,
+			    vd->vdev_path) == 0);
+		}
+		if (vd->vdev_devid != NULL) {
+			VERIFY(nvlist_add_string(label, ZPOOL_CONFIG_DEVID,
+			    vd->vdev_devid) == 0);
+		}
+		if (vd->vdev_physpath != NULL) {
+			VERIFY(nvlist_add_string(label, ZPOOL_CONFIG_PHYS_PATH,
+			    vd->vdev_physpath) == 0);
+		}
+
+		/*
+		 * When spare or l2cache (aux) vdev is added during pool
+		 * creation, spa->spa_uberblock is not written until this
+		 * point. Write it on next config sync.
+		 */
+		if (uberblock_verify(&spa->spa_uberblock))
+			spa->spa_aux_sync_uber = B_TRUE;
 	} else {
 		uint64_t txg = 0ULL;
 
@@ -1300,7 +1353,7 @@ vdev_label_read_bootenv(vdev_t *rvd, nvlist_t *bootenv)
 				nvlist_free(config);
 				break;
 			}
-			fallthrough;
+			zfs_fallthrough;
 		default:
 			/* Check for FreeBSD zfs bootonce command string */
 			buf = abd_to_buf(abd);
@@ -1336,6 +1389,7 @@ vdev_label_write_bootenv(vdev_t *vd, nvlist_t *env)
 	int error;
 	size_t nvsize;
 	char *nvbuf;
+	const char *tmp;
 
 	error = nvlist_size(env, &nvsize, NV_ENCODE_XDR);
 	if (error != 0)
@@ -1375,8 +1429,8 @@ vdev_label_write_bootenv(vdev_t *vd, nvlist_t *env)
 	bootenv->vbe_version = fnvlist_lookup_uint64(env, BOOTENV_VERSION);
 	switch (bootenv->vbe_version) {
 	case VB_RAW:
-		if (nvlist_lookup_string(env, GRUB_ENVMAP, &nvbuf) == 0) {
-			(void) strlcpy(bootenv->vbe_bootenv, nvbuf, nvsize);
+		if (nvlist_lookup_string(env, GRUB_ENVMAP, &tmp) == 0) {
+			(void) strlcpy(bootenv->vbe_bootenv, tmp, nvsize);
 		}
 		error = 0;
 		break;
@@ -1542,7 +1596,7 @@ vdev_uberblock_load(vdev_t *rvd, uberblock_t *ub, nvlist_t **config)
 	ASSERT(ub);
 	ASSERT(config);
 
-	bzero(ub, sizeof (uberblock_t));
+	memset(ub, 0, sizeof (uberblock_t));
 	*config = NULL;
 
 	cb.ubl_ubbest = ub;
@@ -1714,6 +1768,16 @@ vdev_uberblock_sync_list(vdev_t **svd, int svdcount, uberblock_t *ub, int flags)
 	for (int v = 0; v < svdcount; v++)
 		vdev_uberblock_sync(zio, &good_writes, ub, svd[v], flags);
 
+	if (spa->spa_aux_sync_uber) {
+		for (int v = 0; v < spa->spa_spares.sav_count; v++) {
+			vdev_uberblock_sync(zio, &good_writes, ub,
+			    spa->spa_spares.sav_vdevs[v], flags);
+		}
+		for (int v = 0; v < spa->spa_l2cache.sav_count; v++) {
+			vdev_uberblock_sync(zio, &good_writes, ub,
+			    spa->spa_l2cache.sav_vdevs[v], flags);
+		}
+	}
 	(void) zio_wait(zio);
 
 	/*
@@ -1726,6 +1790,19 @@ vdev_uberblock_sync_list(vdev_t **svd, int svdcount, uberblock_t *ub, int flags)
 	for (int v = 0; v < svdcount; v++) {
 		if (vdev_writeable(svd[v])) {
 			zio_flush(zio, svd[v]);
+		}
+	}
+	if (spa->spa_aux_sync_uber) {
+		spa->spa_aux_sync_uber = B_FALSE;
+		for (int v = 0; v < spa->spa_spares.sav_count; v++) {
+			if (vdev_writeable(spa->spa_spares.sav_vdevs[v])) {
+				zio_flush(zio, spa->spa_spares.sav_vdevs[v]);
+			}
+		}
+		for (int v = 0; v < spa->spa_l2cache.sav_count; v++) {
+			if (vdev_writeable(spa->spa_l2cache.sav_vdevs[v])) {
+				zio_flush(zio, spa->spa_l2cache.sav_vdevs[v]);
+			}
 		}
 	}
 
@@ -1908,6 +1985,7 @@ retry:
 	/*
 	 * If this isn't a resync due to I/O errors,
 	 * and nothing changed in this transaction group,
+	 * and multihost protection isn't enabled,
 	 * and the vdev configuration hasn't changed,
 	 * then there's nothing to do.
 	 */
@@ -1915,7 +1993,8 @@ retry:
 		boolean_t changed = uberblock_update(ub, spa->spa_root_vdev,
 		    txg, spa->spa_mmp.mmp_delay);
 
-		if (!changed && list_is_empty(&spa->spa_config_dirty_list))
+		if (!changed && list_is_empty(&spa->spa_config_dirty_list) &&
+		    !spa_multihost(spa))
 			return (0);
 	}
 

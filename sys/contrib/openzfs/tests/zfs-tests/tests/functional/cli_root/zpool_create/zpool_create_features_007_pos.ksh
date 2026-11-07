@@ -7,7 +7,7 @@
 # You may not use this file except in compliance with the License.
 #
 # You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
-# or http://www.opensolaris.org/os/licensing.
+# or https://opensource.org/licenses/CDDL-1.0.
 # See the License for the specific language governing permissions
 # and limitations under the License.
 #
@@ -34,6 +34,7 @@
 # STRATEGY:
 #	1. Create a pool with a known feature set.
 #	2. Verify only those features are active/enabled.
+#	3. Do this for all known feature sets
 #
 
 verify_runnable "global"
@@ -47,8 +48,11 @@ log_onexit cleanup
 
 log_assert "creates a pool with a specified feature set enabled"
 
-log_must zpool create -f -o compatibility=compat-2020 $TESTPOOL $DISKS
-check_feature_set $TESTPOOL compat-2020
-log_must zpool destroy -f $TESTPOOL
+for compat in "$ZPOOL_COMPAT_DIR"/*
+do
+	log_must zpool create -f -o compatibility="${compat##*/}" $TESTPOOL $DISKS
+	check_feature_set $TESTPOOL "${compat##*/}"
+	log_must zpool destroy -f $TESTPOOL
+done
 
 log_pass "creates a pool with a specified feature set enabled"

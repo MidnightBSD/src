@@ -62,30 +62,15 @@ known_reason = 'Known issue'
 exec_reason = 'Test user execute permissions required for utilities'
 
 #
-# Some tests require a minimum python version of 3.6 and will be skipped when
-# the default system version is too old.  There may also be tests which require
-# additional python modules be installed, for example python3-cffi is required
-# by the pyzfs tests.
+# Some tests require that the kernel supports renameat2 syscall.
 #
-python_reason = 'Python v3.6 or newer required'
-python_deps_reason = 'Python modules missing: python3-cffi'
-
-#
-# Some tests require the O_TMPFILE flag which was first introduced in the
-# 3.11 kernel.
-#
-tmpfile_reason = 'Kernel O_TMPFILE support required'
+renameat2_reason = 'Kernel renameat2 support required'
 
 #
 # Some tests require the statx(2) system call on Linux which was first
 # introduced in the 4.11 kernel.
 #
 statx_reason = 'Kernel statx(2) system call required on Linux'
-
-#
-# Some tests require that the NFS client and server utilities be installed.
-#
-share_reason = 'NFS client and server utilities required'
 
 #
 # Some tests require that the lsattr utility support the project id feature.
@@ -105,14 +90,6 @@ user_ns_reason = 'Kernel user namespace support required'
 # never a sure thing.
 #
 rewind_reason = 'Arbitrary pool rewind is not guaranteed'
-
-#
-# Some tests may by structured in a way that relies on exact knowledge
-# of how much free space in available in a pool.  These tests cannot be
-# made completely reliable because the internal details of how free space
-# is managed are not exposed to user space.
-#
-enospc_reason = 'Exact free space reporting is not guaranteed'
 
 #
 # Some tests require a minimum version of the fio benchmark utility.
@@ -142,15 +119,19 @@ fspacectl_reason = 'fspacectl(2) and truncate -d support required'
 na_reason = "Not applicable"
 
 #
-# Some test cases doesn't have all requirements to run on Github actions CI.
+# Idmapped mount is only supported in kernel version >= 5.12
 #
-ci_reason = 'CI runner doesn\'t have all requirements'
+idmap_reason = 'Idmapped mount needs kernel 5.12+'
 
-summary = {
-    'total': float(0),
-    'passed': float(0),
-    'logfile': "Could not determine logfile location."
-}
+#
+# copy_file_range() is not supported by all kernels
+#
+cfr_reason = 'Kernel copy_file_range support required'
+
+if sys.platform.startswith('freebsd'):
+    cfr_cross_reason = 'copy_file_range(2) cross-filesystem needs FreeBSD 14+'
+else:
+    cfr_cross_reason = 'copy_file_range(2) cross-filesystem needs kernel 5.3+'
 
 #
 # These tests are known to fail, thus we use this list to prevent these
@@ -166,12 +147,11 @@ summary = {
 known = {
     'casenorm/mixed_none_lookup_ci': ['FAIL', 7633],
     'casenorm/mixed_formd_lookup_ci': ['FAIL', 7633],
-    'cli_root/zfs_unshare/zfs_unshare_002_pos': ['SKIP', na_reason],
-    'cli_root/zfs_unshare/zfs_unshare_006_pos': ['SKIP', na_reason],
     'cli_root/zpool_import/import_rewind_device_replaced':
         ['FAIL', rewind_reason],
     'cli_user/misc/zfs_share_001_neg': ['SKIP', na_reason],
     'cli_user/misc/zfs_unshare_001_neg': ['SKIP', na_reason],
+    'pool_checkpoint/checkpoint_discard_busy': ['SKIP', 12053],
     'privilege/setup': ['SKIP', na_reason],
     'refreserv/refreserv_004_pos': ['FAIL', known_reason],
     'rootpool/setup': ['SKIP', na_reason],
@@ -188,8 +168,11 @@ if sys.platform.startswith('freebsd'):
         'cli_root/zpool_wait/zpool_wait_trim_basic': ['SKIP', trim_reason],
         'cli_root/zpool_wait/zpool_wait_trim_cancel': ['SKIP', trim_reason],
         'cli_root/zpool_wait/zpool_wait_trim_flag': ['SKIP', trim_reason],
+        'cli_root/zfs_unshare/zfs_unshare_008_pos': ['SKIP', na_reason],
+        'cp_files/cp_files_002_pos': ['SKIP', na_reason],
         'link_count/link_count_001': ['SKIP', na_reason],
         'mmap/mmap_sync_001_pos': ['SKIP', na_reason],
+        'rsend/send_raw_ashift': ['SKIP', 14961],
     })
 elif sys.platform.startswith('linux'):
     known.update({
@@ -198,6 +181,7 @@ elif sys.platform.startswith('linux'):
         'casenorm/sensitive_formd_lookup': ['FAIL', 7633],
         'casenorm/sensitive_formd_delete': ['FAIL', 7633],
         'removal/removal_with_zdb': ['SKIP', known_reason],
+        'cli_root/zfs_unshare/zfs_unshare_002_pos': ['SKIP', na_reason],
     })
 
 
@@ -213,29 +197,38 @@ elif sys.platform.startswith('linux'):
 # reasons listed above can be used.
 #
 maybe = {
-    'threadsappend/threadsappend_001_pos': ['FAIL', 6136],
+    'append/threadsappend_001_pos': ['FAIL', 6136],
     'chattr/setup': ['SKIP', exec_reason],
     'crtime/crtime_001_pos': ['SKIP', statx_reason],
     'cli_root/zdb/zdb_006_pos': ['FAIL', known_reason],
+    'cli_root/zfs_copies/zfs_copies_006_pos': ['FAIL', known_reason],
     'cli_root/zfs_destroy/zfs_destroy_dev_removal_condense':
         ['FAIL', known_reason],
     'cli_root/zfs_get/zfs_get_004_pos': ['FAIL', known_reason],
     'cli_root/zfs_get/zfs_get_009_pos': ['SKIP', 5479],
     'cli_root/zfs_rollback/zfs_rollback_001_pos': ['FAIL', known_reason],
     'cli_root/zfs_rollback/zfs_rollback_002_pos': ['FAIL', known_reason],
-    'cli_root/zfs_share/setup': ['SKIP', share_reason],
+    'cli_root/zfs_share/zfs_share_concurrent_shares': ['FAIL', known_reason],
     'cli_root/zfs_snapshot/zfs_snapshot_002_neg': ['FAIL', known_reason],
-    'cli_root/zfs_unshare/setup': ['SKIP', share_reason],
+    'cli_root/zfs_unshare/zfs_unshare_006_pos': ['SKIP', na_reason],
     'cli_root/zpool_add/zpool_add_004_pos': ['FAIL', known_reason],
     'cli_root/zpool_destroy/zpool_destroy_001_pos': ['SKIP', 6145],
+    'cli_root/zpool_import/import_devices_missing': ['FAIL', 16669],
     'cli_root/zpool_import/zpool_import_missing_003_pos': ['SKIP', 6839],
     'cli_root/zpool_initialize/zpool_initialize_import_export':
         ['FAIL', 11948],
+    'cli_root/zpool_initialize/zpool_initialize_suspend_resume':
+        ['FAIL', known_reason],
     'cli_root/zpool_labelclear/zpool_labelclear_removed':
         ['FAIL', known_reason],
     'cli_root/zpool_trim/setup': ['SKIP', trim_reason],
+    'cli_root/zpool_trim/zpool_trim_fault_export_import_online':
+        ['FAIL', known_reason],
     'cli_root/zpool_upgrade/zpool_upgrade_004_pos': ['FAIL', 6141],
+    'cli_user/misc/arc_summary_001_pos': ['FAIL', known_reason],
     'delegate/setup': ['SKIP', exec_reason],
+    'events/zed_cksum_config': ['FAIL', known_reason],
+    'fault/auto_replace_002_pos': ['FAIL', known_reason],
     'fallocate/fallocate_punch-hole': ['SKIP', fspacectl_reason],
     'history/history_004_pos': ['FAIL', 7026],
     'history/history_005_neg': ['FAIL', 6680],
@@ -243,20 +236,26 @@ maybe = {
     'history/history_008_pos': ['FAIL', known_reason],
     'history/history_010_pos': ['SKIP', exec_reason],
     'io/mmap': ['SKIP', fio_reason],
+    'l2arc/l2arc_l2miss_pos': ['FAIL', known_reason],
+    'l2arc/persist_l2arc_005_pos': ['FAIL', known_reason],
     'largest_pool/largest_pool_001_pos': ['FAIL', known_reason],
+    'mmap/mmap_sync_001_pos': ['FAIL', known_reason],
     'mmp/mmp_on_uberblocks': ['FAIL', known_reason],
-    'pyzfs/pyzfs_unittest': ['SKIP', python_deps_reason],
-    'pool_checkpoint/checkpoint_discard_busy': ['FAIL', 11946],
     'pam/setup': ['SKIP', "pamtester might be not available"],
+    'pool_checkpoint/checkpoint_discard_busy': ['FAIL', 11946],
     'projectquota/setup': ['SKIP', exec_reason],
+    'raidz/raidz_002_pos': ['FAIL', known_reason],
+    'raidz/raidz_expand_001_pos': ['FAIL', 16421],
+    'redundancy/redundancy_draid_spare3': ['FAIL', known_reason],
     'removal/removal_condense_export': ['FAIL', known_reason],
+    'renameat2/setup': ['SKIP', renameat2_reason],
     'reservation/reservation_008_pos': ['FAIL', 7741],
     'reservation/reservation_018_pos': ['FAIL', 5642],
     'snapshot/clone_001_pos': ['FAIL', known_reason],
+    'snapshot/snapshot_006_pos': ['FAIL', known_reason],
     'snapshot/snapshot_009_pos': ['FAIL', 7961],
     'snapshot/snapshot_010_pos': ['FAIL', 7961],
     'snapused/snapused_004_pos': ['FAIL', 5513],
-    'tmpfile/setup': ['SKIP', tmpfile_reason],
     'trim/setup': ['SKIP', trim_reason],
     'upgrade/upgrade_projectquota_001_pos': ['SKIP', project_id_reason],
     'user_namespace/setup': ['SKIP', user_ns_reason],
@@ -269,116 +268,125 @@ if sys.platform.startswith('freebsd'):
     maybe.update({
         'cli_root/zfs_copies/zfs_copies_002_pos': ['FAIL', known_reason],
         'cli_root/zfs_inherit/zfs_inherit_001_neg': ['FAIL', known_reason],
-        'cli_root/zfs_share/zfs_share_011_pos': ['FAIL', known_reason],
-        'cli_root/zfs_share/zfs_share_concurrent_shares':
-            ['FAIL', known_reason],
         'cli_root/zpool_import/zpool_import_012_pos': ['FAIL', known_reason],
         'delegate/zfs_allow_003_pos': ['FAIL', known_reason],
         'inheritance/inherit_001_pos': ['FAIL', 11829],
-        'resilver/resilver_restart_001': ['FAIL', known_reason],
         'pool_checkpoint/checkpoint_big_rewind': ['FAIL', 12622],
         'pool_checkpoint/checkpoint_indirect': ['FAIL', 12623],
+        'resilver/resilver_restart_001': ['FAIL', known_reason],
         'snapshot/snapshot_002_pos': ['FAIL', 14831],
+        'zvol/zvol_misc/zvol_misc_volmode': ['FAIL', 16668],
+        'bclone/bclone_crossfs_corner_cases': ['SKIP', cfr_cross_reason],
+        'bclone/bclone_crossfs_corner_cases_limited':
+            ['SKIP', cfr_cross_reason],
+        'bclone/bclone_crossfs_data': ['SKIP', cfr_cross_reason],
+        'bclone/bclone_crossfs_embedded': ['SKIP', cfr_cross_reason],
+        'bclone/bclone_crossfs_hole': ['SKIP', cfr_cross_reason],
+        'bclone/bclone_diffprops_all': ['SKIP', cfr_cross_reason],
+        'bclone/bclone_diffprops_checksum': ['SKIP', cfr_cross_reason],
+        'bclone/bclone_diffprops_compress': ['SKIP', cfr_cross_reason],
+        'bclone/bclone_diffprops_copies': ['SKIP', cfr_cross_reason],
+        'bclone/bclone_diffprops_recordsize': ['SKIP', cfr_cross_reason],
+        'bclone/bclone_prop_sync': ['SKIP', cfr_cross_reason],
+        'block_cloning/block_cloning_cross_enc_dataset':
+            ['SKIP', cfr_cross_reason],
+        'block_cloning/block_cloning_copyfilerange_cross_dataset':
+            ['SKIP', cfr_cross_reason]
     })
 elif sys.platform.startswith('linux'):
     maybe.update({
+        'bclone/bclone_crossfs_corner_cases': ['SKIP', cfr_cross_reason],
+        'bclone/bclone_crossfs_corner_cases_limited':
+            ['SKIP', cfr_cross_reason],
+        'bclone/bclone_crossfs_data': ['SKIP', cfr_cross_reason],
+        'bclone/bclone_crossfs_embedded': ['SKIP', cfr_cross_reason],
+        'bclone/bclone_crossfs_hole': ['SKIP', cfr_cross_reason],
+        'bclone/bclone_diffprops_all': ['SKIP', cfr_cross_reason],
+        'bclone/bclone_diffprops_checksum': ['SKIP', cfr_cross_reason],
+        'bclone/bclone_diffprops_compress': ['SKIP', cfr_cross_reason],
+        'bclone/bclone_diffprops_copies': ['SKIP', cfr_cross_reason],
+        'bclone/bclone_diffprops_recordsize': ['SKIP', cfr_cross_reason],
+        'bclone/bclone_prop_sync': ['SKIP', cfr_cross_reason],
+        'bclone/bclone_samefs_corner_cases': ['SKIP', cfr_reason],
+        'bclone/bclone_samefs_corner_cases_limited': ['SKIP', cfr_reason],
+        'bclone/bclone_samefs_data': ['SKIP', cfr_reason],
+        'bclone/bclone_samefs_embedded': ['SKIP', cfr_reason],
+        'bclone/bclone_samefs_hole': ['SKIP', cfr_reason],
+        'block_cloning/block_cloning_clone_mmap_cached': ['SKIP', cfr_reason],
+        'block_cloning/block_cloning_clone_mmap_write':
+            ['SKIP', cfr_reason],
+        'block_cloning/block_cloning_copyfilerange':
+            ['SKIP', cfr_reason],
+        'block_cloning/block_cloning_copyfilerange_cross_dataset':
+            ['SKIP', cfr_cross_reason],
+        'block_cloning/block_cloning_copyfilerange_fallback':
+            ['SKIP', cfr_reason],
+        'block_cloning/block_cloning_copyfilerange_fallback_same_txg':
+            ['SKIP', cfr_cross_reason],
+        'block_cloning/block_cloning_copyfilerange_partial':
+            ['SKIP', cfr_reason],
+        'block_cloning/block_cloning_cross_enc_dataset':
+            ['SKIP', cfr_cross_reason],
+        'block_cloning/block_cloning_disabled_copyfilerange':
+            ['SKIP', cfr_reason],
+        'block_cloning/block_cloning_lwb_buffer_overflow':
+            ['SKIP', cfr_reason],
+        'block_cloning/block_cloning_replay':
+            ['SKIP', cfr_reason],
+        'block_cloning/block_cloning_replay_encrypted':
+            ['SKIP', cfr_reason],
+        'block_cloning/block_cloning_rlimit_fsize':
+            ['SKIP', cfr_reason],
         'cli_root/zfs_rename/zfs_rename_002_pos': ['FAIL', known_reason],
         'cli_root/zpool_reopen/zpool_reopen_003_pos': ['FAIL', known_reason],
+        'cp_files/cp_files_002_pos': ['SKIP', cfr_reason],
         'fault/auto_online_002_pos': ['FAIL', 11889],
         'fault/auto_replace_001_pos': ['FAIL', 14851],
         'fault/auto_spare_002_pos': ['FAIL', 11889],
         'fault/auto_spare_multiple': ['FAIL', 11889],
         'fault/auto_spare_shared': ['FAIL', 11889],
         'fault/decompress_fault': ['FAIL', 11889],
+        'idmap_mount/idmap_mount_001': ['SKIP', idmap_reason],
+        'idmap_mount/idmap_mount_002': ['SKIP', idmap_reason],
+        'idmap_mount/idmap_mount_003': ['SKIP', idmap_reason],
+        'idmap_mount/idmap_mount_004': ['SKIP', idmap_reason],
+        'idmap_mount/idmap_mount_005': ['SKIP', idmap_reason],
         'io/io_uring': ['SKIP', 'io_uring support required'],
         'limits/filesystem_limit': ['SKIP', known_reason],
         'limits/snapshot_limit': ['SKIP', known_reason],
         'mmp/mmp_active_import': ['FAIL', known_reason],
         'mmp/mmp_exported_import': ['FAIL', known_reason],
         'mmp/mmp_inactive_import': ['FAIL', known_reason],
-        'zvol/zvol_misc/zvol_misc_snapdev': ['FAIL', 12621],
-        'zvol/zvol_misc/zvol_misc_volmode': ['FAIL', known_reason],
     })
-
-
-# Not all Github actions runners have scsi_debug module, so we may skip
-#   some tests which use it.
-if os.environ.get('CI') == 'true':
-    known.update({
-        'cli_root/zpool_expand/zpool_expand_001_pos': ['SKIP', ci_reason],
-        'cli_root/zpool_expand/zpool_expand_003_neg': ['SKIP', ci_reason],
-        'cli_root/zpool_expand/zpool_expand_005_pos': ['SKIP', ci_reason],
-        'cli_root/zpool_reopen/setup': ['SKIP', ci_reason],
-        'cli_root/zpool_reopen/zpool_reopen_001_pos': ['SKIP', ci_reason],
-        'cli_root/zpool_reopen/zpool_reopen_002_pos': ['SKIP', ci_reason],
-        'cli_root/zpool_reopen/zpool_reopen_003_pos': ['SKIP', ci_reason],
-        'cli_root/zpool_reopen/zpool_reopen_004_pos': ['SKIP', ci_reason],
-        'cli_root/zpool_reopen/zpool_reopen_005_pos': ['SKIP', ci_reason],
-        'cli_root/zpool_reopen/zpool_reopen_006_neg': ['SKIP', ci_reason],
-        'cli_root/zpool_reopen/zpool_reopen_007_pos': ['SKIP', ci_reason],
-        'cli_root/zpool_split/zpool_split_wholedisk': ['SKIP', ci_reason],
-        'fault/auto_offline_001_pos': ['SKIP', ci_reason],
-        'fault/auto_online_001_pos': ['SKIP', ci_reason],
-        'fault/auto_online_002_pos': ['SKIP', ci_reason],
-        'fault/auto_replace_001_pos': ['SKIP', ci_reason],
-        'fault/auto_spare_ashift': ['SKIP', ci_reason],
-        'fault/auto_spare_shared': ['SKIP', ci_reason],
-        'procfs/pool_state': ['SKIP', ci_reason],
-    })
-
-    maybe.update({
-        'events/events_002_pos': ['FAIL', 11546],
-    })
-elif sys.platform.startswith('linux'):
-    maybe.update({
-        'alloc_class/alloc_class_009_pos': ['FAIL', known_reason],
-        'alloc_class/alloc_class_010_pos': ['FAIL', known_reason],
-        'cli_root/zfs_rename/zfs_rename_002_pos': ['FAIL', known_reason],
-        'cli_root/zpool_expand/zpool_expand_001_pos': ['FAIL', known_reason],
-        'cli_root/zpool_expand/zpool_expand_005_pos': ['FAIL', known_reason],
-        'cli_root/zpool_reopen/zpool_reopen_003_pos': ['FAIL', known_reason],
-        'refreserv/refreserv_raidz': ['FAIL', known_reason],
-        'rsend/rsend_007_pos': ['FAIL', known_reason],
-        'rsend/rsend_010_pos': ['FAIL', known_reason],
-        'rsend/rsend_011_pos': ['FAIL', known_reason],
-        'snapshot/rollback_003_pos': ['FAIL', known_reason],
-    })
-
-
-def usage(s):
-    print(s)
-    sys.exit(1)
 
 
 def process_results(pathname):
     try:
-        f = open(pathname)
+        f = open(pathname, errors='replace')
     except IOError as e:
-        print('Error opening file: %s' % e)
+        print('Error opening file:', e)
         sys.exit(1)
 
-    prefix = '/zfs-tests/tests/functional/'
+    prefix = '/zfs-tests/tests/(?:functional|perf/regression)/'
     pattern = \
         r'^Test(?:\s+\(\S+\))?:' + \
-        r'\s*\S*%s(\S+)\s*\(run as (\S+)\)\s*\[(\S+)\]\s*\[(\S+)\]' \
-        % prefix
+        rf'\s*\S*{prefix}(\S+)' + \
+        r'\s*\(run as (\S+)\)\s*\[(\S+)\]\s*\[(\S+)\]'
     pattern_log = r'^\s*Log directory:\s*(\S*)'
 
     d = {}
+    logdir = 'Could not determine log directory.'
     for line in f.readlines():
         m = re.match(pattern, line)
         if m and len(m.groups()) == 4:
-            summary['total'] += 1
-            if m.group(4) == "PASS":
-                summary['passed'] += 1
             d[m.group(1)] = m.group(4)
             continue
 
         m = re.match(pattern_log, line)
         if m:
-            summary['logfile'] = m.group(1)
+            logdir = m.group(1)
 
-    return d
+    return d, logdir
 
 
 class ListMaybesAction(argparse.Action):
@@ -407,11 +415,11 @@ if __name__ == "__main__":
     parser.add_argument('--no-maybes', action='store_false', dest='maybes')
     args = parser.parse_args()
 
-    results = process_results(args.logfile)
+    results, logdir = process_results(args.logfile)
 
-    if summary['total'] == 0:
+    if not results:
         print("\n\nNo test results were found.")
-        print("Log directory:  %s" % summary['logfile'])
+        print("Log directory:", logdir)
         sys.exit(0)
 
     expected = []
@@ -466,7 +474,7 @@ if __name__ == "__main__":
             continue
         else:
             expect = "UNKNOWN REASON"
-        print("    %s %s (%s)" % (results[test], test, expect))
+        print(f"    {results[test]} {test} ({expect})")
 
     print("\nTests with result of PASS that are unexpected:")
     for test in sorted(known.keys()):
@@ -474,13 +482,12 @@ if __name__ == "__main__":
         # where "test" is not in "results".
         if test not in results or results[test] != "PASS":
             continue
-        print("    %s %s (expected %s)" % (results[test], test,
-                                           known[test][0]))
+        print(f"    {results[test]} {test} (expected {known[test][0]})")
 
     print("\nTests with results other than PASS that are unexpected:")
     for test in sorted(unexpected):
         expect = "PASS" if test not in known else known[test][0]
-        print("    %s %s (expected %s)" % (results[test], test, expect))
+        print(f"    {results[test]} {test} (expected {expect})")
 
     if len(unexpected) == 0:
         sys.exit(0)

@@ -1903,6 +1903,8 @@ class ZFSTest(unittest.TestCase):
             with self.assertRaises(lzc_exc.StreamIOError) as ctx:
                 lzc.lzc_send(snap, None, fd)
             os.close(fd)
+            os.unlink(output.name)
+
         self.assertEqual(ctx.exception.errno, errno.EBADF)
 
     def test_recv_full(self):
@@ -2906,6 +2908,27 @@ class ZFSTest(unittest.TestCase):
                 tosnap, stream.fileno(), c_header, props=props,
                 cmdprops=cmdprops)
             self.assertExists(tosnap)
+            self.assertEqual(fs.getProperty("compression"), b"on")
+            self.assertEqual(fs.getProperty("ns:prop"), b"val")
+
+    def test_recv_with_heal(self):
+        snap = ZFSTest.pool.makeName(b"fs1@snap1")
+        fs = ZFSTest.pool.getFilesystem(b"fs1")
+        props = {}
+        cmdprops = {
+            b"compression": 0x01,
+            b"ns:prop": b"val"
+        }
+
+        lzc.lzc_snapshot([snap])
+        with tempfile.TemporaryFile(suffix='.zstream') as stream:
+            lzc.lzc_send(snap, None, stream.fileno())
+            stream.seek(0)
+            (header, c_header) = lzc.receive_header(stream.fileno())
+            lzc.lzc_receive_with_heal(
+                snap, stream.fileno(), c_header, props=props,
+                cmdprops=cmdprops)
+            self.assertExists(snap)
             self.assertEqual(fs.getProperty("compression"), b"on")
             self.assertEqual(fs.getProperty("ns:prop"), b"val")
 
@@ -4132,7 +4155,8 @@ class _TempPool(object):
             cachefile = 'none'
         self._zpool_create = [
             'zpool', 'create', '-o', 'cachefile=' + cachefile,
-            '-O', 'mountpoint=legacy', self._pool_name, self._pool_file_path]
+            '-O', 'mountpoint=legacy', '-O', 'compression=off',
+            self._pool_name, self._pool_file_path]
         try:
             os.ftruncate(fd, size)
             os.close(fd)
@@ -4198,7 +4222,7 @@ class _TempPool(object):
             self.getRoot().reset()
             return
 
-        # On the Buildbot builders this may fail with "pool is busy"
+        # On the CI builders this may fail with "pool is busy"
         # Retry 5 times before raising an error
         retry = 0
         while True:

@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -44,27 +44,32 @@ extern int zfs_write_simple(znode_t *zp, const void *data, size_t len,
     loff_t pos, size_t *resid);
 extern int zfs_lookup(znode_t *dzp, char *nm, znode_t **zpp, int flags,
     cred_t *cr, int *direntflags, pathname_t *realpnp);
+extern int zfs_get_name(znode_t *dzp, char *name, znode_t *zp);
 extern int zfs_create(znode_t *dzp, char *name, vattr_t *vap, int excl,
-    int mode, znode_t **zpp, cred_t *cr, int flag, vsecattr_t *vsecp);
+    int mode, znode_t **zpp, cred_t *cr, int flag, vsecattr_t *vsecp,
+    zidmap_t *mnt_ns);
 extern int zfs_tmpfile(struct inode *dip, vattr_t *vapzfs, int excl,
-    int mode, struct inode **ipp, cred_t *cr, int flag, vsecattr_t *vsecp);
+    int mode, struct inode **ipp, cred_t *cr, int flag, vsecattr_t *vsecp,
+    zidmap_t *mnt_ns);
 extern int zfs_remove(znode_t *dzp, char *name, cred_t *cr, int flags);
 extern int zfs_mkdir(znode_t *dzp, char *dirname, vattr_t *vap,
-    znode_t **zpp, cred_t *cr, int flags, vsecattr_t *vsecp);
+    znode_t **zpp, cred_t *cr, int flags, vsecattr_t *vsecp, zidmap_t *mnt_ns);
 extern int zfs_rmdir(znode_t *dzp, char *name, znode_t *cwd,
     cred_t *cr, int flags);
-extern int zfs_readdir(struct inode *ip, zpl_dir_context_t *ctx, cred_t *cr);
+extern int zfs_readdir(struct inode *ip, struct dir_context *ctx, cred_t *cr);
 #ifdef HAVE_GENERIC_FILLATTR_IDMAP_REQMASK
 extern int zfs_getattr_fast(zidmap_t *, u32 request_mask, struct inode *ip,
     struct kstat *sp);
 #else
 extern int zfs_getattr_fast(zidmap_t *, struct inode *ip, struct kstat *sp);
 #endif
-extern int zfs_setattr(znode_t *zp, vattr_t *vap, int flag, cred_t *cr);
+extern int zfs_setattr(znode_t *zp, vattr_t *vap, int flag, cred_t *cr,
+    zidmap_t *mnt_ns);
 extern int zfs_rename(znode_t *sdzp, char *snm, znode_t *tdzp,
-    char *tnm, cred_t *cr, int flags);
+    char *tnm, cred_t *cr, int flags, uint64_t rflags, vattr_t *wo_vap,
+    zidmap_t *mnt_ns);
 extern int zfs_symlink(znode_t *dzp, char *name, vattr_t *vap,
-    char *link, znode_t **zpp, cred_t *cr, int flags);
+    char *link, znode_t **zpp, cred_t *cr, int flags, zidmap_t *mnt_ns);
 extern int zfs_readlink(struct inode *ip, zfs_uio_t *uio, cred_t *cr);
 extern int zfs_link(znode_t *tdzp, znode_t *szp,
     char *name, cred_t *cr, int flags);

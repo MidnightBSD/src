@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -54,7 +54,7 @@ extern void zfs_onexit_destroy(zfs_onexit_t *zo);
 extern zfs_file_t *zfs_onexit_fd_hold(int fd, minor_t *minorp);
 extern void zfs_onexit_fd_rele(zfs_file_t *);
 extern int zfs_onexit_add_cb(minor_t minor, void (*func)(void *), void *data,
-    uint64_t *action_handle);
+    uintptr_t *action_handle);
 
 #ifdef	__cplusplus
 }

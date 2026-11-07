@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -168,7 +168,7 @@ out:
 	(void) close(fd);
 }
 
-static const char *
+static const char * const
 zpool_default_import_path[] = {
 	"/dev"
 };
@@ -243,8 +243,9 @@ zpool_find_import_blkid(libpc_handle_t *hdl, pthread_mutex_t *lock,
 }
 
 int
-zfs_dev_flush(int fd __unused)
+zfs_dev_flush(int fd)
 {
+	(void) fd;
 	return (0);
 }
 
@@ -260,6 +261,7 @@ update_vdev_config_dev_sysfs_path(nvlist_t *nv, const char *path,
 void
 update_vdevs_config_dev_sysfs_path(nvlist_t *config)
 {
+	(void) config;
 }
 
 int

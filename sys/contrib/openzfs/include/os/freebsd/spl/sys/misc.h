@@ -52,9 +52,12 @@ struct opensolaris_utsname {
 	const char	*machine;
 };
 
-extern char hw_serial[11];
-
 #define	task_io_account_read(n)
 #define	task_io_account_write(n)
+
+/*
+ * Check if the current thread is a memory reclaim thread.
+ */
+extern int current_is_reclaim_thread(void);
 
 #endif	/* _OPENSOLARIS_SYS_MISC_H_ */

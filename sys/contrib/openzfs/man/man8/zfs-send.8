@@ -6,7 +6,7 @@
 .\" You may not use this file except in compliance with the License.
 .\"
 .\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
-.\" or http://www.opensolaris.org/os/licensing.
+.\" or https://opensource.org/licenses/CDDL-1.0.
 .\" See the License for the specific language governing permissions
 .\" and limitations under the License.
 .\"
@@ -29,7 +29,7 @@
 .\" Copyright 2018 Nexenta Systems, Inc.
 .\" Copyright 2019 Joyent, Inc.
 .\"
-.Dd January 12, 2023
+.Dd July 27, 2023
 .Dt ZFS-SEND 8
 .Os
 .
@@ -39,7 +39,8 @@
 .Sh SYNOPSIS
 .Nm zfs
 .Cm send
-.Op Fl DLPVRbcehnpsvw
+.Op Fl DLPVbcehnpsvw
+.Op Fl R Op Fl X Ar dataset Ns Oo , Ns Ar dataset Oc Ns …
 .Op Oo Fl I Ns | Ns Fl i Oc Ar snapshot
 .Ar snapshot
 .Nm zfs
@@ -72,7 +73,8 @@
 .It Xo
 .Nm zfs
 .Cm send
-.Op Fl DLPVRbcehnpvw
+.Op Fl DLPVbcehnpsvw
+.Op Fl R Op Fl X Ar dataset Ns Oo , Ns Ar dataset Oc Ns …
 .Op Oo Fl I Ns | Ns Fl i Oc Ar snapshot
 .Ar snapshot
 .Xc
@@ -100,12 +102,12 @@ The incremental source may be specified as with the
 .Fl i
 option.
 .It Fl L , -large-block
-Generate a stream which may contain blocks larger than 128KB.
+Generate a stream which may contain blocks larger than 128 KiB.
 This flag has no effect if the
 .Sy large_blocks
 pool feature is disabled, or if the
 .Sy recordsize
-property of this filesystem has never been set above 128KB.
+property of this filesystem has never been set above 128 KiB.
 The receiving system must have the
 .Sy large_blocks
 pool feature enabled as well.
@@ -142,6 +144,16 @@ flag is used to send encrypted datasets, then
 must also be specified.
 .It Fl V , -proctitle
 Set the process title to a per-second report of how much data has been sent.
+.It Fl X , -exclude Ar dataset Ns Oo , Ns Ar dataset Oc Ns …
+With
+.Fl R ,
+.Fl X
+specifies a set of datasets (and, hence, their descendants),
+to be excluded from the send stream.
+The root dataset may not be excluded.
+.Fl X Ar a Fl X Ar b
+is equivalent to
+.Fl X Ar a , Ns Ar b .
 .It Fl e , -embed
 Generate a more compact stream by using
 .Sy WRITE_EMBEDDED
@@ -200,9 +212,13 @@ will not have their data recompressed on the receiver side using
 .Fl o Sy compress Ns = Ar value .
 The data will stay compressed as it was from the sender.
 The new compression property will be set for future data.
+Note that uncompressed data from the sender will still attempt to
+compress on the receiver, unless you specify
+.Fl o Sy compress Ns = Em off .
 .It Fl w , -raw
 For encrypted datasets, send data exactly as it exists on disk.
-This allows backups to be taken even if encryption keys are not currently loaded.
+This allows backups to be taken even if encryption keys are not currently
+loaded.
 The backup may then be received on an untrusted machine since that machine will
 not have the encryption keys to read the protected data or alter it without
 being detected.
@@ -273,13 +289,20 @@ when using this flag.
 Allows sending a replication stream even when there are snapshots missing in the
 hierarchy.
 When a snapshot is missing, instead of throwing an error and aborting the send,
-a warning is printed to the standard error stream and the dataset to which it belongs
+a warning is printed to the standard error stream and the dataset to which it
+belongs
 and its descendents are skipped.
 This flag can only be used in conjunction with
 .Fl R .
 .It Fl v , -verbose
 Print verbose information about the stream package generated.
 This information includes a per-second report of how much data has been sent.
+The same report can be requested by sending
+.Dv SIGINFO
+or
+.Dv SIGUSR1 ,
+regardless of
+.Fl v .
 .Pp
 The format of the stream is committed.
 You will be able to receive your streams on future versions of ZFS.
@@ -304,12 +327,12 @@ Deduplicated send is no longer supported.
 This flag is accepted for backwards compatibility, but a regular,
 non-deduplicated stream will be generated.
 .It Fl L , -large-block
-Generate a stream which may contain blocks larger than 128KB.
+Generate a stream which may contain blocks larger than 128 KiB.
 This flag has no effect if the
 .Sy large_blocks
 pool feature is disabled, or if the
 .Sy recordsize
-property of this filesystem has never been set above 128KB.
+property of this filesystem has never been set above 128 KiB.
 The receiving system must have the
 .Sy large_blocks
 pool feature enabled as well.
@@ -341,7 +364,8 @@ then the data will be decompressed before sending so it can be split into
 smaller block sizes.
 .It Fl w , -raw
 For encrypted datasets, send data exactly as it exists on disk.
-This allows backups to be taken even if encryption keys are not currently loaded.
+This allows backups to be taken even if encryption keys are not currently
+loaded.
 The backup may then be received on an untrusted machine since that machine will
 not have the encryption keys to read the protected data or alter it without
 being detected.
@@ -373,7 +397,8 @@ If the
 .Sy lz4_compress
 feature is active on the sending system, then the receiving system must have
 that feature enabled as well.
-Datasets that are sent with this flag may not be received as an encrypted dataset,
+Datasets that are sent with this flag may not be received as an encrypted
+dataset,
 since encrypted datasets cannot use the
 .Sy embedded_data
 feature.
@@ -414,6 +439,12 @@ and the verbose output goes to standard error
 .It Fl v , -verbose
 Print verbose information about the stream package generated.
 This information includes a per-second report of how much data has been sent.
+The same report can be requested by sending
+.Dv SIGINFO
+or
+.Dv SIGUSR1 ,
+regardless of
+.Fl v .
 .El
 .It Xo
 .Nm zfs
@@ -432,7 +463,7 @@ included in the redaction list contained in the bookmark specified by the
 flag.
 The resulting send stream is said to be redacted with respect to the snapshots
 the bookmark specified by the
-.Fl -redact No flag was created with.
+.Fl -redact No flag was created with .
 The bookmark must have been created by running
 .Nm zfs Cm redact
 on the snapshot being sent.
@@ -616,7 +647,8 @@ snapshots themselves.
 In order to make the purpose of the feature more clear, an example is provided.
 Consider a zfs filesystem containing four files.
 These files represent information for an online shopping service.
-One file contains a list of usernames and passwords, another contains purchase histories,
+One file contains a list of usernames and passwords, another contains purchase
+histories,
 a third contains click tracking data, and a fourth contains user preferences.
 The owner of this data wants to make it available for their development teams to
 test against, and their market research teams to do analysis on.
@@ -628,7 +660,8 @@ However, because all of this data is stored in one ZFS filesystem,
 it must all be sent and received together.
 In addition, the owner of the data
 wants to take advantage of features like compression, checksumming, and
-snapshots, so they do want to continue to use ZFS to store and transmit their data.
+snapshots, so they do want to continue to use ZFS to store and transmit their
+data.
 Redaction can help them do so.
 First, they would make two clones of a snapshot of the data on the source.
 In one clone, they create the setup they want their market research team to see;
@@ -641,11 +674,58 @@ They would then create a redaction bookmark on the parent snapshot,
 using snapshots on the two clones as redaction snapshots.
 The parent can then be sent, redacted, to the target
 server where the research and development teams have access.
-Finally, incremental sends from the parent snapshot to each of the clones can be sent
+Finally, incremental sends from the parent snapshot to each of the clones can be
+sent
 to and received on the target server; these snapshots are identical to the
 ones on the source, and are ready to be used, while the parent snapshot on the
 target contains none of the username and password data present on the source,
 because it was removed by the redacted send operation.
+.
+.Sh SIGNALS
+See
+.Fl v .
+.
+.Sh EXAMPLES
+.\" These are, respectively, examples 12, 13 from zfs.8
+.\" Make sure to update them bidirectionally
+.Ss Example 1 : No Remotely Replicating ZFS Data
+The following commands send a full stream and then an incremental stream to a
+remote machine, restoring them into
+.Em poolB/received/fs@a
+and
+.Em poolB/received/fs@b ,
+respectively.
+.Em poolB
+must contain the file system
+.Em poolB/received ,
+and must not initially contain
+.Em poolB/received/fs .
+.Bd -literal -compact -offset Ds
+.No # Nm zfs Cm send Ar pool/fs@a |
+.No "   " Nm ssh Ar host Nm zfs Cm receive Ar poolB/received/fs Ns @ Ns Ar a
+.No # Nm zfs Cm send Fl i Ar a pool/fs@b |
+.No "   " Nm ssh Ar host Nm zfs Cm receive Ar poolB/received/fs
+.Ed
+.
+.Ss Example 2 : No Using the Nm zfs Cm receive Fl d No Option
+The following command sends a full stream of
+.Ar poolA/fsA/fsB@snap
+to a remote machine, receiving it into
+.Ar poolB/received/fsA/fsB@snap .
+The
+.Ar fsA/fsB@snap
+portion of the received snapshot's name is determined from the name of the sent
+snapshot.
+.Ar poolB
+must contain the file system
+.Ar poolB/received .
+If
+.Ar poolB/received/fsA
+does not exist, it is created as an empty file system.
+.Bd -literal -compact -offset Ds
+.No # Nm zfs Cm send Ar poolA/fsA/fsB@snap |
+.No "   " Nm ssh Ar host Nm zfs Cm receive Fl d Ar poolB/received
+.Ed
 .
 .Sh SEE ALSO
 .Xr zfs-bookmark 8 ,

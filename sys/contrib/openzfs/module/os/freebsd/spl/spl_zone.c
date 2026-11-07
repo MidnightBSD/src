@@ -24,9 +24,6 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
-
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/kernel.h>
@@ -66,7 +63,7 @@ zone_dataset_attach(struct ucred *cred, const char *dataset, int jailid)
 	struct prison *pr;
 	int dofree, error;
 
-	if ((error = spl_priv_check_cred(cred, PRIV_ZFS_JAIL)) != 0)
+	if ((error = priv_check_cred(cred, PRIV_ZFS_JAIL)) != 0)
 		return (error);
 
 	/* Allocate memory before we grab prison's mutex. */
@@ -119,7 +116,7 @@ zone_dataset_detach(struct ucred *cred, const char *dataset, int jailid)
 	struct prison *pr;
 	int error;
 
-	if ((error = spl_priv_check_cred(cred, PRIV_ZFS_JAIL)) != 0)
+	if ((error = priv_check_cred(cred, PRIV_ZFS_JAIL)) != 0)
 		return (error);
 
 	sx_slock(&allprison_lock);
@@ -184,7 +181,7 @@ zone_dataset_visible(const char *dataset, int *write)
 	LIST_FOREACH(zd, head, zd_next) {
 		len = strlen(zd->zd_dataset);
 		if (strlen(dataset) >= len &&
-		    bcmp(dataset, zd->zd_dataset, len) == 0 &&
+		    memcmp(dataset, zd->zd_dataset, len) == 0 &&
 		    (dataset[len] == '\0' || dataset[len] == '/' ||
 		    dataset[len] == '@')) {
 			if (write)
@@ -206,7 +203,7 @@ zone_dataset_visible(const char *dataset, int *write)
 		if (dataset[len - 1] == '/')
 			len--;	/* Ignore trailing slash */
 		if (len < strlen(zd->zd_dataset) &&
-		    bcmp(dataset, zd->zd_dataset, len) == 0 &&
+		    memcmp(dataset, zd->zd_dataset, len) == 0 &&
 		    zd->zd_dataset[len] == '/') {
 			if (write)
 				*write = 0;

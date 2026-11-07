@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -44,7 +44,7 @@
 
 static int
 vdev_missing_open(vdev_t *vd, uint64_t *psize, uint64_t *max_psize,
-    uint64_t *ashift, uint64_t *pshift)
+    uint64_t *ashift, uint64_t *pshift, cred_t *cr)
 {
 	/*
 	 * Really this should just fail.  But then the root vdev will be in the
@@ -52,7 +52,7 @@ vdev_missing_open(vdev_t *vd, uint64_t *psize, uint64_t *max_psize,
 	 * VDEV_AUX_BAD_GUID_SUM.  So we pretend to succeed, knowing that we
 	 * will fail the GUID sum check before ever trying to open the pool.
 	 */
-	(void) vd;
+	(void) vd, (void) cr;
 	*psize = 0;
 	*max_psize = 0;
 	*ashift = 0;

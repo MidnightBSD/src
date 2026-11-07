@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -158,7 +158,7 @@ procfs_list_seq_stop(struct seq_file *f, void *p)
 	mutex_exit(&procfs_list->pl_lock);
 }
 
-static struct seq_operations procfs_list_seq_ops = {
+static const struct seq_operations procfs_list_seq_ops = {
 	.show  = procfs_list_seq_show,
 	.start = procfs_list_seq_start,
 	.next  = procfs_list_seq_next,

@@ -1,8 +1,9 @@
 AC_DEFUN([ZFS_AC_KERNEL_SRC_RENAME], [
 	dnl #
 	dnl # 4.9 API change,
-	dnl # iops->rename2() merged into iops->rename(), and iops->rename() now wants
-	dnl # flags.
+	dnl #
+	dnl # iops->rename2() merged into iops->rename(), and iops->rename() now
+	dnl # wants flags.
 	dnl #
 	ZFS_LINUX_TEST_SRC([inode_operations_rename_flags], [
 		#include <linux/fs.h>
@@ -19,8 +20,8 @@ AC_DEFUN([ZFS_AC_KERNEL_SRC_RENAME], [
 	dnl #
 	dnl # 5.12 API change,
 	dnl #
-	dnl # Linux 5.12 introduced passing struct user_namespace* as the first argument
-	dnl # of the rename() and other inode_operations members.
+	dnl # Linux 5.12 introduced passing struct user_namespace* as the first
+	dnl # argument of the rename() and other inode_operations members.
 	dnl #
 	ZFS_LINUX_TEST_SRC([inode_operations_rename_userns], [
 		#include <linux/fs.h>

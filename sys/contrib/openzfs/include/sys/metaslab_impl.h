@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -179,7 +179,7 @@ typedef struct metaslab_class_allocator {
 struct metaslab_class {
 	kmutex_t		mc_lock;
 	spa_t			*mc_spa;
-	metaslab_ops_t		*mc_ops;
+	const metaslab_ops_t		*mc_ops;
 
 	/*
 	 * Track the number of metaslab groups that have been initialized
@@ -196,10 +196,12 @@ struct metaslab_class {
 
 	uint64_t		mc_alloc_groups; /* # of allocatable groups */
 
-	uint64_t		mc_alloc;	/* total allocated space */
-	uint64_t		mc_deferred;	/* total deferred frees */
+	uint64_t		mc_alloc;	/* allocated space */
+	uint64_t		mc_dalloc;	/* deflated allocated space */
+	uint64_t		mc_deferred;	/* deferred frees */
+	uint64_t		mc_ddeferred;	/* deflated deferred frees */
 	uint64_t		mc_space;	/* total space (alloc + free) */
-	uint64_t		mc_dspace;	/* total deflated space */
+	uint64_t		mc_dspace;	/* deflated total space */
 	uint64_t		mc_histogram[RANGE_TREE_HISTOGRAM_SIZE];
 
 	/*
@@ -250,7 +252,6 @@ struct metaslab_group {
 	int64_t			mg_activation_count;
 	metaslab_class_t	*mg_class;
 	vdev_t			*mg_vd;
-	taskq_t			*mg_taskq;
 	metaslab_group_t	*mg_prev;
 	metaslab_group_t	*mg_next;
 
@@ -313,7 +314,7 @@ struct metaslab_group {
  * Each metaslab maintains a set of in-core trees to track metaslab
  * operations.  The in-core free tree (ms_allocatable) contains the list of
  * free segments which are eligible for allocation.  As blocks are
- * allocated, the allocated segment are removed from the ms_allocatable and
+ * allocated, the allocated segments are removed from the ms_allocatable and
  * added to a per txg allocation tree (ms_allocating).  As blocks are
  * freed, they are added to the free tree (ms_freeing).  These trees
  * allow us to process all allocations and frees in syncing context
@@ -366,9 +367,9 @@ struct metaslab_group {
 struct metaslab {
 	/*
 	 * This is the main lock of the metaslab and its purpose is to
-	 * coordinate our allocations and frees [e.g metaslab_block_alloc(),
+	 * coordinate our allocations and frees [e.g., metaslab_block_alloc(),
 	 * metaslab_free_concrete(), ..etc] with our various syncing
-	 * procedures [e.g. metaslab_sync(), metaslab_sync_done(), ..etc].
+	 * procedures [e.g., metaslab_sync(), metaslab_sync_done(), ..etc].
 	 *
 	 * The lock is also used during some miscellaneous operations like
 	 * using the metaslab's histogram for the metaslab group's histogram

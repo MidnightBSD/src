@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -60,7 +60,7 @@ param_set_deadman_ziotime(const char *val, zfs_kernel_param_t *kp)
 {
 	int error;
 
-	error = param_set_ulong(val, kp);
+	error = spl_param_set_u64(val, kp);
 	if (error < 0)
 		return (SET_ERROR(error));
 
@@ -74,7 +74,7 @@ param_set_deadman_synctime(const char *val, zfs_kernel_param_t *kp)
 {
 	int error;
 
-	error = param_set_ulong(val, kp);
+	error = spl_param_set_u64(val, kp);
 	if (error < 0)
 		return (SET_ERROR(error));
 
@@ -107,4 +107,28 @@ const char *
 spa_history_zone(void)
 {
 	return ("linux");
+}
+
+void
+spa_import_os(spa_t *spa)
+{
+	(void) spa;
+}
+
+void
+spa_export_os(spa_t *spa)
+{
+	(void) spa;
+}
+
+void
+spa_activate_os(spa_t *spa)
+{
+	(void) spa;
+}
+
+void
+spa_deactivate_os(spa_t *spa)
+{
+	(void) spa;
 }

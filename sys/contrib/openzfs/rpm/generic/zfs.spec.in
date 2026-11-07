@@ -3,7 +3,7 @@
 
 # Set the default udev directory based on distribution.
 %if %{undefined _udevdir}
-%if 0%{?fedora}%{?rhel}%{?centos}%{?openEuler}
+%if 0%{?rhel}%{?fedora}%{?centos}%{?suse_version}%{?openEuler}
 %global _udevdir    %{_prefix}/lib/udev
 %else
 %global _udevdir    /lib/udev
@@ -12,16 +12,25 @@
 
 # Set the default udevrule directory based on distribution.
 %if %{undefined _udevruledir}
-%if 0%{?fedora}%{?rhel}%{?centos}%{?openEuler}
+%if 0%{?rhel}%{?fedora}%{?centos}%{?suse_version}%{?openEuler}
 %global _udevruledir    %{_prefix}/lib/udev/rules.d
 %else
 %global _udevruledir    /lib/udev/rules.d
 %endif
 %endif
 
+# Set the default _bashcompletiondir directory based on distribution.
+%if %{undefined _bashcompletiondir}
+%if 0%{?rhel}%{?fedora}%{?centos}%{?suse_version}%{?openEuler}
+%global _bashcompletiondir    /etc/bash_completion.d
+%else
+%global _bashcompletiondir    /usr/share/bash-completion
+%endif
+%endif
+
 # Set the default dracut directory based on distribution.
 %if %{undefined _dracutdir}
-%if 0%{?fedora}%{?rhel}%{?centos}%{?openEuler}
+%if 0%{?rhel}%{?fedora}%{?centos}%{?suse_version}%{?openEuler}
 %global _dracutdir  %{_prefix}/lib/dracut
 %else
 %global _dracutdir  %{_prefix}/share/dracut
@@ -55,6 +64,7 @@
 %bcond_with    debug
 %bcond_with    debuginfo
 %bcond_with    asan
+%bcond_with    ubsan
 %bcond_with    systemd
 %bcond_with    pam
 %bcond_without pyzfs
@@ -65,7 +75,7 @@
 %endif
 
 # Distros below support systemd
-%if 0%{?rhel}%{?fedora}%{?centos}%{?suse_version}
+%if 0%{?rhel}%{?fedora}%{?centos}%{?suse_version}%{?openEuler}
 %define _systemd 1
 %endif
 
@@ -77,7 +87,7 @@
 %define __python                  %{__use_python}
 %define __python_pkg_version      %{__use_python_pkg_version}
 %endif
-%define __python_sitelib          %(%{__python} -Esc "from distutils.sysconfig import get_python_lib; print(get_python_lib())")
+%define __python_sitelib          %(%{__python} -Esc "from distutils.sysconfig import get_python_lib; print(get_python_lib())" 2>/dev/null || %{__python} -Esc "import sysconfig; print(sysconfig.get_path('purelib'))")
 
 Name:           @PACKAGE@
 Version:        @VERSION@
@@ -109,7 +119,7 @@ BuildRequires:  libblkid-devel
 BuildRequires:  libudev-devel
 BuildRequires:  libattr-devel
 BuildRequires:  openssl-devel
-%if 0%{?fedora}%{?openEuler} || 0%{?rhel} >= 8 || 0%{?centos} >= 8
+%if 0%{?fedora}%{?suse_version}%{?openEuler} || 0%{?rhel} >= 8 || 0%{?centos} >= 8
 BuildRequires:  libtirpc-devel
 %endif
 
@@ -118,10 +128,6 @@ BuildRequires:  libtirpc-devel
 # crash+corrupt rpmdb
 # See issue #12071
 BuildRequires:  ncompress
-%endif
-
-%if %{with pam}
-BuildRequires:  pam-devel
 %endif
 
 Requires:       openssl
@@ -327,6 +333,19 @@ This package contains a initramfs module used to construct an initramfs
 image which is ZFS aware.
 %endif
 
+%if %{with pam}
+%package -n pam_zfs_key
+Summary:        PAM module for encrypted ZFS datasets
+
+%if 0%{?rhel}%{?centos}%{?fedora}%{?suse_version}%{?openEuler}
+BuildRequires:  pam-devel
+%endif
+
+%description -n pam_zfs_key
+This package contains the pam_zfs_key PAM module, which provides
+support for unlocking datasets on user login.
+%endif
+
 %prep
 %if %{with debug}
     %define debug --enable-debug
@@ -344,6 +363,12 @@ image which is ZFS aware.
     %define asan --enable-asan
 %else
     %define asan --disable-asan
+%endif
+
+%if %{with ubsan}
+    %define ubsan --enable-ubsan
+%else
+    %define ubsan --disable-ubsan
 %endif
 
 %if 0%{?_systemd}
@@ -381,6 +406,7 @@ image which is ZFS aware.
     %{debug} \
     %{debuginfo} \
     %{asan} \
+    %{ubsan} \
     %{systemd} \
     %{pam} \
     %{pyzfs}
@@ -392,7 +418,8 @@ make install DESTDIR=%{?buildroot}
 find %{?buildroot}%{_libdir} -name '*.la' -exec rm -f {} \;
 %if 0%{!?__brp_mangle_shebangs:1}
 find %{?buildroot}%{_bindir} \
-    \( -name arc_summary -or -name arcstat -or -name dbufstat \) \
+    \( -name arc_summary -or -name arcstat -or -name dbufstat \
+    -or -name zilstat \) \
     -exec %{__sed} -i 's|^#!.*|#!%{__python}|' {} \;
 find %{?buildroot}%{_datadir} \
     \( -name test-runner.py -or -name zts-report.py \) \
@@ -470,6 +497,7 @@ systemctl --system daemon-reload >/dev/null || true
 %{_bindir}/arc_summary
 %{_bindir}/arcstat
 %{_bindir}/dbufstat
+%{_bindir}/zilstat
 # Man pages
 %{_mandir}/man1/*
 %{_mandir}/man4/*
@@ -501,11 +529,9 @@ systemctl --system daemon-reload >/dev/null || true
 %config(noreplace) %{_sysconfdir}/%{name}/zed.d/*
 %config(noreplace) %{_sysconfdir}/%{name}/zpool.d/*
 %config(noreplace) %{_sysconfdir}/%{name}/vdev_id.conf.*.example
-%attr(440, root, root) %config(noreplace) %{_sysconfdir}/sudoers.d/*
-%if %{with pam}
-%{_libdir}/security/*
-%{_datadir}/pam-configs/*
-%endif
+
+%config(noreplace) %{_bashcompletiondir}/zfs
+%config(noreplace) %{_bashcompletiondir}/zpool
 
 %files -n libzpool5
 %{_libdir}/libzpool.so.*
@@ -534,7 +560,7 @@ systemctl --system daemon-reload >/dev/null || true
 %{_datadir}/%{name}/*.sh
 
 %files dracut
-%doc contrib/dracut/README.dracut.markdown
+%doc contrib/dracut/README.md
 %{_dracutdir}/modules.d/*
 
 %if %{with pyzfs}
@@ -548,10 +574,16 @@ systemctl --system daemon-reload >/dev/null || true
 
 %if 0%{?_initramfs}
 %files initramfs
-%doc contrib/initramfs/README.initramfs.markdown
+%doc contrib/initramfs/README.md
 /usr/share/initramfs-tools/*
 %else
 # Since we're not building the initramfs package,
 # ignore those files.
 %exclude /usr/share/initramfs-tools
+%endif
+
+%if %{with pam}
+%files -n pam_zfs_key
+%{_libdir}/security/*
+%{_datadir}/pam-configs/*
 %endif

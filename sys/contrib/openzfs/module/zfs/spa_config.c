@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -67,8 +67,10 @@ static uint64_t spa_config_generation = 1;
  * This can be overridden in userland to preserve an alternate namespace for
  * userland pools when doing testing.
  */
-char *spa_config_path = ZPOOL_CACHE;
-int zfs_autoimport_disable = 1;
+char *spa_config_path = (char *)ZPOOL_CACHE;
+#ifdef _KERNEL
+static int zfs_autoimport_disable = B_TRUE;
+#endif
 
 /*
  * Called when the module is first loaded, this routine loads the configuration
@@ -99,11 +101,11 @@ spa_config_load(void)
 
 	(void) snprintf(pathname, MAXPATHLEN, "%s", spa_config_path);
 
-	err = zfs_file_open(pathname, O_RDONLY, 0, &fp);
+	err = zfs_file_open(pathname, O_RDONLY, 0, kcred, &fp);
 
 #ifdef __FreeBSD__
 	if (err)
-		err = zfs_file_open(ZPOOL_CACHE_BOOT, O_RDONLY, 0, &fp);
+		err = zfs_file_open(ZPOOL_CACHE_BOOT, O_RDONLY, 0, kcred, &fp);
 #endif
 	kmem_free(pathname, MAXPATHLEN);
 
@@ -170,7 +172,7 @@ spa_config_remove(spa_config_dirent_t *dp)
 		int flags = O_RDWR | O_TRUNC;
 		zfs_file_t *fp;
 
-		error = zfs_file_open(dp->scd_path, flags, 0644, &fp);
+		error = zfs_file_open(dp->scd_path, flags, 0644, kcred, &fp);
 		if (error == 0) {
 			(void) zfs_file_fsync(fp, O_SYNC);
 			(void) zfs_file_close(fp);
@@ -213,7 +215,7 @@ spa_config_write(spa_config_dirent_t *dp, nvlist_t *nvl)
 	 * is instead truncated and overwritten in place.  This way we always
 	 * have a consistent view of the data or a zero length file.
 	 */
-	err = zfs_file_open(dp->scd_path, oflags, 0644, &fp);
+	err = zfs_file_open(dp->scd_path, oflags, 0644, kcred, &fp);
 	if (err == 0) {
 		err = zfs_file_write(fp, buf, buflen, NULL);
 		if (err == 0)
@@ -243,7 +245,7 @@ spa_write_cachefile(spa_t *target, boolean_t removing, boolean_t postsysevent,
 {
 	spa_config_dirent_t *dp, *tdp;
 	nvlist_t *nvl;
-	char *pool_name;
+	const char *pool_name;
 	boolean_t ccw_failure;
 	int error = 0;
 
@@ -365,23 +367,24 @@ spa_write_cachefile(spa_t *target, boolean_t removing, boolean_t postsysevent,
  * So we have to invent the ZFS_IOC_CONFIG ioctl to grab the configuration
  * information for all pool visible within the zone.
  */
-nvlist_t *
-spa_all_configs(uint64_t *generation)
+int
+spa_all_configs(uint64_t *generation, nvlist_t **pools)
 {
-	nvlist_t *pools;
 	spa_t *spa = NULL;
 
 	if (*generation == spa_config_generation)
-		return (NULL);
+		return (SET_ERROR(EEXIST));
 
-	pools = fnvlist_alloc();
+	int error = mutex_enter_interruptible(&spa_namespace_lock);
+	if (error)
+		return (SET_ERROR(EINTR));
 
-	mutex_enter(&spa_namespace_lock);
+	*pools = fnvlist_alloc();
 	while ((spa = spa_next(spa)) != NULL) {
 		if (INGLOBALZONE(curproc) ||
 		    zone_dataset_visible(spa_name(spa), NULL)) {
 			mutex_enter(&spa->spa_props_lock);
-			fnvlist_add_nvlist(pools, spa_name(spa),
+			fnvlist_add_nvlist(*pools, spa_name(spa),
 			    spa->spa_config);
 			mutex_exit(&spa->spa_props_lock);
 		}
@@ -389,7 +392,7 @@ spa_all_configs(uint64_t *generation)
 	*generation = spa_config_generation;
 	mutex_exit(&spa_namespace_lock);
 
-	return (pools);
+	return (0);
 }
 
 void
@@ -416,7 +419,7 @@ spa_config_generate(spa_t *spa, vdev_t *vd, uint64_t txg, int getstats)
 	unsigned long hostid = 0;
 	boolean_t locked = B_FALSE;
 	uint64_t split_guid;
-	char *pool_name;
+	const char *pool_name;
 
 	if (vd == NULL) {
 		vd = rvd;
@@ -457,6 +460,8 @@ spa_config_generate(spa_t *spa, vdev_t *vd, uint64_t txg, int getstats)
 	fnvlist_add_uint64(config, ZPOOL_CONFIG_POOL_TXG, txg);
 	fnvlist_add_uint64(config, ZPOOL_CONFIG_POOL_GUID, spa_guid(spa));
 	fnvlist_add_uint64(config, ZPOOL_CONFIG_ERRATA, spa->spa_errata);
+	fnvlist_add_uint64(config, ZPOOL_CONFIG_MIN_ALLOC, spa->spa_min_alloc);
+	fnvlist_add_uint64(config, ZPOOL_CONFIG_MAX_ALLOC, spa->spa_max_alloc);
 	if (spa->spa_comment != NULL)
 		fnvlist_add_string(config, ZPOOL_CONFIG_COMMENT,
 		    spa->spa_comment);
@@ -625,7 +630,6 @@ EXPORT_SYMBOL(spa_config_set);
 EXPORT_SYMBOL(spa_config_generate);
 EXPORT_SYMBOL(spa_config_update);
 
-/* BEGIN CSTYLED */
 #ifdef __linux__
 /* string sysctls require a char array on FreeBSD */
 ZFS_MODULE_PARAM(zfs_spa, spa_, config_path, STRING, ZMOD_RD,
@@ -634,4 +638,3 @@ ZFS_MODULE_PARAM(zfs_spa, spa_, config_path, STRING, ZMOD_RD,
 
 ZFS_MODULE_PARAM(zfs, zfs_, autoimport_disable, INT, ZMOD_RW,
 	"Disable pool import at module load");
-/* END CSTYLED */

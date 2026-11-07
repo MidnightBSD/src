@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -51,7 +51,9 @@
 		__field(uint64_t,	zl_parse_lr_seq)		    \
 		__field(uint64_t,	zl_parse_blk_count)		    \
 		__field(uint64_t,	zl_parse_lr_count)		    \
-		__field(uint64_t,	zl_cur_used)			    \
+		__field(uint64_t,	zl_cur_size)			    \
+		__field(uint64_t,	zl_cur_left)			    \
+		__field(uint64_t,	zl_cur_max)			    \
 		__field(clock_t,	zl_replay_time)			    \
 		__field(uint64_t,	zl_replay_blks)
 
@@ -72,7 +74,9 @@
 		__entry->zl_parse_lr_seq	= zilog->zl_parse_lr_seq;   \
 		__entry->zl_parse_blk_count	= zilog->zl_parse_blk_count;\
 		__entry->zl_parse_lr_count	= zilog->zl_parse_lr_count; \
-		__entry->zl_cur_used	= zilog->zl_cur_used;		    \
+		__entry->zl_cur_size	= zilog->zl_cur_size;		    \
+		__entry->zl_cur_left	= zilog->zl_cur_left;		    \
+		__entry->zl_cur_max	= zilog->zl_cur_max;		    \
 		__entry->zl_replay_time	= zilog->zl_replay_time;	    \
 		__entry->zl_replay_blks	= zilog->zl_replay_blks;
 
@@ -82,7 +86,8 @@
 	"replay %u stop_sync %u logbias %u sync %u "			    \
 	"parse_error %u parse_blk_seq %llu parse_lr_seq %llu "		    \
 	"parse_blk_count %llu parse_lr_count %llu "			    \
-	"cur_used %llu replay_time %lu replay_blks %llu }"
+	"cur_size %llu cur_left %llu cur_max %llu replay_time %lu "	    \
+	"replay_blks %llu }"
 
 #define	ZILOG_TP_PRINTK_ARGS						    \
 	    __entry->zl_lr_seq, __entry->zl_commit_lr_seq,		    \
@@ -92,7 +97,8 @@
 	    __entry->zl_stop_sync, __entry->zl_logbias, __entry->zl_sync,   \
 	    __entry->zl_parse_error, __entry->zl_parse_blk_seq,		    \
 	    __entry->zl_parse_lr_seq, __entry->zl_parse_blk_count,	    \
-	    __entry->zl_parse_lr_count, __entry->zl_cur_used,		    \
+	    __entry->zl_parse_lr_count, __entry->zl_cur_size,		    \
+	    __entry->zl_cur_left, __entry->zl_cur_max,			    \
 	    __entry->zl_replay_time, __entry->zl_replay_blks
 
 #define	ITX_TP_STRUCT_ENTRY						    \
@@ -152,6 +158,11 @@
  *     zilog_t *, ...,
  *     itx_t *, ...);
  */
+
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wordered-compare-function-pointers"
+#endif
 /* BEGIN CSTYLED */
 DECLARE_EVENT_CLASS(zfs_zil_process_itx_class,
 	TP_PROTO(zilog_t *zilog, itx_t *itx),
@@ -169,15 +180,16 @@ DECLARE_EVENT_CLASS(zfs_zil_process_itx_class,
 	    ZILOG_TP_PRINTK_ARGS, ITX_TP_PRINTK_ARGS)
 );
 /* END CSTYLED */
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 
-/* BEGIN CSTYLED */
 #define	DEFINE_ZIL_PROCESS_ITX_EVENT(name) \
 DEFINE_EVENT(zfs_zil_process_itx_class, name, \
-	TP_PROTO(zilog_t *zilog, itx_t *itx), \
-	TP_ARGS(zilog, itx))
+    TP_PROTO(zilog_t *zilog, itx_t *itx), \
+    TP_ARGS(zilog, itx))
 DEFINE_ZIL_PROCESS_ITX_EVENT(zfs_zil__process__commit__itx);
 DEFINE_ZIL_PROCESS_ITX_EVENT(zfs_zil__process__normal__itx);
-/* END CSTYLED */
 
 /*
  * Generic support for two argument tracepoints of the form:
@@ -203,13 +215,44 @@ DECLARE_EVENT_CLASS(zfs_zil_commit_io_error_class,
 	    ZILOG_TP_PRINTK_ARGS, ZCW_TP_PRINTK_ARGS)
 );
 
-/* BEGIN CSTYLED */
 #define	DEFINE_ZIL_COMMIT_IO_ERROR_EVENT(name) \
 DEFINE_EVENT(zfs_zil_commit_io_error_class, name, \
-	TP_PROTO(zilog_t *zilog, zil_commit_waiter_t *zcw), \
-	TP_ARGS(zilog, zcw))
+    TP_PROTO(zilog_t *zilog, zil_commit_waiter_t *zcw), \
+    TP_ARGS(zilog, zcw))
 DEFINE_ZIL_COMMIT_IO_ERROR_EVENT(zfs_zil__commit__io__error);
-/* END CSTYLED */
+
+/*
+ * Generic support for three argument tracepoints of the form:
+ *
+ * DTRACE_PROBE3(...,
+ *     zilog_t *, ...,
+ *     uint64_t, ...,
+ *     uint64_t, ...);
+ */
+/* BEGIN CSTYLED */
+DECLARE_EVENT_CLASS(zfs_zil_block_size_class,
+	TP_PROTO(zilog_t *zilog, uint64_t res, uint64_t s1),
+	TP_ARGS(zilog, res, s1),
+	TP_STRUCT__entry(
+	    ZILOG_TP_STRUCT_ENTRY
+	    __field(uint64_t, res)
+	    __field(uint64_t, s1)
+	),
+	TP_fast_assign(
+	    ZILOG_TP_FAST_ASSIGN
+	    __entry->res = res;
+	    __entry->s1 = s1;
+	),
+	TP_printk(
+	    ZILOG_TP_PRINTK_FMT " res %llu s1 %llu",
+	    ZILOG_TP_PRINTK_ARGS, __entry->res, __entry->s1)
+);
+
+#define	DEFINE_ZIL_BLOCK_SIZE_EVENT(name) \
+DEFINE_EVENT(zfs_zil_block_size_class, name, \
+    TP_PROTO(zilog_t *zilog, uint64_t res, uint64_t s1), \
+    TP_ARGS(zilog, res, s1))
+DEFINE_ZIL_BLOCK_SIZE_EVENT(zfs_zil__block__size);
 
 #endif /* _TRACE_ZIL_H */
 
@@ -224,6 +267,7 @@ DEFINE_ZIL_COMMIT_IO_ERROR_EVENT(zfs_zil__commit__io__error);
 DEFINE_DTRACE_PROBE2(zil__process__commit__itx);
 DEFINE_DTRACE_PROBE2(zil__process__normal__itx);
 DEFINE_DTRACE_PROBE2(zil__commit__io__error);
+DEFINE_DTRACE_PROBE3(zil__block__size);
 
 #endif /* HAVE_DECLARE_EVENT_CLASS */
 #endif /* _KERNEL */

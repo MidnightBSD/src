@@ -175,6 +175,10 @@ _zed_exec_fork_child(uint64_t eid, const char *dir, const char *prog,
 		node->pid = pid;
 		node->eid = eid;
 		node->name = strdup(prog);
+		if (node->name == NULL) {
+			perror("strdup");
+			exit(EXIT_FAILURE);
+		}
 
 		avl_add(&_launched_processes, node);
 	}
@@ -187,11 +191,14 @@ _zed_exec_fork_child(uint64_t eid, const char *dir, const char *prog,
 
 static void
 _nop(int sig)
-{}
+{
+	(void) sig;
+}
 
 static void *
 _reap_children(void *arg)
 {
+	(void) arg;
 	struct launched_process_node node, *pnode;
 	pid_t pid;
 	int status;
@@ -260,7 +267,7 @@ _reap_children(void *arg)
 				zed_log_msg(LOG_INFO,
 				    "Finished \"%s\" eid=%llu pid=%d "
 				    "time=%llu.%06us status=0x%X",
-				    node.name, node.eid,
+				    node.name, node.eid, pid,
 				    (unsigned long long) usage.ru_utime.tv_sec,
 				    (unsigned int) usage.ru_utime.tv_usec,
 				    (unsigned int) status);

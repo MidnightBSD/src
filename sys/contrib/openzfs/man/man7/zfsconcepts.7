@@ -6,7 +6,7 @@
 .\" You may not use this file except in compliance with the License.
 .\"
 .\" You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
-.\" or http://www.opensolaris.org/os/licensing.
+.\" or https://opensource.org/licenses/CDDL-1.0.
 .\" See the License for the specific language governing permissions
 .\" and limitations under the License.
 .\"
@@ -28,8 +28,9 @@
 .\" Copyright 2019 Richard Laager. All rights reserved.
 .\" Copyright 2018 Nexenta Systems, Inc.
 .\" Copyright 2019 Joyent, Inc.
+.\" Copyright 2023 Klara, Inc.
 .\"
-.Dd June 30, 2019
+.Dd October 6, 2023
 .Dt ZFSCONCEPTS 7
 .Os
 .
@@ -81,7 +82,8 @@ Bookmarks can be created extremely quickly, compared to snapshots, and they
 consume no additional space within the pool.
 Bookmarks can also have arbitrary names, much like snapshots.
 .Pp
-Unlike snapshots, bookmarks can not be accessed through the filesystem in any way.
+Unlike snapshots, bookmarks can not be accessed through the filesystem in any
+way.
 From a storage standpoint a bookmark just provides a way to reference
 when a snapshot was created as a distinct object.
 Bookmarks are initially tied to a snapshot, not the filesystem or volume,
@@ -193,10 +195,10 @@ Calculating the exact requirement depends heavily
 on the type of data stored in the pool.
 .Pp
 Enabling deduplication on an improperly-designed system can result in
-performance issues (slow IO and administrative operations).
+performance issues (slow I/O and administrative operations).
 It can potentially lead to problems importing a pool due to memory exhaustion.
 Deduplication can consume significant processing power (CPU) and memory as well
-as generate additional disk IO.
+as generate additional disk I/O.
 .Pp
 Before creating a pool with deduplication enabled, ensure that you have planned
 your hardware requirements appropriately and implemented appropriate recovery
@@ -204,3 +206,40 @@ practices, such as regular backups.
 Consider using the
 .Sy compression
 property as a less resource-intensive alternative.
+.Ss Block cloning
+Block cloning is a facility that allows a file (or parts of a file) to be
+.Qq cloned ,
+that is, a shallow copy made where the existing data blocks are referenced
+rather than copied.
+Later modifications to the data will cause a copy of the data block to be taken
+and that copy modified.
+This facility is used to implement
+.Qq reflinks
+or
+.Qq file-level copy-on-write .
+.Pp
+Cloned blocks are tracked in a special on-disk structure called the Block
+Reference Table
+.Po BRT
+.Pc .
+Unlike deduplication, this table has minimal overhead, so can be enabled at all
+times.
+.Pp
+Also unlike deduplication, cloning must be requested by a user program.
+Many common file copying programs, including newer versions of
+.Nm /bin/cp ,
+will try to create clones automatically.
+Look for
+.Qq clone ,
+.Qq dedupe
+or
+.Qq reflink
+in the documentation for more information.
+.Pp
+There are some limitations to block cloning.
+Only whole blocks can be cloned, and blocks can not be cloned if they are not
+yet written to disk, or if they are encrypted, or the source and destination
+.Sy recordsize
+properties differ.
+The OS may add additional restrictions;
+for example, most versions of Linux will not allow clones across datasets.

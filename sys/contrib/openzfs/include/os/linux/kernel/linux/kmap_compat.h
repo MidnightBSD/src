@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -29,9 +29,15 @@
 #include <linux/highmem.h>
 #include <linux/uaccess.h>
 
+#ifdef HAVE_KMAP_LOCAL_PAGE
+/* 5.11 API change */
+#define	zfs_kmap_local(page)   kmap_local_page(page)
+#define	zfs_kunmap_local(addr) kunmap_local(addr)
+#else
 /* 2.6.37 API change */
-#define	zfs_kmap_atomic(page)	kmap_atomic(page)
-#define	zfs_kunmap_atomic(addr)	kunmap_atomic(addr)
+#define	zfs_kmap_local(page)   kmap_atomic(page)
+#define	zfs_kunmap_local(addr) kunmap_atomic(addr)
+#endif
 
 /* 5.0 API change - no more 'type' argument for access_ok() */
 #ifdef HAVE_ACCESS_OK_TYPE

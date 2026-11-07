@@ -60,13 +60,13 @@ log_must set_tunable64 VDEV_MIN_MS_COUNT 64
 
 # Minimum trim size is decreased to verify all trim sizes.
 typeset trim_extent_bytes_min=$(get_tunable TRIM_EXTENT_BYTES_MIN)
-log_must set_tunable64 TRIM_EXTENT_BYTES_MIN 4096
+log_must set_tunable64 TRIM_EXTENT_BYTES_MIN 512
 
 log_must mkdir "$TESTDIR"
 log_must truncate -s $LARGESIZE "$LARGEFILE"
-log_must zpool create $TESTPOOL "$LARGEFILE"
+log_must zpool create -O compression=off $TESTPOOL "$LARGEFILE"
 log_must mkfile $(( floor(LARGESIZE * 0.80) )) /$TESTPOOL/file
-log_must zpool sync
+sync_all_pools
 
 new_size=$(du -B1 "$LARGEFILE" | cut -f1)
 log_must test $new_size -le $LARGESIZE
@@ -89,7 +89,7 @@ log_must set_tunable64 TRIM_METASLAB_SKIP 1
 log_must zpool trim $TESTPOOL
 log_must set_tunable64 TRIM_METASLAB_SKIP 0
 
-log_must zpool sync
+sync_all_pools
 while [[ "$(trim_progress $TESTPOOL $LARGEFILE)" -lt "100" ]]; do
 	sleep 0.5
 done
@@ -102,7 +102,7 @@ log_must test $new_size -gt $LARGESIZE
 # space usage of the new metaslabs.
 log_must zpool trim $TESTPOOL
 
-log_must zpool sync
+sync_all_pools
 while [[ "$(trim_progress $TESTPOOL $LARGEFILE)" -lt "100" ]]; do
 	sleep 0.5
 done

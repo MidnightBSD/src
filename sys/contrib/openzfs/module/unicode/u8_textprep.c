@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -39,7 +39,7 @@
  */
 
 #include <sys/types.h>
-#include <sys/strings.h>
+#include <sys/string.h>
 #include <sys/param.h>
 #include <sys/sysmacros.h>
 #include <sys/debug.h>
@@ -203,7 +203,7 @@ typedef enum {
 #define	I_				U8_ILLEGAL_CHAR
 #define	O_				U8_OUT_OF_RANGE_CHAR
 
-const int8_t u8_number_of_bytes[0x100] = {
+static const int8_t u8_number_of_bytes[0x100] = {
 	1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
 	1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
 	1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,  1,
@@ -241,7 +241,7 @@ const int8_t u8_number_of_bytes[0x100] = {
 #undef	I_
 #undef	O_
 
-const uint8_t u8_valid_min_2nd_byte[0x100] = {
+static const uint8_t u8_valid_min_2nd_byte[0x100] = {
 	0,    0,    0,    0,    0,    0,    0,    0,
 	0,    0,    0,    0,    0,    0,    0,    0,
 	0,    0,    0,    0,    0,    0,    0,    0,
@@ -283,7 +283,7 @@ const uint8_t u8_valid_min_2nd_byte[0x100] = {
 	0,    0,    0,    0,    0,    0,    0,    0,
 };
 
-const uint8_t u8_valid_max_2nd_byte[0x100] = {
+static const uint8_t u8_valid_max_2nd_byte[0x100] = {
 	0,    0,    0,    0,    0,    0,    0,    0,
 	0,    0,    0,    0,    0,    0,    0,    0,
 	0,    0,    0,    0,    0,    0,    0,    0,
@@ -2137,27 +2137,6 @@ u8_textprep_str(char *inarray, size_t *inlen, char *outarray, size_t *outlen,
 
 	return (ret_val);
 }
-
-#if defined(_KERNEL)
-static int __init
-unicode_init(void)
-{
-	return (0);
-}
-
-static void __exit
-unicode_fini(void)
-{
-}
-
-module_init(unicode_init);
-module_exit(unicode_fini);
-#endif
-
-ZFS_MODULE_DESCRIPTION("Unicode implementation");
-ZFS_MODULE_AUTHOR(ZFS_META_AUTHOR);
-ZFS_MODULE_LICENSE(ZFS_META_LICENSE);
-ZFS_MODULE_VERSION(ZFS_META_VERSION "-" ZFS_META_RELEASE);
 
 EXPORT_SYMBOL(u8_validate);
 EXPORT_SYMBOL(u8_strcmp);

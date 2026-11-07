@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -343,7 +343,7 @@ struct dnode {
 	kcondvar_t dn_notxholds;
 	kcondvar_t dn_nodnholds;
 	enum dnode_dirtycontext dn_dirtyctx;
-	void *dn_dirtyctx_firstset;		/* dbg: contents meaningless */
+	const void *dn_dirtyctx_firstset;	/* dbg: contents meaningless */
 
 	/* protected by own devices */
 	zfs_refcount_t dn_tx_holds;
@@ -427,16 +427,16 @@ void dnode_setbonus_type(dnode_t *dn, dmu_object_type_t, dmu_tx_t *tx);
 void dnode_rm_spill(dnode_t *dn, dmu_tx_t *tx);
 
 int dnode_hold(struct objset *dd, uint64_t object,
-    void *ref, dnode_t **dnp);
+    const void *ref, dnode_t **dnp);
 int dnode_hold_impl(struct objset *dd, uint64_t object, int flag, int dn_slots,
-    void *ref, dnode_t **dnp);
-boolean_t dnode_add_ref(dnode_t *dn, void *ref);
-void dnode_rele(dnode_t *dn, void *ref);
-void dnode_rele_and_unlock(dnode_t *dn, void *tag, boolean_t evicting);
+    const void *ref, dnode_t **dnp);
+boolean_t dnode_add_ref(dnode_t *dn, const void *ref);
+void dnode_rele(dnode_t *dn, const void *ref);
+void dnode_rele_and_unlock(dnode_t *dn, const void *tag, boolean_t evicting);
 int dnode_try_claim(objset_t *os, uint64_t object, int slots);
 boolean_t dnode_is_dirty(dnode_t *dn);
 void dnode_setdirty(dnode_t *dn, dmu_tx_t *tx);
-void dnode_set_dirtyctx(dnode_t *dn, dmu_tx_t *tx, void *tag);
+void dnode_set_dirtyctx(dnode_t *dn, dmu_tx_t *tx, const void *tag);
 void dnode_sync(dnode_t *dn, dmu_tx_t *tx);
 void dnode_allocate(dnode_t *dn, dmu_object_type_t ot, int blocksize, int ibs,
     dmu_object_type_t bonustype, int bonuslen, int dn_slots, dmu_tx_t *tx);
@@ -465,14 +465,10 @@ void dnode_free_interior_slots(dnode_t *dn);
 #define	DNODE_IS_DIRTY(_dn)						\
 	((_dn)->dn_dirty_txg >= spa_syncing_txg((_dn)->dn_objset->os_spa))
 
-#define	DNODE_IS_CACHEABLE(_dn)						\
+#define	DNODE_LEVEL_IS_CACHEABLE(_dn, _level)				\
 	((_dn)->dn_objset->os_primary_cache == ZFS_CACHE_ALL ||		\
-	(DMU_OT_IS_METADATA((_dn)->dn_type) &&				\
+	(((_level) > 0 || DMU_OT_IS_METADATA((_dn)->dn_type)) &&	\
 	(_dn)->dn_objset->os_primary_cache == ZFS_CACHE_METADATA))
-
-#define	DNODE_META_IS_CACHEABLE(_dn)					\
-	((_dn)->dn_objset->os_primary_cache == ZFS_CACHE_ALL ||		\
-	(_dn)->dn_objset->os_primary_cache == ZFS_CACHE_METADATA)
 
 /*
  * Used for dnodestats kstat.
@@ -649,7 +645,7 @@ extern dnode_sums_t dnode_sums;
 	dprintf_ds((dn)->dn_objset->os_dsl_dataset, "obj=%s " fmt, \
 	    __db_buf, __VA_ARGS__); \
 	} \
-_NOTE(CONSTCOND) } while (0)
+} while (0)
 
 #define	DNODE_VERIFY(dn)		dnode_verify(dn)
 #define	FREE_VERIFY(db, start, end, tx)	free_verify(db, start, end, tx)

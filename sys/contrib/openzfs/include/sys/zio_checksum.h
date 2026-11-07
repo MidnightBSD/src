@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -21,11 +21,12 @@
 /*
  * Copyright (c) 2005, 2010, Oracle and/or its affiliates. All rights reserved.
  * Copyright (c) 2014, 2016 by Delphix. All rights reserved.
- * Copyright Saso Kiselkov 2013, All rights reserved.
+ * Copyright (c) 2013 Saso Kiselkov, All rights reserved.
+ * Copyright (c) 2021 Tino Reichardt <milky-zfs@mcmilk.de>
  */
 
 #ifndef _SYS_ZIO_CHECKSUM_H
-#define	_SYS_ZIO_CHECKSUM_H
+#define	_SYS_ZIO_CHECKSUM_H extern __attribute__((visibility("default")))
 
 #include <sys/zio.h>
 #include <zfeature_common.h>
@@ -89,26 +90,27 @@ typedef const struct zio_checksum_info {
 	zio_checksum_tmpl_init_t	*ci_tmpl_init;
 	zio_checksum_tmpl_free_t	*ci_tmpl_free;
 	zio_checksum_flags_t		ci_flags;
-	char				*ci_name;	/* descriptive name */
+	const char			*ci_name;	/* descriptive name */
 } zio_checksum_info_t;
 
 typedef struct zio_bad_cksum {
-	zio_cksum_t		zbc_expected;
-	zio_cksum_t		zbc_actual;
 	const char		*zbc_checksum_name;
 	uint8_t			zbc_byteswapped;
 	uint8_t			zbc_injected;
 	uint8_t			zbc_has_cksum;	/* expected/actual valid */
 } zio_bad_cksum_t;
 
-extern zio_checksum_info_t zio_checksum_table[ZIO_CHECKSUM_FUNCTIONS];
+_SYS_ZIO_CHECKSUM_H zio_checksum_info_t
+    zio_checksum_table[ZIO_CHECKSUM_FUNCTIONS];
 
 /*
  * Checksum routines.
  */
-extern zio_checksum_t abd_checksum_SHA256;
-extern zio_checksum_t abd_checksum_SHA512_native;
-extern zio_checksum_t abd_checksum_SHA512_byteswap;
+
+/* SHA2 */
+extern zio_checksum_t abd_checksum_sha256;
+extern zio_checksum_t abd_checksum_sha512_native;
+extern zio_checksum_t abd_checksum_sha512_byteswap;
 
 /* Skein */
 extern zio_checksum_t abd_checksum_skein_native;
@@ -122,7 +124,14 @@ extern zio_checksum_t abd_checksum_edonr_byteswap;
 extern zio_checksum_tmpl_init_t abd_checksum_edonr_tmpl_init;
 extern zio_checksum_tmpl_free_t abd_checksum_edonr_tmpl_free;
 
-extern zio_abd_checksum_func_t fletcher_4_abd_ops;
+/* BLAKE3 */
+extern zio_checksum_t abd_checksum_blake3_native;
+extern zio_checksum_t abd_checksum_blake3_byteswap;
+extern zio_checksum_tmpl_init_t abd_checksum_blake3_tmpl_init;
+extern zio_checksum_tmpl_free_t abd_checksum_blake3_tmpl_free;
+
+/* Fletcher 4 */
+_SYS_ZIO_CHECKSUM_H zio_abd_checksum_func_t fletcher_4_abd_ops;
 extern zio_checksum_t abd_fletcher_4_native;
 extern zio_checksum_t abd_fletcher_4_byteswap;
 

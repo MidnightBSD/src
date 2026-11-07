@@ -12,6 +12,7 @@ if getargbool 0 zfs_force -y zfs.force -y zfsforce; then
 fi
 
 _mount_dataset_cb() {
+    # shellcheck disable=SC2154
     mount -o zfsutil -t zfs "${1}" "${NEWROOT}${2}"
 }
 
@@ -33,7 +34,7 @@ mount_dataset() {
         fi
     fi
 
-    return ${ret}
+    return "${ret}"
 }
 
 # for_relevant_root_children DATASET EXEC
@@ -59,7 +60,7 @@ for_relevant_root_children() {
                         ;;
                 esac
             done
-            exit ${_ret}
+            exit "${_ret}"
         )
 }
 
@@ -87,11 +88,11 @@ decode_root_args() {
         return
     fi
 
-    root=$(getarg root=)
+    xroot=$(getarg root=)
     rootfstype=$(getarg rootfstype=)
 
     # shellcheck disable=SC2249
-    case "$root" in
+    case "$xroot" in
         ""|zfs|zfs:|zfs:AUTO)
             root=zfs:AUTO
             rootfstype=zfs
@@ -99,7 +100,7 @@ decode_root_args() {
             ;;
 
         ZFS=*|zfs:*)
-            root="${root#zfs:}"
+            root="${xroot#zfs:}"
             root="${root#ZFS=}"
             root=$(echo "$root" | tr '+' ' ')
             rootfstype=zfs
@@ -108,9 +109,9 @@ decode_root_args() {
     esac
 
     if [ "$rootfstype" = "zfs" ]; then
-        case "$root" in
+        case "$xroot" in
             "") root=zfs:AUTO ;;
-            *)  root=$(echo "$root" | tr '+' ' ') ;;
+            *)  root=$(echo "$xroot" | tr '+' ' ') ;;
         esac
         return 0
     fi

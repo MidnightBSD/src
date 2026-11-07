@@ -201,6 +201,7 @@ line_worker(char *line, const char *cachefile)
 	void **tofree = tofree_all;
 
 	char *toktmp;
+	const char *toktmp2;
 	/* BEGIN CSTYLED */
 	const char *dataset                     = strtok_r(line, "\t", &toktmp);
 	      char *p_mountpoint                = strtok_r(NULL, "\t", &toktmp);
@@ -224,9 +225,10 @@ line_worker(char *line, const char *cachefile)
 	const char *p_systemd_ignore            = strtok_r(NULL, "\t", &toktmp) ?: "-";
 	/* END CSTYLED */
 
-	const char *pool = dataset;
-	if ((toktmp = strchr(pool, '/')) != NULL)
-		pool = strndupa(pool, toktmp - pool);
+	size_t pool_len = strlen(dataset);
+	if ((toktmp2 = strchr(dataset, '/')) != NULL)
+		pool_len = toktmp2 - dataset;
+	const char *pool = *(tofree++) = strndup(dataset, pool_len);
 
 	if (p_nbmand == NULL) {
 		fprintf(stderr, PROGNAME "[%d]: %s: not enough tokens!\n",
@@ -681,25 +683,28 @@ line_worker(char *line, const char *cachefile)
 	}
 	*(tofree++) = linktgt;
 
-	char *dependencies[][2] = {
+	struct dep {
+		const char *type;
+		char *list;
+	} deps[] = {
 		{"wants", wantedby},
 		{"requires", requiredby},
 		{}
 	};
-	for (__typeof__(&*dependencies) dep = &*dependencies; **dep; ++dep) {
-		if (!(*dep)[1])
+	for (struct dep *dep = deps; dep->type; ++dep) {
+		if (!dep->list)
 			continue;
 
-		for (char *reqby = strtok_r((*dep)[1], " ", &toktmp);
+		for (char *reqby = strtok_r(dep->list, " ", &toktmp);
 		    reqby;
 		    reqby = strtok_r(NULL, " ", &toktmp)) {
 			char *depdir;
 			if (asprintf(
-			    &depdir, "%s.%s", reqby, (*dep)[0]) == -1) {
+			    &depdir, "%s.%s", reqby, dep->type) == -1) {
 				fprintf(stderr, PROGNAME "[%d]: %s: "
 				    "out of memory for dependent dir name "
 				    "\"%s.%s\"!\n",
-				    getpid(), dataset, reqby, (*dep)[0]);
+				    getpid(), dataset, reqby, dep->type);
 				continue;
 			}
 
@@ -731,7 +736,7 @@ end:
 	if (tofree >= tofree_all + nitems(tofree_all)) {
 		/*
 		 * This won't happen as-is:
-		 * we've got 8 slots and allocate 4 things at most.
+		 * we've got 8 slots and allocate 5 things at most.
 		 */
 		fprintf(stderr,
 		    PROGNAME "[%d]: %s: need to free %zu > %zu!\n",

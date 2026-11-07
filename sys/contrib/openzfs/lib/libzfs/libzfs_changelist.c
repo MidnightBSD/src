@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -98,10 +98,20 @@ changelist_prefix(prop_changelist_t *clp)
 	prop_changenode_t *cn;
 	uu_avl_walk_t *walk;
 	int ret = 0;
+	const enum sa_protocol smb[] = {SA_PROTOCOL_SMB, SA_NO_PROTOCOL};
 	boolean_t commit_smb_shares = B_FALSE;
 
 	if (clp->cl_prop != ZFS_PROP_MOUNTPOINT &&
 	    clp->cl_prop != ZFS_PROP_SHARESMB)
+		return (0);
+
+	/*
+	 * If CL_GATHER_DONT_UNMOUNT is set, don't want to unmount/unshare and
+	 * later (re)mount/(re)share the filesystem in postfix phase, so we
+	 * return from here. If filesystem is mounted or unmounted, leave it
+	 * as it is.
+	 */
+	if (clp->cl_gflags & CL_GATHER_DONT_UNMOUNT)
 		return (0);
 
 	if ((walk = uu_avl_walk_start(clp->cl_tree, UU_WALK_ROBUST)) == NULL)
@@ -128,8 +138,6 @@ changelist_prefix(prop_changelist_t *clp)
 			 */
 			switch (clp->cl_prop) {
 			case ZFS_PROP_MOUNTPOINT:
-				if (clp->cl_gflags & CL_GATHER_DONT_UNMOUNT)
-					break;
 				if (zfs_unmount(cn->cn_handle, NULL,
 				    clp->cl_mflags) != 0) {
 					ret = -1;
@@ -137,7 +145,8 @@ changelist_prefix(prop_changelist_t *clp)
 				}
 				break;
 			case ZFS_PROP_SHARESMB:
-				(void) zfs_unshare_smb(cn->cn_handle, NULL);
+				(void) zfs_unshare(cn->cn_handle, NULL,
+				    smb);
 				commit_smb_shares = B_TRUE;
 				break;
 
@@ -148,7 +157,7 @@ changelist_prefix(prop_changelist_t *clp)
 	}
 
 	if (commit_smb_shares)
-		zfs_commit_smb_shares();
+		zfs_commit_shares(smb);
 	uu_avl_walk_end(walk);
 
 	if (ret == -1)
@@ -162,9 +171,8 @@ changelist_prefix(prop_changelist_t *clp)
  * reshare the filesystems as necessary.  In changelist_gather() we recorded
  * whether the filesystem was previously shared or mounted.  The action we take
  * depends on the previous state, and whether the value was previously 'legacy'.
- * For non-legacy properties, we only remount/reshare the filesystem if it was
- * previously mounted/shared.  Otherwise, we always remount/reshare the
- * filesystem.
+ * For non-legacy properties, we always remount/reshare the filesystem,
+ * if CL_GATHER_DONT_UNMOUNT is not set.
  */
 int
 changelist_postfix(prop_changelist_t *clp)
@@ -172,9 +180,17 @@ changelist_postfix(prop_changelist_t *clp)
 	prop_changenode_t *cn;
 	uu_avl_walk_t *walk;
 	char shareopts[ZFS_MAXPROPLEN];
-	int errors = 0;
 	boolean_t commit_smb_shares = B_FALSE;
 	boolean_t commit_nfs_shares = B_FALSE;
+	int rc = 0;
+
+	/*
+	 * If CL_GATHER_DONT_UNMOUNT is set, it means we don't want to (un)mount
+	 * or (re/un)share the filesystem, so we return from here. If filesystem
+	 * is mounted or unmounted, leave it as it is.
+	 */
+	if (clp->cl_gflags & CL_GATHER_DONT_UNMOUNT)
+		return (0);
 
 	/*
 	 * If we're changing the mountpoint, attempt to destroy the underlying
@@ -238,17 +254,16 @@ changelist_postfix(prop_changelist_t *clp)
 		needs_key = (zfs_prop_get_int(cn->cn_handle,
 		    ZFS_PROP_KEYSTATUS) == ZFS_KEYSTATUS_UNAVAILABLE);
 
-		mounted = (clp->cl_gflags & CL_GATHER_DONT_UNMOUNT) ||
-		    zfs_is_mounted(cn->cn_handle, NULL);
+		mounted = zfs_is_mounted(cn->cn_handle, NULL);
 
 		if (!mounted && !needs_key && (cn->cn_mounted ||
-		    ((sharenfs || sharesmb || clp->cl_waslegacy) &&
+		    (((clp->cl_prop == ZFS_PROP_MOUNTPOINT &&
+		    clp->cl_prop == clp->cl_realprop) ||
+		    sharenfs || sharesmb || clp->cl_waslegacy) &&
 		    (zfs_prop_get_int(cn->cn_handle,
 		    ZFS_PROP_CANMOUNT) == ZFS_CANMOUNT_ON)))) {
 
-			if (zfs_mount(cn->cn_handle, NULL, 0) != 0)
-				errors++;
-			else
+			if (zfs_mount(cn->cn_handle, NULL, 0) == 0)
 				mounted = TRUE;
 		}
 
@@ -257,34 +272,50 @@ changelist_postfix(prop_changelist_t *clp)
 		 * if the filesystem is currently shared, so that we can
 		 * adopt any new options.
 		 */
+		const enum sa_protocol nfs[] =
+		    {SA_PROTOCOL_NFS, SA_NO_PROTOCOL};
 		if (sharenfs && mounted) {
-			errors += zfs_share_nfs(cn->cn_handle);
+			rc = zfs_share(cn->cn_handle, nfs);
 			commit_nfs_shares = B_TRUE;
 		} else if (cn->cn_shared || clp->cl_waslegacy) {
-			errors += zfs_unshare_nfs(cn->cn_handle, NULL);
+			zfs_unshare(cn->cn_handle, NULL, nfs);
 			commit_nfs_shares = B_TRUE;
 		}
+		const enum sa_protocol smb[] =
+		    {SA_PROTOCOL_SMB, SA_NO_PROTOCOL};
 		if (sharesmb && mounted) {
-			errors += zfs_share_smb(cn->cn_handle);
+			rc = zfs_share(cn->cn_handle, smb);
 			commit_smb_shares = B_TRUE;
 		} else if (cn->cn_shared || clp->cl_waslegacy) {
-			errors += zfs_unshare_smb(cn->cn_handle, NULL);
+			zfs_unshare(cn->cn_handle, NULL, smb);
 			commit_smb_shares = B_TRUE;
 		}
 	}
+
+	enum sa_protocol proto[SA_PROTOCOL_COUNT + 1], *p = proto;
 	if (commit_nfs_shares)
-		zfs_commit_nfs_shares();
+		*p++ = SA_PROTOCOL_NFS;
 	if (commit_smb_shares)
-		zfs_commit_smb_shares();
+		*p++ = SA_PROTOCOL_SMB;
+	*p++ = SA_NO_PROTOCOL;
+	zfs_commit_shares(proto);
 	uu_avl_walk_end(walk);
 
-	return (errors ? -1 : 0);
+	/*
+	 * It's possible rc != 0 since we set a mountpoint or option while
+	 * SMB/NFS was not running.  This is fine, and we should not return
+	 * an error up the stack.
+	 *
+	 * At this point we only want to report mountpoint/shareops parsing
+	 * errors.
+	 */
+	return (rc == SA_SYNTAX_ERR ? rc : 0);
 }
 
 /*
  * Is this "dataset" a child of "parent"?
  */
-boolean_t
+static boolean_t
 isa_child_of(const char *dataset, const char *parent)
 {
 	int len;
@@ -345,7 +376,7 @@ changelist_rename(prop_changelist_t *clp, const char *src, const char *dst)
  * unshare all the datasets in the list.
  */
 int
-changelist_unshare(prop_changelist_t *clp, zfs_share_proto_t *proto)
+changelist_unshare(prop_changelist_t *clp, const enum sa_protocol *proto)
 {
 	prop_changenode_t *cn;
 	uu_avl_walk_t *walk;
@@ -359,11 +390,12 @@ changelist_unshare(prop_changelist_t *clp, zfs_share_proto_t *proto)
 		return (-1);
 
 	while ((cn = uu_avl_walk_next(walk)) != NULL) {
-		if (zfs_unshare_proto(cn->cn_handle, NULL, proto) != 0)
+		if (zfs_unshare(cn->cn_handle, NULL, proto) != 0)
 			ret = -1;
 	}
 
-	zfs_commit_proto(proto);
+	for (const enum sa_protocol *p = proto; *p != SA_NO_PROTOCOL; ++p)
+		sa_commit_shares(*p);
 	uu_avl_walk_end(walk);
 
 	return (ret);
@@ -447,16 +479,11 @@ changelist_add_mounted(zfs_handle_t *zhp, void *data)
 
 	ASSERT3U(clp->cl_prop, ==, ZFS_PROP_MOUNTPOINT);
 
-	if ((cn = zfs_alloc(zfs_get_handle(zhp),
-	    sizeof (prop_changenode_t))) == NULL) {
-		zfs_close(zhp);
-		return (ENOMEM);
-	}
-
+	cn = zfs_alloc(zfs_get_handle(zhp), sizeof (prop_changenode_t));
 	cn->cn_handle = zhp;
 	cn->cn_mounted = zfs_is_mounted(zhp, NULL);
 	ASSERT3U(cn->cn_mounted, ==, B_TRUE);
-	cn->cn_shared = zfs_is_shared(zhp);
+	cn->cn_shared = zfs_is_shared(zhp, NULL, NULL);
 	cn->cn_zoned = zfs_prop_get_int(zhp, ZFS_PROP_ZONED);
 	cn->cn_needpost = B_TRUE;
 
@@ -522,16 +549,11 @@ change_one(zfs_handle_t *zhp, void *data)
 	    (clp->cl_shareprop != ZPROP_INVAL &&
 	    (share_sourcetype == ZPROP_SRC_DEFAULT ||
 	    share_sourcetype == ZPROP_SRC_INHERITED))) {
-		if ((cn = zfs_alloc(zfs_get_handle(zhp),
-		    sizeof (prop_changenode_t))) == NULL) {
-			ret = -1;
-			goto out;
-		}
-
+		cn = zfs_alloc(zfs_get_handle(zhp), sizeof (prop_changenode_t));
 		cn->cn_handle = zhp;
 		cn->cn_mounted = (clp->cl_gflags & CL_GATHER_MOUNT_ALWAYS) ||
 		    zfs_is_mounted(zhp, NULL);
-		cn->cn_shared = zfs_is_shared(zhp);
+		cn->cn_shared = zfs_is_shared(zhp, NULL, NULL);
 		cn->cn_zoned = zfs_prop_get_int(zhp, ZFS_PROP_ZONED);
 		cn->cn_needpost = B_TRUE;
 
@@ -551,7 +573,7 @@ change_one(zfs_handle_t *zhp, void *data)
 		}
 
 		if (!clp->cl_alldependents)
-			ret = zfs_iter_children(zhp, change_one, data);
+			ret = zfs_iter_children_v2(zhp, 0, change_one, data);
 
 		/*
 		 * If we added the handle to the changelist, we will re-use it
@@ -592,7 +614,6 @@ compare_props(const void *a, const void *b, zfs_prop_t prop)
 		return (strcmp(propb, propa));
 }
 
-/*ARGSUSED*/
 static int
 compare_mountpoints(const void *a, const void *b, void *unused)
 {
@@ -602,13 +623,14 @@ compare_mountpoints(const void *a, const void *b, void *unused)
 	 * hierarchy that is different from the dataset hierarchy, and still
 	 * allow it to be changed.
 	 */
+	(void) unused;
 	return (compare_props(a, b, ZFS_PROP_MOUNTPOINT));
 }
 
-/*ARGSUSED*/
 static int
 compare_dataset_names(const void *a, const void *b, void *unused)
 {
+	(void) unused;
 	return (compare_props(a, b, ZFS_PROP_NAME));
 }
 
@@ -630,8 +652,7 @@ changelist_gather(zfs_handle_t *zhp, zfs_prop_t prop, int gather_flags,
 	char property[ZFS_MAXPROPLEN];
 	boolean_t legacy = B_FALSE;
 
-	if ((clp = zfs_alloc(zhp->zfs_hdl, sizeof (prop_changelist_t))) == NULL)
-		return (NULL);
+	clp = zfs_alloc(zhp->zfs_hdl, sizeof (prop_changelist_t));
 
 	/*
 	 * For mountpoint-related tasks, we want to sort everything by
@@ -721,11 +742,12 @@ changelist_gather(zfs_handle_t *zhp, zfs_prop_t prop, int gather_flags,
 			return (NULL);
 		}
 	} else if (clp->cl_alldependents) {
-		if (zfs_iter_dependents(zhp, B_TRUE, change_one, clp) != 0) {
+		if (zfs_iter_dependents_v2(zhp, 0, B_TRUE, change_one,
+		    clp) != 0) {
 			changelist_free(clp);
 			return (NULL);
 		}
-	} else if (zfs_iter_children(zhp, change_one, clp) != 0) {
+	} else if (zfs_iter_children_v2(zhp, 0, change_one, clp) != 0) {
 		changelist_free(clp);
 		return (NULL);
 	}
@@ -744,17 +766,11 @@ changelist_gather(zfs_handle_t *zhp, zfs_prop_t prop, int gather_flags,
 	 * Always add ourself to the list.  We add ourselves to the end so that
 	 * we're the last to be unmounted.
 	 */
-	if ((cn = zfs_alloc(zhp->zfs_hdl,
-	    sizeof (prop_changenode_t))) == NULL) {
-		zfs_close(temp);
-		changelist_free(clp);
-		return (NULL);
-	}
-
+	cn = zfs_alloc(zhp->zfs_hdl, sizeof (prop_changenode_t));
 	cn->cn_handle = temp;
 	cn->cn_mounted = (clp->cl_gflags & CL_GATHER_MOUNT_ALWAYS) ||
 	    zfs_is_mounted(temp, NULL);
-	cn->cn_shared = zfs_is_shared(temp);
+	cn->cn_shared = zfs_is_shared(temp, NULL, NULL);
 	cn->cn_zoned = zfs_prop_get_int(zhp, ZFS_PROP_ZONED);
 	cn->cn_needpost = B_TRUE;
 

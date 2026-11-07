@@ -7,7 +7,7 @@
  * with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -52,7 +52,8 @@
 /*
  * Compatibility macros/typedefs needed for Solaris -> Linux port
  */
-#define	P2ALIGN(x, align)	((x) & -(align))
+// Deprecated. Use P2ALIGN_TYPED instead.
+// #define	P2ALIGN(x, align)	((x) & -(align))
 #define	P2CROSS(x, y, align)	(((x) ^ (y)) > (align) - 1)
 #define	P2ROUNDUP(x, align)	((((x) - 1) | ((align) - 1)) + 1)
 #define	P2BOUNDARY(off, len, align) \
@@ -97,7 +98,5 @@
 #if defined(_KERNEL) && !defined(_KMEMUSER) && !defined(offsetof)
 #define	offsetof(s, m)	((size_t)(&(((s *)0)->m)))
 #endif
-
-#define	_NOTE(x)
 
 #endif /* _LIBSPL_SYS_SYSMACROS_H */

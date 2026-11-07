@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -90,6 +90,7 @@ enum dmu_tx_hold_type {
 	THT_ZAP,
 	THT_SPACE,
 	THT_SPILL,
+	THT_CLONE,
 	THT_APPEND,
 	THT_NUMTYPES
 };

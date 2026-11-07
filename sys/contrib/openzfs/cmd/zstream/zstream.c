@@ -23,7 +23,7 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <strings.h>
+#include <string.h>
 #include <unistd.h>
 #include <libintl.h>
 #include <stddef.h>
@@ -39,6 +39,10 @@ zstream_usage(void)
 	    "\n"
 	    "\tzstream dump [-vCd] FILE\n"
 	    "\t... | zstream dump [-vCd]\n"
+	    "\n"
+	    "\tzstream decompress [-v] [OBJECT,OFFSET[,TYPE]] ...\n"
+	    "\n"
+	    "\tzstream recompress [ -l level] TYPE\n"
 	    "\n"
 	    "\tzstream token resume_token\n"
 	    "\n"
@@ -61,6 +65,10 @@ main(int argc, char *argv[])
 
 	if (strcmp(subcommand, "dump") == 0) {
 		return (zstream_do_dump(argc - 1, argv + 1));
+	} else if (strcmp(subcommand, "decompress") == 0) {
+		return (zstream_do_decompress(argc - 1, argv + 1));
+	} else if (strcmp(subcommand, "recompress") == 0) {
+		return (zstream_do_recompress(argc - 1, argv + 1));
 	} else if (strcmp(subcommand, "token") == 0) {
 		return (zstream_do_token(argc - 1, argv + 1));
 	} else if (strcmp(subcommand, "redup") == 0) {

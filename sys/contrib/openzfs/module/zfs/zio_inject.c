@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -148,7 +148,8 @@ zio_match_handler(const zbookmark_phys_t *zb, uint64_t type, int dva,
 	    zb->zb_level == record->zi_level &&
 	    zb->zb_blkid >= record->zi_start &&
 	    zb->zb_blkid <= record->zi_end &&
-	    (record->zi_dvas == 0 || (record->zi_dvas & (1ULL << dva))) &&
+	    (record->zi_dvas == 0 ||
+	    (dva != ZI_NO_DVA && (record->zi_dvas & (1ULL << dva)))) &&
 	    error == record->zi_error) {
 		return (freq_triggered(record->zi_freq));
 	}
@@ -161,7 +162,7 @@ zio_match_handler(const zbookmark_phys_t *zb, uint64_t type, int dva,
  * specified by tag.
  */
 void
-zio_handle_panic_injection(spa_t *spa, char *tag, uint64_t type)
+zio_handle_panic_injection(spa_t *spa, const char *tag, uint64_t type)
 {
 	inject_handler_t *handler;
 
@@ -341,15 +342,14 @@ zio_handle_label_injection(zio_t *zio, int error)
 	return (ret);
 }
 
-/*ARGSUSED*/
 static int
 zio_inject_bitflip_cb(void *data, size_t len, void *private)
 {
-	zio_t *zio __maybe_unused = private;
+	zio_t *zio = private;
 	uint8_t *buffer = data;
 	uint_t byte = random_in_range(len);
 
-	ASSERT(zio->io_type == ZIO_TYPE_READ);
+	ASSERT3U(zio->io_type, ==, ZIO_TYPE_READ);
 
 	/* flip a single random bit in an abd data buffer */
 	buffer[byte] ^= 1 << random_in_range(8);
@@ -604,6 +604,12 @@ zio_handle_io_delay(zio_t *zio)
 
 		if (vd->vdev_guid != handler->zi_record.zi_guid)
 			continue;
+
+		/* also match on I/O type (e.g., -T read) */
+		if (handler->zi_record.zi_iotype != ZIO_TYPES &&
+		    handler->zi_record.zi_iotype != zio->io_type) {
+			continue;
+		}
 
 		/*
 		 * Defensive; should never happen as the array allocation
@@ -887,7 +893,7 @@ zio_inject_list_next(int *id, char *name, size_t buflen,
 	if (handler) {
 		*record = handler->zi_record;
 		*id = handler->zi_id;
-		(void) strncpy(name, spa_name(handler->zi_spa), buflen);
+		(void) strlcpy(name, spa_name(handler->zi_spa), buflen);
 		ret = 0;
 	} else {
 		ret = SET_ERROR(ENOENT);

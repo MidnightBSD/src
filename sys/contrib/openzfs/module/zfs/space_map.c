@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -455,7 +455,8 @@ space_map_histogram_clear(space_map_t *sm)
 	if (sm->sm_dbuf->db_size != sizeof (space_map_phys_t))
 		return;
 
-	bzero(sm->sm_phys->smp_histogram, sizeof (sm->sm_phys->smp_histogram));
+	memset(sm->sm_phys->smp_histogram, 0,
+	    sizeof (sm->sm_phys->smp_histogram));
 }
 
 boolean_t
@@ -548,7 +549,7 @@ space_map_write_intro_debug(space_map_t *sm, maptype_t maptype, dmu_tx_t *tx)
 static void
 space_map_write_seg(space_map_t *sm, uint64_t rstart, uint64_t rend,
     maptype_t maptype, uint64_t vdev_id, uint8_t words, dmu_buf_t **dbp,
-    void *tag, dmu_tx_t *tx)
+    const void *tag, dmu_tx_t *tx)
 {
 	ASSERT3U(words, !=, 0);
 	ASSERT3U(words, <=, 2);
@@ -896,7 +897,7 @@ space_map_truncate(space_map_t *sm, int blocksize, dmu_tx_t *tx)
 		 * will be reset.  Do the same in the common case so that
 		 * bugs related to the uncommon case do not go unnoticed.
 		 */
-		bzero(sm->sm_phys->smp_histogram,
+		memset(sm->sm_phys->smp_histogram, 0,
 		    sizeof (sm->sm_phys->smp_histogram));
 	}
 

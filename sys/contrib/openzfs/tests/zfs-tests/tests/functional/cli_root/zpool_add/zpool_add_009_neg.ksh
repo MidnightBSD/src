@@ -7,7 +7,7 @@
 # You may not use this file except in compliance with the License.
 #
 # You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
-# or http://www.opensolaris.org/os/licensing.
+# or https://opensource.org/licenses/CDDL-1.0.
 # See the License for the specific language governing permissions
 # and limitations under the License.
 #
@@ -39,8 +39,9 @@
 #
 # STRATEGY:
 #	1. Create a storage pool
-#	2. Add the two same devices to pool A
-#	3. Add the device in pool A to pool A again
+#	2. Add the device in pool A to pool A again
+#	3. Add the two devices to pool A in the loop, one of them already
+#	added or same device added multiple times
 #
 
 verify_runnable "global"
@@ -58,8 +59,15 @@ log_onexit cleanup
 create_pool $TESTPOOL $DISK0
 log_must poolexists $TESTPOOL
 
-log_mustnot zpool add -f $TESTPOOL $DISK1 $DISK1
 log_mustnot zpool add -f $TESTPOOL $DISK0
+
+for type in "" "mirror" "raidz" "draid" "spare" "log" "dedup" "special" "cache"
+do
+	log_mustnot zpool add -f $TESTPOOL $type $DISK0 $DISK1
+	log_mustnot zpool add --allow-in-use $TESTPOOL $type $DISK0 $DISK1
+	log_mustnot zpool add -f $TESTPOOL $type $DISK1 $DISK1
+	log_mustnot zpool add --allow-in-use $TESTPOOL $type $DISK1 $DISK1
+done
 
 log_pass "'zpool add' get fail as expected if vdevs are the same or vdev is " \
 	"contained in the given pool."

@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -199,7 +199,7 @@ spa_history_log_notify(spa_t *spa, nvlist_t *nvl)
 {
 	nvlist_t *hist_nvl = fnvlist_alloc();
 	uint64_t uint64;
-	char *string;
+	const char *string;
 
 	if (nvlist_lookup_string(nvl, ZPOOL_HIST_CMD, &string) == 0)
 		fnvlist_add_string(hist_nvl, ZFS_EV_HIST_CMD, string);
@@ -248,7 +248,6 @@ spa_history_log_notify(spa_t *spa, nvlist_t *nvl)
 /*
  * Write out a history event.
  */
-/*ARGSUSED*/
 static void
 spa_history_log_sync(void *arg, dmu_tx_t *tx)
 {

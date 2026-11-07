@@ -7,7 +7,7 @@
 # You may not use this file except in compliance with the License.
 #
 # You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
-# or http://www.opensolaris.org/os/licensing.
+# or https://opensource.org/licenses/CDDL-1.0.
 # See the License for the specific language governing permissions
 # and limitations under the License.
 #
@@ -58,7 +58,7 @@ log_must dd if=/dev/urandom of=$srcfile bs=1024k count=1
 log_onexit cleanup
 log_must cp $srcfile $TESTDIR/$TESTFILE
 log_must cp /dev/null $TESTDIR/$TESTFILE
-log_must sync
+sync_all_pools
 if [[ -s $TESTDIR/$TESTFILE ]]; then
 	log_note "$(ls -l $TESTDIR/$TESTFILE)"
 	log_fail "testfile not truncated"

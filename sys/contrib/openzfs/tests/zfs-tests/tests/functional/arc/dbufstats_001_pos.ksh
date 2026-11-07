@@ -7,7 +7,7 @@
 # You may not use this file except in compliance with the License.
 #
 # You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
-# or http://www.opensolaris.org/os/licensing.
+# or https://opensource.org/licenses/CDDL-1.0.
 # See the License for the specific language governing permissions
 # and limitations under the License.
 #
@@ -40,8 +40,8 @@
 #    dbufstat and the dbufs kstat output
 #
 
-DBUFSTATS_FILE=$(mktemp $TEST_BASE_DIR/dbufstats.out.XXXXXX)
-DBUFS_FILE=$(mktemp $TEST_BASE_DIR/dbufs.out.XXXXXX)
+DBUFSTATS_FILE=$(mktemp -t dbufstats.out.XXXXXX)
+DBUFS_FILE=$(mktemp -t dbufs.out.XXXXXX)
 
 function cleanup
 {
@@ -56,8 +56,7 @@ function testdbufstat # stat_name dbufstat_filter
         [[ -n "$2" ]] && filter="-F $2"
 
 	if is_linux; then
-		from_dbufstat=$(grep -w "$name" "$DBUFSTATS_FILE" |
-		    awk '{ print $3 }')
+		read -r _ _ from_dbufstat _ < <(grep -w "$name" "$DBUFSTATS_FILE")
 	else
 		from_dbufstat=$(awk "/dbufstats\.$name:/ { print \$2 }" \
 		    "$DBUFSTATS_FILE")
@@ -75,7 +74,7 @@ log_assert "dbufstats produces correct statistics"
 log_onexit cleanup
 
 log_must file_write -o create -f "$TESTDIR/file" -b 1048576 -c 20 -d R
-log_must zpool sync
+sync_all_pools
 
 log_must eval "kstat dbufs > $DBUFS_FILE"
 log_must eval "kstat dbufstats '' > $DBUFSTATS_FILE"

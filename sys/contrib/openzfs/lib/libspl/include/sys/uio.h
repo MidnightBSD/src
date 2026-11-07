@@ -7,7 +7,7 @@
  * with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -90,7 +90,7 @@ zfs_uio_iov_at_index(zfs_uio_t *uio, uint_t idx, void **base, uint64_t *len)
 }
 
 static inline void
-zfs_uio_advance(zfs_uio_t *uio, size_t size)
+zfs_uio_advance(zfs_uio_t *uio, ssize_t size)
 {
 	uio->uio_resid -= size;
 	uio->uio_loffset += size;

@@ -63,7 +63,7 @@ lzbe_set_boot_device(const char *pool, lzbe_flags_t flag, const char *device)
 			/* Drop this nvlist */
 			fnvlist_free(nv);
 		}
-		fallthrough;
+		zfs_fallthrough;
 	case lzbe_replace:
 		nv = fnvlist_alloc();
 		break;
@@ -74,6 +74,7 @@ lzbe_set_boot_device(const char *pool, lzbe_flags_t flag, const char *device)
 	/* version is mandatory */
 	fnvlist_add_uint64(nv, BOOTENV_VERSION, VB_NVLIST);
 
+	rv = 0;
 	/*
 	 * If device name is empty, remove boot device configuration.
 	 */
@@ -95,8 +96,8 @@ lzbe_set_boot_device(const char *pool, lzbe_flags_t flag, const char *device)
 				rv = ENOMEM;
 		}
 	}
-
-	rv = zpool_set_bootenv(zphdl, nv);
+	if (rv == 0)
+		rv = zpool_set_bootenv(zphdl, nv);
 	if (rv != 0)
 		fprintf(stderr, "%s\n", libzfs_error_description(hdl));
 
@@ -115,7 +116,7 @@ lzbe_get_boot_device(const char *pool, char **device)
 	libzfs_handle_t *hdl;
 	zpool_handle_t *zphdl;
 	nvlist_t *nv;
-	char *val;
+	const char *val;
 	int rv = -1;
 
 	if (pool == NULL || *pool == '\0' || device == NULL)
@@ -139,14 +140,13 @@ lzbe_get_boot_device(const char *pool, char **device)
 			 * we only do need dataset name.
 			 */
 			if (strncmp(val, "zfs:", 4) == 0) {
-				val += 4;
-				val = strdup(val);
-				if (val != NULL) {
-					size_t len = strlen(val);
+				char *tmp = strdup(val + 4);
+				if (tmp != NULL) {
+					size_t len = strlen(tmp);
 
-					if (val[len - 1] == ':')
-						val[len - 1] = '\0';
-					*device = val;
+					if (tmp[len - 1] == ':')
+						tmp[len - 1] = '\0';
+					*device = tmp;
 				} else {
 					rv = ENOMEM;
 				}

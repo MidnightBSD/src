@@ -29,6 +29,7 @@
 #else
 #include <stdarg.h>
 #endif
+#include <sys/atomic.h>
 
 #define	CE_CONT		0 /* continuation */
 #define	CE_NOTE		1 /* notice */
@@ -36,10 +37,29 @@
 #define	CE_PANIC	3 /* panic */
 #define	CE_IGNORE	4 /* print nothing */
 
-extern void cmn_err(int, const char *, ...);
-extern void vcmn_err(int, const char *, va_list);
-extern void vpanic(const char *, va_list);
+extern void cmn_err(int, const char *, ...)
+    __attribute__((format(printf, 2, 3)));
+extern void vcmn_err(int, const char *, va_list)
+    __attribute__((format(printf, 2, 0)));
+extern void vpanic(const char *, va_list)
+    __attribute__((format(printf, 1, 0), __noreturn__));
 
 #define	fm_panic	panic
+
+#define	cmn_err_once(ce, ...)				\
+do {							\
+	static volatile uint32_t printed = 0;		\
+	if (atomic_cas_32(&printed, 0, 1) == 0) {	\
+		cmn_err(ce, __VA_ARGS__);		\
+	}						\
+} while (0)
+
+#define	vcmn_err_once(ce, fmt, ap)			\
+do {							\
+	static volatile uint32_t printed = 0;		\
+	if (atomic_cas_32(&printed, 0, 1) == 0) {	\
+		vcmn_err(ce, fmt, ap);			\
+	}						\
+} while (0)
 
 #endif /* SPL_CMN_ERR_H */

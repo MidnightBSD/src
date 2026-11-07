@@ -7,7 +7,7 @@
 # You may not use this file except in compliance with the License.
 #
 # You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
-# or http://www.opensolaris.org/os/licensing.
+# or https://opensource.org/licenses/CDDL-1.0.
 # See the License for the specific language governing permissions
 # and limitations under the License.
 #
@@ -35,14 +35,14 @@
 #
 # STRATEGY:
 #	1. Create various pools with different ashift values.
-#	2. Verify 'attach -o ashift=<n>' works only with allowed values.
+#	2. Verify 'attach' works.
 #
 
 verify_runnable "global"
 
 function cleanup
 {
-	log_must set_tunable64 VDEV_FILE_PHYSICAL_ASHIFT $orig_ashift
+	log_must set_tunable32 VDEV_FILE_PHYSICAL_ASHIFT $orig_ashift
 	poolexists $TESTPOOL1 && destroy_pool $TESTPOOL1
 	rm -f $disk1 $disk2
 }
@@ -61,40 +61,19 @@ orig_ashift=$(get_tunable VDEV_FILE_PHYSICAL_ASHIFT)
 # the ashift using the -o ashift property should still
 # be honored.
 #
-log_must set_tunable64 VDEV_FILE_PHYSICAL_ASHIFT 16
+log_must set_tunable32 VDEV_FILE_PHYSICAL_ASHIFT 16
 
 typeset ashifts=("9" "10" "11" "12" "13" "14" "15" "16")
 for ashift in ${ashifts[@]}
 do
-	for cmdval in ${ashifts[@]}
-	do
-		log_must zpool create -o ashift=$ashift $TESTPOOL1 $disk1
-		verify_ashift $disk1 $ashift
-		if [[ $? -ne 0 ]]
-		then
-			log_fail "Pool was created without setting ashift " \
-			    "value to $ashift"
-		fi
-		# ashift_of(attached_disk) <= ashift_of(existing_vdev)
-		if [[ $cmdval -le $ashift ]]
-		then
-			log_must zpool attach -o ashift=$cmdval $TESTPOOL1 \
-			    $disk1 $disk2
-			verify_ashift $disk2 $ashift
-			if [[ $? -ne 0 ]]
-			then
-				log_fail "Device was attached without " \
-				    "setting ashift value to $ashift"
-			fi
-		else
-			log_mustnot zpool attach -o ashift=$cmdval $TESTPOOL1 \
-			    $disk1 $disk2
-		fi
-		# clean things for the next run
-		log_must zpool destroy $TESTPOOL1
-		log_must zpool labelclear $disk1
-		log_must zpool labelclear $disk2
-	done
+	log_must zpool create -o ashift=$ashift $TESTPOOL1 $disk1
+	log_must verify_ashift $disk1 $ashift
+	log_must zpool attach $TESTPOOL1 $disk1 $disk2
+	log_must verify_ashift $disk2 $ashift
+	# clean things for the next run
+	log_must zpool destroy $TESTPOOL1
+	log_must zpool labelclear $disk1
+	log_must zpool labelclear $disk2
 done
 
 typeset badvals=("off" "on" "1" "8" "17" "1b" "ff" "-")

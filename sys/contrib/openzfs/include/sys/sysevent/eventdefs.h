@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -123,6 +123,11 @@ extern "C" {
 #define	ESC_ZFS_TRIM_CANCEL		"trim_cancel"
 #define	ESC_ZFS_TRIM_RESUME		"trim_resume"
 #define	ESC_ZFS_TRIM_SUSPEND		"trim_suspend"
+#define	ESC_ZFS_ERRORSCRUB_START	"errorscrub_start"
+#define	ESC_ZFS_ERRORSCRUB_FINISH	"errorscrub_finish"
+#define	ESC_ZFS_ERRORSCRUB_ABORT	"errorscrub_abort"
+#define	ESC_ZFS_ERRORSCRUB_RESUME	"errorscrub_resume"
+#define	ESC_ZFS_ERRORSCRUB_PAUSED	"errorscrub_paused"
 
 /*
  * datalink subclass definitions.

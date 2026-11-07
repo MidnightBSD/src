@@ -7,7 +7,7 @@
 # You may not use this file except in compliance with the License.
 #
 # You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
-# or http://www.opensolaris.org/os/licensing.
+# or https://opensource.org/licenses/CDDL-1.0.
 # See the License for the specific language governing permissions
 # and limitations under the License.
 #
@@ -70,8 +70,12 @@ if is_freebsd; then
 	recursive=$(get_tunable VOL_RECURSIVE)
 	log_must set_tunable64 VOL_RECURSIVE 1
 fi
-log_must zpool add $TESTPOOL $ZVOL_DEVDIR/$TESTPOOL1/$TESTVOL
+log_must zpool add --allow-ashift-mismatch $TESTPOOL $ZVOL_DEVDIR/$TESTPOOL1/$TESTVOL
 
 log_must vdevs_in_pool "$TESTPOOL" "$ZVOL_DEVDIR/$TESTPOOL1/$TESTVOL"
+
+# Give zed a chance to finish processing the event, otherwise
+# a race condition can lead to stuck "zpool destroy $TESTPOOL"
+sleep 1
 
 log_pass "'zpool add <pool> <vdev> ...' adds zfs volume to the pool successfully"

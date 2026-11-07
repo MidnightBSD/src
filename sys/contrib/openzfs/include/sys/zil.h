@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -33,6 +33,7 @@
 #include <sys/zio.h>
 #include <sys/dmu.h>
 #include <sys/zio_crypt.h>
+#include <sys/wmsum.h>
 
 #ifdef	__cplusplus
 extern "C" {
@@ -162,7 +163,11 @@ typedef enum zil_create {
 #define	TX_MKDIR_ATTR		18	/* mkdir with attr */
 #define	TX_MKDIR_ACL_ATTR	19	/* mkdir with ACL + attrs */
 #define	TX_WRITE2		20	/* dmu_sync EALREADY write */
-#define	TX_MAX_TYPE		21	/* Max transaction type */
+#define	TX_SETSAXATTR		21	/* Set sa xattrs on file */
+#define	TX_RENAME_EXCHANGE	22	/* Atomic swap via renameat2 */
+#define	TX_RENAME_WHITEOUT	23	/* Atomic whiteout via renameat2 */
+#define	TX_CLONE_RANGE		24	/* Clone a file range */
+#define	TX_MAX_TYPE		25	/* Max transaction type */
 
 /*
  * The transactions for mkdir, symlink, remove, rmdir, link, and rename
@@ -172,9 +177,9 @@ typedef enum zil_create {
 #define	TX_CI	((uint64_t)0x1 << 63) /* case-insensitive behavior requested */
 
 /*
- * Transactions for write, truncate, setattr, acl_v0, and acl can be logged
- * out of order.  For convenience in the code, all such records must have
- * lr_foid at the same offset.
+ * Transactions for operations below can be logged out of order.
+ * For convenience in the code, all such records must have lr_foid
+ * at the same offset.
  */
 #define	TX_OOO(txtype)			\
 	((txtype) == TX_WRITE ||	\
@@ -182,7 +187,9 @@ typedef enum zil_create {
 	(txtype) == TX_SETATTR ||	\
 	(txtype) == TX_ACL_V0 ||	\
 	(txtype) == TX_ACL ||		\
-	(txtype) == TX_WRITE2)
+	(txtype) == TX_WRITE2 ||	\
+	(txtype) == TX_SETSAXATTR ||	\
+	(txtype) == TX_CLONE_RANGE)
 
 /*
  * The number of dnode slots consumed by the object is stored in the 8
@@ -241,6 +248,7 @@ typedef struct {
 	uint32_t	lr_attr_masksize; /* number of elements in array */
 	uint32_t	lr_attr_bitmap; /* First entry of array */
 	/* remainder of array and additional lr_attr_end_t fields */
+	uint8_t		lr_attr_data[];
 } lr_attr_t;
 
 /*
@@ -257,9 +265,14 @@ typedef struct {
 	uint64_t	lr_gen;		/* generation (txg of creation) */
 	uint64_t	lr_crtime[2];	/* creation time */
 	uint64_t	lr_rdev;	/* rdev of object to create */
+} _lr_create_t;
+
+typedef struct {
+	_lr_create_t	lr_create;	/* common create portion */
 	/* name of object to create follows this */
 	/* for symlinks, link content follows name */
 	/* for creates with xvattr data, the name follows the xvattr info */
+	uint8_t		lr_data[];
 } lr_create_t;
 
 /*
@@ -286,18 +299,20 @@ typedef struct {
  * and group will be in lr_create.  Name follows ACL data.
  */
 typedef struct {
-	lr_create_t	lr_create;	/* common create portion */
+	_lr_create_t	lr_create;	/* common create portion */
 	uint64_t	lr_aclcnt;	/* number of ACEs in ACL */
 	uint64_t	lr_domcnt;	/* number of unique domains */
 	uint64_t	lr_fuidcnt;	/* number of real fuids */
 	uint64_t	lr_acl_bytes;	/* number of bytes in ACL */
 	uint64_t	lr_acl_flags;	/* ACL flags */
+	uint8_t		lr_data[];
 } lr_acl_create_t;
 
 typedef struct {
 	lr_t		lr_common;	/* common portion of log record */
 	uint64_t	lr_doid;	/* obj id of directory */
 	/* name of object to remove follows this */
+	uint8_t		lr_data[];
 } lr_remove_t;
 
 typedef struct {
@@ -305,14 +320,34 @@ typedef struct {
 	uint64_t	lr_doid;	/* obj id of directory */
 	uint64_t	lr_link_obj;	/* obj id of link */
 	/* name of object to link follows this */
+	uint8_t		lr_data[];
 } lr_link_t;
 
 typedef struct {
 	lr_t		lr_common;	/* common portion of log record */
 	uint64_t	lr_sdoid;	/* obj id of source directory */
 	uint64_t	lr_tdoid;	/* obj id of target directory */
+} _lr_rename_t;
+
+typedef struct {
+	_lr_rename_t	lr_rename;	/* common rename portion */
 	/* 2 strings: names of source and destination follow this */
+	uint8_t		lr_data[];
 } lr_rename_t;
+
+typedef struct {
+	_lr_rename_t	lr_rename;	/* common rename portion */
+	/* members related to the whiteout file (based on _lr_create_t) */
+	uint64_t	lr_wfoid;	/* obj id of the new whiteout file */
+	uint64_t	lr_wmode;	/* mode of object */
+	uint64_t	lr_wuid;	/* uid of whiteout */
+	uint64_t	lr_wgid;	/* gid of whiteout */
+	uint64_t	lr_wgen;	/* generation (txg of creation) */
+	uint64_t	lr_wcrtime[2];	/* creation time */
+	uint64_t	lr_wrdev;	/* always makedev(0, 0) */
+	/* 2 strings: names of source and destination follow this */
+	uint8_t		lr_data[];
+} lr_rename_whiteout_t;
 
 typedef struct {
 	lr_t		lr_common;	/* common portion of log record */
@@ -322,6 +357,7 @@ typedef struct {
 	uint64_t	lr_blkoff;	/* no longer used */
 	blkptr_t	lr_blkptr;	/* spa block pointer for replay */
 	/* write data will follow for small writes */
+	uint8_t		lr_data[];
 } lr_write_t;
 
 typedef struct {
@@ -342,13 +378,23 @@ typedef struct {
 	uint64_t	lr_atime[2];	/* access time */
 	uint64_t	lr_mtime[2];	/* modification time */
 	/* optional attribute lr_attr_t may be here */
+	uint8_t		lr_data[];
 } lr_setattr_t;
+
+typedef struct {
+	lr_t		lr_common;	/* common portion of log record */
+	uint64_t	lr_foid;	/* file object to change attributes */
+	uint64_t	lr_size;
+	/* xattr name and value follows */
+	uint8_t		lr_data[];
+} lr_setsaxattr_t;
 
 typedef struct {
 	lr_t		lr_common;	/* common portion of log record */
 	uint64_t	lr_foid;	/* obj id of file */
 	uint64_t	lr_aclcnt;	/* number of acl entries */
 	/* lr_aclcnt number of ace_t entries follow this */
+	uint8_t		lr_data[];
 } lr_acl_v0_t;
 
 typedef struct {
@@ -360,7 +406,19 @@ typedef struct {
 	uint64_t	lr_acl_bytes;	/* number of bytes in ACL */
 	uint64_t	lr_acl_flags;	/* ACL flags */
 	/* lr_acl_bytes number of variable sized ace's follows */
+	uint8_t		lr_data[];
 } lr_acl_t;
+
+typedef struct {
+	lr_t		lr_common;	/* common portion of log record */
+	uint64_t	lr_foid;	/* file object to clone into */
+	uint64_t	lr_offset;	/* offset to clone to */
+	uint64_t	lr_length;	/* length of the blocks to clone */
+	uint64_t	lr_blksz;	/* file's block size */
+	uint64_t	lr_nbps;	/* number of block pointers */
+	/* block pointers of the blocks to clone follows */
+	blkptr_t	lr_bps[];
+} lr_clone_range_t;
 
 /*
  * ZIL structure definitions, interface function prototype and globals.
@@ -410,7 +468,7 @@ typedef struct itx {
 	uint64_t	itx_oid;	/* object id */
 	uint64_t	itx_gen;	/* gen number for zfs_get_data */
 	lr_t		itx_lr;		/* common part of log record */
-	/* followed by type-specific part of lr_xx_t and its immediate data */
+	uint8_t		itx_lr_data[];	/* type-specific part of lr_xx_t */
 } itx_t;
 
 /*
@@ -451,26 +509,54 @@ typedef struct zil_stats {
 	 * Transactions which have been allocated to the "normal"
 	 * (i.e. not slog) storage pool. Note that "bytes" accumulate
 	 * the actual log record sizes - which do not include the actual
-	 * data in case of indirect writes.
+	 * data in case of indirect writes.  bytes <= write <= alloc.
 	 */
 	kstat_named_t zil_itx_metaslab_normal_count;
 	kstat_named_t zil_itx_metaslab_normal_bytes;
+	kstat_named_t zil_itx_metaslab_normal_write;
+	kstat_named_t zil_itx_metaslab_normal_alloc;
 
 	/*
 	 * Transactions which have been allocated to the "slog" storage pool.
 	 * If there are no separate log devices, this is the same as the
-	 * "normal" pool.
+	 * "normal" pool.  bytes <= write <= alloc.
 	 */
 	kstat_named_t zil_itx_metaslab_slog_count;
 	kstat_named_t zil_itx_metaslab_slog_bytes;
-} zil_stats_t;
+	kstat_named_t zil_itx_metaslab_slog_write;
+	kstat_named_t zil_itx_metaslab_slog_alloc;
+} zil_kstat_values_t;
 
-extern zil_stats_t zil_stats;
+typedef struct zil_sums {
+	wmsum_t zil_commit_count;
+	wmsum_t zil_commit_writer_count;
+	wmsum_t zil_itx_count;
+	wmsum_t zil_itx_indirect_count;
+	wmsum_t zil_itx_indirect_bytes;
+	wmsum_t zil_itx_copied_count;
+	wmsum_t zil_itx_copied_bytes;
+	wmsum_t zil_itx_needcopy_count;
+	wmsum_t zil_itx_needcopy_bytes;
+	wmsum_t zil_itx_metaslab_normal_count;
+	wmsum_t zil_itx_metaslab_normal_bytes;
+	wmsum_t zil_itx_metaslab_normal_write;
+	wmsum_t zil_itx_metaslab_normal_alloc;
+	wmsum_t zil_itx_metaslab_slog_count;
+	wmsum_t zil_itx_metaslab_slog_bytes;
+	wmsum_t zil_itx_metaslab_slog_write;
+	wmsum_t zil_itx_metaslab_slog_alloc;
+} zil_sums_t;
 
-#define	ZIL_STAT_INCR(stat, val) \
-    atomic_add_64(&zil_stats.stat.value.ui64, (val));
-#define	ZIL_STAT_BUMP(stat) \
-    ZIL_STAT_INCR(stat, 1);
+#define	ZIL_STAT_INCR(zil, stat, val) \
+	do { \
+		int64_t tmpval = (val); \
+		wmsum_add(&(zil_sums_global.stat), tmpval); \
+		if ((zil)->zl_sums) \
+			wmsum_add(&((zil)->zl_sums->stat), tmpval); \
+	} while (0)
+
+#define	ZIL_STAT_BUMP(zil, stat) \
+    ZIL_STAT_INCR(zil, stat, 1);
 
 typedef int zil_parse_blk_func_t(zilog_t *zilog, const blkptr_t *bp, void *arg,
     uint64_t txg);
@@ -490,13 +576,14 @@ extern void	zil_fini(void);
 extern zilog_t	*zil_alloc(objset_t *os, zil_header_t *zh_phys);
 extern void	zil_free(zilog_t *zilog);
 
-extern zilog_t	*zil_open(objset_t *os, zil_get_data_t *get_data);
+extern zilog_t	*zil_open(objset_t *os, zil_get_data_t *get_data,
+    zil_sums_t *zil_sums);
 extern void	zil_close(zilog_t *zilog);
 
-extern void	zil_replay(objset_t *os, void *arg,
-    zil_replay_func_t *replay_func[TX_MAX_TYPE]);
+extern boolean_t zil_replay(objset_t *os, void *arg,
+    zil_replay_func_t *const replay_func[TX_MAX_TYPE]);
 extern boolean_t zil_replaying(zilog_t *zilog, dmu_tx_t *tx);
-extern void	zil_destroy(zilog_t *zilog, boolean_t keep_first);
+extern boolean_t zil_destroy(zilog_t *zilog, boolean_t keep_first);
 extern void	zil_destroy_sync(zilog_t *zilog, dmu_tx_t *tx);
 
 extern itx_t	*zil_itx_create(uint64_t txtype, size_t lrsize);
@@ -528,7 +615,12 @@ extern void	zil_set_sync(zilog_t *zilog, uint64_t syncval);
 extern void	zil_set_logbias(zilog_t *zilog, uint64_t slogval);
 
 extern uint64_t	zil_max_copied_data(zilog_t *zilog);
-extern uint64_t	zil_max_log_data(zilog_t *zilog);
+extern uint64_t	zil_max_log_data(zilog_t *zilog, size_t hdrsize);
+
+extern void zil_sums_init(zil_sums_t *zs);
+extern void zil_sums_fini(zil_sums_t *zs);
+extern void zil_kstat_values_update(zil_kstat_values_t *zs,
+    zil_sums_t *zil_sums);
 
 extern int zil_replay_disable;
 

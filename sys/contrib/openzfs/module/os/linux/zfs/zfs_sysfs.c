@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -89,6 +89,7 @@ struct zfs_mod_kobj {
 static zfs_mod_kobj_t kernel_features_kobj;
 static zfs_mod_kobj_t pool_features_kobj;
 static zfs_mod_kobj_t dataset_props_kobj;
+static zfs_mod_kobj_t vdev_props_kobj;
 static zfs_mod_kobj_t pool_props_kobj;
 
 /*
@@ -109,8 +110,17 @@ zfs_kobj_fini(zfs_mod_kobj_t *zkobj)
 	}
 
 	/* kobject_put() will call zfs_kobj_release() to release memory */
-	kobject_del(&zkobj->zko_kobj);
-	kobject_put(&zkobj->zko_kobj);
+	/*
+	 * Special case note:
+	 *
+	 * We have to check for 'zkobj->zko_kobj.name != NULL' as
+	 * a workaround for #16249 which was added to zfs-2.2.4
+	 * and fixed (with this change) in zfs-2.2.5.
+	 */
+	if (zkobj->zko_kobj.name != NULL) {
+		kobject_del(&zkobj->zko_kobj);
+		kobject_put(&zkobj->zko_kobj);
+	}
 }
 
 static void
@@ -230,7 +240,7 @@ zfs_kobj_add(zfs_mod_kobj_t *zkobj, struct kobject *parent, const char *name)
 /*
  * Each zfs property has these common attributes
  */
-static const char *zprop_attrs[]  = {
+static const char *const zprop_attrs[]  = {
 	"type",
 	"readonly",
 	"setonce",
@@ -243,7 +253,7 @@ static const char *zprop_attrs[]  = {
 #define	ZFS_PROP_ATTR_COUNT	ARRAY_SIZE(zprop_attrs)
 #define	ZPOOL_PROP_ATTR_COUNT	(ZFS_PROP_ATTR_COUNT - 1)
 
-static const char *zprop_types[]  = {
+static const char *const zprop_types[]  = {
 	"number",
 	"string",
 	"index",
@@ -254,7 +264,7 @@ typedef struct zfs_type_map {
 	const char	*ztm_name;
 } zfs_type_map_t;
 
-static zfs_type_map_t type_map[] = {
+static const zfs_type_map_t type_map[] = {
 	{ZFS_TYPE_FILESYSTEM,	"filesystem"},
 	{ZFS_TYPE_SNAPSHOT,	"snapshot"},
 	{ZFS_TYPE_VOLUME,	"volume"},
@@ -278,11 +288,11 @@ zprop_sysfs_show(const char *attr_name, const zprop_desc_t *property,
 
 		for (int i = 0; i < ARRAY_SIZE(type_map); i++) {
 			if (type_map[i].ztm_type & property->pd_types)  {
-				len += snprintf(buf + len, buflen - len, "%s ",
-				    type_map[i].ztm_name);
+				len += kmem_scnprintf(buf + len, buflen - len,
+				    "%s ", type_map[i].ztm_name);
 			}
 		}
-		len += snprintf(buf + len, buflen - len, "\n");
+		len += kmem_scnprintf(buf + len, buflen - len, "\n");
 		return (len);
 	}
 
@@ -339,6 +349,20 @@ dataset_property_show(struct kobject *kobj, struct attribute *attr, char *buf)
 }
 
 static ssize_t
+vdev_property_show(struct kobject *kobj, struct attribute *attr, char *buf)
+{
+	vdev_prop_t prop = vdev_name_to_prop(kobject_name(kobj));
+	zprop_desc_t *prop_tbl = vdev_prop_get_table();
+	ssize_t len;
+
+	ASSERT3U(prop, <, VDEV_NUM_PROPS);
+
+	len = zprop_sysfs_show(attr->name, &prop_tbl[prop], buf, PAGE_SIZE);
+
+	return (len);
+}
+
+static ssize_t
 pool_property_show(struct kobject *kobj, struct attribute *attr, char *buf)
 {
 	zpool_prop_t prop = zpool_name_to_prop(kobject_name(kobj));
@@ -361,7 +385,7 @@ pool_property_show(struct kobject *kobj, struct attribute *attr, char *buf)
  * A user process can easily check if the running zfs kernel module
  * supports the new feature.
  */
-static const char *zfs_kernel_features[] = {
+static const char *const zfs_kernel_features[] = {
 	/* --> Add new kernel features here */
 	"com.delphix:vdev_initialize",
 	"org.zfsonlinux:vdev_trim",
@@ -429,7 +453,7 @@ zfs_kernel_features_init(zfs_mod_kobj_t *zfs_kobj, struct kobject *parent)
 /*
  * Each pool feature has these common attributes
  */
-static const char *pool_feature_attrs[]  = {
+static const char *const pool_feature_attrs[]  = {
 	"description",
 	"guid",
 	"uname",
@@ -582,6 +606,14 @@ zfs_sysfs_properties_init(zfs_mod_kobj_t *zfs_kobj, struct kobject *parent,
 		context.p2k_show_func = pool_property_show;
 		err = zfs_kobj_init(zfs_kobj, 0, ZPOOL_NUM_PROPS,
 		    pool_property_show);
+	} else if (type == ZFS_TYPE_VDEV) {
+		name = ZFS_SYSFS_VDEV_PROPERTIES;
+		context.p2k_table = vdev_prop_get_table();
+		context.p2k_attr_count = ZPOOL_PROP_ATTR_COUNT;
+		context.p2k_parent = zfs_kobj;
+		context.p2k_show_func = vdev_property_show;
+		err = zfs_kobj_init(zfs_kobj, 0, VDEV_NUM_PROPS,
+		    vdev_property_show);
 	} else {
 		name = ZFS_SYSFS_DATASET_PROPERTIES;
 		context.p2k_table = zfs_prop_get_table();
@@ -644,12 +676,22 @@ zfs_sysfs_init(void)
 		return;
 	}
 
+	err = zfs_sysfs_properties_init(&vdev_props_kobj, parent,
+	    ZFS_TYPE_VDEV);
+	if (err) {
+		zfs_kobj_fini(&kernel_features_kobj);
+		zfs_kobj_fini(&pool_features_kobj);
+		zfs_kobj_fini(&pool_props_kobj);
+		return;
+	}
+
 	err = zfs_sysfs_properties_init(&dataset_props_kobj, parent,
 	    ZFS_TYPE_FILESYSTEM);
 	if (err) {
 		zfs_kobj_fini(&kernel_features_kobj);
 		zfs_kobj_fini(&pool_features_kobj);
 		zfs_kobj_fini(&pool_props_kobj);
+		zfs_kobj_fini(&vdev_props_kobj);
 		return;
 	}
 }
@@ -662,6 +704,7 @@ zfs_sysfs_fini(void)
 	 */
 	zfs_kobj_fini(&kernel_features_kobj);
 	zfs_kobj_fini(&pool_features_kobj);
-	zfs_kobj_fini(&dataset_props_kobj);
 	zfs_kobj_fini(&pool_props_kobj);
+	zfs_kobj_fini(&vdev_props_kobj);
+	zfs_kobj_fini(&dataset_props_kobj);
 }

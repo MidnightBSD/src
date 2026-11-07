@@ -7,7 +7,7 @@
 # You may not use this file except in compliance with the License.
 #
 # You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
-# or http://www.opensolaris.org/os/licensing.
+# or https://opensource.org/licenses/CDDL-1.0.
 # See the License for the specific language governing permissions
 # and limitations under the License.
 #
@@ -33,7 +33,9 @@
 
 #
 # DESCRIPTION:
-# 'zfs set mountpoint/sharenfs' should fail when the mountpoint is invalid
+# 'zfs set mountpoint/sharenfs' should set the property when mountpoint
+#  is invalid. Setting the property should be successful, but dataset
+# should not be mounted, as mountpoint is invalid.
 #
 # STRATEGY:
 # 1. Create invalid scenarios
@@ -62,10 +64,12 @@ longpath=$(gen_dataset_name 1030 "abcdefg")
 log_must zfs create -o mountpoint=legacy $TESTPOOL/foo
 
 # Do the negative testing about "property may be set but unable to remount filesystem"
-log_mustnot eval "zfs set mountpoint=$badpath $TESTPOOL/foo >/dev/null 2>&1"
+set_n_check_prop "$badpath" "mountpoint" "$TESTPOOL/foo"
+log_mustnot ismounted $TESTPOOL/foo
 
 # Do the negative testing about "property may be set but unable to reshare filesystem"
-log_mustnot eval "zfs set sharenfs=on $TESTPOOL/foo >/dev/null 2>&1"
+set_n_check_prop "on" "sharenfs" "$TESTPOOL/foo"
+log_mustnot ismounted $TESTPOOL/foo
 
 # Do the negative testing about "sharenfs property can not be set to null"
 log_mustnot eval "zfs set sharenfs= $TESTPOOL/foo >/dev/null 2>&1"

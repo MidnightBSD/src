@@ -7,7 +7,7 @@
 # You may not use this file except in compliance with the License.
 #
 # You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
-# or http://www.opensolaris.org/os/licensing.
+# or https://opensource.org/licenses/CDDL-1.0.
 # See the License for the specific language governing permissions
 # and limitations under the License.
 #
@@ -55,7 +55,6 @@ log_assert "zpool history limitation test."
 log_onexit cleanup
 
 mntpnt=$(get_prop mountpoint $TESTPOOL)
-(( $? != 0 )) && log_fail "get_prop mountpoint $TESTPOOL"
 
 VDEV0=$mntpnt/vdev0
 log_must mkfile $MINVDEVSIZE $VDEV0
@@ -65,7 +64,7 @@ log_must zpool create $spool $VDEV0
 log_must zfs create $spool/$sfs
 
 typeset -i orig_count=$(zpool history $spool | wc -l)
-typeset orig_md5=$(zpool history $spool | head -2 | md5digest)
+typeset orig_hash=$(zpool history $spool | head -2 | xxh128digest)
 typeset -i i=0
 while ((i < 300)); do
 	zfs set compression=off $spool/$sfs
@@ -79,20 +78,20 @@ done
 
 TMPFILE=$TEST_BASE_DIR/spool.$$
 zpool history $spool >$TMPFILE
-typeset -i entry_count=$(wc -l $TMPFILE | awk '{print $1}')
-typeset final_md5=$(head -2 $TMPFILE | md5digest)
+typeset -i entry_count=$(wc -l < $TMPFILE)
+typeset final_hash=$(head -2 $TMPFILE | xxh128digest)
 
-grep 'zpool create' $TMPFILE >/dev/null 2>&1 ||
+grep -q 'zpool create' $TMPFILE ||
     log_fail "'zpool create' was not found in pool history"
 
-grep 'zfs create' $TMPFILE >/dev/null 2>&1 &&
+grep -q 'zfs create' $TMPFILE &&
     log_fail "'zfs create' was found in pool history"
 
-grep 'zfs set compress' $TMPFILE >/dev/null 2>&1 ||
+grep -q 'zfs set compress' $TMPFILE ||
     log_fail "'zfs set compress' was found in pool history"
 
 # Verify that the creation of the pool was preserved in the history.
-if [[ $orig_md5 != $final_md5 ]]; then
+if [[ $orig_hash != $final_hash ]]; then
 	log_fail "zpool creation history was not preserved."
 fi
 

@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -41,12 +41,12 @@
  * determined to be the lowest value that eliminates the measurable effect
  * of lock contention from this code path.
  */
-int dmu_object_alloc_chunk_shift = 7;
+uint_t dmu_object_alloc_chunk_shift = 7;
 
 static uint64_t
 dmu_object_alloc_impl(objset_t *os, dmu_object_type_t ot, int blocksize,
     int indirect_blockshift, dmu_object_type_t bonustype, int bonuslen,
-    int dnodesize, dnode_t **allocated_dnode, void *tag, dmu_tx_t *tx)
+    int dnodesize, dnode_t **allocated_dnode, const void *tag, dmu_tx_t *tx)
 {
 	uint64_t object;
 	uint64_t L1_dnode_count = DNODES_PER_BLOCK <<
@@ -55,7 +55,7 @@ dmu_object_alloc_impl(objset_t *os, dmu_object_type_t ot, int blocksize,
 	int dn_slots = dnodesize >> DNODE_SHIFT;
 	boolean_t restarted = B_FALSE;
 	uint64_t *cpuobj = NULL;
-	int dnodes_per_chunk = 1 << dmu_object_alloc_chunk_shift;
+	uint_t dnodes_per_chunk = 1 << dmu_object_alloc_chunk_shift;
 	int error;
 
 	cpuobj = &os->os_obj_next_percpu[CPU_SEQID_UNSTABLE %
@@ -160,7 +160,7 @@ dmu_object_alloc_impl(objset_t *os, dmu_object_type_t ot, int blocksize,
 			 * is not suitably aligned.
 			 */
 			os->os_obj_next_chunk =
-			    P2ALIGN(object, dnodes_per_chunk) +
+			    P2ALIGN_TYPED(object, dnodes_per_chunk, uint64_t) +
 			    dnodes_per_chunk;
 			(void) atomic_swap_64(cpuobj, object);
 			mutex_exit(&os->os_obj_lock);
@@ -255,7 +255,7 @@ dmu_object_alloc_dnsize(objset_t *os, dmu_object_type_t ot, int blocksize,
 uint64_t
 dmu_object_alloc_hold(objset_t *os, dmu_object_type_t ot, int blocksize,
     int indirect_blockshift, dmu_object_type_t bonustype, int bonuslen,
-    int dnodesize, dnode_t **allocated_dnode, void *tag, dmu_tx_t *tx)
+    int dnodesize, dnode_t **allocated_dnode, const void *tag, dmu_tx_t *tx)
 {
 	return (dmu_object_alloc_impl(os, ot, blocksize, indirect_blockshift,
 	    bonustype, bonuslen, dnodesize, allocated_dnode, tag, tx));
@@ -409,6 +409,8 @@ dmu_object_next(objset_t *os, uint64_t *objectp, boolean_t hole, uint64_t txg)
 		 * hand off to dnode_next_offset() for further scanning.
 		 */
 		while (i <= last_obj) {
+			if (i == 0)
+				return (SET_ERROR(ESRCH));
 			error = dmu_object_info(os, i, &doi);
 			if (error == ENOENT) {
 				if (hole) {
@@ -518,6 +520,6 @@ EXPORT_SYMBOL(dmu_object_zapify);
 EXPORT_SYMBOL(dmu_object_free_zapified);
 
 /* BEGIN CSTYLED */
-ZFS_MODULE_PARAM(zfs, , dmu_object_alloc_chunk_shift, INT, ZMOD_RW,
+ZFS_MODULE_PARAM(zfs, , dmu_object_alloc_chunk_shift, UINT, ZMOD_RW,
 	"CPU-specific allocator grabs 2^N objects at once");
 /* END CSTYLED */

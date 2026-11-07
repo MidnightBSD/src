@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -34,18 +34,16 @@
 
 #include <sys/vfs.h>
 
-#ifdef FS_PROJINHERIT_FL
-#define	ZFS_PROJINHERIT_FL	FS_PROJINHERIT_FL
-#else
-#define	ZFS_PROJINHERIT_FL	0x20000000
-#endif
-
 #ifdef FS_IOC_FSGETXATTR
 typedef struct fsxattr zfsxattr_t;
 
 #define	ZFS_IOC_FSGETXATTR	FS_IOC_FSGETXATTR
 #define	ZFS_IOC_FSSETXATTR	FS_IOC_FSSETXATTR
 #else
+/* Non-Linux OS */
+#define	FS_PROJINHERIT_FL	0x20000000
+#define	FS_XFLAG_PROJINHERIT	FS_PROJINHERIT_FL
+
 struct zfsxattr {
 	uint32_t	fsx_xflags;	/* xflags field value (get/set) */
 	uint32_t	fsx_extsize;	/* extsize field value (get/set) */

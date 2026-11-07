@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -24,6 +24,7 @@
  */
 
 
+#include <sys/sysmacros.h>
 #include <sys/zfs_ctldir.h>
 #include <sys/zfs_vfsops.h>
 #include <sys/zfs_vnops.h>
@@ -32,7 +33,6 @@
 #include <sys/vfs.h>
 #include <sys/zpl.h>
 #include <sys/file.h>
-
 
 static struct dentry *
 zpl_lookup(struct inode *dir, struct dentry *dentry, unsigned int flags)
@@ -112,18 +112,22 @@ zpl_lookup(struct inode *dir, struct dentry *dentry, unsigned int flags)
 }
 
 void
-zpl_vap_init(vattr_t *vap, struct inode *dir, umode_t mode, cred_t *cr)
+zpl_vap_init(vattr_t *vap, struct inode *dir, umode_t mode, cred_t *cr,
+    zidmap_t *mnt_ns)
 {
 	vap->va_mask = ATTR_MODE;
 	vap->va_mode = mode;
-	vap->va_uid = crgetuid(cr);
 
-	if (dir && dir->i_mode & S_ISGID) {
+	vap->va_uid = zfs_vfsuid_to_uid(mnt_ns,
+	    zfs_i_user_ns(dir), crgetuid(cr));
+
+	if (dir->i_mode & S_ISGID) {
 		vap->va_gid = KGID_TO_SGID(dir->i_gid);
 		if (S_ISDIR(mode))
 			vap->va_mode |= S_ISGID;
 	} else {
-		vap->va_gid = crgetgid(cr);
+		vap->va_gid = zfs_vfsgid_to_gid(mnt_ns,
+		    zfs_i_user_ns(dir), crgetgid(cr));
 	}
 }
 
@@ -143,14 +147,17 @@ zpl_create(struct inode *dir, struct dentry *dentry, umode_t mode, bool flag)
 	vattr_t *vap;
 	int error;
 	fstrans_cookie_t cookie;
+#if !(defined(HAVE_IOPS_CREATE_USERNS) || defined(HAVE_IOPS_CREATE_IDMAP))
+	zidmap_t *user_ns = kcred->user_ns;
+#endif
 
 	crhold(cr);
 	vap = kmem_zalloc(sizeof (vattr_t), KM_SLEEP);
-	zpl_vap_init(vap, dir, mode, cr);
+	zpl_vap_init(vap, dir, mode, cr, user_ns);
 
 	cookie = spl_fstrans_mark();
 	error = -zfs_create(ITOZ(dir), dname(dentry), vap, 0,
-	    mode, &zp, cr, 0, NULL);
+	    mode, &zp, cr, 0, NULL, user_ns);
 	if (error == 0) {
 		error = zpl_xattr_security_init(ZTOI(zp), dir, &dentry->d_name);
 		if (error == 0)
@@ -190,6 +197,9 @@ zpl_mknod(struct inode *dir, struct dentry *dentry, umode_t mode,
 	vattr_t *vap;
 	int error;
 	fstrans_cookie_t cookie;
+#if !(defined(HAVE_IOPS_MKNOD_USERNS) || defined(HAVE_IOPS_MKNOD_IDMAP))
+	zidmap_t *user_ns = kcred->user_ns;
+#endif
 
 	/*
 	 * We currently expect Linux to supply rdev=0 for all sockets
@@ -200,12 +210,12 @@ zpl_mknod(struct inode *dir, struct dentry *dentry, umode_t mode,
 
 	crhold(cr);
 	vap = kmem_zalloc(sizeof (vattr_t), KM_SLEEP);
-	zpl_vap_init(vap, dir, mode, cr);
+	zpl_vap_init(vap, dir, mode, cr, user_ns);
 	vap->va_rdev = rdev;
 
 	cookie = spl_fstrans_mark();
 	error = -zfs_create(ITOZ(dir), dname(dentry), vap, 0,
-	    mode, &zp, cr, 0, NULL);
+	    mode, &zp, cr, 0, NULL, user_ns);
 	if (error == 0) {
 		error = zpl_xattr_security_init(ZTOI(zp), dir, &dentry->d_name);
 		if (error == 0)
@@ -228,7 +238,6 @@ zpl_mknod(struct inode *dir, struct dentry *dentry, umode_t mode,
 	return (error);
 }
 
-#ifdef HAVE_TMPFILE
 static int
 #ifdef HAVE_TMPFILE_IDMAP
 zpl_tmpfile(struct mnt_idmap *userns, struct inode *dir,
@@ -250,6 +259,9 @@ zpl_tmpfile(struct inode *dir, struct dentry *dentry, umode_t mode)
 	vattr_t *vap;
 	int error;
 	fstrans_cookie_t cookie;
+#if !(defined(HAVE_TMPFILE_USERNS) || defined(HAVE_TMPFILE_IDMAP))
+	zidmap_t *userns = kcred->user_ns;
+#endif
 
 	crhold(cr);
 	vap = kmem_zalloc(sizeof (vattr_t), KM_SLEEP);
@@ -259,10 +271,10 @@ zpl_tmpfile(struct inode *dir, struct dentry *dentry, umode_t mode)
 	 */
 	if (!IS_POSIXACL(dir))
 		mode &= ~current_umask();
-	zpl_vap_init(vap, dir, mode, cr);
+	zpl_vap_init(vap, dir, mode, cr, userns);
 
 	cookie = spl_fstrans_mark();
-	error = -zfs_tmpfile(dir, vap, 0, mode, &ip, cr, 0, NULL);
+	error = -zfs_tmpfile(dir, vap, 0, mode, &ip, cr, 0, NULL, userns);
 	if (error == 0) {
 		/* d_tmpfile will do drop_nlink, so we should set it first */
 		set_nlink(ip, 1);
@@ -294,7 +306,6 @@ zpl_tmpfile(struct inode *dir, struct dentry *dentry, umode_t mode)
 
 	return (error);
 }
-#endif
 
 static int
 zpl_unlink(struct inode *dir, struct dentry *dentry)
@@ -322,14 +333,20 @@ zpl_unlink(struct inode *dir, struct dentry *dentry)
 	return (error);
 }
 
+#if defined(HAVE_IOPS_MKDIR_USERNS)
 static int
-#ifdef HAVE_IOPS_MKDIR_USERNS
 zpl_mkdir(struct user_namespace *user_ns, struct inode *dir,
     struct dentry *dentry, umode_t mode)
 #elif defined(HAVE_IOPS_MKDIR_IDMAP)
+static int
+zpl_mkdir(struct mnt_idmap *user_ns, struct inode *dir,
+    struct dentry *dentry, umode_t mode)
+#elif defined(HAVE_IOPS_MKDIR_DENTRY)
+static struct dentry *
 zpl_mkdir(struct mnt_idmap *user_ns, struct inode *dir,
     struct dentry *dentry, umode_t mode)
 #else
+static int
 zpl_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode)
 #endif
 {
@@ -338,13 +355,18 @@ zpl_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode)
 	znode_t *zp;
 	int error;
 	fstrans_cookie_t cookie;
+#if !(defined(HAVE_IOPS_MKDIR_USERNS) || \
+	defined(HAVE_IOPS_MKDIR_IDMAP) || defined(HAVE_IOPS_MKDIR_DENTRY))
+	zidmap_t *user_ns = kcred->user_ns;
+#endif
 
 	crhold(cr);
 	vap = kmem_zalloc(sizeof (vattr_t), KM_SLEEP);
-	zpl_vap_init(vap, dir, mode | S_IFDIR, cr);
+	zpl_vap_init(vap, dir, mode | S_IFDIR, cr, user_ns);
 
 	cookie = spl_fstrans_mark();
-	error = -zfs_mkdir(ITOZ(dir), dname(dentry), vap, &zp, cr, 0, NULL);
+	error = -zfs_mkdir(ITOZ(dir), dname(dentry), vap, &zp, cr, 0, NULL,
+	    user_ns);
 	if (error == 0) {
 		error = zpl_xattr_security_init(ZTOI(zp), dir, &dentry->d_name);
 		if (error == 0)
@@ -362,9 +384,13 @@ zpl_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode)
 	spl_fstrans_unmark(cookie);
 	kmem_free(vap, sizeof (vattr_t));
 	crfree(cr);
-	ASSERT3S(error, <=, 0);
 
+	ASSERT3S(error, <=, 0);
+#if defined(HAVE_IOPS_MKDIR_DENTRY)
+	return (error != 0 ? ERR_PTR(error) : NULL);
+#else
 	return (error);
+#endif
 }
 
 static int
@@ -489,8 +515,20 @@ zpl_setattr(struct dentry *dentry, struct iattr *ia)
 	vap = kmem_zalloc(sizeof (vattr_t), KM_SLEEP);
 	vap->va_mask = ia->ia_valid & ATTR_IATTR_MASK;
 	vap->va_mode = ia->ia_mode;
-	vap->va_uid = KUID_TO_SUID(ia->ia_uid);
-	vap->va_gid = KGID_TO_SGID(ia->ia_gid);
+	if (ia->ia_valid & ATTR_UID)
+#ifdef HAVE_IATTR_VFSID
+		vap->va_uid = zfs_vfsuid_to_uid(user_ns, zfs_i_user_ns(ip),
+		    __vfsuid_val(ia->ia_vfsuid));
+#else
+		vap->va_uid = KUID_TO_SUID(ia->ia_uid);
+#endif
+	if (ia->ia_valid & ATTR_GID)
+#ifdef HAVE_IATTR_VFSID
+		vap->va_gid = zfs_vfsgid_to_gid(user_ns, zfs_i_user_ns(ip),
+		    __vfsgid_val(ia->ia_vfsgid));
+#else
+		vap->va_gid = KGID_TO_SGID(ia->ia_gid);
+#endif
 	vap->va_size = ia->ia_size;
 	vap->va_atime = ia->ia_atime;
 	vap->va_mtime = ia->ia_mtime;
@@ -501,7 +539,13 @@ zpl_setattr(struct dentry *dentry, struct iattr *ia)
 		    zpl_inode_timestamp_truncate(ia->ia_atime, ip));
 
 	cookie = spl_fstrans_mark();
-	error = -zfs_setattr(ITOZ(ip), vap, 0, cr);
+#ifdef HAVE_USERNS_IOPS_SETATTR
+	error = -zfs_setattr(ITOZ(ip), vap, 0, cr, user_ns);
+#elif defined(HAVE_IDMAP_IOPS_SETATTR)
+	error = -zfs_setattr(ITOZ(ip), vap, 0, cr, user_ns);
+#else
+	error = -zfs_setattr(ITOZ(ip), vap, 0, cr, zfs_init_idmap);
+#endif
 	if (!error && (ia->ia_valid & ATTR_MODE))
 		error = zpl_chmod_acl(ip);
 
@@ -528,18 +572,26 @@ zpl_rename2(struct inode *sdip, struct dentry *sdentry,
 #endif
 {
 	cred_t *cr = CRED();
+	vattr_t *wo_vap = NULL;
 	int error;
 	fstrans_cookie_t cookie;
-
-	/* We don't have renameat2(2) support */
-	if (rflags)
-		return (-EINVAL);
+#if !(defined(HAVE_IOPS_RENAME_USERNS) || defined(HAVE_IOPS_RENAME_IDMAP))
+	zidmap_t *user_ns = kcred->user_ns;
+#endif
 
 	crhold(cr);
+	if (rflags & RENAME_WHITEOUT) {
+		wo_vap = kmem_zalloc(sizeof (vattr_t), KM_SLEEP);
+		zpl_vap_init(wo_vap, sdip, S_IFCHR, cr, user_ns);
+		wo_vap->va_rdev = makedevice(0, 0);
+	}
+
 	cookie = spl_fstrans_mark();
 	error = -zfs_rename(ITOZ(sdip), dname(sdentry), ITOZ(tdip),
-	    dname(tdentry), cr, 0);
+	    dname(tdentry), cr, 0, rflags, wo_vap, user_ns);
 	spl_fstrans_unmark(cookie);
+	if (wo_vap)
+		kmem_free(wo_vap, sizeof (vattr_t));
 	crfree(cr);
 	ASSERT3S(error, <=, 0);
 
@@ -573,14 +625,17 @@ zpl_symlink(struct inode *dir, struct dentry *dentry, const char *name)
 	znode_t *zp;
 	int error;
 	fstrans_cookie_t cookie;
+#if !(defined(HAVE_IOPS_SYMLINK_USERNS) || defined(HAVE_IOPS_SYMLINK_IDMAP))
+	zidmap_t *user_ns = kcred->user_ns;
+#endif
 
 	crhold(cr);
 	vap = kmem_zalloc(sizeof (vattr_t), KM_SLEEP);
-	zpl_vap_init(vap, dir, S_IFLNK | S_IRWXUGO, cr);
+	zpl_vap_init(vap, dir, S_IFLNK | S_IRWXUGO, cr, user_ns);
 
 	cookie = spl_fstrans_mark();
 	error = -zfs_symlink(ITOZ(dir), dname(dentry), vap,
-	    (char *)name, &zp, cr, 0);
+	    (char *)name, &zp, cr, 0, user_ns);
 	if (error == 0) {
 		error = zpl_xattr_security_init(ZTOI(zp), dir, &dentry->d_name);
 		if (error) {
@@ -600,28 +655,11 @@ zpl_symlink(struct inode *dir, struct dentry *dentry, const char *name)
 	return (error);
 }
 
-#if defined(HAVE_PUT_LINK_COOKIE)
-static void
-zpl_put_link(struct inode *unused, void *cookie)
-{
-	kmem_free(cookie, MAXPATHLEN);
-}
-#elif defined(HAVE_PUT_LINK_NAMEIDATA)
-static void
-zpl_put_link(struct dentry *dentry, struct nameidata *nd, void *ptr)
-{
-	const char *link = nd_get_link(nd);
-
-	if (!IS_ERR(link))
-		kmem_free(link, MAXPATHLEN);
-}
-#elif defined(HAVE_PUT_LINK_DELAYED)
 static void
 zpl_put_link(void *ptr)
 {
 	kmem_free(ptr, MAXPATHLEN);
 }
-#endif
 
 static int
 zpl_get_link_common(struct dentry *dentry, struct inode *ip, char **link)
@@ -653,7 +691,6 @@ zpl_get_link_common(struct dentry *dentry, struct inode *ip, char **link)
 	return (error);
 }
 
-#if defined(HAVE_GET_LINK_DELAYED)
 static const char *
 zpl_get_link(struct dentry *dentry, struct inode *inode,
     struct delayed_call *done)
@@ -672,51 +709,6 @@ zpl_get_link(struct dentry *dentry, struct inode *inode,
 
 	return (link);
 }
-#elif defined(HAVE_GET_LINK_COOKIE)
-static const char *
-zpl_get_link(struct dentry *dentry, struct inode *inode, void **cookie)
-{
-	char *link = NULL;
-	int error;
-
-	if (!dentry)
-		return (ERR_PTR(-ECHILD));
-
-	error = zpl_get_link_common(dentry, inode, &link);
-	if (error)
-		return (ERR_PTR(error));
-
-	return (*cookie = link);
-}
-#elif defined(HAVE_FOLLOW_LINK_COOKIE)
-static const char *
-zpl_follow_link(struct dentry *dentry, void **cookie)
-{
-	char *link = NULL;
-	int error;
-
-	error = zpl_get_link_common(dentry, dentry->d_inode, &link);
-	if (error)
-		return (ERR_PTR(error));
-
-	return (*cookie = link);
-}
-#elif defined(HAVE_FOLLOW_LINK_NAMEIDATA)
-static void *
-zpl_follow_link(struct dentry *dentry, struct nameidata *nd)
-{
-	char *link = NULL;
-	int error;
-
-	error = zpl_get_link_common(dentry, dentry->d_inode, &link);
-	if (error)
-		nd_set_link(nd, ERR_PTR(error));
-	else
-		nd_set_link(nd, link);
-
-	return (NULL);
-}
-#endif
 
 static int
 zpl_link(struct dentry *old_dentry, struct inode *dir, struct dentry *dentry)
@@ -753,16 +745,9 @@ out:
 const struct inode_operations zpl_inode_operations = {
 	.setattr	= zpl_setattr,
 	.getattr	= zpl_getattr,
-#ifdef HAVE_GENERIC_SETXATTR
-	.setxattr	= generic_setxattr,
-	.getxattr	= generic_getxattr,
-	.removexattr	= generic_removexattr,
-#endif
 	.listxattr	= zpl_xattr_list,
 #if defined(CONFIG_FS_POSIX_ACL)
-#if defined(HAVE_SET_ACL)
 	.set_acl	= zpl_set_acl,
-#endif /* HAVE_SET_ACL */
 #if defined(HAVE_GET_INODE_ACL)
 	.get_inode_acl	= zpl_get_acl,
 #else
@@ -787,21 +772,12 @@ const struct inode_operations zpl_dir_inode_operations = {
 #else
 	.rename		= zpl_rename,
 #endif
-#ifdef HAVE_TMPFILE
 	.tmpfile	= zpl_tmpfile,
-#endif
 	.setattr	= zpl_setattr,
 	.getattr	= zpl_getattr,
-#ifdef HAVE_GENERIC_SETXATTR
-	.setxattr	= generic_setxattr,
-	.getxattr	= generic_getxattr,
-	.removexattr	= generic_removexattr,
-#endif
 	.listxattr	= zpl_xattr_list,
 #if defined(CONFIG_FS_POSIX_ACL)
-#if defined(HAVE_SET_ACL)
 	.set_acl	= zpl_set_acl,
-#endif /* HAVE_SET_ACL */
 #if defined(HAVE_GET_INODE_ACL)
 	.get_inode_acl	= zpl_get_acl,
 #else
@@ -811,40 +787,18 @@ const struct inode_operations zpl_dir_inode_operations = {
 };
 
 const struct inode_operations zpl_symlink_inode_operations = {
-#ifdef HAVE_GENERIC_READLINK
-	.readlink	= generic_readlink,
-#endif
-#if defined(HAVE_GET_LINK_DELAYED) || defined(HAVE_GET_LINK_COOKIE)
 	.get_link	= zpl_get_link,
-#elif defined(HAVE_FOLLOW_LINK_COOKIE) || defined(HAVE_FOLLOW_LINK_NAMEIDATA)
-	.follow_link	= zpl_follow_link,
-#endif
-#if defined(HAVE_PUT_LINK_COOKIE) || defined(HAVE_PUT_LINK_NAMEIDATA)
-	.put_link	= zpl_put_link,
-#endif
 	.setattr	= zpl_setattr,
 	.getattr	= zpl_getattr,
-#ifdef HAVE_GENERIC_SETXATTR
-	.setxattr	= generic_setxattr,
-	.getxattr	= generic_getxattr,
-	.removexattr	= generic_removexattr,
-#endif
 	.listxattr	= zpl_xattr_list,
 };
 
 const struct inode_operations zpl_special_inode_operations = {
 	.setattr	= zpl_setattr,
 	.getattr	= zpl_getattr,
-#ifdef HAVE_GENERIC_SETXATTR
-	.setxattr	= generic_setxattr,
-	.getxattr	= generic_getxattr,
-	.removexattr	= generic_removexattr,
-#endif
 	.listxattr	= zpl_xattr_list,
 #if defined(CONFIG_FS_POSIX_ACL)
-#if defined(HAVE_SET_ACL)
 	.set_acl	= zpl_set_acl,
-#endif /* HAVE_SET_ACL */
 #if defined(HAVE_GET_INODE_ACL)
 	.get_inode_acl	= zpl_get_acl,
 #else

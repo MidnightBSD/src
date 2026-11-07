@@ -54,7 +54,7 @@ log_onexit cleanup
 
 # Minimum trim size is decreased to verify all trim sizes.
 typeset trim_extent_bytes_min=$(get_tunable TRIM_EXTENT_BYTES_MIN)
-log_must set_tunable64 TRIM_EXTENT_BYTES_MIN 4096
+log_must set_tunable64 TRIM_EXTENT_BYTES_MIN 512
 
 # Reduced TRIM_TXG_BATCH to make trimming more frequent.
 typeset trim_txg_batch=$(get_tunable TRIM_TXG_BATCH)
@@ -72,7 +72,7 @@ for type in "" "mirror" "raidz" "draid"; do
 		filesize=$((4096 + ((RANDOM * 691) % 131072) ))
 		log_must rm -rf $dir
 		log_must fill_fs $dir 10 10 $filesize 1 R
-		zpool sync
+		sync_all_pools
 	done
 	log_must du -hs /$TESTPOOL
 

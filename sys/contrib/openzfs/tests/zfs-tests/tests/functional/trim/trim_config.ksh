@@ -57,7 +57,7 @@ log_onexit cleanup
 
 # Minimum trim size is decreased to verify all trim sizes.
 typeset trim_extent_bytes_min=$(get_tunable TRIM_EXTENT_BYTES_MIN)
-log_must set_tunable64 TRIM_EXTENT_BYTES_MIN 4096
+log_must set_tunable64 TRIM_EXTENT_BYTES_MIN 512
 
 # Reduced TRIM_TXG_BATCH to make trimming more frequent.
 typeset trim_txg_batch=$(get_tunable TRIM_TXG_BATCH)
@@ -94,6 +94,7 @@ for type in "" "mirror" "raidz2" "draid"; do
 
 	# Fill the pool, verify the vdevs are no longer sparse.
 	file_write -o create -f /$TESTPOOL/file -b 1048576 -c $fill_mb -d R
+	sync_pool $TESTPOOL
 	verify_vdevs "-ge" "$VDEV_MAX_MB" $VDEVS
 
 	# Remove the file, issue trim, verify the vdevs are now sparse.

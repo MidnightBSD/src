@@ -7,7 +7,7 @@
 # You may not use this file except in compliance with the License.
 #
 # You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
-# or http://www.opensolaris.org/os/licensing.
+# or https://opensource.org/licenses/CDDL-1.0.
 # See the License for the specific language governing permissions
 # and limitations under the License.
 #
@@ -55,18 +55,13 @@ log_onexit depth_fs_cleanup
 set -A all_props type used available creation volsize referenced \
 	compressratio mounted origin recordsize quota reservation mountpoint \
 	sharenfs checksum compression atime devices exec readonly setuid \
-	snapdir aclinherit canmount primarycache secondarycache \
+	snapdir aclinherit canmount primarycache secondarycache version \
 	usedbychildren usedbydataset usedbyrefreservation usedbysnapshots \
 	userquota@root groupquota@root userused@root groupused@root
 if is_freebsd; then
 	set -A all_props ${all_props[*]} jailed aclmode
 else
 	set -A all_props ${all_props[*]} zoned acltype
-fi
-
-zfs upgrade -v > /dev/null 2>&1
-if [[ $? -eq 0 ]]; then
-	set -A all_props ${all_props[*]} version
 fi
 
 depth_fs_setup

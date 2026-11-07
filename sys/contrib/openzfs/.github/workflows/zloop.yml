@@ -3,63 +3,83 @@ name: zloop
 on:
   push:
   pull_request:
+    paths-ignore:
+      - 'man/**'
+      - '**.md'
+      - 'AUTHORS'
+      - 'COPYRIGHT'
+      - 'LICENSE'
+      - 'NOTICE'
+      - '.gitignore'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
 
 jobs:
-  tests:
-    runs-on: ubuntu-22.04
+  zloop:
+    runs-on: ubuntu-24.04
     env:
-      TEST_DIR: /var/tmp/zloop
+      WORK_DIR: /mnt/zloop
+      CORE_DIR: /mnt/zloop/cores
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v6
       with:
         ref: ${{ github.event.pull_request.head.sha }}
     - name: Install dependencies
       run: |
-        # https://github.com/orgs/community/discussions/47863
-        sudo apt-mark hold grub-efi-amd64-signed
-        sudo apt-get update --fix-missing
-        sudo apt-get upgrade
-        sudo xargs --arg-file=${{ github.workspace }}/.github/workflows/build-dependencies.txt apt-get install -qq
-        sudo apt-get clean
+        sudo apt-get purge -y snapd google-chrome-stable firefox
+        ONLY_DEPS=1 .github/workflows/scripts/qemu-3-deps-vm.sh ubuntu24
     - name: Autogen.sh
       run: |
-        sh autogen.sh
+        sed -i '/DEBUG_CFLAGS="-Werror"/s/^/#/' config/zfs-build.m4
+        ./autogen.sh
     - name: Configure
       run: |
-        ./configure --enable-debug --enable-debuginfo
+        ./configure --prefix=/usr --enable-debug --enable-debuginfo \
+           --enable-asan --enable-ubsan \
+           --enable-debug-kmem --enable-debug-kmem-tracking
     - name: Make
       run: |
-        make --no-print-directory -s pkg-utils pkg-kmod
+        make -j$(nproc)
     - name: Install
       run: |
-        sudo dpkg -i *.deb
-        # Update order of directories to search for modules, otherwise
-        #   Ubuntu will load kernel-shipped ones.
-        sudo sed -i.bak 's/updates/extra updates/' /etc/depmod.d/ubuntu.conf
+        sudo make install
         sudo depmod
         sudo modprobe zfs
     - name: Tests
       run: |
-        sudo mkdir -p $TEST_DIR
-        # run for 10 minutes or at most 2 iterations for a maximum runner
-        #   time of 20 minutes.
-        sudo /usr/share/zfs/zloop.sh -t 600 -I 2 -l -m1 -- -T 120 -P 60
+        sudo truncate -s 256G /mnt/vdev
+        sudo zpool create cipool -m $WORK_DIR -O compression=on -o autotrim=on /mnt/vdev
+        sudo /usr/share/zfs/zloop.sh -t 600 -I 6 -l -m 1 -c $CORE_DIR -f $WORK_DIR -- -T 120 -P 60
     - name: Prepare artifacts
       if: failure()
       run: |
-        sudo chmod +r -R $TEST_DIR/
-    - uses: actions/upload-artifact@v3
+        sudo chmod +r -R $WORK_DIR/
+    - name: Ztest log
+      if: failure()
+      run: |
+        grep -B10 -A1000 'ASSERT' $CORE_DIR/*/ztest.out || tail -n 1000 $CORE_DIR/*/ztest.out
+    - name: Gdb log
+      if: failure()
+      run: |
+        sed -n '/Backtraces (full)/q;p' $CORE_DIR/*/ztest.gdb
+    - name: Zdb log
+      if: failure()
+      run: |
+        cat $CORE_DIR/*/ztest.zdb
+    - uses: actions/upload-artifact@v7
       if: failure()
       with:
         name: Logs
         path: |
-          /var/tmp/zloop/*/
-          !/var/tmp/zloop/*/vdev/
+          /mnt/zloop/*/
+          !/mnt/zloop/cores/*/vdev/
         if-no-files-found: ignore
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v7
       if: failure()
       with:
         name: Pool files
         path: |
-          /var/tmp/zloop/*/vdev/
+          /mnt/zloop/cores/*/vdev/
         if-no-files-found: ignore

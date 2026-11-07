@@ -6,7 +6,7 @@
  * You may not use this file except in compliance with the License.
  *
  * You can obtain a copy of the license at usr/src/OPENSOLARIS.LICENSE
- * or http://www.opensolaris.org/os/licensing.
+ * or https://opensource.org/licenses/CDDL-1.0.
  * See the License for the specific language governing permissions
  * and limitations under the License.
  *
@@ -81,12 +81,10 @@ DECLARE_EVENT_CLASS(zfs_delay_mintime_class,
 );
 /* END CSTYLED */
 
-/* BEGIN CSTYLED */
 #define	DEFINE_DELAY_MINTIME_EVENT(name) \
 DEFINE_EVENT(zfs_delay_mintime_class, name, \
-	TP_PROTO(dmu_tx_t *tx, uint64_t dirty, uint64_t min_tx_time), \
-	TP_ARGS(tx, dirty, min_tx_time))
-/* END CSTYLED */
+    TP_PROTO(dmu_tx_t *tx, uint64_t dirty, uint64_t min_tx_time), \
+    TP_ARGS(tx, dirty, min_tx_time))
 DEFINE_DELAY_MINTIME_EVENT(zfs_delay__mintime);
 
 /* BEGIN CSTYLED */
@@ -110,13 +108,11 @@ DECLARE_EVENT_CLASS(zfs_free_long_range_class,
 );
 /* END CSTYLED */
 
-/* BEGIN CSTYLED */
 #define	DEFINE_FREE_LONG_RANGE_EVENT(name) \
 DEFINE_EVENT(zfs_free_long_range_class, name, \
-	TP_PROTO(uint64_t long_free_dirty_all_txgs, \
-	    uint64_t chunk_len, uint64_t txg), \
-	TP_ARGS(long_free_dirty_all_txgs, chunk_len, txg))
-/* END CSTYLED */
+    TP_PROTO(uint64_t long_free_dirty_all_txgs, \
+    uint64_t chunk_len, uint64_t txg), \
+    TP_ARGS(long_free_dirty_all_txgs, chunk_len, txg))
 DEFINE_FREE_LONG_RANGE_EVENT(zfs_free__long__range);
 
 #endif /* _TRACE_DMU_H */
