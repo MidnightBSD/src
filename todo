@@ -1,0 +1,32 @@
+$NetBSD: todo,v 1.20 2026/02/10 19:45:08 lukem Exp $
+
+Current Items
+-------------
+
+sync libedit?
+
+sync strvis? see http://gnats.netbsd.org/57573
+Only used by libedit history_save()/history_load(), which tnftp doesn't use.
+
+Publish on http://freshcode.club
+
+Old Items
+---------
+
+autoconf test for HAVE_DECL_GETADDRINFO if providing getaddrinfo() override.
+(required for UnixWare 7.1.1)
+
+Interix may need hack to fix detection of getpgrp() void args.
+(See pkgsrc/net/tnftp/files/src/progressbar.c 1.2)
+
+in configure, require ansi c compiler
+
+check if we need #defines for memcpy() et al
+
+possibly install editline.3 and editrc.5; maybe with tnftp_ prefixes?
+
+system specific tests (to remove need for manual intervention):
+- sunos4
+	LIBS+= -lresolv
+
+RHEL 8 needs -lresolv for inet_net_pton
