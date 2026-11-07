@@ -99,7 +99,7 @@ KERNEL_C+=	zfs_impl.c
 SRCS= $(ASM_SOURCES_AS) $(KERNEL_C)
 
 WARNS?=	2
-SHLIB_MAJOR= 3
+SHLIB_MAJOR= 4
 CSTD=	c99
 CFLAGS+= -DIN_BASE
 CFLAGS+= -I${SRCTOP}/sys/contrib/openzfs/include

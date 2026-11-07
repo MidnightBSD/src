@@ -6,6 +6,7 @@
 LIB=	tpool
 LIBADD=	spl
 PACKAGE=	zfs
+SHLIB_MAJOR=	3
 
 INCS=	thread_pool_impl.h
 SRCS=	thread_pool.c

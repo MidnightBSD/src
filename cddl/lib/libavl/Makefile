@@ -2,6 +2,7 @@
 .PATH: ${SRCTOP}/sys/contrib/openzfs/module/avl
 
 PACKAGE=	zfs
+SHLIB_MAJOR=	3
 LIB=	avl
 LIBADD=	spl
 SRCS=	avl.c

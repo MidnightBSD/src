@@ -4,7 +4,7 @@
 
 PACKAGE=	zfs
 LIB=		zfsbootenv
-SHLIB_MAJOR=	1
+SHLIB_MAJOR=	2
 
 LIBADD=		zfs
 LIBADD+=	nvpair

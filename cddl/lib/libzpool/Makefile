@@ -24,6 +24,7 @@ ATOMIC_SRCS=	opensolaris_atomic.c
 .endif
 
 PACKAGE=	zfs
+SHLIB_MAJOR=	3
 LIB=		zpool
 
 USER_C = \

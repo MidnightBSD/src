@@ -84,7 +84,7 @@ ARCH_C +=	zfs_fletcher_aarch64_neon.c
 SRCS= $(USER_C) $(KERNEL_C) $(ARCH_C)
 
 WARNS?=	2
-SHLIB_MAJOR= 4
+SHLIB_MAJOR= 5
 CSTD=	c99
 CFLAGS+= -DIN_BASE
 CFLAGS+= -I${SRCTOP}/sys/contrib/openzfs/include

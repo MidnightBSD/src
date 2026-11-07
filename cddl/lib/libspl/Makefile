@@ -8,6 +8,7 @@
 LIB=	spl
 LIBADD=
 PACKAGE=	zfs
+SHLIB_MAJOR=	3
 
 SRCS = \
         assert.c \

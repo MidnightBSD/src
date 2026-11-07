@@ -7,6 +7,7 @@ LIB=	nvpair
 LIBADD=	spl
 
 PACKAGE=	zfs
+SHLIB_MAJOR=	3
 # user
 INCS=	libnvpair.h
 SRCS=	libnvpair.c \

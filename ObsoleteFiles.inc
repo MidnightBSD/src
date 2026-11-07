@@ -39,6 +39,34 @@
 # for generating a list from a directory
 # find  /usr/lib/perl5/5.36.0 -exec echo {} \; | cut -b 2-150  | xargs printf "OLD_FILES+=%s\n"
 
+# 20261107: OpenZFS 2.2 update bumps the shared library major versions
+OLD_LIBS+=lib/libavl.so.2
+OLD_LIBS+=lib/libicp.so.3
+OLD_LIBS+=lib/libicp_rescue.so.3
+OLD_LIBS+=lib/libnvpair.so.2
+OLD_LIBS+=lib/libspl.so.2
+OLD_LIBS+=lib/libtpool.so.2
+OLD_LIBS+=lib/libumem.so.2
+OLD_LIBS+=lib/libuutil.so.2
+OLD_LIBS+=lib/libzfs.so.4
+OLD_LIBS+=lib/libzfs_core.so.2
+OLD_LIBS+=lib/libzfsbootenv.so.1
+OLD_LIBS+=lib/libzpool.so.2
+OLD_LIBS+=lib/libzutil.so.2
+OLD_LIBS+=usr/lib32/libavl.so.2
+OLD_LIBS+=usr/lib32/libicp.so.3
+OLD_LIBS+=usr/lib32/libicp_rescue.so.3
+OLD_LIBS+=usr/lib32/libnvpair.so.2
+OLD_LIBS+=usr/lib32/libspl.so.2
+OLD_LIBS+=usr/lib32/libtpool.so.2
+OLD_LIBS+=usr/lib32/libumem.so.2
+OLD_LIBS+=usr/lib32/libuutil.so.2
+OLD_LIBS+=usr/lib32/libzfs.so.4
+OLD_LIBS+=usr/lib32/libzfs_core.so.2
+OLD_LIBS+=usr/lib32/libzfsbootenv.so.1
+OLD_LIBS+=usr/lib32/libzpool.so.2
+OLD_LIBS+=usr/lib32/libzutil.so.2
+
 # 20261107: libzfs now requires librt, moved to /lib
 MOVED_LIBS+=usr/lib/librt.so.1
 
