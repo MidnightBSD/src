@@ -29,6 +29,9 @@ Updating Information for MidnightBSD users.
 	Update kernel and world together; the new wg(8) on an old kernel
 	adds the addresses instead of removing them.
 
+	ACPICA 20260930.  ACPI_STATE_D3 now means D3cold for ACPI power
+	resources; PCI devices still use D3hot.  Install the new kernel.
+
 20261106:
 	unbound 1.26.2: CVE-2026-14586 CVE-2026-32665 CVE-2026-35501
 	CVE-2026-40691 CVE-2026-41637 CVE-2026-42955 CVE-2026-44621
