@@ -1,0 +1,107 @@
+Upgrade procedure for ACPICA
+
+Source: https://github.com/open-acpica/acpica/releases/download/VERSION/acpica-unix-VERSION.tar.gz
+	(VERSION is YYYYMMDD; the project moved from acpica/acpica and
+	acpica.org to open-acpica/acpica on GitHub).  Releases are not
+	signed and the tags are lightweight.  Check the tarball against
+	the sha256 digest GitHub shows for the release asset, and compare
+	its source/ directory with the upstream git tag of the same name
+	(the unix tarball leaves out source/os_specific/efi).
+
+The vendor branch (vendor/acpica) carries the release tarball after
+it has been processed by acpica_prep.sh, so it has the same layout as
+sys/contrib/dev/acpica: common, compiler, components, include and
+os_specific at the top, the include paths rewritten to
+<contrib/dev/acpica/...>, and the other ports, the generated parser
+and lexer sources, the test suites and the tools removed.  There is
+no MIDNIGHTBSD-Xlist; acpica_prep.sh does the pruning.  acpica_prep.sh
+and this file exist only in sys/contrib/dev/acpica, not on the vendor
+branch.
+
+History: vendor/acpica was started at ACPICA 20201113, the version
+FreeBSD had imported and that was already in sys/contrib/dev/acpica,
+and connected to the tree with a merge that changed no files.  The
+next import was 20260930.
+
+To upgrade to a new version:
+
+1. Download and check acpica-unix-VERSION.tar.gz.
+2. In an empty scratch directory, run
+	sh /usr/src/sys/contrib/dev/acpica/acpica_prep.sh \
+	    /path/to/acpica-unix-VERSION.tar.gz
+   The script needs BSD sed(1) and xargs(1).  It writes the result to
+   ./acpi_ca_destination.  Check the output for new top-level files,
+   new platform headers (include/platform/ac*.h) and new OS layers
+   (os_specific/service_layers/os*.c) that should be added to
+   stripfiles, and for includes that were not rewritten
+   (grep -rn '#include "ac' acpi_ca_destination).
+3. Use the vendor-update skill (vendor/acpica, sys/contrib/dev/acpica,
+   tag vendor/acpica/VERSION): replace the whole vendor tree with
+   acpi_ca_destination, stage with "git add -A -f" and check that
+   the committed tree is identical to acpi_ca_destination.
+4. git subtree merge -P sys/contrib/dev/acpica vendor/acpica, then
+   re-check the local patches below against the new code.
+5. Update the glue.  Compare the file lists of the old and new trees
+   and add new compiled sources to sys/conf/files,
+   usr.sbin/acpi/iasl/Makefile and usr.sbin/acpi/acpidb/Makefile.
+   Look for renamed functions and struct members used by
+   sys/dev/acpica, sys/{amd64,arm64,i386,x86}/acpica, stand/ and
+   usr.sbin/acpi, and for changes to include/acpiosxf.h (the OS
+   services layer in sys/dev/acpica/Osd).  FreeBSD's merge commits
+   and follow-ups ("git log -- sys/contrib/dev/acpica" in FreeBSD)
+   are the usual reference.
+6. Build GENERIC, a kernel with "options ACPI_DEBUG" (it compiles the
+   debugger and disassembler, where several local patches are), the
+   arm64 GENERIC kernel or at least sys/arm64/acpica, iasl(8),
+   acpidb(8), acpidump(8) and acpiconf(8).  Boot it (bhyve provides
+   ACPI tables) and compare dmesg, "sysctl hw.acpi", "acpidump -dt"
+   and an S5 poweroff with the old kernel.
+
+Local patches applied on top of upstream:
+
+  - include/platform/acenv.h: select acfreebsd.h with
+    "defined(__MidnightBSD__) || defined(__MidnightBSD_kernel__)"
+    instead of the __FreeBSD__ test (MidnightBSD).
+  - include/platform/acgcc.h: the whole va_arg/<stdarg.h> block is
+    wrapped in "#ifndef _KERNEL"; acfreebsd.h includes
+    <machine/stdarg.h> for the kernel (FreeBSD; FreeBSD has since
+    switched to <sys/stdarg.h>, which MidnightBSD does not have).
+  - components/utilities/utxferror.c, AcpiInfo(): under _KERNEL,
+    return early unless bootverbose (FreeBSD).
+  - components/disassembler/dmresrcl2.c: the MpSaveGpioInfo() call
+    and the five MpSaveSerialInfo() calls are wrapped in
+    "#ifndef _KERNEL" (FreeBSD; the CSI-2 one is FreeBSD
+    429f71bf08d2).
+  - components/dispatcher/dsfield.c, dswexec.c, dswload2.c: every
+    "#ifdef ACPI_EXEC_APP" that guards aecommon.h, the
+    AeLookupInitFileEntry() code or its local variables is
+    "#if !defined(ACPI_DB_APP) && defined(ACPI_EXEC_APP)", because
+    acpidb(8) defines both but does not build the acpiexec sources
+    (FreeBSD).
+  - components/utilities/utuuid.c and include/acutils.h: the
+    AcpiUtConvertStringToUuid() test also accepts ACPI_DISASSEMBLER
+    (FreeBSD).
+  - compiler/aslhelp.c, asloptions.c, aslutils.c: the iasl -vd option
+    (build date and time) is removed and listings do not print
+    __DATE__, so builds are reproducible (FreeBSD).
+  - components/executer/extrace.c, AcpiExTraceArgs(): print the
+    integer argument with "%jx" and a (uintmax_t) cast instead of
+    "%lx" (FreeBSD 95c8b4d74bce).
+  - components/debugger/dbcmds.c: the #include "limits.h" is removed
+    (FreeBSD f1e8d3361b94).
+
+Dropped with 20260930: the __FreeBSD__ definitions of
+ACPI_TO_INTEGER and ACPI_OFFSET in include/actypes.h (FreeBSD
+130a690ae16e); upstream acfreebsd.h now defines both.
+
+sys/conf/files builds components/namespace/nsaccess.c with
+${NO_WUNUSED_BUT_SET_VARIABLE} (FreeBSD 3c9a0112bae6); upstream has
+marked the variable ACPI_UNUSED_VAR since then, so the flag may be
+removed.
+
+Notes:
+  - ACPI_STATE_D3 means D3cold since 20250807 (D3hot is 3, D3cold is
+    4), while PCI_POWERSTATE_D3 is still D3hot (3).  acpi_pci.c
+    asserts that the D3hot and D3cold values match.
+  - acpica_prep.sh comes from FreeBSD; the generated-file list
+    (genfiles) is a MidnightBSD addition.
