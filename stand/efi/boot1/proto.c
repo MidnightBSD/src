@@ -21,6 +21,7 @@
 
 #include <sys/cdefs.h>
 #include <sys/param.h>
+#include <sys/disk/gpt.h>
 #include <machine/elf.h>
 #include <machine/stdarg.h>
 #include <stand.h>
@@ -44,6 +45,88 @@ static const char *prio_str[] = {
 	"better"
 };
 #endif
+
+static const gpt_uuid_t freebsd_ufs_uuid = GPT_ENT_TYPE_FREEBSD_UFS;
+static const gpt_uuid_t freebsd_zfs_uuid = GPT_ENT_TYPE_FREEBSD_ZFS;
+
+/*
+ * is_fallback_part returns true if devpath is a GPT partition of type
+ * freebsd-ufs or freebsd-zfs. Such partitions are only tried after all
+ * others so that MidnightBSD partitions are preferred. If the type cannot
+ * be determined, false is returned and the partition keeps its place.
+ */
+static bool
+is_fallback_part(EFI_DEVICE_PATH *devpath)
+{
+	HARDDRIVE_DEVICE_PATH *hd;
+	EFI_DEVICE_PATH *diskpath, *rem;
+	EFI_BLOCK_IO *blkio;
+	EFI_HANDLE h;
+	struct gpt_hdr hdr;
+	struct gpt_ent ent;
+	uint64_t off;
+	UINT32 bsize;
+	char *buf;
+	bool ret;
+
+	hd = (HARDDRIVE_DEVICE_PATH *)efi_devpath_last_node(devpath);
+	if (hd == NULL ||
+	    DevicePathType(&hd->Header) != MEDIA_DEVICE_PATH ||
+	    DevicePathSubType(&hd->Header) != MEDIA_HARDDRIVE_DP ||
+	    DevicePathNodeLength(&hd->Header) < sizeof(*hd) ||
+	    hd->MBRType != MBR_TYPE_EFI_PARTITION_TABLE_HEADER ||
+	    hd->SignatureType != SIGNATURE_TYPE_GUID)
+		return (false);
+
+	/* Find the whole disk the partition is on. */
+	diskpath = efi_devpath_trim(devpath);
+	if (diskpath == NULL)
+		return (false);
+	rem = diskpath;
+	if (BS->LocateDevicePath(&BlockIoProtocolGUID, &rem, &h) !=
+	    EFI_SUCCESS || !IsDevicePathEnd(rem)) {
+		free(diskpath);
+		return (false);
+	}
+	free(diskpath);
+	if (OpenProtocolByHandle(h, &BlockIoProtocolGUID, (void **)&blkio) !=
+	    EFI_SUCCESS || blkio->Media->LogicalPartition)
+		return (false);
+	bsize = blkio->Media->BlockSize;
+	if (bsize < sizeof(hdr))
+		return (false);
+
+	/* Read the primary GPT header and the partition's entry. */
+	buf = malloc(bsize);
+	if (buf == NULL)
+		return (false);
+	ret = false;
+	if (blkio->ReadBlocks(blkio, blkio->Media->MediaId, 1, bsize, buf) !=
+	    EFI_SUCCESS)
+		goto out;
+	memcpy(&hdr, buf, sizeof(hdr));
+	if (memcmp(hdr.hdr_sig, GPT_HDR_SIG, sizeof(hdr.hdr_sig)) != 0 ||
+	    hdr.hdr_entsz < sizeof(ent) || bsize % hdr.hdr_entsz != 0 ||
+	    hd->PartitionNumber < 1 || hd->PartitionNumber > hdr.hdr_entries)
+		goto out;
+	off = (uint64_t)(hd->PartitionNumber - 1) * hdr.hdr_entsz;
+	if (blkio->ReadBlocks(blkio, blkio->Media->MediaId,
+	    hdr.hdr_lba_table + off / bsize, bsize, buf) != EFI_SUCCESS)
+		goto out;
+	memcpy(&ent, buf + off % bsize, sizeof(ent));
+
+	/* Make sure the entry is the partition the firmware gave us. */
+	if (memcmp(&ent.ent_uuid, hd->Signature, sizeof(ent.ent_uuid)) != 0 ||
+	    ent.ent_lba_start != hd->PartitionStart)
+		goto out;
+	ret = memcmp(&ent.ent_type, &freebsd_ufs_uuid,
+	    sizeof(ent.ent_type)) == 0 ||
+	    memcmp(&ent.ent_type, &freebsd_zfs_uuid,
+	    sizeof(ent.ent_type)) == 0;
+out:
+	free(buf);
+	return (ret);
+}
 
 /*
  * probe_handle determines if the passed handle represents a logical partition
@@ -102,6 +185,7 @@ probe_handle(EFI_HANDLE h, EFI_DEVICE_PATH *imgpath)
 	devinfo->devpath = devpath;
 	devinfo->devhandle = h;
 	devinfo->preferred = preferred;
+	devinfo->fallback = is_fallback_part(devpath);
 	devinfo->next = NULL;
 
 	for (i = 0; i < num_boot_modules; i++) {
@@ -123,11 +207,12 @@ probe_handle(EFI_HANDLE h, EFI_DEVICE_PATH *imgpath)
  * in order until a successful load occurs at which point it returns EFI_SUCCESS
  * and EFI_NOT_FOUND otherwise.
  *
- * Only devices which have preferred matching the preferred parameter are tried.
+ * Only devices which have preferred and fallback matching the preferred and
+ * fallback parameters are tried.
  */
 static EFI_STATUS
 load_loader(const boot_module_t **modp, dev_info_t **devinfop, void **bufp,
-    size_t *bufsize, int preferred)
+    size_t *bufsize, int preferred, int fallback)
 {
 	UINTN i;
 	dev_info_t *dev;
@@ -136,7 +221,8 @@ load_loader(const boot_module_t **modp, dev_info_t **devinfop, void **bufp,
 	for (i = 0; i < num_boot_modules; i++) {
 		mod = boot_modules[i];
 		for (dev = mod->devices(); dev != NULL; dev = dev->next) {
-			if (dev->preferred != preferred)
+			if (dev->preferred != preferred ||
+			    dev->fallback != fallback)
 				continue;
 
 			if (mod->load(PATH_LOADER_EFI, dev, bufp, bufsize) ==
@@ -158,7 +244,7 @@ choice_protocol(EFI_HANDLE *handles, UINTN nhandles, EFI_DEVICE_PATH *imgpath)
 	size_t sz;
 	UINT16 boot_order[100];
 	unsigned i;
-	int rv;
+	int pass, rv;
 	EFI_STATUS status;
 	const boot_module_t *mod;
 	dev_info_t *dev;
@@ -210,13 +296,17 @@ choice_protocol(EFI_HANDLE *handles, UINTN nhandles, EFI_DEVICE_PATH *imgpath)
 		boot_modules[i]->status();
 	}
 
-	status = load_loader(&mod, &dev, &loaderbuf, &loadersize, 1);
+	/*
+	 * Try non-FreeBSD partitions on all disks before any FreeBSD
+	 * partition. In each group, the disk we were loaded from goes first.
+	 */
+	status = EFI_NOT_FOUND;
+	for (pass = 0; pass < 4 && status != EFI_SUCCESS; pass++)
+		status = load_loader(&mod, &dev, &loaderbuf, &loadersize,
+		    pass % 2 == 0, pass / 2);
 	if (status != EFI_SUCCESS) {
-		status = load_loader(&mod, &dev, &loaderbuf, &loadersize, 0);
-		if (status != EFI_SUCCESS) {
-			printf("Failed to load '%s'\n", PATH_LOADER_EFI);
-			return;
-		}
+		printf("Failed to load '%s'\n", PATH_LOADER_EFI);
+		return;
 	}
 
 	try_boot(mod, dev, loaderbuf, loadersize);

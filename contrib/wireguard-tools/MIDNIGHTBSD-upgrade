@@ -1,0 +1,47 @@
+Upgrade procedure for wireguard-tools
+
+Source: https://git.zx2c4.com/wireguard-tools/ (tag vVERSION, e.g.
+v1.0.20260223).  Tarballs are also available from
+https://git.zx2c4.com/wireguard-tools/snapshot/wireguard-tools-VERSION.tar.xz
+but a snapshot omits files marked export-ignore, so prefer a git checkout.
+The release tags are signed by Jason A. Donenfeld
+(AB99 42E6 D4A4 CFC3 4126  20A7 49FC 7012 A5DE 03AE); verify with
+"git tag -v vVERSION".
+
+To upgrade to a new version:
+
+1. Clone the repository and export the tag:
+     git --work-tree=/tmp/wg-export checkout vVERSION -- .
+2. Use the vendor-update skill (branch vendor/wireguard-tools, prefix
+   contrib/wireguard-tools).
+3. The vendor branch holds the contents of upstream's src/ directory at its
+   top level, pruned of everything listed in .gitignore (the same layout
+   FreeBSD uses): Makefile, completion/, fuzz/, ipc-uapi-windows.h,
+   ipc-windows.h, netlink.h, uapi/, wg-quick/, wincompat/, ipc-linux.h,
+   ipc-openbsd.h, man/wg-quick.8 and systemd/.  Keep the .gitignore
+   file itself.  Stage with "git add -A -f".
+4. git subtree merge -P contrib/wireguard-tools <vendor-branch>
+5. Build glue lives in usr.bin/wg (identical to FreeBSD's).  Check it
+   against FreeBSD's usr.bin/wg for new source files or flags.
+
+Local patches applied on top of upstream:
+
+  1. ipc-freebsd.h: allowed-ip flags support.  From FreeBSD stable/14
+     e95cf8b04b47 (main f6d9e22982a1) "wg: ipc: add allowed-ip flags
+     support for FreeBSD".  In the allowed-ips loop of kernel_set_device,
+     the "TODO: implement me" -EOPNOTSUPP block is replaced with
+     nvlist_add_number(nvl_aips[j], "flags", aip->flags), so that
+     "wg set ... allowed-ips -ip" sends WGALLOWEDIP_REMOVE_ME to the
+     kernel.  The diff is carried exactly as FreeBSD ships it (its commit
+     message mentions a flag mapping function that the diff does not
+     contain).  It requires the kernel side in sys/dev/wg (per-allowed-ip
+     "flags" nvlist key, FreeBSD 684dd4e8c008 and its prerequisites
+     1cacf672e3ee and d0b6c358e748).  On a kernel without that support
+     the "flags" key is ignored and a removal silently becomes an add,
+     so update the kernel and world together.  Keep this patch until
+     upstream wireguard-tools carries it; check on every upgrade.
+
+Notes:
+  - ipc.c selects ipc-freebsd.h with defined(__FreeBSD__); our compilers
+    define both __FreeBSD__ and __MidnightBSD__, so no change is needed.
+  - ipc-freebsd.h includes <dev/wg/if_wg.h> from the system headers.

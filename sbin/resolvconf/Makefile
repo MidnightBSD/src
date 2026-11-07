@@ -16,6 +16,9 @@ SYSCONFDIR=	/etc
 RCDIR=		${SYSCONFDIR}/rc.d
 VARDIR=		/var/run/resolvconf
 SBINDIR=	/sbin
+# Only used by resolvconf's init system detection, which is skipped
+# because RESTARTCMD is set; service(8) needs onestatus.
+STATUSARG=	onestatus
 
 # We don't assume to restart the services in /sbin.  So, though
 # our service(8) is in /usr/sbin, we can use it, here.
@@ -31,6 +34,7 @@ ${f}:	${f}.in
 		-e 's:@RESTARTCMD@:${RESTARTCMD}:g' \
 		-e 's:@RCDIR@:${RCDIR}:g' \
 		-e 's:@SBINDIR@:${SBINDIR}:g' \
+		-e 's:@STATUSARG@:${STATUSARG}:g' \
 		-e 's: vpn : ng[0-9]*&:g' \
 		${DIST}/$@.in > $@
 .endfor
