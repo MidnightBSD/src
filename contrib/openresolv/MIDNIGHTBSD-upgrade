@@ -1,0 +1,52 @@
+Upgrade procedure for openresolv
+
+Source: https://github.com/NetworkConfiguration/openresolv/releases/download/vVERSION/openresolv-VERSION.tar.xz
+	Check openresolv-VERSION.tar.xz.asc with gpg and Roy Marples'
+	key A785ED2755955D9E93EA59F6597F97EA9AD45549 (roy@marples.name),
+	and compare the sha256 sum with the one in the release notes.
+	Releases before 3.17.0 have no release tarball; the GitHub tag
+	archive (archive/refs/tags/vVERSION.tar.gz) was used for 3.9.2.
+
+The vendor branch is vendor/openresolv, in-tree prefix contrib/openresolv,
+tag vendor/openresolv/VERSION.  The vendor branch carries the release minus
+the files listed in MIDNIGHTBSD-Xlist (just .gitignore), so that its tree
+matches contrib/openresolv.  Its first commit is the 3.9.2 import that was
+already in the tree; master was joined to it with a merge that changed no
+files (the same way as vendor/zlib), later updates use "git subtree merge".
+
+To upgrade to a new version:
+
+1. Download and verify the tarball and extract it into a new directory.
+2. Use the vendor-update skill (vendor/openresolv, contrib/openresolv).
+   Stage with "git add -A -f", remove the Xlist files first and check that
+   the committed tree is identical to the tarball minus the Xlist files.
+3. Merge with "git subtree merge -P contrib/openresolv vendor/openresolv".
+4. Update the build glue in sbin/resolvconf/Makefile if configure or the
+   upstream Makefile gained new @VARIABLE@ substitutions
+   (grep -ho '@[A-Z_]*@' contrib/openresolv/*.in | sort -u), new
+   subscribers (the FILES list, only libc, dnsmasq, named, pdnsd,
+   pdns_recursor and unbound are installed) or new manual pages.
+5. Build sbin/resolvconf, install it into a DESTDIR and run it with a
+   resolvconf.conf that points resolv_conf and the state directory at
+   temporary files (resolvconf -a, -d, -u, -l, -i).
+
+Local patches applied on top of upstream:
+
+  None.  The libc.in change that 3.9.2 carried here (writing resolv.conf
+  with echo instead of printf %s) was dropped in the 3.17.4 update: it only
+  added a trailing blank line and upstream now has resolv_conf_mv handling.
+
+Local build glue (sbin/resolvconf/Makefile, not part of contrib):
+
+  - sed substitutions for SYSCONFDIR, LIBEXECDIR, VARDIR, RESTARTCMD, RCDIR,
+    SBINDIR and STATUSARG (onestatus, for service(8)).
+  - RESTARTCMD uses "service $1 onestatus && service $1 restart".
+  - " vpn " in the dynamic_order list of resolvconf is rewritten to
+    " ng[0-9]* vpn " so that ng(4) devices are ordered like VPNs.
+
+Notes:
+  - Not installed: avahi-daemon, mdnsd, resolvectl and systemd-resolved
+    subscribers (added upstream after 3.9.2).
+  - FreeBSD carries one change after 3.17.4 in resolvconf.in (strip a
+    leading dot in process_domain(), FreeBSD aad298c8f9ca); MidnightBSD
+    does not carry it.

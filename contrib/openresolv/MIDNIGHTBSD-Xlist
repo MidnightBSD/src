@@ -1,0 +1,4 @@
+# Files and directories pruned from the openresolv release when it is
+# imported into contrib/openresolv.  The vendor branch (vendor/openresolv)
+# also omits them, so that its tree matches contrib/openresolv.
+.gitignore
