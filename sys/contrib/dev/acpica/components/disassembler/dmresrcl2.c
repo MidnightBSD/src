@@ -671,7 +671,9 @@ AcpiDmCsi2SerialBusDescriptor (
     AcpiDmDumpSerialBusVendorData (Resource, Level);
     AcpiOsPrintf (")\n");
 
+#ifndef _KERNEL
     MpSaveSerialInfo (Info->MappingOp, Resource, DeviceName);
+#endif
 }
 
 
