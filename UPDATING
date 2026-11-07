@@ -40,6 +40,9 @@ Updating Information for MidnightBSD users.
 	on non-blocking files) is also fixed; it only affected zlib 1.3.1.2
 	through 1.3.2, which MidnightBSD never shipped.
 
+	zstd 1.5.7: CVE-2022-4899 (buffer overrun in zstd(1) with an empty
+	--output-dir-flat or --output-dir-mirror argument).
+
 20261105:
 	OpenSSH 10.6p2: fixes an sshd(8) password authentication bypass
 	reported against Linux builds without PAM, and accepts the
