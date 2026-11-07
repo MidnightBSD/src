@@ -57,6 +57,7 @@
 extern uint32_t _end;
 
 static const uuid_t mnbsd_ufs_uuid = GPT_ENT_TYPE_MIDNIGHTBSD_UFS;
+static const uuid_t fbsd_ufs_uuid = GPT_ENT_TYPE_FREEBSD_UFS;
 static const char optstr[NOPT] = "DhaCcdgmnpqrsv"; /* Also 'P', 'S' */
 static const unsigned char flags[NOPT] = {
 	RBX_DUAL,
@@ -234,7 +235,8 @@ gptinit(void)
 		printf("%s: unable to load GPT\n", BOOTPROG);
 		return (-1);
 	}
-	if (gptfind(&mnbsd_ufs_uuid, &gdsk.dsk, gdsk.dsk.part) == -1) {
+	if (gptfind(&mnbsd_ufs_uuid, &fbsd_ufs_uuid, &gdsk.dsk,
+	    gdsk.dsk.part) == -1) {
 		printf("%s: no UFS partition was found\n", BOOTPROG);
 		return (-1);
 	}
@@ -337,7 +339,8 @@ main(void)
 		memcpy(kname, PATH_KERNEL, sizeof(PATH_KERNEL));
 		load();
 		gptbootfailed(&gdsk.dsk);
-		if (gptfind(&mnbsd_ufs_uuid, &gdsk.dsk, -1) == -1)
+		if (gptfind(&mnbsd_ufs_uuid, &fbsd_ufs_uuid, &gdsk.dsk,
+		    -1) == -1)
 			break;
 		dsk_meta = 0;
 	}

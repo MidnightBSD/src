@@ -59,6 +59,10 @@ static const uuid_t gpt_uuid_midnightbsd_swap = GPT_ENT_TYPE_MIDNIGHTBSD_SWAP;
 static const uuid_t gpt_uuid_midnightbsd_zfs = GPT_ENT_TYPE_MIDNIGHTBSD_ZFS;
 static const uuid_t gpt_uuid_midnightbsd_vinum = GPT_ENT_TYPE_MIDNIGHTBSD_VINUM;
 static const uuid_t gpt_uuid_apple_apfs = GPT_ENT_TYPE_APPLE_APFS;
+static const uuid_t gpt_uuid_freebsd_boot = GPT_ENT_TYPE_FREEBSD_BOOT;
+static const uuid_t gpt_uuid_freebsd_ufs = GPT_ENT_TYPE_FREEBSD_UFS;
+static const uuid_t gpt_uuid_freebsd_zfs = GPT_ENT_TYPE_FREEBSD_ZFS;
+static const uuid_t gpt_uuid_freebsd_swap = GPT_ENT_TYPE_FREEBSD_SWAP;
 #endif
 
 struct pentry {
@@ -98,6 +102,10 @@ static struct parttypes {
 	{ PART_DOS,		"DOS/Windows" },
 	{ PART_ISO9660,		"ISO9660" },
 	{ PART_APFS,		"APFS" },
+	{ PART_FREEBSD_BOOT,	"FreeBSD boot" },
+	{ PART_FREEBSD_UFS,	"FreeBSD UFS" },
+	{ PART_FREEBSD_ZFS,	"FreeBSD ZFS" },
+	{ PART_FREEBSD_SWAP,	"FreeBSD swap" },
 };
 
 const char *
@@ -145,6 +153,14 @@ gpt_parttype(uuid_t type)
 		return (PART_MIDNIGHTBSD);
 	else if (uuid_equal(&type, &gpt_uuid_apple_apfs, NULL))
 		return (PART_APFS);
+	else if (uuid_equal(&type, &gpt_uuid_freebsd_boot, NULL))
+		return (PART_FREEBSD_BOOT);
+	else if (uuid_equal(&type, &gpt_uuid_freebsd_ufs, NULL))
+		return (PART_FREEBSD_UFS);
+	else if (uuid_equal(&type, &gpt_uuid_freebsd_zfs, NULL))
+		return (PART_FREEBSD_ZFS);
+	else if (uuid_equal(&type, &gpt_uuid_freebsd_swap, NULL))
+		return (PART_FREEBSD_SWAP);
 	return (PART_UNKNOWN);
 }
 
@@ -747,19 +763,21 @@ ptable_getpart(const struct ptable *table, struct ptable_entry *part, int index)
  *
  * 1: Active MidnightBSD slice
  * 2: Non-active MidnightBSD slice
- * 3: Active Linux slice
- * 4: non-active Linux slice
- * 5: Active FAT/FAT32 slice
- * 6: non-active FAT/FAT32 slice
+ * 3: FreeBSD UFS/ZFS partition (GPT only)
+ * 4: Active Linux slice
+ * 5: non-active Linux slice
+ * 6: Active FAT/FAT32 slice
+ * 7: non-active FAT/FAT32 slice
  */
 #define	PREF_RAWDISK	0
 #define	PREF_MBSD_ACT	1
 #define	PREF_MBSD	2
-#define	PREF_LINUX_ACT	3
-#define	PREF_LINUX	4
-#define	PREF_DOS_ACT	5
-#define	PREF_DOS	6
-#define	PREF_NONE	7
+#define	PREF_FBSD	3
+#define	PREF_LINUX_ACT	4
+#define	PREF_LINUX	5
+#define	PREF_DOS_ACT	6
+#define	PREF_DOS	7
+#define	PREF_NONE	8
 int
 ptable_getbestpart(const struct ptable *table, struct ptable_entry *part)
 {
@@ -804,6 +822,9 @@ ptable_getbestpart(const struct ptable *table, struct ptable_entry *part)
 			else if (entry->part.type == PART_MIDNIGHTBSD_UFS ||
 			    entry->part.type == PART_MIDNIGHTBSD_ZFS)
 				pref = PREF_MBSD;
+			else if (entry->part.type == PART_FREEBSD_UFS ||
+			    entry->part.type == PART_FREEBSD_ZFS)
+				pref = PREF_FBSD;
 			else
 				pref = PREF_NONE;
 		}

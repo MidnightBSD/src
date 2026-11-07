@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.Dd April 6, 2021
+.Dd November 7, 2026
 .Dt GPTBOOT.EFI 8
 .Os
 .Sh NAME
@@ -151,15 +151,29 @@ partition found.
 .Sh BOOTING
 .Nm
 first reads the partition table.
-All
+Partitions of type
+.Cm mnbsd-ufs
+are preferred.
+Partitions of type
 .Cm freebsd-ufs
+are recognized as a fallback:
+the complete selection sequence described below is run over all
+.Cm mnbsd-ufs
+partitions first, and only if none of them can be booted is the same
+sequence run over all
+.Cm freebsd-ufs
+partitions on the disk.
+The preference applies within a single disk.
+.Pp
+All
+.Cm mnbsd-ufs
 partitions with only the
 .Cm bootonce
 attribute set, indicating a failed boot, are set to
 .Cm bootfailed .
 .Nm
 then scans through all of the
-.Cm freebsd-ufs
+.Cm mnbsd-ufs
 partitions.
 Boot behavior depends on the combination of
 .Cm bootme
@@ -169,14 +183,14 @@ attributes set on those partitions.
 .Bl -tag -width ".Cm bootonce + .Cm bootme"
 .It Cm bootonce + Cm bootme
 Highest priority: booting is attempted from each of the
-.Cm freebsd-ufs
+.Cm mnbsd-ufs
 partitions with both of these attributes.
 On each partition, the
 .Cm bootme
 attribute is removed and the boot attempted.
 .It Cm bootme
 Middle priority: booting is attempted from each of the
-.Cm freebsd-ufs
+.Cm mnbsd-ufs
 partitions with the
 .Cm bootme
 attribute.
@@ -188,12 +202,14 @@ nor
 .Cm bootme
 attributes are found on any partitions, booting is attempted from the
 first
-.Cm freebsd-ufs
+.Cm mnbsd-ufs
 partition on the disk.
 .Sh POST-BOOT ACTIONS
 The startup script
 .Pa /etc/rc.d/gptboot
 checks the attributes of
+.Cm mnbsd-ufs
+and
 .Cm freebsd-ufs
 partitions on all GPT disks.
 Partitions with the

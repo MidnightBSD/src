@@ -39,7 +39,7 @@ start_cmd="gptboot_report"
 gptboot_report()
 {
 	gpart show | \
-		egrep '(^=>| mnbsd-ufs .*(\[|,)(bootfailed|bootonce)(,|\]))' | \
+		egrep '(^=>| (mnbsd|freebsd)-ufs .*(\[|,)(bootfailed|bootonce)(,|\]))' | \
 		sed 's/^=>//' | \
 		egrep -v '(\[|,)bootme(,|\])' | \
 	while read start size pos type attrs rest; do

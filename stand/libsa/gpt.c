@@ -41,7 +41,7 @@ static struct gpt_hdr hdr_primary, hdr_backup, *gpthdr;
 static uint64_t hdr_primary_lba, hdr_backup_lba;
 static struct gpt_ent table_primary[MAXTBLENTS], table_backup[MAXTBLENTS];
 static struct gpt_ent *gpttable;
-static int curent, bootonce;
+static int curent, bootonce, fallback;
 
 /*
  * Buffer below 64kB passed on gptread(), which can hold at least
@@ -88,8 +88,13 @@ gptupdate(const char *which, struct dsk *dskp, struct gpt_hdr *hdr,
 	}
 }
 
+/*
+ * Find the next partition to boot from.  Partitions of type uuid are
+ * tried first.  Once those are exhausted, partitions of type fbuuid (if
+ * not NULL) are searched the same way, so that fbuuid is only a fallback.
+ */
 int
-gptfind(const uuid_t *uuid, struct dsk *dskp, int part)
+gptfind(const uuid_t *uuid, const uuid_t *fbuuid, struct dsk *dskp, int part)
 {
 	struct gpt_ent *ent;
 	int firsttry;
@@ -100,7 +105,9 @@ gptfind(const uuid_t *uuid, struct dsk *dskp, int part)
 			return (-1);
 		}
 		ent = &gpttable[part - 1];
-		if (bcmp(&ent->ent_type, uuid, sizeof(uuid_t)) != 0) {
+		if (bcmp(&ent->ent_type, uuid, sizeof(uuid_t)) != 0 &&
+		    (fbuuid == NULL ||
+		    bcmp(&ent->ent_type, fbuuid, sizeof(uuid_t)) != 0)) {
 			printf("%s: specified partition is not UFS\n",
 			    BOOTPROG);
 			return (-1);
@@ -109,11 +116,14 @@ gptfind(const uuid_t *uuid, struct dsk *dskp, int part)
 		goto found;
 	}
 
+	if (fallback)
+		uuid = fbuuid;
+retry:
 	firsttry = (curent == -1);
 	curent++;
 	if (curent >= gpthdr->hdr_entries) {
 		curent = gpthdr->hdr_entries;
-		return (-1);
+		goto notfound;
 	}
 	if (bootonce) {
 		/*
@@ -157,6 +167,15 @@ gptfind(const uuid_t *uuid, struct dsk *dskp, int part)
 			/* Ok, found one. */
 			goto found;
 		}
+	}
+notfound:
+	if (!fallback && fbuuid != NULL) {
+		/* Restart the search with the fallback partition type. */
+		fallback = 1;
+		uuid = fbuuid;
+		curent = -1;
+		bootonce = 1;
+		goto retry;
 	}
 	return (-1);
 found:
@@ -331,6 +350,7 @@ gptread(struct dsk *dskp, char *buf)
 	hdr_primary_lba = hdr_backup_lba = 0;
 	curent = -1;
 	bootonce = 1;
+	fallback = 0;
 	dskp->start = 0;
 
 	if (gptread_hdr("primary", dskp, &hdr_primary, 1) == 0 &&
