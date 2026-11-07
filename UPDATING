@@ -33,6 +33,13 @@ Updating Information for MidnightBSD users.
 	the hostapd RADIUS Message-Authenticator length check (w1.fi
 	2026-5).
 
+	zlib 1.3.2 with the security fixes from 1.4: fixes out-of-bounds
+	writes in inflateGetDictionary(), inflateSync() and deflatePrime(),
+	out-of-bounds reads after inflatePrime() and deflateResetKeep(),
+	and uninitialised memory exposed by inflateBack() and gzseek().
+	The non-blocking I/O support new in 1.3.2 comes with the fixes for
+	CVE-2026-85091 and a related gzprintf() overflow.
+
 20261105:
 	OpenSSH 10.6p2: fixes an sshd(8) password authentication bypass
 	reported against Linux builds without PAM, and accepts the
