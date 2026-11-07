@@ -11,18 +11,22 @@ MLINKS=	zstream.8 zstreamdump.8
 INCS=	zstream.h
 SRCS= \
 	zstream.c \
+	zstream_decompress.c \
 	zstream_dump.c \
+	zstream_recompress.c  \
 	zstream_redup.c \
 	zstream_token.c
 
-SYMLINKS=	${BINDIR}/zstream ${BINDIR}/zstreamdump
+SYMLINKS=	zstream ${BINDIR}/zstreamdump
 
 WARNS?=	2
 CFLAGS+= \
 	-DIN_BASE \
+	-DZFS_DEBUG \
 	-I${ZFSTOP}/include \
 	-I${ZFSTOP}/lib/libspl/include \
 	-I${ZFSTOP}/lib/libspl/include/os/freebsd \
+	-I${SRCTOP}/sys/contrib/openzfs/lib/libzpool/include \
 	-I${SRCTOP}/sys \
 	-I${SRCTOP}/cddl/compat/opensolaris/include \
 	-I${ZFSTOP}/module/icp/include \

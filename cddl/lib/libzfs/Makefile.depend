@@ -6,6 +6,7 @@ DIRDEPS = \
 	cddl/lib/libumem \
 	cddl/lib/libuutil \
 	cddl/lib/libzfs_core \
+	cddl/lib/libzutil \
 	include \
 	include/xlocale \
 	lib/${CSU_DIR} \
@@ -14,10 +15,12 @@ DIRDEPS = \
 	lib/libexpat \
 	lib/libgeom \
 	lib/libmd \
+	lib/librt \
 	lib/libthr \
 	lib/libutil \
 	lib/libz \
 	lib/msun \
+	secure/lib/libcrypto \
 
 
 .include <dirdeps.mk>

@@ -222,7 +222,9 @@ bool
 GeomEvent::OnlineByLabel(const string &devPath, const string& physPath,
 			      nvlist_t *devConfig)
 {
+	bool ret = false;
 	try {
+		CaseFileList case_list;
 		/*
 		 * A device with ZFS label information has been
 		 * inserted.  If it matches a device for which we
@@ -231,10 +233,12 @@ GeomEvent::OnlineByLabel(const string &devPath, const string& physPath,
 		syslog(LOG_INFO, "Interrogating VDEV label for %s\n",
 		       devPath.c_str());
 		Vdev vdev(devConfig);
-		CaseFile *caseFile(CaseFile::Find(vdev.PoolGUID(),
-						  vdev.GUID()));
-		if (caseFile != NULL)
-			return (caseFile->ReEvaluate(devPath, physPath, &vdev));
+		CaseFile::Find(vdev.PoolGUID(),vdev.GUID(), case_list);
+		for (CaseFileList::iterator curr = case_list.begin();
+		    curr != case_list.end(); curr++) {
+			ret |= (*curr)->ReEvaluate(devPath, physPath, &vdev);
+		}
+		return (ret);
 
 	} catch (ZfsdException &exp) {
 		string context("GeomEvent::OnlineByLabel: " + devPath + ": ");
@@ -242,7 +246,7 @@ GeomEvent::OnlineByLabel(const string &devPath, const string& physPath,
 		exp.GetString().insert(0, context);
 		exp.Log();
 	}
-	return (false);
+	return (ret);
 }
 
 
@@ -346,6 +350,13 @@ ZfsEvent::Process() const
 
 	Vdev vdev(zpl.front(), vdevConfig);
 	caseFile = &CaseFile::Create(vdev);
+	if (caseFile->VdevState() == VDEV_STATE_OFFLINE) {
+		/*
+		 * An administrator did this deliberately.  It's not considered
+		 * an error that zfsd must fix.
+		 */
+		return (false);
+	}
 	if (caseFile->ReEvaluate(*this) == false) {
 		stringstream msg;
 		int priority = LOG_INFO;

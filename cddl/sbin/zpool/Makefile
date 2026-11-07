@@ -13,6 +13,7 @@ PACKAGE=	zfs
 PROG=	zpool
 MAN= \
 	spl.4 \
+	vdevprops.7 \
 	zfs.4 \
 	zpool.8 \
 	zpool-add.8 \
@@ -65,6 +66,7 @@ CFLAGS+= \
 	-I${ZFSTOP}/include \
 	-I${ZFSTOP}/lib/libspl/include \
 	-I${ZFSTOP}/lib/libspl/include/os/freebsd \
+	-I${SRCTOP}/sys/contrib/openzfs/lib/libzpool/include \
 	-I${SRCTOP}/sys \
 	-I${SRCTOP}/cddl/compat/opensolaris/include \
 	-I${ZFSTOP}/cmd/zpool \

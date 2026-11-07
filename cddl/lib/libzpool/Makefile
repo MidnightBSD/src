@@ -1,5 +1,6 @@
-
 ZFSTOP=	${SRCTOP}/sys/contrib/openzfs
+
+.PATH: ${ZFSTOP}/lib/libzpool
 
 # ZFS_COMMON_SRCS
 .PATH: ${ZFSTOP}/module/zfs
@@ -9,11 +10,9 @@ ZFSTOP=	${SRCTOP}/sys/contrib/openzfs
 .PATH: ${ZFSTOP}/module/lua
 # ZSTD_SRCS
 .PATH: ${ZFSTOP}/module/zstd
-.PATH: ${ZFSTOP}/module/zstd/lib
-
-.PATH: ${ZFSTOP}/module/os/linux/zfs
-
-.PATH: ${ZFSTOP}/lib/libzpool
+.PATH: ${ZFSTOP}/module/zstd/lib/common
+.PATH: ${ZFSTOP}/module/zstd/lib/compress
+.PATH: ${ZFSTOP}/module/zstd/lib/decompress
 
 .if exists(${SRCTOP}/sys/cddl/contrib/opensolaris/common/atomic/${MACHINE_ARCH}/opensolaris_atomic.S)
 .PATH: ${SRCTOP}/sys/cddl/contrib/opensolaris/common/atomic/${MACHINE_ARCH}
@@ -28,11 +27,16 @@ PACKAGE=	zfs
 LIB=		zpool
 
 USER_C = \
+	arc_os.c \
 	kernel.c \
 	taskq.c \
-	util.c
+	util.c \
+	zfs_debug.c
+
+.PATH: ${ZFSTOP}/module/os/linux/zfs
 
 KERNEL_C = \
+	simd_stat.c \
 	zfeature_common.c \
 	zfs_comutil.c \
 	zfs_deleg.c \
@@ -48,13 +52,14 @@ KERNEL_C = \
 	abd_os.c \
 	aggsum.c \
 	arc.c \
-	arc_os.c \
+        blake3_zfs.c \
 	blkptr.c \
 	bplist.c \
 	bpobj.c \
 	bptree.c \
-	btree.c \
 	bqueue.c \
+	btree.c \
+	brt.c \
 	cityhash.c \
 	dbuf.c \
 	dbuf_stats.c \
@@ -85,24 +90,32 @@ KERNEL_C = \
 	dsl_destroy.c \
 	dsl_userhold.c \
 	edonr_zfs.c \
-	hkdf.c \
+	entropy_common.c \
+	error_private.c \
 	fm.c \
+	fse_compress.c \
+	fse_decompress.c \
 	gzip.c \
+	hist.c \
+	hkdf.c \
+	huf_compress.c \
+	huf_decompress.c \
 	lzjb.c \
 	lz4.c \
+	lz4_zfs.c \
 	metaslab.c \
 	mmp.c \
 	multilist.c \
 	objlist.c \
 	pathname.c \
+	pool.c \
 	range_tree.c \
 	refcount.c \
 	rrwlock.c \
 	sa.c \
-	sha256.c \
+	sha2_zfs.c \
 	skein_zfs.c \
 	spa.c \
-	spa_boot.c \
 	spa_checkpoint.c \
 	spa_config.c \
 	spa_errlog.c \
@@ -117,7 +130,6 @@ KERNEL_C = \
 	uberblock.c \
 	unique.c \
 	vdev.c \
-	vdev_cache.c \
 	vdev_draid.c \
 	vdev_draid_rand.c \
 	vdev_file.c \
@@ -126,6 +138,7 @@ KERNEL_C = \
 	vdev_indirect_mapping.c \
 	vdev_initialize.c \
 	vdev_label.c \
+	vdev_label_os.c \
 	vdev_mirror.c \
 	vdev_missing.c \
 	vdev_queue.c \
@@ -141,6 +154,7 @@ KERNEL_C = \
 	vdev_removal.c \
 	vdev_root.c \
 	vdev_trim.c \
+	xxhash.c \
 	zap.c \
 	zap_leaf.c \
 	zap_micro.c \
@@ -152,7 +166,7 @@ KERNEL_C = \
 	zcp_synctask.c \
 	zfeature.c \
 	zfs_byteswap.c \
-	zfs_debug.c \
+        zfs_chksum.c \
 	zfs_fm.c \
 	zfs_fuid.c \
 	zfs_sa.c \
@@ -168,7 +182,19 @@ KERNEL_C = \
 	zio_inject.c \
 	zle.c \
 	zrlock.c \
-	zstd.c \
+	zstd_common.c \
+	zstd_compress.c \
+	zstd_compress_literals.c \
+	zstd_compress_sequences.c \
+	zstd_compress_superblock.c \
+	zstd_ddict.c \
+	zstd_decompress.c \
+	zstd_decompress_block.c \
+	zstd_double_fast.c \
+	zstd_fast.c \
+	zstd_lazy.c \
+	zstd_ldm.c \
+	zstd_opt.c \
 	zthr.c
 
 ARCH_C =
@@ -224,10 +250,12 @@ CFLAGS+= \
 	-I${ZFSTOP}/include \
 	-I${ZFSTOP}/lib/libspl/include \
 	-I${ZFSTOP}/lib/libspl/include/os/freebsd \
+	-I${SRCTOP}/sys/contrib/openzfs/lib/libzpool/include \
 	-I${SRCTOP}/sys \
 	-I${ZFSTOP}/include/os/freebsd/zfs \
 	-I${SRCTOP}/cddl/compat/opensolaris/include \
 	-I${ZFSTOP}/module/icp/include \
+	-I${SRCTOP}/compat/linuxkpi/common/include/linux \
 	-include ${ZFSTOP}/include/os/freebsd/spl/sys/ccompile.h \
 	-DHAVE_ISSETUGID \
 	-include ${SRCTOP}/sys/modules/zfs/zfs_config.h \
@@ -256,10 +284,51 @@ CSTD=	c99
 
 CFLAGS+=	-g -DDEBUG=1
 
-CFLAGS.zfs_zstd.c=	-Wno-cast-qual -Wno-pointer-arith
-CFLAGS.zstd.c+=	-fno-tree-vectorize
-CFLAGS.zstd.c+=	${NO_WBITWISE_INSTEAD_OF_LOGICAL}
-
-.include <bsd.compiler.mk>
+# Pointer values are used as debugging "tags" to mark reference count
+# ownerships and in some cases the tag reference is dropped after an
+# object is freed.
+CFLAGS.dbuf.c=			${NO_WUSE_AFTER_FREE}
+CFLAGS.entropy_common.c=	-fno-tree-vectorize
+CFLAGS.entropy_common.c+=	${NO_WBITWISE_INSTEAD_OF_LOGICAL}
+CFLAGS.error_private.c=		-fno-tree-vectorize
+CFLAGS.error_private.c+=	${NO_WBITWISE_INSTEAD_OF_LOGICAL}
+CFLAGS.fse_compress.c=		-fno-tree-vectorize
+CFLAGS.fse_compress.c+=		${NO_WBITWISE_INSTEAD_OF_LOGICAL}
+CFLAGS.fse_decompress.c=	-fno-tree-vectorize
+CFLAGS.fse_decompress.c+=	${NO_WBITWISE_INSTEAD_OF_LOGICAL}
+CFLAGS.hist.c=			-fno-tree-vectorize
+CFLAGS.hist.c+=			${NO_WBITWISE_INSTEAD_OF_LOGICAL}
+CFLAGS.huf_compress.c=		-fno-tree-vectorize
+CFLAGS.huf_compress.c+=		${NO_WBITWISE_INSTEAD_OF_LOGICAL}
+CFLAGS.huf_decompress.c=	-fno-tree-vectorize
+CFLAGS.huf_decompress.c+=	${NO_WBITWISE_INSTEAD_OF_LOGICAL}
+CFLAGS.pool.c=			-fno-tree-vectorize
+CFLAGS.pool.c+=			${NO_WBITWISE_INSTEAD_OF_LOGICAL}
+CFLAGS.xxhash.c=		-fno-tree-vectorize
+CFLAGS.xxhash.c+=		${NO_WBITWISE_INSTEAD_OF_LOGICAL}
+CFLAGS.zstd_compress.c=		-fno-tree-vectorize
+CFLAGS.zstd_compress.c+=	${NO_WBITWISE_INSTEAD_OF_LOGICAL}
+CFLAGS.zstd_compress_literals.c=	-fno-tree-vectorize
+CFLAGS.zstd_compress_literals.c+=	${NO_WBITWISE_INSTEAD_OF_LOGICAL}
+CFLAGS.zstd_compress_sequences.c=	-fno-tree-vectorize
+CFLAGS.zstd_compress_sequences.c+=	${NO_WBITWISE_INSTEAD_OF_LOGICAL}
+CFLAGS.zstd_compress_superblock.c=	-fno-tree-vectorize
+CFLAGS.zstd_compress_superblock.c+=	${NO_WBITWISE_INSTEAD_OF_LOGICAL}
+CFLAGS.zstd_double_fast.c=	-fno-tree-vectorize
+CFLAGS.zstd_double_fast.c+=	${NO_WBITWISE_INSTEAD_OF_LOGICAL}
+CFLAGS.zstd_fast.c=		-fno-tree-vectorize
+CFLAGS.zstd_fast.c+=		${NO_WBITWISE_INSTEAD_OF_LOGICAL}
+CFLAGS.zstd_lazy.c=		-fno-tree-vectorize
+CFLAGS.zstd_lazy.c+=		${NO_WBITWISE_INSTEAD_OF_LOGICAL}
+CFLAGS.zstd_ldm.c=		-fno-tree-vectorize
+CFLAGS.zstd_ldm.c+=		${NO_WBITWISE_INSTEAD_OF_LOGICAL}
+CFLAGS.zstd_opt.c=		-fno-tree-vectorize
+CFLAGS.zstd_opt.c+=		${NO_WBITWISE_INSTEAD_OF_LOGICAL}
+CFLAGS.zstd_ddict.c=		-fno-tree-vectorize
+CFLAGS.zstd_ddict.c+=		${NO_WBITWISE_INSTEAD_OF_LOGICAL}
+CFLAGS.zstd_decompress.c=	-fno-tree-vectorize
+CFLAGS.zstd_decompress.c+=	${NO_WBITWISE_INSTEAD_OF_LOGICAL}
+CFLAGS.zstd_decompress_block.c=	-fno-tree-vectorize
+CFLAGS.zstd_decompress_block.c+=	${NO_WBITWISE_INSTEAD_OF_LOGICAL}
 
 .include <bsd.lib.mk>

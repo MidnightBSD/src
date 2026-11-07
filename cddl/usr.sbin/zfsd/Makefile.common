@@ -18,12 +18,12 @@ CFLAGS+= -DIN_BASE
 CFLAGS+= -I${SRCTOP}/sys/contrib/openzfs/include
 CFLAGS+= -I${SRCTOP}/sys/contrib/openzfs/lib/libspl/include
 CFLAGS+= -I${SRCTOP}/sys/contrib/openzfs/lib/libspl/include/os/freebsd
+CFLAGS+= -I${SRCTOP}/sys/contrib/openzfs/lib/libzpool/include
 CFLAGS+= -I${SRCTOP}/sys
 CFLAGS+= -include ${SRCTOP}/sys/contrib/openzfs/include/os/freebsd/spl/sys/ccompile.h
 CFLAGS+= -I${SRCTOP}/cddl/usr.sbin
 
-# use issetugid(2)
-CFLAGS+= -D_MACHINE_FLOAT_H_ -DHAVE_ISSETUGID
+CFLAGS+= -DHAVE_ISSETUGID
 
 LIBADD+=	devdctl zfs util geom bsdxml sbuf nvpair avl uutil zutil
 

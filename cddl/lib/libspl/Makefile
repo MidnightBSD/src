@@ -13,7 +13,7 @@ SRCS = \
         assert.c \
         list.c \
         mkdirp.c \
-	os/freebsd/zone.c \
+        os/freebsd/zone.c \
         page.c \
         timestamp.c \
         include/sys/list.h \
@@ -23,13 +23,13 @@ SRCS = \
 # will not compile when building on macOS.
 .if !defined(BOOTSTRAPPING)
 SRCS += \
-	atomic.c \
-	os/freebsd/getexecname.c \
-	os/freebsd/gethostid.c \
-	os/freebsd/getmntany.c \
-	os/freebsd/mnttab.c
+        atomic.c \
+        getexecname.c \
+        os/freebsd/getexecname.c \
+        os/freebsd/gethostid.c \
+        os/freebsd/getmntany.c \
+        os/freebsd/mnttab.c
 .endif
-
 
 WARNS?=	2
 CSTD=	c99

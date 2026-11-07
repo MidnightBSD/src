@@ -1,5 +1,5 @@
 
-.PATH: ${SRCTOP}/sys/contrib/openzfs/cmd/zhack
+.PATH: ${SRCTOP}/sys/contrib/openzfs/cmd
 
 PACKAGE=	zfs
 PROG=	zhack
@@ -13,6 +13,7 @@ CFLAGS+= -DIN_BASE
 CFLAGS+= -I${SRCTOP}/sys/contrib/openzfs/include
 CFLAGS+= -I${SRCTOP}/sys/contrib/openzfs/lib/libspl/include/
 CFLAGS+= -I${SRCTOP}/sys/contrib/openzfs/lib/libspl/include/os/freebsd
+CFLAGS+= -I${SRCTOP}/sys/contrib/openzfs/lib/libzpool/include
 CFLAGS+= -I${SRCTOP}/sys
 CFLAGS+= -I${SRCTOP}/cddl/compat/opensolaris/include
 CFLAGS+= -I${SRCTOP}/sys/contrib/openzfs/module/icp/include

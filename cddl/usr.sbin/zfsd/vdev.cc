@@ -327,7 +327,7 @@ Vdev::Name(zpool_handle_t *zhp, bool verbose) const
 string
 Vdev::Path() const
 {
-	char *path(NULL);
+	const char *path(NULL);
 
 	if ((m_config != NULL)
 	    && (nvlist_lookup_string(m_config, ZPOOL_CONFIG_PATH, &path) == 0))
@@ -339,7 +339,7 @@ Vdev::Path() const
 string
 Vdev::PhysicalPath() const
 {
-	char *path(NULL);
+	const char *path(NULL);
 
 	if ((m_config != NULL) && (nvlist_lookup_string(m_config,
 				    ZPOOL_CONFIG_PHYS_PATH, &path) == 0))

@@ -97,6 +97,19 @@ public:
 	static CaseFile *Find(DevdCtl::Guid poolGUID, DevdCtl::Guid vdevGUID);
 
 	/**
+	 * \brief Find multiple CaseFile objects by a vdev's pool/vdev
+	 *        GUID tuple (special case for spare vdevs)
+	 *
+	 * \param poolGUID  Pool GUID for the vdev of the CaseFile to find.
+	 * 		    If InvalidGuid, then only match the vdev GUID
+	 * 		    instead of both pool and vdev GUIDs.
+	 * \param vdevGUID  Vdev GUID for the vdev of the CaseFile to find.
+	 * \param caseList  List of cases associated with the vdev.
+	 */
+	static void  Find(DevdCtl::Guid poolGUID, DevdCtl::Guid vdevGUID,
+				     CaseFileList &caseList);
+
+	/**
 	 * \brief Find a CaseFile object by a vdev's current/last known
 	 *        physical path.
 	 *
@@ -217,18 +230,32 @@ public:
 	 */
 	bool ShouldFault() const;
 
+	/**
+	 * \brief If this vdev is spare
+	 */
+	int IsSpare();
+
+	/**
+	 * \brief Get case vdev's specified property
+	 */
+	int GetVdevProp(vdev_prop_t) const;
+
 protected:
 	enum {
+		/*
+		 * Use these defaults if we can't get the corresponding vdev
+		 * prop or if the prop is not set
+		 */
 		/**
 		 * The number of soft errors on a vdev required
 		 * to transition a vdev from healthy to degraded
-		 * status.
+		 * status
 		 */
-		ZFS_DEGRADE_IO_COUNT = 50,
+		DEFAULT_ZFS_DEGRADE_IO_COUNT = 50,
 		/**
 		 * The number of delay errors on a vdev required to fault it
 		 */
-		ZFS_FAULT_DELAY_COUNT = 8,
+		DEFAULT_ZFS_FAULT_SLOW_IO_COUNT = 8,
 	};
 
 	static CalloutFunc_t OnGracePeriodEnded;
@@ -362,12 +389,6 @@ protected:
 	static const string  s_caseFilePath;
 
 	/**
-	 * \brief The time ZFSD waits before promoting a tentative event
-	 *        into a permanent event.
-	 */
-	static const timeval s_removeGracePeriod;
-
-	/**
 	 * \brief A list of soft error events counted against the health of
 	 *        a vdev.
 	 */
@@ -386,6 +407,8 @@ protected:
 	string		   m_poolGUIDString;
 	string		   m_vdevGUIDString;
 	string		   m_vdevPhysPath;
+	string		   m_vdevName;
+	int		   m_is_spare;
 
 	/**
 	 * \brief Callout activated when a grace period
