@@ -25,6 +25,10 @@ Updating Information for MidnightBSD users.
 
 	openresolv 3.17.4
 
+	wg(4): Allowed-IPs can be removed with "wg set ... allowed-ips -ip".
+	Update kernel and world together; the new wg(8) on an old kernel
+	adds the addresses instead of removing them.
+
 20261106:
 	unbound 1.26.2: CVE-2026-14586 CVE-2026-32665 CVE-2026-35501
 	CVE-2026-40691 CVE-2026-41637 CVE-2026-42955 CVE-2026-44621
