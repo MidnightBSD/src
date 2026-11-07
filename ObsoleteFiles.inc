@@ -39,6 +39,9 @@
 # for generating a list from a directory
 # find  /usr/lib/perl5/5.36.0 -exec echo {} \; | cut -b 2-150  | xargs printf "OLD_FILES+=%s\n"
 
+# 20261107: libzfs now requires librt, moved to /lib
+MOVED_LIBS+=usr/lib/librt.so.1
+
 # 20261105: Provide stdint.h macros unconditionally
 OLD_FILES+=usr/include/c++/v1/stdint.h
 
