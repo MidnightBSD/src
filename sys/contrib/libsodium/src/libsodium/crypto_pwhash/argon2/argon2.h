@@ -151,11 +151,11 @@ typedef enum Argon2_ErrorCodes {
  *****
  * Simplest situation: you have output array out[8], password is stored in
  * pwd[32], salt is stored in salt[16], you do not have keys nor associated
- *data.
+ * data.
  * You need to spend 1 GB of RAM and you run 5 passes of Argon2 with 4 parallel
- *lanes.
+ * lanes.
  * You want to erase the password, but you're OK with last pass not being
- *erased.
+ * erased.
  * You want to use the default memory allocator.
  * Then you initialize:
  * Argon2_Context(out,8,pwd,32,salt,16,NULL,0,NULL,0,5,1<<20,4,4,NULL,NULL,true,false,false,false).
@@ -190,7 +190,7 @@ typedef enum Argon2_type { Argon2_i = 1, Argon2_id = 2 } argon2_type;
 /*
  * Function that performs memory-hard hashing with certain degree of parallelism
  * @param  context  Pointer to the Argon2 internal structure
- * @return Error code if smth is wrong, ARGON2_OK otherwise
+ * @return Error code if something is wrong, ARGON2_OK otherwise
  */
 int argon2_ctx(argon2_context *context, argon2_type type);
 
@@ -283,7 +283,7 @@ int argon2_hash(const uint32_t t_cost, const uint32_t m_cost,
 
 /**
  * Verifies a password against an encoded string
- * Encoded string is restricted as in validate_inputs()
+ * Encoded string is restricted as in argon2_validate_inputs()
  * @param encoded String encoding parameters, salt, hash
  * @param pwd Pointer to password
  * @pre   Returns ARGON2_OK if successful
@@ -292,7 +292,7 @@ int argon2i_verify(const char *encoded, const void *pwd, const size_t pwdlen);
 
 /**
  * Verifies a password against an encoded string
- * Encoded string is restricted as in validate_inputs()
+ * Encoded string is restricted as in argon2_validate_inputs()
  * @param encoded String encoding parameters, salt, hash
  * @param pwd Pointer to password
  * @pre   Returns ARGON2_OK if successful

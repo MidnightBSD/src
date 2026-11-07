@@ -1,10 +1,16 @@
 
 EXTRA_DIST = \
+	run.sh \
 	cmptest.h \
+	wasi-test-wrapper.sh \
 	wintest.bat \
 	pre.js.inc \
+	aead_aegis128l.exp \
+	aead_aegis256.exp \
 	aead_aes256gcm.exp \
+	aead_aes256gcm2.exp \
 	aead_chacha20poly1305.exp \
+	aead_chacha20poly13052.exp \
 	aead_xchacha20poly1305.exp \
 	auth.exp \
 	auth2.exp \
@@ -22,7 +28,11 @@ EXTRA_DIST = \
 	box_seed.exp \
 	chacha20.exp \
 	codecs.exp \
+	codecs2.exp \
+	codecs3.exp \
 	core_ed25519.exp \
+	core_keccak1600.exp \
+	core_ristretto255.exp \
 	core1.exp \
 	core2.exp \
 	core3.exp \
@@ -34,9 +44,18 @@ EXTRA_DIST = \
 	generichash2.exp \
 	generichash3.exp \
 	hash.exp \
-	hash2.exp \
 	hash3.exp \
+	hash_sha3256.exp \
+	hash_sha3512.exp \
+	ipcrypt.exp \
 	kdf.exp \
+	kdf_hkdf.exp \
+	kdf_hkdf2.exp \
+	kdf_hkdf3.exp \
+	kdf_hkdf4.exp \
+	kem.exp \
+	kem_mlkem768.exp \
+	kem_xwing.exp \
 	keygen.exp \
 	kx.exp \
 	metamorphic.exp \
@@ -46,22 +65,25 @@ EXTRA_DIST = \
 	onetimeauth7.exp \
 	pwhash_argon2i.exp \
 	pwhash_argon2id.exp \
+	pwhash_argon2id2.exp \
 	pwhash_scrypt.exp \
 	pwhash_scrypt_ll.exp \
 	randombytes.exp \
 	scalarmult.exp \
 	scalarmult_ed25519.exp \
+	scalarmult_ristretto255.exp \
 	scalarmult2.exp \
 	scalarmult5.exp \
 	scalarmult6.exp \
 	scalarmult7.exp \
+	scalarmult8.exp \
 	secretbox.exp \
 	secretbox2.exp \
 	secretbox7.exp \
 	secretbox8.exp \
 	secretbox_easy.exp \
 	secretbox_easy2.exp \
-	secretstream.exp \
+	secretstream_xchacha20poly1305.exp \
 	shorthash.exp \
 	sign.exp \
 	siphashx24.exp \
@@ -69,17 +91,29 @@ EXTRA_DIST = \
 	sodium_utils.exp \
 	sodium_utils2.exp \
 	sodium_utils3.exp \
+	sodium_utils4.exp \
 	sodium_version.exp \
 	stream.exp \
 	stream2.exp \
 	stream3.exp \
 	stream4.exp \
+	stream5.exp \
+	stream6.exp \
 	verify1.exp \
-	xchacha20.exp
+	xchacha20.exp \
+	xof_shake128.exp \
+	xof_shake256.exp \
+	xof_turboshake128.exp \
+	xof_turboshake256.exp \
+	xof2.exp
 
 DISTCLEANFILES = \
+	aead_aegis128l.res \
+	aead_aegis256.res \
 	aead_aes256gcm.res \
+	aead_aes256gcm2.res \
 	aead_chacha20poly1305.res \
+	aead_chacha20poly13052.res \
 	aead_xchacha20poly1305.res \
 	auth.res \
 	auth2.res \
@@ -97,7 +131,11 @@ DISTCLEANFILES = \
 	box_seed.res \
 	chacha20.res \
 	codecs.res \
+	codecs2.res \
+	codecs3.res \
 	core_ed25519.res \
+	core_keccak1600.res \
+	core_ristretto255.res \
 	core1.res \
 	core2.res \
 	core3.res \
@@ -111,7 +149,17 @@ DISTCLEANFILES = \
 	hash.res \
 	hash2.res \
 	hash3.res \
+	hash_sha3256.res \
+	hash_sha3512.res \
+	ipcrypt.res \
 	kdf.res \
+	kdf_hkdf.res \
+	kdf_hkdf2.res \
+	kdf_hkdf3.res \
+	kdf_hkdf4.res \
+	kem.res \
+	kem_mlkem768.res \
+	kem_xwing.res \
 	keygen.res \
 	kx.res \
 	metamorphic.res \
@@ -121,22 +169,25 @@ DISTCLEANFILES = \
 	onetimeauth7.res \
 	pwhash_argon2i.res \
 	pwhash_argon2id.res \
+	pwhash_argon2id2.res \
 	pwhash_scrypt.res \
 	pwhash_scrypt_ll.res \
 	randombytes.res \
 	scalarmult.res \
 	scalarmult_ed25519.res \
+	scalarmult_ristretto255.res \
 	scalarmult2.res \
 	scalarmult5.res \
 	scalarmult6.res \
 	scalarmult7.res \
+	scalarmult8.res \
 	secretbox.res \
 	secretbox2.res \
 	secretbox7.res \
 	secretbox8.res \
 	secretbox_easy.res \
 	secretbox_easy2.res \
-	secretstream.res \
+	secretstream_xchacha20poly1305.res \
 	shorthash.res \
 	sign.res \
 	siphashx24.res \
@@ -144,159 +195,21 @@ DISTCLEANFILES = \
 	sodium_utils.res \
 	sodium_utils2.res \
 	sodium_utils3.res \
+	sodium_utils4.res \
 	sodium_version.res \
 	stream.res \
 	stream2.res \
 	stream3.res \
 	stream4.res \
+	stream5.res \
+	stream6.res \
 	verify1.res \
-	xchacha20.res
-
-if NATIVECLIENT
-CLEANFILES = \
-	aead_aes256gcm.final \
-	aead_chacha20poly1305.final \
-	aead_xchacha20poly1305.final \
-	auth.final \
-	auth2.final \
-	auth3.final \
-	auth5.final \
-	auth6.final \
-	auth7.final \
-	box.final \
-	box2.final \
-	box7.final \
-	box8.final \
-	box_easy.final \
-	box_easy2.final \
-	box_seal.final \
-	box_seed.final \
-	chacha20.final \
-	codecs.final \
-	core_ed25519.final \
-	core1.final \
-	core2.final \
-	core3.final \
-	core4.final \
-	core5.final \
-	core6.final \
-	ed25519_convert.final \
-	generichash.final \
-	generichash2.final \
-	generichash3.final \
-	hash.final \
-	hash2.final \
-	hash3.final \
-	kdf.final \
-	keygen.final \
-	kx.final \
-	metamorphic.final \
-	misuse.final \
-	onetimeauth.final \
-	onetimeauth2.final \
-	onetimeauth7.final \
-	pwhash_argon2i.final \
-	pwhash_argon2id.final \
-	pwhash_scrypt.final \
-	pwhash_scrypt_ll.final \
-	randombytes.final \
-	scalarmult.final \
-	scalarmult_ed25519.final \
-	scalarmult2.final \
-	scalarmult5.final \
-	scalarmult6.final \
-	scalarmult7.final \
-	secretbox.final \
-	secretbox2.final \
-	secretbox7.final \
-	secretbox8.final \
-	secretbox_easy.final \
-	secretbox_easy2.final \
-	secretstream.final \
-	shorthash.final \
-	sign.final \
-	siphashx24.final \
-	sodium_core.final \
-	sodium_utils.final \
-	sodium_version.final \
-	stream.final \
-	stream2.final \
-	stream3.final \
-	stream4.final \
-	verify1.final \
-	xchacha20.final \
-	aead_aes256gcm.nexe \
-	aead_chacha20poly1305.nexe \
-	aead_xchacha20poly1305.nexe \
-	auth.nexe \
-	auth2.nexe \
-	auth3.nexe \
-	auth5.nexe \
-	auth6.nexe \
-	auth7.nexe \
-	box.nexe \
-	box2.nexe \
-	box7.nexe \
-	box8.nexe \
-	box_easy.nexe \
-	box_easy2.nexe \
-	box_seal.nexe \
-	box_seed.nexe \
-	chacha20.nexe \
-	codecs.nexe \
-	core_ed25519.nexe \
-	core1.nexe \
-	core2.nexe \
-	core3.nexe \
-	core4.nexe \
-	core5.nexe \
-	core6.nexe \
-	ed25519_convert.nexe \
-	generichash.nexe \
-	generichash2.nexe \
-	generichash3.nexe \
-	hash.nexe \
-	hash2.nexe \
-	hash3.nexe \
-	kdf.nexe \
-	keygen.nexe \
-	kx.nexe \
-	metamorphic.nexe \
-	misuse.nexe \
-	onetimeauth.nexe \
-	onetimeauth2.nexe \
-	onetimeauth7.nexe \
-	pwhash_argon2i.nexe \
-	pwhash_argon2id.nexe \
-	pwhash_scrypt.nexe \
-	pwhash_scrypt_ll.nexe \
-	randombytes.nexe \
-	scalarmult.nexe \
-	scalarmult_ed25519.nexe \
-	scalarmult2.nexe \
-	scalarmult5.nexe \
-	scalarmult6.nexe \
-	scalarmult7.nexe \
-	secretbox.nexe \
-	secretbox2.nexe \
-	secretbox7.nexe \
-	secretbox8.nexe \
-	secretbox_easy.nexe \
-	secretbox_easy2.nexe \
-	secretstream.nexe \
-	shorthash.nexe \
-	sign.nexe \
-	siphashx24.nexe \
-	sodium_core.nexe \
-	sodium_utils.nexe \
-	sodium_version.nexe \
-	stream.nexe \
-	stream2.nexe \
-	stream3.nexe \
-	stream4.nexe \
-	verify1.nexe \
-	xchacha20.nexe
-endif
+	xchacha20.res \
+	xof_shake128.res \
+	xof_shake256.res \
+	xof_turboshake128.res \
+	xof_turboshake256.res \
+	xof2.res
 
 AM_CPPFLAGS = \
 	-DTEST_SRCDIR=\"@srcdir@\" \
@@ -309,8 +222,12 @@ AM_CPPFLAGS = \
 AM_LDFLAGS = @TEST_LDFLAGS@
 
 TESTS_TARGETS = \
+	aead_aegis128l \
+	aead_aegis256 \
 	aead_aes256gcm \
+	aead_aes256gcm2 \
 	aead_chacha20poly1305 \
+	aead_chacha20poly13052 \
 	aead_xchacha20poly1305 \
 	auth \
 	auth2 \
@@ -328,6 +245,9 @@ TESTS_TARGETS = \
 	box_seed \
 	chacha20 \
 	codecs \
+	codecs2 \
+	codecs3 \
+	core_keccak1600 \
 	core1 \
 	core2 \
 	core3 \
@@ -340,7 +260,13 @@ TESTS_TARGETS = \
 	generichash3 \
 	hash \
 	hash3 \
+	hash_sha3256 \
+	hash_sha3512 \
+	ipcrypt \
 	kdf \
+	kem \
+	kem_mlkem768 \
+	kem_xwing \
 	keygen \
 	kx \
 	metamorphic \
@@ -350,19 +276,21 @@ TESTS_TARGETS = \
 	onetimeauth7 \
 	pwhash_argon2i \
 	pwhash_argon2id \
+	pwhash_argon2id2 \
 	randombytes \
 	scalarmult \
 	scalarmult2 \
 	scalarmult5 \
 	scalarmult6 \
 	scalarmult7 \
+	scalarmult8 \
 	secretbox \
 	secretbox2 \
 	secretbox7 \
 	secretbox8 \
 	secretbox_easy \
 	secretbox_easy2 \
-	secretstream \
+	secretstream_xchacha20poly1305 \
 	shorthash \
 	sign \
 	sodium_core \
@@ -372,14 +300,18 @@ TESTS_TARGETS = \
 	stream2 \
 	stream3 \
 	stream4 \
-	verify1
+	verify1 \
+	xof_shake128 \
+	xof_shake256 \
+	xof_turboshake128 \
+	xof_turboshake256 \
+	xof2
 
 if !EMSCRIPTEN
-if !NATIVECLIENT
 TESTS_TARGETS += \
 	sodium_utils2 \
-	sodium_utils3
-endif
+	sodium_utils3 \
+	sodium_utils4
 endif
 
 check_PROGRAMS = $(TESTS_TARGETS)
@@ -389,11 +321,23 @@ TESTS = $(TESTS_TARGETS)
 TESTS_LDADD = \
 	${top_builddir}/src/libsodium/libsodium.la
 
+aead_aegis128l_SOURCE                 = cmptest.h aead_aegis128l.c
+aead_aegis128l_LDADD                  = $(TESTS_LDADD)
+
+aead_aegis256_SOURCE                  = cmptest.h aead_aegis256.c
+aead_aegis256_LDADD                   = $(TESTS_LDADD)
+
 aead_aes256gcm_SOURCE                 = cmptest.h aead_aes256gcm.c
 aead_aes256gcm_LDADD                  = $(TESTS_LDADD)
 
+aead_aes256gcm2_SOURCE                = cmptest.h aead_aes256gcm2.c
+aead_aes256gcm2_LDADD                 = $(TESTS_LDADD)
+
 aead_chacha20poly1305_SOURCE          = cmptest.h aead_chacha20poly1305.c
 aead_chacha20poly1305_LDADD           = $(TESTS_LDADD)
+
+aead_chacha20poly13052_SOURCE         = cmptest.h aead_chacha20poly13052.c
+aead_chacha20poly13052_LDADD          = $(TESTS_LDADD)
 
 aead_xchacha20poly1305_SOURCE         = cmptest.h aead_xchacha20poly1305.c
 aead_xchacha20poly1305_LDADD          = $(TESTS_LDADD)
@@ -446,8 +390,20 @@ chacha20_LDADD            = $(TESTS_LDADD)
 codecs_SOURCE             = cmptest.h codecs.c
 codecs_LDADD              = $(TESTS_LDADD)
 
+codecs2_SOURCE            = cmptest.h codecs2.c
+codecs2_LDADD             = $(TESTS_LDADD)
+
+codecs3_SOURCE            = cmptest.h codecs3.c
+codecs3_LDADD             = $(TESTS_LDADD)
+
 core_ed25519_SOURCE       = cmptest.h core_ed25519.c
 core_ed25519_LDADD        = $(TESTS_LDADD)
+
+core_keccak1600_SOURCE    = cmptest.h core_keccak1600.c
+core_keccak1600_LDADD     = $(TESTS_LDADD)
+
+core_ristretto255_SOURCE  = cmptest.h core_ristretto255.c
+core_ristretto255_LDADD   = $(TESTS_LDADD)
 
 core1_SOURCE              = cmptest.h core1.c
 core1_LDADD               = $(TESTS_LDADD)
@@ -485,8 +441,38 @@ hash_LDADD                = $(TESTS_LDADD)
 hash3_SOURCE              = cmptest.h hash3.c
 hash3_LDADD               = $(TESTS_LDADD)
 
+hash_sha3256_SOURCE       = cmptest.h hash_sha3256.c
+hash_sha3256_LDADD        = $(TESTS_LDADD)
+
+hash_sha3512_SOURCE       = cmptest.h hash_sha3512.c
+hash_sha3512_LDADD        = $(TESTS_LDADD)
+
+ipcrypt_SOURCE            = cmptest.h ipcrypt.c
+ipcrypt_LDADD             = $(TESTS_LDADD)
+
 kdf_SOURCE                = cmptest.h kdf.c
 kdf_LDADD                 = $(TESTS_LDADD)
+
+kdf_hkdf_SOURCE            = cmptest.h kdf_hkdf.c
+kdf_hkdf_LDADD             = $(TESTS_LDADD)
+
+kdf_hkdf2_SOURCE           = cmptest.h kdf_hkdf2.c
+kdf_hkdf2_LDADD            = $(TESTS_LDADD)
+
+kdf_hkdf3_SOURCE           = cmptest.h kdf_hkdf3.c
+kdf_hkdf3_LDADD            = $(TESTS_LDADD)
+
+kdf_hkdf4_SOURCE           = cmptest.h kdf_hkdf4.c
+kdf_hkdf4_LDADD            = $(TESTS_LDADD)
+
+kem_SOURCE                 = cmptest.h kem.c
+kem_LDADD                  = $(TESTS_LDADD)
+
+kem_mlkem768_SOURCE        = cmptest.h kem_mlkem768.c
+kem_mlkem768_LDADD         = $(TESTS_LDADD)
+
+kem_xwing_SOURCE           = cmptest.h kem_xwing.c
+kem_xwing_LDADD            = $(TESTS_LDADD)
 
 keygen_SOURCE             = cmptest.h keygen.c
 keygen_LDADD              = $(TESTS_LDADD)
@@ -515,6 +501,9 @@ pwhash_argon2i_LDADD      = $(TESTS_LDADD)
 pwhash_argon2id_SOURCE    = cmptest.h pwhash_argon2id.c
 pwhash_argon2id_LDADD     = $(TESTS_LDADD)
 
+pwhash_argon2id2_SOURCE   = cmptest.h pwhash_argon2id2.c
+pwhash_argon2id2_LDADD    = $(TESTS_LDADD)
+
 pwhash_scrypt_SOURCE      = cmptest.h pwhash_scrypt.c
 pwhash_scrypt_LDADD       = $(TESTS_LDADD)
 
@@ -530,6 +519,9 @@ scalarmult_LDADD          = $(TESTS_LDADD)
 scalarmult_ed25519_SOURCE = cmptest.h scalarmult_ed25519.c
 scalarmult_ed25519_LDADD  = $(TESTS_LDADD)
 
+scalarmult_ristretto255_SOURCE = cmptest.h scalarmult_ristretto255.c
+scalarmult_ristretto255_LDADD  = $(TESTS_LDADD)
+
 scalarmult2_SOURCE        = cmptest.h scalarmult2.c
 scalarmult2_LDADD         = $(TESTS_LDADD)
 
@@ -541,6 +533,9 @@ scalarmult6_LDADD         = $(TESTS_LDADD)
 
 scalarmult7_SOURCE        = cmptest.h scalarmult7.c
 scalarmult7_LDADD         = $(TESTS_LDADD)
+
+scalarmult8_SOURCE        = cmptest.h scalarmult8.c
+scalarmult8_LDADD         = $(TESTS_LDADD)
 
 secretbox_SOURCE          = cmptest.h secretbox.c
 secretbox_LDADD           = $(TESTS_LDADD)
@@ -560,8 +555,8 @@ secretbox_easy_LDADD      = $(TESTS_LDADD)
 secretbox_easy2_SOURCE    = cmptest.h secretbox_easy2.c
 secretbox_easy2_LDADD     = $(TESTS_LDADD)
 
-secretstream_SOURCE       = cmptest.h secretstream.c
-secretstream_LDADD        = $(TESTS_LDADD)
+secretstream_xchacha20poly1305_SOURCE = cmptest.h secretstream_xchacha20poly1305.c
+secretstream_xchacha20poly1305_LDADD  = $(TESTS_LDADD)
 
 shorthash_SOURCE          = cmptest.h shorthash.c
 shorthash_LDADD           = $(TESTS_LDADD)
@@ -584,6 +579,9 @@ sodium_utils2_LDADD       = $(TESTS_LDADD)
 sodium_utils3_SOURCE      = cmptest.h sodium_utils3.c
 sodium_utils3_LDADD       = $(TESTS_LDADD)
 
+sodium_utils4_SOURCE      = cmptest.h sodium_utils4.c
+sodium_utils4_LDADD       = $(TESTS_LDADD)
+
 sodium_version_SOURCE     = cmptest.h sodium_version.c
 sodium_version_LDADD      = $(TESTS_LDADD)
 
@@ -599,24 +597,53 @@ stream3_LDADD             = $(TESTS_LDADD)
 stream4_SOURCE            = cmptest.h stream4.c
 stream4_LDADD             = $(TESTS_LDADD)
 
+stream5_SOURCE            = cmptest.h stream5.c
+stream5_LDADD             = $(TESTS_LDADD)
+
+stream6_SOURCE            = cmptest.h stream6.c
+stream6_LDADD             = $(TESTS_LDADD)
+
 verify1_SOURCE            = cmptest.h verify1.c
 verify1_LDADD             = $(TESTS_LDADD)
 
 xchacha20_SOURCE          = cmptest.h xchacha20.c
 xchacha20_LDADD           = $(TESTS_LDADD)
 
+xof_shake128_SOURCE       = cmptest.h xof_shake128.c
+xof_shake128_LDADD        = $(TESTS_LDADD)
+
+xof_shake256_SOURCE       = cmptest.h xof_shake256.c
+xof_shake256_LDADD        = $(TESTS_LDADD)
+
+xof_turboshake128_SOURCE  = cmptest.h xof_turboshake128.c
+xof_turboshake128_LDADD   = $(TESTS_LDADD)
+
+xof_turboshake256_SOURCE  = cmptest.h xof_turboshake256.c
+xof_turboshake256_LDADD   = $(TESTS_LDADD)
+
+xof2_SOURCE               = cmptest.h xof2.c
+xof2_LDADD                = $(TESTS_LDADD)
+
 if !MINIMAL
 TESTS_TARGETS += \
 	core_ed25519 \
+	core_ristretto255 \
+	kdf_hkdf \
+	kdf_hkdf2 \
+	kdf_hkdf3 \
+	kdf_hkdf4 \
 	pwhash_scrypt \
+	stream5 \
+	stream6 \
 	pwhash_scrypt_ll \
 	scalarmult_ed25519 \
+	scalarmult_ristretto255 \
 	siphashx24 \
 	xchacha20
 endif
 
-if NATIVECLIENT
-LOG_COMPILER = ./nacl-test-wrapper.sh
+if WASI
+LOG_COMPILER = ./wasi-test-wrapper.sh
 endif
 
 verify: check

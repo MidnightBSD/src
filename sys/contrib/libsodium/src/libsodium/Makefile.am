@@ -2,8 +2,19 @@ lib_LTLIBRARIES = \
 	libsodium.la
 
 libsodium_la_SOURCES = \
-	crypto_aead/chacha20poly1305/sodium/aead_chacha20poly1305.c \
-	crypto_aead/xchacha20poly1305/sodium/aead_xchacha20poly1305.c \
+	crypto_aead/aegis128l/aead_aegis128l.c \
+	crypto_aead/aegis128l/aegis128l_common.h \
+	crypto_aead/aegis128l/aegis128l_soft.c \
+	crypto_aead/aegis128l/aegis128l_soft.h \
+	crypto_aead/aegis128l/implementations.h \
+	crypto_aead/aegis256/aead_aegis256.c \
+	crypto_aead/aegis256/aegis256_common.h \
+	crypto_aead/aegis256/aegis256_soft.c \
+	crypto_aead/aegis256/aegis256_soft.h \
+	crypto_aead/aegis256/implementations.h \
+	crypto_aead/aes256gcm/aead_aes256gcm.c \
+	crypto_aead/chacha20poly1305/aead_chacha20poly1305.c \
+	crypto_aead/xchacha20poly1305/aead_xchacha20poly1305.c \
 	crypto_auth/crypto_auth.c \
 	crypto_auth/hmacsha256/auth_hmacsha256.c \
 	crypto_auth/hmacsha512/auth_hmacsha512.c \
@@ -16,7 +27,13 @@ libsodium_la_SOURCES = \
 	crypto_core/hchacha20/core_hchacha20.c \
 	crypto_core/hsalsa20/ref2/core_hsalsa20_ref2.c \
 	crypto_core/hsalsa20/core_hsalsa20.c \
+	crypto_core/keccak1600/keccak1600.c \
+	crypto_core/keccak1600/ref/keccak1600_ref.c \
+	crypto_core/keccak1600/ref/keccak1600_ref.h \
+	crypto_core/keccak1600/armsha3/keccak1600_armsha3.c \
+	crypto_core/keccak1600/armsha3/keccak1600_armsha3.h \
 	crypto_core/salsa/ref/core_salsa_ref.c \
+	crypto_core/softaes/softaes.c \
 	crypto_generichash/crypto_generichash.c \
 	crypto_generichash/blake2b/generichash_blake2.c \
 	crypto_generichash/blake2b/ref/blake2.h \
@@ -31,8 +48,20 @@ libsodium_la_SOURCES = \
 	crypto_hash/sha256/cp/hash_sha256_cp.c \
 	crypto_hash/sha512/hash_sha512.c \
 	crypto_hash/sha512/cp/hash_sha512_cp.c \
+	crypto_hash/sha3/hash_sha3.c \
+	crypto_ipcrypt/crypto_ipcrypt.c \
+	crypto_ipcrypt/ipcrypt_soft.c \
+	crypto_ipcrypt/ipcrypt_soft.h \
+	crypto_ipcrypt/implementations.h \
 	crypto_kdf/blake2b/kdf_blake2b.c \
 	crypto_kdf/crypto_kdf.c \
+	crypto_kdf/hkdf/kdf_hkdf_sha256.c \
+	crypto_kdf/hkdf/kdf_hkdf_sha512.c \
+	crypto_kem/crypto_kem.c \
+	crypto_kem/mlkem768/kem_mlkem768.c \
+	crypto_kem/mlkem768/ref/kem_mlkem768_ref.c \
+	crypto_kem/mlkem768/ref/kem_mlkem768_ref.h \
+	crypto_kem/xwing/kem_xwing.c \
 	crypto_kx/crypto_kx.c \
 	crypto_onetimeauth/crypto_onetimeauth.c \
 	crypto_onetimeauth/poly1305/onetimeauth_poly1305.c \
@@ -46,11 +75,13 @@ libsodium_la_SOURCES = \
 	crypto_pwhash/argon2/argon2-encoding.c \
 	crypto_pwhash/argon2/argon2-encoding.h \
 	crypto_pwhash/argon2/argon2-fill-block-ref.c \
+	crypto_pwhash/argon2/argon2-fill-block-wasm32.c \
 	crypto_pwhash/argon2/argon2.c \
 	crypto_pwhash/argon2/argon2.h \
 	crypto_pwhash/argon2/blake2b-long.c \
 	crypto_pwhash/argon2/blake2b-long.h \
 	crypto_pwhash/argon2/blamka-round-ref.h \
+	crypto_pwhash/argon2/blamka-round-wasm32.h \
 	crypto_pwhash/argon2/pwhash_argon2i.c \
 	crypto_pwhash/argon2/pwhash_argon2id.c \
 	crypto_pwhash/crypto_pwhash.c \
@@ -81,12 +112,28 @@ libsodium_la_SOURCES = \
 	crypto_stream/salsa20/stream_salsa20.c \
 	crypto_stream/salsa20/stream_salsa20.h \
 	crypto_stream/xsalsa20/stream_xsalsa20.c \
-	crypto_verify/sodium/verify.c \
+	crypto_verify/verify.c \
+	crypto_xof/shake128/xof_shake128.c \
+	crypto_xof/shake128/ref/shake128_ref.c \
+	crypto_xof/shake128/ref/shake128_ref.h \
+	crypto_xof/shake256/xof_shake256.c \
+	crypto_xof/shake256/ref/shake256_ref.c \
+	crypto_xof/shake256/ref/shake256_ref.h \
+	crypto_xof/turboshake128/xof_turboshake128.c \
+	crypto_xof/turboshake128/ref/turboshake128_ref.c \
+	crypto_xof/turboshake128/ref/turboshake128_ref.h \
+	crypto_xof/turboshake256/xof_turboshake256.c \
+	crypto_xof/turboshake256/ref/turboshake256_ref.c \
+	crypto_xof/turboshake256/ref/turboshake256_ref.h \
+	include/sodium/private/asm_cet.h \
+	include/sodium/private/chacha20_ietf_ext.h \
 	include/sodium/private/common.h \
 	include/sodium/private/ed25519_ref10.h \
 	include/sodium/private/implementations.h \
 	include/sodium/private/mutex.h \
+	include/sodium/private/quirks.h \
 	include/sodium/private/sse2_64_32.h \
+	include/sodium/private/softaes.h \
 	randombytes/randombytes.c \
 	sodium/codecs.c \
 	sodium/core.c \
@@ -126,8 +173,7 @@ noinst_HEADERS = \
 	crypto_scalarmult/curve25519/sandy2x/fe51_mul.S \
 	crypto_scalarmult/curve25519/sandy2x/fe51_nsquare.S \
 	crypto_scalarmult/curve25519/sandy2x/fe51_pack.S \
-	crypto_scalarmult/curve25519/sandy2x/ladder.S \
-	crypto_scalarmult/curve25519/sandy2x/ladder_base.S
+	crypto_scalarmult/curve25519/sandy2x/ladder.S
 
 if HAVE_AVX_ASM
 libsodium_la_SOURCES += \
@@ -140,8 +186,6 @@ libsodium_la_SOURCES += \
 	crypto_scalarmult/curve25519/sandy2x/fe51_namespace.h \
 	crypto_scalarmult/curve25519/sandy2x/fe_frombytes_sandy2x.c \
 	crypto_scalarmult/curve25519/sandy2x/ladder.h \
-	crypto_scalarmult/curve25519/sandy2x/ladder_base.h \
-	crypto_scalarmult/curve25519/sandy2x/ladder_base_namespace.h \
 	crypto_scalarmult/curve25519/sandy2x/ladder_namespace.h \
 	crypto_scalarmult/curve25519/sandy2x/sandy2x.S
 endif
@@ -151,6 +195,7 @@ libsodium_la_SOURCES += \
 	crypto_box/curve25519xchacha20poly1305/box_curve25519xchacha20poly1305.c \
 	crypto_box/curve25519xchacha20poly1305/box_seal_curve25519xchacha20poly1305.c \
 	crypto_core/ed25519/core_ed25519.c \
+	crypto_core/ed25519/core_ristretto255.c \
 	crypto_pwhash/scryptsalsa208sha256/crypto_scrypt-common.c \
 	crypto_pwhash/scryptsalsa208sha256/crypto_scrypt.h \
 	crypto_pwhash/scryptsalsa208sha256/scrypt_platform.c \
@@ -159,6 +204,7 @@ libsodium_la_SOURCES += \
 	crypto_pwhash/scryptsalsa208sha256/pwhash_scryptsalsa208sha256.c \
 	crypto_pwhash/scryptsalsa208sha256/nosse/pwhash_scryptsalsa208sha256_nosse.c \
 	crypto_scalarmult/ed25519/ref10/scalarmult_ed25519_ref10.c \
+	crypto_scalarmult/ristretto255/ref10/scalarmult_ristretto255_ref10.c \
 	crypto_secretbox/xchacha20poly1305/secretbox_xchacha20poly1305.c \
 	crypto_shorthash/siphash24/shorthash_siphashx24.c \
 	crypto_shorthash/siphash24/ref/shorthash_siphashx24_ref.c \
@@ -170,7 +216,7 @@ libsodium_la_SOURCES += \
 	crypto_stream/xchacha20/stream_xchacha20.c
 endif
 
-randombytes_salsa20_randombytes_salsa20_random_CFLAGS = @CFLAGS_RDRAND@
+randombytes_internal_randombytes_internal_random_CFLAGS = @CFLAGS_RDRAND@
 
 libsodium_la_LDFLAGS = \
 	$(AM_LDFLAGS) \
@@ -194,34 +240,48 @@ endif
 SUBDIRS = \
 	include
 
-libsodium_la_LIBADD = libaesni.la libsse2.la libssse3.la libsse41.la libavx2.la libavx512f.la
-noinst_LTLIBRARIES  = libaesni.la libsse2.la libssse3.la libsse41.la libavx2.la libavx512f.la
+libsodium_la_LIBADD = libaesni.la libarmcrypto.la libsse2.la libssse3.la libsse41.la libavx2.la libavx512f.la
+noinst_LTLIBRARIES  = libaesni.la libarmcrypto.la libsse2.la libssse3.la libsse41.la libavx2.la libavx512f.la
 
 librdrand_la_LDFLAGS = $(libsodium_la_LDFLAGS)
 librdrand_la_CPPFLAGS = $(libsodium_la_CPPFLAGS) \
 	@CFLAGS_RDRAND@
 librdrand_la_SOURCES = \
-	randombytes/salsa20/randombytes_salsa20_random.c
+	randombytes/internal/randombytes_internal_random.c
 
 if !EMSCRIPTEN
 libsodium_la_LIBADD += librdrand.la
 noinst_LTLIBRARIES  += librdrand.la
 
-if NATIVECLIENT
-libsodium_la_SOURCES += \
-	randombytes/nativeclient/randombytes_nativeclient.c
-else
 libsodium_la_SOURCES += \
 	randombytes/sysrandom/randombytes_sysrandom.c
 endif
 
-endif
+libarmcrypto_la_LDFLAGS = $(libsodium_la_LDFLAGS)
+libarmcrypto_la_CPPFLAGS = $(libsodium_la_CPPFLAGS) \
+	@CFLAGS_ARMCRYPTO@
+libarmcrypto_la_SOURCES = \
+	crypto_aead/aegis128l/aegis128l_armcrypto.c \
+	crypto_aead/aegis128l/aegis128l_armcrypto.h \
+	crypto_aead/aegis256/aegis256_armcrypto.c \
+	crypto_aead/aegis256/aegis256_armcrypto.h \
+	crypto_aead/aes256gcm/armcrypto/aead_aes256gcm_armcrypto.c \
+	crypto_ipcrypt/ipcrypt_armcrypto.c \
+	crypto_ipcrypt/ipcrypt_armcrypto.h \
+	crypto_pwhash/argon2/argon2-fill-block-neon.c \
+	crypto_pwhash/argon2/blamka-round-neon.h
 
 libaesni_la_LDFLAGS = $(libsodium_la_LDFLAGS)
 libaesni_la_CPPFLAGS = $(libsodium_la_CPPFLAGS) \
-	@CFLAGS_SSE2@ @CFLAGS_SSSE3@ @CFLAGS_AESNI@ @CFLAGS_PCLMUL@
+	@CFLAGS_SSE2@ @CFLAGS_SSSE3@ @CFLAGS_AVX@ @CFLAGS_AESNI@ @CFLAGS_PCLMUL@
 libaesni_la_SOURCES = \
-	crypto_aead/aes256gcm/aesni/aead_aes256gcm_aesni.c
+	crypto_aead/aegis128l/aegis128l_aesni.c \
+	crypto_aead/aegis128l/aegis128l_aesni.h \
+	crypto_aead/aegis256/aegis256_aesni.c \
+	crypto_aead/aegis256/aegis256_aesni.h \
+	crypto_aead/aes256gcm/aesni/aead_aes256gcm_aesni.c \
+	crypto_ipcrypt/ipcrypt_aesni.c \
+	crypto_ipcrypt/ipcrypt_aesni.h
 
 libsse2_la_LDFLAGS = $(libsodium_la_LDFLAGS)
 libsse2_la_CPPFLAGS = $(libsodium_la_CPPFLAGS) \

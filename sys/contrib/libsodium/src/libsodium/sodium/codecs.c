@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "core.h"
+#include "private/common.h"
 #include "utils.h"
 
 /* Derived from original code by CodesInChaos */
@@ -123,8 +124,9 @@ b64_byte_to_char(unsigned int x)
 }
 
 static unsigned int
-b64_char_to_byte(int c)
+b64_char_to_byte(int c_)
 {
+    const unsigned int c = (unsigned char) c_;
     const unsigned int x =
         (GE(c, 'A') & LE(c, 'Z') & (c - 'A')) |
         (GE(c, 'a') & LE(c, 'z') & (c - ('a' - 26))) |
@@ -144,8 +146,9 @@ b64_byte_to_urlsafe_char(unsigned int x)
 }
 
 static unsigned int
-b64_urlsafe_char_to_byte(int c)
+b64_urlsafe_char_to_byte(int c_)
 {
+    const unsigned int c = (unsigned char) c_;
     const unsigned x =
         (GE(c, 'A') & LE(c, 'Z') & (c - 'A')) |
         (GE(c, 'a') & LE(c, 'z') & (c - ('a' - 26))) |
@@ -163,7 +166,7 @@ static void
 sodium_base64_check_variant(const int variant)
 {
     if ((((unsigned int) variant) & ~ 0x6U) != 0x1U) {
-        sodium_misuse();
+        sodium_misuse(); /* LCOV_EXCL_LINE */
     }
 }
 
@@ -172,6 +175,9 @@ sodium_base64_encoded_len(const size_t bin_len, const int variant)
 {
     sodium_base64_check_variant(variant);
 
+    if (bin_len / 3 > (SIZE_MAX - 5) / 4) {
+      sodium_misuse(); /* LCOV_EXCL_LINE */
+    }
     return sodium_base64_ENCODED_LEN(bin_len, variant);
 }
 
@@ -190,6 +196,9 @@ sodium_bin2base64(char * const b64, const size_t b64_maxlen,
 
     sodium_base64_check_variant(variant);
     nibbles = bin_len / 3;
+    if (nibbles > (SIZE_MAX - 5) / 4) {
+        sodium_misuse(); /* LCOV_EXCL_LINE */
+    }
     remainder = bin_len - 3 * nibbles;
     b64_len = nibbles * 4;
     if (remainder != 0) {
@@ -200,7 +209,7 @@ sodium_bin2base64(char * const b64, const size_t b64_maxlen,
         }
     }
     if (b64_maxlen <= b64_len) {
-        sodium_misuse();
+        sodium_misuse(); /* LCOV_EXCL_LINE */
     }
     if ((((unsigned int) variant) & VARIANT_URLSAFE_MASK) != 0U) {
         while (bin_pos < bin_len) {
@@ -250,6 +259,7 @@ _sodium_base642bin_skip_padding(const char * const b64, const size_t b64_len,
             errno = ERANGE;
             return -1;
         }
+        ACQUIRE_FENCE;
         c = b64[*b64_pos_p];
         if (c == '=') {
             padding_len--;
@@ -330,4 +340,285 @@ sodium_base642bin(unsigned char * const bin, const size_t bin_maxlen,
         *bin_len = bin_pos;
     }
     return ret;
+}
+
+static int
+ip_hex_digit(int ch)
+{
+    if (ch >= '0' && ch <= '9') {
+        return ch - '0';
+    }
+    if (((unsigned int) ch | 32U) >= 'a' && ((unsigned int) ch | 32U) <= 'f') {
+        return ((unsigned int) ch | 32U) - 'a' + 10;
+    }
+    return -1;
+}
+
+static int
+parse_ipv4(const char *src, const char *end, unsigned char out[4])
+{
+    const char *p = src;
+    int         i;
+
+    if (src == NULL || end == NULL || out == NULL || src >= end) {
+        return 0;
+    }
+    for (i = 0; i < 4; i++) {
+        unsigned int val    = 0U;
+        int          digits = 0;
+
+        while (p < end && *p >= '0' && *p <= '9') {
+            val = val * 10U + (unsigned int) (*p++ - '0');
+            if (++digits > 3 || val > 255U) {
+                return 0;
+            }
+        }
+        if (digits == 0) {
+            return 0;
+        }
+        out[i] = (unsigned char) val;
+
+        if (i < 3) {
+            if (p >= end || *p++ != '.') {
+                return 0;
+            }
+        }
+    }
+    return p == end;
+}
+
+static int
+parse_ipv6(const char *src, const char *end, unsigned char out[16])
+{
+    unsigned char  tmp[16]    = { 0 };
+    unsigned char *tp         = tmp;
+    unsigned char *endp       = tmp + 16;
+    unsigned char *colonp     = NULL;
+    const char    *p          = src;
+    const char    *curtok     = src;
+    unsigned int   val        = 0U;
+    int            saw_xdigit = 0;
+    int            xdigits    = 0;
+    int            ch;
+    int            hv;
+
+    if (src == NULL || end == NULL || out == NULL || src >= end) {
+        return 0;
+    }
+    if (*p == ':') {
+        if (++p >= end || *p != ':') {
+            return 0;
+        }
+        colonp = tp;
+        curtok = ++p;
+    }
+    while (p < end) {
+        ch = *p;
+
+        if (ch == ':') {
+            if (!saw_xdigit) {
+                if (colonp != NULL) {
+                    return 0;
+                }
+                colonp = tp;
+                curtok = ++p;
+                continue;
+            }
+            if (tp + 2 > endp) {
+                return 0;
+            }
+            *tp++      = (unsigned char) (val >> 8);
+            *tp++      = (unsigned char) (val & 0xffU);
+            val        = 0U;
+            saw_xdigit = 0;
+            xdigits    = 0;
+            curtok     = ++p;
+            if (p >= end) {
+                return 0;
+            }
+            continue;
+        }
+        if (ch == '.') {
+            if (tp + 4 > endp || parse_ipv4(curtok, end, tp) == 0) {
+                return 0;
+            }
+            tp += 4;
+            saw_xdigit = 0;
+            break;
+        }
+        hv = ip_hex_digit(ch);
+        if (hv < 0 || xdigits >= 4) {
+            return 0;
+        }
+        val        = (val << 4) | (unsigned int) hv;
+        saw_xdigit = 1;
+        xdigits++;
+        p++;
+    }
+    if (saw_xdigit) {
+        if (tp + 2 > endp) {
+            return 0;
+        }
+        *tp++ = (unsigned char) (val >> 8);
+        *tp++ = (unsigned char) (val & 0xffU);
+    }
+    if (colonp != NULL) {
+        size_t n = (size_t) (tp - colonp);
+
+        if (tp == endp) {
+            return 0;
+        }
+        memmove(endp - n, colonp, n);
+        memset(colonp, 0, (size_t) (endp - n - colonp));
+        tp = endp;
+    }
+    if (tp != endp) {
+        return 0;
+    }
+    memcpy(out, tmp, 16U);
+
+    return 1;
+}
+
+int
+sodium_ip2bin(unsigned char bin[16], const char *ip,
+              size_t ip_len_) /* Some AIX versions define a macro named "ip_len" */
+{
+    const char   *ip_end = ip + ip_len_;
+    const char   *end    = ip;
+    const char   *zone   = NULL;
+    const char   *z;
+    unsigned char v4[4];
+    int           is_ipv6;
+
+    for (; end < ip_end && *end != 0; end++) {
+        /* empty */
+    }
+    zone = (const char *) memchr(ip, '%', (size_t) (end - ip));
+    if (zone != NULL) {
+        for (z = zone + 1; z < end; z++) {
+            if (!((*z >= '0' && *z <= '9') || (*z >= 'a' && *z <= 'z') ||
+                  (*z >= 'A' && *z <= 'Z') || *z == '-' || *z == '_' || *z == '.')) {
+                return -1;
+            }
+        }
+        if (zone + 1 >= end) {
+            return -1;
+        }
+        end = zone;
+    }
+    is_ipv6 = memchr(ip, ':', (size_t) (end - ip)) != NULL;
+    if (zone != NULL && !is_ipv6) {
+        return -1;
+    }
+    if (is_ipv6) {
+        return parse_ipv6(ip, end, bin) != 0 ? 0 : -1;
+    }
+    if (parse_ipv4(ip, end, v4) == 0) {
+        return -1;
+    }
+    memset(bin, 0, 10U);
+    bin[10] = 0xffU;
+    bin[11] = 0xffU;
+    memcpy(bin + 12, v4, 4U);
+
+    return 0;
+}
+
+static const unsigned char ipv4_mapped_prefix[12] = { 0U, 0U, 0U, 0U, 0U,    0U,
+                                                      0U, 0U, 0U, 0U, 0xffU, 0xffU };
+
+static void
+ip_write_num(char **p, unsigned int val, int base)
+{
+    char buf[4];
+    int  n = 0;
+
+    do {
+        unsigned int d = val % (unsigned int) base;
+
+        buf[n++] = (char) (d < 10U ? '0' + d : 'a' + d - 10U);
+        val /= (unsigned int) base;
+    } while (val != 0U);
+
+    while (n-- > 0) {
+        *(*p)++ = buf[n];
+    }
+}
+
+char *
+sodium_bin2ip(char *ip, size_t ip_maxlen, const unsigned char bin[16])
+{
+    char   buf[46];
+    char  *p = buf;
+    int    i;
+    int    best_start = -1;
+    int    best_len   = 0;
+    int    cur_start  = -1;
+    int    cur_len    = 0;
+    size_t len;
+
+    if (ip_maxlen <= 2U) {
+        return NULL;
+    }
+    if (memcmp(bin, ipv4_mapped_prefix, 12U) == 0) {
+        for (i = 0; i < 4; i++) {
+            if (i != 0) {
+                *p++ = '.';
+            }
+            ip_write_num(&p, (unsigned int) bin[12 + i], 10);
+        }
+        len = (size_t) (p - buf);
+        if (len >= ip_maxlen) {
+            return NULL;
+        }
+        memcpy(ip, buf, len + 1U);
+        ip[len] = 0;
+
+        return ip;
+    }
+    for (i = 0; i < 8; i++) {
+        unsigned int word = ((unsigned int) bin[i * 2] << 8) | (unsigned int) bin[i * 2 + 1];
+
+        if (word == 0U) {
+            if (cur_start < 0) {
+                cur_start = i;
+            }
+            cur_len++;
+        } else {
+            if (cur_len > best_len) {
+                best_start = cur_start;
+                best_len   = cur_len;
+            }
+            cur_start = -1;
+            cur_len   = 0;
+        }
+    }
+    if (cur_len > best_len) {
+        best_start = cur_start;
+        best_len   = cur_len;
+    }
+    if (best_len < 2) {
+        best_start = -1;
+    }
+    for (i = 0; i < 8; i++) {
+        if (i == best_start) {
+            *p++ = ':';
+            *p++ = ':';
+            i += best_len - 1;
+            continue;
+        }
+        if (i != 0 && (best_start < 0 || i != best_start + best_len)) {
+            *p++ = ':';
+        }
+        ip_write_num(&p, ((unsigned int) bin[i * 2] << 8) | (unsigned int) bin[i * 2 + 1], 16);
+    }
+    len = (size_t) (p - buf);
+    if (len >= ip_maxlen) {
+        return NULL;
+    }
+    memcpy(ip, buf, len);
+    ip[len] = 0;
+
+    return ip;
 }

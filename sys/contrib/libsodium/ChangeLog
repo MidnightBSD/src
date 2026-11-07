@@ -1,3 +1,258 @@
+* Version 1.0.22
+  This point release includes all the changes from 1.0.21-stable, plus:
+ - Post-quantum key encapsulation is now available. ML-KEM768, the
+NIST-standardized lattice-based KEM, is accessible through the
+`crypto_kem_mlkem768_*()` functions.
+ - X-Wing, a hybrid KEM combining ML-KEM768 with X25519 for protection
+against both classical and quantum adversaries, is available through the
+`crypto_kem_*()` functions. X-Wing is the recommended KEM for most
+applications.
+ - SHA-3 hash functions are now available as `crypto_hash_sha3256_*()`
+and `crypto_hash_sha3512_*()`, with both one-shot and streaming APIs.
+
+* Version 1.0.21-stable
+ - Performance: NEON optimizations for Argon2 on ARM platforms.
+ - Performance: SHA3 (Keccak1600) now leverages ARM SHA3 instructions when
+available on ARM platforms.
+ - Performance: WebAssembly SIMD implementations of Argon2 have been added.
+ - Emscripten: LTO is now disabled. With Emscripten 4, LTO produced
+WebAssembly modules with functions that ran significantly slower than
+without it.
+ - Emscripten: a new option allows compilation with SIMD support.
+ - Emscripten: native ESM module generation is now supported.
+ - JavaScript sumo builds now allow up to 80 MiB memory usage, so that
+`crypto_pwhash` with the interactive settings can be used in pure
+JavaScript, not just WebAssembly.
+ - XOF state alignment has been relaxed.
+ - `crypto_core_keccak1600_state` has been added.
+ - Export missing `crypto_ipcrypt_nd_keygen()` helper function.
+ - `crypto_auth_hmacsha256_init` and `crypto_auth_hmacsha512_init` now
+accept NULL key pointers (with a zero key length), for consistency with
+other `_init` functions.
+ - apple-xcframework: headers are now in a Clibsodium subdirectory
+to prevent module.modulemap collisions with other xcframeworks.
+ - Fixed compilation with GCC on aarch64 and gcc 4.x.
+ - On aarch64, aes256-gcm is now enabled even when not using clang,
+including MSVC.
+ - Added compatibility with Visual Studio 2026 when toolsets do not
+define PlatformToolsetVersion.
+ - Libsodium can be directly used as a dependency in a Zig project.
+ - Performance of MSVC builds has been improved.
+
+* Version 1.0.21
+  This point release includes all the changes from 1.0.20-stable, which
+include a security fix for the `crypto_core_ed25519_is_valid_point()`
+function, as well as two new sets of functions:
+ - The new `crypto_ipcrypt_*` functions implement mechanisms for securely
+encrypting and anonymizing IP addresses as specified in https://ipcrypt-std.github.io
+ - The `sodium_bin2ip` and `sodium_ip2bin` helper functions have been added
+to complement the `crypto_ipcrypt_*` functions and easily convert addresses
+between bytes and strings.
+ - XOF: the `crypto_xof_shake*` and `crypto_xof_turboshake*` functions
+are standard extendable output functions. From input of any length, they can
+derive output of any length with the same properties as hash functions. These
+primitives are required by many post-quantum mechanisms, but can also be used
+for a wide range of applications, including key derivation, session encryption
+and more.
+
+* Version 1.0.20-stable
+ - XCFramework: cross-compilation is now forced on Apple Silicon to
+avoid Rosetta-related build issues
+ - The Fil-C compiler is supported out of the box
+ - The CompCert compiler is supported out of the box
+ - MSVC 2026 (Visual Studio 2026) is now supported
+ - Zig builds now support FreeBSD targets
+ - Performance of AES256-GCM and AEGIS on ARM has been improved
+with some compilers
+ - Android binaries have been added to the NuGet package
+ - Windows ARM binaries have been added to the NuGet package
+ - The Android build script has been improved. The base SDK is
+now 27c, and the default platform is 21, supporting 16 KB page sizes.
+ - The library can now be compiled with Zig 0.15 and Zig 0.16
+ - Zig builds now generate position-independent static libraries by
+default on targets that support PIC
+ - arm64e builds have been added to the XCFramework packages
+ - XCFramework packages are now full builds instead of minimal
+builds
+ - MSVC builds have been enabled for ARM64
+ - iOS 32-bit (armv7/armv7s) support has been removed from the
+XCFramework build script
+ - Security: optblockers have been introduced in critical code paths
+to prevent compilers from introducing unwanted side channels via
+conditional jumps. This was observed on RISC-V targets with specific
+compilers and options.
+ - Security: `crypto_core_ed25519_is_valid_point()` now properly
+rejects small-order points that are not in the main subgroup
+ - `((nonnull))` attributes have been relaxed on some `crypto_stream*`
+functions to allow NULL output buffers when the output length is zero
+ - A cross-compilation issue with old clang versions has been
+fixed
+ - JavaScript: support for Cloudflare Workers has been added
+ - JavaScript: WASM_BIGINT is forcibly disabled to retain
+compatibility with older runtimes
+ - A compilation issue with old toolchains on Solaris has been
+fixed
+ - `crypto_aead_aes256gcm_is_available` is exported to JavaScript
+ - libsodium is now compatible with Emscripten 4.x
+ - Security: memory fences have been added after MAC verification in
+AEAD to prevent speculative access to plaintext before authentication
+is complete
+ - Assembly files now include .gnu.property notes for proper IBT and
+Shadow Stack support when building with CET instrumentation
+
+* Version 1.0.20
+  This point release includes all the changes from 1.0.19-stable,
+mainly addressing compilation issues and improvements to the .NET
+packages.
+
+* Version 1.0.19-stable
+ - Building with `zig build` now requires Zig 0.12.
+ - When using the traditional build system, -O3 is used instead of -Ofast.
+ - Improved detection of the compiler flags required on aarch64.
+ - Improved compatibility with custom build systems on aarch64.
+ - apple-xcframework: VisionOS packages are not built if Xcode doesn't
+include that SDK.
+ - `crypto_kdf_hkdf_sha512_statebytes()` was added.
+ - When using Visual Studio, runtime CPU feature detection is now enabled
+on Windows/aarch64.
+ - There were issues with C++ guards affecting usage of libsodium
+using Swift on Windows. This has been fixed.
+ - Emscripten: `crypto_aead_aegis*()` functions are now exported in
+JavaScript builds
+ - Emscripten: unsupported `--memory-init-file` option has been removed.
+ - apple-xcframework: the minimal deployment target can be set to iOS 11+.
+ - .NET packages now include precompiled libraries for Windows/arm64,
+iOS, TvOS and Catalyst.
+ - .NET precompiled libraries now work on any CPUs, using only runtime
+feature detection.
+ - SYSV assembly should not be used when targeting Windows (reported by
+@meiyese, thanks!)
+ - Compatibility issues with LLVM 18 and AVX512 have been addressed.
+ - GitHub attestation build provenance is now added to NuGet packages.
+ - JavaScript tests can now use Bun as an alternative to Node.
+
+* Version 1.0.19
+  This release includes all the changes from 1.0.18-stable, as well as two
+additions:
+
+ - New AEADs: AEGIS-128L and AEGIS-256 are now available in the
+`crypto_aead_aegis128l_*()` and `crypto_aead_aegis256_*()` namespaces.
+AEGIS is a family of authenticated ciphers for high-performance applications,
+leveraging hardware AES acceleration on `x86_64` and `aarch64`. In addition
+to performance, AEGIS ciphers have unique properties making them easier and
+safer to use than AES-GCM. They can also be used as high-performance MACs.
+ - The HKDF key derivation mechanism, required by many standard protocols, is
+now available in the `crypto_kdf_hkdf_*()` namespace. It is implemented for
+the SHA-256 and SHA-512 hash functions.
+ - The `osx.sh` build script was renamed to `macos.sh`.
+ - Support for android-mips was removed.
+
+* Version 1.0.18-stable
+ - Visual Studio: support for Windows/ARM64 builds has been added.
+ - Visual Studio: AVX512 implementations are enabled on supported CPUs.
+ - Visual Studio: an MSVC 2022 solution was added.
+ - Apple XCFramework: support for VisionOS was added.
+ - Apple XCFramework: support for Catalyst was added.
+ - Apple XCFramework: building the simulators is now optional.
+ - iOS: bitcode is not generated any more, as it was deprecated by Apple.
+ - watchOS: support for arm64 was added.
+ - The Zig toolchain can now be used as a modern build system to replace
+autoconf/automake/libtool/make/ccache and the compiler. This enables faster
+compilation times, easier cross compilation, and static libraries optimized
+for any CPU.
+ - The Zig toolchain is now the recommended way to compile `libsodium`
+to WebAssembly/WASI(X).
+ - libsodium can now be added as a dependency to Zig projects.
+ - Memory fences were added to remove some gadgets that could be used
+alongside speculative loads.
+ - The AES-GCM implementation was completely rewritten. It is now faster,
+and also available on aarch64, including Windows/ARM64.
+ - Compatibility with CET instrumentation / IBT / Shadow Stack was added.
+ - Emscripten: the `crypto_pwhash_*()` functions have been removed from Sumo
+builds, as they reserve a substantial amount of JavaScript memory, even when
+not used.
+ - Benchmarks now use `CLOCK_MONOTONIC` if possible.
+ - WebAssembly: tests can now run using Bun, WasmEdge, Wazero, wasm3 and
+wasmer-js. Support for WAVM and Lucet have been removed, as these projects
+have reached EOL.
+ - .NET: the minimum supported macOS version is now 10.15; this matches
+Microsoft guidelines.
+ - .NET: all the packages are now built using Zig, on all platforms. This
+allows us to easily match Microsoft's requirements, including supported glibc
+versions. However, on x86_64, targets are expected to support at least the
+AVX instruction set.
+ - .NET: packages for ARM64 are now available.
+ - C23 `memset_explicit()` is now used, when available.
+ - Compilation now uses `-Ofast` or `-O3` instead of `-O2` by default.
+ - Portability improvements to help compile libsodium to modern game consoles.
+ - JavaScript: a default `unhandledRejection` handler is not set any more.
+ - Slightly faster 25519 operations.
+ - OpenBSD: leverage `MAP_CONCEAL`.
+
+* Version 1.0.18
+ - Enterprise versions of Visual Studio are now supported.
+ - Visual Studio 2019 is now supported.
+ - 32-bit binaries for Visual Studio 2010 are now provided.
+ - A test designed to trigger an OOM condition didn't work on Linux systems
+with memory overcommit turned on. It has been removed in order to fix
+Ansible builds.
+ - Emscripten: `print` and `printErr` functions are overridden to send
+errors to the console, if there is one.
+ - Emscripten: `UTF8ToString()` is now exported since `Pointer_stringify()`
+has been deprecated.
+ - Libsodium version detection has been fixed in the CMake recipe.
+ - Generic hashing got a 10% speedup on AVX2.
+ - New target: WebAssembly/WASI (compile with `dist-builds/wasm32-wasi.sh`).
+ - New functions to map a hash to an edwards25519 point or get a random point:
+`core_ed25519_from_hash()` and `core_ed25519_random()`.
+ - `crypto_core_ed25519_scalar_mul()` has been implemented for
+`scalar*scalar (mod L)` multiplication.
+ - Support for the Ristretto group has been implemented for interoperability
+with wasm-crypto.
+ - Improvements have been made to the test suite.
+ - Portability improvements have been made.
+ - `getentropy()` is now used on systems providing this system call.
+ - `randombytes_salsa20` has been renamed to `randombytes_internal`.
+ - Support for NativeClient has been removed.
+ - Most `((nonnull))` attributes have been relaxed to allow 0-length inputs
+to be `NULL`.
+ - The `-ftree-vectorize` and `-ftree-slp-vectorize` compiler switches are
+now used, if available, for optimized builds.
+
+* Version 1.0.17-stable
+ - AVX512 detection has been improved.
+ - A compilation option was added to enable retpoline support.
+ - `-ftls-model=global-dynamic` is now set, if available.
+ - Portability and documentation improvements.
+
+* Version 1.0.17
+ - Bug fix: `sodium_pad()` didn't properly support block sizes >= 256 bytes.
+ - JS/WebAssembly: some old iOS versions can't instantiate the WebAssembly
+module; fall back to JavaScript on these.
+ - JS/WebAssembly: compatibility with newer Emscripten versions.
+ - Bug fix: `crypto_pwhash_scryptsalsa208sha256_str_verify()` and
+`crypto_pwhash_scryptsalsa208sha256_str_needs_rehash()` didn't return
+`EINVAL` on input strings with a short length, unlike their high-level
+counterpart.
+ - Added a workaround for Visual Studio 2010 bug causing CPU features
+not to be detected.
+ - Portability improvements.
+ - Test vectors from Project Wycheproof have been added.
+ - New low-level APIs for arithmetic mod the order of the prime order group:
+`crypto_core_ed25519_scalar_random()`, `crypto_core_ed25519_scalar_reduce()`,
+`crypto_core_ed25519_scalar_invert()`, `crypto_core_ed25519_scalar_negate()`,
+`crypto_core_ed25519_scalar_complement()`, `crypto_core_ed25519_scalar_add()`
+and `crypto_core_ed25519_scalar_sub()`.
+ - New low-level APIs for scalar multiplication without clamping:
+`crypto_scalarmult_ed25519_base_noclamp()` and
+`crypto_scalarmult_ed25519_noclamp()`. These new APIs are especially useful
+for blinding.
+ - `sodium_sub()` has been implemented.
+ - Support for WatchOS has been added.
+ - getrandom(2) is now used on FreeBSD 12+.
+ - The `nonnull` attribute has been added to all relevant prototypes.
+ - More reliable AVX512 detection.
+ - JavaScript/WebAssembly builds now use dynamic memory growth.
 
 * Version 1.0.16
  - Signatures computations and verifications are now way faster on
@@ -8,12 +263,12 @@ clang, icc). This includes the WebAssembly target.
 `crypto_core_ed25519_is_valid_point()`, `crypto_core_ed25519_add()`,
 `crypto_core_ed25519_sub()` and `crypto_core_ed25519_from_uniform()`
 (elligator representative to point).
- - `crypto_sign_open()`, `crypto_sign_verify_detached() and
-`crypto_sign_edwards25519sha512batch_open` now reject public keys in
+ - `crypto_sign_open()`, `crypto_sign_verify_detached()` and
+`crypto_sign_edwards25519sha512batch_open()` now reject public keys in
 non-canonical form in addition to low-order points.
  - The library can be built with `ED25519_NONDETERMINISTIC` defined in
 order to use synthetic nonces for EdDSA. This is disabled by default.
- - Webassembly: `crypto_pwhash_*()` functions are now included in
+ - WebAssembly: `crypto_pwhash_*()` functions are now included in
 non-sumo builds.
  - `sodium_stackzero()` was added to wipe content off the stack.
  - Android: support new SDKs where unified headers have become the
@@ -35,9 +290,9 @@ authenticated, and didn't seem to be used by any opensource project.
 of `1` as defined by the `OPSLIMIT_MIN` constant. This has been fixed.
  - The secretstream construction was slightly changed to be consistent
 with forthcoming variants.
- - The Javascript and Webassembly versions have been merged, and the
+ - The JavaScript and WebAssembly versions have been merged, and the
 module now returns a `.ready` promise that will resolve after the
-Webassembly code is loaded and compiled.
+WebAssembly code is loaded and compiled.
  - Note that due to these incompatible changes, the library version
 major was bumped up.
 
@@ -89,7 +344,7 @@ emscripten/binaryen that don't allow multiple variables declarations
 using a single `var` statement.
 
 * Version 1.0.13
- - Javascript: the sumo builds now include all symbols. They were
+ - JavaScript: the sumo builds now include all symbols. They were
 previously limited to symbols defined in minimal builds.
  - The public `crypto_pwhash_argon2i_MEMLIMIT_MAX` constant was
 incorrectly defined on 32-bit platforms. This has been fixed.
@@ -178,7 +433,7 @@ This checks the MAC without writing the decrypted message.
 gcc versions. There are no functional changes over the previous release.
 
 * Version 1.0.9
- - The Javascript target now includes a `--sumo` option to include all
+ - The JavaScript target now includes a `--sumo` option to include all
 the symbols of the original C library.
  - A detached API was added to the ChaCha20-Poly1305 and AES256-GCM
 implementations.
@@ -256,13 +511,13 @@ been added.
 directives were added (required at least on RHEL-6/i386), a workaround
 for a VRP bug on gcc/armv7 was added, and the library can now be compiled
 with the SunPro compiler.
- - Javascript target: io.js is not supported any more. Use nodejs.
+ - JavaScript target: io.js is not supported any more. Use Node.js.
 
 * Version 1.0.4
  - Support for AES256-GCM has been added. This requires
 a CPU with the aesni and pclmul extensions, and is accessible via the
 crypto_aead_aes256gcm_*() functions.
- - The Javascript target doesn't use eval() any more, so that the
+ - The JavaScript target doesn't use eval() any more, so that the
 library can be used in Chrome packaged applications.
  - QNX and CloudABI are now supported.
  - Support for NaCl has finally been added.
@@ -288,7 +543,7 @@ crypto_hash_*_statebytes() have been added in order to retrieve the
 size of structures keeping states from foreign languages.
  - The JavaScript target doesn't require /dev/urandom or an external
 randombytes() implementation any more. Other minor Emscripten-related
-improvements have been made in order to support libsodium.js
+improvements have been made in order to support libsodium.js.
  - Custom randombytes implementations do not need to provide their own
 implementation of randombytes_uniform() any more. randombytes_stir()
 and randombytes_close() can also be NULL pointers if they are not
@@ -315,8 +570,8 @@ libsodium is not installed, has been added.
  - The iOS target now includes armv7s and arm64 optimized code, as well
 as i386 and x86_64 code for the iOS simulator.
  - sodium_free() can now be called on regions with PROT_NONE protection.
- - The Javascript tests can run on Ubuntu, where the node binary was
-renamed nodejs. io.js can also be used instead of node.
+ - The JavaScript tests can run on Ubuntu, where the node binary was
+renamed nodejs. io.js can also be used instead of Node.
 
 * Version 1.0.1
  - DLL_EXPORT was renamed SODIUM_DLL_EXPORT in order to avoid

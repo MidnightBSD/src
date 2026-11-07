@@ -1,25 +1,21 @@
-AC_PREREQ([2.65])
-AC_INIT([libsodium],[1.0.16],
-  [https://github.com/jedisct1/libsodium/issues],
-  [libsodium],
-  [https://github.com/jedisct1/libsodium])
+AC_PREREQ([2.69])
+AC_INIT([libsodium],[1.0.22],[https://github.com/jedisct1/libsodium/issues],[libsodium],[https://libsodium.org])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([src/libsodium/sodium/version.c])
 AC_CANONICAL_HOST
+AC_CANONICAL_TARGET
 AM_INIT_AUTOMAKE([1.11 dist-bzip2 tar-ustar foreign subdir-objects])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 AM_MAINTAINER_MODE
 AM_DEP_TRACK
 
 AC_SUBST(VERSION)
-ISODATE=`date +%Y-%m-%d`
-AC_SUBST(ISODATE)
 
-SODIUM_LIBRARY_VERSION_MAJOR=10
-SODIUM_LIBRARY_VERSION_MINOR=1
-DLL_VERSION=8
-SODIUM_LIBRARY_VERSION=24:0:1
+SODIUM_LIBRARY_VERSION_MAJOR=26
+SODIUM_LIBRARY_VERSION_MINOR=4
+DLL_VERSION=26
+SODIUM_LIBRARY_VERSION=30:0:4
 #                       | | |
 #                +------+ | +---+
 #                |        |     |
@@ -38,12 +34,29 @@ AC_SUBST(DLL_VERSION)
 
 AC_LANG_ASSERT(C)
 LX_CFLAGS=${CFLAGS-NONE}
+PKGCONFIG_LIBS_PRIVATE=""
 
 dnl Path check
 
 AS_IF([pwd | fgrep ' ' > /dev/null 2>&1],
   [AC_MSG_ERROR([The build directory contains whitespaces - This can cause tests/installation to fail due to limitations of some libtool versions])]
 )
+
+sodium_CFLAGS=${CFLAGS+set}
+: ${CFLAGS=""}
+
+AC_PROG_CC
+AM_PROG_AS
+AC_USE_SYSTEM_EXTENSIONS
+
+dnl Default optimization flags
+
+if test "$sodium_CFLAGS" != "set" ; then
+  AX_CHECK_COMPILE_FLAG([-O3], [CFLAGS="$CFLAGS -O3"],
+    [AX_CHECK_COMPILE_FLAG([-O2], [CFLAGS="$CFLAGS -O2"],
+      [AX_CHECK_COMPILE_FLAG([-O1], [CFLAGS="$CFLAGS -O1"],
+        [AX_CHECK_COMPILE_FLAG([-O], [CFLAGS="$CFLAGS -O"])])])])
+fi
 
 dnl Switches
 
@@ -61,7 +74,7 @@ AC_ARG_ENABLE(ssp,
 ])
 
 AC_ARG_ENABLE(asm,
-[AS_HELP_STRING(--disable-asm,[Do not compile assembly code -- As a side effect, this disables CPU-specific implementations on non-Windows platforms. Only for use with targets such as WebAssembly and NativeClient.])],
+[AS_HELP_STRING(--disable-asm,[Do not compile assembly code -- As a side effect, this disables CPU-specific implementations on non-Windows platforms. Only for use with targets such as WebAssembly.])],
 [
   AS_IF([test "x$enableval" = "xno"], [
     enable_asm="no"
@@ -78,21 +91,28 @@ AS_IF([test "x$EMSCRIPTEN" != "x"], [
     enable_asm="no"
     AC_MSG_WARN([compiling to JavaScript - asm implementations disabled])
   ], [
-    AC_MSG_WARN([EMSCRIPTEN environment variable defined, but emcc doesn't appear to be used - Assuming compilation to native code])
+    AC_MSG_WARN([EMSCRIPTEN environment variable defined, but emcc doesn\'t appear to be used - Assuming compilation to native code])
     CFLAGS="$CFLAGS -U__EMSCRIPTEN__"
     unset EMSCRIPTEN
   ])
 ])
-AS_IF([test "$host_os" = "nacl" -o "$host_os" = "pnacl"], [
-  enable_asm="no"
-  AC_MSG_WARN([compiling to Native Client - asm implementations disabled])
-])
+
+AC_MSG_CHECKING([if we are using FilC])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+#ifndef __FILC__
+# error __FILC__ is not defined
+#endif
+]], [[]])],
+  [AC_MSG_RESULT(yes)
+   enable_asm="no"
+   AC_MSG_WARN([compiling with FilC - asm implementations disabled])],
+  [AC_MSG_RESULT(no)])
 
 AC_ARG_ENABLE(pie,
 [AS_HELP_STRING(--disable-pie,Do not produce position independent executables)],
  enable_pie=$enableval, enable_pie="maybe")
 
-AS_CASE([$host_os], [mingw*|cygwin*|msys], [enable_pie="no"])
+AS_CASE([$host_os], [mingw*|cygwin*|msys|eabi*], [enable_pie="no"])
 
 AC_ARG_ENABLE(blocking-random,
 [AS_HELP_STRING(--enable-blocking-random,Enable this switch only if /dev/urandom is totally broken on the target platform)],
@@ -120,17 +140,31 @@ AC_ARG_ENABLE(minimal,
 AM_CONDITIONAL([MINIMAL], [test x$enable_minimal = xyes])
 AC_SUBST(SODIUM_LIBRARY_MINIMAL_DEF)
 
-AC_ARG_WITH(pthreads, AC_HELP_STRING([--with-pthreads],
- [use pthreads library, or --without-pthreads to disable threading support.]),
+AC_ARG_WITH(pthreads, AS_HELP_STRING([--with-pthreads],
+ [use pthreads library, or --without-pthreads to disable threading support]),
  [ ], [withval="yes"])
 
 AS_IF([test "x$withval" = "xyes"], [
   AX_PTHREAD([
-    AC_DEFINE([HAVE_PTHREAD], [1], [Define if you have POSIX threads libraries and header files])
-    with_threads="yes"
-    LIBS="$PTHREAD_LIBS $LIBS"
-    CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
-    CC="$PTHREAD_CC"])
+    AC_LINK_IFELSE([AC_LANG_PROGRAM([[
+        #include <pthread.h>
+      ]], [[
+        pthread_mutex_t mutex;
+
+        pthread_mutex_lock(&mutex);
+        pthread_mutex_unlock(&mutex)
+      ]]
+    )], [
+        AC_DEFINE([HAVE_PTHREAD], [1], [Define if you have POSIX threads libraries and header files])
+        with_threads="yes"
+        LIBS="$PTHREAD_LIBS $LIBS"
+        PKGCONFIG_LIBS_PRIVATE="$PTHREAD_LIBS $PTHREAD_CFLAGS $PKGCONFIG_LIBS_PRIVATE"
+        CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
+        CC="$PTHREAD_CC"
+      ])
+    ],
+    [ AC_MSG_NOTICE(pthread mutexes are not available) ]
+  )
 ], [with_threads="no"])
 
 AC_ARG_WITH(safecode,
@@ -148,6 +182,17 @@ AC_ARG_WITH(ctgrind,
 [AS_HELP_STRING(--with-ctgrind,For maintainers only - please do not use)],
 [AS_IF([test "x$withval" = "xyes"], [
     AC_CHECK_LIB(ctgrind, ct_poison)
+  ])
+])
+
+AC_ARG_ENABLE(retpoline,
+[AS_HELP_STRING(--enable-retpoline,Use return trampolines for indirect calls)],
+[AS_IF([test "x$enableval" = "xyes"], [
+  AX_CHECK_COMPILE_FLAG([-mindirect-branch=thunk-inline],
+    [CFLAGS="$CFLAGS -mindirect-branch=thunk-inline"],
+    [AX_CHECK_COMPILE_FLAG([-mretpoline], [CFLAGS="$CFLAGS -mretpoline"])]
+  )
+  AX_CHECK_COMPILE_FLAG([-mindirect-branch-register])
   ])
 ])
 
@@ -175,40 +220,31 @@ AC_ARG_ENABLE(opt,
 [AS_HELP_STRING(--enable-opt,Optimize for the native CPU - The resulting library will be faster but not portable)],
 [
   AS_IF([test "x$enableval" = "xyes"], [
-    AX_CHECK_COMPILE_FLAG([-Ofast], [CFLAGS="$CFLAGS -Ofast"])
+    AX_CHECK_COMPILE_FLAG([-ftree-vectorize], [CFLAGS="$CFLAGS -ftree-vectorize"])
+    AX_CHECK_COMPILE_FLAG([-ftree-slp-vectorize], [CFLAGS="$CFLAGS -ftree-slp-vectorize"])
     AX_CHECK_COMPILE_FLAG([-fomit-frame-pointer], [CFLAGS="$CFLAGS -fomit-frame-pointer"])
     AX_CHECK_COMPILE_FLAG([-march=native], [CFLAGS="$CFLAGS -march=native"])
+    AX_CHECK_COMPILE_FLAG([-mtune=native], [CFLAGS="$CFLAGS -mtune=native"])
   ])
 ])
 
-AC_SUBST([MAINT])
+AC_SUBST(MAINT)
+AC_SUBST(PKGCONFIG_LIBS_PRIVATE)
 
 AX_VALGRIND_CHECK
 
 dnl Checks
 
-AC_PROG_CC_C99
-AM_PROG_AS
-AC_USE_SYSTEM_EXTENSIONS
 AC_C_VARARRAYS
 
-AC_CHECK_DEFINE([__native_client__], [NATIVECLIENT="yes"], [])
+AC_CHECK_DEFINE([__wasi__], [WASI="yes"], [])
 
-AC_CHECK_DEFINE([_FORTIFY_SOURCE], [], [
-  AX_CHECK_COMPILE_FLAG([-D_FORTIFY_SOURCE=2],
-    [CPPFLAGS="$CPPFLAGS -D_FORTIFY_SOURCE=2"])
-])
-
-AX_CHECK_COMPILE_FLAG([-mindirect-branch=thunk],
-  [CFLAGS="$CFLAGS -mindirect-branch=thunk"],
-  [
-    AX_CHECK_COMPILE_FLAG([-mretpoline], [CFLAGS="$CFLAGS -mretpoline"])
-  ])
+AS_CASE([$host_os], [linux-gnu], [AX_ADD_FORTIFY_SOURCE], [ ])
 
 AX_CHECK_COMPILE_FLAG([-fvisibility=hidden],
   [CFLAGS="$CFLAGS -fvisibility=hidden"])
 
-AS_CASE([$host_os], [cygwin*|mingw*|msys|pw32*|cegcc*], [ ], [
+AS_CASE([$host_os], [cygwin*|mingw*|msys|pw32*|cegcc*|eabi*], [ ], [
   AX_CHECK_COMPILE_FLAG([-fPIC], [CFLAGS="$CFLAGS -fPIC"])
 ])
 
@@ -245,7 +281,7 @@ int main(void) { return 0; }
 LIBTOOL_OLD_FLAGS="$LIBTOOL_EXTRA_FLAGS"
 LIBTOOL_EXTRA_FLAGS="$LIBTOOL_EXTRA_FLAGS -version-info $SODIUM_LIBRARY_VERSION"
 AC_ARG_ENABLE(soname-versions,
-  [AC_HELP_STRING([--enable-soname-versions], [enable soname versions (must be disabled for Android) (default: enabled)])],
+  [AS_HELP_STRING([--enable-soname-versions], [enable soname versions (must be disabled for Android) (default: enabled)])],
     [
         AS_IF([test "x$enableval" = "xno"], [
           LIBTOOL_EXTRA_FLAGS="$LIBTOOL_OLD_FLAGS -avoid-version"
@@ -261,7 +297,7 @@ AS_CASE([$host_os],
   ])
 
 AS_CASE([$host_os],
-  [cygwin*|mingw*|msys|pw32*|cegcc*], [
+  [cygwin*|mingw*|msys|pw32*|cegcc*|eabi*], [
     AX_CHECK_COMPILE_FLAG([-fno-asynchronous-unwind-tables], [
       [CFLAGS="$CFLAGS -fno-asynchronous-unwind-tables"]
     ])
@@ -270,7 +306,7 @@ AS_CASE([$host_os],
 AS_IF([test "x$enable_ssp" != "xno"],[
 
 AS_CASE([$host_os],
-  [cygwin*|mingw*|msys|pw32*|cegcc*|haiku], [ ],
+  [solaris*|cygwin*|mingw*|msys|pw32*|cegcc*|haiku|none|eabi*], [ ],
   [*], [
     AX_CHECK_COMPILE_FLAG([-fstack-protector], [
       AX_CHECK_LINK_FLAG([-fstack-protector],
@@ -280,15 +316,16 @@ AS_CASE([$host_os],
   ])
 ])
 
-AC_ARG_VAR([CWFLAGS], [define to compilation flags for generating extra warnings])
-
 AX_CHECK_COMPILE_FLAG([$CFLAGS -Wall], [CWFLAGS="$CFLAGS -Wall"])
-AX_CHECK_COMPILE_FLAG([$CFLAGS -Wextra], [CWFLAGS="$CFLAGS -Wextra"])
+AX_CHECK_COMPILE_FLAG([$CFLAGS -Wno-deprecated-declarations], [CFLAGS="$CFLAGS -Wno-deprecated-declarations"])
+AX_CHECK_COMPILE_FLAG([$CFLAGS -Wno-unknown-pragmas], [CFLAGS="$CFLAGS -Wno-unknown-pragmas"])
+
+AC_ARG_VAR([CWFLAGS], [compilation flags for generating extra warnings])
 
 AC_MSG_CHECKING(for clang)
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[
 #ifndef __clang__
-#error Not clang
+#error Not clang nor zig cc
 #endif
 ]])],
   [AC_MSG_RESULT(yes)
@@ -298,6 +335,8 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[
   [AC_MSG_RESULT(no)
 ])
 
+AX_CHECK_COMPILE_FLAG([$CWFLAGS -Wextra], [CWFLAGS="$WCFLAGS -Wextra"])
+AX_CHECK_COMPILE_FLAG([$CWFLAGS -Warray-bounds], [CWFLAGS="$CWFLAGS -Warray-bounds"])
 AX_CHECK_COMPILE_FLAG([$CWFLAGS -Wbad-function-cast], [CWFLAGS="$CWFLAGS -Wbad-function-cast"])
 AX_CHECK_COMPILE_FLAG([$CWFLAGS -Wcast-qual], [CWFLAGS="$CWFLAGS -Wcast-qual"])
 AX_CHECK_COMPILE_FLAG([$CWFLAGS -Wdiv-by-zero], [CWFLAGS="$CWFLAGS -Wdiv-by-zero"])
@@ -326,44 +365,138 @@ AX_CHECK_COMPILE_FLAG([$CWFLAGS -Wswitch-enum], [CWFLAGS="$CWFLAGS -Wswitch-enum
 AX_CHECK_COMPILE_FLAG([$CWFLAGS -Wvariable-decl], [CWFLAGS="$CWFLAGS -Wvariable-decl"])
 AX_CHECK_COMPILE_FLAG([$CWFLAGS -Wwrite-strings], [CWFLAGS="$CWFLAGS -Wwrite-strings"])
 
-AX_CHECK_LINK_FLAG([-Wl,-z,relro], [LDFLAGS="$LDFLAGS -Wl,-z,relro"])
-AX_CHECK_LINK_FLAG([-Wl,-z,now], [LDFLAGS="$LDFLAGS -Wl,-z,now"])
-AX_CHECK_LINK_FLAG([-Wl,-z,noexecstack], [LDFLAGS="$LDFLAGS -Wl,-z,noexecstack"])
-
-AC_MSG_CHECKING(for a broken clang + AVX512 combination)
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[
-#if !(defined(__AVX512F__) && defined(__clang__) && __clang_major__ < 4)
-#error Not a broken clang + AVX512 combination
-#endif
-]])],
-  [AC_MSG_RESULT(yes - disabling AVX512 optimizations)
-   AX_CHECK_COMPILE_FLAG([$CFLAGS -mno-avx512f],
-     [CFLAGS="$CFLAGS -mno-avx512f"])
-  ],
-  [AC_MSG_RESULT(no)
+AS_IF([test "x$EMSCRIPTEN" = "x"], [
+  AX_CHECK_LINK_FLAG([-Wl,-z,relro], [LDFLAGS="$LDFLAGS -Wl,-z,relro"])
+  AX_CHECK_LINK_FLAG([-Wl,-z,now], [LDFLAGS="$LDFLAGS -Wl,-z,now"])
+  AX_CHECK_LINK_FLAG([-Wl,-z,noexecstack], [LDFLAGS="$LDFLAGS -Wl,-z,noexecstack"])
 ])
 
 AX_CHECK_CATCHABLE_SEGV
 AX_CHECK_CATCHABLE_ABRT
 
 AS_IF([test "x$with_threads" = "xyes"], [
-  AX_TLS([AC_MSG_RESULT(thread local storage is supported)],
+  AX_TLS([AC_MSG_RESULT(thread local storage is supported)
+          AX_CHECK_COMPILE_FLAG([-ftls-model=global-dynamic],
+            [CFLAGS="$CFLAGS -ftls-model=global-dynamic"])],
          [AC_MSG_RESULT(thread local storage is not supported)]) ])
 
 LT_INIT
+
+dnl CompCert compiler support
+AC_MSG_CHECKING([if we are using CompCert])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+#ifndef __COMPCERT__
+# error __COMPCERT__ is not defined
+#endif
+]], [[]])],
+  [AC_MSG_RESULT(yes)
+   lt_prog_compiler_wl='-Wl,'
+   enable_asm="no"
+   CFLAGS="$CFLAGS -fstruct-passing"
+   AC_MSG_WARN([compiling with CompCert - asm implementations disabled])],
+  [AC_MSG_RESULT(no)])
+
 AC_SUBST(LIBTOOL_DEPS)
 
 AC_ARG_VAR([AR], [path to the ar utility])
 AC_CHECK_TOOL([AR], [ar], [ar])
 
-dnl Checks for headers
+dnl Checks for headers and codegen feature flags
 
-AS_IF([test "x$EMSCRIPTEN" = "x" -a "$host_os" != "pnacl"], [
+target_cpu_aarch64=no
+AC_MSG_CHECKING(for ARM64 target)
+AC_LINK_IFELSE(
+  [AC_LANG_PROGRAM([
+#ifndef __aarch64__
+#error Not aarch64
+#endif
+#include <arm_neon.h>
+   ], [(void) 0])],
+   [AC_MSG_RESULT(yes)
+    target_cpu_aarch64=yes],
+   [AC_MSG_RESULT(no)
+    target_cpu_aarch64=no])
+
+AS_IF([test "x$EMSCRIPTEN" = "x"], [
+
+  AS_IF([test "x$target_cpu_aarch64" = "xyes"], [
+    have_armcrypto=no
+    AC_MSG_CHECKING(for ARM crypto instructions set)
+    AC_LINK_IFELSE([AC_LANG_PROGRAM([[
+      #ifndef __ARM_FEATURE_CRYPTO
+      #  define __ARM_FEATURE_CRYPTO 1
+      #endif
+      #ifndef __ARM_FEATURE_AES
+      #  define __ARM_FEATURE_AES 1
+      #endif
+
+      #include <arm_neon.h>
+
+      #ifdef __clang__
+      #  pragma clang attribute push(__attribute__((target("neon,crypto,aes"))), apply_to = function)
+      #elif defined(__GNUC__)
+      #  pragma GCC target("+simd+crypto")
+      #endif
+    ]], [[
+      int64x2_t x = { 0, 0 };
+      vaeseq_u8(vmovq_n_u8(0), vmovq_n_u8(0));
+      vmull_high_p64(vreinterpretq_p64_s64(x), vreinterpretq_p64_s64(x));
+
+      #ifdef __clang__
+      #  pragma clang attribute pop
+      #endif
+      (void) 0
+      ]])],
+      [
+        AC_MSG_RESULT(yes)
+        have_armcrypto=yes
+      ],
+      [
+        AC_MSG_RESULT(no)
+        oldcflags="$CFLAGS"
+        AX_CHECK_COMPILE_FLAG([-march=armv8-a+crypto+aes], [
+          CFLAGS="$CFLAGS -march=armv8-a+crypto+aes"
+          AC_MSG_CHECKING(for ARM crypto instructions set with -march=armv8-a+crypto+aes)
+          AC_LINK_IFELSE([AC_LANG_PROGRAM([[
+            #ifdef __clang__
+            #  pragma clang attribute push(__attribute__((target("neon,crypto,aes"))), apply_to = function)
+            #elif defined(__GNUC__)
+            #  pragma GCC target("+simd+crypto")
+            #endif
+            #ifndef __ARM_FEATURE_CRYPTO
+            #  define __ARM_FEATURE_CRYPTO 1
+            #endif
+            #ifndef __ARM_FEATURE_AES
+            #  define __ARM_FEATURE_AES 1
+            #endif
+
+            #include <arm_neon.h>
+          ]], [[
+            int64x2_t x = { 0, 0 };
+            vaeseq_u8(vmovq_n_u8(0), vmovq_n_u8(0));
+            vmull_high_p64(vreinterpretq_p64_s64(x), vreinterpretq_p64_s64(x));
+
+            #ifdef __clang__
+            #  pragma clang attribute pop
+            #endif
+            (void) 0
+          ]])],
+            [
+              AC_MSG_RESULT(yes - with addition of -march=armv8-a+crypto+aes)
+              have_armcrypto=yes
+              CFLAGS_ARMCRYPTO="-march=armv8-a+crypto+aes"
+            ],
+            [AC_MSG_RESULT(no)])
+          CFLAGS="$oldcflags"
+        ])
+      ])
+      AS_IF([test "$have_armcrypto" = "yes"],[AC_DEFINE([HAVE_ARMCRYPTO], [1], [ARM crypto extensions are available])])
+  ])
 
   oldcflags="$CFLAGS"
   AX_CHECK_COMPILE_FLAG([-mmmx], [CFLAGS="$CFLAGS -mmmx"])
   AC_MSG_CHECKING(for MMX instructions set)
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+  AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 #pragma GCC target("mmx")
 #include <mmintrin.h>
 ]], [[ __m64 x = _mm_setzero_si64(); ]])],
@@ -376,7 +509,7 @@ AS_IF([test "x$EMSCRIPTEN" = "x" -a "$host_os" != "pnacl"], [
   oldcflags="$CFLAGS"
   AX_CHECK_COMPILE_FLAG([-msse2], [CFLAGS="$CFLAGS -msse2"])
   AC_MSG_CHECKING(for SSE2 instructions set)
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+  AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 #pragma GCC target("sse2")
 #ifndef __SSE2__
 # define __SSE2__
@@ -393,7 +526,7 @@ AS_IF([test "x$EMSCRIPTEN" = "x" -a "$host_os" != "pnacl"], [
   oldcflags="$CFLAGS"
   AX_CHECK_COMPILE_FLAG([-msse3], [CFLAGS="$CFLAGS -msse3"])
   AC_MSG_CHECKING(for SSE3 instructions set)
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+  AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 #pragma GCC target("sse3")
 #include <pmmintrin.h>
 ]], [[ __m128 x = _mm_addsub_ps(_mm_cvtpd_ps(_mm_setzero_pd()),
@@ -407,7 +540,7 @@ AS_IF([test "x$EMSCRIPTEN" = "x" -a "$host_os" != "pnacl"], [
   oldcflags="$CFLAGS"
   AX_CHECK_COMPILE_FLAG([-mssse3], [CFLAGS="$CFLAGS -mssse3"])
   AC_MSG_CHECKING(for SSSE3 instructions set)
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+  AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 #pragma GCC target("ssse3")
 #include <tmmintrin.h>
 ]], [[ __m64 x = _mm_abs_pi32(_m_from_int(0)); ]])],
@@ -420,7 +553,7 @@ AS_IF([test "x$EMSCRIPTEN" = "x" -a "$host_os" != "pnacl"], [
   oldcflags="$CFLAGS"
   AX_CHECK_COMPILE_FLAG([-msse4.1], [CFLAGS="$CFLAGS -msse4.1"])
   AC_MSG_CHECKING(for SSE4.1 instructions set)
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+  AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 #pragma GCC target("sse4.1")
 #include <smmintrin.h>
 ]], [[ __m128i x = _mm_minpos_epu16(_mm_setzero_si128()); ]])],
@@ -433,10 +566,7 @@ AS_IF([test "x$EMSCRIPTEN" = "x" -a "$host_os" != "pnacl"], [
   oldcflags="$CFLAGS"
   AX_CHECK_COMPILE_FLAG([-mavx], [CFLAGS="$CFLAGS -mavx"])
   AC_MSG_CHECKING(for AVX instructions set)
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
-#ifdef __native_client__
-# error NativeClient detected - Avoiding AVX opcodes
-#endif
+  AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 #pragma GCC target("avx")
 #include <immintrin.h>
 ]], [[ _mm256_zeroall(); ]])],
@@ -449,10 +579,7 @@ AS_IF([test "x$EMSCRIPTEN" = "x" -a "$host_os" != "pnacl"], [
   oldcflags="$CFLAGS"
   AX_CHECK_COMPILE_FLAG([-mavx2], [CFLAGS="$CFLAGS -mavx2"])
   AC_MSG_CHECKING(for AVX2 instructions set)
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
-#ifdef __native_client__
-# error NativeClient detected - Avoiding AVX2 opcodes
-#endif
+  AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 #pragma GCC target("avx2")
 #include <immintrin.h>
 ]], [[
@@ -464,10 +591,7 @@ return _mm256_movemask_ps(_mm256_cmp_ps(x, y, _CMP_NEQ_OQ));
      AC_DEFINE([HAVE_AVX2INTRIN_H], [1], [AVX2 is available])
      AX_CHECK_COMPILE_FLAG([-mavx2], [CFLAGS_AVX2="-mavx2"])
      AC_MSG_CHECKING(if _mm256_broadcastsi128_si256 is correctly defined)
-     AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
-#ifdef __native_client__
-# error NativeClient detected - Avoiding AVX2 opcodes
-#endif
+     AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 #pragma GCC target("avx2")
 #include <immintrin.h>
      ]], [[ __m256i y = _mm256_broadcastsi128_si256(_mm_setzero_si128()); ]])],
@@ -482,30 +606,40 @@ return _mm256_movemask_ps(_mm256_cmp_ps(x, y, _CMP_NEQ_OQ));
   oldcflags="$CFLAGS"
   AX_CHECK_COMPILE_FLAG([-mavx512f], [CFLAGS="$CFLAGS -mavx512f"])
   AC_MSG_CHECKING(for AVX512F instructions set)
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
-#ifdef __native_client__
-# error NativeClient detected - Avoiding AVX512F opcodes
-#endif
+  AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 #pragma GCC target("avx512f")
 #include <immintrin.h>
 ]], [[
+
+#ifndef __AVX512F__
+# error No AVX512 support
+#elif defined(__clang__)
+# if __clang_major__ < 4
+#  error Compiler AVX512 support may be broken
+# endif
+#elif defined(__GNUC__)
+# if __GNUC__ < 6
+#  error Compiler AVX512 support may be broken
+# endif
+#endif
+
 __m512i x = _mm512_setzero_epi32();
 __m512i y = _mm512_permutexvar_epi64(_mm512_setr_epi64(0, 1, 4, 5, 2, 3, 6, 7), x);
 ]])],
     [AC_MSG_RESULT(yes)
      AC_DEFINE([HAVE_AVX512FINTRIN_H], [1], [AVX512F is available])
      AX_CHECK_COMPILE_FLAG([-mavx512f], [CFLAGS_AVX512F="-mavx512f"])],
-    [AC_MSG_RESULT(no)])
+    [AC_MSG_RESULT(no)
+     AX_CHECK_COMPILE_FLAG([$CFLAGS -mno-avx512f],
+       [CFLAGS="$CFLAGS -mno-avx512f"])
+    ])
   CFLAGS="$oldcflags"
 
   oldcflags="$CFLAGS"
   AX_CHECK_COMPILE_FLAG([-maes], [CFLAGS="$CFLAGS -maes"])
   AX_CHECK_COMPILE_FLAG([-mpclmul], [CFLAGS="$CFLAGS -mpclmul"])
   AC_MSG_CHECKING(for AESNI instructions set and PCLMULQDQ)
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
-#ifdef __native_client__
-# error NativeClient detected - Avoiding AESNI opcodes
-#endif
+  AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 #pragma GCC target("aes")
 #pragma GCC target("pclmul")
 #include <wmmintrin.h>
@@ -522,10 +656,7 @@ __m512i y = _mm512_permutexvar_epi64(_mm512_setr_epi64(0, 1, 4, 5, 2, 3, 6, 7), 
   oldcflags="$CFLAGS"
   AX_CHECK_COMPILE_FLAG([-mrdrnd], [CFLAGS="$CFLAGS -mrdrnd"])
   AC_MSG_CHECKING(for RDRAND)
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
-#ifdef __native_client__
-# error NativeClient detected - Avoiding RDRAND opcodes
-#endif
+  AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 #pragma GCC target("rdrnd")
 #include <immintrin.h>
 ]], [[ unsigned long long x; _rdrand64_step(&x); ]])],
@@ -538,6 +669,7 @@ __m512i y = _mm512_permutexvar_epi64(_mm512_setr_epi64(0, 1, 4, 5, 2, 3, 6, 7), 
 
 ])
 
+AC_SUBST(CFLAGS_ARMCRYPTO)
 AC_SUBST(CFLAGS_MMX)
 AC_SUBST(CFLAGS_SSE2)
 AC_SUBST(CFLAGS_SSE3)
@@ -550,7 +682,9 @@ AC_SUBST(CFLAGS_AESNI)
 AC_SUBST(CFLAGS_PCLMUL)
 AC_SUBST(CFLAGS_RDRAND)
 
-AC_CHECK_HEADERS([sys/mman.h intrin.h])
+AC_CHECK_HEADERS([sys/mman.h sys/param.h sys/random.h intrin.h sys/auxv.h])
+AC_CHECK_HEADERS([CommonCrypto/CommonRandom.h])
+AC_CHECK_HEADERS([cet.h threads.h])
 
 AC_MSG_CHECKING([if _xgetbv() is available])
 AC_LINK_IFELSE(
@@ -574,7 +708,7 @@ AC_C_BIGENDIAN(
 )
 
 AC_MSG_CHECKING(whether __STDC_LIMIT_MACROS is required)
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+AC_LINK_IFELSE([AC_LANG_PROGRAM([[
 #include <limits.h>
 #include <stdint.h>
 ]], [[
@@ -588,6 +722,9 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
 
 AC_MSG_CHECKING(whether we can use inline asm code)
 AC_LINK_IFELSE([AC_LANG_PROGRAM([[
+#ifdef __FILC__
+# error inline assembly is not supported with FilC
+#endif
 ]], [[
 int a = 42;
 int *pnt = &a;
@@ -601,7 +738,7 @@ __asm__ __volatile__ ("" : : "r"(pnt) : "memory");
 HAVE_AMD64_ASM_V=0
 AS_IF([test "$enable_asm" != "no"],[
   AC_MSG_CHECKING(whether we can use x86_64 asm code)
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+  AC_LINK_IFELSE([AC_LANG_PROGRAM([[
   ]], [[
 #if defined(__amd64) || defined(__amd64__) || defined(__x86_64__)
 # if defined(__CYGWIN__) || defined(__MINGW32__) || defined(__MINGW64__) || defined(_WIN32) || defined(_WIN64)
@@ -630,7 +767,7 @@ AC_SUBST(HAVE_AMD64_ASM_V)
 HAVE_AVX_ASM_V=0
 AS_IF([test "$enable_asm" != "no"],[
   AC_MSG_CHECKING(whether we can assemble AVX opcodes)
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+  AC_LINK_IFELSE([AC_LANG_PROGRAM([[
   ]], [[
 #if defined(__amd64) || defined(__amd64__) || defined(__x86_64__)
 # if defined(__CYGWIN__) || defined(__MINGW32__) || defined(__MINGW64__) || defined(_WIN32) || defined(_WIN64)
@@ -688,9 +825,9 @@ AM_CONDITIONAL([HAVE_TI_MODE], [test $HAVE_TI_MODE_V = 1])
 AC_SUBST(HAVE_TI_MODE_V)
 
 HAVE_CPUID_V=0
-AS_IF([test "$enable_asm" != "no" -o "$host_alias" = "x86_64-nacl"],[
+AS_IF([test "$enable_asm" != "no"],[
   AC_MSG_CHECKING(for cpuid instruction)
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[ ]], [[
+  AC_LINK_IFELSE([AC_LANG_PROGRAM([[ ]], [[
 unsigned int cpu_info[4];
 __asm__ __volatile__ ("xchgl %%ebx, %k1; cpuid; xchgl %%ebx, %k1" :
                       "=a" (cpu_info[0]), "=&r" (cpu_info[1]),
@@ -705,7 +842,7 @@ __asm__ __volatile__ ("xchgl %%ebx, %k1; cpuid; xchgl %%ebx, %k1" :
 AC_SUBST(HAVE_CPUID_V)
 
 asm_hide_symbol="unsupported"
-AS_IF([test "$enable_asm" != "no" -o "$host_os" = "nacl"],[
+AS_IF([test "$enable_asm" != "no"],[
   AC_MSG_CHECKING(if the .private_extern asm directive is supported)
   AC_LINK_IFELSE([AC_LANG_PROGRAM([[ ]], [[
 __asm__ __volatile__ (".private_extern dummy_symbol \n"
@@ -758,23 +895,6 @@ void f(void *x) { __dummy(x); }
  AC_DEFINE([HAVE_WEAK_SYMBOLS], [1], [weak symbols are supported])],
 [AC_MSG_RESULT(no)])
 
-AC_MSG_CHECKING(if data alignment is required)
-aligned_access_required=yes
-AS_CASE([$host_cpu],
-  [i?86|amd64|x86_64|powerpc*|s390*],
-    [aligned_access_required=no],
-  [arm*],
-    [AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
-#ifndef __ARM_FEATURE_UNALIGNED
-# error data alignment is required
-#endif
-      ]], [[]])], [aligned_access_required=no], [])]
-)
-AS_IF([test "x$aligned_access_required" = "xyes"],
-  [AC_MSG_RESULT(yes)],
-  [AC_MSG_RESULT(no)
-   AC_DEFINE([CPU_UNALIGNED_ACCESS], [1], [unaligned memory access is supported])])
-
 AC_MSG_CHECKING(if atomic operations are supported)
 AC_LINK_IFELSE([AC_LANG_PROGRAM([[ ]], [[
 static volatile int _sodium_lock;
@@ -786,33 +906,104 @@ __sync_lock_release(&_sodium_lock);
  AC_DEFINE([HAVE_ATOMIC_OPS], [1], [atomic operations are supported])],
 [AC_MSG_RESULT(no)])
 
+AC_MSG_CHECKING(if C11 memory fences are supported)
+AC_LINK_IFELSE([AC_LANG_PROGRAM([[
+#include <stdatomic.h>
+ ]], [[
+atomic_thread_fence(memory_order_acquire);
+]]
+)],
+[AC_MSG_RESULT(yes)
+ AC_DEFINE([HAVE_C11_MEMORY_FENCES], [1], [C11 memory fences are supported])],
+[AC_MSG_RESULT(no)])
+
+AC_MSG_CHECKING(if gcc memory fences are supported)
+AC_LINK_IFELSE([AC_LANG_PROGRAM([[ ]], [[
+__atomic_thread_fence(__ATOMIC_ACQUIRE);
+]]
+)],
+[AC_MSG_RESULT(yes)
+ AC_DEFINE([HAVE_GCC_MEMORY_FENCES], [1], [GCC memory fences are supported])],
+[AC_MSG_RESULT(no)])
+
 dnl Checks for functions and headers
 
 AC_FUNC_ALLOCA
 AS_IF([test "x$EMSCRIPTEN" = "x"],[
   AC_CHECK_FUNCS([arc4random arc4random_buf])
-  AC_CHECK_FUNCS([mmap mlock madvise mprotect memset_s explicit_bzero nanosleep])
+  AS_IF([test "x$WASI" = "x"],[
+    AC_CHECK_FUNCS([mmap mlock madvise mprotect])
+    AC_CHECK_FUNCS([raise])
+    AC_CHECK_FUNCS([sysconf])
+  ])
+  AC_MSG_CHECKING(for getrandom with a standard API)
+  AC_LINK_IFELSE([AC_LANG_PROGRAM([[
+#include <stdlib.h>
+#ifdef HAVE_UNISTD_H
+# include <unistd.h>
+#endif
+#ifdef HAVE_SYS_RANDOM_H
+# include <sys/random.h>
+#endif
+]], [[
+unsigned char buf;
+if (&getrandom != NULL) {
+  (void) getrandom((void *) &buf, 1U, 0U);
+}
+  ]])],
+  [AC_MSG_RESULT(yes)
+   AC_CHECK_FUNCS([getrandom])],
+  [AC_MSG_RESULT(no)
+  ])
+
+  AC_MSG_CHECKING(for getentropy with a standard API)
+  AC_LINK_IFELSE([AC_LANG_PROGRAM([[
+#include <stdlib.h>
+#ifdef HAVE_UNISTD_H
+# include <unistd.h>
+#endif
+#ifdef HAVE_SYS_RANDOM_H
+# include <sys/random.h>
+#endif
+]], [[
+unsigned char buf;
+if (&getentropy != NULL) {
+  (void) getentropy((void *) &buf, 1U);
+}
+  ]])],
+  [AC_MSG_RESULT(yes)
+   AC_CHECK_FUNCS([getentropy])],
+  [AC_MSG_RESULT(no)
+  ])
 ])
-AC_CHECK_FUNCS([posix_memalign getpid])
+
+AS_IF([test "x$WASI" = "x"],[
+  AC_CHECK_FUNCS([getpid])
+  AC_CHECK_FUNCS([getauxval elf_aux_info])
+])
+
+AC_CHECK_FUNCS([posix_memalign nanosleep clock_gettime])
+
+AS_IF([test "x$WASI" = "x"],[
+  AC_CHECK_FUNCS([memset_s explicit_bzero memset_explicit explicit_memset])
+])
 
 AC_SUBST([LIBTOOL_EXTRA_FLAGS])
 
 TEST_LDFLAGS=''
 AS_IF([test "x$EMSCRIPTEN" != "x"],[
   EXEEXT=.js
-  TEST_LDFLAGS='--memory-init-file 0 --pre-js pre.js.inc -s RESERVED_FUNCTION_POINTERS=8'
+  TEST_LDFLAGS='--pre-js pre.js.inc -sALLOW_TABLE_GROWTH'
 ])
 AC_SUBST(TEST_LDFLAGS)
 AM_CONDITIONAL([EMSCRIPTEN], [test "x$EMSCRIPTEN" != "x"])
-
-AM_CONDITIONAL([NATIVECLIENT], [test "x$NATIVECLIENT" != "x"])
+AM_CONDITIONAL([WASI], [test "x$WASI" != "x"])
 
 AC_DEFINE([CONFIGURED], [1], [the build system was properly configured])
 
 dnl Libtool.
 
-LT_INIT([dlopen])
-AC_LIBTOOL_WIN32_DLL
+LT_INIT([dlopen win32-dll])
 gl_LD_OUTPUT_DEF
 
 dnl Output.
@@ -832,7 +1023,6 @@ AC_CONFIG_FILES([Makefile
                  dist-build/Makefile
                  libsodium.pc
                  libsodium-uninstalled.pc
-                 msvc-scripts/Makefile
                  src/Makefile
                  src/libsodium/Makefile
                  src/libsodium/include/Makefile
