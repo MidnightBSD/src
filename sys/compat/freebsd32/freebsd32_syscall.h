@@ -508,6 +508,9 @@
 #define	FREEBSD32_SYS_freebsd32_aio_writev	578
 #define	FREEBSD32_SYS_freebsd32_aio_readv	579
 #define	FREEBSD32_SYS_sched_getcpu	581
+#define	FREEBSD32_SYS_timerfd_create	585
+#define	FREEBSD32_SYS_freebsd32_timerfd_gettime	586
+#define	FREEBSD32_SYS_freebsd32_timerfd_settime	587
 #define	FREEBSD32_SYS_kcmp	588
 #define	FREEBSD32_SYS_inotify_add_watch_at	589
 #define	FREEBSD32_SYS_inotify_rm_watch	590

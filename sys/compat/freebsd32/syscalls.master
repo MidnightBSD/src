@@ -1180,9 +1180,14 @@
 582	AUE_NULL	UNIMPL	swapoff
 583	AUE_NULL	UNIMPL	kqueuex
 584	AUE_NULL	UNIMPL	membarrier
-585	AUE_NULL	UNIMPL  timerfd_create
-586	AUE_NULL	UNIMPL  timerfd_gettime
-587	AUE_NULL	UNIMPL  timerfd_settime
+585	AUE_TIMERFD	NOPROTO|CAPENABLED { int timerfd_create(int clockid, \
+				    int flags); }
+586	AUE_TIMERFD	STD|CAPENABLED { int freebsd32_timerfd_gettime(int fd, \
+				    struct itimerspec32 *curr_value); }
+587	AUE_TIMERFD	STD|CAPENABLED { int freebsd32_timerfd_settime(int fd, \
+				    int flags, \
+				    const struct itimerspec32 *new_value, \
+				    struct itimerspec32 *old_value); }
 588	AUE_NULL	NOPROTO { int kcmp(pid_t pid1, pid_t pid2, int type, \
 				    u_int idx1, u_int idx2); }
 589	AUE_INOTIFY	NOPROTO|CAPENABLED { int inotify_add_watch_at(int fd, int dfd, \

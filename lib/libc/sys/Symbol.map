@@ -426,6 +426,9 @@ FBSD_1.8 {
 	 kcmp;
 	inotify_add_watch_at;
 	inotify_rm_watch;
+	timerfd_create;
+	timerfd_gettime;
+	timerfd_settime;
 };
 
 FBSDprivate_1.0 {

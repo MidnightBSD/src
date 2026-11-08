@@ -426,6 +426,9 @@ MIASM =  \
 	swapoff.o \
 	kqueuex.o \
 	membarrier.o \
+	timerfd_create.o \
+	timerfd_gettime.o \
+	timerfd_settime.o \
 	kcmp.o \
 	inotify_add_watch_at.o \
 	inotify_rm_watch.o
