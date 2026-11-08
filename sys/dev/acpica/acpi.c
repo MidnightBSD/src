@@ -257,6 +257,24 @@ static struct rman acpi_rman_io, acpi_rman_mem;
 
 #define ACPI_MINIMUM_AWAKETIME	5
 
+/*
+ * Grace window after wakeup during which a power/sleep button press for suspend
+ * is ignored.  Some firmware wrongly reports the depress that caused the wakeup
+ * as an "S0 Power/Sleep Button Pressed" notify (value 0x80) instead of the
+ * spec-required "Device Wake" notify (0x02); honoring it re-enters sleep
+ * immediately after resume.  On the Framework Laptop 12 the replayed event
+ * arrives within ~620 ms of the recorded resume time when i915kms is loaded,
+ * so a one-second window was chosen originally; without KMS the same notify
+ * can arrive after that one-second mark (and is then held until
+ * acpi_sleep_disabled clears), so the default was widened to
+ * ACPI_MINIMUM_AWAKETIME seconds (the same bound already used since
+ * ece50487e935 to ignore sleep requests for a period after wakeup on some
+ * Toshiba and ThinkPad machines).  Override with hw.acpi.button_replay_window
+ * (seconds; 0 disables; default ACPI_MINIMUM_AWAKETIME).  See
+ * https://bugs.freebsd.org/296243 for the traces, timing data, and analysis.
+ */
+static int acpi_button_replay_secs = ACPI_MINIMUM_AWAKETIME;
+
 /* Holds the description of the acpi0 device. */
 static char acpi_desc[ACPI_OEM_ID_SIZE + ACPI_OEM_TABLE_ID_SIZE + 2];
 
@@ -608,6 +626,11 @@ acpi_attach(device_t dev)
     SYSCTL_ADD_INT(&sc->acpi_sysctl_ctx, SYSCTL_CHILDREN(sc->acpi_sysctl_tree),
 	OID_AUTO, "sleep_delay", CTLFLAG_RW, &sc->acpi_sleep_delay, 0,
 	"sleep delay in seconds");
+    SYSCTL_ADD_INT(&sc->acpi_sysctl_ctx, SYSCTL_CHILDREN(sc->acpi_sysctl_tree),
+	OID_AUTO, "button_replay_window", CTLFLAG_RWTUN,
+	&acpi_button_replay_secs, 0,
+	"Seconds after resume to ignore firmware-replayed power/sleep "
+	"button presses (0 disables)");
     SYSCTL_ADD_INT(&sc->acpi_sysctl_ctx, SYSCTL_CHILDREN(sc->acpi_sysctl_tree),
 	OID_AUTO, "s4bios", CTLFLAG_RW, &sc->acpi_s4bios, 0, "S4BIOS mode");
     SYSCTL_ADD_INT(&sc->acpi_sysctl_ctx, SYSCTL_CHILDREN(sc->acpi_sysctl_tree),
@@ -3375,8 +3398,16 @@ backout:
 	acpi_wake_prep_walk(state);
 	sc->acpi_sstate = ACPI_STATE_S0;
     }
-    if (slp_state >= ACPI_SS_DEV_SUSPEND)
+    if (slp_state >= ACPI_SS_DEV_SUSPEND) {
+	/*
+	 * Record the resume time so a spurious power/sleep button press can be
+	 * ignored for a grace period afterward (see the comment before
+	 * acpi_button_replay_secs).  This must be taken before
+	 * DEVICE_RESUME(), which re-initializes the EC that replays the press.
+	 */
+	sc->acpi_resume_sbt = getsbinuptime();
 	DEVICE_RESUME(root_bus);
+    }
     if (slp_state >= ACPI_SS_SLP_PREP)
 	AcpiLeaveSleepState(state);
     if (slp_state >= ACPI_SS_SLEPT) {
@@ -3745,6 +3776,30 @@ acpi_system_eventhandler_wakeup(void *arg, int state)
     return_VOID;
 }
 
+static bool
+acpi_button_resume_replay(struct acpi_softc *sc, const char *which)
+{
+    sbintime_t elapsed, window;
+    int secs;
+
+    if (sc->acpi_resume_sbt == 0)
+	return (false);
+    secs = acpi_button_replay_secs;
+    if (secs <= 0)
+	return (false);
+    window = SBT_1S * secs;
+    elapsed = getsbinuptime() - sc->acpi_resume_sbt;
+    if (elapsed < 0 || elapsed >= window)
+	return (false);
+    if (bootverbose) {
+	device_printf(sc->acpi_dev,
+	    "ignoring %s button press %jd us after resume "
+	    "(firmware replayed the wake event)\n",
+	    which, (intmax_t)(elapsed / SBT_1US));
+    }
+    return (true);
+}
+
 /* 
  * ACPICA Event Handlers (FixedEvent, also called from button notify handler)
  */
@@ -3768,6 +3823,9 @@ acpi_event_power_button_sleep(void *context)
     struct acpi_softc	*sc = (struct acpi_softc *)context;
 
     ACPI_FUNCTION_TRACE((char *)(uintptr_t)__func__);
+
+    if (acpi_button_resume_replay(sc, "power"))
+	return_VALUE (ACPI_INTERRUPT_HANDLED);
 
     if (ACPI_FAILURE(AcpiOsExecute(OSL_NOTIFY_HANDLER,
 	acpi_invoke_sleep_eventhandler, &sc->acpi_power_button_sx)))
@@ -3794,6 +3852,9 @@ acpi_event_sleep_button_sleep(void *context)
     struct acpi_softc	*sc = (struct acpi_softc *)context;
 
     ACPI_FUNCTION_TRACE((char *)(uintptr_t)__func__);
+
+    if (acpi_button_resume_replay(sc, "sleep"))
+	return_VALUE (ACPI_INTERRUPT_HANDLED);
 
     if (ACPI_FAILURE(AcpiOsExecute(OSL_NOTIFY_HANDLER,
 	acpi_invoke_sleep_eventhandler, &sc->acpi_sleep_button_sx)))
