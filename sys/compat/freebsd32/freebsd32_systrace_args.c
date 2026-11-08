@@ -3411,6 +3411,32 @@ systrace_args(int sysnum, void *params, uint64_t *uarg, int *n_args)
 		*n_args = 0;
 		break;
 	}
+	/* timerfd_create */
+	case 585: {
+		struct timerfd_create_args *p = params;
+		iarg[0] = p->clockid; /* int */
+		iarg[1] = p->flags; /* int */
+		*n_args = 2;
+		break;
+	}
+	/* freebsd32_timerfd_gettime */
+	case 586: {
+		struct freebsd32_timerfd_gettime_args *p = params;
+		iarg[0] = p->fd; /* int */
+		uarg[1] = (intptr_t)p->curr_value; /* struct itimerspec32 * */
+		*n_args = 2;
+		break;
+	}
+	/* freebsd32_timerfd_settime */
+	case 587: {
+		struct freebsd32_timerfd_settime_args *p = params;
+		iarg[0] = p->fd; /* int */
+		iarg[1] = p->flags; /* int */
+		uarg[2] = (intptr_t)p->new_value; /* const struct itimerspec32 * */
+		uarg[3] = (intptr_t)p->old_value; /* struct itimerspec32 * */
+		*n_args = 4;
+		break;
+	}
 	/* kcmp */
 	case 588: {
 		struct kcmp_args *p = params;
@@ -9219,6 +9245,51 @@ systrace_entry_setargdesc(int sysnum, int ndx, char *desc, size_t descsz)
 	/* sched_getcpu */
 	case 581:
 		break;
+	/* timerfd_create */
+	case 585:
+		switch (ndx) {
+		case 0:
+			p = "int";
+			break;
+		case 1:
+			p = "int";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* freebsd32_timerfd_gettime */
+	case 586:
+		switch (ndx) {
+		case 0:
+			p = "int";
+			break;
+		case 1:
+			p = "userland struct itimerspec32 *";
+			break;
+		default:
+			break;
+		};
+		break;
+	/* freebsd32_timerfd_settime */
+	case 587:
+		switch (ndx) {
+		case 0:
+			p = "int";
+			break;
+		case 1:
+			p = "int";
+			break;
+		case 2:
+			p = "userland const struct itimerspec32 *";
+			break;
+		case 3:
+			p = "userland struct itimerspec32 *";
+			break;
+		default:
+			break;
+		};
+		break;
 	/* kcmp */
 	case 588:
 		switch (ndx) {
@@ -11194,6 +11265,21 @@ systrace_return_setargdesc(int sysnum, int ndx, char *desc, size_t descsz)
 		break;
 	/* sched_getcpu */
 	case 581:
+	/* timerfd_create */
+	case 585:
+		if (ndx == 0 || ndx == 1)
+			p = "int";
+		break;
+	/* freebsd32_timerfd_gettime */
+	case 586:
+		if (ndx == 0 || ndx == 1)
+			p = "int";
+		break;
+	/* freebsd32_timerfd_settime */
+	case 587:
+		if (ndx == 0 || ndx == 1)
+			p = "int";
+		break;
 	/* kcmp */
 	case 588:
 		if (ndx == 0 || ndx == 1)

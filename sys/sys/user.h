@@ -264,6 +264,7 @@ struct user {
 #define	KF_TYPE_PROCDESC	11
 #define	KF_TYPE_DEV	12
 #define	KF_TYPE_EVENTFD	13
+#define	KF_TYPE_TIMERFD	14
 #define	KF_TYPE_INOTIFY	15
 #define	KF_TYPE_UNKNOWN	255
 
@@ -446,6 +447,11 @@ struct kinfo_file {
 				uint32_t	kf_eventfd_spareint[3];
 				uint64_t	kf_eventfd_addr;
 			} kf_eventfd;
+			struct {
+				uint32_t	kf_timerfd_clockid;
+				uint32_t	kf_timerfd_flags;
+				uint64_t	kf_timerfd_addr;
+			} kf_timerfd;
 			struct {
 				uint64_t	kf_kqueue_addr;
 				int32_t		kf_kqueue_count;

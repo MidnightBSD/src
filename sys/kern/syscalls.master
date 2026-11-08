@@ -3294,9 +3294,26 @@
 		    int cpu_id
 		);
 	}
-585	AUE_NULL	UNIMPL timerfd_create
-586	AUE_NULL	UNIMPL timerfd_gettime
-587	AUE_NULL	UNIMPL timerfd_settime
+585	AUE_TIMERFD	STD|CAPENABLED {
+		int timerfd_create(
+		    int clockid,
+		    int flags
+		);
+	}
+586	AUE_TIMERFD	STD|CAPENABLED {
+		int timerfd_gettime(
+		    int fd,
+		    _Out_ struct itimerspec *curr_value
+		);
+	}
+587	AUE_TIMERFD	STD|CAPENABLED {
+		int timerfd_settime(
+		    int fd,
+		    int flags,
+		    _In_ const struct itimerspec *new_value,
+		    _Out_opt_ struct itimerspec *old_value
+		);
+	}
 588	AUE_NULL	STD {
 		int kcmp(
 		    pid_t pid1,
