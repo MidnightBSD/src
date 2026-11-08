@@ -1131,7 +1131,7 @@ lkpi_sta_scan_to_auth(struct ieee80211vap *vap, enum ieee80211_state nstate, int
 	struct lkpi_vif *lvif;
 	struct ieee80211_vif *vif;
 	struct ieee80211_node *ni;
-	struct lkpi_sta *lsta;
+	struct lkpi_sta *lsta, *nlsta;
 	enum ieee80211_bss_changed bss_changed;
 	struct ieee80211_prep_tx_info prep_tx_info;
 	uint32_t changed;
@@ -1427,6 +1427,23 @@ lkpi_sta_scan_to_auth(struct ieee80211vap *vap, enum ieee80211_state nstate, int
 	LKPI_80211_LSTA_TXQ_LOCK(lsta);
 	lsta->txq_ready = synched;
 	LKPI_80211_LSTA_TXQ_UNLOCK(lsta);
+
+	/*
+	 * net80211::sta_newstate() sends the AUTH frame to the current
+	 * vap->iv_bss, which is not our lsta if we lost the race.  That
+	 * node's sta is not known to the driver and the chanctx is for the
+	 * old BSS, so also stop its queue.  The AUTH -> AUTH transition
+	 * queued by the join1() which swapped iv_bss will run
+	 * lkpi_sta_scan_to_auth() for it (see lkpi_sta_a_to_a()) and
+	 * re-enable the queue.  We hold the ic lock so iv_bss is stable.
+	 */
+	if (!synched && vap->iv_bss != NULL &&
+	    vap->iv_bss->ni_drv_data != NULL) {
+		nlsta = vap->iv_bss->ni_drv_data;
+		LKPI_80211_LSTA_TXQ_LOCK(nlsta);
+		nlsta->txq_ready = false;
+		LKPI_80211_LSTA_TXQ_UNLOCK(nlsta);
+	}
 
 	goto out_relocked;
 
