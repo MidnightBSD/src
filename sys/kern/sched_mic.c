@@ -1499,7 +1499,7 @@ sched_pickcpu(struct thread *td, int flags)
 	if (smp_started == 0)
 		return (self);
 	/*
-	 * SRQ_OURSELF means the caller is requeueing the thread locally.
+	 * Don't migrate a running thread from sched_switch().
 	 */
 	if ((flags & SRQ_OURSELF) || !THREAD_CAN_MIGRATE(td))
 		return (ts->ts_cpu);
@@ -2390,7 +2390,8 @@ sched_switch(struct thread *td, int flags)
 		srqflag = SRQ_OURSELF | SRQ_YIELDING |
 		    (preempted ? SRQ_PREEMPTED : 0);
 #ifdef SMP
-		if (THREAD_CAN_MIGRATE(td) && !THREAD_CAN_SCHED(td, ts->ts_cpu))
+		if (THREAD_CAN_MIGRATE(td) && (!THREAD_CAN_SCHED(td, ts->ts_cpu)
+		    || pickcpu))
 			ts->ts_cpu = sched_pickcpu(td, 0);
 #endif
 		if (ts->ts_cpu == cpuid)
