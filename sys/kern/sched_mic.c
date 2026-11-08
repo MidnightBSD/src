@@ -397,13 +397,64 @@ sched_core_class_update(void)
 }
 
 /*
+ * kern.sched.mic.force_classes="c,c,..." (loader tunable, debugging aid):
+ * override the detected class of CPUs 0..N-1 so the hybrid placement paths
+ * can be exercised on homogeneous hardware or in a VM that has no CPUID
+ * hybrid leaf.  Each entry must be 1 (perf), 2 (eff) or 4 (LP); CPUs past
+ * the end of the list keep their detected class.  Parsed once at boot; the
+ * whole string is rejected if any entry is malformed or it names more than
+ * MAXCPU CPUs.  "c," per CPU, with the last entry unterminated, fits in
+ * MAXCPU * 2 bytes including the NUL.
+ */
+static char sched_force_classes[MAXCPU * 2];
+
+static void
+sched_force_classes_apply(void)
+{
+	uint8_t cls[MAXCPU];
+	const char *p;
+	char *end;
+	long v;
+	int c, i;
+
+	if (sched_force_classes[0] == '\0')
+		return;
+	p = sched_force_classes;
+	for (c = 0;; c++) {
+		if (c >= MAXCPU)
+			goto bad;
+		v = strtol(p, &end, 10);
+		if (end == p || (v != CPU_CLASS_PERF && v != CPU_CLASS_EFF &&
+		    v != CPU_CLASS_LP))
+			goto bad;
+		cls[c] = (uint8_t)v;
+		if (*end == '\0')
+			break;
+		if (*end != ',')
+			goto bad;
+		p = end + 1;
+	}
+	c++;
+	for (i = 0; i < c; i++)
+		cpu_core_class[i] = cls[i];
+	printf("sched_mic: core class of %d CPU%s forced by "
+	    "kern.sched.mic.force_classes\n", c, c == 1 ? "" : "s");
+	return;
+bad:
+	printf("sched_mic: ignoring malformed kern.sched.mic.force_classes "
+	    "\"%s\" (expected a comma-separated list of 1, 2 or 4, at most "
+	    "%d entries)\n", sched_force_classes, MAXCPU);
+}
+
+/*
  * MD classification runs at SI_SUB_SMP with an order before SI_ORDER_ANY;
- * derive the tables once it is done.
+ * apply any forced classes and derive the tables once it is done.
  */
 static void
 sched_core_class_init(void *dummy __unused)
 {
 
+	sched_force_classes_apply();
 	sched_core_class_update();
 }
 SYSINIT(sched_core_class, SI_SUB_SMP, SI_ORDER_ANY, sched_core_class_init,
@@ -3575,6 +3626,12 @@ SYSCTL_INT(_kern_sched, OID_AUTO, detect_lpe, CTLFLAG_RDTUN,
 SYSCTL_PROC(_kern_sched, OID_AUTO, core_class, CTLTYPE_STRING |
     CTLFLAG_MPSAFE | CTLFLAG_RD, NULL, 0, sysctl_kern_sched_core_class, "A",
     "Per-CPU hybrid core class (1=perf 2=eff 4=LP)");
+SYSCTL_NODE(_kern_sched, OID_AUTO, mic, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
+    "SCHED_MIC debugging knobs");
+SYSCTL_STRING(_kern_sched_mic, OID_AUTO, force_classes, CTLFLAG_RDTUN,
+    sched_force_classes, sizeof(sched_force_classes),
+    "Boot-time override of per-CPU core classes, e.g. \"1,1,2,2,4\" "
+    "(1=perf 2=eff 4=LP), applied to CPUs 0..N-1 in order");
 #endif
 
 /* ps compat.  All cpu percentages from ULE are weighted. */
