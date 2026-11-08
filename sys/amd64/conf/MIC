@@ -1,7 +1,10 @@
-
 include GENERIC
 
 ident	MIC
 
-nooptions	SCHED_ULE
+# SCHED_MIC is ULE-derived and shares ULE's thread-lock hand-off protocol
+# with the machine-dependent context switch code (cpu_switch() waits for
+# the incoming thread's td_lock to leave blocked_lock only when SCHED_ULE
+# is defined).  SCHED_ULE therefore stays enabled (inherited from GENERIC);
+# with both set, sys/conf/files builds sched_mic.c instead of sched_ule.c.
 options 	SCHED_MIC		# Hybrid-core-aware scheduler (ULE-derived)
