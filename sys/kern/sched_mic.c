@@ -1001,7 +1001,14 @@ cpu_search_lowest(const struct cpu_group *cg, const struct cpu_search *s,
 			class_cost = sched_class_cost(cg, c, l);
 			load += class_cost;
 		}
-		if (c == s->cs_prefer && (!s->cs_class || class_cost == 0))
+		/*
+		 * The affinity bonus applies whatever the class of the last
+		 * CPU: it is smaller than any class weight, so an idle
+		 * preferred core still wins, but a thread last run on an
+		 * efficiency core stays there rather than bouncing to a
+		 * busier preferred core and back.
+		 */
+		if (c == s->cs_prefer)
 			p = 128;
 		total += load - p;
 
