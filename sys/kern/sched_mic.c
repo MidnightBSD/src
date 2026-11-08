@@ -1184,13 +1184,37 @@ sched_highest(const struct cpu_group *cg, cpuset_t *mask, int minload,
 	return (r.csr_cpu);
 }
 
+/*
+ * Ask the lone thread running on "tdq" to pick a new CPU for itself the
+ * next time it passes through sched_switch(); the balancer cannot move a
+ * running thread directly.  sched_pickcpu() keeps it where it is unless a
+ * cheaper CPU exists.
+ */
+static void
+sched_balance_repick(struct tdq *tdq)
+{
+	struct thread *td;
+	int cpu;
+
+	cpu = TDQ_ID(tdq);
+	TDQ_LOCK(tdq);
+	td = tdq->tdq_curthread;
+	if (td->td_lock == TDQ_LOCKPTR(tdq) &&
+	    (td->td_flags & TDF_IDLETD) == 0 &&
+	    THREAD_CAN_MIGRATE(td)) {
+		td->td_flags |= TDF_NEEDRESCHED | TDF_PICKCPU;
+		if (cpu != curcpu)
+			ipi_cpu(cpu, IPI_AST);
+	}
+	TDQ_UNLOCK(tdq);
+}
+
 static void
 sched_balance_group(struct cpu_group *cg)
 {
 	struct tdq *tdq;
-	struct thread *td;
 	cpuset_t hmask, lmask;
-	int high, low, anylow;
+	int cpu, high, low, anylow;
 
 	CPU_FILL(&hmask);
 	for (;;) {
@@ -1209,16 +1233,23 @@ sched_balance_group(struct cpu_group *cg)
 			 * There is only one running thread.  We can't move
 			 * it from here, so tell it to pick new CPU by itself.
 			 */
-			TDQ_LOCK(tdq);
-			td = tdq->tdq_curthread;
-			if (td->td_lock == TDQ_LOCKPTR(tdq) &&
-			    (td->td_flags & TDF_IDLETD) == 0 &&
-			    THREAD_CAN_MIGRATE(td)) {
-				td->td_flags |= TDF_NEEDRESCHED | TDF_PICKCPU;
-				if (high != curcpu)
-					ipi_cpu(high, IPI_AST);
+			sched_balance_repick(tdq);
+			/*
+			 * Every CPU left now carries at most one thread, which
+			 * ULE considers balanced and stops at.  sched_highest()
+			 * always lands in the most loaded group (e.g. a fully
+			 * busy SMT core), so on hybrid hardware a lone thread
+			 * on a lesser-class CPU would otherwise never be asked
+			 * and could sit on an E or LP core forever while a
+			 * cheaper slot is idle.  Ask each of those to repick
+			 * too; preferred-class (cost 0) CPUs are left alone as
+			 * in ULE.
+			 */
+			CPU_FOREACH_ISSET(cpu, &hmask) {
+				if (sched_cpu_cost[cpu] != 0 &&
+				    TDQ_LOAD(TDQ_CPU(cpu)) == 1)
+					sched_balance_repick(TDQ_CPU(cpu));
 			}
-			TDQ_UNLOCK(tdq);
 			break;
 		}
 		anylow = 1;
