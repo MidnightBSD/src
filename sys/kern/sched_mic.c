@@ -829,6 +829,7 @@ struct cpu_search {
 	int	cs_load;	/* Max load for low, min load for high. */
 	int	cs_trans;	/* Min transferable load for high. */
 	int	cs_class;	/* Apply hybrid-core class cost (placement). */
+	int	cs_rank;	/* Stealer's class rank (stealing). */
 };
 
 struct cpu_search_res {
@@ -1070,9 +1071,15 @@ cpu_search_highest(const struct cpu_group *cg, const struct cpu_search *s,
 		total += load;
 
 		/*
-		 * Check this CPU is acceptable.
+		 * Check this CPU is acceptable.  A stealer from a less
+		 * preferred class (higher rank) than this CPU, e.g. an E-core
+		 * looking at a P-core, only qualifies it when it is genuinely
+		 * overloaded: one more runnable thread than the plain
+		 * threshold.  Pulling the other way (P from E) and between
+		 * equals uses the threshold unchanged, as in ULE.
 		 */
-		if (l < s->cs_load || TDQ_TRANSFERABLE(tdq) < s->cs_trans ||
+		if (l < s->cs_load + (sched_cpu_rank[c] < s->cs_rank ? 1 : 0) ||
+		    TDQ_TRANSFERABLE(tdq) < s->cs_trans ||
 		    !CPU_ISSET(c, s->cs_mask))
 			continue;
 
@@ -1113,7 +1120,7 @@ sched_lowest(const struct cpu_group *cg, cpuset_t *mask, int pri, int maxload,
  */
 static inline int
 sched_highest(const struct cpu_group *cg, cpuset_t *mask, int minload,
-    int mintrans)
+    int mintrans, int rank)
 {
 	struct cpu_search s;
 	struct cpu_search_res r;
@@ -1121,6 +1128,7 @@ sched_highest(const struct cpu_group *cg, cpuset_t *mask, int minload,
 	s.cs_mask = mask;
 	s.cs_load = minload;
 	s.cs_trans = mintrans;
+	s.cs_rank = rank;
 	cpu_search_highest(cg, &s, &r);
 	return (r.csr_cpu);
 }
@@ -1135,7 +1143,7 @@ sched_balance_group(struct cpu_group *cg)
 
 	CPU_FILL(&hmask);
 	for (;;) {
-		high = sched_highest(cg, &hmask, 1, 0);
+		high = sched_highest(cg, &hmask, 1, 0, 0);
 		/* Stop if there is no more CPU with transferrable threads. */
 		if (high == -1)
 			break;
@@ -1166,7 +1174,13 @@ sched_balance_group(struct cpu_group *cg)
 nextlow:
 		if (TDQ_TRANSFERABLE(tdq) == 0)
 			continue;
-		low = sched_lowest(cg, &lmask, -1, TDQ_LOAD(tdq) - 1, high, 1, 0);
+		/*
+		 * Among the less loaded CPUs prefer the better core class
+		 * (class costs are below one thread of load, so real load
+		 * still decides first).
+		 */
+		low = sched_lowest(cg, &lmask, -1, TDQ_LOAD(tdq) - 1, high, 1,
+		    1);
 		/* Stop if we looked well and found no less loaded CPU. */
 		if (anylow && low == -1)
 			break;
@@ -1307,16 +1321,17 @@ tdq_idled(struct tdq *tdq)
 	struct cpu_group *cg, *parent;
 	struct tdq *steal;
 	cpuset_t mask;
-	int cpu, switchcnt, goup;
+	int cpu, rank, switchcnt, goup;
 
 	if (smp_started == 0 || steal_idle == 0 || tdq->tdq_cg == NULL)
 		return (1);
 	CPU_FILL(&mask);
 	CPU_CLR(PCPU_GET(cpuid), &mask);
+	rank = sched_cpu_rank[TDQ_ID(tdq)];
 restart:
 	switchcnt = TDQ_SWITCHCNT(tdq);
 	for (cg = tdq->tdq_cg, goup = 0; ; ) {
-		cpu = sched_highest(cg, &mask, steal_thresh, 1);
+		cpu = sched_highest(cg, &mask, steal_thresh, 1, rank);
 		/*
 		 * We were assigned a thread but not preempted.  Returning
 		 * 0 here will cause our caller to switch to it.
@@ -1690,7 +1705,13 @@ llc:
 	mask = &td->td_cpuset->cs_mask;
 	pri = td->td_priority;
 	r = TD_IS_RUNNING(td);
-	class_aware = !r;
+	/*
+	 * Apply the class cost to running threads as well, so a lone thread
+	 * the balancer asked to repick (TDF_PICKCPU) or one whose cpuset
+	 * changed can move from a lesser core to an idle preferred one; the
+	 * affinity bonus on ts_cpu keeps it from moving the other way.
+	 */
+	class_aware = 1;
 	/*
 	 * Try hard to keep interrupts within found LLC.  Search the LLC for
 	 * the least loaded CPU we can run now.  For NUMA systems it should
@@ -2307,18 +2328,19 @@ tdq_trysteal(struct tdq *tdq)
 	struct cpu_group *cg, *parent;
 	struct tdq *steal;
 	cpuset_t mask;
-	int cpu, i, goup;
+	int cpu, i, rank, goup;
 
 	if (smp_started == 0 || steal_idle == 0 || trysteal_limit == 0 ||
 	    tdq->tdq_cg == NULL)
 		return;
 	CPU_FILL(&mask);
 	CPU_CLR(PCPU_GET(cpuid), &mask);
+	rank = sched_cpu_rank[TDQ_ID(tdq)];
 	/* We don't want to be preempted while we're iterating. */
 	spinlock_enter();
 	TDQ_UNLOCK(tdq);
 	for (i = 1, cg = tdq->tdq_cg, goup = 0; ; ) {
-		cpu = sched_highest(cg, &mask, steal_thresh, 1);
+		cpu = sched_highest(cg, &mask, steal_thresh, 1, rank);
 		/*
 		 * If a thread was added while interrupts were disabled don't
 		 * steal one here.
