@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.Dd June 11, 2026
+.Dd November 8, 2026
 .Dt SCHED_MIC 4
 .Os
 .Sh NAME
@@ -95,14 +95,29 @@ Setting this to
 restores the SMT placement behavior of
 .Xr sched_ule 4 .
 .It Va kern.sched.prefer_compute
-For AMD hybrid CCD parts, selects which die is preferred:
-.Li 0
-.Pq the default
-favors the 3D V-Cache die, while
+Selects which of the two main core classes is filled first.
 .Li 1
-favors the compute
+prefers the platform's compute cores:
+Intel P-cores, or on AMD parts with asymmetric last-level caches the
+smaller-cache compute
 .Pq frequency
+or
+.Dq C
+core die.
+.Li 0
+prefers the other class:
+Intel E-cores, or the AMD large-cache
+.Pq 3D V-Cache
 die.
+The default is
+.Li 1
+except on AMD X3D parts, where it is
+.Li 0 .
+Low-power
+.Pq class 4
+cores are always used last.
+Which class holds the compute cores is reported by the read-only
+.Va kern.sched.compute_class .
 .It Va kern.sched.detect_lpe
 A boot-time tunable that enables detection of Intel LP-E cores as class 4.
 Setting it to

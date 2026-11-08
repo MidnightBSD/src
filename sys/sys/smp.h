@@ -119,6 +119,15 @@ typedef struct cpu_group *cpu_group_t;
 /* class 3 is dynamic (busy SMT sibling) and is never stored. */
 #define	CPU_CLASS_LP	4		/* Intel LP-E core (scheduled last). */
 extern uint8_t cpu_core_class[];
+/*
+ * Knobs MD classification sets, and the hook that rederives the scheduler's
+ * per-CPU tables after cpu_core_class[] or a knob changes (run automatically
+ * at SI_SUB_SMP/SI_ORDER_ANY for the boot-time classification).
+ */
+extern int sched_prefer_compute;
+extern int sched_compute_class;
+extern int sched_detect_lpe;
+void	sched_core_class_update(void);
 
 /*
  * Convenience routines for building and traversing topologies.
