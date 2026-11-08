@@ -68,7 +68,7 @@ ACPI_MODULE_NAME("ACPI_WMI");
 struct acpi_wmi_softc {
 	device_t	wmi_dev;	/* wmi device id */
 	ACPI_HANDLE	wmi_handle;	/* handle of the PNP0C14 node */
-	device_t	ec_dev;		/* acpi_ec0 */
+	device_t	ec_dev;		/* first attached acpi_ec */
 	struct cdev	*wmistat_dev_t;	/* wmistat device handle */
 	struct sbuf	wmistat_sbuf;	/* sbuf for /dev/wmistat output */
 	pid_t		wmistat_open_pid; /* pid operating on /dev/wmistat */
@@ -229,7 +229,9 @@ static int
 acpi_wmi_attach(device_t dev)
 {
 	struct acpi_wmi_softc *sc;
-	int ret;
+	devclass_t ec_dc;
+	device_t ec;
+	int i, ret;
 	ACPI_STATUS status;
 
 	ACPI_FUNCTION_TRACE((char *)(uintptr_t)__func__);
@@ -240,9 +242,21 @@ acpi_wmi_attach(device_t dev)
 	sc->wmi_dev = dev;
 	sc->wmi_handle = acpi_get_handle(dev);
 	TAILQ_INIT(&sc->wmi_info_list);
-	/* XXX Only works with one EC, but nearly all systems only have one. */
-	if ((sc->ec_dev = devclass_get_device(devclass_find("acpi_ec"), 0))
-	    == NULL)
+	/*
+	 * XXX Only works with one EC, but nearly all systems only have one.
+	 * The acpi_ec unit number is the EC's _UID (or the ECDT UID), which
+	 * need not be 0, so use the first attached instance.
+	 */
+	sc->ec_dev = NULL;
+	ec_dc = devclass_find("acpi_ec");
+	for (i = 0; i < devclass_get_maxunit(ec_dc); i++) {
+		ec = devclass_get_device(ec_dc, i);
+		if (ec != NULL && device_is_attached(ec)) {
+			sc->ec_dev = ec;
+			break;
+		}
+	}
+	if (sc->ec_dev == NULL)
 		device_printf(dev, "cannot find EC device\n");
 	if (ACPI_FAILURE((status = AcpiInstallNotifyHandler(sc->wmi_handle,
 		    ACPI_DEVICE_NOTIFY, acpi_wmi_notify_handler, sc))))
