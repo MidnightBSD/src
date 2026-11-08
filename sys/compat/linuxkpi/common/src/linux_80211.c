@@ -1472,11 +1472,13 @@ lkpi_sta_auth_to_scan(struct ieee80211vap *vap, enum ieee80211_state nstate, int
 	struct ieee80211_sta *sta;
 	struct ieee80211_prep_tx_info prep_tx_info;
 	int error;
+	bool leak_ni;
 
 	lhw = vap->iv_ic->ic_softc;
 	hw = LHW_TO_HW(lhw);
 	lvif = VAP_TO_LVIF(vap);
 	vif = LVIF_TO_VIF(lvif);
+	leak_ni = false;
 
 	LKPI_80211_LVIF_LOCK(lvif);
 	/*
@@ -1545,10 +1547,25 @@ lkpi_sta_auth_to_scan(struct ieee80211vap *vap, enum ieee80211_state nstate, int
 	    "NONE: %#x, nstate %d arg %d\n", __func__, lsta, lsta->state, nstate, arg));
 	error = lkpi_80211_mo_sta_state(hw, vif, lsta, IEEE80211_STA_NOTEXIST);
 	if (error != 0) {
-		IMPROVE("do we need to undo the chan ctx?");
 		ic_printf(vap->iv_ic, "%s:%d: mo_sta_state(NOTEXIST) "
-		    "failed: %d\n", __func__, __LINE__, error);
-		goto out;
+		    "failed: %d; forcing cleanup, leaking lsta %p ni %p\n",
+		    __func__, __LINE__, error, lsta, ni);
+		/*
+		 * Do not leave lvif_bss set or every following
+		 * lkpi_sta_scan_to_auth() fails with EBUSY and the vif is
+		 * stuck until it is re-created.  The driver may still know
+		 * the sta, so we must neither free the lsta (lkpi_lsta_free()
+		 * panics if added_to_drv is set) nor take the chanctx away
+		 * from under it.  Stop its queue, unhook it from the lvif,
+		 * and keep (leak) the lvif_bss reference on the ni so the
+		 * lsta/sta memory stays valid for the driver.
+		 * lkpi_sta_scan_to_auth() can re-use the existing chanctx.
+		 */
+		LKPI_80211_LSTA_TXQ_LOCK(lsta);
+		lsta->txq_ready = false;
+		LKPI_80211_LSTA_TXQ_UNLOCK(lsta);
+		leak_ni = true;
+		error = 0;
 	}
 #if 0
 	lsta->added_to_drv = false;	/* mo manages. */
@@ -1562,6 +1579,8 @@ lkpi_sta_auth_to_scan(struct ieee80211vap *vap, enum ieee80211_state nstate, int
 	lvif->lvif_bss_synched = false;
 	LKPI_80211_LVIF_UNLOCK(lvif);
 	lkpi_lsta_remove(lsta, lvif);
+	if (leak_ni)
+		goto out;
 
 	/* conf_tx */
 
@@ -1586,7 +1605,7 @@ lkpi_sta_auth_to_scan(struct ieee80211vap *vap, enum ieee80211_state nstate, int
 out:
 	LKPI_80211_LHW_UNLOCK(lhw);
 	IEEE80211_LOCK(vap->iv_ic);
-	if (error == 0) {
+	if (error == 0 && !leak_ni) {
 		/*
 		 * Do this outside the LHW lock: net80211::node_free() may drain
 		 * the txq taskqueue (which takes the same lock) and may call into
