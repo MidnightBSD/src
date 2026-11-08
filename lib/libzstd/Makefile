@@ -34,7 +34,7 @@ SRCS=	entropy_common.c \
 	hist.c \
 	fastcover.c
 WARNS?=	2
-INCS=	zstd.h
+INCS=	zstd.h zstd_errors.h
 CFLAGS+=	-I${ZSTDDIR}/lib -I${ZSTDDIR}/lib/common -DXXH_NAMESPACE=ZSTD_ \
 		-DZSTD_MULTITHREAD=1 -fvisibility=hidden
 LIBADD=	pthread
