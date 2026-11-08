@@ -1696,11 +1696,42 @@ lkpi_sta_a_to_a(struct ieee80211vap *vap, enum ieee80211_state nstate, int arg)
 	struct lkpi_sta *lsta;
 	struct ieee80211_prep_tx_info prep_tx_info;
 	int error;
+	bool have_bss, resync;
 
 	lhw = vap->iv_ic->ic_softc;
 	hw = LHW_TO_HW(lhw);
 	lvif = VAP_TO_LVIF(vap);
 	vif = LVIF_TO_VIF(lvif);
+
+	/*
+	 * AUTH -> AUTH after net80211 swapped vap->iv_bss from under us,
+	 * e.g., a 2nd net80211::join1() while lkpi_sta_scan_to_auth() had
+	 * the ic lock dropped (multiple BSSIDs for one SSID).  Erroring here
+	 * leaves net80211 in AUTH with our lvif_bss pointing to the old node
+	 * and nothing will take us down again.  Instead tear the old sta
+	 * down and redo scan_to_auth for the current iv_bss, like
+	 * lkpi_sta_run_to_auth()/lkpi_sta_assoc_to_auth() do.
+	 * This is done at most once per state transition; if we lose the
+	 * race again, the next AUTH -> AUTH from net80211 will retry.
+	 * Both functions expect the ic lock held and the lhw lock not held.
+	 */
+	if (nstate == IEEE80211_S_AUTH) {
+		LKPI_80211_LVIF_LOCK(lvif);
+		resync = !lvif->lvif_bss_synched;
+		have_bss = (lvif->lvif_bss != NULL);
+		LKPI_80211_LVIF_UNLOCK(lvif);
+		if (resync) {
+			ic_printf(vap->iv_ic, "%s:%d: vap %p iv_bss %p "
+			    "changed; re-authenticating (have_bss %d)\n",
+			    __func__, __LINE__, vap, vap->iv_bss, have_bss);
+			if (have_bss) {
+				error = lkpi_sta_auth_to_scan(vap, nstate, arg);
+				if (error != 0)
+					return (error);
+			}
+			return (lkpi_sta_scan_to_auth(vap, nstate, arg));
+		}
+	}
 
 	IEEE80211_UNLOCK(vap->iv_ic);
 	LKPI_80211_LHW_LOCK(lhw);
