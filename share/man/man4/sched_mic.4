@@ -56,9 +56,16 @@ Intel low-power
 cores, which are used last.
 .El
 .Pp
-The preference is a soft, tunable bias applied only when selecting a CPU
-for a thread; the long-term load balancer and work stealing remain
-unaware of core class and continue to balance by real load.
+The preference is a soft, tunable bias: real load always decides first,
+and the class only orders CPUs whose load is otherwise acceptable.
+It is applied when selecting a CPU for a thread, when the long-term load
+balancer chooses where to move a thread, and when an idle CPU looks for
+work to steal: a CPU of a less preferred class only steals from a more
+preferred one that has at least one more runnable thread than
+.Va kern.sched.steal_thresh
+requires, so efficiency cores do not drain performance cores unless the
+latter are genuinely overloaded, while performance cores pull from
+efficiency cores as usual.
 On homogeneous hardware, and on architectures other than x86,
 .Nm
 behaves identically to
