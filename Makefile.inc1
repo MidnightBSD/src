@@ -3343,6 +3343,16 @@ delete-old-files: .PHONY
 			rm ${RM_I} $${catpage} <&3; \
 	        fi; \
 	done
+.if ${MK_CAROOT} != "no"
+# Removing old trust store certificates leaves dangling hash links in
+# /etc/ssl/certs; some TLS libraries (e.g. wolfSSL) then refuse the whole
+# directory.  Regenerate the links.
+	@if which openssl>/dev/null; then \
+		sh ${SRCTOP}/usr.sbin/certctl/certctl.sh ${CERTCTLFLAGS} rehash; \
+	else \
+		echo "No openssl on the host, not rehashing certificates -- /etc/ssl/certs may contain stale links."; \
+	fi
+.endif
 	@echo ">>> Old files removed"
 
 check-old-files: .PHONY
