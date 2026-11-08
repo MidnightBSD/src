@@ -23,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.Dd July 15, 2024
+.Dd November 8, 2026
 .Dt ACPI 4
 .Os
 .Sh NAME
@@ -112,6 +112,14 @@ List of supported CPU idle states and their transition methods, as
 directed by the firmware.
 .It Va hw.acpi.acline
 AC line state (1 means online, 0 means on battery power).
+.It Va hw.acpi.button_replay_window
+Number of seconds after resume during which power and sleep button
+presses are ignored.
+Some firmware reports the button press that woke the system as a new
+button press shortly after resume, which would otherwise put the system
+back to sleep or turn it off.
+Set to 0 to disable.
+Default is 5 seconds.
 .It Va hw.acpi.disable_on_reboot
 Disable ACPI during the reboot process.
 Most systems reboot fine with ACPI still enabled, but some require
