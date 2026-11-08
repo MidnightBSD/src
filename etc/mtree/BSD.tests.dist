@@ -778,7 +778,11 @@
         file
         ..
         fs
+            fdescfs
+            ..
             fusefs
+            ..
+            linsysfs
             ..
             tmpfs
             ..
