@@ -51,8 +51,9 @@ ${c}:	${c}.base
 		}							\
 		print $$0;						\
 	}' |								\
-	sed -e '1s/^/$$set 1~$$quote "~/; 1y/~/\n/' |			\
-	gencat $c /dev/stdin;						\
+	sed -e '1s/^/$$set 1~$$quote "~/; 1y/~/\n/' > $c.msg;		\
+	gencat $c $c.msg;						\
+	rm -f $c.msg;							\
 	chmod 444 $c;							\
 	if grep DUPLICATE $c > /dev/null; then				\
 		grep DUPLICATE $@;					\
@@ -108,7 +109,7 @@ english.base: dump ${SCAN} #Makefile
 DEPENDOBJS+=	dump
 dump: ${BUILD_TOOLS_META}
 
-CLEANFILES+= dump ${CAT} english.base *.check __ck1 __ck2
+CLEANFILES+= dump ${CAT} ${CAT:S/$/.msg/} english.base *.check __ck1 __ck2
 
 CATALOGS= ${CAT}
 NLLINKS= nl_NL
