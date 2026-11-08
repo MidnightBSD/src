@@ -354,6 +354,43 @@ uint8_t cpu_core_class[MAXCPU] = { [0 ... MAXCPU - 1] = CPU_CLASS_PERF };
 static uint16_t __read_mostly sched_cpu_cost[MAXCPU];	/* Static class cost. */
 static uint8_t __read_mostly sched_cpu_rank[MAXCPU];	/* 0 = preferred. */
 #define	SCHED_CLASS_WEIGHT_MAX	0x7fff
+/*
+ * Modulus of the random tie-breaking jitter cpu_search_lowest() subtracts
+ * from a candidate's load when class costs are in play.  ULE uses 128
+ * (half a thread); here it is the smallest gap between any two distinct
+ * cost levels so the jitter can only reorder CPUs of equal cost.
+ */
+static int __read_mostly sched_class_jitter = 128;
+
+static void
+sched_class_jitter_update(void)
+{
+	int levels[12];
+	int i, j, d, gap, n;
+
+	/*
+	 * Cost levels a candidate can have: each static class cost, with
+	 * and without the busy-sibling penalty, each with and without the
+	 * 128-point affinity bonus.
+	 */
+	n = 0;
+	for (i = 0; i < 3; i++) {
+		d = i == 0 ? 0 : i == 1 ? sched_class_weight_eff :
+		    sched_class_weight_lp;
+		levels[n++] = d;
+		levels[n++] = d - 128;
+		levels[n++] = d + sched_smt_busy_penalty;
+		levels[n++] = d + sched_smt_busy_penalty - 128;
+	}
+	gap = 128;
+	for (i = 0; i < n; i++)
+		for (j = i + 1; j < n; j++) {
+			d = abs(levels[i] - levels[j]);
+			if (d > 0 && d < gap)
+				gap = d;
+		}
+	sched_class_jitter = gap;	/* 1 <= gap <= 128 */
+}
 
 /*
  * Recompute the derived per-CPU tables.  Called at boot after MD
@@ -394,6 +431,7 @@ sched_core_class_update(void)
 		sched_cpu_cost[c] = cost;
 		sched_cpu_rank[c] = rank;
 	}
+	sched_class_jitter_update();
 }
 
 /*
@@ -1031,7 +1069,13 @@ cpu_search_lowest(const struct cpu_group *cg, const struct cpu_search *s,
 		if (__predict_false(s->cs_running) && l > 0)
 			p = 0;
 
-		load -= sched_random() % 128;
+		/*
+		 * Random tie-breaking; with class costs the modulus is the
+		 * smallest gap between cost levels so it cannot flip the
+		 * class ordering (see sched_class_jitter_update()).
+		 */
+		load -= sched_random() %
+		    (s->cs_class ? sched_class_jitter : 128);
 		if (bload > load - p) {
 			bload = load - p;
 			r->csr_cpu = c;
@@ -3637,9 +3681,13 @@ SYSCTL_PROC(_kern_sched, OID_AUTO, class_weight_lp,
     CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE, &sched_class_weight_lp,
     SCHED_CLASS_WEIGHT_MAX, sysctl_kern_sched_class_knob, "I",
     "Load penalty for class-4 cores (Intel LP-E), scheduled last");
-SYSCTL_INT(_kern_sched, OID_AUTO, smt_busy_penalty, CTLFLAG_RW,
-    &sched_smt_busy_penalty, 0,
+SYSCTL_PROC(_kern_sched, OID_AUTO, smt_busy_penalty,
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE, &sched_smt_busy_penalty,
+    SCHED_CLASS_WEIGHT_MAX, sysctl_kern_sched_class_knob, "I",
     "Penalty for a free thread whose SMT sibling is busy (0 = ULE behavior)");
+SYSCTL_INT(_kern_sched, OID_AUTO, class_jitter, CTLFLAG_RD,
+    &sched_class_jitter, 0,
+    "Modulus of the placement tie-breaking jitter (derived from the weights)");
 SYSCTL_PROC(_kern_sched, OID_AUTO, prefer_compute,
     CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE, &sched_prefer_compute, 1,
     sysctl_kern_sched_class_knob, "I",
