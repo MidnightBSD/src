@@ -40,6 +40,22 @@
 #include "opt_hwpmc_hooks.h"
 #include "opt_sched.h"
 
+/*
+ * MIC reuses ULE's thread-lock hand-off protocol unchanged, and the
+ * machine-dependent context switch code only honours that protocol when
+ * SCHED_ULE is defined: cpu_switch() spins while the incoming thread's
+ * td_lock is still blocked_lock, i.e. while the thread is still being
+ * switched out on another CPU.  Without that wait a thread migrated with
+ * sched_switch_migrate() can be resumed on its new CPU before the old CPU
+ * has finished saving its context, so it executes on two CPUs at once
+ * (shared kernel stack, random stack corruption panics).  Refuse to build a
+ * kernel that would silently run that way; sys/conf/files selects
+ * sched_mic.c over sched_ule.c when both options are present.
+ */
+#if !defined(SCHED_ULE) || defined(SCHED_4BSD)
+#error "options SCHED_MIC requires options SCHED_ULE (and not SCHED_4BSD)"
+#endif
+
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/kdb.h>
@@ -509,6 +525,11 @@ tdq_runq_add(struct tdq *tdq, struct thread *td, int flags)
 
 	TDQ_LOCK_ASSERT(tdq, MA_OWNED);
 	THREAD_LOCK_BLOCKED_ASSERT(td, MA_OWNED);
+	KASSERT(!TD_ON_RUNQ(td),
+	    ("tdq_runq_add: thread %p already on a run queue", td));
+	KASSERT(td_get_sched(td)->ts_cpu == TDQ_ID(tdq),
+	    ("tdq_runq_add: thread %p ts_cpu %d != tdq cpu %d", td,
+	    td_get_sched(td)->ts_cpu, TDQ_ID(tdq)));
 
 	pri = td->td_priority;
 	ts = td_get_sched(td);
@@ -2432,6 +2453,17 @@ sched_switch(struct thread *td, int flags)
 		td->td_oncpu = NOCPU;
 		cpu_switch(td, newtd, mtx);
 		cpuid = td->td_oncpu = PCPU_GET(cpuid);
+		/*
+		 * cpu_switch() must not have resumed us before the CPU we
+		 * left finished switching us out: by then our td_lock has
+		 * been released from blocked_lock to our new run queue's
+		 * lock.  Catch an MD context switch that skipped that wait.
+		 */
+		KASSERT(td->td_lock == TDQ_LOCKPTR(TDQ_CPU(cpuid)),
+		    ("sched_switch: thread %p resumed on CPU %d with lock %p "
+		    "(%s), expected %p", td, cpuid, td->td_lock,
+		    td->td_lock == &blocked_lock ? "blocked_lock" : "other",
+		    TDQ_LOCKPTR(TDQ_CPU(cpuid))));
 
 		SDT_PROBE0(sched, , , on__cpu);
 #ifdef	HWPMC_HOOKS

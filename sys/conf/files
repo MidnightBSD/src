@@ -3935,7 +3935,7 @@ kern/md5c.c			standard
 kern/p1003_1b.c			standard
 kern/posix4_mib.c		standard
 kern/sched_4bsd.c		optional sched_4bsd
-kern/sched_ule.c		optional sched_ule
+kern/sched_ule.c		optional sched_ule !sched_mic
 kern/sched_mic.c		optional sched_mic
 kern/serdev_if.m		standard
 kern/stack_protector.c		standard \

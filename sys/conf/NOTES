@@ -208,7 +208,12 @@ options 	ROOTDEVNAME=\"ufs:da0s2e\"
 # which leads to better responsiveness even on uniprocessor machines.  This
 # is the default scheduler.
 #
-# SCHED_MIC is SCHED_ULE extended with hybrid-core awareness.  On x86 CPUs with
+# SCHED_MIC is SCHED_ULE extended with hybrid-core awareness.  It is selected
+# by specifying SCHED_MIC in addition to SCHED_ULE: machine-dependent code
+# (cpu_switch(), idle and clock paths) keys ULE's thread-lock protocol off
+# SCHED_ULE, which MIC shares, and sys/conf/files then builds sched_mic.c in
+# place of sched_ule.c.  A config with SCHED_MIC but without SCHED_ULE fails
+# to compile.  On x86 CPUs with
 # heterogeneous cores it weighs four core priority classes when placing threads:
 # performance cores (Intel P-cores, AMD 3D V-Cache CCD) first, then efficiency
 # cores (Intel E-cores, AMD compute CCD, AMD mobile C-cores), then the second
@@ -222,7 +227,7 @@ options 	ROOTDEVNAME=\"ufs:da0s2e\"
 options 	SCHED_4BSD
 options 	SCHED_STATS
 #options 	SCHED_ULE
-#options 	SCHED_MIC
+#options 	SCHED_MIC		# requires SCHED_ULE as well
 
 #####################################################################
 # SMP OPTIONS:
