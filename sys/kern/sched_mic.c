@@ -319,21 +319,95 @@ static int __read_mostly trysteal_limit = 2;
 static int __read_mostly sched_class_weight_eff = 160;	/* class 2 penalty. */
 static int __read_mostly sched_class_weight_lp = 512;	/* class 4 penalty. */
 static int __read_mostly sched_smt_busy_penalty = 192;	/* busy-sibling (pri 3). */
-int __read_mostly sched_prefer_compute = 0;
 /*
- * Machine-dependent classification sets this when prefer_compute=1 should
- * keep class 1 preferred instead of swapping class 1 and class 2.
+ * kern.sched.prefer_compute selects which of the two main classes is filled
+ * first.  1 (the default) prefers the platform's compute class, which
+ * machine-dependent classification names in sched_compute_class: Intel
+ * P-cores (CPU_CLASS_PERF) or, on AMD parts with asymmetric L3, the
+ * smaller-cache compute/C-core CCD (CPU_CLASS_EFF).  0 prefers the other
+ * class: Intel E-cores, or the AMD large-cache (3D V-Cache) CCD, which is
+ * the default MD code picks on X3D parts.  CPU_CLASS_LP is always last.
  */
-int __read_mostly sched_prefer_compute_invert = 0;
+int __read_mostly sched_prefer_compute = 1;
+int __read_mostly sched_compute_class = CPU_CLASS_PERF;
 /* Read by machine-dependent classification; enables Intel LP-E detection. */
 int sched_detect_lpe = 1;
 
 /*
  * Per-CPU core class, indexed by cpuid.  Defaults to CPU_CLASS_PERF for every
  * CPU so that non-hybrid (and non-x86) systems behave exactly like SCHED_ULE.
- * Populated by machine-dependent detection (see cpu_set_core_classes()).
+ * Populated by machine-dependent detection (see mic_classify() in
+ * sys/x86/x86/mp_x86.c); sched_core_class_update() then derives the tables
+ * below, and the scheduler never reads cpu_core_class[] on a hot path.
+ * Any later provider that rewrites cpu_core_class[] must call
+ * sched_core_class_update() afterwards.
  */
 uint8_t cpu_core_class[MAXCPU] = { [0 ... MAXCPU - 1] = CPU_CLASS_PERF };
+
+/*
+ * Tables derived from cpu_core_class[] and the tunables above by
+ * sched_core_class_update().  The placement and stealing hot paths read only
+ * these, one load per candidate CPU, so no preference or weight logic runs
+ * there.  Zero means "treat like ULE", which is also the state before
+ * classification has run.
+ */
+static uint16_t __read_mostly sched_cpu_cost[MAXCPU];	/* Static class cost. */
+static uint8_t __read_mostly sched_cpu_rank[MAXCPU];	/* 0 = preferred. */
+#define	SCHED_CLASS_WEIGHT_MAX	0x7fff
+
+/*
+ * Recompute the derived per-CPU tables.  Called at boot after MD
+ * classification and whenever a class tunable changes; readers are lockless,
+ * so a concurrent update only yields a momentarily mixed placement bias.
+ */
+void
+sched_core_class_update(void)
+{
+	int c, cls, cost;
+	uint8_t rank;
+	bool swap;
+
+	swap = (sched_prefer_compute != 0) ==
+	    (sched_compute_class == CPU_CLASS_EFF);
+	for (c = 0; c < MAXCPU; c++) {
+		cls = cpu_core_class[c];
+		if (swap) {
+			if (cls == CPU_CLASS_PERF)
+				cls = CPU_CLASS_EFF;
+			else if (cls == CPU_CLASS_EFF)
+				cls = CPU_CLASS_PERF;
+		}
+		if (cls == CPU_CLASS_EFF) {
+			cost = sched_class_weight_eff;
+			rank = 1;
+		} else if (cls == CPU_CLASS_LP) {
+			cost = sched_class_weight_lp;
+			rank = 2;
+		} else {
+			cost = 0;
+			rank = 0;
+		}
+		if (cost < 0)
+			cost = 0;
+		else if (cost > SCHED_CLASS_WEIGHT_MAX)
+			cost = SCHED_CLASS_WEIGHT_MAX;
+		sched_cpu_cost[c] = cost;
+		sched_cpu_rank[c] = rank;
+	}
+}
+
+/*
+ * MD classification runs at SI_SUB_SMP with an order before SI_ORDER_ANY;
+ * derive the tables once it is done.
+ */
+static void
+sched_core_class_init(void *dummy __unused)
+{
+
+	sched_core_class_update();
+}
+SYSINIT(sched_core_class, SI_SUB_SMP, SI_ORDER_ANY, sched_core_class_init,
+    NULL);
 
 /*
  * One thread queue per processor.
@@ -732,32 +806,21 @@ smt_sibling_busy(const struct cpu_group *cg, int self)
 
 /*
  * Compute the hybrid-core placement cost added to a candidate CPU's load.
- * Returns 0 for performance-class CPUs with no busy SMT sibling, so on
- * homogeneous hardware (all CPU_CLASS_PERF) the search is identical to ULE.
+ * The static part is a precomputed per-CPU table lookup (see
+ * sched_core_class_update()).  Returns 0 for preferred-class CPUs with no
+ * busy SMT sibling, so on homogeneous hardware the search is identical to
+ * ULE.
  * The result is folded into "load" before it is summed into the per-group
  * total, so the bias steers both subtree selection and the final CPU pick.
  */
 static int
 sched_class_cost(const struct cpu_group *cg, int c, int l)
 {
-	int cls, cost;
+	int cost;
 
 	if (c < 0 || c >= MAXCPU || CPU_ABSENT(c))
 		return (0);
-	cls = cpu_core_class[c];
-	if ((sched_prefer_compute != 0) !=
-	    (sched_prefer_compute_invert != 0)) {
-		if (cls == CPU_CLASS_PERF)
-			cls = CPU_CLASS_EFF;
-		else if (cls == CPU_CLASS_EFF)
-			cls = CPU_CLASS_PERF;
-	}
-	if (cls == CPU_CLASS_EFF)
-		cost = sched_class_weight_eff;
-	else if (cls == CPU_CLASS_LP)
-		cost = sched_class_weight_lp;
-	else
-		cost = 0;
+	cost = sched_cpu_cost[c];
 
 	/*
 	 * Priority 3: a free thread whose SMT sibling is busy.  Applied to any
@@ -3384,6 +3447,26 @@ sysctl_kern_sched_topology_spec(SYSCTL_HANDLER_ARGS)
 }
 
 /*
+ * Class tunables feed the derived per-CPU tables, so changing one must
+ * recompute them.  arg1 is the variable, arg2 its maximum (minimum is 0).
+ */
+static int
+sysctl_kern_sched_class_knob(SYSCTL_HANDLER_ARGS)
+{
+	int error, val;
+
+	val = *(int *)arg1;
+	error = sysctl_handle_int(oidp, &val, 0, req);
+	if (error != 0 || req->newptr == NULL)
+		return (error);
+	if (val < 0 || val > arg2)
+		return (EINVAL);
+	*(int *)arg1 = val;
+	sched_core_class_update();
+	return (0);
+}
+
+/*
  * Debug dump of the per-CPU hybrid core classification, one "cpuid:class"
  * pair per present CPU.  Class 1 = performance, 2 = efficiency, 4 = LP-E.
  */
@@ -3466,18 +3549,26 @@ SYSCTL_INT(_kern_sched, OID_AUTO, always_steal, CTLFLAG_RW, &always_steal, 0,
 SYSCTL_PROC(_kern_sched, OID_AUTO, topology_spec, CTLTYPE_STRING |
     CTLFLAG_MPSAFE | CTLFLAG_RD, NULL, 0, sysctl_kern_sched_topology_spec, "A",
     "XML dump of detected CPU topology");
-SYSCTL_INT(_kern_sched, OID_AUTO, class_weight_eff, CTLFLAG_RW,
-    &sched_class_weight_eff, 0,
+SYSCTL_PROC(_kern_sched, OID_AUTO, class_weight_eff,
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE, &sched_class_weight_eff,
+    SCHED_CLASS_WEIGHT_MAX, sysctl_kern_sched_class_knob, "I",
     "Load penalty for class-2 cores (E-core / AMD compute CCD / C-core)");
-SYSCTL_INT(_kern_sched, OID_AUTO, class_weight_lp, CTLFLAG_RW,
-    &sched_class_weight_lp, 0,
+SYSCTL_PROC(_kern_sched, OID_AUTO, class_weight_lp,
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE, &sched_class_weight_lp,
+    SCHED_CLASS_WEIGHT_MAX, sysctl_kern_sched_class_knob, "I",
     "Load penalty for class-4 cores (Intel LP-E), scheduled last");
 SYSCTL_INT(_kern_sched, OID_AUTO, smt_busy_penalty, CTLFLAG_RW,
     &sched_smt_busy_penalty, 0,
     "Penalty for a free thread whose SMT sibling is busy (0 = ULE behavior)");
-SYSCTL_INT(_kern_sched, OID_AUTO, prefer_compute, CTLFLAG_RW,
-    &sched_prefer_compute, 0,
-    "Platform compute preference: Intel 1=P-core 0=E-core; AMD 0=large-cache 1=smaller-cache compute/C-core");
+SYSCTL_PROC(_kern_sched, OID_AUTO, prefer_compute,
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE, &sched_prefer_compute, 1,
+    sysctl_kern_sched_class_knob, "I",
+    "1: prefer the compute class (Intel P-cores; AMD smaller-cache "
+    "compute/C-core CCD), 0: prefer the other class (Intel E-cores; "
+    "AMD large-cache CCD)");
+SYSCTL_INT(_kern_sched, OID_AUTO, compute_class, CTLFLAG_RD,
+    &sched_compute_class, 0,
+    "Core class holding this platform's compute cores (1=perf 2=eff)");
 SYSCTL_INT(_kern_sched, OID_AUTO, detect_lpe, CTLFLAG_RDTUN,
     &sched_detect_lpe, 0,
     "Detect Intel LP-E cores (no L3) as class 4; 0 leaves them class 2");

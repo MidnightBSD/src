@@ -975,10 +975,6 @@ cpu_topo(void)
  *                    or the full-size cache of classic cores) is preferred;
  *                    symmetric or single-CCD parts stay all-perf (== ULE).
  */
-extern int sched_detect_lpe;
-extern int sched_prefer_compute;
-extern int sched_prefer_compute_invert;
-
 static u_int	mic_hybrid[MAXCPU];	/* CPUID 0x1a core type (Intel). */
 static uint64_t	mic_l3size[MAXCPU];	/* L3 bytes this CPU shares. */
 static bool	mic_has_l3[MAXCPU];	/* Whether an L3 was found. */
@@ -1056,8 +1052,9 @@ mic_classify(void *arg __unused)
 	smp_rendezvous(NULL, mic_probe_cpu, NULL, NULL);
 
 	if (intel) {
+		/* Compute cores are the P-cores; prefer them by default. */
+		sched_compute_class = CPU_CLASS_PERF;
 		sched_prefer_compute = 1;
-		sched_prefer_compute_invert = 1;
 		CPU_FOREACH(i) {
 			if (mic_hybrid[i] == CPUID_HYBRID_LARGE_CORE)
 				cpu_core_class[i] = CPU_CLASS_PERF;
@@ -1085,13 +1082,21 @@ mic_classify(void *arg __unused)
 		}
 	if (!asymmetric)
 		return;			/* Single CCD / symmetric L3 == ULE. */
-	if (!mic_amd_x3d())
-		sched_prefer_compute = 1;
+	/*
+	 * The smaller-L3 CCD holds the compute (frequency) or C-cores.  Prefer
+	 * it unless this is an X3D part, where the V-Cache CCD wins by default.
+	 */
+	sched_compute_class = CPU_CLASS_EFF;
+	sched_prefer_compute = mic_amd_x3d() ? 0 : 1;
 	CPU_FOREACH(i)
 		if (!(mic_has_l3[i] && mic_l3size[i] == maxl3))
 			cpu_core_class[i] = CPU_CLASS_EFF;
 }
-SYSINIT(mic_classify, SI_SUB_SMP, SI_ORDER_ANY, mic_classify, NULL);
+/*
+ * Must run after release_aps() (SI_ORDER_FIRST) and before the scheduler
+ * derives its tables from cpu_core_class[] at SI_ORDER_ANY.
+ */
+SYSINIT(mic_classify, SI_SUB_SMP, SI_ORDER_MIDDLE, mic_classify, NULL);
 #endif /* SCHED_MIC */
 
 static void
