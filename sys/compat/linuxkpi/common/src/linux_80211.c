@@ -1478,6 +1478,7 @@ lkpi_sta_auth_to_scan(struct ieee80211vap *vap, enum ieee80211_state nstate, int
 	hw = LHW_TO_HW(lhw);
 	lvif = VAP_TO_LVIF(vap);
 	vif = LVIF_TO_VIF(lvif);
+	ni = NULL;
 	leak_ni = false;
 
 	LKPI_80211_LVIF_LOCK(lvif);
@@ -1489,19 +1490,23 @@ lkpi_sta_auth_to_scan(struct ieee80211vap *vap, enum ieee80211_state nstate, int
 	if (lvif->lvif_bss == NULL) {
 		ic_printf(vap->iv_ic, "%s:%d: ERROR: lvif %p vap %p iv_bss %p "
 		    "lvif_bss %p lvif_bss->ni %p synched %d; "
-		    "expect follow-up problems\n", __func__, __LINE__,
+		    "no sta to remove\n", __func__, __LINE__,
 		    lvif, vap, vap->iv_bss, lvif->lvif_bss,
 		    (lvif->lvif_bss != NULL) ? lvif->lvif_bss->ni : NULL,
 		    lvif->lvif_bss_synched);
 		LKPI_80211_LVIF_UNLOCK(lvif);
 		/*
-		 * This will likely lead to a firmware crash (if there
-		 * was not one before already) and need a
-		 * ieee80211_restart_hw() but still better than a panic
-		 * for users as they can at least recover.
-		 * We still hold the ic lock and not the lhw lock here.
+		 * We can get here in AUTH without a sta if
+		 * lkpi_sta_scan_to_auth() failed after lkpi_sta_a_to_a()
+		 * took the old sta down.  Failing would also fail the
+		 * AUTH -> INIT transition and leave us stuck in AUTH.
+		 * There is no sta to remove; take a possibly lingering
+		 * chanctx down and let the state machine continue.
 		 */
-		return (ENOTRECOVERABLE);
+		IEEE80211_UNLOCK(vap->iv_ic);
+		LKPI_80211_LHW_LOCK(lhw);
+		error = 0;
+		goto chanctx_down;
 	}
 	lsta = lvif->lvif_bss;
 	LKPI_80211_LVIF_UNLOCK(lvif);
@@ -1584,6 +1589,7 @@ lkpi_sta_auth_to_scan(struct ieee80211vap *vap, enum ieee80211_state nstate, int
 
 	/* conf_tx */
 
+chanctx_down:
 	/* Take the chan ctx down. */
 	if (vif->chanctx_conf != NULL) {
 		struct lkpi_chanctx *lchanctx;
@@ -1605,7 +1611,7 @@ lkpi_sta_auth_to_scan(struct ieee80211vap *vap, enum ieee80211_state nstate, int
 out:
 	LKPI_80211_LHW_UNLOCK(lhw);
 	IEEE80211_LOCK(vap->iv_ic);
-	if (error == 0 && !leak_ni) {
+	if (error == 0 && ni != NULL && !leak_ni) {
 		/*
 		 * Do this outside the LHW lock: net80211::node_free() may drain
 		 * the txq taskqueue (which takes the same lock) and may call into
