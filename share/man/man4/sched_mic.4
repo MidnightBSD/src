@@ -340,6 +340,10 @@ count class reads on the tick, reads the processor had no valid class for,
 and reads that changed a thread's class, and
 .Va kern.sched.itd_hist
 reports the reads per class.
+A read without a valid class leaves the thread's last known class in
+place; on the Alder Lake E-cores tested nearly every read is invalid, so
+threads are effectively classified while they run on P-cores and keep that
+class elsewhere.
 .It Va kern.sched.itd_swap
 When set to
 .Li 1 ,

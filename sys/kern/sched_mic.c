@@ -3558,7 +3558,18 @@ sched_itd_tick(struct thread *td)
 		cls = itd_read_class();
 		counter_u64_add(sched_itd_reads, 1);
 		if (cls < 0 || cls >= (int)itd_nclasses) {
+			/*
+			 * No valid classification.  On the Alder Lake
+			 * E-cores tested this is nearly every read, so a
+			 * thread is only classified while it runs on a
+			 * P-core.  Keep the last known class (0 if never
+			 * classified) and let it age as stable, or a thread
+			 * on such a core could never become a swap
+			 * candidate.
+			 */
 			counter_u64_add(sched_itd_invalid, 1);
+			if (ts->ts_itdstable < UCHAR_MAX)
+				ts->ts_itdstable++;
 			return;
 		}
 #else
