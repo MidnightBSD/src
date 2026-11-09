@@ -1770,7 +1770,7 @@ sched_itd_swap_pass(void)
 {
 	struct thread *td;
 	struct tdq *tdq;
-	int best, bi, bj, cpu, gain, i, j, n, swaps;
+	int best, bi, bj, cpu, from, gain, i, j, lcls, n, swaps, to;
 
 	if (sched_itd_swap == 0 || !sched_hybrid || sched_itd_nclasses <= 1 ||
 	    sched_itd_swap_max <= 0)
@@ -1811,11 +1811,26 @@ sched_itd_swap_pass(void)
 		}
 		if (bi < 0)
 			break;
-		/* The thread headed for the better-ranked CPU moves first. */
-		if (sched_cpu_cost[0][bi] <= sched_cpu_cost[0][bj])
-			sched_itd_swap_start(bj, bi, sched_itd_swap_cls[bj]);
+		/*
+		 * The thread headed for the better-ranked CPU moves first.
+		 * Only a strict rank difference makes the vacated CPU wait
+		 * sched_steal_delay before it may steal the lead back, and
+		 * the lead's own class must gain from its move, since the
+		 * partner may not follow; otherwise drop the pair.
+		 */
+		if (sched_cpu_rank[bi] < sched_cpu_rank[bj]) {
+			from = bj;
+			to = bi;
+		} else {
+			from = bi;
+			to = bj;
+		}
+		lcls = sched_itd_swap_cls[from];
+		if (sched_cpu_rank[to] < sched_cpu_rank[from] &&
+		    sched_cpu_cost[lcls][to] < sched_cpu_cost[lcls][from])
+			sched_itd_swap_start(from, to, lcls);
 		else
-			sched_itd_swap_start(bi, bj, sched_itd_swap_cls[bi]);
+			counter_u64_add(sched_itd_swap_skipped, 1);
 		sched_itd_swap_cls[bi] = SCHED_ITD_NOCAND;
 		sched_itd_swap_cls[bj] = SCHED_ITD_NOCAND;
 		n -= 2;
