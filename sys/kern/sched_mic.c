@@ -1796,7 +1796,8 @@ sched_itd_swap_pass(void)
 			if (sched_itd_swap_cls[i] == SCHED_ITD_NOCAND)
 				continue;
 			for (j = i + 1; j <= (int)mp_maxid; j++) {
-				if (sched_itd_swap_cls[j] == SCHED_ITD_NOCAND)
+				if (CPU_ABSENT(j) ||
+				    sched_itd_swap_cls[j] == SCHED_ITD_NOCAND)
 					continue;
 				gain = sched_itd_swap_gain(
 				    sched_itd_swap_cls[i], i,
