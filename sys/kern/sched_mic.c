@@ -353,6 +353,8 @@ uint8_t cpu_core_class[MAXCPU] = { [0 ... MAXCPU - 1] = CPU_CLASS_PERF };
  */
 static uint16_t __read_mostly sched_cpu_cost[MAXCPU];	/* Static class cost. */
 static uint8_t __read_mostly sched_cpu_rank[MAXCPU];	/* 0 = preferred. */
+#define	SCHED_RANK_EFF	1
+#define	SCHED_RANK_LP	2
 #define	SCHED_CLASS_WEIGHT_MAX	0x7fff
 /*
  * Modulus of the random tie-breaking jitter cpu_search_lowest() subtracts
@@ -416,10 +418,10 @@ sched_core_class_update(void)
 		}
 		if (cls == CPU_CLASS_EFF) {
 			cost = sched_class_weight_eff;
-			rank = 1;
+			rank = SCHED_RANK_EFF;
 		} else if (cls == CPU_CLASS_LP) {
 			cost = sched_class_weight_lp;
-			rank = 2;
+			rank = SCHED_RANK_LP;
 		} else {
 			cost = 0;
 			rank = 0;
@@ -1122,12 +1124,13 @@ cpu_search_highest(const struct cpu_group *cg, const struct cpu_search *s,
 		total += load;
 
 		/*
-		 * Check this CPU is acceptable.  A stealer from a less
-		 * preferred class (higher rank) than this CPU, e.g. an E-core
-		 * looking at a P-core, only qualifies it when it is genuinely
-		 * overloaded: one more runnable thread than the plain
-		 * threshold.  Pulling the other way (P from E) and between
-		 * equals uses the threshold unchanged, as in ULE.
+		 * Check this CPU is acceptable.  Only queued threads can be
+		 * stolen, and a thread waiting behind another on a P-core is
+		 * worse off than running on an idle E-core, so E stealers use
+		 * the plain threshold like ULE.  Only an LP stealer
+		 * (cs_rank == SCHED_RANK_LP) demands one more runnable thread
+		 * from a better-class victim, so that an idle P or E CPU gets
+		 * to take a single queued thread first.
 		 */
 		if (l < s->cs_load + (sched_cpu_rank[c] < s->cs_rank ? 1 : 0) ||
 		    TDQ_TRANSFERABLE(tdq) < s->cs_trans ||
@@ -1164,6 +1167,19 @@ sched_lowest(const struct cpu_group *cg, cpuset_t *mask, int pri, int maxload,
 	s.cs_class = class_aware;
 	cpu_search_lowest(cg, &s, &r);
 	return (r.csr_cpu);
+}
+
+/*
+ * Rank an idle CPU presents when it looks for work to steal.  P and E
+ * stealers take any queued thread (rank 0, ULE threshold); only LP stealers
+ * keep their rank and so hold back from better-class victims with a single
+ * queued thread.  One byte load; the table is precomputed.
+ */
+static inline int
+sched_steal_rank(int cpu)
+{
+
+	return (sched_cpu_rank[cpu] == SCHED_RANK_LP ? SCHED_RANK_LP : 0);
 }
 
 /*
@@ -1409,7 +1425,7 @@ tdq_idled(struct tdq *tdq)
 		return (1);
 	CPU_FILL(&mask);
 	CPU_CLR(PCPU_GET(cpuid), &mask);
-	rank = sched_cpu_rank[TDQ_ID(tdq)];
+	rank = sched_steal_rank(TDQ_ID(tdq));
 restart:
 	switchcnt = TDQ_SWITCHCNT(tdq);
 	for (cg = tdq->tdq_cg, goup = 0; ; ) {
@@ -2417,7 +2433,7 @@ tdq_trysteal(struct tdq *tdq)
 		return;
 	CPU_FILL(&mask);
 	CPU_CLR(PCPU_GET(cpuid), &mask);
-	rank = sched_cpu_rank[TDQ_ID(tdq)];
+	rank = sched_steal_rank(TDQ_ID(tdq));
 	/* We don't want to be preempted while we're iterating. */
 	spinlock_enter();
 	TDQ_UNLOCK(tdq);

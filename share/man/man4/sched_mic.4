@@ -60,12 +60,17 @@ The preference is a soft, tunable bias: real load always decides first,
 and the class only orders CPUs whose load is otherwise acceptable.
 It is applied when selecting a CPU for a thread, when the long-term load
 balancer chooses where to move a thread, and when an idle CPU looks for
-work to steal: a CPU of a less preferred class only steals from a more
-preferred one that has at least one more runnable thread than
+work to steal.
+Only queued threads can be stolen, never a running one, and a thread
+waiting behind another on a performance core is worse off than running on
+an idle efficiency core, so idle performance and efficiency cores both
+steal a queued thread as soon as
 .Va kern.sched.steal_thresh
-requires, so efficiency cores do not drain performance cores unless the
-latter are genuinely overloaded, while performance cores pull from
-efficiency cores as usual.
+allows, as in
+.Xr sched_ule 4 .
+An idle low-power core only steals from a performance or efficiency core
+that has at least one more runnable thread than that, so a single queued
+thread is left for an idle performance or efficiency core to take first.
 On homogeneous hardware, and on architectures other than x86,
 .Nm
 behaves identically to
