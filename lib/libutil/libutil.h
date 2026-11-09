@@ -140,21 +140,6 @@ int	uu_lock(const char *_ttyname);
 int	uu_unlock(const char *_ttyname);
 int	uu_lock_txfr(const char *_ttyname, pid_t _pid);
 
-void		(*esetfunc(void (*)(int, const char *, ...)))
-    (int, const char *, ...);
-size_t 		estrlcpy(char *, const char *, size_t);
-size_t 		estrlcat(char *, const char *, size_t);
-char 		*estrdup(const char *);
-void 		*ecalloc(size_t, size_t);
-void 		*emalloc(size_t);
-void 		*erealloc(void *, size_t);
-struct __sFILE	*efopen(const char *, const char *);
-#ifdef __BSD_VISIBLE
-int	 	easprintf(char **, const char *, ...)
-    __printflike(2, 3);
-int		evasprintf(char **, const char *, __va_list)
-    __printflike(2, 0);
-#endif
 /*
  * Conditionally prototype the following functions if the include
  * files upon which they depend have been included.

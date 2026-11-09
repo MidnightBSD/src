@@ -39,6 +39,19 @@
 # for generating a list from a directory
 # find  /usr/lib/perl5/5.36.0 -exec echo {} \; | cut -b 2-150  | xargs printf "OLD_FILES+=%s\n"
 
+# 20261109: efun(3) moved to libnetbsd in 2022, remove its old man pages
+OLD_FILES+=usr/share/man/man3/easprintf.3.gz
+OLD_FILES+=usr/share/man/man3/ecalloc.3.gz
+OLD_FILES+=usr/share/man/man3/efopen.3.gz
+OLD_FILES+=usr/share/man/man3/efun.3.gz
+OLD_FILES+=usr/share/man/man3/emalloc.3.gz
+OLD_FILES+=usr/share/man/man3/erealloc.3.gz
+OLD_FILES+=usr/share/man/man3/esetfunc.3.gz
+OLD_FILES+=usr/share/man/man3/estrdup.3.gz
+OLD_FILES+=usr/share/man/man3/estrlcat.3.gz
+OLD_FILES+=usr/share/man/man3/estrlcpy.3.gz
+OLD_FILES+=usr/share/man/man3/evasprintf.3.gz
+
 # 20261020: Regenerate trust store from NSS 3.131.1
 OLD_FILES+=usr/share/certs/trusted/Atos_TrustedRoot_2011.pem
 OLD_FILES+=usr/share/certs/trusted/SecureSign_Root_CA12.pem
