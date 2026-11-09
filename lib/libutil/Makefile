@@ -67,8 +67,13 @@ MLINKS+=pidfile.3 pidfile_close.3 \
 MLINKS+=property.3 property_find.3  property.3 properties_free.3
 MLINKS+=property.3 properties_read.3
 MLINKS+=pty.3 forkpty.3  pty.3 openpty.3
-MLINKS+=quotafile.3 quota_close.3 \
+MLINKS+=quotafile.3 quota_check_path.3 \
+	quotafile.3 quota_close.3 \
+	quotafile.3 quota_convert.3 \
 	quotafile.3 quota_fsname.3 \
+	quotafile.3 quota_maxid.3 \
+	quotafile.3 quota_off.3 \
+	quotafile.3 quota_on.3 \
 	quotafile.3 quota_open.3 \
 	quotafile.3 quota_qfname.3 \
 	quotafile.3 quota_read.3 \
