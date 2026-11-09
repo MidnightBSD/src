@@ -93,6 +93,7 @@ SUBDIR=	\
 	${_cloudabi32} \
 	${_cloudabi64} \
 	${_coretemp} \
+	${_hfi} \
 	${_cp} \
 	${_cpsw} \
 	${_cpuctl} \
@@ -737,6 +738,7 @@ _chvgpio=	chvgpio
 _ciss=		ciss
 _chromebook_platform=	chromebook_platform
 _coretemp=	coretemp
+_hfi=		hfi
 .if ${MK_SOURCELESS_HOST} != "no" && empty(KCSAN_ENABLED)
 _hpt27xx=	hpt27xx
 .endif
