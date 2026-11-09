@@ -54870,8 +54870,6 @@ lib/libutil/Makefile -text
 lib/libutil/_secure_path.3 -text
 lib/libutil/_secure_path.c -text
 lib/libutil/auth.c -text
-lib/libutil/efun.3 -text
-lib/libutil/efun.c -text
 lib/libutil/expand_number.3 -text
 lib/libutil/expand_number.c -text
 lib/libutil/flopen.3 -text
