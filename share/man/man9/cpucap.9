@@ -1,0 +1,343 @@
+.\" Copyright (c) 2026 Lucas Holt
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHORS AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHORS OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.Dd November 8, 2026
+.Dt CPUCAP 9
+.Os
+.Sh NAME
+.Nm cpucap ,
+.Nm cpucap_provider_register ,
+.Nm cpucap_provider_unregister ,
+.Nm cpucap_set_class ,
+.Nm cpucap_set_capacity ,
+.Nm cpucap_set_scores ,
+.Nm cpucap_set_compute_class ,
+.Nm cpucap_commit ,
+.Nm cpucap_consumer_register ,
+.Nm cpucap_consumer_unregister ,
+.Nm cpucap_class ,
+.Nm cpucap_capacity ,
+.Nm cpucap_perf ,
+.Nm cpucap_eff ,
+.Nm cpucap_compute_class ,
+.Nm cpucap_prefer_compute ,
+.Nm cpucap_has_scores ,
+.Nm cpucap_generation
+.Nd per-CPU capability layer for heterogeneous processors
+.Sh SYNOPSIS
+.Cd "options SCHED_MIC"
+.Pp
+.In sys/smp.h
+.In sys/cpucap.h
+.Ft int
+.Fn cpucap_provider_register "struct cpucap_provider *cp"
+.Ft void
+.Fn cpucap_provider_unregister "struct cpucap_provider *cp"
+.Fn CPUCAP_PROVIDER_DECLARE "sym" "struct cpucap_provider provider"
+.Ft void
+.Fn cpucap_set_class "int cpu" "uint8_t cls"
+.Ft void
+.Fn cpucap_set_capacity "int cpu" "uint16_t capacity"
+.Ft void
+.Fn cpucap_set_scores "int cpu" "uint8_t perf" "uint8_t eff"
+.Ft void
+.Fn cpucap_set_compute_class "uint8_t cls" "bool prefer_compute"
+.Ft void
+.Fn cpucap_commit "void"
+.Ft void
+.Fn cpucap_consumer_register "struct cpucap_consumer *cc"
+.Ft void
+.Fn cpucap_consumer_unregister "struct cpucap_consumer *cc"
+.Ft uint8_t
+.Fn cpucap_class "int cpu"
+.Ft uint16_t
+.Fn cpucap_capacity "int cpu"
+.Ft uint8_t
+.Fn cpucap_perf "int cpu"
+.Ft uint8_t
+.Fn cpucap_eff "int cpu"
+.Ft uint8_t
+.Fn cpucap_compute_class "void"
+.Ft bool
+.Fn cpucap_prefer_compute "void"
+.Ft bool
+.Fn cpucap_has_scores "void"
+.Ft u_int
+.Fn cpucap_generation "void"
+.Sh DESCRIPTION
+The
+.Nm
+layer keeps a machine-independent description of how capable each CPU is,
+so that a scheduler can place threads on heterogeneous
+.Pq Dq hybrid
+processors without knowing how that information was obtained.
+It sits between
+.Em providers ,
+machine-dependent code or drivers that discover the information, and
+.Em consumers ,
+such as the
+.Xr sched_mic 4
+scheduler, that act on it.
+It is modelled on the
+.Xr hmp 4
+framework proposed for
+.Fx
+so that the two can converge.
+.Pp
+Four values are kept for every CPU:
+.Bl -tag -width "capacity" -offset indent
+.It class
+One of
+.Dv CPU_CLASS_PERF
+.Pq 1 ,
+.Dv CPU_CLASS_EFF
+.Pq 2
+or
+.Dv CPU_CLASS_LP
+.Pq 4
+from
+.In sys/smp.h :
+a performance core, an efficiency core, or an Intel low-power E-core.
+The default is
+.Dv CPU_CLASS_PERF .
+.It capacity
+The static relative performance of the CPU on a scale of 0 to
+.Dv CPUCAP_CAPACITY_MAX
+.Pq 1024 ,
+the same scale
+.Xr hmp 4
+uses.
+The default is 1024.
+.It perf, eff
+Dynamic performance and energy-efficiency scores on a scale of 0 to
+.Dv CPUCAP_SCORE_MAX
+.Pq 255 ,
+the scale the Intel Hardware Feedback Interface reports natively.
+Both default to 255 and are only meaningful while
+.Fn cpucap_has_scores
+returns true.
+.El
+.Pp
+Two platform hints accompany them:
+.Fn cpucap_compute_class
+names the class that holds the platform's compute cores
+.Po
+.Dv CPU_CLASS_PERF
+on Intel,
+.Dv CPU_CLASS_EFF
+on AMD parts whose dies have different last-level cache sizes
+.Pc
+and
+.Fn cpucap_prefer_compute
+says whether that class should be preferred by default.
+.Pp
+Without any provider every CPU is a performance core of capacity 1024,
+so a consumer behaves as it would on a homogeneous machine.
+.Ss Providers
+A provider is described by a
+.Vt struct cpucap_provider :
+.Bd -literal -offset indent
+struct cpucap_provider {
+	const char	*cp_name;
+	int		cp_kind;	/* CPUCAP_PROVIDER_* */
+	int		cp_priority;	/* higher wins */
+	int		(*cp_probe)(void);
+	int		(*cp_init)(void);
+	/* ... owned by the layer */
+};
+.Ed
+.Pp
+A
+.Dv CPUCAP_PROVIDER_STATIC
+provider supplies class, capacity and the platform hints once, from
+.Fa cp_init .
+A
+.Dv CPUCAP_PROVIDER_DYNAMIC
+provider supplies scores from
+.Fa cp_init
+and may update them later from thread or taskqueue context.
+At most one provider of each kind is active: the one with the highest
+.Fa cp_priority
+whose
+.Fa cp_probe
+returns zero and whose
+.Fa cp_init
+then returns zero.
+Selection runs once at boot, at
+.Dv SI_SUB_SMP ,
+.Dv SI_ORDER_MIDDLE ,
+after the application processors have started;
+.Fn CPUCAP_PROVIDER_DECLARE
+registers a statically defined provider from a
+.Xr SYSINIT 9
+that runs just before that.
+A provider registered later, by a device driver or a loadable module, is
+probed on registration and replaces a lower-priority active provider of its
+kind.
+.Fn cpucap_provider_register
+returns
+.Er EINVAL
+for a malformed provider and
+.Er EEXIST
+for one already registered.
+.Fn cpucap_provider_unregister
+removes a provider, resets the values it supplied to their defaults and
+falls back to the next best provider of its kind, if any.
+.Pp
+Before a static provider's
+.Fa cp_init
+runs, the layer resets every class and capacity to the default; the routine
+must therefore set every CPU it classifies.
+Before a dynamic provider's
+.Fa cp_init
+runs, the scores are reset.
+.Pp
+Providers write values with
+.Fn cpucap_set_class ,
+.Fn cpucap_set_capacity ,
+.Fn cpucap_set_scores
+and
+.Fn cpucap_set_compute_class .
+Each stores one naturally aligned value and ignores out-of-range CPUs and
+values.
+A provider writes all the CPUs of a batch, then calls
+.Fn cpucap_commit
+once.
+That increments the generation counter and, after boot, queues one
+notification on
+.Va taskqueue_thread ;
+commits that arrive before the notification runs are coalesced.
+.Fn cpucap_commit
+may be called from any context that may acquire a default
+.Xr mutex 9 ,
+so from a thread, an interrupt thread or a taskqueue, but not from an
+interrupt filter.
+During boot-time selection consumers are instead called synchronously.
+.Pp
+The class of a CPU may be overridden by the
+.Va kern.cpucap.force_classes
+tunable, described below; the override is applied by the layer and a
+provider's
+.Fn cpucap_set_class
+for such a CPU is ignored.
+.Ss Consumers
+A consumer is described by a
+.Vt struct cpucap_consumer :
+.Bd -literal -offset indent
+struct cpucap_consumer {
+	const char	*cc_name;
+	void		(*cc_update)(void *arg, int changed);
+	void		*cc_arg;
+	/* ... owned by the layer */
+};
+.Ed
+.Pp
+.Fa cc_update
+runs in thread context after a commit, with
+.Fa changed
+set to the union of
+.Dv CPUCAP_CHANGED_STATIC
+.Pq class, capacity or a hint changed
+and
+.Dv CPUCAP_CHANGED_SCORES
+over every commit since the previous notification.
+It is called with the layer's lock held, so it must not sleep and must not
+register or unregister providers or consumers.
+.Fn cpucap_consumer_register
+calls
+.Fa cc_update
+immediately if any commit has already happened, so a consumer need not
+order its own initialization against the providers.
+.Pp
+The intended use is for a consumer to derive whatever precomputed per-CPU
+tables its hot paths need inside
+.Fa cc_update
+and publish them with atomic stores; the hot paths then never call into
+.Nm .
+.Ss Reading values
+.Fn cpucap_class ,
+.Fn cpucap_capacity ,
+.Fn cpucap_perf
+and
+.Fn cpucap_eff
+return the current value for a CPU, or the default for a CPU outside
+.Bq 0, MAXCPU ) .
+Each is a single relaxed atomic load of a naturally aligned value, so a
+caller racing a provider sees either the old or the new value, never a torn
+one, and never blocks.
+.Fn cpucap_generation
+returns the number of commits so far.
+.Sh SYSCTL VARIABLES
+.Bl -tag -width indent
+.It Va kern.cpucap.class , kern.cpucap.capacity , kern.cpucap.perf , kern.cpucap.eff
+Every present CPU's value as
+.Dq Va cpuid : Ns Va value
+pairs.
+.It Va kern.cpucap.cpu.N.{class,capacity,perf,eff}
+The same values, one node per CPU.
+.It Va kern.cpucap.compute_class , kern.cpucap.prefer_compute
+The platform hints.
+.It Va kern.cpucap.has_scores
+Whether a dynamic provider is active.
+.It Va kern.cpucap.generation
+The number of commits so far.
+.It Va kern.cpucap.providers
+Every registered provider as
+.Dq Ar name Ns ( Ns Ar kind , priority , state ) ,
+where state is one of
+.Li registered , absent , failed , probed
+or
+.Li active .
+.It Va kern.cpucap.force_classes
+A boot-time tunable for testing.
+When set to a comma-separated list of classes such as
+.Dq Li 1,1,1,1,2,2,2,2,4,4
+the class of CPUs 0, 1, ... is replaced by the listed values
+(1 performance, 2 efficiency, 4 low-power), whatever any provider says;
+CPUs beyond the end of the list keep their provided class.
+A malformed list is ignored with a console message.
+.Va kern.sched.mic.force_classes
+is accepted as an alias for existing configurations.
+.It Va kern.cpucap.detect_lpe
+A boot-time tunable of the x86 CPUID provider: when non-zero, the default,
+Intel small cores without a last-level cache are classified as low-power
+.Pq class 4
+rather than efficiency
+.Pq class 2
+cores.
+.Va kern.sched.detect_lpe
+is accepted as an alias.
+.El
+.Sh SEE ALSO
+.Xr sched_mic 4 ,
+.Xr atomic 9 ,
+.Xr SYSINIT 9 ,
+.Xr taskqueue 9
+.Sh HISTORY
+The
+.Nm
+layer first appeared in
+.Mx 4.2 .
+.Sh AUTHORS
+.An Lucas Holt Aq Mt luke@midnightbsd.org

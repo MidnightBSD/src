@@ -219,7 +219,9 @@ options 	ROOTDEVNAME=\"ufs:da0s2e\"
 # cores (Intel E-cores, AMD compute CCD, AMD mobile C-cores), then the second
 # SMT thread of a busy core, then Intel LP-E cores last.  Preference is a soft,
 # tunable bias (see kern.sched.class_weight_*, smt_busy_penalty, prefer_compute).
-# On homogeneous hardware it behaves like SCHED_ULE.
+# Core classes come from the cpucap(9) capability layer (kern/subr_cpucap.c),
+# which SCHED_MIC also pulls in; on homogeneous hardware, and without a
+# provider, it behaves like SCHED_ULE.
 #
 # SCHED_STATS is a debugging option which keeps some stats in the sysctl
 # tree at 'kern.sched.stats' and is useful for debugging scheduling decisions.
