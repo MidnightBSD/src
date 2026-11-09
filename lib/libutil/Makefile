@@ -45,13 +45,15 @@ MLINKS+=flopen.3 flopenat.3
 MLINKS+=kld.3 kld_isloaded.3 kld.3 kld_load.3
 MLINKS+=login_auth.3 auth_cat.3 login_auth.3 auth_checknologin.3
 MLINKS+=login_cap.3 login_close.3 login_cap.3 login_getcapbool.3 \
+	login_cap.3 login_getcapenum.3 \
 	login_cap.3 login_getcaplist.3 login_cap.3 login_getcapnum.3 \
 	login_cap.3 login_getcapsize.3 login_cap.3 login_getcapstr.3 \
 	login_cap.3 login_getcaptime.3 login_cap.3 login_getclass.3 \
 	login_cap.3 login_getclassbyname.3 login_cap.3 login_getpath.3 \
 	login_cap.3 login_getpwclass.3 login_cap.3 login_getstyle.3 \
 	login_cap.3 login_getuserclass.3 login_cap.3 login_setcryptfmt.3
-MLINKS+=login_class.3 setclasscontext.3 login_class.3 setclassenvironment.3 \
+MLINKS+=login_class.3 setclasscontext.3 login_class.3 setclasscpumask.3 \
+	login_class.3 setclassenvironment.3 \
 	login_class.3 setclassresources.3 login_class.3 setusercontext.3
 MLINKS+=login_ok.3 auth_hostok.3 login_ok.3 auth_timeok.3 \
 	login_ok.3 auth_ttyok.3
