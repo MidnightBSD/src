@@ -355,6 +355,7 @@ static uint16_t __read_mostly sched_cpu_cost[MAXCPU];	/* Static class cost. */
 static uint8_t __read_mostly sched_cpu_rank[MAXCPU];	/* 0 = preferred. */
 #define	SCHED_RANK_EFF	1
 #define	SCHED_RANK_LP	2
+static bool __read_mostly sched_hybrid;	/* Any present CPU not rank 0. */
 #define	SCHED_CLASS_WEIGHT_MAX	0x7fff
 /*
  * Modulus of the random tie-breaking jitter cpu_search_lowest() subtracts
@@ -404,10 +405,11 @@ sched_core_class_update(void)
 {
 	int c, cls, cost;
 	uint8_t rank;
-	bool swap;
+	bool hybrid, swap;
 
 	swap = (sched_prefer_compute != 0) ==
 	    (sched_compute_class == CPU_CLASS_EFF);
+	hybrid = false;
 	for (c = 0; c < MAXCPU; c++) {
 		cls = cpu_core_class[c];
 		if (swap) {
@@ -432,7 +434,10 @@ sched_core_class_update(void)
 			cost = SCHED_CLASS_WEIGHT_MAX;
 		sched_cpu_cost[c] = cost;
 		sched_cpu_rank[c] = rank;
+		if (rank != 0 && !CPU_ABSENT(c))
+			hybrid = true;
 	}
+	sched_hybrid = hybrid;
 	sched_class_jitter_update();
 }
 
@@ -875,6 +880,7 @@ struct cpu_search {
 struct cpu_search_res {
 	int	csr_cpu;	/* The best CPU found. */
 	int	csr_load;	/* The load of cs_cpu. */
+	int	csr_key;	/* Class-adjusted load of cs_cpu (no jitter). */
 };
 
 /*
@@ -987,11 +993,12 @@ cpu_search_lowest(const struct cpu_group *cg, const struct cpu_search *s,
 {
 	struct cpu_search_res lr;
 	struct tdq *tdq;
-	int c, bload, class_cost, l, load, p, total;
+	int c, bkey, bload, key, l, load, p, total;
 
 	total = 0;
-	bload = INT_MAX;
+	bkey = bload = INT_MAX;
 	r->csr_cpu = -1;
+	r->csr_key = INT_MAX;
 
 	/* Loop through children CPU groups if there are any. */
 	if (cg->cg_children > 0) {
@@ -1009,12 +1016,34 @@ cpu_search_lowest(const struct cpu_group *cg, const struct cpu_search *s,
 			    load >= 128 && (load & 128) != 0)
 				load += 128;
 
-			if (lr.csr_cpu >= 0 && (load < bload ||
-			    (load == bload && lr.csr_load < r->csr_load))) {
-				bload = load;
-				r->csr_cpu = lr.csr_cpu;
-				r->csr_load = lr.csr_load;
-			}
+			if (lr.csr_cpu < 0)
+				continue;
+			/*
+			 * Hybrid placement: the best slot's class-adjusted
+			 * load decides first and the subtree's load (cache
+			 * sharing, ULE's criterion) only breaks ties, so the
+			 * order idle P < idle E < busy-sibling P < LP holds
+			 * whatever the group sizes are.  Summing class costs
+			 * into the totals would let a 2-thread P core with
+			 * one busy thread (256 + 192) beat a 4-CPU cluster of
+			 * idle E-cores (4 x 160).  Class-blind searches use
+			 * ULE's comparison unchanged.
+			 */
+			if (s->cs_class) {
+				if (lr.csr_key > bkey)
+					continue;
+				if (lr.csr_key == bkey && (load > bload ||
+				    (load == bload &&
+				    lr.csr_load >= r->csr_load)))
+					continue;
+			} else if (load > bload ||
+			    (load == bload && lr.csr_load >= r->csr_load))
+				continue;
+			bkey = lr.csr_key;
+			bload = load;
+			r->csr_cpu = lr.csr_cpu;
+			r->csr_load = lr.csr_load;
+			r->csr_key = lr.csr_key;
 		}
 		return (total);
 	}
@@ -1031,17 +1060,6 @@ cpu_search_lowest(const struct cpu_group *cg, const struct cpu_search *s,
 				l--;
 		}
 		/*
-		 * Fold the hybrid-core class cost into this candidate's load
-		 * before it is summed into the group total, so the bias steers
-		 * both subtree selection and the final CPU choice.
-		 */
-		load = l * 256;
-		class_cost = 0;
-		if (s->cs_class) {
-			class_cost = sched_class_cost(cg, c, l);
-			load += class_cost;
-		}
-		/*
 		 * The affinity bonus applies whatever the class of the last
 		 * CPU: it is smaller than any class weight, so an idle
 		 * preferred core still wins, but a thread last run on an
@@ -1050,7 +1068,15 @@ cpu_search_lowest(const struct cpu_group *cg, const struct cpu_search *s,
 		 */
 		if (c == s->cs_prefer)
 			p = 128;
+		/*
+		 * The group total stays ULE's (load only); the hybrid class
+		 * cost is added to this candidate's own load and carried up
+		 * as csr_key, where the parent compares the best slots.
+		 */
+		load = l * 256;
 		total += load - p;
+		if (s->cs_class)
+			load += sched_class_cost(cg, c, l);
 
 		/*
 		 * Check this CPU is acceptable.
@@ -1076,12 +1102,14 @@ cpu_search_lowest(const struct cpu_group *cg, const struct cpu_search *s,
 		 * smallest gap between cost levels so it cannot flip the
 		 * class ordering (see sched_class_jitter_update()).
 		 */
+		key = load - p;
 		load -= sched_random() %
 		    (s->cs_class ? sched_class_jitter : 128);
 		if (bload > load - p) {
 			bload = load - p;
 			r->csr_cpu = c;
 			r->csr_load = load;
+			r->csr_key = key;
 		}
 	}
 	return (total);
@@ -1127,10 +1155,12 @@ cpu_search_highest(const struct cpu_group *cg, const struct cpu_search *s,
 		 * Check this CPU is acceptable.  Only queued threads can be
 		 * stolen, and a thread waiting behind another on a P-core is
 		 * worse off than running on an idle E-core, so E stealers use
-		 * the plain threshold like ULE.  Only an LP stealer
-		 * (cs_rank == SCHED_RANK_LP) demands one more runnable thread
-		 * from a better-class victim, so that an idle P or E CPU gets
-		 * to take a single queued thread first.
+		 * the plain threshold like ULE.  A stealer that ranks behind
+		 * the core classes (cs_rank == SCHED_RANK_LP: an LP core, or
+		 * the idle SMT thread of a busy core, see sched_steal_rank())
+		 * demands one more runnable thread from a better-ranked
+		 * victim, so an idle P or E core gets to take a single queued
+		 * thread first.
 		 */
 		if (l < s->cs_load + (sched_cpu_rank[c] < s->cs_rank ? 1 : 0) ||
 		    TDQ_TRANSFERABLE(tdq) < s->cs_trans ||
@@ -1170,16 +1200,29 @@ sched_lowest(const struct cpu_group *cg, cpuset_t *mask, int pri, int maxload,
 }
 
 /*
- * Rank an idle CPU presents when it looks for work to steal.  P and E
- * stealers take any queued thread (rank 0, ULE threshold); only LP stealers
- * keep their rank and so hold back from better-class victims with a single
- * queued thread.  One byte load; the table is precomputed.
+ * Rank an idle CPU presents when it looks for work to steal.  Idle P and E
+ * cores take any queued thread (rank 0, ULE threshold).  Two kinds of
+ * stealer hold back from victims of a better rank that have only a single
+ * queued thread, leaving it for an idle P or E core: LP cores, and on
+ * hybrid hardware the idle SMT thread of a busy core, which the placement
+ * order ranks behind an idle E-core (eff 160 < smt_busy 192).  Both report
+ * SCHED_RANK_LP, i.e. "behind every core class".  One byte load plus the
+ * existing sibling check on the CPU's own leaf group; on homogeneous
+ * hardware (sched_hybrid false) this is exactly ULE.
  */
 static inline int
-sched_steal_rank(int cpu)
+sched_steal_rank(struct tdq *tdq)
 {
+	int cpu;
 
-	return (sched_cpu_rank[cpu] == SCHED_RANK_LP ? SCHED_RANK_LP : 0);
+	cpu = TDQ_ID(tdq);
+	if (sched_cpu_rank[cpu] == SCHED_RANK_LP)
+		return (SCHED_RANK_LP);
+	if (sched_hybrid && tdq->tdq_cg != NULL &&
+	    (tdq->tdq_cg->cg_flags & CG_FLAG_THREAD) != 0 &&
+	    smt_sibling_busy(tdq->tdq_cg, cpu))
+		return (SCHED_RANK_LP);
+	return (0);
 }
 
 /*
@@ -1425,7 +1468,7 @@ tdq_idled(struct tdq *tdq)
 		return (1);
 	CPU_FILL(&mask);
 	CPU_CLR(PCPU_GET(cpuid), &mask);
-	rank = sched_steal_rank(TDQ_ID(tdq));
+	rank = sched_steal_rank(tdq);
 restart:
 	switchcnt = TDQ_SWITCHCNT(tdq);
 	for (cg = tdq->tdq_cg, goup = 0; ; ) {
@@ -2433,7 +2476,7 @@ tdq_trysteal(struct tdq *tdq)
 		return;
 	CPU_FILL(&mask);
 	CPU_CLR(PCPU_GET(cpuid), &mask);
-	rank = sched_steal_rank(TDQ_ID(tdq));
+	rank = sched_steal_rank(tdq);
 	/* We don't want to be preempted while we're iterating. */
 	spinlock_enter();
 	TDQ_UNLOCK(tdq);
