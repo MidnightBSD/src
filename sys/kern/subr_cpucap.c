@@ -59,6 +59,7 @@
 #include <sys/mutex.h>
 #include <sys/sbuf.h>
 #include <sys/smp.h>
+#include <sys/sx.h>
 #include <sys/sysctl.h>
 #include <sys/taskqueue.h>
 
@@ -77,8 +78,24 @@ static uint8_t	cpucap_perf_score[MAXCPU] = {
 static uint8_t	cpucap_eff_score[MAXCPU] = {
 	[0 ... MAXCPU - 1] = CPUCAP_SCORE_DEFAULT
 };
+/*
+ * Scores as the dynamic provider last supplied them.  The tables above hold
+ * what readers see: the provider's value, or the forced value for CPUs
+ * covered by kern.cpucap.force_scores, so clearing a forced score brings
+ * the provider's value back.
+ */
+static uint8_t	cpucap_perf_prov[MAXCPU] = {
+	[0 ... MAXCPU - 1] = CPUCAP_SCORE_DEFAULT
+};
+static uint8_t	cpucap_eff_prov[MAXCPU] = {
+	[0 ... MAXCPU - 1] = CPUCAP_SCORE_DEFAULT
+};
 /* Class forced by the tunable below for CPUs 0..N-1; 0 means not forced. */
 static uint8_t	cpucap_forced[MAXCPU];
+/* Scores forced by kern.cpucap.force_scores for CPUs 0..N-1. */
+static uint8_t	cpucap_forced_perf[MAXCPU];
+static uint8_t	cpucap_forced_eff[MAXCPU];
+static int	cpucap_nforced_scores;	/* N above; 0 means none forced. */
 
 static struct mtx cpucap_lock;
 MTX_SYSINIT(cpucap_lock, &cpucap_lock, "cpucap", MTX_DEF);
@@ -114,6 +131,29 @@ static struct task cpucap_notify_task;
  * legacy alias.
  */
 static char cpucap_force_classes[MAXCPU * 2];
+
+/*
+ * kern.cpucap.force_scores="p/e,p/e,..." (loader tunable and sysctl,
+ * debugging aid): override the dynamic perf/eff scores of CPUs 0..N-1 so
+ * that a scheduler's score handling can be exercised where no HFI exists
+ * (bhyve) and runtime score updates can be simulated.  Each entry is two
+ * decimal numbers 0..255 separated by '/'; CPUs past the end of the list
+ * keep their provider's score, and an empty string clears every override.
+ * While any score is forced cpucap_has_scores() is true even without a
+ * dynamic provider.  A sysctl write is parsed in the caller's thread and
+ * installed under cpucap_lock with a commit, so consumers see it exactly
+ * as they would a provider update.  "ppp/eee," per CPU, with the last
+ * entry unterminated, fits in MAXCPU * 8 bytes including the NUL.
+ * cpucap_force_sx serializes writers, which parse into the staging buffer
+ * and arrays before taking cpucap_lock.
+ */
+#define	CPUCAP_FORCE_SCORES_LEN	(MAXCPU * 8)
+static char cpucap_force_scores[CPUCAP_FORCE_SCORES_LEN];
+static char cpucap_force_scores_new[CPUCAP_FORCE_SCORES_LEN];
+static uint8_t	cpucap_force_scores_perf[MAXCPU];
+static uint8_t	cpucap_force_scores_eff[MAXCPU];
+static struct sx cpucap_force_sx;
+SX_SYSINIT(cpucap_force_sx, &cpucap_force_sx, "cpucap force");
 
 static void	cpucap_notify(void *arg, int pending);
 
@@ -263,6 +303,15 @@ cpucap_set_scores(int cpu, uint8_t perf, uint8_t eff)
 
 	if (!cpucap_cpu_valid(cpu))
 		return;
+	/*
+	 * Providers write without the lock, so an update that races a
+	 * kern.cpucap.force_scores write clearing this CPU's override may
+	 * be published only by the provider's next commit.
+	 */
+	cpucap_perf_prov[cpu] = perf;
+	cpucap_eff_prov[cpu] = eff;
+	if (cpu < cpucap_nforced_scores)
+		return;		/* Readers see the forced score. */
 	atomic_store_8(&cpucap_perf_score[cpu], perf);
 	atomic_store_8(&cpucap_eff_score[cpu], eff);
 	atomic_set_int(&cpucap_pending, CPUCAP_CHANGED_SCORES);
@@ -358,17 +407,41 @@ cpucap_reset_static(void)
 	atomic_set_int(&cpucap_pending, CPUCAP_CHANGED_STATIC);
 }
 
+/* Publish every CPU's score: the forced one if any, else the provider's. */
+static void
+cpucap_publish_scores(void)
+{
+	int cpu;
+
+	mtx_assert(&cpucap_lock, MA_OWNED);
+	for (cpu = 0; cpu < MAXCPU; cpu++) {
+		if (cpu < cpucap_nforced_scores) {
+			atomic_store_8(&cpucap_perf_score[cpu],
+			    cpucap_forced_perf[cpu]);
+			atomic_store_8(&cpucap_eff_score[cpu],
+			    cpucap_forced_eff[cpu]);
+		} else {
+			atomic_store_8(&cpucap_perf_score[cpu],
+			    cpucap_perf_prov[cpu]);
+			atomic_store_8(&cpucap_eff_score[cpu],
+			    cpucap_eff_prov[cpu]);
+		}
+	}
+	atomic_store_8(&cpucap_scores_valid, cpucap_dynamic_active != NULL ||
+	    cpucap_nforced_scores > 0 ? 1 : 0);
+	atomic_set_int(&cpucap_pending, CPUCAP_CHANGED_SCORES);
+}
+
 static void
 cpucap_reset_scores(void)
 {
 	int cpu;
 
-	atomic_store_8(&cpucap_scores_valid, 0);
 	for (cpu = 0; cpu < MAXCPU; cpu++) {
-		atomic_store_8(&cpucap_perf_score[cpu], CPUCAP_SCORE_DEFAULT);
-		atomic_store_8(&cpucap_eff_score[cpu], CPUCAP_SCORE_DEFAULT);
+		cpucap_perf_prov[cpu] = CPUCAP_SCORE_DEFAULT;
+		cpucap_eff_prov[cpu] = CPUCAP_SCORE_DEFAULT;
 	}
-	atomic_set_int(&cpucap_pending, CPUCAP_CHANGED_SCORES);
+	cpucap_publish_scores();
 }
 
 /*
@@ -404,7 +477,7 @@ cpucap_activate(struct cpucap_provider *cp)
 		cp->cp_state = CPUCAP_PS_ACTIVE;
 		*active = cp;
 		if (cp->cp_kind == CPUCAP_PROVIDER_DYNAMIC)
-			atomic_store_8(&cpucap_scores_valid, 1);
+			cpucap_publish_scores();
 	}
 	cpucap_commit_locked();
 }
@@ -559,6 +632,64 @@ bad:
 }
 
 /*
+ * Parse a force_scores string into perf[]/eff[] and return the number of
+ * entries, or -1 after a console message if it is malformed.  An empty
+ * string is zero entries.
+ */
+static int
+cpucap_force_scores_parse(const char *str, uint8_t *perf, uint8_t *eff)
+{
+	const char *p;
+	char *end;
+	long v;
+	int c;
+
+	if (str[0] == '\0')
+		return (0);
+	p = str;
+	for (c = 0;; c++) {
+		if (c >= MAXCPU)
+			goto bad;
+		v = strtol(p, &end, 10);
+		if (end == p || *end != '/' || v < 0 || v > CPUCAP_SCORE_MAX)
+			goto bad;
+		perf[c] = (uint8_t)v;
+		p = end + 1;
+		v = strtol(p, &end, 10);
+		if (end == p || v < 0 || v > CPUCAP_SCORE_MAX)
+			goto bad;
+		eff[c] = (uint8_t)v;
+		if (*end == '\0')
+			break;
+		if (*end != ',')
+			goto bad;
+		p = end + 1;
+	}
+	return (c + 1);
+bad:
+	printf("cpucap: ignoring malformed kern.cpucap.force_scores \"%s\" "
+	    "(expected a comma-separated list of perf/eff pairs, each 0-%d, "
+	    "at most %d entries)\n", str, CPUCAP_SCORE_MAX, MAXCPU);
+	return (-1);
+}
+
+/* Install parsed forced scores and republish; the caller commits. */
+static void
+cpucap_force_scores_apply(const uint8_t *perf, const uint8_t *eff, int n)
+{
+	int cpu;
+
+	mtx_assert(&cpucap_lock, MA_OWNED);
+	KASSERT(n >= 0 && n <= MAXCPU, ("cpucap: %d forced scores", n));
+	for (cpu = 0; cpu < n; cpu++) {
+		cpucap_forced_perf[cpu] = perf[cpu];
+		cpucap_forced_eff[cpu] = eff[cpu];
+	}
+	cpucap_nforced_scores = n;
+	cpucap_publish_scores();
+}
+
+/*
  * Runs after release_aps() (SI_ORDER_FIRST) and after providers have
  * registered (SI_ORDER_SECOND).  The commit made here runs consumers
  * synchronously; everything after it goes through the taskqueue.
@@ -566,11 +697,26 @@ bad:
 static void
 cpucap_init(void *arg __unused)
 {
+	int n;
 
 	TASK_INIT(&cpucap_notify_task, 0, cpucap_notify, NULL);
+	TUNABLE_STR_FETCH("kern.cpucap.force_scores", cpucap_force_scores,
+	    sizeof(cpucap_force_scores));
+	n = cpucap_force_scores_parse(cpucap_force_scores,
+	    cpucap_force_scores_perf, cpucap_force_scores_eff);
+	if (n < 0) {
+		cpucap_force_scores[0] = '\0';
+		n = 0;
+	}
 	mtx_lock(&cpucap_lock);
 	cpucap_force_classes_parse();
 	cpucap_reset_static();
+	if (n > 0) {
+		cpucap_force_scores_apply(cpucap_force_scores_perf,
+		    cpucap_force_scores_eff, n);
+		printf("cpucap: scores of %d CPU%s forced by "
+		    "kern.cpucap.force_scores\n", n, n == 1 ? "" : "s");
+	}
 	cpucap_select(CPUCAP_PROVIDER_STATIC);
 	cpucap_select(CPUCAP_PROVIDER_DYNAMIC);
 	if (cpucap_pending != 0)
@@ -591,7 +737,8 @@ SYSCTL_UINT(_kern_cpucap, OID_AUTO, generation, CTLFLAG_RD, &cpucap_gen, 0,
     "Number of provider commits so far");
 SYSCTL_U8(_kern_cpucap, OID_AUTO, has_scores, CTLFLAG_RD,
     &cpucap_scores_valid, 0,
-    "A dynamic provider is supplying perf/eff scores");
+    "A dynamic provider or kern.cpucap.force_scores is supplying "
+    "perf/eff scores");
 SYSCTL_U8(_kern_cpucap, OID_AUTO, compute_class, CTLFLAG_RD,
     &cpucap_compute_cls, 0,
     "Core class holding this platform's compute cores (1=perf 2=eff)");
@@ -602,6 +749,46 @@ SYSCTL_STRING(_kern_cpucap, OID_AUTO, force_classes, CTLFLAG_RDTUN,
     cpucap_force_classes, sizeof(cpucap_force_classes),
     "Boot-time override of per-CPU core classes, e.g. \"1,1,2,2,4\" "
     "(1=perf 2=eff 4=LP), applied to CPUs 0..N-1 in order");
+
+/*
+ * Writable at run time; the tunable is fetched by cpucap_init() instead of
+ * the sysctl layer (CTLFLAG_NOFETCH) so it is applied once the lock exists
+ * and before provider selection.
+ */
+static int
+sysctl_cpucap_force_scores(SYSCTL_HANDLER_ARGS)
+{
+	int error, n;
+
+	sx_xlock(&cpucap_force_sx);
+	strlcpy(cpucap_force_scores_new, cpucap_force_scores,
+	    sizeof(cpucap_force_scores_new));
+	error = sysctl_handle_string(oidp, cpucap_force_scores_new,
+	    sizeof(cpucap_force_scores_new), req);
+	if (error != 0 || req->newptr == NULL)
+		goto out;
+	n = cpucap_force_scores_parse(cpucap_force_scores_new,
+	    cpucap_force_scores_perf, cpucap_force_scores_eff);
+	if (n < 0) {
+		error = EINVAL;
+		goto out;
+	}
+	mtx_lock(&cpucap_lock);
+	cpucap_force_scores_apply(cpucap_force_scores_perf,
+	    cpucap_force_scores_eff, n);
+	strlcpy(cpucap_force_scores, cpucap_force_scores_new,
+	    sizeof(cpucap_force_scores));
+	cpucap_commit_locked();
+	mtx_unlock(&cpucap_lock);
+out:
+	sx_xunlock(&cpucap_force_sx);
+	return (error);
+}
+SYSCTL_PROC(_kern_cpucap, OID_AUTO, force_scores, CTLTYPE_STRING |
+    CTLFLAG_RWTUN | CTLFLAG_NOFETCH | CTLFLAG_MPSAFE, NULL, 0,
+    sysctl_cpucap_force_scores, "A",
+    "Debug override of per-CPU perf/eff scores, e.g. \"60/92,34/100\" "
+    "(each 0-255), applied to CPUs 0..N-1 in order; \"\" clears it");
 
 #define	CPUCAP_FIELD_CLASS	0
 #define	CPUCAP_FIELD_CAPACITY	1
