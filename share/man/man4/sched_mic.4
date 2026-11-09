@@ -119,6 +119,36 @@ flows from the driver through
 to a recomputation of the tables in thread context, so the hot paths are
 the same in both modes.
 .Pp
+On processors with Intel Thread Director, the per-thread extension of that
+interface, the
+.Xr hfi 4
+driver can also enable the processor's classification of the running
+thread by the instructions it executes, and publish a separate score pair
+per thread class
+.Pq four on current parts
+for every CPU.
+This is off by default and enabled with the
+.Va hw.hfi.itd
+loader tunable.
+With it on, and
+.Va kern.sched.use_scores
+and
+.Va kern.sched.itd
+set,
+.Nm
+keeps one cost table per thread class, reads the running thread's class
+from the processor once per statistics clock tick, and places a thread
+using the table of its class, so a thread whose class the processor rates
+nearly as well on an efficiency core as on a performance core is steered
+less strongly towards the latter than one it rates much lower there.
+A thread without a class yet, every thread while Thread Director is off,
+and every class the processor does not publish use the plain table, so
+the feature off is exactly the behavior described above.
+At every context switch the scheduler executes the
+.Li HRESET
+instruction, when the processor has it, so one thread's history is not
+read as the next thread's.
+.Pp
 Because
 .Nm
 is derived from
@@ -255,6 +285,46 @@ each a list of
 pairs.
 Scores can be injected for testing with
 .Va kern.cpucap.force_scores ,
+see
+.Xr cpucap 9 .
+.It Va kern.sched.itd
+When set to
+.Li 1 ,
+the default, and
+.Xr hfi 4
+has enabled Intel Thread Director
+.Pq Va hw.hfi.itd
+and
+.Va kern.sched.use_scores
+is on, threads are placed with the cost table of their Thread Director
+class as described above; otherwise, or when set to
+.Li 0 ,
+every thread uses the plain table.
+The read-only
+.Va kern.sched.itd_active
+reports the class source in effect
+.Pq 0 off, 1 hardware, 2 the test override below ,
+.Va kern.sched.itd_classes
+how many classes have a table of their own, and
+.Va kern.sched.class_cost
+every class's per-CPU costs.
+.Va kern.sched.itd_reads ,
+.Va kern.sched.itd_invalid
+and
+.Va kern.sched.itd_changes
+count class reads on the tick, reads the processor had no valid class for,
+and reads that changed a thread's class, and
+.Va kern.sched.itd_hist
+reports the reads per class.
+.It Va kern.sched.mic.itd_force_class
+A debugging aid for exercising the per-class tables without Thread
+Director: -1, the default, is off; a class number gives every thread that
+class on its next tick; and
+.Li 8
+.Pq Dv CPUCAP_MAX_CLASSES
+spreads threads over the published classes by thread id.
+Per-class scores can be injected with
+.Va kern.cpucap.force_class_scores ,
 see
 .Xr cpucap 9 .
 .It Va kern.sched.core_class
