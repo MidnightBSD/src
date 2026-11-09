@@ -105,7 +105,8 @@ static struct task cpucap_notify_task;
  * kern.cpucap.force_classes="c,c,..." (loader tunable, debugging aid):
  * override the provided class of CPUs 0..N-1 so the hybrid placement paths
  * can be exercised on homogeneous hardware or in a VM without a CPUID hybrid
- * leaf.  Each entry must be 1 (perf), 2 (eff) or 4 (LP); CPUs past the end
+ * leaf.  Each entry must be 1 (perf), 2 (eff) or 4 (LP) and sets the class
+ * and its nominal capacity (1024, 640 or 320); CPUs past the end
  * of the list keep their provided class.  Parsed once at boot; the whole
  * string is rejected if any entry is malformed or it names more than MAXCPU
  * CPUs.  "c," per CPU, with the last entry unterminated, fits in MAXCPU * 2
@@ -129,6 +130,21 @@ cpucap_cpu_valid(int cpu)
 {
 
 	return (cpu >= 0 && cpu < MAXCPU);
+}
+
+/* The nominal capacity of a class, used for CPUs whose class is forced. */
+static uint16_t
+cpucap_class_capacity(uint8_t cls)
+{
+
+	switch (cls) {
+	case CPU_CLASS_EFF:
+		return (CPUCAP_CAPACITY_EFF_NOMINAL);
+	case CPU_CLASS_LP:
+		return (CPUCAP_CAPACITY_LP_NOMINAL);
+	default:
+		return (CPUCAP_CAPACITY_PERF_NOMINAL);
+	}
 }
 
 /*
@@ -216,8 +232,15 @@ cpucap_set_class(int cpu, uint8_t cls)
 
 	if (!cpucap_cpu_valid(cpu) || !cpucap_class_valid(cls))
 		return;
-	if (cpucap_forced[cpu] != 0)
+	/*
+	 * A forced class brings its nominal capacity with it, whatever the
+	 * provider measured for the real core, so a forced map looks the
+	 * same to consumers whichever CPUs it lands on.
+	 */
+	if (cpucap_forced[cpu] != 0) {
 		cls = cpucap_forced[cpu];
+		atomic_store_16(&cpucap_cap[cpu], cpucap_class_capacity(cls));
+	}
 	atomic_store_8(&cpucap_cls[cpu], cls);
 	atomic_set_int(&cpucap_pending, CPUCAP_CHANGED_STATIC);
 }
@@ -228,6 +251,8 @@ cpucap_set_capacity(int cpu, uint16_t capacity)
 
 	if (!cpucap_cpu_valid(cpu) || capacity > CPUCAP_CAPACITY_MAX)
 		return;
+	if (cpucap_forced[cpu] != 0)
+		return;		/* Fixed by the forced class, see above. */
 	atomic_store_16(&cpucap_cap[cpu], capacity);
 	atomic_set_int(&cpucap_pending, CPUCAP_CHANGED_STATIC);
 }
@@ -318,9 +343,15 @@ cpucap_reset_static(void)
 	int cpu;
 
 	for (cpu = 0; cpu < MAXCPU; cpu++) {
-		atomic_store_8(&cpucap_cls[cpu], cpucap_forced[cpu] != 0 ?
-		    cpucap_forced[cpu] : CPU_CLASS_PERF);
-		atomic_store_16(&cpucap_cap[cpu], CPUCAP_CAPACITY_DEFAULT);
+		if (cpucap_forced[cpu] != 0) {
+			atomic_store_8(&cpucap_cls[cpu], cpucap_forced[cpu]);
+			atomic_store_16(&cpucap_cap[cpu],
+			    cpucap_class_capacity(cpucap_forced[cpu]));
+		} else {
+			atomic_store_8(&cpucap_cls[cpu], CPU_CLASS_PERF);
+			atomic_store_16(&cpucap_cap[cpu],
+			    CPUCAP_CAPACITY_DEFAULT);
+		}
 	}
 	atomic_store_8(&cpucap_compute_cls, CPU_CLASS_PERF);
 	atomic_store_8(&cpucap_prefer_compute_hint, 1);

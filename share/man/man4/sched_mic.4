@@ -172,8 +172,9 @@ A boot-time tunable for testing.
 When set to a comma-separated list of classes such as
 .Dq Li 1,1,1,1,2,2,2,2,4,4
 the detected class of CPUs 0, 1, ... is replaced by the listed values
-(1 performance, 2 efficiency, 4 low-power); CPUs beyond the end of the
-list keep their detected class.
+(1 performance, 2 efficiency, 4 low-power) and each such CPU takes the
+nominal capacity of its forced class; CPUs beyond the end of the list keep
+their detected class.
 This allows the hybrid placement paths to be exercised on homogeneous
 hardware or in a virtual machine.
 A malformed list is ignored with a console message.
