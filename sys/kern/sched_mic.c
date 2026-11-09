@@ -353,6 +353,7 @@ static int __read_mostly sched_compute_class = CPU_CLASS_PERF;
  * sched_score_cost().
  */
 static int __read_mostly sched_use_scores = 0;
+TUNABLE_INT("kern.sched.use_scores", &sched_use_scores);
 /*
  * Intel Thread Director (per-thread classes).  The hardware side is
  * enabled by hfi(4) when hw.hfi.itd is set (off by default); with it on and
