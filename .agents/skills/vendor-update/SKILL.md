@@ -1,6 +1,6 @@
 ---
 name: vendor-update
-description: Import a new upstream release of third-party software into a MidnightBSD vendor branch and merge it into master (and optionally stable branches). Handles vendor branch naming, Xlist pruning, tagging, git subtree merge, FreeBSD patch refresh, and stable branch merges — with mandatory user approval before every push, merge, or commit.
+description: Import a new upstream release of third-party software into a MidnightBSD vendor branch and merge it into master (and optionally stable branches). Handles vendor branch naming, Xlist pruning, tagging, git subtree merge, FreeBSD patch refresh, ObsoleteFiles.inc checks, and stable branch merges — with mandatory user approval before every push, merge, or commit.
 ---
 
 # Vendor Branch Update
@@ -298,6 +298,43 @@ git add <prefix>/MIDNIGHTBSD-upgrade
 git commit -m "<name>: add/update MIDNIGHTBSD-upgrade"
 ```
 
+### Step 10b — Check ObsoleteFiles.inc
+
+Imports often rename or drop man pages, headers and directories, and the
+build glue commit adds `OLD_FILES` / `OLD_DIRS` entries for them. An entry
+for something installworld still installs, or a directory an `etc/mtree`
+spec still creates, makes `make check-old` report it after every upgrade,
+and `make delete-old` removes a file that the next installworld puts back.
+Upstream renames are the usual trap: a page that moved to another `.pod`
+is often still installed under its old name as an `MLINK` (OpenSSL 3.5
+`TS_VERIFY_CTX_set_certs.3`).
+
+Run the checker from the top of the branch, after the build glue commits:
+
+```sh
+sh .agents/skills/vendor-update/scripts/check_obsolete.sh
+```
+
+It exits 1 when it finds an exact overlap, and prints one section per
+problem:
+
+| Section | Fix |
+|---|---|
+| `OLD_DIRS still created by etc/mtree` | Remove the directory and its `..` line from the spec. If something still installs into it, drop the `OLD_DIRS` entry instead. Validate with `mtree -deUW -f etc/mtree/<spec> -p $(mktemp -d)`. |
+| `OpenSSL man pages still installed` | Drop the `OLD_FILES` entry (the page is still a `MAN`/`MLINKS` target; OpenSSL installs under `/usr/share/openssl/man`). |
+| `libc++ headers still installed` | Drop the `OLD_FILES` entry. |
+| `Other man pages to review` | Candidates only: a page with that name and section is listed in some Makefile. Check whether that directory is built and where it installs. On master `ipftest.1`, `ipresend.1` (commented out of `sbin/ipf`), `vgrind.1` and `vgrindefs.5` (not built) are known false positives. A real hit looks like stable/4.0's `quota_statfs.3`: still an `MLINK` in `lib/libutil/Makefile` while `OLD_FILES` deletes it. |
+
+The `OLD_DIRS` check needs `/usr/sbin/mtree`, so run it on the MidnightBSD
+build host. On other hosts it is skipped with a warning. If the imported
+package installs files somewhere the script does not know about (its own
+`MANDIR`, `INCSDIR` groups), check those `OLD_FILES` entries against its
+Makefiles by hand, or extend the script.
+
+**STOP. If the checker reports overlaps, show them to the user and ask:**
+> "These ObsoleteFiles.inc / mtree entries conflict with what installworld
+> installs. Shall I fix them in a separate commit?"
+
 ### Step 11 — Push master
 
 **STOP. Ask the user:**
@@ -330,6 +367,10 @@ If approved:
 ```bash
 git subtree merge -P <prefix> <vendor-branch>
 ```
+
+After the stable branch's build glue commits, run the Step 10b checker on
+that branch too. Stable branches carry different `ObsoleteFiles.inc` and
+mtree contents, so a clean result on master says nothing about them.
 
 Then:
 
@@ -435,6 +476,7 @@ Key entries from the wiki (may not be exhaustive — always verify with
 - **Use `git subtree merge -P <prefix>`** — not `git merge` — so that the subtree history is preserved correctly.
 - **All pushes, commits, and merges require explicit user approval** before execution.
 - **Do not rebase or amend commits on vendor branches** — they are shared history.
+- **Run `scripts/check_obsolete.sh` on every branch before pushing** (Step 10b). `ObsoleteFiles.inc` must never list a file installworld installs or a directory an `etc/mtree` spec creates.
 - **Stage vendor imports with `git add -A -f`** and verify the staged tree against upstream (Step 6); upstream `.gitignore` files otherwise drop real files.
 - **Never squash a vendor merge.** If the update goes through a pull request, it must be merged with "Create a merge commit", never "Squash and merge" or "Rebase and merge". Say so in the PR description. Squashing turns the merge into a single-parent commit, so the vendor commit is no longer an ancestor of the branch. The next `git subtree merge` then picks an old import as the merge base and reports large numbers of false conflicts (libarchive 3.8.8, PR #451). Before pushing, check that `git merge-base --is-ancestor <vendor-commit> <branch>` succeeds.
 - **If an earlier import was squashed**, do the next merge as a three-way merge with an explicit base: build commits whose `<prefix>` is replaced by the previous and new vendor trees, then run `git merge-tree --write-tree --merge-base=<old> <branch> <new>` and record the result as a merge with the vendor commit as second parent.
