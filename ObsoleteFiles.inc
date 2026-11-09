@@ -39,6 +39,19 @@
 # for generating a list from a directory
 # find  /usr/lib/perl5/5.36.0 -exec echo {} \; | cut -b 2-150  | xargs printf "OLD_FILES+=%s\n"
 
+# 20261109: efun(3) moved to libnetbsd in 2022, remove its old man pages
+OLD_FILES+=usr/share/man/man3/easprintf.3.gz
+OLD_FILES+=usr/share/man/man3/ecalloc.3.gz
+OLD_FILES+=usr/share/man/man3/efopen.3.gz
+OLD_FILES+=usr/share/man/man3/efun.3.gz
+OLD_FILES+=usr/share/man/man3/emalloc.3.gz
+OLD_FILES+=usr/share/man/man3/erealloc.3.gz
+OLD_FILES+=usr/share/man/man3/esetfunc.3.gz
+OLD_FILES+=usr/share/man/man3/estrdup.3.gz
+OLD_FILES+=usr/share/man/man3/estrlcat.3.gz
+OLD_FILES+=usr/share/man/man3/estrlcpy.3.gz
+OLD_FILES+=usr/share/man/man3/evasprintf.3.gz
+
 # 20261107: OpenZFS 2.2 update bumps the shared library major versions
 OLD_LIBS+=lib/libavl.so.2
 OLD_LIBS+=lib/libicp.so.3
