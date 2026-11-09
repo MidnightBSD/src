@@ -263,6 +263,7 @@ struct tdq {
 	int		tdq_sysload;	/* (ts) For loadavg, !ITHD load. */
 	int		tdq_cpu_idle;	/* (ls) cpu_idle() is active. */
 	int		tdq_transferable; /* (ts) Transferable thread count. */
+	int		tdq_qtick;	/* (ts) ticks when load reached 2. */
 	short		tdq_switchcnt;	/* (l) Switches this tick. */
 	short		tdq_oldswitchcnt; /* (l) Switches last tick. */
 	u_char		tdq_lowpri;	/* (ts) Lowest priority thread. */
@@ -356,6 +357,15 @@ static uint8_t __read_mostly sched_cpu_rank[MAXCPU];	/* 0 = preferred. */
 #define	SCHED_RANK_EFF	1
 #define	SCHED_RANK_LP	2
 static bool __read_mostly sched_hybrid;	/* Any present CPU not rank 0. */
+/*
+ * How long (ticks) a thread must have been queued on a CPU before a stealer
+ * of a worse class than that CPU may take it.  Idle CPUs of the same or a
+ * better class steal at once, so a queued thread goes to an idle P-core
+ * first, then to an idle E-core or P sibling, and a brief preemption by an
+ * interrupt thread or a daemon no longer bounces CPU-bound threads between
+ * classes.  Reset in sched_initticks() to about 4 ms.
+ */
+static int __read_mostly sched_steal_delay = 1;
 #define	SCHED_CLASS_WEIGHT_MAX	0x7fff
 /*
  * Modulus of the random tie-breaking jitter cpu_search_lowest() subtracts
@@ -778,6 +788,12 @@ tdq_load_add(struct tdq *tdq, struct thread *td)
 	THREAD_LOCK_BLOCKED_ASSERT(td, MA_OWNED);
 
 	tdq->tdq_load++;
+	/*
+	 * Stamp the moment a thread starts waiting here so that worse-class
+	 * stealers can tell a transient preemption from a real backlog.
+	 */
+	if (tdq->tdq_load == 2)
+		tdq->tdq_qtick = ticks;
 	if ((td->td_flags & TDF_NOLOAD) == 0)
 		tdq->tdq_sysload++;
 	KTR_COUNTER0(KTR_SCHED, "load", tdq->tdq_loadname, tdq->tdq_load);
@@ -875,6 +891,7 @@ struct cpu_search {
 	int	cs_trans;	/* Min transferable load for high. */
 	int	cs_class;	/* Apply hybrid-core class cost (placement). */
 	int	cs_rank;	/* Stealer's class rank (stealing). */
+	int	cs_ticks;	/* ticks at the start of the search. */
 };
 
 struct cpu_search_res {
@@ -1152,19 +1169,25 @@ cpu_search_highest(const struct cpu_group *cg, const struct cpu_search *s,
 		total += load;
 
 		/*
-		 * Check this CPU is acceptable.  Only queued threads can be
-		 * stolen, and a thread waiting behind another on a P-core is
-		 * worse off than running on an idle E-core, so E stealers use
-		 * the plain threshold like ULE.  A stealer that ranks behind
-		 * the core classes (cs_rank == SCHED_RANK_LP: an LP core, or
-		 * the idle SMT thread of a busy core, see sched_steal_rank())
-		 * demands one more runnable thread from a better-ranked
-		 * victim, so an idle P or E core gets to take a single queued
-		 * thread first.
+		 * Check this CPU is acceptable.
 		 */
-		if (l < s->cs_load + (sched_cpu_rank[c] < s->cs_rank ? 1 : 0) ||
-		    TDQ_TRANSFERABLE(tdq) < s->cs_trans ||
+		if (l < s->cs_load || TDQ_TRANSFERABLE(tdq) < s->cs_trans ||
 		    !CPU_ISSET(c, s->cs_mask))
+			continue;
+		/*
+		 * Only queued threads can be stolen.  A stealer of a worse
+		 * rank than this CPU (an E-core or LP core looking at a
+		 * P-core, or the idle SMT thread of a busy core, see
+		 * sched_steal_rank()) takes one only once it has waited
+		 * sched_steal_delay ticks: an idle CPU of the same or a
+		 * better class steals immediately and so gets it first, and
+		 * a thread merely preempted for a moment resumes where it
+		 * was.  A real backlog on a saturated P-core still spills to
+		 * the E-cores after the delay.  One byte load and one tick
+		 * compare per candidate.
+		 */
+		if (sched_cpu_rank[c] < s->cs_rank &&
+		    s->cs_ticks - tdq->tdq_qtick < sched_steal_delay)
 			continue;
 
 		load -= sched_random() % 256;
@@ -1200,15 +1223,14 @@ sched_lowest(const struct cpu_group *cg, cpuset_t *mask, int pri, int maxload,
 }
 
 /*
- * Rank an idle CPU presents when it looks for work to steal.  Idle P and E
- * cores take any queued thread (rank 0, ULE threshold).  Two kinds of
- * stealer hold back from victims of a better rank that have only a single
- * queued thread, leaving it for an idle P or E core: LP cores, and on
- * hybrid hardware the idle SMT thread of a busy core, which the placement
- * order ranks behind an idle E-core (eff 160 < smt_busy 192).  Both report
- * SCHED_RANK_LP, i.e. "behind every core class".  One byte load plus the
- * existing sibling check on the CPU's own leaf group; on homogeneous
- * hardware (sched_hybrid false) this is exactly ULE.
+ * Rank an idle CPU presents when it looks for work to steal: its class rank
+ * (0 P, 1 E, 2 LP), except that on hybrid hardware the idle SMT thread of a
+ * busy core ranks with LP, behind every core class, as the placement order
+ * puts it after an idle E-core (eff 160 < smt_busy 192).  Victims of a
+ * better rank than this are only stolen from after sched_steal_delay.  One
+ * byte load plus the existing sibling check on the CPU's own leaf group; on
+ * homogeneous hardware (sched_hybrid false) every CPU is rank 0 and this is
+ * exactly ULE.
  */
 static inline int
 sched_steal_rank(struct tdq *tdq)
@@ -1216,14 +1238,17 @@ sched_steal_rank(struct tdq *tdq)
 	int cpu;
 
 	cpu = TDQ_ID(tdq);
-	if (sched_cpu_rank[cpu] == SCHED_RANK_LP)
-		return (SCHED_RANK_LP);
-	if (sched_hybrid && tdq->tdq_cg != NULL &&
+	if (sched_hybrid && sched_cpu_rank[cpu] != SCHED_RANK_LP &&
+	    tdq->tdq_cg != NULL &&
 	    (tdq->tdq_cg->cg_flags & CG_FLAG_THREAD) != 0 &&
 	    smt_sibling_busy(tdq->tdq_cg, cpu))
 		return (SCHED_RANK_LP);
-	return (0);
+	return (sched_cpu_rank[cpu]);
 }
+
+SCHED_STAT_DEFINE(steal_idled, "Thread stolen by the idle thread");
+SCHED_STAT_DEFINE(steal_trysteal, "Thread stolen in sched_switch()");
+SCHED_STAT_DEFINE(balance_moved, "Thread moved by the long-term balancer");
 
 /*
  * Find the cpu with the highest load via the highest loaded path.
@@ -1239,6 +1264,7 @@ sched_highest(const struct cpu_group *cg, cpuset_t *mask, int minload,
 	s.cs_load = minload;
 	s.cs_trans = mintrans;
 	s.cs_rank = rank;
+	s.cs_ticks = ticks;
 	cpu_search_highest(cg, &s, &r);
 	return (r.csr_cpu);
 }
@@ -1412,6 +1438,7 @@ sched_balance_pair(struct tdq *high, struct tdq *low)
 				tdq_notify(low, lowpri);
 			else
 				sched_setpreempt(low->tdq_lowpri);
+			SCHED_STAT_INC(balance_moved);
 			ret = true;
 		}
 	}
@@ -1548,8 +1575,10 @@ restart:
 		/*
 		 * Steal the thread and switch to it.
 		 */
-		if (tdq_move(steal, tdq) != -1)
+		if (tdq_move(steal, tdq) != -1) {
+			SCHED_STAT_INC(steal_idled);
 			break;
+		}
 		/*
 		 * We failed to acquire a thread even though it looked
 		 * like one was available.  This could be due to affinity
@@ -2013,6 +2042,7 @@ sched_initticks(void *dummy)
 	realstathz = stathz ? stathz : hz;
 	sched_slice = realstathz / SCHED_SLICE_DEFAULT_DIVISOR;
 	sched_slice_min = sched_slice / SCHED_SLICE_MIN_DIVISOR;
+	sched_steal_delay = imax(1, hz / 250);		/* ~4 ms */
 	hogticks = imax(1, (2 * hz * sched_slice + realstathz / 2) /
 	    realstathz);
 
@@ -2560,6 +2590,7 @@ tdq_trysteal(struct tdq *tdq)
 			TDQ_UNLOCK(steal);
 			break;
 		}
+		SCHED_STAT_INC(steal_trysteal);
 		TDQ_UNLOCK(steal);
 		break;
 	}
@@ -3775,6 +3806,9 @@ SYSCTL_PROC(_kern_sched, OID_AUTO, smt_busy_penalty,
     CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE, &sched_smt_busy_penalty,
     SCHED_CLASS_WEIGHT_MAX, sysctl_kern_sched_class_knob, "I",
     "Penalty for a free thread whose SMT sibling is busy (0 = ULE behavior)");
+SYSCTL_INT(_kern_sched, OID_AUTO, steal_delay, CTLFLAG_RW,
+    &sched_steal_delay, 0,
+    "Ticks a thread must be queued before a worse-class CPU may steal it");
 SYSCTL_INT(_kern_sched, OID_AUTO, class_jitter, CTLFLAG_RD,
     &sched_class_jitter, 0,
     "Modulus of the placement tie-breaking jitter (derived from the weights)");
