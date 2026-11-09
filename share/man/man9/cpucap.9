@@ -240,7 +240,9 @@ The class of a CPU may be overridden by the
 tunable, described below; the override is applied by the layer and a
 provider's
 .Fn cpucap_set_class
-for such a CPU is ignored.
+and
+.Fn cpucap_set_capacity
+for such a CPU are ignored.
 .Ss Consumers
 A consumer is described by a
 .Vt struct cpucap_consumer :
@@ -314,8 +316,10 @@ A boot-time tunable for testing.
 When set to a comma-separated list of classes such as
 .Dq Li 1,1,1,1,2,2,2,2,4,4
 the class of CPUs 0, 1, ... is replaced by the listed values
-(1 performance, 2 efficiency, 4 low-power), whatever any provider says;
-CPUs beyond the end of the list keep their provided class.
+(1 performance, 2 efficiency, 4 low-power), whatever any provider says,
+and each such CPU takes the nominal capacity of its forced class
+(1024, 640 or 320) in place of whatever the provider measured;
+CPUs beyond the end of the list keep their provided class and capacity.
 A malformed list is ignored with a console message.
 .Va kern.sched.mic.force_classes
 is accepted as an alias for existing configurations.
