@@ -61,17 +61,21 @@ and the class only orders CPUs whose load is otherwise acceptable.
 It is applied when selecting a CPU for a thread, when the long-term load
 balancer chooses where to move a thread, and when an idle CPU looks for
 work to steal.
-Only queued threads can be stolen, never a running one, and a thread
-waiting behind another on a performance core is worse off than running on
-an idle efficiency core, so idle performance and efficiency cores both
-steal a queued thread as soon as
+Only queued threads can be stolen, never a running one.
+An idle CPU of the same or a better class than the CPU holding a queued
+thread steals it as soon as
 .Va kern.sched.steal_thresh
 allows, as in
 .Xr sched_ule 4 .
-An idle low-power core, or the idle SMT thread of a core whose other
-thread is busy, only steals from a performance or efficiency core that has
-at least one more runnable thread than that, so a single queued thread is
-left for an idle performance or efficiency core to take first.
+An idle CPU of a worse class, including the idle SMT thread of a core whose
+other thread is busy, waits until the thread has been queued for
+.Va kern.sched.steal_delay
+ticks (about 4 ms by default).
+An idle performance core therefore gets a thread queued on another
+performance core first, a thread briefly preempted by an interrupt handler
+or a daemon simply resumes where it was instead of bouncing to an
+efficiency core, and a real backlog on saturated performance cores still
+spills to idle efficiency cores after the delay.
 When comparing groups of CPUs the best available slot's class-adjusted load
 decides first and the group's total load, the
 .Xr sched_ule 4
@@ -139,6 +143,9 @@ Low-power
 cores are always used last.
 Which class holds the compute cores is reported by the read-only
 .Va kern.sched.compute_class .
+.It Va kern.sched.steal_delay
+Ticks a thread must have been queued on a CPU before an idle CPU of a worse
+class may steal it; see above.
 .It Va kern.sched.detect_lpe
 A boot-time tunable that enables detection of Intel LP-E cores as class 4.
 Setting it to
