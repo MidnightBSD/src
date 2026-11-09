@@ -410,7 +410,12 @@ topo_probe_intel_0xb(void)
 		return;
 	}
 
-	/* We only support three levels for now. */
+	/*
+	 * Only the SMT level and the package are used.  Leaf 1Fh may report
+	 * module, tile and die levels above the core level (e.g. Arrow Lake),
+	 * so the package shift is the shift of the last level reported, not
+	 * that of the core level.
+	 */
 	for (i = 0; ; i++) {
 		cpuid_count(leaf, i, p);
 
@@ -422,10 +427,9 @@ topo_probe_intel_0xb(void)
 
 		if (type == CPUID_TYPE_SMT)
 			core_id_shift = bits;
-		else if (type == CPUID_TYPE_CORE)
-			pkg_id_shift = bits;
-		else if (bootverbose)
+		else if (type != CPUID_TYPE_CORE && bootverbose)
 			printf("Topology level type %d shift: %d\n", type, bits);
+		pkg_id_shift = bits;
 	}
 
 	if (pkg_id_shift < core_id_shift) {
