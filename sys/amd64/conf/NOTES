@@ -583,6 +583,10 @@ device		itwd
 device		coretemp
 device		amdtemp
 
+# hfi: Intel Hardware Feedback Interface, feeds per-core performance and
+# efficiency scores to the cpucap(9) layer (SCHED_MIC kernels only)
+device		hfi
+
 #
 # CPU control pseudo-device. Provides access to MSRs, CPUID info and
 # microcode update feature.

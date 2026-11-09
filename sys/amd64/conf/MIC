@@ -8,3 +8,7 @@ ident	MIC
 # is defined).  SCHED_ULE therefore stays enabled (inherited from GENERIC);
 # with both set, sys/conf/files builds sched_mic.c instead of sched_ule.c.
 options 	SCHED_MIC		# Hybrid-core-aware scheduler (ULE-derived)
+
+# Intel Hardware Feedback Interface: per-core performance and efficiency
+# scores for the cpucap(9) layer.  Attaches only on CPUs that support it.
+device		hfi
