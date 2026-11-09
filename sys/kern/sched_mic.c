@@ -76,6 +76,7 @@
 #include <sys/turnstile.h>
 #include <sys/umtxvar.h>
 #include <sys/vmmeter.h>
+#include <sys/cpucap.h>
 #include <sys/cpuset.h>
 #include <sys/sbuf.h>
 
@@ -322,35 +323,41 @@ static int __read_mostly sched_class_weight_lp = 512;	/* class 4 penalty. */
 static int __read_mostly sched_smt_busy_penalty = 192;	/* busy-sibling (pri 3). */
 /*
  * kern.sched.prefer_compute selects which of the two main classes is filled
- * first.  1 (the default) prefers the platform's compute class, which
- * machine-dependent classification names in sched_compute_class: Intel
- * P-cores (CPU_CLASS_PERF) or, on AMD parts with asymmetric L3, the
- * smaller-cache compute/C-core CCD (CPU_CLASS_EFF).  0 prefers the other
- * class: Intel E-cores, or the AMD large-cache (3D V-Cache) CCD, which is
- * the default MD code picks on X3D parts.  CPU_CLASS_LP is always last.
+ * first.  1 (the default) prefers the platform's compute class, which the
+ * static cpucap(9) provider names (cpucap_compute_class()): Intel P-cores
+ * (CPU_CLASS_PERF) or, on AMD parts with asymmetric L3, the smaller-cache
+ * compute/C-core CCD (CPU_CLASS_EFF).  0 prefers the other class: Intel
+ * E-cores, or the AMD large-cache (3D V-Cache) CCD, which is the default the
+ * provider picks on X3D parts.  CPU_CLASS_LP is always last.
  */
-int __read_mostly sched_prefer_compute = 1;
-int __read_mostly sched_compute_class = CPU_CLASS_PERF;
-/* Read by machine-dependent classification; enables Intel LP-E detection. */
-int sched_detect_lpe = 1;
+static int __read_mostly sched_prefer_compute = 1;
+static int __read_mostly sched_compute_class = CPU_CLASS_PERF;
+/*
+ * kern.sched.use_scores: fold the dynamic perf/eff scores a cpucap(9)
+ * provider such as an Intel HFI driver publishes into the per-CPU cost.
+ * Off by default; see sched_score_cost().
+ */
+static int __read_mostly sched_use_scores = 0;
 
 /*
- * Per-CPU core class, indexed by cpuid.  Defaults to CPU_CLASS_PERF for every
- * CPU so that non-hybrid (and non-x86) systems behave exactly like SCHED_ULE.
- * Populated by machine-dependent detection (see mic_classify() in
- * sys/x86/x86/mp_x86.c); sched_core_class_update() then derives the tables
- * below, and the scheduler never reads cpu_core_class[] on a hot path.
- * Any later provider that rewrites cpu_core_class[] must call
- * sched_core_class_update() afterwards.
+ * Per-CPU core class, capacity and scores come from the cpucap(9) layer
+ * (sys/kern/subr_cpucap.c): every CPU is CPU_CLASS_PERF unless a provider
+ * such as the x86 CPUID probe says otherwise, so non-hybrid (and non-x86)
+ * systems behave exactly like SCHED_ULE.  The layer calls
+ * sched_cpucap_update() in thread context after each provider commit; that
+ * derives the tables below, and the scheduler never reads the layer on a
+ * hot path.
  */
-uint8_t cpu_core_class[MAXCPU] = { [0 ... MAXCPU - 1] = CPU_CLASS_PERF };
 
 /*
- * Tables derived from cpu_core_class[] and the tunables above by
+ * Tables derived from the layer's per-CPU class and the tunables above by
  * sched_core_class_update().  The placement and stealing hot paths read only
  * these, one load per candidate CPU, so no preference or weight logic runs
  * there.  Zero means "treat like ULE", which is also the state before
- * classification has run.
+ * classification has run.  Each entry is published with one atomic store,
+ * so a hot path racing an update sees either the old or the new value for
+ * a CPU, never a torn one; a momentarily mixed table only yields a
+ * momentarily mixed placement bias.
  */
 static uint16_t __read_mostly sched_cpu_cost[MAXCPU];	/* Static class cost. */
 static uint8_t __read_mostly sched_cpu_rank[MAXCPU];	/* 0 = preferred. */
@@ -406,22 +413,39 @@ sched_class_jitter_update(void)
 }
 
 /*
- * Recompute the derived per-CPU tables.  Called at boot after MD
- * classification and whenever a class tunable changes; readers are lockless,
- * so a concurrent update only yields a momentarily mixed placement bias.
+ * Hook for folding a CPU's dynamic scores into its static class cost.
+ * Phase E of the hybrid scheduler plan fills this in once an HFI provider
+ * exists; until then it is a no-op even when kern.sched.use_scores is set,
+ * so placement is identical with or without scores.  A perf score of 0 must
+ * become a heavy penalty, never an exclusion, so sched_pickcpu() always
+ * finds a CPU.
  */
-void
+static int
+sched_score_cost(int cost, uint8_t perf __unused, uint8_t eff __unused)
+{
+
+	return (cost);
+}
+
+/*
+ * Recompute the derived per-CPU tables.  Called from the cpucap(9) consumer
+ * callback after a provider commit and whenever a class tunable changes;
+ * readers are lockless, so a concurrent update only yields a momentarily
+ * mixed placement bias.
+ */
+static void
 sched_core_class_update(void)
 {
 	int c, cls, cost;
 	uint8_t rank;
-	bool hybrid, swap;
+	bool hybrid, scores, swap;
 
 	swap = (sched_prefer_compute != 0) ==
 	    (sched_compute_class == CPU_CLASS_EFF);
+	scores = sched_use_scores != 0 && cpucap_has_scores();
 	hybrid = false;
 	for (c = 0; c < MAXCPU; c++) {
-		cls = cpu_core_class[c];
+		cls = cpucap_class(c);
 		if (swap) {
 			if (cls == CPU_CLASS_PERF)
 				cls = CPU_CLASS_EFF;
@@ -438,12 +462,15 @@ sched_core_class_update(void)
 			cost = 0;
 			rank = 0;
 		}
+		if (scores)
+			cost = sched_score_cost(cost, cpucap_perf(c),
+			    cpucap_eff(c));
 		if (cost < 0)
 			cost = 0;
 		else if (cost > SCHED_CLASS_WEIGHT_MAX)
 			cost = SCHED_CLASS_WEIGHT_MAX;
-		sched_cpu_cost[c] = cost;
-		sched_cpu_rank[c] = rank;
+		atomic_store_16(&sched_cpu_cost[c], cost);
+		atomic_store_8(&sched_cpu_rank[c], rank);
 		if (rank != 0 && !CPU_ABSENT(c))
 			hybrid = true;
 	}
@@ -452,65 +479,38 @@ sched_core_class_update(void)
 }
 
 /*
- * kern.sched.mic.force_classes="c,c,..." (loader tunable, debugging aid):
- * override the detected class of CPUs 0..N-1 so the hybrid placement paths
- * can be exercised on homogeneous hardware or in a VM that has no CPUID
- * hybrid leaf.  Each entry must be 1 (perf), 2 (eff) or 4 (LP); CPUs past
- * the end of the list keep their detected class.  Parsed once at boot; the
- * whole string is rejected if any entry is malformed or it names more than
- * MAXCPU CPUs.  "c," per CPU, with the last entry unterminated, fits in
- * MAXCPU * 2 bytes including the NUL.
+ * cpucap(9) consumer callback.  Runs in thread context with the layer's
+ * lock held, after the boot-time classification and after every later
+ * provider commit (an HFI driver updating scores, for example).  A static
+ * change also carries the platform hints: which class holds the compute
+ * cores and whether to prefer it, the latter only a default for
+ * kern.sched.prefer_compute.
  */
-static char sched_force_classes[MAXCPU * 2];
-
 static void
-sched_force_classes_apply(void)
+sched_cpucap_update(void *arg __unused, int changed)
 {
-	uint8_t cls[MAXCPU];
-	const char *p;
-	char *end;
-	long v;
-	int c, i;
 
-	if (sched_force_classes[0] == '\0')
-		return;
-	p = sched_force_classes;
-	for (c = 0;; c++) {
-		if (c >= MAXCPU)
-			goto bad;
-		v = strtol(p, &end, 10);
-		if (end == p || (v != CPU_CLASS_PERF && v != CPU_CLASS_EFF &&
-		    v != CPU_CLASS_LP))
-			goto bad;
-		cls[c] = (uint8_t)v;
-		if (*end == '\0')
-			break;
-		if (*end != ',')
-			goto bad;
-		p = end + 1;
+	if ((changed & CPUCAP_CHANGED_STATIC) != 0) {
+		sched_compute_class = cpucap_compute_class();
+		sched_prefer_compute = cpucap_prefer_compute() ? 1 : 0;
 	}
-	c++;
-	for (i = 0; i < c; i++)
-		cpu_core_class[i] = cls[i];
-	printf("sched_mic: core class of %d CPU%s forced by "
-	    "kern.sched.mic.force_classes\n", c, c == 1 ? "" : "s");
-	return;
-bad:
-	printf("sched_mic: ignoring malformed kern.sched.mic.force_classes "
-	    "\"%s\" (expected a comma-separated list of 1, 2 or 4, at most "
-	    "%d entries)\n", sched_force_classes, MAXCPU);
+	sched_core_class_update();
 }
 
+static struct cpucap_consumer sched_cpucap_consumer = {
+	.cc_name = "sched_mic",
+	.cc_update = sched_cpucap_update,
+};
+
 /*
- * MD classification runs at SI_SUB_SMP with an order before SI_ORDER_ANY;
- * apply any forced classes and derive the tables once it is done.
+ * The layer selects providers at SI_SUB_SMP/SI_ORDER_MIDDLE; registering
+ * afterwards gets the callback at once with whatever has been committed.
  */
 static void
 sched_core_class_init(void *dummy __unused)
 {
 
-	sched_force_classes_apply();
-	sched_core_class_update();
+	cpucap_consumer_register(&sched_cpucap_consumer);
 }
 SYSINIT(sched_core_class, SI_SUB_SMP, SI_ORDER_ANY, sched_core_class_init,
     NULL);
@@ -3726,10 +3726,19 @@ sysctl_kern_sched_core_class(SYSCTL_HANDLER_ARGS)
 		return (ENOMEM);
 	CPU_FOREACH(i)
 		sbuf_printf(sb, "%s%d:%u", i == 0 ? "" : " ", i,
-		    cpu_core_class[i]);
+		    cpucap_class(i));
 	err = sbuf_finish(sb);
 	sbuf_delete(sb);
 	return (err);
+}
+
+/* Read-only alias of kern.cpucap.force_classes, which replaced this knob. */
+static int
+sysctl_kern_sched_force_classes(SYSCTL_HANDLER_ARGS)
+{
+
+	return (sysctl_handle_string(oidp,
+	    __DECONST(char *, cpucap_force_classes_string()), 0, req));
 }
 
 #endif
@@ -3821,18 +3830,19 @@ SYSCTL_PROC(_kern_sched, OID_AUTO, prefer_compute,
 SYSCTL_INT(_kern_sched, OID_AUTO, compute_class, CTLFLAG_RD,
     &sched_compute_class, 0,
     "Core class holding this platform's compute cores (1=perf 2=eff)");
-SYSCTL_INT(_kern_sched, OID_AUTO, detect_lpe, CTLFLAG_RDTUN,
-    &sched_detect_lpe, 0,
-    "Detect Intel LP-E cores (no L3) as class 4; 0 leaves them class 2");
+SYSCTL_PROC(_kern_sched, OID_AUTO, use_scores,
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE, &sched_use_scores, 1,
+    sysctl_kern_sched_class_knob, "I",
+    "Fold dynamic cpucap(9) perf/eff scores into the per-CPU cost "
+    "(reserved; no effect yet)");
 SYSCTL_PROC(_kern_sched, OID_AUTO, core_class, CTLTYPE_STRING |
     CTLFLAG_MPSAFE | CTLFLAG_RD, NULL, 0, sysctl_kern_sched_core_class, "A",
     "Per-CPU hybrid core class (1=perf 2=eff 4=LP)");
 SYSCTL_NODE(_kern_sched, OID_AUTO, mic, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
     "SCHED_MIC debugging knobs");
-SYSCTL_STRING(_kern_sched_mic, OID_AUTO, force_classes, CTLFLAG_RDTUN,
-    sched_force_classes, sizeof(sched_force_classes),
-    "Boot-time override of per-CPU core classes, e.g. \"1,1,2,2,4\" "
-    "(1=perf 2=eff 4=LP), applied to CPUs 0..N-1 in order");
+SYSCTL_PROC(_kern_sched_mic, OID_AUTO, force_classes, CTLTYPE_STRING |
+    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, 0, sysctl_kern_sched_force_classes,
+    "A", "Alias of kern.cpucap.force_classes (set that tunable instead)");
 #endif
 
 /* ps compat.  All cpu percentages from ULE are weighted. */
