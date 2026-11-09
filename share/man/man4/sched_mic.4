@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.Dd November 8, 2026
+.Dd November 9, 2026
 .Dt SCHED_MIC 4
 .Os
 .Sh NAME
@@ -105,6 +105,20 @@ single-die parts, are treated entirely as performance cores.
 The per-CPU classes, capacities and any dynamic scores are reported under
 .Va kern.cpucap .
 .Pp
+On Intel processors with the Hardware Feedback Interface the
+.Xr hfi 4
+driver publishes a dynamic performance and efficiency score for every CPU
+through the same layer, and the processor may revise them at run time as
+thermal and power limits change.
+When
+.Va kern.sched.use_scores
+is set the per-CPU costs are derived from those scores instead of the
+fixed class weights, as described under that variable; each revision
+flows from the driver through
+.Xr cpucap 9
+to a recomputation of the tables in thread context, so the hot paths are
+the same in both modes.
+.Pp
 Because
 .Nm
 is derived from
@@ -155,12 +169,94 @@ Which class holds the compute cores is reported by the read-only
 Ticks a thread must have been queued on a CPU before an idle CPU of a worse
 class may steal it; see above.
 .It Va kern.sched.use_scores
-Reserved for folding the dynamic performance and efficiency scores a
+When set to
+.Li 1
+and a dynamic
 .Xr cpucap 9
-provider publishes into the per-CPU cost.
-It defaults to
+provider such as
+.Xr hfi 4
+is active, the cost of each CPU is derived from its score rather than from
+.Va kern.sched.class_weight_eff
+and
+.Va kern.sched.class_weight_lp .
+With
+.Va s
+the CPU's performance score, or its efficiency score when
+.Va kern.sched.prefer_compute
+is
+.Li 0 ,
+and
+.Va m
+the best such score of any CPU, the cost is
+.Pp
+.Dl "cost = (m - s) * 384 / m"
+.Pp
+so the best CPUs cost
 .Li 0
-and currently has no effect even when set.
+and every other CPU pays one and a half threads of load
+.Pq 384 points at 256 per thread
+per unit of relative shortfall.
+On an Intel Core i7-1260P, which reports a performance score of 60 for its
+P-cores and 34 for its E-cores, the E-cores cost 166, between the default
+.Va class_weight_eff
+of 160 and the
+.Va smt_busy_penalty
+of 192, so the fill order described above does not change; a P-core the
+processor throttles to a score of 20 costs 256 and is not used while any
+other CPU is idle.
+With
+.Va prefer_compute
+set to
+.Li 0
+the same processor reports efficiency scores of 92 and 100, so the E-cores
+cost
+.Li 0
+and the P-cores 30.
+A score of
+.Li 0 ,
+by which the processor asks that nothing be run on a CPU, costs 4096
+.Pq 16 threads :
+a very large penalty but never an exclusion, so a thread that may run
+nowhere else is still placed there.
+Low-power cores keep at least
+.Va class_weight_lp ,
+since their fabric and cache handicap is not reflected in the score, and
+if every CPU reports a score of
+.Li 0
+the class weights are used.
+For stealing, a CPU whose cost is
+.Li 0
+ranks with the performance cores, a CPU scoring
+.Li 0
+or costing at least
+.Va class_weight_lp
+ranks with the low-power cores, and every other CPU ranks with the
+efficiency cores, so a throttled P-core and the E-cores steal from each
+other at once.
+.Pp
+The default is
+.Li 0 :
+on processors that write the table once at boot, such as the i7-1260P,
+the scores only reproduce the class ordering, and the behavior on
+processors that revise the table at run time has not yet been validated on
+hardware.
+The default is expected to become
+.Li 1
+once it has.
+Whether the costs in effect derive from scores is reported by the
+read-only
+.Va kern.sched.scores_active ,
+and the costs and ranks themselves by
+.Va kern.sched.cpu_cost
+and
+.Va kern.sched.cpu_rank ,
+each a list of
+.Dq Va cpuid : Ns Va value
+pairs.
+Scores can be injected for testing with
+.Va kern.cpucap.force_scores ,
+see
+.Xr cpucap 9 .
 .It Va kern.sched.core_class
 This read-only sysctl reports the class of each CPU as a list of
 .Dq Va cpuid : Ns Va class
@@ -191,6 +287,7 @@ The older name
 is still accepted.
 .El
 .Sh SEE ALSO
+.Xr hfi 4 ,
 .Xr sched_4bsd 4 ,
 .Xr sched_ule 4 ,
 .Xr sysctl 8 ,
