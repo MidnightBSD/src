@@ -338,9 +338,10 @@ static int __read_mostly sched_prefer_compute = 1;
 static bool sched_prefer_compute_set;
 static int __read_mostly sched_compute_class = CPU_CLASS_PERF;
 /*
- * kern.sched.use_scores: fold the dynamic perf/eff scores a cpucap(9)
- * provider such as an Intel HFI driver publishes into the per-CPU cost.
- * Off by default; see sched_score_cost().
+ * kern.sched.use_scores: derive the per-CPU cost from the dynamic perf/eff
+ * scores a cpucap(9) provider such as hfi(4) publishes instead of from the
+ * class weights.  Off by default; see the score-mode comment above
+ * sched_score_cost().
  */
 static int __read_mostly sched_use_scores = 0;
 
@@ -364,7 +365,7 @@ static int __read_mostly sched_use_scores = 0;
  * a CPU, never a torn one; a momentarily mixed table only yields a
  * momentarily mixed placement bias.
  */
-static uint16_t __read_mostly sched_cpu_cost[MAXCPU];	/* Static class cost. */
+static uint16_t __read_mostly sched_cpu_cost[MAXCPU];	/* Static cost. */
 static uint8_t __read_mostly sched_cpu_rank[MAXCPU];	/* 0 = preferred. */
 #define	SCHED_RANK_EFF	1
 #define	SCHED_RANK_LP	2
@@ -386,22 +387,98 @@ static int __read_mostly sched_steal_delay = 1;
  * cost levels so the jitter can only reorder CPUs of equal cost.
  */
 static int __read_mostly sched_class_jitter = 128;
+/* Distinct static costs considered by sched_class_jitter_update(). */
+#define	SCHED_COST_LEVELS	16
 
-static void
-sched_class_jitter_update(void)
+/*
+ * Score mode: kern.sched.use_scores=1 while a dynamic cpucap(9) provider
+ * such as hfi(4) (or kern.cpucap.force_scores) supplies scores.  A CPU's
+ * static cost then comes from its score instead of its class.  With s the
+ * CPU's score (perf, or eff when kern.sched.prefer_compute is 0) and m the
+ * best score of any present CPU,
+ *
+ *	cost = (m - s) * SCHED_SCORE_SCALE / m
+ *
+ * so the best CPUs cost 0 and the rest pay SCHED_SCORE_SCALE load points
+ * (1.5 threads, at 256 per thread) per unit of relative shortfall.  An
+ * i7-1260P reports perf 60 for its P-cores and 34 for its E-cores, giving
+ * the E-cores (60 - 34) * 384 / 60 = 166: between the class-mode E weight
+ * (160) and the busy-sibling penalty (192), so the fill order idle P <
+ * idle E < busy-sibling P < busy-sibling E < LP is unchanged.  A P-core
+ * throttled to perf 20 costs 256, one thread of load: it is used after the
+ * idle E-cores and the busy P siblings, and only once every other CPU
+ * already runs a thread.  With prefer_compute=0 the same part reports
+ * eff 92 / 100, so the E-cores cost 0 and the P-cores 30.
+ *
+ * A score of 0 means the processor asks that nothing run on that CPU; it
+ * costs SCHED_SCORE_AVOID_COST, 16 threads of load, which is a very large
+ * penalty but never an exclusion, so sched_pickcpu() always finds a CPU.
+ * LP cores keep at least their class weight, since their fabric and cache
+ * handicap is not in the score.  If every present CPU scores 0 the class
+ * weights are used instead.
+ *
+ * Ranks for stealing follow the cost rather than the class, so a throttled
+ * P-core and the E-cores are peers that steal from each other at once
+ * while a CPU scoring 0 ranks with LP, which only steals after
+ * sched_steal_delay and whose lone threads the balancer asks to repick:
+ * rank 0 for cost 0, SCHED_RANK_LP for an LP core, a CPU scoring 0 or a
+ * cost of at least the LP weight, and SCHED_RANK_EFF otherwise.
+ */
+#define	SCHED_SCORE_SCALE	384
+#define	SCHED_SCORE_AVOID_COST	4096
+/* Whether the tables currently derive from scores (read-only sysctl). */
+static int __read_mostly sched_scores_active;
+
+static int
+sched_score_cost(int score, int max)
 {
-	int levels[12];
-	int i, j, d, gap, n;
 
-	/*
-	 * Cost levels a candidate can have: each static class cost, with
-	 * and without the busy-sibling penalty, each with and without the
-	 * 128-point affinity bonus.
-	 */
+	if (score <= 0)
+		return (SCHED_SCORE_AVOID_COST);
+	if (score >= max)
+		return (0);
+	return ((max - score) * SCHED_SCORE_SCALE / max);
+}
+
+/*
+ * Derive the jitter modulus from the distinct static costs in the table:
+ * each gives a level with and without the busy-sibling penalty, each with
+ * and without the 128-point affinity bonus.  In class mode the three class
+ * weights are the levels whichever classes are present; in score mode the
+ * costs actually in the table are.  More distinct costs than fit (score
+ * mode on a part with many different scores) leave no room for jitter.
+ */
+static void
+sched_class_jitter_update(bool scores)
+{
+	int costs[SCHED_COST_LEVELS];
+	int levels[SCHED_COST_LEVELS * 4];
+	int c, d, gap, i, j, n, ncosts;
+
+	costs[0] = 0;
+	ncosts = 1;
+	if (!scores) {
+		costs[ncosts++] = sched_class_weight_eff;
+		costs[ncosts++] = sched_class_weight_lp;
+	}
+	for (c = 0; c < MAXCPU; c++) {
+		if (CPU_ABSENT(c))
+			continue;
+		d = sched_cpu_cost[c];
+		for (i = 0; i < ncosts; i++)
+			if (costs[i] == d)
+				break;
+		if (i < ncosts)
+			continue;
+		if (ncosts == SCHED_COST_LEVELS) {
+			sched_class_jitter = 1;
+			return;
+		}
+		costs[ncosts++] = d;
+	}
 	n = 0;
-	for (i = 0; i < 3; i++) {
-		d = i == 0 ? 0 : i == 1 ? sched_class_weight_eff :
-		    sched_class_weight_lp;
+	for (i = 0; i < ncosts; i++) {
+		d = costs[i];
 		levels[n++] = d;
 		levels[n++] = d - 128;
 		levels[n++] = d + sched_smt_busy_penalty;
@@ -418,21 +495,6 @@ sched_class_jitter_update(void)
 }
 
 /*
- * Hook for folding a CPU's dynamic scores into its static class cost.
- * Phase E of the hybrid scheduler plan fills this in once an HFI provider
- * exists; until then it is a no-op even when kern.sched.use_scores is set,
- * so placement is identical with or without scores.  A perf score of 0 must
- * become a heavy penalty, never an exclusion, so sched_pickcpu() always
- * finds a CPU.
- */
-static int
-sched_score_cost(int cost, uint8_t perf __unused, uint8_t eff __unused)
-{
-
-	return (cost);
-}
-
-/*
  * Recompute the derived per-CPU tables.  Called from the cpucap(9) consumer
  * callback after a provider commit and whenever a class tunable changes;
  * readers are lockless, so a concurrent update only yields a momentarily
@@ -441,13 +503,26 @@ sched_score_cost(int cost, uint8_t perf __unused, uint8_t eff __unused)
 static void
 sched_core_class_update(void)
 {
-	int c, cls, cost;
+	int c, cls, cost, max, score;
 	uint8_t rank;
-	bool hybrid, scores, swap;
+	bool hybrid, scores, swap, use_eff;
 
 	swap = (sched_prefer_compute != 0) ==
 	    (sched_compute_class == CPU_CLASS_EFF);
+	use_eff = sched_prefer_compute == 0;
 	scores = sched_use_scores != 0 && cpucap_has_scores();
+	max = 0;
+	if (scores) {
+		for (c = 0; c < MAXCPU; c++) {
+			if (CPU_ABSENT(c))
+				continue;
+			score = use_eff ? cpucap_eff(c) : cpucap_perf(c);
+			if (score > max)
+				max = score;
+		}
+		if (max == 0)
+			scores = false;	/* Nothing to go on; use classes. */
+	}
 	hybrid = false;
 	for (c = 0; c < MAXCPU; c++) {
 		cls = cpucap_class(c);
@@ -467,9 +542,19 @@ sched_core_class_update(void)
 			cost = 0;
 			rank = 0;
 		}
-		if (scores)
-			cost = sched_score_cost(cost, cpucap_perf(c),
-			    cpucap_eff(c));
+		if (scores) {
+			score = use_eff ? cpucap_eff(c) : cpucap_perf(c);
+			cost = sched_score_cost(score, max);
+			if (cls == CPU_CLASS_LP && cost < sched_class_weight_lp)
+				cost = sched_class_weight_lp;
+			if (cost == 0)
+				rank = 0;
+			else if (cls == CPU_CLASS_LP || score == 0 ||
+			    cost >= sched_class_weight_lp)
+				rank = SCHED_RANK_LP;
+			else
+				rank = SCHED_RANK_EFF;
+		}
 		if (cost < 0)
 			cost = 0;
 		else if (cost > SCHED_CLASS_WEIGHT_MAX)
@@ -480,13 +565,14 @@ sched_core_class_update(void)
 			hybrid = true;
 	}
 	sched_hybrid = hybrid;
-	sched_class_jitter_update();
+	sched_scores_active = scores ? 1 : 0;
+	sched_class_jitter_update(scores);
 }
 
 /*
  * cpucap(9) consumer callback.  Runs in thread context with the layer's
  * lock held, after the boot-time classification and after every later
- * provider commit (an HFI driver updating scores, for example).  A static
+ * provider commit (hfi(4) publishing a new table, for example).  A static
  * change also carries the platform hints: which class holds the compute
  * cores and whether to prefer it.  The latter is only a default for
  * kern.sched.prefer_compute and is not applied once an administrator has
@@ -582,7 +668,7 @@ static inline void thread_unblock_switch(struct thread *, struct mtx *);
 static int sysctl_kern_sched_topology_spec(SYSCTL_HANDLER_ARGS);
 static int sysctl_kern_sched_topology_spec_internal(struct sbuf *sb,
     struct cpu_group *cg, int indent);
-static int sysctl_kern_sched_core_class(SYSCTL_HANDLER_ARGS);
+static int sysctl_kern_sched_cpu_table(SYSCTL_HANDLER_ARGS);
 #endif
 
 static void sched_setup(void *dummy);
@@ -3720,22 +3806,39 @@ sysctl_kern_sched_class_knob(SYSCTL_HANDLER_ARGS)
 	return (0);
 }
 
+#define	SCHED_TABLE_CLASS	0
+#define	SCHED_TABLE_COST	1
+#define	SCHED_TABLE_RANK	2
+
 /*
- * Debug dump of the per-CPU hybrid core classification, one "cpuid:class"
- * pair per present CPU.  Class 1 = performance, 2 = efficiency, 4 = LP-E.
+ * Debug dump of a per-CPU table, one "cpuid:value" pair per present CPU;
+ * arg2 selects the layer's class (1 = performance, 2 = efficiency, 4 = LP-E)
+ * or the derived cost or rank in effect.
  */
 static int
-sysctl_kern_sched_core_class(SYSCTL_HANDLER_ARGS)
+sysctl_kern_sched_cpu_table(SYSCTL_HANDLER_ARGS)
 {
 	struct sbuf *sb;
+	u_int v;
 	int err, i;
 
 	sb = sbuf_new_for_sysctl(NULL, NULL, 128, req);
 	if (sb == NULL)
 		return (ENOMEM);
-	CPU_FOREACH(i)
-		sbuf_printf(sb, "%s%d:%u", i == 0 ? "" : " ", i,
-		    cpucap_class(i));
+	CPU_FOREACH(i) {
+		switch (arg2) {
+		case SCHED_TABLE_COST:
+			v = sched_cpu_cost[i];
+			break;
+		case SCHED_TABLE_RANK:
+			v = sched_cpu_rank[i];
+			break;
+		default:
+			v = cpucap_class(i);
+			break;
+		}
+		sbuf_printf(sb, "%s%d:%u", i == 0 ? "" : " ", i, v);
+	}
 	err = sbuf_finish(sb);
 	sbuf_delete(sb);
 	return (err);
@@ -3842,11 +3945,23 @@ SYSCTL_INT(_kern_sched, OID_AUTO, compute_class, CTLFLAG_RD,
 SYSCTL_PROC(_kern_sched, OID_AUTO, use_scores,
     CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE, &sched_use_scores, 1,
     sysctl_kern_sched_class_knob, "I",
-    "Fold dynamic cpucap(9) perf/eff scores into the per-CPU cost "
-    "(reserved; no effect yet)");
+    "Derive the per-CPU cost from dynamic cpucap(9) perf/eff scores "
+    "(hfi(4)) instead of the class weights");
+SYSCTL_INT(_kern_sched, OID_AUTO, scores_active, CTLFLAG_RD,
+    &sched_scores_active, 0,
+    "The per-CPU costs in effect derive from scores");
 SYSCTL_PROC(_kern_sched, OID_AUTO, core_class, CTLTYPE_STRING |
-    CTLFLAG_MPSAFE | CTLFLAG_RD, NULL, 0, sysctl_kern_sched_core_class, "A",
+    CTLFLAG_MPSAFE | CTLFLAG_RD, NULL, SCHED_TABLE_CLASS,
+    sysctl_kern_sched_cpu_table, "A",
     "Per-CPU hybrid core class (1=perf 2=eff 4=LP)");
+SYSCTL_PROC(_kern_sched, OID_AUTO, cpu_cost, CTLTYPE_STRING |
+    CTLFLAG_MPSAFE | CTLFLAG_RD, NULL, SCHED_TABLE_COST,
+    sysctl_kern_sched_cpu_table, "A",
+    "Per-CPU static placement cost in effect (load points, 256 per thread)");
+SYSCTL_PROC(_kern_sched, OID_AUTO, cpu_rank, CTLTYPE_STRING |
+    CTLFLAG_MPSAFE | CTLFLAG_RD, NULL, SCHED_TABLE_RANK,
+    sysctl_kern_sched_cpu_table, "A",
+    "Per-CPU stealing rank in effect (0=preferred 1=eff 2=LP)");
 SYSCTL_NODE(_kern_sched, OID_AUTO, mic, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
     "SCHED_MIC debugging knobs");
 SYSCTL_PROC(_kern_sched_mic, OID_AUTO, force_classes, CTLTYPE_STRING |
