@@ -43,6 +43,8 @@ module at boot time, place the following line in
 .Bd -literal -offset indent
 hfi_load="YES"
 .Ed
+.Pp
+The module cannot be unloaded once it has attached; see below.
 .Sh DESCRIPTION
 The
 .Nm
@@ -86,6 +88,13 @@ not enabled.
 The driver does not attach on processors without HFI, including virtual
 machines that do not expose it, or when the local APIC has no thermal
 interrupt slot.
+.Pp
+Once a table has been handed to the processor it is kept for the rest of
+the boot, because some processors keep using the pages after HFI has been
+disabled.
+The driver therefore cannot be detached and the module cannot be
+unloaded; both fail with
+.Er EBUSY .
 .Sh SYSCTL VARIABLES
 The following variables are available under
 .Va dev.hfi.0 :

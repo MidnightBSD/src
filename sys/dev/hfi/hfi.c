@@ -70,6 +70,19 @@
  *
  * Thread Director (per-thread classes, IA32_HW_FEEDBACK_CONFIG bit 1) is
  * deliberately left disabled: enabling it changes the table layout.
+ *
+ * Table lifetime
+ *
+ * Hardware tables are never freed.  Intel's reference driver notes that
+ * some processors keep writing to, or later return to, the table address
+ * they were first given even after HFI has been disabled or the pointer
+ * reprogrammed, so handing those pages back to the allocator could corrupt
+ * whatever gets them next.  The tables live in a file-scope cache keyed by
+ * package id for the rest of the boot: a failed and retried attach reuses
+ * the same pages for the same package, and detach is always refused, which
+ * also keeps the module from being unloaded (kldunload fails with EBUSY
+ * rather than detaching).  Shadows and mutexes
+ * are ordinary softc resources and are freed normally.
  */
 
 #include <sys/param.h>
@@ -110,6 +123,16 @@
 /* Largest table the 4-bit page count can describe. */
 #define	HFI_MAX_PAGES		16
 
+/* Hardware tables ever allocated; see "Table lifetime" above. */
+struct hfi_hwtable {
+	uint32_t	ht_id;		/* Package id. */
+	size_t		ht_size;
+	void		*ht_va;
+	vm_paddr_t	ht_pa;
+};
+static struct hfi_hwtable hfi_hwtables[MAXCPU];	/* Packages <= CPUs. */
+static int hfi_nhwtables;
+
 /*
  * IA32_PACKAGE_THERM_STATUS write mask used to acknowledge an HFI update.
  *
@@ -132,7 +155,7 @@ struct hfi_pkg {
 	struct hfi_softc *hp_sc;
 	uint32_t	hp_id;		/* Package id from CPUID. */
 	int		hp_leader;	/* CPU that programs the MSRs. */
-	void		*hp_table;	/* Hardware table (contigmalloc). */
+	void		*hp_table;	/* Hardware table, never freed. */
 	vm_paddr_t	hp_table_pa;
 	uint8_t		*hp_shadow;	/* Copy taken by the interrupt. */
 	struct mtx	hp_lock;	/* Spin; shadow and timestamp. */
@@ -555,8 +578,7 @@ hfi_free_pkgs(struct hfi_softc *sc)
 		return;
 	for (i = 0; i < sc->sc_npkgs; i++) {
 		pkg = &sc->sc_pkgs[i];
-		if (pkg->hp_table != NULL)
-			contigfree(pkg->hp_table, sc->sc_table_size, M_HFI);
+		/* hp_table stays in hfi_hwtables; see "Table lifetime". */
 		if (pkg->hp_shadow != NULL)
 			free(pkg->hp_shadow, M_HFI);
 		if (mtx_initialized(&pkg->hp_lock))
@@ -568,13 +590,43 @@ hfi_free_pkgs(struct hfi_softc *sc)
 }
 
 /*
- * Group the CPUs that reported a usable row by package id, allocate one
- * hardware table and shadow per package and pick the lowest-numbered CPU
- * of each as its leader.
+ * Return the hardware table for a package, allocating it on first use.
+ * Tables are page-aligned, zeroed and kept for the rest of the boot.
+ */
+static struct hfi_hwtable *
+hfi_hwtable_get(uint32_t id, size_t size)
+{
+	struct hfi_hwtable *ht;
+	int i;
+
+	for (i = 0; i < hfi_nhwtables; i++) {
+		ht = &hfi_hwtables[i];
+		if (ht->ht_id == id && ht->ht_size == size)
+			return (ht);
+	}
+	if (hfi_nhwtables >= nitems(hfi_hwtables))
+		return (NULL);
+	ht = &hfi_hwtables[hfi_nhwtables];
+	ht->ht_va = contigmalloc(size, M_HFI, M_WAITOK | M_ZERO, 0,
+	    ~(vm_paddr_t)0, PAGE_SIZE, 0);
+	if (ht->ht_va == NULL)
+		return (NULL);
+	ht->ht_id = id;
+	ht->ht_size = size;
+	ht->ht_pa = vtophys(ht->ht_va);
+	hfi_nhwtables++;
+	return (ht);
+}
+
+/*
+ * Group the CPUs that reported a usable row by package id, find or
+ * allocate one hardware table and allocate one shadow per package, and
+ * pick the lowest-numbered CPU of each as its leader.
  */
 static int
 hfi_alloc_pkgs(struct hfi_softc *sc)
 {
+	struct hfi_hwtable *ht;
 	struct hfi_pkg *pkg;
 	struct hfi_cpu *hc;
 	u_int cpu;
@@ -597,11 +649,11 @@ hfi_alloc_pkgs(struct hfi_softc *sc)
 			pkg->hp_id = hc->hc_pkgid;
 			pkg->hp_leader = cpu;
 			mtx_init(&pkg->hp_lock, "hfi table", NULL, MTX_SPIN);
-			pkg->hp_table = contigmalloc(sc->sc_table_size, M_HFI,
-			    M_WAITOK | M_ZERO, 0, ~(vm_paddr_t)0, PAGE_SIZE, 0);
-			if (pkg->hp_table == NULL)
+			ht = hfi_hwtable_get(hc->hc_pkgid, sc->sc_table_size);
+			if (ht == NULL)
 				return (ENOMEM);
-			pkg->hp_table_pa = vtophys(pkg->hp_table);
+			pkg->hp_table = ht->ht_va;
+			pkg->hp_table_pa = ht->ht_pa;
 			pkg->hp_shadow = malloc(sc->sc_table_size, M_HFI,
 			    M_WAITOK | M_ZERO);
 		}
@@ -856,24 +908,15 @@ hfi_attach(device_t dev)
 static int
 hfi_detach(device_t dev)
 {
-	struct hfi_softc *sc;
 
-	sc = device_get_softc(dev);
-	if (sc->sc_registered) {
-		cpucap_provider_unregister(&hfi_provider);
-		sc->sc_registered = false;
-	}
-	hfi_disable_all(sc);
-	if (sc->sc_thermal) {
-		/* No handler runs once this returns. */
-		lapic_disable_thermal();
-		sc->sc_thermal = false;
-	}
-	callout_drain(&sc->sc_callout);
-	taskqueue_drain(taskqueue_thread, &sc->sc_task);
-	hfi_sc = NULL;
-	hfi_free_pkgs(sc);
-	return (0);
+	/*
+	 * Once the processor has been given a table it may keep using the
+	 * pages, so the driver stays attached for the rest of the boot; this
+	 * also makes kldunload fail with EBUSY.  See "Table lifetime".
+	 */
+	device_printf(dev, "cannot detach: HFI table is in use by the "
+	    "processor\n");
+	return (EBUSY);
 }
 
 static int
