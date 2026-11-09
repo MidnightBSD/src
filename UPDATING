@@ -1,5 +1,14 @@
 Updating Information for MidnightBSD users.
 
+20261109:
+	amd64 GENERIC now uses the sched_mic(4) scheduler with hfi(4), and
+	Intel Thread Director (hw.hfi.itd) and score mode
+	(kern.sched.use_scores) are on by default.  On hybrid Intel CPUs,
+	threads are placed by their Thread Director class.  To opt out, set
+	hw.hfi.itd=0 or kern.sched.use_scores=0 in loader.conf, or build
+	sched_ule(4) with "nooptions SCHED_MIC" and "nodevice hfi" in a
+	kernel config that includes GENERIC.
+
 20261108:
 	timerfd(2) added: timerfd_create(2), timerfd_gettime(2) and
 	timerfd_settime(2) are new system calls (__MidnightBSD_version
