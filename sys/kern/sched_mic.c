@@ -331,6 +331,11 @@ static int __read_mostly sched_smt_busy_penalty = 192;	/* busy-sibling (pri 3). 
  * provider picks on X3D parts.  CPU_CLASS_LP is always last.
  */
 static int __read_mostly sched_prefer_compute = 1;
+/*
+ * Set once an administrator writes the sysctl; the layer's hint then stops
+ * overriding it.
+ */
+static bool sched_prefer_compute_set;
 static int __read_mostly sched_compute_class = CPU_CLASS_PERF;
 /*
  * kern.sched.use_scores: fold the dynamic perf/eff scores a cpucap(9)
@@ -483,8 +488,9 @@ sched_core_class_update(void)
  * lock held, after the boot-time classification and after every later
  * provider commit (an HFI driver updating scores, for example).  A static
  * change also carries the platform hints: which class holds the compute
- * cores and whether to prefer it, the latter only a default for
- * kern.sched.prefer_compute.
+ * cores and whether to prefer it.  The latter is only a default for
+ * kern.sched.prefer_compute and is not applied once an administrator has
+ * set that sysctl, so a provider that commits after boot cannot undo it.
  */
 static void
 sched_cpucap_update(void *arg __unused, int changed)
@@ -492,7 +498,8 @@ sched_cpucap_update(void *arg __unused, int changed)
 
 	if ((changed & CPUCAP_CHANGED_STATIC) != 0) {
 		sched_compute_class = cpucap_compute_class();
-		sched_prefer_compute = cpucap_prefer_compute() ? 1 : 0;
+		if (!sched_prefer_compute_set)
+			sched_prefer_compute = cpucap_prefer_compute() ? 1 : 0;
 	}
 	sched_core_class_update();
 }
@@ -3707,6 +3714,8 @@ sysctl_kern_sched_class_knob(SYSCTL_HANDLER_ARGS)
 	if (val < 0 || val > arg2)
 		return (EINVAL);
 	*(int *)arg1 = val;
+	if (arg1 == &sched_prefer_compute)
+		sched_prefer_compute_set = true;
 	sched_core_class_update();
 	return (0);
 }
