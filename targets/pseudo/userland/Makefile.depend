@@ -445,6 +445,7 @@ DIRDEPS+= \
 	usr.sbin/bluetooth/iwmbtfw \
 	usr.sbin/bluetooth/l2control \
 	usr.sbin/bluetooth/l2ping \
+	usr.sbin/bluetooth/mtkbtfw \
 	usr.sbin/bluetooth/rfcomm_pppd \
 	usr.sbin/bluetooth/sdpcontrol \
 	usr.sbin/bluetooth/sdpd \
