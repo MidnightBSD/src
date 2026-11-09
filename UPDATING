@@ -7,6 +7,11 @@ Updating Information for MidnightBSD users.
 	and reboot before running installworld.  The Linux emulation layer
 	now uses the native implementation.
 
+	libc++: older ObsoleteFiles.inc listed usr/include/c++/v1/__fwd/get.h,
+	which LLVM 21 installs again, so "make delete-old" removed it and
+	<ranges> fails with "'__fwd/get.h' file not found".  Run installworld
+	from a tree with 5f2e3949f4 or later before running delete-old again.
+
 20261107:
 	device-tree files updated to Linux 5.10 (arm, arm64 and riscv kernels only)
 
