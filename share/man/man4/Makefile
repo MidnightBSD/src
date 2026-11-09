@@ -208,6 +208,7 @@ MAN=	aac.4 \
 	${_hv_utils.4} \
 	${_hv_vmbus.4} \
 	${_hv_vss.4} \
+	${_hfi.4} \
 	hwpmc.4 \
 	${_hwpstate_intel.4} \
 	iavf.4 \
@@ -832,6 +833,7 @@ _coretemp.4=	coretemp.4
 _cpuctl.4=	cpuctl.4
 _dpms.4=	dpms.4
 _ftwd.4=	ftwd.4
+_hfi.4=		hfi.4
 _hpt27xx.4=	hpt27xx.4
 _hptiop.4=	hptiop.4
 _hptmv.4=	hptmv.4

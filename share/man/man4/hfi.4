@@ -1,0 +1,149 @@
+.\" Copyright (c) 2026 Lucas Holt
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHORS AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHORS OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.Dd November 8, 2026
+.Dt HFI 4
+.Os
+.Sh NAME
+.Nm hfi
+.Nd Intel Hardware Feedback Interface driver
+.Sh SYNOPSIS
+To compile this driver into the kernel,
+place the following lines in your
+kernel configuration file:
+.Bd -ragged -offset indent
+.Cd "options SCHED_MIC"
+.Cd "device hfi"
+.Ed
+.Pp
+Alternatively, to load the driver as a
+module at boot time, place the following line in
+.Xr loader.conf 5 :
+.Bd -literal -offset indent
+hfi_load="YES"
+.Ed
+.Sh DESCRIPTION
+The
+.Nm
+driver supports the Hardware Feedback Interface
+.Pq HFI
+found on Intel hybrid processors beginning with the 12th generation Core
+.Pq Alder Lake .
+The processor writes a table of per-core performance and energy-efficiency
+capabilities into memory the driver provides, one table per physical
+package, and raises the local APIC thermal interrupt whenever power or
+thermal conditions change the table.
+Each capability is a number from 0 to 255; 0 means the processor
+recommends that nothing be scheduled on that core.
+.Pp
+The driver publishes the capabilities as dynamic scores through the
+.Xr cpucap 9
+layer, where the
+.Xr sched_mic 4
+scheduler can read them.
+It therefore requires a kernel built with
+.Cd "options SCHED_MIC" ,
+and the module refuses to load on other kernels.
+.Pp
+One
+.Nm
+device attaches below
+.Pa cpu0
+and manages every package.
+It reads each CPU's row index from
+.Dv CPUID.06H:EDX[31:16]
+on that CPU, since SMT siblings and the cores of an E-core module share a
+row and the index cannot be derived from the CPU number.
+Table updates are copied by the interrupt handler and published from a
+taskqueue after a short delay, so a burst of updates costs one
+.Xr cpucap 9
+commit.
+The tables are re-programmed on resume.
+Intel Thread Director, the per-thread classification extension of HFI, is
+not enabled.
+.Pp
+The driver does not attach on processors without HFI, including virtual
+machines that do not expose it, or when the local APIC has no thermal
+interrupt slot.
+.Sh SYSCTL VARIABLES
+The following variables are available under
+.Va dev.hfi.0 :
+.Bl -tag -width "pkg.N.perf_changed" -offset indent
+.It Va enabled
+Whether the tables are programmed into the processor.
+.It Va table_pages , capabilities , rows , packages
+The geometry reported by CPUID: table size in 4 KB pages, capability
+columns per row, rows the table can hold, and packages with a table.
+.It Va commits
+Score batches committed to
+.Xr cpucap 9 .
+.It Va delay_ms
+Delay between a table update and its publication, in milliseconds
+.Pq default 100 .
+Also settable as a loader tunable.
+.It Va summary
+One line of
+.Dq cpuN:row:perf/eff
+for every CPU with a row.
+.It Va cpu.N.edx , index , pkg , perf , eff
+Per-CPU: the raw
+.Dv CPUID.06H:EDX
+value, the row index, the package node and the last performance and
+efficiency capabilities read for that row.
+An index of -1 means the CPU reported no usable row and keeps the default
+score.
+.It Va pkg.N.id , leader , timestamp , interrupts , updates
+Per-package: the CPUID package id, the CPU that programs its MSRs, the
+timestamp of the last table update, thermal interrupts seen and table
+updates copied.
+.It Va pkg.N.perf_changed , ee_changed
+The change indications from the table header after the last update.
+.El
+.Pp
+.Va interrupts
+and
+.Va updates
+rising while the system is loaded show the processor really updates the
+table; some processors write it only once, at boot.
+.Sh SEE ALSO
+.Xr coretemp 4 ,
+.Xr sched_mic 4 ,
+.Xr cpucap 9
+.Rs
+.%A Intel Corporation
+.%B Intel 64 and IA-32 Architectures Software Developer's Manual
+.%V Volume 3
+.%T Hardware Feedback Interface
+.Re
+.Sh HISTORY
+The
+.Nm
+driver first appeared in
+.Mx 4.2 .
+.Sh AUTHORS
+.An Lucas Holt Aq Mt luke@foolishgames.com .
+The table handling follows Intel's reference HFI driver.
+.Sh BUGS
+CPU hotplug is not supported.
+Thread Director classes are not used.
