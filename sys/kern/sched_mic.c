@@ -344,6 +344,7 @@ static int __read_mostly sched_compute_class = CPU_CLASS_PERF;
  * sched_score_cost().
  */
 static int __read_mostly sched_use_scores = 0;
+TUNABLE_INT("kern.sched.use_scores", &sched_use_scores);
 
 /*
  * Per-CPU core class, capacity and scores come from the cpucap(9) layer
