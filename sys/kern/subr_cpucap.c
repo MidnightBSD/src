@@ -72,30 +72,47 @@ static uint8_t	cpucap_cls[MAXCPU] = {
 static uint16_t	cpucap_cap[MAXCPU] = {
 	[0 ... MAXCPU - 1] = CPUCAP_CAPACITY_DEFAULT
 };
-static uint8_t	cpucap_perf_score[MAXCPU] = {
-	[0 ... MAXCPU - 1] = CPUCAP_SCORE_DEFAULT
+/*
+ * Scores, one row per thread class (see CPUCAP_MAX_CLASSES in <sys/cpucap.h>);
+ * row 0 holds the plain scores.
+ */
+#define	CPUCAP_SCORE_ROW	{ [0 ... MAXCPU - 1] = CPUCAP_SCORE_DEFAULT }
+static uint8_t	cpucap_perf_score[CPUCAP_MAX_CLASSES][MAXCPU] = {
+	[0 ... CPUCAP_MAX_CLASSES - 1] = CPUCAP_SCORE_ROW
 };
-static uint8_t	cpucap_eff_score[MAXCPU] = {
-	[0 ... MAXCPU - 1] = CPUCAP_SCORE_DEFAULT
+static uint8_t	cpucap_eff_score[CPUCAP_MAX_CLASSES][MAXCPU] = {
+	[0 ... CPUCAP_MAX_CLASSES - 1] = CPUCAP_SCORE_ROW
 };
 /*
  * Scores as the dynamic provider last supplied them.  The tables above hold
  * what readers see: the provider's value, or the forced value for CPUs
- * covered by kern.cpucap.force_scores, so clearing a forced score brings
- * the provider's value back.
+ * covered by kern.cpucap.force_scores (class 0) or
+ * kern.cpucap.force_class_scores (other classes), so clearing a forced
+ * score brings the provider's value back.
  */
-static uint8_t	cpucap_perf_prov[MAXCPU] = {
-	[0 ... MAXCPU - 1] = CPUCAP_SCORE_DEFAULT
+static uint8_t	cpucap_perf_prov[CPUCAP_MAX_CLASSES][MAXCPU] = {
+	[0 ... CPUCAP_MAX_CLASSES - 1] = CPUCAP_SCORE_ROW
 };
-static uint8_t	cpucap_eff_prov[MAXCPU] = {
-	[0 ... MAXCPU - 1] = CPUCAP_SCORE_DEFAULT
+static uint8_t	cpucap_eff_prov[CPUCAP_MAX_CLASSES][MAXCPU] = {
+	[0 ... CPUCAP_MAX_CLASSES - 1] = CPUCAP_SCORE_ROW
 };
+/*
+ * Classes published: what readers see (the larger of the provider's count
+ * and the highest forced class plus one) and the provider's own count.
+ * Both are at least 1 and at most CPUCAP_MAX_CLASSES.
+ */
+static u_int	cpucap_ncls = 1;
+static u_int	cpucap_ncls_prov = 1;
 /* Class forced by the tunable below for CPUs 0..N-1; 0 means not forced. */
 static uint8_t	cpucap_forced[MAXCPU];
-/* Scores forced by kern.cpucap.force_scores for CPUs 0..N-1. */
-static uint8_t	cpucap_forced_perf[MAXCPU];
-static uint8_t	cpucap_forced_eff[MAXCPU];
-static int	cpucap_nforced_scores;	/* N above; 0 means none forced. */
+/*
+ * Scores forced by kern.cpucap.force_scores (row 0) and
+ * kern.cpucap.force_class_scores (rows 1..) for CPUs 0..N-1 of each class.
+ */
+static uint8_t	cpucap_forced_perf[CPUCAP_MAX_CLASSES][MAXCPU];
+static uint8_t	cpucap_forced_eff[CPUCAP_MAX_CLASSES][MAXCPU];
+/* N above per class; 0 means none forced. */
+static int	cpucap_nforced_scores[CPUCAP_MAX_CLASSES];
 
 static struct mtx cpucap_lock;
 MTX_SYSINIT(cpucap_lock, &cpucap_lock, "cpucap", MTX_DEF);
@@ -154,6 +171,26 @@ static uint8_t	cpucap_force_scores_perf[MAXCPU];
 static uint8_t	cpucap_force_scores_eff[MAXCPU];
 static struct sx cpucap_force_sx;
 SX_SYSINIT(cpucap_force_sx, &cpucap_force_sx, "cpucap force");
+
+/*
+ * kern.cpucap.force_class_scores="c:p/e,p/e,...;c:..." (loader tunable
+ * and sysctl, debugging aid): the same for the per-class scores of classes
+ * 1..CPUCAP_MAX_CLASSES-1, so a scheduler's per-class placement can be
+ * exercised where no Thread Director exists.  Each ';'-separated segment
+ * names a class and a perf/eff list in the kern.cpucap.force_scores
+ * format; class 0 is refused (use force_scores).  While a class is forced
+ * cpucap_nclasses() covers it.  A write is received in the _new buffer,
+ * parsed from a scratch copy that the parser NUL-terminates in place, and
+ * only copied over the live string once it parsed; all three buffers and
+ * the staging arrays are protected by cpucap_force_sx.
+ */
+#define	CPUCAP_FORCE_CLASS_SCORES_LEN	4096
+static char cpucap_force_class_scores[CPUCAP_FORCE_CLASS_SCORES_LEN];
+static char cpucap_force_class_scores_new[CPUCAP_FORCE_CLASS_SCORES_LEN];
+static char cpucap_force_class_scores_buf[CPUCAP_FORCE_CLASS_SCORES_LEN];
+static uint8_t	cpucap_force_class_perf[CPUCAP_MAX_CLASSES][MAXCPU];
+static uint8_t	cpucap_force_class_eff[CPUCAP_MAX_CLASSES][MAXCPU];
+static int	cpucap_force_class_n[CPUCAP_MAX_CLASSES];
 
 static void	cpucap_notify(void *arg, int pending);
 
@@ -215,7 +252,7 @@ cpucap_perf(int cpu)
 
 	if (!cpucap_cpu_valid(cpu))
 		return (CPUCAP_SCORE_DEFAULT);
-	return (atomic_load_8(&cpucap_perf_score[cpu]));
+	return (atomic_load_8(&cpucap_perf_score[0][cpu]));
 }
 
 uint8_t
@@ -224,7 +261,44 @@ cpucap_eff(int cpu)
 
 	if (!cpucap_cpu_valid(cpu))
 		return (CPUCAP_SCORE_DEFAULT);
-	return (atomic_load_8(&cpucap_eff_score[cpu]));
+	return (atomic_load_8(&cpucap_eff_score[0][cpu]));
+}
+
+u_int
+cpucap_nclasses(void)
+{
+
+	return (atomic_load_int(&cpucap_ncls));
+}
+
+/* A class at or beyond the published count reads as class 0. */
+static u_int
+cpucap_class_index(u_int cls)
+{
+
+	if (cls >= CPUCAP_MAX_CLASSES || cls >= cpucap_nclasses())
+		return (0);
+	return (cls);
+}
+
+uint8_t
+cpucap_class_perf(int cpu, u_int cls)
+{
+
+	if (!cpucap_cpu_valid(cpu))
+		return (CPUCAP_SCORE_DEFAULT);
+	cls = cpucap_class_index(cls);
+	return (atomic_load_8(&cpucap_perf_score[cls][cpu]));
+}
+
+uint8_t
+cpucap_class_eff(int cpu, u_int cls)
+{
+
+	if (!cpucap_cpu_valid(cpu))
+		return (CPUCAP_SCORE_DEFAULT);
+	cls = cpucap_class_index(cls);
+	return (atomic_load_8(&cpucap_eff_score[cls][cpu]));
 }
 
 uint8_t
@@ -298,22 +372,54 @@ cpucap_set_capacity(int cpu, uint16_t capacity)
 }
 
 void
-cpucap_set_scores(int cpu, uint8_t perf, uint8_t eff)
+cpucap_set_class_scores(int cpu, u_int cls, uint8_t perf, uint8_t eff)
 {
 
-	if (!cpucap_cpu_valid(cpu))
+	if (!cpucap_cpu_valid(cpu) || cls >= CPUCAP_MAX_CLASSES)
 		return;
 	/*
 	 * Providers write without the lock, so an update that races a
 	 * kern.cpucap.force_scores write clearing this CPU's override may
 	 * be published only by the provider's next commit.
 	 */
-	cpucap_perf_prov[cpu] = perf;
-	cpucap_eff_prov[cpu] = eff;
-	if (cpu < cpucap_nforced_scores)
+	cpucap_perf_prov[cls][cpu] = perf;
+	cpucap_eff_prov[cls][cpu] = eff;
+	if (cpu < cpucap_nforced_scores[cls])
 		return;		/* Readers see the forced score. */
-	atomic_store_8(&cpucap_perf_score[cpu], perf);
-	atomic_store_8(&cpucap_eff_score[cpu], eff);
+	atomic_store_8(&cpucap_perf_score[cls][cpu], perf);
+	atomic_store_8(&cpucap_eff_score[cls][cpu], eff);
+	atomic_set_int(&cpucap_pending, CPUCAP_CHANGED_SCORES);
+}
+
+void
+cpucap_set_scores(int cpu, uint8_t perf, uint8_t eff)
+{
+
+	cpucap_set_class_scores(cpu, 0, perf, eff);
+}
+
+/* Highest class with a forced score, plus one; at least 1. */
+static u_int
+cpucap_forced_nclasses(void)
+{
+	u_int cls, n;
+
+	n = 1;
+	for (cls = 1; cls < CPUCAP_MAX_CLASSES; cls++)
+		if (cpucap_nforced_scores[cls] > 0)
+			n = cls + 1;
+	return (n);
+}
+
+void
+cpucap_set_nclasses(u_int nclasses)
+{
+
+	if (nclasses < 1 || nclasses > CPUCAP_MAX_CLASSES)
+		return;
+	cpucap_ncls_prov = nclasses;
+	atomic_store_int(&cpucap_ncls, MAX(nclasses,
+	    cpucap_forced_nclasses()));
 	atomic_set_int(&cpucap_pending, CPUCAP_CHANGED_SCORES);
 }
 
@@ -407,40 +513,51 @@ cpucap_reset_static(void)
 	atomic_set_int(&cpucap_pending, CPUCAP_CHANGED_STATIC);
 }
 
-/* Publish every CPU's score: the forced one if any, else the provider's. */
+/*
+ * Publish every CPU's score in every class: the forced one if any, else
+ * the provider's.
+ */
 static void
 cpucap_publish_scores(void)
 {
+	u_int cls;
 	int cpu;
 
 	mtx_assert(&cpucap_lock, MA_OWNED);
-	for (cpu = 0; cpu < MAXCPU; cpu++) {
-		if (cpu < cpucap_nforced_scores) {
-			atomic_store_8(&cpucap_perf_score[cpu],
-			    cpucap_forced_perf[cpu]);
-			atomic_store_8(&cpucap_eff_score[cpu],
-			    cpucap_forced_eff[cpu]);
-		} else {
-			atomic_store_8(&cpucap_perf_score[cpu],
-			    cpucap_perf_prov[cpu]);
-			atomic_store_8(&cpucap_eff_score[cpu],
-			    cpucap_eff_prov[cpu]);
+	for (cls = 0; cls < CPUCAP_MAX_CLASSES; cls++) {
+		for (cpu = 0; cpu < MAXCPU; cpu++) {
+			if (cpu < cpucap_nforced_scores[cls]) {
+				atomic_store_8(&cpucap_perf_score[cls][cpu],
+				    cpucap_forced_perf[cls][cpu]);
+				atomic_store_8(&cpucap_eff_score[cls][cpu],
+				    cpucap_forced_eff[cls][cpu]);
+			} else {
+				atomic_store_8(&cpucap_perf_score[cls][cpu],
+				    cpucap_perf_prov[cls][cpu]);
+				atomic_store_8(&cpucap_eff_score[cls][cpu],
+				    cpucap_eff_prov[cls][cpu]);
+			}
 		}
 	}
+	atomic_store_int(&cpucap_ncls, MAX(cpucap_ncls_prov,
+	    cpucap_forced_nclasses()));
 	atomic_store_8(&cpucap_scores_valid, cpucap_dynamic_active != NULL ||
-	    cpucap_nforced_scores > 0 ? 1 : 0);
+	    cpucap_nforced_scores[0] > 0 ? 1 : 0);
 	atomic_set_int(&cpucap_pending, CPUCAP_CHANGED_SCORES);
 }
 
 static void
 cpucap_reset_scores(void)
 {
+	u_int cls;
 	int cpu;
 
-	for (cpu = 0; cpu < MAXCPU; cpu++) {
-		cpucap_perf_prov[cpu] = CPUCAP_SCORE_DEFAULT;
-		cpucap_eff_prov[cpu] = CPUCAP_SCORE_DEFAULT;
-	}
+	for (cls = 0; cls < CPUCAP_MAX_CLASSES; cls++)
+		for (cpu = 0; cpu < MAXCPU; cpu++) {
+			cpucap_perf_prov[cls][cpu] = CPUCAP_SCORE_DEFAULT;
+			cpucap_eff_prov[cls][cpu] = CPUCAP_SCORE_DEFAULT;
+		}
+	cpucap_ncls_prov = 1;
 	cpucap_publish_scores();
 }
 
@@ -673,19 +790,80 @@ bad:
 	return (-1);
 }
 
-/* Install parsed forced scores and republish; the caller commits. */
+/*
+ * Install parsed forced scores for one class; the caller republishes and
+ * commits.
+ */
 static void
-cpucap_force_scores_apply(const uint8_t *perf, const uint8_t *eff, int n)
+cpucap_force_scores_install(u_int cls, const uint8_t *perf,
+    const uint8_t *eff, int n)
 {
 	int cpu;
 
 	mtx_assert(&cpucap_lock, MA_OWNED);
+	KASSERT(cls < CPUCAP_MAX_CLASSES, ("cpucap: forced class %u", cls));
 	KASSERT(n >= 0 && n <= MAXCPU, ("cpucap: %d forced scores", n));
 	for (cpu = 0; cpu < n; cpu++) {
-		cpucap_forced_perf[cpu] = perf[cpu];
-		cpucap_forced_eff[cpu] = eff[cpu];
+		cpucap_forced_perf[cls][cpu] = perf[cpu];
+		cpucap_forced_eff[cls][cpu] = eff[cpu];
 	}
-	cpucap_nforced_scores = n;
+	cpucap_nforced_scores[cls] = n;
+}
+
+/* Install parsed class-0 forced scores and republish; the caller commits. */
+static void
+cpucap_force_scores_apply(const uint8_t *perf, const uint8_t *eff, int n)
+{
+
+	cpucap_force_scores_install(0, perf, eff, n);
+	cpucap_publish_scores();
+}
+
+/*
+ * Parse kern.cpucap.force_class_scores into the staging arrays (str is
+ * the writable staging buffer; segments are NUL-terminated in place).
+ * Returns 0, or -1 after a console message if malformed.
+ */
+static int
+cpucap_force_class_scores_parse(char *str)
+{
+	char *end, *seg, *next;
+	long cls;
+	int n;
+
+	memset(cpucap_force_class_n, 0, sizeof(cpucap_force_class_n));
+	for (seg = str; seg != NULL && *seg != '\0'; seg = next) {
+		next = strchr(seg, ';');
+		if (next != NULL)
+			*next++ = '\0';
+		cls = strtol(seg, &end, 10);
+		if (end == seg || *end != ':' || cls < 1 ||
+		    cls >= CPUCAP_MAX_CLASSES)
+			goto bad;
+		n = cpucap_force_scores_parse(end + 1,
+		    cpucap_force_class_perf[cls], cpucap_force_class_eff[cls]);
+		if (n < 0)
+			return (-1);	/* Already reported. */
+		cpucap_force_class_n[cls] = n;
+	}
+	return (0);
+bad:
+	printf("cpucap: ignoring malformed kern.cpucap.force_class_scores "
+	    "(expected \"class:perf/eff,...;class:...\" with class 1-%d)\n",
+	    CPUCAP_MAX_CLASSES - 1);
+	return (-1);
+}
+
+/* Install every class from the staging arrays and republish. */
+static void
+cpucap_force_class_scores_apply(void)
+{
+	u_int cls;
+
+	mtx_assert(&cpucap_lock, MA_OWNED);
+	for (cls = 1; cls < CPUCAP_MAX_CLASSES; cls++)
+		cpucap_force_scores_install(cls, cpucap_force_class_perf[cls],
+		    cpucap_force_class_eff[cls], cpucap_force_class_n[cls]);
 	cpucap_publish_scores();
 }
 
@@ -708,6 +886,15 @@ cpucap_init(void *arg __unused)
 		cpucap_force_scores[0] = '\0';
 		n = 0;
 	}
+	TUNABLE_STR_FETCH("kern.cpucap.force_class_scores",
+	    cpucap_force_class_scores, sizeof(cpucap_force_class_scores));
+	strlcpy(cpucap_force_class_scores_buf, cpucap_force_class_scores,
+	    sizeof(cpucap_force_class_scores_buf));
+	if (cpucap_force_class_scores_parse(cpucap_force_class_scores_buf)
+	    != 0) {
+		cpucap_force_class_scores[0] = '\0';
+		memset(cpucap_force_class_n, 0, sizeof(cpucap_force_class_n));
+	}
 	mtx_lock(&cpucap_lock);
 	cpucap_force_classes_parse();
 	cpucap_reset_static();
@@ -716,6 +903,11 @@ cpucap_init(void *arg __unused)
 		    cpucap_force_scores_eff, n);
 		printf("cpucap: scores of %d CPU%s forced by "
 		    "kern.cpucap.force_scores\n", n, n == 1 ? "" : "s");
+	}
+	if (cpucap_force_class_scores[0] != '\0') {
+		cpucap_force_class_scores_apply();
+		printf("cpucap: per-class scores forced by "
+		    "kern.cpucap.force_class_scores\n");
 	}
 	cpucap_select(CPUCAP_PROVIDER_STATIC);
 	cpucap_select(CPUCAP_PROVIDER_DYNAMIC);
@@ -789,6 +981,73 @@ SYSCTL_PROC(_kern_cpucap, OID_AUTO, force_scores, CTLTYPE_STRING |
     sysctl_cpucap_force_scores, "A",
     "Debug override of per-CPU perf/eff scores, e.g. \"60/92,34/100\" "
     "(each 0-255), applied to CPUs 0..N-1 in order; \"\" clears it");
+
+static int
+sysctl_cpucap_force_class_scores(SYSCTL_HANDLER_ARGS)
+{
+	int error;
+
+	sx_xlock(&cpucap_force_sx);
+	strlcpy(cpucap_force_class_scores_new, cpucap_force_class_scores,
+	    sizeof(cpucap_force_class_scores_new));
+	error = sysctl_handle_string(oidp, cpucap_force_class_scores_new,
+	    sizeof(cpucap_force_class_scores_new), req);
+	if (error != 0 || req->newptr == NULL)
+		goto out;
+	/* The parser NUL-terminates segments in place, so parse a copy. */
+	strlcpy(cpucap_force_class_scores_buf, cpucap_force_class_scores_new,
+	    sizeof(cpucap_force_class_scores_buf));
+	if (cpucap_force_class_scores_parse(cpucap_force_class_scores_buf)
+	    != 0) {
+		error = EINVAL;
+		goto out;
+	}
+	mtx_lock(&cpucap_lock);
+	cpucap_force_class_scores_apply();
+	strlcpy(cpucap_force_class_scores, cpucap_force_class_scores_new,
+	    sizeof(cpucap_force_class_scores));
+	cpucap_commit_locked();
+	mtx_unlock(&cpucap_lock);
+out:
+	sx_xunlock(&cpucap_force_sx);
+	return (error);
+}
+SYSCTL_PROC(_kern_cpucap, OID_AUTO, force_class_scores, CTLTYPE_STRING |
+    CTLFLAG_RWTUN | CTLFLAG_NOFETCH | CTLFLAG_MPSAFE, NULL, 0,
+    sysctl_cpucap_force_class_scores, "A",
+    "Debug override of per-class perf/eff scores, e.g. "
+    "\"1:60/92,34/100;3:10/10\", applied to CPUs 0..N-1 of each class; "
+    "\"\" clears it");
+
+SYSCTL_UINT(_kern_cpucap, OID_AUTO, classes, CTLFLAG_RD, &cpucap_ncls, 0,
+    "Thread classes with scores (1 = class 0 only)");
+
+/* Every class's perf/eff for every present CPU: "cpu:p/e,p/e,...". */
+static int
+sysctl_cpucap_class_scores(SYSCTL_HANDLER_ARGS)
+{
+	struct sbuf *sb;
+	u_int cls, n;
+	int cpu, error;
+
+	sb = sbuf_new_for_sysctl(NULL, NULL, 128, req);
+	if (sb == NULL)
+		return (ENOMEM);
+	n = cpucap_nclasses();
+	CPU_FOREACH(cpu) {
+		sbuf_printf(sb, "%s%d:", cpu == 0 ? "" : " ", cpu);
+		for (cls = 0; cls < n && cls < CPUCAP_MAX_CLASSES; cls++)
+			sbuf_printf(sb, "%s%u/%u", cls == 0 ? "" : ",",
+			    cpucap_class_perf(cpu, cls),
+			    cpucap_class_eff(cpu, cls));
+	}
+	error = sbuf_finish(sb);
+	sbuf_delete(sb);
+	return (error);
+}
+SYSCTL_PROC(_kern_cpucap, OID_AUTO, class_scores, CTLTYPE_STRING |
+    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, 0, sysctl_cpucap_class_scores, "A",
+    "Per-CPU perf/eff score of every thread class, class 0 first");
 
 #define	CPUCAP_FIELD_CLASS	0
 #define	CPUCAP_FIELD_CAPACITY	1

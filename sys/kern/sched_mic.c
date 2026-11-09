@@ -76,8 +76,10 @@
 #include <sys/turnstile.h>
 #include <sys/umtxvar.h>
 #include <sys/vmmeter.h>
+#include <sys/counter.h>
 #include <sys/cpucap.h>
 #include <sys/cpuset.h>
+#include <sys/malloc.h>
 #include <sys/sbuf.h>
 
 #ifdef HWPMC_HOOKS
@@ -93,6 +95,12 @@ dtrace_vtime_switch_func_t	dtrace_vtime_switch_func;
 #include <machine/cpu.h>
 #include <machine/smp.h>
 
+#if defined(__amd64__) || defined(__i386__)
+/* Intel Thread Director: per-thread classes and HRESET, see x86/itd.h. */
+#include <x86/itd.h>
+#define	SCHED_ITD
+#endif
+
 #define	KTR_ULE	0
 
 #define	TS_NAME_LEN (MAXCOMLEN + sizeof(" td ") + sizeof(__XSTRING(UINT_MAX)))
@@ -106,6 +114,7 @@ dtrace_vtime_switch_func_t	dtrace_vtime_switch_func;
 struct td_sched {	
 	struct runq	*ts_runq;	/* Run-queue we're queued on. */
 	short		ts_flags;	/* TSF_* flags. */
+	uint8_t		ts_itdclass;	/* Thread Director class, 0 default. */
 	int		ts_cpu;		/* CPU that we have affinity for. */
 	int		ts_rltick;	/* Real last tick, for affinity. */
 	int		ts_slice;	/* Ticks of slice remaining. */
@@ -345,6 +354,36 @@ static int __read_mostly sched_compute_class = CPU_CLASS_PERF;
  */
 static int __read_mostly sched_use_scores = 0;
 TUNABLE_INT("kern.sched.use_scores", &sched_use_scores);
+/*
+ * Intel Thread Director (per-thread classes).  The hardware side is
+ * enabled by hfi(4) when hw.hfi.itd is set (off by default); with it on and
+ * kern.sched.itd set (the default), sched_clock() reads the running
+ * thread's class from IA32_THREAD_FEEDBACK_CHAR once per statclock tick
+ * and the placement path indexes the per-class cost rows with it.  The
+ * class is read on the tick rather than on every switch because an rdmsr
+ * costs tens to a hundred cycles against a switch of a microsecond or so
+ * and a thread that never runs a full tick has no history worth reading;
+ * the tick is at most stathz reads per CPU per second.  HRESET at the
+ * switch is unconditional once the hardware is on (one load and branch
+ * when it is not) so one thread's history never colours the next.
+ *
+ * sched_itd_mode is derived in sched_core_class_update(): off, hardware,
+ * or the kern.sched.mic.itd_force_class test override, which assigns
+ * every thread a fixed class or, with CPUCAP_MAX_CLASSES, one derived from
+ * its thread id, so the per-class rows can be exercised without hardware.
+ */
+static int __read_mostly sched_use_itd = 1;
+static int __read_mostly sched_itd_force_class = -1;
+#define	SCHED_ITD_OFF		0
+#define	SCHED_ITD_HW		1
+#define	SCHED_ITD_FORCED	2
+static int __read_mostly sched_itd_mode = SCHED_ITD_OFF;
+/* Classes with a cost row of their own; 1 means row 0 only. */
+static u_int __read_mostly sched_itd_nclasses = 1;
+static counter_u64_t sched_itd_reads;	/* Class reads attempted. */
+static counter_u64_t sched_itd_invalid;	/* Reads with no valid class. */
+static counter_u64_t sched_itd_changes;	/* Reads that changed a class. */
+static counter_u64_t sched_itd_hist[CPUCAP_MAX_CLASSES]; /* Reads by class. */
 
 /*
  * Per-CPU core class, capacity and scores come from the cpucap(9) layer
@@ -366,7 +405,14 @@ TUNABLE_INT("kern.sched.use_scores", &sched_use_scores);
  * a CPU, never a torn one; a momentarily mixed table only yields a
  * momentarily mixed placement bias.
  */
-static uint16_t __read_mostly sched_cpu_cost[MAXCPU];	/* Static cost. */
+/*
+ * Static cost, one row per thread class.  Row 0 is the plain cost every
+ * thread without a class (and every thread when Thread Director is off)
+ * is placed with; rows 1.. are derived from the per-class scores a
+ * classifying provider publishes and are copies of row 0 whenever no such
+ * class exists, so any index below CPUCAP_MAX_CLASSES is safe and sensible.
+ */
+static uint16_t __read_mostly sched_cpu_cost[CPUCAP_MAX_CLASSES][MAXCPU];
 static uint8_t __read_mostly sched_cpu_rank[MAXCPU];	/* 0 = preferred. */
 #define	SCHED_RANK_EFF	1
 #define	SCHED_RANK_LP	2
@@ -465,7 +511,7 @@ sched_class_jitter_update(bool scores)
 	for (c = 0; c < MAXCPU; c++) {
 		if (CPU_ABSENT(c))
 			continue;
-		d = sched_cpu_cost[c];
+		d = sched_cpu_cost[0][c];
 		for (i = 0; i < ncosts; i++)
 			if (costs[i] == d)
 				break;
@@ -493,6 +539,69 @@ sched_class_jitter_update(bool scores)
 				gap = d;
 		}
 	sched_class_jitter = gap;	/* 1 <= gap <= 128 */
+}
+
+/*
+ * Per-class cost rows 1..CPUCAP_MAX_CLASSES-1.  In score mode with a
+ * classifying provider each published class gets the same derivation as
+ * row 0 from its own scores (its own best score as the reference, the LP
+ * floor, the clamp); every other row is a copy of row 0.  The stealing
+ * ranks and the jitter modulus stay those of row 0: stealing is
+ * class-blind and the rows differ by small amounts.  Also settles
+ * sched_itd_mode from the knobs and the hardware state.
+ */
+static void
+sched_itd_class_update(bool scores, bool use_eff)
+{
+	u_int cls, ncls;
+	int c, cost, max, score;
+	bool hw;
+
+	ncls = cpucap_nclasses();
+	if (ncls > CPUCAP_MAX_CLASSES)
+		ncls = CPUCAP_MAX_CLASSES;
+	if (!scores)
+		ncls = 1;
+	for (cls = 1; cls < CPUCAP_MAX_CLASSES; cls++) {
+		max = 0;
+		if (cls < ncls) {
+			for (c = 0; c < MAXCPU; c++) {
+				if (CPU_ABSENT(c))
+					continue;
+				score = use_eff ? cpucap_class_eff(c, cls) :
+				    cpucap_class_perf(c, cls);
+				if (score > max)
+					max = score;
+			}
+		}
+		for (c = 0; c < MAXCPU; c++) {
+			if (max == 0) {
+				cost = sched_cpu_cost[0][c];
+			} else {
+				score = use_eff ? cpucap_class_eff(c, cls) :
+				    cpucap_class_perf(c, cls);
+				cost = sched_score_cost(score, max);
+				if (cpucap_class(c) == CPU_CLASS_LP &&
+				    cost < sched_class_weight_lp)
+					cost = sched_class_weight_lp;
+				if (cost > SCHED_CLASS_WEIGHT_MAX)
+					cost = SCHED_CLASS_WEIGHT_MAX;
+			}
+			atomic_store_16(&sched_cpu_cost[cls][c], cost);
+		}
+	}
+	sched_itd_nclasses = ncls;
+	hw = false;
+#ifdef SCHED_ITD
+	hw = sched_use_itd != 0 && itd_nclasses > 1 && ncls > 1;
+#endif
+	if (sched_itd_force_class >= 0 &&
+	    sched_itd_force_class <= CPUCAP_MAX_CLASSES)
+		sched_itd_mode = SCHED_ITD_FORCED;
+	else if (hw)
+		sched_itd_mode = SCHED_ITD_HW;
+	else
+		sched_itd_mode = SCHED_ITD_OFF;
 }
 
 /*
@@ -560,7 +669,7 @@ sched_core_class_update(void)
 			cost = 0;
 		else if (cost > SCHED_CLASS_WEIGHT_MAX)
 			cost = SCHED_CLASS_WEIGHT_MAX;
-		atomic_store_16(&sched_cpu_cost[c], cost);
+		atomic_store_16(&sched_cpu_cost[0][c], cost);
 		atomic_store_8(&sched_cpu_rank[c], rank);
 		if (rank != 0 && !CPU_ABSENT(c))
 			hybrid = true;
@@ -568,6 +677,7 @@ sched_core_class_update(void)
 	sched_hybrid = hybrid;
 	sched_scores_active = scores ? 1 : 0;
 	sched_class_jitter_update(scores);
+	sched_itd_class_update(scores, use_eff);
 }
 
 /*
@@ -603,7 +713,13 @@ static struct cpucap_consumer sched_cpucap_consumer = {
 static void
 sched_core_class_init(void *dummy __unused)
 {
+	u_int cls;
 
+	sched_itd_reads = counter_u64_alloc(M_WAITOK);
+	sched_itd_invalid = counter_u64_alloc(M_WAITOK);
+	sched_itd_changes = counter_u64_alloc(M_WAITOK);
+	for (cls = 0; cls < CPUCAP_MAX_CLASSES; cls++)
+		sched_itd_hist[cls] = counter_u64_alloc(M_WAITOK);
 	cpucap_consumer_register(&sched_cpucap_consumer);
 }
 SYSINIT(sched_core_class, SI_SUB_SMP, SI_ORDER_ANY, sched_core_class_init,
@@ -984,6 +1100,7 @@ struct cpu_search {
 	int	cs_load;	/* Max load for low, min load for high. */
 	int	cs_trans;	/* Min transferable load for high. */
 	int	cs_class;	/* Apply hybrid-core class cost (placement). */
+	int	cs_tcls;	/* Thread class: cost row to use (placement). */
 	int	cs_rank;	/* Stealer's class rank (stealing). */
 	int	cs_ticks;	/* ticks at the start of the search. */
 };
@@ -1014,22 +1131,38 @@ smt_sibling_busy(const struct cpu_group *cg, int self)
 }
 
 /*
+ * The cost row for a thread: its Thread Director class, always checked
+ * against the table bound even though the byte is only ever written with
+ * a checked value.  0 (row 0, the plain costs) without Thread Director.
+ */
+static inline int
+sched_thread_class(struct thread *td)
+{
+	u_int cls;
+
+	cls = td_get_sched(td)->ts_itdclass;
+	return (cls < CPUCAP_MAX_CLASSES ? (int)cls : 0);
+}
+
+/*
  * Compute the hybrid-core placement cost added to a candidate CPU's load.
  * The static part is a precomputed per-CPU table lookup (see
- * sched_core_class_update()).  Returns 0 for preferred-class CPUs with no
- * busy SMT sibling, so on homogeneous hardware the search is identical to
- * ULE.
+ * sched_core_class_update()) in the row of the thread's class, tcls.
+ * Returns 0 for preferred-class CPUs with no busy SMT sibling, so on
+ * homogeneous hardware the search is identical to ULE.
  * The result is folded into "load" before it is summed into the per-group
  * total, so the bias steers both subtree selection and the final CPU pick.
  */
 static int
-sched_class_cost(const struct cpu_group *cg, int c, int l)
+sched_class_cost(const struct cpu_group *cg, int c, int l, int tcls)
 {
 	int cost;
 
 	if (c < 0 || c >= MAXCPU || CPU_ABSENT(c))
 		return (0);
-	cost = sched_cpu_cost[c];
+	if (tcls < 0 || tcls >= CPUCAP_MAX_CLASSES)
+		tcls = 0;
+	cost = sched_cpu_cost[tcls][c];
 
 	/*
 	 * Priority 3: a free thread whose SMT sibling is busy.  Applied to any
@@ -1066,7 +1199,7 @@ sched_better_idle_class(struct thread *td, struct cpu_group *cg, int lastcpu)
 {
 	struct cpu_group *domain;
 	struct tdq *tdq;
-	int c, cost, lastcost;
+	int c, cost, lastcost, tcls;
 
 	if (cg == NULL || lastcpu < 0 || lastcpu >= MAXCPU ||
 	    CPU_ABSENT(lastcpu) || TDQ_CPU(lastcpu)->tdq_cg == NULL)
@@ -1074,7 +1207,9 @@ sched_better_idle_class(struct thread *td, struct cpu_group *cg, int lastcpu)
 	domain = sched_affinity_domain(cg);
 	if (domain == NULL)
 		return (false);
-	lastcost = sched_class_cost(TDQ_CPU(lastcpu)->tdq_cg, lastcpu, 0);
+	tcls = sched_thread_class(td);
+	lastcost = sched_class_cost(TDQ_CPU(lastcpu)->tdq_cg, lastcpu, 0,
+	    tcls);
 	for (c = domain->cg_first; c <= domain->cg_last; c++) {
 		if (c == lastcpu || !CPU_ISSET(c, &domain->cg_mask) ||
 		    !THREAD_CAN_SCHED(td, c))
@@ -1084,7 +1219,7 @@ sched_better_idle_class(struct thread *td, struct cpu_group *cg, int lastcpu)
 			continue;
 		if (atomic_load_char(&tdq->tdq_lowpri) < PRI_MIN_IDLE)
 			continue;
-		cost = sched_class_cost(tdq->tdq_cg, c, 0);
+		cost = sched_class_cost(tdq->tdq_cg, c, 0, tcls);
 		if (cost < lastcost)
 			return (true);
 	}
@@ -1187,7 +1322,7 @@ cpu_search_lowest(const struct cpu_group *cg, const struct cpu_search *s,
 		load = l * 256;
 		total += load - p;
 		if (s->cs_class)
-			load += sched_class_cost(cg, c, l);
+			load += sched_class_cost(cg, c, l, s->cs_tcls);
 
 		/*
 		 * Check this CPU is acceptable.
@@ -1301,7 +1436,7 @@ cpu_search_highest(const struct cpu_group *cg, const struct cpu_search *s,
  */
 static inline int
 sched_lowest(const struct cpu_group *cg, cpuset_t *mask, int pri, int maxload,
-    int prefer, int running, int class_aware)
+    int prefer, int running, int class_aware, int tcls)
 {
 	struct cpu_search s;
 	struct cpu_search_res r;
@@ -1312,6 +1447,7 @@ sched_lowest(const struct cpu_group *cg, cpuset_t *mask, int pri, int maxload,
 	s.cs_pri = pri;
 	s.cs_load = maxload;
 	s.cs_class = class_aware;
+	s.cs_tcls = tcls;
 	cpu_search_lowest(cg, &s, &r);
 	return (r.csr_cpu);
 }
@@ -1425,7 +1561,7 @@ sched_balance_group(struct cpu_group *cg)
 			 * in ULE.
 			 */
 			CPU_FOREACH_ISSET(cpu, &hmask) {
-				if (sched_cpu_cost[cpu] != 0 &&
+				if (sched_cpu_cost[0][cpu] != 0 &&
 				    TDQ_LOAD(TDQ_CPU(cpu)) == 1)
 					sched_balance_repick(TDQ_CPU(cpu));
 			}
@@ -1441,7 +1577,7 @@ nextlow:
 		 * still decides first).
 		 */
 		low = sched_lowest(cg, &lmask, -1, TDQ_LOAD(tdq) - 1, high, 1,
-		    1);
+		    1, 0);
 		/* Stop if we looked well and found no less loaded CPU. */
 		if (anylow && low == -1)
 			break;
@@ -1883,10 +2019,11 @@ sched_pickcpu(struct thread *td, int flags)
 	struct td_sched *ts;
 	struct tdq *tdq;
 	cpuset_t *mask;
-	int class_aware, cpu, pri, r, self, intr;
+	int class_aware, cpu, pri, r, self, intr, tcls;
 
 	self = PCPU_GET(cpuid);
 	ts = td_get_sched(td);
+	tcls = sched_thread_class(td);
 	KASSERT(!CPU_ABSENT(ts->ts_cpu), ("sched_pickcpu: Start scheduler on "
 	    "absent CPU %d for thread %s.", ts->ts_cpu, td->td_name));
 	if (smp_started == 0)
@@ -1983,28 +2120,28 @@ llc:
 	 */
 	if (ccg != NULL && intr) {
 		cpu = sched_lowest(ccg, mask, pri, INT_MAX, ts->ts_cpu, r,
-		    class_aware);
+		    class_aware, tcls);
 		if (cpu >= 0)
 			SCHED_STAT_INC(pickcpu_intrbind);
 	} else
 	/* Search the LLC for the least loaded idle CPU we can run now. */
 	if (ccg != NULL) {
 		cpu = sched_lowest(ccg, mask, max(pri, PRI_MAX_TIMESHARE),
-		    INT_MAX, ts->ts_cpu, r, class_aware);
+		    INT_MAX, ts->ts_cpu, r, class_aware, tcls);
 		if (cpu >= 0)
 			SCHED_STAT_INC(pickcpu_affinity);
 	}
 	/* Search globally for the least loaded CPU we can run now. */
 	if (cpu < 0) {
 		cpu = sched_lowest(cpu_top, mask, pri, INT_MAX, ts->ts_cpu, r,
-		    class_aware);
+		    class_aware, tcls);
 		if (cpu >= 0)
 			SCHED_STAT_INC(pickcpu_lowest);
 	}
 	/* Search globally for the least loaded CPU. */
 	if (cpu < 0) {
 		cpu = sched_lowest(cpu_top, mask, -1, INT_MAX, ts->ts_cpu, r,
-		    class_aware);
+		    class_aware, tcls);
 		if (cpu >= 0)
 			SCHED_STAT_INC(pickcpu_lowest);
 	}
@@ -2354,6 +2491,7 @@ schedinit(void)
 	ts0->ts_ltick = ticks;
 	ts0->ts_ftick = ticks;
 	ts0->ts_slice = 0;
+	ts0->ts_itdclass = 0;
 	ts0->ts_cpu = curcpu;	/* set valid CPU number */
 }
 
@@ -2756,6 +2894,9 @@ sched_switch(struct thread *td, int flags)
 #ifdef SMP
 	int pickcpu;
 #endif
+#ifdef SCHED_ITD
+	u_int hreset_mask;
+#endif
 
 	THREAD_LOCK_ASSERT(td, MA_OWNED);
 
@@ -2838,6 +2979,20 @@ sched_switch(struct thread *td, int flags)
 	 * Call the MD code to switch contexts if necessary.
 	 */
 	if (td != newtd) {
+#ifdef SCHED_ITD
+		/*
+		 * Reset this CPU's Thread Director history so newtd starts
+		 * from a clean slate and td's instruction mix is not read
+		 * as newtd's at the next tick.  One __read_mostly load and
+		 * a predictable branch while the hardware is off.  Interrupts
+		 * are disabled here (spinlock_enter() above), so the MSR that
+		 * makes HRESET legal cannot be cleared between the test and
+		 * the instruction; see itd_disable().
+		 */
+		hreset_mask = itd_hreset_mask;
+		if (__predict_false(hreset_mask != 0))
+			hreset(hreset_mask);
+#endif
 #ifdef	HWPMC_HOOKS
 		if (PMC_PROC_IS_USING_PMCS(td->td_proc))
 			PMC_SWITCH_CONTEXT(td, PMC_FN_CSW_OUT);
@@ -3001,6 +3156,7 @@ sched_fork_thread(struct thread *td, struct thread *child)
 	child->td_domain.dr_policy = td->td_cpuset->cs_domain;
 	ts2->ts_cpu = ts->ts_cpu;
 	ts2->ts_flags = 0;
+	ts2->ts_itdclass = 0;	/* Unclassified until the hardware says. */
 	/*
 	 * Grab our parents cpu estimation information.
 	 */
@@ -3121,6 +3277,49 @@ sched_userret_slowpath(struct thread *td)
  * Handle a stathz tick.  This is really only relevant for timeshare
  * threads.
  */
+/*
+ * Refresh the running thread's Thread Director class from the hardware
+ * (or the test override).  Called on the statclock tick with the thread
+ * lock held, only while sched_itd_mode is on.  A class the hardware has
+ * not validated yet, or one beyond what is published, leaves the thread's
+ * class alone.
+ */
+static void
+sched_itd_tick(struct thread *td)
+{
+	struct td_sched *ts;
+	int cls;
+
+	ts = td_get_sched(td);
+	if (sched_itd_mode == SCHED_ITD_FORCED) {
+		cls = sched_itd_force_class;
+		if (cls == CPUCAP_MAX_CLASSES)
+			cls = td->td_tid % (int)MAX(sched_itd_nclasses, 1);
+	} else {
+#ifdef SCHED_ITD
+		if (itd_nclasses == 0)
+			return;
+		cls = itd_read_class();
+		counter_u64_add(sched_itd_reads, 1);
+		if (cls < 0 || cls >= (int)itd_nclasses) {
+			counter_u64_add(sched_itd_invalid, 1);
+			return;
+		}
+#else
+		return;
+#endif
+	}
+	if (cls < 0 || cls >= CPUCAP_MAX_CLASSES)
+		return;
+	if (cls >= (int)sched_itd_nclasses)
+		cls = 0;	/* No row of its own; use the plain costs. */
+	counter_u64_add(sched_itd_hist[cls], 1);
+	if (ts->ts_itdclass != cls) {
+		ts->ts_itdclass = cls;
+		counter_u64_add(sched_itd_changes, 1);
+	}
+}
+
 void
 sched_clock(struct thread *td, int cnt)
 {
@@ -3159,6 +3358,9 @@ sched_clock(struct thread *td, int cnt)
 	}
 	ts = td_get_sched(td);
 	sched_pctcpu_update(ts, 1);
+	if (__predict_false(sched_itd_mode != SCHED_ITD_OFF) &&
+	    !TD_IS_IDLETHREAD(td))
+		sched_itd_tick(td);
 	if ((td->td_pri_class & PRI_FIFO_BIT) || TD_IS_IDLETHREAD(td))
 		return;
 
@@ -3829,7 +4031,7 @@ sysctl_kern_sched_cpu_table(SYSCTL_HANDLER_ARGS)
 	CPU_FOREACH(i) {
 		switch (arg2) {
 		case SCHED_TABLE_COST:
-			v = sched_cpu_cost[i];
+			v = sched_cpu_cost[0][i];
 			break;
 		case SCHED_TABLE_RANK:
 			v = sched_cpu_rank[i];
@@ -3843,6 +4045,73 @@ sysctl_kern_sched_cpu_table(SYSCTL_HANDLER_ARGS)
 	err = sbuf_finish(sb);
 	sbuf_delete(sb);
 	return (err);
+}
+
+/* Every cost row: "class0: cpu:cost ...; class1: ..." for the rows in use. */
+static int
+sysctl_kern_sched_class_cost(SYSCTL_HANDLER_ARGS)
+{
+	struct sbuf *sb;
+	u_int cls, n;
+	int err, i;
+
+	sb = sbuf_new_for_sysctl(NULL, NULL, 256, req);
+	if (sb == NULL)
+		return (ENOMEM);
+	n = sched_itd_nclasses;
+	if (n > CPUCAP_MAX_CLASSES)
+		n = CPUCAP_MAX_CLASSES;
+	for (cls = 0; cls < n; cls++) {
+		sbuf_printf(sb, "%sclass%u:", cls == 0 ? "" : "; ", cls);
+		CPU_FOREACH(i)
+			sbuf_printf(sb, " %d:%u", i, sched_cpu_cost[cls][i]);
+	}
+	err = sbuf_finish(sb);
+	sbuf_delete(sb);
+	return (err);
+}
+
+/* Thread Director class histogram: "class:reads" for every row in use. */
+static int
+sysctl_kern_sched_itd_hist(SYSCTL_HANDLER_ARGS)
+{
+	struct sbuf *sb;
+	u_int cls, n;
+	int err;
+
+	sb = sbuf_new_for_sysctl(NULL, NULL, 128, req);
+	if (sb == NULL)
+		return (ENOMEM);
+	n = sched_itd_nclasses;
+	if (n > CPUCAP_MAX_CLASSES)
+		n = CPUCAP_MAX_CLASSES;
+	for (cls = 0; cls < n; cls++)
+		sbuf_printf(sb, "%s%u:%ju", cls == 0 ? "" : " ", cls,
+		    (uintmax_t)counter_u64_fetch(sched_itd_hist[cls]));
+	err = sbuf_finish(sb);
+	sbuf_delete(sb);
+	return (err);
+}
+
+/*
+ * kern.sched.mic.itd_force_class: -1 off, 0..CPUCAP_MAX_CLASSES-1 give
+ * every thread that class on its next tick, CPUCAP_MAX_CLASSES spreads
+ * threads over the published classes by thread id.
+ */
+static int
+sysctl_kern_sched_itd_force_class(SYSCTL_HANDLER_ARGS)
+{
+	int error, val;
+
+	val = sched_itd_force_class;
+	error = sysctl_handle_int(oidp, &val, 0, req);
+	if (error != 0 || req->newptr == NULL)
+		return (error);
+	if (val < -1 || val > CPUCAP_MAX_CLASSES)
+		return (EINVAL);
+	sched_itd_force_class = val;
+	sched_core_class_update();
+	return (0);
 }
 
 /* Read-only alias of kern.cpucap.force_classes, which replaced this knob. */
@@ -3951,6 +4220,29 @@ SYSCTL_PROC(_kern_sched, OID_AUTO, use_scores,
 SYSCTL_INT(_kern_sched, OID_AUTO, scores_active, CTLFLAG_RD,
     &sched_scores_active, 0,
     "The per-CPU costs in effect derive from scores");
+SYSCTL_PROC(_kern_sched, OID_AUTO, itd,
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE, &sched_use_itd, 1,
+    sysctl_kern_sched_class_knob, "I",
+    "Use Intel Thread Director per-thread classes when hfi(4) has enabled "
+    "them (hw.hfi.itd) and use_scores is on");
+SYSCTL_INT(_kern_sched, OID_AUTO, itd_active, CTLFLAG_RD,
+    &sched_itd_mode, 0,
+    "Thread class source in effect (0 off, 1 hardware, 2 forced)");
+SYSCTL_UINT(_kern_sched, OID_AUTO, itd_classes, CTLFLAG_RD,
+    &sched_itd_nclasses, 0,
+    "Thread classes with a cost row of their own (1 = row 0 only)");
+SYSCTL_COUNTER_U64(_kern_sched, OID_AUTO, itd_reads, CTLFLAG_RD,
+    &sched_itd_reads, "Thread class reads on the tick");
+SYSCTL_COUNTER_U64(_kern_sched, OID_AUTO, itd_invalid, CTLFLAG_RD,
+    &sched_itd_invalid, "Thread class reads without a valid class");
+SYSCTL_COUNTER_U64(_kern_sched, OID_AUTO, itd_changes, CTLFLAG_RD,
+    &sched_itd_changes, "Thread class reads that changed a thread's class");
+SYSCTL_PROC(_kern_sched, OID_AUTO, itd_hist, CTLTYPE_STRING |
+    CTLFLAG_MPSAFE | CTLFLAG_RD, NULL, 0, sysctl_kern_sched_itd_hist, "A",
+    "Thread class reads per class");
+SYSCTL_PROC(_kern_sched, OID_AUTO, class_cost, CTLTYPE_STRING |
+    CTLFLAG_MPSAFE | CTLFLAG_RD, NULL, 0, sysctl_kern_sched_class_cost, "A",
+    "Per-CPU placement cost of every thread class in effect");
 SYSCTL_PROC(_kern_sched, OID_AUTO, core_class, CTLTYPE_STRING |
     CTLFLAG_MPSAFE | CTLFLAG_RD, NULL, SCHED_TABLE_CLASS,
     sysctl_kern_sched_cpu_table, "A",
@@ -3968,6 +4260,11 @@ SYSCTL_NODE(_kern_sched, OID_AUTO, mic, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
 SYSCTL_PROC(_kern_sched_mic, OID_AUTO, force_classes, CTLTYPE_STRING |
     CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, 0, sysctl_kern_sched_force_classes,
     "A", "Alias of kern.cpucap.force_classes (set that tunable instead)");
+SYSCTL_PROC(_kern_sched_mic, OID_AUTO, itd_force_class,
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE, NULL, 0,
+    sysctl_kern_sched_itd_force_class, "I",
+    "Debug: -1 off; N gives every thread class N; CPUCAP_MAX_CLASSES "
+    "spreads threads over the published classes by thread id");
 #endif
 
 /* ps compat.  All cpu percentages from ULE are weighted. */

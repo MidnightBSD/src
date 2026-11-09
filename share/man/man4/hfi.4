@@ -91,8 +91,35 @@ taskqueue after a short delay, so a burst of updates costs one
 .Xr cpucap 9
 commit.
 The tables are re-programmed on resume.
+.Pp
 Intel Thread Director, the per-thread classification extension of HFI, is
-not enabled.
+enabled when the
+.Va hw.hfi.itd
+loader tunable is set and the processor reports it
+.Pq Dv CPUID.06H:EAX[23] .
+The processor then classifies the running thread of every CPU by the
+instructions it executes and writes a performance and efficiency
+capability pair per class
+.Pq Dv CPUID.06H:ECX[15:8] classes, four on current parts
+into every row of the table.
+The driver turns classification on for every CPU
+.Pq Dv IA32_HW_FEEDBACK_THREAD_CONFIG ,
+enables the
+.Li HRESET
+instruction where the processor has it
+.Pq Dv IA32_HRESET_ENABLE ,
+sets the Thread Director bit of
+.Dv IA32_HW_FEEDBACK_CONFIG
+on every package, and publishes the per-class pairs as class scores
+through
+.Xr cpucap 9 ;
+class 0 is the pair classless consumers see.
+How
+.Xr sched_mic 4
+reads the class of a thread and places it is described in that page.
+All of this is undone on suspend and redone on resume.
+The default is off because the scheduler side has not yet been validated
+on hardware.
 .Pp
 The driver does not attach on processors without HFI, including virtual
 machines that do not expose it, or when the local APIC has no thermal
@@ -110,6 +137,10 @@ The following variables are available under
 .Bl -tag -width "pkg.N.perf_changed" -offset indent
 .It Va enabled
 Whether the tables are programmed into the processor.
+.It Va itd , classes
+Whether Thread Director is enabled, and the number of thread classes
+parsed and published
+.Pq 1 without Thread Director .
 .It Va table_pages , capabilities , rows , packages
 The geometry reported by CPUID: table size in 4 KB pages, capability
 columns per row, rows the table can hold, and packages with a table.
@@ -123,12 +154,16 @@ Also settable as a loader tunable.
 .It Va summary
 One line of
 .Dq cpuN:row:perf/eff
-for every CPU with a row.
+for every CPU with a row; with Thread Director the pair is followed by
+one more
+.Dq ,perf/eff
+per further class.
 .It Va cpu.N.edx , index , pkg , perf , eff
 Per-CPU: the raw
 .Dv CPUID.06H:EDX
 value, the row index, the package node and the last performance and
-efficiency capabilities read for that row.
+efficiency capabilities read for that row
+.Pq class 0 with Thread Director .
 An index of -1 means the CPU reported no usable row and keeps the default
 score.
 .It Va pkg.N.id , leader , timestamp , interrupts , updates
@@ -144,6 +179,28 @@ and
 .Va updates
 rising while the system is loaded show the processor really updates the
 table; some processors write it only once, at boot.
+.Sh LOADER TUNABLES
+.Bl -tag -width indent
+.It Va hw.hfi.itd
+Set to
+.Li 1
+to enable Intel Thread Director at attach; the default is
+.Li 0 .
+.It Va hint.hfi.0.disabled
+Set to
+.Li 1
+to keep the driver from attaching.
+.El
+.Pp
+The read-only
+.Va hw.itd.supported , hw.itd.hreset , hw.itd.classes
+and
+.Va hw.itd.hreset_mask
+report whether the processor has Thread Director and
+.Li HRESET ,
+how many classes are enabled, and the
+.Dv IA32_HRESET_ENABLE
+value in effect.
 .Sh SEE ALSO
 .Xr coretemp 4 ,
 .Xr sched_mic 4 ,
@@ -164,4 +221,3 @@ driver first appeared in
 The table handling follows Intel's reference HFI driver.
 .Sh BUGS
 CPU hotplug is not supported.
-Thread Director classes are not used.

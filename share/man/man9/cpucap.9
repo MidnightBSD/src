@@ -62,6 +62,10 @@
 .Ft void
 .Fn cpucap_set_scores "int cpu" "uint8_t perf" "uint8_t eff"
 .Ft void
+.Fn cpucap_set_nclasses "u_int nclasses"
+.Ft void
+.Fn cpucap_set_class_scores "int cpu" "u_int cls" "uint8_t perf" "uint8_t eff"
+.Ft void
 .Fn cpucap_set_compute_class "uint8_t cls" "bool prefer_compute"
 .Ft void
 .Fn cpucap_commit "void"
@@ -77,6 +81,12 @@
 .Fn cpucap_perf "int cpu"
 .Ft uint8_t
 .Fn cpucap_eff "int cpu"
+.Ft u_int
+.Fn cpucap_nclasses "void"
+.Ft uint8_t
+.Fn cpucap_class_perf "int cpu" "u_int cls"
+.Ft uint8_t
+.Fn cpucap_class_eff "int cpu" "u_int cls"
 .Ft uint8_t
 .Fn cpucap_compute_class "void"
 .Ft bool
@@ -140,6 +150,19 @@ returns true, that is while a dynamic provider is active or
 .Va kern.cpucap.force_scores
 is set.
 .El
+.Pp
+A dynamic provider that classifies threads, such as
+.Xr hfi 4
+with Intel Thread Director enabled, may publish a separate perf and eff
+pair per
+.Em thread class ,
+numbered from 0 to
+.Fn cpucap_nclasses
+- 1 and at most
+.Dv CPUCAP_MAX_CLASSES
+.Pq 8 .
+Class 0 is the pair above, which every classless consumer sees.
+Without such a provider there is one class.
 .Pp
 Two platform hints accompany them:
 .Fn cpucap_compute_class
@@ -245,6 +268,19 @@ provider's
 and
 .Fn cpucap_set_capacity
 for such a CPU are ignored.
+.Pp
+A provider that classifies threads calls
+.Fn cpucap_set_nclasses
+with the number of classes it publishes, from 1 to
+.Dv CPUCAP_MAX_CLASSES ,
+and
+.Fn cpucap_set_class_scores
+for each CPU and class;
+.Fn cpucap_set_class_scores
+with class 0 is
+.Fn cpucap_set_scores .
+Out-of-range classes are ignored and the count is reset to 1 when the
+provider is deactivated.
 .Ss Consumers
 A consumer is described by a
 .Vt struct cpucap_consumer :
@@ -290,6 +326,13 @@ return the current value for a CPU, or the default for a CPU outside
 Each is a single relaxed atomic load of a naturally aligned value, so a
 caller racing a provider sees either the old or the new value, never a torn
 one, and never blocks.
+.Fn cpucap_class_perf
+and
+.Fn cpucap_class_eff
+return the scores of a thread class, or those of class 0 for a class at or
+beyond
+.Fn cpucap_nclasses ,
+so a consumer may index them with any class it has stored.
 .Fn cpucap_generation
 returns the number of commits so far.
 .Sh SYSCTL VARIABLES
@@ -304,6 +347,10 @@ The same values, one node per CPU.
 The platform hints.
 .It Va kern.cpucap.has_scores
 Whether a dynamic provider is active.
+.It Va kern.cpucap.classes , kern.cpucap.class_scores
+The number of thread classes with scores, and every CPU's perf/eff pair for
+each class, class 0 first, as
+.Dq Va cpuid : Ns Va p/e , Ns Va p/e , Ns ...
 .It Va kern.cpucap.generation
 The number of commits so far.
 .It Va kern.cpucap.providers
@@ -352,6 +399,28 @@ score handling be exercised in a virtual machine without
 .Xr hfi 4 ,
 and a run-time update of a processor's table be simulated by writing a
 new list.
+.It Va kern.cpucap.force_class_scores
+The same for the per-class scores of classes 1 to
+.Dv CPUCAP_MAX_CLASSES
+- 1: a semicolon-separated list of
+.Ar class : Ns Ar list
+segments such as
+.Dq Li 1:60/92,34/100;3:10/10,10/10 ,
+each list in the
+.Va kern.cpucap.force_scores
+format.
+Class 0 is refused; use
+.Va kern.cpucap.force_scores
+for it.
+While any class is forced
+.Fn cpucap_nclasses
+covers it, so a scheduler's per-class placement can be exercised where no
+Thread Director exists, together with
+.Va kern.sched.mic.itd_force_class
+in
+.Xr sched_mic 4 .
+The whole string replaces the previous one; a malformed string is rejected
+with a console message.
 .It Va kern.cpucap.detect_lpe
 A boot-time tunable of the x86 CPUID provider: when non-zero, the default,
 Intel small cores without a last-level cache are classified as low-power
