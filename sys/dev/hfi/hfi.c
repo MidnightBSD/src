@@ -45,14 +45,20 @@
  * This driver owns those tables and publishes the capabilities as dynamic
  * scores through cpucap(9), where SCHED_MIC can read them.
  *
- * Table layout (Intel SDM vol. 3, "Hardware Feedback Interface"), with
- * Thread Director disabled:
+ * Table layout (Intel SDM vol. 3, "Hardware Feedback Interface"):
  *
  *	offset 0	uint64_t timestamp (TSC units) of the last update
- *	offset 8	header: one "changed" byte per capability, padded
- *			to 8 bytes
- *	offset 8+hdr	rows: one byte per capability, padded to 8 bytes,
- *			indexed by CPUID.06H:EDX[31:16] as read ON THAT CPU
+ *	offset 8	header: one "changed" byte per capability and class,
+ *			padded to 8 bytes
+ *	offset 8+hdr	rows: one byte per capability and class, padded to
+ *			8 bytes, indexed by CPUID.06H:EDX[31:16] as read ON
+ *			THAT CPU
+ *
+ * With Thread Director disabled there is one class, so a row is the perf
+ * byte, the efficiency byte and padding.  With it enabled the row holds
+ * that pair once per class, classes contiguous (class k's perf byte at
+ * k * ncaps), and the header likewise; on the parts so far (4 classes, 2
+ * capabilities) both are still 8 bytes.
  *
  * Several logical CPUs share a row: SMT siblings and, on Alder Lake E-core
  * modules, all four cores of a module.  The row index therefore has to be
@@ -69,7 +75,13 @@
  * resume methods, all of which run in thread context.
  *
  * Thread Director (per-thread classes, IA32_HW_FEEDBACK_CONFIG bit 1) is
- * deliberately left disabled: enabling it changes the table layout.
+ * enabled only when the hw.hfi.itd tunable is set and the processor
+ * reports it.  The per-CPU side (IA32_HW_FEEDBACK_THREAD_CONFIG,
+ * IA32_HRESET_ENABLE) is programmed through itd_enable() in
+ * sys/x86/x86/itd.c before the package bit is set, following the order
+ * Intel's Linux patches use, and torn down on suspend.  The per-class
+ * columns are published as class scores through cpucap(9); class 0 is the
+ * plain score every classless consumer sees.
  *
  * Table lifetime
  *
@@ -112,6 +124,7 @@
 #include <machine/intr_machdep.h>	/* For x86/apicvar.h */
 #include <machine/specialreg.h>
 #include <x86/apicvar.h>
+#include <x86/itd.h>
 
 /* CPUID.06H:EDX fields. */
 #define	HFI_EDX_CAPS(edx)	((edx) & 0xff)
@@ -172,8 +185,8 @@ struct hfi_cpu {
 	uint32_t	hc_pkgid;	/* Raw package id on this CPU. */
 	int16_t		hc_index;	/* Row index, -1 if unusable. */
 	int16_t		hc_pkg;		/* Index into sc_pkgs, -1 if none. */
-	uint8_t		hc_perf;	/* Last scores parsed. */
-	uint8_t		hc_eff;
+	uint8_t		hc_perf[CPUCAP_MAX_CLASSES]; /* Last scores parsed, */
+	uint8_t		hc_eff[CPUCAP_MAX_CLASSES];  /* per class. */
 };
 
 struct hfi_softc {
@@ -184,6 +197,8 @@ struct hfi_softc {
 	u_int		sc_hdr_size;
 	u_int		sc_stride;
 	u_int		sc_nrows;
+	u_int		sc_hwclasses;	/* Classes in the table layout. */
+	u_int		sc_nclasses;	/* Classes parsed and published. */
 	struct hfi_pkg	*sc_pkgs;
 	int		sc_npkgs;
 	struct hfi_cpu	sc_cpu[MAXCPU];
@@ -192,11 +207,19 @@ struct hfi_softc {
 	u_int		sc_delay_ms;
 	u_int		sc_commits;
 	bool		sc_enabled;	/* Tables programmed. */
+	bool		sc_itd;		/* Thread Director enabled. */
 	bool		sc_thermal;	/* lapic thermal handler installed. */
 	bool		sc_registered;	/* cpucap provider registered. */
 };
 
 static MALLOC_DEFINE(M_HFI, "hfi", "Intel HFI tables");
+
+/* hw.hfi.itd: enable Thread Director classes when the processor has them. */
+static int hfi_itd_tunable = 0;
+SYSCTL_NODE(_hw, OID_AUTO, hfi, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
+    "Intel Hardware Feedback Interface");
+SYSCTL_INT(_hw_hfi, OID_AUTO, itd, CTLFLAG_RDTUN, &hfi_itd_tunable, 0,
+    "Enable Intel Thread Director per-thread classes at attach (0 = off)");
 
 /* For the cpucap provider callbacks, which take no argument. */
 static struct hfi_softc *hfi_sc;
@@ -303,6 +326,7 @@ hfi_pkg_enable(void *arg)
 {
 	struct hfi_pkg *pkg = arg;
 	uint64_t msr;
+	bool itd = pkg->hp_sc->sc_itd;
 
 	/* Interrupt first, so the initial table write is not missed. */
 	msr = rdmsr(MSR_IA32_PKG_THERM_INTERRUPT);
@@ -315,6 +339,8 @@ hfi_pkg_enable(void *arg)
 	msr = rdmsr(MSR_IA32_HW_FEEDBACK_CONFIG);
 	msr &= ~IA32_HW_FEEDBACK_CONFIG_EN_THDIR;
 	msr |= IA32_HW_FEEDBACK_CONFIG_EN_HFI;
+	if (itd)
+		msr |= IA32_HW_FEEDBACK_CONFIG_EN_THDIR;
 	wrmsr(MSR_IA32_HW_FEEDBACK_CONFIG, msr);
 }
 
@@ -329,8 +355,9 @@ hfi_pkg_disable(void *arg)
 	    msr & ~IA32_PKG_THERM_INTERRUPT_HFI_ENABLE);
 
 	msr = rdmsr(MSR_IA32_HW_FEEDBACK_CONFIG);
-	wrmsr(MSR_IA32_HW_FEEDBACK_CONFIG,
-	    msr & ~IA32_HW_FEEDBACK_CONFIG_EN_HFI);
+	msr &= ~(IA32_HW_FEEDBACK_CONFIG_EN_HFI |
+	    IA32_HW_FEEDBACK_CONFIG_EN_THDIR);
+	wrmsr(MSR_IA32_HW_FEEDBACK_CONFIG, msr);
 
 	/*
 	 * The processor sets the HFI update bit once it has finished with
@@ -346,11 +373,42 @@ hfi_pkg_disable(void *arg)
 	wrmsr(MSR_IA32_HW_FEEDBACK_PTR, 0);
 }
 
+/*
+ * Row geometry for the number of classes in the table layout.  The row
+ * count can only grow when classes shrink, so indices already validated
+ * against an ITD layout stay valid after a fall-back to the classless one.
+ */
+static void
+hfi_geometry(struct hfi_softc *sc, u_int hwclasses, u_int nclasses)
+{
+
+	sc->sc_hwclasses = hwclasses;
+	sc->sc_nclasses = nclasses;
+	sc->sc_hdr_size = roundup2(sc->sc_ncaps * hwclasses, 8);
+	sc->sc_stride = roundup2(sc->sc_ncaps * hwclasses, 8);
+	sc->sc_nrows = (sc->sc_table_size - sizeof(uint64_t) -
+	    sc->sc_hdr_size) / sc->sc_stride;
+}
+
+/*
+ * Thread Director is enabled per logical CPU first, then per package; if
+ * the per-CPU step fails the driver falls back to classless HFI and the
+ * classless layout.  Also used on resume.
+ */
 static void
 hfi_enable_all(struct hfi_softc *sc)
 {
-	int i;
+	int error, i;
 
+	if (sc->sc_itd) {
+		error = itd_enable(sc->sc_nclasses);
+		if (error != 0) {
+			device_printf(sc->sc_dev, "Thread Director per-CPU "
+			    "enable failed: %d\n", error);
+			sc->sc_itd = false;
+			hfi_geometry(sc, 1, 1);
+		}
+	}
 	for (i = 0; i < sc->sc_npkgs; i++)
 		hfi_run_on_cpu(sc->sc_pkgs[i].hp_leader, hfi_pkg_enable,
 		    &sc->sc_pkgs[i]);
@@ -367,6 +425,7 @@ hfi_disable_all(struct hfi_softc *sc)
 	for (i = 0; i < sc->sc_npkgs; i++)
 		hfi_run_on_cpu(sc->sc_pkgs[i].hp_leader, hfi_pkg_disable,
 		    NULL);
+	itd_disable();
 	sc->sc_enabled = false;
 }
 
@@ -412,9 +471,10 @@ hfi_pkg_snapshot(struct hfi_pkg *pkg)
 }
 
 /*
- * Parse the shadow of one package into the per-CPU scores.  Every row
- * access is bounds-checked against the table size, although the index was
- * already checked against sc_nrows when it was read.
+ * Parse the shadow of one package into the per-CPU, per-class scores.
+ * Every row access is bounds-checked against the table size, although the
+ * index was already checked against sc_nrows when it was read, and the
+ * class loop is bounded by both the softc count and the array size.
  */
 static void
 hfi_pkg_parse(struct hfi_softc *sc, int pkgidx)
@@ -423,7 +483,7 @@ hfi_pkg_parse(struct hfi_softc *sc, int pkgidx)
 	struct hfi_cpu *hc;
 	const uint8_t *hdr, *row;
 	size_t off;
-	u_int cpu;
+	u_int cls, cpu;
 
 	mtx_lock_spin(&pkg->hp_lock);
 	/* An all-zero shadow would read as "avoid every CPU"; wait. */
@@ -443,8 +503,14 @@ hfi_pkg_parse(struct hfi_softc *sc, int pkgidx)
 		if (off + sc->sc_stride > sc->sc_table_size)
 			continue;
 		row = pkg->hp_shadow + off;
-		hc->hc_perf = row[0];
-		hc->hc_eff = row[1];
+		for (cls = 0; cls < sc->sc_nclasses &&
+		    cls < CPUCAP_MAX_CLASSES; cls++) {
+			/* Class k's pair starts at k * ncaps within the row. */
+			if ((size_t)cls * sc->sc_ncaps + 1 >= sc->sc_stride)
+				break;
+			hc->hc_perf[cls] = row[cls * sc->sc_ncaps];
+			hc->hc_eff[cls] = row[cls * sc->sc_ncaps + 1];
+		}
 	}
 	mtx_unlock_spin(&pkg->hp_lock);
 }
@@ -454,13 +520,17 @@ static void
 hfi_publish(struct hfi_softc *sc)
 {
 	struct hfi_cpu *hc;
-	u_int cpu;
+	u_int cls, cpu;
 
+	cpucap_set_nclasses(sc->sc_nclasses);
 	for (cpu = 0; cpu <= mp_maxid && cpu < MAXCPU; cpu++) {
 		hc = &sc->sc_cpu[cpu];
 		if (hc->hc_index < 0)
 			continue;
-		cpucap_set_scores(cpu, hc->hc_perf, hc->hc_eff);
+		for (cls = 0; cls < sc->sc_nclasses &&
+		    cls < CPUCAP_MAX_CLASSES; cls++)
+			cpucap_set_class_scores(cpu, cls, hc->hc_perf[cls],
+			    hc->hc_eff[cls]);
 	}
 }
 
@@ -672,7 +742,7 @@ hfi_sysctl_summary(SYSCTL_HANDLER_ARGS)
 	struct hfi_softc *sc = arg1;
 	struct hfi_cpu *hc;
 	struct sbuf sb;
-	u_int cpu;
+	u_int cls, cpu;
 	int error;
 	bool first;
 
@@ -682,8 +752,12 @@ hfi_sysctl_summary(SYSCTL_HANDLER_ARGS)
 		hc = &sc->sc_cpu[cpu];
 		if (hc->hc_pkg < 0)
 			continue;
-		sbuf_printf(&sb, "%scpu%u:%d:%u/%u", first ? "" : " ",
-		    cpu, hc->hc_index, hc->hc_perf, hc->hc_eff);
+		sbuf_printf(&sb, "%scpu%u:%d:", first ? "" : " ", cpu,
+		    hc->hc_index);
+		for (cls = 0; cls < sc->sc_nclasses &&
+		    cls < CPUCAP_MAX_CLASSES; cls++)
+			sbuf_printf(&sb, "%s%u/%u", cls == 0 ? "" : ",",
+			    hc->hc_perf[cls], hc->hc_eff[cls]);
 		first = false;
 	}
 	error = sbuf_finish(&sb);
@@ -714,6 +788,10 @@ hfi_sysctl_init(struct hfi_softc *sc)
 	    &sc->sc_ncaps, 0, "Capabilities (columns) per row");
 	SYSCTL_ADD_UINT(ctx, tree, OID_AUTO, "rows", CTLFLAG_RD,
 	    &sc->sc_nrows, 0, "Rows the table can hold");
+	SYSCTL_ADD_BOOL(ctx, tree, OID_AUTO, "itd", CTLFLAG_RD,
+	    &sc->sc_itd, 0, "Thread Director enabled");
+	SYSCTL_ADD_UINT(ctx, tree, OID_AUTO, "classes", CTLFLAG_RD,
+	    &sc->sc_nclasses, 0, "Thread classes published (1 = class 0 only)");
 	SYSCTL_ADD_INT(ctx, tree, OID_AUTO, "packages", CTLFLAG_RD,
 	    &sc->sc_npkgs, 0, "Packages with a table");
 	SYSCTL_ADD_UINT(ctx, tree, OID_AUTO, "commits", CTLFLAG_RD,
@@ -722,7 +800,8 @@ hfi_sysctl_init(struct hfi_softc *sc)
 	    &sc->sc_delay_ms, 0, "Delay between an update and publishing it");
 	SYSCTL_ADD_PROC(ctx, tree, OID_AUTO, "summary",
 	    CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_MPSAFE, sc, 0,
-	    hfi_sysctl_summary, "A", "cpuN:row:perf/eff for every CPU");
+	    hfi_sysctl_summary, "A",
+	    "cpuN:row:perf/eff[,perf/eff per class] for every CPU");
 
 	node = SYSCTL_ADD_NODE(ctx, tree, OID_AUTO, "pkg",
 	    CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "Per-package state");
@@ -770,9 +849,10 @@ hfi_sysctl_init(struct hfi_softc *sc)
 		SYSCTL_ADD_S16(ctx, SYSCTL_CHILDREN(sub), OID_AUTO, "pkg",
 		    CTLFLAG_RD, &hc->hc_pkg, 0, "Package node, -1 if none");
 		SYSCTL_ADD_U8(ctx, SYSCTL_CHILDREN(sub), OID_AUTO, "perf",
-		    CTLFLAG_RD, &hc->hc_perf, 0, "Performance capability");
+		    CTLFLAG_RD, &hc->hc_perf[0], 0, "Performance capability");
 		SYSCTL_ADD_U8(ctx, SYSCTL_CHILDREN(sub), OID_AUTO, "eff",
-		    CTLFLAG_RD, &hc->hc_eff, 0, "Energy efficiency capability");
+		    CTLFLAG_RD, &hc->hc_eff[0], 0,
+		    "Energy efficiency capability");
 	}
 }
 
@@ -812,7 +892,7 @@ hfi_attach(device_t dev)
 	struct hfi_softc *sc;
 	struct hfi_cpu *hc;
 	uint32_t edx;
-	u_int cpu, nvalid;
+	u_int cls, cpu, nclasses, nvalid;
 	int error;
 
 	sc = device_get_softc(dev);
@@ -842,10 +922,18 @@ hfi_attach(device_t dev)
 	if (sc->sc_pages > HFI_MAX_PAGES)
 		return (ENXIO);
 	sc->sc_table_size = (size_t)sc->sc_pages * PAGE_SIZE;
-	sc->sc_hdr_size = roundup2(sc->sc_ncaps, 8);
-	sc->sc_stride = roundup2(sc->sc_ncaps, 8);
-	sc->sc_nrows = (sc->sc_table_size - sizeof(uint64_t) -
-	    sc->sc_hdr_size) / sc->sc_stride;
+	/*
+	 * Thread Director: the layout gets one capability set per class
+	 * that the processor reports, of which at most CPUCAP_MAX_CLASSES
+	 * are parsed and published.  Off unless hw.hfi.itd is set.
+	 */
+	sc->sc_itd = false;
+	if (hfi_itd_tunable != 0 && itd_supported(&nclasses) &&
+	    nclasses >= 1) {
+		hfi_geometry(sc, nclasses, MIN(nclasses, CPUCAP_MAX_CLASSES));
+		sc->sc_itd = true;
+	} else
+		hfi_geometry(sc, 1, 1);
 	if (sc->sc_nrows == 0)
 		return (ENXIO);
 
@@ -853,8 +941,10 @@ hfi_attach(device_t dev)
 	for (cpu = 0; cpu < MAXCPU; cpu++) {
 		sc->sc_cpu[cpu].hc_index = -1;
 		sc->sc_cpu[cpu].hc_pkg = -1;
-		sc->sc_cpu[cpu].hc_perf = CPUCAP_SCORE_DEFAULT;
-		sc->sc_cpu[cpu].hc_eff = CPUCAP_SCORE_DEFAULT;
+		for (cls = 0; cls < CPUCAP_MAX_CLASSES; cls++) {
+			sc->sc_cpu[cpu].hc_perf[cls] = CPUCAP_SCORE_DEFAULT;
+			sc->sc_cpu[cpu].hc_eff[cls] = CPUCAP_SCORE_DEFAULT;
+		}
 	}
 	smp_rendezvous(NULL, hfi_cpu_probe, NULL, sc);
 	nvalid = 0;
@@ -902,6 +992,9 @@ hfi_attach(device_t dev)
 		device_printf(dev, "%d package(s), %u-page table, %u rows, "
 		    "%u CPUs with a row\n", sc->sc_npkgs, sc->sc_pages,
 		    sc->sc_nrows, nvalid);
+	if (sc->sc_itd)
+		device_printf(dev, "Thread Director enabled, %u classes%s\n",
+		    sc->sc_nclasses, itd_hreset_mask != 0 ? ", HRESET" : "");
 	return (0);
 }
 
