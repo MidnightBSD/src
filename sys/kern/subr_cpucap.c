@@ -55,6 +55,7 @@
 #include <sys/kernel.h>
 #include <sys/libkern.h>
 #include <sys/lock.h>
+#include <sys/module.h>
 #include <sys/mutex.h>
 #include <sys/sbuf.h>
 #include <sys/smp.h>
@@ -718,3 +719,5 @@ cpucap_sysctl_init(void *arg __unused)
 	}
 }
 SYSINIT(cpucap_sysctl, SI_SUB_SMP, SI_ORDER_ANY, cpucap_sysctl_init, NULL);
+
+MODULE_VERSION(cpucap, 1);
