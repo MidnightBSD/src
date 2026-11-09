@@ -63,6 +63,17 @@
 #define	CPUCAP_SCORE_DEFAULT	CPUCAP_SCORE_MAX
 
 /*
+ * Thread classes.  A dynamic provider may publish a separate perf/eff
+ * score pair per class of thread (Intel Thread Director reports four,
+ * distinguished by the instruction mix the thread executes); class 0 is
+ * the pair every classless consumer sees, so the class-0 scores are the
+ * plain scores above.  Classes are numbered 0..cpucap_nclasses()-1 and
+ * bounded by CPUCAP_MAX_CLASSES; the scheduler stores a thread's class in
+ * one byte and must check it against both before indexing anything.
+ */
+#define	CPUCAP_MAX_CLASSES	8
+
+/*
  * Nominal capacities a static provider may assign from a core class alone
  * when the platform offers no better figure (no ACPI CPPC data, for example).
  */
@@ -137,6 +148,15 @@ void	cpucap_set_class(int cpu, uint8_t cls);
 void	cpucap_set_capacity(int cpu, uint16_t capacity);
 void	cpucap_set_scores(int cpu, uint8_t perf, uint8_t eff);
 /*
+ * Per-class scores from a dynamic provider that classifies threads.
+ * cpucap_set_nclasses() declares how many classes it publishes (1..
+ * CPUCAP_MAX_CLASSES; 1 means none beyond class 0) and resets classes
+ * beyond that to the class-0 values; cpucap_set_class_scores() with class
+ * 0 is cpucap_set_scores().  Out-of-range classes are ignored.
+ */
+void	cpucap_set_nclasses(u_int nclasses);
+void	cpucap_set_class_scores(int cpu, u_int cls, uint8_t perf, uint8_t eff);
+/*
  * Platform hints from a static provider: which class holds the platform's
  * compute cores (CPU_CLASS_PERF on Intel, CPU_CLASS_EFF on AMD parts with
  * asymmetric L3) and whether that class should be preferred by default.
@@ -177,6 +197,10 @@ uint8_t		cpucap_class(int cpu);
 uint16_t	cpucap_capacity(int cpu);
 uint8_t		cpucap_perf(int cpu);
 uint8_t		cpucap_eff(int cpu);
+/* Per-class scores; an out-of-range class reads as class 0. */
+u_int		cpucap_nclasses(void);
+uint8_t		cpucap_class_perf(int cpu, u_int cls);
+uint8_t		cpucap_class_eff(int cpu, u_int cls);
 uint8_t		cpucap_compute_class(void);
 bool		cpucap_prefer_compute(void);
 bool		cpucap_has_scores(void);
