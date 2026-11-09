@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.Dd November 8, 2026
+.Dd November 9, 2026
 .Dt CPUCAP 9
 .Os
 .Sh NAME
@@ -136,7 +136,9 @@ Dynamic performance and energy-efficiency scores on a scale of 0 to
 the scale the Intel Hardware Feedback Interface reports natively.
 Both default to 255 and are only meaningful while
 .Fn cpucap_has_scores
-returns true.
+returns true, that is while a dynamic provider is active or
+.Va kern.cpucap.force_scores
+is set.
 .El
 .Pp
 Two platform hints accompany them:
@@ -323,6 +325,33 @@ CPUs beyond the end of the list keep their provided class and capacity.
 A malformed list is ignored with a console message.
 .Va kern.sched.mic.force_classes
 is accepted as an alias for existing configurations.
+.It Va kern.cpucap.force_scores
+A debugging aid that overrides the dynamic scores of CPUs 0, 1, ...
+with a comma-separated list of
+.Ar perf Ns / Ns Ar eff
+pairs such as
+.Dq Li 60/92,60/92,34/100,34/100 ,
+each value between 0 and 255.
+CPUs beyond the end of the list keep the score their provider supplied,
+and setting the empty string removes every override.
+It may be set as a loader tunable or written at run time; a write is
+parsed in the caller's thread, installed under the layer's lock and
+committed like a provider update, so consumers see a forced score exactly
+as they would a provider's, and
+.Fn cpucap_has_scores
+is true while any score is forced even when no dynamic provider is
+active.
+A provider's update for a CPU with a forced score is retained and
+published again once the override is removed.
+A malformed list is rejected with a console message; a run-time write then
+fails with
+.Er EINVAL .
+This lets the
+.Xr sched_mic 4
+score handling be exercised in a virtual machine without
+.Xr hfi 4 ,
+and a run-time update of a processor's table be simulated by writing a
+new list.
 .It Va kern.cpucap.detect_lpe
 A boot-time tunable of the x86 CPUID provider: when non-zero, the default,
 Intel small cores without a last-level cache are classified as low-power
