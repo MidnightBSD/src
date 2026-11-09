@@ -68,9 +68,18 @@ steal a queued thread as soon as
 .Va kern.sched.steal_thresh
 allows, as in
 .Xr sched_ule 4 .
-An idle low-power core only steals from a performance or efficiency core
-that has at least one more runnable thread than that, so a single queued
-thread is left for an idle performance or efficiency core to take first.
+An idle low-power core, or the idle SMT thread of a core whose other
+thread is busy, only steals from a performance or efficiency core that has
+at least one more runnable thread than that, so a single queued thread is
+left for an idle performance or efficiency core to take first.
+When comparing groups of CPUs the best available slot's class-adjusted load
+decides first and the group's total load, the
+.Xr sched_ule 4
+criterion, only breaks ties, so the fill order holds regardless of how many
+CPUs share a cache: on an Intel hybrid part with four P-cores and eight
+E-cores, four CPU-bound threads occupy one thread of each P-core, eight
+occupy the P-cores and four E-cores, twelve the P-cores and all E-cores,
+and only then are the second SMT threads of the P-cores used.
 On homogeneous hardware, and on architectures other than x86,
 .Nm
 behaves identically to
