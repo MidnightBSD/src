@@ -115,7 +115,10 @@ struct td_sched {
 	struct runq	*ts_runq;	/* Run-queue we're queued on. */
 	short		ts_flags;	/* TSF_* flags. */
 	uint8_t		ts_itdclass;	/* Thread Director class, 0 default. */
+	uint8_t		ts_itdstable;	/* Ticks ts_itdclass went unchanged. */
 	int		ts_cpu;		/* CPU that we have affinity for. */
+	int		ts_swapcpu;	/* Class swap: CPU to move to, or -1. */
+	int		ts_swaptick;	/* ticks of the last class swap. */
 	int		ts_rltick;	/* Real last tick, for affinity. */
 	int		ts_slice;	/* Ticks of slice remaining. */
 	u_int		ts_slptime;	/* Number of ticks we vol. slept */
@@ -130,6 +133,7 @@ struct td_sched {
 /* flags kept in ts_flags */
 #define	TSF_BOUND	0x0001		/* Thread can not migrate. */
 #define	TSF_XFERABLE	0x0002		/* Thread was added as transferable. */
+#define	TSF_SWAPLEAD	0x0004		/* First mover of a class swap. */
 
 #define	THREAD_CAN_MIGRATE(td)	((td)->td_pinned == 0)
 #define	THREAD_CAN_SCHED(td, cpu)	\
@@ -384,6 +388,28 @@ static counter_u64_t sched_itd_reads;	/* Class reads attempted. */
 static counter_u64_t sched_itd_invalid;	/* Reads with no valid class. */
 static counter_u64_t sched_itd_changes;	/* Reads that changed a class. */
 static counter_u64_t sched_itd_hist[CPUCAP_MAX_CLASSES]; /* Reads by class. */
+/*
+ * Class-aware swaps (kern.sched.itd_swap).  The per-class cost rows only
+ * steer a thread when it is placed, so CPU-bound threads that never sleep
+ * keep whatever CPU the fill order gave them, whatever their class.  Each
+ * balancer pass therefore compares the running threads of pairs of CPUs
+ * and asks the pair whose exchange lowers the summed class cost by more
+ * than sched_itd_swap_margin to trade CPUs; see sched_itd_swap_pass().
+ * A thread is only considered once its class has been the same for
+ * sched_itd_swap_stable consecutive ticks, no thread is swapped twice
+ * within sched_itd_swap_cooldown ticks, and at most sched_itd_swap_max
+ * pairs are started per pass, so a wrong or wavering class cannot bounce
+ * threads between cores.  All off, and no field touched, unless
+ * sched_itd_mode is on.
+ */
+static int __read_mostly sched_itd_swap = 1;
+static int __read_mostly sched_itd_swap_margin = 32;	/* Cost points. */
+static int __read_mostly sched_itd_swap_max = 2;	/* Pairs per pass. */
+static int __read_mostly sched_itd_swap_stable = 8;	/* Statclock ticks. */
+static int __read_mostly sched_itd_swap_cooldown = 1;	/* hz ticks; init. */
+static counter_u64_t sched_itd_swaps;		/* Pairs started. */
+static counter_u64_t sched_itd_swap_follows;	/* Partners asked to move. */
+static counter_u64_t sched_itd_swap_skipped;	/* Pairs dropped late. */
 
 /*
  * Per-CPU core class, capacity and scores come from the cpucap(9) layer
@@ -718,6 +744,9 @@ sched_core_class_init(void *dummy __unused)
 	sched_itd_reads = counter_u64_alloc(M_WAITOK);
 	sched_itd_invalid = counter_u64_alloc(M_WAITOK);
 	sched_itd_changes = counter_u64_alloc(M_WAITOK);
+	sched_itd_swaps = counter_u64_alloc(M_WAITOK);
+	sched_itd_swap_follows = counter_u64_alloc(M_WAITOK);
+	sched_itd_swap_skipped = counter_u64_alloc(M_WAITOK);
 	for (cls = 0; cls < CPUCAP_MAX_CLASSES; cls++)
 		sched_itd_hist[cls] = counter_u64_alloc(M_WAITOK);
 	cpucap_consumer_register(&sched_cpucap_consumer);
@@ -1601,6 +1630,197 @@ nextlow:
 	}
 }
 
+/*
+ * Class-aware swaps.
+ *
+ * A thread running on "cpu" may take part in a swap to "to" (any CPU when
+ * to is -1) when it is the thread the tdq lock serialises against (its
+ * lock is that tdq's lock, so it cannot switch out while we hold it), is
+ * an ordinary timeshare thread that may migrate, its class has been
+ * stable, and it has not swapped lately.  Idle threads, interrupt threads
+ * and every other non-timeshare class are left alone, as are pinned,
+ * bound and cpuset-restricted threads.  A plain re-pick the balancer has
+ * already asked for (TDF_PICKCPU without a target) is no obstacle: the
+ * swap target simply decides that pick.
+ */
+static bool
+sched_itd_swap_ok(struct thread *td, struct tdq *tdq, int to)
+{
+	struct td_sched *ts;
+
+	TDQ_LOCK_ASSERT(tdq, MA_OWNED);
+	if (td == NULL || td->td_lock != TDQ_LOCKPTR(tdq) ||
+	    (td->td_flags & TDF_IDLETD) != 0 ||
+	    PRI_BASE(td->td_pri_class) != PRI_TIMESHARE ||
+	    !THREAD_CAN_MIGRATE(td))
+		return (false);
+	ts = td_get_sched(td);
+	if ((ts->ts_flags & TSF_BOUND) != 0 ||
+	    ts->ts_itdstable < sched_itd_swap_stable ||
+	    ticks - ts->ts_swaptick < sched_itd_swap_cooldown)
+		return (false);
+	if (to >= 0 && !THREAD_CAN_SCHED(td, to))
+		return (false);
+	return (true);
+}
+
+/*
+ * Cost saved by exchanging a thread of class c1 on CPU cpu1 with one of
+ * class c2 on cpu2: positive when each class loses more where it is than
+ * it would where the other is.  Static rows only; the SMT-sibling penalty
+ * is the same for both threads of a pair and cancels.
+ */
+static int
+sched_itd_swap_gain(int c1, int cpu1, int c2, int cpu2)
+{
+
+	return ((int)sched_cpu_cost[c1][cpu1] + (int)sched_cpu_cost[c2][cpu2] -
+	    (int)sched_cpu_cost[c1][cpu2] - (int)sched_cpu_cost[c2][cpu1]);
+}
+
+/*
+ * Ask the thread running on "from" to move itself to "to" and, once it is
+ * queued there, to ask the thread running on "to" to come here.  Only the
+ * flags of a thread whose lock we hold are written; the move itself is
+ * made by that thread in its own sched_switch(), exactly as for the
+ * balancer's sched_balance_repick(): TDF_PICKCPU makes the switch pick a
+ * CPU and ts_swapcpu names it, both set and consumed under the thread's
+ * (tdq) lock.
+ */
+static void
+sched_itd_swap_start(int from, int to, int cls)
+{
+	struct td_sched *ts;
+	struct thread *td;
+	struct tdq *tdq;
+
+	tdq = TDQ_CPU(from);
+	TDQ_LOCK(tdq);
+	td = tdq->tdq_curthread;
+	if (sched_itd_swap_ok(td, tdq, to) &&
+	    td_get_sched(td)->ts_itdclass == cls) {
+		ts = td_get_sched(td);
+		ts->ts_swapcpu = to;
+		ts->ts_swaptick = ticks;
+		ts->ts_flags |= TSF_SWAPLEAD;
+		td->td_flags |= TDF_NEEDRESCHED | TDF_PICKCPU;
+		if (from != curcpu)
+			ipi_cpu(from, IPI_AST);
+		counter_u64_add(sched_itd_swaps, 1);
+	} else {
+		counter_u64_add(sched_itd_swap_skipped, 1);
+	}
+	TDQ_UNLOCK(tdq);
+}
+
+/*
+ * Second half of a swap, run by the first mover in sched_switch_migrate()
+ * right after it has been queued on "to", with to's lock held: ask the
+ * thread running there to take the CPU just left.  The exchange is
+ * re-evaluated from scratch, so a thread that changed class, slept or
+ * swapped meanwhile is simply not asked and the first move stands on its
+ * own (it was cheaper for the mover's class anyway).  Ordering the halves
+ * this way matters: the first mover goes to the better-ranked CPU, so the
+ * CPU it left is of worse rank and only steals from "to" after
+ * sched_steal_delay, by which time the partner's AST has long moved it.
+ * Were the worse-ranked thread to move first, the better-ranked CPU
+ * would fall idle and steal it straight back.
+ */
+static void
+sched_itd_swap_follow(struct tdq *from, struct tdq *to, struct thread *td)
+{
+	struct td_sched *ts2;
+	struct thread *td2;
+	int fromcpu, tocpu;
+
+	TDQ_LOCK_ASSERT(to, MA_OWNED);
+	fromcpu = TDQ_ID(from);
+	tocpu = TDQ_ID(to);
+	td2 = to->tdq_curthread;
+	if (!sched_itd_swap_ok(td2, to, fromcpu) ||
+	    sched_itd_swap_gain(sched_thread_class(td), fromcpu,
+	    sched_thread_class(td2), tocpu) <= sched_itd_swap_margin) {
+		counter_u64_add(sched_itd_swap_skipped, 1);
+		return;
+	}
+	ts2 = td_get_sched(td2);
+	ts2->ts_swapcpu = fromcpu;
+	ts2->ts_swaptick = ticks;
+	td2->td_flags |= TDF_NEEDRESCHED | TDF_PICKCPU;
+	ipi_cpu(tocpu, IPI_AST);
+	counter_u64_add(sched_itd_swap_follows, 1);
+}
+
+/* Snapshot of the swappable running threads' classes; 0xff is none. */
+static uint8_t sched_itd_swap_cls[MAXCPU];
+#define	SCHED_ITD_NOCAND	0xff
+
+/*
+ * One pass of class-aware swapping, from sched_balance() with no tdq lock
+ * held.  Snapshot the class of every swappable running thread, then
+ * greedily pick the pair with the largest gain above the margin, start
+ * it, retire both CPUs and repeat up to sched_itd_swap_max times.  The
+ * pair search is quadratic in the number of busy CPUs, which Thread
+ * Director parts keep small.  Everything here reads precomputed tables;
+ * the only writes are the flags of the two threads chosen, each under its
+ * own tdq lock.
+ */
+static void
+sched_itd_swap_pass(void)
+{
+	struct thread *td;
+	struct tdq *tdq;
+	int best, bi, bj, cpu, gain, i, j, n, swaps;
+
+	if (sched_itd_swap == 0 || !sched_hybrid || sched_itd_nclasses <= 1 ||
+	    sched_itd_swap_max <= 0)
+		return;
+	n = 0;
+	CPU_FOREACH(cpu) {
+		sched_itd_swap_cls[cpu] = SCHED_ITD_NOCAND;
+		tdq = TDQ_CPU(cpu);
+		if (TDQ_LOAD(tdq) == 0)
+			continue;
+		TDQ_LOCK(tdq);
+		td = tdq->tdq_curthread;
+		if (sched_itd_swap_ok(td, tdq, -1)) {
+			sched_itd_swap_cls[cpu] = sched_thread_class(td);
+			n++;
+		}
+		TDQ_UNLOCK(tdq);
+	}
+	for (swaps = 0; swaps < sched_itd_swap_max && n >= 2; swaps++) {
+		best = sched_itd_swap_margin;
+		bi = bj = -1;
+		CPU_FOREACH(i) {
+			if (sched_itd_swap_cls[i] == SCHED_ITD_NOCAND)
+				continue;
+			for (j = i + 1; j <= (int)mp_maxid; j++) {
+				if (sched_itd_swap_cls[j] == SCHED_ITD_NOCAND)
+					continue;
+				gain = sched_itd_swap_gain(
+				    sched_itd_swap_cls[i], i,
+				    sched_itd_swap_cls[j], j);
+				if (gain > best) {
+					best = gain;
+					bi = i;
+					bj = j;
+				}
+			}
+		}
+		if (bi < 0)
+			break;
+		/* The thread headed for the better-ranked CPU moves first. */
+		if (sched_cpu_cost[0][bi] <= sched_cpu_cost[0][bj])
+			sched_itd_swap_start(bj, bi, sched_itd_swap_cls[bj]);
+		else
+			sched_itd_swap_start(bi, bj, sched_itd_swap_cls[bi]);
+		sched_itd_swap_cls[bi] = SCHED_ITD_NOCAND;
+		sched_itd_swap_cls[bj] = SCHED_ITD_NOCAND;
+		n -= 2;
+	}
+}
+
 static void
 sched_balance(void)
 {
@@ -1611,6 +1831,8 @@ sched_balance(void)
 	tdq = TDQ_SELF();
 	TDQ_UNLOCK(tdq);
 	sched_balance_group(cpu_top);
+	if (__predict_false(sched_itd_mode != SCHED_ITD_OFF))
+		sched_itd_swap_pass();
 	TDQ_LOCK(tdq);
 }
 
@@ -2274,6 +2496,7 @@ sched_initticks(void *dummy)
 	sched_slice = realstathz / SCHED_SLICE_DEFAULT_DIVISOR;
 	sched_slice_min = sched_slice / SCHED_SLICE_MIN_DIVISOR;
 	sched_steal_delay = imax(1, hz / 250);		/* ~4 ms */
+	sched_itd_swap_cooldown = 2 * hz;
 	hogticks = imax(1, (2 * hz * sched_slice + realstathz / 2) /
 	    realstathz);
 
@@ -2492,6 +2715,9 @@ schedinit(void)
 	ts0->ts_ftick = ticks;
 	ts0->ts_slice = 0;
 	ts0->ts_itdclass = 0;
+	ts0->ts_itdstable = 0;
+	ts0->ts_swapcpu = -1;
+	ts0->ts_swaptick = ticks;
 	ts0->ts_cpu = curcpu;	/* set valid CPU number */
 }
 
@@ -2835,7 +3061,8 @@ tdq_trysteal(struct tdq *tdq)
  * cpu binding.
  */
 static struct mtx *
-sched_switch_migrate(struct tdq *tdq, struct thread *td, int flags)
+sched_switch_migrate(struct tdq *tdq, struct thread *td, int flags,
+    bool swaplead)
 {
 	struct tdq *tdn;
 #ifdef SMP
@@ -2859,6 +3086,8 @@ sched_switch_migrate(struct tdq *tdq, struct thread *td, int flags)
 	TDQ_UNLOCK(tdq);
 	TDQ_LOCK(tdn);
 	lowpri = tdq_add(tdn, td, flags);
+	if (__predict_false(swaplead))
+		sched_itd_swap_follow(tdq, tdn, td);
 	tdq_notify(tdn, lowpri);
 	TDQ_UNLOCK(tdn);
 	TDQ_LOCK(tdq);
@@ -2891,8 +3120,9 @@ sched_switch(struct thread *td, int flags)
 	struct mtx *mtx;
 	int srqflag;
 	int cpuid, preempted;
+	bool swaplead;
 #ifdef SMP
-	int pickcpu;
+	int pickcpu, swapcpu;
 #endif
 #ifdef SCHED_ITD
 	u_int hreset_mask;
@@ -2904,12 +3134,26 @@ sched_switch(struct thread *td, int flags)
 	tdq = TDQ_SELF();
 	ts = td_get_sched(td);
 	sched_pctcpu_update(ts, 1);
+	swaplead = false;
 #ifdef SMP
 	pickcpu = (td->td_flags & TDF_PICKCPU) != 0;
-	if (pickcpu)
+	swapcpu = -1;
+	if (pickcpu) {
 		ts->ts_rltick = ticks - affinity * MAX_CACHE_LEVELS;
-	else
+		/*
+		 * A class swap names the CPU to pick (see
+		 * sched_itd_swap_start()).  Consume it together with
+		 * TDF_PICKCPU whatever happens below, so a target set for a
+		 * thread that then sleeps never outlives this switch.  Both
+		 * stay -1 and clear while Thread Director is off.
+		 */
+		swapcpu = ts->ts_swapcpu;
+		ts->ts_swapcpu = -1;
+		swaplead = (ts->ts_flags & TSF_SWAPLEAD) != 0;
+		ts->ts_flags &= ~TSF_SWAPLEAD;
+	} else {
 		ts->ts_rltick = ticks;
+	}
 #endif
 	td->td_lastcpu = td->td_oncpu;
 	preempted = (td->td_flags & TDF_SLICEEND) == 0 &&
@@ -2934,13 +3178,21 @@ sched_switch(struct thread *td, int flags)
 		    (preempted ? SRQ_PREEMPTED : 0);
 #ifdef SMP
 		if (THREAD_CAN_MIGRATE(td) && (!THREAD_CAN_SCHED(td, ts->ts_cpu)
-		    || pickcpu))
-			ts->ts_cpu = sched_pickcpu(td, 0);
+		    || pickcpu)) {
+			if (swapcpu >= 0 && swapcpu <= (int)mp_maxid &&
+			    !CPU_ABSENT(swapcpu) &&
+			    THREAD_CAN_SCHED(td, swapcpu))
+				ts->ts_cpu = swapcpu;
+			else {
+				ts->ts_cpu = sched_pickcpu(td, 0);
+				swaplead = false;
+			}
+		}
 #endif
 		if (ts->ts_cpu == cpuid)
 			tdq_runq_add(tdq, td, srqflag);
 		else
-			mtx = sched_switch_migrate(tdq, td, srqflag);
+			mtx = sched_switch_migrate(tdq, td, srqflag, swaplead);
 	} else {
 		/* This thread must be going to sleep. */
 		if (mtx != TDQ_LOCKPTR(tdq)) {
@@ -3157,6 +3409,9 @@ sched_fork_thread(struct thread *td, struct thread *child)
 	ts2->ts_cpu = ts->ts_cpu;
 	ts2->ts_flags = 0;
 	ts2->ts_itdclass = 0;	/* Unclassified until the hardware says. */
+	ts2->ts_itdstable = 0;
+	ts2->ts_swapcpu = -1;
+	ts2->ts_swaptick = ticks;
 	/*
 	 * Grab our parents cpu estimation information.
 	 */
@@ -3316,8 +3571,10 @@ sched_itd_tick(struct thread *td)
 	counter_u64_add(sched_itd_hist[cls], 1);
 	if (ts->ts_itdclass != cls) {
 		ts->ts_itdclass = cls;
+		ts->ts_itdstable = 0;
 		counter_u64_add(sched_itd_changes, 1);
-	}
+	} else if (ts->ts_itdstable < UCHAR_MAX)
+		ts->ts_itdstable++;
 }
 
 void
@@ -4114,6 +4371,24 @@ sysctl_kern_sched_itd_force_class(SYSCTL_HANDLER_ARGS)
 	return (0);
 }
 
+/*
+ * kern.sched.itd_swap*: a non-negative integer no larger than arg2.
+ */
+static int
+sysctl_kern_sched_itd_swap_knob(SYSCTL_HANDLER_ARGS)
+{
+	int error, val;
+
+	val = *(int *)arg1;
+	error = sysctl_handle_int(oidp, &val, 0, req);
+	if (error != 0 || req->newptr == NULL)
+		return (error);
+	if (val < 0 || val > arg2)
+		return (EINVAL);
+	*(int *)arg1 = val;
+	return (0);
+}
+
 /* Read-only alias of kern.cpucap.force_classes, which replaced this knob. */
 static int
 sysctl_kern_sched_force_classes(SYSCTL_HANDLER_ARGS)
@@ -4240,6 +4515,35 @@ SYSCTL_COUNTER_U64(_kern_sched, OID_AUTO, itd_changes, CTLFLAG_RD,
 SYSCTL_PROC(_kern_sched, OID_AUTO, itd_hist, CTLTYPE_STRING |
     CTLFLAG_MPSAFE | CTLFLAG_RD, NULL, 0, sysctl_kern_sched_itd_hist, "A",
     "Thread class reads per class");
+SYSCTL_PROC(_kern_sched, OID_AUTO, itd_swap,
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE, &sched_itd_swap, 1,
+    sysctl_kern_sched_itd_swap_knob, "I",
+    "Let the balancer swap running threads between core types by Thread "
+    "Director class (needs itd_active)");
+SYSCTL_PROC(_kern_sched, OID_AUTO, itd_swap_margin,
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE, &sched_itd_swap_margin,
+    SCHED_CLASS_WEIGHT_MAX, sysctl_kern_sched_itd_swap_knob, "I",
+    "Summed class cost a swap must save (load points, 256 per thread)");
+SYSCTL_PROC(_kern_sched, OID_AUTO, itd_swap_max,
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE, &sched_itd_swap_max, MAXCPU,
+    sysctl_kern_sched_itd_swap_knob, "I",
+    "Class swaps started per balancer pass");
+SYSCTL_PROC(_kern_sched, OID_AUTO, itd_swap_stable,
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE, &sched_itd_swap_stable,
+    UCHAR_MAX, sysctl_kern_sched_itd_swap_knob, "I",
+    "Statclock ticks a thread's class must be unchanged before it may swap");
+SYSCTL_PROC(_kern_sched, OID_AUTO, itd_swap_cooldown,
+    CTLTYPE_INT | CTLFLAG_RW | CTLFLAG_MPSAFE, &sched_itd_swap_cooldown,
+    INT_MAX / 2, sysctl_kern_sched_itd_swap_knob, "I",
+    "hz ticks a thread waits between class swaps");
+SYSCTL_COUNTER_U64(_kern_sched, OID_AUTO, itd_swaps, CTLFLAG_RD,
+    &sched_itd_swaps, "Class swaps started by the balancer");
+SYSCTL_COUNTER_U64(_kern_sched, OID_AUTO, itd_swap_follows, CTLFLAG_RD,
+    &sched_itd_swap_follows,
+    "Class swaps whose partner thread was asked to move too");
+SYSCTL_COUNTER_U64(_kern_sched, OID_AUTO, itd_swap_skipped, CTLFLAG_RD,
+    &sched_itd_swap_skipped,
+    "Class swap halves dropped because a thread no longer qualified");
 SYSCTL_PROC(_kern_sched, OID_AUTO, class_cost, CTLTYPE_STRING |
     CTLFLAG_MPSAFE | CTLFLAG_RD, NULL, 0, sysctl_kern_sched_class_cost, "A",
     "Per-CPU placement cost of every thread class in effect");
