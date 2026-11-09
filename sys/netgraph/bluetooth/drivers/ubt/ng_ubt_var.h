@@ -167,4 +167,7 @@ usb_error_t	ubt_do_hci_request(struct usb_device *, struct ubt_hci_cmd *,
 extern	devclass_t	ubt_devclass;
 extern	driver_t	ubt_driver;
 
+extern	const STRUCT_USB_HOST_ID	ubt_mtk_devs[];
+extern	const size_t			ubt_mtk_devs_sizeof;
+
 #endif /* ndef _NG_UBT_VAR_H_ */
