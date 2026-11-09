@@ -149,6 +149,28 @@ At every context switch the scheduler executes the
 instruction, when the processor has it, so one thread's history is not
 read as the next thread's.
 .Pp
+The class steers a thread only when it is placed, so CPU-bound threads
+that never sleep would keep whatever CPU they were first given.
+While Thread Director is on, each pass of the periodic load balancer
+therefore also looks at the threads running on every pair of CPUs and,
+where exchanging two of them lowers the sum of their class costs by more
+than a margin
+.Pq Va kern.sched.itd_swap_margin ,
+asks both to trade CPUs: the thread headed for the better core moves
+first and, once queued there, asks the thread it displaces to take the
+CPU it left.
+Each thread moves itself at its next context switch, as when the balancer
+asks a lone thread to pick a new CPU, so no thread is ever taken off a
+CPU by another one.
+A thread is only considered once its class has been unchanged for
+.Va kern.sched.itd_swap_stable
+ticks, no thread is swapped twice within
+.Va kern.sched.itd_swap_cooldown
+ticks, and at most
+.Va kern.sched.itd_swap_max
+pairs are started per pass, so a wavering class cannot bounce threads
+between cores.
+.Pp
 Because
 .Nm
 is derived from
@@ -318,6 +340,36 @@ count class reads on the tick, reads the processor had no valid class for,
 and reads that changed a thread's class, and
 .Va kern.sched.itd_hist
 reports the reads per class.
+.It Va kern.sched.itd_swap
+When set to
+.Li 1 ,
+the default, and Thread Director classes are in effect
+.Pq Va kern.sched.itd_active ,
+the load balancer swaps running threads between core types by class as
+described above.
+.Va kern.sched.itd_swap_margin
+.Pq default 32 load points, an eighth of a thread
+is the summed class cost a swap must save,
+.Va kern.sched.itd_swap_max
+.Pq default 2
+the number of pairs started per balancer pass,
+.Va kern.sched.itd_swap_stable
+.Pq default 8 statistics clock ticks
+how long a thread's class must have been unchanged, and
+.Va kern.sched.itd_swap_cooldown
+.Pq default two seconds, in Va hz No ticks
+how long a thread that swapped is left alone.
+The read-only
+.Va kern.sched.itd_swaps
+counts pairs started,
+.Va kern.sched.itd_swap_follows
+those whose second thread was asked to move too, and
+.Va kern.sched.itd_swap_skipped
+halves dropped because a thread no longer qualified by the time it was
+asked.
+None of this runs while
+.Va kern.sched.itd_active
+is 0.
 .It Va kern.sched.mic.itd_force_class
 A debugging aid for exercising the per-class tables without Thread
 Director: -1, the default, is off; a class number gives every thread that
