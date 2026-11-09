@@ -353,10 +353,10 @@ static int __read_mostly sched_compute_class = CPU_CLASS_PERF;
 /*
  * kern.sched.use_scores: derive the per-CPU cost from the dynamic perf/eff
  * scores a cpucap(9) provider such as hfi(4) publishes instead of from the
- * class weights.  Off by default; see the score-mode comment above
+ * class weights.  On by default; see the score-mode comment above
  * sched_score_cost().
  */
-static int __read_mostly sched_use_scores = 0;
+static int __read_mostly sched_use_scores = 1;
 TUNABLE_INT("kern.sched.use_scores", &sched_use_scores);
 /*
  * Intel Thread Director (per-thread classes).  The hardware side is

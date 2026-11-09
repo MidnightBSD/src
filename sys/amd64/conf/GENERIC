@@ -13,7 +13,13 @@ ident		GENERIC
 makeoptions	DEBUG=-g		# Build kernel with gdb(1) debug symbols
 makeoptions	WITH_CTF=1		# Run ctfconvert(1) for DTrace support
 
+# SCHED_MIC is ULE-derived and shares ULE's thread-lock hand-off protocol
+# with the machine-dependent context switch code (cpu_switch() waits for
+# the incoming thread's td_lock to leave blocked_lock only when SCHED_ULE
+# is defined), so SCHED_ULE stays enabled; with both set, sys/conf/files
+# builds sched_mic.c instead of sched_ule.c.  See sched_mic(4).
 options 	SCHED_ULE		# ULE scheduler
+options 	SCHED_MIC		# Hybrid-core-aware scheduler (ULE-derived)
 options 	NUMA			# Non-Uniform Memory Architecture support
 options 	PREEMPTION		# Enable kernel thread preemption
 options 	VIMAGE			# Subsystem virtualization, e.g. VNET
@@ -104,6 +110,10 @@ options 	EARLY_AP_STARTUP
 
 # CPU frequency control
 device		cpufreq
+
+# Intel Hardware Feedback Interface and Thread Director for SCHED_MIC;
+# attaches only on CPUs that support it.  See hfi(4).
+device		hfi
 
 # Bus support.
 device		acpi

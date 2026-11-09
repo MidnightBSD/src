@@ -89,6 +89,21 @@ On homogeneous hardware, and on architectures other than x86,
 behaves identically to
 .Xr sched_ule 4 .
 .Pp
+The amd64
+.Cd GENERIC
+kernel uses
+.Nm
+together with
+.Xr hfi 4 .
+To build a kernel with
+.Xr sched_ule 4
+instead, add
+.Cd "nooptions SCHED_MIC"
+and
+.Cd "nodevice hfi"
+to a configuration file that includes
+.Cd GENERIC .
+.Pp
 Core class is supplied per-CPU by the
 .Xr cpucap 9
 capability layer, which the scheduler consults only when a provider commits
@@ -127,9 +142,11 @@ thread by the instructions it executes, and publish a separate score pair
 per thread class
 .Pq four on current parts
 for every CPU.
-This is off by default and enabled with the
+This is on by default on processors that support it and can be disabled
+by setting the
 .Va hw.hfi.itd
-loader tunable.
+loader tunable to
+.Li 0 .
 With it on, and
 .Va kern.sched.use_scores
 and
@@ -290,15 +307,15 @@ other six 86: all eight rank with the performance cores, and the cost of 8
 on the six only makes the favored cores fill first.
 .Pp
 The default is
-.Li 0 :
-on processors that write the table once at boot, such as the i7-1260P,
-the scores only reproduce the class ordering, and the behavior on
-processors that revise the table at run time has not yet been validated on
-hardware.
-The default is expected to become
-.Li 1
-once it has.
-It is also a loader tunable, so score mode can be enabled from
+.Li 1 .
+On processors that write the table once at boot, such as the i7-1260P,
+the scores reproduce the class ordering; processors such as the Core Ultra
+7 265K revise it at run time.
+Setting it to
+.Li 0
+restores the fixed class weights and, since the per-class tables derive
+from the scores, also turns off placement by Thread Director class.
+It is also a loader tunable, so score mode can be disabled from
 .Xr loader.conf 5 .
 Whether the costs in effect derive from scores is reported by the
 read-only
