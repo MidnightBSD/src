@@ -494,10 +494,17 @@ static int __read_mostly sched_class_jitter = 128;
  * P-core and the E-cores are peers that steal from each other at once
  * while a CPU scoring 0 ranks with LP, which only steals after
  * sched_steal_delay and whose lone threads the balancer asks to repick:
- * rank 0 for cost 0, SCHED_RANK_LP for an LP core, a CPU scoring 0 or a
- * cost of at least the LP weight, and SCHED_RANK_EFF otherwise.
+ * rank 0 for a cost of at most SCHED_SCORE_RANK0_COST, SCHED_RANK_LP for an
+ * LP core, a CPU scoring 0 or a cost of at least the LP weight, and
+ * SCHED_RANK_EFF otherwise.  Rank 0 takes CPUs within 1/16 of the best
+ * score, not only the best: a Core Ultra 7 265K reports perf 88 for its two
+ * favored (Turbo Boost Max) P-cores and 86 for the other six, which cost 8.
+ * The cost alone still fills the favored cores first; ranking the others
+ * with the E-cores would let the E-cores take their threads at once and
+ * make the class swap treat them as peers.
  */
 #define	SCHED_SCORE_SCALE	384
+#define	SCHED_SCORE_RANK0_COST	(SCHED_SCORE_SCALE / 16)
 #define	SCHED_SCORE_AVOID_COST	4096
 /* Whether the tables currently derive from scores (read-only sysctl). */
 static int __read_mostly sched_scores_active;
@@ -683,7 +690,7 @@ sched_core_class_update(void)
 			cost = sched_score_cost(score, max);
 			if (cls == CPU_CLASS_LP && cost < sched_class_weight_lp)
 				cost = sched_class_weight_lp;
-			if (cost == 0)
+			if (cost <= SCHED_SCORE_RANK0_COST)
 				rank = 0;
 			else if (cls == CPU_CLASS_LP || score == 0 ||
 			    cost >= sched_class_weight_lp)

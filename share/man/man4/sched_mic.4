@@ -276,8 +276,8 @@ since their fabric and cache handicap is not reflected in the score, and
 if every CPU reports a score of
 .Li 0
 the class weights are used.
-For stealing, a CPU whose cost is
-.Li 0
+For stealing, a CPU whose score is within 1/16 of the best
+.Pq a cost of at most 24
 ranks with the performance cores, a CPU scoring
 .Li 0
 or costing at least
@@ -285,6 +285,9 @@ or costing at least
 ranks with the low-power cores, and every other CPU ranks with the
 efficiency cores, so a throttled P-core and the E-cores steal from each
 other at once.
+On a Core Ultra 7 265K the two favored P-cores report perf 88 and the
+other six 86: all eight rank with the performance cores, and the cost of 8
+on the six only makes the favored cores fill first.
 .Pp
 The default is
 .Li 0 :
