@@ -32,12 +32,6 @@
 extern	int mtkbt_do_debug;
 extern	int mtkbt_do_info;
 
-#ifdef S_SPLINT_S
-/* splint cannot parse variadic macros; give it plain prototypes. */
-void	mtkbt_err(const char *fmt, ...);
-void	mtkbt_info(const char *fmt, ...);
-void	mtkbt_debug(const char *fmt, ...);
-#else
 #define	mtkbt_err(fmt, ...)						\
 	fprintf(stderr, "mtkbtfw: %s: "fmt"\n", __func__, ##__VA_ARGS__)
 #define	mtkbt_info(fmt, ...)	do {					\
@@ -48,6 +42,5 @@ void	mtkbt_debug(const char *fmt, ...);
 	if (mtkbt_do_debug)						\
 		fprintf(stderr, "%s: "fmt"\n", __func__, ##__VA_ARGS__);\
 } while (0)
-#endif
 
 #endif
