@@ -75,8 +75,8 @@
  * resume methods, all of which run in thread context.
  *
  * Thread Director (per-thread classes, IA32_HW_FEEDBACK_CONFIG bit 1) is
- * enabled only when the hw.hfi.itd tunable is set and the processor
- * reports it.  The per-CPU side (IA32_HW_FEEDBACK_THREAD_CONFIG,
+ * enabled when the processor reports it, unless the hw.hfi.itd tunable is
+ * set to 0.  The per-CPU side (IA32_HW_FEEDBACK_THREAD_CONFIG,
  * IA32_HRESET_ENABLE) is programmed through itd_enable() in
  * sys/x86/x86/itd.c before the package bit is set, following the order
  * Intel's Linux patches use, and torn down on suspend.  The per-class
@@ -215,11 +215,11 @@ struct hfi_softc {
 static MALLOC_DEFINE(M_HFI, "hfi", "Intel HFI tables");
 
 /* hw.hfi.itd: enable Thread Director classes when the processor has them. */
-static int hfi_itd_tunable = 0;
+static int hfi_itd_tunable = 1;
 SYSCTL_NODE(_hw, OID_AUTO, hfi, CTLFLAG_RD | CTLFLAG_MPSAFE, 0,
     "Intel Hardware Feedback Interface");
 SYSCTL_INT(_hw_hfi, OID_AUTO, itd, CTLFLAG_RDTUN, &hfi_itd_tunable, 0,
-    "Enable Intel Thread Director per-thread classes at attach (0 = off)");
+    "Enable Intel Thread Director per-thread classes at attach (1 = on)");
 
 /* For the cpucap provider callbacks, which take no argument. */
 static struct hfi_softc *hfi_sc;
@@ -925,7 +925,7 @@ hfi_attach(device_t dev)
 	/*
 	 * Thread Director: the layout gets one capability set per class
 	 * that the processor reports, of which at most CPUCAP_MAX_CLASSES
-	 * are parsed and published.  Off unless hw.hfi.itd is set.
+	 * are parsed and published.  On unless hw.hfi.itd is 0.
 	 */
 	sc->sc_itd = false;
 	if (hfi_itd_tunable != 0 && itd_supported(&nclasses) &&

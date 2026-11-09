@@ -29,7 +29,10 @@
 .Nm hfi
 .Nd Intel Hardware Feedback Interface driver
 .Sh SYNOPSIS
-To compile this driver into the kernel,
+The amd64
+.Cd GENERIC
+kernel includes this driver.
+To compile it into a custom kernel,
 place the following lines in your
 kernel configuration file:
 .Bd -ragged -offset indent
@@ -183,9 +186,10 @@ table; some processors write it only once, at boot.
 .Bl -tag -width indent
 .It Va hw.hfi.itd
 Set to
-.Li 1
-to enable Intel Thread Director at attach; the default is
-.Li 0 .
+.Li 0
+to keep Intel Thread Director disabled at attach; the default is
+.Li 1 ,
+which enables it on processors that support it.
 .It Va hint.hfi.0.disabled
 Set to
 .Li 1
