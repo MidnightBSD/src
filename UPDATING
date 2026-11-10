@@ -1,5 +1,16 @@
 Updating Information for MidnightBSD users.
 
+20261110:
+	OFED/RDMA kernel stack (sys/ofed) updated to FreeBSD stable/15,
+	Linux 5.7 based ibcore.  mlx4ib, mlx5ib, irdma (1.3.56-k), mthca,
+	qlnxr, iw_cxgbe and iser updated to match, and bnxt_re(4) is now
+	built.  The kernel, ibcore and all RDMA driver modules must be
+	rebuilt together; out of tree RDMA modules must be rebuilt.
+
+	libirdma updated and libbnxtre added.  Rebuild world together with
+	the kernel so libirdma matches irdma(4).  The user space verbs ABI
+	stays backwards compatible.
+
 20261109:
 	LinuxKPI, net80211 and the LinuxKPI wireless drivers (iwlwifi,
 	rtw88, rtw89) updated to FreeBSD stable/15.  New mt76 driver
