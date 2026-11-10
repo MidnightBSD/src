@@ -4179,6 +4179,12 @@ if_setdrvflags(if_t ifp, int flags)
 }
 
 int
+if_getlinkstate(if_t ifp)
+{
+	return (((struct ifnet *)ifp)->if_link_state);
+}
+
+int
 if_setflags(if_t ifp, int flags)
 {
 
