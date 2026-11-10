@@ -247,6 +247,7 @@ _LIBRARIES+= \
 .if ${MK_OFED} != "no"
 _LIBRARIES+= \
 		cxgb4 \
+		bnxtre \
 		ibcm \
 		ibmad \
 		ibnetdisc \
@@ -323,7 +324,7 @@ _DP_cap_pwd=	nv
 _DP_cap_sysctl=	nv
 _DP_cap_syslog=	nv
 .if ${MK_OFED} != "no"
-_DP_pcap=	ibverbs mlx5
+_DP_pcap=	ibverbs mlx5 bnxtre
 .endif
 _DP_pjdlog=	util
 _DP_opie=	md
@@ -441,6 +442,7 @@ _DP_cxgb4=	ibverbs pthread
 _DP_ibcm=	ibverbs
 _DP_ibmad=	ibumad
 _DP_ibnetdisc=	osmcomp ibmad ibumad
+_DP_bnxtre=	ibverbs pthread
 _DP_ibumad=	
 _DP_ibverbs=
 _DP_irdma=	ibverbs pthread
@@ -703,6 +705,7 @@ LIBTPOOLDIR=	${OBJTOP}/cddl/lib/libtpool
 # OFED support
 LIBCXGB4DIR=	${OBJTOP}/lib/ofed/libcxgb4
 LIBIBCMDIR=	${OBJTOP}/lib/ofed/libibcm
+LIBBNXTREDIR=	${OBJTOP}/lib/ofed/libbnxtre
 LIBIBMADDIR=	${OBJTOP}/lib/ofed/libibmad
 LIBIBNETDISCDIR=${OBJTOP}/lib/ofed/libibnetdisc
 LIBIBUMADDIR=	${OBJTOP}/lib/ofed/libibumad

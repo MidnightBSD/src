@@ -150,6 +150,7 @@ CFLAGS+= -DPCAP_SUPPORT_NETMAP
 SRCS+= pcap-rdmasniff.c
 LIBADD+= ibverbs
 LIBADD+= mlx5
+LIBADD+= bnxtre
 CFLAGS+= -DPCAP_SUPPORT_RDMASNIFF
 .endif
 
