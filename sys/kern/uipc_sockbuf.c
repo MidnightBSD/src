@@ -463,9 +463,11 @@ soroverflow(struct socket *so)
  * Wait for data to arrive at/drain from a socket buffer.
  */
 int
-sbwait(struct sockbuf *sb)
+sbwait(struct socket *so, sb_which which)
 {
+	struct sockbuf *sb;
 
+	sb = sobuf(so, which);
 	SOCKBUF_LOCK_ASSERT(sb);
 
 	sb->sb_flags |= SB_WAIT;

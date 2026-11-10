@@ -12981,7 +12981,7 @@ sctp_lower_sosend(struct socket *so,
 			be.error = 0;
 			stcb->block_entry = &be;
 			SCTP_TCB_UNLOCK(stcb);
-			error = sbwait(&so->so_snd);
+			error = sbwait(so, SO_SND);
 			if (error == 0) {
 				if (so->so_error != 0) {
 					error = so->so_error;
@@ -13344,7 +13344,7 @@ skip_preblock:
 				be.error = 0;
 				stcb->block_entry = &be;
 				SCTP_TCB_UNLOCK(stcb);
-				error = sbwait(&so->so_snd);
+				error = sbwait(so, SO_SND);
 				if (error == 0) {
 					if (so->so_error != 0)
 						error = so->so_error;

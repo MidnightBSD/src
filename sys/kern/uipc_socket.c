@@ -1691,7 +1691,7 @@ restart:
 				error = EWOULDBLOCK;
 				goto release;
 			}
-			error = sbwait(&so->so_snd);
+			error = sbwait(so, SO_SND);
 			SOCKBUF_UNLOCK(&so->so_snd);
 			if (error)
 				goto release;
@@ -2032,7 +2032,7 @@ restart:
 		}
 		SBLASTRECORDCHK(&so->so_rcv);
 		SBLASTMBUFCHK(&so->so_rcv);
-		error = sbwait(&so->so_rcv);
+		error = sbwait(so, SO_RCV);
 		SOCKBUF_UNLOCK(&so->so_rcv);
 		if (error)
 			goto release;
@@ -2358,7 +2358,7 @@ dontblock:
 			 * the protocol. Skip blocking in this case.
 			 */
 			if (so->so_rcv.sb_mb == NULL) {
-				error = sbwait(&so->so_rcv);
+				error = sbwait(so, SO_RCV);
 				if (error) {
 					SOCKBUF_UNLOCK(&so->so_rcv);
 					goto release;
@@ -2541,7 +2541,7 @@ restart:
 	 * Wait and block until (more) data comes in.
 	 * NB: Drops the sockbuf lock during wait.
 	 */
-	error = sbwait(sb);
+	error = sbwait(so, SO_RCV);
 	if (error)
 		goto out;
 	goto restart;
@@ -2713,7 +2713,7 @@ soreceive_dgram(struct socket *so, struct sockaddr **psa, struct uio *uio,
 		}
 		SBLASTRECORDCHK(&so->so_rcv);
 		SBLASTMBUFCHK(&so->so_rcv);
-		error = sbwait(&so->so_rcv);
+		error = sbwait(so, SO_RCV);
 		if (error) {
 			SOCKBUF_UNLOCK(&so->so_rcv);
 			return (error);
@@ -4226,7 +4226,7 @@ sodtor_set(struct socket *so, so_dtor_t *func)
  * Register per-socket buffer upcalls.
  */
 void
-soupcall_set(struct socket *so, int which, so_upcall_t func, void *arg)
+soupcall_set(struct socket *so, sb_which which, so_upcall_t func, void *arg)
 {
 	struct sockbuf *sb;
 
@@ -4249,7 +4249,7 @@ soupcall_set(struct socket *so, int which, so_upcall_t func, void *arg)
 }
 
 void
-soupcall_clear(struct socket *so, int which)
+soupcall_clear(struct socket *so, sb_which which)
 {
 	struct sockbuf *sb;
 
@@ -4262,8 +4262,6 @@ soupcall_clear(struct socket *so, int which)
 	case SO_SND:
 		sb = &so->so_snd;
 		break;
-	default:
-		panic("soupcall_clear: bad which");
 	}
 	SOCKBUF_LOCK_ASSERT(sb);
 	KASSERT(sb->sb_upcall != NULL,
