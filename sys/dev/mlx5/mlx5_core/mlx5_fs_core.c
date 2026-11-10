@@ -3242,9 +3242,12 @@ void mlx5_fs_core_free(struct mlx5_core_dev *dev)
 {
 	struct mlx5_flow_steering *steering = dev->priv.steering;
 
-	kmem_cache_destroy(steering->ftes_cache);
-	kmem_cache_destroy(steering->fgs_cache);
-	kfree(steering);
+	if (steering != NULL) {
+		kmem_cache_destroy(steering->ftes_cache);
+		kmem_cache_destroy(steering->fgs_cache);
+		kfree(steering);
+		dev->priv.steering = NULL;
+	}
 	mlx5_ft_pool_destroy(dev);
 	mlx5_cleanup_fc_stats(dev);
 }

@@ -1244,7 +1244,7 @@ static int mlx5_load_one(struct mlx5_core_dev *dev, struct mlx5_priv *priv,
 	err = mlx5_core_set_hca_defaults(dev);
 	if (err) {
 		mlx5_core_err(dev, "Failed to set HCA defaults %d\n", err);
-		goto err_free_comp_eqs;
+		goto err_fs;
 	}
 
 	err = mlx5_mpfs_init(dev);
@@ -1287,7 +1287,7 @@ err_mpfs:
 	mlx5_mpfs_destroy(dev);
 
 err_fs:
-	mlx5_cleanup_fs(dev);
+	mlx5_fs_core_cleanup(dev);
 
 err_free_comp_eqs:
 	free_comp_eqs(dev);
