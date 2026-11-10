@@ -93,6 +93,7 @@ struct dma_map_ops {
 int linux_dma_tag_init(struct device *, u64);
 #ifdef __MidnightBSD__
 u64 linuxkpi_dma_get_mask(struct device *);	/* MNBSD-KPI */
+void linuxkpi_skb_note_dma_mask(uint64_t);	/* MNBSD-KPI */
 #endif
 int linux_dma_tag_init_coherent(struct device *, u64);
 void *linux_dma_alloc_coherent(struct device *dev, size_t size,

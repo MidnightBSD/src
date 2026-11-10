@@ -183,6 +183,7 @@ struct sk_buff {
 	uint16_t		_flags;		/* Internal flags. */
 #define	_SKB_FLAGS_SKBEXTFRAG	0x0001
 #define	_SKB_PP_RECYCLE		0x0010
+#define	_SKB_FLAGS_HEADCONTIG	0x0100	/* MNBSD-KPI: head from contigmalloc */
 	uint16_t		l3hdroff;	/* network header offset from *head */
 	uint16_t		l4hdroff;	/* transport header offset from *head */
 	uint16_t		mac_header;	/* offset of mac_header */

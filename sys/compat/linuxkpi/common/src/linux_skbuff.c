@@ -43,6 +43,13 @@
 #include <sys/sysctl.h>
 
 #include <vm/uma.h>
+#ifdef __MidnightBSD__
+#include <sys/systm.h>
+#include <machine/atomic.h>
+#include <vm/vm.h>
+#include <vm/vm_param.h>
+#include <vm/vm_phys.h>
+#endif
 
 #ifdef DDB
 #include <ddb/ddb.h>
@@ -114,6 +121,60 @@ SYSCTL_INT(_compat_linuxkpi_skb, OID_AUTO, mem_limit, CTLFLAG_RDTUN,
     "1=32bit, 2=36bit, other=undef (currently 32bit)");
 
 static MALLOC_DEFINE(M_LKPISKB, "lkpiskb", "Linux KPI skbuff compat");
+
+#ifdef __MidnightBSD__
+/*
+ * MNBSD-KPI: pick the limit automatically.  A device with a DMA mask
+ * below the top of physical memory otherwise gets skb heads > 4K that
+ * bounce into several segments, which the nseg=1 LinuxKPI tag rejects
+ * (mt7925 on a >4G machine: "Failed to send patch").  An explicitly
+ * set compat.linuxkpi.skb.mem_limit tunable always wins.
+ *
+ * The limit may change at runtime, so each skb records how its head
+ * was allocated (_SKB_FLAGS_HEADCONTIG) and is freed accordingly.
+ */
+static bool linuxkpi_skb_memlimit_user;
+
+static void
+linuxkpi_skb_memlimit_init(void *arg __unused)
+{
+
+	linuxkpi_skb_memlimit_user =
+	    testenv("compat.linuxkpi.skb.mem_limit") != 0;
+}
+SYSINIT(lkpi_skb_memlimit, SI_SUB_TUNABLES, SI_ORDER_ANY,
+    linuxkpi_skb_memlimit_init, NULL);
+
+void
+linuxkpi_skb_note_dma_mask(uint64_t mask)
+{
+	vm_paddr_t top;
+	int lim, cur;
+
+	if (linuxkpi_skb_memlimit_user || mask == 0 || vm_phys_nsegs == 0)
+		return;
+	top = vm_phys_segs[vm_phys_nsegs - 1].end;
+	if (mask >= top - 1)
+		return;		/* The device reaches all of memory. */
+
+	if (mask <= 0xffffffffULL)
+		lim = 1;
+#ifdef __LP64__
+	else if (mask <= 0xfffffffffULL)
+		lim = 2;
+#endif
+	else
+		return;		/* No matching limit; leave it alone. */
+
+	cur = atomic_load_int(&linuxkpi_skb_memlimit);
+	if (cur != 0 && cur <= lim)
+		return;		/* Already as strict or stricter. */
+	atomic_store_int(&linuxkpi_skb_memlimit, lim);
+	printf("LinuxKPI: DMA mask %#jx below top of memory %#jx, "
+	    "allocating skbs below %s\n", (uintmax_t)mask, (uintmax_t)top,
+	    (lim == 1) ? "4G" : "64G");
+}
+#endif /* __MidnightBSD__ */
 #endif
 
 struct sk_buff *
@@ -143,7 +204,7 @@ linuxkpi_alloc_skb(size_t size, gfp_t gfp)
 	if (__predict_false(linuxkpi_skb_memlimit != 0)) {
 		vm_paddr_t high;
 
-		switch (linuxkpi_skb_memlimit) {
+		switch (atomic_load_int(&linuxkpi_skb_memlimit)) {
 #ifdef __LP64__
 		case 2:
 			high = (0xfffffffff);	/* 1<<36 really. */
@@ -157,6 +218,10 @@ linuxkpi_alloc_skb(size_t size, gfp_t gfp)
 		len = roundup_pow_of_two(len);
 		p = contigmalloc(len, M_LKPISKB,
 		    linux_check_m_flags(gfp) | M_ZERO, 0, high, PAGE_SIZE, 0);
+#ifdef __MidnightBSD__
+		if (p != NULL)
+			skb->_flags |= _SKB_FLAGS_HEADCONTIG;	/* MNBSD-KPI */
+#endif
 	} else
 #endif
 	p = __kmalloc(len, linux_check_m_flags(gfp) | M_ZERO);
@@ -307,7 +372,11 @@ lkpi___skb_linearize(struct sk_buff *skb)
 	}
 
 #ifdef	SKB_DMA32_MALLOC
+#ifdef __MidnightBSD__
+	if (__predict_false((skb->_flags & _SKB_FLAGS_HEADCONTIG) != 0))
+#else
 	if (__predict_false(linuxkpi_skb_memlimit != 0))
+#endif
 		free(skb->head, M_LKPISKB);
 	else
 #endif
@@ -320,6 +389,11 @@ lkpi___skb_linearize(struct sk_buff *skb)
 	skb->len = new->len;
 	skb->data_len = new->data_len;
 	skb->truesize = new->truesize;
+#ifdef __MidnightBSD__
+	/* MNBSD-KPI: the head now comes from new; so does how to free it. */
+	skb->_flags = (skb->_flags & ~_SKB_FLAGS_HEADCONTIG) |
+	    (new->_flags & _SKB_FLAGS_HEADCONTIG);
+#endif
 
 	uma_zfree(skbzone, new);
 
@@ -412,7 +486,11 @@ linuxkpi_kfree_skb(struct sk_buff *skb)
 	}
 
 #ifdef	SKB_DMA32_MALLOC
+#ifdef __MidnightBSD__
+	if (__predict_false((skb->_flags & _SKB_FLAGS_HEADCONTIG) != 0))
+#else
 	if (__predict_false(linuxkpi_skb_memlimit != 0))
+#endif
 		free(skb->head, M_LKPISKB);
 	else
 #endif

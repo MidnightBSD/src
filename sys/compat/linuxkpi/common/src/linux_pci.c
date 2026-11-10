@@ -255,6 +255,9 @@ linux_dma_tag_init(struct device *dev, u64 dma_mask)
 	}
 
 	priv->dma_mask = dma_mask;
+#ifdef __MidnightBSD__
+	linuxkpi_skb_note_dma_mask(dma_mask);	/* MNBSD-KPI */
+#endif
 
 	error = bus_dma_tag_create(bus_get_dma_tag(dev->bsddev),
 	    1, 0,			/* alignment, boundary */
