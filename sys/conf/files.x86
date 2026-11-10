@@ -85,8 +85,9 @@ dev/bxe/57710_init_values.c     optional	bxe pci
 dev/bxe/57711_init_values.c     optional	bxe pci
 dev/bxe/57712_init_values.c     optional	bxe pci
 dev/coretemp/coretemp.c		optional	coretemp
-# hfi needs the cpucap(9) layer, which SCHED_MIC kernels build.
-dev/hfi/hfi.c			optional	hfi
+# hfi needs the cpucap(9) and itd layers, which only SCHED_MIC kernels
+# build, so a non-MIC kernel with device hfi simply leaves it out.
+dev/hfi/hfi.c			optional	hfi sched_mic
 dev/cpuctl/cpuctl.c		optional	cpuctl
 dev/dpms/dpms.c			optional	dpms
 dev/fb/fb.c			optional	fb | vga
