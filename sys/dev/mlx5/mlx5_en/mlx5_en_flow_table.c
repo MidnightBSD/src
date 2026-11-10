@@ -1782,8 +1782,8 @@ mlx5e_add_vxlan_rule(struct mlx5e_priv *priv, sa_family_t family, u_int port)
 		el->refcount++;
 		if (el->installed)
 			return (0);
-	}
-	el = mlx5e_vxlan_alloc_db_el(priv, proto, port);
+	} else
+		el = mlx5e_vxlan_alloc_db_el(priv, proto, port);
 
 	if ((priv->ifp->if_capenable & IFCAP_VXLAN_HWCSUM) != 0) {
 		err = mlx5e_add_vxlan_rule_from_db(priv, el);
