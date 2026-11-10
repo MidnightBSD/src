@@ -1772,13 +1772,15 @@ mlx5e_add_vxlan_rule(struct mlx5e_priv *priv, sa_family_t family, u_int port)
 	struct mlx5e_vxlan_db_el *el;
 	u_int proto;
 	int err;
+	bool found;
 
 	err = mlx5e_vxlan_family_to_proto(family, &proto);
 	if (err != 0)
 		return (err);
 
 	el = mlx5e_vxlan_find_db_el(priv, proto, port);
-	if (el != NULL) {
+	found = el != NULL;
+	if (found) {
 		el->refcount++;
 		if (el->installed)
 			return (0);
@@ -1790,7 +1792,11 @@ mlx5e_add_vxlan_rule(struct mlx5e_priv *priv, sa_family_t family, u_int port)
 		if (err == 0)
 			el->installed = true;
 	}
-	if (err == 0)
+	if (found) {
+		/* The element is already on the list. */
+		if (err != 0)
+			el->refcount--;
+	} else if (err == 0)
 		TAILQ_INSERT_TAIL(&priv->vxlan.head, el, link);
 	else
 		kvfree(el);
