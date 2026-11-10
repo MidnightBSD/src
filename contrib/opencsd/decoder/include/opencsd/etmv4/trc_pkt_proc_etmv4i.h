@@ -1,8 +1,8 @@
 /*
- * \file       trc_pkt_proc_etmv4i_impl.h
+ * \file       trc_pkt_proc_etmv4i.h
  * \brief      OpenCSD : Implementation of ETMv4 packet processing
  * 
- * \copyright  Copyright (c) 2015, ARM Limited. All Rights Reserved.
+ * \copyright  Copyright (c) 2015, 2019 ARM Limited. All Rights Reserved.
  */
 
 /* 
@@ -35,29 +35,37 @@
 #ifndef ARM_TRC_PKT_PROC_ETMV4I_IMPL_H_INCLUDED
 #define ARM_TRC_PKT_PROC_ETMV4I_IMPL_H_INCLUDED
 
+#include "trc_pkt_types_etmv4.h"
 #include "opencsd/etmv4/trc_pkt_proc_etmv4.h"
 #include "opencsd/etmv4/trc_cmp_cfg_etmv4.h"
 #include "opencsd/etmv4/trc_pkt_elem_etmv4i.h"
+#include "common/trc_raw_buffer.h"
+#include "common/trc_pkt_proc_base.h"
 
-class EtmV4IPktProcImpl
+class EtmV4ITrcPacket;
+class EtmV4Config;
+
+/** @addtogroup ocsd_pkt_proc
+@{*/
+
+class TrcPktProcEtmV4I : public TrcPktProcBase< EtmV4ITrcPacket, ocsd_etmv4_i_pkt_type, EtmV4Config>
 {
 public:
-    EtmV4IPktProcImpl();
-    ~EtmV4IPktProcImpl();
+    TrcPktProcEtmV4I();
+    TrcPktProcEtmV4I(int instIDNum);
+    virtual ~TrcPktProcEtmV4I();
 
-    void Initialise(TrcPktProcEtmV4I *p_interface);
-
-    ocsd_err_t Configure(const EtmV4Config *p_config);
-
-
-    ocsd_datapath_resp_t processData(  const ocsd_trc_index_t index,
+protected:
+    /* implementation packet processing interface */
+    virtual ocsd_datapath_resp_t processData(  const ocsd_trc_index_t index,
                                         const uint32_t dataBlockSize,
                                         const uint8_t *pDataBlock,
                                         uint32_t *numBytesProcessed);
-    ocsd_datapath_resp_t onEOT();
-    ocsd_datapath_resp_t onReset();
-    ocsd_datapath_resp_t onFlush();
-    const bool isBadPacket() const;
+    virtual ocsd_datapath_resp_t onEOT();
+    virtual ocsd_datapath_resp_t onReset();
+    virtual ocsd_datapath_resp_t onFlush();
+    virtual ocsd_err_t onProtocolConfig();
+    virtual const bool isBadPacket() const;
 
 protected:
     typedef enum _process_state {
@@ -75,17 +83,16 @@ protected:
 
     /** packet processor configuration **/
     bool m_isInit;
-    TrcPktProcEtmV4I *m_interface;       /**< The interface to the other decode components */
 
     // etmv4 hardware configuration
     EtmV4Config m_config;
 
     /** packet data **/
-    std::vector<uint8_t> m_currPacketData;  // raw data
+    TraceRawBuffer m_trcIn;    // trace data in buffer
+    std::vector<uint8_t> m_currPacketData;  // raw data packet
     int m_currPktIdx;   // index into raw packet when expanding
     EtmV4ITrcPacket m_curr_packet;  // expanded packet
     ocsd_trc_index_t m_packet_index;   // index of the start of the current packet
-    uint32_t m_blockBytesProcessed;     // number of bytes processed in the current data block
     ocsd_trc_index_t m_blockIndex;     // index at the start of the current data block being processed
 
     // searching for sync
@@ -110,9 +117,10 @@ private:
     #define TINFO_KEY_SECT  0x02 
     #define TINFO_SPEC_SECT 0x04
     #define TINFO_CYCT_SECT 0x08
-    #define TINFO_CTRL      0x10
-    #define TINFO_ALL_SECT  0x0F
-    #define TINFO_ALL       0x1F
+    #define TINFO_WNDW_SECT 0x10
+    #define TINFO_CTRL      0x20
+    #define TINFO_ALL_SECT  0x1F
+    #define TINFO_ALL       0x3F
 
 
     // address and context packets 
@@ -152,27 +160,29 @@ private:
     ocsd_datapath_resp_t outputPacket();
     ocsd_datapath_resp_t outputUnsyncedRawPacket(); 
 
-    void iNotSync();      // not synced yet
-    void iPktNoPayload(); // process a single byte packet
-    void iPktReserved();  // deal with reserved header value
-    void iPktExtension();
-    void iPktASync();
-    void iPktTraceInfo();
-    void iPktTimestamp();
-    void iPktException();
-    void iPktCycleCntF123();
-    void iPktSpeclRes();
-    void iPktCondInstr();
-    void iPktCondResult();
-    void iPktContext();
-    void iPktAddrCtxt();
-    void iPktShortAddr();
-    void iPktLongAddr();
-    void iPktQ();
-    void iAtom();
+    void iNotSync(const uint8_t lastByte);      // not synced yet
+    void iPktNoPayload(const uint8_t lastByte); // process a single byte packet
+    void iPktReserved(const uint8_t lastByte);  // deal with reserved header value
+    void iPktExtension(const uint8_t lastByte);
+    void iPktASync(const uint8_t lastByte);
+    void iPktTraceInfo(const uint8_t lastByte);
+    void iPktTimestamp(const uint8_t lastByte);
+    void iPktException(const uint8_t lastByte);
+    void iPktCycleCntF123(const uint8_t lastByte);
+    void iPktSpeclRes(const uint8_t lastByte);
+    void iPktCondInstr(const uint8_t lastByte);
+    void iPktCondResult(const uint8_t lastByte);
+    void iPktContext(const uint8_t lastByte);
+    void iPktAddrCtxt(const uint8_t lastByte);
+    void iPktShortAddr(const uint8_t lastByte);
+    void iPktLongAddr(const uint8_t lastByte);
+    void iPktQ(const uint8_t lastByte);
+    void iAtom(const uint8_t lastByte);
+    void iPktInvalidCfg(const uint8_t lastByte);  // packet invalid in current config.
+    void iPktITE(const uint8_t lastByte);
 
     unsigned extractContField(const std::vector<uint8_t> &buffer, const unsigned st_idx, uint32_t &value, const unsigned byte_limit = 5);
-    unsigned extractContField64(const std::vector<uint8_t> &buffer, const unsigned st_idx, uint64_t &value, const unsigned byte_limit = 9);
+    unsigned extractTSField64(const std::vector<uint8_t> &buffer, const unsigned st_idx, uint64_t &value);
     unsigned extractCondResult(const std::vector<uint8_t> &buffer, const unsigned st_idx, uint32_t& key, uint8_t &result);
     void extractAndSetContextInfo(const std::vector<uint8_t> &buffer, const int st_idx);
     int extract64BitLongAddr(const std::vector<uint8_t> &buffer, const int st_idx, const uint8_t IS, uint64_t &value);
@@ -180,7 +190,7 @@ private:
     int extractShortAddr(const std::vector<uint8_t> &buffer, const int st_idx, const uint8_t IS, uint32_t &value, int &bits);
 
     // packet processing is table driven.    
-    typedef void (EtmV4IPktProcImpl::*PPKTFN)(void);
+    typedef void (TrcPktProcEtmV4I::*PPKTFN)(uint8_t);
     PPKTFN m_pIPktFn;
 
     struct _pkt_i_table_t {
@@ -194,10 +204,12 @@ private:
 };
 
 
-inline const bool EtmV4IPktProcImpl::isBadPacket() const
+inline const bool TrcPktProcEtmV4I::isBadPacket() const
 {
     return m_curr_packet.isBadPacket();
 }
+
+/** @}*/
 
 #endif // ARM_TRC_PKT_PROC_ETMV4I_IMPL_H_INCLUDED
 

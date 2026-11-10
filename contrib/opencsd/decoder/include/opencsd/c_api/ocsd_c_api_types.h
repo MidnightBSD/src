@@ -37,6 +37,7 @@
 
 /* select the library types that are C compatible - the interface data types */
 #include "opencsd/ocsd_if_types.h"
+#include "opencsd/ocsd_if_version.h"
 #include "opencsd/trc_gen_elem_types.h"
 #include "opencsd/trc_pkt_types.h"
 
@@ -45,6 +46,7 @@
 #include "opencsd/etmv4/trc_pkt_types_etmv4.h"
 #include "opencsd/ptm/trc_pkt_types_ptm.h"
 #include "opencsd/stm/trc_pkt_types_stm.h"
+#include "opencsd/ete/trc_pkt_types_ete.h"
 
 /** @ingroup lib_c_api
 @{*/

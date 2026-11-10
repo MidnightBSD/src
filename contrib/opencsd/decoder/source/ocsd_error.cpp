@@ -61,6 +61,7 @@ static const char *s_errorCodeDescs[][2] = {
     {"OCSD_ERR_DATA_DECODE_FATAL", "A decoder in the data path has returned a fatal error."},
     /* frame deformatter errors */
     {"OCSD_ERR_DFMTR_NOTCONTTRACE", "Trace input to deformatter none-continuous"},
+    {"OCSD_ERR_DFMTR_BAD_FHSYNC", "Bad frame or half frame sync in trace deformatter"},
     /* packet processor errors - protocol issues etc */
     {"OCSD_ERR_BAD_PACKET_SEQ","Bad packet sequence"},
     {"OCSD_ERR_INVALID_PCKT_HDR","Invalid packet header"},
@@ -79,6 +80,7 @@ static const char *s_errorCodeDescs[][2] = {
     {"OCSD_ERR_MEM_ACC_OVERLAP","Attempted to set an overlapping range in memory access map."},
     {"OCSD_ERR_MEM_ACC_FILE_NOT_FOUND","Memory access file could not be opened."},
     {"OCSD_ERR_MEM_ACC_FILE_DIFF_RANGE","Attempt to re-use the same memory access file for a different address range."},
+    {"OCSD_ERR_MEM_ACC_BAD_LEN","Memory accessor returned a bad read length value (larger than requested."},
     {"OCSD_ERR_MEM_ACC_RANGE_INVALID","Address range in accessor set to invalid values."},
     /* test errors - errors generated only by the test code, not the library */
     {"OCSD_ERR_TEST_SNAPSHOT_PARSE", "Test snapshot file parse error"},
@@ -90,7 +92,7 @@ static const char *s_errorCodeDescs[][2] = {
     {"OCSD_ERR_DCDREG_NAME_UNKNOWN","Attempted to find a decoder with a name that is not known in the library."},
     {"OCSD_ERR_DCDREG_TYPE_UNKNOWN","Attempted to find a decoder with a type that is not known in the library."},
     /* decoder config */
-    {"OCSD_ERR_DCD_INTERFACE_UNUSED","Attempt to connect or use and inteface not supported by this decoder."},
+    {"OCSD_ERR_DCD_INTERFACE_UNUSED","Attempt to connect or use and interface not supported by this decoder."},
     /* end marker*/
     {"OCSD_ERR_LAST", "No error - error code end marker"}
 };
@@ -205,7 +207,7 @@ const std::string ocsdError::getErrorString(const ocsdError &error)
 
 void ocsdError::appendErrorDetails(std::string &errStr, const ocsdError &error)
 {
-    int numerrstr = ((sizeof(s_errorCodeDescs) / sizeof(const char *)) / 2);
+    int numerrstr = sizeof(s_errorCodeDescs) / sizeof(s_errorCodeDescs[0]);
     int code = (int)error.getErrorCode();
     ocsd_trc_index_t idx = error.getErrorIndex();
     uint8_t chan_ID = error.getErrorChanID();
@@ -225,6 +227,27 @@ void ocsdError::appendErrorDetails(std::string &errStr, const ocsdError &error)
 
     oss << error.getMessage();
     errStr = oss.str();
+}
+
+
+const char* ocsdDataRespStr::getStr()
+{
+    static const char* szRespStr[] = {
+    "OCSD_RESP_CONT: Continue processing.",
+    "OCSD_RESP_WARN_CONT: Continue processing -> a component logged a warning.",
+    "OCSD_RESP_ERR_CONT: Continue processing -> a component logged an error.",
+    "OCSD_RESP_WAIT: Pause processing",
+    "OCSD_RESP_WARN_WAIT: Pause processing -> a component logged a warning.",
+    "OCSD_RESP_ERR_WAIT: Pause processing -> a component logged an error.",
+    "OCSD_RESP_FATAL_NOT_INIT: Processing Fatal Error :  component unintialised.",
+    "OCSD_RESP_FATAL_INVALID_OP: Processing Fatal Error :  invalid data path operation.",
+    "OCSD_RESP_FATAL_INVALID_PARAM: Processing Fatal Error :  invalid parameter in datapath call.",
+    "OCSD_RESP_FATAL_INVALID_DATA: Processing Fatal Error :  invalid trace data.",
+    "OCSD_RESP_FATAL_SYS_ERR: Processing Fatal Error :  internal system error."
+    };
+    if ((m_type < OCSD_RESP_CONT) || (m_type > OCSD_RESP_FATAL_SYS_ERR))
+        return "Unknown OCSD_RESP type.";
+    return szRespStr[m_type];
 }
 
 /* End of File ocsd_error.cpp */

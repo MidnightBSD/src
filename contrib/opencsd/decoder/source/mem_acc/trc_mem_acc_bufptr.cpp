@@ -37,12 +37,11 @@
 
 TrcMemAccBufPtr::TrcMemAccBufPtr(const ocsd_vaddr_t s_address, const uint8_t *p_buffer, const uint32_t size) : 
     TrcMemAccessorBase(MEMACC_BUFPTR, s_address, s_address+size-1),
-    m_p_buffer(p_buffer),
-    m_size(size)
+    m_p_buffer(p_buffer)
 {
 }
 
-const uint32_t TrcMemAccBufPtr::readBytes(const ocsd_vaddr_t address, const ocsd_mem_space_acc_t mem_space, const uint32_t reqBytes, uint8_t *byteBuffer)
+const uint32_t TrcMemAccBufPtr::readBytes(const ocsd_vaddr_t address, const ocsd_mem_space_acc_t mem_space, const uint8_t trcID, const uint32_t reqBytes, uint8_t *byteBuffer)
 {
     // mapper wlll filter memory spaces.
     uint32_t bytesRead = bytesInRange(address,reqBytes); // check bytes available
