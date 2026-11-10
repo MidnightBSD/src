@@ -1,0 +1,34 @@
+Upgrade procedure for opencsd
+
+Source: https://github.com/Linaro/OpenCSD (git tag vVERSION)
+        https://github.com/Linaro/OpenCSD/archive/refs/tags/vVERSION.tar.gz
+
+To upgrade to a new version:
+
+1. Clone upstream and export the release tag into an empty directory
+   with git --work-tree=DIR checkout vVERSION -- . (not git archive).
+2. Use the vendor-update skill (vendor branch vendor/opencsd, in-tree
+   prefix contrib/opencsd, tag vendor/opencsd/VERSION).
+3. Prune the vendor tree with MIDNIGHTBSD-Xlist before committing.
+   Only decoder/include and decoder/source are kept.
+4. Merge with git subtree merge -P contrib/opencsd vendor/opencsd.
+5. Update lib/libopencsd/Makefile (SRCS, INCS groups) and
+   etc/mtree/BSD.include.dist for added or removed files, following
+   FreeBSD's lib/libopencsd where possible.
+
+Local patches applied on top of upstream:
+
+  - None.  As of 1.4.0, contrib/opencsd is identical to the pruned
+    upstream tree and to FreeBSD's contrib/opencsd (stable/14 and
+    stable/15).
+
+Notes:
+  - opencsd 0.8.2 was imported directly into contrib/opencsd in
+    c668a41cec.  The vendor branch was created later with a 0.8.2
+    import (tag vendor/opencsd/0.8.2) followed by 1.4.0; the first
+    merge into master was done by hand because the histories were
+    unrelated.
+  - libopencsd is only built on aarch64 (lib/Makefile, MK_PMC) and is
+    a private library (PRIVATELIB) installed in /usr/lib.
+  - Upstream's LICENSE file is pruned, as in FreeBSD; every source
+    file carries the BSD license text.
