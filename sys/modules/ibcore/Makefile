@@ -7,6 +7,7 @@ SRCS= \
 	ib_cache.c \
 	ib_cm.c \
 	ib_cma.c \
+	ib_core_uverbs.c \
 	ib_cq.c \
 	ib_device.c \
 	ib_fmr_pool.c \
@@ -17,6 +18,7 @@ SRCS= \
 	ib_mad_rmpp.c \
 	ib_multicast.c \
 	ib_packer.c \
+	ib_rdma_core.c \
 	ib_roce_gid_mgmt.c \
 	ib_sa_query.c \
 	ib_smi.c \
@@ -27,9 +29,20 @@ SRCS= \
 	ib_umem.c \
 	ib_user_mad.c \
 	ib_uverbs_cmd.c \
+	ib_uverbs_ioctl.c \
 	ib_uverbs_main.c \
 	ib_uverbs_marshall.c \
+	ib_uverbs_std_types.c \
+	ib_uverbs_std_types_async_fd.c \
+	ib_uverbs_std_types_counters.c \
+	ib_uverbs_std_types_cq.c \
+	ib_uverbs_std_types_device.c \
+	ib_uverbs_std_types_dm.c \
+	ib_uverbs_std_types_flow_action.c \
+	ib_uverbs_std_types_mr.c \
+	ib_uverbs_uapi.c \
 	ib_verbs.c
+
 SRCS+=	${LINUXKPI_GENSRCS}
 SRCS+=	opt_inet.h opt_inet6.h
 
@@ -43,3 +56,4 @@ EXPORT_SYMS=	YES
 .include <bsd.kmod.mk>
 
 CWARNFLAGS+= -Wno-cast-qual -Wno-pointer-arith
+CWARNFLAGS+=	${NO_WUNUSED_BUT_SET_VARIABLE}

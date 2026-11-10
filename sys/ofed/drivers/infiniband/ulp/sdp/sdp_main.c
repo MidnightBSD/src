@@ -62,7 +62,7 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-#include <sys/cdefs.h>
+
 #include <sys/param.h>
 #include <sys/eventhandler.h>
 #include <sys/kernel.h>
@@ -187,6 +187,7 @@ sdp_pcbfree(struct sdp_sock *ssk)
 	uma_zfree(sdp_zone, ssk);
 }
 
+#ifdef __MidnightBSD__	/* MNBSD-KPI: 13.x socket/protosw KPI */
 /*
  * Common routines to return a socket address.
  */
@@ -258,6 +259,41 @@ sdp_pcbnotifyall(struct in_addr faddr, int errno,
 	}
 	SDP_LIST_WUNLOCK();
 }
+#else
+static int
+sdp_getsockaddr(struct socket *so, struct sockaddr *sa)
+{
+	struct sdp_sock *ssk = sdp_sk(so);
+
+	SDP_RLOCK(ssk);
+	*(struct sockaddr_in *)sa = (struct sockaddr_in ){
+		.sin_family = AF_INET,
+		.sin_len = sizeof(struct sockaddr_in),
+		.sin_addr.s_addr = ssk->laddr,
+		.sin_port = ssk->lport,
+	};
+	SDP_RUNLOCK(ssk);
+
+	return (0);
+}
+
+static int
+sdp_getpeeraddr(struct socket *so, struct sockaddr *sa)
+{
+	struct sdp_sock *ssk = sdp_sk(so);
+
+	SDP_RLOCK(ssk);
+	*(struct sockaddr_in *)sa = (struct sockaddr_in ){
+		.sin_family = AF_INET,
+		.sin_len = sizeof(struct sockaddr_in),
+		.sin_addr.s_addr = ssk->faddr,
+		.sin_port = ssk->fport,
+	};
+	SDP_RUNLOCK(ssk);
+
+	return (0);
+}
+#endif
 
 #if 0
 static void
@@ -306,6 +342,7 @@ sdp_closed(struct sdp_sock *ssk)
 	so = ssk->socket;
 	soisdisconnected(so);
 	if (ssk->flags & SDP_SOCKREF) {
+#ifdef __MidnightBSD__	/* MNBSD-KPI: 13.x socket/protosw KPI */
 		KASSERT(so->so_state & SS_PROTOREF,
 		    ("sdp_closed: !SS_PROTOREF"));
 		ssk->flags &= ~SDP_SOCKREF;
@@ -313,6 +350,11 @@ sdp_closed(struct sdp_sock *ssk)
 		SOCK_LOCK(so);
 		so->so_state &= ~SS_PROTOREF;
 		sofree(so);
+#else
+		ssk->flags &= ~SDP_SOCKREF;
+		SDP_WUNLOCK(ssk);
+		sorele(so);
+#endif
 		return (NULL);
 	}
 	return (ssk);
@@ -800,16 +842,23 @@ out:
  * are fully initialized.
  */
 static int
+#ifdef __MidnightBSD__	/* MNBSD-KPI: 13.x socket/protosw KPI */
 sdp_accept(struct socket *so, struct sockaddr **nam)
 {
 	struct sdp_sock *ssk = NULL;
 	struct in_addr addr;
 	in_port_t port;
+#else
+sdp_accept(struct socket *so, struct sockaddr *sa)
+{
+	struct sdp_sock *ssk = NULL;
+#endif
 	int error;
 
 	if (so->so_state & SS_ISDISCONNECTED)
 		return (ECONNABORTED);
 
+#ifdef __MidnightBSD__	/* MNBSD-KPI: 13.x socket/protosw KPI */
 	port = 0;
 	addr.s_addr = 0;
 	error = 0;
@@ -826,12 +875,30 @@ out:
 	if (error == 0)
 		*nam = sdp_sockaddr(port, &addr);
 	return error;
+#else
+	error = 0;
+	ssk = sdp_sk(so);
+	SDP_WLOCK(ssk);
+	if (ssk->flags & (SDP_TIMEWAIT | SDP_DROPPED))
+		error = ECONNABORTED;
+	else
+		*(struct sockaddr_in *)sa = (struct sockaddr_in ){
+			.sin_family = AF_INET,
+			.sin_len = sizeof(struct sockaddr_in),
+			.sin_addr.s_addr = ssk->faddr,
+			.sin_port = ssk->fport,
+		};
+	SDP_WUNLOCK(ssk);
+
+	return (error);
+#endif
 }
 
 /*
  * Mark the connection as being incapable of further output.
  */
 static int
+#ifdef __MidnightBSD__	/* MNBSD-KPI: 13.x socket/protosw KPI */
 sdp_shutdown(struct socket *so)
 {
 	int error = 0;
@@ -853,6 +920,55 @@ out:
 
 	return (error);
 }
+#else
+sdp_shutdown(struct socket *so, enum shutdown_how how)
+{
+	struct sdp_sock *ssk = sdp_sk(so);
+	int error = 0;
+
+	SOCK_LOCK(so);
+	if ((so->so_state &
+	    (SS_ISCONNECTED | SS_ISCONNECTING | SS_ISDISCONNECTING)) == 0) {
+		SOCK_UNLOCK(so);
+		return (ENOTCONN);
+	}
+	if (SOLISTENING(so)) {
+		if (how != SHUT_WR) {
+			so->so_error = ECONNABORTED;
+			solisten_wakeup(so);	/* unlocks so */
+		} else
+			SOCK_UNLOCK(so);
+		return (0);
+	}
+	SOCK_UNLOCK(so);
+
+	switch (how) {
+	case SHUT_RD:
+		socantrcvmore(so);
+		sbrelease(so, SO_RCV);
+		break;
+	case SHUT_RDWR:
+		socantrcvmore(so);
+		sbrelease(so, SO_RCV);
+		/* FALLTHROUGH */
+	case SHUT_WR:
+		SDP_WLOCK(ssk);
+		if (ssk->flags & (SDP_TIMEWAIT | SDP_DROPPED)) {
+			SDP_WUNLOCK(ssk);
+			error = ECONNRESET;
+			break;
+		}
+		socantsendmore(so);
+		sdp_usrclosed(ssk);
+		if (!(ssk->flags & SDP_DROPPED))
+			sdp_output_disconnect(ssk);
+		SDP_WUNLOCK(ssk);
+	}
+	wakeup(&so->so_timeo);
+
+	return (error);
+}
+#endif
 
 static void
 sdp_append(struct sdp_sock *ssk, struct sockbuf *sb, struct mbuf *mb, int cnt)
@@ -1140,7 +1256,11 @@ restart:
 				error = EWOULDBLOCK;
 				goto release;
 			}
+#ifdef __MidnightBSD__	/* MNBSD-KPI: 13.x socket/protosw KPI */
 			error = sbwait(&so->so_snd);
+#else
+			error = sbwait(so, SO_SND);
+#endif
 			SOCKBUF_UNLOCK(&so->so_snd);
 			if (error)
 				goto release;
@@ -1217,7 +1337,11 @@ soreceive_rcvoob(struct socket *so, struct uio *uio, int flags)
 	KASSERT(flags & MSG_OOB, ("soreceive_rcvoob: (flags & MSG_OOB) == 0"));
 
 	m = m_get(M_WAITOK, MT_DATA);
+#ifdef __MidnightBSD__	/* MNBSD-KPI: 13.x socket/protosw KPI */
 	error = (*pr->pr_usrreqs->pru_rcvoob)(so, m, flags & MSG_PEEK);
+#else
+	error = pr->pr_rcvoob(so, m, flags & MSG_PEEK);
+#endif
 	if (error)
 		goto bad;
 	do {
@@ -1334,7 +1458,11 @@ restart:
 	 * Wait and block until (more) data comes in.
 	 * NB: Drops the sockbuf lock during wait.
 	 */
+#ifdef __MidnightBSD__	/* MNBSD-KPI: 13.x socket/protosw KPI */
 	error = sbwait(sb);
+#else
+	error = sbwait(so, SO_RCV);
+#endif
 	if (error)
 		goto out;
 	goto restart;
@@ -1470,10 +1598,15 @@ sdp_close(struct socket *so)
 	 * holding on to the socket and pcb for a while.
 	 */
 	if (!(ssk->flags & SDP_DROPPED)) {
+#ifdef __MidnightBSD__	/* MNBSD-KPI: 13.x socket/protosw KPI */
 		SOCK_LOCK(so);
 		so->so_state |= SS_PROTOREF;
 		SOCK_UNLOCK(so);
 		ssk->flags |= SDP_SOCKREF;
+#else
+		ssk->flags |= SDP_SOCKREF;
+		soref(so);
+#endif
 	}
 	SDP_WUNLOCK(ssk);
 }
@@ -1566,6 +1699,7 @@ sdp_notify(struct sdp_sock *ssk, int error)
 	ssk->softerror = error;
 	return sdp_drop(ssk, error);
 }
+#ifdef __MidnightBSD__	/* MNBSD-KPI: 13.x socket/protosw KPI */
 
 static void
 sdp_ctlinput(int cmd, struct sockaddr *sa, void *vip)
@@ -1585,6 +1719,7 @@ sdp_control(struct socket *so, u_long cmd, caddr_t data, struct ifnet *ifp,
 {
 	return (EOPNOTSUPP);
 }
+#endif
 
 static void
 sdp_keepalive_timeout(void *data)
@@ -1905,7 +2040,11 @@ sdp_zone_change(void *tag)
 }
 
 static void
+#ifdef __MidnightBSD__	/* MNBSD-KPI: 13.x socket/protosw KPI */
 sdp_init(void)
+#else
+sdp_init(void *arg __unused)
+#endif
 {
 
 	LIST_INIT(&sdp_list);
@@ -1917,6 +2056,7 @@ sdp_init(void)
 	rx_comp_wq = create_singlethread_workqueue("rx_comp_wq");
 	ib_register_client(&sdp_client);
 }
+#ifdef __MidnightBSD__	/* MNBSD-KPI: 13.x socket/protosw KPI */
 
 extern struct domain sdpdomain;
 
@@ -1968,6 +2108,50 @@ struct domain sdpdomain = {
 	.dom_protosw =		sdpsw,
 	.dom_protoswNPROTOSW =	&sdpsw[sizeof(sdpsw)/sizeof(sdpsw[0])],
 };
+#else
+SYSINIT(sdp_init, SI_SUB_PROTO_DOMAIN, SI_ORDER_SECOND, sdp_init, NULL);
+
+#define	SDP_PROTOSW							\
+	.pr_type =		SOCK_STREAM,				\
+	.pr_flags =		PR_CONNREQUIRED|PR_IMPLOPCL|PR_WANTRCVD,\
+	.pr_ctloutput =		sdp_ctloutput,				\
+	.pr_abort =		sdp_abort,				\
+	.pr_accept =		sdp_accept,				\
+	.pr_attach =		sdp_attach,				\
+	.pr_bind =		sdp_bind,				\
+	.pr_connect =		sdp_connect,				\
+	.pr_detach =		sdp_detach,				\
+	.pr_disconnect =	sdp_disconnect,				\
+	.pr_listen =		sdp_listen,				\
+	.pr_peeraddr =		sdp_getpeeraddr,			\
+	.pr_rcvoob =		sdp_rcvoob,				\
+	.pr_send =		sdp_send,				\
+	.pr_sosend =		sdp_sosend,				\
+	.pr_soreceive =		sdp_sorecv,				\
+	.pr_shutdown =		sdp_shutdown,				\
+	.pr_sockaddr =		sdp_getsockaddr,			\
+	.pr_close =		sdp_close
+
+
+static struct protosw sdp_ip_protosw = {
+	.pr_protocol =		IPPROTO_IP,
+	SDP_PROTOSW
+};
+static struct protosw sdp_tcp_protosw = {
+	.pr_protocol =		IPPROTO_TCP,
+	SDP_PROTOSW
+};
+
+static struct domain sdpdomain = {
+	.dom_family =		AF_INET_SDP,
+	.dom_name =		"SDP",
+	.dom_nprotosw =		2,
+	.dom_protosw = {
+		&sdp_ip_protosw,
+		&sdp_tcp_protosw,
+	},
+};
+#endif
 
 DOMAIN_SET(sdp);
 
