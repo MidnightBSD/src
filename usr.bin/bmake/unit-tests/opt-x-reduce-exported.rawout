@@ -1,4 +1,0 @@
-ordinary:
-BEFORE=before
-submake:
-BEFORE=before
