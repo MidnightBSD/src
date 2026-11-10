@@ -83,6 +83,7 @@ MAN=	aac.4 \
 	bhndb_pci.4 \
 	blackhole.4 \
 	bnxt.4 \
+	bnxt_re.4 \
 	bpf.4 \
 	bridge.4 \
 	bwi.4 \

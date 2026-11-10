@@ -443,8 +443,8 @@ SUBDIR+=	dtrace
 SUBDIR+=	opensolaris
 .endif
 
-# Requires bus_space_read_8
-.if ${MACHINE_ARCH} != "i386"
+# MNBSD-KPI: no MACHINE_ABI in share/mk; FreeBSD uses !${MACHINE_ABI:Mlong32}.
+.if ${MACHINE_ARCH} != "i386" && ${MACHINE_ARCH:Marmv[67]*} == ""
 _bnxt=		bnxt
 .endif
 

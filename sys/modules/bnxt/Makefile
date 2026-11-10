@@ -1,14 +1,10 @@
+SUBDIR=	bnxt_en
 
-.PATH:  ${SRCTOP}/sys/dev/bnxt
+# MNBSD-KPI: bnxt_re needs the Linux 5.7-based ibcore (FreeBSD b633e08c705f:
+# ib_device ops, rdma/uverbs_ioctl.h, new verb signatures) and the
+# if_getlinkstate() IfAPI accessor, which this tree does not have yet.
+# FreeBSD stable/15 has:
+#SUBDIR=	bnxt_en	\
+#	bnxt_re
 
-KMOD    = if_bnxt
-SRCS    = device_if.h bus_if.h pci_if.h pci_iov_if.h ifdi_if.h
-SRCS	+= opt_inet.h opt_inet6.h opt_rss.h
-SRCS    += bnxt_txrx.c if_bnxt.c
-SRCS	+= bnxt_hwrm.c
-SRCS	+= bnxt_sysctl.c
-SRCS	+= bnxt_mgmt.c
-
-CFLAGS+= -DIFLIB
-
-.include <bsd.kmod.mk>
+.include <bsd.subdir.mk>

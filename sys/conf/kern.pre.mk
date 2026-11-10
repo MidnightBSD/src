@@ -343,6 +343,10 @@ MLXFW_C=	${OFED_C_NOIMP} \
 		-I${SRCTOP}/sys/contrib/xz-embedded/freebsd \
 		-I${SRCTOP}/sys/contrib/xz-embedded/linux/lib/xz \
 		${.IMPSRC}
+# BNXT Driver
+BNXT_CFLAGS=	-I$S/dev/bnxt/bnxt_en ${OFEDCFLAGS}
+BNXT_C_NOIMP=	${CC} -c -o ${.TARGET} ${BNXT_CFLAGS} ${WERROR}
+BNXT_C=		${BNXT_C_NOIMP} ${.IMPSRC}
 
 # IP Filter
 IPFILTER_CFLAGS=	-I$S/netpfil/ipfilter
