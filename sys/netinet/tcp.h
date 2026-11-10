@@ -54,12 +54,12 @@ struct tcphdr {
 	tcp_seq	th_seq;			/* sequence number */
 	tcp_seq	th_ack;			/* acknowledgement number */
 #if BYTE_ORDER == LITTLE_ENDIAN
-	u_char	th_x2:4,		/* (unused) */
+	u_char	th_x2:4,		/* upper 4 (reserved) flags */
 		th_off:4;		/* data offset */
 #endif
 #if BYTE_ORDER == BIG_ENDIAN
 	u_char	th_off:4,		/* data offset */
-		th_x2:4;		/* (unused) */
+		th_x2:4;		/* upper 4 (reserved) flags */
 #endif
 	u_char	th_flags;
 #define	TH_FIN	0x01
@@ -81,6 +81,24 @@ struct tcphdr {
 	u_short	th_sum;			/* checksum */
 	u_short	th_urp;			/* urgent pointer */
 };
+
+static __inline uint16_t
+__tcp_get_flags(const struct tcphdr *th)
+{
+	return (((uint16_t)th->th_x2 << 8) | th->th_flags);
+}
+
+static __inline void
+__tcp_set_flags(struct tcphdr *th, uint16_t flags)
+{
+	th->th_x2 = (flags >> 8) & 0x0f;
+	th->th_flags = flags & 0xff;
+}
+
+#ifdef _KERNEL
+#define tcp_get_flags(th) __tcp_get_flags(th)
+#define tcp_set_flags(th, flags) __tcp_set_flags(th, flags)
+#endif
 
 #define	PADTCPOLEN(len)		((((len) / 4) + !!((len) % 4)) * 4)
 
