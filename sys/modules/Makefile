@@ -325,6 +325,8 @@ SUBDIR=	\
 	pwm \
 	${_qat} \
 	${_qatfw} \
+	${_qat_c2xxx} \
+	${_qat_c2xxxfw} \
 	${_qlxge} \
 	${_qlxgb} \
 	${_qlxgbe} \
@@ -732,8 +734,8 @@ _ndis=		ndis
 _ntb=		ntb
 _ocs_fc=	ocs_fc
 _pccard=	pccard
-_qat=		qat
-_qatfw=		qatfw
+_qat_c2xxx=	qat_c2xxx
+_qat_c2xxxfw=	qat_c2xxxfw
 .if ${MK_OFED} != "no" || defined(ALL_MODULES)
 _rdma=		rdma
 .endif
@@ -826,6 +828,10 @@ _ioat=		ioat
 _ixl=		ixl
 _nvdimm=	nvdimm
 _pms=		pms
+_qat=		qat
+.if ${MK_SOURCELESS_UCODE} != "no"
+_qatfw=		qatfw
+.endif
 _qlxge=		qlxge
 _qlxgb=		qlxgb
 _sume=		sume

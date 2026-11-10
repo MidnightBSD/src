@@ -471,6 +471,7 @@ MAN=	aac.4 \
 	pwmc.4 \
 	${_pvscsi.4} \
 	${_qat.4} \
+	${_qat_c2xxx.4} \
 	${_qlxge.4} \
 	${_qlxgb.4} \
 	${_qlxgbe.4} \
@@ -883,6 +884,7 @@ _nvram.4=	nvram.4
 _padlock.4=	padlock.4
 _pchtherm.4=	pchtherm.4
 _qat.4=		qat.4
+_qat_c2xxx.4=	qat_c2xxx.4
 _rr232x.4=	rr232x.4
 _speaker.4=	speaker.4
 _spkr.4=	spkr.4
