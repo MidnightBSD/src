@@ -582,6 +582,8 @@ _mt76=		mt76
 .if ${MK_SOURCELESS_UCODE} != "no"
 _mt76fw=	mt76fw
 .endif
+# athk_common, ath10k, ath11k and ath12k exist but are not built yet,
+# as in FreeBSD.
 # brcm80211 (brcmfmac, brcmutil) is imported but not built yet, as in FreeBSD.
 _vmware=	vmware
 .endif

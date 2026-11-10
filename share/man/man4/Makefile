@@ -54,6 +54,7 @@ MAN=	aac.4 \
 	at45d.4 \
 	ata.4 \
 	ath.4 \
+	ath10k.4 \
 	ath_ahb.4 \
 	ath_hal.4 \
 	ath_pci.4 \
