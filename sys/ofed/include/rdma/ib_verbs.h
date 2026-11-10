@@ -58,9 +58,6 @@
 #include <linux/slab.h>
 #include <linux/rcupdate.h>
 #include <linux/netdevice.h>
-#ifdef __MidnightBSD__	/* MNBSD-KPI: FreeBSD 14 IfAPI accessors */
-#include <rdma/ib_mnbsd_ifapi.h>
-#endif
 #include <linux/xarray.h>
 #include <netinet/ip.h>
 #include <uapi/rdma/ib_user_verbs.h>
