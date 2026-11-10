@@ -75,29 +75,6 @@
 
 #define IRDMA_VER_LEN 24
 
-#ifdef __MidnightBSD__
-/*
- * MNBSD-KPI: netinet/tcp.h has no tcp_get_flags()/tcp_set_flags()
- * (FreeBSD 14).  Same definitions, th_x2 holds the upper flag bits.
- */
-#ifndef tcp_get_flags
-static inline uint16_t
-irdma_tcp_get_flags(const struct tcphdr *th)
-{
-	return (((uint16_t)th->th_x2 << 8) | th->th_flags);
-}
-
-static inline void
-irdma_tcp_set_flags(struct tcphdr *th, uint16_t flags)
-{
-	th->th_x2 = (flags >> 8) & 0x0f;
-	th->th_flags = flags & 0xff;
-}
-#define	tcp_get_flags(th)		irdma_tcp_get_flags(th)
-#define	tcp_set_flags(th, flags)	irdma_tcp_set_flags(th, flags)
-#endif
-#endif
-
 void kc_set_roce_uverbs_cmd_mask(struct irdma_device *iwdev);
 void kc_set_rdma_uverbs_cmd_mask(struct irdma_device *iwdev);
 

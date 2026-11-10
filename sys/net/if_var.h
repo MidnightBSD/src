@@ -763,6 +763,20 @@ u_int if_lladdr_count(if_t);
 u_int if_llmaddr_count(if_t);
 
 struct ifaddr * if_getifaddr(if_t ifp);
+typedef u_int if_addr_cb_t(void *, struct ifaddr *, u_int);
+u_int if_foreach_addr_type(if_t ifp, int type, if_addr_cb_t cb, void *cb_arg);
+
+typedef int (*if_foreach_cb_t)(if_t, void *);
+int	if_foreach(if_foreach_cb_t, void *);
+
+/* Opaque iterator structure for iterating over interfaces. */
+struct if_iter {
+	void *context[4];
+};
+
+if_t	if_iter_start(struct if_iter *);
+if_t	if_iter_next(struct if_iter *);
+void	if_iter_finish(struct if_iter *);
 
 /* Functions */
 void if_setinitfn(if_t ifp, void (*)(void *));
@@ -775,6 +789,16 @@ uint64_t if_getcounter(if_t ifp, ift_counter counter);
 const uint8_t *if_getbroadcastaddr(const if_t ifp);
 void if_setqflushfn(if_t ifp, if_qflush_fn_t);
 void if_setgetcounterfn(if_t ifp, if_get_counter_t);
+int if_getindex(const if_t ifp);
+int if_getdunit(const if_t ifp);
+struct vnet *if_getvnet(const if_t ifp);
+uint8_t if_getaddrlen(if_t ifp);
+uint8_t if_getpcp(if_t ifp);
+struct ifvlantrunk *if_getvlantrunk(if_t ifp);
+void if_setbroadcastaddr(if_t ifp, const uint8_t *);
+int if_transmit(if_t ifp, struct mbuf *m);
+void if_init(if_t ifp, void *ctx);
+int if_resolvemulti(if_t ifp, struct sockaddr **, struct sockaddr *);
 
 /* Revisit the below. These are inline functions originally */
 int drbr_inuse_drv(if_t ifp, struct buf_ring *br);

@@ -270,7 +270,7 @@ static void	if_input_default(struct ifnet *, struct mbuf *);
 static int	if_requestencap_default(struct ifnet *, struct if_encap_req *);
 static void	if_route(struct ifnet *, int flag, int fam);
 static int	if_setflag(struct ifnet *, int, int, int *, int);
-static int	if_transmit(struct ifnet *ifp, struct mbuf *m);
+static int	if_transmit_default(struct ifnet *ifp, struct mbuf *m);
 static void	if_unroute(struct ifnet *, int flag, int fam);
 static int	if_delmulti_locked(struct ifnet *, struct ifmultiaddr *, int);
 static void	do_link_state_change(void *, int);
@@ -885,7 +885,7 @@ if_attach_internal(struct ifnet *ifp, bool vmove)
 	    (ifp->if_transmit != NULL && ifp->if_qflush != NULL),
 	    ("transmit and qflush must both either be set or both be NULL"));
 	if (ifp->if_transmit == NULL) {
-		ifp->if_transmit = if_transmit;
+		ifp->if_transmit = if_transmit_default;
 		ifp->if_qflush = if_qflush;
 	}
 	if (ifp->if_input == NULL)
@@ -3969,7 +3969,7 @@ if_start(struct ifnet *ifp)
  * that have not implemented it
  */
 static int
-if_transmit(struct ifnet *ifp, struct mbuf *m)
+if_transmit_default(struct ifnet *ifp, struct mbuf *m)
 {
 	int error;
 
@@ -4583,6 +4583,153 @@ if_setgetcounterfn(if_t ifp, if_get_counter_t fn)
 {
 
 	ifp->if_get_counter = fn;
+}
+
+int
+if_getindex(const if_t ifp)
+{
+	return (ifp->if_index);
+}
+
+int
+if_getdunit(const if_t ifp)
+{
+	return (ifp->if_dunit);
+}
+
+struct vnet *
+if_getvnet(const if_t ifp)
+{
+	return (ifp->if_vnet);
+}
+
+uint8_t
+if_getaddrlen(if_t ifp)
+{
+	return (ifp->if_addrlen);
+}
+
+uint8_t
+if_getpcp(if_t ifp)
+{
+	return (ifp->if_pcp);
+}
+
+struct ifvlantrunk *
+if_getvlantrunk(if_t ifp)
+{
+	return (ifp->if_vlantrunk);
+}
+
+void
+if_setbroadcastaddr(if_t ifp, const uint8_t *addr)
+{
+	ifp->if_broadcastaddr = addr;
+}
+
+int
+if_transmit(if_t ifp, struct mbuf *m)
+{
+	return ((*ifp->if_transmit)(ifp, m));
+}
+
+void
+if_init(if_t ifp, void *ctx)
+{
+	(*ifp->if_init)(ctx);
+}
+
+int
+if_resolvemulti(if_t ifp, struct sockaddr **srcs, struct sockaddr *dst)
+{
+	if (ifp->if_resolvemulti == NULL)
+		return (EOPNOTSUPP);
+
+	return (ifp->if_resolvemulti(ifp, srcs, dst));
+}
+
+/*
+ * Call cb for each address of family type on ifp, in the net epoch.
+ * Returns the sum of the callback return values.
+ */
+u_int
+if_foreach_addr_type(if_t ifp, int type, if_addr_cb_t cb, void *cb_arg)
+{
+	struct epoch_tracker et;
+	struct ifaddr *ifa;
+	u_int count;
+
+	MPASS(cb);
+
+	count = 0;
+	NET_EPOCH_ENTER(et);
+	CK_STAILQ_FOREACH(ifa, &ifp->if_addrhead, ifa_link) {
+		if (ifa->ifa_addr->sa_family != type)
+			continue;
+		count += (*cb)(cb_arg, ifa, count);
+	}
+	NET_EPOCH_EXIT(et);
+
+	return (count);
+}
+
+/*
+ * Call cb for each interface in the current vnet until it returns
+ * non-zero.  The caller must be in the net epoch.
+ */
+int
+if_foreach(if_foreach_cb_t cb, void *cb_arg)
+{
+	if_t ifp;
+	int error;
+
+	NET_EPOCH_ASSERT();
+	MPASS(cb);
+
+	error = 0;
+	CK_STAILQ_FOREACH(ifp, &V_ifnet, if_link) {
+		error = cb(ifp, cb_arg);
+		if (error != 0)
+			break;
+	}
+
+	return (error);
+}
+
+/*
+ * Interface iterator.  The caller must be in the net epoch from
+ * if_iter_start() until if_iter_finish().
+ */
+if_t
+if_iter_start(struct if_iter *iter)
+{
+	if_t ifp;
+
+	NET_EPOCH_ASSERT();
+
+	bzero(iter, sizeof(*iter));
+	ifp = CK_STAILQ_FIRST(&V_ifnet);
+	if (ifp != NULL)
+		iter->context[0] = CK_STAILQ_NEXT(ifp, if_link);
+	else
+		iter->context[0] = NULL;
+	return (ifp);
+}
+
+if_t
+if_iter_next(struct if_iter *iter)
+{
+	if_t cur_ifp = iter->context[0];
+
+	if (cur_ifp != NULL)
+		iter->context[0] = CK_STAILQ_NEXT(cur_ifp, if_link);
+	return (cur_ifp);
+}
+
+void
+if_iter_finish(struct if_iter *iter)
+{
+	/* Nothing to do here for now. */
 }
 
 /* Revisit these - These are inline functions originally. */
