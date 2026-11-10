@@ -116,6 +116,9 @@ struct	sockbuf {
 #endif	/* defined(_KERNEL) || defined(_WANT_SOCKET) */
 #ifdef _KERNEL
 
+/* 'which' values for KPIs that operate on one buffer of a socket. */
+typedef enum { SO_RCV, SO_SND } sb_which;
+
 /*
  * Per-socket buffer mutex used to protect most fields in the socket
  * buffer.
@@ -181,7 +184,7 @@ struct mbuf *
 	sbsndptr_noadv(struct sockbuf *sb, u_int off, u_int *moff);
 struct mbuf *
 	sbsndmbuf(struct sockbuf *sb, u_int off, u_int *moff);
-int	sbwait(struct sockbuf *sb);
+int	sbwait(struct socket *, sb_which);
 void	sballoc(struct sockbuf *, struct mbuf *);
 void	sbfree(struct sockbuf *, struct mbuf *);
 void	sballoc_ktls_rx(struct sockbuf *sb, struct mbuf *m);

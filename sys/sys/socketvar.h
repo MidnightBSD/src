@@ -242,8 +242,11 @@ struct socket {
 	    ("%s: %p not listening", __func__, (sol)));			\
 } while (0)
 
-/* 'which' values for socket buffer events and upcalls. */
-typedef enum { SO_RCV, SO_SND } sb_which;
+static inline struct sockbuf *
+sobuf(struct socket *so, const sb_which which)
+{
+	return (which == SO_RCV ? &so->so_rcv : &so->so_snd);
+}
 
 /*
  * Macros for sockets and socket buffering.
