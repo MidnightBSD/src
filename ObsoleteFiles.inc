@@ -39,6 +39,12 @@
 # for generating a list from a directory
 # find  /usr/lib/perl5/5.36.0 -exec echo {} \; | cut -b 2-150  | xargs printf "OLD_FILES+=%s\n"
 
+# 20261110: opencsd 1.4.0; libopencsd moved to /usr/lib and made private
+OLD_FILES+=lib/libopencsd.so.0
+OLD_FILES+=usr/include/opencsd/etmv4/trc_pkt_elem_etmv4d.h
+OLD_FILES+=usr/lib/libopencsd.a
+OLD_FILES+=usr/lib/libopencsd.so
+
 # 20261109: efun(3) moved to libnetbsd in 2022, remove its old man pages
 OLD_FILES+=usr/share/man/man3/easprintf.3.gz
 OLD_FILES+=usr/share/man/man3/ecalloc.3.gz
