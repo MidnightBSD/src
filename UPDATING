@@ -14,6 +14,14 @@ Updating Information for MidnightBSD users.
 
 	firmware(9) can load raw firmware files from /boot/firmware/.
 
+	LinuxKPI 802.11 hardware crypto offload is now on by default
+	(compat.linuxkpi.80211.hw_crypto=1); without it receive A-MPDU is
+	disabled for mt76, iwlwifi and rtw89 and throughput is about half.
+	Set compat.linuxkpi.80211.hw_crypto=0 in loader.conf(5) to go back
+	to software crypto.  compat.linuxkpi.skb.mem_limit no longer needs
+	to be set by hand on machines with more than 4GB of memory; it is
+	chosen automatically from the DMA masks of attached devices.
+
 20261108:
 	timerfd(2) added: timerfd_create(2), timerfd_gettime(2) and
 	timerfd_settime(2) are new system calls (__MidnightBSD_version
