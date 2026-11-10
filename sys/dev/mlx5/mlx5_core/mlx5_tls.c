@@ -53,7 +53,7 @@ int mlx5_encryption_key_create(struct mlx5_core_dev *mdev, u32 pdn,
 		MLX5_SET(create_encryption_key_in, in, encryption_key_object.key_size,
 			 MLX5_GENERAL_OBJECT_TYPE_ENCRYPTION_KEY_KEY_SIZE_128);
 		MLX5_SET(create_encryption_key_in, in, encryption_key_object.key_type,
-			 MLX5_GENERAL_OBJECT_TYPE_ENCRYPTION_KEY_TYPE_DEK);
+			 MLX5_GENERAL_OBJECT_TYPE_ENCRYPTION_KEY_TYPE_TLS);
 		break;
 	case 256 / 8:
 		memcpy(MLX5_ADDR_OF(create_encryption_key_in, in,
@@ -62,7 +62,7 @@ int mlx5_encryption_key_create(struct mlx5_core_dev *mdev, u32 pdn,
 		MLX5_SET(create_encryption_key_in, in, encryption_key_object.key_size,
 			 MLX5_GENERAL_OBJECT_TYPE_ENCRYPTION_KEY_KEY_SIZE_256);
 		MLX5_SET(create_encryption_key_in, in, encryption_key_object.key_type,
-			 MLX5_GENERAL_OBJECT_TYPE_ENCRYPTION_KEY_TYPE_DEK);
+			 MLX5_GENERAL_OBJECT_TYPE_ENCRYPTION_KEY_TYPE_TLS);
 		break;
 	default:
 		return -EINVAL;

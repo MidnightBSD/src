@@ -201,11 +201,7 @@ static void handle_responder(struct ib_wc *wc, struct mlx5_cqe64 *cqe,
 	case MLX5_CQE_RESP_WR_IMM:
 		wc->opcode	= IB_WC_RECV_RDMA_WITH_IMM;
 		wc->wc_flags	= IB_WC_WITH_IMM;
-#ifdef __MidnightBSD__	/* MNBSD-KPI: older mlx5 flow steering core */
-		wc->ex.imm_data = cqe->imm_inval_pkey;
-#else
 		wc->ex.imm_data = cqe->immediate;
-#endif
 		break;
 	case MLX5_CQE_RESP_SEND:
 		wc->opcode   = IB_WC_RECV;
@@ -217,20 +213,12 @@ static void handle_responder(struct ib_wc *wc, struct mlx5_cqe64 *cqe,
 	case MLX5_CQE_RESP_SEND_IMM:
 		wc->opcode	= IB_WC_RECV;
 		wc->wc_flags	= IB_WC_WITH_IMM;
-#ifdef __MidnightBSD__	/* MNBSD-KPI: older mlx5 flow steering core */
-		wc->ex.imm_data = cqe->imm_inval_pkey;
-#else
 		wc->ex.imm_data = cqe->immediate;
-#endif
 		break;
 	case MLX5_CQE_RESP_SEND_INV:
 		wc->opcode	= IB_WC_RECV;
 		wc->wc_flags	= IB_WC_WITH_INVALIDATE;
-#ifdef __MidnightBSD__	/* MNBSD-KPI: older mlx5 flow steering core */
-		wc->ex.invalidate_rkey = be32_to_cpu(cqe->imm_inval_pkey);
-#else
 		wc->ex.invalidate_rkey = be32_to_cpu(cqe->inval_rkey);
-#endif
 		break;
 	}
 	wc->src_qp	   = be32_to_cpu(cqe->flags_rqpn) & 0xffffff;
@@ -238,11 +226,7 @@ static void handle_responder(struct ib_wc *wc, struct mlx5_cqe64 *cqe,
 	g = (be32_to_cpu(cqe->flags_rqpn) >> 28) & 3;
 	wc->wc_flags |= g ? IB_WC_GRH : 0;
 	if (unlikely(is_qp1(qp->ibqp.qp_type))) {
-#ifdef __MidnightBSD__	/* MNBSD-KPI: older mlx5 flow steering core */
-		u16 pkey = be32_to_cpu(cqe->imm_inval_pkey) & 0xffff;
-#else
 		u16 pkey = be32_to_cpu(cqe->pkey) & 0xffff;
-#endif
 
 		ib_find_cached_pkey(&dev->ib_dev, qp->port, pkey,
 				    &wc->pkey_index);

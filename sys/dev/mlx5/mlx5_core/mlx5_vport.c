@@ -718,6 +718,7 @@ int mlx5_query_nic_vport_mac_list(struct mlx5_core_dev *dev,
 	void *nic_vport_ctx;
 	int max_list_size;
 	int req_list_size;
+	int fw_list_size;
 	int out_sz;
 	void *out;
 	int err;
@@ -756,8 +757,14 @@ int mlx5_query_nic_vport_mac_list(struct mlx5_core_dev *dev,
 
 	nic_vport_ctx = MLX5_ADDR_OF(query_nic_vport_context_out, out,
 				     nic_vport_context);
-	req_list_size = MLX5_GET(nic_vport_context, nic_vport_ctx,
+	fw_list_size = MLX5_GET(nic_vport_context, nic_vport_ctx,
 				 allowed_list_size);
+	/*
+	 * Firmware reports the size of the whole list; never copy more
+	 * entries than addr_list and the output buffer were sized for.
+	 */
+	if (fw_list_size < req_list_size)
+		req_list_size = fw_list_size;
 
 	*list_size = req_list_size;
 	for (i = 0; i < req_list_size; i++) {

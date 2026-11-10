@@ -11,9 +11,12 @@ mlx5_diag_cnt.c \
 mlx5_diagnostics.c \
 mlx5_eq.c \
 mlx5_eswitch.c \
+mlx5_fs_chains.c \
 mlx5_fs_cmd.c \
+mlx5_fs_core.c \
+mlx5_fs_counters.c \
+mlx5_fs_ft_pool.c \
 mlx5_fs_tcp.c \
-mlx5_fs_tree.c \
 mlx5_fw.c \
 mlx5_fwdump.c \
 mlx5_health.c \
