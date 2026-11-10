@@ -2138,21 +2138,13 @@ static int mlx5_ib_destroy_flow(struct ib_flow *flow_id)
 	mutex_lock(&dev->flow_db.lock);
 
 	list_for_each_entry_safe(iter, tmp, &handler->list, list) {
-#ifdef __MidnightBSD__	/* MNBSD-KPI: older mlx5 flow steering core */
-		mlx5_del_flow_rule(&iter->rule);
-#else
 		mlx5_del_flow_rules(&iter->rule);
-#endif
 		put_flow_table(dev, iter->prio, true);
 		list_del(&iter->list);
 		kfree(iter);
 	}
 
-#ifdef __MidnightBSD__	/* MNBSD-KPI: older mlx5 flow steering core */
-	mlx5_del_flow_rule(&handler->rule);
-#else
 	mlx5_del_flow_rules(&handler->rule);
-#endif
 	put_flow_table(dev, handler->prio, true);
 	mutex_unlock(&dev->flow_db.lock);
 
@@ -2181,9 +2173,7 @@ static struct mlx5_ib_flow_prio *get_flow_table(struct mlx5_ib_dev *dev,
 						enum flow_table_type ft_type)
 {
 	bool dont_trap = flow_attr->flags & IB_FLOW_ATTR_FLAGS_DONT_TRAP;
-#ifndef __MidnightBSD__	/* MNBSD-KPI: older mlx5 flow steering core */
 	struct mlx5_flow_table_attr ft_attr = {};
-#endif
 	struct mlx5_flow_namespace *ns = NULL;
 	struct mlx5_ib_flow_prio *prio;
 	struct mlx5_flow_table *ft;
@@ -2232,17 +2222,11 @@ static struct mlx5_ib_flow_prio *get_flow_table(struct mlx5_ib_dev *dev,
 
 	ft = prio->flow_table;
 	if (!ft) {
-#ifdef __MidnightBSD__	/* MNBSD-KPI: older mlx5 flow steering core */
-		ft = mlx5_create_auto_grouped_flow_table(ns, priority, "bypass",
-							 num_entries,
-							 num_groups);
-#else
 		ft_attr.prio = priority;
 		ft_attr.max_fte = num_entries;
 		ft_attr.autogroup.max_num_groups = num_groups;
 
 		ft = mlx5_create_auto_grouped_flow_table(ns, &ft_attr);
-#endif
 
 		if (!IS_ERR(ft)) {
 			prio->refcount = 0;
@@ -2265,10 +2249,8 @@ static struct mlx5_ib_flow_handler *create_flow_rule(struct mlx5_ib_dev *dev,
 	struct mlx5_flow_spec *spec;
 	const void *ib_flow = (const void *)flow_attr + sizeof(*flow_attr);
 	unsigned int spec_index;
-#ifndef __MidnightBSD__	/* MNBSD-KPI: older mlx5 flow steering core */
 	struct mlx5_flow_act flow_act = {};
 
-#endif
 	u32 action;
 	int err = 0;
 
@@ -2282,11 +2264,9 @@ static struct mlx5_ib_flow_handler *create_flow_rule(struct mlx5_ib_dev *dev,
 		goto free;
 	}
 
-#ifndef __MidnightBSD__	/* MNBSD-KPI: older mlx5 flow steering core */
 	spec->flow_context.flags = FLOW_CONTEXT_HAS_TAG;
 	spec->flow_context.flow_tag = MLX5_FS_DEFAULT_FLOW_TAG;
 
-#endif
 	INIT_LIST_HEAD(&handler->list);
 
 	for (spec_index = 0; spec_index < flow_attr->num_of_specs; spec_index++) {
@@ -2299,20 +2279,9 @@ static struct mlx5_ib_flow_handler *create_flow_rule(struct mlx5_ib_dev *dev,
 	}
 
 	spec->match_criteria_enable = get_match_criteria_enable(spec->match_criteria);
-#ifdef __MidnightBSD__	/* MNBSD-KPI: older mlx5 flow steering core */
-	action = dst ? MLX5_FLOW_CONTEXT_ACTION_FWD_DEST :
-		MLX5_FLOW_CONTEXT_ACTION_FWD_NEXT_PRIO;
-	handler->rule = mlx5_add_flow_rule(ft, spec->match_criteria_enable,
-					   spec->match_criteria,
-					   spec->match_value,
-					   action,
-					   MLX5_FS_DEFAULT_FLOW_TAG,
-					   dst);
-#else
 	action = dst ? MLX5_FLOW_CONTEXT_ACTION_FWD_DEST : 0;
 	flow_act.action = action;
 	handler->rule = mlx5_add_flow_rules(ft, spec, &flow_act, dst, 1);
-#endif
 
 	if (IS_ERR(handler->rule)) {
 		err = PTR_ERR(handler->rule);
@@ -2343,11 +2312,7 @@ static struct mlx5_ib_flow_handler *create_dont_trap_rule(struct mlx5_ib_dev *de
 		handler_dst = create_flow_rule(dev, ft_prio,
 					       flow_attr, dst);
 		if (IS_ERR(handler_dst)) {
-#ifdef __MidnightBSD__	/* MNBSD-KPI: older mlx5 flow steering core */
-			mlx5_del_flow_rule(&handler->rule);
-#else
 			mlx5_del_flow_rules(&handler->rule);
-#endif
 			ft_prio->refcount--;
 			kfree(handler);
 			handler = handler_dst;
@@ -2410,11 +2375,7 @@ static struct mlx5_ib_flow_handler *create_leftovers_rule(struct mlx5_ib_dev *de
 						 &leftovers_specs[LEFTOVERS_UC].flow_attr,
 						 dst);
 		if (IS_ERR(handler_ucast)) {
-#ifdef __MidnightBSD__	/* MNBSD-KPI: older mlx5 flow steering core */
-			mlx5_del_flow_rule(&handler->rule);
-#else
 			mlx5_del_flow_rules(&handler->rule);
-#endif
 			ft_prio->refcount--;
 			kfree(handler);
 			handler = handler_ucast;
@@ -2457,11 +2418,7 @@ static struct mlx5_ib_flow_handler *create_sniffer_rule(struct mlx5_ib_dev *dev,
 	return handler_rx;
 
 err_tx:
-#ifdef __MidnightBSD__	/* MNBSD-KPI: older mlx5 flow steering core */
-	mlx5_del_flow_rule(&handler_rx->rule);
-#else
 	mlx5_del_flow_rules(&handler_rx->rule);
-#endif
 	ft_rx->refcount--;
 	kfree(handler_rx);
 err:
