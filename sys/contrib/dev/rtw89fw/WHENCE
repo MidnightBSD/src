@@ -1,8 +1,24 @@
+Driver: rtw89 - Realtek 802.11ax and 802.11be WLAN driver
 
-Driver: rtw89 - Realtek 802.11ax WLAN driver for RTL8852A
-
+File: rtw89/rtw8851b_fw.bin
+File: rtw89/rtw8851b_fw-1.bin
 File: rtw89/rtw8852a_fw.bin
+File: rtw89/rtw8852a_fw-1.bin
+File: rtw89/rtw8852b_fw.bin
+File: rtw89/rtw8852b_fw-1.bin
+File: rtw89/rtw8852b_fw-2.bin
+File: rtw89/rtw8852bt_fw.bin
+File: rtw89/rtw8852bt_fw-1.bin
 File: rtw89/rtw8852c_fw.bin
+File: rtw89/rtw8852c_fw-1.bin
+File: rtw89/rtw8852c_fw-2.bin
+File: rtw89/rtw8922a_fw.bin
+File: rtw89/rtw8922a_fw-1.bin
+File: rtw89/rtw8922a_fw-2.bin
+File: rtw89/rtw8922a_fw-3.bin
+File: rtw89/rtw8922a_fw-4.bin
 
 Licence: Redistributable. See LICENCE.rtlwifi_firmware.txt for details.
 
+   These firmware support 802.11ax chips including RTL8851B, RTL8852A,
+   RTL8852B, RTL8852BT and RTL8852C and 802.11be chip including RTL8922A.

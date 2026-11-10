@@ -2,7 +2,9 @@
 # Common rules for building firmware.  Note this gets auto-included
 # by the subdir Makefile's as a consequence of included bsd.kmod.mk.
 
-_NAME=		rtw${NAME}_fw.bin
+# FWSFX is the "-N" firmware format suffix, empty for the plain image.
+FWSFX?=
+_NAME=		rtw${NAME}_fw${FWSFX}.bin
 
 IMG=		${_NAME}
 KMOD=		${_NAME}
