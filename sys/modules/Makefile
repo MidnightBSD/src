@@ -270,6 +270,7 @@ SUBDIR=	\
 	msdosfs_iconv \
 	msk \
 	${_mt76} \
+	${_mt76fw} \
 	${_mthca} \
 	mvs \
 	mwl \
@@ -577,6 +578,9 @@ _rtw89fw=	rtw89fw
 .endif
 .endif
 _mt76=		mt76
+.if ${MK_SOURCELESS_UCODE} != "no"
+_mt76fw=	mt76fw
+.endif
 _vmware=	vmware
 .endif
 

@@ -86,19 +86,18 @@ The
 .Nm if_mt7925
 driver has been tested with the MediaTek MT7925 (PCI ID 14c3:7925).
 .Sh FILES
-The drivers need firmware which is not part of the base system.
-It is loaded from
-.Pa /boot/firmware/mediatek/ :
-.Bl -tag -width indent
-.It Pa mediatek/mt7925/WIFI_MT7925_PATCH_MCU_1_1_hdr.bin
-.It Pa mediatek/mt7925/WIFI_RAM_CODE_MT7925_1_1.bin
-Firmware for
-.Nm if_mt7925 .
-.El
+The firmware is part of the base system and is loaded automatically as
+kernel modules named after the firmware file, for example
+.Pa /boot/kernel/WIFI_RAM_CODE_MT7925_1_1.bin.ko .
+Firmware files placed in
+.Pa /boot/firmware/mediatek/
+are used instead if present.
 .Pp
-The firmware is available from the linux-firmware repository and is
-distributed under the MediaTek firmware license, which allows
-redistribution for use with devices containing MediaTek chipsets.
+The firmware comes from the linux-firmware repository and is
+distributed under the MediaTek firmware license
+.Pq Pa sys/contrib/dev/mt76fw/LICENCE.mediatek ,
+which allows redistribution for use with devices containing MediaTek
+chipsets.
 .Sh LOADER TUNABLES
 .Bl -tag -width indent
 .It Va compat.linuxkpi.80211.hw_crypto
