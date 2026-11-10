@@ -223,6 +223,7 @@ accel_fs_tcp_create_groups(struct mlx5e_flow_table *ft, int type)
 	in = kvzalloc(inlen, GFP_KERNEL);
 	if (!in || !ft->g) {
 		kfree(ft->g);
+		ft->g = NULL;
 		kvfree(in);
 		return (-ENOMEM);
 	}
@@ -333,6 +334,11 @@ accel_fs_tcp_create_table(struct mlx5e_priv *priv, int type)
 	return (0);
 
 err_destroy_flow_table:
+	if (ft->g != NULL) {
+		accel_fs_tcp_destroy_groups(ft);
+		kfree(ft->g);
+		ft->g = NULL;
+	}
 	mlx5_destroy_flow_table(ft->t);
 	ft->t = NULL;
 	return (err);
