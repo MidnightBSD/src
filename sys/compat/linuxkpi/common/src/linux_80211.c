@@ -115,7 +115,17 @@ SYSCTL_BOOL(_compat_linuxkpi_80211, OID_AUTO, order_scanlist, CTLFLAG_RW,
     &lkpi_order_scanlist, 0, "Enable LinuxKPI 802.11 scan list shuffeling");
 
 #if defined(LKPI_80211_HW_CRYPTO)
+#ifdef __MidnightBSD__
+/*
+ * MNBSD-KPI: default on.  Without hardware crypto RX A-MPDU is turned off
+ * for drivers doing A-MPDU in firmware (mt76, iwlwifi, rtw89), which
+ * halves throughput (mt7925: 52 vs 99 Mbit/s).  Set the tunable to 0 to
+ * go back to software crypto.
+ */
+static bool lkpi_hwcrypto = true;
+#else
 static bool lkpi_hwcrypto = false;
+#endif
 SYSCTL_BOOL(_compat_linuxkpi_80211, OID_AUTO, hw_crypto, CTLFLAG_RDTUN,
     &lkpi_hwcrypto, 0, "Enable LinuxKPI 802.11 hardware crypto offload");
 
