@@ -32,8 +32,11 @@
 #define	_LINUXKPI_LINUX_SCATTERLIST_H_
 
 #include <sys/types.h>
+#include <sys/proc.h>
+#include <sys/sched.h>
 #include <sys/sf_buf.h>
 
+#include <linux/err.h>
 #include <linux/page.h>
 #include <linux/slab.h>
 #include <linux/mm.h>
@@ -47,6 +50,7 @@ struct scatterlist {
 	unsigned int offset;
 	unsigned int length;
 	dma_addr_t dma_address;
+	unsigned int dma_length;
 	struct bus_dmamap *dma_map;	/* FreeBSD specific */
 };
 
@@ -86,13 +90,18 @@ struct sg_dma_page_iter {
 	((struct scatterlist *) ((sg)->page_link & ~SG_PAGE_LINK_MASK))
 
 #define	sg_dma_address(sg)	(sg)->dma_address
+#ifdef CONFIG_NEED_SG_DMA_LENGTH
+#define	sg_dma_len(sg)		(sg)->dma_length
+#else
 #define	sg_dma_len(sg)		(sg)->length
+#endif
 
 #define	for_each_sg_page(sgl, iter, nents, pgoffset)			\
-	for (_sg_iter_init(sgl, iter, nents, pgoffset);			\
-	     (iter)->sg; _sg_iter_next(iter))
+	for (_sg_iter_init(sgl, iter, nents, pgoffset, false);		\
+	     (iter)->sg; _sg_iter_next(iter, false))
 #define	for_each_sg_dma_page(sgl, iter, nents, pgoffset) 		\
-	for_each_sg_page(sgl, &(iter)->base, nents, pgoffset)
+	for (_sg_iter_init(sgl, &(iter)->base, nents, pgoffset, true);	\
+	     (iter)->base.sg; _sg_iter_next(&(iter)->base, true))
 
 #define	for_each_sg(sglist, sg, sgmax, iter)				\
 	for (iter = 0, sg = (sglist); iter < (sgmax); iter++, sg = sg_next(sg))
@@ -132,7 +141,7 @@ sg_set_page(struct scatterlist *sg, struct page *page, unsigned int len,
 static inline struct page *
 sg_page(struct scatterlist *sg)
 {
-	return ((struct page *)((sg)->page_link & ~SG_PAGE_LINK_MASK));
+	return ((struct page *)(sg->page_link & ~SG_PAGE_LINK_MASK));
 }
 
 static inline void
@@ -183,6 +192,12 @@ sg_mark_end(struct scatterlist *sg)
 {
 	sg->page_link |= SG_PAGE_LINK_LAST;
 	sg->page_link &= ~SG_PAGE_LINK_CHAIN;
+}
+
+static inline void
+sg_init_marker(struct scatterlist *sg, uint32_t num_sgs)
+{
+	sg_mark_end(&sg[num_sgs - 1]);
 }
 
 static inline void
@@ -468,13 +483,14 @@ __sg_page_iter_start(struct sg_page_iter *piter,
 }
 
 static inline void
-_sg_iter_next(struct sg_page_iter *iter)
+_sg_iter_next(struct sg_page_iter *iter, bool is_dma)
 {
 	struct scatterlist *sg;
-	unsigned int pgcount;
+	unsigned int pgcount, sglength;
 
 	sg = iter->sg;
-	pgcount = (sg->offset + sg->length + PAGE_SIZE - 1) >> PAGE_SHIFT;
+	sglength = is_dma ? sg_dma_len(sg) : sg->length;
+	pgcount = (sg->offset + sglength + PAGE_SIZE - 1) >> PAGE_SHIFT;
 
 	++iter->sg_pgoffset;
 	while (iter->sg_pgoffset >= pgcount) {
@@ -483,7 +499,8 @@ _sg_iter_next(struct sg_page_iter *iter)
 		--iter->maxents;
 		if (sg == NULL || iter->maxents == 0)
 			break;
-		pgcount = (sg->offset + sg->length + PAGE_SIZE - 1) >> PAGE_SHIFT;
+		sglength = is_dma ? sg_dma_len(sg) : sg->length;
+		pgcount = (sg->offset + sglength + PAGE_SIZE - 1) >> PAGE_SHIFT;
 	}
 	iter->sg = sg;
 }
@@ -527,13 +544,13 @@ __sg_page_iter_next(struct sg_page_iter *piter)
 
 static inline void
 _sg_iter_init(struct scatterlist *sgl, struct sg_page_iter *iter,
-    unsigned int nents, unsigned long pgoffset)
+    unsigned int nents, unsigned long pgoffset, bool is_dma)
 {
 	if (nents) {
 		iter->sg = sgl;
 		iter->sg_pgoffset = pgoffset - 1;
 		iter->maxents = nents;
-		_sg_iter_next(iter);
+		_sg_iter_next(iter, is_dma);
 	} else {
 		iter->sg = NULL;
 		iter->sg_pgoffset = 0;
@@ -669,6 +686,13 @@ sg_pcopy_to_buffer(struct scatterlist *sgl, unsigned int nents,
 	if (!PMAP_HAS_DMAP)
 		sched_unpin();
 	return (total);
+}
+
+static inline void
+sg_set_folio(struct scatterlist *sg, struct folio *folio, size_t len,
+    size_t offset)
+{
+	sg_set_page(sg, &folio->page, len, offset);
 }
 
 #endif					/* _LINUXKPI_LINUX_SCATTERLIST_H_ */

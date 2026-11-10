@@ -28,8 +28,13 @@
 #ifndef _LINUXKPI_LINUX_SEQ_FILE_H_
 #define _LINUXKPI_LINUX_SEQ_FILE_H_
 
+#include <sys/types.h>
+#include <sys/sbuf.h>
+
 #include <linux/types.h>
 #include <linux/fs.h>
+#include <linux/string_helpers.h>
+#include <linux/printk.h>
 
 #undef file
 #define inode vnode
@@ -50,8 +55,24 @@ static const struct file_operations __name ## _fops = {			\
 	.release	= single_release,				\
 }
 
+#define	DEFINE_SHOW_STORE_ATTRIBUTE(__name)				\
+static int __name ## _open(struct inode *inode, struct linux_file *file)	\
+{									\
+	return single_open(file, __name ## _show, inode->i_private);	\
+}									\
+									\
+static const struct file_operations __name ## _fops = {			\
+	.owner		= THIS_MODULE,					\
+	.open		= __name ## _open,				\
+	.read		= seq_read,					\
+	.write		= __name ## _write,				\
+	.llseek		= seq_lseek,					\
+	.release	= single_release,				\
+}
+
 struct seq_file {
 	struct sbuf *buf;
+	size_t size;
 	const struct seq_operations *op;
 	const struct linux_file *file;
 	void *private;
@@ -64,8 +85,11 @@ struct seq_operations {
 	int (*show) (struct seq_file *m, void *v);
 };
 
-ssize_t seq_read(struct linux_file *, char *, size_t, off_t *);
+ssize_t seq_read(struct linux_file *, char __user *, size_t, off_t *);
 int seq_write(struct seq_file *seq, const void *data, size_t len);
+void seq_putc(struct seq_file *m, char c);
+void seq_puts(struct seq_file *m, const char *str);
+bool seq_has_overflowed(struct seq_file *m);
 
 void *__seq_open_private(struct linux_file *, const struct seq_operations *, int);
 int seq_release_private(struct inode *, struct linux_file *);
@@ -75,6 +99,7 @@ int seq_release(struct inode *inode, struct linux_file *file);
 
 off_t seq_lseek(struct linux_file *file, off_t offset, int whence);
 int single_open(struct linux_file *, int (*)(struct seq_file *, void *), void *);
+int single_open_size(struct linux_file *, int (*)(struct seq_file *, void *), void *, size_t);
 int single_release(struct inode *, struct linux_file *);
 
 void lkpi_seq_vprintf(struct seq_file *m, const char *fmt, va_list args);
@@ -83,8 +108,15 @@ void lkpi_seq_printf(struct seq_file *m, const char *fmt, ...);
 #define	seq_vprintf(...)	lkpi_seq_vprintf(__VA_ARGS__)
 #define	seq_printf(...)		lkpi_seq_printf(__VA_ARGS__)
 
-#define seq_puts(m, str)	sbuf_printf((m)->buf, str)
-#define seq_putc(m, str)	sbuf_putc((m)->buf, str)
+int __lkpi_hexdump_sbuf_printf(void *, const char *, ...) __printflike(2, 3);
+
+static inline void
+seq_hex_dump(struct seq_file *m, const char *prefix_str, int prefix_type,
+    int rowsize, int groupsize, const void *buf, size_t len, bool ascii)
+{
+	lkpi_hex_dump(__lkpi_hexdump_sbuf_printf, m->buf, NULL, prefix_str, prefix_type,
+	    rowsize, groupsize, buf, len, ascii, true);
+}
 
 #define	file			linux_file
 

@@ -144,7 +144,7 @@ list_replace_init(struct list_head *old, struct list_head *new)
 }
 
 static inline void
-linux_list_add(struct list_head *new, struct list_head *prev,
+__list_add(struct list_head *new, struct list_head *prev,
     struct list_head *next)
 {
 
@@ -225,22 +225,32 @@ list_del_init(struct list_head *entry)
 
 #define	list_for_each_prev(p, h) for (p = (h)->prev; p != (h); p = (p)->prev)
 
+#define	list_for_each_prev_safe(p, n, h) 				\
+	for (p = (h)->prev, n = (p)->prev;				\
+	     p != (h);							\
+	     p = n, n = (p)->prev)
+
 #define	list_for_each_entry_from_reverse(p, h, field)	\
 	for (; &p->field != (h);			\
 	     p = list_prev_entry(p, field))
+
+#define	list_for_each_rcu(p, head)					\
+	for (p = rcu_dereference((head)->next);				\
+	     p != (head);						\
+	     p = rcu_dereference((p)->next))
 
 static inline void
 list_add(struct list_head *new, struct list_head *head)
 {
 
-	linux_list_add(new, head, head->next);
+	__list_add(new, head, head->next);
 }
 
 static inline void
 list_add_tail(struct list_head *new, struct list_head *head)
 {
 
-	linux_list_add(new, head->prev, head);
+	__list_add(new, head->prev, head);
 }
 
 static inline void

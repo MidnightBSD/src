@@ -30,6 +30,7 @@
  * SOFTWARE.
  */
 
+#define	WANT_NATIVE_PCI_GET_SLOT	/* native pci_get_slot(9), not LinuxKPI */
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/conf.h>

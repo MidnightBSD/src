@@ -4,7 +4,7 @@
  * Copyright (c) 2010 Panasas, Inc.
  * Copyright (c) 2013-2019 Mellanox Technologies, Ltd.
  * All rights reserved.
- * Copyright (c) 2020-2021 The FreeBSD Foundation
+ * Copyright (c) 2020-2025 The FreeBSD Foundation
  * Copyright (c) 2020-2022 Bjoern A. Zeeb
  *
  * Portions of this software were developed by Björn Zeeb
@@ -75,6 +75,10 @@ struct wireless_dev;		/* net/cfg80211.h */
 
 #define	NET_NAME_UNKNOWN	0
 
+enum net_addr_assign_type {
+	NET_ADDR_RANDOM,
+};
+
 enum netdev_tx {
 	NETDEV_TX_OK		= 0,
 };
@@ -95,6 +99,10 @@ enum net_device_reg_state {
 	NETREG_REGISTERED,
 };
 
+enum tc_setup_type {
+	TC_SETUP_MAX_DUMMY,
+};
+
 struct net_device_ops {
 	int (*ndo_open)(struct net_device *);
 	int (*ndo_stop)(struct net_device *);
@@ -104,9 +112,6 @@ struct net_device_ops {
 };
 
 struct net_device {
-	/* BSD specific for compat. */
-	struct ifnet			bsdifp;
-
 	/* net_device fields seen publicly. */
 	/* XXX can we later make some aliases to ifnet? */
 	char				name[IFNAMSIZ];
@@ -125,6 +130,7 @@ struct net_device {
 		unsigned long		tx_errors;
 		unsigned long		tx_packets;
 	} stats;
+	enum net_addr_assign_type	addr_assign_type;
 	enum net_device_reg_state	reg_state;
 	const struct ethtool_ops	*ethtool_ops;
 	const struct net_device_ops	*netdev_ops;
@@ -153,6 +159,30 @@ struct net_device {
 };
 
 #define	SET_NETDEV_DEV(_ndev, _dev)	(_ndev)->dev.parent = _dev;
+
+enum net_device_path_type {
+	DEV_PATH_MTK_WDMA,
+};
+
+struct net_device_path {
+	enum net_device_path_type		type;
+	const struct net_device			*dev;
+	/* We assume there's a struct per type. */
+	union {
+		struct {
+			uint16_t		wcid;
+			uint8_t			wdma_idx;
+			uint8_t			queue;
+			uint8_t			bss;
+			uint8_t			amsdu;
+		} mtk_wdma;
+	};
+};
+
+struct net_device_path_ctx {
+	const struct net_device			*dev;
+};
+
 
 /* -------------------------------------------------------------------------- */
 /* According to linux::ipoib_main.c. */
@@ -294,6 +324,13 @@ netdev_rss_key_fill(uint32_t *buf, size_t len)
 	 * iwlwifi is looking for a 10byte "secret" so stay with random for now.
 	 */
 	get_random_bytes(buf, len);
+}
+
+static inline void
+__hw_addr_init(struct netdev_hw_addr_list *list)
+{
+	list->count = 0;
+	INIT_LIST_HEAD(&list->addr_list);
 }
 
 static inline int
@@ -460,6 +497,8 @@ void linuxkpi_free_netdev(struct net_device *);
 
 #define	alloc_netdev(_l, _n, _f, _func)						\
 	linuxkpi_alloc_netdev(_l, _n, _f, _func)
+#define	alloc_netdev_dummy(_l)							\
+	linuxkpi_alloc_netdev(_l, "dummy", NET_NAME_UNKNOWN, NULL)
 #define	free_netdev(_n)								\
 	linuxkpi_free_netdev(_n)
 
@@ -469,6 +508,21 @@ netdev_priv(const struct net_device *ndev)
 
 	return (__DECONST(void *, ndev->drv_priv));
 }
+
+/* -------------------------------------------------------------------------- */
+
+static __inline void
+netif_device_attach(struct net_device *ndev)
+{
+	pr_debug("%s: TODO\n", __func__);
+}
+
+static __inline void
+netif_device_detach(struct net_device *ndev)
+{
+	pr_debug("%s: TODO\n", __func__);
+}
+
 
 /* -------------------------------------------------------------------------- */
 /* This is really rtnetlink and probably belongs elsewhere. */

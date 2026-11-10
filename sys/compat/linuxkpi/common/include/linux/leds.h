@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2022 Bjoern A. Zeeb
+ * Copyright (c) 2022-2025 Bjoern A. Zeeb
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +27,7 @@
 #define	_LINUXKPI_LINUX_LEDS_H
 
 enum led_brightness {
-	__DUMMY,
+	LED_OFF,
 };
 
 struct led_classdev {
@@ -35,6 +35,10 @@ struct led_classdev {
 	const char		*default_trigger;
 	int (*blink_set)(struct led_classdev *, unsigned long *, unsigned long *);
 	void (*brightness_set)(struct led_classdev *, enum led_brightness);
+	void (*led_set)(struct led_classdev *, enum led_brightness);
+};
+
+struct gpio_led {
 };
 
 #endif	/* _LINUXKPI_LINUX_LEDS_H */

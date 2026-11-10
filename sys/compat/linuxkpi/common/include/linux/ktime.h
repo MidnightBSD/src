@@ -69,6 +69,12 @@ ktime_to_ms(ktime_t kt)
 	return (ktime_divns(kt, NSEC_PER_MSEC));
 }
 
+static inline ktime_t
+ms_to_ktime(uint64_t ms)
+{
+	return (ms * NSEC_PER_MSEC);
+}
+
 static inline struct timeval
 ktime_to_timeval(ktime_t kt)
 {
@@ -226,6 +232,13 @@ ktime_get_boottime_ns(void)
 	return (ktime_to_ns(ktime_get_boottime()));
 }
 
+static inline uint64_t
+ktime_get_boottime_seconds(void)
+{
+
+	return (ktime_divns(ktime_get_boottime(), NSEC_PER_SEC));
+}
+
 static inline ktime_t
 ktime_get_real(void)
 {
@@ -259,6 +272,15 @@ ktime_get_raw_ns(void)
 	struct timespec ts;
 
 	nanouptime(&ts);
+	return (ktime_to_ns(timespec_to_ktime(ts)));
+}
+
+static inline uint64_t
+ktime_get_raw_fast_ns(void)
+{
+	struct timespec ts;
+
+	getnanouptime(&ts);
 	return (ktime_to_ns(timespec_to_ktime(ts)));
 }
 

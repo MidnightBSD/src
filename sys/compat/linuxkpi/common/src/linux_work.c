@@ -57,6 +57,7 @@ struct workqueue_struct *system_long_wq;
 struct workqueue_struct *system_unbound_wq;
 struct workqueue_struct *system_highpri_wq;
 struct workqueue_struct *system_power_efficient_wq;
+struct workqueue_struct *system_percpu_wq;
 
 struct taskqueue *linux_irq_work_tq;
 
@@ -212,7 +213,7 @@ linux_flush_rcu_work(struct rcu_work *rwork)
  */
 bool
 linux_queue_delayed_work_on(int cpu, struct workqueue_struct *wq,
-    struct delayed_work *dwork, unsigned delay)
+    struct delayed_work *dwork, unsigned long delay)
 {
 	static const uint8_t states[WORK_ST_MAX] __aligned(8) = {
 		[WORK_ST_IDLE] = WORK_ST_TIMER,		/* start timeout */
@@ -225,6 +226,13 @@ linux_queue_delayed_work_on(int cpu, struct workqueue_struct *wq,
 
 	if (atomic_read(&wq->draining) != 0)
 		return (!work_pending(&dwork->work));
+
+	/*
+	 * Clamp the delay to a valid ticks value, some consumers pass
+	 * MAX_SCHEDULE_TIMEOUT.
+	 */
+	if (delay > INT_MAX)
+		delay = INT_MAX;
 
 	mtx_lock(&dwork->timer.mtx);
 	switch (linux_update_state(&dwork->work.state, states)) {
@@ -357,6 +365,38 @@ linux_delayed_work_timer_fn(void *arg)
 		break;
 	default:
 		break;
+	}
+}
+
+/*
+ * This function cancels the given work structure in a
+ * non-blocking fashion. It returns non-zero if the work was
+ * successfully cancelled. Else the work may still be busy or already
+ * cancelled.
+ */
+bool
+linux_cancel_work(struct work_struct *work)
+{
+	static const uint8_t states[WORK_ST_MAX] __aligned(8) = {
+		[WORK_ST_IDLE] = WORK_ST_IDLE,		/* NOP */
+		[WORK_ST_TIMER] = WORK_ST_TIMER,	/* can't happen */
+		[WORK_ST_TASK] = WORK_ST_IDLE,		/* cancel */
+		[WORK_ST_EXEC] = WORK_ST_EXEC,		/* NOP */
+		[WORK_ST_CANCEL] = WORK_ST_IDLE,	/* can't happen */
+	};
+	struct taskqueue *tq;
+
+	MPASS(atomic_read(&work->state) != WORK_ST_TIMER);
+	MPASS(atomic_read(&work->state) != WORK_ST_CANCEL);
+
+	switch (linux_update_state(&work->state, states)) {
+	case WORK_ST_TASK:
+		tq = work->work_queue->taskqueue;
+		if (taskqueue_cancel(tq, &work->work_task, NULL) == 0)
+			return (true);
+		/* FALLTHROUGH */
+	default:
+		return (false);
 	}
 }
 
@@ -702,7 +742,14 @@ linux_work_init(void *arg)
 
 	/* populate the workqueue pointers */
 	system_long_wq = linux_system_long_wq;
+	/*
+	 * With Linux v6.17 system_wq was "renamed" to system_percpu_wq with the
+	 * old name staying around.
+	 * Note: neither implementation here does fully implement the per-cpu
+	 * characteristics upstream expects.
+	 */
 	system_wq = linux_system_short_wq;
+	system_percpu_wq = linux_system_short_wq;
 	system_power_efficient_wq = linux_system_short_wq;
 	system_unbound_wq = linux_system_short_wq;
 	system_highpri_wq = linux_system_short_wq;
@@ -718,6 +765,7 @@ linux_work_uninit(void *arg)
 	/* clear workqueue pointers */
 	system_long_wq = NULL;
 	system_wq = NULL;
+	system_percpu_wq = NULL;
 	system_power_efficient_wq = NULL;
 	system_unbound_wq = NULL;
 	system_highpri_wq = NULL;

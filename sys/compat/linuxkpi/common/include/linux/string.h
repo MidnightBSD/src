@@ -31,12 +31,14 @@
 
 #include <sys/ctype.h>
 
+#include <linux/array_size.h>
 #include <linux/types.h>
 #include <linux/gfp.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
 #include <linux/err.h>
 #include <linux/bitops.h> /* for BITS_PER_LONG */
+#include <linux/overflow.h>
 #include <linux/stdarg.h>
 
 #include <sys/libkern.h>
@@ -71,6 +73,21 @@ memdup_user(const void *ptr, size_t len)
 }
 
 static inline void *
+vmemdup_user(const void *ptr, size_t len)
+{
+	void *retval;
+	int error;
+
+	retval = malloc(len, M_KMALLOC, M_WAITOK);
+	error = linux_copyin(ptr, retval, len);
+	if (error != 0) {
+		free(retval, M_KMALLOC);
+		return (ERR_PTR(error));
+	}
+	return (retval);
+}
+
+static inline void *
 memdup_user_nul(const void *ptr, size_t len)
 {
 	char *retval;
@@ -87,6 +104,28 @@ memdup_user_nul(const void *ptr, size_t len)
 }
 
 static inline void *
+memdup_array_user(const void *src, size_t n, size_t size)
+{
+	size_t len;
+
+	if (check_mul_overflow(n, size, &len))
+		return (ERR_PTR(-EOVERFLOW));
+
+	return (memdup_user(src, len));
+}
+
+static inline void *
+vmemdup_array_user(const void *src, size_t n, size_t size)
+{
+	size_t len;
+
+	if (check_mul_overflow(n, size, &len))
+		return (ERR_PTR(-EOVERFLOW));
+
+	return (vmemdup_user(src, len));
+}
+
+static inline void *
 kmemdup(const void *src, size_t len, gfp_t gfp)
 {
 	void *dst;
@@ -95,6 +134,12 @@ kmemdup(const void *src, size_t len, gfp_t gfp)
 	if (dst != NULL)
 		memcpy(dst, src, len);
 	return (dst);
+}
+
+static inline void *
+kmemdup_array(const void *src, size_t count, size_t element_size, gfp_t gfp)
+{
+	return (kmemdup(src, size_mul(count, element_size), gfp));
 }
 
 /* See slab.h for kvmalloc/kvfree(). */
@@ -160,6 +205,24 @@ skip_spaces(const char *str)
 	return (__DECONST(char *, str));
 }
 
+/*
+ * This function trims whitespaces at the end of a string and returns a pointer
+ * to the first non-whitespace character.
+ */
+static inline char *
+strim(char *str)
+{
+	char *end;
+
+	end = str + strlen(str);
+	while (end >= str && (*end == '\0' || isspace(*end))) {
+		*end = '\0';
+		end--;
+	}
+
+	return (skip_spaces(str));
+}
+
 static inline void *
 memchr_inv(const void *start, int c, size_t length)
 {
@@ -177,6 +240,12 @@ memchr_inv(const void *start, int c, size_t length)
 		ptr++;
 	}
 	return (NULL);
+}
+
+static inline bool
+mem_is_zero(const void *start, size_t length)
+{
+	return (memchr_inv(start, 0, length) == NULL);
 }
 
 static inline size_t
@@ -226,6 +295,21 @@ strscpy_pad(char* dst, const char* src, size_t len)
 	return (strscpy(dst, src, len));
 }
 
+static inline char *
+strnchr(const char *cp, size_t n, int ch)
+{
+	char *p;
+
+	for (p = __DECONST(char *, cp); n--; ++p) {
+		if (*p == ch)
+			return (p);
+		if (*p == '\0')
+			break;
+	}
+
+	return (NULL);
+}
+
 static inline void *
 memset32(uint32_t *b, uint32_t c, size_t len)
 {
@@ -268,6 +352,22 @@ memcpy_and_pad(void *dst, size_t dstlen, const void *src, size_t len, int ch)
 		memset((char *)dst + len, ch, dstlen - len);
 	}
 }
+
+#define strtomem(dst, src)	do {					\
+	size_t dstlen = ARRAY_SIZE(dst);				\
+	size_t srclen = __builtin_object_size(src, 1);			\
+	srclen = MIN(srclen, dstlen);					\
+	srclen = strnlen(src, srclen);					\
+	memcpy(dst, src, srclen);					\
+} while (0)
+
+#define strtomem_pad(dst, src, pad)	do {				\
+	size_t dstlen = ARRAY_SIZE(dst);				\
+	size_t srclen = __builtin_object_size(src, 1);			\
+	srclen = MIN(srclen, dstlen);					\
+	srclen = strnlen(src, srclen);					\
+	memcpy_and_pad(dst, dstlen, src, srclen, pad);			\
+} while (0)
 
 #define	memset_startat(ptr, bytepat, smember)				\
 ({									\

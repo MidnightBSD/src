@@ -30,6 +30,7 @@
 #ifndef _LINUXKPI_LINUX_LOCKDEP_H_
 #define	_LINUXKPI_LINUX_LOCKDEP_H_
 
+#include <sys/systm.h>
 #include <sys/types.h>
 #include <sys/lock.h>
 
@@ -50,8 +51,8 @@ struct pin_cookie {
 #define	lockdep_unregister_key(key) do { } while(0)
 
 #ifdef INVARIANTS
-#define	lockdep_assert(cond) do { WARN_ON(!cond); } while (0)
-#define	lockdep_assert_once(cond) do { WARN_ON_ONCE(!cond); } while (0)
+#define	lockdep_assert(cond) do { WARN_ON(!(cond)); } while (0)
+#define	lockdep_assert_once(cond) do { WARN_ON_ONCE(!(cond)); } while (0)
 
 #define	lockdep_assert_not_held(m) do {					\
 	struct lock_object *__lock = (struct lock_object *)(m);		\
@@ -70,17 +71,6 @@ struct pin_cookie {
 
 #define	lockdep_assert_none_held_once() do { } while (0)
 
-static __inline bool
-lockdep_is_held(void *__m)
-{
-	struct lock_object *__lock;
-	struct thread *__td;
-
-	__lock = __m;
-	return (LOCK_CLASS(__lock)->lc_owner(__lock, &__td) != 0);
-}
-#define	lockdep_is_held_type(_m, _t) lockdep_is_held(_m)
-
 #else
 #define	lockdep_assert(cond) do { } while (0)
 #define	lockdep_assert_once(cond) do { } while (0)
@@ -91,9 +81,22 @@ lockdep_is_held(void *__m)
 
 #define	lockdep_assert_held_once(m) do { (void)(m); } while (0)
 
-#define	lockdep_is_held(m)	1
-#define	lockdep_is_held_type(_m, _t)	1
 #endif
+
+static __inline bool
+lockdep_is_held(void *__m __diagused)
+{
+#ifdef INVARIANTS
+	struct lock_object *__lock;
+	struct thread *__td;
+
+	__lock = __m;
+	return (LOCK_CLASS(__lock)->lc_owner(__lock, &__td) != 0);
+#else
+	return (true);
+#endif
+}
+#define	lockdep_is_held_type(_m, _t)	lockdep_is_held(_m)
 
 #define	might_lock(m)	do { } while (0)
 #define	might_lock_read(m) do { } while (0)
@@ -106,12 +109,12 @@ lockdep_is_held(void *__m)
 #define	mutex_acquire(...) do { } while (0)
 #define	mutex_release(...) do { } while (0)
 
-#define	lockdep_pin_lock(l) ({ struct pin_cookie __pc = { }; __pc; })
-#define	lockdep_repin_lock(l,c) do { (void)(l); (void)(c); } while (0)
-#define	lockdep_unpin_lock(l,c) do { (void)(l); (void)(c); } while (0)
-
 #define	lock_map_acquire(_map) do { } while (0)
 #define	lock_map_acquire_read(_map) do { } while (0)
 #define	lock_map_release(_map) do { } while (0)
+
+#define	lockdep_pin_lock(l) ({ struct pin_cookie __pc = { }; __pc; })
+#define	lockdep_repin_lock(l,c) do { (void)(l); (void)(c); } while (0)
+#define	lockdep_unpin_lock(l,c) do { (void)(l); (void)(c); } while (0)
 
 #endif /* _LINUXKPI_LINUX_LOCKDEP_H_ */

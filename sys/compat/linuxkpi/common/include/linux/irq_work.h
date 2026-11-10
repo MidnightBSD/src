@@ -49,13 +49,13 @@ typedef void (*irq_work_func_t)(struct irq_work *);
 
 struct irq_work {
 	struct task irq_task;
-	irq_work_func_t func;
 	union {
 		struct llist_node llnode;
 		struct {
 			struct llist_node llist;
 		} node;
 	};
+	irq_work_func_t func;
 };
 
 extern struct taskqueue *linux_irq_work_tq;

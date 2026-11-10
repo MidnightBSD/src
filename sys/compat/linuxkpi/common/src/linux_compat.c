@@ -28,6 +28,7 @@
  */
 
 #include <sys/cdefs.h>
+#include "opt_global.h"
 #include "opt_stack.h"
 
 #include <sys/param.h>
@@ -49,6 +50,8 @@
 #include <sys/rwlock.h>
 #include <sys/mman.h>
 #include <sys/stack.h>
+#include <sys/stdarg.h>
+#include <sys/syscall.h>
 #include <sys/sysent.h>
 #include <sys/time.h>
 #include <sys/user.h>
@@ -58,10 +61,10 @@
 #include <vm/vm_object.h>
 #include <vm/vm_page.h>
 #include <vm/vm_pager.h>
-
-#include <machine/stdarg.h>
+#include <vm/vm_radix.h>
 
 #if defined(__i386__) || defined(__amd64__)
+#include <machine/cputypes.h>
 #include <machine/md_var.h>
 #endif
 
@@ -73,6 +76,7 @@
 #include <linux/moduleparam.h>
 #include <linux/cdev.h>
 #include <linux/file.h>
+#include <linux/fs.h>
 #include <linux/sysfs.h>
 #include <linux/mm.h>
 #include <linux/io.h>
@@ -83,6 +87,7 @@
 #include <linux/uaccess.h>
 #include <linux/utsname.h>
 #include <linux/list.h>
+#include <linux/sort.h>
 #include <linux/kthread.h>
 #include <linux/kernel.h>
 #include <linux/compat.h>
@@ -93,10 +98,22 @@
 #include <linux/rcupdate.h>
 #include <linux/interval_tree.h>
 #include <linux/interval_tree_generic.h>
+#include <linux/printk.h>
+#include <linux/seq_file.h>
+#include <linux/uuid.h>
 
 #if defined(__i386__) || defined(__amd64__)
 #include <asm/smp.h>
 #include <asm/processor.h>
+#endif
+
+#include <xen/xen.h>
+#ifdef XENHVM
+#undef xen_pv_domain
+#undef xen_initial_domain
+/* xen/xen-os.h redefines __must_check */
+#undef __must_check
+#include <xen/xen-os.h>
 #endif
 
 SYSCTL_NODE(_compat, OID_AUTO, linuxkpi, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
@@ -105,6 +122,10 @@ SYSCTL_NODE(_compat, OID_AUTO, linuxkpi, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
 int linuxkpi_debug;
 SYSCTL_INT(_compat_linuxkpi, OID_AUTO, debug, CTLFLAG_RWTUN,
     &linuxkpi_debug, 0, "Set to enable pr_debug() prints. Clear to disable.");
+
+int linuxkpi_rcu_debug;
+SYSCTL_INT(_compat_linuxkpi, OID_AUTO, rcu_debug, CTLFLAG_RWTUN,
+    &linuxkpi_rcu_debug, 0, "Set to enable RCU warning. Clear to disable.");
 
 int linuxkpi_warn_dump_stack = 0;
 SYSCTL_INT(_compat_linuxkpi, OID_AUTO, warn_dump_stack, CTLFLAG_RWTUN,
@@ -146,6 +167,20 @@ unsigned long linux_timer_hz_mask;
 wait_queue_head_t linux_bit_waitq;
 wait_queue_head_t linux_var_waitq;
 
+const guid_t guid_null;
+
+enum system_states system_state = SYSTEM_RUNNING;
+
+struct task_struct *
+__lkpi_current(void)
+{
+	struct thread *td;
+
+	td = curthread;
+	linux_set_current(td);
+	return ((struct task_struct *)td->td_lkpi_task);
+}
+
 int
 panic_cmp(struct rb_node *one, struct rb_node *two)
 {
@@ -159,176 +194,6 @@ RB_GENERATE(linux_root, rb_node, __entry, panic_cmp);
 
 INTERVAL_TREE_DEFINE(struct interval_tree_node, rb, unsigned long,, START,
     LAST,, lkpi_interval_tree)
-
-struct kobject *
-kobject_create(void)
-{
-	struct kobject *kobj;
-
-	kobj = kzalloc(sizeof(*kobj), GFP_KERNEL);
-	if (kobj == NULL)
-		return (NULL);
-	kobject_init(kobj, &linux_kfree_type);
-
-	return (kobj);
-}
-
-
-int
-kobject_set_name_vargs(struct kobject *kobj, const char *fmt, va_list args)
-{
-	va_list tmp_va;
-	int len;
-	char *old;
-	char *name;
-	char dummy;
-
-	old = kobj->name;
-
-	if (old && fmt == NULL)
-		return (0);
-
-	/* compute length of string */
-	va_copy(tmp_va, args);
-	len = vsnprintf(&dummy, 0, fmt, tmp_va);
-	va_end(tmp_va);
-
-	/* account for zero termination */
-	len++;
-
-	/* check for error */
-	if (len < 1)
-		return (-EINVAL);
-
-	/* allocate memory for string */
-	name = kzalloc(len, GFP_KERNEL);
-	if (name == NULL)
-		return (-ENOMEM);
-	vsnprintf(name, len, fmt, args);
-	kobj->name = name;
-
-	/* free old string */
-	kfree(old);
-
-	/* filter new string */
-	for (; *name != '\0'; name++)
-		if (*name == '/')
-			*name = '!';
-	return (0);
-}
-
-int
-kobject_set_name(struct kobject *kobj, const char *fmt, ...)
-{
-	va_list args;
-	int error;
-
-	va_start(args, fmt);
-	error = kobject_set_name_vargs(kobj, fmt, args);
-	va_end(args);
-
-	return (error);
-}
-
-static int
-kobject_add_complete(struct kobject *kobj, struct kobject *parent)
-{
-	const struct kobj_type *t;
-	int error;
-
-	kobj->parent = parent;
-	error = sysfs_create_dir(kobj);
-	if (error == 0 && kobj->ktype && kobj->ktype->default_attrs) {
-		struct attribute **attr;
-		t = kobj->ktype;
-
-		for (attr = t->default_attrs; *attr != NULL; attr++) {
-			error = sysfs_create_file(kobj, *attr);
-			if (error)
-				break;
-		}
-		if (error)
-			sysfs_remove_dir(kobj);
-	}
-	return (error);
-}
-
-int
-kobject_add(struct kobject *kobj, struct kobject *parent, const char *fmt, ...)
-{
-	va_list args;
-	int error;
-
-	va_start(args, fmt);
-	error = kobject_set_name_vargs(kobj, fmt, args);
-	va_end(args);
-	if (error)
-		return (error);
-
-	return kobject_add_complete(kobj, parent);
-}
-
-void
-linux_kobject_release(struct kref *kref)
-{
-	struct kobject *kobj;
-	char *name;
-
-	kobj = container_of(kref, struct kobject, kref);
-	sysfs_remove_dir(kobj);
-	name = kobj->name;
-	if (kobj->ktype && kobj->ktype->release)
-		kobj->ktype->release(kobj);
-	kfree(name);
-}
-
-static void
-linux_kobject_kfree(struct kobject *kobj)
-{
-	kfree(kobj);
-}
-
-static void
-linux_kobject_kfree_name(struct kobject *kobj)
-{
-	if (kobj) {
-		kfree(kobj->name);
-	}
-}
-
-const struct kobj_type linux_kfree_type = {
-	.release = linux_kobject_kfree
-};
-
-static ssize_t
-lkpi_kobj_attr_show(struct kobject *kobj, struct attribute *attr, char *buf)
-{
-	struct kobj_attribute *ka =
-	    container_of(attr, struct kobj_attribute, attr);
-
-	if (ka->show == NULL)
-		return (-EIO);
-
-	return (ka->show(kobj, ka, buf));
-}
-
-static ssize_t
-lkpi_kobj_attr_store(struct kobject *kobj, struct attribute *attr,
-    const char *buf, size_t count)
-{
-	struct kobj_attribute *ka =
-	    container_of(attr, struct kobj_attribute, attr);
-
-	if (ka->store == NULL)
-		return (-EIO);
-
-	return (ka->store(kobj, ka, buf, count));
-}
-
-const struct sysfs_ops kobj_sysfs_ops = {
-	.show	= lkpi_kobj_attr_show,
-	.store	= lkpi_kobj_attr_store,
-};
 
 static void
 linux_device_release(struct device *dev)
@@ -501,13 +366,12 @@ error:
 }
 
 struct class *
-class_create(struct module *owner, const char *name)
+lkpi_class_create(const char *name)
 {
 	struct class *class;
 	int error;
 
 	class = kzalloc(sizeof(*class), M_WAITOK);
-	class->owner = owner;
 	class->name = name;
 	class->class_release = linux_class_kfree;
 	error = class_register(class);
@@ -517,26 +381,6 @@ class_create(struct module *owner, const char *name)
 	}
 
 	return (class);
-}
-
-int
-kobject_init_and_add(struct kobject *kobj, const struct kobj_type *ktype,
-    struct kobject *parent, const char *fmt, ...)
-{
-	va_list args;
-	int error;
-
-	kobject_init(kobj, ktype);
-	kobj->ktype = ktype;
-	kobj->parent = parent;
-	kobj->name = NULL;
-
-	va_start(args, fmt);
-	error = kobject_set_name_vargs(kobj, fmt, args);
-	va_end(args);
-	if (error)
-		return (error);
-	return kobject_add_complete(kobj, parent);
 }
 
 static void
@@ -561,9 +405,9 @@ linux_kq_assert_lock(void *arg, int what)
 	spinlock_t *s = arg;
 
 	if (what == LA_LOCKED)
-		mtx_assert(&s->m, MA_OWNED);
+		mtx_assert(s, MA_OWNED);
 	else
-		mtx_assert(&s->m, MA_NOTOWNED);
+		mtx_assert(s, MA_NOTOWNED);
 #endif
 }
 
@@ -717,6 +561,8 @@ linux_cdev_pager_populate(vm_object_t vm_obj, vm_pindex_t pidx, int fault_type,
 		 */
 		*first = vmap->vm_pfn_first;
 		*last = *first + vmap->vm_pfn_count - 1;
+		MPASS(pidx >= *first);
+		MPASS(pidx <= *last);
 		err = VM_PAGER_OK;
 		break;
 	default:
@@ -820,6 +666,9 @@ int
 zap_vma_ptes(struct vm_area_struct *vma, unsigned long address,
     unsigned long size)
 {
+#ifndef __MidnightBSD__
+	struct pctrie_iter pages;
+#endif
 	vm_object_t obj;
 	vm_page_t m;
 
@@ -827,10 +676,16 @@ zap_vma_ptes(struct vm_area_struct *vma, unsigned long address,
 	if (obj == NULL || (obj->flags & OBJ_UNMANAGED) != 0)
 		return (-ENOTSUP);
 	VM_OBJECT_RLOCK(obj);
+#ifdef __MidnightBSD__	/* MNBSD-KPI: no pctrie iterators in the base VM */
 	for (m = vm_page_find_least(obj, OFF_TO_IDX(address));
 	    m != NULL && m->pindex < OFF_TO_IDX(address + size);
 	    m = TAILQ_NEXT(m, listq))
 		pmap_remove_all(m);
+#else
+	vm_page_iter_limit_init(&pages, obj, OFF_TO_IDX(address + size));
+	VM_RADIX_FOREACH_FROM(m, &pages, OFF_TO_IDX(address))
+		pmap_remove_all(m);
+#endif
 	VM_OBJECT_RUNLOCK(obj);
 	return (0);
 }
@@ -951,7 +806,12 @@ linux_dev_fdopen(struct cdev *dev, int fflags, struct thread *td,
 	vref(filp->f_vnode);
 
 	/* release the file from devfs */
+#ifdef __MidnightBSD__	/* MNBSD-KPI: finit() takes non-const fileops */
+	finit(file, filp->f_mode, DTYPE_DEV, filp,
+	    __DECONST(struct fileops *, &linuxfileops));
+#else
 	finit(file, filp->f_mode, DTYPE_DEV, filp, &linuxfileops);
+#endif
 	linux_drop_fop(ldev);
 	return (ENXIO);
 }
@@ -1094,19 +954,39 @@ linux_file_ioctl_sub(struct file *fp, struct linux_file *filp,
 	struct task_struct *task = current;
 	unsigned size;
 	int error;
+	bool direct;
 
 	size = IOCPARM_LEN(cmd);
 	/* refer to logic in sys_ioctl() */
+	direct = false;
 	if (size > 0) {
 		/*
 		 * Setup hint for linux_copyin() and linux_copyout().
 		 *
-		 * Background: Linux code expects a user-space address
-		 * while FreeBSD supplies a kernel-space address.
+		 * Background: Linux kernel code expects to operate on
+		 * userspace addresses, but FreeBSD's kern_ioctl()
+		 * will generally provide a kernel address.  For the
+		 * native process ABI, where we know how to find the
+		 * original address, we reach directly into the system
+		 * call args to get it.  Then, if the Linux driver
+		 * copied out to that address, we copy the whole block
+		 * back into the kernel buffer allocated by
+		 * kern_ioctl() so that kern_ioctl() itself doesn't
+		 * clobber the driver's data.
+		 *
+		 * Otherwise, fall back to the LINUX_IOCTL_MIN_PTR
+		 * hack.
 		 */
 		task->bsd_ioctl_data = data;
 		task->bsd_ioctl_len = size;
-		data = (void *)LINUX_IOCTL_MIN_PTR;
+		if ((td->td_pflags & TDP_KTHREAD) == 0 &&
+		    SV_PROC_ABI(td->td_proc) == SV_ABI_FREEBSD &&
+		    td->td_sa.code == SYS_ioctl) {
+			direct = true;
+			data = (void *)(uintptr_t)td->td_sa.args[2];
+		} else {
+			data = (void *)LINUX_IOCTL_MIN_PTR;
+		}
 	} else {
 		/* fetch user-space pointer */
 		data = *(void **)data;
@@ -1136,11 +1016,30 @@ linux_file_ioctl_sub(struct file *fp, struct linux_file *filp,
 			error = ENOTTY;
 		}
 	}
+	if (error == 0 && size > 0 && (cmd & IOC_OUT) != 0 && direct) {
+		void *xdata;
+		int error1;
+
+		/*
+		 * Ensure that the copyout in sys_generic.c copies
+		 * over the data which is possibly modified by the
+		 * driver.  A possible error from the copyin() is
+		 * ignored since it is formally possible for the memory
+		 * to become unaccessible in the meantime.  Do the copying
+		 * through the intermediate buffer instead of copying
+		 * directly to bsd_ioctl_data, to ensure atomicity of
+		 * the change with respect to the error.
+		 */
+		xdata = malloc(size, M_TEMP, M_WAITOK);
+		error1 = copyin(data, xdata, size);
+		if (error1 == 0)
+			memcpy(task->bsd_ioctl_data, xdata, size);
+		free(xdata, M_TEMP);
+	}
 	if (size > 0) {
 		task->bsd_ioctl_data = NULL;
 		task->bsd_ioctl_len = 0;
 	}
-
 	if (error == EWOULDBLOCK) {
 		/* update kqfilter status, if any */
 		linux_file_kqfilter_poll(filp,
@@ -1258,6 +1157,58 @@ linux_poll_wakeup(struct linux_file *filp)
 	spin_unlock(&filp->f_kqlock);
 }
 
+static struct linux_file *
+__get_file_rcu(struct linux_file **f)
+{
+	struct linux_file *file1, *file2;
+
+	file1 = READ_ONCE(*f);
+	if (file1 == NULL)
+		return (NULL);
+
+	if (!refcount_acquire_if_not_zero(
+	    file1->_file == NULL ? &file1->f_count : &file1->_file->f_count))
+		return (ERR_PTR(-EAGAIN));
+
+	file2 = READ_ONCE(*f);
+	if (file2 == file1)
+		return (file2);
+
+	fput(file1);
+	return (ERR_PTR(-EAGAIN));
+}
+
+struct linux_file *
+linux_get_file_rcu(struct linux_file **f)
+{
+	struct linux_file *file1;
+
+	for (;;) {
+		file1 = __get_file_rcu(f);
+		if (file1 == NULL)
+			return (NULL);
+
+		if (IS_ERR(file1))
+			continue;
+
+		return (file1);
+	}
+}
+
+struct linux_file *
+get_file_active(struct linux_file **f)
+{
+	struct linux_file *file1;
+
+	rcu_read_lock();
+	file1 = __get_file_rcu(f);
+	rcu_read_unlock();
+	if (IS_ERR(file1))
+		file1 = NULL;
+
+	return (file1);
+}
+
 static void
 linux_file_kqfilter_detach(struct knote *kn)
 {
@@ -1273,7 +1224,7 @@ linux_file_kqfilter_read_event(struct knote *kn, long hint)
 {
 	struct linux_file *filp = kn->kn_hook;
 
-	mtx_assert(&filp->f_kqlock.m, MA_OWNED);
+	mtx_assert(&filp->f_kqlock, MA_OWNED);
 
 	return ((filp->f_kqflags & LINUX_KQ_FLAG_NEED_READ) ? 1 : 0);
 }
@@ -1283,21 +1234,27 @@ linux_file_kqfilter_write_event(struct knote *kn, long hint)
 {
 	struct linux_file *filp = kn->kn_hook;
 
-	mtx_assert(&filp->f_kqlock.m, MA_OWNED);
+	mtx_assert(&filp->f_kqlock, MA_OWNED);
 
 	return ((filp->f_kqflags & LINUX_KQ_FLAG_NEED_WRITE) ? 1 : 0);
 }
 
-static struct filterops linux_dev_kqfiltops_read = {
+static const struct filterops linux_dev_kqfiltops_read = {
 	.f_isfd = 1,
 	.f_detach = linux_file_kqfilter_detach,
 	.f_event = linux_file_kqfilter_read_event,
+#ifndef __MidnightBSD__	/* MNBSD-KPI: struct filterops has no f_copy */
+	.f_copy = knote_triv_copy,
+#endif
 };
 
-static struct filterops linux_dev_kqfiltops_write = {
+static const struct filterops linux_dev_kqfiltops_write = {
 	.f_isfd = 1,
 	.f_detach = linux_file_kqfilter_detach,
 	.f_event = linux_file_kqfilter_write_event,
+#ifndef __MidnightBSD__	/* MNBSD-KPI: struct filterops has no f_copy */
+	.f_copy = knote_triv_copy,
+#endif
 };
 
 static void
@@ -1842,8 +1799,12 @@ out:
 }
 
 static int
+#ifdef __MidnightBSD__	/* MNBSD-KPI: fo_stat_t and VOP_STAT() still take a thread */
 linux_file_stat(struct file *fp, struct stat *sb, struct ucred *active_cred,
     struct thread *td)
+#else
+linux_file_stat(struct file *fp, struct stat *sb, struct ucred *active_cred)
+#endif
 {
 	struct linux_file *filp;
 	struct vnode *vp;
@@ -1856,7 +1817,11 @@ linux_file_stat(struct file *fp, struct stat *sb, struct ucred *active_cred,
 	vp = filp->f_vnode;
 
 	vn_lock(vp, LK_SHARED | LK_RETRY);
+#ifdef __MidnightBSD__
 	error = VOP_STAT(vp, sb, td->td_ucred, NOCRED, td);
+#else
+	error = VOP_STAT(vp, sb, curthread->td_ucred, NOCRED);
+#endif
 	VOP_UNLOCK(vp);
 
 	return (error);
@@ -1914,7 +1879,7 @@ linux_file_kcmp(struct file *fp1, struct file *fp2, struct thread *td)
 	return (kcmp_cmp((uintptr_t)filp1->f_cdev, (uintptr_t)filp2->f_cdev));
 }
 
-struct fileops linuxfileops = {
+const struct fileops linuxfileops = {
 	.fo_read = linux_file_read,
 	.fo_write = linux_file_write,
 	.fo_truncate = invfo_truncate,
@@ -1931,113 +1896,6 @@ struct fileops linuxfileops = {
 	.fo_cmp = linux_file_kcmp,
 	.fo_flags = DFLAG_PASSABLE,
 };
-
-/*
- * Hash of vmmap addresses.  This is infrequently accessed and does not
- * need to be particularly large.  This is done because we must store the
- * caller's idea of the map size to properly unmap.
- */
-struct vmmap {
-	LIST_ENTRY(vmmap)	vm_next;
-	void 			*vm_addr;
-	unsigned long		vm_size;
-};
-
-struct vmmaphd {
-	struct vmmap *lh_first;
-};
-#define	VMMAP_HASH_SIZE	64
-#define	VMMAP_HASH_MASK	(VMMAP_HASH_SIZE - 1)
-#define	VM_HASH(addr)	((uintptr_t)(addr) >> PAGE_SHIFT) & VMMAP_HASH_MASK
-static struct vmmaphd vmmaphead[VMMAP_HASH_SIZE];
-static struct mtx vmmaplock;
-
-static void
-vmmap_add(void *addr, unsigned long size)
-{
-	struct vmmap *vmmap;
-
-	vmmap = kmalloc(sizeof(*vmmap), GFP_KERNEL);
-	mtx_lock(&vmmaplock);
-	vmmap->vm_size = size;
-	vmmap->vm_addr = addr;
-	LIST_INSERT_HEAD(&vmmaphead[VM_HASH(addr)], vmmap, vm_next);
-	mtx_unlock(&vmmaplock);
-}
-
-static struct vmmap *
-vmmap_remove(void *addr)
-{
-	struct vmmap *vmmap;
-
-	mtx_lock(&vmmaplock);
-	LIST_FOREACH(vmmap, &vmmaphead[VM_HASH(addr)], vm_next)
-		if (vmmap->vm_addr == addr)
-			break;
-	if (vmmap)
-		LIST_REMOVE(vmmap, vm_next);
-	mtx_unlock(&vmmaplock);
-
-	return (vmmap);
-}
-
-#if defined(__i386__) || defined(__amd64__) || defined(__powerpc__) || defined(__aarch64__) || defined(__riscv)
-void *
-_ioremap_attr(vm_paddr_t phys_addr, unsigned long size, int attr)
-{
-	void *addr;
-
-	addr = pmap_mapdev_attr(phys_addr, size, attr);
-	if (addr == NULL)
-		return (NULL);
-	vmmap_add(addr, size);
-
-	return (addr);
-}
-#endif
-
-void
-iounmap(void *addr)
-{
-	struct vmmap *vmmap;
-
-	vmmap = vmmap_remove(addr);
-	if (vmmap == NULL)
-		return;
-#if defined(__i386__) || defined(__amd64__) || defined(__powerpc__) || defined(__aarch64__) || defined(__riscv)
-	pmap_unmapdev((vm_offset_t)addr, vmmap->vm_size);
-#endif
-	kfree(vmmap);
-}
-
-void *
-vmap(struct page **pages, unsigned int count, unsigned long flags, int prot)
-{
-	vm_offset_t off;
-	size_t size;
-
-	size = count * PAGE_SIZE;
-	off = kva_alloc(size);
-	if (off == 0)
-		return (NULL);
-	vmmap_add((void *)off, size);
-	pmap_qenter(off, pages, count);
-
-	return ((void *)off);
-}
-
-void
-vunmap(void *addr)
-{
-	struct vmmap *vmmap;
-
-	vmmap = vmmap_remove(addr);
-	if (vmmap == NULL)
-		return;
-	pmap_qremove((vm_offset_t)addr, vmmap->vm_size / PAGE_SIZE);
-	kva_free((vm_offset_t)addr, vmmap->vm_size);
-	kfree(vmmap);
-}
 
 static char *
 devm_kvasprintf(struct device *dev, gfp_t gfp, const char *fmt, va_list ap)
@@ -2093,12 +1951,206 @@ kasprintf(gfp_t gfp, const char *fmt, ...)
 	return (p);
 }
 
+int
+__lkpi_hexdump_printf(void *arg1 __unused, const char *fmt, ...)
+{
+	va_list ap;
+	int result;
+
+	va_start(ap, fmt);
+	result = vprintf(fmt, ap);
+	va_end(ap);
+	return (result);
+}
+
+int
+__lkpi_hexdump_sbuf_printf(void *arg1, const char *fmt, ...)
+{
+	va_list ap;
+	int result;
+
+	va_start(ap, fmt);
+	result = sbuf_vprintf(arg1, fmt, ap);
+	va_end(ap);
+	return (result);
+}
+
+void
+lkpi_hex_dump(int(*_fpf)(void *, const char *, ...), void *arg1,
+    const char *level, const char *prefix_str,
+    const int prefix_type, const int rowsize, const int groupsize,
+    const void *buf, size_t len, const bool ascii, const bool trailing_newline)
+{
+	typedef const struct { long long value; } __packed *print_64p_t;
+	typedef const struct { uint32_t value; } __packed *print_32p_t;
+	typedef const struct { uint16_t value; } __packed *print_16p_t;
+	const void *buf_old = buf;
+	int row, linelen, ret;
+
+	while (len > 0) {
+		linelen = 0;
+		if (level != NULL) {
+			ret = _fpf(arg1, "%s", level);
+			if (ret < 0)
+				break;
+			linelen += ret;
+		}
+		if (prefix_str != NULL) {
+			ret = _fpf(
+			    arg1, "%s%s", linelen ? " " : "", prefix_str);
+			if (ret < 0)
+				break;
+			linelen += ret;
+		}
+
+		switch (prefix_type) {
+		case DUMP_PREFIX_ADDRESS:
+			ret = _fpf(
+			    arg1, "%s[%p]", linelen ? " " : "", buf);
+			if (ret < 0)
+				return;
+			linelen += ret;
+			break;
+		case DUMP_PREFIX_OFFSET:
+			ret = _fpf(
+			    arg1, "%s[%#tx]", linelen ? " " : "",
+			    ((const char *)buf - (const char *)buf_old));
+			if (ret < 0)
+				return;
+			linelen += ret;
+			break;
+		default:
+			break;
+		}
+		for (row = 0; row != rowsize; row++) {
+			if (groupsize == 8 && len > 7) {
+				ret = _fpf(
+				    arg1, "%s%016llx", linelen ? " " : "",
+				    ((print_64p_t)buf)->value);
+				if (ret < 0)
+					return;
+				linelen += ret;
+				buf = (const uint8_t *)buf + 8;
+				len -= 8;
+			} else if (groupsize == 4 && len > 3) {
+				ret = _fpf(
+				    arg1, "%s%08x", linelen ? " " : "",
+				    ((print_32p_t)buf)->value);
+				if (ret < 0)
+					return;
+				linelen += ret;
+				buf = (const uint8_t *)buf + 4;
+				len -= 4;
+			} else if (groupsize == 2 && len > 1) {
+				ret = _fpf(
+				    arg1, "%s%04x", linelen ? " " : "",
+				    ((print_16p_t)buf)->value);
+				if (ret < 0)
+					return;
+				linelen += ret;
+				buf = (const uint8_t *)buf + 2;
+				len -= 2;
+			} else if (len > 0) {
+				ret = _fpf(
+				    arg1, "%s%02x", linelen ? " " : "",
+				    *(const uint8_t *)buf);
+				if (ret < 0)
+					return;
+				linelen += ret;
+				buf = (const uint8_t *)buf + 1;
+				len--;
+			} else {
+				break;
+			}
+		}
+		if (len > 0 && trailing_newline) {
+			ret = _fpf(arg1, "\n");
+			if (ret < 0)
+				break;
+		}
+	}
+}
+
+struct hdtb_context {
+	char	*linebuf;
+	size_t	 linebuflen;
+	int	 written;
+};
+
+static int
+hdtb_cb(void *arg, const char *format, ...)
+{
+	struct hdtb_context *context;
+	int written;
+	va_list args;
+
+	context = arg;
+
+	va_start(args, format);
+	written = vsnprintf(
+	    context->linebuf, context->linebuflen, format, args);
+	va_end(args);
+
+	if (written < 0)
+		return (written);
+
+	/*
+	 * Linux' hex_dump_to_buffer() function has the same behaviour as
+	 * snprintf() basically. Therefore, it returns the number of bytes it
+	 * would have written if the destination buffer was large enough.
+	 *
+	 * If the destination buffer was exhausted, lkpi_hex_dump() will
+	 * continue to call this callback but it will only compute the bytes it
+	 * would have written but write nothing to that buffer.
+	 */
+	context->written += written;
+
+	if (written < context->linebuflen) {
+		context->linebuf += written;
+		context->linebuflen -= written;
+	} else {
+		context->linebuf += context->linebuflen;
+		context->linebuflen = 0;
+	}
+
+	return (written);
+}
+
+int
+lkpi_hex_dump_to_buffer(const void *buf, size_t len, int rowsize,
+    int groupsize, char *linebuf, size_t linebuflen, bool ascii)
+{
+	int written;
+	struct hdtb_context context;
+
+	context.linebuf = linebuf;
+	context.linebuflen = linebuflen;
+	context.written = 0;
+
+	if (rowsize != 16 && rowsize != 32)
+		rowsize = 16;
+
+	len = min(len, rowsize);
+
+	lkpi_hex_dump(
+	    hdtb_cb, &context, NULL, NULL, DUMP_PREFIX_NONE,
+	    rowsize, groupsize, buf, len, ascii, false);
+
+	written = context.written;
+
+	return (written);
+}
+
 static void
 linux_timer_callback_wrapper(void *context)
 {
 	struct timer_list *timer;
 
 	timer = context;
+
+	/* the timer is about to be shutdown permanently */
+	if (timer->function == NULL)
+		return;
 
 	if (linux_set_current_flags(curthread, M_NOWAIT)) {
 		/* try again later */
@@ -2110,8 +2162,24 @@ linux_timer_callback_wrapper(void *context)
 	timer->function(timer->data);
 }
 
+static int
+linux_timer_jiffies_until(unsigned long expires)
+{
+	unsigned long delta = expires - jiffies;
+
+	/*
+	 * Guard against already expired values and make sure that the value can
+	 * be used as a tick count, rather than a jiffies count.
+	 */
+	if ((long)delta < 1)
+		delta = 1;
+	else if (delta > INT_MAX)
+		delta = INT_MAX;
+	return ((int)delta);
+}
+
 int
-mod_timer(struct timer_list *timer, int expires)
+mod_timer(struct timer_list *timer, unsigned long expires)
 {
 	int ret;
 
@@ -2144,7 +2212,7 @@ add_timer_on(struct timer_list *timer, int cpu)
 }
 
 int
-del_timer(struct timer_list *timer)
+timer_delete(struct timer_list *timer)
 {
 
 	if (callout_stop(&(timer)->callout) == -1)
@@ -2153,7 +2221,7 @@ del_timer(struct timer_list *timer)
 }
 
 int
-del_timer_sync(struct timer_list *timer)
+timer_delete_sync(struct timer_list *timer)
 {
 
 	if (callout_drain(&(timer)->callout) == -1)
@@ -2162,16 +2230,10 @@ del_timer_sync(struct timer_list *timer)
 }
 
 int
-timer_delete_sync(struct timer_list *timer)
-{
-
-	return (del_timer_sync(timer));
-}
-
-int
 timer_shutdown_sync(struct timer_list *timer)
 {
 
+	timer->function = NULL;
 	return (del_timer_sync(timer));
 }
 
@@ -2244,20 +2306,16 @@ SYSINIT(linux_timer, SI_SUB_DRIVERS, SI_ORDER_FIRST, linux_timer_init, NULL);
 void
 linux_complete_common(struct completion *c, int all)
 {
-	int wakeup_swapper;
-
 	sleepq_lock(c);
 	if (all) {
 		c->done = UINT_MAX;
-		wakeup_swapper = sleepq_broadcast(c, SLEEPQ_SLEEP, 0, 0);
+		sleepq_broadcast(c, SLEEPQ_SLEEP, 0, 0);
 	} else {
 		if (c->done != UINT_MAX)
 			c->done++;
-		wakeup_swapper = sleepq_signal(c, SLEEPQ_SLEEP, 0, 0);
+		sleepq_signal(c, SLEEPQ_SLEEP, 0, 0);
 	}
 	sleepq_release(c);
-	if (wakeup_swapper)
-		kick_proc0();
 }
 
 /*
@@ -2310,12 +2368,12 @@ intr:
 /*
  * Time limited wait for done != 0 with or without signals.
  */
-int
-linux_wait_for_timeout_common(struct completion *c, int timeout, int flags)
+unsigned long
+linux_wait_for_timeout_common(struct completion *c, unsigned long timeout,
+    int flags)
 {
 	struct task_struct *task;
-	int end = jiffies + timeout;
-	int error;
+	unsigned long end = jiffies + timeout, error;
 
 	if (SCHEDULER_STOPPED())
 		return (0);
@@ -2605,7 +2663,11 @@ struct list_sort_thunk {
 };
 
 static inline int
+#ifdef __MidnightBSD__	/* MNBSD-KPI: base qsort_r() uses the BSD (thunk-first) order */
 linux_le_cmp(void *priv, const void *d1, const void *d2)
+#else
+linux_le_cmp(const void *d1, const void *d2, void *priv)
+#endif
 {
 	struct list_head *le1, *le2;
 	struct list_sort_thunk *thunk;
@@ -2615,6 +2677,34 @@ linux_le_cmp(void *priv, const void *d1, const void *d2)
 	le2 = *(__DECONST(struct list_head **, d2));
 	return ((thunk->cmp)(thunk->priv, le1, le2));
 }
+
+#ifdef __MidnightBSD__
+/*
+ * MNBSD-KPI: Linux sort_r() takes a C11-order comparator (a, b, priv); the
+ * base qsort_r() wants the BSD order (thunk, a, b).  Trampoline between them.
+ */
+struct lkpi_sort_r_thunk {
+	int (*cmp)(const void *, const void *, void *);
+	void *priv;
+};
+
+static int
+lkpi_sort_r_cmp(void *arg, const void *a, const void *b)
+{
+	struct lkpi_sort_r_thunk *t = arg;
+
+	return (t->cmp(a, b, t->priv));
+}
+
+void
+lkpi_sort_r(void *base, size_t num, size_t size,
+    int (*cmp)(const void *, const void *, void *), void *priv)
+{
+	struct lkpi_sort_r_thunk t = { .cmp = cmp, .priv = priv };
+
+	qsort_r(base, num, size, &t, lkpi_sort_r_cmp);
+}
+#endif
 
 void
 list_sort(void *priv, struct list_head *head, int (*cmp)(void *priv,
@@ -2633,7 +2723,11 @@ list_sort(void *priv, struct list_head *head, int (*cmp)(void *priv,
 		ar[i++] = le;
 	thunk.cmp = cmp;
 	thunk.priv = priv;
+#ifdef __MidnightBSD__
 	qsort_r(ar, count, sizeof(struct list_head *), &thunk, linux_le_cmp);
+#else
+	qsort_r(ar, count, sizeof(struct list_head *), linux_le_cmp, &thunk);
+#endif
 	INIT_LIST_HEAD(head);
 	for (i = 0; i < count; i++)
 		list_add_tail(ar[i], head);
@@ -2748,7 +2842,6 @@ linux_dump_stack(void)
 #ifdef STACK
 	struct stack st;
 
-	stack_zero(&st);
 	stack_save(&st);
 	stack_print(&st);
 #endif
@@ -2791,6 +2884,42 @@ device_can_wakeup(struct device *dev)
 	return (false);
 }
 
+void
+linuxkpi_device_set_wakeup_capable(struct device *dev, bool capable)
+{
+	dev->power.can_wakeup = capable;
+}
+
+static void
+devm_device_group_remove(struct device *dev, void *p)
+{
+	const struct attribute_group **dr = p;
+	const struct attribute_group *group = *dr;
+
+	sysfs_remove_group(&dev->kobj, group);
+}
+
+int
+lkpi_devm_device_add_group(struct device *dev,
+    const struct attribute_group *group)
+{
+	const struct attribute_group **dr;
+	int ret;
+
+	dr = devres_alloc(devm_device_group_remove, sizeof(*dr), GFP_KERNEL);
+	if (dr == NULL)
+		return (-ENOMEM);
+
+	ret = sysfs_create_group(&dev->kobj, group);
+	if (ret == 0) {
+		*dr = group;
+		devres_add(dev, dr);
+	} else
+		devres_free(dr);
+
+	return (ret);
+}
+
 #if defined(__i386__) || defined(__amd64__)
 bool linux_cpu_has_clflush;
 struct cpuinfo_x86 boot_cpu_data;
@@ -2809,6 +2938,26 @@ lkpi_get_static_single_cpu_mask(int cpuid)
 	return (static_single_cpu_mask[cpuid]);
 }
 
+bool
+lkpi_xen_initial_domain(void)
+{
+#ifdef XENHVM
+	return (xen_initial_domain());
+#else
+	return (false);
+#endif
+}
+
+bool
+lkpi_xen_pv_domain(void)
+{
+#ifdef XENHVM
+	return (xen_pv_domain());
+#else
+	return (false);
+#endif
+}
+
 static void
 linux_compat_init(void *arg)
 {
@@ -2816,19 +2965,39 @@ linux_compat_init(void *arg)
 	int i;
 
 #if defined(__i386__) || defined(__amd64__)
+	static const uint32_t x86_vendors[X86_VENDOR_NUM] = {
+		[X86_VENDOR_INTEL] = CPU_VENDOR_INTEL,
+		[X86_VENDOR_CYRIX] = CPU_VENDOR_CYRIX,
+		[X86_VENDOR_AMD] = CPU_VENDOR_AMD,
+		[X86_VENDOR_UMC] = CPU_VENDOR_UMC,
+		[X86_VENDOR_CENTAUR] = CPU_VENDOR_CENTAUR,
+		[X86_VENDOR_TRANSMETA] = CPU_VENDOR_TRANSMETA,
+		[X86_VENDOR_NSC] = CPU_VENDOR_NSC,
+		[X86_VENDOR_HYGON] = CPU_VENDOR_HYGON,
+	};
+	uint8_t x86_vendor = X86_VENDOR_UNKNOWN;
+
+	for (i = 0; i < X86_VENDOR_NUM; i++) {
+		if (cpu_vendor_id != 0 && cpu_vendor_id == x86_vendors[i]) {
+			x86_vendor = i;
+			break;
+		}
+	}
 	linux_cpu_has_clflush = (cpu_feature & CPUID_CLFSH);
 	boot_cpu_data.x86_clflush_size = cpu_clflush_line_size;
 	boot_cpu_data.x86_max_cores = mp_ncpus;
 	boot_cpu_data.x86 = CPUID_TO_FAMILY(cpu_id);
 	boot_cpu_data.x86_model = CPUID_TO_MODEL(cpu_id);
+	boot_cpu_data.x86_vendor = x86_vendor;
 
-	__cpu_data = mallocarray(mp_maxid + 1,
-	    sizeof(*__cpu_data), M_KMALLOC, M_WAITOK | M_ZERO);
+	__cpu_data = kmalloc_array(mp_maxid + 1,
+	    sizeof(*__cpu_data), M_WAITOK | M_ZERO);
 	CPU_FOREACH(i) {
 		__cpu_data[i].x86_clflush_size = cpu_clflush_line_size;
 		__cpu_data[i].x86_max_cores = mp_ncpus;
 		__cpu_data[i].x86 = CPUID_TO_FAMILY(cpu_id);
 		__cpu_data[i].x86_model = CPUID_TO_MODEL(cpu_id);
+		__cpu_data[i].x86_vendor = x86_vendor;
 	}
 #endif
 	rw_init(&linux_vma_lock, "lkpi-vma-lock");
@@ -2850,9 +3019,6 @@ linux_compat_init(void *arg)
 	INIT_LIST_HEAD(&pci_drivers);
 	INIT_LIST_HEAD(&pci_devices);
 	spin_lock_init(&pci_lock);
-	mtx_init(&vmmaplock, "IO Map lock", NULL, MTX_DEF);
-	for (i = 0; i < VMMAP_HASH_SIZE; i++)
-		LIST_INIT(&vmmaphead[i]);
 	init_waitqueue_head(&linux_bit_waitq);
 	init_waitqueue_head(&linux_var_waitq);
 
@@ -2864,8 +3030,8 @@ linux_compat_init(void *arg)
 	 * This is used by cpumask_of() (and possibly others in the future) for,
 	 * e.g., drivers to pass hints to irq_set_affinity_hint().
 	 */
-	static_single_cpu_mask = mallocarray(mp_maxid + 1,
-	    sizeof(static_single_cpu_mask), M_KMALLOC, M_WAITOK | M_ZERO);
+	static_single_cpu_mask = kmalloc_array(mp_maxid + 1,
+	    sizeof(static_single_cpu_mask), M_WAITOK | M_ZERO);
 
 	/*
 	 * When the number of CPUs reach a threshold, we start to save memory
@@ -2884,9 +3050,9 @@ linux_compat_init(void *arg)
 		 * (_BITSET_BITS / 8)' bytes (for comparison with the
 		 * overlapping scheme).
 		 */
-		static_single_cpu_mask_lcs = mallocarray(mp_ncpus,
+		static_single_cpu_mask_lcs = kmalloc_array(mp_ncpus,
 		    sizeof(*static_single_cpu_mask_lcs),
-		    M_KMALLOC, M_WAITOK | M_ZERO);
+		    M_WAITOK | M_ZERO);
 
 		sscm_ptr = static_single_cpu_mask_lcs;
 		CPU_FOREACH(i) {
@@ -2963,7 +3129,6 @@ linux_compat_uninit(void *arg)
 	free(__cpu_data, M_KMALLOC);
 #endif
 
-	mtx_destroy(&vmmaplock);
 	spin_lock_destroy(&pci_lock);
 	rw_destroy(&linux_vma_lock);
 }

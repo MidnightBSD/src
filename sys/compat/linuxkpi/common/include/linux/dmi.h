@@ -30,7 +30,6 @@
 #define	__LINUXKPI_LINUX_DMI_H__
 
 #include <sys/types.h>
-#include <linux/errno.h>
 #include <linux/mod_devicetable.h>
 
 struct dmi_header {

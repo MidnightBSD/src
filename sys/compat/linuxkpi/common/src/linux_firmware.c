@@ -57,7 +57,7 @@ struct lkpi_fw_task {
 
 static int
 _linuxkpi_request_firmware(const char *fw_name, const struct linuxkpi_firmware **fw,
-    struct device *dev, gfp_t gfp __unused, bool enoentok, bool warn)
+    struct device *dev, gfp_t gfp __unused, bool warn)
 {
 	const struct firmware *fbdfw;
 	struct linuxkpi_firmware *lfw;
@@ -66,7 +66,8 @@ _linuxkpi_request_firmware(const char *fw_name, const struct linuxkpi_firmware *
 	uint32_t flags;
 
 	if (fw_name == NULL || fw == NULL || dev == NULL) {
-		*fw = NULL;
+		if (fw != NULL)
+			*fw = NULL;
 		return (-EINVAL);
 	}
 
@@ -88,17 +89,17 @@ _linuxkpi_request_firmware(const char *fw_name, const struct linuxkpi_firmware *
 	 * way rather than adding more name-mangling-hacks here in the future
 	 * (though we could if needed).
 	 */
-	/* (1) Try any name removed of path. */
-	fwimg = strrchr(fw_name, '/');
-	if (fwimg != NULL)
-		fwimg++;
-	if (fwimg == NULL || *fwimg == '\0')
-		fwimg = fw_name;
-	fbdfw = firmware_get_flags(fwimg, flags);
-	/* (2) Try the original name if we have not yet. */
-	if (fbdfw == NULL && fwimg != fw_name) {
-		fwimg = fw_name;
-		fbdfw = firmware_get_flags(fwimg, flags);
+	/* (1) Try the original name. */
+	fbdfw = firmware_get_flags(fw_name, flags);
+	/* (2) Try any name removed of path, if we have not yet. */
+	if (fbdfw == NULL) {
+		fwimg = strrchr(fw_name, '/');
+		if (fwimg != NULL)
+			fwimg++;
+		if (fwimg == NULL || *fwimg == '\0')
+			fwimg = fw_name;
+		if (fwimg != fw_name)
+			fbdfw = firmware_get_flags(fwimg, flags);
 	}
 	/* (3) Flatten '/', '.' and '-' to '_' and try with adjusted name. */
 	if (fbdfw == NULL &&
@@ -123,19 +124,16 @@ _linuxkpi_request_firmware(const char *fw_name, const struct linuxkpi_firmware *
 		}
 	}
 	if (fbdfw == NULL) {
-		if (enoentok)
-			*fw = lfw;
-		else {
-			free(lfw, M_LKPI_FW);
-			*fw = NULL;
-		}
+		linuxkpi_release_firmware(lfw);
+		*fw = NULL;
 		if (warn)
-			device_printf(dev->bsddev, "could not load firmware "
-			    "image '%s'\n", fw_name);
+			device_printf(dev->bsddev,
+			    "could not load firmware image '%s'\n",
+			    fw_name);
 		return (-ENOENT);
 	}
 
-	device_printf(dev->bsddev,"successfully loaded firmware image '%s'\n",
+	device_printf(dev->bsddev, "successfully loaded firmware image '%s'\n",
 	    fw_name);
 	lfw->fbdfw = fbdfw;
 	lfw->data = (const uint8_t *)fbdfw->data;
@@ -157,8 +155,8 @@ lkpi_fw_task(void *ctx, int pending)
 	if (lfwt->cont == NULL)
 		goto out;
 
-	_linuxkpi_request_firmware(lfwt->fw_name, &fw, lfwt->dev,
-	    lfwt->gfp, true, true);
+	_linuxkpi_request_firmware(lfwt->fw_name, &fw, lfwt->dev, lfwt->gfp,
+	    true);
 
 	/*
 	 * Linux seems to run the callback if it cannot find the firmware.
@@ -198,8 +196,7 @@ linuxkpi_request_firmware(const struct linuxkpi_firmware **fw,
     const char *fw_name, struct device *dev)
 {
 
-	return (_linuxkpi_request_firmware(fw_name, fw, dev, GFP_KERNEL, false,
-	    true));
+	return (_linuxkpi_request_firmware(fw_name, fw, dev, GFP_KERNEL, true));
 }
 
 int
@@ -207,7 +204,7 @@ linuxkpi_firmware_request_nowarn(const struct linuxkpi_firmware **fw,
     const char *fw_name, struct device *dev)
 {
 
-	return (_linuxkpi_request_firmware(fw_name, fw, dev, GFP_KERNEL, false,
+	return (_linuxkpi_request_firmware(fw_name, fw, dev, GFP_KERNEL,
 	    false));
 }
 

@@ -24,7 +24,6 @@
  *
  */
 
-#include <sys/cdefs.h>
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -86,12 +85,12 @@ lkpi_iic_attach(device_t dev)
 	struct lkpi_iic_softc *sc;
 
 	sc = device_get_softc(dev);
-	sc->iicbus = device_add_child(dev, "iicbus", -1);
+	sc->iicbus = device_add_child(dev, "iicbus", DEVICE_UNIT_ANY);
 	if (sc->iicbus == NULL) {
 		device_printf(dev, "Couldn't add iicbus child, aborting\n");
 		return (ENXIO);
 	}
-	bus_generic_attach(dev);
+	bus_attach_children(dev);
 	return (0);
 }
 
@@ -146,17 +145,15 @@ static device_method_t lkpi_iic_methods[] = {
 	DEVMETHOD_END
 };
 
-devclass_t lkpi_iic_devclass;
-
 driver_t lkpi_iic_driver = {
 	"lkpi_iic",
 	lkpi_iic_methods,
 	sizeof(struct lkpi_iic_softc),
 };
 
-DRIVER_MODULE(lkpi_iic, drmn, lkpi_iic_driver, lkpi_iic_devclass, 0, 0);
-DRIVER_MODULE(lkpi_iic, drm, lkpi_iic_driver, lkpi_iic_devclass, 0, 0);
-DRIVER_MODULE(iicbus, lkpi_iic, iicbus_driver, iicbus_devclass, 0, 0);
+DRIVER_MODULE(lkpi_iic, drmn, lkpi_iic_driver, 0, 0);
+DRIVER_MODULE(lkpi_iic, drm, lkpi_iic_driver, 0, 0);
+DRIVER_MODULE(iicbus, lkpi_iic, iicbus_driver, 0, 0);
 MODULE_DEPEND(linuxkpi, iicbus, IICBUS_MINVER, IICBUS_PREFVER, IICBUS_MAXVER);
 
 static int
@@ -319,7 +316,6 @@ int
 lkpi_i2c_add_adapter(struct i2c_adapter *adapter)
 {
 	device_t lkpi_iic;
-	int error;
 
 	if (adapter->name[0] == '\0')
 		return (-EINVAL);
@@ -327,7 +323,8 @@ lkpi_i2c_add_adapter(struct i2c_adapter *adapter)
 		device_printf(adapter->dev.parent->bsddev,
 		    "Adding i2c adapter %s\n", adapter->name);
 	sx_xlock(&lkpi_sx_i2c);
-	lkpi_iic = device_add_child(adapter->dev.parent->bsddev, "lkpi_iic", -1);
+	lkpi_iic = device_add_child(adapter->dev.parent->bsddev, "lkpi_iic",
+	    DEVICE_UNIT_ANY);
 	if (lkpi_iic == NULL) {
 		device_printf(adapter->dev.parent->bsddev, "Couldn't add lkpi_iic\n");
 		sx_xunlock(&lkpi_sx_i2c);
@@ -335,14 +332,8 @@ lkpi_i2c_add_adapter(struct i2c_adapter *adapter)
 	}
 
 	bus_topo_lock();
-	error = bus_generic_attach(adapter->dev.parent->bsddev);
+	bus_attach_children(adapter->dev.parent->bsddev);
 	bus_topo_unlock();
-	if (error) {
-		device_printf(adapter->dev.parent->bsddev,
-		  "failed to attach child: error %d\n", error);
-		sx_xunlock(&lkpi_sx_i2c);
-		return (ENXIO);
-	}
 	LKPI_IIC_ADD_ADAPTER(lkpi_iic, adapter);
 	sx_xunlock(&lkpi_sx_i2c);
 	return (0);
@@ -351,40 +342,42 @@ lkpi_i2c_add_adapter(struct i2c_adapter *adapter)
 int
 lkpi_i2c_del_adapter(struct i2c_adapter *adapter)
 {
-	device_t child;
-	int unit, rv;
+	device_t parent, *children, child;
+	const char *name;
+	int count, i, rv;
 
 	if (adapter == NULL)
 		return (-EINVAL);
+	parent = adapter->dev.parent->bsddev;
 	if (bootverbose)
-		device_printf(adapter->dev.parent->bsddev,
-		    "Removing i2c adapter %s\n", adapter->name);
+		device_printf(parent, "Removing i2c adapter %s\n",
+		    adapter->name);
 	sx_xlock(&lkpi_sx_i2c);
-	unit = 0;
-	while ((child = device_find_child(adapter->dev.parent->bsddev, "lkpi_iic", unit++)) != NULL) {
-
-		if (adapter == LKPI_IIC_GET_ADAPTER(child)) {
-			bus_topo_lock();
-			device_delete_child(adapter->dev.parent->bsddev, child);
-			bus_topo_unlock();
-			rv = 0;
-			goto out;
-		}
-	}
-
-	unit = 0;
-	while ((child = device_find_child(adapter->dev.parent->bsddev, "lkpi_iicbb", unit++)) != NULL) {
-
-		if (adapter == LKPI_IIC_GET_ADAPTER(child)) {
-			bus_topo_lock();
-			device_delete_child(adapter->dev.parent->bsddev, child);
-			bus_topo_unlock();
-			rv = 0;
-			goto out;
-		}
-	}
+	/*
+	 * Look at every child: the units of the lkpi_iic and lkpi_iicbb
+	 * devices are not contiguous once other adapters have been removed,
+	 * so searching by increasing unit until the first hole would miss
+	 * the device and leave it behind.
+	 */
 	rv = -EINVAL;
-out:
+	bus_topo_lock();
+	if (device_get_children(parent, &children, &count) == 0) {
+		for (i = 0; i < count; i++) {
+			child = children[i];
+			name = device_get_name(child);
+			if (name == NULL ||
+			    (strcmp(name, "lkpi_iic") != 0 &&
+			    strcmp(name, "lkpi_iicbb") != 0))
+				continue;
+			if (adapter == LKPI_IIC_GET_ADAPTER(child)) {
+				device_delete_child(parent, child);
+				rv = 0;
+				break;
+			}
+		}
+		free(children, M_TEMP);
+	}
+	bus_topo_unlock();
 	sx_xunlock(&lkpi_sx_i2c);
 	return (rv);
 }

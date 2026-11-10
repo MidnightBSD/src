@@ -29,7 +29,6 @@
 #ifndef	_LINUXKPI_LINUX_FS_H_
 #define	_LINUXKPI_LINUX_FS_H_
 
-#include <sys/cdefs.h>
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/conf.h>
@@ -134,8 +133,11 @@ do {									\
 
 typedef int (*filldir_t)(void *, const char *, int, off_t, u64, unsigned);
 
+typedef unsigned int fop_flags_t;
+
 struct file_operations {
 	struct module *owner;
+	fop_flags_t fop_flags; /* Unused on FreeBSD. */
 	ssize_t (*read)(struct linux_file *, char __user *, size_t, off_t *);
 	ssize_t (*write)(struct linux_file *, const char __user *, size_t, off_t *);
 	unsigned int (*poll) (struct linux_file *, struct poll_table_struct *);
@@ -151,6 +153,11 @@ struct file_operations {
  * an illegal seek error
  */
 	off_t (*llseek)(struct linux_file *, off_t, int);
+/*
+ * Not supported in FreeBSD. That's ok, we never call it and it allows some
+ * drivers like DRM drivers to compile without changes.
+ */
+	void (*show_fdinfo)(struct seq_file *, struct file *);
 #if 0
 	/* We do not support these methods.  Don't permit them to compile. */
 	loff_t (*llseek)(struct file *, loff_t, int);
@@ -178,6 +185,14 @@ struct file_operations {
 	int (*setlease)(struct file *, long, struct file_lock **);
 #endif
 };
+
+#define	FOP_BUFFER_RASYNC	(1 << 0)
+#define	FOP_BUFFER_WASYNC	(1 << 1)
+#define	FOP_MMAP_SYNC		(1 << 2)
+#define	FOP_DIO_PARALLEL_WRITE	(1 << 3)
+#define	FOP_HUGE_PAGES		(1 << 4)
+#define	FOP_UNSIGNED_OFFSET	(1 << 5)
+
 #define	fops_get(fops)		(fops)
 #define	replace_fops(f, fops)	((f)->f_op = (fops))
 
@@ -265,12 +280,18 @@ get_file(struct linux_file *f)
 	return (f);
 }
 
+struct linux_file * linux_get_file_rcu(struct linux_file **f);
+struct linux_file * get_file_active(struct linux_file **f);
+#if defined(LINUXKPI_VERSION) && LINUXKPI_VERSION < 60700
 static inline bool
 get_file_rcu(struct linux_file *f)
 {
 	return (refcount_acquire_if_not_zero(
 	    f->_file == NULL ? &f->f_count : &f->_file->f_count));
 }
+#else
+#define	get_file_rcu(f)	linux_get_file_rcu(f)
+#endif
 
 static inline struct inode *
 igrab(struct inode *inode)
@@ -358,8 +379,8 @@ simple_read_from_buffer(void __user *dest, size_t read_size, loff_t *ppos,
 	size_t buf_remain = buf_size - *ppos;
 	ssize_t num_read;
 
-	if (buf_remain < 0 || buf_remain > buf_size)
-		return -EINVAL;
+	if (*ppos >= buf_size || read_size == 0)
+		return (0);
 
 	if (read_size > buf_remain)
 		read_size = buf_remain;
@@ -375,7 +396,7 @@ simple_read_from_buffer(void __user *dest, size_t read_size, loff_t *ppos,
 
 MALLOC_DECLARE(M_LSATTR);
 
-#define DEFINE_SIMPLE_ATTRIBUTE(__fops, __get, __set, __fmt)		\
+#define	__DEFINE_SIMPLE_ATTRIBUTE(__fops, __get, __set, __fmt, __wrfunc)\
 static inline int							\
 __fops ## _open(struct inode *inode, struct file *filp)			\
 {									\
@@ -386,9 +407,14 @@ static const struct file_operations __fops = {				\
 	.open	 = __fops ## _open,					\
 	.release = simple_attr_release,					\
 	.read	 = simple_attr_read,					\
-	.write	 = simple_attr_write,					\
+	.write	 = __wrfunc,						\
 	.llseek	 = no_llseek						\
 }
+
+#define	DEFINE_SIMPLE_ATTRIBUTE(fops, get, set, fmt)			\
+	__DEFINE_SIMPLE_ATTRIBUTE(fops, get, set, fmt, simple_attr_write)
+#define	DEFINE_SIMPLE_ATTRIBUTE_SIGNED(fops, get, set, fmt)		\
+	__DEFINE_SIMPLE_ATTRIBUTE(fops, get, set, fmt, simple_attr_write_signed)
 
 int simple_attr_open(struct inode *inode, struct file *filp,
     int (*get)(void *, uint64_t *), int (*set)(void *, uint64_t),
@@ -396,8 +422,13 @@ int simple_attr_open(struct inode *inode, struct file *filp,
 
 int simple_attr_release(struct inode *inode, struct file *filp);
 
-ssize_t simple_attr_read(struct file *filp, char *buf, size_t read_size, loff_t *ppos);
+ssize_t simple_attr_read(struct file *filp, char __user *buf, size_t read_size,
+    loff_t *ppos);
 
-ssize_t simple_attr_write(struct file *filp, const char *buf, size_t write_size, loff_t *ppos);
+ssize_t simple_attr_write(struct file *filp, const char __user *buf,
+    size_t write_size, loff_t *ppos);
+
+ssize_t simple_attr_write_signed(struct file *filp, const char __user *buf,
+	    size_t write_size, loff_t *ppos);
 
 #endif /* _LINUXKPI_LINUX_FS_H_ */

@@ -1,7 +1,7 @@
 /*-
  * SPDX-License-Identifier: BSD-2-Clause
  * 
- * Copyright (c) 2020 Greg V <greg@unrelenting.technology>
+ * Copyright (c) 2020 Val Packett <val@packett.cool>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,23 +30,70 @@
 #include <sys/proc.h>
 #include <sys/kernel.h>
 
-#if defined(__aarch64__) || defined(__amd64__) || defined(__i386__)
+#include <linux/compat.h>
+#include <linux/sched.h>
+
+#include <asm/fpu/api.h>
+
+#if defined(__aarch64__) || defined(__arm__) || defined(__amd64__) ||	\
+    defined(__i386__) || defined(__powerpc64__)
+
 #include <machine/fpu.h>
 
-struct fpu_kern_ctx *__lkpi_fpu_ctx;
-unsigned int __lkpi_fpu_ctx_level = 0;
+/*
+ * Technically the Linux API isn't supposed to allow nesting sections
+ * either, but currently used versions of GPU drivers rely on nesting
+ * working, so we only enter the section on the outermost level.
+ */
 
-static void
-linux_fpu_init(void *arg __unused)
+void
+lkpi_kernel_fpu_begin(void)
 {
-	__lkpi_fpu_ctx = fpu_kern_alloc_ctx(0);
+	if ((current->fpu_ctx_level)++ == 0)
+		fpu_kern_enter(curthread, NULL, FPU_KERN_NOCTX);
 }
-SYSINIT(linux_fpu, SI_SUB_EVENTHANDLER, SI_ORDER_SECOND, linux_fpu_init, NULL);
 
-static void
-linux_fpu_uninit(void *arg __unused)
+void
+lkpi_kernel_fpu_end(void)
 {
-	fpu_kern_free_ctx(__lkpi_fpu_ctx);
+	if (--(current->fpu_ctx_level) == 0)
+		fpu_kern_leave(curthread, NULL);
 }
-SYSUNINIT(linux_fpu, SI_SUB_EVENTHANDLER, SI_ORDER_SECOND, linux_fpu_uninit, NULL);
+
+void
+lkpi_fpu_safe_exec(fpu_safe_exec_cb_t func, void *ctx)
+{
+	unsigned int save_fpu_level;
+
+	save_fpu_level =
+	    __current_unallocated(curthread) ? 0 : current->fpu_ctx_level;
+	if (__predict_false(save_fpu_level != 0)) {
+		current->fpu_ctx_level = 1;
+		kernel_fpu_end();
+	}
+	func(ctx);
+	if (__predict_false(save_fpu_level != 0)) {
+		kernel_fpu_begin();
+		current->fpu_ctx_level = save_fpu_level;
+	}
+}
+
+#else
+
+void
+lkpi_kernel_fpu_begin(void)
+{
+}
+
+void
+lkpi_kernel_fpu_end(void)
+{
+}
+
+void
+lkpi_fpu_safe_exec(fpu_safe_exec_cb_t func, void *ctx)
+{
+	func(ctx);
+}
+
 #endif

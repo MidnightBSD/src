@@ -29,6 +29,9 @@
 #ifndef _LINUXKPI_ACPI_ACPI_BUS_H_
 #define _LINUXKPI_ACPI_ACPI_BUS_H_
 
+/* Aliase struct acpi_device to device_t */
+#define	acpi_device	_device
+
 typedef char acpi_device_class[20];
 
 struct acpi_bus_event {
@@ -37,14 +40,28 @@ struct acpi_bus_event {
 	uint32_t data;
 };
 
+#define	acpi_dev_present(...)	lkpi_acpi_dev_present(__VA_ARGS__)
+#define	acpi_dev_get_first_match_dev(...)	\
+	lkpi_acpi_dev_get_first_match_dev(__VA_ARGS__)
+
 ACPI_HANDLE	bsd_acpi_get_handle(device_t bsddev);
-bool		acpi_check_dsm(ACPI_HANDLE handle, const char *uuid, int rev,
+bool		acpi_check_dsm(ACPI_HANDLE handle, const guid_t *uuid, int rev,
 		    uint64_t funcs);
-ACPI_OBJECT *	acpi_evaluate_dsm_typed(ACPI_HANDLE handle, const char *uuid,
+ACPI_OBJECT *	acpi_evaluate_dsm_typed(ACPI_HANDLE handle, const guid_t *uuid,
 		    int rev, int func, ACPI_OBJECT *argv4,
 		    ACPI_OBJECT_TYPE type);
 int		register_acpi_notifier(struct notifier_block *nb);
 int		unregister_acpi_notifier(struct notifier_block *nb);
 uint32_t	acpi_target_system_state(void);
+bool		lkpi_acpi_dev_present(const char *hid, const char *uid,
+		    int64_t hrv);
+struct acpi_device *lkpi_acpi_dev_get_first_match_dev(const char *hid,
+		    const char *uid, int64_t hrv);
+
+union linuxkpi_acpi_object;
+
+union linuxkpi_acpi_object *
+acpi_evaluate_dsm(ACPI_HANDLE ObjHandle, const guid_t *guid,
+    UINT64 rev, UINT64 func, union linuxkpi_acpi_object *arg);
 
 #endif /* _LINUXKPI_ACPI_ACPI_BUS_H_ */

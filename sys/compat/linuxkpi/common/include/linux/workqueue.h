@@ -90,7 +90,7 @@ struct delayed_work {
 	struct {
 		struct callout callout;
 		struct mtx mtx;
-		int	expires;
+		unsigned long expires;
 	} timer;
 };
 
@@ -188,6 +188,9 @@ do {									\
 #define	delayed_work_pending(dwork) \
 	linux_work_pending(&(dwork)->work)
 
+#define	cancel_work(work) \
+	linux_cancel_work(work)
+
 #define	cancel_delayed_work(dwork) \
 	linux_cancel_delayed_work(dwork)
 
@@ -234,6 +237,7 @@ extern struct workqueue_struct *system_long_wq;
 extern struct workqueue_struct *system_unbound_wq;
 extern struct workqueue_struct *system_highpri_wq;
 extern struct workqueue_struct *system_power_efficient_wq;
+extern struct workqueue_struct *system_percpu_wq;
 
 extern void linux_init_delayed_work(struct delayed_work *, work_func_t);
 extern void linux_work_fn(void *, int);
@@ -242,7 +246,8 @@ extern struct workqueue_struct *linux_create_workqueue_common(const char *, int)
 extern void linux_destroy_workqueue(struct workqueue_struct *);
 extern bool linux_queue_work_on(int cpu, struct workqueue_struct *, struct work_struct *);
 extern bool linux_queue_delayed_work_on(int cpu, struct workqueue_struct *,
-    struct delayed_work *, unsigned delay);
+    struct delayed_work *, unsigned long delay);
+extern bool linux_cancel_work(struct work_struct *);
 extern bool linux_cancel_delayed_work(struct delayed_work *);
 extern bool linux_cancel_work_sync(struct work_struct *);
 extern bool linux_cancel_delayed_work_sync(struct delayed_work *);
@@ -253,5 +258,11 @@ extern bool linux_work_busy(struct work_struct *);
 extern struct work_struct *linux_current_work(void);
 extern bool linux_queue_rcu_work(struct workqueue_struct *wq, struct rcu_work *rwork);
 extern bool linux_flush_rcu_work(struct rcu_work *rwork);
+
+static inline bool
+queue_work_node(int node __unused, struct workqueue_struct *wq, struct work_struct *work)
+{
+	return (queue_work(wq, work));
+}
 
 #endif					/* _LINUXKPI_LINUX_WORKQUEUE_H_ */
