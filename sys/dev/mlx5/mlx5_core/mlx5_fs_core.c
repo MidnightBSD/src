@@ -748,6 +748,7 @@ static void dealloc_flow_group(struct mlx5_flow_steering *steering,
 			       struct mlx5_flow_group *fg)
 {
 	xa_destroy(&fg->ftes_xa);
+	ida_destroy(&fg->fte_allocator);
 	kmem_cache_free(steering->fgs_cache, fg);
 }
 
@@ -3049,7 +3050,7 @@ int mlx5_fs_egress_acls_init(struct mlx5_core_dev *dev, int total_vports)
 	return 0;
 
 cleanup_root_ns:
-	for (i--; i >= 0; i--)
+	for (; i >= 0; i--)
 		cleanup_root_ns(steering->esw_egress_root_ns[i]);
 	kfree(steering->esw_egress_root_ns);
 	steering->esw_egress_root_ns = NULL;
@@ -3093,7 +3094,7 @@ int mlx5_fs_ingress_acls_init(struct mlx5_core_dev *dev, int total_vports)
 	return 0;
 
 cleanup_root_ns:
-	for (i--; i >= 0; i--)
+	for (; i >= 0; i--)
 		cleanup_root_ns(steering->esw_ingress_root_ns[i]);
 	kfree(steering->esw_ingress_root_ns);
 	steering->esw_ingress_root_ns = NULL;
@@ -3156,6 +3157,8 @@ void mlx5_fs_core_cleanup(struct mlx5_core_dev *dev)
 {
 	struct mlx5_flow_steering *steering = dev->priv.steering;
 
+	mlx5_fs_ingress_acls_cleanup(dev);
+	mlx5_fs_egress_acls_cleanup(dev);
 	cleanup_root_ns(steering->root_ns);
 	cleanup_fdb_root_ns(steering);
 	cleanup_root_ns(steering->port_sel_root_ns);
