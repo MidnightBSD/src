@@ -1,11 +1,6 @@
 #ifndef _OFED_IBVERBS_CONFIG_H_
 #define	_OFED_IBVERBS_CONFIG_H_
 
-#ifdef __MidnightBSD__
-/* MNBSD-KPI: libc has no strdupa(); use the local alloca.h version. */
-#include "alloca.h"
-#endif
-
 #define	memalign(align, size) ({			\
 	void *__ptr;					\
 	if (posix_memalign(&__ptr, (align), (size)))	\
