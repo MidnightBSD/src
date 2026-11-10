@@ -74,7 +74,7 @@ static std::map<dcd_tree_handle_t, lib_dt_data_list *> s_data_map;
 /* C API functions                                                             */
 /*******************************************************************************/
 
-/** Get Library version. Return a 32 bit version in form MMMMnnpp - MMMM = major verison, nn = minor version, pp = patch version */ 
+/** Get Library version. Return a 32 bit version in form MMMMnnpp - MMMM = major version, nn = minor version, pp = patch version */
 OCSD_C_API uint32_t ocsd_get_version(void) 
 { 
     return ocsdVersion::vers_num();
@@ -234,8 +234,24 @@ OCSD_C_API ocsd_err_t ocsd_dt_attach_packet_callback(  const dcd_tree_handle_t h
     return err;
 }
 
-/*** Decode tree set element output */
+OCSD_C_API ocsd_err_t ocsd_dt_get_decode_stats(const dcd_tree_handle_t handle,
+                                               const unsigned char CSID,                                               
+                                               ocsd_decode_stats_t **p_stats_block)
+{
+    DecodeTree *pDT = static_cast<DecodeTree *>(handle);
+    
+    return pDT->getDecoderStats(CSID, p_stats_block);
+}
 
+OCSD_C_API ocsd_err_t ocsd_dt_reset_decode_stats(const dcd_tree_handle_t handle,
+                                                 const unsigned char CSID)
+{
+    DecodeTree *pDT = static_cast<DecodeTree *>(handle);
+
+    return pDT->resetDecoderStats(CSID);
+}
+
+/*** Decode tree set element output */
 OCSD_C_API ocsd_err_t ocsd_dt_set_gen_elem_outfn(const dcd_tree_handle_t handle, FnTraceElemIn pFn, const void *p_context)
 {
 
@@ -404,6 +420,17 @@ OCSD_C_API ocsd_err_t ocsd_dt_add_callback_mem_acc(const dcd_tree_handle_t handl
     return err;
 }
 
+OCSD_C_API ocsd_err_t ocsd_dt_add_callback_trcid_mem_acc(const dcd_tree_handle_t handle, const ocsd_vaddr_t st_address, const ocsd_vaddr_t en_address, const ocsd_mem_space_acc_t mem_space, Fn_MemAccID_CB p_cb_func, const void *p_context)
+{
+    ocsd_err_t err = OCSD_OK;
+    DecodeTree *pDT;
+    err = ocsd_check_and_add_mem_acc_mapper(handle, &pDT);
+    if (err == OCSD_OK)
+        err = pDT->addCallbackIDMemAcc(st_address, en_address, mem_space, p_cb_func, p_context);
+    return err;
+}
+
+
 OCSD_C_API ocsd_err_t ocsd_dt_remove_mem_acc(const dcd_tree_handle_t handle, const ocsd_vaddr_t st_address, const ocsd_mem_space_acc_t mem_space)
 {
     ocsd_err_t err = OCSD_OK;
@@ -455,6 +482,39 @@ OCSD_C_API ocsd_err_t ocsd_dt_set_pkt_protocol_printer(const dcd_tree_handle_t h
     {
         DecodeTree *p_tree = (DecodeTree *)handle;
         err = p_tree->addPacketPrinter(cs_id, (bool)(monitor != 0), 0);
+    }
+    return err;
+}
+
+OCSD_C_API void ocsd_err_str(const ocsd_err_t err, char *buffer, const int buffer_size)
+{
+    std::string err_str;
+    err_str = ocsdError::getErrorString(ocsdError(OCSD_ERR_SEV_ERROR, err));
+    strncpy(buffer, err_str.c_str(), buffer_size - 1);
+    buffer[buffer_size - 1] = 0;
+}
+
+OCSD_C_API ocsd_err_t ocsd_get_last_err(ocsd_trc_index_t *index, uint8_t *chan_id, char *message, const int message_len)
+{
+    ocsdError *p_err;
+    ocsd_err_t err = OCSD_OK;
+    std::string err_str;
+
+    p_err = DecodeTree::getDefaultErrorLogger()->GetLastError();
+    if (p_err) 
+    {
+        *index = p_err->getErrorIndex();
+        *chan_id = p_err->getErrorChanID();
+        err_str = p_err->getErrorString(ocsdError(p_err));
+        strncpy(message, err_str.c_str(), message_len - 1);
+        message[message_len - 1] = 0;
+        err = p_err->getErrorCode();
+    }
+    else
+    {
+        message[0] = 0;
+        *index = OCSD_BAD_TRC_INDEX;
+        *chan_id = OCSD_BAD_CS_SRC_ID;
     }
     return err;
 }

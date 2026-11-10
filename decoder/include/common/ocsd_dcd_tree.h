@@ -168,6 +168,30 @@ public:
      */
     ocsd_err_t removeDecoder(const uint8_t CSID);
 
+    /*!
+    * Get the stats block for the channel indicated.
+    * Caller must check p_stats_block->version to esure that the block
+    * is filled in a compatible manner.
+    *
+    * @param CSID : Configured CoreSight trace ID for the decoder.
+    * @param p_stats_block: block pointer to set to reference the stats block.
+    *
+    * @return ocsd_err_t  : Library error code -  OCSD_OK if valid block pointer returned,
+    *                      OCSD_ERR_NOTINIT if decoder does not support stats counting.
+    */
+    ocsd_err_t getDecoderStats(const uint8_t CSID, ocsd_decode_stats_t **p_stats_block);
+    
+    /*!
+    * Reset the stats block for the chosens decode channel.
+    * stats block is reset independently of the decoder reset to allow counts across
+    * multiple decode runs.
+    *
+    * @param handle : Handle to decode tree.
+    * @param CSID : Configured CoreSight trace ID for the decoder.
+    *
+    * @return ocsd_err_t  : Library error code -  OCSD_OK if successful.
+    */
+    ocsd_err_t resetDecoderStats(const uint8_t CSID);
 
 /* get decoder elements currently in use  */
 
@@ -313,6 +337,22 @@ public:
      */
     ocsd_err_t addBinFileRegionMemAcc(const ocsd_file_mem_region_t *region_array, const int num_regions, const ocsd_mem_space_acc_t mem_space, const std::string &filepath);
     
+
+    /*!
+    * Updates/adds to a memory accessor for a memory block supplied as a one or more memory regions in a binary file.
+    * Region structures are created that describe the memory start address, the offset within the binary file
+    * for that address, and the length of the region. This accessor can be used to point to the code section
+    * in a program file for example.
+    *
+    * @param *region_array : array of valid memory regions in the file.
+    * @param num_regions : number of regions
+    * @param mem_space : Memory space
+    * @param &filepath : Path to the binary data file
+    *
+    * @return ocsd_err_t  : Library error code or OCSD_OK if successful.
+    */    
+    ocsd_err_t updateBinFileRegionMemAcc(const ocsd_file_mem_region_t *region_array, const int num_regions, const ocsd_mem_space_acc_t mem_space, const std::string &filepath);
+
     /*!
      * This memory accessor allows the client to supply a callback function for the region 
      * defined by the start and end addresses. This can be used to supply a custom memory accessor, 
@@ -327,7 +367,8 @@ public:
      * @return ocsd_err_t  : Library error code or OCSD_OK if successful.
      */
     ocsd_err_t addCallbackMemAcc(const ocsd_vaddr_t st_address, const ocsd_vaddr_t en_address, const ocsd_mem_space_acc_t mem_space, Fn_MemAcc_CB p_cb_func, const void *p_context); 
-    
+    ocsd_err_t addCallbackIDMemAcc(const ocsd_vaddr_t st_address, const ocsd_vaddr_t en_address, const ocsd_mem_space_acc_t mem_space, Fn_MemAccID_CB p_cb_func, const void *p_context);
+
     /*!
      * Remove the memory accessor from the map, that begins at the given address, for the memory space provided.
      *
@@ -368,6 +409,9 @@ private:
     ocsd_err_t createDecodeElement(const uint8_t CSID);
     void destroyDecodeElement(const uint8_t CSID);
     void destroyMemAccMapper();
+    ocsd_err_t initCallbackMemAcc(const ocsd_vaddr_t st_address, const ocsd_vaddr_t en_address, 
+        const ocsd_mem_space_acc_t mem_space, void *p_cb_func, bool IDfn, const void *p_context);
+    TrcPktProcI *getPktProcI(const uint8_t CSID);
 
     ocsd_dcd_tree_src_t m_dcd_tree_type;
 
@@ -397,6 +441,9 @@ private:
 
     /**! default instruction decoder */
     static TrcIDecode s_instruction_decoder;
+
+    /**! demux stats block */
+    ocsd_demux_stats_t m_demux_stats;
 };
 
 /** @}*/

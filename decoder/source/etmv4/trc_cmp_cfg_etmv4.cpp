@@ -75,6 +75,8 @@ void EtmV4Config::PrivateInit()
     m_VMIDSize = 0;
     m_condTraceCalc = false;
     m_CondTrace = COND_TR_DIS;
+    m_MajVer = (uint8_t)((m_cfg.reg_idr1 >> 8) & 0xF);
+    m_MinVer = (uint8_t)((m_cfg.reg_idr1 >> 4) & 0xF);
 }
 
 void EtmV4Config::CalcQSupp()
@@ -96,7 +98,7 @@ void EtmV4Config::CalcVMIDSize()
     uint32_t vmidszF = (m_cfg.reg_idr2 >> 10) & 0x1F;
     if(vmidszF == 1)
         m_VMIDSize = 8;
-    else if(MinVersion() > 0)
+    else if(FullVersion() > 0x40)
     {
         if(vmidszF == 2)
             m_VMIDSize = 16;

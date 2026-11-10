@@ -5,7 +5,6 @@
  * \copyright  Copyright (c) 2015, ARM Limited. All Rights Reserved.
  */
 
-
 /* 
  * Redistribution and use in source and binary forms, with or without modification, 
  * are permitted provided that the following conditions are met:
@@ -40,7 +39,8 @@
 
 #define DCD_NAME "DCD_ETMV4"
 
-static const uint32_t ETMV4_SUPPORTED_DECODE_OP_FLAGS = OCSD_OPFLG_PKTDEC_COMMON;
+static const uint32_t ETMV4_SUPPORTED_DECODE_OP_FLAGS = OCSD_OPFLG_PKTDEC_COMMON |
+                        ETE_OPFLG_PKTDEC_SRCADDR_N_ATOMS;
 
 TrcPktDecodeEtmV4I::TrcPktDecodeEtmV4I()
     : TrcPktDecodeBase(DCD_NAME)
@@ -63,6 +63,7 @@ TrcPktDecodeEtmV4I::~TrcPktDecodeEtmV4I()
 ocsd_datapath_resp_t TrcPktDecodeEtmV4I::processPacket()
 {
     ocsd_datapath_resp_t resp = OCSD_RESP_CONT;
+    ocsd_err_t err = OCSD_OK;
     bool bPktDone = false;
 
     while(!bPktDone)
@@ -71,9 +72,18 @@ ocsd_datapath_resp_t TrcPktDecodeEtmV4I::processPacket()
         {
         case NO_SYNC:
             // output the initial not synced packet to the sink
-            m_output_elem.setType(OCSD_GEN_TRC_ELEM_NO_SYNC);
-            resp = outputTraceElement(m_output_elem);
-            m_curr_state = WAIT_SYNC;
+            err = m_out_elem.resetElemStack();
+            if (!err)
+                err = m_out_elem.addElemType(m_index_curr_pkt, OCSD_GEN_TRC_ELEM_NO_SYNC);
+            if (!err)
+            {
+                outElem().setUnSyncEOTReason(m_unsync_eot_info);
+                resp = m_out_elem.sendElements();
+                m_curr_state = WAIT_SYNC;
+            }
+            else
+                resp = OCSD_RESP_FATAL_SYS_ERR;
+
             // fall through to check if the current packet is the async we are waiting for.
             break;
 
@@ -92,17 +102,43 @@ ocsd_datapath_resp_t TrcPktDecodeEtmV4I::processPacket()
                 m_curr_state = DECODE_PKTS;
                 m_return_stack.flush();
             }
+            /* ETE spec allows early event packets. */
+            else if ((m_config->MajVersion() >= 0x5) && 
+                     (m_curr_packet_in->getType() == ETM4_PKT_I_EVENT))
+            {
+                err = decodePacket();
+                if (err)
+                    resp = OCSD_RESP_FATAL_INVALID_DATA;
+            }
             bPktDone = true;
             break;
 
         case DECODE_PKTS:
-            resp = decodePacket(bPktDone);  // this may change the state to commit elem;
+            // this may change the state to RESOLVE_ELEM if required;
+            err = decodePacket();
+            if (err)
+            {
+#ifdef OCSD_WARN_UNSUPPORTED
+                if (err == OCSD_ERR_UNSUPP_DECODE_PKT)
+                    resp = OCSD_RESP_WARN_CONT;
+                else
+#else
+                resp = OCSD_RESP_FATAL_INVALID_DATA;
+#endif
+
+                bPktDone = true;
+            }
+            else if (m_curr_state != RESOLVE_ELEM)
+                bPktDone = true;
             break;
 
-        case COMMIT_ELEM:
-            resp = commitElements(bPktDone); // this will change the state to DECODE_PKTS once all elem committed.
+        case RESOLVE_ELEM:
+            // this will change the state to DECODE_PKTS once required elem resolved & 
+            // needed generic packets output
+            resp = resolveElements(); 
+            if ((m_curr_state == DECODE_PKTS) || (!OCSD_DATA_RESP_IS_CONT(resp)))
+                bPktDone = true;
             break;
-
         }
     }
     return resp;
@@ -111,14 +147,21 @@ ocsd_datapath_resp_t TrcPktDecodeEtmV4I::processPacket()
 ocsd_datapath_resp_t TrcPktDecodeEtmV4I::onEOT()
 {
     ocsd_datapath_resp_t resp = OCSD_RESP_CONT;
-    m_flush_EOT = true;
-    resp = flushEOT();
+    ocsd_err_t err;
+    if ((err = commitElemOnEOT()) != OCSD_OK)
+    {
+        resp = OCSD_RESP_FATAL_INVALID_DATA;
+        LogError(ocsdError(OCSD_ERR_SEV_ERROR, err, "Error flushing element stack at end of trace data."));
+    }
+    else
+        resp = m_out_elem.sendElements();
     return resp;
 }
 
 ocsd_datapath_resp_t TrcPktDecodeEtmV4I::onReset()
 {
     ocsd_datapath_resp_t resp = OCSD_RESP_CONT;
+    m_unsync_eot_info = UNSYNC_RESET_DECODER;
     resetDecoder();
     return resp;
 }
@@ -127,15 +170,10 @@ ocsd_datapath_resp_t TrcPktDecodeEtmV4I::onFlush()
 {
     ocsd_datapath_resp_t resp = OCSD_RESP_CONT;
 
-    // continue exception processing (can't go through processPacket as elements no longer on stack)
-    if(m_excep_proc != EXCEP_POP)
-        resp = processException();
-    // continue ongoing output operations on comitted elements.
-    else if(m_curr_state == COMMIT_ELEM)
-        resp = processPacket(); 
-    // continue flushing at end of trace
-    else if(m_flush_EOT)
-        resp = flushEOT();
+    if (m_curr_state == RESOLVE_ELEM)
+        resp = resolveElements();
+    else
+        resp = m_out_elem.sendElements();
     return resp;
 }
 
@@ -146,11 +184,18 @@ ocsd_err_t TrcPktDecodeEtmV4I::onProtocolConfig()
     // set some static config elements
     m_CSID = m_config->getTraceID();
     m_max_spec_depth = m_config->MaxSpecDepth();
+
+    // elements associated with data trace
+#ifdef DATA_TRACE_SUPPORTED
     m_p0_key_max = m_config->P0_Key_Max();
     m_cond_key_max_incr = m_config->CondKeyMaxIncr();
+#endif
+
+    m_out_elem.initCSID(m_CSID);
 
     // set up static trace instruction decode elements
     m_instr_info.dsb_dmb_waypoints = 0;
+    m_instr_info.wfi_wfe_branch = m_config->wfiwfeBranch() ? 1 : 0;
     m_instr_info.pe_type.arch = m_config->archVersion();
     m_instr_info.pe_type.profile = m_config->coreProfile();
 
@@ -167,12 +212,7 @@ ocsd_err_t TrcPktDecodeEtmV4I::onProtocolConfig()
     // check config compatible with current decoder support level.
     // at present no data trace, no spec depth, no return stack, no QE
     // Remove these checks as support is added.
-    if(m_max_spec_depth != 0)
-    {
-        err = OCSD_ERR_HW_CFG_UNSUPP;
-        LogError(ocsdError(OCSD_ERR_SEV_ERROR,OCSD_ERR_HW_CFG_UNSUPP,"ETMv4 instruction decode : None-zero speculation depth not supported"));
-    }
-    else if(m_config->enabledDataTrace())
+    if(m_config->enabledDataTrace())
     {
         err = OCSD_ERR_HW_CFG_UNSUPP;
         LogError(ocsdError(OCSD_ERR_SEV_ERROR,OCSD_ERR_HW_CFG_UNSUPP,"ETMv4 instruction decode : Data trace elements not supported"));
@@ -187,14 +227,8 @@ ocsd_err_t TrcPktDecodeEtmV4I::onProtocolConfig()
         err = OCSD_ERR_HW_CFG_UNSUPP;
         LogError(ocsdError(OCSD_ERR_SEV_ERROR,OCSD_ERR_HW_CFG_UNSUPP,"ETMv4 instruction decode : Trace on conditional non-branch elements not supported."));
     }
-    else if(m_config->enabledQE())
-    {
-        err = OCSD_ERR_HW_CFG_UNSUPP;
-        LogError(ocsdError(OCSD_ERR_SEV_ERROR,OCSD_ERR_HW_CFG_UNSUPP,"ETMv4 instruction decode : Trace using Q elements not supported."));
-    }
     return err;
 }
-
 
 /************* local decode methods */
 void TrcPktDecodeEtmV4I::initDecoder()
@@ -204,12 +238,17 @@ void TrcPktDecodeEtmV4I::initDecoder()
 
     /* init elements that get set by config */
     m_max_spec_depth = 0;
-    m_p0_key_max = 0;
     m_CSID = 0;
-    m_cond_key_max_incr = 0;
     m_IASize64 = false;
 
+    // elements associated with data trace
+#ifdef DATA_TRACE_SUPPORTED
+    m_p0_key_max = 0;
+    m_cond_key_max_incr = 0;
+#endif
+
     // reset decoder state to unsynced
+    m_unsync_eot_info = UNSYNC_INIT_DECODER;
     resetDecoder();
 }
 
@@ -223,33 +262,41 @@ void TrcPktDecodeEtmV4I::resetDecoder()
     m_is_64bit = false;
     m_cc_threshold = 0;
     m_curr_spec_depth = 0;
+    m_need_ctxt = true;
+    m_need_addr = true;
+    m_elem_pending_addr = false;
+    m_prev_overflow = false;
+    m_P0_stack.delete_all();
+    m_out_elem.resetElemStack();
+    m_last_IS = 0;
+    clearElemRes();
+    m_ete_first_ts_marker = false;
+
+    // elements associated with data trace
+#ifdef DATA_TRACE_SUPPORTED
     m_p0_key = 0;
     m_cond_c_key = 0;
     m_cond_r_key = 0;
-    m_need_ctxt = true;
-    m_need_addr = true;
-    m_except_pending_addr = false;
-    m_mem_nacc_pending = false;
-    m_prev_overflow = false;
-    m_P0_stack.delete_all();
-    m_output_elem.init();
-    m_excep_proc = EXCEP_POP;
-    m_flush_EOT = false;
+#endif
 }
 
-// this function can output an immediate generic element if this covers the complete packet decode, 
-// or stack P0 and other elements for later processing on commit or cancel.
-ocsd_datapath_resp_t TrcPktDecodeEtmV4I::decodePacket(bool &Complete)
+void TrcPktDecodeEtmV4I::onFirstInitOK()
 {
+    // once init, set the output element interface to the out elem list.
+    m_out_elem.initSendIf(this->getTraceElemOutAttachPt());
+}
+
+// Changes a packet into stack of trace elements - these will be resolved and output later
+ocsd_err_t TrcPktDecodeEtmV4I::decodePacket()
+{
+    ocsd_err_t err = OCSD_OK;
     bool bAllocErr = false;
-    ocsd_datapath_resp_t resp = OCSD_RESP_CONT;
-    Complete = true;
     bool is_addr = false;
-    bool is_except = false;
-    
+
     switch(m_curr_packet_in->getType())
     {
     case ETM4_PKT_I_ASYNC: // nothing to do with this packet.
+    case ETM4_PKT_I_IGNORE: // or this one.
         break;
 
     case ETM4_PKT_I_TRACE_INFO:
@@ -260,13 +307,6 @@ ocsd_datapath_resp_t TrcPktDecodeEtmV4I::decodePacket(bool &Complete)
     case ETM4_PKT_I_TRACE_ON:
         {
             if (m_P0_stack.createParamElemNoParam(P0_TRC_ON, false, m_curr_packet_in->getType(), m_index_curr_pkt) == 0)
-                bAllocErr = true;
-        }
-        break;
-
-    case ETM4_PKT_I_OVERFLOW:
-        {
-            if (m_P0_stack.createParamElemNoParam(P0_OVERFLOW, false, m_curr_packet_in->getType(), m_index_curr_pkt) == 0)
                 bAllocErr = true;
         }
         break;
@@ -287,7 +327,7 @@ ocsd_datapath_resp_t TrcPktDecodeEtmV4I::decodePacket(bool &Complete)
 
     case ETM4_PKT_I_CTXT:
         {
-            if (m_P0_stack.createContextElem(m_curr_packet_in->getType(), m_index_curr_pkt, m_curr_packet_in->getContext()) == 0)
+            if (m_P0_stack.createContextElem(m_curr_packet_in->getType(), m_index_curr_pkt, m_curr_packet_in->getContext(), m_last_IS) == 0)
                 bAllocErr = true;
         }
         break;
@@ -297,7 +337,8 @@ ocsd_datapath_resp_t TrcPktDecodeEtmV4I::decodePacket(bool &Complete)
             etmv4_addr_val_t addr;
 
             addr.val = m_curr_packet_in->getAddrVal();
-            addr.isa = m_curr_packet_in->getAddrIS();
+            addr.isa = m_last_IS = m_curr_packet_in->getAddrIS();
+
             if (m_P0_stack.createAddrElem(m_curr_packet_in->getType(), m_index_curr_pkt, addr) == 0)
                 bAllocErr = true;
             is_addr = true;
@@ -309,7 +350,8 @@ ocsd_datapath_resp_t TrcPktDecodeEtmV4I::decodePacket(bool &Complete)
     case ETM4_PKT_I_ADDR_CTXT_L_32IS0:
     case ETM4_PKT_I_ADDR_CTXT_L_32IS1:    
         {
-            if (m_P0_stack.createContextElem(m_curr_packet_in->getType(), m_index_curr_pkt, m_curr_packet_in->getContext()) == 0)
+            m_last_IS = m_curr_packet_in->getAddrIS();
+            if (m_P0_stack.createContextElem(m_curr_packet_in->getType(), m_index_curr_pkt, m_curr_packet_in->getContext(), m_last_IS) == 0)
                 bAllocErr = true;
         }
     case ETM4_PKT_I_ADDR_L_32IS0:
@@ -322,10 +364,29 @@ ocsd_datapath_resp_t TrcPktDecodeEtmV4I::decodePacket(bool &Complete)
             etmv4_addr_val_t addr;
 
             addr.val = m_curr_packet_in->getAddrVal();
-            addr.isa = m_curr_packet_in->getAddrIS();
+            addr.isa = m_last_IS = m_curr_packet_in->getAddrIS();
+
             if (m_P0_stack.createAddrElem(m_curr_packet_in->getType(), m_index_curr_pkt, addr) == 0)
                 bAllocErr = true;
-            is_addr = true;
+            is_addr = true;  // may be waiting for target address from indirect branch
+        }
+        break;
+
+    case ETE_PKT_I_SRC_ADDR_MATCH:
+    case ETE_PKT_I_SRC_ADDR_S_IS0:
+    case ETE_PKT_I_SRC_ADDR_S_IS1:
+    case ETE_PKT_I_SRC_ADDR_L_32IS0:
+    case ETE_PKT_I_SRC_ADDR_L_32IS1:
+    case ETE_PKT_I_SRC_ADDR_L_64IS0:
+    case ETE_PKT_I_SRC_ADDR_L_64IS1:
+        {
+            etmv4_addr_val_t addr;
+
+            addr.val = m_curr_packet_in->getAddrVal();
+            addr.isa = m_curr_packet_in->getAddrIS();
+            if (m_P0_stack.createSrcAddrElem(m_curr_packet_in->getType(), m_index_curr_pkt, addr) == 0)
+                bAllocErr = true;
+            m_curr_spec_depth++;
         }
         break;
 
@@ -337,10 +398,7 @@ ocsd_datapath_resp_t TrcPktDecodeEtmV4I::decodePacket(bool &Complete)
                                             m_curr_packet_in->exception_info.exceptionType) == 0)
                 bAllocErr = true;
             else
-            {
-                m_except_pending_addr = true;  // wait for following packets before marking for commit.
-                is_except = true;
-            }
+                m_elem_pending_addr = true;  // wait for following packets before marking for commit.
         }
         break;
 
@@ -350,6 +408,21 @@ ocsd_datapath_resp_t TrcPktDecodeEtmV4I::decodePacket(bool &Complete)
             bool bV7MProfile = (m_config->archVersion() == ARCH_V7) && (m_config->coreProfile() == profile_CortexM);
             if (m_P0_stack.createParamElemNoParam(P0_EXCEP_RET, bV7MProfile, m_curr_packet_in->getType(), m_index_curr_pkt) == 0)
                 bAllocErr = true;
+            else if (bV7MProfile)
+                m_curr_spec_depth++;
+        }
+        break;
+
+    case ETM4_PKT_I_FUNC_RET:
+        {
+            // P0 element iff V8M profile, otherwise ignore
+            if (OCSD_IS_V8_ARCH(m_config->archVersion()) && (m_config->coreProfile() == profile_CortexM))
+            {
+                if (m_P0_stack.createParamElemNoParam(P0_FUNC_RET, true, m_curr_packet_in->getType(), m_index_curr_pkt) == 0)
+                    bAllocErr = true;
+                else
+                    m_curr_spec_depth++;
+            }
         }
         break;
 
@@ -371,7 +444,7 @@ ocsd_datapath_resp_t TrcPktDecodeEtmV4I::decodePacket(bool &Complete)
         {
             std::vector<uint32_t> params = { 0 };
             params[0] = m_curr_packet_in->getCC();
-            if (m_P0_stack.createParamElem(P0_EVENT, false, m_curr_packet_in->getType(), m_index_curr_pkt, params) == 0)
+            if (m_P0_stack.createParamElem(P0_CC, false, m_curr_packet_in->getType(), m_index_curr_pkt, params) == 0)
                 bAllocErr = true;
 
         }
@@ -387,26 +460,124 @@ ocsd_datapath_resp_t TrcPktDecodeEtmV4I::decodePacket(bool &Complete)
             params[1] = (uint32_t)((ts >> 32) & 0xFFFFFFFF);
             if (bTSwithCC)
                 params[2] = m_curr_packet_in->getCC();
-            if (m_P0_stack.createParamElem(P0_EVENT, false, m_curr_packet_in->getType(), m_index_curr_pkt, params) == 0)
+            if (m_P0_stack.createParamElem(bTSwithCC ? P0_TS_CC : P0_TS, false, m_curr_packet_in->getType(), m_index_curr_pkt, params) == 0)
                 bAllocErr = true;
 
         }
         break;
 
+    case ETE_PKT_I_TS_MARKER:
+        {
+            trace_marker_payload_t marker;
+            marker.type = ELEM_MARKER_TS;
+            marker.value = 0;
+            if (m_P0_stack.createMarkerElem(m_curr_packet_in->getType(), m_index_curr_pkt, marker) == 0)
+                bAllocErr = true;
+        }
+        break;
+
     case ETM4_PKT_I_BAD_SEQUENCE:
-        resp = handleBadPacket("Bad byte sequence in packet.");
+        err = handleBadPacket("Bad byte sequence in packet.", m_index_curr_pkt);
         break;
 
     case ETM4_PKT_I_BAD_TRACEMODE:
-        resp = handleBadPacket("Invalid packet type for trace mode.");
+        err = handleBadPacket("Invalid packet type for trace mode.", m_index_curr_pkt);
         break;
 
     case ETM4_PKT_I_RESERVED:
-        resp = handleBadPacket("Reserved packet header");
+        err = handleBadPacket("Reserved packet header", m_index_curr_pkt);
+        break;
+
+    // speculation 
+    case ETM4_PKT_I_MISPREDICT:
+    case ETM4_PKT_I_CANCEL_F1_MISPRED:
+    case ETM4_PKT_I_CANCEL_F2:
+    case ETM4_PKT_I_CANCEL_F3:
+        m_elem_res.mispredict = true;
+        if (m_curr_packet_in->getNumAtoms())
+        {
+            if (m_P0_stack.createAtomElem(m_curr_packet_in->getType(), m_index_curr_pkt, m_curr_packet_in->getAtom()) == 0)
+                bAllocErr = true;
+            else
+                m_curr_spec_depth += m_curr_packet_in->getNumAtoms();
+        }
+
+    case ETM4_PKT_I_CANCEL_F1:
+        m_elem_res.P0_cancel = m_curr_packet_in->getCancelElem();
+        break;
+                                
+    case ETM4_PKT_I_COMMIT:
+        m_elem_res.P0_commit = m_curr_packet_in->getCommitElem();
+        break;
+
+    case ETM4_PKT_I_OVERFLOW:
+        m_prev_overflow = true;
+    case ETM4_PKT_I_DISCARD:
+        m_curr_spec_depth = 0;
+        m_elem_res.discard = true;
+        break;
+
+        /* Q packets */
+    case ETM4_PKT_I_Q:
+        {
+            TrcStackQElem *pQElem = m_P0_stack.createQElem(m_curr_packet_in->getType(), m_index_curr_pkt, m_curr_packet_in->Q_pkt.q_count);
+            if (pQElem)
+            {
+                if (m_curr_packet_in->Q_pkt.addr_present)
+                {
+                    etmv4_addr_val_t addr;
+
+                    addr.val = m_curr_packet_in->getAddrVal();
+                    addr.isa = m_curr_packet_in->getAddrIS();
+                    pQElem->setAddr(addr);
+                    m_curr_spec_depth++;
+                }
+                else
+                    m_elem_pending_addr = true;
+            }
+            else
+                bAllocErr = true;
+        }
+        break;
+
+        /* transactional memory packets */
+    case ETE_PKT_I_TRANS_ST:
+        {
+            if (m_P0_stack.createParamElemNoParam(P0_TRANS_START, m_config->commTransP0(), m_curr_packet_in->getType(), m_index_curr_pkt) == 0)
+                bAllocErr = true;
+            if (m_config->commTransP0())
+                m_curr_spec_depth++;
+        }
+        break;
+
+    case ETE_PKT_I_TRANS_COMMIT:
+        {
+            if (m_P0_stack.createParamElemNoParam(P0_TRANS_COMMIT, false, m_curr_packet_in->getType(), m_index_curr_pkt) == 0)
+                bAllocErr = true;
+        }
+        break;
+
+    case ETE_PKT_I_TRANS_FAIL:
+        {
+            if (m_P0_stack.createParamElemNoParam(P0_TRANS_FAIL, false, m_curr_packet_in->getType(), m_index_curr_pkt) == 0)
+                bAllocErr = true;
+        }
+        break;
+
+        /* PE Instrumentation packet */
+    case ETE_PKT_I_ITE:
+        {
+            trace_sw_ite_t ite_pkt;
+
+            ite_pkt.el = m_curr_packet_in->getITE_EL();
+            ite_pkt.value = m_curr_packet_in->getITE_value();
+            if (m_P0_stack.createITEElem(m_curr_packet_in->getType(), m_index_curr_pkt, ite_pkt) == 0)
+                bAllocErr = true;
+        }
         break;
 
     /*** presently unsupported packets ***/
-    /* conditional instruction tracing */
+        /* conditional instruction tracing */
     case ETM4_PKT_I_COND_FLUSH:
     case ETM4_PKT_I_COND_I_F1:
     case ETM4_PKT_I_COND_I_F2:
@@ -415,108 +586,166 @@ ocsd_datapath_resp_t TrcPktDecodeEtmV4I::decodePacket(bool &Complete)
     case ETM4_PKT_I_COND_RES_F2:
     case ETM4_PKT_I_COND_RES_F3:
     case ETM4_PKT_I_COND_RES_F4:
-    // speculation 
-    case ETM4_PKT_I_CANCEL_F1:
-    case ETM4_PKT_I_CANCEL_F2:
-    case ETM4_PKT_I_CANCEL_F3:
-    case ETM4_PKT_I_COMMIT:
-    case ETM4_PKT_I_MISPREDICT:
-    case ETM4_PKT_I_DISCARD:
     // data synchronisation markers
     case ETM4_PKT_I_NUM_DS_MKR:
     case ETM4_PKT_I_UNNUM_DS_MKR:
-    /* Q packets */
-    case ETM4_PKT_I_Q:
-        resp = OCSD_RESP_FATAL_INVALID_DATA;
-        LogError(ocsdError(OCSD_ERR_SEV_ERROR,OCSD_ERR_BAD_DECODE_PKT,"Unsupported packet type."));
+        // all currently unsupported
+        {
+        ocsd_err_severity_t sev = OCSD_ERR_SEV_ERROR;
+#ifdef OCSD_WARN_UNSUPPORTED
+        sev = OCSD_ERR_SEV_WARN;
+        //resp = OCSD_RESP_WARN_CONT;
+#else
+        //resp = OCSD_RESP_FATAL_INVALID_DATA;
+#endif
+        err = OCSD_ERR_UNSUPP_DECODE_PKT;
+        if (sev == OCSD_ERR_SEV_WARN)
+                        LogError(ocsdError(sev, err, "Data trace related, unsupported packet type."));
+        else 
+            err = handlePacketSeqErr(err, m_index_curr_pkt, "Data trace related, unsupported packet type.");
+        }
         break;
 
     default:
         // any other packet - bad packet error
-        resp = OCSD_RESP_FATAL_INVALID_DATA;
-        LogError(ocsdError(OCSD_ERR_SEV_ERROR,OCSD_ERR_BAD_DECODE_PKT,"Unknown packet type."));
+        err = handleBadPacket("Unknown packet type.", m_index_curr_pkt);
         break;
-
     }
 
-    // we need to wait for following address after exception 
+    // we need to wait for following address after certain packets
     // - work out if we have seen enough here...
-    if(m_except_pending_addr && !is_except)
+    if (is_addr && m_elem_pending_addr)
     {
-        m_except_pending_addr = false;  //next packet has to be an address
-        // exception packet sequence complete
-        if(is_addr)
-        {
-            m_curr_spec_depth++;   // exceptions are P0 elements so up the spec depth to commit if needed.
-        }
-        else
-        {
-            resp = OCSD_RESP_FATAL_INVALID_DATA;
-            LogError(ocsdError(OCSD_ERR_SEV_ERROR,OCSD_ERR_BAD_DECODE_PKT,"Expected Address packet to follow exception packet."));
-        }
+        m_curr_spec_depth++;  // increase spec depth for element waiting on address.
+        m_elem_pending_addr = false;  // can't be waiting on both
     }
 
     if(bAllocErr)
     {
-        resp = OCSD_RESP_FATAL_SYS_ERR;
+        err = OCSD_ERR_MEM;
         LogError(ocsdError(OCSD_ERR_SEV_ERROR,OCSD_ERR_MEM,"Memory allocation error."));       
     }
     else if(m_curr_spec_depth > m_max_spec_depth)
     {
         // auto commit anything above max spec depth 
         // (this will auto commit anything if spec depth not supported!)
-        m_P0_commit = m_curr_spec_depth - m_max_spec_depth;
-        m_curr_state = COMMIT_ELEM;
-        Complete = false;   // force the processing of the commit elements.        
+        m_elem_res.P0_commit = m_curr_spec_depth - m_max_spec_depth;
     }
-    return resp;
+
+    if (!err && isElemForRes())
+        m_curr_state = RESOLVE_ELEM;
+    return err;
 }
 
 void TrcPktDecodeEtmV4I::doTraceInfoPacket()
 {
     m_trace_info = m_curr_packet_in->getTraceInfo();
     m_cc_threshold = m_curr_packet_in->getCCThreshold();
-    m_p0_key = m_curr_packet_in->getP0Key();
     m_curr_spec_depth = m_curr_packet_in->getCurrSpecDepth();
+    /* put a trans marker in stack if started in trans state */
+    if (m_trace_info.bits.in_trans_state)
+        m_P0_stack.createParamElemNoParam(P0_TRANS_TRACE_INIT, false, m_curr_packet_in->getType(), m_index_curr_pkt);
+
+    // elements associated with data trace
+#ifdef DATA_TRACE_SUPPORTED
+    m_p0_key = m_curr_packet_in->getP0Key();
+#endif
+}
+
+/* Element resolution
+ * Commit or cancel elements as required
+ * Send any buffered output packets.
+ */
+ocsd_datapath_resp_t TrcPktDecodeEtmV4I::resolveElements()
+{
+    ocsd_datapath_resp_t resp = OCSD_RESP_CONT;
+    bool Complete = false;
+
+    while (!Complete)
+    {
+        if (m_out_elem.numElemToSend())
+            resp = m_out_elem.sendElements();
+        else if (isElemForRes())
+        {
+            ocsd_err_t err = OCSD_OK;
+            if (m_elem_res.P0_commit)
+                err = commitElements();
+
+            // allow for early flush on context element 
+            if (!m_elem_res.P0_commit) {
+
+                if (!err && m_elem_res.P0_cancel)
+                    err = cancelElements();
+
+                if (!err && m_elem_res.mispredict)
+                    err = mispredictAtom();
+
+                if (!err && m_elem_res.discard)
+                    err = discardElements();
+            }
+
+            if (err != OCSD_OK)
+                resp = OCSD_RESP_FATAL_INVALID_DATA;
+        }
+        
+        // break out on error or wait request.
+        if (!OCSD_DATA_RESP_IS_CONT(resp))
+            break;
+
+        // completion is nothing to send and nothing to commit
+        Complete = !m_out_elem.numElemToSend() && !isElemForRes();
+
+        // done all elements - need more packets.
+        if (Complete) {
+            // if we are still in resolve, the goto decode.
+            if (m_curr_state == RESOLVE_ELEM)
+                m_curr_state = DECODE_PKTS;
+        }        
+    }
+    return resp;
 }
 
 /*
  * Walks through the element stack, processing from oldest element to the newest, 
    according to the number of P0 elements that need committing.
+   Build a stack of output elements in the process.
  */
-ocsd_datapath_resp_t TrcPktDecodeEtmV4I::commitElements(bool &Complete)
+ocsd_err_t TrcPktDecodeEtmV4I::commitElements()
 {
-    ocsd_datapath_resp_t resp = OCSD_RESP_CONT;
-    bool bPause = false;    // pause commit operation 
+    ocsd_err_t err = OCSD_OK;
     bool bPopElem = true;       // do we remove the element from the stack (multi atom elements may need to stay!)
-    int num_commit_req = m_P0_commit;
-
-    Complete = true; // assume we exit due to completion of commit operation
-
+    int num_commit_req = m_elem_res.P0_commit;
+    ocsd_trc_index_t err_idx = 0;
     TrcStackElem *pElem = 0;    // stacked element pointer
+    bool contextFlush = false;
 
-    while(m_P0_commit && !bPause)
+    err = m_out_elem.resetElemStack();
+
+    while(m_elem_res.P0_commit && !err && !contextFlush)
     {
-        if(m_P0_stack.size() > 0)
+        if (m_P0_stack.size() > 0)
         {
             pElem = m_P0_stack.back();  // get oldest element
-            
-            switch(pElem->getP0Type())
+            err_idx = pElem->getRootIndex(); // save index in case of error.
+
+            switch (pElem->getP0Type())
             {
-            // indicates a trace restart - beginning of trace or discontinuiuty
+                // indicates a trace restart - beginning of trace or discontinuiuty
             case P0_TRC_ON:
-                m_output_elem.setType(OCSD_GEN_TRC_ELEM_TRACE_ON);
-                m_output_elem.trace_on_reason = m_prev_overflow ? TRACE_ON_OVERFLOW : TRACE_ON_NORMAL;
-                m_prev_overflow = false;
-                resp = outputTraceElementIdx(pElem->getRootIndex(),m_output_elem);
-                m_return_stack.flush();
+                err = m_out_elem.addElemType(pElem->getRootIndex(), OCSD_GEN_TRC_ELEM_TRACE_ON);
+                if (!err)
+                {
+                    m_out_elem.getCurrElem().trace_on_reason = m_prev_overflow ? TRACE_ON_OVERFLOW : TRACE_ON_NORMAL;
+                    m_prev_overflow = false;
+                    m_return_stack.flush();
+                }
                 break;
 
             case P0_ADDR:
                 {
                 TrcStackElemAddr *pAddrElem = dynamic_cast<TrcStackElemAddr *>(pElem);
                 m_return_stack.clear_pop_pending(); // address removes the need to pop the indirect address target from the stack
-                if(pAddrElem)
+                if (pAddrElem)
                 {
                     SetInstrInfoInAddrISA(pAddrElem->getAddr().val, pAddrElem->getAddr().isa);
                     m_need_addr = false;
@@ -527,81 +756,63 @@ ocsd_datapath_resp_t TrcPktDecodeEtmV4I::commitElements(bool &Complete)
             case P0_CTXT:
                 {
                 TrcStackElemCtxt *pCtxtElem = dynamic_cast<TrcStackElemCtxt *>(pElem);
-                if(pCtxtElem)
+                if (pCtxtElem)
                 {
                     etmv4_context_t ctxt = pCtxtElem->getContext();
                     // check this is an updated context
                     if(ctxt.updated)
-                    {
-                        updateContext(pCtxtElem);
+                    {                        
+                        err = m_out_elem.addElem(pElem->getRootIndex());
+                        if (!err) {
+                            updateContext(pCtxtElem, outElem());
 
-                        m_output_elem.setType(OCSD_GEN_TRC_ELEM_PE_CONTEXT);
-                        resp = outputTraceElementIdx(pElem->getRootIndex(),m_output_elem);
+                            // updated context - need to force this to be output to the client so correct memory 
+                            // context can be used.
+                            contextFlush = true;
+                            
+                            // invalidate memory accessor cacheing - force next memory access out to client to 
+                            // ensure that the correct memory context is in play when decoding subsequent atoms.
+                            invalidateMemAccCache();
+                        }
                     }
                 }
                 }
                 break;
 
             case P0_EVENT:
-                {
-                TrcStackElemParam *pParamElem = dynamic_cast<TrcStackElemParam *>(pElem);
-                if(pParamElem)
-                    resp = this->outputEvent(pParamElem);
-                }
-                break;
-
             case P0_TS:
-                {
-                TrcStackElemParam *pParamElem = dynamic_cast<TrcStackElemParam *>(pElem);
-                if(pParamElem)
-                    resp = outputTS(pParamElem,false);
-                }
-                break;
-
             case P0_CC:
-                {
-                TrcStackElemParam *pParamElem = dynamic_cast<TrcStackElemParam *>(pElem);
-                if(pParamElem)
-                    resp = outputCC(pParamElem);
-                }
-                break;
-
             case P0_TS_CC:
-                {
-                TrcStackElemParam *pParamElem = dynamic_cast<TrcStackElemParam *>(pElem);
-                if(pParamElem)
-                    resp = outputTS(pParamElem,true);
-                }
+                err = processTS_CC_EventElem(pElem);
                 break;
 
-            case P0_OVERFLOW:
-                m_prev_overflow = true;
+            case P0_MARKER:
+                err = processMarkerElem(pElem);
                 break;
 
             case P0_ATOM:
                 {
                 TrcStackElemAtom *pAtomElem = dynamic_cast<TrcStackElemAtom *>(pElem);
 
-                if(pAtomElem)
+                if (pAtomElem)
                 {
-                    bool bContProcess = true;
-                    while(!pAtomElem->isEmpty() && m_P0_commit && bContProcess)
+                    while(!pAtomElem->isEmpty() && m_elem_res.P0_commit && !err)
                     {
                         ocsd_atm_val atom = pAtomElem->commitOldest();
 
                         // check if prev atom left us an indirect address target on the return stack
-                        if ((resp = returnStackPop()) != OCSD_RESP_CONT)
+                        if ((err = returnStackPop()) != OCSD_OK)
                             break;
 
                         // if address and context do instruction trace follower.
                         // otherwise skip atom and reduce committed elements
-                        if(!m_need_ctxt && !m_need_addr)
+                        if (!m_need_ctxt && !m_need_addr)
                         {
-                            resp = processAtom(atom,bContProcess);
+                            err = processAtom(atom);
                         }
-                        m_P0_commit--; // mark committed 
+                        m_elem_res.P0_commit--; // mark committed 
                     }
-                    if(!pAtomElem->isEmpty())   
+                    if (!pAtomElem->isEmpty())
                         bPopElem = false;   // don't remove if still atoms to process.
                 }
                 }
@@ -609,65 +820,80 @@ ocsd_datapath_resp_t TrcPktDecodeEtmV4I::commitElements(bool &Complete)
 
             case P0_EXCEP:
                 // check if prev atom left us an indirect address target on the return stack
-                if ((resp = returnStackPop()) != OCSD_RESP_CONT)
+                if ((err = returnStackPop()) != OCSD_OK)
                     break;
 
-                m_excep_proc = EXCEP_POP;   // set state in case we need to stop part way through
-                resp = processException();  // output trace + exception elements.
-                m_P0_commit--;
+                err = processException();  // output trace + exception elements.
+                m_elem_res.P0_commit--;
                 break;
 
             case P0_EXCEP_RET:
-                m_output_elem.setType(OCSD_GEN_TRC_ELEM_EXCEPTION_RET);
-                resp = outputTraceElementIdx(pElem->getRootIndex(),m_output_elem);
-                if(pElem->isP0()) // are we on a core that counts ERET as P0?
-                    m_P0_commit--;
+                err = m_out_elem.addElemType(pElem->getRootIndex(), OCSD_GEN_TRC_ELEM_EXCEPTION_RET);
+                if (!err)
+                {
+                    if (pElem->isP0()) // are we on a core that counts ERET as P0?
+                        m_elem_res.P0_commit--;
+                }
+                break;
+
+            case P0_FUNC_RET:
+                // func ret is V8M - data trace only - hint that data has been popped off the stack.
+                // at this point nothing to do till the decoder starts handling data trace.
+                if (pElem->isP0()) 
+                    m_elem_res.P0_commit--;
+                break;
+
+            case P0_SRC_ADDR:
+                err = processSourceAddress();
+                m_elem_res.P0_commit--;
+                break;
+
+            case P0_Q:
+                err = processQElement();
+                m_elem_res.P0_commit--;
+				break;
+
+            case P0_TRANS_START:
+                if (m_config->commTransP0())
+                    m_elem_res.P0_commit--;
+            case P0_TRANS_COMMIT:
+            case P0_TRANS_FAIL:
+            case P0_TRANS_TRACE_INIT:
+                err = processTransElem(pElem);
+                break;
+
+            case P0_ITE:
+                err = processITEElem(pElem);
                 break;
             }
 
             if(bPopElem)
                 m_P0_stack.delete_back();  // remove element from stack;
-
-            // if response not continue, then break out of the loop.
-            if(!OCSD_DATA_RESP_IS_CONT(resp))
-            {
-                bPause = true;
-            }
         }
         else
         {
-            // too few elements for commit operation - decode error.
-            ocsd_trc_index_t err_idx = 0;
-            if(pElem)
-                err_idx = pElem->getRootIndex();
-              
-            resp = OCSD_RESP_FATAL_INVALID_DATA;
-            LogError(ocsdError(OCSD_ERR_SEV_ERROR,OCSD_ERR_COMMIT_PKT_OVERRUN,err_idx,m_CSID,"Not enough elements to commit"));
-            bPause = true;
+            // too few elements for commit operation - decode error.            
+            err = handlePacketSeqErr(OCSD_ERR_COMMIT_PKT_OVERRUN, err_idx, "Not enough elements to commit");
         }
     }
 
-    // done all elements - need more packets.
-    if(m_P0_commit == 0)    
-        m_curr_state = DECODE_PKTS;
-
     // reduce the spec depth by number of comitted elements
-    m_curr_spec_depth -= (num_commit_req-m_P0_commit);
-    return resp;
+    m_curr_spec_depth -= (num_commit_req-m_elem_res.P0_commit);
+    return err;
 }
 
-ocsd_datapath_resp_t TrcPktDecodeEtmV4I::returnStackPop()
+ocsd_err_t TrcPktDecodeEtmV4I::returnStackPop()
 {
-    ocsd_datapath_resp_t resp = OCSD_RESP_CONT;
+    ocsd_err_t err = OCSD_OK;
     ocsd_isa nextISA;
-    
+       
     if (m_return_stack.pop_pending())
     {
         ocsd_vaddr_t popAddr = m_return_stack.pop(nextISA);
         if (m_return_stack.overflow())
         {
-            resp = OCSD_RESP_FATAL_INVALID_DATA;
-            LogError(ocsdError(OCSD_ERR_SEV_ERROR, OCSD_ERR_RET_STACK_OVERFLOW, "Trace Return Stack Overflow."));
+            err = OCSD_ERR_RET_STACK_OVERFLOW;
+            err = handlePacketSeqErr(err, OCSD_BAD_TRC_INDEX, "Trace Return Stack Overflow.");
         }
         else
         {
@@ -676,20 +902,23 @@ ocsd_datapath_resp_t TrcPktDecodeEtmV4I::returnStackPop()
             m_need_addr = false;
         }
     }
-    return resp;
+    return err;
 }
 
-ocsd_datapath_resp_t TrcPktDecodeEtmV4I::flushEOT()
+ocsd_err_t TrcPktDecodeEtmV4I::commitElemOnEOT()
 {
-    ocsd_datapath_resp_t resp = OCSD_RESP_CONT;
-    if(m_flush_EOT)
+    ocsd_err_t err = OCSD_OK;
+    TrcStackElem *pElem = 0;
+
+    // nothing outstanding - reset the stack before we add more
+    if (!m_out_elem.numElemToSend())
+        m_out_elem.resetElemStack();
+
+    while((m_P0_stack.size() > 0) && !err)
     {
-        TrcStackElem *pElem = 0;
-        while(OCSD_DATA_RESP_IS_CONT(resp) && (m_P0_stack.size() > 0))
-        {
-            // scan for outstanding events, TS and CC, before any outstanding
-            // P0 commit elements.
-            pElem = m_P0_stack.back();
+        // scan for outstanding events, TS and CC, that appear before any outstanding
+        // uncommited P0 element.
+        pElem = m_P0_stack.back();
             
             switch(pElem->getP0Type())
             {
@@ -700,93 +929,381 @@ ocsd_datapath_resp_t TrcPktDecodeEtmV4I::flushEOT()
             case P0_EXCEP:
             case P0_EXCEP_RET:
             case P0_OVERFLOW:
+            case P0_Q:
                 m_P0_stack.delete_all();
                 break;
 
-                //skip
-            case P0_ADDR:
-            case P0_CTXT:
-                break;
+            //skip
+        case P0_ADDR:
+        case P0_CTXT:
+            break;
 
-                // output
-            case P0_EVENT:
-                {
-                TrcStackElemParam *pParamElem = dynamic_cast<TrcStackElemParam *>(pElem);
-                if(pParamElem)
-                    resp = this->outputEvent(pParamElem);
-                }
-                break;
+            // trans
+            // P0 trans - clear and stop, otherwise skip
+        case P0_TRANS_START:
+            if (m_config->commTransP0())
+                m_P0_stack.delete_all();
+            break;
 
-            case P0_TS:
-                {
-                TrcStackElemParam *pParamElem = dynamic_cast<TrcStackElemParam *>(pElem);
-                if(pParamElem)
-                    resp = outputTS(pParamElem,false);
-                }
-                break;
+            // non-speculative trans fail / commit - could appear at EoT after valid trace
+            // but without a subsequent P0 that would force output.
+        case P0_TRANS_FAIL:
+        case P0_TRANS_COMMIT:
+            if (m_max_spec_depth == 0 || m_curr_spec_depth == 0)
+                err = processTransElem(pElem);
+            break;
 
-            case P0_CC:
-                {
-                TrcStackElemParam *pParamElem = dynamic_cast<TrcStackElemParam *>(pElem);
-                if(pParamElem)
-                    resp = outputCC(pParamElem);
-                }
-                break;
+            // others - skip non P0
+        case P0_TRANS_TRACE_INIT:
+            break;
 
-            case P0_TS_CC:
-                {
-                TrcStackElemParam *pParamElem = dynamic_cast<TrcStackElemParam *>(pElem);
-                if(pParamElem)
-                    resp = outputTS(pParamElem,true);
-                }
-                break;
-            }
-            m_P0_stack.delete_back();
+            // output
+        case P0_EVENT:
+        case P0_TS:
+        case P0_CC:
+        case P0_TS_CC:
+            err = processTS_CC_EventElem(pElem);
+            break;
+
+        case P0_MARKER:
+            err = processMarkerElem(pElem);
+            break;
+
+        case P0_ITE:
+            err = processITEElem(pElem);
+            break;
         }
+        m_P0_stack.delete_back();
+    }
 
-        if(OCSD_DATA_RESP_IS_CONT(resp) && (m_P0_stack.size() == 0))
+    if(!err)
+    {
+        err = m_out_elem.addElemType(m_index_curr_pkt, OCSD_GEN_TRC_ELEM_EO_TRACE);
+        outElem().setUnSyncEOTReason(m_prev_overflow ? UNSYNC_OVERFLOW : UNSYNC_EOT);
+    }
+    return err;
+}
+
+// cancel elements. These not output  
+ocsd_err_t TrcPktDecodeEtmV4I::cancelElements()
+{
+    ocsd_err_t err = OCSD_OK;
+    bool P0StackDone = false;  // checked all P0 elements on the stack
+    TrcStackElem *pElem = 0;   // stacked element pointer
+    EtmV4P0Stack temp;
+    int num_cancel_req = m_elem_res.P0_cancel;
+    
+    while (m_elem_res.P0_cancel)
+    {
+        //search the stack for the newest elements 
+        if (!P0StackDone)
         {
-            m_output_elem.setType(OCSD_GEN_TRC_ELEM_EO_TRACE);
-            resp = outputTraceElement(m_output_elem);
-            m_flush_EOT = false;
+            if (m_P0_stack.size() == 0)
+                P0StackDone = true;
+            else
+            {
+                // get the newest element
+                pElem = m_P0_stack.front();
+                if (pElem->isP0()) {
+                    if (pElem->getP0Type() == P0_ATOM)
+                    { 
+                        TrcStackElemAtom *pAtomElem = (TrcStackElemAtom *)pElem;
+                        // atom - cancel N atoms
+                        m_elem_res.P0_cancel -= pAtomElem->cancelNewest(m_elem_res.P0_cancel);
+                        if (pAtomElem->isEmpty())
+                            m_P0_stack.delete_front();  // remove the element
+                    }
+                    else
+                    {
+                        m_elem_res.P0_cancel--;
+                        m_P0_stack.delete_front();  // remove the element
+                    }
+                } else {
+                // not P0, make a keep / remove decision
+                    switch (pElem->getP0Type())
+                    {
+                    // keep these 
+                    case P0_EVENT:
+                    case P0_TS:
+                    case P0_CC:
+                    case P0_TS_CC:
+                    case P0_MARKER:
+                    case P0_ITE:
+                        m_P0_stack.pop_front(false);
+                        temp.push_back(pElem);
+                        break;
+
+                    default:
+                        m_P0_stack.delete_front();
+                        break;
+                    }
+                }
+                if (m_P0_stack.size() == 0)
+                    P0StackDone = true;
+            }
+        }
+        // may have some unseen elements
+        else if (m_unseen_spec_elem)
+        {
+            m_unseen_spec_elem--;
+            m_elem_res.P0_cancel--;
+        }
+        // otherwise we have some sort of overrun
+        else
+        {
+            // too few elements for commit operation - decode error.
+            err = OCSD_ERR_COMMIT_PKT_OVERRUN;
+            err = handlePacketSeqErr(err, m_index_curr_pkt, "Not enough elements to cancel");
+            m_elem_res.P0_cancel = 0;
+            break;
         }
     }
-    return resp;
+
+    /* restore any saved elements that are unaffected by cancel. */
+    if (temp.size())
+    {
+        while (temp.size())
+        {
+            pElem = temp.back();
+            m_P0_stack.push_front(pElem);
+            temp.pop_back(false);
+        }
+    }
+
+    m_curr_spec_depth -= num_cancel_req - m_elem_res.P0_cancel;
+    return err;
 }
 
-ocsd_datapath_resp_t TrcPktDecodeEtmV4I::outputCC(TrcStackElemParam *pParamElem)
+// mispredict an atom
+ocsd_err_t TrcPktDecodeEtmV4I::mispredictAtom()
 {
-    m_output_elem.setType(OCSD_GEN_TRC_ELEM_CYCLE_COUNT);
-    m_output_elem.cycle_count = pParamElem->getParam(0);
-    return outputTraceElementIdx(pParamElem->getRootIndex(),m_output_elem);
+    ocsd_err_t err = OCSD_OK;
+    bool bFoundAtom = false, bDone = false;
+    TrcStackElem *pElem = 0;
+       
+    m_P0_stack.from_front_init();   // init iterator at front.
+    while (!bDone)
+    {
+        pElem = m_P0_stack.from_front_next();
+        if (pElem)
+        {
+            if (pElem->getP0Type() == P0_ATOM)
+            {
+                TrcStackElemAtom *pAtomElem = dynamic_cast<TrcStackElemAtom *>(pElem);
+                if (pAtomElem)
+                {
+                    pAtomElem->mispredictNewest();
+                    bFoundAtom = true;
+                }
+                bDone = true;
+            }
+            else if (pElem->getP0Type() == P0_ADDR)
+            {
+                // need to disregard any addresses that appear between mispredict and the atom in question
+                m_P0_stack.erase_curr_from_front();
+            }
+        }
+        else
+            bDone = true;
+    }
+   
+    // if missed atom then either overrun error or mispredict on unseen element
+    if (!bFoundAtom && !m_unseen_spec_elem)
+    {
+        err = OCSD_ERR_COMMIT_PKT_OVERRUN;
+        err = handlePacketSeqErr(err, m_index_curr_pkt, "Not found mispredict atom");            
+        //LogError(ocsdError(OCSD_ERR_SEV_ERROR, err, m_index_curr_pkt, m_CSID, "Not found mispredict atom"));
+    }
+    m_elem_res.mispredict = false;
+    return err;
 }
 
-ocsd_datapath_resp_t TrcPktDecodeEtmV4I::outputTS(TrcStackElemParam *pParamElem, bool withCC)
+// discard elements and flush
+ocsd_err_t TrcPktDecodeEtmV4I::discardElements()
 {
-    m_output_elem.setType(OCSD_GEN_TRC_ELEM_TIMESTAMP);
-    m_output_elem.timestamp = (uint64_t)(pParamElem->getParam(0)) | (((uint64_t)pParamElem->getParam(1)) << 32);
-    if(withCC)
-        m_output_elem.setCycleCount(pParamElem->getParam(2));
-    return outputTraceElementIdx(pParamElem->getRootIndex(),m_output_elem);
+    ocsd_err_t err = OCSD_OK;
+    TrcStackElem *pElem = 0;   // stacked element pointer
+
+    // dump P0, elemnts - output remaining CC / TS
+    while ((m_P0_stack.size() > 0) && !err)
+    {
+        pElem = m_P0_stack.back();
+        if (pElem->getP0Type() == P0_MARKER)
+            err = processMarkerElem(pElem);
+        else if (pElem->getP0Type() == P0_MARKER)
+            err = processITEElem(pElem);
+        else
+            err = processTS_CC_EventElem(pElem);
+        m_P0_stack.delete_back();
+    }
+
+    // clear all speculation info
+    clearElemRes(); 
+    m_curr_spec_depth = 0;
+
+    // set decode state
+    m_curr_state = NO_SYNC;
+    m_unsync_eot_info = m_prev_overflow ? UNSYNC_OVERFLOW : UNSYNC_DISCARD;
+
+    // unsync so need context & address.
+    m_need_ctxt = true;
+    m_need_addr = true;
+    m_elem_pending_addr = false;
+    return err;
 }
 
-ocsd_datapath_resp_t TrcPktDecodeEtmV4I::outputEvent(TrcStackElemParam *pParamElem)
+ocsd_err_t TrcPktDecodeEtmV4I::processTS_CC_EventElem(TrcStackElem *pElem)
 {
-    m_output_elem.setType(OCSD_GEN_TRC_ELEM_EVENT);
-    m_output_elem.trace_event.ev_type = EVENT_NUMBERED;
-    m_output_elem.trace_event.ev_number = pParamElem->getParam(0);
-    return outputTraceElementIdx(pParamElem->getRootIndex(),m_output_elem);
+    ocsd_err_t err = OCSD_OK;
+    // ignore ts for ETE if not seen first TS marker on systems that use this.
+    bool bPermitTS = !m_config->eteHasTSMarker() || m_ete_first_ts_marker;
+
+    switch (pElem->getP0Type())
+    {
+        case P0_EVENT:
+        {
+            TrcStackElemParam *pParamElem = dynamic_cast<TrcStackElemParam *>(pElem);
+            if (pParamElem)
+                err = addElemEvent(pParamElem);
+        }
+        break;
+
+        case P0_TS:
+        {
+            TrcStackElemParam *pParamElem = dynamic_cast<TrcStackElemParam *>(pElem);
+            if (pParamElem && bPermitTS)
+                err = addElemTS(pParamElem, false);
+        }
+        break;
+
+        case P0_CC:
+        {
+            TrcStackElemParam *pParamElem = dynamic_cast<TrcStackElemParam *>(pElem);
+            if (pParamElem)
+                err = addElemCC(pParamElem);
+        }
+        break;
+
+        case P0_TS_CC:
+        {
+            TrcStackElemParam *pParamElem = dynamic_cast<TrcStackElemParam *>(pElem);
+            if (pParamElem && bPermitTS)
+                err = addElemTS(pParamElem, true);
+        }
+        break;
+    }
+    return err;
+
 }
 
-ocsd_datapath_resp_t TrcPktDecodeEtmV4I::processAtom(const ocsd_atm_val atom, bool &bCont)
+ocsd_err_t TrcPktDecodeEtmV4I::processMarkerElem(TrcStackElem *pElem)
 {
-    ocsd_datapath_resp_t resp = OCSD_RESP_CONT;
-    TrcStackElem *pElem = m_P0_stack.back();  // get the atom element
-    bool bWPFound = false;
+    ocsd_err_t err = OCSD_OK;
+    TrcStackElemMarker *pMarkerElem = dynamic_cast<TrcStackElemMarker *>(pElem);
+
+    if (m_config->eteHasTSMarker() && (pMarkerElem->getMarker().type == ELEM_MARKER_TS))
+        m_ete_first_ts_marker = true;
+
+    if (!err)
+    {
+        err = m_out_elem.addElemType(pElem->getRootIndex(), OCSD_GEN_TRC_ELEM_SYNC_MARKER);
+        if (!err)
+            m_out_elem.getCurrElem().setSyncMarker(pMarkerElem->getMarker());
+    }
+    return err;
+}
+
+ocsd_err_t TrcPktDecodeEtmV4I::processTransElem(TrcStackElem *pElem)
+{
+    ocsd_err_t err = m_out_elem.addElemType(pElem->getRootIndex(), OCSD_GEN_TRC_ELEM_MEMTRANS);
+    if (!err)
+    {
+        outElem().setTransactionType((trace_memtrans_t)((int)OCSD_MEM_TRANS_FAIL -
+            ((int)P0_TRANS_FAIL - (int)pElem->getP0Type())));
+    }
+    return err;
+}
+
+ocsd_err_t TrcPktDecodeEtmV4I::processITEElem(TrcStackElem *pElem)
+{
+    ocsd_err_t err = OCSD_OK;
+    TrcStackElemITE *pITEElem = dynamic_cast<TrcStackElemITE *>(pElem);
+
+    err = m_out_elem.addElemType(pElem->getRootIndex(), OCSD_GEN_TRC_ELEM_INSTRUMENTATION);
+    if (!err) {
+        outElem().setITEInfo(pITEElem->getITE());
+    }
+    return err;
+}
+
+ocsd_err_t TrcPktDecodeEtmV4I::addElemCC(TrcStackElemParam *pParamElem)
+{
+    ocsd_err_t err = OCSD_OK;
+
+    err = m_out_elem.addElemType(pParamElem->getRootIndex(), OCSD_GEN_TRC_ELEM_CYCLE_COUNT);
+    if (!err)
+        outElem().setCycleCount(pParamElem->getParam(0));
+    return err;
+}
+
+ocsd_err_t TrcPktDecodeEtmV4I::addElemTS(TrcStackElemParam *pParamElem, bool withCC)
+{
+    ocsd_err_t err = OCSD_OK;
+
+    err = m_out_elem.addElemType(pParamElem->getRootIndex(), OCSD_GEN_TRC_ELEM_TIMESTAMP);
+    if (!err)
+    {
+        outElem().timestamp = (uint64_t)(pParamElem->getParam(0)) | (((uint64_t)pParamElem->getParam(1)) << 32);
+        if (withCC)
+            outElem().setCycleCount(pParamElem->getParam(2));
+    }
+    return err;
+}
+
+ocsd_err_t TrcPktDecodeEtmV4I::addElemEvent(TrcStackElemParam *pParamElem)
+{
+    ocsd_err_t err = OCSD_OK;
+
+    err = m_out_elem.addElemType(pParamElem->getRootIndex(), OCSD_GEN_TRC_ELEM_EVENT);
+    if (!err)
+    {
+        outElem().trace_event.ev_type = EVENT_NUMBERED;
+        outElem().trace_event.ev_number = pParamElem->getParam(0);
+    }
+    return err;
+}
+
+void TrcPktDecodeEtmV4I::setElemTraceRange(OcsdTraceElement &elemIn, const instr_range_t &addr_range,
+    const bool executed, ocsd_trc_index_t index)
+{
+    setElemTraceRangeInstr(elemIn, addr_range, executed, index, m_instr_info);
+}
+
+void TrcPktDecodeEtmV4I::setElemTraceRangeInstr(OcsdTraceElement &elemIn, const instr_range_t &addr_range,
+    const bool executed, ocsd_trc_index_t index, ocsd_instr_info &instr)
+{
+    elemIn.setType(OCSD_GEN_TRC_ELEM_INSTR_RANGE);
+    elemIn.setLastInstrInfo(executed, instr.type, instr.sub_type, instr.instr_size);
+    elemIn.setISA(instr.isa);
+    elemIn.setLastInstrCond(instr.is_conditional);
+    elemIn.setAddrRange(addr_range.st_addr, addr_range.en_addr, addr_range.num_instr);
+    if (executed)
+        instr.isa = instr.next_isa;
+}
+
+ocsd_err_t TrcPktDecodeEtmV4I::processAtom(const ocsd_atm_val atom)
+{
     ocsd_err_t err;
-    bCont = true;
+    TrcStackElem *pElem = m_P0_stack.back();  // get the atom element
+    WP_res_t WPRes;
+    instr_range_t addr_range;
+    bool ETE_ERET = false;
 
-    err = traceInstrToWP(bWPFound);
+    // new element for this processed atom
+    if ((err = m_out_elem.addElem(pElem->getRootIndex())) != OCSD_OK)
+        return err;
+
+    err = traceInstrToWP(addr_range, WPRes);
     if(err != OCSD_OK)
     {
         if(err == OCSD_ERR_UNSUPPORTED_ISA)
@@ -795,18 +1312,17 @@ ocsd_datapath_resp_t TrcPktDecodeEtmV4I::processAtom(const ocsd_atm_val atom, bo
              m_need_ctxt = true;
              LogError(ocsdError(OCSD_ERR_SEV_WARN,err,pElem->getRootIndex(),m_CSID,"Warning: unsupported instruction set processing atom packet."));  
              // wait for next context
-             return resp;
+             return OCSD_OK;
         }
         else
         {
-            bCont = false;
-            resp = OCSD_RESP_FATAL_INVALID_DATA;
-            LogError(ocsdError(OCSD_ERR_SEV_ERROR,err,pElem->getRootIndex(),m_CSID,"Error processing atom packet."));  
-            return resp;
+            err = handlePacketSeqErr(err, pElem->getRootIndex(), "Error processing atom packet.");
+            //LogError(ocsdError(OCSD_ERR_SEV_ERROR,err,pElem->getRootIndex(),m_CSID,"Error processing atom packet."));  
+            return err;
         }
     }
 
-    if(bWPFound)
+    if(WPFound(WPRes))
     {
         //  save recorded next instuction address
         ocsd_vaddr_t nextAddr = m_instr_info.instr_addr;
@@ -831,219 +1347,519 @@ ocsd_datapath_resp_t TrcPktDecodeEtmV4I::processAtom(const ocsd_atm_val atom, bo
                 if (m_instr_info.is_link)
                     m_return_stack.push(nextAddr,m_instr_info.isa);
                 m_return_stack.set_pop_pending();  // need to know next packet before we know what is to happen
+
+                /* ETE does not have ERET trace packets - however to maintain the illusion if we see an ERET
+                   output a gen elem ERET packet */
+                if (isETEConfig() && (m_instr_info.sub_type == OCSD_S_INSTR_V8_ERET))
+                    ETE_ERET = true;
             }
             break;
         }
-        m_output_elem.setType(OCSD_GEN_TRC_ELEM_INSTR_RANGE);
-        m_output_elem.setLastInstrInfo((atom == ATOM_E),m_instr_info.type, m_instr_info.sub_type);
-        m_output_elem.setISA(m_instr_info.isa);
-        resp = outputTraceElementIdx(pElem->getRootIndex(),m_output_elem);
+        setElemTraceRange(outElem(), addr_range, (atom == ATOM_E), pElem->getRootIndex());
 
+        if (ETE_ERET)
+        {
+            err = m_out_elem.addElemType(pElem->getRootIndex(), OCSD_GEN_TRC_ELEM_EXCEPTION_RET);
+            if (err)
+                return err;
+        }
     }
     else
     {
         // no waypoint - likely inaccessible memory range.
         m_need_addr = true; // need an address update 
 
-        if(m_output_elem.st_addr != m_output_elem.en_addr)
+        if(addr_range.st_addr != addr_range.en_addr)
         {
             // some trace before we were out of memory access range
-            m_output_elem.setType(OCSD_GEN_TRC_ELEM_INSTR_RANGE);
-            m_output_elem.setLastInstrInfo(true,m_instr_info.type, m_instr_info.sub_type);
-            m_output_elem.setISA(m_instr_info.isa);
-            resp = outputTraceElementIdx(pElem->getRootIndex(),m_output_elem);
+            setElemTraceRange(outElem(), addr_range, true, pElem->getRootIndex());
+
+            // another element for the nacc...
+            if (WPNacc(WPRes))
+                err = m_out_elem.addElem(pElem->getRootIndex());
         }
 
-        if(m_mem_nacc_pending && OCSD_DATA_RESP_IS_CONT(resp))
+        if(WPNacc(WPRes) && !err)
         {
-            m_output_elem.setType(OCSD_GEN_TRC_ELEM_ADDR_NACC);
-            m_output_elem.st_addr = m_nacc_addr;
-            resp = outputTraceElementIdx(pElem->getRootIndex(),m_output_elem);
-            m_mem_nacc_pending = false;
+            outElem().setType(OCSD_GEN_TRC_ELEM_ADDR_NACC);
+            outElem().st_addr = m_instr_info.instr_addr;
         }
     }
-
-    if(!OCSD_DATA_RESP_IS_CONT(resp))
-        bCont = false;
-
-    return resp;
+    return err;
 }
 
 // Exception processor
-ocsd_datapath_resp_t  TrcPktDecodeEtmV4I::processException()
+ocsd_err_t TrcPktDecodeEtmV4I::processException()
 {
-    ocsd_datapath_resp_t resp = OCSD_RESP_CONT; 
-    bool excep_implied_P0 = false;          //!< exception implies P0
+    ocsd_err_t err;
+    TrcStackElem *pElem = 0;
+    TrcStackElemExcept *pExceptElem = 0;
+    TrcStackElemAddr *pAddressElem = 0;
+    TrcStackElemCtxt *pCtxtElem = 0;
+    bool branch_target = false;    // exception address implies prior branch target address
+    ocsd_vaddr_t excep_ret_addr = 0;
+    ocsd_trc_index_t excep_pkt_index;
+    WP_res_t WPRes = WP_NOT_FOUND;
+    bool ETE_resetPkt = false;
 
-    if(m_excep_proc == EXCEP_POP)
+    // grab the exception element off the stack
+    pExceptElem = dynamic_cast<TrcStackElemExcept *>(m_P0_stack.back());  // get the exception element
+    excep_pkt_index = pExceptElem->getRootIndex();
+    branch_target = pExceptElem->getPrevSame();
+    if (pExceptElem->getRootPkt() == ETE_PKT_I_PE_RESET)
+        ETE_resetPkt = true;
+    m_P0_stack.pop_back(); // remove the exception element
+
+    // ETE reset has no follow up address, the rest of the exceptions do....
+    if (!ETE_resetPkt) 
     {
-        TrcStackElemExcept *pExceptElem = dynamic_cast<TrcStackElemExcept *>(m_P0_stack.back());  // get the exception element
-        TrcStackElemAddr *pAddressElem = 0;
-        TrcStackElemCtxt *pCtxtElem = 0;
-        TrcStackElem *pElem = 0;
-    
-        m_P0_stack.pop_back(); // remove the exception element
         pElem = m_P0_stack.back();  // look at next element.
-        if(pElem->getP0Type() == P0_CTXT)
+        if (pElem->getP0Type() == P0_CTXT)
         {
             pCtxtElem = dynamic_cast<TrcStackElemCtxt *>(pElem);
             m_P0_stack.pop_back(); // remove the context element
             pElem = m_P0_stack.back();  // next one should be an address element
         }
-   
-        if(pElem->getP0Type() != P0_ADDR)
+
+        if (pElem->getP0Type() != P0_ADDR)
         {
             // no following address element - indicate processing error.
-            resp = OCSD_RESP_FATAL_INVALID_DATA;
-            LogError(ocsdError(OCSD_ERR_SEV_ERROR,OCSD_ERR_BAD_PACKET_SEQ,pExceptElem->getRootIndex(),m_CSID,"Address missing in exception packet."));  
+            
+            err = handlePacketSeqErr(OCSD_ERR_BAD_PACKET_SEQ, m_index_curr_pkt, "Address missing in exception packet.");      
+            //LogError(ocsdError(OCSD_ERR_SEV_ERROR, OCSD_ERR_BAD_PACKET_SEQ, excep_pkt_index, m_CSID, "Address missing in exception packet."));
+            return err;
         }
         else
         {
             // extract address
             pAddressElem = static_cast<TrcStackElemAddr *>(pElem);
+            excep_ret_addr = pAddressElem->getAddr().val;
 
-            m_excep_addr = pAddressElem->getAddr();                
+            // see if there is an address + optional context element implied 
+            // prior to the exception.
+            if (branch_target)
+            {
+                // this was a branch target address - update current setting
+                bool b64bit = m_instr_info.isa == ocsd_isa_aarch64;
+                if (pCtxtElem) {
+                    b64bit = pCtxtElem->getContext().SF;
+                }
 
-            // if we have context, get that.
-            if(pCtxtElem)
-                 updateContext(pCtxtElem);
-
-            // record the exception number
-            m_output_elem.exception_number = pExceptElem->getExcepNum();
-
-            // see if there is an implied P0 element on the exception.
-            excep_implied_P0 = pExceptElem->getPrevSame();
-
-            // save the trace index.
-            m_excep_index = pExceptElem->getRootIndex();
-
-            // figure out next move
-            if(m_excep_addr.val == m_instr_info.instr_addr)
-                m_excep_proc = EXCEP_EXCEP;
-            else
-                m_excep_proc = EXCEP_RANGE;
+                // as the exception address was also a branch target address then update the 
+                // current maintained address value. This also means that there is no range to
+                // output before the exception packet.
+                m_instr_info.instr_addr = excep_ret_addr;
+                m_instr_info.isa = (pAddressElem->getAddr().isa == 0) ?
+                    (b64bit ? ocsd_isa_aarch64 : ocsd_isa_arm) : ocsd_isa_thumb2;
+                m_need_addr = false;
+            }
         }
-        m_P0_stack.delete_popped();
     }
 
-    // output a range element
-    if(m_excep_proc == EXCEP_RANGE) 
+    // need to output something - set up an element
+    if ((err = m_out_elem.addElem(excep_pkt_index)))
+        return err;  
+
+    // output a context element if present
+    if (pCtxtElem)
     {
-        bool bWPFound = false;
-        ocsd_err_t err;
+        updateContext(pCtxtElem, outElem());
 
-        // last instr_info address is the start address
-        m_output_elem.st_addr = m_instr_info.instr_addr;
+        // used the element - need another for later stages
+        if ((err = m_out_elem.addElem(excep_pkt_index)))
+            return err;
+    }
 
-        // look for either a WP or match to return address.
-        err = traceInstrToWP(bWPFound,!excep_implied_P0,m_excep_addr.val);
-
-        if(err != OCSD_OK)
+    if (!ETE_resetPkt)
+    {
+        // if the preferred return address is not the end of the last output range...
+        if (m_instr_info.instr_addr != excep_ret_addr)
         {
-            if(err == OCSD_ERR_UNSUPPORTED_ISA)
+            bool range_out = false;
+            instr_range_t addr_range;
+
+            // look for match to return address.
+            err = traceInstrToWP(addr_range, WPRes, true, excep_ret_addr);
+
+            if (err != OCSD_OK)
             {
-                m_need_addr = true;
-                m_need_ctxt = true;
-                LogError(ocsdError(OCSD_ERR_SEV_WARN,err,m_excep_index,m_CSID,"Warning: unsupported instruction set processing exception packet."));  
+                if (err == OCSD_ERR_UNSUPPORTED_ISA)
+                {
+                    m_need_addr = true;
+                    m_need_ctxt = true;
+                    LogError(ocsdError(OCSD_ERR_SEV_WARN, err, excep_pkt_index, m_CSID, "Warning: unsupported instruction set processing exception packet."));
+                }
+                else
+                {
+                    LogError(ocsdError(OCSD_ERR_SEV_ERROR, err, excep_pkt_index, m_CSID, "Error processing exception packet."));
+                }
+                return err;
+            }
+
+            if (WPFound(WPRes))
+            {
+                // waypoint address found - output range
+                setElemTraceRange(outElem(), addr_range, true, excep_pkt_index);
+                range_out = true;
             }
             else
             {
-                resp = OCSD_RESP_FATAL_INVALID_DATA;
-                LogError(ocsdError(OCSD_ERR_SEV_ERROR,err,m_excep_index,m_CSID,"Error processing exception packet."));  
-                m_excep_proc = EXCEP_POP;  // nothing more to do, reset to start of exception handling
+                // no waypoint - likely inaccessible memory range.
+                m_need_addr = true; // need an address update 
+
+                if (addr_range.st_addr != addr_range.en_addr)
+                {
+                    // some trace before we were out of memory access range
+                    setElemTraceRange(outElem(), addr_range, true, excep_pkt_index);
+                    range_out = true;
+                }
+            }
+
+            // used the element need another for NACC or EXCEP.
+            if (range_out)
+            {
+                if ((err = m_out_elem.addElem(excep_pkt_index)))
+                    return err;
             }
         }
 
-        if(bWPFound)
+        // watchpoint walk resulted in inaccessible memory call...
+        if (WPNacc(WPRes))
         {
-            // action according to waypoint type and atom value
-            if(excep_implied_P0)
-            {
-                switch(m_instr_info.type)
-                {
-                case OCSD_INSTR_BR:
-                m_instr_info.instr_addr = m_instr_info.branch_addr;
-                break;
 
-                case OCSD_INSTR_BR_INDIRECT:
-                m_instr_info.instr_addr = m_excep_addr.val;
+            outElem().setType(OCSD_GEN_TRC_ELEM_ADDR_NACC);
+            outElem().st_addr = m_instr_info.instr_addr;
+
+            // used the element - need another for the final exception packet.
+            if ((err = m_out_elem.addElem(excep_pkt_index)))
+                return err;
+        }
+    }
+
+    // output exception element.
+    outElem().setType(OCSD_GEN_TRC_ELEM_EXCEPTION);
+
+    // add end address as preferred return address to end addr in element
+    outElem().en_addr = excep_ret_addr;
+    outElem().excep_ret_addr = 1;
+    outElem().excep_ret_addr_br_tgt = branch_target;
+    outElem().exception_number = pExceptElem->getExcepNum();
+
+    m_P0_stack.delete_popped();     // clear the used elements from the stack
+    return err;
+}
+
+ocsd_err_t TrcPktDecodeEtmV4I::processQElement()
+{
+    ocsd_err_t err = OCSD_OK;
+    TrcStackQElem *pQElem;
+    etmv4_addr_val_t QAddr; // address where trace restarts 
+    int iCount = 0;
+
+    pQElem = dynamic_cast<TrcStackQElem *>(m_P0_stack.back());  // get the exception element
+    m_P0_stack.pop_back(); // remove the Q element.
+
+    if (!pQElem->hasAddr())  // no address - it must be next on the stack....
+    {
+        TrcStackElemAddr *pAddressElem = 0;
+        TrcStackElemCtxt *pCtxtElem = 0;
+        TrcStackElem *pElem = 0;
+
+        pElem = m_P0_stack.back();  // look at next element.
+        if (pElem->getP0Type() == P0_CTXT)
+        {
+            pCtxtElem = dynamic_cast<TrcStackElemCtxt *>(pElem);
+            m_P0_stack.pop_back(); // remove the context element
+            pElem = m_P0_stack.back();  // next one should be an address element
+        }
+
+        if (pElem->getP0Type() != P0_ADDR)
+        {
+            // no following address element - indicate processing error.
+            err = OCSD_ERR_BAD_PACKET_SEQ;
+            LogError(ocsdError(OCSD_ERR_SEV_ERROR, err, pQElem->getRootIndex(), m_CSID, "Address missing in Q packet."));
+            m_P0_stack.delete_popped();
+            return err;
+        }
+        pAddressElem = dynamic_cast<TrcStackElemAddr *>(pElem);
+        QAddr = pAddressElem->getAddr();
+        m_P0_stack.pop_back();  // remove the address element
+        m_P0_stack.delete_popped(); // clear used elements
+
+        // return the context element for processing next time.
+        if (pCtxtElem)
+        {
+            // need a new copy at the back - old one will be deleted as popped.
+            m_P0_stack.createContextElem(pCtxtElem->getRootPkt(), pCtxtElem->getRootIndex(), pCtxtElem->getContext(),true);
+        }
+    }
+    else
+        QAddr = pQElem->getAddr();
+
+    // process the Q element with address. 
+    iCount = pQElem->getInstrCount();
+
+    bool isBranch = false;
+
+    // need to output something - set up an element
+    if ((err = m_out_elem.addElem(pQElem->getRootIndex())))
+        return err;
+
+    instr_range_t addr_range;
+    addr_range.st_addr = addr_range.en_addr = m_instr_info.instr_addr;
+    addr_range.num_instr = 0;
+
+    // walk iCount instructions
+    for (int i = 0; i < iCount; i++)
+    {
+        uint32_t opcode;
+        uint32_t bytesReq = 4;
+
+        err = accessMemory(m_instr_info.instr_addr, getCurrMemSpace(), &bytesReq, (uint8_t *)&opcode);
+        if (err != OCSD_OK) break;
+
+        if (bytesReq == 4) // got data back
+        {
+            m_instr_info.opcode = opcode;
+            err = instrDecode(&m_instr_info);
+            if (err != OCSD_OK) break;
+
+            // increment address - may be adjusted by direct branch value later
+            m_instr_info.instr_addr += m_instr_info.instr_size;
+            addr_range.num_instr++;
+
+            isBranch = (m_instr_info.type == OCSD_INSTR_BR) ||
+                (m_instr_info.type == OCSD_INSTR_BR_INDIRECT);
+
+            // on a branch no way of knowing if taken - bail out
+            if (isBranch)
                 break;
-                }
+        }
+        else
+            break;  // missing memory
+
+    }
+
+    if (err == OCSD_OK)
+    {
+        bool inCompleteRange = true;
+        if (iCount && (addr_range.num_instr == (unsigned)iCount))
+        {
+            if ((m_instr_info.instr_addr == QAddr.val) ||    // complete range
+                (isBranch)) // or ends on branch - only way we know if branch taken.
+            {
+                // output a range and continue
+                inCompleteRange = false;
+                // update the range decoded address in the output packet.
+                addr_range.en_addr = m_instr_info.instr_addr;
+                setElemTraceRange(outElem(), addr_range, true, pQElem->getRootIndex());
             }
-            m_output_elem.setType(OCSD_GEN_TRC_ELEM_INSTR_RANGE);
-            m_output_elem.setLastInstrInfo(true,m_instr_info.type, m_instr_info.sub_type);
-            m_output_elem.setISA(m_instr_info.isa);
-            resp = outputTraceElementIdx(m_excep_index, m_output_elem);
-            m_excep_proc = EXCEP_EXCEP;
+        }
+
+        if (inCompleteRange)
+        {   
+            // unknown instructions executed.
+            addr_range.en_addr = QAddr.val;
+            addr_range.num_instr = iCount;
+
+            outElem().setType(OCSD_GEN_TRC_ELEM_I_RANGE_NOPATH);
+            outElem().setAddrRange(addr_range.st_addr, addr_range.en_addr, addr_range.num_instr);
+            outElem().setISA(calcISA(m_is_64bit, QAddr.isa));
+        }
+
+        // after the Q element, tracing resumes at the address supplied
+        SetInstrInfoInAddrISA(QAddr.val, QAddr.isa);
+        m_need_addr = false;
+    }
+    else
+    {
+        // output error and halt decode.
+        LogError(ocsdError(OCSD_ERR_SEV_ERROR, err, pQElem->getRootIndex(), m_CSID, "Error processing Q packet"));
+    }
+    m_P0_stack.delete_popped();
+    return err;
+}
+
+ocsd_err_t TrcPktDecodeEtmV4I::processSourceAddress()
+{
+    ocsd_err_t err = OCSD_OK;
+    TrcStackElemAddr *pElem = dynamic_cast<TrcStackElemAddr *>(m_P0_stack.back());  // get the address element
+    etmv4_addr_val_t srcAddr = pElem->getAddr();
+    uint32_t opcode, bytesReq = 4;
+    ocsd_vaddr_t currAddr = m_instr_info.instr_addr;    // get the latest decoded address.
+    instr_range_t out_range;
+    bool bSplitRangeOnN = getComponentOpMode() & ETE_OPFLG_PKTDEC_SRCADDR_N_ATOMS ? true : false;
+
+    // check we can read instruction @ source address
+    err = accessMemory(srcAddr.val, getCurrMemSpace(), &bytesReq, (uint8_t *)&opcode);
+    if (err != OCSD_OK)
+    {        
+        LogError(ocsdError(OCSD_ERR_SEV_ERROR, err, pElem->getRootIndex(), m_CSID, "Mem access error processing source address packet."));
+        return err;
+    }
+
+    if (bytesReq != 4)
+    {
+        // can't access - no bytes returned - output nacc.
+        err = m_out_elem.addElemType(pElem->getRootIndex(), OCSD_GEN_TRC_ELEM_ADDR_NACC);
+        outElem().setAddrStart(srcAddr.val);
+        return err;
+    }
+
+    // analyze opcode @ source address. 
+    m_instr_info.opcode = opcode;
+    m_instr_info.instr_addr = srcAddr.val;
+    err = instrDecode(&m_instr_info);
+    if (err != OCSD_OK)
+    {        
+        LogError(ocsdError(OCSD_ERR_SEV_ERROR, err, pElem->getRootIndex(), m_CSID, "Instruction decode error processing source address packet."));
+        return err;
+    }
+    m_instr_info.instr_addr += m_instr_info.instr_size;
+
+    // initial instruction count for the range.
+    out_range.num_instr = 1;
+
+    // calculate range traced...
+    if (m_need_addr || (currAddr > srcAddr.val))
+    {
+        // we were waiting for a target address, or missing trace 
+        // that indicates how we got to the source address.
+        m_need_addr = false;
+        out_range.st_addr = srcAddr.val;
+    }
+    else
+        out_range.st_addr = currAddr;
+    out_range.en_addr = m_instr_info.instr_addr;
+
+    // count instructions
+    if (out_range.en_addr - out_range.st_addr > m_instr_info.instr_size)
+    {
+        if ((m_instr_info.isa != ocsd_isa_thumb2) && !bSplitRangeOnN)
+        {
+            // all 4 byte instructions - just calculate...
+            out_range.num_instr = (uint32_t)(out_range.en_addr - out_range.st_addr) / 4;
         }
         else
         {
-            // no waypoint - likely inaccessible memory range.
-            m_need_addr = true; // need an address update 
-            
-            if(m_output_elem.st_addr != m_output_elem.en_addr)
-            {
-                // some trace before we were out of memory access range
-                m_output_elem.setType(OCSD_GEN_TRC_ELEM_INSTR_RANGE);
-                m_output_elem.setLastInstrInfo(true,m_instr_info.type, m_instr_info.sub_type);
-                m_output_elem.setISA(m_instr_info.isa);
-                resp = outputTraceElementIdx(m_excep_index,m_output_elem);
-            }
+            // need to count T32 - 2 or 4 byte instructions or we are spotting N atoms
+            ocsd_instr_info instr; // going back to start of range so make a copy of info.
+            bool bMemAccErr = false;
 
-            m_excep_proc = m_mem_nacc_pending ? EXCEP_NACC : EXCEP_EXCEP;
+            instr.instr_addr = out_range.st_addr;
+            instr.isa = m_instr_info.isa;
+            instr.pe_type = m_instr_info.pe_type;
+            instr.dsb_dmb_waypoints = m_instr_info.dsb_dmb_waypoints;
+            instr.wfi_wfe_branch = m_instr_info.wfi_wfe_branch;
+            out_range.num_instr = 0;
+
+            while ((instr.instr_addr < out_range.en_addr) && !bMemAccErr)
+            {
+                bytesReq = 4;
+                err = accessMemory(instr.instr_addr, getCurrMemSpace(), &bytesReq, (uint8_t *)&opcode);
+                if (err != OCSD_OK)
+                {
+                    LogError(ocsdError(OCSD_ERR_SEV_ERROR, err, pElem->getRootIndex(), m_CSID, "Mem access error processing source address packet."));
+                    return err;
+                }
+
+                if (bytesReq == 4)
+                {
+                    instr.opcode = opcode;
+                    err = instrDecode(&instr);
+                    if (err != OCSD_OK)
+                    {
+                        LogError(ocsdError(OCSD_ERR_SEV_ERROR, err, pElem->getRootIndex(), m_CSID, "Instruction decode error processing source address packet."));
+                        return err;
+                    }
+
+                    instr.instr_addr += instr.instr_size;
+                    out_range.num_instr++;
+
+                    /* if we are doing N atom ranges ...*/
+                    if (bSplitRangeOnN && (instr.instr_addr < out_range.en_addr))
+                    {
+                        if (instr.type != OCSD_INSTR_OTHER)
+                        {
+                            instr_range_t mid_range = out_range;
+                            mid_range.en_addr = instr.instr_addr;
+
+                            err = m_out_elem.addElem(pElem->getRootIndex());
+                            if (err)
+                                return err;
+                            setElemTraceRangeInstr(outElem(), mid_range, false, pElem->getRootIndex(), instr);
+
+                            out_range.st_addr = mid_range.en_addr;
+                            out_range.num_instr = 0;
+                        }
+                    }
+                }
+                else
+                {
+                    // something inaccessible between last and current...
+                    bMemAccErr = true;
+
+                    err = m_out_elem.addElemType(pElem->getRootIndex(), OCSD_GEN_TRC_ELEM_ADDR_NACC);
+                    if (err)
+                        return err;
+                    outElem().setAddrStart(srcAddr.val);
+
+                    // force range to the one instruction
+                    out_range.num_instr = 1;
+                    out_range.st_addr = srcAddr.val;
+                    out_range.en_addr = m_instr_info.instr_addr;  // instr after the decoded instruction @ srcAddr.
+                }
+            }
         }
-    }  
-    
-    if((m_excep_proc == EXCEP_NACC) && OCSD_DATA_RESP_IS_CONT(resp))
-    {
-        m_output_elem.setType(OCSD_GEN_TRC_ELEM_ADDR_NACC);
-        m_output_elem.st_addr = m_nacc_addr;
-        resp = outputTraceElementIdx(m_excep_index,m_output_elem);
-        m_excep_proc = EXCEP_EXCEP;
-        m_mem_nacc_pending = false;
     }
-    
-    if((m_excep_proc == EXCEP_EXCEP) && OCSD_DATA_RESP_IS_CONT(resp))
+
+    // got to the source address - output trace range, and instruction as E atom.
+    switch (m_instr_info.type)
     {
-        // output element.
-        m_output_elem.setType(OCSD_GEN_TRC_ELEM_EXCEPTION);
-        // add end address as preferred return address to end addr in element
-        m_output_elem.en_addr = m_excep_addr.val;
-        m_output_elem.excep_ret_addr = 1;
-        resp = outputTraceElementIdx(m_excep_index,m_output_elem);  
-        m_excep_proc = EXCEP_POP;
-    }   
-    return resp;
+    case OCSD_INSTR_BR:
+        if (m_instr_info.is_link)
+            m_return_stack.push(m_instr_info.instr_addr, m_instr_info.isa);
+        m_instr_info.instr_addr = m_instr_info.branch_addr;
+        break;
+
+    case OCSD_INSTR_BR_INDIRECT:
+        m_need_addr = true; // indirect branch taken - need new address.
+        if (m_instr_info.is_link)
+            m_return_stack.push(m_instr_info.instr_addr, m_instr_info.isa);
+        m_return_stack.set_pop_pending();  // need to know next packet before we know what is to happen
+        break;
+    }
+    m_instr_info.isa = m_instr_info.next_isa;
+
+    // set the trace range element.
+    m_out_elem.addElem(pElem->getRootIndex());
+    setElemTraceRange(outElem(), out_range, true, pElem->getRootIndex());
+    return err;
 }
 
 void TrcPktDecodeEtmV4I::SetInstrInfoInAddrISA(const ocsd_vaddr_t addr_val, const uint8_t isa)
 {
     m_instr_info.instr_addr = addr_val;
-    if(m_is_64bit)
-        m_instr_info.isa = ocsd_isa_aarch64;
-    else
-        m_instr_info.isa = (isa == 0) ? ocsd_isa_arm : ocsd_isa_thumb2;
+    m_instr_info.isa = calcISA(m_is_64bit, isa);
 }
 
 // trace an instruction range to a waypoint - and set next address to restart from.
-ocsd_err_t TrcPktDecodeEtmV4I::traceInstrToWP(bool &bWPFound, const bool traceToAddrNext /*= false*/, const ocsd_vaddr_t nextAddrMatch /*= 0*/)
+ocsd_err_t TrcPktDecodeEtmV4I::traceInstrToWP(instr_range_t &range, WP_res_t &WPRes, const bool traceToAddrNext /*= false*/, const ocsd_vaddr_t nextAddrMatch /*= 0*/)
 {
     uint32_t opcode;
     uint32_t bytesReq;
     ocsd_err_t err = OCSD_OK;
 
-    // TBD?: update mem space to allow for EL as well.
-    ocsd_mem_space_acc_t mem_space = m_is_secure ? OCSD_MEM_SPACE_S : OCSD_MEM_SPACE_N;
+    range.st_addr = range.en_addr = m_instr_info.instr_addr;
+    range.num_instr = 0;
 
-    m_output_elem.st_addr = m_output_elem.en_addr = m_instr_info.instr_addr;
+    WPRes = WP_NOT_FOUND;
 
-    bWPFound = false;
-
-    while(!bWPFound && !m_mem_nacc_pending)
+    while(WPRes == WP_NOT_FOUND)
     {
         // start off by reading next opcode;
         bytesReq = 4;
-        err = accessMemory(m_instr_info.instr_addr,mem_space,&bytesReq,(uint8_t *)&opcode);
+        err = accessMemory(m_instr_info.instr_addr, getCurrMemSpace(),&bytesReq,(uint8_t *)&opcode);
         if(err != OCSD_OK) break;
 
         if(bytesReq == 4) // got data back
@@ -1054,68 +1870,118 @@ ocsd_err_t TrcPktDecodeEtmV4I::traceInstrToWP(bool &bWPFound, const bool traceTo
 
             // increment address - may be adjusted by direct branch value later
             m_instr_info.instr_addr += m_instr_info.instr_size;
-
-            // update the range decoded address in the output packet.
-            m_output_elem.en_addr = m_instr_info.instr_addr;
+            range.num_instr++;
 
             // either walking to match the next instruction address or a real watchpoint
-            if(traceToAddrNext)
-                bWPFound = (m_output_elem.en_addr == nextAddrMatch);
-            else
-                bWPFound = (m_instr_info.type != OCSD_INSTR_OTHER);
+            if (traceToAddrNext)
+            {
+                if (m_instr_info.instr_addr == nextAddrMatch) 
+                    WPRes = WP_FOUND;
+            }
+            else if (m_instr_info.type != OCSD_INSTR_OTHER)
+                WPRes = WP_FOUND;
         }
         else
         {
             // not enough memory accessible.
-            m_mem_nacc_pending = true;
-            m_nacc_addr = m_instr_info.instr_addr;
+            WPRes = WP_NACC;
         }
     }
+    // update the range decoded address in the output packet.
+    range.en_addr = m_instr_info.instr_addr;
     return err;
 }
 
-void TrcPktDecodeEtmV4I::updateContext(TrcStackElemCtxt *pCtxtElem)
+void TrcPktDecodeEtmV4I::updateContext(TrcStackElemCtxt *pCtxtElem, OcsdTraceElement &elem)
 {
     etmv4_context_t ctxt = pCtxtElem->getContext();
-    // map to output element  and local saved state.
+    
+    elem.setType(OCSD_GEN_TRC_ELEM_PE_CONTEXT);
+
+    // map to output element and local saved state.
     m_is_64bit = (ctxt.SF != 0);
-    m_output_elem.context.bits64 = ctxt.SF;
+    elem.context.bits64 = ctxt.SF;
     m_is_secure = (ctxt.NS == 0);
-    m_output_elem.context.security_level = ctxt.NS ? ocsd_sec_nonsecure : ocsd_sec_secure;
-    m_output_elem.context.exception_level = (ocsd_ex_level)ctxt.EL;
-    m_output_elem.context.el_valid = 1;
+    if (ctxt.NSE)
+        elem.context.security_level = ctxt.NS ? ocsd_sec_realm : ocsd_sec_root;
+    else
+        elem.context.security_level = ctxt.NS ? ocsd_sec_nonsecure : ocsd_sec_secure;
+    elem.context.exception_level = (ocsd_ex_level)ctxt.EL;
+    elem.context.el_valid = 1;
     if(ctxt.updated_c)
     {
-        m_output_elem.context.ctxt_id_valid = 1;
-        m_context_id = m_output_elem.context.context_id = ctxt.ctxtID;
+        elem.context.ctxt_id_valid = 1;
+        m_context_id = elem.context.context_id = ctxt.ctxtID;
     }
     if(ctxt.updated_v)
     {
-        m_output_elem.context.vmid_valid = 1;
-        m_vmid_id = m_output_elem.context.vmid = ctxt.VMID;
+        elem.context.vmid_valid = 1;
+        m_vmid_id = elem.context.vmid = ctxt.VMID;
     }
+
+    // need to update ISA in case context follows address.
+    elem.isa = m_instr_info.isa = calcISA(m_is_64bit, pCtxtElem->getIS());
     m_need_ctxt = false;
 }
 
-ocsd_datapath_resp_t TrcPktDecodeEtmV4I::handleBadPacket(const char *reason)
+ocsd_err_t TrcPktDecodeEtmV4I::handleBadPacket(const char *reason, ocsd_trc_index_t index /* = OCSD_BAD_TRC_INDEX */)
 {
-    ocsd_datapath_resp_t resp  = OCSD_RESP_CONT;   
+    ocsd_err_severity_t sev = OCSD_ERR_SEV_WARN;
+    if (getComponentOpMode() & OCSD_OPFLG_PKTDEC_ERROR_BAD_PKTS)
+        sev = OCSD_ERR_SEV_ERROR;
 
-    if(getComponentOpMode() && OCSD_OPFLG_PKTDEC_ERROR_BAD_PKTS)
-    {
-        // error out - stop decoding
-        resp = OCSD_RESP_FATAL_INVALID_DATA;
-        LogError(ocsdError(OCSD_ERR_SEV_ERROR,OCSD_ERR_BAD_DECODE_PKT,reason));
-    }
-    else
-    {
-        // switch to unsync - clear decode state
-        m_output_elem.setType(OCSD_GEN_TRC_ELEM_NO_SYNC);
-        resp = outputTraceElement(m_output_elem);
-        resetDecoder();
-        m_curr_state = WAIT_SYNC;
-    }
-    return resp;
+    return handlePacketErr(OCSD_ERR_BAD_DECODE_PKT, sev, index, reason);
 }
 
+ocsd_err_t TrcPktDecodeEtmV4I::handlePacketSeqErr(ocsd_err_t err, ocsd_trc_index_t index, const char *reason)
+{
+    return handlePacketErr(err, OCSD_ERR_SEV_ERROR, index, reason);
+}
+
+ocsd_err_t TrcPktDecodeEtmV4I::handlePacketErr(ocsd_err_t err, ocsd_err_severity_t sev, ocsd_trc_index_t index, const char *reason)
+{
+    bool resetOnBadPackets = true;
+
+    if(getComponentOpMode() & OCSD_OPFLG_PKTDEC_HALT_BAD_PKTS)
+        resetOnBadPackets = false;
+
+    LogError(ocsdError(sev, err, index, getCoreSightTraceID(), reason));
+
+    if (resetOnBadPackets)
+    {
+        // switch to unsync - clear decode state
+        resetDecoder();
+        m_curr_state = NO_SYNC;
+        m_unsync_eot_info = UNSYNC_BAD_PACKET;
+        err = OCSD_OK;
+    }
+    return err;
+
+}
+
+
+inline ocsd_mem_space_acc_t TrcPktDecodeEtmV4I::getCurrMemSpace()
+{
+    static ocsd_mem_space_acc_t SMemSpace[] = {
+        OCSD_MEM_SPACE_EL1S,
+        OCSD_MEM_SPACE_EL1S,
+        OCSD_MEM_SPACE_EL2S,
+        OCSD_MEM_SPACE_EL3
+    };
+
+    static ocsd_mem_space_acc_t NSMemSpace[] = {
+        OCSD_MEM_SPACE_EL1N,
+        OCSD_MEM_SPACE_EL1N,
+        OCSD_MEM_SPACE_EL2,
+        OCSD_MEM_SPACE_EL3
+    };
+
+    /* if no valid EL value - just use S/NS */
+    if (!outElem().context.el_valid)
+        return  m_is_secure ? OCSD_MEM_SPACE_S : OCSD_MEM_SPACE_N;
+    
+    /* mem space according to EL + S/NS */
+    int el = (int)(outElem().context.exception_level) & 0x3;
+    return m_is_secure ? SMemSpace[el] : NSMemSpace[el];
+}
 /* End of File trc_pkt_decode_etmv4i.cpp */
