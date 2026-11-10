@@ -15,6 +15,17 @@ Updating Information for MidnightBSD users.
 	FreeBSD stable/15, so drm-*-kmod and nvidia-drm-*-kmod can detect
 	it.  Rebuild those mports after installing the new kernel.
 
+	IFF_KNOWSEPOCH has been replaced by IFF_NEEDSEPOCH, as in FreeBSD
+	14.  ether_input() and infiniband_input() now enter the net epoch
+	only for interfaces that set IFF_NEEDSEPOCH.  All in tree drivers
+	that did not set IFF_KNOWSEPOCH now set IFF_NEEDSEPOCH, so their
+	behaviour is unchanged.  Out of tree network drivers must stop
+	setting IFF_KNOWSEPOCH, and must set IFF_NEEDSEPOCH unless they
+	call if_input with the net epoch entered (use #ifdef
+	IFF_NEEDSEPOCH to detect this).  Kernels with INVARIANTS print a
+	warning once for an unmarked driver that calls if_input without
+	the epoch.
+
 20261109:
 	LinuxKPI, net80211 and the LinuxKPI wireless drivers (iwlwifi,
 	rtw88, rtw89) updated to FreeBSD stable/15.  New mt76 driver
