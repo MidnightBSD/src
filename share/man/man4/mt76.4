@@ -1,0 +1,158 @@
+.\"-
+.\" SPDX-License-Identifier: BSD-2-Clause
+.\"
+.\" Copyright (c) 2026 Lucas Holt
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.Dd November 9, 2026
+.Dt MT76 4
+.Os
+.Sh NAME
+.Nm mt76 ,
+.Nm mt7921 ,
+.Nm mt7925
+.Nd MediaTek IEEE 802.11 wireless network drivers
+.Sh SYNOPSIS
+The drivers will auto-load without any user interaction using
+.Xr devmatch 8
+if enabled in
+.Xr rc.conf 5 .
+.Pp
+Only if auto-loading is explicitly disabled, place the following
+line in
+.Xr rc.conf 5
+to manually load a driver as a module at boot time:
+.Bd -literal -offset indent
+kld_list="${kld_list} if_mt7925"
+.Ed
+.Pp
+The drivers should not be compiled into the kernel.
+.Sh DESCRIPTION
+The
+.Nm
+family of drivers provides support for MediaTek PCIe wireless network
+devices.
+The drivers are ports of the Linux mt76 drivers and use the
+.Xr linuxkpi 4
+compatibility layer and
+.Xr net80211 4 .
+.Pp
+.Nm mt76_core
+contains the code shared by all chipsets and is loaded automatically
+as a dependency.
+The chipset specific modules are:
+.Bl -tag -width "if_mt7925" -offset indent
+.It Nm if_mt7921
+MT7921 and MT7922 (Wi-Fi 6/6E) devices.
+.It Nm if_mt7925
+MT7925 (Wi-Fi 7) devices.
+.El
+.Pp
+Modules for mt7615, mt7915 and mt7996 are built as well but have not
+been tested on
+.Mx .
+.Pp
+The compatibility layer currently supports 802.11 a/b/g/n/ac;
+802.11ax, 802.11be, 6GHz and multi-link operation are not supported,
+so a Wi-Fi 6 or Wi-Fi 7 device associates using 802.11ac at most.
+Only station mode is supported.
+.Pp
+For more information on configuring this device, see
+.Xr ifconfig 8
+and
+.Xr wpa_supplicant 8 .
+.Sh HARDWARE
+The
+.Nm if_mt7925
+driver has been tested with the MediaTek MT7925 (PCI ID 14c3:7925).
+.Sh FILES
+The drivers need firmware which is not part of the base system.
+It is loaded from
+.Pa /boot/firmware/mediatek/ :
+.Bl -tag -width indent
+.It Pa mediatek/mt7925/WIFI_MT7925_PATCH_MCU_1_1_hdr.bin
+.It Pa mediatek/mt7925/WIFI_RAM_CODE_MT7925_1_1.bin
+Firmware for
+.Nm if_mt7925 .
+.El
+.Pp
+The firmware is available from the linux-firmware repository and is
+distributed under the MediaTek firmware license, which allows
+redistribution for use with devices containing MediaTek chipsets.
+.Sh LOADER TUNABLES
+.Bl -tag -width indent
+.It Va compat.linuxkpi.80211.hw_crypto
+Use the hardware for 802.11 encryption and decryption.
+The default is
+.Sy 1 .
+Setting it to
+.Sy 0
+switches to software crypto, which also disables receive A-MPDU
+aggregation and roughly halves throughput.
+.It Va compat.linuxkpi.skb.mem_limit
+Limit network buffer memory to physical addresses below 4GB
+.Pq Sy 1
+or 64GB
+.Pq Sy 2 .
+These devices use 32-bit DMA, so on machines with more than 4GB of
+memory this is set to
+.Sy 1
+automatically when the driver attaches.
+An explicit setting in
+.Xr loader.conf 5
+takes precedence.
+.El
+.Sh DIAGNOSTICS
+.Bl -diag
+.It "failed to get patch semaphore"
+The device does not answer firmware commands; usually the firmware
+could not be loaded or the device is in a bad state.
+Reboot and check that the firmware files are installed.
+.It "Failed to send patch"
+The firmware download to the device failed.
+On machines with more than 4GB of memory check that
+.Va compat.linuxkpi.skb.mem_limit
+has not been set to
+.Sy 0
+and that
+.Va compat.linuxkpi.lkpi_pci_nseg1_fail
+does not increase.
+.It "hardware init failed"
+Firmware initialisation failed after several retries.
+The driver stays loaded without a network interface.
+.El
+.Sh SEE ALSO
+.Xr iwlwifi 4 ,
+.Xr linuxkpi 4 ,
+.Xr rtw88 4 ,
+.Xr wlan 4 ,
+.Xr loader.conf 5 ,
+.Xr ifconfig 8 ,
+.Xr wpa_supplicant 8
+.Sh HISTORY
+The
+.Nm
+drivers first appeared in
+.Mx 4.2 .
+.Sh BUGS
+Throughput is lower than on other operating systems.

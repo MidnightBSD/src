@@ -25,7 +25,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.Dd September 21, 2023
+.Dd November 9, 2026
 .Dt IWLWIFI 4
 .Os
 .Sh NAME
@@ -208,8 +208,32 @@ While
 supports all 802.11 a/b/g/n/ac/ax
 the compatibility code currently only supports 802.11 a/b/g modes.
 Support for 802.11 n/ac is to come. 802.11ax and 6Ghz support are planned.
-.Sh BUGS
-Certainly.
+.Sh LOADER TUNABLES
+.Bl -tag -width indent
+.It Va compat.linuxkpi.80211.hw_crypto
+Use the hardware for 802.11 encryption and decryption.
+The default is
+.Sy 1 .
+Setting it to
+.Sy 0
+in
+.Xr loader.conf 5
+switches to software crypto in
+.Xr net80211 4 ,
+which also disables receive A-MPDU aggregation for most chipsets and
+significantly lowers throughput.
+.It Va compat.linuxkpi.skb.mem_limit
+Limit network buffer memory to physical addresses below
+4GB
+.Pq Sy 1
+or 64GB
+.Pq Sy 2 .
+This is set automatically when a device that cannot reach all of
+physical memory attaches, so it normally does not need to be set.
+An explicit setting in
+.Xr loader.conf 5
+always takes precedence.
+.El
 .Sh SEE ALSO
 .Xr iwlwififw 4 ,
 .Xr iwm 4 ,
@@ -222,3 +246,5 @@ The
 .Nm
 driver first appeared in
 .Fx 13.1 .
+.Sh BUGS
+Certainly.

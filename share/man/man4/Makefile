@@ -328,6 +328,7 @@ MAN=	aac.4 \
 	mpt.4 \
 	mrsas.4 \
 	msk.4 \
+	mt76.4 \
 	mtio.4 \
 	multicast.4 \
 	muge.4 \
@@ -744,6 +745,10 @@ MLINKS+=mlx5en.4 mce.4
 MLINKS+=mn.4 if_mn.4
 MLINKS+=mos.4 if_mos.4
 MLINKS+=msk.4 if_msk.4
+MLINKS+=mt76.4 if_mt7921.4 \
+	mt76.4 if_mt7925.4 \
+	mt76.4 mt7921.4 \
+	mt76.4 mt7925.4
 MLINKS+=mwl.4 if_mwl.4
 MLINKS+=mxge.4 if_mxge.4
 MLINKS+=my.4 if_my.4
