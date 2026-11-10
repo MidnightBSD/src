@@ -10,6 +10,8 @@
 #include "rtw8852a.h"
 
 static const struct rtw89_pci_info rtw8852a_pci_info = {
+	.gen_def		= &rtw89_pci_gen_ax,
+	.isr_def		= &rtw89_pci_isr_ax,
 	.txbd_trunc_mode	= MAC_AX_BD_TRUNC,
 	.rxbd_trunc_mode	= MAC_AX_BD_TRUNC,
 	.rxbd_mode		= MAC_AX_RXBD_PKT,
@@ -24,6 +26,11 @@ static const struct rtw89_pci_info rtw8852a_pci_info = {
 	.autok_en		= MAC_AX_PCIE_DISABLE,
 	.io_rcy_en		= MAC_AX_PCIE_DISABLE,
 	.io_rcy_tmr		= MAC_AX_IO_RCY_ANA_TMR_6MS,
+	.rx_ring_eq_is_full	= false,
+	.check_rx_tag		= false,
+	.no_rxbd_fs		= false,
+	.group_bd_addr		= false,
+	.rpp_fmt_size		= sizeof(struct rtw89_pci_rpp_fmt),
 
 	.init_cfg_reg		= R_AX_PCIE_INIT_CFG1,
 	.txhci_en_bit		= B_AX_TXHCI_EN,
@@ -33,27 +40,37 @@ static const struct rtw89_pci_info rtw8852a_pci_info = {
 	.max_tag_num_mask	= B_AX_MAX_TAG_NUM,
 	.rxbd_rwptr_clr_reg	= R_AX_RXBD_RWPTR_CLR,
 	.txbd_rwptr_clr2_reg	= R_AX_TXBD_RWPTR_CLR2,
-	.dma_stop1_reg		= R_AX_PCIE_DMA_STOP1,
-	.dma_stop2_reg		= R_AX_PCIE_DMA_STOP2,
-	.dma_busy1_reg		= R_AX_PCIE_DMA_BUSY1,
+	.dma_io_stop		= {R_AX_PCIE_DMA_STOP1, B_AX_STOP_PCIEIO},
+	.dma_stop1		= {R_AX_PCIE_DMA_STOP1, B_AX_TX_STOP1_MASK},
+	.dma_stop2		= {R_AX_PCIE_DMA_STOP2, B_AX_TX_STOP2_ALL},
+	.dma_busy1		= {R_AX_PCIE_DMA_BUSY1, DMA_BUSY1_CHECK},
 	.dma_busy2_reg		= R_AX_PCIE_DMA_BUSY2,
 	.dma_busy3_reg		= R_AX_PCIE_DMA_BUSY1,
 
 	.rpwm_addr		= R_AX_PCIE_HRPWM,
 	.cpwm_addr		= R_AX_CPWM,
+	.mit_addr		= R_AX_INT_MIT_RX,
+	.wp_sel_addr		= 0,
+	.tx_dma_ch_mask		= 0,
 	.bd_idx_addr_low_power	= NULL,
 	.dma_addr_set		= &rtw89_pci_ch_dma_addr_set,
+	.bd_ram_table		= &rtw89_bd_ram_table_dual,
 
 	.ltr_set		= rtw89_pci_ltr_set,
 	.fill_txaddr_info	= rtw89_pci_fill_txaddr_info,
+	.parse_rpp		= rtw89_pci_parse_rpp,
 	.config_intr_mask	= rtw89_pci_config_intr_mask,
 	.enable_intr		= rtw89_pci_enable_intr,
 	.disable_intr		= rtw89_pci_disable_intr,
 	.recognize_intrs	= rtw89_pci_recognize_intrs,
+
+	.ssid_quirks		= NULL,
 };
 
 static const struct rtw89_driver_info rtw89_8852ae_info = {
 	.chip = &rtw8852a_chip_info,
+	.variant = NULL,
+	.quirks = NULL,
 	.bus = {
 		.pci = &rtw8852a_pci_info,
 	},
@@ -78,6 +95,7 @@ static struct pci_driver rtw89_8852ae_driver = {
 	.probe		= rtw89_pci_probe,
 	.remove		= rtw89_pci_remove,
 	.driver.pm	= &rtw89_pm_ops,
+	.err_handler    = &rtw89_pci_err_handler,
 #if defined(__FreeBSD__)
 	.bsddriver.name	= KBUILD_MODNAME,
 #endif

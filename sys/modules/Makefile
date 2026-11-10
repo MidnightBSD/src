@@ -269,6 +269,7 @@ SUBDIR=	\
 	msdosfs \
 	msdosfs_iconv \
 	msk \
+	${_mt76} \
 	${_mthca} \
 	mvs \
 	mwl \
@@ -339,6 +340,8 @@ SUBDIR=	\
 	rtsx \
 	${_rtw88} \
 	${_rtw88fw} \
+	${_rtw89} \
+	${_rtw89fw} \
 	rtwn \
 	rtwn_pci \
 	rtwn_usb \
@@ -410,6 +413,7 @@ SUBDIR=	\
 	wlan_acl \
 	wlan_amrr \
 	wlan_ccmp \
+	wlan_gcmp \
 	wlan_rssadapt \
 	wlan_tkip \
 	wlan_wep \
@@ -565,6 +569,14 @@ _rtw88=		rtw88
 .if ${MK_SOURCELESS_UCODE} != "no"
 _rtw88fw=	rtw88fw
 .endif
+# rtw89 currently cannot be compiled without ACPI (seems also broken in Linux).
+.if ${KERN_OPTS:MDEV_ACPI}
+_rtw89=		rtw89
+.if ${MK_SOURCELESS_UCODE} != "no"
+_rtw89fw=	rtw89fw
+.endif
+.endif
+_mt76=		mt76
 _vmware=	vmware
 .endif
 

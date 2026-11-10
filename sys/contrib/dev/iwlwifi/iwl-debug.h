@@ -47,7 +47,7 @@ enum iwl_dl {
 	IWL_DL_DROP		= 0x00000010,
 	IWL_DL_EEPROM		= 0x00000020,
 	IWL_DL_FW		= 0x00000040,
-	/*			= 0x00000080, */
+	IWL_DL_DEV_RADIO	= 0x00000080,
 	IWL_DL_HC		= 0x00000100,
 	IWL_DL_HT		= 0x00000200,
 	IWL_DL_INFO		= 0x00000400,
@@ -62,7 +62,7 @@ enum iwl_dl {
 	IWL_DL_RX		= 0x00080000,
 	IWL_DL_SCAN		= 0x00100000,
 	IWL_DL_STATS		= 0x00200000,
-	/*			= 0x00400000, */
+	IWL_DL_EHT		= 0x00400000,
 	IWL_DL_TDLS		= 0x00800000,
 	IWL_DL_TE		= 0x01000000,
 	IWL_DL_TEMP		= 0x02000000,
@@ -71,8 +71,7 @@ enum iwl_dl {
 	IWL_DL_TX_QUEUES	= 0x10000000,
 	IWL_DL_TX_REPLY		= 0x20000000,
 	IWL_DL_WEP		= 0x40000000,
-
-	IWL_DL_PCI_RW		= 0x80000000,
+	IWL_DL_PTP		= 0x80000000,
 
 	IWL_DL_ANY		= 0x7fffffff,
 };
@@ -161,6 +160,8 @@ void __iwl_dbg(struct device *, u32, bool, const char *, const char *fmt, ...);
 	IWL_DPRINTF(_subsys, IWL_DL_MAC80211, _fmt, ##__VA_ARGS__)
 #define	IWL_DEBUG_POWER(_subsys, _fmt, ...)				\
 	IWL_DPRINTF(_subsys, IWL_DL_POWER, _fmt, ##__VA_ARGS__)
+#define	IWL_DEBUG_DEV_POWER(_dev, _fmt, ...)				\
+	IWL_DPRINTF_DEV((_dev), IWL_DL_POWER, _fmt, ##__VA_ARGS__)
 #define	IWL_DEBUG_QUOTA(_subsys, _fmt, ...)				\
 	IWL_DPRINTF(_subsys, IWL_DL_QUOTA, _fmt, ##__VA_ARGS__)
 #define	IWL_DEBUG_RADIO(_subsys, _fmt, ...)				\
@@ -195,8 +196,11 @@ void __iwl_dbg(struct device *, u32, bool, const char *, const char *fmt, ...);
 	IWL_DPRINTF(_subsys, IWL_DL_WEP, _fmt, ##__VA_ARGS__)
 #define	IWL_DEBUG_WOWLAN(_subsys, _fmt, ...)				\
 	IWL_DPRINTF(_subsys, IWL_DL_WOWLAN, _fmt, ##__VA_ARGS__)
-
-#define	IWL_DEBUG_PCI_RW(_subsys, _fmt, ...)				\
-	IWL_DPRINTF(_subsys, IWL_DL_PCI_RW, _fmt, ##__VA_ARGS__)
+#define	IWL_DEBUG_DEV_RADIO(_dev, _fmt, ...)				\
+	IWL_DPRINTF_DEV((_dev), IWL_DL_DEV_RADIO, _fmt, ##__VA_ARGS__)
+#define	IWL_DEBUG_PTP(_subsys, _fmt, ...)				\
+	IWL_DPRINTF(_subsys, IWL_DL_PTP, _fmt, ##__VA_ARGS__)
+#define	IWL_DEBUG_EHT(_subsys, _fmt, ...)				\
+	IWL_DPRINTF(_subsys, IWL_DL_EHT, _fmt, ##__VA_ARGS__)
 
 #endif /* _IWL_DEBUG_H */

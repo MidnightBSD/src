@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2012-2014, 2018-2023 Intel Corporation
+ * Copyright (C) 2012-2014, 2018-2025 Intel Corporation
  * Copyright (C) 2013-2015 Intel Mobile Communications GmbH
  * Copyright (C) 2016-2017 Intel Deutschland GmbH
  */
-#include <asm/unaligned.h>
+#include <linux/unaligned.h>
 #include <linux/etherdevice.h>
 #include <linux/skbuff.h>
 #include "iwl-trans.h"
@@ -499,8 +499,6 @@ void iwl_mvm_rx_rx_mpdu(struct iwl_mvm *mvm, struct napi_struct *napi,
 	if (!(rate_n_flags & RATE_MCS_CCK_MSK_V1) &&
 	    rate_n_flags & RATE_MCS_SGI_MSK_V1)
 		rx_status->enc_flags |= RX_ENC_FLAG_SHORT_GI;
-	if (rate_n_flags & RATE_HT_MCS_GF_MSK)
-		rx_status->enc_flags |= RX_ENC_FLAG_HT_GF;
 	if (rate_n_flags & RATE_MCS_LDPC_MSK_V1)
 		rx_status->enc_flags |= RX_ENC_FLAG_LDPC;
 	if (rate_n_flags & RATE_MCS_HT_MSK_V1) {
@@ -530,6 +528,8 @@ void iwl_mvm_rx_rx_mpdu(struct iwl_mvm *mvm, struct napi_struct *napi,
 			return;
 		}
 		rx_status->rate_idx = rate;
+		/* override BW - it could be DUP and indicate the wrong BW */
+		rx_status->bw = RATE_INFO_BW_20;
 	}
 
 #ifdef CONFIG_IWLWIFI_DEBUGFS
@@ -562,15 +562,17 @@ struct iwl_mvm_stat_data {
 struct iwl_mvm_stat_data_all_macs {
 	struct iwl_mvm *mvm;
 	__le32 flags;
-	struct iwl_statistics_ntfy_per_mac *per_mac_stats;
+	struct iwl_stats_ntfy_per_mac *per_mac;
 };
 
-static void iwl_mvm_update_vif_sig(struct ieee80211_vif *vif, int sig)
+static void iwl_mvm_update_link_sig(struct ieee80211_vif *vif, int sig,
+				    struct iwl_mvm_vif_link_info *link_info,
+				    struct ieee80211_bss_conf *bss_conf)
 {
 	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
 	struct iwl_mvm *mvm = mvmvif->mvm;
-	int thold = vif->bss_conf.cqm_rssi_thold;
-	int hyst = vif->bss_conf.cqm_rssi_hyst;
+	int thold = bss_conf->cqm_rssi_thold;
+	int hyst = bss_conf->cqm_rssi_hyst;
 	int last_event;
 
 	if (sig == 0) {
@@ -578,23 +580,23 @@ static void iwl_mvm_update_vif_sig(struct ieee80211_vif *vif, int sig)
 		return;
 	}
 
-	mvmvif->bf_data.ave_beacon_signal = sig;
+	link_info->bf_data.ave_beacon_signal = sig;
 
 	/* BT Coex */
-	if (mvmvif->bf_data.bt_coex_min_thold !=
-	    mvmvif->bf_data.bt_coex_max_thold) {
-		last_event = mvmvif->bf_data.last_bt_coex_event;
-		if (sig > mvmvif->bf_data.bt_coex_max_thold &&
-		    (last_event <= mvmvif->bf_data.bt_coex_min_thold ||
+	if (link_info->bf_data.bt_coex_min_thold !=
+	    link_info->bf_data.bt_coex_max_thold) {
+		last_event = link_info->bf_data.last_bt_coex_event;
+		if (sig > link_info->bf_data.bt_coex_max_thold &&
+		    (last_event <= link_info->bf_data.bt_coex_min_thold ||
 		     last_event == 0)) {
-			mvmvif->bf_data.last_bt_coex_event = sig;
+			link_info->bf_data.last_bt_coex_event = sig;
 			IWL_DEBUG_RX(mvm, "cqm_iterator bt coex high %d\n",
 				     sig);
 			iwl_mvm_bt_rssi_event(mvm, vif, RSSI_EVENT_HIGH);
-		} else if (sig < mvmvif->bf_data.bt_coex_min_thold &&
-			   (last_event >= mvmvif->bf_data.bt_coex_max_thold ||
+		} else if (sig < link_info->bf_data.bt_coex_min_thold &&
+			   (last_event >= link_info->bf_data.bt_coex_max_thold ||
 			    last_event == 0)) {
-			mvmvif->bf_data.last_bt_coex_event = sig;
+			link_info->bf_data.last_bt_coex_event = sig;
 			IWL_DEBUG_RX(mvm, "cqm_iterator bt coex low %d\n",
 				     sig);
 			iwl_mvm_bt_rssi_event(mvm, vif, RSSI_EVENT_LOW);
@@ -605,10 +607,10 @@ static void iwl_mvm_update_vif_sig(struct ieee80211_vif *vif, int sig)
 		return;
 
 	/* CQM Notification */
-	last_event = mvmvif->bf_data.last_cqm_event;
+	last_event = link_info->bf_data.last_cqm_event;
 	if (thold && sig < thold && (last_event == 0 ||
 				     sig < last_event - hyst)) {
-		mvmvif->bf_data.last_cqm_event = sig;
+		link_info->bf_data.last_cqm_event = sig;
 		IWL_DEBUG_RX(mvm, "cqm_iterator cqm low %d\n",
 			     sig);
 		ieee80211_cqm_rssi_notify(
@@ -618,7 +620,7 @@ static void iwl_mvm_update_vif_sig(struct ieee80211_vif *vif, int sig)
 			GFP_KERNEL);
 	} else if (sig > thold &&
 		   (last_event == 0 || sig > last_event + hyst)) {
-		mvmvif->bf_data.last_cqm_event = sig;
+		link_info->bf_data.last_cqm_event = sig;
 		IWL_DEBUG_RX(mvm, "cqm_iterator cqm high %d\n",
 			     sig);
 		ieee80211_cqm_rssi_notify(
@@ -660,14 +662,15 @@ static void iwl_mvm_stat_iterator(void *_data, u8 *mac,
 		mvmvif->deflink.beacon_stats.accu_num_beacons +=
 			mvmvif->deflink.beacon_stats.num_beacons;
 
-	iwl_mvm_update_vif_sig(vif, sig);
+	/* This is used in pre-MLO API so use deflink */
+	iwl_mvm_update_link_sig(vif, sig, &mvmvif->deflink, &vif->bss_conf);
 }
 
 static void iwl_mvm_stat_iterator_all_macs(void *_data, u8 *mac,
 					   struct ieee80211_vif *vif)
 {
 	struct iwl_mvm_stat_data_all_macs *data = _data;
-	struct iwl_statistics_ntfy_per_mac *mac_stats;
+	struct iwl_stats_ntfy_per_mac *mac_stats;
 	int sig;
 	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
 	u16 vif_id = mvmvif->id;
@@ -678,7 +681,7 @@ static void iwl_mvm_stat_iterator_all_macs(void *_data, u8 *mac,
 	if (vif->type != NL80211_IFTYPE_STATION)
 		return;
 
-	mac_stats = &data->per_mac_stats[vif_id];
+	mac_stats = &data->per_mac[vif_id];
 
 	mvmvif->deflink.beacon_stats.num_beacons =
 		le32_to_cpu(mac_stats->beacon_counter);
@@ -693,7 +696,9 @@ static void iwl_mvm_stat_iterator_all_macs(void *_data, u8 *mac,
 			mvmvif->deflink.beacon_stats.num_beacons;
 
 	sig = -le32_to_cpu(mac_stats->beacon_filter_average_energy);
-	iwl_mvm_update_vif_sig(vif, sig);
+
+	/* This is used in pre-MLO API so use deflink */
+	iwl_mvm_update_link_sig(vif, sig, &mvmvif->deflink, &vif->bss_conf);
 }
 
 static inline void
@@ -732,8 +737,8 @@ static void iwl_mvm_stats_energy_iter(void *_data,
 	u8 *energy = _data;
 	u32 sta_id = mvmsta->deflink.sta_id;
 
-	if (WARN_ONCE(sta_id >= IWL_MVM_STATION_COUNT_MAX, "sta_id %d >= %d",
-		      sta_id, IWL_MVM_STATION_COUNT_MAX))
+	if (WARN_ONCE(sta_id >= IWL_STATION_COUNT_MAX, "sta_id %d >= %d",
+		      sta_id, IWL_STATION_COUNT_MAX))
 		return;
 
 	if (energy[sta_id])
@@ -765,6 +770,21 @@ iwl_mvm_update_tcm_from_stats(struct iwl_mvm *mvm, __le32 *air_time_le,
 	spin_unlock(&mvm->tcm.lock);
 }
 
+static void iwl_mvm_handle_per_phy_stats(struct iwl_mvm *mvm,
+					 struct iwl_stats_ntfy_per_phy *per_phy)
+{
+	int i;
+
+	for (i = 0; i < NUM_PHY_CTX; i++) {
+		if (!mvm->phy_ctxts[i].ref)
+			continue;
+		mvm->phy_ctxts[i].channel_load_by_us =
+			le32_to_cpu(per_phy[i].channel_load_by_us);
+		mvm->phy_ctxts[i].channel_load_not_by_us =
+			le32_to_cpu(per_phy[i].channel_load_not_by_us);
+	}
+}
+
 static void
 iwl_mvm_stats_ver_15(struct iwl_mvm *mvm,
 		     struct iwl_statistics_operational_ntfy *stats)
@@ -772,13 +792,14 @@ iwl_mvm_stats_ver_15(struct iwl_mvm *mvm,
 	struct iwl_mvm_stat_data_all_macs data = {
 		.mvm = mvm,
 		.flags = stats->flags,
-		.per_mac_stats = stats->per_mac_stats,
+		.per_mac = stats->per_mac,
 	};
 
 	ieee80211_iterate_active_interfaces(mvm->hw,
 					    IEEE80211_IFACE_ITER_NORMAL,
 					    iwl_mvm_stat_iterator_all_macs,
 					    &data);
+	iwl_mvm_handle_per_phy_stats(mvm, stats->per_phy);
 }
 
 static void
@@ -842,10 +863,149 @@ static bool iwl_mvm_verify_stats_len(struct iwl_mvm *mvm,
 }
 
 static void
+iwl_mvm_stat_iterator_all_links(struct iwl_mvm *mvm,
+				struct iwl_stats_ntfy_per_link *per_link)
+{
+	u32 air_time[MAC_INDEX_AUX] = {};
+	u32 rx_bytes[MAC_INDEX_AUX] = {};
+	int fw_link_id;
+
+	/* driver uses link ID == MAC ID */
+	for (fw_link_id = 0; fw_link_id < ARRAY_SIZE(mvm->vif_id_to_mac);
+	     fw_link_id++) {
+		struct iwl_stats_ntfy_per_link *link_stats;
+		struct iwl_mvm_vif_link_info *link_info;
+		struct iwl_mvm_vif *mvmvif;
+		struct ieee80211_vif *vif;
+		int link_id;
+		int sig;
+
+		vif = iwl_mvm_rcu_dereference_vif_id(mvm, fw_link_id, false);
+		if (!vif)
+			continue;
+
+		if (vif->type != NL80211_IFTYPE_STATION)
+			continue;
+
+		link_id = vif->bss_conf.link_id;
+		if (link_id >= ARRAY_SIZE(mvmvif->link))
+			continue;
+
+		mvmvif = iwl_mvm_vif_from_mac80211(vif);
+		link_info = mvmvif->link[link_id];
+		if (!link_info)
+			continue;
+
+		link_stats = &per_link[fw_link_id];
+
+		link_info->beacon_stats.num_beacons =
+			le32_to_cpu(link_stats->beacon_counter);
+
+		/* we basically just use the u8 to store 8 bits and then treat
+		 * it as a s8 whenever we take it out to a different type.
+		 */
+		link_info->beacon_stats.avg_signal =
+			-le32_to_cpu(link_stats->beacon_average_energy);
+
+		/* make sure that beacon statistics don't go backwards with TCM
+		 * request to clear statistics
+		 */
+		if (mvm->statistics_clear)
+			mvmvif->link[link_id]->beacon_stats.accu_num_beacons +=
+				mvmvif->link[link_id]->beacon_stats.num_beacons;
+
+		sig = -le32_to_cpu(link_stats->beacon_filter_average_energy);
+		iwl_mvm_update_link_sig(vif, sig, link_info, &vif->bss_conf);
+
+		if (WARN_ONCE(mvmvif->id >= MAC_INDEX_AUX,
+			      "invalid mvmvif id: %d", mvmvif->id))
+			continue;
+
+		air_time[mvmvif->id] +=
+			le32_to_cpu(per_link[fw_link_id].air_time);
+		rx_bytes[mvmvif->id] +=
+			le32_to_cpu(per_link[fw_link_id].rx_bytes);
+	}
+
+	/* Don't update in case the statistics are not cleared, since
+	 * we will end up counting twice the same airtime, once in TCM
+	 * request and once in statistics notification.
+	 */
+	if (mvm->statistics_clear) {
+		__le32 air_time_le[MAC_INDEX_AUX];
+		__le32 rx_bytes_le[MAC_INDEX_AUX];
+		int vif_id;
+
+		for (vif_id = 0; vif_id < ARRAY_SIZE(air_time_le); vif_id++) {
+			air_time_le[vif_id] = cpu_to_le32(air_time[vif_id]);
+			rx_bytes_le[vif_id] = cpu_to_le32(rx_bytes[vif_id]);
+		}
+
+		iwl_mvm_update_tcm_from_stats(mvm, air_time_le, rx_bytes_le);
+	}
+}
+
+void iwl_mvm_handle_rx_system_oper_stats(struct iwl_mvm *mvm,
+					 struct iwl_rx_cmd_buffer *rxb)
+{
+	u8 average_energy[IWL_STATION_COUNT_MAX];
+	struct iwl_rx_packet *pkt = rxb_addr(rxb);
+	struct iwl_system_statistics_notif_oper *stats;
+	int i;
+	u32 notif_ver = iwl_fw_lookup_notif_ver(mvm->fw, STATISTICS_GROUP,
+						STATISTICS_OPER_NOTIF, 0);
+
+	if (notif_ver != 3) {
+		IWL_FW_CHECK_FAILED(mvm,
+				    "Oper stats notif ver %d is not supported\n",
+				    notif_ver);
+		return;
+	}
+
+	stats = (void *)&pkt->data;
+	iwl_mvm_stat_iterator_all_links(mvm, stats->per_link);
+
+	for (i = 0; i < ARRAY_SIZE(average_energy); i++)
+		average_energy[i] =
+			le32_to_cpu(stats->per_sta[i].average_energy);
+
+	ieee80211_iterate_stations_atomic(mvm->hw, iwl_mvm_stats_energy_iter,
+					  average_energy);
+	iwl_mvm_handle_per_phy_stats(mvm, stats->per_phy);
+}
+
+void iwl_mvm_handle_rx_system_oper_part1_stats(struct iwl_mvm *mvm,
+					       struct iwl_rx_cmd_buffer *rxb)
+{
+	struct iwl_rx_packet *pkt = rxb_addr(rxb);
+	struct iwl_system_statistics_part1_notif_oper *part1_stats;
+	int i;
+	u32 notif_ver = iwl_fw_lookup_notif_ver(mvm->fw, STATISTICS_GROUP,
+						STATISTICS_OPER_PART1_NOTIF, 0);
+
+	if (notif_ver != 4) {
+		IWL_FW_CHECK_FAILED(mvm,
+				    "Part1 stats notif ver %d is not supported\n",
+				    notif_ver);
+		return;
+	}
+
+	part1_stats = (void *)&pkt->data;
+	mvm->radio_stats.rx_time = 0;
+	mvm->radio_stats.tx_time = 0;
+	for (i = 0; i < ARRAY_SIZE(part1_stats->per_link); i++) {
+		mvm->radio_stats.rx_time +=
+			le64_to_cpu(part1_stats->per_link[i].rx_time);
+		mvm->radio_stats.tx_time +=
+			le64_to_cpu(part1_stats->per_link[i].tx_time);
+	}
+}
+
+static void
 iwl_mvm_handle_rx_statistics_tlv(struct iwl_mvm *mvm,
 				 struct iwl_rx_packet *pkt)
 {
-	u8 average_energy[IWL_MVM_STATION_COUNT_MAX];
+	u8 average_energy[IWL_STATION_COUNT_MAX];
 	__le32 air_time[MAC_INDEX_AUX];
 	__le32 rx_bytes[MAC_INDEX_AUX];
 	__le32 flags = 0;
@@ -900,11 +1060,11 @@ iwl_mvm_handle_rx_statistics_tlv(struct iwl_mvm *mvm,
 
 		for (i = 0; i < ARRAY_SIZE(average_energy); i++)
 			average_energy[i] =
-				le32_to_cpu(stats->per_sta_stats[i].average_energy);
+				le32_to_cpu(stats->per_sta[i].average_energy);
 
 		for (i = 0; i < ARRAY_SIZE(air_time); i++) {
-			air_time[i] = stats->per_mac_stats[i].air_time;
-			rx_bytes[i] = stats->per_mac_stats[i].rx_bytes;
+			air_time[i] = stats->per_mac[i].air_time;
+			rx_bytes[i] = stats->per_mac[i].rx_bytes;
 		}
 	}
 
@@ -930,6 +1090,13 @@ void iwl_mvm_handle_rx_statistics(struct iwl_mvm *mvm,
 	__le32 *bytes, *air_time, flags;
 	int expected_size;
 	u8 *energy;
+	u8 cmd_ver = iwl_fw_lookup_cmd_ver(mvm->fw,
+					   WIDE_ID(SYSTEM_GROUP,
+						   SYSTEM_STATISTICS_CMD),
+					   IWL_FW_CMD_VER_UNKNOWN);
+
+	if (cmd_ver != IWL_FW_CMD_VER_UNKNOWN)
+		return;
 
 	/* From ver 14 and up we use TLV statistics format */
 	if (iwl_fw_lookup_notif_ver(mvm->fw, LEGACY_GROUP,

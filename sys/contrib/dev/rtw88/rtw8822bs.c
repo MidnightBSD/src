@@ -20,13 +20,13 @@ static const struct sdio_device_id rtw_8822bs_id_table[] =  {
 MODULE_DEVICE_TABLE(sdio, rtw_8822bs_id_table);
 
 static struct sdio_driver rtw_8822bs_driver = {
-	.name = "rtw_8822bs",
+	.name = KBUILD_MODNAME,
 	.probe = rtw_sdio_probe,
 	.remove = rtw_sdio_remove,
+	.shutdown = rtw_sdio_shutdown,
 	.id_table = rtw_8822bs_id_table,
 	.drv = {
 		.pm = &rtw_sdio_pm_ops,
-		.shutdown = rtw_sdio_shutdown,
 	}
 };
 module_sdio_driver(rtw_8822bs_driver);

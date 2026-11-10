@@ -1,11 +1,15 @@
 /* SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause */
 /*
- * Copyright (C) 2005-2014, 2020-2021, 2023 Intel Corporation
+ * Copyright (C) 2005-2014, 2020-2021, 2023, 2025 Intel Corporation
  * Copyright (C) 2013-2014 Intel Mobile Communications GmbH
  */
 #ifndef __iwl_drv_h__
 #define __iwl_drv_h__
 #include <linux/export.h>
+#include <kunit/visibility.h>
+#if defined(__FreeBSD__)
+#include <linux/types.h>
+#endif
 
 /* for all modules */
 #define DRV_NAME        "iwlwifi"
@@ -52,16 +56,17 @@
 
 struct iwl_drv;
 struct iwl_trans;
-struct iwl_cfg;
+struct iwl_rf_cfg;
 /**
  * iwl_drv_start - start the drv
  *
- * @trans_ops: the ops of the transport
+ * @trans: the transport
  *
  * starts the driver: fetches the firmware. This should be called by bus
  * specific system flows implementations. For example, the bus specific probe
  * function should do bus related operations only, and then call to this
- * function. It returns the driver object or %NULL if an error occurred.
+ * function.
+ * Return: the driver object or %NULL if an error occurred.
  */
 struct iwl_drv *iwl_drv_start(struct iwl_trans *trans);
 
@@ -77,6 +82,12 @@ struct iwl_drv *iwl_drv_start(struct iwl_trans *trans);
 void iwl_drv_stop(struct iwl_drv *drv);
 
 /*
+ * iwl_drv_is_wifi7_supported - returns if wifi7 is supported
+ * If yes, iwlmld needs to be used to drive the device.
+ */
+bool iwl_drv_is_wifi7_supported(struct iwl_trans *trans);
+
+/*
  * exported symbol management
  *
  * The driver can be split into multiple modules, in which case some symbols
@@ -84,9 +95,17 @@ void iwl_drv_stop(struct iwl_drv *drv);
  * everything is built-in, then we can avoid that.
  */
 #ifdef CONFIG_IWLWIFI_OPMODE_MODULAR
-#define IWL_EXPORT_SYMBOL(sym)	EXPORT_SYMBOL_NS_GPL(sym, IWLWIFI)
+#define IWL_EXPORT_SYMBOL(sym)	EXPORT_SYMBOL_NS_GPL(sym, "IWLWIFI")
 #else
 #define IWL_EXPORT_SYMBOL(sym)
+#endif
+
+#if IS_ENABLED(CONFIG_IWLWIFI_KUNIT_TESTS)
+#define EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(sym)	EXPORT_SYMBOL_IF_KUNIT(sym)
+#define VISIBLE_IF_IWLWIFI_KUNIT
+#else
+#define EXPORT_SYMBOL_IF_IWLWIFI_KUNIT(sym)
+#define VISIBLE_IF_IWLWIFI_KUNIT static
 #endif
 
 /* max retry for init flow */

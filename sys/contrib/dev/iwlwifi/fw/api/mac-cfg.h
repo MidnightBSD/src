@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause */
 /*
- * Copyright (C) 2012-2014, 2018-2019, 2021-2022 Intel Corporation
+ * Copyright (C) 2012-2014, 2018-2019, 2021-2025 Intel Corporation
  * Copyright (C) 2013-2015 Intel Mobile Communications GmbH
  * Copyright (C) 2016-2017 Intel Deutschland GmbH
  */
@@ -42,15 +42,15 @@ enum iwl_mac_conf_subcmd_ids {
 	 */
 	LINK_CONFIG_CMD = 0x9,
 	/**
-	 * @STA_CONFIG_CMD: &struct iwl_mvm_sta_cfg_cmd
+	 * @STA_CONFIG_CMD: &struct iwl_sta_cfg_cmd
 	 */
 	STA_CONFIG_CMD = 0xA,
 	/**
-	 * @AUX_STA_CMD: &struct iwl_mvm_aux_sta_cmd
+	 * @AUX_STA_CMD: &struct iwl_aux_sta_cmd
 	 */
 	AUX_STA_CMD = 0xB,
 	/**
-	 * @STA_REMOVE_CMD: &struct iwl_mvm_remove_sta_cmd
+	 * @STA_REMOVE_CMD: &struct iwl_remove_sta_cmd
 	 */
 	STA_REMOVE_CMD = 0xC,
 	/**
@@ -58,7 +58,39 @@ enum iwl_mac_conf_subcmd_ids {
 	 */
 	STA_DISABLE_TX_CMD = 0xD,
 	/**
-	 * @SESSION_PROTECTION_NOTIF: &struct iwl_mvm_session_prot_notif
+	 * @ROC_CMD: &struct iwl_roc_req
+	 */
+	ROC_CMD = 0xE,
+	/**
+	 * @TWT_OPERATION_CMD: &struct iwl_twt_operation_cmd
+	 */
+	TWT_OPERATION_CMD = 0x10,
+	/**
+	 * @NAN_CFG_CMD: &struct iwl_nan_config_cmd
+	 */
+	NAN_CFG_CMD = 0x12,
+	/**
+	 * @NAN_DW_END_NOTIF: &struct iwl_nan_dw_end_notif
+	 */
+	NAN_DW_END_NOTIF = 0xf4,
+	/**
+	 * @NAN_JOINED_CLUSTER_NOTIF: &struct iwl_nan_cluster_notif
+	 */
+	NAN_JOINED_CLUSTER_NOTIF = 0xf5,
+	/**
+	 * @MISSED_BEACONS_NOTIF: &struct iwl_missed_beacons_notif
+	 */
+	MISSED_BEACONS_NOTIF = 0xF6,
+	/**
+	 * @EMLSR_TRANS_FAIL_NOTIF: &struct iwl_esr_trans_fail_notif
+	 */
+	EMLSR_TRANS_FAIL_NOTIF = 0xF7,
+	/**
+	 * @ROC_NOTIF: &struct iwl_roc_notif
+	 */
+	ROC_NOTIF = 0xF8,
+	/**
+	 * @SESSION_PROTECTION_NOTIF: &struct iwl_session_prot_notif
 	 */
 	SESSION_PROTECTION_NOTIF = 0xFB,
 
@@ -136,7 +168,7 @@ struct iwl_missed_vap_notif {
 } __packed; /* MISSED_VAP_NTFY_API_S_VER_1 */
 
 /**
- * struct iwl_channel_switch_start_notif - Channel switch start notification
+ * struct iwl_channel_switch_start_notif_v1 - Channel switch start notification
  *
  * @id_and_color: ID and color of the MAC
  */
@@ -234,9 +266,9 @@ struct iwl_mac_low_latency_cmd {
  * @esr_transition_timeout: the timeout required by the AP for the
  *	eSR transition.
  *	Available only from version 2 of the command.
- *	This values comes from the EMLSR transition delay in the EML
+ *	This value comes from the EMLSR transition delay in the EML
  *	Capabilities subfield.
- * @medium_sync_delay: the value as it appeasr in P802.11be_D2.2 Figure 9-1002j.
+ * @medium_sync_delay: the value as it appears in P802.11be_D2.2 Figure 9-1002j.
  * @assoc_id: unique ID assigned by the AP during association
  * @reserved1: alignment
  * @data_policy: see &enum iwl_mac_data_policy
@@ -291,8 +323,41 @@ enum iwl_mac_config_filter_flags {
 }; /* MAC_FILTER_FLAGS_MASK_E_VER_1 */
 
 /**
+ * struct iwl_mac_wifi_gen_support_v2 - parameters of iwl_mac_config_cmd
+ *	with support up to eht as in version 2 of the command
+ *
+ * @he_support: does this MAC support HE
+ * @he_ap_support: HE AP enabled, "pseudo HE", no trigger frame handling
+ * @eht_support: does this MAC support EHT. Requires he_support
+ */
+struct iwl_mac_wifi_gen_support_v2 {
+	__le16 he_support;
+	__le16 he_ap_support;
+	__le32 eht_support;
+} __packed;
+
+/**
+ * struct iwl_mac_wifi_gen_support - parameters of iwl_mac_config_cmd
+ *	with support up to uhr as in version 3 of the command
+ * ( MAC_CONTEXT_CONFIG_CMD = 0x8 )
+ *
+ * @he_support: does this MAC support HE
+ * @he_ap_support: HE AP enabled, "pseudo HE", no trigger frame handling
+ * @eht_support: does this MAC support EHT. Requires he_support
+ * @uhr_support: does this MAC support UHR. Requires eht_support
+ * @reserved: reserved for alignment and to match version 2's size
+ */
+struct iwl_mac_wifi_gen_support {
+	u8 he_support;
+	u8 he_ap_support;
+	u8 eht_support;
+	u8 uhr_support;
+	__le32 reserved;
+} __packed;
+
+/**
  * struct iwl_mac_config_cmd - command structure to configure MAC contexts in
- *	MLD API
+ *	MLD API for versions 2 and 3
  * ( MAC_CONTEXT_CONFIG_CMD = 0x8 )
  *
  * @id_and_color: ID and color of the MAC
@@ -301,19 +366,16 @@ enum iwl_mac_config_filter_flags {
  * @local_mld_addr: mld address
  * @reserved_for_local_mld_addr: reserved
  * @filter_flags: combination of &enum iwl_mac_config_filter_flags
- * @he_support: does this MAC support HE
- * @he_ap_support: HE AP enabled, "pseudo HE", no trigger frame handling
- * @eht_support: does this MAC support EHT. Requires he_support
+ * @wifi_gen_v2: he/eht parameters as in cmd version 2
+ * @wifi_gen: he/eht/uhr parameters as in cmd version 3
  * @nic_not_ack_enabled: mark that the NIC doesn't support receiving
  *	ACK-enabled AGG, (i.e. both BACK and non-BACK frames in single AGG).
  *	If the NIC is not ACK_ENABLED it may use the EOF-bit in first non-0
  *	len delim to determine if AGG or single.
  * @client: client mac data
- * @go_ibss: mac data for go or ibss
  * @p2p_dev: mac data for p2p device
  */
 struct iwl_mac_config_cmd {
-	/* COMMON_INDEX_HDR_API_S_VER_1 */
 	__le32 id_and_color;
 	__le32 action;
 	/* MAC_CONTEXT_TYPE_API_E */
@@ -321,16 +383,17 @@ struct iwl_mac_config_cmd {
 	u8 local_mld_addr[6];
 	__le16 reserved_for_local_mld_addr;
 	__le32 filter_flags;
-	__le16 he_support;
-	__le16 he_ap_support;
-	__le32 eht_support;
+	union {
+		struct iwl_mac_wifi_gen_support_v2 wifi_gen_v2;
+		struct iwl_mac_wifi_gen_support wifi_gen;
+	};
 	__le32 nic_not_ack_enabled;
 	/* MAC_CONTEXT_CONFIG_SPECIFIC_DATA_API_U_VER_2 */
 	union {
 		struct iwl_mac_client_data client;
 		struct iwl_mac_p2p_dev_data p2p_dev;
 	};
-} __packed; /* MAC_CONTEXT_CONFIG_CMD_API_S_VER_2 */
+} __packed; /* MAC_CONTEXT_CONFIG_CMD_API_S_VER_2_VER_3 */
 
 /**
  * enum iwl_link_ctx_modify_flags - indicate to the fw what fields are being
@@ -366,7 +429,11 @@ struct iwl_mac_config_cmd {
  *	iwl_link_ctx_cfg_cmd::bss_color_disable
  * @LINK_CONTEXT_MODIFY_EHT_PARAMS: covers iwl_link_ctx_cfg_cmd::puncture_mask.
  *	This flag can be set only if the MAC that this link relates to has
- *	eht_support set to true.
+ *	eht_support set to true. No longer used since _VER_3 of this command.
+ * @LINK_CONTEXT_MODIFY_BANDWIDTH: Covers iwl_link_ctx_cfg_cmd::modify_bandwidth.
+ *	Request RX OMI to the AP to modify bandwidth of this link.
+ * @LINK_CONTEXT_MODIFY_UHR_PARAMS: covers iwl_link_ctx_cfg_cmd::npca_params and
+ *	iwl_link_ctx_cfg_cmd::prio_edca_params. Since _VER_7.
  * @LINK_CONTEXT_MODIFY_ALL: set all above flags
  */
 enum iwl_link_ctx_modify_flags {
@@ -378,6 +445,8 @@ enum iwl_link_ctx_modify_flags {
 	LINK_CONTEXT_MODIFY_HE_PARAMS		= BIT(5),
 	LINK_CONTEXT_MODIFY_BSS_COLOR_DISABLE	= BIT(6),
 	LINK_CONTEXT_MODIFY_EHT_PARAMS		= BIT(7),
+	LINK_CONTEXT_MODIFY_BANDWIDTH		= BIT(8),
+	LINK_CONTEXT_MODIFY_UHR_PARAMS		= BIT(9),
 	LINK_CONTEXT_MODIFY_ALL			= 0xff,
 }; /* LINK_CONTEXT_MODIFY_MASK_E_VER_1 */
 
@@ -419,6 +488,54 @@ enum iwl_link_ctx_flags {
 }; /* LINK_CONTEXT_FLAG_E_VER_1 */
 
 /**
+ * enum iwl_link_modify_bandwidth - link modify (RX OMI) bandwidth
+ * @IWL_LINK_MODIFY_BW_20: request 20 MHz
+ * @IWL_LINK_MODIFY_BW_40: request 40 MHz
+ * @IWL_LINK_MODIFY_BW_80: request 80 MHz
+ * @IWL_LINK_MODIFY_BW_160: request 160 MHz
+ * @IWL_LINK_MODIFY_BW_320: request 320 MHz
+ */
+enum iwl_link_modify_bandwidth {
+	IWL_LINK_MODIFY_BW_20,
+	IWL_LINK_MODIFY_BW_40,
+	IWL_LINK_MODIFY_BW_80,
+	IWL_LINK_MODIFY_BW_160,
+	IWL_LINK_MODIFY_BW_320,
+};
+
+/**
+ * enum iwl_npca_flags - NPCA flags
+ * @IWL_NPCA_FLAG_MAC_HDR_BASED: MAC header based NPCA operation
+ *	permitted in the BSS (MOPLEN)
+ */
+enum iwl_npca_flags {
+	IWL_NPCA_FLAG_MAC_HDR_BASED = BIT(0),
+}; /* NPCA_FLAG_E */
+
+/**
+ * struct iwl_npca_params - NPCA parameters (non-primary channel access)
+ *
+ * @dis_subch_bmap: disabled subchannel bitmap for NPCA
+ * @switch_delay: after switch, delay TX according to destination AP
+ * @switch_back_delay: switch back to control channel before OBSS frame end
+ * @initial_qsrc: Indicates the value that is used to initialize the
+ *	EDCAF QSRC[AC] variables
+ * @min_dur_threshold: minimum PPDU time to switch to the non-primary
+ *	NPCA channel (usec)
+ * @flags: NPCA flags, see &enum iwl_npca_flags
+ * @reserved: reserved for alignment purposes
+ */
+struct iwl_npca_params {
+	__le16 dis_subch_bmap;
+	u8 switch_delay;
+	u8 switch_back_delay;
+	u8 initial_qsrc;
+	u8 min_dur_threshold;
+	u8 flags;
+	u8 reserved;
+} __packed; /* NPCA_PARAM_API_S_VER_2 */
+
+/**
  * struct iwl_link_config_cmd - command structure to configure the LINK context
  *	in MLD API
  * ( LINK_CONFIG_CMD =0x9 )
@@ -439,6 +556,12 @@ enum iwl_link_ctx_flags {
  * @listen_lmac: indicates whether the link should be allocated on the Listen
  *	Lmac or on the Main Lmac. Cannot be changed on an active Link.
  *	Relevant only for eSR.
+ * @block_tx: tell the firmware that this link can't Tx. This should be used
+ *	only when a link is de-activated because of CSA with mode = 1.
+ *	Available since version 5.
+ * @modify_bandwidth: bandwidth request value for RX OMI (see also
+ *	%LINK_CONTEXT_MODIFY_BANDWIDTH), from &enum iwl_link_modify_bandwidth.
+ * @reserved1: in version 2, listen_lmac became reserved
  * @cck_rates: basic rates available for CCK
  * @ofdm_rates: basic rates available for OFDM
  * @cck_short_preamble: 1 for enabling short preamble, 0 otherwise
@@ -454,7 +577,7 @@ enum iwl_link_ctx_flags {
  * @bi: beacon interval in TU, applicable only when associated
  * @dtim_interval: DTIM interval in TU.
  *	Relevant only for GO, otherwise this is offloaded.
- * @puncture_mask: puncture mask for EHT
+ * @puncture_mask: puncture mask for EHT (removed in VER_3)
  * @frame_time_rts_th: HE duration RTS threshold, in units of 32us
  * @flags: a combination from &enum iwl_link_ctx_flags
  * @flags_mask: what of %flags have changed. Also &enum iwl_link_ctx_flags
@@ -464,10 +587,14 @@ enum iwl_link_ctx_flags {
  * @bssid_index: index of the associated VAP
  * @bss_color: 11ax AP ID that is used in the HE SIG-A to mark inter BSS frame
  * @spec_link_id: link_id as the AP knows it
- * @reserved: alignment
+ * @ul_mu_data_disable: OM Control UL MU Data Disable RX Support (bit 44) in
+ *	HE MAC Capabilities information field as defined in figure 9-897 in
+ *	IEEE802.11REVme-D5.0
  * @ibss_bssid_addr: bssid for ibss
  * @reserved_for_ibss_bssid_addr: reserved
- * @reserved1: reserved for future use
+ * @npca_params: NPCA parameters
+ * @prio_edca_params: priority EDCA parameters for enhanced QoS
+ * @reserved3: reserved for future use
  */
 struct iwl_link_config_cmd {
 	__le32 action;
@@ -478,7 +605,14 @@ struct iwl_link_config_cmd {
 	__le16 reserved_for_local_link_addr;
 	__le32 modify_mask;
 	__le32 active;
-	__le32 listen_lmac;
+	union {
+		__le32 listen_lmac; /* only _VER_1 */
+		struct {
+			u8 block_tx; /* since _VER_5 */
+			u8 modify_bandwidth; /* since _VER_6 */
+			u8 reserved1[2];
+		};
+	};
 	__le32 cck_rates;
 	__le32 ofdm_rates;
 	__le32 cck_short_preamble;
@@ -494,27 +628,30 @@ struct iwl_link_config_cmd {
 	struct iwl_he_backoff_conf trig_based_txf[AC_NUM];
 	__le32 bi;
 	__le32 dtim_interval;
-	__le16 puncture_mask;
+	__le16 puncture_mask; /* removed in _VER_3 */
 	__le16 frame_time_rts_th;
 	__le32 flags;
-	__le32 flags_mask;
+	__le32 flags_mask; /* removed in _VER_6 */
 	/* The below fields are for multi-bssid */
 	u8 ref_bssid_addr[6];
 	__le16 reserved_for_ref_bssid_addr;
 	u8 bssid_index;
 	u8 bss_color;
 	u8 spec_link_id;
-	u8 reserved;
+	u8 ul_mu_data_disable;
 	u8 ibss_bssid_addr[6];
 	__le16 reserved_for_ibss_bssid_addr;
-	__le32 reserved1[8];
-} __packed; /* LINK_CONTEXT_CONFIG_CMD_API_S_VER_1 */
+	struct iwl_npca_params npca_params; /* since _VER_7 */
+	struct iwl_ac_qos prio_edca_params; /* since _VER_7 */
+	__le32 reserved3[4];
+} __packed; /* LINK_CONTEXT_CONFIG_CMD_API_S_VER_1, _VER_2, _VER_3, _VER_4,
+	     *				    _VER_5, _VER_6, _VER_7, _VER_8 */
 
 /* Currently FW supports link ids in the range 0-3 and can have
  * at most two active links for each vif.
  */
-#define IWL_MVM_FW_MAX_ACTIVE_LINKS_NUM 2
-#define IWL_MVM_FW_MAX_LINK_ID 3
+#define IWL_FW_MAX_ACTIVE_LINKS_NUM 2
+#define IWL_FW_MAX_LINK_ID 3
 
 /**
  * enum iwl_fw_sta_type - FW station types
@@ -536,7 +673,7 @@ enum iwl_fw_sta_type {
 }; /* STATION_TYPE_E_VER_1 */
 
 /**
- * struct iwl_mvm_sta_cfg_cmd - cmd structure to add a peer sta to the uCode's
+ * struct iwl_sta_cfg_cmd_v1 - cmd structure to add a peer sta to the uCode's
  *	station table
  * ( STA_CONFIG_CMD = 0xA )
  *
@@ -568,7 +705,7 @@ enum iwl_fw_sta_type {
  *	capa
  * @htc_flags: which features are supported in HTC
  */
-struct iwl_mvm_sta_cfg_cmd {
+struct iwl_sta_cfg_cmd_v1 {
 	__le32 sta_id;
 	__le32 link_id;
 	u8 peer_mld_address[ETH_ALEN];
@@ -592,7 +729,78 @@ struct iwl_mvm_sta_cfg_cmd {
 } __packed; /* STA_CMD_API_S_VER_1 */
 
 /**
- * struct iwl_mvm_aux_sta_cmd - command for AUX STA configuration
+ * struct iwl_sta_cfg_cmd - cmd structure to add a peer sta to the uCode's
+ *	station table
+ * ( STA_CONFIG_CMD = 0xA )
+ *
+ * @sta_id: index of station in uCode's station table
+ * @link_id: the id of the link that is used to communicate with this sta
+ * @peer_mld_address: the peers mld address
+ * @reserved_for_peer_mld_address: reserved
+ * @peer_link_address: the address of the link that is used to communicate
+ *	with this sta
+ * @reserved_for_peer_link_address: reserved
+ * @station_type: type of this station. See &enum iwl_fw_sta_type
+ * @assoc_id: for GO only
+ * @beamform_flags: beam forming controls
+ * @mfp: indicates whether the STA uses management frame protection or not.
+ * @mimo: indicates whether the sta uses mimo or not
+ * @mimo_protection: indicates whether the sta uses mimo protection or not
+ * @ack_enabled: indicates that the AP supports receiving ACK-
+ *	enabled AGG, i.e. both BACK and non-BACK frames in a single AGG
+ * @trig_rnd_alloc: indicates that trigger based random allocation
+ *	is enabled according to UORA element existence
+ * @tx_ampdu_spacing: minimum A-MPDU spacing:
+ *	4 - 2us density, 5 - 4us density, 6 - 8us density, 7 - 16us density
+ * @tx_ampdu_max_size: maximum A-MPDU length: 0 - 8K, 1 - 16K, 2 - 32K,
+ *	3 - 64K, 4 - 128K, 5 - 256K, 6 - 512K, 7 - 1024K.
+ * @sp_length: the size of the SP in actual number of frames
+ * @uapsd_acs:  4 LS bits are trigger enabled ACs, 4 MS bits are the deliver
+ *	enabled ACs.
+ * @pkt_ext: optional, exists according to PPE-present bit in the HE/EHT-PHY
+ *	capa
+ * @htc_flags: which features are supported in HTC
+ * @use_ldpc_x2_cw: Indicates whether to use LDPC with double CW
+ * @use_icf: Indicates whether to use ICF instead of RTS
+ * @dps_pad_time: DPS (Dynamic Power Save) padding delay resolution to ensure
+ *	proper timing alignment
+ * @dps_trans_delay: DPS minimal time that takes the peer to return to low power
+ * @mic_prep_pad_delay: MIC prep time padding
+ * @mic_compute_pad_delay: MIC compute time padding
+ * @reserved: Reserved for alignment
+ */
+struct iwl_sta_cfg_cmd {
+	__le32 sta_id;
+	__le32 link_id;
+	u8 peer_mld_address[ETH_ALEN];
+	__le16 reserved_for_peer_mld_address;
+	u8 peer_link_address[ETH_ALEN];
+	__le16 reserved_for_peer_link_address;
+	__le32 station_type;
+	__le32 assoc_id;
+	__le32 beamform_flags;
+	__le32 mfp;
+	__le32 mimo;
+	__le32 mimo_protection;
+	__le32 ack_enabled;
+	__le32 trig_rnd_alloc;
+	__le32 tx_ampdu_spacing;
+	__le32 tx_ampdu_max_size;
+	__le32 sp_length;
+	__le32 uapsd_acs;
+	struct iwl_he_pkt_ext_v2 pkt_ext;
+	__le32 htc_flags;
+	u8 use_ldpc_x2_cw;
+	u8 use_icf;
+	u8 dps_pad_time;
+	u8 dps_trans_delay;
+	u8 mic_prep_pad_delay;
+	u8 mic_compute_pad_delay;
+	u8 reserved[2];
+} __packed; /* STA_CMD_API_S_VER_2 */
+
+/**
+ * struct iwl_aux_sta_cmd - command for AUX STA configuration
  * ( AUX_STA_CMD = 0xB )
  *
  * @sta_id: index of aux sta to configure
@@ -600,7 +808,7 @@ struct iwl_mvm_sta_cfg_cmd {
  * @mac_addr: mac addr of the auxilary sta
  * @reserved_for_mac_addr: reserved
  */
-struct iwl_mvm_aux_sta_cmd {
+struct iwl_aux_sta_cmd {
 	__le32 sta_id;
 	__le32 lmac_id;
 	u8 mac_addr[ETH_ALEN];
@@ -609,13 +817,13 @@ struct iwl_mvm_aux_sta_cmd {
 } __packed; /* AUX_STA_CMD_API_S_VER_1 */
 
 /**
- * struct iwl_mvm_remove_sta_cmd - a cmd structure to remove a sta added by
+ * struct iwl_remove_sta_cmd - a cmd structure to remove a sta added by
  *	STA_CONFIG_CMD or AUX_STA_CONFIG_CMD
  * ( STA_REMOVE_CMD = 0xC )
  *
  * @sta_id: index of station to remove
  */
-struct iwl_mvm_remove_sta_cmd {
+struct iwl_remove_sta_cmd {
 	__le32 sta_id;
 } __packed; /* REMOVE_STA_API_S_VER_1 */
 
@@ -630,5 +838,301 @@ struct iwl_mvm_sta_disable_tx_cmd {
 	__le32 sta_id;
 	__le32 disable;
 } __packed; /* STA_DISABLE_TX_API_S_VER_1 */
+
+/**
+ * enum iwl_mvm_fw_esr_recommendation - FW recommendation code
+ * @ESR_RECOMMEND_LEAVE: recommendation to leave EMLSR
+ * @ESR_FORCE_LEAVE: force exiting EMLSR
+ * @ESR_RECOMMEND_ENTER: recommendation to enter EMLSR
+ */
+enum iwl_mvm_fw_esr_recommendation {
+	ESR_RECOMMEND_LEAVE,
+	ESR_FORCE_LEAVE,
+	ESR_RECOMMEND_ENTER,
+}; /* ESR_MODE_RECOMMENDATION_CODE_API_E_VER_1 */
+
+/**
+ * struct iwl_esr_mode_notif_v1 - FW recommendation/force for EMLSR mode
+ *
+ * @action: the action to apply on EMLSR state.
+ *	See &iwl_mvm_fw_esr_recommendation
+ */
+struct iwl_esr_mode_notif_v1 {
+	__le32 action;
+} __packed; /* ESR_MODE_RECOMMENDATION_NTFY_API_S_VER_1 */
+
+/**
+ * enum iwl_esr_leave_reason - reasons for leaving EMLSR mode
+ *
+ * @ESR_LEAVE_REASON_OMI_MU_UL_DISALLOWED: OMI MU UL disallowed
+ * @ESR_LEAVE_REASON_NO_TRIG_FOR_ESR_STA: No trigger for EMLSR station
+ * @ESR_LEAVE_REASON_NO_ESR_STA_IN_MU_DL: No EMLSR station in MU DL
+ * @ESR_LEAVE_REASON_BAD_ACTIV_FRAME_TH: Bad activation frame threshold
+ * @ESR_LEAVE_REASON_RTS_IN_DUAL_LISTEN: RTS in dual listen
+ */
+enum iwl_esr_leave_reason {
+	ESR_LEAVE_REASON_OMI_MU_UL_DISALLOWED	= BIT(0),
+	ESR_LEAVE_REASON_NO_TRIG_FOR_ESR_STA	= BIT(1),
+	ESR_LEAVE_REASON_NO_ESR_STA_IN_MU_DL	= BIT(2),
+	ESR_LEAVE_REASON_BAD_ACTIV_FRAME_TH	= BIT(3),
+	ESR_LEAVE_REASON_RTS_IN_DUAL_LISTEN	= BIT(4),
+};
+
+/**
+ * struct iwl_esr_mode_notif - FW recommendation/force for EMLSR mode
+ *
+ * @action: the action to apply on EMLSR state.
+ *	See &iwl_mvm_fw_esr_recommendation
+ * @leave_reason_mask: mask for various reasons to leave EMLSR mode.
+ *	See &iwl_esr_leave_reason
+ */
+struct iwl_esr_mode_notif {
+	__le32 action;
+	__le32 leave_reason_mask;
+} __packed; /* ESR_MODE_RECOMMENDATION_NTFY_API_S_VER_2 */
+
+/**
+ * struct iwl_missed_beacons_notif - sent when by the firmware upon beacon loss
+ *  ( MISSED_BEACONS_NOTIF = 0xF6 )
+ * @link_id: fw link ID
+ * @consec_missed_beacons_since_last_rx: number of consecutive missed
+ *	beacons since last RX.
+ * @consec_missed_beacons: number of consecutive missed beacons
+ * @other_link_id: used in EMLSR only. The fw link ID for
+ *	&consec_missed_beacons_other_link. IWL_MVM_FW_LINK_ID_INVALID (0xff) if
+ *	invalid.
+ * @consec_missed_beacons_other_link: number of consecutive missed beacons on
+ *	&other_link_id.
+ */
+struct iwl_missed_beacons_notif {
+	__le32 link_id;
+	__le32 consec_missed_beacons_since_last_rx;
+	__le32 consec_missed_beacons;
+	__le32 other_link_id;
+	__le32 consec_missed_beacons_other_link;
+} __packed; /* MISSED_BEACON_NTFY_API_S_VER_5 */
+
+/*
+ * enum iwl_esr_trans_fail_code: to be used to parse the notif below
+ *
+ * @ESR_TRANS_FAILED_TX_STATUS_ERROR: failed to TX EML OMN frame
+ * @ESR_TRANSITION_FAILED_TX_TIMEOUT: timeout on the EML OMN frame
+ * @ESR_TRANSITION_FAILED_BEACONS_NOT_HEARD: can't get a beacon on the new link
+ */
+enum iwl_esr_trans_fail_code {
+	ESR_TRANS_FAILED_TX_STATUS_ERROR,
+	ESR_TRANSITION_FAILED_TX_TIMEOUT,
+	ESR_TRANSITION_FAILED_BEACONS_NOT_HEARD,
+};
+
+/**
+ * struct iwl_esr_trans_fail_notif - FW reports a failure in EMLSR transition
+ *
+ * @link_id: the link_id that still works after the failure
+ * @activation: true if the link was activated, false otherwise
+ * @err_code: see &enum iwl_esr_trans_fail_code
+ */
+struct iwl_esr_trans_fail_notif {
+	__le32 link_id;
+	__le32 activation;
+	__le32 err_code;
+} __packed; /* ESR_TRANSITION_FAILED_NTFY_API_S_VER_1 */
+
+/*
+ * enum iwl_twt_operation_type: TWT operation in a TWT action frame
+ *
+ * @TWT_OPERATION_REQUEST: TWT Request
+ * @TWT_OPERATION_SUGGEST: TWT Suggest
+ * @TWT_OPERATION_DEMAND: TWT Demand
+ * @TWT_OPERATION_GROUPING: TWT Grouping
+ * @TWT_OPERATION_ACCEPT: TWT Accept
+ * @TWT_OPERATION_ALTERNATE: TWT Alternate
+ * @TWT_OPERATION_DICTATE: TWT Dictate
+ * @TWT_OPERATION_REJECT: TWT Reject
+ * @TWT_OPERATION_TEARDOWN: TWT Teardown
+ * @TWT_OPERATION_UNAVAILABILITY: TWT Unavailability
+ */
+enum iwl_twt_operation_type {
+	TWT_OPERATION_REQUEST,
+	TWT_OPERATION_SUGGEST,
+	TWT_OPERATION_DEMAND,
+	TWT_OPERATION_GROUPING,
+	TWT_OPERATION_ACCEPT,
+	TWT_OPERATION_ALTERNATE,
+	TWT_OPERATION_DICTATE,
+	TWT_OPERATION_REJECT,
+	TWT_OPERATION_TEARDOWN,
+	TWT_OPERATION_UNAVAILABILITY,
+	TWT_OPERATION_MAX,
+}; /* TWT_OPERATION_TYPE_E_VER_1 */
+
+/**
+ * struct iwl_twt_operation_cmd - initiate a TWT session from driver
+ *
+ * @link_id: FW link id to initiate the TWT
+ * @twt_operation: &enum iwl_twt_operation_type
+ * @target_wake_time: TSF time to start the TWT
+ * @interval_exponent: the exponent for the interval
+ * @interval_mantissa: the mantissa for the interval
+ * @minimum_wake_duration: the minimum duration for the wake period
+ * @trigger: is the TWT triggered or not
+ * @flow_type: is the TWT announced (0) or not (1)
+ * @flow_id: the TWT flow identifier 0 - 7
+ * @twt_protection: is the TWT protected
+ * @ndp_paging_indicator: is ndp paging indicator set
+ * @responder_pm_mode: is responder pm mode set
+ * @negotiation_type: if the responder wants to doze outside the TWT SP
+ * @twt_request: 1 for TWT request (STA), 0 for TWT response (AP)
+ * @implicit: is TWT implicit
+ * @twt_group_assignment: the TWT group assignment
+ * @twt_channel: the TWT channel
+ * @restricted_info_present: is this a restricted TWT
+ * @dl_bitmap_valid: is DL (download) bitmap valid (restricted TWT)
+ * @ul_bitmap_valid: is UL (upload) bitmap valid (restricted TWT)
+ * @dl_tid_bitmap: DL TID bitmap (restricted TWT)
+ * @ul_tid_bitmap: UL TID bitmap (restricted TWT)
+ */
+struct iwl_twt_operation_cmd {
+	__le32 link_id;
+	__le32 twt_operation;
+	__le64 target_wake_time;
+	__le32 interval_exponent;
+	__le32 interval_mantissa;
+	__le32 minimum_wake_duration;
+	u8 trigger;
+	u8 flow_type;
+	u8 flow_id;
+	u8 twt_protection;
+	u8 ndp_paging_indicator;
+	u8 responder_pm_mode;
+	u8 negotiation_type;
+	u8 twt_request;
+	u8 implicit;
+	u8 twt_group_assignment;
+	u8 twt_channel;
+	u8 restricted_info_present;
+	u8 dl_bitmap_valid;
+	u8 ul_bitmap_valid;
+	u8 dl_tid_bitmap;
+	u8 ul_tid_bitmap;
+} __packed; /* TWT_OPERATION_API_S_VER_1 */
+
+enum iwl_nan_band {
+	IWL_NAN_BAND_5GHZ = 0,
+	IWL_NAN_BAND_2GHZ = 1,
+	IWL_NUM_NAN_BANDS,
+};
+
+/**
+ * struct iwl_nan_band_config - NAN band configuration
+ *
+ * @rssi_close: RSSI threshold for close proximity in dBm
+ * @rssi_middle: RSSI threshold for middle proximity in dBm
+ * @dw_interval: Discovery Window (DW) interval for synchronization beacons and
+ *	SDFs. Valid values of DW interval are: 1, 2, 3, 4 and 5 corresponding to
+ *	1, 2, 4, 8, and 16 DWs.
+ * @reserved: reserved
+ */
+struct iwl_nan_band_config {
+	u8 rssi_close;
+	u8 rssi_middle;
+	u8 dw_interval;
+	u8 reserved;
+}; /* NAN_BAND_SPECIFIC_CONFIG_API_S_VER_1 */
+
+/**
+ * enum iwl_nan_flags - flags for NAN configuration
+ *
+ * @IWL_NAN_FLAG_DW_END_NOTIF_ENABLED: indicates that the host wants to receive
+ *	notifications when a DW ends.
+ */
+enum iwl_nan_flags {
+	IWL_NAN_FLAG_DW_END_NOTIF_ENABLED = BIT(0),
+};
+
+/**
+ * struct iwl_nan_config_cmd - NAN configuration command
+ *
+ * @action: action to perform, see &enum iwl_ctxt_action
+ * @nmi_addr: NAN Management Interface (NMI) address
+ * @reserved_for_nmi_addr: reserved
+ * @discovery_beacon_interval: discovery beacon interval in TUs
+ * @cluster_id: lower last two bytes of the cluster ID, in case the local
+ *	device starts a cluster
+ * @sta_id: station ID of the NAN station
+ * @hb_channel: channel for 5 GHz if the device supports operation on 5 GHz.
+ *	Valid values are 44 and 149, which correspond to the 5 GHz channel, and
+ *	0 which means that NAN operation on the 5 GHz band is disabled.
+ * @master_pref: master preference
+ * @dwell_time: dwell time on the discovery channel during scan (milliseconds).
+ *	If set to 0, the dwell time is determined by the firmware.
+ * @scan_period: scan period in seconds. If set to 0, the scan period is
+ *	determined by the firmware.
+ * @flags: flags for NAN configuration, see &enum iwl_nan_flags
+ * @band_config: band configuration for NAN, one for each band
+ * @nan_attr_len: length of the NAN attributes to be added to the beacon (bytes)
+ * @nan_vendor_elems_len: length of the NAN vendor elements to be added to the
+ *	beacon (bytes)
+ * @beacon_data: variable length data that contains the NAN attributes
+ *	(&nan_attr_len) followed by the NAN vendor elements
+ *	(&nan_vendor_elems_len).
+ */
+struct iwl_nan_config_cmd {
+	__le32 action;
+	u8 nmi_addr[6];
+	__le16 reserved_for_nmi_addr;
+	__le32 discovery_beacon_interval;
+
+	u8 cluster_id[2];
+	u8 sta_id;
+	u8 hb_channel;
+
+	u8 master_pref;
+	u8 dwell_time;
+	u8 scan_period;
+	u8 flags;
+
+	struct iwl_nan_band_config band_config[IWL_NUM_NAN_BANDS];
+
+	__le32 nan_attr_len;
+	__le32 nan_vendor_elems_len;
+	u8 beacon_data[];
+} __packed; /*  NAN_CONFIG_CMD_API_S_VER_1 */
+
+/**
+ * enum iwl_nan_cluster_notif_flags - flags for the cluster notification
+ *
+ * @IWL_NAN_CLUSTER_NOTIF_FLAG_NEW_CLUSTER: indicates that the device has
+ *	started a new cluster. If not set, the device has joined an existing
+ *	cluster.
+ */
+enum iwl_nan_cluster_notif_flags {
+	IWL_NAN_CLUSTER_NOTIF_FLAG_NEW_CLUSTER	= BIT(0),
+}; /* NAN_JOINED_CLUSTER_FLAG_E_VER_1 */
+
+/**
+ * struct iwl_nan_cluster_notif - event sent when the device starts or joins a
+ *	NAN cluster.
+ *
+ * @cluster_id: the last two bytes of the cluster ID
+ * @flags: combination of &enum iwl_nan_cluster_notif_flags
+ * @reserved: reserved
+ */
+struct iwl_nan_cluster_notif {
+	u8 cluster_id[2];
+	u8 flags;
+	u8 reserved;
+}; /* NAN_JOINED_CLUSTER_NTF_API_S_VER_1 */
+
+/**
+ * struct iwl_nan_dw_end_notif - sent to notify the host the end of a DW.
+ *
+ * @band: band on which the DW ended. See &enum iwl_nan_band.
+ * @reserved: reserved
+ */
+struct iwl_nan_dw_end_notif {
+	u8 band;
+	u8 reserved[3];
+} __packed; /* NAN_DW_END_NTF_API_S_VER_1 */
 
 #endif /* __iwl_fw_api_mac_cfg_h__ */

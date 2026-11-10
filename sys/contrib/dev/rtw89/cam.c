@@ -6,6 +6,7 @@
 #include "debug.h"
 #include "fw.h"
 #include "mac.h"
+#include "ps.h"
 
 static struct sk_buff *
 rtw89_cam_get_sec_key_cmd(struct rtw89_dev *rtwdev,
@@ -135,8 +136,8 @@ again:
 }
 
 static int rtw89_cam_get_addr_cam_key_idx(struct rtw89_addr_cam_entry *addr_cam,
-					  struct rtw89_sec_cam_entry *sec_cam,
-					  struct ieee80211_key_conf *key,
+					  const struct rtw89_sec_cam_entry *sec_cam,
+					  const struct ieee80211_key_conf *key,
 					  u8 *key_idx)
 {
 	u8 idx;
@@ -150,8 +151,6 @@ static int rtw89_cam_get_addr_cam_key_idx(struct rtw89_addr_cam_entry *addr_cam,
 	case RTW89_ADDR_CAM_SEC_NONE:
 		return -EINVAL;
 	case RTW89_ADDR_CAM_SEC_ALL_UNI:
-		if (!(key->flags & IEEE80211_KEY_FLAG_PAIRWISE))
-			return -EINVAL;
 		idx = find_first_zero_bit(addr_cam->sec_cam_map,
 					  RTW89_SEC_CAM_IN_ADDR_CAM);
 		if (idx >= RTW89_SEC_CAM_IN_ADDR_CAM)
@@ -213,25 +212,55 @@ static int rtw89_cam_get_addr_cam_key_idx(struct rtw89_addr_cam_entry *addr_cam,
 	return 0;
 }
 
-static int rtw89_cam_attach_sec_cam(struct rtw89_dev *rtwdev,
-				    struct ieee80211_vif *vif,
-				    struct ieee80211_sta *sta,
-				    struct ieee80211_key_conf *key,
-				    struct rtw89_sec_cam_entry *sec_cam)
+static int __rtw89_cam_detach_sec_cam(struct rtw89_dev *rtwdev,
+				      struct rtw89_vif_link *rtwvif_link,
+				      struct rtw89_sta_link *rtwsta_link,
+				      const struct rtw89_sec_cam_entry *sec_cam,
+				      bool inform_fw)
 {
-	struct rtw89_sta *rtwsta = sta_to_rtwsta_safe(sta);
-	struct rtw89_vif *rtwvif;
+	struct rtw89_addr_cam_entry *addr_cam;
+	unsigned int i;
+	int ret = 0;
+
+	addr_cam = rtw89_get_addr_cam_of(rtwvif_link, rtwsta_link);
+
+	for_each_set_bit(i, addr_cam->sec_cam_map, RTW89_SEC_CAM_IN_ADDR_CAM) {
+		if (addr_cam->sec_ent[i] != sec_cam->sec_cam_idx)
+			continue;
+
+		clear_bit(i, addr_cam->sec_cam_map);
+	}
+
+	if (inform_fw) {
+		ret = rtw89_chip_h2c_dctl_sec_cam(rtwdev, rtwvif_link, rtwsta_link);
+		if (ret)
+			rtw89_err(rtwdev,
+				  "failed to update dctl cam del key: %d\n", ret);
+		ret = rtw89_fw_h2c_cam(rtwdev, rtwvif_link, rtwsta_link, NULL,
+				       RTW89_ROLE_INFO_CHANGE);
+		if (ret)
+			rtw89_err(rtwdev, "failed to update cam del key: %d\n", ret);
+	}
+
+	return ret;
+}
+
+static int __rtw89_cam_attach_sec_cam(struct rtw89_dev *rtwdev,
+				      struct rtw89_vif_link *rtwvif_link,
+				      struct rtw89_sta_link *rtwsta_link,
+				      const struct ieee80211_key_conf *key,
+				      const struct rtw89_sec_cam_entry *sec_cam)
+{
 	struct rtw89_addr_cam_entry *addr_cam;
 	u8 key_idx = 0;
 	int ret;
 
-	if (!vif) {
-		rtw89_err(rtwdev, "No iface for adding sec cam\n");
-		return -EINVAL;
-	}
+	addr_cam = rtw89_get_addr_cam_of(rtwvif_link, rtwsta_link);
 
-	rtwvif = (struct rtw89_vif *)vif->drv_priv;
-	addr_cam = rtw89_get_addr_cam_of(rtwvif, rtwsta);
+	if (key->cipher == WLAN_CIPHER_SUITE_WEP40 ||
+	    key->cipher == WLAN_CIPHER_SUITE_WEP104)
+		addr_cam->sec_ent_mode = RTW89_ADDR_CAM_SEC_ALL_UNI;
+
 	ret = rtw89_cam_get_addr_cam_key_idx(addr_cam, sec_cam, key, &key_idx);
 	if (ret) {
 		rtw89_err(rtwdev, "failed to get addr cam key idx %d, %d\n",
@@ -239,25 +268,130 @@ static int rtw89_cam_attach_sec_cam(struct rtw89_dev *rtwdev,
 		return ret;
 	}
 
-	key->hw_key_idx = key_idx;
 	addr_cam->sec_ent_keyid[key_idx] = key->keyidx;
 	addr_cam->sec_ent[key_idx] = sec_cam->sec_cam_idx;
-	addr_cam->sec_entries[key_idx] = sec_cam;
 	set_bit(key_idx, addr_cam->sec_cam_map);
-	ret = rtw89_chip_h2c_dctl_sec_cam(rtwdev, rtwvif, rtwsta);
+	ret = rtw89_chip_h2c_dctl_sec_cam(rtwdev, rtwvif_link, rtwsta_link);
 	if (ret) {
 		rtw89_err(rtwdev, "failed to update dctl cam sec entry: %d\n",
 			  ret);
 		return ret;
 	}
-	ret = rtw89_fw_h2c_cam(rtwdev, rtwvif, rtwsta, NULL);
+	ret = rtw89_fw_h2c_cam(rtwdev, rtwvif_link, rtwsta_link, NULL,
+			       RTW89_ROLE_INFO_CHANGE);
 	if (ret) {
 		rtw89_err(rtwdev, "failed to update addr cam sec entry: %d\n",
 			  ret);
 		clear_bit(key_idx, addr_cam->sec_cam_map);
-		addr_cam->sec_entries[key_idx] = NULL;
 		return ret;
 	}
+
+	return 0;
+}
+
+int rtw89_cam_attach_link_sec_cam(struct rtw89_dev *rtwdev,
+				  struct rtw89_vif_link *rtwvif_link,
+				  struct rtw89_sta_link *rtwsta_link,
+				  u8 sec_cam_idx)
+{
+	struct rtw89_cam_info *cam_info = &rtwdev->cam_info;
+	const struct rtw89_sec_cam_entry *sec_cam;
+
+	sec_cam = cam_info->sec_entries[sec_cam_idx];
+	if (!sec_cam)
+		return -ENOENT;
+
+	return __rtw89_cam_attach_sec_cam(rtwdev, rtwvif_link, rtwsta_link,
+					  sec_cam->key_conf, sec_cam);
+}
+
+static int rtw89_cam_detach_sec_cam(struct rtw89_dev *rtwdev,
+				    struct ieee80211_vif *vif,
+				    struct ieee80211_sta *sta,
+				    const struct rtw89_sec_cam_entry *sec_cam,
+				    bool inform_fw)
+{
+	struct rtw89_sta *rtwsta = sta_to_rtwsta_safe(sta);
+	struct rtw89_sta_link *rtwsta_link;
+	struct rtw89_vif_link *rtwvif_link;
+	struct rtw89_vif *rtwvif;
+	unsigned int link_id;
+	int ret;
+
+	if (!vif) {
+		rtw89_err(rtwdev, "No iface for deleting sec cam\n");
+		return -EINVAL;
+	}
+
+	rtwvif = vif_to_rtwvif(vif);
+
+	if (rtwsta)
+		clear_bit(sec_cam->sec_cam_idx, rtwsta->pairwise_sec_cam_map);
+
+	rtw89_vif_for_each_link(rtwvif, rtwvif_link, link_id) {
+		rtwsta_link = rtwsta ? rtwsta->links[link_id] : NULL;
+		if (rtwsta && !rtwsta_link)
+			continue;
+
+		ret = __rtw89_cam_detach_sec_cam(rtwdev, rtwvif_link, rtwsta_link,
+						 sec_cam, inform_fw);
+		if (ret)
+			return ret;
+	}
+
+	return 0;
+}
+
+static int rtw89_cam_attach_sec_cam(struct rtw89_dev *rtwdev,
+				    struct ieee80211_vif *vif,
+				    struct ieee80211_sta *sta,
+				    struct ieee80211_key_conf *key,
+				    struct rtw89_sec_cam_entry *sec_cam)
+{
+	struct rtw89_sta *rtwsta = sta_to_rtwsta_safe(sta);
+	struct rtw89_sta_link *rtwsta_link;
+	struct rtw89_vif_link *rtwvif_link;
+	struct rtw89_vif *rtwvif;
+	unsigned int link_id;
+	int key_link_id;
+	int ret;
+
+	if (!vif) {
+		rtw89_err(rtwdev, "No iface for adding sec cam\n");
+		return -EINVAL;
+	}
+
+	rtwvif = vif_to_rtwvif(vif);
+
+	key_link_id = ieee80211_vif_is_mld(vif) ? key->link_id : 0;
+	if (key_link_id >= 0) {
+		rtwvif_link = rtwvif->links[key_link_id];
+		rtwsta_link = rtwsta ? rtwsta->links[key_link_id] : NULL;
+
+		if (!rtwvif_link || (rtwsta && !rtwsta_link)) {
+			rtw89_err(rtwdev, "No drv link for adding sec cam\n");
+			return -ENOLINK;
+		}
+
+		return __rtw89_cam_attach_sec_cam(rtwdev, rtwvif_link,
+						  rtwsta_link, key, sec_cam);
+	}
+
+	/* key_link_id < 0: MLD pairwise key */
+	if (!rtwsta) {
+		rtw89_err(rtwdev, "No sta for adding MLD pairwise sec cam\n");
+		return -EINVAL;
+	}
+
+	rtw89_sta_for_each_link(rtwsta, rtwsta_link, link_id) {
+		rtwvif_link = rtwsta_link->rtwvif_link;
+		ret = __rtw89_cam_attach_sec_cam(rtwdev, rtwvif_link,
+						 rtwsta_link, key, sec_cam);
+		if (ret)
+			return ret;
+	}
+
+	set_bit(sec_cam->sec_cam_idx, rtwsta->pairwise_sec_cam_map);
 
 	return 0;
 }
@@ -286,17 +420,23 @@ static int rtw89_cam_sec_key_install(struct rtw89_dev *rtwdev,
 		return ret;
 	}
 
-	sec_cam = kzalloc(sizeof(*sec_cam), GFP_KERNEL);
+	sec_cam = kzalloc_obj(*sec_cam);
 	if (!sec_cam) {
 		ret = -ENOMEM;
 		goto err_release_cam;
 	}
+
+	key->hw_key_idx = sec_cam_idx;
+	cam_info->sec_entries[sec_cam_idx] = sec_cam;
 
 	sec_cam->sec_cam_idx = sec_cam_idx;
 	sec_cam->type = hw_key_type;
 	sec_cam->len = RTW89_SEC_CAM_LEN;
 	sec_cam->ext_key = ext_key;
 	memcpy(sec_cam->key, key->key, key->keylen);
+
+	sec_cam->key_conf = key;
+
 	ret = rtw89_cam_send_sec_key_cmd(rtwdev, sec_cam);
 	if (ret) {
 		rtw89_err(rtwdev, "failed to send sec key cmd: %d\n", ret);
@@ -313,6 +453,7 @@ static int rtw89_cam_sec_key_install(struct rtw89_dev *rtwdev,
 	return 0;
 
 err_release_cam:
+	cam_info->sec_entries[sec_cam_idx] = NULL;
 	kfree(sec_cam);
 	clear_bit(sec_cam_idx, cam_info->sec_cam_map);
 	if (ext_key)
@@ -331,30 +472,49 @@ int rtw89_cam_sec_key_add(struct rtw89_dev *rtwdev,
 	bool ext_key = false;
 	int ret;
 
+	if (ieee80211_vif_is_mld(vif) && !chip->hw_mlo_bmc_crypto &&
+	    !(key->flags & IEEE80211_KEY_FLAG_PAIRWISE))
+		return -EOPNOTSUPP;
+
 	switch (key->cipher) {
 	case WLAN_CIPHER_SUITE_WEP40:
+		rtw89_leave_ips_by_hwflags(rtwdev);
 		hw_key_type = RTW89_SEC_KEY_TYPE_WEP40;
 		break;
 	case WLAN_CIPHER_SUITE_WEP104:
+		rtw89_leave_ips_by_hwflags(rtwdev);
 		hw_key_type = RTW89_SEC_KEY_TYPE_WEP104;
+		break;
+	case WLAN_CIPHER_SUITE_TKIP:
+		if (!chip->hw_tkip_crypto)
+			return -EOPNOTSUPP;
+		hw_key_type = RTW89_SEC_KEY_TYPE_TKIP;
+		key->flags |= IEEE80211_KEY_FLAG_GENERATE_MMIC;
 		break;
 	case WLAN_CIPHER_SUITE_CCMP:
 		hw_key_type = RTW89_SEC_KEY_TYPE_CCMP128;
-		key->flags |= IEEE80211_KEY_FLAG_SW_MGMT_TX;
+		if (!chip->hw_mgmt_tx_encrypt)
+			key->flags |= IEEE80211_KEY_FLAG_SW_MGMT_TX;
 		break;
 	case WLAN_CIPHER_SUITE_CCMP_256:
 		hw_key_type = RTW89_SEC_KEY_TYPE_CCMP256;
-		key->flags |= IEEE80211_KEY_FLAG_SW_MGMT_TX;
+		if (!chip->hw_mgmt_tx_encrypt)
+			key->flags |= IEEE80211_KEY_FLAG_SW_MGMT_TX;
 		ext_key = true;
 		break;
 	case WLAN_CIPHER_SUITE_GCMP:
 		hw_key_type = RTW89_SEC_KEY_TYPE_GCMP128;
-		key->flags |= IEEE80211_KEY_FLAG_SW_MGMT_TX;
+		if (!chip->hw_mgmt_tx_encrypt)
+			key->flags |= IEEE80211_KEY_FLAG_SW_MGMT_TX;
 		break;
 	case WLAN_CIPHER_SUITE_GCMP_256:
 		hw_key_type = RTW89_SEC_KEY_TYPE_GCMP256;
-		key->flags |= IEEE80211_KEY_FLAG_SW_MGMT_TX;
+		if (!chip->hw_mgmt_tx_encrypt)
+			key->flags |= IEEE80211_KEY_FLAG_SW_MGMT_TX;
 		ext_key = true;
+		break;
+	case WLAN_CIPHER_SUITE_AES_CMAC:
+		hw_key_type = RTW89_SEC_KEY_TYPE_BIP_CCMP128;
 		break;
 	default:
 		return -EOPNOTSUPP;
@@ -380,42 +540,22 @@ int rtw89_cam_sec_key_del(struct rtw89_dev *rtwdev,
 			  struct ieee80211_key_conf *key,
 			  bool inform_fw)
 {
-	struct rtw89_sta *rtwsta = sta_to_rtwsta_safe(sta);
 	struct rtw89_cam_info *cam_info = &rtwdev->cam_info;
-	struct rtw89_vif *rtwvif;
-	struct rtw89_addr_cam_entry *addr_cam;
-	struct rtw89_sec_cam_entry *sec_cam;
-	u8 key_idx = key->hw_key_idx;
+	const struct rtw89_sec_cam_entry *sec_cam;
 	u8 sec_cam_idx;
-	int ret = 0;
+	int ret;
 
-	if (!vif) {
-		rtw89_err(rtwdev, "No iface for deleting sec cam\n");
-		return -EINVAL;
-	}
-
-	rtwvif = (struct rtw89_vif *)vif->drv_priv;
-	addr_cam = rtw89_get_addr_cam_of(rtwvif, rtwsta);
-	sec_cam = addr_cam->sec_entries[key_idx];
+	sec_cam_idx = key->hw_key_idx;
+	sec_cam = cam_info->sec_entries[sec_cam_idx];
 	if (!sec_cam)
 		return -EINVAL;
 
-	/* detach sec cam from addr cam */
-	clear_bit(key_idx, addr_cam->sec_cam_map);
-	addr_cam->sec_entries[key_idx] = NULL;
-	if (inform_fw) {
-		ret = rtw89_chip_h2c_dctl_sec_cam(rtwdev, rtwvif, rtwsta);
-		if (ret)
-			rtw89_err(rtwdev, "failed to update dctl cam del key: %d\n", ret);
-		ret = rtw89_fw_h2c_cam(rtwdev, rtwvif, rtwsta, NULL);
-		if (ret)
-			rtw89_err(rtwdev, "failed to update cam del key: %d\n", ret);
-	}
+	ret = rtw89_cam_detach_sec_cam(rtwdev, vif, sta, sec_cam, inform_fw);
 
 	/* clear valid bit in addr cam will disable sec cam,
 	 * so we don't need to send H2C command again
 	 */
-	sec_cam_idx = sec_cam->sec_cam_idx;
+	cam_info->sec_entries[sec_cam_idx] = NULL;
 	clear_bit(sec_cam_idx, cam_info->sec_cam_map);
 	if (sec_cam->ext_key)
 		clear_bit(sec_cam_idx + 1, cam_info->sec_cam_map);
@@ -454,10 +594,10 @@ void rtw89_cam_deinit_bssid_cam(struct rtw89_dev *rtwdev,
 	clear_bit(bssid_cam->bssid_cam_idx, cam_info->bssid_cam_map);
 }
 
-void rtw89_cam_deinit(struct rtw89_dev *rtwdev, struct rtw89_vif *rtwvif)
+void rtw89_cam_deinit(struct rtw89_dev *rtwdev, struct rtw89_vif_link *rtwvif_link)
 {
-	struct rtw89_addr_cam_entry *addr_cam = &rtwvif->addr_cam;
-	struct rtw89_bssid_cam_entry *bssid_cam = &rtwvif->bssid_cam;
+	struct rtw89_addr_cam_entry *addr_cam = &rtwvif_link->addr_cam;
+	struct rtw89_bssid_cam_entry *bssid_cam = &rtwvif_link->bssid_cam;
 
 	rtw89_cam_deinit_addr_cam(rtwdev, addr_cam);
 	rtw89_cam_deinit_bssid_cam(rtwdev, bssid_cam);
@@ -488,6 +628,21 @@ static int rtw89_cam_get_avail_addr_cam(struct rtw89_dev *rtwdev,
 	return 0;
 }
 
+static u8 rtw89_get_addr_cam_entry_size(struct rtw89_dev *rtwdev)
+{
+	const struct rtw89_chip_info *chip = rtwdev->chip;
+
+	switch (chip->chip_id) {
+	case RTL8852A:
+	case RTL8852B:
+	case RTL8851B:
+	case RTL8852BT:
+		return ADDR_CAM_ENT_SIZE;
+	default:
+		return ADDR_CAM_ENT_SHORT_SIZE;
+	}
+}
+
 int rtw89_cam_init_addr_cam(struct rtw89_dev *rtwdev,
 			    struct rtw89_addr_cam_entry *addr_cam,
 			    const struct rtw89_bssid_cam_entry *bssid_cam)
@@ -509,7 +664,7 @@ int rtw89_cam_init_addr_cam(struct rtw89_dev *rtwdev,
 	}
 
 	addr_cam->addr_cam_idx = addr_cam_idx;
-	addr_cam->len = ADDR_CAM_ENT_SIZE;
+	addr_cam->len = rtw89_get_addr_cam_entry_size(rtwdev);
 	addr_cam->offset = 0;
 	addr_cam->valid = true;
 	addr_cam->addr_mask = 0;
@@ -547,7 +702,7 @@ static int rtw89_cam_get_avail_bssid_cam(struct rtw89_dev *rtwdev,
 }
 
 int rtw89_cam_init_bssid_cam(struct rtw89_dev *rtwdev,
-			     struct rtw89_vif *rtwvif,
+			     struct rtw89_vif_link *rtwvif_link,
 			     struct rtw89_bssid_cam_entry *bssid_cam,
 			     const u8 *bssid)
 {
@@ -567,7 +722,7 @@ int rtw89_cam_init_bssid_cam(struct rtw89_dev *rtwdev,
 	}
 
 	bssid_cam->bssid_cam_idx = bssid_cam_idx;
-	bssid_cam->phy_idx = rtwvif->phy_idx;
+	bssid_cam->phy_idx = rtwvif_link->phy_idx;
 	bssid_cam->len = BSSID_CAM_ENT_SIZE;
 	bssid_cam->offset = 0;
 	bssid_cam->valid = true;
@@ -576,20 +731,21 @@ int rtw89_cam_init_bssid_cam(struct rtw89_dev *rtwdev,
 	return 0;
 }
 
-void rtw89_cam_bssid_changed(struct rtw89_dev *rtwdev, struct rtw89_vif *rtwvif)
+void rtw89_cam_bssid_changed(struct rtw89_dev *rtwdev, struct rtw89_vif_link *rtwvif_link)
 {
-	struct rtw89_bssid_cam_entry *bssid_cam = &rtwvif->bssid_cam;
+	struct rtw89_bssid_cam_entry *bssid_cam = &rtwvif_link->bssid_cam;
 
-	ether_addr_copy(bssid_cam->bssid, rtwvif->bssid);
+	ether_addr_copy(bssid_cam->bssid, rtwvif_link->bssid);
 }
 
-int rtw89_cam_init(struct rtw89_dev *rtwdev, struct rtw89_vif *rtwvif)
+int rtw89_cam_init(struct rtw89_dev *rtwdev, struct rtw89_vif_link *rtwvif_link)
 {
-	struct rtw89_addr_cam_entry *addr_cam = &rtwvif->addr_cam;
-	struct rtw89_bssid_cam_entry *bssid_cam = &rtwvif->bssid_cam;
+	struct rtw89_addr_cam_entry *addr_cam = &rtwvif_link->addr_cam;
+	struct rtw89_bssid_cam_entry *bssid_cam = &rtwvif_link->bssid_cam;
 	int ret;
 
-	ret = rtw89_cam_init_bssid_cam(rtwdev, rtwvif, bssid_cam, rtwvif->bssid);
+	ret = rtw89_cam_init_bssid_cam(rtwdev, rtwvif_link, bssid_cam,
+				       rtwvif_link->bssid);
 	if (ret) {
 		rtw89_err(rtwdev, "failed to init bssid cam\n");
 		return ret;
@@ -605,33 +761,41 @@ int rtw89_cam_init(struct rtw89_dev *rtwdev, struct rtw89_vif *rtwvif)
 }
 
 int rtw89_cam_fill_bssid_cam_info(struct rtw89_dev *rtwdev,
-				  struct rtw89_vif *rtwvif,
-				  struct rtw89_sta *rtwsta, u8 *cmd)
+				  struct rtw89_vif_link *rtwvif_link,
+				  struct rtw89_sta_link *rtwsta_link,
+				  struct rtw89_h2c_addr_cam_v0 *h2c)
 {
-	struct ieee80211_vif *vif = rtwvif_to_vif(rtwvif);
-	struct rtw89_bssid_cam_entry *bssid_cam = rtw89_get_bssid_cam_of(rtwvif, rtwsta);
-	u8 bss_color = vif->bss_conf.he_bss_color.color;
+	struct rtw89_bssid_cam_entry *bssid_cam = rtw89_get_bssid_cam_of(rtwvif_link,
+									 rtwsta_link);
+	struct ieee80211_bss_conf *bss_conf;
+	u8 bss_color;
 	u8 bss_mask;
 
-	if (vif->bss_conf.nontransmitted)
+	rcu_read_lock();
+
+	bss_conf = rtw89_vif_rcu_dereference_link(rtwvif_link, false);
+	bss_color = bss_conf->he_bss_color.color;
+
+	if (bss_conf->nontransmitted)
 		bss_mask = RTW89_BSSID_MATCH_5_BYTES;
 	else
 		bss_mask = RTW89_BSSID_MATCH_ALL;
 
-	FWCMD_SET_ADDR_BSSID_IDX(cmd, bssid_cam->bssid_cam_idx);
-	FWCMD_SET_ADDR_BSSID_OFFSET(cmd, bssid_cam->offset);
-	FWCMD_SET_ADDR_BSSID_LEN(cmd, bssid_cam->len);
-	FWCMD_SET_ADDR_BSSID_VALID(cmd, bssid_cam->valid);
-	FWCMD_SET_ADDR_BSSID_MASK(cmd, bss_mask);
-	FWCMD_SET_ADDR_BSSID_BB_SEL(cmd, bssid_cam->phy_idx);
-	FWCMD_SET_ADDR_BSSID_BSS_COLOR(cmd, bss_color);
+	rcu_read_unlock();
 
-	FWCMD_SET_ADDR_BSSID_BSSID0(cmd, bssid_cam->bssid[0]);
-	FWCMD_SET_ADDR_BSSID_BSSID1(cmd, bssid_cam->bssid[1]);
-	FWCMD_SET_ADDR_BSSID_BSSID2(cmd, bssid_cam->bssid[2]);
-	FWCMD_SET_ADDR_BSSID_BSSID3(cmd, bssid_cam->bssid[3]);
-	FWCMD_SET_ADDR_BSSID_BSSID4(cmd, bssid_cam->bssid[4]);
-	FWCMD_SET_ADDR_BSSID_BSSID5(cmd, bssid_cam->bssid[5]);
+	h2c->w12 = le32_encode_bits(bssid_cam->bssid_cam_idx, ADDR_CAM_W12_BSSID_IDX) |
+		   le32_encode_bits(bssid_cam->offset, ADDR_CAM_W12_BSSID_OFFSET) |
+		   le32_encode_bits(bssid_cam->len, ADDR_CAM_W12_BSSID_LEN);
+	h2c->w13 = le32_encode_bits(bssid_cam->valid, ADDR_CAM_W13_BSSID_VALID) |
+		   le32_encode_bits(bss_mask, ADDR_CAM_W13_BSSID_MASK) |
+		   le32_encode_bits(bssid_cam->phy_idx, ADDR_CAM_W13_BSSID_BB_SEL) |
+		   le32_encode_bits(bss_color, ADDR_CAM_W13_BSSID_BSS_COLOR) |
+		   le32_encode_bits(bssid_cam->bssid[0], ADDR_CAM_W13_BSSID_BSSID0) |
+		   le32_encode_bits(bssid_cam->bssid[1], ADDR_CAM_W13_BSSID_BSSID1);
+	h2c->w14 = le32_encode_bits(bssid_cam->bssid[2], ADDR_CAM_W14_BSSID_BSSID2) |
+		   le32_encode_bits(bssid_cam->bssid[3], ADDR_CAM_W14_BSSID_BSSID3) |
+		   le32_encode_bits(bssid_cam->bssid[4], ADDR_CAM_W14_BSSID_BSSID4) |
+		   le32_encode_bits(bssid_cam->bssid[5], ADDR_CAM_W14_BSSID_BSSID5);
 
 	return 0;
 }
@@ -648,19 +812,33 @@ static u8 rtw89_cam_addr_hash(u8 start, const u8 *addr)
 }
 
 void rtw89_cam_fill_addr_cam_info(struct rtw89_dev *rtwdev,
-				  struct rtw89_vif *rtwvif,
-				  struct rtw89_sta *rtwsta,
+				  struct rtw89_vif_link *rtwvif_link,
+				  struct rtw89_sta_link *rtwsta_link,
 				  const u8 *scan_mac_addr,
-				  u8 *cmd)
+				  struct rtw89_h2c_addr_cam_v0 *h2c)
 {
-	struct ieee80211_vif *vif = rtwvif_to_vif(rtwvif);
-	struct rtw89_addr_cam_entry *addr_cam = rtw89_get_addr_cam_of(rtwvif, rtwsta);
-	struct ieee80211_sta *sta = rtwsta_to_sta_safe(rtwsta);
-	const u8 *sma = scan_mac_addr ? scan_mac_addr : rtwvif->mac_addr;
+	struct ieee80211_vif *vif = rtwvif_link_to_vif(rtwvif_link);
+	struct rtw89_addr_cam_entry *addr_cam =
+		rtw89_get_addr_cam_of(rtwvif_link, rtwsta_link);
+	struct ieee80211_sta *sta = rtwsta_link_to_sta_safe(rtwsta_link);
+	const struct rtw89_chip_info *chip = rtwdev->chip;
+	struct ieee80211_link_sta *link_sta;
+	const u8 *sma = scan_mac_addr ? scan_mac_addr : rtwvif_link->mac_addr;
 	u8 sma_hash, tma_hash, addr_msk_start;
+	u8 ver = chip->addrcam_ver;
 	u8 sma_start = 0;
 	u8 tma_start = 0;
-	u8 *tma = sta ? sta->addr : rtwvif->bssid;
+	const u8 *tma;
+	u8 mac_id;
+
+	rcu_read_lock();
+
+	if (sta) {
+		link_sta = rtw89_sta_rcu_dereference_link(rtwsta_link, true);
+		tma = link_sta->addr;
+	} else {
+		tma = rtwvif_link->bssid;
+	}
 
 	if (addr_cam->addr_mask != 0) {
 		addr_msk_start = __ffs(addr_cam->addr_mask);
@@ -672,94 +850,427 @@ void rtw89_cam_fill_addr_cam_info(struct rtw89_dev *rtwdev,
 	sma_hash = rtw89_cam_addr_hash(sma_start, sma);
 	tma_hash = rtw89_cam_addr_hash(tma_start, tma);
 
-	FWCMD_SET_ADDR_IDX(cmd, addr_cam->addr_cam_idx);
-	FWCMD_SET_ADDR_OFFSET(cmd, addr_cam->offset);
-	FWCMD_SET_ADDR_LEN(cmd, addr_cam->len);
+	mac_id = rtwsta_link ? rtwsta_link->mac_id : rtwvif_link->mac_id;
 
-	FWCMD_SET_ADDR_VALID(cmd, addr_cam->valid);
-	FWCMD_SET_ADDR_NET_TYPE(cmd, rtwvif->net_type);
-	FWCMD_SET_ADDR_BCN_HIT_COND(cmd, rtwvif->bcn_hit_cond);
-	FWCMD_SET_ADDR_HIT_RULE(cmd, rtwvif->hit_rule);
-	FWCMD_SET_ADDR_BB_SEL(cmd, rtwvif->phy_idx);
-	FWCMD_SET_ADDR_ADDR_MASK(cmd, addr_cam->addr_mask);
-	FWCMD_SET_ADDR_MASK_SEL(cmd, addr_cam->mask_sel);
-	FWCMD_SET_ADDR_SMA_HASH(cmd, sma_hash);
-	FWCMD_SET_ADDR_TMA_HASH(cmd, tma_hash);
+	if (ver == 0)
+		h2c->w1 = le32_encode_bits(addr_cam->addr_cam_idx, ADDR_CAM_W1_IDX) |
+			  le32_encode_bits(addr_cam->offset, ADDR_CAM_W1_OFFSET) |
+			  le32_encode_bits(addr_cam->len, ADDR_CAM_W1_LEN);
+	else
+		h2c->w1 = le32_encode_bits(addr_cam->addr_cam_idx, ADDR_CAM_W1_V1_IDX) |
+			  le32_encode_bits(addr_cam->offset, ADDR_CAM_W1_V1_OFFSET) |
+			  le32_encode_bits(addr_cam->len, ADDR_CAM_W1_V1_LEN);
 
-	FWCMD_SET_ADDR_BSSID_CAM_IDX(cmd, addr_cam->bssid_cam_idx);
+	h2c->w2 = le32_encode_bits(addr_cam->valid, ADDR_CAM_W2_VALID) |
+		  le32_encode_bits(rtwvif_link->net_type, ADDR_CAM_W2_NET_TYPE) |
+		  le32_encode_bits(rtwvif_link->bcn_hit_cond, ADDR_CAM_W2_BCN_HIT_COND) |
+		  le32_encode_bits(rtwvif_link->hit_rule, ADDR_CAM_W2_HIT_RULE) |
+		  le32_encode_bits(rtwvif_link->phy_idx, ADDR_CAM_W2_BB_SEL) |
+		  le32_encode_bits(addr_cam->addr_mask, ADDR_CAM_W2_ADDR_MASK) |
+		  le32_encode_bits(addr_cam->mask_sel, ADDR_CAM_W2_MASK_SEL) |
+		  le32_encode_bits(sma_hash, ADDR_CAM_W2_SMA_HASH) |
+		  le32_encode_bits(tma_hash, ADDR_CAM_W2_TMA_HASH);
+	h2c->w3 = le32_encode_bits(addr_cam->bssid_cam_idx, ADDR_CAM_W3_BSSID_CAM_IDX);
+	h2c->w4 = le32_encode_bits(sma[0], ADDR_CAM_W4_SMA0) |
+		  le32_encode_bits(sma[1], ADDR_CAM_W4_SMA1) |
+		  le32_encode_bits(sma[2], ADDR_CAM_W4_SMA2) |
+		  le32_encode_bits(sma[3], ADDR_CAM_W4_SMA3);
+	h2c->w5 = le32_encode_bits(sma[4], ADDR_CAM_W5_SMA4) |
+		  le32_encode_bits(sma[5], ADDR_CAM_W5_SMA5) |
+		  le32_encode_bits(tma[0], ADDR_CAM_W5_TMA0) |
+		  le32_encode_bits(tma[1], ADDR_CAM_W5_TMA1);
+	h2c->w6 = le32_encode_bits(tma[2], ADDR_CAM_W6_TMA2) |
+		  le32_encode_bits(tma[3], ADDR_CAM_W6_TMA3) |
+		  le32_encode_bits(tma[4], ADDR_CAM_W6_TMA4) |
+		  le32_encode_bits(tma[5], ADDR_CAM_W6_TMA5);
+	if (ver == 0)
+		h2c->w8 = le32_encode_bits(rtwvif_link->port, ADDR_CAM_W8_PORT_INT) |
+			  le32_encode_bits(rtwvif_link->port, ADDR_CAM_W8_TSF_SYNC) |
+			  le32_encode_bits(rtwvif_link->trigger, ADDR_CAM_W8_TF_TRS) |
+			  le32_encode_bits(rtwvif_link->lsig_txop, ADDR_CAM_W8_LSIG_TXOP) |
+			  le32_encode_bits(rtwvif_link->tgt_ind, ADDR_CAM_W8_TGT_IND) |
+			  le32_encode_bits(rtwvif_link->frm_tgt_ind, ADDR_CAM_W8_FRM_TGT_IND) |
+			  le32_encode_bits(mac_id, ADDR_CAM_W8_MACID);
+	else
+		h2c->w8 = le32_encode_bits(rtwvif_link->port, ADDR_CAM_W8_V1_PORT_INT) |
+			  le32_encode_bits(rtwvif_link->port, ADDR_CAM_W8_V1_TSF_SYNC) |
+			  le32_encode_bits(rtwvif_link->trigger, ADDR_CAM_W8_V1_TF_TRS) |
+			  le32_encode_bits(rtwvif_link->lsig_txop, ADDR_CAM_W8_V1_LSIG_TXOP) |
+			  le32_encode_bits(mac_id, ADDR_CAM_W8_V1_MACID);
 
-	FWCMD_SET_ADDR_SMA0(cmd, sma[0]);
-	FWCMD_SET_ADDR_SMA1(cmd, sma[1]);
-	FWCMD_SET_ADDR_SMA2(cmd, sma[2]);
-	FWCMD_SET_ADDR_SMA3(cmd, sma[3]);
-	FWCMD_SET_ADDR_SMA4(cmd, sma[4]);
-	FWCMD_SET_ADDR_SMA5(cmd, sma[5]);
+	if (rtwvif_link->net_type == RTW89_NET_TYPE_INFRA)
+		h2c->w9 = le32_encode_bits(vif->cfg.aid & 0xfff, ADDR_CAM_W9_AID12);
+	else if (rtwvif_link->net_type == RTW89_NET_TYPE_AP_MODE)
+		h2c->w9 = le32_encode_bits(sta ? sta->aid & 0xfff : 0, ADDR_CAM_W9_AID12);
 
-	FWCMD_SET_ADDR_TMA0(cmd, tma[0]);
-	FWCMD_SET_ADDR_TMA1(cmd, tma[1]);
-	FWCMD_SET_ADDR_TMA2(cmd, tma[2]);
-	FWCMD_SET_ADDR_TMA3(cmd, tma[3]);
-	FWCMD_SET_ADDR_TMA4(cmd, tma[4]);
-	FWCMD_SET_ADDR_TMA5(cmd, tma[5]);
+	h2c->w9 |= le32_encode_bits(rtwvif_link->wowlan_pattern, ADDR_CAM_W9_WOL_PATTERN) |
+		   le32_encode_bits(rtwvif_link->wowlan_uc, ADDR_CAM_W9_WOL_UC) |
+		   le32_encode_bits(rtwvif_link->wowlan_magic, ADDR_CAM_W9_WOL_MAGIC) |
+		   le32_encode_bits(addr_cam->wapi, ADDR_CAM_W9_WAPI) |
+		   le32_encode_bits(addr_cam->sec_ent_mode, ADDR_CAM_W9_SEC_ENT_MODE) |
+		   le32_encode_bits(addr_cam->sec_ent_keyid[0], ADDR_CAM_W9_SEC_ENT0_KEYID) |
+		   le32_encode_bits(addr_cam->sec_ent_keyid[1], ADDR_CAM_W9_SEC_ENT1_KEYID) |
+		   le32_encode_bits(addr_cam->sec_ent_keyid[2], ADDR_CAM_W9_SEC_ENT2_KEYID) |
+		   le32_encode_bits(addr_cam->sec_ent_keyid[3], ADDR_CAM_W9_SEC_ENT3_KEYID) |
+		   le32_encode_bits(addr_cam->sec_ent_keyid[4], ADDR_CAM_W9_SEC_ENT4_KEYID) |
+		   le32_encode_bits(addr_cam->sec_ent_keyid[5], ADDR_CAM_W9_SEC_ENT5_KEYID) |
+		   le32_encode_bits(addr_cam->sec_ent_keyid[6], ADDR_CAM_W9_SEC_ENT6_KEYID);
+	h2c->w10 = le32_encode_bits(addr_cam->sec_cam_map[0] & 0xff, ADDR_CAM_W10_SEC_ENT_VALID) |
+		   le32_encode_bits(addr_cam->sec_ent[0], ADDR_CAM_W10_SEC_ENT0) |
+		   le32_encode_bits(addr_cam->sec_ent[1], ADDR_CAM_W10_SEC_ENT1) |
+		   le32_encode_bits(addr_cam->sec_ent[2], ADDR_CAM_W10_SEC_ENT2);
+	h2c->w11 = le32_encode_bits(addr_cam->sec_ent[3], ADDR_CAM_W11_SEC_ENT3) |
+		   le32_encode_bits(addr_cam->sec_ent[4], ADDR_CAM_W11_SEC_ENT4) |
+		   le32_encode_bits(addr_cam->sec_ent[5], ADDR_CAM_W11_SEC_ENT5) |
+		   le32_encode_bits(addr_cam->sec_ent[6], ADDR_CAM_W11_SEC_ENT6);
 
-	FWCMD_SET_ADDR_PORT_INT(cmd, rtwvif->port);
-	FWCMD_SET_ADDR_TSF_SYNC(cmd, rtwvif->port);
-	FWCMD_SET_ADDR_TF_TRS(cmd, rtwvif->trigger);
-	FWCMD_SET_ADDR_LSIG_TXOP(cmd, rtwvif->lsig_txop);
-	FWCMD_SET_ADDR_TGT_IND(cmd, rtwvif->tgt_ind);
-	FWCMD_SET_ADDR_FRM_TGT_IND(cmd, rtwvif->frm_tgt_ind);
-	FWCMD_SET_ADDR_MACID(cmd, rtwsta ? rtwsta->mac_id : rtwvif->mac_id);
-	if (rtwvif->net_type == RTW89_NET_TYPE_INFRA)
-		FWCMD_SET_ADDR_AID12(cmd, vif->cfg.aid & 0xfff);
-	else if (rtwvif->net_type == RTW89_NET_TYPE_AP_MODE)
-		FWCMD_SET_ADDR_AID12(cmd, sta ? sta->aid & 0xfff : 0);
-	FWCMD_SET_ADDR_WOL_PATTERN(cmd, rtwvif->wowlan_pattern);
-	FWCMD_SET_ADDR_WOL_UC(cmd, rtwvif->wowlan_uc);
-	FWCMD_SET_ADDR_WOL_MAGIC(cmd, rtwvif->wowlan_magic);
-	FWCMD_SET_ADDR_WAPI(cmd, addr_cam->wapi);
-	FWCMD_SET_ADDR_SEC_ENT_MODE(cmd, addr_cam->sec_ent_mode);
-	FWCMD_SET_ADDR_SEC_ENT0_KEYID(cmd, addr_cam->sec_ent_keyid[0]);
-	FWCMD_SET_ADDR_SEC_ENT1_KEYID(cmd, addr_cam->sec_ent_keyid[1]);
-	FWCMD_SET_ADDR_SEC_ENT2_KEYID(cmd, addr_cam->sec_ent_keyid[2]);
-	FWCMD_SET_ADDR_SEC_ENT3_KEYID(cmd, addr_cam->sec_ent_keyid[3]);
-	FWCMD_SET_ADDR_SEC_ENT4_KEYID(cmd, addr_cam->sec_ent_keyid[4]);
-	FWCMD_SET_ADDR_SEC_ENT5_KEYID(cmd, addr_cam->sec_ent_keyid[5]);
-	FWCMD_SET_ADDR_SEC_ENT6_KEYID(cmd, addr_cam->sec_ent_keyid[6]);
-
-	FWCMD_SET_ADDR_SEC_ENT_VALID(cmd, addr_cam->sec_cam_map[0] & 0xff);
-	FWCMD_SET_ADDR_SEC_ENT0(cmd, addr_cam->sec_ent[0]);
-	FWCMD_SET_ADDR_SEC_ENT1(cmd, addr_cam->sec_ent[1]);
-	FWCMD_SET_ADDR_SEC_ENT2(cmd, addr_cam->sec_ent[2]);
-	FWCMD_SET_ADDR_SEC_ENT3(cmd, addr_cam->sec_ent[3]);
-	FWCMD_SET_ADDR_SEC_ENT4(cmd, addr_cam->sec_ent[4]);
-	FWCMD_SET_ADDR_SEC_ENT5(cmd, addr_cam->sec_ent[5]);
-	FWCMD_SET_ADDR_SEC_ENT6(cmd, addr_cam->sec_ent[6]);
+	rcu_read_unlock();
 }
 
 void rtw89_cam_fill_dctl_sec_cam_info_v1(struct rtw89_dev *rtwdev,
-					 struct rtw89_vif *rtwvif,
-					 struct rtw89_sta *rtwsta,
-					 u8 *cmd)
+					 struct rtw89_vif_link *rtwvif_link,
+					 struct rtw89_sta_link *rtwsta_link,
+					 struct rtw89_h2c_dctlinfo_ud_v1 *h2c)
 {
-	struct rtw89_addr_cam_entry *addr_cam = rtw89_get_addr_cam_of(rtwvif, rtwsta);
+	struct rtw89_addr_cam_entry *addr_cam =
+		rtw89_get_addr_cam_of(rtwvif_link, rtwsta_link);
+	struct rtw89_wow_param *rtw_wow = &rtwdev->wow;
+	u8 *ptk_tx_iv = rtw_wow->key_info.ptk_tx_iv;
 
-	SET_DCTL_MACID_V1(cmd, rtwsta ? rtwsta->mac_id : rtwvif->mac_id);
-	SET_DCTL_OPERATION_V1(cmd, 1);
+	h2c->c0 = le32_encode_bits(rtwsta_link ? rtwsta_link->mac_id :
+						 rtwvif_link->mac_id,
+				   DCTLINFO_V1_C0_MACID) |
+		  le32_encode_bits(1, DCTLINFO_V1_C0_OP);
 
-	SET_DCTL_SEC_ENT0_KEYID_V1(cmd, addr_cam->sec_ent_keyid[0]);
-	SET_DCTL_SEC_ENT1_KEYID_V1(cmd, addr_cam->sec_ent_keyid[1]);
-	SET_DCTL_SEC_ENT2_KEYID_V1(cmd, addr_cam->sec_ent_keyid[2]);
-	SET_DCTL_SEC_ENT3_KEYID_V1(cmd, addr_cam->sec_ent_keyid[3]);
-	SET_DCTL_SEC_ENT4_KEYID_V1(cmd, addr_cam->sec_ent_keyid[4]);
-	SET_DCTL_SEC_ENT5_KEYID_V1(cmd, addr_cam->sec_ent_keyid[5]);
-	SET_DCTL_SEC_ENT6_KEYID_V1(cmd, addr_cam->sec_ent_keyid[6]);
+	h2c->w4 = le32_encode_bits(addr_cam->sec_ent_keyid[0],
+				   DCTLINFO_V1_W4_SEC_ENT0_KEYID) |
+		  le32_encode_bits(addr_cam->sec_ent_keyid[1],
+				   DCTLINFO_V1_W4_SEC_ENT1_KEYID) |
+		  le32_encode_bits(addr_cam->sec_ent_keyid[2],
+				   DCTLINFO_V1_W4_SEC_ENT2_KEYID) |
+		  le32_encode_bits(addr_cam->sec_ent_keyid[3],
+				   DCTLINFO_V1_W4_SEC_ENT3_KEYID) |
+		  le32_encode_bits(addr_cam->sec_ent_keyid[4],
+				   DCTLINFO_V1_W4_SEC_ENT4_KEYID) |
+		  le32_encode_bits(addr_cam->sec_ent_keyid[5],
+				   DCTLINFO_V1_W4_SEC_ENT5_KEYID) |
+		  le32_encode_bits(addr_cam->sec_ent_keyid[6],
+				   DCTLINFO_V1_W4_SEC_ENT6_KEYID);
+	h2c->m4 = cpu_to_le32(DCTLINFO_V1_W4_SEC_ENT0_KEYID |
+			      DCTLINFO_V1_W4_SEC_ENT1_KEYID |
+			      DCTLINFO_V1_W4_SEC_ENT2_KEYID |
+			      DCTLINFO_V1_W4_SEC_ENT3_KEYID |
+			      DCTLINFO_V1_W4_SEC_ENT4_KEYID |
+			      DCTLINFO_V1_W4_SEC_ENT5_KEYID |
+			      DCTLINFO_V1_W4_SEC_ENT6_KEYID);
 
-	SET_DCTL_SEC_ENT_VALID_V1(cmd, addr_cam->sec_cam_map[0] & 0xff);
-	SET_DCTL_SEC_ENT0_V1(cmd, addr_cam->sec_ent[0]);
-	SET_DCTL_SEC_ENT1_V1(cmd, addr_cam->sec_ent[1]);
-	SET_DCTL_SEC_ENT2_V1(cmd, addr_cam->sec_ent[2]);
-	SET_DCTL_SEC_ENT3_V1(cmd, addr_cam->sec_ent[3]);
-	SET_DCTL_SEC_ENT4_V1(cmd, addr_cam->sec_ent[4]);
-	SET_DCTL_SEC_ENT5_V1(cmd, addr_cam->sec_ent[5]);
-	SET_DCTL_SEC_ENT6_V1(cmd, addr_cam->sec_ent[6]);
+	h2c->w5 = le32_encode_bits(addr_cam->sec_cam_map[0] & 0xff,
+				   DCTLINFO_V1_W5_SEC_ENT_VALID) |
+		  le32_encode_bits(addr_cam->sec_ent[0],
+				   DCTLINFO_V1_W5_SEC_ENT0) |
+		  le32_encode_bits(addr_cam->sec_ent[1],
+				   DCTLINFO_V1_W5_SEC_ENT1) |
+		  le32_encode_bits(addr_cam->sec_ent[2],
+				   DCTLINFO_V1_W5_SEC_ENT2);
+	h2c->m5 = cpu_to_le32(DCTLINFO_V1_W5_SEC_ENT_VALID |
+			      DCTLINFO_V1_W5_SEC_ENT0      |
+			      DCTLINFO_V1_W5_SEC_ENT1      |
+			      DCTLINFO_V1_W5_SEC_ENT2);
+
+	h2c->w6 = le32_encode_bits(addr_cam->sec_ent[3],
+				   DCTLINFO_V1_W6_SEC_ENT3) |
+		  le32_encode_bits(addr_cam->sec_ent[4],
+				   DCTLINFO_V1_W6_SEC_ENT4) |
+		  le32_encode_bits(addr_cam->sec_ent[5],
+				   DCTLINFO_V1_W6_SEC_ENT5) |
+		  le32_encode_bits(addr_cam->sec_ent[6],
+				   DCTLINFO_V1_W6_SEC_ENT6);
+	h2c->m6 = cpu_to_le32(DCTLINFO_V1_W6_SEC_ENT3 |
+			      DCTLINFO_V1_W6_SEC_ENT4 |
+			      DCTLINFO_V1_W6_SEC_ENT5 |
+			      DCTLINFO_V1_W6_SEC_ENT6);
+
+	if (rtw_wow->ptk_alg) {
+		h2c->w0 = le32_encode_bits(ptk_tx_iv[0] | ptk_tx_iv[1] << 8,
+					   DCTLINFO_V1_W0_AES_IV_L);
+		h2c->m0 = cpu_to_le32(DCTLINFO_V1_W0_AES_IV_L);
+
+		h2c->w1 = le32_encode_bits(ptk_tx_iv[4]       |
+					   ptk_tx_iv[5] << 8  |
+					   ptk_tx_iv[6] << 16 |
+					   ptk_tx_iv[7] << 24,
+					   DCTLINFO_V1_W1_AES_IV_H);
+		h2c->m1 = cpu_to_le32(DCTLINFO_V1_W1_AES_IV_H);
+
+		h2c->w4 |= le32_encode_bits(rtw_wow->ptk_keyidx,
+					    DCTLINFO_V1_W4_SEC_KEY_ID);
+		h2c->m4 |= cpu_to_le32(DCTLINFO_V1_W4_SEC_KEY_ID);
+	}
+}
+
+void rtw89_cam_fill_dctl_sec_cam_info_v2(struct rtw89_dev *rtwdev,
+					 struct rtw89_vif_link *rtwvif_link,
+					 struct rtw89_sta_link *rtwsta_link,
+					 struct rtw89_h2c_dctlinfo_ud_v2 *h2c)
+{
+	struct ieee80211_sta *sta = rtwsta_link_to_sta_safe(rtwsta_link);
+	struct ieee80211_vif *vif = rtwvif_to_vif(rtwvif_link->rtwvif);
+	struct rtw89_vif *rtwvif = rtwvif_link->rtwvif;
+	struct rtw89_addr_cam_entry *addr_cam =
+		rtw89_get_addr_cam_of(rtwvif_link, rtwsta_link);
+	bool is_mld = sta ? sta->mlo : ieee80211_vif_is_mld(vif);
+	struct rtw89_wow_param *rtw_wow = &rtwdev->wow;
+	u8 *ptk_tx_iv = rtw_wow->key_info.ptk_tx_iv;
+	u8 *mld_sma, *mld_tma, *mld_bssid;
+
+	h2c->c0 = le32_encode_bits(rtwsta_link ? rtwsta_link->mac_id :
+						 rtwvif_link->mac_id,
+				   DCTLINFO_V2_C0_MACID) |
+		  le32_encode_bits(1, DCTLINFO_V2_C0_OP);
+
+	h2c->w2 = le32_encode_bits(is_mld, DCTLINFO_V2_W2_IS_MLD);
+	h2c->m2 = cpu_to_le32(DCTLINFO_V2_W2_IS_MLD);
+
+	h2c->w4 = le32_encode_bits(addr_cam->sec_ent_keyid[0],
+				   DCTLINFO_V2_W4_SEC_ENT0_KEYID) |
+		  le32_encode_bits(addr_cam->sec_ent_keyid[1],
+				   DCTLINFO_V2_W4_SEC_ENT1_KEYID) |
+		  le32_encode_bits(addr_cam->sec_ent_keyid[2],
+				   DCTLINFO_V2_W4_SEC_ENT2_KEYID) |
+		  le32_encode_bits(addr_cam->sec_ent_keyid[3],
+				   DCTLINFO_V2_W4_SEC_ENT3_KEYID) |
+		  le32_encode_bits(addr_cam->sec_ent_keyid[4],
+				   DCTLINFO_V2_W4_SEC_ENT4_KEYID) |
+		  le32_encode_bits(addr_cam->sec_ent_keyid[5],
+				   DCTLINFO_V2_W4_SEC_ENT5_KEYID) |
+		  le32_encode_bits(addr_cam->sec_ent_keyid[6],
+				   DCTLINFO_V2_W4_SEC_ENT6_KEYID);
+	h2c->m4 = cpu_to_le32(DCTLINFO_V2_W4_SEC_ENT0_KEYID |
+			      DCTLINFO_V2_W4_SEC_ENT1_KEYID |
+			      DCTLINFO_V2_W4_SEC_ENT2_KEYID |
+			      DCTLINFO_V2_W4_SEC_ENT3_KEYID |
+			      DCTLINFO_V2_W4_SEC_ENT4_KEYID |
+			      DCTLINFO_V2_W4_SEC_ENT5_KEYID |
+			      DCTLINFO_V2_W4_SEC_ENT6_KEYID);
+
+	h2c->w5 = le32_encode_bits(addr_cam->sec_cam_map[0],
+				   DCTLINFO_V2_W5_SEC_ENT_VALID_V1) |
+		  le32_encode_bits(addr_cam->sec_ent[0],
+				   DCTLINFO_V2_W5_SEC_ENT0_V1);
+	h2c->m5 = cpu_to_le32(DCTLINFO_V2_W5_SEC_ENT_VALID_V1 |
+			      DCTLINFO_V2_W5_SEC_ENT0_V1);
+
+	h2c->w6 = le32_encode_bits(addr_cam->sec_ent[1],
+				   DCTLINFO_V2_W6_SEC_ENT1_V1) |
+		  le32_encode_bits(addr_cam->sec_ent[2],
+				   DCTLINFO_V2_W6_SEC_ENT2_V1) |
+		  le32_encode_bits(addr_cam->sec_ent[3],
+				   DCTLINFO_V2_W6_SEC_ENT3_V1) |
+		  le32_encode_bits(addr_cam->sec_ent[4],
+				   DCTLINFO_V2_W6_SEC_ENT4_V1);
+	h2c->m6 = cpu_to_le32(DCTLINFO_V2_W6_SEC_ENT1_V1 |
+			      DCTLINFO_V2_W6_SEC_ENT2_V1 |
+			      DCTLINFO_V2_W6_SEC_ENT3_V1 |
+			      DCTLINFO_V2_W6_SEC_ENT4_V1);
+
+	h2c->w7 = le32_encode_bits(addr_cam->sec_ent[5],
+				   DCTLINFO_V2_W7_SEC_ENT5_V1) |
+		  le32_encode_bits(addr_cam->sec_ent[6],
+				   DCTLINFO_V2_W7_SEC_ENT6_V1);
+	h2c->m7 = cpu_to_le32(DCTLINFO_V2_W7_SEC_ENT5_V1 |
+			      DCTLINFO_V2_W7_SEC_ENT6_V1);
+
+	if (rtw_wow->ptk_alg) {
+		h2c->w0 = le32_encode_bits(ptk_tx_iv[0] | ptk_tx_iv[1] << 8,
+					   DCTLINFO_V2_W0_AES_IV_L);
+		h2c->m0 = cpu_to_le32(DCTLINFO_V2_W0_AES_IV_L);
+
+		h2c->w1 = le32_encode_bits(ptk_tx_iv[4] |
+					   ptk_tx_iv[5] << 8 |
+					   ptk_tx_iv[6] << 16 |
+					   ptk_tx_iv[7] << 24,
+					   DCTLINFO_V2_W1_AES_IV_H);
+		h2c->m1 = cpu_to_le32(DCTLINFO_V2_W1_AES_IV_H);
+
+		h2c->w4 |= le32_encode_bits(rtw_wow->ptk_keyidx,
+					    DCTLINFO_V2_W4_SEC_KEY_ID);
+		h2c->m4 |= cpu_to_le32(DCTLINFO_V2_W4_SEC_KEY_ID);
+	}
+
+	if (!is_mld)
+		return;
+
+	if (rtwvif_link->net_type == RTW89_NET_TYPE_INFRA) {
+		mld_sma = rtwvif->mac_addr;
+		mld_tma = vif->cfg.ap_addr;
+		mld_bssid = vif->cfg.ap_addr;
+	} else if (rtwvif_link->net_type == RTW89_NET_TYPE_AP_MODE && sta) {
+		mld_sma = rtwvif->mac_addr;
+		mld_tma = sta->addr;
+		mld_bssid = rtwvif->mac_addr;
+	} else {
+		return;
+	}
+
+	h2c->w8 = le32_encode_bits(mld_sma[0], DCTLINFO_V2_W8_MLD_SMA_0) |
+		  le32_encode_bits(mld_sma[1], DCTLINFO_V2_W8_MLD_SMA_1) |
+		  le32_encode_bits(mld_sma[2], DCTLINFO_V2_W8_MLD_SMA_2) |
+		  le32_encode_bits(mld_sma[3], DCTLINFO_V2_W8_MLD_SMA_3);
+	h2c->m8 = cpu_to_le32(DCTLINFO_V2_W8_ALL);
+
+	h2c->w9 = le32_encode_bits(mld_sma[4], DCTLINFO_V2_W9_MLD_SMA_4) |
+		  le32_encode_bits(mld_sma[5], DCTLINFO_V2_W9_MLD_SMA_5) |
+		  le32_encode_bits(mld_tma[0], DCTLINFO_V2_W9_MLD_TMA_0) |
+		  le32_encode_bits(mld_tma[1], DCTLINFO_V2_W9_MLD_TMA_1);
+	h2c->m9 = cpu_to_le32(DCTLINFO_V2_W9_ALL);
+
+	h2c->w10 = le32_encode_bits(mld_tma[2], DCTLINFO_V2_W10_MLD_TMA_2) |
+		   le32_encode_bits(mld_tma[3], DCTLINFO_V2_W10_MLD_TMA_3) |
+		   le32_encode_bits(mld_tma[4], DCTLINFO_V2_W10_MLD_TMA_4) |
+		   le32_encode_bits(mld_tma[5], DCTLINFO_V2_W10_MLD_TMA_5);
+	h2c->m10 = cpu_to_le32(DCTLINFO_V2_W10_ALL);
+
+	h2c->w11 = le32_encode_bits(mld_bssid[0], DCTLINFO_V2_W11_MLD_BSSID_0) |
+		   le32_encode_bits(mld_bssid[1], DCTLINFO_V2_W11_MLD_BSSID_1) |
+		   le32_encode_bits(mld_bssid[2], DCTLINFO_V2_W11_MLD_BSSID_2) |
+		   le32_encode_bits(mld_bssid[3], DCTLINFO_V2_W11_MLD_BSSID_3);
+	h2c->m11 = cpu_to_le32(DCTLINFO_V2_W11_ALL);
+
+	h2c->w12 = le32_encode_bits(mld_bssid[4], DCTLINFO_V2_W12_MLD_BSSID_4) |
+		   le32_encode_bits(mld_bssid[5], DCTLINFO_V2_W12_MLD_BSSID_5);
+	h2c->m12 = cpu_to_le32(DCTLINFO_V2_W12_ALL);
+}
+
+void rtw89_cam_fill_dctl_sec_cam_info_v3(struct rtw89_dev *rtwdev,
+					 struct rtw89_vif_link *rtwvif_link,
+					 struct rtw89_sta_link *rtwsta_link,
+					 struct rtw89_h2c_dctlinfo_ud_v3 *h2c)
+{
+	struct ieee80211_sta *sta = rtwsta_link_to_sta_safe(rtwsta_link);
+	struct ieee80211_vif *vif = rtwvif_to_vif(rtwvif_link->rtwvif);
+	struct rtw89_vif *rtwvif = rtwvif_link->rtwvif;
+	struct rtw89_addr_cam_entry *addr_cam =
+		rtw89_get_addr_cam_of(rtwvif_link, rtwsta_link);
+	bool is_mld = sta ? sta->mlo : ieee80211_vif_is_mld(vif);
+	struct rtw89_wow_param *rtw_wow = &rtwdev->wow;
+	u8 *ptk_tx_iv = rtw_wow->key_info.ptk_tx_iv;
+	u8 *mld_sma, *mld_tma, *mld_bssid;
+
+	h2c->c0 = le32_encode_bits(rtwsta_link ? rtwsta_link->mac_id :
+						 rtwvif_link->mac_id,
+				   DCTLINFO_V3_C0_MACID) |
+		  le32_encode_bits(1, DCTLINFO_V3_C0_OP);
+
+	h2c->w2 = le32_encode_bits(is_mld, DCTLINFO_V3_W2_IS_MLD);
+	h2c->m2 = cpu_to_le32(DCTLINFO_V3_W2_IS_MLD);
+
+	h2c->w4 = le32_encode_bits(addr_cam->sec_ent_keyid[0],
+				   DCTLINFO_V3_W4_SEC_ENT0_KEYID) |
+		  le32_encode_bits(addr_cam->sec_ent_keyid[1],
+				   DCTLINFO_V3_W4_SEC_ENT1_KEYID) |
+		  le32_encode_bits(addr_cam->sec_ent_keyid[2],
+				   DCTLINFO_V3_W4_SEC_ENT2_KEYID) |
+		  le32_encode_bits(addr_cam->sec_ent_keyid[3],
+				   DCTLINFO_V3_W4_SEC_ENT3_KEYID) |
+		  le32_encode_bits(addr_cam->sec_ent_keyid[4],
+				   DCTLINFO_V3_W4_SEC_ENT4_KEYID) |
+		  le32_encode_bits(addr_cam->sec_ent_keyid[5],
+				   DCTLINFO_V3_W4_SEC_ENT5_KEYID) |
+		  le32_encode_bits(addr_cam->sec_ent_keyid[6],
+				   DCTLINFO_V3_W4_SEC_ENT6_KEYID);
+	h2c->m4 = cpu_to_le32(DCTLINFO_V3_W4_SEC_ENT0_KEYID |
+			      DCTLINFO_V3_W4_SEC_ENT1_KEYID |
+			      DCTLINFO_V3_W4_SEC_ENT2_KEYID |
+			      DCTLINFO_V3_W4_SEC_ENT3_KEYID |
+			      DCTLINFO_V3_W4_SEC_ENT4_KEYID |
+			      DCTLINFO_V3_W4_SEC_ENT5_KEYID |
+			      DCTLINFO_V3_W4_SEC_ENT6_KEYID);
+
+	h2c->w5 = le32_encode_bits(addr_cam->sec_cam_map[0],
+				   DCTLINFO_V3_W5_SEC_ENT_VALID_V1);
+	h2c->m5 = cpu_to_le32(DCTLINFO_V3_W5_SEC_ENT_VALID_V1);
+
+	h2c->w6 = le32_encode_bits(addr_cam->sec_ent[0],
+				   DCTLINFO_V3_W6_SEC_ENT0_V2) |
+		  le32_encode_bits(addr_cam->sec_ent[1],
+				   DCTLINFO_V3_W6_SEC_ENT1_V2) |
+		  le32_encode_bits(addr_cam->sec_ent[2],
+				   DCTLINFO_V3_W6_SEC_ENT2_V2);
+	h2c->m6 = cpu_to_le32(DCTLINFO_V3_W6_SEC_ENT0_V2 |
+			      DCTLINFO_V3_W6_SEC_ENT1_V2 |
+			      DCTLINFO_V3_W6_SEC_ENT2_V2);
+
+	h2c->w7 = le32_encode_bits(addr_cam->sec_ent[3],
+				   DCTLINFO_V3_W7_SEC_ENT3_V2) |
+		  le32_encode_bits(addr_cam->sec_ent[4],
+				   DCTLINFO_V3_W7_SEC_ENT4_V2) |
+		  le32_encode_bits(addr_cam->sec_ent[5],
+				   DCTLINFO_V3_W7_SEC_ENT5_V2);
+	h2c->m7 = cpu_to_le32(DCTLINFO_V3_W7_SEC_ENT3_V2 |
+			      DCTLINFO_V3_W7_SEC_ENT4_V2 |
+			      DCTLINFO_V3_W7_SEC_ENT5_V2);
+
+	h2c->w8 = le32_encode_bits(addr_cam->sec_ent[6],
+				   DCTLINFO_V3_W8_SEC_ENT6_V2);
+	h2c->m8 = cpu_to_le32(DCTLINFO_V3_W8_SEC_ENT6_V2);
+
+	if (rtw_wow->ptk_alg) {
+		h2c->w0 = le32_encode_bits(ptk_tx_iv[0] | ptk_tx_iv[1] << 8,
+					   DCTLINFO_V3_W0_AES_IV_L);
+		h2c->m0 = cpu_to_le32(DCTLINFO_V3_W0_AES_IV_L);
+
+		h2c->w1 = le32_encode_bits(ptk_tx_iv[4] |
+					   ptk_tx_iv[5] << 8 |
+					   ptk_tx_iv[6] << 16 |
+					   ptk_tx_iv[7] << 24,
+					   DCTLINFO_V3_W1_AES_IV_H);
+		h2c->m1 = cpu_to_le32(DCTLINFO_V3_W1_AES_IV_H);
+
+		h2c->w4 |= le32_encode_bits(rtw_wow->ptk_keyidx,
+					    DCTLINFO_V3_W4_SEC_KEY_ID);
+		h2c->m4 |= cpu_to_le32(DCTLINFO_V3_W4_SEC_KEY_ID);
+	}
+
+	if (!is_mld)
+		return;
+
+	if (rtwvif_link->net_type == RTW89_NET_TYPE_INFRA) {
+		mld_sma = rtwvif->mac_addr;
+		mld_tma = vif->cfg.ap_addr;
+		mld_bssid = vif->cfg.ap_addr;
+	} else if (rtwvif_link->net_type == RTW89_NET_TYPE_AP_MODE && sta) {
+		mld_sma = rtwvif->mac_addr;
+		mld_tma = sta->addr;
+		mld_bssid = rtwvif->mac_addr;
+	} else {
+		return;
+	}
+
+	h2c->w9 = le32_encode_bits(mld_sma[0], DCTLINFO_V3_W9_MLD_SMA_0_V2) |
+		  le32_encode_bits(mld_sma[1], DCTLINFO_V3_W9_MLD_SMA_1_V2) |
+		  le32_encode_bits(mld_sma[2], DCTLINFO_V3_W9_MLD_SMA_2_V2) |
+		  le32_encode_bits(mld_sma[3], DCTLINFO_V3_W9_MLD_SMA_3_V2);
+	h2c->m9 = cpu_to_le32(DCTLINFO_V3_W9_ALL);
+
+	h2c->w10 = le32_encode_bits(mld_sma[4], DCTLINFO_V3_W10_MLD_SMA_4_V2) |
+		   le32_encode_bits(mld_sma[5], DCTLINFO_V3_W10_MLD_SMA_5_V2) |
+		   le32_encode_bits(mld_tma[0], DCTLINFO_V3_W10_MLD_TMA_0_V2) |
+		   le32_encode_bits(mld_tma[1], DCTLINFO_V3_W10_MLD_TMA_1_V2);
+	h2c->m10 = cpu_to_le32(DCTLINFO_V3_W10_ALL);
+
+	h2c->w11 = le32_encode_bits(mld_tma[2], DCTLINFO_V3_W11_MLD_TMA_2_V2) |
+		   le32_encode_bits(mld_tma[3], DCTLINFO_V3_W11_MLD_TMA_3_V2) |
+		   le32_encode_bits(mld_tma[4], DCTLINFO_V3_W11_MLD_TMA_4_V2) |
+		   le32_encode_bits(mld_tma[5], DCTLINFO_V3_W11_MLD_TMA_5_V2);
+	h2c->m11 = cpu_to_le32(DCTLINFO_V3_W11_ALL);
+
+	h2c->w12 = le32_encode_bits(mld_bssid[0], DCTLINFO_V3_W12_MLD_TA_BSSID_0_V2) |
+		   le32_encode_bits(mld_bssid[1], DCTLINFO_V3_W12_MLD_TA_BSSID_1_V2) |
+		   le32_encode_bits(mld_bssid[2], DCTLINFO_V3_W12_MLD_TA_BSSID_2_V2) |
+		   le32_encode_bits(mld_bssid[3], DCTLINFO_V3_W12_MLD_TA_BSSID_3_V2);
+	h2c->m12 = cpu_to_le32(DCTLINFO_V3_W12_ALL);
+
+	h2c->w13 = le32_encode_bits(mld_bssid[4], DCTLINFO_V3_W13_MLD_TA_BSSID_4_V2) |
+		   le32_encode_bits(mld_bssid[5], DCTLINFO_V3_W13_MLD_TA_BSSID_5_V2);
+	h2c->m13 = cpu_to_le32(DCTLINFO_V3_W13_ALL);
 }

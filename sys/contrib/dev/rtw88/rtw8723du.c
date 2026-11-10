@@ -24,11 +24,11 @@ static int rtw8723du_probe(struct usb_interface *intf,
 }
 
 static struct usb_driver rtw_8723du_driver = {
-	.name = "rtw_8723du",
+	.name = KBUILD_MODNAME,
 	.id_table = rtw_8723du_id_table,
 	.probe = rtw8723du_probe,
 	.disconnect = rtw_usb_disconnect,
-#if defined(__FreeBSD__) && defined(__notyet__)
+#if defined(__FreeBSD__)
 	.bsddriver.name = KBUILD_MODNAME,
 #endif
 };
