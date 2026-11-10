@@ -15,6 +15,11 @@ Updating Information for MidnightBSD users.
 	FreeBSD stable/15, so drm-*-kmod and nvidia-drm-*-kmod can detect
 	it.  Rebuild those mports after installing the new kernel.
 
+	sbwait() now takes the socket and SO_RCV or SO_SND, as in
+	FreeBSD 14, and SO_RCV/SO_SND are now an enum with new values.
+	Out of tree modules that call sbwait(), soupcall_set() or
+	soupcall_clear() must be updated and rebuilt.
+
 20261109:
 	LinuxKPI, net80211 and the LinuxKPI wireless drivers (iwlwifi,
 	rtw88, rtw89) updated to FreeBSD stable/15.  New mt76 driver
