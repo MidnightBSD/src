@@ -1256,11 +1256,7 @@ restart:
 				error = EWOULDBLOCK;
 				goto release;
 			}
-#ifdef __MidnightBSD__	/* MNBSD-KPI: 13.x socket/protosw KPI */
-			error = sbwait(&so->so_snd);
-#else
 			error = sbwait(so, SO_SND);
-#endif
 			SOCKBUF_UNLOCK(&so->so_snd);
 			if (error)
 				goto release;
@@ -1458,11 +1454,7 @@ restart:
 	 * Wait and block until (more) data comes in.
 	 * NB: Drops the sockbuf lock during wait.
 	 */
-#ifdef __MidnightBSD__	/* MNBSD-KPI: 13.x socket/protosw KPI */
-	error = sbwait(sb);
-#else
 	error = sbwait(so, SO_RCV);
-#endif
 	if (error)
 		goto out;
 	goto restart;
