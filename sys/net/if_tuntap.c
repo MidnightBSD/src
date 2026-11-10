@@ -982,6 +982,7 @@ tuncreate(struct cdev *dev)
 		ifp->if_qflush = if_qflush;
 
 		ether_gen_addr(ifp, &eaddr);
+		if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 		ether_ifattach(ifp, eaddr.octet);
 	} else {
 		ifp->if_mtu = TUNMTU;

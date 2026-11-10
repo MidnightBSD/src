@@ -612,6 +612,7 @@ sfxge_ifnet_init(struct ifnet *ifp, struct sfxge_softc *sc)
 	ifp->if_hwassist = CSUM_TCP | CSUM_UDP | CSUM_IP | CSUM_TSO |
 			   CSUM_TCP_IPV6 | CSUM_UDP_IPV6;
 
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, encp->enc_mac_addr);
 
 	ifp->if_transmit = sfxge_if_transmit;

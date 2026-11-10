@@ -713,6 +713,7 @@ dtsec_attach(device_t dev)
 	sc->sc_mii = device_get_softc(sc->sc_mii_dev);
 
 	/* Attach to stack */
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, sc->sc_mac_addr);
 
 	return (0);

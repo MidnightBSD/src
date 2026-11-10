@@ -619,6 +619,7 @@ age_attach(device_t dev)
 		goto fail;
 	}
 
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, sc->age_eaddr);
 
 	/* VLAN capability setup. */

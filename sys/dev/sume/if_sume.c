@@ -1169,6 +1169,7 @@ sume_ifp_alloc(struct sume_adapter *adapter, uint32_t port)
 
 	uint8_t hw_addr[ETHER_ADDR_LEN] = DEFAULT_ETHER_ADDRESS;
 	hw_addr[ETHER_ADDR_LEN-1] = nf_priv->unit;
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, hw_addr);
 
 	ifmedia_init(&nf_priv->media, IFM_IMASK, sume_media_change,

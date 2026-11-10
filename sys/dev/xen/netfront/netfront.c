@@ -2258,6 +2258,7 @@ create_netdev(device_t dev)
 	ifp->if_hw_tsomaxsegcount = MAX_TX_REQ_FRAGS;
 	ifp->if_hw_tsomaxsegsize = PAGE_SIZE;
 
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
     	ether_ifattach(ifp, np->mac);
 	netfront_carrier_off(np);
 

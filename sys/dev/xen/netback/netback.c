@@ -1235,6 +1235,7 @@ create_netdev(device_t dev)
 		ifp->if_capabilities = IFCAP_HWCSUM;
 		ifp->if_capenable = IFCAP_HWCSUM;
 
+		if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 		ether_ifattach(ifp, xnb->mac);
 		xnb->carrier = 0;
 	}

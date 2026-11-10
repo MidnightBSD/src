@@ -2439,6 +2439,7 @@ qlnx_init_ifnet(device_t dev, qlnx_host_t *ha)
 
         ifmedia_set(&ha->media, (IFM_ETHER | IFM_AUTO));
 
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, ha->primary_mac);
         QL_DPRINT2(ha, "exit\n");
 

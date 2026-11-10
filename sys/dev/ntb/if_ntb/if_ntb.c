@@ -172,6 +172,7 @@ ntb_net_attach(device_t dev)
 	if_settransmitfn(ifp, ntb_transmit);
 	if_setqflushfn(ifp, ntb_qflush);
 	create_random_local_eui48(sc->eaddr);
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, sc->eaddr);
 	if_setcapabilities(ifp, IFCAP_HWCSUM | IFCAP_HWCSUM_IPV6 |
 	    IFCAP_JUMBO_MTU | IFCAP_LINKSTATE);

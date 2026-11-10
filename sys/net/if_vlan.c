@@ -1139,6 +1139,7 @@ vlan_clone_create(struct if_clone *ifc, char *name, size_t len, caddr_t params)
 #endif
 	ifp->if_flags = VLAN_IFFLAGS;
 	ifp->if_type = IFT_L2VLAN;
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, eaddr);
 	/* Now undo some of the damage... */
 	ifp->if_baudrate = 0;

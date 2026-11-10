@@ -782,6 +782,7 @@ bridge_clone_create(struct if_clone *ifc, int unit, caddr_t params)
 	ether_gen_addr(ifp, &sc->sc_defaddr);
 
 	bstp_attach(&sc->sc_stp, &bridge_ops);
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, sc->sc_defaddr.octet);
 	/* Now undo some of the damage... */
 	ifp->if_baudrate = 0;

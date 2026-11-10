@@ -187,6 +187,7 @@ fwe_attach(device_t dev)
 	ifp->if_snd.ifq_maxlen = TX_MAX_QUEUE;
 
 	s = splimp();
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, eaddr);
 	splx(s);
 

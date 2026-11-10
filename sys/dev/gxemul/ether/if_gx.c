@@ -187,6 +187,7 @@ gx_attach(device_t dev)
 
 	mtx_init(&sc->sc_mtx, "GXemul Ethernet", NULL, MTX_DEF);
 
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, mac);
 
 	ifp->if_transmit = gx_transmit;

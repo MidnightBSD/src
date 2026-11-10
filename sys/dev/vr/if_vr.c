@@ -786,6 +786,7 @@ vr_attach(device_t dev)
 	}
 
 	/* Call MI attach routine. */
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, eaddr);
 	/*
 	 * Tell the upper layer(s) we support long frames.

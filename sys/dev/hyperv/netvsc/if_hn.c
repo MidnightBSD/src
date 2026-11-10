@@ -2446,6 +2446,7 @@ hn_attach(device_t dev)
 		ifp->if_hw_tsomaxsegsize = PAGE_SIZE;
 	}
 
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, eaddr);
 
 	if ((ifp->if_capabilities & (IFCAP_TSO6 | IFCAP_TSO4)) && bootverbose) {

@@ -387,6 +387,7 @@ smc_attach(device_t dev)
 	ifp->if_capabilities |= IFCAP_POLLING;
 #endif
 
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, eaddr);
 
 	/* Set up taskqueue */

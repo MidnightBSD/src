@@ -538,6 +538,7 @@ axgbe_attach(device_t dev)
 	ifp->if_capenable = 0;
 	ifp->if_hwassist = 0;
 
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, sc->mac_addr);
 
 	ifmedia_init(&sc->media, IFM_IMASK, axgbe_media_change,

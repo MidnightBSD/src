@@ -1451,6 +1451,7 @@ bce_attach(device_t dev)
 	}
 
 	/* Attach to the Ethernet interface list. */
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, sc->eaddr);
 
 	callout_init_mtx(&sc->bce_tick_callout, &sc->bce_mtx, 0);

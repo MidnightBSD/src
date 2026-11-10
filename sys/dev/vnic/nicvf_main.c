@@ -260,6 +260,7 @@ nicvf_attach(device_t dev)
 	mtx_init(&nic->stats_mtx, "VNIC stats", NULL, MTX_DEF);
 	callout_init_mtx(&nic->stats_callout, &nic->stats_mtx, 0);
 
+	if_setflagbits(nic->ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(nic->ifp, nic->hwaddr);
 
 	return (0);

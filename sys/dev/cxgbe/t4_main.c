@@ -2655,6 +2655,7 @@ cxgbe_vi_attach(device_t dev, struct vi_info *vi)
 	}
 #endif
 
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, vi->hw_addr);
 #ifdef DEV_NETMAP
 	if (vi->nnmrxq != 0)

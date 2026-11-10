@@ -868,6 +868,7 @@ fxp_attach(device_t dev)
 	/*
 	 * Attach the interface.
 	 */
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, eaddr);
 
 	/*

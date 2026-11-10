@@ -4916,6 +4916,7 @@ mxge_attach(device_t dev)
 	mxge_media_init(sc);
 	mxge_media_probe(sc);
 	sc->dying = 0;
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, sc->mac_addr);
 	/* ether_ifattach sets mtu to ETHERMTU */
 	if (mxge_initial_mtu != ETHERMTU)

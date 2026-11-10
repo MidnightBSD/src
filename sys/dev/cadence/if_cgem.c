@@ -1831,6 +1831,7 @@ cgem_attach(device_t dev)
 	/* Start ticks. */
 	callout_init_mtx(&sc->tick_ch, &sc->sc_mtx, 0);
 
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, eaddr);
 
 	err = bus_setup_intr(dev, sc->irq_res, INTR_TYPE_NET | INTR_MPSAFE |

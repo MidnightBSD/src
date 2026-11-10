@@ -339,6 +339,7 @@ et_attach(device_t dev)
 		goto fail;
 	}
 
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, eaddr);
 
 	/* Tell the upper layer(s) we support long frames. */

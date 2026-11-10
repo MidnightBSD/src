@@ -627,6 +627,7 @@ vtbe_attach(device_t dev)
 	ifp->if_hdrlen = sizeof(struct ether_vlan_header);
 
 	/* All ready to run, attach the ethernet interface. */
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, macaddr);
 
 	sc->is_attached = true;

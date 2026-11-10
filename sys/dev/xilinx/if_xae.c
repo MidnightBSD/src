@@ -1029,6 +1029,7 @@ xae_attach(device_t dev)
 		xae_phy_fixup(sc);
 
 	/* All ready to run, attach the ethernet interface. */
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, sc->macaddr);
 	sc->is_attached = true;
 

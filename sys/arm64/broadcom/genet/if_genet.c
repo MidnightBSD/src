@@ -353,6 +353,7 @@ gen_attach(device_t dev)
 	if (!eaddr_found)
 		ether_gen_addr(sc->ifp, &eaddr);
 	/* Attach ethernet interface */
+	if_setflagbits(sc->ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(sc->ifp, eaddr.octet);
 
 fail:

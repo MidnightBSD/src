@@ -2288,6 +2288,7 @@ int mlx4_en_init_netdev(struct mlx4_en_dev *mdev, int port,
 		dev_addr[ETHER_ADDR_LEN - 1 - i] = (u8) (priv->mac >> (8 * i));
 
 
+	if_setflagbits(dev, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(dev, dev_addr);
 	if_link_state_change(dev, LINK_STATE_DOWN);
 	ifmedia_init(&priv->media, IFM_IMASK | IFM_ETH_FMASK,

@@ -13051,6 +13051,7 @@ bxe_init_ifnet(struct bxe_softc *sc)
     sc->ifp = ifp;
 
     /* attach to the Ethernet interface list */
+    if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
     ether_ifattach(ifp, sc->link_params.mac_addr);
 
     /* Attach driver debugnet methods. */

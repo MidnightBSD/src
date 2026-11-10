@@ -744,6 +744,7 @@ qls_init_ifnet(device_t dev, qla_host_t *ha)
 	} else
 		ha->msize = MJUM9BYTES;
 
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, qls_get_mac_addr(ha));
 
 	ifp->if_capabilities = IFCAP_JUMBO_MTU;
