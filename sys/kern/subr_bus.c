@@ -2538,6 +2538,26 @@ device_set_desc_copy(device_t dev, const char* desc)
 }
 
 /**
+ * @brief Set the device's description using a printf-style format
+ *
+ * The formatted string is copied, as with device_set_desc_copy().
+ */
+void
+device_set_descf(device_t dev, const char *fmt, ...)
+{
+	va_list ap;
+	char *buf = NULL;
+
+	va_start(ap, fmt);
+	vasprintf(&buf, M_BUS, fmt, ap);
+	va_end(ap);
+	/* Hand the buffer to the device, as FreeBSD does. */
+	device_set_desc_internal(dev, buf, FALSE);
+	if (buf != NULL)
+		dev->flags |= DF_DESCMALLOCED;
+}
+
+/**
  * @brief Set the device's flags
  */
 void
@@ -3858,6 +3878,57 @@ bus_generic_detach(device_t dev)
 }
 
 /**
+ * @brief Ask drivers to add child devices of the given device.
+ *
+ * This function allows drivers for child devices of a bus to identify
+ * child devices and add them as children of the given device.  NB:
+ * The driver for @param dev must implement the BUS_ADD_CHILD method.
+ *
+ * @param dev		the parent device
+ */
+void
+bus_identify_children(device_t dev)
+{
+	(void)bus_generic_probe(dev);
+}
+
+/**
+ * @brief Probe and attach all children of the given device
+ *
+ * This function attempts to attach a device driver to each unattached
+ * child of the given device using device_probe_and_attach().  If an
+ * individual child fails to attach this function continues attaching
+ * other children.
+ *
+ * @param dev		the parent device
+ */
+void
+bus_attach_children(device_t dev)
+{
+	(void)bus_generic_attach(dev);
+}
+
+/**
+ * @brief Detach drivers from all children of a device
+ *
+ * This function attempts to detach a device driver from each attached
+ * child of the given device using device_detach().  If an individual
+ * child fails to detach this function stops and returns an error.
+ * NB: Children that were successfully detached are not re-attached if
+ * an error occurs.
+ *
+ * @param dev		the parent device
+ *
+ * @retval 0		success
+ * @retval non-zero	a device would not detach
+ */
+int
+bus_detach_children(device_t dev)
+{
+	return (bus_generic_detach(dev));
+}
+
+/**
  * @brief Helper function for implementing DEVICE_SHUTDOWN()
  *
  * This function can be used to help implement the DEVICE_SHUTDOWN()
@@ -4802,6 +4873,21 @@ bus_unmap_resource(device_t dev, int type, struct resource *r,
 	if (dev->parent == NULL)
 		return (EINVAL);
 	return (BUS_UNMAP_RESOURCE(dev->parent, dev, type, r, map));
+}
+
+/**
+ * @brief Wrapper function for BUS_TRANSLATE_RESOURCE().
+ *
+ * This function simply calls the BUS_TRANSLATE_RESOURCE() method of the
+ * parent of @p dev.
+ */
+int
+bus_translate_resource(device_t dev, int type, rman_res_t start,
+    rman_res_t *newstart)
+{
+	if (dev->parent == NULL)
+		return (EINVAL);
+	return (BUS_TRANSLATE_RESOURCE(dev->parent, type, start, newstart));
 }
 
 /**

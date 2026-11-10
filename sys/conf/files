@@ -3999,6 +3999,7 @@ kern/subr_stack.c		optional ddb | stack | ktr
 kern/subr_stats.c		optional stats
 kern/subr_taskqueue.c		standard
 kern/subr_terminal.c		optional vt
+kern/subr_ticks.S		standard
 kern/subr_trap.c		standard
 kern/subr_turnstile.c		standard
 kern/subr_uio.c			standard
@@ -4287,6 +4288,8 @@ net80211/ieee80211_amrr.c	optional wlan | wlan_amrr
 net80211/ieee80211_crypto.c	optional wlan \
 	compile-with "${NORMAL_C} -Wno-unused-function"
 net80211/ieee80211_crypto_ccmp.c optional wlan wlan_ccmp
+net80211/ieee80211_crypto_gcmp.c optional wlan wlan_gcmp
+net80211/ieee80211_crypto_gcm.c	optional wlan wlan_gcmp
 net80211/ieee80211_crypto_none.c optional wlan
 net80211/ieee80211_crypto_tkip.c optional wlan wlan_tkip
 net80211/ieee80211_crypto_wep.c	optional wlan wlan_wep
@@ -4643,6 +4646,8 @@ compat/linuxkpi/common/src/linux_80211.c	optional compat_linuxkpi wlan \
 	compile-with "${LINUXKPI_C}"
 compat/linuxkpi/common/src/linux_80211_macops.c	optional compat_linuxkpi wlan \
 	compile-with "${LINUXKPI_C}"
+compat/linuxkpi/common/src/linuxkpi_80211_pm.c	optional compat_linuxkpi wlan \
+	compile-with "${LINUXKPI_C}"
 compat/linuxkpi/common/src/linux_kmod.c		optional compat_linuxkpi \
 	compile-with "${LINUXKPI_C}"
 compat/linuxkpi/common/src/linux_acpi.c		optional compat_linuxkpi acpi \
@@ -4657,9 +4662,13 @@ compat/linuxkpi/common/src/linux_dmi.c		optional compat_linuxkpi \
 	compile-with "${LINUXKPI_C}"
 compat/linuxkpi/common/src/linux_domain.c	optional compat_linuxkpi \
 	compile-with "${LINUXKPI_C}"
+compat/linuxkpi/common/src/linux_eventfd.c	optional compat_linuxkpi \
+	compile-with "${LINUXKPI_C}"
 compat/linuxkpi/common/src/linux_firmware.c	optional compat_linuxkpi \
 	compile-with "${LINUXKPI_C}"
 compat/linuxkpi/common/src/linux_fpu.c		optional compat_linuxkpi \
+	compile-with "${LINUXKPI_C}"
+compat/linuxkpi/common/src/linux_folio.c	optional compat_linuxkpi \
 	compile-with "${LINUXKPI_C}"
 compat/linuxkpi/common/src/linux_hrtimer.c	optional compat_linuxkpi \
 	compile-with "${LINUXKPI_C}"
@@ -4668,6 +4677,8 @@ compat/linuxkpi/common/src/linux_i2c.c		optional compat_linuxkpi \
 compat/linuxkpi/common/src/linux_i2cbb.c	optional compat_linuxkpi \
 	compile-with "${LINUXKPI_C}"
 compat/linuxkpi/common/src/linux_interrupt.c	optional compat_linuxkpi \
+	compile-with "${LINUXKPI_C}"
+compat/linuxkpi/common/src/linux_kobject.c	optional compat_linuxkpi \
 	compile-with "${LINUXKPI_C}"
 compat/linuxkpi/common/src/linux_kthread.c	optional compat_linuxkpi \
 	compile-with "${LINUXKPI_C}"
@@ -4678,6 +4689,8 @@ compat/linuxkpi/common/src/linux_mhi.c		optional compat_linuxkpi wlan \
 compat/linuxkpi/common/src/linux_netdev.c	optional compat_linuxkpi \
 	compile-with "${LINUXKPI_C}"
 compat/linuxkpi/common/src/linux_page.c		optional compat_linuxkpi \
+	compile-with "${LINUXKPI_C}"
+compat/linuxkpi/common/src/linuxkpi_page_pool.c	optional compat_linuxkpi \
 	compile-with "${LINUXKPI_C}"
 compat/linuxkpi/common/src/linux_pci.c		optional compat_linuxkpi pci \
 	compile-with "${LINUXKPI_C}"
@@ -4691,9 +4704,13 @@ compat/linuxkpi/common/src/linux_rcu.c		optional compat_linuxkpi \
 	compile-with "${LINUXKPI_C} -I$S/contrib/ck/include"
 compat/linuxkpi/common/src/linux_schedule.c	optional compat_linuxkpi \
 	compile-with "${LINUXKPI_C}"
+compat/linuxkpi/common/src/linux_seq_buf.c	optional compat_linuxkpi \
+	compile-with "${LINUXKPI_C}"
 compat/linuxkpi/common/src/linux_shmemfs.c	optional compat_linuxkpi \
 	compile-with "${LINUXKPI_C}"
 compat/linuxkpi/common/src/linux_shrinker.c	optional compat_linuxkpi \
+	compile-with "${LINUXKPI_C}"
+compat/linuxkpi/common/src/linux_siphash.c	optional compat_linuxkpi \
 	compile-with "${LINUXKPI_C}"
 compat/linuxkpi/common/src/linux_skbuff.c	optional compat_linuxkpi \
 	compile-with "${LINUXKPI_C}"

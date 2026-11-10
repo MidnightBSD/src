@@ -168,7 +168,7 @@ cloudabi64_thread_setregs(struct thread *td,
 	 * containing a pointer to the TCB. %fs base will point to this.
 	 */
 	tcbptr = rounddown(attr->stack + attr->stack_len - sizeof(tcbptr),
-	    _Alignof(tcbptr));
+	    _Alignof(register_t));
 	error = copyout(&tcb, (void *)tcbptr, sizeof(tcb));
 	if (error != 0)
 		return (error);
