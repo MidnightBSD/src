@@ -1784,6 +1784,7 @@ static int build_match_list(struct match_list *match_head,
 		curr_match = kmalloc(sizeof(*curr_match), GFP_ATOMIC);
 		if (!curr_match) {
 			rcu_read_unlock();
+			tree_put_node(&g->node, ft_locked);
 			free_match_list(match_head, ft_locked);
 			return -ENOMEM;
 		}
