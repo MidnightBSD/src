@@ -582,6 +582,7 @@ _mt76=		mt76
 .if ${MK_SOURCELESS_UCODE} != "no"
 _mt76fw=	mt76fw
 .endif
+# brcm80211 (brcmfmac, brcmutil) is imported but not built yet, as in FreeBSD.
 _vmware=	vmware
 .endif
 
