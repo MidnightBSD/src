@@ -89,7 +89,6 @@
 #define __aligned_u64 uint64_t __aligned(8)
 
 #define VLAN_PRIO_SHIFT 13
-#define IB_USER_VERBS_EX_CMD_MODIFY_QP IB_USER_VERBS_CMD_MODIFY_QP
 
 /*
  * debug definition section
@@ -152,11 +151,6 @@ struct irdma_sc_vsi;
 
 #define rt_tos2priority(tos) (tos >> 5)
 #define ah_attr_to_dmac(attr) ((attr).dmac)
-#define kc_typeq_ib_wr const
-#define kc_ifp_find ip_ifp_find
-#define kc_ifp6_find ip6_ifp_find
-#define kc_rdma_gid_attr_network_type(sgid_attr, gid_type, gid) \
-	ib_gid_to_network_type(gid_type, gid)
 #define irdma_del_timer_compat(tt) del_timer((tt))
 #define IRDMA_TAILQ_FOREACH CK_STAILQ_FOREACH
 #define IRDMA_TAILQ_FOREACH_SAFE CK_STAILQ_FOREACH_SAFE

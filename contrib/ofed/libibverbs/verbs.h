@@ -595,6 +595,8 @@ enum ibv_rate {
 	IBV_RATE_50_GBPS  = 20,
 	IBV_RATE_400_GBPS = 21,
 	IBV_RATE_600_GBPS = 22,
+	IBV_RATE_800_GBPS = 23,
+	IBV_RATE_1200_GBPS = 24,
 };
 
 /**
@@ -2166,11 +2168,8 @@ static inline struct ibv_wq *ibv_create_wq(struct ibv_context *context,
 	}
 
 	wq = vctx->create_wq(context, wq_init_attr);
-	if (wq) {
+	if (wq)
 		wq->events_completed = 0;
-		pthread_mutex_init(&wq->mutex, NULL);
-		pthread_cond_init(&wq->cond, NULL);
-	}
 
 	return wq;
 }

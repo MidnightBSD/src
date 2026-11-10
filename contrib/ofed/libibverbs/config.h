@@ -1,6 +1,10 @@
-/* $FreeBSD$ */
+#ifndef _OFED_IBVERBS_CONFIG_H_
+#define	_OFED_IBVERBS_CONFIG_H_
 
+#ifdef __MidnightBSD__
+/* MNBSD-KPI: libc has no strdupa(); use the local alloca.h version. */
 #include "alloca.h"
+#endif
 
 #define	memalign(align, size) ({			\
 	void *__ptr;					\
@@ -39,3 +43,4 @@
 #define	MADV_DOFORK MADV_NORMAL
 #define	SWITCH_FALLTHROUGH (void)0
 
+#endif	/* _OFED_IBVERBS_CONFIG_H_ */

@@ -115,6 +115,8 @@ int __attribute__((const)) ibv_rate_to_mult(enum ibv_rate rate)
 	case IBV_RATE_50_GBPS:  return 20;
 	case IBV_RATE_400_GBPS: return 160;
 	case IBV_RATE_600_GBPS: return 240;
+	case IBV_RATE_800_GBPS: return 320;
+	case IBV_RATE_1200_GBPS: return 480;
 	default:           return -1;
 	}
 }
@@ -135,6 +137,8 @@ enum ibv_rate __attribute__((const)) mult_to_ibv_rate(int mult)
 	case 20: return IBV_RATE_50_GBPS;
 	case 160: return IBV_RATE_400_GBPS;
 	case 240: return IBV_RATE_600_GBPS;
+	case 320: return IBV_RATE_800_GBPS;
+	case 480: return IBV_RATE_1200_GBPS;
 	default: return IBV_RATE_MAX;
 	}
 }
@@ -163,6 +167,8 @@ int  __attribute__((const)) ibv_rate_to_mbps(enum ibv_rate rate)
 	case IBV_RATE_50_GBPS:  return 53125;
 	case IBV_RATE_400_GBPS: return 425000;
 	case IBV_RATE_600_GBPS: return 637500;
+	case IBV_RATE_800_GBPS: return 850000;
+	case IBV_RATE_1200_GBPS: return 1275000;
 	default:               return -1;
 	}
 }
@@ -191,6 +197,8 @@ enum ibv_rate __attribute__((const)) mbps_to_ibv_rate(int mbps)
 	case 53125:  return IBV_RATE_50_GBPS;
 	case 425000: return IBV_RATE_400_GBPS;
 	case 637500: return IBV_RATE_600_GBPS;
+	case 850000: return IBV_RATE_800_GBPS;
+	case 1275000: return IBV_RATE_1200_GBPS;
 	default:     return IBV_RATE_MAX;
 	}
 }
@@ -455,13 +463,23 @@ struct ibv_cq *__ibv_create_cq(struct ibv_context *context, int cqe, void *cq_co
 			       struct ibv_comp_channel *channel, int comp_vector)
 {
 	struct ibv_cq *cq;
+	int err = 0;
 
 	cq = context->ops.create_cq(context, cqe, channel, comp_vector);
 
-	if (cq)
-		verbs_init_cq(cq, context, channel, cq_context);
+	if (!cq)
+		return NULL;
+
+	err = verbs_init_cq(cq, context, channel, cq_context);
+	if (err)
+		goto err;
 
 	return cq;
+
+err:
+	context->ops.destroy_cq(cq);
+
+	return NULL;
 }
 default_symver(__ibv_create_cq, ibv_create_cq);
 
@@ -529,16 +547,26 @@ struct ibv_srq *__ibv_create_srq(struct ibv_pd *pd,
 		return NULL;
 
 	srq = pd->context->ops.create_srq(pd, srq_init_attr);
-	if (srq) {
-		srq->context          = pd->context;
-		srq->srq_context      = srq_init_attr->srq_context;
-		srq->pd               = pd;
-		srq->events_completed = 0;
-		pthread_mutex_init(&srq->mutex, NULL);
-		pthread_cond_init(&srq->cond, NULL);
-	}
+	if (!srq)
+		return NULL;
+
+	srq->context		  = pd->context;
+	srq->srq_context	  = srq_init_attr->srq_context;
+	srq->pd				  = pd;
+	srq->events_completed = 0;
+	if (pthread_mutex_init(&srq->mutex, NULL))
+		goto err;
+	if (pthread_cond_init(&srq->cond, NULL))
+		goto err_mutex;
 
 	return srq;
+
+err_mutex:
+	pthread_mutex_destroy(&srq->mutex);
+err:
+	pd->context->ops.destroy_srq(srq);
+
+	return NULL;
 }
 default_symver(__ibv_create_srq, ibv_create_srq);
 
@@ -558,6 +586,8 @@ default_symver(__ibv_query_srq, ibv_query_srq);
 
 int __ibv_destroy_srq(struct ibv_srq *srq)
 {
+	pthread_cond_destroy(&srq->cond);
+	pthread_mutex_destroy(&srq->mutex);
 	return srq->context->ops.destroy_srq(srq);
 }
 default_symver(__ibv_destroy_srq, ibv_destroy_srq);
