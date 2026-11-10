@@ -1,14 +1,8 @@
+#
+# MIC -- kept for existing build scripts.  GENERIC now includes
+# SCHED_MIC and hfi(4), so this config only changes the ident.
+#
+
 include GENERIC
 
 ident	MIC
-
-# SCHED_MIC is ULE-derived and shares ULE's thread-lock hand-off protocol
-# with the machine-dependent context switch code (cpu_switch() waits for
-# the incoming thread's td_lock to leave blocked_lock only when SCHED_ULE
-# is defined).  SCHED_ULE therefore stays enabled (inherited from GENERIC);
-# with both set, sys/conf/files builds sched_mic.c instead of sched_ule.c.
-options 	SCHED_MIC		# Hybrid-core-aware scheduler (ULE-derived)
-
-# Intel Hardware Feedback Interface: per-core performance and efficiency
-# scores for the cpucap(9) layer.  Attaches only on CPUs that support it.
-device		hfi

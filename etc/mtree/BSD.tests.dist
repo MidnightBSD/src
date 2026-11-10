@@ -1053,8 +1053,6 @@
         ..
         cut
         ..
-        dc
-        ..
         diff
         ..
         diff3

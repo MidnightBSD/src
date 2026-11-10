@@ -45,13 +45,15 @@ MLINKS+=flopen.3 flopenat.3
 MLINKS+=kld.3 kld_isloaded.3 kld.3 kld_load.3
 MLINKS+=login_auth.3 auth_cat.3 login_auth.3 auth_checknologin.3
 MLINKS+=login_cap.3 login_close.3 login_cap.3 login_getcapbool.3 \
+	login_cap.3 login_getcapenum.3 \
 	login_cap.3 login_getcaplist.3 login_cap.3 login_getcapnum.3 \
 	login_cap.3 login_getcapsize.3 login_cap.3 login_getcapstr.3 \
 	login_cap.3 login_getcaptime.3 login_cap.3 login_getclass.3 \
 	login_cap.3 login_getclassbyname.3 login_cap.3 login_getpath.3 \
 	login_cap.3 login_getpwclass.3 login_cap.3 login_getstyle.3 \
 	login_cap.3 login_getuserclass.3 login_cap.3 login_setcryptfmt.3
-MLINKS+=login_class.3 setclasscontext.3 login_class.3 setclassenvironment.3 \
+MLINKS+=login_class.3 setclasscontext.3 login_class.3 setclasscpumask.3 \
+	login_class.3 setclassenvironment.3 \
 	login_class.3 setclassresources.3 login_class.3 setusercontext.3
 MLINKS+=login_ok.3 auth_hostok.3 login_ok.3 auth_timeok.3 \
 	login_ok.3 auth_ttyok.3
@@ -67,8 +69,13 @@ MLINKS+=pidfile.3 pidfile_close.3 \
 MLINKS+=property.3 property_find.3  property.3 properties_free.3
 MLINKS+=property.3 properties_read.3
 MLINKS+=pty.3 forkpty.3  pty.3 openpty.3
-MLINKS+=quotafile.3 quota_close.3 \
+MLINKS+=quotafile.3 quota_check_path.3 \
+	quotafile.3 quota_close.3 \
+	quotafile.3 quota_convert.3 \
 	quotafile.3 quota_fsname.3 \
+	quotafile.3 quota_maxid.3 \
+	quotafile.3 quota_off.3 \
+	quotafile.3 quota_on.3 \
 	quotafile.3 quota_open.3 \
 	quotafile.3 quota_qfname.3 \
 	quotafile.3 quota_read.3 \

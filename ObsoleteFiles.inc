@@ -39,6 +39,19 @@
 # for generating a list from a directory
 # find  /usr/lib/perl5/5.36.0 -exec echo {} \; | cut -b 2-150  | xargs printf "OLD_FILES+=%s\n"
 
+# 20261109: efun(3) moved to libnetbsd in 2022, remove its old man pages
+OLD_FILES+=usr/share/man/man3/easprintf.3.gz
+OLD_FILES+=usr/share/man/man3/ecalloc.3.gz
+OLD_FILES+=usr/share/man/man3/efopen.3.gz
+OLD_FILES+=usr/share/man/man3/efun.3.gz
+OLD_FILES+=usr/share/man/man3/emalloc.3.gz
+OLD_FILES+=usr/share/man/man3/erealloc.3.gz
+OLD_FILES+=usr/share/man/man3/esetfunc.3.gz
+OLD_FILES+=usr/share/man/man3/estrdup.3.gz
+OLD_FILES+=usr/share/man/man3/estrlcat.3.gz
+OLD_FILES+=usr/share/man/man3/estrlcpy.3.gz
+OLD_FILES+=usr/share/man/man3/evasprintf.3.gz
+
 # 20261107: OpenZFS 2.2 update bumps the shared library major versions
 OLD_LIBS+=lib/libavl.so.2
 OLD_LIBS+=lib/libicp.so.3
@@ -535,7 +548,6 @@ OLD_LIBS+=usr/lib/libssl.so.30
 OLD_LIBS+=usr/lib32/libcrypto.so.30
 OLD_LIBS+=usr/lib32/libssl.so.30
 OLD_FILES+=usr/include/openssl/asn1_mac.h
-OLD_FILES+=usr/share/openssl/man/man3/TS_VERIFY_CTX_set_certs.3.gz
 OLD_FILES+=usr/share/openssl/man/man7/crypto.7.gz
 OLD_FILES+=usr/share/openssl/man/man7/migration_guide.7.gz
 OLD_FILES+=usr/share/openssl/man/man7/ssl.7.gz
@@ -6970,22 +6982,17 @@ OLD_FILES+=usr/share/openssl/man/man3/RAND_SSLeay.3.gz
 OLD_FILES+=usr/share/openssl/man/man3/RSA_PKCS1_SSLeay.3.gz
 OLD_FILES+=usr/share/openssl/man/man3/RSA_null_method.3.gz
 OLD_FILES+=usr/share/openssl/man/man3/SSL.3.gz
-OLD_FILES+=usr/share/openssl/man/man3/SSL_CTX_get_ex_new_index.3.gz
 OLD_FILES+=usr/share/openssl/man/man3/SSL_CTX_need_tmp_rsa.3.gz
 OLD_FILES+=usr/share/openssl/man/man3/SSL_CTX_set_custom_cli_ext.3.gz
 OLD_FILES+=usr/share/openssl/man/man3/SSL_CTX_set_default_read_ahead.3.gz
-OLD_FILES+=usr/share/openssl/man/man3/SSL_CTX_set_ecdh_auto.3.gz
 OLD_FILES+=usr/share/openssl/man/man3/SSL_CTX_set_tmp_rsa.3.gz
 OLD_FILES+=usr/share/openssl/man/man3/SSL_CTX_set_tmp_rsa_callback.3.gz
-OLD_FILES+=usr/share/openssl/man/man3/SSL_SESSION_get_ex_new_index.3.gz
 OLD_FILES+=usr/share/openssl/man/man3/SSL_add_session.3.gz
 OLD_FILES+=usr/share/openssl/man/man3/SSL_flush_sessions.3.gz
 OLD_FILES+=usr/share/openssl/man/man3/SSL_get_accept_state.3.gz
-OLD_FILES+=usr/share/openssl/man/man3/SSL_get_ex_new_index.3.gz
 OLD_FILES+=usr/share/openssl/man/man3/SSL_get_msg_callback_arg.3.gz
 OLD_FILES+=usr/share/openssl/man/man3/SSL_need_tmp_rsa.3.gz
 OLD_FILES+=usr/share/openssl/man/man3/SSL_remove_session.3.gz
-OLD_FILES+=usr/share/openssl/man/man3/SSL_set_ecdh_auto.3.gz
 OLD_FILES+=usr/share/openssl/man/man3/SSL_set_tmp_rsa.3.gz
 OLD_FILES+=usr/share/openssl/man/man3/SSL_set_tmp_rsa_callback.3.gz
 OLD_FILES+=usr/share/openssl/man/man3/SSLeay.3.gz
