@@ -18,7 +18,8 @@ Updating Information for MidnightBSD users.
 	sbwait() now takes the socket and SO_RCV or SO_SND, as in
 	FreeBSD 14, and SO_RCV/SO_SND are now an enum with new values.
 	Out of tree modules that call sbwait(), soupcall_set() or
-	soupcall_clear() must be updated and rebuilt.
+	soupcall_clear() must be updated and rebuilt
+	(__MidnightBSD_version 402005).
 
 20261109:
 	LinuxKPI, net80211 and the LinuxKPI wireless drivers (iwlwifi,
