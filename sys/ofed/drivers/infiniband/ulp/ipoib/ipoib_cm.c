@@ -478,7 +478,7 @@ void ipoib_cm_handle_rx_wc(struct ipoib_dev_priv *priv, struct ib_wc *wc)
 	struct ipoib_cm_rx_buf saverx;
 	struct ipoib_cm_rx_buf *rx_ring;
 	unsigned int wr_id = wc->wr_id & ~(IPOIB_OP_CM | IPOIB_OP_RECV);
-	struct ifnet *dev = priv->dev;
+	if_t dev = priv->dev;
 	struct mbuf *mb, *newmb;
 	struct ipoib_cm_rx *p;
 	int has_srq;
@@ -570,7 +570,7 @@ void ipoib_cm_handle_rx_wc(struct ipoib_dev_priv *priv, struct ib_wc *wc)
 		memset(ibh->hwaddr, 0, 4);
 		memcpy(ibh->hwaddr + 4, priv->local_gid.raw, sizeof(union ib_gid));
 
-		dev->if_input(dev, mb);
+		if_input(dev, mb);
 	} else {
 		if_inc_counter(dev, IFCOUNTER_IERRORS, 1);
 	}
@@ -618,7 +618,7 @@ static inline int post_send(struct ipoib_dev_priv *priv,
 void ipoib_cm_send(struct ipoib_dev_priv *priv, struct mbuf *mb, struct ipoib_cm_tx *tx)
 {
 	struct ipoib_cm_tx_buf *tx_req;
-	struct ifnet *dev = priv->dev;
+	if_t dev = priv->dev;
 
 	if (unlikely(priv->tx_outstanding > MAX_SEND_CQE)) {
 		while (ipoib_poll_tx(priv, false))
@@ -668,7 +668,7 @@ void ipoib_cm_send(struct ipoib_dev_priv *priv, struct mbuf *mb, struct ipoib_cm
 				  tx->qp->qp_num);
 			if (ib_req_notify_cq(priv->send_cq, IB_CQ_NEXT_COMP))
 				ipoib_warn(priv, "request notify on send CQ failed\n");
-			dev->if_drv_flags |= IFF_DRV_OACTIVE;
+			if_setdrvflagbits(dev, IFF_DRV_OACTIVE, 0);
 		}
 	}
 
@@ -678,7 +678,7 @@ void ipoib_cm_handle_tx_wc(struct ipoib_dev_priv *priv, struct ib_wc *wc)
 {
 	struct ipoib_cm_tx *tx = wc->qp->qp_context;
 	unsigned int wr_id = wc->wr_id & ~IPOIB_OP_CM;
-	struct ifnet *dev = priv->dev;
+	if_t dev = priv->dev;
 	struct ipoib_cm_tx_buf *tx_req;
 
 	ipoib_dbg_data(priv, "cm send completion: id %d, status: %d\n",
@@ -701,9 +701,9 @@ void ipoib_cm_handle_tx_wc(struct ipoib_dev_priv *priv, struct ib_wc *wc)
 
 	++tx->tx_tail;
 	if (unlikely(--priv->tx_outstanding == ipoib_sendq_size >> 1) &&
-	    (dev->if_drv_flags & IFF_DRV_OACTIVE) != 0 &&
+	    (if_getdrvflags(dev) & IFF_DRV_OACTIVE) != 0 &&
 	    test_bit(IPOIB_FLAG_ADMIN_UP, &priv->flags))
-		dev->if_drv_flags &= ~IFF_DRV_OACTIVE;
+		if_setdrvflagbits(dev, 0, IFF_DRV_OACTIVE);
 
 	if (wc->status != IB_WC_SUCCESS &&
 	    wc->status != IB_WC_WR_FLUSH_ERR) {
@@ -735,7 +735,7 @@ int ipoib_cm_dev_open(struct ipoib_dev_priv *priv)
 {
 	int ret;
 
-	if (!IPOIB_CM_SUPPORTED(IF_LLADDR(priv->dev)))
+	if (!IPOIB_CM_SUPPORTED(if_getlladdr(priv->dev)))
 		return 0;
 
 	priv->cm.id = ib_create_cm_id(priv->ca, ipoib_cm_rx_handler, priv);
@@ -789,7 +789,7 @@ void ipoib_cm_dev_stop(struct ipoib_dev_priv *priv)
 	unsigned long begin;
 	int ret;
 
-	if (!IPOIB_CM_SUPPORTED(IF_LLADDR(priv->dev)) || !priv->cm.id)
+	if (!IPOIB_CM_SUPPORTED(if_getlladdr(priv->dev)) || !priv->cm.id)
 		return;
 
 	ib_destroy_cm_id(priv->cm.id);
@@ -903,12 +903,12 @@ static int ipoib_cm_rep_handler(struct ib_cm_id *cm_id, struct ib_cm_event *even
 
 	NET_EPOCH_ENTER(et);
 	for (;;) {
-		struct ifnet *dev = p->priv->dev;
+		if_t dev = p->priv->dev;
 		_IF_DEQUEUE(&mbqueue, mb);
 		if (mb == NULL)
 			break;
 		mb->m_pkthdr.rcvif = dev;
-		if (dev->if_transmit(dev, mb))
+		if (if_transmit(dev, mb))
 			ipoib_warn(priv, "dev_queue_xmit failed "
 				   "to requeue packet\n");
 	}
@@ -1062,7 +1062,7 @@ err_tx:
 static void ipoib_cm_tx_destroy(struct ipoib_cm_tx *p)
 {
 	struct ipoib_dev_priv *priv = p->priv;
-	struct ifnet *dev = priv->dev;
+	if_t dev = priv->dev;
 	struct ipoib_cm_tx_buf *tx_req;
 	unsigned long begin;
 
@@ -1097,9 +1097,9 @@ timeout:
 		m_freem(tx_req->mb);
 		++p->tx_tail;
 		if (unlikely(--priv->tx_outstanding == ipoib_sendq_size >> 1) &&
-		    (dev->if_drv_flags & IFF_DRV_OACTIVE) != 0 &&
+		    (if_getdrvflags(dev) & IFF_DRV_OACTIVE) != 0 &&
 		    test_bit(IPOIB_FLAG_ADMIN_UP, &priv->flags))
-			dev->if_drv_flags &= ~IFF_DRV_OACTIVE;
+			if_setdrvflagbits(dev, 0, IFF_DRV_OACTIVE);
 	}
 
 	if (p->qp)
@@ -1270,7 +1270,7 @@ static void ipoib_cm_mb_reap(struct work_struct *work)
 
 	spin_lock_irqsave(&priv->lock, flags);
 
-	CURVNET_SET_QUIET(priv->dev->if_vnet);
+	CURVNET_SET_QUIET(if_getvnet(priv->dev));
 
 	for (;;) {
 		IF_DEQUEUE(&priv->cm.mb_queue, mb);
@@ -1381,7 +1381,7 @@ static void ipoib_cm_create_srq(struct ipoib_dev_priv *priv, int max_sge)
 
 int ipoib_cm_dev_init(struct ipoib_dev_priv *priv)
 {
-	struct ifnet *dev = priv->dev;
+	if_t dev = priv->dev;
 	int i;
 	int max_srq_sge;
 
@@ -1400,7 +1400,7 @@ int ipoib_cm_dev_init(struct ipoib_dev_priv *priv)
 
 	bzero(&priv->cm.mb_queue, sizeof(priv->cm.mb_queue));
 	mtx_init(&priv->cm.mb_queue.ifq_mtx,
-	    dev->if_xname, "if send queue", MTX_DEF);
+	    if_name(dev), "if send queue", MTX_DEF);
 
 	max_srq_sge = priv->ca->attrs.max_srq_sge;
 
@@ -1438,7 +1438,7 @@ int ipoib_cm_dev_init(struct ipoib_dev_priv *priv)
 		}
 	}
 
-	IF_LLADDR(priv->dev)[0] = IPOIB_FLAGS_RC;
+	if_getlladdr(priv->dev)[0] = IPOIB_FLAGS_RC;
 	return 0;
 }
 

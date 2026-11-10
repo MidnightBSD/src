@@ -29,6 +29,7 @@ CFLAGS+= -DCONFIG_MLX5_FPGA
 .endif
 
 CFLAGS+= -I${SRCTOP}/sys/ofed/include
+CFLAGS+= -I${SRCTOP}/sys/ofed/include/uapi
 CFLAGS+= ${LINUXKPI_INCLUDES}
 
 .include <bsd.kmod.mk>

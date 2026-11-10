@@ -715,6 +715,7 @@ int if_setdev(if_t ifp, void *dev);
 int if_setdrvflagbits(if_t ifp, int if_setflags, int clear_flags);
 int if_getdrvflags(if_t ifp);
 int if_setdrvflags(if_t ifp, int flags);
+int if_getlinkstate(if_t ifp);
 int if_clearhwassist(if_t ifp);
 int if_sethwassistbits(if_t ifp, int toset, int toclear);
 int if_sethwassist(if_t ifp, int hwassist_bit);
