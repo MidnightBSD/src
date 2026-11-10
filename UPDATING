@@ -11,6 +11,10 @@ Updating Information for MidnightBSD users.
 	the kernel so libirdma matches irdma(4).  The user space verbs ABI
 	stays backwards compatible.
 
+	__MidnightBSD_version bumped to 402004 for the LinuxKPI update to
+	FreeBSD stable/15, so drm-*-kmod and nvidia-drm-*-kmod can detect
+	it.  Rebuild those mports after installing the new kernel.
+
 20261109:
 	LinuxKPI, net80211 and the LinuxKPI wireless drivers (iwlwifi,
 	rtw88, rtw89) updated to FreeBSD stable/15.  New mt76 driver
