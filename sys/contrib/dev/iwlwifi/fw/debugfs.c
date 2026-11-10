@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2012-2014, 2018-2020 Intel Corporation
+ * Copyright (C) 2012-2014, 2018-2024 Intel Corporation
  * Copyright (C) 2013-2015 Intel Mobile Communications GmbH
  * Copyright (C) 2016-2017 Intel Deutschland GmbH
  */
 #include "api/commands.h"
 #include "debugfs.h"
 #include "dbg.h"
+#include <linux/hex.h>
 #include <linux/seq_file.h>
 
 #define FWRT_DEBUGFS_OPEN_WRAPPER(name, buflen, argtype)		\
@@ -123,6 +124,24 @@ static const struct file_operations iwl_dbgfs_##name##_ops = {		\
 #define FWRT_DEBUGFS_ADD_FILE(name, parent, mode) \
 	FWRT_DEBUGFS_ADD_FILE_ALIAS(#name, name, parent, mode)
 
+static ssize_t iwl_dbgfs_fw_dbg_collect_write(struct iwl_fw_runtime *fwrt,
+					      char *buf, size_t count)
+{
+	if (count == 0)
+		return 0;
+
+	if (!iwl_trans_fw_running(fwrt->trans))
+		return count;
+
+	iwl_dbg_tlv_time_point(fwrt, IWL_FW_INI_TIME_POINT_USER_TRIGGER, NULL);
+
+	iwl_fw_dbg_collect(fwrt, FW_DBG_TRIGGER_USER, buf, (count - 1), NULL);
+
+	return count;
+}
+
+FWRT_DEBUGFS_WRITE_FILE_OPS(fw_dbg_collect, 16);
+
 static int iwl_dbgfs_enabled_severities_write(struct iwl_fw_runtime *fwrt,
 					      char *buf, size_t count)
 {
@@ -141,7 +160,11 @@ static int iwl_dbgfs_enabled_severities_write(struct iwl_fw_runtime *fwrt,
 
 	event_cfg.enabled_severities = cpu_to_le32(enabled_severities);
 
-	ret = iwl_trans_send_cmd(fwrt->trans, &hcmd);
+	if (fwrt->ops && fwrt->ops->send_hcmd)
+		ret = fwrt->ops->send_hcmd(fwrt->ops_ctx, &hcmd);
+	else
+		ret = -EPERM;
+
 	IWL_INFO(fwrt,
 		 "sent host event cfg with enabled_severities: %u, ret: %d\n",
 		 enabled_severities, ret);
@@ -176,7 +199,7 @@ void iwl_fw_trigger_timestamp(struct iwl_fw_runtime *fwrt, u32 delay)
 
 	iwl_fw_cancel_timestamp(fwrt);
 
-	fwrt->timestamp.delay = msecs_to_jiffies(delay * 1000);
+	fwrt->timestamp.delay = secs_to_jiffies(delay);
 
 	schedule_delayed_work(&fwrt->timestamp.wk,
 			      round_jiffies_relative(fwrt->timestamp.delay));
@@ -226,8 +249,7 @@ static ssize_t iwl_dbgfs_send_hcmd_write(struct iwl_fw_runtime *fwrt, char *buf,
 		.data = { NULL, },
 	};
 
-	if (fwrt->ops && fwrt->ops->fw_running &&
-	    !fwrt->ops->fw_running(fwrt->ops_ctx))
+	if (!iwl_trans_fw_running(fwrt->trans))
 		return -EIO;
 
 	if (count < header_size + 1 || count > 1024 * 4)
@@ -279,6 +301,26 @@ static ssize_t iwl_dbgfs_fw_dbg_domain_read(struct iwl_fw_runtime *fwrt,
 
 FWRT_DEBUGFS_READ_FILE_OPS(fw_dbg_domain, 20);
 
+static ssize_t iwl_dbgfs_fw_ver_read(struct iwl_fw_runtime *fwrt,
+				     size_t size, char *buf)
+{
+	char *pos = buf;
+	char *endpos = buf + size;
+
+	pos += scnprintf(pos, endpos - pos, "FW id: %s\n",
+			 fwrt->fw->fw_version);
+	pos += scnprintf(pos, endpos - pos, "FW: %s\n",
+			 fwrt->fw->human_readable);
+	pos += scnprintf(pos, endpos - pos, "Device: %s\n",
+			 fwrt->trans->info.name);
+	pos += scnprintf(pos, endpos - pos, "Bus: %s\n",
+			 fwrt->dev->bus->name);
+
+	return pos - buf;
+}
+
+FWRT_DEBUGFS_READ_FILE_OPS(fw_ver, 1024);
+
 struct iwl_dbgfs_fw_info_priv {
 	struct iwl_fw_runtime *fwrt;
 };
@@ -318,7 +360,7 @@ static void *iwl_dbgfs_fw_info_seq_start(struct seq_file *seq, loff_t *pos)
 	if (*pos >= fw->ucode_capa.n_cmd_versions)
 		return NULL;
 
-	state = kzalloc(sizeof(*state), GFP_KERNEL);
+	state = kzalloc_obj(*state);
 	if (!state)
 		return NULL;
 	state->pos = *pos;
@@ -341,6 +383,18 @@ static int iwl_dbgfs_fw_info_seq_show(struct seq_file *seq, void *v)
 		seq_printf(seq,
 			   "    %d: %d\n",
 			   IWL_UCODE_TLV_CAPA_PPAG_CHINA_BIOS_SUPPORT,
+			   has_capa);
+		has_capa = fw_has_capa(&fw->ucode_capa,
+				       IWL_UCODE_TLV_CAPA_CHINA_22_REG_SUPPORT) ? 1 : 0;
+		seq_printf(seq,
+			   "    %d: %d\n",
+			   IWL_UCODE_TLV_CAPA_CHINA_22_REG_SUPPORT,
+			   has_capa);
+		has_capa = fw_has_capa(&fw->ucode_capa,
+				       IWL_UCODE_TLV_CAPA_FW_ACCEPTS_RAW_DSM_TABLE) ? 1 : 0;
+		seq_printf(seq,
+			   "    %d: %d\n",
+			   IWL_UCODE_TLV_CAPA_FW_ACCEPTS_RAW_DSM_TABLE,
 			   has_capa);
 		seq_puts(seq, "fw_api_ver:\n");
 	}
@@ -394,5 +448,7 @@ void iwl_fwrt_dbgfs_register(struct iwl_fw_runtime *fwrt,
 	FWRT_DEBUGFS_ADD_FILE(fw_info, dbgfs_dir, 0200);
 	FWRT_DEBUGFS_ADD_FILE(send_hcmd, dbgfs_dir, 0200);
 	FWRT_DEBUGFS_ADD_FILE(enabled_severities, dbgfs_dir, 0200);
+	FWRT_DEBUGFS_ADD_FILE(fw_dbg_collect, dbgfs_dir, 0200);
 	FWRT_DEBUGFS_ADD_FILE(fw_dbg_domain, dbgfs_dir, 0400);
+	FWRT_DEBUGFS_ADD_FILE(fw_ver, dbgfs_dir, 0400);
 }

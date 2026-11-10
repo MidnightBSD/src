@@ -4,6 +4,10 @@
  * Copyright (c) 2010 Panasas, Inc.
  * Copyright (c) 2013-2021 Mellanox Technologies, Ltd.
  * All rights reserved.
+ * Copyright (c) 2024-2026 The FreeBSD Foundation
+ *
+ * Portions of this software were developed by Björn Zeeb
+ * under sponsorship from the FreeBSD Foundation.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,24 +40,41 @@
 #include <linux/compat.h>
 #include <linux/types.h>
 #include <linux/gfp.h>
+#include <linux/err.h>
 #include <linux/llist.h>
 #include <linux/overflow.h>
+#include <linux/cleanup.h>
 
 MALLOC_DECLARE(M_KMALLOC);
 
-#define	kvmalloc(size, flags)		kmalloc(size, flags)
-#define	kvzalloc(size, flags)		kmalloc(size, (flags) | __GFP_ZERO)
+#define	kvzalloc(size, flags)		kvmalloc(size, (flags) | __GFP_ZERO)
 #define	kvcalloc(n, size, flags)	kvmalloc_array(n, size, (flags) | __GFP_ZERO)
 #define	kzalloc(size, flags)		kmalloc(size, (flags) | __GFP_ZERO)
 #define	kzalloc_node(size, flags, node)	kmalloc_node(size, (flags) | __GFP_ZERO, node)
+#define	kzalloc_obj(_p, ...)						\
+    kzalloc(sizeof(typeof(_p)), default_gfp(__VA_ARGS__))
+#define	kzalloc_objs(_p, _n, ...)					\
+    kzalloc(size_mul((_n), sizeof(typeof(_p))), default_gfp(__VA_ARGS__))
+#define	kzalloc_flex(_p, _field, _n, ...)				\
+({									\
+	const size_t __n = (_n);					\
+	const size_t __psize = struct_size_t(typeof(_p), _field, __n);	\
+	typeof(_p) *__p_obj;						\
+									\
+	__p_obj = kzalloc(__psize, default_gfp(__VA_ARGS__));		\
+	if (__p_obj != NULL)						\
+		__set_flex_counter(__p_obj->_field, __n);		\
+									\
+	__p_obj;							\
+})
 #define	kfree_const(ptr)		kfree(ptr)
+#define kfree_async(ptr)		kfree(ptr)		/* drm-kmod 5.4 compat */
 #define	vzalloc(size)			__vmalloc(size, GFP_KERNEL | __GFP_NOWARN | __GFP_ZERO, 0)
 #define	vfree(arg)			kfree(arg)
 #define	kvfree(arg)			kfree(arg)
 #define	vmalloc_node(size, node)	__vmalloc_node(size, GFP_KERNEL, node)
 #define	vmalloc_user(size)		__vmalloc(size, GFP_KERNEL | __GFP_ZERO, 0)
 #define	vmalloc(size)			__vmalloc(size, GFP_KERNEL, 0)
-#define	__kmalloc(...)			kmalloc(__VA_ARGS__)
 
 /*
  * Prefix some functions with linux_ to avoid namespace conflict
@@ -85,11 +106,22 @@ struct linux_kmem_cache;
 #define	ARCH_KMALLOC_MINALIGN \
 	__alignof(unsigned long long)
 
-/* drm-kmod 5.4 compat */
-#define kfree_async(ptr)	kfree(ptr);
-
 #define	ZERO_SIZE_PTR		((void *)16)
 #define ZERO_OR_NULL_PTR(x)	((x) == NULL || (x) == ZERO_SIZE_PTR)
+
+struct linux_kmem_cache *linux_kmem_cache_create(const char *name,
+    size_t size, size_t align, unsigned flags, linux_kmem_ctor_t *ctor);
+void *lkpi_kmem_cache_alloc(struct linux_kmem_cache *, gfp_t);
+void *lkpi_kmem_cache_zalloc(struct linux_kmem_cache *, gfp_t);
+void lkpi_kmem_cache_free(struct linux_kmem_cache *, void *);
+void linux_kmem_cache_destroy(struct linux_kmem_cache *);
+
+void *lkpi_kmalloc(size_t, gfp_t);
+void *lkpi_kvmalloc(size_t, gfp_t);
+void *lkpi___kmalloc(size_t, gfp_t);
+void *lkpi___kmalloc_node(size_t, gfp_t, int);
+void *lkpi_krealloc(const void *, size_t, gfp_t);
+void lkpi_kfree(const void *);
 
 static inline gfp_t
 linux_check_m_flags(gfp_t flags)
@@ -106,35 +138,104 @@ linux_check_m_flags(gfp_t flags)
 	return (flags & GFP_NATIVE_MASK);
 }
 
+/*
+ * Base functions with a native implementation.
+ */
+
+static inline size_t
+ksize(const void *ptr)
+{
+	return (malloc_usable_size(ptr));
+}
+
 static inline void *
 kmalloc(size_t size, gfp_t flags)
 {
-	return (malloc(MAX(size, sizeof(struct llist_node)), M_KMALLOC,
-	    linux_check_m_flags(flags)));
+	return (lkpi_kmalloc(size, flags));
+}
+
+static inline void *
+__kmalloc(size_t size, gfp_t flags)
+{
+	return (lkpi___kmalloc(size, flags));
 }
 
 static inline void *
 kmalloc_node(size_t size, gfp_t flags, int node)
 {
-	return (malloc_domainset(size, M_KMALLOC,
-	    linux_get_vm_domain_set(node), linux_check_m_flags(flags)));
+	return (lkpi___kmalloc_node(size, flags, node));
+}
+
+#define	kmalloc_obj(_p, ...)						\
+    kmalloc(sizeof(typeof(_p)), default_gfp(__VA_ARGS__))
+
+#define	kmalloc_objs(_p, _n, ...)					\
+    kmalloc(size_mul((_n) * sizeof(typeof(_p))), default_gfp(__VA_ARGS__))
+
+static inline void *
+krealloc(const void *ptr, size_t size, gfp_t flags)
+{
+	return (lkpi_krealloc(ptr, size, flags));
+}
+
+static inline void
+kfree(const void *ptr)
+{
+	lkpi_kfree(ptr);
+}
+
+DEFINE_FREE(kfree, void *, if (!IS_ERR_OR_NULL(_T)) kfree(_T))
+
+/*
+ * Other k*alloc() funtions using the above as underlying allocator.
+ */
+/* kmalloc */
+static inline void *
+kmalloc_array(size_t n, size_t size, gfp_t flags)
+{
+	if (WOULD_OVERFLOW(n, size))
+		panic("%s: %zu * %zu overflowed", __func__, n, size);
+
+	return (kmalloc(size * n, flags));
 }
 
 static inline void *
 kcalloc(size_t n, size_t size, gfp_t flags)
 {
 	flags |= __GFP_ZERO;
-	return (mallocarray(n, size, M_KMALLOC, linux_check_m_flags(flags)));
+	return (kmalloc_array(n, size, flags));
+}
+
+/* kmalloc_node */
+static inline void *
+kmalloc_array_node(size_t n, size_t size, gfp_t flags, int node)
+{
+	if (WOULD_OVERFLOW(n, size))
+		panic("%s: %zu * %zu overflowed", __func__, n, size);
+
+	return (kmalloc_node(size * n, flags, node));
 }
 
 static inline void *
 kcalloc_node(size_t n, size_t size, gfp_t flags, int node)
 {
 	flags |= __GFP_ZERO;
-	return (mallocarray_domainset(n, size, M_KMALLOC,
-	    linux_get_vm_domain_set(node), linux_check_m_flags(flags)));
+	return (kmalloc_array_node(n, size, flags, node));
 }
 
+/* krealloc */
+static inline void *
+krealloc_array(void *ptr, size_t n, size_t size, gfp_t flags)
+{
+	if (WOULD_OVERFLOW(n, size))
+		return NULL;
+
+	return (krealloc(ptr, n * size, flags));
+}
+
+/*
+ * vmalloc/kvalloc functions.
+ */
 static inline void *
 __vmalloc(size_t size, gfp_t flags, int other)
 {
@@ -154,71 +255,64 @@ vmalloc_32(size_t size)
 	return (contigmalloc(size, M_KMALLOC, M_WAITOK, 0, UINT_MAX, 1, 1));
 }
 
+/* May return non-contiguous memory. */
 static inline void *
-kmalloc_array(size_t n, size_t size, gfp_t flags)
+kvmalloc(size_t size, gfp_t flags)
 {
-	return (mallocarray(n, size, M_KMALLOC, linux_check_m_flags(flags)));
-}
-
-static inline void *
-kmalloc_array_node(size_t n, size_t size, gfp_t flags, int node)
-{
-	return (mallocarray_domainset(n, size, M_KMALLOC,
-	    linux_get_vm_domain_set(node), linux_check_m_flags(flags)));
+	return (lkpi_kvmalloc(size, flags));
 }
 
 static inline void *
 kvmalloc_array(size_t n, size_t size, gfp_t flags)
 {
-	return (mallocarray(n, size, M_KMALLOC, linux_check_m_flags(flags)));
+	if (WOULD_OVERFLOW(n, size))
+		panic("%s: %zu * %zu overflowed", __func__, n, size);
+
+	return (kvmalloc(size * n, flags));
 }
 
+void * lkpi_kvrealloc(const void *ptr, size_t oldsize, size_t newsize, gfp_t flags);
+
+#if defined(LINUXKPI_VERSION) && LINUXKPI_VERSION < 61200
 static inline void *
-krealloc(void *ptr, size_t size, gfp_t flags)
+kvrealloc(const void *ptr, size_t oldsize, size_t newsize, gfp_t flags)
 {
-	return (realloc(ptr, size, M_KMALLOC, linux_check_m_flags(flags)));
+	return (lkpi_kvrealloc(ptr, oldsize, newsize, flags));
 }
-
+#else
 static inline void *
-krealloc_array(void *ptr, size_t n, size_t size, gfp_t flags)
+kvrealloc(const void *ptr, size_t newsize, gfp_t flags)
 {
-	if (WOULD_OVERFLOW(n, size)) {
-		return NULL;
-	}
+	size_t oldsize;
 
-	return (realloc(ptr, n * size, M_KMALLOC, linux_check_m_flags(flags)));
-}
-
-extern void linux_kfree_async(void *);
-
-static inline void
-kfree(const void *ptr)
-{
-	if (curthread->td_critnest != 0)
-		linux_kfree_async(__DECONST(void *, ptr));
+	if (!ZERO_OR_NULL_PTR(ptr))
+		oldsize = ksize(ptr);
 	else
-		free(__DECONST(void *, ptr), M_KMALLOC);
+		oldsize = 0;
+
+	return (lkpi_kvrealloc(ptr, oldsize, newsize, flags));
 }
+#endif
+
+/*
+ * Misc.
+ */
 
 static __inline void
 kfree_sensitive(const void *ptr)
 {
+	if (ZERO_OR_NULL_PTR(ptr))
+		return;
+
 	zfree(__DECONST(void *, ptr), M_KMALLOC);
 }
 
 static inline size_t
-ksize(const void *ptr)
+kmalloc_size_roundup(size_t size)
 {
-	return (malloc_usable_size(ptr));
+	if (unlikely(size == 0 || size == SIZE_MAX))
+		return (size);
+	return (malloc_size(size));
 }
-
-extern struct linux_kmem_cache *linux_kmem_cache_create(const char *name,
-    size_t size, size_t align, unsigned flags, linux_kmem_ctor_t *ctor);
-extern void *lkpi_kmem_cache_alloc(struct linux_kmem_cache *, gfp_t);
-extern void *lkpi_kmem_cache_zalloc(struct linux_kmem_cache *, gfp_t);
-extern void lkpi_kmem_cache_free(struct linux_kmem_cache *, void *);
-extern void linux_kmem_cache_destroy(struct linux_kmem_cache *);
-void linux_kmem_cache_free_rcu_callback(struct rcu_head *head);
-void linux_kmem_cache_free_rcu(struct linux_kmem_cache *, void *);
 
 #endif					/* _LINUXKPI_LINUX_SLAB_H_ */

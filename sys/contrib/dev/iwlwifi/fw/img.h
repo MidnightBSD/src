@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause */
 /*
- * Copyright (C) 2005-2014, 2018-2021 Intel Corporation
+ * Copyright (C) 2005-2014, 2018-2024 Intel Corporation
  * Copyright (C) 2013-2015 Intel Mobile Communications GmbH
  * Copyright (C) 2016 Intel Deutschland GmbH
  */
@@ -14,14 +14,13 @@
 #include "error-dump.h"
 
 /**
- * enum iwl_ucode_type
- *
- * The type of ucode.
+ * enum iwl_ucode_type - type of ucode
  *
  * @IWL_UCODE_REGULAR: Normal runtime ucode
  * @IWL_UCODE_INIT: Initial ucode
  * @IWL_UCODE_WOWLAN: Wake on Wireless enabled ucode
  * @IWL_UCODE_REGULAR_USNIFFER: Normal runtime ucode when using usniffer image
+ * @IWL_UCODE_TYPE_MAX: (internal value)
  */
 enum iwl_ucode_type {
 	IWL_UCODE_REGULAR,
@@ -51,9 +50,10 @@ struct iwl_ucode_capabilities {
 	u32 error_log_addr;
 	u32 error_log_size;
 	u32 num_stations;
+	u32 num_links;
 	u32 num_beacons;
-	unsigned long _api[BITS_TO_LONGS(NUM_IWL_UCODE_TLV_API)];
-	unsigned long _capa[BITS_TO_LONGS(NUM_IWL_UCODE_TLV_CAPA)];
+	DECLARE_BITMAP(_api, NUM_IWL_UCODE_TLV_API);
+	DECLARE_BITMAP(_capa, NUM_IWL_UCODE_TLV_CAPA);
 
 	const struct iwl_fw_cmd_version *cmd_versions;
 	u32 n_cmd_versions;
@@ -121,7 +121,7 @@ struct fw_img {
 #define FW_ADDR_CACHE_CONTROL 0xC0000000UL
 
 /**
- * struct iwl_fw_paging
+ * struct iwl_fw_paging - FW paging descriptor
  * @fw_paging_phys: page phy pointer
  * @fw_paging_block: pointer to the allocated block
  * @fw_paging_size: page size
@@ -194,11 +194,18 @@ struct iwl_dump_exclude {
  * @phy_integration_ver_len: length of @phy_integration_ver
  * @dump_excl: image dump exclusion areas for RT image
  * @dump_excl_wowlan: image dump exclusion areas for WoWLAN image
+ * @pnvm_data: PNVM data embedded in the .ucode file, if any
+ * @pnvm_size: size of the embedded PNVM data
+ * @dbg: debug data, see &struct iwl_fw_dbg
+ * @default_calib: default calibration data
+ * @phy_config: PHY configuration flags
+ * @valid_rx_ant: valid RX antenna bitmap
+ * @valid_tx_ant: valid TX antenna bitmap
  */
 struct iwl_fw {
 	u32 ucode_ver;
 
-	char fw_version[64];
+	char fw_version[128];
 
 	/* ucode images */
 	struct fw_img img[IWL_UCODE_TYPE_MAX];
@@ -226,6 +233,9 @@ struct iwl_fw {
 	u32 phy_integration_ver_len;
 
 	struct iwl_dump_exclude dump_excl[2], dump_excl_wowlan[2];
+
+	const void *pnvm_data;
+	u32 pnvm_size;
 };
 
 static inline const char *get_fw_dbg_mode_string(int mode)

@@ -101,7 +101,8 @@ void rtw_desc_to_mcsrate(u16 rate, u8 *mcs, u8 *nss)
 		*nss = 4;
 		*mcs = rate - DESC_RATEVHT4SS_MCS0;
 	} else if (rate >= DESC_RATEMCS0 &&
-		   rate <= DESC_RATEMCS15) {
+		   rate <= DESC_RATEMCS31) {
+		*nss = 0;
 		*mcs = rate - DESC_RATEMCS0;
 	}
 }
@@ -121,7 +122,7 @@ static void rtw_collect_sta_iter(void *data, struct ieee80211_sta *sta)
 	struct rtw_iter_stas_data *iter_stas = data;
 	struct rtw_stas_entry *stas_entry;
 
-	stas_entry = kmalloc(sizeof(*stas_entry), GFP_ATOMIC);
+	stas_entry = kmalloc_obj(*stas_entry, GFP_ATOMIC);
 	if (!stas_entry)
 		return;
 
@@ -171,7 +172,7 @@ static void rtw_collect_vif_iter(void *data, u8 *mac, struct ieee80211_vif *vif)
 	struct rtw_iter_vifs_data *iter_stas = data;
 	struct rtw_vifs_entry *vifs_entry;
 
-	vifs_entry = kmalloc(sizeof(*vifs_entry), GFP_ATOMIC);
+	vifs_entry = kmalloc_obj(*vifs_entry, GFP_ATOMIC);
 	if (!vifs_entry)
 		return;
 

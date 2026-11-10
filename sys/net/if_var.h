@@ -768,6 +768,10 @@ void if_setinitfn(if_t ifp, void (*)(void *));
 void if_setioctlfn(if_t ifp, int (*)(if_t, u_long, caddr_t));
 void if_setstartfn(if_t ifp, void (*)(if_t));
 void if_settransmitfn(if_t ifp, if_transmit_fn_t);
+int if_gettype(if_t ifp);
+if_transmit_fn_t if_gettransmitfn(if_t ifp);
+uint64_t if_getcounter(if_t ifp, ift_counter counter);
+const uint8_t *if_getbroadcastaddr(const if_t ifp);
 void if_setqflushfn(if_t ifp, if_qflush_fn_t);
 void if_setgetcounterfn(if_t ifp, if_get_counter_t);
 

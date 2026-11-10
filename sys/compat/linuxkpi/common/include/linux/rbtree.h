@@ -39,8 +39,8 @@
 struct rb_node {
 	RB_ENTRY(rb_node)	__entry;
 };
-#define	rb_left		__entry.rbe_link[_RB_L-1]
-#define	rb_right	__entry.rbe_link[_RB_R-1]
+#define	rb_left		__entry.rbe_link[_RB_L]
+#define	rb_right	__entry.rbe_link[_RB_R]
 
 /*
  * We provide a false structure that has the same bit pattern as tree.h
@@ -72,8 +72,11 @@ RB_PROTOTYPE(linux_root, rb_node, __entry, panic_cmp);
 #define RB_EMPTY_NODE(node)     (RB_PARENT(node, __entry) == node)
 #define RB_CLEAR_NODE(node)     RB_SET_PARENT(node, node, __entry)
 
-#define rb_insert_color(node, root)					\
-	linux_root_RB_INSERT_COLOR((struct linux_root *)(root), (node))
+#define rb_insert_color(node, root) do {				\
+	if (rb_parent(node))						\
+		linux_root_RB_INSERT_COLOR((struct linux_root *)(root), \
+		    rb_parent(node), (node));				\
+} while (0)
 #define	rb_erase(node, root)						\
 	linux_root_RB_REMOVE((struct linux_root *)(root), (node))
 #define	rb_next(node)	RB_NEXT(linux_root, NULL, (node))
@@ -143,7 +146,9 @@ static inline void
 rb_insert_color_cached(struct rb_node *node, struct rb_root_cached *root,
     bool leftmost)
 {
-	linux_root_RB_INSERT_COLOR((struct linux_root *)&root->rb_root, node);
+	if (rb_parent(node))
+		linux_root_RB_INSERT_COLOR((struct linux_root *)&root->rb_root,
+		    rb_parent(node), node);
 	if (leftmost)
 		root->rb_leftmost = node;
 }
@@ -168,6 +173,50 @@ rb_replace_node_cached(struct rb_node *old, struct rb_node *new,
 	rb_replace_node(old, new, &root->rb_root);
 	if (root->rb_leftmost == old)
 		root->rb_leftmost = new;
+}
+
+static inline struct rb_node *
+rb_add_cached(struct rb_node *node, struct rb_root_cached *tree,
+    bool (*less)(struct rb_node *, const struct rb_node *))
+{
+	struct rb_node **link = &tree->rb_root.rb_node;
+	struct rb_node *parent = NULL;
+	bool leftmost = true;
+
+	while (*link != NULL) {
+		parent = *link;
+		if (less(node, parent)) {
+			link = &RB_LEFT(parent, __entry);
+		} else {
+			link = &RB_RIGHT(parent, __entry);
+			leftmost = false;
+		}
+	}
+
+	rb_link_node(node, parent, link);
+	rb_insert_color_cached(node, tree, leftmost);
+
+	return (leftmost ? node : NULL);
+}
+
+static inline void
+rb_add(struct rb_node *node, struct rb_root *tree,
+    bool (*less)(struct rb_node *, const struct rb_node *))
+{
+	struct rb_node **link = &tree->rb_node;
+	struct rb_node *parent = NULL;
+
+	while (*link != NULL) {
+		parent = *link;
+		if (less(node, parent)) {
+			link = &RB_LEFT(parent, __entry);
+		} else {
+			link = &RB_RIGHT(parent, __entry);
+		}
+	}
+
+	rb_link_node(node, parent, link);
+	rb_insert_color(node, tree);
 }
 
 #undef RB_ROOT

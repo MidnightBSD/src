@@ -36,14 +36,14 @@
 #include <sys/mutex.h>
 #include <sys/kdb.h>
 
+#include <linux/cleanup.h>
 #include <linux/compiler.h>
 #include <linux/rwlock.h>
 #include <linux/bottom_half.h>
 #include <linux/lockdep.h>
+#include <linux/preempt.h>
 
-typedef struct {
-	struct mtx m;
-} spinlock_t;
+typedef struct mtx spinlock_t;
 
 /*
  * By defining CONFIG_SPIN_SKIP LinuxKPI spinlocks and asserts will be
@@ -59,7 +59,7 @@ typedef struct {
 #define	spin_lock(_l) do {			\
 	if (SPIN_SKIP())			\
 		break;				\
-	mtx_lock(&(_l)->m);			\
+	mtx_lock(_l);				\
 	local_bh_disable();			\
 } while (0)
 
@@ -76,7 +76,7 @@ typedef struct {
 	if (SPIN_SKIP())			\
 		break;				\
 	local_bh_enable();			\
-	mtx_unlock(&(_l)->m);			\
+	mtx_unlock(_l);				\
 } while (0)
 
 #define	spin_unlock_bh(_l) do {			\
@@ -93,7 +93,7 @@ typedef struct {
 	if (SPIN_SKIP()) {			\
 		__ret = 1;			\
 	} else {				\
-		__ret = mtx_trylock(&(_l)->m);	\
+		__ret = mtx_trylock(_l);	\
 		if (likely(__ret != 0))		\
 			local_bh_disable();	\
 	}					\
@@ -111,7 +111,7 @@ typedef struct {
 #define	spin_lock_nested(_l, _n) do {		\
 	if (SPIN_SKIP())			\
 		break;				\
-	mtx_lock_flags(&(_l)->m, MTX_DUPOK);	\
+	mtx_lock_flags(_l, MTX_DUPOK);		\
 	local_bh_disable();			\
 } while (0)
 
@@ -126,6 +126,7 @@ typedef struct {
 } while (0)
 
 #define	spin_unlock_irqrestore(_l, flags) do {		\
+	(void)(flags);					\
 	spin_unlock(_l);				\
 } while (0)
 
@@ -140,31 +141,27 @@ typedef struct {
 #define	_spin_lock_name(...)		__spin_lock_name(__VA_ARGS__)
 #define	spin_lock_name(name)		_spin_lock_name(name, __FILE__, __LINE__)
 
-#define	spin_lock_init(lock)	linux_spin_lock_init(lock, spin_lock_name("lnxspin"))
+#define	spin_lock_init(lock)	mtx_init(lock, spin_lock_name("lnxspin"), \
+				  NULL, MTX_DEF | MTX_NOWITNESS | MTX_NEW)
 
-static inline void
-linux_spin_lock_init(spinlock_t *lock, const char *name)
-{
-
-	memset(lock, 0, sizeof(*lock));
-	mtx_init(&lock->m, name, NULL, MTX_DEF | MTX_NOWITNESS);
-}
-
-static inline void
-spin_lock_destroy(spinlock_t *lock)
-{
-
-       mtx_destroy(&lock->m);
-}
+#define	spin_lock_destroy(_l)	mtx_destroy(_l)
 
 #define	DEFINE_SPINLOCK(lock)					\
 	spinlock_t lock;					\
-	MTX_SYSINIT(lock, &(lock).m, spin_lock_name("lnxspin"), MTX_DEF)
+	MTX_SYSINIT(lock, &lock, spin_lock_name("lnxspin"), MTX_DEF)
 
 #define	assert_spin_locked(_l) do {		\
 	if (SPIN_SKIP())			\
 		break;				\
-	mtx_assert(&(_l)->m, MA_OWNED);		\
+	mtx_assert(_l, MA_OWNED);		\
+} while (0)
+
+#define	local_irq_save(flags) do {		\
+	(flags) = 0;				\
+} while (0)
+
+#define	local_irq_restore(flags) do {		\
+	(void)(flags);				\
 } while (0)
 
 #define	atomic_dec_and_lock_irqsave(cnt, lock, flags) \
@@ -182,5 +179,34 @@ _atomic_dec_and_lock_irqsave(atomic_t *cnt, spinlock_t *lock,
 	spin_unlock_irqrestore(lock, *flags);
 	return (0);
 }
+
+/*
+ * struct raw_spinlock
+ */
+
+typedef struct raw_spinlock {
+	struct mtx	lock;
+} raw_spinlock_t;
+
+#define	raw_spin_lock_init(rlock) \
+	mtx_init(&(rlock)->lock, spin_lock_name("lnxspin_raw"), \
+	    NULL, MTX_DEF | MTX_NOWITNESS | MTX_NEW)
+
+#define	raw_spin_lock(rl)	spin_lock(&(rl)->lock)
+#define	raw_spin_trylock(rl)	spin_trylock(&(rl)->lock)
+#define	raw_spin_unlock(rl)	spin_unlock(&(rl)->lock)
+
+#define	raw_spin_lock_irqsave(rl, f)		spin_lock_irqsave(&(rl)->lock, (f))
+#define	raw_spin_trylock_irqsave(rl, f)		spin_trylock_irqsave(&(rl)->lock, (f))
+#define	raw_spin_unlock_irqrestore(rl, f)	spin_unlock_irqrestore(&(rl)->lock, (f))
+
+/*
+ * cleanup.h related pre-defined cases.
+ */
+DEFINE_LOCK_GUARD_1(spinlock_irqsave,
+    spinlock_t,
+    spin_lock_irqsave(_T->lock, _T->flags),
+    spin_unlock_irqrestore(_T->lock, _T->flags),
+    unsigned long flags)
 
 #endif					/* _LINUXKPI_LINUX_SPINLOCK_H_ */

@@ -325,7 +325,8 @@ NORMAL_CTFCONVERT=	@:
 
 # Linux Kernel Programming Interface C-flags
 LINUXKPI_INCLUDES=	-I$S/compat/linuxkpi/common/include \
-			-I$S/compat/linuxkpi/dummy/include
+			-I$S/compat/linuxkpi/dummy/include \
+			-include $S/compat/linuxkpi/common/include/linux/kconfig.h
 LINUXKPI_C=		${NORMAL_C} ${LINUXKPI_INCLUDES}
 
 # Infiniband C flags.  Correct include paths and omit errors that linux
@@ -342,6 +343,10 @@ MLXFW_C=	${OFED_C_NOIMP} \
 		-I${SRCTOP}/sys/contrib/xz-embedded/freebsd \
 		-I${SRCTOP}/sys/contrib/xz-embedded/linux/lib/xz \
 		${.IMPSRC}
+# BNXT Driver
+BNXT_CFLAGS=	-I$S/dev/bnxt/bnxt_en ${OFEDCFLAGS}
+BNXT_C_NOIMP=	${CC} -c -o ${.TARGET} ${BNXT_CFLAGS} ${WERROR}
+BNXT_C=		${BNXT_C_NOIMP} ${.IMPSRC}
 
 # IP Filter
 IPFILTER_CFLAGS=	-I$S/netpfil/ipfilter

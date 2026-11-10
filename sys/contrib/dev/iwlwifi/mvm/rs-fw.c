@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
  * Copyright (C) 2017 Intel Deutschland GmbH
- * Copyright (C) 2018-2023 Intel Corporation
+ * Copyright (C) 2018-2025 Intel Corporation
  */
 #include "rs.h"
 #include "fw-api.h"
@@ -72,7 +72,7 @@ static u16 rs_fw_get_config_flags(struct iwl_mvm *mvm,
 	u16 flags = 0;
 
 	/* get STBC flags */
-	if (mvm->cfg->ht_params->stbc &&
+	if (mvm->cfg->ht_params.stbc &&
 	    (num_of_ant(iwl_mvm_get_valid_tx_ant(mvm)) > 1)) {
 		if (he_cap->has_he && he_cap->he_cap_elem.phy_cap_info[2] &
 				      IEEE80211_HE_PHY_CAP2_STBC_RX_UNDER_80MHZ)
@@ -83,7 +83,7 @@ static u16 rs_fw_get_config_flags(struct iwl_mvm *mvm,
 			flags |= IWL_TLC_MNG_CFG_FLAGS_STBC_MSK;
 	}
 
-	if (mvm->cfg->ht_params->ldpc &&
+	if (mvm->cfg->ht_params.ldpc &&
 	    ((ht_cap->cap & IEEE80211_HT_CAP_LDPC_CODING) ||
 	     (vht_ena && (vht_cap->cap & IEEE80211_VHT_CAP_RXLDPC))))
 		flags |= IWL_TLC_MNG_CFG_FLAGS_LDPC_MSK;
@@ -440,12 +440,6 @@ void iwl_mvm_tlc_update_notif(struct iwl_mvm *mvm,
 
 	mvmsta = iwl_mvm_sta_from_mac80211(sta);
 
-	if (!mvmsta) {
-		IWL_ERR(mvm, "Invalid sta id (%d) in FW TLC notification\n",
-			notif->sta_id);
-		goto out;
-	}
-
 	flags = le32_to_cpu(notif->flags);
 
 	mvm_link_sta = rcu_dereference(mvmsta->link[link_sta->link_id]);
@@ -460,27 +454,22 @@ void iwl_mvm_tlc_update_notif(struct iwl_mvm *mvm,
 	if (flags & IWL_TLC_NOTIF_FLAG_RATE) {
 		char pretty_rate[100];
 
-		if (iwl_fw_lookup_notif_ver(mvm->fw, DATA_PATH_GROUP,
-					    TLC_MNG_UPDATE_NOTIF, 0) < 3) {
-			rs_pretty_print_rate_v1(pretty_rate,
-						sizeof(pretty_rate),
-						le32_to_cpu(notif->rate));
-			IWL_DEBUG_RATE(mvm,
-				       "Got rate in old format. Rate: %s. Converting.\n",
-				       pretty_rate);
-			lq_sta->last_rate_n_flags =
-				iwl_new_rate_from_v1(le32_to_cpu(notif->rate));
-		} else {
-			lq_sta->last_rate_n_flags = le32_to_cpu(notif->rate);
-		}
+		lq_sta->last_rate_n_flags =
+			iwl_mvm_v3_rate_from_fw(notif->rate, mvm->fw_rates_ver);
 		rs_pretty_print_rate(pretty_rate, sizeof(pretty_rate),
 				     lq_sta->last_rate_n_flags);
-		IWL_DEBUG_RATE(mvm, "new rate: %s\n", pretty_rate);
+		IWL_DEBUG_RATE(mvm, "rate: %s\n", pretty_rate);
 	}
 
 	if (flags & IWL_TLC_NOTIF_FLAG_AMSDU && !mvm_link_sta->orig_amsdu_len) {
+		u32 enabled = le32_to_cpu(notif->amsdu_enabled);
 		u16 size = le32_to_cpu(notif->amsdu_size);
 		int i;
+
+		if (size < 2000) {
+			size = 0;
+			enabled = 0;
+		}
 
 		if (link_sta->agg.max_amsdu_len < size) {
 			/*
@@ -492,7 +481,7 @@ void iwl_mvm_tlc_update_notif(struct iwl_mvm *mvm,
 			goto out;
 		}
 
-		mvmsta->amsdu_enabled = le32_to_cpu(notif->amsdu_enabled);
+		mvmsta->amsdu_enabled = enabled;
 		mvmsta->max_amsdu_len = size;
 		link_sta->agg.max_rc_amsdu_len = mvmsta->max_amsdu_len;
 
@@ -507,6 +496,8 @@ void iwl_mvm_tlc_update_notif(struct iwl_mvm *mvm,
 				 */
 				link_sta->agg.max_tid_amsdu_len[i] = 1;
 		}
+
+		ieee80211_sta_recalc_aggregates(sta);
 
 		IWL_DEBUG_RATE(mvm,
 			       "AMSDU update. AMSDU size: %d, AMSDU selected size: %d, AMSDU TID bitmap 0x%X\n",
@@ -528,10 +519,10 @@ u16 rs_fw_get_max_amsdu_len(struct ieee80211_sta *sta,
 	const struct ieee80211_sta_ht_cap *ht_cap = &link_sta->ht_cap;
 	const struct ieee80211_sta_eht_cap *eht_cap = &link_sta->eht_cap;
 
-	if (WARN_ON_ONCE(!link_conf->chandef.chan))
+	if (WARN_ON_ONCE(!link_conf->chanreq.oper.chan))
 		return IEEE80211_MAX_MPDU_LEN_VHT_3895;
 
-	if (link_conf->chandef.chan->band == NL80211_BAND_6GHZ) {
+	if (link_conf->chanreq.oper.chan->band == NL80211_BAND_6GHZ) {
 		switch (le16_get_bits(link_sta->he_6ghz_capa.capa,
 				      IEEE80211_HE_6GHZ_CAP_MAX_MPDU_LEN)) {
 		case IEEE80211_VHT_CAP_MAX_MPDU_LENGTH_11454:
@@ -541,7 +532,7 @@ u16 rs_fw_get_max_amsdu_len(struct ieee80211_sta *sta,
 		default:
 			return IEEE80211_MAX_MPDU_LEN_VHT_3895;
 		}
-	} else if (link_conf->chandef.chan->band == NL80211_BAND_2GHZ &&
+	} else if (link_conf->chanreq.oper.chan->band == NL80211_BAND_2GHZ &&
 		   eht_cap->has_eht) {
 		switch (u8_get_bits(eht_cap->eht_cap_elem.mac_cap_info[0],
 				    IEEE80211_EHT_MAC_CAP0_MAX_MPDU_LEN_MASK)) {
@@ -606,14 +597,12 @@ void iwl_mvm_rs_fw_rate_init(struct iwl_mvm *mvm,
 				cpu_to_le16(max_amsdu_len) : 0,
 	};
 	unsigned int link_id = link_conf->link_id;
+	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(mvmsta->vif);
 	int cmd_ver;
 	int ret;
 
-	/* Enable external EHT LTF only for GL device and if there's
-	 * mutual support by AP and client
-	 */
-	if (CSR_HW_REV_TYPE(mvm->trans->hw_rev) == IWL_CFG_MAC_TYPE_GL &&
-	    sband_eht_cap &&
+	/* Enable extra EHT LTF if there's mutual support by AP and client */
+	if (sband_eht_cap &&
 	    sband_eht_cap->eht_cap_elem.phy_cap_info[5] &
 		IEEE80211_EHT_PHY_CAP5_SUPP_EXTRA_EHT_LTF &&
 	    link_sta->eht_cap.has_eht &&
@@ -649,12 +638,12 @@ void iwl_mvm_rs_fw_rate_init(struct iwl_mvm *mvm,
 	 * since TLC offload works with one mode we can assume
 	 * that only vht/ht is used and also set it as station max amsdu
 	 */
-	sta->deflink.agg.max_amsdu_len = max_amsdu_len;
+	link_sta->agg.max_amsdu_len = max_amsdu_len;
+	ieee80211_sta_recalc_aggregates(sta);
 
-	cmd_ver = iwl_fw_lookup_cmd_ver(mvm->fw,
-					WIDE_ID(DATA_PATH_GROUP,
-						TLC_MNG_CONFIG_CMD),
-					0);
+	cfg_cmd.max_tx_op = cpu_to_le16(mvmvif->max_tx_op);
+
+	cmd_ver = iwl_fw_lookup_cmd_ver(mvm->fw, cmd_id, 0);
 	IWL_DEBUG_RATE(mvm, "TLC CONFIG CMD, sta_id=%d, max_ch_width=%d, mode=%d\n",
 		       cfg_cmd.sta_id, cfg_cmd.max_ch_width, cfg_cmd.mode);
 	IWL_DEBUG_RATE(mvm, "TLC CONFIG CMD, chains=0x%X, ch_wid_supp=%d, flags=0x%X\n",
@@ -690,9 +679,7 @@ void iwl_mvm_rs_fw_rate_init(struct iwl_mvm *mvm,
 		u16 cmd_size = sizeof(cfg_cmd_v3);
 
 		/* In old versions of the API the struct is 4 bytes smaller */
-		if (iwl_fw_lookup_cmd_ver(mvm->fw,
-					  WIDE_ID(DATA_PATH_GROUP,
-						  TLC_MNG_CONFIG_CMD), 0) < 3)
+		if (iwl_fw_lookup_cmd_ver(mvm->fw, cmd_id, 0) < 3)
 			cmd_size -= 4;
 
 		ret = iwl_mvm_send_cmd_pdu(mvm, cmd_id, CMD_ASYNC, cmd_size,

@@ -29,12 +29,12 @@
 #ifndef	_LINUXKPI_LINUX_GFP_H_
 #define	_LINUXKPI_LINUX_GFP_H_
 
-#include <sys/cdefs.h>
 #include <sys/types.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
 
 #include <linux/page.h>
+#include <linux/topology.h>
 
 #include <vm/vm_param.h>
 #include <vm/vm_object.h>
@@ -44,7 +44,6 @@
 #define	__GFP_NOWARN	0
 #define	__GFP_HIGHMEM	0
 #define	__GFP_ZERO	M_ZERO
-#define	__GFP_NORETRY	0
 #define	__GFP_NOMEMALLOC 0
 #define	__GFP_RECLAIM   0
 #define	__GFP_RECLAIMABLE   0
@@ -56,15 +55,19 @@
 #define	__GFP_IO	0
 #define	__GFP_NO_KSWAPD	0
 #define	__GFP_KSWAPD_RECLAIM	0
+#define	__GFP_ACCOUNT	0
 #define	__GFP_WAIT	M_WAITOK
 #define	__GFP_DMA32	(1U << 24) /* LinuxKPI only */
-#define	__GFP_BITS_SHIFT 25
+#define	__GFP_NORETRY	(1U << 25) /* LinuxKPI only */
+#define	__GFP_THISNODE	(1U << 26)
+#define	__GFP_BITS_SHIFT	27
 #define	__GFP_BITS_MASK	((1 << __GFP_BITS_SHIFT) - 1)
 #define	__GFP_NOFAIL	M_WAITOK
 
 #define	GFP_NOWAIT	M_NOWAIT
 #define	GFP_ATOMIC	(M_NOWAIT | M_USE_RESERVE)
 #define	GFP_KERNEL	M_WAITOK
+#define	GFP_KERNEL_ACCOUNT	(GFP_KERNEL | __GFP_ACCOUNT)
 #define	GFP_USER	M_WAITOK
 #define	GFP_HIGHUSER	M_WAITOK
 #define	GFP_HIGHUSER_MOVABLE	M_WAITOK
@@ -80,19 +83,13 @@
 CTASSERT((__GFP_DMA32 & GFP_NATIVE_MASK) == 0);
 CTASSERT((__GFP_BITS_MASK & GFP_NATIVE_MASK) == GFP_NATIVE_MASK);
 
+#define	__default_gfp(_discard, _arg_or_default, ...)	_arg_or_default
+#define	default_gfp(...)	__default_gfp(, ##__VA_ARGS__, GFP_KERNEL)
+
 struct page_frag_cache {
 	void *va;
 	int pagecnt_bias;
 };
-
-/*
- * Resolve a page into a virtual address:
- *
- * NOTE: This function only works for pages allocated by the kernel.
- */
-void *linux_page_address(struct page *);
-
-#define	page_address(page) linux_page_address(page)
 
 /*
  * Page management for unmapped pages:
@@ -143,6 +140,8 @@ dev_alloc_pages(unsigned int order)
 {
 	return (linux_alloc_pages(GFP_ATOMIC, order));
 }
+
+struct folio *folio_alloc(gfp_t gfp, unsigned int order);
 
 /*
  * Page management for mapped pages:

@@ -24,7 +24,6 @@
  *
  */
 
-#include <sys/cdefs.h>
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/bus.h>
@@ -91,12 +90,12 @@ lkpi_iicbb_attach(device_t dev)
 	struct lkpi_iicbb_softc *sc;
 
 	sc = device_get_softc(dev);
-	sc->iicbb = device_add_child(dev, "iicbb", -1);
+	sc->iicbb = device_add_child(dev, "iicbb", DEVICE_UNIT_ANY);
 	if (sc->iicbb == NULL) {
 		device_printf(dev, "Couldn't add iicbb child, aborting\n");
 		return (ENXIO);
 	}
-	bus_generic_attach(dev);
+	bus_attach_children(dev);
 	return (0);
 }
 
@@ -162,17 +161,15 @@ static device_method_t lkpi_iicbb_methods[] = {
 	DEVMETHOD_END
 };
 
-static devclass_t lkpi_iicbb_devclass;
-
 driver_t lkpi_iicbb_driver = {
 	"lkpi_iicbb",
 	lkpi_iicbb_methods,
 	sizeof(struct lkpi_iicbb_softc),
 };
 
-DRIVER_MODULE(lkpi_iicbb, drmn, lkpi_iicbb_driver, lkpi_iicbb_devclass, 0, 0);
-DRIVER_MODULE(lkpi_iicbb, drm, lkpi_iicbb_driver, lkpi_iicbb_devclass, 0, 0);
-DRIVER_MODULE(iicbb, lkpi_iicbb, iicbb_driver, iicbb_devclass, 0, 0);
+DRIVER_MODULE(lkpi_iicbb, drmn, lkpi_iicbb_driver, 0, 0);
+DRIVER_MODULE(lkpi_iicbb, drm, lkpi_iicbb_driver, 0, 0);
+DRIVER_MODULE(iicbb, lkpi_iicbb, iicbb_driver, 0, 0);
 MODULE_DEPEND(linuxkpi, iicbb, IICBUS_MINVER, IICBUS_PREFVER, IICBUS_MAXVER);
 
 static void
@@ -306,13 +303,13 @@ int
 lkpi_i2c_bit_add_bus(struct i2c_adapter *adapter)
 {
 	device_t lkpi_iicbb;
-	int error;
 
 	if (bootverbose)
 		device_printf(adapter->dev.parent->bsddev,
 		    "Adding i2c adapter %s\n", adapter->name);
 	sx_xlock(&lkpi_sx_i2cbb);
-	lkpi_iicbb = device_add_child(adapter->dev.parent->bsddev, "lkpi_iicbb", -1);
+	lkpi_iicbb = device_add_child(adapter->dev.parent->bsddev, "lkpi_iicbb",
+	    DEVICE_UNIT_ANY);
 	if (lkpi_iicbb == NULL) {
 		device_printf(adapter->dev.parent->bsddev, "Couldn't add lkpi_iicbb\n");
 		sx_xunlock(&lkpi_sx_i2cbb);
@@ -320,14 +317,8 @@ lkpi_i2c_bit_add_bus(struct i2c_adapter *adapter)
 	}
 
 	bus_topo_lock();
-	error = bus_generic_attach(adapter->dev.parent->bsddev);
+	bus_attach_children(adapter->dev.parent->bsddev);
 	bus_topo_unlock();
-	if (error) {
-		device_printf(adapter->dev.parent->bsddev,
-		  "failed to attach child: error %d\n", error);
-		sx_xunlock(&lkpi_sx_i2cbb);
-		return (ENXIO);
-	}
 	LKPI_IIC_ADD_ADAPTER(lkpi_iicbb, adapter);
 	sx_xunlock(&lkpi_sx_i2cbb);
 	return (0);

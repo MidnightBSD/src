@@ -62,7 +62,11 @@ static const struct cfg80211_sar_freq_ranges rtw_common_sar_freq_ranges[] = {
 	[RTW_SAR_BAND_4] = { .start_freq = 5745, .end_freq = 5825, },
 };
 
+#if defined(__linux__)
+static_assert(ARRAY_SIZE(rtw_common_sar_freq_ranges) == RTW_SAR_BAND_NR);
+#elif defined(__FreeBSD__)
 rtw88_static_assert(ARRAY_SIZE(rtw_common_sar_freq_ranges) == RTW_SAR_BAND_NR);
+#endif
 
 const struct cfg80211_sar_capa rtw_sar_capa = {
 	.type = NL80211_SAR_TYPE_POWER,
@@ -97,7 +101,7 @@ int rtw_set_sar_specs(struct rtw_dev *rtwdev,
 			power, BIT(RTW_COMMON_SAR_FCT));
 
 		for (j = 0; j < RTW_RF_PATH_MAX; j++) {
-			for (k = 0; k < RTW_RATE_SECTION_MAX; k++) {
+			for (k = 0; k < RTW_RATE_SECTION_NUM; k++) {
 				arg = (struct rtw_sar_arg){
 					.sar_band = idx,
 					.path = j,

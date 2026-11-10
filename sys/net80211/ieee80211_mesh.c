@@ -27,9 +27,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF 
  * SUCH DAMAGE. 
  */ 
-#include <sys/cdefs.h>
-#ifdef __MidnightBSD__
-#endif
 
 /*
  * IEEE 802.11s Mesh Point (MBSS) support.
@@ -86,7 +83,7 @@ static void	mesh_transmit_to_gate(struct ieee80211vap *, struct mbuf *,
 static void	mesh_forward(struct ieee80211vap *, struct mbuf *,
 		    const struct ieee80211_meshcntl *);
 static int	mesh_input(struct ieee80211_node *, struct mbuf *,
-		    const struct ieee80211_rx_stats *rxs, int, int);
+		    const struct ieee80211_rx_stats *rxs, net80211_rssi_t, int);
 static void	mesh_recv_mgmt(struct ieee80211_node *, struct mbuf *, int,
 		    const struct ieee80211_rx_stats *rxs, int, int);
 static void	mesh_recv_ctl(struct ieee80211_node *, struct mbuf *, int);
@@ -551,7 +548,7 @@ mesh_gatemode_cb(void *arg)
 }
 
 static void
-ieee80211_mesh_init(void)
+ieee80211_mesh_init(void *dummy __unused)
 {
 
 	memset(mesh_proto_paths, 0, sizeof(mesh_proto_paths));
@@ -666,7 +663,8 @@ mesh_vattach(struct ieee80211vap *vap)
 	ms = IEEE80211_MALLOC(sizeof(struct ieee80211_mesh_state), M_80211_VAP,
 	    IEEE80211_M_NOWAIT | IEEE80211_M_ZERO);
 	if (ms == NULL) {
-		printf("%s: couldn't alloc MBSS state\n", __func__);
+		net80211_vap_printf(vap, "%s: couldn't alloc MBSS state\n",
+		    __func__);
 		return;
 	}
 	vap->iv_mesh = ms;
@@ -823,7 +821,7 @@ mesh_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int arg)
 				ieee80211_print_essid(ni->ni_meshid,
 				    ni->ni_meshidlen);
 				/* XXX MCS/HT */
-				printf(" channel %d\n",
+				net80211_printf(" channel %d\n",
 				    ieee80211_chan2ieee(ic, ic->ic_curchan));
 			}
 #endif
@@ -1527,7 +1525,7 @@ mesh_recv_group_data(struct ieee80211vap *vap, struct mbuf *m,
 
 static int
 mesh_input(struct ieee80211_node *ni, struct mbuf *m,
-    const struct ieee80211_rx_stats *rxs, int rssi, int nf)
+    const struct ieee80211_rx_stats *rxs, net80211_rssi_t rssi, int nf)
 {
 #define	HAS_SEQ(type)	((type & 0x4) == 0)
 #define	MC01(mc)	((const struct ieee80211_meshcntl_ae01 *)mc)
@@ -1566,8 +1564,7 @@ mesh_input(struct ieee80211_node *ni, struct mbuf *m,
 	*/
 	wh = mtod(m, struct ieee80211_frame *);
 
-	if ((wh->i_fc[0] & IEEE80211_FC0_VERSION_MASK) !=
-	    IEEE80211_FC0_VERSION_0) {
+	if (!IEEE80211_IS_FC0_CHECK_VER(wh, IEEE80211_FC0_VERSION_0)) {
 		IEEE80211_DISCARD_MAC(vap, IEEE80211_MSG_ANY,
 		    ni->ni_macaddr, NULL, "wrong version %x", wh->i_fc[0]);
 		vap->iv_stats.is_rx_badversion++;
@@ -1791,12 +1788,13 @@ mesh_input(struct ieee80211_node *ni, struct mbuf *m,
 		if ((ieee80211_msg_debug(vap) && 
 		    (vap->iv_ic->ic_flags & IEEE80211_F_SCAN)) ||
 		    ieee80211_msg_dumppkts(vap)) {
-			if_printf(ifp, "received %s from %s rssi %d\n",
+			net80211_vap_printf(vap,
+			    "received %s from %s rssi %d\n",
 			    ieee80211_mgt_subtype_name(subtype),
 			    ether_sprintf(wh->i_addr2), rssi);
 		}
 #endif
-		if (wh->i_fc[1] & IEEE80211_FC1_PROTECTED) {
+		if (IEEE80211_IS_PROTECTED(wh)) {
 			IEEE80211_DISCARD(vap, IEEE80211_MSG_INPUT,
 			    wh, NULL, "%s", "WEP set but not permitted");
 			vap->iv_stats.is_rx_mgtdiscard++; /* XXX */
@@ -1880,7 +1878,7 @@ mesh_recv_mgmt(struct ieee80211_node *ni, struct mbuf *m0, int subtype,
 				 * XXX check if the beacon we recv'd gives
 				 * us what we need and suppress the probe req
 				 */
-				ieee80211_probe_curchan(vap, 1);
+				ieee80211_probe_curchan(vap, true);
 				ic->ic_flags_ext &= ~IEEE80211_FEXT_PROBECHAN;
 			}
 			ieee80211_add_scan(vap, rxchan, &scan, wh,
@@ -3301,13 +3299,13 @@ mesh_airtime_calc(struct ieee80211_node *ni)
 	uint64_t res;
 
 	/* Time to transmit a frame */
-	rate = ni->ni_txrate;
+	rate = ieee80211_node_get_txrate_dot11rate(ni);
 	overhead = ieee80211_compute_duration(ic->ic_rt,
-	    ifp->if_mtu + IEEE80211_MESH_MAXOVERHEAD, rate, 0) << M_BITS;
+	    if_getmtu(ifp) + IEEE80211_MESH_MAXOVERHEAD, rate, 0) << M_BITS;
 	/* Error rate in percentage */
 	/* XXX assuming small failures are ok */
-	errrate = (((ifp->if_get_counter(ifp, IFCOUNTER_OERRORS) +
-	    ifp->if_get_counter(ifp, IFCOUNTER_IERRORS)) / 100) << M_BITS)
+	errrate = (((if_getcounter(ifp, IFCOUNTER_OERRORS) +
+	    if_getcounter(ifp, IFCOUNTER_IERRORS)) / 100) << M_BITS)
 	    / 100;
 	res = (overhead + (nbits / rate)) *
 	    ((1 << S_FACTOR) / ((1 << M_BITS) - errrate));

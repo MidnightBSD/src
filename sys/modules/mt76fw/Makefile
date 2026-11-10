@@ -1,0 +1,50 @@
+
+SUBDIR=	\
+	mt7615_cr4 \
+	mt7615_n9 \
+	mt7615_rom_patch \
+	mt7915_eeprom \
+	mt7915_eeprom_dbdc \
+	mt7915_rom_patch \
+	mt7915_wa \
+	mt7915_wm \
+	mt7916_eeprom \
+	mt7916_rom_patch \
+	mt7916_wa \
+	mt7916_wm \
+	mt7990_eeprom \
+	mt7990_eeprom_2i5i \
+	mt7990_rom_patch \
+	mt7990_wm \
+	mt7992_dsp \
+	mt7992_dsp_23 \
+	mt7992_eeprom \
+	mt7992_eeprom_23 \
+	mt7992_eeprom_23_2i5i \
+	mt7992_eeprom_2i5e \
+	mt7992_eeprom_2i5i \
+	mt7992_rom_patch \
+	mt7992_rom_patch_23 \
+	mt7992_wa \
+	mt7992_wa_23 \
+	mt7992_wm \
+	mt7992_wm_23 \
+	mt7996_dsp \
+	mt7996_eeprom \
+	mt7996_eeprom_233 \
+	mt7996_eeprom_233_2i5i6i \
+	mt7996_eeprom_2i5i6i \
+	mt7996_rom_patch \
+	mt7996_rom_patch_233 \
+	mt7996_wa \
+	mt7996_wa_233 \
+	mt7996_wm \
+	mt7996_wm_233 \
+	wifi_mt7922_patch_mcu_1_1_hdr \
+	wifi_mt7925_patch_mcu_1_1_hdr \
+	wifi_mt7961_patch_mcu_1_2_hdr \
+	wifi_ram_code_mt7922_1 \
+	wifi_ram_code_mt7925_1_1 \
+	wifi_ram_code_mt7961_1
+
+.include <bsd.subdir.mk>

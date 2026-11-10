@@ -1,34 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 /*
- * Copyright (C) 2022 - 2023 Intel Corporation
+ * Copyright (C) 2022 - 2024 Intel Corporation
  */
 #include "mvm.h"
 #include "time-event.h"
-
-static u32 iwl_mvm_get_free_fw_link_id(struct iwl_mvm *mvm,
-				       struct iwl_mvm_vif *mvm_vif)
-{
-	u32 link_id;
-
-	lockdep_assert_held(&mvm->mutex);
-
-	link_id = ffz(mvm->fw_link_ids_map);
-
-	/* this case can happen if there're deactivated but not removed links */
-	if (link_id > IWL_MVM_FW_MAX_LINK_ID)
-		return IWL_MVM_FW_LINK_ID_INVALID;
-
-	mvm->fw_link_ids_map |= BIT(link_id);
-	return link_id;
-}
-
-static void iwl_mvm_release_fw_link_id(struct iwl_mvm *mvm, u32 link_id)
-{
-	lockdep_assert_held(&mvm->mutex);
-
-	if (!WARN_ON(link_id > IWL_MVM_FW_MAX_LINK_ID))
-		mvm->fw_link_ids_map &= ~BIT(link_id);
-}
 
 static int iwl_mvm_link_cmd_send(struct iwl_mvm *mvm,
 				 struct iwl_link_config_cmd *cmd,
@@ -46,6 +21,17 @@ static int iwl_mvm_link_cmd_send(struct iwl_mvm *mvm,
 	return ret;
 }
 
+void iwl_mvm_set_link_fw_id(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
+			    struct ieee80211_bss_conf *link_conf)
+{
+	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
+	struct iwl_mvm_vif_link_info *link_info =
+		mvmvif->link[link_conf->link_id];
+
+	if (link_info->fw_link_id == IWL_MVM_FW_LINK_ID_INVALID)
+		link_info->fw_link_id = mvmvif->id;
+}
+
 int iwl_mvm_add_link(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 		     struct ieee80211_bss_conf *link_conf)
 {
@@ -53,20 +39,13 @@ int iwl_mvm_add_link(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 	unsigned int link_id = link_conf->link_id;
 	struct iwl_mvm_vif_link_info *link_info = mvmvif->link[link_id];
 	struct iwl_link_config_cmd cmd = {};
-	struct iwl_mvm_phy_ctxt *phyctxt;
+	unsigned int cmd_id = WIDE_ID(MAC_CONF_GROUP, LINK_CONFIG_CMD);
+	u8 cmd_ver = iwl_fw_lookup_cmd_ver(mvm->fw, cmd_id, 1);
 
 	if (WARN_ON_ONCE(!link_info))
 		return -EINVAL;
 
-	if (link_info->fw_link_id == IWL_MVM_FW_LINK_ID_INVALID) {
-		link_info->fw_link_id = iwl_mvm_get_free_fw_link_id(mvm,
-								    mvmvif);
-		if (link_info->fw_link_id == IWL_MVM_FW_LINK_ID_INVALID)
-			return -EINVAL;
-
-		rcu_assign_pointer(mvm->link_id_to_link_conf[link_info->fw_link_id],
-				   link_conf);
-	}
+	iwl_mvm_set_link_fw_id(mvm, vif, link_conf);
 
 	/* Update SF - Disable if needed. if this fails, SF might still be on
 	 * while many macs are bound, which is forbidden - so fail the binding.
@@ -77,19 +56,16 @@ int iwl_mvm_add_link(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 	cmd.link_id = cpu_to_le32(link_info->fw_link_id);
 	cmd.mac_id = cpu_to_le32(mvmvif->id);
 	cmd.spec_link_id = link_conf->link_id;
-	/* P2P-Device already has a valid PHY context during add */
-	phyctxt = link_info->phy_ctxt;
-	if (phyctxt)
-		cmd.phy_id = cpu_to_le32(phyctxt->id);
-	else
-		cmd.phy_id = cpu_to_le32(FW_CTXT_INVALID);
+	WARN_ON_ONCE(link_info->phy_ctxt);
+	cmd.phy_id = cpu_to_le32(FW_CTXT_INVALID);
 
 	memcpy(cmd.local_link_addr, link_conf->addr, ETH_ALEN);
 
 	if (vif->type == NL80211_IFTYPE_ADHOC && link_conf->bssid)
 		memcpy(cmd.ibss_bssid_addr, link_conf->bssid, ETH_ALEN);
 
-	cmd.listen_lmac = cpu_to_le32(link_info->listen_lmac);
+	if (cmd_ver < 2)
+		cmd.listen_lmac = cpu_to_le32(link_info->listen_lmac);
 
 	return iwl_mvm_link_cmd_send(mvm, &cmd, FW_CTXT_ACTION_ADD);
 }
@@ -105,6 +81,8 @@ int iwl_mvm_link_changed(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 	struct iwl_link_config_cmd cmd = {};
 	u32 ht_flag, flags = 0, flags_mask = 0;
 	int ret;
+	unsigned int cmd_id = WIDE_ID(MAC_CONF_GROUP, LINK_CONFIG_CMD);
+	u8 cmd_ver = iwl_fw_lookup_cmd_ver(mvm->fw, cmd_id, 1);
 
 	if (WARN_ON_ONCE(!link_info ||
 			 link_info->fw_link_id == IWL_MVM_FW_LINK_ID_INVALID))
@@ -126,10 +104,15 @@ int iwl_mvm_link_changed(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 		WARN_ON_ONCE(active == link_info->active);
 
 		/* When deactivating a link session protection should
-		 * be stopped
+		 * be stopped. Also let the firmware know if we can't Tx.
 		 */
-		if (!active && vif->type == NL80211_IFTYPE_STATION)
+		if (!active && vif->type == NL80211_IFTYPE_STATION) {
 			iwl_mvm_stop_session_protection(mvm, vif);
+			if (link_info->csa_block_tx) {
+				cmd.block_tx = 1;
+				link_info->csa_block_tx = false;
+			}
+		}
 	}
 
 	cmd.link_id = cpu_to_le32(link_info->fw_link_id);
@@ -151,7 +134,7 @@ int iwl_mvm_link_changed(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 	if (vif->type == NL80211_IFTYPE_ADHOC && link_conf->bssid)
 		memcpy(cmd.ibss_bssid_addr, link_conf->bssid, ETH_ALEN);
 
-	iwl_mvm_set_fw_basic_rates(mvm, vif, link_conf,
+	iwl_mvm_set_fw_basic_rates(mvm, vif, link_info,
 				   &cmd.cck_rates, &cmd.ofdm_rates);
 
 	cmd.cck_short_preamble = cpu_to_le32(link_conf->use_short_preamble);
@@ -186,6 +169,17 @@ int iwl_mvm_link_changed(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 			(link_conf->uora_ocw_range >> 3) & 0x7;
 	}
 
+	/* ap_sta may be NULL if we're disconnecting */
+	if (changes & LINK_CONTEXT_MODIFY_HE_PARAMS && mvmvif->ap_sta) {
+		struct ieee80211_link_sta *link_sta =
+			link_sta_dereference_check(mvmvif->ap_sta, link_id);
+
+		if (!WARN_ON(!link_sta) && link_sta->he_cap.has_he &&
+		    link_sta->he_cap.he_cap_elem.mac_cap_info[5] &
+		    IEEE80211_HE_MAC_CAP5_OM_CTRL_UL_MU_DATA_DIS_RX)
+			cmd.ul_mu_data_disable = 1;
+	}
+
 	/* TODO  how to set ndp_fdbk_buff_th_exp? */
 
 	if (iwl_mvm_set_fw_mu_edca_params(mvm, mvmvif->link[link_id],
@@ -194,11 +188,23 @@ int iwl_mvm_link_changed(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 		flags_mask |= LINK_FLG_MU_EDCA_CW;
 	}
 
-	if (link_conf->eht_puncturing && !iwlwifi_mod_params.disable_11be)
-		cmd.puncture_mask = cpu_to_le16(link_conf->eht_puncturing);
-	else
-		/* This flag can be set only if the MAC has eht support */
-		changes &= ~LINK_CONTEXT_MODIFY_EHT_PARAMS;
+	if (changes & LINK_CONTEXT_MODIFY_EHT_PARAMS) {
+		struct ieee80211_chanctx_conf *ctx;
+		struct cfg80211_chan_def *def = NULL;
+
+		rcu_read_lock();
+		ctx = rcu_dereference(link_conf->chanctx_conf);
+		if (ctx)
+			def = iwl_mvm_chanctx_def(mvm, ctx);
+
+		if (iwlwifi_mod_params.disable_11be ||
+		    !link_conf->eht_support || !def ||
+		    iwl_fw_lookup_cmd_ver(mvm->fw, PHY_CONTEXT_CMD, 1) >= 6)
+			changes &= ~LINK_CONTEXT_MODIFY_EHT_PARAMS;
+		else
+			cmd.puncture_mask = cpu_to_le16(def->punctured);
+		rcu_read_unlock();
+	}
 
 	cmd.bss_color = link_conf->he_bss_color.color;
 
@@ -224,9 +230,11 @@ int iwl_mvm_link_changed(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 send_cmd:
 	cmd.modify_mask = cpu_to_le32(changes);
 	cmd.flags = cpu_to_le32(flags);
-	cmd.flags_mask = cpu_to_le32(flags_mask);
+	if (cmd_ver < 6)
+		cmd.flags_mask = cpu_to_le32(flags_mask);
 	cmd.spec_link_id = link_conf->link_id;
-	cmd.listen_lmac = cpu_to_le32(link_info->listen_lmac);
+	if (cmd_ver < 2)
+		cmd.listen_lmac = cpu_to_le32(link_info->listen_lmac);
 
 	ret = iwl_mvm_link_cmd_send(mvm, &cmd, FW_CTXT_ACTION_MODIFY);
 	if (!ret && (changes & LINK_CONTEXT_MODIFY_ACTIVE))
@@ -244,22 +252,15 @@ int iwl_mvm_remove_link(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 	struct iwl_link_config_cmd cmd = {};
 	int ret;
 
-	if (WARN_ON(!link_info ||
-		    link_info->fw_link_id == IWL_MVM_FW_LINK_ID_INVALID))
-		return -EINVAL;
-
-	RCU_INIT_POINTER(mvm->link_id_to_link_conf[link_info->fw_link_id],
-			 NULL);
 	cmd.link_id = cpu_to_le32(link_info->fw_link_id);
-	iwl_mvm_release_fw_link_id(mvm, link_info->fw_link_id);
 	link_info->fw_link_id = IWL_MVM_FW_LINK_ID_INVALID;
 	cmd.spec_link_id = link_conf->link_id;
+	cmd.phy_id = cpu_to_le32(FW_CTXT_INVALID);
 
 	ret = iwl_mvm_link_cmd_send(mvm, &cmd, FW_CTXT_ACTION_REMOVE);
 
-	if (!ret)
-		if (iwl_mvm_sf_update(mvm, vif, true))
-			IWL_ERR(mvm, "Failed to update SF state\n");
+	if (!ret && iwl_mvm_sf_update(mvm, vif, true))
+		IWL_ERR(mvm, "Failed to update SF state\n");
 
 	return ret;
 }
@@ -282,4 +283,15 @@ int iwl_mvm_disable_link(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
 		return ret;
 
 	return ret;
+}
+
+void iwl_mvm_init_link(struct iwl_mvm_vif_link_info *link)
+{
+	link->bcast_sta.sta_id = IWL_INVALID_STA;
+	link->mcast_sta.sta_id = IWL_INVALID_STA;
+	link->ap_sta_id = IWL_INVALID_STA;
+
+	for (int r = 0; r < NUM_IWL_MVM_SMPS_REQ; r++)
+		link->smps_requests[r] =
+			IEEE80211_SMPS_AUTOMATIC;
 }

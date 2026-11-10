@@ -25,10 +25,6 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-#ifdef __MidnightBSD__
-#endif
-
 /*
  * IEEE 802.11n protocol support.
  */
@@ -38,6 +34,7 @@
 
 #include <sys/param.h>
 #include <sys/kernel.h>
+#include <sys/libkern.h>
 #include <sys/malloc.h>
 #include <sys/systm.h> 
 #include <sys/endian.h>
@@ -171,7 +168,7 @@ static	ieee80211_send_action_func ht_send_action_ba_delba;
 static	ieee80211_send_action_func ht_send_action_ht_txchwidth;
 
 static void
-ieee80211_ht_init(void)
+ieee80211_ht_init(void *dummy __unused)
 {
 	/*
 	 * Setup HT parameters that depends on the clock frequency.
@@ -321,9 +318,12 @@ static int
 ht_getrate(struct ieee80211com *ic, int index, enum ieee80211_phymode mode,
     int ratetype)
 {
+	struct ieee80211_node_txrate tr;
 	int mword, rate;
 
-	mword = ieee80211_rate2media(ic, index | IEEE80211_RATE_MCS, mode);
+	tr = IEEE80211_NODE_TXRATE_INIT_HT(index);
+
+	mword = ieee80211_rate2media(ic, &tr, mode);
 	if (IFM_SUBTYPE(mword) != IFM_IEEE80211_MCS)
 		return (0);
 	switch (ratetype) {
@@ -1018,7 +1018,7 @@ ieee80211_ampdu_reorder(struct ieee80211_node *ni, struct mbuf *m,
 
 	/* NB: m_len known to be sufficient */
 	wh = mtod(m, struct ieee80211_qosframe *);
-	if (wh->i_fc[0] != IEEE80211_FC0_QOSDATA) {
+	if (!IEEE80211_IS_QOSDATA(wh)) {
 		/*
 		 * Not QoS data, shouldn't get here but just
 		 * return it to the caller for processing.
@@ -1131,7 +1131,8 @@ again:
 		 */
 		if (rap->rxa_qframes != 0) {
 			/* XXX honor batimeout? */
-			if (ticks - rap->rxa_age > ieee80211_ampdu_age) {
+			if (ieee80211_time_after(ticks - rap->rxa_age,
+			    ieee80211_ampdu_age)) {
 				/*
 				 * Too long since we received the first
 				 * frame; flush the reorder buffer.
@@ -1393,7 +1394,8 @@ ieee80211_ht_node_age(struct ieee80211_node *ni)
 		 * See above for more details on what's happening here.
 		 */
 		/* XXX honor batimeout? */
-		if (ticks - rap->rxa_age > ieee80211_ampdu_age) {
+		if (ieee80211_time_after(ticks - rap->rxa_age,
+		    ieee80211_ampdu_age)) {
 			/*
 			 * Too long since we received the first
 			 * frame; flush the reorder buffer.
@@ -1477,7 +1479,7 @@ ieee80211_ht_wds_init(struct ieee80211_node *ni)
 		ni->ni_htcap |= IEEE80211_HTCAP_SHORTGI20;
 	if (IEEE80211_IS_CHAN_HT40(ni->ni_chan)) {
 		ni->ni_htcap |= IEEE80211_HTCAP_CHWIDTH40;
-		ni->ni_chw = 40;
+		ni->ni_chw = NET80211_STA_RX_BW_40;
 		if (IEEE80211_IS_CHAN_HT40U(ni->ni_chan))
 			ni->ni_ht2ndchan = IEEE80211_HTINFO_2NDCHAN_ABOVE;
 		else if (IEEE80211_IS_CHAN_HT40D(ni->ni_chan))
@@ -1485,7 +1487,7 @@ ieee80211_ht_wds_init(struct ieee80211_node *ni)
 		if (vap->iv_flags_ht & IEEE80211_FHT_SHORTGI40)
 			ni->ni_htcap |= IEEE80211_HTCAP_SHORTGI40;
 	} else {
-		ni->ni_chw = 20;
+		ni->ni_chw = NET80211_STA_RX_BW_20;
 		ni->ni_ht2ndchan = IEEE80211_HTINFO_2NDCHAN_NONE;
 	}
 	ni->ni_htctlchan = ni->ni_chan->ic_ieee;
@@ -1581,7 +1583,7 @@ ieee80211_ht_node_join(struct ieee80211_node *ni)
 
 	if (ni->ni_flags & IEEE80211_NODE_HT) {
 		vap->iv_ht_sta_assoc++;
-		if (ni->ni_chw == 40)
+		if (ni->ni_chw == NET80211_STA_RX_BW_40)
 			vap->iv_ht40_sta_assoc++;
 	}
 	htinfo_update(vap);
@@ -1599,7 +1601,7 @@ ieee80211_ht_node_leave(struct ieee80211_node *ni)
 
 	if (ni->ni_flags & IEEE80211_NODE_HT) {
 		vap->iv_ht_sta_assoc--;
-		if (ni->ni_chw == 40)
+		if (ni->ni_chw == NET80211_STA_RX_BW_40)
 			vap->iv_ht40_sta_assoc--;
 	}
 	htinfo_update(vap);
@@ -1827,7 +1829,8 @@ htinfo_update_chw(struct ieee80211_node *ni, int htflags, int vhtflags)
 
 done:
 	/* update node's (11n) tx channel width */
-	ni->ni_chw = IEEE80211_IS_CHAN_HT40(ni->ni_chan)? 40 : 20;
+	ni->ni_chw = IEEE80211_IS_CHAN_HT40(ni->ni_chan) ?
+	    NET80211_STA_RX_BW_40 : NET80211_STA_RX_BW_20;
 	return (ret);
 }
 
@@ -1931,70 +1934,141 @@ ieee80211_ht_updateparams(struct ieee80211_node *ni,
 static uint32_t
 ieee80211_vht_get_vhtflags(struct ieee80211_node *ni, uint32_t htflags)
 {
-	struct ieee80211vap *vap = ni->ni_vap;
-	uint32_t vhtflags = 0;
+#define	_RETURN_CHAN_BITS(_cb)						\
+do {									\
+	if (0) IEEE80211_NOTE(ni->ni_vap, IEEE80211_MSG_11N, ni,	\
+	    "%s:%d: selected %b", __func__, __LINE__,			\
+	    (_cb), IEEE80211_CHAN_BITS);				\
+	return (_cb);							\
+} while(0)
+	struct ieee80211vap *vap;
+	const struct ieee80211_ie_htinfo *htinfo;
+	uint32_t vhtflags;
+	bool can_vht160, can_vht80p80, can_vht80;
+	bool ht40;
+
+	vap = ni->ni_vap;
+
+	/* If we do not support VHT or VHT is disabled just return. */
+	if ((ni->ni_flags & IEEE80211_NODE_VHT) == 0 ||
+	    (vap->iv_vht_flags & IEEE80211_FVHT_VHT) == 0)
+		_RETURN_CHAN_BITS(0);
+
+	/*
+	 * TODO: should we bail out if there's no htinfo?
+	 * Or just treat it as if we can't do the HT20/HT40 check?
+	 */
+
+	/*
+	 * The original code was based on
+	 * 802.11ac-2013, Table 8-183x-VHT Operation Information subfields.
+	 * 802.11-2020, Table 9-274-VHT Operation Information subfields
+	 * has IEEE80211_VHT_CHANWIDTH_160MHZ and
+	 * IEEE80211_VHT_CHANWIDTH_80P80MHZ deprecated.
+	 * For current logic see
+	 * 802.11-2020, 11.38.1 Basic VHT BSS functionality.
+	 */
+
+	htinfo = (const struct ieee80211_ie_htinfo *)ni->ni_ies.htinfo_ie;
+	if (htinfo != NULL)
+		ht40 = ((htinfo->hi_byte1 & IEEE80211_HTINFO_TXWIDTH) ==
+		    IEEE80211_HTINFO_TXWIDTH_2040);
+	else
+		ht40 = false;
+
+	can_vht160 = can_vht80p80 = can_vht80 = false;
+
+	/* 20 Mhz */
+	if (!ht40) {
+		/* Check for the full valid combination -- other fields be 0. */
+		if (ni->ni_vht_chanwidth != IEEE80211_VHT_CHANWIDTH_USE_HT ||
+		    ni->ni_vht_chan2 != 0)
+			IEEE80211_NOTE(ni->ni_vap, IEEE80211_MSG_11N, ni,
+			    "%s: invalid VHT BSS bandwidth 0/%d/%d/%d",
+			    __func__, ni->ni_vht_chanwidth,
+			    ni->ni_vht_chan1, ni->ni_vht_chan2);
+
+		_RETURN_CHAN_BITS(IEEE80211_CHAN_VHT20 | IEEE80211_CHAN_HT20);
+	}
 
 	vhtflags = 0;
-	if (ni->ni_flags & IEEE80211_NODE_VHT && vap->iv_vht_flags & IEEE80211_FVHT_VHT) {
-		if ((ni->ni_vht_chanwidth == IEEE80211_VHT_CHANWIDTH_160MHZ) &&
-		    /* XXX 2 means "160MHz and 80+80MHz", 1 means "160MHz" */
-		    (_IEEE80211_MASKSHIFT(vap->iv_vht_cap.vht_cap_info,
-		     IEEE80211_VHTCAP_SUPP_CHAN_WIDTH_MASK) >= 1) &&
-		    (vap->iv_vht_flags & IEEE80211_FVHT_USEVHT160)) {
-			vhtflags = IEEE80211_CHAN_VHT160;
-			/* Mirror the HT40 flags */
-			if (htflags == IEEE80211_CHAN_HT40U) {
-				vhtflags |= IEEE80211_CHAN_HT40U;
-			} else if (htflags == IEEE80211_CHAN_HT40D) {
-				vhtflags |= IEEE80211_CHAN_HT40D;
-			}
-		} else if ((ni->ni_vht_chanwidth == IEEE80211_VHT_CHANWIDTH_80P80MHZ) &&
-		    /* XXX 2 means "160MHz and 80+80MHz" */
-		    (_IEEE80211_MASKSHIFT(vap->iv_vht_cap.vht_cap_info,
-		     IEEE80211_VHTCAP_SUPP_CHAN_WIDTH_MASK) == 2) &&
-		    (vap->iv_vht_flags & IEEE80211_FVHT_USEVHT80P80)) {
-			vhtflags = IEEE80211_CHAN_VHT80P80;
-			/* Mirror the HT40 flags */
-			if (htflags == IEEE80211_CHAN_HT40U) {
-				vhtflags |= IEEE80211_CHAN_HT40U;
-			} else if (htflags == IEEE80211_CHAN_HT40D) {
-				vhtflags |= IEEE80211_CHAN_HT40D;
-			}
-		} else if ((ni->ni_vht_chanwidth == IEEE80211_VHT_CHANWIDTH_80MHZ) &&
-		    (vap->iv_vht_flags & IEEE80211_FVHT_USEVHT80)) {
-			vhtflags = IEEE80211_CHAN_VHT80;
-			/* Mirror the HT40 flags */
-			if (htflags == IEEE80211_CHAN_HT40U) {
-				vhtflags |= IEEE80211_CHAN_HT40U;
-			} else if (htflags == IEEE80211_CHAN_HT40D) {
-				vhtflags |= IEEE80211_CHAN_HT40D;
-			}
-		} else if (ni->ni_vht_chanwidth == IEEE80211_VHT_CHANWIDTH_USE_HT) {
-			/* Mirror the HT40 flags */
-			/*
-			 * XXX TODO: if ht40 is disabled, but vht40 isn't
-			 * disabled then this logic will get very, very sad.
-			 * It's quite possible the only sane thing to do is
-			 * to not have vht40 as an option, and just obey
-			 * 'ht40' as that flag.
-			 */
-			if ((htflags == IEEE80211_CHAN_HT40U) &&
-			    (vap->iv_vht_flags & IEEE80211_FVHT_USEVHT40)) {
-				vhtflags = IEEE80211_CHAN_VHT40U
-				    | IEEE80211_CHAN_HT40U;
-			} else if (htflags == IEEE80211_CHAN_HT40D &&
-			    (vap->iv_vht_flags & IEEE80211_FVHT_USEVHT40)) {
-				vhtflags = IEEE80211_CHAN_VHT40D
-				    | IEEE80211_CHAN_HT40D;
-			} else if (htflags == IEEE80211_CHAN_HT20) {
-				vhtflags = IEEE80211_CHAN_VHT20
-				    | IEEE80211_CHAN_HT20;
-			}
-		} else {
-			vhtflags = IEEE80211_CHAN_VHT20;
+
+	/* We know we can at least do 40Mhz, so mirror the HT40 flags. */
+	if (htflags == IEEE80211_CHAN_HT40U)
+		vhtflags |= IEEE80211_CHAN_HT40U;
+	else if (htflags == IEEE80211_CHAN_HT40D)
+		vhtflags |= IEEE80211_CHAN_HT40D;
+
+	/* 40 MHz */
+	if (ni->ni_vht_chanwidth == IEEE80211_VHT_CHANWIDTH_USE_HT) {
+		if (ni->ni_vht_chan2 != 0)
+			IEEE80211_NOTE(ni->ni_vap, IEEE80211_MSG_11N, ni,
+			    "%s: invalid VHT BSS bandwidth 1/%d/%d/%d",
+			    __func__, ni->ni_vht_chanwidth,
+			    ni->ni_vht_chan1, ni->ni_vht_chan2);
+
+		if ((vap->iv_vht_flags & IEEE80211_FVHT_USEVHT40) != 0) {
+			if (htflags == IEEE80211_CHAN_HT40U)
+				_RETURN_CHAN_BITS(IEEE80211_CHAN_VHT40U | vhtflags);
+			if (htflags == IEEE80211_CHAN_HT40D)
+				_RETURN_CHAN_BITS(IEEE80211_CHAN_VHT40D | vhtflags);
 		}
+
+		/* If we get here VHT40 is not supported or disabled. */
+		_RETURN_CHAN_BITS(IEEE80211_CHAN_VHT20 | IEEE80211_CHAN_HT20);
 	}
-	return (vhtflags);
+
+	/* Deprecated check for 160. */
+	if ((ni->ni_vht_chanwidth == IEEE80211_VHT_CHANWIDTH_160MHZ) &&
+	    IEEE80211_VHTCAP_SUPP_CHAN_WIDTH_IS_160MHZ(vap->iv_vht_cap.vht_cap_info) &&
+	    (vap->iv_vht_flags & IEEE80211_FVHT_USEVHT160) != 0)
+		_RETURN_CHAN_BITS(IEEE80211_CHAN_VHT160 | vhtflags);
+
+	/* Deprecated check for 80P80. */
+	if ((ni->ni_vht_chanwidth == IEEE80211_VHT_CHANWIDTH_80P80MHZ) &&
+	    IEEE80211_VHTCAP_SUPP_CHAN_WIDTH_IS_160_80P80MHZ(vap->iv_vht_cap.vht_cap_info) &&
+	    (vap->iv_vht_flags & IEEE80211_FVHT_USEVHT80P80) != 0)
+		_RETURN_CHAN_BITS(IEEE80211_CHAN_VHT80P80 | vhtflags);
+
+	if (ni->ni_vht_chanwidth != IEEE80211_VHT_CHANWIDTH_80MHZ) {
+		IEEE80211_NOTE(ni->ni_vap, IEEE80211_MSG_11N, ni,
+		    "%s: invalid VHT BSS bandwidth %d/%d/%d", __func__,
+		    ni->ni_vht_chanwidth, ni->ni_vht_chan2);
+
+		_RETURN_CHAN_BITS(0);
+	}
+
+	/* CCFS1 > 0 and | CCFS1 - CCFS0 | = 8 */
+	if (ni->ni_vht_chan2 > 0 && abs(ni->ni_vht_chan2 - ni->ni_vht_chan1) == 8)
+		can_vht160 = can_vht80 = true;
+
+	/* CCFS1 > 0 and | CCFS1 - CCFS0 | > 16 */
+	if (ni->ni_vht_chan2 > 0 && abs(ni->ni_vht_chan2 - ni->ni_vht_chan1) > 16)
+		can_vht80p80 = can_vht80 = true;
+
+	/* CFFS1 == 0 */
+	if (ni->ni_vht_chan2 == 0)
+		can_vht80 = true;
+
+	if (can_vht160 && (vap->iv_vht_flags & IEEE80211_FVHT_USEVHT160) != 0)
+		_RETURN_CHAN_BITS(IEEE80211_CHAN_VHT160 | vhtflags);
+
+	if (can_vht80p80 && (vap->iv_vht_flags & IEEE80211_FVHT_USEVHT80P80) != 0)
+		_RETURN_CHAN_BITS(IEEE80211_CHAN_VHT80P80 | vhtflags);
+
+	if (can_vht80 && (vap->iv_vht_flags & IEEE80211_FVHT_USEVHT80) != 0)
+		_RETURN_CHAN_BITS(IEEE80211_CHAN_VHT80 | vhtflags);
+
+	if (ht40 && (vap->iv_vht_flags & IEEE80211_FVHT_USEVHT40) != 0) {
+		if (htflags == IEEE80211_CHAN_HT40U)
+			_RETURN_CHAN_BITS(IEEE80211_CHAN_VHT40U | vhtflags);
+		if (htflags == IEEE80211_CHAN_HT40D)
+			_RETURN_CHAN_BITS(IEEE80211_CHAN_VHT40D | vhtflags);
+	}
+
+	/* Either we disabled support or got an invalid setting. */
+	_RETURN_CHAN_BITS(IEEE80211_CHAN_VHT20 | IEEE80211_CHAN_HT20);
+#undef _RETURN_CHAN_BITS
 }
 
 /*
@@ -2596,18 +2670,33 @@ ht_recv_action_ba_delba(struct ieee80211_node *ni,
 	return 0;
 }
 
+/*
+ * Handle the HT channel width action frame.
+ *
+ * 802.11-2020 9.6.11.2 (Notify Channel Width frame format).
+ */
 static int
 ht_recv_action_ht_txchwidth(struct ieee80211_node *ni,
-	const struct ieee80211_frame *wh,
-	const uint8_t *frm, const uint8_t *efrm)
+	const struct ieee80211_frame *wh __unused,
+	const uint8_t *frm, const uint8_t *efrm __unused)
 {
 	int chw;
 
-	chw = (frm[2] == IEEE80211_A_HT_TXCHWIDTH_2040) ? 40 : 20;
+	/* If 20/40 is not supported the chw cannot change. */
+	if ((ni->ni_htcap & IEEE80211_HTCAP_CHWIDTH40) == 0)
+		return (0);
+
+	/*
+	 * The supported values are either 0 (any supported width)
+	 * or 1 (HT20).  80, 160, etc MHz widths are not represented
+	 * here.
+	 */
+	chw = (frm[2] == IEEE80211_A_HT_TXCHWIDTH_2040) ?
+	    NET80211_STA_RX_BW_40 : NET80211_STA_RX_BW_20;
 
 	IEEE80211_NOTE(ni->ni_vap, IEEE80211_MSG_ACTION | IEEE80211_MSG_11N, ni,
-	    "%s: HT txchwidth, width %d%s",
-	    __func__, chw, ni->ni_chw != chw ? "*" : "");
+	    "%s: HT txchwidth, width %d%s (%s)", __func__,
+	    chw, ni->ni_chw != chw ? "*" : "", net80211_ni_chw_to_str(chw));
 	if (chw != ni->ni_chw) {
 		/* XXX does this need to change the ht40 station count? */
 		ni->ni_chw = chw;
@@ -2680,10 +2769,15 @@ ieee80211_ampdu_enable(struct ieee80211_node *ni,
 	return 1;
 }
 
-/*
- * Request A-MPDU tx aggregation.  Setup local state and
- * issue an ADDBA request.  BA use will only happen after
+/**
+ * @brief Request A-MPDU tx aggregation.
+ *
+ * Setup local state and issue an ADDBA request.  BA use will only happen after
  * the other end replies with ADDBA response.
+ *
+ * @param ni ieee80211_node update
+ * @param tap tx_ampdu state
+ * @returns 1 on success and 0 on error
  */
 int
 ieee80211_ampdu_request(struct ieee80211_node *ni,
@@ -2691,7 +2785,7 @@ ieee80211_ampdu_request(struct ieee80211_node *ni,
 {
 	struct ieee80211com *ic = ni->ni_ic;
 	uint16_t args[5];
-	int tid, dialogtoken;
+	int tid, dialogtoken, error;
 	static int tokens = 0;	/* XXX */
 
 	/* XXX locking */
@@ -2733,7 +2827,7 @@ ieee80211_ampdu_request(struct ieee80211_node *ni,
 		/* defer next try so we don't slam the driver with requests */
 		tap->txa_attempts = ieee80211_addba_maxtries;
 		/* NB: check in case driver wants to override */
-		if (tap->txa_nextrequest <= ticks)
+		if (ieee80211_time_before_eq(tap->txa_nextrequest, ticks))
 			tap->txa_nextrequest = ticks + ieee80211_addba_backoff;
 		return 0;
 	}
@@ -2742,8 +2836,11 @@ ieee80211_ampdu_request(struct ieee80211_node *ni,
 	args[4] = _IEEE80211_SHIFTMASK(tap->txa_start, IEEE80211_BASEQ_START)
 		| _IEEE80211_SHIFTMASK(0, IEEE80211_BASEQ_FRAG)
 		;
-	return ic->ic_send_action(ni, IEEE80211_ACTION_CAT_BA,
+
+	error = ic->ic_send_action(ni, IEEE80211_ACTION_CAT_BA,
 		IEEE80211_ACTION_BA_ADDBA_REQUEST, args);
+	/* Silly return of 1 for success here. */
+	return (error == 0);
 }
 
 /*
@@ -3202,20 +3299,20 @@ ieee80211_set_mcsset(struct ieee80211com *ic, uint8_t *frm)
 			for (i = 39; i <= 52; i++)
 				setbit(frm, i);
 		}
-		if (ic->ic_txstream >= 4) {
+		if (ic->ic_rxstream >= 4) {
 			for (i = 53; i <= 76; i++)
 				setbit(frm, i);
 		}
 	}
 
+	txparams = 0x1;			/* TX MCS set defined */
 	if (ic->ic_rxstream != ic->ic_txstream) {
-		txparams = 0x1;			/* TX MCS set defined */
 		txparams |= 0x2;		/* TX RX MCS not equal */
 		txparams |= (ic->ic_txstream - 1) << 2;	/* num TX streams */
 		if (ic->ic_htcaps & IEEE80211_HTC_TXUNEQUAL)
 			txparams |= 0x16;	/* TX unequal modulation sup */
-	} else
-		txparams = 0;
+	}
+
 	frm[12] = txparams;
 }
 
@@ -3607,4 +3704,144 @@ ieee80211_add_htinfo_vendor(uint8_t *frm, struct ieee80211_node *ni)
 	frm[4] = (BCM_OUI >> 16) & 0xff;
 	frm[5] = BCM_OUI_HTINFO;
 	return ieee80211_add_htinfo_body(frm + 6, ni);
+}
+
+/*
+ * Get the HT density for the given 802.11n node.
+ *
+ * Take into account the density advertised from the peer.
+ * Larger values are longer A-MPDU density spacing values, and
+ * we want to obey them per station if we get them.
+ */
+int
+ieee80211_ht_get_node_ampdu_density(const struct ieee80211_node *ni)
+{
+	struct ieee80211vap *vap;
+	int peer_mpdudensity;
+
+	vap = ni->ni_vap;
+	peer_mpdudensity =
+	    _IEEE80211_MASKSHIFT(ni->ni_htparam, IEEE80211_HTCAP_MPDUDENSITY);
+	if (vap->iv_ampdu_density > peer_mpdudensity)
+		peer_mpdudensity = vap->iv_ampdu_density;
+	return (peer_mpdudensity);
+}
+
+/*
+ * Get the transmit A-MPDU limit for the given 802.11n node.
+ *
+ * Take into account the limit advertised from the peer.
+ * Smaller values indicate smaller maximum A-MPDU sizes, and
+ * should be used when forming an A-MPDU to the given peer.
+ */
+int
+ieee80211_ht_get_node_ampdu_limit(const struct ieee80211_node *ni)
+{
+	struct ieee80211vap *vap;
+	int peer_mpdulimit;
+
+	vap = ni->ni_vap;
+	peer_mpdulimit =
+	    _IEEE80211_MASKSHIFT(ni->ni_htparam, IEEE80211_HTCAP_MAXRXAMPDU);
+
+	return (MIN(vap->iv_ampdu_limit, peer_mpdulimit));
+}
+
+/*
+ * Return true if short-GI is available when transmitting to
+ * the given node at 20MHz.
+ *
+ * Ensure it's configured and available in the VAP / driver as
+ * well as the node.
+ */
+bool
+ieee80211_ht_check_tx_shortgi_20(const struct ieee80211_node *ni)
+{
+	const struct ieee80211vap *vap;
+	const struct ieee80211com *ic;
+
+	if (! ieee80211_ht_check_tx_ht(ni))
+		return (false);
+
+	vap = ni->ni_vap;
+	ic = ni->ni_ic;
+
+	return ((ic->ic_htcaps & IEEE80211_HTCAP_SHORTGI20) &&
+	    (ni->ni_htcap & IEEE80211_HTCAP_SHORTGI20) &&
+	    (vap->iv_flags_ht & IEEE80211_FHT_SHORTGI20));
+}
+
+/*
+ * Return true if short-GI is available when transmitting to
+ * the given node at 40MHz.
+ *
+ * Ensure it's configured and available in the VAP / driver as
+ * well as the node and BSS.
+ */
+bool
+ieee80211_ht_check_tx_shortgi_40(const struct ieee80211_node *ni)
+{
+	const struct ieee80211vap *vap;
+	const struct ieee80211com *ic;
+
+	if (! ieee80211_ht_check_tx_ht40(ni))
+		return (false);
+
+	vap = ni->ni_vap;
+	ic = ni->ni_ic;
+
+	return ((ic->ic_htcaps & IEEE80211_HTCAP_SHORTGI40) &&
+	    (ni->ni_htcap & IEEE80211_HTCAP_SHORTGI40) &&
+	    (vap->iv_flags_ht & IEEE80211_FHT_SHORTGI40));
+}
+
+/*
+ * Return true if HT rates can be used for the given node.
+ *
+ * There are some situations seen in the wild, wild past where
+ * HT APs would announce HT but no HT rates.
+ */
+bool
+ieee80211_ht_check_tx_ht(const struct ieee80211_node *ni)
+{
+	const struct ieee80211vap *vap;
+	const struct ieee80211_channel *bss_chan;
+
+	if (ni == NULL || ni->ni_chan == IEEE80211_CHAN_ANYC ||
+	    ni->ni_vap == NULL || ni->ni_vap->iv_bss == NULL)
+		return (false);
+
+	vap = ni->ni_vap;
+	bss_chan = vap->iv_bss->ni_chan;
+
+	if (bss_chan == IEEE80211_CHAN_ANYC)
+		return (false);
+
+	if (IEEE80211_IS_CHAN_HT(ni->ni_chan) &&
+	    ni->ni_htrates.rs_nrates == 0)
+		return (false);
+	return (IEEE80211_IS_CHAN_HT(ni->ni_chan));
+}
+
+/*
+ * Return true if HT40 rates can be transmitted to the given node.
+ *
+ * This verifies that the BSS is HT40 capable and the current
+ * node channel width is 40MHz.
+ */
+bool
+ieee80211_ht_check_tx_ht40(const struct ieee80211_node *ni)
+{
+	struct ieee80211vap *vap;
+	struct ieee80211_channel *bss_chan;
+
+	if (! ieee80211_ht_check_tx_ht(ni))
+		return (false);
+
+	vap = ni->ni_vap;
+	bss_chan = vap->iv_bss->ni_chan;
+
+	return (IEEE80211_IS_CHAN_HT40(bss_chan) &&
+	    IEEE80211_IS_CHAN_HT40(ni->ni_chan) &&
+	    (ni->ni_chw == NET80211_STA_RX_BW_40));
 }

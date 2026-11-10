@@ -123,6 +123,10 @@ struct mbuf *	ieee80211_ff_encap1(struct ieee80211vap *, struct mbuf *,
 		const struct ether_header *);
 void	ieee80211_tx_complete(struct ieee80211_node *,
 		struct mbuf *, int);
+void	ieee80211_output_seqno_assign(struct ieee80211_node *,
+		int, struct mbuf *);
+void	ieee80211_output_beacon_seqno_assign(struct ieee80211_node *,
+		struct mbuf *);
 
 /*
  * The formation of ProbeResponse frames requires guidance to
@@ -460,5 +464,5 @@ void	ieee80211_notify_node_auth(struct ieee80211_node *);
 void	ieee80211_notify_country(struct ieee80211vap *,
 		const uint8_t [IEEE80211_ADDR_LEN], const uint8_t cc[2]);
 void	ieee80211_notify_radio(struct ieee80211com *, int);
-void	ieee80211_notify_ifnet_change(struct ieee80211vap *);
+void	ieee80211_notify_ifnet_change(struct ieee80211vap *, int);
 #endif /* _NET80211_IEEE80211_PROTO_H_ */

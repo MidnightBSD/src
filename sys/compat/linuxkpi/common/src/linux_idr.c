@@ -27,7 +27,6 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
@@ -35,8 +34,7 @@
 #include <sys/sysctl.h>
 #include <sys/lock.h>
 #include <sys/mutex.h>
-
-#include <machine/stdarg.h>
+#include <sys/stdarg.h>
 
 #include <linux/bitmap.h>
 #include <linux/kobject.h>
@@ -64,13 +62,21 @@ DPCPU_DEFINE_STATIC(struct linux_idr_cache, linux_idr_cache);
  */
 static MALLOC_DEFINE(M_IDR, "idr", "Linux IDR compat");
 
+#define	IDR_LOCK_INIT(_idr)	mtx_init(&(_idr)->lock, "idr", NULL, MTX_DEF);
+#define	IDR_LOCK(_idr)		mtx_lock(&(_idr)->lock);
+#define	IDR_UNLOCK(_idr)	mtx_unlock(&(_idr)->lock);
+#define	IDR_LOCK_ASSERT(_idr)	mtx_assert(&(_idr)->lock, MA_OWNED);
+#define	IDR_LOCK_INITALIZED(_idr) mtx_initialized(&(_idr)->lock)
+
+static inline struct idr_layer *idr_find_layer_locked(struct idr *, int);
+
 static struct idr_layer *
 idr_preload_dequeue_locked(struct linux_idr_cache *lic)
 {
 	struct idr_layer *retval;
 
 	/* check if wrong thread is trying to dequeue */
-	if (mtx_owned(&lic->lock.m) == 0)
+	if (mtx_owned(&lic->lock) == 0)
 		return (NULL);
 
 	retval = lic->head;
@@ -157,7 +163,9 @@ idr_preload_end(void)
 static inline int
 idr_max(struct idr *idr)
 {
-	return (1 << (idr->layers * IDR_BITS)) - 1;
+	if (idr->layers * IDR_BITS >= (int)MAX_ID_SHIFT)
+		return (INT_MAX);
+	return ((1 << (idr->layers * IDR_BITS)) - 1);
 }
 
 static inline int
@@ -170,7 +178,7 @@ void
 idr_init(struct idr *idr)
 {
 	bzero(idr, sizeof(*idr));
-	mtx_init(&idr->lock, "idr", NULL, MTX_DEF);
+	IDR_LOCK_INIT(idr);
 }
 
 /* Only frees cached pages. */
@@ -179,14 +187,31 @@ idr_destroy(struct idr *idr)
 {
 	struct idr_layer *il, *iln;
 
+	/*
+	 * This idr can be reused, and this function might be called multiple times
+	 * without a idr_init(). Check if this is the case.  If we do not do this
+	 * then the mutex will panic while asserting that it is valid.
+	 */
+	if (IDR_LOCK_INITALIZED(idr) == 0)
+		return;
+
 	idr_remove_all(idr);
-	mtx_lock(&idr->lock);
+	IDR_LOCK(idr);
 	for (il = idr->free; il != NULL; il = iln) {
 		iln = il->ary[0];
 		free(il, M_IDR);
 	}
-	mtx_unlock(&idr->lock);
-	mtx_destroy(&idr->lock);
+	idr->free = NULL;
+	idr->next_cyclic_id = 0;
+	IDR_UNLOCK(idr);
+	/*
+	 * In Linux an idr only owns memory; after idr_destroy() it is an
+	 * empty idr that can still be used (idr_find(), idr_remove(),
+	 * idr_alloc(), idr_for_each_entry() ...).  Drivers rely on that,
+	 * e.g. mt76 destroys its token idr on reset while the tx-free path
+	 * may still release tokens.  So keep the lock alive and leave the
+	 * idr empty.  The lock is (re)initialized by idr_init().
+	 */
 }
 
 static void
@@ -203,17 +228,18 @@ idr_remove_layer(struct idr_layer *il, int layer)
 	for (i = 0; i < IDR_SIZE; i++)
 		if (il->ary[i])
 			idr_remove_layer(il->ary[i], layer - 1);
+	free(il, M_IDR);
 }
 
 void
 idr_remove_all(struct idr *idr)
 {
 
-	mtx_lock(&idr->lock);
+	IDR_LOCK(idr);
 	idr_remove_layer(idr->top, idr->layers - 1);
 	idr->top = NULL;
 	idr->layers = 0;
-	mtx_unlock(&idr->lock);
+	IDR_UNLOCK(idr);
 }
 
 static void *
@@ -224,33 +250,38 @@ idr_remove_locked(struct idr *idr, int id)
 	int layer;
 	int idx;
 
-	id &= MAX_ID_MASK;
-	il = idr->top;
-	layer = idr->layers - 1;
-	if (il == NULL || id > idr_max(idr))
+	IDR_LOCK_ASSERT(idr);
+
+	/*
+	 * Like Linux, removing an id which is not allocated (or negative)
+	 * is not an error; return NULL.  Drivers pass ids reported back by
+	 * firmware (e.g. mt76 tx tokens and packet ids) which can be stale.
+	 * Check before touching anything: the free bitmaps on the path must
+	 * only be updated if a slot is actually freed, or later allocations
+	 * would descend into full subtrees.
+	 */
+	if (id < 0)
 		return (NULL);
+	il = idr_find_layer_locked(idr, id);
+	idx = id & IDR_MASK;
+	if (il == NULL || (il->bitmap & (1UL << idx)) != 0)
+		return (NULL);
+
 	/*
 	 * Walk down the tree to this item setting bitmaps along the way
 	 * as we know at least one item will be free along this path.
 	 */
+	il = idr->top;
+	layer = idr->layers - 1;
 	while (layer && il) {
-		idx = idr_pos(id, layer);
-		il->bitmap |= 1 << idx;
-		il = il->ary[idx];
+		il->bitmap |= 1UL << idr_pos(id, layer);
+		il = il->ary[idr_pos(id, layer)];
 		layer--;
 	}
-	idx = id & IDR_MASK;
-	/*
-	 * At this point we've set free space bitmaps up the whole tree.
-	 * We could make this non-fatal and unwind but linux dumps a stack
-	 * and a warning so I don't think it's necessary.
-	 */
-	if (il == NULL || (il->bitmap & (1 << idx)) != 0)
-		panic("idr_remove: Item %d not allocated (%p, %p)\n",
-		    id, idr, il);
+	MPASS(il != NULL);
 	res = il->ary[idx];
 	il->ary[idx] = NULL;
-	il->bitmap |= 1 << idx;
+	il->bitmap |= 1UL << idx;
 
 	return (res);
 }
@@ -260,9 +291,9 @@ idr_remove(struct idr *idr, int id)
 {
 	void *res;
 
-	mtx_lock(&idr->lock);
+	IDR_LOCK(idr);
 	res = idr_remove_locked(idr, id);
-	mtx_unlock(&idr->lock);
+	IDR_UNLOCK(idr);
 
 	return (res);
 }
@@ -292,18 +323,18 @@ idr_replace(struct idr *idr, void *ptr, int id)
 	void *res;
 	int idx;
 
-	mtx_lock(&idr->lock);
+	IDR_LOCK(idr);
 	il = idr_find_layer_locked(idr, id);
 	idx = id & IDR_MASK;
 
 	/* Replace still returns an error if the item was not allocated. */
-	if (il == NULL || (il->bitmap & (1 << idx))) {
+	if (il == NULL || (il->bitmap & (1UL << idx))) {
 		res = ERR_PTR(-ENOENT);
 	} else {
 		res = il->ary[idx];
 		il->ary[idx] = ptr;
 	}
-	mtx_unlock(&idr->lock);
+	IDR_UNLOCK(idr);
 	return (res);
 }
 
@@ -313,7 +344,7 @@ idr_find_locked(struct idr *idr, int id)
 	struct idr_layer *il;
 	void *res;
 
-	mtx_assert(&idr->lock, MA_OWNED);
+	IDR_LOCK_ASSERT(idr);
 	il = idr_find_layer_locked(idr, id);
 	if (il != NULL)
 		res = il->ary[id & IDR_MASK];
@@ -327,9 +358,9 @@ idr_find(struct idr *idr, int id)
 {
 	void *res;
 
-	mtx_lock(&idr->lock);
+	IDR_LOCK(idr);
 	res = idr_find_locked(idr, id);
-	mtx_unlock(&idr->lock);
+	IDR_UNLOCK(idr);
 	return (res);
 }
 
@@ -339,15 +370,18 @@ idr_get_next(struct idr *idr, int *nextidp)
 	void *res = NULL;
 	int id = *nextidp;
 
-	mtx_lock(&idr->lock);
-	for (; id <= idr_max(idr); id++) {
+	IDR_LOCK(idr);
+	for (; id >= 0 && id <= idr_max(idr); id++) {
 		res = idr_find_locked(idr, id);
-		if (res == NULL)
-			continue;
-		*nextidp = id;
-		break;
+		if (res != NULL) {
+			*nextidp = id;
+			break;
+		}
+		/* Do not overflow when idr_max() is INT_MAX. */
+		if (id == INT_MAX)
+			break;
 	}
-	mtx_unlock(&idr->lock);
+	IDR_UNLOCK(idr);
 	return (res);
 }
 
@@ -358,12 +392,12 @@ idr_pre_get(struct idr *idr, gfp_t gfp_mask)
 	struct idr_layer *head;
 	int need;
 
-	mtx_lock(&idr->lock);
+	IDR_LOCK(idr);
 	for (;;) {
 		need = idr->layers + 1;
 		for (il = idr->free; il != NULL; il = il->ary[0])
 			need--;
-		mtx_unlock(&idr->lock);
+		IDR_UNLOCK(idr);
 		if (need <= 0)
 			break;
 		for (head = NULL; need; need--) {
@@ -379,7 +413,7 @@ idr_pre_get(struct idr *idr, gfp_t gfp_mask)
 		}
 		if (head == NULL)
 			return (0);
-		mtx_lock(&idr->lock);
+		IDR_LOCK(idr);
 		il->ary[0] = idr->free;
 		idr->free = head;
 	}
@@ -429,7 +463,7 @@ idr_get_new_locked(struct idr *idr, void *ptr, int *idp)
 	int idx;
 	int id;
 
-	mtx_assert(&idr->lock, MA_OWNED);
+	IDR_LOCK_ASSERT(idr);
 
 	error = -EAGAIN;
 	/*
@@ -474,7 +508,7 @@ idr_get_new_locked(struct idr *idr, void *ptr, int *idp)
 	/*
 	 * Allocate the leaf to the consumer.
 	 */
-	il->bitmap &= ~(1 << idx);
+	il->bitmap &= ~(1UL << idx);
 	il->ary[idx] = ptr;
 	*idp = id;
 	/*
@@ -482,7 +516,7 @@ idr_get_new_locked(struct idr *idr, void *ptr, int *idp)
 	 */
 	while (il->bitmap == 0 && ++layer < idr->layers) {
 		il = stack[layer];
-		il->bitmap &= ~(1 << idr_pos(id, layer));
+		il->bitmap &= ~(1UL << idr_pos(id, layer));
 	}
 	error = 0;
 out:
@@ -500,9 +534,9 @@ idr_get_new(struct idr *idr, void *ptr, int *idp)
 {
 	int retval;
 
-	mtx_lock(&idr->lock);
+	IDR_LOCK(idr);
 	retval = idr_get_new_locked(idr, ptr, idp);
-	mtx_unlock(&idr->lock);
+	IDR_UNLOCK(idr);
 	return (retval);
 }
 
@@ -516,7 +550,7 @@ idr_get_new_above_locked(struct idr *idr, void *ptr, int starting_id, int *idp)
 	int idx, sidx;
 	int id;
 
-	mtx_assert(&idr->lock, MA_OWNED);
+	IDR_LOCK_ASSERT(idr);
 
 	error = -EAGAIN;
 	/*
@@ -538,7 +572,7 @@ restart:
 	 * Expand the tree until there is free space at or beyond starting_id.
 	 */
 	while (idr->layers <= layer ||
-	    idr->top->bitmap < (1 << idr_pos(starting_id, idr->layers - 1))) {
+	    idr->top->bitmap < (1UL << idr_pos(starting_id, idr->layers - 1))) {
 		if (idr->layers == MAX_LEVEL + 1) {
 			error = -ENOSPC;
 			goto out;
@@ -592,7 +626,7 @@ restart:
 	/*
 	 * Allocate the leaf to the consumer.
 	 */
-	il->bitmap &= ~(1 << idx);
+	il->bitmap &= ~(1UL << idx);
 	il->ary[idx] = ptr;
 	*idp = id;
 	/*
@@ -600,7 +634,7 @@ restart:
 	 */
 	while (il->bitmap == 0 && ++layer < idr->layers) {
 		il = stack[layer];
-		il->bitmap &= ~(1 << idr_pos(id, layer));
+		il->bitmap &= ~(1UL << idr_pos(id, layer));
 	}
 	error = 0;
 out:
@@ -618,9 +652,9 @@ idr_get_new_above(struct idr *idr, void *ptr, int starting_id, int *idp)
 {
 	int retval;
 
-	mtx_lock(&idr->lock);
+	IDR_LOCK(idr);
 	retval = idr_get_new_above_locked(idr, ptr, starting_id, idp);
-	mtx_unlock(&idr->lock);
+	IDR_UNLOCK(idr);
 	return (retval);
 }
 
@@ -637,7 +671,7 @@ idr_alloc_locked(struct idr *idr, void *ptr, int start, int end)
 	int error;
 	int id;
 
-	mtx_assert(&idr->lock, MA_OWNED);
+	IDR_LOCK_ASSERT(idr);
 
 	if (unlikely(start < 0))
 		return (-EINVAL);
@@ -663,9 +697,9 @@ idr_alloc(struct idr *idr, void *ptr, int start, int end, gfp_t gfp_mask)
 {
 	int retval;
 
-	mtx_lock(&idr->lock);
+	IDR_LOCK(idr);
 	retval = idr_alloc_locked(idr, ptr, start, end);
-	mtx_unlock(&idr->lock);
+	IDR_UNLOCK(idr);
 	return (retval);
 }
 
@@ -674,13 +708,13 @@ idr_alloc_cyclic(struct idr *idr, void *ptr, int start, int end, gfp_t gfp_mask)
 {
 	int retval;
 
-	mtx_lock(&idr->lock);
+	IDR_LOCK(idr);
 	retval = idr_alloc_locked(idr, ptr, max(start, idr->next_cyclic_id), end);
 	if (unlikely(retval == -ENOSPC))
 		retval = idr_alloc_locked(idr, ptr, start, end);
 	if (likely(retval >= 0))
 		idr->next_cyclic_id = retval + 1;
-	mtx_unlock(&idr->lock);
+	IDR_UNLOCK(idr);
 	return (retval);
 }
 
@@ -755,10 +789,9 @@ ida_simple_get(struct ida *ida, unsigned int start, unsigned int end,
 	unsigned int max;
 
 	MPASS((int)start >= 0);
-	MPASS((int)end >= 0);
 
-	if (end == 0)
-		max = 0x80000000;
+	if ((int)end <= 0)
+		max = INT_MAX;
 	else {
 		MPASS(end > start);
 		max = end - 1;
@@ -804,4 +837,5 @@ ida_destroy(struct ida *ida)
 {
 	idr_destroy(&ida->idr);
 	free(ida->free_bitmap, M_IDR);
+	ida->free_bitmap = NULL;
 }

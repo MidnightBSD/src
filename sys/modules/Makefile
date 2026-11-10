@@ -261,6 +261,7 @@ SUBDIR=	\
 	${_mly} \
 	mmc \
 	mmcsd \
+	${_mpi3mr} \
 	${_mpr} \
 	${_mps} \
 	mpt \
@@ -269,6 +270,8 @@ SUBDIR=	\
 	msdosfs \
 	msdosfs_iconv \
 	msk \
+	${_mt76} \
+	${_mt76fw} \
 	${_mthca} \
 	mvs \
 	mwl \
@@ -322,6 +325,8 @@ SUBDIR=	\
 	pwm \
 	${_qat} \
 	${_qatfw} \
+	${_qat_c2xxx} \
+	${_qat_c2xxxfw} \
 	${_qlxge} \
 	${_qlxgb} \
 	${_qlxgbe} \
@@ -339,6 +344,8 @@ SUBDIR=	\
 	rtsx \
 	${_rtw88} \
 	${_rtw88fw} \
+	${_rtw89} \
+	${_rtw89fw} \
 	rtwn \
 	rtwn_pci \
 	rtwn_usb \
@@ -410,6 +417,7 @@ SUBDIR=	\
 	wlan_acl \
 	wlan_amrr \
 	wlan_ccmp \
+	wlan_gcmp \
 	wlan_rssadapt \
 	wlan_tkip \
 	wlan_wep \
@@ -435,8 +443,8 @@ SUBDIR+=	dtrace
 SUBDIR+=	opensolaris
 .endif
 
-# Requires bus_space_read_8
-.if ${MACHINE_ARCH} != "i386"
+# MNBSD-KPI: no MACHINE_ABI in share/mk; FreeBSD uses !${MACHINE_ABI:Mlong32}.
+.if ${MACHINE_ARCH} != "i386" && ${MACHINE_ARCH:Marmv[67]*} == ""
 _bnxt=		bnxt
 .endif
 
@@ -565,6 +573,20 @@ _rtw88=		rtw88
 .if ${MK_SOURCELESS_UCODE} != "no"
 _rtw88fw=	rtw88fw
 .endif
+# rtw89 currently cannot be compiled without ACPI (seems also broken in Linux).
+.if ${KERN_OPTS:MDEV_ACPI}
+_rtw89=		rtw89
+.if ${MK_SOURCELESS_UCODE} != "no"
+_rtw89fw=	rtw89fw
+.endif
+.endif
+_mt76=		mt76
+.if ${MK_SOURCELESS_UCODE} != "no"
+_mt76fw=	mt76fw
+.endif
+# athk_common, ath10k, ath11k and ath12k exist but are not built yet,
+# as in FreeBSD.
+# brcm80211 (brcmfmac, brcmutil) is imported but not built yet, as in FreeBSD.
 _vmware=	vmware
 .endif
 
@@ -615,6 +637,11 @@ _rtwnfw=	rtwnfw
 .if ${MK_SOURCELESS_UCODE} != "no" && ${MACHINE_CPUARCH} != "arm" && \
 	${MACHINE_CPUARCH} != "riscv"
 _cxgbe=		cxgbe
+.endif
+
+# This has only been tested on amd64 and arm64
+.if ${MACHINE_CPUARCH} == "amd64" || ${MACHINE_CPUARCH} == "aarch64"
+_mpi3mr=mpi3mr
 .endif
 
 .if ${MACHINE_ARCH} == "amd64" || ${MACHINE_ARCH} == "arm64"
@@ -707,8 +734,8 @@ _ndis=		ndis
 _ntb=		ntb
 _ocs_fc=	ocs_fc
 _pccard=	pccard
-_qat=		qat
-_qatfw=		qatfw
+_qat_c2xxx=	qat_c2xxx
+_qat_c2xxxfw=	qat_c2xxxfw
 .if ${MK_OFED} != "no" || defined(ALL_MODULES)
 _rdma=		rdma
 .endif
@@ -801,6 +828,10 @@ _ioat=		ioat
 _ixl=		ixl
 _nvdimm=	nvdimm
 _pms=		pms
+_qat=		qat
+.if ${MK_SOURCELESS_UCODE} != "no"
+_qatfw=		qatfw
+.endif
 _qlxge=		qlxge
 _qlxgb=		qlxgb
 _sume=		sume

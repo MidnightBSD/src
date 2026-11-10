@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause */
 /*
- * Copyright (C) 2005-2014, 2018-2021, 2023 Intel Corporation
+ * Copyright (C) 2005-2014, 2018-2021, 2023-2025 Intel Corporation
  * Copyright (C) 2015-2017 Intel Deutschland GmbH
  */
 #ifndef __iwl_fh_h__
@@ -15,7 +15,7 @@
 /* Flow Handler Definitions */
 /****************************/
 
-/**
+/*
  * This I/O area is directly read/writable by driver (e.g. Linux uses writel())
  * Addresses are offsets from device's PCI hardware base address.
  */
@@ -24,7 +24,7 @@
 #define FH_MEM_LOWER_BOUND_GEN2              (0xa06000)
 #define FH_MEM_UPPER_BOUND_GEN2              (0xa08000)
 
-/**
+/*
  * Keep-Warm (KW) buffer base address.
  *
  * Driver must allocate a 4KByte buffer that is for keeping the
@@ -44,7 +44,7 @@
 #define FH_KW_MEM_ADDR_REG		     (FH_MEM_LOWER_BOUND + 0x97C)
 
 
-/**
+/*
  * TFD Circular Buffers Base (CBBC) addresses
  *
  * Device has 16 base pointer registers, one for each of 16 host-DRAM-resident
@@ -71,7 +71,7 @@
 static inline unsigned int FH_MEM_CBBC_QUEUE(struct iwl_trans *trans,
 					     unsigned int chnl)
 {
-	if (trans->trans_cfg->gen2) {
+	if (trans->mac_cfg->gen2) {
 		WARN_ON_ONCE(chnl >= 64);
 		return TFH_TFDQ_CBB_TABLE + 8 * chnl;
 	}
@@ -143,7 +143,7 @@ static inline unsigned int FH_MEM_CBBC_QUEUE(struct iwl_trans *trans,
  */
 #define TFH_SRV_DMA_CHNL0_BC	(0x1F70)
 
-/**
+/*
  * Rx SRAM Control and Status Registers (RSCSR)
  *
  * These registers provide handshake between driver and device for the Rx queue
@@ -216,21 +216,21 @@ static inline unsigned int FH_MEM_CBBC_QUEUE(struct iwl_trans *trans,
 #define FH_MEM_RSCSR_UPPER_BOUND	(FH_MEM_LOWER_BOUND + 0xC00)
 #define FH_MEM_RSCSR_CHNL0		(FH_MEM_RSCSR_LOWER_BOUND)
 
-/**
+/*
  * Physical base address of 8-byte Rx Status buffer.
  * Bit fields:
  *  31-0: Rx status buffer physical base address [35:4], must 16-byte aligned.
  */
 #define FH_RSCSR_CHNL0_STTS_WPTR_REG	(FH_MEM_RSCSR_CHNL0)
 
-/**
+/*
  * Physical base address of Rx Buffer Descriptor Circular Buffer.
  * Bit fields:
  *  27-0:  RBD CD physical base address [35:8], must be 256-byte aligned.
  */
 #define FH_RSCSR_CHNL0_RBDCB_BASE_REG	(FH_MEM_RSCSR_CHNL0 + 0x004)
 
-/**
+/*
  * Rx write pointer (index, really!).
  * Bit fields:
  *  11-0:  Index of driver's most recent prepared-to-be-filled RBD, + 1.
@@ -242,7 +242,7 @@ static inline unsigned int FH_MEM_CBBC_QUEUE(struct iwl_trans *trans,
 #define FW_RSCSR_CHNL0_RXDCB_RDPTR_REG	(FH_MEM_RSCSR_CHNL0 + 0x00c)
 #define FH_RSCSR_CHNL0_RDPTR		FW_RSCSR_CHNL0_RXDCB_RDPTR_REG
 
-/**
+/*
  * Rx Config/Status Registers (RCSR)
  * Rx Config Reg for channel 0 (only channel used)
  *
@@ -300,7 +300,7 @@ static inline unsigned int FH_MEM_CBBC_QUEUE(struct iwl_trans *trans,
 #define FH_RCSR_CHNL0_RX_CONFIG_IRQ_DEST_NO_INT_VAL    (0x00000000)
 #define FH_RCSR_CHNL0_RX_CONFIG_IRQ_DEST_INT_HOST_VAL  (0x00001000)
 
-/**
+/*
  * Rx Shared Status Registers (RSSR)
  *
  * After stopping Rx DMA channel (writing 0 to
@@ -356,7 +356,7 @@ static inline unsigned int FH_MEM_CBBC_QUEUE(struct iwl_trans *trans,
 #define RFH_RBDBUF_RBD0_LSB 0xA08300
 #define RFH_RBDBUF_RBD_LSB(q) (RFH_RBDBUF_RBD0_LSB + (q) * 8)
 
-/**
+/*
  * RFH Status Register
  *
  * Bit fields:
@@ -378,14 +378,14 @@ static inline unsigned int FH_MEM_CBBC_QUEUE(struct iwl_trans *trans,
  * Once the RXF-to-DRAM DMA is active, this flag is immediately turned off.
  */
 #define RFH_GEN_STATUS		0xA09808
-#define RFH_GEN_STATUS_GEN3	0xA07824
+#define RFH_GEN_STATUS_AX210	0xA07824
 #define RBD_FETCH_IDLE	BIT(29)
 #define SRAM_DMA_IDLE	BIT(30)
 #define RXF_DMA_IDLE	BIT(31)
 
 /* DMA configuration */
 #define RFH_RXF_DMA_CFG		0xA09820
-#define RFH_RXF_DMA_CFG_GEN3	0xA07880
+#define RFH_RXF_DMA_CFG_AX210	0xA07880
 /* RB size */
 #define RFH_RXF_DMA_RB_SIZE_MASK (0x000F0000) /* bits 16-19 */
 #define RFH_RXF_DMA_RB_SIZE_POS 16
@@ -440,7 +440,7 @@ static inline unsigned int FH_MEM_CBBC_QUEUE(struct iwl_trans *trans,
 #define FH_TFDIB_CTRL0_REG(_chnl)  (FH_TFDIB_LOWER_BOUND + 0x8 * (_chnl))
 #define FH_TFDIB_CTRL1_REG(_chnl)  (FH_TFDIB_LOWER_BOUND + 0x8 * (_chnl) + 0x4)
 
-/**
+/*
  * Transmit DMA Channel Control/Status Registers (TCSR)
  *
  * Device has one configuration register for each of 8 Tx DMA/FIFO channels
@@ -501,7 +501,7 @@ static inline unsigned int FH_MEM_CBBC_QUEUE(struct iwl_trans *trans,
 #define FH_TCSR_CHNL_TX_BUF_STS_REG_POS_TB_NUM		(20)
 #define FH_TCSR_CHNL_TX_BUF_STS_REG_POS_TB_IDX		(12)
 
-/**
+/*
  * Tx Shared Status Registers (TSSR)
  *
  * After stopping Tx DMA channel (writing 0 to
@@ -518,7 +518,7 @@ static inline unsigned int FH_MEM_CBBC_QUEUE(struct iwl_trans *trans,
 
 #define FH_TSSR_TX_STATUS_REG		(FH_TSSR_LOWER_BOUND + 0x010)
 
-/**
+/*
  * Bit fields for TSSR(Tx Shared Status & Control) error status register:
  * 31:  Indicates an address error when accessed to internal memory
  *	uCode/driver must write "1" in order to clear this flag
@@ -565,33 +565,35 @@ static inline unsigned int FH_MEM_CBBC_QUEUE(struct iwl_trans *trans,
 #define RX_QUEUE_MASK                         255
 #define RX_QUEUE_SIZE_LOG                     8
 
+#define IWL_DEFAULT_RX_QUEUE			0
+
 /**
  * struct iwl_rb_status - reserve buffer status
  * 	host memory mapped FH registers
- * @closed_rb_num [0:11] - Indicates the index of the RB which was closed
- * @closed_fr_num [0:11] - Indicates the index of the RX Frame which was closed
- * @finished_rb_num [0:11] - Indicates the index of the current RB
+ * @closed_rb_num: [0:11] Indicates the index of the RB which was closed
+ * @closed_fr_num: [0:11] Indicates the index of the RX Frame which was closed
+ * @finished_rb_num: [0:11] Indicates the index of the current RB
  * 	in which the last frame was written to
- * @finished_fr_num [0:11] - Indicates the index of the RX Frame
+ * @finished_fr_num: [0:11] Indicates the index of the RX Frame
  * 	which was transferred
+ * @__spare: reserved
  */
 struct iwl_rb_status {
 	__le16 closed_rb_num;
 	__le16 closed_fr_num;
 	__le16 finished_rb_num;
-	__le16 finished_fr_nam;
+	__le16 finished_fr_num;
 	__le32 __spare;
 } __packed;
 
 
 #define TFD_QUEUE_SIZE_MAX      (256)
-#define TFD_QUEUE_SIZE_MAX_GEN3 (65536)
 /* cb size is the exponent - 3 */
 #define TFD_QUEUE_CB_SIZE(x)	(ilog2(x) - 3)
 #define TFD_QUEUE_SIZE_BC_DUP	(64)
 #define TFD_QUEUE_BC_SIZE	(TFD_QUEUE_SIZE_MAX + TFD_QUEUE_SIZE_BC_DUP)
-#define TFD_QUEUE_BC_SIZE_GEN3_AX210	1024
-#define TFD_QUEUE_BC_SIZE_GEN3_BZ	(1024 * 4)
+#define TFD_QUEUE_BC_SIZE_AX210	1024
+#define TFD_QUEUE_BC_SIZE_BZ	(1024 * 4)
 #define IWL_TX_DMA_MASK        DMA_BIT_MASK(36)
 #define IWL_NUM_OF_TBS		20
 #define IWL_TFH_NUM_TBS		25
@@ -631,7 +633,7 @@ enum iwl_tfd_tb_hi_n_len {
 };
 
 /**
- * struct iwl_tfd_tb transmit buffer descriptor within transmit frame descriptor
+ * struct iwl_tfd_tb - transmit buffer descriptor within transmit frame descriptor
  *
  * This structure contains dma address and length of transmission address
  *
@@ -645,19 +647,19 @@ struct iwl_tfd_tb {
 } __packed;
 
 /**
- * struct iwl_tfh_tb transmit buffer descriptor within transmit frame descriptor
+ * struct iwl_tfh_tb - transmit buffer descriptor within transmit frame descriptor
  *
  * This structure contains dma address and length of transmission address
  *
- * @tb_len length of the tx buffer
- * @addr 64 bits dma address
+ * @tb_len: length of the tx buffer
+ * @addr: 64 bits dma address
  */
 struct iwl_tfh_tb {
 	__le16 tb_len;
 	__le64 addr;
 } __packed;
 
-/**
+/*
  * Each Tx queue uses a circular buffer of 256 TFDs stored in host DRAM.
  * Both driver and device share these circular buffers, each of which must be
  * contiguous 256 TFDs.
@@ -679,12 +681,13 @@ struct iwl_tfh_tb {
 
 /**
  * struct iwl_tfd - Transmit Frame Descriptor (TFD)
- * @ __reserved1[3] reserved
- * @ num_tbs 0-4 number of active tbs
- *	     5   reserved
- *	     6-7 padding (not used)
- * @ tbs[20]	transmit frame buffer descriptors
- * @ __pad	padding
+ * @__reserved1: reserved
+ * @num_tbs:
+ *  0-4 number of active tbs
+ *  5   reserved
+ *  6-7 padding (not used)
+ * @tbs: transmit frame buffer descriptors
+ * @__pad: padding
  */
 struct iwl_tfd {
 	u8 __reserved1[3];
@@ -695,10 +698,11 @@ struct iwl_tfd {
 
 /**
  * struct iwl_tfh_tfd - Transmit Frame Descriptor (TFD)
- * @ num_tbs 0-4 number of active tbs
- *	     5 -15   reserved
- * @ tbs[25]	transmit frame buffer descriptors
- * @ __pad	padding
+ * @num_tbs:
+ *	0-4 number of active tbs
+ *	5-15   reserved
+ * @tbs:	transmit frame buffer descriptors
+ * @__pad:	padding
  */
 struct iwl_tfh_tfd {
 	__le16 num_tbs;
@@ -712,28 +716,19 @@ struct iwl_tfh_tfd {
 /* Fixed (non-configurable) rx data from phy */
 
 /**
- * struct iwlagn_schedq_bc_tbl scheduler byte count table
+ * struct iwl_bc_tbl_entry - scheduler byte count table entry
  *	base physical address provided by SCD_DRAM_BASE_ADDR
  * For devices up to 22000:
- * @tfd_offset  0-12 - tx command byte count
+ * @tfd_offset:
+ *	For devices up to 22000:
+ *		 0-12 - tx command byte count
  *		12-16 - station index
- * For 22000:
- * @tfd_offset  0-12 - tx command byte count
+ *	For 22000 and on:
+ *		 0-12 - tx command byte count
  *		12-13 - number of 64 byte chunks
  *		14-16 - reserved
  */
-struct iwlagn_scd_bc_tbl {
-	__le16 tfd_offset[TFD_QUEUE_BC_SIZE];
-} __packed;
-
-/**
- * struct iwl_gen3_bc_tbl_entry scheduler byte count table entry gen3
- * For AX210 and on:
- * @tfd_offset: 0-12 - tx command byte count
- *		12-13 - number of 64 byte chunks
- *		14-16 - reserved
- */
-struct iwl_gen3_bc_tbl_entry {
+struct iwl_bc_tbl_entry {
 	__le16 tfd_offset;
 } __packed;
 

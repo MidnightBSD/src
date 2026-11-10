@@ -21,22 +21,24 @@ static const struct usb_device_id rtw_8822cu_id_table[] = {
 	  .driver_info = (kernel_ulong_t)&(rtw8822c_hw_spec) },
 	{ USB_DEVICE_AND_INTERFACE_INFO(0x13b1, 0x0043, 0xff, 0xff, 0xff),
 	  .driver_info = (kernel_ulong_t)&(rtw8822c_hw_spec) }, /* Alpha - Alpha */
+	{ USB_DEVICE_AND_INTERFACE_INFO(0x2001, 0x3329, 0xff, 0xff, 0xff),
+	  .driver_info = (kernel_ulong_t)&(rtw8822c_hw_spec) }, /* D-Link AC13U rev. A1 */
 	{},
 };
 MODULE_DEVICE_TABLE(usb, rtw_8822cu_id_table);
 
-static int rtw8822bu_probe(struct usb_interface *intf,
+static int rtw8822cu_probe(struct usb_interface *intf,
 			   const struct usb_device_id *id)
 {
 	return rtw_usb_probe(intf, id);
 }
 
 static struct usb_driver rtw_8822cu_driver = {
-	.name = "rtw_8822cu",
+	.name = KBUILD_MODNAME,
 	.id_table = rtw_8822cu_id_table,
-	.probe = rtw8822bu_probe,
+	.probe = rtw8822cu_probe,
 	.disconnect = rtw_usb_disconnect,
-#if defined(__FreeBSD__) && defined(__notyet__)
+#if defined(__FreeBSD__)
 	.bsddriver.name = KBUILD_MODNAME,
 #endif
 };

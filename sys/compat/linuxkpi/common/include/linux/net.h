@@ -45,26 +45,40 @@ sock_create_kern(int family, int type, int proto, struct socket **res)
 }
 
 static inline int
-sock_getname(struct socket *so, struct sockaddr *addr, int *sockaddr_len,
+sock_getname(struct socket *so, struct sockaddr *sa, int *sockaddr_len,
     int peer)
 {
-	struct sockaddr *nam;
+#ifdef __MidnightBSD__
+	struct sockaddr *nam = NULL;
+#endif
 	int error;
 
-	nam = NULL;
+	/*
+	 * XXXGL: we can't use sopeeraddr()/sosockaddr() here since with
+	 * INVARIANTS they would check if supplied sockaddr has enough
+	 * length.  Such notion doesn't even exist in Linux KPI.
+	 */
 	if (peer) {
-		if ((so->so_state & (SS_ISCONNECTED|SS_ISCONFIRMING)) == 0)
+		if ((so->so_state & SS_ISCONNECTED) == 0)
 			return (-ENOTCONN);
 
+#ifdef __MidnightBSD__	/* MNBSD-KPI: pre-protosw-refactor pru_*addr() allocate */
 		error = (*so->so_proto->pr_usrreqs->pru_peeraddr)(so, &nam);
 	} else
 		error = (*so->so_proto->pr_usrreqs->pru_sockaddr)(so, &nam);
 	if (error)
 		return (-error);
-	*addr = *nam;
-	*sockaddr_len = addr->sa_len;
-
+	memcpy(sa, nam, nam->sa_len);
 	free(nam, M_SONAME);
+#else
+		error = so->so_proto->pr_peeraddr(so, sa);
+	} else
+		error = so->so_proto->pr_sockaddr(so, sa);
+	if (error)
+		return (-error);
+#endif
+	*sockaddr_len = sa->sa_len;
+
 	return (0);
 }
 

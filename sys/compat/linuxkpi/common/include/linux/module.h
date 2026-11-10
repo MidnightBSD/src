@@ -29,7 +29,6 @@
 #ifndef	_LINUXKPI_LINUX_MODULE_H_
 #define	_LINUXKPI_LINUX_MODULE_H_
 
-#include <sys/cdefs.h>
 #include <sys/types.h>
 #include <sys/param.h>
 #include <sys/module.h>
@@ -53,6 +52,24 @@
 #define	MODULE_FIRMWARE(firmware)
 #define	MODULE_SUPPORTED_DEVICE(name)
 #define	MODULE_IMPORT_NS(_name)
+
+/* Linux has an empty element at the end of the ID table -> nitems() - 1. */
+#define	MODULE_DEVICE_TABLE(_bus, _table)				\
+									\
+static device_method_t _ ## _bus ## _ ## _table ## _methods[] = {	\
+	DEVMETHOD_END							\
+};									\
+									\
+static driver_t _ ## _bus ## _ ## _table ## _driver = {			\
+	"lkpi_" #_bus #_table,						\
+	_ ## _bus ## _ ## _table ## _methods,				\
+	0								\
+};									\
+									\
+DRIVER_MODULE(lkpi_ ## _table, _bus, _ ## _bus ## _ ## _table ## _driver,\
+	0, 0);								\
+									\
+MODULE_DEVICE_TABLE_BUS_ ## _bus(_bus, _table)
 
 /*
  * THIS_MODULE is used to differentiate modules on Linux. We currently
@@ -119,9 +136,14 @@ _module_run(void *arg)
 #define	module_exit_order(fn, order)				\
 	SYSUNINIT(fn, SI_SUB_OFED_MODINIT, (order), _module_run, (fn))
 
-#define	module_get(module)
-#define	module_put(module)
-#define	try_module_get(module)	1
+static inline void module_get(struct module *module) {}
+static inline void module_put(struct module *module) {}
+
+static inline bool
+try_module_get(struct module *module)
+{
+	return (true);
+}
 
 #define	postcore_initcall(fn)	module_init(fn)
 

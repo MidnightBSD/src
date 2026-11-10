@@ -29,14 +29,18 @@
 #ifndef	_LINUXKPI_LINUX_KOBJECT_H_
 #define	_LINUXKPI_LINUX_KOBJECT_H_
 
-#include <machine/stdarg.h>
+#include <sys/stdarg.h>
 
 #include <linux/kernel.h>
 #include <linux/kref.h>
 #include <linux/list.h>
 #include <linux/slab.h>
+#include <linux/spinlock.h>
+#include <linux/wait.h>
+#include <linux/workqueue.h>
 
 struct kobject;
+struct kset;
 struct sysctl_oid;
 
 #define	KOBJ_CHANGE		0x01
@@ -45,6 +49,7 @@ struct kobj_type {
 	void (*release)(struct kobject *kobj);
 	const struct sysfs_ops *sysfs_ops;
 	struct attribute **default_attrs;
+	const struct attribute_group **default_groups;
 };
 
 extern const struct kobj_type linux_kfree_type;
@@ -56,6 +61,7 @@ struct kobject {
 	const struct kobj_type	*ktype;
 	struct list_head	entry;
 	struct sysctl_oid	*oidp;
+	struct kset		*kset;
 };
 
 extern struct kobject *mm_kobj;
@@ -74,6 +80,17 @@ struct kobj_attribute {
 	    char *buf);
 	ssize_t (*store)(struct kobject *kobj, struct kobj_attribute *attr,
 	    const char *buf, size_t count);
+};
+
+struct kset_uevent_ops {
+	/* TODO */
+};
+
+struct kset {
+	struct list_head	list;
+	spinlock_t		list_lock;
+	struct kobject		kobj;
+	const struct kset_uevent_ops *uevent_ops;
 };
 
 static inline void
@@ -141,7 +158,7 @@ int	kobject_set_name(struct kobject *kobj, const char *fmt, ...);
 int	kobject_init_and_add(struct kobject *kobj, const struct kobj_type *ktype,
 	    struct kobject *parent, const char *fmt, ...);
 
-static __inline void
+static __inline int
 kobject_uevent_env(struct kobject *kobj, int action, char *envp[])
 {
 
@@ -151,6 +168,45 @@ kobject_uevent_env(struct kobject *kobj, int action, char *envp[])
 	 * Not sure if we do anything related to udev/sysfs at the moment or
 	 * need a shortcut or simply ignore it (for now).
 	 */
+
+	return (0);
 }
+
+void	kset_init(struct kset *kset);
+int	kset_register(struct kset *kset);
+void	kset_unregister(struct kset *kset);
+struct kset * kset_create_and_add(const char *name,
+    const struct kset_uevent_ops *u, struct kobject *parent_kobj);
+
+static inline struct kset *
+to_kset(struct kobject *kobj)
+{
+	if (kobj != NULL)
+		return container_of(kobj, struct kset, kobj);
+	else
+		return NULL;
+}
+
+static inline struct kset *
+kset_get(struct kset *kset)
+{
+	if (kset != NULL) {
+		struct kobject *kobj;
+
+		kobj = kobject_get(&kset->kobj);
+		return to_kset(kobj);
+	} else {
+		return NULL;
+	}
+}
+
+static inline void
+kset_put(struct kset *kset)
+{
+	if (kset != NULL)
+		kobject_put(&kset->kobj);
+}
+
+void linux_kobject_kfree_name(struct kobject *kobj);
 
 #endif /* _LINUXKPI_LINUX_KOBJECT_H_ */

@@ -54,6 +54,7 @@ MAN=	aac.4 \
 	at45d.4 \
 	ata.4 \
 	ath.4 \
+	ath10k.4 \
 	ath_ahb.4 \
 	ath_hal.4 \
 	ath_pci.4 \
@@ -82,6 +83,7 @@ MAN=	aac.4 \
 	bhndb_pci.4 \
 	blackhole.4 \
 	bnxt.4 \
+	bnxt_re.4 \
 	bpf.4 \
 	bridge.4 \
 	bwi.4 \
@@ -323,11 +325,13 @@ MAN=	aac.4 \
 	mod_cc.4 \
 	mos.4 \
 	mouse.4 \
+	mpi3mr.4 \
 	mpr.4 \
 	mps.4 \
 	mpt.4 \
 	mrsas.4 \
 	msk.4 \
+	mt76.4 \
 	mtio.4 \
 	multicast.4 \
 	muge.4 \
@@ -468,6 +472,7 @@ MAN=	aac.4 \
 	pwmc.4 \
 	${_pvscsi.4} \
 	${_qat.4} \
+	${_qat_c2xxx.4} \
 	${_qlxge.4} \
 	${_qlxgb.4} \
 	${_qlxgbe.4} \
@@ -744,6 +749,10 @@ MLINKS+=mlx5en.4 mce.4
 MLINKS+=mn.4 if_mn.4
 MLINKS+=mos.4 if_mos.4
 MLINKS+=msk.4 if_msk.4
+MLINKS+=mt76.4 if_mt7921.4 \
+	mt76.4 if_mt7925.4 \
+	mt76.4 mt7921.4 \
+	mt76.4 mt7925.4
 MLINKS+=mwl.4 if_mwl.4
 MLINKS+=mxge.4 if_mxge.4
 MLINKS+=my.4 if_my.4
@@ -876,6 +885,7 @@ _nvram.4=	nvram.4
 _padlock.4=	padlock.4
 _pchtherm.4=	pchtherm.4
 _qat.4=		qat.4
+_qat_c2xxx.4=	qat_c2xxx.4
 _rr232x.4=	rr232x.4
 _speaker.4=	speaker.4
 _spkr.4=	spkr.4

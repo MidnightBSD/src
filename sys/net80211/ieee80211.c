@@ -38,13 +38,13 @@
 #include <sys/malloc.h>
 #include <sys/socket.h>
 #include <sys/sbuf.h>
-
-#include <machine/stdarg.h>
+#include <sys/stdarg.h>
 
 #include <net/if.h>
 #include <net/if_var.h>
 #include <net/if_dl.h>
 #include <net/if_media.h>
+#include <net/if_private.h>
 #include <net/if_types.h>
 #include <net/ethernet.h>
 
@@ -272,19 +272,6 @@ null_update_chw(struct ieee80211com *ic)
 	ic_printf(ic, "%s: need callback\n", __func__);
 }
 
-int
-ic_printf(struct ieee80211com *ic, const char * fmt, ...)
-{
-	va_list ap;
-	int retval;
-
-	retval = printf("%s: ", ic->ic_name);
-	va_start(ap, fmt);
-	retval += vprintf(fmt, ap);
-	va_end(ap);
-	return (retval);
-}
-
 static LIST_HEAD(, ieee80211com) ic_head = LIST_HEAD_INITIALIZER(ic_head);
 static struct mtx ic_list_mtx;
 MTX_SYSINIT(ic_list, &ic_list_mtx, "ieee80211com list", MTX_DEF);
@@ -433,6 +420,40 @@ ieee80211_ifdetach(struct ieee80211com *ic)
 	IEEE80211_LOCK_DESTROY(ic);
 }
 
+/*
+ * Called by drivers during attach to set the supported
+ * cipher set for software encryption.
+ */
+void
+ieee80211_set_software_ciphers(struct ieee80211com *ic,
+    uint32_t cipher_suite)
+{
+	ieee80211_crypto_set_supported_software_ciphers(ic, cipher_suite);
+}
+
+/*
+ * Called by drivers during attach to set the supported
+ * cipher set for hardware encryption.
+ */
+void
+ieee80211_set_hardware_ciphers(struct ieee80211com *ic,
+    uint32_t cipher_suite)
+{
+	ieee80211_crypto_set_supported_hardware_ciphers(ic, cipher_suite);
+}
+
+/*
+ * Called by drivers during attach to set the supported
+ * key management suites by the driver/hardware.
+ */
+void
+ieee80211_set_driver_keymgmt_suites(struct ieee80211com *ic,
+    uint32_t keymgmt_set)
+{
+	ieee80211_crypto_set_supported_driver_keymgmt(ic,
+	    keymgmt_set);
+}
+
 struct ieee80211com *
 ieee80211_find_com(const char *name)
 {
@@ -529,7 +550,7 @@ ieee80211_vap_setup(struct ieee80211com *ic, struct ieee80211vap *vap,
 	ifp = if_alloc(IFT_ETHER);
 	if_initname(ifp, name, unit);
 	ifp->if_softc = vap;			/* back pointer */
-	ifp->if_flags = IFF_SIMPLEX | IFF_BROADCAST | IFF_MULTICAST;
+	if_setflags(ifp, IFF_SIMPLEX | IFF_BROADCAST | IFF_MULTICAST);
 	ifp->if_transmit = ieee80211_vap_transmit;
 	ifp->if_qflush = ieee80211_vap_qflush;
 	ifp->if_ioctl = ieee80211_ioctl;
@@ -687,7 +708,8 @@ ieee80211_vap_attach(struct ieee80211vap *vap, ifm_change_cb_t media_change,
 		ifp->if_baudrate = IF_Mbps(maxrate);
 
 	ether_ifattach(ifp, macaddr);
-	IEEE80211_ADDR_COPY(vap->iv_myaddr, IF_LLADDR(ifp));
+	/* Do initial MAC address sync */
+	ieee80211_vap_copy_mac_address(vap);
 	/* hook output method setup by ether_ifattach */
 	vap->iv_output = ifp->if_output;
 	ifp->if_output = ieee80211_output;
@@ -709,6 +731,8 @@ ieee80211_vap_attach(struct ieee80211vap *vap, ifm_change_cb_t media_change,
 	ieee80211_syncflag_vht_locked(ic, IEEE80211_FVHT_USEVHT80);
 	ieee80211_syncflag_vht_locked(ic, IEEE80211_FVHT_USEVHT160);
 	ieee80211_syncflag_vht_locked(ic, IEEE80211_FVHT_USEVHT80P80);
+	ieee80211_syncflag_vht_locked(ic, IEEE80211_FVHT_STBC_TX);
+	ieee80211_syncflag_vht_locked(ic, IEEE80211_FVHT_STBC_RX);
 	IEEE80211_UNLOCK(ic);
 
 	return 1;
@@ -766,6 +790,8 @@ ieee80211_vap_detach(struct ieee80211vap *vap)
 	ieee80211_syncflag_vht_locked(ic, IEEE80211_FVHT_USEVHT80);
 	ieee80211_syncflag_vht_locked(ic, IEEE80211_FVHT_USEVHT160);
 	ieee80211_syncflag_vht_locked(ic, IEEE80211_FVHT_USEVHT80P80);
+	ieee80211_syncflag_vht_locked(ic, IEEE80211_FVHT_STBC_TX);
+	ieee80211_syncflag_vht_locked(ic, IEEE80211_FVHT_STBC_RX);
 
 	/* NB: this handles the bpfdetach done below */
 	ieee80211_syncflag_ext_locked(ic, IEEE80211_FEXT_BPF);
@@ -1157,12 +1183,14 @@ struct vht_chan_range vht80_chan_ranges[] = {
 	{ 5570, 5650 },
 	{ 5650, 5730 },
 	{ 5735, 5815 },
+	{ 5815, 5895 },
 	{ 0, 0 }
 };
 
 struct vht_chan_range vht160_chan_ranges[] = {
 	{ 5170, 5330 },
 	{ 5490, 5650 },
+	{ 5735, 5895 },
 	{ 0, 0 }
 };
 
@@ -1175,7 +1203,7 @@ set_vht_extchan(struct ieee80211_channel *c)
 		return (0);
 
 	if (IEEE80211_IS_CHAN_VHT80P80(c)) {
-		printf("%s: TODO VHT80+80 channel (ieee=%d, flags=0x%08x)\n",
+		net80211_printf("%s: TODO VHT80+80 channel (ieee=%d, flags=0x%08x)\n",
 		    __func__, c->ic_ieee, c->ic_flags);
 	}
 
@@ -1190,7 +1218,7 @@ set_vht_extchan(struct ieee80211_channel *c)
 				    ieee80211_mhz2ieee(midpoint, c->ic_flags);
 				c->ic_vht_ch_freq2 = 0;
 #if 0
-				printf("%s: %d, freq=%d, midpoint=%d, freq1=%d, freq2=%d\n",
+				net80211_printf("%s: %d, freq=%d, midpoint=%d, freq1=%d, freq2=%d\n",
 				    __func__, c->ic_ieee, c->ic_freq, midpoint,
 				    c->ic_vht_ch_freq1, c->ic_vht_ch_freq2);
 #endif
@@ -1211,7 +1239,7 @@ set_vht_extchan(struct ieee80211_channel *c)
 				    ieee80211_mhz2ieee(midpoint, c->ic_flags);
 				c->ic_vht_ch_freq2 = 0;
 #if 0
-				printf("%s: %d, freq=%d, midpoint=%d, freq1=%d, freq2=%d\n",
+				net80211_printf("%s: %d, freq=%d, midpoint=%d, freq1=%d, freq2=%d\n",
 				    __func__, c->ic_ieee, c->ic_freq, midpoint,
 				    c->ic_vht_ch_freq1, c->ic_vht_ch_freq2);
 #endif
@@ -1236,7 +1264,7 @@ set_vht_extchan(struct ieee80211_channel *c)
 		return (1);
 	}
 
-	printf("%s: unknown VHT channel type (ieee=%d, flags=0x%08x)\n",
+	net80211_printf("%s: unknown VHT channel type (ieee=%d, flags=0x%08x)\n",
 	    __func__, c->ic_ieee, c->ic_flags);
 
 	return (0);
@@ -1284,7 +1312,7 @@ addchan(struct ieee80211_channel chans[], int maxchans, int *nchans,
 		return (ENOBUFS);
 
 #if 0
-	printf("%s: %d of %d: ieee=%d, freq=%d, flags=0x%08x\n",
+	net80211_printf("%s: %d of %d: ieee=%d, freq=%d, flags=0x%08x\n",
 	    __func__, *nchans, maxchans, ieee, freq, flags);
 #endif
 
@@ -1314,7 +1342,7 @@ copychan_prev(struct ieee80211_channel chans[], int maxchans, int *nchans,
 		return (ENOBUFS);
 
 #if 0
-	printf("%s: %d of %d: flags=0x%08x\n",
+	net80211_printf("%s: %d of %d: flags=0x%08x\n",
 	    __func__, *nchans, maxchans, flags);
 #endif
 
@@ -1908,6 +1936,7 @@ ieee80211_media_setup(struct ieee80211com *ic,
 	enum ieee80211_phymode mode;
 	const struct ieee80211_rateset *rs;
 	struct ieee80211_rateset allrates;
+	struct ieee80211_node_txrate tn;
 
 	/*
 	 * Fill in media characteristics.
@@ -1927,7 +1956,8 @@ ieee80211_media_setup(struct ieee80211com *ic,
 		rs = &ic->ic_sup_rates[mode];
 		for (i = 0; i < rs->rs_nrates; i++) {
 			rate = rs->rs_rates[i];
-			mword = ieee80211_rate2media(ic, rate, mode);
+			tn = IEEE80211_NODE_TXRATE_INIT_LEGACY(rate);
+			mword = ieee80211_rate2media(ic, &tn, mode);
 			if (mword == 0)
 				continue;
 			addmedia(media, caps, addsta, mode, mword);
@@ -1949,8 +1979,8 @@ ieee80211_media_setup(struct ieee80211com *ic,
 		}
 	}
 	for (i = 0; i < allrates.rs_nrates; i++) {
-		mword = ieee80211_rate2media(ic, allrates.rs_rates[i],
-				IEEE80211_MODE_AUTO);
+		tn = IEEE80211_NODE_TXRATE_INIT_LEGACY(allrates.rs_rates[i]);
+		mword = ieee80211_rate2media(ic, &tn, IEEE80211_MODE_AUTO);
 		if (mword == 0)
 			continue;
 		/* NB: remove media options from mword */
@@ -2030,6 +2060,7 @@ ieee80211_announce(struct ieee80211com *ic)
 	int i, rate, mword;
 	enum ieee80211_phymode mode;
 	const struct ieee80211_rateset *rs;
+	struct ieee80211_node_txrate tn;
 
 	/* NB: skip AUTO since it has no rates */
 	for (mode = IEEE80211_MODE_AUTO+1; mode < IEEE80211_MODE_11NA; mode++) {
@@ -2038,14 +2069,15 @@ ieee80211_announce(struct ieee80211com *ic)
 		ic_printf(ic, "%s rates: ", ieee80211_phymode_name[mode]);
 		rs = &ic->ic_sup_rates[mode];
 		for (i = 0; i < rs->rs_nrates; i++) {
-			mword = ieee80211_rate2media(ic, rs->rs_rates[i], mode);
+			tn = IEEE80211_NODE_TXRATE_INIT_LEGACY(rs->rs_rates[i]);
+			mword = ieee80211_rate2media(ic, &tn, mode);
 			if (mword == 0)
 				continue;
 			rate = ieee80211_media2rate(mword);
-			printf("%s%d%sMbps", (i != 0 ? " " : ""),
+			net80211_printf("%s%d%sMbps", (i != 0 ? " " : ""),
 			    rate / 2, ((rate & 0x1) != 0 ? ".5" : ""));
 		}
-		printf("\n");
+		net80211_printf("\n");
 	}
 	ieee80211_ht_announce(ic);
 	ieee80211_vht_announce(ic);
@@ -2058,7 +2090,7 @@ ieee80211_announce_channels(struct ieee80211com *ic)
 	char type;
 	int i, cw;
 
-	printf("Chan  Freq  CW  RegPwr  MinPwr  MaxPwr\n");
+	net80211_printf("Chan  Freq  CW  RegPwr  MinPwr  MaxPwr\n");
 	for (i = 0; i < ic->ic_nchans; i++) {
 		c = &ic->ic_channels[i];
 		if (IEEE80211_IS_CHAN_ST(c))
@@ -2085,7 +2117,7 @@ ieee80211_announce_channels(struct ieee80211com *ic)
 			cw = 5;
 		else
 			cw = 20;
-		printf("%4d  %4d%c %2d%c %6d  %4d.%d  %4d.%d\n"
+		net80211_printf("%4d  %4d%c %2d%c %6d  %4d.%d  %4d.%d\n"
 			, c->ic_ieee, c->ic_freq, type
 			, cw
 			, IEEE80211_IS_CHAN_HT40U(c) ? '+' :
@@ -2237,6 +2269,7 @@ ieee80211_media_status(struct ifnet *ifp, struct ifmediareq *imr)
 	struct ieee80211vap *vap = ifp->if_softc;
 	struct ieee80211com *ic = vap->iv_ic;
 	enum ieee80211_phymode mode;
+	struct ieee80211_node_txrate tn;
 
 	imr->ifm_status = IFM_AVALID;
 	/*
@@ -2258,14 +2291,15 @@ ieee80211_media_status(struct ifnet *ifp, struct ifmediareq *imr)
 		/*
 		 * A fixed rate is set, report that.
 		 */
-		imr->ifm_active |= ieee80211_rate2media(ic,
-			vap->iv_txparms[mode].ucastrate, mode);
+		tn = IEEE80211_NODE_TXRATE_INIT_LEGACY(
+		    vap->iv_txparms[mode].ucastrate);
+		imr->ifm_active |= ieee80211_rate2media(ic, &tn, mode);
 	} else if (vap->iv_opmode == IEEE80211_M_STA) {
 		/*
 		 * In station mode report the current transmit rate.
 		 */
-		imr->ifm_active |= ieee80211_rate2media(ic,
-			vap->iv_bss->ni_txrate, mode);
+		ieee80211_node_get_txrate(vap->iv_bss, &tn);
+		imr->ifm_active |= ieee80211_rate2media(ic, &tn, mode);
 	} else
 		imr->ifm_active |= IFM_AUTO;
 	if (imr->ifm_status & IFM_ACTIVE)
@@ -2331,7 +2365,7 @@ ieee80211_chan2mode(const struct ieee80211_channel *chan)
 		return IEEE80211_MODE_FH;
 
 	/* NB: should not get here */
-	printf("%s: cannot map channel to mode; freq %u flags 0x%x\n",
+	net80211_printf("%s: cannot map channel to mode; freq %u flags 0x%x\n",
 		__func__, chan->ic_freq, chan->ic_flags);
 	return IEEE80211_MODE_11B;
 }
@@ -2358,7 +2392,8 @@ findmedia(const struct ratemedia rates[], int n, u_int match)
  * or an MCS index.
  */
 int
-ieee80211_rate2media(struct ieee80211com *ic, int rate, enum ieee80211_phymode mode)
+ieee80211_rate2media(struct ieee80211com *ic,
+    const struct ieee80211_node_txrate *tr, enum ieee80211_phymode mode)
 {
 	static const struct ratemedia rates[] = {
 		{   2 | IFM_IEEE80211_FH, IFM_IEEE80211_FH1 },
@@ -2489,35 +2524,44 @@ ieee80211_rate2media(struct ieee80211com *ic, int rate, enum ieee80211_phymode m
 		{  11, IFM_IEEE80211_VHT },
 #endif
 	};
-	int m;
+	int m, rate;
 
 	/*
 	 * Check 11ac/11n rates first for match as an MCS.
 	 */
 	if (mode == IEEE80211_MODE_VHT_5GHZ) {
-		if (rate & IFM_IEEE80211_VHT) {
-			rate &= ~IFM_IEEE80211_VHT;
-			m = findmedia(vhtrates, nitems(vhtrates), rate);
+		if (tr->type == IEEE80211_NODE_TXRATE_VHT) {
+			m = findmedia(vhtrates, nitems(vhtrates), tr->mcs);
 			if (m != IFM_AUTO)
 				return (m | IFM_IEEE80211_VHT);
 		}
 	} else if (mode == IEEE80211_MODE_11NA) {
-		if (rate & IEEE80211_RATE_MCS) {
-			rate &= ~IEEE80211_RATE_MCS;
-			m = findmedia(htrates, nitems(htrates), rate);
+		/* NB: 12 is ambiguous, it will be treated as an MCS */
+		if (tr->type == IEEE80211_NODE_TXRATE_HT) {
+			m = findmedia(htrates, nitems(htrates),
+			    tr->dot11rate & ~IEEE80211_RATE_MCS);
 			if (m != IFM_AUTO)
 				return m | IFM_IEEE80211_11NA;
 		}
 	} else if (mode == IEEE80211_MODE_11NG) {
 		/* NB: 12 is ambiguous, it will be treated as an MCS */
-		if (rate & IEEE80211_RATE_MCS) {
-			rate &= ~IEEE80211_RATE_MCS;
-			m = findmedia(htrates, nitems(htrates), rate);
+		if (tr->type == IEEE80211_NODE_TXRATE_HT) {
+			m = findmedia(htrates, nitems(htrates),
+			    tr->dot11rate & ~IEEE80211_RATE_MCS);
 			if (m != IFM_AUTO)
 				return m | IFM_IEEE80211_11NG;
 		}
 	}
-	rate &= IEEE80211_RATE_VAL;
+
+	/*
+	 * At this point it needs to be a dot11rate (legacy/HT) for the
+	 * rest of the logic to work.
+	 */
+	if ((tr->type != IEEE80211_NODE_TXRATE_LEGACY) &&
+	    (tr->type != IEEE80211_NODE_TXRATE_HT))
+		return (IFM_AUTO);
+	rate = tr->dot11rate & IEEE80211_RATE_VAL;
+
 	switch (mode) {
 	case IEEE80211_MODE_11A:
 	case IEEE80211_MODE_HALF:		/* XXX good 'nuf */
@@ -2643,4 +2687,109 @@ ieee80211_channel_type_char(const struct ieee80211_channel *c)
 	if (IEEE80211_IS_CHAN_B(c))
 		return 'b';
 	return 'f';
+}
+
+/**
+ * @brief Determine whether the given key in the given VAP is a global key.
+ *
+ * (key index 0..3, shared between all stations on a VAP.)
+ *
+ * This is either a WEP key or a GROUP key.
+ *
+ * Note this will NOT return true if it is a IGTK key.
+ *
+ * @param vap the current VAP
+ * @param key ieee80211_key to use/check
+ * @returns true if it's a global/WEP key, false otherwise
+ */
+bool
+ieee80211_is_key_global(const struct ieee80211vap *vap,
+    const struct ieee80211_key *key)
+{
+	return (&vap->iv_nw_keys[0] <= key &&
+	    key < &vap->iv_nw_keys[IEEE80211_WEP_NKID]);
+}
+
+/**
+ * @brief Determine whether the given key in the given VAP is a unicast key.
+ *
+ * This only returns true if it's a unicast key.
+ *
+ * Note: For now net80211 only supports a single unicast key, stored in
+ * an ieee80211_node entry.
+ *
+ * Code should use this to know if it's a unicast key and then call
+ * ieee80211_crypto_get_keyid() to get the 802.11 key ID (0..3 for
+ * unicast/global keys, 4..5 for IGTK keys.)  Since the unicast
+ * and global key indexes "overlap", callers will need to check
+ * both the type and id.
+ *
+ * @param vap the current VAP
+ * @param key ieee80211_key to use/check
+ * @returns true if the key is a unicast key, false if it is not
+ */
+bool
+ieee80211_is_key_unicast(const struct ieee80211vap *vap,
+    const struct ieee80211_key *key)
+{
+	/*
+	 * This is a short-cut for now; eventually we will need
+	 * to support multiple unicast keys, IGTK, etc) so we
+	 * will absolutely need to fix the key flags.
+	 */
+	return (!ieee80211_is_key_global(vap, key));
+}
+
+/**
+ * Determine whether the given control frame is from a known node
+ * and destined to us.
+ *
+ * In some instances a control frame won't have a TA (eg ACKs), so
+ * we should only verify the RA for those.
+ *
+ * @param ni	ieee80211_node representing the sender, or BSS node
+ * @param m0	mbuf representing the 802.11 frame.
+ * @returns	false if the frame is not a CTL frame (with a warning logged);
+ *		true if the frame is from a known sender / valid recipient,
+ *		false otherwise.
+ */
+bool
+ieee80211_is_ctl_frame_for_vap(struct ieee80211_node *ni, const struct mbuf *m0)
+{
+	const struct ieee80211vap *vap = ni->ni_vap;
+	const struct ieee80211_frame *wh;
+	uint8_t subtype;
+
+	wh = mtod(m0, const struct ieee80211_frame *);
+	subtype = wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_MASK;
+
+	/* Verify it's a ctl frame. */
+	KASSERT(IEEE80211_IS_CTL(wh), ("%s: not a CTL frame (fc[0]=0x%04x)",
+	    __func__, wh->i_fc[0]));
+	if (!IEEE80211_IS_CTL(wh)) {
+		net80211_vap_printf(vap,
+		    "%s: not a control frame (fc[0]=0x%04x)\n",
+		    __func__, wh->i_fc[0]);
+		return (false);
+	}
+
+	/* Verify the TA if present. */
+	switch (subtype) {
+	case IEEE80211_FC0_SUBTYPE_CTS:
+	case IEEE80211_FC0_SUBTYPE_ACK:
+		/* No TA. */
+		break;
+	default:
+		/*
+		 * Verify TA matches ni->ni_macaddr; for unknown
+		 * sources it will be the BSS node and ni->ni_macaddr
+		 * will the BSS MAC.
+		 */
+		if (!IEEE80211_ADDR_EQ(wh->i_addr2, ni->ni_macaddr))
+			return (false);
+		break;
+	}
+
+	/* Verify the RA */
+	return (IEEE80211_ADDR_EQ(wh->i_addr1, vap->iv_myaddr));
 }

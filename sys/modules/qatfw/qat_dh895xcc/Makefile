@@ -1,10 +1,9 @@
-
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright(c) 2007-2022 Intel Corporation
 .PATH: ${SRCTOP}/sys/contrib/dev/qat
 
-KMOD=	qat_dh895xccfw
-IMG1=	qat_895xcc
-IMG2=	qat_895xcc_mmp
+KMOD= qat_dh895xcc_fw
 
-FIRMWS=	${IMG1}.bin:${KMOD}:111 ${IMG2}.bin:${IMG2}:111
+FIRMWS= qat_895xcc.bin:qat_dh895xcc_fw:111 qat_895xcc_mmp.bin:qat_dh895xcc_mmp_fw:111
 
 .include <bsd.kmod.mk>

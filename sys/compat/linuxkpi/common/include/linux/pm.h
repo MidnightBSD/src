@@ -40,15 +40,16 @@
 
 struct device;
 
-struct dev_pm_info {
-	atomic_t usage_count;
-};
-
 typedef struct pm_message {
 	int event;
 } pm_message_t;
 
 struct dev_pm_domain {
+};
+
+struct dev_pm_info {
+	atomic_t usage_count;
+	bool can_wakeup;
 };
 
 #define	PM_EVENT_FREEZE		0x0001
@@ -96,5 +97,35 @@ pm_wakeup_event(struct device *dev __unused, unsigned int x __unused)
 
 	pr_debug("%s: TODO\n", __func__);
 }
+
+/*
+ * We do not need to specify anything here as a VT switch always happens on
+ * suspend/resume.
+ */
+static inline void
+pm_vt_switch_required(struct device *dev __unused, bool required __unused)
+{
+}
+
+static inline void
+pm_vt_switch_unregister(struct device *dev __unused)
+{
+}
+
+#ifdef CONFIG_PM_SLEEP
+static inline void
+device_set_wakeup_capable(struct device *dev __unused, bool capable __unused)
+{
+	pr_debug("%s: TODO\n", __func__);
+}
+#else
+void linuxkpi_device_set_wakeup_capable(struct device *, bool);
+
+static inline void
+device_set_wakeup_capable(struct device *dev, bool capable)
+{
+	linuxkpi_device_set_wakeup_capable(dev, capable);
+}
+#endif
 
 #endif	/* _LINUXKPI_LINUX_PM_H */

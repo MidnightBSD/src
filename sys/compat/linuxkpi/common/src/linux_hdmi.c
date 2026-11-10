@@ -226,8 +226,11 @@ int hdmi_spd_infoframe_init(struct hdmi_spd_infoframe *frame,
 {
 	size_t len;
 
+#ifdef __MidnightBSD__
+	/* MNBSD-KPI: local hardening from #379. */
 	if (frame == NULL || vendor == NULL || product == NULL)
 		return -EINVAL;
+#endif
 
 	memset(frame, 0, sizeof(*frame));
 

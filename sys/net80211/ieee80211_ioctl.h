@@ -253,6 +253,14 @@ struct ieee80211_stats {
 	uint32_t	is_ff_encapfail;	/* failed FF encap */
 	uint32_t	is_amsdu_encapfail;	/* failed A-MSDU encap */
 
+	uint32_t	is_crypto_gcmp;		/* gcmp crypto done in s/w */
+	uint32_t	is_rx_gcmpreplay;	/* rx seq# violation (GCMP) */
+	uint32_t	is_rx_gcmpformat;	/* rx format bad (GCMP) */
+	uint32_t	is_rx_gcmpmic;		/* rx MIC check failed (GCMP) */
+	uint32_t	is_crypto_gcmp_nomem;	/* gcmp crypto failed; no mem */
+	uint32_t	is_crypto_gcmp_nospc;	/* gcmp crypto failed; no mbuf space */
+	uint32_t	is_crypto_swcipherfail;	/* no support for SW cipher */
+
 	uint32_t	is_spare[5];
 };
 
@@ -551,13 +559,13 @@ struct ieee80211_regdomain_req {
 	IEEE80211_REGDOMAIN_SIZE((_req)->chaninfo.ic_nchans)
 
 /*
- * Get driver capabilities.  Driver, hardware crypto, and
+ * Get driver capabilities.  Driver, hardware/software crypto, and
  * HT/802.11n capabilities, and a table that describes what
  * the radio can do.
  */
 struct ieee80211_devcaps_req {
 	uint32_t	dc_drivercaps;		/* general driver caps */
-	uint32_t	dc_cryptocaps;		/* hardware crypto support */
+	uint32_t	dc_cryptocaps;		/* software + hardware crypto support */
 	uint32_t	dc_htcaps;		/* HT/802.11n support */
 	uint32_t	dc_vhtcaps;		/* VHT/802.11ac capabilities */
 	struct ieee80211req_chaninfo dc_chaninfo;
@@ -582,7 +590,7 @@ struct ieee80211req_sta_vlan {
 	uint16_t	sv_vlan;
 };
 
-#ifdef __MidnightBSD__
+#ifdef __FreeBSD__
 /*
  * FreeBSD-style ioctls.
  */
@@ -872,6 +880,6 @@ struct ieee80211_clone_params {
 #define	IEEE80211_CLONE_WDSLEGACY	0x0004	/* legacy WDS processing */
 #define	IEEE80211_CLONE_MACADDR		0x0008	/* use specified mac addr */
 #define	IEEE80211_CLONE_TDMA		0x0010	/* operate in TDMA mode */
-#endif /* __MidnightBSD__ */
+#endif /* __FreeBSD__ */
 
 #endif /* _NET80211_IEEE80211_IOCTL_H_ */

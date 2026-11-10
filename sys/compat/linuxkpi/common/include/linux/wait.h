@@ -43,13 +43,6 @@
 
 #define	SKIP_SLEEP() (SCHEDULER_STOPPED() || kdb_active)
 
-#define	might_sleep()							\
-	WITNESS_WARN(WARN_GIANTOK | WARN_SLEEPOK, NULL, "might_sleep()")
-
-#define	might_sleep_if(cond) do { \
-	if (cond) { might_sleep(); } \
-} while (0)
-
 struct wait_queue;
 struct wait_queue_head;
 
@@ -61,12 +54,14 @@ typedef struct wait_queue_head wait_queue_head_t;
 
 typedef int wait_queue_func_t(wait_queue_t *, unsigned int, int, void *);
 
+#define WQ_FLAG_WOKEN		0x02
+
 /*
  * Many API consumers directly reference these fields and those of
  * wait_queue_head.
  */
 struct wait_queue {
-	unsigned int flags;	/* always 0 */
+	unsigned int flags;
 	void *private;
 	wait_queue_func_t *func;
 	union {
@@ -87,8 +82,14 @@ struct wait_queue_head {
  * This function is referenced by at least one DRM driver, so it may not be
  * renamed and furthermore must be the default wait queue callback.
  */
-extern wait_queue_func_t autoremove_wake_function;
-extern wait_queue_func_t default_wake_function;
+wait_queue_func_t autoremove_wake_function;
+wait_queue_func_t default_wake_function;
+wait_queue_func_t woken_wake_function;
+
+long linux_wait_woken(wait_queue_t *wq, unsigned state, long timeout);
+
+#define	wait_woken(wq, state, timeout) \
+	linux_wait_woken((wq), (state), (timeout))
 
 #define	DEFINE_WAIT_FUNC(name, function)				\
 	wait_queue_t name = {						\
@@ -110,10 +111,10 @@ extern wait_queue_func_t default_wake_function;
 	wait_queue_head_t name = {					\
 		.task_list = LINUX_LIST_HEAD_INIT(name.task_list),	\
 	};								\
-	MTX_SYSINIT(name, &(name).lock.m, spin_lock_name("wqhead"), MTX_DEF)
+	MTX_SYSINIT(name, &(name).lock, spin_lock_name("wqhead"), MTX_DEF)
 
 #define	init_waitqueue_head(wqh) do {					\
-	mtx_init(&(wqh)->lock.m, spin_lock_name("wqhead"),		\
+	mtx_init(&(wqh)->lock, spin_lock_name("wqhead"),		\
 	    NULL, MTX_DEF | MTX_NEW | MTX_NOWITNESS);			\
 	INIT_LIST_HEAD(&(wqh)->task_list);				\
 } while (0)
@@ -138,7 +139,7 @@ void linux_wake_up(wait_queue_head_t *, unsigned int, int, bool);
 #define	wake_up_interruptible_all(wqh)					\
 	linux_wake_up(wqh, TASK_INTERRUPTIBLE, 0, false)
 
-int linux_wait_event_common(wait_queue_head_t *, wait_queue_t *, int,
+int linux_wait_event_common(wait_queue_head_t *, wait_queue_t *, long,
     unsigned int, spinlock_t *);
 
 /*
@@ -148,9 +149,9 @@ int linux_wait_event_common(wait_queue_head_t *, wait_queue_t *, int,
  */
 #define	__wait_event_common(wqh, cond, timeout, state, lock) ({	\
 	DEFINE_WAIT(__wq);					\
-	const int __timeout = ((int)(timeout)) < 1 ? 1 : (timeout);	\
-	int __start = ticks;					\
-	int __ret = 0;						\
+	const long __timeout = ((long)(timeout)) < 1 ? 1 : (timeout); \
+	long __start = jiffies;					\
+	long __ret = 0;						\
 								\
 	for (;;) {						\
 		linux_prepare_to_wait(&(wqh), &__wq, state);	\
@@ -166,7 +167,7 @@ int linux_wait_event_common(wait_queue_head_t *, wait_queue_t *, int,
 		if (__ret == -EWOULDBLOCK)			\
 			__ret = !!(cond);			\
 		else if (__ret != -ERESTARTSYS) {		\
-			__ret = __timeout + __start - ticks;	\
+			__ret = __timeout + __start - jiffies;	\
 			/* range check return value */		\
 			if (__ret < 1)				\
 				__ret = 1;			\
@@ -284,7 +285,7 @@ void linux_finish_wait(wait_queue_head_t *, wait_queue_t *);
 #define	finish_wait(wqh, wq)		linux_finish_wait(wqh, wq)
 
 void linux_wake_up_bit(void *, int);
-int linux_wait_on_bit_timeout(unsigned long *, int, unsigned int, int);
+int linux_wait_on_bit_timeout(unsigned long *, int, unsigned int, long);
 void linux_wake_up_atomic_t(atomic_t *);
 int linux_wait_on_atomic_t(atomic_t *, unsigned int);
 

@@ -4542,6 +4542,30 @@ if_settransmitfn(if_t ifp, if_transmit_fn_t start_fn)
 	((struct ifnet *)ifp)->if_transmit = start_fn;
 }
 
+int
+if_gettype(if_t ifp)
+{
+	return (((struct ifnet *)ifp)->if_type);
+}
+
+if_transmit_fn_t
+if_gettransmitfn(if_t ifp)
+{
+	return (((struct ifnet *)ifp)->if_transmit);
+}
+
+uint64_t
+if_getcounter(if_t ifp, ift_counter counter)
+{
+	return (((struct ifnet *)ifp)->if_get_counter(ifp, counter));
+}
+
+const uint8_t *
+if_getbroadcastaddr(const if_t ifp)
+{
+	return (((struct ifnet *)ifp)->if_broadcastaddr);
+}
+
 void if_setqflushfn(if_t ifp, if_qflush_fn_t flush_fn)
 {
 	((struct ifnet *)ifp)->if_qflush = flush_fn;

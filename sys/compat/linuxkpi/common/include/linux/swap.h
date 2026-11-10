@@ -37,6 +37,16 @@
 #include <vm/swap_pager.h>
 #include <vm/vm_pageout.h>
 
+#include <linux/spinlock.h>
+#include <linux/mmzone.h>
+#include <linux/list.h>
+#include <linux/memcontrol.h>
+#include <linux/sched.h>
+#include <linux/fs.h>
+#include <linux/pagemap.h>
+#include <linux/atomic.h>
+#include <linux/page-flags.h>
+
 static inline long
 get_nr_swap_pages(void)
 {
@@ -52,6 +62,17 @@ current_is_kswapd(void)
 {
 
 	return (curproc == pageproc);
+}
+
+static inline void
+folio_mark_accessed(struct folio *folio)
+{
+	mark_page_accessed(&folio->page);
+}
+
+static inline void
+check_move_unevictable_folios(struct folio_batch *fbatch)
+{
 }
 
 #endif

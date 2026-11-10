@@ -140,6 +140,7 @@ struct iwl_rfi_freq_table_resp_cmd *iwl_rfi_get_freq_table(struct iwl_mvm *mvm)
 
 	resp = kmemdup(cmd.resp_pkt->data, resp_size, GFP_KERNEL);
 	iwl_free_resp(&cmd);
+
 	if (!resp)
 		return ERR_PTR(-ENOMEM);
 

@@ -27,6 +27,8 @@
 
 #include <linux/types.h>
 #include <linux/device.h>
+#include <linux/skbuff.h>
+#include <linux/netdevice.h>
 
 #include <sys/random.h>
 #include <sys/libkern.h>
@@ -58,9 +60,15 @@ is_zero_ether_addr(const u8 * addr)
 }
 
 static inline bool
+is_unicast_ether_addr(const u8 * addr)
+{
+	return ((addr[0] & 0x01) == 0x00);
+}
+
+static inline bool
 is_multicast_ether_addr(const u8 * addr)
 {
-	return (0x01 & addr[0]);
+	return ((addr[0] & 0x01) == 0x01);
 }
 
 static inline bool
@@ -129,6 +137,27 @@ device_get_mac_address(struct device *dev, char *dst)
 
 	/* XXX get mac address from FDT? */
 	return (-ENOENT);
+}
+
+/* Returns network byte order. */
+static inline uint16_t
+eth_type_trans(struct sk_buff *skb, struct net_device *dev)
+{
+	pr_debug("%s: TODO\n", __func__);
+	return (htons(ETHERTYPE_8023));
+}
+
+static inline void
+eth_hw_addr_set(struct net_device *dev, const u8 *addr)
+{
+	pr_debug("%s: TODO (if we want to)\n", __func__);
+}
+
+static inline int
+eth_platform_get_mac_address(struct device *dev __unused, u8 *addr __unused)
+{
+	pr_debug("%s: TODO\n", __func__);
+	return (-ENODEV);
 }
 
 #endif					/* _LINUXKPI_LINUX_ETHERDEVICE_H_ */

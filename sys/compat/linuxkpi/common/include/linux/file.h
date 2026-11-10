@@ -39,11 +39,16 @@
 #include <linux/fs.h>
 #include <linux/slab.h>
 
+#include <linux/compiler.h>
+#include <linux/types.h>
+#include <linux/errno.h>
+#include <linux/cleanup.h>
+
 struct linux_file;
 
 #undef file
 
-extern struct fileops linuxfileops;
+extern const struct fileops linuxfileops;
 
 static inline struct linux_file *
 linux_fget(unsigned int fd)
@@ -51,8 +56,12 @@ linux_fget(unsigned int fd)
 	struct file *file;
 
 	/* lookup file pointer by file descriptor index */
-	if (fget_unlocked(curthread->td_proc->p_fd, fd,
-	    &cap_no_rights, &file) != 0)
+#ifdef __MidnightBSD__	/* MNBSD-KPI: fget_unlocked() takes struct filedesc * */
+	if (fget_unlocked(curthread->td_proc->p_fd, fd, &cap_no_rights,
+	    &file) != 0)
+#else
+	if (fget_unlocked(curthread, fd, &cap_no_rights, &file) != 0)
+#endif
 		return (NULL);
 
 	/* check if file handle really belongs to us */
@@ -87,8 +96,12 @@ put_unused_fd(unsigned int fd)
 {
 	struct file *file;
 
-	if (fget_unlocked(curthread->td_proc->p_fd, fd,
-	    &cap_no_rights, &file) != 0) {
+#ifdef __MidnightBSD__	/* MNBSD-KPI: fget_unlocked() takes struct filedesc * */
+	if (fget_unlocked(curthread->td_proc->p_fd, fd, &cap_no_rights,
+	    &file) != 0) {
+#else
+	if (fget_unlocked(curthread, fd, &cap_no_rights, &file) != 0) {
+#endif
 		return;
 	}
 	/*
@@ -107,12 +120,21 @@ fd_install(unsigned int fd, struct linux_file *filp)
 {
 	struct file *file;
 
-	if (fget_unlocked(curthread->td_proc->p_fd, fd,
-	    &cap_no_rights, &file) != 0) {
+#ifdef __MidnightBSD__	/* MNBSD-KPI: fget_unlocked(fdp), finit() non-const fileops */
+	if (fget_unlocked(curthread->td_proc->p_fd, fd, &cap_no_rights,
+	    &file) != 0) {
+		filp->_file = NULL;
+	} else {
+		filp->_file = file;
+		finit(file, filp->f_mode, DTYPE_DEV, filp,
+		    __DECONST(struct fileops *, &linuxfileops));
+#else
+	if (fget_unlocked(curthread, fd, &cap_no_rights, &file) != 0) {
 		filp->_file = NULL;
 	} else {
 		filp->_file = file;
 		finit(file, filp->f_mode, DTYPE_DEV, filp, &linuxfileops);
+#endif
 
 		/* transfer reference count from "filp" to "file" */
 		while (refcount_release(&filp->f_count) == 0)
@@ -180,6 +202,16 @@ static inline struct fd fdget(unsigned int fd)
 {
 	struct linux_file *f = linux_fget(fd);
 	return (struct fd){f};
+}
+
+LINUXKPI_DEFINE_CLASS(fd, struct fd, fdput(_T), fdget(fd), int fd)
+
+#define	fd_file(fd)	((fd).linux_file)
+
+static inline bool
+fd_empty(struct fd fd)
+{
+	return (fd_file(fd) == NULL);
 }
 
 #define	file		linux_file

@@ -42,6 +42,7 @@
 #include <linux/completion.h>
 #include <linux/hrtimer.h>
 #include <linux/mm_types.h>
+#include <linux/nodemask.h>
 #include <linux/pid.h>
 #include <linux/slab.h>
 #include <linux/string.h>
@@ -52,7 +53,7 @@
 
 #include <asm/atomic.h>
 
-#define	MAX_SCHEDULE_TIMEOUT	INT_MAX
+#define	MAX_SCHEDULE_TIMEOUT	LONG_MAX
 
 #define	TASK_RUNNING		0x0000
 #define	TASK_INTERRUPTIBLE	0x0001
@@ -87,14 +88,12 @@ struct task_struct {
 	int bsd_interrupt_value;
 	struct work_struct *work;	/* current work struct, if set */
 	struct task_struct *group_leader;
-  	unsigned rcu_section[TS_RCU_TYPE_MAX];
+	unsigned rcu_section[TS_RCU_TYPE_MAX];
+	unsigned int fpu_ctx_level;
 };
 
-#define	current	({ \
-	struct thread *__td = curthread; \
-	linux_set_current(__td); \
-	((struct task_struct *)__td->td_lkpi_task); \
-})
+struct task_struct *__lkpi_current(void);
+#define	current	(__lkpi_current())
 
 #define	task_pid_group_leader(task) (task)->task_thread->td_proc->p_pid
 #define	task_pid(task)		((task)->pid)
@@ -129,7 +128,13 @@ put_task_struct(struct task_struct *task)
 #define	yield()		kern_yield(PRI_UNCHANGED)
 #define	sched_yield()	sched_relinquish(curthread)
 
-#define	need_resched() (curthread->td_flags & TDF_NEEDRESCHED)
+#ifdef __MidnightBSD__	/* MNBSD-KPI: no td_ast framework; use TDF_NEEDRESCHED */
+#define	need_resched()	(curthread->td_owepreempt || \
+    (curthread->td_flags & TDF_NEEDRESCHED) != 0)
+#else
+#define	need_resched()	(curthread->td_owepreempt || \
+    td_ast_pending(curthread, TDA_SCHED))
+#endif
 
 static inline int
 cond_resched_lock(spinlock_t *lock)
@@ -157,7 +162,7 @@ void linux_send_sig(int signo, struct task_struct *task);
 	linux_send_sig(signo, task);			\
 } while (0)
 
-int linux_schedule_timeout(int timeout);
+long linux_schedule_timeout(long timeout);
 
 static inline void
 linux_schedule_save_interrupt_value(struct task_struct *task, int value)

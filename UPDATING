@@ -1,6 +1,27 @@
 Updating Information for MidnightBSD users.
 
 20261109:
+	LinuxKPI, net80211 and the LinuxKPI wireless drivers (iwlwifi,
+	rtw88, rtw89) updated to FreeBSD stable/15.  New mt76 driver
+	modules for MediaTek mt7615/mt7915/mt7921/mt7925/mt7996, and the
+	rtw89 module is now built.  The kernel and all LinuxKPI and wlan
+	modules must be rebuilt together; this includes drm-*-kmod and
+	other LinuxKPI based mports.
+
+	The kernel is now built with -std=gnu17 instead of c99.  ticks is
+	backed by the 64-bit ticksl (jiffies), so out of tree modules must
+	be rebuilt.
+
+	firmware(9) can load raw firmware files from /boot/firmware/.
+
+	LinuxKPI 802.11 hardware crypto offload is now on by default
+	(compat.linuxkpi.80211.hw_crypto=1); without it receive A-MPDU is
+	disabled for mt76, iwlwifi and rtw89 and throughput is about half.
+	Set compat.linuxkpi.80211.hw_crypto=0 in loader.conf(5) to go back
+	to software crypto.  compat.linuxkpi.skb.mem_limit no longer needs
+	to be set by hand on machines with more than 4GB of memory; it is
+	chosen automatically from the DMA masks of attached devices.
+
 	amd64 GENERIC now uses the sched_mic(4) scheduler with hfi(4), and
 	Intel Thread Director (hw.hfi.itd) and score mode
 	(kern.sched.use_scores) are on by default.  On hybrid Intel CPUs,

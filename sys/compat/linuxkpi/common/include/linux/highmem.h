@@ -43,7 +43,9 @@
 #include <vm/vm_page.h>
 #include <vm/pmap.h>
 
+#include <linux/mm.h>
 #include <linux/page.h>
+#include <linux/hardirq.h>
 
 #define	PageHighMem(p)		(0)
 
@@ -78,9 +80,7 @@ kmap_atomic_prot(struct page *page, pgprot_t prot)
 	vm_memattr_t attr = pgprot2cachemode(prot);
 
 	if (attr != VM_MEMATTR_DEFAULT) {
-		vm_page_lock(page);
 		page->flags |= PG_FICTITIOUS;
-		vm_page_unlock(page);
 		pmap_page_set_memattr(page, attr);
 	}
 	return (kmap(page));
@@ -91,6 +91,25 @@ kmap_atomic(struct page *page)
 {
 
 	return (kmap_atomic_prot(page, VM_PROT_ALL));
+}
+
+static inline void *
+kmap_local_page(struct page *page)
+{
+	return (kmap(page));
+}
+
+static inline void *
+kmap_local_folio(struct folio *folio, size_t offset)
+{
+	struct page *page;
+	char *vaddr;
+
+	page = &folio->page;
+	vaddr = kmap_local_page(page);
+	vaddr += offset;
+
+	return (vaddr);
 }
 
 static inline void *
@@ -130,6 +149,45 @@ kunmap_local(void *addr)
 {
 
 	kunmap_atomic(addr);
+}
+
+static inline void
+memcpy_from_page(char *to, struct page *page, size_t offset, size_t len)
+{
+	char *from;
+
+	KASSERT(offset + len <= PAGE_SIZE,
+	    ("%s: memcpy from page %p to address %p: "
+	     "offset+len (%zu+%zu) would go beyond page end",
+	     __func__, page, to, offset, len));
+
+	from = kmap_local_page(page);
+	memcpy(to, from + offset, len);
+	kunmap_local(from);
+}
+
+static inline void
+memcpy_to_page(struct page *page, size_t offset, const char *from, size_t len)
+{
+	char *to;
+
+	KASSERT(offset + len <= PAGE_SIZE,
+	    ("%s: memcpy from address %p to page %p: "
+	     "offset+len (%zu+%zu) would go beyond page end",
+	     __func__, from, page, offset, len));
+
+	to = kmap_local_page(page);
+	memcpy(to + offset, from, len);
+	kunmap_local(to);
+}
+
+static inline void
+memcpy_to_folio(struct folio *folio, size_t offset, const char *from, size_t len)
+{
+	struct page *page;
+
+	page = &folio->page;
+	memcpy_to_page(page, offset, from, len);
 }
 
 #endif	/* _LINUXKPI_LINUX_HIGHMEM_H_ */

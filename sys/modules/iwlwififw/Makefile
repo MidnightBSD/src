@@ -15,17 +15,32 @@ SUBDIR=	\
 	iwlwifi-Qu-c0-jf-b0-fw \
 	iwlwifi-QuZ-a0-hr-b0-fw \
 	iwlwifi-QuZ-a0-jf-b0-fw \
+	iwlwifi-bz-b0-fm-c0-core-fw \
+	iwlwifi-bz-b0-fm-c0-fw \
+	iwlwifi-bz-b0-fm-c0-pnvm \
+	iwlwifi-bz-b0-gf-a0-fw \
+	iwlwifi-bz-b0-gf-a0-pnvm \
+	iwlwifi-bz-b0-hr-b0-fw \
+	iwlwifi-bz-b0-hr-b0-pnvm \
 	iwlwifi-cc-a0-fw \
+	iwlwifi-gl-c0-fm-c0-core-fw \
 	iwlwifi-gl-c0-fm-c0-fw \
 	iwlwifi-gl-c0-fm-c0-pnvm \
+	iwlwifi-ma-b0-gf-a0-fw \
+	iwlwifi-ma-b0-gf-a0-pnvm \
+	iwlwifi-ma-b0-gf4-a0-fw \
+	iwlwifi-ma-b0-gf4-a0-pnvm \
+	iwlwifi-ma-b0-hr-b0-fw \
+	iwlwifi-sc-a0-fm-c0-core-fw \
+	iwlwifi-sc-a0-wh-b0-core-fw \
+	iwlwifi-sc-a0-wh-b0-fw \
 	iwlwifi-so-a0-gf-a0-fw \
+	iwlwifi-so-a0-gf-a0-pnvm \
 	iwlwifi-so-a0-gf4-a0-fw \
+	iwlwifi-so-a0-gf4-a0-pnvm \
 	iwlwifi-so-a0-hr-b0-fw \
 	iwlwifi-so-a0-jf-b0-fw \
 	iwlwifi-ty-a0-gf-a0-fw \
-	iwlwifi-so-a0-gf-a0-pnvm \
-	iwlwifi-so-a0-gf4-a0-pnvm \
 	iwlwifi-ty-a0-gf-a0-pnvm
-
 
 .include <bsd.subdir.mk>

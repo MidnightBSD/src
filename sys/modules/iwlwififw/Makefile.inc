@@ -2,7 +2,10 @@
 # Common rules for building iwlwifi firmware.
 
 EXT?=		ucode
-_NAME?=		iwlwifi-${NAME}-${FWVERSION}.${EXT}
+# FWFILE is the version as spelled in the file name ("c101" for
+# core-numbered images); FWVERSION must stay numeric for firmware(9).
+FWFILE?=	${FWVERSION}
+_NAME?=		iwlwifi-${NAME}-${FWFILE}.${EXT}
 
 IMG=		${_NAME}
 KMOD=		${_NAME}

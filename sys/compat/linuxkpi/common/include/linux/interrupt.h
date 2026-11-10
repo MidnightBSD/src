@@ -40,18 +40,13 @@
 
 typedef	irqreturn_t	(*irq_handler_t)(int, void *);
 
-#define	IRQF_SHARED	RF_SHAREABLE
+#define	IRQF_SHARED		0x0004	/* Historically */
 #define	IRQF_NOBALANCING	0
 
 #define	IRQ_DISABLE_UNLAZY	0
 
 #define	IRQ_NOTCONNECTED	(1U << 31)
 
-struct irq_ent;
-
-void linux_irq_handler(void *);
-void lkpi_devm_irq_release(struct device *, void *);
-void lkpi_irq_release(struct device *, struct irq_ent *);
 int  lkpi_request_irq(struct device *, unsigned int, irq_handler_t,
 	irq_handler_t, unsigned long, const char *, void *);
 int  lkpi_enable_irq(unsigned int);
@@ -138,13 +133,19 @@ irq_set_affinity_hint(int vector, const cpumask_t *mask)
 	int error;
 
 	if (mask != NULL)
-		error = intr_setaffinity(vector, CPU_WHICH_IRQ, __DECONST(cpumask_t *, mask));
+#ifdef __MidnightBSD__	/* MNBSD-KPI: intr_setaffinity() takes non-const void * */
+		error = intr_setaffinity(vector, CPU_WHICH_IRQ,
+		    __DECONST(cpumask_t *, mask));
+#else
+		error = intr_setaffinity(vector, CPU_WHICH_IRQ, mask);
+#endif
 	else
 		error = intr_setaffinity(vector, CPU_WHICH_IRQ, cpuset_root);
 
 	return (-error);
 }
 
+struct msi_desc *lkpi_pci_msi_desc_alloc(unsigned int);
 static inline struct msi_desc *
 irq_get_msi_desc(unsigned int irq)
 {
@@ -185,7 +186,6 @@ struct tasklet_struct _name = { .func = (_func), .data = (_data) }
     container_of(_t, typeof(*(_dev)), _field)
 
 void tasklet_setup(struct tasklet_struct *, tasklet_callback_t *);
-
 extern void tasklet_schedule(struct tasklet_struct *);
 extern void tasklet_kill(struct tasklet_struct *);
 extern void tasklet_init(struct tasklet_struct *, tasklet_func_t *,

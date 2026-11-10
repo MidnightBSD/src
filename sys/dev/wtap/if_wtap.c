@@ -347,7 +347,7 @@ wtap_vap_create(struct ieee80211com *ic, const char name[IFNAMSIZ],
 
 	/* TODO this is a hack to force it to choose the rate we want */
 	ni = ieee80211_ref_node(vap->iv_bss);
-	ni->ni_txrate = 130;
+	ieee80211_node_set_txrate_ht_mcsrate(ni, 2);
 	ieee80211_free_node(ni);
 	return vap;
 }
@@ -445,6 +445,8 @@ wtap_rx_proc(void *arg, int npending)
 	struct ieee80211_node *ni;
 	int type;
 	struct wtap_buf *bf;
+	net80211_rssi_t rssi;
+	int8_t nf;
 
 #if 0
 	DWTAP_PRINTF("%s\n", __func__);
@@ -472,6 +474,14 @@ wtap_rx_proc(void *arg, int npending)
 #endif
 
 		/*
+		 * Use arbitrary but sane values: a -53 dBm signal over a
+		 * -95 dBm noise floor.  net80211 wants rssi in 0.5 dBm units
+		 * relative to the noise floor.
+		 */
+		nf = -95;
+		rssi = 2 * (-53 - nf);
+
+		/*
 		 * Locate the node for sender, track state, and then
 		 * pass the (referenced) node up to the 802.11 layer
 		 * for its use.
@@ -483,10 +493,10 @@ wtap_rx_proc(void *arg, int npending)
 			/*
 			 * Sending station is known, dispatch directly.
 			 */
-			type = ieee80211_input(ni, m, 1<<7, 10);
+			type = ieee80211_input(ni, m, rssi, nf);
 			ieee80211_free_node(ni);
 		} else {
-			type = ieee80211_input_all(ic, m, 1<<7, 10);
+			type = ieee80211_input_all(ic, m, rssi, nf);
 		}
 		
 		/* The mbufs are freed by the Net80211 stack */
@@ -557,8 +567,7 @@ wtap_node_alloc(struct ieee80211vap *vap, const uint8_t mac[IEEE80211_ADDR_LEN])
 	    M_NOWAIT|M_ZERO);
 	if (ni == NULL)
 		return (NULL);
-
-	ni->ni_txrate = 130;
+	ieee80211_node_set_txrate_ht_mcsrate(ni, 2);
 	return ni;
 }
 

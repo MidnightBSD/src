@@ -26,7 +26,6 @@
  *
  */
 
-#include <sys/cdefs.h>
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/queue.h>
@@ -105,7 +104,7 @@ debugfs_destroy(PFS_DESTROY_ARGS)
 	struct dentry_meta *dm;
 
 	dm = pn->pn_data;
-	if (dm->dm_type == DM_SYMLINK)
+	if (dm != NULL && dm->dm_type == DM_SYMLINK)
 		free(dm->dm_data, M_DFSINT);
 
 	free(dm, M_DFSINT);
@@ -118,9 +117,14 @@ debugfs_fill(PFS_FILL_ARGS)
 	struct dentry_meta *d;
 	struct linux_file lf = {};
 	struct vnode vn;
-	char *buf;
-	int rc;
-	off_t off = 0;
+	struct iovec *iov;
+	size_t cnt, orig_resid;
+	ssize_t rc;
+	off_t off;
+
+	/* Linux file operations assume a pointer to a user buffer. */
+	if (uio->uio_segflg != UIO_USERSPACE)
+		return (EOPNOTSUPP);
 
 	if ((rc = linux_set_current_flags(curthread, M_NOWAIT)))
 		return (rc);
@@ -131,42 +135,64 @@ debugfs_fill(PFS_FILL_ARGS)
 	rc = d->dm_fops->open(&vn, &lf);
 	if (rc < 0) {
 #ifdef INVARIANTS
-		printf("%s:%d open failed with %d\n", __func__, __LINE__, rc);
+		printf("%s:%d open failed with %zd\n", __func__, __LINE__, rc);
 #endif
 		return (-rc);
 	}
 
-	rc = -ENODEV;
-	switch (uio->uio_rw) {
-	case UIO_READ:
-		if (d->dm_fops->read != NULL) {
-			rc = -ENOMEM;
-			buf = malloc(sb->s_size, M_DFSINT, M_ZERO | M_NOWAIT);
-			if (buf != NULL) {
-				rc = d->dm_fops->read(&lf, buf, sb->s_size,
-				    &off);
-				if (rc > 0)
-					sbuf_bcpy(sb, buf, strlen(buf));
+	off = uio->uio_offset;
+	orig_resid = uio->uio_resid;
+	while (uio->uio_resid > 0) {
+		KASSERT(uio->uio_iovcnt > 0,
+		    ("%s: uio %p iovcnt underflow", __func__, uio));
 
-				free(buf, M_DFSINT);
-			}
+		iov = uio->uio_iov;
+		cnt = iov->iov_len;
+		if (cnt == 0) {
+			uio->uio_iov++;
+			uio->uio_iovcnt--;
+			continue;
 		}
-		break;
-	case UIO_WRITE:
-		if (d->dm_fops->write != NULL) {
-			sbuf_finish(sb);
-			rc = d->dm_fops->write(&lf, sbuf_data(sb), sbuf_len(sb),
-			    &off);
+		if (cnt > uio->uio_resid)
+			cnt = uio->uio_resid;
+
+		switch (uio->uio_rw) {
+		case UIO_READ:
+			if (d->dm_fops->read != NULL)
+				rc = d->dm_fops->read(&lf, iov->iov_base, cnt,
+				    &off);
+			else
+				rc = -ENODEV;
+			break;
+		case UIO_WRITE:
+			if (d->dm_fops->write != NULL)
+				rc = d->dm_fops->write(&lf, iov->iov_base, cnt,
+				    &off);
+			else
+				rc = -ENODEV;
+			break;
 		}
-		break;
+
+		if (rc <= 0)
+			break;
+
+		iov->iov_base = (char *)iov->iov_base + rc;
+		iov->iov_len -= rc;
+		uio->uio_resid -= rc;
+		uio->uio_offset = off;
 	}
 
 	if (d->dm_fops->release)
 		d->dm_fops->release(&vn, &lf);
 
+	/* Return success for short operations. */
+	if (orig_resid != uio->uio_resid)
+		rc = 0;
+
 	if (rc < 0) {
 #ifdef INVARIANTS
-		printf("%s:%d read/write failed with %d\n", __func__, __LINE__, rc);
+		printf("%s:%d %s failed with %zd\n", __func__, __LINE__,
+		    (uio->uio_rw == UIO_READ) ? "read" : "write", rc);
 #endif
 		return (-rc);
 	}
@@ -207,8 +233,13 @@ debugfs_create_file(const char *name, umode_t mode,
 		pnode = debugfs_root;
 
 	flags = fops->write ? PFS_RDWR : PFS_RD;
+#ifdef __MidnightBSD__	/* MNBSD-KPI: pfs_create_*() return the node */
 	dnode->d_pfs_node = pfs_create_file(pnode, name, debugfs_fill,
-	    debugfs_attr, NULL, debugfs_destroy, flags | PFS_NOWAIT);
+	    debugfs_attr, NULL, debugfs_destroy, flags | PFS_RAW | PFS_NOWAIT);
+#else
+	pfs_create_file(pnode, &dnode->d_pfs_node, name, debugfs_fill,
+	    debugfs_attr, NULL, debugfs_destroy, flags | PFS_RAW | PFS_NOWAIT);
+#endif
 	if (dnode->d_pfs_node == NULL) {
 		free(dm, M_DFSINT);
 		return (NULL);
@@ -273,6 +304,9 @@ debugfs_create_dir(const char *name, struct dentry *parent)
 	struct dentry *dnode;
 	struct pfs_node *pnode;
 
+	if (name == NULL)
+		return (NULL);
+
 	dm = malloc(sizeof(*dm), M_DFSINT, M_NOWAIT | M_ZERO);
 	if (dm == NULL)
 		return (NULL);
@@ -284,7 +318,13 @@ debugfs_create_dir(const char *name, struct dentry *parent)
 	else
 		pnode = debugfs_root;
 
-	dnode->d_pfs_node = pfs_create_dir(pnode, name, debugfs_attr, NULL, debugfs_destroy, PFS_RD | PFS_NOWAIT);
+#ifdef __MidnightBSD__	/* MNBSD-KPI: pfs_create_*() return the node */
+	dnode->d_pfs_node = pfs_create_dir(pnode, name, debugfs_attr, NULL,
+	    debugfs_destroy, PFS_RD | PFS_NOWAIT);
+#else
+	pfs_create_dir(pnode, &dnode->d_pfs_node, name, debugfs_attr, NULL,
+	    debugfs_destroy, PFS_RD | PFS_NOWAIT);
+#endif
 	if (dnode->d_pfs_node == NULL) {
 		free(dm, M_DFSINT);
 		return (NULL);
@@ -317,7 +357,13 @@ debugfs_create_symlink(const char *name, struct dentry *parent,
 	else
 		pnode = debugfs_root;
 
-	dnode->d_pfs_node = pfs_create_link(pnode, name, &debugfs_fill_data, NULL, NULL, NULL, PFS_NOWAIT);
+#ifdef __MidnightBSD__	/* MNBSD-KPI: pfs_create_*() return the node */
+	dnode->d_pfs_node = pfs_create_link(pnode, name, &debugfs_fill_data,
+	    NULL, NULL, NULL, PFS_NOWAIT);
+#else
+	pfs_create_link(pnode, &dnode->d_pfs_node, name, &debugfs_fill_data,
+	    NULL, NULL, NULL, PFS_NOWAIT);
+#endif
 	if (dnode->d_pfs_node == NULL)
 		goto fail;
 	dnode->d_pfs_node->pn_data = dm;
@@ -327,6 +373,23 @@ debugfs_create_symlink(const char *name, struct dentry *parent,
  fail1:
 	free(data, M_DFSINT);
 	return (NULL);
+}
+
+struct dentry *
+debugfs_lookup(const char *name, struct dentry *parent)
+{
+	struct dentry_meta *dm;
+	struct dentry *dnode;
+	struct pfs_node *pnode;
+
+	pnode = pfs_find_node(parent->d_pfs_node, name);
+	if (pnode == NULL)
+		return (NULL);
+
+	dm = (struct dentry_meta *)pnode->pn_data;
+	dnode = &dm->dm_dnode;
+
+	return (dnode);
 }
 
 void
@@ -605,6 +668,121 @@ debugfs_create_atomic_t(const char *name, umode_t mode, struct dentry *parent, a
 
 	debugfs_create_mode_unsafe(name, mode, parent, value, &fops_atomic_t,
 	    &fops_atomic_t_ro, &fops_atomic_t_wo);
+}
+
+
+static int
+fops_str_open(struct inode *inode, struct file *filp)
+{
+
+	return (simple_open(inode, filp));
+}
+
+static ssize_t
+fops_str_read(struct file *filp, char __user *ubuf, size_t read_size,
+    loff_t *ppos)
+{
+	ssize_t ret;
+	char *str, *str_with_newline;
+	size_t str_len, str_with_newline_len;
+
+	if (filp->private_data == NULL)
+		return (-EINVAL);
+
+	str = *(char **)filp->private_data;
+	str_len = strlen(str);
+
+	/*
+	 * `str_with_newline` is terminated with a newline, but is not
+	 * NUL-terminated.
+	 */
+	str_with_newline_len = str_len + 1;
+	str_with_newline = kmalloc(str_with_newline_len, GFP_KERNEL);
+	if (str_with_newline == NULL)
+		return (-ENOMEM);
+
+	strncpy(str_with_newline, str, str_len);
+	str_with_newline[str_len] = '\n';
+
+	ret = simple_read_from_buffer(ubuf, read_size, ppos,
+	    str_with_newline, str_with_newline_len);
+
+	kfree(str_with_newline);
+
+	return (ret);
+}
+
+static ssize_t
+fops_str_write(struct file *filp, const char __user *buf, size_t write_size,
+    loff_t *ppos)
+{
+	char *old, *new;
+	size_t old_len, new_len;
+
+	if (filp->private_data == NULL)
+		return (-EINVAL);
+
+	old = *(char **)filp->private_data;
+	new = NULL;
+
+	/*
+	 * We enforce concatenation of the newly written value to the existing
+	 * value.
+	 */
+	old_len = strlen(old);
+	if (*ppos && *ppos != old_len)
+		return (-EINVAL);
+
+	new_len = old_len + write_size;
+	if (new_len + 1 > PAGE_SIZE)
+		return (-E2BIG);
+
+	new = kmalloc(new_len + 1, GFP_KERNEL);
+	if (new == NULL)
+		return (-ENOMEM);
+
+	memcpy(new, old, old_len);
+	if (copy_from_user(new + old_len, buf, write_size) != 0) {
+		kfree(new);
+		return (-EFAULT);
+	}
+
+	new[new_len] = '\0';
+	strim(new);
+
+	filp->private_data = &new;
+
+	kfree(old);
+
+	return (write_size);
+}
+
+static const struct file_operations fops_str = {
+	.owner = THIS_MODULE,
+	.open = fops_str_open,
+	.read = fops_str_read,
+	.write = fops_str_write,
+	.llseek = no_llseek
+};
+static const struct file_operations fops_str_ro = {
+	.owner = THIS_MODULE,
+	.open = fops_str_open,
+	.read = fops_str_read,
+	.llseek = no_llseek
+};
+static const struct file_operations fops_str_wo = {
+	.owner = THIS_MODULE,
+	.open = fops_str_open,
+	.write = fops_str_write,
+	.llseek = no_llseek
+};
+
+void
+debugfs_create_str(const char *name, umode_t mode, struct dentry *parent,
+    char **value)
+{
+	debugfs_create_mode_unsafe(name, mode, parent, value,
+	    &fops_str, &fops_str_ro, &fops_str_wo);
 }
 
 

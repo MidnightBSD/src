@@ -26,7 +26,6 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
@@ -66,6 +65,7 @@
 #include <linux/idr.h>
 #include <linux/io.h>
 #include <linux/io-mapping.h>
+#include <linux/_mnbsd_kpi.h>
 
 #ifdef __i386__
 DEFINE_IDR(mtrr_idr);
@@ -84,7 +84,7 @@ si_meminfo(struct sysinfo *si)
 }
 
 void *
-linux_page_address(struct page *page)
+linux_page_address(const struct page *page)
 {
 
 	if (page->object != kernel_object) {
@@ -107,6 +107,7 @@ linux_alloc_pages(gfp_t flags, unsigned int order)
 
 		if ((flags & M_ZERO) != 0)
 			req |= VM_ALLOC_ZERO;
+
 		if (order == 0 && (flags & GFP_DMA32) == 0) {
 			page = vm_page_alloc_noobj(req);
 			if (page == NULL)
@@ -114,15 +115,31 @@ linux_alloc_pages(gfp_t flags, unsigned int order)
 		} else {
 			vm_paddr_t pmax = (flags & GFP_DMA32) ?
 			    BUS_SPACE_MAXADDR_32BIT : BUS_SPACE_MAXADDR;
+
+			if ((flags & __GFP_NORETRY) != 0)
+				req |= VM_ALLOC_NORECLAIM;
+
 		retry:
-			page = vm_page_alloc_noobj_contig(req, npages, 0, pmax,
-			    PAGE_SIZE, 0, VM_MEMATTR_DEFAULT);
+			if ((flags & __GFP_THISNODE) != 0) {
+				int curdomain = PCPU_GET(domain);
+				page = vm_page_alloc_noobj_contig_domain(
+				    curdomain, req, npages, 0, pmax,
+				    PAGE_SIZE, 0, VM_MEMATTR_DEFAULT);
+			} else {
+				page = vm_page_alloc_noobj_contig(
+				    req, npages, 0, pmax,
+				    PAGE_SIZE, 0, VM_MEMATTR_DEFAULT);
+			}
+
 			if (page == NULL) {
-				if (flags & M_WAITOK) {
-					if (!vm_page_reclaim_contig(req,
-					    npages, 0, pmax, PAGE_SIZE, 0)) {
+				if ((flags & (M_WAITOK | __GFP_NORETRY | __GFP_THISNODE)) ==
+				    M_WAITOK) {
+					int err = vm_page_reclaim_contig(req,
+					    npages, 0, pmax, PAGE_SIZE, 0);
+					if (err == ENOMEM)
 						vm_wait(NULL);
-					}
+					else if (err != 0)
+						return (NULL);
 					flags &= ~M_WAITOK;
 					goto retry;
 				}
@@ -150,7 +167,7 @@ _linux_free_kmem(vm_offset_t addr, unsigned int order)
 {
 	size_t size = ((size_t)PAGE_SIZE) << order;
 
-	kmem_free(addr, size);
+	kmem_free(LKPI_KVA(addr), size);	/* MNBSD-KPI */
 }
 
 void
@@ -163,8 +180,24 @@ linux_free_pages(struct page *page, unsigned int order)
 		for (x = 0; x != npages; x++) {
 			vm_page_t pgo = page + x;
 
-			if (vm_page_unwire_noq(pgo))
-				vm_page_free(pgo);
+			/*
+			 * The "free page" function is used in several
+			 * contexts.
+			 *
+			 * Some pages are allocated by `linux_alloc_pages()`
+			 * above, but not all of them are. For instance in the
+			 * DRM drivers, some pages come from
+			 * `shmem_read_mapping_page_gfp()`.
+			 *
+			 * That's why we need to check if the page is managed
+			 * or not here.
+			 */
+			if ((pgo->oflags & VPO_UNMANAGED) == 0) {
+				vm_page_unwire(pgo, PQ_ACTIVE);
+			} else {
+				if (vm_page_unwire_noq(pgo))
+					vm_page_free(pgo);
+			}
 		}
 	} else {
 		vm_offset_t vaddr;
@@ -175,25 +208,34 @@ linux_free_pages(struct page *page, unsigned int order)
 	}
 }
 
+void
+linux_release_pages(release_pages_arg arg, int nr)
+{
+	int i;
+
+	CTASSERT(offsetof(struct folio, page) == 0);
+
+	for (i = 0; i < nr; i++)
+		__free_page(arg.pages[i]);
+}
+
 vm_offset_t
 linux_alloc_kmem(gfp_t flags, unsigned int order)
 {
 	size_t size = ((size_t)PAGE_SIZE) << order;
-	vm_offset_t addr;
+	void *addr;
 
-	if ((flags & GFP_DMA32) == 0) {
-		addr = kmem_malloc(size, flags & GFP_NATIVE_MASK);
-	} else {
-		addr = kmem_alloc_contig(size, flags & GFP_NATIVE_MASK, 0,
-		    BUS_SPACE_MAXADDR_32BIT, PAGE_SIZE, 0, VM_MEMATTR_DEFAULT);
-	}
-	return (addr);
+	addr = LKPI_KVA_PTR(kmem_alloc_contig(size, flags & GFP_NATIVE_MASK, 0,
+	    ((flags & GFP_DMA32) == 0) ? -1UL : BUS_SPACE_MAXADDR_32BIT,
+	    PAGE_SIZE, 0, VM_MEMATTR_DEFAULT));	/* MNBSD-KPI */
+
+	return ((vm_offset_t)addr);
 }
 
 void
 linux_free_kmem(vm_offset_t addr, unsigned int order)
 {
-	KASSERT((addr & PAGE_MASK) == 0,
+	KASSERT((addr & ~PAGE_MASK) == 0,
 	    ("%s: addr %p is not page aligned", __func__, (void *)addr));
 
 	if (addr >= VM_MIN_KERNEL_ADDRESS && addr < VM_MAX_KERNEL_ADDRESS) {
@@ -276,8 +318,8 @@ get_user_pages_remote(struct task_struct *task, struct mm_struct *mm,
 }
 
 long
-get_user_pages(unsigned long start, unsigned long nr_pages,
-    unsigned int gup_flags, struct page **pages, struct vm_area_struct **vmas)
+lkpi_get_user_pages(unsigned long start, unsigned long nr_pages,
+    unsigned int gup_flags, struct page **pages)
 {
 	vm_map_t map;
 
@@ -286,12 +328,189 @@ get_user_pages(unsigned long start, unsigned long nr_pages,
 	    !!(gup_flags & FOLL_WRITE), pages));
 }
 
+/*
+ * Hash of vmmap addresses.  This is infrequently accessed and does not
+ * need to be particularly large.  This is done because we must store the
+ * caller's idea of the map size to properly unmap.
+ */
+struct vmmap {
+	LIST_ENTRY(vmmap)	vm_next;
+	void			*vm_addr;
+	unsigned long		vm_size;
+};
+
+struct vmmaphd {
+	struct vmmap *lh_first;
+};
+#define VMMAP_HASH_SIZE 64
+#define VMMAP_HASH_MASK (VMMAP_HASH_SIZE - 1)
+#define VM_HASH(addr)   ((uintptr_t)(addr) >> PAGE_SHIFT) & VMMAP_HASH_MASK
+static struct vmmaphd vmmaphead[VMMAP_HASH_SIZE];
+static struct mtx vmmaplock;
+
 int
 is_vmalloc_addr(const void *addr)
 {
+	struct vmmap *vmmap;
+
+	mtx_lock(&vmmaplock);
+	LIST_FOREACH(vmmap, &vmmaphead[VM_HASH(addr)], vm_next)
+		if (addr == vmmap->vm_addr)
+			break;
+	mtx_unlock(&vmmaplock);
+	if (vmmap != NULL)
+		return (1);
+
 	return (vtoslab((vm_offset_t)addr & ~UMA_SLAB_MASK) != NULL);
 }
 
+static void
+vmmap_add(void *addr, unsigned long size)
+{
+	struct vmmap *vmmap;
+
+	vmmap = kmalloc(sizeof(*vmmap), GFP_KERNEL);
+	mtx_lock(&vmmaplock);
+	vmmap->vm_size = size;
+	vmmap->vm_addr = addr;
+	LIST_INSERT_HEAD(&vmmaphead[VM_HASH(addr)], vmmap, vm_next);
+	mtx_unlock(&vmmaplock);
+}
+
+static struct vmmap *
+vmmap_remove(void *addr)
+{
+	struct vmmap *vmmap;
+
+	mtx_lock(&vmmaplock);
+	LIST_FOREACH(vmmap, &vmmaphead[VM_HASH(addr)], vm_next)
+		if (vmmap->vm_addr == addr)
+			break;
+	if (vmmap)
+		LIST_REMOVE(vmmap, vm_next);
+	mtx_unlock(&vmmaplock);
+
+	return (vmmap);
+}
+
+#if defined(__i386__) || defined(__amd64__) || defined(__powerpc__) || defined(__aarch64__) || defined(__riscv)
+void *
+_ioremap_attr(vm_paddr_t phys_addr, unsigned long size, int attr)
+{
+	void *addr;
+
+	addr = pmap_mapdev_attr(phys_addr, size, attr);
+	if (addr == NULL)
+		return (NULL);
+	vmmap_add(addr, size);
+
+	return (addr);
+}
+#endif
+
+void
+iounmap(void *addr)
+{
+	struct vmmap *vmmap;
+
+	vmmap = vmmap_remove(addr);
+	if (vmmap == NULL)
+		return;
+#if defined(__i386__) || defined(__amd64__) || defined(__powerpc__) || defined(__aarch64__) || defined(__riscv)
+	pmap_unmapdev(LKPI_KVA(addr), vmmap->vm_size);	/* MNBSD-KPI */
+#endif
+	kfree(vmmap);
+}
+
+void *
+vmap(struct page **pages, unsigned int count, unsigned long flags, int prot)
+{
+	vm_offset_t off;
+	size_t size;
+
+	size = count * PAGE_SIZE;
+	off = kva_alloc(size);
+	if (off == 0)
+		return (NULL);
+	vmmap_add((void *)off, size);
+	pmap_qenter(off, pages, count);
+
+	return ((void *)off);
+}
+
+#define	VMAP_MAX_CHUNK_SIZE (65536U / sizeof(struct vm_page)) /* KMEM_ZMAX */
+
+void *
+linuxkpi_vmap_pfn(unsigned long *pfns, unsigned int count, int prot)
+{
+	vm_page_t m, *ma, fma;
+	vm_offset_t off, coff;
+	vm_paddr_t pa;
+	vm_memattr_t attr;
+	size_t size;
+	unsigned int i, c, chunk;
+
+	size = ptoa(count);
+	off = kva_alloc(size);
+	if (off == 0)
+		return (NULL);
+	vmmap_add((void *)off, size);
+
+	chunk = MIN(count, VMAP_MAX_CHUNK_SIZE);
+	attr = pgprot2cachemode(prot);
+	ma = malloc(chunk * sizeof(vm_page_t), M_TEMP, M_WAITOK | M_ZERO);
+	fma = NULL;
+	c = 0;
+	coff = off;
+	for (i = 0; i < count; i++) {
+		pa = IDX_TO_OFF(pfns[i]);
+		m = PHYS_TO_VM_PAGE(pa);
+		if (m == NULL) {
+			if (fma == NULL)
+				fma = malloc(chunk * sizeof(struct vm_page),
+				    M_TEMP, M_WAITOK | M_ZERO);
+			m = fma + c;
+			vm_page_initfake(m, pa, attr);
+		} else {
+			pmap_page_set_memattr(m, attr);
+		}
+		ma[c] = m;
+		c++;
+		if (c == chunk || i == count - 1) {
+			pmap_qenter(coff, ma, c);
+			if (i == count - 1)
+				break;
+			coff += ptoa(c);
+			c = 0;
+			memset(ma, 0, chunk * sizeof(vm_page_t));
+			if (fma != NULL)
+				memset(fma, 0, chunk * sizeof(struct vm_page));
+		}
+	}
+	free(fma, M_TEMP);
+	free(ma, M_TEMP);
+
+	return ((void *)off);
+}
+
+void
+vunmap(void *addr)
+{
+	struct vmmap *vmmap;
+
+	vmmap = vmmap_remove(addr);
+	if (vmmap == NULL)
+		return;
+	pmap_qremove((vm_offset_t)addr, vmmap->vm_size / PAGE_SIZE);
+	kva_free((vm_offset_t)addr, vmmap->vm_size);
+	kfree(vmmap);
+}
+
+#ifdef __MidnightBSD__
+/*
+ * MNBSD-KPI: the base VM has no pctrie iterators (vm_page_iter_*()); this is
+ * the pre-iterator FreeBSD 14 implementation plus stable/15's NULL page check.
+ */
 vm_fault_t
 lkpi_vmf_insert_pfn_prot_locked(struct vm_area_struct *vma, unsigned long addr,
     unsigned long pfn, pgprot_t prot)
@@ -301,16 +520,22 @@ lkpi_vmf_insert_pfn_prot_locked(struct vm_area_struct *vma, unsigned long addr,
 	vm_page_t page;
 	vm_pindex_t pindex;
 
+	/* FreeBSD main 8ffe2419e4e7. */
+	if (addr < vma->vm_start || addr >= vma->vm_end)
+		return (VM_FAULT_SIGBUS);
+
 	VM_OBJECT_ASSERT_WLOCKED(vm_obj);
 	pindex = OFF_TO_IDX(addr - vma->vm_start);
 	if (vma->vm_pfn_count == 0)
 		vma->vm_pfn_first = pindex;
-	MPASS(pindex <= OFF_TO_IDX(vma->vm_end));
+	MPASS(pindex < OFF_TO_IDX(vma->vm_end));
 
 retry:
 	page = vm_page_grab(vm_obj, pindex, VM_ALLOC_NOCREAT);
 	if (page == NULL) {
 		page = PHYS_TO_VM_PAGE(IDX_TO_OFF(pfn));
+		if (page == NULL)
+			return (VM_FAULT_SIGBUS);
 		if (!vm_page_busy_acquire(page, VM_ALLOC_WAITFAIL))
 			goto retry;
 		if (page->object != NULL) {
@@ -350,6 +575,76 @@ retry:
 
 	return (VM_FAULT_NOPAGE);
 }
+#else
+vm_fault_t
+lkpi_vmf_insert_pfn_prot_locked(struct vm_area_struct *vma, unsigned long addr,
+    unsigned long pfn, pgprot_t prot)
+{
+	struct pctrie_iter pages;
+	vm_object_t vm_obj = vma->vm_obj;
+	vm_object_t tmp_obj;
+	vm_page_t page;
+	vm_pindex_t pindex;
+
+	if (addr < vma->vm_start || addr >= vma->vm_end)
+		return (VM_FAULT_SIGBUS);
+
+	VM_OBJECT_ASSERT_WLOCKED(vm_obj);
+	vm_page_iter_init(&pages, vm_obj);
+	pindex = OFF_TO_IDX(addr - vma->vm_start);
+	if (vma->vm_pfn_count == 0)
+		vma->vm_pfn_first = pindex;
+	MPASS(pindex < OFF_TO_IDX(vma->vm_end));
+
+retry:
+	page = vm_page_grab_iter(vm_obj, pindex, VM_ALLOC_NOCREAT, &pages);
+	if (page == NULL) {
+		page = PHYS_TO_VM_PAGE(IDX_TO_OFF(pfn));
+		if (page == NULL)
+			return (VM_FAULT_SIGBUS);
+		if (!vm_page_busy_acquire(page, VM_ALLOC_WAITFAIL)) {
+			pctrie_iter_reset(&pages);
+			goto retry;
+		}
+		if (page->object != NULL) {
+			tmp_obj = page->object;
+			vm_page_xunbusy(page);
+			VM_OBJECT_WUNLOCK(vm_obj);
+			VM_OBJECT_WLOCK(tmp_obj);
+			if (page->object == tmp_obj &&
+			    vm_page_busy_acquire(page, VM_ALLOC_WAITFAIL)) {
+				KASSERT(page->object == tmp_obj,
+				    ("page has changed identity"));
+				KASSERT((page->oflags & VPO_UNMANAGED) == 0,
+				    ("page does not belong to shmem"));
+				vm_pager_page_unswapped(page);
+				if (pmap_page_is_mapped(page)) {
+					vm_page_xunbusy(page);
+					VM_OBJECT_WUNLOCK(tmp_obj);
+					printf("%s: page rename failed: page "
+					    "is mapped\n", __func__);
+					VM_OBJECT_WLOCK(vm_obj);
+					return (VM_FAULT_NOPAGE);
+				}
+				vm_page_remove(page);
+			}
+			VM_OBJECT_WUNLOCK(tmp_obj);
+			pctrie_iter_reset(&pages);
+			VM_OBJECT_WLOCK(vm_obj);
+			goto retry;
+		}
+		if (vm_page_iter_insert(page, vm_obj, pindex, &pages) != 0) {
+			vm_page_xunbusy(page);
+			return (VM_FAULT_OOM);
+		}
+		vm_page_valid(page);
+	}
+	pmap_page_set_memattr(page, pgprot2cachemode(prot));
+	vma->vm_pfn_count++;
+
+	return (VM_FAULT_NOPAGE);
+}
+#endif /* __MidnightBSD__ */
 
 int
 lkpi_remap_pfn_range(struct vm_area_struct *vma, unsigned long start_addr,
@@ -417,27 +712,30 @@ lkpi_io_mapping_map_user(struct io_mapping *iomap,
  */
 void
 lkpi_unmap_mapping_range(void *obj, loff_t const holebegin __unused,
-    loff_t const holelen, int even_cows __unused)
+    loff_t const holelen __unused, int even_cows __unused)
 {
 	vm_object_t devobj;
-	vm_page_t page;
-	int i, page_count;
 
 	devobj = cdev_pager_lookup(obj);
 	if (devobj != NULL) {
-		page_count = OFF_TO_IDX(holelen);
+#ifdef __MidnightBSD__
+		/*
+		 * MNBSD-KPI: no cdev_mgtdev_pager_free_pages() (needs pctrie
+		 * iterators); free every page of the object the same way.
+		 */
+		vm_page_t m, next;
 
 		VM_OBJECT_WLOCK(devobj);
 retry:
-		for (i = 0; i < page_count; i++) {
-			page = vm_page_lookup(devobj, i);
-			if (page == NULL)
-				continue;
-			if (!vm_page_busy_acquire(page, VM_ALLOC_WAITFAIL))
+		TAILQ_FOREACH_SAFE(m, &devobj->memq, listq, next) {
+			if (!vm_page_busy_acquire(m, VM_ALLOC_WAITFAIL))
 				goto retry;
-			cdev_pager_free_page(devobj, page);
+			cdev_pager_free_page(devobj, m);
 		}
 		VM_OBJECT_WUNLOCK(devobj);
+#else
+		cdev_mgtdev_pager_free_pages(devobj);
+#endif
 		vm_object_deallocate(devobj);
 	}
 }
@@ -504,6 +802,27 @@ lkpi_arch_phys_wc_del(int reg)
 #endif
 }
 
+int
+lkpi_set_pages_attr(struct page *page, int numpages, vm_memattr_t ma)
+{
+	while (numpages-- > 0) {
+		/*
+		 * pmap_page_set_memattr() would only update the DMAP mapping
+		 * if it's a normal page, leaving the kernel map untouched.
+		 */
+		MPASS(page->object != kernel_object);
+
+		/*
+		 * pmap_page_set_memattr() sets page->md.pat_mode, which is
+		 * crucial for future userspace mappings.
+		 */
+		pmap_page_set_memattr(page, ma);
+		page++;
+	}
+
+	return (0);
+}
+
 /*
  * This is a highly simplified version of the Linux page_frag_cache.
  * We only support up-to 1 single page as fragment size and we will
@@ -516,7 +835,7 @@ void *
 linuxkpi_page_frag_alloc(struct page_frag_cache *pfc,
     size_t fragsz, gfp_t gfp)
 {
-	vm_page_t pages;
+	struct page *pages;
 
 	if (fragsz == 0)
 		return (NULL);
@@ -538,7 +857,7 @@ linuxkpi_page_frag_alloc(struct page_frag_cache *pfc,
 void
 linuxkpi_page_frag_free(void *addr)
 {
-	vm_page_t page;
+	struct page *page;
 
 	page = virt_to_page(addr);
 	linux_free_pages(page, 0);
@@ -550,3 +869,21 @@ linuxkpi__page_frag_cache_drain(struct page *page, size_t count __unused)
 
 	linux_free_pages(page, 0);
 }
+
+static void
+lkpi_page_init(void *arg)
+{
+	int i;
+
+	mtx_init(&vmmaplock, "IO Map lock", NULL, MTX_DEF);
+	for (i = 0; i < VMMAP_HASH_SIZE; i++)
+		LIST_INIT(&vmmaphead[i]);
+}
+SYSINIT(lkpi_page, SI_SUB_DRIVERS, SI_ORDER_SECOND, lkpi_page_init, NULL);
+
+static void
+lkpi_page_uninit(void *arg)
+{
+	mtx_destroy(&vmmaplock);
+}
+SYSUNINIT(lkpi_page, SI_SUB_DRIVERS, SI_ORDER_SECOND, lkpi_page_uninit, NULL);

@@ -41,7 +41,9 @@
 #include <sys/module.h>
 #include <sys/priv.h>
 #include <sys/proc.h>
+#include <sys/stdarg.h>
 #include <sys/sysctl.h>
+#include <sys/syslog.h>
 
 #include <sys/socket.h>
 
@@ -52,6 +54,7 @@
 #include <net/if_dl.h>
 #include <net/if_clone.h>
 #include <net/if_media.h>
+#include <net/if_private.h>
 #include <net/if_types.h>
 #include <net/ethernet.h>
 #include <net/route.h>
@@ -110,7 +113,8 @@ ieee80211_priv_check_create_vap(u_long cmd __unused,
 }
 
 static int
-wlan_clone_create(struct if_clone *ifc, int unit, caddr_t params)
+wlan_clone_create(struct if_clone *ifc, char *name, size_t len,
+    struct ifc_data *ifd, struct ifnet **ifpp)
 {
 	struct ieee80211_clone_params cp;
 	struct ieee80211vap *vap;
@@ -121,7 +125,7 @@ wlan_clone_create(struct if_clone *ifc, int unit, caddr_t params)
 	if (error)
 		return error;
 
-	error = copyin(params, &cp, sizeof(cp));
+	error = ifc_copyin(ifd, &cp, sizeof(cp));
 	if (error)
 		return error;
 	ic = ieee80211_find_com(cp.icp_parent);
@@ -147,7 +151,7 @@ wlan_clone_create(struct if_clone *ifc, int unit, caddr_t params)
 		ic_printf(ic, "TDMA not supported\n");
 		return EOPNOTSUPP;
 	}
-	vap = ic->ic_vap_create(ic, wlanname, unit,
+	vap = ic->ic_vap_create(ic, wlanname, ifd->unit,
 			cp.icp_opmode, cp.icp_flags, cp.icp_bssid,
 			cp.icp_flags & IEEE80211_CLONE_MACADDR ?
 			    cp.icp_macaddr : ic->ic_macaddr);
@@ -159,16 +163,20 @@ wlan_clone_create(struct if_clone *ifc, int unit, caddr_t params)
 	if (ic->ic_debugnet_meth != NULL)
 		DEBUGNET_SET(vap->iv_ifp, ieee80211);
 #endif
+	*ifpp = vap->iv_ifp;
+
 	return (0);
 }
 
-static void
-wlan_clone_destroy(struct ifnet *ifp)
+static int
+wlan_clone_destroy(struct if_clone *ifc, struct ifnet *ifp, uint32_t flags)
 {
 	struct ieee80211vap *vap = ifp->if_softc;
 	struct ieee80211com *ic = vap->iv_ic;
 
 	ic->ic_vap_delete(vap);
+
+	return (0);
 }
 
 void
@@ -269,13 +277,13 @@ ieee80211_sysctl_vattach(struct ieee80211vap *vap)
 	ctx = (struct sysctl_ctx_list *) IEEE80211_MALLOC(sizeof(struct sysctl_ctx_list),
 		M_DEVBUF, IEEE80211_M_NOWAIT | IEEE80211_M_ZERO);
 	if (ctx == NULL) {
-		if_printf(ifp, "%s: cannot allocate sysctl context!\n",
-			__func__);
+		net80211_vap_printf(vap,
+		    "%s: cannot allocate sysctl context!\n", __func__);
 		return;
 	}
 	sysctl_ctx_init(ctx);
 	snprintf(num, sizeof(num), "%u", ifp->if_dunit);
-	oid = SYSCTL_ADD_NODE(ctx, &SYSCTL_NODE_CHILDREN(_net, wlan),
+	oid = SYSCTL_ADD_NODE(ctx, SYSCTL_STATIC_CHILDREN(_net_wlan),
 	    OID_AUTO, num, CTLFLAG_RD | CTLFLAG_MPSAFE, NULL, "");
 	SYSCTL_ADD_PROC(ctx, SYSCTL_CHILDREN(oid), OID_AUTO,
 	    "%parent", CTLTYPE_STRING | CTLFLAG_RD | CTLFLAG_NEEDGIANT,
@@ -700,7 +708,37 @@ ieee80211_get_toa_params(struct mbuf *m, struct ieee80211_toa_params *p)
 }
 
 /*
- * Transmit a frame to the parent interface.
+ * @brief Transmit a frame to the parent interface.
+ *
+ * Transmit an 802.11 or 802.3 frame to the parent interface.
+ *
+ * This is called as part of 802.11 processing to enqueue a frame
+ * from net80211 into the device for transmit.
+ *
+ * If the interface is marked as 802.3 via IEEE80211_C_8023ENCAP
+ * (ie, doing offload), then an 802.3 frame will be sent and the
+ * driver will need to understand what to do.
+ *
+ * If the interface is marked as 802.11 (ie, no offload), then
+ * an encapsulated 802.11 frame will be queued.  In the case
+ * of an 802.11 fragmented frame this will be a list of frames
+ * representing the fragments making up the 802.11 frame, linked
+ * via m_nextpkt.
+ *
+ * A fragmented frame list will consist of:
+ * + only the first frame with M_SEQNO_SET() assigned the sequence number;
+ * + only the first frame with the node reference and node in rcvif;
+ * + all frames will have the sequence + fragment number populated in
+ *   the 802.11 header.
+ *
+ * The driver must ensure it doesn't try releasing a node reference
+ * for each fragment in the list.
+ *
+ * The provided mbuf/list is consumed both upon success and error.
+ *
+ * @param ic	struct ieee80211com device to enqueue frame to
+ * @param m	struct mbuf chain / packet list to enqueue
+ * @returns	0 if successful, errno if error.
  */
 int
 ieee80211_parent_xmitpkt(struct ieee80211com *ic, struct mbuf *m)
@@ -720,6 +758,8 @@ ieee80211_parent_xmitpkt(struct ieee80211com *ic, struct mbuf *m)
 
 		/* XXX number of fragments */
 		if_inc_counter(ni->ni_vap->iv_ifp, IFCOUNTER_OERRORS, 1);
+
+		/* Note: there's only one node reference for a fragment list */
 		ieee80211_free_node(ni);
 		ieee80211_free_mbuf(m);
 	}
@@ -727,7 +767,19 @@ ieee80211_parent_xmitpkt(struct ieee80211com *ic, struct mbuf *m)
 }
 
 /*
- * Transmit a frame to the VAP interface.
+ * @brief Transmit an 802.3 frame to the VAP interface.
+ *
+ * This is the entry point for the wifi stack to enqueue 802.3
+ * encapsulated frames for transmit to the given vap/ifnet instance.
+ * This is used in paths where 802.3 frames have been received
+ * or queued, and need to be pushed through the VAP encapsulation
+ * and transmit processing pipeline.
+ *
+ * The provided mbuf/list is consumed both upon success and error.
+ *
+ * @param vap	struct ieee80211vap instance to transmit frame to
+ * @param m	mbuf to transmit
+ * @returns	0 if OK, errno if error
  */
 int
 ieee80211_vap_xmitpkt(struct ieee80211vap *vap, struct mbuf *m)
@@ -864,7 +916,7 @@ ieee80211_notify_replay_failure(struct ieee80211vap *vap,
 
 void
 ieee80211_notify_michael_failure(struct ieee80211vap *vap,
-	const struct ieee80211_frame *wh, u_int keyix)
+	const struct ieee80211_frame *wh, ieee80211_keyix keyix)
 {
 	struct ifnet *ifp = vap->iv_ifp;
 
@@ -1013,7 +1065,7 @@ ieee80211_notify_radio(struct ieee80211com *ic, int state)
 }
 
 void
-ieee80211_notify_ifnet_change(struct ieee80211vap *vap)
+ieee80211_notify_ifnet_change(struct ieee80211vap *vap, int if_flags_mask)
 {
 	struct ifnet *ifp = vap->iv_ifp;
 
@@ -1021,7 +1073,11 @@ ieee80211_notify_ifnet_change(struct ieee80211vap *vap)
 	    "interface state change");
 
 	CURVNET_SET(ifp->if_vnet);
+#ifdef __MidnightBSD__	/* MNBSD-KPI: rt_ifmsg() takes only the ifnet */
 	rt_ifmsg(ifp);
+#else
+	rt_ifmsg(ifp, if_flags_mask);
+#endif
 	CURVNET_RESTORE();
 }
 
@@ -1091,7 +1147,7 @@ ieee80211_get_vap_ifname(struct ieee80211vap *vap)
 {
 	if (vap->iv_ifp == NULL)
 		return "(none)";
-	return vap->iv_ifp->if_xname;
+	return (if_name(vap->iv_ifp));
 }
 
 #ifdef DEBUGNET
@@ -1142,6 +1198,183 @@ ieee80211_debugnet_poll(struct ifnet *ifp, int count)
 }
 #endif
 
+/**
+ * @brief Check if the MAC address was changed by the upper layer.
+ *
+ * This is specifically to handle cases like the MAC address
+ * being changed via an ioctl (eg SIOCSIFLLADDR).
+ *
+ * @param vap	VAP to sync MAC address for
+ */
+void
+ieee80211_vap_sync_mac_address(struct ieee80211vap *vap)
+{
+	struct epoch_tracker et;
+	const struct ifnet *ifp = vap->iv_ifp;
+
+	/*
+	 * Check if the MAC address was changed
+	 * via SIOCSIFLLADDR ioctl.
+	 *
+	 * NB: device may be detached during initialization;
+	 * use if_ioctl for existence check.
+	 */
+	NET_EPOCH_ENTER(et);
+	if (ifp->if_ioctl == ieee80211_ioctl &&
+	    (ifp->if_flags & IFF_UP) == 0 &&
+	    !IEEE80211_ADDR_EQ(vap->iv_myaddr, IF_LLADDR(ifp)))
+		IEEE80211_ADDR_COPY(vap->iv_myaddr, IF_LLADDR(ifp));
+	NET_EPOCH_EXIT(et);
+}
+
+/**
+ * @brief Initial MAC address setup for a VAP.
+ *
+ * @param vap	VAP to sync MAC address for
+ */
+void
+ieee80211_vap_copy_mac_address(struct ieee80211vap *vap)
+{
+	struct epoch_tracker et;
+
+	NET_EPOCH_ENTER(et);
+	IEEE80211_ADDR_COPY(vap->iv_myaddr, IF_LLADDR(vap->iv_ifp));
+	NET_EPOCH_EXIT(et);
+}
+
+/**
+ * @brief Deliver data into the upper ifp of the VAP interface
+ *
+ * This delivers an 802.3 frame from net80211 up to the operating
+ * system network interface layer.
+ *
+ * @param vap	the current VAP
+ * @param m	the 802.3 frame to pass up to the VAP interface
+ *
+ * Note: this API consumes the mbuf.
+ */
+void
+ieee80211_vap_deliver_data(struct ieee80211vap *vap, struct mbuf *m)
+{
+	struct epoch_tracker et;
+
+	NET_EPOCH_ENTER(et);
+	if_input(vap->iv_ifp, m);
+	NET_EPOCH_EXIT(et);
+}
+
+/**
+ * @brief Return whether the VAP is configured with monitor mode
+ *
+ * This checks the operating system layer for whether monitor mode
+ * is enabled.
+ *
+ * @param vap	the current VAP
+ * @retval true if the underlying interface is in MONITOR mode, false otherwise
+ */
+bool
+ieee80211_vap_ifp_check_is_monitor(struct ieee80211vap *vap)
+{
+	return ((if_getflags(vap->iv_ifp) & IFF_MONITOR) != 0);
+}
+
+/**
+ * @brief Return whether the VAP is configured in simplex mode.
+ *
+ * This checks the operating system layer for whether simplex mode
+ * is enabled.
+ *
+ * @param vap	the current VAP
+ * @retval true if the underlying interface is in SIMPLEX mode, false otherwise
+ */
+bool
+ieee80211_vap_ifp_check_is_simplex(struct ieee80211vap *vap)
+{
+	return ((if_getflags(vap->iv_ifp) & IFF_SIMPLEX) != 0);
+}
+
+/**
+ * @brief Return if the VAP underlying network interface is running
+ *
+ * @param vap	the current VAP
+ * @retval true if the underlying interface is running; false otherwise
+ */
+bool
+ieee80211_vap_ifp_check_is_running(struct ieee80211vap *vap)
+{
+	return ((if_getdrvflags(vap->iv_ifp) & IFF_DRV_RUNNING) != 0);
+}
+
+/**
+ * @brief Change the VAP underlying network interface state
+ *
+ * @param vap	the current VAP
+ * @param state	true to mark the interface as RUNNING, false to clear
+ */
+void
+ieee80211_vap_ifp_set_running_state(struct ieee80211vap *vap, bool state)
+{
+	if (state)
+		if_setdrvflagbits(vap->iv_ifp, IFF_DRV_RUNNING, 0);
+	else
+		if_setdrvflagbits(vap->iv_ifp, 0, IFF_DRV_RUNNING);
+}
+
+/**
+ * @brief Return the broadcast MAC address.
+ *
+ * @param vap	The current VAP
+ * @retval a uint8_t array representing the ethernet broadcast address
+ */
+const uint8_t *
+ieee80211_vap_get_broadcast_address(struct ieee80211vap *vap)
+{
+	return (if_getbroadcastaddr(vap->iv_ifp));
+}
+
+/**
+ * @brief net80211 printf() (not vap/ic related)
+ */
+void
+net80211_printf(const char *fmt, ...)
+{
+	va_list ap;
+
+	va_start(ap, fmt);
+	vprintf(fmt, ap);
+	va_end(ap);
+}
+
+/**
+ * @brief VAP specific printf()
+ */
+void
+net80211_vap_printf(const struct ieee80211vap *vap, const char *fmt, ...)
+{
+	char if_fmt[256];
+	va_list ap;
+
+	va_start(ap, fmt);
+	snprintf(if_fmt, sizeof(if_fmt), "%s: %s", if_name(vap->iv_ifp), fmt);
+	vprintf(if_fmt, ap);
+	va_end(ap);
+}
+
+/**
+ * @brief ic specific printf()
+ */
+void
+net80211_ic_printf(const struct ieee80211com *ic, const char *fmt, ...)
+{
+	char if_fmt[256];
+	va_list ap;
+
+	snprintf(if_fmt, sizeof(if_fmt), "%s: %s", ic->ic_name, fmt);
+	va_start(ap, fmt);
+	vprintf(if_fmt, ap);
+	va_end(ap);
+}
+
 /*
  * Module glue.
  *
@@ -1158,11 +1391,15 @@ wlan_modevent(module_t mod, int type, void *unused)
 		    bpf_track, 0, EVENTHANDLER_PRI_ANY);
 		wlan_ifllevent = EVENTHANDLER_REGISTER(iflladdr_event,
 		    wlan_iflladdr, NULL, EVENTHANDLER_PRI_ANY);
-		wlan_cloner = if_clone_simple(wlanname, wlan_clone_create,
-		    wlan_clone_destroy, 0);
+		struct if_clone_addreq req = {
+			.create_f = wlan_clone_create,
+			.destroy_f = wlan_clone_destroy,
+			.flags = IFC_F_AUTOUNIT,
+		};
+		wlan_cloner = ifc_attach_cloner(wlanname, &req);
 		return 0;
 	case MOD_UNLOAD:
-		if_clone_detach(wlan_cloner);
+		ifc_detach_cloner(wlan_cloner);
 		EVENTHANDLER_DEREGISTER(bpf_track, wlan_bpfevent);
 		EVENTHANDLER_DEREGISTER(iflladdr_event, wlan_ifllevent);
 		return 0;

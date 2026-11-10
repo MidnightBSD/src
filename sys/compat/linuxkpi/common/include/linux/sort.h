@@ -34,8 +34,22 @@
 #include <sys/libkern.h>
 
 #define	sort(base, num, size, cmp, swap)	do {	\
-	BUILD_BUG_ON_ZERO(swap);			\
+	BUILD_BUG_ON(swap);				\
 	qsort(base, num, size, cmp);			\
 } while (0)
+
+#ifdef __MidnightBSD__	/* MNBSD-KPI: base qsort_r() uses the BSD argument order */
+void lkpi_sort_r(void *, size_t, size_t,
+    int (*)(const void *, const void *, void *), void *);
+#define	sort_r(base, num, size, cmp, swap, priv) do {	\
+	BUILD_BUG_ON(swap);				\
+	lkpi_sort_r(base, num, size, cmp, priv);	\
+} while (0)
+#else
+#define	sort_r(base, num, size, cmp, swap, priv) do {	\
+	BUILD_BUG_ON(swap);				\
+	qsort_r(base, num, size, cmp, priv);		\
+} while (0)
+#endif
 
 #endif	/* _LINUXKPI_LINUX_SORT_H_ */
