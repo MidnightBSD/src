@@ -1,5 +1,5 @@
 
-FWVERSION=	83
+FWVERSION=	89
 NAME=		so-a0-gf4-a0
 EXT=		pnvm
 _NAME=		iwlwifi-${NAME}.${EXT}
