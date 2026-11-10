@@ -357,6 +357,7 @@ gem_attach(struct gem_softc *sc)
 	    sc->sc_rxfifosize / 1024, v / 16);
 
 	/* Attach the interface. */
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, sc->sc_enaddr);
 
 	/*

@@ -863,6 +863,7 @@ jme_attach(device_t dev)
 		}
 	}
 
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, sc->jme_eaddr);
 
 	/* VLAN capability setup */

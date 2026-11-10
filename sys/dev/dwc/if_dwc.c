@@ -1753,6 +1753,7 @@ dwc_attach(device_t dev)
 	sc->mii_softc = device_get_softc(sc->miibus);
 
 	/* All ready to run, attach the ethernet interface. */
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, macaddr);
 	sc->is_attached = true;
 

@@ -656,6 +656,7 @@ dpaa2_ni_attach(device_t dev)
 		goto err_close_ni;
 	}
 
+	if_setflagbits(sc->ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(sc->ifp, sc->mac.addr);
 	callout_init(&sc->mii_callout, 0);
 

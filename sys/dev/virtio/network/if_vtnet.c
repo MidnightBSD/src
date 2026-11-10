@@ -1099,8 +1099,7 @@ vtnet_setup_interface(struct vtnet_softc *sc)
 	dev = sc->vtnet_dev;
 	ifp = sc->vtnet_ifp;
 
-	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST |
-	    IFF_KNOWSEPOCH;
+	ifp->if_flags = IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST;
 	ifp->if_baudrate = IF_Gbps(10);
 	ifp->if_init = vtnet_init;
 	ifp->if_ioctl = vtnet_ioctl;

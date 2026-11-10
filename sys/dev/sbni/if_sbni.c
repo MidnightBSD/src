@@ -239,6 +239,7 @@ sbni_attach(struct sbni_softc *sc, int unit, struct sbni_flags flags)
 
 	mtx_init(&sc->lock, ifp->if_xname, MTX_NETWORK_LOCK, MTX_DEF);
 	callout_init_mtx(&sc->wch, &sc->lock, 0);
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, sc->enaddr);
 	/* device attach does transition from UNCONFIGURED to IDLE state */
 

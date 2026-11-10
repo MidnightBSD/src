@@ -424,6 +424,7 @@ ptnet_attach(device_t dev)
 	sc->hwaddr[4] = (macreg >> 8) & 0xff;
 	sc->hwaddr[5] = macreg & 0xff;
 
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, sc->hwaddr);
 
 	ifp->if_hdrlen = sizeof(struct ether_vlan_header);

@@ -151,6 +151,7 @@ edsc_clone_create(struct if_clone *ifc, int unit, caddr_t params)
 	 * Do ifnet initializations common to all Ethernet drivers
 	 * and attach to the network interface framework.
 	 */
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, eaddr.octet);
 
 	/*

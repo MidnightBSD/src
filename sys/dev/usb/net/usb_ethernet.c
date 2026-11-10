@@ -255,6 +255,7 @@ ue_attach_post_task(struct usb_proc_msg *_task)
 	}
 
 	if_printf(ifp, "<USB Ethernet> on %s\n", device_get_nameunit(ue->ue_dev));
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, ue->ue_eaddr);
 	/* Tell upper layer we support VLAN oversized frames. */
 	if (ifp->if_capabilities & IFCAP_VLAN_MTU)

@@ -1394,6 +1394,7 @@ atse_attach(device_t dev)
 	}
 
 	/* Call media-indepedent attach routine. */
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, sc->atse_eth_addr);
 
 	/* Tell the upper layer(s) about vlan mtu support. */

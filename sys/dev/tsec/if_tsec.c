@@ -277,6 +277,7 @@ tsec_attach(struct tsec_softc *sc)
 
 	/* Set MAC address */
 	tsec_get_hwaddr(sc, hwaddr);
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, hwaddr);
 
 	return (0);

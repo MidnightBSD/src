@@ -555,6 +555,7 @@ rt_attach(device_t dev)
 #endif /* IF_RT_PHY_SUPPORT */
 
 	ether_request_mac(dev, sc->mac_addr);
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, sc->mac_addr);
 
 	/*

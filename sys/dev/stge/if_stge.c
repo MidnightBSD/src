@@ -600,6 +600,7 @@ stge_attach(device_t dev)
 		goto fail;
 	}
 
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, enaddr);
 
 	/* VLAN capability setup */

@@ -697,6 +697,7 @@ mvneta_attach(device_t self)
 		}
 	}
 
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, sc->enaddr);
 
 	/*

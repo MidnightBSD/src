@@ -814,6 +814,7 @@ nf10bmac_attach(device_t dev)
 	IFQ_SET_READY(&ifp->if_snd);
 
 	/* Call media-indepedent attach routine. */
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, sc->nf10bmac_eth_addr);
 
 	/* Tell the upper layer(s) about vlan mtu support. */

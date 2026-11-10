@@ -799,6 +799,7 @@ an_attach(struct an_softc *sc, int flags)
 	 * Call MI attach routine.
 	 */
 
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, sc->an_caps.an_oemaddr);
 	callout_init_mtx(&sc->an_stat_ch, &sc->an_mtx, 0);
 

@@ -641,6 +641,7 @@ nfe_attach(device_t dev)
 		device_printf(dev, "attaching PHYs failed\n");
 		goto fail;
 	}
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, sc->eaddr);
 
 	NET_TASK_INIT(&sc->nfe_int_task, 0, nfe_int_task, sc);

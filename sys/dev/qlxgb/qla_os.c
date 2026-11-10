@@ -679,6 +679,7 @@ qla_init_ifnet(device_t dev, qla_host_t *ha)
 
 	ha->max_frame_size = ifp->if_mtu + ETHER_HDR_LEN + ETHER_CRC_LEN;
 
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, qla_get_mac_addr(ha));
 
 	ifp->if_capabilities = IFCAP_HWCSUM |

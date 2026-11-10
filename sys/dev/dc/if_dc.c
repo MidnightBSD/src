@@ -2492,6 +2492,7 @@ dc_attach(device_t dev)
 	/*
 	 * Call MI attach routine.
 	 */
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, (caddr_t)eaddr);
 
 	/* Hook interrupt last to avoid having to lock softc */

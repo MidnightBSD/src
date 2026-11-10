@@ -187,6 +187,7 @@ t4_cloner_create(struct if_clone *ifc, char *name, size_t len, caddr_t params)
 	    tracer_media_status);
 	ifmedia_add(&sc->media, IFM_ETHER | IFM_FDX | IFM_NONE, 0, NULL);
 	ifmedia_set(&sc->media, IFM_ETHER | IFM_FDX | IFM_NONE);
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, lla);
 
 	mtx_lock(&sc->ifp_lock);

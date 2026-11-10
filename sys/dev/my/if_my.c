@@ -944,6 +944,7 @@ my_attach(device_t dev)
 	MY_UNLOCK(sc);
 	ifmedia_set(&sc->ifmedia, media);
 
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, eaddr);
 
 	error = bus_setup_intr(dev, sc->my_irq, INTR_TYPE_NET | INTR_MPSAFE,

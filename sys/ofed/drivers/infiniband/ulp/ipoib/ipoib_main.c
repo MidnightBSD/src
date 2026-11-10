@@ -916,13 +916,8 @@ ipoib_intf_alloc(const char *name, struct ib_device *hca)
 	}
 	if_initname(dev, name, priv->unit);
 	if_setflags(dev, IFF_BROADCAST | IFF_MULTICAST);
-#ifdef __MidnightBSD__	/* MNBSD-KPI: no IFF_NEEDSEPOCH, opt in via IFF_KNOWSEPOCH */
-	if (hca->attrs.device_cap_flags & IB_DEVICE_KNOWSEPOCH)
-		if_setflagbits(dev, IFF_KNOWSEPOCH, 0);
-#else
 	if ((hca->attrs.device_cap_flags & IB_DEVICE_KNOWSEPOCH) == 0)
 		if_setflagbits(dev, IFF_NEEDSEPOCH, 0);
-#endif
 
 	infiniband_ifattach(priv->dev, NULL, priv->broadcastaddr);
 

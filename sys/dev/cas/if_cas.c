@@ -411,6 +411,7 @@ cas_attach(struct cas_softc *sc)
 	    CAS_RX_FIFO_SIZE / 1024, v / 16);
 
 	/* Attach the interface. */
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, sc->sc_enaddr);
 
 	/*

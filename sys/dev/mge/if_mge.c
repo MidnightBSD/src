@@ -873,6 +873,7 @@ mge_attach(device_t dev)
 	IFQ_SET_READY(&ifp->if_snd);
 
 	mge_get_mac_address(sc, hwaddr);
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, hwaddr);
 	callout_init(&sc->wd_callout, 1);
 

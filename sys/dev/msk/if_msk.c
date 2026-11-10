@@ -1671,6 +1671,7 @@ msk_attach(device_t dev)
 	 * Call MI attach routine.  Can't hold locks when calling into ether_*.
 	 */
 	MSK_IF_UNLOCK(sc_if);
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, eaddr);
 	MSK_IF_LOCK(sc_if);
 

@@ -707,6 +707,7 @@ ieee80211_vap_attach(struct ieee80211vap *vap, ifm_change_cb_t media_change,
 	if (maxrate)
 		ifp->if_baudrate = IF_Mbps(maxrate);
 
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, macaddr);
 	/* Do initial MAC address sync */
 	ieee80211_vap_copy_mac_address(vap);

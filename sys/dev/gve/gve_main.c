@@ -367,7 +367,7 @@ gve_setup_ifnet(device_t dev, struct gve_priv *priv)
 	if_settransmitfn(ifp, gve_xmit_ifp);
 	if_setqflushfn(ifp, gve_qflush);
 
-#if __FreeBSD_version >= 1400086
+#if __FreeBSD_version >= 1400086 || defined(IFF_NEEDSEPOCH)
 	if_setflags(ifp, IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST);
 #else
 	if_setflags(ifp, IFF_BROADCAST | IFF_SIMPLEX | IFF_MULTICAST | IFF_KNOWSEPOCH);

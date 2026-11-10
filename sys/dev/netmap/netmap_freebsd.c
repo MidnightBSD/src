@@ -613,6 +613,7 @@ nm_os_vi_persist(const char *name, struct ifnet **ret)
 	ifp->if_capabilities |= IFCAP_LINKSTATE;
 	ifp->if_capenable |= IFCAP_LINKSTATE;
 
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, eaddr);
 	*ret = ifp;
 	return 0;

@@ -1987,6 +1987,7 @@ awg_attach(device_t dev)
 	}
 
 	/* Attach ethernet interface */
+	if_setflagbits(sc->ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(sc->ifp, eaddr);
 
 	return (0);

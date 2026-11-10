@@ -192,6 +192,7 @@ lance_attach(struct lance_softc *sc)
 	struct ifnet *ifp = sc->sc_ifp;
 
 	/* Attach the interface. */
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, sc->sc_enaddr);
 
 	/* Claim 802.1q capability. */

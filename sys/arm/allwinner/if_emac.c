@@ -961,6 +961,7 @@ emac_attach(device_t dev)
 
 	/* Get MAC address */
 	emac_get_hwaddr(sc, eaddr);
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, eaddr);
 
 	/* VLAN capability setup. */

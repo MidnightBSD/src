@@ -423,6 +423,7 @@ al_attach(device_t dev)
 	callout_init_mtx(&adapter->stats_callout, &adapter->stats_mtx, 0);
 	callout_init_mtx(&adapter->wd_callout, &adapter->wd_mtx, 0);
 
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, adapter->mac_addr);
 	ifp->if_mtu = AL_DEFAULT_MTU;
 

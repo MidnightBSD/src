@@ -1381,6 +1381,7 @@ lio_setup_nic_devices(struct octeon_device *octeon_dev)
 		lio_swap_8B_data(&lio->linfo.hw_addr, 1);
 		memcpy(mac, (uint8_t *)&lio->linfo.hw_addr + 2, ETHER_ADDR_LEN);
 
+		if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 		ether_ifattach(ifp, mac);
 
 		/*

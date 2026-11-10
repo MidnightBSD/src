@@ -3251,6 +3251,7 @@ vxlan_clone_create(struct if_clone *ifc, int unit, caddr_t params)
 	ifmedia_set(&sc->vxl_media, IFM_ETHER | IFM_AUTO);
 
 	ether_gen_addr(ifp, &sc->vxl_hwaddr);
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, sc->vxl_hwaddr.octet);
 
 	ifp->if_baudrate = 0;

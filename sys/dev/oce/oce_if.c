@@ -2110,7 +2110,7 @@ oce_attach_ifp(POCE_SOFTC sc)
 	ifmedia_add(&sc->media, IFM_ETHER | IFM_AUTO, 0, NULL);
 	ifmedia_set(&sc->media, IFM_ETHER | IFM_AUTO);
 
-	sc->ifp->if_flags = IFF_BROADCAST | IFF_MULTICAST | IFF_KNOWSEPOCH;
+	sc->ifp->if_flags = IFF_BROADCAST | IFF_MULTICAST;
 	sc->ifp->if_ioctl = oce_ioctl;
 	sc->ifp->if_start = oce_start;
 	sc->ifp->if_init = oce_init;

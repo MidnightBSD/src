@@ -1087,6 +1087,7 @@ cpswp_attach(device_t dev)
 	cpsw_write_4(sc->swsc, sc->physel,
 	    MDIO_PHYSEL_LINKINTENB | (sc->phy & 0x1F));
 
+	if_setflagbits(sc->ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(sc->ifp, mac_addr);
 	callout_init(&sc->mii_callout, 0);
 

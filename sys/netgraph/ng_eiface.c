@@ -427,6 +427,7 @@ ng_eiface_constructor(node_p node)
 
 	/* Attach the interface */
 	ether_gen_addr(ifp, &eaddr);
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, eaddr.octet);
 	ifp->if_baudrate = ifmedia_baudrate(IFM_ETHER | IFM_1000_T);
 

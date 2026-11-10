@@ -1048,6 +1048,7 @@ cxgb_port_attach(device_t dev)
 		ifp->if_hwassist &= ~CSUM_TSO;
 	}
 
+	if_setflagbits(ifp, IFF_NEEDSEPOCH, 0);
 	ether_ifattach(ifp, p->hw_addr);
 
 	/* Attach driver debugnet methods. */
