@@ -27,9 +27,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-#include <sys/cdefs.h>
-#ifdef __MidnightBSD__
-#endif
 
 /*
  * IEEE 802.11s Hybrid Wireless Mesh Protocol, HWMP.
@@ -215,7 +212,7 @@ SYSCTL_PROC(_net_wlan_hwmp, OID_AUTO, inact,
     "mesh route inactivity timeout (ms)");
 
 static void
-ieee80211_hwmp_init(void)
+ieee80211_hwmp_init(void *dummy __unused)
 {
 	/* Default values as per amendment */
 	ieee80211_hwmp_pathtimeout = msecs_to_ticks(5*1000);
@@ -264,7 +261,8 @@ hwmp_vattach(struct ieee80211vap *vap)
 	hs = IEEE80211_MALLOC(sizeof(struct ieee80211_hwmp_state), M_80211_VAP,
 	    IEEE80211_M_NOWAIT | IEEE80211_M_ZERO);
 	if (hs == NULL) {
-		printf("%s: couldn't alloc HWMP state\n", __func__);
+		net80211_vap_printf(vap, "%s: couldn't alloc HWMP state\n",
+		    __func__);
 		return;
 	}
 	hs->hs_maxhops = IEEE80211_HWMP_DEFAULT_MAXHOPS;

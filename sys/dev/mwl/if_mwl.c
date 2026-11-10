@@ -3354,6 +3354,7 @@ mwl_tx_processq(struct mwl_softc *sc, struct mwl_txq *txq)
 		if (ni != NULL) {
 			an = MWL_NODE(ni);
 			status = le32toh(ds->Status);
+			int rate;
 			if (status & EAGLE_TXD_STATUS_OK) {
 				uint16_t Format = le16toh(ds->Format);
 				uint8_t txant = _IEEE80211_MASKSHIFT(Format,
@@ -3366,14 +3367,14 @@ mwl_tx_processq(struct mwl_softc *sc, struct mwl_txq *txq)
 					sc->sc_stats.mst_tx_mretries++;
 				if (txq->qnum >= MWL_WME_AC_VO)
 					ic->ic_wme.wme_hipri_traffic++;
-				ni->ni_txrate = _IEEE80211_MASKSHIFT(Format,
+				rate = _IEEE80211_MASKSHIFT(Format,
 				    EAGLE_TXD_RATE);
 				if ((Format & EAGLE_TXD_FORMAT_HT) == 0) {
-					ni->ni_txrate = mwl_cvtlegacyrix(
-					    ni->ni_txrate);
+					rate = mwl_cvtlegacyrix(rate);
 				} else
-					ni->ni_txrate |= IEEE80211_RATE_MCS;
-				sc->sc_stats.mst_tx_rate = ni->ni_txrate;
+					rate |= IEEE80211_RATE_MCS;
+				sc->sc_stats.mst_tx_rate = rate;
+				ieee80211_node_set_txrate_dot11rate(ni, rate);
 			} else {
 				if (status & EAGLE_TXD_STATUS_FAILED_LINK_ERROR)
 					sc->sc_stats.mst_tx_linkerror++;

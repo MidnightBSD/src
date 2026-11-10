@@ -25,10 +25,6 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-#ifdef __FreeBSD__
-#endif
-
 /*
  * IEEE 802.11 WDS mode support.
  */
@@ -66,7 +62,7 @@
 static void wds_vattach(struct ieee80211vap *);
 static int wds_newstate(struct ieee80211vap *, enum ieee80211_state, int);
 static	int wds_input(struct ieee80211_node *ni, struct mbuf *m,
-	    const struct ieee80211_rx_stats *rxs, int, int);
+	    const struct ieee80211_rx_stats *rxs, net80211_rssi_t, int);
 static void wds_recv_mgmt(struct ieee80211_node *, struct mbuf *, int subtype,
 	const struct ieee80211_rx_stats *, int, int);
 
@@ -105,7 +101,8 @@ wds_flush(struct ieee80211_node *ni)
 {
 	struct ieee80211com *ic = ni->ni_ic;
 	struct mbuf *m, *next;
-	int8_t rssi, nf;
+	net80211_rssi_t rssi;
+	int8_t nf;
 
 	m = ieee80211_ageq_remove(&ic->ic_stageq,
 	    (void *)(uintptr_t) ieee80211_mac_hash(ic, ni->ni_macaddr));
@@ -172,7 +169,7 @@ ieee80211_create_wds(struct ieee80211vap *vap, struct ieee80211_channel *chan)
 			IEEE80211_DPRINTF(vap, IEEE80211_MSG_WDS,
 			    "%s: station %s in use with %s\n",
 			    __func__, ether_sprintf(vap->iv_des_bssid),
-			    ni->ni_wdsvap->iv_ifp->if_xname);
+			    ieee80211_get_vap_ifname(ni->ni_wdsvap));
 			/* XXX stat? */
 		} else {
 			/*
@@ -408,7 +405,7 @@ wds_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int arg)
  */
 static int
 wds_input(struct ieee80211_node *ni, struct mbuf *m,
-    const struct ieee80211_rx_stats *rxs, int rssi, int nf)
+    const struct ieee80211_rx_stats *rxs, net80211_rssi_t rssi, int nf)
 {
 	struct ieee80211vap *vap = ni->ni_vap;
 	struct ieee80211com *ic = ni->ni_ic;
@@ -468,8 +465,7 @@ wds_input(struct ieee80211_node *ni, struct mbuf *m,
 	if (!IEEE80211_IS_MULTICAST(wh->i_addr1))
 		ni->ni_inact = ni->ni_inact_reload;
 
-	if ((wh->i_fc[0] & IEEE80211_FC0_VERSION_MASK) !=
-	    IEEE80211_FC0_VERSION_0) {
+	if (!IEEE80211_IS_FC0_CHECK_VER(wh, IEEE80211_FC0_VERSION_0)) {
 		IEEE80211_DISCARD_MAC(vap, IEEE80211_MSG_ANY,
 		    ni->ni_macaddr, NULL, "wrong version, fc %02x:%02x",
 		    wh->i_fc[0], wh->i_fc[1]);
@@ -491,7 +487,8 @@ wds_input(struct ieee80211_node *ni, struct mbuf *m,
 	}
 	/* NB: the TA is implicitly verified by finding the wds peer node */
 	if (!IEEE80211_ADDR_EQ(wh->i_addr1, vap->iv_myaddr) &&
-	    !IEEE80211_ADDR_EQ(wh->i_addr1, ifp->if_broadcastaddr)) {
+	    !IEEE80211_ADDR_EQ(wh->i_addr1,
+	    ieee80211_vap_get_broadcast_address(vap))) {
 		/* not interested in */
 		IEEE80211_DISCARD_MAC(vap, IEEE80211_MSG_INPUT,
 		    wh->i_addr1, NULL, "%s", "not to bss");
@@ -555,7 +552,7 @@ wds_input(struct ieee80211_node *ni, struct mbuf *m,
 		 * crypto cipher modules used to do delayed update
 		 * of replay sequence numbers.
 		 */
-		if (is_hw_decrypted || wh->i_fc[1] & IEEE80211_FC1_PROTECTED) {
+		if (is_hw_decrypted || IEEE80211_IS_PROTECTED(wh)) {
 			if ((vap->iv_flags & IEEE80211_F_PRIVACY) == 0) {
 				/*
 				 * Discard encrypted frames when privacy is off.
@@ -706,12 +703,13 @@ wds_input(struct ieee80211_node *ni, struct mbuf *m,
 		}
 #ifdef IEEE80211_DEBUG
 		if (ieee80211_msg_debug(vap) || ieee80211_msg_dumppkts(vap)) {
-			if_printf(ifp, "received %s from %s rssi %d\n",
+			net80211_vap_printf(vap,
+			    "received %s from %s rssi %d\n",
 			    ieee80211_mgt_subtype_name(subtype),
 			    ether_sprintf(wh->i_addr2), rssi);
 		}
 #endif
-		if (wh->i_fc[1] & IEEE80211_FC1_PROTECTED) {
+		if (IEEE80211_IS_PROTECTED(wh)) {
 			IEEE80211_DISCARD(vap, IEEE80211_MSG_INPUT,
 			    wh, NULL, "%s", "WEP set but not permitted");
 			vap->iv_stats.is_rx_mgtdiscard++; /* XXX */

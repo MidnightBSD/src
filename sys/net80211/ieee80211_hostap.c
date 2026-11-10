@@ -25,10 +25,6 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-#ifdef __MidnightBSD__
-#endif
-
 /*
  * IEEE 802.11 HOSTAP mode support.
  */
@@ -66,13 +62,11 @@
 #include <net80211/ieee80211_vht.h>
 #include <net80211/ieee80211_sta.h> /* for parse_wmeie */
 
-#define	IEEE80211_RATE2MBS(r)	(((r) & IEEE80211_RATE_VAL) / 2)
-
 static	void hostap_vattach(struct ieee80211vap *);
 static	int hostap_newstate(struct ieee80211vap *, enum ieee80211_state, int);
 static	int hostap_input(struct ieee80211_node *ni, struct mbuf *m,
 	    const struct ieee80211_rx_stats *,
-	    int rssi, int nf);
+	    net80211_rssi_t rssi, int nf);
 static void hostap_deliver_data(struct ieee80211vap *,
 	    struct ieee80211_node *, struct mbuf *);
 static void hostap_recv_mgmt(struct ieee80211_node *, struct mbuf *,
@@ -314,10 +308,9 @@ hostap_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int arg)
 				    ether_sprintf(ni->ni_bssid));
 				ieee80211_print_essid(ni->ni_essid,
 				    ni->ni_esslen);
-				/* XXX MCS/HT */
-				printf(" channel %d start %uMb\n",
+				net80211_printf(" channel %d start %uMbit/s\n",
 				    ieee80211_chan2ieee(ic, ic->ic_curchan),
-				    IEEE80211_RATE2MBS(ni->ni_txrate));
+				    ieee80211_node_get_txrate_kbit(ni) / 1000);
 			}
 #endif
 			break;
@@ -422,8 +415,6 @@ hostap_deliver_data(struct ieee80211vap *vap,
 			(void) ieee80211_vap_xmitpkt(vap, mcopy);
 	}
 	if (m != NULL) {
-		struct epoch_tracker et;
-
 		/*
 		 * Mark frame as coming from vap's interface.
 		 */
@@ -440,9 +431,8 @@ hostap_deliver_data(struct ieee80211vap *vap,
 			m->m_pkthdr.ether_vtag = ni->ni_vlan;
 			m->m_flags |= M_VLANTAG;
 		}
-		NET_EPOCH_ENTER(et);
-		ifp->if_input(ifp, m);
-		NET_EPOCH_EXIT(et);
+
+		ieee80211_vap_deliver_data(vap, m);
 	}
 }
 
@@ -476,7 +466,7 @@ doprint(struct ieee80211vap *vap, int subtype)
  */
 static int
 hostap_input(struct ieee80211_node *ni, struct mbuf *m,
-    const struct ieee80211_rx_stats *rxs, int rssi, int nf)
+    const struct ieee80211_rx_stats *rxs, net80211_rssi_t rssi, int nf)
 {
 	struct ieee80211vap *vap = ni->ni_vap;
 	struct ieee80211com *ic = ni->ni_ic;
@@ -535,8 +525,7 @@ hostap_input(struct ieee80211_node *ni, struct mbuf *m,
 	 */
 	wh = mtod(m, struct ieee80211_frame *);
 
-	if ((wh->i_fc[0] & IEEE80211_FC0_VERSION_MASK) !=
-	    IEEE80211_FC0_VERSION_0) {
+	if (!IEEE80211_IS_FC0_CHECK_VER(wh, IEEE80211_FC0_VERSION_0)) {
 		IEEE80211_DISCARD_MAC(vap, IEEE80211_MSG_ANY,
 		    ni->ni_macaddr, NULL, "wrong version, fc %02x:%02x",
 		    wh->i_fc[0], wh->i_fc[1]);
@@ -567,9 +556,10 @@ hostap_input(struct ieee80211_node *ni, struct mbuf *m,
 		 * Validate the bssid.
 		 */
 		if (!(type == IEEE80211_FC0_TYPE_MGT &&
-		      subtype == IEEE80211_FC0_SUBTYPE_BEACON) &&
+		    subtype == IEEE80211_FC0_SUBTYPE_BEACON) &&
 		    !IEEE80211_ADDR_EQ(bssid, vap->iv_bss->ni_bssid) &&
-		    !IEEE80211_ADDR_EQ(bssid, ifp->if_broadcastaddr)) {
+		    !IEEE80211_ADDR_EQ(bssid,
+		    ieee80211_vap_get_broadcast_address(vap))) {
 			/* not interested in */
 			IEEE80211_DISCARD_MAC(vap, IEEE80211_MSG_INPUT,
 			    bssid, NULL, "%s", "not to bss");
@@ -686,7 +676,7 @@ hostap_input(struct ieee80211_node *ni, struct mbuf *m,
 		 * crypto cipher modules used to do delayed update
 		 * of replay sequence numbers.
 		 */
-		if (is_hw_decrypted || wh->i_fc[1] & IEEE80211_FC1_PROTECTED) {
+		if (is_hw_decrypted || IEEE80211_IS_PROTECTED(wh)) {
 			if ((vap->iv_flags & IEEE80211_F_PRIVACY) == 0) {
 				/*
 				 * Discard encrypted frames when privacy is off.
@@ -847,12 +837,13 @@ hostap_input(struct ieee80211_node *ni, struct mbuf *m,
 #ifdef IEEE80211_DEBUG
 		if ((ieee80211_msg_debug(vap) && doprint(vap, subtype)) ||
 		    ieee80211_msg_dumppkts(vap)) {
-			if_printf(ifp, "received %s from %s rssi %d\n",
+			net80211_vap_printf(vap,
+			    "received %s from %s rssi %d\n",
 			    ieee80211_mgt_subtype_name(subtype),
 			    ether_sprintf(wh->i_addr2), rssi);
 		}
 #endif
-		if (wh->i_fc[1] & IEEE80211_FC1_PROTECTED) {
+		if (IEEE80211_IS_PROTECTED(wh)) {
 			if (subtype != IEEE80211_FC0_SUBTYPE_AUTH) {
 				/*
 				 * Only shared key auth frames with a challenge
@@ -896,7 +887,8 @@ hostap_input(struct ieee80211_node *ni, struct mbuf *m,
 	case IEEE80211_FC0_TYPE_CTL:
 		vap->iv_stats.is_rx_ctl++;
 		IEEE80211_NODE_STAT(ni, rx_ctrl);
-		vap->iv_recv_ctl(ni, m, subtype);
+		if (ieee80211_is_ctl_frame_for_vap(ni, m))
+			vap->iv_recv_ctl(ni, m, subtype);
 		goto out;
 	default:
 		IEEE80211_DISCARD(vap, IEEE80211_MSG_ANY,
@@ -1213,6 +1205,7 @@ wpa_cipher(const uint8_t *sel, uint8_t *keylen, uint8_t *cipher)
 	case WPA_SEL(WPA_CSE_CCMP):
 		*cipher = IEEE80211_CIPHER_AES_CCM;
 		break;
+	/* Note: no GCM cipher in the legacy WPA1 OUI */
 	default:
 		return (EINVAL);
 	}
@@ -1391,6 +1384,9 @@ rsn_cipher(const uint8_t *sel, uint8_t *keylen, uint8_t *cipher)
 	case RSN_SEL(RSN_CSE_WRAP):
 		*cipher = IEEE80211_CIPHER_AES_OCB;
 		break;
+	case RSN_SEL(RSN_CSE_GCMP_128):
+		*cipher = IEEE80211_CIPHER_AES_GCM_128;
+		break;
 	default:
 		return (EINVAL);
 	}
@@ -1503,8 +1499,10 @@ ieee80211_parse_rsn(struct ieee80211vap *vap, const uint8_t *frm,
 
 		frm += 4, len -= 4;
 	}
-        if (w & (1 << IEEE80211_CIPHER_AES_CCM))
-                rsn->rsn_ucastcipher = IEEE80211_CIPHER_AES_CCM;
+	if (w & (1 << IEEE80211_CIPHER_AES_GCM_128))
+		rsn->rsn_ucastcipher = IEEE80211_CIPHER_AES_GCM_128;
+	else if (w & (1 << IEEE80211_CIPHER_AES_CCM))
+		rsn->rsn_ucastcipher = IEEE80211_CIPHER_AES_CCM;
 	else if (w & (1 << IEEE80211_CIPHER_AES_OCB))
 		rsn->rsn_ucastcipher = IEEE80211_CIPHER_AES_OCB;
 	else if (w & (1 << IEEE80211_CIPHER_TKIP))
@@ -1542,9 +1540,14 @@ ieee80211_parse_rsn(struct ieee80211vap *vap, const uint8_t *frm,
 		rsn->rsn_keymgmt = RSN_ASE_8021X_PSK;
 
 	/* optional RSN capabilities */
-	if (len > 2)
+	if (len >= 2) {
 		rsn->rsn_caps = le16dec(frm);
-	/* XXXPMKID */
+		frm += 2, len -= 2;
+	}
+
+	/* XXX PMK Count / PMKID */
+
+	/* XXX Group Cipher Management Suite */
 
 	return 0;
 }
@@ -1652,7 +1655,6 @@ static void
 ieee80211_deliver_l2uf(struct ieee80211_node *ni)
 {
 	struct ieee80211vap *vap = ni->ni_vap;
-	struct ifnet *ifp = vap->iv_ifp;
 	struct mbuf *m;
 	struct l2_update_frame *l2uf;
 	struct ether_header *eh;
@@ -1667,7 +1669,8 @@ ieee80211_deliver_l2uf(struct ieee80211_node *ni)
 	l2uf = mtod(m, struct l2_update_frame *);
 	eh = &l2uf->eh;
 	/* dst: Broadcast address */
-	IEEE80211_ADDR_COPY(eh->ether_dhost, ifp->if_broadcastaddr);
+	IEEE80211_ADDR_COPY(eh->ether_dhost,
+	    ieee80211_vap_get_broadcast_address(vap));
 	/* src: associated STA */
 	IEEE80211_ADDR_COPY(eh->ether_shost, ni->ni_macaddr);
 	eh->ether_type = htons(sizeof(*l2uf) - sizeof(*eh));
@@ -1758,6 +1761,29 @@ is11bclient(const uint8_t *rates, const uint8_t *xrates)
 	return 1;
 }
 
+/**
+ * Check if the given cipher is valid for 802.11 HT operation.
+ *
+ * The 802.11 specification only allows HT A-MPDU to be performed
+ * on CCMP / GCMP encrypted frames.  The WEP/TKIP hardware crypto
+ * implementations may not meet the timing required for A-MPDU
+ * operation.
+ *
+ * @param cipher	the IEEE80211_CIPHER_ value to check
+ * @returns	true if the cipher is valid for HT A-MPDU, false otherwise
+ */
+static bool
+hostapd_validate_cipher_for_ht_ampdu(uint8_t cipher)
+{
+	switch (cipher) {
+	case IEEE80211_CIPHER_AES_CCM:
+	case IEEE80211_CIPHER_AES_GCM_128:
+		return true;
+	default:
+		return false;
+	}
+}
+
 static void
 hostap_recv_mgmt(struct ieee80211_node *ni, struct mbuf *m0,
 	int subtype, const struct ieee80211_rx_stats *rxs, int rssi, int nf)
@@ -1815,7 +1841,7 @@ hostap_recv_mgmt(struct ieee80211_node *ni, struct mbuf *m0,
 				 * XXX check if the beacon we recv'd gives
 				 * us what we need and suppress the probe req
 				 */
-				ieee80211_probe_curchan(vap, 1);
+				ieee80211_probe_curchan(vap, true);
 				ic->ic_flags_ext &= ~IEEE80211_FEXT_PROBECHAN;
 			}
 			ieee80211_add_scan(vap, ic->ic_curchan, &scan, wh,
@@ -2188,12 +2214,9 @@ hostap_recv_mgmt(struct ieee80211_node *ni, struct mbuf *m0,
 
 		/* VHT */
 		if (IEEE80211_IS_CHAN_VHT(ni->ni_chan) &&
-		    vhtcap != NULL &&
-		    vhtinfo != NULL) {
-			/* XXX TODO; see below */
-			printf("%s: VHT TODO!\n", __func__);
+		    vhtcap != NULL) {
 			ieee80211_vht_node_init(ni);
-			ieee80211_vht_update_cap(ni, vhtcap, vhtinfo);
+			ieee80211_vht_update_cap(ni, vhtcap);
 		} else if (ni->ni_flags & IEEE80211_NODE_VHT)
 			ieee80211_vht_node_cleanup(ni);
 
@@ -2224,13 +2247,16 @@ hostap_recv_mgmt(struct ieee80211_node *ni, struct mbuf *m0,
 #endif
 		/*
 		 * Allow AMPDU operation only with unencrypted traffic
-		 * or AES-CCM; the 11n spec only specifies these ciphers
-		 * so permitting any others is undefined and can lead
+		 * or AES-CCM / AES-GCM; the 802.11n spec only specifies these
+		 * ciphers so permitting any others is undefined and can lead
 		 * to interoperability problems.
+		 *
+		 * TODO: before landing, find exactly where in 802.11-2020 this
+		 * is called out!
 		 */
 		if ((ni->ni_flags & IEEE80211_NODE_HT) &&
 		    (((vap->iv_flags & IEEE80211_F_WPA) &&
-		      rsnparms.rsn_ucastcipher != IEEE80211_CIPHER_AES_CCM) ||
+		    !hostapd_validate_cipher_for_ht_ampdu(rsnparms.rsn_ucastcipher)) ||
 		     (vap->iv_flags & (IEEE80211_F_WPA|IEEE80211_F_PRIVACY)) == IEEE80211_F_PRIVACY)) {
 			IEEE80211_NOTE(vap,
 			    IEEE80211_MSG_ASSOC | IEEE80211_MSG_11N, ni,

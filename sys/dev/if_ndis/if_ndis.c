@@ -2356,7 +2356,8 @@ ndis_media_status(struct ifnet *ifp, struct ifmediareq *imr)
 
 	len = sizeof(txrate);
 	if (ndis_get_info(sc, OID_GEN_LINK_SPEED, &txrate, &len) == 0)
-		vap->iv_bss->ni_txrate = txrate / 5000;
+		ieee80211_node_set_txrate_dot11rate(vap->iv_bss,
+		    txrate / 5000);
 	ieee80211_media_status(ifp, imr);
 }
 

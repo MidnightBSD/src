@@ -25,10 +25,6 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
-#ifdef __FreeBSD__
-#endif
-
 /*
  * IEEE 802.11 IBSS mode support.
  */
@@ -72,7 +68,7 @@
 static	void adhoc_vattach(struct ieee80211vap *);
 static	int adhoc_newstate(struct ieee80211vap *, enum ieee80211_state, int);
 static int adhoc_input(struct ieee80211_node *, struct mbuf *,
-	    const struct ieee80211_rx_stats *, int, int);
+	    const struct ieee80211_rx_stats *, net80211_rssi_t, int);
 static void adhoc_recv_mgmt(struct ieee80211_node *, struct mbuf *,
 	int subtype, const struct ieee80211_rx_stats *, int, int);
 static void ahdemo_recv_mgmt(struct ieee80211_node *, struct mbuf *,
@@ -238,10 +234,9 @@ adhoc_newstate(struct ieee80211vap *vap, enum ieee80211_state nstate, int arg)
 				    ether_sprintf(ni->ni_bssid));
 				ieee80211_print_essid(vap->iv_bss->ni_essid,
 				    ni->ni_esslen);
-				/* XXX MCS/HT */
-				printf(" channel %d start %uMb\n",
+				net80211_printf(" channel %d start %uMbit/s\n",
 				    ieee80211_chan2ieee(ic, ic->ic_curchan),
-				    IEEE80211_RATE2MBS(ni->ni_txrate));
+				    ieee80211_node_get_txrate_kbit(ni) / 1000);
 			}
 #endif
 			break;
@@ -306,7 +301,7 @@ doprint(struct ieee80211vap *vap, int subtype)
  */
 static int
 adhoc_input(struct ieee80211_node *ni, struct mbuf *m,
-    const struct ieee80211_rx_stats *rxs, int rssi, int nf)
+    const struct ieee80211_rx_stats *rxs, net80211_rssi_t rssi, int nf)
 {
 	struct ieee80211vap *vap = ni->ni_vap;
 	struct ieee80211com *ic = ni->ni_ic;
@@ -365,8 +360,7 @@ adhoc_input(struct ieee80211_node *ni, struct mbuf *m,
 	 */
 	wh = mtod(m, struct ieee80211_frame *);
 
-	if ((wh->i_fc[0] & IEEE80211_FC0_VERSION_MASK) !=
-	    IEEE80211_FC0_VERSION_0) {
+	if (!IEEE80211_IS_FC0_CHECK_VER(wh, IEEE80211_FC0_VERSION_0)) {
 		IEEE80211_DISCARD_MAC(vap, IEEE80211_MSG_ANY,
 		    ni->ni_macaddr, NULL, "wrong version, fc %02x:%02x",
 		    wh->i_fc[0], wh->i_fc[1]);
@@ -400,7 +394,8 @@ adhoc_input(struct ieee80211_node *ni, struct mbuf *m,
 		     (subtype == IEEE80211_FC0_SUBTYPE_BEACON ||
 		      subtype == IEEE80211_FC0_SUBTYPE_PROBE_RESP)) &&
 		    !IEEE80211_ADDR_EQ(bssid, vap->iv_bss->ni_bssid) &&
-		    !IEEE80211_ADDR_EQ(bssid, ifp->if_broadcastaddr)) {
+		    !IEEE80211_ADDR_EQ(bssid,
+		        ieee80211_vap_get_broadcast_address(vap))) {
 			/* not interested in */
 			IEEE80211_DISCARD_MAC(vap, IEEE80211_MSG_INPUT,
 			    bssid, NULL, "%s", "not to bss");
@@ -494,7 +489,7 @@ adhoc_input(struct ieee80211_node *ni, struct mbuf *m,
 		 * crypto cipher modules used to do delayed update
 		 * of replay sequence numbers.
 		 */
-		if (is_hw_decrypted || wh->i_fc[1] & IEEE80211_FC1_PROTECTED) {
+		if (is_hw_decrypted || IEEE80211_IS_PROTECTED(wh)) {
 			if ((vap->iv_flags & IEEE80211_F_PRIVACY) == 0) {
 				/*
 				 * Discard encrypted frames when privacy is off.
@@ -649,12 +644,13 @@ adhoc_input(struct ieee80211_node *ni, struct mbuf *m,
 #ifdef IEEE80211_DEBUG
 		if ((ieee80211_msg_debug(vap) && doprint(vap, subtype)) ||
 		    ieee80211_msg_dumppkts(vap)) {
-			if_printf(ifp, "received %s from %s rssi %d\n",
+			net80211_vap_printf(vap,
+			    "received %s from %s rssi %d\n",
 			    ieee80211_mgt_subtype_name(subtype),
 			    ether_sprintf(wh->i_addr2), rssi);
 		}
 #endif
-		if (wh->i_fc[1] & IEEE80211_FC1_PROTECTED) {
+		if (IEEE80211_IS_PROTECTED(wh)) {
 			IEEE80211_DISCARD(vap, IEEE80211_MSG_INPUT,
 			    wh, NULL, "%s", "WEP set but not permitted");
 			vap->iv_stats.is_rx_mgtdiscard++; /* XXX */
@@ -666,7 +662,8 @@ adhoc_input(struct ieee80211_node *ni, struct mbuf *m,
 	case IEEE80211_FC0_TYPE_CTL:
 		vap->iv_stats.is_rx_ctl++;
 		IEEE80211_NODE_STAT(ni, rx_ctrl);
-		vap->iv_recv_ctl(ni, m, subtype);
+		if (ieee80211_is_ctl_frame_for_vap(ni, m))
+			vap->iv_recv_ctl(ni, m, subtype);
 		goto out;
 
 	default:
@@ -766,7 +763,7 @@ adhoc_recv_mgmt(struct ieee80211_node *ni, struct mbuf *m0,
 				 * XXX check if the beacon we recv'd gives
 				 * us what we need and suppress the probe req
 				 */
-				ieee80211_probe_curchan(vap, 1);
+				ieee80211_probe_curchan(vap, true);
 				ic->ic_flags_ext &= ~IEEE80211_FEXT_PROBECHAN;
 			}
 			ieee80211_add_scan(vap, rxchan, &scan, wh,
