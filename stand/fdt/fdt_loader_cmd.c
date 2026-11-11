@@ -57,6 +57,9 @@
 #define	CMD_REQUIRES_BLOB	0x01
 
 /* Location of FDT yet to be loaded. */
+/* Room to add a few properties to a DTB with no free space. */
+#define	FDT_PROP_PADSZ	512
+
 /* This may be in read-only memory, so can't be manipulated directly. */
 static struct fdt_header *fdt_to_load = NULL;
 /* Location of FDT on heap. */
@@ -535,6 +538,7 @@ fdt_pad_dtb(size_t padding)
 		free(padded_fdtp);
 		return (1);
 	}
+	free(fdtp);
 	fdtp = padded_fdtp;
 	fdtp_size = padded_fdtp_size;
 	return (0);
@@ -929,6 +933,41 @@ fdt_fixup_stdout(const char *str)
 		fdt_setprop(fdtp, no, "stdin", &tmp,
 		    strlen((char *)&tmp) + 1);
 	}
+}
+
+/*
+ * Set /chosen/boot-hartid, unless an earlier boot stage already did.
+ * The riscv kernel needs it to know which hart it is running on.
+ */
+void
+fdt_fixup_boot_hartid(uint32_t hartid)
+{
+	int chosen, err;
+
+	if (fdtp == NULL)
+		return;
+
+	chosen = fdt_path_offset(fdtp, "/chosen");
+	if (chosen < 0)
+		return;
+	if (fdt_getprop(fdtp, chosen, "boot-hartid", NULL) != NULL)
+		return;
+
+	err = fdt_setprop_u32(fdtp, chosen, "boot-hartid", hartid);
+	if (err == -FDT_ERR_NOSPACE) {
+		/* A DTB provided by firmware may have no free space left. */
+		if (fdt_pad_dtb(FDT_PROP_PADSZ) != 0) {
+			printf("Cannot grow DTB to set boot-hartid\n");
+			return;
+		}
+		chosen = fdt_path_offset(fdtp, "/chosen");
+		if (chosen < 0)
+			return;
+		err = fdt_setprop_u32(fdtp, chosen, "boot-hartid", hartid);
+	}
+	if (err < 0)
+		printf("Cannot set /chosen/boot-hartid: %s\n",
+		    fdt_strerror(err));
 }
 
 void

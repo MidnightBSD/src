@@ -35,6 +35,10 @@
 
 #include "bootstrap.h"
 
+#if defined(__riscv)
+#include <efiriscvboot.h>
+#endif
+
 static EFI_GUID fdtdtb = FDT_TABLE_GUID;
 
 int
@@ -59,9 +63,39 @@ fdt_platform_load_overlays(void)
 	fdt_load_dtb_overlays(NULL);
 }
 
+#if defined(__riscv)
+/*
+ * The riscv kernel learns its boot hart from /chosen/boot-hartid.  U-Boot
+ * adds that property, but EDK2 reports the hart only through
+ * RISCV_EFI_BOOT_PROTOCOL, so copy it into the DTB here.
+ */
+static void
+efi_fdt_fixup_boot_hartid(void)
+{
+	EFI_GUID riscv_boot_guid = RISCV_EFI_BOOT_PROTOCOL_GUID;
+	RISCV_EFI_BOOT_PROTOCOL *proto;
+	EFI_STATUS status;
+	UINTN hartid;
+
+	status = BS->LocateProtocol(&riscv_boot_guid, NULL, (VOID **)&proto);
+	if (EFI_ERROR(status))
+		return;
+	status = proto->GetBootHartId(proto, &hartid);
+	if (EFI_ERROR(status)) {
+		printf("RISCV_EFI_BOOT_PROTOCOL: GetBootHartId failed: %lu\n",
+		    EFI_ERROR_CODE(status));
+		return;
+	}
+	fdt_fixup_boot_hartid((uint32_t)hartid);
+}
+#endif
+
 void
 fdt_platform_fixups(void)
 {
 
 	fdt_apply_overlays();
+#if defined(__riscv)
+	efi_fdt_fixup_boot_hartid();
+#endif
 }
