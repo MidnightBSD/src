@@ -3,7 +3,7 @@
 #
 
 # PROVIDE: rpcbind
-# REQUIRE: NETWORKING ntpdate syslogd
+# REQUIRE: NETWORKING rdate syslogd
 # KEYWORD: shutdown
 
 . /etc/rc.subr
