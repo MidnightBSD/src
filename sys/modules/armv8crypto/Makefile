@@ -8,6 +8,8 @@ SRCS+=	device_if.h bus_if.h opt_bus.h cryptodev_if.h
 
 OBJS+=	armv8_crypto_wrap.o aesv8-armx.o ghashv8-armx.o
 
+CFLAGS+=-I${SRCTOP}/sys/crypto/openssl
+
 # Remove -nostdinc so we can get the intrinsics.
 armv8_crypto_wrap.o: armv8_crypto_wrap.c
 	${CC} -c ${CFLAGS:C/^-O2$/-O3/:N-nostdinc:N-mgeneral-regs-only} \

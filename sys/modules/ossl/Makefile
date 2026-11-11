@@ -16,6 +16,7 @@ SRCS=	bus_if.h \
 
 SRCS.aarch64= \
 	chacha-armv8.S \
+	chacha-armv8-sve.S \
 	poly1305-armv8.S \
 	sha1-armv8.S \
 	sha256-armv8.S \
@@ -37,6 +38,8 @@ SRCS.i386= \
 	sha256-586.S \
 	sha512-586.S \
 	ossl_x86.c
+
+CFLAGS+= -I${SRCTOP}/sys/crypto/openssl
 
 # For arm64, we are forced to rewrite the compiler invocation for the assembly
 # files, to remove -mgeneral-regs-only.
