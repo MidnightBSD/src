@@ -1,0 +1,12 @@
+# Files and directories pruned from the OpenCSD distribution before it is
+# committed to the vendor/opencsd branch.  Only the decoder library sources
+# and headers (decoder/include, decoder/source) are kept, matching the
+# file set FreeBSD carries in contrib/opencsd.
+.gitignore
+HOWTO.md
+LICENSE
+README.md
+TODO
+decoder/build
+decoder/docs
+decoder/tests

@@ -81,6 +81,7 @@ public:
     const bool hasCycleCountI() const;
     const bool hasRetStack() const;
     const uint8_t numEvents() const;
+    const bool eteHasTSMarker() const;
     
     typedef enum _condType {
         COND_PASS_FAIL,
@@ -104,10 +105,12 @@ public:
     const uint32_t TimeStampSize() const;
 
     const bool commitOpt1() const;
+    const bool commTransP0() const;
 
     /* idr 1 */
     const uint8_t MajVersion() const;
     const uint8_t MinVersion() const;
+    const uint8_t FullVersion() const;
     
     /* idr 2 */
     const uint32_t iaSizeMax() const;
@@ -117,6 +120,7 @@ public:
     const uint32_t dvSize() const;
     const uint32_t ccSize() const;
     const bool vmidOpt() const;
+    const bool wfiwfeBranch() const;
 
     /* id regs 8-13*/
     const uint32_t MaxSpecDepth() const;
@@ -149,6 +153,7 @@ public:
     const bool enabledCCI() const;
     const bool enabledCID() const;
     const bool enabledVMID() const;
+    const bool enabledVMIDOpt() const;
 
     typedef enum {
         COND_TR_DIS,
@@ -180,7 +185,11 @@ private:
     bool m_condTraceCalc;
     CondITrace_t m_CondTrace;
 
+protected:
     ocsd_etmv4_cfg m_cfg;
+    uint8_t m_MajVer;
+    uint8_t m_MinVer;
+
 };
 
 /* idr 0 */
@@ -247,6 +256,11 @@ inline const bool EtmV4Config::hasTrcExcpData() const
     return (bool)((m_cfg.reg_idr0 & 0x20000) == 0x20000);
 }
 
+inline const bool EtmV4Config::eteHasTSMarker() const
+{
+    return (FullVersion() >= 0x51) && ((m_cfg.reg_idr0 & 0x800000) == 0x800000);
+}
+
 inline const uint32_t EtmV4Config::TimeStampSize() const
 {
     uint32_t tsSizeF = (m_cfg.reg_idr0 >> 24) & 0x1F;
@@ -262,17 +276,26 @@ inline const bool EtmV4Config::commitOpt1() const
     return (bool)((m_cfg.reg_idr0 & 0x20000000) == 0x20000000) && hasCycleCountI();
 }
 
+inline const bool EtmV4Config::commTransP0() const
+{
+    return (bool)((m_cfg.reg_idr0 & 0x40000000) == 0x0);
+}
+
     /* idr 1 */
 inline const uint8_t EtmV4Config::MajVersion() const
 {
-    return (uint8_t)((m_cfg.reg_idr1 >> 8) & 0xF);
+    return m_MajVer;
 }
 
 inline const uint8_t EtmV4Config::MinVersion() const
 {
-    return (uint8_t)((m_cfg.reg_idr1 >> 4) & 0xF);
+    return m_MinVer;
 }
 
+inline const uint8_t EtmV4Config::FullVersion() const
+{
+    return (m_MajVer << 4) | m_MinVer;
+}
 
 /* idr 2 */
 inline const uint32_t EtmV4Config::iaSizeMax() const
@@ -319,6 +342,12 @@ inline const bool EtmV4Config::vmidOpt() const
 {
     return (bool)((m_cfg.reg_idr2 & 0x20000000) == 0x20000000) && (MinVersion() > 0);
 }
+
+inline const bool EtmV4Config::wfiwfeBranch() const
+{
+    return (bool)((m_cfg.reg_idr2 & 0x80000000) && (FullVersion() >= 0x43));
+}
+
 
 /* id regs 8-13*/
 
@@ -406,6 +435,20 @@ inline const bool EtmV4Config::enabledCID() const
 inline const bool EtmV4Config::enabledVMID() const
 {
     return ((m_cfg.reg_configr & (0x1 << 7)) != 0);
+}
+
+inline const bool EtmV4Config::enabledVMIDOpt() const
+{
+    bool vmidOptVal = ((m_cfg.reg_configr & (0x1 << 15)) != 0);
+    /* TRIDR2.VMIDOPT[30:29] determine value used */
+    if (!vmidOpt()) { /* [29] = 1'b0 */
+        vmidOptVal = false; /* res0 */
+        if (FullVersion() >= 0x45) {
+            /* umless version > 4.5 in which case [30] determines res val */
+            vmidOptVal = ((m_cfg.reg_idr2 & (0x1 << 30)) != 0);
+        }
+    }
+    return vmidOptVal;
 }
 
 inline const EtmV4Config::CondITrace_t EtmV4Config::enabledCondITrace()

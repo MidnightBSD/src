@@ -1,8 +1,8 @@
 /*
- * \file       trc_pkt_proc_etmv4d_impl.h
- * \brief      OpenCSD : 
+ * \file       ocsd_if_version.h
+ * \brief      OpenCSD : Library API versioning
  * 
- * \copyright  Copyright (c) 2015, ARM Limited. All Rights Reserved.
+ * \copyright  Copyright (c) 2016, ARM Limited. All Rights Reserved.
  */
 
 /* 
@@ -32,40 +32,34 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */ 
 
-#ifndef ARM_TRC_PKT_PROC_ETMV4D_IMPL_H_INCLUDED
-#define ARM_TRC_PKT_PROC_ETMV4D_IMPL_H_INCLUDED
+#ifndef ARM_OCSD_IF_VERSION_H_INCLUDED
+#define ARM_OCSD_IF_VERSION_H_INCLUDED
 
-#include "etmv4/trc_pkt_proc_etmv4.h"
-#include "etmv4/trc_cmp_cfg_etmv4.h"
+#include <stdint.h>
 
-class EtmV4DPktProcImpl
-{
-public:
-    EtmV4DPktProcImpl();
-    ~EtmV4DPktProcImpl();
+/** @addtogroup ocsd_interfaces
+@{*/
 
-    void Initialise(TrcPktProcEtmV4D *p_interface);
+/** @name Library Versioning
+@{*/
+#define OCSD_VER_MAJOR 0x1 /**< Library Major Version */
+#define OCSD_VER_MINOR 0x4 /**< Library Minor Version */
+#define OCSD_VER_PATCH 0x0 /**< Library Patch Version */
 
-    ocsd_err_t Configure(const EtmV4Config *p_config);
+/** Library version number - MMMMnnpp format.
+    MMMM = major version, 
+    nn = minor version, 
+    pp = patch version
+*/
+#define OCSD_VER_NUM ((OCSD_VER_MAJOR << 16) | (OCSD_VER_MINOR << 8) | OCSD_VER_PATCH) 
 
+#define OCSD_VER_STRING "1.4.0"    /**< Library Version string */
+#define OCSD_LIB_NAME "OpenCSD Library"  /**< Library name string */
+#define OCSD_LIB_SHORT_NAME "OCSD"    /**< Library Short name string */
+/** @}*/
 
-    ocsd_datapath_resp_t processData(  const ocsd_trc_index_t index,
-                                        const uint32_t dataBlockSize,
-                                        const uint8_t *pDataBlock,
-                                        uint32_t *numBytesProcessed);
-    ocsd_datapath_resp_t onEOT();
-    ocsd_datapath_resp_t onReset();
-    ocsd_datapath_resp_t onFlush();
+/** @}*/
 
-protected:
+#endif // ARM_OCSD_IF_VERSION_H_INCLUDED
 
-    bool m_isInit;
-    TrcPktProcEtmV4D *m_interface;       /**< The interface to the other decode components */
-    
-    EtmV4Config m_config;
-};
-
-
-#endif // ARM_TRC_PKT_PROC_ETMV4D_IMPL_H_INCLUDED
-
-/* End of File trc_pkt_proc_etmv4d_impl.h */
+/* End of File ocsd_if_version.h */

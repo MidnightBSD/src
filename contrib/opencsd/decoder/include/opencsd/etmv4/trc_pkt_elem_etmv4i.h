@@ -57,14 +57,7 @@ class Etmv4PktAddrStack
 public:
     Etmv4PktAddrStack()
     {
-        for (int i = 0; i < 3; i++)
-        {
-            m_v_addr[i].pkt_bits = 0;
-            m_v_addr[i].size = VA_64BIT;
-            m_v_addr[i].val = 0;
-            m_v_addr[i].valid_bits = 0;
-            m_v_addr_ISA[i] = 0;
-        }
+        reset_stack();
     }
     ~Etmv4PktAddrStack() {};
 
@@ -85,6 +78,20 @@ public:
             vaddr = m_v_addr[idx];
             isa = m_v_addr_ISA[idx];
         }
+    }
+
+    // explicit reset for TInfo.
+    void reset_stack()
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            m_v_addr[i].pkt_bits = 0;
+            m_v_addr[i].size = OCSD_MAX_VA_BITSIZE == 64 ? VA_64BIT : VA_32BIT;
+            m_v_addr[i].val = 0;
+            m_v_addr[i].valid_bits = OCSD_MAX_VA_BITSIZE;
+            m_v_addr_ISA[i] = 0;
+        }
+
     }
 
 private:
@@ -115,7 +122,7 @@ public:
     void initNextPacket();  //!< clear any single packet only flags / state.
 
     void setType(const ocsd_etmv4_i_pkt_type pkt_type) { type = pkt_type; };
-    void updateErrType(const ocsd_etmv4_i_pkt_type err_pkt_type);
+    void updateErrType(const ocsd_etmv4_i_pkt_type err_pkt_type, const uint8_t val = 0);
 
     void clearTraceInfo();  //!< clear all the trace info data prior to setting for new trace info packet.
     void setTraceInfo(const uint32_t infoVal);
@@ -138,7 +145,7 @@ public:
     void setCondRF3(const uint16_t tokens);
     void setCondRF4(const uint8_t token);
 
-    void setContextInfo(const bool update, const uint8_t EL = 0, const uint8_t NS = 0, const uint8_t SF = 0);
+    void setContextInfo(const bool update, const uint8_t EL = 0, const uint8_t NS = 0, const uint8_t SF = 0, const uint8_t NSE = 0);
     void setContextVMID(const uint32_t VMID);
     void setContextCID(const uint32_t CID);
 
@@ -153,6 +160,7 @@ public:
     void setEvent(const uint8_t event_val);
 
     void setQType(const bool has_count, const uint32_t count, const bool has_addr, const bool addr_match, const uint8_t type);
+    void setITE(const uint8_t el, const uint64_t value);
 
     // packet status interface - get packet info.
     const ocsd_etmv4_i_pkt_type getType() const { return type; };
@@ -172,6 +180,7 @@ public:
 
     // atom
     const ocsd_pkt_atom &getAtom() const { return atom; };
+    const int getNumAtoms() const { return atom.num; };
 
     // context
     const etmv4_context_t &getContext() const { return context; };
@@ -188,12 +197,22 @@ public:
     // cc
     const uint32_t getCC() const { return pkt_valid.bits.cc_valid ? cycle_count : 0; };
 
+    // speculation
+    const int getCommitElem() const { return commit_elements; };
+    const int getCancelElem() const { return cancel_elements; };
+
+    // ITE
+    const uint8_t getITE_EL() const { return ite_pkt.el; };
+    const uint64_t getITE_value() const { return ite_pkt.value; };
+
     // packet type
     const bool isBadPacket() const;
 
     // printing
     virtual void toString(std::string &str) const;
     virtual void toStringFmt(const uint32_t fmtFlags, std::string &str) const;
+
+    void setProtocolVersion(const uint8_t version) { protocol_version = version; };
 
 private:
     const char *packetTypeName(const ocsd_etmv4_i_pkt_type type, const char **pDesc) const;
@@ -205,14 +224,17 @@ private:
     void push_vaddr();
     void pop_vaddr_idx(const uint8_t idx);
 
+    const bool isETE() const { return (protocol_version & 0xF0) == 0x50; };
+
     Etmv4PktAddrStack m_addr_stack;
 };
 
-inline void  EtmV4ITrcPacket::updateErrType(const ocsd_etmv4_i_pkt_type err_pkt_type)
+inline void  EtmV4ITrcPacket::updateErrType(const ocsd_etmv4_i_pkt_type err_pkt_type, const uint8_t err_val /* = 0 */)
 {
     // set primary type to incoming error type, set packet err type to previous primary type.
     err_type = type;
     type = err_pkt_type;
+    err_hdr_val = err_val;
 }
 
 inline void EtmV4ITrcPacket::clearTraceInfo()
@@ -223,7 +245,13 @@ inline void EtmV4ITrcPacket::clearTraceInfo()
     pkt_valid.bits.spec_depth_valid = 0;
     pkt_valid.bits.cc_thresh_valid  = 0;
 
-    pkt_valid.bits.ts_valid = 0;    // mark TS as invalid - must be re-updated after trace info.
+    // set these as defaults - if they don't appear in TINFO this is the state.
+    setTraceInfo(0);        
+    setTraceInfoSpec(0);   
+
+    // explicitly reset the stack & zero the current address. 
+    m_addr_stack.reset_stack();
+    m_addr_stack.get_idx(0, v_addr, v_addr_ISA);
 }
 
 inline void EtmV4ITrcPacket::setTraceInfo(const uint32_t infoVal)
@@ -393,7 +421,7 @@ inline void EtmV4ITrcPacket::setCondRF4(const uint8_t token)
     cond_result.f2f4_token = token;
 }
 
-inline void EtmV4ITrcPacket::setContextInfo(const bool update, const uint8_t EL, const uint8_t NS, const uint8_t SF)
+inline void EtmV4ITrcPacket::setContextInfo(const bool update, const uint8_t EL, const uint8_t NS, const uint8_t SF, const uint8_t NSE)
 {
     pkt_valid.bits.context_valid = 1;
     if(update)
@@ -402,6 +430,7 @@ inline void EtmV4ITrcPacket::setContextInfo(const bool update, const uint8_t EL,
         context.EL = EL;
         context.NS = NS;
         context.SF = SF;
+        context.NSE = NSE;
     }
 }
 
@@ -444,18 +473,20 @@ inline void EtmV4ITrcPacket::set32BitAddress(const uint32_t addr, const uint8_t 
     uint64_t mask = OCSD_BIT_MASK(32);
     v_addr.pkt_bits = 32;
 
-    if (pkt_valid.bits.context_valid && context.SF)
-        v_addr.size = VA_64BIT;
+	if (pkt_valid.bits.context_valid && context.SF)
+	{
+		v_addr.size = VA_64BIT;
+		v_addr.val = (v_addr.val & ~mask) | (addr & mask);
+	}
     else
     {
-        v_addr.val &= 0xFFFFFFFF;   // ensure vaddr is only 32 bits if not 64 bit 
+		v_addr.val = addr;
         v_addr.size = VA_32BIT;
-    }
+	}
 
-    if (v_addr.valid_bits < 32) // may be 64 bit address so only set 32 if less
+    if (v_addr.valid_bits < 32) // may be updating a 64 bit address so only set 32 if currently less.
         v_addr.valid_bits = 32;
 
-    v_addr.val = (v_addr.val & ~mask) | (addr & mask);
     v_addr_ISA = IS;
     push_vaddr();
 }
@@ -511,6 +542,12 @@ inline void  EtmV4ITrcPacket::push_vaddr()
 inline void EtmV4ITrcPacket::pop_vaddr_idx(const uint8_t idx)
 {
     m_addr_stack.get_idx(idx, v_addr, v_addr_ISA);
+}
+
+inline void EtmV4ITrcPacket::setITE(const uint8_t el, const uint64_t value)
+{
+    ite_pkt.el = el;
+    ite_pkt.value = value;
 }
 
 /** @}*/

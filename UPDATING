@@ -32,6 +32,8 @@ Updating Information for MidnightBSD users.
 	soupcall_clear() must be updated and rebuilt
 	(__MidnightBSD_version 402005).
 
+	opencsd 1.4.0
+
 20261109:
 	LinuxKPI, net80211 and the LinuxKPI wireless drivers (iwlwifi,
 	rtw88, rtw89) updated to FreeBSD stable/15.  New mt76 driver

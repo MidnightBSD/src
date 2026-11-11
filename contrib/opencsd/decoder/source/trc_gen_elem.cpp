@@ -46,14 +46,18 @@ static const char *s_elem_descs[][2] =
     {"OCSD_GEN_TRC_ELEM_EO_TRACE","End of the available trace in the buffer."},
     {"OCSD_GEN_TRC_ELEM_PE_CONTEXT","PE status update / change (arch, ctxtid, vmid etc)."},
     {"OCSD_GEN_TRC_ELEM_INSTR_RANGE","Traced N consecutive instructions from addr (no intervening events or data elements), may have data assoc key"},
+    {"OCSD_GEN_TRC_ELEM_I_RANGE_NOPATH","Traced N instructions in a range, but incomplete information as to program execution path from start to end of range"},
     {"OCSD_GEN_TRC_ELEM_ADDR_NACC","Tracing in inaccessible memory area."},
     {"OCSD_GEN_TRC_ELEM_ADDR_UNKNOWN","Tracing unknown address area."},
     {"OCSD_GEN_TRC_ELEM_EXCEPTION","Exception"},
-    {"OCSD_GEN_TRC_ELEM_EXCEPTION_RET","Expection return"},
+    {"OCSD_GEN_TRC_ELEM_EXCEPTION_RET","Exception return"},
     {"OCSD_GEN_TRC_ELEM_TIMESTAMP","Timestamp - preceding elements happeded before this time."},
     {"OCSD_GEN_TRC_ELEM_CYCLE_COUNT","Cycle count - cycles since last cycle count value - associated with a preceding instruction range."},
     {"OCSD_GEN_TRC_ELEM_EVENT","Event - numbered event or trigger"},
-    {"OCSD_GEN_TRC_ELEM_SWTRACE","Software trace packet - may contain data payload."},
+    {"OCSD_GEN_TRC_ELEM_SWTRACE","Software trace packet - may contain data payload. STM / ITM hardware trace with channel protocol."},
+    {"OCSD_GEN_TRC_ELEM_SYNC_MARKER","Synchronisation marker - marks position in stream of an element that is output later."},
+    {"OCSD_GEN_TRC_ELEM_MEMTRANS","Trace indication of transactional memory operations."},
+    {"OCSD_GEN_TRC_ELEM_INSTRUMENTATION", "PE instrumentation trace - PE generated SW trace, application dependent protocol."},
     {"OCSD_GEN_TRC_ELEM_CUSTOM","Fully custom packet type."}
 };
 
@@ -62,7 +66,9 @@ static const char *instr_type[] = {
     "BR  ",
     "iBR ",
     "ISB ",
-    "DSB.DMB"
+    "DSB.DMB",
+    "WFI.WFE",
+    "TSTART"
 };
 
 #define T_SIZE (sizeof(instr_type) / sizeof(const char *))
@@ -71,7 +77,8 @@ static const char *instr_sub_type[] = {
     "--- ",
     "b+link ",
     "A64:ret ",
-    "A64:eret "
+    "A64:eret ",
+    "V7:impl ret",
 };
 
 #define ST_SIZE (sizeof(instr_sub_type) / sizeof(const char *))
@@ -93,10 +100,30 @@ static const char *s_isa_str[] = {
    "Unk"       /**< ISA not yet known */
 };
 
+static const char *s_unsync_reason[] = {
+    "undefined",            // UNSYNC_UNKNOWN - unknown /undefined
+    "init-decoder",         // UNSYNC_INIT_DECODER - decoder intialisation - start of trace.
+    "reset-decoder",        // UNSYNC_RESET_DECODER - decoder reset.
+    "overflow",             // UNSYNC_OVERFLOW - overflow packet - need to re-sync
+    "discard",              // UNSYNC_DISCARD - specl trace discard - need to re-sync
+    "bad-packet",           // UNSYNC_BAD_PACKET - bad packet at input - resync to restart.
+    "end-of-trace",         // UNSYNC_EOT - end of trace info.
+};
+static const char *s_transaction_type[] = {
+	"Init",
+    "Start",
+    "Commit",
+    "Fail"
+};
+
+static const char *s_marker_t[] = {
+  "Timestamp marker",  //  ELEM_MARKER_TS  
+};
+
 void OcsdTraceElement::toString(std::string &str) const
 {
     std::ostringstream oss;
-    int num_str = ((sizeof(s_elem_descs) / sizeof(const char *)) / 2);
+    int num_str = sizeof(s_elem_descs) / sizeof(s_elem_descs[0]);
     int typeIdx = (int)this->elem_type;
     if(typeIdx < num_str)
     {
@@ -105,22 +132,36 @@ void OcsdTraceElement::toString(std::string &str) const
         {
         case OCSD_GEN_TRC_ELEM_INSTR_RANGE:
             oss << "exec range=0x" << std::hex << st_addr << ":[0x" << en_addr << "] ";
+            oss << "num_i(" << std::dec << num_instr_range << ") ";
+            oss << "last_sz(" << last_instr_sz << ") ";
             oss << "(ISA=" << s_isa_str[(int)isa] << ") ";
             oss << ((last_instr_exec == 1) ? "E " : "N ");
             if((int)last_i_type < T_SIZE)
                 oss << instr_type[last_i_type];
             if((last_i_subtype != OCSD_S_INSTR_NONE) && ((int)last_i_subtype < ST_SIZE))
                 oss << instr_sub_type[last_i_subtype];
+            if (last_instr_cond)
+                oss << " <cond>";
             break;
 
         case OCSD_GEN_TRC_ELEM_ADDR_NACC:
             oss << " 0x" << std::hex << st_addr << " ";
             break;
 
+        case OCSD_GEN_TRC_ELEM_I_RANGE_NOPATH:
+            oss << "first 0x" << std::hex << st_addr << ":[next 0x" << en_addr << "] ";
+            oss << "num_i(" << std::dec << num_instr_range << ") ";
+            break;
+
         case OCSD_GEN_TRC_ELEM_EXCEPTION:
-            if(excep_ret_addr == 1)
+            if (excep_ret_addr == 1)
             {
-                oss << "pref ret addr:0x" << std::hex << en_addr << "; ";
+                oss << "pref ret addr:0x" << std::hex << en_addr; 
+                if (excep_ret_addr_br_tgt)
+                {
+                    oss << " [addr also prev br tgt]";
+                }
+                oss << "; ";
             }
             oss << "excep num (0x" << std::setfill('0') << std::setw(2) << std::hex << exception_number << ") ";
             break;
@@ -131,7 +172,14 @@ void OcsdTraceElement::toString(std::string &str) const
             {
                 oss << "EL" << std::dec << (int)(context.exception_level);
             }
-            oss << (context.security_level == ocsd_sec_secure ? "S; " : "N; ") << (context.bits64 ? "64-bit; " : "32-bit; ");
+            switch (context.security_level) 
+            {
+            case ocsd_sec_secure: oss << "S; "; break;
+            case ocsd_sec_nonsecure: oss << "N; "; break;
+            case ocsd_sec_root: oss << "Root; "; break;
+            case ocsd_sec_realm: oss << "Realm; "; break;
+            }
+            oss  << (context.bits64 ? "64-bit; " : "32-bit; ");
             if(context.vmid_valid)
                 oss << "VMID=0x" << std::hex << context.vmid << "; ";
             if(context.ctxt_id_valid)
@@ -148,6 +196,32 @@ void OcsdTraceElement::toString(std::string &str) const
 
         case OCSD_GEN_TRC_ELEM_SWTRACE:
             printSWInfoPkt(oss);
+            break;
+
+        case OCSD_GEN_TRC_ELEM_EVENT:
+            if(trace_event.ev_type == EVENT_TRIGGER)
+                oss << " Trigger; ";
+            else if(trace_event.ev_type == EVENT_NUMBERED)
+                oss << " Numbered:" << std::dec << trace_event.ev_number << "; ";
+            break;
+
+        case OCSD_GEN_TRC_ELEM_EO_TRACE:
+        case OCSD_GEN_TRC_ELEM_NO_SYNC:
+            if (unsync_eot_info <= UNSYNC_EOT)
+                oss << " [" << s_unsync_reason[unsync_eot_info] << "]";
+            break;
+
+        case OCSD_GEN_TRC_ELEM_SYNC_MARKER:
+            oss << " [" << s_marker_t[sync_marker.type] << "(0x" << std::setfill('0') << std::setw(8) << std::hex << sync_marker.value << ")]";
+            break;
+
+        case OCSD_GEN_TRC_ELEM_MEMTRANS:
+            if (mem_trans <= OCSD_MEM_TRANS_FAIL)
+                oss << s_transaction_type[mem_trans];
+            break;
+
+        case OCSD_GEN_TRC_ELEM_INSTRUMENTATION:
+            oss << "EL" << std::dec << (int)sw_ite.el << "; 0x" << std::setfill('0') << std::setw(16) << std::hex << sw_ite.value;
             break;
 
         default: break;

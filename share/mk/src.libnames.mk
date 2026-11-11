@@ -27,6 +27,7 @@ _PRIVATELIBS=	\
 		heimipcc \
 		heimipcs \
 		ldns \
+		opencsd \
 		ssh \
 		ucl \
 		unbound \
