@@ -2747,22 +2747,6 @@ is set to
 these are the flags to pass to the
 .Xr ntpd 8
 daemon.
-.It Va ntpd_sync_on_start
-.Pq Vt bool
-If set to
-.Dq Li YES ,
-.Xr ntpd 8
-is run with the
-.Fl s
-flag.
-The current
-.Xr ntpd 8
-ignores this flag and logs a warning:
-at boot it sets the clock itself when constraints are satisfied or
-trusted servers or sensors answer, as described in
-.Xr ntpd 8
-and
-.Xr ntpd.conf 5 .
 .It Va nis_client_enable
 .Pq Vt bool
 If set to
