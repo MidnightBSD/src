@@ -308,9 +308,12 @@ extra_chroot_setup() {
 		PBUILD_FLAGS="${PBUILD_FLAGS} WRKDIRPREFIX=/tmp/mports"
 		PBUILD_FLAGS="${PBUILD_FLAGS} DISTDIR=/tmp/distfiles"
 		for _PORT in ${EMBEDDEDPORTS}; do
+			# mports' deinstall fails if the package is not installed.
+			eval chroot ${CHROOTDIR} env ${PBUILD_FLAGS} make -C \
+				/usr/mports/${_PORT} deinstall || true
 			eval chroot ${CHROOTDIR} env ${PBUILD_FLAGS} make -C \
 				/usr/mports/${_PORT} \
-				FORCE_PKG_REGISTER=1 deinstall install clean distclean
+				FORCE_PKG_REGISTER=1 install clean distclean
 		done
 	fi
 
