@@ -22,7 +22,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.Dd July 15, 2025
+.Dd November 11, 2026
 .Dt RC.CONF 5
 .Os
 .Sh NAME
@@ -2698,72 +2698,46 @@ This is mandatory when
 .Va pppoed_enable
 is set to
 .Dq Li YES .
-.It Va ntpdate_enable
+.It Va rdate_enable
 .Pq Vt bool
 If set to
 .Dq Li YES ,
 run
-.Xr ntpdate 8
-at system startup.
-This command is intended to
-synchronize the system clock only
+.Xr rdate 8
+at system startup, before
+.Xr ntpd 8 .
+This sets the system clock only
 .Em once
-from some standard reference.
-.Pp
-Note that the use of the
-.Va ntpd_sync_on_start
-variable is a preferred alternative to the
-.Xr ntpdate 8
-utility as
-.Xr ntpdate 8
-is to be retired from the NTP distribution.
-.It Va ntpdate_config
-.Pq Vt str
-Configuration file for
-.Xr ntpdate 8 .
-Default
-.Pa /etc/ntp.conf .
-.It Va ntpdate_hosts
-.Pq Vt str
-A whitespace-separated list of NTP servers to synchronize with at startup.
-The default is to use the servers listed in
-.Va ntpdate_config ,
-if that file exists.
-.It Va ntpdate_program
-.Pq Vt str
-Path to
-.Xr ntpdate 8
-(default
-.Pa /usr/sbin/ntpdate ) .
-.It Va ntpdate_flags
+from a remote time server.
+.It Va rdate_flags
 .Pq Vt str
 If
-.Va ntpdate_enable
+.Va rdate_enable
 is set to
 .Dq Li YES ,
-these are the flags to pass to the
-.Xr ntpdate 8
-command (typically a hostname).
+these are the flags and the time server passed to
+.Xr rdate 8 ,
+for example
+.Dq Li "-n pool.ntp.org"
+to use SNTP.
+A time server must be given.
 .It Va ntpd_enable
 .Pq Vt bool
 If set to
 .Dq Li YES ,
 run the
 .Xr ntpd 8
-command at boot time.
+daemon at boot time.
+It is configured in
+.Pa /etc/ntpd.conf ;
+see
+.Xr ntpd.conf 5 .
 .It Va ntpd_program
 .Pq Vt str
 Path to
 .Xr ntpd 8
 (default
 .Pa /usr/sbin/ntpd ) .
-.It Va ntpd_config
-.Pq Vt str
-Path to
-.Xr ntpd 8
-configuration file.
-Default
-.Pa /etc/ntp.conf .
 .It Va ntpd_flags
 .Pq Vt str
 If
@@ -2779,18 +2753,16 @@ If set to
 .Dq Li YES ,
 .Xr ntpd 8
 is run with the
-.Fl g
-flag, which syncs the system's clock on startup.
-See
+.Fl s
+flag.
+The current
 .Xr ntpd 8
-for more information regarding the
-.Fl g
-option.
-This is a preferred alternative to using
-.Xr ntpdate 8
-or specifying the
-.Va ntpdate_enable
-variable.
+ignores this flag and logs a warning:
+at boot it sets the clock itself when constraints are satisfied or
+trusted servers or sensors answer, as described in
+.Xr ntpd 8
+and
+.Xr ntpd.conf 5 .
 .It Va nis_client_enable
 .Pq Vt bool
 If set to
@@ -4802,7 +4774,6 @@ The default is 10.
 .Xr newsyslog 8 ,
 .Xr nfsd 8 ,
 .Xr ntpd 8 ,
-.Xr ntpdate 8 ,
 .Xr pfctl 8 ,
 .Xr pflogd 8 ,
 .Xr ping 8 ,
@@ -4812,6 +4783,7 @@ The default is 10.
 .Xr rc 8 ,
 .Xr rc.sendmail 8 ,
 .Xr rc.subr 8 ,
+.Xr rdate 8 ,
 .Xr rfcomm_pppd 8 ,
 .Xr route 8 ,
 .Xr routed 8 ,
