@@ -215,8 +215,7 @@ SRCS+=	ecdsa_vrf.c eck_prn.c ecp_mont.c ecp_nist.c
 SRCS+=	ecp_oct.c ecp_smpl.c ecx_backend.c ecx_key.c ecx_meth.c eddsa.c
 SRCS+=	f_generic.c f_impl32.c f_impl64.c scalar.c
 # see OPENSSL_NO_EC_NISTP_64_GCC_128 in configuration.h
-.if ${TARGET_ENDIANNESS} == 1234 && (${MACHINE_CPUARCH} == "amd64" || \
-    ${MACHINE_CPUARCH} == "aarch64")
+.if ${TARGET_ENDIANNESS} == 1234 && ${MACHINE_ABI:Mlong64}
 SRCS+=	ecp_nistp224.c ecp_nistp256.c ecp_nistp384.c ecp_nistp521.c ecp_nistputil.c
 .else
 CFLAGS+=-DOPENSSL_NO_EC_NISTP_64_GCC_128
