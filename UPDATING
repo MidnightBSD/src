@@ -1,5 +1,9 @@
 Updating Information for MidnightBSD users.
 
+20261111:
+	mport(1) updated to 2.8.7.  Adds the aarch64 and riscv64
+	architectures.
+
 20261106:
 	unbound 1.26.2: CVE-2026-14586 CVE-2026-32665 CVE-2026-35501
 	CVE-2026-40691 CVE-2026-41637 CVE-2026-42955 CVE-2026-44621
