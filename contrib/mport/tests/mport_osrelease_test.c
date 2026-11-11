@@ -244,6 +244,12 @@ ATF_TC_CLEANUP(abi_file_release_from_note, tc)
 #elif defined(__i386__)
 #define HOST_ARCH "i386"
 #define HOST_LEGACY_ARCH "x86:32"
+#elif defined(__aarch64__)
+#define HOST_ARCH "aarch64"
+#define HOST_LEGACY_ARCH "aarch64:64"
+#elif defined(__riscv) && __riscv_xlen == 64
+#define HOST_ARCH "riscv64"
+#define HOST_LEGACY_ARCH "riscv64"
 #endif
 
 ATF_TC_WITH_CLEANUP(abi_strings_from_settings);

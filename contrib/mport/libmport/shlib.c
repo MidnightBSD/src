@@ -392,9 +392,9 @@ elf_abi_from_notes(Elf *elf, unsigned char encoding, /*@out@*/ int *os,
  * *osrelease is the release ("4.1") and *osreldate the raw tag from a
  * MidnightBSD ABI note, or NULL and 0 when the file has none, *elfclass
  * its word size, and *arch the package architecture name for its machine
- * type ("amd64", "i386", "aarch64"), or NULL for one without a port.  Any
- * output may be NULL.  A file that cannot be read or is not ELF is an error:
- * guessing would record the build host's ABI.
+ * type ("amd64", "i386", "aarch64", "riscv64"), or NULL for one without a
+ * port.  Any output may be NULL.  A file that cannot be read or is not ELF
+ * is an error: guessing would record the build host's ABI.
  */
 int
 mport_abi_file_read(/*@notnull@*/ const char *path, /*@null@*/ /*@out@*/ char **osrelease,

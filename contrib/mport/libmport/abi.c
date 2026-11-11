@@ -77,6 +77,8 @@ mport_arch_from_elf_machine(unsigned int machine)
 		return "amd64";
 	case EM_AARCH64:
 		return "aarch64";
+	case EM_RISCV:
+		return "riscv64";
 	default:
 		return NULL;
 	}

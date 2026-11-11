@@ -1620,7 +1620,7 @@ run_postexec(mportInstance *mport, mportPackageMeta *pkg)
 				/* load the linux module */
 				mport_call_msg_cb(mport,
 				    "Loading Linux kernel module.  To make this permanent, follow instructions in man LINUX(4)");
-#if defined(__amd64__) || defined(__aarch64__) || defined(__arm64__)
+#if defined(__amd64__) || defined(__aarch64__)
 				if (mport_xsystem(mport, "/sbin/kldload linux64") != MPORT_OK) {
 					goto ERROR;
 				}
