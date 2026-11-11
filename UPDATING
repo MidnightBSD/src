@@ -1,5 +1,9 @@
 Updating Information for MidnightBSD users.
 
+20261111:
+	mport(1) updated to 2.8.6.  Adds the arm64 and riscv architectures,
+	so libmport builds on those platforms.
+
 20261110:
 	OFED/RDMA kernel stack (sys/ofed) updated to FreeBSD stable/15,
 	Linux 5.7 based ibcore.  mlx4ib, mlx5ib, irdma (1.3.56-k), mthca,
