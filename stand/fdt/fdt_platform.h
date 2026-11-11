@@ -41,6 +41,7 @@ void fdt_fixup_cpubusfreqs(unsigned long, unsigned long);
 void fdt_fixup_ethernet(const char *, char *, int);
 void fdt_fixup_memory(struct fdt_mem_region *, size_t);
 void fdt_fixup_stdout(const char *);
+void fdt_fixup_boot_hartid(uint32_t);
 int fdt_apply_overlays(void);
 int fdt_pad_dtb(size_t);
 int fdt_load_dtb_addr(struct fdt_header *);
