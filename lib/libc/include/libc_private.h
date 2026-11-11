@@ -318,6 +318,12 @@ extern void (*__cleanup)(void) __hidden;
  * ignores value of $OSVERSION and caches result.
  */
 int __getosreldate(void);
+
+/*
+ * Translate a MidnightBSD osreldate to the matching __FreeBSD_version, for
+ * comparisons against FreeBSD version thresholds.
+ */
+int __osrel_to_freebsd(int);
 #include <sys/_types.h>
 #include <sys/_sigset.h>
 

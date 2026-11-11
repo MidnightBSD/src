@@ -62,6 +62,7 @@ __ssize_t	__sys_write(int, const void *, __size_t);
 extern char* __progname;
 const char *_getprogname(void);
 int __getosreldate(void);
+int __osrel_to_freebsd(int);
 
 
 /*

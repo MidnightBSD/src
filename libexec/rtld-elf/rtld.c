@@ -2424,7 +2424,7 @@ init_rtld(caddr_t mapbase, Elf_Auxinfo **aux_info)
 #endif
 
     if (aux_info[AT_OSRELDATE] != NULL)
-	    osreldate = aux_info[AT_OSRELDATE]->a_un.a_val;
+	    osreldate = __osrel_to_freebsd(aux_info[AT_OSRELDATE]->a_un.a_val);
 
     digest_dynamic2(&obj_rtld, dyn_rpath, dyn_soname, dyn_runpath);
 
@@ -6355,7 +6355,7 @@ __getosreldate(void)
 	len = sizeof(osrel);
 	error = sysctl(oid, 2, &osrel, &len, NULL, 0);
 	if (error == 0 && osrel > 0 && len == sizeof(osrel))
-		osreldate = osrel;
+		osreldate = __osrel_to_freebsd(osrel);
 	return (osreldate);
 }
 const char *

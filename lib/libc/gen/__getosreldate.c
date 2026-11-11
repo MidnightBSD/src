@@ -40,6 +40,9 @@
  *
  * Use getosreldate(3) for public use as it respects the $OSVERSION environment
  * variable.
+ *
+ * The kernel reports a MidnightBSD version, but callers compare the result
+ * against FreeBSD versions, so it is translated by __osrel_to_freebsd().
  */
 
 int
@@ -53,9 +56,12 @@ __getosreldate(void)
 	if (osreldate != 0)
 		return (osreldate);
 
-	error = _elf_aux_info(AT_OSRELDATE, &osreldate, sizeof(osreldate));
-	if (error == 0 && osreldate != 0)
+	osrel = 0;
+	error = _elf_aux_info(AT_OSRELDATE, &osrel, sizeof(osrel));
+	if (error == 0 && osrel != 0) {
+		osreldate = __osrel_to_freebsd(osrel);
 		return (osreldate);
+	}
 
 	oid[0] = CTL_KERN;
 	oid[1] = KERN_OSRELDATE;
@@ -63,6 +69,6 @@ __getosreldate(void)
 	len = sizeof(osrel);
 	error = sysctl(oid, 2, &osrel, &len, NULL, 0);
 	if (error == 0 && osrel > 0 && len == sizeof(osrel))
-		osreldate = osrel;
+		osreldate = __osrel_to_freebsd(osrel);
 	return (osreldate);
 }

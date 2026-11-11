@@ -33,7 +33,7 @@ CFLAGS.merge.c+=-Wno-error=null-pointer-arithmetic
 .endif
 .PATH: ${LIBC_SRCTOP}/gen
 SRCS+=	errlst.c getcwd.c getprogname.c raise.c sigsetops.c sysctlnametomib.c \
-    __xuname.c
+    __xuname.c __osrel_freebsd.c
 # errlst.c needs the errlst.h header from libc:
 CFLAGS.errlst.c+=-I${LIBC_SRCTOP}/include
 
