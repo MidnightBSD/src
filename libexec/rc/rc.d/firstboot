@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # PROVIDE: firstboot
-# REQUIRE: NETWORKING FILESYSTEMS
+# REQUIRE: NETWORKING FILESYSTEMS sshd
 # KEYWORD: nojail
 
 . /etc/rc.subr
@@ -80,6 +80,50 @@ set_default_session()
 	    /bin/chmod 755 "${xinitrcd}/default-session.sh"
 }
 
+firstboot_interactive()
+{
+	local active
+
+	# No terminal on stdin: nobody can answer the prompts.
+	[ -t 0 ] || return 1
+
+	# At boot (faststart/quietstart), skip when every active console is
+	# a serial one, e.g. a headless board.  Video consoles are ttyv*.
+	# Running "service firstboot start" by hand is not affected.
+	if [ -n "${rc_quiet}" ]; then
+		active=$(/sbin/sysctl -n kern.console 2>/dev/null)
+		active=${active%%/*}
+		case ",${active}" in
+		*,ttyv*)
+			;;
+		*)
+			[ -n "${active}" ] && return 1
+			;;
+		esac
+	fi
+
+	return 0
+}
+
+# fb_read var: read an answer, giving up after ${firstboot_timeout} seconds.
+fb_read()
+{
+	local rc
+
+	read -t "${firstboot_timeout}" "$1"
+	rc=$?
+	[ ${rc} -eq 0 ] && return 0
+
+	echo
+	if [ ${rc} -gt 128 ]; then
+		warn_msg "No answer within ${firstboot_timeout} seconds; stopping FirstBoot Configuration."
+	else
+		warn_msg "No more input; stopping FirstBoot Configuration."
+	fi
+	echo "It will run again on the next boot, or run: service firstboot start"
+	return 1
+}
+
 firstboot_start()
 {
 	local lsuffix
@@ -93,11 +137,17 @@ firstboot_start()
 	receipt="/etc/fbreceipt"
 
 	if [ ! -f ${receipt} ]; then
+		if ! firstboot_interactive; then
+			echo "Skipping FirstBoot Configuration: no interactive console."
+			echo "Log in and run 'service firstboot start' to configure the system."
+			return 0
+		fi
+
 		echo -e "\r${red}MidnightBSD FirstBoot Configuration${lsuffix}"
 			echo "This utility requires an active Internet connection."
 
 			echo -e "\r${yellow}Set your preferred package mirror? (us,uk,jp)${lsuffix}"
-			read mportmirror
+			fb_read mportmirror || return 0
 			run_step "Updating the package mirror" \
 			    /usr/sbin/mport config set mirror_region "${mportmirror}"
 
@@ -106,20 +156,20 @@ firstboot_start()
 		echo "If you do not live in a region with required age verification, you can disable this feature and the associated parental controls."
 			echo -e "\r${red}MidnightBSD does not support ID checks or AI facial scanning for age verification. You may NOT use MidnightBSD in regions requiring it.${lsuffix}"
 			echo -e "\r${yellow}Do you live in a region with required age verification or want parental controls enabled? (yes or no)${lsuffix}"
-			read ageverify
+			fb_read ageverify || return 0
 			if [ "${ageverify}" = "no" ]; then
 				run_step "Disabling aged" /usr/sbin/sysrc aged_enable=NO
 			else
 				echo "parental will enable parental controls based on age attestion for apps in the MidnightBSD package manger."
 				echo -e "\r${yellow}Specify one of the following regions for age attestion (US-CA, US-CO, US-IL, BR, parental)${lsuffix}"
-				read ageregion
+				fb_read ageregion || return 0
 				run_step "Configuring the age verification region" \
 				    /usr/sbin/agectl -r "${ageregion}"
 				echo "You may change the setting later with the agectl -r <region> command."
 			fi
 
 			echo -e "\r${yellow}Would you like to report your install via bsdstats? (yes or no)${lsuffix}"
-			read installbstat
+			fb_read installbstat || return 0
 			if [ "${installbstat}" = "yes" ]; then
 				if [ ! -f /usr/local/etc/rc.d/bsdstats.sh ]; then
 					install_pkg bsdstats
@@ -128,7 +178,7 @@ firstboot_start()
 			fi
 
 			echo -e "\r${yellow}Would you like to report your install via hw-probe? (yes or no)${lsuffix}"
-			read installhp
+			fb_read installhp || return 0
 			if [ "${installhp}" = "yes" ]; then
 				if [ ! -f /usr/local/bin/hw-probe ]; then
 					install_pkg hw-probe
@@ -143,7 +193,7 @@ firstboot_start()
 
 			if [ "$(uname -m)" = "amd64" ]; then
 				echo -e "\r${yellow}Would you like to install Ravenports, an alternative package manager? (yes or no)${lsuffix}"
-	                	read ravenports
+	                	fb_read ravenports || return 0
 	                	if [ "${ravenports}" = "yes" ]; then
 					if ! /usr/bin/fetch http://www.ravenports.com/repository/ravenports-downloader.sh -o - | /bin/sh; then
 						warn_msg "Ravenports installation failed."
@@ -158,7 +208,7 @@ firstboot_start()
 			fi
 
 			echo -e "\r${yellow}Do you wish to enable a graphical environment? (yes or no)${lsuffix}"
-			read installgui
+			fb_read installgui || return 0
 
 			if [ "${installgui}" = "yes" ]; then
 				echo "Available desktops:"
@@ -167,7 +217,7 @@ firstboot_start()
 				echo "  windowmaker - GNUstep and Window Maker"
 				echo "Other installed desktops can be picked at the login screen with F1."
 				echo -e "\r${yellow}Which desktop would you like as the default? (midnight, xfce or windowmaker) [midnight]${lsuffix}"
-				read desktop
+				fb_read desktop || return 0
 				case "${desktop}" in
 				""|midnight)
 					desktop="midnight"
@@ -213,11 +263,11 @@ firstboot_start()
 					run_step "Running xconfig auto" /usr/local/bin/xconfig auto
 				else
 				echo -e "\r${yellow}Do you wish to install Intel or AMD GPU drivers? (yes or no)${lsuffix}"
-				read drmkmod
+				fb_read drmkmod || return 0
 				if [ "${drmkmod}" = "yes" ]; then
 					install_pkg drm-510-kmod
 					echo -e "\r${yellow}Which GPU module do you want to activate? (amd, radeonkms or intel)${lsuffix}"
-					read kmsmodule
+					fb_read kmsmodule || return 0
 					if [ "${kmsmodule}" = "intel" ]; then
 						run_step "Configuring the Intel DRM module" \
 						    /usr/sbin/sysrc kld_list="/boot/modules/i915kms.ko"
@@ -233,7 +283,7 @@ firstboot_start()
 				fi
 
 				echo -e "\r${yellow}Do you wish to install nvidia GPU driver? (no, 340, 390, 470, 580)${lsuffix}"
-				read nvidia
+				fb_read nvidia || return 0
 				if [ "${nvidia}" = "340" ]; then
 					if install_pkg nvidia-driver-340; then
 						run_step "Configuring the NVIDIA module" \
@@ -268,4 +318,5 @@ firstboot_start()
 	}
 
 load_rc_config $name
+: ${firstboot_timeout:=300}
 run_rc_command "$1"
