@@ -38,6 +38,8 @@ SRCS.i386= \
 	sha512-586.S \
 	ossl_x86.c
 
+CFLAGS+= -I${SRCTOP}/sys/crypto/openssl
+
 # For arm64, we are forced to rewrite the compiler invocation for the assembly
 # files, to remove -mgeneral-regs-only.
 ${SRCS.aarch64:M*.S:S/S/o/}: ${.TARGET:R}.S
