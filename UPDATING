@@ -1,6 +1,9 @@
 Updating Information for MidnightBSD users.
 
 20261111:
+	mport(1) updated to 2.8.7.  arm64 and riscv64 packages use the
+	MACHINE_ARCH names aarch64 and riscv64 (ABI MidnightBSD:4.2:aarch64).
+
 	mport(1) updated to 2.8.6.  Adds the arm64 and riscv architectures,
 	so libmport builds on those platforms.
 
