@@ -26,6 +26,13 @@ DFLAGS= -D_PATH_TCSHELL='"/bin/${PROG}"'
 .endif
 CFLAGS+= -I. -I${.CURDIR} -I${TCSHDIR} ${DFLAGS}
 WARNS?=	1
+
+# tcsh uses wint_t (signed) for Char, while wchar_t is unsigned on arm,
+# so every %S/%ls of a Char * draws a harmless -Wformat sign mismatch.
+.if ${MACHINE_CPUARCH} == "aarch64" || ${MACHINE_CPUARCH} == "arm"
+NO_WFORMAT=
+.endif
+
 SRCS=	sh.c sh.dir.c sh.dol.c sh.err.c sh.exec.c sh.char.c \
 	sh.exp.c sh.file.c sh.func.c sh.glob.c sh.hist.c sh.init.c \
 	sh.lex.c sh.misc.c sh.parse.c sh.print.c sh.proc.c sh.sem.c \
