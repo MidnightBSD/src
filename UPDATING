@@ -1,5 +1,9 @@
 Updating Information for MidnightBSD users.
 
+20261111:
+	mport(1) updated to 2.8.7.  Adds the aarch64 and riscv64
+	architectures.
+
 20261107:
 	device-tree files updated to Linux 5.10 (arm, arm64 and riscv kernels only)
 
