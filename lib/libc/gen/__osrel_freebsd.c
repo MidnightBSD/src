@@ -53,10 +53,15 @@ static const struct {
 };
 
 /*
- * MidnightBSD versions are well below the oldest FreeBSD version userland
- * still checks for.  Anything at or above this is already a FreeBSD
- * version (for example, a jail created with a FreeBSD osreldate) and is
- * returned unchanged.
+ * MidnightBSD versions are below the oldest FreeBSD version userland still
+ * checks for.  Anything at or above this is already a FreeBSD version (for
+ * example, a jail created with a FreeBSD osreldate) and is returned
+ * unchanged.
+ *
+ * Values below this are always treated as MidnightBSD versions, even
+ * though FreeBSD 4-6 used the same range.  That is safe: this code only
+ * runs in MidnightBSD userland, and a FreeBSD 4-6 jail runs its own libc
+ * and rtld, which never call it.
  */
 #define	OSREL_FREEBSD_MIN	700000
 

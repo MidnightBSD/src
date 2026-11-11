@@ -13,6 +13,7 @@ ATF_TESTS_C+=		getentropy_test
 ATF_TESTS_C+=		getmntinfo_test
 ATF_TESTS_C+=		glob2_test
 ATF_TESTS_C+=		makecontext_test
+ATF_TESTS_C+=		osrel_freebsd_test
 ATF_TESTS_C+=		popen_test
 ATF_TESTS_C+=		posix_spawn_test
 ATF_TESTS_C+=		realpath2_test
@@ -93,6 +94,11 @@ LIBADD.nice_test+=	pthread
 LIBADD.syslog_test+=	pthread
 
 CFLAGS+=		-I${.CURDIR}
+
+# __osrel_to_freebsd() is private to libc, so build its source into the test.
+.PATH:	${SRCTOP}/lib/libc/gen
+SRCS.osrel_freebsd_test=	osrel_freebsd_test.c __osrel_freebsd.c
+CFLAGS.__osrel_freebsd.c+=	-I${SRCTOP}/lib/libc/include
 
 SRCS.fmtcheck2_test=	fmtcheck_test.c
 SRCS.fnmatch2_test=	fnmatch_test.c
