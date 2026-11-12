@@ -110,6 +110,19 @@ SYSCTL_INT(_compat_linuxkpi_80211, OID_AUTO, suspend_type, CTLFLAG_RW,
     &lkpi_suspend_type, 0,
     "LinuxKPI 802.11 suspend type bitmask (0=off, 1=net80211, 2=wowlan");
 
+#ifdef __MidnightBSD__
+/*
+ * MNBSD-KPI: ieee80211_restart_hw() is a no-op in FreeBSD, which leaves a
+ * device whose firmware crashed dead until the vap is destroyed.  We emulate
+ * it with a full stop/start (as on suspend/resume).  Set to 0 to go back to
+ * the no-op.
+ */
+static bool lkpi_hw_restart = true;
+SYSCTL_BOOL(_compat_linuxkpi_80211, OID_AUTO, hw_restart, CTLFLAG_RWTUN,
+    &lkpi_hw_restart, 0,
+    "Restart the hardware when a driver calls ieee80211_restart_hw()");
+#endif
+
 static bool lkpi_order_scanlist = false;
 SYSCTL_BOOL(_compat_linuxkpi_80211, OID_AUTO, order_scanlist, CTLFLAG_RW,
     &lkpi_order_scanlist, 0, "Enable LinuxKPI 802.11 scan list shuffeling");
@@ -192,6 +205,9 @@ static void lkpi_sw_scan_task(void *, int);
 static void lkpi_80211_txq_tx_one(struct lkpi_sta *, struct mbuf *);
 static void lkpi_80211_txq_task(void *, int);
 static void lkpi_80211_lhw_rxq_task(void *, int);
+#ifdef __MidnightBSD__
+static void lkpi_80211_restart_task(void *, int);
+#endif
 static void lkpi_ieee80211_free_skb_mbuf(void *);
 #ifdef LKPI_80211_WME
 static int lkpi_wme_update(struct lkpi_hw *, struct ieee80211vap *, bool);
@@ -4696,12 +4712,131 @@ linuxkpi_ieee80211_unregister_hw(struct ieee80211_hw *hw)
 	IMPROVE();
 }
 
+#ifdef __MidnightBSD__
+/*
+ * MNBSD-KPI: emulate mac80211's restart with a full stop/start.  We have no
+ * reconfig code to replay the driver state, so do what suspend/resume does
+ * instead: take all vaps down, remove the interfaces, stop and start the
+ * driver, add the interfaces back and let net80211 associate again.  Drivers
+ * cope with being stopped while a restart is pending (iwlwifi's mac_stop
+ * clears its restart flags); reconfig_complete(RESTART) then lets them
+ * finish their restart bookkeeping.
+ */
+static void
+lkpi_80211_restart_task(void *arg, int pending __unused)
+{
+	struct lkpi_hw *lhw;
+	struct ieee80211_hw *hw;
+	struct ieee80211com *ic;
+	struct lkpi_vif *lvif;
+	int error;
+
+	lhw = arg;
+	hw = LHW_TO_HW(lhw);
+	ic = lhw->ic;
+
+	if ((atomic_load_int(&lhw->restart_state) &
+	    LKPI_LHW_RESTART_DYING) != 0)
+		goto out;
+	if ((lhw->sc_flags & LKPI_MAC80211_DRV_STARTED) == 0) {
+		/* Not started; the next start will reload the firmware. */
+		goto out;
+	}
+
+	ic_printf(ic, "%s: restarting hardware\n", __func__);
+
+	ieee80211_suspend_all(ic);
+
+	/* A hw scan the dead firmware never completed must not linger. */
+	LKPI_80211_LHW_SCAN_LOCK(lhw);
+	if ((lhw->scan_flags &
+	    (LKPI_LHW_SCAN_RUNNING | LKPI_LHW_SCAN_HW)) != 0) {
+		free(lhw->hw_req, M_LKPI80211);
+		lhw->hw_req = NULL;
+		lhw->scan_flags &= ~(LKPI_LHW_SCAN_RUNNING | LKPI_LHW_SCAN_HW);
+		wakeup(lhw);
+	}
+	LKPI_80211_LHW_SCAN_UNLOCK(lhw);
+
+	wiphy_lock(hw->wiphy);
+	TAILQ_FOREACH(lvif, &lhw->lvif_head, lvif_entry)
+		lkpi_80211_mo_remove_interface(hw, LVIF_TO_VIF(lvif));
+	lkpi_80211_mo_stop(hw, false);
+
+	error = lkpi_80211_mo_start(hw);
+	if (error != 0) {
+		wiphy_unlock(hw->wiphy);
+		ic_printf(ic, "%s: mo_start failed: %d\n", __func__, error);
+		goto out;
+	}
+	TAILQ_FOREACH(lvif, &lhw->lvif_head, lvif_entry) {
+		error = lkpi_80211_mo_add_interface(hw, LVIF_TO_VIF(lvif));
+		if (error != 0) {
+			wiphy_unlock(hw->wiphy);
+			ic_printf(ic, "%s: mo_add_interface %s failed: %d\n",
+			    __func__, if_name(LVIF_TO_VAP(lvif)->iv_ifp),
+			    error);
+			goto out;
+		}
+	}
+	lkpi_80211_mo_reconfig_complete(hw, IEEE80211_RECONFIG_TYPE_RESTART);
+	wiphy_unlock(hw->wiphy);
+
+	ieee80211_resume_all(ic);
+	ic_printf(ic, "%s: hardware restart done\n", __func__);
+out:
+	atomic_clear_int(&lhw->restart_state, LKPI_LHW_RESTART_PENDING);
+}
+
+/*
+ * Refuse new restarts and wait for a queued or running one, so the lvif
+ * list does not change under the restart task.  Undo with
+ * lkpi_80211_restart_allow().
+ */
+static void
+lkpi_80211_restart_block(struct lkpi_hw *lhw)
+{
+
+	atomic_set_int(&lhw->restart_state, LKPI_LHW_RESTART_DYING);
+	while (taskqueue_cancel(taskqueue_thread, &lhw->restart_task,
+	    NULL) != 0)
+		taskqueue_drain(taskqueue_thread, &lhw->restart_task);
+	/* A cancelled task did not get to clear it. */
+	atomic_clear_int(&lhw->restart_state, LKPI_LHW_RESTART_PENDING);
+}
+
+static void
+lkpi_80211_restart_allow(struct lkpi_hw *lhw)
+{
+
+	atomic_clear_int(&lhw->restart_state, LKPI_LHW_RESTART_DYING);
+}
+
+void
+linuxkpi_ieee80211_restart_hw(struct ieee80211_hw *hw)
+{
+	struct lkpi_hw *lhw;
+
+	lhw = HW_TO_LHW(hw);
+	if (!lkpi_hw_restart) {
+		ic_printf(lhw->ic, "%s: disabled by "
+		    "compat.linuxkpi.80211.hw_restart\n", __func__);
+		return;
+	}
+	/* May be called from atomic context; defer.  One at a time. */
+	if (atomic_cmpset_int(&lhw->restart_state, 0,
+	    LKPI_LHW_RESTART_PENDING) == 0)
+		return;
+	taskqueue_enqueue(taskqueue_thread, &lhw->restart_task);
+}
+#else
 void
 linuxkpi_ieee80211_restart_hw(struct ieee80211_hw *hw)
 {
 
 	TODO();
 }
+#endif
 
 static void
 lkpi_ic_vap_delete(struct ieee80211vap *vap)
@@ -4717,6 +4852,11 @@ lkpi_ic_vap_delete(struct ieee80211vap *vap)
 	ic = vap->iv_ic;
 	lhw = ic->ic_softc;
 	hw = LHW_TO_HW(lhw);
+
+#ifdef __MidnightBSD__
+	/* MNBSD-KPI: keep the restart task off the lvif being removed. */
+	lkpi_80211_restart_block(lhw);
+#endif
 
 	EVENTHANDLER_DEREGISTER(iflladdr_event, lvif->lvif_ifllevent);
 
@@ -4747,6 +4887,9 @@ lkpi_ic_vap_delete(struct ieee80211vap *vap)
 
 	mtx_destroy(&lvif->mtx);
 	free(lvif, M_80211_VAP);
+#ifdef __MidnightBSD__
+	lkpi_80211_restart_allow(lhw);
+#endif
 }
 
 static void
@@ -7351,6 +7494,10 @@ linuxkpi_ieee80211_alloc_hw(size_t priv_len, const struct ieee80211_ops *ops)
 	TASK_INIT(&lhw->rxq_task, 0, lkpi_80211_lhw_rxq_task, lhw);
 	mbufq_init(&lhw->rxq, 32 * NAPI_POLL_WEIGHT);
 	lhw->rxq_stopped = false;
+#ifdef __MidnightBSD__
+	TASK_INIT(&lhw->restart_task, 0, lkpi_80211_restart_task, lhw);
+	lhw->restart_state = 0;
+#endif
 
 	/*
 	 * XXX-BZ TODO make sure there is a "_null" function to all ops
@@ -7842,6 +7989,10 @@ linuxkpi_ieee80211_ifdetach(struct ieee80211_hw *hw)
 
 	lhw = HW_TO_LHW(hw);
 	ic = lhw->ic;
+#ifdef __MidnightBSD__
+	/* MNBSD-KPI: no restart may run past detach; never re-allowed. */
+	lkpi_80211_restart_block(lhw);
+#endif
 	ieee80211_ifdetach(ic);
 }
 
