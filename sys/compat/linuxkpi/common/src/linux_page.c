@@ -109,6 +109,21 @@ linux_alloc_pages(gfp_t flags, unsigned int order)
 			req |= VM_ALLOC_ZERO;
 
 		if (order == 0 && (flags & GFP_DMA32) == 0) {
+#ifdef __MidnightBSD__
+			/*
+			 * MNBSD-KPI: honour the gfp class like Linux does.
+			 * GFP_KERNEL sleeps until pages are freed instead of
+			 * failing once free pages drop below v_free_reserved,
+			 * and GFP_ATOMIC may use part of the reserve.  iwlwifi's
+			 * RX allocator spins on GFP_KERNEL failures and starves
+			 * the RX ring (beacon loss, firmware restart) otherwise.
+			 */
+			if ((flags & M_USE_RESERVE) != 0)
+				req |= VM_ALLOC_SYSTEM;
+			else if ((flags & (M_WAITOK | __GFP_NORETRY)) ==
+			    M_WAITOK)
+				req |= VM_ALLOC_WAITOK;
+#endif
 			page = vm_page_alloc_noobj(req);
 			if (page == NULL)
 				return (NULL);
