@@ -149,12 +149,23 @@ linux_alloc_pages(gfp_t flags, unsigned int order)
 			if (page == NULL) {
 				if ((flags & (M_WAITOK | __GFP_NORETRY | __GFP_THISNODE)) ==
 				    M_WAITOK) {
+#ifdef __MidnightBSD__
+					/*
+					 * MNBSD-KPI: the base
+					 * vm_page_reclaim_contig() returns
+					 * bool, not an errno.
+					 */
+					if (!vm_page_reclaim_contig(req,
+					    npages, 0, pmax, PAGE_SIZE, 0))
+						vm_wait(NULL);
+#else
 					int err = vm_page_reclaim_contig(req,
 					    npages, 0, pmax, PAGE_SIZE, 0);
 					if (err == ENOMEM)
 						vm_wait(NULL);
 					else if (err != 0)
 						return (NULL);
+#endif
 					flags &= ~M_WAITOK;
 					goto retry;
 				}
