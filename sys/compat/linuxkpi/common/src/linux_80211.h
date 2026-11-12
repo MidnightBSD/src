@@ -344,7 +344,8 @@ struct lkpi_hw {	/* name it mac80211_sc? */
 	/* MNBSD-KPI: deferred ieee80211_restart_hw(). */
 	struct task			restart_task;
 #define	LKPI_LHW_RESTART_PENDING	0x00000001
-#define	LKPI_LHW_RESTART_DYING		0x00000002
+#define	LKPI_LHW_RESTART_DYING		0x00000002	/* vap delete */
+#define	LKPI_LHW_RESTART_DETACHED	0x00000004	/* never cleared */
 	volatile u_int			restart_state;
 #endif
 
