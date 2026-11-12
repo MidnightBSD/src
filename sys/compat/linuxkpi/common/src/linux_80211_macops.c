@@ -968,6 +968,26 @@ out:
 	return (error);
 }
 
+#ifdef __MidnightBSD__
+/* MNBSD-KPI: used to finish a deferred ieee80211_restart_hw(). */
+void
+lkpi_80211_mo_reconfig_complete(struct ieee80211_hw *hw,
+    enum ieee80211_reconfig_type type)
+{
+	struct lkpi_hw *lhw;
+
+	might_sleep();
+	lockdep_assert_wiphy(hw->wiphy);
+
+	lhw = HW_TO_LHW(hw);
+	if (lhw->ops->reconfig_complete == NULL)
+		return;
+
+	LKPI_80211_TRACE_MO("hw %p type %d", hw, type);
+	lhw->ops->reconfig_complete(hw, type);
+}
+#endif
+
 int
 lkpi_80211_mo_set_wakeup(struct ieee80211_hw *hw, bool enable)
 {

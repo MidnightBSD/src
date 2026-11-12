@@ -340,6 +340,15 @@ struct lkpi_hw {	/* name it mac80211_sc? */
 	bool				rxq_stopped;
 	bool				emulate_chanctx;
 
+#ifdef __MidnightBSD__
+	/* MNBSD-KPI: deferred ieee80211_restart_hw(). */
+	struct task			restart_task;
+#define	LKPI_LHW_RESTART_PENDING	0x00000001
+#define	LKPI_LHW_RESTART_DYING		0x00000002	/* vap delete */
+#define	LKPI_LHW_RESTART_DETACHED	0x00000004	/* never cleared */
+	volatile u_int			restart_state;
+#endif
+
 	/* Must be last! */
 	struct ieee80211_hw		hw __aligned(CACHE_LINE_SIZE);
 };
@@ -473,6 +482,10 @@ int lkpi_80211_mo_set_frag_threshold(struct ieee80211_hw *, uint32_t);
 int lkpi_80211_mo_set_rts_threshold(struct ieee80211_hw *, uint32_t);
 int lkpi_80211_mo_add_interface(struct ieee80211_hw *, struct ieee80211_vif *);
 void lkpi_80211_mo_remove_interface(struct ieee80211_hw *, struct ieee80211_vif *);
+#ifdef __MidnightBSD__
+void lkpi_80211_mo_reconfig_complete(struct ieee80211_hw *,
+    enum ieee80211_reconfig_type);
+#endif
 int lkpi_80211_mo_hw_scan(struct ieee80211_hw *, struct ieee80211_vif *,
     struct ieee80211_scan_request *);
 void lkpi_80211_mo_cancel_hw_scan(struct ieee80211_hw *, struct ieee80211_vif *);
