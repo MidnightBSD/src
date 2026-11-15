@@ -1,5 +1,13 @@
 Updating Information for MidnightBSD users.
 
+20261115:
+	vt(4) gained the vd_bitblt_after_vtbuf_unlock driver flag and
+	vt_config_cons_colors(), from FreeBSD 14, so drm-61-kmod and later
+	can attach their console driver.  struct fb_info grew fb_rgboffs
+	and vt_generate_cons_palette() is no longer exported; out of tree
+	modules using struct fb_info (drm-*-kmod) must be rebuilt after
+	installing the new kernel (__MidnightBSD_version 402006).
+
 20261111:
 	mport(1) updated to 2.8.7.  arm64 and riscv64 packages use the
 	MACHINE_ARCH names aarch64 and riscv64 (ABI MidnightBSD:4.2:aarch64).
