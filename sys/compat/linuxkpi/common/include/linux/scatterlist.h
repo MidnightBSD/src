@@ -648,20 +648,31 @@ sg_pcopy_to_buffer(struct scatterlist *sgl, unsigned int nents,
 	struct sf_buf *sf;
 	char *vaddr;
 	size_t total = 0;
-	size_t len;
+	size_t len, lo, hi;
 
 	if (!PMAP_HAS_DMAP)
 		sched_pin();
 	for_each_sg_page(sgl, &iter, nents, 0) {
 		sg = iter.sg;
 
-		if (offset >= sg->length) {
-			offset -= sg->length;
+		/*
+		 * The iterator walks the entry page by page, so only look at
+		 * the part of the data of the entry that lies in this page.
+		 * An entry may span several pages.
+		 */
+		lo = ulmax((size_t)iter.sg_pgoffset << PAGE_SHIFT, sg->offset);
+		hi = ulmin(((size_t)iter.sg_pgoffset + 1) << PAGE_SHIFT,
+		    (size_t)sg->offset + sg->length);
+		if (lo >= hi)
+			continue;
+		if (offset >= hi - lo) {
+			offset -= hi - lo;
 			continue;
 		}
-		len = ulmin(buflen, sg->length - offset);
+		len = ulmin(buflen, hi - lo - offset);
 		if (len == 0)
 			break;
+		lo -= (size_t)iter.sg_pgoffset << PAGE_SHIFT;
 
 		page = sg_page_iter_page(&iter);
 		if (!PMAP_HAS_DMAP) {
@@ -671,7 +682,7 @@ sg_pcopy_to_buffer(struct scatterlist *sgl, unsigned int nents,
 			vaddr = (char *)sf_buf_kva(sf);
 		} else
 			vaddr = (char *)PHYS_TO_DMAP(page_to_phys(page));
-		memcpy(buf, vaddr + sg->offset + offset, len);
+		memcpy(buf, vaddr + lo + offset, len);
 		if (!PMAP_HAS_DMAP)
 			sf_buf_free(sf);
 
