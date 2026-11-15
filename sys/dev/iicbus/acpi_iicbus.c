@@ -30,8 +30,10 @@
 #include <sys/bus.h>
 #include <sys/endian.h>
 #include <sys/kernel.h>
+#include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/module.h>
+#include <sys/mutex.h>
 #include <sys/rman.h>
 
 #include <machine/resource.h>
@@ -45,6 +47,16 @@
 #include <dev/iicbus/iicbus.h>
 
 #define	ACPI_IICBUS_LOCAL_BUFSIZE	32	/* Fits max SMBUS block size */
+
+/*
+ * x86 has no INTRNG, so the pin of a GpioInt() resource can not be mapped
+ * to an interrupt of the platform interrupt controller there.  The GPIO
+ * controller acts as the bus for the interrupt instead and we forward the
+ * requests of our child to it.
+ */
+#if defined(__amd64__) || defined(__i386__)
+#define	ACPI_IICBUS_GPIO_INTR
+#endif
 
 /*
  * Make a copy of ACPI_RESOURCE_I2C_SERIALBUS type and replace "pointer to ACPI
@@ -73,6 +85,13 @@ struct acpi_iicbus_softc {
 struct acpi_iicbus_ivars {
 	struct iicbus_ivar	super_ivar;
 	ACPI_HANDLE		handle;
+#ifdef ACPI_IICBUS_GPIO_INTR
+	/* GpioInt() interrupt of the device, served by a GPIO controller */
+	ACPI_HANDLE		gpio_handle;
+	device_t		gpio_dev;
+	struct resource		*gpio_res;
+	u_int			gpio_pin;
+#endif
 };
 
 static int install_space_handler = 0;
@@ -394,6 +413,11 @@ acpi_iicbus_parse_resources_cb(ACPI_RESOURCE *res, void *context)
 	device_t dev = context;
 	struct iicbus_ivar *super_devi = device_get_ivars(dev);
 	struct resource_list *rl = &super_devi->rl;
+#ifdef ACPI_IICBUS_GPIO_INTR
+	struct acpi_iicbus_ivars *devi = device_get_ivars(dev);
+	ACPI_RESOURCE_GPIO *gpio;
+	ACPI_HANDLE gpio_handle;
+#endif
 	int irq, gpio_pin;
 
 	switch(res->Type) {
@@ -409,10 +433,27 @@ acpi_iicbus_parse_resources_cb(ACPI_RESOURCE *res, void *context)
 	case ACPI_RESOURCE_TYPE_GPIO:
 		if (res->Data.Gpio.ConnectionType ==
 		    ACPI_RESOURCE_GPIO_TYPE_INT) {
-			/* Not supported by FreeBSD yet */
+			if (res->Data.Gpio.PinTableLength == 0)
+				break;
 			gpio_pin = res->Data.Gpio.PinTable[0];
 			if (bootverbose)
 				printf("  GPIO IRQ pin:      %d\n", gpio_pin);
+#ifdef ACPI_IICBUS_GPIO_INTR
+			/*
+			 * Remember the pin.  Whether its controller is able
+			 * to deliver the interrupt is only known once the
+			 * child asks for it.
+			 */
+			gpio = &res->Data.Gpio;
+			if (gpio->ResourceSource.StringLength != 0 &&
+			    gpio->ResourceSource.StringPtr != NULL &&
+			    gpio->Polarity != ACPI_ACTIVE_BOTH &&
+			    ACPI_SUCCESS(AcpiGetHandle(ACPI_ROOT_OBJECT,
+			    gpio->ResourceSource.StringPtr, &gpio_handle))) {
+				devi->gpio_handle = gpio_handle;
+				devi->gpio_pin = gpio_pin;
+			}
+#endif
 			return (AE_CTRL_TERMINATE);
 		}
 		break;
@@ -759,6 +800,132 @@ acpi_iicbus_child_pnpinfo_str(device_t bus, device_t child, char *buf,
 	return (error);
 }
 
+#ifdef ACPI_IICBUS_GPIO_INTR
+/*
+ * Interrupt of a child which is described by a GpioInt() resource.  It is
+ * allocated from and set up by the GPIO controller.  See the description of
+ * the protocol in sys/dev/gpio/intel/intelgpio.c.
+ */
+static struct resource *
+acpi_iicbus_alloc_gpio_intr(device_t child, struct acpi_iicbus_ivars *devi,
+    int *rid, u_int flags)
+{
+	device_t gpio_dev;
+	struct resource *res;
+
+	if (devi->gpio_res != NULL)
+		return (NULL);
+
+	/*
+	 * All GPIO controller drivers are named "gpio".  The check keeps us
+	 * from talking to a system resource holder which claimed the node
+	 * of a controller we have no driver for.
+	 */
+	gpio_dev = acpi_get_device(devi->gpio_handle);
+	if (gpio_dev == NULL)
+		return (NULL);
+	/*
+	 * The controller is a child of acpi0 and may well come after our
+	 * controller in its list of children.  Do not wait for its turn.
+	 * Attaching a device needs Giant, which is held while our child
+	 * attaches.
+	 */
+	if (!device_is_attached(gpio_dev) && mtx_owned(&Giant))
+		(void)device_probe_and_attach(gpio_dev);
+	if (!device_is_attached(gpio_dev) ||
+	    device_get_devclass(gpio_dev) != devclass_find("gpio"))
+		return (NULL);
+
+	/* A controller without pin interrupt support hands out nothing. */
+	res = BUS_ALLOC_RESOURCE(gpio_dev, child, SYS_RES_IRQ, rid,
+	    devi->gpio_pin, devi->gpio_pin, 1, flags);
+	if (res == NULL)
+		return (NULL);
+	devi->gpio_dev = gpio_dev;
+	devi->gpio_res = res;
+	return (res);
+}
+
+static struct resource *
+acpi_iicbus_alloc_resource(device_t bus, device_t child, int type, int *rid,
+    rman_res_t start, rman_res_t end, rman_res_t count, u_int flags)
+{
+	struct acpi_iicbus_ivars *devi;
+
+	if (device_get_parent(child) == bus && type == SYS_RES_IRQ &&
+	    *rid == 0) {
+		devi = device_get_ivars(child);
+		if (devi->gpio_handle != NULL && resource_list_find(
+		    &devi->super_ivar.rl, SYS_RES_IRQ, 0) == NULL)
+			return (acpi_iicbus_alloc_gpio_intr(child, devi, rid,
+			    flags));
+	}
+
+	return (bus_generic_rl_alloc_resource(bus, child, type, rid, start,
+	    end, count, flags));
+}
+
+static bool
+acpi_iicbus_is_gpio_intr(device_t bus, device_t child, struct resource *res)
+{
+	struct acpi_iicbus_ivars *devi;
+
+	if (device_get_parent(child) != bus)
+		return (false);
+	devi = device_get_ivars(child);
+	return (devi->gpio_res != NULL && devi->gpio_res == res);
+}
+
+static int
+acpi_iicbus_release_resource(device_t bus, device_t child, int type, int rid,
+    struct resource *res)
+{
+	struct acpi_iicbus_ivars *devi;
+	int error;
+
+	if (!acpi_iicbus_is_gpio_intr(bus, child, res))
+		return (bus_generic_rl_release_resource(bus, child, type, rid,
+		    res));
+
+	devi = device_get_ivars(child);
+	error = BUS_RELEASE_RESOURCE(devi->gpio_dev, child, type, rid, res);
+	if (error == 0) {
+		devi->gpio_res = NULL;
+		devi->gpio_dev = NULL;
+	}
+	return (error);
+}
+
+static int
+acpi_iicbus_setup_intr(device_t bus, device_t child, struct resource *res,
+    int flags, driver_filter_t *filter, driver_intr_t *handler, void *arg,
+    void **cookiep)
+{
+	struct acpi_iicbus_ivars *devi;
+
+	if (!acpi_iicbus_is_gpio_intr(bus, child, res))
+		return (bus_generic_setup_intr(bus, child, res, flags, filter,
+		    handler, arg, cookiep));
+
+	devi = device_get_ivars(child);
+	return (BUS_SETUP_INTR(devi->gpio_dev, child, res, flags, filter,
+	    handler, arg, cookiep));
+}
+
+static int
+acpi_iicbus_teardown_intr(device_t bus, device_t child, struct resource *res,
+    void *cookie)
+{
+	struct acpi_iicbus_ivars *devi;
+
+	if (!acpi_iicbus_is_gpio_intr(bus, child, res))
+		return (bus_generic_teardown_intr(bus, child, res, cookie));
+
+	devi = device_get_ivars(child);
+	return (BUS_TEARDOWN_INTR(devi->gpio_dev, child, res, cookie));
+}
+#endif /* ACPI_IICBUS_GPIO_INTR */
+
 static device_method_t acpi_iicbus_methods[] = {
 	/* Device interface */
 	DEVMETHOD(device_probe,		acpi_iicbus_probe),
@@ -776,6 +943,12 @@ static device_method_t acpi_iicbus_methods[] = {
 	DEVMETHOD(bus_write_ivar,	acpi_iicbus_write_ivar),
 	DEVMETHOD(bus_child_location_str,acpi_iicbus_child_location_str),
 	DEVMETHOD(bus_child_pnpinfo_str,acpi_iicbus_child_pnpinfo_str),
+#ifdef ACPI_IICBUS_GPIO_INTR
+	DEVMETHOD(bus_alloc_resource,	acpi_iicbus_alloc_resource),
+	DEVMETHOD(bus_release_resource,	acpi_iicbus_release_resource),
+	DEVMETHOD(bus_setup_intr,	acpi_iicbus_setup_intr),
+	DEVMETHOD(bus_teardown_intr,	acpi_iicbus_teardown_intr),
+#endif
 
 	DEVMETHOD_END,
 };
