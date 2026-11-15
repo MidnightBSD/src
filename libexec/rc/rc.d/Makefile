@@ -261,6 +261,7 @@ JAILPACKAGE=	jail
 
 .if ${MK_LEGACY_CONSOLE} != "no"
 CONFS+=		moused
+CONFS+=		msconvd
 CONFS+=		syscons
 .endif
 
