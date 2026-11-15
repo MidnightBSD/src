@@ -30,8 +30,10 @@
 #include <sys/bus.h>
 #include <sys/endian.h>
 #include <sys/kernel.h>
+#include <sys/lock.h>
 #include <sys/malloc.h>
 #include <sys/module.h>
+#include <sys/mutex.h>
 #include <sys/rman.h>
 
 #include <machine/resource.h>
@@ -820,7 +822,17 @@ acpi_iicbus_alloc_gpio_intr(device_t child, struct acpi_iicbus_ivars *devi,
 	 * of a controller we have no driver for.
 	 */
 	gpio_dev = acpi_get_device(devi->gpio_handle);
-	if (gpio_dev == NULL || !device_is_attached(gpio_dev) ||
+	if (gpio_dev == NULL)
+		return (NULL);
+	/*
+	 * The controller is a child of acpi0 and may well come after our
+	 * controller in its list of children.  Do not wait for its turn.
+	 * Attaching a device needs Giant, which is held while our child
+	 * attaches.
+	 */
+	if (!device_is_attached(gpio_dev) && mtx_owned(&Giant))
+		(void)device_probe_and_attach(gpio_dev);
+	if (!device_is_attached(gpio_dev) ||
 	    device_get_devclass(gpio_dev) != devclass_find("gpio"))
 		return (NULL);
 

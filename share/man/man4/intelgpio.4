@@ -89,14 +89,16 @@ Firmware may route such a pad to an IOAPIC pin too, where it does nothing
 but fire the handlers of the devices sharing that IOAPIC pin.
 The driver turns this routing off for as long as the pin interrupt is in use.
 .Pp
-The device asks for its interrupt when it attaches, so
+The device asks for its interrupt when it attaches, and the controller is
+attached on its behalf at that point if need be.
+The
 .Nm
-has to be attached by then.
-This is the case if the driver is part of the kernel or loaded from
-.Xr loader.conf 5 ,
-but not if it is loaded with
+driver has to be available by then, so it has to be part of the kernel or
+loaded from
+.Xr loader.conf 5 .
+A device which attached before the driver was loaded with
 .Xr kldload 8
-after the system has booted.
+keeps polling.
 .Sh HARDWARE
 The
 .Nm

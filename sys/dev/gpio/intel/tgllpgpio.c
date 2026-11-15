@@ -106,13 +106,8 @@ static device_method_t tgllp_methods[] = {
 DEFINE_CLASS_1(gpio, tgllp_driver, tgllp_methods,
     sizeof(struct intelgpio_softc), intelgpio_driver);
 
-/*
- * Attach ahead of the devices which have their interrupt wired to a pin, as
- * they ask for it at attach time and do not retry later.
- */
 static devclass_t tgllp_devclass;
-EARLY_DRIVER_MODULE(tgllpgpio, acpi, tgllp_driver, tgllp_devclass, NULL, NULL,
-    BUS_PASS_SUPPORTDEV + BUS_PASS_ORDER_MIDDLE);
+DRIVER_MODULE(tgllpgpio, acpi, tgllp_driver, tgllp_devclass, NULL, NULL);
 MODULE_DEPEND(tgllpgpio, acpi, 1, 1, 1);
 MODULE_DEPEND(tgllpgpio, gpiobus, 1, 1, 1);
 MODULE_VERSION(tgllpgpio, 1);
