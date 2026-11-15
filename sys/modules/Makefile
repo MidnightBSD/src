@@ -176,6 +176,7 @@ SUBDIR=	\
 	${_igc} \
 	${_iir} \
 	imgact_binmisc \
+	${_intelgpio} \
 	${_intelspi} \
 	${_io} \
 	${_ioat} \
@@ -778,6 +779,7 @@ _hyperv=	hyperv
 _ichwd=		ichwd
 _ida=		ida
 _iir=		iir
+_intelgpio=	intelgpio
 _intelspi=	intelspi
 _ips=		ips
 _isci=		isci

@@ -238,6 +238,7 @@ MAN=	aac.4 \
 	${_imcsmb.4} \
 	inet.4 \
 	inet6.4 \
+	${_intelgpio.4} \
 	intpm.4 \
 	intro.4 \
 	${_io.4} \
@@ -864,6 +865,7 @@ _if_urtw.4=	if_urtw.4
 _if_wpi.4=	if_wpi.4
 _igc.4=		igc.4
 _imcsmb.4=	imcsmb.4
+_intelgpio.4=	intelgpio.4
 _io.4=		io.4
 _itwd.4=	itwd.4
 _kvmclock.4=	kvmclock.4
