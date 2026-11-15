@@ -322,7 +322,6 @@ intelgpio_pin_toggle(device_t dev, uint32_t pin)
  * as the start of the resource:
  *
  *	BUS_ALLOC_RESOURCE(gpio, child, SYS_RES_IRQ, &rid, pin, pin, 1, flags)
- *	BUS_CONFIG_INTR(gpio, pin, trigger, polarity)
  *	BUS_SETUP_INTR(gpio, child, res, flags, filter, handler, arg, &cookie)
  *	BUS_TEARDOWN_INTR(gpio, child, res, cookie)
  *	BUS_RELEASE_RESOURCE(gpio, child, SYS_RES_IRQ, rid, res)
@@ -330,7 +329,8 @@ intelgpio_pin_toggle(device_t dev, uint32_t pin)
  * All pins share the interrupt of the controller.  Its ithread calls the
  * handlers of the pending pins one by one, so they run in the same context
  * an interrupt handler of their own would have provided.  A filter is called
- * from the ithread too.
+ * from the ithread too.  Trigger and polarity of a pin are taken from the
+ * GpioInt() resource of the child.
  */
 
 static int
@@ -499,34 +499,71 @@ intelgpio_release_resource(device_t dev, device_t child, int type, int rid,
 	return (rman_release_resource(r));
 }
 
-static int
-intelgpio_config_intr(device_t dev, int irq, enum intr_trigger trig,
-    enum intr_polarity pol)
+struct intelgpio_gpioint {
+	ACPI_HANDLE handle;
+	u_int pin;
+	bool found;
+	UINT8 triggering;
+	UINT8 polarity;
+};
+
+static ACPI_STATUS
+intelgpio_gpioint_cb(ACPI_RESOURCE *res, void *context)
 {
-	struct intelgpio_softc *sc;
-	struct intelgpio_pin_intr *pi;
-	int bank, bit, com, error;
+	struct intelgpio_gpioint *gi = context;
+	ACPI_RESOURCE_GPIO *gpio;
+	ACPI_HANDLE handle;
 
-	sc = device_get_softc(dev);
-	if (!sc->sc_pin_rman_valid)
+	if (res->Type != ACPI_RESOURCE_TYPE_GPIO)
+		return (AE_OK);
+	gpio = &res->Data.Gpio;
+	if (gpio->ConnectionType != ACPI_RESOURCE_GPIO_TYPE_INT ||
+	    gpio->PinTableLength == 0 || gpio->PinTable[0] != gi->pin ||
+	    gpio->ResourceSource.StringLength == 0 ||
+	    gpio->ResourceSource.StringPtr == NULL ||
+	    ACPI_FAILURE(AcpiGetHandle(ACPI_ROOT_OBJECT,
+	    gpio->ResourceSource.StringPtr, &handle)) || handle != gi->handle)
+		return (AE_OK);
+
+	gi->found = true;
+	gi->triggering = gpio->Triggering;
+	gi->polarity = gpio->Polarity;
+	return (AE_CTRL_TERMINATE);
+}
+
+/*
+ * Find out how the device wants its pin interrupt to trigger.  This is
+ * taken from the GpioInt() resource of the device which refers to the pin.
+ * bus_config_intr() is of no use here: acpi(4) calls that method of ours to
+ * configure the interrupt of the controller itself.
+ */
+static int
+intelgpio_gpioint_config(device_t dev, device_t child, int pin,
+    enum intr_trigger *trig, enum intr_polarity *pol)
+{
+	struct intelgpio_gpioint gi;
+	ACPI_HANDLE handle;
+
+	*trig = INTR_TRIGGER_CONFORM;
+	*pol = INTR_POLARITY_CONFORM;
+
+	handle = acpi_get_handle(child);
+	if (handle == NULL)
+		return (0);
+	memset(&gi, 0, sizeof(gi));
+	gi.handle = acpi_get_handle(dev);
+	gi.pin = pin;
+	(void)AcpiWalkResources(handle, "_CRS", intelgpio_gpioint_cb, &gi);
+	if (!gi.found)
+		return (0);
+	if (gi.polarity == ACPI_ACTIVE_BOTH)
 		return (ENXIO);
-	if (irq < 0 || intelgpio_pin_lookup(sc, irq, &com, &bank, &bit) != 0)
-		return (EINVAL);
-	if ((trig != INTR_TRIGGER_EDGE && trig != INTR_TRIGGER_LEVEL) ||
-	    (pol != INTR_POLARITY_HIGH && pol != INTR_POLARITY_LOW))
-		return (EINVAL);
 
-	error = 0;
-	pi = &sc->sc_pin_intr[irq];
-	mtx_lock(&sc->sc_intr_mtx);
-	if (pi->established)
-		error = EBUSY;
-	else {
-		pi->trig = trig;
-		pi->pol = pol;
-	}
-	mtx_unlock(&sc->sc_intr_mtx);
-	return (error);
+	*trig = gi.triggering == ACPI_EDGE_SENSITIVE ?
+	    INTR_TRIGGER_EDGE : INTR_TRIGGER_LEVEL;
+	*pol = gi.polarity == ACPI_ACTIVE_LOW ?
+	    INTR_POLARITY_LOW : INTR_POLARITY_HIGH;
+	return (0);
 }
 
 /*
@@ -573,6 +610,8 @@ intelgpio_setup_intr(device_t dev, device_t child, struct resource *r,
 	struct intelgpio_pin_intr *pi;
 	struct resource *res;
 	bus_size_t pad_off;
+	enum intr_trigger trig;
+	enum intr_polarity pol;
 	uint32_t val;
 	int bank, bit, com, error, pin;
 
@@ -588,8 +627,10 @@ intelgpio_setup_intr(device_t dev, device_t child, struct resource *r,
 	    intelgpio_gpio_to_pad(sc, pin, &res, &pad_off, NULL) != 0 ||
 	    res == NULL)
 		return (EINVAL);
+	error = intelgpio_gpioint_config(dev, child, pin, &trig, &pol);
+	if (error != 0)
+		return (error);
 
-	error = 0;
 	pi = &sc->sc_pin_intr[pin];
 	mtx_lock(&sc->sc_intr_mtx);
 	if (pi->established) {
@@ -612,8 +653,10 @@ intelgpio_setup_intr(device_t dev, device_t child, struct resource *r,
 		error = ENXIO;
 	} else {
 		pi->saved_padcfg0 = val;
+		pi->trig = trig;
+		pi->pol = pol;
 		if (pi->trig == INTR_TRIGGER_CONFORM) {
-			/* Never configured, stick to the firmware setup. */
+			/* Not described, stick to the firmware setup. */
 			pi->trig = (val & INTELGPIO_PADCFG0_RXEVCFG_MASK) ==
 			    INTELGPIO_PADCFG0_RXEVCFG_LEVEL ?
 			    INTR_TRIGGER_LEVEL : INTR_TRIGGER_EDGE;
@@ -926,7 +969,6 @@ static device_method_t intelgpio_methods[] = {
 
 	DEVMETHOD(bus_alloc_resource, intelgpio_alloc_resource),
 	DEVMETHOD(bus_release_resource, intelgpio_release_resource),
-	DEVMETHOD(bus_config_intr, intelgpio_config_intr),
 	DEVMETHOD(bus_setup_intr, intelgpio_setup_intr),
 	DEVMETHOD(bus_teardown_intr, intelgpio_teardown_intr),
 

@@ -89,8 +89,6 @@ struct acpi_iicbus_ivars {
 	device_t		gpio_dev;
 	struct resource		*gpio_res;
 	u_int			gpio_pin;
-	enum intr_trigger	gpio_trig;
-	enum intr_polarity	gpio_pol;
 #endif
 };
 
@@ -452,12 +450,6 @@ acpi_iicbus_parse_resources_cb(ACPI_RESOURCE *res, void *context)
 			    gpio->ResourceSource.StringPtr, &gpio_handle))) {
 				devi->gpio_handle = gpio_handle;
 				devi->gpio_pin = gpio_pin;
-				devi->gpio_trig =
-				    gpio->Triggering == ACPI_EDGE_SENSITIVE ?
-				    INTR_TRIGGER_EDGE : INTR_TRIGGER_LEVEL;
-				devi->gpio_pol =
-				    gpio->Polarity == ACPI_ACTIVE_LOW ?
-				    INTR_POLARITY_LOW : INTR_POLARITY_HIGH;
 			}
 #endif
 			return (AE_CTRL_TERMINATE);
@@ -837,12 +829,6 @@ acpi_iicbus_alloc_gpio_intr(device_t child, struct acpi_iicbus_ivars *devi,
 	    devi->gpio_pin, devi->gpio_pin, 1, flags);
 	if (res == NULL)
 		return (NULL);
-	if (BUS_CONFIG_INTR(gpio_dev, devi->gpio_pin, devi->gpio_trig,
-	    devi->gpio_pol) != 0) {
-		BUS_RELEASE_RESOURCE(gpio_dev, child, SYS_RES_IRQ, *rid, res);
-		return (NULL);
-	}
-
 	devi->gpio_dev = gpio_dev;
 	devi->gpio_res = res;
 	return (res);
