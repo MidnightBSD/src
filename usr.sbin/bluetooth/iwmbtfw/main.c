@@ -287,6 +287,7 @@ iwmbt_init_firmware(libusb_device_handle *hdl, const char *firmware_path,
 
 		/* Check if CSS header for ECDSA follows the RSA header */
 		if (fw.buf[ECDSA_OFFSET] != 0x06) {
+			iwmbt_err("Invalid ECDSA CSS header");
 			ret = -1;
 			goto exit;
 		}
@@ -297,6 +298,10 @@ iwmbt_init_firmware(libusb_device_handle *hdl, const char *firmware_path,
 			ret = -1;
 			goto exit;
 		}
+	} else {
+		iwmbt_err("Unsupported hardware variant (%d)", hw_variant);
+		ret = -1;
+		goto exit;
 	}
 
 	/* Load in the CSS header */

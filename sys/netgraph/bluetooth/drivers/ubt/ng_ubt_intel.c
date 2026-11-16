@@ -158,6 +158,12 @@ ubt_intel_get_img_type(struct usb_device *udev)
 	if (error != USB_ERR_NORMAL_COMPLETION)
 		goto exit;
 
+	/* Reject lengths that would underflow or run past the buffer */
+	if (evt->header.length < UBT_HCI_EVENT_COMPL_HEAD_SIZE + 1 ||
+	    evt->header.length >
+	    UBT_INTEL_MAX_EVT_SIZE - sizeof(struct ubt_hci_evhdr))
+		goto exit;
+
 	datalen = evt->header.length - UBT_HCI_EVENT_COMPL_HEAD_SIZE;
 	data = evt->data;
 	status = *data++;

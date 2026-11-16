@@ -92,6 +92,12 @@ iwmbt_fw_read(struct iwmbt_firmware *fw, const char *fwname)
 	memset(fw, 0, sizeof(*fw));
 
 	fw->fwname = strdup(fwname);
+	if (fw->fwname == NULL) {
+		warn("%s: strdup", __func__);
+		free(buf);
+		close(fd);
+		return (0);
+	}
 	fw->len = sb.st_size;
 	fw->buf = buf;
 

@@ -30,7 +30,6 @@
 #include <sys/endian.h>
 #include <sys/stat.h>
 
-#include <assert.h>
 #include <err.h>
 #include <errno.h>
 #include <stddef.h>
@@ -135,6 +134,9 @@ iwmbt_hci_command(struct libusb_device_handle *hdl, struct iwmbt_hci_cmd *cmd,
 			return (ret);
 		}
 
+		if (*transferred < (int)sizeof(struct iwmbt_hci_evhdr))
+			goto next;
+
 		switch (((struct iwmbt_hci_event *)event)->header.event) {
 		case NG_HCI_EVENT_COMMAND_COMPL:
 			if (*transferred <
@@ -151,6 +153,8 @@ iwmbt_hci_command(struct libusb_device_handle *hdl, struct iwmbt_hci_cmd *cmd,
 		}
 		iwmbt_debug("Stray HCI event: %x",
 		    ((struct iwmbt_hci_event *)event)->header.event);
+next:
+		clock_gettime(CLOCK_MONOTONIC, &now);
 	} while (timespeccmp(&to, &now, >));
 
 	iwmbt_err("libusb_interrupt_transfer() failed: err=%s",
@@ -366,8 +370,14 @@ iwmbt_load_fwfile(struct libusb_device_handle *hdl,
 	 */
 	while (fw->len - sent - ready >= (int) sizeof(struct iwmbt_hci_cmd)) {
 		cmd = (struct iwmbt_hci_cmd *)(fw->buf + sent + ready);
+		if ((int)IWMBT_HCI_CMD_SIZE(cmd) > fw->len - sent - ready) {
+			iwmbt_err("Invalid firmware, truncated HCI command "
+			    "at offset %d", sent + ready);
+			return (-1);
+		}
 		/* Parse firmware for Intel Reset HCI command parameter */
-		if (cmd->opcode == htole16(0xfc0e)) {
+		if (cmd->opcode == htole16(0xfc0e) &&
+		    cmd->length >= sizeof(uint32_t)) {
 			*boot_param = le32dec(cmd->data);
 			iwmbt_debug("boot_param=0x%08x", *boot_param);
 		}
@@ -533,7 +543,16 @@ iwmbt_get_version_tlv(struct libusb_device_handle *hdl,
 	}
 
 	event = (struct iwmbt_hci_event_cmd_compl *)buf;
-	memcpy(version, event->data, sizeof(struct iwmbt_version));
+	memset(version, 0, sizeof(*version));
+
+	/* Reject lengths that would underflow or run past received data */
+	if (event->header.length < IWMBT_HCI_EVENT_COMPL_HEAD_SIZE + 1 ||
+	    event->header.length + sizeof(struct iwmbt_hci_evhdr) >
+	    (size_t)transferred) {
+		iwmbt_debug("Invalid version event length %d",
+		    event->header.length);
+		return (-1);
+	}
 
 	datalen = event->header.length - IWMBT_HCI_EVENT_COMPL_HEAD_SIZE;
 	data = event->data;
@@ -552,75 +571,93 @@ iwmbt_get_version_tlv(struct libusb_device_handle *hdl,
 
 		switch (type) {
 		case IWMBT_TLV_CNVI_TOP:
-			assert(len == 4);
+			if (len != 4)
+				break;
 			version->cnvi_top = le32dec(data);
 			break;
 		case IWMBT_TLV_CNVR_TOP:
-			assert(len == 4);
+			if (len != 4)
+				break;
 			version->cnvr_top = le32dec(data);
 			break;
 		case IWMBT_TLV_CNVI_BT:
-			assert(len == 4);
+			if (len != 4)
+				break;
 			version->cnvi_bt = le32dec(data);
 			break;
 		case IWMBT_TLV_CNVR_BT:
-			assert(len == 4);
+			if (len != 4)
+				break;
 			version->cnvr_bt = le32dec(data);
 			break;
 		case IWMBT_TLV_DEV_REV_ID:
-			assert(len == 2);
+			if (len != 2)
+				break;
 			version->dev_rev_id = le16dec(data);
 			break;
 		case IWMBT_TLV_IMAGE_TYPE:
-			assert(len == 1);
+			if (len != 1)
+				break;
 			version->img_type = *data;
 			break;
 		case IWMBT_TLV_TIME_STAMP:
-			assert(len == 2);
+			if (len != 2)
+				break;
 			version->min_fw_build_cw = data[0];
 			version->min_fw_build_yy = data[1];
 			version->timestamp = le16dec(data);
 			break;
 		case IWMBT_TLV_BUILD_TYPE:
-			assert(len == 1);
+			if (len != 1)
+				break;
 			version->build_type = *data;
 			break;
 		case IWMBT_TLV_BUILD_NUM:
-			assert(len == 4);
+			if (len != 4)
+				break;
 			version->min_fw_build_nn = *data;
 			version->build_num = le32dec(data);
 			break;
 		case IWMBT_TLV_SECURE_BOOT:
-			assert(len == 1);
+			if (len != 1)
+				break;
 			version->secure_boot = *data;
 			break;
 		case IWMBT_TLV_OTP_LOCK:
-			assert(len == 1);
+			if (len != 1)
+				break;
 			version->otp_lock = *data;
 			break;
 		case IWMBT_TLV_API_LOCK:
-			assert(len == 1);
+			if (len != 1)
+				break;
 			version->api_lock = *data;
 			break;
 		case IWMBT_TLV_DEBUG_LOCK:
-			assert(len == 1);
+			if (len != 1)
+				break;
 			version->debug_lock = *data;
 			break;
 		case IWMBT_TLV_MIN_FW:
-			assert(len == 3);
+			if (len != 3)
+				break;
 			version->min_fw_build_nn = data[0];
 			version->min_fw_build_cw = data[1];
 			version->min_fw_build_yy = data[2];
 			break;
 		case IWMBT_TLV_LIMITED_CCE:
-			assert(len == 1);
+			if (len != 1)
+				break;
 			version->limited_cce = *data;
 			break;
 		case IWMBT_TLV_SBE_TYPE:
-			assert(len == 1);
+			if (len != 1)
+				break;
 			version->sbe_type = *data;
 			break;
 		case IWMBT_TLV_OTP_BDADDR:
+			if (len != sizeof(bdaddr_t))
+				break;
 			memcpy(&version->otp_bd_addr, data, sizeof(bdaddr_t));
 			break;
 		default:
@@ -712,7 +749,7 @@ int
 iwmbt_load_ddc(struct libusb_device_handle *hdl,
     const struct iwmbt_firmware *ddc)
 {
-	int size, sent = 0;
+	int plen, size, sent = 0;
 	int ret, transferred;
 	uint8_t buf[IWMBT_HCI_MAX_CMD_SIZE];
 	uint8_t evt[IWMBT_HCI_MAX_CMD_SIZE];
@@ -724,10 +761,18 @@ iwmbt_load_ddc(struct libusb_device_handle *hdl,
 
 	while (size > 0) {
 
+		/* A DDC record is a length byte followed by that many bytes */
+		plen = ddc->buf[sent] + 1;
+		if (plen > size || plen > (int)(sizeof(buf) -
+		    offsetof(struct iwmbt_hci_cmd, data))) {
+			iwmbt_err("Invalid DDC record at offset %d", sent);
+			return (-1);
+		}
+
 		memset(buf, 0, sizeof(buf));
 		cmd->opcode = htole16(0xfc8b);
-		cmd->length = ddc->buf[sent] + 1;
-		memcpy(cmd->data, ddc->buf + sent, XMIN(ddc->buf[sent], size));
+		cmd->length = plen;
+		memcpy(cmd->data, ddc->buf + sent, plen - 1);
 
 		iwmbt_debug("transferring %d bytes, offset %d",
 		    cmd->length,
