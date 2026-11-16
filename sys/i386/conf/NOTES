@@ -832,6 +832,13 @@ device		coretemp
 device		amdtemp
 
 #
+# Power limits:
+#
+# intel_rapl: package power limits and power measurement through Intel RAPL
+#
+device		intel_rapl
+
+#
 # CPU control pseudo-device. Provides access to MSRs, CPUID info and
 # microcode update feature.
 #

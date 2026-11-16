@@ -590,6 +590,13 @@ device		mei
 device		coretemp
 device		amdtemp
 
+#
+# Power limits:
+#
+# intel_rapl: package power limits and power measurement through Intel RAPL
+#
+device		intel_rapl
+
 # hfi: Intel Hardware Feedback Interface, feeds per-core performance and
 # efficiency scores to the cpucap(9) layer.  It is only built into
 # SCHED_MIC kernels; LINT uses SCHED_4BSD, so it is listed but not built.

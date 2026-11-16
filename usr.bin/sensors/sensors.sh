@@ -39,6 +39,9 @@ __usage() {
   echo "    - amdtemp.ko"
   echo "    - coretemp.ko"
   echo
+  echo "  load this module to get CPU package power data (Intel):"
+  echo "    - intel_rapl.ko"
+  echo
   echo "  install 'smartmontools' package for disks temperatures:"
   echo "    # mport install smartmontools"
   echo
@@ -191,6 +194,34 @@ echo "${SYSCTL}"                            \
     done
 unset TEMP_MAX_CPU
 unset TEMP_MAX_ACPI
+
+
+
+# HEADER: CPU/POWER (ONLY WITH AN ATTACHED intel_rapl(4) DEVICE)
+if echo "${SYSCTL}" | grep -q -E '^dev\.intel_rapl\.[0-9]+\.power_mw:'
+then
+  echo
+  printf "%38s\n" 'CPU/POWER '
+  printf "%38s\n" '------------------------------------ '
+
+  # DISPLAY POWER AND LIMITS IN WATTS
+  echo "${SYSCTL}"                                                        \
+    | grep -E '^dev\.intel_rapl\.[0-9]+\.(power|pl1|pl2|tdp)_mw:|\.locked:' \
+    | grep '^dev\.intel_rapl\.'                                            \
+    | sort -n -t . -k 3                                                   \
+    | while read MIB VALUE
+      do
+        case ${MIB} in
+          (*_mw:)
+            printf "%38s %s\n" ${MIB} \
+              $( echo ${VALUE} | awk '{printf("%.3fW", $1 / 1000)}' )
+            ;;
+          (*)
+            printf "%38s %s\n" ${MIB} ${VALUE}
+            ;;
+        esac
+      done
+fi
 
 
 

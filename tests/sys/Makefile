@@ -15,6 +15,7 @@ TESTS_SUBDIRS+=		fifo
 TESTS_SUBDIRS+=		file
 TESTS_SUBDIRS+=		fs
 TESTS_SUBDIRS+=		geom
+TESTS_SUBDIRS+=		${_intel_rapl}
 TESTS_SUBDIRS+=		kern
 TESTS_SUBDIRS+=		kqueue
 TESTS_SUBDIRS+=		mac
@@ -41,6 +42,10 @@ _audit=	audit
 
 .if ${MK_CDDL} != "no"
 _cddl=	cddl
+.endif
+
+.if ${MACHINE_CPUARCH} == "amd64" || ${MACHINE_CPUARCH} == "i386"
+_intel_rapl=	intel_rapl
 .endif
 
 .if ${MK_NETGRAPH} != "no"
