@@ -21,6 +21,7 @@ SUBDIR+=	bthidcontrol
 SUBDIR+=	bthidd
 SUBDIR+=	iwmbtfw
 SUBDIR+=	mtkbtfw
+SUBDIR+=	rtlbtfw
 .endif
 
 .include <bsd.subdir.mk>
