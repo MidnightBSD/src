@@ -88,6 +88,9 @@ rtlbt_hci_command(struct libusb_device_handle *hdl, struct rtlbt_hci_cmd *cmd,
 			return (ret);
 		}
 
+		if (*transferred < (int)sizeof(struct rtlbt_hci_evhdr))
+			goto next;
+
 		switch (((struct rtlbt_hci_event *)event)->header.event) {
 		case NG_HCI_EVENT_COMMAND_COMPL:
 			if (*transferred <
@@ -102,6 +105,8 @@ rtlbt_hci_command(struct libusb_device_handle *hdl, struct rtlbt_hci_cmd *cmd,
 		}
 		rtlbt_debug("Stray HCI event: %x",
 		    ((struct rtlbt_hci_event *)event)->header.event);
+next:
+		clock_gettime(CLOCK_MONOTONIC, &now);
 	} while (timespeccmp(&to, &now, >));
 
 	rtlbt_err("libusb_interrupt_transfer() failed: err=%s",

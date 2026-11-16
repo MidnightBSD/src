@@ -213,6 +213,12 @@ rtlbt_fw_read(struct rtlbt_firmware *fw, const char *fwname)
 	memset(fw, 0, sizeof(*fw));
 
 	fw->fwname = strdup(fwname);
+	if (fw->fwname == NULL) {
+		warn("%s: strdup", __func__);
+		free(buf);
+		close(fd);
+		return (0);
+	}
 	fw->len = sb.st_size;
 	fw->buf = buf;
 
@@ -261,7 +267,7 @@ rtlbt_get_fw_type(struct rtlbt_firmware *fw, uint16_t *fw_lmp_subversion)
 {
 	enum rtlbt_fw_type fw_type;
 	size_t fw_header_len;
-	uint8_t *ptr;
+	uint8_t *ptr, *min;
 	uint8_t opcode, oplen, project_id;
 
 	if (fw->len < 8) {
@@ -290,9 +296,15 @@ rtlbt_get_fw_type(struct rtlbt_firmware *fw, uint16_t *fw_lmp_subversion)
 		return (RTLBT_FW_TYPE_UNKNOWN);
 	}
 
-	do {
+	/* Walk the extension section backwards, staying past the header */
+	min = fw->buf + fw_header_len;
+	while (ptr - min >= 2) {
 		opcode = *--ptr;
 		oplen = *--ptr;
+		if (ptr - min < oplen) {
+			rtlbt_err("invalid instruction length");
+			return (RTLBT_FW_TYPE_UNKNOWN);
+		}
 		ptr -= oplen;
 
 		rtlbt_debug("code=%x len=%x", opcode, oplen);
@@ -312,7 +324,9 @@ rtlbt_get_fw_type(struct rtlbt_firmware *fw, uint16_t *fw_lmp_subversion)
 			*fw_lmp_subversion = project_ids[project_id];
 			return (fw_type);
 		}
-	} while (opcode != 0xff && ptr > fw->buf + fw_header_len);
+		if (opcode == 0xff)
+			break;
+	}
 
 	rtlbt_err("can not find project id instruction");
 	return (RTLBT_FW_TYPE_UNKNOWN);
@@ -357,7 +371,9 @@ rtlbt_parse_fwfile_v1(struct rtlbt_firmware *fw, uint8_t rom_version)
 
 	rtlbt_debug(
 	    "index=%d length=%x offset=%x", i, patch_length, patch_offset);
-	if (fw->len < patch_offset + patch_length) {
+	/* The patch must hold the 4-byte version and fit in the file */
+	if (patch_length < 4 || patch_offset > fw->len ||
+	    patch_length > fw->len - patch_offset) {
 		errno = EINVAL;
 		return (-1);
 	}
@@ -477,6 +493,18 @@ rtlbt_parse_section(struct rtlbt_patch_list *patch_list, uint32_t opcode,
 	return (sec_len);
 }
 
+static void
+rtlbt_free_patch_list(struct rtlbt_patch_list *patch_list)
+{
+	struct rtlbt_patch_entry *entry;
+
+	while (!SLIST_EMPTY(patch_list)) {
+		entry = SLIST_FIRST(patch_list);
+		SLIST_REMOVE_HEAD(patch_list, next);
+		free(entry);
+	}
+}
+
 int
 rtlbt_parse_fwfile_v2(struct rtlbt_firmware *fw, uint8_t rom_version,
     uint8_t key_id)
@@ -540,18 +568,21 @@ rtlbt_parse_fwfile_v2(struct rtlbt_firmware *fw, uint8_t rom_version,
 		if (seclen < 0) {
 			rtlbt_err("Section parse (0x%08x) failed. err %d",
 			    opcode, errno);
+			rtlbt_free_patch_list(&patch_list);
 			return (-1);
 		}
 		len += seclen;
 	}
 
 	if (len == 0) {
+		rtlbt_free_patch_list(&patch_list);
 		errno = ENOMSG;
 		return (-1);
 	}
 
 	patch_buf = calloc(1, len);
 	if (patch_buf == NULL) {
+		rtlbt_free_patch_list(&patch_list);
 		errno = ENOMEM;
 		return (-1);
 	}
@@ -567,6 +598,7 @@ rtlbt_parse_fwfile_v2(struct rtlbt_firmware *fw, uint8_t rom_version,
 	}
 
 	if (patch_len == 0) {
+		free(patch_buf);
 		errno = EPERM;
 		return (-1);
 	}

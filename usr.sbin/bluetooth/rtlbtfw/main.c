@@ -338,6 +338,9 @@ main(int argc, char *argv[])
 	enum rtlbt_fw_type fw_type;
 	uint16_t fw_lmp_subversion;
 
+	memset(&fw, 0, sizeof(fw));
+	memset(&cfg, 0, sizeof(cfg));
+
 	/* Parse command line arguments */
 	while ((n = getopt(argc, argv, "Dd:f:hIm:p:v:")) != -1) {
 		switch (n) {
@@ -418,8 +421,8 @@ main(int argc, char *argv[])
 	}
 	rtlbt_dump_version(&ver);
 
-	ic = rtlbt_get_ic(ver.lmp_subversion, ver.hci_revision,
-	    ver.hci_version);
+	ic = rtlbt_get_ic(le16toh(ver.lmp_subversion),
+	    le16toh(ver.hci_revision), ver.hci_version);
 	if (ic == NULL) {
 		rtlbt_err("rtlbt_get_ic() failed: Unknown IC");
 		goto shutdown;
@@ -428,6 +431,8 @@ main(int argc, char *argv[])
 	/* Default the firmware path */
 	if (firmware_dir == NULL)
 		firmware_dir = strdup(_DEFAULT_RTLBT_FIRMWARE_PATH);
+	if (firmware_dir == NULL)
+		goto shutdown;
 
 	fw_suffix = ic->fw_suffix == NULL ? "_fw.bin" : ic->fw_suffix;
 	firmware_path = rtlbt_get_fwname(ic->fw_name, firmware_dir, fw_suffix);
@@ -441,7 +446,7 @@ main(int argc, char *argv[])
 	/* Read in the firmware */
 	if (rtlbt_fw_read(&fw, firmware_path) <= 0) {
 		rtlbt_debug("rtlbt_fw_read() failed");
-		return (-1);
+		goto shutdown;
 	}
 
 	fw_type = rtlbt_get_fw_type(&fw, &fw_lmp_subversion);
@@ -454,9 +459,9 @@ main(int argc, char *argv[])
 	if (fw_type != RTLBT_FW_TYPE_UNKNOWN) {
 
 		/* Match hardware and firmware lmp_subversion */
-		if (fw_lmp_subversion != ver.lmp_subversion) {
+		if (fw_lmp_subversion != le16toh(ver.lmp_subversion)) {
 			rtlbt_err("firmware is for %x but this is a %x",
-			    fw_lmp_subversion, ver.lmp_subversion);
+			    fw_lmp_subversion, le16toh(ver.lmp_subversion));
 			goto shutdown;
 		}
 
@@ -539,6 +544,11 @@ main(int argc, char *argv[])
 shutdown:
 
 	/* Shutdown */
+
+	rtlbt_fw_free(&fw);
+	free(config_path);
+	free(firmware_path);
+	free(firmware_dir);
 
 	if (hdl != NULL)
 		libusb_close(hdl);
