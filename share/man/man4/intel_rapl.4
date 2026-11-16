@@ -96,7 +96,8 @@ with
 .It Va min_allowed_mw , max_allowed_mw
 The range of limits the driver accepts.
 They are set from the hardware's reported minimum and maximum, or to
-5000 mW and twice the thermal design power when it does not report them.
+5000 mW and twice the thermal design power when it does not report them,
+and are then widened to include the limits set by the firmware.
 A
 .Va max_allowed_mw
 of 0 removes the upper bound.

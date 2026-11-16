@@ -611,6 +611,25 @@ rapl_add_sysctls(struct rapl_softc *sc)
 	    "Average package power over the last second (mW)");
 }
 
+/*
+ * Extend the accepted range to include the limit in the low 32 bits of pl,
+ * if one is programmed.  A maximum of 0 already means no upper bound.
+ */
+static void
+rapl_widen_range(struct rapl_softc *sc, uint64_t pl)
+{
+	uint32_t mw;
+
+	mw = (uint32_t)rapl_units_to_mw(pl & RAPL_PL_POWER_MASK,
+	    sc->sc_power_shift);
+	if (mw == 0)
+		return;
+	if (mw < sc->sc_min_allowed_mw)
+		sc->sc_min_allowed_mw = mw;
+	if (sc->sc_max_allowed_mw != 0 && mw > sc->sc_max_allowed_mw)
+		sc->sc_max_allowed_mw = mw;
+}
+
 static int
 rapl_attach(device_t dev)
 {
@@ -666,11 +685,16 @@ rapl_attach(device_t dev)
 	 * Seed the accepted range from the hardware where it reports one.
 	 * Without a reported maximum, allow up to twice the TDP; without a
 	 * TDP either, only the width of the register field limits it.
+	 * Widen the range to cover the limits the firmware programmed, so
+	 * that they can always be written back: client parts often set PL2
+	 * above twice the TDP and report no maximum.
 	 */
 	sc->sc_min_allowed_mw = sc->sc_hw_min_mw != 0 ? sc->sc_hw_min_mw :
 	    RAPL_DEFAULT_MIN_MW;
 	sc->sc_max_allowed_mw = sc->sc_hw_max_mw != 0 ? sc->sc_hw_max_mw :
 	    sc->sc_tdp_mw * 2;
+	rapl_widen_range(sc, limit);
+	rapl_widen_range(sc, limit >> RAPL_PL2_SHIFT);
 	sc->sc_locked = (limit & RAPL_PL_LOCKED) != 0;
 
 	sx_init(&sc->sc_sx, "intel_rapl limit");
