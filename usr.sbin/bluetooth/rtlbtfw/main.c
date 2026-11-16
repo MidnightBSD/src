@@ -473,7 +473,8 @@ main(int argc, char *argv[])
 			uint8_t key_id, reg_val[2];
 			r = rtlbt_read_reg16(hdl, RTLBT_SEC_PROJ, reg_val);
 			if (r < 0) {
-				rtlbt_err("rtlbt_read_reg16() failed code %d", r);
+				rtlbt_err("rtlbt_read_reg16() failed code %d",
+				    r);
 				goto shutdown;
 			}
 			key_id = reg_val[0];

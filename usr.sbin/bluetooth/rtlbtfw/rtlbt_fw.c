@@ -134,31 +134,33 @@ static const struct rtlbt_id_table rtlbt_ic_id_table[] = {
 };
 
 static const uint16_t project_ids[] = {
-	[  0 ] = RTLBT_ROM_LMP_8723A,
-	[  1 ] = RTLBT_ROM_LMP_8723B,
-	[  2 ] = RTLBT_ROM_LMP_8821A,
-	[  3 ] = RTLBT_ROM_LMP_8761A,
-	[  7 ] = RTLBT_ROM_LMP_8703B,
-	[  8 ] = RTLBT_ROM_LMP_8822B,
-	[  9 ] = RTLBT_ROM_LMP_8723B,	/* 8723DU */
-	[ 10 ] = RTLBT_ROM_LMP_8821A,	/* 8821CU */
-	[ 13 ] = RTLBT_ROM_LMP_8822B,	/* 8822CU */
-	[ 14 ] = RTLBT_ROM_LMP_8761A,	/* 8761BU */
-	[ 18 ] = RTLBT_ROM_LMP_8852A,	/* 8852AU */
-	[ 19 ] = RTLBT_ROM_LMP_8723B,	/* 8723FU */
-	[ 20 ] = RTLBT_ROM_LMP_8852A,	/* 8852BU */
-	[ 25 ] = RTLBT_ROM_LMP_8852A,	/* 8852CU */
-	[ 33 ] = RTLBT_ROM_LMP_8822B,	/* 8822EU */
-	[ 36 ] = RTLBT_ROM_LMP_8851B,	/* 8851BU */
-	[ 44 ] = RTLBT_ROM_LMP_8922A,	/* 8922A */
-	[ 47 ] = RTLBT_ROM_LMP_8852A,	/* 8852BT */
+	[0] = RTLBT_ROM_LMP_8723A,
+	[1] = RTLBT_ROM_LMP_8723B,
+	[2] = RTLBT_ROM_LMP_8821A,
+	[3] = RTLBT_ROM_LMP_8761A,
+	[7] = RTLBT_ROM_LMP_8703B,
+	[8] = RTLBT_ROM_LMP_8822B,
+	[9] = RTLBT_ROM_LMP_8723B,	/* 8723DU */
+	[10] = RTLBT_ROM_LMP_8821A,	/* 8821CU */
+	[13] = RTLBT_ROM_LMP_8822B,	/* 8822CU */
+	[14] = RTLBT_ROM_LMP_8761A,	/* 8761BU */
+	[18] = RTLBT_ROM_LMP_8852A,	/* 8852AU */
+	[19] = RTLBT_ROM_LMP_8723B,	/* 8723FU */
+	[20] = RTLBT_ROM_LMP_8852A,	/* 8852BU */
+	[25] = RTLBT_ROM_LMP_8852A,	/* 8852CU */
+	[33] = RTLBT_ROM_LMP_8822B,	/* 8822EU */
+	[36] = RTLBT_ROM_LMP_8851B,	/* 8851BU */
+	[44] = RTLBT_ROM_LMP_8922A,	/* 8922A */
+	[47] = RTLBT_ROM_LMP_8852A,	/* 8852BT */
 };
 
 /* Signatures */
-static const uint8_t fw_header_sig_v1[8] =
-    {0x52, 0x65, 0x61, 0x6C, 0x74, 0x65, 0x63, 0x68};	/* Realtech */
-static const uint8_t fw_header_sig_v2[8] =
-    {0x52, 0x54, 0x42, 0x54, 0x43, 0x6F, 0x72, 0x65};	/* RTBTCore */
+static const uint8_t fw_header_sig_v1[8] = {	/* Realtech */
+	0x52, 0x65, 0x61, 0x6C, 0x74, 0x65, 0x63, 0x68
+};
+static const uint8_t fw_header_sig_v2[8] = {	/* RTBTCore */
+	0x52, 0x54, 0x42, 0x54, 0x43, 0x6F, 0x72, 0x65
+};
 static const uint8_t fw_ext_sig[4] = {0x51, 0x04, 0xFD, 0x77};
 
 int

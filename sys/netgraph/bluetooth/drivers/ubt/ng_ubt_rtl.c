@@ -66,8 +66,7 @@ static device_probe_t	ubt_rtl_probe;
  * that it is blacklisted in ng_ubt.c and is supported by rtlbtfw utility.
  */
 
-const STRUCT_USB_HOST_ID ubt_rtl_devs[] =
-{
+const STRUCT_USB_HOST_ID ubt_rtl_devs[] = {
 	/* Generic Realtek Bluetooth class devices */
 	{ USB_VENDOR(USB_VENDOR_REALTEK),
 	  USB_IFACE_CLASS(UDCLASS_WIRELESS),
@@ -271,8 +270,7 @@ ubt_rtl_probe(device_t dev)
  * registration and PNP string are inherited from ng_ubt.c driver.
  */
 
-static device_method_t	ubt_rtl_methods[] =
-{
+static device_method_t	ubt_rtl_methods[] = {
 	DEVMETHOD(device_probe,	ubt_rtl_probe),
 	DEVMETHOD_END
 };

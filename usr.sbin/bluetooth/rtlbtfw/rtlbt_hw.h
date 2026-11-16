@@ -99,7 +99,8 @@ struct rtlbt_hci_dl_rp {
 struct rtlbt_vendor_cmd {
 	uint8_t data[5];
 }  __attribute__ ((packed));
-#define	RTLBT_SEC_PROJ	(&(struct rtlbt_vendor_cmd) {{0x10, 0xA4, 0x0D, 0x00, 0xb0}})
+#define	RTLBT_SEC_PROJ	\
+	(&(struct rtlbt_vendor_cmd) { { 0x10, 0xA4, 0x0D, 0x00, 0xb0 } })
 
 struct rtlbt_vendor_rp {
 	uint8_t status;

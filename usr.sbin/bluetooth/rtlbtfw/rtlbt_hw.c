@@ -133,10 +133,10 @@ rtlbt_read_local_ver(struct libusb_device_handle *hdl,
 	    RTLBT_HCI_CMD_TIMEOUT);
 
 	if (ret < 0 || transferred != sizeof(buf)) {
-		 rtlbt_debug("Can't read local version: code=%d, size=%d",
-		     ret,
-		     transferred);
-		 return (-1);
+		rtlbt_debug("Can't read local version: code=%d, size=%d",
+		    ret,
+		    transferred);
+		return (-1);
 	}
 
 	event = (struct rtlbt_hci_event_cmd_compl *)buf;
@@ -166,10 +166,10 @@ rtlbt_read_rom_ver(struct libusb_device_handle *hdl, uint8_t *ver)
 	    RTLBT_HCI_CMD_TIMEOUT);
 
 	if (ret < 0 || transferred != sizeof(buf)) {
-		 rtlbt_debug("Can't read ROM version: code=%d, size=%d",
-		     ret,
-		     transferred);
-		 return (-1);
+		rtlbt_debug("Can't read ROM version: code=%d, size=%d",
+		    ret,
+		    transferred);
+		return (-1);
 	}
 
 	event = (struct rtlbt_hci_event_cmd_compl *)buf;
@@ -201,10 +201,10 @@ rtlbt_read_reg16(struct libusb_device_handle *hdl,
 	    RTLBT_HCI_CMD_TIMEOUT);
 
 	if (ret < 0 || transferred != sizeof(buf)) {
-		 rtlbt_debug("Can't read reg16: code=%d, size=%d",
-		     ret,
-		     transferred);
-		 return (-1);
+		rtlbt_debug("Can't read reg16: code=%d, size=%d",
+		    ret,
+		    transferred);
+		return (-1);
 	}
 
 	event = (struct rtlbt_hci_event_cmd_compl *)buf;
