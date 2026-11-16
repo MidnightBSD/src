@@ -198,10 +198,10 @@ iwmbt_patch_fwfile(struct libusb_device_handle *hdl,
 		iwmbt_debug("opcode=%04x, len=%02x", cmd_opcode, cmd_length);
 
 		/*
-		 * If there is a command that loads a patch in the
-		 * firmware file, then activate the patch upon success,
-		 * otherwise just disable the manufacturer mode.
-		 */
+		* If there is a command that loads a patch in the
+		* firmware file, then activate the patch upon success,
+		* otherwise just disable the manufacturer mode.
+		*/
 		if (cmd_opcode == 0xfc8e)
 			activate_patch = 1;
 
@@ -236,10 +236,10 @@ iwmbt_patch_fwfile(struct libusb_device_handle *hdl,
 		}
 
 		/*
-		 * Every command has its associated event: data must match
-		 * what is recorded in the firmware file. Perform that check
-		 * now.
-		 */
+		* Every command has its associated event: data must match
+		* what is recorded in the firmware file. Perform that check
+		* now.
+		*/
 
 		while (fw_job.len > 0 && fw_job.buf[0] == 0x02) {
 			/* Is this the end of the file? */
@@ -427,10 +427,10 @@ iwmbt_enter_manufacturer(struct libusb_device_handle *hdl)
 	    IWMBT_HCI_CMD_TIMEOUT);
 
 	if (ret < 0) {
-		 iwmbt_debug("Can't enter manufacturer mode: code=%d, size=%d",
-		     ret,
-		     transferred);
-		 return (-1);
+		iwmbt_debug("Can't enter manufacturer mode: code=%d, size=%d",
+		    ret,
+		    transferred);
+		return (-1);
 	}
 
 	return (0);
@@ -458,10 +458,10 @@ iwmbt_exit_manufacturer(struct libusb_device_handle *hdl,
 	    IWMBT_HCI_CMD_TIMEOUT);
 
 	if (ret < 0) {
-		 iwmbt_debug("Can't exit manufacturer mode: code=%d, size=%d",
-		     ret,
-		     transferred);
-		 return (-1);
+		iwmbt_debug("Can't exit manufacturer mode: code=%d, size=%d",
+		    ret,
+		    transferred);
+		return (-1);
 	}
 
 	return (0);
@@ -489,10 +489,10 @@ iwmbt_get_version(struct libusb_device_handle *hdl,
 	    IWMBT_HCI_CMD_TIMEOUT);
 
 	if (ret < 0 || transferred != sizeof(buf)) {
-		 iwmbt_debug("Can't get version: : code=%d, size=%d",
-		     ret,
-		     transferred);
-		 return (-1);
+		iwmbt_debug("Can't get version: : code=%d, size=%d",
+		    ret,
+		    transferred);
+		return (-1);
 	}
 
 	event = (struct iwmbt_hci_event_cmd_compl *)buf;
@@ -526,10 +526,10 @@ iwmbt_get_version_tlv(struct libusb_device_handle *hdl,
 	    IWMBT_HCI_CMD_TIMEOUT);
 
 	if (ret < 0 || transferred < (int)IWMBT_HCI_EVT_COMPL_SIZE(uint16_t)) {
-		 iwmbt_debug("Can't get version: code=%d, size=%d",
-		     ret,
-		     transferred);
-		 return (-1);
+		iwmbt_debug("Can't get version: code=%d, size=%d",
+		    ret,
+		    transferred);
+		return (-1);
 	}
 
 	event = (struct iwmbt_hci_event_cmd_compl *)buf;
@@ -657,10 +657,10 @@ iwmbt_get_boot_params(struct libusb_device_handle *hdl,
 	    IWMBT_HCI_CMD_TIMEOUT);
 
 	if (ret < 0 || transferred != sizeof(buf)) {
-		 iwmbt_debug("Can't get boot params: code=%d, size=%d",
-		     ret,
-		     transferred);
-		 return (-1);
+		iwmbt_debug("Can't get boot params: code=%d, size=%d",
+		    ret,
+		    transferred);
+		return (-1);
 	}
 
 	event = (struct iwmbt_hci_event_cmd_compl *)buf;
@@ -692,10 +692,10 @@ iwmbt_intel_reset(struct libusb_device_handle *hdl, uint32_t boot_param)
 	    IWMBT_HCI_CMD_TIMEOUT);
 
 	if (ret < 0 || transferred < (int)sizeof(struct iwmbt_hci_event) + 1) {
-		 iwmbt_debug("Intel Reset command failed: code=%d, size=%d",
+		iwmbt_debug("Intel Reset command failed: code=%d, size=%d",
 		    ret,
 		    transferred);
-		 return (ret);
+		return (ret);
 	}
 
 	/* expect Vendor Specific Event 0x02 */
@@ -744,8 +744,8 @@ iwmbt_load_ddc(struct libusb_device_handle *hdl,
 		    IWMBT_HCI_CMD_TIMEOUT);
 
 		if (ret < 0) {
-			 iwmbt_debug("Intel Write DDC failed: code=%d", ret);
-			 return (-1);
+			iwmbt_debug("Intel Write DDC failed: code=%d", ret);
+			return (-1);
 		}
 	}
 
@@ -771,7 +771,7 @@ iwmbt_set_event_mask(struct libusb_device_handle *hdl)
 	    IWMBT_HCI_CMD_TIMEOUT);
 
 	if (ret < 0)
-		 iwmbt_debug("Intel Set Event Mask failed: code=%d", ret);
+		iwmbt_debug("Intel Set Event Mask failed: code=%d", ret);
 
 	return (ret);
 }

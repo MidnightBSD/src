@@ -570,7 +570,7 @@ ubt_do_hci_request(struct usb_device *udev, struct ubt_hci_cmd *cmd,
 		return (USB_ERR_NORMAL_COMPLETION);
 
 	/* Save operation code if we expect completion event in response */
-	if(((struct ubt_hci_event *)evt)->header.event ==
+	if (((struct ubt_hci_event *)evt)->header.event ==
 	    NG_HCI_EVENT_COMMAND_COMPL)
 		((struct ubt_hci_event_command_compl *)evt)->opcode =
 		  cmd->opcode;
