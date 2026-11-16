@@ -311,6 +311,7 @@ MAN=	aac.4 \
 	md.4 \
 	mdio.4 \
 	me.4 \
+	${_mei.4} \
 	mem.4 \
 	mfi.4 \
 	${_mgb.4} \
@@ -869,6 +870,7 @@ _intelgpio.4=	intelgpio.4
 _io.4=		io.4
 _itwd.4=	itwd.4
 _kvmclock.4=	kvmclock.4
+_mei.4=		mei.4
 _mgb.4=		mgb.4
 _nda.4=		nda.4
 _ndis.4=	ndis.4

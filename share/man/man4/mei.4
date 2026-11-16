@@ -1,0 +1,203 @@
+.\" Copyright (c) 2026 Lucas Holt
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHORS AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHORS OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.Dd November 15, 2026
+.Dt MEI 4
+.Os
+.Sh NAME
+.Nm mei
+.Nd Intel Management Engine Interface driver
+.Sh SYNOPSIS
+To compile this driver into the kernel,
+place the following line in your
+kernel configuration file:
+.Bd -ragged -offset indent
+.Cd "device mei"
+.Ed
+.Pp
+Alternatively, to load the driver as a
+module at boot time, place the following line in
+.Xr loader.conf 5 :
+.Bd -literal -offset indent
+mei_load="YES"
+.Ed
+.Sh DESCRIPTION
+The Intel Management Engine
+.Pq ME
+is an embedded controller in Intel chipsets that runs its own firmware
+independently of the host CPU.
+The Host Embedded Controller Interface
+.Pq HECI
+PCI function is a message channel between the host and the firmware
+services running on the ME, known as ME clients.
+Each ME client is identified by a protocol GUID.
+.Pp
+The
+.Nm
+driver resets the channel, negotiates the version of the host bus
+message protocol with the firmware and enumerates the ME clients.
+It then provides a character device through which user programs can
+connect to an ME client and exchange messages with it.
+.Sh HARDWARE
+The
+.Nm
+driver supports the Intel Converged Security and Management Engine
+.Pq CSME
+HECI function 1 on Intel 100 Series
+.Pq Sunrise Point
+PCH and later chipsets, up to Lunar Lake and the Intel 800 Series PCH,
+including Alder Lake.
+.Sh DEVICE INTERFACE
+Each open of
+.Pa /dev/mei0
+creates one host client.
+Before any data can be transferred, the host client must be connected to
+an ME client with the
+.Dv IOCTL_MEI_CONNECT_CLIENT
+.Xr ioctl 2 ,
+which takes a pointer to the following structure, defined in
+.In dev/mei/meiio.h :
+.Bd -literal
+struct mei_client {
+	uint32_t	max_msg_length;
+	uint8_t		protocol_version;
+	uint8_t		reserved[3];
+};
+
+struct mei_connect_client_data {
+	union {
+		/* in: protocol GUID of the ME client, GUID byte order */
+		uint8_t			in_client_uuid[16];
+		/* out: properties of the connected ME client */
+		struct mei_client	out_client_properties;
+	};
+};
+.Ed
+.Pp
+On input,
+.Va in_client_uuid
+holds the protocol GUID of the ME client in GUID byte order: the first
+field is stored as 4 bytes in little endian order, the second and third
+fields as 2 bytes each in little endian order, and the remaining 8 bytes
+in the order they are written.
+On successful return,
+.Va out_client_properties
+holds the maximum message length accepted by the ME client and the
+version of the protocol it implements.
+.Pp
+Once connected, each
+.Xr write 2
+sends one message of at most
+.Va max_msg_length
+bytes to the ME client, and each
+.Xr read 2
+returns one message received from it.
+If the buffer passed to
+.Xr read 2
+is shorter than the message, the remainder of the message is returned
+by the next
+.Xr read 2 .
+.Xr poll 2
+is supported.
+A connection lasts until the file descriptor is closed.
+.Pp
+The ioctl number, the structure layout and the read and write semantics
+match those of the Linux mei character device, so existing tools written
+for that interface can be used.
+.Sh SYSCTL VARIABLES
+The following read-only variables are available:
+.Bl -tag -width indent
+.It Va dev.mei.%d.fwsts1 No .. Va dev.mei.%d.fwsts6
+The six firmware status registers of the ME.
+.It Va dev.mei.%d.hbm_version
+The version of the host bus message protocol negotiated with the
+firmware.
+.It Va dev.mei.%d.clients
+The list of ME clients reported by the firmware.
+For each client it shows the client address, the protocol GUID,
+the maximum message length, whether the client uses a single receive
+buffer and whether it is a fixed address client.
+.It Va dev.mei.%d.state
+The state of the host interface.
+.El
+.Sh FILES
+.Bl -tag -width ".Pa /dev/mei0" -compact
+.It Pa /dev/mei0
+character device of the first
+.Nm
+instance
+.El
+.Sh ERRORS
+The
+.Dv IOCTL_MEI_CONNECT_CLIENT
+request fails if:
+.Bl -tag -width Er
+.It Bq Er ENOTTY
+No ME client with the given GUID exists, or the ME client does not
+accept connections.
+.It Bq Er EBUSY
+The ME client is already connected, or it has no free connections.
+.It Bq Er EALREADY
+The file descriptor is already connected.
+.It Bq Er ETIMEDOUT
+The firmware did not answer the connect request in time.
+.El
+.Pp
+.Xr read 2
+and
+.Xr write 2
+fail if:
+.Bl -tag -width Er
+.It Bq Er ENOTCONN
+The file descriptor is not connected to an ME client.
+.It Bq Er ENODEV
+The connection was lost, for example because the ME was reset.
+The device must be closed and opened again.
+.It Bq Er EMSGSIZE
+The message passed to
+.Xr write 2
+is longer than
+.Va max_msg_length .
+.It Bq Er EAGAIN
+The file descriptor is in non-blocking mode
+.Pq Dv O_NONBLOCK
+and no message is available, or the message cannot be sent yet.
+.El
+.Sh SEE ALSO
+.Xr pci 4
+.Sh HISTORY
+The
+.Nm
+driver first appeared in
+.Mx 4.2 .
+.Sh AUTHORS
+The
+.Nm
+driver was written by
+.An Lucas Holt .
+.Sh CAVEATS
+The driver keeps the device in the D0 power state and does not use D0i3
+power gating.
+It does not support DMA rings, extended message headers or dynamic
+addition of ME clients.
