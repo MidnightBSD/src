@@ -772,7 +772,7 @@ iwmbt_load_ddc(struct libusb_device_handle *hdl,
 		memset(buf, 0, sizeof(buf));
 		cmd->opcode = htole16(0xfc8b);
 		cmd->length = plen;
-		memcpy(cmd->data, ddc->buf + sent, plen - 1);
+		memcpy(cmd->data, ddc->buf + sent, plen);
 
 		iwmbt_debug("transferring %d bytes, offset %d",
 		    cmd->length,
