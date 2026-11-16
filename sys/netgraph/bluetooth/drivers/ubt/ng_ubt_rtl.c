@@ -190,6 +190,7 @@ const size_t ubt_rtl_devs_sizeof = sizeof(ubt_rtl_devs);
 static const uint16_t ubt_rtl_lmp_subvers[] = {
 	0x8703, 0x1200, 0x8723, 0x8821,
 	0x8761, 0x8822, 0x8852, 0x8851,
+	0x8922,
 };
 
 /*
