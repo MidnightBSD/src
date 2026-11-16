@@ -1,0 +1,177 @@
+.\"-
+.\" SPDX-License-Identifier: BSD-2-Clause
+.\"
+.\" Copyright (c) 2026 Rafal Rabczuk
+.\" Copyright (c) 2026 Lucas Holt
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY THE AUTHORS AND CONTRIBUTORS ``AS IS'' AND
+.\" ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+.\" IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+.\" ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHORS OR CONTRIBUTORS BE LIABLE
+.\" FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+.\" DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+.\" OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+.\" LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+.\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+.\" SUCH DAMAGE.
+.\"
+.Dd November 16, 2026
+.Dt INTEL_RAPL 4
+.Os
+.Sh NAME
+.Nm intel_rapl
+.Nd Intel RAPL package power limits and power measurement
+.Sh SYNOPSIS
+To compile this driver into the kernel,
+place the following line in your
+kernel configuration file:
+.Bd -ragged -offset indent
+.Cd "device intel_rapl"
+.Ed
+.Pp
+Alternatively, to load the driver as a
+module at boot time, place the following line in
+.Xr loader.conf 5 :
+.Bd -literal -offset indent
+intel_rapl_load="YES"
+.Ed
+.Sh DESCRIPTION
+The
+.Nm
+driver gives access to the package domain of the Running Average Power
+Limit (RAPL) interface of Intel processors from Sandy Bridge onwards.
+It reports how much power each processor package draws and lets the
+administrator set the package power limits that the processor enforces
+by adjusting its own frequency.
+.Pp
+RAPL has two package limits.
+PL1 is the sustained limit: the processor keeps its average power at or
+below PL1 over the PL1 time window.
+PL2 is the burst limit, enforced over a much shorter window.
+Lowering PL1 trades performance for lower temperature and fan noise, which
+is useful on a laptop whose cooling cannot sustain the default limits.
+.Pp
+One
+.Nm
+device attaches to the first CPU of each processor package.
+All register accesses for a package are made on that CPU.
+.Sh SYSCTL VARIABLES
+The following variables are available for each package under
+.Va dev.intel_rapl.N ,
+where
+.Va N
+is the device unit.
+Power is in milliwatts, energy in microjoules and time in microseconds.
+.Bl -tag -width "hw_max_window_us"
+.It Va power_mw
+Average package power over the last second.
+.It Va energy_uj
+Package energy consumed since the driver attached.
+.It Va pl1_mw , pl2_mw
+The sustained and burst power limits.
+Writing a value also enables the limit.
+The value is rounded to the nearest step the hardware supports, usually
+125 mW.
+.It Va pl1_enabled , pl2_enabled
+Whether the processor enforces the limit.
+.It Va pl1_window_us , pl2_window_us
+The time windows of the limits.
+The hardware supports only a sparse set of windows; a written value is
+rounded to the nearest one.
+A PL2 window is typically a few milliseconds and a PL1 window tens of
+seconds.
+Many client processors ignore the PL2 window, and writing it then fails
+with
+.Er EPERM .
+.It Va min_allowed_mw , max_allowed_mw
+The range of limits the driver accepts.
+They are set from the hardware's reported minimum and maximum, or to
+5000 mW and twice the thermal design power when it does not report them.
+A
+.Va max_allowed_mw
+of 0 removes the upper bound.
+Limits that do not fit the register are always refused.
+.It Va tdp_mw
+The thermal design power reported by the hardware.
+.It Va hw_min_mw , hw_max_mw , hw_max_window_us
+The minimum and maximum power and the longest time window reported by
+the hardware, or 0 if it does not report them.
+.It Va locked
+Set when the firmware has locked the power limit register.
+Writes to the limits then fail with
+.Er EPERM
+until the next reset.
+.It Va package , cpu
+The package number and the CPU used to access its registers.
+.El
+.Pp
+The writable variables can only be changed while the system security
+level is 0 or lower; see
+.Xr security 7 .
+Settings in
+.Xr sysctl.conf 5
+are applied before the security level is raised at boot.
+.Sh EXAMPLES
+Limit the sustained power of the first package to 15 W, averaged over 28
+seconds:
+.Bd -literal -offset indent
+sysctl dev.intel_rapl.0.pl1_mw=15000
+sysctl dev.intel_rapl.0.pl1_window_us=28000000
+.Ed
+.Pp
+The same settings in
+.Xr sysctl.conf 5 :
+.Bd -literal -offset indent
+dev.intel_rapl.0.pl1_mw=15000
+dev.intel_rapl.0.pl1_window_us=28000000
+.Ed
+.Sh DIAGNOSTICS
+Writing a limit fails with
+.Er EINVAL
+when the value is outside the accepted range,
+and with
+.Er EPERM
+when the register is locked or the processor ignored the write.
+In the second case the previous register value is put back.
+.Sh SEE ALSO
+.Xr coretemp 4 ,
+.Xr cpufreq 4 ,
+.Xr hwpstate_intel 4 ,
+.Xr sysctl.conf 5 ,
+.Xr security 7 ,
+.Xr sysctl 8
+.Sh HISTORY
+The
+.Nm
+driver first appeared in
+.Mx 4.2 .
+It is based on the
+.Nm
+kernel module by
+.An Rafal Rabczuk .
+.Sh CAVEATS
+Many laptops also set package power limits through a memory-mapped copy
+of these registers or through the ACPI Dynamic Platform and Thermal
+Framework.
+The processor enforces the lowest of the limits, so raising a limit with
+.Nm
+may have no effect, and firmware may restore its own limits later, for
+example when the power source changes.
+.Pp
+A limit set too low can make the system unresponsive.
+.Sh BUGS
+Only the package domain is supported; the core, graphics, DRAM and
+platform domains are not.
+.Pp
+Silvermont and Airmont Atom processors use different units and are not
+supported.

@@ -817,6 +817,8 @@
                 ..
             ..
         ..
+        intel_rapl
+        ..
         kern
             acct
             ..
