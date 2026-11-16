@@ -247,6 +247,7 @@ SUBDIR=	\
 	${_malo} \
 	md \
 	mdio \
+	${_mei} \
 	${_mgb} \
 	mem \
 	mfi \
@@ -793,6 +794,7 @@ _iwifw=		iwifw
 _iwmfw=		iwmfw
 _iwnfw=		iwnfw
 .endif
+_mei=		mei
 _mly=		mly
 _nfe=		nfe
 _nvd=		nvd

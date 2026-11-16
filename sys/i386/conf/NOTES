@@ -818,6 +818,11 @@ device		wbwd
 device		itwd
 
 #
+# mei: Intel Management Engine Interface (HECI)
+#
+device		mei
+
+#
 # Temperature sensors:
 #
 # coretemp: on-die sensor on Intel Core and newer CPUs
