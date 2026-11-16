@@ -170,4 +170,7 @@ extern	driver_t	ubt_driver;
 extern	const STRUCT_USB_HOST_ID	ubt_mtk_devs[];
 extern	const size_t			ubt_mtk_devs_sizeof;
 
+extern	const STRUCT_USB_HOST_ID	ubt_rtl_devs[];
+extern	const size_t			ubt_rtl_devs_sizeof;
+
 #endif /* ndef _NG_UBT_VAR_H_ */

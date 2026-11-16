@@ -8,6 +8,12 @@ Updating Information for MidnightBSD users.
 	modules using struct fb_info (drm-*-kmod) must be rebuilt after
 	installing the new kernel (__MidnightBSD_version 402006).
 
+	ng_ubt(4) no longer attaches to Realtek 87XX/88XX Bluetooth
+	adaptors until their firmware has been loaded.  Install
+	comms/rtlbt-firmware (build it from mports; there is no binary
+	package yet) so that the new rtlbtfw(8) can load it from devd,
+	otherwise these adaptors stop working.
+
 20261111:
 	mport(1) updated to 2.8.7.  arm64 and riscv64 packages use the
 	MACHINE_ARCH names aarch64 and riscv64 (ABI MidnightBSD:4.2:aarch64).

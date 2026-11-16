@@ -625,6 +625,10 @@ ubt_probe(device_t dev)
 	if (usbd_lookup_id_by_uaa(ubt_mtk_devs,
 			ubt_mtk_devs_sizeof, uaa) == 0)
 		return (ENXIO);
+	/* Realtek 87XX/88XX devices are attached by ng_ubt_rtl.c */
+	if (usbd_lookup_id_by_uaa(ubt_rtl_devs,
+			ubt_rtl_devs_sizeof, uaa) == 0)
+		return (ENXIO);
 
 	id = usbd_lookup_id_by_info(ubt_devs,
 	    sizeof(ubt_devs), &uaa->info);
