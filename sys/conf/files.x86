@@ -293,6 +293,8 @@ dev/isci/scil/scif_sas_task_request_states.c			optional isci
 dev/isci/scil/scif_sas_timer.c					optional isci
 dev/itwd/itwd.c							optional itwd
 dev/kvm_clock/kvm_clock.c	optional	kvm_clock
+dev/mei/mei.c			optional	mei pci
+dev/mei/mei_cdev.c		optional	mei pci
 dev/qat_c2xxx/qat.c		optional	qat_c2xxx
 dev/qat_c2xxx/qat_ae.c		optional	qat_c2xxx
 dev/qat_c2xxx/qat_c2xxx.c	optional	qat_c2xxx
