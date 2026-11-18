@@ -1,6 +1,11 @@
 Updating Information for MidnightBSD users.
 
 20261117:
+	tmpfs: clear setgid on files created by nonmembers of the group
+	(CVE-2026-127749, FreeBSD-SA-26:94.tmpfs).  A user could create a
+	setgid file on tmpfs for a group it does not belong to.  Rebuild
+	and install the kernel and tmpfs.ko, then reboot.
+
 	tcp: handle read-only mbufs when extracting urgent data
 	(CVE-2026-127748, FreeBSD-SA-26:93.tcp).  Receiving TCP urgent
 	data modified mbufs that may be shared, such as file pages sent
