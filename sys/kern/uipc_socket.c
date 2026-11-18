@@ -1619,7 +1619,7 @@ sosend_generic(struct socket *so, struct sockaddr *addr, struct uio *uio,
 		if (control != NULL) {
 			struct cmsghdr *cm = mtod(control, struct cmsghdr *);
 
-			if (clen >= sizeof(*cm) &&
+			if (clen >= CMSG_LEN(sizeof(tls_rtype)) &&
 			    cm->cmsg_type == TLS_SET_RECORD_TYPE) {
 				tls_rtype = *((uint8_t *)CMSG_DATA(cm));
 				clen = 0;
