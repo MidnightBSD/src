@@ -1,6 +1,15 @@
 Updating Information for MidnightBSD users.
 
 20261117:
+	nfsd: fix a use after free via DELEGRETURN (CVE-2026-101317,
+	FreeBSD-SA-26:79.nfs).  The NFSv4 server did not check that the
+	stateid passed to DELEGRETURN referred to a delegation, so a client
+	could supply an open or lock stateid and have the server free that
+	state while it was still in use.  A remote NFSv4 client able to
+	open a file on an export could panic the server or potentially
+	execute code in its kernel.  Systems not running an NFSv4 server
+	are not affected.  Rebuild and install the kernel, then reboot.
+
 	netlink: fix a kernel heap buffer overflow (CVE-2026-127747,
 	FreeBSD-SA-26:77.netlink).  When a netlink reply outgrew its
 	buffer, nlmsg_refill_buffer() sized the replacement buffer for the
