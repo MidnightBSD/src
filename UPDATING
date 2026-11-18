@@ -1,6 +1,14 @@
 Updating Information for MidnightBSD users.
 
 20261117:
+	netlink: fix a kernel heap buffer overflow (CVE-2026-127747,
+	FreeBSD-SA-26:77.netlink).  When a netlink reply outgrew its
+	buffer, nlmsg_refill_buffer() sized the replacement buffer for the
+	data being added but not for the part of the message already
+	written, so the kernel could write past its end.  An unprivileged
+	local user, including one in a jail, could use this to escalate
+	privileges.  Rebuild and install the kernel, then reboot.
+
 	ocs_fc: fix multiple vulnerabilities in the Emulex Fibre Channel
 	driver (CVE-2026-127752, CVE-2026-127753, CVE-2026-127754,
 	FreeBSD-SA-26:76.ocs_fc).  The ioctl interface did not require
