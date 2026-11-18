@@ -1,6 +1,18 @@
 Updating Information for MidnightBSD users.
 
 20261117:
+	ocs_fc: fix multiple vulnerabilities in the Emulex Fibre Channel
+	driver (CVE-2026-127752, CVE-2026-127753, CVE-2026-127754,
+	FreeBSD-SA-26:76.ocs_fc).  The ioctl interface did not require
+	superuser privileges and did not bound user supplied sizes or PCI
+	offsets, so a member of the operator group could corrupt kernel
+	memory.  A remote port on the same fabric could trigger a use after
+	free with a single PRLI, or out-of-bounds accesses via malformed
+	FCP command frames or exchange IDs.  /dev/ocsN is now root:wheel
+	mode 0600 and its ioctls require root; tools that used it as an
+	operator group member must now run as root.  Rebuild and install
+	the kernel, then reboot.
+
 	ktls: fix a kernel memory disclosure via TLS_SET_RECORD_TYPE
 	control messages (CVE-2026-101313, FreeBSD-SA-26:74.ktls).
 	sosend_generic() accepted a TLS_SET_RECORD_TYPE message holding
