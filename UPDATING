@@ -1,6 +1,12 @@
 Updating Information for MidnightBSD users.
 
 20261117:
+	freebsd32: do not modify control messages shared with the socket
+	buffer (CVE-2026-101321, FreeBSD-SA-26:86.freebsd32).  Receiving
+	a large control message with MSG_PEEK in a 32-bit program could
+	corrupt the socket's message queue, which a local user could exploit
+	to gain root.  Rebuild and install the kernel, then reboot.
+
 	kqueue: fix a use after free when detaching a timer knote
 	(CVE-2026-101320, FreeBSD-SA-26:85.kqueue).  A timer knote of a
 	stopped process could be re-armed while it was being detached and
