@@ -1,6 +1,13 @@
 Updating Information for MidnightBSD users.
 
 20261117:
+	vmm: reject guest writes of reserved bits to IA32_TSC_AUX
+	(CVE-2026-101319, FreeBSD-SA-26:84.vmm).  On Intel hosts a bhyve
+	guest could store a value with reserved bits set, which was later
+	loaded into the host MSR, crashing the host.  The write now raises
+	#GP in the guest.  Rebuild and install the kernel and vmm.ko, then
+	reboot.
+
 	socket: fix races between listen(2) and other operations on the
 	same socket.  Converting a socket to a listening socket destroyed
 	its socket buffer locks and reused their memory without taking them,
