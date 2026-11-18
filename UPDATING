@@ -1,6 +1,12 @@
 Updating Information for MidnightBSD users.
 
 20261117:
+	kqueue: fix a use after free when detaching a timer knote
+	(CVE-2026-101320, FreeBSD-SA-26:85.kqueue).  A timer knote of a
+	stopped process could be re-armed while it was being detached and
+	fire after its memory was freed, which a local user could exploit
+	to gain root.  Rebuild and install the kernel, then reboot.
+
 	vmm: reject guest writes of reserved bits to IA32_TSC_AUX
 	(CVE-2026-101319, FreeBSD-SA-26:84.vmm).  On Intel hosts a bhyve
 	guest could store a value with reserved bits set, which was later
