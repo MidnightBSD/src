@@ -142,6 +142,8 @@ dummy_chan_init(kobj_t obj, void *devinfo, struct snd_dbuf *b,
 
 	snd_mtxlock(sc->lock);
 
+	KASSERT(sc->chnum < DUMMY_NCHAN,
+	    ("%s: too many channels (%d)", __func__, sc->chnum));
 	ch = &sc->chans[sc->chnum++];
 	ch->sc = sc;
 	ch->dir = dir;
@@ -334,8 +336,10 @@ dummy_attach(device_t dev)
 	};
 
 	pcm_setflags(dev, pcm_getflags(dev) | SD_F_MPSAFE);
-	if (pcm_register(dev, sc, DUMMY_NPCHAN, DUMMY_NRCHAN))
+	if (pcm_register(dev, sc, DUMMY_NPCHAN, DUMMY_NRCHAN)) {
+		snd_mtxfree(sc->lock);
 		return (ENXIO);
+	}
 	for (i = 0; i < DUMMY_NPCHAN; i++)
 		pcm_addchan(dev, PCMDIR_PLAY, &dummy_chan_class, sc);
 	for (i = 0; i < DUMMY_NRCHAN; i++)
@@ -360,9 +364,22 @@ dummy_detach(device_t dev)
 	snd_mtxunlock(sc->lock);
 	callout_drain(&sc->callout);
 	err = pcm_unregister(dev);
+	if (err != 0) {
+		/*
+		 * pcm_unregister() fails with EBUSY while the device is in
+		 * use, and the device then stays attached: keep the lock and
+		 * restart the callout if a channel is still running.
+		 */
+		snd_mtxlock(sc->lock);
+		sc->stopped = false;
+		if (dummy_active(sc))
+			callout_reset(&sc->callout, 1, dummy_chan_io, sc);
+		snd_mtxunlock(sc->lock);
+		return (err);
+	}
 	snd_mtxfree(sc->lock);
 
-	return (err);
+	return (0);
 }
 
 static device_method_t dummy_methods[] = {
