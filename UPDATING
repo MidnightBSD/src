@@ -1,6 +1,16 @@
 Updating Information for MidnightBSD users.
 
 20261117:
+	ipsec: fix IV reuse with AES-CTR and AES-GCM (CVE-2026-101318,
+	FreeBSD-SA-26:82.ipsec).  esp_output() advanced the per-SA IV
+	counter under a shared lock, so packets sent concurrently on
+	different CPUs could be encrypted with the same IV and key,
+	letting an on-path attacker forge packets and potentially recover
+	plaintext.  Rebuild and install the kernel, then reboot.  IV reuse
+	before the update may allow continued forgery on SAs that keep the
+	same keys: SAs negotiated by an IKE daemon are replaced at reboot,
+	but manually keyed SAs (setkey(8)) should be given new keys.
+
 	inotify: fix a use after free when removing one-shot watches
 	(CVE-2026-101316, FreeBSD-SA-26:80.vfs).  inotify_log_one() only
 	checked that a watch with the same watch descriptor was still
