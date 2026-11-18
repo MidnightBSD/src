@@ -113,7 +113,7 @@ unmount_tmpfs(void)
 }
 
 /*
- * Try to create a setgid file, and return true if the setgid bit was applied. 
+ * Try to create a setgid file, and return true if the setgid bit was applied.
  */
 static bool
 create_setgid(enum nodetype type, uid_t uid, gid_t gid, const gid_t *groups,
@@ -218,7 +218,11 @@ ATF_TC_HEAD(supplementary_member_file, tc)
 }
 ATF_TC_BODY(supplementary_member_file, tc)
 {
-	const gid_t groups[] = { DIR_GID };
+	/*
+	 * setgroups(2) sets the effective gid from groups[0], so put the
+	 * primary group first and DIR_GID second to make it supplementary.
+	 */
+	const gid_t groups[] = { TEST_GID, DIR_GID };
 
 	mount_tmpfs();
 	ATF_REQUIRE_MSG(create_setgid(NODE_FILE, TEST_UID, TEST_GID, groups,
