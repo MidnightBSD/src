@@ -1,6 +1,16 @@
 Updating Information for MidnightBSD users.
 
 20261117:
+	ipsec: fix IV reuse with AES-CTR and AES-GCM (CVE-2026-101318,
+	FreeBSD-SA-26:82.ipsec).  esp_output() advanced the per-SA IV
+	counter under a shared lock, so packets sent concurrently on
+	different CPUs could be encrypted with the same IV and key,
+	letting an on-path attacker forge packets and potentially recover
+	plaintext.  Rebuild and install the kernel, then reboot.  IV reuse
+	before the update may allow continued forgery on SAs that keep the
+	same keys: SAs negotiated by an IKE daemon are replaced at reboot,
+	but manually keyed SAs (setkey(8)) should be given new keys.
+
 	nfsd: fix a use after free via DELEGRETURN (CVE-2026-101317,
 	FreeBSD-SA-26:79.nfs).  The NFSv4 server did not check that the
 	stateid passed to DELEGRETURN referred to a delegation, so a client
