@@ -1,6 +1,13 @@
 Updating Information for MidnightBSD users.
 
 20261117:
+	vmm: reject guest writes of reserved bits to IA32_TSC_AUX
+	(CVE-2026-101319, FreeBSD-SA-26:84.vmm).  On Intel hosts a bhyve
+	guest could store a value with reserved bits set, which was later
+	loaded into the host MSR, crashing the host.  The write now raises
+	#GP in the guest.  Rebuild and install the kernel and vmm.ko, then
+	reboot.
+
 	ipsec: fix IV reuse with AES-CTR and AES-GCM (CVE-2026-101318,
 	FreeBSD-SA-26:82.ipsec).  esp_output() advanced the per-SA IV
 	counter under a shared lock, so packets sent concurrently on
