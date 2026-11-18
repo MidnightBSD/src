@@ -2505,14 +2505,17 @@ ng_btsocket_l2cap_listen(struct socket *so, int backlog, struct thread *td)
 	if (error != 0)
 		goto out;
 	if (pcb == NULL) {
+		solisten_proto_abort(so);
 		error = EINVAL;
 		goto out;
 	}
 	if (ng_btsocket_l2cap_node == NULL) {
+		solisten_proto_abort(so);
 		error = EINVAL;
 		goto out;
 	}
 	if (pcb->psm == 0) {
+		solisten_proto_abort(so);
 		error = EADDRNOTAVAIL;
 		goto out;
 	}

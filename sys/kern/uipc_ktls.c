@@ -1101,8 +1101,18 @@ ktls_enable_rx(struct socket *so, struct tls_enable *en)
 		return (error);
 	}
 
-	/* Mark the socket as using TLS offload. */
-	SOCKBUF_LOCK(&so->so_rcv);
+	/*
+	 * Mark the socket as using TLS offload.  The SOLISTENING() check above
+	 * is racy since the inpcb is not locked here; recheck now that the
+	 * receive buffer lock, which listen(2) holds while converting the
+	 * socket, is held.
+	 */
+	SOCK_RECVBUF_LOCK(so);
+	if (__predict_false(SOLISTENING(so))) {
+		SOCK_RECVBUF_UNLOCK(so);
+		ktls_free(tls);
+		return (EINVAL);
+	}
 	so->so_rcv.sb_tls_seqno = be64dec(en->rec_seq);
 	so->so_rcv.sb_tls_info = tls;
 	so->so_rcv.sb_flags |= SB_TLS_RX;
@@ -1112,7 +1122,7 @@ ktls_enable_rx(struct socket *so, struct tls_enable *en)
 		sb_mark_notready(&so->so_rcv);
 		ktls_check_rx(&so->so_rcv);
 	}
-	SOCKBUF_UNLOCK(&so->so_rcv);
+	SOCK_RECVBUF_UNLOCK(so);
 
 	counter_u64_add(ktls_offload_total, 1);
 
@@ -1185,12 +1195,12 @@ ktls_enable_tx(struct socket *so, struct tls_enable *en)
 	 */
 	inp = so->so_pcb;
 	INP_WLOCK(inp);
-	SOCKBUF_LOCK(&so->so_snd);
+	SOCK_SENDBUF_LOCK(so);
 	so->so_snd.sb_tls_seqno = be64dec(en->rec_seq);
 	so->so_snd.sb_tls_info = tls;
 	if (tls->mode != TCP_TLS_MODE_SW)
 		so->so_snd.sb_flags |= SB_TLS_IFNET;
-	SOCKBUF_UNLOCK(&so->so_snd);
+	SOCK_SENDBUF_UNLOCK(so);
 	INP_WUNLOCK(inp);
 	SOCK_IO_SEND_UNLOCK(so);
 

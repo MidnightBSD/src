@@ -406,9 +406,18 @@ void
 socantsendmore(struct socket *so)
 {
 
-	SOCKBUF_LOCK(&so->so_snd);
+	SOCK_SENDBUF_LOCK(so);
+	/*
+	 * The socket may have been converted to a listening socket since the
+	 * caller looked at it; its send buffer is then gone.  The conversion
+	 * holds the send buffer mutex, so the check is stable here.
+	 */
+	if (__predict_false(SOLISTENING(so))) {
+		SOCK_SENDBUF_UNLOCK(so);
+		return;
+	}
 	socantsendmore_locked(so);
-	mtx_assert(SOCKBUF_MTX(&so->so_snd), MA_NOTOWNED);
+	SOCK_SENDBUF_UNLOCK_ASSERT(so);
 }
 
 void
@@ -430,9 +439,14 @@ void
 socantrcvmore(struct socket *so)
 {
 
-	SOCKBUF_LOCK(&so->so_rcv);
+	SOCK_RECVBUF_LOCK(so);
+	/* See the comment in socantsendmore(). */
+	if (__predict_false(SOLISTENING(so))) {
+		SOCK_RECVBUF_UNLOCK(so);
+		return;
+	}
 	socantrcvmore_locked(so);
-	mtx_assert(SOCKBUF_MTX(&so->so_rcv), MA_NOTOWNED);
+	SOCK_RECVBUF_UNLOCK_ASSERT(so);
 }
 
 void
