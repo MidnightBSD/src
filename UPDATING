@@ -1,6 +1,18 @@
 Updating Information for MidnightBSD users.
 
 20261117:
+	socket: fix races between listen(2) and other operations on the
+	same socket.  Converting a socket to a listening socket destroyed
+	its socket buffer locks and reused their memory without taking them,
+	so listen(2) racing with send, receive, shutdown(2), kevent(2), AIO
+	or enabling KTLS could corrupt kernel memory.  The socket buffer
+	locks now live in struct socket and listen(2) takes them first.
+	listen(2) may now fail with EAGAIN while another thread is doing
+	I/O on the socket, and with EINVAL on a socket using KTLS or AIO.
+	The layout of struct socket changed (__MidnightBSD_version
+	402007): rebuild and install the kernel and world, rebuild all
+	kernel modules including those from mports, then reboot.
+
 	ipsec: fix IV reuse with AES-CTR and AES-GCM (CVE-2026-101318,
 	FreeBSD-SA-26:82.ipsec).  esp_output() advanced the per-SA IV
 	counter under a shared lock, so packets sent concurrently on
