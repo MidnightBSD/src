@@ -1,6 +1,14 @@
 Updating Information for MidnightBSD users.
 
 20261117:
+	bsnmpd: fix SNMPv3 authentication and VACM bypasses and a buffer
+	overflow (CVE-2026-127742, CVE-2026-127743, FreeBSD-SA-26:89.bsnmp).
+	A remote client could have SNMPv3 discovery messages executed
+	without authentication or access checks, including SETs, read the
+	USM and VACM configuration, or overflow a buffer with an oversized
+	vacmViewTreeFamilyMask.  Rebuild and install world, then restart
+	bsnmpd if it is running.
+
 	sound: do not resize a channel buffer while I/O is in progress
 	(CVE-2026-127741, FreeBSD-SA-26:88.sound).  A resize racing with a
 	read or write on the same channel could free the buffer the copy
