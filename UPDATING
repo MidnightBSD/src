@@ -1,6 +1,11 @@
 Updating Information for MidnightBSD users.
 
 20261117:
+	vfs: check access for open(2) with O_CREAT and O_DIRECTORY
+	(CVE-2026-127746, FreeBSD-SA-26:92.vfs).  The combination skipped
+	the read and search permission check on an existing directory.
+	Rebuild and install the kernel, then reboot.
+
 	fdescfs: check write access when truncating through /dev/fd
 	(CVE-2026-127745, FreeBSD-SA-26:91.fdescfs).  With fdescfs mounted,
 	a file opened read-only could be truncated through /dev/fd/N
