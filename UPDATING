@@ -1,5 +1,15 @@
 Updating Information for MidnightBSD users.
 
+20261117:
+	ktls: fix a kernel memory disclosure via TLS_SET_RECORD_TYPE
+	control messages (CVE-2026-101313, FreeBSD-SA-26:74.ktls).
+	sosend_generic() accepted a TLS_SET_RECORD_TYPE message holding
+	only a cmsghdr and read the record type from the byte past its
+	end, so a local user with a KTLS transmit socket could leak one
+	byte of uninitialized kernel memory per record in the plaintext
+	TLS 1.2 record header.  Such messages are now rejected with
+	EINVAL.  Rebuild and install the kernel, then reboot.
+
 20261111:
 	mport(1) updated to 2.8.7.  Adds the aarch64 and riscv64
 	architectures.
