@@ -1,6 +1,12 @@
 Updating Information for MidnightBSD users.
 
 20261117:
+	vm: fix handling of largepage mappings (CVE-2026-127744,
+	FreeBSD-SA-26:90.vm).  Pages of a largepage shared memory object
+	could stay mapped after the object was freed, which a local user
+	could exploit to gain root.  Rebuild and install the kernel, then
+	reboot.
+
 	bsnmpd: fix SNMPv3 authentication and VACM bypasses and a buffer
 	overflow (CVE-2026-127742, CVE-2026-127743, FreeBSD-SA-26:89.bsnmp).
 	A remote client could have SNMPv3 discovery messages executed
