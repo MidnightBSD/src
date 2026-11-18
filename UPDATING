@@ -1,6 +1,12 @@
 Updating Information for MidnightBSD users.
 
 20261117:
+	tcp: handle read-only mbufs when extracting urgent data
+	(CVE-2026-127748, FreeBSD-SA-26:93.tcp).  Receiving TCP urgent
+	data modified mbufs that may be shared, such as file pages sent
+	with sendfile(2), which a local user could exploit to gain root.
+	Rebuild and install the kernel, then reboot.
+
 	vfs: check access for open(2) with O_CREAT and O_DIRECTORY
 	(CVE-2026-127746, FreeBSD-SA-26:92.vfs).  The combination skipped
 	the read and search permission check on an existing directory.
