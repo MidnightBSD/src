@@ -9,7 +9,8 @@ TESTS_SUBDIRS+=	libalias
 ATF_TESTS_C=	ip_reass_test \
 		so_reuseport_lb_test \
 		socket_afinet \
-		tcp_connect_port_test
+		tcp_connect_port_test \
+		tcp_oob
 
 ATF_TESTS_SH=	arp \
 		carp \
