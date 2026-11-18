@@ -1,6 +1,13 @@
 Updating Information for MidnightBSD users.
 
 20261117:
+	sound: do not resize a channel buffer while I/O is in progress
+	(CVE-2026-127741, FreeBSD-SA-26:88.sound).  A resize racing with a
+	read or write on the same channel could free the buffer the copy
+	was using, which a local user with access to a dsp device could
+	exploit to gain root.  Rebuild and install the kernel and sound
+	modules, then reboot.
+
 	freebsd32: do not modify control messages shared with the socket
 	buffer (CVE-2026-101321, FreeBSD-SA-26:86.freebsd32).  Receiving
 	a large control message with MSG_PEEK in a 32-bit program could
