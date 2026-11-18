@@ -1774,9 +1774,15 @@ chn_calclatency(int dir, int latency, int bps, u_int32_t datarate,
 	return blksz << blkcnt;
 }
 
+static bool
+chn_may_resizebuf(struct pcm_channel *c)
+{
+	return ((c->flags & (CHN_F_MMAP | CHN_F_TRIGGERED)) == 0 &&
+	    c->inprog == 0);
+}
+
 static int
-chn_resizebuf(struct pcm_channel *c, int latency,
-					int blkcnt, int blksz)
+chn_resizebuf(struct pcm_channel *c, int latency, int blkcnt, int blksz)
 {
 	struct snd_dbuf *b, *bs, *pb;
 	int sblksz, sblkcnt, hblksz, hblkcnt, limit = 0, nsblksz, nsblkcnt;
@@ -1786,7 +1792,7 @@ chn_resizebuf(struct pcm_channel *c, int latency,
 
 	if (!(c->direction == PCMDIR_PLAY || c->direction == PCMDIR_REC))
 		return (EINVAL);
-	if ((c->flags & (CHN_F_MMAP | CHN_F_TRIGGERED)) != 0)
+	if (!chn_may_resizebuf(c))
 		return EINVAL;
 
 	if (latency == -1) {
@@ -1844,7 +1850,7 @@ chn_resizebuf(struct pcm_channel *c, int latency,
 		CHN_UNLOCK(c->parentchannel);
 		CHN_LOCK(c);
 		/* Revalidate. */
-		if ((c->flags & (CHN_F_MMAP | CHN_F_TRIGGERED)) != 0)
+		if (!chn_may_resizebuf(c))
 			return (EINVAL);
 		if (c->direction == PCMDIR_PLAY) {
 			limit = (pb != NULL) ?
@@ -1892,7 +1898,7 @@ chn_resizebuf(struct pcm_channel *c, int latency,
 			    c->devinfo, hblksz));
 		CHN_LOCK(c);
 		/* Revalidate. */
-		if ((c->flags & (CHN_F_MMAP | CHN_F_TRIGGERED)) != 0)
+		if (!chn_may_resizebuf(c))
 			return (EINVAL);
 
 		if (!CHN_EMPTY(c, children)) {
