@@ -1,6 +1,12 @@
 Updating Information for MidnightBSD users.
 
 20261117:
+	fdescfs: check write access when truncating through /dev/fd
+	(CVE-2026-127745, FreeBSD-SA-26:91.fdescfs).  With fdescfs mounted,
+	a file opened read-only could be truncated through /dev/fd/N
+	without write permission.  Rebuild and install the kernel and
+	fdescfs.ko, then reboot.
+
 	vm: fix handling of largepage mappings (CVE-2026-127744,
 	FreeBSD-SA-26:90.vm).  Pages of a largepage shared memory object
 	could stay mapped after the object was freed, which a local user
