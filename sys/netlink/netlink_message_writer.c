@@ -505,7 +505,7 @@ bool
 nlmsg_refill_buffer(struct nl_writer *nw, int required_len)
 {
 	struct nl_writer ns_new = {};
-	int completed_len, new_len;
+	size_t completed_len, new_len, last_len;
 
 	if (nw->enomem)
 		return (false);
@@ -513,8 +513,10 @@ nlmsg_refill_buffer(struct nl_writer *nw, int required_len)
 	NL_LOG(LOG_DEBUG3, "no space at offset %d/%d (want %d), trying to reclaim",
 	    nw->offset, nw->alloc_len, required_len);
 
-	/* Calculated new buffer size and allocate it s*/
-	completed_len = (nw->hdr != NULL) ? (char *)nw->hdr - nw->data : nw->offset;
+	/* Calculate new buffer size and allocate it. */
+	completed_len = (nw->hdr != NULL) ?
+	    (char *)nw->hdr - nw->data : nw->offset;
+	last_len = nw->offset - completed_len;
 	if (completed_len > 0 && required_len < MCLBYTES) {
 		/* We already ran out of space, use the largest effective size */
 		new_len = max(nw->alloc_len, MCLBYTES);
@@ -523,9 +525,10 @@ nlmsg_refill_buffer(struct nl_writer *nw, int required_len)
 			new_len = MCLBYTES;
 		else
 			new_len = nw->alloc_len * 2;
-		while (new_len < required_len)
-			new_len *= 2;
 	}
+	/* The unfinished message is copied over and needs room as well. */
+	while (new_len < last_len + required_len)
+		new_len *= 2;
 	bool waitok = (nw->malloc_flag == M_WAITOK);
 	bool is_linux = (nw->writer_type == NS_WRITER_TYPE_LBUF);
 	if (!nlmsg_get_buf(&ns_new, new_len, waitok, is_linux)) {
@@ -541,15 +544,14 @@ nlmsg_refill_buffer(struct nl_writer *nw, int required_len)
 	nlmsg_set_callback(&ns_new);
 	ns_new.arg_uint = nw->arg_uint;
 
-	/* Copy last (unfinished) header to the new storage */
-	int last_len = nw->offset - completed_len;
+	/* Copy last (unfinished) header to the new storage. */
 	if (last_len > 0) {
 		memcpy(ns_new.data, nw->hdr, last_len);
 		ns_new.hdr = (struct nlmsghdr *)ns_new.data;
 		ns_new.offset = last_len;
 	}
 
-	NL_LOG(LOG_DEBUG2, "completed: %d bytes, copied: %d bytes", completed_len, last_len);
+	NL_LOG(LOG_DEBUG2, "completed: %zu bytes, copied: %zu bytes", completed_len, last_len);
 
 	/* Flush completed headers & switch to the new nw */
 	nlmsg_flush(nw);
