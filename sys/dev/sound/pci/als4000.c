@@ -48,8 +48,6 @@
 
 #include "mixer_if.h"
 
-SND_DECLARE_FILE("");
-
 /* Debugging macro's */
 #undef DEB
 #ifndef DEB
@@ -269,7 +267,8 @@ alschan_setblocksize(kobj_t obj, void *data, u_int32_t blocksize)
 	if (blocksize > sc->bufsz / 2) {
 		blocksize = sc->bufsz / 2;
 	}
-	sndbuf_resize(ch->buffer, 2, blocksize);
+	if (sndbuf_resize(ch->buffer, 2, blocksize) != 0)
+		return 0;
 	return blocksize;
 }
 
@@ -849,8 +848,9 @@ als_pci_attach(device_t dev)
 	pcm_addchan(dev, PCMDIR_PLAY, &alspchan_class, sc);
 	pcm_addchan(dev, PCMDIR_REC,  &alsrchan_class, sc);
 
-	snprintf(status, SND_STATUSLEN, "at io 0x%jx irq %jd %s",
-		 rman_get_start(sc->reg), rman_get_start(sc->irq),PCM_KLDSTRING(snd_als4000));
+	snprintf(status, SND_STATUSLEN, "port 0x%jx irq %jd on %s",
+		 rman_get_start(sc->reg), rman_get_start(sc->irq),
+		 device_get_nameunit(device_get_parent(dev)));
 	pcm_setstatus(dev, status);
 	return 0;
 
@@ -927,7 +927,7 @@ static device_method_t als_methods[] = {
 	DEVMETHOD(device_detach,	als_pci_detach),
 	DEVMETHOD(device_suspend,	als_pci_suspend),
 	DEVMETHOD(device_resume,	als_pci_resume),
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t als_driver = {
@@ -936,6 +936,6 @@ static driver_t als_driver = {
 	PCM_SOFTC_SIZE,
 };
 
-DRIVER_MODULE(snd_als4000, pci, als_driver, pcm_devclass, 0, 0);
+DRIVER_MODULE(snd_als4000, pci, als_driver, 0, 0);
 MODULE_DEPEND(snd_als4000, sound, SOUND_MINVER, SOUND_PREFVER, SOUND_MAXVER);
 MODULE_VERSION(snd_als4000, 1);

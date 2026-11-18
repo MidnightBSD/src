@@ -58880,7 +58880,6 @@ share/man/man4/smbus.4 -text
 share/man/man4/smp.4 -text
 share/man/man4/smsc.4 svneol=native#text/plain
 share/man/man4/sn.4 -text
-share/man/man4/snd_ad1816.4 -text
 share/man/man4/snd_als4000.4 -text
 share/man/man4/snd_atiixp.4 -text
 share/man/man4/snd_cmi.4 -text
@@ -58892,17 +58891,13 @@ share/man/man4/snd_emu10kx.4 -text
 share/man/man4/snd_envy24.4 -text
 share/man/man4/snd_envy24ht.4 -text
 share/man/man4/snd_es137x.4 -text
-share/man/man4/snd_ess.4 -text
 share/man/man4/snd_fm801.4 -text
-share/man/man4/snd_gusc.4 -text
 share/man/man4/snd_hda.4 -text
 share/man/man4/snd_hdspe.4 -text
 share/man/man4/snd_ich.4 -text
 share/man/man4/snd_maestro.4 -text
 share/man/man4/snd_maestro3.4 -text
-share/man/man4/snd_mss.4 -text
 share/man/man4/snd_neomagic.4 -text
-share/man/man4/snd_sbc.4 -text
 share/man/man4/snd_solo.4 -text
 share/man/man4/snd_spicds.4 -text
 share/man/man4/snd_t4dwave.4 -text
@@ -67312,7 +67307,6 @@ sys/dev/sound/isa/sb.h -text
 sys/dev/sound/isa/sb16.c -text
 sys/dev/sound/isa/sb8.c -text
 sys/dev/sound/isa/sbc.c -text
-sys/dev/sound/isa/sndbuf_dma.c -text
 sys/dev/sound/macio/aoa.c -text
 sys/dev/sound/macio/aoa.h -text
 sys/dev/sound/macio/davbus.c -text

@@ -39,8 +39,6 @@
 #include <dev/sound/pci/ds1.h>
 #include <dev/sound/pci/ds1-fw.h>
 
-SND_DECLARE_FILE("");
-
 /* -------------------------------------------------------------------- */
 
 #define	DS1_CHANS 4
@@ -1011,8 +1009,9 @@ ds_pci_attach(device_t dev)
 		goto bad;
 	}
 
-	snprintf(status, SND_STATUSLEN, "at memory 0x%jx irq %jd %s",
-		 rman_get_start(sc->reg), rman_get_start(sc->irq),PCM_KLDSTRING(snd_ds1));
+	snprintf(status, SND_STATUSLEN, "mem 0x%jx irq %jd on %s",
+	    rman_get_start(sc->reg), rman_get_start(sc->irq),
+	    device_get_nameunit(device_get_parent(dev)));
 
 	if (pcm_register(dev, sc, DS1_CHANS, 2))
 		goto bad;

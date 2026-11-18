@@ -38,8 +38,6 @@
 
 #define SND_USE_FXDIV
 #include "snd_fxdiv_gen.h"
-
-SND_DECLARE_FILE("");
 #endif
 
 typedef void (*feed_volume_t)(int *, int *, uint32_t, uint8_t *, uint32_t);
@@ -65,10 +63,13 @@ feed_volume_##SIGN##BIT##ENDIAN(int *vol, int *matrix,			\
 		do {							\
 			dst -= PCM_##BIT##_BPS;				\
 			i--;						\
-			x = PCM_READ_##SIGN##BIT##_##ENDIAN(dst);	\
+			x = pcm_sample_read_calc(dst,			\
+			    AFMT_##SIGN##BIT##_##ENDIAN);		\
 			v = FEEDVOLUME_CALC##BIT(x, vol[matrix[i]]);	\
-			x = PCM_CLAMP_##SIGN##BIT(v);			\
-			_PCM_WRITE_##SIGN##BIT##_##ENDIAN(dst, x);	\
+			x = pcm_clamp_calc(v,				\
+			    AFMT_##SIGN##BIT##_##ENDIAN);		\
+			pcm_sample_write(dst, x,			\
+			    AFMT_##SIGN##BIT##_##ENDIAN);		\
 		} while (i != 0);					\
 	} while (--count != 0);						\
 }
@@ -92,6 +93,8 @@ FEEDVOLUME_DECLARE(U, 32, LE)
 FEEDVOLUME_DECLARE(U, 16, BE)
 FEEDVOLUME_DECLARE(U, 24, BE)
 FEEDVOLUME_DECLARE(U, 32, BE)
+FEEDVOLUME_DECLARE(F, 32, LE)
+FEEDVOLUME_DECLARE(F, 32, BE)
 #endif
 
 struct feed_volume_info {
@@ -130,7 +133,9 @@ static const struct {
 	FEEDVOLUME_ENTRY(U, 32, LE),
 	FEEDVOLUME_ENTRY(U, 16, BE),
 	FEEDVOLUME_ENTRY(U, 24, BE),
-	FEEDVOLUME_ENTRY(U, 32, BE)
+	FEEDVOLUME_ENTRY(U, 32, BE),
+	FEEDVOLUME_ENTRY(F, 32, LE),
+	FEEDVOLUME_ENTRY(F, 32, BE),
 #endif
 };
 
@@ -339,7 +344,7 @@ feeder_volume_apply_matrix(struct pcm_feeder *f, struct pcmchan_matrix *m)
 
 	info = f->data;
 
-	for (i = 0; i < (sizeof(info->matrix) / sizeof(info->matrix[0])); i++) {
+	for (i = 0; i < nitems(info->matrix); i++) {
 		if (i < m->channels)
 			info->matrix[i] = m->map[i].type;
 		else

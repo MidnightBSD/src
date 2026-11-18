@@ -43,8 +43,6 @@
 #include <dev/sound/midi/mpu401.h>
 #include "mpufoi_if.h"
 
-SND_DECLARE_FILE("");
-
 /* -------------------------------------------------------------------- */
 
 #define	NUM_G		64	/* use all channels */
@@ -869,14 +867,11 @@ emupchan_setblocksize(kobj_t obj, void *data, u_int32_t blocksize)
 {
 	struct sc_pchinfo *ch = data;
 	struct sc_info *sc = ch->parent;
-	int irqrate, blksz;
 
 	ch->blksz = blocksize;
 	snd_mtxlock(sc->lock);
 	emu_settimer(sc);
-	irqrate = 48000 / sc->timerinterval;
 	snd_mtxunlock(sc->lock);
-	blksz = (ch->spd * sndbuf_getalign(ch->buffer)) / irqrate;
 	return blocksize;
 }
 
@@ -1030,14 +1025,11 @@ emurchan_setblocksize(kobj_t obj, void *data, u_int32_t blocksize)
 {
 	struct sc_rchinfo *ch = data;
 	struct sc_info *sc = ch->parent;
-	int irqrate, blksz;
 
 	ch->blksz = blocksize;
 	snd_mtxlock(sc->lock);
 	emu_settimer(sc);
-	irqrate = 48000 / sc->timerinterval;
 	snd_mtxunlock(sc->lock);
-	blksz = (ch->spd * sndbuf_getalign(ch->buffer)) / irqrate;
 	return blocksize;
 }
 
@@ -1328,8 +1320,8 @@ emu_malloc(struct sc_info *sc, u_int32_t sz, bus_addr_t *addr,
 	*addr = 0;
 	if (bus_dmamem_alloc(sc->parent_dmat, &buf, BUS_DMA_NOWAIT, map))
 		return NULL;
-	if (bus_dmamap_load(sc->parent_dmat, *map, buf, sz, emu_setmap, addr, 0)
-	    || !*addr) {
+	if (bus_dmamap_load(sc->parent_dmat, *map, buf, sz, emu_setmap, addr,
+	    BUS_DMA_NOWAIT) || !*addr) {
 		bus_dmamem_free(sc->parent_dmat, buf, *map);
 		return NULL;
 	}
@@ -2107,8 +2099,8 @@ emu_pci_attach(device_t dev)
 		/*highaddr*/BUS_SPACE_MAXADDR,
 		/*filter*/NULL, /*filterarg*/NULL,
 		/*maxsize*/sc->bufsz, /*nsegments*/1, /*maxsegz*/0x3ffff,
-		/*flags*/0, /*lockfunc*/busdma_lock_mutex,
-		/*lockarg*/&Giant, &sc->parent_dmat) != 0) {
+		/*flags*/0, /*lockfunc*/NULL, /*lockarg*/NULL,
+		&sc->parent_dmat) != 0) {
 		device_printf(dev, "unable to create dma tag\n");
 		goto bad;
 	}
@@ -2134,9 +2126,9 @@ emu_pci_attach(device_t dev)
 		goto bad;
 	}
 
-	snprintf(status, SND_STATUSLEN, "at io 0x%jx irq %jd %s",
+	snprintf(status, SND_STATUSLEN, "port 0x%jx irq %jd on %s",
 	    rman_get_start(sc->reg), rman_get_start(sc->irq),
-	    PCM_KLDSTRING(snd_emu10k1));
+	    device_get_nameunit(device_get_parent(dev)));
 
 	if (pcm_register(dev, sc, sc->nchans, gotmic ? 3 : 2)) goto bad;
 	for (i = 0; i < sc->nchans; i++)
@@ -2199,7 +2191,7 @@ static driver_t emu_driver = {
 	PCM_SOFTC_SIZE,
 };
 
-DRIVER_MODULE(snd_emu10k1, pci, emu_driver, pcm_devclass, NULL, NULL);
+DRIVER_MODULE(snd_emu10k1, pci, emu_driver, NULL, NULL);
 MODULE_DEPEND(snd_emu10k1, sound, SOUND_MINVER, SOUND_PREFVER, SOUND_MAXVER);
 MODULE_VERSION(snd_emu10k1, 1);
 MODULE_DEPEND(snd_emu10k1, midi, 1, 1, 1);
@@ -2253,6 +2245,4 @@ static driver_t emujoy_driver = {
 	1	/* no softc */
 };
 
-static devclass_t emujoy_devclass;
-
-DRIVER_MODULE(emujoy, pci, emujoy_driver, emujoy_devclass, NULL, NULL);
+DRIVER_MODULE(emujoy, pci, emujoy_driver, NULL, NULL);

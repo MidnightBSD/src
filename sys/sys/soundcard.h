@@ -184,6 +184,8 @@ struct snd_size {
 #define AFMT_S24_BE	0x00020000	/* Big endian signed 24-bit */
 #define AFMT_U24_LE	0x00040000	/* Little endian unsigned 24-bit */
 #define AFMT_U24_BE	0x00080000	/* Big endian unsigned 24-bit */
+#define AFMT_F32_LE	0x10000000	/* Little endian 32-bit floating point */
+#define AFMT_F32_BE	0x20000000	/* Big endian 32-bit floating point */
 
 /* Machine dependent AFMT_* definitions. */
 #if BYTE_ORDER == LITTLE_ENDIAN
@@ -199,6 +201,8 @@ struct snd_size {
 #define AFMT_U16_OE	AFMT_U16_BE
 #define AFMT_U24_OE	AFMT_U24_BE
 #define AFMT_U32_OE	AFMT_U32_BE
+#define AFMT_F32_NE	AFMT_F32_LE
+#define AFMT_F32_OE	AFMT_F32_BE
 #else
 #define AFMT_S16_OE	AFMT_S16_LE
 #define AFMT_S24_OE	AFMT_S24_LE
@@ -212,7 +216,11 @@ struct snd_size {
 #define AFMT_U16_NE	AFMT_U16_BE
 #define AFMT_U24_NE	AFMT_U24_BE
 #define AFMT_U32_NE	AFMT_U32_BE
+#define AFMT_F32_NE	AFMT_F32_BE
+#define AFMT_F32_OE	AFMT_F32_LE
 #endif
+
+#define AFMT_FLOAT	AFMT_F32_NE	/* compatibility alias */
 
 #define AFMT_STEREO	0x10000000	/* can do/want stereo	*/
 
@@ -1878,7 +1886,7 @@ typedef struct oss_audioinfo
 	int	card_number;
 	int	port_number;
 	int	mixer_dev;
-	int	real_device;	/* Obsolete field. Replaced by devnode */
+	int	legacy_device;	/* Obsolete field. Replaced by devnode */
 	int	enabled;	/* 1=enabled, 0=device not ready at this
 				   moment */
 	int	flags;		/* For internal use only - no practical
@@ -1925,7 +1933,9 @@ typedef struct oss_mixerinfo
    * as the default mixer.
    */
   int priority;
-  int filler[254];		/* Reserved */
+  oss_devnode_t devnode;
+  int legacy_device;
+  int filler[245];		/* Reserved */
 } oss_mixerinfo;
 
 typedef struct oss_midi_info

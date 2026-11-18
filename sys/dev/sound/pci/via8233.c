@@ -50,8 +50,6 @@
 
 #include <dev/sound/pci/via8233.h>
 
-SND_DECLARE_FILE("");
-
 #define VIA8233_PCI_ID 0x30591106
 
 #define VIA8233_REV_ID_8233PRE	0x10
@@ -567,6 +565,7 @@ via8233chan_setfragments(kobj_t obj, void *data,
 {
 	struct via_chinfo *ch = data;
 	struct via_info *via = ch->parent;
+	int error;
 
 	blksz &= VIA_BLK_ALIGN;
 
@@ -590,9 +589,11 @@ via8233chan_setfragments(kobj_t obj, void *data,
 
 	if ((sndbuf_getblksz(ch->buffer) != blksz ||
 	    sndbuf_getblkcnt(ch->buffer) != blkcnt) &&
-	    sndbuf_resize(ch->buffer, blkcnt, blksz) != 0)
+	    (error = sndbuf_resize(ch->buffer, blkcnt, blksz)) != 0) {
 		device_printf(via->dev, "%s: failed blksz=%u blkcnt=%u\n",
 		    __func__, blksz, blkcnt);
+		return (error);
+	}
 
 	ch->blksz = sndbuf_getblksz(ch->buffer);
 	ch->blkcnt = sndbuf_getblkcnt(ch->buffer);
@@ -606,7 +607,8 @@ via8233chan_setblocksize(kobj_t obj, void *data, uint32_t blksz)
 	struct via_chinfo *ch = data;
 	struct via_info *via = ch->parent;
 
-	via8233chan_setfragments(obj, data, blksz, via->blkcnt);
+	if (via8233chan_setfragments(obj, data, blksz, via->blkcnt) != 0)
+		return (0);
 
 	return (ch->blksz);
 }
@@ -1349,9 +1351,9 @@ via_attach(device_t dev)
 		ac97_setextmode(via->codec, ext);
 	}
 
-	snprintf(status, SND_STATUSLEN, "at io 0x%jx irq %jd %s",
+	snprintf(status, SND_STATUSLEN, "port 0x%jx irq %jd on %s",
 	    rman_get_start(via->reg), rman_get_start(via->irq),
-	    PCM_KLDSTRING(snd_via8233));
+	    device_get_nameunit(device_get_parent(dev)));
 
 	/* Register */
 	if (pcm_register(dev, via, via_dxs_chnum + via_sgd_chnum, NWRCHANS))
@@ -1440,6 +1442,6 @@ static driver_t via_driver = {
 	PCM_SOFTC_SIZE,
 };
 
-DRIVER_MODULE(snd_via8233, pci, via_driver, pcm_devclass, 0, 0);
+DRIVER_MODULE(snd_via8233, pci, via_driver, 0, 0);
 MODULE_DEPEND(snd_via8233, sound, SOUND_MINVER, SOUND_PREFVER, SOUND_MAXVER);
 MODULE_VERSION(snd_via8233, 1);

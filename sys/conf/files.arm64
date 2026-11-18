@@ -310,6 +310,11 @@ dev/psci/smccc.c				standard
 
 dev/safexcel/safexcel.c				optional safexcel fdt
 
+dev/sound/fdt/audio_dai_if.m			optional sound fdt
+dev/sound/fdt/audio_soc.c			optional sound fdt
+dev/sound/fdt/dummy_codec.c			optional sound fdt
+dev/sound/fdt/simple_amplifier.c		optional sound fdt
+
 dev/sdhci/sdhci_xenon.c				optional sdhci_xenon sdhci
 dev/sdhci/sdhci_xenon_acpi.c			optional sdhci_xenon sdhci acpi
 dev/sdhci/sdhci_xenon_fdt.c			optional sdhci_xenon sdhci fdt
@@ -348,12 +353,15 @@ dev/vnic/lmac_if.m				optional inet | inet6 | vnic
 
 # Allwinner common files
 arm/allwinner/a10_timer.c			optional a10_timer fdt
-arm/allwinner/a10_codec.c			optional sound a10_codec
+arm/allwinner/a10_codec.c			optional sound a10_codec fdt
 arm/allwinner/a31_dmac.c			optional a31_dmac
+arm/allwinner/a33_codec.c			optional fdt sound a33_codec
+arm/allwinner/a64/sun50i_a64_acodec.c		optional fdt sound a64_codec
 arm/allwinner/sunxi_dma_if.m			optional a31_dmac
 arm/allwinner/aw_cir.c				optional evdev aw_cir fdt
 arm/allwinner/aw_dwc3.c				optional aw_dwc3 fdt
 arm/allwinner/aw_gpio.c				optional gpio aw_gpio fdt
+arm/allwinner/aw_i2s.c				optional fdt sound aw_i2s
 arm/allwinner/aw_mmc.c				optional mmc aw_mmc fdt | mmccam aw_mmc fdt
 arm/allwinner/aw_nmi.c				optional aw_nmi fdt \
 	compile-with "${NORMAL_C} -I$S/contrib/device-tree/include"
@@ -563,9 +571,11 @@ dev/ahci/ahci_fsl_fdt.c				optional soc_nxp_ls ahci fdt
 arm64/qualcomm/qcom_gcc.c			optional qcom_gcc fdt
 
 # RockChip Drivers
+arm64/rockchip/rk3328_codec.c			optional fdt rk3328codec soc_rockchip_rk3328
 arm64/rockchip/rk3399_emmcphy.c			optional fdt rk_emmcphy soc_rockchip_rk3399
 arm64/rockchip/rk_dwc3.c			optional fdt rk_dwc3 soc_rockchip_rk3399
 arm64/rockchip/rk_i2c.c				optional fdt rk_i2c soc_rockchip_rk3328 | fdt rk_i2c soc_rockchip_rk3399
+arm64/rockchip/rk_i2s.c				optional fdt sound soc_rockchip_rk3328 | fdt sound soc_rockchip_rk3399
 arm64/rockchip/rk805.c				optional fdt rk805 soc_rockchip_rk3328 | fdt rk805 soc_rockchip_rk3399
 arm64/rockchip/rk_grf.c				optional fdt soc_rockchip_rk3328 | fdt soc_rockchip_rk3399
 arm64/rockchip/rk_pinctrl.c			optional fdt rk_pinctrl soc_rockchip_rk3328 | fdt rk_pinctrl soc_rockchip_rk3399

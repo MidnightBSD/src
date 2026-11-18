@@ -28,7 +28,6 @@
 #endif
 
 #include <dev/sound/pcm/sound.h>
-#include <dev/sound/chip.h>
 
 #include "mixer_if.h"
 
@@ -38,7 +37,6 @@
 
 #include "vc_vchi_audioserv_defs.h"
 
-SND_DECLARE_FILE("");
 
 /* Audio destination */
 #define	DEST_AUTO		0
@@ -964,7 +962,7 @@ static driver_t bcm2835_audio_driver = {
 	PCM_SOFTC_SIZE,
 };
 
-DRIVER_MODULE(bcm2835_audio, vchiq, bcm2835_audio_driver, pcm_devclass, 0, 0);
+DRIVER_MODULE(bcm2835_audio, vchiq, bcm2835_audio_driver, 0, 0);
 MODULE_DEPEND(bcm2835_audio, sound, SOUND_MINVER, SOUND_PREFVER, SOUND_MAXVER);
 MODULE_DEPEND(bcm2835_audio, vchiq, 1, 1, 1);
 MODULE_VERSION(bcm2835_audio, 1);

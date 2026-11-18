@@ -90,8 +90,6 @@
 
 #include "mixer_if.h"
 
-SND_DECLARE_FILE("");
-
 #define MEM_MAP_REG 0x14
 
 /* PCI IDs of supported chips */
@@ -634,8 +632,9 @@ eschan1371_setspeed(kobj_t obj, void *data, uint32_t speed)
 static int
 eschan_setfragments(kobj_t obj, void *data, uint32_t blksz, uint32_t blkcnt)
 {
-  	struct es_chinfo *ch = data;
-  	struct es_info *es = ch->parent;
+	struct es_chinfo *ch = data;
+	struct es_info *es = ch->parent;
+	int error;
 
 	blksz &= ES_BLK_ALIGN;
 
@@ -659,9 +658,11 @@ eschan_setfragments(kobj_t obj, void *data, uint32_t blksz, uint32_t blkcnt)
 
 	if ((sndbuf_getblksz(ch->buffer) != blksz ||
 	    sndbuf_getblkcnt(ch->buffer) != blkcnt) &&
-	    sndbuf_resize(ch->buffer, blkcnt, blksz) != 0)
+	    (error = sndbuf_resize(ch->buffer, blkcnt, blksz)) != 0) {
 		device_printf(es->dev, "%s: failed blksz=%u blkcnt=%u\n",
 		    __func__, blksz, blkcnt);
+		return (error);
+	}
 
 	ch->bufsz = sndbuf_getsize(ch->buffer);
 	ch->blksz = sndbuf_getblksz(ch->buffer);
@@ -676,7 +677,8 @@ eschan_setblocksize(kobj_t obj, void *data, uint32_t blksz)
   	struct es_chinfo *ch = data;
   	struct es_info *es = ch->parent;
 
-	eschan_setfragments(obj, data, blksz, es->blkcnt);
+	if (eschan_setfragments(obj, data, blksz, es->blkcnt) != 0)
+		return (0);
 
 	return (ch->blksz);
 }
@@ -1858,10 +1860,10 @@ es_pci_attach(device_t dev)
 		goto bad;
 	}
 
-	snprintf(status, SND_STATUSLEN, "at %s 0x%jx irq %jd %s",
-	    (es->regtype == SYS_RES_IOPORT)? "io" : "memory",
+	snprintf(status, SND_STATUSLEN, "%s 0x%jx irq %jd on %s",
+	    (es->regtype == SYS_RES_IOPORT)? "port" : "mem",
 	    rman_get_start(es->reg), rman_get_start(es->irq),
-	    PCM_KLDSTRING(snd_es137x));
+	    device_get_nameunit(device_get_parent(dev)));
 
 	if (pcm_register(dev, es, numplay, 1))
 		goto bad;
@@ -1932,7 +1934,7 @@ static device_method_t es_methods[] = {
 	DEVMETHOD(device_probe,		es_pci_probe),
 	DEVMETHOD(device_attach,	es_pci_attach),
 	DEVMETHOD(device_detach,	es_pci_detach),
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t es_driver = {
@@ -1941,6 +1943,6 @@ static driver_t es_driver = {
 	PCM_SOFTC_SIZE,
 };
 
-DRIVER_MODULE(snd_es137x, pci, es_driver, pcm_devclass, 0, 0);
+DRIVER_MODULE(snd_es137x, pci, es_driver, 0, 0);
 MODULE_DEPEND(snd_es137x, sound, SOUND_MINVER, SOUND_PREFVER, SOUND_MAXVER);
 MODULE_VERSION(snd_es137x, 1);

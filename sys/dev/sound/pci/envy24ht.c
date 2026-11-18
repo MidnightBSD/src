@@ -53,8 +53,6 @@
 
 #include "mixer_if.h"
 
-SND_DECLARE_FILE("");
-
 static MALLOC_DEFINE(M_ENVY24HT, "envy24ht", "envy24ht audio");
 
 /* -------------------------------------------------------------------- */
@@ -1156,9 +1154,9 @@ envy24ht_gethwptr(struct sc_info *sc, int dir)
 static void
 envy24ht_updintr(struct sc_info *sc, int dir)
 {
-	int regptr, regintr;
+	int regintr;
 	u_int32_t mask, intr;
-	u_int32_t ptr, size, cnt;
+	u_int32_t cnt;
 	u_int16_t blk;
 
 #if(0)
@@ -1166,28 +1164,18 @@ envy24ht_updintr(struct sc_info *sc, int dir)
 #endif
 	if (dir == PCMDIR_PLAY) {
 		blk = sc->blk[0];
-		size = sc->psize / 4;
-		regptr = ENVY24HT_MT_PCNT;
 		regintr = ENVY24HT_MT_PTERM;
 		mask = ~ENVY24HT_MT_INT_PMASK;
 	}
 	else {
 		blk = sc->blk[1];
-		size = sc->rsize / 4;
-		regptr = ENVY24HT_MT_RCNT;
 		regintr = ENVY24HT_MT_RTERM;
 		mask = ~ENVY24HT_MT_INT_RMASK;
 	}
 
-	ptr = size - envy24ht_rdmt(sc, regptr, 2) - 1;
-	/*
-	cnt = blk - ptr % blk - 1;
-	if (cnt == 0)
-		cnt = blk - 1;
-	*/
 	cnt = blk - 1;
 #if(0)
-	device_printf(sc->dev, "envy24ht_updintr():ptr = %d, blk = %d, cnt = %d\n", ptr, blk, cnt);
+	device_printf(sc->dev, "envy24ht_updintr():blk = %d, cnt = %d\n", blk, cnt);
 #endif
 	envy24ht_wrmt(sc, regintr, cnt, 2);
 	intr = envy24ht_rdmt(sc, ENVY24HT_MT_INT_MASK, 1);
@@ -1639,7 +1627,7 @@ envy24htchan_setblocksize(kobj_t obj, void *data, u_int32_t blocksize)
 {
 	struct sc_chinfo *ch = data;
 	/* struct sc_info *sc = ch->parent; */
-	u_int32_t size, prev;
+	uint32_t blk, size, prev;
 	unsigned int bcnt, bsize;
 
 #if(0)
@@ -1654,20 +1642,22 @@ envy24htchan_setblocksize(kobj_t obj, void *data, u_int32_t blocksize)
 			break;
 	}
 
-	ch->blk = prev / ch->unit;
+	blk = prev / ch->unit;
 	if (ch->dir == PCMDIR_PLAY)
-		ch->blk *= ENVY24HT_PLAY_BUFUNIT / 4;
+		blk *= ENVY24HT_PLAY_BUFUNIT / 4;
 	else
-		ch->blk *= ENVY24HT_REC_BUFUNIT / 4;
+		blk *= ENVY24HT_REC_BUFUNIT / 4;
         /* set channel buffer information */
         /* ch->size = ch->unit * ENVY24HT_SAMPLE_NUM; */
         if (ch->dir == PCMDIR_PLAY)
-                bsize = ch->blk * 4 / ENVY24HT_PLAY_BUFUNIT;
+                bsize = blk * 4 / ENVY24HT_PLAY_BUFUNIT;
         else
-                bsize = ch->blk * 4 / ENVY24HT_REC_BUFUNIT;
+                bsize = blk * 4 / ENVY24HT_REC_BUFUNIT;
         bsize *= ch->unit;
         bcnt = ch->size / bsize;
-        sndbuf_resize(ch->buffer, bcnt, bsize);
+        if (sndbuf_resize(ch->buffer, bcnt, bsize) != 0)
+		return 0;
+	ch->blk = blk;
 	/* snd_mtxunlock(sc->lock); */
 
 #if(0)
@@ -2508,12 +2498,13 @@ envy24ht_pci_attach(device_t dev)
 
 	/* set status iformation */
 	snprintf(status, SND_STATUSLEN,
-	    "at io 0x%jx:%jd,0x%jx:%jd irq %jd",
+	    "port 0x%jx:%jd,0x%jx:%jd irq %jd on %s",
 	    rman_get_start(sc->cs),
 	    rman_get_end(sc->cs) - rman_get_start(sc->cs) + 1,
 	    rman_get_start(sc->mt),
 	    rman_get_end(sc->mt) - rman_get_start(sc->mt) + 1,
-	    rman_get_start(sc->irq));
+	    rman_get_start(sc->irq),
+	    device_get_nameunit(device_get_parent(dev)));
 	pcm_setstatus(dev, status);
 
 	return 0;
@@ -2583,7 +2574,7 @@ static device_method_t envy24ht_methods[] = {
 	DEVMETHOD(device_probe,		envy24ht_pci_probe),
 	DEVMETHOD(device_attach,	envy24ht_pci_attach),
 	DEVMETHOD(device_detach,	envy24ht_pci_detach),
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t envy24ht_driver = {
@@ -2592,7 +2583,7 @@ static driver_t envy24ht_driver = {
 	PCM_SOFTC_SIZE,
 };
 
-DRIVER_MODULE(snd_envy24ht, pci, envy24ht_driver, pcm_devclass, 0, 0);
+DRIVER_MODULE(snd_envy24ht, pci, envy24ht_driver, 0, 0);
 MODULE_DEPEND(snd_envy24ht, sound, SOUND_MINVER, SOUND_PREFVER, SOUND_MAXVER);
 MODULE_DEPEND(snd_envy24ht, snd_spicds, 1, 1, 1);
 MODULE_VERSION(snd_envy24ht, 1);

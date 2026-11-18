@@ -47,8 +47,6 @@
 #include "pin_patch.h"
 #include "pin_patch_realtek.h"
 
-SND_DECLARE_FILE("");
-
 static const struct {
 	uint32_t model;
 	uint32_t id;
@@ -302,6 +300,28 @@ hdac_pin_patch(struct hdaa_widget *w)
 			patch_str = "as=2";
 			break;
 		}
+	} else if (id == HDA_CODEC_CX20590 &&
+	    subid == LENOVO_T420S_SUBVENDOR) {
+		switch (nid) {
+		case 25:
+			patch_str = "as=1 seq=15";
+			break;
+		case 27:
+			patch_str = "as=2 seq=15";
+			break;
+		case 31:
+			patch_str = "as=1 seq=0";
+			break;
+		case 35:
+			patch_str = "as=2 seq=0";
+			break;
+		}
+	} else if (id == HDA_CODEC_ALC235 && subid == ASUS_GL553VE_SUBVENDOR) {
+		switch (nid) {
+		case 33:
+			patch_str = "as=1 seq=15";
+			break;
+		}
 	} else if (id == HDA_CODEC_ALC256 && (subid == DELL_I7577_SUBVENDOR ||
 	    subid == DELL_L7480_SUBVENDOR)) {
 		switch (nid) {
@@ -314,7 +334,8 @@ hdac_pin_patch(struct hdaa_widget *w)
 		}
 	} else if (id == HDA_CODEC_ALC257 &&
 	    (subid == LENOVO_L5AMD_SUBVENDOR ||
-	    subid == LENOVO_L5INTEL_SUBVENDOR)) {
+	    subid == LENOVO_L5INTEL_SUBVENDOR ||
+	    subid == LENOVO_IDEAPAD3_SUBVENDOR)) {
 		switch (nid) {
 		case 20:
 			patch_str = "as=1 seq=0";
@@ -325,13 +346,68 @@ hdac_pin_patch(struct hdaa_widget *w)
 		}
 	} else if (id == HDA_CODEC_IDT92HD95B &&
 	    (subid == FRAMEWORK_LAPTOP_0001_SUBVENDOR ||
-	    subid == FRAMEWORK_LAPTOP_0002_SUBVENDOR)) {
+	    subid == FRAMEWORK_LAPTOP_0002_SUBVENDOR ||
+	    subid == FRAMEWORK_LAPTOP_0003_SUBVENDOR)) {
 		switch (nid) {
 		case 10:
 			patch_str = "as=1 seq=15 color=Black loc=Left";
 			break;
 		case 11:
 			patch_str = "as=3 seq=15 color=Black loc=Left";
+			break;
+		}
+	} else if ((id == HDA_CODEC_ALC295 &&
+	    subid == FRAMEWORK_LAPTOP_0005_SUBVENDOR) ||
+	    (id == HDA_CODEC_ALC285 &&
+	    subid == FRAMEWORK_LAPTOP_000D_SUBVENDOR)) {
+		switch (nid) {
+		case 20:
+			/*
+			 * This pin is a duplicate of pin 23 (both as=1 seq=0),
+			 * which ends up in the driver disabling the
+			 * association altogether. Since sound quality from pin
+			 * 23 seems to be better, configure this one as a back
+			 * speaker.
+			 */
+			patch_str = "as=1 seq=2";
+			break;
+		}
+	} else if (id == HDA_CODEC_ALC295 &&
+	    subid == FRAMEWORK_LAPTOP_0006_SUBVENDOR) {
+		switch (nid) {
+		case 33:
+			patch_str = "as=1 seq=15 color=Black loc=Left";
+			break;
+		}
+	} else if (id == HDA_CODEC_ALC230 &&
+	    subid == LENOVO_IDEAPAD330_SUBVENDOR) {
+		switch (nid) {
+		case 20:
+			patch_str = "as=1 seq=0 device=Speaker";
+			break;
+		case 33:
+			patch_str = "as=1 seq=15 device=Headphones";
+			break;
+		}
+	} else if (id == HDA_CODEC_ALC269 &&
+	    subid == LENOVO_X230_SUBVENDOR) {
+		switch (nid) {
+		case 21:
+			patch_str = "as=1 seq=15";
+			break;
+		case 24:
+			patch_str = "as=4 seq=15";
+			break;
+		}
+	} else if (id == HDA_CODEC_ALC294 &&
+	    subid == ASUS_UX331_SUBVENDOR) {
+		switch (nid) {
+		case 25:
+			/* XXX You are not expected to understand this. */
+			config = 0x01a1103c;
+			break;
+		case 33:
+			patch_str = "as=1 seq=15";
 			break;
 		}
 	} else {

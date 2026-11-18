@@ -39,6 +39,15 @@
 # for generating a list from a directory
 # find  /usr/lib/perl5/5.36.0 -exec echo {} \; | cut -b 2-150  | xargs printf "OLD_FILES+=%s\n"
 
+# 20261118: ISA sound card drivers removed
+OLD_FILES+=usr/share/man/man4/snd_ad1816.4.gz
+OLD_FILES+=usr/share/man/man4/snd_ess.4.gz
+OLD_FILES+=usr/share/man/man4/snd_gusc.4.gz
+OLD_FILES+=usr/share/man/man4/snd_mss.4.gz
+OLD_FILES+=usr/share/man/man4/snd_sb16.4.gz
+OLD_FILES+=usr/share/man/man4/snd_sb8.4.gz
+OLD_FILES+=usr/share/man/man4/snd_sbc.4.gz
+
 # 20261110: opencsd 1.4.0; libopencsd moved to /usr/lib and made private
 OLD_FILES+=lib/libopencsd.so.0
 OLD_FILES+=usr/include/opencsd/etmv4/trc_pkt_elem_etmv4d.h

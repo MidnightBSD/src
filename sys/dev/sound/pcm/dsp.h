@@ -5,6 +5,10 @@
  * Portions Copyright (c) Ryan Beasley <ryan.beasley@gmail.com> - GSoC 2006
  * Copyright (c) 1999 Cameron Grant <cg@FreeBSD.org>
  * All rights reserved.
+ * Copyright (c) 2024-2025 The FreeBSD Foundation
+ *
+ * Portions of this software were developed by Christos Margiolis
+ * <christos@FreeBSD.org> under sponsorship from the FreeBSD Foundation.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,14 +35,9 @@
 #ifndef _PCMDSP_H_
 #define _PCMDSP_H_
 
-extern struct cdevsw dsp_cdevsw;
-
-struct dsp_cdevinfo;
-
-char *dsp_unit2name(char *, size_t, int);
-int dsp_oss_audioinfo(struct cdev *, oss_audioinfo *);
-
-void dsp_cdevinfo_init(struct snddev_info *);
-void dsp_cdevinfo_flush(struct snddev_info *);
+int dsp_make_dev(device_t);
+void dsp_destroy_dev(device_t);
+int dsp_oss_audioinfo(struct cdev *, oss_audioinfo *, bool);
+int dsp_oss_engineinfo(struct cdev *, oss_audioinfo *);
 
 #endif /* !_PCMDSP_H_ */
