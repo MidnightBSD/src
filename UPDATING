@@ -1,6 +1,15 @@
 Updating Information for MidnightBSD users.
 
 20261117:
+	inotify: fix a use after free when removing one-shot watches
+	(CVE-2026-101316, FreeBSD-SA-26:80.vfs).  inotify_log_one() only
+	checked that a watch with the same watch descriptor was still
+	registered, not that it was the same watch, so by wrapping the
+	32-bit descriptor counter an unprivileged local user could make
+	the kernel free a watch that was still in use and potentially
+	escalate privileges.  Only current is affected; native inotify is
+	not in any release.  Rebuild and install the kernel, then reboot.
+
 	nfsd: fix a use after free via DELEGRETURN (CVE-2026-101317,
 	FreeBSD-SA-26:79.nfs).  The NFSv4 server did not check that the
 	stateid passed to DELEGRETURN referred to a delegation, so a client
