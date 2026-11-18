@@ -1,5 +1,15 @@
 Updating Information for MidnightBSD users.
 
+20261118:
+	sound(4) has been synced with FreeBSD stable/14.  Unloading a sound
+	driver while the device is in use now succeeds, and programs using
+	it get errors instead of the unload failing with EBUSY.  The
+	/dev/dspX.Y devices are gone; open /dev/dspX instead.  The
+	hw.snd.version sysctl has been removed.  The ISA sound drivers
+	snd_ad1816, snd_ess, snd_gusc, snd_mss, snd_sb8, snd_sb16 and
+	snd_sbc have been removed.  Rebuild and install the kernel and
+	modules, then reboot.
+
 20261117:
 	tmpfs: clear setgid on files created by nonmembers of the group
 	(CVE-2026-127749, FreeBSD-SA-26:94.tmpfs).  A user could create a
