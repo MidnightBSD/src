@@ -45,8 +45,6 @@
 
 #include <dev/sound/pci/cs4281.h>
 
-SND_DECLARE_FILE("");
-
 #define CS4281_DEFAULT_BUFSZ 16384
 
 /* Max fifo size for full duplex is 64 */
@@ -348,12 +346,14 @@ cs4281chan_setblocksize(kobj_t obj, void *data, u_int32_t blocksize)
     struct sc_info *sc = ch->parent;
     u_int32_t go;
 
-    go = adcdac_go(ch, 0);
-
     /* 2 interrupts are possible and used in buffer (half-empty,empty),
      * hence factor of 2. */
-    ch->blksz = MIN(blocksize, sc->bufsz / 2);
-    sndbuf_resize(ch->buffer, 2, ch->blksz);
+    blocksize = MIN(blocksize, sc->bufsz / 2);
+    if (sndbuf_resize(ch->buffer, 2, blocksize) != 0)
+	return 0;
+    ch->blksz = blocksize;
+
+    go = adcdac_go(ch, 0);
     ch->dma_setup = 0;
     adcdac_prog(ch);
     adcdac_go(ch, go);
@@ -819,8 +819,8 @@ cs4281_pci_attach(device_t dev)
 			   /*filter*/NULL, /*filterarg*/NULL,
 			   /*maxsize*/sc->bufsz, /*nsegments*/1,
 			   /*maxsegz*/0x3ffff,
-			   /*flags*/0, /*lockfunc*/busdma_lock_mutex,
-			   /*lockarg*/&Giant, &sc->parent_dmat) != 0) {
+			   /*flags*/0, /*lockfunc*/NULL, /*lockarg*/NULL,
+			   &sc->parent_dmat) != 0) {
 	device_printf(dev, "unable to create dma tag\n");
 	goto bad;
     }
@@ -847,9 +847,10 @@ cs4281_pci_attach(device_t dev)
     pcm_addchan(dev, PCMDIR_PLAY, &cs4281chan_class, sc);
     pcm_addchan(dev, PCMDIR_REC, &cs4281chan_class, sc);
 
-    snprintf(status, SND_STATUSLEN, "at %s 0x%jx irq %jd %s",
-	     (sc->regtype == SYS_RES_IOPORT)? "io" : "memory",
-	     rman_get_start(sc->reg), rman_get_start(sc->irq),PCM_KLDSTRING(snd_cs4281));
+    snprintf(status, SND_STATUSLEN, "%s 0x%jx irq %jd on %s",
+	     (sc->regtype == SYS_RES_IOPORT)? "port" : "mem",
+	     rman_get_start(sc->reg), rman_get_start(sc->irq),
+	     device_get_nameunit(device_get_parent(dev)));
     pcm_setstatus(dev, status);
 
     return 0;
@@ -955,7 +956,7 @@ static device_method_t cs4281_methods[] = {
     DEVMETHOD(device_detach,		cs4281_pci_detach),
     DEVMETHOD(device_suspend,		cs4281_pci_suspend),
     DEVMETHOD(device_resume,		cs4281_pci_resume),
-    { 0, 0 }
+    DEVMETHOD_END
 };
 
 static driver_t cs4281_driver = {
@@ -964,6 +965,6 @@ static driver_t cs4281_driver = {
     PCM_SOFTC_SIZE,
 };
 
-DRIVER_MODULE(snd_cs4281, pci, cs4281_driver, pcm_devclass, 0, 0);
+DRIVER_MODULE(snd_cs4281, pci, cs4281_driver, 0, 0);
 MODULE_DEPEND(snd_cs4281, sound, SOUND_MINVER, SOUND_PREFVER, SOUND_MAXVER);
 MODULE_VERSION(snd_cs4281, 1);

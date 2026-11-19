@@ -36,14 +36,11 @@
 
 #include <dev/sound/pcm/sound.h>
 #include <dev/sound/pcm/ac97.h>
-#include <dev/sound/chip.h>
 #include <dev/sound/pci/csareg.h>
 #include <dev/sound/pci/csavar.h>
 
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
-
-SND_DECLARE_FILE("");
 
 /* Buffer size on dma transfer. Fixed for CS416x. */
 #define CS461x_BUFFSIZE   (4 * 1024)
@@ -716,8 +713,8 @@ csa_allocres(struct csa_info *csa, device_t dev)
 			       /*highaddr*/BUS_SPACE_MAXADDR,
 			       /*filter*/NULL, /*filterarg*/NULL,
 			       /*maxsize*/CS461x_BUFFSIZE, /*nsegments*/1, /*maxsegz*/0x3ffff,
-			       /*flags*/0, /*lockfunc*/busdma_lock_mutex,
-			       /*lockarg*/&Giant, &csa->parent_dmat) != 0)
+			       /*flags*/0, /*lockfunc*/NULL, /*lockarg*/NULL,
+			       &csa->parent_dmat) != 0)
 		return (1);
 
 	return (0);
@@ -821,8 +818,9 @@ pcmcsa_attach(device_t dev)
 		return (ENXIO);
 	}
 
-	snprintf(status, SND_STATUSLEN, "at irq %jd %s",
-			rman_get_start(resp->irq),PCM_KLDSTRING(snd_csa));
+	snprintf(status, SND_STATUSLEN, "irq %jd on %s",
+			rman_get_start(resp->irq),
+			device_get_nameunit(device_get_parent(dev)));
 
 	/* Enable interrupt. */
 	if (snd_setup_intr(dev, resp->irq, 0, csa_intr, csa, &csa->ih)) {
@@ -1026,7 +1024,7 @@ static device_method_t pcmcsa_methods[] = {
 	DEVMETHOD(device_suspend, pcmcsa_suspend),
 	DEVMETHOD(device_resume, pcmcsa_resume),
 
-	{ 0, 0 },
+	DEVMETHOD_END
 };
 
 static driver_t pcmcsa_driver = {
@@ -1035,7 +1033,7 @@ static driver_t pcmcsa_driver = {
 	PCM_SOFTC_SIZE,
 };
 
-DRIVER_MODULE(snd_csapcm, csa, pcmcsa_driver, pcm_devclass, 0, 0);
+DRIVER_MODULE(snd_csapcm, csa, pcmcsa_driver, 0, 0);
 MODULE_DEPEND(snd_csapcm, sound, SOUND_MINVER, SOUND_PREFVER, SOUND_MAXVER);
 MODULE_DEPEND(snd_csapcm, snd_csa, 1, 1, 1);
 MODULE_VERSION(snd_csapcm, 1);

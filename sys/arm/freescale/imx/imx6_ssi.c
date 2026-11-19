@@ -43,7 +43,6 @@
 #include <sys/timetc.h>
 
 #include <dev/sound/pcm/sound.h>
-#include <dev/sound/chip.h>
 #include <mixer_if.h>
 
 #include <dev/ofw/openfirm.h>
@@ -853,7 +852,7 @@ static driver_t ssi_pcm_driver = {
 	PCM_SOFTC_SIZE,
 };
 
-DRIVER_MODULE(ssi, simplebus, ssi_pcm_driver, pcm_devclass, 0, 0);
+DRIVER_MODULE(ssi, simplebus, ssi_pcm_driver, 0, 0);
 MODULE_DEPEND(ssi, sound, SOUND_MINVER, SOUND_PREFVER, SOUND_MAXVER);
 MODULE_DEPEND(ssi, sdma, 0, 0, 0);
 MODULE_VERSION(ssi, 1);

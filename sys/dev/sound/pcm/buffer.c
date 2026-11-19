@@ -32,16 +32,15 @@
 #include "opt_snd.h"
 #endif
 
-#include <dev/sound/pcm/sound.h>
+#include <sys/param.h>
 #include <sys/refcount.h>
+#include <dev/sound/pcm/sound.h>
 
 #include "feeder_if.h"
 
 #define SND_USE_FXDIV
 #define	SND_DECLARE_FXDIV
 #include "snd_fxdiv_gen.h"
-
-SND_DECLARE_FILE("");
 
 struct snd_dbuf *
 sndbuf_create(device_t dev, char *drv, char *desc, struct pcm_channel *channel)
@@ -85,6 +84,7 @@ sndbuf_rele(struct snd_dbuf *b)
 		free(b, M_DEVBUF);
 	}
 }
+
 
 bus_addr_t
 sndbuf_getbufaddr(struct snd_dbuf *buf)
@@ -150,7 +150,7 @@ sndbuf_alloc(struct snd_dbuf *b, bus_dma_tag_t dmatag, int dmaflags,
 		return (ENOMEM);
 	}
 	if (bus_dmamap_load(b->dmatag, b->dmamap, b->buf, b->maxsize,
-	    sndbuf_setmap, b, 0) != 0 || b->buf_addr == 0) {
+	    sndbuf_setmap, b, BUS_DMA_NOWAIT) != 0 || b->buf_addr == 0) {
 		sndbuf_free(b);
 		return (ENOMEM);
 	}
@@ -192,6 +192,7 @@ sndbuf_free(struct snd_dbuf *b)
 		} else
 			free(b->buf, M_DEVBUF);
 	}
+	seldrain(sndbuf_getsel(b));
 
 	b->tmpbuf = NULL;
 	b->shadbuf = NULL;
@@ -229,7 +230,7 @@ sndbuf_resize(struct snd_dbuf *b, unsigned int blkcnt, unsigned int blksz)
 	    bufsize < (b->allocsize >> SNDBUF_CACHE_SHIFT)) {
 		if (sndbuf_busy(b)) {
 			CHN_UNLOCK(b->channel);
-			return EBUSY;
+			return (EBUSY);
 		}
 		allocsize = round_page(bufsize);
 		CHN_UNLOCK(b->channel);
@@ -278,7 +279,7 @@ sndbuf_remalloc(struct snd_dbuf *b, unsigned int blkcnt, unsigned int blksz)
 	if (bufsize > b->allocsize ||
 	    bufsize < (b->allocsize >> SNDBUF_CACHE_SHIFT)) {
 		if (sndbuf_busy(b))
-			return EBUSY;
+			return (EBUSY);
 		allocsize = round_page(bufsize);
 		CHN_UNLOCK(b->channel);
 		buf = malloc(allocsize, M_DEVBUF, M_WAITOK);
@@ -416,15 +417,6 @@ sndbuf_setfmt(struct snd_dbuf *b, u_int32_t fmt)
 	b->fmt = fmt;
 	b->bps = AFMT_BPS(b->fmt);
 	b->align = AFMT_ALIGN(b->fmt);
-#if 0
-	b->bps = AFMT_CHANNEL(b->fmt);
-	if (b->fmt & AFMT_16BIT)
-		b->bps <<= 1;
-	else if (b->fmt & AFMT_24BIT)
-		b->bps *= 3;
-	else if (b->fmt & AFMT_32BIT)
-		b->bps <<= 2;
-#endif
 	return 0;
 }
 
@@ -530,39 +522,30 @@ sndbuf_getsel(struct snd_dbuf *b)
 unsigned int
 sndbuf_getxrun(struct snd_dbuf *b)
 {
-	SNDBUF_LOCKASSERT(b);
-
 	return b->xrun;
 }
 
 void
 sndbuf_setxrun(struct snd_dbuf *b, unsigned int xrun)
 {
-	SNDBUF_LOCKASSERT(b);
-
 	b->xrun = xrun;
 }
 
 unsigned int
 sndbuf_gethwptr(struct snd_dbuf *b)
 {
-	SNDBUF_LOCKASSERT(b);
-
 	return b->hp;
 }
 
 void
 sndbuf_sethwptr(struct snd_dbuf *b, unsigned int ptr)
 {
-	SNDBUF_LOCKASSERT(b);
-
 	b->hp = ptr;
 }
 
 unsigned int
 sndbuf_getready(struct snd_dbuf *b)
 {
-	SNDBUF_LOCKASSERT(b);
 	KASSERT((b->rl >= 0) && (b->rl <= b->bufsize), ("%s: b->rl invalid %d", __func__, b->rl));
 
 	return b->rl;
@@ -571,7 +554,6 @@ sndbuf_getready(struct snd_dbuf *b)
 unsigned int
 sndbuf_getreadyptr(struct snd_dbuf *b)
 {
-	SNDBUF_LOCKASSERT(b);
 	KASSERT((b->rp >= 0) && (b->rp <= b->bufsize), ("%s: b->rp invalid %d", __func__, b->rp));
 
 	return b->rp;
@@ -580,7 +562,6 @@ sndbuf_getreadyptr(struct snd_dbuf *b)
 unsigned int
 sndbuf_getfree(struct snd_dbuf *b)
 {
-	SNDBUF_LOCKASSERT(b);
 	KASSERT((b->rl >= 0) && (b->rl <= b->bufsize), ("%s: b->rl invalid %d", __func__, b->rl));
 
 	return b->bufsize - b->rl;
@@ -589,7 +570,6 @@ sndbuf_getfree(struct snd_dbuf *b)
 unsigned int
 sndbuf_getfreeptr(struct snd_dbuf *b)
 {
-	SNDBUF_LOCKASSERT(b);
 	KASSERT((b->rp >= 0) && (b->rp <= b->bufsize), ("%s: b->rp invalid %d", __func__, b->rp));
 	KASSERT((b->rl >= 0) && (b->rl <= b->bufsize), ("%s: b->rl invalid %d", __func__, b->rl));
 
@@ -599,40 +579,30 @@ sndbuf_getfreeptr(struct snd_dbuf *b)
 u_int64_t
 sndbuf_getblocks(struct snd_dbuf *b)
 {
-	SNDBUF_LOCKASSERT(b);
-
 	return b->total / b->blksz;
 }
 
 u_int64_t
 sndbuf_getprevblocks(struct snd_dbuf *b)
 {
-	SNDBUF_LOCKASSERT(b);
-
 	return b->prev_total / b->blksz;
 }
 
 u_int64_t
 sndbuf_gettotal(struct snd_dbuf *b)
 {
-	SNDBUF_LOCKASSERT(b);
-
 	return b->total;
 }
 
 u_int64_t
 sndbuf_getprevtotal(struct snd_dbuf *b)
 {
-	SNDBUF_LOCKASSERT(b);
-
 	return b->prev_total;
 }
 
 void
 sndbuf_updateprevtotal(struct snd_dbuf *b)
 {
-	SNDBUF_LOCKASSERT(b);
-
 	b->prev_total = b->total;
 }
 

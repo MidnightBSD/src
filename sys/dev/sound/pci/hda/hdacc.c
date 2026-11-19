@@ -43,8 +43,6 @@
 #include <dev/sound/pci/hda/hda_reg.h>
 #include <dev/sound/pci/hda/hdac.h>
 
-SND_DECLARE_FILE("");
-
 struct hdacc_fg {
 	device_t	dev;
 	nid_t		nid;
@@ -81,6 +79,7 @@ static const struct {
 	{ HDA_CODEC_ALC221, 0,		"Realtek ALC221" },
 	{ HDA_CODEC_ALC222, 0,		"Realtek ALC222" },
 	{ HDA_CODEC_ALC225, 0,		"Realtek ALC225" },
+	{ HDA_CODEC_ALC230, 0,		"Realtek ALC230" },
 	{ HDA_CODEC_ALC231, 0,		"Realtek ALC231" },
 	{ HDA_CODEC_ALC233, 0,		"Realtek ALC233" },
 	{ HDA_CODEC_ALC234, 0,		"Realtek ALC234" },
@@ -148,6 +147,7 @@ static const struct {
 	{ HDA_CODEC_ALC889, 0,		"Realtek ALC889" },
 	{ HDA_CODEC_ALC892, 0,		"Realtek ALC892" },
 	{ HDA_CODEC_ALC897, 0,		"Realtek ALC897" },
+	{ HDA_CODEC_ALC898, 0,		"Realtek ALC898" },
 	{ HDA_CODEC_ALC899, 0,		"Realtek ALC899" },
 	{ HDA_CODEC_ALC1150, 0,		"Realtek ALC1150" },
 	{ HDA_CODEC_ALCS1200A, 0,	"Realtek ALCS1200A" },
@@ -359,6 +359,7 @@ static const struct {
 	{ HDA_CODEC_NVIDIAMCP78_3, 0,	"NVIDIA MCP78" },
 	{ HDA_CODEC_NVIDIAMCP78_4, 0,	"NVIDIA MCP78" },
 	{ HDA_CODEC_NVIDIAMCP7A, 0,	"NVIDIA MCP7A" },
+	{ HDA_CODEC_NVIDIAGM204, 0,	"NVIDIA GM204" },
 	{ HDA_CODEC_NVIDIAGT220, 0,	"NVIDIA GT220" },
 	{ HDA_CODEC_NVIDIAGT21X, 0,	"NVIDIA GT21x" },
 	{ HDA_CODEC_NVIDIAMCP89, 0,	"NVIDIA MCP89" },
@@ -394,6 +395,7 @@ static const struct {
 	{ HDA_CODEC_INTELGMLK1, 0,	"Intel Gemini Lake" },
 	{ HDA_CODEC_INTELICLK, 0,	"Intel Ice Lake" },
 	{ HDA_CODEC_INTELTGLK, 0,	"Intel Tiger Lake" },
+	{ HDA_CODEC_INTELTGLKH, 0,	"Intel Tiger Lake-H" },
 	{ HDA_CODEC_INTELALLK, 0,	"Intel Alder Lake" },
 	{ HDA_CODEC_SII1390, 0,		"Silicon Image SiI1390" },
 	{ HDA_CODEC_SII1392, 0,		"Silicon Image SiI1392" },
@@ -474,8 +476,7 @@ hdacc_probe(device_t dev)
 			    hdacc_codecs[i].name, hda_get_device_id(dev));
 	} else
 		snprintf(buf, sizeof(buf), "Generic (0x%04x)", id);
-	strlcat(buf, " HDA CODEC", sizeof(buf));
-	device_set_desc_copy(dev, buf);
+	device_set_descf(dev, "%s HDA CODEC", buf);
 	return (BUS_PROBE_DEFAULT);
 }
 
@@ -799,6 +800,4 @@ static driver_t hdacc_driver = {
 	sizeof(struct hdacc_softc),
 };
 
-static devclass_t hdacc_devclass;
-
-DRIVER_MODULE(snd_hda, hdac, hdacc_driver, hdacc_devclass, NULL, NULL);
+DRIVER_MODULE(snd_hda, hdac, hdacc_driver, NULL, NULL);

@@ -41,7 +41,6 @@
 #include <machine/bus.h>
 
 #include <dev/sound/pcm/sound.h>
-#include <dev/sound/chip.h>
 
 #include <dev/ofw/ofw_bus.h>
 #include <dev/ofw/ofw_bus_subr.h>
@@ -1202,6 +1201,6 @@ static driver_t a10codec_pcm_driver = {
 	PCM_SOFTC_SIZE,
 };
 
-DRIVER_MODULE(a10codec, simplebus, a10codec_pcm_driver, pcm_devclass, 0, 0);
+DRIVER_MODULE(a10codec, simplebus, a10codec_pcm_driver, 0, 0);
 MODULE_DEPEND(a10codec, sound, SOUND_MINVER, SOUND_PREFVER, SOUND_MAXVER);
 MODULE_VERSION(a10codec, 1);

@@ -39,8 +39,6 @@
 
 #include <dev/sound/pci/via82c686.h>
 
-SND_DECLARE_FILE("");
-
 #define VIA_PCI_ID 0x30581106
 #define	NSEGS		4	/* Number of segments in SGD table */
 
@@ -330,8 +328,9 @@ viachan_setblocksize(kobj_t obj, void *data, u_int32_t blocksize)
 {
 	struct via_chinfo *ch = data;
 
+	if (sndbuf_resize(ch->buffer, SEGS_PER_CHAN, blocksize) != 0)
+		return 0;
 	ch->blksz = blocksize;
-	sndbuf_resize(ch->buffer, SEGS_PER_CHAN, ch->blksz);
 
 	return ch->blksz;
 }
@@ -341,14 +340,12 @@ viachan_trigger(kobj_t obj, void *data, int go)
 {
 	struct via_chinfo *ch = data;
 	struct via_info *via = ch->parent;
-	struct via_dma_op *ado;
 	bus_addr_t sgd_addr = ch->sgd_addr;
 
 	if (!PCMTRIG_COMMON(go))
 		return 0;
 
-	ado = ch->sgd_table;
-	DEB(printf("ado located at va=%p pa=%x\n", ado, sgd_addr));
+	DEB(printf("ado located at va=%p pa=%x\n", ch->sgd_table, sgd_addr));
 
 	snd_mtxlock(via->lock);
 	if (go == PCMTRIG_START) {
@@ -368,11 +365,9 @@ viachan_getptr(kobj_t obj, void *data)
 {
 	struct via_chinfo *ch = data;
 	struct via_info *via = ch->parent;
-	struct via_dma_op *ado;
 	bus_addr_t sgd_addr = ch->sgd_addr;
 	u_int32_t ptr, base, base1, len, seg;
 
-	ado = ch->sgd_table;
 	snd_mtxlock(via->lock);
 	base1 = via_rd(via, ch->base, 4);
 	len = via_rd(via, ch->count, 4);
@@ -586,9 +581,9 @@ via_attach(device_t dev)
 	    NSEGS * sizeof(struct via_dma_op), dma_cb, via, 0) != 0)
 		goto bad;
 
-	snprintf(status, SND_STATUSLEN, "at io 0x%jx irq %jd %s",
+	snprintf(status, SND_STATUSLEN, "port 0x%jx irq %jd on %s",
 		 rman_get_start(via->reg), rman_get_start(via->irq),
-		 PCM_KLDSTRING(snd_via82c686));
+		 device_get_nameunit(device_get_parent(dev)));
 
 	/* Register */
 	if (pcm_register(dev, via, 1, 1)) goto bad;
@@ -646,6 +641,6 @@ static driver_t via_driver = {
 	PCM_SOFTC_SIZE,
 };
 
-DRIVER_MODULE(snd_via82c686, pci, via_driver, pcm_devclass, 0, 0);
+DRIVER_MODULE(snd_via82c686, pci, via_driver, 0, 0);
 MODULE_DEPEND(snd_via82c686, sound, SOUND_MINVER, SOUND_PREFVER, SOUND_MAXVER);
 MODULE_VERSION(snd_via82c686, 1);

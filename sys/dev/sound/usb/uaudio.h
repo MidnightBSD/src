@@ -45,8 +45,6 @@ extern void	*uaudio_chan_init(struct uaudio_chan *ch, struct snd_dbuf *b,
 extern int	uaudio_chan_free(struct uaudio_chan *ch);
 extern int	uaudio_chan_set_param_blocksize(struct uaudio_chan *ch,
 		    uint32_t blocksize);
-extern int	uaudio_chan_set_param_fragments(struct uaudio_chan *ch,
-		    uint32_t blocksize, uint32_t blockcount);
 extern int	uaudio_chan_set_param_speed(struct uaudio_chan *ch,
 		    uint32_t speed);
 extern int	uaudio_chan_getptr(struct uaudio_chan *ch);
@@ -63,9 +61,5 @@ extern void	uaudio_mixer_set(struct uaudio_softc *, struct snd_mixer *,
 		    unsigned type, unsigned left, unsigned right);
 extern uint32_t	uaudio_mixer_setrecsrc(struct uaudio_softc *, struct snd_mixer *,
 		    uint32_t src);
-
-int	uaudio_get_vendor(device_t dev);
-int	uaudio_get_product(device_t dev);
-int	uaudio_get_release(device_t dev);
 
 #endif			/* _UAUDIO_H_ */

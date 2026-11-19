@@ -23,7 +23,7 @@
 .\" OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 .\" SUCH DAMAGE.
 .\"
-.Dd December 26, 2020
+.Dd February 15, 2025
 .Dt SOUND 4
 .Os
 .Sh NAME
@@ -73,8 +73,6 @@ The following bridge device drivers are available:
 .Pp
 .Bl -bullet -compact
 .It
-.Xr snd_ad1816 4
-.It
 .Xr snd_ai2s 4 (enabled by default on powerpc)
 .It
 .Xr snd_als4000 4
@@ -101,11 +99,7 @@ The following bridge device drivers are available:
 .It
 .Xr snd_es137x 4 (enabled by default on amd64, i386)
 .It
-.Xr snd_ess 4
-.It
 .Xr snd_fm801 4
-.It
-.Xr snd_gusc 4
 .It
 .Xr snd_hda 4 (enabled by default on amd64, i386)
 .It
@@ -117,21 +111,13 @@ The following bridge device drivers are available:
 .It
 .Xr snd_maestro3 4
 .It
-.Xr snd_mss 4
-.It
 .Xr snd_neomagic 4
-.It
-snd_sb16
-.It
-snd_sb8
-.It
-.Xr snd_sbc 4
 .It
 .Xr snd_solo 4
 .It
 .Xr snd_spicds 4
 .It
-.Xr snd_uaudio 4 (enabled by default on amd64, i386, powerpc)
+.Xr snd_uaudio 4 (auto-loaded on device plug)
 .It
 .Xr snd_via8233 4 (enabled by default on amd64, i386)
 .It
@@ -142,33 +128,6 @@ snd_sb8
 .Pp
 Refer to the manual page for each bridge device driver for driver specific
 settings and information.
-.Ss Legacy Hardware
-For old legacy
-.Tn ISA
-cards, the driver looks for
-.Tn MSS
-cards at addresses
-.Dv 0x530
-and
-.Dv 0x604 .
-These values can be overridden in
-.Pa /boot/device.hints .
-Non-PnP sound cards require the following lines in
-.Xr device.hints 5 :
-.Bd -literal -offset indent
-hint.pcm.0.at="isa"
-hint.pcm.0.irq="5"
-hint.pcm.0.drq="1"
-hint.pcm.0.flags="0x0"
-.Ed
-.Pp
-Apart from the usual parameters, the flags field is used to specify
-the secondary
-.Tn DMA
-channel (generally used for capture in full duplex cards).
-Flags are set to 0 for cards not using a secondary
-.Tn DMA
-channel, or to 0x10 + C to specify channel C.
 .Ss Boot Variables
 In general, the module
 .Pa snd_foo
@@ -212,16 +171,16 @@ This will mute the input channel per default.
 Multichannel audio, popularly referred to as
 .Dq surround sound
 is supported and enabled by default.
-The FreeBSD multichannel matrix processor supports up to 18 interleaved
-channels, but the limit is currently set to 8 channels (as commonly used
-for 7.1 surround sound).
+The
+.Fx
+multichannel matrix processor supports up to 18 interleaved channels, but the
+limit is currently set to 8 channels (as commonly used for 7.1 surround sound).
 The internal matrix mapping can handle reduction, expansion or
 re-routing of channels.
 This provides a base interface for related multichannel
 .Fn ioctl
 support.
-Multichannel audio works both with and without
-.Tn VCHANs .
+Multichannel audio works both with and without VCHANs.
 .Pp
 Most bridge device drivers are still missing multichannel matrixing
 support, but in most cases this should be trivial to implement.
@@ -247,21 +206,18 @@ tunable.
 Each device can optionally support more playback and recording channels
 than physical hardware provides by using
 .Dq virtual channels
-or
-.Tn VCHANs .
-.Tn VCHAN
-options can be configured via the
+or VCHANs.
+VCHAN options can be configured via the
 .Xr sysctl 8
 interface but can only be manipulated while the device is inactive.
 .Ss VPC
-FreeBSD supports independent and individual volume controls for each active
+.Fx
+supports independent and individual volume controls for each active
 application, without touching the master
 .Nm
 volume.
 This is sometimes referred to as Volume Per Channel (VPC).
-The
-.Tn VPC
-feature is enabled by default.
+The VPC feature is enabled by default.
 .Ss Loader Tunables
 The following loader tunables are used to set driver configuration at the
 .Xr loader 8
@@ -283,12 +239,9 @@ Enabling this will make bass and treble controls appear in mixer applications.
 This tunable is undefined by default.
 Equalizing is disabled by default.
 .It Va hint.pcm.%d.vpc
-Set to 1 or 0 to explicitly enable (1) or disable (0) the
-.Tn VPC
-feature.
+Set to 1 or 0 to explicitly enable (1) or disable (0) the VPC feature.
 This tunable is undefined by default.
-.Tn VPC
-is however enabled by default.
+VPC is however enabled by default.
 .El
 .Ss Runtime Configuration
 There are a number of
@@ -409,18 +362,12 @@ A value of 0 will use a low and aggressive latency profile which can result
 in possible underruns if the application cannot keep up with a rapid irq
 rate, especially during high workload.
 The default value is 1, which is considered a moderate/safe latency profile.
-.It Va hw.snd.maxautovchans
-Global
-.Tn VCHAN
-setting that only affects devices with at least one playback or recording channel available.
-The sound system will dynamically create up to this many
-.Tn VCHANs .
-Set to
-.Dq 0
-if no
-.Tn VCHANs
-are desired.
-Maximum value is 256.
+.It Va hw.snd.vchans_enable
+Global VCHAN setting to enable (1) or disable (0) VCHANs.
+This setting can be overridden for an individual device by using the
+.Va dev.pcm.%d.[play|rec].vchans
+tunables.
+Default is enabled.
 .It Va hw.snd.report_soft_formats
 Controls the internal format conversion if it is
 available transparently to the application software.
@@ -464,13 +411,11 @@ This means that any changes to the volume will be lost.
 Enabling this will preserve the volume, at the cost of possible confusion
 when applications tries to re-open the same device.
 .It Va hw.snd.vpc_mixer_bypass
-The recommended way to use the
-.Tn VPC
-feature is to teach applications to use
-the correct
+The recommended way to use the VPC feature is to teach applications to use the
+correct
 .Fn ioctl :
-.Dv SNDCTL_DSP_GETPLAYVOL, SNDCTL_DSP_SETPLAYVOL,
-.Dv SNDCTL_DSP_SETRECVOL, SNDCTL_DSP_SETRECVOL.
+.Dv SNDCTL_DSP_GETPLAYVOL , SNDCTL_DSP_SETPLAYVOL ,
+.Dv SNDCTL_DSP_SETRECVOL , SNDCTL_DSP_SETRECVOL .
 This is however not always possible.
 Enable this to allow applications to use their own existing mixer logic
 to control their own channel volume.
@@ -483,30 +428,16 @@ matrixing, rate converting and equalizing.
 The pure
 .Nm
 stream will be fed directly to the hardware.
-If
-.Tn VCHANs
-are enabled, the bitperfect mode will use the
-.Tn VCHAN
-format/rate as the definitive format/rate target.
-The recommended way to use bitperfect mode is to disable
-.Tn VCHANs
-and enable this sysctl.
+If VCHANs are enabled, the bitperfect mode will use the VCHAN format/rate as
+the definitive format/rate target.
+The recommended way to use bitperfect mode is to disable VCHANs and enable this
+sysctl.
 Default is disabled.
 .It Va dev.pcm.%d.[play|rec].vchans
-The current number of
-.Tn VCHANs
-allocated per device.
-This can be set to preallocate a certain number of
-.Tn VCHANs .
-Setting this value to
-.Dq 0
-will disable
-.Tn VCHANs
-for this device.
+Enable (1) or disable (0) VCHANs.
+Default is enabled.
 .It Va dev.pcm.%d.[play|rec].vchanformat
-Format for
-.Tn VCHAN
-mixing.
+Format for VCHAN mixing.
 All playback paths will be converted to this format before the mixing
 process begins.
 By default only 2 channels are enabled.
@@ -536,8 +467,7 @@ Quadraphonic, 4 channels (front/rear left and right).
 8 channels (4.0 + center + LFE + left and right side).
 .El
 .It Va dev.pcm.%d.[play|rec].vchanmode
-.Tn VCHAN
-format/rate selection.
+VCHAN format/rate selection.
 Available options include:
 .Bl -tag -width 2n
 .It fixed
@@ -572,9 +502,7 @@ The downside is that the hardware DMA mode needs to be restarted, which may
 cause annoying pops or clicks.
 .El
 .It Va dev.pcm.%d.[play|rec].vchanrate
-Sample rate speed for
-.Tn VCHAN
-mixing.
+Sample rate speed for VCHAN mixing.
 All playback paths will be converted to this sample rate before the mixing
 process begins.
 .It Va dev.pcm.%d.polling
@@ -584,30 +512,17 @@ device state on each tick using a
 mechanism.
 Disabled by default and currently only available for a few device drivers.
 .El
-.Ss Recording Channels
-On devices that have more than one recording source (ie: mic and line),
-there is a corresponding
-.Pa /dev/dsp%d.r%d
-device.
-The
-.Xr mixer 8
-utility can be used to start and stop recording from an specific device.
 .Ss Statistics
 Channel statistics are only kept while the device is open.
 So with situations involving overruns and underruns, consider the output
 while the errant application is open and running.
 .Ss IOCTL Support
-The driver supports most of the
-.Tn OSS
+The driver supports most of the OSS
 .Fn ioctl
 functions, and most applications work unmodified.
 A few differences exist, while memory mapped playback is
-supported natively and in
-.Tn Linux
-emulation, memory mapped recording is
-not due to
-.Tn VM
-system design.
+supported natively and in Linux emulation, memory mapped recording is not due
+to VM system design.
 As a consequence, some applications may need to be recompiled
 with a slightly modified audio module.
 See
@@ -618,36 +533,24 @@ functions.
 .Sh FILES
 The
 .Nm
-drivers may create the following
-device nodes:
+drivers may create the following device nodes:
 .Pp
-.Bl -tag -width ".Pa /dev/audio%d.%d" -compact
-.It Pa /dev/audio%d.%d
-Sparc-compatible audio device.
-.It Pa /dev/dsp%d.%d
-Digitized voice device.
-.It Pa /dev/dspW%d.%d
-Like
-.Pa /dev/dsp ,
-but 16 bits per sample.
-.It Pa /dev/dsp%d.p%d
-Playback channel.
-.It Pa /dev/dsp%d.r%d
-Record channel.
-.It Pa /dev/dsp%d.vp%d
-Virtual playback channel.
-.It Pa /dev/dsp%d.vr%d
-Virtual recording channel.
+.Bl -tag -width ".Pa /dev/sndstat" -compact
+.It Pa /dev/dsp%d
+Audio device.
+The number represents the unit number of the device.
+.It Pa /dev/dsp
+Alias of
+.Pa /dev/dsp${hw.snd.default_unit} .
+Available only if
+.Pa hw.snd.basename_clone
+is set.
 .It Pa /dev/sndstat
 Current
 .Nm
 status, including all channels and drivers.
 .El
 .Pp
-The first number in the device node
-represents the unit number of the
-.Nm
-device.
 All
 .Nm
 devices are listed
@@ -657,15 +560,6 @@ Additional messages are sometimes recorded when the
 device is probed and attached, these messages can be viewed with the
 .Xr dmesg 8
 utility.
-.Pp
-The above device nodes are only created on demand through the dynamic
-.Xr devfs 5
-clone handler.
-Users are strongly discouraged to access them directly.
-For specific sound card access, please instead use
-.Pa /dev/dsp
-or
-.Pa /dev/dsp%d .
 .Sh EXAMPLES
 Use the sound metadriver to load all
 .Nm
@@ -690,7 +584,7 @@ This is handy if there are multiple
 .Nm
 devices available:
 .Pp
-.Dl sysctl hw.snd.default_unit=1
+.Dl mixer -d pcm1
 .Sh DIAGNOSTICS
 .Bl -diag
 .It pcm%d:play:%d:dsp%d.p%d: play interrupt timeout, channel dead
@@ -700,7 +594,6 @@ or outgoing (record) data.
 A device node is not created properly.
 .El
 .Sh SEE ALSO
-.Xr snd_ad1816 4 ,
 .Xr snd_ai2s 4 ,
 .Xr snd_als4000 4 ,
 .Xr snd_atiixp 4 ,
@@ -714,17 +607,13 @@ A device node is not created properly.
 .Xr snd_envy24 4 ,
 .Xr snd_envy24ht 4 ,
 .Xr snd_es137x 4 ,
-.Xr snd_ess 4 ,
 .Xr snd_fm801 4 ,
-.Xr snd_gusc 4 ,
 .Xr snd_hda 4 ,
 .Xr snd_hdspe 4 ,
 .Xr snd_ich 4 ,
 .Xr snd_maestro 4 ,
 .Xr snd_maestro3 4 ,
-.Xr snd_mss 4 ,
 .Xr snd_neomagic 4 ,
-.Xr snd_sbc 4 ,
 .Xr snd_solo 4 ,
 .Xr snd_spicds 4 ,
 .Xr snd_t4dwave 4 ,
@@ -787,3 +676,10 @@ It was then rewritten for
 .Sh BUGS
 Some features of your sound card (e.g., global volume control) might not
 be supported on all devices.
+.Pp
+Some audio devices might refuse to work properly unless the sample rate is
+configured the same for both recording and playback, even if only simplex is
+used.
+See the
+.Va dev.pcm.%d.[play|rec].vchanrate
+sysctls.

@@ -35,11 +35,8 @@
 #include <dev/pci/pcivar.h>
 
 #include  <dev/sound/isa/sb.h>
-#include  <dev/sound/chip.h>
 
 #include "mixer_if.h"
-
-SND_DECLARE_FILE("");
 
 #define SOLO_DEFAULT_BUFSZ 16384
 #define ABS(x) (((x) < 0)? -(x) : (x))
@@ -49,9 +46,6 @@ SND_DECLARE_FILE("");
 
 /* more accurate clocks and split audio1/audio2 rates */
 #define ESS18XX_NEWSPEED
-
-/* 1 = INTR_MPSAFE, 0 = GIANT */
-#define ESS18XX_MPSAFE	1
 
 static u_int32_t ess_playfmt[] = {
 	SND_FORMAT(AFMT_U8, 1, 0),
@@ -103,20 +97,12 @@ struct ess_info {
 	unsigned int bufsz;
 
     	struct ess_chinfo pch, rch;
-#if ESS18XX_MPSAFE == 1
 	struct mtx *lock;
-#endif
 };
 
-#if ESS18XX_MPSAFE == 1
 #define ess_lock(_ess) snd_mtxlock((_ess)->lock)
 #define ess_unlock(_ess) snd_mtxunlock((_ess)->lock)
 #define ess_lock_assert(_ess) snd_mtxassert((_ess)->lock)
-#else
-#define ess_lock(_ess)
-#define ess_unlock(_ess)
-#define ess_lock_assert(_ess)
-#endif
 
 static int ess_rd(struct ess_info *sc, int reg);
 static void ess_wr(struct ess_info *sc, int reg, u_int8_t val);
@@ -868,12 +854,10 @@ ess_release_resources(struct ess_info *sc, device_t dev)
 		sc->parent_dmat = 0;
     	}
 
-#if ESS18XX_MPSAFE == 1
 	if (sc->lock) {
 		snd_mtxfree(sc->lock);
 		sc->lock = NULL;
 	}
-#endif
 
     	free(sc, M_DEVBUF);
 }
@@ -902,14 +886,10 @@ ess_alloc_resources(struct ess_info *sc, device_t dev)
 	sc->irq = bus_alloc_resource_any(dev, SYS_RES_IRQ, &rid,
 		RF_ACTIVE | RF_SHAREABLE);
 
-#if ESS18XX_MPSAFE == 1
 	sc->lock = snd_mtxcreate(device_get_nameunit(dev), "snd_solo softc");
 
 	return (sc->irq && sc->io && sc->sb && sc->vc &&
 				sc->mpu && sc->gp && sc->lock)? 0 : ENXIO;
-#else
-	return (sc->irq && sc->io && sc->sb && sc->vc && sc->mpu && sc->gp)? 0 : ENXIO;
-#endif
 }
 
 static int
@@ -1008,13 +988,7 @@ ess_attach(device_t dev)
 #else
 	sc->newspeed = 0;
 #endif
-	if (snd_setup_intr(dev, sc->irq,
-#if ESS18XX_MPSAFE == 1
-			INTR_MPSAFE
-#else
-			0
-#endif
-			, ess_intr, sc, &sc->ih)) {
+	if (snd_setup_intr(dev, sc->irq, INTR_MPSAFE, ess_intr, sc, &sc->ih)) {
 		device_printf(dev, "unable to map interrupt\n");
 		goto no;
 	}
@@ -1032,11 +1006,7 @@ ess_attach(device_t dev)
 			/*maxsize*/sc->bufsz, /*nsegments*/1,
 			/*maxsegz*/0x3ffff,
 			/*flags*/0,
-#if ESS18XX_MPSAFE == 1
 			/*lockfunc*/NULL, /*lockarg*/NULL,
-#else
-			/*lockfunc*/busdma_lock_mutex, /*lockarg*/&Giant,
-#endif
 			&sc->parent_dmat) != 0) {
 		device_printf(dev, "unable to create dma tag\n");
 		goto no;
@@ -1051,9 +1021,10 @@ ess_attach(device_t dev)
     	if (mixer_init(dev, &solomixer_class, sc))
 		goto no;
 
-    	snprintf(status, SND_STATUSLEN, "at io 0x%jx,0x%jx,0x%jx irq %jd %s",
+	snprintf(status, SND_STATUSLEN, "port 0x%jx,0x%jx,0x%jx irq %jd on %s",
     	     	rman_get_start(sc->io), rman_get_start(sc->sb), rman_get_start(sc->vc),
-		rman_get_start(sc->irq),PCM_KLDSTRING(snd_solo));
+		rman_get_start(sc->irq),
+		device_get_nameunit(device_get_parent(dev)));
 
     	if (pcm_register(dev, sc, 1, 1))
 		goto no;
@@ -1090,7 +1061,7 @@ static device_method_t ess_methods[] = {
 	DEVMETHOD(device_detach,	ess_detach),
 	DEVMETHOD(device_resume,	ess_resume),
 	DEVMETHOD(device_suspend,	ess_suspend),
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t ess_driver = {
@@ -1099,6 +1070,6 @@ static driver_t ess_driver = {
 	PCM_SOFTC_SIZE,
 };
 
-DRIVER_MODULE(snd_solo, pci, ess_driver, pcm_devclass, 0, 0);
+DRIVER_MODULE(snd_solo, pci, ess_driver, 0, 0);
 MODULE_DEPEND(snd_solo, sound, SOUND_MINVER, SOUND_PREFVER, SOUND_MAXVER);
 MODULE_VERSION(snd_solo, 1);

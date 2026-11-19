@@ -45,7 +45,6 @@
 #endif
 
 #include <dev/sound/pcm/sound.h>
-#include <dev/sound/chip.h>
 #include <dev/sound/pci/csareg.h>
 #include <dev/sound/pci/csavar.h>
 
@@ -53,8 +52,6 @@
 #include <dev/pci/pcivar.h>
 
 #include <dev/sound/pci/cs461x_dsp.h>
-
-SND_DECLARE_FILE("");
 
 /* This is the pci device id. */
 #define CS4610_PCI_ID 0x60011013
@@ -97,8 +94,6 @@ static driver_intr_t csa_intr;
 static int csa_initialize(sc_p scp);
 static int csa_downloadimage(csa_res *resp);
 static int csa_transferimage(csa_res *resp, u_int32_t *src, u_long dest, u_long len);
-
-static devclass_t csa_devclass;
 
 static void
 amp_none(void)
@@ -279,22 +274,14 @@ csa_attach(device_t dev)
 	/* Attach the children. */
 
 	/* PCM Audio */
-	func = malloc(sizeof(struct sndcard_func), M_DEVBUF, M_NOWAIT | M_ZERO);
-	if (func == NULL) {
-		error = ENOMEM;
-		goto err_teardown;
-	}
+	func = malloc(sizeof(struct sndcard_func), M_DEVBUF, M_WAITOK | M_ZERO);
 	func->varinfo = &scp->binfo;
 	func->func = SCF_PCM;
 	scp->pcm = device_add_child(dev, "pcm", -1);
 	device_set_ivars(scp->pcm, func);
 
 	/* Midi Interface */
-	func = malloc(sizeof(struct sndcard_func), M_DEVBUF, M_NOWAIT | M_ZERO);
-	if (func == NULL) {
-		error = ENOMEM;
-		goto err_teardown;
-	}
+	func = malloc(sizeof(struct sndcard_func), M_DEVBUF, M_WAITOK | M_ZERO);
 	func->varinfo = &scp->binfo;
 	func->func = SCF_MIDI;
 	scp->midi = device_add_child(dev, "midi", -1);
@@ -315,34 +302,33 @@ err_io:
 	return (error);
 }
 
+static void
+csa_child_deleted(device_t dev, device_t child)
+{
+	free(device_get_ivars(child), M_DEVBUF);
+}
+
 static int
 csa_detach(device_t dev)
 {
 	csa_res *resp;
 	sc_p scp;
-	struct sndcard_func *func;
 	int err;
 
 	scp = device_get_softc(dev);
 	resp = &scp->res;
 
 	if (scp->midi != NULL) {
-		func = device_get_ivars(scp->midi);
 		err = device_delete_child(dev, scp->midi);
 		if (err != 0)
 			return err;
-		if (func != NULL)
-			free(func, M_DEVBUF);
 		scp->midi = NULL;
 	}
 
 	if (scp->pcm != NULL) {
-		func = device_get_ivars(scp->pcm);
 		err = device_delete_child(dev, scp->pcm);
 		if (err != 0)
 			return err;
-		if (func != NULL)
-			free(func, M_DEVBUF);
 		scp->pcm = NULL;
 	}
 
@@ -1067,6 +1053,7 @@ static device_method_t csa_methods[] = {
 	DEVMETHOD(device_resume,	csa_resume),
 
 	/* Bus interface */
+	DEVMETHOD(bus_child_deleted,	csa_child_deleted),
 	DEVMETHOD(bus_alloc_resource,	csa_alloc_resource),
 	DEVMETHOD(bus_release_resource,	csa_release_resource),
 	DEVMETHOD(bus_activate_resource, bus_generic_activate_resource),
@@ -1086,6 +1073,6 @@ static driver_t csa_driver = {
 /*
  * csa can be attached to a pci bus.
  */
-DRIVER_MODULE(snd_csa, pci, csa_driver, csa_devclass, 0, 0);
+DRIVER_MODULE(snd_csa, pci, csa_driver, 0, 0);
 MODULE_DEPEND(snd_csa, sound, SOUND_MINVER, SOUND_PREFVER, SOUND_MAXVER);
 MODULE_VERSION(snd_csa, 1);

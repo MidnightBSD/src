@@ -38,8 +38,6 @@
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
 
-SND_DECLARE_FILE("");
-
 /* -------------------------------------------------------------------- */
 
 #define ICH_TIMEOUT		1000 /* semaphore timeout polling count */
@@ -296,21 +294,23 @@ AC97_DECLARE(ich_ac97);
 /* -------------------------------------------------------------------- */
 /* common routines */
 
-static void
-ich_filldtbl(struct sc_chinfo *ch)
+static int
+ich_filldtbl(struct sc_chinfo *ch, uint32_t blksz)
 {
 	struct sc_info *sc = ch->parent;
 	uint32_t base;
-	int i;
+	int error, i;
 
 	base = sndbuf_getbufaddr(ch->buffer);
-	if ((ch->blksz * ch->blkcnt) > sndbuf_getmaxsize(ch->buffer))
-		ch->blksz = sndbuf_getmaxsize(ch->buffer) / ch->blkcnt;
-	if ((sndbuf_getblksz(ch->buffer) != ch->blksz ||
+	if ((blksz * ch->blkcnt) > sndbuf_getmaxsize(ch->buffer))
+		blksz = sndbuf_getmaxsize(ch->buffer) / ch->blkcnt;
+	if ((sndbuf_getblksz(ch->buffer) != blksz ||
 	    sndbuf_getblkcnt(ch->buffer) != ch->blkcnt) &&
-	    sndbuf_resize(ch->buffer, ch->blkcnt, ch->blksz) != 0)
+	    (error = sndbuf_resize(ch->buffer, ch->blkcnt, blksz)) != 0) {
 		device_printf(sc->dev, "%s: failed blksz=%u blkcnt=%u\n",
 		    __func__, ch->blksz, ch->blkcnt);
+		return (error);
+	}
 	ch->blksz = sndbuf_getblksz(ch->buffer);
 
 	for (i = 0; i < ICH_DTBL_LENGTH; i++) {
@@ -318,6 +318,7 @@ ich_filldtbl(struct sc_chinfo *ch)
 		ch->dtbl[i].length = ICH_BDC_IOC
 				   | (ch->blksz / ch->parent->sample_size);
 	}
+	return (0);
 }
 
 static int
@@ -498,8 +499,8 @@ ichchan_setblocksize(kobj_t obj, void *data, uint32_t blocksize)
 	if (blocksize < ICH_MIN_BLKSZ)
 		blocksize = ICH_MIN_BLKSZ;
 	blocksize &= ~(ICH_MIN_BLKSZ - 1);
-	ch->blksz = blocksize;
-	ich_filldtbl(ch);
+	if (ich_filldtbl(ch, blocksize) != 0)
+		return (0);
 	ICH_LOCK(sc);
 	ich_wr(sc, ch->regbase + ICH_REG_X_LVI, ch->blkcnt - 1, 1);
 	ICH_UNLOCK(sc);
@@ -688,9 +689,10 @@ ich_setstatus(struct sc_info *sc)
 	char status[SND_STATUSLEN];
 
 	snprintf(status, SND_STATUSLEN,
-	    "at io 0x%jx, 0x%jx irq %jd bufsz %u %s",
+	    "port 0x%jx,0x%jx irq %jd on %s",
 	    rman_get_start(sc->nambar), rman_get_start(sc->nabmbar),
-	    rman_get_start(sc->irq), sc->bufsz,PCM_KLDSTRING(snd_ich));
+	    rman_get_start(sc->irq),
+	    device_get_nameunit(device_get_parent(sc->dev)));
 
 	if (bootverbose && (sc->flags & ICH_DMA_NOCACHE))
 		device_printf(sc->dev,
@@ -861,12 +863,12 @@ ich_init(struct sc_info *sc)
 static int
 ich_pci_probe(device_t dev)
 {
-	int i;
+	size_t i;
 	uint16_t devid, vendor;
 
 	vendor = pci_get_vendor(dev);
 	devid = pci_get_device(dev);
-	for (i = 0; i < sizeof(ich_devs)/sizeof(ich_devs[0]); i++) {
+	for (i = 0; i < nitems(ich_devs); i++) {
 		if (vendor == ich_devs[i].vendor &&
 				devid == ich_devs[i].devid) {
 			device_set_desc(dev, ich_devs[i].name);
@@ -1228,7 +1230,7 @@ static device_method_t ich_methods[] = {
 	DEVMETHOD(device_detach,	ich_pci_detach),
 	DEVMETHOD(device_suspend, 	ich_pci_suspend),
 	DEVMETHOD(device_resume,	ich_pci_resume),
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t ich_driver = {
@@ -1237,6 +1239,6 @@ static driver_t ich_driver = {
 	PCM_SOFTC_SIZE,
 };
 
-DRIVER_MODULE(snd_ich, pci, ich_driver, pcm_devclass, 0, 0);
+DRIVER_MODULE(snd_ich, pci, ich_driver, 0, 0);
 MODULE_DEPEND(snd_ich, sound, SOUND_MINVER, SOUND_PREFVER, SOUND_MAXVER);
 MODULE_VERSION(snd_ich, 1);

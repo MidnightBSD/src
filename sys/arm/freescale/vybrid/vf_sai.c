@@ -44,7 +44,6 @@
 #include <sys/watchdog.h>
 
 #include <dev/sound/pcm/sound.h>
-#include <dev/sound/chip.h>
 #include <mixer_if.h>
 
 #include <dev/ofw/openfirm.h>
@@ -797,6 +796,6 @@ static driver_t sai_pcm_driver = {
 	PCM_SOFTC_SIZE,
 };
 
-DRIVER_MODULE(sai, simplebus, sai_pcm_driver, pcm_devclass, 0, 0);
+DRIVER_MODULE(sai, simplebus, sai_pcm_driver, 0, 0);
 MODULE_DEPEND(sai, sound, SOUND_MINVER, SOUND_PREFVER, SOUND_MAXVER);
 MODULE_VERSION(sai, 1);

@@ -40,8 +40,6 @@
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
 
-SND_DECLARE_FILE("");
-
 /* -------------------------------------------------------------------- */
 
 #define	NM_BUFFSIZE	16384
@@ -704,9 +702,10 @@ nm_pci_attach(device_t dev)
 		goto bad;
 	}
 
-	snprintf(status, SND_STATUSLEN, "at memory 0x%jx, 0x%jx irq %jd %s",
+	snprintf(status, SND_STATUSLEN, "mem 0x%jx,0x%jx irq %jd on %s",
 		 rman_get_start(sc->buf), rman_get_start(sc->reg),
-		 rman_get_start(sc->irq),PCM_KLDSTRING(snd_neomagic));
+		 rman_get_start(sc->irq),
+		 device_get_nameunit(device_get_parent(dev)));
 
 	if (pcm_register(dev, sc, 1, 1)) goto bad;
 	pcm_addchan(dev, PCMDIR_REC, &nmchan_class, sc);
@@ -808,7 +807,7 @@ static device_method_t nm_methods[] = {
 	DEVMETHOD(device_detach,	nm_pci_detach),
 	DEVMETHOD(device_suspend,	nm_pci_suspend),
 	DEVMETHOD(device_resume,	nm_pci_resume),
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t nm_driver = {
@@ -817,6 +816,6 @@ static driver_t nm_driver = {
 	PCM_SOFTC_SIZE,
 };
 
-DRIVER_MODULE(snd_neomagic, pci, nm_driver, pcm_devclass, 0, 0);
+DRIVER_MODULE(snd_neomagic, pci, nm_driver, 0, 0);
 MODULE_DEPEND(snd_neomagic, sound, SOUND_MINVER, SOUND_PREFVER, SOUND_MAXVER);
 MODULE_VERSION(snd_neomagic, 1);

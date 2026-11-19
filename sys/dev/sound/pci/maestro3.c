@@ -69,8 +69,6 @@
 #include <dev/sound/pci/allegro_reg.h>
 #include <dev/sound/pci/allegro_code.h>
 
-SND_DECLARE_FILE("");
-
 /* -------------------------------------------------------------------- */
 
 enum {CHANGE=0, CALL=1, INTR=2, BORING=3, NONE=-1};
@@ -490,7 +488,7 @@ m3_pchan_init(kobj_t kobj, void *devinfo, struct snd_dbuf *b, struct pcm_channel
 			DMAC_BLOCKF_SELECTOR);
 
 	/* set an armload of static initializers */
-	for(i = 0 ; i < (sizeof(pv) / sizeof(pv[0])) ; i++) {
+	for(i = 0 ; i < nitems(pv); i++) {
 		m3_wr_assp_data(sc, ch->dac_data + pv[i].addr, pv[i].val);
 	}
 
@@ -864,7 +862,7 @@ m3_rchan_init(kobj_t kobj, void *devinfo, struct snd_dbuf *b, struct pcm_channel
 			DMAC_PAGE3_SELECTOR + DMAC_BLOCKF_SELECTOR);
 
 	/* set an armload of static initializers */
-	for(i = 0 ; i < (sizeof(rv) / sizeof(rv[0])) ; i++) {
+	for(i = 0 ; i < nitems(rv); i++) {
 		m3_wr_assp_data(sc, ch->adc_data + rv[i].addr, rv[i].val);
 	}
 
@@ -1441,10 +1439,10 @@ m3_pci_attach(device_t dev)
 			goto bad;
 		}
 	}
- 	snprintf(status, SND_STATUSLEN, "at %s 0x%jx irq %jd %s",
-	    (sc->regtype == SYS_RES_IOPORT)? "io" : "memory",
+	snprintf(status, SND_STATUSLEN, "%s 0x%jx irq %jd on %s",
+	    (sc->regtype == SYS_RES_IOPORT)? "port" : "mem",
 	    rman_get_start(sc->reg), rman_get_start(sc->irq),
-	    PCM_KLDSTRING(snd_maestro3));
+	    device_get_nameunit(device_get_parent(dev)));
 	if (pcm_setstatus(dev, status)) {
 		device_printf(dev, "attach: pcm_setstatus error\n");
 		goto bad;
@@ -1455,7 +1453,7 @@ m3_pci_attach(device_t dev)
 	/* Create the buffer for saving the card state during suspend */
 	len = sizeof(u_int16_t) * (REV_B_CODE_MEMORY_LENGTH +
 	    REV_B_DATA_MEMORY_LENGTH);
-	sc->savemem = (u_int16_t*)malloc(len, M_DEVBUF, M_WAITOK | M_ZERO);
+	sc->savemem = malloc(len, M_DEVBUF, M_WAITOK | M_ZERO);
 
 	return 0;
 
@@ -1785,7 +1783,7 @@ static device_method_t m3_methods[] = {
 	DEVMETHOD(device_suspend,       m3_pci_suspend),
 	DEVMETHOD(device_resume,        m3_pci_resume),
 	DEVMETHOD(device_shutdown,      m3_pci_shutdown),
-	{ 0, 0 }
+	DEVMETHOD_END
 };
 
 static driver_t m3_driver = {
@@ -1794,6 +1792,6 @@ static driver_t m3_driver = {
 	PCM_SOFTC_SIZE,
 };
 
-DRIVER_MODULE(snd_maestro3, pci, m3_driver, pcm_devclass, 0, 0);
+DRIVER_MODULE(snd_maestro3, pci, m3_driver, 0, 0);
 MODULE_DEPEND(snd_maestro3, sound, SOUND_MINVER, SOUND_PREFVER, SOUND_MAXVER);
 MODULE_VERSION(snd_maestro3, 1);

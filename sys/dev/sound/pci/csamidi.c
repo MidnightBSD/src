@@ -43,7 +43,6 @@
 #include <dev/pci/pcireg.h>
 #include <dev/pci/pcivar.h>
 
-#include <dev/sound/chip.h>
 #include <dev/sound/pcm/sound.h>
 
 #include <dev/sound/midi/midi.h>
@@ -53,8 +52,6 @@
 #include <dev/sound/pci/csavar.h>
 
 #include "mpufoi_if.h"
-
-SND_DECLARE_FILE("");
 
 /* pulled from mpu401.c */
 #define	MPU_DATAPORT	0
@@ -81,7 +78,6 @@ struct csa_midi_softc {
 };
 
 static struct kobj_class csamidi_mpu_class;
-static devclass_t midicsa_devclass;
 
 static u_int32_t
 csamidi_readio(struct csa_midi_softc *scp, u_long offset)
@@ -282,7 +278,7 @@ static driver_t midicsa_driver = {
 	midicsa_methods,
 	sizeof(struct csa_midi_softc),
 };
-DRIVER_MODULE(snd_csa_midi, csa, midicsa_driver, midicsa_devclass, 0, 0);
+DRIVER_MODULE(snd_csa_midi, csa, midicsa_driver, 0, 0);
 MODULE_DEPEND(snd_csa_midi, snd_csa, 1, 1, 1);
 MODULE_DEPEND(snd_csa_midi, sound, SOUND_MINVER, SOUND_PREFVER, SOUND_MAXVER);
 MODULE_VERSION(snd_csa_midi, 1);
