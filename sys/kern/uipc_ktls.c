@@ -90,8 +90,6 @@ struct ktls_domain_info {
 struct ktls_domain_info ktls_domains[MAXMEMDOM];
 static struct ktls_wq *ktls_wq;
 static struct proc *ktls_proc;
-LIST_HEAD(, ktls_crypto_backend) ktls_backends;
-static struct rmlock ktls_backends_lock;
 static uma_zone_t ktls_session_zone;
 static uint16_t ktls_cpuid_lookup[MAXCPU];
 
@@ -99,10 +97,6 @@ SYSCTL_NODE(_kern_ipc, OID_AUTO, tls, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
     "Kernel TLS offload");
 SYSCTL_NODE(_kern_ipc_tls, OID_AUTO, stats, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
     "Kernel TLS offload stats");
-
-static int ktls_allow_unload;
-SYSCTL_INT(_kern_ipc_tls, OID_AUTO, allow_unload, CTLFLAG_RDTUN,
-    &ktls_allow_unload, 0, "Allow software crypto modules to unload");
 
 #ifdef RSS
 static int ktls_bind_threads = 1;
@@ -266,76 +260,6 @@ static void ktls_reset_send_tag(void *context, int pending);
 #endif
 static void ktls_work_thread(void *ctx);
 
-int
-ktls_crypto_backend_register(struct ktls_crypto_backend *be)
-{
-	struct ktls_crypto_backend *curr_be, *tmp;
-
-	if (be->api_version != KTLS_API_VERSION) {
-		printf("KTLS: API version mismatch (%d vs %d) for %s\n",
-		    be->api_version, KTLS_API_VERSION,
-		    be->name);
-		return (EINVAL);
-	}
-
-	rm_wlock(&ktls_backends_lock);
-	printf("KTLS: Registering crypto method %s with prio %d\n",
-	       be->name, be->prio);
-	if (LIST_EMPTY(&ktls_backends)) {
-		LIST_INSERT_HEAD(&ktls_backends, be, next);
-	} else {
-		LIST_FOREACH_SAFE(curr_be, &ktls_backends, next, tmp) {
-			if (curr_be->prio < be->prio) {
-				LIST_INSERT_BEFORE(curr_be, be, next);
-				break;
-			}
-			if (LIST_NEXT(curr_be, next) == NULL) {
-				LIST_INSERT_AFTER(curr_be, be, next);
-				break;
-			}
-		}
-	}
-	rm_wunlock(&ktls_backends_lock);
-	return (0);
-}
-
-int
-ktls_crypto_backend_deregister(struct ktls_crypto_backend *be)
-{
-	struct ktls_crypto_backend *tmp;
-
-	/*
-	 * Don't error if the backend isn't registered.  This permits
-	 * MOD_UNLOAD handlers to use this function unconditionally.
-	 */
-	rm_wlock(&ktls_backends_lock);
-	LIST_FOREACH(tmp, &ktls_backends, next) {
-		if (tmp == be)
-			break;
-	}
-	if (tmp == NULL) {
-		rm_wunlock(&ktls_backends_lock);
-		return (0);
-	}
-
-	if (!ktls_allow_unload) {
-		rm_wunlock(&ktls_backends_lock);
-		printf(
-		    "KTLS: Deregistering crypto method %s is not supported\n",
-		    be->name);
-		return (EBUSY);
-	}
-
-	if (be->use_count) {
-		rm_wunlock(&ktls_backends_lock);
-		return (EBUSY);
-	}
-
-	LIST_REMOVE(be, next);
-	rm_wunlock(&ktls_backends_lock);
-	return (0);
-}
-
 #if defined(INET) || defined(INET6)
 static u_int
 ktls_get_cpu(struct socket *so)
@@ -354,7 +278,7 @@ ktls_get_cpu(struct socket *so)
 #endif
 	/*
 	 * Just use the flowid to shard connections in a repeatable
-	 * fashion.  Note that some crypto backends rely on the
+	 * fashion.  Note that TLS 1.0 sessions rely on the
 	 * serialization provided by having the same connection use
 	 * the same queue.
 	 */
@@ -376,9 +300,6 @@ ktls_init(void *dummy __unused)
 	struct pcpu *pc;
 	cpuset_t mask;
 	int count, domain, error, i;
-
-	rm_init(&ktls_backends_lock, "ktls backends");
-	LIST_INIT(&ktls_backends);
 
 	ktls_wq = malloc(sizeof(*ktls_wq) * (mp_maxid + 1), M_KTLS,
 	    M_WAITOK | M_ZERO);
@@ -724,7 +645,6 @@ ktls_cleanup(struct ktls_session *tls)
 	counter_u64_add(ktls_offload_active, -1);
 	switch (tls->mode) {
 	case TCP_TLS_MODE_SW:
-		MPASS(tls->be != NULL);
 		switch (tls->params.cipher_algorithm) {
 		case CRYPTO_AES_CBC:
 			counter_u64_add(ktls_sw_cbc, -1);
@@ -736,7 +656,7 @@ ktls_cleanup(struct ktls_session *tls)
 			counter_u64_add(ktls_sw_chacha20, -1);
 			break;
 		}
-		tls->free(tls);
+		ktls_ocf_free(tls);
 		break;
 	case TCP_TLS_MODE_IFNET:
 		switch (tls->params.cipher_algorithm) {
@@ -959,33 +879,11 @@ ktls_try_ifnet(struct socket *so, struct ktls_session *tls, bool force)
 static int
 ktls_try_sw(struct socket *so, struct ktls_session *tls, int direction)
 {
-	struct rm_priotracker prio;
-	struct ktls_crypto_backend *be;
+	int error;
 
-	/*
-	 * Choose the best software crypto backend.  Backends are
-	 * stored in sorted priority order (larget value == most
-	 * important at the head of the list), so this just stops on
-	 * the first backend that claims the session by returning
-	 * success.
-	 */
-	if (ktls_allow_unload)
-		rm_rlock(&ktls_backends_lock, &prio);
-	LIST_FOREACH(be, &ktls_backends, next) {
-		if (be->try(so, tls, direction) == 0)
-			break;
-		KASSERT(tls->cipher == NULL,
-		    ("ktls backend leaked a cipher pointer"));
-	}
-	if (be != NULL) {
-		if (ktls_allow_unload)
-			be->use_count++;
-		tls->be = be;
-	}
-	if (ktls_allow_unload)
-		rm_runlock(&ktls_backends_lock, &prio);
-	if (be == NULL)
-		return (EOPNOTSUPP);
+	error = ktls_ocf_try(so, tls, direction);
+	if (error)
+		return (error);
 	tls->mode = TCP_TLS_MODE_SW;
 	switch (tls->params.cipher_algorithm) {
 	case CRYPTO_AES_CBC:
@@ -1502,7 +1400,6 @@ ktls_modify_txrtlmt(struct ktls_session *tls, uint64_t max_pacing_rate)
 void
 ktls_destroy(struct ktls_session *tls)
 {
-	struct rm_priotracker prio;
 
 	if (tls->sequential_records) {
 		struct mbuf *m, *n;
@@ -1519,11 +1416,6 @@ ktls_destroy(struct ktls_session *tls)
 		}
 	}
 	ktls_cleanup(tls);
-	if (tls->be != NULL && ktls_allow_unload) {
-		rm_rlock(&ktls_backends_lock, &prio);
-		tls->be->use_count--;
-		rm_runlock(&ktls_backends_lock, &prio);
-	}
 	uma_zfree(ktls_session_zone, tls);
 }
 
@@ -1605,7 +1497,7 @@ ktls_frame(struct mbuf *top, struct ktls_session *tls, int *enq_cnt,
 			 *
 			 * Compute the final trailer length assuming
 			 * at most one block of padding.
-			 * tls->params.sb_tls_tlen is the maximum
+			 * tls->params.tls_tlen is the maximum
 			 * possible trailer length (padding + digest).
 			 * delta holds the number of excess padding
 			 * bytes if the maximum were used.  Those
@@ -2253,11 +2145,9 @@ ktls_encrypt(struct mbuf *top)
 	struct socket *so;
 	struct mbuf *m;
 	vm_paddr_t parray[1 + btoc(TLS_MAX_MSG_SIZE_V10_2)];
-	struct iovec src_iov[1 + btoc(TLS_MAX_MSG_SIZE_V10_2)];
 	struct iovec dst_iov[1 + btoc(TLS_MAX_MSG_SIZE_V10_2)];
 	vm_page_t pg;
 	int error, i, len, npages, off, total_pages;
-	bool is_anon;
 
 	so = top->m_epg_so;
 	tls = top->m_epg_tls;
@@ -2299,58 +2189,34 @@ ktls_encrypt(struct mbuf *top)
 		    total_pages, m));
 
 		/*
-		 * Generate source and destination ivoecs to pass to
-		 * the SW encryption backend.  For writable mbufs, the
-		 * destination iovec is a copy of the source and
-		 * encryption is done in place.  For file-backed mbufs
-		 * (from sendfile), anonymous wired pages are
-		 * allocated and assigned to the destination iovec.
+		 * For anonymous mbufs, encryption is done in place.
+		 * For file-backed mbufs (from sendfile), anonymous
+		 * wired pages are allocated and used as the
+		 * encryption destination.
 		 */
-		is_anon = (m->m_epg_flags & EPG_FLAG_ANON) != 0;
-
-		off = m->m_epg_1st_off;
-		for (i = 0; i < m->m_epg_npgs; i++, off = 0) {
-			len = m_epg_pagelen(m, i, off);
-			src_iov[i].iov_len = len;
-			src_iov[i].iov_base =
-			    (char *)(void *)PHYS_TO_DMAP(m->m_epg_pa[i]) +
-				off;
-
-			if (is_anon) {
-				dst_iov[i].iov_base = src_iov[i].iov_base;
-				dst_iov[i].iov_len = src_iov[i].iov_len;
-				continue;
-			}
+		if ((m->m_epg_flags & EPG_FLAG_ANON) != 0) {
+			error = (*tls->sw_encrypt)(tls, m, NULL, 0);
+		} else {
+			off = m->m_epg_1st_off;
+			for (i = 0; i < m->m_epg_npgs; i++, off = 0) {
 retry_page:
-			pg = vm_page_alloc_noobj(VM_ALLOC_NODUMP |
-			    VM_ALLOC_WIRED);
-			if (pg == NULL) {
-				vm_wait(NULL);
-				goto retry_page;
+				pg = vm_page_alloc_noobj(VM_ALLOC_NODUMP |
+				    VM_ALLOC_WIRED);
+				if (pg == NULL) {
+					vm_wait(NULL);
+					goto retry_page;
+				}
+
+				len = m_epg_pagelen(m, i, off);
+				parray[i] = VM_PAGE_TO_PHYS(pg);
+				dst_iov[i].iov_base =
+				    (char *)(void *)PHYS_TO_DMAP(parray[i]) +
+				    off;
+				dst_iov[i].iov_len = len;
 			}
-			parray[i] = VM_PAGE_TO_PHYS(pg);
-			dst_iov[i].iov_base =
-			    (char *)(void *)PHYS_TO_DMAP(parray[i]) + off;
-			dst_iov[i].iov_len = len;
-		}
 
-		npages += m->m_epg_nrdy;
+			error = (*tls->sw_encrypt)(tls, m, dst_iov, i);
 
-		error = (*tls->sw_encrypt)(tls,
-		    (const struct tls_record_layer *)m->m_epg_hdr,
-		    m->m_epg_trail, src_iov, dst_iov, i, m->m_epg_seqno,
-		    m->m_epg_record_type);
-		if (error) {
-			counter_u64_add(ktls_offload_failed_crypto, 1);
-			break;
-		}
-
-		/*
-		 * For file-backed mbufs, release the file-backed
-		 * pages and replace them in the ext_pgs array with
-		 * the anonymous wired pages allocated above.
-		 */
-		if (!is_anon) {
 			/* Free the old pages. */
 			m->m_ext.ext_free(m);
 
@@ -2364,6 +2230,12 @@ retry_page:
 			/* Pages are now writable. */
 			m->m_epg_flags |= EPG_FLAG_ANON;
 		}
+		if (error) {
+			counter_u64_add(ktls_offload_failed_crypto, 1);
+			break;
+		}
+
+		npages += m->m_epg_nrdy;
 
 		/*
 		 * Drop a reference to the session now that it is no
