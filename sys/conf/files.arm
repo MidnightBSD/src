@@ -74,7 +74,7 @@ arm/arm/uio_machdep.c		standard
 arm/arm/undefined.c		standard
 arm/arm/unwind.c		optional	ddb | kdtrace_hooks | stack
 arm/arm/vm_machdep.c		standard
-arm/arm/vfp.c			standard
+arm/arm/vfp.c			optional	vfp
 arm/cloudabi32/cloudabi32_sysvec.c	optional compat_cloudabi32
 cddl/compat/opensolaris/kern/opensolaris_atomic.c	optional !armv7 !armv6 zfs | !armv7 !armv6 dtrace compile-with "${CDDL_C}"
 cddl/dev/dtrace/arm/dtrace_asm.S			optional dtrace compile-with "${DTRACE_S}"
