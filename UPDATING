@@ -1,5 +1,11 @@
 Updating Information for MidnightBSD users.
 
+20261119:
+	The KTLS software backend is now built into kernels with
+	options KERN_TLS, and ktls_ocf.ko has been removed.  Remove
+	ktls_ocf_load from /boot/loader.conf and ktls_ocf from kld_list
+	in /etc/rc.conf.  Rebuild and install the kernel, then reboot.
+
 20261118:
 	sound(4) has been synced with FreeBSD stable/14.  Unloading a sound
 	driver while the device is in use now succeeds, and programs using
