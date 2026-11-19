@@ -1907,7 +1907,8 @@ ktls_record_has_shared_mbuf(struct mbuf *m)
 		    (m->m_epg_flags & EPG_FLAG_ANON) == 0)
 			return (true);
 		if ((m->m_flags & M_EXT) != 0 &&
-		    m->m_ext.ext_type == EXT_SFBUF)
+		    m->m_ext.ext_type == EXT_SFBUF &&
+		    (m->m_ext.ext_flags & EXT_FLAG_SFBUF_ANON) == 0)
 			return (true);
 	}
 	return (false);
