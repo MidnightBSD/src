@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(readelf *)",
+      "Bash(mport list *)",
+      "Bash(kdump *)",
+      "Bash(mport info *)",
+      "Bash(tools/build/checkstyle9.pl *)"
+    ]
+  }
+}
