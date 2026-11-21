@@ -158,6 +158,16 @@ At most 8 paths are allowed.
 A relative path, or too many, makes
 .Xr prowld 8
 refuse the unit rather than weaken the check.
+.It Va instances_var
+Makes the file a template; see
+.Sx TEMPLATES .
+The name of an
+.Xr rc.conf 5
+variable holding a space-separated list of instance names.
+.It Va default_instance
+For a template, the instance created when
+.Va instances_var
+is empty or unset.
 .It Va nojail
 .Pq boolean
 If true, the job is never started when
@@ -237,6 +247,42 @@ Keys in each description:
 .Va host
 (bind address),
 .Va backlog .
+.Sh TEMPLATES
+A unit file whose name ends in
+.Pa @.unit
+is a template.
+It is not loaded as a job itself.
+Every
+.Dq %i
+in the file is replaced by an instance name and
+.Dq %%
+by a single
+.Dq % ,
+before the file is parsed, so the label, the program, the arguments and
+the other fields can all depend on the instance.
+A template's label must contain
+.Dq %i
+and the name of an instance may only use letters, digits and
+.Dq _ ,
+.Dq -
+and
+.Dq \&. .
+.Pp
+At start-up prowld creates one instance for each name in the
+.Xr rc.conf 5
+variable given by
+.Va instances_var ,
+or the
+.Va default_instance
+if that variable is empty.
+Any other instance is created when it is first named, as in
+.Dq prowlctl start pflog@pf3 .
+An instance can be addressed by its label, such as
+.Dq org.midnightbsd.pflog@pf1 ,
+or by the shorter
+.Dq pflog@pf1 .
+Drop-in files for a template are read from
+.Pa <name>@.d .
 .Sh EXAMPLES
 A simple periodic cleanup task:
 .Bd -literal -offset indent
@@ -303,6 +349,9 @@ the old name of blocklistd
 .Xr dhcp6c 8
 .It Pa ftpd.unit
 .Xr ftpd 8
+.It Pa ftpproxy@.unit
+.Xr ftp-proxy 8 ,
+template
 .It Pa gssd.unit
 .Xr gssd 8
 .It Pa hastd.unit
@@ -312,6 +361,8 @@ the old name of blocklistd
 .It Pa inetd.unit
 .Xr inetd 8 ,
 watched through its pidfile
+.It Pa ipmon.unit
+.Xr ipmon 8
 .It Pa iscsid.unit
 .Xr iscsid 8
 .It Pa keyserv.unit
@@ -348,6 +399,9 @@ a oneshot
 .Xr nscd 8
 .It Pa ntpd.unit
 .Xr ntpd 8
+.It Pa pflog@.unit
+.Xr pflogd 8 ,
+template
 .It Pa powerd.unit
 .Xr powerd 8
 .It Pa pppoed.unit

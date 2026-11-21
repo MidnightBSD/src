@@ -1,0 +1,20 @@
+# ipmon.unit - native prowld(8) unit for ipmon(8)
+#
+# Replaces the rc.d/ipmon shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with ipmon_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/ipmon.
+#
+# ipmon runs in the foreground; the -D (daemonize) option in ipmon_flags is
+# removed.  Like rc.d/ipmon it needs ipfilter or ipnat enabled and loaded.
+
+label = "org.midnightbsd.ipmon";
+description = "Monitor for packets logged by IP Filter";
+type = "daemon";
+rc_name = "ipmon";
+run_at_load = true;
+keep_alive = true;
+provides = ["ipmon"];
+wants = ["FILESYSTEMS", "hostname", "sysctl"];
+before = ["SERVERS"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config ipmon\nif ! checkyesno ipfilter_enable && ! checkyesno ipnat_enable; then\n    echo \"ipmon requires either ipfilter or ipnat enabled\" >&2\n    exit 1\nfi\nprog=$ipfilter_program\n[ -n \"$prog\" ] || prog=/sbin/ipf\nif ! $prog -V | grep -q 'Running: yes'; then\n    echo \"ipfilter module is not loaded\" >&2\n    exit 1\nfi\nflags=$(echo \"$ipmon_flags\" | sed -E -e 's/(^| )-([A-Za-z]*)D([A-Za-z]*)/\\1-\\2\\3/g' -e 's/(^| )-( |$)/\\1/g')\nexec /sbin/ipmon $flags", "ipmon"];

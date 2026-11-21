@@ -43,10 +43,12 @@ UNITS=		units/auditd.unit \
 		units/devd.unit \
 		units/dhcp6c.unit \
 		units/ftpd.unit \
+		units/ftpproxy@.unit \
 		units/gssd.unit \
 		units/hastd.unit \
 		units/hcsecd.unit \
 		units/inetd.unit \
+		units/ipmon.unit \
 		units/iscsid.unit \
 		units/keyserv.unit \
 		units/local_unbound.unit \
@@ -63,6 +65,7 @@ UNITS=		units/auditd.unit \
 		units/nfsuserd.unit \
 		units/nscd.unit \
 		units/ntpd.unit \
+		units/pflog@.unit \
 		units/powerd.unit \
 		units/pppoed.unit \
 		units/rarpd.unit \
