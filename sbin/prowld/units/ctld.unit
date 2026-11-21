@@ -1,0 +1,22 @@
+# ctld.unit - native prowld(8) unit for ctld(8)
+#
+# Replaces the rc.d/ctld shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with ctld_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/ctld.
+#
+# ctld runs in the foreground (-d); its output is discarded.  A reload sends
+# SIGHUP.
+
+label = "org.midnightbsd.ctld";
+description = "CAM Target Layer / iSCSI target daemon";
+type = "daemon";
+rc_name = "ctld";
+run_at_load = true;
+keep_alive = true;
+required_files = ["/etc/ctl.conf"];
+nojail = true;
+provides = ["ctld"];
+wants = ["NETWORKING", "FILESYSTEMS"];
+before = ["DAEMON"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config ctld\nkldstat -q -m ctl || kldload ctl || exit 1\nexec /usr/sbin/ctld -d $ctld_flags > /dev/null 2>&1", "ctld"];

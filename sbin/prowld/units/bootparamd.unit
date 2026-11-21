@@ -1,0 +1,21 @@
+# bootparamd.unit - native prowld(8) unit for bootparamd(8)
+#
+# Replaces the rc.d/bootparamd shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with bootparamd_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/bootparamd.
+#
+# bootparamd stays in the foreground only in debug mode (-d), so its
+# output is discarded.
+
+label = "org.midnightbsd.bootparamd";
+description = "Boot parameter daemon";
+type = "daemon";
+rc_name = "bootparamd";
+run_at_load = true;
+keep_alive = true;
+required_files = ["/etc/bootparams"];
+provides = ["bootparams", "bootparamd"];
+wants = ["rpcbind", "DAEMON"];
+before = ["LOGIN"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config bootparamd\nexec /usr/sbin/bootparamd -d $bootparamd_flags > /dev/null 2>&1", "bootparamd"];

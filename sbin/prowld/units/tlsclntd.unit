@@ -1,0 +1,21 @@
+# tlsclntd.unit - native prowld(8) unit for tlsclntd(8)
+#
+# Replaces the rc.d/tlsclntd shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with tlsclntd_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/tlsclntd.
+#
+# tlsclntd stays in the foreground only in debug mode (-d), so its output is
+# discarded.
+
+label = "org.midnightbsd.tlsclntd";
+description = "NFS over TLS client side daemon";
+type = "daemon";
+rc_name = "tlsclntd";
+run_at_load = true;
+keep_alive = true;
+nojail = true;
+provides = ["tlsclntd"];
+wants = ["NETWORKING", "root", "mountcritlocal", "sysctl"];
+before = ["nfscbd"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config tlsclntd\nexec /usr/sbin/rpc.tlsclntd -d $tlsclntd_flags > /dev/null 2>&1", "tlsclntd"];
