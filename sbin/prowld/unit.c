@@ -42,9 +42,11 @@
 #include <libgen.h>
 #include <netinet/in.h>
 #include <pwd.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <syslog.h>
 #include <unistd.h>
 
@@ -554,6 +556,56 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 	obj = ucl_object_lookup(root, "throttle_interval");
 	if (obj != NULL)
 		job->throttle_interval = (int)ucl_object_toint(obj);
+
+	/* pid_file, pid_name: the daemon forks and its parent exits */
+	obj = ucl_object_lookup(root, "pid_file");
+	if (obj != NULL && ucl_object_type(obj) == UCL_STRING) {
+		const char *pf = ucl_object_tostring(obj);
+
+		if (pf[0] != '/' || strlcpy(job->pid_file, pf,
+		    sizeof(job->pid_file)) >= sizeof(job->pid_file)) {
+			prowl_log(LOG_ERR, "%s: bad pid_file", job->label);
+			job_free(job);
+			return (NULL);
+		}
+	}
+	obj = ucl_object_lookup(root, "pid_name");
+	if (obj != NULL && ucl_object_type(obj) == UCL_STRING) {
+		if (strlcpy(job->pid_name, ucl_object_tostring(obj),
+		    sizeof(job->pid_name)) >= sizeof(job->pid_name) ||
+		    job->pid_name[0] == '\0') {
+			prowl_log(LOG_ERR, "%s: bad pid_name", job->label);
+			job_free(job);
+			return (NULL);
+		}
+	}
+	if (job->pid_file[0] != '\0' && job->pid_name[0] != '\0') {
+		prowl_log(LOG_ERR, "%s: pid_file and pid_name are exclusive",
+		    job->label);
+		job_free(job);
+		return (NULL);
+	}
+
+	/* stop_signal: a name (TERM, USR1, ...) with or without SIG */
+	obj = ucl_object_lookup(root, "stop_signal");
+	if (obj != NULL && ucl_object_type(obj) == UCL_STRING) {
+		const char *sn = ucl_object_tostring(obj);
+		int sg;
+
+		if (strncasecmp(sn, "SIG", 3) == 0)
+			sn += 3;
+		for (sg = 1; sg < NSIG; sg++) {
+			if (sys_signame[sg] != NULL &&
+			    strcasecmp(sn, sys_signame[sg]) == 0)
+				break;
+		}
+		if (sg >= NSIG || sg == SIGKILL || sg == SIGSTOP) {
+			prowl_log(LOG_ERR, "%s: bad stop_signal", job->label);
+			job_free(job);
+			return (NULL);
+		}
+		job->stop_signal = sg;
+	}
 
 	/* exit_timeout */
 	obj = ucl_object_lookup(root, "exit_timeout");

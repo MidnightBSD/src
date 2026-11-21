@@ -124,6 +124,9 @@ static_assert((__alignof__(struct job) & TIMER_MASK) == 0,
 #define DEFAULT_SHUTDOWN_TMO	300	/* seconds */
 #define DEFAULT_THROTTLE_INT	10	/* seconds */
 #define PROWL_READY_DELAY	1	/* seconds until a daemon is "up" */
+#define PROWL_ADOPT_TRIES	50	/* looks for a forked daemon */
+#define PROWL_ADOPT_MS		200	/* between those looks */
+#define PROWL_PIDNAME_LEN	32	/* process name of a forked daemon */
 #define DEFAULT_EXIT_TIMEOUT	20	/* seconds */
 
 /* IPC */
@@ -280,6 +283,14 @@ struct job {
 	char		provides[PROWL_PROVIDES_MAX][PROWL_LABEL_MAX];
 	int		provides_count;
 
+	/*
+	 * A daemon that forks and lets its parent exit: where to find the
+	 * process that stays, and the signal that stops it (0 = SIGTERM).
+	 */
+	char		pid_file[PROWL_PATH_MAX];
+	char		pid_name[PROWL_PIDNAME_LEN];
+	int		stop_signal;
+
 	/* Files that must be readable before the job is started */
 	char		required_files[PROWL_REQFILES_MAX][PROWL_PATH_MAX];
 	int		required_files_count;
@@ -331,6 +342,9 @@ struct job {
 	/* Timer tracking */
 	bool		throttle_timer_active;
 	bool		restart_hold;	/* waiting out a restart back-off */
+	bool		launcher;	/* pid is the process that forks the daemon */
+	bool		adopting;	/* looking for the forked daemon */
+	int		adopt_tries;
 	bool		rc_stopping;	/* rc-shim running its "stop" */
 	bool		restart_after_stop;	/* restart: start once stopped */
 	int		quick_fails;	/* consecutive short runs */
@@ -392,6 +406,7 @@ extern volatile bool	 g_reload;
 extern int		 g_current_starts;
 extern bool		 g_is_init;		/* running as PID 1 */
 extern bool		 g_jailed;		/* running inside a jail */
+extern bool		 g_reaper;		/* orphaned descendants are ours */
 extern bool		 g_rundown;		/* rc.shutdown is running */
 extern bool		 g_fastboot;		/* no "autoboot": skip fsck */
 extern bool		 g_boot_mode;		/* we run rc.d */

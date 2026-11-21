@@ -208,6 +208,38 @@ when the module has a different name.
 A module that is already loaded or built in is left alone; if one cannot be
 loaded the job does not run.
 At most 8 entries are allowed.
+.It Va pid_file
+.It Va pid_name
+.Pq string
+For a daemon that forks and lets its parent exit.
+The process
+.Xr prowld 8
+starts is then only a launcher: when it exits with status 0,
+.Xr prowld 8
+looks for the daemon and supervises that instead, so that stopping, reloading
+and restarting act on the daemon.
+.Va pid_file
+is the path of the file the daemon writes its process id to; it is removed
+before each start.
+.Va pid_name
+is the name of the process, for a daemon that writes no pidfile: the oldest
+process with that name that was left to
+.Xr prowld 8
+is taken.
+The daemon is looked for every 200 milliseconds for up to 10 seconds; if it
+does not appear the job is treated as having failed.
+Only one of the two may be given.
+.It Va stop_signal
+.Pq string
+The signal that stops the job, by name with or without the
+.Dq SIG
+prefix, such as
+.Li USR1 .
+The default is
+.Dv SIGTERM .
+.Dv SIGKILL
+is still sent if the job has not ended after
+.Va exit_timeout .
 .It Va instances_var
 Makes the file a template; see
 .Sx TEMPLATES .

@@ -480,6 +480,80 @@ expansion_cleanup()
 	stop_prowld
 }
 
+atf_test_case forking cleanup
+forking_head()
+{
+	atf_set descr "a daemon that forks away is found and supervised"
+	atf_set require.user root
+}
+forking_body()
+{
+	dir="$(pwd)"
+	mkdir -p units
+	# Found by pidfile; stopped with SIGUSR1, as TERM is ignored.
+	cat >units/fa.unit <<EOF
+{"label": "org.test.fa", "rc_name": "prowlctl_test_fa",
+ "type": "daemon", "program": "/bin/sh",
+ "arguments": ["-c", "(trap 'echo usr1 >> ${dir}/log; exit 0' USR1; trap '' TERM; while :; do sleep 1; done) >/dev/null 2>&1 & echo \$! > ${dir}/a.pid"],
+ "pid_file": "${dir}/a.pid", "stop_signal": "USR1",
+ "run_at_load": true, "keep_alive": true, "throttle_interval": 1}
+EOF
+	# Found by name; comes back when it is killed.
+	cat >units/fb.unit <<EOF
+{"label": "org.test.fb", "rc_name": "prowlctl_test_fb",
+ "type": "daemon", "program": "/bin/sh",
+ "arguments": ["-c", "sleep 300 >/dev/null 2>&1 &"],
+ "pid_name": "sleep",
+ "run_at_load": true, "keep_alive": true, "throttle_interval": 1}
+EOF
+	# The daemon never shows up.
+	cat >units/fn.unit <<EOF
+{"label": "org.test.fn", "rc_name": "prowlctl_test_fn",
+ "type": "daemon", "program": "/usr/bin/true",
+ "pid_file": "${dir}/none.pid", "run_at_load": true}
+EOF
+	# A bad stop signal refuses the unit.
+	cat >units/fx.unit <<EOF
+{"label": "org.test.fx", "rc_name": "prowlctl_test_fx",
+ "type": "daemon", "program": "/bin/sleep", "arguments": ["300"],
+ "stop_signal": "NOSUCH", "run_at_load": true}
+EOF
+	start_prowld
+	wait_state org.test.fa running
+	pid=$(job_pid org.test.fa)
+	atf_check_equal "${pid}" "$(cat a.pid)"
+	atf_check_equal "$(cat prowld.pid)" "$(ps -o ppid= -p "${pid}" | tr -d ' ')"
+	atf_check -o ignore ${CTL} stop org.test.fa
+	wait_state org.test.fa stopped
+	atf_check -o inline:"usr1\n" cat log
+	atf_check -s exit:1 -e ignore kill -0 "${pid}"
+
+	wait_state org.test.fb running
+	pid=$(job_pid org.test.fb)
+	atf_check_equal "sleep" "$(ps -o comm= -p "${pid}")"
+	kill -KILL "${pid}"
+	new=
+	for i in $(jot 75); do
+		new=$(job_pid org.test.fb)
+		[ "${new}" -gt 0 ] 2>/dev/null && [ "${new}" != "${pid}" ] && break
+		sleep 0.2
+	done
+	wait_state org.test.fb running
+	atf_check_not_equal "${pid}" "$(job_pid org.test.fb)"
+	pid=$(job_pid org.test.fb)
+	atf_check -o ignore ${CTL} stop org.test.fb
+	wait_state org.test.fb stopped
+	atf_check -s exit:1 -e ignore kill -0 "${pid}"
+
+	wait_state org.test.fn failed
+	atf_check -s not-exit:0 -e ignore -o ignore ${CTL} status org.test.fx
+}
+forking_cleanup()
+{
+	stop_prowld
+	pkill -KILL -f "sleep 300" 2>/dev/null || true
+}
+
 atf_test_case templates cleanup
 templates_head()
 {
@@ -521,6 +595,7 @@ templates_cleanup()
 
 atf_init_test_cases()
 {
+	atf_add_test_case forking
 	atf_add_test_case expansion
 	atf_add_test_case actions
 	atf_add_test_case oneshot_stop

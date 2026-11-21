@@ -35,6 +35,7 @@
 #include <sys/types.h>
 #include <sys/sysctl.h>
 #include <sys/event.h>
+#include <sys/procctl.h>
 #include <sys/reboot.h>
 #include <sys/stat.h>
 #include <sys/time.h>
@@ -70,6 +71,7 @@ static bool		 g_single_user = false;	/* PID 1: go to single-user */
 static int		 g_howto = RB_AUTOBOOT;	/* PID 1: reboot(2) argument */
 bool			 g_is_init = false;	/* running as PID 1 */
 bool			 g_jailed = false;	/* running inside a jail */
+bool			 g_reaper = false;	/* orphaned descendants are ours */
 bool			 g_rundown = false;	/* rc.shutdown is running */
 bool			 g_fastboot = false;	/* no "autoboot": skip fsck */
 char			 g_unit_override[PROWL_PATH_MAX]; /* -u unit dir */
@@ -532,6 +534,9 @@ handle_proc_event(struct kevent *kev)
 	pid = waitpid((pid_t)kev->ident, &status, WNOHANG);
 	if (pid > 0)
 		supervisor_reap(pid, status);
+	else if (pid == -1 && errno == ECHILD && job->pid == (pid_t)kev->ident)
+		/* Not our child (no reaper): the exit status is unknown */
+		supervisor_reap((pid_t)kev->ident, 1 << 8);
 }
 
 /*
@@ -860,6 +865,18 @@ main(int argc, char *argv[])
 	} else if (!debug && daemon(0, 0) == -1) {
 		err(1, "daemon");
 	}
+
+	/*
+	 * A daemon that forks and lets its parent exit is found afterwards
+	 * and supervised as our own child.  As init it is reparented to us;
+	 * otherwise ask the kernel to do the same.
+	 */
+	if (g_is_init)
+		g_reaper = true;
+	else if (procctl(P_PID, getpid(), PROC_REAP_ACQUIRE, NULL) == 0)
+		g_reaper = true;
+	else
+		prowl_log(LOG_WARNING, "procctl reaper: %m");
 
 	g_kqueue_fd = kqueue();
 	if (g_kqueue_fd == -1) {

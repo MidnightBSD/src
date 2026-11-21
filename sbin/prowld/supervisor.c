@@ -45,9 +45,12 @@
 #include <sys/user.h>
 #include <sys/wait.h>
 
+#include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <grp.h>
+#include <libutil.h>
+#include <limits.h>
 #include <poll.h>
 #include <pwd.h>
 #include <signal.h>
@@ -62,6 +65,9 @@
 #include <ucl.h>
 
 #include "prowld.h"
+
+static void	supervisor_adopt(job_t *);
+static pid_t	find_daemon_pid(const job_t *);
 
 static bool g_dnssd_available = true;
 static char g_dnssd_path[PROWL_PATH_MAX];
@@ -300,14 +306,9 @@ arm_boot_delay_timer(job_t *job)
  * Low bit of ident is 0: throttle timer.
  */
 static void
-arm_throttle_timer(job_t *job, int secs)
+arm_throttle_timer_ms(job_t *job, int64_t ms)
 {
 	struct kevent kev;
-	int64_t ms;
-
-	ms = (int64_t)secs * 1000;
-	if (ms <= 0)
-		ms = DEFAULT_THROTTLE_INT * 1000;
 
 	EV_SET(&kev, timer_ident(job, TIMER_THROTTLE), EVFILT_TIMER,
 	    EV_ADD | EV_ONESHOT, NOTE_MSECONDS, ms, NULL);
@@ -315,6 +316,17 @@ arm_throttle_timer(job_t *job, int secs)
 		prowl_log(LOG_WARNING, "kevent throttle timer %s: %m",
 		    job->label);
 	job->throttle_timer_active = true;
+}
+
+static void
+arm_throttle_timer(job_t *job, int secs)
+{
+	int64_t ms;
+
+	ms = (int64_t)secs * 1000;
+	if (ms <= 0)
+		ms = DEFAULT_THROTTLE_INT * 1000;
+	arm_throttle_timer_ms(job, ms);
 }
 
 static void
@@ -952,6 +964,19 @@ supervisor_start(job_t *job)
 			    "falling back to throttle timer", job->label);
 	}
 
+	/*
+	 * A forking daemon: forget a pidfile left by an earlier run, so
+	 * only the new daemon's is believed.
+	 */
+	job->launcher = false;
+	job->adopting = false;
+	job->adopt_tries = 0;
+	if (job->pid_file[0] != '\0' || job->pid_name[0] != '\0') {
+		job->launcher = true;
+		if (job->pid_file[0] != '\0')
+			(void)unlink(job->pid_file);
+	}
+
 	pid = fork();
 	if (pid == -1) {
 		prowl_log(LOG_ERR, "fork %s: %m", job->label);
@@ -981,7 +1006,7 @@ supervisor_start(job_t *job)
 		/* Wait for READY=1; use exit_timeout as the deadline */
 		arm_notify_timeout_timer(job);
 	} else if (job->type != JOB_TYPE_ONESHOT &&
-	    job->type != JOB_TYPE_RCSHIM) {
+	    job->type != JOB_TYPE_RCSHIM && !job->launcher) {
 		/*
 		 * Promote to RUNNING once the process has survived a moment,
 		 * so that jobs ordered after this one are not held back for
@@ -1168,6 +1193,31 @@ supervisor_stop(job_t *job, bool force)
 	    (job->type == JOB_TYPE_RCSHIM || job->stop_argc > 0))
 		return (supervisor_rc_stop(job));
 
+	/*
+	 * Still looking for the forked daemon: take it if it is there now,
+	 * otherwise there is nothing to stop.
+	 */
+	if (job->adopting) {
+		struct kevent kev;
+		pid_t dpid = find_daemon_pid(job);
+
+		EV_SET(&kev, timer_ident(job, TIMER_THROTTLE), EVFILT_TIMER,
+		    EV_DELETE, 0, 0, NULL);
+		(void)kevent(g_kqueue_fd, &kev, 1, NULL, 0, NULL);
+		job->throttle_timer_active = false;
+		job->adopting = false;
+		if (dpid > 0) {
+			job->pid = dpid;
+			watch_child(dpid, job);
+		} else {
+			if (job->state == JOB_STATE_STARTING &&
+			    g_current_starts > 0)
+				g_current_starts--;
+			job_set_state(job, JOB_STATE_STOPPED);
+			return (0);
+		}
+	}
+
 	/* Stopping a job that is waiting to be restarted cancels the restart */
 	if (job->pid <= 0 && job->restart_hold) {
 		struct kevent kev;
@@ -1202,7 +1252,8 @@ supervisor_stop(job_t *job, bool force)
 	if (force) {
 		kill(job->pid, SIGKILL);
 	} else {
-		kill(job->pid, SIGTERM);
+		kill(job->pid, job->stop_signal > 0 ? job->stop_signal :
+		    SIGTERM);
 		arm_stop_timer(job);
 	}
 
@@ -1417,6 +1468,20 @@ supervisor_handle_throttle(job_t *job)
 
 	if (job->state != JOB_STATE_STARTING)
 		return;
+
+	/* Waiting for the forked daemon to show up */
+	if (job->adopting) {
+		supervisor_adopt(job);
+		return;
+	}
+
+	/* A forked daemon that is gone before we saw it start */
+	if (job->pid > 0 && (job->pid_file[0] != '\0' ||
+	    job->pid_name[0] != '\0') &&
+	    kill(job->pid, 0) == -1 && errno == ESRCH) {
+		supervisor_reap(job->pid, 1 << 8);
+		return;
+	}
 
 	if (job->pid > 0 && kill(job->pid, 0) == 0) {
 		job_set_state(job, JOB_STATE_RUNNING);
@@ -1706,6 +1771,157 @@ should_restart(const job_t *job, int status)
 }
 
 /*
+ * A job ended when it should not have: restart it after a back-off if its
+ * keep_alive policy says so, otherwise leave it failed.
+ */
+static void
+job_restart_or_fail(job_t *job, int status)
+{
+	if (should_restart(job, status)) {
+		int base, delay, shift;
+
+		job->restart_count++;
+
+		/*
+		 * Hold the job off for throttle_interval seconds before it
+		 * is eligible again.  A job that keeps dying within that
+		 * interval backs off exponentially, up to 16 times the
+		 * interval, so a broken service cannot respawn in a tight
+		 * loop.  A run that lasted longer resets the backoff.
+		 */
+		base = job->throttle_interval > 0 ?
+		    job->throttle_interval : DEFAULT_THROTTLE_INT;
+		if (job->exited_at - job->started_at < base) {
+			if (job->quick_fails < 4)
+				job->quick_fails++;
+		} else
+			job->quick_fails = 0;
+		shift = job->quick_fails > 0 ? job->quick_fails - 1 : 0;
+		delay = base << shift;
+
+		prowl_log(LOG_NOTICE,
+		    "job %s will restart in %ds (attempt %d)",
+		    job->label, delay, job->restart_count);
+		job_set_state(job, JOB_STATE_LOADED);
+		job->restart_hold = true;
+		arm_throttle_timer(job, delay);
+	} else {
+		job_set_state(job, JOB_STATE_FAILED);
+		prowl_log(LOG_ERR, "job %s entered failed state",
+		    job->label);
+	}
+}
+
+/*
+ * Read a process id from a pidfile.  Returns -1 when the file does not hold
+ * the id of a live process yet.
+ */
+static pid_t
+pid_from_file(const char *path)
+{
+	char buf[32], *end;
+	ssize_t n;
+	long v;
+	int fd;
+
+	fd = open(path, O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
+	if (fd == -1)
+		return (-1);
+	n = read(fd, buf, sizeof(buf) - 1);
+	(void)close(fd);
+	if (n <= 0)
+		return (-1);
+	buf[n] = '\0';
+
+	errno = 0;
+	v = strtol(buf, &end, 10);
+	if (end == buf || errno != 0 || v <= 1 || v > INT_MAX ||
+	    (*end != '\0' && !isspace((unsigned char)*end)))
+		return (-1);
+	if (kill((pid_t)v, 0) == -1 && errno != EPERM)
+		return (-1);
+	return ((pid_t)v);
+}
+
+/*
+ * Find the oldest process called name that was left to us: a child of
+ * ours, or of init when we are not a reaper.  Returns -1 if there is none.
+ */
+static pid_t
+pid_from_name(const char *name)
+{
+	struct kinfo_proc *kp;
+	pid_t self, parent, best;
+	struct timeval bt;
+	int i, cnt;
+
+	self = getpid();
+	parent = g_reaper ? self : 1;
+	best = -1;
+	bt.tv_sec = bt.tv_usec = 0;
+
+	kp = kinfo_getallproc(&cnt);
+	if (kp == NULL)
+		return (-1);
+	for (i = 0; i < cnt; i++) {
+		if (kp[i].ki_pid == self || kp[i].ki_ppid != parent ||
+		    kp[i].ki_stat == SZOMB ||
+		    strcmp(kp[i].ki_comm, name) != 0)
+			continue;
+		if (best == -1 || timercmp(&kp[i].ki_start, &bt, <)) {
+			best = kp[i].ki_pid;
+			bt = kp[i].ki_start;
+		}
+	}
+	free(kp);
+	return (best);
+}
+
+static pid_t
+find_daemon_pid(const job_t *job)
+{
+	if (job->pid_file[0] != '\0')
+		return (pid_from_file(job->pid_file));
+	return (pid_from_name(job->pid_name));
+}
+
+/*
+ * The process that forks the daemon has exited cleanly: find the daemon and
+ * supervise that instead.  It may not have written its pidfile yet, so look
+ * again every PROWL_ADOPT_MS until PROWL_ADOPT_TRIES are used up.
+ */
+static void
+supervisor_adopt(job_t *job)
+{
+	pid_t pid;
+
+	pid = find_daemon_pid(job);
+	if (pid > 0) {
+		job->adopting = false;
+		job->pid = pid;
+		watch_child(pid, job);
+		arm_throttle_timer(job, PROWL_READY_DELAY);
+		prowl_log(LOG_INFO, "job %s daemon is pid %d", job->label,
+		    (int)pid);
+		return;
+	}
+
+	if (++job->adopt_tries >= PROWL_ADOPT_TRIES) {
+		job->adopting = false;
+		prowl_log(LOG_ERR, "job %s: the daemon did not appear",
+		    job->label);
+		if (job->state == JOB_STATE_STARTING && g_current_starts > 0)
+			g_current_starts--;
+		job->exited_at = time(NULL);
+		job_restart_or_fail(job, 1 << 8);
+		return;
+	}
+
+	job->adopting = true;
+	arm_throttle_timer_ms(job, PROWL_ADOPT_MS);
+}
+
+/*
  * Reap a child process and update job state.
  */
 void
@@ -1713,6 +1929,7 @@ supervisor_reap(pid_t pid, int status)
 {
 	job_t *job;
 	struct kevent kev;
+	bool was_launcher;
 
 	TAILQ_FOREACH(job, &g_jobs, entries) {
 		if (job->pid == pid || job->mdns_pid == pid)
@@ -1739,6 +1956,8 @@ supervisor_reap(pid_t pid, int status)
 		return;
 	}
 
+	was_launcher = job->launcher;
+	job->launcher = false;
 	job->last_exit_status = status;
 	job->exited_at = time(NULL);
 	job->pid = -1;
@@ -1765,6 +1984,17 @@ supervisor_reap(pid_t pid, int status)
 	else if (WIFSIGNALED(status))
 		prowl_log(LOG_NOTICE, "job %s killed by signal %d",
 		    job->label, WTERMSIG(status));
+
+	/*
+	 * The process that forks a daemon is done: the daemon is what we
+	 * supervise from here on.
+	 */
+	if (was_launcher && !job->rc_stopping &&
+	    job->state == JOB_STATE_STARTING &&
+	    WIFEXITED(status) && WEXITSTATUS(status) == 0) {
+		supervisor_adopt(job);
+		return;
+	}
 
 	/*
 	 * Oneshot completes on clean exit.  So does an rc-shim start: an
@@ -1819,39 +2049,7 @@ supervisor_reap(pid_t pid, int status)
 	}
 
 	/* Unexpected exit */
-	if (should_restart(job, status)) {
-		int base, delay, shift;
-
-		job->restart_count++;
-
-		/*
-		 * Hold the job off for throttle_interval seconds before it
-		 * is eligible again.  A job that keeps dying within that
-		 * interval backs off exponentially, up to 16 times the
-		 * interval, so a broken service cannot respawn in a tight
-		 * loop.  A run that lasted longer resets the backoff.
-		 */
-		base = job->throttle_interval > 0 ?
-		    job->throttle_interval : DEFAULT_THROTTLE_INT;
-		if (job->exited_at - job->started_at < base) {
-			if (job->quick_fails < 4)
-				job->quick_fails++;
-		} else
-			job->quick_fails = 0;
-		shift = job->quick_fails > 0 ? job->quick_fails - 1 : 0;
-		delay = base << shift;
-
-		prowl_log(LOG_NOTICE,
-		    "job %s will restart in %ds (attempt %d)",
-		    job->label, delay, job->restart_count);
-		job_set_state(job, JOB_STATE_LOADED);
-		job->restart_hold = true;
-		arm_throttle_timer(job, delay);
-	} else {
-		job_set_state(job, JOB_STATE_FAILED);
-		prowl_log(LOG_ERR, "job %s entered failed state",
-		    job->label);
-	}
+	job_restart_or_fail(job, status);
 }
 
 /*
@@ -1905,7 +2103,23 @@ supervisor_shutdown_all(void)
 			kill(job->pid, SIGKILL);
 	}
 
-	/* Final reap */
+	/*
+	 * Final reap.  A killed process takes a moment to die: wait for each,
+	 * so that none is left for init when we exit.
+	 */
+	TAILQ_FOREACH(job, &g_jobs, entries) {
+		int st, tries;
+
+		if (job->pid <= 0)
+			continue;
+		for (tries = 0; tries < 50; tries++) {
+			struct timespec ts = { 0, 20000000L };
+
+			if (waitpid(job->pid, &st, WNOHANG) != 0)
+				break;
+			nanosleep(&ts, NULL);
+		}
+	}
 	for (;;) {
 		int st;
 		if (waitpid(-1, &st, WNOHANG) <= 0)
