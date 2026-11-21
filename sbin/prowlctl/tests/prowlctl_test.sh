@@ -391,6 +391,51 @@ oneshot_stop_cleanup()
 	stop_prowld
 }
 
+atf_test_case actions cleanup
+actions_head()
+{
+	atf_set descr "reload, check and resync run the unit's commands"
+	atf_set require.user root
+}
+actions_body()
+{
+	mkdir -p units
+	cat >units/act.unit <<EOF
+{"label": "org.test.act", "rc_name": "prowlctl_test_act",
+ "type": "oneshot", "program": "/bin/sh",
+ "arguments": ["-c", "exit 0"],
+ "reload_arguments": ["-c", "echo reloaded; echo oops >&2"],
+ "check_arguments": ["-c", "echo 'line \"one\"'; echo two; exit 3"],
+ "resync_arguments": ["-c", "echo resynced"],
+ "run_at_load": false}
+EOF
+	cat >units/plain.unit <<EOF
+{"label": "org.test.plain", "rc_name": "prowlctl_test_plain",
+ "type": "daemon", "program": "/bin/sleep",
+ "arguments": ["300"], "run_at_load": true}
+EOF
+	start_prowld
+	# check works before the job has been started, and reports its exit
+	atf_check -s exit:3 -o inline:'line "one"\ntwo\n' ${CTL} check org.test.act
+	# reload and resync need a started job
+	atf_check -s not-exit:0 -e ignore -o ignore ${CTL} reload org.test.act
+	atf_check -o ignore ${CTL} start org.test.act
+	wait_state org.test.act completed
+	atf_check -o match:reloaded -o match:oops ${CTL} reload org.test.act
+	atf_check -o inline:'resynced\n' ${CTL} resync org.test.act
+	# the rc.subr variants mean the same
+	atf_check -o inline:'resynced\n' ${CTL} quietresync org.test.act
+	# a unit without the command is refused; reload falls back to SIGHUP
+	wait_state org.test.plain running
+	atf_check -s not-exit:0 -e match:'no check command' -o ignore ${CTL} check org.test.plain
+	atf_check -s not-exit:0 -e match:'no resync command' -o ignore ${CTL} resync org.test.plain
+	atf_check -o inline:'ok\n' ${CTL} reload org.test.plain
+}
+actions_cleanup()
+{
+	stop_prowld
+}
+
 atf_test_case templates cleanup
 templates_head()
 {
@@ -432,6 +477,7 @@ templates_cleanup()
 
 atf_init_test_cases()
 {
+	atf_add_test_case actions
 	atf_add_test_case oneshot_stop
 	atf_add_test_case stop_restart_wait
 	atf_add_test_case templates

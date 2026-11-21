@@ -71,7 +71,7 @@ job_alloc(void)
 void
 job_free(job_t *job)
 {
-	int i;
+	int i, a;
 
 	if (job == NULL)
 		return;
@@ -81,6 +81,10 @@ job_free(job_t *job)
 
 	for (i = 0; i < job->stop_argc; i++)
 		free(job->stop_arguments[i]);
+
+	for (a = 0; a < PROWL_ACTION_MAX; a++)
+		for (i = 0; i < job->action_argc[a]; i++)
+			free(job->action_args[a][i]);
 
 	for (i = 0; i < job->envc; i++)
 		free(job->envp[i]);

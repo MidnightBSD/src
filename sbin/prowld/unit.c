@@ -420,6 +420,46 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 		job->stop_argc = n;
 	}
 
+	/* reload_arguments, check_arguments, resync_arguments */
+	{
+		static const struct {
+			const char	*key;
+			int		 action;
+		} actions[] = {
+			{ "reload_arguments", PROWL_ACTION_RELOAD },
+			{ "check_arguments", PROWL_ACTION_CHECK },
+			{ "resync_arguments", PROWL_ACTION_RESYNC },
+		};
+		size_t k;
+
+		for (k = 0; k < sizeof(actions) / sizeof(actions[0]); k++) {
+			int act = actions[k].action;
+
+			arr = ucl_object_lookup(root, actions[k].key);
+			if (arr == NULL || ucl_object_type(arr) != UCL_ARRAY)
+				continue;
+			it = NULL;
+			n = 0;
+			while ((item = ucl_object_iterate(arr, &it, true)) !=
+			    NULL) {
+				if (n >= PROWL_ARGS_MAX - 1)
+					break;
+				if (ucl_object_type(item) != UCL_STRING)
+					continue;
+				job->action_args[act][n] =
+				    strdup(ucl_object_tostring(item));
+				if (job->action_args[act][n] == NULL) {
+					prowl_log(LOG_ERR, "strdup: %m");
+					job->action_argc[act] = n;
+					job_free(job);
+					return (NULL);
+				}
+				n++;
+			}
+			job->action_argc[act] = n;
+		}
+	}
+
 	/* environment */
 	obj = ucl_object_lookup(root, "environment");
 	if (obj != NULL && ucl_object_type(obj) == UCL_OBJECT) {

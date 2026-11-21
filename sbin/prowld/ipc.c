@@ -670,6 +670,86 @@ cmd_restart(int fd, const char *id, const ucl_object_t *req)
 	ipc_send_ok(fd, id, NULL);
 }
 
+/*
+ * Run a unit's reload, check or resync command and send back its exit
+ * status and output: {"exit":N,"output":"..."}.  Reload and resync only
+ * make sense for a job that has been started; check can run at any time.
+ */
+static void
+cmd_action(int fd, const char *id, job_t *job, int action, const char *name)
+{
+	char out[PROWL_ACTION_OUT_MAX];
+	char msg[96];
+	char *esc, *result;
+	size_t cap;
+	int code;
+
+	if (job->action_argc[action] == 0) {
+		snprintf(msg, sizeof(msg), "job has no %s command", name);
+		ipc_send_error(fd, id, msg);
+		return;
+	}
+	if (job->state == JOB_STATE_MASKED) {
+		ipc_send_error(fd, id, "job is masked");
+		return;
+	}
+	if (action != PROWL_ACTION_CHECK &&
+	    job->state != JOB_STATE_RUNNING &&
+	    job->state != JOB_STATE_COMPLETED) {
+		ipc_send_error(fd, id, "job not running");
+		return;
+	}
+
+	if (supervisor_run_action(job, action, out, sizeof(out), &code) == -1) {
+		ipc_send_error(fd, id, "could not run the command");
+		return;
+	}
+
+	/* Worst case every byte becomes a six byte \u00XX escape. */
+	cap = strlen(out) * 6 + 1;
+	esc = malloc(cap);
+	if (esc == NULL) {
+		ipc_send_error(fd, id, "out of memory");
+		return;
+	}
+	if (json_escape_str(out, esc, cap) == -1) {
+		free(esc);
+		ipc_send_error(fd, id, "could not encode the output");
+		return;
+	}
+	cap = strlen(esc) + 64;
+	result = malloc(cap);
+	if (result == NULL) {
+		free(esc);
+		ipc_send_error(fd, id, "out of memory");
+		return;
+	}
+	snprintf(result, cap, "{\"exit\":%d,\"output\":\"%s\"}", code, esc);
+	ipc_send_ok(fd, id, result);
+	free(result);
+	free(esc);
+}
+
+static void
+cmd_check(int fd, const char *id, const ucl_object_t *req)
+{
+	job_t *job;
+
+	job = resolve_target(req, fd, id);
+	if (job != NULL)
+		cmd_action(fd, id, job, PROWL_ACTION_CHECK, "check");
+}
+
+static void
+cmd_resync(int fd, const char *id, const ucl_object_t *req)
+{
+	job_t *job;
+
+	job = resolve_target(req, fd, id);
+	if (job != NULL)
+		cmd_action(fd, id, job, PROWL_ACTION_RESYNC, "resync");
+}
+
 static void
 cmd_reload(int fd, const char *id, const ucl_object_t *req)
 {
@@ -678,6 +758,12 @@ cmd_reload(int fd, const char *id, const ucl_object_t *req)
 	job = resolve_target(req, fd, id);
 	if (job == NULL)
 		return;
+
+	/* A unit with a reload command has it run instead of a SIGHUP */
+	if (job->action_argc[PROWL_ACTION_RELOAD] > 0) {
+		cmd_action(fd, id, job, PROWL_ACTION_RELOAD, "reload");
+		return;
+	}
 
 	if (job->state != JOB_STATE_RUNNING) {
 		ipc_send_error(fd, id, "job not running");
@@ -1071,6 +1157,10 @@ ipc_dispatch_message(int fd, const char *json, size_t len)
 		cmd_restart(fd, id, root);
 	else if (strcmp(verb, "reload") == 0)
 		cmd_reload(fd, id, root);
+	else if (strcmp(verb, "check") == 0)
+		cmd_check(fd, id, root);
+	else if (strcmp(verb, "resync") == 0)
+		cmd_resync(fd, id, root);
 	else if (strcmp(verb, "enable") == 0)
 		cmd_enable(fd, id, root);
 	else if (strcmp(verb, "disable") == 0)

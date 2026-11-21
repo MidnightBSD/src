@@ -46,6 +46,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <grp.h>
+#include <poll.h>
 #include <pwd.h>
 #include <signal.h>
 #include <stdint.h>
@@ -770,7 +771,11 @@ child_setup_and_exec(job_t *job)
 	/* Native unit: build argv */
 	argv[0] = job->program;
 	argc = 1;
-	if (job->rc_stopping && job->stop_argc > 0) {
+	if (job->action != PROWL_ACTION_NONE) {
+		for (i = 0; i < job->action_argc[job->action] &&
+		    argc < PROWL_ARGS_MAX; i++)
+			argv[argc++] = job->action_args[job->action][i];
+	} else if (job->rc_stopping && job->stop_argc > 0) {
 		for (i = 0; i < job->stop_argc && argc < PROWL_ARGS_MAX; i++)
 			argv[argc++] = job->stop_arguments[i];
 	} else {
@@ -987,6 +992,114 @@ supervisor_rc_stop(job_t *job)
 	job_set_state(job, JOB_STATE_STOPPING);
 	watch_child(pid, job);
 	arm_stop_timer(job);
+	return (0);
+}
+
+/*
+ * Run one of a unit's reload, check or resync commands and wait for it,
+ * keeping the first PROWL_ACTION_OUT_MAX bytes of what it prints (standard
+ * output and standard error together) in out.  *exitp is its exit status,
+ * 128 plus the signal if a signal ended it, or 124 if it ran longer than
+ * PROWL_ACTION_TIMEOUT seconds and was killed.  These are administrator
+ * commands that finish quickly; prowld does nothing else while it waits.
+ * Returns -1 if the command could not be started.
+ */
+int
+supervisor_run_action(job_t *job, int action, char *out, size_t outsz,
+    int *exitp)
+{
+	struct pollfd pfd;
+	char buf[1024];
+	time_t deadline, now;
+	size_t len = 0;
+	ssize_t n;
+	pid_t pid;
+	int fds[2], st = 0, r;
+	bool timed_out = false;
+
+	if (outsz == 0)
+		return (-1);
+	out[0] = '\0';
+	*exitp = -1;
+
+	if (action <= PROWL_ACTION_NONE || action >= PROWL_ACTION_MAX ||
+	    job->action_argc[action] == 0)
+		return (-1);
+
+	if (pipe(fds) == -1) {
+		prowl_log(LOG_ERR, "pipe %s: %m", job->label);
+		return (-1);
+	}
+	resolve_job_privileges(job);
+
+	pid = fork();
+	if (pid == -1) {
+		prowl_log(LOG_ERR, "fork %s: %m", job->label);
+		close(fds[0]);
+		close(fds[1]);
+		return (-1);
+	}
+	if (pid == 0) {
+		close(fds[0]);
+		if (g_kqueue_fd >= 0)
+			close(g_kqueue_fd);
+		if (dup2(fds[1], STDOUT_FILENO) == -1 ||
+		    dup2(fds[1], STDERR_FILENO) == -1)
+			_exit(127);
+		if (fds[1] > STDERR_FILENO)
+			close(fds[1]);
+		job->action = action;
+		child_setup_and_exec(job);
+		/* NOTREACHED */
+		_exit(127);
+	}
+	close(fds[1]);
+
+	deadline = time(NULL) + PROWL_ACTION_TIMEOUT;
+	for (;;) {
+		now = time(NULL);
+		if (now >= deadline) {
+			timed_out = true;
+			break;
+		}
+		pfd.fd = fds[0];
+		pfd.events = POLLIN;
+		pfd.revents = 0;
+		r = poll(&pfd, 1, (int)(deadline - now) * 1000);
+		if (r == -1) {
+			if (errno == EINTR)
+				continue;
+			break;
+		}
+		if (r == 0) {
+			timed_out = true;
+			break;
+		}
+		n = read(fds[0], buf, sizeof(buf));
+		if (n <= 0)
+			break;
+		if (len < outsz - 1) {
+			size_t take = (size_t)n;
+
+			if (take > outsz - 1 - len)
+				take = outsz - 1 - len;
+			memcpy(out + len, buf, take);
+			len += take;
+			out[len] = '\0';
+		}
+	}
+	close(fds[0]);
+
+	if (timed_out)
+		kill(pid, SIGKILL);
+	while (waitpid(pid, &st, 0) == -1 && errno == EINTR)
+		;
+	if (timed_out)
+		*exitp = 124;
+	else if (WIFEXITED(st))
+		*exitp = WEXITSTATUS(st);
+	else if (WIFSIGNALED(st))
+		*exitp = 128 + WTERMSIG(st);
 	return (0);
 }
 

@@ -104,6 +104,30 @@ until the command exits and
 .Em stopped
 afterwards, whatever its exit status.
 Without it, stopping a completed oneshot does nothing.
+.It Va reload_arguments , check_arguments , resync_arguments
+.Pq arrays of strings
+Argument vectors for the commands behind
+.Dq prowlctl reload ,
+.Dq prowlctl check
+and
+.Dq prowlctl resync .
+Each is run with the same
+.Va program ,
+user and environment as the job, and
+.Xr prowlctl 8
+prints what it writes to standard output and standard error and exits with
+its status.
+A command that runs longer than 30 seconds is killed, and the first 8192
+bytes of its output are kept.
+Without
+.Va reload_arguments
+a running job gets SIGHUP.
+.Ic reload
+and
+.Ic resync
+need a job that has been started; a
+.Ic check
+may run at any time.
 .It Va environment
 .Pq object
 Key/value pairs set in the child's environment.

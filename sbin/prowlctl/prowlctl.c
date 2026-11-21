@@ -105,6 +105,8 @@ usage(void)
 	    "  stop <label>\n"
 	    "  restart <label>\n"
 	    "  reload <label>\n"
+	    "  check <label>\n"
+	    "  resync <label>\n"
 	    "  enable <label>\n"
 	    "  disable <label>\n"
 	    "  mask <label>\n"
@@ -398,6 +400,8 @@ rc_verb(const char *cmd)
 		    strcmp(cmd + n, "stop") == 0 ||
 		    strcmp(cmd + n, "restart") == 0 ||
 		    strcmp(cmd + n, "reload") == 0 ||
+		    strcmp(cmd + n, "check") == 0 ||
+		    strcmp(cmd + n, "resync") == 0 ||
 		    strcmp(cmd + n, "status") == 0))
 			return (cmd + n);
 	}
@@ -642,6 +646,111 @@ do_simple_target(const char *verb, int argc, char *argv[])
 		printf("ok\n");
 	else if (g_json && resp != NULL)
 		puts(resp);
+
+	free(resp);
+	return (ret);
+}
+
+/*
+ * Print the "output" string of a command response, undoing the JSON
+ * escapes.  json_get_str() is not used because it does not decode \n.
+ */
+static void
+print_action_output(const char *resp)
+{
+	const char *p;
+	unsigned int v;
+	int i;
+
+	p = strstr(resp, "\"output\":\"");
+	if (p == NULL)
+		return;
+	p += strlen("\"output\":\"");
+	while (*p != '\0' && *p != '"') {
+		if (*p != '\\') {
+			putchar((unsigned char)*p++);
+			continue;
+		}
+		p++;
+		switch (*p) {
+		case 'n':
+			putchar('\n');
+			p++;
+			break;
+		case 't':
+			putchar('\t');
+			p++;
+			break;
+		case 'r':
+			putchar('\r');
+			p++;
+			break;
+		case 'u':
+			p++;
+			v = 0;
+			for (i = 0; i < 4 && isxdigit((unsigned char)*p); i++) {
+				v = v * 16 + (unsigned int)(isdigit(
+				    (unsigned char)*p) ? *p - '0' :
+				    (tolower((unsigned char)*p) - 'a' + 10));
+				p++;
+			}
+			putchar((int)(v & 0xff));
+			break;
+		case '\0':
+			break;
+		default:
+			putchar((unsigned char)*p++);
+			break;
+		}
+	}
+}
+
+/*
+ * reload, check and resync: a unit may define a command for each, whose
+ * output and exit status come back in the response.  A job without a reload
+ * command just gets SIGHUP and the reply carries no output.
+ */
+static int
+do_action(const char *verb, int argc, char *argv[])
+{
+	char req[REQ_MAX];
+	char code[16];
+	char *resp;
+	int ret;
+
+	if (argc < 1) {
+		fprintf(stderr, "prowlctl: %s requires a label\n", verb);
+		return (EXIT_NOT_FOUND);
+	}
+
+	if (!validate_label_input(argv[0])) {
+		fprintf(stderr, "prowlctl: invalid label '%s'\n", argv[0]);
+		return (EXIT_NOT_FOUND);
+	}
+
+	snprintf(req, sizeof(req),
+	    "{\"verb\":\"%s\",\"target\":\"%s\"}", verb, argv[0]);
+
+	if (send_request(g_sock, req) == -1)
+		err(EXIT_NO_DAEMON, "send");
+
+	resp = recv_response(g_sock);
+	ret = check_response(resp);
+	if (ret != EXIT_OK) {
+		free(resp);
+		return (ret);
+	}
+
+	if (g_json) {
+		puts(resp);
+	} else if (json_get_str(resp, "exit", code, sizeof(code)) != NULL) {
+		print_action_output(resp);
+		ret = atoi(code);
+		if (ret < 0 || ret > 255)
+			ret = EXIT_FAILED;
+	} else {
+		printf("ok\n");
+	}
 
 	free(resp);
 	return (ret);
@@ -1132,7 +1241,11 @@ main(int argc, char *argv[])
 	else if (strcmp(cmd, "restart") == 0)
 		ret = do_simple_target("restart", argc, argv);
 	else if (strcmp(cmd, "reload") == 0)
-		ret = do_simple_target("reload", argc, argv);
+		ret = do_action("reload", argc, argv);
+	else if (strcmp(cmd, "check") == 0)
+		ret = do_action("check", argc, argv);
+	else if (strcmp(cmd, "resync") == 0)
+		ret = do_action("resync", argc, argv);
 	else if (strcmp(cmd, "enable") == 0)
 		ret = do_simple_target("enable", argc, argv);
 	else if (strcmp(cmd, "disable") == 0)

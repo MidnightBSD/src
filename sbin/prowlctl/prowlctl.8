@@ -126,14 +126,35 @@ instead, with the same time limit.
 Stop then start the named job again, once it has stopped.
 This also starts a job that is stopped, completed or failed.
 .It Cm reload Ar label
-Send
+Make the named job re-read its configuration.
+If the unit defines
+.Va reload_arguments
+that command is run and its output is printed, and
+.Nm
+exits with its exit status.
+Otherwise
 .Dv SIGHUP
-to the named job.
-By convention this causes a daemon to re-read its configuration
-without dropping connections.
+is sent to the job, which by convention causes a daemon to re-read its
+configuration without dropping connections.
 The job must be in the
 .Dv running
+or
+.Dv completed
 state.
+.It Cm check Ar label
+Run the unit's
+.Va check_arguments
+command, which tests the configuration without applying it, and print its
+output.
+.Nm
+exits with the command's exit status.
+The job does not have to be running.
+.It Cm resync Ar label
+Run the unit's
+.Va resync_arguments
+command, which brings the running service back in line with its
+configuration, for example by reloading firewall rules.
+The job must be running or completed.
 .It Cm enable Ar label
 Mark a job to start at boot by setting
 .Va \*(Lt rc_name \*(Gt _enable=YES

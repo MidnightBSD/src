@@ -71,6 +71,15 @@ static_assert((__alignof__(struct job) & TIMER_MASK) == 0,
 #define PROWL_DEPS_MAX		32
 #define PROWL_REQFILES_MAX	8
 #define PROWL_ARGS_MAX		64
+
+/* Commands a unit can define besides start and stop. */
+#define PROWL_ACTION_NONE	0
+#define PROWL_ACTION_RELOAD	1
+#define PROWL_ACTION_CHECK	2
+#define PROWL_ACTION_RESYNC	3
+#define PROWL_ACTION_MAX	4
+#define PROWL_ACTION_OUT_MAX	8192	/* output kept from a command */
+#define PROWL_ACTION_TIMEOUT	30	/* seconds a command may run */
 #define PROWL_ENV_MAX		64
 #define PROWL_GROUPS_MAX	32
 
@@ -228,6 +237,10 @@ struct job {
 	int		argc;
 	char	       *stop_arguments[PROWL_ARGS_MAX];
 	int		stop_argc;
+	/* reload, check and resync commands, indexed by PROWL_ACTION_* */
+	char	       *action_args[PROWL_ACTION_MAX][PROWL_ARGS_MAX];
+	int		action_argc[PROWL_ACTION_MAX];
+	int		action;		/* command being run in the child */
 	char	       *envp[PROWL_ENV_MAX];
 	int		envc;
 	char		working_directory[PROWL_PATH_MAX];
@@ -451,6 +464,7 @@ void	timer_state_save(void);
 int	supervisor_start(job_t *);
 int	supervisor_stop(job_t *, bool);
 int	supervisor_signal(job_t *, int);
+int	supervisor_run_action(job_t *, int, char *, size_t, int *);
 void	supervisor_reap(pid_t, int);
 void	supervisor_handle_throttle(job_t *);
 void	supervisor_handle_stop_timeout(job_t *);

@@ -300,6 +300,7 @@ File extension: `.unit` (language-neutral; libucl auto-detects syntax).
 **Execution**
 - `program` *(required unless `arguments[0]` is a full path)*: Path to executable
 - `arguments` *(array of strings)*: argv (argv[0] is `program` basename by default)
+- `reload_arguments`, `check_arguments`, `resync_arguments` *(arrays of strings)*: argv for `prowlctl reload`, `check` and `resync`, run with the same `program`, user and environment. The reply carries the exit status and the first 8192 bytes of output (stdout and stderr together); a command is killed after 30 seconds. Without `reload_arguments`, `reload` sends SIGHUP to a running job. `reload` and `resync` need a started job; `check` does not.
 - `stop_arguments` *(array of strings)*: argv for a stop command, run with the same `program`, user and environment when a job with no process of its own (a completed oneshot) is stopped. The job is `stopping` until it exits and `stopped` afterwards, whatever the exit status. Without it, stopping a completed oneshot does nothing.
 - `environment` *(object)*: Environment variables
 - `working_directory` *(string)*: Working directory
