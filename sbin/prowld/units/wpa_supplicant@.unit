@@ -1,0 +1,16 @@
+# wpa_supplicant@.unit - native prowld(8) template unit for wpa_supplicant(8)
+#
+# One instance per interface.  rc.d/wpa_supplicant, which network.subr calls,
+# starts and stops an instance with prowlctl(8) when prowld is running.  The
+# client stays in the foreground (wpa_supplicant_flags defaults to -s, which
+# logs to syslog).  It is restarted only if it crashes.
+
+label = "org.midnightbsd.wpa_supplicant@%i";
+description = "WPA/802.11i supplicant for one interface";
+type = "daemon";
+rc_name = "wpa_supplicant";
+run_at_load = false;
+keep_alive = {"crashed": true};
+nojail = true;
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\n. /etc/network.subr\nload_rc_config wpa_supplicant\nifn=%i\nprog=$wpa_supplicant_program\n[ -n \"$prog\" ] || prog=/usr/sbin/wpa_supplicant\nconf=$wpa_supplicant_conf_file\n[ -n \"$conf\" ] || conf=/etc/wpa_supplicant.conf\nif [ ! -r \"$conf\" ]; then\n    echo \"$conf is not readable\" >&2\n    exit 1\nfi\nfor m in wlan_wep wlan_tkip wlan_ccmp; do\n    kldstat -q -m $m || kldload $m || exit 1\ndone\nif is_wired_interface $ifn; then\n    driver=wired\nelse\n    case $(sysctl -n net.wlan.$(echo $ifn | sed -e 's/^wlan//').%parent 2> /dev/null) in\n    ndis*) driver=ndis ;;\n    *) driver=bsd ;;\n    esac\nfi\ninstall -d -o root -g wheel -m 755 /var/run/wpa_supplicant\nexec $prog -i $ifn -c $conf -D $driver -P /var/run/wpa_supplicant/$ifn.pid $wpa_supplicant_flags", "wpa_supplicant"];

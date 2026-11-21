@@ -362,6 +362,12 @@ template
 .Xr hastd 8
 .It Pa hcsecd.unit
 .Xr hcsecd 8
+.It Pa hostapd.unit
+.Xr hostapd 8
+.It Pa hostapd@.unit
+.Xr hostapd 8 ,
+template, started by
+.Pa rc.d/hostapd
 .It Pa inetd.unit
 .Xr inetd 8 ,
 watched through its pidfile
@@ -442,6 +448,10 @@ after generating missing host keys and checking the configuration
 .Xr rpc.tlsservd 8
 .It Pa watchdogd.unit
 .Xr watchdogd 8
+.It Pa wpa_supplicant@.unit
+.Xr wpa_supplicant 8 ,
+template, started by
+.Pa rc.d/wpa_supplicant
 .It Pa ypbind.unit
 .Xr ypbind 8
 .It Pa ypserv.unit

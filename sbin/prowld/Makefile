@@ -48,6 +48,8 @@ UNITS=		units/auditd.unit \
 		units/gssd.unit \
 		units/hastd.unit \
 		units/hcsecd.unit \
+		units/hostapd.unit \
+		units/hostapd@.unit \
 		units/inetd.unit \
 		units/ipmon.unit \
 		units/iscsid.unit \
@@ -84,6 +86,7 @@ UNITS=		units/auditd.unit \
 		units/tlsclntd.unit \
 		units/tlsservd.unit \
 		units/watchdogd.unit \
+		units/wpa_supplicant@.unit \
 		units/ypbind.unit \
 		units/ypserv.unit \
 		units/ypxfrd.unit \

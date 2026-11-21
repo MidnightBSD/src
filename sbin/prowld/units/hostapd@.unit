@@ -1,0 +1,16 @@
+# hostapd@.unit - native prowld(8) template unit for hostapd(8)
+#
+# One instance per interface, with its configuration in /etc/hostapd-IF.conf.
+# rc.d/hostapd starts and stops an instance with prowlctl(8) when prowld is
+# running.  hostapd stays in the foreground and logs to syslog (-s).  It is
+# restarted only if it crashes.
+
+label = "org.midnightbsd.hostapd@%i";
+description = "IEEE 802.11 authenticator for one interface";
+type = "daemon";
+rc_name = "hostapd";
+run_at_load = false;
+keep_alive = {"crashed": true};
+nojail = true;
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config hostapd\nprog=$hostapd_program\n[ -n \"$prog\" ] || prog=/usr/sbin/hostapd\nconf=/etc/hostapd-%i.conf\nif [ ! -r \"$conf\" ]; then\n    echo \"$conf is not readable\" >&2\n    exit 1\nfi\nfor m in wlan_xauth wlan_wep wlan_tkip wlan_ccmp; do\n    kldstat -q -m $m || kldload $m || exit 1\ndone\nexec $prog -s -P /var/run/hostapd-%i.pid $hostapd_flags $conf", "hostapd"];
