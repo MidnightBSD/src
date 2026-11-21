@@ -860,6 +860,16 @@ supervisor_start(job_t *job)
 	    job->state == JOB_STATE_STARTING)
 		return (0);
 
+	/* A missing configuration file keeps the job down, as rc.subr does */
+	for (int i = 0; i < job->required_files_count; i++) {
+		if (access(job->required_files[i], R_OK) == -1) {
+			prowl_log(LOG_WARNING, "job %s not started: required "
+			    "file %s: %m", job->label, job->required_files[i]);
+			job_set_state(job, JOB_STATE_FAILED);
+			return (-1);
+		}
+	}
+
 	prowl_log(LOG_NOTICE, "starting %s", job->label);
 	job->started_at = time(NULL);
 	job->restart_hold = false;
@@ -1608,6 +1618,12 @@ supervisor_reap(pid_t pid, int status)
 	if (job->sockets_count > 0 && job->socket_activated) {
 		job_set_state(job, JOB_STATE_LOADED);
 		socket_rearm(job);
+		return;
+	}
+
+	/* rc.shutdown is stopping services behind our back: let it */
+	if (g_rundown) {
+		job_set_state(job, JOB_STATE_STOPPED);
 		return;
 	}
 

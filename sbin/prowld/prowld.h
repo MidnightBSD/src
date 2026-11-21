@@ -69,6 +69,7 @@ static_assert((__alignof__(struct job) & TIMER_MASK) == 0,
 #define PROWL_DESC_MAX		512
 #define PROWL_PROVIDES_MAX	16
 #define PROWL_DEPS_MAX		32
+#define PROWL_REQFILES_MAX	8
 #define PROWL_ARGS_MAX		64
 #define PROWL_ENV_MAX		64
 #define PROWL_GROUPS_MAX	32
@@ -258,6 +259,10 @@ struct job {
 	char		provides[PROWL_PROVIDES_MAX][PROWL_LABEL_MAX];
 	int		provides_count;
 
+	/* Files that must be readable before the job is started */
+	char		required_files[PROWL_REQFILES_MAX][PROWL_PATH_MAX];
+	int		required_files_count;
+
 	/* I/O */
 	char		stdin_path[PROWL_PATH_MAX];
 	char		stdout_path[PROWL_PATH_MAX];
@@ -364,6 +369,7 @@ extern volatile bool	 g_reload;
 extern int		 g_current_starts;
 extern bool		 g_is_init;		/* running as PID 1 */
 extern bool		 g_jailed;		/* running inside a jail */
+extern bool		 g_rundown;		/* rc.shutdown is running */
 extern bool		 g_fastboot;		/* no "autoboot": skip fsck */
 extern bool		 g_boot_mode;		/* we run rc.d */
 

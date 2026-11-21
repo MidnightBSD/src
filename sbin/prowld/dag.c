@@ -221,7 +221,7 @@ dag_schedule_ready(void)
 	int limit = max_concurrent();
 
 	/* Nothing new starts while the system is going down. */
-	if (g_shutdown)
+	if (g_shutdown || g_rundown)
 		return;
 
 	TAILQ_FOREACH(job, &g_jobs, entries) {

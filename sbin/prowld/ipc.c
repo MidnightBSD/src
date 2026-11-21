@@ -614,6 +614,11 @@ cmd_start(int fd, const char *id, const ucl_object_t *req)
 		job_set_state(job, JOB_STATE_LOADED);
 		if (supervisor_start(job) == 0)
 			g_current_starts++;
+		else {
+			ipc_send_error(fd, id, "job failed to start "
+			    "(see the system log)");
+			return;
+		}
 	}
 
 	ipc_send_ok(fd, id, NULL);

@@ -70,6 +70,7 @@ static bool		 g_single_user = false;	/* PID 1: go to single-user */
 static int		 g_howto = RB_AUTOBOOT;	/* PID 1: reboot(2) argument */
 bool			 g_is_init = false;	/* running as PID 1 */
 bool			 g_jailed = false;	/* running inside a jail */
+bool			 g_rundown = false;	/* rc.shutdown is running */
 bool			 g_fastboot = false;	/* no "autoboot": skip fsck */
 static char		 g_unit_override[PROWL_PATH_MAX]; /* -u unit dir */
 static bool		 g_reroot = false;	/* PID 1: reroot requested */

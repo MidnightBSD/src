@@ -228,13 +228,16 @@ job_dep_satisfied(const job_t *job, const dep_entry_t *dep)
 	/*
 	 * rc(8) semantics: a REQUIRE only orders scripts.  A script that is
 	 * disabled in rc.conf, masked, or that failed does not hold back the
-	 * scripts that require it.  Native units keep the strict rule.
+	 * scripts that require it, whatever kind of job provides it, nor does
+	 * one that is crash-looping and waiting out its restart back-off.  The
+	 * same goes for a native unit's "wants".  A native unit's "requires"
+	 * keeps the strict rule.
 	 */
-	if (job->type == JOB_TYPE_RCSHIM &&
-	    provider->type == JOB_TYPE_RCSHIM &&
+	if ((job->type == JOB_TYPE_RCSHIM || !dep->hard) &&
 	    (provider->state == JOB_STATE_DISABLED ||
 	    provider->state == JOB_STATE_MASKED ||
-	    provider->state == JOB_STATE_FAILED))
+	    provider->state == JOB_STATE_FAILED ||
+	    provider->restart_hold))
 		return (true);
 
 	return (false);

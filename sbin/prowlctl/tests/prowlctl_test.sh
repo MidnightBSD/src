@@ -293,8 +293,46 @@ shutdown_cleanup()
 	stop_prowld
 }
 
+atf_test_case required_files cleanup
+required_files_head()
+{
+	atf_set descr "a job does not start while a required file is missing"
+	atf_set require.user root
+}
+required_files_body()
+{
+	req="$(pwd)/required.conf"
+	mkdir -p units
+	cat >units/req.unit <<EOF
+{"label": "org.test.req", "rc_name": "prowlctl_test_req",
+ "type": "daemon", "program": "/bin/sleep",
+ "arguments": ["300"], "run_at_load": true,
+ "required_files": ["${req}"]}
+EOF
+	# A relative path would weaken the check: the whole unit is refused.
+	cat >units/rel.unit <<EOF
+{"label": "org.test.rel", "rc_name": "prowlctl_test_rel",
+ "type": "daemon", "program": "/bin/sleep",
+ "arguments": ["300"], "run_at_load": true,
+ "required_files": ["required.conf"]}
+EOF
+	start_prowld
+	wait_state org.test.req failed
+	atf_check -s not-exit:0 -e ignore -o ignore ${CTL} start org.test.req
+	atf_check -s not-exit:0 -e ignore -o ignore ${CTL} status org.test.rel
+
+	: >"${req}"
+	atf_check -o ignore ${CTL} start org.test.req
+	wait_state org.test.req running
+}
+required_files_cleanup()
+{
+	stop_prowld
+}
+
 atf_init_test_cases()
 {
+	atf_add_test_case required_files
 	atf_add_test_case list_type
 	atf_add_test_case list_failed
 	atf_add_test_case list_enabled

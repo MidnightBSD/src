@@ -516,6 +516,37 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 	job->conflicts_count = parse_str_array(arr, job->conflicts,
 	    PROWL_DEPS_MAX);
 
+	/* required_files: all must be readable for the job to start */
+	arr = ucl_object_lookup(root, "required_files");
+	if (arr != NULL) {
+		if (ucl_object_type(arr) != UCL_ARRAY) {
+			prowl_log(LOG_ERR, "unit_load_file %s: required_files "
+			    "must be an array of paths", path);
+			job_free(job);
+			return (NULL);
+		}
+		it = NULL;
+		while ((item = ucl_object_iterate(arr, &it, true)) != NULL) {
+			s = ucl_object_tostring(item);
+			if (ucl_object_type(item) != UCL_STRING || s == NULL ||
+			    s[0] != '/' ||
+			    strlen(s) >= sizeof(job->required_files[0]) ||
+			    job->required_files_count >= PROWL_REQFILES_MAX) {
+				/*
+				 * Dropping an entry would silently weaken the
+				 * check, so refuse the whole unit.
+				 */
+				prowl_log(LOG_ERR, "unit_load_file %s: bad "
+				    "required_files entry", path);
+				job_free(job);
+				return (NULL);
+			}
+			strlcpy(job->required_files[job->required_files_count],
+			    s, sizeof(job->required_files[0]));
+			job->required_files_count++;
+		}
+	}
+
 	/* provides */
 	arr = ucl_object_lookup(root, "provides");
 	job->provides_count = parse_str_array(arr, job->provides,
@@ -679,6 +710,11 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 
 	/* Determine enabled state from rc.conf */
 	job->enabled = rcconf_is_enabled(job->rc_name, job->run_at_load);
+
+	/* nojail: cannot work inside a jail (devd, ntpd, ...); never start */
+	obj = ucl_object_lookup(root, "nojail");
+	if (obj != NULL && ucl_object_toboolean(obj) && g_jailed)
+		job->enabled = false;
 
 	return (job);
 }

@@ -216,6 +216,9 @@ boot_run_rundown(const char *arg)
 	if (stat(PID1_RUNDOWN, &sb) == -1 && errno == ENOENT)
 		return (0);
 
+	/* Daemons that rc.shutdown stops must stay down, not be restarted */
+	g_rundown = true;
+
 	pid = fork();
 	if (pid == -1) {
 		prowl_log(LOG_ERR, "fork for %s: %m", PID1_RUNDOWN);
