@@ -330,6 +330,34 @@ required_files_cleanup()
 	stop_prowld
 }
 
+atf_test_case stop_restart_wait cleanup
+stop_restart_wait_head()
+{
+	atf_set descr "stopping a job that is waiting to restart keeps it stopped"
+	atf_set require.user root
+}
+stop_restart_wait_body()
+{
+	mkdir -p units
+	cat >units/flap.unit <<EOF
+{"label": "org.test.flap", "rc_name": "prowlctl_test_flap",
+ "type": "daemon", "program": "/bin/sh",
+ "arguments": ["-c", "exit 1"], "run_at_load": true,
+ "keep_alive": true, "throttle_interval": 3}
+EOF
+	start_prowld
+	wait_state org.test.flap loaded
+	atf_check -o ignore ${CTL} stop org.test.flap
+	wait_state org.test.flap stopped
+	# The cancelled restart must not bring it back.
+	sleep 5
+	atf_check -o match:'stopped' ${CTL} list
+}
+stop_restart_wait_cleanup()
+{
+	stop_prowld
+}
+
 atf_test_case templates cleanup
 templates_head()
 {
@@ -371,6 +399,7 @@ templates_cleanup()
 
 atf_init_test_cases()
 {
+	atf_add_test_case stop_restart_wait
 	atf_add_test_case templates
 	atf_add_test_case required_files
 	atf_add_test_case list_type

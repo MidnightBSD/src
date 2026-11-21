@@ -997,6 +997,21 @@ supervisor_stop(job_t *job, bool force)
 	    job->state == JOB_STATE_COMPLETED)
 		return (supervisor_rc_stop(job));
 
+	/* Stopping a job that is waiting to be restarted cancels the restart */
+	if (job->pid <= 0 && job->restart_hold) {
+		struct kevent kev;
+
+		if (job->throttle_timer_active) {
+			EV_SET(&kev, timer_ident(job, TIMER_THROTTLE),
+			    EVFILT_TIMER, EV_DELETE, 0, 0, NULL);
+			(void)kevent(g_kqueue_fd, &kev, 1, NULL, 0, NULL);
+			job->throttle_timer_active = false;
+		}
+		job->restart_hold = false;
+		job_set_state(job, JOB_STATE_STOPPED);
+		return (0);
+	}
+
 	if (job->pid <= 0)
 		return (0);
 
