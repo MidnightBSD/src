@@ -355,10 +355,9 @@ dump_iface(struct libusb20_device *pdev,
 }
 
 static struct usb_vendors *
-load_vendors(void)
+load_vendors(const char *dbf)
 {
-	const char *dbf;
-	FILE *db = NULL;
+	FILE *db;
 	struct usb_vendor_info *cv;
 	struct usb_product_info *cd;
 	struct usb_vendors *usb_vendors;
@@ -366,20 +365,14 @@ load_vendors(void)
 	char *ch;
 	unsigned int id;
 
+	db = fopen(dbf, "r");
+	if (db == NULL)
+		return (NULL);
+
 	usb_vendors = malloc(sizeof(*usb_vendors));
 	if (usb_vendors == NULL)
 		err(1, "out of memory");
 	STAILQ_INIT(usb_vendors);
-	if ((dbf = getenv("USB_VENDOR_DATABASE")) != NULL)
-		db = fopen(dbf, "r");
-	if (db == NULL) {
-		dbf = _PATH_LUSBVDB;
-		if ((db = fopen(dbf, "r")) == NULL) {
-			dbf = _PATH_USBVDB;
-			if ((db = fopen(dbf, "r")) == NULL)
-				return (usb_vendors);
-		}
-	}
 	cv = NULL;
 	cd = NULL;
 
@@ -433,6 +426,31 @@ load_vendors(void)
 	return (usb_vendors);
 }
 
+static void
+lookup_vendors(struct usb_vendors *usb_vendors, uint16_t vid, uint16_t pid,
+    const char **vendor, const char **product)
+{
+	struct usb_vendor_info *vi;
+	struct usb_product_info *pi;
+
+	if (usb_vendors == NULL)
+		return;
+	STAILQ_FOREACH(vi, usb_vendors, link) {
+		if (vi->id != vid)
+			continue;
+		if (*vendor == NULL)
+			*vendor = vi->desc;
+		STAILQ_FOREACH(pi, &vi->devs, link) {
+			if (pi->id == pid) {
+				if (*product == NULL)
+					*product = pi->desc;
+				break;
+			}
+		}
+		break;
+	}
+}
+
 enum device_descr_list_type {
 	DEVICE_DESCR_LIST_TYPE_DEFAULT = 0,
 	DEVICE_DESCR_LIST_TYPE_UGEN = 1,
@@ -443,11 +461,12 @@ static char *
 device_desc(struct libusb20_device *pdev,
     enum device_descr_list_type list_type)
 {
-	static struct usb_vendors *usb_vendors;
+	static struct usb_vendors *local_vendors;
+	static struct usb_vendors *base_vendors;
+	static bool vendors_loaded;
 	char *desc = NULL;
+	const char *dbf;
 	const char *vendor = NULL, *product = NULL;
-	struct usb_vendor_info *vi;
-	struct usb_product_info *pi;
 	struct usb_device_info devinfo;
 	uint16_t vid, pid;
 
@@ -461,23 +480,19 @@ device_desc(struct libusb20_device *pdev,
 
 	vid = libusb20_dev_get_device_desc(pdev)->idVendor;
 	pid = libusb20_dev_get_device_desc(pdev)->idProduct;
-	if (usb_vendors == NULL)
-		usb_vendors = load_vendors();
-
-	STAILQ_FOREACH(vi, usb_vendors, link) {
-		if (vi->id == vid) {
-			vendor = vi->desc;
-			break;
+	if (!vendors_loaded) {
+		vendors_loaded = true;
+		dbf = getenv("USB_VENDOR_DATABASE");
+		if (dbf != NULL) {
+			local_vendors = load_vendors(dbf);
+		}
+		if (local_vendors == NULL) {
+			local_vendors = load_vendors(_PATH_LUSBVDB);
+			base_vendors = load_vendors(_PATH_USBVDB);
 		}
 	}
-	if (vi != NULL) {
-		STAILQ_FOREACH(pi, &vi->devs, link) {
-			if (pi->id == pid) {
-				product = pi->desc;
-				break;
-			}
-		}
-	}
+	lookup_vendors(local_vendors, vid, pid, &vendor, &product);
+	lookup_vendors(base_vendors, vid, pid, &vendor, &product);
 
 	if (vendor == NULL || product == NULL) {
 		char buf[64];
