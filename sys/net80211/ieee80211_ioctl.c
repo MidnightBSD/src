@@ -1228,6 +1228,17 @@ ieee80211_ioctl_setkey(struct ieee80211vap *vap, struct ieee80211req *ireq)
 	/* NB: this also checks ik->ik_keylen > sizeof(wk->wk_key) */
 	if (ik.ik_keylen > sizeof(ik.ik_keydata))
 		return E2BIG;
+	/*
+	 * Check the key length for the cipher before the key slot is
+	 * touched, so a key that does not fit cannot replace a valid one.
+	 * TKIP carries the 128 bit TX/RX MIC after the 128 bit key.
+	 */
+	if (ik.ik_type == IEEE80211_CIPHER_TKIP) {
+		if (ik.ik_keylen < (IEEE80211_IOCTL_KEYBUF_SIZE +
+		    IEEE80211_IOCTL_MICBUF_SIZE))
+			return (EINVAL);
+	} else if (ik.ik_keylen > IEEE80211_KEYBUF_SIZE)
+		return (E2BIG);
 	kid = ik.ik_keyix;
 	if (kid == IEEE80211_KEYIX_NONE) {
 		/* XXX unicast keys currently must be tx/rx */
@@ -1305,25 +1316,34 @@ ieee80211_ioctl_setkey(struct ieee80211vap *vap, struct ieee80211req *ireq)
 			key_len -= IEEE80211_IOCTL_MICBUF_SIZE;
 
 			/* Set the key with the adjusted key length. */
-			ieee80211_crypto_set_key_data(wk, ik.ik_keydata,
-			    key_len);
+			if (!ieee80211_crypto_set_key_data(wk, ik.ik_keydata,
+			    key_len)) {
+				error = EINVAL;
+				goto finish;
+			}
 
 			/* The TX and RX MIC follow the key data. */
-			ieee80211_crypto_set_key_txmic_data(wk,
+			if (!ieee80211_crypto_set_key_txmic_data(wk,
 			    ik.ik_keydata + key_len,
-			    IEEE80211_IOCTL_TX_MICBUF_SIZE);
-			ieee80211_crypto_set_key_rxmic_data(wk,
+			    IEEE80211_IOCTL_TX_MICBUF_SIZE) ||
+			    !ieee80211_crypto_set_key_rxmic_data(wk,
 			    ik.ik_keydata + key_len +
 			      IEEE80211_IOCTL_TX_MICBUF_SIZE,
-			    IEEE80211_IOCTL_RX_MICBUF_SIZE);
+			    IEEE80211_IOCTL_RX_MICBUF_SIZE)) {
+				error = EINVAL;
+				goto finish;
+			}
 			break;
 		default:
 			/*
 			 * Non-TKIP keys don't need the special case around
 			 * key length; just use what was supplied.
 			 */
-			ieee80211_crypto_set_key_data(wk, ik.ik_keydata,
-			    key_len);
+			if (!ieee80211_crypto_set_key_data(wk, ik.ik_keydata,
+			    key_len)) {
+				error = EINVAL;
+				goto finish;
+			}
 			break;
 		}
 

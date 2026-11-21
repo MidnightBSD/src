@@ -357,7 +357,7 @@ ieee80211_crypto_set_key_txmic_data(struct ieee80211_key *k,
 {
 	if (len > IEEE80211_TX_MICBUF_128_SIZE)
 		return (false);
-	memset(k->wk_key, '\0', IEEE80211_TX_MICBUF_128_SIZE);
+	memset(k->wk_txmic, '\0', IEEE80211_TX_MICBUF_128_SIZE);
 	memcpy(k->wk_txmic, data, len);
 	return (true);
 }
@@ -382,7 +382,7 @@ ieee80211_crypto_set_key_rxmic_data(struct ieee80211_key *k,
 {
 	if (len > IEEE80211_RX_MICBUF_128_SIZE)
 		return (false);
-	memset(k->wk_key, '\0', IEEE80211_RX_MICBUF_128_SIZE);
+	memset(k->wk_rxmic, '\0', IEEE80211_RX_MICBUF_128_SIZE);
 	memcpy(k->wk_rxmic, data, len);
 	return (true);
 }
