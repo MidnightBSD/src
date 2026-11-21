@@ -1,0 +1,20 @@
+# route6d.unit - native prowld(8) unit for route6d(8)
+#
+# Replaces the rc.d/route6d shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with route6d_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/route6d.
+#
+# route6d stays in the foreground only in debug mode (-d), so its output is
+# discarded.
+
+label = "org.midnightbsd.route6d";
+description = "RIP6 routing daemon";
+type = "daemon";
+rc_name = "route6d";
+run_at_load = true;
+keep_alive = true;
+nojail = true;
+provides = ["route6d"];
+wants = ["netif", "routing"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config route6d\nprog=$route6d_program\n[ -n \"$prog\" ] || prog=/usr/sbin/route6d\nexec $prog -d $route6d_flags > /dev/null 2>&1", "route6d"];

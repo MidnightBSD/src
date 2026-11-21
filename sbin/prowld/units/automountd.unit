@@ -1,0 +1,22 @@
+# automountd.unit - native prowld(8) unit for automountd(8)
+#
+# Replaces the rc.d/automountd shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with automountd_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/automountd.
+#
+# automountd stays in the foreground only in debug mode (-d), so its output is
+# discarded.  It is enabled by autofs_enable.
+
+label = "org.midnightbsd.automountd";
+description = "Daemon handling autofs mount requests";
+type = "daemon";
+rc_name = "automountd";
+run_at_load = true;
+keep_alive = true;
+nojail = true;
+rc_name = "autofs";
+provides = ["automountd"];
+wants = ["rpcbind", "ypset", "nfsclient", "FILESYSTEMS", "ldconfig"];
+before = ["DAEMON"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config automountd\nkldstat -q -m autofs || kldload autofs || exit 1\nexec /usr/sbin/automountd -d > /dev/null 2>&1", "automountd"];

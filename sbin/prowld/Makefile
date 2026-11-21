@@ -30,7 +30,10 @@ CONFSDIR=	/etc/prowld
 
 # Native units for base services.
 FILESGROUPS+=	UNITS
-UNITS=		units/blacklistd.unit \
+UNITS=		units/auditd.unit \
+		units/automountd.unit \
+		units/autounmountd.unit \
+		units/blacklistd.unit \
 		units/blocklistd.unit \
 		units/bootparamd.unit \
 		units/bsnmpd.unit \
@@ -38,6 +41,7 @@ UNITS=		units/blacklistd.unit \
 		units/cron.unit \
 		units/ctld.unit \
 		units/devd.unit \
+		units/dhcp6c.unit \
 		units/ftpd.unit \
 		units/gssd.unit \
 		units/hastd.unit \
@@ -63,6 +67,8 @@ UNITS=		units/blacklistd.unit \
 		units/pppoed.unit \
 		units/rarpd.unit \
 		units/rdate.unit \
+		units/route6d.unit \
+		units/routed.unit \
 		units/rpcbind.unit \
 		units/rtadvd.unit \
 		units/rtsold.unit \
@@ -74,6 +80,8 @@ UNITS=		units/blacklistd.unit \
 		units/tlsclntd.unit \
 		units/tlsservd.unit \
 		units/watchdogd.unit \
+		units/ypbind.unit \
+		units/ypserv.unit \
 		units/ypxfrd.unit \
 		units/zfsd.unit
 

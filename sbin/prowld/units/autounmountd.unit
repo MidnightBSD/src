@@ -1,0 +1,22 @@
+# autounmountd.unit - native prowld(8) unit for autounmountd(8)
+#
+# Replaces the rc.d/autounmountd shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with autounmountd_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/autounmountd.
+#
+# autounmountd stays in the foreground only in debug mode (-d), so its output
+# is discarded.  It is enabled by autofs_enable.
+
+label = "org.midnightbsd.autounmountd";
+description = "Daemon unmounting automounted filesystems";
+type = "daemon";
+rc_name = "autounmountd";
+run_at_load = true;
+keep_alive = true;
+nojail = true;
+rc_name = "autofs";
+provides = ["autounmountd"];
+wants = ["FILESYSTEMS"];
+before = ["DAEMON"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config autounmountd\nexec /usr/sbin/autounmountd -d > /dev/null 2>&1", "autounmountd"];

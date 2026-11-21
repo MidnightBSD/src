@@ -1,0 +1,23 @@
+# auditd.unit - native prowld(8) unit for auditd(8)
+#
+# Replaces the rc.d/auditd shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with auditd_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/auditd.
+#
+# auditd stays in the foreground only in debug mode (-d); it logs to syslog
+# and its console output is discarded.  Stopping sends SIGTERM, which makes
+# auditd close the trail.
+
+label = "org.midnightbsd.auditd";
+description = "Audit daemon";
+type = "daemon";
+rc_name = "auditd";
+run_at_load = true;
+keep_alive = true;
+required_files = ["/etc/security/audit_class", "/etc/security/audit_control", "/etc/security/audit_event", "/etc/security/audit_user", "/etc/security/audit_warn"];
+nojail = true;
+provides = ["auditd"];
+wants = ["syslogd"];
+before = ["DAEMON"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config auditd\nprog=$auditd_program\n[ -n \"$prog\" ] || prog=/usr/sbin/auditd\nexec $prog -d $auditd_flags > /dev/null 2>&1", "auditd"];
