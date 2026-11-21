@@ -43,6 +43,17 @@
 typedef struct job job_t;
 typedef struct prowl_socket prowl_socket_t;
 
+/* A command of start_pre or stop_post: the program, then its arguments */
+#define PROWL_CMDS_MAX		8	/* commands in one list */
+#define PROWL_CMD_ARGS		16	/* words in one command */
+#define PROWL_CMD_PRE		0
+#define PROWL_CMD_POST		1
+#define PROWL_CMD_LISTS		2
+typedef struct prowl_cmd {
+	char	       *argv[PROWL_CMD_ARGS];
+	int		argc;
+} prowl_cmd_t;
+
 /*
  * Timer ident encoding (low 3 bits of job pointer).
  * Assumes job_t pointers are at least 8-byte aligned.
@@ -248,6 +259,10 @@ struct job {
 	char	       *action_args[PROWL_ACTION_MAX][PROWL_ARGS_MAX];
 	int		action_argc[PROWL_ACTION_MAX];
 	int		action;		/* command being run in the child */
+	/* start_pre and stop_post, indexed by PROWL_CMD_* */
+	prowl_cmd_t	cmds[PROWL_CMD_LISTS][PROWL_CMDS_MAX];
+	int		cmd_count[PROWL_CMD_LISTS];
+	const prowl_cmd_t *run_cmd;	/* stop_post command in the child */
 	char	       *envp[PROWL_ENV_MAX];
 	int		envc;
 	char		working_directory[PROWL_PATH_MAX];

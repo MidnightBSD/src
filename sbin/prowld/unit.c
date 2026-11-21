@@ -462,6 +462,76 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 		}
 	}
 
+	/*
+	 * start_pre, stop_post: lists of commands, each an array holding the
+	 * program (an absolute path, or @name@) and its arguments.  A "-" in
+	 * front of the program means a failure is ignored.
+	 */
+	{
+		static const struct {
+			const char	*key;
+			int		 list;
+		} lists[] = {
+			{ "start_pre", PROWL_CMD_PRE },
+			{ "stop_post", PROWL_CMD_POST },
+		};
+		const ucl_object_t *cmdobj, *word;
+		ucl_object_iter_t wit;
+		size_t k;
+
+		for (k = 0; k < sizeof(lists) / sizeof(lists[0]); k++) {
+			int l = lists[k].list;
+
+			arr = ucl_object_lookup(root, lists[k].key);
+			if (arr == NULL)
+				continue;
+			it = NULL;
+			while (arr != NULL &&
+			    (cmdobj = ucl_object_iterate(arr, &it, true)) !=
+			    NULL) {
+				prowl_cmd_t *c;
+				const char *p;
+
+				if (job->cmd_count[l] >= PROWL_CMDS_MAX ||
+				    ucl_object_type(cmdobj) != UCL_ARRAY) {
+					prowl_log(LOG_ERR, "%s: bad %s",
+					    job->label, lists[k].key);
+					job_free(job);
+					return (NULL);
+				}
+				c = &job->cmds[l][job->cmd_count[l]];
+				wit = NULL;
+				while ((word = ucl_object_iterate(cmdobj,
+				    &wit, true)) != NULL) {
+					if (c->argc >= PROWL_CMD_ARGS - 1 ||
+					    ucl_object_type(word) !=
+					    UCL_STRING ||
+					    (c->argv[c->argc] = strdup(
+					    ucl_object_tostring(word))) ==
+					    NULL) {
+						prowl_log(LOG_ERR, "%s: bad %s",
+						    job->label, lists[k].key);
+						job->cmd_count[l]++;
+						job_free(job);
+						return (NULL);
+					}
+					c->argc++;
+				}
+				job->cmd_count[l]++;
+				p = c->argc > 0 ? c->argv[0] : "";
+				if (*p == '-')
+					p++;
+				if (*p != '/' && *p != '@') {
+					prowl_log(LOG_ERR, "%s: %s needs an "
+					    "absolute program", job->label,
+					    lists[k].key);
+					job_free(job);
+					return (NULL);
+				}
+			}
+		}
+	}
+
 	/* environment */
 	obj = ucl_object_lookup(root, "environment");
 	if (obj != NULL && ucl_object_type(obj) == UCL_OBJECT) {

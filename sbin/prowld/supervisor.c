@@ -69,6 +69,7 @@
 static void	supervisor_adopt(job_t *);
 static pid_t	find_daemon_pid(job_t *);
 static pid_t	pid_from_name(job_t *, bool);
+static bool	not_exec_yet(pid_t);
 
 static bool g_dnssd_available = true;
 static char g_dnssd_path[PROWL_PATH_MAX];
@@ -650,6 +651,73 @@ static const char *minimal_env[] = {
 };
 
 /*
+ * Expand a start_pre or stop_post command into program and argv, with the
+ * rc.conf variables filled in.  A "-" in front of the program, which is
+ * dropped, means a failure of the command is ignored.  argv has room for
+ * PROWL_ARGS_MAX + 2 words.  Returns 0, or -1 if it does not fit.
+ */
+static int
+cmd_build(const job_t *job, const prowl_cmd_t *c, char *program, size_t psz,
+    char **argv, bool *ignore)
+{
+	const char *p = c->argv[0];
+	int n;
+
+	*ignore = false;
+	if (*p == '-') {
+		*ignore = true;
+		p++;
+	}
+	if (rcconf_expand(job->rc_name, p, program, psz) == -1)
+		return (-1);
+	n = rcconf_expand_args(job->rc_name, c->argv + 1, c->argc - 1,
+	    &argv[1], PROWL_ARGS_MAX);
+	if (n == -1)
+		return (-1);
+	argv[0] = program;
+	argv[1 + n] = NULL;
+	return (0);
+}
+
+/*
+ * In the child, before it execs the job: run the start_pre commands one
+ * after the other.  The first that fails, unless it is marked with "-",
+ * ends the child, so the job does not start.
+ */
+static void
+run_start_pre(const job_t *job, char *const *envp)
+{
+	char program[PROWL_PATH_MAX];
+	char *argv[PROWL_ARGS_MAX + 2];
+	bool ignore;
+	pid_t pid;
+	int i, st;
+
+	for (i = 0; i < job->cmd_count[PROWL_CMD_PRE]; i++) {
+		if (cmd_build(job, &job->cmds[PROWL_CMD_PRE][i], program,
+		    sizeof(program), argv, &ignore) == -1) {
+			syslog(LOG_ERR, "prowld: %s: cannot expand start_pre",
+			    job->label);
+			_exit(1);
+		}
+		pid = fork();
+		if (pid == -1)
+			_exit(1);
+		if (pid == 0) {
+			execve(argv[0], argv, envp);
+			_exit(127);
+		}
+		while (waitpid(pid, &st, 0) == -1 && errno == EINTR)
+			;
+		if (!ignore && !(WIFEXITED(st) && WEXITSTATUS(st) == 0)) {
+			syslog(LOG_ERR, "prowld: %s: start_pre %s failed",
+			    job->label, argv[0]);
+			_exit(1);
+		}
+	}
+}
+
+/*
  * Child-side setup after fork().  Configures the execution environment
  * and replaces the process image via execve(2).
  * Must not return; calls _exit on failure.
@@ -678,7 +746,8 @@ child_setup_and_exec(job_t *job)
 	 * file to load, or file:module when the module has another name.
 	 * A module that is already there, or built in, is left alone.
 	 */
-	for (i = 0; i < job->required_modules_count; i++) {
+	for (i = 0; job->run_cmd == NULL &&
+	    i < job->required_modules_count; i++) {
 		char ent[PROWL_MODULE_LEN];
 		char *mod;
 
@@ -806,8 +875,27 @@ child_setup_and_exec(job_t *job)
 		_exit(127);
 	}
 
-	/* Native unit: build argv */
-	{
+	/* start_pre commands come before the job itself */
+	if (job->run_cmd == NULL && job->action == PROWL_ACTION_NONE &&
+	    !job->rc_stopping && job->cmd_count[PROWL_CMD_PRE] > 0) {
+		envp[envc] = NULL;
+		run_start_pre(job, envp);
+	}
+
+	/* A stop_post command */
+	if (job->run_cmd != NULL) {
+		bool ignore;
+
+		if (cmd_build(job, job->run_cmd, program, sizeof(program),
+		    argv, &ignore) == -1) {
+			syslog(LOG_ERR, "prowld: %s: cannot expand stop_post",
+			    job->label);
+			_exit(1);
+		}
+		for (argc = 0; argv[argc] != NULL; argc++)
+			;
+	} else {
+		/* Native unit: build argv */
 		char *const *src;
 		int nsrc, n;
 
@@ -1181,6 +1269,65 @@ supervisor_run_action(job_t *job, int action, char *out, size_t outsz,
 }
 
 /*
+ * Run the stop_post commands of a job whose process has ended, one after
+ * the other, each as the job's user and with its environment.  A command
+ * that fails or takes longer than PROWL_ACTION_TIMEOUT is logged; the rest
+ * still run.  prowld does nothing else meanwhile.
+ */
+static void
+supervisor_stop_post(job_t *job)
+{
+	const prowl_cmd_t *c;
+	time_t deadline;
+	pid_t pid;
+	int i, st;
+
+	resolve_job_privileges(job);
+	for (i = 0; i < job->cmd_count[PROWL_CMD_POST]; i++) {
+		c = &job->cmds[PROWL_CMD_POST][i];
+		pid = fork();
+		if (pid == -1) {
+			prowl_log(LOG_ERR, "fork %s: %m", job->label);
+			return;
+		}
+		if (pid == 0) {
+			if (g_kqueue_fd >= 0)
+				close(g_kqueue_fd);
+			job->run_cmd = c;
+			child_setup_and_exec(job);
+			/* NOTREACHED */
+			_exit(127);
+		}
+
+		deadline = time(NULL) + PROWL_ACTION_TIMEOUT;
+		for (;;) {
+			struct timespec ts = { 0, 20000000L };
+			pid_t r = waitpid(pid, &st, WNOHANG);
+
+			if (r == pid)
+				break;
+			if (r == -1 && errno != EINTR)
+				break;
+			if (time(NULL) >= deadline) {
+				prowl_log(LOG_WARNING, "job %s: stop_post %s "
+				    "timed out", job->label, c->argv[0]);
+				kill(pid, SIGKILL);
+				while (waitpid(pid, &st, 0) == -1 &&
+				    errno == EINTR)
+					;
+				st = 0;
+				break;
+			}
+			nanosleep(&ts, NULL);
+		}
+		if (c->argv[0][0] != '-' &&
+		    !(WIFEXITED(st) && WEXITSTATUS(st) == 0))
+			prowl_log(LOG_WARNING, "job %s: stop_post %s failed",
+			    job->label, c->argv[0]);
+	}
+}
+
+/*
  * Stop a job.  Sends SIGTERM and arms the stop-timeout timer.
  * If force is true, sends SIGKILL directly.
  */
@@ -1490,6 +1637,13 @@ supervisor_handle_throttle(job_t *job)
 		return;
 	}
 
+	/* Still running its start_pre commands: not up yet */
+	if (job->cmd_count[PROWL_CMD_PRE] > 0 && job->pid > 0 &&
+	    not_exec_yet(job->pid)) {
+		arm_throttle_timer_ms(job, PROWL_ADOPT_MS);
+		return;
+	}
+
 	if (job->pid > 0 && kill(job->pid, 0) == 0) {
 		job_set_state(job, JOB_STATE_RUNNING);
 		supervisor_mdns_register(job);
@@ -1499,6 +1653,25 @@ supervisor_handle_throttle(job_t *job)
 		    job->label, (int)job->pid);
 		dag_schedule_ready();
 	}
+}
+
+/*
+ * True while pid is still the copy of prowld that fork() made, that is,
+ * before it has exec'd the job.
+ */
+static bool
+not_exec_yet(pid_t pid)
+{
+	struct kinfo_proc *a, *b;
+	bool r = false;
+
+	a = kinfo_getproc(pid);
+	b = kinfo_getproc(getpid());
+	if (a != NULL && b != NULL)
+		r = strcmp(a->ki_comm, b->ki_comm) == 0;
+	free(a);
+	free(b);
+	return (r);
 }
 
 /*
@@ -2021,6 +2194,12 @@ supervisor_reap(pid_t pid, int status)
 		return;
 	}
 
+	/* The job has ended: clean up after it */
+	if (job->cmd_count[PROWL_CMD_POST] > 0 && !was_launcher &&
+	    job->type != JOB_TYPE_RCSHIM &&
+	    (job->type != JOB_TYPE_ONESHOT || job->rc_stopping))
+		supervisor_stop_post(job);
+
 	/*
 	 * Oneshot completes on clean exit.  So does an rc-shim start: an
 	 * rc.d script runs "start" to completion (daemonizing the service
@@ -2106,7 +2285,8 @@ supervisor_shutdown_all(void)
 			break;
 
 		TAILQ_FOREACH(job, &g_jobs, entries) {
-			if (job->shutdown_wait &&
+			if ((job->shutdown_wait ||
+			    job->cmd_count[PROWL_CMD_POST] > 0) &&
 			    job->state == JOB_STATE_STOPPING) {
 				any_pending = true;
 				break;

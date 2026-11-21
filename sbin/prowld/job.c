@@ -82,6 +82,11 @@ job_free(job_t *job)
 	for (i = 0; i < job->stop_argc; i++)
 		free(job->stop_arguments[i]);
 
+	for (a = 0; a < PROWL_CMD_LISTS; a++)
+		for (i = 0; i < job->cmd_count[a]; i++)
+			for (int w = 0; w < job->cmds[a][i].argc; w++)
+				free(job->cmds[a][i].argv[w]);
+
 	for (a = 0; a < PROWL_ACTION_MAX; a++)
 		for (i = 0; i < job->action_argc[a]; i++)
 			free(job->action_args[a][i]);

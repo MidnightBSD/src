@@ -556,6 +556,62 @@ forking_cleanup()
 	pkill -KILL -f "sleep (300|400)" 2>/dev/null || true
 }
 
+atf_test_case pre_post cleanup
+pre_post_head()
+{
+	atf_set descr "start_pre runs before the job, stop_post after it"
+	atf_set require.user root
+}
+pre_post_body()
+{
+	dir="$(pwd)"
+	mkdir -p units
+	cat >units/pp.unit <<EOF
+{"label": "org.test.pp", "rc_name": "prowlctl_test_pp",
+ "type": "daemon", "program": "/bin/sh",
+ "arguments": ["-c", "echo main >> ${dir}/log; exec sleep 300"],
+ "start_pre": [["/bin/sh", "-c", "echo pre1 >> ${dir}/log; sleep 2"],
+               ["-/usr/bin/false"],
+               ["/bin/sh", "-c", "echo @nosuch_pp:-pre2@ >> ${dir}/log"]],
+ "stop_post": [["/bin/sh", "-c", "echo post1 >> ${dir}/log"],
+               ["/usr/bin/false"],
+               ["/bin/sh", "-c", "echo post2 >> ${dir}/log"]],
+ "run_at_load": true, "keep_alive": true}
+EOF
+	# A failing start_pre keeps the job from running; stop_post still runs.
+	cat >units/pf.unit <<EOF
+{"label": "org.test.pf", "rc_name": "prowlctl_test_pf",
+ "type": "daemon", "program": "/bin/sh",
+ "arguments": ["-c", "echo pfmain >> ${dir}/log2; exec sleep 300"],
+ "start_pre": [["/usr/bin/false"]],
+ "run_at_load": true}
+EOF
+	# A start_pre that is not a list of commands refuses the unit.
+	cat >units/px.unit <<EOF
+{"label": "org.test.px", "rc_name": "prowlctl_test_px",
+ "type": "daemon", "program": "/bin/sleep", "arguments": ["300"],
+ "start_pre": [["relative"]], "run_at_load": true}
+EOF
+	start_prowld
+	# Up only once the pre commands are done (they take 2 s).
+	sleep 1
+	atf_check -o match:'State: starting' ${CTL} status org.test.pp
+	wait_state org.test.pp running
+	atf_check -o inline:"pre1\npre2\nmain\n" cat log
+	atf_check -s exit:1 -e ignore -o ignore test -f log2
+	atf_check -o ignore ${CTL} stop org.test.pp
+	wait_state org.test.pp stopped
+	atf_check -o inline:"pre1\npre2\nmain\npost1\npost2\n" cat log
+	wait_state org.test.pf failed
+	[ ! -f log2 ] || atf_fail "pfmain ran after a failed start_pre"
+	atf_check -s not-exit:0 -e ignore -o ignore ${CTL} status org.test.px
+}
+pre_post_cleanup()
+{
+	stop_prowld
+	pkill -KILL -f "sleep 300" 2>/dev/null || true
+}
+
 atf_test_case templates cleanup
 templates_head()
 {
@@ -597,6 +653,7 @@ templates_cleanup()
 
 atf_init_test_cases()
 {
+	atf_add_test_case pre_post
 	atf_add_test_case forking
 	atf_add_test_case expansion
 	atf_add_test_case actions

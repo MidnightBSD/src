@@ -229,6 +229,40 @@ is taken.
 The daemon is looked for every 200 milliseconds for up to 10 seconds; if it
 does not appear the job is treated as having failed.
 Only one of the two may be given.
+.It Va start_pre
+.It Va stop_post
+.Pq array of arrays of strings
+Commands run around the job, at most 8 in each list.
+A command is an array of the program, an absolute path or an
+.Li @name@
+reference, followed by its arguments; both are expanded like
+.Va program .
+A
+.Dq -
+in front of the program means that a failure of the command is ignored.
+.Pp
+The
+.Va start_pre
+commands run one after the other in the process that is about to execute the
+job, as the job's user and with its environment and standard files.
+The first one that fails, unless it is marked with
+.Dq - ,
+ends that process and the job does not start.
+A daemon is not considered up while they run.
+.Pp
+The
+.Va stop_post
+commands run after the job's process has ended, however it ended, and in
+the same way.
+A failure is logged and the remaining commands still run.
+Each is stopped with
+.Dv SIGKILL
+after 30 seconds, and
+.Xr prowld 8
+does nothing else while they run.
+At shutdown
+.Xr prowld 8
+waits for the job to stop so that they run.
 .It Va stop_signal
 .Pq string
 The signal that stops the job, by name with or without the
