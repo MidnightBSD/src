@@ -56,8 +56,10 @@ Local changes carried in contrib/wpa on top of upstream:
       the RSN IE, else the WPA vendor IE, and programs it with that.
     * IBSS uses IFM_IEEE80211_ADHOC; get80211opmode() reports
       IEEE80211_M_IBSS.
-    * wpa_driver_bsd_capa() always advertises WEP40/WEP104/TKIP/CCMP
-      under __MidnightBSD__ because net80211 does software crypto.
+    * wpa_driver_bsd_capa() takes the cipher list from dc_cryptocaps,
+      which net80211 fills with hardware plus software ciphers, and
+      maps CCMP-256, GCMP, GCMP-256 and BIP-CMAC-128 keys and
+      ciphers (FreeBSD 491938d7435f, 8b51df0d4fad, fa06d18b3b87).
     * bsd_global_init() opens the ioctl socket with PF_LOCAL (FreeBSD
       6aeec6a74197) instead of upstream's PF_INET with a PF_INET6
       fallback.

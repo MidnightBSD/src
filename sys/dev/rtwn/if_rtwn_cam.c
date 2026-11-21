@@ -113,13 +113,8 @@ rtwn_key_alloc(struct ieee80211vap *vap, struct ieee80211_key *k,
 	struct rtwn_softc *sc = vap->iv_ic->ic_softc;
 	int i, start;
 
-	if (&vap->iv_nw_keys[0] <= k &&
-	    k < &vap->iv_nw_keys[IEEE80211_WEP_NKID]) {
-#if __FreeBSD_version > 1200018
+	if (ieee80211_is_key_global(vap, k)) {
 		*keyix = ieee80211_crypto_get_key_wepidx(vap, k);
-#else
-		*keyix = k - vap->iv_nw_keys;
-#endif
 		if (sc->sc_hwcrypto != RTWN_CRYPTO_FULL)
 			k->wk_flags |= IEEE80211_KEY_SWCRYPT;
 		else {
@@ -174,15 +169,9 @@ rtwn_key_alloc(struct ieee80211vap *vap, struct ieee80211_key *k,
 	}
 	RTWN_UNLOCK(sc);
 	if (i == sc->cam_entry_limit) {
-#if __FreeBSD_version > 1200008
 		/* XXX check and remove keys with the same MAC address */
 		k->wk_flags |= IEEE80211_KEY_SWCRYPT;
 		*keyix = 0;
-#else
-		device_printf(sc->sc_dev,
-		    "%s: no free space in the key table\n", __func__);
-		return (0);
-#endif
 	}
 
 end:
@@ -193,6 +182,7 @@ end:
 static int
 rtwn_key_set_cb0(struct rtwn_softc *sc, const struct ieee80211_key *k)
 {
+	const char *key_data;
 	uint8_t algo, keyid;
 	int i, error;
 
@@ -205,7 +195,7 @@ rtwn_key_set_cb0(struct rtwn_softc *sc, const struct ieee80211_key *k)
 	/* Map net80211 cipher to HW crypto algorithm. */
 	switch (k->wk_cipher->ic_cipher) {
 	case IEEE80211_CIPHER_WEP:
-		if (k->wk_keylen < 8)
+		if (ieee80211_crypto_get_key_len(k) < 8)
 			algo = R92C_CAM_ALGO_WEP40;
 		else
 			algo = R92C_CAM_ALGO_WEP104;
@@ -222,11 +212,18 @@ rtwn_key_set_cb0(struct rtwn_softc *sc, const struct ieee80211_key *k)
 		return (EINVAL);
 	}
 
+	/* Get key data. */
+	key_data = ieee80211_crypto_get_key_data(k);
+	if (key_data == NULL) {
+		error = ENXIO;
+		goto fail;
+	}
+
 	RTWN_DPRINTF(sc, RTWN_DEBUG_KEY,
 	    "%s: keyix %u, keyid %u, algo %u/%u, flags %04X, len %u, "
 	    "macaddr %s\n", __func__, k->wk_keyix, keyid,
-	    k->wk_cipher->ic_cipher, algo, k->wk_flags, k->wk_keylen,
-	    ether_sprintf(k->wk_macaddr));
+	    k->wk_cipher->ic_cipher, algo, k->wk_flags,
+	    ieee80211_crypto_get_key_len(k), ether_sprintf(k->wk_macaddr));
 
 	/* Clear high bits. */
 	rtwn_cam_write(sc, R92C_CAM_CTL6(k->wk_keyix), 0);
@@ -235,7 +232,7 @@ rtwn_key_set_cb0(struct rtwn_softc *sc, const struct ieee80211_key *k)
 	/* Write key. */
 	for (i = 0; i < 4; i++) {
 		error = rtwn_cam_write(sc, R92C_CAM_KEY(k->wk_keyix, i),
-		    le32dec(&k->wk_key[i * 4]));
+		    le32dec(&key_data[i * 4]));
 		if (error != 0)
 			goto fail;
 	}
@@ -318,18 +315,8 @@ rtwn_process_key(struct ieee80211vap *vap, const struct ieee80211_key *k,
 		return (1);
 	}
 
-	if (&vap->iv_nw_keys[0] <= k &&
-	    k < &vap->iv_nw_keys[IEEE80211_WEP_NKID]) {
-#if __FreeBSD_version <= 1200008
-		struct ieee80211_key *k1 = &vap->iv_nw_keys[k->wk_keyix];
-
-		if (sc->sc_hwcrypto != RTWN_CRYPTO_FULL) {
-			k1->wk_flags |= IEEE80211_KEY_SWCRYPT;
-			return (k->wk_cipher->ic_setkey(k1));
-		} else {
-#else
+	if (ieee80211_is_key_global(vap, k)) {
 		if (sc->sc_hwcrypto == RTWN_CRYPTO_FULL) {
-#endif
 			struct rtwn_vap *rvp = RTWN_VAP(vap);
 
 			RTWN_LOCK(sc);
