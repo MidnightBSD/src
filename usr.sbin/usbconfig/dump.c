@@ -2,6 +2,11 @@
  * SPDX-License-Identifier: BSD-2-Clause
  *
  * Copyright (c) 2008 Hans Petter Selasky. All rights reserved.
+ * Copyright (c) 2024 Baptiste Daroussin <bapt@FreeBSD.org>
+ * Copyright (c) 2025 The FreeBSD Foundation
+ *
+ * Portions of this software were developed by Björn Zeeb
+ * under sponsorship from the FreeBSD Foundation.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,24 +30,52 @@
  * SUCH DAMAGE.
  */
 
+#include <sys/queue.h>
+
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <unistd.h>
 #include <err.h>
 #include <string.h>
 #include <pwd.h>
 #include <grp.h>
 #include <ctype.h>
+#include <fcntl.h>
 
 #include <libusb20.h>
 #include <libusb20_desc.h>
 
+#include <dev/usb/usb_ioctl.h>
+
 #include "dump.h"
+#include "pathnames.h"
+
+#ifndef IOUSB
+#define IOUSB(a) a
+#endif
 
 #define	DUMP0(n,type,field,...) dump_field(pdev, "  ", #field, n->field);
+#define	DUMP0L(n,type,field,...) dump_fieldl(pdev, "  ", #field, n->field);
 #define	DUMP1(n,type,field,...) dump_field(pdev, "    ", #field, n->field);
 #define	DUMP2(n,type,field,...) dump_field(pdev, "      ", #field, n->field);
 #define	DUMP3(n,type,field,...) dump_field(pdev, "        ", #field, n->field);
+
+struct usb_product_info {
+	STAILQ_ENTRY(usb_product_info)	link;
+	int				id;
+	char				*desc;
+};
+
+struct usb_vendor_info {
+	STAILQ_ENTRY(usb_vendor_info)	link;
+	STAILQ_HEAD(, usb_product_info)	devs;
+	int				id;
+	char				*desc;
+};
+
+STAILQ_HEAD(usb_vendors, usb_vendor_info);
 
 const char *
 dump_mode(uint8_t value)
@@ -67,6 +100,8 @@ dump_speed(uint8_t value)
 		return ("VARIABLE (52-480Mbps)");
 	case LIBUSB20_SPEED_SUPER:
 		return ("SUPER (5.0Gbps)");
+	case LIBUSB20_SPEED_SUPER_PLUS:
+		return ("SUPER+(10-20Gbps)");
 	default:
 		break;
 	}
@@ -94,11 +129,20 @@ dump_power_mode(uint8_t value)
 }
 
 static void
-dump_field(struct libusb20_device *pdev, const char *plevel,
-    const char *field, uint32_t value)
+_dump_field(struct libusb20_device *pdev, const char *plevel,
+    const char *field, uint32_t value, bool list_mode)
 {
 	uint8_t temp_string[256];
 
+	if (list_mode) {
+		if (strcmp(field, "bLength") == 0 ||
+		    strcmp(field, "bDescriptorType") == 0 ||
+		    strcmp(field, "bMaxPacketSize0") == 0)
+			return;
+
+		printf("%s=%#06x ", field, value);
+		return;
+	}
 	printf("%s%s = 0x%04x ", plevel, field, value);
 
 	if (strlen(plevel) == 8) {
@@ -239,6 +283,20 @@ dump_field(struct libusb20_device *pdev, const char *plevel,
 }
 
 static void
+dump_field(struct libusb20_device *pdev, const char *plevel,
+    const char *field, uint32_t value)
+{
+	_dump_field(pdev, plevel, field, value, false);
+}
+
+static void
+dump_fieldl(struct libusb20_device *pdev, const char *plevel,
+    const char *field, uint32_t value)
+{
+	_dump_field(pdev, plevel, field, value, true);
+}
+
+static void
 dump_extra(struct libusb20_me_struct *str, const char *plevel)
 {
 	const uint8_t *ptr;
@@ -296,24 +354,190 @@ dump_iface(struct libusb20_device *pdev,
 	return;
 }
 
+static struct usb_vendors *
+load_vendors(void)
+{
+	const char *dbf;
+	FILE *db = NULL;
+	struct usb_vendor_info *cv;
+	struct usb_product_info *cd;
+	struct usb_vendors *usb_vendors;
+	char buf[1024], str[1024];
+	char *ch;
+	unsigned int id;
+
+	usb_vendors = malloc(sizeof(*usb_vendors));
+	if (usb_vendors == NULL)
+		err(1, "out of memory");
+	STAILQ_INIT(usb_vendors);
+	if ((dbf = getenv("USB_VENDOR_DATABASE")) != NULL)
+		db = fopen(dbf, "r");
+	if (db == NULL) {
+		dbf = _PATH_LUSBVDB;
+		if ((db = fopen(dbf, "r")) == NULL) {
+			dbf = _PATH_USBVDB;
+			if ((db = fopen(dbf, "r")) == NULL)
+				return (usb_vendors);
+		}
+	}
+	cv = NULL;
+	cd = NULL;
+
+	for (;;) {
+		if (fgets(buf, sizeof(buf), db) == NULL)
+			break;
+
+		if ((ch = strchr(buf, '#')) != NULL)
+			*ch = '\0';
+		if (ch == buf)
+			continue;
+		ch = strchr(buf, '\0') - 1;
+		while (ch > buf && isspace(*ch))
+			*ch-- = '\0';
+		if (ch <= buf)
+			continue;
+
+		if (buf[0] == '\t' && buf[1] == '\t')
+			continue;
+
+		if (buf[0] != '\t' &&
+		    sscanf(buf, "%04x %1023[^\n]", &id, str) == 2) {
+			if ((id == 0) || (strlen(str) < 1))
+				continue;
+			if ((cv = malloc(sizeof(*cv))) == NULL)
+				err(1, "out of memory");
+			if ((cv->desc = strdup(str)) == NULL)
+				err(1, "out of memory");
+			cv->id = id;
+			STAILQ_INIT(&cv->devs);
+			STAILQ_INSERT_TAIL(usb_vendors, cv, link);
+			continue;
+		}
+
+		if (buf[0] == '\t' &&
+		    sscanf(buf + 1, "%04x %1023[^\n]", &id, str) == 2) {
+			if ((id == 0) || (strlen(str) < 1) || cv == NULL)
+				continue;
+			if ((cd = malloc(sizeof(*cd))) == NULL)
+				err(1, "out of memory");
+			if ((cd->desc = strdup(str)) == NULL)
+				err(1, "out of memory");
+			cd->id = id;
+			STAILQ_INSERT_TAIL(&cv->devs, cd, link);
+		}
+	}
+	if (ferror(db))
+		err(1, "error reading the usb id db");
+
+	fclose(db);
+	return (usb_vendors);
+}
+
+enum device_descr_list_type {
+	DEVICE_DESCR_LIST_TYPE_DEFAULT = 0,
+	DEVICE_DESCR_LIST_TYPE_UGEN = 1,
+	DEVICE_DESCR_LIST_TYPE_PRODUCT_VENDOR = 2,
+};
+
+static char *
+device_desc(struct libusb20_device *pdev,
+    enum device_descr_list_type list_type)
+{
+	static struct usb_vendors *usb_vendors;
+	char *desc = NULL;
+	const char *vendor = NULL, *product = NULL;
+	struct usb_vendor_info *vi;
+	struct usb_product_info *pi;
+	struct usb_device_info devinfo;
+	uint16_t vid, pid;
+
+	if (list_type == DEVICE_DESCR_LIST_TYPE_UGEN) {
+		if (asprintf(&desc, "ugen%u.%u",
+		    libusb20_dev_get_bus_number(pdev),
+		    libusb20_dev_get_address(pdev)) < 0)
+			err(1, "asprintf");
+		return (desc);
+	}
+
+	vid = libusb20_dev_get_device_desc(pdev)->idVendor;
+	pid = libusb20_dev_get_device_desc(pdev)->idProduct;
+	if (usb_vendors == NULL)
+		usb_vendors = load_vendors();
+
+	STAILQ_FOREACH(vi, usb_vendors, link) {
+		if (vi->id == vid) {
+			vendor = vi->desc;
+			break;
+		}
+	}
+	if (vi != NULL) {
+		STAILQ_FOREACH(pi, &vi->devs, link) {
+			if (pi->id == pid) {
+				product = pi->desc;
+				break;
+			}
+		}
+	}
+
+	if (vendor == NULL || product == NULL) {
+		char buf[64];
+		int fd;
+
+		snprintf(buf, sizeof(buf), "/dev/" USB_GENERIC_NAME "%u.%u",
+		    libusb20_dev_get_bus_number(pdev),
+		    libusb20_dev_get_address(pdev));
+		fd = open(buf, O_RDWR);
+		if (fd >= 0) {
+			if (ioctl(fd, IOUSB(USB_GET_DEVICEINFO), &devinfo) == 0) {
+				if (vendor == NULL)
+					vendor = devinfo.udi_vendor;
+				if (product == NULL)
+					product = devinfo.udi_product;
+			}
+			close(fd);
+		}
+	}
+
+	if (list_type == DEVICE_DESCR_LIST_TYPE_PRODUCT_VENDOR) {
+		if (asprintf(&desc, "vendor='%s' product='%s'",
+		    vendor != NULL ? vendor : "", product != NULL ? product : "") < 0)
+			err(1, "asprintf");
+		return (desc);
+	}
+	if (vendor == NULL || product == NULL)
+		return (NULL);
+	if (asprintf(&desc, "ugen%u.%u: <%s %s> at usbus%u",
+	    libusb20_dev_get_bus_number(pdev), libusb20_dev_get_address(pdev),
+	    product, vendor, libusb20_dev_get_bus_number(pdev)) < 0)
+		err(1, "asprintf");
+	return (desc);
+}
+
 void
-dump_device_info(struct libusb20_device *pdev, uint8_t show_ifdrv)
+dump_device_info(struct libusb20_device *pdev, uint8_t show_ifdrv,
+    bool list_mode)
 {
 	char buf[128];
 	uint8_t n;
 	unsigned int usage;
+	char *desc;
 
 	usage = libusb20_dev_get_power_usage(pdev);
-
-	printf("%s, cfg=%u md=%s spd=%s pwr=%s (%umA)\n",
-	    libusb20_dev_get_desc(pdev),
+	desc = device_desc(pdev, list_mode ? DEVICE_DESCR_LIST_TYPE_UGEN :
+	    DEVICE_DESCR_LIST_TYPE_DEFAULT);
+	if (list_mode)
+		printf("%s: ", desc);
+	else
+		printf("%s, cfg=%u md=%s spd=%s pwr=%s (%umA)\n",
+	    desc != NULL ? desc : libusb20_dev_get_desc(pdev),
 	    libusb20_dev_get_config_index(pdev),
 	    dump_mode(libusb20_dev_get_mode(pdev)),
 	    dump_speed(libusb20_dev_get_speed(pdev)),
 	    dump_power_mode(libusb20_dev_get_power_mode(pdev)),
 	    usage);
+	free(desc);
 
-	if (!show_ifdrv)
+	if (list_mode || !show_ifdrv)
 		return;
 
 	for (n = 0; n != 255; n++) {
@@ -388,12 +612,21 @@ dump_be_dev_quirks(struct libusb20_backend *pbe)
 }
 
 void
-dump_device_desc(struct libusb20_device *pdev)
+dump_device_desc(struct libusb20_device *pdev, bool list_mode)
 {
 	struct LIBUSB20_DEVICE_DESC_DECODED *ddesc;
 
 	ddesc = libusb20_dev_get_device_desc(pdev);
-	LIBUSB20_DEVICE_DESC(DUMP0, ddesc);
+	if (list_mode) {
+		char *desc;
+
+		LIBUSB20_DEVICE_DESC(DUMP0L, ddesc);
+		desc = device_desc(pdev, DEVICE_DESCR_LIST_TYPE_PRODUCT_VENDOR);
+		printf("%s\n", desc != NULL ? desc : "");
+		free(desc);
+	} else {
+		LIBUSB20_DEVICE_DESC(DUMP0, ddesc);
+	}
 	return;
 }
 
