@@ -226,6 +226,8 @@ struct job {
 	char		program[PROWL_PATH_MAX];
 	char	       *arguments[PROWL_ARGS_MAX];
 	int		argc;
+	char	       *stop_arguments[PROWL_ARGS_MAX];
+	int		stop_argc;
 	char	       *envp[PROWL_ENV_MAX];
 	int		envc;
 	char		working_directory[PROWL_PATH_MAX];

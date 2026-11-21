@@ -358,6 +358,39 @@ stop_restart_wait_cleanup()
 	stop_prowld
 }
 
+atf_test_case oneshot_stop cleanup
+oneshot_stop_head()
+{
+	atf_set descr "stopping a completed oneshot runs its stop command"
+	atf_set require.user root
+}
+oneshot_stop_body()
+{
+	dir="$(pwd)"
+	mkdir -p units
+	cat >units/os.unit <<EOF
+{"label": "org.test.os", "rc_name": "prowlctl_test_os",
+ "type": "oneshot", "program": "/bin/sh",
+ "arguments": ["-c", "echo start >> ${dir}/log"],
+ "stop_arguments": ["-c", "echo stop >> ${dir}/log; exit 3"],
+ "run_at_load": true}
+EOF
+	start_prowld
+	wait_state org.test.os completed
+	atf_check -o ignore ${CTL} stop org.test.os
+	wait_state org.test.os stopped
+	atf_check -o inline:"start\nstop\n" cat log
+	# A stop command that fails still leaves the job stopped; starting
+	# it again runs the start command once more.
+	atf_check -o ignore ${CTL} start org.test.os
+	wait_state org.test.os completed
+	atf_check -o inline:"start\nstop\nstart\n" cat log
+}
+oneshot_stop_cleanup()
+{
+	stop_prowld
+}
+
 atf_test_case templates cleanup
 templates_head()
 {
@@ -399,6 +432,7 @@ templates_cleanup()
 
 atf_init_test_cases()
 {
+	atf_add_test_case oneshot_stop
 	atf_add_test_case stop_restart_wait
 	atf_add_test_case templates
 	atf_add_test_case required_files

@@ -79,6 +79,9 @@ job_free(job_t *job)
 	for (i = 0; i < job->argc; i++)
 		free(job->arguments[i]);
 
+	for (i = 0; i < job->stop_argc; i++)
+		free(job->stop_arguments[i]);
+
 	for (i = 0; i < job->envc; i++)
 		free(job->envp[i]);
 

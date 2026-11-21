@@ -770,8 +770,13 @@ child_setup_and_exec(job_t *job)
 	/* Native unit: build argv */
 	argv[0] = job->program;
 	argc = 1;
-	for (i = 0; i < job->argc && argc < PROWL_ARGS_MAX; i++)
-		argv[argc++] = job->arguments[i];
+	if (job->rc_stopping && job->stop_argc > 0) {
+		for (i = 0; i < job->stop_argc && argc < PROWL_ARGS_MAX; i++)
+			argv[argc++] = job->stop_arguments[i];
+	} else {
+		for (i = 0; i < job->argc && argc < PROWL_ARGS_MAX; i++)
+			argv[argc++] = job->arguments[i];
+	}
 	argv[argc] = NULL;
 
 	/* Inject daemon-protocol environment variables */
@@ -956,8 +961,12 @@ supervisor_rc_stop(job_t *job)
 {
 	pid_t pid;
 
-	prowl_log(LOG_NOTICE, "stopping %s via %s stop", job->label,
-	    job->rcshim_path);
+	if (job->type == JOB_TYPE_RCSHIM)
+		prowl_log(LOG_NOTICE, "stopping %s via %s stop", job->label,
+		    job->rcshim_path);
+	else
+		prowl_log(LOG_NOTICE, "stopping %s via its stop command",
+		    job->label);
 	job->rc_stopping = true;
 	resolve_job_privileges(job);
 
@@ -993,8 +1002,8 @@ supervisor_stop(job_t *job, bool force)
 	 * the script daemonized the service and exited.  Stopping it means
 	 * running the script's "stop", as rc.d scripts expect.
 	 */
-	if (job->pid <= 0 && job->type == JOB_TYPE_RCSHIM &&
-	    job->state == JOB_STATE_COMPLETED)
+	if (job->pid <= 0 && job->state == JOB_STATE_COMPLETED &&
+	    (job->type == JOB_TYPE_RCSHIM || job->stop_argc > 0))
 		return (supervisor_rc_stop(job));
 
 	/* Stopping a job that is waiting to be restarted cancels the restart */
@@ -1600,7 +1609,7 @@ supervisor_reap(pid_t pid, int status)
 	 * rc.d script runs "start" to completion (daemonizing the service
 	 * if it has one), so a clean exit means dependents may proceed.
 	 */
-	if ((job->type == JOB_TYPE_ONESHOT ||
+	if (!job->rc_stopping && (job->type == JOB_TYPE_ONESHOT ||
 	    (job->type == JOB_TYPE_RCSHIM &&
 	    job->state == JOB_STATE_STARTING)) &&
 	    WIFEXITED(status) && WEXITSTATUS(status) == 0) {

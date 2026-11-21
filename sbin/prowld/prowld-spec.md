@@ -300,6 +300,7 @@ File extension: `.unit` (language-neutral; libucl auto-detects syntax).
 **Execution**
 - `program` *(required unless `arguments[0]` is a full path)*: Path to executable
 - `arguments` *(array of strings)*: argv (argv[0] is `program` basename by default)
+- `stop_arguments` *(array of strings)*: argv for a stop command, run with the same `program`, user and environment when a job with no process of its own (a completed oneshot) is stopped. The job is `stopping` until it exits and `stopped` afterwards, whatever the exit status. Without it, stopping a completed oneshot does nothing.
 - `environment` *(object)*: Environment variables
 - `working_directory` *(string)*: Working directory
 - `root_directory` *(string)*: chroot target (optional)

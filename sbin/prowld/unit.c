@@ -397,6 +397,29 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 		job->argc = n;
 	}
 
+	/* stop_arguments: run in place of a signal when the job is stopped */
+	arr = ucl_object_lookup(root, "stop_arguments");
+	if (arr != NULL && ucl_object_type(arr) == UCL_ARRAY) {
+		it = NULL;
+		n = 0;
+		while ((item = ucl_object_iterate(arr, &it, true)) != NULL) {
+			if (n >= PROWL_ARGS_MAX - 1)
+				break;
+			if (ucl_object_type(item) != UCL_STRING)
+				continue;
+			job->stop_arguments[n] =
+			    strdup(ucl_object_tostring(item));
+			if (job->stop_arguments[n] == NULL) {
+				prowl_log(LOG_ERR, "strdup: %m");
+				job->stop_argc = n;
+				job_free(job);
+				return (NULL);
+			}
+			n++;
+		}
+		job->stop_argc = n;
+	}
+
 	/* environment */
 	obj = ucl_object_lookup(root, "environment");
 	if (obj != NULL && ucl_object_type(obj) == UCL_OBJECT) {

@@ -665,6 +665,7 @@ cmd_restart(int fd, const char *id, const ucl_object_t *req)
 	    job->state != JOB_STATE_MASKED &&
 	    job->state != JOB_STATE_DISABLED) {
 		job_set_state(job, JOB_STATE_LOADED);
+		dag_schedule_ready();
 	}
 	ipc_send_ok(fd, id, NULL);
 }
