@@ -60,6 +60,39 @@ dhclient_prestart()
 	rc_flags="${rc_flags} ${ifn}"
 }
 
+# When prowld has a dhclient@ unit it supervises the client; start and
+# stop it through prowlctl(8).  Without prowld the client is run as before.
+dhclient_prowld()
+{
+	[ -n "$ifn" ] && [ -x /sbin/prowlctl ] &&
+	    /sbin/prowlctl show dhclient@$ifn > /dev/null 2>&1
+}
+
+dhclient_prowld_start()
+{
+	local i
+
+	/sbin/prowlctl start dhclient@$ifn || return 1
+
+	# The rc.d script does not return before a SYNCDHCP interface has
+	# a lease; dhclient itself no longer returns when it runs in a unit.
+	if syncdhcpif $ifn; then
+		i=0
+		while [ $i -lt 60 ]; do
+			ifconfig $ifn inet 2> /dev/null | grep -q 'inet ' &&
+			    break
+			sleep 1
+			i=$((i + 1))
+		done
+	fi
+	return 0
+}
+
+dhclient_prowld_stop()
+{
+	/sbin/prowlctl stop dhclient@$ifn
+}
+
 load_rc_config $name
 load_rc_config network
 
@@ -68,6 +101,11 @@ if [ -z $ifn ] ; then
 	if [ -n "$1" ] ; then
 		err 1 "$0: no interface specified"
 	fi
+fi
+
+if dhclient_prowld; then
+	start_cmd="dhclient_prowld_start"
+	stop_cmd="dhclient_prowld_stop"
 fi
 
 run_rc_command "$1"

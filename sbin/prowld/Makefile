@@ -41,6 +41,7 @@ UNITS=		units/auditd.unit \
 		units/cron.unit \
 		units/ctld.unit \
 		units/devd.unit \
+		units/dhclient@.unit \
 		units/dhcp6c.unit \
 		units/ftpd.unit \
 		units/ftpproxy@.unit \
