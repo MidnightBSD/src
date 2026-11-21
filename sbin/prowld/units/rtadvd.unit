@@ -1,0 +1,20 @@
+# rtadvd.unit - native prowld(8) unit for rtadvd(8)
+#
+# Replaces the rc.d/rtadvd shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with rtadvd_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/rtadvd.
+#
+# rtadvd runs in the foreground (-f).  With rtadvd_interfaces unset or "auto"
+# it serves every IPv6 interface, as rc.d/rtadvd does.
+
+label = "org.midnightbsd.rtadvd";
+description = "Router advertisement daemon";
+type = "daemon";
+rc_name = "rtadvd";
+run_at_load = true;
+keep_alive = true;
+provides = ["rtadvd"];
+wants = ["DAEMON"];
+before = ["LOGIN"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\n. /etc/network.subr\nload_rc_config rtadvd\nargs=\ncase \"$rtadvd_interfaces\" in\n[Aa][Uu][Tt][Oo]|'')\n    for i in $(list_net_interfaces); do\n        case $i in\n        lo0)\n            continue\n            ;;\n        esac\n        if ipv6if $i; then\n            args=\"$args $i\"\n        fi\n    done\n    ;;\n[Nn][Oo][Nn][Ee])\n    ;;\n*)\n    args=$rtadvd_interfaces\n    ;;\nesac\nexec /usr/sbin/rtadvd -f $rtadvd_flags $args", "rtadvd"];

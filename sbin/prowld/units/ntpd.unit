@@ -1,0 +1,21 @@
+# ntpd.unit - native prowld(8) unit for ntpd(8)
+#
+# Replaces the rc.d/ntpd shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with ntpd_enable in
+# rc.conf; ntpd_flags is honoured as in rc.d/ntpd.
+#
+# ntpd runs in the foreground (-d) so that prowld supervises it directly.
+
+label = "org.midnightbsd.ntpd";
+description = "Network Time Protocol daemon";
+type = "daemon";
+rc_name = "ntpd";
+run_at_load = true;
+keep_alive = true;
+nojail = true;
+provides = ["ntpd"];
+wants = ["DAEMON", "rdate", "FILESYSTEMS", "devfs"];
+before = ["LOGIN"];
+required_files = ["/etc/ntpd.conf"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config ntpd\nexec /usr/sbin/ntpd -d $ntpd_flags", "ntpd"];

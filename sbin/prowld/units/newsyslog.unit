@@ -1,0 +1,16 @@
+# newsyslog.unit - native prowld(8) unit for newsyslog(8)
+#
+# Replaces the rc.d/newsyslog shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with newsyslog_enable in
+# rc.conf; newsyslog_flags is honoured as in rc.d/newsyslog.
+
+label = "org.midnightbsd.newsyslog";
+description = "Logfile rotation";
+type = "oneshot";
+rc_name = "newsyslog";
+run_at_load = true;
+provides = ["newsyslog"];
+wants = ["FILESYSTEMS", "mountcritremote"];
+required_files = ["/etc/newsyslog.conf"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config newsyslog\nexec /usr/sbin/newsyslog $newsyslog_flags", "newsyslog"];

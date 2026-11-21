@@ -1,0 +1,22 @@
+# watchdogd.unit - native prowld(8) unit for watchdogd(8)
+#
+# Replaces the rc.d/watchdogd shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with watchdogd_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/watchdogd.
+#
+# watchdogd stays in the foreground only in debug mode (-d), so its output is
+# discarded.  When prowld stops the unit and watchdogd_shutdown_timeout is
+# set the wrapper disarms the watchdog, as an administrative stop does in
+# rc.d/watchdogd.  If rc.shutdown stops watchdogd first the timer stays armed.
+
+label = "org.midnightbsd.watchdogd";
+description = "Watchdog daemon";
+type = "daemon";
+rc_name = "watchdogd";
+run_at_load = true;
+keep_alive = true;
+nojail = true;
+provides = ["watchdogd"];
+wants = ["FILESYSTEMS", "syslogd"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config watchdogd\n[ -z \"$watchdogd_timeout\" ] || watchdogd_flags=\"$watchdogd_flags -t $watchdogd_timeout\"\n[ -z \"$watchdogd_shutdown_timeout\" ] || watchdogd_flags=\"$watchdogd_flags -x $watchdogd_shutdown_timeout\"\n/usr/sbin/watchdogd -d -I /var/run/watchdogd.pid $watchdogd_flags > /dev/null 2>&1 &\npid=$!\nstopped=\ntrap 'stopped=1; kill $pid 2> /dev/null' TERM INT\nwait $pid\nrc=$?\nif [ -n \"$stopped\" ]; then\n    wait $pid\n    if [ -n \"$watchdogd_shutdown_timeout\" ] && [ \"$watchdogd_shutdown_timeout\" -gt 0 ]; then\n        /usr/sbin/watchdog -t 0\n    fi\nfi\nexit $rc", "watchdogd"];

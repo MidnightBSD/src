@@ -1,0 +1,20 @@
+# pppoed.unit - native prowld(8) unit for pppoed(8)
+#
+# Replaces the rc.d/pppoed shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with pppoed_enable in
+# rc.conf; pppoed_flags is honoured as in rc.d/pppoed.
+#
+# pppoed runs in the foreground (-F) so that prowld supervises it directly.
+
+label = "org.midnightbsd.pppoed";
+description = "Handle incoming PPP over Ethernet connections";
+type = "daemon";
+rc_name = "pppoed";
+run_at_load = true;
+keep_alive = true;
+nojail = true;
+provides = ["pppoed"];
+wants = ["NETWORKING"];
+before = ["DAEMON"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config pppoed\nif [ -n \"$pppoed_provider\" ]; then\n    pppoed_flags=\"$pppoed_flags -p $pppoed_provider\"\nfi\n# the provider may be \"*\"\nset -f\nexec /usr/libexec/pppoed -F $pppoed_flags $pppoed_interface", "pppoed"];

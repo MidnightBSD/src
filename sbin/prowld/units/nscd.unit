@@ -1,0 +1,20 @@
+# nscd.unit - native prowld(8) unit for nscd(8)
+#
+# Replaces the rc.d/nscd shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with nscd_enable in
+# rc.conf; nscd_flags is honoured as in rc.d/nscd.
+#
+# nscd runs in the foreground (-n) so that prowld supervises it directly.
+# The obsolete cached_* variables are not read; use nscd_flags.
+
+label = "org.midnightbsd.nscd";
+description = "Name-service caching daemon";
+type = "daemon";
+rc_name = "nscd";
+run_at_load = true;
+keep_alive = true;
+provides = ["nscd"];
+wants = ["DAEMON"];
+before = ["LOGIN"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config nscd\nexec /usr/sbin/nscd -n $nscd_flags", "nscd"];

@@ -1,0 +1,21 @@
+# mdnsd.unit - native prowld(8) unit for mdnsd(8)
+#
+# Replaces the rc.d/mdnsd shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with mdnsd_enable in
+# rc.conf; mdnsd_flags is honoured as in rc.d/mdnsd.
+#
+# mdnsd stays in the foreground only in debug mode, so its output is
+# discarded.  Like the rc.d script, the unit adds mdns to the hosts line of
+# /etc/nsswitch.conf when it is missing.  mdnsd and mdnsresponder conflict.
+
+label = "org.midnightbsd.mdnsd";
+description = "Multicast DNS daemon";
+type = "daemon";
+rc_name = "mdnsd";
+run_at_load = true;
+keep_alive = true;
+provides = ["mdnsd"];
+conflicts = ["mdnsresponder"];
+wants = ["DAEMON"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config mdnsd\nif ! grep -q mdns /etc/nsswitch.conf; then\n    if [ -w /etc/nsswitch.conf ]; then\n        sed -i '' 's|^\\(hosts.*\\)files dns|\\1files mdns dns|g' /etc/nsswitch.conf\n    else\n        echo \"/etc/nsswitch.conf is not writable, update failed.\"\n    fi\nfi\nexec /usr/sbin/mdnsd -debug $mdnsd_flags > /dev/null 2>&1", "mdnsd"];

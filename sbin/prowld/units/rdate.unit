@@ -1,0 +1,19 @@
+# rdate.unit - native prowld(8) unit for rdate(8)
+#
+# Replaces the rc.d/rdate shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with rdate_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/rdate.
+#
+# Set rdate_flags in rc.conf to the time host, for example "-n host".
+
+label = "org.midnightbsd.rdate";
+description = "Set the system time from a network host";
+type = "oneshot";
+rc_name = "rdate";
+run_at_load = true;
+nojail = true;
+provides = ["rdate"];
+wants = ["NETWORKING", "syslogd"];
+before = ["ntpd", "LOGIN"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config rdate\nexec /usr/sbin/rdate $rdate_flags", "rdate"];

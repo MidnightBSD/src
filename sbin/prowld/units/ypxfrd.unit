@@ -1,0 +1,21 @@
+# ypxfrd.unit - native prowld(8) unit for rpc.ypxfrd(8)
+#
+# Replaces the rc.d/ypxfrd shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with nis_ypxfrd_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/ypxfrd.
+#
+# rpc.ypxfrd always detaches from its parent and has no foreground mode.  The
+# wrapper therefore waits for the daemon and stops it when prowld sends
+# SIGTERM, so prowld still sees the service end and can restart it.  rpcbind
+# and ypserv are started if they are not running, as rc.d/ypxfrd does.
+
+label = "org.midnightbsd.ypxfrd";
+description = "NIS map transfer server";
+type = "daemon";
+rc_name = "nis_ypxfrd";
+run_at_load = true;
+keep_alive = true;
+provides = ["ypxfrd"];
+wants = ["rpcbind", "ypserv"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config ypxfrd\n/etc/rc.d/rpcbind status > /dev/null 2>&1 || /etc/rc.d/rpcbind onestart || exit 1\n/etc/rc.d/ypserv status > /dev/null 2>&1 || /etc/rc.d/ypserv onestart || exit 1\nif [ -z \"$(domainname)\" ]; then\n    echo \"NIS domainname(1) is not set.\"\n    exit 1\nfi\n/usr/sbin/rpc.ypxfrd $nis_ypxfrd_flags || exit 1\ni=0\npid=\nwhile [ -z \"$pid\" ] && [ $i -lt 10 ]; do\n    pid=$(pgrep -x rpc.ypxfrd | head -n 1)\n    [ -n \"$pid\" ] || sleep 1\n    i=$((i + 1))\ndone\n[ -n \"$pid\" ] || exit 1\ntrap 'kill $pid 2> /dev/null; exit 0' TERM INT\nwhile kill -0 $pid 2> /dev/null; do\n    sleep 1 &\n    wait $!\ndone\nexit 1", "ypxfrd"];

@@ -1,0 +1,22 @@
+# hastd.unit - native prowld(8) unit for hastd(8)
+#
+# Replaces the rc.d/hastd shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with hastd_enable in
+# rc.conf; hastd_flags is honoured as in rc.d/hastd.
+#
+# hastd runs in the foreground (-F).  Like the rc.d script, the unit loads
+# geom_gate first and puts every resource into the init role when it stops.
+
+label = "org.midnightbsd.hastd";
+description = "Highly Available Storage daemon";
+type = "daemon";
+rc_name = "hastd";
+run_at_load = true;
+keep_alive = true;
+nojail = true;
+provides = ["hastd"];
+wants = ["NETWORKING", "syslogd"];
+before = ["DAEMON"];
+required_files = ["/etc/hast.conf"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config hastd\nkldstat -q -m g_gate || kldload geom_gate || exit 1\n/sbin/hastd -F $hastd_flags &\npid=$!\ntrap '/sbin/hastctl role init all; kill $pid 2> /dev/null' TERM INT\nwait $pid\nrc=$?\ntrap - TERM INT\nkill -0 $pid 2> /dev/null && wait $pid\nexit $rc", "hastd"];

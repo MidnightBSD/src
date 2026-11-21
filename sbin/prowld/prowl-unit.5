@@ -144,6 +144,28 @@ Default: 20.
 .It Va shutdown_wait
 .Pq boolean
 Wait for clean exit during system shutdown.
+.It Va required_files
+.Pq array of strings
+Absolute paths of files that must exist and be readable for the job to
+start, such as its configuration file.
+If one is missing the job is not started: it enters the
+.Dq failed
+state, the reason is logged, and
+.Cm prowlctl start
+reports an error.
+Starting it again after creating the file works.
+At most 8 paths are allowed.
+A relative path, or too many, makes
+.Xr prowld 8
+refuse the unit rather than weaken the check.
+.It Va nojail
+.Pq boolean
+If true, the job is never started when
+.Xr prowld 8
+runs inside a jail.
+Use it for services that need the real hardware or kernel state,
+like
+.Xr devd 8 .
 .El
 .Ss Dependencies
 .Bl -tag -width "requires"
@@ -153,8 +175,12 @@ Capability names that must be running for this job to start.
 .It Va wants
 .Pq array of strings
 Like
-.Va requires
-but failure of the dependency is non-fatal.
+.Va requires ,
+but a provider that is disabled, masked or failed does not hold the job
+back, and a capability that nothing provides is ignored.
+This matches the way
+.Xr rc 8
+treats REQUIRE, so units converted from rc.d scripts use it.
 .It Va provides
 .Pq array of strings
 Capabilities this job satisfies (e.g.,
@@ -237,34 +263,89 @@ A daemon with dependencies and socket activation:
 }
 .Ed
 .Sh FILES
-.Bl -tag -width "/etc/prowld/units.d/syslogd.unit" -compact
-.It Pa /etc/prowld/units.d/syslogd.unit
-Native unit for
-.Xr syslogd 8 .
-It runs
-.Xr syslogd 8
-in the foreground
-.Pq Fl F
-under
-.Xr prowld 8 ,
-honours
-.Va syslogd_enable ,
-.Va syslogd_flags
+Units for base system services are installed in
+.Pa /etc/prowld/units.d/ .
+Each replaces the matching
+.Pa /etc/rc.d
+script when
+.Xr prowld 8
+manages the system, and each honours the service's
+.Va _enable
 and
-.Va altlog_proglist
-from
-.Xr rc.conf 5 ,
-and takes the place of the
-.Pa /etc/rc.d/syslogd
-shim.
-Because the daemon is supervised by
-.Xr prowld 8 ,
+.Va _flags
+variables from
+.Xr rc.conf 5 .
+.Bl -tag -width "local_unbound.unit" -compact
+.It Pa blacklistd.unit
+.Xr blacklistd 8 ,
+the old name of blocklistd
+.It Pa blocklistd.unit
+.Xr blocklistd 8
+.It Pa cron.unit
+.Xr cron 8
+.It Pa devd.unit
+.Xr devd 8
+.It Pa ftpd.unit
+.Xr ftpd 8
+.It Pa gssd.unit
+.Xr gssd 8
+.It Pa hastd.unit
+.Xr hastd 8
+.It Pa inetd.unit
+.Xr inetd 8
+.It Pa local_unbound.unit
+.Xr local-unbound 8
+.It Pa mdnsd.unit
+mdnsd
+.It Pa mdnsresponder.unit
+.Xr mDNSResponderPosix 8
+.It Pa moused.unit
+.Xr moused 8
+for the default mouse
+.Pq Va moused_port
+.It Pa natd.unit
+.Xr natd 8 ,
+started only on request
+.It Pa newsyslog.unit
+.Xr newsyslog 8 ,
+a oneshot
+.It Pa nscd.unit
+.Xr nscd 8
+.It Pa ntpd.unit
+.Xr ntpd 8
+.It Pa powerd.unit
+.Xr powerd 8
+.It Pa pppoed.unit
+.Xr pppoed 8
+.It Pa rdate.unit
+.Xr rdate 8 ,
+a oneshot
+.It Pa rtadvd.unit
+.Xr rtadvd 8
+.It Pa rtsold.unit
+.Xr rtsold 8
+.It Pa sdpd.unit
+.Xr sdpd 8
+.It Pa sshd.unit
+.Xr sshd 8 ,
+after generating missing host keys and checking the configuration
+.It Pa statd.unit
+.Xr rpc.statd 8
+.It Pa syslogd.unit
+.Xr syslogd 8
+.It Pa watchdogd.unit
+.Xr watchdogd 8
+.It Pa ypxfrd.unit
+.Xr rpc.ypxfrd 8
+.El
+.Pp
+These daemons are supervised by
+.Xr prowld 8 :
 use
 .Xr prowlctl 8
 rather than
 .Xr service 8
-to restart it.
-.El
+to restart them.
 .Sh SEE ALSO
 .Xr libucl 3 ,
 .Xr prowld 8 ,
