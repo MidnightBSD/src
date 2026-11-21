@@ -1,0 +1,22 @@
+# nfsd.unit - native prowld(8) unit for nfsd(8)
+#
+# Replaces the rc.d/nfsd shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with nfs_server_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/nfsd.
+#
+# nfsd always detaches from its parent and has no foreground mode.  The
+# wrapper therefore waits for the daemon and stops it when prowld sends
+# SIGTERM, so prowld still sees the service end and can restart it.  The daemon is
+# stopped with SIGUSR1, as rc.d/nfsd does.  The NFSv4, privileged-port and
+# max I/O settings of rc.d/nfsd are kept.
+
+label = "org.midnightbsd.nfsd";
+description = "Remote NFS server";
+type = "daemon";
+rc_name = "nfs_server";
+run_at_load = true;
+keep_alive = true;
+provides = ["nfsd"];
+wants = ["mountcritremote", "mountd", "hostname", "gssd", "nfsuserd"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config nfsd\nload_kld nfsd || exit 1\nif [ -n \"$nfs_server_maxio\" ] && ! check_jail jailed; then\n    sysctl vfs.nfsd.srvmaxio=$nfs_server_maxio > /dev/null || echo \"Failed to set server max I/O\"\nfi\nif checkyesno nfs_reserved_port_only; then\n    echo \"NFS on reserved port only=YES\"\n    sysctl vfs.nfsd.nfs_privport=1 > /dev/null\nelse\n    sysctl vfs.nfsd.nfs_privport=0 > /dev/null\nfi\nif checkyesno nfs_server_managegids; then\n    /etc/rc.d/nfsuserd status > /dev/null 2>&1 || /etc/rc.d/nfsuserd onestart || exit 1\nfi\nif checkyesno nfsv4_server_enable; then\n    sysctl vfs.nfsd.server_max_nfsvers=4 > /dev/null\nelif ! checkyesno nfsv4_server_only; then\n    echo \"NFSv4 is disabled\"\n    sysctl vfs.nfsd.server_max_nfsvers=3 > /dev/null\nfi\nif ! checkyesno nfsv4_server_only; then\n    /etc/rc.d/rpcbind status > /dev/null 2>&1 || /etc/rc.d/rpcbind onestart || exit 1\nfi\n/etc/rc.d/mountd status > /dev/null 2>&1 || /etc/rc.d/mountd onestart || exit 1\nif [ -n \"$nfs_server_vhost\" ]; then\n    set -- -V \"$nfs_server_vhost\"\nelse\n    set --\nfi\n/usr/sbin/nfsd $nfs_server_flags \"$@\" || exit 1\ni=0\npid=\nwhile [ -z \"$pid\" ] && [ $i -lt 10 ]; do\n    pid=$(pgrep -o -x nfsd)\n    [ -n \"$pid\" ] || sleep 1\n    i=$((i + 1))\ndone\n[ -n \"$pid\" ] || exit 1\nstopping=\ntrap 'stopping=1; kill -USR1 $pid 2> /dev/null' TERM INT\nwhile kill -0 $pid 2> /dev/null; do\n    sleep 1 &\n    wait $!\ndone\n[ -z \"$stopping\" ] || exit 0\nexit 1", "nfsd"];

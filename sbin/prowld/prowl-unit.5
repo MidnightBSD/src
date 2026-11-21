@@ -292,13 +292,18 @@ the old name of blocklistd
 .It Pa hastd.unit
 .Xr hastd 8
 .It Pa inetd.unit
-.Xr inetd 8
+.Xr inetd 8 ,
+watched through its pidfile
 .It Pa local_unbound.unit
 .Xr local-unbound 8
+.It Pa lockd.unit
+.Xr rpc.lockd 8
 .It Pa mdnsd.unit
 mdnsd
 .It Pa mdnsresponder.unit
 .Xr mDNSResponderPosix 8
+.It Pa mountd.unit
+.Xr mountd 8
 .It Pa moused.unit
 .Xr moused 8
 for the default mouse
@@ -309,6 +314,12 @@ started only on request
 .It Pa newsyslog.unit
 .Xr newsyslog 8 ,
 a oneshot
+.It Pa nfscbd.unit
+.Xr nfscbd 8
+.It Pa nfsd.unit
+.Xr nfsd 8
+.It Pa nfsuserd.unit
+.Xr nfsuserd 8
 .It Pa nscd.unit
 .Xr nscd 8
 .It Pa ntpd.unit
@@ -320,6 +331,8 @@ a oneshot
 .It Pa rdate.unit
 .Xr rdate 8 ,
 a oneshot
+.It Pa rpcbind.unit
+.Xr rpcbind 8
 .It Pa rtadvd.unit
 .Xr rtadvd 8
 .It Pa rtsold.unit

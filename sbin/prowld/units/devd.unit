@@ -4,7 +4,7 @@
 # a native unit is skipped.  Enable and disable it with devd_enable in
 # rc.conf; devd_flags is honoured as in rc.d/devd.
 #
-# devd runs in the foreground (-d) so that prowld supervises it directly.
+# devd runs in the foreground (-d) so that prowld supervises it directly.  Its debug output is discarded.
 
 label = "org.midnightbsd.devd";
 description = "Device state change daemon";
@@ -18,4 +18,4 @@ wants = ["netif", "ldconfig"];
 before = ["NETWORKING", "mountcritremote"];
 required_files = ["/etc/devd.conf"];
 program = "/bin/sh";
-arguments = ["-c", ". /etc/rc.subr\nload_rc_config devd\nexec /sbin/devd -d $devd_flags", "devd"];
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config devd\nexec /sbin/devd -d $devd_flags > /dev/null 2>&1", "devd"];

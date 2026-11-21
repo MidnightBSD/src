@@ -39,16 +39,22 @@ UNITS=		units/blacklistd.unit \
 		units/hastd.unit \
 		units/inetd.unit \
 		units/local_unbound.unit \
+		units/lockd.unit \
 		units/mdnsd.unit \
 		units/mdnsresponder.unit \
+		units/mountd.unit \
 		units/moused.unit \
 		units/natd.unit \
 		units/newsyslog.unit \
+		units/nfscbd.unit \
+		units/nfsd.unit \
+		units/nfsuserd.unit \
 		units/nscd.unit \
 		units/ntpd.unit \
 		units/powerd.unit \
 		units/pppoed.unit \
 		units/rdate.unit \
+		units/rpcbind.unit \
 		units/rtadvd.unit \
 		units/rtsold.unit \
 		units/sdpd.unit \

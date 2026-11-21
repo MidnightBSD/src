@@ -1,0 +1,23 @@
+# mountd.unit - native prowld(8) unit for mountd(8)
+#
+# Replaces the rc.d/mountd shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with mountd_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/mountd.
+#
+# mountd always detaches from its parent and has no foreground mode.  The
+# wrapper therefore waits for the daemon and stops it when prowld sends
+# SIGTERM, so prowld still sees the service end and can restart it.  SIGHUP, which
+# makes mountd reread /etc/exports, is passed on to the daemon.  The NFSv4 and
+# ZFS handling of rc.d/mountd is kept.
+
+label = "org.midnightbsd.mountd";
+description = "Service remote NFS mount requests";
+type = "daemon";
+rc_name = "mountd";
+run_at_load = true;
+keep_alive = true;
+provides = ["mountd"];
+wants = ["NETWORKING", "rpcbind", "quota", "mountlate"];
+required_files = ["/etc/exports"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config mountd\nload_rc_config nfsd\nload_rc_config zfs\nload_kld nfsd || exit 1\nif checkyesno nfsv4_server_only; then\n    echo \"NFSv4 only server\"\n    sysctl vfs.nfsd.server_min_nfsvers=4 > /dev/null\n    sysctl vfs.nfsd.server_max_nfsvers=4 > /dev/null\n    mountd_flags=\"$mountd_flags -R\"\nelse\n    /etc/rc.d/rpcbind status > /dev/null 2>&1 || /etc/rc.d/rpcbind onestart || exit 1\n    if checkyesno nfsv4_server_enable; then\n        sysctl vfs.nfsd.server_max_nfsvers=4 > /dev/null\n    else\n        sysctl vfs.nfsd.server_max_nfsvers=3 > /dev/null\n    fi\nfi\nif checkyesno nfs_server_enable || checkyesno nfsv4_server_only; then\n    if checkyesno weak_mountd_authentication; then\n        if checkyesno nfsv4_server_only; then\n            echo \"weak_mountd_authentication incompatible with nfsv4_server_only, ignored\"\n        else\n            mountd_flags=\"$mountd_flags -n\"\n        fi\n    fi\nelif checkyesno mountd_enable && checkyesno weak_mountd_authentication; then\n    mountd_flags=\"-n\"\nfi\nif checkyesno zfs_enable; then\n    mountd_flags=\"$mountd_flags /etc/exports /etc/zfs/exports\"\nfi\nrm -f /var/db/mountdtab /var/run/mountd.pid\n( umask 022 ; > /var/db/mountdtab ) || exit 1\n/usr/sbin/mountd $mountd_flags || exit 1\ni=0\npid=\nwhile [ -z \"$pid\" ] && [ $i -lt 10 ]; do\n    pid=$(cat /var/run/mountd.pid 2> /dev/null)\n    [ -n \"$pid\" ] || sleep 1\n    i=$((i + 1))\ndone\n[ -n \"$pid\" ] || exit 1\nstopping=\ntrap 'stopping=1; kill -TERM $pid 2> /dev/null' TERM INT\ntrap 'kill -HUP $pid 2> /dev/null' HUP\nwhile kill -0 $pid 2> /dev/null; do\n    sleep 1 &\n    wait $!\ndone\n[ -z \"$stopping\" ] || exit 0\nexit 1", "mountd"];
