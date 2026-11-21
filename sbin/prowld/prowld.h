@@ -109,6 +109,7 @@ static_assert((__alignof__(struct job) & TIMER_MASK) == 0,
 #define DEFAULT_MAX_STARTS	0	/* 0 = auto (ncpu*2) */
 #define DEFAULT_SHUTDOWN_TMO	300	/* seconds */
 #define DEFAULT_THROTTLE_INT	10	/* seconds */
+#define PROWL_READY_DELAY	1	/* seconds until a daemon is "up" */
 #define DEFAULT_EXIT_TIMEOUT	20	/* seconds */
 
 /* IPC */

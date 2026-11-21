@@ -680,7 +680,9 @@ running jobs. Once a job reaches `running`, its slot is released.
 
 A daemon is considered `running` when:
 
-- **Default**: its process is alive after `throttle_interval` seconds
+- **Default**: its process is still alive one second after it was started
+  (`PROWL_READY_DELAY`).  Jobs ordered after it do not wait longer;
+  `throttle_interval` only governs the restart back-off.
 - **With `notify_socket`**: it sends a ready notification (similar to
   sd_notify). Recommended for v1.1.
 - **With `sockets`**: immediately after prowld has bound the socket
@@ -873,7 +875,7 @@ ship with systemd" are outside the scope of compatibility work.
 
 ### 10.5 Interaction with Startup Completion
 
-`notify_type: notify` overrides the default "alive after throttle_interval"
+`notify_type: notify` overrides the default "alive after one second"
 readiness check (§8.3). If the service never sends `READY=1`, prowld fails the
 start after `exit_timeout` seconds and acts per `keep_alive`.
 

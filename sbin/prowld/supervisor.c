@@ -923,8 +923,13 @@ supervisor_start(job_t *job)
 		arm_notify_timeout_timer(job);
 	} else if (job->type != JOB_TYPE_ONESHOT &&
 	    job->type != JOB_TYPE_RCSHIM) {
-		/* Promote to RUNNING after throttle_interval seconds alive */
-		arm_throttle_timer(job, job->throttle_interval);
+		/*
+		 * Promote to RUNNING once the process has survived a moment,
+		 * so that jobs ordered after this one are not held back for
+		 * a whole throttle_interval.  throttle_interval still governs
+		 * the restart back-off.
+		 */
+		arm_throttle_timer(job, PROWL_READY_DELAY);
 	}
 	/*
 	 * Oneshots and rc-shims have no readiness timer: they stay STARTING

@@ -49,8 +49,9 @@
 #include "prowld.h"
 
 /*
- * Add an "after X" edge to job by inserting X into job->deps[] as a hard dep,
- * unless an equivalent entry already exists.
+ * Add an "after X" edge to job by inserting X into job->deps[] as a soft dep
+ * (ordering only: a provider that is disabled, masked or failed does not hold
+ * the job back), unless an equivalent entry already exists.
  */
 static void
 dag_add_after_dep(job_t *job, const char *name)
@@ -66,7 +67,7 @@ dag_add_after_dep(job_t *job, const char *name)
 	}
 
 	strlcpy(job->deps[job->deps_count].name, name, PROWL_LABEL_MAX);
-	job->deps[job->deps_count].hard = true;
+	job->deps[job->deps_count].hard = false;
 	job->deps_count++;
 }
 
