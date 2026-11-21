@@ -220,6 +220,10 @@ dag_schedule_ready(void)
 	job_t *job;
 	int limit = max_concurrent();
 
+	/* Nothing new starts while the system is going down. */
+	if (g_shutdown)
+		return;
+
 	TAILQ_FOREACH(job, &g_jobs, entries) {
 		if (g_current_starts >= limit)
 			break;
@@ -228,6 +232,10 @@ dag_schedule_ready(void)
 			continue;
 
 		if (!job->run_at_load)
+			continue;
+
+		/* Waiting out a restart back-off */
+		if (job->restart_hold)
 			continue;
 
 		if (!job_all_deps_satisfied(job))

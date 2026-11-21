@@ -51,7 +51,8 @@
 #include <unistd.h>
 
 #define PROWLD_SOCK_PATH	"/var/run/prowld/prowld.sock"
-#define MSG_MAX			65536	/* must match IPC_MSG_MAX in prowld.h */
+/* Must be >= IPC_REPLY_MAX in prowld.h */
+#define MSG_MAX			(4 * 1024 * 1024)
 #define REQ_MAX			1024
 
 /* Exit codes per spec §13.3 */
@@ -212,9 +213,11 @@ recv_response(int fd)
 }
 
 /*
- * Simple JSON field extractor: returns the string value of "key" from a
- * flat JSON object, or NULL.  This handles only simple string values and
- * avoids pulling in a full JSON library for the client.
+ * Simple JSON field extractor: returns the value of "key" from a flat JSON
+ * object as text, or NULL.  String values are unescaped; numbers and
+ * true/false/null are copied as written.  out is always NUL-terminated, even
+ * when the key is missing.  This avoids pulling in a full JSON library for
+ * the client.
  */
 static const char *
 json_get_str(const char *json, const char *key, char *out, size_t outsz)
@@ -223,26 +226,42 @@ json_get_str(const char *json, const char *key, char *out, size_t outsz)
 	const char *p, *q;
 	size_t i;
 
-	snprintf(search, sizeof(search), "\"%s\":\"", key);
+	if (outsz == 0)
+		return (NULL);
+	out[0] = '\0';
+
+	snprintf(search, sizeof(search), "\"%s\":", key);
 	p = strstr(json, search);
 	if (p == NULL)
 		return (NULL);
 
 	p += strlen(search);
-	q = p;
+	while (*p == ' ')
+		p++;
 
-	/* Find closing quote, handling simple escapes */
 	i = 0;
-	while (*q != '\0' && *q != '"' && i < outsz - 1) {
-		if (*q == '\\' && *(q + 1) != '\0') {
-			out[i++] = *(q + 1);
-			q += 2;
-		} else {
-			out[i++] = *q++;
+	if (*p == '"') {
+		/* String value: find closing quote, handling simple escapes */
+		q = p + 1;
+		while (*q != '\0' && *q != '"' && i < outsz - 1) {
+			if (*q == '\\' && *(q + 1) != '\0') {
+				out[i++] = *(q + 1);
+				q += 2;
+			} else {
+				out[i++] = *q++;
+			}
 		}
+		out[i] = '\0';
+		return (out);
 	}
+
+	/* Bare value (number, true, false, null): copy up to the delimiter */
+	q = p;
+	while (*q != '\0' && *q != ',' && *q != '}' && *q != ']' &&
+	    *q != ' ' && *q != '\n' && i < outsz - 1)
+		out[i++] = *q++;
 	out[i] = '\0';
-	return (out);
+	return (i > 0 ? out : NULL);
 }
 
 /*
@@ -308,7 +327,7 @@ static void
 print_job_list(const char *json)
 {
 	const char *p = json;
-	char item[1024];
+	char item[4096];
 	size_t depth = 0;
 	size_t i = 0;
 	bool in_string = false;
@@ -349,6 +368,33 @@ print_job_list(const char *json)
 		}
 		p++;
 	}
+}
+
+/*
+ * service(8) passes rc.subr verbs through to prowlctl, including the
+ * faststart/quietstart/forcestart/onestart variants (and the same for stop,
+ * restart, reload and status) that rc scripts use at boot.  They all mean
+ * the plain verb here.
+ */
+static const char *
+rc_verb(const char *cmd)
+{
+	static const char *prefixes[] = { "fast", "quiet", "force", "one",
+	    NULL };
+	size_t n;
+	int i;
+
+	for (i = 0; prefixes[i] != NULL; i++) {
+		n = strlen(prefixes[i]);
+		if (strncmp(cmd, prefixes[i], n) == 0 &&
+		    (strcmp(cmd + n, "start") == 0 ||
+		    strcmp(cmd + n, "stop") == 0 ||
+		    strcmp(cmd + n, "restart") == 0 ||
+		    strcmp(cmd + n, "reload") == 0 ||
+		    strcmp(cmd + n, "status") == 0))
+			return (cmd + n);
+	}
+	return (cmd);
 }
 
 /*
@@ -445,6 +491,59 @@ do_list(int argc, char *argv[])
 	if (result != NULL) {
 		result += strlen("\"result\":");
 		print_job_list(result);
+	}
+
+	free(resp);
+	return (EXIT_OK);
+}
+
+/*
+ * show <label>: print the job's JSON object as the daemon reports it.
+ */
+static int
+do_show(int argc, char *argv[])
+{
+	char req[REQ_MAX];
+	char *resp;
+	const char *result;
+	size_t len;
+	int ret;
+
+	if (argc < 1) {
+		fprintf(stderr, "prowlctl: show requires a label\n");
+		return (EXIT_NOT_FOUND);
+	}
+
+	if (!validate_label_input(argv[0])) {
+		fprintf(stderr, "prowlctl: invalid label '%s'\n", argv[0]);
+		return (EXIT_NOT_FOUND);
+	}
+
+	snprintf(req, sizeof(req),
+	    "{\"verb\":\"show\",\"target\":\"%s\"}", argv[0]);
+
+	if (send_request(g_sock, req) == -1)
+		err(EXIT_NO_DAEMON, "send");
+
+	resp = recv_response(g_sock);
+	ret = check_response(resp);
+	if (ret != EXIT_OK) {
+		free(resp);
+		return (ret);
+	}
+
+	if (g_json) {
+		puts(resp);
+		free(resp);
+		return (EXIT_OK);
+	}
+
+	/* {"id":...,"status":"ok","result":{...}}: print the result object */
+	result = strstr(resp, "\"result\":");
+	len = strlen(resp);
+	if (result != NULL && len > 0 && resp[len - 1] == '}') {
+		result += strlen("\"result\":");
+		printf("%.*s\n", (int)(&resp[len - 1] - result), result);
 	}
 
 	free(resp);
@@ -946,7 +1045,7 @@ main(int argc, char *argv[])
 	if (argc < 1)
 		usage();
 
-	cmd = argv[0];
+	cmd = rc_verb(argv[0]);
 	argc--;
 	argv++;
 
@@ -979,7 +1078,7 @@ main(int argc, char *argv[])
 	else if (strcmp(cmd, "unmask") == 0)
 		ret = do_simple_target("unmask", argc, argv);
 	else if (strcmp(cmd, "show") == 0)
-		ret = do_simple_target("show", argc, argv);
+		ret = do_show(argc, argv);
 	else if (strcmp(cmd, "reload-config") == 0)
 		ret = do_no_target("reload-config");
 	else if (strcmp(cmd, "daemon-reexec") == 0)

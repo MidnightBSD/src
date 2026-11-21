@@ -56,6 +56,7 @@
 #define RCD_BEFORE	"# BEFORE:"
 #define RCD_KEYWORD	"# KEYWORD:"
 #define RCD_KEYWORDS	"# KEYWORDS:"
+#define RCD_RCVAR	"rcvar="
 
 /*
  * Skip leading whitespace and return pointer into s.
@@ -101,6 +102,46 @@ tokenize_into(const char *line, char dest[][PROWL_LABEL_MAX], int cur, int max)
 }
 
 /*
+ * Look for an "rcvar=" assignment at the start of a script line (p must
+ * already be past leading whitespace).
+ *
+ * *found is set when the script names a non-empty rcvar.  An empty
+ * "rcvar=" means the service has no enable switch and always runs, so it is
+ * treated like a script with no rcvar at all.  name receives the variable
+ * name when it is a plain literal (e.g. "syslogd_enable"); it is left empty
+ * when the value needs shell expansion (e.g. "${name}_enable"), in which
+ * case the caller falls back to <PROVIDE>_enable.  Only the first rcvar=
+ * line in a script is used.
+ */
+static void
+rcvar_scan(const char *p, bool *found, char *name, size_t namesz)
+{
+	const char *q;
+	size_t n;
+
+	if (*found || strncmp(p, RCD_RCVAR, strlen(RCD_RCVAR)) != 0)
+		return;
+	p += strlen(RCD_RCVAR);
+	if (*p == '"' || *p == '\'')
+		p++;
+	if (*p == '\0' || *p == '\n' || *p == '"' || *p == '\'')
+		return;		/* empty rcvar: no enable switch */
+
+	*found = true;
+	name[0] = '\0';
+	for (q = p; *q != '\0' && *q != '"' && *q != '\'' && *q != '\n' &&
+	    *q != ' ' && *q != '\t' && *q != ';'; q++) {
+		if (!isalnum((unsigned char)*q) && *q != '_')
+			return;	/* needs expansion: caller uses fallback */
+	}
+	n = (size_t)(q - p);
+	if (n == 0 || n >= namesz)
+		return;
+	memcpy(name, p, n);
+	name[n] = '\0';
+}
+
+/*
  * Parse an rc.d script to extract its PROVIDE/REQUIRE/BEFORE/KEYWORD
  * headers and build a JOB_TYPE_RCSHIM job.
  *
@@ -124,7 +165,10 @@ rcshim_parse_script(const char *path, const char *scriptname)
 	int before_count = 0;
 	bool keyword_shutdown = false;
 	bool keyword_nojail = false;
+	bool keyword_nostart = false;
 	bool done_headers = false;
+	bool has_rcvar = false;
+	char rcvar_name[PROWL_LABEL_MAX];
 
 	{
 		int rfd = open(path, O_RDONLY | O_NOFOLLOW);
@@ -143,9 +187,11 @@ rcshim_parse_script(const char *path, const char *scriptname)
 
 	/*
 	 * rc.d headers appear before the first non-comment, non-blank line.
-	 * We stop scanning once we hit executable code.
+	 * Once we hit executable code the headers are done, but we keep
+	 * reading to find the rcvar= line that names the enable variable.
 	 */
-	while (!done_headers && fgets(line, sizeof(line), fp) != NULL) {
+	rcvar_name[0] = '\0';
+	while (fgets(line, sizeof(line), fp) != NULL) {
 		const char *p = line;
 
 		while (*p == ' ' || *p == '\t')
@@ -154,9 +200,17 @@ rcshim_parse_script(const char *path, const char *scriptname)
 		if (*p == '\0' || *p == '\n')
 			continue;
 
+		if (done_headers) {
+			rcvar_scan(p, &has_rcvar, rcvar_name,
+			    sizeof(rcvar_name));
+			continue;
+		}
+
 		if (*p != '#') {
 			done_headers = true;
-			break;
+			rcvar_scan(p, &has_rcvar, rcvar_name,
+			    sizeof(rcvar_name));
+			continue;
 		}
 
 		if (strncmp(p, RCD_PROVIDE, strlen(RCD_PROVIDE)) == 0)
@@ -189,6 +243,8 @@ rcshim_parse_script(const char *path, const char *scriptname)
 				keyword_shutdown = true;
 			if (strstr(kw, "nojail") != NULL)
 				keyword_nojail = true;
+			if (strstr(kw, "nostart") != NULL)
+				keyword_nostart = true;
 		}
 	}
 	fclose(fp);
@@ -208,6 +264,16 @@ rcshim_parse_script(const char *path, const char *scriptname)
 	if (job_find_by_provides(provides_raw[0]) != NULL) {
 		prowl_log(LOG_DEBUG, "rcshim: native unit covers %s, "
 		    "skipping %s", provides_raw[0], path);
+		return (NULL);
+	}
+
+	/*
+	 * Never wrap our own rc.d script: running it would start a second
+	 * prowld that takes over the control socket from this one.
+	 */
+	if (strcmp(scriptname, "prowld") == 0) {
+		prowl_log(LOG_DEBUG, "rcshim: skipping %s (prowld itself)",
+		    path);
 		return (NULL);
 	}
 
@@ -262,9 +328,30 @@ rcshim_parse_script(const char *path, const char *scriptname)
 	job->shutdown_wait = keyword_shutdown;
 	(void)keyword_nojail; /* TODO: add nojail condition check */
 
-	/* Enabled state: default to false for base system services */
-	job->enabled = rcconf_is_enabled(provides_raw[0], false);
-	job->run_at_load = job->enabled;
+	/*
+	 * Enabled state.  A script that names an rcvar is enabled only when
+	 * that variable is YES in rc.conf (default NO).  A script without an
+	 * rcvar (hostname, FILESYSTEMS, mountcritlocal, ...) has no enable
+	 * switch and always runs, as it does under rc(8); the pseudo-targets
+	 * that other services REQUIRE depend on this.  KEYWORD: nostart
+	 * scripts are never run at boot.
+	 */
+	if (keyword_nostart)
+		job->enabled = false;
+	else if (!has_rcvar)
+		job->enabled = true;
+	else if (rcvar_name[0] != '\0')
+		job->enabled = rcconf_var_is_enabled(rcvar_name, false);
+	else
+		job->enabled = rcconf_is_enabled(provides_raw[0], false);
+
+	/*
+	 * Only auto-start shims when prowld is the init process.  Under
+	 * init(8) /etc/rc has already run these scripts; starting them a
+	 * second time would run every service twice.  They stay loaded and
+	 * can be driven with prowlctl.
+	 */
+	job->run_at_load = job->enabled && g_is_init;
 
 	return (job);
 }
@@ -351,6 +438,20 @@ rcshim_scan_dir(const char *dirpath)
 bool
 rcconf_is_enabled(const char *name, bool default_val)
 {
+	char varname[PROWL_LABEL_MAX];
+
+	snprintf(varname, sizeof(varname), "%s_enable", name);
+	return (rcconf_var_is_enabled(varname, default_val));
+}
+
+/*
+ * Read the defaults, rc.conf and rc.conf.local for the variable varname
+ * (the full name, e.g. "syslogd_enable").  Later files override earlier
+ * ones.  Returns the value found, or default_val if not set.
+ */
+bool
+rcconf_var_is_enabled(const char *varname, bool default_val)
+{
 	const char *files[] = {
 		"/etc/defaults/rc.conf",
 		RCCONF_PATH,
@@ -359,10 +460,7 @@ rcconf_is_enabled(const char *name, bool default_val)
 	};
 	FILE *fp;
 	char line[1024];
-	char varname[PROWL_LABEL_MAX];
 	bool result = default_val;
-
-	snprintf(varname, sizeof(varname), "%s_enable", name);
 
 	for (int fi = 0; files[fi] != NULL; fi++) {
 		fp = fopen(files[fi], "r");

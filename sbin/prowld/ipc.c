@@ -68,6 +68,7 @@ static ipc_client_t g_clients[IPC_MAX_CLIENTS];
 
 /* Internal prototypes */
 static ipc_client_t *ipc_get_client(int fd);
+static void ipc_send_error(int fd, const char *id, const char *message);
 
 /* ------------------------------------------------------------------ */
 /* JSON helpers                                                          */
@@ -127,72 +128,176 @@ json_escape_str(const char *src, char *dst, size_t dstsz)
 	return ((int)i);
 }
 
+/* Upper bound on queued output per client; slower readers lose messages. */
+#define IPC_OUT_MAX	(IPC_REPLY_MAX * 2)
+
 /*
- * Send exactly len bytes, retrying on EINTR.  Returns 0 on success, -1 on error.
- * Uses MSG_DONTWAIT to avoid blocking the main event loop if the buffer is full.
+ * Drop everything queued for a client and stop watching for writability.
  */
-static int
-ipc_send_all(int fd, const void *buf, size_t len)
+static void
+ipc_out_reset(ipc_client_t *c)
 {
-	const char *p = (const char *)buf;
+	struct kevent kev;
+
+	free(c->out);
+	c->out = NULL;
+	c->out_len = 0;
+	c->out_off = 0;
+	if (c->want_write) {
+		EV_SET(&kev, (uintptr_t)c->fd, EVFILT_WRITE, EV_DELETE, 0, 0,
+		    NULL);
+		(void)kevent(g_kqueue_fd, &kev, 1, NULL, 0, NULL);
+		c->want_write = false;
+	}
+}
+
+/*
+ * Write as much queued output as the socket accepts without blocking.  If
+ * the socket is full, arm EVFILT_WRITE and resume from ipc_write_ready().
+ * The fd is never closed here (callers may still be using the client);
+ * on a fatal error the connection is shut down so the read side sees EOF
+ * and closes the client through the normal path.
+ */
+static void
+ipc_flush_client(ipc_client_t *c)
+{
+	struct kevent kev;
 	ssize_t n;
 
-	while (len > 0) {
-		n = send(fd, p, len, MSG_NOSIGNAL | MSG_DONTWAIT);
+	while (c->out_off < c->out_len) {
+		n = send(c->fd, c->out + c->out_off, c->out_len - c->out_off,
+		    MSG_NOSIGNAL | MSG_DONTWAIT);
 		if (n == -1) {
 			if (errno == EINTR)
 				continue;
 			if (errno == EAGAIN || errno == EWOULDBLOCK) {
-				/*
-				 * For a production daemon we should buffer the
-				 * outgoing data and wait for EVFILT_WRITE.
-				 * Given prowld's small response sizes we
-				 * log a warning and drop the response to avoid
-				 * stalling the whole service manager.
-				 */
+				if (c->want_write)
+					return;
+				EV_SET(&kev, (uintptr_t)c->fd, EVFILT_WRITE,
+				    EV_ADD, 0, 0, NULL);
+				if (kevent(g_kqueue_fd, &kev, 1, NULL, 0,
+				    NULL) == 0) {
+					c->want_write = true;
+					return;
+				}
 				prowl_log(LOG_WARNING,
-				    "ipc_send_all: send buffer full, "
-				    "dropping response to fd %d", fd);
-				return (-1);
+				    "ipc: kevent EVFILT_WRITE fd %d: %m",
+				    c->fd);
+			} else {
+				prowl_log(LOG_DEBUG, "ipc send fd %d: %m",
+				    c->fd);
 			}
-			return (-1);
+			/* A frame may be half sent: the stream is unusable. */
+			(void)shutdown(c->fd, SHUT_RDWR);
+			ipc_out_reset(c);
+			return;
 		}
-		p += n;
-		len -= (size_t)n;
+		c->out_off += (size_t)n;
 	}
-	return (0);
+
+	ipc_out_reset(c);
 }
 
+/*
+ * Queue one length-prefixed frame for a client and try to send it.  Frames
+ * are queued whole, so the stream framing stays intact even when a frame
+ * has to be dropped for lack of room.
+ */
 static void
 ipc_send(int fd, const char *json, size_t len)
 {
-	uint32_t nlen = htonl((uint32_t)len);
+	ipc_client_t *c;
+	uint32_t nlen;
+	size_t pending, total;
+	char *nb;
 
-	if (ipc_send_all(fd, &nlen, 4) == -1 ||
-	    ipc_send_all(fd, json, len) == -1)
-		prowl_log(LOG_DEBUG, "ipc_send fd %d: %m", fd);
+	c = ipc_get_client(fd);
+	if (c == NULL) {
+		prowl_log(LOG_DEBUG, "ipc_send: fd %d is not a client", fd);
+		return;
+	}
+	if (len > UINT32_MAX - 4)
+		return;
+
+	total = 4 + len;
+	pending = c->out_len - c->out_off;
+	if (pending > IPC_OUT_MAX || total > IPC_OUT_MAX - pending) {
+		prowl_log(LOG_WARNING,
+		    "ipc: output queue full for fd %d, dropping message", fd);
+		return;
+	}
+
+	/* Reclaim the already-sent head before growing the buffer. */
+	if (c->out_off > 0) {
+		memmove(c->out, c->out + c->out_off, pending);
+		c->out_len = pending;
+		c->out_off = 0;
+	}
+
+	nb = realloc(c->out, c->out_len + total);
+	if (nb == NULL) {
+		prowl_log(LOG_ERR, "ipc_send: out of memory");
+		return;
+	}
+	c->out = nb;
+
+	nlen = htonl((uint32_t)len);
+	memcpy(c->out + c->out_len, &nlen, 4);
+	memcpy(c->out + c->out_len + 4, json, len);
+	c->out_len += total;
+
+	/* If EVFILT_WRITE is armed, it will drain the queue in order. */
+	if (!c->want_write)
+		ipc_flush_client(c);
+}
+
+/*
+ * EVFILT_WRITE fired: the socket has room again.
+ */
+void
+ipc_write_ready(int fd)
+{
+	ipc_client_t *c;
+
+	c = ipc_get_client(fd);
+	if (c == NULL)
+		return;
+	ipc_flush_client(c);
 }
 
 static void
 ipc_send_ok(int fd, const char *id, const char *result_json)
 {
-	char buf[IPC_MSG_MAX];
 	char eid[512];
+	char *buf;
+	size_t cap;
 	int n;
 
 	json_escape_str(id != NULL ? id : "", eid, sizeof(eid));
 
+	/* Room for the envelope plus the result; results can be large. */
+	cap = strlen(eid) + 64 +
+	    (result_json != NULL ? strlen(result_json) : 0);
+	buf = malloc(cap);
+	if (buf == NULL) {
+		ipc_send_error(fd, id, "out of memory");
+		return;
+	}
+
 	if (result_json != NULL)
-		n = snprintf(buf, sizeof(buf),
+		n = snprintf(buf, cap,
 		    "{\"id\":\"%s\",\"status\":\"ok\",\"result\":%s}",
 		    eid, result_json);
 	else
-		n = snprintf(buf, sizeof(buf),
+		n = snprintf(buf, cap,
 		    "{\"id\":\"%s\",\"status\":\"ok\"}",
 		    eid);
 
-	if (n > 0 && (size_t)n < sizeof(buf))
+	if (n > 0 && (size_t)n < cap)
 		ipc_send(fd, buf, (size_t)n);
+	else	/* never leave the client waiting for a reply that was lost */
+		ipc_send_error(fd, id, "response too large");
+	free(buf);
 }
 
 static void
@@ -320,6 +425,7 @@ run_sysrc(const char *varname, const char *value)
 		/* Child: close kqueue fd */
 		if (g_kqueue_fd >= 0)
 			close(g_kqueue_fd);
+		prowl_reset_signals();
 		char *argv[] = {
 			(char *)(uintptr_t)"/usr/sbin/sysrc",
 			assignment,
@@ -366,13 +472,41 @@ resolve_target(const ucl_object_t *req, int fd, const char *id)
 /* Command handlers                                                     */
 /* ------------------------------------------------------------------ */
 
+/*
+ * Append n bytes of s to a growing NUL-terminated buffer.  Returns -1 if
+ * the result would exceed IPC_REPLY_MAX or memory is exhausted.
+ */
+static int
+rbuf_append(char **buf, size_t *cap, size_t *used, const char *s, size_t n)
+{
+	char *nb;
+	size_t ncap;
+
+	if (n > IPC_REPLY_MAX || *used > IPC_REPLY_MAX - n)
+		return (-1);
+	if (*used + n + 1 > *cap) {
+		ncap = *cap == 0 ? 4096 : *cap;
+		while (ncap < *used + n + 1)
+			ncap *= 2;
+		nb = realloc(*buf, ncap);
+		if (nb == NULL)
+			return (-1);
+		*buf = nb;
+		*cap = ncap;
+	}
+	memcpy(*buf + *used, s, n);
+	*used += n;
+	(*buf)[*used] = '\0';
+	return (0);
+}
+
 static void
 cmd_list(int fd, const char *id, const ucl_object_t *req)
 {
 	job_t *job;
-	char buf[IPC_MSG_MAX];
+	char *buf = NULL;
+	size_t cap = 0, used = 0;
 	char jbuf[4096];
-	size_t used = 0;
 	bool first = true;
 	const ucl_object_t *filt, *sf;
 	const char *state_filter = NULL;
@@ -384,7 +518,8 @@ cmd_list(int fd, const char *id, const ucl_object_t *req)
 			state_filter = ucl_object_tostring(sf);
 	}
 
-	used += (size_t)snprintf(buf + used, sizeof(buf) - used, "[");
+	if (rbuf_append(&buf, &cap, &used, "[", 1) == -1)
+		goto toolarge;
 
 	TAILQ_FOREACH(job, &g_jobs, entries) {
 		int n;
@@ -393,28 +528,30 @@ cmd_list(int fd, const char *id, const ucl_object_t *req)
 		    strcmp(job_state_str(job->state), state_filter) != 0)
 			continue;
 
-		if (!first) {
-			if (used + 1 >= sizeof(buf))
-				break;
-			buf[used++] = ',';
-		}
-		first = false;
-
 		n = job_to_json(job, jbuf, sizeof(jbuf));
-		if (n <= 0 || used + (size_t)n >= sizeof(buf)) {
+		if (n <= 0 || (size_t)n >= sizeof(jbuf)) {
 			prowl_log(LOG_WARNING,
-			    "cmd_list: response buffer full, list truncated");
-			break;
+			    "cmd_list: job %s does not fit its buffer, "
+			    "skipped", job->label);
+			continue;
 		}
-		memcpy(buf + used, jbuf, (size_t)n);
-		used += (size_t)n;
+		if (!first && rbuf_append(&buf, &cap, &used, ",", 1) == -1)
+			goto toolarge;
+		first = false;
+		if (rbuf_append(&buf, &cap, &used, jbuf, (size_t)n) == -1)
+			goto toolarge;
 	}
 
-	if (used + 1 < sizeof(buf))
-		buf[used++] = ']';
-	buf[used] = '\0';
+	if (rbuf_append(&buf, &cap, &used, "]", 1) == -1)
+		goto toolarge;
 
 	ipc_send_ok(fd, id, buf);
+	free(buf);
+	return;
+
+toolarge:
+	free(buf);
+	ipc_send_error(fd, id, "job list too large");
 }
 
 static void
@@ -908,7 +1045,7 @@ ipc_init(void)
 
 	unlink(g_sock_path);
 
-	fd = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
+	fd = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
 	if (fd == -1) {
 		prowl_log(LOG_ERR, "ipc socket: %m");
 		return (-1);
@@ -918,26 +1055,35 @@ ipc_init(void)
 	sun.sun_family = AF_UNIX;
 	strlcpy(sun.sun_path, g_sock_path, sizeof(sun.sun_path));
 
-	if (bind(fd, (struct sockaddr *)&sun, sizeof(sun)) == -1) {
-		prowl_log(LOG_ERR, "ipc bind %s: %m", g_sock_path);
-		close(fd);
-		return (-1);
-	}
-
-	/*
-	 * Use fd-based fchmod/fchown rather than path-based chmod/chown.
-	 * Path-based calls have a TOCTOU window between bind(2) and the
-	 * permission update where an attacker could swap the socket node;
-	 * operating on the fd we hold eliminates that race entirely.
-	 */
 	{
 		struct group *gr = getgrnam("wheel");
+		mode_t oumask;
+		int bind_rc, bind_errno;
+
 		if (gr != NULL)
 			g_wheel_gid = gr->gr_gid;
-		if (fchown(fd, 0, g_wheel_gid) == -1)
-			prowl_log(LOG_WARNING, "ipc_init: fchown: %m");
-		if (fchmod(fd, 0660) == -1)
-			prowl_log(LOG_WARNING, "ipc_init: fchmod: %m");
+
+		/*
+		 * fchmod(2)/fchown(2) do not work on a socket descriptor
+		 * (EBADF), so the mode is set through the umask: the node is
+		 * created 0660 and is never more permissive than that.  The
+		 * group is then set by path; the run directory is root-owned
+		 * and not writable by others (secure_mkdir), so nobody else
+		 * can replace the node, and lchown does not follow symlinks.
+		 */
+		oumask = umask(0117);
+		bind_rc = bind(fd, (struct sockaddr *)&sun, sizeof(sun));
+		bind_errno = errno;
+		(void)umask(oumask);
+		if (bind_rc == -1) {
+			errno = bind_errno;
+			prowl_log(LOG_ERR, "ipc bind %s: %m", g_sock_path);
+			close(fd);
+			return (-1);
+		}
+		if (lchown(g_sock_path, 0, g_wheel_gid) == -1)
+			prowl_log(LOG_WARNING, "ipc_init: lchown %s: %m",
+			    g_sock_path);
 	}
 
 	if (listen(fd, IPC_MAX_CLIENTS) == -1) {
@@ -986,7 +1132,7 @@ ipc_accept(void)
 	int cfd, i;
 
 	cfd = accept4(ipc_listen_fd, (struct sockaddr *)&sun, &sunlen,
-	    SOCK_NONBLOCK);
+	    SOCK_NONBLOCK | SOCK_CLOEXEC);
 	if (cfd == -1) {
 		if (errno != EAGAIN && errno != EWOULDBLOCK)
 			prowl_log(LOG_WARNING, "ipc accept: %m");
@@ -1018,6 +1164,12 @@ ipc_accept(void)
 
 	g_clients[i].fd = cfd;
 	g_clients[i].buf_used = 0;
+	g_clients[i].is_subscriber = false;
+	g_clients[i].event_filter[0] = '\0';
+	g_clients[i].out = NULL;
+	g_clients[i].out_len = 0;
+	g_clients[i].out_off = 0;
+	g_clients[i].want_write = false;
 	g_clients[i].active = true;
 
 	EV_SET(&kev, (uintptr_t)cfd, EVFILT_READ, EV_ADD, 0, 0, NULL);
@@ -1040,6 +1192,12 @@ ipc_close_client(int fd)
 
 	for (i = 0; i < IPC_MAX_CLIENTS; i++) {
 		if (g_clients[i].active && g_clients[i].fd == fd) {
+			free(g_clients[i].out);
+			g_clients[i].out = NULL;
+			g_clients[i].out_len = 0;
+			g_clients[i].out_off = 0;
+			g_clients[i].want_write = false;
+			g_clients[i].is_subscriber = false;
 			g_clients[i].active = false;
 			g_clients[i].fd = -1;
 			g_clients[i].buf_used = 0;

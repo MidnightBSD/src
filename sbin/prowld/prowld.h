@@ -112,7 +112,8 @@ static_assert((__alignof__(struct job) & TIMER_MASK) == 0,
 
 /* IPC */
 #define IPC_MAX_CLIENTS		32
-#define IPC_MSG_MAX		65536	/* max JSON message size */
+#define IPC_MSG_MAX		65536	/* max JSON request size */
+#define IPC_REPLY_MAX		(4 * 1024 * 1024) /* max JSON reply size */
 
 /* Job types */
 typedef enum {
@@ -301,6 +302,8 @@ struct job {
 
 	/* Timer tracking */
 	bool		throttle_timer_active;
+	bool		restart_hold;	/* waiting out a restart back-off */
+	int		quick_fails;	/* consecutive short runs */
 	bool		stop_timer_active;
 	bool		watchdog_timer_active;
 	time_t		watchdog_last_ping;
@@ -331,6 +334,16 @@ typedef struct ipc_client {
 	/* Subscriptions */
 	bool		is_subscriber;
 	char		event_filter[PROWL_LABEL_MAX];
+
+	/*
+	 * Pending output.  Whole frames (4-byte length + JSON) are appended
+	 * to out and drained from out_off; EVFILT_WRITE is armed only while
+	 * data is left over because the socket buffer was full.
+	 */
+	char		*out;
+	size_t		out_len;	/* bytes queued in out */
+	size_t		out_off;	/* bytes of out already sent */
+	bool		want_write;	/* EVFILT_WRITE registered */
 } ipc_client_t;
 
 /* Prowld daemon configuration */
@@ -347,6 +360,7 @@ extern int		 g_kqueue_fd;
 extern volatile bool	 g_shutdown;
 extern volatile bool	 g_reload;
 extern int		 g_current_starts;
+extern bool		 g_is_init;		/* running as PID 1 */
 
 /*
  * Runtime path globals.  Defaults match the compile-time macros but may be
@@ -388,6 +402,13 @@ int	unit_load_file(const char *);
 /* ---- rcshim.c ---- */
 int	rcshim_scan_dir(const char *);
 bool	rcconf_is_enabled(const char *, bool);
+bool	rcconf_var_is_enabled(const char *, bool);
+
+/* ---- pid1.c ---- */
+void	pid1_open_console(void);
+void	pid1_shutdown(int) __dead2;
+void	pid1_single_user(void) __dead2;
+int	pid1_load_ttys(void);
 
 /* ---- dag.c ---- */
 int	dag_build(void);
@@ -395,6 +416,7 @@ void	dag_schedule_ready(void);
 
 /* ---- supervisor.c ---- */
 void	supervisor_init(void);
+void	prowl_reset_signals(void);
 void	timer_state_load(void);
 void	timer_state_save(void);
 int	supervisor_start(job_t *);
@@ -429,6 +451,7 @@ int	ipc_init(void);
 void	ipc_shutdown(void);
 void	ipc_accept(void);
 void	ipc_read_client(int);
+void	ipc_write_ready(int);
 void	ipc_close_client(int);
 void	ipc_broadcast_event(const char *, const char *, const char *);
 

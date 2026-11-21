@@ -63,7 +63,11 @@ volatile bool		 g_reload = false;
 int			 g_current_starts = 0;
 
 static int		 g_ipc_listen_fd = -1;
-static bool		 g_is_init = false;	/* running as PID 1 */
+/* run dir, pidfile and IPC are set up */
+static bool		 g_runtime_done = false;
+static bool		 g_single_user = false;	/* PID 1: go to single-user */
+static int		 g_howto = RB_AUTOBOOT;	/* PID 1: reboot(2) argument */
+bool			 g_is_init = false;	/* running as PID 1 */
 
 /* Runtime path globals — defaults match compile-time macros */
 char	g_run_dir[PROWL_PATH_MAX]      = PROWLD_RUN_DIR;
@@ -223,7 +227,7 @@ secure_mkdir(const char *path, mode_t mode)
 	return (0);
 }
 
-static void
+static int
 ensure_dirs(void)
 {
 	/*
@@ -245,7 +249,7 @@ ensure_dirs(void)
 			prowl_log(LOG_ERR,
 			    "cannot safely create or validate run directory "
 			    "%s; refusing to start", g_run_dir);
-			exit(1);
+			return (-1);
 		}
 	}
 
@@ -256,6 +260,59 @@ ensure_dirs(void)
 	(void)secure_mkdir(g_log_dir,       0750); /* daemon logs */
 	(void)secure_mkdir(g_job_log_dir,   0750); /* per-job logs */
 	(void)secure_mkdir(g_generated_dir, 0755); /* generated units */
+	return (0);
+}
+
+/*
+ * Create the run directory, write the pidfile and open the IPC socket.
+ * Under init(8) this must wait until the root file system is writable and
+ * the rc.d "var" and "cleanvar" scripts have finished: they would otherwise
+ * hide or delete what is created here.  Returns -1 if no run directory
+ * could be made.
+ */
+static int
+runtime_up(void)
+{
+	if (g_runtime_done)
+		return (0);
+	g_runtime_done = true;
+
+	if (ensure_dirs() == -1)
+		return (-1);
+	write_pidfile();
+
+	/*
+	 * IPC is non-fatal: on read-only or constrained media the socket
+	 * directory may not be available.  prowld still manages services;
+	 * management commands will be unavailable until the socket is up.
+	 */
+	if (ipc_init() == -1)
+		prowl_log(LOG_WARNING,
+		    "IPC socket unavailable; management commands disabled");
+	else
+		g_ipc_listen_fd = ipc_listen_fd;
+
+	if (g_is_init)
+		timer_state_load();
+	return (0);
+}
+
+/*
+ * PID 1 only: bring the runtime state up once FILESYSTEMS has run.
+ */
+static void
+check_runtime(void)
+{
+	job_t *fs;
+
+	if (!g_is_init || g_runtime_done)
+		return;
+	fs = job_find_by_provides("FILESYSTEMS");
+	if (fs != NULL && fs->state != JOB_STATE_COMPLETED &&
+	    fs->state != JOB_STATE_FAILED)
+		return;
+	if (runtime_up() == -1)
+		prowl_log(LOG_ERR, "running without a control socket");
 }
 
 static void
@@ -354,10 +411,21 @@ static void
 setup_kqueue_signals(void)
 {
 	struct kevent kev;
-	int sigs[] = { SIGTERM, SIGINT, SIGHUP, SIGCHLD, 0 };
+	int sigs[] = { SIGTERM, SIGINT, SIGHUP, SIGCHLD, SIGUSR1, SIGUSR2, 0 };
 
 	for (int i = 0; sigs[i] != 0; i++) {
-		signal(sigs[i], SIG_IGN);
+		/* SIGUSR1/SIGUSR2 (halt, power off) are init(8)'s signals */
+		if (!g_is_init && (sigs[i] == SIGUSR1 || sigs[i] == SIGUSR2))
+			continue;
+		/*
+		 * EVFILT_SIGNAL sees a signal even when it is ignored, so the
+		 * terminating signals are ignored to keep their default action
+		 * from killing us.  SIGCHLD must not be SIG_IGN: that makes the
+		 * kernel discard children's exit status (no zombie, ECHILD
+		 * from waitpid), so supervisor_reap() would never run.  Its
+		 * default action is already "ignore".
+		 */
+		signal(sigs[i], sigs[i] == SIGCHLD ? SIG_DFL : SIG_IGN);
 		EV_SET(&kev, (uintptr_t)sigs[i], EVFILT_SIGNAL,
 		    EV_ADD, 0, 0, NULL);
 		if (kevent(g_kqueue_fd, &kev, 1, NULL, 0, NULL) == -1)
@@ -371,8 +439,32 @@ handle_signal(int sig)
 {
 	switch (sig) {
 	case SIGTERM:
+		/*
+		 * Under init(8) SIGTERM means "go to single-user mode".  It
+		 * is what rc.subr's stop_boot() sends to abort a boot.
+		 */
+		if (g_is_init) {
+			prowl_log(LOG_NOTICE, "SIGTERM: single-user mode");
+			g_single_user = true;
+		} else
+			prowl_log(LOG_NOTICE,
+			    "received signal %d, shutting down", sig);
+		g_shutdown = true;
+		break;
 	case SIGINT:
-		prowl_log(LOG_NOTICE, "received signal %d, shutting down", sig);
+		prowl_log(LOG_NOTICE, "received signal %d, %s", sig,
+		    g_is_init ? "rebooting" : "shutting down");
+		g_howto = RB_AUTOBOOT;
+		g_shutdown = true;
+		break;
+	case SIGUSR1:
+		prowl_log(LOG_NOTICE, "SIGUSR1: halting");
+		g_howto = RB_HALT;
+		g_shutdown = true;
+		break;
+	case SIGUSR2:
+		prowl_log(LOG_NOTICE, "SIGUSR2: powering off");
+		g_howto = RB_HALT | RB_POWEROFF;
 		g_shutdown = true;
 		break;
 	case SIGHUP:
@@ -506,9 +598,15 @@ startup_load(void)
 	rcshim_scan_dir(RCD_DIR_BASE);
 	rcshim_scan_dir(RCD_DIR_LOCAL);
 
+	/* init(8) respawns gettys from /etc/ttys; so do we */
+	if (g_is_init)
+		(void)pid1_load_ttys();
+
 	dag_build();
 
-	timer_state_load();
+	/* As init the state directory is not writable yet: see runtime_up() */
+	if (!g_is_init)
+		timer_state_load();
 
 	/* Initialize job timers and handle catch-up */
 	TAILQ_FOREACH(job, &g_jobs, entries) {
@@ -600,6 +698,10 @@ main_loop(void)
 				else
 					ipc_read_client((int)kev->ident);
 				break;
+			case EVFILT_WRITE:
+				/* IPC client socket has room again */
+				ipc_write_ready((int)kev->ident);
+				break;
 			case EVFILT_PROC:
 				handle_proc_event(kev);
 				break;
@@ -613,39 +715,17 @@ main_loop(void)
 
 		/* After processing events, promote any newly-ready jobs */
 		dag_schedule_ready();
+		check_runtime();
 	}
 }
 
 int
 main(int argc, char *argv[])
 {
-	int ch;
+	int ch, i;
 	bool debug = false;
+	bool single = false;
 	const char *override_dir = NULL;
-
-	while ((ch = getopt(argc, argv, "ds:")) != -1) {
-		switch (ch) {
-		case 'd':
-			debug = true;
-			break;
-		case 's':
-			override_dir = optarg;
-			break;
-		default:
-			usage();
-		}
-	}
-	argc -= optind;
-	argv += optind;
-
-	if (argc != 0)
-		usage();
-
-	openlog("prowld", LOG_PID | LOG_NDELAY, LOG_DAEMON);
-
-	/* Apply explicit runtime directory override before anything else. */
-	if (override_dir != NULL)
-		setup_runtime_paths(override_dir);
 
 	/*
 	 * If we are PID 1 (kernel executed us directly as init), skip
@@ -654,23 +734,64 @@ main(int argc, char *argv[])
 	 * so early boot messages are visible on the console.
 	 */
 	g_is_init = (getpid() == 1);
+
+	if (g_is_init) {
+		/*
+		 * The kernel passes init its boot flags ("-s" for single-user,
+		 * "-v", ...).  They are not prowld options: -s here means
+		 * single-user, not a run directory.
+		 */
+		for (i = 1; i < argc; i++) {
+			if (strcmp(argv[i], "-s") == 0)
+				single = true;
+		}
+		pid1_open_console();
+		debug = true;
+		g_config.debug = true;
+	} else {
+		while ((ch = getopt(argc, argv, "ds:")) != -1) {
+			switch (ch) {
+			case 'd':
+				debug = true;
+				break;
+			case 's':
+				override_dir = optarg;
+				break;
+			default:
+				usage();
+			}
+		}
+		argc -= optind;
+		argv += optind;
+
+		if (argc != 0)
+			usage();
+	}
+
+	openlog("prowld", LOG_PID | LOG_NDELAY, LOG_DAEMON);
+
+	/* Apply explicit runtime directory override before anything else. */
+	if (override_dir != NULL)
+		setup_runtime_paths(override_dir);
+
 	if (g_is_init) {
 		prowl_log(LOG_NOTICE, "running as PID 1 (init)");
-		debug = true;
+		if (single)
+			pid1_single_user();	/* does not return */
 	} else if (!debug && daemon(0, 0) == -1) {
 		err(1, "daemon");
 	}
 
 	g_kqueue_fd = kqueue();
-	if (g_kqueue_fd == -1)
-		err(1, "kqueue");
+	if (g_kqueue_fd == -1) {
+		/* Exiting as PID 1 would panic the kernel. */
+		prowl_log(LOG_ERR, "kqueue: %m");
+		if (g_is_init)
+			pid1_single_user();	/* does not return */
+		exit(1);
+	}
+	(void)fcntl(g_kqueue_fd, F_SETFD, FD_CLOEXEC);
 
-	/*
-	 * ensure_dirs() auto-detects read-only media and falls back to
-	 * /tmp/prowld if the standard run dir is not writable.
-	 */
-	ensure_dirs();
-	write_pidfile();
 	setup_kqueue_signals();
 	load_config();
 	supervisor_init();
@@ -680,36 +801,35 @@ main(int argc, char *argv[])
 		g_config.debug = true;
 
 	/*
-	 * IPC is non-fatal: on read-only or constrained media the socket
-	 * directory may not be available.  prowld still manages services;
-	 * management commands will be unavailable until the socket is up.
+	 * As a daemon the run directory, pidfile and IPC socket come up
+	 * now.  As init the root file system is still read-only and the
+	 * rc.d scripts have yet to run, so main_loop() does this later,
+	 * through check_runtime().
 	 */
-	if (ipc_init() == -1)
-		prowl_log(LOG_WARNING,
-		    "IPC socket unavailable; management commands disabled");
-	else
-		g_ipc_listen_fd = ipc_listen_fd;
+	if (!g_is_init && runtime_up() == -1)
+		exit(1);
 
 	startup_load();
 	main_loop();
 
-	/* Orderly shutdown */
 	prowl_log(LOG_NOTICE, "prowld stopping");
+
+	/*
+	 * As init, exiting would panic the kernel: take the system down,
+	 * or go to single-user mode, instead.
+	 */
+	if (g_is_init) {
+		remove_pidfile();
+		if (g_single_user)
+			pid1_single_user();	/* does not return */
+		pid1_shutdown(g_howto);		/* does not return */
+	}
+
+	/* Orderly shutdown */
 	supervisor_shutdown_all();
 	ipc_shutdown();
 	remove_pidfile();
 	closelog();
-
-	/*
-	 * If we are PID 1, exiting would panic the kernel.  Trigger a
-	 * system halt instead.  This is the last resort — under normal
-	 * operation g_shutdown is only set by SIGTERM/SIGINT which on a
-	 * real system would come from a shutdown(8) invocation.
-	 */
-	if (g_is_init) {
-		reboot(RB_HALT);
-		/* NOTREACHED */
-	}
 
 	return (0);
 }
@@ -719,12 +839,15 @@ void
 prowl_log(int priority, const char *fmt, ...)
 {
 	va_list ap;
+	int saved_errno = errno;
 
 	va_start(ap, fmt);
 	vsyslog(priority, fmt, ap);
 	va_end(ap);
 
 	if (g_config.debug) {
+		/* syslog may have changed errno; %m must see the caller's */
+		errno = saved_errno;
 		va_start(ap, fmt);
 		vfprintf(stderr, fmt, ap);
 		va_end(ap);

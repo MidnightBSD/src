@@ -297,12 +297,12 @@ arm_boot_delay_timer(job_t *job)
  * Low bit of ident is 0: throttle timer.
  */
 static void
-arm_throttle_timer(job_t *job)
+arm_throttle_timer(job_t *job, int secs)
 {
 	struct kevent kev;
 	int64_t ms;
 
-	ms = (int64_t)job->throttle_interval * 1000;
+	ms = (int64_t)secs * 1000;
 	if (ms <= 0)
 		ms = DEFAULT_THROTTLE_INT * 1000;
 
@@ -489,6 +489,28 @@ notify_socket_close(job_t *job)
 }
 
 /*
+ * Undo the signal setup prowld needs for itself before exec'ing a child.
+ * Ignored dispositions survive execve(2) and the signal mask is inherited,
+ * so without this every service would start with SIGTERM, SIGINT, SIGHUP
+ * and SIGCHLD ignored and could not be stopped with SIGTERM.
+ * Async-signal-safe: only signal(2) and sigprocmask(2).
+ */
+void
+prowl_reset_signals(void)
+{
+	sigset_t set;
+	int sig;
+
+	for (sig = 1; sig < NSIG; sig++) {
+		if (sig == SIGKILL || sig == SIGSTOP)
+			continue;
+		(void)signal(sig, SIG_DFL);
+	}
+	sigemptyset(&set);
+	(void)sigprocmask(SIG_SETMASK, &set, NULL);
+}
+
+/*
  * Redirect a standard file descriptor to a path.
  * Called in the child after fork(), before the new program is loaded.
  * Must be async-signal-safe: no malloc, no printf.
@@ -632,6 +654,8 @@ child_setup_and_exec(job_t *job)
 	char listen_fdnames_env[600];
 	int i, argc, envc;
 
+	prowl_reset_signals();
+
 	/*
 	 * chroot(2) must be called as root before drop_privileges().
 	 * After chroot we always chdir("/") to ensure the process cannot
@@ -711,10 +735,27 @@ child_setup_and_exec(job_t *job)
 	}
 
 	if (job->type == JOB_TYPE_RCSHIM) {
-		/* rc-shim invocation: script start */
+		char rcpid_env[32];
+
+		/*
+		 * rc-shim invocation.  When prowld is the init process it is
+		 * doing what /etc/rc does at boot, so give the script the
+		 * same context: autoboot=yes (fsck_start tests it), the
+		 * "faststart" argument, and RC_PID naming the process that
+		 * stop_boot() must SIGTERM to abort the boot.  Otherwise this
+		 * is a manual start, which gets a plain "start".
+		 */
+		if (g_is_init && envc + 3 <= PROWL_ENV_MAX + 6) {
+			snprintf(rcpid_env, sizeof(rcpid_env), "RC_PID=%d",
+			    (int)getppid());
+			envp[envc++] = (char *)(uintptr_t)"autoboot=yes";
+			envp[envc++] = (char *)(uintptr_t)"rc_fast=yes";
+			envp[envc++] = rcpid_env;
+		}
 		envp[envc] = NULL;
 		argv[0] = job->rcshim_path;
-		argv[1] = (char *)(uintptr_t)"start";
+		argv[1] = (char *)(uintptr_t)(g_is_init ? "faststart" :
+		    "start");
 		argv[2] = NULL;
 		execve(argv[0], argv, envp);
 		_exit(127);
@@ -815,6 +856,7 @@ supervisor_start(job_t *job)
 
 	prowl_log(LOG_NOTICE, "starting %s", job->label);
 	job->started_at = time(NULL);
+	job->restart_hold = false;
 	job_set_state(job, JOB_STATE_STARTING);
 
 	resolve_job_privileges(job);
@@ -863,10 +905,16 @@ supervisor_start(job_t *job)
 	if (use_notify) {
 		/* Wait for READY=1; use exit_timeout as the deadline */
 		arm_notify_timeout_timer(job);
-	} else {
+	} else if (job->type != JOB_TYPE_ONESHOT &&
+	    job->type != JOB_TYPE_RCSHIM) {
 		/* Promote to RUNNING after throttle_interval seconds alive */
-		arm_throttle_timer(job);
+		arm_throttle_timer(job, job->throttle_interval);
 	}
+	/*
+	 * Oneshots and rc-shims have no readiness timer: they stay STARTING
+	 * until they exit, so jobs that depend on them (an fsck, a mount)
+	 * wait for the work to finish rather than for a timeout.
+	 */
 
 	if (job->watchdog_sec > 0) {
 		job->watchdog_last_ping = time(NULL);
@@ -1069,6 +1117,7 @@ supervisor_mdns_register(job_t *job)
 	if (pid == 0) {
 		/* Child */
 		if (g_kqueue_fd >= 0) close(g_kqueue_fd);
+		prowl_reset_signals();
 		/* Redirect output to null to avoid cluttering logs */
 		int fd = open("/dev/null", O_WRONLY);
 		if (fd >= 0) {
@@ -1107,6 +1156,13 @@ void
 supervisor_handle_throttle(job_t *job)
 {
 	job->throttle_timer_active = false;
+
+	/* Restart hold-off over: the job may be scheduled again. */
+	if (job->restart_hold) {
+		job->restart_hold = false;
+		dag_schedule_ready();
+		return;
+	}
 
 	if (job->state != JOB_STATE_STARTING)
 		return;
@@ -1436,14 +1492,16 @@ supervisor_reap(pid_t pid, int status)
 	job->exited_at = time(NULL);
 	job->pid = -1;
 
+	/* A job that dies while STARTING still held a start slot. */
+	if (job->state == JOB_STATE_STARTING && g_current_starts > 0)
+		g_current_starts--;
+
 	/* Cancel throttle timer if still active */
 	if (job->throttle_timer_active) {
 		EV_SET(&kev, timer_ident(job, TIMER_THROTTLE), EVFILT_TIMER,
 		    EV_DELETE, 0, 0, NULL);
 		kevent(g_kqueue_fd, &kev, 1, NULL, 0, NULL);
 		job->throttle_timer_active = false;
-		if (g_current_starts > 0)
-			g_current_starts--;
 	}
 
 	cancel_watchdog_timer(job);
@@ -1457,8 +1515,14 @@ supervisor_reap(pid_t pid, int status)
 		prowl_log(LOG_NOTICE, "job %s killed by signal %d",
 		    job->label, WTERMSIG(status));
 
-	/* Oneshot completes on clean exit */
-	if (job->type == JOB_TYPE_ONESHOT &&
+	/*
+	 * Oneshot completes on clean exit.  So does an rc-shim start: an
+	 * rc.d script runs "start" to completion (daemonizing the service
+	 * if it has one), so a clean exit means dependents may proceed.
+	 */
+	if ((job->type == JOB_TYPE_ONESHOT ||
+	    (job->type == JOB_TYPE_RCSHIM &&
+	    job->state == JOB_STATE_STARTING)) &&
 	    WIFEXITED(status) && WEXITSTATUS(status) == 0) {
 		job_set_state(job, JOB_STATE_COMPLETED);
 		dag_schedule_ready();
@@ -1483,14 +1547,34 @@ supervisor_reap(pid_t pid, int status)
 	}
 
 	/* Unexpected exit */
-	job->restart_count++;
-
 	if (should_restart(job, status)) {
+		int base, delay, shift;
+
+		job->restart_count++;
+
+		/*
+		 * Hold the job off for throttle_interval seconds before it
+		 * is eligible again.  A job that keeps dying within that
+		 * interval backs off exponentially, up to 16 times the
+		 * interval, so a broken service cannot respawn in a tight
+		 * loop.  A run that lasted longer resets the backoff.
+		 */
+		base = job->throttle_interval > 0 ?
+		    job->throttle_interval : DEFAULT_THROTTLE_INT;
+		if (job->exited_at - job->started_at < base) {
+			if (job->quick_fails < 4)
+				job->quick_fails++;
+		} else
+			job->quick_fails = 0;
+		shift = job->quick_fails > 0 ? job->quick_fails - 1 : 0;
+		delay = base << shift;
+
 		prowl_log(LOG_NOTICE,
-		    "job %s will restart (attempt %d)",
-		    job->label, job->restart_count);
+		    "job %s will restart in %ds (attempt %d)",
+		    job->label, delay, job->restart_count);
 		job_set_state(job, JOB_STATE_LOADED);
-		arm_throttle_timer(job);
+		job->restart_hold = true;
+		arm_throttle_timer(job, delay);
 	} else {
 		job_set_state(job, JOB_STATE_FAILED);
 		prowl_log(LOG_ERR, "job %s entered failed state",

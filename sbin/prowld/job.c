@@ -212,13 +212,32 @@ job_dep_satisfied(const job_t *job, const dep_entry_t *dep)
 {
 	job_t *provider;
 
-	(void)job;
 	provider = job_find_by_provides(dep->name);
-	if (provider == NULL)
-		return (!dep->hard); /* soft dep: missing provider is OK */
+	if (provider == NULL) {
+		/*
+		 * Soft dep: missing provider is OK.  rcorder(8) also ignores
+		 * a REQUIRE that nothing provides, so rc-shims follow suit.
+		 */
+		return (!dep->hard || job->type == JOB_TYPE_RCSHIM);
+	}
 
-	return (provider->state == JOB_STATE_RUNNING ||
-	    provider->state == JOB_STATE_COMPLETED);
+	if (provider->state == JOB_STATE_RUNNING ||
+	    provider->state == JOB_STATE_COMPLETED)
+		return (true);
+
+	/*
+	 * rc(8) semantics: a REQUIRE only orders scripts.  A script that is
+	 * disabled in rc.conf, masked, or that failed does not hold back the
+	 * scripts that require it.  Native units keep the strict rule.
+	 */
+	if (job->type == JOB_TYPE_RCSHIM &&
+	    provider->type == JOB_TYPE_RCSHIM &&
+	    (provider->state == JOB_STATE_DISABLED ||
+	    provider->state == JOB_STATE_MASKED ||
+	    provider->state == JOB_STATE_FAILED))
+		return (true);
+
+	return (false);
 }
 
 /*

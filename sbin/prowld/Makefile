@@ -11,7 +11,8 @@ SRCS=		prowld.c \
 		dag.c \
 		supervisor.c \
 		socket_activation.c \
-		ipc.c
+		ipc.c \
+		pid1.c
 MAN=		prowld.8 prowld.conf.5 prowl-unit.5
 
 CFLAGS+=	-I${SRCTOP}/contrib/libucl/include

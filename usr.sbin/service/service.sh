@@ -169,10 +169,22 @@ else
 	exit 1
 fi
 
-if prowl_available; then
-	if ${PROWLCTL} status "${script}" > /dev/null 2>&1; then
-		exec ${PROWLCTL} "$@" "${script}"
-	fi
+# Hand the standard rc verbs to prowld.  Anything else (arguments that
+# devd passes to scripts such as power_profile, extra_commands, ...) is for
+# the rc.d script itself, which prowlctl does not know.  The same goes
+# for a verb that carries extra arguments (devd's "quietstart '?...'").
+if prowl_available && [ $# -eq 1 ]; then
+	case "$1" in
+	start|stop|restart|reload|status|\
+	faststart|faststop|fastrestart|fastreload|faststatus|\
+	quietstart|quietstop|quietrestart|quietreload|quietstatus|\
+	forcestart|forcestop|forcerestart|forcereload|forcestatus|\
+	onestart|onestop|onerestart|onereload|onestatus)
+		if ${PROWLCTL} status "${script}" > /dev/null 2>&1; then
+			exec ${PROWLCTL} "$@" "${script}"
+		fi
+		;;
+	esac
 fi
 
 cd /
