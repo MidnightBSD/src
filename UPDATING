@@ -1,5 +1,14 @@
 Updating Information for MidnightBSD users.
 
+20261121:
+	NDIS Windows network driver compatibility support has been removed,
+	along with ndiscvt, ndisgen and ndis_events.  Use a native network
+	driver or supported network adapter instead.  Remove NDIS driver
+	module entries from /boot/loader.conf and kld_list in /etc/rc.conf,
+	and remove options NDISAPI and device ndis from custom kernel
+	configurations.  Rebuild and install world and the kernel, then
+	reboot.  USB urndis and Hyper-V networking are unaffected.
+
 20261119:
 	The KTLS software backend is now built into kernels with
 	options KERN_TLS, and ktls_ocf.ko has been removed.  Remove
