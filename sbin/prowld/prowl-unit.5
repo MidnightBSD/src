@@ -322,8 +322,12 @@ and
 variables from
 .Xr rc.conf 5 .
 .Bl -tag -width "local_unbound.unit" -compact
+.It Pa aged.unit
+.Xr aged 8
 .It Pa auditd.unit
 .Xr auditd 8
+.It Pa auditdistd.unit
+.Xr auditdistd 8
 .It Pa automountd.unit
 .Xr automountd 8
 .It Pa autounmountd.unit
@@ -373,6 +377,9 @@ template, started by
 watched through its pidfile
 .It Pa ipmon.unit
 .Xr ipmon 8
+.It Pa iscsictl.unit
+.Xr iscsictl 8 ,
+a oneshot
 .It Pa iscsid.unit
 .Xr iscsid 8
 .It Pa keyserv.unit
@@ -393,6 +400,9 @@ mdnsd
 .Xr moused 8
 for the default mouse
 .Pq Va moused_port
+.It Pa msgs.unit
+.Xr msgs 1 ,
+a oneshot
 .It Pa natd.unit
 .Xr natd 8 ,
 started only on request
@@ -435,6 +445,9 @@ a oneshot
 .Xr rwhod 8
 .It Pa sdpd.unit
 .Xr sdpd 8
+.It Pa sppp.unit
+.Xr spppcontrol 8 ,
+a oneshot
 .It Pa sshd.unit
 .Xr sshd 8 ,
 after generating missing host keys and checking the configuration
@@ -446,6 +459,9 @@ after generating missing host keys and checking the configuration
 .Xr rpc.tlsclntd 8
 .It Pa tlsservd.unit
 .Xr rpc.tlsservd 8
+.It Pa ubthidhci.unit
+.Xr usbconfig 8 ,
+a oneshot
 .It Pa watchdogd.unit
 .Xr watchdogd 8
 .It Pa wpa_supplicant@.unit

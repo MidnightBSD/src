@@ -1,0 +1,22 @@
+# aged.unit - native prowld(8) unit for aged(8)
+#
+# Replaces the rc.d/aged shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with aged_enable in
+# rc.conf.
+#
+# aged always detaches and has no foreground flag, so a wrapper starts it,
+# follows its pidfile and relays the stop signal.  The state directories are
+# created as in rc.d/aged.
+
+
+label = "org.midnightbsd.aged";
+description = "Age verification daemon";
+type = "daemon";
+rc_name = "aged";
+run_at_load = true;
+keep_alive = true;
+provides = ["aged"];
+wants = ["DAEMON"];
+before = ["LOGIN"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config aged\ninstall -d -o root -g wheel -m 0755 /var/run/aged\ninstall -d -o aged -g aged -m 0700 /var/db/aged\nrm -f /var/run/aged/aged.pid\n/usr/sbin/aged $aged_flags || exit 1\ni=0\npid=\nwhile [ -z \"$pid\" ] && [ $i -lt 10 ]; do\n    pid=$(cat /var/run/aged/aged.pid 2> /dev/null)\n    [ -n \"$pid\" ] || sleep 1\n    i=$((i + 1))\ndone\n[ -n \"$pid\" ] || exit 1\nstopping=\ntrap 'stopping=1; kill -TERM $pid 2> /dev/null' TERM INT\nwhile kill -0 $pid 2> /dev/null; do\n    sleep 1 &\n    wait $!\ndone\n[ -z \"$stopping\" ] || exit 0\nexit 1", "aged"];

@@ -30,7 +30,9 @@ CONFSDIR=	/etc/prowld
 
 # Native units for base services.
 FILESGROUPS+=	UNITS
-UNITS=		units/auditd.unit \
+UNITS=		units/aged.unit \
+		units/auditd.unit \
+		units/auditdistd.unit \
 		units/automountd.unit \
 		units/autounmountd.unit \
 		units/blacklistd.unit \
@@ -52,6 +54,7 @@ UNITS=		units/auditd.unit \
 		units/hostapd@.unit \
 		units/inetd.unit \
 		units/ipmon.unit \
+		units/iscsictl.unit \
 		units/iscsid.unit \
 		units/keyserv.unit \
 		units/local_unbound.unit \
@@ -61,6 +64,7 @@ UNITS=		units/auditd.unit \
 		units/mdnsresponder.unit \
 		units/mountd.unit \
 		units/moused.unit \
+		units/msgs.unit \
 		units/natd.unit \
 		units/newsyslog.unit \
 		units/nfscbd.unit \
@@ -80,11 +84,13 @@ UNITS=		units/auditd.unit \
 		units/rtsold.unit \
 		units/rwhod.unit \
 		units/sdpd.unit \
+		units/sppp.unit \
 		units/sshd.unit \
 		units/statd.unit \
 		units/syslogd.unit \
 		units/tlsclntd.unit \
 		units/tlsservd.unit \
+		units/ubthidhci.unit \
 		units/watchdogd.unit \
 		units/wpa_supplicant@.unit \
 		units/ypbind.unit \

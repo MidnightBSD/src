@@ -1,0 +1,23 @@
+# auditdistd.unit - native prowld(8) unit for auditdistd(8)
+#
+# Replaces the rc.d/auditdistd shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with auditdistd_enable in
+# rc.conf.
+#
+# auditdistd runs in the foreground (-F) so that prowld supervises it
+# directly.  auditdistd_flags is honoured as in rc.d/auditdistd.
+
+
+label = "org.midnightbsd.auditdistd";
+description = "Audit trail files distribution daemon";
+type = "daemon";
+rc_name = "auditdistd";
+run_at_load = true;
+keep_alive = true;
+nojail = true;
+required_files = ["/etc/security/auditdistd.conf"];
+provides = ["auditdistd"];
+wants = ["auditd"];
+before = ["DAEMON"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config auditdistd\n[ -n \"$auditdistd_program\" ] || auditdistd_program=/usr/sbin/auditdistd\nexec $auditdistd_program -F $auditdistd_flags", "auditdistd"];

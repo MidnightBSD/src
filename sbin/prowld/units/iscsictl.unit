@@ -1,0 +1,19 @@
+# iscsictl.unit - native prowld(8) unit for iscsictl(8)
+#
+# Replaces the rc.d/iscsictl shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with iscsictl_enable in
+# rc.conf.
+# iscsictl_flags defaults to "-Aa" (log in to all configured targets).
+
+
+label = "org.midnightbsd.iscsictl";
+description = "Start the iSCSI initiator sessions";
+type = "oneshot";
+rc_name = "iscsictl";
+run_at_load = true;
+nojail = true;
+provides = ["iscsictl"];
+wants = ["NETWORK", "iscsid"];
+before = ["DAEMON"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config iscsictl\nkldstat -q -m iscsi || kldload iscsi || exit 1\nexec /usr/bin/iscsictl $iscsictl_flags", "iscsictl"];
