@@ -7,7 +7,7 @@
 FILES=	ascii birthtoken bsd-family-tree \
 	flowers init.ee \
 	iso3166 iso639 latin1 mdoc.template operator pci_vendors \
-	scsi_modes
+	scsi_modes usb_vendors
 
 FILESDIR=	${BINDIR}/misc
 
