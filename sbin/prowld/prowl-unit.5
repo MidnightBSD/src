@@ -236,6 +236,35 @@ A daemon with dependencies and socket activation:
   }
 }
 .Ed
+.Sh FILES
+.Bl -tag -width "/etc/prowld/units.d/syslogd.unit" -compact
+.It Pa /etc/prowld/units.d/syslogd.unit
+Native unit for
+.Xr syslogd 8 .
+It runs
+.Xr syslogd 8
+in the foreground
+.Pq Fl F
+under
+.Xr prowld 8 ,
+honours
+.Va syslogd_enable ,
+.Va syslogd_flags
+and
+.Va altlog_proglist
+from
+.Xr rc.conf 5 ,
+and takes the place of the
+.Pa /etc/rc.d/syslogd
+shim.
+Because the daemon is supervised by
+.Xr prowld 8 ,
+use
+.Xr prowlctl 8
+rather than
+.Xr service 8
+to restart it.
+.El
 .Sh SEE ALSO
 .Xr libucl 3 ,
 .Xr prowld 8 ,

@@ -28,4 +28,10 @@ NO_SHARED?=	YES
 CONFS=		prowld.conf.sample
 CONFSDIR=	/etc/prowld
 
+# Native units for base services.
+FILESGROUPS+=	UNITS
+UNITS=		units/syslogd.unit
+UNITSDIR=	/etc/prowld/units.d
+UNITSMODE=	444
+
 .include <bsd.prog.mk>
