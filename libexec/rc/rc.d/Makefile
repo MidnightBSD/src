@@ -13,7 +13,6 @@ CONFS=	DAEMON \
 	addswap \
 	adjkerntz \
 	aged \
-	archdep \
 	bgfsck \
 	${_blacklistd} \
 	${_blocklistd} \
