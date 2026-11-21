@@ -592,7 +592,7 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 		while ((item = ucl_object_iterate(arr, &it, true)) != NULL) {
 			s = ucl_object_tostring(item);
 			if (ucl_object_type(item) != UCL_STRING || s == NULL ||
-			    s[0] != '/' ||
+			    (s[0] != '/' && s[0] != '@') ||
 			    strlen(s) >= sizeof(job->required_files[0]) ||
 			    job->required_files_count >= PROWL_REQFILES_MAX) {
 				/*
@@ -607,6 +607,35 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 			strlcpy(job->required_files[job->required_files_count],
 			    s, sizeof(job->required_files[0]));
 			job->required_files_count++;
+		}
+	}
+
+	/* required_modules: "file" or "file:module", loaded before the start */
+	arr = ucl_object_lookup(root, "required_modules");
+	if (arr != NULL) {
+		if (ucl_object_type(arr) != UCL_ARRAY) {
+			prowl_log(LOG_ERR, "unit_load_file %s: "
+			    "required_modules must be an array", path);
+			job_free(job);
+			return (NULL);
+		}
+		it = NULL;
+		while ((item = ucl_object_iterate(arr, &it, true)) != NULL) {
+			s = ucl_object_tostring(item);
+			if (ucl_object_type(item) != UCL_STRING || s == NULL ||
+			    s[0] == '\0' || s[0] == ':' || s[0] == '/' ||
+			    strstr(s, "..") != NULL ||
+			    strlen(s) >= sizeof(job->required_modules[0]) ||
+			    job->required_modules_count >= PROWL_MODULES_MAX) {
+				prowl_log(LOG_ERR, "unit_load_file %s: bad "
+				    "required_modules entry", path);
+				job_free(job);
+				return (NULL);
+			}
+			strlcpy(job->required_modules[
+			    job->required_modules_count], s,
+			    sizeof(job->required_modules[0]));
+			job->required_modules_count++;
 		}
 	}
 

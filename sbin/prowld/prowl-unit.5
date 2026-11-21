@@ -196,6 +196,18 @@ At most 8 paths are allowed.
 A relative path, or too many, makes
 .Xr prowld 8
 refuse the unit rather than weaken the check.
+.It Va required_modules
+.Pq array of strings
+Kernel modules to load before the job starts, as
+.Va required_modules
+does in
+.Xr rc.subr 8 .
+An entry is the file to load, or
+.Dq file:module
+when the module has a different name.
+A module that is already loaded or built in is left alone; if one cannot be
+loaded the job does not run.
+At most 8 entries are allowed.
 .It Va instances_var
 Makes the file a template; see
 .Sx TEMPLATES .
@@ -285,6 +297,59 @@ Keys in each description:
 .Va host
 (bind address),
 .Va backlog .
+.Sh RC.CONF VARIABLES
+.Va program ,
+.Va arguments ,
+.Va stop_arguments ,
+.Va reload_arguments ,
+.Va check_arguments ,
+.Va resync_arguments
+and
+.Va required_files
+may refer to variables from
+.Xr rc.conf 5 ,
+so that a unit does not need a shell script to read them.
+The variables are those of the unit's
+.Va rc_name :
+.Pa /etc/defaults/rc.conf ,
+.Pa /etc/rc.conf ,
+.Pa /etc/rc.conf.local ,
+and
+.Pa /etc/rc.conf.d/ Ns Ar rc_name
+and
+.Pa /usr/local/etc/rc.conf.d/ Ns Ar rc_name ,
+with later files overriding earlier ones.
+They are read each time the job is started.
+.Bl -tag -width "@name?text@" -compact
+.It Li @name@
+The value, empty if the variable is not set.
+.It Li @name:-default@
+The value, or default if it is empty.
+.It Li @name?text@
+text if the value is
+.Dv YES ,
+.Dv TRUE ,
+.Dv ON
+or
+.Dv 1 ,
+and nothing otherwise.
+.It Li @@
+A literal
+.Ql @ .
+.El
+.Pp
+An argument that is only one reference becomes as many arguments as the
+value has words, none if it is empty, the way an unquoted
+.Ev $flags
+does in
+.Xr sh 1 .
+Anywhere else the value is put in place as one word.
+Arguments that contain a newline are shell scripts and are left alone.
+For example:
+.Bd -literal -offset indent
+program = "/usr/sbin/ntpd";
+arguments = ["-d", "@ntpd_flags@"];
+.Ed
 .Sh TEMPLATES
 A unit file whose name ends in
 .Pa @.unit

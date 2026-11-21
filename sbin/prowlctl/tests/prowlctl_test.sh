@@ -436,6 +436,50 @@ actions_cleanup()
 	stop_prowld
 }
 
+atf_test_case expansion cleanup
+expansion_head()
+{
+	atf_set descr "@name@ in arguments and required_modules"
+	atf_set require.user root
+}
+expansion_body()
+{
+	dir="$(pwd)"
+	mkdir -p units
+	cat >units/ex.unit <<EOF
+{"label": "org.test.ex", "rc_name": "prowlctl_test_ex",
+ "type": "oneshot", "program": "@nosuch_p:-/bin/sh@",
+ "arguments": ["-c", "echo \"\$@\" > ${dir}/out", "sh",
+   "@nosuch_a:-one two@", "x@nosuch_b:-y@z", "@@lit", "@nosuch_c@",
+   "@nosuch_d?no@", "k@nosuch_e:-@"],
+ "required_modules": ["nosuchfile:if_lo"],
+ "run_at_load": true}
+EOF
+	cat >units/nomod.unit <<EOF
+{"label": "org.test.nomod", "rc_name": "prowlctl_test_nomod",
+ "type": "oneshot", "program": "/usr/bin/true",
+ "required_modules": ["nosuchmodule_xyz"],
+ "run_at_load": true}
+EOF
+	cat >units/nofile.unit <<EOF
+{"label": "org.test.nofile", "rc_name": "prowlctl_test_nofile",
+ "type": "oneshot", "program": "/usr/bin/true",
+ "required_files": ["@nosuch_f:-/nonexistent/file@"],
+ "run_at_load": true}
+EOF
+	start_prowld
+	wait_state org.test.ex completed
+	atf_check -o inline:"one two xyz @lit k\n" cat out
+	# a module that cannot be loaded keeps the job from running
+	wait_state org.test.nomod failed
+	# required_files is expanded too
+	wait_state org.test.nofile failed
+}
+expansion_cleanup()
+{
+	stop_prowld
+}
+
 atf_test_case templates cleanup
 templates_head()
 {
@@ -477,6 +521,7 @@ templates_cleanup()
 
 atf_init_test_cases()
 {
+	atf_add_test_case expansion
 	atf_add_test_case actions
 	atf_add_test_case oneshot_stop
 	atf_add_test_case stop_restart_wait

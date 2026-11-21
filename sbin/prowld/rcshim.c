@@ -43,6 +43,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <syslog.h>
 #include <unistd.h>
 
@@ -447,19 +448,14 @@ rcconf_is_enabled(const char *name, bool default_val)
 }
 
 /*
- * Read the defaults, rc.conf and rc.conf.local for the variable varname
+ * Read the files in files, in order, for the variable varname
  * (the full name, e.g. "syslogd_enable").  Later files override earlier
  * ones.  Returns the value found, or default_val if not set.
  */
-bool
-rcconf_var_get(const char *varname, char *buf, size_t sz)
+static bool
+rcconf_scan(const char *const *files, const char *varname, char *buf,
+    size_t sz)
 {
-	const char *files[] = {
-		"/etc/defaults/rc.conf",
-		RCCONF_PATH,
-		RCCONF_LOCAL_PATH,
-		NULL
-	};
 	FILE *fp;
 	char line[1024];
 	bool found = false;
@@ -505,6 +501,191 @@ rcconf_var_get(const char *varname, char *buf, size_t sz)
 		fclose(fp);
 	}
 	return (found);
+}
+
+
+bool
+rcconf_var_get(const char *varname, char *buf, size_t sz)
+{
+	const char *files[] = {
+		"/etc/defaults/rc.conf",
+		RCCONF_PATH,
+		RCCONF_LOCAL_PATH,
+		NULL
+	};
+
+	return (rcconf_scan(files, varname, buf, sz));
+}
+
+/*
+ * As rcconf_var_get(), but also read the per-service files that
+ * load_rc_config() reads: rc.conf.d/<rc_name> under /etc and
+ * /usr/local/etc.
+ */
+bool
+rcconf_job_var(const char *rc_name, const char *varname, char *buf,
+    size_t sz)
+{
+	char d1[PROWL_PATH_MAX], d2[PROWL_PATH_MAX];
+	const char *files[6];
+	int n = 0;
+
+	files[n++] = "/etc/defaults/rc.conf";
+	files[n++] = RCCONF_PATH;
+	files[n++] = RCCONF_LOCAL_PATH;
+	if (rc_name != NULL && rc_name[0] != '\0') {
+		snprintf(d1, sizeof(d1), "/etc/rc.conf.d/%s", rc_name);
+		snprintf(d2, sizeof(d2), "/usr/local/etc/rc.conf.d/%s",
+		    rc_name);
+		files[n++] = d1;
+		files[n++] = d2;
+	}
+	files[n] = NULL;
+
+	return (rcconf_scan(files, varname, buf, sz));
+}
+
+static bool
+append_str(char *out, size_t outsz, size_t *len, const char *s, size_t n)
+{
+	if (*len + n >= outsz)
+		return (false);
+	memcpy(out + *len, s, n);
+	*len += n;
+	out[*len] = '\0';
+	return (true);
+}
+
+/*
+ * Expand @name@, @name:-default@ and @name?text@ in in, using the rc.conf
+ * variables of the service rc_name.  @name@ is the variable's value (empty
+ * if it is not set), @name:-default@ is the default when it is empty,
+ * @name?text@ is text when the variable is YES, TRUE, ON or 1 and nothing
+ * otherwise, and @@ is a literal @.  An @ that does not start one of these
+ * is left as it is.  Returns the length of the result, or -1 if it does
+ * not fit.
+ */
+int
+rcconf_expand(const char *rc_name, const char *in, char *out, size_t outsz)
+{
+	char name[128], val[PROWL_PATH_MAX];
+	const char *p = in, *end, *sep;
+	size_t len = 0, nlen;
+
+	if (outsz == 0)
+		return (-1);
+	out[0] = '\0';
+
+	while (*p != '\0') {
+		if (*p != '@') {
+			if (!append_str(out, outsz, &len, p, 1))
+				return (-1);
+			p++;
+			continue;
+		}
+		if (p[1] == '@') {
+			if (!append_str(out, outsz, &len, "@", 1))
+				return (-1);
+			p += 2;
+			continue;
+		}
+		end = strchr(p + 1, '@');
+		nlen = 0;
+		while (p[1 + nlen] != '\0' &&
+		    (isalnum((unsigned char)p[1 + nlen]) ||
+		    p[1 + nlen] == '_'))
+			nlen++;
+		if (end == NULL || nlen == 0 || nlen >= sizeof(name) ||
+		    p + 1 + nlen > end) {
+			if (!append_str(out, outsz, &len, p, 1))
+				return (-1);
+			p++;
+			continue;
+		}
+		memcpy(name, p + 1, nlen);
+		name[nlen] = '\0';
+		sep = p + 1 + nlen;	/* "@", ":-default@" or "?text@" */
+		val[0] = '\0';
+		(void)rcconf_job_var(rc_name, name, val, sizeof(val));
+
+		if (sep == end) {
+			if (!append_str(out, outsz, &len, val, strlen(val)))
+				return (-1);
+		} else if (sep[0] == ':' && sep[1] == '-') {
+			if (val[0] != '\0') {
+				if (!append_str(out, outsz, &len, val,
+				    strlen(val)))
+					return (-1);
+			} else if (!append_str(out, outsz, &len, sep + 2,
+			    (size_t)(end - (sep + 2))))
+				return (-1);
+		} else if (sep[0] == '?') {
+			if ((strcasecmp(val, "yes") == 0 ||
+			    strcasecmp(val, "true") == 0 ||
+			    strcasecmp(val, "on") == 0 ||
+			    strcmp(val, "1") == 0) &&
+			    !append_str(out, outsz, &len, sep + 1,
+			    (size_t)(end - (sep + 1))))
+				return (-1);
+		} else {
+			/* not one of the forms: keep the @ and go on */
+			if (!append_str(out, outsz, &len, p, 1))
+				return (-1);
+			p++;
+			continue;
+		}
+		p = end + 1;
+	}
+	return ((int)len);
+}
+
+/*
+ * Expand an argument vector.  An argument that is a single @name@ reference
+ * becomes as many arguments as the value has words (none if it is empty),
+ * the way an unquoted $flags does in sh; any other argument is expanded in
+ * place.  Arguments with a newline are shell scripts and are left alone.
+ * The results are malloc'd strings in out, which has room for max
+ * pointers; the caller is about to exec, so they are not freed.  Returns
+ * the number of arguments, or -1 on error.
+ */
+int
+rcconf_expand_args(const char *rc_name, char *const *in, int n, char **out,
+    int max)
+{
+	char buf[PROWL_PATH_MAX];
+	const char *s, *e;
+	int i, count = 0;
+
+	for (i = 0; i < n; i++) {
+		s = in[i];
+		if (strchr(s, '@') == NULL || strchr(s, '\n') != NULL) {
+			if (count >= max)
+				return (-1);
+			out[count++] = (char *)(uintptr_t)s;
+			continue;
+		}
+		if (rcconf_expand(rc_name, s, buf, sizeof(buf)) == -1)
+			return (-1);
+		e = strchr(s + 1, '@');
+		if (s[0] == '@' && e != NULL && e[1] == '\0') {
+			/* a lone reference: split into words */
+			char *w = buf, *tok;
+
+			while ((tok = strsep(&w, " \t")) != NULL) {
+				if (*tok == '\0')
+					continue;
+				if (count >= max ||
+				    (out[count] = strdup(tok)) == NULL)
+					return (-1);
+				count++;
+			}
+		} else {
+			if (count >= max || (out[count] = strdup(buf)) == NULL)
+				return (-1);
+			count++;
+		}
+	}
+	return (count);
 }
 
 bool

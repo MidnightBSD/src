@@ -72,6 +72,9 @@ static_assert((__alignof__(struct job) & TIMER_MASK) == 0,
 #define PROWL_REQFILES_MAX	8
 #define PROWL_ARGS_MAX		64
 
+#define PROWL_MODULES_MAX	8
+#define PROWL_MODULE_LEN	96
+
 /* Commands a unit can define besides start and stop. */
 #define PROWL_ACTION_NONE	0
 #define PROWL_ACTION_RELOAD	1
@@ -280,6 +283,8 @@ struct job {
 	/* Files that must be readable before the job is started */
 	char		required_files[PROWL_REQFILES_MAX][PROWL_PATH_MAX];
 	int		required_files_count;
+	char		required_modules[PROWL_MODULES_MAX][PROWL_MODULE_LEN];
+	int		required_modules_count;
 
 	/* I/O */
 	char		stdin_path[PROWL_PATH_MAX];
@@ -436,6 +441,9 @@ int	rcshim_scan_dir(const char *);
 bool	rcconf_is_enabled(const char *, bool);
 bool	rcconf_var_is_enabled(const char *, bool);
 bool	rcconf_var_get(const char *, char *, size_t);
+bool	rcconf_job_var(const char *, const char *, char *, size_t);
+int	rcconf_expand(const char *, const char *, char *, size_t);
+int	rcconf_expand_args(const char *, char *const *, int, char **, int);
 
 /* ---- pid1.c ---- */
 void	pid1_mount_devfs(bool);

@@ -39,6 +39,8 @@
 #include <sys/sysctl.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <sys/linker.h>
+#include <sys/module.h>
 #include <sys/un.h>
 #include <sys/user.h>
 #include <sys/wait.h>
@@ -653,9 +655,32 @@ child_setup_and_exec(job_t *job)
 	char listen_pid_env[32];
 	/* "LISTEN_FDNAMES=" + 8 names * 63 chars + 7 colons + NUL */
 	char listen_fdnames_env[600];
+	char program[PROWL_PATH_MAX];
 	int i, argc, envc;
 
 	prowl_reset_signals();
+
+	/*
+	 * Kernel modules, as rc.subr's required_modules: an entry is the
+	 * file to load, or file:module when the module has another name.
+	 * A module that is already there, or built in, is left alone.
+	 */
+	for (i = 0; i < job->required_modules_count; i++) {
+		char ent[PROWL_MODULE_LEN];
+		char *mod;
+
+		strlcpy(ent, job->required_modules[i], sizeof(ent));
+		mod = strchr(ent, ':');
+		if (mod != NULL)
+			*mod++ = '\0';
+		else
+			mod = ent;
+		if (modfind(mod) == -1 && kldload(ent) == -1) {
+			syslog(LOG_ERR, "prowld: %s: cannot load kernel "
+			    "module %s: %m", job->label, ent);
+			_exit(1);
+		}
+	}
 
 	/*
 	 * chroot(2) must be called as root before drop_privileges().
@@ -769,20 +794,39 @@ child_setup_and_exec(job_t *job)
 	}
 
 	/* Native unit: build argv */
-	argv[0] = job->program;
-	argc = 1;
-	if (job->action != PROWL_ACTION_NONE) {
-		for (i = 0; i < job->action_argc[job->action] &&
-		    argc < PROWL_ARGS_MAX; i++)
-			argv[argc++] = job->action_args[job->action][i];
-	} else if (job->rc_stopping && job->stop_argc > 0) {
-		for (i = 0; i < job->stop_argc && argc < PROWL_ARGS_MAX; i++)
-			argv[argc++] = job->stop_arguments[i];
-	} else {
-		for (i = 0; i < job->argc && argc < PROWL_ARGS_MAX; i++)
-			argv[argc++] = job->arguments[i];
+	{
+		char *const *src;
+		int nsrc, n;
+
+		if (job->action != PROWL_ACTION_NONE) {
+			src = job->action_args[job->action];
+			nsrc = job->action_argc[job->action];
+		} else if (job->rc_stopping && job->stop_argc > 0) {
+			src = job->stop_arguments;
+			nsrc = job->stop_argc;
+		} else {
+			src = job->arguments;
+			nsrc = job->argc;
+		}
+
+		/* @name@ is an rc.conf variable, see prowl-unit(5) */
+		if (rcconf_expand(job->rc_name, job->program, program,
+		    sizeof(program)) == -1) {
+			syslog(LOG_ERR, "prowld: %s: program too long",
+			    job->label);
+			_exit(1);
+		}
+		n = rcconf_expand_args(job->rc_name, src, nsrc, &argv[1],
+		    PROWL_ARGS_MAX);
+		if (n == -1) {
+			syslog(LOG_ERR, "prowld: %s: cannot expand arguments",
+			    job->label);
+			_exit(1);
+		}
+		argv[0] = program;
+		argc = 1 + n;
+		argv[argc] = NULL;
 	}
-	argv[argc] = NULL;
 
 	/* Inject daemon-protocol environment variables */
 	if (job->notify_type == NOTIFY_NOTIFY) {
@@ -853,7 +897,7 @@ child_setup_and_exec(job_t *job)
 	}
 
 	envp[envc] = NULL;
-	execve(job->program, argv, envp);
+	execve(argv[0], argv, envp);
 	_exit(127);
 }
 
@@ -872,9 +916,14 @@ supervisor_start(job_t *job)
 
 	/* A missing configuration file keeps the job down, as rc.subr does */
 	for (int i = 0; i < job->required_files_count; i++) {
-		if (access(job->required_files[i], R_OK) == -1) {
+		char rf[PROWL_PATH_MAX];
+
+		if (rcconf_expand(job->rc_name, job->required_files[i], rf,
+		    sizeof(rf)) == -1)
+			strlcpy(rf, job->required_files[i], sizeof(rf));
+		if (access(rf, R_OK) == -1) {
 			prowl_log(LOG_WARNING, "job %s not started: required "
-			    "file %s: %m", job->label, job->required_files[i]);
+			    "file %s: %m", job->label, rf);
 			job_set_state(job, JOB_STATE_FAILED);
 			return (-1);
 		}
