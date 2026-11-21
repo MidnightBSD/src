@@ -90,6 +90,20 @@ is an absolute path.
 Argument vector passed to the process.
 The executable name is automatically prepended as
 .Vt argv[0] .
+.It Va stop_arguments
+.Pq array of strings
+Argument vector for a command that stops the job, run with the same
+.Va program ,
+user and environment.
+It is used when the job is stopped while it has no process of its own, as
+for a
+.Cm oneshot
+that has completed: the job is then
+.Em stopping
+until the command exits and
+.Em stopped
+afterwards, whatever its exit status.
+Without it, stopping a completed oneshot does nothing.
 .It Va environment
 .Pq object
 Key/value pairs set in the child's environment.
@@ -375,8 +389,26 @@ template, started by
 .It Pa inetd.unit
 .Xr inetd 8 ,
 watched through its pidfile
+.It Pa ipfilter.unit
+.Xr ipf 8 ,
+a oneshot with a stop command
+.It Pa ipfs.unit
+.Xr ipfs 8 ,
+a oneshot with a stop command
+.It Pa ipfw.unit
+.Xr ipfw 8 ,
+a oneshot with a stop command
+.It Pa ipfw_netflow.unit
+.Xr ng_netflow 4 ,
+a oneshot with a stop command
 .It Pa ipmon.unit
 .Xr ipmon 8
+.It Pa ipnat.unit
+.Xr ipnat 8 ,
+a oneshot with a stop command
+.It Pa ippool.unit
+.Xr ippool 8 ,
+a oneshot with a stop command
 .It Pa iscsictl.unit
 .Xr iscsictl 8 ,
 a oneshot
@@ -419,9 +451,15 @@ a oneshot
 .Xr nscd 8
 .It Pa ntpd.unit
 .Xr ntpd 8
+.It Pa pf.unit
+.Xr pf 4 ,
+a oneshot with a stop command
 .It Pa pflog@.unit
 .Xr pflogd 8 ,
 template
+.It Pa pfsync.unit
+.Xr pfsync 4 ,
+a oneshot with a stop command
 .It Pa powerd.unit
 .Xr powerd 8
 .It Pa pppoed.unit

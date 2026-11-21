@@ -1,0 +1,21 @@
+# pf.unit - native prowld(8) unit for pf(8)
+#
+# Replaces the rc.d/pf shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with pf_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/pf.
+#
+# A oneshot: it loads the rules and exits.  "prowlctl stop pf" runs the
+# stop command (stop_arguments), which undoes what the start did.
+# The rules are loaded with pfctl and the filter enabled.  Stopping the unit
+# disables pf again.  Use "service pf reload|check|resync|status" for the rest.
+
+label = "org.midnightbsd.pf";
+description = "Packet filter";
+type = "oneshot";
+rc_name = "pf";
+run_at_load = true;
+provides = ["pf"];
+wants = ["FILESYSTEMS", "netif", "pflog", "pfsync", "routing"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config pf\n[ -n \"$pf_program\" ] || pf_program=/sbin/pfctl\nload_kld pf || exit 1\nif [ ! -r \"$pf_rules\" ]; then\n    echo \"pf: $pf_rules: no such file\" >&2\n    exit 1\nfi\n$pf_program -F all > /dev/null 2>&1\nif ! $pf_program -f \"$pf_rules\" $pf_flags; then\n    echo \"pf: unable to load $pf_rules\" >&2\n    if checkyesno pf_fallback_rules_enable; then\n        if [ -f \"$pf_fallback_rules_file\" ]; then\n            echo \"pf: loading fallback rules file $pf_fallback_rules_file\" >&2\n            $pf_program -f \"$pf_fallback_rules_file\" $pf_flags\n        else\n            echo \"pf: loading fallback rules\" >&2\n            echo \"$pf_fallback_rules\" | $pf_program -f - $pf_flags\n        fi\n    fi\nfi\nif ! $pf_program -s info | grep -q Enabled; then\n    $pf_program -eq\nfi", "pf"];
+stop_arguments = ["-c", ". /etc/rc.subr\nload_rc_config pf\n[ -n \"$pf_program\" ] || pf_program=/sbin/pfctl\nif $pf_program -s info 2> /dev/null | grep -q Enabled; then\n    exec $pf_program -dq\nfi", "pf"];

@@ -53,7 +53,13 @@ UNITS=		units/aged.unit \
 		units/hostapd.unit \
 		units/hostapd@.unit \
 		units/inetd.unit \
+		units/ipfilter.unit \
+		units/ipfs.unit \
+		units/ipfw.unit \
+		units/ipfw_netflow.unit \
 		units/ipmon.unit \
+		units/ipnat.unit \
+		units/ippool.unit \
 		units/iscsictl.unit \
 		units/iscsid.unit \
 		units/keyserv.unit \
@@ -72,7 +78,9 @@ UNITS=		units/aged.unit \
 		units/nfsuserd.unit \
 		units/nscd.unit \
 		units/ntpd.unit \
+		units/pf.unit \
 		units/pflog@.unit \
+		units/pfsync.unit \
 		units/powerd.unit \
 		units/pppoed.unit \
 		units/rarpd.unit \

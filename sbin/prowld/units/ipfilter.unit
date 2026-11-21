@@ -1,0 +1,21 @@
+# ipfilter.unit - native prowld(8) unit for ipfilter(8)
+#
+# Replaces the rc.d/ipfilter shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with ipfilter_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/ipfilter.
+#
+# A oneshot: it loads the rules and exits.  "prowlctl stop ipfilter" runs the
+# stop command (stop_arguments), which undoes what the start did.
+# Stopping the unit saves the state tables with ipfs and disables the filter.
+
+label = "org.midnightbsd.ipfilter";
+description = "IP packet filter";
+type = "oneshot";
+rc_name = "ipfilter";
+run_at_load = true;
+provides = ["ipfilter"];
+wants = ["FILESYSTEMS"];
+before = ["ipmon", "ipnat", "netif", "netwait", "securelevel"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config ipfilter\n[ -n \"$ipfilter_program\" ] || ipfilter_program=/sbin/ipf\nif [ ! -f \"$ipfilter_rules\" ] && [ ! -f \"$ipv6_ipfilter_rules\" ]; then\n    echo \"ipfilter: no rules file ($ipfilter_rules)\" >&2\n    exit 1\nfi\nload_kld -m ipfilter ipl || exit 1\necho \"Enabling ipfilter.\"\nif ! $ipfilter_program -V | grep -q 'Running: yes'; then\n    $ipfilter_program -E\nfi\nif [ -n \"$ipfilter_optionlist\" ]; then\n    $ipfilter_program -T \"$ipfilter_optionlist\"\nfi\n$ipfilter_program -Fa\nif [ -r \"$ipfilter_rules\" ]; then\n    $ipfilter_program -f \"$ipfilter_rules\" $ipfilter_flags\nfi\nif [ -r \"$ipv6_ipfilter_rules\" ]; then\n    $ipfilter_program -6 -f \"$ipv6_ipfilter_rules\" $ipfilter_flags\nfi", "ipfilter"];
+stop_arguments = ["-c", ". /etc/rc.subr\nload_rc_config ipfilter\n[ -n \"$ipfilter_program\" ] || ipfilter_program=/sbin/ipf\n[ -n \"$ipfs_program\" ] || ipfs_program=/sbin/ipfs\nif $ipfilter_program -V | grep -q 'Running: yes'; then\n    echo \"Saving firewall state tables\"\n    $ipfs_program -W $ipfs_flags\n    echo \"Disabling ipfilter.\"\n    exec $ipfilter_program -D\nfi", "ipfilter"];

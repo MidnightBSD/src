@@ -1,0 +1,19 @@
+# pfsync.unit - native prowld(8) unit for pfsync(8)
+#
+# Replaces the rc.d/pfsync shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with pfsync_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/pfsync.
+#
+# A oneshot: it loads the rules and exits.  "prowlctl stop pfsync" runs the
+# stop command (stop_arguments), which undoes what the start did.
+
+label = "org.midnightbsd.pfsync";
+description = "Packet filter state table synchronisation interface";
+type = "oneshot";
+rc_name = "pfsync";
+run_at_load = true;
+provides = ["pfsync"];
+wants = ["FILESYSTEMS", "netif"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config pfsync\nif [ -z \"$pfsync_syncdev\" ]; then\n    echo \"pfsync_syncdev is not set\" >&2\n    exit 1\nfi\nload_kld pf || exit 1\nload_kld pfsync || exit 1\nsyncpeer=\nif [ -n \"$pfsync_syncpeer\" ]; then\n    syncpeer=\"syncpeer $pfsync_syncpeer\"\nfi\nexec ifconfig pfsync0 $syncpeer syncdev $pfsync_syncdev $pfsync_ifconfig up", "pfsync"];
+stop_arguments = ["-c", "exec ifconfig pfsync0 -syncdev -syncpeer down", "pfsync"];
