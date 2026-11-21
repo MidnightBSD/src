@@ -4,7 +4,7 @@
 # a native unit is skipped.  Enable and disable it with rwhod_enable in
 # rc.conf; the other rc.conf variables are honoured as in rc.d/rwhod.
 #
-# rwhod always detaches.  The wrapper finds it with pgrep and waits for it.
+# rwhod always detaches.  prowld finds it by name.
 
 label = "org.midnightbsd.rwhod";
 description = "System status server";
@@ -15,5 +15,6 @@ keep_alive = true;
 provides = ["rwho", "rwhod"];
 wants = ["DAEMON"];
 before = ["LOGIN"];
-program = "/bin/sh";
-arguments = ["-c", ". /etc/rc.subr\nload_rc_config rwhod\n/usr/sbin/rwhod $rwhod_flags || exit 1\ni=0\npid=\nwhile [ -z \"$pid\" ] && [ $i -lt 10 ]; do\n    pid=$(pgrep -o -x rwhod)\n    [ -n \"$pid\" ] || sleep 1\n    i=$((i + 1))\ndone\n[ -n \"$pid\" ] || exit 1\nstopping=\ntrap 'stopping=1; kill -TERM $pid 2> /dev/null' TERM INT\nwhile kill -0 $pid 2> /dev/null; do\n    sleep 1 &\n    wait $!\ndone\n[ -z \"$stopping\" ] || exit 0\nexit 1", "rwhod"];
+pid_name = "rwhod";
+program = "/usr/sbin/rwhod";
+arguments = ["@rwhod_flags@"];

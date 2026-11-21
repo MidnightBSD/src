@@ -4,8 +4,8 @@
 # a native unit is skipped.  Enable and disable it with hostapd_enable in
 # rc.conf; the other rc.conf variables are honoured as in rc.d/hostapd.
 #
-# hostapd runs in the foreground and logs to syslog (-s).  This is the
-# unit for /etc/hostapd.conf; hostapd@.unit is the one for a single interface.
+# hostapd stays in the foreground and logs to syslog (-s).  Its modules are
+# loaded first.
 
 label = "org.midnightbsd.hostapd";
 description = "IEEE 802.11 authenticator";
@@ -17,5 +17,6 @@ required_files = ["/etc/hostapd.conf"];
 nojail = true;
 provides = ["hostapd"];
 wants = ["mountcritremote"];
-program = "/bin/sh";
-arguments = ["-c", ". /etc/rc.subr\nload_rc_config hostapd\nprog=$hostapd_program\n[ -n \"$prog\" ] || prog=/usr/sbin/hostapd\nconf=/etc/hostapd.conf\nif [ ! -r \"$conf\" ]; then\n    echo \"$conf is not readable\" >&2\n    exit 1\nfi\nfor m in wlan_xauth wlan_wep wlan_tkip wlan_ccmp; do\n    kldstat -q -m $m || kldload $m || exit 1\ndone\nexec $prog -s -P /var/run/hostapd.pid $hostapd_flags $conf", "hostapd"];
+required_modules = ["wlan_xauth","wlan_wep","wlan_tkip","wlan_ccmp"];
+program = "@hostapd_program:-/usr/sbin/hostapd@";
+arguments = ["-s","-P","/var/run/hostapd.pid","@hostapd_flags@","/etc/hostapd.conf"];

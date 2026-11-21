@@ -4,7 +4,8 @@
 # a native unit is skipped.  Enable and disable it with ypbind_enable in
 # rc.conf; the other rc.conf variables are honoured as in rc.d/ypbind.
 #
-# ypbind always detaches.  The wrapper finds it with pgrep and waits for it.
+# ypbind always detaches.  The shell only does what has to come first (rpcbind,
+# the NIS domain name); prowld finds the daemon by name.
 # It is enabled by nis_client_enable.
 
 label = "org.midnightbsd.ypbind";
@@ -18,4 +19,5 @@ provides = ["ypbind"];
 wants = ["ypserv", "nisdomain"];
 before = ["DAEMON"];
 program = "/bin/sh";
-arguments = ["-c", ". /etc/rc.subr\nload_rc_config ypbind\n/etc/rc.d/rpcbind status > /dev/null 2>&1 || /etc/rc.d/rpcbind onestart || exit 1\n[ -n \"$(domainname)\" ] || { echo \"NIS domainname(1) is not set.\" >&2; exit 1; }\n/usr/sbin/ypbind $nis_client_flags || exit 1\ni=0\npid=\nwhile [ -z \"$pid\" ] && [ $i -lt 10 ]; do\n    pid=$(pgrep -o -x ypbind)\n    [ -n \"$pid\" ] || sleep 1\n    i=$((i + 1))\ndone\n[ -n \"$pid\" ] || exit 1\nstopping=\ntrap 'stopping=1; kill -TERM $pid 2> /dev/null' TERM INT\nwhile kill -0 $pid 2> /dev/null; do\n    sleep 1 &\n    wait $!\ndone\n[ -z \"$stopping\" ] || exit 0\nexit 1", "ypbind"];
+pid_name = "ypbind";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config ypbind\n/etc/rc.d/rpcbind status > /dev/null 2>&1 || /etc/rc.d/rpcbind onestart || exit 1\n[ -n \"$(domainname)\" ] || { echo \"NIS domainname(1) is not set.\" >&2; exit 1; }\nexec /usr/sbin/ypbind $nis_client_flags", "ypbind"];

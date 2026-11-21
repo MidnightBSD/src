@@ -5,11 +5,9 @@
 # rc.conf; the other rc.conf variables are honoured as in rc.d/inetd.
 #
 # inetd only keeps its pidfile, which "service inetd reload" needs, when it
-# detaches from its parent; in the foreground (-d) it also logs a great deal.
-# The wrapper therefore lets inetd detach, waits for the daemon in the pidfile
-# and stops it when prowld sends SIGTERM, so prowld still sees the service end
-# and can restart it.  SIGHUP, which makes inetd reread its configuration, is
-# passed on to the daemon.
+# detaches from its parent, so it is not run in the foreground (-d).  prowld
+# watches the daemon through its pidfile, and "prowlctl reload" sends it SIGHUP
+# to reread its configuration.
 
 label = "org.midnightbsd.inetd";
 description = "Internet super-server";
@@ -20,5 +18,6 @@ keep_alive = true;
 provides = ["inetd"];
 wants = ["DAEMON", "LOGIN", "FILESYSTEMS"];
 required_files = ["/etc/inetd.conf"];
-program = "/bin/sh";
-arguments = ["-c", ". /etc/rc.subr\nload_rc_config inetd\npidfile=/var/run/inetd.pid\nrm -f $pidfile\n/usr/sbin/inetd $inetd_flags || exit 1\ni=0\nwhile [ ! -s $pidfile ] && [ $i -lt 10 ]; do\n    sleep 1\n    i=$((i + 1))\ndone\npid=$(cat $pidfile) || exit 1\ntrap 'kill $pid 2> /dev/null; exit 0' TERM INT\ntrap 'kill -HUP $pid 2> /dev/null' HUP\nwhile kill -0 $pid 2> /dev/null; do\n    sleep 1 &\n    wait $!\ndone\nexit 1", "inetd"];
+pid_file = "/var/run/inetd.pid";
+program = "@inetd_program:-/usr/sbin/inetd@";
+arguments = ["@inetd_flags@"];

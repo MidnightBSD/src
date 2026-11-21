@@ -5,9 +5,7 @@
 # rc.conf; ftpd_flags is honoured as in rc.d/ftpd.
 #
 # Stand-alone ftpd always detaches from its parent (-D) and has no foreground
-# mode.  The wrapper therefore waits for the daemon in the pidfile and stops it
-# when prowld sends SIGTERM, so prowld still sees the service end and can
-# restart it.
+# mode.  prowld watches the daemon through its pidfile.
 
 label = "org.midnightbsd.ftpd";
 description = "Internet File Transfer Protocol daemon";
@@ -17,5 +15,6 @@ run_at_load = true;
 keep_alive = true;
 provides = ["ftpd"];
 wants = ["LOGIN", "FILESYSTEMS"];
-program = "/bin/sh";
-arguments = ["-c", ". /etc/rc.subr\nload_rc_config ftpd\n[ -n \"$ftpd_program\" ] || ftpd_program=/usr/libexec/ftpd\npidfile=/var/run/ftpd.pid\nrm -f $pidfile\n$ftpd_program -D $ftpd_flags || exit 1\ni=0\nwhile [ ! -s $pidfile ] && [ $i -lt 10 ]; do\n    sleep 1\n    i=$((i + 1))\ndone\npid=$(cat $pidfile) || exit 1\ntrap 'kill $pid 2> /dev/null; exit 0' TERM INT\nwhile kill -0 $pid 2> /dev/null; do\n    sleep 1 &\n    wait $!\ndone\nexit 1", "ftpd"];
+pid_file = "/var/run/ftpd.pid";
+program = "@ftpd_program:-/usr/libexec/ftpd@";
+arguments = ["-D","@ftpd_flags@"];

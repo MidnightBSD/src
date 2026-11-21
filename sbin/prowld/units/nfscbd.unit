@@ -4,10 +4,8 @@
 # a native unit is skipped.  Enable and disable it with nfscbd_enable in
 # rc.conf; the other rc.conf variables are honoured as in rc.d/nfscbd.
 #
-# nfscbd always detaches from its parent and has no foreground mode.  The
-# wrapper therefore waits for the daemon and stops it when prowld sends
-# SIGTERM, so prowld still sees the service end and can restart it.  The daemon is
-# stopped with SIGUSR1, as rc.d/nfscbd does.
+# nfscbd always detaches from its parent and has no foreground mode.  prowld
+# finds it by name.  The daemon is stopped with SIGUSR1, as rc.d/nfscbd does.
 
 label = "org.midnightbsd.nfscbd";
 description = "NFSv4 client side callback daemon";
@@ -18,5 +16,7 @@ keep_alive = true;
 nojail = true;
 provides = ["nfscbd"];
 wants = ["NETWORKING", "nfsuserd"];
-program = "/bin/sh";
-arguments = ["-c", ". /etc/rc.subr\nload_rc_config nfscbd\n/usr/sbin/nfscbd $nfscbd_flags || exit 1\ni=0\npid=\nwhile [ -z \"$pid\" ] && [ $i -lt 10 ]; do\n    pid=$(pgrep -o -x nfscbd)\n    [ -n \"$pid\" ] || sleep 1\n    i=$((i + 1))\ndone\n[ -n \"$pid\" ] || exit 1\nstopping=\ntrap 'stopping=1; kill -USR1 $pid 2> /dev/null' TERM INT\nwhile kill -0 $pid 2> /dev/null; do\n    sleep 1 &\n    wait $!\ndone\n[ -z \"$stopping\" ] || exit 0\nexit 1", "nfscbd"];
+pid_name = "nfscbd";
+stop_signal = "USR1";
+program = "/usr/sbin/nfscbd";
+arguments = ["@nfscbd_flags@"];
