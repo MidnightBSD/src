@@ -43,6 +43,7 @@
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
@@ -64,6 +65,8 @@
 #define EXIT_NO_DAEMON		4
 
 static int g_sock = -1;
+static char g_sock_path[PATH_MAX] = PROWLD_SOCK_PATH;
+static char g_pid_path[PATH_MAX] = "/var/run/prowld/prowld.pid";
 static bool g_json = false;	/* --json flag */
 
 /*
@@ -91,7 +94,7 @@ static void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: prowlctl [--json] <command> [args]\n"
+	    "usage: prowlctl [-s rundir] [--json] <command> [args]\n"
 	    "\n"
 	    "Commands:\n"
 	    "  list [--enabled] [--failed] [--type=TYPE]\n"
@@ -127,7 +130,7 @@ connect_daemon(void)
 
 	memset(&sun, 0, sizeof(sun));
 	sun.sun_family = AF_UNIX;
-	strlcpy(sun.sun_path, PROWLD_SOCK_PATH, sizeof(sun.sun_path));
+	strlcpy(sun.sun_path, g_sock_path, sizeof(sun.sun_path));
 
 	if (connect(fd, (struct sockaddr *)&sun, sizeof(sun)) == -1) {
 		close(fd);
@@ -442,7 +445,8 @@ do_list(int argc, char *argv[])
 	bool show_enabled = false;
 	bool show_failed = false;
 	const char *type_filter = NULL;
-	int i;
+	const char *sep = "";
+	int i, n;
 
 	for (i = 0; i < argc; i++) {
 		if (strcmp(argv[i], "--enabled") == 0)
@@ -453,24 +457,32 @@ do_list(int argc, char *argv[])
 			type_filter = argv[i] + 7;
 	}
 
-	if (show_enabled)
-		snprintf(req, sizeof(req),
-		    "{\"verb\":\"list\",\"filter\":{\"state\":\"running\"}}");
-	else if (show_failed)
-		snprintf(req, sizeof(req),
-		    "{\"verb\":\"list\",\"filter\":{\"state\":\"failed\"}}");
-	else if (type_filter != NULL) {
-		if (!validate_label_input(type_filter)) {
-			fprintf(stderr, "prowlctl: invalid type filter '%s'\n",
-			    type_filter);
-			return (EXIT_FAILED);
-		}
-		snprintf(req, sizeof(req),
-		    "{\"verb\":\"list\",\"filter\":{\"type\":\"%s\"}}",
+	/* Filters combine: state, type and enabled are ANDed server-side. */
+	if (type_filter != NULL && !validate_label_input(type_filter)) {
+		fprintf(stderr, "prowlctl: invalid type filter '%s'\n",
 		    type_filter);
+		return (EXIT_FAILED);
 	}
-	else
-		snprintf(req, sizeof(req), "{\"verb\":\"list\"}");
+	n = snprintf(req, sizeof(req), "{\"verb\":\"list\"");
+	if (show_enabled || show_failed || type_filter != NULL) {
+		n += snprintf(req + n, sizeof(req) - (size_t)n,
+		    ",\"filter\":{");
+		if (show_failed)
+			n += snprintf(req + n, sizeof(req) - (size_t)n,
+			    "%s\"state\":\"failed\"", sep);
+		if (show_failed)
+			sep = ",";
+		if (show_enabled)
+			n += snprintf(req + n, sizeof(req) - (size_t)n,
+			    "%s\"enabled\":true", sep);
+		if (show_enabled)
+			sep = ",";
+		if (type_filter != NULL)
+			n += snprintf(req + n, sizeof(req) - (size_t)n,
+			    "%s\"type\":\"%s\"", sep, type_filter);
+		n += snprintf(req + n, sizeof(req) - (size_t)n, "}");
+	}
+	snprintf(req + n, sizeof(req) - (size_t)n, "}");
 
 	if (send_request(g_sock, req) == -1)
 		err(EXIT_NO_DAEMON, "send");
@@ -1013,7 +1025,7 @@ do_shutdown(void)
 	time_t end;
 	int ret;
 
-	if ((fp = fopen("/var/run/prowld/prowld.pid", "r")) != NULL) {
+	if ((fp = fopen(g_pid_path, "r")) != NULL) {
 		if (fgets(buf, sizeof(buf), fp) != NULL)
 			pid = (pid_t)atoi(buf);
 		fclose(fp);
@@ -1068,6 +1080,17 @@ main(int argc, char *argv[])
 	/* Strip argv[0] */
 	argc--;
 	argv++;
+
+	/* -s rundir: talk to a prowld started with -s rundir */
+	if (argc >= 2 && strcmp(argv[0], "-s") == 0) {
+		if (snprintf(g_sock_path, sizeof(g_sock_path), "%s/prowld.sock",
+		    argv[1]) >= (int)sizeof(g_sock_path) ||
+		    snprintf(g_pid_path, sizeof(g_pid_path), "%s/prowld.pid",
+		    argv[1]) >= (int)sizeof(g_pid_path))
+			errx(1, "run directory too long");
+		argc -= 2;
+		argv += 2;
+	}
 
 	/* Parse global flags */
 	for (i = 0; i < argc; i++) {

@@ -510,12 +510,30 @@ cmd_list(int fd, const char *id, const ucl_object_t *req)
 	bool first = true;
 	const ucl_object_t *filt, *sf;
 	const char *state_filter = NULL;
+	const char *type_filter = NULL;
+	bool enabled_only = false;
 
 	filt = ucl_object_lookup(req, "filter");
 	if (filt != NULL) {
 		sf = ucl_object_lookup(filt, "state");
 		if (sf != NULL)
 			state_filter = ucl_object_tostring(sf);
+		sf = ucl_object_lookup(filt, "type");
+		if (sf != NULL)
+			type_filter = ucl_object_tostring(sf);
+		sf = ucl_object_lookup(filt, "enabled");
+		if (sf != NULL)
+			enabled_only = ucl_object_toboolean(sf);
+	}
+
+	/* An unknown type is an error, not an empty list. */
+	if (type_filter != NULL && strcmp(type_filter, "daemon") != 0 &&
+	    strcmp(type_filter, "oneshot") != 0 &&
+	    strcmp(type_filter, "timer") != 0 &&
+	    strcmp(type_filter, "socket") != 0 &&
+	    strcmp(type_filter, "rcshim") != 0) {
+		ipc_send_error(fd, id, "unknown job type");
+		return;
 	}
 
 	if (rbuf_append(&buf, &cap, &used, "[", 1) == -1)
@@ -526,6 +544,13 @@ cmd_list(int fd, const char *id, const ucl_object_t *req)
 
 		if (state_filter != NULL &&
 		    strcmp(job_state_str(job->state), state_filter) != 0)
+			continue;
+		if (type_filter != NULL &&
+		    strcmp(job_type_str(job->type), type_filter) != 0)
+			continue;
+		if (enabled_only && (!job->enabled ||
+		    job->state == JOB_STATE_DISABLED ||
+		    job->state == JOB_STATE_MASKED))
 			continue;
 
 		n = job_to_json(job, jbuf, sizeof(jbuf));
@@ -1067,6 +1092,13 @@ ipc_init(void)
 	struct sockaddr_un sun;
 	struct kevent kev;
 	int fd;
+
+	/* A longer path would be silently truncated: bind the wrong socket. */
+	if (strlen(g_sock_path) >= sizeof(sun.sun_path)) {
+		prowl_log(LOG_ERR, "ipc socket path %s is too long",
+		    g_sock_path);
+		return (-1);
+	}
 
 	unlink(g_sock_path);
 

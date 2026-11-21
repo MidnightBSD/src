@@ -32,6 +32,7 @@
 .Nm
 .Op Fl d
 .Op Fl s Ar rundir
+.Op Fl u Ar unitdir
 .Sh DESCRIPTION
 .Nm
 is a dependency-aware, parallel-execution service manager for MidnightBSD.
@@ -53,7 +54,7 @@ It is typically started by
 early in the boot sequence and runs for the lifetime of the system.
 .Pp
 The following options are available:
-.Bl -tag -width "-s rundir"
+.Bl -tag -width "-u unitdir"
 .It Fl d
 Debug mode.
 .Nm
@@ -81,7 +82,25 @@ All other runtime paths
 .Pq notify socket directory, PID file, IPC socket, generated unit directory
 are derived from
 .Ar rundir .
+.It Fl u Ar unitdir
+Read unit files from
+.Ar unitdir
+only, and do not scan the
+.Xr rc.d 8
+directories.
+This gives a self-contained
+.Nm
+that never reads or starts anything belonging to the running system.
+It is intended for tests, together with
+.Fl s .
 .El
+.Pp
+When the kernel runs
+.Nm
+as
+.Xr init 8
+(process ID 1) it takes its flags from the kernel instead; see
+.Sx RUNNING AS INIT .
 .Sh CONFIGURATION FILE
 .Nm
 reads daemon-level configuration from
@@ -721,7 +740,236 @@ When the main event loop exits, the system is halted via
 rather than returning from
 .Fn main ,
 since PID 1 must never exit.
+.Sh RUNNING AS INIT
+.Nm
+can replace
+.Xr init 8 .
+Select it with the loader variable
+.Va init_path ,
+for example
+.Dl init_path="/sbin/prowld"
+in
+.Pa /boot/loader.conf .
+As process ID 1,
+.Nm
+does itself what
+.Xr init 8
+and
+.Pa /etc/rc
+do: it runs the
+.Pa /etc/rc.d
+scripts as rc-shim jobs in dependency order, with the environment
+.Xr rc 8
+gives them
+.Pq Va autoboot=yes , Va rc_fast=yes , Va RC_PID
+and the
+.Cm faststart
+argument.
+The rc.d scripts see no difference, and
+.Va rc.conf
+remains the source of the enable state.
+Because
+.Pa /usr
+is not mounted when it starts and a reroot must be able to unmount the old
+root,
+.Nm
+is linked statically, as
+.Xr init 8
+is.
+.Pp
+The kernel passes boot flags to init, and
+.Nm
+understands the same ones:
+.Bl -tag -width ".Fl s"
+.It Fl s
+Single-user mode.
+.It Fl f
+Fast boot: run the rc.d scripts without
+.Va autoboot ,
+so that file system checks are skipped.
+.Nm
+passes this itself when it starts over after single-user mode.
+.It Fl d
+Mount
+.Xr devfs 4
+on
+.Pa /dev
+even if it looks mounted.
+This is done automatically when
+.Pa /
+and
+.Pa /dev
+are on the same device, which is the case after a reroot.
+.It Fl r
+Second phase of a reroot.
+Used internally.
+.El
+.Pp
+Other flags are ignored.
+.Ss Boot
+.Nm
+becomes a session leader, opens
+.Pa /dev/console
+as standard input, output and error, and sets the login name to
+.Dq root .
+It then honours the loader variables that
+.Xr init 8
+honours:
+.Bl -tag -width ".Va init_script"
+.It Va init_exec
+Run this script in place of init.
+It is expected to end by rebooting.
+.It Va init_script
+Run this script before the boot starts; if it exits non-zero, go to
+single-user mode.
+.It Va init_chroot
+Change root to this directory before starting.
+.It Va init_shell
+The shell for single-user mode and for the scripts above
+.Pq default Pa /bin/sh .
+.El
+.Pp
+The control socket, the PID file and the state directories are created only
+once the
+.Dv FILESYSTEMS
+rc.d script has finished, when the root file system is writable.
+Until then
+.Xr prowlctl 8
+cannot connect.
+.Pp
+For every enabled line of
+.Xr ttys 5 ,
+.Nm
+runs a keep-alive job
+.Pq Dq org.midnightbsd.getty. Ns Ar tty
+that starts the line's getty with the line's terminal type, once the
+.Dv LOGIN
+rc.d milestone is reached.
+Lines marked
+.Dq onifexists
+or
+.Dq onifconsole
+get a getty only if the device exists.
+The user accounting records for boot and shutdown are written by the
+.Xr utx 8
+rc.d script
+.Pq Pa /etc/rc.d/utx ,
+which runs at boot and from
+.Pa /etc/rc.shutdown .
+.Ss Single-user mode
+Single-user mode starts when the kernel passes
+.Fl s ,
+when
+.Va init_script
+fails, or on
+.Dv SIGTERM ,
+which is how
+.Va stop_boot
+in
+.Xr rc.subr 8
+aborts a boot.
+All processes are terminated and a shell is started on the console.
+If the console is not
+.Dq secure
+in
+.Xr ttys 5
+and root has a password,
+.Nm
+asks for it first, as
+.Xr init 8
+does; an empty password or end of file goes to multi-user mode instead.
+When the shell exits,
+.Nm
+starts over with
+.Fl f .
+.Ss Shutdown and reroot
+On
+.Dv SIGINT ,
+.Dv SIGUSR1 ,
+.Dv SIGUSR2
+or
+.Dv SIGWINCH
+.Nm
+runs
+.Pa /etc/rc.shutdown ,
+stops its own jobs, sends
+.Dv SIGTERM
+and then
+.Dv SIGKILL
+to everything that is left, synchronizes the disks and calls
+.Xr reboot 2
+with the matching flags.
+.Pp
+On
+.Dv SIGEMT
+.Pq Xr reboot 8 Fl r
+it does the same, but then copies itself to a
+.Xr tmpfs 4
+mounted on
+.Pa /dev/reroot ,
+runs from there, calls
+.Xr reboot 2
+with
+.Dv RB_REROOT
+to unmount and mount the root file system again, and executes the
+.Xr init 8
+of the new root
+.Pq Va init_path
+or
+.Va kern.init_path ) .
+.Sh RUNNING IN A JAIL
+.Nm
+can be the service manager of a jail, in place of
+.Pa /etc/rc .
+When it finds that it is in a jail
+.Pq Va security.jail.jailed
+it runs the rc.d boot sequence itself, as it does when it is init, but it
+does not manage a console, gettys or the machine.
+Scripts with
+.Dq KEYWORD: nojail
+are not started.
+Start it as the jail's
+.Va exec.start :
+.Bd -literal -offset indent
+www {
+	path = "/jails/www";
+	host.hostname = "www.example.org";
+	mount.devfs;
+	exec.start = "/sbin/prowld";
+	exec.stop = "/sbin/prowlctl shutdown";
+}
+.Ed
+.Pp
+.Xr jail 8
+removes a jail by killing everything in it, so give it an
+.Va exec.stop
+command.
+.Cm prowlctl shutdown
+asks
+.Nm
+to stop, and returns only after it has gone.
+.Nm
+then runs
+.Pa /etc/rc.shutdown
+with the argument
+.Dq jail
+and stops its own jobs, so that daemons are stopped by their scripts in
+reverse dependency order before the jail is removed.
+Note that
+.Va exec.stop
+is only used when
+.Xr jail 8
+reads it from its configuration file or command line when it removes the
+jail.
 .Sh SIGNALS
+These are the signals when
+.Nm
+runs as a daemon.
+When it is
+.Xr init 8
+the signals are those of
+.Xr init 8 ,
+described below.
 .Bl -tag -width "SIGTERM"
 .It Dv SIGTERM , Dv SIGINT
 Begin an orderly shutdown.
@@ -746,6 +994,34 @@ uses
 .Fn waitpid -1 ... WNOHANG
 in a loop; no action is required from the administrator.
 .El
+.Pp
+As init:
+.Bl -tag -width "SIGUSR1"
+.It Dv SIGHUP
+Re-read
+.Xr ttys 5 .
+Gettys on lines that were switched off are stopped, lines that were switched
+on get one.
+.It Dv SIGINT
+Reboot.
+.It Dv SIGTERM
+Single-user mode.
+.It Dv SIGUSR1
+Halt.
+.It Dv SIGUSR2
+Halt and power off.
+.It Dv SIGWINCH
+Power cycle, if the hardware can.
+.It Dv SIGEMT
+Reroot.
+.El
+.Pp
+.Xr init 8
+also handles
+.Dv SIGTSTP ,
+which stops further logins;
+.Nm
+does not.
 .Sh FILES
 .Bl -tag -width "/var/run/prowld/generated.d/" -compact
 .It Pa /etc/prowld/prowld.conf
@@ -787,6 +1063,20 @@ Per-job log files
 .Pq mode 0750 .
 .It Pa /etc/rc.conf
 Authoritative source for service enable state.
+.It Pa /etc/ttys
+Terminal lines to run a getty on, when
+.Nm
+is init.
+.It Pa /etc/rc.shutdown
+Run at shutdown, and by a jail's
+.Nm
+when it is stopped.
+.It Pa /dev/reroot
+Temporary
+.Xr tmpfs 4
+holding a copy of
+.Nm
+during a reroot.
 .El
 .Sh DIAGNOSTICS
 .Nm
@@ -819,13 +1109,18 @@ The system continues booting without the affected services.
 .Ex -std
 .Sh SEE ALSO
 .Xr kqueue 2 ,
+.Xr reboot 2 ,
+.Xr syslog 3 ,
+.Xr rc.conf 5 ,
+.Xr ttys 5 ,
+.Xr init 8 ,
+.Xr jail 8 ,
 .Xr prowlctl 8 ,
 .Xr rc 8 ,
-.Xr rc.conf 5 ,
 .Xr rcorder 8 ,
 .Xr service 8 ,
-.Xr syslog 3 ,
-.Xr sysrc 8
+.Xr sysrc 8 ,
+.Xr utx 8
 .Sh HISTORY
 .Nm
 first appeared in MidnightBSD 4.1.

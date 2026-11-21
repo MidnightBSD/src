@@ -30,6 +30,7 @@
 .Nd control utility for prowld(8)
 .Sh SYNOPSIS
 .Nm
+.Op Fl s Ar rundir
 .Op Fl \-json
 .Ar command
 .Op Ar args ...
@@ -46,8 +47,17 @@ Most commands require appropriate privilege;
 operations that modify service state or system configuration
 must be run as root.
 .Pp
-The following global option is available:
+The following global options are available:
 .Bl -tag -width "--json"
+.It Fl s Ar rundir
+Connect to the
+.Xr prowld 8
+that was started with
+.Fl s Ar rundir ,
+that is to
+.Pa rundir/prowld.sock ,
+instead of the system one.
+It must come first, before any other option or the command.
 .It Fl \-json
 Print raw JSON responses instead of human-readable output.
 Useful for scripts and monitoring tools.
@@ -55,22 +65,28 @@ Useful for scripts and monitoring tools.
 .Sh COMMANDS
 .Bl -tag -width "reload-config"
 .It Cm list Op Fl \-enabled | Fl \-failed | Fl \-type Ns = Ns Ar type
-List all known jobs.
+List known jobs.
 With no filter options all loaded jobs are shown regardless of state.
+The filters are applied by
+.Xr prowld 8
+and can be combined; a job is shown only if it passes all of them.
 .Fl \-enabled
-shows only jobs that are set enabled (via rc.conf or the enable command).
+shows only jobs that are enabled: not disabled in
+.Xr rc.conf 5
+and not masked.
 .Fl \-failed
 shows only jobs currently in the
 .Dv failed
 state.
 .Fl \-type Ns = Ns Ar type
-filters by job type; valid values are
+shows only jobs of that type; valid values are
 .Cm daemon ,
 .Cm oneshot ,
 .Cm timer ,
-.Cm socket ,
+.Cm socket
 and
 .Cm rcshim .
+Any other value is an error.
 .It Cm status Ar label
 Show detailed status for a single job, including its state, PID,
 restart count, last exit code, and any status message reported via
@@ -94,13 +110,21 @@ and waits up to
 .Va exit_timeout
 seconds for the process to exit before sending
 .Dv SIGKILL .
-.It Cm restart Ar label
-Stop then restart the named job.
-Equivalent to
+.Pp
+A legacy
+.Xr rc.d 8
+script
+.Pq an rcshim job
+whose start has finished has no process of its own, because the script
+started a daemon and exited.
+For such a job
+.Xr prowld 8
+runs the script's
 .Cm stop
-followed by
-.Cm start
-but performed atomically in the daemon.
+instead, with the same time limit.
+.It Cm restart Ar label
+Stop then start the named job again, once it has stopped.
+This also starts a job that is stopped, completed or failed.
 .It Cm reload Ar label
 Send
 .Dv SIGHUP
@@ -150,6 +174,30 @@ Equivalent to sending
 to
 .Xr prowld 8
 directly.
+.It Cm shutdown
+Ask
+.Xr prowld 8
+to shut down, and wait until it has exited.
+It stops the jobs, and when
+.Xr prowld 8
+is the service manager of a jail it first runs
+.Pa /etc/rc.shutdown .
+Intended as the
+.Va exec.stop
+command of a jail whose
+.Va exec.start
+is
+.Pa /sbin/prowld ;
+see
+.Xr prowld 8 .
+It is refused when
+.Xr prowld 8
+is
+.Xr init 8 ,
+which must be stopped with
+.Xr shutdown 8
+or
+.Xr reboot 8 .
 .It Cm daemon-reexec
 Re-execute
 .Xr prowld 8

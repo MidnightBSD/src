@@ -481,6 +481,8 @@
         ..
         ping
         ..
+        prowlctl
+        ..
         route
         ..
     ..

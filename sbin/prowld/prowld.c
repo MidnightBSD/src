@@ -70,6 +70,9 @@ static bool		 g_single_user = false;	/* PID 1: go to single-user */
 static int		 g_howto = RB_AUTOBOOT;	/* PID 1: reboot(2) argument */
 bool			 g_is_init = false;	/* running as PID 1 */
 bool			 g_jailed = false;	/* running inside a jail */
+bool			 g_fastboot = false;	/* no "autoboot": skip fsck */
+static char		 g_unit_override[PROWL_PATH_MAX]; /* -u unit dir */
+static bool		 g_reroot = false;	/* PID 1: reroot requested */
 bool			 g_boot_mode = false;	/* we run rc.d */
 
 /* Runtime path globals — defaults match compile-time macros */
@@ -86,7 +89,7 @@ char	g_generated_dir[PROWL_PATH_MAX] = UNIT_DIR_GENERATED;
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: prowld [-d] [-s rundir]\n");
+	fprintf(stderr, "usage: prowld [-d] [-s rundir] [-u unitdir]\n");
 	exit(1);
 }
 
@@ -414,11 +417,16 @@ static void
 setup_kqueue_signals(void)
 {
 	struct kevent kev;
-	int sigs[] = { SIGTERM, SIGINT, SIGHUP, SIGCHLD, SIGUSR1, SIGUSR2, 0 };
+	int sigs[] = { SIGTERM, SIGINT, SIGHUP, SIGCHLD, SIGUSR1, SIGUSR2,
+	    SIGEMT, SIGWINCH, 0 };
 
 	for (int i = 0; sigs[i] != 0; i++) {
-		/* SIGUSR1/SIGUSR2 (halt, power off) are init(8)'s signals */
-		if (!g_is_init && (sigs[i] == SIGUSR1 || sigs[i] == SIGUSR2))
+		/*
+		 * SIGUSR1/SIGUSR2 (halt, power off), SIGEMT (reroot) and
+		 * SIGWINCH (power cycle) are init(8)'s signals.
+		 */
+		if (!g_is_init && (sigs[i] == SIGUSR1 || sigs[i] == SIGUSR2 ||
+		    sigs[i] == SIGEMT || sigs[i] == SIGWINCH))
 			continue;
 		/*
 		 * EVFILT_SIGNAL sees a signal even when it is ignored, so the
@@ -470,7 +478,23 @@ handle_signal(int sig)
 		g_howto = RB_HALT | RB_POWEROFF;
 		g_shutdown = true;
 		break;
+	case SIGEMT:
+		prowl_log(LOG_NOTICE, "SIGEMT: reroot");
+		g_reroot = true;
+		g_shutdown = true;
+		break;
+	case SIGWINCH:
+		prowl_log(LOG_NOTICE, "SIGWINCH: power cycling");
+		g_howto = RB_POWERCYCLE;
+		g_shutdown = true;
+		break;
 	case SIGHUP:
+		if (g_is_init) {
+			/* init(8): rescan /etc/ttys */
+			prowl_log(LOG_NOTICE, "SIGHUP: rescanning /etc/ttys");
+			pid1_rescan_ttys();
+			break;
+		}
 		prowl_log(LOG_NOTICE, "received SIGHUP, reloading config");
 		g_reload = true;
 		break;
@@ -557,17 +581,33 @@ handle_timer_event(struct kevent *kev)
  * Perform a configuration reload: re-read unit files and rc.d shims.
  * Existing running jobs are left untouched; new jobs become eligible.
  */
+/*
+ * Load unit files and rc-shims.  With -u only that directory is read and
+ * rc.d is not scanned, which gives tests a self-contained prowld.
+ */
+static void
+load_units(void)
+{
+	if (g_unit_override[0] != '\0') {
+		unit_load_dir(g_unit_override);
+		return;
+	}
+	unit_load_dir(UNIT_DIR_BASE);
+	unit_load_dir(UNIT_DIR_LOCAL);
+	unit_load_dir(UNIT_DIR_OVERRIDE);
+	unit_load_dir(g_generated_dir);
+
+	prowl_log(LOG_NOTICE, "scanning rc.d directories");
+	rcshim_scan_dir(RCD_DIR_BASE);
+	rcshim_scan_dir(RCD_DIR_LOCAL);
+}
+
 static void
 reload_config(void)
 {
 	prowl_log(LOG_NOTICE, "reloading configuration");
 	load_config();
-	unit_load_dir(UNIT_DIR_BASE);
-	unit_load_dir(UNIT_DIR_LOCAL);
-	unit_load_dir(UNIT_DIR_OVERRIDE);
-	unit_load_dir(g_generated_dir);
-	rcshim_scan_dir(RCD_DIR_BASE);
-	rcshim_scan_dir(RCD_DIR_LOCAL);
+	load_units();
 	dag_build();
 	dag_schedule_ready();
 	g_reload = false;
@@ -592,14 +632,7 @@ startup_load(void)
 
 	prowl_log(LOG_NOTICE, "prowld starting, loading unit files");
 
-	unit_load_dir(UNIT_DIR_BASE);
-	unit_load_dir(UNIT_DIR_LOCAL);
-	unit_load_dir(UNIT_DIR_OVERRIDE);
-	unit_load_dir(g_generated_dir);
-
-	prowl_log(LOG_NOTICE, "scanning rc.d directories");
-	rcshim_scan_dir(RCD_DIR_BASE);
-	rcshim_scan_dir(RCD_DIR_LOCAL);
+	load_units();
 
 	/* init(8) respawns gettys from /etc/ttys; so do we */
 	if (g_is_init)
@@ -728,6 +761,8 @@ main(int argc, char *argv[])
 	int ch, i;
 	bool debug = false;
 	bool single = false;
+	bool reroot_two = false;
+	bool devfs = false;
 	const char *override_dir = NULL;
 
 	/*
@@ -760,18 +795,31 @@ main(int argc, char *argv[])
 		for (i = 1; i < argc; i++) {
 			if (strcmp(argv[i], "-s") == 0)
 				single = true;
+			else if (strcmp(argv[i], "-f") == 0)
+				g_fastboot = true;
+			else if (strcmp(argv[i], "-r") == 0)
+				reroot_two = true;
+			else if (strcmp(argv[i], "-d") == 0)
+				devfs = true;
 		}
+		pid1_mount_devfs(devfs);
 		pid1_open_console();
 		debug = true;
 		g_config.debug = true;
 	} else {
-		while ((ch = getopt(argc, argv, "ds:")) != -1) {
+		while ((ch = getopt(argc, argv, "ds:u:")) != -1) {
 			switch (ch) {
 			case 'd':
 				debug = true;
 				break;
 			case 's':
 				override_dir = optarg;
+				break;
+			case 'u':
+				if (strlcpy(g_unit_override, optarg,
+				    sizeof(g_unit_override)) >=
+				    sizeof(g_unit_override))
+					errx(1, "unit directory too long");
 				break;
 			default:
 				usage();
@@ -792,6 +840,20 @@ main(int argc, char *argv[])
 
 	if (g_is_init) {
 		prowl_log(LOG_NOTICE, "running as PID 1 (init)");
+		if (setlogin("root") < 0)
+			prowl_log(LOG_WARNING, "setlogin() failed: %m");
+
+		/* After a reroot the new root's init is run by pid1_reroot */
+		if (reroot_two)
+			pid1_reroot_phase_two();	/* does not return */
+		pid1_reroot_cleanup();
+
+		/* Loader variables: init_exec, init_script, init_chroot */
+		pid1_init_exec();
+		if (pid1_init_script() == -1)
+			single = true;
+		pid1_init_chroot();
+
 		if (single)
 			pid1_single_user();	/* does not return */
 	} else if (!debug && daemon(0, 0) == -1) {
@@ -836,6 +898,8 @@ main(int argc, char *argv[])
 	 */
 	if (g_is_init) {
 		remove_pidfile();
+		if (g_reroot)
+			pid1_reroot();		/* does not return */
 		if (g_single_user)
 			pid1_single_user();	/* does not return */
 		pid1_shutdown(g_howto);		/* does not return */

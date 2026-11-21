@@ -749,7 +749,9 @@ child_setup_and_exec(job_t *job)
 		    envc + 3 <= PROWL_ENV_MAX + 6) {
 			snprintf(rcpid_env, sizeof(rcpid_env), "RC_PID=%d",
 			    (int)getppid());
-			envp[envc++] = (char *)(uintptr_t)"autoboot=yes";
+			if (!g_fastboot)
+				envp[envc++] =
+				    (char *)(uintptr_t)"autoboot=yes";
 			envp[envc++] = (char *)(uintptr_t)"rc_fast=yes";
 			envp[envc++] = rcpid_env;
 		}
@@ -1573,6 +1575,13 @@ supervisor_reap(pid_t pid, int status)
 	    job->state == JOB_STATE_STARTING)) &&
 	    WIFEXITED(status) && WEXITSTATUS(status) == 0) {
 		job_set_state(job, JOB_STATE_COMPLETED);
+		dag_schedule_ready();
+		return;
+	}
+
+	/* Masked while running: the process was stopped, stay masked */
+	if (job->state == JOB_STATE_MASKED) {
+		job->rc_stopping = false;
 		dag_schedule_ready();
 		return;
 	}

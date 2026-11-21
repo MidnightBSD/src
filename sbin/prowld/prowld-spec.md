@@ -87,8 +87,8 @@ init (PID 1)
       └── prowlctl handler threads
 ```
 
-A future version may migrate prowld to PID 1 once the design is proven. This
-migration is explicitly deferred and out of scope for v1.0.
+prowld can also run as PID 1 (§3.4), selected with the loader variable
+`init_path="/sbin/prowld"`. That is opt-in and init(8) remains the default.
 
 **Rationale:** Keeping init as PID 1 minimizes the blast radius of prowld bugs
 during early adoption. Users can fall back to traditional rc.d by editing a
@@ -118,6 +118,71 @@ single line in `/etc/rc` if prowld fails.
 7. prowld computes a topological sort and launches jobs in parallel waves
    respecting dependencies
 8. prowld enters its main loop: event-driven supervision
+
+
+### 3.4 Running as PID 1
+
+With `init_path="/sbin/prowld"` the kernel runs prowld as init. It then does
+what init(8) and `/etc/rc` do, so a system can boot with no init(8) at all.
+It is linked statically (`NO_SHARED=YES`): `/usr` is not mounted when it
+starts, and a reroot must be able to unmount the old root while it runs.
+
+**Boot flags.** The kernel flags are the ones init(8) takes: `-s`
+(single-user), `-f` (fast boot: no `autoboot`, so no fsck), `-d` (mount
+devfs), `-r` (second phase of a reroot). Others are ignored. They are not
+prowld's daemon options; in particular `-s` is single-user, not a run
+directory.
+
+**Startup.** prowld mounts devfs if `/` and `/dev` share a device, becomes a
+session leader, opens `/dev/console` as fds 0-2, sets the login name to root,
+and honours the loader variables `init_exec` (run a script instead of init),
+`init_script` (run first; failure means single-user), `init_chroot`, and
+`init_shell`. It then loads units, rc-shims and one getty job per enabled
+`/etc/ttys` line.
+
+**rc-shims.** Shims run with `autoboot=yes` (unless `-f`), `rc_fast=yes`,
+`RC_PID=<prowld pid>` and the `faststart` argument, which is the environment
+`/etc/rc` gives them. Stopping a shim runs its `stop` with a plain
+environment: with `rc_fast` set, rc.subr skips the stop when it finds no
+pidfile.
+
+**Runtime state.** The run directory, pidfile and control socket are created
+only when the `FILESYSTEMS` shim has finished. Before that the root file
+system is read-only, and the `var`/`cleanvar` scripts would hide or delete
+them.
+
+**Gettys.** `org.midnightbsd.getty.<tty>`: keep-alive, requires `LOGIN`, the
+terminal type from `/etc/ttys` as `TERM`. `onifexists` and `onifconsole`
+lines get a job only if the device exists. SIGHUP re-reads `/etc/ttys`:
+lines switched off are stopped and not respawned, new or re-enabled lines get
+a getty. A change to the command of a line that stays on is not applied until
+the getty is restarted.
+
+**Signals** (as init(8)): HUP rescan ttys, INT reboot, TERM single-user,
+USR1 halt, USR2 power off, WINCH power cycle, EMT reroot. TSTP (block logins)
+is not implemented.
+
+**Shutdown.** Run `/etc/rc.shutdown`, stop prowld's jobs, SIGTERM then SIGKILL
+to every process, sync, `reboot(2)`. `rc.d/prowld stop` does nothing inside
+this run (`PROWLD_RUNDOWN=1`): it would wait for prowld itself.
+
+**Single-user.** Entered on `-s`, `init_script` failure, or SIGTERM (which
+is how `stop_boot` in rc.subr aborts a boot). All processes are killed and
+`init_shell` (default `/bin/sh`) runs on the console. If the console is not
+`secure` in `/etc/ttys` and root has a password, it is asked for first; an
+empty password or end of file goes to multi-user. When the shell exits prowld
+re-executes itself with `-f`. Not implemented: init(8)'s DEBUGSHELL prompt for
+an alternate shell.
+
+**Reroot.** On SIGEMT: shutdown as above, SIGKILL all, copy prowld to a tmpfs
+on `/dev/reroot`, exec it with `-r`; it closes everything that refers to the
+old root, calls `reboot(RB_REROOT)` and execs the new root's init
+(`init_path` or `kern.init_path`). The new prowld mounts devfs and unmounts
+`/dev/reroot`.
+
+**Accounting.** Boot and shutdown records in `utx.log` are written by the
+`utx` rc.d script (`utx boot` at startup, `utx shutdown` from
+`rc.shutdown`); prowld does not write them itself.
 
 ---
 
@@ -500,13 +565,21 @@ is source-compatible: units that depend on `jail` (the rc-shim aggregate)
 continue to work unchanged, and hosts with many independent jails will see
 measurable boot-time improvements automatically.
 
-**Services inside jails remain out of scope in both v1.0 and v1.1.** Each
-jail has its own init and service manager. A unit file's `jail: <name>`
+**Services inside jails are not managed from the host in v1.0 or v1.1.**
+Each jail has its own init and service manager. A unit file's `jail: <name>`
 field causes the program to be `jexec`'d into the named jail from the host,
 but prowld does not cross the jail boundary to manage the jail's internal
-service tree. Admins who want prowld inside a jail can run a separate
-prowld instance there, managed by that jail's init — this is no different
-from running any other service manager in a jail.
+service tree. A prowld inside a jail is supported (below).
+
+**prowld as a jail's service manager.** Set `exec.start = "/sbin/prowld"`.
+prowld sees `security.jail.jailed` and runs the rc.d boot sequence itself, as
+when it is PID 1, with the same shim environment and the same deferred runtime
+setup, but without console, gettys or `reboot(2)`. Scripts with
+`KEYWORD: nojail` do not start. Set `exec.stop = "/sbin/prowlctl shutdown"`:
+`jail -r` kills everything at once otherwise. `prowlctl shutdown` makes
+prowld run `/etc/rc.shutdown jail`, stop its jobs and exit, and returns only
+when it has. `exec.stop` is only honoured if `jail` is given it (config file
+or command line) when it removes the jail.
 
 ### 7.6 rc.conf and sysrc Integration
 
@@ -936,7 +1009,7 @@ runs it once at next startup if `schedule.persistent: true` is set.
 ### 13.1 Commands
 
 ```
-prowlctl list [--enabled] [--failed] [--type=daemon|oneshot|timer]
+prowlctl list [--enabled] [--failed] [--type=daemon|oneshot|timer|socket|rcshim]
 prowlctl status <label>
 prowlctl start <label>
 prowlctl stop <label>
@@ -949,10 +1022,16 @@ prowlctl unmask <label>
 prowlctl show <label>                   # dump effective unit file
 prowlctl logs <label> [--follow] [--lines=N]
 prowlctl reload-config                  # rescan unit directories
+prowlctl shutdown                       # stop prowld and wait (jail exec.stop)
 prowlctl daemon-reexec                  # re-exec prowld (for upgrades)
 prowlctl dependencies <label>           # show dependency tree
 prowlctl graph [--format=dot]           # full dependency graph
 ```
+
+The filters of `list` are applied by prowld and combine with AND.
+`--enabled` means enabled and not masked. `prowlctl -s <rundir>` talks to a
+prowld started with `prowld -s <rundir>`; `prowld -u <unitdir>` reads only
+that unit directory and skips rc.d (both are for tests).
 
 ### 13.2 Output
 

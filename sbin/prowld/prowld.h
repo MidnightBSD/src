@@ -364,6 +364,7 @@ extern volatile bool	 g_reload;
 extern int		 g_current_starts;
 extern bool		 g_is_init;		/* running as PID 1 */
 extern bool		 g_jailed;		/* running inside a jail */
+extern bool		 g_fastboot;		/* no "autoboot": skip fsck */
 extern bool		 g_boot_mode;		/* we run rc.d */
 
 /*
@@ -409,11 +410,19 @@ bool	rcconf_is_enabled(const char *, bool);
 bool	rcconf_var_is_enabled(const char *, bool);
 
 /* ---- pid1.c ---- */
+void	pid1_mount_devfs(bool);
 void	pid1_open_console(void);
 void	pid1_shutdown(int) __dead2;
 void	pid1_single_user(void) __dead2;
 int	pid1_load_ttys(void);
 int	boot_run_rundown(const char *);
+void	pid1_init_exec(void);
+int	pid1_init_script(void);
+void	pid1_init_chroot(void);
+void	pid1_rescan_ttys(void);
+void	pid1_reroot(void) __dead2;
+void	pid1_reroot_phase_two(void) __dead2;
+void	pid1_reroot_cleanup(void);
 
 /* ---- dag.c ---- */
 int	dag_build(void);

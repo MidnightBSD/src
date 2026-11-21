@@ -9,4 +9,6 @@ MAN=		prowlctl.8
 
 WARNS?=		6
 
+SUBDIR.${MK_TESTS}+= tests
+
 .include <bsd.prog.mk>

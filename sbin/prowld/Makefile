@@ -16,9 +16,14 @@ SRCS=		prowld.c \
 MAN=		prowld.8 prowld.conf.5 prowl-unit.5
 
 CFLAGS+=	-I${SRCTOP}/contrib/libucl/include
-LIBADD=		ucl util
+LIBADD=		ucl util crypt
 
 WARNS?=		6
+
+# prowld can be init(8): /usr is not mounted when it starts, and a reroot
+# must be able to unmount the old root while it runs, so it cannot map
+# shared libraries.  Like init(8), build it statically.
+NO_SHARED?=	YES
 
 CONFS=		prowld.conf.sample
 CONFSDIR=	/etc/prowld
