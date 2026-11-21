@@ -458,9 +458,18 @@ resolve_target(const ucl_object_t *req, int fd, const char *id)
 
 	job = job_find_by_label(label);
 	if (job == NULL)
+		job = job_find_instance(label);
+	if (job == NULL)
 		job = job_find_by_provides(label);
 	if (job == NULL)
 		job = job_find_by_rcname(label);
+
+	/* "unit@instance" of a template that was not listed in rc.conf */
+	if (job == NULL && strchr(label, '@') != NULL) {
+		job = unit_instantiate(label);
+		if (job != NULL)
+			dag_build();
+	}
 
 	if (job == NULL)
 		ipc_send_error(fd, id, "job not found");

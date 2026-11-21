@@ -719,8 +719,93 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 	return (job);
 }
 
-int
-unit_load_file(const char *path)
+/*
+ * Instance names end up in labels and in file names: keep them boring.
+ */
+static bool
+instance_valid(const char *inst)
+{
+	const char *p;
+
+	if (inst == NULL || *inst == '\0' || strlen(inst) >= PROWL_INSTANCE_MAX)
+		return (false);
+	if (inst[0] == '.')
+		return (false);
+	for (p = inst; *p != '\0'; p++) {
+		unsigned char c = (unsigned char)*p;
+
+		if (!isalnum(c) && c != '.' && c != '-' && c != '_')
+			return (false);
+	}
+	return (strstr(inst, "..") == NULL);
+}
+
+/*
+ * Add the unit file at path to the parser.  For a template instance every
+ * "%i" in the file is replaced by the instance name and "%%" by "%".
+ */
+static bool
+add_unit_file(struct ucl_parser *parser, const char *path, const char *inst)
+{
+	struct stat sb;
+	char *in, *out, *o;
+	const char *p;
+	size_t ilen;
+	ssize_t n;
+	bool ok;
+	int fd;
+
+	if (inst == NULL)
+		return (ucl_parser_add_file(parser, path));
+
+	fd = open(path, O_RDONLY | O_NOFOLLOW);
+	if (fd == -1)
+		return (false);
+	if (fstat(fd, &sb) == -1 || !S_ISREG(sb.st_mode) ||
+	    sb.st_size > UNIT_FILE_MAX) {
+		close(fd);
+		return (false);
+	}
+	ilen = strlen(inst);
+	in = malloc((size_t)sb.st_size + 1);
+	out = malloc((size_t)sb.st_size * (ilen > 1 ? ilen : 1) + 1);
+	if (in == NULL || out == NULL) {
+		free(in);
+		free(out);
+		close(fd);
+		return (false);
+	}
+	n = read(fd, in, (size_t)sb.st_size);
+	close(fd);
+	if (n < 0 || n != sb.st_size) {
+		free(in);
+		free(out);
+		return (false);
+	}
+	in[n] = '\0';
+
+	o = out;
+	for (p = in; *p != '\0'; p++) {
+		if (p[0] == '%' && p[1] == 'i') {
+			memcpy(o, inst, ilen);
+			o += ilen;
+			p++;
+		} else if (p[0] == '%' && p[1] == '%') {
+			*o++ = '%';
+			p++;
+		} else
+			*o++ = *p;
+	}
+	*o = '\0';
+	ok = ucl_parser_add_chunk(parser, (const unsigned char *)out,
+	    (size_t)(o - out));
+	free(in);
+	free(out);
+	return (ok);
+}
+
+static int
+unit_load_file_inst(const char *path, const char *inst)
 {
 	struct ucl_parser *parser;
 	ucl_object_t *root;
@@ -755,7 +840,7 @@ unit_load_file(const char *path)
 		return (-1);
 	}
 
-	if (!ucl_parser_add_file(parser, path)) {
+	if (!add_unit_file(parser, path, inst)) {
 		/*
 		 * Log only a bounded prefix of the parser error.  UCL error
 		 * strings can include surrounding token text from the file,
@@ -788,7 +873,20 @@ unit_load_file(const char *path)
 	char dropin_dir[PROWL_PATH_MAX];
 	char *parent = strdup(path);
 	char *dname = dirname(parent);
-	snprintf(dropin_dir, sizeof(dropin_dir), "%s/%s.d", dname, job->label);
+	if (inst != NULL) {
+		char *base = strdup(path);
+		char *bname = basename(base);
+		size_t blen = strlen(bname);
+
+		/* A template's drop-ins live in <name>@.d */
+		if (blen > 5)
+			blen -= 5;
+		snprintf(dropin_dir, sizeof(dropin_dir), "%s/%.*s.d", dname,
+		    (int)blen, bname);
+		free(base);
+	} else
+		snprintf(dropin_dir, sizeof(dropin_dir), "%s/%s.d", dname,
+		    job->label);
 	free(parent);
 
 	{
@@ -848,7 +946,8 @@ unit_load_file(const char *path)
 					ucl_object_unref(root);
 					parser = ucl_parser_new(
 					    UCL_PARSER_NO_FILEVARS);
-					if (!ucl_parser_add_file(parser, path)) {
+					if (!add_unit_file(parser, path,
+					    inst)) {
 						prowl_log(LOG_WARNING,
 						    "drop-in re-parse %s: %.128s",
 						    path,
@@ -875,8 +974,8 @@ unit_load_file(const char *path)
 						    "%s/%s", dropin_dir,
 						    de->d_name);
 
-						if (!ucl_parser_add_file(parser,
-						    dpath)) {
+						if (!add_unit_file(parser,
+						    dpath, inst)) {
 							prowl_log(LOG_WARNING,
 							    "drop-in %s: %.128s",
 							    dpath,
@@ -913,6 +1012,132 @@ skip_dropins:
 	prowl_log(LOG_DEBUG, "loaded unit %s from %s", job->label, path);
 
 	return (ret);
+}
+
+static bool
+is_template_name(const char *name)
+{
+	size_t len = strlen(name);
+
+	return (len > 6 && strcmp(name + len - 6, "@.unit") == 0);
+}
+
+/*
+ * Instantiate the template at path for the instances named by its
+ * "instances_var" rc.conf variable, or for "default_instance" if the
+ * variable is empty or unset.
+ */
+static int
+unit_load_template(const char *path)
+{
+	struct ucl_parser *parser;
+	ucl_object_t *root;
+	const ucl_object_t *obj;
+	char list[1024], *p, *tok;
+	const char *def = NULL;
+	int n = 0;
+
+	parser = ucl_parser_new(UCL_PARSER_NO_FILEVARS);
+	if (parser == NULL)
+		return (-1);
+	if (!ucl_parser_add_file(parser, path)) {
+		prowl_log(LOG_ERR, "unit_load_file %s: %.128s", path,
+		    ucl_parser_get_error(parser));
+		ucl_parser_free(parser);
+		return (-1);
+	}
+	root = ucl_parser_get_object(parser);
+	ucl_parser_free(parser);
+	if (root == NULL)
+		return (-1);
+
+	list[0] = '\0';
+	obj = ucl_object_lookup(root, "instances_var");
+	if (obj != NULL && ucl_object_type(obj) == UCL_STRING)
+		(void)rcconf_var_get(ucl_object_tostring(obj), list,
+		    sizeof(list));
+	obj = ucl_object_lookup(root, "default_instance");
+	if (obj != NULL && ucl_object_type(obj) == UCL_STRING)
+		def = ucl_object_tostring(obj);
+
+	p = list;
+	while ((tok = strsep(&p, " \t\n")) != NULL) {
+		if (*tok == '\0')
+			continue;
+		if (!instance_valid(tok)) {
+			prowl_log(LOG_WARNING,
+			    "unit %s: invalid instance name '%.32s'",
+			    path, tok);
+			continue;
+		}
+		if (unit_load_file_inst(path, tok) == 0)
+			n++;
+	}
+	if (n == 0 && list[0] == '\0' && def != NULL && instance_valid(def)) {
+		if (unit_load_file_inst(path, def) == 0)
+			n++;
+	}
+	ucl_object_unref(root);
+	return (n > 0 ? 0 : -1);
+}
+
+int
+unit_load_file(const char *path)
+{
+	const char *base = strrchr(path, '/');
+
+	base = base != NULL ? base + 1 : path;
+	if (is_template_name(base))
+		return (unit_load_template(path));
+	return (unit_load_file_inst(path, NULL));
+}
+
+/*
+ * Create the instance of a template named by label, e.g. the label
+ * "org.midnightbsd.pflog@pflog1" from "pflog@.unit".  Returns the new job
+ * or NULL if there is no such template.
+ */
+job_t *
+unit_instantiate(const char *label)
+{
+	char stem[PROWL_LABEL_MAX], path[PROWL_PATH_MAX];
+	const char *dirs[5], *at, *dot;
+	size_t len;
+	int i;
+
+	at = strchr(label, '@');
+	if (at == NULL || !label_valid(label) || !instance_valid(at + 1))
+		return (NULL);
+	dot = at;
+	while (dot > label && dot[-1] != '.')
+		dot--;
+	len = (size_t)(at - dot);
+	if (len == 0 || len >= sizeof(stem))
+		return (NULL);
+	memcpy(stem, dot, len);
+	stem[len] = '\0';
+
+	if (g_unit_override[0] != '\0') {
+		dirs[0] = g_unit_override;
+		dirs[1] = NULL;
+	} else {
+		dirs[0] = UNIT_DIR_BASE;
+		dirs[1] = UNIT_DIR_LOCAL;
+		dirs[2] = UNIT_DIR_OVERRIDE;
+		dirs[3] = g_generated_dir;
+		dirs[4] = NULL;
+	}
+	for (i = 0; dirs[i] != NULL; i++) {
+		snprintf(path, sizeof(path), "%s/%s@.unit", dirs[i], stem);
+		if (access(path, R_OK) != 0)
+			continue;
+		if (unit_load_file_inst(path, at + 1) == 0) {
+			job_t *job = job_find_instance(label);
+
+			return (job != NULL ? job : job_find_by_label(label));
+		}
+	}
+	return (NULL);
 }
 
 /*

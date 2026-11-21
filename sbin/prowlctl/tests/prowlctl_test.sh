@@ -330,8 +330,48 @@ required_files_cleanup()
 	stop_prowld
 }
 
+atf_test_case templates cleanup
+templates_head()
+{
+	atf_set descr "template units are instantiated on demand"
+	atf_set require.user root
+}
+templates_body()
+{
+	dir="$(pwd)"
+	mkdir -p units
+	cat >units/tmpl@.unit <<EOF
+{"label": "org.test.tmpl@%i", "rc_name": "prowlctl_test_tmpl",
+ "type": "daemon", "program": "/bin/sh",
+ "arguments": ["-c", "echo %i > ${dir}/inst.%i; exec sleep 300"],
+ "run_at_load": true, "default_instance": "one"}
+EOF
+	start_prowld
+	# The default instance exists and runs.
+	wait_state org.test.tmpl@one running
+	test -f inst.one || atf_fail "%i was not substituted in instance one"
+
+	# Others are created by name, with or without the label prefix.
+	atf_check -o ignore ${CTL} start tmpl@two
+	wait_state org.test.tmpl@two running
+	atf_check -o inline:"two\n" cat inst.two
+	atf_check -o match:'org.test.tmpl@two' ${CTL} show tmpl@two
+	atf_check -o ignore ${CTL} stop tmpl@two
+	wait_state org.test.tmpl@two stopped
+
+	# Bad instance names and unknown templates are refused.
+	atf_check -s not-exit:0 -e ignore -o ignore ${CTL} start tmpl@bad/x
+	atf_check -s not-exit:0 -e ignore -o ignore ${CTL} start tmpl@..x
+	atf_check -s not-exit:0 -e ignore -o ignore ${CTL} start nosuch@x
+}
+templates_cleanup()
+{
+	stop_prowld
+}
+
 atf_init_test_cases()
 {
+	atf_add_test_case templates
 	atf_add_test_case required_files
 	atf_add_test_case list_type
 	atf_add_test_case list_failed

@@ -342,6 +342,21 @@ File extension: `.unit` (language-neutral; libucl auto-detects syntax).
 
 ---
 
+### 4.5 Template Units
+
+A unit file named `name@.unit` is a template.  Before it is parsed, every
+`%i` is replaced by the instance name and `%%` by `%`.  The label must
+contain `%i`.  Instance names use letters, digits, `_`, `-` and `.`.
+
+- `instances_var` *(string)*: the rc.conf variable listing the instances to
+  create at start-up (space separated).
+- `default_instance` *(string)*: the instance created when that variable is
+  empty or unset.
+
+Other instances are created on demand: `prowlctl start pflog@pf3` loads
+`pflog@.unit` for the instance `pf3`.  An instance is addressed by its full
+label or by the short form `name@instance`.
+
 ## 5. Dependency Resolution
 
 ### 5.1 Relationship Types

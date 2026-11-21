@@ -452,6 +452,62 @@ rcconf_is_enabled(const char *name, bool default_val)
  * ones.  Returns the value found, or default_val if not set.
  */
 bool
+rcconf_var_get(const char *varname, char *buf, size_t sz)
+{
+	const char *files[] = {
+		"/etc/defaults/rc.conf",
+		RCCONF_PATH,
+		RCCONF_LOCAL_PATH,
+		NULL
+	};
+	FILE *fp;
+	char line[1024];
+	bool found = false;
+	size_t vlen = strlen(varname);
+
+	if (sz > 0)
+		buf[0] = '\0';
+
+	for (int fi = 0; files[fi] != NULL; fi++) {
+		fp = fopen(files[fi], "r");
+		if (fp == NULL)
+			continue;
+
+		while (fgets(line, sizeof(line), fp) != NULL) {
+			const char *p = skip_ws(line);
+			char q;
+			size_t n;
+
+			if (strncmp(p, varname, vlen) != 0)
+				continue;
+			p = skip_ws(p + vlen);
+			if (*p != '=')
+				continue;
+			p = skip_ws(p + 1);
+
+			q = '\0';
+			if (*p == '"' || *p == '\'') {
+				q = *p;
+				p++;
+			}
+			n = 0;
+			while (*p != '\0' && *p != '\n' &&
+			    (q != '\0' ? *p != q : *p != '#') &&
+			    n < sz - 1)
+				buf[n++] = *p++;
+			buf[n] = '\0';
+			/* trim trailing blanks of an unquoted value */
+			while (q == '\0' && n > 0 &&
+			    (buf[n - 1] == ' ' || buf[n - 1] == '\t'))
+				buf[--n] = '\0';
+			found = true;
+		}
+		fclose(fp);
+	}
+	return (found);
+}
+
+bool
 rcconf_var_is_enabled(const char *varname, bool default_val)
 {
 	const char *files[] = {

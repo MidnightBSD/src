@@ -72,6 +72,7 @@ static bool g_json = false;	/* --json flag */
 /*
  * Validate a user-supplied label before embedding it in JSON.
  * Mirrors label_valid() in prowld/job.c to prevent JSON injection.
+ * An "@" names an instance of a template unit.
  */
 static bool
 validate_label_input(const char *s)
@@ -82,7 +83,8 @@ validate_label_input(const char *s)
 		return (false);
 	for (p = s; *p != '\0'; p++) {
 		unsigned char c = (unsigned char)*p;
-		if (!isalnum(c) && c != '.' && c != '-' && c != '_')
+		if (!isalnum(c) && c != '.' && c != '-' && c != '_' &&
+		    c != '@')
 			return (false);
 	}
 	if (strstr(s, "..") != NULL)

@@ -87,6 +87,8 @@ static_assert((__alignof__(struct job) & TIMER_MASK) == 0,
 #define PROWLD_JOB_LOG_DIR	"/var/log/prowld/jobs"
 
 /* Unit file directories (searched in order; later overrides earlier) */
+#define PROWL_INSTANCE_MAX	64	/* longest template instance name */
+#define UNIT_FILE_MAX		(256 * 1024)	/* largest template file */
 #define UNIT_DIR_BASE		"/etc/prowld/units.d"
 #define UNIT_DIR_LOCAL		"/usr/local/etc/prowld/units.d"
 #define UNIT_DIR_OVERRIDE	"/etc/prowld/overrides.d"
@@ -388,6 +390,7 @@ extern char		 g_mask_dir[PROWL_PATH_MAX];
 extern char		 g_log_dir[PROWL_PATH_MAX];
 extern char		 g_job_log_dir[PROWL_PATH_MAX];
 extern char		 g_generated_dir[PROWL_PATH_MAX];
+extern char		 g_unit_override[PROWL_PATH_MAX];
 
 /* ---- IPC state (defined in ipc.c) ---- */
 extern int		 ipc_listen_fd;
@@ -397,6 +400,7 @@ job_t		*job_alloc(void);
 void		 job_free(job_t *);
 job_t		*job_find_by_label(const char *);
 job_t		*job_find_by_rcname(const char *);
+job_t		*job_find_instance(const char *);
 job_t		*job_find_by_provides(const char *);
 bool		 job_provides(const job_t *, const char *);
 void		 job_set_state(job_t *, job_state_t);
@@ -410,11 +414,13 @@ bool		 label_valid(const char *);
 /* ---- unit.c ---- */
 int	unit_load_dir(const char *);
 int	unit_load_file(const char *);
+job_t	*unit_instantiate(const char *);
 
 /* ---- rcshim.c ---- */
 int	rcshim_scan_dir(const char *);
 bool	rcconf_is_enabled(const char *, bool);
 bool	rcconf_var_is_enabled(const char *, bool);
+bool	rcconf_var_get(const char *, char *, size_t);
 
 /* ---- pid1.c ---- */
 void	pid1_mount_devfs(bool);

@@ -100,6 +100,27 @@ job_find_by_label(const char *label)
 	return (NULL);
 }
 
+/*
+ * Find an instance of a template by its short name: "pflog@pf1" matches
+ * the label "org.midnightbsd.pflog@pf1".
+ */
+job_t *
+job_find_instance(const char *name)
+{
+	job_t *job;
+	size_t llen, nlen = strlen(name);
+
+	if (strchr(name, '@') == NULL)
+		return (NULL);
+	TAILQ_FOREACH(job, &g_jobs, entries) {
+		llen = strlen(job->label);
+		if (llen > nlen && job->label[llen - nlen - 1] == '.' &&
+		    strcmp(job->label + llen - nlen, name) == 0)
+			return (job);
+	}
+	return (NULL);
+}
+
 job_t *
 job_find_by_rcname(const char *rcname)
 {
@@ -283,7 +304,8 @@ label_valid(const char *label)
 
 	for (p = label; *p != '\0'; p++) {
 		unsigned char c = (unsigned char)*p;
-		if (!isalnum(c) && c != '.' && c != '-' && c != '_')
+		if (!isalnum(c) && c != '.' && c != '-' && c != '_' &&
+		    c != '@')
 			return (false);
 	}
 
