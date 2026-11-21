@@ -1,0 +1,22 @@
+# hcsecd.unit - native prowld(8) unit for hcsecd(8)
+#
+# Replaces the rc.d/hcsecd shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with hcsecd_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/hcsecd.
+#
+# hcsecd runs in the foreground (-d).  The configuration file is listed in
+# required_files; a different hcsecd_config is checked by the script.
+
+label = "org.midnightbsd.hcsecd";
+description = "Bluetooth link key and PIN code daemon";
+type = "daemon";
+rc_name = "hcsecd";
+run_at_load = true;
+keep_alive = true;
+required_files = ["/etc/bluetooth/hcsecd.conf"];
+nojail = true;
+provides = ["hcsecd"];
+wants = ["DAEMON"];
+before = ["LOGIN"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config hcsecd\nkldstat -q -m ng_btsocket || kldload ng_btsocket || exit 1\nconfig=$hcsecd_config\n[ -n \"$config\" ] || config=/etc/bluetooth/hcsecd.conf\n[ -r \"$config\" ] || exit 1\nexec /usr/sbin/hcsecd -d -f $config $hcsecd_flags", "hcsecd"];

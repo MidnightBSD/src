@@ -1,0 +1,22 @@
+# bthidd.unit - native prowld(8) unit for bthidd(8)
+#
+# Replaces the rc.d/bthidd shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with bthidd_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/bthidd.
+#
+# bthidd runs in the foreground (-d).  evdev support (bthidd_evdev_support)
+# is handled as in rc.d/bthidd.
+
+label = "org.midnightbsd.bthidd";
+description = "Bluetooth HID daemon";
+type = "daemon";
+rc_name = "bthidd";
+run_at_load = true;
+keep_alive = true;
+required_files = ["/etc/bluetooth/bthidd.conf"];
+nojail = true;
+provides = ["bthidd"];
+wants = ["DAEMON", "hcsecd"];
+before = ["LOGIN"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config bthidd\nevdev=\ncase $bthidd_evdev_support in\n[Aa][Uu][Tt][Oo])\n    check_kern_features evdev_support && evdev=1\n    ;;\n*)\n    checkyesno bthidd_evdev_support && evdev=1\n    ;;\nesac\nif [ -n \"$evdev\" ]; then\n    kldstat -q -m uinput || kldload uinput\n    bthidd_flags=\"-u $bthidd_flags\"\nfi\nfor m in kbdmux vkbd ng_btsocket; do\n    kldstat -q -m $m || kldload $m || exit 1\ndone\nconfig=$bthidd_config\n[ -n \"$config\" ] || config=/etc/bluetooth/bthidd.conf\nhids=$bthidd_hids\n[ -n \"$hids\" ] || hids=/var/db/bthidd.hids\n[ -r \"$config\" ] || exit 1\nexec /usr/sbin/bthidd -d -c $config -H $hids -p /var/run/bthidd.pid $bthidd_flags", "bthidd"];

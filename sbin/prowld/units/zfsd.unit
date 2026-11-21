@@ -1,0 +1,20 @@
+# zfsd.unit - native prowld(8) unit for zfsd(8)
+#
+# Replaces the rc.d/zfsd shim: a shim whose PROVIDE is already covered by
+# a native unit is skipped.  Enable and disable it with zfsd_enable in
+# rc.conf; the other rc.conf variables are honoured as in rc.d/zfsd.
+#
+# zfsd stays in the foreground only in debug mode (-d), so its debug output
+# is discarded.
+
+label = "org.midnightbsd.zfsd";
+description = "ZFS fault management daemon";
+type = "daemon";
+rc_name = "zfsd";
+run_at_load = true;
+keep_alive = true;
+nojail = true;
+provides = ["zfsd"];
+wants = ["devd", "zfs"];
+program = "/bin/sh";
+arguments = ["-c", ". /etc/rc.subr\nload_rc_config zfsd\nexec /usr/sbin/zfsd -d $zfsd_flags > /dev/null 2>&1", "zfsd"];

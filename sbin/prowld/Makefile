@@ -32,14 +32,18 @@ CONFSDIR=	/etc/prowld
 FILESGROUPS+=	UNITS
 UNITS=		units/blacklistd.unit \
 		units/blocklistd.unit \
+		units/bthidd.unit \
 		units/cron.unit \
 		units/devd.unit \
 		units/ftpd.unit \
 		units/gssd.unit \
 		units/hastd.unit \
+		units/hcsecd.unit \
 		units/inetd.unit \
+		units/iscsid.unit \
 		units/local_unbound.unit \
 		units/lockd.unit \
+		units/lpd.unit \
 		units/mdnsd.unit \
 		units/mdnsresponder.unit \
 		units/mountd.unit \
@@ -62,8 +66,7 @@ UNITS=		units/blacklistd.unit \
 		units/statd.unit \
 		units/syslogd.unit \
 		units/watchdogd.unit \
-		units/ypxfrd.unit
-UNITSDIR=	/etc/prowld/units.d
-UNITSMODE=	444
+		units/ypxfrd.unit \
+		units/zfsd.unit
 
 .include <bsd.prog.mk>
