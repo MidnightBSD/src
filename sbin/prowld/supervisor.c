@@ -745,7 +745,7 @@ child_setup_and_exec(job_t *job)
 		 * stop_boot() must SIGTERM to abort the boot.  Otherwise this
 		 * is a manual start, which gets a plain "start".
 		 */
-		if (g_is_init && envc + 3 <= PROWL_ENV_MAX + 6) {
+		if (g_boot_mode && envc + 3 <= PROWL_ENV_MAX + 6) {
 			snprintf(rcpid_env, sizeof(rcpid_env), "RC_PID=%d",
 			    (int)getppid());
 			envp[envc++] = (char *)(uintptr_t)"autoboot=yes";
@@ -754,7 +754,7 @@ child_setup_and_exec(job_t *job)
 		}
 		envp[envc] = NULL;
 		argv[0] = job->rcshim_path;
-		argv[1] = (char *)(uintptr_t)(g_is_init ? "faststart" :
+		argv[1] = (char *)(uintptr_t)(g_boot_mode ? "faststart" :
 		    "start");
 		argv[2] = NULL;
 		execve(argv[0], argv, envp);

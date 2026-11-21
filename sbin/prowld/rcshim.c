@@ -326,7 +326,9 @@ rcshim_parse_script(const char *path, const char *scriptname)
 	job->before_count = before_count;
 
 	job->shutdown_wait = keyword_shutdown;
-	(void)keyword_nojail; /* TODO: add nojail condition check */
+	/* rcorder -s nojail: scripts that cannot work in a jail are skipped */
+	if (keyword_nojail && g_jailed)
+		keyword_nostart = true;
 
 	/*
 	 * Enabled state.  A script that names an rcvar is enabled only when
@@ -351,7 +353,7 @@ rcshim_parse_script(const char *path, const char *scriptname)
 	 * second time would run every service twice.  They stay loaded and
 	 * can be driven with prowlctl.
 	 */
-	job->run_at_load = job->enabled && g_is_init;
+	job->run_at_load = job->enabled && g_boot_mode;
 
 	return (job);
 }

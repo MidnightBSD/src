@@ -361,6 +361,8 @@ extern volatile bool	 g_shutdown;
 extern volatile bool	 g_reload;
 extern int		 g_current_starts;
 extern bool		 g_is_init;		/* running as PID 1 */
+extern bool		 g_jailed;		/* running inside a jail */
+extern bool		 g_boot_mode;		/* we run rc.d */
 
 /*
  * Runtime path globals.  Defaults match the compile-time macros but may be

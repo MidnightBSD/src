@@ -33,6 +33,7 @@
  */
 
 #include <sys/types.h>
+#include <sys/sysctl.h>
 #include <sys/event.h>
 #include <sys/reboot.h>
 #include <sys/stat.h>
@@ -68,6 +69,8 @@ static bool		 g_runtime_done = false;
 static bool		 g_single_user = false;	/* PID 1: go to single-user */
 static int		 g_howto = RB_AUTOBOOT;	/* PID 1: reboot(2) argument */
 bool			 g_is_init = false;	/* running as PID 1 */
+bool			 g_jailed = false;	/* running inside a jail */
+bool			 g_boot_mode = false;	/* we run rc.d */
 
 /* Runtime path globals — defaults match compile-time macros */
 char	g_run_dir[PROWL_PATH_MAX]      = PROWLD_RUN_DIR;
@@ -292,7 +295,7 @@ runtime_up(void)
 	else
 		g_ipc_listen_fd = ipc_listen_fd;
 
-	if (g_is_init)
+	if (g_boot_mode)
 		timer_state_load();
 	return (0);
 }
@@ -305,11 +308,11 @@ check_runtime(void)
 {
 	job_t *fs;
 
-	if (!g_is_init || g_runtime_done)
+	if (!g_boot_mode || g_runtime_done)
 		return;
 	fs = job_find_by_provides("FILESYSTEMS");
-	if (fs != NULL && fs->state != JOB_STATE_COMPLETED &&
-	    fs->state != JOB_STATE_FAILED)
+	if (fs != NULL && (fs->state == JOB_STATE_LOADED ||
+	    fs->state == JOB_STATE_STARTING))
 		return;
 	if (runtime_up() == -1)
 		prowl_log(LOG_ERR, "running without a control socket");
@@ -604,8 +607,8 @@ startup_load(void)
 
 	dag_build();
 
-	/* As init the state directory is not writable yet: see runtime_up() */
-	if (!g_is_init)
+	/* When booting the state directory is not ready yet: runtime_up() */
+	if (!g_boot_mode)
 		timer_state_load();
 
 	/* Initialize job timers and handle catch-up */
@@ -734,6 +737,19 @@ main(int argc, char *argv[])
 	 * so early boot messages are visible on the console.
 	 */
 	g_is_init = (getpid() == 1);
+	{
+		int jailed = 0;
+		size_t jlen = sizeof(jailed);
+
+		if (sysctlbyname("security.jail.jailed", &jailed, &jlen, NULL,
+		    0) == 0)
+			g_jailed = (jailed != 0);
+	}
+	/*
+	 * As PID 1 or as the first process of a jail, prowld replaces rc(8)
+	 * and runs the rc.d boot sequence itself.
+	 */
+	g_boot_mode = g_is_init || g_jailed;
 
 	if (g_is_init) {
 		/*
@@ -806,7 +822,7 @@ main(int argc, char *argv[])
 	 * rc.d scripts have yet to run, so main_loop() does this later,
 	 * through check_runtime().
 	 */
-	if (!g_is_init && runtime_up() == -1)
+	if (!g_boot_mode && runtime_up() == -1)
 		exit(1);
 
 	startup_load();
