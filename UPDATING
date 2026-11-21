@@ -1,6 +1,13 @@
 Updating Information for MidnightBSD users.
 
 20261121:
+	var_run_enable and var_run_autosave now default to YES.  When
+	/var/run resides on tmpfs, its directory layout is saved at shutdown
+	and restored at boot.  Files and sockets are not preserved.  Set
+	var_run_enable="NO" in /etc/rc.conf to disable this behavior, or
+	var_run_autosave="NO" to retain a manually saved directory layout.
+	Disk-backed /var/run is unaffected.
+
 	NDIS Windows network driver compatibility support has been removed,
 	along with ndiscvt, ndisgen and ndis_events.  Use a native network
 	driver or supported network adapter instead.  Remove NDIS driver
