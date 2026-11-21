@@ -24,7 +24,6 @@ cloudabi32_vdso_blob.o		optional	compat_cloudabi32	\
 #
 cddl/dev/dtrace/i386/dtrace_asm.S			optional dtrace compile-with "${DTRACE_S}"
 cddl/dev/dtrace/i386/dtrace_subr.c			optional dtrace compile-with "${DTRACE_C}"
-compat/ndis/winx32_wrap.S	optional ndisapi pci
 crypto/aesni/aeskeys_i386.S	optional aesni
 crypto/des/arch/i386/des_enc.S	optional netsmb
 crypto/openssl/i386/chacha-x86.S	optional ossl

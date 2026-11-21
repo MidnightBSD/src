@@ -6297,14 +6297,6 @@ OLD_FILES+=usr/share/man/whatis
 OLD_FILES+=usr/share/openssl/man/whatis
 .endif
 
-.if ${MK_NDIS} == no
-OLD_FILES+=usr/sbin/ndiscvt
-OLD_FILES+=usr/sbin/ndisgen
-OLD_FILES+=usr/share/man/man8/ndiscvt.8.gz
-OLD_FILES+=usr/share/man/man8/ndisgen.8.gz
-OLD_FILES+=usr/share/misc/windrv_stub.c
-.endif
-
 .if ${MK_NETCAT} == no
 OLD_FILES+=rescue/nc
 OLD_FILES+=usr/bin/nc
@@ -9898,7 +9890,6 @@ OLD_FILES+=etc/rc.d/wpa_supplicant
 OLD_FILES+=usr/sbin/ancontrol
 OLD_FILES+=usr/sbin/hostapd
 OLD_FILES+=usr/sbin/hostapd_cli
-OLD_FILES+=usr/sbin/ndis_events
 OLD_FILES+=usr/sbin/wlandebug
 OLD_FILES+=usr/sbin/wpa_cli
 OLD_FILES+=usr/sbin/wpa_passphrase
@@ -9914,7 +9905,6 @@ OLD_FILES+=usr/share/man/man5/wpa_supplicant.conf.5.gz
 OLD_FILES+=usr/share/man/man8/ancontrol.8.gz
 OLD_FILES+=usr/share/man/man8/hostapd.8.gz
 OLD_FILES+=usr/share/man/man8/hostapd_cli.8.gz
-OLD_FILES+=usr/share/man/man8/ndis_events.8.gz
 OLD_FILES+=usr/share/man/man8/wlandebug.8.gz
 OLD_FILES+=usr/share/man/man8/wpa_cli.8.gz
 OLD_FILES+=usr/share/man/man8/wpa_passphrase.8.gz

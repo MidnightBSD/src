@@ -701,7 +701,6 @@ static struct witness_order_list_entry order_lists[] = {
 	{ "ALD Queue", &lock_class_mtx_spin },
 #if defined(__i386__) || defined(__amd64__)
 	{ "pcicfg", &lock_class_mtx_spin },
-	{ "NDIS thread lock", &lock_class_mtx_spin },
 #endif
 	{ "tw_osl_io_lock", &lock_class_mtx_spin },
 	{ "tw_osl_q_lock", &lock_class_mtx_spin },

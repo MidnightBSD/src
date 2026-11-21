@@ -104,6 +104,6 @@ Local patches dropped at 2.12:
     2.12 (w1.fi 2026-1, CVE-2026-58374).
 
 Notes:
-  - usr.sbin/wpa/ndis_events and the Packet32/ntddndis files in
-    usr.sbin/wpa/wpa_supplicant are MidnightBSD/FreeBSD-only.
+  - The BSD-only usr.sbin/wpa/ndis_events and Packet32/ntddndis
+    compatibility files were removed with the NDIS driver.
   - Security advisories: https://w1.fi/security/

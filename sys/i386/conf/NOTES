@@ -892,10 +892,6 @@ options 	COMPAT_AOUT
 # Enable 32-bit runtime support for CloudABI binaries.
 options 	COMPAT_CLOUDABI32
 
-# Enable NDIS binary driver support
-options 	NDISAPI
-device		ndis
-
 
 #####################################################################
 # VM OPTIONS

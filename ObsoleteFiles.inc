@@ -39,6 +39,17 @@
 # for generating a list from a directory
 # find  /usr/lib/perl5/5.36.0 -exec echo {} \; | cut -b 2-150  | xargs printf "OLD_FILES+=%s\n"
 
+# 20261121: NDIS compatibility support removed
+OLD_FILES+=usr/sbin/ndis_events
+OLD_FILES+=usr/sbin/ndiscvt
+OLD_FILES+=usr/sbin/ndisgen
+OLD_FILES+=usr/share/man/man4/if_ndis.4.gz
+OLD_FILES+=usr/share/man/man4/ndis.4.gz
+OLD_FILES+=usr/share/man/man8/ndis_events.8.gz
+OLD_FILES+=usr/share/man/man8/ndiscvt.8.gz
+OLD_FILES+=usr/share/man/man8/ndisgen.8.gz
+OLD_FILES+=usr/share/misc/windrv_stub.c
+
 # 20261118: ISA sound card drivers removed
 OLD_FILES+=usr/share/man/man4/snd_ad1816.4.gz
 OLD_FILES+=usr/share/man/man4/snd_ess.4.gz

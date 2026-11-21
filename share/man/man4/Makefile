@@ -344,7 +344,6 @@ MAN=	aac.4 \
 	mx25l.4 \
 	mxge.4 \
 	my.4 \
-	${_ndis.4} \
 	net80211.4 \
 	netdump.4 \
 	netfpga10g_nf10bmac.4 \
@@ -756,7 +755,6 @@ MLINKS+=mt76.4 if_mt7921.4 \
 MLINKS+=mwl.4 if_mwl.4
 MLINKS+=mxge.4 if_mxge.4
 MLINKS+=my.4 if_my.4
-MLINKS+=${_ndis.4} ${_if_ndis.4}
 MLINKS+=netfpga10g_nf10bmac.4 if_nf10bmac.4
 MLINKS+=netintro.4 net.4 \
 	netintro.4 networking.4
@@ -856,7 +854,6 @@ _hwpstate_intel.4=	hwpstate_intel.4
 _i8254.4=	i8254.4
 _ichwd.4=	ichwd.4
 _if_bxe.4=	if_bxe.4
-_if_ndis.4=	if_ndis.4
 _if_nfe.4=	if_nfe.4
 _if_urtw.4=	if_urtw.4
 _if_wpi.4=	if_wpi.4
@@ -870,7 +867,6 @@ _kvmclock.4=	kvmclock.4
 _mei.4=		mei.4
 _mgb.4=		mgb.4
 _nda.4=		nda.4
-_ndis.4=	ndis.4
 _nfe.4=		nfe.4
 _nfsmb.4=	nfsmb.4
 _ng_sppp.4=	ng_sppp.4
