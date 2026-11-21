@@ -67,7 +67,8 @@
 #include "prowld.h"
 
 static void	supervisor_adopt(job_t *);
-static pid_t	find_daemon_pid(const job_t *);
+static pid_t	find_daemon_pid(job_t *);
+static pid_t	pid_from_name(job_t *, bool);
 
 static bool g_dnssd_available = true;
 static char g_dnssd_path[PROWL_PATH_MAX];
@@ -975,6 +976,8 @@ supervisor_start(job_t *job)
 		job->launcher = true;
 		if (job->pid_file[0] != '\0')
 			(void)unlink(job->pid_file);
+		else
+			(void)pid_from_name(job, true);
 	}
 
 	pid = fork();
@@ -1475,6 +1478,10 @@ supervisor_handle_throttle(job_t *job)
 		return;
 	}
 
+	/* The launcher itself is not a daemon that is up */
+	if (job->launcher)
+		return;
+
 	/* A forked daemon that is gone before we saw it start */
 	if (job->pid > 0 && (job->pid_file[0] != '\0' ||
 	    job->pid_name[0] != '\0') &&
@@ -1844,21 +1851,26 @@ pid_from_file(const char *path)
 }
 
 /*
- * Find the oldest process called name that was left to us: a child of
- * ours, or of init when we are not a reaper.  Returns -1 if there is none.
+ * Find the oldest process called job->pid_name that was left to us: a child
+ * of ours, or of init when we are not a reaper.  Returns -1 if there is
+ * none.  Processes noted before the start (skip_pids) are leftovers, such as
+ * the workers of a master that died, and are not considered.  With note set
+ * nothing is returned: the matching processes are remembered instead.
  */
 static pid_t
-pid_from_name(const char *name)
+pid_from_name(job_t *job, bool note)
 {
 	struct kinfo_proc *kp;
 	pid_t self, parent, best;
 	struct timeval bt;
-	int i, cnt;
+	int i, j, cnt;
 
 	self = getpid();
 	parent = g_reaper ? self : 1;
 	best = -1;
 	bt.tv_sec = bt.tv_usec = 0;
+	if (note)
+		job->skip_count = 0;
 
 	kp = kinfo_getallproc(&cnt);
 	if (kp == NULL)
@@ -1866,7 +1878,20 @@ pid_from_name(const char *name)
 	for (i = 0; i < cnt; i++) {
 		if (kp[i].ki_pid == self || kp[i].ki_ppid != parent ||
 		    kp[i].ki_stat == SZOMB ||
-		    strcmp(kp[i].ki_comm, name) != 0)
+		    strcmp(kp[i].ki_comm, job->pid_name) != 0)
+			continue;
+		if (note) {
+			if (job->skip_count < PROWL_SKIP_MAX) {
+				job->skip_pids[job->skip_count++] =
+				    kp[i].ki_pid;
+			}
+			continue;
+		}
+		for (j = 0; j < job->skip_count; j++) {
+			if (job->skip_pids[j] == kp[i].ki_pid)
+				break;
+		}
+		if (j < job->skip_count)
 			continue;
 		if (best == -1 || timercmp(&kp[i].ki_start, &bt, <)) {
 			best = kp[i].ki_pid;
@@ -1878,11 +1903,11 @@ pid_from_name(const char *name)
 }
 
 static pid_t
-find_daemon_pid(const job_t *job)
+find_daemon_pid(job_t *job)
 {
 	if (job->pid_file[0] != '\0')
 		return (pid_from_file(job->pid_file));
-	return (pid_from_name(job->pid_name));
+	return (pid_from_name(job, false));
 }
 
 /*

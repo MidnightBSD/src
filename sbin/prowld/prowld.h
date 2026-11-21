@@ -127,6 +127,7 @@ static_assert((__alignof__(struct job) & TIMER_MASK) == 0,
 #define PROWL_ADOPT_TRIES	50	/* looks for a forked daemon */
 #define PROWL_ADOPT_MS		200	/* between those looks */
 #define PROWL_PIDNAME_LEN	32	/* process name of a forked daemon */
+#define PROWL_SKIP_MAX		16	/* same-named processes ignored */
 #define DEFAULT_EXIT_TIMEOUT	20	/* seconds */
 
 /* IPC */
@@ -290,6 +291,8 @@ struct job {
 	char		pid_file[PROWL_PATH_MAX];
 	char		pid_name[PROWL_PIDNAME_LEN];
 	int		stop_signal;
+	pid_t		skip_pids[PROWL_SKIP_MAX];	/* there before start */
+	int		skip_count;
 
 	/* Files that must be readable before the job is started */
 	char		required_files[PROWL_REQFILES_MAX][PROWL_PATH_MAX];
@@ -342,7 +345,7 @@ struct job {
 	/* Timer tracking */
 	bool		throttle_timer_active;
 	bool		restart_hold;	/* waiting out a restart back-off */
-	bool		launcher;	/* pid is the process that forks the daemon */
+	bool		launcher;	/* pid forks the daemon */
 	bool		adopting;	/* looking for the forked daemon */
 	int		adopt_tries;
 	bool		rc_stopping;	/* rc-shim running its "stop" */

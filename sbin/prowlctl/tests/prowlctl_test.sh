@@ -498,11 +498,12 @@ forking_body()
  "pid_file": "${dir}/a.pid", "stop_signal": "USR1",
  "run_at_load": true, "keep_alive": true, "throttle_interval": 1}
 EOF
-	# Found by name; comes back when it is killed.
+	# Found by name; comes back when it is killed.  A second process of
+	# the same name is left behind by the first start and is not taken.
 	cat >units/fb.unit <<EOF
 {"label": "org.test.fb", "rc_name": "prowlctl_test_fb",
  "type": "daemon", "program": "/bin/sh",
- "arguments": ["-c", "sleep 300 >/dev/null 2>&1 &"],
+ "arguments": ["-c", "sleep 300 >/dev/null 2>&1 & [ -f ${dir}/second ] || { touch ${dir}/second; sleep 400 >/dev/null 2>&1 & }"],
  "pid_name": "sleep",
  "run_at_load": true, "keep_alive": true, "throttle_interval": 1}
 EOF
@@ -530,7 +531,7 @@ EOF
 
 	wait_state org.test.fb running
 	pid=$(job_pid org.test.fb)
-	atf_check_equal "sleep" "$(ps -o comm= -p "${pid}")"
+	atf_check_equal "sleep 300" "$(ps -o args= -p "${pid}")"
 	kill -KILL "${pid}"
 	new=
 	for i in $(jot 75); do
@@ -541,6 +542,7 @@ EOF
 	wait_state org.test.fb running
 	atf_check_not_equal "${pid}" "$(job_pid org.test.fb)"
 	pid=$(job_pid org.test.fb)
+	atf_check_equal "sleep 300" "$(ps -o args= -p "${pid}")"
 	atf_check -o ignore ${CTL} stop org.test.fb
 	wait_state org.test.fb stopped
 	atf_check -s exit:1 -e ignore kill -0 "${pid}"
@@ -551,7 +553,7 @@ EOF
 forking_cleanup()
 {
 	stop_prowld
-	pkill -KILL -f "sleep 300" 2>/dev/null || true
+	pkill -KILL -f "sleep (300|400)" 2>/dev/null || true
 }
 
 atf_test_case templates cleanup
