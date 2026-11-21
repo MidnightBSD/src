@@ -16,5 +16,5 @@ keep_alive = true;
 provides = ["aged"];
 wants = ["DAEMON"];
 before = ["LOGIN"];
-program = "/bin/sh";
-arguments = ["-c", ". /etc/rc.subr\nload_rc_config aged\nexec /usr/sbin/aged -F $aged_flags", "aged"];
+program = "/usr/sbin/aged";
+arguments = ["-F","@aged_flags@"];

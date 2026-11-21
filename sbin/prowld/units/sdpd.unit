@@ -16,5 +16,6 @@ nojail = true;
 provides = ["sdpd"];
 wants = ["DAEMON"];
 before = ["LOGIN"];
-program = "/bin/sh";
-arguments = ["-c", ". /etc/rc.subr\nload_rc_config sdpd\nkldstat -q -m ng_btsocket || kldload ng_btsocket || exit 1\n[ -n \"$sdpd_control\" ] || sdpd_control=/var/run/sdp\n[ -n \"$sdpd_groupname\" ] || sdpd_groupname=nobody\n[ -n \"$sdpd_username\" ] || sdpd_username=nobody\nexec /usr/sbin/sdpd -d -c $sdpd_control -g $sdpd_groupname -u $sdpd_username $sdpd_flags", "sdpd"];
+required_modules = ["ng_btsocket"];
+program = "/usr/sbin/sdpd";
+arguments = ["-d","-c","@sdpd_control:-/var/run/sdp@","-g","@sdpd_groupname:-nobody@","-u","@sdpd_username:-nobody@","@sdpd_flags@"];

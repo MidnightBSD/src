@@ -19,5 +19,5 @@ required_files = ["/etc/security/auditdistd.conf"];
 provides = ["auditdistd"];
 wants = ["auditd"];
 before = ["DAEMON"];
-program = "/bin/sh";
-arguments = ["-c", ". /etc/rc.subr\nload_rc_config auditdistd\n[ -n \"$auditdistd_program\" ] || auditdistd_program=/usr/sbin/auditdistd\nexec $auditdistd_program -F $auditdistd_flags", "auditdistd"];
+program = "@auditdistd_program:-/usr/sbin/auditdistd@";
+arguments = ["-F","@auditdistd_flags@"];

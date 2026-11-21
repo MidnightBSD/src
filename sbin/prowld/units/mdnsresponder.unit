@@ -16,5 +16,5 @@ keep_alive = true;
 provides = ["mdnsresponder"];
 conflicts = ["mdnsd"];
 wants = ["DAEMON"];
-program = "/bin/sh";
-arguments = ["-c", ". /etc/rc.subr\nload_rc_config mdnsresponder\n[ -n \"$mdnsresponder_pidfile\" ] || mdnsresponder_pidfile=/var/run/mdnsresponder.pid\nexec /usr/bin/mDNSResponderPosix -P $mdnsresponder_pidfile $mdnsresponder_flags", "mdnsresponder"];
+program = "/usr/bin/mDNSResponderPosix";
+arguments = ["-P","@mdnsresponder_pidfile:-/var/run/mdnsresponder.pid@","@mdnsresponder_flags@"];

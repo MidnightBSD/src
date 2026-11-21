@@ -12,5 +12,5 @@ run_at_load = true;
 provides = ["newsyslog"];
 wants = ["FILESYSTEMS", "mountcritremote"];
 required_files = ["/etc/newsyslog.conf"];
-program = "/bin/sh";
-arguments = ["-c", ". /etc/rc.subr\nload_rc_config newsyslog\nexec /usr/sbin/newsyslog $newsyslog_flags", "newsyslog"];
+program = "/usr/sbin/newsyslog";
+arguments = ["@newsyslog_flags@"];

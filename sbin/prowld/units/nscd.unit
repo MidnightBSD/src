@@ -16,5 +16,5 @@ keep_alive = true;
 provides = ["nscd"];
 wants = ["DAEMON"];
 before = ["LOGIN"];
-program = "/bin/sh";
-arguments = ["-c", ". /etc/rc.subr\nload_rc_config nscd\nexec /usr/sbin/nscd -n $nscd_flags", "nscd"];
+program = "/usr/sbin/nscd";
+arguments = ["-n","@nscd_flags@"];

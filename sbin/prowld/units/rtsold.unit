@@ -16,5 +16,5 @@ keep_alive = true;
 provides = ["rtsold"];
 wants = ["netif"];
 before = ["NETWORKING"];
-program = "/bin/sh";
-arguments = ["-c", ". /etc/rc.subr\nload_rc_config rtsold\nexec /usr/sbin/rtsold -f $rtsold_flags", "rtsold"];
+program = "/usr/sbin/rtsold";
+arguments = ["-f","@rtsold_flags@"];

@@ -15,5 +15,5 @@ keep_alive = true;
 provides = ["cron"];
 wants = ["LOGIN", "FILESYSTEMS"];
 before = ["securelevel"];
-program = "/bin/sh";
-arguments = ["-c", ". /etc/rc.subr\nload_rc_config cron\nif checkyesno cron_dst; then\n    cron_flags=\"$cron_flags -s\"\nfi\nexec /usr/sbin/cron -n $cron_flags", "cron"];
+program = "/usr/sbin/cron";
+arguments = ["-n","@cron_dst?-s@","@cron_flags@"];

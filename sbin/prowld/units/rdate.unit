@@ -15,5 +15,5 @@ nojail = true;
 provides = ["rdate"];
 wants = ["NETWORKING", "syslogd"];
 before = ["ntpd", "LOGIN"];
-program = "/bin/sh";
-arguments = ["-c", ". /etc/rc.subr\nload_rc_config rdate\nexec /usr/sbin/rdate $rdate_flags", "rdate"];
+program = "/usr/sbin/rdate";
+arguments = ["@rdate_flags@"];

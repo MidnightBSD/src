@@ -17,5 +17,5 @@ provides = ["ntpd"];
 wants = ["DAEMON", "rdate", "FILESYSTEMS", "devfs"];
 before = ["LOGIN"];
 required_files = ["/etc/ntpd.conf"];
-program = "/bin/sh";
-arguments = ["-c", ". /etc/rc.subr\nload_rc_config ntpd\nexec /usr/sbin/ntpd -d $ntpd_flags", "ntpd"];
+program = "/usr/sbin/ntpd";
+arguments = ["-d","@ntpd_flags@"];

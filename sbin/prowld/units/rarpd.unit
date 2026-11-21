@@ -17,5 +17,5 @@ nojail = true;
 provides = ["rarpd"];
 wants = ["DAEMON", "FILESYSTEMS"];
 before = ["LOGIN"];
-program = "/bin/sh";
-arguments = ["-c", ". /etc/rc.subr\nload_rc_config rarpd\nexec /usr/sbin/rarpd -f $rarpd_flags", "rarpd"];
+program = "/usr/sbin/rarpd";
+arguments = ["-f","@rarpd_flags@"];
