@@ -303,6 +303,8 @@ struct job {
 	/* Timer tracking */
 	bool		throttle_timer_active;
 	bool		restart_hold;	/* waiting out a restart back-off */
+	bool		rc_stopping;	/* rc-shim running its "stop" */
+	bool		restart_after_stop;	/* restart: start once stopped */
 	int		quick_fails;	/* consecutive short runs */
 	bool		stop_timer_active;
 	bool		watchdog_timer_active;
@@ -411,6 +413,7 @@ void	pid1_open_console(void);
 void	pid1_shutdown(int) __dead2;
 void	pid1_single_user(void) __dead2;
 int	pid1_load_ttys(void);
+int	boot_run_rundown(const char *);
 
 /* ---- dag.c ---- */
 int	dag_build(void);

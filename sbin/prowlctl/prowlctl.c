@@ -45,6 +45,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
 #include <stdbool.h>
 #include <string.h>
 #include <time.h>
@@ -105,6 +106,7 @@ usage(void)
 	    "  unmask <label>\n"
 	    "  show <label>\n"
 	    "  reload-config\n"
+	    "  shutdown\n"
 	    "  daemon-reexec\n"
 	    "  dependencies <label>\n"
 	    "  graph [--format=dot]\n"
@@ -996,6 +998,43 @@ do_logs(int argc, char *argv[])
 	return (ret);
 }
 
+static int do_no_target(const char *verb);
+
+/*
+ * Ask prowld to shut down and wait until it has gone, so that it can be
+ * used as a jail's exec.stop.
+ */
+static int
+do_shutdown(void)
+{
+	char buf[32];
+	FILE *fp;
+	pid_t pid = -1;
+	time_t end;
+	int ret;
+
+	if ((fp = fopen("/var/run/prowld/prowld.pid", "r")) != NULL) {
+		if (fgets(buf, sizeof(buf), fp) != NULL)
+			pid = (pid_t)atoi(buf);
+		fclose(fp);
+	}
+
+	ret = do_no_target("shutdown");
+	if (ret != EXIT_OK || pid <= 1)
+		return (ret);
+
+	end = time(NULL) + 300;
+	while (kill(pid, 0) == 0 || errno == EPERM) {
+		if (time(NULL) >= end) {
+			warnx("timed out waiting for prowld (pid %d)",
+			    (int)pid);
+			return (EXIT_FAILED);
+		}
+		usleep(100000);
+	}
+	return (EXIT_OK);
+}
+
 static int
 do_no_target(const char *verb)
 {
@@ -1083,6 +1122,8 @@ main(int argc, char *argv[])
 		ret = do_no_target("reload-config");
 	else if (strcmp(cmd, "daemon-reexec") == 0)
 		ret = do_no_target("daemon-reexec");
+	else if (strcmp(cmd, "shutdown") == 0)
+		ret = do_shutdown();
 	else if (strcmp(cmd, "dependencies") == 0)
 		ret = do_dependencies(argc, argv);
 	else if (strcmp(cmd, "graph") == 0)

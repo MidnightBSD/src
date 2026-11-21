@@ -745,7 +745,8 @@ child_setup_and_exec(job_t *job)
 		 * stop_boot() must SIGTERM to abort the boot.  Otherwise this
 		 * is a manual start, which gets a plain "start".
 		 */
-		if (g_boot_mode && envc + 3 <= PROWL_ENV_MAX + 6) {
+		if (g_boot_mode && !job->rc_stopping &&
+		    envc + 3 <= PROWL_ENV_MAX + 6) {
 			snprintf(rcpid_env, sizeof(rcpid_env), "RC_PID=%d",
 			    (int)getppid());
 			envp[envc++] = (char *)(uintptr_t)"autoboot=yes";
@@ -754,8 +755,11 @@ child_setup_and_exec(job_t *job)
 		}
 		envp[envc] = NULL;
 		argv[0] = job->rcshim_path;
-		argv[1] = (char *)(uintptr_t)(g_boot_mode ? "faststart" :
-		    "start");
+		if (job->rc_stopping)
+			argv[1] = (char *)(uintptr_t)"stop";
+		else
+			argv[1] = (char *)(uintptr_t)(g_boot_mode ?
+			    "faststart" : "start");
 		argv[2] = NULL;
 		execve(argv[0], argv, envp);
 		_exit(127);
@@ -926,12 +930,56 @@ supervisor_start(job_t *job)
 }
 
 /*
+ * Run an rc-shim's "stop" in a child that is tracked like any other job
+ * process, so that STOPPING ends when the script exits and the stop timer
+ * bounds how long it may take.
+ */
+static int
+supervisor_rc_stop(job_t *job)
+{
+	pid_t pid;
+
+	prowl_log(LOG_NOTICE, "stopping %s via %s stop", job->label,
+	    job->rcshim_path);
+	job->rc_stopping = true;
+	resolve_job_privileges(job);
+
+	pid = fork();
+	if (pid == -1) {
+		prowl_log(LOG_ERR, "fork %s (stop): %m", job->label);
+		job->rc_stopping = false;
+		return (-1);
+	}
+	if (pid == 0) {
+		if (g_kqueue_fd >= 0)
+			close(g_kqueue_fd);
+		child_setup_and_exec(job);
+		/* NOTREACHED */
+	}
+
+	job->pid = pid;
+	job_set_state(job, JOB_STATE_STOPPING);
+	watch_child(pid, job);
+	arm_stop_timer(job);
+	return (0);
+}
+
+/*
  * Stop a job.  Sends SIGTERM and arms the stop-timeout timer.
  * If force is true, sends SIGKILL directly.
  */
 int
 supervisor_stop(job_t *job, bool force)
 {
+	/*
+	 * An rc-shim whose start has finished has no process of its own:
+	 * the script daemonized the service and exited.  Stopping it means
+	 * running the script's "stop", as rc.d scripts expect.
+	 */
+	if (job->pid <= 0 && job->type == JOB_TYPE_RCSHIM &&
+	    job->state == JOB_STATE_COMPLETED)
+		return (supervisor_rc_stop(job));
+
 	if (job->pid <= 0)
 		return (0);
 
@@ -1531,6 +1579,14 @@ supervisor_reap(pid_t pid, int status)
 
 	/* Normal stop requested */
 	if (job->state == JOB_STATE_STOPPING) {
+		job->rc_stopping = false;
+		if (job->restart_after_stop) {
+			job->restart_after_stop = false;
+			job_set_state(job, JOB_STATE_LOADED);
+			job->run_at_load = true;
+			dag_schedule_ready();
+			return;
+		}
 		job_set_state(job, JOB_STATE_STOPPED);
 		if (job->sockets_count > 0 && job->socket_activated)
 			socket_rearm(job);

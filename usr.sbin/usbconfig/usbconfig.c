@@ -273,8 +273,8 @@ usage(int exitcode)
 {
 	fprintf(stderr, ""
 	    "usbconfig - configure the USB subsystem" "\n"
-	    "usage: usbconfig [-u <busnum>] [-a <devaddr>] [-i <ifaceindex>] [-v] [cmds...]" "\n"
-	    "usage: usbconfig -d [ugen]<busnum>.<devaddr> [-i <ifaceindex>] [-v] [cmds...]" "\n"
+	    "usage: usbconfig [-u <busnum>] [-a <devaddr>] [-i <ifaceindex>] [-l] [-v] [cmds...]" "\n"
+	    "usage: usbconfig -d [ugen]<busnum>.<devaddr> [-i <ifaceindex>] [-l] [-v] [cmds...]" "\n"
 	    "commands:" "\n"
 	    "  set_config <cfg_index>" "\n"
 	    "  set_alt <alt_index>" "\n"

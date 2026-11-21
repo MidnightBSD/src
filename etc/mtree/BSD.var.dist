@@ -100,6 +100,8 @@
         ppp             gname=network mode=0770 tags=package=ppp
         ..
         prowld
+            generated.d
+            ..
             notify      mode=0700
             ..
         ..

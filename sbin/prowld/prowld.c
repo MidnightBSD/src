@@ -841,7 +841,13 @@ main(int argc, char *argv[])
 		pid1_shutdown(g_howto);		/* does not return */
 	}
 
-	/* Orderly shutdown */
+	/*
+	 * Orderly shutdown.  In a jail run rc.shutdown first, as rc(8) would
+	 * for exec.stop, so services that rc-shims started are stopped by
+	 * their own scripts and in dependency order.
+	 */
+	if (g_jailed)
+		(void)boot_run_rundown("jail");
 	supervisor_shutdown_all();
 	ipc_shutdown();
 	remove_pidfile();

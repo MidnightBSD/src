@@ -66,6 +66,14 @@ static char *const pid1_env[] = {
 	NULL
 };
 
+/* rc.shutdown must not stop prowld itself: rc.d/prowld checks this. */
+static char *const rundown_env[] = {
+	(char *)(uintptr_t)"HOME=/",
+	(char *)(uintptr_t)"PATH=/sbin:/bin:/usr/sbin:/usr/bin",
+	(char *)(uintptr_t)"PROWLD_RUNDOWN=1",
+	NULL
+};
+
 /*
  * Become session leader and make stdin/stdout/stderr the console, as
  * init(8) does, so that anything we or the rc scripts print is visible
@@ -158,8 +166,8 @@ pid1_kill_all(void)
  * prowld does not track itself.  Returns the script's exit status, or -1
  * if it could not be run or timed out.
  */
-static int
-pid1_run_rundown(const char *arg)
+int
+boot_run_rundown(const char *arg)
 {
 	struct timespec ts = { 0, 50000000L };
 	time_t end;
@@ -183,7 +191,7 @@ pid1_run_rundown(const char *arg)
 		argv[1] = (char *)(uintptr_t)PID1_RUNDOWN;
 		argv[2] = (char *)(uintptr_t)arg;
 		argv[3] = NULL;
-		execve(PID1_SHELL, argv, pid1_env);
+		execve(PID1_SHELL, argv, rundown_env);
 		_exit(1);
 	}
 
@@ -216,7 +224,7 @@ pid1_shutdown(int howto)
 {
 	prowl_log(LOG_NOTICE, "system going down (howto %#x)", howto);
 
-	(void)pid1_run_rundown("reboot");
+	(void)boot_run_rundown("reboot");
 	supervisor_shutdown_all();
 	ipc_shutdown();
 	pid1_kill_all();

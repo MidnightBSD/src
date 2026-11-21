@@ -9,6 +9,10 @@
         ..
         pam.d
         ..
+        prowld
+            units.d
+            ..
+        ..
         rc.d
         ..
     ..

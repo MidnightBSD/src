@@ -618,6 +618,15 @@ cmd_restart(int fd, const char *id, const ucl_object_t *req)
 
 	supervisor_stop(job, false);
 	job->run_at_load = true;
+	if (job->state == JOB_STATE_STOPPING) {
+		/* started again by supervisor_reap() once it has stopped */
+		job->restart_after_stop = true;
+	} else if (job->state != JOB_STATE_RUNNING &&
+	    job->state != JOB_STATE_STARTING &&
+	    job->state != JOB_STATE_MASKED &&
+	    job->state != JOB_STATE_DISABLED) {
+		job_set_state(job, JOB_STATE_LOADED);
+	}
 	ipc_send_ok(fd, id, NULL);
 }
 
@@ -870,6 +879,20 @@ cmd_reload_config(int fd, const char *id, const ucl_object_t *req)
 }
 
 static void
+cmd_shutdown(int fd, const char *id, const ucl_object_t *req)
+{
+	(void)req;
+	if (g_is_init) {
+		ipc_send_error(fd, id,
+		    "prowld is init: use shutdown(8) or reboot(8)");
+		return;
+	}
+	prowl_log(LOG_NOTICE, "shutdown requested over IPC");
+	g_shutdown = true;
+	ipc_send_ok(fd, id, NULL);
+}
+
+static void
 cmd_daemon_reexec(int fd, const char *id, const ucl_object_t *req)
 {
 	(void)req;
@@ -1026,6 +1049,8 @@ ipc_dispatch_message(int fd, const char *json, size_t len)
 		cmd_reload_config(fd, id, root);
 	else if (strcmp(verb, "daemon-reexec") == 0)
 		cmd_daemon_reexec(fd, id, root);
+	else if (strcmp(verb, "shutdown") == 0)
+		cmd_shutdown(fd, id, root);
 	else
 		ipc_send_error(fd, id, "unknown verb");
 
