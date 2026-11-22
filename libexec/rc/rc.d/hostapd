@@ -42,7 +42,9 @@ load_rc_config ${name}
 # When prowld has a unit for this hostapd it supervises it; start and stop
 # it through prowlctl(8).  Without prowld hostapd is run as before.
 hostapd_unit="hostapd${ifn:+@${ifn}}"
-if [ -x /sbin/prowlctl ] &&
+# prowld runs rc.shutdown without answering prowlctl, so leave it alone then;
+# prowld stops its own jobs when rc.shutdown is done.
+if [ -z "${PROWLD_RUNDOWN}" ] && [ -x /sbin/prowlctl ] &&
     /sbin/prowlctl show "${hostapd_unit}" > /dev/null 2>&1; then
 	start_cmd="/sbin/prowlctl start ${hostapd_unit}"
 	stop_cmd="/sbin/prowlctl stop ${hostapd_unit}"

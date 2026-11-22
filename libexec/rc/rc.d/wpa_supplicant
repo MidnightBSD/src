@@ -35,7 +35,9 @@ required_modules="wlan_wep wlan_tkip wlan_ccmp"
 
 # When prowld has a wpa_supplicant@ unit it supervises the client; start and
 # stop it through prowlctl(8).  Without prowld the client is run as before.
-if [ -x /sbin/prowlctl ] &&
+# prowld runs rc.shutdown without answering prowlctl, so leave it alone then;
+# prowld stops its own jobs when rc.shutdown is done.
+if [ -z "${PROWLD_RUNDOWN}" ] && [ -x /sbin/prowlctl ] &&
     /sbin/prowlctl show wpa_supplicant@$ifn > /dev/null 2>&1; then
 	start_cmd="/sbin/prowlctl start wpa_supplicant@$ifn"
 	stop_cmd="/sbin/prowlctl stop wpa_supplicant@$ifn"

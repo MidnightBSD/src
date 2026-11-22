@@ -64,7 +64,9 @@ dhclient_prestart()
 # stop it through prowlctl(8).  Without prowld the client is run as before.
 dhclient_prowld()
 {
-	[ -n "$ifn" ] && [ -x /sbin/prowlctl ] &&
+	# prowld runs rc.shutdown without answering prowlctl, so leave it
+	# alone then; prowld stops its own jobs when rc.shutdown is done.
+	[ -z "${PROWLD_RUNDOWN}" ] && [ -n "$ifn" ] && [ -x /sbin/prowlctl ] &&
 	    /sbin/prowlctl show dhclient@$ifn > /dev/null 2>&1
 }
 

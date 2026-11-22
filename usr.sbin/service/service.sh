@@ -33,7 +33,8 @@ PROWLCTL=/sbin/prowlctl
 PROWL_SOCK=/var/run/prowld/prowld.sock
 
 prowl_available () {
-	[ -z "${JAIL}" ] && [ -x "${PROWLCTL}" ] && [ -S "${PROWL_SOCK}" ]
+	# prowld runs rc.shutdown without answering prowlctl
+	[ -z "${PROWLD_RUNDOWN}" ] && [ -z "${JAIL}" ] && [ -x "${PROWLCTL}" ] && [ -S "${PROWL_SOCK}" ]
 }
 
 usage () {
