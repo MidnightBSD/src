@@ -230,6 +230,8 @@ The daemon is looked for every 200 milliseconds for up to 10 seconds; if it
 does not appear the job is treated as having failed.
 Only one of the two may be given.
 .It Va start_pre
+.It Va start_post
+.It Va stop_pre
 .It Va stop_post
 .Pq array of arrays of strings
 Commands run around the job, at most 8 in each list.
@@ -249,8 +251,18 @@ runs it only if the variable is YES, TRUE, ON or 1,
 .Dq !name
 only if it is not, and
 .Dq +name
-only if it is not empty.
+only if it is not empty,
+.Dq ~name
+only if it is empty,
+.Dq <name
+only if its value is the name of a readable file, and
+.Dq !<name
+only if it is not.
 All the conditions must hold.
+An entry of
+.Va required_modules
+may also start with a condition and a space, as in
+.Dq "?dummynet_enable dummynet" .
 .Pp
 The
 .Va start_pre
@@ -260,6 +272,25 @@ The first one that fails, unless it is marked with
 .Dq - ,
 ends that process and the job does not start.
 A daemon is not considered up while they run.
+.Pp
+.Va start_post
+and
+.Va stop_pre
+are for oneshot jobs.
+The
+.Va start_post
+commands run after the job's command has exited with status 0, one after the
+other like
+.Va stop_post ,
+and the job is not complete until they are done; a command that fails, unless
+it is marked with
+.Dq - ,
+makes the job fail.
+The
+.Va stop_pre
+commands run before the stop command, like
+.Va start_pre ,
+and one that fails keeps the stop command from running.
 .Pp
 The
 .Va stop_post

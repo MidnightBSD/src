@@ -696,26 +696,28 @@ cmd_enabled(const job_t *job, const prowl_cmd_t *c)
 }
 
 /*
- * In the child, before it execs the job: run the start_pre commands one
- * after the other.  The first that fails, unless it is marked with "-",
- * ends the child, so the job does not start.
+ * In the child, before it execs the job: run the commands of a list
+ * (start_pre, or stop_pre when the job is stopped) one after the other.
+ * The first that fails, unless it is marked with "-", ends the child, so
+ * the job does not start or stop.
  */
 static void
-run_start_pre(const job_t *job, char *const *envp)
+run_pre_list(const job_t *job, int list, char *const *envp)
 {
+	const char *lname = list == PROWL_CMD_PRE ? "start_pre" : "stop_pre";
 	char program[PROWL_PATH_MAX];
 	char *argv[PROWL_ARGS_MAX + 2];
 	bool ignore;
 	pid_t pid;
 	int i, st;
 
-	for (i = 0; i < job->cmd_count[PROWL_CMD_PRE]; i++) {
-		if (!cmd_enabled(job, &job->cmds[PROWL_CMD_PRE][i]))
+	for (i = 0; i < job->cmd_count[list]; i++) {
+		if (!cmd_enabled(job, &job->cmds[list][i]))
 			continue;
-		if (cmd_build(job, &job->cmds[PROWL_CMD_PRE][i], program,
+		if (cmd_build(job, &job->cmds[list][i], program,
 		    sizeof(program), argv, &ignore) == -1) {
-			syslog(LOG_ERR, "prowld: %s: cannot expand start_pre",
-			    job->label);
+			syslog(LOG_ERR, "prowld: %s: cannot expand %s",
+			    job->label, lname);
 			_exit(1);
 		}
 		pid = fork();
@@ -728,8 +730,8 @@ run_start_pre(const job_t *job, char *const *envp)
 		while (waitpid(pid, &st, 0) == -1 && errno == EINTR)
 			;
 		if (!ignore && !(WIFEXITED(st) && WEXITSTATUS(st) == 0)) {
-			syslog(LOG_ERR, "prowld: %s: start_pre %s failed",
-			    job->label, argv[0]);
+			syslog(LOG_ERR, "prowld: %s: %s %s failed",
+			    job->label, lname, argv[0]);
 			_exit(1);
 		}
 	}
@@ -770,6 +772,18 @@ child_setup_and_exec(job_t *job)
 		char *mod;
 
 		strlcpy(ent, job->required_modules[i], sizeof(ent));
+		/* "?name module": only when the rc.conf variable holds */
+		if (prowl_is_cond(ent)) {
+			char *sp = strchr(ent, ' ');
+
+			if (sp == NULL)
+				continue;
+			*sp++ = '\0';
+			if (!prowl_cond_holds(job->rc_name, ent))
+				continue;
+			sp += strspn(sp, " ");
+			memmove(ent, sp, strlen(sp) + 1);
+		}
 		mod = strchr(ent, ':');
 		if (mod != NULL)
 			*mod++ = '\0';
@@ -893,11 +907,14 @@ child_setup_and_exec(job_t *job)
 		_exit(127);
 	}
 
-	/* start_pre commands come before the job itself */
-	if (job->run_cmd == NULL && job->action == PROWL_ACTION_NONE &&
-	    !job->rc_stopping && job->cmd_count[PROWL_CMD_PRE] > 0) {
-		envp[envc] = NULL;
-		run_start_pre(job, envp);
+	/* start_pre commands come before the job itself, stop_pre before stop */
+	if (job->run_cmd == NULL && job->action == PROWL_ACTION_NONE) {
+		int pl = job->rc_stopping ? PROWL_CMD_STOP_PRE : PROWL_CMD_PRE;
+
+		if (job->cmd_count[pl] > 0) {
+			envp[envc] = NULL;
+			run_pre_list(job, pl, envp);
+		}
 	}
 
 	/* A stop_post command */
@@ -1287,28 +1304,31 @@ supervisor_run_action(job_t *job, int action, char *out, size_t outsz,
 }
 
 /*
- * Run the stop_post commands of a job whose process has ended, one after
- * the other, each as the job's user and with its environment.  A command
- * that fails or takes longer than PROWL_ACTION_TIMEOUT is logged; the rest
- * still run.  prowld does nothing else meanwhile.
+ * Run the commands of a list (stop_post or start_post) of a job whose
+ * process has ended, one after the other, each as the job's user and with
+ * its environment.  A command that fails or takes longer than
+ * PROWL_ACTION_TIMEOUT is logged; the rest still run.  Returns false if one
+ * failed, unless it is marked with "-".  prowld does nothing else meanwhile.
  */
-static void
-supervisor_stop_post(job_t *job)
+static bool
+supervisor_run_list(job_t *job, int list)
 {
+	const char *lname = list == PROWL_CMD_POST ? "stop_post" : "start_post";
+	bool ok = true;
 	const prowl_cmd_t *c;
 	time_t deadline;
 	pid_t pid;
 	int i, st;
 
 	resolve_job_privileges(job);
-	for (i = 0; i < job->cmd_count[PROWL_CMD_POST]; i++) {
-		c = &job->cmds[PROWL_CMD_POST][i];
+	for (i = 0; i < job->cmd_count[list]; i++) {
+		c = &job->cmds[list][i];
 		if (!cmd_enabled(job, c))
 			continue;
 		pid = fork();
 		if (pid == -1) {
 			prowl_log(LOG_ERR, "fork %s: %m", job->label);
-			return;
+			return (false);
 		}
 		if (pid == 0) {
 			if (g_kqueue_fd >= 0)
@@ -1329,8 +1349,8 @@ supervisor_stop_post(job_t *job)
 			if (r == -1 && errno != EINTR)
 				break;
 			if (time(NULL) >= deadline) {
-				prowl_log(LOG_WARNING, "job %s: stop_post %s "
-				    "timed out", job->label,
+				prowl_log(LOG_WARNING, "job %s: %s %s "
+				    "timed out", job->label, lname,
 				    c->argv[prowl_cmd_first(c)]);
 				kill(pid, SIGKILL);
 				while (waitpid(pid, &st, 0) == -1 &&
@@ -1342,10 +1362,13 @@ supervisor_stop_post(job_t *job)
 			nanosleep(&ts, NULL);
 		}
 		if (c->argv[prowl_cmd_first(c)][0] != '-' &&
-		    !(WIFEXITED(st) && WEXITSTATUS(st) == 0))
-			prowl_log(LOG_WARNING, "job %s: stop_post %s failed",
-			    job->label, c->argv[prowl_cmd_first(c)]);
+		    !(WIFEXITED(st) && WEXITSTATUS(st) == 0)) {
+			prowl_log(LOG_WARNING, "job %s: %s %s failed",
+			    job->label, lname, c->argv[prowl_cmd_first(c)]);
+			ok = false;
+		}
 	}
+	return (ok);
 }
 
 /*
@@ -2219,7 +2242,17 @@ supervisor_reap(pid_t pid, int status)
 	if (job->cmd_count[PROWL_CMD_POST] > 0 && !was_launcher &&
 	    job->type != JOB_TYPE_RCSHIM &&
 	    (job->type != JOB_TYPE_ONESHOT || job->rc_stopping))
-		supervisor_stop_post(job);
+		(void)supervisor_run_list(job, PROWL_CMD_POST);
+
+	/*
+	 * A oneshot that ended well is not done until its start_post
+	 * commands have run; if one of them fails the job has failed.
+	 */
+	if (!job->rc_stopping && job->type == JOB_TYPE_ONESHOT &&
+	    job->cmd_count[PROWL_CMD_START_POST] > 0 &&
+	    WIFEXITED(status) && WEXITSTATUS(status) == 0 &&
+	    !supervisor_run_list(job, PROWL_CMD_START_POST))
+		status = 1 << 8;
 
 	/*
 	 * Oneshot completes on clean exit.  So does an rc-shim start: an

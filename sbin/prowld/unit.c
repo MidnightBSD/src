@@ -191,7 +191,7 @@ parse_deps(const ucl_object_t *arr, job_t *job, bool hard)
 		dep->cond[0] = '\0';
 		dep->activate = false;
 		/* "?name service": only when the rc.conf variable holds */
-		if ((*s == '?' || *s == '!' || *s == '+') &&
+		if (prowl_is_cond(s) &&
 		    (sp = strchr(s, ' ')) != NULL) {
 			size_t cl = (size_t)(sp - s);
 
@@ -479,7 +479,7 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 	}
 
 	/*
-	 * start_pre, stop_post: lists of commands, each an array holding the
+	 * start_pre, start_post, stop_pre, stop_post: lists of commands, each an array holding the
 	 * program (an absolute path, or @name@) and its arguments.  A "-" in
 	 * front of the program means a failure is ignored.
 	 */
@@ -490,6 +490,8 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 		} lists[] = {
 			{ "start_pre", PROWL_CMD_PRE },
 			{ "stop_post", PROWL_CMD_POST },
+			{ "start_post", PROWL_CMD_START_POST },
+			{ "stop_pre", PROWL_CMD_STOP_PRE },
 		};
 		const ucl_object_t *cmdobj, *word;
 		ucl_object_iter_t wit;
@@ -502,6 +504,15 @@ unit_parse_obj(const ucl_object_t *root, const char *path)
 			arr = ucl_object_lookup(root, lists[k].key);
 			if (arr == NULL)
 				continue;
+			if ((l == PROWL_CMD_START_POST ||
+			    l == PROWL_CMD_STOP_PRE) &&
+			    job->type != JOB_TYPE_ONESHOT) {
+				prowl_log(LOG_ERR, "%s: %s is for "
+				    "oneshot jobs", job->label,
+				    lists[k].key);
+				job_free(job);
+				return (NULL);
+			}
 			it = NULL;
 			while (arr != NULL &&
 			    (cmdobj = ucl_object_iterate(arr, &it, true)) !=

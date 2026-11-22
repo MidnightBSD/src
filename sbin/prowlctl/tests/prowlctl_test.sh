@@ -783,8 +783,76 @@ templates_cleanup()
 	stop_prowld
 }
 
+atf_test_case oneshot_lists cleanup
+oneshot_lists_head()
+{
+	atf_set descr "start_post and stop_pre, and the ~ and < conditions"
+	atf_set require.user root
+}
+oneshot_lists_body()
+{
+	dir="$(pwd)"
+	mkdir -p units /etc/rc.conf.d
+	: > present
+	cat >/etc/rc.conf.d/prowlctl_test_ol <<EOF
+ol_empty=""
+ol_val="x"
+ol_here="${dir}/present"
+ol_gone="${dir}/nothere"
+EOF
+	cat >units/ol.unit <<EOF
+{"label": "org.test.ol", "rc_name": "prowlctl_test_ol",
+ "type": "oneshot", "program": "/bin/sh",
+ "arguments": ["-c", "echo main >> ${dir}/log"],
+ "stop_arguments": ["-c", "echo stop >> ${dir}/log"],
+ "start_pre": [["/bin/sh", "-c", "echo pre >> ${dir}/log"]],
+ "start_post": [
+   ["~ol_empty", "/bin/sh", "-c", "echo a >> ${dir}/log"],
+   ["~ol_val", "/bin/sh", "-c", "echo b >> ${dir}/log"],
+   ["<ol_here", "/bin/sh", "-c", "echo c >> ${dir}/log"],
+   ["<ol_gone", "/bin/sh", "-c", "echo d >> ${dir}/log"],
+   ["!<ol_gone", "/bin/sh", "-c", "echo e >> ${dir}/log"],
+   ["!<ol_here", "/bin/sh", "-c", "echo f >> ${dir}/log"],
+   ["<ol_empty", "/bin/sh", "-c", "echo g >> ${dir}/log"]],
+ "stop_pre": [["/bin/sh", "-c", "echo prestop >> ${dir}/log"]],
+ "run_at_load": true}
+EOF
+	cat >units/of.unit <<EOF
+{"label": "org.test.of", "rc_name": "prowlctl_test_ol",
+ "type": "oneshot", "program": "/usr/bin/true",
+ "start_post": [["/bin/sh", "-c", "exit 1"]], "run_at_load": true}
+EOF
+	cat >units/oi.unit <<EOF
+{"label": "org.test.oi", "rc_name": "prowlctl_test_ol",
+ "type": "oneshot", "program": "/usr/bin/true",
+ "start_post": [["-/bin/sh", "-c", "exit 1"]], "run_at_load": true}
+EOF
+	cat >units/od.unit <<EOF
+{"label": "org.test.od", "rc_name": "prowlctl_test_ol",
+ "type": "daemon", "program": "/bin/sleep", "arguments": ["300"],
+ "start_post": [["/usr/bin/true"]], "run_at_load": true}
+EOF
+	start_prowld
+	wait_state org.test.ol completed
+	atf_check -o inline:"pre\nmain\na\nc\ne\n" cat log
+	atf_check -o ignore ${CTL} stop org.test.ol
+	wait_state org.test.ol stopped
+	atf_check -o inline:"pre\nmain\na\nc\ne\nprestop\nstop\n" cat log
+	# A start_post command that fails fails the job, unless it has a "-".
+	wait_state org.test.of failed
+	wait_state org.test.oi completed
+	# start_post is for oneshot jobs.
+	atf_check -s not-exit:0 -e ignore -o ignore ${CTL} status org.test.od
+}
+oneshot_lists_cleanup()
+{
+	rm -f /etc/rc.conf.d/prowlctl_test_ol
+	stop_prowld
+}
+
 atf_init_test_cases()
 {
+	atf_add_test_case oneshot_lists
 	atf_add_test_case conditions
 	atf_add_test_case activates
 	atf_add_test_case pre_post

@@ -38,6 +38,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <syslog.h>
 
 #include "prowld.h"
@@ -313,31 +314,54 @@ job_all_deps_satisfied(const job_t *job)
 }
 
 /*
+ * Does the string start a condition?  See prowl_cond_holds().
+ */
+bool
+prowl_is_cond(const char *s)
+{
+	return (s[0] != '\0' && strchr("?!+~<", s[0]) != NULL);
+}
+
+/*
  * Does the condition hold?  "?name": the rc.conf variable is YES, TRUE, ON or
- * 1; "!name": it is not; "+name": it is not empty.  rc_name selects the
- * rc.conf.d file read after rc.conf.
+ * 1; "!name": it is not; "+name": it is not empty; "~name": it is empty;
+ * "<name": it names a readable file; "!<name": it does not.  rc_name selects
+ * the rc.conf.d file read after rc.conf.
  */
 bool
 prowl_cond_holds(const char *rc_name, const char *cond)
 {
 	char val[256];
+	const char *name = cond + 1;
+	char kind = cond[0];
 
+	/* "!<name" is the opposite of "<name" */
+	if (kind == '!' && name[0] == '<') {
+		kind = '>';
+		name++;
+	}
 	val[0] = '\0';
-	(void)rcconf_job_var(rc_name, cond + 1, val, sizeof(val));
-	switch (cond[0]) {
+	(void)rcconf_job_var(rc_name, name, val, sizeof(val));
+	switch (kind) {
 	case '?':
 		return (rcconf_value_yes(val));
 	case '!':
 		return (!rcconf_value_yes(val));
 	case '+':
 		return (val[0] != '\0');
+	case '~':
+		return (val[0] == '\0');
+	case '<':
+		return (val[0] != '\0' && access(val, R_OK) == 0);
+	case '>':
+		return (val[0] == '\0' || access(val, R_OK) != 0);
 	}
 	return (true);
 }
 
 /*
- * A start_pre or stop_post command may begin with conditions: "?name" (the
- * rc.conf variable is YES), "!name" (it is not) or "+name" (it is not empty).
+ * A start_pre, start_post or stop_post command may begin with conditions,
+ * see prowl_cond_holds().
  * Returns the index of the program, after the conditions.
  */
 int
@@ -346,8 +370,7 @@ prowl_cmd_first(const prowl_cmd_t *c)
 	int i;
 
 	for (i = 0; i < c->argc; i++) {
-		if (c->argv[i][0] != '?' && c->argv[i][0] != '!' &&
-		    c->argv[i][0] != '+')
+		if (!prowl_is_cond(c->argv[i]))
 			break;
 	}
 	return (i);

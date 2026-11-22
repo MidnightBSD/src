@@ -43,13 +43,15 @@
 typedef struct job job_t;
 typedef struct prowl_socket prowl_socket_t;
 
-/* A command of start_pre or stop_post: the program, then its arguments */
+/* A command of start_pre, start_post, stop_pre or stop_post: the program, then its arguments */
 #define PROWL_COND_LEN		48	/* "?name" before a dependency */
 #define PROWL_CMDS_MAX		8	/* commands in one list */
 #define PROWL_CMD_ARGS		16	/* words in one command */
 #define PROWL_CMD_PRE		0
 #define PROWL_CMD_POST		1
-#define PROWL_CMD_LISTS		2
+#define PROWL_CMD_START_POST	2
+#define PROWL_CMD_STOP_PRE	3
+#define PROWL_CMD_LISTS		4
 typedef struct prowl_cmd {
 	char	       *argv[PROWL_CMD_ARGS];
 	int		argc;
@@ -469,6 +471,7 @@ bool		 job_activations_pending(const job_t *);
 bool		 label_valid(const char *);
 int		 prowl_cmd_first(const prowl_cmd_t *);
 bool		 prowl_cond_holds(const char *, const char *);
+bool		 prowl_is_cond(const char *);
 
 /* ---- unit.c ---- */
 int	unit_load_dir(const char *);
