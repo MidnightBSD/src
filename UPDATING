@@ -1,5 +1,16 @@
 Updating Information for MidnightBSD users.
 
+20261122:
+	The kernel now starts prowld(8) as process 1 instead of init(8).  The
+	default kern.init_path is "/sbin/prowld:/sbin/init:/sbin/oinit:
+	/sbin/init.bak:/rescue/init", so a system whose /sbin/prowld is missing
+	still boots with init(8).  rc.conf remains the source of the enable
+	state for the rc.d scripts.  Install world before or together with the
+	kernel.  To keep init(8), set
+	init_path="/sbin/init:/sbin/oinit:/sbin/init.bak:/rescue/init" in
+	/boot/loader.conf.  Services with native units are supervised by
+	prowld; see prowld(8) and prowlctl(8).
+
 20261121:
 	var_run_enable and var_run_autosave now default to YES.  When
 	/var/run resides on tmpfs, its directory layout is saved at shutdown
